@@ -1,0 +1,78 @@
+//protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. edgar.proto
+
+syntax = "proto3";
+package Jde.Markets.Edgar.Proto;
+
+message InfoTable
+{
+	string cusip=1;
+	uint32 class_id=2;
+	int32 value=3;
+	int32 shares=4;
+	bool is_principal=5;
+}
+
+message Form13F
+{
+	uint32 cik=1;
+	uint32 quarter=2;
+	uint32 year=3;
+	uint32 line_number=4;
+	int64 value=5;
+	repeated InfoTable holdings=6;
+}
+
+message File13F
+{
+	repeated Form13F forms=1;
+}
+
+message Investment
+{
+	InfoTable table=1;
+	float percent=2;
+}
+
+message Investor
+{
+	uint32 cik=1;
+	uint32 end_period=2;
+	repeated Investment current=3;
+	repeated Investment previous=4;
+}
+message Company
+{
+	uint32 cik=1;
+	string name=2;
+}
+message Investors
+{
+	uint32 request_id=1;
+	repeated Investor values=2;
+	repeated Company companies=3;
+}
+
+message Filing
+{
+	uint32 line_number=1;
+	uint32 cik=2;
+	uint32 form_id=3;
+	uint32 submitter=4;
+	uint32 year=5;
+	uint32 sequence=6;
+	uint32 filing_day=7;
+	uint32 period_end=8;
+}
+
+message Filings
+{
+	uint32 request_id=1;
+	repeated Filing values=2;
+}
+
+message MasterIndex
+{
+	uint32 quarter=1;
+	uint32 year=2;
+	repeated Filing filings=3;
+}

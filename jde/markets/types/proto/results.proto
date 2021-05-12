@@ -1,0 +1,702 @@
+//protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. results.proto
+
+syntax = "proto3";
+package Jde.Markets.Proto.Results;
+import "ib.proto";
+import "watch.proto";
+import "edgar.proto";
+
+message MessageValue
+{
+	EResults type=1;
+	oneof Value
+	{
+		string string_value = 2;
+		int32 int_value = 3;
+	}
+}
+
+message StringResult
+{
+	EResults type=1;
+	int32	id=2;
+	string value=3;
+}
+
+message NewsArticle
+{
+	uint32 id=1;
+	bool is_text=2;
+	string value=3;
+}
+
+message TickNews
+{
+	uint32 id = 1;
+	uint32 time=2;
+	string provider_code=3;
+	string article_id=4;
+	string headline=5;
+	string extra_data=6;
+}
+
+message HistoricalNews
+{
+	uint32 id = 1;
+	uint32 time=2;
+	string provider_code=3;
+	string article_id=4;
+	string headline=5;
+}
+message HistoricalNewsCollection
+{
+	uint32 request_id = 1;
+	repeated HistoricalNews values = 2;
+	bool has_more = 3;
+}
+
+message TagValue
+{
+	string tag=1;
+	string value=2;
+};
+
+message ContractHours
+{
+	int32 start=1;
+	int32 end=2;
+}
+
+message ContractDetail
+{
+	Contract	contract=2;
+	string	market_name=3;
+	double	min_tick=4;
+	string	order_types=5;
+	string	valid_exchanges=6;
+	int64		price_magnifier=7;
+	uint32	under_con_id=8;
+	string	long_name=9;
+	string	contract_month=10;
+	string	industry=11;
+	string	category=12;
+	string	subcategory=13;
+	string	time_zone_id=14;
+	repeated ContractHours trading_hours=15;
+	repeated ContractHours liquid_hours=16;
+	string	ev_rule=17;
+	double	ev_multiplier=18;
+	int32		md_size_multiplier=19;
+	int32		agg_group=20;
+	string	under_symbol=21;
+	string	under_sec_type=22;
+	string	market_rule_ids=23;
+	string	real_expiration_date=24;
+	string	last_trade_time=25;
+	string 	stock_type=26;
+
+	repeated TagValue sec_id_list=27;
+
+	string	cusip=28;
+	string	ratings=29;
+	string	desc_append=30;
+	string	bond_type=31;
+	string	coupon_type=32;
+	bool		callable=33;
+	bool		putable=34;
+	double	coupon=35;
+	bool		convertible=36;
+	string	maturity=37;
+	string	issueDate=38;
+	string	next_option_date=39;
+	string	next_option_type=40;
+	bool		next_option_partial=41;
+	string	notes=42;
+};
+
+message ContractDetailsResult
+{
+	uint32	request_id=1;
+	repeated ContractDetail details=2;
+}
+
+message Position
+{
+	string account_number=1;
+	Contract contract=2;
+	double size=3;
+	double avg_cost=4;
+}
+
+message StringMap
+{
+	EResults result=1;
+	map<string,string> values=2;
+}
+
+message Fundamentals
+{
+	uint32 request_id=1;
+	map<string,double> values=2;
+}
+
+message AccountUpdate
+{
+	string account=2;
+	string key=4;
+	string value=5;
+	string currency=6;
+}
+
+message AccountUpdateMulti
+{
+	uint32 request_id=1;
+	string account=2;
+	string model_code=3;
+	string key=4;
+	string value=5;
+	string currency=6;
+}
+
+message PositionMulti
+{
+	int32 id=1; /*web request id*/
+	string account=2;
+	string model_code=3;
+	Contract contract=4;
+	double position=5;
+	double avgerage_cost=6;
+}
+
+message Bar
+{
+	int32 time=1;
+	double high=2;
+	double low=3;
+	double open=4;
+	double close=5;
+	double wap=6;
+	uint64 volume=7;
+	int32 count=8;
+}
+
+message CommissionReport
+{
+	string exec_id=2;
+	double commission=3;
+	string currency=4;
+	double realized_pnl=5;
+	double yield=6;
+	uint32 yield_redemption_date=7;
+};
+
+message DaySummary
+{
+	uint32 request_id=1;
+	uint32 contract_id=2;
+	uint32 day=3;
+	double high=4;
+	double low=5;
+	double open=6;
+	double close=7;
+	double bid=8;
+	double ask=9;
+	uint64 volume=10;
+	uint32 count=11;
+}
+
+message HistoricalData
+{
+	uint32 request_id=1;
+	repeated Bar bars=2;
+}
+
+message PortfolioUpdate
+{
+	Contract contract=1;
+	double position=2;
+	double market_price=3;
+	double market_value=4;
+	double average_cost=5;
+	double unrealized_pnl=6;
+	double realized_pnl=7;
+	string account_number=8;
+}
+
+message FlexOrder
+{
+	uint32 order_id=2;
+	string account_number=3;
+	uint32 time=4;
+	string side=5;
+	double shares=6;
+	double price=7;
+	Contract contract=9;
+	double commission=10;
+	string order_type=11;
+	uint32 order_time=12;
+}
+
+message Trade
+{
+	uint32 id=1;
+	uint32 order_id=2;
+	string account_number=3;
+	uint32 time=4;
+	string side=5;
+	double shares=6;
+	double price=7;
+	string exec_id=8;
+	Contract contract=9;
+
+	double commission=10;
+	string order_type=11;
+	uint32 order_time=12;
+	bool is_api=13;
+}
+message Execution
+{
+	uint32	id=1;
+	uint32	order_id=2;
+	string	account_number=3;
+	uint32	time=4;
+	string	side=5;
+	double	shares=6;
+	double	price=7;
+	string	exec_id=8;
+	Contract contract=9;
+
+	string	exchange=14;
+	int32		perm_id=15;
+	uint32	client_id=16;
+	int32		liquidation=17;
+	double	cumulative_quantity=18;
+	double	avg_price=19;
+	string	order_ref=20;
+	string	ev_rule=21;
+	double	ev_multiplier=22;
+	string 	model_code=23;
+	int32    last_liquidity=24;
+}
+
+message Flex
+{
+	uint32 id=1;
+	repeated FlexOrder orders=2;
+	repeated Trade trades=3;
+}
+
+message Error
+{
+	uint32 request_id=1;
+	int32 code=2;
+	string message=3;
+}
+
+message Option
+{
+	uint32 id=1;
+	float	 strike=2;
+	float	 bid=3;
+	float	 ask=4;
+	float	 last=5;
+	uint32	 volume=6;
+	uint32 open_interest=7;
+	int32 oi_change=8;
+	float	 previous_price=9;
+}
+
+message OptionCalculation
+{
+	uint32 request_id=1;
+	ETickType tick_type=2;
+	bool price_based=3;
+	double implied_volatility=4;
+	double delta=5;
+	double option_price=6;
+	double pv_dividend=7;
+	double gamma=8;
+	double vega=9;
+	double theta=10;
+	double underlying_price=11;
+}
+
+message OptionDay
+{
+	bool is_call=1;
+	uint32 expiration_days=2;
+	repeated Option values=3;
+}
+
+message OptionValues
+{
+	uint32 id=1;
+	uint32 day=2;
+	repeated OptionDay option_days=3;
+}
+
+message OrderStatus
+{
+	int32 id=1;
+	int32 order_id=2;
+	EOrderStatus status=3;
+	double filled=4;
+	double remaining=5;
+	double average_fill_price=6;
+	int32 perm_id=7;
+	int32 parent_id=8;
+	double last_fill_price=9;
+	int32 client_id=10;
+	string why_held=11;
+	double market_cap_price=12;
+}
+
+message StringList
+{
+	uint32 request_id=1;
+	repeated string values=2;
+}
+
+message WatchList
+{
+	uint32 request_id=1;
+	Watch.File file=2;
+}
+
+message Statistics
+{
+	uint32 request_id=1;
+	uint32 count=2;
+	double average=3;
+	double variance=4;
+	double min=5;
+	double max=6;
+}
+
+message Custom
+{
+	uint32 request_id=1;
+	bytes message=2;
+}
+
+message MessageUnion
+{
+	oneof Value
+	{
+		Position position = 1;
+		Contract contract = 2;
+		MessageValue message = 3;
+		StringMap string_map=4;
+		AccountUpdate account_update=5;
+		AccountUpdateMulti account_update_multi=6;
+		CommissionReport commission_report=7;
+		ContractDetailsResult contract_details=8;
+		Execution execution=9;
+		PortfolioUpdate portfolio_update=10;
+		TickGeneric tick_generic = 11;
+		TickPrice tick_price = 12;
+		TickSize tick_size = 13;
+		TickString tick_string = 14;
+		Error error = 15;
+		OptionValues options=16;
+		HistoricalData historical_data=17;
+		StringResult string_result=18;
+		Flex flex=19;
+		OrderStatus order_status=20;
+		OpenOrder open_order=21;
+		OptionExchanges option_exchanges=22;
+		EResults type=23;
+		DaySummary day_summary=24;
+		Fundamentals fundamentals=25;
+		PositionMulti position_multi=26;
+		WatchList watch_list=27;
+		StringList string_list=28;
+		NewsArticle news_article=29;
+		TickNews tick_news=30;
+		HistoricalNewsCollection historical_news=31;
+		Statistics statistics=32;
+		OptionCalculation option_calculation=33;
+		Custom custom=34;
+
+		Jde.Markets.Edgar.Proto.Investors investors=35;
+		Jde.Markets.Edgar.Proto.Filings filings=36;
+	}
+}
+message Transmission
+{
+	repeated MessageUnion messages=1;
+}
+
+message TickGeneric
+{
+	uint32 request_id=1;
+	ETickType tick_type=2;
+	double value=3;
+}
+
+message TickAttrib
+{
+	bool can_auto_execute=1;
+	bool past_limit=2;
+	bool pre_open=3;
+}
+
+message TickPrice
+{
+	 uint32 request_id=1;
+	 ETickType tick_type=2;
+	 double price=3;
+	 TickAttrib attributes=4;
+}
+
+message TickSize
+{
+	uint32 request_id=1;
+	ETickType tick_type=2;
+	int32 size =3;
+}
+
+message TickString
+{
+	uint32 request_id=1;
+	ETickType tick_type=2;
+	string value=3;
+}
+
+message OrderState
+{
+	string status=1;
+	string init_margin_before=2;
+	string maint_margin_before=3;
+	string equity_with_loan_before=4;
+	string init_margin_change=5;
+	string maint_margin_change=6;
+	string equity_with_loan_change=7;
+	string init_margin_after=8;
+	string maint_margin_after=9;
+	string equity_with_loan_after=10;
+	double commission=11;
+	double min_commission=12;
+	double max_commission=13;
+	string commission_currency=14;
+	string warning_text=15;
+	string completed_time=16;
+	string completed_status=17;
+}
+message OpenOrder
+{
+	uint32 web_id=1;
+	Contract contract=2;
+	Order order=3;
+	OrderState state=4;
+}
+
+message ExchangeContracts
+{
+	Exchanges exchange=1;
+	uint32 underlying_contract_id=2;
+	string trading_class=3;
+	string multiplier=4;
+	repeated uint32 expirations=5;
+	repeated double strikes=6;
+}
+
+message OptionExchanges
+{
+	uint32 request_id=1;
+	repeated ExchangeContracts exchanges=2;
+}
+
+enum ETickType
+{
+	BidSize =0;
+	BidPrice =1;
+	AskPrice =2;
+	AskSize =3;
+	LastPrice =4;
+	LastSize = 5;
+	High=6;
+	Low=7;
+	Volume=8;
+	ClosePrice = 9;
+	BID_OPTION_COMPUTATION=10;
+	ASK_OPTION_COMPUTATION=11;
+	LAST_OPTION_COMPUTATION=12;
+	MODEL_OPTION=13;
+	OpenTick=14;
+	Low13Week = 15;
+	High13Week = 16;
+	Low26Week = 17;
+	High26Week = 18;
+	Low52Week = 19;
+	High52Week = 20;
+	AverageVolume=21;
+	OPEN_INTEREST=22;
+	OptionHistoricalVol=23;
+	OptionImpliedVol=24;
+	OPTION_BID_EXCH=25;
+	OPTION_ASK_EXCH=26;
+	OPTION_CALL_OPEN_INTEREST=27;
+	OPTION_PUT_OPEN_INTEREST=28;
+	OPTION_CALL_VOLUME=29;
+	OPTION_PUT_VOLUME=30;
+	INDEX_FUTURE_PREMIUM=31;
+	BidExchange=32;
+	AskExchange=33;
+	AUCTION_VOLUME=34;
+	AUCTION_PRICE=35;
+	AUCTION_IMBALANCE=36;
+	MarkPrice=37;
+	BID_EFP_COMPUTATION=38;
+	ASK_EFP_COMPUTATION=39;
+	LAST_EFP_COMPUTATION=40;
+	OPEN_EFP_COMPUTATION=41;
+	HIGH_EFP_COMPUTATION=42;
+	LOW_EFP_COMPUTATION=43;
+	CLOSE_EFP_COMPUTATION=44;
+	LastTimestamp=45;
+	SHORTABLE=46;
+	FUNDAMENTAL_RATIOS=47;
+	RT_VOLUME=48;
+	Halted=49;
+	BID_YIELD=50;
+	ASK_YIELD=51;
+	LAST_YIELD=52;
+	CUST_OPTION_COMPUTATION=53;
+	TRADE_COUNT=54;
+	TRADE_RATE=55;
+	VOLUME_RATE=56;
+	LAST_RTH_TRADE=57;
+	RT_HISTORICAL_VOL=58;
+	IB_DIVIDENDS=59;
+	BOND_FACTOR_MULTIPLIER=60;
+	REGULATORY_IMBALANCE=61;
+	NewsTick=62;
+	SHORT_TERM_VOLUME_3_MIN=63;
+	SHORT_TERM_VOLUME_5_MIN=64;
+	SHORT_TERM_VOLUME_10_MIN=65;
+	DELAYED_BID=66;
+	DELAYED_ASK=67;
+	DELAYED_LAST=68;
+	DELAYED_BID_SIZE=69;
+	DELAYED_ASK_SIZE=70;
+	DELAYED_LAST_SIZE=71;
+	DELAYED_HIGH=72;
+	DELAYED_LOW=73;
+	DELAYED_VOLUME=74;
+	DELAYED_CLOSE=75;
+	DELAYED_OPEN=76;
+	RT_TRD_VOLUME=77;
+	CREDITMAN_MARK_PRICE=78;
+	CREDITMAN_SLOW_MARK_PRICE=79;
+	DELAYED_BID_OPTION_COMPUTATION=80;
+	DELAYED_ASK_OPTION_COMPUTATION=81;
+	DELAYED_LAST_OPTION_COMPUTATION=82;
+	DELAYED_MODEL_OPTION_COMPUTATION=83;
+	LastExchange=84;
+	LAST_REG_TIME=85;
+	FUTURES_OPEN_INTEREST=86;
+	AVG_OPT_VOLUME=87;
+	DELAYED_LAST_TIMESTAMP=88;
+	SHORTABLE_SHARES=89;
+	NOT_SET =90;
+}
+enum EResults
+{
+	Accept	                                	= 0;
+	MultiEnd												=-1;
+	DaySummary_											=-2;
+	Authentication                            =-3;
+	Query													=-4;
+	TickPriceMessage                          = 1;
+	TickSizeMessage                           = 2;
+	OrderStatus_                             	= 3;
+	ErrorMessage                              = 4;
+	OpenOrder_                               	= 5;
+	ACCT_VALUE                                = 6;
+	PORTFOLIO_VALUE                           = 7;
+	ACCT_UPDATE_TIME                          = 8;
+	NextValidId                               = 9;
+	CONTRACT_DATA                             = 10;
+	ExecutionData                             = 11;
+	MARKET_DEPTH                              = 12;
+	MARKET_DEPTH_L2                           = 13;
+	NEWS_BULLETINS                            = 14;
+	ManagedAccounts                           = 15;
+	RECEIVE_FA                                = 16;
+	HistoricalData_                           = 17;
+	BOND_CONTRACT_DATA                        = 18;
+	SCANNER_PARAMETERS                        = 19;
+	SCANNER_DATA                              = 20;
+	TICK_OPTION_COMPUTATION                   = 21;
+	TickGenericMessage                        = 45;
+	TickStringMessage                         = 46;
+	TICK_EFP                                  = 47;
+	CurrentTime                               = 49;
+	RealTimeBars                              = 50;
+	FUNDAMENTAL_DATA                          = 51;
+	ContractDataEnd                         	= 52;
+	OpenOrderEnd	                            = 53;
+	AccountDownloadEnd                         = 54;
+	ExecutionDataEnd                        = 55;
+	DELTA_NEUTRAL_VALIDATION                  = 56;
+	TickSnapshotEnd                           = 57;
+	MarketDataType                            = 58;
+	COMMISSION_REPORT                         = 59;
+	PositionData                              = 61;
+	PositionEnd	                              = 62;
+	ACCOUNT_SUMMARY                           = 63;
+	ACCOUNT_SUMMARY_END                       = 64;
+	VERIFY_MESSAGE_API                        = 65;
+	VERIFY_COMPLETED                          = 66;
+	DISPLAY_GROUP_LIST                        = 67;
+	DISPLAY_GROUP_UPDATED                     = 68;
+	VERIFY_AND_AUTH_MESSAGE_API               = 69;
+	VERIFY_AND_AUTH_COMPLETED                 = 70;
+	PositionMulti_                            = 71;
+	PositionMultiEnd                        = 72;
+	AccountUpdateMulti_                        = 73;
+	ACCOUNT_UPDATE_MULTI_END                  = 74;
+	SECURITY_DEFINITION_OPTION_PARAMETER      = 75;
+	SecurityDefinitionOptionParameterEnd  = 76;
+	SOFT_DOLLAR_TIERS                         = 77;
+	FAMILY_CODES                              = 78;
+	SYMBOL_SAMPLES                            = 79;
+	MKT_DEPTH_EXCHANGES                       = 80;
+	TickRequiredParams                        = 81;
+	SMART_COMPONENTS                          = 82;
+	NewsArticle_                              = 83;
+	TickNews_                                 = 84;
+	NewsProviders                             = 85;
+	HistoricalNews_                           = 86;
+	HistoricalNewsEnd                         = 87;
+	HEAD_TIMESTAMP                            = 88;
+	HISTOGRAM_DATA                            = 89;
+	HISTORICAL_DATA_UPDATE                    = 90;
+	REROUTE_MKT_DATA_REQ                      = 91;
+	REROUTE_MKT_DEPTH_REQ                     = 92;
+	MARKET_RULE                               = 93;
+	PNL                                       = 94;
+	PNL_SINGLE                                = 95;
+	HISTORICAL_TICKS                          = 96;
+	HISTORICAL_TICKS_BID_ASK                  = 97;
+	HISTORICAL_TICKS_LAST                     = 98;
+	TICK_BY_TICK                              = 99;
+}
+
+enum EOrderStatus
+{
+	None = 0x0;
+	Submitted = 0x1;//- indicates that your order has been accepted by the system.
+	Cancelled = 0x2;//- indicates that the balance of your order has been confirmed canceled by the IB system. This could occur unexpectedly when IB or the destination has rejected your order.
+	Filled = 0x4;//- indicates that the order has been completely filled. Market orders executions will not always trigger a Filled status.
+	Inactive = 0x8;//- indicates that the order was received by the system but is no longer active because it was rejected or canceled.
+	Pending = 0x20;
+	PendingSubmit=0x21;//- indicates that you have transmitted the order, but have not yet received confirmation that it has been accepted by the order destination.
+	PendingCancel=0x22;//- indicates that you have sent a request to cancel the order but have not yet received cancel confirmation from the order destination. At this point, your order is not confirmed canceled. It is not guaranteed that the cancellation will be successful.
+	Pre = 0x40;
+	PreSubmitted = 0x41;//- indicates that a simulated order type has been accepted by the IB system and that this order has yet to be elected. The order is held in the IB system until the election criteria are met. At that time the order is transmitted to the order destination as specified .
+	Api = 0x80;
+	ApiCancelled = 0x82; //- after an order has been submitted and before it has been acknowledged, an API client client can request its cancelation, producing this state.
+	UnknownStatus = 0x100;//Unknown
+}

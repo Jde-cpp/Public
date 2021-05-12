@@ -1,0 +1,64 @@
+//protoc --cpp_out dllexport_decl=JDE_BLOCKLY:. blockly.proto
+
+syntax = "proto3";
+package Jde.Blockly.Proto;
+
+message Copy
+{
+	string from_id=1;
+	Function to=2;
+}
+
+enum ERequestType
+{
+	Load=0;
+	Delete=1;
+	Build=2;
+	DeleteBuild=3;
+	Enable=4;
+	Disable=5;
+}
+message IdRequest
+{
+	string id=1;
+	ERequestType type=2;
+}
+
+message RequestUnion
+{
+	oneof Value
+	{
+		IdRequest id_request=1;
+		Function save = 4;
+		Copy copy = 5;
+
+	}
+}
+
+message Function
+{
+	string id=1;
+	string name=2;
+	string description=3;
+	bool enabled=4;
+	string library=5;
+	string xml=6;
+}
+
+message Functions
+{
+	repeated Function functions=1;
+}
+
+message ResultUnion
+{
+	oneof Value
+	{
+		bool success = 2;
+		Functions functions = 3;
+		Function function = 4;
+		//string successId=5;
+		string error=6;
+		//StringMessage message=7;
+	}
+}

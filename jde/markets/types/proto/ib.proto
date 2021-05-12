@@ -1,0 +1,274 @@
+//protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. ib.proto
+//ln -s /home/duffyj/code/jde/7.0/native/framework/markets/types/proto/ib.proto .
+//npx pbjs  -r ib_root -t static-module -w es6 -o src/app/proto/ib.js ib.proto & npx pbts -o src/app/proto/ib.d.ts src/app/proto/ib.js
+//npx pbjs -r ib_root -t static-module -w es6 -o ib.js /home/duffyj/code/jde/MarketLibrary/source/types/proto/ib.proto & npx pbts -o ib.d.ts ib.js
+
+syntax = "proto3";
+package Jde.Markets.Proto;
+
+//import "google/protobuf/timestamp.proto";
+
+message ComboLeg
+{
+	uint32 contract_id=1;
+	int32 ratio=2;
+	string action=3;
+	string exchange=4;
+	int32 open_close=5;
+	int32 short_sales_lot=6; // 1 = clearing broker, 2 = third party
+	string designated_location=7;
+	int32 exempt_code=8;
+}
+
+message DeltaNeutralContract
+{
+	int32 id=1;
+	double delta=2;
+	double price=3;
+}
+
+enum SecurityRight
+{
+	None=0;
+	Call=1;
+	Put=2;
+};
+enum SecurityType
+{
+	Unknown=0;
+	Stock=1;
+	MutualFund=2;
+	Etf=3;
+	Future=4;
+	Commodity=5;
+	Bag=6;
+	Cash=7;
+	Fop=8;
+	Index=9;
+	Option=10;
+	Warrant=11;
+};
+
+enum Exchanges
+{
+	Smart   = 0;
+	Nyse   = 1;
+	Nasdaq = 2;
+	Amex   =3;
+	Arca   =4;
+	Bats   =5;
+	PinkSheets =6;
+	Value = 7;
+	Ibis = 8;
+	Cboe = 9;
+	Ise = 10;
+	Pse = 11;
+	Pearl = 12;
+	Miax = 13;
+	Mercury = 14;
+	Edgx = 15;
+	Gemini = 16;
+	Box = 17;
+	Emerald = 18;
+	NasdaqOM = 19;
+	NasdaqBX = 20;
+	Phlx = 21;
+	Cboe2 = 22;
+	Ebs = 23;
+	Iex = 24;
+	Venture = 25;
+	UnknownExchange = -1;
+};
+
+enum Currencies
+{
+	NoCurrency = 0;
+	ArgentinaPeso = 1;
+	BrazilReal = 2;
+	CanadaDollar = 3;
+	ChilePeso = 4;
+	ColombiaPeso = 5;
+	EcuadorUsDollar = 6;
+	MexicoPeso = 7;
+	PeruNewSol = 8;
+	UruguayPeso = 9;
+	VenezuelaBolivar = 10;
+	AustralianDollar = 11;
+	ChinaYuan = 12;
+	HongKongDollar = 13;
+	IndiaRupee = 14;
+	IndonesiaRupiah = 15;
+	JapanYen = 16;
+	MalaysiaRinggit = 17;
+	NewZealandDollar = 18;
+	PakistanRupee = 19;
+	PhilippinesPeso = 20;
+	SingaporeDollar = 21;
+	SouthKoreaWon = 22;
+	TaiwanDollar = 23;
+	ThailandBaht = 24;
+	CzechRepKoruna = 25;
+	DenmarkKrone = 26;
+	EuroAreaEuro = 27;
+	HungaryForint = 28;
+	MaltaLira = 29;
+	NorwayKrone = 30;
+	PolandZloty = 31;
+	RussiaRuble = 32;
+	SlovakRepKoruna = 33;
+	SwedenKrona = 34;
+	SwitzerlandFranc = 35;
+	TurkeyLira = 36;
+	UKPound = 37;
+	BahrainDinar = 38;
+	EgyptPound = 39;
+	IsraelShekel = 40;
+	JordanDinar = 41;
+	KuwaitDinar = 42;
+	LebanonPound = 43;
+	SaudiArabiaRiyal = 44;
+	SouthAfricaRand = 45;
+	UaeDirham = 46;
+	Sdr = 47;
+	UsDollar = 48;
+	VenezuelaBolivarFuerte = 49;
+	VietnamDong = 50;
+	RomaniaLeu = 51;
+	KenyaShilling = 52;
+}
+
+message Contract
+{
+	uint32 id=1;
+	string symbol=2;
+	SecurityType security_type=3;
+	uint32 expiration=4;
+	double strike=5;
+	SecurityRight right=6;
+	uint32 multiplier=7;
+	Exchanges exchange=8;
+	Exchanges primary_exchange=9;
+	Currencies currency=10;
+	string local_symbol=11;
+	string trading_class=12;
+	bool include_expired=13;
+	string sec_id_type=14;		// CUSIP;SEDOL;ISIN;RIC
+	string sec_id=15;
+	string combo_legs_description=16; // received in open order 14 and up for all combos
+	repeated ComboLeg combo_Legs=17;
+	DeltaNeutralContract delta_neutral=18;
+	string name=19;
+	uint32 flags=20;
+	uint32 underlying_id=21;
+}
+
+enum EOrderType
+{
+	Limit=0;
+	Market=1;
+	MarketToLimit=2;
+	MarketIfTouched=3;
+	MarketOnClose=4;
+	PeggedToMarket=5;
+	PeggedToStock=6;
+	PeggedToPrimary=7;
+	BoxTop=8;
+	LimitIfTouched=9;
+	LimitOnClose=10;
+	PassiveRelative=11;
+	PeggedToMidpoint=12;
+	Stop=13;
+	StopLimit=14;
+	StopWithProtection=15;
+	TrailingStop=16;
+	TrailLimit=17;
+	RelativeLimit=18;
+	RelativeMarket=19;
+	Volatility=20;
+	PeggedToBenchmark=21;
+};
+
+enum ETimeInForce
+{
+	DayTif = 0;	//Valid for the day only.
+	Gtc = 1; //Good until canceled.
+	Ioc = 2; //Immediate or Cancel
+	Gtd = 3; //Good until Date.
+	Opg = 4; //Use OPG to send a market-on-open (MOO) or limit-on-open (LOO) order.
+	Fok = 5; //- If the entire Fill-or-Kill order does not execute as soon as it becomes available, the entire order is canceled.
+	Dtc = 6; //Day until Canceled
+}
+
+message Order
+{
+	uint32 id=1;
+	uint32 client_id=2;
+	uint32 perm_id=3;
+	bool is_buy = 4;
+	double quantity=5;
+	EOrderType type=6;
+	double limit=7;
+	double aux=8;
+	ETimeInForce time_in_force=9; // "Time in Force" - DAY, GTC, etc.
+	int32 active_start_time=10;	// for GTC orders
+	int32 active_stop_time=11;	// for GTC orders
+	string oca_group=12;      // one cancels all group name
+	int32 oca_type = 13;       // 1 = CANCEL_WITH_BLOCK, 2 = REDUCE_WITH_BLOCK, 3 = REDUCE_NON_BLOCK
+	string order_ref=14;      // order reference
+	bool transmit =15;      // if false, order will be created but not transmited
+	int32 parent_id = 16;      // Parent order Id, to associate Auto STP or TRAIL orders with the original order.
+	bool block_order = 17;
+	bool sweep_to_fill = 18;
+	int32 display_size = 19;
+	int32 trigger_method = 20; // 0=Default, 1=Double_Bid_Ask, 2=Last, 3=Double_Last, 4=Bid_Ask, 7=Last_or_Bid_Ask, 8=Mid-point
+	bool outside_rth = 21;
+	bool hidden = 22;
+	int32 good_after_time=23;    // Format: 20060505 08:00:00 {time zone}
+	int32 good_till_date=24;     // Format: 20060505 08:00:00 {time zone}
+	string rule_80a=25; // Individual = 'I', Agency = 'A', AgentOtherMember = 'W', IndividualPTIA = 'J', AgencyPTIA = 'U', AgentOtherMemberPTIA = 'M', IndividualPT = 'K', AgencyPT = 'Y', AgentOtherMemberPT = 'N'
+	bool all_or_none = 26;
+	int32  min_qty = 27;
+	double percent_offset = 28; // REL orders only
+	bool override_percentage_constraints = 29;
+	double trail_stop_price = 30; // TRAILLIMIT orders only
+	double trailing_percent = 31;
+		// financial advisors only
+	string fa_group=32;
+	string fa_profile=33;
+	string fa_method=34;
+	string fa_percentage=35;
+
+	string open_close=36; // institutional (ie non-cleared) only O=Open, C=Close
+	uint32 origin=37;    // 0=Customer, 1=Firm
+	int32 short_sale_slot=38; // 1 if you hold the shares, 2 if they will be delivered from elsewhere.  Only for Action="SSHORT
+	string designated_location=39; // set when slot=2 only.
+	int32 exempt_code = 40;
+
+	// SMART routing only
+	double discretionary_amt = 41;
+	bool etrade_only = 42;
+	bool firm_quote_only = 43;
+	double nbbo_price_cap = 44;
+	bool  opt_out_smart_routing = 45;
+
+	int32 auction_strategy = 46; // AUCTION_MATCH, AUCTION_IMPROVEMENT, AUCTION_TRANSPARENT
+	double starting_price = 47;
+	double stock_ref_price = 48;
+	double delta = 49;
+	double stock_range_lower = 50;
+	double stock_range_upper = 51;
+	bool randomize_size = 52;
+	bool randomize_price = 53;
+
+	double volatility = 54;
+	uint32 volatility_type = 55;     //UNSET_INTEGER 1=daily, 2=annual
+	string delta_neutral_order_type = 56;
+	double delta_neutral_aux_price = 57;
+	int32 delta_neutral_con_id = 58;
+
+	bool what_if=70;
+	string account=71;
+	int32 use_price_mngmnt_algrthm = 99;//DEFAULT = 0,USE=1, DONT_USE=2
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

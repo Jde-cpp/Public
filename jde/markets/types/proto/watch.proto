@@ -1,0 +1,25 @@
+//protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. watch.proto
+
+syntax = "proto3";
+package Jde.Markets.Proto.Watch;
+import "ib.proto";
+
+message Entry
+{
+	uint32 contract_id=1;
+	double shares=2;
+}
+
+message CashEntry
+{
+	Currencies currency=1;
+	double amount=2;
+}
+
+message File
+{
+	string name=1;
+	bool is_portfolio=2;
+	repeated Entry securities=3;
+	repeated CashEntry currencies=4;
+}
