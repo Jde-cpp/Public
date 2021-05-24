@@ -12,6 +12,48 @@
 namespace Jde
 {
 	#define 🚪 JDE_NATIVE_VISIBILITY auto
+
+	struct ci_char_traits : public std::char_traits<char>
+	{
+		static bool eq(char c1, char c2)noexcept{ return toupper(c1) == toupper(c2); }
+		static bool ne(char c1, char c2)noexcept{ return toupper(c1) != toupper(c2); }
+		static bool lt(char c1, char c2)noexcept{ return toupper(c1) <  toupper(c2); }
+		JDE_NATIVE_VISIBILITY static int compare( const char* s1, const char* s2, size_t n )noexcept;
+		JDE_NATIVE_VISIBILITY static const char* find( const char* s, size_t n, char a )noexcept;
+	};
+	#define var const auto
+	struct JDE_NATIVE_VISIBILITY CIString : public std::basic_string<char, ci_char_traits>
+	{
+		using base=basic_string<char, ci_char_traits>;
+		CIString()noexcept{};
+		CIString( sv sv )noexcept:base{sv.data(), sv.size()}{}
+		CIString( str s )noexcept:base{s.data(), s.size()}{}
+		CIString( const char* p, uint s )noexcept:base{p, s}{}
+		uint find( sv sub, uint pos = 0 )const noexcept;
+		uint find( const CIString& sub, uint pos = 0 )const noexcept{ return find( sv{sub.data(), sub.size()}, pos ); }
+		//inline CIString& operator=( sv s )noexcept{ base::reserve(s.size()+1); memcpy(data(), s.data(), s.size() ); data()[s.size()]='\0'; resize(s.size()); return *this; }
+		template<class T> bool operator==( const T& s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
+		bool operator==( const char* psz )const noexcept{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
+		/*
+		inline bool operator ==( const CIString& s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
+		inline bool operator ==( sv s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
+		inline bool operator ==( const char* psz )const noexcept{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
+		*/
+		friend std::ostream& operator<<( std::ostream &os, const CIString& obj )noexcept{ os << (string)obj; return os; }
+		inline bool operator !=( sv s )const noexcept{ return size() == s.size() && base::compare(0, s.size(), s.data(), s.size())!=0; }
+		inline bool operator !=( str s )const noexcept{ return *this!=sv{s}; }
+		inline CIString& operator+=( sv s )noexcept
+		{
+			var l = size()+s.size();
+			base::resize(l);
+			std::copy( s.data(), s.data()+s.size(), data() );
+			return *this;
+		}
+		inline char operator[]( uint i )const noexcept{ return data()[i]; }
+		operator string()const noexcept{ return string{data(), size()}; }
+		operator sv()const noexcept{ return sv{data(), size()}; }
+	};
+
 	namespace Str
 	{
 		using std::basic_string;
@@ -20,6 +62,7 @@ namespace Jde
 		ⓣ Split( const basic_string<T> &s, T delim=T{','} )->vector<basic_string<T>>;
 
 		🚪 Split( sv s, sv delim )->vector<sv>;
+		🚪 Split( sv text, const CIString& delim )->vector<sv>;
 		🚪 Split( sv s, char delim=',', uint estCnt=0 )->vector<sv>;
 
 		template<typename T>
@@ -65,47 +108,6 @@ namespace Jde
 	
 	};
 	
-	struct ci_char_traits : public std::char_traits<char>
-	{
-		static bool eq(char c1, char c2)noexcept{ return toupper(c1) == toupper(c2); }
-		static bool ne(char c1, char c2)noexcept{ return toupper(c1) != toupper(c2); }
-		static bool lt(char c1, char c2)noexcept{ return toupper(c1) <  toupper(c2); }
-		JDE_NATIVE_VISIBILITY static int compare( const char* s1, const char* s2, size_t n )noexcept;
-		JDE_NATIVE_VISIBILITY static const char* find( const char* s, size_t n, char a )noexcept;
-	};
-#define var const auto
-	struct JDE_NATIVE_VISIBILITY CIString : public std::basic_string<char, ci_char_traits>
-	{
-		using base=basic_string<char, ci_char_traits>;
-		CIString()noexcept{};
-		CIString( sv sv )noexcept:base{sv.data(), sv.size()}{}
-		CIString( str s )noexcept:base{s.data(), s.size()}{}
-		CIString( const char* p, uint s )noexcept:base{p, s}{}
-		uint find( sv sub, uint pos = 0 )const noexcept;
-		uint find( const CIString& sub, uint pos = 0 )const noexcept{ return find( sv{sub.data(), sub.size()}, pos ); }
-		//inline CIString& operator=( sv s )noexcept{ base::reserve(s.size()+1); memcpy(data(), s.data(), s.size() ); data()[s.size()]='\0'; resize(s.size()); return *this; }
-		template<class T> bool operator==( const T& s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
-		bool operator==( const char* psz )const noexcept{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
-		/*
-		inline bool operator ==( const CIString& s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
-		inline bool operator ==( sv s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
-		inline bool operator ==( const char* psz )const noexcept{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
-		*/
-		friend std::ostream& operator<<( std::ostream &os, const CIString& obj )noexcept{ os << (string)obj; return os; }
-		inline bool operator !=( sv s )const noexcept{ return size() == s.size() && base::compare(0, s.size(), s.data(), s.size())!=0; }
-		inline bool operator !=( str s )const noexcept{ return *this!=sv{s}; }
-		inline CIString& operator+=( sv s )noexcept
-		{
-			var l = size()+s.size();
-			base::resize(l);
-			std::copy( s.data(), s.data()+s.size(), data() );
-			return *this;
-		}
-		inline char operator[]( uint i )const noexcept{ return data()[i]; }
-		operator string()const noexcept{ return string{data(), size()}; }
-		operator sv()const noexcept{ return sv{data(), size()}; }
-	};
-
 	struct StringCompare
 	{
    	bool operator()( str a, str b )const noexcept{ return a<b; }

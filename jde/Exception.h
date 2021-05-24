@@ -210,7 +210,7 @@ namespace Jde
 	};
 
 	template<class T,std::enable_if_t<std::is_base_of<Exception,T>::value>* = nullptr>
-	[[noreturn]] void throw_exception( T exp, const char* pszFunction, const char* pszFile, long line )
+	[[noreturn]] void throw_exception( T exp, const char* pszFunction, const char* pszFile, long line )noexcept(false)
 	{
 		exp.SetFunction( pszFunction );
 		exp.SetFile( pszFile );
