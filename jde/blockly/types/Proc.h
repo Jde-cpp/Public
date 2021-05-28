@@ -3,7 +3,7 @@
 #include <cmath>
 #include <compare>
 #ifdef _MSC_VER
-	#include <fmt/core.h>
+//	#include <fmt/core.h>
 #endif
 #include <jde/Exception.h>
 #include <jde/Log.h>
