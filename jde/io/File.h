@@ -22,8 +22,8 @@ namespace IO
 		JDE_NATIVE_VISIBILITY std::unique_ptr<std::vector<char>> LoadBinary( path path )noexcept(false);
 		JDE_NATIVE_VISIBILITY string Load( path path )noexcept(false);
 		JDE_NATIVE_VISIBILITY void SaveBinary( path path, const std::vector<char>& values )noexcept(false);
-		JDE_NATIVE_VISIBILITY void Save( path path, const std::string& value, std::ios_base::openmode openMode = std::ios_base::out )noexcept(false);
-		inline void SaveBinary( path path, const std::string& value )noexcept(false){ return Save(path, value, std::ios::binary); }
+		JDE_NATIVE_VISIBILITY void Save( path path, sv value, std::ios_base::openmode openMode = std::ios_base::out )noexcept(false);
+		inline void SaveBinary( path path, sv value )noexcept(false){ return Save(path, value, std::ios::binary); }
 		JDE_NATIVE_VISIBILITY size_t GetFileSize( path path );
 		JDE_NATIVE_VISIBILITY void ForEachItem( path directory, std::function<void(const fs::directory_entry&)> function )noexcept(false);//todo get rid of, 1 liner
 		JDE_NATIVE_VISIBILITY std::unique_ptr<std::set<fs::directory_entry>> GetDirectory( path directory );
