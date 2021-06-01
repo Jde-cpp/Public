@@ -1,20 +1,10 @@
 #pragma once
-#ifndef JDE_EXCEPTION
-#define JDE_EXCEPTION
 
 #include "./Exports.h"
-
-//#ifndef NO_FORMAT
-//#include <spdlog/spdlog.h>
-//#include <spdlog/sinks/basic_file_sink.h>
-//#include <spdlog/fmt/ostr.h>
-//#endif
-
 #include "collections/ToVec.h"
 
 namespace boost::system{ class error_code; }
 
-//#include "log/Log.h"
 #ifndef  THROW
 # define THROW(x) Jde::throw_exception(x, __func__,__FILE__,__LINE__)
 #endif
@@ -33,18 +23,6 @@ namespace boost::system{ class error_code; }
 # define CHECK(condition) THROW_IF( !condition, #condition )
 #endif
 
-//#ifndef CATCH_STD
-//# define CATCH_STD(pszAdditional) catch (const std::exception& e){Jde::catch_exception(__func__,__FILE__,__LINE__,pszAdditional, &e); }
-//#endif
-//
-//#ifndef CATCH_ALL
-//# define CATCH_ALL(pszAdditional) catch (...){Jde::catch_exception(__func__,__FILE__,__LINE__,pszAdditional); }
-//#endif
-//
-//#ifndef CATCH_DEFAULT
-//# define CATCH_DEFAULT(pszAdditional) catch (const Exception&){} CATCH_STD(pszAdditional) CATCH_ALL(pszAdditional)
-//#endif
-
 namespace Jde
 {
 	struct JDE_NATIVE_VISIBILITY Exception : public std::exception
@@ -56,12 +34,10 @@ namespace Jde
 		Exception( sv value )noexcept;
 
 		template<class... Args>
-		Exception( Exception&&, sv value={}, Args&&... args )noexcept;
+		Exception( Exception&&, sv value, Args&&... args )noexcept;
 		template<class... Args>
 		Exception( sv value, Args&&... args )noexcept;
-
 		Exception( const std::exception& exp )noexcept;
-
 		virtual ~Exception();
 
 		//Exception& operator=( const Exception& copyFrom );
@@ -282,4 +258,3 @@ namespace Jde
 		return result;
 	}
 }
-#endif
