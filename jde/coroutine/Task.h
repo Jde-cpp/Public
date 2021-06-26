@@ -4,6 +4,7 @@
 
 #include <variant>
 #include <jde/Log.h>
+#include <jde/Exception.h>
 
 namespace Jde::Coroutine
 {
@@ -14,8 +15,18 @@ namespace Jde::Coroutine
 	JDE_NATIVE_VISIBILITY ClientHandle NextTaskHandle()noexcept;
 	JDE_NATIVE_VISIBILITY ClientHandle NextTaskPromiseHandle()noexcept;
 
+struct task{
+  struct promise_type {
+    task get_return_object() { return {}; }
+    suspend_never initial_suspend() { return {}; }
+    suspend_never final_suspend() noexcept { return {}; }
+    void return_void() {}
+    void unhandled_exception() {}
+  };
+};
 	struct TaskVoid final
 	{
+		using TResult=void;
 		struct promise_type//must be promise_type
 		{
 			TaskVoid get_return_object()noexcept{ return {}; }
@@ -26,9 +37,10 @@ namespace Jde::Coroutine
 		};
 	};
 
-	template<typename T>
+	template<class T>
 	struct Task final
 	{
+		using TResult=T;
 		Task():_taskHandle{NextTaskHandle()}{ DBG("Task::Task({})"sv, _taskHandle); }
 		Task( const Task& t2 ):
 			Result{t2.Result},
@@ -52,13 +64,12 @@ namespace Jde::Coroutine
 			Task<T> _returnObject;
 			const Handle _promiseHandle;
 		};
-		T Result;
-		//std::exception_ptr ExceptionPtr;
+		TResult Result;
 		const Handle _taskHandle;
 	};
 
 
-	template<typename TTask>
+	template<class TTask>
 	struct PromiseType /*notfinal*/
 	{
 		PromiseType():_promiseHandle{ NextTaskPromiseHandle() }
@@ -72,16 +83,77 @@ namespace Jde::Coroutine
 		const Handle _promiseHandle;
 	};
 
-
-	template<typename T>
-	struct TaskError final
+	struct ITaskError
 	{
-		typedef std::variant<T,std::exception_ptr> TResult;
-		TaskError():_taskHandle{NextTaskHandle()}{ /*DBG("Task::Task({})"sv, _taskHandle);*/ }
-		struct promise_type : PromiseType<TaskError<T>>
-		{};
-		TResult Result;
+		ITaskError():_taskHandle{NextTaskHandle()}{ /*DBG("Task::Task({})"sv, _taskHandle);*/ }
 		const Handle _taskHandle;
+	};
+
+	template<class T>
+	struct TaskError final : ITaskError
+	{
+		using TResult=std::variant<T,std::exception_ptr>;
+		struct promise_type : PromiseType<TaskError<T>>{};
+
+		TResult Result;
+	};
+
+	struct TaskResult
+	{
+		TaskResult()=default;
+		TaskResult( sp<void> r )noexcept:Ptr{r}{}
+		TaskResult( std::exception_ptr e )noexcept:ExceptionPtr{e}{};
+		bool HasError()const noexcept{ return ExceptionPtr!=nullptr; }
+		ⓣ Get()noexcept(false)
+		{
+			if( ExceptionPtr )
+				 std::rethrow_exception( ExceptionPtr );
+			THROW_IF( !Ptr, "No Result" );
+			auto p = static_pointer_cast<T>( Ptr );
+			THROW_IF( !p, "Could not cast ptr." );
+			return p;
+		}
+		std::exception_ptr ExceptionPtr;
+		sp<void> Ptr;
+	};
+	struct Task2 final : ITaskError
+	{
+		using TResult=TaskResult;
+		struct promise_type
+		{
+			promise_type():_promiseHandle{ NextTaskPromiseHandle() }{}
+			Task2& get_return_object()noexcept{ return _pReturnObject ? *_pReturnObject : *(_pReturnObject=make_unique<Task2>()); }
+			suspend_never initial_suspend()noexcept{ return {}; }
+			suspend_never final_suspend()noexcept{ return {}; }
+			void return_void()noexcept{}
+			void unhandled_exception()noexcept
+			{
+				try
+				{
+					auto p = std::current_exception();
+					if( p )
+						std::rethrow_exception( p );
+					else
+						ERR( "unhandled_exception - no exception"sv );
+				}
+				catch( const Exception& e )
+				{
+					e.Log();
+				}
+				catch( const std::exception& e )
+				{
+					ERR( "unhandled_exception ->{}"sv, e.what() );
+				}
+				catch( ... )
+				{
+					ERR( "unhandled_exception"sv );
+				}
+			}
+		private:
+			up<Task2> _pReturnObject;
+			const Handle _promiseHandle;
+		};
+		TResult Result;
 	};
 }
 #endif

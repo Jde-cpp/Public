@@ -30,15 +30,8 @@ namespace Jde
 		CIString( str s )noexcept:base{s.data(), s.size()}{}
 		CIString( const char* p, uint s )noexcept:base{p, s}{}
 		uint find( sv sub, uint pos = 0 )const noexcept;
-		uint find( const CIString& sub, uint pos = 0 )const noexcept{ return find( sv{sub.data(), sub.size()}, pos ); }
-		//inline CIString& operator=( sv s )noexcept{ base::reserve(s.size()+1); memcpy(data(), s.data(), s.size() ); data()[s.size()]='\0'; resize(s.size()); return *this; }
 		template<class T> bool operator==( const T& s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
 		bool operator==( const char* psz )const noexcept{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
-		/*
-		inline bool operator ==( const CIString& s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
-		inline bool operator ==( sv s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
-		inline bool operator ==( const char* psz )const noexcept{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
-		*/
 		friend std::ostream& operator<<( std::ostream &os, const CIString& obj )noexcept{ os << (string)obj; return os; }
 		inline bool operator !=( sv s )const noexcept{ return size() == s.size() && base::compare(0, s.size(), s.data(), s.size())!=0; }
 		inline bool operator !=( str s )const noexcept{ return *this!=sv{s}; }
@@ -78,7 +71,6 @@ namespace Jde
 		🚪 Replace( sv source, sv find, sv replace )noexcept->string;
 		🚪 Replace( sv source, char find, char replace )noexcept->string;
 		🚪 ToLower( sv source )noexcept->string;
-		//inline string ToLower( sv source )noexcept{ return ToLower( string{source}); }
 		JDE_NATIVE_VISIBILITY string ToUpper( sv source )noexcept;
 
 		template<typename T>
@@ -105,9 +97,9 @@ namespace Jde
 		inline string Trim( str s ){ auto y{s}; LTrim(y); RTrim(y); return y; }
 
 		template<typename T> T Trim( const T& s, sv substring )noexcept;
-	
+
 	};
-	
+
 	struct StringCompare
 	{
    	bool operator()( str a, str b )const noexcept{ return a<b; }
@@ -233,7 +225,6 @@ namespace Jde
 		T os; uint i, current=0;
 		while( (i = s.find(substring, current))!=string::npos )
 		{
-			//sv s2{ s.data()+current, s.size()-current };
 			os += sv{ s.data()+current, i-current };
 			current = i+substring.size();
 		}

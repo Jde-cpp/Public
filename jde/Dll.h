@@ -48,14 +48,14 @@ namespace Jde
 		~DllHelper()
 		{
 			if( GetDefaultLogger() )
-				DBGN( "Freeing '{}'."sv, _path.string() );
+				DBG( "Freeing '{}'."sv, _path.string() );
 #if _MSC_VER
 			::FreeLibrary( _module );
 #else
 			::dlclose( _module );
 #endif
 			if( GetDefaultLogger() )
-				DBGN( "Freed '{}'."sv, _path.string() );
+				DBG( "Freed '{}'."sv, _path.string() );
 		}
 
 

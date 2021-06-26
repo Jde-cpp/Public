@@ -1,4 +1,4 @@
-//protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. requests.proto
+//protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. requests.proto; mv requests.pb.cc ../../../../../MarketLibrary/source/types/proto
 
 syntax = "proto3";
 package Jde.Markets.Proto.Requests;
@@ -321,6 +321,7 @@ enum ERequests
 	Query									= -8;
 	Filings								= -9;
 	Investors							= -10;
+	Tweets								= -11;
 
 	MarketData             			= 1;
 	CancelMarketData              = 2;

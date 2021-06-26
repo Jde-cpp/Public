@@ -8,9 +8,6 @@
 #include <jde/markets/types/proto/ib.pb.h>
 #pragma warning( default : 4244 )
 
-//#include "Exchanges.h"
-//#include "../../../framework/io/Buffer.h"
-//#include "../../TypeDefs.h"
 #include <jde/markets/TypeDefs.h>
 struct ContractDetails;
 struct Contract;
@@ -18,20 +15,14 @@ struct Contract;
 namespace Jde::Markets
 {
 	typedef std::chrono::system_clock::time_point TimePoint;
-//	namespace Proto{ class Contract; class ComboLeg; class DeltaNeutralContract; enum Currencies : int; enum SecurityRight : int; enum SecurityType : int; enum Exchanges : int; }
 	namespace Proto::Results{ class ContractDetail; class ContractHours; }
 	using Proto::Exchanges;
-/*	typedef std::string str;
-	typedef std::string_view sv;
 
-	typedef double PositionAmount;
-	typedef double Amount;*/
 #pragma region DeltaNeutralContract
 	struct DeltaNeutralContract
 	{
 		DeltaNeutralContract()noexcept{};
 		DeltaNeutralContract( const Proto::DeltaNeutralContract& proto )noexcept;
-		//DeltaNeutralContract( IO::IncomingMessage& message );
 		long Id{0};
 		double Delta{0.0};
 		double Price{0.0};
@@ -52,7 +43,6 @@ namespace Jde::Markets
 #pragma region ComboLeg
 	struct ComboLeg
 	{
-		//ComboLeg( IO::IncomingMessage& message, bool isOrder )noexcept;
 		ComboLeg( const Proto::ComboLeg& proto )noexcept;
 
 		ContractPK ConId{0};
@@ -81,6 +71,7 @@ namespace Jde::Markets
 #pragma region Contract
 	struct JDE_MARKETS_EXPORT Contract
 	{
+		static constexpr sv CacheFormat="Contract.{}";
 		Contract()=default;
 		//Contract( IO::IncomingMessage& message, bool havePrimaryExchange=true )noexcept(false);
 		explicit Contract( ContractPK id, sv symbol="" )noexcept;
@@ -122,7 +113,6 @@ namespace Jde::Markets
 		PositionAmount LongShareCount( Amount price )const noexcept;
 		PositionAmount ShortShareCount( Amount price )const noexcept;
 		PositionAmount RoundShares( PositionAmount amount, PositionAmount roundAmount )const noexcept;
-		//sp<DateTime> ExpirationTime()const noexcept;
 		Amount RoundDownToMinTick( Amount price )const noexcept;
 		static DayIndex ToDay( str str )noexcept;
 		sp<std::vector<Proto::Results::ContractHours>> TradingHoursPtr;//TODO a const vector.
@@ -134,7 +124,6 @@ namespace Jde::Markets
 	std::ostream& operator<<( std::ostream& os, const Contract& contract )noexcept;
 	JDE_MARKETS_EXPORT ContractPtr_ Find( const std::map<ContractPK, ContractPtr_>&, sv symbol )noexcept;
 
-	//JDE_MARKETS_EXPORT sp<Proto::ContractDetails> ToProto( const ::ContractDetails& details )noexcept;
 	JDE_MARKETS_EXPORT void ToProto( const ContractDetails& details, Proto::Results::ContractDetail& proto )noexcept;
 	namespace Contracts
 	{

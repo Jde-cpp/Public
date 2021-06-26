@@ -45,20 +45,20 @@ namespace Jde
 		const char* what() const noexcept override;
 		ELogLevel GetLevel()const{return _level;}
 
-		void SetFunction( const char* pszFunction ){ _functionName = pszFunction; }
-		void SetFile( const char* pszFile ){ _fileName = pszFile; }
+		void SetFunction( const char* pszFunction ){ _functionName = {pszFunction, strlen(pszFunction)}; }
+		void SetFile( const char* pszFile ){ _fileName = {pszFile, strlen(pszFile)}; }
 		void SetLine( long line ){ _line = line; }
 		friend std::ostream& operator<<( std::ostream& os, const Exception& e );
 	protected:
-		std::string _functionName;
-		std::string _fileName;
+		sv _functionName;
+		sv _fileName;
 		long _line;
 
 		ELogLevel _level{ELogLevel::Trace};
-		mutable std::string _what;
+		mutable string _what;
 		sp<Exception> _pInner;//sp to save custom copy constructor
 	private:
-		std::string _format;
+		string _format;
 		vector<string> _args;
 	};
 
@@ -118,9 +118,9 @@ namespace Jde
 	{
 		CodeException( sv value, const std::error_code& code, ELogLevel level=ELogLevel::Error );
 
-		static std::string ToString( const std::error_code& pErrorCode )noexcept;
-		static std::string ToString( const std::error_category& errorCategory )noexcept;
-		static std::string ToString( const std::error_condition& errorCondition )noexcept;
+		static string ToString( const std::error_code& pErrorCode )noexcept;
+		static string ToString( const std::error_category& errorCategory )noexcept;
+		static string ToString( const std::error_condition& errorCondition )noexcept;
 	private:
 		std::shared_ptr<std::error_code> _pErrorCode;
 	};
@@ -129,7 +129,7 @@ namespace Jde
 
 	struct JDE_NATIVE_VISIBILITY BoostCodeException final : public RuntimeException
 	{
-		BoostCodeException( const boost::system::error_code& ec )noexcept;
+		BoostCodeException( const boost::system::error_code& ec, str msg={} )noexcept;
 		BoostCodeException( const BoostCodeException& e )noexcept;
 		~BoostCodeException();
 	private:
@@ -177,7 +177,8 @@ namespace Jde
 
 		uint ErrorCode()const noexcept;
 		path Path()const noexcept; void SetPath( path x )noexcept{ _path=x; }
-		static void TestExists( path path )noexcept(false){if( !fs::exists(path) ) throw IOException{path, "'{}' does not exist", path.string().c_str()}; }
+
+		static void TestExists( path path )noexcept(false);
 		const char* what() const noexcept override;
 	private:
 		const uint _errorCode{0};

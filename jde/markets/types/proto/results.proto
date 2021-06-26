@@ -1,4 +1,4 @@
-//protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. results.proto
+//protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. results.proto; mv results.pb.cc ../../../../../MarketLibrary/source/types/proto
 
 syntax = "proto3";
 package Jde.Markets.Proto.Results;
@@ -23,9 +23,19 @@ message StringResult
 	string value=3;
 }
 
+message GoogleNews
+{
+	string title=1;
+	string link=2;
+	uint32 publication_date=3;
+	string description=4;
+	string source_url=5;
+	string source=6;
+}
+
 message NewsArticle
 {
-	uint32 id=1;
+	uint32 request_id=1;
 	bool is_text=2;
 	string value=3;
 }
@@ -48,11 +58,12 @@ message HistoricalNews
 	string article_id=4;
 	string headline=5;
 }
-message HistoricalNewsCollection
+message NewsCollection
 {
 	uint32 request_id = 1;
-	repeated HistoricalNews values = 2;
-	bool has_more = 3;
+	repeated HistoricalNews historical = 2;
+	repeated GoogleNews google = 3;
+	bool has_more = 4;
 }
 
 message TagValue
@@ -373,6 +384,37 @@ message Statistics
 	double max=6;
 }
 
+message Tweet
+{
+	uint64 id=1;
+	uint64 author_id=2;
+	uint32 created_at=3;
+	string text=4;
+	uint32 retweet=5;
+	uint32 reply=6;
+	uint32 like=7;
+	uint32 quote=8;
+}
+message Tweets
+{
+	uint32 request_id=1;
+	uint32 update_time=2;
+	uint32 earliest_time=3;
+	repeated Tweet values=4;
+}
+
+message TweetAuthor
+{
+	uint64 id=1;
+	string screen_name=2;
+	string profile_url=3;
+}
+message TweetAuthors
+{
+	uint32 request_id=1;
+	repeated TweetAuthor values=2;
+}
+
 message Custom
 {
 	uint32 request_id=1;
@@ -413,13 +455,14 @@ message MessageUnion
 		StringList string_list=28;
 		NewsArticle news_article=29;
 		TickNews tick_news=30;
-		HistoricalNewsCollection historical_news=31;
+		NewsCollection news=31;
 		Statistics statistics=32;
 		OptionCalculation option_calculation=33;
 		Custom custom=34;
-
 		Jde.Markets.Edgar.Proto.Investors investors=35;
 		Jde.Markets.Edgar.Proto.Filings filings=36;
+		Tweets tweets=37;
+		TweetAuthors tweet_authors=38;
 	}
 }
 message Transmission
@@ -608,6 +651,7 @@ enum EResults
 	DaySummary_											=-2;
 	Authentication                            =-3;
 	Query													=-4;
+	Success												=-5;
 	TickPriceMessage                          = 1;
 	TickSizeMessage                           = 2;
 	OrderStatus_                             	= 3;
