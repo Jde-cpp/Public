@@ -213,6 +213,13 @@ message RequestExecutions
 	string side=8;
 }
 
+message Reddit
+{
+	uint32 id=1;
+	string symbol=2;
+	string sort=3;
+}
+
 message Custom
 {
 	uint32 id=1;
@@ -242,6 +249,7 @@ message RequestUnion
 		ImpliedVolatilityRequest implied_volatility=18;
 		ImpliedPriceRequest implied_price=19;
 		Custom blockly=20;
+		Reddit reddit=21;
 	}
 }
 
@@ -304,7 +312,6 @@ enum BarSize
 	Day=86400;
 	Week=604800;
 	Month=2592000;
-	//Month3=15;
 	Year=31104000;
 }
 
@@ -322,7 +329,7 @@ enum ERequests
 	Filings								= -9;
 	Investors							= -10;
 	Tweets								= -11;
-
+   //Reddit							   = -12;
 	MarketData             			= 1;
 	CancelMarketData              = 2;
 	PlaceOrder_                  	= 3;

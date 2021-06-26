@@ -32,4 +32,4 @@
 *.app
 stage/*
 *.pb.h
-
+*.pb.cc
