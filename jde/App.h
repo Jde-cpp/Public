@@ -28,6 +28,7 @@ namespace Jde
 		static void GarbageCollect()noexcept;
 		static void AddApplicationLog( ELogLevel level, str value )noexcept;//static to call in std::terminate.
 		static void AddShutdown( sp<IShutdown> pShared )noexcept;
+		static void RemoveShutdown( sp<IShutdown> pShared )noexcept;
 		static void Add( sp<void> pShared )noexcept;
 		static bool Kill( uint processId )noexcept{return _pInstance ? _pInstance->KillInstance( processId ) : false;}
 		static void Remove( sp<void> pShared )noexcept;

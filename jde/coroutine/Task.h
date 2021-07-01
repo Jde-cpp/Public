@@ -5,6 +5,7 @@
 #include <variant>
 #include <jde/Log.h>
 #include <jde/Exception.h>
+#include <jde/Assert.h>
 
 namespace Jde::Coroutine
 {
@@ -101,20 +102,28 @@ struct task{
 	struct TaskResult
 	{
 		TaskResult()=default;
-		TaskResult( sp<void> r )noexcept:Ptr{r}{}
-		TaskResult( std::exception_ptr e )noexcept:ExceptionPtr{e}{};
-		bool HasError()const noexcept{ return ExceptionPtr!=nullptr; }
+		TaskResult( sp<void> r )noexcept:_result{r}{}
+		TaskResult( std::exception_ptr e )noexcept:_result{e}{};
+		α HasValue()const noexcept{ return _result.index()==0 && get<sp<void>>( _result ); }
+		α HasError()const noexcept{ return _result.index()==1; }
+		α Uninitialized()const noexcept{ return _result.index()==0 && !get<sp<void>>(_result); }
+
 		ⓣ Get()noexcept(false)
 		{
-			if( ExceptionPtr )
-				 std::rethrow_exception( ExceptionPtr );
-			THROW_IF( !Ptr, "No Result" );
-			auto p = static_pointer_cast<T>( Ptr );
+			if( HasError() )//0x619000009e00
+				 std::rethrow_exception( get<std::exception_ptr>(_result) );
+			auto pVoid = get<sp<void>>( _result );
+			THROW_IF( !pVoid, "No Result" );
+			auto p = static_pointer_cast<T>( pVoid );
 			THROW_IF( !p, "Could not cast ptr." );
 			return p;
 		}
-		std::exception_ptr ExceptionPtr;
-		sp<void> Ptr;
+
+		α Set( sp<void> p )noexcept->void{ ASSERT(Uninitialized()); _result = p; }
+		α Set( std::exception_ptr p )noexcept->void{ ASSERT(Uninitialized()); _result = p; }
+		α Set( Exception&& e )noexcept->void{ ASSERT(Uninitialized()); Set( std::make_exception_ptr(move(e)) ); }
+	private:
+		std::variant<sp<void>,std::exception_ptr> _result;
 	};
 	struct Task2 final : ITaskError
 	{
@@ -153,6 +162,12 @@ struct task{
 			up<Task2> _pReturnObject;
 			const Handle _promiseHandle;
 		};
+		α GetResult()const noexcept->const TResult&{ return Result; }
+		α SetResult( sp<void> p )noexcept->void{ Result.Set( p ); }
+		α SetResult( std::exception_ptr p )noexcept->void{ Result.Set( p ); }
+		α SetResult( Exception&& e )noexcept->void{ Result.Set( move(e) ); }
+		α SetResult( TResult&& r )noexcept->void{ Result = move(r); }
+	private:
 		TResult Result;
 	};
 }
