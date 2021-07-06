@@ -1,6 +1,4 @@
-#pragma once
-#ifndef JDE_TASK
-#define JDE_TASK
+﻿#pragma once
 
 #include <variant>
 #include <jde/Log.h>
@@ -110,7 +108,7 @@ struct task{
 
 		ⓣ Get()noexcept(false)
 		{
-			if( HasError() )//0x619000009e00
+			if( HasError() )
 				 std::rethrow_exception( get<std::exception_ptr>(_result) );
 			auto pVoid = get<sp<void>>( _result );
 			THROW_IF( !pVoid, "No Result" );
@@ -162,6 +160,7 @@ struct task{
 			up<Task2> _pReturnObject;
 			const Handle _promiseHandle;
 		};
+		α HasResult()const noexcept->bool{ return !Result.Uninitialized(); }
 		α GetResult()const noexcept->const TResult&{ return Result; }
 		α SetResult( sp<void> p )noexcept->void{ Result.Set( p ); }
 		α SetResult( std::exception_ptr p )noexcept->void{ Result.Set( p ); }
@@ -171,4 +170,3 @@ struct task{
 		TResult Result;
 	};
 }
-#endif

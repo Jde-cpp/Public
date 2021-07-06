@@ -9,13 +9,8 @@
 #include <boost/container/flat_map.hpp>
 #include <jde/Exception.h>
 
-namespace Jde
-{
-	namespace fs=std::filesystem;
-	struct Stopwatch;
-	//class String;
-	using boost::container::flat_map;
-namespace IO
+namespace Jde{ struct Stopwatch; }
+namespace Jde::IO
 {
 	namespace FileUtilities
 	{
@@ -27,9 +22,7 @@ namespace IO
 		JDE_NATIVE_VISIBILITY size_t GetFileSize( path path );
 		JDE_NATIVE_VISIBILITY void ForEachItem( path directory, std::function<void(const fs::directory_entry&)> function )noexcept(false);//todo get rid of, 1 liner
 		JDE_NATIVE_VISIBILITY std::unique_ptr<std::set<fs::directory_entry>> GetDirectory( path directory );
-		//JDE_NATIVE_VISIBILITY std::set<fs::directory_entry> GetDirectoryRecursive( path directory, set<fs::directory_entry>& values )noexcept;
 		JDE_NATIVE_VISIBILITY std::unique_ptr<std::set<fs::directory_entry>> GetDirectories( path directory, std::unique_ptr<std::set<fs::directory_entry>> pItems=nullptr );
-		//void ForEachDirectory( path directory, std::function<void(const fs::directory_entry&)> function );
 		JDE_NATIVE_VISIBILITY std::string ToString( path pszFilePath );
 		JDE_NATIVE_VISIBILITY std::vector<std::string> LoadColumnNames( path csvFileName );
 		JDE_NATIVE_VISIBILITY std::string DateFileName( uint16 year, uint8 month=0, uint8 day=0 )noexcept;
@@ -84,9 +77,6 @@ namespace IO
 		static size_t GetFileSize( std::ifstream& file );
 
 		static std::pair<std::vector<std::string>,std::set<size_t>> LoadColumnNames( sv csvFileName, std::vector<std::string>& columnNamesToFetch, bool notColumns=false );
-
-		template<typename T, template<typename> typename C >
-		static void WriteLine( path filePath, C<T> collection, const std::function<const char*(T item)>& function );
 
 		template<typename T>
 		static void ForEachLine( path file, const std::function<void(const std::basic_string<T>&)>& function )noexcept;
@@ -143,19 +133,4 @@ namespace IO
 				break;
 		}
 	}
-
-	template<typename T, template<typename> typename C >
-	void File::WriteLine( path filePath, C<T> collection, const std::function<const char*(T item)>& function )
-	{
-/*		ofstream os( filePath.c_str() );
-		for( X value : )
-		auto saveLine = [&os](str line)mutable
-		{
-			os<< line << endl;
-		};
-		IO::File::ForEachLine<char>( "C:\\Users\\duffyj\\Google Drive\\WorkShare\\Bosch\\train_categorical.csv", saveLine, 100000 );*/
-
-	}
-
-
-}}
+}

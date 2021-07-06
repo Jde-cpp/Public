@@ -2,11 +2,6 @@
 #ifndef JDE_TYPEDEFS
 #define JDE_TYPEDEFS
 
-#ifndef PROTOBUF_USE_LIB
-//	#define PROTOBUF_USE_DLLS
-//	#define PROTOBUF_USE_EXCEPTIONS 0
-#endif
-
 #include <map>
 #include <memory>
 #include <mutex>
@@ -25,7 +20,7 @@
 #define ENABLE_WARNINGS  _Pragma("warning( pop  )")
 
 #ifndef NO_FORMAT
-	DISABLE_WARNINGS 
+	DISABLE_WARNINGS
 	#include <spdlog/spdlog.h>
 	#include <spdlog/sinks/basic_file_sink.h>
 	#include <spdlog/fmt/ostr.h>
@@ -86,16 +81,16 @@ namespace Jde
 	typedef int_fast32_t int32;
 
 	using uint=uint_fast64_t;
-	typedef int_fast64_t _int;
-	typedef uint Handle;
+	using _int=int_fast64_t ;
+	using Handle=uint;
 
-	typedef std::chrono::system_clock Clock;
-	typedef Clock::duration Duration;
-	typedef Clock::time_point TimePoint;
+	using Clock=std::chrono::system_clock;
+	using Duration=Clock::duration;
+	using TimePoint=Clock::time_point;
 
-	typedef std::chrono::steady_clock SClock;
-	typedef SClock::duration SDuration;
-	typedef SClock::time_point STimePoint;
+	using SClock=std::chrono::steady_clock ;
+	using SDuration=SClock::duration;
+	using STimePoint=SClock::time_point;
 
 	using std::array;
 	using std::lock_guard;
@@ -122,7 +117,6 @@ namespace Jde
 	using std::make_tuple;
 	using std::list;
 	using std::atomic;
-	//using boost::container::flat_multimap;
 
 	template<class T> using sp = std::shared_ptr<T>;
 	template<class T> using up = std::unique_ptr<T>;
@@ -147,13 +141,15 @@ namespace Jde
 	using boost::container::flat_multimap;
 #endif
 #ifndef NO_FORMAT
-	using fmt::format;
 	#ifdef _MSC_VER
+		using std::format;
 		#ifdef NDEBUG
 			#pragma comment(lib, "fmt.lib")
 		#else
 			#pragma comment(lib, "fmtd.lib")
 		#endif
+	#else
+		using fmt::format;
 	#endif
 #endif
 	using path = const fs::path&;
@@ -179,9 +175,5 @@ namespace Jde
 #define ρ friend auto
 #define Ω static auto
 #define ψ template<> inline auto
-//#define ➡️ inline auto
 #define ⓣ template<typename T> auto
-
-//📋 Write( )->uint{ return 0; }
-
 #endif // !JDE_TYPEDEFS

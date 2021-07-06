@@ -52,13 +52,11 @@ namespace Jde::Markets
 		typedef std::bitset<91> Fields;//ETickType::NOT_SET+1
 		typedef std::variant<nullptr_t,uint,int,double,time_t,string,OptionComputation,sp<Vector<News>>> TVariant;
 		Tick()=default;//TODO try to remove
-		//Tick( Tick&& )=default;
-		//Tick( const Tick& )=default;
 		Tick( ContractPK id ):ContractId{id}{}
 		Tick( ContractPK id, TickerId tickId ):ContractId{id},TwsRequestId{tickId}{};
 
 		bool SetString( ETickType type, str value )noexcept;
-		bool SetInt( ETickType type, int value )noexcept;
+		bool SetInt( ETickType type, _int value )noexcept;
 		bool SetPrice( ETickType type, double value/*, const ::TickAttrib& attribs*/ )noexcept;
 		bool SetDouble( ETickType type, double value )noexcept;
 		bool SetOptionComputation( ETickType type, OptionComputation&& v )noexcept;
