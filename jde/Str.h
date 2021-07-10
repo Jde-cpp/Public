@@ -28,7 +28,7 @@ namespace Jde
 		CIString()noexcept{};
 		CIString( sv sv )noexcept:base{sv.data(), sv.size()}{}
 		CIString( str s )noexcept:base{s.data(), s.size()}{}
-		CIString( const char* p, uint s )noexcept:base{p, s}{}
+		CIString( const char* p, sv::size_type s )noexcept:base{p, s}{}
 		uint find( sv sub, uint pos = 0 )const noexcept;
 		template<class T> bool operator==( const T& s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
 		bool operator==( const char* psz )const noexcept{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
@@ -198,7 +198,7 @@ namespace Jde
 		bool equal = starting.size() <= value.size();
 		if( equal )
 		{
-			for( uint i=0; i<starting.size(); ++i )
+			for( sv::size_type i=0; i<starting.size(); ++i )
 			{
 				equal = ::toupper(starting[i])==::toupper(value[i]);
 				if( !equal )

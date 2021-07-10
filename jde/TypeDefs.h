@@ -19,6 +19,17 @@
 #define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )")
 #define ENABLE_WARNINGS  _Pragma("warning( pop  )")
 
+#ifdef _MSC_VER
+	#define WIN32_LEAN_AND_MEAN
+	#if __cplusplus > 2017
+		#include <coroutine>
+	#else
+		#include <experimental/coroutine>
+	#endif
+#else
+	#include <experimental/coroutine>
+#endif
+
 #ifndef NO_FORMAT
 	DISABLE_WARNINGS
 	#include <spdlog/spdlog.h>
@@ -31,15 +42,6 @@
 #include <boost/container/flat_map.hpp>
 #endif
 
-#ifdef _MSC_VER
-	#if __cplusplus > 2017
-		#include <coroutine>
-	#else
-		#include <experimental/coroutine>
-	#endif
-#else
-	#include <experimental/coroutine>
-#endif
 
 #ifdef ONE_CORE
 	#pragma comment(lib, "Onecore.lib")
