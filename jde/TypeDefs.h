@@ -39,7 +39,8 @@
 #endif
 
 #ifndef NO_BOOST
-#include <boost/container/flat_map.hpp>
+	#include <boost/container/flat_map.hpp>
+	#include <boost/container/flat_set.hpp>
 #endif
 
 
@@ -141,6 +142,7 @@ namespace Jde
 #ifndef NO_BOOST
 	using boost::container::flat_map;
 	using boost::container::flat_multimap;
+	using boost::container::flat_set;
 #endif
 #ifndef NO_FORMAT
 	#ifdef _MSC_VER
@@ -174,8 +176,9 @@ namespace Jde
 }
 
 #define α auto
-#define ρ friend auto
 #define Ω static auto
-#define ψ template<> inline auto
-#define ⓣ template<typename T> auto
+#define ⓣ template<class T> auto
+//#define ρ friend auto
+//#define ψ template<> inline auto
+
 #endif // !JDE_TYPEDEFS

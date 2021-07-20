@@ -1,6 +1,4 @@
 #pragma once
-#ifndef JDE_LOGGING
-#define JDE_LOGGING
 #include <array>
 #include <memory>
 
@@ -18,108 +16,106 @@
 //#ifdef _MSC_VER
 //	#include "server/EtwSink.h"
 //#endif
+namespace Jde::IO{ class IncomingMessage; }
 
-namespace Jde
+namespace Jde::Logging
 {
 #pragma region MessageBase
-	namespace IO{ class IncomingMessage; }
-	namespace Logging
-	{
-		namespace Messages{ struct Message; }
-		extern map<uint,set<uint>> OnceMessages; extern std::shared_mutex OnceMessageMutex;
-		struct IServerSink;
+	namespace Messages{ struct Message; }
+	extern map<uint,set<uint>> OnceMessages; extern std::shared_mutex OnceMessageMutex;
+	struct IServerSink;
 #pragma region EFields
-		enum class EFields : uint16
-		{
-			None=0,
-			Timestamp=0x1,
-			MessageId=0x2,
-			Message=0x4,
-			Level=0x8,
-			FileId=0x10,
-			File=0x20,
-			FunctionId=0x40,
-			Function=0x80,
-			LineNumber=0x100,
-			UserId=0x200,
-			User=0x400,
-			ThreadId=0x800,
-			Thread=0x1000,
-			VariableCount=0x2000,
-			SessionId=0x4000
-		};
-		constexpr inline EFields operator|(EFields a, EFields b){ return (EFields)( (uint16)a | (uint16)b ); }
-		constexpr inline EFields operator&(EFields a, EFields b){ return (EFields)( (uint16)a & (uint16)b ); }
-		constexpr inline EFields operator~(EFields a){ return (EFields)( ~(uint16)a ); }
-		constexpr inline EFields& operator|=(EFields& a, EFields b){ return a = a | b; }
-		inline std::ostream& operator<<( std::ostream& os, const EFields& value ){ os << (uint)value; return os; }
+	enum class EFields : uint16
+	{
+		None=0,
+		Timestamp=0x1,
+		MessageId=0x2,
+		Message=0x4,
+		Level=0x8,
+		FileId=0x10,
+		File=0x20,
+		FunctionId=0x40,
+		Function=0x80,
+		LineNumber=0x100,
+		UserId=0x200,
+		User=0x400,
+		ThreadId=0x800,
+		Thread=0x1000,
+		VariableCount=0x2000,
+		SessionId=0x4000
+	};
+	constexpr inline EFields operator|(EFields a, EFields b){ return (EFields)( (uint16)a | (uint16)b ); }
+	constexpr inline EFields operator&(EFields a, EFields b){ return (EFields)( (uint16)a & (uint16)b ); }
+	constexpr inline EFields operator~(EFields a){ return (EFields)( ~(uint16)a ); }
+	constexpr inline EFields& operator|=(EFields& a, EFields b){ return a = a | b; }
+	inline std::ostream& operator<<( std::ostream& os, const EFields& value ){ os << (uint)value; return os; }
 #pragma endregion
 
-		struct MessageBase
-		{
-			constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, uint line )noexcept;
-			constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, uint line, uint32 messageId )noexcept;
-			//Causes ambiguous issue TODO refactor
-			JDE_NATIVE_VISIBILITY MessageBase( ELogLevel level, const std::string& message, sv file, sv function, uint line )noexcept;
-			JDE_NATIVE_VISIBILITY MessageBase( ELogLevel level, sp<std::string> pMessage, sv file, sv function, uint line )noexcept;
-			constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, uint line, uint messageId, uint fileId, uint functionId )noexcept;
-			MessageBase( IO::IncomingMessage& message, EFields fields )noexcept(false);
-			EFields Fields{EFields::None};
-			ELogLevel Level;
-			uint MessageId{0};
-			sv MessageView;
-			uint FileId{0};
-			sv File;
-			uint FunctionId{0};
-			sv Function;
-			uint LineNumber;
-			uint UserId{0};
-			uint ThreadId{0};
-		protected:
-			sp<string> _pMessage;
-		};
+	struct MessageBase
+	{
+		constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, uint line )noexcept;
+		constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, uint line, uint32 messageId )noexcept;
+		//Causes ambiguous issue TODO refactor
+		JDE_NATIVE_VISIBILITY MessageBase( ELogLevel level, const std::string& message, sv file, sv function, uint line )noexcept;
+		JDE_NATIVE_VISIBILITY MessageBase( ELogLevel level, sp<std::string> pMessage, sv file, sv function, uint line )noexcept;
+		constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, uint line, uint messageId, uint fileId, uint functionId )noexcept;
+		MessageBase( IO::IncomingMessage& message, EFields fields )noexcept(false);
+		EFields Fields{EFields::None};
+		ELogLevel Level;
+		uint MessageId{0};
+		sv MessageView;
+		uint FileId{0};
+		sv File;
+		uint FunctionId{0};
+		sv Function;
+		uint LineNumber;
+		uint UserId{0};
+		uint ThreadId{0};
+	protected:
+		sp<string> _pMessage;
+	};
 #pragma endregion
-		void Log( const Logging::MessageBase& messageBase );
-		JDE_NATIVE_VISIBILITY void LogCritical( const Logging::MessageBase& messageBase )noexcept;
-		template<class... Args >
-		void Log( const Logging::MessageBase& messageBase, Args&&... args )noexcept;
+	void Log( const Logging::MessageBase& messageBase );
+	JDE_NATIVE_VISIBILITY void LogCritical( const Logging::MessageBase& messageBase )noexcept;
+	template<class... Args >
+	void Log( const Logging::MessageBase& messageBase, Args&&... args )noexcept;
 
-		JDE_NATIVE_VISIBILITY bool ShouldLogOnce( const Logging::MessageBase& messageBase );
-		JDE_NATIVE_VISIBILITY void LogOnce( const Logging::MessageBase& messageBase );
-		template<class... Args >
-		void LogOnce( const Logging::MessageBase& messageBase, Args&&... args );
-		//void LogOnceVec( const Logging::MessageBase& messageBase, const vector<string>& values );
-		template<class... Args >
-		void LogCritical( const Logging::MessageBase& messageBase, Args&&... args );
-		template<class... Args >
-		void LogError( const Logging::MessageBase& messageBase, Args&&... args );
-		template<class... Args >
-		void LogNoServer( const Logging::MessageBase& messageBase );
-		JDE_NATIVE_VISIBILITY void LogServer( const Logging::MessageBase& messageBase )noexcept;
-		JDE_NATIVE_VISIBILITY void LogServer( const Logging::MessageBase& messageBase, const vector<string>& values )noexcept;
-		JDE_NATIVE_VISIBILITY void LogServer( const Logging::Messages::Message& message )noexcept;
-		JDE_NATIVE_VISIBILITY void LogMemory( const Logging::MessageBase& messageBase, const vector<string>* pValues=nullptr )noexcept;
+	JDE_NATIVE_VISIBILITY bool ShouldLogOnce( const Logging::MessageBase& messageBase );
+	JDE_NATIVE_VISIBILITY void LogOnce( const Logging::MessageBase& messageBase );
+	template<class... Args >
+	void LogOnce( const Logging::MessageBase& messageBase, Args&&... args );
+	//void LogOnceVec( const Logging::MessageBase& messageBase, const vector<string>& values );
+	template<class... Args >
+	void LogCritical( const Logging::MessageBase& messageBase, Args&&... args );
+	template<class... Args >
+	void LogError( const Logging::MessageBase& messageBase, Args&&... args );
+	template<class... Args >
+	void LogNoServer( const Logging::MessageBase& messageBase );
+	JDE_NATIVE_VISIBILITY void LogServer( const Logging::MessageBase& messageBase )noexcept;
+	JDE_NATIVE_VISIBILITY void LogServer( const Logging::MessageBase& messageBase, const vector<string>& values )noexcept;
+	JDE_NATIVE_VISIBILITY void LogServer( const Logging::Messages::Message& message )noexcept;
+	JDE_NATIVE_VISIBILITY void LogMemory( const Logging::MessageBase& messageBase, const vector<string>* pValues=nullptr )noexcept;
 
-		//JDE_NATIVE_VISIBILITY void LogEtw( const Logging::MessageBase& messageBase );
-		//JDE_NATIVE_VISIBILITY void LogEtw( const Logging::MessageBase& messageBase, const vector<string>& values );
-	}
+	//JDE_NATIVE_VISIBILITY void LogEtw( const Logging::MessageBase& messageBase );
+	//JDE_NATIVE_VISIBILITY void LogEtw( const Logging::MessageBase& messageBase, const vector<string>& values );
 }
 #define MY_FILE __FILE__
 
-#define CRITICAL(message,...) Jde::Logging::LogCritical( Jde::Logging::MessageBase(Jde:: ELogLevel::Critical, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define CRITICAL(message,...) ::Jde::Logging::LogCritical( ::Jde::Logging::MessageBase(::Jde::ELogLevel::Critical, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define ERR0_ONCE(message) Logging::LogOnce( Logging::MessageBase(ELogLevel::Error, message, MY_FILE, __func__, __LINE__) )
 #define ERR(message,...) Logging::LogError( Logging::MessageBase(ELogLevel::Error, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define ERRX(message,...) Logging::LogNoServer( Logging::MessageBase(ELogLevel::Error, message, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
 #define ERR_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(ELogLevel::Error, message, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
 #define WARN(message,...) Logging::Log( Logging::MessageBase(ELogLevel::Warning, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define WARN_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(ELogLevel::Warning, message, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
-#define WARN_IF(predicate, message,...) if( predicate ) Logging::Log( Logging::MessageBase(ELogLevel::Warning, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define WARN_IF(predicate, message,...) if( predicate ) Logging::Log( Logging::MessageBase(ELogLevel::Warning, message##sv, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define INFO(message,...) Jde::Logging::Log( Jde::Logging::MessageBase(Jde::ELogLevel::Information, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define INFO_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(ELogLevel::Information, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define DBG(message,...) Jde::Logging::Log( Jde::Logging::MessageBase(Jde::ELogLevel::Debug, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-#define DBG_IF(predicate,message,...) if( predicate ) Jde::Logging::Log( Jde::Logging::MessageBase(Jde::ELogLevel::Debug, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-#define CONTINUE_IF( predicate, message, ...) if( predicate ){ DBG(message, __VA_ARGS__); continue; }
-#define RETURN_IF( predicate, message, ...) if( predicate ){ DBG(message, __VA_ARGS__); return; }
+#define DBG_IF(predicate,message,...) if( predicate ) Jde::Logging::Log( Jde::Logging::MessageBase(Jde::ELogLevel::Debug, message##sv, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define BREAK_IF( predicate, severity, message, ...) if( predicate ){ LOG(severity, message##sv, __VA_ARGS__); break; }
+#define CONTINUE_IF( predicate, message, ...) if( predicate ){ DBG(message##sv, __VA_ARGS__); continue; }
+#define RETURN_IF( predicate, message, ...) if( predicate ){ DBG(message##sv, __VA_ARGS__); return; }
 #define DBGX(message,...) Logging::LogNoServer( Logging::MessageBase(ELogLevel::Debug, message, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
 #define DBG_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(ELogLevel::Debug, message, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
 #define TRACE(message,...) Logging::Log( Logging::MessageBase(ELogLevel::Trace, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
@@ -128,6 +124,7 @@ namespace Jde
 #define LOG(severity,message,...) Logging::Log( Logging::MessageBase(severity, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOGX(severity,message,...) Logging::LogNoServer( Logging::MessageBase(severity, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOGN(severity,message,messageId) Logging::Log( Logging::MessageBase(severity, message, MY_FILE, __func__, __LINE__, messageId) )
+#define LOG_IF(predicate, severity, message,...) if( predicate ) Logging::Log( Logging::MessageBase(severity, message##sv, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 
 namespace spdlog
 {
@@ -300,4 +297,3 @@ namespace Jde::Logging
 #pragma endregion
 
 #undef _logMemory
-#endif

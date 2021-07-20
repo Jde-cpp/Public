@@ -100,12 +100,13 @@ struct task{
 	struct TaskResult
 	{
 		TaskResult()=default;
-		TaskResult( sp<void> r )noexcept:_result{r}{}
+		explicit TaskResult( sp<void> p )noexcept:_result{p}{}
 		TaskResult( std::exception_ptr e )noexcept:_result{e}{};
+		TaskResult( Exception&& e )noexcept:_result{ std::make_exception_ptr(move(e)) }{};
+		//TaskResult( TaskResult&& rhs )noexcept:_result{ move(rhs._result) }{};
 		α HasValue()const noexcept{ return _result.index()==0 && get<sp<void>>( _result ); }
 		α HasError()const noexcept{ return _result.index()==1; }
 		α Uninitialized()const noexcept{ return _result.index()==0 && !get<sp<void>>(_result); }
-
 		ⓣ Get()noexcept(false)
 		{
 			if( HasError() )
@@ -116,10 +117,12 @@ struct task{
 			THROW_IF( !p, "Could not cast ptr." );
 			return p;
 		}
+//		ⓣ Get<std::exception_ptr>()noexcept{ return get<std::exception_ptr>(_result); }
 
 		α Set( sp<void> p )noexcept->void{ ASSERT(Uninitialized()); _result = p; }
 		α Set( std::exception_ptr p )noexcept->void{ ASSERT(Uninitialized()); _result = p; }
 		α Set( Exception&& e )noexcept->void{ ASSERT(Uninitialized()); Set( std::make_exception_ptr(move(e)) ); }
+		α Set( std::variant<sp<void>,std::exception_ptr>&& result )noexcept{ _result = move(result); }
 	private:
 		std::variant<sp<void>,std::exception_ptr> _result;
 	};
@@ -162,11 +165,12 @@ struct task{
 		};
 		α HasResult()const noexcept->bool{ return !Result.Uninitialized(); }
 		α GetResult()const noexcept->const TResult&{ return Result; }
-		α SetResult( sp<void> p )noexcept->void{ Result.Set( p ); }
+		//α SetResult( sp<void> p )noexcept->void{ Result.Set( p ); }
 		α SetResult( std::exception_ptr p )noexcept->void{ Result.Set( p ); }
 		α SetResult( Exception&& e )noexcept->void{ Result.Set( move(e) ); }
-		α SetResult( TResult&& r )noexcept->void{ Result = move(r); }
+		α SetResult( TaskResult&& r )noexcept->void{ Result = move(r); }
+		α SetResult( std::variant<sp<void>,std::exception_ptr>&& r )noexcept{ Result.Set( move(r) ); }
 	private:
-		TResult Result;
+		TaskResult Result;
 	};
 }
