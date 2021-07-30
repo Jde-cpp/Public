@@ -58,6 +58,7 @@ namespace Jde::Markets
 		bool SetString( ETickType type, str value )noexcept;
 		bool SetInt( ETickType type, _int value )noexcept;
 		bool SetPrice( ETickType type, double value/*, const ::TickAttrib& attribs*/ )noexcept;
+		void SetPrices( double bidSize, double bid, double askSize, double ask )noexcept;
 		bool SetDouble( ETickType type, double value )noexcept;
 		bool SetOptionComputation( ETickType type, OptionComputation&& v )noexcept;
 		bool FieldEqual( const Tick& other, ETickType tick )const noexcept;

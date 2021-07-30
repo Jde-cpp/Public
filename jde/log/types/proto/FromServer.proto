@@ -1,0 +1,124 @@
+//protoc --cpp_out . FromServer.proto
+//ln -s /home/duffyj/code/jde/ApplicationServer/source/types/proto/FromServer.proto ../proto/appFromServer.proto
+syntax = "proto3";
+package Jde.ApplicationServer.Web.FromServer;
+
+message Acknowledgement
+{
+	uint32 Id=1;
+}
+
+enum ELogLevel
+{
+	Trace = 0;
+	Debug = 1;
+	Information = 2;
+	Warning = 3;
+	Error = 4;
+	Critical = 5;
+	None = 6;
+}
+
+message Application
+{
+	uint32 Id=1;
+	string Name=2;
+	ELogLevel DbLevel=3;
+	ELogLevel FileLevel=4;
+}
+
+message Applications
+{
+	repeated Application Values=1;
+}
+
+message Status
+{
+	uint32 ApplicationId=1;
+	uint32 InstanceId=2;
+	string HostName=3;
+	uint32 StartTime=4;
+	uint64 Memory=5;
+	uint32 LogCount=6;
+	double Cpu=7;
+	ELogLevel DBLogLevel=8;
+	ELogLevel FileLogLevel=9;
+	repeated string Values=10;
+}
+
+message Statuses
+{
+	repeated Status Values=1;
+}
+
+message TraceMessage
+{
+	uint64 id=1;
+	uint64 InstanceId=2;
+	uint64 Time=3;
+	ELogLevel Level=4;
+	uint32 MessageId=5;
+	uint32 FileId=6;
+	uint32 FunctionId=7;
+	uint32 LineNumber=8;
+	uint32 UserId=9;
+	uint64 ThreadId=10;
+	repeated string Variables=11;
+}
+
+message Traces
+{
+	uint32 ApplicationId=1;
+	repeated TraceMessage Values=2;
+}
+
+message ApplicationString
+{
+	uint32 StringRequestType=1;
+	uint32 Id=2;
+	string Value=3;
+}
+
+message ApplicationStrings
+{
+	uint32 RequestId=1;
+	uint32 ApplicationId=2;
+	repeated ApplicationString Values=3;
+}
+
+message ErrorMessage
+{
+	uint32 RequestId=1;
+	string Message=2;
+}
+
+message Custom
+{
+	uint32 RequestId=1;
+	bytes Message=2;
+}
+
+message Complete
+{
+	uint32 RequestId=1;
+}
+
+message MessageUnion
+{
+	oneof Value
+	{
+		Traces Traces=1;
+		Statuses Statuses=2;
+		Acknowledgement Acknowledgement=3;
+		ApplicationStrings Strings=4;
+		Applications Applications=5;
+		ErrorMessage Error=6;
+		Custom Custom=7;
+		Complete Complete=8;
+	}
+}
+
+message Transmission
+{
+	repeated MessageUnion Messages=1;
+}

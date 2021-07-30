@@ -16,7 +16,9 @@ namespace Jde
 	{
 		virtual ~IApplication();
 		static IApplication& Instance()noexcept{ /*assert(_pInstance);*/ return *_pInstance; }
-		set<string> BaseStartup( int argc, char** argv, sv appName, sv companyName="jde-cpp" )noexcept(false);
+		set<string> BaseStartup( int argc, char** argv, sv appName, string serviceDescription, sv companyName="jde-cpp" )noexcept(false);
+		virtual void Install( string serviceDescription )noexcept(false)=0;
+		virtual void Uninstall()noexcept(false)=0;
 
 		static size_t MemorySize()noexcept;
 		static fs::path Path()noexcept;
@@ -66,9 +68,11 @@ namespace Jde
 
 	struct OSApp : IApplication
 	{
-		JDE_NATIVE_VISIBILITY static set<string> Startup( int argc, char** argv, sv appName )noexcept(false);
+		JDE_NATIVE_VISIBILITY static set<string> Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false);
 		string GetEnvironmentVariable( sv variable )noexcept override;
 		fs::path ProgramDataFolder()noexcept override;
+		void Install( string serviceDescription )noexcept(false) override;
+		void Uninstall()noexcept(false) override;
 
 		JDE_NATIVE_VISIBILITY uint GetThreadId()noexcept;
 		JDE_NATIVE_VISIBILITY void SetThreadDscrptn( std::thread& thread, sv pszDescription )noexcept;

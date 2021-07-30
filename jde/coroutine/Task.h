@@ -117,7 +117,7 @@ struct task{
 			THROW_IF( !p, "Could not cast ptr." );
 			return p;
 		}
-//		ⓣ Get<std::exception_ptr>()noexcept{ return get<std::exception_ptr>(_result); }
+		std::exception_ptr Error()noexcept{ return HasError() ? get<std::exception_ptr>(_result) : nullptr; }
 
 		α Set( sp<void> p )noexcept->void{ ASSERT(Uninitialized()); _result = p; }
 		α Set( std::exception_ptr p )noexcept->void{ ASSERT(Uninitialized()); _result = p; }

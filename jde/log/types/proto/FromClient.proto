@@ -1,0 +1,91 @@
+//protoc --cpp_out . FromClient.proto
+//C:\code\libraries\vcpkg\installed\x64-windows\tools\protobuf\protoc.exe --cpp_out . FromClient.proto
+//ln -s ../../../ApplicationServer/source/types/proto/FromClient.proto ../proto/appFromClient.proto
+//npx pbjs -r app_from_client -t static-module -w es6 -o src/app/proto/appFromClient.js ../proto/appFromClient.proto & npx pbts -o src/app/proto/appFromClient.d.ts src/app/proto/appFromClient.js
+
+syntax = "proto3";
+package Jde.ApplicationServer.Web.FromClient;
+
+enum ERequest
+{
+	Ping = 0;
+	Negate = -1;
+	Statuses=1;
+	Power=2;
+	Logs=3;
+	Applications=4;
+}
+
+message Request
+{
+	ERequest Value=1;
+}
+
+message RequestId
+{
+	ERequest Value=1;
+	uint64 InstanceId=2;
+}
+
+message RequestLogs
+{
+	uint64 ApplicationId=1;
+	uint64 InstanceId=2;/*unused*/
+	uint32 Value=3;
+	uint32 Start=4;
+	uint32 Limit=5;
+}
+
+message LogValues
+{
+	uint64 InstanceId=1;
+	uint32 DbValue=2;
+	uint32 ClientValue=3;
+}
+
+enum EStringRequest
+{
+	MessageString = 0;
+	File = 1;
+	Function=2;
+	Thread=3;
+	User=4;
+}
+
+message RequestString
+{
+	uint32 ApplicationId=1;
+	EStringRequest Type=2;
+	uint32 Value=3;
+}
+
+message RequestStrings
+{
+	uint32 RequestId=1;
+	repeated RequestString Values=2;
+}
+
+message Custom
+{
+	uint32 RequestId=1;
+	uint32 ApplicationId=2;
+	bytes Message=3;
+}
+
+message MessageUnion
+{
+	oneof Value
+	{
+		Request Request=1;
+		//Request CancelRequest=2;
+		RequestId RequestId=3;
+		RequestLogs RequestLogs=4;
+		LogValues LogValues=5;
+		RequestStrings RequestStrings=6;
+		Custom Custom=7;
+	}
+}
+message Transmission
+{
+	repeated MessageUnion Messages=1;
+}

@@ -145,6 +145,7 @@ namespace Jde
 		{}
 	};
 
+#define CHECK_FILE_EXISTS( path ) THROW_IF( !fs::exists(path), IOException{path, "path '{}' does not exist", path.string()} );
 	struct JDE_NATIVE_VISIBILITY IOException : public RuntimeException
 	{
 		template<class... Args>
@@ -178,7 +179,7 @@ namespace Jde
 		uint ErrorCode()const noexcept;
 		path Path()const noexcept; void SetPath( path x )noexcept{ _path=x; }
 
-		static void TestExists( path path )noexcept(false);
+//		static void TestExists( path path, sv fileName )noexcept(false);
 		const char* what() const noexcept override;
 	private:
 		const uint _errorCode{0};

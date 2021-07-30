@@ -176,7 +176,8 @@ namespace Jde
 		Proto::Status* GetAllocatedStatus()noexcept;
 		inline void Log( const Logging::MessageBase& messageBase )
 		{
-			GetDefaultLogger()->log( ( spdlog::level::level_enum)messageBase.Level, messageBase.MessageView );
+			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
+			GetDefaultLogger()->log( ( spdlog::level::level_enum)messageBase.Level, msg );
 			if( GetServerSink() )
 				LogServer( messageBase );
 			if( _logMemory )
@@ -188,7 +189,8 @@ namespace Jde
 		template<class... Args >
 		inline void LogCritical( const Logging::MessageBase& messageBase, Args&&... args )
 		{
-			GetDefaultLogger()->log( spdlog::level::level_enum::critical, messageBase.MessageView.data(), args... );
+			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
+			GetDefaultLogger()->log( spdlog::level::level_enum::critical, msg, args... );
 			if( GetServerSink() || _logMemory )
 			{
 				vector<string> values; values.reserve( sizeof...(args) );
@@ -208,7 +210,8 @@ namespace Jde
 		template<class... Args >
 		void LogError( const Logging::MessageBase& messageBase, Args&&... args )
 		{
-			GetDefaultLogger()->log( spdlog::level::level_enum::err, messageBase.MessageView.data(), args... );
+			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
+			GetDefaultLogger()->log( spdlog::level::level_enum::err, msg, args... );
 			if( GetServerSink() || _logMemory )
 			{
 				vector<string> values; values.reserve( sizeof...(args) );
@@ -223,8 +226,9 @@ namespace Jde
 		template<class... Args >
 		inline void Log( const Logging::MessageBase& messageBase, Args&&... args )noexcept
 		{
+			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
 			if( GetDefaultLogger() )
-				GetDefaultLogger()->log( (spdlog::level::level_enum)messageBase.Level, messageBase.MessageView.data(), args... );
+				GetDefaultLogger()->log( (spdlog::level::level_enum)messageBase.Level, msg, args... );
 			if( GetServerSink() || _logMemory )
 			{
 				vector<string> values; values.reserve( sizeof...(args) );
@@ -250,13 +254,15 @@ namespace Jde
 
 		inline void LogNoServer( const Logging::MessageBase& messageBase )
 		{
-			GetDefaultLogger()->log( (spdlog::level::level_enum)messageBase.Level, messageBase.MessageView );
+			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
+			GetDefaultLogger()->log( (spdlog::level::level_enum)messageBase.Level, msg );
 		}
 
 		template<class... Args >
 		inline void LogNoServer( const Logging::MessageBase& messageBase, Args&&... args )
 		{
-			GetDefaultLogger()->log( (spdlog::level::level_enum)messageBase.Level, messageBase.MessageView.data(), args... );
+			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
+			GetDefaultLogger()->log( (spdlog::level::level_enum)messageBase.Level, msg, args... );
 		}
 	}
 }
