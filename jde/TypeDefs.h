@@ -54,6 +54,7 @@ namespace Jde
 	typedef int_fast8_t int8;
 
 	using namespace std::literals::string_view_literals;
+	using sv = std::string_view;
 
 #pragma region ELogLevel
 	enum class ELogLevel : uint8
@@ -66,7 +67,8 @@ namespace Jde
 		Critical = 5,
 		None = 6
 	};
-	constexpr std::array<std::string_view,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };
+	constexpr std::array<sv,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };
+	constexpr sv ToString( ELogLevel v )noexcept{ return (uint8)v<ELogLevelStrings.size() ? ELogLevelStrings[(uint8)v] : sv{}; }
 #pragma endregion
 
 	template<typename T>
@@ -118,7 +120,7 @@ namespace Jde
 	using std::ostringstream;
 	using std::chrono::duration_cast;
 	using std::make_tuple;
-	using std::list;
+	using std::nullopt;
 	using std::atomic;
 
 	template<class T> using sp = std::shared_ptr<T>;
@@ -157,7 +159,6 @@ namespace Jde
 	#endif
 #endif
 	using path = const fs::path&;
-	using sv = std::string_view;
 	using str = const std::string&;
 
 #ifdef _MSC_VER

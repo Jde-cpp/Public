@@ -112,9 +112,8 @@ struct task{
 			if( HasError() )
 				 std::rethrow_exception( get<std::exception_ptr>(_result) );
 			auto pVoid = get<sp<void>>( _result );
-			THROW_IF( !pVoid, "No Result" );
-			auto p = static_pointer_cast<T>( pVoid );
-			THROW_IF( !p, "Could not cast ptr." );
+			sp<T> p = pVoid ? static_pointer_cast<T>( pVoid ) : sp<T>{};
+			THROW_IF( pVoid && !p, "Could not cast ptr." );
 			return p;
 		}
 		std::exception_ptr Error()noexcept{ return HasError() ? get<std::exception_ptr>(_result) : nullptr; }

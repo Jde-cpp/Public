@@ -73,19 +73,14 @@ namespace Jde
 		🚪 ToLower( sv source )noexcept->string;
 		JDE_NATIVE_VISIBILITY string ToUpper( sv source )noexcept;
 
-		template<typename T>
-		static optional<T> TryTo( sv value )noexcept;
-		template<typename T>
-		static T To( sv value )noexcept(false);
-
-		template<typename T>
-		static float TryToFloat( const basic_string<T>& s )noexcept;
+		ⓣ TryTo( sv value )noexcept->optional<T>;
+		ⓣ To( sv value )noexcept(false)->T;
+		ⓣ TryToFloat( const basic_string<T>& s )noexcept->float;
 		optional<double> TryToDouble( str s )noexcept;
 
 		template<typename Enum, typename Collection>
 		sv FromEnum( const Collection& s, Enum value )noexcept;
-		template<typename Enum, typename Collection>
-		Enum ToEnum( const Collection& s, sv text, Enum dflt )noexcept;
+		template<class Enum, class Collection> α ToEnum( const Collection& s, sv text )noexcept->optional<Enum>;
 
 		[[nodiscard]]inline bool EndsWith( sv value, sv ending ){ return ending.size() > value.size() ? false : std::equal( ending.rbegin(), ending.rend(), value.rbegin() ); }
 		[[nodiscard]]inline bool StartsWith( sv value, sv starting ){ return starting.size() > value.size() ? false : std::equal( starting.begin(), starting.end(), value.begin() ); }
@@ -161,7 +156,7 @@ namespace Jde
 		}
 		catch(std::invalid_argument e)
 		{
-			GetDefaultLogger()->trace( "Can't convert:  {}.  to float.  {}", token, e.what() );
+			TRACE( "Can't convert:  {}.  to float.  {}", token, e.what() );
 			return std::nanf("");
 		}
 	}
@@ -179,14 +174,14 @@ namespace Jde
 		return v;
 	}
 	template<typename T>
-	static optional<T> Str::TryTo( sv value )noexcept
+	optional<T> Str::TryTo( sv value )noexcept
 	{
 		optional<T> v;
 		Try( [&v, value]{v=To<T>( value );} );
 		return v;
 	}
 	template<typename T>
-	static T Str::To( sv value )
+	T Str::To( sv value )
 	{
 		T v;
 		var e=std::from_chars( value.data(), value.data()+value.size(), v );
@@ -209,10 +204,17 @@ namespace Jde
 	}
 
 	template<typename Enum, typename Collection>
-	Enum Str::ToEnum( const Collection& stringValues, sv text, Enum dflt )noexcept
+	α Str::ToEnum( const Collection& stringValues, sv text )noexcept->optional<Enum>
 	{
-		auto value = static_cast<Enum>( std::distance(std::find(std::begin(stringValues), std::end(stringValues), text), std::begin(stringValues)) );
-		return static_cast<uint>(value)<stringValues.size() ? value : dflt;
+		typedef typename std::underlying_type<Enum>::type T;
+		T v = (T)std::distance( std::begin(stringValues), std::find(std::begin(stringValues), std::end(stringValues), text) );
+		auto pResult = v<stringValues.size() ? optional<Enum>((Enum)v) : nullopt;
+		if( !pResult )
+		{
+			if( auto p = TryTo<T>(text); p )
+				pResult = *p<stringValues.size() ? optional<Enum>((Enum)*p) : nullopt;
+		}
+		return pResult;
 	}
 	template<typename Enum, typename Collection>
 	sv Str::FromEnum( const Collection& stringValues, Enum value )noexcept

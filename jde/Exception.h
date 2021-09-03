@@ -6,18 +6,21 @@
 namespace boost::system{ class error_code; }
 
 #ifndef  THROW
-# define THROW(x) Jde::throw_exception(x, __func__,__FILE__,__LINE__)
+# define THROW(x, ...) Jde::throw_exception(Jde::Exception(x __VA_OPT__(,) __VA_ARGS__), __func__,__FILE__,__LINE__)
 #endif
 //mysql undefs THROW :(
 #ifndef  THROW2
-# define THROW2(x) Jde::throw_exception(x, __func__,__FILE__,__LINE__)
+# define THROW2(x, ...) Jde::throw_exception(Jde::Exception(x __VA_OPT__(,) __VA_ARGS__), __func__,__FILE__,__LINE__)
+#endif
+#ifndef  THROWX
+# define THROWX(x) Jde::throw_exception(x, __func__,__FILE__,__LINE__)
 #endif
 
 #ifndef  THROW_IF
 # define THROW_IF(condition, x, ...) if( condition ) Jde::throw_exception( Jde::Exception(x __VA_OPT__(,) __VA_ARGS__), __func__, __FILE__, __LINE__ )
 #endif
 #ifndef  THROW_IFX
-# define THROW_IFX(condition, x) if( condition ) THROW(x)
+# define THROW_IFX(condition, x) if( condition ) THROWX(x)
 #endif
 #ifndef  CHECK
 # define CHECK(condition) THROW_IF( !condition, #condition )
@@ -30,7 +33,7 @@ namespace Jde
 		Exception()noexcept=default;
 		Exception( const Exception& )noexcept=default;
 		Exception( ELogLevel level, sv value )noexcept;
-		Exception( ELogLevel level, sv value, sv function, sv file, long line )noexcept;
+		Exception( ELogLevel level, sv value, sv function, sv file, int line )noexcept;
 		Exception( sv value )noexcept;
 
 		template<class... Args>
@@ -41,18 +44,18 @@ namespace Jde
 		virtual ~Exception();
 
 		//Exception& operator=( const Exception& copyFrom );
-		virtual void Log( sv pszAdditionalInformation="", ELogLevel level=ELogLevel::Error )const noexcept;
+		virtual void Log( sv pszAdditionalInformation="", optional<ELogLevel> level=nullopt )const noexcept;
 		const char* what() const noexcept override;
 		ELogLevel GetLevel()const{return _level;}
 
 		void SetFunction( const char* pszFunction ){ _functionName = {pszFunction, strlen(pszFunction)}; }
 		void SetFile( const char* pszFile ){ _fileName = {pszFile, strlen(pszFile)}; }
-		void SetLine( long line ){ _line = line; }
+		void SetLine( int line ){ _line = line; }
 		friend std::ostream& operator<<( std::ostream& os, const Exception& e );
 	protected:
 		sv _functionName;
 		sv _fileName;
-		long _line;
+		int _line;
 
 		ELogLevel _level{ELogLevel::Trace};
 		mutable string _what;
@@ -65,7 +68,7 @@ namespace Jde
 
 	template<class... Args>
 	Exception::Exception( sv value, Args&&... args )noexcept:
-		_what{ fmt::format(value,args...) },
+		_what{ fmt::vformat(value, fmt::make_format_args(std::forward<Args>(args)...)) },
 		_format{ value }
 	{
 		_args.reserve( sizeof...(args) );
@@ -116,13 +119,14 @@ namespace Jde
 
 	struct JDE_NATIVE_VISIBILITY CodeException : public RuntimeException
 	{
-		CodeException( sv value, const std::error_code& code, ELogLevel level=ELogLevel::Error );
+		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error );
+		CodeException( sv value, std::error_code&& code, ELogLevel level=ELogLevel::Error );
 
 		static string ToString( const std::error_code& pErrorCode )noexcept;
 		static string ToString( const std::error_category& errorCategory )noexcept;
 		static string ToString( const std::error_condition& errorCondition )noexcept;
 	private:
-		std::shared_ptr<std::error_code> _pErrorCode;
+		std::error_code _errorCode;
 	};
 
 	//https://stackoverflow.com/questions/10176471/is-it-possible-to-convert-a-boostsystemerror-code-to-a-stderror-code
@@ -170,9 +174,9 @@ namespace Jde
 			_errorCode{errorCode}
 		{}
 
-		IOException( const fs::filesystem_error& e ):
+		IOException( fs::filesystem_error&& e ):
 			RuntimeException{},
-			_pUnderLying( make_unique<fs::filesystem_error>(e) )
+			_pUnderLying( make_unique<fs::filesystem_error>(move(e)) )
 		{}
 
 
@@ -206,9 +210,9 @@ namespace Jde
 	JDE_NATIVE_VISIBILITY void catch_exception( sv pszFunction, sv pszFile, long line, sv pszAdditional, const std::exception* pException=nullptr );
 	//https://stackoverflow.com/questions/35941045/can-i-obtain-c-type-names-in-a-constexpr-way/35943472#35943472
 	template<class T>
-	constexpr std::basic_string_view<char> GetTypeName()
+	consteval sv GetTypeName()
 	{
-#ifdef _WINDOWS
+#ifdef _MSC_VER
 		char const* p = __FUNCSIG__;
 #else
 		char const* p = __PRETTY_FUNCTION__;
@@ -230,7 +234,6 @@ namespace Jde
 					return {p, std::size_t(p2 - p)};
 			}
 		}
-//		return "";
 	}
 #define TRY(x) Try( [&]{x;} )
 	inline bool Try( std::function<void()> func )

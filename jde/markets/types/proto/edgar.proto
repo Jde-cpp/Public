@@ -1,5 +1,7 @@
 //protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. edgar.proto
-
+//cd $JDE_DIR/MarketLibrary/source/types/proto
+//mv $JDE_DIR/Public/jde/markets/types/proto/edgar.pb.cc .
+//ln -s $JDE_DIR/Public/jde/markets/types/proto/edgar.pb.h .
 syntax = "proto3";
 package Jde.Markets.Edgar.Proto;
 

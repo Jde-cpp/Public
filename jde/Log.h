@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <memory>
+#include <iostream> //TODO remove
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -13,11 +14,36 @@
 #include "collections/ToVec.h"
 #include "io/Crc.h"
 #include "TypeDefs.h"
-//#ifdef _MSC_VER
-//	#include "server/EtwSink.h"
-//#endif
-namespace Jde::IO{ class IncomingMessage; }
 
+#define 🚪 JDE_NATIVE_VISIBILITY auto
+namespace Jde::IO{ class IncomingMessage; }
+namespace Jde
+{
+/*	template<class T>
+	struct copy_ptr : unique_ptr<T>
+	{
+		using base=unique_ptr<T>;
+		copy_ptr()noexcept=default;
+		copy_ptr( const copy_ptr& rhs )noexcept:
+			unique_ptr<T>{ rhs.get()==nullptr ? unique_ptr<T>{} : make_unique<T>(*rhs.get()) }
+		{}
+		copy_ptr( base&& rhs )noexcept:
+			unique_ptr<T>( move(rhs) )
+		{}
+		copy_ptr& operator=( const base& rhs )
+		{
+			if( rhs.get()==nullptr )
+				*this = nullptr;
+			else
+			{
+				auto p = rhs.get();
+				unique_ptr<T>& self = *this;
+				self = make_unique<T>( *p );
+			}
+			return *this;
+		}
+	};*/
+}
 namespace Jde::Logging
 {
 #pragma region MessageBase
@@ -50,16 +76,15 @@ namespace Jde::Logging
 	constexpr inline EFields& operator|=(EFields& a, EFields b){ return a = a | b; }
 	inline std::ostream& operator<<( std::ostream& os, const EFields& value ){ os << (uint)value; return os; }
 #pragma endregion
-
 	struct MessageBase
 	{
-		constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, uint line )noexcept;
-		constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, uint line, uint32 messageId )noexcept;
+		//consteval MessageBase( ELogLevel level, sv message, sv file, sv function, int line )noexcept;
+		//consteval MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId )noexcept;
+		constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId, uint fileId, uint functionId )noexcept;
+		MessageBase( sv message, ELogLevel level, sv file, sv function, int line/*, uint messageId=0, uint fileId=0, uint functionId=0*/ )noexcept;
 		//Causes ambiguous issue TODO refactor
-		JDE_NATIVE_VISIBILITY MessageBase( ELogLevel level, const std::string& message, sv file, sv function, uint line )noexcept;
-		JDE_NATIVE_VISIBILITY MessageBase( ELogLevel level, sp<std::string> pMessage, sv file, sv function, uint line )noexcept;
-		constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, uint line, uint messageId, uint fileId, uint functionId )noexcept;
-		MessageBase( IO::IncomingMessage& message, EFields fields )noexcept(false);
+		//JDE_NATIVE_VISIBILITY MessageBase( ELogLevel level, sp<std::string> pMessage, sv file, sv function, int line )noexcept;
+		virtual sv GetType()const{ return "MessageBase"; }
 		EFields Fields{EFields::None};
 		ELogLevel Level;
 		uint MessageId{0};
@@ -68,44 +93,61 @@ namespace Jde::Logging
 		sv File;
 		uint FunctionId{0};
 		sv Function;
-		uint LineNumber;
+		int LineNumber;
 		uint UserId{0};
 		uint ThreadId{0};
-	protected:
-		sp<string> _pMessage;
 	};
+	struct Message2 : MessageBase
+	{
+		Message2( const MessageBase& b )noexcept;
+		Message2( const Message2& x )noexcept:
+			MessageBase{ x },
+			_pMessage{ x._pMessage ? make_unique<string>(*x._pMessage) : nullptr },
+			_fileName{ x._fileName }
+		{
+			File = _fileName;
+			if( _pMessage )
+				MessageView = *_pMessage;
+		}
+		JDE_NATIVE_VISIBILITY Message2( ELogLevel level, string message, sv file, sv function, int line )noexcept;
+		sv GetType()const override{ return "Message2"; }
+		//Message2( IO::IncomingMessage& message, EFields fields )noexcept(false);
+		//Message2( sv message, ELogLevel level, sv file, sv function, int line, uint messageId=0, uint fileId=0, uint functionId=0 )noexcept;
+		//JDE_NATIVE_VISIBILITY Message2( ELogLevel level, string&& message, sv file, sv function, int line )noexcept;
+	protected:
+		unique_ptr<string> _pMessage;
+		string _fileName;
+	};
+
 #pragma endregion
-	void Log( const Logging::MessageBase& messageBase );
-	JDE_NATIVE_VISIBILITY void LogCritical( const Logging::MessageBase& messageBase )noexcept;
-	template<class... Args >
-	void Log( const Logging::MessageBase& messageBase, Args&&... args )noexcept;
+	void Log( Logging::MessageBase& messageBase );
+	template<class... Args>
+	void Log( Logging::MessageBase&& messageBase, Args&&... args )noexcept;
 
-	JDE_NATIVE_VISIBILITY bool ShouldLogOnce( const Logging::MessageBase& messageBase );
-	JDE_NATIVE_VISIBILITY void LogOnce( const Logging::MessageBase& messageBase );
-	template<class... Args >
-	void LogOnce( const Logging::MessageBase& messageBase, Args&&... args );
-	//void LogOnceVec( const Logging::MessageBase& messageBase, const vector<string>& values );
-	template<class... Args >
-	void LogCritical( const Logging::MessageBase& messageBase, Args&&... args );
-	template<class... Args >
-	void LogError( const Logging::MessageBase& messageBase, Args&&... args );
-	template<class... Args >
-	void LogNoServer( const Logging::MessageBase& messageBase );
-	JDE_NATIVE_VISIBILITY void LogServer( const Logging::MessageBase& messageBase )noexcept;
-	JDE_NATIVE_VISIBILITY void LogServer( const Logging::MessageBase& messageBase, const vector<string>& values )noexcept;
-	JDE_NATIVE_VISIBILITY void LogServer( const Logging::Messages::Message& message )noexcept;
-	JDE_NATIVE_VISIBILITY void LogMemory( const Logging::MessageBase& messageBase, const vector<string>* pValues=nullptr )noexcept;
-
-	//JDE_NATIVE_VISIBILITY void LogEtw( const Logging::MessageBase& messageBase );
-	//JDE_NATIVE_VISIBILITY void LogEtw( const Logging::MessageBase& messageBase, const vector<string>& values );
+	🚪 ShouldLogOnce( const Logging::MessageBase& messageBase )->bool;
+	🚪 LogOnce( Logging::MessageBase&& messageBase )->void;
+	template<class... Args>
+	void LogOnce( Logging::MessageBase&& messageBase, Args&&... args );
+	void LogNoServer( Logging::MessageBase&& messageBase );
+	template<class... Args>
+	void LogNoServer( Logging::MessageBase&& messageBase, Args&&... args );
+	🚪 LogServer( Logging::MessageBase&& messageBase )noexcept->void;
+	🚪 LogServer( Logging::MessageBase&& messageBase, vector<string>&& values )noexcept->void;
+	🚪 LogServer( Logging::Messages::Message&& message )noexcept->void;
+	🚪 LogMemory( const Logging::MessageBase& messageBase )noexcept->void;
+	🚪 LogMemory( Logging::MessageBase&& messageBase )noexcept->void;
+	🚪 LogMemory( Logging::MessageBase&& messageBase, vector<string> values )noexcept->void;
+	🚪 LogMemory( Logging::Message2&& messageBase, vector<string> values )noexcept->void;
+	🚪 LogMemory( const Logging::MessageBase& messageBase, vector<string> values )noexcept->void;
 }
+
 #define MY_FILE __FILE__
 
-#define CRITICAL(message,...) ::Jde::Logging::LogCritical( ::Jde::Logging::MessageBase(::Jde::ELogLevel::Critical, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define CRITICAL(message,...) Jde::Logging::Log( Jde::Logging::MessageBase(Jde::ELogLevel::Critical, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define ERR0_ONCE(message) Logging::LogOnce( Logging::MessageBase(ELogLevel::Error, message, MY_FILE, __func__, __LINE__) )
-#define ERR(message,...) Logging::LogError( Logging::MessageBase(ELogLevel::Error, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define ERR(message,...) Logging::Log( Logging::MessageBase(ELogLevel::Error, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define ERRX(message,...) Logging::LogNoServer( Logging::MessageBase(ELogLevel::Error, message, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
-#define ERR_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(ELogLevel::Error, message, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
+#define ERR_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(ELogLevel::Error, message##sv, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define WARN(message,...) Logging::Log( Logging::MessageBase(ELogLevel::Warning, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define WARN_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(ELogLevel::Warning, message, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
 #define WARN_IF(predicate, message,...) if( predicate ) Logging::Log( Logging::MessageBase(ELogLevel::Warning, message##sv, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
@@ -121,10 +163,15 @@ namespace Jde::Logging
 #define TRACE(message,...) Logging::Log( Logging::MessageBase(ELogLevel::Trace, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define TRACE_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(ELogLevel::Trace, message, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
 #define TRACEX(message,...) Logging::LogNoServer( Logging::MessageBase(ELogLevel::Trace, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-#define LOG(severity,message,...) Logging::Log( Logging::MessageBase(severity, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-#define LOGX(severity,message,...) Logging::LogNoServer( Logging::MessageBase(severity, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-#define LOGN(severity,message,messageId) Logging::Log( Logging::MessageBase(severity, message, MY_FILE, __func__, __LINE__, messageId) )
+
+#define LOG(severity,message,...) Logging::Log( Logging::MessageBase(message, severity, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define LOGX(severity,message,...) Logging::LogNoServer( Logging::MessageBase(message, severity, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define LOGN(severity,message,messageId) Logging::Log( Logging::MessageBase(message, severity, MY_FILE, __func__, __LINE__, messageId) )
+#define LOGS(severity,message,...) Logging::Log( Logging::Message2( severity, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+
 #define LOG_IF(predicate, severity, message,...) if( predicate ) Logging::Log( Logging::MessageBase(severity, message##sv, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define ERR_IF(predicate, message,...) LOG_IF( predicate, ELogLevel::Error, message, __VA_ARGS__ )
+#define LOG_MEMORY( severity, message, ... ) LogMemoryDetail( Logging::Message2{ severity, message, MY_FILE, __func__, __LINE__} __VA_OPT__(,) __VA_ARGS__ );
 
 namespace spdlog
 {
@@ -134,150 +181,120 @@ namespace spdlog
 }
 namespace Jde
 {
-	extern std::shared_ptr<spdlog::logger> spLogger;
-	JDE_NATIVE_VISIBILITY void DestroyLogger();
+	//extern std::shared_ptr<spdlog::logger> spLogger;
+	🚪 DestroyLogger()->void;
 
    using namespace std::literals;
-	JDE_NATIVE_VISIBILITY void InitializeLogger( sv fileName )noexcept;
-	JDE_NATIVE_VISIBILITY void InitializeLogger( ELogLevel level2=ELogLevel::Debug, path path=fs::path{}, uint16 serverPort=0, bool memory=false, ELogLevel flushOn=ELogLevel::Information )noexcept;
-	JDE_NATIVE_VISIBILITY bool HaveLogger()noexcept;
-	JDE_NATIVE_VISIBILITY void ClearMemoryLog()noexcept;
-	JDE_NATIVE_VISIBILITY vector<Logging::Messages::Message> FindMemoryLog( uint32 messageId )noexcept;
+	🚪 InitializeLogger()noexcept->void;
+	🚪 HaveLogger()noexcept->bool;
+	🚪 ClearMemoryLog()noexcept->void;
+	🚪 FindMemoryLog( uint32 messageId )noexcept->vector<Logging::Messages::Message>;
 #if _MSC_VER
-	JDE_NATIVE_VISIBILITY spdlog::logger* GetDefaultLogger()noexcept;
-	JDE_NATIVE_VISIBILITY Logging::IServerSink* GetServerSink()noexcept;
-	JDE_NATIVE_VISIBILITY void SetServerSink( Logging::IServerSink* p )noexcept;
-	JDE_NATIVE_VISIBILITY bool ShouldLogMemory()noexcept;
+	🚪 GetDefaultLogger()noexcept->spdlog::logger&;
+	#define _logger GetDefaultLogger()
+	🚪 GetServerSink()noexcept->Logging::IServerSink*;
+	#define _pServerSink GetServerSink()
+	🚪 ShouldLogMemory()noexcept->bool;
 	#define _logMemory ShouldLogMemory()
-	//namespace Logging{ struct EtwSink; }
-	//extern std::shared_ptr<Logging::EtwSink> _spEtwSink;
-	//extern Logging::EtwSink* _pEtwSink;
-//	JDE_NATIVE_VISIBILITY Logging::EtwSink* GetEtwSink();
+	🚪 ServerLogLevel()noexcept->ELogLevel;
+	#define _serverLogLevel ServerLogLevel()
 #else
-	extern spdlog::logger* pLogger;
-	extern Logging::IServerSink* _pServerSink;
-	inline spdlog::logger* GetDefaultLogger()noexcept{ /*assert(pLogger);*/ return pLogger; }
-	inline Logging::IServerSink* GetServerSink()noexcept{ return _pServerSink; }
-	inline void SetServerSink( Logging::IServerSink* p )noexcept{_pServerSink=p;}
-
-	namespace Logging{ struct Lttng; }
-	extern Logging::Lttng* _pLttng;
-	extern sp<Logging::Lttng> _spLttng;
-	extern bool _logMemory;
-//	JDE_NATIVE_VISIBILITY Logging::Lttng* GetEtwSink();
+	extern spdlog::logger _logger;
+	extern up<Logging::IServerSink> _pServerSink;
+	extern ELogLevel _serverLogLevel;
+	namespace Logging{ extern bool _logMemory; }
 #endif
-	JDE_NATIVE_VISIBILITY std::ostream& operator<<( std::ostream& os, const ELogLevel& value );
+	constexpr PortType ServerSinkDefaultPort = 4321;
+	void SetServerSink( up<Logging::IServerSink> p )noexcept;
+	void SetServerLevel( ELogLevel serverLevel )noexcept;
+
+	//JDE_NATIVE_VISIBILITY std::ostream& operator<<( std::ostream& os, const ELogLevel& value );
 	namespace Logging
 	{
 		namespace Proto{class Status;}
 		TimePoint StartTime()noexcept;
-		JDE_NATIVE_VISIBILITY void SetStatus( const vector<string>& values )noexcept;
+		🚪 SetStatus( const vector<string>& values )noexcept->void;
 		void SetLogLevel( ELogLevel client, ELogLevel server )noexcept;
-		Proto::Status* GetAllocatedStatus()noexcept;
-		inline void Log( const Logging::MessageBase& messageBase )
+		up<Proto::Status> GetStatus()noexcept;
+	}
+
+	inline std::string FileName( std::string_view file )
+	{
+		uint start = 0;
+		for( uint i=0; i<3 && start!=std::string::npos; ++i, start+=1 )
+			start = file.find( '/', start );
+		return start==std::string::npos ? std::string{file} : '~'+std::string{ file.substr(start-1) };
+	}
+#define SOURCE spdlog::source_loc{FileName(messageBase.File.data()).c_str(),messageBase.LineNumber,messageBase.Function.data()}
+	inline void Logging::Log( Logging::MessageBase& messageBase )
+	{
+		//string msg = format("[{}:{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
+		_logger.log( SOURCE, (spdlog::level::level_enum)messageBase.Level, messageBase.MessageView );
+		if( _logMemory )
+			LogMemory( messageBase );
+		if( _pServerSink && _serverLogLevel<=messageBase.Level )
+			LogServer( move(messageBase) );
+	}
+
+	template<class... Args>
+	inline void Logging::Log( Logging::MessageBase&& messageBase, Args&&... args )noexcept
+	{
+		_logger.log( SOURCE, (spdlog::level::level_enum)messageBase.Level, fmt::vformat(messageBase.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
+		if( auto pServer=_pServerSink.get(); pServer || _logMemory )
 		{
-			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
-			GetDefaultLogger()->log( ( spdlog::level::level_enum)messageBase.Level, msg );
-			if( GetServerSink() )
-				LogServer( messageBase );
+			vector<string> values; values.reserve( sizeof...(args) );
+			ToVec::Append( values, args... );
 			if( _logMemory )
-				LogMemory( messageBase );
-			// if( GetEtwSink() )
-			// 	LogEtw( messageBase );
+				LogMemory( messageBase, values );
+			if( pServer && _serverLogLevel<=messageBase.Level )
+				LogServer( move(messageBase), move(values) );
 		}
-
-		template<class... Args >
-		inline void LogCritical( const Logging::MessageBase& messageBase, Args&&... args )
-		{
-			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
-			GetDefaultLogger()->log( spdlog::level::level_enum::critical, msg, args... );
-			if( GetServerSink() || _logMemory )
-			{
-				vector<string> values; values.reserve( sizeof...(args) );
-				ToVec::Append( values, args... );
-				if( GetServerSink() )
-					LogServer( messageBase, values );
-				if( _logMemory )
-					LogMemory( messageBase, &values );
-			}
-			// if( GetEtwSink() )
-			// {
-			// 	vector<string> values; values.reserve( sizeof...(args) );
-			// 	ToVec::Append( values, args... );
-			// 	LogEtw( messageBase, values );
-			// }
-		}
-		template<class... Args >
-		void LogError( const Logging::MessageBase& messageBase, Args&&... args )
-		{
-			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
-			GetDefaultLogger()->log( spdlog::level::level_enum::err, msg, args... );
-			if( GetServerSink() || _logMemory )
-			{
-				vector<string> values; values.reserve( sizeof...(args) );
-				ToVec::Append( values, args... );
-				if( GetServerSink() )
-					LogServer( messageBase, values );
-				if( _logMemory )
-					LogMemory( messageBase, &values );
-			}
-		}
-
-		template<class... Args >
-		inline void Log( const Logging::MessageBase& messageBase, Args&&... args )noexcept
-		{
-			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
-			if( GetDefaultLogger() )
-				GetDefaultLogger()->log( (spdlog::level::level_enum)messageBase.Level, msg, args... );
-			if( GetServerSink() || _logMemory )
-			{
-				vector<string> values; values.reserve( sizeof...(args) );
-				ToVec::Append( values, args... );
-				if( GetServerSink() )
-					LogServer( messageBase, values );
-				if( _logMemory )
-					LogMemory( messageBase, &values );
-			}
 /*			if( GetEtwSink() )
-			{
-				vector<string> values; values.reserve( sizeof...(args) );
-				ToVec::Append( values, args... );
-				LogEtw( messageBase, values );
-			}*/
-		}
-		template<class... Args >
-		void LogOnce( const Logging::MessageBase& messageBase, Args&&... args )
 		{
-			if( ShouldLogOnce(messageBase) )
-				Log( messageBase, args... );
-		}
+			vector<string> values; values.reserve( sizeof...(args) );
+			ToVec::Append( values, args... );
+			LogEtw( messageBase, values );
+		}*/
+	}
+	template<class... Args>
+	void Logging::LogOnce( Logging::MessageBase&& messageBase, Args&&... args )
+	{
+		if( ShouldLogOnce(messageBase) )
+			Log( move(messageBase), args... );
+	}
 
-		inline void LogNoServer( const Logging::MessageBase& messageBase )
-		{
-			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
-			GetDefaultLogger()->log( (spdlog::level::level_enum)messageBase.Level, msg );
-		}
+	inline void Logging::LogNoServer( Logging::MessageBase&& messageBase )
+	{
+		_logger.log( SOURCE, (spdlog::level::level_enum)messageBase.Level, messageBase.MessageView );
+	}
 
-		template<class... Args >
-		inline void LogNoServer( const Logging::MessageBase& messageBase, Args&&... args )
-		{
-			string msg = format("[{}.{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
-			GetDefaultLogger()->log( (spdlog::level::level_enum)messageBase.Level, msg, args... );
-		}
+	template<class... Args>
+	inline void Logging::LogNoServer( Logging::MessageBase&& messageBase, Args&&... args )
+	{
+		_logger.log( SOURCE, (spdlog::level::level_enum)messageBase.Level, fmt::vformat(messageBase.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 	}
 }
-JDE_NATIVE_VISIBILITY std::ostream& operator<<( std::ostream& os, const std::optional<double>& value );
+
+//JDE_NATIVE_VISIBILITY std::ostream& operator<<( std::ostream& os, const std::optional<double>& value );
 
 #pragma region MessageBase
 namespace Jde::Logging
 {
-	constexpr MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, uint line, uint messageId, uint fileId, uint functionId )noexcept:
+	template<class... Args>
+	void LogMemoryDetail( Logging::Message2&& m, Args&&... args )noexcept
+	{
+		vector<string> values; values.reserve( sizeof...(args) );
+		ToVec::Append( values, args... );
+		LogMemory( move(m), move(values) );
+	}
+
+	constexpr MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint messageId=0, uint fileId=0, uint functionId=0 )noexcept:
 		Level{level},
-		MessageId{messageId},//{IO::Crc::Calc32(message)},
+		MessageId{ messageId ? messageId : IO::Crc::Calc32(message) },//{},
 		MessageView{message},
-		FileId{ fileId },
+		FileId{ fileId ? fileId : IO::Crc::Calc32(file) },
 		File{file},
-		FunctionId{ functionId },
+		FunctionId{ functionId ? functionId : IO::Crc::Calc32(function) },
 		Function{function},
 		LineNumber{line}
 	{
@@ -292,14 +309,16 @@ namespace Jde::Logging
 		if( LineNumber )
 			Fields |= EFields::LineNumber;
 	}
-	constexpr MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, uint line )noexcept:
+/*	consteval MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, int line )noexcept:
 		MessageBase( level, message, file, function, line, IO::Crc::Calc32(message) )
 	{}
 
-	constexpr MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, uint line, uint32 messageId )noexcept:
+	consteval MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId )noexcept:
 		MessageBase( level, message, file, function, line, messageId, IO::Crc::Calc32(file), IO::Crc::Calc32(function) )
-	{}
+	{}*/
 }
 #pragma endregion
 
 #undef _logMemory
+#undef 🚪
+#undef SOURCE

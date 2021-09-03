@@ -8,10 +8,18 @@
 #include <vector>
 #include <boost/container/flat_map.hpp>
 #include <jde/Exception.h>
+#include "../../../Framework/source/threading/Worker.h"
+#include "../../../Framework/source/io/DiskWatcher.h"
+#include "../../../Framework/source/io/FileCo.h"
 
+#define 🚪 JDE_NATIVE_VISIBILITY auto
 namespace Jde{ struct Stopwatch; }
 namespace Jde::IO
 {
+	inline 🚪 Read( path path, bool vector=true )noexcept{ return DriveAwaitable{path, vector}; }
+	inline 🚪 Write( path path, sp<vector<char>> data )noexcept{ return DriveAwaitable{path, data}; }
+	inline 🚪 Write( path path, sp<string> data )noexcept{ return DriveAwaitable{path, data}; }
+
 	namespace FileUtilities
 	{
 		JDE_NATIVE_VISIBILITY std::unique_ptr<std::vector<char>> LoadBinary( path path )noexcept(false);
@@ -19,7 +27,7 @@ namespace Jde::IO
 		JDE_NATIVE_VISIBILITY void SaveBinary( path path, const std::vector<char>& values )noexcept(false);
 		JDE_NATIVE_VISIBILITY void Save( path path, sv value, std::ios_base::openmode openMode = std::ios_base::out )noexcept(false);
 		inline void SaveBinary( path path, sv value )noexcept(false){ return Save(path, value, std::ios::binary); }
-		JDE_NATIVE_VISIBILITY size_t GetFileSize( path path );
+		JDE_NATIVE_VISIBILITY uint GetFileSize( path path );
 		JDE_NATIVE_VISIBILITY void ForEachItem( path directory, std::function<void(const fs::directory_entry&)> function )noexcept(false);//todo get rid of, 1 liner
 		JDE_NATIVE_VISIBILITY std::unique_ptr<std::set<fs::directory_entry>> GetDirectory( path directory );
 		JDE_NATIVE_VISIBILITY std::unique_ptr<std::set<fs::directory_entry>> GetDirectories( path directory, std::unique_ptr<std::set<fs::directory_entry>> pItems=nullptr );
@@ -71,26 +79,25 @@ namespace Jde::IO
 #endif
 		};
 	}
-	class JDE_NATIVE_VISIBILITY File
+	namespace File
 	{
-	public:
-		static size_t GetFileSize( std::ifstream& file );
+		uint GetFileSize( std::ifstream& file );
 
-		static std::pair<std::vector<std::string>,std::set<size_t>> LoadColumnNames( sv csvFileName, std::vector<std::string>& columnNamesToFetch, bool notColumns=false );
+		std::pair<std::vector<std::string>,std::set<uint>> LoadColumnNames( sv csvFileName, std::vector<std::string>& columnNamesToFetch, bool notColumns=false );
 
 		template<typename T>
-		static void ForEachLine( path file, const std::function<void(const std::basic_string<T>&)>& function )noexcept;
+		void ForEachLine( path file, const std::function<void(const std::basic_string<T>&)>& function )noexcept;
 		template<typename T>
-		static void ForEachLine( const std::basic_string<T>& file, const std::function<void(const std::basic_string<T>&)>& function, const size_t lineCount );
+		void ForEachLine( const std::basic_string<T>& file, const std::function<void(const std::basic_string<T>&)>& function, const uint lineCount );
 
-		static void ForEachLine( sv file, const std::function<void(sv)>& function, const size_t lineCount );
-		static size_t ForEachLine( sv pszFileName, const std::function<void(const std::vector<std::string>&, size_t lineIndex)>& function, const std::set<size_t>& columnIndexes, const size_t maxLines=std::numeric_limits<size_t>::max(), const size_t startLine=0, const size_t chunkSize=1073741824, size_t maxColumnCount=1500 );
+		void ForEachLine( sv file, const std::function<void(sv)>& function, const uint lineCount );
+		uint ForEachLine( sv pszFileName, const std::function<void(const std::vector<std::string>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint maxLines=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, uint maxColumnCount=1500 );
 
-		static size_t ForEachLine2( path fileName, const std::function<void(const std::vector<std::string>&, size_t lineIndex)>& function, const std::set<size_t>& columnIndexes, const size_t lineCount=std::numeric_limits<size_t>::max(), const size_t startLine=0, const size_t chunkSize=1073741824, Stopwatch* sw=nullptr )noexcept(false);
-		static size_t ForEachLine3( sv pszFileName, const std::function<void(const std::vector<double>&, size_t lineIndex)>& function, const std::set<size_t>& columnIndexes, const size_t lineCount=std::numeric_limits<size_t>::max(), const size_t startLine=0, const size_t chunkSize=1073741824, size_t maxColumnCount=1500, Stopwatch* sw=nullptr );
-		static size_t ForEachLine4( sv pszFileName, const std::function<void(const std::vector<double>&, size_t lineIndex)>& function, const std::set<size_t>& columnIndexes, const size_t lineCount=std::numeric_limits<size_t>::max(), const size_t startLine=0, const size_t chunkSize=1073741824, size_t maxColumnCount=1500, Stopwatch* sw=nullptr, double emptyValue=0.0 );
+		uint ForEachLine2( path fileName, const std::function<void(const std::vector<std::string>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint lineCount=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, Stopwatch* sw=nullptr )noexcept(false);
+		uint ForEachLine3( sv pszFileName, const std::function<void(const std::vector<double>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint lineCount=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, uint maxColumnCount=1500, Stopwatch* sw=nullptr );
+		uint ForEachLine4( sv pszFileName, const std::function<void(const std::vector<double>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint lineCount=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, uint maxColumnCount=1500, Stopwatch* sw=nullptr, double emptyValue=0.0 );
 
-		static uint Merge( path file, const vector<char>& original, const vector<char>& newData )noexcept(false);
+		uint Merge( path file, const vector<char>& original, const vector<char>& newData )noexcept(false);
 	};
 
 	template<typename TCollection>
@@ -119,13 +126,13 @@ namespace Jde::IO
 			function( line );
 	}
 	template<typename T>
-	void File::ForEachLine( const std::basic_string<T>& file, const std::function<void(const std::basic_string<T>&)>& function, const size_t lineCount )
+	void File::ForEachLine( const std::basic_string<T>& file, const std::function<void(const std::basic_string<T>&)>& function, const uint lineCount )
 	{
 		std::basic_ifstream<T> t( file );
 		if( t.fail() )
 			THROW( Exception(fmt::format("Could not open file '{}'", file).c_str()) );
 		std::basic_string<T> line;
-		size_t lineIndex=0;
+		uint lineIndex=0;
 		while( std::getline<T>(t, line) )
 		{
 			function( line );
@@ -133,4 +140,7 @@ namespace Jde::IO
 				break;
 		}
 	}
+
+	IO::IDrive& Native()noexcept;
 }
+#undef 🚪

@@ -43,19 +43,19 @@ namespace Jde
 #else
 				THROW( IOException("Can not load library '{}':  '{}'"sv, path.c_str(), dlerror()) );
 #endif
-			DBG( "Opened module '{}'."sv, path.string() );
+			INFO( "({})Opened"sv, path.string() );
 		}
 		~DllHelper()
 		{
-			if( GetDefaultLogger() )
-				DBG( "Freeing '{}'."sv, _path.string() );
+			//if( GetDefaultLogger() )
+				INFO( "({})Freeing"sv, _path.string() );
 #if _MSC_VER
 			::FreeLibrary( _module );
 #else
 			::dlclose( _module );
 #endif
-			if( GetDefaultLogger() )
-				DBG( "Freed '{}'."sv, _path.string() );
+			//if( GetDefaultLogger() )
+				DBG( "({})Freed"sv, _path.string() );
 		}
 
 
