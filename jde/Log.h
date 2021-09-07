@@ -78,12 +78,8 @@ namespace Jde::Logging
 #pragma endregion
 	struct MessageBase
 	{
-		//consteval MessageBase( ELogLevel level, sv message, sv file, sv function, int line )noexcept;
-		//consteval MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId )noexcept;
 		constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId, uint fileId, uint functionId )noexcept;
 		MessageBase( sv message, ELogLevel level, sv file, sv function, int line/*, uint messageId=0, uint fileId=0, uint functionId=0*/ )noexcept;
-		//Causes ambiguous issue TODO refactor
-		//JDE_NATIVE_VISIBILITY MessageBase( ELogLevel level, sp<std::string> pMessage, sv file, sv function, int line )noexcept;
 		virtual sv GetType()const{ return "MessageBase"; }
 		EFields Fields{EFields::None};
 		ELogLevel Level;
@@ -111,9 +107,6 @@ namespace Jde::Logging
 		}
 		JDE_NATIVE_VISIBILITY Message2( ELogLevel level, string message, sv file, sv function, int line )noexcept;
 		sv GetType()const override{ return "Message2"; }
-		//Message2( IO::IncomingMessage& message, EFields fields )noexcept(false);
-		//Message2( sv message, ELogLevel level, sv file, sv function, int line, uint messageId=0, uint fileId=0, uint functionId=0 )noexcept;
-		//JDE_NATIVE_VISIBILITY Message2( ELogLevel level, string&& message, sv file, sv function, int line )noexcept;
 	protected:
 		unique_ptr<string> _pMessage;
 		string _fileName;
@@ -131,9 +124,9 @@ namespace Jde::Logging
 	void LogNoServer( Logging::MessageBase&& messageBase );
 	template<class... Args>
 	void LogNoServer( Logging::MessageBase&& messageBase, Args&&... args );
-	🚪 LogServer( Logging::MessageBase&& messageBase )noexcept->void;
-	🚪 LogServer( Logging::MessageBase&& messageBase, vector<string>&& values )noexcept->void;
-	🚪 LogServer( Logging::Messages::Message&& message )noexcept->void;
+	🚪 LogServer( const Logging::MessageBase& messageBase )noexcept->void;
+	🚪 LogServer( const Logging::MessageBase& messageBase, vector<string>& values )noexcept->void;
+	🚪 LogServer( Logging::Messages::Message& message )noexcept->void;
 	🚪 LogMemory( const Logging::MessageBase& messageBase )noexcept->void;
 	🚪 LogMemory( Logging::MessageBase&& messageBase )noexcept->void;
 	🚪 LogMemory( Logging::MessageBase&& messageBase, vector<string> values )noexcept->void;
@@ -208,7 +201,6 @@ namespace Jde
 	void SetServerSink( up<Logging::IServerSink> p )noexcept;
 	void SetServerLevel( ELogLevel serverLevel )noexcept;
 
-	//JDE_NATIVE_VISIBILITY std::ostream& operator<<( std::ostream& os, const ELogLevel& value );
 	namespace Logging
 	{
 		namespace Proto{class Status;}
@@ -228,7 +220,6 @@ namespace Jde
 #define SOURCE spdlog::source_loc{FileName(messageBase.File.data()).c_str(),messageBase.LineNumber,messageBase.Function.data()}
 	inline void Logging::Log( Logging::MessageBase& messageBase )
 	{
-		//string msg = format("[{}:{}] - {}", messageBase.File, messageBase.LineNumber, messageBase.MessageView );
 		_logger.log( SOURCE, (spdlog::level::level_enum)messageBase.Level, messageBase.MessageView );
 		if( _logMemory )
 			LogMemory( messageBase );
@@ -247,14 +238,8 @@ namespace Jde
 			if( _logMemory )
 				LogMemory( messageBase, values );
 			if( pServer && _serverLogLevel<=messageBase.Level )
-				LogServer( move(messageBase), move(values) );
+				LogServer( messageBase, values );
 		}
-/*			if( GetEtwSink() )
-		{
-			vector<string> values; values.reserve( sizeof...(args) );
-			ToVec::Append( values, args... );
-			LogEtw( messageBase, values );
-		}*/
 	}
 	template<class... Args>
 	void Logging::LogOnce( Logging::MessageBase&& messageBase, Args&&... args )
@@ -274,8 +259,6 @@ namespace Jde
 		_logger.log( SOURCE, (spdlog::level::level_enum)messageBase.Level, fmt::vformat(messageBase.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 	}
 }
-
-//JDE_NATIVE_VISIBILITY std::ostream& operator<<( std::ostream& os, const std::optional<double>& value );
 
 #pragma region MessageBase
 namespace Jde::Logging
@@ -309,13 +292,6 @@ namespace Jde::Logging
 		if( LineNumber )
 			Fields |= EFields::LineNumber;
 	}
-/*	consteval MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, int line )noexcept:
-		MessageBase( level, message, file, function, line, IO::Crc::Calc32(message) )
-	{}
-
-	consteval MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId )noexcept:
-		MessageBase( level, message, file, function, line, messageId, IO::Crc::Calc32(file), IO::Crc::Calc32(function) )
-	{}*/
 }
 #pragma endregion
 
