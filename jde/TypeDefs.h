@@ -57,8 +57,9 @@ namespace Jde
 	using sv = std::string_view;
 
 #pragma region ELogLevel
-	enum class ELogLevel : uint8
+	enum class ELogLevel : int8
 	{
+		NoLog = -1,
 		Trace = 0,
 		Debug = 1,
 		Information = 2,
@@ -179,7 +180,9 @@ namespace Jde
 #define α auto
 #define Ω static auto
 #define ⓣ template<class T> auto
+#define ẗ template<class K,class V> auto
+#define Ṫ template<class T> static auto
 //#define ρ friend auto
-//#define ψ template<> inline auto
+#define ψ template<class... Args> auto
 
 #endif // !JDE_TYPEDEFS

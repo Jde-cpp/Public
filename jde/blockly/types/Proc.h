@@ -52,9 +52,10 @@ namespace Jde::Markets::MBlockly
 	{
 		Size()=default;
 		friend auto operator<=>( const Size&, const Size& )noexcept = default;
-		string ToString(){ return fmt::format("{:.0f}", _value); }
+		string ToString()const{ return fmt::format("{:.0f}", _value); }
 	private:
 		Size( double value )noexcept:_value{value}{}
+		Size( long long value )noexcept:_value{(double)value}{}
 		double _value{Unitialized};
 		constexpr static double Unitialized = NAN;
 		friend Amount operator*( Price a, Size b )noexcept;

@@ -1,9 +1,16 @@
-//protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. requests.proto; mv requests.pb.cc ../../../../../MarketLibrary/source/types/proto
+//cd $JDE_DIR/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. requests.proto; mv requests.pb.cc ../../../../../MarketLibrary/source/types/proto
 
 syntax = "proto3";
 package Jde.Markets.Proto.Requests;
 import "ib.proto";
 import "watch.proto";
+
+message GenericRequest
+{
+	uint32 id=1;
+	ERequests type=2;
+	int64 item_id=3;
+}
 
 message GenericRequests
 {
@@ -233,8 +240,9 @@ message RequestUnion
 		RequestAccountUpdates account_updates = 1;
 		RequestAccountUpdatesMulti account_updates_multi = 2;
 		RequestContractDetails contract_details = 3;
-		GenericRequests generic_requests=4;
-		RequestMrkDataSmart market_data_smart = 5;
+		GenericRequest generic_request=4;
+		GenericRequests generic_requests=5;
+		RequestMrkDataSmart market_data_smart = 6;
 		RequestOptions options = 7;
 		RequestHistoricalData historical_data = 8;
 		FlexExecutions flex_executions=9;

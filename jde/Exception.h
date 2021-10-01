@@ -25,13 +25,16 @@ namespace boost::system{ class error_code; }
 #ifndef  CHECK
 # define CHECK(condition) THROW_IF( !condition, #condition )
 #endif
+#ifndef  LOG_EX
+# define LOG_EX(e) log_exception( e, __func__, __FILE__, __LINE__ )
+#endif
 
 namespace Jde
 {
 	struct JDE_NATIVE_VISIBILITY Exception : public std::exception
 	{
 		Exception()noexcept=default;
-		Exception( const Exception& )noexcept=default;
+		//Exception( const Exception& )noexcept=default;
 		Exception( ELogLevel level, sv value )noexcept;
 		Exception( ELogLevel level, sv value, sv function, sv file, int line )noexcept;
 		Exception( sv value )noexcept;
@@ -57,7 +60,7 @@ namespace Jde
 		sv _fileName;
 		int _line;
 
-		ELogLevel _level{ELogLevel::Trace};
+		ELogLevel _level{ ELogLevel::Debug };
 		mutable string _what;
 		sp<Exception> _pInner;//sp to save custom copy constructor
 	private:
@@ -122,9 +125,11 @@ namespace Jde
 		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error );
 		CodeException( sv value, std::error_code&& code, ELogLevel level=ELogLevel::Error );
 
-		static string ToString( const std::error_code& pErrorCode )noexcept;
-		static string ToString( const std::error_category& errorCategory )noexcept;
-		static string ToString( const std::error_condition& errorCondition )noexcept;
+		//α what()const noexcept->const char* override;
+
+		Ω ToString( const std::error_code& pErrorCode )noexcept->string;
+		Ω ToString( const std::error_category& errorCategory )noexcept->string;
+		Ω ToString( const std::error_condition& errorCondition )noexcept->string;
 	private:
 		std::error_code _errorCode;
 	};
@@ -192,20 +197,26 @@ namespace Jde
 	};
 
 	template<class T,std::enable_if_t<std::is_base_of<Exception,T>::value>* = nullptr>
-	[[noreturn]] void throw_exception( T exp, const char* pszFunction, const char* pszFile, long line )noexcept(false)
+	void log_exception( T& e, const char* fnctn, const char* file, long line )noexcept(false)
 	{
-		exp.SetFunction( pszFunction );
-		exp.SetFile( pszFile );
-		exp.SetLine( line );
-		exp.Log();
-		throw exp;
+		e.SetFunction( fnctn );
+		e.SetFile( file );
+		e.SetLine( line );
+		e.Log();
 	}
-
+	template<class T,std::enable_if_t<std::is_base_of<Exception,T>::value>* = nullptr>
+	[[noreturn]] void throw_exception( T e, const char* fnctn, const char* file, long line )noexcept(false)
+	{
+		log_exception( e, fnctn, file, line );
+		throw e;
+	}
+/*
 	[[noreturn]] inline void throw_exception( sv what, const char* pszFunction, const char* pszFile, long line )
 	{
-		throw_exception<Exception>( Exception{what}, pszFunction, pszFile, line );
+		Exception e{ what };
+		throw_exception<Exception>( e, pszFunction, pszFile, line );
 	}
-
+*/
 
 	JDE_NATIVE_VISIBILITY void catch_exception( sv pszFunction, sv pszFile, long line, sv pszAdditional, const std::exception* pException=nullptr );
 	//https://stackoverflow.com/questions/35941045/can-i-obtain-c-type-names-in-a-constexpr-way/35943472#35943472

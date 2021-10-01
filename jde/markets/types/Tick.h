@@ -73,10 +73,10 @@ namespace Jde::Markets
 		static Fields PriceFields()noexcept;
 		ContractPK ContractId{0};
 		TickerId TwsRequestId{0};
-		double BidSize;
+		long long BidSize;
 		double Bid;
 		double Ask;
-		double AskSize;
+		long long AskSize;
 		double LastPrice;
 		double LastSize;
 		double High;

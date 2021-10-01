@@ -80,7 +80,7 @@ namespace Jde
 
 		template<typename Enum, typename Collection>
 		sv FromEnum( const Collection& s, Enum value )noexcept;
-		template<class Enum, class Collection> α ToEnum( const Collection& s, sv text )noexcept->optional<Enum>;
+		template<class TEnum, class TCollection, class TString> α ToEnum( const TCollection& s, TString text )noexcept->optional<TEnum>;
 
 		[[nodiscard]]inline bool EndsWith( sv value, sv ending ){ return ending.size() > value.size() ? false : std::equal( ending.rbegin(), ending.rend(), value.rbegin() ); }
 		[[nodiscard]]inline bool StartsWith( sv value, sv starting ){ return starting.size() > value.size() ? false : std::equal( starting.begin(), starting.end(), value.begin() ); }
@@ -203,23 +203,23 @@ namespace Jde
 		return equal;
 	}
 
-	template<typename Enum, typename Collection>
-	α Str::ToEnum( const Collection& stringValues, sv text )noexcept->optional<Enum>
+	template<class TEnum, class TCollection, class TString>
+	α Str::ToEnum( const TCollection& stringValues, TString text )noexcept->optional<TEnum>
 	{
-		typedef typename std::underlying_type<Enum>::type T;
+		typedef typename std::underlying_type<TEnum>::type T;
 		T v = (T)std::distance( std::begin(stringValues), std::find(std::begin(stringValues), std::end(stringValues), text) );
-		auto pResult = v<stringValues.size() ? optional<Enum>((Enum)v) : nullopt;
+		auto pResult = v<stringValues.size() ? optional<TEnum>((TEnum)v) : nullopt;
 		if( !pResult )
 		{
 			if( auto p = TryTo<T>(text); p )
-				pResult = *p<stringValues.size() ? optional<Enum>((Enum)*p) : nullopt;
+				pResult = *p<stringValues.size() ? optional<TEnum>((TEnum)*p) : nullopt;
 		}
 		return pResult;
 	}
-	template<typename Enum, typename Collection>
-	sv Str::FromEnum( const Collection& stringValues, Enum value )noexcept
+	template<class TEnum, class Collection>
+	sv Str::FromEnum( const Collection& stringValues, TEnum value )noexcept
 	{
-		return static_cast<uint>(value)<stringValues.size() ? stringValues[value] : sv{};
+		return static_cast<uint>(value)<stringValues.size() ? stringValues[(uint)value] : sv{};
 	}
 
 	template<typename T> T Str::Trim( const T& s, sv substring )noexcept

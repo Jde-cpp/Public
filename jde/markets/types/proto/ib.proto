@@ -77,6 +77,7 @@ enum Exchanges
 	Ebs = 23;
 	Iex = 24;
 	Venture = 25;
+	Australian = 26;
 	UnknownExchange = -1;
 };
 
