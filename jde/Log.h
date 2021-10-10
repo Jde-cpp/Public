@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <array>
 #include <memory>
 #include <iostream> //TODO remove
@@ -79,7 +79,7 @@ namespace Jde::Logging
 	struct MessageBase
 	{
 		constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId, uint fileId, uint functionId )noexcept;
-		MessageBase( sv message, ELogLevel level, sv file, sv function, int line/*, uint messageId=0, uint fileId=0, uint functionId=0*/ )noexcept;
+		JDE_NATIVE_VISIBILITY MessageBase( sv message, ELogLevel level, sv file, sv function, int line/*, uint messageId=0, uint fileId=0, uint functionId=0*/ )noexcept;
 		virtual sv GetType()const{ return "MessageBase"; }
 		EFields Fields{EFields::None};
 		ELogLevel Level;
@@ -113,13 +113,13 @@ namespace Jde::Logging
 	};
 
 #pragma endregion
-	void Log( Logging::MessageBase& messageBase )noexcept;
+	α Log( Logging::MessageBase& messageBase )noexcept->void;
 	ψ Log( Logging::MessageBase&& messageBase, Args&&... args )noexcept->void;
 
 	🚪 ShouldLogOnce( const Logging::MessageBase& messageBase )noexcept->bool;
 	🚪 LogOnce( Logging::MessageBase&& messageBase )noexcept->void;
 	ψ LogOnce( Logging::MessageBase&& messageBase, Args&&... args )noexcept->void;
-	void LogNoServer( Logging::MessageBase&& messageBase )noexcept;
+	α LogNoServer( Logging::MessageBase&& messageBase )noexcept->void;
 	ψ LogNoServer( Logging::MessageBase&& messageBase, Args&&... args )noexcept->void;
 	🚪 LogServer( const Logging::MessageBase& messageBase )noexcept->void;
 	🚪 LogServer( const Logging::MessageBase& messageBase, vector<string>& values )noexcept->void;
@@ -174,7 +174,6 @@ namespace spdlog
 namespace Jde
 {
 	//extern std::shared_ptr<spdlog::logger> spLogger;
-	🚪 DestroyLogger()->void;
 
    using namespace std::literals;
 	🚪 HaveLogger()noexcept->bool;
@@ -183,37 +182,18 @@ namespace Jde
 	struct Tag_{ array<char,20> Id{0}; ELogLevel Level{ELogLevel::NoLog}; bool Empty()const noexcept{return Id[0]==0 || Level==ELogLevel::NoLog;} };
 	namespace Logging
 	{
+		🚪 DestroyLogger()->void;
 		🚪 Initialize()noexcept->void;
 		🚪 Tags()noexcept->const array<Tag_,20>&;
 		🚪 ServerTags()noexcept->const array<Tag_,20>&;
 		🚪 TagLevel( sv tag )noexcept->ELogLevel;
 		🚪 TagLevel( sv tagName, function<void(ELogLevel)> onChange, ELogLevel dflt=ELogLevel::NoLog )noexcept->ELogLevel;
+		🚪 LogMemory()noexcept->bool;
+		🚪 ServerLevel()noexcept->ELogLevel;
+		🚪 Default()noexcept->spdlog::logger&;
 	}
-#if _MSC_VER
-	🚪 GetDefaultLogger()noexcept->spdlog::logger&;
-	#define _logger GetDefaultLogger()
-	🚪 GetServerSink()noexcept->Logging::IServerSink*;
-	#define _pServerSink GetServerSink()
-	🚪 ShouldLogMemory()noexcept->bool;
-	#define _logMemory ShouldLogMemory()
-	🚪 ServerLogLevel()noexcept->ELogLevel;
-	#define _serverLogLevel ServerLogLevel()
-	#define _tags Tags();
-	#define _serverTags ServerTags();
-#else
-	extern spdlog::logger _logger;
-	extern up<Logging::IServerSink> _pServerSink;
-	extern ELogLevel _serverLogLevel;
-	namespace Logging
-	{
-		extern bool _logMemory;
-		extern array<Tag_,20> _tags;
-		extern array<Tag_,20> _serverTags;
-	}
-#endif
+
 	constexpr PortType ServerSinkDefaultPort = 4321;
-	void SetServerSink( up<Logging::IServerSink> p )noexcept;
-	void SetServerLevel( ELogLevel serverLevel )noexcept;
 
 	namespace Logging
 	{
@@ -237,7 +217,7 @@ namespace Jde
 
 		for( uint end; (end=homeDir.find("/..", 0))!=string::npos; )
 		{
-			var start = homeDir.substr(0,end).find_last_of( '/' ); if( start==string::npos ) break;
+			start = homeDir.substr(0,end).find_last_of( '/' ); if( start==string::npos ) break;
 			homeDir = homeDir.substr( 0, start )+homeDir.substr( end+3 );
 		}
 		return homeDir;
@@ -245,10 +225,10 @@ namespace Jde
 #define SOURCE spdlog::source_loc{FileName(m.File.data()).c_str(),m.LineNumber,m.Function.data()}
 	inline void Logging::Log( Logging::MessageBase& m )noexcept
 	{
-		_logger.log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
-		if( _logMemory )
+		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
+		if( LogMemory() )
 			LogMemory( m );
-		if( _pServerSink && _serverLogLevel<=m.Level )
+		if( ServerLevel()<=m.Level )
 			LogServer( move(m) );
 	}
 
@@ -257,19 +237,22 @@ namespace Jde
 	{//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
 		try
 		{
-			_logger.log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
+			if constexpr( sizeof...(args) )
+				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
+			else
+				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
 		}
-		catch( const fmt::format_error& e )
+		catch( const fmt::format_error& )
 		{
 			CRITICAL( "could not format {} - {}", m.MessageView, sizeof...(args) );
 		}
-		if( auto pServer=_pServerSink.get(); pServer || _logMemory )
+		if( ServerLevel()<=m.Level || LogMemory() )
 		{
 			vector<string> values; values.reserve( sizeof...(args) );
 			ToVec::Append( values, args... );
-			if( _logMemory )
+			if( LogMemory() )
 				LogMemory( m, values );
-			if( pServer && _serverLogLevel<=m.Level )
+			if( ServerLevel()<=m.Level )
 				LogServer( m, values );
 		}
 	}
@@ -282,13 +265,13 @@ namespace Jde
 
 	inline void Logging::LogNoServer( Logging::MessageBase&& m )noexcept
 	{
-		_logger.log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
+		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
 	}
 
 	template<class... Args>
 	inline void Logging::LogNoServer( Logging::MessageBase&& m, Args&&... args )noexcept
 	{
-		_logger.log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
+		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 	}
 	namespace Internal
 	{
@@ -301,21 +284,22 @@ namespace Jde
 			return l;
 		}
 	}
+
 	ψ Logging::Tag( sv tag, Logging::MessageBase&& m, Args&&... args )noexcept->void
 	{
-		if( var l = Internal::TagLevel(tag, _tags); l>ELogLevel::NoLog )
-			_logger.log( SOURCE, (spdlog::level::level_enum)l, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
-		auto pServer = _pServerSink.get();
-		if( !pServer && !_logMemory )
+		
+		if( auto l = Internal::TagLevel(tag, Tags()); l>ELogLevel::NoLog )
+			Default().log( SOURCE, (spdlog::level::level_enum)l, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
+		if( ServerLevel()>m.Level && !LogMemory() )
 			return;
-		if( var l = Internal::TagLevel(tag, _serverTags); l>ELogLevel::NoLog )
+		if( var l = Internal::TagLevel(tag, ServerTags()); l>ELogLevel::NoLog )
 		{
 			vector<string> values; values.reserve( sizeof...(args) );
 			ToVec::Append( values, args... );
 			m.Level = l;
-			if( _logMemory )
+			if( LogMemory() )
 				LogMemory( m, values );
-			if( pServer && _serverLogLevel<=m.Level )
+			if( ServerLevel()<=m.Level )
 				LogServer( m, values );
 		}
 	}
@@ -332,9 +316,9 @@ namespace Jde::Logging
 		LogMemory( move(m), move(values) );
 	}
 
-	constexpr MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint messageId=0, uint fileId=0, uint functionId=0 )noexcept:
+	constexpr MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId=0, uint fileId=0, uint functionId=0 )noexcept:
 		Level{level},
-		MessageId{ messageId ? messageId : IO::Crc::Calc32(message) },//{},
+		MessageId{ messageId ? messageId : IO::Crc::Calc32(message.substr(0, 100)) },//{},
 		MessageView{message},
 		FileId{ fileId ? fileId : IO::Crc::Calc32(file) },
 		File{file},
@@ -356,7 +340,6 @@ namespace Jde::Logging
 }
 #pragma endregion
 
-#undef _logMemory
 #undef 🚪
 #undef SOURCE
 #undef var

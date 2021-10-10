@@ -147,18 +147,7 @@ namespace Jde
 	using boost::container::flat_multimap;
 	using boost::container::flat_set;
 #endif
-#ifndef NO_FORMAT
-	#ifdef _MSC_VER
-		using std::format;
-		#ifdef NDEBUG
-			#pragma comment(lib, "fmt.lib")
-		#else
-			#pragma comment(lib, "fmtd.lib")
-		#endif
-	#else
-		using fmt::format;
-	#endif
-#endif
+	using fmt::format;
 	using path = const fs::path&;
 	using str = const std::string&;
 
@@ -178,6 +167,7 @@ namespace Jde
 }
 
 #define α auto
+#define β virtual auto
 #define Ω static auto
 #define ⓣ template<class T> auto
 #define ẗ template<class K,class V> auto

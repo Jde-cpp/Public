@@ -185,7 +185,7 @@ namespace Jde
 	{
 		T v;
 		var e=std::from_chars( value.data(), value.data()+value.size(), v );
-		THROW_IF( e.ec!=std::errc(), "Can't convert:  '{}'.  to '{}'.  ec='{}'"sv, value, Jde::GetTypeName<T>(), (uint)e.ec );
+		THROW_IF( e.ec!=std::errc(), "Can't convert:  '{}'.  to '{}'.  ec='{}'"sv, value, "Jde::GetTypeName<T>()", (uint)e.ec);
 		return v;
 	}
 	inline bool Str::StartsWithInsensitive( sv value, sv starting )

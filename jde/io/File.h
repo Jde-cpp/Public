@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #include <functional>
 #include <fstream>
@@ -8,17 +8,20 @@
 #include <vector>
 #include <boost/container/flat_map.hpp>
 #include <jde/Exception.h>
+#include <jde/Exports.h>
 #include "../../../Framework/source/threading/Worker.h"
 #include "../../../Framework/source/io/DiskWatcher.h"
 #include "../../../Framework/source/io/FileCo.h"
 
-#define 🚪 JDE_NATIVE_VISIBILITY auto
+#define 🚪 JDE_NATIVE_VISIBILITY α
 namespace Jde{ struct Stopwatch; }
 namespace Jde::IO
 {
-	inline 🚪 Read( path path, bool vector=true )noexcept{ return DriveAwaitable{path, vector}; }
-	inline 🚪 Write( path path, sp<vector<char>> data )noexcept{ return DriveAwaitable{path, data}; }
-	inline 🚪 Write( path path, sp<string> data )noexcept{ return DriveAwaitable{path, data}; }
+	🚪 Native()noexcept->IO::IDrive&;
+	inline α Read( path path, bool vector=true )noexcept{ return DriveAwaitable{path, vector}; }
+	inline α Write( path path, sp<vector<char>> data )noexcept{ return DriveAwaitable{path, data}; }
+	inline α Write( path path, sp<string> data )noexcept{ return DriveAwaitable{path, data}; }
+
 
 	namespace FileUtilities
 	{
@@ -140,7 +143,5 @@ namespace Jde::IO
 				break;
 		}
 	}
-
-	IO::IDrive& Native()noexcept;
 }
 #undef 🚪

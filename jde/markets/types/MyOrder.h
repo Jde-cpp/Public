@@ -1,10 +1,12 @@
 #pragma once
-#ifndef JDE_ORDER
-#define JDE_ORDER
-
+#ifdef _MSC_VER
+#pragma push_macro("assert")
+#undef assert
 #include <Order.h>
 #include <OrderState.h>
 #include <CommonDefs.h>
+#pragma pop_macro("assert")
+#endif
 #include "../Exports.h"
 #pragma warning( disable : 4244 )
 #pragma warning( disable : 4996 )
@@ -105,4 +107,3 @@ namespace Jde::Markets
 	inline OrderState::Fields operator| (OrderState::Fields a, OrderState::Fields b){ return (OrderState::Fields)( (uint_fast8_t)a | (uint_fast8_t)b ); }
 	inline OrderState::Fields operator|=(OrderState::Fields& a, OrderState::Fields b){ return a = (OrderState::Fields)( (uint)a | (uint)b ); }
 }
-#endif

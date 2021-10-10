@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <jde/Exports.h>
 #include "Assert.h"
 #include "Log.h"
@@ -50,7 +50,6 @@ namespace Jde
 		//void Sleep()noexcept override;
 
 		static vector<sp<Threading::InterruptibleThread>>& GetBackgroundThreads()noexcept{ return  *_pBackgroundThreads; }
-		static string CompanyName()noexcept;//{ return _pCompanyName ? *_pCompanyName : ""sv;}
 		static sv ApplicationName()noexcept{ return _pApplicationName ? *_pApplicationName : ""sv;}
 		virtual fs::path ProgramDataFolder()noexcept=0;
 		static fs::path ApplicationDataFolder()noexcept;
@@ -80,20 +79,21 @@ namespace Jde
 
 	struct OSApp : IApplication
 	{
-		JDE_NATIVE_VISIBILITY static set<string> Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false);
-		string GetEnvironmentVariable( sv variable )noexcept override;
-		fs::path ProgramDataFolder()noexcept override;
-		Ω CompanyRootDir()noexcept->fs::path; //#ifdef _MSC_VER sv company = CompanyName();#else
-		void Install( str serviceDescription )noexcept(false) override;
-		void Uninstall()noexcept(false) override;
-		static uint ProcessId()noexcept;
-		static fs::path Executable()noexcept;
+		static 🚪 Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->set<string>;
+		α GetEnvironmentVariable( sv variable )noexcept->string override;
+		α ProgramDataFolder()noexcept->fs::path override;
+		Ω CompanyName()noexcept->string;
+		Ω CompanyRootDir()noexcept->fs::path;
+		α Install( str serviceDescription )noexcept(false)->void override;
+		α Uninstall()noexcept(false)->void override;
+		static 🚪 ProcessId()noexcept->uint;
+		Ω Executable()noexcept->fs::path;
 		Ω Args()noexcept->flat_map<string,string>;
 		Ω Pause()noexcept->void;
-		JDE_NATIVE_VISIBILITY uint GetThreadId()noexcept;
-		JDE_NATIVE_VISIBILITY void SetThreadDscrptn( std::thread& thread, sv pszDescription )noexcept;
-		JDE_NATIVE_VISIBILITY void SetThreadDscrptn( const std::string& pszDescription )noexcept;
-		JDE_NATIVE_VISIBILITY const char* GetThreadDescription()noexcept;
+		🚪 GetThreadId()noexcept->uint;
+		🚪 SetThreadDscrptn( std::thread& thread, sv pszDescription )noexcept->void;
+		🚪 SetThreadDscrptn( const std::string& pszDescription )noexcept->void;
+		🚪 GetThreadDescription()noexcept->const char*;
 
 	protected:
 		bool KillInstance( uint processId )noexcept override;

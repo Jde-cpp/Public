@@ -33,11 +33,43 @@ namespace Jde::Markets::MBlockly
 	private:
 		atomic<bool> _value{false};
 	};
+
+	template<class T>
+	struct Task final
+	{
+		using TResult=T;
+		Task():_taskHandle{NextTaskHandle()}{ DBG("Task::Task({})"sv, _taskHandle); }
+		Task( const Task& t2 ):
+			Result{t2.Result},
+			_taskHandle{t2._taskHandle}
+		{
+			DBG("Task(Task{})"sv, _taskHandle);
+		}
+		~Task(){ DBG( "Task::~Task({})"sv, _taskHandle); }
+
+		struct promise_type
+		{
+			promise_type():_promiseHandle{ NextTaskPromiseHandle() }
+			{
+				DBG( "promise_type::promise_type({})"sv, _promiseHandle );
+			}
+			Task<T>& get_return_object()noexcept{ return _returnObject; }
+			suspend_never initial_suspend()noexcept{ return {}; }
+			suspend_never final_suspend()noexcept{ return {}; }
+			void return_void()noexcept{}
+			void unhandled_exception()noexcept{ /*DBG0("unhandled_exception"sv); TODO uncomment*/  }
+			Task<T> _returnObject;
+			const Handle _promiseHandle;
+		};
+		TResult Result;
+		const Handle _taskHandle;
+	};
+
 	struct JDE_BLOCKLY_EXECUTOR Awaitable final : std::enable_shared_from_this<Awaitable>
 	{
 		Awaitable( const optional<ProcTimePoint>& alarm, const BTick& tick, const Tick::Fields& tickFields, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields )noexcept;
 		typedef EventResult TReturn;
-		typedef Coroutine::Task<TReturn> TTask;
+		typedef Task<TReturn> TTask;
 		~Awaitable();
 		bool await_ready()noexcept;
 		void await_suspend( coroutine_handle<TTask::promise_type> h )noexcept; //if( !await_ready){ await_suspend();} await_resume()

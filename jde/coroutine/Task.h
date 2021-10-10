@@ -52,7 +52,7 @@ namespace Jde::Coroutine
 			suspend_never initial_suspend()noexcept{ return {}; }
 			suspend_never final_suspend()noexcept{ return {}; }
 			void return_void()noexcept{}
-			α unhandled_exception()noexcept->void;
+			🚪 unhandled_exception()noexcept->void;
 		private:
 			up<Task2> _pReturnObject;
 			const Handle _promiseHandle;

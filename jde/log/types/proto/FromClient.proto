@@ -1,5 +1,5 @@
 //protoc --cpp_out . FromClient.proto
-//C:\code\libraries\vcpkg\installed\x64-windows\tools\protobuf\protoc.exe --cpp_out . FromClient.proto
+//MkLink
 //ln -s ../../../ApplicationServer/source/types/proto/FromClient.proto ../proto/appFromClient.proto
 //npx pbjs -r app_from_client -t static-module -w es6 -o src/app/proto/appFromClient.js ../proto/appFromClient.proto & npx pbts -o src/app/proto/appFromClient.d.ts src/app/proto/appFromClient.js
 
