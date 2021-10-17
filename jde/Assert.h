@@ -3,6 +3,9 @@
 #ifndef ASSERT
 # define ASSERT( actual ){ if( !(actual) ){ CRITICAL("Assert:  {} is false"sv,  #actual ); } assert( actual ); }
 #endif
+#ifndef ASSERTX
+# define	ASSERTX( actual ){ if( !(actual) ){ LOGX( ELogLevel::Critical, "Assert:  {} is false"sv,  #actual ); } assert( actual ); }
+#endif
 #ifndef VERIFY
 # define VERIFY( actual ) if( !(actual) ){WARN( "VERIFY_TR - Expected {} to be false"sv, #actual ); }
 #endif

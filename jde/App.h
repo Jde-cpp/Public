@@ -84,6 +84,9 @@ namespace Jde
 		α ProgramDataFolder()noexcept->fs::path override;
 		Ω CompanyName()noexcept->string;
 		Ω CompanyRootDir()noexcept->fs::path;
+		Ω FreeLibrary( void* p )noexcept->void;
+		Ω LoadLibrary( path path )noexcept(false)->void*;
+		Ω GetProcAddress( void* pModule, str procName )noexcept(false)->void*;
 		α Install( str serviceDescription )noexcept(false)->void override;
 		α Uninstall()noexcept(false)->void override;
 		static 🚪 ProcessId()noexcept->uint;

@@ -78,9 +78,9 @@ namespace Jde::Logging
 #pragma endregion
 	struct MessageBase
 	{
-		constexpr MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId, uint fileId, uint functionId )noexcept;
+		consteval MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId, uint fileId, uint functionId )noexcept;
 		JDE_NATIVE_VISIBILITY MessageBase( sv message, ELogLevel level, sv file, sv function, int line/*, uint messageId=0, uint fileId=0, uint functionId=0*/ )noexcept;
-		virtual sv GetType()const{ return "MessageBase"; }
+		//virtual sv GetType()const{ return "MessageBase"; }
 		EFields Fields{EFields::None};
 		ELogLevel Level;
 		uint MessageId{0};
@@ -106,7 +106,7 @@ namespace Jde::Logging
 				MessageView = *_pMessage;
 		}
 		JDE_NATIVE_VISIBILITY Message2( ELogLevel level, string message, sv file, sv function, int line )noexcept;
-		sv GetType()const override{ return "Message2"; }
+		//sv GetType()const override{ return "Message2"; }
 	protected:
 		unique_ptr<string> _pMessage;
 		string _fileName;
@@ -161,6 +161,7 @@ namespace Jde::Logging
 #define LOGS(severity,message,...) Logging::Log( Logging::Message2( severity, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 
 #define LOG_IF(predicate, severity, message,...) if( predicate ) Logging::Log( Logging::MessageBase(severity, message##sv, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define LOG_IFL(predicate, severity, message,...) if( predicate ) Logging::Log( Logging::MessageBase(message##sv, severity, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define ERR_IF(predicate, message,...) LOG_IF( predicate, ELogLevel::Error, message, __VA_ARGS__ )
 #define LOG_MEMORY( severity, message, ... ) LogMemoryDetail( Logging::Message2{ severity, message, MY_FILE, __func__, __LINE__} __VA_OPT__(,) __VA_ARGS__ );
 #define TAG( tag, message, ... ) Logging::Tag( tag, Logging::MessageBase( ELogLevel::Trace, message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
@@ -237,7 +238,7 @@ namespace Jde
 	{//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
 		try
 		{
-			if constexpr( sizeof...(args) )
+			if constexpr( sizeof...(args)>0 )
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 			else
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
@@ -287,7 +288,7 @@ namespace Jde
 
 	ψ Logging::Tag( sv tag, Logging::MessageBase&& m, Args&&... args )noexcept->void
 	{
-		
+
 		if( auto l = Internal::TagLevel(tag, Tags()); l>ELogLevel::NoLog )
 			Default().log( SOURCE, (spdlog::level::level_enum)l, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 		if( ServerLevel()>m.Level && !LogMemory() )
@@ -316,7 +317,7 @@ namespace Jde::Logging
 		LogMemory( move(m), move(values) );
 	}
 
-	constexpr MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId=0, uint fileId=0, uint functionId=0 )noexcept:
+	consteval MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId=0, uint fileId=0, uint functionId=0 )noexcept:
 		Level{level},
 		MessageId{ messageId ? messageId : IO::Crc::Calc32(message.substr(0, 100)) },//{},
 		MessageView{message},

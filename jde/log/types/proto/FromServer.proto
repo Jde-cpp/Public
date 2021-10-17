@@ -1,4 +1,4 @@
-//cd $REPO_DIR/jde/Public/jde/log/types/proto;protoc --cpp_out . FromServer.proto
+//cd $JDE_DIR/Public/jde/log/types/proto;protoc --cpp_out . FromServer.proto
 //ln -s REPO_DIR/jde/ApplicationServer/source/types/proto/FromServer.proto ../proto/appFromServer.proto
 
 syntax = "proto3";

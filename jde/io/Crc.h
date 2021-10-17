@@ -1,13 +1,20 @@
 #pragma once
-#ifndef JDE_CRC_H
-#define JDE_CRC_H
-
 #include <vector>
 //https://gist.github.com/oktal/5573082
-// #pragma warning( disable : 4245)
-// #include <boost/crc.hpp>
-// #pragma warning( default : 4245)
+#pragma warning( disable : 4245)
+#include <boost/crc.hpp>
+#pragma warning( default : 4245)
 
+namespace Jde
+{
+	Ξ Calc32RunTime( sv value )->uint32_t
+	{
+		//return Calc32( value );
+		boost::crc_32_type result;
+		result.process_bytes( value.data(), value.size() );
+		return result.checksum();
+	}
+}
 namespace Jde::IO::Crc
 {
 	constexpr unsigned int crc32_table[] =
@@ -107,21 +114,12 @@ namespace Jde::IO::Crc
 		return crc32_rec( 0xFFFFFFFF, s );
 	}
 
-	constexpr unsigned int Calc32( sv value, unsigned int crc=0xFFFFFFFF, size_t index=0 )
+	consteval unsigned int Calc32( sv value, unsigned int crc=0xFFFFFFFF, size_t index=0 )
 	{
 		return index == value.size()
 			? crc ^ 0xFFFFFFFF
 			: Calc32( value, crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(value[index])] ^ (crc >> 8), index + 1 );
 	}
-
-	inline unsigned int Calc32RunTime( sv value )
-	{
-		return Calc32( value );
-		/*boost::crc_32_type result;
-		result.process_bytes( value.data(), value.size() );
-		return result.checksum();*/
-	}
-
 
 	inline unsigned int Calc32( const std::vector<char>& value, unsigned int crc=0xFFFFFFFF, size_t index=0 )
 	{
@@ -133,4 +131,3 @@ namespace Jde::IO::Crc
 	static_assert( "Hello"_crc32 == Crc32<'H', 'e', 'l', 'l', 'o'>::value, "CRC32 values don't match" );
 	static_assert( "0"_crc32 == Crc32<'0'>::value, "CRC32 values don't match" );
 }
-#endif // !JDE_CRC_H

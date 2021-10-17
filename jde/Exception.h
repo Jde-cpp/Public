@@ -23,7 +23,7 @@ namespace boost::system{ class error_code; }
 # define THROW_IFX(condition, x) if( condition ) THROWX(x)
 #endif
 #ifndef  CHECK
-# define CHECK(condition) THROW_IF( !condition, #condition )
+# define CHECK(condition) THROW_IF( !(condition), #condition )
 #endif
 #ifndef  LOG_EX
 # define LOG_EX(e) log_exception( e, __func__, __FILE__, __LINE__ )

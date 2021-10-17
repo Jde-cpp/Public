@@ -169,6 +169,7 @@ namespace Jde
 #define α auto
 #define β virtual auto
 #define Ω static auto
+#define Ξ inline auto
 #define ⓣ template<class T> auto
 #define ẗ template<class K,class V> auto
 #define Ṫ template<class T> static auto
