@@ -1,9 +1,8 @@
-#pragma once
-#include <vector>
-//https://gist.github.com/oktal/5573082
-#pragma warning( disable : 4245)
+﻿#pragma once
+DISABLE_WARNINGS
 #include <boost/crc.hpp>
-#pragma warning( default : 4245)
+ENABLE_WARNINGS
+//https://gist.github.com/oktal/5573082
 
 namespace Jde
 {
@@ -102,26 +101,26 @@ namespace Jde::IO::Crc
 
 	template<char ...Chars> using Crc32 = Crc32Impl<0xFFFFFFFF, Chars...>;
 
-	constexpr unsigned int crc32_rec( unsigned int crc, const char *s )
+	constexpr α crc32_rec( unsigned int crc, const char *s )->unsigned int
 	{
 		return *s == 0
 			? crc ^ 0xFFFFFFFF
 			: crc32_rec( crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(*s)] ^ (crc >> 8), s + 1 );
 	}
 
-	constexpr unsigned int operator "" _crc32( const char *s, size_t )
+	constexpr α operator "" _crc32( const char *s, size_t )->unsigned int
 	{
 		return crc32_rec( 0xFFFFFFFF, s );
 	}
 
-	consteval unsigned int Calc32( sv value, unsigned int crc=0xFFFFFFFF, size_t index=0 )
+	consteval α Calc32( sv value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int
 	{
 		return index == value.size()
 			? crc ^ 0xFFFFFFFF
 			: Calc32( value, crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(value[index])] ^ (crc >> 8), index + 1 );
 	}
 
-	inline unsigned int Calc32( const std::vector<char>& value, unsigned int crc=0xFFFFFFFF, size_t index=0 )
+	consteval α Calc32( const std::vector<char>& value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int
 	{
 		return index == value.size()
 			? crc ^ 0xFFFFFFFF

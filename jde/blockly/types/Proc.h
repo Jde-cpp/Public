@@ -87,7 +87,7 @@ namespace Jde::Markets::MBlockly
 	{
 		typedef Duration base;
 		explicit ProcDuration( Duration x )noexcept:base{x}{}
-		friend ProcDuration operator/( const ProcDuration& a, double b )noexcept(false){ THROW_IF(!llround(b), Exception("divide by zero.")); base x = static_cast<const base&>(a)/llround(b); return ProcDuration{x}; }
+		friend ProcDuration operator/( const ProcDuration& a, double b )noexcept(false){ THROW_IF(!llround(b), "divide by zero."); base x = static_cast<const base&>(a)/llround(b); return ProcDuration{x}; }
 	private:
 		//operator Duration()const noexcept{ return *this; }
 		friend ProcTimePoint; friend PositiveDuration; friend Blocks::OptionTest;

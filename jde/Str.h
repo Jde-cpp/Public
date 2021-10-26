@@ -11,18 +11,18 @@
 
 namespace Jde
 {
-	#define 🚪 JDE_NATIVE_VISIBILITY auto
+	#define 🚪 Γ auto
 
 	struct ci_char_traits : public std::char_traits<char>
 	{
 		static bool eq(char c1, char c2)noexcept{ return toupper(c1) == toupper(c2); }
 		static bool ne(char c1, char c2)noexcept{ return toupper(c1) != toupper(c2); }
 		static bool lt(char c1, char c2)noexcept{ return toupper(c1) <  toupper(c2); }
-		JDE_NATIVE_VISIBILITY static int compare( const char* s1, const char* s2, size_t n )noexcept;
-		JDE_NATIVE_VISIBILITY static const char* find( const char* s, size_t n, char a )noexcept;
+		Γ static int compare( const char* s1, const char* s2, size_t n )noexcept;
+		Γ static const char* find( const char* s, size_t n, char a )noexcept;
 	};
 	#define var const auto
-	struct JDE_NATIVE_VISIBILITY CIString : public std::basic_string<char, ci_char_traits>
+	struct Γ CIString : public std::basic_string<char, ci_char_traits>
 	{
 		using base=basic_string<char, ci_char_traits>;
 		CIString()noexcept{};
@@ -71,7 +71,7 @@ namespace Jde
 		🚪 Replace( sv source, sv find, sv replace )noexcept->string;
 		🚪 Replace( sv source, char find, char replace )noexcept->string;
 		🚪 ToLower( sv source )noexcept->string;
-		JDE_NATIVE_VISIBILITY string ToUpper( sv source )noexcept;
+		Γ string ToUpper( sv source )noexcept;
 
 		ⓣ TryTo( sv value )noexcept->optional<T>;
 		ⓣ To( sv value )noexcept(false)->T;

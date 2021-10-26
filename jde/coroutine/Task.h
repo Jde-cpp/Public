@@ -7,7 +7,7 @@
 
 namespace Jde::Coroutine
 {
-	#define 🚪 JDE_NATIVE_VISIBILITY auto
+	#define 🚪 Γ auto
 	typedef uint Handle;
 	typedef Handle ClientHandle;
 
@@ -37,7 +37,9 @@ namespace Jde::Coroutine
 
 		α Set( sp<void> p )noexcept->void{ CheckUninitialized(); _result = p; }
 		α Set( std::exception_ptr p )noexcept->void{ CheckUninitialized(); _result = p; }
-		α Set( Exception&& e )noexcept->void{ CheckUninitialized(); Set( std::make_exception_ptr(move(e)) ); }
+		//α Set( Exception&& e )noexcept->void{ CheckUninitialized(); Set( std::make_exception_ptr(move(e)) ); }
+		//α Set( BoostCodeException&& e )noexcept->void{ CheckUninitialized(); Set( std::make_exception_ptr(move(e)) ); }
+		α Set( std::exception&& e )noexcept->void{ CheckUninitialized(); Set( std::make_exception_ptr(move(e)) ); }
 		α Set( std::variant<sp<void>,std::exception_ptr>&& result )noexcept{ _result = move(result); }
 	private:
 		std::variant<sp<void>,std::exception_ptr> _result;
@@ -61,7 +63,9 @@ namespace Jde::Coroutine
 		α HasResult()const noexcept->bool{ return !Result.Uninitialized(); }
 		α GetResult()const noexcept->const TaskResult&{ return Result; }
 		α SetResult( std::exception_ptr p )noexcept->void{ Result.Set( p ); }
-		α SetResult( Exception&& e )noexcept->void{ Result.Set( move(e) ); }
+		//α SetResult( Exception&& e )noexcept->void{ Result.Set( move(e) ); }
+		//α SetResult( BoostCodeException&& e )noexcept->void{ Result.Set( move(e) ); }
+		α SetResult( std::exception&& e )noexcept->void{ Result.Set( move(e) ); }
 		α SetResult( TaskResult&& r )noexcept->void{ Result = move(r); }
 		α SetResult( std::variant<sp<void>,std::exception_ptr>&& r )noexcept{ Result.Set( move(r) ); }
 	private:

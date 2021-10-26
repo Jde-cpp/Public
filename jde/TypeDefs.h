@@ -1,6 +1,4 @@
 ﻿#pragma once
-#ifndef JDE_TYPEDEFS
-#define JDE_TYPEDEFS
 
 #include <map>
 #include <memory>
@@ -16,19 +14,23 @@
 #include <string_view>
 #include <vector>
 
-#define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )")
-#define ENABLE_WARNINGS  _Pragma("warning( pop  )")
-
 #ifdef _MSC_VER
-	#define WIN32_LEAN_AND_MEAN
-	#if __cplusplus > 2017
-		#include <coroutine>
-	#else
-		#include <experimental/coroutine>
+	#ifndef WIN32_LEAN_AND_MEAN
+		#error WIN32_LEAN_AND_MEAN not defined
 	#endif
+	#include <coroutine>
+	#include <source_location>
+	#define __PRETTY_FUNCTION__ __FUNCSIG__
+	using std::coroutine_handle;
+	using std::suspend_never;
 #else
 	#include <experimental/coroutine>
+	using std::experimental::coroutine_handle;
+	using std::experimental::suspend_never;
 #endif
+
+#define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )") _Pragma("warning( disable: 4701 )")
+#define ENABLE_WARNINGS  _Pragma("warning( pop  )")
 
 #ifndef NO_FORMAT
 	DISABLE_WARNINGS
@@ -152,19 +154,20 @@ namespace Jde
 	using str = const std::string&;
 
 #ifdef _MSC_VER
-	#define __PRETTY_FUNCTION__ __FUNCSIG__
-	#if __cplusplus > 2017
-		using std::coroutine_handle;
-		using std::suspend_never;
-	#else
-		using std::experimental::coroutine_handle;
-		using std::experimental::suspend_never;
+	#ifndef WIN32_LEAN_AND_MEAN
+		#error WIN32_LEAN_AND_MEAN not defined
 	#endif
+	#define __PRETTY_FUNCTION__ __FUNCSIG__
+	using std::source_location;
+	using std::coroutine_handle;
+	using std::suspend_never;
 #else
 	using std::experimental::coroutine_handle;
 	using std::experimental::suspend_never;
 #endif
 }
+
+#define SRCE const std::source_location& sl=std::source_location::current()
 
 #define α auto
 #define β virtual auto
@@ -175,5 +178,3 @@ namespace Jde
 #define Ṫ template<class T> static auto
 //#define ρ friend auto
 #define ψ template<class... Args> auto
-
-#endif // !JDE_TYPEDEFS

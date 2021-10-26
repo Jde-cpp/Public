@@ -201,7 +201,7 @@ namespace Jde::Blockly
 	{
 		ProcedureDefinition( const ptree& element, const File& file )noexcept:IBlock{ element }, FieldBlock{ element }, StatementBlock{ element, file }{};
 		virtual ~ProcedureDefinition()=default;
-		IMPL override{ THROW(Exception("not implemented")); }
+		IMPL override{ THROW("not implemented"); }
 		TICKS override;
 		ALARMS override;
 		const string& Name()const noexcept{ return Field.Value; }
@@ -217,7 +217,7 @@ namespace Jde::Blockly
 	struct ProcedureDefinitionReturn final : ProcedureDefinition, ValueBlock
 	{
 		ProcedureDefinitionReturn( const ptree& element, const File& file )noexcept:IBlock{ element }, ProcedureDefinition{ element, file }, ValueBlock{ element, file }{ /*DBG("ProcedureDefinitionReturn::{}"sv, Name());*/ }
-		IMPL override{ THROW(Exception("not implemented")); }
+		IMPL override{ THROW("not implemented"); }
 		ALARMS override;
 		TICKS override;
 		EValueType ValueType()const noexcept(false){ return Value.ValueType(); }
@@ -350,7 +350,7 @@ namespace Jde::Blockly
 	{
 		OptionOrder( const ptree& element, const File& file )noexcept(false);
 
-		IMPL override{ THROW(Exception("Can't implement base function 'OptionOrder'")); }
+		IMPL override{ THROW("Can't implement base function 'OptionOrder'"); }
 		TICKS override{}
 		ALARMS override{}
 		Blockly::Statement Statement;
@@ -361,7 +361,7 @@ namespace Jde::Blockly
 	const T& Require( const auto& parent, sv description )noexcept(false)
 	{
 		var p = dynamic_cast<const T*>( &parent );
-		THROW_IF( !p, Exception("{} does not have a {}.", description, GetTypeName<T>()) );
+		THROW_IF( !p, "{} does not have a {}.", description, GetTypeName<T>() );
 		return *p;
 	}
 
@@ -499,7 +499,7 @@ namespace Jde::Blockly
 		{
 			if( elementName==T::ElementName )
 			{
-				THROW_IF( v, Exception("({})element occurs 2x+.", elementName) );
+				THROW_IF( v, "({})element occurs 2x+.", elementName );
 				v = T( subElement );
 			}
 		}
@@ -509,7 +509,7 @@ namespace Jde::Blockly
 	T Factory( const ptree& element )noexcept(false)
 	{
 		auto v = OptFactory<T>( element );
-		THROW_IF( !v, Exception("Could not find element '{}'.", T::ElementName) );
+		THROW_IF( !v, "Could not find element '{}'.", T::ElementName );
 		return v.value();
 	}
 
@@ -521,7 +521,7 @@ namespace Jde::Blockly
 		{
 			if( elementName==T::ElementName )
 			{
-				THROW_IF( v, Exception("({})element occurs 2x+.", elementName) );
+				THROW_IF( v, "({})element occurs 2x+.", elementName );
 				v = T( subElement, file );
 			}
 		}
@@ -532,16 +532,16 @@ namespace Jde::Blockly
 	T Factory( const ptree& element, const File& file )noexcept(false)
 	{
 		auto v = OptFactory<T>( element, file );
-		THROW_IF( !v, Exception("Could not find element '{}'.", T::ElementName) );
+		THROW_IF( !v, "Could not find element '{}'.", T::ElementName );
 		return v.value();
 	}
 
 	inline uint8 GetOperation( const ptree& element, sv Id, std::span<const sv> blocklyStrings )
 	{
 		var field = Blockly::Factory<Blockly::Field>( element );
-		THROW_IF( field.Name!="OP", Exception("({})Expecting single field named OP.", Id) );
+		THROW_IF( field.Name!="OP", "({})Expecting single field named OP.", Id );
 		var operation = std::distance( blocklyStrings.begin(), std::find(blocklyStrings.begin(), blocklyStrings.end(), field.Value) );
-		THROW_IF( (uint8)operation>=(uint8)blocklyStrings.size(), Exception("({})OP value '{}' not implemented.", Id, field.Value) );
+		THROW_IF( (uint8)operation>=(uint8)blocklyStrings.size(), "({})OP value '{}' not implemented.", Id, field.Value );
 		return (uint8)operation;
 	}
 

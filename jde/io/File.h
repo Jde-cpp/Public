@@ -13,7 +13,7 @@
 #include "../../../Framework/source/io/DiskWatcher.h"
 #include "../../../Framework/source/io/FileCo.h"
 
-#define 🚪 JDE_NATIVE_VISIBILITY α
+#define 🚪 Γ α
 namespace Jde{ struct Stopwatch; }
 namespace Jde::IO
 {
@@ -25,28 +25,28 @@ namespace Jde::IO
 
 	namespace FileUtilities
 	{
-		JDE_NATIVE_VISIBILITY std::unique_ptr<std::vector<char>> LoadBinary( path path )noexcept(false);
-		JDE_NATIVE_VISIBILITY string Load( path path )noexcept(false);
-		JDE_NATIVE_VISIBILITY void SaveBinary( path path, const std::vector<char>& values )noexcept(false);
-		JDE_NATIVE_VISIBILITY void Save( path path, sv value, std::ios_base::openmode openMode = std::ios_base::out )noexcept(false);
+		Γ std::unique_ptr<std::vector<char>> LoadBinary( path path )noexcept(false);
+		Γ string Load( path path )noexcept(false);
+		Γ void SaveBinary( path path, const std::vector<char>& values )noexcept(false);
+		Γ void Save( path path, sv value, std::ios_base::openmode openMode = std::ios_base::out )noexcept(false);
 		inline void SaveBinary( path path, sv value )noexcept(false){ return Save(path, value, std::ios::binary); }
-		JDE_NATIVE_VISIBILITY uint GetFileSize( path path );
-		JDE_NATIVE_VISIBILITY void ForEachItem( path directory, std::function<void(const fs::directory_entry&)> function )noexcept(false);//todo get rid of, 1 liner
-		JDE_NATIVE_VISIBILITY std::unique_ptr<std::set<fs::directory_entry>> GetDirectory( path directory );
-		JDE_NATIVE_VISIBILITY std::unique_ptr<std::set<fs::directory_entry>> GetDirectories( path directory, std::unique_ptr<std::set<fs::directory_entry>> pItems=nullptr );
-		JDE_NATIVE_VISIBILITY std::string ToString( path pszFilePath );
-		JDE_NATIVE_VISIBILITY std::vector<std::string> LoadColumnNames( path csvFileName );
-		JDE_NATIVE_VISIBILITY std::string DateFileName( uint16 year, uint8 month=0, uint8 day=0 )noexcept;
-		JDE_NATIVE_VISIBILITY tuple<uint16,uint8,uint8> ExtractDate( path path )noexcept;
+		Γ uint GetFileSize( path path );
+		Γ void ForEachItem( path directory, std::function<void(const fs::directory_entry&)> function )noexcept(false);//todo get rid of, 1 liner
+		Γ std::unique_ptr<std::set<fs::directory_entry>> GetDirectory( path directory );
+		Γ std::unique_ptr<std::set<fs::directory_entry>> GetDirectories( path directory, std::unique_ptr<std::set<fs::directory_entry>> pItems=nullptr );
+		Γ std::string ToString( path pszFilePath );
+		Γ std::vector<std::string> LoadColumnNames( path csvFileName );
+		Γ std::string DateFileName( uint16 year, uint8 month=0, uint8 day=0 )noexcept;
+		Γ tuple<uint16,uint8,uint8> ExtractDate( path path )noexcept;
 
-		JDE_NATIVE_VISIBILITY void Replace( path source, path destination, const flat_map<string,string>& replacements )noexcept(false);
+		Γ void Replace( path source, path destination, const flat_map<string,string>& replacements )noexcept(false);
 
-		JDE_NATIVE_VISIBILITY void CombineFiles( path csvFileName );
+		Γ void CombineFiles( path csvFileName );
 
 		template<typename TCollection>
 		void SaveColumnNames( path path, const TCollection& columns );
 
-		struct JDE_NATIVE_VISIBILITY Compression //TODO See if this is used.
+		struct Γ Compression //TODO See if this is used.
 		{
 			void Save( path path, const std::vector<char>& data )noexcept(false);
 			virtual fs::path Compress( path path, bool deleteAfter=true )noexcept(false);
@@ -131,9 +131,8 @@ namespace Jde::IO
 	template<typename T>
 	void File::ForEachLine( const std::basic_string<T>& file, const std::function<void(const std::basic_string<T>&)>& function, const uint lineCount )
 	{
-		std::basic_ifstream<T> t( file );
-		if( t.fail() )
-			THROW( Exception(fmt::format("Could not open file '{}'", file).c_str()) );
+		CHECK_FILE_EXISTS( file );
+		std::basic_ifstream<T> t( file ); THROW_IFX( t.fail(), IOException(file, "Could not open file") );
 		std::basic_string<T> line;
 		uint lineIndex=0;
 		while( std::getline<T>(t, line) )

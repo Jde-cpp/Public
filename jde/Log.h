@@ -15,7 +15,7 @@
 #include "io/Crc.h"
 #include "TypeDefs.h"
 
-#define 🚪 JDE_NATIVE_VISIBILITY auto
+#define 🚪 Γ auto
 namespace Jde::IO{ class IncomingMessage; }
 namespace Jde
 {
@@ -78,8 +78,10 @@ namespace Jde::Logging
 #pragma endregion
 	struct MessageBase
 	{
-		consteval MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId, uint fileId, uint functionId )noexcept;
-		JDE_NATIVE_VISIBILITY MessageBase( sv message, ELogLevel level, sv file, sv function, int line/*, uint messageId=0, uint fileId=0, uint functionId=0*/ )noexcept;
+		consteval MessageBase( ELogLevel level, sv message, sv file, sv function, uint_least32_t line, uint32 messageId, uint fileId, uint functionId )noexcept;
+		consteval MessageBase( ELogLevel level, sv message, SRCE )noexcept;
+		Γ MessageBase( sv message, ELogLevel level, SRCE )noexcept;
+		Γ MessageBase( sv message, ELogLevel level, sv file, sv function, uint_least32_t line )noexcept;
 		//virtual sv GetType()const{ return "MessageBase"; }
 		EFields Fields{EFields::None};
 		ELogLevel Level;
@@ -89,7 +91,7 @@ namespace Jde::Logging
 		sv File;
 		uint FunctionId{0};
 		sv Function;
-		int LineNumber;
+		uint_least32_t LineNumber;
 		uint UserId{0};
 		uint ThreadId{0};
 	};
@@ -105,7 +107,7 @@ namespace Jde::Logging
 			if( _pMessage )
 				MessageView = *_pMessage;
 		}
-		JDE_NATIVE_VISIBILITY Message2( ELogLevel level, string message, sv file, sv function, int line )noexcept;
+		Γ Message2( ELogLevel level, string message, sv file, sv function, uint_least32_t line )noexcept;
 		//sv GetType()const override{ return "Message2"; }
 	protected:
 		unique_ptr<string> _pMessage;
@@ -209,6 +211,10 @@ namespace Jde
 	{
 		if( file.starts_with('~') )
 			return string{ file };
+
+#ifdef _MSC_VER
+		const string homeDir = file.find("\\jde\\")==sv::npos ? string{ file }  : format( "%JDE_DIR%{}", file.substr(file.find("\\jde\\")+4) );
+#else
 		uint start = 0;
 		for( uint i=0; i<3 && (start = file.find( '/', start ))!=string::npos; ++i, ++start );
 
@@ -221,9 +227,10 @@ namespace Jde
 			start = homeDir.substr(0,end).find_last_of( '/' ); if( start==string::npos ) break;
 			homeDir = homeDir.substr( 0, start )+homeDir.substr( end+3 );
 		}
+#endif
 		return homeDir;
 	}
-#define SOURCE spdlog::source_loc{FileName(m.File.data()).c_str(),m.LineNumber,m.Function.data()}
+#define SOURCE spdlog::source_loc{FileName(m.File.data()).c_str(),(int)m.LineNumber,m.Function.data()}
 	inline void Logging::Log( Logging::MessageBase& m )noexcept
 	{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
@@ -317,7 +324,7 @@ namespace Jde::Logging
 		LogMemory( move(m), move(values) );
 	}
 
-	consteval MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, int line, uint32 messageId=0, uint fileId=0, uint functionId=0 )noexcept:
+	consteval MessageBase::MessageBase( ELogLevel level, sv message, sv file, sv function, uint_least32_t line, uint32 messageId=0, uint fileId=0, uint functionId=0 )noexcept:
 		Level{level},
 		MessageId{ messageId ? messageId : IO::Crc::Calc32(message.substr(0, 100)) },//{},
 		MessageView{message},
