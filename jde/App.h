@@ -21,8 +21,8 @@ namespace Jde
 	struct Γ IApplication //: IPollster
 	{
 		virtual ~IApplication();
-		static IApplication& Instance()noexcept{ /*assert(_pInstance);*/ return *_pInstance; }
-		set<string> BaseStartup( int argc, char** argv, sv appName, string serviceDescription/*, sv companyName="jde-cpp"*/ )noexcept(false);
+		Ω Instance()noexcept->IApplication&{ /*assert(_pInstance);*/ return *_pInstance; }
+		α BaseStartup( int argc, char** argv, sv appName, string serviceDescription/*, sv companyName="jde-cpp"*/ )noexcept(false)->flat_set<string>;
 		β Install( str serviceDescription )noexcept(false)->void=0;
 		β Uninstall()noexcept(false)->void=0;
 
@@ -84,7 +84,7 @@ namespace Jde
 
 	struct OSApp : IApplication
 	{
-		static 🚪 Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->set<string>;
+		static 🚪 Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->flat_set<string>;
 		α GetEnvironmentVariable( sv variable )noexcept->string override;
 		α ProgramDataFolder()noexcept->fs::path override;
 		Ω CompanyName()noexcept->string;

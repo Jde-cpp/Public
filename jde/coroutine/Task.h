@@ -78,7 +78,7 @@ namespace Jde::Coroutine
 				std::rethrow_exception( get<std::exception_ptr>(_result) );
 		auto pVoid = get<sp<void>>( _result );
 		sp<T> p = pVoid ? static_pointer_cast<T>( pVoid ) : sp<T>{};
-		THROW_IF( pVoid && !p, "Could not cast ptr." );
+		if( pVoid && !p ) throw Exception{ "Could not cast ptr." };//mysql precludes using THROW_IF
 		return p;
 	}
 }

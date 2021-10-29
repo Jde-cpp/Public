@@ -131,8 +131,8 @@ namespace Jde::IO
 	template<typename T>
 	void File::ForEachLine( const std::basic_string<T>& file, const std::function<void(const std::basic_string<T>&)>& function, const uint lineCount )
 	{
-		CHECK_FILE_EXISTS( file );
-		std::basic_ifstream<T> t( file ); THROW_IFX( t.fail(), IOException(file, "Could not open file") );
+		CHECK_PATH( file );
+		std::basic_ifstream<T> t( file ); THROW_IFX2( t.fail(), IOException(file, "Could not open file") );
 		std::basic_string<T> line;
 		uint lineIndex=0;
 		while( std::getline<T>(t, line) )

@@ -27,6 +27,7 @@
 	#include <experimental/coroutine>
 	using std::experimental::coroutine_handle;
 	using std::experimental::suspend_never;
+	#include <boost/assert/source_location.hpp>
 #endif
 
 #define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )") _Pragma("warning( disable: 4701 )")
@@ -110,7 +111,7 @@ namespace Jde
 	using std::tuple;
 	using std::unique_ptr;
 	using std::get;
-	using std::set;
+	//using std::set;
 	using std::static_pointer_cast;
 	using std::unique_lock;
 	using std::shared_lock;
@@ -158,17 +159,18 @@ namespace Jde
 		#error WIN32_LEAN_AND_MEAN not defined
 	#endif
 	#define __PRETTY_FUNCTION__ __FUNCSIG__
-	using std::source_location;
 	using std::coroutine_handle;
 	using std::suspend_never;
+	using std::source_location;
+	#define SRCE_CUR std::source_location::current()
 #else
 	using std::experimental::coroutine_handle;
 	using std::experimental::suspend_never;
+	using boost::source_location;
+	#define SRCE_CUR boost::source_location{ __builtin_FILE(), __builtin_LINE(), __builtin_FUNCTION() }
 #endif
+	#define SRCE const source_location& sl=SRCE_CUR
 }
-
-#define SRCE const std::source_location& sl=std::source_location::current()
-
 #define α auto
 #define β virtual auto
 #define Ω static auto
