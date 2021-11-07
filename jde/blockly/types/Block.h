@@ -491,6 +491,7 @@ namespace Jde::Blockly
 		constexpr static sv ElementName = "variable";
 		constexpr static sv VariableContainerName = "variables";
 	};
+	#pragma warning( disable : 4297 )
 	template<typename T>
 	optional<T> OptFactory( const ptree& element )noexcept
 	{

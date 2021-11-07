@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifndef JDE_TICK
 #define JDE_TICK
 
@@ -7,6 +7,7 @@
 #include <bitset>
 #include <CommonDefs.h>
 #include "../Exports.h"
+#include "../TypeDefs.h"
 
 namespace Jde{ template<typename> class Vector; }
 namespace Jde::Markets
@@ -15,7 +16,6 @@ namespace Jde::Markets
 	typedef long ContractPK;
 	template<class T> using sp = std::shared_ptr<T>;
 	template<class T> using up = std::unique_ptr<T>;
-
 	namespace Proto
 	{
 		namespace Requests{ enum ETickList:int; }
@@ -25,7 +25,7 @@ namespace Jde::Markets
 	struct OptionComputation
 	{
 		std::unique_ptr<Proto::Results::OptionCalculation> ToProto( ContractPK contractId, ETickType tickType )const noexcept;
-		bool operator==(const OptionComputation& x)const noexcept{ return memcmp(this, &x, sizeof(OptionComputation))==0; }
+		α operator==(const OptionComputation& x)const noexcept->bool{ return memcmp(this, &x, sizeof(OptionComputation))==0; }
 		bool ReturnBased;//vs price based TickAttrib;
 		double ImpliedVol;
 		double Delta;
@@ -55,15 +55,16 @@ namespace Jde::Markets
 		Tick( ContractPK id ):ContractId{id}{}
 		Tick( ContractPK id, TickerId tickId ):ContractId{id},TwsRequestId{tickId}{};
 
-		bool SetString( ETickType type, str value )noexcept;
-		bool SetInt( ETickType type, _int value )noexcept;
-		bool SetPrice( ETickType type, double value/*, const ::TickAttrib& attribs*/ )noexcept;
-		void SetPrices( long long bidSize, double bid, long long askSize, double ask )noexcept;
-		bool SetDouble( ETickType type, double value )noexcept;
-		bool SetOptionComputation( ETickType type, OptionComputation&& v )noexcept;
-		bool FieldEqual( const Tick& other, ETickType tick )const noexcept;
-		bool IsSet( ETickType type )const noexcept{ return _setFields[type]; }
-		bool HasRatios()const noexcept;
+		α SetString( ETickType type, str value )noexcept->bool;
+		α SetInt( ETickType type, _int value )noexcept->bool;
+		α SetPrice( ETickType type, double value/*, const ::TickAttrib& attribs*/ )noexcept->bool;
+		void SetPrices( Decimal bidSize, double bid, Decimal askSize, double ask )noexcept;
+		α SetDecimal( ETickType type, Decimal value )noexcept->bool;
+		α SetDouble( ETickType type, double value )noexcept->bool;
+		α SetOptionComputation( ETickType type, OptionComputation&& v )noexcept->bool;
+		α FieldEqual( const Tick& other, ETickType tick )const noexcept->bool;
+		α IsSet( ETickType type )const noexcept->bool{ return _setFields[type]; }
+		α HasRatios()const noexcept->bool;
 		void AddNews( News&& news )noexcept;
 		Fields SetFields()const noexcept{ return _setFields; }
 		std::map<string,double> Ratios()const noexcept;
@@ -73,15 +74,15 @@ namespace Jde::Markets
 		static Fields PriceFields()noexcept;
 		ContractPK ContractId{0};
 		TickerId TwsRequestId{0};
-		long long BidSize;
+		Decimal BidSize;
 		double Bid;
 		double Ask;
-		long long AskSize;
+		Decimal AskSize;
 		double LastPrice;
-		long long LastSize;
+		Decimal LastSize;
 		double High;
 		double Low;
-		uint Volume;
+		Decimal Volume;
 		double ClosePrice;
 		OptionComputation BID_OPTION_COMPUTATION;
 		OptionComputation ASK_OPTION_COMPUTATION;
@@ -94,7 +95,7 @@ namespace Jde::Markets
 		double High26Week;
 		double Low52Week;
 		double High52Week;
-		uint AverageVolume;
+		Decimal AverageVolume;
 		uint OPEN_INTEREST;
 		double OptionHistoricalVol;
 		double OptionImpliedVol;
@@ -162,7 +163,7 @@ namespace Jde::Markets
 		uint FUTURES_OPEN_INTEREST;
 		uint AVG_OPT_VOLUME;
 		time_t DELAYED_LAST_TIMESTAMP;
-		uint SHORTABLE_SHARES;
+		Decimal ShortableShares;
 		int NOT_SET;
 	private:
 		Fields _setFields;

@@ -73,7 +73,6 @@ namespace Jde::Markets
 	{
 		static constexpr sv CacheFormat="Contract.{}";
 		Contract()=default;
-		//Contract( IO::IncomingMessage& message, bool havePrimaryExchange=true )noexcept(false);
 		explicit Contract( ContractPK id, sv symbol="" )noexcept;
 		Contract( ContractPK id, Proto::Currencies currency, sv localSymbol, uint_fast32_t multiplier, sv name, Exchanges exchange, sv symbol, sv tradingClass, TimePoint issueDate=TimePoint::max() )noexcept;
 		Contract( const ::Contract& contract )noexcept;
@@ -120,7 +119,7 @@ namespace Jde::Markets
 
 		std::ostream& to_stream( std::ostream& os, bool includePrimaryExchange=true )const noexcept;
 	};
-	typedef std::shared_ptr<const Contract> ContractPtr_;
+	using ContractPtr_=sp<const Contract>;
 	std::ostream& operator<<( std::ostream& os, const Contract& contract )noexcept;
 	JDE_MARKETS_EXPORT ContractPtr_ Find( const std::map<ContractPK, ContractPtr_>&, sv symbol )noexcept;
 

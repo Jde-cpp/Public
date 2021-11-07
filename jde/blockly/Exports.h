@@ -1,5 +1,5 @@
 #pragma once
-#define JDE_EDGAR
+
 #ifdef JDE_BLOCKLY_EXPORTS
 	#ifdef _MSC_VER
 		#define JDE_BLOCKLY __declspec( dllexport )

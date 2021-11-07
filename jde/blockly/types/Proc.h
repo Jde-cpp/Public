@@ -2,11 +2,9 @@
 #include <cstdint>
 #include <cmath>
 #include <compare>
-#ifdef _MSC_VER
-//	#include <fmt/core.h>
-#endif
 #include <jde/Exception.h>
 #include <jde/Log.h>
+#include <jde/markets/TypeDefs.h>
 #include <jde/markets/types/MyOrder.h>
 #include "../Exports-Executor.h"
 
@@ -32,7 +30,6 @@ namespace Jde::Markets::MBlockly
 		constexpr Price()noexcept=default;
 		explicit Price( double v )noexcept(false);//TODO move protected
 
-
 		bool empty()const noexcept{ return _value==Unitialized; }
 		friend auto operator<=>( const Price&, const Price& )noexcept = default;
 		friend Price operator-( const Price& me, const Price& other )noexcept{ return Price( me._value-other._value ); }
@@ -54,6 +51,7 @@ namespace Jde::Markets::MBlockly
 		friend auto operator<=>( const Size&, const Size& )noexcept = default;
 		string ToString()const{ return fmt::format("{:.0f}", _value); }
 	private:
+		Size( ::Decimal value )noexcept:_value{ ToDouble(value) }{}
 		Size( double value )noexcept:_value{value}{}
 		Size( long long value )noexcept:_value{(double)value}{}
 		double _value{Unitialized};
@@ -76,7 +74,6 @@ namespace Jde::Markets::MBlockly
 		friend Amount operator*( Price a, Size b )noexcept;
 		friend Blockly;
 	};
-	//Amount operator*( Price a, Size b )noexcept{ return Amount{};}
 
 	inline Amount operator*( Price a, Size b )noexcept{ return Amount{a._value*b._value}; }
 

@@ -33,8 +33,8 @@ namespace Jde
 		template<class T> bool operator==( const T& s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
 		bool operator==( const char* psz )const noexcept{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
 		friend std::ostream& operator<<( std::ostream &os, const CIString& obj )noexcept{ os << (string)obj; return os; }
-		inline bool operator !=( sv s )const noexcept{ return size() == s.size() && base::compare(0, s.size(), s.data(), s.size())!=0; }
-		inline bool operator !=( str s )const noexcept{ return *this!=sv{s}; }
+		Ξ operator !=( sv s )const noexcept{ return size() == s.size() && base::compare(0, s.size(), s.data(), s.size())!=0; }
+		Ξ operator !=( str s )const noexcept{ return *this!=sv{s}; }
 		inline CIString& operator+=( sv s )noexcept
 		{
 			var l = size()+s.size();
@@ -78,13 +78,12 @@ namespace Jde
 		ⓣ TryToFloat( const basic_string<T>& s )noexcept->float;
 		optional<double> TryToDouble( str s )noexcept;
 
-		template<typename Enum, typename Collection>
-		sv FromEnum( const Collection& s, Enum value )noexcept;
+		template<class TEnum, class Collection> α FromEnum( const Collection& stringValues, TEnum value )noexcept->string;
 		template<class TEnum, class TCollection, class TString> α ToEnum( const TCollection& s, TString text )noexcept->optional<TEnum>;
 
-		[[nodiscard]]inline bool EndsWith( sv value, sv ending ){ return ending.size() > value.size() ? false : std::equal( ending.rbegin(), ending.rend(), value.rbegin() ); }
-		[[nodiscard]]inline bool StartsWith( sv value, sv starting ){ return starting.size() > value.size() ? false : std::equal( starting.begin(), starting.end(), value.begin() ); }
-		[[nodiscard]]inline bool StartsWithInsensitive( sv value, sv starting );
+		[[nodiscard]]Ξ EndsWith( sv value, sv ending )noexcept{ return ending.size() > value.size() ? false : std::equal( ending.rbegin(), ending.rend(), value.rbegin() ); }
+		[[nodiscard]]Ξ StartsWith( sv value, sv starting )noexcept{ return starting.size() > value.size() ? false : std::equal( starting.begin(), starting.end(), value.begin() ); }
+		[[nodiscard]]Ξ StartsWithInsensitive( sv value, sv starting )noexcept->bool;
 
 		inline void LTrim( string& s ){ s.erase( s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {return !std::isspace(ch); }) ); }
 		inline void RTrim( string& s ){ s.erase( std::find_if(s.rbegin(), s.rend(), [](int ch) {return !std::isspace(ch);}).base(), s.end() ); }
@@ -188,7 +187,7 @@ namespace Jde
 		THROW_IF( e.ec!=std::errc(), "Can't convert:  '{}'.  to '{}'.  ec='{}'"sv, value, "Jde::GetTypeName<T>()", (uint)e.ec);
 		return v;
 	}
-	inline bool Str::StartsWithInsensitive( sv value, sv starting )
+	Ξ Str::StartsWithInsensitive( sv value, sv starting )noexcept->bool
 	{
 		bool equal = starting.size() <= value.size();
 		if( equal )
@@ -217,12 +216,12 @@ namespace Jde
 		return pResult;
 	}
 	template<class TEnum, class Collection>
-	sv Str::FromEnum( const Collection& stringValues, TEnum value )noexcept
+	α Str::FromEnum( const Collection& stringValues, TEnum value )noexcept->string
 	{
-		return static_cast<uint>(value)<stringValues.size() ? stringValues[(uint)value] : sv{};
+		return (uint)value<stringValues.size() ? string{ stringValues[(uint)value] } : std::to_string( (uint)value );
 	}
 
-	template<typename T> T Str::Trim( const T& s, sv substring )noexcept
+	ⓣ Str::Trim( const T& s, sv substring )noexcept->T
 	{
 		T os; uint i, current=0;
 		while( (i = s.find(substring, current))!=string::npos )

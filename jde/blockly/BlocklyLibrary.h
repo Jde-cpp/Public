@@ -12,6 +12,7 @@ namespace Jde::Markets
 {
 	struct MyOrder; struct Tick; struct Account; struct Contract; struct TwsClient;
 	namespace MBlockly{ struct Account; struct IBlockly; }
+	constexpr array<sv,25> TickTypeStrings = { "BidSize"sv, "BidPrice"sv, "AskPrice"sv, "AskSize"sv, "LastPrice"sv, "LastSize"sv, "High"sv, "Low"sv, "Volume"sv, "ClosePrice"sv, "BID_OPTION_COMPUTATION"sv, "ASK_OPTION_COMPUTATION"sv, "LAST_OPTION_COMPUTATION"sv, "MODEL_OPTION"sv, "OpenTick"sv, "Low13Week", "High13Week", "Low26Week", "High26Week", "Low52Week", "High52Week", "AverageVolume", "OPEN_INTEREST", "OptionHistoricalVol", "OptionImpliedVol" };
 }
 
 namespace Jde::Blockly

@@ -18,6 +18,7 @@
 	#ifndef WIN32_LEAN_AND_MEAN
 		#error WIN32_LEAN_AND_MEAN not defined
 	#endif
+	#define NTDDI_VERSION NTDDI_WIN10_RS1 // work around linker failure MapViewOfFileNuma2@36
 	#include <coroutine>
 	#include <source_location>
 	#define __PRETTY_FUNCTION__ __FUNCSIG__
@@ -44,11 +45,6 @@
 #ifndef NO_BOOST
 	#include <boost/container/flat_map.hpp>
 	#include <boost/container/flat_set.hpp>
-#endif
-
-
-#ifdef ONE_CORE
-	#pragma comment(lib, "Onecore.lib")
 #endif
 
 namespace Jde
@@ -81,16 +77,16 @@ namespace Jde
 	template<typename T>
 	constexpr auto mu = std::make_unique<T>;
 
-	typedef uint_fast16_t uint16;
-	typedef int_fast16_t int16;
+	using uint16=uint_fast16_t;
+	using int16=int_fast16_t ;
 
-	typedef uint_fast32_t uint32;
-	typedef uint_fast64_t PK;
-	typedef PK UserPK;
-	typedef int_fast32_t int32;
+	using uint32=uint_fast32_t;
+	using PK=uint_fast64_t;
+	using UserPK=PK;
+	using int32=int_fast32_t;
 
 	using uint=uint_fast64_t;
-	using _int=int_fast64_t ;
+	using _int=int_fast64_t;
 	using Handle=uint;
 
 	using Clock=std::chrono::system_clock;

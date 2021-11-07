@@ -514,7 +514,7 @@ message TickSize
 {
 	uint32 request_id=1;
 	ETickType tick_type=2;
-	int32 size =3;
+	double size=3;
 }
 
 message TickString

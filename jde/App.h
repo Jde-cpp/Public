@@ -78,7 +78,7 @@ namespace Jde
 	private:
 		β SetConsoleTitle( sv title )noexcept->void=0;
 		static vector<sp<void>> _objects; static mutex _objectMutex;
-		static vector<Threading::IPollWorker*> _activeWorkers; static atomic<bool> _activeWorkersMutex;
+		static vector<Threading::IPollWorker*> _activeWorkers; static std::atomic_flag _activeWorkersMutex;
 		static vector<sp<IShutdown>> _shutdowns;
 	};
 

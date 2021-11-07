@@ -1,7 +1,5 @@
 //protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. ib.proto
-//ln -s /home/duffyj/code/jde/7.0/native/framework/markets/types/proto/ib.proto .
-//npx pbjs  -r ib_root -t static-module -w es6 -o src/app/proto/ib.js ib.proto & npx pbts -o src/app/proto/ib.d.ts src/app/proto/ib.js
-//npx pbjs -r ib_root -t static-module -w es6 -o ib.js /home/duffyj/code/jde/MarketLibrary/source/types/proto/ib.proto & npx pbts -o ib.d.ts ib.js
+//cd $JDE_DIR/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. ib.proto; mv ib.pb.cc ../../../../../MarketLibrary/source/types/proto
 
 syntax = "proto3";
 package Jde.Markets.Proto;
@@ -78,6 +76,8 @@ enum Exchanges
 	Iex = 24;
 	Venture = 25;
 	Australian = 26;
+	Aequitas = 27;
+	London = 28;
 	UnknownExchange = -1;
 };
 

@@ -13,11 +13,10 @@
 #include "../../../Framework/source/io/DiskWatcher.h"
 #include "../../../Framework/source/io/FileCo.h"
 
-#define 🚪 Γ α
 namespace Jde{ struct Stopwatch; }
 namespace Jde::IO
 {
-	🚪 Native()noexcept->IO::IDrive&;
+	Γ α Native()noexcept->IO::IDrive&;
 	inline α Read( path path, bool vector=true )noexcept{ return DriveAwaitable{path, vector}; }
 	inline α Write( path path, sp<vector<char>> data )noexcept{ return DriveAwaitable{path, data}; }
 	inline α Write( path path, sp<string> data )noexcept{ return DriveAwaitable{path, data}; }
@@ -132,7 +131,7 @@ namespace Jde::IO
 	void File::ForEachLine( const std::basic_string<T>& file, const std::function<void(const std::basic_string<T>&)>& function, const uint lineCount )
 	{
 		CHECK_PATH( file );
-		std::basic_ifstream<T> t( file ); THROW_IFX2( t.fail(), IOException(file, "Could not open file") );
+		std::basic_ifstream<T> t( file ); THROW_IFX( t.fail(), IOException(file, "Could not open file") );
 		std::basic_string<T> line;
 		uint lineIndex=0;
 		while( std::getline<T>(t, line) )
@@ -143,4 +142,3 @@ namespace Jde::IO
 		}
 	}
 }
-#undef 🚪

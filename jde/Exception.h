@@ -5,31 +5,13 @@
 
 namespace boost::system{ class error_code; }
 
-//#ifdef THROW
-	#undef THROW
-//#endif
-#define THROW(x, ...) throw Jde::Exception{ SRCE_CUR, x __VA_OPT__(,) __VA_ARGS__ }
-//#endif
+//#undef THROW
+#define THROW(x, ...) throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Debug, x __VA_OPT__(,) __VA_ARGS__ }
 #define IO_EX( p, v, ... ) IOException( SRCE_CUR, p, v __VA_OPT__(,) __VA_ARGS__ )
-//mysql undefs THROW :(
-//#ifndef  THROW2
-//# define THROW2(x, ...) throw Exception{ SRCE_CUR, x __VA_OPT__(,) __VA_ARGS__ }
-//#endif
-// #ifndef  THROWX
-// # define THROWX(x) Jde::throw_exception(x, __func__,__FILE__,__LINE__)
-// #endif
-
-#define THROW_IF(condition, x, ...) if( condition ) THROW( x )
-#define THROW_IFX2(condition, x) if( condition ) throw x
-// #ifndef THROW_IFXSL
-#define THROW_IFL(condition, x, ...) if( condition ) Jde::Exception{ SRCE_CUR, LogLevel(), x __VA_OPT__(,) __VA_ARGS__ }
-// #endif
-#ifndef  CHECK
-# define CHECK(condition) THROW_IF( !(condition), #condition )
-#endif
-// #ifndef  LOG_EX
-// # define LOG_EX(e) log_exception( e, __func__, __FILE__, __LINE__ )
-// #endif
+#define THROW_IF(condition, x, ...) if( condition ) THROW( x __VA_OPT__(,) __VA_ARGS__  )
+#define THROW_IFX(condition, x) if( condition ) throw x
+#define THROW_IFL(condition, x, ...) if( condition ) throw Jde::Exception{ SRCE_CUR, _logLevel.Level, x __VA_OPT__(,) __VA_ARGS__ }
+#define CHECK(condition) THROW_IF( !(condition), #condition )
 
 #define RETHROW(x, ...) catch( std::exception& e ){ throw Exception{SRCE_CUR, move(e), x __VA_OPT__(,) __VA_ARGS__}; }
 
@@ -44,17 +26,19 @@ namespace Jde
 		IException( sv value, SRCE )noexcept;
 
 		template<class... Args> IException( const source_location& sl, std::exception&& inner, sv format_={}, Args&&... args )noexcept;
-		template<class... Args> IException( const source_location& sl, ELogLevel l, sv m, Args&&... args )noexcept;
-		template<class... Args> IException( const source_location& sl, sv m, Args&&... args )noexcept:IException{ sl, ELogLevel::Debug, m, ...args }{}
+		template<class... Args> IException( const source_location& sl, ELogLevel l, sv m, Args&& ...args )noexcept;
+/*		template<class... Args> IException(const source_location& sl, sv msg, Args&& ...args)noexcept :
+			IException( sl, ELogLevel::Debug, msg, ...args )
+		{}*/
 		virtual ~IException()=0;
 
 		β Log()const noexcept->void;
 		α what()const noexcept->const char* override;
 		α Level()const noexcept->ELogLevel{return _level;}
 
-		α SetFunction( const char* p )->void{ _sl = {_sl.file_name(), _sl.line(), p}; }
-		α SetFile( const char* p )noexcept->void{ _sl = {p, _sl.line(), _sl.function_name()}; }
-		α SetLine( uint_least32_t line )noexcept->void{ _sl = {_sl.file_name(), line, _sl.function_name()}; }
+		//α SetFunction( const char* p )->void{ _sl = source_location{_sl.file_name(), _sl.line(), p}; }
+		//α SetFile( const char* p )noexcept->void{ _sl = source_location{p, _sl.line(), _sl.function_name()}; }
+		//α SetLine( uint_least32_t line )noexcept->void{ _sl = source_location{_sl.file_name(), line, _sl.function_name()}; }
 		//friend α operator<<( std::ostream& os, const Exception& e )->std::ostream&;
 	protected:
 		source_location _sl;
@@ -155,14 +139,14 @@ namespace Jde
 		{}
 	};
 */
-#define CHECK_PATH( path ) THROW_IFX2( !fs::exists(path), IOException(path, "path does not exist") );
+#define CHECK_PATH( path ) THROW_IFX( !fs::exists(path), IOException(path, "path does not exist") );
 	struct Γ IOException final : IException
 	{
 		IOException( path path, sv value, SRCE ): IException( value, sl ), _path{path}{ Log(); }
 		IOException( path path, uint errorCode, sv value, SRCE ):IException( value, sl ), _errorCode{errorCode}, _path{path}{ Log(); }
 
 		template<class... Args> IOException( const source_location& sl, path path, sv value, Args&&... args ):
-			IException( sl, value, args... ),
+			IException( sl, ELogLevel::Debug, value, args... ),
 			_path{ path }
 		{
 			Log();

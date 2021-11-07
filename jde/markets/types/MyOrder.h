@@ -2,9 +2,11 @@
 #ifdef _MSC_VER
 #pragma push_macro("assert")
 #undef assert
+#pragma warning( disable : 4267 )
 #include <Order.h>
 #include <OrderState.h>
 #include <CommonDefs.h>
+#pragma warning( default : 4267 )
 #pragma pop_macro("assert")
 #endif
 #include "../Exports.h"
