@@ -16,38 +16,10 @@
 #include "TypeDefs.h"
 
 namespace Jde::IO{ class IncomingMessage; }
-namespace Jde
-{
-/*	template<class T>
-	struct copy_ptr : unique_ptr<T>
-	{
-		using base=unique_ptr<T>;
-		copy_ptr()noexcept=default;
-		copy_ptr( const copy_ptr& rhs )noexcept:
-			unique_ptr<T>{ rhs.get()==nullptr ? unique_ptr<T>{} : make_unique<T>(*rhs.get()) }
-		{}
-		copy_ptr( base&& rhs )noexcept:
-			unique_ptr<T>( move(rhs) )
-		{}
-		copy_ptr& operator=( const base& rhs )
-		{
-			if( rhs.get()==nullptr )
-				*this = nullptr;
-			else
-			{
-				auto p = rhs.get();
-				unique_ptr<T>& self = *this;
-				self = make_unique<T>( *p );
-			}
-			return *this;
-		}
-	};*/
-}
 namespace Jde::Logging
 {
 #pragma region MessageBase
 	namespace Messages{ struct ServerMessage; }
-	struct IServerSink;
 #pragma region EFields
 	enum class EFields : uint16
 	{
@@ -93,7 +65,6 @@ namespace Jde::Logging
 		uint ThreadId{0};
 	protected:
 		explicit Γ MessageBase( ELogLevel level, SRCE )noexcept;
-		//Γ MessageBase( ELogLevel level, sv file, sv function, uint_least32_t line )noexcept;
 	};
 	struct Message /*final*/ : MessageBase
 	{
@@ -108,12 +79,14 @@ namespace Jde::Logging
 				MessageView = *_pMessage;
 		}
 		Γ Message( ELogLevel level, string message, SRCE )noexcept;
-		unique_ptr<string> _pMessage;//todo move to protected
+
+		up<string> _pMessage;//todo move to protected
 	protected:
 		string _fileName;
 	};
 
 #pragma endregion
+	Γ α SetTag( sv tag, ELogLevel l=ELogLevel::Debug, bool file=true )noexcept->void;
 	α Log( const Logging::MessageBase& messageBase )noexcept->void;
 	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )noexcept->void;
 	ψ Log( const Logging::MessageBase& messageBase, Args&&... args )noexcept->void;
@@ -148,23 +121,23 @@ namespace Jde::Logging
 #define DBG(message,...) Logging::Log( Logging::MessageBase(message, ELogLevel::Debug, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define DBG_IF(predicate,message,...) if( predicate ) Logging::Log( Logging::MessageBase(message, ELogLevel::Debug, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define BREAK_IF( predicate, severity, message, ...) if( predicate ){ LOGL(severity, message, __VA_ARGS__); break; }
-#define CONTINUE_IF( predicate, message, ...) if( predicate ){ DBG(message, __VA_ARGS__); continue; }
+#define CONTINUE_IF( predicate, message, ...) if( predicate ){ LOG(message, __VA_ARGS__); continue; }
 #define RETURN_IF( predicate, message, ... ) if( predicate ){ DBG( message, __VA_ARGS__ ); return; }
 #define DBGX(message,...) Logging::LogNoServer( Logging::MessageBase(message, ELogLevel::Debug, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define DBG_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(message, ELogLevel::Debug, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
 #define TRACE(message,...) Logging::Log( Logging::MessageBase(message, ELogLevel::Trace, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-#define TRACE_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(message, ELogLevel::Trace, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
+//#define TRACE_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(message, ELogLevel::Trace, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
 #define TRACEX(message,...) Logging::LogNoServer( Logging::MessageBase(message, ELogLevel::Trace, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 
 #define LOGL(severity,message,...) Logging::Log( severity, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOGX(severity,message,...) Logging::LogNoServer( Logging::MessageBase(message, severity, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOGT(severity,message,...) Logging::Log( severity.Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOG(message,...) Logging::Log( _logLevel.Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-#define LOGS(severity,message,...) Logging::Log( Logging::Message( severity, message ) __VA_OPT__(,) __VA_ARGS__ )
+#define LOGS(message,...) Logging::Log( Logging::Message( _logLevel.Level, message ) __VA_OPT__(,) __VA_ARGS__ )
 
 #define LOG_IF(predicate, message,...) if( predicate ) Logging::Log( _logLevel.Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOG_IFT(predicate, severity, message,...) if( predicate ) LOGT( severity, message __VA_OPT__(,) __VA_ARGS__ )
-#define LOG_IFL(predicate, severity, message,...) if( predicate ) LOGL( severity, message )
+#define LOG_IFL(predicate, severity, message,...) if( predicate ) LOGL( severity, message __VA_OPT__(,) __VA_ARGS__ )
 #define ERR_IF(predicate, message,...) LOG_IFL( predicate, ELogLevel::Error, message, __VA_ARGS__ )
 #define LOG_MEMORY( severity, message, ... ) LogMemoryDetail( Logging::Message{severity, message} __VA_OPT__(,) __VA_ARGS__ );
 
@@ -177,7 +150,7 @@ namespace spdlog
 namespace Jde
 {
 	Ξ Log( ELogLevel sev, string&& x, SRCE )noexcept{ Logging::Log( Logging::Message{sev, move(x), sl} ); }
-	Ξ Dbg( string&& x, SRCE )noexcept{ Logging::Log( Logging::Message{ELogLevel::Debug, move(x), sl} ); }
+	Ξ Dbg( string x, SRCE )noexcept{ Logging::Log( Logging::Message{ELogLevel::Debug, move(x), sl} ); }
 
    using namespace std::literals;
 	Γ α HaveLogger()noexcept->bool;
@@ -204,13 +177,13 @@ namespace Jde
 	namespace Logging
 	{
 		namespace Proto{class Status;}
-		TimePoint StartTime()noexcept;
+		α StartTime()noexcept->TimePoint;
 		Γ α SetStatus( const vector<string>& values )noexcept->void;
-		void SetLogLevel( ELogLevel client, ELogLevel server )noexcept;
-		up<Proto::Status> GetStatus()noexcept;
+		α SetLogLevel( ELogLevel client, ELogLevel server )noexcept->void;
+		α GetStatus()noexcept->up<Proto::Status>;
 	}
 #define var const auto
-	inline string FileName( sv file )
+	Ξ FileName( sv file )->string
 	{
 		if( file.starts_with('~') )
 			return string{ file };
@@ -233,7 +206,7 @@ namespace Jde
 #endif
 		return homeDir;
 	}
-#define SOURCE spdlog::source_loc{FileName(m.File.data()).c_str(),(int)m.LineNumber,m.Function.data()}
+#define SOURCE spdlog::source_loc{ FileName(m.File.data()).c_str(), (int)m.LineNumber, m.Function.data() }
 	Ξ Logging::Log( const Logging::MessageBase& m )noexcept->void
 	{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
@@ -292,38 +265,6 @@ namespace Jde
 	{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 	}
-	namespace Internal
-	{
-/*		inline α TagLevel( sv tag, const array<Tag_,20>& tags )noexcept->ELogLevel
-		{
-			auto f = [tag](var x)noexcept->bool{ return x.Id[0]==0 || tag==(const char*)&x.Id[0]; };
-			ELogLevel l{ELogLevel::NoLog};
-			if( var p = find_if( tags.begin(), tags.end(), f); p!=tags.end() && p->Id[0]!=0 )
-				l = p->Level;
-			return l;
-		}
-*/
-	}
-/*
-	ψ Logging::Tag( sv tag, const Logging::MessageBase& m, Args&&... args )noexcept->void
-	{
-
-		if( auto l = Internal::TagLevel(tag, Tags()); l>ELogLevel::NoLog )
-			Default().log( SOURCE, (spdlog::level::level_enum)l, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
-		if( ServerLevel()>m.Level && !LogMemory() )
-			return;
-		if( var l = Internal::TagLevel(tag, ServerTags()); l>ELogLevel::NoLog )
-		{
-			vector<string> values; values.reserve( sizeof...(args) );
-			ToVec::Append( values, args... );
-			m.Level = l;
-			if( LogMemory() )
-				LogMemory( m, values );
-			if( ServerLevel()<=m.Level )
-				LogServer( m, values );
-		}
-	}
-*/
 }
 
 #pragma region MessageBase

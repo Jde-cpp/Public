@@ -28,7 +28,7 @@ namespace Jde::Markets
 		namespace IB{ enum ETimeInForce:int; class Order; }
 	}
 
-	struct JDE_MARKETS_EXPORT MyOrder : public ::Order
+	struct ΓM MyOrder : public ::Order
 	{
 		MyOrder()noexcept=default;
 		MyOrder( ::OrderId orderId, const Proto::Order& order )noexcept;

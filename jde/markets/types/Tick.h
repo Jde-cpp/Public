@@ -47,7 +47,7 @@ namespace Jde::Markets
 		const string ExtraData;
 	};
 
-	struct JDE_MARKETS_EXPORT Tick
+	struct ΓM Tick
 	{
 		typedef std::bitset<91> Fields;//ETickType::NOT_SET+1
 		typedef std::variant<nullptr_t,uint,int,double,time_t,string,OptionComputation,sp<Vector<News>>> TVariant;

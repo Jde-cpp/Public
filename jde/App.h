@@ -4,7 +4,7 @@
 #include "Log.h"
 
 namespace Jde::Threading{ struct InterruptibleThread; struct IWorker; }
-#define 🚪 Γ auto
+#define Φ Γ auto
 namespace Jde
 {
 	namespace Threading{ struct IPollWorker; }
@@ -36,7 +36,6 @@ namespace Jde
 		Ω GarbageCollect()noexcept->void;
 		Ω AddApplicationLog( ELogLevel level, str value )noexcept->void;//static to call in std::terminate.
 		ⓣ static AddPollster( bool appThread )noexcept->sp<T>;
-		//ⓣ static AddShutdown()noexcept->sp<IShutdown>;
 		Ω AddShutdown( sp<IShutdown> pShared )noexcept->void;
 		Ω RemoveShutdown( sp<IShutdown> pShared )noexcept->void;
 		Ω Add( sp<void> pShared )noexcept->void;
@@ -48,14 +47,11 @@ namespace Jde
 		Ω AddShutdownFunction( function<void()>&& shutdown )noexcept->void;
 		Ω Pause()noexcept->void;
 		Ω IsConsole()noexcept->bool;
-		//Ω SetExitReason( int i )noexcept->void;
-		//void WakeUp()noexcept override;
-		//void Sleep()noexcept override;
 
-		static vector<sp<Threading::InterruptibleThread>>& GetBackgroundThreads()noexcept{ return  *_pBackgroundThreads; }
-		static sv ApplicationName()noexcept{ return _pApplicationName ? *_pApplicationName : ""sv;}
-		virtual fs::path ProgramDataFolder()noexcept=0;
-		static fs::path ApplicationDataFolder()noexcept;
+		Ω GetBackgroundThreads()noexcept{ return  *_pBackgroundThreads; }
+		Ω ApplicationName()noexcept{ return _pApplicationName ? *_pApplicationName : ""sv;}
+		β ProgramDataFolder()noexcept->fs::path=0;
+		Ω ApplicationDataFolder()noexcept->fs::path;
 		Ω ShuttingDown()noexcept->bool;
 		Ω Shutdown()noexcept->void;
 		β GetEnvironmentVariable( sv variable )noexcept->string=0;
@@ -63,20 +59,19 @@ namespace Jde
 		Ω RemoveActiveWorker( Threading::IPollWorker* p )noexcept->void;
 	protected:
 
-		static void OnTerminate()noexcept;//implement in OSApp.cpp.
-		// OSPause()noexcept->void=0;
-		virtual bool AsService()noexcept=0;
+		Ω OnTerminate()noexcept->void;
+		β AsService()noexcept->bool=0;
 		β AddSignals()noexcept(false)->void=0;
-		virtual bool KillInstance( uint processId )noexcept=0;
+		β KillInstance( uint processId )noexcept->bool=0;
 
 		static mutex _threadMutex;
 		static VectorPtr<sp<Threading::InterruptibleThread>> _pBackgroundThreads;
 
 		static sp<IApplication> _pInstance;
-		static unique_ptr<string> _pApplicationName;
-		//static unique_ptr<string> _pCompanyName;
+		static up<string> _pApplicationName;
 	private:
 		β SetConsoleTitle( sv title )noexcept->void=0;
+
 		static vector<sp<void>> _objects; static mutex _objectMutex;
 		static vector<Threading::IPollWorker*> _activeWorkers; static std::atomic_flag _activeWorkersMutex;
 		static vector<sp<IShutdown>> _shutdowns;
@@ -84,41 +79,38 @@ namespace Jde
 
 	struct OSApp : IApplication
 	{
-		static 🚪 Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->flat_set<string>;
+		Γ Ω Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->flat_set<string>;
 		α GetEnvironmentVariable( sv variable )noexcept->string override;
 		α ProgramDataFolder()noexcept->fs::path override;
 		Ω CompanyName()noexcept->string;
 		Ω CompanyRootDir()noexcept->fs::path;
-		static 🚪 FreeLibrary( void* p )noexcept->void;
-		static 🚪 LoadLibrary( path path )noexcept(false)->void*;
-		static 🚪 GetProcAddress( void* pModule, str procName )noexcept(false)->void*;
+		Γ Ω FreeLibrary( void* p )noexcept->void;
+		Γ Ω LoadLibrary( path path )noexcept(false)->void*;
+		Γ Ω GetProcAddress( void* pModule, str procName )noexcept(false)->void*;
 		α Install( str serviceDescription )noexcept(false)->void override;
 		α Uninstall()noexcept(false)->void override;
-		static 🚪 ProcessId()noexcept->uint;
+		Γ Ω ProcessId()noexcept->uint;
 		Ω Executable()noexcept->fs::path;
 		Ω Args()noexcept->flat_map<string,string>;
 		Ω Pause()noexcept->void;
 		Ω UnPause()noexcept->void;
-		🚪 GetThreadId()noexcept->uint;
-		🚪 GetThreadDescription()noexcept->const char*;
+		Φ GetThreadId()noexcept->uint;
+		Φ GetThreadDescription()noexcept->const char*;
 
 	protected:
-		bool KillInstance( uint processId )noexcept override;
-		void SetConsoleTitle( sv title )noexcept override;
-		void AddSignals()noexcept(false) override;
-		bool AsService()noexcept override;
+		α KillInstance( uint processId )noexcept->bool override;
+		α SetConsoleTitle( sv title )noexcept->void override;
+		α AddSignals()noexcept(false)->void override;
+		α AsService()noexcept->bool override;
 
 		//void OnTerminate()noexcept override;
 	private:
-		static void ExitHandler( int s );
+		Ω ExitHandler( int s )->void;
 #ifdef _MSC_VER
 		BOOL HandlerRoutine( DWORD  ctrlType );
 #endif
 	};
 
-	//ⓣ IApplication::AddShutdown()->sp<T>
-	//{
-	//}
 	ⓣ IApplication::AddPollster( bool appThread )noexcept->sp<T>
 	{
 		static_assert(std::is_base_of<IShutdown, T>::value, "T must derive from IShutdown");
@@ -136,4 +128,4 @@ namespace Jde
 		return p;
 	}
 }
-#undef 🚪
+#undef Φ

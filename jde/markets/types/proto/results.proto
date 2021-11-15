@@ -1,4 +1,4 @@
-//protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. results.proto; mv results.pb.cc ../../../../../MarketLibrary/source/types/proto
+//cd $JDE_DIR/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. results.proto; mv results.pb.cc ../../../../../MarketLibrary/source/types/proto
 
 syntax = "proto3";
 package Jde.Markets.Proto.Results;
@@ -659,7 +659,7 @@ enum ETickType
 	FUTURES_OPEN_INTEREST=86;
 	AVG_OPT_VOLUME=87;
 	DELAYED_LAST_TIMESTAMP=88;
-	SHORTABLE_SHARES=89;
+	ShortableShares=89;
 	NOT_SET =90;
 }
 enum EResults

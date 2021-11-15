@@ -5,7 +5,6 @@
 
 namespace boost::system{ class error_code; }
 
-//#undef THROW
 #define THROW(x, ...) throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Debug, x __VA_OPT__(,) __VA_ARGS__ }
 #define IO_EX( p, v, ... ) IOException( SRCE_CUR, p, v __VA_OPT__(,) __VA_ARGS__ )
 #define THROW_IF(condition, x, ...) if( condition ) THROW( x __VA_OPT__(,) __VA_ARGS__  )
@@ -27,24 +26,18 @@ namespace Jde
 
 		template<class... Args> IException( const source_location& sl, std::exception&& inner, sv format_={}, Args&&... args )noexcept;
 		template<class... Args> IException( const source_location& sl, ELogLevel l, sv m, Args&& ...args )noexcept;
-/*		template<class... Args> IException(const source_location& sl, sv msg, Args&& ...args)noexcept :
-			IException( sl, ELogLevel::Debug, msg, ...args )
-		{}*/
+
 		virtual ~IException()=0;
 
 		β Log()const noexcept->void;
 		α what()const noexcept->const char* override;
 		α Level()const noexcept->ELogLevel{return _level;}
-
-		//α SetFunction( const char* p )->void{ _sl = source_location{_sl.file_name(), _sl.line(), p}; }
-		//α SetFile( const char* p )noexcept->void{ _sl = source_location{p, _sl.line(), _sl.function_name()}; }
-		//α SetLine( uint_least32_t line )noexcept->void{ _sl = source_location{_sl.file_name(), line, _sl.function_name()}; }
-		//friend α operator<<( std::ostream& os, const Exception& e )->std::ostream&;
+		β Clone()noexcept->sp<IException> =0;
+		β Ptr()->std::exception_ptr =0;
+		α SetSource( const source_location& sl )noexcept{ _sl=sl; Log(); }
+		[[noreturn]] β Throw()->void =0;
 	protected:
 		source_location _sl;
-/*		sv _functionName;
-		sv _fileName;
-		uint_least32_t _line;*/
 
 		ELogLevel _level{ ELogLevel::Debug };
 		mutable string _what;
@@ -60,6 +53,73 @@ namespace Jde
 		template<class... Args> Exception( const source_location& sl, std::exception&& inner, sv format_={}, Args&&... args )noexcept:IException{sl, move(inner), format_, args...}{}
 		template<class... Args> Exception( const source_location& sl, ELogLevel l, sv format_, Args&&... args )noexcept:IException( sl, l, format_, args... ){Log();}
 		~Exception(){}
+		α Clone()noexcept->sp<IException> override{ return std::make_shared<Exception>(move(*this)); }
+		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
+		[[noreturn]] α Throw()->void override{ throw *this; }
+	};
+
+	struct Γ OSException final : IException
+	{
+#ifdef _MSC_VER
+		using T=DWORD;
+#else
+		using T=_int;
+#endif
+		OSException( T result, string&& msg, SRCE )noexcept;
+		α Clone()noexcept->sp<IException> override{ return std::make_shared<OSException>(move(*this)); }
+		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
+		[[noreturn]] α Throw()->void override{ throw *this; }
+	};
+
+	struct Γ CodeException final : IException
+	{
+		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE );
+		CodeException( sv value, std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE );
+
+		α Clone()noexcept->sp<IException> override{ return std::make_shared<CodeException>(move(*this)); }
+		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
+		[[noreturn]] β Throw()->void override{ throw *this; }
+
+		Ω ToString( const std::error_code& pErrorCode )noexcept->string;
+		Ω ToString( const std::error_category& errorCategory )noexcept->string;
+		Ω ToString( const std::error_condition& errorCondition )noexcept->string;
+	private:
+		std::error_code _errorCode;
+	};
+
+	//https://stackoverflow.com/questions/10176471/is-it-possible-to-convert-a-boostsystemerror-code-to-a-stderror-code
+	struct Γ BoostCodeException final : IException
+	{
+		BoostCodeException( const boost::system::error_code& ec, sv msg={}, SRCE )noexcept;
+		BoostCodeException( const BoostCodeException& e, SRCE )noexcept;
+		~BoostCodeException();
+
+		α Clone()noexcept->sp<IException> override{ return std::make_shared<BoostCodeException>(move(*this)); }
+		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
+		[[noreturn]] β Throw()->void override{ throw *this; }
+	private:
+		up<boost::system::error_code> _errorCode;
+	};
+
+#define CHECK_PATH( path ) THROW_IFX( !fs::exists(path), IOException(path, "path does not exist") );
+	struct Γ IOException final : IException
+	{
+		IOException( path path, sv value, SRCE ): IException( value, sl ), _path{path}{ Log(); }
+		IOException( path path, uint errorCode, sv value, SRCE ):IException( value, sl ), _errorCode{errorCode}, _path{path}{ Log(); }
+		IOException( fs::filesystem_error&& e ):IException{}, _pUnderLying( make_unique<fs::filesystem_error>(move(e)) ){ Log(); }
+		template<class... Args> IOException( const source_location& sl, path path, sv value, Args&&... args ):IException( sl, ELogLevel::Debug, value, args... ),_path{ path }{Log();}
+
+		α Clone()noexcept->sp<IException> override{ return std::make_shared<IOException>(move(*this)); }
+		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
+		α ErrorCode()const noexcept->uint;
+		α Path()const noexcept->path; α SetPath( path x )noexcept{ _path=x; }
+		α Log()const noexcept->void override;
+		α what()const noexcept->const char* override;
+		[[noreturn]] β Throw()->void override{ throw *this; }
+	private:
+		const uint _errorCode{ 0 };
+		sp<const fs::filesystem_error> _pUnderLying;
+		fs::path _path;
 	};
 
 	template<class... Args> IException::IException( const source_location& sl, ELogLevel l, sv format_, Args&&... args )noexcept:
@@ -80,144 +140,8 @@ namespace Jde
 		ToVec::Append( _args, args... );
 	}
 
-		//environment variables
-/*	struct Γ EnvironmentException final : Exception
-	{
-		template<class... Args> EnvironmentException( const source_location& sl, sv value, Args&&... args ):
-			Exception( value, args... )
-		{
-			_level = ELogLevel::Error;
-		}
-	};
-*/
-	struct Γ OSException final : IException
-	{
-#ifdef _MSC_VER
-		using T=DWORD;
-#else
-		using T=_int;
-#endif
-		OSException( T result, string&& msg, SRCE )noexcept;
-	private:
-		//α Log()const noexcept->void;
-		//const T _error;
-		//const T _result;
-	};
-
-	struct Γ CodeException final : IException
-	{
-		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE );
-		CodeException( sv value, std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE );
-
-		//α what()const noexcept->const char* override;
-
-		Ω ToString( const std::error_code& pErrorCode )noexcept->string;
-		Ω ToString( const std::error_category& errorCategory )noexcept->string;
-		Ω ToString( const std::error_condition& errorCondition )noexcept->string;
-	private:
-		//α Log()const noexcept->void;
-		std::error_code _errorCode;
-	};
-
-	//https://stackoverflow.com/questions/10176471/is-it-possible-to-convert-a-boostsystemerror-code-to-a-stderror-code
-	struct Γ BoostCodeException final : IException
-	{
-		BoostCodeException( const boost::system::error_code& ec, sv msg={}, SRCE )noexcept;
-		BoostCodeException( const BoostCodeException& e, SRCE )noexcept;
-		~BoostCodeException();
-	private:
-		//α Log()const noexcept->void;
-		up<boost::system::error_code> _errorCode;
-	};
-
-/*
-	struct Γ ArgumentException : Exception
-	{
-		template<class... Args>
-		ArgumentException( sv value, Args&&... args ):
-			Exception( value, args... )
-		{}
-	};
-*/
-#define CHECK_PATH( path ) THROW_IFX( !fs::exists(path), IOException(path, "path does not exist") );
-	struct Γ IOException final : IException
-	{
-		IOException( path path, sv value, SRCE ): IException( value, sl ), _path{path}{ Log(); }
-		IOException( path path, uint errorCode, sv value, SRCE ):IException( value, sl ), _errorCode{errorCode}, _path{path}{ Log(); }
-
-		template<class... Args> IOException( const source_location& sl, path path, sv value, Args&&... args ):
-			IException( sl, ELogLevel::Debug, value, args... ),
-			_path{ path }
-		{
-			Log();
-		}
-
-/*		template<class... Args> IOException( const source_location& sl, path path, uint errorCode, sv value, Args&&... args ):
-			IException( value, args... ),
-			_errorCode{errorCode},
-			_path{path}
-		{
-			Log();
-		}*/
-		/*
-		template<class... Args>
-		IOException( path path, sv value, Args&&... args ):
-			IException( value, args... ),
-			_path{path}
-		{
-			Log();
-		}
-
-		template<class... Args>
-		IOException( uint errorCode, sv value, Args&&... args ):
-			IException( value, args... ),
-			_errorCode{errorCode}
-		{
-			Log();
-		}
-		*/
-		IOException( fs::filesystem_error&& e ):
-			IException{},
-			_pUnderLying( make_unique<fs::filesystem_error>(move(e)) )
-		{
-			Log();
-		}
-		α ErrorCode()const noexcept->uint;
-		α Path()const noexcept->path; α SetPath( path x )noexcept{ _path=x; }
-		α Log()const noexcept->void override;
-		α what()const noexcept->const char* override;
-	private:
-		const uint _errorCode{0};
-		sp<const fs::filesystem_error> _pUnderLying;
-		fs::path _path;
-	};
-
-	template<class T,std::enable_if_t<std::is_base_of<IException,T>::value>* = nullptr>
-	void log_exception( T& e, const char* fnctn, const char* file, long line )noexcept(false)
-	{
-		e.SetFunction( fnctn );
-		e.SetFile( file );
-		e.SetLine( line );
-		//e.Log();
-	}
-	template<class T,std::enable_if_t<std::is_base_of<IException,T>::value>* = nullptr>
-/*	[[noreturn]] void throw_exception( T e, const char* fnctn, const char* file, long line )noexcept(false)
-	{
-		log_exception( e, fnctn, file, line );
-		throw e;
-	}*/
-/*
-	[[noreturn]] inline void throw_exception( sv what, const char* pszFunction, const char* pszFile, long line )
-	{
-		Exception e{ what };
-		throw_exception<Exception>( e, pszFunction, pszFile, line );
-	}
-*/
-
-	Γ void catch_exception( sv pszFunction, sv pszFile, long line, sv pszAdditional, const std::exception* pException=nullptr );
 	//https://stackoverflow.com/questions/35941045/can-i-obtain-c-type-names-in-a-constexpr-way/35943472#35943472
-	template<class T>
-	constexpr sv GetTypeName()
+	ⓣ consteval GetTypeName()->sv
 	{
 #ifdef _MSC_VER
 		char const* p = __FUNCSIG__;
@@ -243,7 +167,7 @@ namespace Jde
 		}
 	}
 #define TRY(x) Try( [&]{x;} )
-	inline bool Try( std::function<void()> func )
+	Ξ Try( std::function<void()> func )
 	{
 		bool result = false;
 		try
@@ -255,8 +179,7 @@ namespace Jde
 		{}
 		return result;
 	}
-	template<typename T>
-	optional<T> Try( std::function<T()> func )
+	ⓣ Try( std::function<T()> func )
 	{
 		optional<T> result;
 		try

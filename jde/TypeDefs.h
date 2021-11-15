@@ -5,7 +5,6 @@
 #include <mutex>
 #include <chrono>
 #include <filesystem>
-#include <list>
 
 #include <optional>
 #include <set>
@@ -47,35 +46,21 @@
 	#include <boost/container/flat_set.hpp>
 #endif
 
+#define α auto
+#define β virtual auto
+#define Ω static auto
+#define Ξ inline auto
+#define ⓣ template<class T> auto
+#define ẗ template<class K,class V> auto
+#define Ṫ template<class T> static auto
+#define ψ template<class... Args> auto
+
 namespace Jde
 {
-	typedef uint_fast8_t uint8;
-	typedef int_fast8_t int8;
-
 	using namespace std::literals::string_view_literals;
-	using sv = std::string_view;
 
-#pragma region ELogLevel
-	enum class ELogLevel : int8
-	{
-		NoLog = -1,
-		Trace = 0,
-		Debug = 1,
-		Information = 2,
-		Warning = 3,
-		Error = 4,
-		Critical = 5,
-		None = 6
-	};
-	constexpr std::array<sv,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };
-	constexpr sv ToString( ELogLevel v )noexcept{ return (uint8)v<ELogLevelStrings.size() ? ELogLevelStrings[(uint8)v] : sv{}; }
-#pragma endregion
-
-	template<typename T>
-	constexpr auto ms = std::make_shared<T>;
-
-	template<typename T>
-	constexpr auto mu = std::make_unique<T>;
+	using uint8=uint_fast8_t;
+	using int8=int_fast8_t;
 
 	using uint16=uint_fast16_t;
 	using int16=int_fast16_t ;
@@ -92,26 +77,26 @@ namespace Jde
 	using Clock=std::chrono::system_clock;
 	using Duration=Clock::duration;
 	using TimePoint=Clock::time_point;
-
-	using SClock=std::chrono::steady_clock ;
+	/*using SClock=std::chrono::steady_clock;
 	using SDuration=SClock::duration;
-	using STimePoint=SClock::time_point;
+	using STimePoint=SClock::time_point;*/
 
 	using std::array;
 	using std::lock_guard;
 	using std::make_unique;
 	using std::make_shared;
 	using std::mutex;
-	using std::shared_ptr;
+	template<class T> using sp = std::shared_ptr<T>;
 	using std::string;
 	using std::tuple;
-	using std::unique_ptr;
+	//using std::unique_ptr;
+	template<class T> using up = std::unique_ptr<T>;
 	using std::get;
-	//using std::set;
 	using std::static_pointer_cast;
 	using std::unique_lock;
 	using std::shared_lock;
 	using std::shared_mutex;
+	using sv = std::string_view;
 	using std::find;
 	using std::find_if;
 	using std::move;
@@ -122,9 +107,10 @@ namespace Jde
 	using std::make_tuple;
 	using std::nullopt;
 	using std::atomic;
+	using std::function;
 
-	template<class T> using sp = std::shared_ptr<T>;
-	template<class T> using up = std::unique_ptr<T>;
+	template<class T, class... Args> auto mu( Args&&... args )->up<T>{ return up<T>( new T(std::forward<Args>(args)...) ); }
+  	template<class T, class... Args> auto ms( Args&&... args ){ static_assert(std::is_constructible_v<T,Args&&...>,""); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
 
 	using std::vector;
 	template<class T> using VectorPtr = std::shared_ptr<std::vector<T>>;
@@ -133,12 +119,10 @@ namespace Jde
 	template<class K, class V> using MapPtr = std::shared_ptr<std::map<K,V>>;
 	template<class K, class V> using UMapPtr = std::unique_ptr<std::map<K,V>>;
 	template<class K, class V> using UnorderedPtr = std::shared_ptr<std::unordered_map<K,V>>;
-	using std::multimap;
-	template<class T, class Y> using MultiMapPtr = std::shared_ptr<std::multimap<T,Y>>;
-	using std::function;
 
-	typedef unsigned short PortType;
-	typedef uint_fast16_t DayIndex;
+	using PortType=unsigned short;
+	using DayIndex=uint_fast16_t;//TODO Refactor remove
+	using Day=uint_fast16_t;
 
 	namespace fs=std::filesystem;
 #ifndef NO_BOOST
@@ -166,13 +150,8 @@ namespace Jde
 	#define SRCE_CUR boost::source_location{ __builtin_FILE(), __builtin_LINE(), __builtin_FUNCTION() }
 #endif
 	#define SRCE const source_location& sl=SRCE_CUR
+
+	enum class ELogLevel : int8{ NoLog=-1, Trace=0, Debug=1, Information=2, Warning=3, Error=4, Critical=5, None=6 };
+	constexpr std::array<sv,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };
+	constexpr sv ToString( ELogLevel v )noexcept{ return (uint8)v<ELogLevelStrings.size() ? ELogLevelStrings[(uint8)v] : sv{}; }
 }
-#define α auto
-#define β virtual auto
-#define Ω static auto
-#define Ξ inline auto
-#define ⓣ template<class T> auto
-#define ẗ template<class K,class V> auto
-#define Ṫ template<class T> static auto
-//#define ρ friend auto
-#define ψ template<class... Args> auto

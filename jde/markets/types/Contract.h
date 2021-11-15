@@ -32,12 +32,12 @@ namespace Jde::Markets
 #pragma endregion
 #pragma region SecurityRight
 	using SecurityRight = Proto::SecurityRight;
-	JDE_MARKETS_EXPORT SecurityRight ToSecurityRight( sv name )noexcept;
-	JDE_MARKETS_EXPORT sv ToString( SecurityRight right )noexcept;
+	ΓM SecurityRight ToSecurityRight( sv name )noexcept;
+	ΓM sv ToString( SecurityRight right )noexcept;
 #pragma endregion
 #pragma region SecurityType
 	using SecurityType=Proto::SecurityType;
-	JDE_MARKETS_EXPORT SecurityType ToSecurityType( sv inputName )noexcept;
+	ΓM SecurityType ToSecurityType( sv inputName )noexcept;
 	sv ToString( SecurityType type )noexcept;
 #pragma endregion
 #pragma region ComboLeg
@@ -69,7 +69,7 @@ namespace Jde::Markets
 	std::ostream& operator<<( std::ostream& os, const ComboLeg& comboLeg )noexcept;
 #pragma endregion
 #pragma region Contract
-	struct JDE_MARKETS_EXPORT Contract
+	struct ΓM Contract
 	{
 		static constexpr sv CacheFormat="Contract.{}";
 		Contract()=default;
@@ -121,18 +121,18 @@ namespace Jde::Markets
 	};
 	using ContractPtr_=sp<const Contract>;
 	std::ostream& operator<<( std::ostream& os, const Contract& contract )noexcept;
-	JDE_MARKETS_EXPORT ContractPtr_ Find( const std::map<ContractPK, ContractPtr_>&, sv symbol )noexcept;
+	ΓM ContractPtr_ Find( const std::map<ContractPK, ContractPtr_>&, sv symbol )noexcept;
 
-	JDE_MARKETS_EXPORT void ToProto( const ContractDetails& details, Proto::Results::ContractDetail& proto )noexcept;
+	ΓM void ToProto( const ContractDetails& details, Proto::Results::ContractDetail& proto )noexcept;
 	namespace Contracts
 	{
-		JDE_MARKETS_EXPORT extern const Contract Spy;
-		JDE_MARKETS_EXPORT extern const Contract SH;
+		ΓM extern const Contract Spy;
+		ΓM extern const Contract SH;
 		extern const Contract Qqq;
 		extern const Contract Psq;
-		JDE_MARKETS_EXPORT extern const Contract Tsla;
-		JDE_MARKETS_EXPORT extern const Contract Aig;
-		JDE_MARKETS_EXPORT extern const Contract Xom;
+		ΓM extern const Contract Tsla;
+		ΓM extern const Contract Aig;
+		ΓM extern const Contract Xom;
 	}
 #pragma endregion
 }
