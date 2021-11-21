@@ -18,7 +18,6 @@
 namespace Jde::IO{ class IncomingMessage; }
 namespace Jde::Logging
 {
-#pragma region MessageBase
 	namespace Messages{ struct ServerMessage; }
 #pragma region EFields
 	enum class EFields : uint16
@@ -48,23 +47,23 @@ namespace Jde::Logging
 #pragma endregion
 	struct MessageBase
 	{
-		consteval MessageBase( sv message, ELogLevel level, sv file, sv function, uint_least32_t line, uint32 messageId=0, uint fileId=0, uint functionId=0 )noexcept;
-		consteval MessageBase( sv message, sv file, sv function, uint_least32_t line )noexcept;
-		consteval MessageBase( sv file, sv function, uint_least32_t line )noexcept;
+		consteval MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, uint32 messageId=0, uint fileId=0, uint functionId=0 )noexcept;
+		consteval MessageBase( sv message, const char* file, const char* function, uint_least32_t line )noexcept;
+		consteval MessageBase( const char* file, const char* function, uint_least32_t line )noexcept;
 
 		EFields Fields{ EFields::None };
 		ELogLevel Level;
 		uint MessageId{0};
 		sv MessageView;
 		uint FileId{0};
-		sv File;
+		const char* File;
 		uint FunctionId{0};
-		sv Function;
+		const char* Function;
 		uint_least32_t LineNumber;
 		uint UserId{0};
 		uint ThreadId{0};
 	protected:
-		explicit Γ MessageBase( ELogLevel level, SRCE )noexcept;
+		explicit Γ MessageBase( ELogLevel level, SL sl )noexcept;
 	};
 	struct Message /*final*/ : MessageBase
 	{
@@ -74,7 +73,7 @@ namespace Jde::Logging
 			_pMessage{ x._pMessage ? make_unique<string>(*x._pMessage) : nullptr },
 			_fileName{ x._fileName }
 		{
-			File = _fileName;
+			File = _fileName.c_str();
 			if( _pMessage )
 				MessageView = *_pMessage;
 		}
@@ -85,7 +84,6 @@ namespace Jde::Logging
 		string _fileName;
 	};
 
-#pragma endregion
 	Γ α SetTag( sv tag, ELogLevel l=ELogLevel::Debug, bool file=true )noexcept->void;
 	α Log( const Logging::MessageBase& messageBase )noexcept->void;
 	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )noexcept->void;
@@ -183,10 +181,11 @@ namespace Jde
 		α GetStatus()noexcept->up<Proto::Status>;
 	}
 #define var const auto
-	Ξ FileName( sv file )->string
+	Ξ FileName( const char* file_ )->string
 	{
+		string file{ file_ };
 		if( file.starts_with('~') )
-			return string{ file };
+			return file;
 
 #ifdef _MSC_VER
 		const string homeDir = file.find("\\jde\\")==sv::npos ? string{ file }  : format( "%JDE_DIR%{}", file.substr(file.find("\\jde\\")+4) );
@@ -206,7 +205,7 @@ namespace Jde
 #endif
 		return homeDir;
 	}
-#define SOURCE spdlog::source_loc{ FileName(m.File.data()).c_str(), (int)m.LineNumber, m.Function.data() }
+#define SOURCE spdlog::source_loc{ FileName(m.File).c_str(), (int)m.LineNumber, m.Function }
 	Ξ Logging::Log( const Logging::MessageBase& m )noexcept->void
 	{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
@@ -236,7 +235,7 @@ namespace Jde
 		}
 		catch( const fmt::format_error& )
 		{
-			CRITICAL( "could not format {} - {}", m.MessageView, sizeof...(args) );
+			Log( Message(ELogLevel::Critical, "could not format {} - {}", source_location{m.File, m.LineNumber, m.Function}), m.MessageView, sizeof...(args) );
 		}
 		if( ServerLevel()<=m.Level || LogMemory() )
 		{
@@ -278,7 +277,7 @@ namespace Jde::Logging
 		LogMemory( move(m), move(values) );
 	}
 
-	consteval MessageBase::MessageBase( sv message, ELogLevel level, sv file, sv function, uint_least32_t line, uint32 messageId, uint fileId, uint functionId )noexcept:
+	consteval MessageBase::MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, uint32 messageId, uint fileId, uint functionId )noexcept:
 		Level{level},
 		MessageId{ messageId ? messageId : IO::Crc::Calc32(message.substr(0, 100)) },//{},
 		MessageView{message},
@@ -288,22 +287,23 @@ namespace Jde::Logging
 		Function{function},
 		LineNumber{line}
 	{
+		//ASSERT( file!=nullptr && function!=nullptr );
 		if( level!=ELogLevel::Trace )
 			Fields |= EFields::Level;
 		if( message.size() )
 			Fields |= EFields::Message | EFields::MessageId;
-		if( File.size() )
+		if( File[0]!='\0' )
 			Fields |= EFields::File | EFields::FileId;
-		if( Function.size() )
+		if( Function[0]!='\0' )
 			Fields |= EFields::Function | EFields::FunctionId;
 		if( LineNumber )
 			Fields |= EFields::LineNumber;
 	}
-	consteval MessageBase::MessageBase( sv message, sv file, sv function, uint_least32_t line )noexcept:
+	consteval MessageBase::MessageBase( sv message, const char* file, const char* function, uint_least32_t line )noexcept:
 		MessageBase{ message, ELogLevel::Trace, file, function, line }
 	{}
 
-	consteval MessageBase::MessageBase( sv file, sv function, uint_least32_t line )noexcept:
+	consteval MessageBase::MessageBase( const char* file, const char* function, uint_least32_t line )noexcept:
 		MessageBase( {}, file, function, line )
 	{}
 

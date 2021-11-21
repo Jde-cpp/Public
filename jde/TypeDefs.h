@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <string_view>
 #include <vector>
+#include <memory>
 
 #ifdef _MSC_VER
 	#ifndef WIN32_LEAN_AND_MEAN
@@ -54,7 +55,7 @@
 #define ẗ template<class K,class V> auto
 #define Ṫ template<class T> static auto
 #define ψ template<class... Args> auto
-
+//#define Φ Γ auto
 namespace Jde
 {
 	using namespace std::literals::string_view_literals;
@@ -82,6 +83,9 @@ namespace Jde
 	using STimePoint=SClock::time_point;*/
 
 	using std::array;
+	using std::atomic;
+	using std::atomic_flag;
+	using std::function;
 	using std::lock_guard;
 	using std::make_unique;
 	using std::make_shared;
@@ -89,7 +93,6 @@ namespace Jde
 	template<class T> using sp = std::shared_ptr<T>;
 	using std::string;
 	using std::tuple;
-	//using std::unique_ptr;
 	template<class T> using up = std::unique_ptr<T>;
 	using std::get;
 	using std::static_pointer_cast;
@@ -106,19 +109,19 @@ namespace Jde
 	using std::chrono::duration_cast;
 	using std::make_tuple;
 	using std::nullopt;
-	using std::atomic;
-	using std::function;
 
-	template<class T, class... Args> auto mu( Args&&... args )->up<T>{ return up<T>( new T(std::forward<Args>(args)...) ); }
-  	template<class T, class... Args> auto ms( Args&&... args ){ static_assert(std::is_constructible_v<T,Args&&...>,""); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
+
+	//template<class T, class U> α cast( const sp<U>& p )noexcept->sp<T>{ auto p2 = dynamic_cast<T*>(p.get()); return p ? sp<T>{p, p2} : sp<T>{}; }
+	//template<class T> α cast( const sp<void>& p )noexcept->sp<T>{ auto p2 = (void*)p.get(); return p ? sp<T>{p, p2} : sp<T>{}; }
+	template<class T, class... Args> α mu( Args&&... args )->up<T>{ return up<T>( new T(std::forward<Args>(args)...) ); }
+  	template<class T, class... Args> α ms( Args&&... args ){ static_assert(std::is_constructible_v<T,Args&&...>,""); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
 
 	using std::vector;
 	template<class T> using VectorPtr = std::shared_ptr<std::vector<T>>;
 
-	using std::map;
-	template<class K, class V> using MapPtr = std::shared_ptr<std::map<K,V>>;
-	template<class K, class V> using UMapPtr = std::unique_ptr<std::map<K,V>>;
-	template<class K, class V> using UnorderedPtr = std::shared_ptr<std::unordered_map<K,V>>;
+	//template<class K, class V> using MapPtr = std::shared_ptr<std::map<K,V>>;
+	//template<class K, class V> using UMapPtr = std::unique_ptr<std::map<K,V>>;
+	//template<class K, class V> using UnorderedPtr = std::shared_ptr<std::unordered_map<K,V>>;
 
 	using PortType=unsigned short;
 	using DayIndex=uint_fast16_t;//TODO Refactor remove
@@ -133,6 +136,7 @@ namespace Jde
 	using fmt::format;
 	using path = const fs::path&;
 	using str = const std::string&;
+	template<class T> using vec = const vector<T>&;
 
 #ifdef _MSC_VER
 	#ifndef WIN32_LEAN_AND_MEAN
@@ -150,6 +154,8 @@ namespace Jde
 	#define SRCE_CUR boost::source_location{ __builtin_FILE(), __builtin_LINE(), __builtin_FUNCTION() }
 #endif
 	#define SRCE const source_location& sl=SRCE_CUR
+	using SL = const source_location&;
+
 
 	enum class ELogLevel : int8{ NoLog=-1, Trace=0, Debug=1, Information=2, Warning=3, Error=4, Critical=5, None=6 };
 	constexpr std::array<sv,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };

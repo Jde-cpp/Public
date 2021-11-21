@@ -60,6 +60,7 @@ namespace Jde::Coroutine
 		};
 		α Clear()noexcept->void{ Result.Clear(); }
 		α HasResult()const noexcept->bool{ return !Result.Uninitialized(); }
+		α Get( SL sl )const noexcept(false)->sp<void>{ return GetResult().Get<void>( sl ); }
 		α GetResult()const noexcept->const TaskResult&{ return Result; }
 		//α SetResult( std::exception_ptr p )noexcept->void{ Result.Set( p ); }
 		//α SetResult( std::exception&& e )noexcept->void{ Result.Set( move(e) ); }

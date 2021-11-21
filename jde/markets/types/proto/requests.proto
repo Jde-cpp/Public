@@ -1,4 +1,4 @@
-//cd $JDE_DIR/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. requests.proto; mv requests.pb.cc ../../../../../MarketLibrary/source/types/proto
+//cd $JDE_DIR/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=ΓM:. requests.proto; mv requests.pb.cc ../../../../../MarketLibrary/source/types/proto
 
 syntax = "proto3";
 package Jde.Markets.Proto.Requests;
@@ -337,7 +337,7 @@ enum ERequests
 	Filings								= -9;
 	Investors							= -10;
 	Tweets								= -11;
-   //Reddit							   = -12;
+   RedditBlock						   = -12;
 	MarketData             			= 1;
 	CancelMarketData              = 2;
 	PlaceOrder_                  	= 3;

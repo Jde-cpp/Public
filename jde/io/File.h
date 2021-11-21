@@ -13,26 +13,28 @@
 #include "../../../Framework/source/io/DiskWatcher.h"
 #include "../../../Framework/source/io/FileCo.h"
 
+#define Φ Γ auto
 namespace Jde{ struct Stopwatch; }
 namespace Jde::IO
 {
-	Γ α Native()noexcept->IO::IDrive&;
-	inline α Read( path path, bool vector=true )noexcept{ return DriveAwaitable{path, vector}; }
-	inline α Write( path path, sp<vector<char>> data )noexcept{ return DriveAwaitable{path, data}; }
-	inline α Write( path path, sp<string> data )noexcept{ return DriveAwaitable{path, data}; }
+	Φ Native()noexcept->IO::IDrive&;
+	Ξ Read( path path, bool vector=true, SRCE )noexcept{ return DriveAwaitable{path, vector, sl}; }
+	Ξ Write( path path, sp<vector<char>> data, SRCE )noexcept{ return DriveAwaitable{path, data, sl}; }
+	Ξ Write( path path, sp<string> data, SRCE )noexcept{ return DriveAwaitable{path, data, sl}; }
 
 
 	namespace FileUtilities
 	{
-		Γ std::unique_ptr<std::vector<char>> LoadBinary( path path )noexcept(false);
+		Γ up<std::vector<char>> LoadBinary( path path )noexcept(false);
 		Γ string Load( path path )noexcept(false);
-		Γ void SaveBinary( path path, const std::vector<char>& values )noexcept(false);
-		Γ void Save( path path, sv value, std::ios_base::openmode openMode = std::ios_base::out )noexcept(false);
-		inline void SaveBinary( path path, sv value )noexcept(false){ return Save(path, value, std::ios::binary); }
+		Φ SaveBinary( path path, const std::vector<char>& values )noexcept(false)->void;
+		Φ Save( path path, sp<string> value, SRCE )noexcept(false)->void;
+		Φ Save( path path, sv value, std::ios_base::openmode openMode = std::ios_base::out, SRCE )noexcept(false)->void;
+		Ξ SaveBinary( path path, sv value, SRCE )noexcept(false){ Save(path, value, std::ios::binary, sl); }
 		Γ uint GetFileSize( path path );
 		Γ void ForEachItem( path directory, std::function<void(const fs::directory_entry&)> function )noexcept(false);//todo get rid of, 1 liner
-		Γ std::unique_ptr<std::set<fs::directory_entry>> GetDirectory( path directory );
-		Γ std::unique_ptr<std::set<fs::directory_entry>> GetDirectories( path directory, std::unique_ptr<std::set<fs::directory_entry>> pItems=nullptr );
+		Γ up<std::set<fs::directory_entry>> GetDirectory( path directory );
+		Γ up<std::set<fs::directory_entry>> GetDirectories( path directory, up<std::set<fs::directory_entry>> pItems=nullptr );
 		Γ std::string ToString( path pszFilePath );
 		Γ std::vector<std::string> LoadColumnNames( path csvFileName );
 		Γ std::string DateFileName( uint16 year, uint8 month=0, uint8 day=0 )noexcept;
@@ -50,7 +52,7 @@ namespace Jde::IO
 			void Save( path path, const std::vector<char>& data )noexcept(false);
 			virtual fs::path Compress( path path, bool deleteAfter=true )noexcept(false);
 			virtual void Extract( path path )noexcept(false);
-			std::unique_ptr<std::vector<char>> LoadBinary( path uncompressed, path compressed=fs::path(), bool setPermissions=false, bool leaveUncompressed=false )noexcept(false);
+			up<std::vector<char>> LoadBinary( path uncompressed, path compressed=fs::path(), bool setPermissions=false, bool leaveUncompressed=false )noexcept(false);
 			virtual const char* Extension()noexcept=0;
 			virtual bool CompressAutoDeletes(){return true;}
 		protected:
@@ -142,3 +144,4 @@ namespace Jde::IO
 		}
 	}
 }
+#undef Φ

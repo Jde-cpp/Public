@@ -58,18 +58,18 @@ namespace Jde::Markets
 		α SetString( ETickType type, str value )noexcept->bool;
 		α SetInt( ETickType type, _int value )noexcept->bool;
 		α SetPrice( ETickType type, double value/*, const ::TickAttrib& attribs*/ )noexcept->bool;
-		void SetPrices( Decimal bidSize, double bid, Decimal askSize, double ask )noexcept;
+		α SetPrices( Decimal bidSize, double bid, Decimal askSize, double ask )noexcept->void;
 		α SetDecimal( ETickType type, Decimal value )noexcept->bool;
 		α SetDouble( ETickType type, double value )noexcept->bool;
 		α SetOptionComputation( ETickType type, OptionComputation&& v )noexcept->bool;
 		α FieldEqual( const Tick& other, ETickType tick )const noexcept->bool;
 		α IsSet( ETickType type )const noexcept->bool{ return _setFields[type]; }
 		α HasRatios()const noexcept->bool;
-		void AddNews( News&& news )noexcept;
-		Fields SetFields()const noexcept{ return _setFields; }
-		std::map<string,double> Ratios()const noexcept;
-		Proto::Results::MessageUnion ToProto( ETickType type )const noexcept;
-		void AddProto( ETickType type, std::vector<Proto::Results::MessageUnion>& messages )const noexcept;
+		α AddNews( News&& news )noexcept->void;
+		α SetFields()const noexcept->Fields{ return _setFields; }
+		α Ratios()const noexcept->flat_map<string,double>;
+		α ToProto( ETickType type )const noexcept->Proto::Results::MessageUnion;
+		α AddProto( ETickType type, std::vector<Proto::Results::MessageUnion>& messages )const noexcept->void;
 
 		static Fields PriceFields()noexcept;
 		ContractPK ContractId{0};

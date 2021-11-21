@@ -11,7 +11,7 @@
 
 namespace Jde
 {
-	#define 🚪 Γ auto
+	#define Φ Γ auto
 
 	struct ci_char_traits : public std::char_traits<char>
 	{
@@ -30,8 +30,8 @@ namespace Jde
 		CIString( str s )noexcept:base{s.data(), s.size()}{}
 		CIString( const char* p, sv::size_type s )noexcept:base{p, s}{}
 		uint find( sv sub, uint pos = 0 )const noexcept;
-		template<class T> bool operator==( const T& s )const noexcept{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
-		bool operator==( const char* psz )const noexcept{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
+		ⓣ operator==( const T& s )const noexcept->bool{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
+		α operator==( const char* psz )const noexcept->bool{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
 		friend std::ostream& operator<<( std::ostream &os, const CIString& obj )noexcept{ os << (string)obj; return os; }
 		Ξ operator !=( sv s )const noexcept{ return size() == s.size() && base::compare(0, s.size(), s.data(), s.size())!=0; }
 		Ξ operator !=( str s )const noexcept{ return *this!=sv{s}; }
@@ -42,7 +42,7 @@ namespace Jde
 			std::copy( s.data(), s.data()+s.size(), data() );
 			return *this;
 		}
-		inline char operator[]( uint i )const noexcept{ return data()[i]; }
+		Ξ operator[]( uint i )const noexcept{ return data()[i]; }
 		operator string()const noexcept{ return string{data(), size()}; }
 		operator sv()const noexcept{ return sv{data(), size()}; }
 	};
@@ -54,23 +54,21 @@ namespace Jde
 
 		ⓣ Split( const basic_string<T> &s, T delim=T{','} )->vector<basic_string<T>>;
 
-		🚪 Split( sv s, sv delim )->vector<sv>;
-		🚪 Split( sv text, const CIString& delim )->vector<sv>;
-		🚪 Split( sv s, char delim=',', uint estCnt=0 )->vector<sv>;
+		Φ Split( sv s, sv delim )->vector<sv>;
+		Φ Split( sv text, const CIString& delim )->vector<sv>;
+		Φ Split( sv s, char delim=',', uint estCnt=0 )->vector<sv>;
 
-		template<typename T>
-		string AddSeparators( T collection, sv separator, bool quote=false );
+		ⓣ AddSeparators( T collection, sv separator, bool quote=false )noexcept->string;
 
-		template<typename T>
-		string AddCommas( T value, bool quote=false ){ return AddSeparators( value, ",", quote ); }
+		ⓣ AddCommas( T value, bool quote=false )noexcept{ return AddSeparators( value, ",", quote ); }
 
-		🚪 NextWord( sv x )noexcept->sv;
+		Φ NextWord( sv x )noexcept->sv;
 
 		std::wstring PorterStemmer(const std::wstring &s);
 
-		🚪 Replace( sv source, sv find, sv replace )noexcept->string;
-		🚪 Replace( sv source, char find, char replace )noexcept->string;
-		🚪 ToLower( sv source )noexcept->string;
+		Φ Replace( sv source, sv find, sv replace )noexcept->string;
+		Φ Replace( sv source, char find, char replace )noexcept->string;
+		Φ ToLower( sv source )noexcept->string;
 		Γ string ToUpper( sv source )noexcept;
 
 		ⓣ TryTo( sv value )noexcept->optional<T>;
@@ -85,21 +83,21 @@ namespace Jde
 		[[nodiscard]]Ξ StartsWith( sv value, sv starting )noexcept{ return starting.size() > value.size() ? false : std::equal( starting.begin(), starting.end(), value.begin() ); }
 		[[nodiscard]]Ξ StartsWithInsensitive( sv value, sv starting )noexcept->bool;
 
-		inline void LTrim( string& s ){ s.erase( s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {return !std::isspace(ch); }) ); }
-		inline void RTrim( string& s ){ s.erase( std::find_if(s.rbegin(), s.rend(), [](int ch) {return !std::isspace(ch);}).base(), s.end() ); }
-		inline void Trim( string& s ){ LTrim(s); RTrim(s); }
-		inline string Trim( str s ){ auto y{s}; LTrim(y); RTrim(y); return y; }
+		Ξ LTrim( string& s ){ s.erase( s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {return !std::isspace(ch); }) ); }
+		Ξ RTrim( string& s ){ s.erase( std::find_if(s.rbegin(), s.rend(), [](int ch) {return !std::isspace(ch);}).base(), s.end() ); }
+		Ξ Trim( string& s ){ LTrim(s); RTrim(s); }
+		//Ξ Trim( string s ){ auto y{move(s)}; LTrim(y); RTrim(y); return y; }
 
-		template<typename T> T Trim( const T& s, sv substring )noexcept;
+		ⓣ Trim( const T& s, sv substring )noexcept->T;
 
 	};
 
 	struct StringCompare
 	{
-   	bool operator()( str a, str b )const noexcept{ return a<b; }
+   	α operator()( str a, str b )const noexcept{ return a<b; }
    };
 
-	ⓣ Str::RTrim(basic_string<T> &s)noexcept->basic_string<T>
+	ⓣ Str::RTrim( basic_string<T> &s )noexcept->basic_string<T>
 	{
 #ifdef _MSC_VER
 		for( uint i=s.size()-1; i>=0; --i )
@@ -115,8 +113,7 @@ namespace Jde
 		return s;
 	}
 
-	template<typename T>
-	string Str::AddSeparators( T collection, sv separator, bool quote )
+	ⓣ Str::AddSeparators( T collection, sv separator, bool quote )noexcept->string
 	{
 		ostringstream os;
 		auto first = true;
@@ -134,8 +131,7 @@ namespace Jde
 		return os.str();
 	}
 
-	template<typename T>
-	std::vector<std::basic_string<T>> Str::Split( const basic_string<T> &s, T delim/*=T{','}*/ )
+	ⓣ Str::Split( const basic_string<T> &s, T delim/*=T{','}*/ )->vector<std::basic_string<T>>
 	{
 		vector<basic_string<T>> tokens;
 		basic_string<T> token;
@@ -146,8 +142,7 @@ namespace Jde
 		return tokens;
 	}
 
-	template<typename T>
-	float Str::TryToFloat( const basic_string<T>& token )noexcept
+	ⓣ Str::TryToFloat( const basic_string<T>& token )noexcept->float
 	{
 		try
 		{
@@ -159,28 +154,27 @@ namespace Jde
 			return std::nanf("");
 		}
 	}
-	inline optional<double> Str::TryToDouble( str s )noexcept
+	Ξ Str::TryToDouble( str s )noexcept->optional<double>
 	{
 		optional<double> v;
 		try
 		{
 			v = std::stod( s );
 		}
-		catch(std::invalid_argument e)
+		catch( const std::invalid_argument& e )
 		{
-			TRACE( "Can't convert:  {}.  to float.  {}"sv, s, e.what() );
+			TRACE( "Can't convert:  {}.  to float.  {}", s, e.what() );
 		}
 		return v;
 	}
-	template<typename T>
-	optional<T> Str::TryTo( sv value )noexcept
+
+	ⓣ Str::TryTo( sv value )noexcept->optional<T>
 	{
 		optional<T> v;
 		Try( [&v, value]{v=To<T>( value );} );
 		return v;
 	}
-	template<typename T>
-	T Str::To( sv value )
+	ⓣ Str::To( sv value )->T
 	{
 		T v;
 		var e=std::from_chars( value.data(), value.data()+value.size(), v );
@@ -235,5 +229,5 @@ namespace Jde
 	}
 
 #undef var
-#undef 🚪
+#undef Φ
 }

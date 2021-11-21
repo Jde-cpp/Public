@@ -52,6 +52,7 @@ namespace Jde
 
 		template<class... Args> Exception( const source_location& sl, std::exception&& inner, sv format_={}, Args&&... args )noexcept:IException{sl, move(inner), format_, args...}{}
 		template<class... Args> Exception( const source_location& sl, ELogLevel l, sv format_, Args&&... args )noexcept:IException( sl, l, format_, args... ){Log();}
+		template<class... Args> Exception( const source_location& sl, sv fmt, Args&&... args )noexcept:IException( sl, ELogLevel::Error, fmt, args... ){Log();}
 		~Exception(){}
 		α Clone()noexcept->sp<IException> override{ return std::make_shared<Exception>(move(*this)); }
 		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
@@ -113,7 +114,7 @@ namespace Jde
 		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
 		α ErrorCode()const noexcept->uint;
 		α Path()const noexcept->path; α SetPath( path x )noexcept{ _path=x; }
-		α Log()const noexcept->void override;
+		//α Log()const noexcept->void override;
 		α what()const noexcept->const char* override;
 		[[noreturn]] β Throw()->void override{ throw *this; }
 	private:
