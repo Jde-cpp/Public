@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+#ifdef _MSC_VER
+	#define NTDDI_VERSION NTDDI_WIN10_RS1 // work around linker failure MapViewOfFileNuma2@36
+#endif
 #include <map>
 #include <memory>
 #include <mutex>
@@ -18,7 +21,6 @@
 	#ifndef WIN32_LEAN_AND_MEAN
 		#error WIN32_LEAN_AND_MEAN not defined
 	#endif
-	#define NTDDI_VERSION NTDDI_WIN10_RS1 // work around linker failure MapViewOfFileNuma2@36
 	#include <coroutine>
 	#include <source_location>
 	#define __PRETTY_FUNCTION__ __FUNCSIG__
