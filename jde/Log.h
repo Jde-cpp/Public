@@ -20,25 +20,7 @@ namespace Jde::Logging
 {
 	namespace Messages{ struct ServerMessage; }
 #pragma region EFields
-	enum class EFields : uint16
-	{
-		None=0,
-		Timestamp=0x1,
-		MessageId=0x2,
-		Message=0x4,
-		Level=0x8,
-		FileId=0x10,
-		File=0x20,
-		FunctionId=0x40,
-		Function=0x80,
-		LineNumber=0x100,
-		UserId=0x200,
-		User=0x400,
-		ThreadId=0x800,
-		Thread=0x1000,
-		VariableCount=0x2000,
-		SessionId=0x4000
-	};
+	enum class EFields : uint16{ None=0, Timestamp=0x1, MessageId=0x2, Message=0x4, Level=0x8, FileId=0x10, File=0x20, FunctionId=0x40, Function=0x80, LineNumber=0x100, UserId=0x200, User=0x400, ThreadId=0x800, Thread=0x1000, VariableCount=0x2000, SessionId=0x4000 };
 	constexpr inline EFields operator|(EFields a, EFields b){ return (EFields)( (uint16)a | (uint16)b ); }
 	constexpr inline EFields operator&(EFields a, EFields b){ return (EFields)( (uint16)a & (uint16)b ); }
 	constexpr inline EFields operator~(EFields a){ return (EFields)( ~(uint16)a ); }
@@ -62,22 +44,17 @@ namespace Jde::Logging
 		uint_least32_t LineNumber;
 		uint UserId{0};
 		uint ThreadId{0};
+		Γ MessageBase( ELogLevel level, sv message, const char* file, const char* function, uint_least32_t line )noexcept;
 	protected:
 		explicit Γ MessageBase( ELogLevel level, SL sl )noexcept;
 	};
 	struct Message /*final*/ : MessageBase
 	{
 		Message( const MessageBase& b )noexcept;
-		Message( const Message& x )noexcept:
-			MessageBase{ x },
-			_pMessage{ x._pMessage ? make_unique<string>(*x._pMessage) : nullptr },
-			_fileName{ x._fileName }
-		{
-			File = _fileName.c_str();
-			if( _pMessage )
-				MessageView = *_pMessage;
-		}
+		Message( const Message& x )noexcept;
 		Γ Message( ELogLevel level, string message, SRCE )noexcept;
+		//Message( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line )noexcept;
+
 
 		up<string> _pMessage;//todo move to protected
 	protected:
@@ -235,7 +212,7 @@ namespace Jde
 		}
 		catch( const fmt::format_error& )
 		{
-			Log( Message(ELogLevel::Critical, "could not format {} - {}", source_location{m.File, m.LineNumber, m.Function}), m.MessageView, sizeof...(args) );
+			Log( MessageBase(ELogLevel::Critical, "could not format {} - {}", m.File, m.Function, m.LineNumber), m.MessageView, sizeof...(args) );
 		}
 		if( ServerLevel()<=m.Level || LogMemory() )
 		{

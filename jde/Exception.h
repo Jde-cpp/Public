@@ -54,7 +54,7 @@ namespace Jde
 		template<class... Args> Exception( const source_location& sl, ELogLevel l, sv format_, Args&&... args )noexcept:IException( sl, l, format_, args... ){Log();}
 		template<class... Args> Exception( const source_location& sl, sv fmt, Args&&... args )noexcept:IException( sl, ELogLevel::Error, fmt, args... ){Log();}
 		~Exception(){}
-		α Clone()noexcept->sp<IException> override{ return std::make_shared<Exception>(move(*this)); }
+		α Clone()noexcept->sp<IException> override{ return ms<Exception>(move(*this)); }
 		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
 		[[noreturn]] α Throw()->void override{ throw *this; }
 	};
@@ -67,7 +67,7 @@ namespace Jde
 		using T=_int;
 #endif
 		OSException( T result, string&& msg, SRCE )noexcept;
-		α Clone()noexcept->sp<IException> override{ return std::make_shared<OSException>(move(*this)); }
+		α Clone()noexcept->sp<IException> override{ return ms<OSException>(move(*this)); }
 		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
 		[[noreturn]] α Throw()->void override{ throw *this; }
 	};
@@ -77,7 +77,7 @@ namespace Jde
 		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE );
 		CodeException( sv value, std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE );
 
-		α Clone()noexcept->sp<IException> override{ return std::make_shared<CodeException>(move(*this)); }
+		α Clone()noexcept->sp<IException> override{ return ms<CodeException>(move(*this)); }
 		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
 		[[noreturn]] β Throw()->void override{ throw *this; }
 
@@ -92,10 +92,14 @@ namespace Jde
 	struct Γ BoostCodeException final : IException
 	{
 		BoostCodeException( const boost::system::error_code& ec, sv msg={}, SRCE )noexcept;
-		BoostCodeException( const BoostCodeException& e, SRCE )noexcept;
+		BoostCodeException( const BoostCodeException& e )noexcept;
 		~BoostCodeException();
 
-		α Clone()noexcept->sp<IException> override{ return std::make_shared<BoostCodeException>(move(*this)); }
+		α Clone()noexcept->sp<IException> override
+		{ 
+			auto p = std::make_shared<BoostCodeException>(*this); 
+			return p;
+		}
 		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
 		[[noreturn]] β Throw()->void override{ throw *this; }
 	private:
@@ -110,7 +114,7 @@ namespace Jde
 		IOException( fs::filesystem_error&& e ):IException{}, _pUnderLying( make_unique<fs::filesystem_error>(move(e)) ){ Log(); }
 		template<class... Args> IOException( const source_location& sl, path path, sv value, Args&&... args ):IException( sl, ELogLevel::Debug, value, args... ),_path{ path }{Log();}
 
-		α Clone()noexcept->sp<IException> override{ return std::make_shared<IOException>(move(*this)); }
+		α Clone()noexcept->sp<IException> override{ return ms<IOException>(move(*this)); }
 		α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(*this); }
 		α ErrorCode()const noexcept->uint;
 		α Path()const noexcept->path; α SetPath( path x )noexcept{ _path=x; }
@@ -142,7 +146,11 @@ namespace Jde
 	}
 
 	//https://stackoverflow.com/questions/35941045/can-i-obtain-c-type-names-in-a-constexpr-way/35943472#35943472
+#ifdef _MSS_VER
+	ⓣ constexpr GetTypeName()->sv
+#else
 	ⓣ consteval GetTypeName()->sv
+#endif
 	{
 #ifdef _MSC_VER
 		char const* p = __FUNCSIG__;

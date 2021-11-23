@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifdef _MSC_VER
 #pragma push_macro("assert")
 #undef assert
@@ -34,13 +34,13 @@ namespace Jde::Markets
 		MyOrder( ::OrderId orderId, const Proto::Order& order )noexcept;
 		MyOrder( const ::Order& order )noexcept:Order{order}{}
 
-		bool IsBuy()const noexcept{ return action=="BUY"; } void IsBuy( bool value )noexcept{ action = value ? "BUY" : "SELL"; }
-		Proto::ETimeInForce TimeInForce()const noexcept; void TimeInForce( Proto::ETimeInForce value )noexcept;
-		Proto::EOrderType OrderType()const noexcept; void OrderType( Proto::EOrderType value )noexcept;
-		std::unique_ptr<Proto::Order> ToProto()const noexcept;
-		static time_t ParseDateTime( const std::string& date )noexcept;
-		static std::string ToDateString( time_t date )noexcept;
-		static Proto::Results::OrderState* ToAllocatedProto( const ::OrderState& state )noexcept;
+		α IsBuy()const noexcept->bool{ return action=="BUY"; } void IsBuy( bool value )noexcept{ action = value ? "BUY" : "SELL"; }
+		α TimeInForce()const noexcept->Proto::ETimeInForce; void TimeInForce( Proto::ETimeInForce value )noexcept;
+		α OrderType()const noexcept->Proto::EOrderType; void OrderType( Proto::EOrderType value )noexcept;
+		α ToProto()const noexcept->up<Proto::Order>;
+		static α  ParseDateTime( const std::string& date )noexcept->time_t;
+		static α ToDateString( time_t date )noexcept->string;
+		static α ToAllocatedProto( const ::OrderState& state )noexcept->Proto::Results::OrderState*;
 
 		enum class Fields : uint
 		{

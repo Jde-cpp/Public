@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifndef JDE_CONTRACT
 #define JDE_CONTRACT
 
@@ -56,9 +56,9 @@ namespace Jde::Markets
 		std::string	DesignatedLocation;
 		int_fast32_t ExemptCode{-1};
 
-		void SetProto( Proto::ComboLeg* pProto )const noexcept;
-		std::ostream& to_stream( std::ostream& os, bool isOrder )const noexcept;
-		bool operator==( const ComboLeg& other) const noexcept
+		α SetProto( Proto::ComboLeg* pProto )const noexcept->void;
+		//std::ostream& to_stream( std::ostream& os, bool isOrder )const noexcept;
+		α operator==( const ComboLeg& other) const noexcept->bool
 		{
 			return ConId == other.ConId && Ratio == other.Ratio && OpenClose == other.OpenClose
 				&& ShortSaleSlot == other.ShortSaleSlot && ExemptCode == other.ExemptCode && Action == other.Action
@@ -80,7 +80,7 @@ namespace Jde::Markets
 		Contract( const ContractDetails& details )noexcept;
 		Contract( const Proto::Contract& contract )noexcept;
 		~Contract();
-		bool operator <(const Contract &b)const noexcept{return Id<b.Id;}
+		α operator <( const Contract &b )const noexcept->bool{return Id<b.Id;}
 
 		string Display()const noexcept;
 		sp<::Contract> ToTws()const noexcept;
@@ -123,7 +123,7 @@ namespace Jde::Markets
 	std::ostream& operator<<( std::ostream& os, const Contract& contract )noexcept;
 	ΓM ContractPtr_ Find( const std::map<ContractPK, ContractPtr_>&, sv symbol )noexcept;
 
-	ΓM void ToProto( const ContractDetails& details, Proto::Results::ContractDetail& proto )noexcept;
+	ΓM α ToProto( const ContractDetails& details, Proto::Results::ContractDetail& proto )noexcept->void;
 	namespace Contracts
 	{
 		ΓM extern const Contract Spy;

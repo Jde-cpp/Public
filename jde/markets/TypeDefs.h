@@ -4,7 +4,9 @@
 #define DECIMAL_CALL_BY_REFERENCE 0
 #pragma warning( push )
 #pragma warning( disable : 4324)
-#define _WCHAR_T_DEFINED
+#ifndef _WCHAR_T_DEFINED
+	#define _WCHAR_T_DEFINED
+#endif
 #include <bid_conf.h>
 #include <bid_functions.h>
 #pragma warning( pop )

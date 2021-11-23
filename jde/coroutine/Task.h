@@ -33,7 +33,7 @@ namespace Jde::Coroutine
 		α Uninitialized()const noexcept{ return _result.index()==0 && get<sp<void>>(_result)==nullptr; }
 		ⓣ Get( SRCE )const noexcept(false)->sp<T>;
 		Γ α CheckUninitialized()noexcept->void;
-		α Error()const noexcept->TException*{ return HasError() ? get<sp<TException>>(_result).get() : nullptr; }
+		α Error()const noexcept->sp<IException>{ return HasError() ? get<sp<TException>>(_result) : nullptr; }
 
 		α Set( sp<void> p )noexcept->void{ CheckUninitialized(); _result = p; }
 		//α Set( TException_ptr p )noexcept->void{ CheckUninitialized(); _result = p; }
@@ -41,7 +41,7 @@ namespace Jde::Coroutine
 		α Set( Exception&& e )noexcept->void{ CheckUninitialized(); _result = std::dynamic_pointer_cast<TException>( std::make_shared<Exception>(move(e)) ); }
 		α Set( std::variant<sp<void>,sp<TException>>&& result )noexcept{ _result = move(result); }
 	private:
-		std::variant<sp<void>,sp<TException>> _result;
+		std::variant<sp<void>,sp<IException>> _result;
 	};
 	struct Task2 final : ITaskError
 	{

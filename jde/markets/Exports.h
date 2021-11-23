@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifdef JDE_EXPORT_MARKETS
 	#ifdef _MSC_VER

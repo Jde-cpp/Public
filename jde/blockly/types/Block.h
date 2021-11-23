@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #include <vector>
 #include <span>
@@ -357,11 +357,14 @@ namespace Jde::Blockly
 	};
 
 #define var const auto
-	template<typename T>
-	const T& Require( const auto& parent, sv description )noexcept(false)
+	ⓣ Require( const auto& parent, sv description, SRCE )noexcept(false)->const T&
 	{
 		var p = dynamic_cast<const T*>( &parent );
-		THROW_IF( !p, "{} does not have a {}.", description, GetTypeName<T>() );
+#ifdef _MSC_VER		
+		if( !p ) throw Exception{ sl, "does not have a {}.", description };
+#else
+		THROW_IF( !p, "{} does not have a {}.", description, GetTypeName<T>() ); MSVC does not like
+#endif
 		return *p;
 	}
 

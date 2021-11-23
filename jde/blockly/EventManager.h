@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <jde/coroutine/Task.h>
 #include <jde/markets/types/Tick.h>
 #include <jde/Log.h>
@@ -19,8 +19,8 @@ namespace Jde::Markets::MBlockly
 			Alarm{alarm},Tick{tick},TickFields{tickFields},Order{order}, OrderFields{orderFields}, Status{status}, StatusFields{statusFields}, Index{index}
 		{}
 		~AwaitableData(){ DBG("~AwaitableData({})"sv, Index); }
-		bool IsHandled()const noexcept{ return _value; }
-		bool Handle()noexcept{ return _value.exchange( true ); }
+		α IsHandled()const noexcept->bool{ return _value; }
+		α Handle()noexcept->bool{ return _value.exchange( true ); }
 
 		const optional<ProcTimePoint> Alarm;
 		BTick Tick; Tick::Fields TickFields;
@@ -53,11 +53,11 @@ namespace Jde::Markets::MBlockly
 			{
 				DBG( "promise_type::promise_type({})"sv, _promiseHandle );
 			}
-			Task<T>& get_return_object()noexcept{ return _returnObject; }
+			α get_return_object()noexcept->Task<T>&{ return _returnObject; }
 			suspend_never initial_suspend()noexcept{ return {}; }
 			suspend_never final_suspend()noexcept{ return {}; }
-			void return_void()noexcept{}
-			void unhandled_exception()noexcept{ /*DBG0("unhandled_exception"sv); TODO uncomment*/  }
+			α return_void()noexcept->void{}
+			α unhandled_exception()noexcept->void{ /*DBG0("unhandled_exception"sv); TODO uncomment*/  }
 			Task<T> _returnObject;
 			const Handle _promiseHandle;
 		};
@@ -71,17 +71,17 @@ namespace Jde::Markets::MBlockly
 		typedef EventResult TReturn;
 		typedef Task<TReturn> TTask;
 		~Awaitable();
-		bool await_ready()noexcept;
-		void await_suspend( coroutine_handle<TTask::promise_type> h )noexcept; //if( !await_ready){ await_suspend();} await_resume()
-		TReturn await_resume()noexcept;
+		α await_ready()noexcept->bool;
+		α await_suspend( coroutine_handle<TTask::promise_type> h )noexcept->void; //if( !await_ready){ await_suspend();} await_resume()
+		α await_resume()noexcept->TReturn;
 	private:
 		optional<std::exception_ptr> _pError;
 		coroutine_handle<TTask::promise_type> _taskHandle;
 
-		void Complete( sp<AwaitableData> p, uint type, std::exception_ptr pError )noexcept;
-		Task2 CallAlarm( sp<AwaitableData> pData )noexcept;
-		Task2 CallTick( sp<AwaitableData> pData )noexcept;
-		Task2 CallOrder( sp<AwaitableData> pData )noexcept;
+		α Complete( sp<AwaitableData> p, uint type, sp<IException> pError )noexcept->void;
+		α CallAlarm( sp<AwaitableData> pData )noexcept->Task2;
+		α CallTick( sp<AwaitableData> pData )noexcept->Task2;
+		α CallOrder( sp<AwaitableData> pData )noexcept->Task2;
 
 		sp<AwaitableData> _pData;
 	};
