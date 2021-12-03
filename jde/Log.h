@@ -29,21 +29,23 @@ namespace Jde::Logging
 #pragma endregion
 	struct MessageBase
 	{
-		consteval MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, uint32 messageId=0, uint fileId=0, uint functionId=0 )noexcept;
+		using ID=uint32;
+		using ThreadID=uint;
+		consteval MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, ID messageId=0, ID fileId=0, ID functionId=0 )noexcept;
 		consteval MessageBase( sv message, const char* file, const char* function, uint_least32_t line )noexcept;
 		consteval MessageBase( const char* file, const char* function, uint_least32_t line )noexcept;
 
 		EFields Fields{ EFields::None };
 		ELogLevel Level;
-		uint MessageId{0};
+		ID MessageId{0};
 		sv MessageView;
-		uint FileId{0};
+		ID FileId{0};
 		const char* File;
-		uint FunctionId{0};
+		ID FunctionId{0};
 		const char* Function;
 		uint_least32_t LineNumber;
-		uint UserId{0};
-		uint ThreadId{0};
+		ID UserId{0};
+		ThreadID ThreadId{0};
 		Γ MessageBase( ELogLevel level, sv message, const char* file, const char* function, uint_least32_t line )noexcept;
 	protected:
 		explicit Γ MessageBase( ELogLevel level, SL sl )noexcept;
@@ -53,9 +55,10 @@ namespace Jde::Logging
 		Message( const MessageBase& b )noexcept;
 		Message( const Message& x )noexcept;
 		Γ Message( ELogLevel level, string message, SRCE )noexcept;
+		Γ Message( sv Tag, ELogLevel level, string message, SRCE )noexcept;
 		//Message( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line )noexcept;
 
-
+		sv Tag;
 		up<string> _pMessage;//todo move to protected
 	protected:
 		string _fileName;
@@ -105,7 +108,7 @@ namespace Jde::Logging
 #define TRACEX(message,...) Logging::LogNoServer( Logging::MessageBase(message, ELogLevel::Trace, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 
 #define LOGL(severity,message,...) Logging::Log( severity, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-#define LOGX(severity,message,...) Logging::LogNoServer( Logging::MessageBase(message, severity, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define LOGX(message,...) Logging::LogNoServer( Logging::Message(_logLevel.Level, message) __VA_OPT__(,) __VA_ARGS__ )
 #define LOGT(severity,message,...) Logging::Log( severity.Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOG(message,...) Logging::Log( _logLevel.Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOGS(message,...) Logging::Log( Logging::Message( _logLevel.Level, message ) __VA_OPT__(,) __VA_ARGS__ )
@@ -114,7 +117,7 @@ namespace Jde::Logging
 #define LOG_IFT(predicate, severity, message,...) if( predicate ) LOGT( severity, message __VA_OPT__(,) __VA_ARGS__ )
 #define LOG_IFL(predicate, severity, message,...) if( predicate ) LOGL( severity, message __VA_OPT__(,) __VA_ARGS__ )
 #define ERR_IF(predicate, message,...) LOG_IFL( predicate, ELogLevel::Error, message, __VA_ARGS__ )
-#define LOG_MEMORY( severity, message, ... ) LogMemoryDetail( Logging::Message{severity, message} __VA_OPT__(,) __VA_ARGS__ );
+#define LOG_MEMORY( tag, severity, message, ... ) LogMemoryDetail( Logging::Message{tag, severity, message} __VA_OPT__(,) __VA_ARGS__ );
 
 namespace spdlog
 {
@@ -254,7 +257,7 @@ namespace Jde::Logging
 		LogMemory( move(m), move(values) );
 	}
 
-	consteval MessageBase::MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, uint32 messageId, uint fileId, uint functionId )noexcept:
+	consteval MessageBase::MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, ID messageId, ID fileId, ID functionId )noexcept:
 		Level{level},
 		MessageId{ messageId ? messageId : IO::Crc::Calc32(message.substr(0, 100)) },//{},
 		MessageView{message},

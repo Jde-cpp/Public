@@ -35,7 +35,7 @@ namespace Jde
 		Ω RemoveThread( sv name )noexcept->sp<Threading::InterruptibleThread>;
 		Ω GarbageCollect()noexcept->void;
 		Ω AddApplicationLog( ELogLevel level, str value )noexcept->void;//static to call in std::terminate.
-		ⓣ static AddPollster( bool appThread )noexcept->sp<T>;
+		ⓣ static AddPollster( /*bool appThread*/ )noexcept->sp<T>;
 		Ω AddShutdown( sp<IShutdown> pShared )noexcept->void;
 		Ω RemoveShutdown( sp<IShutdown> pShared )noexcept->void;
 		Ω Add( sp<void> pShared )noexcept->void;
@@ -111,7 +111,7 @@ namespace Jde
 #endif
 	};
 
-	ⓣ IApplication::AddPollster( bool appThread )noexcept->sp<T>
+	ⓣ IApplication::AddPollster( /*bool appThread*/ )noexcept->sp<T>
 	{
 		static_assert(std::is_base_of<IShutdown, T>::value, "T must derive from IShutdown");
 		static_assert(std::is_base_of<Threading::IPollWorker, T>::value, "T must derive from IPollWorker");
@@ -120,7 +120,7 @@ namespace Jde
 		_objects.push_back( p );
 		_shutdowns.push_back( static_pointer_cast<IShutdown>(p) );
 		auto pPoller = static_pointer_cast<Threading::IPollWorker>(p).get();
-		if( appThread )
+		if( pPoller->ThreadCount==0 )
 			AddActiveWorker( pPoller );
 		else
 			pPoller->StartThread();
