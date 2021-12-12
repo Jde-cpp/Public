@@ -360,10 +360,10 @@ namespace Jde::Blockly
 	ⓣ Require( const auto& parent, sv description, SRCE )noexcept(false)->const T&
 	{
 		var p = dynamic_cast<const T*>( &parent );
-#ifdef _MSC_VER		
+#ifdef _MSC_VER
 		if( !p ) throw Exception{ sl, "does not have a {}.", description };
 #else
-		THROW_IF( !p, "{} does not have a {}.", description, GetTypeName<T>() ); MSVC does not like
+		THROW_IF( !p, "{} does not have a {}.", description, GetTypeName<T>() ); //MSVC does not like
 #endif
 		return *p;
 	}

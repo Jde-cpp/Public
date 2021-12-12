@@ -14,14 +14,15 @@
 namespace Jde::Markets
 {
 	using Decimal=unsigned long long;
-	typedef int32 AccountPK;
-	typedef long ContractPK;
-	typedef int32 DecisionTreePK;
-	typedef uint8 MetricPK;
+	//typedef int32 AccountPK;
+	using AccountPK=uint32;
+	using ContractPK=long;
+	using DecisionTreePK=int32;
+	using MetricPK=uint8;
 
-	typedef long ReqId;//
-	typedef unsigned long long OrderId;
-	typedef uint16 MinuteIndex;//TODO change to int
+	using ReqId=long;
+	using OrderId=unsigned long long;
+	using MinuteIndex=uint16;//TODO change to int
 
 	using Amount=double;
 	using PositionAmount=double;

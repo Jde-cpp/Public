@@ -21,7 +21,7 @@ namespace Jde::IO
 	Ξ Read( path path, bool vector=true, SRCE )noexcept{ return DriveAwaitable{path, vector, sl}; }
 	Ξ Write( path path, sp<vector<char>> data, SRCE )noexcept{ return DriveAwaitable{path, data, sl}; }
 	Ξ Write( path path, sp<string> data, SRCE )noexcept{ return DriveAwaitable{path, data, sl}; }
-
+	Φ FileSize( path path )noexcept(false)->uint;
 
 	namespace FileUtilities
 	{
@@ -31,7 +31,6 @@ namespace Jde::IO
 		Φ Save( path path, sp<string> value, SRCE )noexcept(false)->void;
 		Φ Save( path path, sv value, std::ios_base::openmode openMode = std::ios_base::out, SRCE )noexcept(false)->void;
 		Ξ SaveBinary( path path, sv value, SRCE )noexcept(false){ Save(path, value, std::ios::binary, sl); }
-		Γ uint GetFileSize( path path );
 		Γ void ForEachItem( path directory, std::function<void(const fs::directory_entry&)> function )noexcept(false);//todo get rid of, 1 liner
 		Γ up<std::set<fs::directory_entry>> GetDirectory( path directory );
 		Γ up<std::set<fs::directory_entry>> GetDirectories( path directory, up<std::set<fs::directory_entry>> pItems=nullptr );

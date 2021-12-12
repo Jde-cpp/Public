@@ -73,10 +73,10 @@ namespace Jde::Coroutine
 
 	ⓣ TaskResult::Get( const source_location& sl )const noexcept(false)->sp<T>
 	{
-		if( auto pException = Error(); pException )
+		if( sp<IException> pException = Error(); pException )
 		{
-			pException->SetSource( sl );
-			pException->Throw();//std::rethrow_exception( get<std::exception_ptr>(_result) );
+			pException->Push( sl );
+			pException->Throw();
 		}
 		auto pVoid = get<sp<void>>( _result );
 		sp<T> p = pVoid ? static_pointer_cast<T>( pVoid ) : sp<T>{};

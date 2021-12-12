@@ -80,6 +80,7 @@ enum Exchanges
 	Australian = 26;
 	Aequitas = 27;
 	London = 28;
+	Lse = 29;
 	UnknownExchange = -1;
 };
 

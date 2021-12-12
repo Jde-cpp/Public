@@ -20,7 +20,6 @@ namespace Jde
 
 	struct Γ IApplication //: IPollster
 	{
-		virtual ~IApplication();
 		Ω Instance()noexcept->IApplication&{ /*assert(_pInstance);*/ return *_pInstance; }
 		α BaseStartup( int argc, char** argv, sv appName, string serviceDescription/*, sv companyName="jde-cpp"*/ )noexcept(false)->flat_set<string>;
 		β Install( str serviceDescription )noexcept(false)->void=0;
@@ -42,7 +41,6 @@ namespace Jde
 		Ω Exit( int reason )noexcept->void;
 		Ω Kill( uint processId )noexcept{return _pInstance ? _pInstance->KillInstance( processId ) : false;}
 		Ω Remove( sp<void> pShared )noexcept->void;
-		Ω CleanUp()noexcept->void;
 		Ω StartTime()noexcept->TimePoint;
 		Ω AddShutdownFunction( function<void()>&& shutdown )noexcept->void;
 		Ω Pause()noexcept->void;
@@ -54,6 +52,7 @@ namespace Jde
 		Ω ApplicationDataFolder()noexcept->fs::path;
 		Ω ShuttingDown()noexcept->bool;
 		Ω Shutdown()noexcept->void;
+		Ω Cleanup()noexcept->void;
 		β GetEnvironmentVariable( sv variable )noexcept->string=0;
 		Ω AddActiveWorker( Threading::IPollWorker* pWorker )noexcept->void;
 		Ω RemoveActiveWorker( Threading::IPollWorker* p )noexcept->void;
@@ -77,7 +76,7 @@ namespace Jde
 		static vector<sp<IShutdown>> _shutdowns;
 	};
 
-	struct OSApp : IApplication
+	struct OSApp final: IApplication
 	{
 		Γ Ω Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->flat_set<string>;
 		α GetEnvironmentVariable( sv variable )noexcept->string override;

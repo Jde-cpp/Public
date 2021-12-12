@@ -1,11 +1,7 @@
 //cd $JDE_DIR/Public/jde/log/types/proto;$JDE_DIR/Public/stage/release/protoc --cpp_out . FromClient.proto
 //cd $JDE_DIR/AppServer/source;moveToDir types;moveToDir proto;mv ../FromClient.pb.cc .;mklink FromClient.pb.h $JDE_DIR/Public/jde/log/types/proto
-
-
-
-source ../../Framework/common.sh
-moveToDir types
-
+//source ../../Framework/common.sh
+//moveToDir types
 //mklink FromClient.pb.h $JDE_DIR/Public/jde/log/types/proto
 
 syntax = "proto3";

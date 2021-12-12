@@ -53,6 +53,7 @@
 #define β virtual auto
 #define Ω static auto
 #define Ξ inline auto
+#define Τ template<class T>
 #define ⓣ template<class T> auto
 #define ẗ template<class K,class V> auto
 #define Ṫ template<class T> static auto
@@ -89,8 +90,8 @@ namespace Jde
 	using std::atomic_flag;
 	using std::function;
 	using std::lock_guard;
-	using std::make_unique;
-	using std::make_shared;
+	using std::make_unique;//refactor remove
+	using std::make_shared;//refactor remove
 	using std::mutex;
 	template<class T> using sp = std::shared_ptr<T>;
 	using std::string;
@@ -98,8 +99,10 @@ namespace Jde
 	template<class T> using up = std::unique_ptr<T>;
 	using std::get;
 	using std::static_pointer_cast;
-	using std::unique_lock;
-	using std::shared_lock;
+	using std::unique_lock;//refactor remove
+	using ul=std::unique_lock<std::shared_mutex>;
+	using std::shared_lock;//refactor remove
+	using sl=std::shared_lock<std::shared_mutex>;
 	using std::shared_mutex;
 	using sv = std::string_view;
 	using std::find;
@@ -112,18 +115,11 @@ namespace Jde
 	using std::make_tuple;
 	using std::nullopt;
 
-
-	//template<class T, class U> α cast( const sp<U>& p )noexcept->sp<T>{ auto p2 = dynamic_cast<T*>(p.get()); return p ? sp<T>{p, p2} : sp<T>{}; }
-	//template<class T> α cast( const sp<void>& p )noexcept->sp<T>{ auto p2 = (void*)p.get(); return p ? sp<T>{p, p2} : sp<T>{}; }
 	template<class T, class... Args> α mu( Args&&... args )->up<T>{ return up<T>( new T(std::forward<Args>(args)...) ); }
   	template<class T, class... Args> α ms( Args&&... args ){ static_assert(std::is_constructible_v<T,Args&&...>,""); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
 
 	using std::vector;
 	template<class T> using VectorPtr = std::shared_ptr<std::vector<T>>;
-
-	//template<class K, class V> using MapPtr = std::shared_ptr<std::map<K,V>>;
-	//template<class K, class V> using UMapPtr = std::unique_ptr<std::map<K,V>>;
-	//template<class K, class V> using UnorderedPtr = std::shared_ptr<std::unordered_map<K,V>>;
 
 	using PortType=unsigned short;
 	using DayIndex=uint_fast16_t;//TODO Refactor remove
