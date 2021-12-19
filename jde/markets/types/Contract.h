@@ -2,7 +2,6 @@
 #ifndef JDE_CONTRACT
 #define JDE_CONTRACT
 
-#include <ostream>
 #include <jde/markets/Exports.h>
 #pragma warning( disable : 4244 )
 #include <jde/markets/types/proto/ib.pb.h>
@@ -57,7 +56,6 @@ namespace Jde::Markets
 		int_fast32_t ExemptCode{-1};
 
 		α SetProto( Proto::ComboLeg* pProto )const noexcept->void;
-		//std::ostream& to_stream( std::ostream& os, bool isOrder )const noexcept;
 		α operator==( const ComboLeg& other) const noexcept->bool
 		{
 			return ConId == other.ConId && Ratio == other.Ratio && OpenClose == other.OpenClose
@@ -66,7 +64,6 @@ namespace Jde::Markets
 		}
 	};
 	typedef sp<ComboLeg> ComboLegPtr_;
-	std::ostream& operator<<( std::ostream& os, const ComboLeg& comboLeg )noexcept;
 #pragma endregion
 #pragma region Contract
 	struct ΓM Contract
@@ -117,10 +114,8 @@ namespace Jde::Markets
 		sp<std::vector<Proto::Results::ContractHours>> TradingHoursPtr;//TODO a const vector.
 		sp<std::vector<Proto::Results::ContractHours>> LiquidHoursPtr;
 
-		std::ostream& to_stream( std::ostream& os, bool includePrimaryExchange=true )const noexcept;
 	};
 	using ContractPtr_=sp<const Contract>;
-	std::ostream& operator<<( std::ostream& os, const Contract& contract )noexcept;
 	ΓM ContractPtr_ Find( const std::map<ContractPK, ContractPtr_>&, sv symbol )noexcept;
 
 	ΓM α ToProto( const ContractDetails& details, Proto::Results::ContractDetail& proto )noexcept->void;

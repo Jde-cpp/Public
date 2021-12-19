@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "../TypeDefs.h"
 DISABLE_WARNINGS
 #include <boost/crc.hpp>
 ENABLE_WARNINGS

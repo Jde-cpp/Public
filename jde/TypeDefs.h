@@ -81,7 +81,8 @@ namespace Jde
 	using Clock=std::chrono::system_clock;
 	using Duration=Clock::duration;
 	using TimePoint=Clock::time_point;
-	/*using SClock=std::chrono::steady_clock;
+	using TP=Clock::time_point;
+	/*
 	using SDuration=SClock::duration;
 	using STimePoint=SClock::time_point;*/
 
@@ -116,7 +117,7 @@ namespace Jde
 	using std::nullopt;
 
 	template<class T, class... Args> α mu( Args&&... args )->up<T>{ return up<T>( new T(std::forward<Args>(args)...) ); }
-  	template<class T, class... Args> α ms( Args&&... args ){ static_assert(std::is_constructible_v<T,Args&&...>,""); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
+  	template<class T, class... Args> α ms( Args&&... args ){ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
 
 	using std::vector;
 	template<class T> using VectorPtr = std::shared_ptr<std::vector<T>>;

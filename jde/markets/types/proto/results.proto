@@ -1,6 +1,6 @@
-﻿//cd $JDE_DIR/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. results.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' results.pb.h;sed -i '1s/^/\xef\xbb\xbf/' results.pb.h;
-//source ../../../../../Framework/common.sh
-//cd $JDE_DIR/MarketLibrary/source/types/proto;mv $JDE_DIR/Public/jde/markets/types/proto/results.pb.cc .;mklink results.pb.h $JDE_DIR/Public/jde/markets/types/proto
+﻿//source $JDE_BASH/Framework/common.sh
+//cd $JDE_BASH/Public/jde/markets/types/proto;$JDE_BASH/Public/stage/release/protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. results.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' results.pb.h;sed -i '1s/^/\xef\xbb\xbf/' results.pb.h;
+//cd $JDE_BASH/MarketLibrary/source/types/proto;mv $JDE_BASH/Public/jde/markets/types/proto/results.pb.cc .;mklink results.pb.h $JDE_BASH/Public/jde/markets/types/proto
 
 syntax = "proto3";
 package Jde.Markets.Proto.Results;
@@ -21,8 +21,16 @@ message MessageValue
 message StringResult
 {
 	EResults type=1;
-	int32	id=2;
+	uint32 id=2;
 	string value=3;
+}
+
+message ContractValue
+{
+	EResults type=1;
+	uint32 request_id=2;
+	uint32 contract_id=3;
+	double value=4;
 }
 
 message GoogleNews
@@ -489,6 +497,7 @@ message MessageUnion
 		TweetAuthors tweet_authors=38;
 		RedditEntries reddit=39;
 		Orders orders = 40;
+		ContractValue contract_value = 41;
 	}
 }
 message Transmission
@@ -599,7 +608,7 @@ enum ETickType
 	High26Week = 18;
 	Low52Week = 19;
 	High52Week = 20;
-	AverageVolume=21;
+	AverageVolume_=21;
 	OPEN_INTEREST=22;
 	OptionHistoricalVol=23;
 	OptionImpliedVol=24;
@@ -672,12 +681,13 @@ enum ETickType
 }
 enum EResults
 {
-	Accept	                                	= 0;
-	MultiEnd												=-1;
-	DaySummary_											=-2;
-	Authentication                            =-3;
-	Query													=-4;
-	Success												=-5;
+	Accept	                                = 0;
+	MultiEnd								=-1;
+	DaySummary_								=-2;
+	Authentication                          =-3;
+	Query									=-4;
+	Success									=-5;
+	AverageVolume	                        =-6;
 	TickPriceMessage                          = 1;
 	TickSizeMessage                           = 2;
 	OrderStatus_                             	= 3;
@@ -724,10 +734,10 @@ enum EResults
 	VERIFY_AND_AUTH_MESSAGE_API               = 69;
 	VERIFY_AND_AUTH_COMPLETED                 = 70;
 	PositionMulti_                            = 71;
-	PositionMultiEnd                        = 72;
-	AccountUpdateMulti_                        = 73;
-	ACCOUNT_UPDATE_MULTI_END                  = 74;
-	SECURITY_DEFINITION_OPTION_PARAMETER      = 75;
+	PositionMultiEnd                      = 72;
+	AccountUpdateMulti_                   = 73;
+	ACCOUNT_UPDATE_MULTI_END              = 74;
+	SECURITY_DEFINITION_OPTION_PARAMETER  = 75;
 	SecurityDefinitionOptionParameterEnd  = 76;
 	SOFT_DOLLAR_TIERS                         = 77;
 	FAMILY_CODES                              = 78;

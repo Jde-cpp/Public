@@ -31,9 +31,9 @@ namespace Jde
 
 		~DllHelper()
 		{
-			Logging::LogNoServer( Logging::MessageBase{ELogLevel::Information, "({})Freeing", MY_FILE, __func__, __LINE__},  _path.string() );
+			Logging::LogNoServer( Logging::MessageBase{"({})Freeing", ELogLevel::Information, MY_FILE, __func__, __LINE__},  _path.string() );
 			OSApp::FreeLibrary( _module );
-			Logging::LogNoServer( Logging::MessageBase{ELogLevel::Information, "({})Freed", MY_FILE, __func__, __LINE__},  _path.string() );
+			Logging::LogNoServer( Logging::MessageBase{"({})Freed", ELogLevel::Information, MY_FILE, __func__, __LINE__},  _path.string() );
 		}
 
 		α operator[](str procName)const noexcept(false)->ProcPtr

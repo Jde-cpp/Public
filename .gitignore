@@ -33,3 +33,6 @@
 stage/*
 *.pb.h
 *.pb.cc
+**/.vs/*
+**/.bin/*
+*.user

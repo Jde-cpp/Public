@@ -1,6 +1,6 @@
-//cd $JDE_DIR/Public/jde/log/types/proto;$JDE_DIR/Public/stage/release/protoc --cpp_out . FromServer.proto
-//cd $JDE_DIR/AppServer/source;moveToDir types;moveToDir proto;mv ../FromServer.pb.cc .;mklink FromServer.pb.h $JDE_DIR/Public/jde/log/types/proto
-
+//source $JDE_DIR/Framework/common.sh;toBashDir $JDE_DIR JDE_BASH;source=$JDE_BASH/Public/jde/log/types/proto;
+//file=FromServer;cd $source;$JDE_BASH/Public/stage/release/protoc --cpp_out . $file.proto
+//cd $JDE_BASH/AppServer/source;moveToDir types;moveToDir proto;mv $source/$file.pb.cc .;mklink $file.pb.h $source
 
 syntax = "proto3";
 package Jde.ApplicationServer.Web.FromServer;
