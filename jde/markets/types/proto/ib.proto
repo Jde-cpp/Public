@@ -1,6 +1,6 @@
 ﻿//protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. ib.proto
 //cd $JDE_DIR/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. ib.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' ib.pb.h;sed -i '1s/^/\xef\xbb\xbf/' ib.pb.h;
-//source ../../../../Framework/common.sh
+//source $JDE_BASH/Framework/common.sh
 //cd $JDE_DIR/MarketLibrary/source/types/proto;mv $JDE_DIR/Public/jde/markets/types/proto/ib.pb.cc .;mklink ib.pb.h $JDE_DIR/Public/jde/markets/types/proto
 
 syntax = "proto3";
@@ -81,6 +81,7 @@ enum Exchanges
 	Aequitas = 27;
 	London = 28;
 	Lse = 29;
+	Island = 30;
 	UnknownExchange = -1;
 };
 

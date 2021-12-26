@@ -8,10 +8,40 @@
 #include "Exception.h"
 #include "Log.h"
 
-
+#define var const auto
+#define Φ Γ auto
 namespace Jde
 {
-	#define Φ Γ auto
+
+	ⓣ Toε( sv value )noexcept(false)->T
+	{
+		T v;
+		var e=std::from_chars( value.data(), value.data()+value.size(), v );
+		THROW_IF( e.ec!=std::errc(), "Can't convert:  '{}'.  to '{}'.  ec='{}'"sv, value, "Jde::GetTypeName<T>()", (uint)e.ec);
+		return v;
+	}
+
+	ⓣ To( sv value )noexcept->T
+	{
+		T v{};
+		std::from_chars( value.data(), value.data()+value.size(), v );
+		return v;
+	}
+
+	template<> Ξ To( sv x )noexcept->double
+	{
+		return stod( string{x} );
+	}
+
+/*	ⓣ ToOpt( sv value )noexcept->optional<T>
+	{
+		T v;
+		var e = std::from_chars( value.data(), value.data()+value.size(), v );
+		return e.ec==std::errc() ? optional<T>{v} : nullopt;
+	}
+*/
+	//ⓣ TryTo( sv value )noexcept->optional<T>;
+
 
 	struct ci_char_traits : public std::char_traits<char>
 	{
@@ -21,7 +51,7 @@ namespace Jde
 		Γ static int compare( const char* s1, const char* s2, size_t n )noexcept;
 		Γ static const char* find( const char* s, size_t n, char a )noexcept;
 	};
-	#define var const auto
+
 	struct Γ CIString : public std::basic_string<char, ci_char_traits>
 	{
 		using base=basic_string<char, ci_char_traits>;
@@ -71,8 +101,6 @@ namespace Jde
 		Φ ToLower( sv source )noexcept->string;
 		Γ string ToUpper( sv source )noexcept;
 
-		ⓣ TryTo( sv value )noexcept->optional<T>;
-		ⓣ To( sv value )noexcept(false)->T;
 		ⓣ TryToFloat( const basic_string<T>& s )noexcept->float;
 		optional<double> TryToDouble( str s )noexcept;
 
@@ -86,7 +114,10 @@ namespace Jde
 		Ξ LTrim( string& s ){ s.erase( s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {return !std::isspace(ch); }) ); }
 		Ξ RTrim( string& s ){ s.erase( std::find_if(s.rbegin(), s.rend(), [](int ch) {return !std::isspace(ch);}).base(), s.end() ); }
 		Ξ Trim( string& s ){ LTrim(s); RTrim(s); }
-		//Ξ Trim( string s ){ auto y{move(s)}; LTrim(y); RTrim(y); return y; }
+
+		Ξ LTrim( sv s ){ auto p = std::find_if( s.begin(), s.end(), [](int ch){return !std::isspace(ch);} ); return p==s.end() ? sv{} : p==s.begin() ? s : sv{ s.data()+std::distance(s.begin(),p), s.size()-std::distance(s.begin(),p) }; }
+		Ξ RTrim( sv s ){ auto p = std::find_if( s.rbegin(), s.rend(), [](int ch){return !std::isspace(ch);} ); return p==s.rend() ? sv{} : p==s.rbegin() ? s : sv{ s.data(), s.size()-std::distance(p, s.rbegin()) }; }//TODO test this
+		Ξ Trim( sv s ){ return RTrim( LTrim(s) ); }
 
 		ⓣ Trim( const T& s, sv substring )noexcept->T;
 
@@ -168,19 +199,6 @@ namespace Jde
 		return v;
 	}
 
-	ⓣ Str::TryTo( sv value )noexcept->optional<T>
-	{
-		optional<T> v;
-		Try( [&v, value]{v=To<T>( value );} );
-		return v;
-	}
-	ⓣ Str::To( sv value )->T
-	{
-		T v;
-		var e=std::from_chars( value.data(), value.data()+value.size(), v );
-		THROW_IF( e.ec!=std::errc(), "Can't convert:  '{}'.  to '{}'.  ec='{}'"sv, value, "Jde::GetTypeName<T>()", (uint)e.ec);
-		return v;
-	}
 	Ξ Str::StartsWithInsensitive( sv value, sv starting )noexcept->bool
 	{
 		bool equal = starting.size() <= value.size();
@@ -204,8 +222,9 @@ namespace Jde
 		auto pResult = v<stringValues.size() ? optional<TEnum>((TEnum)v) : nullopt;
 		if( !pResult )
 		{
-			if( auto p = TryTo<T>(text); p )
-				pResult = *p<stringValues.size() ? optional<TEnum>((TEnum)*p) : nullopt;
+			_int v;
+			if( var e = std::from_chars(text.data(), text.data()+text.size(), v); e.ec==std::errc() )
+				pResult = v<stringValues.size() ? optional<TEnum>((TEnum)v) : nullopt;
 		}
 		return pResult;
 	}

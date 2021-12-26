@@ -7,4 +7,8 @@ Jde::DB::IDataSource* GetDataSource()
 
 namespace Jde::DB::Sqlite
 {
+	α SqliteDS::SchemaProc()noexcept->sp<ISchemaProc>
+	{
+		return ms<SchemaProc( shared_from_this() );
+	}
 }

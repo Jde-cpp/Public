@@ -68,7 +68,7 @@ namespace Jde::Markets
 #pragma region Contract
 	struct ΓM Contract
 	{
-		static constexpr sv CacheFormat="Contract.{}";
+		static constexpr sv CacheDetailsFormat="ContractDetails.{}";
 		Contract()=default;
 		explicit Contract( ContractPK id, sv symbol="" )noexcept;
 		Contract( ContractPK id, Proto::Currencies currency, sv localSymbol, uint_fast32_t multiplier, sv name, Exchanges exchange, sv symbol, sv tradingClass, TimePoint issueDate=TimePoint::max() )noexcept;
@@ -81,7 +81,7 @@ namespace Jde::Markets
 
 		string Display()const noexcept;
 		sp<::Contract> ToTws()const noexcept;
-		sp<Proto::Contract> ToProto( bool stupidPointer=false )const noexcept;
+		up<Proto::Contract> ToProto()const noexcept;
 		ContractPK Id{0};
 		string Symbol;
 		SecurityType SecType{SecurityType::Stock};//"STK", "OPT"
@@ -118,7 +118,8 @@ namespace Jde::Markets
 	using ContractPtr_=sp<const Contract>;
 	ΓM ContractPtr_ Find( const std::map<ContractPK, ContractPtr_>&, sv symbol )noexcept;
 
-	ΓM α ToProto( const ContractDetails& details, Proto::Results::ContractDetail& proto )noexcept->void;
+	//ΓM α ToProto( const ::ContractDetails& details, Proto::Results::ContractDetail& proto )noexcept->void;
+	ΓM α ToProto( const ::ContractDetails& details )noexcept->Proto::Results::ContractDetail;
 	namespace Contracts
 	{
 		ΓM extern const Contract Spy;

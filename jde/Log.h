@@ -92,7 +92,7 @@ namespace Jde::Logging
 
 #define MY_FILE __FILE__
 
-#define CRITICAL(message,...) Logging::Log( Logging::MessageBase(message, ELogLevel::Critical, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define CRITICAL(message,...) Jde::Logging::Log( Jde::Logging::MessageBase(message, Jde::ELogLevel::Critical, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define ERR(message,...) Logging::Log( Logging::MessageBase(message, ELogLevel::Error, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define ERRX(message,...) Logging::LogNoServer( Logging::MessageBase(message, ELogLevel::Error, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define ERR_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(message, ELogLevel::Error, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )

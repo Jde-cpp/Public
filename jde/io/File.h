@@ -18,7 +18,7 @@ namespace Jde{ struct Stopwatch; }
 namespace Jde::IO
 {
 	Φ Native()noexcept->IO::IDrive&;
-	Ξ Read( path path, bool vector=true, SRCE )noexcept{ return DriveAwaitable{path, vector, sl}; }
+	Ξ Read( path path, bool vector=true, bool cache=false, SRCE )noexcept{ return DriveAwaitable{path, vector, cache, sl}; }
 	Ξ Write( path path, sp<vector<char>> data, SRCE )noexcept{ return DriveAwaitable{path, data, sl}; }
 	Ξ Write( path path, sp<string> data, SRCE )noexcept{ return DriveAwaitable{path, data, sl}; }
 	Φ FileSize( path path )noexcept(false)->uint;

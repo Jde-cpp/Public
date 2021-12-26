@@ -16,24 +16,33 @@ namespace boost::system{ class error_code; }
 
 #define RETHROW(x, ...) catch( std::exception& e ){ throw Exception{SRCE_CUR, move(e), x __VA_OPT__(,) __VA_ARGS__}; }
 #define $ template<class... Args>
-#define COMMON α Ptr()->std::exception_ptr override{ return std::make_exception_ptr(move(*this)); } [[noreturn]] α Throw()->void override{ throw move(*this); }
+#define COMMON α Clone()noexcept->sp<IException> override{ return ms<T>(move(*this)); }\
+	α Move()noexcept->up<IException> override{ return mu<T>(move(*this)); }\
+	α Ptr()->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }\
+	[[noreturn]] α Throw()->void override{ throw move(*this); }
 namespace Jde
 {
+#ifdef _MSC_VER
+	Ξ make_exception_ptr( std::exception&& e )noexcept->std::exception_ptr{ return std::make_exception_ptr(move(e)); }
+#else
+	Ξ make_exception_ptr( std::exception&& e )noexcept->std::exception_ptr{ try{ throw move(e); } catch (...){return std::current_exception();} }
+#endif
 	struct StackTrace
 	{
 		StackTrace( SL sl )noexcept{ stack.push_back(sl); }
 		α front()const noexcept->SL&{ return stack.front(); }
+		α size()const noexcept->uint{ return stack.size(); }
 		vector<source_location> stack;
 	};
 	struct Γ IException : std::exception
 	{
 		using base=std::exception;
-		IException( vector<string>&& args, string&& format, const source_location& sl, uint c, ELogLevel l=ELogLevel::Debug )noexcept;
+		IException( vector<string>&& args, string&& format, SL sl, uint c, ELogLevel l=ELogLevel::Debug )noexcept;
 		IException( string value, ELogLevel level=ELogLevel::Debug, uint code=0, SRCE )noexcept;
 		IException( IException&& from )noexcept;
 
-		$ IException( const source_location& sl, std::exception&& inner, sv format_={}, Args&&... args )noexcept;
-		$ IException( const source_location& sl, ELogLevel l, sv m, Args&& ...args )noexcept;
+		$ IException( SL sl, std::exception&& inner, sv format_={}, Args&&... args )noexcept;
+		$ IException( SL sl, ELogLevel l, sv m, Args&& ...args )noexcept;
 
 		virtual ~IException();
 
@@ -43,7 +52,8 @@ namespace Jde
 		α What()const noexcept->const string&{ return _what; }
 		α Level()const noexcept->ELogLevel{return _level;}
 		β Clone()noexcept->sp<IException> =0;
-		α Push( const source_location& sl )noexcept{ _stack.stack.push_back(sl); }
+		β Move()noexcept->up<IException> =0;
+		α Push( SL sl )noexcept{ _stack.stack.push_back(sl); }
 		//β Id()const noexcept->uint32{ return _messageId; }
 		β Ptr()->std::exception_ptr =0;
 		[[noreturn]] β Throw()->void=0;
@@ -66,23 +76,23 @@ namespace Jde
 		Exception( string what, ELogLevel l=ELogLevel::Debug, SRCE )noexcept;
 		Exception( Exception&& from ):IException{ move(from) }{}
 
-		$ Exception( const source_location& sl, std::exception&& inner, sv format_={}, Args&&... args )noexcept:IException{sl, move(inner), format_, args...}{}
-		$ Exception( const source_location& sl, ELogLevel l, sv format_, Args&&... args )noexcept:IException( sl, l, format_, args... ){}
-		$ Exception( const source_location& sl, sv fmt, Args&&... args )noexcept:IException( sl, ELogLevel::Error, fmt, args... ){}
+		$ Exception( SL sl, std::exception&& inner, sv format_={}, Args&&... args )noexcept:IException{sl, move(inner), format_, args...}{}
+		$ Exception( SL sl, ELogLevel l, sv format_, Args&&... args )noexcept:IException( sl, l, format_, args... ){}
+		$ Exception( SL sl, sv fmt, Args&&... args )noexcept:IException( sl, ELogLevel::Error, fmt, args... ){}
 		~Exception(){}
-		α Clone()noexcept->sp<IException> override{ return ms<Exception>(move(*this)); }
+		using T=Exception;
 		COMMON
 	};
 
 	struct Γ OSException final : IException
 	{
 #ifdef _MSC_VER
-		using T=DWORD;
+		using TErrorCode=DWORD;
 #else
-		using T=_int;
+		using TErrorCode=_int;
 #endif
-		OSException( T result, string&& msg, SRCE )noexcept;
-		α Clone()noexcept->sp<IException> override{ return ms<OSException>(move(*this)); }
+		OSException( TErrorCode result, string&& msg, SRCE )noexcept;
+		using T=OSException;
 		COMMON
 	};
 
@@ -91,7 +101,7 @@ namespace Jde
 		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE );
 		CodeException( string value, std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE );
 
-		α Clone()noexcept->sp<IException> override{ return ms<CodeException>(move(*this)); }
+		using T=CodeException;
 		COMMON
 
 		Ω ToString( const std::error_code& pErrorCode )noexcept->string;
@@ -108,7 +118,7 @@ namespace Jde
 		BoostCodeException( BoostCodeException&& e )noexcept;
 		~BoostCodeException();
 
-		α Clone()noexcept->sp<IException> override{ return ms<BoostCodeException>( move(*this) ); }
+		using T=BoostCodeException;
 		COMMON
 	private:
 		up<boost::system::error_code> _errorCode;
@@ -120,12 +130,11 @@ namespace Jde
 		IOException( fs::path path, uint code, string value, SRCE ):IException{ move(value), ELogLevel::Debug, code, sl }, _path{ move(path) }{}
 		IOException( fs::path path, string value, SRCE ): IOException{ move(path), 0, move(value), sl }{}
 		IOException( fs::filesystem_error&& e, SRCE ):IException{sl}, _pUnderLying( make_unique<fs::filesystem_error>(move(e)) ){}
-		$ IOException( const source_location& sl, path path, sv value, Args&&... args ):IException( sl, ELogLevel::Debug, value, args... ),_path{ path }{}
+		$ IOException( SL sl, path path, sv value, Args&&... args ):IException( sl, ELogLevel::Debug, value, args... ),_path{ path }{}
 
-		α Clone()noexcept->sp<IException> override{ return ms<IOException>(move(*this)); }
-		//α ErrorCode()const noexcept->uint;
 		α Path()const noexcept->path; α SetPath( path x )noexcept{ _path=x; }
 		α what()const noexcept->const char* override;
+		using T=IOException;
 		COMMON
 	private:
 		//const uint _errorCode{ 0 };
@@ -133,7 +142,7 @@ namespace Jde
 		fs::path _path;
 	};
 
-	$ IException::IException( const source_location& sl, ELogLevel l, sv format_, Args&&... args )noexcept:
+	$ IException::IException( SL sl, ELogLevel l, sv format_, Args&&... args )noexcept:
 		_stack{ sl },
 		_level{ l },
 		_format{ format_ },
@@ -143,7 +152,7 @@ namespace Jde
 		ToVec::Append( _args, args... );
 	}
 
-	$ IException::IException( const source_location& sl, std::exception&& inner, sv format_, Args&&... args )noexcept:
+	$ IException::IException( SL sl, std::exception&& inner, sv format_, Args&&... args )noexcept:
 		_stack{ sl },
 		_pInner{ make_shared<std::exception>(move(inner)) },
 		_format{ format_ },

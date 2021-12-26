@@ -38,9 +38,8 @@ namespace Jde::Markets
 		α TimeInForce()const noexcept->Proto::ETimeInForce; void TimeInForce( Proto::ETimeInForce value )noexcept;
 		α OrderType()const noexcept->Proto::EOrderType; void OrderType( Proto::EOrderType value )noexcept;
 		α ToProto()const noexcept->up<Proto::Order>;
-		static α  ParseDateTime( const std::string& date )noexcept->time_t;
-		static α ToDateString( time_t date )noexcept->string;
-		static α ToAllocatedProto( const ::OrderState& state )noexcept->Proto::Results::OrderState*;
+		Ω ParseDateTime( str date )noexcept->time_t;
+		Ω ToDateString( time_t date )noexcept->string;
 
 		enum class Fields : uint
 		{
@@ -56,22 +55,23 @@ namespace Jde::Markets
 			All = std::numeric_limits<uint>::max() //(uint)~0
 		};
 		Fields Changes( const MyOrder& status, Fields fields )const noexcept;
-		mutable std::chrono::system_clock::time_point LastUpdate;
+		mutable TP LastUpdate;
 	};
-	inline MyOrder::Fields operator|(MyOrder::Fields a, MyOrder::Fields b){ return (MyOrder::Fields)( (uint)a | (uint)b ); }
-	inline MyOrder::Fields operator|=(MyOrder::Fields& a, MyOrder::Fields b){ return a = (MyOrder::Fields)( (uint)a | (uint)b ); }
+	Ξ operator|(MyOrder::Fields a, MyOrder::Fields b)noexcept->MyOrder::Fields{ return (MyOrder::Fields)( (uint)a | (uint)b ); }
+	Ξ operator|=(MyOrder::Fields& a, MyOrder::Fields b)noexcept->MyOrder::Fields{ return a = (MyOrder::Fields)( (uint)a | (uint)b ); }
 
 	struct OrderStatus final
 	{
 		::OrderId Id;
 		EOrderStatus Status{EOrderStatus::None};
+		α ToProto()const noexcept->up<Proto::Results::OrderStatus>;
 		double Filled;
 		double Remaining;
 		double AverageFillPrice;
 		int_fast32_t PermId;
 		int_fast32_t ParentId;
 		double LastFillPrice;
-		std::string WhyHeld;
+		string WhyHeld;
 		double MarketCapPrice;
 
 		enum class Fields : uint_fast8_t
@@ -82,12 +82,13 @@ namespace Jde::Markets
 			Remaining   = 1 << 3,
 			All = std::numeric_limits<uint_fast8_t>::max()
 		};
-		Fields Changes( const OrderStatus& status, Fields fields )const noexcept;
+		Fields Changes( const OrderStatus& status )const noexcept;
 	};
-	inline OrderStatus::Fields operator|(OrderStatus::Fields a, OrderStatus::Fields b){ return (OrderStatus::Fields)( (uint_fast8_t)a | (uint_fast8_t)b ); }
-	inline OrderStatus::Fields operator|=(OrderStatus::Fields& a, OrderStatus::Fields b){ return a = (OrderStatus::Fields)( (uint)a | (uint)b ); }
+	Ξ operator|(OrderStatus::Fields a, OrderStatus::Fields b)->OrderStatus::Fields{ return (OrderStatus::Fields)( (uint_fast8_t)a | (uint_fast8_t)b ); }
+	Ξ operator|=(OrderStatus::Fields& a, OrderStatus::Fields b)->OrderStatus::Fields{ return a = (OrderStatus::Fields)( (uint)a | (uint)b ); }
 
-	struct OrderState : ::OrderState
+	α ToProto( const ::OrderState& state )noexcept->up<Proto::Results::OrderState>;
+/*	struct OrderState final: ::OrderState
 	{
 		OrderState():
 			::OrderState{}
@@ -95,17 +96,17 @@ namespace Jde::Markets
 		OrderState( const ::OrderState& base ):
 			::OrderState{base}
 		{}
-
-		enum class Fields : uint_fast8_t
-		{
-			None            = 0,
-			Status          = 1 << 1,
-			CompletedTime   = 1 << 2,
-			CompletedStatus = 1 << 3,
-			All = std::numeric_limits<uint_fast8_t>::max()
-		};
-		Fields Changes( const OrderState& state, Fields fields )const noexcept;
+*/
+	enum class OrderStateFields : uint_fast8_t
+	{
+		None            = 0,
+		Status          = 1 << 1,
+		CompletedTime   = 1 << 2,
+		CompletedStatus = 1 << 3,
+		All = std::numeric_limits<uint_fast8_t>::max()
 	};
-	inline OrderState::Fields operator| (OrderState::Fields a, OrderState::Fields b){ return (OrderState::Fields)( (uint_fast8_t)a | (uint_fast8_t)b ); }
-	inline OrderState::Fields operator|=(OrderState::Fields& a, OrderState::Fields b){ return a = (OrderState::Fields)( (uint)a | (uint)b ); }
+	α OrderStateChanges( const ::OrderState& a, const ::OrderState& b )noexcept->OrderStateFields;
+//	};
+	Ξ operator| (OrderStateFields a, OrderStateFields b)->OrderStateFields{ return (OrderStateFields)( (uint_fast8_t)a | (uint_fast8_t)b ); }
+	Ξ operator|=(OrderStateFields& a, OrderStateFields b)->OrderStateFields{ return a = (OrderStateFields)( (uint)a | (uint)b ); }
 }

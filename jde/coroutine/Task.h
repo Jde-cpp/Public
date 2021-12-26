@@ -5,82 +5,113 @@
 #include <jde/Exception.h>
 #include <jde/Assert.h>
 
+#define Φ Γ auto
 namespace Jde::Coroutine
 {
 	typedef uint Handle;
 	typedef Handle ClientHandle;
 
-	Γ α NextHandle()noexcept->ClientHandle;
-	Γ α NextTaskHandle()noexcept->ClientHandle;
-	Γ α NextTaskPromiseHandle()noexcept->ClientHandle;
+	Φ NextHandle()noexcept->ClientHandle;
+	Φ NextTaskHandle()noexcept->ClientHandle;
+	Φ NextTaskPromiseHandle()noexcept->ClientHandle;
 
 	struct ITaskError
 	{
-		ITaskError():_taskHandle{NextTaskHandle()}{ /*DBG("Task::Task({})"sv, _taskHandle);*/ }
-		const Handle _taskHandle;
+		//ITaskError():_taskHandle{NextTaskHandle()}{ /*DBG("Task::Task({})"sv, _taskHandle);*/ }
+		//const Handle _taskHandle;
 	};
 
-	struct TaskResult
+	struct AwaitResult
 	{
-		using TException=IException;
-		TaskResult()=default;
-		explicit TaskResult( sp<void> p )noexcept:_result{p}{}
-		explicit TaskResult( sp<IException> e )noexcept:_result{dynamic_pointer_cast<TException>(e)}{};
-		TaskResult( Exception&& e )noexcept:_result{ dynamic_pointer_cast<TException>(std::make_shared<Exception>(move(e))) }{};
-		α Clear()noexcept->void{ _result = sp<void>{}; }
-		α HasValue()const noexcept{ return _result.index()==0 && get<sp<void>>( _result ); }
-		α HasError()const noexcept{ return _result.index()==1; }
-		α Uninitialized()const noexcept{ return _result.index()==0 && get<sp<void>>(_result)==nullptr; }
-		ⓣ Get( SRCE )const noexcept(false)->sp<T>;
-		Γ α CheckUninitialized()noexcept->void;
-		α Error()const noexcept->sp<IException>{ return HasError() ? get<sp<TException>>(_result) : nullptr; }
+		//function<void(const void*)> Deleter;
+		using UType=void*;//std::unique_ptr<void,decltype(Deleter)>;
+		using Value = std::variant<UType,sp<void>,IException*>;
+		AwaitResult()=default;
+		Τ AwaitResult( up<T> p )noexcept:_result{ p.release() }{}
+		explicit AwaitResult( UType p )noexcept:_result{ p }{}
+		explicit AwaitResult( up<IException> e )noexcept:_result{move(e)}{};
+		explicit AwaitResult( sp<void> p )noexcept:_result{ p }{};
+		AwaitResult( Exception&& e )noexcept:_result{ e.Move() }{};
+		α Clear()noexcept->void{ _result = UType{}; }
+		α HasValue()const noexcept{ return _result.index()==0 && get<0>( _result ); }
+		α HasShared()const noexcept{ return _result.index()==1 && get<1>( _result ); }
+		α HasError()const noexcept{ return _result.index()==2; }
+		α Error()noexcept->up<IException>{ auto p = HasError() ? get<IException*>(_result) : nullptr; ASSERT(p); Clear(); return up<IException>{ p->Move() };  }
+		α Uninitialized()const noexcept{ return _result.index()==0 && get<0>(_result)==nullptr; }
+		α CheckError( SRCE )noexcept(false)->void;
+		ⓣ SP( SRCE )noexcept(false)->sp<T>;
+		ⓣ UP( SRCE )noexcept(false)->up<T>;
 
-		α Set( sp<void> p )noexcept->void{ CheckUninitialized(); _result = p; }
-		//α Set( TException_ptr p )noexcept->void{ CheckUninitialized(); _result = p; }
-		//α Set( TException&& e )noexcept->void{ CheckUninitialized(); Set( std::make_exception_ptr(move(e)) ); }
-		α Set( Exception&& e )noexcept->void{ CheckUninitialized(); _result = std::dynamic_pointer_cast<TException>( std::make_shared<Exception>(move(e)) ); }
-		α Set( std::variant<sp<void>,sp<TException>>&& result )noexcept{ _result = move(result); }
+		Φ CheckUninitialized()noexcept->void;
+		//α Error()const noexcept->up<IException>{ return HasError() ? get<1>(_result) : nullptr; }
+
+		α Set( UType p )noexcept->void{ CheckUninitialized(); _result = move(p); }
+		α Set( IException&& e )noexcept->void{ CheckUninitialized(); _result = e.Move().release(); }
+		α Set( Value&& result )noexcept{ _result = move(result); }
 	private:
-		std::variant<sp<void>,sp<IException>> _result;
+		Value _result;
 	};
-	struct Task2 final : ITaskError
+
+	struct Task final //: ITaskError
 	{
-		using TResult=TaskResult;
+		using TResult=AwaitResult;
 		struct promise_type
 		{
 			promise_type():_promiseHandle{ NextTaskPromiseHandle() }{}
-			Task2& get_return_object()noexcept{ return _pReturnObject ? *_pReturnObject : *(_pReturnObject=make_unique<Task2>()); }
+			Task& get_return_object()noexcept{ return _pReturnObject ? *_pReturnObject : *(_pReturnObject=mu<Task>()); }
 			suspend_never initial_suspend()noexcept{ return {}; }
 			suspend_never final_suspend()noexcept{ return {}; }
 			void return_void()noexcept{}
-			Γ α unhandled_exception()noexcept->void;
+			Φ unhandled_exception()noexcept->void;
 		private:
-			up<Task2> _pReturnObject;
+			up<Task> _pReturnObject;
 			const Handle _promiseHandle;
 		};
-		α Clear()noexcept->void{ Result.Clear(); }
-		α HasResult()const noexcept->bool{ return !Result.Uninitialized(); }
-		α Get( SL sl )const noexcept(false)->sp<void>{ return GetResult().Get<void>( sl ); }
-		α GetResult()const noexcept->const TaskResult&{ return Result; }
-		//α SetResult( std::exception_ptr p )noexcept->void{ Result.Set( p ); }
-		//α SetResult( std::exception&& e )noexcept->void{ Result.Set( move(e) ); }
-		α SetResult( Exception&& e )noexcept->void{ Result.Set( move(e) ); }
-		α SetResult( TaskResult&& r )noexcept->void{ Result = move(r); }
-		α SetResult( std::variant<sp<void>,sp<TaskResult::TException>>&& r )noexcept{ Result.Set( move(r) ); }
+		α Clear()noexcept->void{ _result.Clear(); }
+		α HasResult()const noexcept->bool{ return !_result.Uninitialized(); }
+		α Result()noexcept->AwaitResult&{ return _result; }
+		α SetResult( IException&& e )noexcept->void{ _result.Set( move(e) ); }
+		α SetResult( AwaitResult::Value&& r )noexcept->void{ _result.Set( move(r) ); }
+		ⓣ SetResult( up<T>&& x )noexcept{ _result.Set( x.release() ); }
+		α SetResult( AwaitResult&& r )noexcept->void{ _result = move(r); }
+		ⓣ SetResult( sp<T> x )noexcept{ _result.Set( x ); }
 	private:
-		TaskResult Result;
+		AwaitResult _result;
 	};
 
-	ⓣ TaskResult::Get( const source_location& sl )const noexcept(false)->sp<T>
+	Ξ AwaitResult::CheckError( SL sl )->void
 	{
-		if( sp<IException> pException = Error(); pException )
+		if( _result.index()==2 )
 		{
+			up<IException> pException = Error(); ASSERT( pException );
 			pException->Push( sl );
 			pException->Throw();
 		}
+	}
+
+	ⓣ AwaitResult::UP( SL sl )noexcept(false)->up<T>
+	{
+		CheckError( sl );
+		if( _result.index()==1 )
+			throw Exception{ "Result is a shared_ptr.", ELogLevel::Debug, sl };
+		AwaitResult::UType pUnique = move( get<AwaitResult::UType>( move(_result) ) );
+		auto p = static_cast<T*>( pUnique );
+		if( pUnique && !p )
+			throw Exception{ "Could not cast ptr." };//mysql
+		return up<T>{ p };
+	}
+
+	ⓣ AwaitResult::SP( const source_location& sl )noexcept(false)->sp<T>
+	{
+		CheckError( sl );
+		if( _result.index()==0 )
+			throw Exception{ "Result is a unique_ptr.", ELogLevel::Debug, sl };
+
 		auto pVoid = get<sp<void>>( _result );
 		sp<T> p = pVoid ? static_pointer_cast<T>( pVoid ) : sp<T>{};
-		if( pVoid && !p ) throw Exception{ "Could not cast ptr.", ELogLevel::Debug, sl };
+		if( pVoid && !p )
+			throw Exception{ "Could not cast ptr." };//mysql
 		return p;
 	}
 }
+#undef Φ

@@ -36,3 +36,5 @@ stage/*
 **/.vs/*
 **/.bin/*
 *.user
+src/db/sqlite/.vscode/settings.json
+src/db/sqlite/.vscode/tasks.json
