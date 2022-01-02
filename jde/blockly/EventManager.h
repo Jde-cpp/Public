@@ -35,17 +35,17 @@ namespace Jde::Markets::MBlockly
 	};
 
 	template<class T>
-	struct Task final
+	struct BTask final
 	{
 		using TResult=T;
-		Task():_taskHandle{NextTaskHandle()}{ DBG("Task::Task({})"sv, _taskHandle); }
-		Task( const Task& t2 ):
+		BTask():_taskHandle{NextTaskHandle()}{ DBG("Task::Task({})"sv, _taskHandle); }
+		BTask( const BTask& t2 ):
 			Result{t2.Result},
 			_taskHandle{t2._taskHandle}
 		{
 			DBG("Task(Task{})"sv, _taskHandle);
 		}
-		~Task(){ DBG( "Task::~Task({})"sv, _taskHandle); }
+		~BTask(){ DBG( "BTask::~BTask({})"sv, _taskHandle); }
 
 		struct promise_type
 		{
@@ -53,12 +53,12 @@ namespace Jde::Markets::MBlockly
 			{
 				DBG( "promise_type::promise_type({})"sv, _promiseHandle );
 			}
-			α get_return_object()noexcept->Task<T>&{ return _returnObject; }
+			α get_return_object()noexcept->BTask<T>&{ return _returnObject; }
 			suspend_never initial_suspend()noexcept{ return {}; }
 			suspend_never final_suspend()noexcept{ return {}; }
 			α return_void()noexcept->void{}
 			α unhandled_exception()noexcept->void{ /*DBG0("unhandled_exception"sv); TODO uncomment*/  }
-			Task<T> _returnObject;
+			BTask<T> _returnObject;
 			const Handle _promiseHandle;
 		};
 		TResult Result;
@@ -69,7 +69,7 @@ namespace Jde::Markets::MBlockly
 	{
 		Awaitable( const optional<ProcTimePoint>& alarm, const BTick& tick, const Tick::Fields& tickFields, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields )noexcept;
 		typedef EventResult TReturn;
-		typedef Task<TReturn> TTask;
+		typedef BTask<TReturn> TTask;
 		~Awaitable();
 		α await_ready()noexcept->bool;
 		α await_suspend( coroutine_handle<TTask::promise_type> h )noexcept->void; //if( !await_ready){ await_suspend();} await_resume()
@@ -79,9 +79,9 @@ namespace Jde::Markets::MBlockly
 		coroutine_handle<TTask::promise_type> _taskHandle;
 
 		α Complete( sp<AwaitableData> p, uint type, sp<IException> pError )noexcept->void;
-		α CallAlarm( sp<AwaitableData> pData )noexcept->Task2;
-		α CallTick( sp<AwaitableData> pData )noexcept->Task2;
-		α CallOrder( sp<AwaitableData> pData )noexcept->Task2;
+		α CallAlarm( sp<AwaitableData> pData )noexcept->Task;
+		α CallTick( sp<AwaitableData> pData )noexcept->Task;
+		α CallOrder( sp<AwaitableData> pData )noexcept->Task;
 
 		sp<AwaitableData> _pData;
 	};

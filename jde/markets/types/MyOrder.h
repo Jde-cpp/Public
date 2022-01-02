@@ -16,7 +16,7 @@
 #pragma warning( default : 4244 )
 #pragma warning( default : 4996 )
 
-
+#define Φ ΓM auto
 namespace Jde::Markets::Proto{ class Order; enum ETimeInForce : int; enum EOrderType : int; }
 namespace Jde::Markets::Proto::Results{ enum EOrderStatus : int; }
 namespace Jde::Markets
@@ -64,7 +64,7 @@ namespace Jde::Markets
 	{
 		::OrderId Id;
 		EOrderStatus Status{EOrderStatus::None};
-		α ToProto()const noexcept->up<Proto::Results::OrderStatus>;
+		Φ ToProto()const noexcept->up<Proto::Results::OrderStatus>;
 		double Filled;
 		double Remaining;
 		double AverageFillPrice;
@@ -87,16 +87,8 @@ namespace Jde::Markets
 	Ξ operator|(OrderStatus::Fields a, OrderStatus::Fields b)->OrderStatus::Fields{ return (OrderStatus::Fields)( (uint_fast8_t)a | (uint_fast8_t)b ); }
 	Ξ operator|=(OrderStatus::Fields& a, OrderStatus::Fields b)->OrderStatus::Fields{ return a = (OrderStatus::Fields)( (uint)a | (uint)b ); }
 
-	α ToProto( const ::OrderState& state )noexcept->up<Proto::Results::OrderState>;
-/*	struct OrderState final: ::OrderState
-	{
-		OrderState():
-			::OrderState{}
-		{}
-		OrderState( const ::OrderState& base ):
-			::OrderState{base}
-		{}
-*/
+	Φ ToProto( const ::OrderState& state )noexcept->up<Proto::Results::OrderState>;
+
 	enum class OrderStateFields : uint_fast8_t
 	{
 		None            = 0,
@@ -106,7 +98,8 @@ namespace Jde::Markets
 		All = std::numeric_limits<uint_fast8_t>::max()
 	};
 	α OrderStateChanges( const ::OrderState& a, const ::OrderState& b )noexcept->OrderStateFields;
-//	};
+
 	Ξ operator| (OrderStateFields a, OrderStateFields b)->OrderStateFields{ return (OrderStateFields)( (uint_fast8_t)a | (uint_fast8_t)b ); }
 	Ξ operator|=(OrderStateFields& a, OrderStateFields b)->OrderStateFields{ return a = (OrderStateFields)( (uint)a | (uint)b ); }
 }
+#undef Φ

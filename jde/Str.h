@@ -33,15 +33,6 @@ namespace Jde
 		return stod( string{x} );
 	}
 
-/*	ⓣ ToOpt( sv value )noexcept->optional<T>
-	{
-		T v;
-		var e = std::from_chars( value.data(), value.data()+value.size(), v );
-		return e.ec==std::errc() ? optional<T>{v} : nullopt;
-	}
-*/
-	//ⓣ TryTo( sv value )noexcept->optional<T>;
-
 
 	struct ci_char_traits : public std::char_traits<char>
 	{
@@ -222,9 +213,9 @@ namespace Jde
 		auto pResult = v<stringValues.size() ? optional<TEnum>((TEnum)v) : nullopt;
 		if( !pResult )
 		{
-			_int v;
-			if( var e = std::from_chars(text.data(), text.data()+text.size(), v); e.ec==std::errc() )
-				pResult = v<stringValues.size() ? optional<TEnum>((TEnum)v) : nullopt;
+			uint v2;
+			if( var e = std::from_chars(text.data(), text.data()+text.size(), v2); e.ec==std::errc() )
+				pResult = v2<stringValues.size() ? optional<TEnum>((TEnum)v2) : nullopt;
 		}
 		return pResult;
 	}

@@ -28,10 +28,14 @@
       </PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="SqliteDS.cpp" />
+    <ClCompile Include="SqliteSchemaProc.cpp" />
+    <ClCompile Include="SqliteStatements.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Exports.h" />
     <ClInclude Include="SqliteDS.h" />
+    <ClInclude Include="SqliteStatements.h" />
+    <ClInclude Include="SqliteSyntax.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -82,7 +86,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>JDE_SQLITE_EXPORTS;_DEBUG;SQLITE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>JDE_SQLITE_EXPORTS;WIN32_LEAN_AND_MEAN;_DEBUG;SQLITE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pc.h</PrecompiledHeaderFile>
@@ -106,7 +110,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>JDE_SQLITE_EXPORTS;NDEBUG;SQLITE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>JDE_SQLITE_EXPORTS;WIN32_LEAN_AND_MEAN;NDEBUG;SQLITE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pc.h</PrecompiledHeaderFile>

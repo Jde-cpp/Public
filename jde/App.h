@@ -4,7 +4,8 @@
 #include "Log.h"
 
 namespace Jde::Threading{ struct InterruptibleThread; struct IWorker; }
-#define Φ Γ auto
+#define Φ Γ α
+#define ω Γ Ω
 namespace Jde
 {
 	namespace Threading{ struct IPollWorker; }
@@ -53,7 +54,6 @@ namespace Jde
 		Ω ShuttingDown()noexcept->bool;
 		Ω Shutdown()noexcept->void;
 		Ω Cleanup()noexcept->void;
-		β GetEnvironmentVariable( sv variable )noexcept->string=0;
 		Ω AddActiveWorker( Threading::IPollWorker* pWorker )noexcept->void;
 		Ω RemoveActiveWorker( Threading::IPollWorker* p )noexcept->void;
 	protected:
@@ -78,17 +78,18 @@ namespace Jde
 
 	struct OSApp final: IApplication
 	{
-		Γ Ω Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->flat_set<string>;
-		α GetEnvironmentVariable( sv variable )noexcept->string override;
+		ω Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->flat_set<string>;
+		ω EnvironmentVariable( str variable )noexcept->string;
+
 		α ProgramDataFolder()noexcept->fs::path override;
 		Ω CompanyName()noexcept->string;
 		Ω CompanyRootDir()noexcept->fs::path;
-		Γ Ω FreeLibrary( void* p )noexcept->void;
-		Γ Ω LoadLibrary( path path )noexcept(false)->void*;
-		Γ Ω GetProcAddress( void* pModule, str procName )noexcept(false)->void*;
+		ω FreeLibrary( void* p )noexcept->void;
+		ω LoadLibrary( path path )noexcept(false)->void*;
+		ω GetProcAddress( void* pModule, str procName )noexcept(false)->void*;
 		α Install( str serviceDescription )noexcept(false)->void override;
 		α Uninstall()noexcept(false)->void override;
-		Γ Ω ProcessId()noexcept->uint;
+		ω ProcessId()noexcept->uint;
 		Ω Executable()noexcept->fs::path;
 		Ω Args()noexcept->flat_map<string,string>;
 		Ω Pause()noexcept->void;
@@ -128,3 +129,4 @@ namespace Jde
 	}
 }
 #undef Φ
+#undef ω

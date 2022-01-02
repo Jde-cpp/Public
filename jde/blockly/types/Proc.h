@@ -179,7 +179,7 @@ namespace Jde::Markets::MBlockly
 			DBG( "Order.LastUpdate='{}'."sv, _lastUpdate.ToString() );
 		}
 		void Bump( Price price )noexcept{ MyOrder::lmtPrice+=price._value; }
-		void Place( TwsClient& tws, const ::Contract& contract )noexcept;
+		void Place( sp<::Contract> p )noexcept;
 		int VolatilityType()const noexcept{ return volatilityType; }
 	private:
 		const MyOrder& Base()const noexcept{ return *this;}

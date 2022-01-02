@@ -1,8 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #ifndef ASSERT
 # define ASSERT( actual ){ if( !(actual) ){ CRITICAL("Assert:  {} is false"sv,  #actual ); } assert( actual ); }
 #endif
+
+#define ASSERTSL( actual, xsl ){ if( !(actual) )Log( ELogLevel::Critical, format("Assert:  {} is false"sv,  #actual), xsl ); }
+
 #ifndef ASSERTX
 # define	ASSERTX( actual ){ if( !(actual) ){ Logging::LogNoServer( MessageBase{ELogLevel::Critical, "Assert:  {} is false", MY_FILE, __func__, __LINE__},  #actual ); } assert( actual ); }
 #endif

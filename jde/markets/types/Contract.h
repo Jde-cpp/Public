@@ -1,13 +1,11 @@
 ﻿#pragma once
-#ifndef JDE_CONTRACT
-#define JDE_CONTRACT
-
 #include <jde/markets/Exports.h>
 #pragma warning( disable : 4244 )
 #include <jde/markets/types/proto/ib.pb.h>
 #pragma warning( default : 4244 )
 
 #include <jde/markets/TypeDefs.h>
+#define Φ ΓM α
 struct ContractDetails;
 struct Contract;
 
@@ -31,13 +29,13 @@ namespace Jde::Markets
 #pragma endregion
 #pragma region SecurityRight
 	using SecurityRight = Proto::SecurityRight;
-	ΓM SecurityRight ToSecurityRight( sv name )noexcept;
-	ΓM sv ToString( SecurityRight right )noexcept;
+	Φ ToSecurityRight( sv name )noexcept->SecurityRight;
+	Φ ToString( SecurityRight right )noexcept->sv;
 #pragma endregion
 #pragma region SecurityType
 	using SecurityType=Proto::SecurityType;
-	ΓM SecurityType ToSecurityType( sv inputName )noexcept;
-	sv ToString( SecurityType type )noexcept;
+	Φ ToSecurityType( sv inputName )noexcept->SecurityType;
+	Φ ToString( SecurityType type )noexcept->sv;
 #pragma endregion
 #pragma region ComboLeg
 	struct ComboLeg
@@ -116,10 +114,10 @@ namespace Jde::Markets
 
 	};
 	using ContractPtr_=sp<const Contract>;
-	ΓM ContractPtr_ Find( const std::map<ContractPK, ContractPtr_>&, sv symbol )noexcept;
+	Φ Find( const std::map<ContractPK, ContractPtr_>&, sv symbol )noexcept->ContractPtr_;
 
-	//ΓM α ToProto( const ::ContractDetails& details, Proto::Results::ContractDetail& proto )noexcept->void;
-	ΓM α ToProto( const ::ContractDetails& details )noexcept->Proto::Results::ContractDetail;
+	Φ ToIb( string symbol, Day dayIndex, SecurityRight right, double strike=0 )noexcept->::Contract;
+	Φ ToProto( const ::ContractDetails& details )noexcept->Proto::Results::ContractDetail;
 	namespace Contracts
 	{
 		ΓM extern const Contract Spy;
@@ -132,4 +130,4 @@ namespace Jde::Markets
 	}
 #pragma endregion
 }
-#endif
+#undef Φ

@@ -127,17 +127,19 @@ namespace Jde
 #define CHECK_PATH( path ) THROW_IFX( !fs::exists(path), IOException(path, "path does not exist") );
 	struct Γ IOException final : IException
 	{
-		IOException( fs::path path, uint code, string value, SRCE ):IException{ move(value), ELogLevel::Debug, code, sl }, _path{ move(path) }{}
+		IOException( fs::path path, uint code, string value, SRCE ):IException{ move(value), ELogLevel::Debug, code, sl }, _path{ move(path) }{ SetWhat(); }
 		IOException( fs::path path, string value, SRCE ): IOException{ move(path), 0, move(value), sl }{}
-		IOException( fs::filesystem_error&& e, SRCE ):IException{sl}, _pUnderLying( make_unique<fs::filesystem_error>(move(e)) ){}
-		$ IOException( SL sl, path path, sv value, Args&&... args ):IException( sl, ELogLevel::Debug, value, args... ),_path{ path }{}
+		IOException( fs::filesystem_error&& e, SRCE ):IException{sl}, _pUnderLying( make_unique<fs::filesystem_error>(move(e)) ){ SetWhat(); }
+		$ IOException( SL sl, path path, sv value, Args&&... args ):IException( sl, ELogLevel::Debug, value, args... ),_path{ path }{ SetWhat(); }
 
+		//α Log()const noexcept->void override;
 		α Path()const noexcept->path; α SetPath( path x )noexcept{ _path=x; }
 		α what()const noexcept->const char* override;
 		using T=IOException;
 		COMMON
 	private:
-		//const uint _errorCode{ 0 };
+		α SetWhat()const noexcept->void;
+
 		sp<const fs::filesystem_error> _pUnderLying;
 		fs::path _path;
 	};
@@ -150,6 +152,8 @@ namespace Jde
 	{
 		_args.reserve( sizeof...(args) );
 		ToVec::Append( _args, args... );
+		if( l==ELogLevel::Critical )
+			Log();
 	}
 
 	$ IException::IException( SL sl, std::exception&& inner, sv format_, Args&&... args )noexcept:

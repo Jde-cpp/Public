@@ -27,11 +27,14 @@ namespace Jde::Coroutine
 		using UType=void*;//std::unique_ptr<void,decltype(Deleter)>;
 		using Value = std::variant<UType,sp<void>,IException*>;
 		AwaitResult()=default;
+		//AwaitResult( AwaitResult&& x ):_result{ move(x._result) }{ x._result = (void*)nullptr;};
 		Τ AwaitResult( up<T> p )noexcept:_result{ p.release() }{}
 		explicit AwaitResult( UType p )noexcept:_result{ p }{}
 		explicit AwaitResult( up<IException> e )noexcept:_result{move(e)}{};
-		explicit AwaitResult( sp<void> p )noexcept:_result{ p }{};
+		AwaitResult( sp<void> p )noexcept:_result{ p }{};
 		AwaitResult( Exception&& e )noexcept:_result{ e.Move() }{};
+		//~AwaitResult(){ ASSERT( _result.index()!=0 || !get<0>(_result) ); }
+		//α operator=( AwaitResult&& x )noexcept->AwaitResult&{ _result = move( x._result ); return *this; }
 		α Clear()noexcept->void{ _result = UType{}; }
 		α HasValue()const noexcept{ return _result.index()==0 && get<0>( _result ); }
 		α HasShared()const noexcept{ return _result.index()==1 && get<1>( _result ); }
@@ -45,7 +48,7 @@ namespace Jde::Coroutine
 		Φ CheckUninitialized()noexcept->void;
 		//α Error()const noexcept->up<IException>{ return HasError() ? get<1>(_result) : nullptr; }
 
-		α Set( UType p )noexcept->void{ CheckUninitialized(); _result = move(p); }
+		α Set( void* p )noexcept->void{ CheckUninitialized(); _result = move(p); }
 		α Set( IException&& e )noexcept->void{ CheckUninitialized(); _result = e.Move().release(); }
 		α Set( Value&& result )noexcept{ _result = move(result); }
 	private:
@@ -54,6 +57,10 @@ namespace Jde::Coroutine
 
 	struct Task final //: ITaskError
 	{
+		//Γ Task()noexcept;
+		//Γ Task( const Task& )noexcept;
+		//Γ Task( Task&& x )noexcept;
+		//Γ ~Task()noexcept;
 		using TResult=AwaitResult;
 		struct promise_type
 		{
@@ -73,9 +80,10 @@ namespace Jde::Coroutine
 		α SetResult( IException&& e )noexcept->void{ _result.Set( move(e) ); }
 		α SetResult( AwaitResult::Value&& r )noexcept->void{ _result.Set( move(r) ); }
 		ⓣ SetResult( up<T>&& x )noexcept{ _result.Set( x.release() ); }
-		α SetResult( AwaitResult&& r )noexcept->void{ _result = move(r); }
+		α SetResult( AwaitResult&& r )noexcept->void{ _result = move( r ); }
 		ⓣ SetResult( sp<T> x )noexcept{ _result.Set( x ); }
 	private:
+		uint i;
 		AwaitResult _result;
 	};
 
@@ -94,10 +102,11 @@ namespace Jde::Coroutine
 		CheckError( sl );
 		if( _result.index()==1 )
 			throw Exception{ "Result is a shared_ptr.", ELogLevel::Debug, sl };
-		AwaitResult::UType pUnique = move( get<AwaitResult::UType>( move(_result) ) );
+		void* pUnique = get<0>( _result ); 
 		auto p = static_cast<T*>( pUnique );
 		if( pUnique && !p )
 			throw Exception{ "Could not cast ptr." };//mysql
+		_result = (void*)nullptr;
 		return up<T>{ p };
 	}
 

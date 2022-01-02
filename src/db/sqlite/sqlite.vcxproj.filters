@@ -24,12 +24,24 @@
     <ClCompile Include="SqliteDS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SqliteSchemaProc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SqliteStatements.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SqliteDS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Exports.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SqliteSyntax.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SqliteStatements.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

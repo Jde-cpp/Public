@@ -1,17 +1,20 @@
-#include "SqliteSchemaProc.h"
+﻿#include "SqliteSchemaProc.h"
+#include "../../../../Framework/source/db/DataSource.h"
+#include "SqliteStatements.h"
+#include "SqliteSyntax.h"
 
-
+#define var const auto
 namespace Jde::DB::Sqlite
 {
-	α SqliteSchemaProc::LoadTables( sv catalog )noexcept(false)->flat_map<string,Table>
+	α SchemaProc::LoadTables( sv catalog )noexcept(false)->flat_map<string,Table>
 	{
 		string catalogLocal;
 		if( catalog.empty() )
 			catalog = catalogLocal = _pDataSource->Catalog( string{DB::MySqlSyntax{}.CatalogSelect()} );
-		auto pTables = mu<flat_map<string,Table>>();
+		flat_map<string,Table> tables;
 		auto result2 = [&]( sv tableName, sv name, _int ordinalPosition, sv dflt, string isNullable, sv type, optional<_int> maxLength, _int isIdentity, _int isId, optional<_int> numericPrecision, optional<_int> numericScale )
 		{
-			auto& table = pTables->emplace( tableName, Table{catalog,tableName} ).first->second;
+			auto& table = tables.emplace( tableName, Table{catalog,tableName} ).first->second;
 			table.Columns.resize( ordinalPosition );
 
 			table.Columns[ordinalPosition-1] = Column{ name, (uint)ordinalPosition, dflt, isNullable!="NO", ToType(type), maxLength.value_or(0), isIdentity!=0, isId!=0, numericPrecision, numericScale };
@@ -22,7 +25,7 @@ namespace Jde::DB::Sqlite
 		};
 		var sql = Sql::ColumnSql( false );
 		_pDataSource->Select( sql, result, {catalog} );
-		return pTables;
+		return tables;
 	}
 
 }

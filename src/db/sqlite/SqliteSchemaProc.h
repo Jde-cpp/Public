@@ -1,8 +1,8 @@
-#pragma once
+﻿#pragma once
 #include <jde/Exception.h>
-#include "../../Framework/source/db/types/Schema.h"
-#include "../../Framework/source/db/types/Table.h"
-#include "../../Framework/source/db/SchemaProc.h"
+#include "../../../../Framework/source/db/types/Schema.h"
+#include "../../../../Framework/source/db/types/Table.h"
+#include "../../../../Framework/source/db/SchemaProc.h"
 
 namespace Jde::DB{ struct IDataSource; }
 
