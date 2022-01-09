@@ -2,6 +2,7 @@
 #include <jde/markets/Exports.h>
 #pragma warning( disable : 4244 )
 #include <jde/markets/types/proto/ib.pb.h>
+#include <jde/markets/types/proto/results.pb.h>
 #pragma warning( default : 4244 )
 
 #include <jde/markets/TypeDefs.h>
@@ -11,6 +12,9 @@ struct Contract;
 
 namespace Jde::Markets
 {
+	α Liquid( const ::ContractDetails& c )noexcept->sp<vector<Proto::Results::ContractHours>>;
+	α Rth( const ::ContractDetails& c )noexcept->sp<vector<Proto::Results::ContractHours>>;
+
 	typedef std::chrono::system_clock::time_point TimePoint;
 	namespace Proto::Results{ class ContractDetail; class ContractHours; }
 	using Proto::Exchanges;

@@ -1,6 +1,7 @@
 #pragma once
 #include <jde/blockly/Blockly.h>
 #include <jde/blockly/types/EventResult.h>
+#include <jde/coroutine/Task.h>
 
 namespace Jde::Markets::MBlockly::Blocks
 {
@@ -8,13 +9,13 @@ namespace Jde::Markets::MBlockly::Blocks
 	{
 		[[jde::ClassName]]( long orderId, uint32_t contractId )noexcept(false);
 		void Run()noexcept override;
-		Coroutine::Task<EventResult>  Run2()noexcept;
+		α Run2()noexcept->BTask<EventResult>;
 		bool Running()noexcept override{ return _pKeepAlive!=nullptr; }
 [[jde::constexpr]]
 	private:
 [[jde::Prototypes]]
 		void Assign( const EventResult& v )noexcept;
-		Coroutine::Task<EventResult> Preliminary()noexcept;
+		Coroutine::Task Preliminary()noexcept;
 		std::optional<ProcTimePoint> GetAlarm( ProcTimePoint now )noexcept(false);
 		Markets::Tick::Fields TickFields()noexcept;
 		uint _pass{0};

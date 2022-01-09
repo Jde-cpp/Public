@@ -68,8 +68,8 @@ namespace Jde::Markets::MBlockly
 	struct JDE_BLOCKLY_EXECUTOR Awaitable final : std::enable_shared_from_this<Awaitable>
 	{
 		Awaitable( const optional<ProcTimePoint>& alarm, const BTick& tick, const Tick::Fields& tickFields, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields )noexcept;
-		typedef EventResult TReturn;
-		typedef BTask<TReturn> TTask;
+		using TReturn=EventResult;
+		using TTask=BTask<TReturn>;
 		~Awaitable();
 		α await_ready()noexcept->bool;
 		α await_suspend( coroutine_handle<TTask::promise_type> h )noexcept->void; //if( !await_ready){ await_suspend();} await_resume()

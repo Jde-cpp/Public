@@ -32,7 +32,7 @@ namespace Jde::Coroutine
 		explicit AwaitResult( UType p )noexcept:_result{ p }{}
 		explicit AwaitResult( up<IException> e )noexcept:_result{move(e)}{};
 		AwaitResult( sp<void> p )noexcept:_result{ p }{};
-		AwaitResult( Exception&& e )noexcept:_result{ e.Move() }{};
+		AwaitResult( Exception&& e )noexcept:_result{ e.Move().release() }{};
 		//~AwaitResult(){ ASSERT( _result.index()!=0 || !get<0>(_result) ); }
 		//α operator=( AwaitResult&& x )noexcept->AwaitResult&{ _result = move( x._result ); return *this; }
 		α Clear()noexcept->void{ _result = UType{}; }
@@ -83,7 +83,7 @@ namespace Jde::Coroutine
 		α SetResult( AwaitResult&& r )noexcept->void{ _result = move( r ); }
 		ⓣ SetResult( sp<T> x )noexcept{ _result.Set( x ); }
 	private:
-		uint i;
+		//uint i;
 		AwaitResult _result;
 	};
 
@@ -101,8 +101,8 @@ namespace Jde::Coroutine
 	{
 		CheckError( sl );
 		if( _result.index()==1 )
-			throw Exception{ "Result is a shared_ptr.", ELogLevel::Debug, sl };
-		void* pUnique = get<0>( _result ); 
+			throw Exception{ "Result is a shared_ptr.", ELogLevel::Critical, sl };
+		void* pUnique = get<0>( _result );
 		auto p = static_cast<T*>( pUnique );
 		if( pUnique && !p )
 			throw Exception{ "Could not cast ptr." };//mysql
@@ -114,7 +114,7 @@ namespace Jde::Coroutine
 	{
 		CheckError( sl );
 		if( _result.index()==0 )
-			throw Exception{ "Result is a unique_ptr.", ELogLevel::Debug, sl };
+			throw Exception{ "Result is a unique_ptr.", ELogLevel::Critical, sl };
 
 		auto pVoid = get<sp<void>>( _result );
 		sp<T> p = pVoid ? static_pointer_cast<T>( pVoid ) : sp<T>{};

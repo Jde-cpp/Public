@@ -6,15 +6,15 @@
 
 #ifdef JDE_BLOCKS_EXPORTS
 	#ifdef _MSC_VER
-		#define 🚪 __declspec( dllexport )  auto
+		#define Φ __declspec( dllexport )  auto
 	#else
-		#define 🚪 __attribute__((visibility("default")))  auto
+		#define Φ __attribute__((visibility("default")))  auto
 	#endif
 #else
 	#ifdef _MSC_VER
-		#define 🚪 __declspec( dllimport ) auto
+		#define Φ __declspec( dllimport ) auto
 	#else
-		#define 🚪 auto
+		#define Φ auto
 	#endif
 #endif
 namespace Jde::Markets
@@ -32,8 +32,8 @@ namespace Jde::Markets
 }
 extern "C"
 {
-	🚪 MBlocklyVersion()noexcept->char*;
-	🚪 MBlocklyAllocatedList()noexcept->std::vector<Jde::Markets::MBlockly::CApi::Function>*;
-	🚪 MBlocklyCreateAllocated( std::string_view id, long orderId, uint32_t contractId/*, std::shared_ptr<Jde::Markets::TwsClient> pTws*/ )noexcept->std::shared_ptr<Jde::Markets::MBlockly::IBlockly>*;
+	Φ MBlocklyVersion()noexcept->const char*;
+	Φ MBlocklyAllocatedList()noexcept->std::vector<Jde::Markets::MBlockly::CApi::Function>*;
+	Φ MBlocklyCreateAllocated( std::string_view id, long orderId, uint32_t contractId/*, std::shared_ptr<Jde::Markets::TwsClient> pTws*/ )noexcept->std::shared_ptr<Jde::Markets::MBlockly::IBlockly>*;
 }
-#undef 🚪
+#undef Φ

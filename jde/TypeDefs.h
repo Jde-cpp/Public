@@ -28,9 +28,9 @@
 	using std::suspend_never;
 #else
 	#include <experimental/coroutine>
+	#include <boost/assert/source_location.hpp>
 	using std::experimental::coroutine_handle;
 	using std::experimental::suspend_never;
-	#include <boost/assert/source_location.hpp>
 #endif
 
 #define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )") _Pragma("warning( disable: 4701 )")

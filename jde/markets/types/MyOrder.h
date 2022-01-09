@@ -1,5 +1,4 @@
 ﻿#pragma once
-#ifdef _MSC_VER
 #pragma push_macro("assert")
 #undef assert
 #pragma warning( disable : 4267 )
@@ -8,7 +7,6 @@
 #include <CommonDefs.h>
 #pragma warning( default : 4267 )
 #pragma pop_macro("assert")
-#endif
 #include "../Exports.h"
 #pragma warning( disable : 4244 )
 #pragma warning( disable : 4996 )
@@ -28,7 +26,7 @@ namespace Jde::Markets
 		namespace IB{ enum ETimeInForce:int; class Order; }
 	}
 
-	struct ΓM MyOrder : public ::Order
+	struct ΓM MyOrder : ::Order
 	{
 		MyOrder()noexcept=default;
 		MyOrder( ::OrderId orderId, const Proto::Order& order )noexcept;

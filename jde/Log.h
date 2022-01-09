@@ -104,8 +104,8 @@ namespace Jde::Logging
 #define DBG_IF(predicate,message,...) if( predicate ) Logging::Log( Logging::MessageBase(message, ELogLevel::Debug, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define DBG_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(message, ELogLevel::Debug, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
 #define BREAK_IF( predicate, severity, message, ...) if( predicate ){ LOGL(severity, message, __VA_ARGS__); break; }
-#define CONTINUE_IF( predicate, message, ...) if( predicate ){ LOG(message, __VA_ARGS__); continue; }
-#define RETURN_IF( predicate, message, ... ) if( predicate ){ DBG( message, __VA_ARGS__ ); return; }
+#define CONTINUE_IF( predicate, message, ...) if( predicate ){ LOG(message __VA_OPT__(,) __VA_ARGS__); continue; }
+#define RETURN_IF( predicate, message, ... ) if( predicate ){ LOG( message __VA_OPT__(,) __VA_ARGS__ ); return; }
 #define TRACE(message,...) Logging::Log( Logging::MessageBase(message, ELogLevel::Trace, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 
 #define LOGL(severity,message,...) Logging::Log( severity, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
@@ -221,8 +221,10 @@ namespace Jde
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 			else
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
+#ifndef NEDBUG
 			if( m.Level==ELogLevel::Critical )
 				BREAK;
+#endif
 		}
 		catch( const fmt::format_error& )
 		{

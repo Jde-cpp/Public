@@ -1,6 +1,4 @@
 ﻿#pragma once
-#ifndef JDE_TICK
-#define JDE_TICK
 
 #include <variant>
 #include <map>
@@ -14,8 +12,6 @@ namespace Jde::Markets
 {
 	class OptionTests;
 	typedef long ContractPK;
-	template<class T> using sp = std::shared_ptr<T>;
-	template<class T> using up = std::unique_ptr<T>;
 	namespace Proto
 	{
 		namespace Requests{ enum ETickList:int; }
@@ -24,7 +20,7 @@ namespace Jde::Markets
 	using Proto::Requests::ETickList; using Proto::Results::ETickType;
 	struct OptionComputation
 	{
-		std::unique_ptr<Proto::Results::OptionCalculation> ToProto( ContractPK contractId, ETickType tickType )const noexcept;
+		up<Proto::Results::OptionCalculation> ToProto( ContractPK contractId, ETickType tickType )const noexcept;
 		α operator==(const OptionComputation& x)const noexcept->bool{ return memcmp(this, &x, sizeof(OptionComputation))==0; }
 		bool ReturnBased;//vs price based TickAttrib;
 		double ImpliedVol;
@@ -39,7 +35,7 @@ namespace Jde::Markets
 
 	struct News
 	{
-		std::unique_ptr<Proto::Results::TickNews> ToProto( ContractPK contractId )const noexcept;
+		up<Proto::Results::TickNews> ToProto( ContractPK contractId )const noexcept;
 		const time_t TimeStamp;
 		const string ProviderCode;
 		const string ArticleId;
@@ -49,8 +45,8 @@ namespace Jde::Markets
 
 	struct ΓM Tick
 	{
-		typedef std::bitset<91> Fields;//ETickType::NOT_SET+1
-		typedef std::variant<nullptr_t,uint,int,double,time_t,string,OptionComputation,sp<Vector<News>>> TVariant;
+		using Fields=std::bitset<91> ;//ETickType::NOT_SET+1
+		using TVariant=std::variant<nullptr_t,uint,int,double,time_t,string,OptionComputation,sp<Vector<News>>>;
 		Tick()=default;//TODO try to remove
 		Tick( ContractPK id ):ContractId{id}{}
 		Tick( ContractPK id, TickerId tickId ):ContractId{id},TwsRequestId{tickId}{};
@@ -67,7 +63,7 @@ namespace Jde::Markets
 		α HasRatios()const noexcept->bool;
 		α AddNews( News&& news )noexcept->void;
 		α SetFields()const noexcept->Fields{ return _setFields; }
-		α Ratios()const noexcept->flat_map<string,double>;
+		α Ratios()const noexcept->std::map<string,double>;//don't use boost because of blockly
 		α ToProto( ETickType type )const noexcept->Proto::Results::MessageUnion;
 		α AddProto( ETickType type, std::vector<Proto::Results::MessageUnion>& messages )const noexcept->void;
 
@@ -171,4 +167,3 @@ namespace Jde::Markets
 		friend OptionTests;
 	};
 }
-#endif

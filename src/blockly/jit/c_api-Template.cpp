@@ -4,7 +4,7 @@
 
 extern "C"
 {
-	std::string_view MBlocklyVersion()noexcept{ return [[jde::Version]]; }
+	const char* MBlocklyVersion()noexcept{ return [[jde::Version]]; }
 
 	#define NS Jde::Markets::MBlockly::Blocks
 	#define ADD_LISTX(x) { using NS::x; p->push_back( {std::string{x::Id}, std::string{x::Name}, std::string{x::Description}, std::string{x::Path}, std:: string{x::Xml}, x::Crc} ); }
