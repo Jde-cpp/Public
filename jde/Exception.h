@@ -124,7 +124,7 @@ namespace Jde
 		up<boost::system::error_code> _errorCode;
 	};
 
-#define CHECK_PATH( path ) THROW_IFX( !fs::exists(path), IOException(path, "path does not exist") );
+#define CHECK_PATH( path, sl ) THROW_IFX( !fs::exists(path), IOException(path, "path does not exist", sl) );
 	struct Γ IOException final : IException
 	{
 		IOException( fs::path path, uint code, string value, SRCE ):IException{ move(value), ELogLevel::Debug, code, sl }, _path{ move(path) }{ SetWhat(); }

@@ -8,6 +8,12 @@ namespace Jde::Threading{ struct InterruptibleThread; struct IWorker; }
 #define ω Γ Ω
 namespace Jde
 {
+#ifdef _MSC_VER
+	consteval α IsWindows()noexcept->bool{return true;}
+#else
+	consteval α IsWindows()noexcept->bool{return false;}
+#endif
+
 	namespace Threading{ struct IPollWorker; }
 	struct IShutdown
 	{

@@ -1,20 +1,12 @@
 ﻿#pragma once
 #include "../TypeDefs.h"
 DISABLE_WARNINGS
-#include <boost/crc.hpp>
+#ifndef NO_BOOST
+	#include <boost/crc.hpp>
+#endif
 ENABLE_WARNINGS
 //https://gist.github.com/oktal/5573082
 
-namespace Jde
-{
-	Ξ Calc32RunTime( sv value )->uint32_t
-	{
-		//return Calc32( value );
-		boost::crc_32_type result;
-		result.process_bytes( value.data(), value.size() );
-		return result.checksum();
-	}
-}
 namespace Jde::IO::Crc
 {
 	constexpr unsigned int crc32_table[] =
@@ -130,4 +122,23 @@ namespace Jde::IO::Crc
 
 	static_assert( "Hello"_crc32 == Crc32<'H', 'e', 'l', 'l', 'o'>::value, "CRC32 values don't match" );
 	static_assert( "0"_crc32 == Crc32<'0'>::value, "CRC32 values don't match" );
+}
+namespace Jde
+{
+#ifdef NO_BOOST
+	Ξ Calc32RunTime( sv value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int
+	{
+		return index == value.size()
+			? crc ^ 0xFFFFFFFF
+			: Calc32RunTime( value, IO::Crc::crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(value[index])] ^ (crc >> 8), index + 1 );
+	}
+#else
+	Ξ Calc32RunTime( sv value )->uint32_t
+	{
+		//return Calc32( value );
+		boost::crc_32_type result;
+		result.process_bytes( value.data(), value.size() );
+		return result.checksum();
+	}
+#endif
 }

@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 #include <jde/blockly/Blockly.h>
 #include <jde/blockly/types/EventResult.h>
+#include <jde/blockly/EventManager.h>
 #include <jde/coroutine/Task.h>
 
 namespace Jde::Markets::MBlockly::Blocks

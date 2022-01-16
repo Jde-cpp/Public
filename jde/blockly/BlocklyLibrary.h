@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Exports.h"
 #include <jde/coroutine/Task.h>
 #pragma warning( disable : 4996 )
@@ -25,7 +25,7 @@ namespace Jde::Blockly
 	Φ Save( const Proto::Function& fnctn )noexcept(false)->void;
 	Φ Delete( sv id )noexcept(false)->void;
 	Φ Load()noexcept(false)->up<Proto::Functions>;
-	Φ Load( sv id )noexcept(false)->up<Proto::Function>;
+	Φ Load( sv id, bool lock=true )noexcept(false)->up<Proto::Function>;
 	Φ Build( str id )noexcept(false)->void;
 	Φ DeleteBuild( sv id )noexcept(false)->void;
 	Φ Enable( str id )noexcept(false)->void;

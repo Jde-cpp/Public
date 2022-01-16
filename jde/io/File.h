@@ -23,10 +23,13 @@ namespace Jde::IO
 	Ξ Write( fs::path path, sp<string> data, SRCE )noexcept{ return DriveAwaitable{move(path), data, sl}; }
 	Φ FileSize( path path )noexcept(false)->uint;
 
+	Φ Copy( fs::path from, fs::path to, SRCE )->PoolAwait;
+	Φ CopySync( fs::path from, fs::path to, SRCE )->void;
+
 	namespace FileUtilities
 	{
-		Γ up<std::vector<char>> LoadBinary( path path )noexcept(false);
-		Γ string Load( path path )noexcept(false);
+		Φ LoadBinary( path path, SRCE )noexcept(false)->up<std::vector<char>>;
+		Φ Load( path path, SRCE )noexcept(false)->string;
 		Φ SaveBinary( path path, const std::vector<char>& values )noexcept(false)->void;
 		Φ Save( fs::path path, sp<string> value, SRCE )noexcept(false)->void;
 		Φ Save( path path, sv value, std::ios_base::openmode openMode = std::ios_base::out, SRCE )noexcept(false)->void;
@@ -131,7 +134,7 @@ namespace Jde::IO
 	template<typename T>
 	void File::ForEachLine( const std::basic_string<T>& file, const std::function<void(const std::basic_string<T>&)>& function, const uint lineCount )
 	{
-		CHECK_PATH( file );
+		CHECK_PATH( file, SRCE_CUR );
 		std::basic_ifstream<T> t( file ); THROW_IFX( t.fail(), IOException(file, "Could not open file") );
 		std::basic_string<T> line;
 		uint lineIndex=0;
