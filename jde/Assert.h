@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #ifndef ASSERT
-# define ASSERT( actual ){ if( !(actual) ){ CRITICAL("Assert:  {} is false"sv,  #actual ); } assert( actual ); }
+# define ASSERT( actual ){ if( !(actual) ){ CRITICAL("Assert:  {} is false"sv,  #actual ); } /*assert( actual );*/ }
 #endif
 
 #define ASSERTSL( actual, xsl ){ if( !(actual) )Log( ELogLevel::Critical, format("Assert:  {} is false"sv,  #actual), xsl ); }

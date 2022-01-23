@@ -221,7 +221,7 @@ namespace Jde
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 			else
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
-#ifndef NEDBUG
+#ifndef NDEBUG
 			if( m.Level==ELogLevel::Critical )
 				BREAK;
 #endif

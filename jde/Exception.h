@@ -9,7 +9,7 @@ namespace boost::system{ class error_code; }
 #define THROW(x, ...) throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Debug, x __VA_OPT__(,) __VA_ARGS__ }
 #define IO_EX( p, v, ... ) IOException( SRCE_CUR, p, v __VA_OPT__(,) __VA_ARGS__ )
 #define THROW_IF(condition, x, ...) if( condition ) THROW( x __VA_OPT__(,) __VA_ARGS__  )
-#define THROW_IFSL(condition, x, ...) throw Jde::Exception{ sl, _logLevel.Level, x __VA_OPT__(,) __VA_ARGS__ }
+#define THROW_IFSL(condition, x, ...) if( condition ) throw Jde::Exception{ sl, _logLevel.Level, x __VA_OPT__(,) __VA_ARGS__ }
 #define THROW_IFX(condition, x) if( condition ) throw x
 #define THROW_IFL(condition, x, ...) if( condition ) throw Jde::Exception{ SRCE_CUR, _logLevel.Level, x __VA_OPT__(,) __VA_ARGS__ }
 #define CHECK(condition) THROW_IF( !(condition), #condition )
