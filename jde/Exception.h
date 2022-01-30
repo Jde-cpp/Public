@@ -22,11 +22,7 @@ namespace boost::system{ class error_code; }
 	[[noreturn]] α Throw()->void override{ throw move(*this); }
 namespace Jde
 {
-#ifdef _MSC_VER
-	Ξ make_exception_ptr( std::exception&& e )noexcept->std::exception_ptr{ return std::make_exception_ptr(move(e)); }
-#else
 	Ξ make_exception_ptr( std::exception&& e )noexcept->std::exception_ptr{ try{ throw move(e); } catch (...){return std::current_exception();} }
-#endif
 	struct StackTrace
 	{
 		StackTrace( SL sl )noexcept{ stack.push_back(sl); }

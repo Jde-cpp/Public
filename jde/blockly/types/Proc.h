@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <cstdint>
 #include <cmath>
 #include <compare>
@@ -167,22 +167,20 @@ namespace Jde::Markets::MBlockly
 		ProcOrder( const MyOrder& x )noexcept:MyOrder{x}{}
 		//ProcOrder( const ProcOrder& x )noexcept:MyOrder{x}, _lastUpdate{x._lastUpdate}{}
 
-		const std::string& AccountNumber()const noexcept{ return MyOrder::account; }
-		const int32 OrderId()const noexcept{ return MyOrder::orderId; }
+		α AccountNumber()const noexcept->str{ return MyOrder::account; }
+		α OrderId()const noexcept{ return MyOrder::orderId; }
 
-		Price Limit()const noexcept{ return Price{MyOrder::lmtPrice }; }
-		void SetLimit( Price limit )noexcept{ MyOrder::lmtPrice = limit._value; }
-		Size Quantity()const noexcept{ return Size{MyOrder::totalQuantity }; }
-		ProcTimePoint LastUpdate()const noexcept{ return _lastUpdate; } void SetLastUpdate( ProcTimePoint x )noexcept
-		{
-			_lastUpdate=x;
-			DBG( "Order.LastUpdate='{}'."sv, _lastUpdate.ToString() );
-		}
-		void Bump( Price price )noexcept{ MyOrder::lmtPrice+=price._value; }
-		void Place( sp<::Contract> p )noexcept;
-		int VolatilityType()const noexcept{ return volatilityType; }
+		α Limit()const noexcept{ return Price{MyOrder::lmtPrice}; }
+		α PostToAts(){ return MyOrder::postToAts; }//TODO remove
+		α SetLimit( Price limit )noexcept{ MyOrder::lmtPrice = limit._value; }
+		α Quantity()const noexcept{ return Size{MyOrder::totalQuantity }; }
+		α LastUpdate()const noexcept{ return _lastUpdate; } 
+		JDE_BLOCKLY_EXECUTOR α SetLastUpdate( ProcTimePoint x )noexcept->void;
+		α Bump( Price price )noexcept{ MyOrder::lmtPrice+=price._value; }
+		α Place( sp<::Contract> p )noexcept(false)->void;
+		α VolatilityType()const noexcept{ return volatilityType; }
 	private:
-		const MyOrder& Base()const noexcept{ return *this;}
+		α Base()const noexcept->const MyOrder&{ return *this;}
 		ProcTimePoint _lastUpdate;
 		friend Awaitable;
 	};

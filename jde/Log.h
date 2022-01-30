@@ -25,6 +25,9 @@
 namespace Jde::IO{ class IncomingMessage; }
 namespace Jde::Logging
 {
+#ifndef NDEBUG
+	Φ BreakLevel()noexcept->ELogLevel;
+#endif
 	namespace Messages{ struct ServerMessage; }
 #pragma region EFields
 	enum class EFields : uint16{ None=0, Timestamp=0x1, MessageId=0x2, Message=0x4, Level=0x8, FileId=0x10, File=0x20, FunctionId=0x40, Function=0x80, LineNumber=0x100, UserId=0x200, User=0x400, ThreadId=0x800, Thread=0x1000, VariableCount=0x2000, SessionId=0x4000 };
@@ -222,7 +225,7 @@ namespace Jde
 			else
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
 #ifndef NDEBUG
-			if( m.Level==ELogLevel::Critical )
+			if( m.Level>=BreakLevel() )
 				BREAK;
 #endif
 		}

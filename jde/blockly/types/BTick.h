@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <jde/markets/types/Tick.h>
 #include "Proc.h"
 #include "../Exports-Executor.h"
@@ -21,6 +21,7 @@ namespace Jde::Markets::MBlockly
 		Size AskSize()const noexcept(false);
 		bool AllSet( Markets::Tick::Fields fields );
 		BTick& operator=( const Tick& rhs )noexcept;
+		α SetFields()const noexcept->Fields{ return Tick::SetFields(); }//TODO remove
 		//void Assign( const Tick& rhs )noexcept{ (Tick&)*this=rhs; }
 
 //TODO Bid

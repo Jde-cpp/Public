@@ -18,7 +18,7 @@ namespace Jde::Markets::MBlockly
 		AwaitableData( const optional<ProcTimePoint>& alarm, const BTick& tick, const Tick::Fields& tickFields, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields, uint index ):
 			Alarm{alarm},Tick{tick},TickFields{tickFields},Order{order}, OrderFields{orderFields}, Status{status}, StatusFields{statusFields}, Index{index}
 		{}
-		~AwaitableData(){ DBG("~AwaitableData({})"sv, Index); }
+		~AwaitableData();
 		α IsHandled()const noexcept->bool{ return _value; }
 		α Handle()noexcept->bool{ return _value.exchange( true ); }
 

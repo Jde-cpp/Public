@@ -31,4 +31,5 @@ namespace Jde::Markets
 	Ξ ToDecimal( double v )noexcept->Decimal{ unsigned int _; Decimal y = binary64_to_bid64( v, 0, &_ ); return y; }
 	Ξ ToString( Decimal v )noexcept->string{ char y[64]; unsigned int _; bid64_to_string(y, v, &_ ); return y; }
 	Ξ Subtract( Decimal x1, Decimal x2)noexcept->Decimal{ unsigned int _; return bid64_sub(x1, x2, 0, &_); }
+	Ξ Add( Decimal x1, Decimal x2)noexcept->Decimal{ unsigned int _; return bid64_add(x1, x2, 0, &_); }
 }
