@@ -27,6 +27,7 @@ namespace Jde::Markets::MBlockly
 	typedef std::shared_ptr<std::vector<Proto::Results::ContractHours>> ContractHoursPtr;
 	struct JDE_BLOCKLY_EXECUTOR Price /*notfinal*/
 	{
+		constexpr static double Unitialized = NAN;
 		constexpr Price()noexcept=default;
 		explicit Price( double v )noexcept(false);//TODO move protected
 
@@ -35,12 +36,11 @@ namespace Jde::Markets::MBlockly
 		friend Price operator-( const Price& me, const Price& other )noexcept{ return Price( me._value-other._value ); }
 		friend Price operator+( const Price& me, const Price& other )noexcept{ return Price( me._value+other._value ); }
 		friend double operator/( const Price& me, const Price& other )noexcept{ return me._value/other._value; }
-		std::string ToString()const noexcept{ return fmt::format("{:.2f}", _value); }
+		std::string ToString()const noexcept{ return empty() ? "nan" : _value==std::numeric_limits<double>::max() ? "null" : fmt::format( "{:.2f}", _value ); }
 	protected:
 
 	private:
 		double _value{Unitialized};
-		constexpr static double Unitialized = NAN;
 		friend Amount operator*( Price a, Size b )noexcept;
 		friend ProcOrder; friend Amount; friend LimitPriceException; friend BTick; friend Blockly; friend OptionTests; friend Blocks::OptionTest;
 	};
@@ -170,11 +170,11 @@ namespace Jde::Markets::MBlockly
 		α AccountNumber()const noexcept->str{ return MyOrder::account; }
 		α OrderId()const noexcept{ return MyOrder::orderId; }
 
-		α Limit()const noexcept{ return Price{MyOrder::lmtPrice}; }
+		α Limit()const noexcept{ return Price{ MyOrder::lmtPrice }; }
 		α PostToAts(){ return MyOrder::postToAts; }//TODO remove
 		α SetLimit( Price limit )noexcept{ MyOrder::lmtPrice = limit._value; }
 		α Quantity()const noexcept{ return Size{MyOrder::totalQuantity }; }
-		α LastUpdate()const noexcept{ return _lastUpdate; } 
+		α LastUpdate()const noexcept{ return _lastUpdate; }
 		JDE_BLOCKLY_EXECUTOR α SetLastUpdate( ProcTimePoint x )noexcept->void;
 		α Bump( Price price )noexcept{ MyOrder::lmtPrice+=price._value; }
 		α Place( sp<::Contract> p )noexcept(false)->void;

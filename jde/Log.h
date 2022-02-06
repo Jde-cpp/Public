@@ -99,7 +99,6 @@ namespace Jde::Logging
 #define ERRX(message,...) Logging::LogNoServer( Logging::MessageBase(message, ELogLevel::Error, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define ERR_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(message, ELogLevel::Error, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define WARN(message,...) Logging::Log( Logging::MessageBase(message, ELogLevel::Warning, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-//#define WARN_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(message, ELogLevel::Warning, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
 #define WARN_IF(predicate, message,...) if( predicate ) Logging::Log( Logging::MessageBase(message, ELogLevel::Warning, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define INFO(message,...) Logging::Log( Logging::MessageBase(message, ELogLevel::Information, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define INFO_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(message, ELogLevel::Information, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
@@ -116,6 +115,7 @@ namespace Jde::Logging
 #define LOGX(message,...) Logging::LogNoServer( Logging::Message(_logLevel.Level, message) __VA_OPT__(,) __VA_ARGS__ )
 #define LOG(message,...) Logging::Log( _logLevel.Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOGS(message,...) Logging::Log( Logging::Message( _logLevel.Level, message ) __VA_OPT__(,) __VA_ARGS__ )
+#define LOGSL(message,...) Logging::Log( Logging::Message{_logLevel.Level, message, sl} __VA_OPT__(,) __VA_ARGS__ )
 
 #define LOG_IF(predicate, message,...) if( predicate ) Logging::Log( _logLevel.Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOG_IFT(predicate, severity, message,...) if( predicate ) LOGT( severity, message __VA_OPT__(,) __VA_ARGS__ )
@@ -155,6 +155,7 @@ namespace Jde
 		Φ TagLevel( sv tag )noexcept->const LogTag&;
 		Φ LogMemory()noexcept->bool;
 		Φ ServerLevel()noexcept->ELogLevel;
+		Φ ClientLevel()noexcept->ELogLevel;
 		Φ Default()noexcept->spdlog::logger&;
 	}
 

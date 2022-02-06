@@ -33,7 +33,7 @@ namespace Jde
 		β Uninstall()noexcept(false)->void=0;
 
 		Ω MemorySize()noexcept->size_t;
-		Ω Path()noexcept->fs::path;
+		Ω ExePath()noexcept->fs::path;
 		Ω HostName()noexcept->string;
 
 		Ω AddThread( sp<Threading::InterruptibleThread> pThread )noexcept->void;
@@ -41,7 +41,7 @@ namespace Jde
 		Ω RemoveThread( sv name )noexcept->sp<Threading::InterruptibleThread>;
 		Ω GarbageCollect()noexcept->void;
 		Ω AddApplicationLog( ELogLevel level, str value )noexcept->void;//static to call in std::terminate.
-		ⓣ static AddPollster( /*bool appThread*/ )noexcept->sp<T>;
+		Ṫ AddPollster( /*bool appThread*/ )noexcept->sp<T>;
 		Ω AddShutdown( sp<IShutdown> pShared )noexcept->void;
 		Ω RemoveShutdown( sp<IShutdown> pShared )noexcept->void;
 		Ω Add( sp<void> pShared )noexcept->void;
