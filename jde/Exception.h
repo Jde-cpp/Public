@@ -46,7 +46,7 @@ namespace Jde
 		α what()const noexcept->const char* override;
 		α What()noexcept->string&&{ return move(_what); }
 		α What()const noexcept->const string&{ return _what; }
-		α Level()const noexcept->ELogLevel{return _level;}
+		α Level()const noexcept->ELogLevel{return _level2;}
 		β Clone()noexcept->sp<IException> =0;
 		β Move()noexcept->up<IException> =0;
 		α Push( SL sl )noexcept{ _stack.stack.push_back(sl); }
@@ -55,16 +55,17 @@ namespace Jde
 		[[noreturn]] β Throw()->void=0;
 	protected:
 		IException( SRCE )noexcept:IException{ {}, ELogLevel::Debug, 0, sl }{}
-
+		α SetLevel( ELogLevel level )noexcept{ _level2=level;}
 		StackTrace _stack;
 
-		ELogLevel _level;
 		mutable string _what;
 		sp<std::exception> _pInner;//sp to save custom copy constructor
 		sv _format;
 		vector<string> _args;
 	public:
 		const uint Code;
+	private:
+		ELogLevel _level2;
 	};
 
 	struct Γ Exception : IException
@@ -142,7 +143,7 @@ namespace Jde
 
 	$ IException::IException( SL sl, ELogLevel l, sv format_, Args&&... args )noexcept:
 		_stack{ sl },
-		_level{ l },
+		_level2{ l },
 		_format{ format_ },
 		Code{ Calc32RunTime(format_) }
 	{
