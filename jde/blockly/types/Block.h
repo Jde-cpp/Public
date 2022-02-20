@@ -206,8 +206,8 @@ namespace Jde::Blockly
 		ALARMS override;
 		const string& Name()const noexcept{ return Field.Value; }
 
-		virtual std::ostringstream& Prototype( std::ostringstream& os, sv prefix={} )const noexcept(false);
-		virtual std::ostringstream& Implementation( sv className, std::ostringstream& os, sv returnString={} )const noexcept(false);
+		/*virtual*/ string Prototype( sv className={} )const noexcept(false);
+		virtual string Implementation( str className, str returnString={} )const noexcept(false);
 		bool IsConst()const noexcept(false);
 		bool IsNoExcept()const noexcept(false);
 
@@ -221,7 +221,7 @@ namespace Jde::Blockly
 		ALARMS override;
 		TICKS override;
 		EValueType ValueType()const noexcept(false){ return Value.ValueType(); }
-		std::ostringstream& Implementation( sv className, std::ostringstream& os, sv returnString={} )const noexcept(false) override;
+		string Implementation( str className, str returnString={} )const noexcept(false) override;
 		static constexpr sv TypeId = "procedures_defreturn"sv;
 	};
 
@@ -340,7 +340,7 @@ namespace Jde::Blockly
 	struct PlaceOrder final: IBlock
 	{
 		PlaceOrder( const ptree& element )noexcept:IBlock{element}{};
-		IMPL override{ return "PlaceOrder();\n"; }
+		IMPL override{ return "\t\t\tLOG( \"({})Limit={}, BidPrice={}, AskPrice={}\", Order.OrderId(), Order.Limit().ToString(), Tick.BidPrice().ToString(), Tick.AskPrice().ToString() );\n\t\t\tPlaceOrder();\n"; }
 		TICKS override{}
 		ALARMS override{}
 		static constexpr sv TypeId = "variables_order_placeOrder"sv;

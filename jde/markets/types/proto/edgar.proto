@@ -1,4 +1,5 @@
-﻿//cd $JDE_DIR/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. edgar.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' edgar.pb.h;sed -i '1s/^/\xef\xbb\xbf/' edgar.pb.h;
+﻿//source $JDE_DIR/Framework/common.sh
+//cd $JDE_DIR/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. edgar.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' edgar.pb.h;sed -i '1s/^/\xef\xbb\xbf/' edgar.pb.h;
 //cd $JDE_DIR/MarketLibrary/source/types/proto;mv $JDE_DIR/Public/jde/markets/types/proto/edgar.pb.cc .;mklink edgar.pb.h $JDE_DIR/Public/jde/markets/types/proto
 syntax = "proto3";
 package Jde.Markets.Edgar.Proto;
@@ -12,7 +13,15 @@ message InfoTable
 	bool is_principal=5;
 }
 
-message Form13F
+message IndexLine
+{
+	uint32 cik=1;
+	uint32 quarter=2;
+	uint32 year=3;
+	uint32 line_number=4;
+}
+
+message Form13FOld
 {
 	uint32 cik=1;
 	uint32 quarter=2;
@@ -22,9 +31,33 @@ message Form13F
 	repeated InfoTable holdings=6;
 }
 
+message Form13F
+{
+	IndexLine line=1;
+	int64 value=2;
+	repeated InfoTable holdings=3;
+}
+
+message Form13G
+{
+	IndexLine line=1;
+	int32 shares=5;
+	string name=6;
+}
+
 message File13F
 {
 	repeated Form13F forms=1;
+}
+
+message File13FOld
+{
+	repeated Form13FOld forms=1;
+}
+
+message File13G
+{
+	repeated Form13G forms=1;
 }
 
 message Investment

@@ -169,7 +169,7 @@ namespace Jde::Markets::MBlockly
 
 		α AccountNumber()const noexcept->str{ return MyOrder::account; }
 		α OrderId()const noexcept{ return MyOrder::orderId; }
-
+		α IsBuy()const noexcept{ return MyOrder::IsBuy(); }
 		α Limit()const noexcept{ return Price{ MyOrder::lmtPrice }; }
 		α PostToAts(){ return MyOrder::postToAts; }//TODO remove
 		α SetLimit( Price limit )noexcept{ MyOrder::lmtPrice = limit._value; }

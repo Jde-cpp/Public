@@ -23,18 +23,14 @@ namespace Jde::Coroutine
 
 	struct AwaitResult
 	{
-		//function<void(const void*)> Deleter;
 		using UType=void*;//std::unique_ptr<void,decltype(Deleter)>;
-		using Value = std::variant<UType,sp<void>,IException*>;
+		using Value = std::variant<UType,sp<void>,IException*,bool>;
 		AwaitResult()=default;
-		//AwaitResult( AwaitResult&& x ):_result{ move(x._result) }{ x._result = (void*)nullptr;};
 		Τ AwaitResult( up<T> p )noexcept:_result{ p.release() }{}
 		explicit AwaitResult( UType p )noexcept:_result{ p }{}
 		explicit AwaitResult( up<IException> e )noexcept:_result{move(e)}{};
 		AwaitResult( sp<void> p )noexcept:_result{ p }{};
 		AwaitResult( Exception&& e )noexcept:_result{ e.Move().release() }{};
-		//~AwaitResult(){ ASSERT( _result.index()!=0 || !get<0>(_result) ); }
-		//α operator=( AwaitResult&& x )noexcept->AwaitResult&{ _result = move( x._result ); return *this; }
 		α Clear()noexcept->void{ _result = UType{}; }
 		α HasValue()const noexcept{ return _result.index()==0 && get<0>( _result ); }
 		α HasShared()const noexcept{ return _result.index()==1 && get<1>( _result ); }
@@ -44,16 +40,18 @@ namespace Jde::Coroutine
 		α CheckError( SRCE )noexcept(false)->void;
 		ⓣ SP( SRCE )noexcept(false)->sp<T>;
 		ⓣ UP( SRCE )noexcept(false)->up<T>;
-
+		α Bool( SRCE )noexcept(false)->bool;
 		Φ CheckUninitialized()noexcept->void;
-		//α Error()const noexcept->up<IException>{ return HasError() ? get<1>(_result) : nullptr; }
 
 		α Set( void* p )noexcept->void{ CheckUninitialized(); _result = move(p); }
 		α Set( IException&& e )noexcept->void{ CheckUninitialized(); _result = e.Move().release(); }
 		α Set( Value&& result )noexcept{ _result = move(result); }
+		α SetBool( bool x )noexcept{ _result = x; }
 	private:
 		Value _result;
 	};
+
+	template<class T> concept IsPolymorphic = std::is_polymorphic_v<T>;
 
 	struct Task final //: ITaskError
 	{
@@ -79,9 +77,11 @@ namespace Jde::Coroutine
 		α Result()noexcept->AwaitResult&{ return _result; }
 		α SetResult( IException&& e )noexcept->void{ _result.Set( move(e) ); }
 		α SetResult( AwaitResult::Value&& r )noexcept->void{ _result.Set( move(r) ); }
+		template<IsPolymorphic T> auto SetResult( up<T>&& x )noexcept{ ASSERT(dynamic_cast<IException*>(x.get())==nullptr); _result.Set( x.release() ); }
 		ⓣ SetResult( up<T>&& x )noexcept{ _result.Set( x.release() ); }
 		α SetResult( AwaitResult&& r )noexcept->void{ _result = move( r ); }
 		ⓣ SetResult( sp<T> x )noexcept{ _result.Set( x ); }
+		α SetBool( bool x )noexcept{ _result.SetBool(x); }
 	private:
 		//uint i;
 		AwaitResult _result;
@@ -121,6 +121,16 @@ namespace Jde::Coroutine
 		if( pVoid && !p )
 			throw Exception{ "Could not cast ptr." };//mysql
 		return p;
+	}
+	Ξ AwaitResult::Bool( const source_location& sl )noexcept(false)->bool
+	{
+		CheckError( sl );
+		if( _result.index()==0 )
+			throw Exception{ "Result is a unique_ptr.", ELogLevel::Critical, sl };
+		else if( _result.index()==1 )
+			throw Exception{ "Result is a shared_ptr.", ELogLevel::Critical, sl };
+
+		return get<bool>( _result );
 	}
 }
 #undef Φ

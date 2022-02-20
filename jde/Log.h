@@ -202,6 +202,8 @@ namespace Jde
 	Ξ Logging::Log( const Logging::MessageBase& m )noexcept->void
 	{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
+		if( string{m.File}.ends_with("construct_at.h") )
+			BREAK;
 		if( LogMemory() )
 			LogMemory( m );
 		if( ServerLevel()<=m.Level )
@@ -226,6 +228,8 @@ namespace Jde
 			else
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
 #ifndef NDEBUG
+			if( string{m.File}.ends_with("construct_at.h") )
+				BREAK;
 			if( m.Level>=BreakLevel() )
 				BREAK;
 #endif

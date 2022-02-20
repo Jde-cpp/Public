@@ -143,9 +143,9 @@ namespace Jde
 
 	$ IException::IException( SL sl, ELogLevel l, sv format_, Args&&... args )noexcept:
 		_stack{ sl },
-		_level2{ l },
 		_format{ format_ },
-		Code{ Calc32RunTime(format_) }
+		Code{ Calc32RunTime(format_) },
+		_level2{ l }
 	{
 		_args.reserve( sizeof...(args) );
 		ToVec::Append( _args, args... );
