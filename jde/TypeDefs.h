@@ -60,6 +60,8 @@
 #define ẗ template<class K,class V> auto
 #define Ṫ template<class T> static auto
 #define ψ template<class... Args> auto
+#define ι noexcept
+#define ε noexcept(false)
 //#define Φ Γ auto
 namespace Jde
 {

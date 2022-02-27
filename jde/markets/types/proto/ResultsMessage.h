@@ -14,6 +14,8 @@ namespace Jde::Markets
 	Ξ ToMessage( _::EResults t, string v )${ auto p = new _::MessageValue(); p->set_type( t ); p->set_string_value( move(v) ); SET(set_allocated_message); }
 	Ξ ToMessage( _::EResults t, uint32 client, ContractPK c, double v )${ auto p = new _::ContractValue(); p->set_type( t ); p->set_request_id( client ); p->set_value( v ); p->set_contract_id( c ); SET(set_allocated_contract_value); }
 	Ξ ToMessage( uint32 c, Edgar::Proto::Investors* p )${ p->set_request_id( c ); SET(set_allocated_investors); }
+	Ξ ToMessage( int id, _::Tweets* p )${ p->set_request_id( id ); SET(set_allocated_tweets); }
+	Ξ ToMessage( int id, _::TweetAuthors* p )${ p->set_request_id( id ); SET( set_allocated_tweet_authors ); }
 	Ξ ToRatioMessage( const std::map<string,double>& x, uint32 c )${ auto p = new _::Fundamentals(); p->set_request_id( c ); for( var& [n,v] : x ) (*p->mutable_values())[n] = v; SET(set_allocated_fundamentals); }
 }
 #undef $

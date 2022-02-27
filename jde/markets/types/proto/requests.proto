@@ -1,5 +1,4 @@
-//source $JDE_BASH/Framework/common.sh
-//$JDE_BASH/Public/stage/release/
+//source $JDE_BASH/Framework/common.sh;source $JDE_BASH/Framework/source-build.sh;findProtoc
 //cd $JDE_BASH/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. requests.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' requests.pb.h;sed -i '1s/^/\xef\xbb\xbf/' requests.pb.h;
 //cd $JDE_BASH/MarketLibrary/source/types/proto;mv $JDE_BASH/Public/jde/markets/types/proto/requests.pb.cc .;mklink requests.pb.h $JDE_BASH/Public/jde/markets/types/proto
 
@@ -341,9 +340,10 @@ enum ERequests
 	Filings								= -9;
 	Investors							= -10;
 	Tweets								= -11;
-   RedditBlock						   = -12;
-	AverageVolume					   = -13;
-	Order					   			= -14;
+	TwitterBlock						= -12;
+   RedditBlock						   = -13;
+	AverageVolume					   = -14;
+	Order					   			= -15;
 	MarketData             			= 1;
 	CancelMarketData              = 2;
 	PlaceOrder_                  	= 3;
@@ -419,4 +419,3 @@ enum ERequests
 	REQ_TICK_BY_TICK_DATA         = 97;
 	CANCEL_TICK_BY_TICK_DATA      = 98;
 }
-

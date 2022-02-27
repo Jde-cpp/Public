@@ -46,7 +46,7 @@ namespace Jde
 		α what()const noexcept->const char* override;
 		α What()noexcept->string&&{ return move(_what); }
 		α What()const noexcept->const string&{ return _what; }
-		α Level()const noexcept->ELogLevel{return _level2;}
+		α Level()const noexcept->ELogLevel{return _level;}
 		β Clone()noexcept->sp<IException> =0;
 		β Move()noexcept->up<IException> =0;
 		α Push( SL sl )noexcept{ _stack.stack.push_back(sl); }
@@ -55,7 +55,8 @@ namespace Jde
 		[[noreturn]] β Throw()->void=0;
 	protected:
 		IException( SRCE )noexcept:IException{ {}, ELogLevel::Debug, 0, sl }{}
-		α SetLevel( ELogLevel level )noexcept{ _level2=level;}
+		α SetLevel( ELogLevel level )const noexcept{ _level=level;}
+		α BreakLog()const noexcept->void;
 		StackTrace _stack;
 
 		mutable string _what;
@@ -65,7 +66,7 @@ namespace Jde
 	public:
 		const uint Code;
 	private:
-		ELogLevel _level2;
+		mutable ELogLevel _level;
 	};
 
 	struct Γ Exception : IException
@@ -141,11 +142,49 @@ namespace Jde
 		fs::path _path;
 	};
 
+	struct NetException : IException
+	{
+		NetException( sv host, sv target, uint code, sv result, ELogLevel level=ELogLevel::Debug, SRCE )noexcept;
+		NetException( NetException&& f )noexcept:IException{ move(f) }, Host{ f.Host }, Target{ f.Target }, Result{ f.Result }{}
+		~NetException(){ Log(); }
+		α Log()const noexcept->void override;
+		Γ α Log( string extra )const noexcept->void;
+
+		using T=NetException;
+		COMMON
+/*		α Clone()noexcept->sp<IException> override{ return ms<T>(move(*this)); }
+		α Move()noexcept->up<IException> override{ return mu<T>(move(*this)); }
+		α Ptr()->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }
+		[[noreturn]] α Throw()->void override{ throw move(*this); }
+		*/
+		const string Host;
+		const string Target;
+		const string Result;
+	};
+
+	inline NetException::NetException( sv host, sv target, uint code, sv result, ELogLevel level, SL sl )noexcept:
+		IException{ {string{host}, string{target}, std::to_string(code), string{result}}, "{}{} ({}){}", sl, code }, //"
+		Host{ host },
+		Target{ target },
+		//Code{ code },
+		Result{ result }
+	{
+		SetLevel( level );
+		_what = format( "{}{} ({}){}", Host, Target, code, Result );
+		//Log();
+	}
+
+#define var const auto
+	Ξ NetException::Log()const noexcept->void
+	{
+		Log( {} );
+	}
+
 	$ IException::IException( SL sl, ELogLevel l, sv format_, Args&&... args )noexcept:
 		_stack{ sl },
 		_format{ format_ },
 		Code{ Calc32RunTime(format_) },
-		_level2{ l }
+		_level{ l }
 	{
 		_args.reserve( sizeof...(args) );
 		ToVec::Append( _args, args... );
@@ -219,4 +258,5 @@ namespace Jde
 	}
 #undef $
 #undef COMMON
+#undef var
 }

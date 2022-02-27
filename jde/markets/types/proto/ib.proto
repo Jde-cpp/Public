@@ -82,6 +82,7 @@ enum Exchanges
 	London = 28;
 	Lse = 29;
 	Island = 30;
+	DirectEdge=31;
 	UnknownExchange = -1;
 };
 
@@ -275,5 +276,3 @@ message Order
 	string account=71;
 	int32 use_price_mngmnt_algrthm = 99;//DEFAULT = 0,USE=1, DONT_USE=2
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

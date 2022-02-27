@@ -85,7 +85,7 @@ namespace Jde
 	struct OSApp final: IApplication
 	{
 		ω Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->flat_set<string>;
-		ω EnvironmentVariable( str variable )noexcept->string;
+		ω EnvironmentVariable( str variable, SRCE )noexcept->string;
 
 		α ProgramDataFolder()noexcept->fs::path override;
 		Ω CompanyName()noexcept->string;

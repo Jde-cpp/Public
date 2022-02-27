@@ -74,6 +74,7 @@ namespace Jde::Coroutine
 		};
 		α Clear()noexcept->void{ _result.Clear(); }
 		α HasResult()const noexcept->bool{ return !_result.Uninitialized(); }
+		α HasError()const noexcept->bool{ return !_result.HasError(); }
 		α Result()noexcept->AwaitResult&{ return _result; }
 		α SetResult( IException&& e )noexcept->void{ _result.Set( move(e) ); }
 		α SetResult( AwaitResult::Value&& r )noexcept->void{ _result.Set( move(r) ); }
