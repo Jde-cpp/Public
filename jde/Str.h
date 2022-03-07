@@ -90,7 +90,7 @@ namespace Jde
 		Φ Replace( sv source, sv find, sv replace )noexcept->string;
 		Φ Replace( sv source, char find, char replace )noexcept->string;
 		Φ ToLower( sv source )noexcept->string;
-		Γ string ToUpper( sv source )noexcept;
+		Φ ToUpper( sv source )noexcept->string;
 
 		ⓣ TryToFloat( const basic_string<T>& s )noexcept->float;
 		optional<double> TryToDouble( str s )noexcept;
@@ -111,7 +111,7 @@ namespace Jde
 		Ξ Trim( sv s ){ return RTrim( LTrim(s) ); }
 
 		ⓣ Trim( const T& s, sv substring )noexcept->T;
-
+		α Words( sv x )noexcept->vector<sv>;
 	};
 
 	struct StringCompare

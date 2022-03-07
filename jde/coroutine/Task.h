@@ -35,6 +35,7 @@ namespace Jde::Coroutine
 		α HasValue()const noexcept{ return _result.index()==0 && get<0>( _result ); }
 		α HasShared()const noexcept{ return _result.index()==1 && get<1>( _result ); }
 		α HasError()const noexcept{ return _result.index()==2; }
+		α HasBool()const noexcept{ return _result.index()==3; }
 		α Error()noexcept->up<IException>{ auto p = HasError() ? get<IException*>(_result) : nullptr; ASSERT(p); Clear(); return up<IException>{ p->Move() };  }
 		α Uninitialized()const noexcept{ return _result.index()==0 && get<0>(_result)==nullptr; }
 		α CheckError( SRCE )noexcept(false)->void;

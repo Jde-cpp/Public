@@ -61,6 +61,7 @@
 #define Ṫ template<class T> static auto
 #define ψ template<class... Args> auto
 #define ι noexcept
+#define Ι const noexcept
 #define ε noexcept(false)
 //#define Φ Γ auto
 namespace Jde
@@ -120,8 +121,8 @@ namespace Jde
 	using std::make_tuple;
 	using std::nullopt;
 
-	template<class T, class... Args> α mu( Args&&... args )->up<T>{ return up<T>( new T(std::forward<Args>(args)...) ); }
-  	template<class T, class... Args> α ms( Args&&... args ){ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
+	template<class T, class... Args> α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{ return up<T>( new T(std::forward<Args>(args)...) ); }
+  	template<class T, class... Args> α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
 
 	using std::vector;
 	template<class T> using VectorPtr = std::shared_ptr<std::vector<T>>;
@@ -156,8 +157,8 @@ namespace Jde
 	using boost::source_location;
 	#define SRCE_CUR boost::source_location{ __builtin_FILE(), __builtin_LINE(), __builtin_FUNCTION() }
 #endif
-	#define SRCE const source_location& sl=SRCE_CUR
-	using SL = const source_location&;
+	#define SRCE const Jde::source_location& sl=SRCE_CUR
+	using SL = const Jde::source_location&;
 
 
 	enum class ELogLevel : int8{ NoLog=-1, Trace=0, Debug=1, Information=2, Warning=3, Error=4, Critical=5, None=6 };
