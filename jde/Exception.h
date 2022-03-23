@@ -12,7 +12,7 @@ namespace boost::system{ class error_code; }
 #define THROW_IFSL(condition, x, ...) if( condition ) throw Jde::Exception{ sl, _logLevel.Level, x __VA_OPT__(,) __VA_ARGS__ }
 #define THROW_IFX(condition, x) if( condition ) throw x
 #define THROW_IFL(condition, x, ...) if( condition ) throw Jde::Exception{ SRCE_CUR, _logLevel.Level, x __VA_OPT__(,) __VA_ARGS__ }
-#define CHECK(condition) THROW_IF( !(condition), #condition )
+#define CHECK(condition) if( !(condition) ) throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Error, #condition }
 
 #define RETHROW(x, ...) catch( std::exception& e ){ throw Exception{SRCE_CUR, move(e), x __VA_OPT__(,) __VA_ARGS__}; }
 #define $ template<class... Args>
@@ -190,6 +190,8 @@ namespace Jde
 		ToVec::Append( _args, args... );
 		if( l==ELogLevel::Critical )
 			Log();
+		else
+			BreakLog();
 	}
 
 	$ IException::IException( SL sl, std::exception&& inner, sv format_, Args&&... args )noexcept:

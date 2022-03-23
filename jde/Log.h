@@ -14,11 +14,11 @@
 #include "collections/ToVec.h"
 #include "io/Crc.h"
 #include "TypeDefs.h"
-#ifndef NDEBUG
+//#ifndef NDEBUG
 	#ifndef _MSC_VER
-		#include "signal.h"
+		#include <signal.h>
 	#endif
-#endif
+//#endif
 
 #define Φ Γ auto
 
@@ -95,7 +95,7 @@ namespace Jde::Logging
 #define MY_FILE __FILE__
 
 #define CRITICAL(message,...) Jde::Logging::Log( Jde::Logging::MessageBase(message, Jde::ELogLevel::Critical, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-#define ERR(message,...) Logging::Log( Logging::MessageBase(message, ELogLevel::Error, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define ERR(message,...) Jde::Logging::Log( Jde::Logging::MessageBase(message, Jde::ELogLevel::Error, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define ERRX(message,...) Logging::LogNoServer( Logging::MessageBase(message, ELogLevel::Error, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define ERR_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(message, ELogLevel::Error, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define WARN(message,...) Logging::Log( Logging::MessageBase(message, ELogLevel::Warning, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )

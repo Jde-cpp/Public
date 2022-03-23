@@ -11,9 +11,9 @@ namespace Jde::Coroutine
 	typedef uint Handle;
 	typedef Handle ClientHandle;
 
-	Φ NextHandle()noexcept->ClientHandle;
-	Φ NextTaskHandle()noexcept->ClientHandle;
-	Φ NextTaskPromiseHandle()noexcept->ClientHandle;
+	Φ NextHandle()ι->ClientHandle;
+	Φ NextTaskHandle()ι->ClientHandle;
+	Φ NextTaskPromiseHandle()ι->ClientHandle;
 
 	struct ITaskError
 	{
@@ -26,28 +26,28 @@ namespace Jde::Coroutine
 		using UType=void*;//std::unique_ptr<void,decltype(Deleter)>;
 		using Value = std::variant<UType,sp<void>,IException*,bool>;
 		AwaitResult()=default;
-		Τ AwaitResult( up<T> p )noexcept:_result{ p.release() }{}
-		explicit AwaitResult( UType p )noexcept:_result{ p }{}
-		explicit AwaitResult( up<IException> e )noexcept:_result{move(e)}{};
-		AwaitResult( sp<void> p )noexcept:_result{ p }{};
-		AwaitResult( Exception&& e )noexcept:_result{ e.Move().release() }{};
-		α Clear()noexcept->void{ _result = UType{}; }
-		α HasValue()const noexcept{ return _result.index()==0 && get<0>( _result ); }
-		α HasShared()const noexcept{ return _result.index()==1 && get<1>( _result ); }
-		α HasError()const noexcept{ return _result.index()==2; }
-		α HasBool()const noexcept{ return _result.index()==3; }
-		α Error()noexcept->up<IException>{ auto p = HasError() ? get<IException*>(_result) : nullptr; ASSERT(p); Clear(); return up<IException>{ p->Move() };  }
-		α Uninitialized()const noexcept{ return _result.index()==0 && get<0>(_result)==nullptr; }
-		α CheckError( SRCE )noexcept(false)->void;
-		ⓣ SP( SRCE )noexcept(false)->sp<T>;
-		ⓣ UP( SRCE )noexcept(false)->up<T>;
-		α Bool( SRCE )noexcept(false)->bool;
-		Φ CheckUninitialized()noexcept->void;
+		Τ AwaitResult( up<T> p )ι:_result{ p.release() }{}
+		explicit AwaitResult( UType p )ι:_result{ p }{}
+		explicit AwaitResult( up<IException> e )ι:_result{move(e)}{};
+		AwaitResult( sp<void> p )ι:_result{ p }{};
+		AwaitResult( Exception&& e )ι:_result{ e.Move().release() }{};
+		α Clear()ι->void{ _result = UType{}; }
+		α HasValue()Ι{ return _result.index()==0 && get<0>( _result ); }
+		α HasShared()Ι{ return _result.index()==1 && get<1>( _result ); }
+		α HasError()Ι{ return _result.index()==2; }
+		α HasBool()Ι{ return _result.index()==3; }
+		α Error()ι->up<IException>{ auto p = HasError() ? get<IException*>(_result) : nullptr; ASSERT(p); Clear(); return up<IException>{ p->Move() };  }
+		α Uninitialized()Ι{ return _result.index()==0 && get<0>(_result)==nullptr; }
+		α CheckError( SRCE )ε->void;
+		ⓣ SP( SRCE )ε->sp<T>;
+		ⓣ UP( SRCE )ε->up<T>;
+		α Bool( SRCE )ε->bool;
+		Φ CheckUninitialized()ι->void;
 
-		α Set( void* p )noexcept->void{ CheckUninitialized(); _result = move(p); }
-		α Set( IException&& e )noexcept->void{ CheckUninitialized(); _result = e.Move().release(); }
-		α Set( Value&& result )noexcept{ _result = move(result); }
-		α SetBool( bool x )noexcept{ _result = x; }
+		α Set( void* p )ι->void{ CheckUninitialized(); _result = move(p); }
+		α Set( IException&& e )ι->void{ CheckUninitialized(); _result = e.Move().release(); }
+		α Set( Value&& result )ι{ _result = move(result); }
+		α SetBool( bool x )ι{ _result = x; }
 	private:
 		Value _result;
 	};
@@ -56,39 +56,74 @@ namespace Jde::Coroutine
 
 	struct Task final //: ITaskError
 	{
-		//Γ Task()noexcept;
-		//Γ Task( const Task& )noexcept;
-		//Γ Task( Task&& x )noexcept;
-		//Γ ~Task()noexcept;
+		//Γ Task()ι;
+		//Γ Task( const Task& )ι;
+		//Γ Task( Task&& x )ι;
+		//Γ ~Task()ι;
 		using TResult=AwaitResult;
 		struct promise_type
 		{
-			promise_type():_promiseHandle{ NextTaskPromiseHandle() }{}
-			Task& get_return_object()noexcept{ return _pReturnObject ? *_pReturnObject : *(_pReturnObject=mu<Task>()); }
-			suspend_never initial_suspend()noexcept{ return {}; }
-			suspend_never final_suspend()noexcept{ return {}; }
-			void return_void()noexcept{}
-			Φ unhandled_exception()noexcept->void;
+			promise_type():_promiseHandle{ NextTaskPromiseHandle() }{ TRACE("({:x})promise_type()", (uint)this); }
+
+			α get_return_object()ι->Task&{ return _pReturnObject ? *_pReturnObject : *(_pReturnObject=mu<Task>()); }
+			suspend_never initial_suspend()ι{ return {}; }
+			suspend_never final_suspend()ι{ return {}; }
+			α return_void()ι{}
+			Φ unhandled_exception()ι->void;
+			α SetUnhandledResume( coroutine_handle<Task::promise_type> h )ι{ _unhandledResume=h; TRACE( "({:x})SetUnhandledResume({:x})", (uint)this, (uint)h.address() ); }
 		private:
 			up<Task> _pReturnObject;
 			const Handle _promiseHandle;
+			coroutine_handle<Task::promise_type> _unhandledResume;
 		};
-		α Clear()noexcept->void{ _result.Clear(); }
-		α HasResult()const noexcept->bool{ return !_result.Uninitialized(); }
-		α HasError()const noexcept->bool{ return !_result.HasError(); }
-		α Result()noexcept->AwaitResult&{ return _result; }
-		α SetResult( IException&& e )noexcept->void{ _result.Set( move(e) ); }
-		α SetResult( AwaitResult::Value&& r )noexcept->void{ _result.Set( move(r) ); }
-		template<IsPolymorphic T> auto SetResult( up<T>&& x )noexcept{ ASSERT(dynamic_cast<IException*>(x.get())==nullptr); _result.Set( x.release() ); }
-		ⓣ SetResult( up<T>&& x )noexcept{ _result.Set( x.release() ); }
-		α SetResult( AwaitResult&& r )noexcept->void{ _result = move( r ); }
-		ⓣ SetResult( sp<T> x )noexcept{ _result.Set( x ); }
-		α SetBool( bool x )noexcept{ _result.SetBool(x); }
+		α Clear()ι->void{ _result.Clear(); }
+		α HasResult()Ι->bool{ return !_result.Uninitialized(); }
+		α HasError()Ι->bool{ return !_result.HasError(); }
+		α Result()ι->AwaitResult&{ return _result; }
+		α SetResult( IException&& e )ι->void{ _result.Set( move(e) ); }
+		α SetResult( AwaitResult::Value&& r )ι->void{ _result.Set( move(r) ); }
+		template<IsPolymorphic T> auto SetResult( up<T>&& x )ι{ ASSERT(dynamic_cast<IException*>(x.get())==nullptr); _result.Set( x.release() ); }
+		ⓣ SetResult( up<T>&& x )ι{ _result.Set( x.release() ); }
+		α SetResult( AwaitResult&& r )ι->void{ _result = move( r ); }
+		ⓣ SetResult( sp<T> x )ι{ _result.Set( x ); }
+		α SetBool( bool x )ι{ _result.SetBool(x); }
 	private:
-		//uint i;
+
 		AwaitResult _result;
 	};
+}
+namespace Jde
+{
+	using HCoroutine = coroutine_handle<Coroutine::Task::promise_type>;
+	ⓣ SP( Coroutine::AwaitResult& r, HCoroutine h, SRCE )ε->sp<T>;
+}
 
+namespace Jde::Coroutine
+{
+	struct CoException : IException
+	{
+		CoException( HCoroutine h, IException&& i, SRCE ):IException{sl, ELogLevel::NoLog, {} },_h{h},_pInner{ i.Move() }{}
+		α Resume( Task::promise_type& pt )ι{ pt.get_return_object().SetResult( move(*_pInner) ); _h.resume(); }
+
+		α Clone()noexcept->sp<IException> override{ return ms<CoException>(move(*this)); }
+		α Move()noexcept->up<IException> override{ return mu<CoException>(move(*this)); }
+		α Ptr()->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }
+		[[noreturn]] α Throw()->void override{ throw move(*this); }
+	private:
+		HCoroutine _h;
+		up<IException> _pInner;
+	};
+
+/*
+	struct UnhandledTask
+	{
+		UnhandledTask( HCoroutine h )ι:_h{Handle}{}
+		~UnhandledTask(){ Handle=nullptr; }
+	private:
+		thread_local HCoroutine Handle;
+		friend Task::promise_type;
+	};
+*/
 	Ξ AwaitResult::CheckError( SL sl )->void
 	{
 		if( _result.index()==2 )
@@ -99,7 +134,7 @@ namespace Jde::Coroutine
 		}
 	}
 
-	ⓣ AwaitResult::UP( SL sl )noexcept(false)->up<T>
+	ⓣ AwaitResult::UP( SL sl )ε->up<T>
 	{
 		CheckError( sl );
 		if( _result.index()==1 )
@@ -112,7 +147,7 @@ namespace Jde::Coroutine
 		return up<T>{ p };
 	}
 
-	ⓣ AwaitResult::SP( const source_location& sl )noexcept(false)->sp<T>
+	ⓣ AwaitResult::SP( const source_location& sl )ε->sp<T>
 	{
 		CheckError( sl );
 		if( _result.index()==0 )
@@ -124,7 +159,18 @@ namespace Jde::Coroutine
 			throw Exception{ "Could not cast ptr." };//mysql
 		return p;
 	}
-	Ξ AwaitResult::Bool( const source_location& sl )noexcept(false)->bool
+	ⓣ SP( AwaitResult&& r, HCoroutine h, SRCE )ε->sp<T>
+	{
+		try
+		{
+			r.SP<T>( sl );
+		}
+		catch( IException& e )
+		{
+			throw CoException( h, move(e), sl );
+		}
+	}
+	Ξ AwaitResult::Bool( const source_location& sl )ε->bool
 	{
 		CheckError( sl );
 		if( _result.index()==0 )

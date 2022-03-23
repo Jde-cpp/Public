@@ -12,12 +12,11 @@
 #define Φ Γ auto
 namespace Jde
 {
-
-	ⓣ Toε( sv value )noexcept(false)->T
+	ⓣ Toε( sv value, SRCE )noexcept(false)->T
 	{
 		T v;
 		var e=std::from_chars( value.data(), value.data()+value.size(), v );
-		THROW_IF( e.ec!=std::errc(), "Can't convert:  '{}'.  to '{}'.  ec='{}'"sv, value, "Jde::GetTypeName<T>()", (uint)e.ec);
+		if( e.ec!=std::errc{} ) throw Jde::Exception{ sl, ELogLevel::Debug, "Can't convert:  '{}'.  to '{}'.  ec='{}'"sv, value, "Jde::GetTypeName<T>()", (uint)e.ec };
 		return v;
 	}
 
@@ -43,10 +42,11 @@ namespace Jde
 		Γ static const char* find( const char* s, size_t n, char a )noexcept;
 	};
 
-	struct Γ CIString : public std::basic_string<char, ci_char_traits>
+	struct Γ CIString : std::basic_string<char, ci_char_traits>
 	{
 		using base=basic_string<char, ci_char_traits>;
 		CIString()noexcept{};
+		CIString( base&& s ):base{ move(s) }{}
 		CIString( sv sv )noexcept:base{sv.data(), sv.size()}{}
 		CIString( str s )noexcept:base{s.data(), s.size()}{}
 		CIString( const char* p, sv::size_type s )noexcept:base{p, s}{}
@@ -102,13 +102,13 @@ namespace Jde
 		[[nodiscard]]Ξ StartsWith( sv value, sv starting )noexcept{ return starting.size() > value.size() ? false : std::equal( starting.begin(), starting.end(), value.begin() ); }
 		[[nodiscard]]Ξ StartsWithInsensitive( sv value, sv starting )noexcept->bool;
 
-		Ξ LTrim( string& s ){ s.erase( s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {return !std::isspace(ch); }) ); }
-		Ξ RTrim( string& s ){ s.erase( std::find_if(s.rbegin(), s.rend(), [](int ch) {return !std::isspace(ch);}).base(), s.end() ); }
-		Ξ Trim( string& s ){ LTrim(s); RTrim(s); }
+		Ξ LTrim( string& s )->void{ s.erase( s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {return !std::isspace(ch); }) ); }
+		Ξ RTrim( string& s )->void{ s.erase( std::find_if(s.rbegin(), s.rend(), [](int ch) {return !std::isspace(ch);}).base(), s.end() ); }
+		Ξ Trim( string& s )->void{ LTrim(s); RTrim(s); }
 
-		Ξ LTrim( sv s ){ auto p = std::find_if( s.begin(), s.end(), [](int ch){return !std::isspace(ch);} ); return p==s.end() ? sv{} : p==s.begin() ? s : sv{ s.data()+std::distance(s.begin(),p), s.size()-std::distance(s.begin(),p) }; }
-		Ξ RTrim( sv s ){ auto p = std::find_if( s.rbegin(), s.rend(), [](int ch){return !std::isspace(ch);} ); return p==s.rend() ? sv{} : p==s.rbegin() ? s : sv{ s.data(), s.size()-std::distance(p, s.rbegin()) }; }//TODO test this
-		Ξ Trim( sv s ){ return RTrim( LTrim(s) ); }
+		[[nodiscard]] Ξ LTrim( sv s ){ auto p = std::find_if( s.begin(), s.end(), [](int ch){return !std::isspace(ch);} ); return p==s.end() ? sv{} : p==s.begin() ? s : sv{ s.data()+std::distance(s.begin(),p), s.size()-std::distance(s.begin(),p) }; }
+		[[nodiscard]] Φ RTrim( sv s )->sv;//{ auto p = std::find_if( s.rbegin(), s.rend(), [](int ch){return !std::isspace(ch);} ); return p==s.rend() ? sv{} : p==s.rbegin() ? s : sv{ s.data(), s.size()-std::distance(p, s.rbegin()) }; }//TODO test this
+		[[nodiscard]] Ξ Trim( sv s ){ return RTrim( LTrim(s) ); }
 
 		ⓣ Trim( const T& s, sv substring )noexcept->T;
 		α Words( sv x )noexcept->vector<sv>;
@@ -227,15 +227,15 @@ namespace Jde
 
 	ⓣ Str::Trim( const T& s, sv substring )noexcept->T
 	{
-		T os; uint i, current=0;
+		T trimmed; uint i, current=0;
 		while( (i = s.find(substring, current))!=string::npos )
 		{
-			os += sv{ s.data()+current, i-current };
+			trimmed += sv{ s.data()+current, i-current };
 			current = i+substring.size();
 		}
 		if( current && current<s.size() )
-			os+=sv{ s.data()+current, s.size()-current };
-		return current ? os : s;
+			trimmed += sv{ s.data()+current, s.size()-current };
+		return current ? trimmed : s;
 	}
 
 #undef var

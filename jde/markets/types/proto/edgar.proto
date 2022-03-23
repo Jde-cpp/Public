@@ -39,12 +39,17 @@ message Form13F
 	repeated InfoTable holdings=4;
 }
 
+message Form13GItem
+{
+	string name=1;
+	int32 shares=2;
+}
+
 message Form13G
 {
 	repeated IndexLine lines=1;
 	uint32 cik=2;
-	string name=3;
-	int32 shares=4;
+	repeated Form13GItem items=3;
 }
 
 message File13F
