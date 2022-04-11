@@ -21,20 +21,21 @@ namespace Jde::IO
 	Ξ Read( path path, bool vector=true, bool cache=false, SRCE )noexcept{ return DriveAwaitable{path, vector, cache, sl}; }
 	Ξ Write( fs::path path, sp<vector<char>> data, SRCE )noexcept{ return DriveAwaitable{move(path), data, sl}; }
 	Ξ Write( fs::path path, sp<string> data, SRCE )noexcept{ return DriveAwaitable{move(path), data, sl}; }
-	Φ FileSize( path path )noexcept(false)->uint;
+	Φ FileSize( path path )ε->uint;
 
 	Φ Copy( fs::path from, fs::path to, SRCE )->PoolAwait;
 	Φ CopySync( fs::path from, fs::path to, SRCE )->void;
+	Φ CreateDirectories( fs::path path )ε->void;
 
 	namespace FileUtilities
 	{
-		Φ LoadBinary( path path, SRCE )noexcept(false)->up<std::vector<char>>;
-		Φ Load( path path, SRCE )noexcept(false)->string;
-		Φ SaveBinary( path path, const std::vector<char>& values )noexcept(false)->void;
-		Φ Save( fs::path path, sp<string> value, SRCE )noexcept(false)->void;
-		Φ Save( path path, sv value, std::ios_base::openmode openMode = std::ios_base::out, SRCE )noexcept(false)->void;
-		Ξ SaveBinary( path path, sv value, SRCE )noexcept(false){ Save(path, value, std::ios::binary, sl); }
-		Γ void ForEachItem( path directory, std::function<void(const fs::directory_entry&)> function )noexcept(false);//todo get rid of, 1 liner
+		Φ LoadBinary( path path, SRCE )ε->up<std::vector<char>>;
+		Φ Load( path path, SRCE )ε->string;
+		Φ SaveBinary( path path, const std::vector<char>& values )ε->void;
+		Φ Save( fs::path path, sp<string> value, SRCE )ε->void;
+		Φ Save( path path, sv value, std::ios_base::openmode openMode = std::ios_base::out, SRCE )ε->void;
+		Ξ SaveBinary( path path, sv value, SRCE )ε{ Save(path, value, std::ios::binary, sl); }
+		Γ void ForEachItem( path directory, std::function<void(const fs::directory_entry&)> function )ε;//todo get rid of, 1 liner
 		Γ up<std::set<fs::directory_entry>> GetDirectory( path directory );
 		Γ up<std::set<fs::directory_entry>> GetDirectories( path directory, up<std::set<fs::directory_entry>> pItems=nullptr );
 		Γ std::string ToString( path pszFilePath );
@@ -42,7 +43,7 @@ namespace Jde::IO
 		Γ std::string DateFileName( uint16 year, uint8 month=0, uint8 day=0 )noexcept;
 		Γ tuple<uint16,uint8,uint8> ExtractDate( path path )noexcept;
 
-		Γ void Replace( path source, path destination, const flat_map<string,string>& replacements )noexcept(false);
+		Γ void Replace( path source, path destination, const flat_map<string,string>& replacements )ε;
 
 		Γ void CombineFiles( path csvFileName );
 
@@ -51,10 +52,10 @@ namespace Jde::IO
 
 		struct Γ Compression //TODO See if this is used.
 		{
-			void Save( path path, const std::vector<char>& data )noexcept(false);
-			virtual fs::path Compress( path path, bool deleteAfter=true )noexcept(false);
-			virtual void Extract( path path )noexcept(false);
-			up<std::vector<char>> LoadBinary( path uncompressed, path compressed=fs::path(), bool setPermissions=false, bool leaveUncompressed=false )noexcept(false);
+			void Save( path path, const std::vector<char>& data )ε;
+			virtual fs::path Compress( path path, bool deleteAfter=true )ε;
+			virtual void Extract( path path )ε;
+			up<std::vector<char>> LoadBinary( path uncompressed, path compressed=fs::path(), bool setPermissions=false, bool leaveUncompressed=false )ε;
 			virtual const char* Extension()noexcept=0;
 			virtual bool CompressAutoDeletes(){return true;}
 		protected:
@@ -99,11 +100,11 @@ namespace Jde::IO
 		void ForEachLine( sv file, const std::function<void(sv)>& function, const uint lineCount );
 		uint ForEachLine( sv pszFileName, const std::function<void(const std::vector<std::string>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint maxLines=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, uint maxColumnCount=1500 );
 
-		uint ForEachLine2( path fileName, const std::function<void(const std::vector<std::string>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint lineCount=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, Stopwatch* sw=nullptr )noexcept(false);
+		uint ForEachLine2( path fileName, const std::function<void(const std::vector<std::string>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint lineCount=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, Stopwatch* sw=nullptr )ε;
 		uint ForEachLine3( sv pszFileName, const std::function<void(const std::vector<double>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint lineCount=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, uint maxColumnCount=1500, Stopwatch* sw=nullptr );
 		uint ForEachLine4( sv pszFileName, const std::function<void(const std::vector<double>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint lineCount=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, uint maxColumnCount=1500, Stopwatch* sw=nullptr, double emptyValue=0.0 );
 
-		uint Merge( path file, const vector<char>& original, const vector<char>& newData )noexcept(false);
+		uint Merge( path file, const vector<char>& original, const vector<char>& newData )ε;
 	};
 
 	template<typename TCollection>

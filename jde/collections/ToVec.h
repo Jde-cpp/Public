@@ -1,8 +1,6 @@
-#pragma once
-#ifndef JDE_TO_VEC
-#define JDE_TO_VEC
-
+﻿#pragma once
 #include <sstream>
+//#include "../Str.h"
 #include "../TypeDefs.h"
 
 //https://stackoverflow.com/questions/21806561/concatenating-strings-and-numbers-in-variadic-template-function
@@ -20,12 +18,19 @@ namespace Jde::ToVec
 		return Apend( values, std::forward<Tail>(t)... );
 	}
 
-	template<typename T>
-	string ToStringT( const T& x )
+	ⓣ ToStringT( const T& x )->string
 	{
-		ostringstream os;
-		os << x;
-		return os.str();
+		constexpr bool StringConcept = requires(const T& t) { t.data(); t.size(); };
+		if constexpr( StringConcept )
+		{
+			return string{ x.data(), x.size() };
+		}
+		else
+		{
+			ostringstream os;
+			os << x;
+			return os.str();
+		}
 	}
 
 	template<typename Head, typename... Tail>
@@ -35,4 +40,3 @@ namespace Jde::ToVec
 		return Append( values, std::forward<Tail>(t)... );
 	}
 }
-#endif

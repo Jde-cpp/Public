@@ -224,7 +224,7 @@ namespace Jde
 		try
 		{
 			if constexpr( sizeof...(args)>0 )
-				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
+				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(std::locale(""), m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 			else
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
 #ifndef NDEBUG

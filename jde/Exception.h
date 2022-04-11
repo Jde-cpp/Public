@@ -22,7 +22,18 @@ namespace boost::system{ class error_code; }
 	[[noreturn]] α Throw()->void override{ throw move(*this); }
 namespace Jde
 {
-	Ξ make_exception_ptr( std::exception&& e )noexcept->std::exception_ptr{ try{ throw move(e); } catch (...){return std::current_exception();} }
+	Ξ make_exception_ptr( std::exception&& e )noexcept->std::exception_ptr
+	{ 
+		try
+		{ 
+			throw move(e); 
+		} 
+		catch (...)
+		{
+			auto p = std::current_exception();
+			return p;
+		} 
+	}
 	struct StackTrace
 	{
 		StackTrace( SL sl )noexcept{ stack.push_back(sl); }
@@ -142,44 +153,23 @@ namespace Jde
 		fs::path _path;
 	};
 
-	struct NetException : IException
+	struct Γ NetException : IException
 	{
-		NetException( sv host, sv target, uint code, sv result, ELogLevel level=ELogLevel::Debug, SRCE )noexcept;
+		NetException( sv host, sv target, uint code, string result, ELogLevel level=ELogLevel::Debug, SRCE )noexcept;
 		NetException( NetException&& f )noexcept:IException{ move(f) }, Host{ f.Host }, Target{ f.Target }, Result{ f.Result }{}
 		~NetException(){ Log(); }
-		α Log()const noexcept->void override;
-		Γ α Log( string extra )const noexcept->void;
+		α Log()const noexcept->void override{ Log( {} ); }
+		α Log( string extra )const noexcept->void;
 
 		using T=NetException;
 		COMMON
-/*		α Clone()noexcept->sp<IException> override{ return ms<T>(move(*this)); }
-		α Move()noexcept->up<IException> override{ return mu<T>(move(*this)); }
-		α Ptr()->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }
-		[[noreturn]] α Throw()->void override{ throw move(*this); }
-		*/
+
 		const string Host;
 		const string Target;
 		const string Result;
 	};
 
-	inline NetException::NetException( sv host, sv target, uint code, sv result, ELogLevel level, SL sl )noexcept:
-		IException{ {string{host}, string{target}, std::to_string(code), string{result}}, "{}{} ({}){}", sl, code }, //"
-		Host{ host },
-		Target{ target },
-		//Code{ code },
-		Result{ result }
-	{
-		SetLevel( level );
-		_what = format( "{}{} ({}){}", Host, Target, code, Result );
-		//Log();
-	}
-
 #define var const auto
-	Ξ NetException::Log()const noexcept->void
-	{
-		Log( {} );
-	}
-
 	$ IException::IException( SL sl, ELogLevel l, sv format_, Args&&... args )noexcept:
 		_stack{ sl },
 		_format{ format_ },
