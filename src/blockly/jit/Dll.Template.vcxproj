@@ -46,14 +46,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir).bin\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir).obj\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir).obj\$(ProjectName)\$(Configuration)\</IntDir>
     <IncludePath>..;$(REPO_DIR)\tws-api\source\cppclient\client;..\IntelRDFPMathLib20U2\LIBRARY\src;C:\TWS API\source\CppClient\client;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>..\lib\$(Configuration)\;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir).bin\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir).obj\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir).obj\$(ProjectName)\$(Configuration)\</IntDir>
     <IncludePath>..;$(REPO_DIR)\tws-api\source\cppclient\client;..\IntelRDFPMathLib20U2\LIBRARY\src;C:\TWS API\source\CppClient\client;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>..\lib\$(Configuration)\;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
@@ -73,7 +73,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>TwsSocketClient.lib;libbid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TwsSocketClient.lib;libprotobufd.lib;libbid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -96,7 +96,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>TwsSocketClient.lib;libbid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TwsSocketClient.lib;libprotobuf.lib;libbid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

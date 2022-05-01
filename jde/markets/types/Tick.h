@@ -6,6 +6,8 @@
 #include <CommonDefs.h>
 #include "../Exports.h"
 #include "../TypeDefs.h"
+#include <jde/TypeDefs.h>
+#include <jde/markets/types/proto/ib.pb.h>
 
 namespace Jde{ template<typename> class Vector; }
 namespace Jde::Markets
@@ -65,8 +67,9 @@ namespace Jde::Markets
 		α SetFields()const noexcept->Fields{ return _setFields; }
 		α Ratios()const noexcept->std::map<string,double>;//don't use boost because of blockly
 		α ToProto( ETickType type )const noexcept->Proto::Results::MessageUnion;
+		α ToProto()const noexcept->up<Jde::Markets::Proto::Tick>;
 		α AddProto( ETickType type, std::vector<Proto::Results::MessageUnion>& messages )const noexcept->void;
-
+		α AllSet( Markets::Tick::Fields fields )const noexcept->bool;
 		static Fields PriceFields()noexcept;
 		ContractPK ContractId{0};
 		TickerId TwsRequestId{0};

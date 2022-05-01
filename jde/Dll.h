@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "App.h"
 
 #ifndef _MSC_VER
 	namespace Jde

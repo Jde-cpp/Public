@@ -15,12 +15,6 @@ namespace Jde::Coroutine
 	Φ NextTaskHandle()ι->ClientHandle;
 	Φ NextTaskPromiseHandle()ι->ClientHandle;
 
-	struct ITaskError
-	{
-		//ITaskError():_taskHandle{NextTaskHandle()}{ /*DBG("Task::Task({})"sv, _taskHandle);*/ }
-		//const Handle _taskHandle;
-	};
-
 	struct AwaitResult
 	{
 		using UType=void*;//std::unique_ptr<void,decltype(Deleter)>;
@@ -29,7 +23,7 @@ namespace Jde::Coroutine
 		Τ AwaitResult( up<T> p )ι:_result{ p.release() }{}
 		explicit AwaitResult( UType p )ι:_result{ p }{}
 		explicit AwaitResult( up<IException> e )ι:_result{move(e)}{};
-		AwaitResult( sp<void> p )ι:_result{ p }{};
+		AwaitResult( sp<void>&& p )ι:_result{ p }{};
 		AwaitResult( Exception&& e )ι:_result{ e.Move().release() }{};
 		α Clear()ι->void{ _result = UType{}; }
 		α HasValue()Ι{ return _result.index()==0 && get<0>( _result ); }
@@ -54,12 +48,8 @@ namespace Jde::Coroutine
 
 	template<class T> concept IsPolymorphic = std::is_polymorphic_v<T>;
 
-	struct Task final //: ITaskError
+	struct Task final
 	{
-		//Γ Task()ι;
-		//Γ Task( const Task& )ι;
-		//Γ Task( Task&& x )ι;
-		//Γ ~Task()ι;
 		using TResult=AwaitResult;
 		struct promise_type
 		{
@@ -85,10 +75,10 @@ namespace Jde::Coroutine
 		template<IsPolymorphic T> auto SetResult( up<T>&& x )ι{ ASSERT(dynamic_cast<IException*>(x.get())==nullptr); _result.Set( x.release() ); }
 		ⓣ SetResult( up<T>&& x )ι{ _result.Set( x.release() ); }
 		α SetResult( AwaitResult&& r )ι->void{ _result = move( r ); }
-		ⓣ SetResult( sp<T> x )ι{ _result.Set( x ); }
+		template<IsPolymorphic T> α SetSP( const sp<T>& x )ι->void{ ASSERT( dynamic_pointer_cast<IException>(x)==nullptr ); _result.Set( x ); }
+		ⓣ SetSP( const sp<T>& x )ι{  _result.Set( x ); }
 		α SetBool( bool x )ι{ _result.SetBool(x); }
 	private:
-
 		AwaitResult _result;
 	};
 }
@@ -114,16 +104,6 @@ namespace Jde::Coroutine
 		up<IException> _pInner;
 	};
 
-/*
-	struct UnhandledTask
-	{
-		UnhandledTask( HCoroutine h )ι:_h{Handle}{}
-		~UnhandledTask(){ Handle=nullptr; }
-	private:
-		thread_local HCoroutine Handle;
-		friend Task::promise_type;
-	};
-*/
 	Ξ AwaitResult::CheckError( SL sl )->void
 	{
 		if( _result.index()==2 )

@@ -1,4 +1,12 @@
-//protoc --cpp_out dllexport_decl=JDE_BLOCKLY:. blockly.proto
+﻿//cd $JDE_DIR/Public/jde/blockly/types/proto/
+//mklink ib.proto $JDE_DIR/Public/jde/markets/types/proto
+//protoc -IPATH=$JDE_DIR/Public/jde/markets/types/proto --cpp_out dllexport_decl=JDE_BLOCKLY:. blockly.proto
+//cd $JDE_DIR/Blockly/source/types/proto;mv $JDE_DIR/Public/jde/markets/types/proto/blockly.pb.cc .;mklink blockly.pb.h $JDE_DIR/Public/jde/markets/types/proto; mklink ib.pb.h $JDE_DIR/Public/jde/markets/types/proto
+
+
+//cd $JDE_DIR/Public/jde/blockly/types/proto;protoc --cpp_out dllexport_decl=JDE_BLOCKLY:. blockly.proto;
+//sed -i -e 's/JDE_BLOCKLY/ΓB/g' blockly.pb.h;sed -i '1s/^/\xef\xbb\xbf/' blockly.pb.h;
+
 
 syntax = "proto3";
 package Jde.Blockly.Proto;
@@ -17,7 +25,9 @@ enum ERequestType
 	DeleteBuild=3;
 	Enable=4;
 	Disable=5;
+	Logs=6;
 }
+
 message IdRequest
 {
 	string id=1;
@@ -57,8 +67,6 @@ message ResultUnion
 		bool success = 2;
 		Functions functions = 3;
 		Function function = 4;
-		//string successId=5;
 		string error=6;
-		//StringMessage message=7;
 	}
 }

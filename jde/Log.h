@@ -146,7 +146,7 @@ namespace Jde
 	Φ HaveLogger()noexcept->bool;
 	Φ ClearMemoryLog()noexcept->void;
 	Φ FindMemoryLog( uint32 messageId )noexcept->vector<Logging::Messages::ServerMessage>;
-	struct LogTag{ sv Id; ELogLevel Level{ELogLevel::NoLog}; /*α Empty()const noexcept{return Id.empty() || Level==ELogLevel::None;}*/ };
+	struct LogTag{ string Id; ELogLevel Level{ELogLevel::NoLog}; };//loadLibrary dlls may disappear, so need string vs. sv
 	namespace Logging
 	{
 		Φ DestroyLogger()->void;
@@ -180,7 +180,7 @@ namespace Jde
 			return file;
 
 #ifdef _MSC_VER
-		const string homeDir = file.find("\\jde\\")==sv::npos ? string{ file }  : format( "%JDE_DIR%{}", file.substr(file.find("\\jde\\")+4) );
+		const string homeDir{ file };
 #else
 		uint start = 0;
 		for( uint i=0; i<3 && (start = file.find( '/', start ))!=string::npos; ++i, ++start );

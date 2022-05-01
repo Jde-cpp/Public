@@ -6,7 +6,7 @@
 namespace Jde::Markets::MBlockly
 {
 	struct Awaitable; struct AwaitableShim;
-	struct JDE_BLOCKLY_EXECUTOR BTick : private Tick
+	struct ΓBE BTick : private Tick
 	{
 		BTick( ContractPK id ):Tick{id}{}
 		BTick( const Tick& tick  ):Tick{tick}{}
@@ -19,7 +19,7 @@ namespace Jde::Markets::MBlockly
 		Price Spread()const noexcept(false){ return AskPrice()-BidPrice(); }
 		Size BidSize()const noexcept(false);
 		Size AskSize()const noexcept(false);
-		bool AllSet( Markets::Tick::Fields fields );
+		α AllSet( Markets::Tick::Fields fields )ι->bool{ return Tick::AllSet(fields); }
 		BTick& operator=( const Tick& rhs )noexcept;
 		α SetFields()const noexcept->Fields{ return Tick::SetFields(); }//TODO remove
 		//void Assign( const Tick& rhs )noexcept{ (Tick&)*this=rhs; }

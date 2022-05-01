@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include <span>
-//#include "Log.h"
 
 #define var const auto
 namespace Jde::IO
@@ -37,7 +36,7 @@ namespace Jde::IO
 		using base::bsv; using base::Text; using base::_peekValue; using base::i; using base::_line;
 		TokenParser( bsv text, TokenParser* p, uint i_=0, uint iLine=1 )ι:base{ text, i_, iLine==1 && p ? p->Line() : iLine }, Tokens{p ? p->Tokens : vector<bsv>{}}{}
 		TokenParser( bsv text, vector<bsv> tokens )ι:base{text}, Tokens{move(tokens)}{}
-		α Next()ι->bsv;
+		α Next( bool testQuote=true )ι->bsv;
 		α Next( const vector<bsv>& tokens, bool dbg=false )ι->bsv;
 		//α Peek()ι->bsv{ return base::_peekValue.empty() ? base::_peekValue = Next() : base::_peekValue; }
 		α SetText( string x, uint index, uint line )ι{ _text = mu<string>( move(x) ); base::Text=*_text; base::i=index; base::_line=line; }
@@ -68,14 +67,14 @@ namespace Jde::IO
 	$::NextWords( const vector<bsv>& phrases, bool stem )ι->optional<uint>
 	{
 		ResetPeek();
-		optional<uint> y; var start = i;
+		optional<uint> y; //var start = i;
 		for( var& phrase : phrases )
 		{
 			auto words = Str::Words<bsv>( phrase );
 			std::span<bsv> s{ &words.front(), words.size() };
-			if( var pIndexes = Str::FindPhrase<bsv>({Text.data()+start, Text.size()-y.value_or(start)}, s, stem); pIndexes )//TODO cache the words FindPhrase parses.
+			if( var pIndexes = Str::FindPhrase<bsv>({Text.data()+i, y.value_or(Text.size())-i}, s, stem); pIndexes )//TODO cache the words FindPhrase parses.
 			{
-				if( var next = start+get<1>( *pIndexes ); !y || next<*y )
+				if( var next = i+get<1>( *pIndexes ); !y || next<*y )
 					y = next;
 			}
 		}
@@ -119,7 +118,7 @@ namespace Jde::IO
 	}
 #undef $ 
 #define $ template<class T> α TokenParser<T>
-	$::Next()ι->std::basic_string_view<char,T>
+	$::Next( bool testQuote )ι->std::basic_string_view<char,T>
 	{
 		//using base::Text; using base::_peekValue; using base::i; using base::_line;
 		bsv result = base::_peekValue;
@@ -132,7 +131,7 @@ namespace Jde::IO
 			if( i<Text.size() )
 			{
 				uint start=i;
-				if( Text[i]=='"' )
+				if( testQuote && Text[i]=='"' )
 				{
 					++i;
 					auto n = base::Next( '"' );
@@ -180,8 +179,6 @@ namespace Jde::IO
 		}
 		return y;
 	}
-
 #undef var
 #undef $
-
 }

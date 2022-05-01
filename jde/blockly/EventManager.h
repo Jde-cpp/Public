@@ -1,13 +1,12 @@
 ﻿#pragma once
+#include "Exports-Executor.h"
+#include <jde/Log.h>
+#include <jde/blockly/IBlockly.h>
 #include <jde/coroutine/Task.h>
 #include <jde/markets/types/Tick.h>
-#include <jde/Log.h>
 #include "types/BTick.h"
 #include "types/Proc.h"
 #include "types/EventResult.h"
-#include <jde/blockly/IBlockly.h>
-
-#include "Exports-Executor.h"
 
 namespace Jde::Markets::OrderManager{ struct Cache; }
 namespace Jde::Markets::MBlockly
@@ -15,15 +14,15 @@ namespace Jde::Markets::MBlockly
 	using namespace Coroutine;
 	struct AwaitableData final
 	{
-		AwaitableData( const optional<ProcTimePoint>& alarm, const BTick& tick, const Tick::Fields& tickFields, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields, uint index ):
-			Alarm{alarm},Tick{tick},TickFields{tickFields},Order{order}, OrderFields{orderFields}, Status{status}, StatusFields{statusFields}, Index{index}
+		AwaitableData( const optional<ProcTimePoint>& alarm, const BTick& tick, optional<function<bool(const Markets::Tick&)>> tickTrigger, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields, uint index ):
+			Alarm{alarm},Tick{tick},TickTrigger{tickTrigger},Order{order}, OrderFields{orderFields}, Status{status}, StatusFields{statusFields}, Index{index}
 		{}
 		~AwaitableData();
 		α IsHandled()const noexcept->bool{ return _value; }
 		α Handle()noexcept->bool{ return _value.exchange( true ); }
 
 		const optional<ProcTimePoint> Alarm;
-		BTick Tick; Tick::Fields TickFields;
+		BTick Tick; optional<function<bool(const Markets::Tick&)>> TickTrigger; //Tick::Fields TickFields;
 		ProcOrder Order; const MyOrder::Fields OrderFields;
 		OrderStatus Status; const OrderStatus::Fields StatusFields;
 		const uint Index;
@@ -65,9 +64,9 @@ namespace Jde::Markets::MBlockly
 		const Handle _taskHandle;
 	};
 
-	struct JDE_BLOCKLY_EXECUTOR Awaitable final : std::enable_shared_from_this<Awaitable>
+	struct ΓBE Awaitable final : std::enable_shared_from_this<Awaitable>
 	{
-		Awaitable( const optional<ProcTimePoint>& alarm, const BTick& tick, const Tick::Fields& tickFields, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields )noexcept;
+		Awaitable( const optional<ProcTimePoint>& alarm, const BTick& tick, optional<function<bool(const Markets::Tick&)>> tickTrigger, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields )noexcept;
 		using TReturn=EventResult;
 		using TTask=BTask<TReturn>;
 		~Awaitable();
@@ -85,8 +84,8 @@ namespace Jde::Markets::MBlockly
 
 		sp<AwaitableData> _pData;
 	};
-	struct JDE_BLOCKLY_EXECUTOR EventManager final
+	struct ΓBE EventManager final
 	{
-		static Awaitable Wait( const optional<ProcTimePoint>& alarm, const BTick& tick, const Tick::Fields& tickFields, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields )noexcept;
+		static Awaitable Wait( const optional<ProcTimePoint>& alarm, const BTick& tick, optional<function<bool(const Markets::Tick&)>> tickTrigger, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields )noexcept;
 	};
 }

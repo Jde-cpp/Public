@@ -178,10 +178,7 @@ namespace Jde
 	{
 		_args.reserve( sizeof...(args) );
 		ToVec::Append( _args, args... );
-		if( l==ELogLevel::Critical )
-			Log();
-		else
-			BreakLog();
+		BreakLog();
 	}
 
 	$ IException::IException( SL sl, std::exception&& inner, sv format_, Args&&... args )noexcept:

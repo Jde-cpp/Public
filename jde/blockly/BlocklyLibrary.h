@@ -7,8 +7,7 @@
 #pragma warning( default : 4996 )
 #pragma warning( default : 4244 )
 
-
-#define Φ JDE_BLOCKLY auto
+#define Φ ΓB auto
 namespace Jde::Markets
 {
 	struct MyOrder; struct Tick; struct Account; struct Contract; struct TwsClient;
@@ -31,7 +30,5 @@ namespace Jde::Blockly
 	Φ Enable( str id )noexcept(false)->void;
 	Φ Disable( sv id )noexcept(false)->void;
 	Φ CreateAllocatedExecutor( sv blockId, long orderId, uint32_t contractId )noexcept(false)->sp<Markets::MBlockly::IBlockly>*;
-	//Φ Execute( std::string_view id, const Markets::MyOrder& order/*, const Jde::Markets::Tick& tick, const Jde::Markets::MBlockly::Account& account*/, const Jde::Markets::Contract& contract, std::shared_ptr<Jde::Markets::TwsClient> pTws )noexcept(false);
-	//Φ Execute( std::string_view id, const Markets::MyOrder& order, const Jde::Markets::Contract& contract, std::shared_ptr<Jde::Markets::TwsClient> pTws )noexcept(false);
 }
 #undef Φ

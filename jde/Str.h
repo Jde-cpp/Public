@@ -1,9 +1,4 @@
 ﻿#pragma once
-//#include <string>
-//#include <sstream>
-//#include <list>
-//#include <functional>
-//#include <cctype>
 #include <charconv>
 #include <span>
 #include "Exception.h"
@@ -11,48 +6,56 @@
 
 #define var const auto
 #define Φ Γ auto
+
+namespace Jde::Str
+{
+	template<class T> using bsv = std::basic_string_view<char,T>;
+	struct ci_traits : public std::char_traits<char>
+	{
+		Ω eq(char c1, char c2)ι{ return toupper(c1) == toupper(c2); }
+		Ω ne(char c1, char c2)ι{ return toupper(c1) != toupper(c2); }
+		Ω lt(char c1, char c2)ι{ return toupper(c1) <  toupper(c2); }
+		Ω compare( const char* s1, const char* s2, uint n )ι->int
+		{
+			int y{};
+			for( ; !y && n-- != 0; ++s1, ++s2 )
+			{
+				if( toupper(*s1) < toupper(*s2) ) y=-1;
+				if( toupper(*s1) > toupper(*s2) ) y= 1;
+			}
+			return y;
+		}
+		Ω find( const char* s, uint n, char a )ι->const char*
+		{
+			while( n-- > 0 && toupper(*s) != toupper(a) )
+				++s;
+			return n==string::npos ? nullptr : s;
+		}
+	};
+}
 namespace Jde
 {
-	namespace Str
-	{
-		template<class T> using bsv = std::basic_string_view<char,T>;
-
-		struct ci_traits : public std::char_traits<char>
-		{
-			Ω eq(char c1, char c2)ι{ return toupper(c1) == toupper(c2); }
-			Ω ne(char c1, char c2)ι{ return toupper(c1) != toupper(c2); }
-			Ω lt(char c1, char c2)ι{ return toupper(c1) <  toupper(c2); }
-			Ω compare( const char* s1, const char* s2, uint n )ι->int
-			{
-				int y{};
-				for( ; !y && n-- != 0; ++s1, ++s2 )
-				{
-					if( toupper(*s1) < toupper(*s2) ) y=-1;
-					if( toupper(*s1) > toupper(*s2) ) y= 1;
-				}
-				return y;
-			}
-			Ω find( const char* s, uint n, char a )ι->const char*
-			{
-				while( n-- > 0 && toupper(*s) != toupper(a) )
-					++s;
-				return n==string::npos ? nullptr : s;
-			}
-		};
-	}
 	using iv = Str::bsv<Str::ci_traits>;
+	using String = std::basic_string<char, Str::ci_traits>;
+}
+namespace Jde::Str
+{
+	Τ concept IsString = std::same_as<T, string> || std::same_as<T, String>;
+	Τ concept IsView = std::same_as<T, sv> || std::same_as<T, iv>;
+	Τ concept IsStringLike = IsString<T> || IsView<T>;
+	Τ concept IsInsensitive = std::same_as<T, String> || std::same_as<T, iv>;
+	Τ concept IsSensitive = std::same_as<T, string> || std::same_as<T, sv>;
+}
+namespace Jde
+{
 	template<class Y=sv, class X> α ToView( const X& x )ι->Y{ return Y{x.data(),x.size()}; }
 	Ξ ToSV( iv x )ι->sv{ return ToView<sv,iv>( x ); }
 	Ξ ToIV( sv x )ι->iv{ return ToView<iv,sv>( x ); }
-/*	ⓣ Toε( sv value, SRCE )ε->T
-	{
-		T v;
-		var e=std::from_chars( value.data(), value.data()+value.size(), v );
-		if( e.ec!=std::errc{} ) 
-			throw Jde::Exception{ sl, ELogLevel::Debug, "Can't convert:  '{}'.  to '{}'.  ec='{}'"sv, value, "Jde::GetTypeName<T>()", (uint)e.ec };
-		return v;
-	}
-*/
+	
+	template<Str::IsInsensitive T> α ToStr( const T& x )ι->string{ return string{ x.data(), x.size() }; }
+	template<Str::IsSensitive T> α ToIStr( const T& x )ι->String{ return String{ x.data(), x.size() }; }
+	
+	Ξ operator<<( std::ostream& os, iv s )ι->std::ostream&{ os << ToSV(s); return os; }
 	template<class Y, class X=sv>
 	α Toε( const X& x, ELogLevel l=ELogLevel::Debug, SRCE )ε->Y
 	{
@@ -75,10 +78,15 @@ namespace Jde
 		return stod( string{x} );
 	}
 
+	Ξ ToString( double x, uint8 precision )->string
+	{
+		std::array<char, 128> b;
+		auto [end, ec] = std::to_chars( b.data(), b.data() + b.size(), x, std::chars_format::fixed, precision );
+		return ec == std::errc{} ? string{} : std::string{ b.data(), end };
+	}
 
 	constexpr iv operator "" _iv( const char* x, uint len )noexcept{ return iv(x, len); }
 	ⓣ FromTraits( T x )->string{ return string{ x.data(), x.size() }; }
-	using String = std::basic_string<char, Str::ci_traits>;
 	struct Γ CIString : String
 	{
 		using base=String;
@@ -110,8 +118,6 @@ namespace Jde
 #define $ std::basic_string<char, TT>
 	namespace Str
 	{
-		Τ concept IsString = std::same_as<T, string> || std::same_as<T, String>;
-		Τ concept IsView = std::same_as<T, sv> || std::same_as<T, iv>;
 		using std::basic_string;
 		template<class T=sv, class D=sv> α Split( bsv<TT> s, bsv<typename D::traits_type> delim )ι->vector<bsv<TT>>;
 		template<class X=sv, class Y=sv> α Split( bsv<typename X::traits_type> x, char delim=',', bool removeEmpty=false )ι->vector<bsv<typename Y::traits_type>>;
@@ -155,20 +161,17 @@ namespace Jde
 		TSV LTrim( X s, const vector<char>& tokens )->X;
 		TSV RTrim( X s, function<bool(char)> f )->X;
 		TSV RTrim( X s, const vector<char>& tokens )->X;
-		TSV TrimPunct( X s )->X{ const vector<char> v{'.',',',':','-','*'}; return RTrim<T>( LTrim<T>(s, v), v ); }
+		TSV TrimPunct( X s, bool leaveTrailingPeriod=false )->X;
 
 		TSV Trim( X s, X substring )ι->$;
 		TSV Words( X x )ι->vector<X>;
 		Φ StemmedWords( sv x )ι->vector<string>;
 		ⓣ FindPhrase( T x, const std::span<X>& entries, bool stem=false )ι->optional<tuple<uint,uint>>;
+		TSV Pascal( X s )ι->$;
+		TSV Camel( X s )ι->$;
 #undef TSV
 #undef X
-	};
-	/*
-	struct StringCompare
-	{
-   	α operator()( str a, str b )const ι{ return a<b; }
-   };*/
+	}
 	template<class T, class D> α Str::Split( bsv<TT> s_, bsv<typename D::traits_type> delim )ι->vector<bsv<TT>>
 	{
 		vector<T> tokens;
@@ -235,24 +238,20 @@ namespace Jde
 	ⓣ Str::RTrim( bsv<TT> s )->bsv<TT>
 	{
 		return RTrim<T>( s, [](int ch){return !std::isspace(ch);} );
-		//if( auto p = std::find_if(s.rbegin(), s.rend(), [](int ch){return !std::isspace(ch);}); p!=s.rend() )
-		//{
-		//	if( p==s.rbegin() )
-		//		y = s;
-		//	else
-		//	{
-		//		var size = std::distance( s.rbegin(), p );
-		//		y = { s.data(), s.size()-size };
-		//	}
-		//}
-		//return y;
 	}
 	ⓣ Str::RTrim( bsv<TT> s, const vector<char>& tokens )->bsv<TT>
 	{
 		auto f = [&tokens](int ch){ return !std::isspace(ch) && std::find(tokens.begin(), tokens.end(), ch)==tokens.end(); };
 		return RTrim<T>( s, f );
 	}
-
+	ⓣ Str::TrimPunct( bsv<TT> s, bool leaveTrailingPeriod )->bsv<TT>
+	{
+		const vector<char> v{ '.',',',':','-','*','_' };
+		auto y = RTrim<T>( LTrim<T>(s, v), v );
+		if( uint i=leaveTrailingPeriod ? y.data()-s.data()+y.size() : s.size();  i<s.size() && s[i]=='.' )
+			y = { y.data(), y.size()+1 };
+		return y;
+	}
 	ⓣ Str::AddSeparators( T collection, sv separator, bool quote )ι->string
 	{
 		ostringstream os;
@@ -271,17 +270,6 @@ namespace Jde
 		return os.str();
 	}
 
-/*	ⓣ Str::Split( const basic_string<T> &s, T delim/ *=T{','}* / )ι->vector<std::basic_string<T>>
-	{
-		vector<basic_string<T>> tokens;
-		basic_string<T> token;
-		std::basic_istringstream<T> tokenStream(s);
-		while( std::getline(tokenStream, token, delim) )
-			tokens.push_back(token);
-
-		return tokens;
-	}
-*/
 	ⓣ Str::TryToFloat( const basic_string<T>& token )ι->float
 	{
 		try
@@ -367,7 +355,8 @@ namespace Jde
 	{
 		ⓣ PorterStemmer( T s )->$//TODO get library or old code.
 		{
-			return ${ s.ends_with('s') || s.ends_with('S') ? s.substr(0,s.size()-1) : s };
+			auto v = Str::TrimPunct<T>( s );
+			return ${ v.ends_with('s') || v.ends_with('S') ? v.substr(0,s.size()-1) : v };
 		}
 
 		template<class T=sv> α FindPhraseT( tuple<vector<T>,vector<uint>> x, const std::span<Str::bsv<TT>>& criteria )ι->optional<tuple<uint,uint>>//[start,start of next word] of phrase index.  start of next word because of stemming
@@ -376,25 +365,26 @@ namespace Jde
 			if( criteria.empty() || !words.size() )
 				return nullopt;
 
-			const vector<T> w{ words.begin(), words.end() }; optional<tuple<uint,uint>> y;
-			T firstWord{ criteria.front().data(), criteria.front().size() };
-			for( auto p=w.begin(); (p=std::find(p, w.end(), firstWord))!=w.end(); ++p )
+			//const vector<T> w{ words.begin(), words.end() }; 
+			T firstWord{ criteria.front().data(), criteria.front().size() }; optional<tuple<uint,uint>> y;
+			for( auto p=words.begin(); (p=std::find(p, words.end(), firstWord))!=words.end(); ++p )
 			{
-				const uint iStartWord{ (uint)std::distance(w.begin(), p) }; uint i = iStartWord;
-				bool equal = w.size()-iStartWord>=criteria.size();
+				const uint iStartWord{ (uint)std::distance(words.begin(), p) }; uint i = iStartWord;
+				bool equal = words.size()-iStartWord>=criteria.size();
 				for( uint j=1; equal && j<criteria.size(); ++j )
-					equal = w[++i]==T{ criteria[j].data(), criteria[j].size() };
+					equal = words[++i]==T{ criteria[j].data(), criteria[j].size() };
 				var& locations = get<1>( x );
 				var iStart = locations[iStartWord];
 				if( equal && (!y || iStart<get<0>(*y)) )
-					y = make_tuple( iStart, i+1==locations.size() ? locations[i]+criteria.back().size() : locations[i+1]  );
+					y = make_tuple( iStart, locations[i] );
 			}
 			return y;
 		}
-		template<class T=sv, bool TStem=false> α WordsLocation( Str::bsv<TT> x )ι->tuple<vector<T>,vector<uint>>
+
+		template<class T=sv, bool TStem=false> α WordsLocation( Str::bsv<TT> x )ι->tuple<vector<T>,vector<uint>> //[words, endIndex]
 		{
 			tuple<vector<T>,vector<uint>> y;
-			auto isSeparator = []( char ch )ι->bool{ return ch>0 && (::isspace(ch) || ch=='.' || ch==':' || ch=='(' || ch==')'); };//msvc asserts if ch<0
+			auto isSeparator = []( unsigned char ch )ι->bool{ return ::isspace(ch) || ch=='.' || ch==':' || ch=='(' || ch==')' || ch=='/'; };
 			for( uint iStart{0}, iEnd; iStart<x.size(); iStart=iEnd )
 			{
 				auto ch=x[iStart];
@@ -410,7 +400,7 @@ namespace Jde
 					else
 						get<0>( y ).push_back( v );
 
-					get<1>( y ).push_back( iStart );
+					get<1>( y ).push_back( iStart+v.size() );
 				}
 			}
 			return y;
@@ -426,36 +416,35 @@ namespace Jde
 			: Internal::FindPhraseT( Internal::WordsLocation<$>( bsv<TT>{x.data(), x.size()} ), criteria );
 	}
 
-/*	struct Parser
+	ⓣ Str::Pascal( bsv<TT> x )ι->$
 	{
-		Parser( sv text, uint i_=0, uint iLine=1 )ι:Text{text}, i{i_},_line{iLine}{}
-		Φ Next( sv x )ι->sv;
-
-		α Index()Ι{ return i;}
-		α Line()Ι->uint{ return _line;}
-		sv Text;
-	protected:
-		uint i;
-		uint _line;
-		sv _peekValue;
-	};
-
-	struct TokenParser : Parser
+		$ y{ x };
+		if( y.size() )
+			y[0] = std::toupper( x[0] );
+		return y;
+	}
+	ⓣ Str::Camel( bsv<TT> x )ι->$
 	{
-		TokenParser( sv text, TokenParser* p, uint i_=0, uint iLine=1 )ι: Parser{text, i_, iLine==1 && p ? p->Line() : iLine}, Tokens{p ? p->Tokens : vector<sv>{}}{}
-		TokenParser( sv text, vector<sv> tokens )ι:Parser{text}, Tokens{move(tokens)}{}
-		Φ Next()ι->sv;
-		Φ Next( const vector<sv>& tokens, bool dbg=false )ι->sv;
-		Φ Next( char end )ι->sv;
-		α Peek()ι->sv{ return _peekValue.empty() ? _peekValue = Next() : _peekValue; }
-		α SetText( string x, uint index )ι{ _text = mu<string>( move(x) ); Text=*_text; i=index; }
-		const vector<sv> Tokens;
-	private:
-		up<string> _text;
-	};
-	*/
+		$ y{ x };
+		if( y.size() )
+			y[0] = std::tolower( x[0] );
+		return y;
+	}
+}
+
+template<> struct fmt::formatter<Jde::iv> 
+{
+	constexpr α parse( fmt::format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
+	ⓣ format( Jde::iv x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{}", Jde::ToSV(x) ); }
+};
+
+template<> struct fmt::formatter<Jde::String> 
+{
+	constexpr α parse( fmt::format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
+	ⓣ format( Jde::iv x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{}", Jde::ToStr(x) ); }
+};
+
 #undef var
 #undef Φ
 #undef $
 #undef TT
-}

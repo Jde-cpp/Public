@@ -11,7 +11,7 @@ extern "C"
 	std::vector<Jde::Markets::MBlockly::CApi::Function>* MBlocklyAllocatedList()noexcept
 	{
 		auto p = new std::vector<Jde::Markets::MBlockly::CApi::Function>();
-		[[jde::AddList]]
+[[jde::AddList]]
 		return p;
 	}
 
@@ -20,7 +20,7 @@ extern "C"
 	{
 		std::shared_ptr<Jde::Markets::MBlockly::IBlockly>* p = nullptr;
 
-		[[jde::Create]]
+[[jde::Create]]
 		return p;
 	}
 }

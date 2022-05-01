@@ -15,16 +15,16 @@
 #pragma warning( default : 4996 )
 
 #define Φ ΓM auto
-namespace Jde::Markets::Proto{ class Order; enum ETimeInForce : int; enum EOrderType : int; }
-namespace Jde::Markets::Proto::Results{ enum EOrderStatus : int; }
 namespace Jde::Markets
 {
-	using Proto::Results::EOrderStatus;
 	namespace Proto
 	{
-		namespace Results{ class OrderState; }
+		
+		class Order; enum ETimeInForce : int; enum EOrderType : int;enum EOrderStatus : int;
 		namespace IB{ enum ETimeInForce:int; class Order; }
+		namespace Results{ class OrderState; }
 	}
+	using Proto::EOrderStatus;
 
 	struct ΓM MyOrder : ::Order
 	{
@@ -36,6 +36,7 @@ namespace Jde::Markets
 		α TimeInForce()const noexcept->Proto::ETimeInForce; void TimeInForce( Proto::ETimeInForce value )noexcept;
 		α OrderType()const noexcept->Proto::EOrderType; void OrderType( Proto::EOrderType value )noexcept;
 		α ToProto()const noexcept->up<Proto::Order>;
+		α ToString( sv symbol )Ι->string{ return format( "{} {}x{}@{}", action, ToDouble(totalQuantity), symbol, lmtPrice==UNSET_DOUBLE ? "" : std::to_string(lmtPrice) ); }
 		Ω ParseDateTime( str date )noexcept->time_t;
 		Ω ToDateString( time_t date )noexcept->string;
 
@@ -60,9 +61,10 @@ namespace Jde::Markets
 
 	struct OrderStatus final
 	{
+		Φ ToProto()const noexcept->up<Proto::OrderStatus>;
+
 		::OrderId Id;
-		EOrderStatus Status{EOrderStatus::None};
-		Φ ToProto()const noexcept->up<Proto::Results::OrderStatus>;
+		EOrderStatus Status{EOrderStatus::NoStatus};
 		double Filled;
 		double Remaining;
 		double AverageFillPrice;
@@ -84,6 +86,7 @@ namespace Jde::Markets
 	};
 	Ξ operator|(OrderStatus::Fields a, OrderStatus::Fields b)->OrderStatus::Fields{ return (OrderStatus::Fields)( (uint_fast8_t)a | (uint_fast8_t)b ); }
 	Ξ operator|=(OrderStatus::Fields& a, OrderStatus::Fields b)->OrderStatus::Fields{ return a = (OrderStatus::Fields)( (uint)a | (uint)b ); }
+	Ξ operator&&(OrderStatus::Fields a, OrderStatus::Fields b)->bool{ return (uint)a && (uint)b; }
 
 	Φ ToProto( const ::OrderState& state )noexcept->up<Proto::Results::OrderState>;
 

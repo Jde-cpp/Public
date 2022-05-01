@@ -92,18 +92,6 @@ namespace Jde::IO
 
 		std::pair<std::vector<std::string>,std::set<uint>> LoadColumnNames( sv csvFileName, std::vector<std::string>& columnNamesToFetch, bool notColumns=false );
 
-		template<typename T>
-		void ForEachLine( path file, const std::function<void(const std::basic_string<T>&)>& function )noexcept;
-		template<typename T>
-		void ForEachLine( const std::basic_string<T>& file, const std::function<void(const std::basic_string<T>&)>& function, const uint lineCount );
-
-		void ForEachLine( sv file, const std::function<void(sv)>& function, const uint lineCount );
-		uint ForEachLine( sv pszFileName, const std::function<void(const std::vector<std::string>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint maxLines=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, uint maxColumnCount=1500 );
-
-		uint ForEachLine2( path fileName, const std::function<void(const std::vector<std::string>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint lineCount=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, Stopwatch* sw=nullptr )ε;
-		uint ForEachLine3( sv pszFileName, const std::function<void(const std::vector<double>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint lineCount=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, uint maxColumnCount=1500, Stopwatch* sw=nullptr );
-		uint ForEachLine4( sv pszFileName, const std::function<void(const std::vector<double>&, uint lineIndex)>& function, const std::set<uint>& columnIndexes, const uint lineCount=std::numeric_limits<uint>::max(), const uint startLine=0, const uint chunkSize=1073741824, uint maxColumnCount=1500, Stopwatch* sw=nullptr, double emptyValue=0.0 );
-
 		uint Merge( path file, const vector<char>& original, const vector<char>& newData )ε;
 	};
 
@@ -121,30 +109,6 @@ namespace Jde::IO
 			os << column;
 		}
 		os << endl;
-	}
-
-
-	template<typename T>
-	void File::ForEachLine( path file, const std::function<void(const std::basic_string<T>&)>& function )noexcept
-	{
-		std::basic_ifstream<T> t( file );
-		std::basic_string<T> line;
-		while( getline(t, line) )
-			function( line );
-	}
-	template<typename T>
-	void File::ForEachLine( const std::basic_string<T>& file, const std::function<void(const std::basic_string<T>&)>& function, const uint lineCount )
-	{
-		CHECK_PATH( file, SRCE_CUR );
-		std::basic_ifstream<T> t( file ); THROW_IFX( t.fail(), IOException(file, "Could not open file") );
-		std::basic_string<T> line;
-		uint lineIndex=0;
-		while( std::getline<T>(t, line) )
-		{
-			function( line );
-			if( ++lineIndex>=lineCount )
-				break;
-		}
 	}
 }
 #undef Φ

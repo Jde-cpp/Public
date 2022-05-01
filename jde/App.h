@@ -31,6 +31,7 @@ namespace Jde
 		α BaseStartup( int argc, char** argv, sv appName, string serviceDescription/*, sv companyName="jde-cpp"*/ )noexcept(false)->flat_set<string>;
 		β Install( str serviceDescription )noexcept(false)->void=0;
 		β Uninstall()noexcept(false)->void=0;
+		Ω EnvironmentVariable( str variable, SRCE )noexcept->string;
 
 		Ω MemorySize()noexcept->size_t;
 		Ω ExePath()noexcept->fs::path;
@@ -54,8 +55,8 @@ namespace Jde
 		Ω IsConsole()noexcept->bool;
 
 		Ω GetBackgroundThreads()noexcept{ return  *_pBackgroundThreads; }
-		Ω ApplicationName()noexcept{ return _pApplicationName ? *_pApplicationName : ""sv;}
-		β ProgramDataFolder()noexcept->fs::path=0;
+		Ω ApplicationName()noexcept->sv{ return _pApplicationName ? *_pApplicationName : ""sv;}
+		Ω ProgramDataFolder()noexcept->fs::path;
 		Ω ApplicationDataFolder()noexcept->fs::path;
 		Ω ShuttingDown()noexcept->bool;
 		Ω Shutdown()noexcept->void;
@@ -85,10 +86,9 @@ namespace Jde
 	struct OSApp final: IApplication
 	{
 		ω Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->flat_set<string>;
-		ω EnvironmentVariable( str variable, SRCE )noexcept->string;
 
-		α ProgramDataFolder()noexcept->fs::path override;
-		Ω CompanyName()noexcept->string;
+		Ω CompanyName()noexcept->str;
+		Ω ProductName()ι->string;
 		Ω CompanyRootDir()noexcept->fs::path;
 		ω FreeLibrary( void* p )noexcept->void;
 		ω LoadLibrary( path path )noexcept(false)->void*;
@@ -97,7 +97,7 @@ namespace Jde
 		α Uninstall()noexcept(false)->void override;
 		ω ProcessId()noexcept->uint;
 		Ω Executable()noexcept->fs::path;
-		Ω Args()noexcept->flat_map<string,string>;
+		Ω Args()noexcept->flat_multimap<string,string>;
 		Ω Pause()noexcept->void;
 		Ω UnPause()noexcept->void;
 		Φ GetThreadId()noexcept->uint;

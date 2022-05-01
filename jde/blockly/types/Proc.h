@@ -10,7 +10,7 @@
 
 //#ifdef TESTING
 //	extern Jde::TimePoint g_now;
-//JDE_BLOCKLY_EXECUTOR Jde::TimePoint& TestingNow();
+//ΓBE Jde::TimePoint& TestingNow();
 //#endif
 
 struct Contract;
@@ -25,7 +25,7 @@ namespace Jde::Markets::MBlockly
 	typedef std::chrono::system_clock::duration Duration;
 	struct ProcOrder; struct Amount; struct Size; struct LimitPriceException; struct BTick; struct Awaitable;
 	typedef std::shared_ptr<std::vector<Proto::Results::ContractHours>> ContractHoursPtr;
-	struct JDE_BLOCKLY_EXECUTOR Price /*notfinal*/
+	struct ΓBE Price /*notfinal*/
 	{
 		constexpr static double Unitialized = NAN;
 		constexpr Price()noexcept=default;
@@ -91,7 +91,7 @@ namespace Jde::Markets::MBlockly
 		friend ProcTimePoint operator+( ProcTimePoint a, ProcDuration b )noexcept;
 	};
 
-	struct JDE_BLOCKLY_EXECUTOR ProcTimePoint final /*: private TimePoint MSVC=LNK2005 */
+	struct ΓBE ProcTimePoint final /*: private TimePoint MSVC=LNK2005 */
 	{
 		constexpr ProcTimePoint()noexcept=default;
 		static ProcTimePoint ClosingTime( ContractHoursPtr pHours )noexcept(false);
@@ -175,10 +175,11 @@ namespace Jde::Markets::MBlockly
 		α SetLimit( Price limit )noexcept{ MyOrder::lmtPrice = limit._value; }
 		α Quantity()const noexcept{ return Size{MyOrder::totalQuantity }; }
 		α LastUpdate()const noexcept{ return _lastUpdate; }
-		JDE_BLOCKLY_EXECUTOR α SetLastUpdate( ProcTimePoint x )noexcept->void;
+		ΓBE α SetLastUpdate( ProcTimePoint x )noexcept->void;
 		α Bump( Price price )noexcept{ MyOrder::lmtPrice+=price._value; }
 		α Place( sp<::Contract> p )noexcept(false)->void;
 		α VolatilityType()const noexcept{ return volatilityType; }
+		α ToProto()const noexcept->up<Proto::Order>{ return MyOrder::ToProto(); }
 	private:
 		α Base()const noexcept->const MyOrder&{ return *this;}
 		ProcTimePoint _lastUpdate;
