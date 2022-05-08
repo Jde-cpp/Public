@@ -53,14 +53,14 @@ namespace Jde::Coroutine
 		using TResult=AwaitResult;
 		struct promise_type
 		{
-			promise_type():_promiseHandle{ NextTaskPromiseHandle() }{ TRACE("({:x})promise_type()", (uint)this); }
+			promise_type():_promiseHandle{ NextTaskPromiseHandle() }{ /*TRACE("({:x})promise_type()", (uint)this);*/ }
 
 			α get_return_object()ι->Task&{ return _pReturnObject ? *_pReturnObject : *(_pReturnObject=mu<Task>()); }
 			suspend_never initial_suspend()ι{ return {}; }
 			suspend_never final_suspend()ι{ return {}; }
 			α return_void()ι{}
 			Φ unhandled_exception()ι->void;
-			α SetUnhandledResume( coroutine_handle<Task::promise_type> h )ι{ _unhandledResume=h; TRACE( "({:x})SetUnhandledResume({:x})", (uint)this, (uint)h.address() ); }
+			α SetUnhandledResume( coroutine_handle<Task::promise_type> h )ι{ _unhandledResume=h; /*TRACE( "({:x})SetUnhandledResume({:x})", (uint)this, (uint)h.address() );*/ }
 		private:
 			up<Task> _pReturnObject;
 			const Handle _promiseHandle;

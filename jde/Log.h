@@ -25,9 +25,9 @@
 namespace Jde::IO{ class IncomingMessage; }
 namespace Jde::Logging
 {
-#ifndef NDEBUG
+//#ifndef NDEBUG
 	Φ BreakLevel()noexcept->ELogLevel;
-#endif
+//#endif
 	namespace Messages{ struct ServerMessage; }
 #pragma region EFields
 	enum class EFields : uint16{ None=0, Timestamp=0x1, MessageId=0x2, Message=0x4, Level=0x8, FileId=0x10, File=0x20, FunctionId=0x40, Function=0x80, LineNumber=0x100, UserId=0x200, User=0x400, ThreadId=0x800, Thread=0x1000, VariableCount=0x2000, SessionId=0x4000 };
@@ -108,7 +108,7 @@ namespace Jde::Logging
 #define BREAK_IF( predicate, severity, message, ...) if( predicate ){ LOGL(severity, message, __VA_ARGS__); break; }
 #define CONTINUE_IF( predicate, message, ...) if( predicate ){ LOG(message __VA_OPT__(,) __VA_ARGS__); continue; }
 #define RETURN_IF( predicate, message, ... ) if( predicate ){ LOG( message __VA_OPT__(,) __VA_ARGS__ ); return; }
-#define TRACE(message,...) Logging::Log( Logging::MessageBase(message, ELogLevel::Trace, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define TRACE(message,...) if( _logLevel.Level==ELogLevel::Trace ) Logging::Log( Logging::MessageBase(message, ELogLevel::Trace, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 
 #define LOGL(severity,message,...) Logging::Log( severity, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOGT(severity,message,...) Logging::Log( severity.Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
@@ -202,8 +202,13 @@ namespace Jde
 	Ξ Logging::Log( const Logging::MessageBase& m )noexcept->void
 	{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
-		if( string{m.File}.ends_with("construct_at.h") )
-			BREAK;
+		//if constexpr( _debug )
+		{
+			if( string{m.File}.ends_with("construct_at.h") )
+				BREAK;
+			if( m.Level>=BreakLevel() )
+				BREAK;
+		}
 		if( LogMemory() )
 			LogMemory( m );
 		if( ServerLevel()<=m.Level )
@@ -227,12 +232,13 @@ namespace Jde
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(std::locale(""), m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 			else
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
-#ifndef NDEBUG
-			if( string{m.File}.ends_with("construct_at.h") )
-				BREAK;
-			if( m.Level>=BreakLevel() )
-				BREAK;
-#endif
+			//if constexpr( _debug )
+			{
+				if( string{m.File}.ends_with("construct_at.h") )
+					BREAK;
+				if( m.Level>=BreakLevel() )
+					BREAK;
+			}
 		}
 		catch( const fmt::format_error& )
 		{

@@ -1,5 +1,7 @@
 ﻿#pragma once
 #include <charconv>
+#include <codecvt>
+#include <boost/algorithm/string/trim.hpp>
 #include <span>
 #include "Exception.h"
 #include "Log.h"
@@ -145,10 +147,9 @@ namespace Jde
 		[[nodiscard]]Ξ StartsWith( sv value, sv starting )ι{ return starting.size() > value.size() ? false : std::equal( starting.begin(), starting.end(), value.begin() ); }
 		[[nodiscard]]Ξ StartsWithInsensitive( sv value, sv starting )ι->bool;
 
-		
-		Φ LTrim_( string& s )->void;
-		Φ RTrim_( string& s )->void;
-		Ξ Trim_( string& s )->void{ LTrim_(s); RTrim_(s); }
+		template<IsString T> α LTrim_( T& s )->void;
+		template<IsString T> α RTrim_( T& s )->void;
+		template<IsString T> α Trim_( T& s )->void{ LTrim_(s); RTrim_(s); }
 		[[nodiscard]] Ξ Trim_( string&& s )->string{ auto y{move(s)}; LTrim_(y); RTrim_(y); return y; }
 
 #define TSV template<class T=sv> [[nodiscard]] α
@@ -165,8 +166,10 @@ namespace Jde
 
 		TSV Trim( X s, X substring )ι->$;
 		TSV Words( X x )ι->vector<X>;
-		Φ StemmedWords( sv x )ι->vector<string>;
-		ⓣ FindPhrase( T x, const std::span<X>& entries, bool stem=false )ι->optional<tuple<uint,uint>>;
+		TSV StemmedWords( X x )ι->vector<$>;
+		struct FindPhraseResult{ uint Start; uint StartNextWord; uint NextEntry{}; };
+		template<IsStringLike T> α FindPhrase( bsv<TT> x, const std::vector<T>& entries, bool stem=false )ι->optional<FindPhraseResult>;
+		//[start,start of next word] of phrase index.  start of next word because of stemming
 		TSV Pascal( X s )ι->$;
 		TSV Camel( X s )ι->$;
 #undef TSV
@@ -276,9 +279,9 @@ namespace Jde
 		{
 			return std::stof( token );
 		}
-		catch(std::invalid_argument e)
+		catch( std::invalid_argument )
 		{
-			TRACE( "Can't convert:  {}.  to float.  {}", token, e.what() );
+			//TRACE( "Can't convert:  {}.  to float.  {}", token, e.what() );
 			return std::nanf("");
 		}
 	}
@@ -289,9 +292,9 @@ namespace Jde
 		{
 			v = std::stod( s );
 		}
-		catch( const std::invalid_argument& e )
+		catch( const std::invalid_argument& )
 		{
-			TRACE( "Can't convert:  {}.  to float.  {}", s, e.what() );
+			//TRACE( "Can't convert:  {}.  to float.  {}", s, e.what() );
 		}
 		return v;
 	}
@@ -310,6 +313,35 @@ namespace Jde
 		}
 		return equal;
 	}
+
+	template<Str::IsString T> α Str::LTrim_( T& s )->void
+	{
+		boost::trim_left( s );
+#ifdef _MSC_VER
+		//auto w = Windows::ToWString( s );
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		auto w = converter.from_bytes( s.data(), s.data()+s.size() );
+		boost::trim_left( w );
+		string conv{ converter.to_bytes(w) };
+		s = bsv<TT>{ conv.data(), conv.size() };
+#else
+		std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> cvt;
+		std::u32string utf32 = cvt.from_bytes( s );
+		::boost::algorithm::trim_left_if(utf32, boost::is_any_of(U"\x2000\x2001\x2002\x2003\x2004\x2005\x2006\x2007\x2009\x200A\x2028\x2029\x202f\x205f\x3000"));
+		s = cvt.to_bytes( utf32 );
+#endif
+	}
+	//https://stackoverflow.com/questions/59589243/utf8-strings-boost-trim
+	template<Str::IsString T> α Str::RTrim_( T& s )->void
+	{
+		boost::trim_right( s );
+		std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> cvt;
+		std::u32string w = cvt.from_bytes( s.data(), s.data()+s.size() );
+		::boost::algorithm::trim_right_if(w, boost::is_any_of(U"\x2000\x2001\x2002\x2003\x2004\x2005\x2006\x2007\x2009\x200A\x2028\x2029\x202f\x205f\x3000"));
+		string conv{ cvt.to_bytes(w) };
+		s = bsv<TT>{ conv.data(), conv.size() };
+	}
+
 
 	template<class TEnum, class TCollection, class TString>
 	α Str::ToEnum( const TCollection& stringValues, TString text )ι->optional<TEnum>
@@ -359,24 +391,23 @@ namespace Jde
 			return ${ v.ends_with('s') || v.ends_with('S') ? v.substr(0,s.size()-1) : v };
 		}
 
-		template<class T=sv> α FindPhraseT( tuple<vector<T>,vector<uint>> x, const std::span<Str::bsv<TT>>& criteria )ι->optional<tuple<uint,uint>>//[start,start of next word] of phrase index.  start of next word because of stemming
+		template<Str::IsStringLike T, Str::IsStringLike TCriteria> α FindPhraseT( tuple<vector<T>,vector<uint>> x, const std::vector<TCriteria>& criteria )ι->optional<Str::FindPhraseResult>
 		{
 			var& words = get<0>(x);
 			if( criteria.empty() || !words.size() )
 				return nullopt;
 
-			//const vector<T> w{ words.begin(), words.end() }; 
-			T firstWord{ criteria.front().data(), criteria.front().size() }; optional<tuple<uint,uint>> y;
+			var& locations = get<1>( x );
+			T firstWord{ criteria.front().data(), criteria.front().size() }; optional<Str::FindPhraseResult> y;
 			for( auto p=words.begin(); (p=std::find(p, words.end(), firstWord))!=words.end(); ++p )
 			{
 				const uint iStartWord{ (uint)std::distance(words.begin(), p) }; uint i = iStartWord;
-				bool equal = words.size()-iStartWord>=criteria.size();
-				for( uint j=1; equal && j<criteria.size(); ++j )
+				bool equal = true;//words.size()-iStartWord>=criteria.size();
+				uint j = 1;
+				for( ; equal && i<words.size()-1 && j<criteria.size(); ++j )
 					equal = words[++i]==T{ criteria[j].data(), criteria[j].size() };
-				var& locations = get<1>( x );
-				var iStart = locations[iStartWord];
-				if( equal && (!y || iStart<get<0>(*y)) )
-					y = make_tuple( iStart, locations[i] );
+				if( var iStart = locations[iStartWord]; equal && (!y || iStart<y->Start || j>y->NextEntry) )
+					y = Str::FindPhraseResult{ iStart, locations[i], j };
 			}
 			return y;
 		}
@@ -384,7 +415,7 @@ namespace Jde
 		template<class T=sv, bool TStem=false> α WordsLocation( Str::bsv<TT> x )ι->tuple<vector<T>,vector<uint>> //[words, endIndex]
 		{
 			tuple<vector<T>,vector<uint>> y;
-			auto isSeparator = []( unsigned char ch )ι->bool{ return ::isspace(ch) || ch=='.' || ch==':' || ch=='(' || ch==')' || ch=='/'; };
+			auto isSeparator = []( unsigned char ch )ι->bool{ return ::isspace(ch) || ch=='.' || ch==';' || ch==':' || ch=='(' || ch==')' || ch=='/'; };
 			for( uint iStart{0}, iEnd; iStart<x.size(); iStart=iEnd )
 			{
 				auto ch=x[iStart];
@@ -409,7 +440,12 @@ namespace Jde
 
 	ⓣ Str::Words( bsv<TT> x )ι->vector<bsv<TT>>{ return get<0>( Internal::WordsLocation<T>(x) ); }
 
-	ⓣ Str::FindPhrase( T x, const std::span<bsv<TT>>& criteria, bool stem )ι->optional<tuple<uint,uint>>
+	ⓣ Str::StemmedWords( bsv<TT> x )ι->vector<$>
+	{
+		return get<0>( Internal::WordsLocation<$,true>(x) );
+	}
+	 
+	template<Str::IsStringLike T> α  Str::FindPhrase( bsv<TT> x, const std::vector<T>& criteria, bool stem )ι->optional<FindPhraseResult>
 	{
 		return stem 
 			? Internal::FindPhraseT<$>( Internal::WordsLocation<$,true>(bsv<TT>{x.data(), x.size()}), criteria )

@@ -4,57 +4,57 @@
 #define var const auto
 namespace Jde::IO
 {
-	template<class Traits=ci_char_traits>
+	template<class T=iv>
 	struct Parser
 	{
-		using bsv = std::basic_string_view<char,Traits>;
-		Parser( bsv text, uint i_=0, uint iLine=1 )ι:Text{text}, i{i_},_line{iLine}{}
-		α Next( char end )ι->bsv;
+		//using bsv = std::basic_string_view<char,Traits>;
+		Parser( T text, uint i_=0, uint iLine=1 )ι:Text{text}, i{i_},_line{iLine}{}
+		α Next( char end )ι->T;
 		α Next( sv x )ι->optional<uint>;
 		α Next( const vector<sv>& phrases )ι->optional<uint>;
-		α NextWords( const vector<bsv>& phrases, bool stem )ι->optional<uint>;
-		β Next()ι->bsv;
-		α Peek()ι->bsv{ return _peekValue.empty() ? _peekValue = Next() : _peekValue; }
+		α NextWords( const vector<T>& phrases, bool stem )ι->optional<uint>;
+		β Next()ι->T;
+		α Peek()ι->T{ return _peekValue.empty() ? _peekValue = Next() : _peekValue; }
 
-		α Index()Ι{ return i;}
+		α Index()Ι{ return i;} α SetIndex( uint i_ )ι->void{i=i_;}
 		α Line()Ι->uint{ return _line;}
 		operator bool()Ι{ return i!=string::npos; }
-		bsv Text;
+		T Text;
 	protected:
 		α ResetPeek()ι->void{ if( _peekValue.size() ){ i = i-_peekValue.size(); _peekValue = {}; } }
 		α LineIncrement( char ch )ι->void{ if( ch=='\n' ) ++_line; }
 
 		uint i;
 		uint _line;
-		bsv _peekValue;
+		T _peekValue;
 	};
 
-	template<class Traits=ci_char_traits>
-	struct TokenParser : Parser<Traits>
+	template<class T=iv>
+	struct TokenParser : Parser<T>
 	{
-		using base=Parser<Traits>;
-		using base::bsv; using base::Text; using base::_peekValue; using base::i; using base::_line;
-		TokenParser( bsv text, TokenParser* p, uint i_=0, uint iLine=1 )ι:base{ text, i_, iLine==1 && p ? p->Line() : iLine }, Tokens{p ? p->Tokens : vector<bsv>{}}{}
-		TokenParser( bsv text, vector<bsv> tokens )ι:base{text}, Tokens{move(tokens)}{}
-		α Next( bool testQuote=true )ι->bsv;
-		α Next( const vector<bsv>& tokens, bool dbg=false )ι->bsv;
-		//α Peek()ι->bsv{ return base::_peekValue.empty() ? base::_peekValue = Next() : base::_peekValue; }
+		using base=Parser<T>;
+		using base::Text; using base::_peekValue; using base::i; using base::_line;
+		TokenParser( T text, TokenParser* p, uint i_=0, uint iLine=1 )ι:base{ text, i_, iLine==1 && p ? p->Line() : iLine }, Tokens{p ? p->Tokens : vector<T>{}}{}
+		TokenParser( T text, vector<T> tokens )ι:base{text}, Tokens{move(tokens)}{}
+		α Next( bool testQuote=true )ι->T;
+		α Next( const vector<T>& tokens, bool dbg=false )ι->T;
+		//α Peek()ι->T{ return base::_peekValue.empty() ? base::_peekValue = Next() : base::_peekValue; }
 		α SetText( string x, uint index, uint line )ι{ _text = mu<string>( move(x) ); base::Text=*_text; base::i=index; base::_line=line; }
-		const vector<bsv> Tokens;
+		const vector<T> Tokens;
 	private:
 		up<string> _text;
 	};
 
 #define $ template<class T> α Parser<T>
-	$::Next()ι->bsv
+	$::Next()ι->T
 	{
 		ResetPeek();
 		var v = Str::NextWordLocation( Text.substr(i) );
 		if( v )
 			i += get<1>( *v );
 		else
-			i = bsv::npos;
-		return v ? get<0>( *v ) : bsv{};
+			i = T::npos;
+		return v ? get<0>( *v ) : T{};
 	}
 
 	$::Next( sv x )ι->optional<uint>
@@ -64,19 +64,24 @@ namespace Jde::IO
 		return subLocation==sv::npos ? nullopt : optional<uint>{ i=subLocation+x.size() };
 	}
 	
-	$::NextWords( const vector<bsv>& phrases, bool stem )ι->optional<uint>
+	$::NextWords( const vector<T>& phrases, bool stem )ι->optional<uint>
 	{
 		ResetPeek();
 		optional<uint> y; //var start = i;
 		for( var& phrase : phrases )
 		{
-			auto words = Str::Words<bsv>( phrase );
-			std::span<bsv> s{ &words.front(), words.size() };
-			if( var pIndexes = Str::FindPhrase<bsv>({Text.data()+i, y.value_or(Text.size())-i}, s, stem); pIndexes )//TODO cache the words FindPhrase parses.
+			auto f = [&]<class T>( const vector<T>& words )
 			{
-				if( var next = i+get<1>( *pIndexes ); !y || next<*y )
-					y = next;
-			}
+				if( var pIndexes = Str::FindPhrase<T>({Text.data()+i, y.value_or(Text.size())-i}, words, stem); pIndexes )//TODO cache the words FindPhrase parses.
+				{
+					if( var next = i+pIndexes->StartNextWord; !y || next<*y )
+						y = next;
+				}
+			};
+			if( stem )
+				f( Str::StemmedWords<T>(phrase) );
+			else
+				f( Str::Words<T>(phrase) );
 		}
 		if( y )
 			i=*y;
@@ -86,7 +91,7 @@ namespace Jde::IO
 	{
 		ResetPeek();
 		optional<uint> y;
-		bsv text{Text};
+		T text{Text};
 		for( var& phrase : phrases )
 		{
 			if( var subLocation = text.find({phrase.data(), phrase.size()}, i); subLocation!=sv::npos )
@@ -98,9 +103,9 @@ namespace Jde::IO
 		return y;
 	}
 
-	$::Next( char end )ι->bsv
+	$::Next( char end )ι->T
 	{
-		bsv result;
+		T result;
 		ResetPeek();
 		for( auto ch = Text[i]; i<Text.size() && ch!=end && isspace(ch); ch = Text[++i] )
 			LineIncrement( ch );
@@ -118,10 +123,10 @@ namespace Jde::IO
 	}
 #undef $ 
 #define $ template<class T> α TokenParser<T>
-	$::Next( bool testQuote )ι->std::basic_string_view<char,T>
+	$::Next( bool testQuote )ι->T
 	{
 		//using base::Text; using base::_peekValue; using base::i; using base::_line;
-		bsv result = base::_peekValue;
+		T result = base::_peekValue;
 		//uint i = base::Text.size();
 		if( result.empty() && i<base::Text.size() )
 		{
@@ -158,9 +163,9 @@ namespace Jde::IO
 			_peekValue = {};
 		return result;
 	}
-	$::Next( const vector<bsv>& tokens, bool dbg )ι->bsv
+	$::Next( const vector<T>& tokens, bool dbg )ι->T
 	{
-		bsv y;
+		T y;
 		if( dbg )
 		{
 			BREAK;

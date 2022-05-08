@@ -910,7 +910,7 @@ struct Γ XMLNode
 	α Find( const std::span<sv>& entries )Ι->const XMLElement*;//[child][grandChild][great-grandChild]
 	template<class T=sv> α FindText( T elementText, sv elementName={} )Ι->const XMLElement*;//<p>value</p>=Find(p, "value"
 
-	α FindOneOf( const std::span<iv>& entries, const XMLNode* pCalledFrom=nullptr, bool searchChildren=true, vector<string> tags={}, bool stem=false )Ι->const XMLNode*;
+   α FindOneOf( const vector<iv>& entries, bool stem=false, const XMLNode* pCalledFrom=nullptr )Ι->const XMLNode*{ optional<Str::FindPhraseResult> el; return FindOneOf( entries, stem, pCalledFrom, true, el, {} ); }
 	α Parent( sv elementName )Ι->const XMLElement*;
    α NextHtmlText( iv prev={} )Ι->const XMLNode*;
 	α Next( bool children=true )Ι->const XMLNode*;
@@ -935,6 +935,8 @@ protected:
 	void*			_userData;
 
 private:
+      α FindOneOf( const vector<iv>& entries, bool stem, const XMLNode* pCalledFrom, bool searchChildren, optional<Str::FindPhraseResult>& entryLocation, vector<string> tags )Ι->const XMLNode*;
+
     MemPool*		_memPool;
     void Unlink( XMLNode* child );
     static void DeleteNode( XMLNode* node );
