@@ -84,7 +84,7 @@ namespace Jde::Markets::MBlockly
 	{
 		typedef Duration base;
 		explicit ProcDuration( Duration x )noexcept:base{x}{}
-		friend ProcDuration operator/( const ProcDuration& a, double b )noexcept(false){ THROW_IF(!llround(b), "divide by zero."); base x = static_cast<const base&>(a)/llround(b); return ProcDuration{x}; }
+		friend ProcDuration operator/( const ProcDuration& a, double b )noexcept(false){ if( !llround(b) ) throw Exception{ SRCE_CUR, ELogLevel::Error, "'{}'divide by zero.", b }; base x = static_cast<const base&>(a)/llround(b); return ProcDuration{x}; }
 	private:
 		//operator Duration()const noexcept{ return *this; }
 		friend ProcTimePoint; friend PositiveDuration; friend Blocks::OptionTest;
@@ -132,7 +132,7 @@ namespace Jde::Markets::MBlockly
 		}
 		TimePoint base;
 		friend Awaitable;
-		friend Jde::Markets::EventManagerTests; friend Blocks::OptionTest; friend OptionTests;
+		friend Jde::Markets::EventManagerTests; friend Blocks::OptionTest; friend OptionTests; friend ProcOrder;
 	};
 
 	struct PositiveDuration final : protected ProcDuration
@@ -166,7 +166,7 @@ namespace Jde::Markets::MBlockly
 		ProcOrder( long orderId )noexcept:MyOrder{::Order{orderId}}{};
 		ProcOrder( const MyOrder& x )noexcept:MyOrder{x}{}
 		//ProcOrder( const ProcOrder& x )noexcept:MyOrder{x}, _lastUpdate{x._lastUpdate}{}
-
+		operator bool()const noexcept{ return MyOrder::action.size(); }
 		α AccountNumber()const noexcept->str{ return MyOrder::account; }
 		α OrderId()const noexcept{ return MyOrder::orderId; }
 		α IsBuy()const noexcept{ return MyOrder::IsBuy(); }
@@ -174,7 +174,7 @@ namespace Jde::Markets::MBlockly
 		α PostToAts(){ return MyOrder::postToAts; }//TODO remove
 		α SetLimit( Price limit )noexcept{ MyOrder::lmtPrice = limit._value; }
 		α Quantity()const noexcept{ return Size{MyOrder::totalQuantity }; }
-		α LastUpdate()const noexcept{ return _lastUpdate; }
+		α LastUpdate()const noexcept{ return ProcTimePoint{MyOrder::LastUpdate}; }
 		ΓBE α SetLastUpdate( ProcTimePoint x )noexcept->void;
 		α Bump( Price price )noexcept{ MyOrder::lmtPrice+=price._value; }
 		α Place( sp<::Contract> p )noexcept(false)->void;
@@ -182,7 +182,6 @@ namespace Jde::Markets::MBlockly
 		α ToProto()const noexcept->up<Proto::Order>{ return MyOrder::ToProto(); }
 	private:
 		α Base()const noexcept->const MyOrder&{ return *this;}
-		ProcTimePoint _lastUpdate;
 		friend Awaitable;
 	};
 /************************************************************

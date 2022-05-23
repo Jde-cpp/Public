@@ -12,8 +12,8 @@ namespace Jde::IO
 		α Next( char end )ι->T;
 		α Next( sv x )ι->optional<uint>;
 		α Next( const vector<sv>& phrases )ι->optional<uint>;
-		α NextWords( const vector<T>& phrases, bool stem )ι->optional<uint>;
-		β Next()ι->T;
+		α NextWords( const vector<T>& phrases, bool stem )ι->optional<Str::FindPhraseResult>;
+		β Next( bool testQuote=true )ι->T;
 		α Peek()ι->T{ return _peekValue.empty() ? _peekValue = Next() : _peekValue; }
 
 		α Index()Ι{ return i;} α SetIndex( uint i_ )ι->void{i=i_;}
@@ -36,8 +36,8 @@ namespace Jde::IO
 		using base::Text; using base::_peekValue; using base::i; using base::_line;
 		TokenParser( T text, TokenParser* p, uint i_=0, uint iLine=1 )ι:base{ text, i_, iLine==1 && p ? p->Line() : iLine }, Tokens{p ? p->Tokens : vector<T>{}}{}
 		TokenParser( T text, vector<T> tokens )ι:base{text}, Tokens{move(tokens)}{}
-		α Next( bool testQuote=true )ι->T;
-		α Next( const vector<T>& tokens, bool dbg=false )ι->T;
+		α Next( bool testQuote=true )ι->T override;
+		α NextToken( const vector<T>& tokens )ι->T;
 		//α Peek()ι->T{ return base::_peekValue.empty() ? base::_peekValue = Next() : base::_peekValue; }
 		α SetText( string x, uint index, uint line )ι{ _text = mu<string>( move(x) ); base::Text=*_text; base::i=index; base::_line=line; }
 		const vector<T> Tokens;
@@ -46,7 +46,7 @@ namespace Jde::IO
 	};
 
 #define $ template<class T> α Parser<T>
-	$::Next()ι->T
+	$::Next( bool /*ignoreQuotes*/ )ι->T
 	{
 		ResetPeek();
 		var v = Str::NextWordLocation( Text.substr(i) );
@@ -63,28 +63,27 @@ namespace Jde::IO
 		var subLocation = Text.find( {x.data(), x.size()}, i );
 		return subLocation==sv::npos ? nullopt : optional<uint>{ i=subLocation+x.size() };
 	}
-	
-	$::NextWords( const vector<T>& phrases, bool stem )ι->optional<uint>
+
+	$::NextWords( const vector<T>& phrases, bool stem )ι->optional<Str::FindPhraseResult>
 	{
 		ResetPeek();
-		optional<uint> y; //var start = i;
+		optional<Str::FindPhraseResult> y; //var start = i;
+		bool complete;
 		for( var& phrase : phrases )
 		{
-			auto f = [&]<class T>( const vector<T>& words )
+			var words = Str::Words<T>( phrase );
+			auto end = [&](){ return (y && complete ? y->Start : Text.size())-i; };
+			if( var pIndexes = Str::FindPhrase<T>({Text.data()+i, end()}, words, stem); pIndexes )//TODO cache the words FindPhrase parses.
 			{
-				if( var pIndexes = Str::FindPhrase<T>({Text.data()+i, y.value_or(Text.size())-i}, words, stem); pIndexes )//TODO cache the words FindPhrase parses.
+				if( var next = i+pIndexes->StartNextWord; !y || (next<y->StartNextWord && (!complete || pIndexes->NextEntry==words.size())) )
 				{
-					if( var next = i+pIndexes->StartNextWord; !y || next<*y )
-						y = next;
+					y = *pIndexes+i;
+					complete = pIndexes->NextEntry==words.size();
 				}
-			};
-			if( stem )
-				f( Str::StemmedWords<T>(phrase) );
-			else
-				f( Str::Words<T>(phrase) );
+			}
 		}
 		if( y )
-			i=*y;
+			i=y->StartNextWord;
 		return y;
 	}
 	$::Next( const vector<sv>& phrases )ι->optional<uint>
@@ -121,7 +120,7 @@ namespace Jde::IO
 		}
 		return result;
 	}
-#undef $ 
+#undef $
 #define $ template<class T> α TokenParser<T>
 	$::Next( bool testQuote )ι->T
 	{
@@ -163,22 +162,11 @@ namespace Jde::IO
 			_peekValue = {};
 		return result;
 	}
-	$::Next( const vector<T>& tokens, bool dbg )ι->T
+	$::NextToken( const vector<T>& tokens )ι->T
 	{
 		T y;
-		if( dbg )
-		{
-			BREAK;
-			y = base::Peek();
-		}
-
 		while( (y = Next()).size() )
 		{
-			if( dbg )
-			{
-				DBG( "{}", y );
-				BREAK;
-			}
 			if( std::find_if(tokens.begin(), tokens.end(), [&y](var& t){return y.ends_with(t);})!=tokens.end() )
 				break;
 		}

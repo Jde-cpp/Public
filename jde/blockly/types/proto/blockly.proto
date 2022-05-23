@@ -1,6 +1,7 @@
 ﻿//cd $JDE_DIR/Public/jde/blockly/types/proto/
+//source $JDE_BASH/Framework/common.sh
 //mklink ib.proto $JDE_DIR/Public/jde/markets/types/proto
-//protoc -IPATH=$JDE_DIR/Public/jde/markets/types/proto --cpp_out dllexport_decl=JDE_BLOCKLY:. blockly.proto
+//protoc -I=. --cpp_out dllexport_decl=JDE_BLOCKLY:. blockly.proto
 //cd $JDE_DIR/Blockly/source/types/proto;mv $JDE_DIR/Public/jde/markets/types/proto/blockly.pb.cc .;mklink blockly.pb.h $JDE_DIR/Public/jde/markets/types/proto; mklink ib.pb.h $JDE_DIR/Public/jde/markets/types/proto
 
 

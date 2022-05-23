@@ -88,7 +88,7 @@ namespace Jde
 		ω Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->flat_set<string>;
 
 		Ω CompanyName()noexcept->str;
-		Ω ProductName()ι->string;
+		Ω ProductName()ι->sv;
 		Ω CompanyRootDir()noexcept->fs::path;
 		ω FreeLibrary( void* p )noexcept->void;
 		ω LoadLibrary( path path )noexcept(false)->void*;
@@ -97,7 +97,7 @@ namespace Jde
 		α Uninstall()noexcept(false)->void override;
 		ω ProcessId()noexcept->uint;
 		Ω Executable()noexcept->fs::path;
-		Ω Args()noexcept->flat_multimap<string,string>;
+		Ω Args()noexcept->const flat_multimap<string,string>&;
 		Ω Pause()noexcept->void;
 		Ω UnPause()noexcept->void;
 		Φ GetThreadId()noexcept->uint;

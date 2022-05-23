@@ -136,7 +136,7 @@ namespace Jde::Blockly
 		virtual TRIGGER_VARS=0;
 		static sp<const IValue> Factory( const Xml::XMLElement& e, const File& file )noexcept(false);
 	};
-	
+
 	struct IValueField : IValue, FieldBlock
 	{
 		IValueField( const Xml::XMLElement& e )noexcept(false):IBlock{ e }, IValue{ e }, FieldBlock{ e }{}
@@ -144,7 +144,6 @@ namespace Jde::Blockly
 		TICK_TRIGGER_NAMES override{}
 		EValueType ValueType()const noexcept(false) override { return Field.ValueType(); }
 	};
-	
 
 	struct Predicate : virtual IValue//returns a boolean
 	{
@@ -232,7 +231,7 @@ namespace Jde::Blockly
 		bool IsTickTrigger()const noexcept(false) override{ TickBits tickFields; TickFields( tickFields, true ); return tickFields.any(); }
 		EValueType ValueType()Ε{ return Value.ValueType(); }
 		string Implementation( str className, ImplArgs args={}, str returnString={} )Ε override;
-		
+
 		static constexpr sv TypeId = "procedures_defreturn"sv;
 	};
 
@@ -305,7 +304,7 @@ namespace Jde::Blockly
 		AccountMember( const Xml::XMLElement& e )noexcept: IBlock{ e }, GetMember{ e }{};
 		TICKS override{}
 		ALARMS override{}
-		
+
 		IMPL override;
 		static constexpr sv Prefix = "variables_account_"sv;
 	};
@@ -399,7 +398,7 @@ namespace Jde::Blockly
 		IMPL override;
 		ALARMS override;
 		TICKS override;
-		TICK_TRIGGER_NAMES{ If.TickTriggerNames( names ); }
+		TICK_TRIGGER_NAMES override{ If.TickTriggerNames( names ); }
 		const Predicate& If;
 		static constexpr sv TypeId = "variables_events_when";
 	};
@@ -411,10 +410,10 @@ namespace Jde::Blockly
 		BinaryOperation( const Xml::XMLElement& e, const File& file )noexcept(false);
 		IMPL override{ return format("({} {} {})", A.Implementation( impl ), TImplStrings[(uint)Operation], B.Implementation( impl )); }
 		TICKS override
-		{ 
-			A.Type().TickFields( tickFields, includeFunctions ); 
+		{
+			A.Type().TickFields( tickFields, includeFunctions );
 			var& t = B.Type();
-			t.TickFields( tickFields, includeFunctions ); 
+			t.TickFields( tickFields, includeFunctions );
 		}
 		TRIGGER_VARS override{ A.Type().TriggerVariables( x ); B.Type().TriggerVariables( x ); }
 

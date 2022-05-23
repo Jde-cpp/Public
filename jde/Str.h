@@ -53,17 +53,17 @@ namespace Jde
 	template<class Y=sv, class X> α ToView( const X& x )ι->Y{ return Y{x.data(),x.size()}; }
 	Ξ ToSV( iv x )ι->sv{ return ToView<sv,iv>( x ); }
 	Ξ ToIV( sv x )ι->iv{ return ToView<iv,sv>( x ); }
-	
+
 	template<Str::IsInsensitive T> α ToStr( const T& x )ι->string{ return string{ x.data(), x.size() }; }
 	template<Str::IsSensitive T> α ToIStr( const T& x )ι->String{ return String{ x.data(), x.size() }; }
-	
+
 	Ξ operator<<( std::ostream& os, iv s )ι->std::ostream&{ os << ToSV(s); return os; }
 	template<class Y, class X=sv>
 	α Toε( const X& x, ELogLevel l=ELogLevel::Debug, SRCE )ε->Y
 	{
 		Y y;
 		var e=std::from_chars( x.data(), x.data()+x.size(), y );
-		if( e.ec!=std::errc{} ) 
+		if( e.ec!=std::errc{} )
 			throw Jde::Exception{ sl, l, "Can't convert:  '{}'.  to '{}'.  ec='{}'"sv, x, "Jde::GetTypeName<T>()", (uint)e.ec };
 		return y;
 	}
@@ -80,11 +80,17 @@ namespace Jde
 		return stod( string{x} );
 	}
 
-	Ξ ToString( double x, uint8 precision )->string
+	Ξ ToString( double x, uint8 precision )ι->string
 	{
+#ifdef _MSC_VER
 		std::array<char, 128> b;
-		auto [end, ec] = std::to_chars( b.data(), b.data() + b.size(), x, std::chars_format::fixed, precision );
+		auto [end, ec] = std::to_chars( b.data(), b.data() + b.size(), x, std::chars_format::fixed, (int)precision );
 		return ec == std::errc{} ? string{} : std::string{ b.data(), end };
+#else
+		ostringstream os; os.precision( precision );
+		os << x;
+		return os.str();
+#endif
 	}
 
 	constexpr iv operator "" _iv( const char* x, uint len )noexcept{ return iv(x, len); }
@@ -157,7 +163,7 @@ namespace Jde
 		TSV LTrim( X s )->X;
 		TSV RTrim( X s )->X;
 		TSV Trim( X s )->X{ return RTrim<T>( LTrim<T>(s) ); }
-		
+
 		TSV LTrim( X s, function<bool(char)> f )->X;
 		TSV LTrim( X s, const vector<char>& tokens )->X;
 		TSV RTrim( X s, function<bool(char)> f )->X;
@@ -167,7 +173,7 @@ namespace Jde
 		TSV Trim( X s, X substring )ι->$;
 		TSV Words( X x )ι->vector<X>;
 		TSV StemmedWords( X x )ι->vector<$>;
-		struct FindPhraseResult{ uint Start; uint StartNextWord; uint NextEntry{}; };
+		struct FindPhraseResult{ uint Start; uint StartNextWord; uint NextEntry{}; FindPhraseResult operator+(uint i)Ι{ return {Start+i, StartNextWord+i, NextEntry}; } };
 		template<IsStringLike T> α FindPhrase( bsv<TT> x, const std::vector<T>& entries, bool stem=false )ι->optional<FindPhraseResult>;
 		//[start,start of next word] of phrase index.  start of next word because of stemming
 		TSV Pascal( X s )ι->$;
@@ -217,10 +223,10 @@ namespace Jde
 	ⓣ Str::LTrim( bsv<TT> s, function<bool(char)> f )->bsv<TT>
 	{
 		auto p = std::find_if( s.begin(), s.end(), f );
-		return p==s.end() ? bsv<TT>{} : p==s.begin() ? s : bsv<TT>{ s.data()+std::distance(s.begin(),p), s.size()-std::distance(s.begin(),p) }; 
+		return p==s.end() ? bsv<TT>{} : p==s.begin() ? s : bsv<TT>{ s.data()+std::distance(s.begin(),p), s.size()-std::distance(s.begin(),p) };
 	}
 	ⓣ Str::LTrim( bsv<TT> s )->bsv<TT>
-	{ 
+	{
 		auto f = [](int ch){ return !std::isspace(ch); };
 		return LTrim<T>( s, f );
 	}
@@ -230,7 +236,7 @@ namespace Jde
 		auto f = [&tokens](int ch){ return !std::isspace(ch) && std::find(tokens.begin(), tokens.end(), ch)==tokens.end(); };
 		return LTrim<T>( s, f );
 	}
-	
+
 	ⓣ Str::RTrim( bsv<TT> s, function<bool(char)> f )->bsv<TT>
 	{
 		bsv<TT> y;
@@ -326,9 +332,10 @@ namespace Jde
 		s = bsv<TT>{ conv.data(), conv.size() };
 #else
 		std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> cvt;
-		std::u32string utf32 = cvt.from_bytes( s );
+		std::u32string utf32 = cvt.from_bytes( s.data(), s.data()+s.size() );
 		::boost::algorithm::trim_left_if(utf32, boost::is_any_of(U"\x2000\x2001\x2002\x2003\x2004\x2005\x2006\x2007\x2009\x200A\x2028\x2029\x202f\x205f\x3000"));
-		s = cvt.to_bytes( utf32 );
+		auto result = cvt.to_bytes( utf32 );
+		s = T{ result.data(), result.size() };
 #endif
 	}
 	//https://stackoverflow.com/questions/59589243/utf8-strings-boost-trim
@@ -382,13 +389,12 @@ namespace Jde
 		for( ;e<x.size() && (x[e]<0 || !::isspace(x[e])); ++e );
 		return e==i ? nullopt : optional<tuple<T,uint>>{ make_tuple(x.substr(i, e-i), e) };
 	}
-	
+
 	namespace Internal
 	{
 		ⓣ PorterStemmer( T s )->$//TODO get library or old code.
 		{
-			auto v = Str::TrimPunct<T>( s );
-			return ${ v.ends_with('s') || v.ends_with('S') ? v.substr(0,s.size()-1) : v };
+			return ${ s.ends_with('s') || s.ends_with('S') ? s.substr(0,s.size()-1) : s };
 		}
 
 		template<Str::IsStringLike T, Str::IsStringLike TCriteria> α FindPhraseT( tuple<vector<T>,vector<uint>> x, const std::vector<TCriteria>& criteria )ι->optional<Str::FindPhraseResult>
@@ -401,13 +407,17 @@ namespace Jde
 			T firstWord{ criteria.front().data(), criteria.front().size() }; optional<Str::FindPhraseResult> y;
 			for( auto p=words.begin(); (p=std::find(p, words.end(), firstWord))!=words.end(); ++p )
 			{
-				const uint iStartWord{ (uint)std::distance(words.begin(), p) }; uint i = iStartWord;
+				var iStartWord{ (uint)std::distance(words.begin(), p) }; uint i = iStartWord;
 				bool equal = true;//words.size()-iStartWord>=criteria.size();
 				uint j = 1;
 				for( ; equal && i<words.size()-1 && j<criteria.size(); ++j )
 					equal = words[++i]==T{ criteria[j].data(), criteria[j].size() };
-				if( var iStart = locations[iStartWord]; equal && (!y || iStart<y->Start || j>y->NextEntry) )
-					y = Str::FindPhraseResult{ iStart, locations[i], j };
+				if( var iStart = locations[iStartWord]; /*equal && (*/!y || iStart<y->Start || j>y->NextEntry/*)*/ )
+				{
+					y = Str::FindPhraseResult{ iStart, locations[std::min(equal ? i : i-1, locations.size()-1)], equal ? j : j-1 };
+					if( y->NextEntry==criteria.size() )
+						break;
+				}
 			}
 			return y;
 		}
@@ -427,12 +437,14 @@ namespace Jde
 				{
 					T v{ x.substr(iStart, length) };
 					if constexpr( TStem )
-						get<0>( y ).push_back( PorterStemmer(v) );
+						get<0>( y ).push_back( PorterStemmer(Str::TrimPunct<T>(v)) );
 					else
 						get<0>( y ).push_back( v );
 
 					get<1>( y ).push_back( iStart+v.size() );
 				}
+				else if( iStart!=x.size() )
+					++iEnd;
 			}
 			return y;
 		}
@@ -444,10 +456,10 @@ namespace Jde
 	{
 		return get<0>( Internal::WordsLocation<$,true>(x) );
 	}
-	 
-	template<Str::IsStringLike T> α  Str::FindPhrase( bsv<TT> x, const std::vector<T>& criteria, bool stem )ι->optional<FindPhraseResult>
+
+	template<Str::IsStringLike T> α Str::FindPhrase( bsv<TT> x, const std::vector<T>& criteria, bool stem )ι->optional<FindPhraseResult>
 	{
-		return stem 
+		return stem
 			? Internal::FindPhraseT<$>( Internal::WordsLocation<$,true>(bsv<TT>{x.data(), x.size()}), criteria )
 			: Internal::FindPhraseT( Internal::WordsLocation<$>( bsv<TT>{x.data(), x.size()} ), criteria );
 	}
@@ -468,13 +480,13 @@ namespace Jde
 	}
 }
 
-template<> struct fmt::formatter<Jde::iv> 
+template<> struct fmt::formatter<Jde::iv>
 {
 	constexpr α parse( fmt::format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
 	ⓣ format( Jde::iv x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{}", Jde::ToSV(x) ); }
 };
 
-template<> struct fmt::formatter<Jde::String> 
+template<> struct fmt::formatter<Jde::String>
 {
 	constexpr α parse( fmt::format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
 	ⓣ format( Jde::iv x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{}", Jde::ToStr(x) ); }

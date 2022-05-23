@@ -32,7 +32,6 @@
 	#include <boost/assert/source_location.hpp>
 	using std::experimental::coroutine_handle;
 	using std::experimental::suspend_never;
-	//using Jde::stop_token;
 #endif
 
 #define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )") _Pragma("warning( disable: 4701 )")
@@ -88,9 +87,6 @@ namespace Jde
 	using Duration=Clock::duration;
 	using TimePoint=Clock::time_point;
 	using TP=Clock::time_point;
-	/*
-	using SDuration=SClock::duration;
-	using STimePoint=SClock::time_point;*/
 
 	using std::array;
 	using std::atomic;
@@ -144,6 +140,7 @@ namespace Jde
 	template<class T> using vec = const vector<T>&;
 
 #ifdef _MSC_VER
+	constexpr bool _msvc{ true };
 	#ifndef WIN32_LEAN_AND_MEAN
 		#error WIN32_LEAN_AND_MEAN not defined
 	#endif
@@ -153,6 +150,7 @@ namespace Jde
 	using std::source_location;
 	#define SRCE_CUR std::source_location::current()
 #else
+	constexpr bool _msvc{ false };
 	using std::experimental::coroutine_handle;
 	using std::experimental::suspend_never;
 	using boost::source_location;

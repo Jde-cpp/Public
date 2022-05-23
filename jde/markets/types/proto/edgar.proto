@@ -42,7 +42,7 @@ message Form13F
 message Form13GItem
 {
 	string name=1;
-	int32 shares=2;
+	int64 shares=2;
 }
 
 message Form13G

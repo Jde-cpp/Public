@@ -43,7 +43,7 @@ namespace Jde::Markets::Edgar
 	{
 		Form13G( Proto::Form13G f, Period periodEnd )noexcept:_periodEnd{periodEnd},_proto{move(f)}{}
 		α Lines()Ι->const google::protobuf::RepeatedPtrField<Proto::IndexLine>& override{ return _proto.lines(); }
-		α Type()Ι->EForm{ return EForm::_13G; }
+		α Type()Ι->EForm override{ return EForm::_13G; }
 		α Cik()Ι->Markets::Cik override{ return _proto.cik(); }
 		β PeriodEnd()Ι->Period override{ return _periodEnd; };
 		α Items()Ι->const google::protobuf::RepeatedPtrField<Proto::Form13GItem>&{ return _proto.items(); }

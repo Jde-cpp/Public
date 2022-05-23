@@ -16,7 +16,7 @@ namespace Jde::Markets::Edgar
 		α Lines()Ι->const google::protobuf::RepeatedPtrField<Proto::IndexLine>&  override{ return _proto.lines(); }
 		α Cik()Ι->Markets::Cik override{ return _proto.cik(); }
 		α PeriodEnd()Ι->Period override{ return _periodEnd; };
-		α Type()Ι->EForm{ return EForm::_13F; }
+		α Type()Ι->EForm override{ return EForm::_13F; }
 		α Proto()Ι->const Proto::Form13F&{ return _proto; }
 		α LatestLine()Ι->const Proto::IndexLine*;
 		α Holdings()Ι->const google::protobuf::RepeatedPtrField<Proto::InfoTable>&{ return _proto.holdings(); }

@@ -7,7 +7,7 @@
 namespace boost::system{ class error_code; }
 
 #define THROW(x, ...) throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Debug, x __VA_OPT__(,) __VA_ARGS__ }
-#define IO_EX( p, v, ... ) IOException( SRCE_CUR, p, v __VA_OPT__(,) __VA_ARGS__ )
+#define IO_EX( path, level, msg, ... ) IOException( SRCE_CUR, path, level, msg __VA_OPT__(,) __VA_ARGS__ )
 #define THROW_IF(condition, x, ...) if( condition ) THROW( x __VA_OPT__(,) __VA_ARGS__  )
 #define THROW_IFSL(condition, x, ...) if( condition ) throw Jde::Exception{ sl, _logLevel.Level, x __VA_OPT__(,) __VA_ARGS__ }
 #define THROW_IFX(condition, x) if( condition ) throw x
@@ -23,16 +23,16 @@ namespace boost::system{ class error_code; }
 namespace Jde
 {
 	Ξ make_exception_ptr( std::exception&& e )noexcept->std::exception_ptr
-	{ 
+	{
 		try
-		{ 
-			throw move(e); 
-		} 
+		{
+			throw move(e);
+		}
 		catch (...)
 		{
 			auto p = std::current_exception();
 			return p;
-		} 
+		}
 	}
 	struct StackTrace
 	{
@@ -57,16 +57,14 @@ namespace Jde
 		α what()const noexcept->const char* override;
 		α What()noexcept->string&&{ return move(_what); }
 		α What()const noexcept->const string&{ return _what; }
-		α Level()const noexcept->ELogLevel{return _level;}
+		α Level()const noexcept->ELogLevel{return _level;} α SetLevel( ELogLevel level )const noexcept{ _level=level;}
 		β Clone()noexcept->sp<IException> =0;
 		β Move()noexcept->up<IException> =0;
 		α Push( SL sl )noexcept{ _stack.stack.push_back(sl); }
-		//β Id()const noexcept->uint32{ return _messageId; }
 		β Ptr()->std::exception_ptr =0;
 		[[noreturn]] β Throw()->void=0;
 	protected:
 		IException( SRCE )noexcept:IException{ {}, ELogLevel::Debug, 0, sl }{}
-		α SetLevel( ELogLevel level )const noexcept{ _level=level;}
 		α BreakLog()const noexcept->void;
 		StackTrace _stack;
 
@@ -139,9 +137,8 @@ namespace Jde
 		IOException( fs::path path, uint code, string value, SRCE ):IException{ move(value), ELogLevel::Debug, code, sl }, _path{ move(path) }{ SetWhat(); }
 		IOException( fs::path path, string value, SRCE ): IOException{ move(path), 0, move(value), sl }{}
 		IOException( fs::filesystem_error&& e, SRCE ):IException{sl}, _pUnderLying( make_unique<fs::filesystem_error>(move(e)) ){ SetWhat(); }
-		$ IOException( SL sl, path path, sv value, Args&&... args ):IException( sl, ELogLevel::Debug, value, args... ),_path{ path }{ SetWhat(); }
+		$ IOException( SL sl, path path, ELogLevel level, sv value, Args&&... args ):IException( sl, level, value, args... ),_path{ path }{ SetWhat(); }
 
-		//α Log()const noexcept->void override;
 		α Path()const noexcept->path; α SetPath( path x )noexcept{ _path=x; }
 		α what()const noexcept->const char* override;
 		using T=IOException;

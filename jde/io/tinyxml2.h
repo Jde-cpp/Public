@@ -139,7 +139,7 @@ struct Γ StrPair
    template<Str::IsView T=sv> α View()ι->T;
    bool Empty() const{ return _start == _end; }
 
-    void SetInternedStr( char* psz ) 
+    void SetInternedStr( char* psz )
     {
         Reset();
         _start = psz;
@@ -587,35 +587,35 @@ namespace XMLUtil
         return insensitive ? Jde::Str::ToUpper( string{p} )==Jde::Str::ToUpper( string{q} ) : strcmp( p, q )==0;
     }*/
 
-    static const char* ReadBOM( const char* p, bool* hasBOM );
+    const char* ReadBOM( const char* p, bool* hasBOM );
     // p is the starting location,
     // the UTF-8 value of the entity will be placed in value, and length filled in.
-    static const char* GetCharacterRef( const char* p, char* value, int* length );
-    static void ConvertUTF32ToUTF8( unsigned long input, char* output, int* length );
+    const char* GetCharacterRef( const char* p, char* value, int* length );
+    void ConvertUTF32ToUTF8( unsigned long input, char* output, int* length );
 
     // converts primitive types to strings
-    static void ToStr( int v, char* buffer, int bufferSize );
-    static void ToStr( unsigned v, char* buffer, int bufferSize );
-    static void ToStr( bool v, char* buffer, int bufferSize );
-    static void ToStr( float v, char* buffer, int bufferSize );
-    static void ToStr( double v, char* buffer, int bufferSize );
-	static void ToStr(int64_t v, char* buffer, int bufferSize);
-    static void ToStr(uint64_t v, char* buffer, int bufferSize);
+    void ToStr( int v, char* buffer, int bufferSize );
+    //static void ToStr( unsigned v, char* buffer, int bufferSize );
+    //static void ToStr( bool v, char* buffer, int bufferSize );
+    //static void ToStr( float v, char* buffer, int bufferSize );
+    //static void ToStr( double v, char* buffer, int bufferSize );
+	//static void ToStr(int64_t v, char* buffer, int bufferSize);
+    //static void ToStr(uint64_t v, char* buffer, int bufferSize);
 
     // converts strings to primitive types
-    static bool	ToInt( const char* str, int* value );
-    static bool ToUnsigned( const char* str, unsigned* value );
-    static bool	ToBool( const char* str, bool* value );
-    static bool	ToFloat( const char* str, float* value );
-    static bool ToDouble( const char* str, double* value );
-	static bool ToInt64(const char* str, int64_t* value);
-    static bool ToUnsigned64(const char* str, uint64_t* value);
+    //static bool	ToInt( const char* str, int* value );
+    //static bool ToUnsigned( const char* str, unsigned* value );
+    //static bool	ToBool( const char* str, bool* value );
+    //static bool	ToFloat( const char* str, float* value );
+    //static bool ToDouble( const char* str, double* value );
+	//static bool ToInt64(const char* str, int64_t* value);
+    //static bool ToUnsigned64(const char* str, uint64_t* value);
 	// Changes what is serialized for a boolean value.
 	// Default to "true" and "false". Shouldn't be changed
 	// unless you have a special testing or compatibility need.
 	// Be careful: static, global, & not thread safe.
 	// Be sure to set static const memory as parameters.
-	static void SetBoolSerialization(const char* writeTrue, const char* writeFalse);
+	//static void SetBoolSerialization(const char* writeTrue, const char* writeFalse);
 }
 
 
@@ -1440,7 +1440,7 @@ struct Γ XMLElement : public XMLNode
 	XMLError QueryAttribute( const char* name, float* value ) const {
 		return QueryFloatAttribute( name, value );
 	}
-   /*
+
 	XMLError QueryAttribute(const char* name, const char** value) const {
 		return QueryStringAttribute(name, value);
 	}*/
@@ -2347,7 +2347,7 @@ private:
 */
 
 	template<> Ξ XMLElement::Attr<sv>( sv n )Ι->sv
-   { 
+   {
       auto pAttribute = (*this)[n];
       return pAttribute ? pAttribute->Value() : sv{};
    }
@@ -2363,10 +2363,10 @@ private:
 	   const XMLElement* y = nullptr;
 	   for( const XMLNode* n=FirstChild(); !y && n; n=n->NextSibling() )
 	   {
-         sv foo = Str::Replace(n->ToElement()->Text(),'\n', ' ');
-         T foo2 = ToView<T,sv>( foo );
-         bool v = foo2==elementText;
-         
+         //sv foo = Str::Replace(n->ToElement()->Text(),'\n', ' ');
+         //T foo2 = ToView<T,sv>( foo );
+         //bool v = foo2==elementText;
+
 		   if( const XMLElement* p=n->ToElement(); p && (elementName.empty() || p->Name()==elementName) && ToView<T,sv>(Str::Replace(p->Text(),'\n', ' '))==elementText )
 			   y = p;
 		   else
@@ -2375,7 +2375,7 @@ private:
 	   return y;
    }
 
-   template<Str::IsString T> α Xml::UnEscape( Str::bsv<typename T::traits_type> xml )ι->T
+   template<Str::IsString T> α UnEscape( Str::bsv<typename T::traits_type> xml )ι->T
 	{
 		T y; //static_assert( std::is_same<T, string>::value || std::is_same<T, String>::value, "can't be sv" );
 		if( xml.size() )
@@ -2392,7 +2392,7 @@ private:
 
    template<Str::IsString T> α XMLNode::HtmlText( bool trim, bool unescape )Ι->T
    {
-      using view=Str::bsv<T::traits_type>;
+      using view=Str::bsv<typename T::traits_type>;
       T y;
 	   if( var* p = ToText(); p )
 		   y = p->Text<view>();
@@ -2437,8 +2437,7 @@ private:
 		   GetStr();
 	   return _start ? T{ _start, std::min(strlen(_start), (Jde::uint)(_end-_start)) } : T{};
    }
-}	
-
+}
 #if defined(_MSC_VER)
 #   pragma warning(pop)
 #endif
