@@ -6,7 +6,7 @@
 
 namespace boost::system{ class error_code; }
 
-#define THROW(x, ...) throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Debug, x __VA_OPT__(,) __VA_ARGS__ }
+#define THROW(x, ...) throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Error, x __VA_OPT__(,) __VA_ARGS__ }
 #define IO_EX( path, level, msg, ... ) IOException( SRCE_CUR, path, level, msg __VA_OPT__(,) __VA_ARGS__ )
 #define THROW_IF(condition, x, ...) if( condition ) THROW( x __VA_OPT__(,) __VA_ARGS__  )
 #define THROW_IFSL(condition, x, ...) if( condition ) throw Jde::Exception{ sl, _logLevel.Level, x __VA_OPT__(,) __VA_ARGS__ }
@@ -242,6 +242,9 @@ namespace Jde
 		{}
 		return result;
 	}
+	
+	template <class Y, class X> α cast( sp<X> x, sv error, SRCE )ε->sp<Y>{ sp<Y> y = std::dynamic_pointer_cast<X,Y>(x); if( !y ) throw Jde::Exception{sl, ELogLevel::Error, error}; return y; }
+
 #undef $
 #undef COMMON
 #undef var

@@ -57,6 +57,21 @@ namespace Jde
 	template<Str::IsInsensitive T> α ToStr( const T& x )ι->string{ return string{ x.data(), x.size() }; }
 	template<Str::IsSensitive T> α ToIStr( const T& x )ι->String{ return String{ x.data(), x.size() }; }
 
+	template<Str::IsView T=sv> α ToWString( T x )ι->std::wstring
+	{
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		return converter.from_bytes( x.data(), x.data()+x.size() );
+	}
+#define TT typename T::traits_type
+#define $ std::basic_string<char, TT>
+	template<Str::IsView T=sv> α ToString( const std::wstring& value )ι->$
+	{
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		auto s = converter.to_bytes( value );
+		return ${ s.data(), s.size() };
+	}
+
+
 	Ξ operator<<( std::ostream& os, iv s )ι->std::ostream&{ os << ToSV(s); return os; }
 	template<class Y, class X=sv>
 	α Toε( const X& x, ELogLevel l=ELogLevel::Debug, SRCE )ε->Y
@@ -122,11 +137,10 @@ namespace Jde
 		operator iv()Ι{ return {data(), size()}; }
 		explicit operator sv()Ι{ return {data(), size()}; }
 	};
-#define TT typename T::traits_type
-#define $ std::basic_string<char, TT>
 	namespace Str
 	{
 		using std::basic_string;
+		template<class T=sv, class D=sv> α Split( bsv<TT> s, bsv<typename D::traits_type> delim, uint count, sv error, SRCE )ε->vector<bsv<TT>>;
 		template<class T=sv, class D=sv> α Split( bsv<TT> s, bsv<typename D::traits_type> delim )ι->vector<bsv<TT>>;
 		template<class X=sv, class Y=sv> α Split( bsv<typename X::traits_type> x, char delim=',', bool removeEmpty=false )ι->vector<bsv<typename Y::traits_type>>;
 
@@ -180,6 +194,13 @@ namespace Jde
 		TSV Camel( X s )ι->$;
 #undef TSV
 #undef X
+	}
+	template<class T, class D> α Str::Split( bsv<TT> s, bsv<typename D::traits_type> delim, uint count, sv errorId, SL sl )ε->vector<bsv<TT>>
+	{
+		var y = Split( s, delim );
+		if( y.size()!=count ) 
+			throw Jde::Exception{ sl, ELogLevel::Error, "({})'{}' expected '{}' tokens vs parsed='{}'", errorId, s, count, y.size() };
+		return y;
 	}
 	template<class T, class D> α Str::Split( bsv<TT> s_, bsv<typename D::traits_type> delim )ι->vector<bsv<TT>>
 	{

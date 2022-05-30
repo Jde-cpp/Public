@@ -16,9 +16,31 @@
 struct Contract;
 namespace Jde::Markets{ struct Contract; struct TwsClient; class EventManagerTests; class OptionTests; }
 namespace Jde::Markets::Proto::Results{ class ContractHours;}
+namespace Jde
+{
+	struct Decimal2
+	{
+		Decimal2( ::Decimal x ):_value{x}{}
+		Decimal2( double x ):_value{ Markets::ToDecimal(x) }{}
+		α ToDouble()Ι->double{ return Markets::ToDouble(_value); }
+		friend auto operator<=>( const Decimal2&, const Decimal2& )ι = default;
+		friend α operator-( Decimal2 a, Decimal2 b )ι->Decimal2{ return Markets::Subtract( a._value,b._value ); }
+		friend α operator+( Decimal2 a, Decimal2 b )ι->Decimal2{ return Markets::Add( a._value,b._value ); }
+		friend α operator/( Decimal2 a, Decimal2 b )ε->Decimal2{ CHECK(b._value!=Markets::ToDecimal(0)); return Markets::Divide( a._value,b._value ); }
+		friend α operator*( Decimal2 a, Decimal2 b )ι->Decimal2{ return Markets::Multiply( a._value,b._value ); }
+	private:
+		::Decimal _value;
+	};
+}
+
+template<> struct fmt::formatter<Jde::Decimal2>
+{
+	constexpr α parse( fmt::format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
+	ⓣ format( Jde::Decimal2 x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{:.2f}", x.ToDouble() ); }
+};
+
 namespace Jde::Markets::MBlockly
 {
-	using std::string;
 	namespace Blocks{ struct OptionTest; }
 	struct Blockly;
 	typedef std::chrono::system_clock::time_point TimePoint;
@@ -27,55 +49,59 @@ namespace Jde::Markets::MBlockly
 	typedef std::shared_ptr<std::vector<Proto::Results::ContractHours>> ContractHoursPtr;
 	struct ΓBE Price /*notfinal*/
 	{
-		constexpr static double Unitialized = NAN;
-		constexpr Price()noexcept=default;
-		explicit Price( double v )noexcept(false);//TODO move protected
+		constexpr Price()ι=default;
+		explicit Price( Decimal2 v )ι;//TODO move protected
 
-		bool empty()const noexcept{ return _value==Unitialized; }
-		friend auto operator<=>( const Price&, const Price& )noexcept = default;
-		friend Price operator-( const Price& me, const Price& other )noexcept{ return Price( me._value-other._value ); }
-		friend Price operator+( const Price& me, const Price& other )noexcept{ return Price( me._value+other._value ); }
-		friend double operator/( const Price& me, const Price& other )noexcept{ return me._value/other._value; }
-		std::string ToString()const noexcept{ return empty() ? "nan" : _value==std::numeric_limits<double>::max() ? "null" : fmt::format( "{:.2f}", _value ); }
+		operator bool()Ι{ return _value.has_value(); }
+		//friend auto operator<=>( const Price&, const Price& )ι = default;
+		friend auto operator<( const Price& a, const Price& b)ι->bool{ return a && b && *a._value<*b._value; }
+#define check CHECK( a ); CHECK( b );
+		friend α operator-( const Price& a, const Price& b )ε->Price{ check return Price{ *a._value-*b._value }; }
+		friend α operator+( const Price& a, const Price& b )ε->Price{ check return Price{ *a._value+*b._value }; }
+		friend α operator/( const Price& a, const Price& b )ε->double{ check return (*a._value / *b._value).ToDouble(); }
+		α ToString()Ι->string{ return *this ? fmt::format( "{}", *_value ) : "null"; }
 	protected:
 
 	private:
-		double _value{Unitialized};
-		friend Amount operator*( Price a, Size b )noexcept;
+		operator Decimal2(){ CHECK(_value); return *_value; }
+		optional<Decimal2> _value;
+		friend Amount operator*( Price a, Size b )ε;
 		friend ProcOrder; friend Amount; friend LimitPriceException; friend BTick; friend Blockly; friend OptionTests; friend Blocks::OptionTest;
 	};
 
 	struct Size final
 	{
 		Size()=default;
-		friend auto operator<=>( const Size&, const Size& )noexcept = default;
-		string ToString()const{ return fmt::format("{:.0f}", _value); }
+		friend auto operator<=>( const Size&, const Size& )ι = default;
+		α ToString()Ι->string{ return *this ? fmt::format("{:.0f}", *_value) : "null"; }
+		operator bool()Ι{ return _value.has_value(); }
 	private:
-		Size( ::Decimal value )noexcept:_value{ ToDouble(value) }{}
-		Size( double value )noexcept:_value{value}{}
-		Size( long long value )noexcept:_value{(double)value}{}
-		double _value{Unitialized};
+		Size( ::Decimal value )ι:_value{ ToDouble(value) }{}
+		Size( double value )ι:_value{value}{}
+		Size( long long value )ι:_value{(double)value}{}
+		optional<Decimal2> _value;
 		constexpr static double Unitialized = NAN;
-		friend Amount operator*( Price a, Size b )noexcept;
+		friend Amount operator*( Price a, Size b )ε;
 		friend ProcOrder; friend Amount; friend BTick; friend OptionTests;
 	};
 	struct LimitAmountException;
 	struct Amount final
 	{
 		Amount()=default;
-		friend Amount operator*( const Amount& me, double other )noexcept{ return Amount( me._value*other ) ;}
-		friend auto operator<=>( const Amount&, const Amount& )noexcept = default;
-		string ToString()const noexcept{return fmt::format("{:.2f}", _value);}
+		friend Amount operator*( const Amount& a, double b )ε{ CHECK(a); return Amount( Decimal2(ToDouble(a)*b) ) ;}
+		friend auto operator<=>( const Amount&, const Amount& )ι = default;
+		α ToString()Ι->string{return *this ? fmt::format("{:.2f}", *_value) : "null";}
+		operator bool()Ι{ return _value.has_value(); }
 	private:
-		Amount( double value )noexcept:_value{value}{}
-		double _value{Unitialized};
+		Amount( Decimal2 value )ι:_value{value}{}
+		optional<Decimal2> _value;
 		constexpr static double Unitialized = NAN;
 		friend ProcOrder; friend LimitAmountException;
-		friend Amount operator*( Price a, Size b )noexcept;
+		friend Amount operator*( Price a, Size b )ε;
 		friend Blockly;
 	};
 
-	inline Amount operator*( Price a, Size b )noexcept{ return Amount{a._value*b._value}; }
+	inline Amount operator*( Price a, Size b )ε{ check return Amount{*a._value * *b._value}; }
 
 
 	struct ProcTimePoint;
@@ -83,32 +109,32 @@ namespace Jde::Markets::MBlockly
 	struct ProcDuration /*notfinal*/: protected Duration
 	{
 		typedef Duration base;
-		explicit ProcDuration( Duration x )noexcept:base{x}{}
-		friend ProcDuration operator/( const ProcDuration& a, double b )noexcept(false){ if( !llround(b) ) throw Exception{ SRCE_CUR, ELogLevel::Error, "'{}'divide by zero.", b }; base x = static_cast<const base&>(a)/llround(b); return ProcDuration{x}; }
+		explicit ProcDuration( Duration x )ι:base{x}{}
+		friend ProcDuration operator/( const ProcDuration& a, double b )ε{ if( !llround(b) ) throw Exception{ SRCE_CUR, ELogLevel::Error, "'{}'divide by zero.", b }; base x = static_cast<const base&>(a)/llround(b); return ProcDuration{x}; }
 	private:
-		//operator Duration()const noexcept{ return *this; }
+		//operator Duration()Ι{ return *this; }
 		friend ProcTimePoint; friend PositiveDuration; friend Blocks::OptionTest;
-		friend ProcTimePoint operator+( ProcTimePoint a, ProcDuration b )noexcept;
+		friend ProcTimePoint operator+( ProcTimePoint a, ProcDuration b )ι;
 	};
 
 	struct ΓBE ProcTimePoint final /*: private TimePoint MSVC=LNK2005 */
 	{
-		constexpr ProcTimePoint()noexcept=default;
-		static ProcTimePoint ClosingTime( ContractHoursPtr pHours )noexcept(false);
+		constexpr ProcTimePoint()ι=default;
+		static ProcTimePoint ClosingTime( ContractHoursPtr pHours )ε;
 
-		explicit operator bool()const noexcept{ return base!=TimePoint{}; }//non-explicit screws with < operator in msvc
+		explicit operator bool()Ι{ return base!=TimePoint{}; }//non-explicit screws with < operator in msvc
 //		auto operator<=>( const ProcTimePoint& )const = default c2487 in msvc;
-		friend bool operator==( const ProcTimePoint& a, const ProcTimePoint& b )noexcept{ return a.base==b.base; }
-		friend bool operator>( const ProcTimePoint& a, const ProcTimePoint& b )noexcept{ return a.base>b.base; }
-		friend bool operator>=( const ProcTimePoint& a, const ProcTimePoint& b )noexcept
+		friend bool operator==( const ProcTimePoint& a, const ProcTimePoint& b )ι{ return a.base==b.base; }
+		friend bool operator>( const ProcTimePoint& a, const ProcTimePoint& b )ι{ return a.base>b.base; }
+		friend bool operator>=( const ProcTimePoint& a, const ProcTimePoint& b )ι
 		{
 			//DBG( "{}>{}={}"sv, a.ToString(), b.ToString(), a.base>=b.base );
 			return a.base>=b.base;
 		}
-		friend bool operator<( const ProcTimePoint& a, const ProcTimePoint& b )noexcept{ return a.base<b.base; }
-		friend bool operator<=( const ProcTimePoint& a, const ProcTimePoint& b )noexcept{ return a.base<=b.base; }
-		string ToString()const noexcept;
-		static ProcTimePoint now()noexcept
+		friend bool operator<( const ProcTimePoint& a, const ProcTimePoint& b )ι{ return a.base<b.base; }
+		friend bool operator<=( const ProcTimePoint& a, const ProcTimePoint& b )ι{ return a.base<=b.base; }
+		string ToString()Ι;
+		static ProcTimePoint now()ι
 		{
 //#ifdef TESTING
 			//if( g_now!=TimePoint::min() )
@@ -118,14 +144,14 @@ namespace Jde::Markets::MBlockly
 		}
 
 //#ifdef TESTING
-//		TimePoint TP()const noexcept{ return *this; }
+//		TimePoint TP()Ι{ return *this; }
 //#endif
-		//friend auto operator<=>( const ProcTimePoint&, const ProcTimePoint& )noexcept = default;
+		//friend auto operator<=>( const ProcTimePoint&, const ProcTimePoint& )ι = default;
 	private:
-		constexpr ProcTimePoint( TimePoint t )noexcept:base{t}{}
-		constexpr static ProcTimePoint Unitialized()noexcept{ return ProcTimePoint{TimePoint{}}; }
-		friend ProcDuration operator-( ProcTimePoint me, ProcTimePoint other )noexcept{ return ProcDuration{me.base-other.base}; }
-		friend ProcTimePoint operator+( ProcTimePoint a, ProcDuration b )noexcept
+		constexpr ProcTimePoint( TimePoint t )ι:base{t}{}
+		constexpr static ProcTimePoint Unitialized()ι{ return ProcTimePoint{TimePoint{}}; }
+		friend ProcDuration operator-( ProcTimePoint me, ProcTimePoint b )ι{ return ProcDuration{me.base-b.base}; }
+		friend ProcTimePoint operator+( ProcTimePoint a, ProcDuration b )ι
 		{
 			//Duration bTemp = (Duration)b;
 			return ProcTimePoint{a.base+(Duration)b};
@@ -137,22 +163,27 @@ namespace Jde::Markets::MBlockly
 
 	struct PositiveDuration final : protected ProcDuration
 	{
-		PositiveDuration( ProcDuration x )noexcept(false);
+		PositiveDuration( ProcDuration x )ε;
 
-		friend ProcDuration operator/( PositiveDuration a, int_fast64_t b )noexcept{ return ProcDuration{ ((Duration)a)/b }; }
-		static PositiveDuration LiquidTimeLeft( const Contract& contract, ProcTimePoint reference )noexcept(false);
-		static PositiveDuration TradingTimeLeft( const Contract& contract, ProcTimePoint reference )noexcept(false);
+		friend ProcDuration operator/( PositiveDuration a, int_fast64_t b )ι{ return ProcDuration{ ((Duration)a)/b }; }
+		static PositiveDuration LiquidTimeLeft( const Contract& contract, ProcTimePoint reference )ε;
+		static PositiveDuration TradingTimeLeft( const Contract& contract, ProcTimePoint reference )ε;
 	};
 
 	struct PriceConst : Price
 	{
-		/*consteval clang crashconstexpr*/ PriceConst( double x )noexcept(false):Price{x}{};
+		/*consteval clang crashconstexpr*/ PriceConst( double x )ε:Price{x}{};
 	};
 
-	struct Limits
+	struct ΓBE Limits
 	{
-		MBlockly::Price Price;
-		Amount Value;
+		α Price()Ι->MBlockly::Price{return _price;}  
+		α SetPrice( MBlockly::Price price )ι->void;
+		α Value()Ι->MBlockly::Amount{return _value;}  
+		α SetValue( MBlockly::Amount value )ι->void;
+	private:
+		MBlockly::Price _price;
+		Amount _value;
 	};
 
 	struct Account
@@ -162,39 +193,40 @@ namespace Jde::Markets::MBlockly
 /**************************************************************/
 	struct ProcOrder final: private MyOrder
 	{
-		ProcOrder()noexcept:ProcOrder{0}{};
-		ProcOrder( long orderId )noexcept:MyOrder{::Order{orderId}}{};
-		ProcOrder( const MyOrder& x )noexcept:MyOrder{x}{}
-		//ProcOrder( const ProcOrder& x )noexcept:MyOrder{x}, _lastUpdate{x._lastUpdate}{}
-		operator bool()const noexcept{ return MyOrder::action.size(); }
-		α AccountNumber()const noexcept->str{ return MyOrder::account; }
-		α OrderId()const noexcept{ return MyOrder::orderId; }
-		α IsBuy()const noexcept{ return MyOrder::IsBuy(); }
-		α Limit()const noexcept{ return Price{ MyOrder::lmtPrice }; }
+		ProcOrder()ι:ProcOrder{0}{};
+		ProcOrder( long orderId )ι:MyOrder{::Order{orderId}}{};
+		ProcOrder( const MyOrder& x )ι:MyOrder{x}{}
+		//ProcOrder( const ProcOrder& x )ι:MyOrder{x}, _lastUpdate{x._lastUpdate}{}
+		operator bool()Ι{ return MyOrder::action.size(); }
+		α AccountNumber()Ι->str{ return MyOrder::account; }
+		α OrderId()Ι{ return MyOrder::orderId; }
+		α IsBuy()Ι{ return MyOrder::IsBuy(); }
+		α Limit()Ι{ return Price{ ToDecimal(MyOrder::lmtPrice) }; }
 		α PostToAts(){ return MyOrder::postToAts; }//TODO remove
-		α SetLimit( Price limit )noexcept{ MyOrder::lmtPrice = limit._value; }
-		α Quantity()const noexcept{ return Size{MyOrder::totalQuantity }; }
-		α LastUpdate()const noexcept{ return ProcTimePoint{MyOrder::LastUpdate}; }
-		ΓBE α SetLastUpdate( ProcTimePoint x )noexcept->void;
-		α Bump( Price price )noexcept{ MyOrder::lmtPrice+=price._value; }
-		α Place( sp<::Contract> p )noexcept(false)->void;
-		α VolatilityType()const noexcept{ return volatilityType; }
-		α ToProto()const noexcept->up<Proto::Order>{ return MyOrder::ToProto(); }
+		α SetLimit( Price limit )ε{ CHECK(limit); MyOrder::lmtPrice = ToDouble(limit); }
+		α Quantity()Ι{ return Size{MyOrder::totalQuantity }; }
+		α LastUpdate()Ι{ return ProcTimePoint{MyOrder::LastUpdate}; }
+		ΓBE α SetLastUpdate( ProcTimePoint x )ι->void;
+		α Bump( Price price )ε{ CHECK(price); MyOrder::lmtPrice+=ToDouble(price); }
+		α Place( sp<::Contract> p )ε->void;
+		α VolatilityType()Ι{ return volatilityType; }
+		α ToProto()Ι->up<Proto::Order>{ return MyOrder::ToProto(); }
 	private:
-		α Base()const noexcept->const MyOrder&{ return *this;}
+		α Base()Ι->const MyOrder&{ return *this;}
 		friend Awaitable;
 	};
 /************************************************************
 	struct LimitPriceException final: Exception
 	{
-		LimitPriceException( Price current, Price limit )noexcept:
+		LimitPriceException( Price current, Price limit )ι:
 			Exception( "'{}' is over the price limit '{}'.", current._value, limit._value )
 		{}
 	};
 	struct LimitAmountException final: Exception
 	{
-		LimitAmountException( Amount current, Amount limit )noexcept:
+		LimitAmountException( Amount current, Amount limit )ι:
 			Exception( "'{}' is over the value limit '{}'.", current._value, limit._value )
 		{}
 	};*/
 }
+#undef check

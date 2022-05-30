@@ -646,16 +646,8 @@ namespace XMLUtil
 */
 struct Γ XMLNode
 {
-    /// Get the XMLDocument that owns this XMLNode.
-    const XMLDocument* GetDocument() const	{
-        TIXMLASSERT( _document );
-        return _document;
-    }
-    /// Get the XMLDocument that owns this XMLNode.
-    XMLDocument* GetDocument()				{
-        TIXMLASSERT( _document );
-        return _document;
-    }
+    α GetDocument()Ι->const XMLDocument&{ TIXMLASSERT( _document ); return *_document; }
+    α GetDocument()ι->XMLDocument&{ TIXMLASSERT( _document ); return *_document; }
 
     /// Safely cast to an Element, or null.
     virtual XMLElement*		ToElement()		{
@@ -1569,6 +1561,7 @@ struct Γ XMLElement : public XMLNode
     		<foo>Hullaballoo!</foo>
     	@endverbatim
     */
+   void SetText( sv inText );
 	void SetText( const char* inText );
     /// Convenience method for setting text inside an element. See SetText() for important limitations.
     void SetText( int value );

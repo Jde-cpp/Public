@@ -93,7 +93,7 @@ namespace Jde
 	using std::atomic_flag;
 	using std::function;
 	using std::lock_guard;
-	using std::make_unique;//refactor remove
+	//using std::make_unique;//refactor remove
 	using std::make_shared;//refactor remove
 	using std::mutex;
 	template<class T> using sp = std::shared_ptr<T>;
@@ -159,10 +159,10 @@ namespace Jde
 	#define SRCE const Jde::source_location& sl=SRCE_CUR
 	using SL = const Jde::source_location&;
 
-
 	enum class ELogLevel : int8{ NoLog=-1, Trace=0, Debug=1, Information=2, Warning=3, Error=4, Critical=5, None=6 };
 	constexpr std::array<sv,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };
 	constexpr sv ToString( ELogLevel v )noexcept{ return (uint8)v<ELogLevelStrings.size() ? ELogLevelStrings[(uint8)v] : sv{}; }
+
 #ifdef NDEBUG
 	constexpr bool _debug{ false };
 #else

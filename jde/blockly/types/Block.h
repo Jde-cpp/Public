@@ -39,7 +39,7 @@ namespace Jde::Blockly
 		bool CallStatic{ false };
 		const bool TickTrigger{ false };
 	};
-#define IMPL α Implementation( ImplArgs& impl )const noexcept(false)->string
+#define IMPL α Implementation( ImplArgs& impl )Ε->string
 	enum EStaticParams{ Prototype, Local, Member,  };
 #define STATIC_PARAMS α StaticParams( EStaticParams type={} )Ι->string
 #define TICK_TRIGGER_NAMES α TickTriggerNames( flat_set<string>& names )Ι->void
@@ -52,7 +52,7 @@ namespace Jde::Blockly
 	struct Field
 	{
 		Field( const Xml::XMLElement& e )noexcept;
-		EValueType ValueType()const noexcept(false);
+		EValueType ValueType()Ε;
 
 		string Name;
 		string Id;
@@ -81,7 +81,7 @@ namespace Jde::Blockly
 		uint size()const noexcept{ return Items.size(); }
 		void emplace_back( const Xml::XMLElement& e, const File& file )noexcept(false);
 		const Value& front()const noexcept{ return Items.front(); }
-		const Value& operator[](sv sv)const noexcept(false);
+		const Value& operator[](sv sv)Ε;
 		vector<Value> Items;
 	};
 	struct IBlock
@@ -120,7 +120,7 @@ namespace Jde::Blockly
 	struct FieldBlock
 	{
 		Field Field;
-		EValueType ValueType()const noexcept(false){ return Field.ValueType(); }
+		EValueType ValueType()Ε{ return Field.ValueType(); }
 		protected:
 	   	FieldBlock( const Xml::XMLElement& e );
 	};
@@ -142,7 +142,7 @@ namespace Jde::Blockly
 		IValueField( const Xml::XMLElement& e )noexcept(false):IBlock{ e }, IValue{ e }, FieldBlock{ e }{}
 		IMPL override;
 		TICK_TRIGGER_NAMES override{}
-		EValueType ValueType()const noexcept(false) override { return Field.ValueType(); }
+		EValueType ValueType()Ε override { return Field.ValueType(); }
 	};
 
 	struct Predicate : virtual IValue//returns a boolean
@@ -210,13 +210,13 @@ namespace Jde::Blockly
 		ALARMS override;
 		const string& Name()const noexcept{ return Field.Value; }
 
-		/*virtual*/ string Prototype( sv className={}, ImplArgs args={} )const noexcept(false);
+		/*virtual*/ string Prototype( sv className={}, ImplArgs args={} )Ε;
 		virtual STATIC_PARAMS{ return {}; }
 		virtual TRIGGER_VARS{}
-		virtual string Implementation( str className, ImplArgs args={}, str returnString={} )const noexcept(false);
-		bool IsConst()const noexcept(false);
-		bool IsNoExcept()const noexcept(false);
-		virtual bool IsTickTrigger()const noexcept(false){ return false; }
+		virtual string Implementation( str className, ImplArgs args={}, str returnString={} )Ε;
+		bool IsConst()Ε;
+		bool IsNoExcept()Ε;
+		virtual bool IsTickTrigger()Ε{ return false; }
 		static constexpr sv TypeId = "procedures_defnoreturn"sv;
 	};
 
@@ -228,7 +228,7 @@ namespace Jde::Blockly
 		TICKS override;
 		TRIGGER_VARS override;
 		STATIC_PARAMS override{ return Value.StaticParams( type ); }
-		bool IsTickTrigger()const noexcept(false) override{ TickBits tickFields; TickFields( tickFields, true ); return tickFields.any(); }
+		bool IsTickTrigger()Ε override{ TickBits tickFields; TickFields( tickFields, true ); return tickFields.any(); }
 		EValueType ValueType()Ε{ return Value.ValueType(); }
 		string Implementation( str className, ImplArgs args={}, str returnString={} )Ε override;
 
@@ -256,7 +256,7 @@ namespace Jde::Blockly
 	struct ProcCallReturn final : virtual ProcCall, virtual IValue
 	{
 		ProcCallReturn( const Xml::XMLElement& e, const File& file ): ProcCall{e, file}, ProcCall::IBlock{e}, IValue{ e }{}
-		EValueType ValueType()const noexcept(false) override;
+		EValueType ValueType()Ε override;
 		IMPL override{ auto v = ProcCall::Implementation( impl ); return v.substr( 0, v.size()-2 ); }
 		STATIC_PARAMS override{ return {}; }
 		TICK_TRIGGER_NAMES override{ TickBits tickFields; TickFields( tickFields ); if( tickFields.any() && _pProc ) names.emplace( _pProc->Name() ); }
@@ -281,11 +281,15 @@ namespace Jde::Blockly
 
 	struct SetMember : IBlock, FieldBlock, ValueBlock, NextBlock//has field & value, optional<next>
 	{
-		SetMember( const Xml::XMLElement& e, const File& file )noexcept : IBlock{e}, FieldBlock{ e }, ValueBlock{ e, file }, NextBlock{ e, file }{};
+		SetMember( const Xml::XMLElement& e, const File& file )noexcept : IBlock{e}, FieldBlock{ e }, ValueBlock{ e, file }, NextBlock{ e, file }
+		{
+			DEBUG_IF( Id=="limits_priceLimit_set" );
+		};
 		IMPL override;
-		string Implementation( ImplArgs& impl, optional<bool> includeTicks )const noexcept(false);
+		string Implementation( ImplArgs& impl, optional<bool> includeTicks )Ε;
 		TICKS override{}
 		ALARMS override{}
+		α IsProperty()Ε->bool{ return !Field.Value.starts_with( "limits" ); }
 		static constexpr sv Suffix = "_set"sv;
 	};
 
@@ -296,7 +300,7 @@ namespace Jde::Blockly
 		IMPL override;
 		STATIC_PARAMS override;
 		TICK_TRIGGER_NAMES override{}
-		//α MemberName()Ε->string{ var v = Str::Split( Field.Value, "." ); THROW_IF( v.size()!=2, "({}) split size()=={}", Id, Field.Value, v.size() ); return Str::Pascal(v[1]); }
+		α IsProperty()Ε->bool{ return !Field.Value.starts_with( "limits" ); }
 		TRIGGER_VARS override;
 	};
 	struct AccountMember final: GetMember
@@ -420,8 +424,8 @@ namespace Jde::Blockly
 		STATIC_PARAMS override{ vector<string> v{ A.StaticParams(type), B.StaticParams(type) }; v.erase( std::remove_if(v.begin(), v.end(), [](var&x){return x.empty();}), v.end() ); return Str::AddSeparators(v, ", "); }
 		TICK_TRIGGER_NAMES override{ A.TickTriggerNames( names ), B.TickTriggerNames( names ); }
 		const TEnum Operation;
-		const Value& A;//()const noexcept(false){ return Values["A"]; }
-		const Value& B;//()const noexcept(false){ return Values["B"]; }
+		const Value& A;//()Ε{ return Values["A"]; }
+		const Value& B;//()Ε{ return Values["B"]; }
 	};
 
 	enum class ELogicOperation : uint8{ And, Or };
@@ -447,7 +451,7 @@ namespace Jde::Blockly
 		Arithmetic( const Xml::XMLElement& e, const File& file )noexcept;
 		IMPL override{ return ArithmeticBase::Implementation( impl ); }
 		ALARMS override;
-		EValueType ValueType()const noexcept(false) override;
+		EValueType ValueType()Ε override;
 	};
 
 	static constexpr array<sv,6> LogicCompareBlocklyStrings = { "EQ"sv, "NEQ"sv, "GT"sv, "GTE"sv, "LT"sv, "LTE"sv };
@@ -479,16 +483,16 @@ namespace Jde::Blockly
 	struct Ternary final: IValue, ValuesBlock
 	{
 		Ternary( const Xml::XMLElement& e, const File& file )noexcept:IBlock{e}, IValue{ e }, ValuesBlock{ e, file }{};
-		EValueType ValueType()const noexcept(false) override;
+		EValueType ValueType()Ε override;
 		IMPL override{ return format("{} ? {} : {}", If().Implementation( impl ), Then().Implementation( impl ), Else().Implementation( impl )); }
 		STATIC_PARAMS override{ vector<string> v{ If().StaticParams(type), Then().StaticParams(type), Else().StaticParams(type) }; v.erase( std::remove_if(v.begin(), v.end(), [](var&x){return x.empty();}), v.end() ); return Str::AddSeparators(v, ", "); }
 		TICK_TRIGGER_NAMES override{ If().TickTriggerNames( names ); Then().TickTriggerNames( names ); Else().TickTriggerNames( names ); }
 		TRIGGER_VARS override{ If().TickTriggerNames( x ); Then().TickTriggerNames( x ); Else().TickTriggerNames( x ); }
 		TICKS override{ return If().Type().TickFields( tickFields, includeFunctions ); Then().Type().TickFields( tickFields, includeFunctions ); Else().Type().TickFields( tickFields, includeFunctions ); }
 		ALARMS override{ return If().Type().Alarms( alarms ); Then().Type().Alarms( alarms ); Else().Type().Alarms( alarms ); }
-		const Value& If()const noexcept(false){ return Values["If"sv]; };
-		const Value& Then()const noexcept(false){ return Values["Then"sv]; };
-		const Value& Else()const noexcept(false){ return Values["Else"sv]; };
+		const Value& If()Ε{ return Values["If"sv]; };
+		const Value& Then()Ε{ return Values["Then"sv]; };
+		const Value& Else()Ε{ return Values["Else"sv]; };
 
 		constexpr static sv TypeName = "variables_logic_ternary";
 	};

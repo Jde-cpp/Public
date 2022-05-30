@@ -27,7 +27,7 @@ namespace Jde::Markets::MBlockly
 //TODO Bid
 	private:
 		//BTick( Tick&& t ):Tick{ std::move(t) }{ DBG0("BTick(Tick&& t)"sv); }
-		/*[[noreturn]]*/ static Price NotSet(){ return Price{0.0}; /*Price{NAN}TODO*/ }
+		/*[[noreturn]]*/ static Price NotSet(){ return Price{}; /*Price{NAN}TODO*/ }
 		//mutable std::function<Price()> NoAsk{ NotSet };
 		//mutable std::function<Price()> NoBid{ NotSet };
 		const Tick& Base()const noexcept{ return static_cast<const Tick&>(*this); }

@@ -234,10 +234,8 @@ namespace Jde
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
 			//if constexpr( _debug )
 			{
-				if( string{m.File}.ends_with("construct_at.h") )
-					BREAK;
-				if( m.Level>=BreakLevel() )
-					BREAK;
+				DEBUG_IF( string{m.File}.ends_with("construct_at.h") );
+				DEBUG_IF( m.Level>=BreakLevel() );
 			}
 		}
 		catch( const fmt::format_error& )
