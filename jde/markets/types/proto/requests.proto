@@ -260,6 +260,7 @@ message RequestUnion
 		ImpliedPriceRequest implied_price=19;
 		Custom blockly=20;
 		Reddit reddit=21;
+		RequestStats request_stats=22;
 	}
 }
 
@@ -283,6 +284,13 @@ message HistoricalNewsRequest
 message RequestTransmission
 {
 	repeated RequestUnion messages=1;
+}
+
+message RequestStats
+{
+	uint32 id=1;
+	repeated uint32 contract_ids=2;
+	repeated Stats stats=3;
 }
 
 enum Display
@@ -324,6 +332,15 @@ enum BarSize
 	Week=604800;
 	Month=2592000;
 	Year=31104000;
+}
+enum Stats
+{
+	StatsNone=0;
+	ATH=1;
+	PWL=2;
+	YearLow=3;
+	YearHigh=4;
+	MA100=5;
 }
 
 enum ERequests

@@ -11,10 +11,10 @@
 #include <bid_functions.h>
 #pragma warning( pop )
 #include "../TypeDefs.h"
+#include "Decimal.h"
+
 namespace Jde::Markets
 {
-	using Decimal=unsigned long long;
-	//typedef int32 AccountPK;
 	using AccountPK=uint32;
 	using ContractPK=long;
 	using DecisionTreePK=int32;
@@ -26,12 +26,4 @@ namespace Jde::Markets
 
 	using Amount=double;
 	using PositionAmount=double;
-	Ξ ToPosition( double value )ι->PositionAmount{ return value; }
-	Ξ ToDouble( Decimal v )ι->double{ unsigned int _; double y = bid64_to_binary64( v, 0, &_ ); return y; }
-	Ξ ToDecimal( double v )ι->Decimal{ unsigned int _; Decimal y = binary64_to_bid64( v, 0, &_ ); return y; }
-	Ξ ToString( Decimal v )ι->string{ char y[64]; unsigned int _; bid64_to_string(y, v, &_ ); return y; }
-	Ξ Subtract( Decimal x1, Decimal x2 )ι->Decimal{ unsigned int _; return bid64_sub(x1, x2, 0, &_); }
-	Ξ Add( Decimal x1, Decimal x2 )ι->Decimal{ unsigned int _; return bid64_add(x1, x2, 0, &_); }
-	Ξ Divide( Decimal x1, Decimal x2)ι->Decimal{ unsigned int _; return bid64_div(x1, x2, 0, &_); }
-	Ξ Multiply( Decimal x1, Decimal x2 )ι->Decimal{ unsigned int _; return bid64_mul(x1, x2, 0, &_); }
 }

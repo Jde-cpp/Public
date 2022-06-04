@@ -1,5 +1,6 @@
-﻿//source ../../../../Framework/common.sh
-//cd $JDE_DIR/Public/jde/markets/types/proto;$JDE_DIR/Public/stage/release/protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. watch.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' watch.pb.h;sed -i '1s/^/\xef\xbb\xbf/' watch.pb.h;
+﻿//source $JDE_BASH/Framework/common.sh
+//PATH=$PATH;$JDE_DIR/Public/stage/release/
+//cd $JDE_DIR/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. watch.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' watch.pb.h;sed -i '1s/^/\xef\xbb\xbf/' watch.pb.h;sed -i -e 's/JDE_MARKETS_EXPORT//g' watch.pb.cc;
 //cd $JDE_DIR/MarketLibrary/source/types/proto;mv $JDE_DIR/Public/jde/markets/types/proto/watch.pb.cc .;mklink watch.pb.h $JDE_DIR/Public/jde/markets/types/proto
 
 syntax = "proto3";
@@ -10,6 +11,7 @@ message Entry
 {
 	uint32 contract_id=1;
 	double shares=2;
+	double avg_price=3;
 }
 
 message CashEntry

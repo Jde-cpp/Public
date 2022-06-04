@@ -8,6 +8,7 @@
 #pragma warning( default : 4267 )
 #pragma pop_macro("assert")
 #include "../Exports.h"
+#include <jde/markets/Decimal.h>
 #pragma warning( disable : 4244 )
 #pragma warning( disable : 4996 )
 #include "proto/results.pb.h"
@@ -19,7 +20,6 @@ namespace Jde::Markets
 {
 	namespace Proto
 	{
-		
 		class Order; enum ETimeInForce : int; enum EOrderType : int;enum EOrderStatus : int;
 		namespace IB{ enum ETimeInForce:int; class Order; }
 		namespace Results{ class OrderState; }

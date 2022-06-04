@@ -18,8 +18,8 @@ namespace Jde::Markets::MBlockly
 			Alarm{alarm},Tick{tick},TickTrigger{tickTrigger},Order{order}, OrderFields{orderFields}, Status{status}, StatusFields{statusFields}, Index{index}
 		{}
 		~AwaitableData();
-		α IsHandled()const noexcept->bool{ return _value; }
-		α Handle()noexcept->bool{ return _value.exchange( true ); }
+		α IsHandled()const ι->bool{ return _value; }
+		α Handle()ι->bool{ return _value.exchange( true ); }
 
 		const optional<ProcTimePoint> Alarm;
 		BTick Tick; optional<function<bool(const Markets::Tick&)>> TickTrigger; //Tick::Fields TickFields;
@@ -33,59 +33,62 @@ namespace Jde::Markets::MBlockly
 		atomic<bool> _value{false};
 	};
 
+	struct ΓBE EventManager final
+	{
+		Ω Wait( const optional<ProcTimePoint>& alarm, const BTick& tick, optional<function<bool(const Markets::Tick&)>> tickTrigger, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields )ι->Awaitable;
+		Ω LogLevel()ι->const LogTag&;
+	};
+
 	template<class T>
 	struct BTask final
 	{
-		using TResult=T;
-		BTask():_taskHandle{NextTaskHandle()}{ DBG("Task::Task({})"sv, _taskHandle); }
+#define _logLevel EventManager::LogLevel()
+		BTask():_taskHandle{NextTaskHandle()}{ TRACE("({})BTask::BTask()", _taskHandle); }
 		BTask( const BTask& t2 ):
 			Result{t2.Result},
 			_taskHandle{t2._taskHandle}
 		{
-			DBG("Task(Task{})"sv, _taskHandle);
+			TRACE( "BTask({})", _taskHandle );
 		}
-		~BTask(){ DBG( "BTask::~BTask({})"sv, _taskHandle); }
+		~BTask(){ TRACE( "({})BTask::~BTask", _taskHandle ); }
 
 		struct promise_type
 		{
 			promise_type():_promiseHandle{ NextTaskPromiseHandle() }
 			{
-				DBG( "promise_type::promise_type({})"sv, _promiseHandle );
+				TRACE( "({})BTask::promise_type)", _promiseHandle );
 			}
-			α get_return_object()noexcept->BTask<T>&{ return _returnObject; }
-			suspend_never initial_suspend()noexcept{ return {}; }
-			suspend_never final_suspend()noexcept{ return {}; }
-			α return_void()noexcept->void{}
-			α unhandled_exception()noexcept->void{ /*DBG0("unhandled_exception"sv); TODO uncomment*/  }
+#undef _logLevel
+			α get_return_object()ι->BTask<T>&{ return _returnObject; }
+			suspend_never initial_suspend()ι{ return {}; }
+			suspend_never final_suspend()ι{ return {}; }
+			α return_void()ι->void{}
+			α unhandled_exception()ι->void{ ERR("unhandled_exception");  }
 			BTask<T> _returnObject;
 			const Handle _promiseHandle;
 		};
-		TResult Result;
+		T Result;
 		const Handle _taskHandle;
 	};
 
 	struct ΓBE Awaitable final : std::enable_shared_from_this<Awaitable>
 	{
-		Awaitable( const optional<ProcTimePoint>& alarm, const BTick& tick, optional<function<bool(const Markets::Tick&)>> tickTrigger, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields )noexcept;
+		Awaitable( const optional<ProcTimePoint>& alarm, const BTick& tick, optional<function<bool(const Markets::Tick&)>> tickTrigger, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields )ι;
 		using TReturn=EventResult;
 		using TTask=BTask<TReturn>;
 		~Awaitable();
-		α await_ready()noexcept->bool;
-		α await_suspend( coroutine_handle<TTask::promise_type> h )noexcept->void; //if( !await_ready){ await_suspend();} await_resume()
-		α await_resume()noexcept->TReturn;
+		α await_ready()ι->bool;
+		α await_suspend( coroutine_handle<TTask::promise_type> h )ι->void; //if( !await_ready){ await_suspend();} await_resume()
+		α await_resume()ι->TReturn;
 	private:
 		optional<std::exception_ptr> _pError;
 		coroutine_handle<TTask::promise_type> _taskHandle;
 
-		α Complete( sp<AwaitableData> p, uint type, sp<IException> pError )noexcept->void;
-		α CallAlarm( sp<AwaitableData> pData )noexcept->Task;
-		α CallTick( sp<AwaitableData> pData )noexcept->Task;
-		α CallOrder( sp<AwaitableData> pData )noexcept->Task;
+		α Complete( sp<AwaitableData> p, uint type, sp<IException> pError )ι->void;
+		α CallAlarm( sp<AwaitableData> pData )ι->Task;
+		α CallTick( sp<AwaitableData> pData )ι->Task;
+		α CallOrder( sp<AwaitableData> pData )ι->Task;
 
 		sp<AwaitableData> _pData;
-	};
-	struct ΓBE EventManager final
-	{
-		static Awaitable Wait( const optional<ProcTimePoint>& alarm, const BTick& tick, optional<function<bool(const Markets::Tick&)>> tickTrigger, const ProcOrder& order, MyOrder::Fields orderFields, const OrderStatus& status, OrderStatus::Fields statusFields )noexcept;
 	};
 }

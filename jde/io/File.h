@@ -21,6 +21,8 @@ namespace Jde::IO
 	Ξ Read( path path, bool vector=true, bool cache=false, SRCE )noexcept{ return DriveAwaitable{path, vector, cache, sl}; }
 	Ξ Write( fs::path path, sp<vector<char>> data, SRCE )noexcept{ return DriveAwaitable{move(path), data, sl}; }
 	Ξ Write( fs::path path, sp<string> data, SRCE )noexcept{ return DriveAwaitable{move(path), data, sl}; }
+	Φ Remove( const fs::path& path, SRCE )ε->void;
+
 	Φ FileSize( path path )ε->uint;
 
 	Φ Copy( fs::path from, fs::path to, SRCE )->PoolAwait;
