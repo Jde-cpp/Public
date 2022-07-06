@@ -644,6 +644,10 @@ namespace XMLUtil
 
 	@endverbatim
 */
+
+struct XMLNode;
+struct FindOneOfStruct : Str::FindPhraseResult{ const XMLNode* StartNodePtr; };
+
 struct Γ XMLNode
 {
     α GetDocument()Ι->const XMLDocument&{ TIXMLASSERT( _document ); return *_document; }
@@ -653,10 +657,9 @@ struct Γ XMLNode
     virtual XMLElement*		ToElement()		{
         return 0;
     }
-    /// Safely cast to Text, or null.
-    virtual XMLText*		ToText()		{
-        return 0;
-    }
+    β ToText() const->const XMLText*{ return nullptr; }
+    β ToText()->XMLText*{ return nullptr; }
+
     /// Safely cast to a Comment, or null.
     virtual XMLComment*		ToComment()		{
         return 0;
@@ -677,9 +680,7 @@ struct Γ XMLNode
     virtual const XMLElement*		ToElement() const		{
         return 0;
     }
-    virtual const XMLText*			ToText() const			{
-        return 0;
-    }
+
     virtual const XMLComment*		ToComment() const		{
         return 0;
     }
@@ -704,7 +705,7 @@ struct Γ XMLNode
     */
     //const char* Value() const;
     template<Str::IsView T=sv> α Value()Ι->T{ return _value.View<T>(); }
-    α IsHtmlStyle()Ι->bool{ return Value<iv>()=="FONT" || Value<iv>()=="B"; }
+    α IsHtmlStyle()Ι->bool{ return Value<iv>()=="FONT" || Value<iv>()=="B" || Value<iv>()=="SMALL"; }
 
 	β Name()Ι->sv{ return {}; }
    void SetValue2( char* val );
@@ -714,12 +715,10 @@ struct Γ XMLNode
     uint GetLineNum() const { return _parseLineNum; }
 
     /// Get the parent of this node on the DOM.
-    const XMLNode*	Parent() const			{
-        return _parent;
-    }
+      β Parent()const->const XMLNode*{ return _parent; }
 
     template<Str::IsView T=sv> α Text()Ι->T;
-    template<Str::IsString T=string> α HtmlText( bool trim=true, bool unescape=true )Ι->T;
+    template<Str::IsString T=string> α HtmlText( bool trim=true, bool unescape=true )Ι->tuple<T,const XMLNode*>;
     α ParentElement()Ι->const XMLElement*{ return _parent ? _parent->ToElement() : nullptr; }
     α Parent()ι->XMLNode*{return _parent;}
 
@@ -902,11 +901,11 @@ struct Γ XMLNode
 	α Find( const std::span<sv>& entries )Ι->const XMLElement*;//[child][grandChild][great-grandChild]
 	template<class T=sv> α FindText( T elementText, sv elementName={} )Ι->const XMLElement*;//<p>value</p>=Find(p, "value"
 
-   α FindOneOf( const vector<iv>& entries, bool stem=false, const XMLNode* pCalledFrom=nullptr )Ι->const XMLNode*{ optional<Str::FindPhraseResult> el; return FindOneOf( entries, stem, pCalledFrom, true, el, {} ); }
+   α FindOneOf( const vector<iv>& entries, bool stem=false, const XMLNode* pCalledFrom=nullptr )Ι->const XMLNode*{ optional<FindOneOfStruct> el; return FindOneOf( entries, stem, pCalledFrom, true, el, {} ); }
 	α Parent( sv elementName )Ι->const XMLElement*;
    α NextHtmlText( iv prev={} )Ι->const XMLNode*;
 	α Next( bool children=true )Ι->const XMLNode*;
-   α NextHtml( bool children=true )Ι->const XMLNode*;
+   α NextHtml( bool children=true, bool continuation=false )Ι->const XMLNode*;
 protected:
     explicit XMLNode( XMLDocument* );
     virtual ~XMLNode();
@@ -927,7 +926,7 @@ protected:
 	void*			_userData;
 
 private:
-      α FindOneOf( const vector<iv>& entries, bool stem, const XMLNode* pCalledFrom, bool searchChildren, optional<Str::FindPhraseResult>& entryLocation, vector<string> tags )Ι->const XMLNode*;
+      α FindOneOf( const vector<iv>& entries, bool stem, const XMLNode* pCalledFrom, bool searchChildren, optional<FindOneOfStruct>& entryLocation, vector<string> tags )Ι->const XMLNode*;
 
     MemPool*		_memPool;
     void Unlink( XMLNode* child );
@@ -958,12 +957,8 @@ struct Γ XMLText : XMLNode
 {
     virtual bool Accept( XMLVisitor* visitor ) const;
 
-    virtual XMLText* ToText()			{
-        return this;
-    }
-    virtual const XMLText* ToText() const	{
-        return this;
-    }
+   β ToText()->XMLText*{ return this; }
+   β ToText()const->const XMLText*{ return this; }
 
     /// Declare whether this should be CDATA or standard text.
     void SetCData( bool isCData )			{
@@ -1904,10 +1899,8 @@ struct Γ XMLDocument : public XMLNode
 	*/
 	void DeepCopy(XMLDocument* target) const;
 
-	// internal
-    char* Identify( char* p, XMLNode** node );
+   α Identify( char* p, const XMLNode& parent )ι->tuple<char*,XMLNode*>;
 
-	// internal
 	void MarkInUse(const XMLNode* const);
 
     virtual XMLNode* ShallowClone( XMLDocument* /*document*/ ) const	{
@@ -2101,9 +2094,8 @@ struct XMLHandle
         return ( _node ? _node->ToElement() : 0 );
     }
     /// Safe cast to XMLText. This can return null.
-    XMLText* ToText() 							{
-        return ( _node ? _node->ToText() : 0 );
-    }
+    β ToText() const->const XMLText*{ return _node ? _node->ToText() : nullptr; }
+
     /// Safe cast to XMLUnknown. This can return null.
     XMLUnknown* ToUnknown() 					{
         return ( _node ? _node->ToUnknown() : 0 );
@@ -2169,9 +2161,8 @@ public:
     const XMLElement* ToElement() const			{
         return ( _node ? _node->ToElement() : 0 );
     }
-    const XMLText* ToText() const				{
-        return ( _node ? _node->ToText() : 0 );
-    }
+    β ToText() const->const XMLText*{ return _node ? _node->ToText() : nullptr; }
+
     const XMLUnknown* ToUnknown() const			{
         return ( _node ? _node->ToUnknown() : 0 );
     }
@@ -2375,6 +2366,8 @@ private:
 		{
 			y = Str::Replace( xml, "&nbsp;", " " );
          y = Str::Replace( y, "&ndash;", "-" );
+         y = Str::Replace( y, "&#8239;", " " );
+         //Str::bsv<typename T::traits_type> xml=
          array<uint8_t,2> sz{ 0xc2, 146 };
          y = Str::Replace( y, Str::bsv<typename T::traits_type>{(char*)sz.data(),2}, "'" );
 			sz[1]=0xa0;
@@ -2383,12 +2376,34 @@ private:
 		return y;
 	}
 
-   template<Str::IsString T> α XMLNode::HtmlText( bool trim, bool unescape )Ι->T
+   template<Str::IsString T> α XMLNode::HtmlText( bool trim, bool unescape )Ι->tuple<T,const XMLNode*>
    {
       using view=Str::bsv<typename T::traits_type>;
       T y;
+      const XMLNode* pNode = this;
 	   if( var* p = ToText(); p )
+      {
 		   y = p->Text<view>();
+         if( auto n = Next(true); n && ToIV(n->Name())=="small" )
+         {
+            y += n->Text<view>();
+            pNode = n;
+         }
+         if( auto n = Next(true); n && ToIV(n->Name())=="br" && n->NextSibling() )
+         {
+            y += "\n";
+            for( ; n->NextSibling() && ToIV(n->NextSibling()->Name())=="br"; n = n->NextSibling() )
+               y += "\n";
+            if( n->NextSibling() )
+            {
+               var [txt,pNode2] = n->NextSibling()->HtmlText<T>();
+               y+=txt;
+               pNode = pNode2;
+            }
+            else
+               pNode = n;
+         }
+      }
 	   else
 	   {
 		   for( var* c = FirstChild(); c; c = c->NextSibling() )
@@ -2400,14 +2415,14 @@ private:
 			   else if( var p{c->ToElement()}; p && p->Value<iv>()=="BR" )
 				   y+='\n';
 			   else if( var p{c->IsHtmlStyle() ? c->ToElement() : nullptr}; p )
-				   y+=p->HtmlText<T>( false, unescape );  //don't want to trim <div>1st <b>2nd</b>
+				   y+=get<0>( p->HtmlText<T>(false, unescape) );  //don't want to trim <div>1st <b>2nd</b>
 		   }
 	   }
       if( unescape )
          y = UnEscape<T>( y );
       if( trim )
          y = Str::Trim<view>( y );
-	   return y;
+	   return make_tuple( y, pNode );
    }
 
    template<Str::IsView T> α XMLNode::Text()Ι->T

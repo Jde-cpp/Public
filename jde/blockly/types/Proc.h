@@ -52,7 +52,7 @@ namespace Jde::Markets::MBlockly
 		friend α operator-( const Price& a, const Price& b )ε->Price{ check return Price{ *a._value-*b._value }; }
 		friend α operator+( const Price& a, const Price& b )ε->Price{ check return Price{ *a._value+*b._value }; }
 		friend α operator/( const Price& a, const Price& b )ε->double{ check return (double)(*a._value / *b._value); }
-		α ToString()Ι->string{ return *this ? fmt::format( "{}", *_value ) : "null"; }
+		α ToString()Ι->string{ return (bool)*this ? fmt::format( "{}", *_value ) : "null"; }
 	protected:
 
 	private:
@@ -189,7 +189,6 @@ namespace Jde::Markets::MBlockly
 		ProcOrder()ι:ProcOrder{0}{};
 		ProcOrder( long orderId )ι:MyOrder{::Order{orderId}}{};
 		ProcOrder( const MyOrder& x )ι:MyOrder{x}{}
-		//ProcOrder( const ProcOrder& x )ι:MyOrder{x}, _lastUpdate{x._lastUpdate}{}
 		operator bool()Ι{ return MyOrder::action.size(); }
 		α AccountNumber()Ι->str{ return MyOrder::account; }
 		α OrderId()Ι{ return MyOrder::orderId; }
@@ -208,18 +207,5 @@ namespace Jde::Markets::MBlockly
 		α Base()Ι->const MyOrder&{ return *this;}
 		friend Awaitable;
 	};
-/************************************************************
-	struct LimitPriceException final: Exception
-	{
-		LimitPriceException( Price current, Price limit )ι:
-			Exception( "'{}' is over the price limit '{}'.", current._value, limit._value )
-		{}
-	};
-	struct LimitAmountException final: Exception
-	{
-		LimitAmountException( Amount current, Amount limit )ι:
-			Exception( "'{}' is over the value limit '{}'.", current._value, limit._value )
-		{}
-	};*/
 }
 #undef check

@@ -333,15 +333,6 @@ enum BarSize
 	Month=2592000;
 	Year=31104000;
 }
-enum Stats
-{
-	StatsNone=0;
-	ATH=1;
-	PWL=2;
-	YearLow=3;
-	YearHigh=4;
-	MA100=5;
-}
 
 enum ERequests
 {

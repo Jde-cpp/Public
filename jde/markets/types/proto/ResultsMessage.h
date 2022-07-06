@@ -25,6 +25,7 @@ namespace Jde::Markets
 	Ξ ToMessage( _::Orders* p )${ SET( set_allocated_orders ); }
 	Ξ ToMessage( ETickType t, ContractPK c, uint v )${ auto p = new TickSize(); p->set_request_id( c ); p->set_tick_type( t ); p->set_size( (double)v ); SET( set_allocated_tick_size ); }
 	Ξ ToRatioMessage( const std::map<string,double>& x, uint32 c )${ auto p = new _::Fundamentals(); p->set_request_id( c ); for( var& [n,v] : x ) (*p->mutable_values())[n] = v; SET(set_allocated_fundamentals); }
+	Ξ ToMessage( ContractStats* p, uint32 c )${ p->set_request_id(c); SET( set_allocated_contract_stats ); }
 }
 #undef $
 #undef SET

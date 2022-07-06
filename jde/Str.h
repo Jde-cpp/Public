@@ -192,7 +192,6 @@ namespace Jde
 		//[start,start of next word] of phrase index.  start of next word because of stemming
 		TSV Pascal( X s )ι->$;
 		TSV Camel( X s )ι->$;
-#undef TSV
 #undef X
 	}
 	template<class T, class D> α Str::Split( bsv<TT> s, bsv<typename D::traits_type> delim, uint count, sv errorId, SL sl )ε->vector<bsv<TT>>
@@ -246,11 +245,7 @@ namespace Jde
 		auto p = std::find_if( s.begin(), s.end(), f );
 		return p==s.end() ? bsv<TT>{} : p==s.begin() ? s : bsv<TT>{ s.data()+std::distance(s.begin(),p), s.size()-std::distance(s.begin(),p) };
 	}
-	ⓣ Str::LTrim( bsv<TT> s )->bsv<TT>
-	{
-		auto f = [](int ch){ return !std::isspace(ch); };
-		return LTrim<T>( s, f );
-	}
+
 
 	ⓣ Str::LTrim( bsv<TT> s, const vector<char>& tokens )->bsv<TT>
 	{
@@ -443,17 +438,47 @@ namespace Jde
 			return y;
 		}
 
+		TSV GetChar( Str::bsv<TT> x, uint& i )ι->wchar_t
+		{
+			wchar_t ch = i<x.size() ? x[i] : '\0';
+			if( ch==L'\xffe2' && i+2<x.size() )
+			{
+						
+				ch =  x[++i];
+				ch = ch << 8;
+				wchar_t lo = x[++i] & 0xff; //lo &= 0xff;
+				ch += lo;
+			}
+			return ch;
+		};
+#undef TSV
+
 		template<class T=sv, bool TStem=false> α WordsLocation( Str::bsv<TT> x )ι->tuple<vector<T>,vector<uint>> //[words, endIndex]
 		{
 			tuple<vector<T>,vector<uint>> y;
-			auto isSeparator = []( unsigned char ch )ι->bool{ return ::isspace(ch) || ch=='.' || ch==';' || ch==':' || ch=='(' || ch==')' || ch=='/'; };
+			auto isSeparator = []( wchar_t ch )ι->bool{ return ::isspace(ch) || ch=='.' || ch==';' || ch==':' || ch=='(' || ch==')' || ch=='/' || ch==L'\x80af' || ch==L'\x8093'; };
 			for( uint iStart{0}, iEnd; iStart<x.size(); iStart=iEnd )
 			{
-				auto ch=x[iStart];
-	#define INCR(i) ch= ++i<x.size() ? x[i] : '\0'
-				for( ; isSeparator(ch); INCR(iStart) );
+/*				auto getChar = [&x]( uint& i )
+				{
+					wchar_t ch = i<x.size() ? x[i] : '\0';
+					if( ch==L'\xffe2' && i+2<x.size() )
+					{
+						
+						ch =  x[++i];
+						ch = ch << 8;
+						wchar_t lo = x[++i] & 0xff; //lo &= 0xff;
+						ch += lo;
+					}
+					return ch;
+				};*/
+				wchar_t ch=GetChar<T>( x, iStart );
+//	#define INCR(i) ch = ++i<x.size() ? x[i] : '\0'
+				for( ; isSeparator(ch); ch=GetChar<T>( x, ++iStart) );
 				iEnd=iStart;
-				for( ; ch!='\0' && !isSeparator(ch); INCR(iEnd) );
+				for( ; ch!='\0' && !isSeparator(ch); ch=GetChar<T>(x, ++iEnd) );
+				if( ch>0xff )
+					iEnd-=2;
 				if( var length{iEnd-iStart}; length )
 				{
 					T v{ x.substr(iStart, length) };
@@ -469,6 +494,18 @@ namespace Jde
 			}
 			return y;
 		}
+	}
+
+	ⓣ Str::LTrim( Str::bsv<TT> s )->Str::bsv<TT>
+	{
+		uint i=0; wchar_t ch;
+		for( ch = Internal::GetChar<T>( s, i ); 
+			std::isspace(ch) || ch==L'\x80af' || ch==L'\x8093'; 
+			ch = Internal::GetChar<T>(s, ++i) );
+		if( ch>0xff && i>1 )
+			i-=2;
+		return i ? bsv<TT>{ s.data()+i, s.size()-i } : s;
+		//return s;
 	}
 
 	ⓣ Str::Words( bsv<TT> x )ι->vector<bsv<TT>>{ return get<0>( Internal::WordsLocation<T>(x) ); }

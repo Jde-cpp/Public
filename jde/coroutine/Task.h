@@ -22,7 +22,7 @@ namespace Jde::Coroutine
 		AwaitResult()=default;
 		Τ AwaitResult( up<T> p )ι:_result{ p.release() }{}
 		explicit AwaitResult( UType p )ι:_result{ p }{}
-		explicit AwaitResult( up<IException> e )ι:_result{move(e)}{};
+		explicit AwaitResult( up<IException> e )ι:_result{e.release()}{};
 		AwaitResult( sp<void>&& p )ι:_result{ p }{};
 		AwaitResult( Exception&& e )ι:_result{ e.Move().release() }{};
 		α Clear()ι->void{ _result = UType{}; }

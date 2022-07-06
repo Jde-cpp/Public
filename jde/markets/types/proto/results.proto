@@ -1,5 +1,4 @@
 ﻿//source $JDE_BASH/Framework/common.sh
-//$JDE_BASH/Public/stage/release/
 //cd $JDE_BASH/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. results.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' results.pb.h;sed -i '1s/^/\xef\xbb\xbf/' results.pb.h;
 //cd $JDE_BASH/MarketLibrary/source/types/proto;mv $JDE_BASH/Public/jde/markets/types/proto/results.pb.cc .;mklink results.pb.h $JDE_BASH/Public/jde/markets/types/proto
 
@@ -26,6 +25,17 @@ message StringResult
 	string value=3;
 }
 
+message ContractStat
+{
+	Stats stat=1;
+	uint32 contract_id=2;
+	double value=3;
+}
+message ContractStats
+{
+	uint32 request_id=1;
+	repeated ContractStat stats=2;
+}
 message ContractValue
 {
 	EResults type=1;
@@ -492,6 +502,7 @@ message MessageUnion
 		Orders orders = 40;
 		ContractValue contract_value = 41;
 		OrderUpdate order_update=42;
+		ContractStats contract_stats=43;
 	}
 }
 message Transmission

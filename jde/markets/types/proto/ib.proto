@@ -140,6 +140,21 @@ enum Currencies
 	KenyaShilling = 52;
 }
 
+enum Stats
+{
+	UpdateDay=0;
+	Atl=1;
+	AtlDay=-1;
+	Ath=2;
+	AthDay=-2;
+	YearLow=3;
+	YearLowDay=-3;
+	YearHigh=4;
+	YearHighDay=-4;
+	MA100=5;
+	Pwl=6;
+}
+
 message Contract
 {
 	uint32 id=1;

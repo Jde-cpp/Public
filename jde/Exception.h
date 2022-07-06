@@ -37,8 +37,8 @@ namespace Jde
 	struct StackTrace
 	{
 		StackTrace( SL sl )noexcept{ stack.push_back(sl); }
-		α front()const noexcept->SL&{ return stack.front(); }
-		α size()const noexcept->uint{ return stack.size(); }
+		α front()Ι->SL&{ return stack.front(); }
+		α size()Ι->uint{ return stack.size(); }
 		vector<source_location> stack;
 	};
 	struct Γ IException : std::exception
@@ -53,11 +53,11 @@ namespace Jde
 
 		virtual ~IException();
 
-		β Log()const noexcept->void;
-		α what()const noexcept->const char* override;
-		α What()noexcept->string&&{ return move(_what); }
-		α What()const noexcept->const string&{ return _what; }
-		α Level()const noexcept->ELogLevel{return _level;} α SetLevel( ELogLevel level )const noexcept{ _level=level;}
+		β Log()Ι->void;
+		α what()Ι->const char* override;
+		//α What()noexcept->string&&{ return move(_what); }
+		α What()Ι->const string&{ return _what; }
+		α Level()Ι->ELogLevel{return _level;} α SetLevel( ELogLevel level )Ι{ _level=level;}
 		β Clone()noexcept->sp<IException> =0;
 		β Move()noexcept->up<IException> =0;
 		α Push( SL sl )noexcept{ _stack.stack.push_back(sl); }
@@ -65,7 +65,7 @@ namespace Jde
 		[[noreturn]] β Throw()->void=0;
 	protected:
 		IException( SRCE )noexcept:IException{ {}, ELogLevel::Debug, 0, sl }{}
-		α BreakLog()const noexcept->void;
+		α BreakLog()Ι->void;
 		StackTrace _stack;
 
 		mutable string _what;
@@ -139,12 +139,12 @@ namespace Jde
 		IOException( fs::filesystem_error&& e, SRCE ):IException{sl}, _pUnderLying( make_unique<fs::filesystem_error>(move(e)) ){ SetWhat(); }
 		$ IOException( SL sl, path path, ELogLevel level, sv value, Args&&... args ):IException( sl, level, value, args... ),_path{ path }{ SetWhat(); }
 
-		α Path()const noexcept->path; α SetPath( path x )noexcept{ _path=x; }
-		α what()const noexcept->const char* override;
+		α Path()Ι->path; α SetPath( path x )noexcept{ _path=x; }
+		α what()Ι->const char* override;
 		using T=IOException;
 		COMMON
 	private:
-		α SetWhat()const noexcept->void;
+		α SetWhat()Ι->void;
 
 		sp<const fs::filesystem_error> _pUnderLying;
 		fs::path _path;
@@ -155,8 +155,8 @@ namespace Jde
 		NetException( sv host, sv target, uint code, string result, ELogLevel level=ELogLevel::Debug, SRCE )noexcept;
 		NetException( NetException&& f )noexcept:IException{ move(f) }, Host{ f.Host }, Target{ f.Target }, Result{ f.Result }{}
 		~NetException(){ Log(); }
-		α Log()const noexcept->void override{ Log( {} ); }
-		α Log( string extra )const noexcept->void;
+		α Log()Ι->void override{ Log( {} ); }
+		α Log( string extra )Ι->void;
 
 		using T=NetException;
 		COMMON

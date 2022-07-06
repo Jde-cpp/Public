@@ -9,7 +9,6 @@ namespace Jde
 	{
 		unsigned int _;
 		double y = bid64_to_binary64( v, 0, &_ );
-		auto _2 = ToDecimal( y );
 		return y;
 	}
 	Ξ ToString( ::Decimal v )ι->string{ char y[64]; unsigned int _; bid64_to_string(y, v, &_ ); return y; }
@@ -23,7 +22,6 @@ namespace Jde
 		Decimal()ι:_value{0}{}
 		Decimal( ::Decimal x )ι:_value{x}{}
 		Decimal( double x )ι:_value{ ToDecimal(x) }{}
-		//α ToDouble()Ι->double{ return ToDouble(*_value); }
 		explicit operator double()Ι
 		{
 			auto y = ToDouble(_value);
