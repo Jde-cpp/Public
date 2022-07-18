@@ -1110,73 +1110,6 @@ struct Γ XMLAttribute
     const XMLAttribute* Next() const {
         return _next;
     }
-
-    /** IntValue interprets the attribute as an integer, and returns the value.
-        If the value isn't an integer, 0 will be returned. There is no error checking;
-    	use QueryIntValue() if you need error checking.
-    */
-    /*
-	int	IntValue() const {
-		int i = 0;
-		QueryIntValue(&i);
-		return i;
-	}
-
-	int64_t Int64Value() const {
-		int64_t i = 0;
-		QueryInt64Value(&i);
-		return i;
-	}
-
-    uint64_t Unsigned64Value() const {
-        uint64_t i = 0;
-        QueryUnsigned64Value(&i);
-        return i;
-    }
-
-    /// Query as an unsigned integer. See IntValue()
-    unsigned UnsignedValue() const			{
-        unsigned i=0;
-        QueryUnsignedValue( &i );
-        return i;
-    }
-    /// Query as a boolean. See IntValue()
-    bool	 BoolValue() const				{
-        bool b=false;
-        QueryBoolValue( &b );
-        return b;
-    }
-    /// Query as a double. See IntValue()
-    double 	 DoubleValue() const			{
-        double d=0;
-        QueryDoubleValue( &d );
-        return d;
-    }
-    /// Query as a float. See IntValue()
-    float	 FloatValue() const				{
-        float f=0;
-        QueryFloatValue( &f );
-        return f;
-    }
-
-    / ** QueryIntValue interprets the attribute as an integer, and returns the value
-    	in the provided parameter. The function will return XML_SUCCESS on success,
-    	and XML_WRONG_ATTRIBUTE_TYPE if the conversion is not successful.
-    * /
-    XMLError QueryIntValue( int* value ) const;
-    /// See QueryIntValue
-    XMLError QueryUnsignedValue( unsigned int* value ) const;
-	/// See QueryIntValue
-	XMLError QueryInt64Value(int64_t* value) const;
-    /// See QueryIntValue
-    XMLError QueryUnsigned64Value(uint64_t* value) const;
-	/// See QueryIntValue
-    XMLError QueryBoolValue( bool* value ) const;
-    /// See QueryIntValue
-    XMLError QueryDoubleValue( double* value ) const;
-    /// See QueryIntValue
-    XMLError QueryFloatValue( float* value ) const;
-    */
     /// Set the attribute to a string value.
     void SetAttribute( sv value );
     /// Set the attribute to value.
@@ -1222,23 +1155,10 @@ private:
 */
 struct Γ XMLElement : public XMLNode
 {
-    /// Get the name of an element (which is the Value() of the node.)
-    /*const char* Name() const		{
-        return Value();
-    }*/
 	 α Name()Ι->sv override{ return _value.View(); }
 
 	 α operator[](sv i)Ι->const XMLAttribute*;
 
-/*	 template<class T=sv> α Attr( sv n )Ι(false)->T
-	 {
-		 auto p = *this[i]; THROW_IF( !p, "Could not find attribute '{}'", n );
-		 return p->value();
-	 }
-	 template<class T=sv> α TryAttr( sv n )Ι(false)->optional<T>
-	 {
-		 return *this[i] ? *this[i]->value() : nullopt;
-	 }*/
 	 template<class T=sv> α Attr( sv n )Ι->T;
 
     /// Set the name of the element.
@@ -1309,129 +1229,6 @@ struct Γ XMLElement : public XMLNode
     	QueryIntAttribute( "foo", &value );		// if "foo" isn't found, value will still be 10
     	@endverbatim
     * /
-
-    XMLError QueryIntAttribute( const char* name, int* value ) const				{
-        const XMLAttribute* a = FindAttribute( name );
-        if ( !a ) {
-            return XML_NO_ATTRIBUTE;
-        }
-        return a->QueryIntValue( value );
-    }
-
-	/// See QueryIntAttribute()
-    XMLError QueryUnsignedAttribute( const char* name, unsigned int* value ) const	{
-        const XMLAttribute* a = FindAttribute( name );
-        if ( !a ) {
-            return XML_NO_ATTRIBUTE;
-        }
-        return a->QueryUnsignedValue( value );
-    }
-
-	/// See QueryIntAttribute()
-	XMLError QueryInt64Attribute(const char* name, int64_t* value) const {
-		const XMLAttribute* a = FindAttribute(name);
-		if (!a) {
-			return XML_NO_ATTRIBUTE;
-		}
-		return a->QueryInt64Value(value);
-	}
-
-    /// See QueryIntAttribute()
-    XMLError QueryUnsigned64Attribute(const char* name, uint64_t* value) const {
-        const XMLAttribute* a = FindAttribute(name);
-        if(!a) {
-            return XML_NO_ATTRIBUTE;
-        }
-        return a->QueryUnsigned64Value(value);
-    }
-
-	/// See QueryIntAttribute()
-    XMLError QueryBoolAttribute( const char* name, bool* value ) const				{
-        const XMLAttribute* a = FindAttribute( name );
-        if ( !a ) {
-            return XML_NO_ATTRIBUTE;
-        }
-        return a->QueryBoolValue( value );
-    }
-    /// See QueryIntAttribute()
-    XMLError QueryDoubleAttribute( const char* name, double* value ) const			{
-        const XMLAttribute* a = FindAttribute( name );
-        if ( !a ) {
-            return XML_NO_ATTRIBUTE;
-        }
-        return a->QueryDoubleValue( value );
-    }
-    /// See QueryIntAttribute()
-    XMLError QueryFloatAttribute( const char* name, float* value ) const			{
-        const XMLAttribute* a = FindAttribute( name );
-        if ( !a ) {
-            return XML_NO_ATTRIBUTE;
-        }
-        return a->QueryFloatValue( value );
-    }
-
-	/// See QueryIntAttribute()
-/ *
-	XMLError QueryStringAttribute(const char* name, const char** value) const {
-		const XMLAttribute* a = FindAttribute(name);
-		if (!a) {
-			return XML_NO_ATTRIBUTE;
-		}
-		*value = a->Value();
-		return XML_SUCCESS;
-	}
-  */
-
-
-    /** Given an attribute name, QueryAttribute() returns
-    	XML_SUCCESS, XML_WRONG_ATTRIBUTE_TYPE if the conversion
-    	can't be performed, or XML_NO_ATTRIBUTE if the attribute
-    	doesn't exist. It is overloaded for the primitive types,
-		and is a generally more convenient replacement of
-		QueryIntAttribute() and related functions.
-
-		If successful, the result of the conversion
-    	will be written to 'value'. If not successful, nothing will
-    	be written to 'value'. This allows you to provide default
-    	value:
-
-    	@verbatim
-    	int value = 10;
-    	QueryAttribute( "foo", &value );		// if "foo" isn't found, value will still be 10
-    	@endverbatim
-    * /
-	XMLError QueryAttribute( const char* name, int* value ) const {
-		return QueryIntAttribute( name, value );
-	}
-
-	XMLError QueryAttribute( const char* name, unsigned int* value ) const {
-		return QueryUnsignedAttribute( name, value );
-	}
-
-	XMLError QueryAttribute(const char* name, int64_t* value) const {
-		return QueryInt64Attribute(name, value);
-	}
-
-    XMLError QueryAttribute(const char* name, uint64_t* value) const {
-        return QueryUnsigned64Attribute(name, value);
-    }
-
-    XMLError QueryAttribute( const char* name, bool* value ) const {
-		return QueryBoolAttribute( name, value );
-	}
-
-	XMLError QueryAttribute( const char* name, double* value ) const {
-		return QueryDoubleAttribute( name, value );
-	}
-
-	XMLError QueryAttribute( const char* name, float* value ) const {
-		return QueryFloatAttribute( name, value );
-	}
-
-	XMLError QueryAttribute(const char* name, const char** value) const {
-		return QueryStringAttribute(name, value);
-	}*/
-
 	/// Sets the named attribute to value.
     void SetAttribute( sv name, sv value )	{
         XMLAttribute* a = FindOrCreateAttribute( name );
@@ -1605,7 +1402,7 @@ struct Γ XMLElement : public XMLNode
 	/// See QueryIntText()
 	XMLError QueryInt64Text(int64_t* uval) const;
 
-	ⓣ TryChildTo( sv elementName )noexcept->T
+	Ŧ TryChildTo( sv elementName )noexcept->T
    {
       var s = TryChildText( elementName );
 		var trim = Jde::Str::Trim( s );
@@ -1742,35 +1539,6 @@ struct Γ XMLDocument : public XMLNode
     	an errorID.
     */
     XMLError LoadFile( const char* filename );
-
-    /**
-    	Load an XML file from disk. You are responsible
-    	for providing and closing the FILE*.
-
-        NOTE: The file should be opened as binary ("rb")
-        not text in order for TinyXML-2 to correctly
-        do newline normalization.
-
-    	Returns XML_SUCCESS (0) on success, or
-    	an errorID.
-    */
-    //XMLError LoadFile( FILE* );
-
-    /**
-    	Save the XML file to disk.
-    	Returns XML_SUCCESS (0) on success, or
-    	an errorID.
-    */
-    //XMLError SaveFile( const char* filename, bool compact = false );
-
-    /**
-    	Save the XML file to disk. You are responsible
-    	for providing and closing the FILE*.
-
-    	Returns XML_SUCCESS (0) on success, or
-    	an errorID.
-    */
-    //XMLError SaveFile( FILE* fp, bool compact = false );
 
     bool ProcessEntities() const		{
         return _processEntities;
@@ -2336,13 +2104,13 @@ private:
       return pAttribute ? pAttribute->Value() : sv{};
    }
    template<> Ξ XMLElement::Attr<bool>( sv n )Ι->bool{ return (*this)[n] ? (*this)[n]->Value()=="true" : false; }
-   ⓣ XMLElement::Attr( sv n )Ι->T
+   Ŧ XMLElement::Attr( sv n )Ι->T
 	{
       auto pAttribute = (*this)[n];
 		return pAttribute ? Jde::To<T>( pAttribute->Value() ) : T{};
 	}
 
-   ⓣ XMLNode::FindText( T elementText, sv elementName )Ι->const XMLElement* //"<p>value</p>=Find(p, value)"
+   Ŧ XMLNode::FindText( T elementText, sv elementName )Ι->const XMLElement* //"<p>value</p>=Find(p, value)"
    {
 	   const XMLElement* y = nullptr;
 	   for( const XMLNode* n=FirstChild(); !y && n; n=n->NextSibling() )

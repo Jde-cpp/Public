@@ -28,10 +28,10 @@
 	using std::suspend_never;
 	using std::stop_token;
 #else
-	#include <experimental/coroutine>
+	#include <coroutine>
 	#include <boost/assert/source_location.hpp>
-	using std::experimental::coroutine_handle;
-	using std::experimental::suspend_never;
+	using std::coroutine_handle;
+	using std::suspend_never;
 #endif
 
 #define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )") _Pragma("warning( disable: 4701 )")
@@ -55,7 +55,7 @@
 #define Ω static auto
 #define Ξ inline auto
 #define Τ template<class T>
-#define ⓣ template<class T> auto
+#define Ŧ template<class T> auto
 #define ẗ template<class K,class V> auto
 #define Ṫ template<class T> static auto
 #define ψ template<class... Args> auto
@@ -151,8 +151,6 @@ namespace Jde
 	#define SRCE_CUR std::source_location::current()
 #else
 	constexpr bool _msvc{ false };
-	using std::experimental::coroutine_handle;
-	using std::experimental::suspend_never;
 	using boost::source_location;
 	#define SRCE_CUR boost::source_location{ __builtin_FILE(), __builtin_LINE(), __builtin_FUNCTION() }
 #endif

@@ -117,7 +117,7 @@ namespace Jde
 #endif
 	};
 
-	ⓣ IApplication::AddPollster( /*bool appThread*/ )noexcept->sp<T>
+	Ŧ IApplication::AddPollster( /*bool appThread*/ )noexcept->sp<T>
 	{
 		static_assert(std::is_base_of<IShutdown, T>::value, "T must derive from IShutdown");
 		static_assert(std::is_base_of<Threading::IPollWorker, T>::value, "T must derive from IPollWorker");

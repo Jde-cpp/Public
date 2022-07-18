@@ -155,7 +155,7 @@ namespace Jde::Blockly
 	{
 		Value( const Xml::XMLElement& e, const File& file )noexcept;
 		EValueType ValueType()Ε{ return Ptr->ValueType(); }
-		ⓣ TryType()const noexcept->const T*{ return dynamic_cast<const T*>(&Type()); }
+		Ŧ TryType()const noexcept->const T*{ return dynamic_cast<const T*>(&Type()); }
 		const IValue& Type()const noexcept{ return *Ptr; }
 		IMPL{ return Ptr->Implementation( impl ); }
 		STATIC_PARAMS{ return Ptr->StaticParams( type ); }
@@ -385,7 +385,7 @@ namespace Jde::Blockly
 	};
 
 #define var const auto
-	ⓣ Require( const auto& parent, sv description, SRCE )noexcept(false)->const T&
+	Ŧ Require( const auto& parent, sv description, SRCE )noexcept(false)->const T&
 	{
 		var p = dynamic_cast<const T*>( &parent );
 #ifdef _MSC_VER
@@ -543,7 +543,7 @@ namespace Jde::Blockly
 		constexpr static sv VariableContainerName = "variables";
 	};
 	#pragma warning( disable : 4297 )
-	ⓣ OptFactory( const Xml::XMLElement& e )noexcept->	optional<T>
+	Ŧ OptFactory( const Xml::XMLElement& e )noexcept->	optional<T>
 	{
 		optional<T> v;
 		for( var* c = e.FirstChildElement(T::ElementName); c; c = c->NextSiblingElement(T::ElementName) )
@@ -553,14 +553,14 @@ namespace Jde::Blockly
 		}
 		return v;
 	}
-	ⓣ Factory( const Xml::XMLElement& e )noexcept(false)->T
+	Ŧ Factory( const Xml::XMLElement& e )noexcept(false)->T
 	{
 		auto v = OptFactory<T>( e );
 		THROW_IF( !v, "Could not find element '{}'.", T::ElementName );
 		return v.value();
 	}
 
-	ⓣ OptFactory( const Xml::XMLElement& e, const File& file )noexcept(false)->optional<T>
+	Ŧ OptFactory( const Xml::XMLElement& e, const File& file )noexcept(false)->optional<T>
 	{
 		optional<T> y;
 		for( var* c = e.FirstChildElement(T::ElementName); c; c = c->NextSiblingElement(T::ElementName) )
@@ -571,7 +571,7 @@ namespace Jde::Blockly
 		return y;
 	}
 
-	ⓣ Factory( const Xml::XMLElement& e, const File& file )noexcept(false)->T
+	Ŧ Factory( const Xml::XMLElement& e, const File& file )noexcept(false)->T
 	{
 		auto v = OptFactory<T>( e, file );
 		THROW_IF( !v, "Could not find element '{}'.", T::ElementName );

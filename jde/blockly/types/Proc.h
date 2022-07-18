@@ -20,7 +20,7 @@ namespace Jde::Markets::Proto::Results{ class ContractHours;}
 template<> struct fmt::formatter<Jde::Decimal>
 {
 	constexpr α parse( fmt::format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
-	ⓣ format( Jde::Decimal x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{:.2f}", (double)x ); }
+	Ŧ format( Jde::Decimal x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{:.2f}", (double)x ); }
 };
 
 namespace Jde::Markets::MBlockly

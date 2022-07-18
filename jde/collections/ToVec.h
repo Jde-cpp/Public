@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include <sstream>
-//#include "../Str.h"
 #include "../TypeDefs.h"
 
 //https://stackoverflow.com/questions/21806561/concatenating-strings-and-numbers-in-variadic-template-function
@@ -18,7 +17,7 @@ namespace Jde::ToVec
 		return Apend( values, std::forward<Tail>(t)... );
 	}
 
-	ⓣ ToStringT( const T& x )->string
+	Ŧ ToStringT( const T& x )->string
 	{
 		constexpr bool StringConcept = requires(const T& t) { t.data(); t.size(); };
 		if constexpr( StringConcept )

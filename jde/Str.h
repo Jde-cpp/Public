@@ -83,7 +83,7 @@ namespace Jde
 		return y;
 	}
 
-	ⓣ To( sv value )ι->T
+	Ŧ To( sv value )ι->T
 	{
 		T v{};
 		std::from_chars( value.data(), value.data()+value.size(), v );
@@ -109,7 +109,7 @@ namespace Jde
 	}
 
 	constexpr iv operator "" _iv( const char* x, uint len )noexcept{ return iv(x, len); }
-	ⓣ FromTraits( T x )->string{ return string{ x.data(), x.size() }; }
+	Ŧ FromTraits( T x )->string{ return string{ x.data(), x.size() }; }
 	struct Γ CIString : String
 	{
 		using base=String;
@@ -120,7 +120,7 @@ namespace Jde
 		CIString( const char* p, sv::size_type s )ι:base{p, s}{}
 		α substr( uint i, uint c = npos )Ι->CIString{ return CIString{base::substr(i, c)}; }
 		//uint find( sv sub, uint pos = 0 )Ι;
-		ⓣ operator==( const T& s )Ι->bool{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
+		Ŧ operator==( const T& s )Ι->bool{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
 		α operator==( const char* psz )Ι->bool{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
 		friend std::ostream& operator<<( std::ostream &os, const CIString& obj )noexcept{ os << (string)obj; return os; }
 		Ξ operator !=( sv s )Ι{ return size() == s.size() && base::compare(0, s.size(), s.data(), s.size())!=0; }
@@ -144,20 +144,20 @@ namespace Jde
 		template<class T=sv, class D=sv> α Split( bsv<TT> s, bsv<typename D::traits_type> delim )ι->vector<bsv<TT>>;
 		template<class X=sv, class Y=sv> α Split( bsv<typename X::traits_type> x, char delim=',', bool removeEmpty=false )ι->vector<bsv<typename Y::traits_type>>;
 
-		ⓣ AddSeparators( T collection, sv separator, bool quote=false )ι->string;
+		Ŧ AddSeparators( T collection, sv separator, bool quote=false )ι->string;
 
-		ⓣ AddCommas( T value, bool quote=false )ι{ return AddSeparators( value, ",", quote ); }
+		Ŧ AddCommas( T value, bool quote=false )ι{ return AddSeparators( value, ",", quote ); }
 
 		Φ NextWord( sv x )ι->sv;
 
-		ⓣ NextWordLocation( T x )ι->optional<tuple<T,uint>>;
+		Ŧ NextWordLocation( T x )ι->optional<tuple<T,uint>>;
 
 		template<class T=string> α Replace( const T& source, bsv<TT> find, bsv<TT> replace )ι->$;
 		Φ Replace( sv source, char find, char replace )ι->string;
 		Φ ToLower( sv source )ι->string;
 		Φ ToUpper( sv source )ι->string;
 
-		ⓣ TryToFloat( const basic_string<T>& s )ι->float;
+		Ŧ TryToFloat( const basic_string<T>& s )ι->float;
 		optional<double> TryToDouble( str s )ι;
 
 		template<class TEnum, class Collection> α FromEnum( const Collection& stringValues, TEnum value )ι->string;
@@ -226,7 +226,7 @@ namespace Jde
 		return results;
 	}
 
-	ⓣ Str::Replace( const T& x, bsv<TT> token, bsv<TT> replace )ι->$
+	Ŧ Str::Replace( const T& x, bsv<TT> token, bsv<TT> replace )ι->$
 	{
 		$ y; y.reserve( x.size() ); uint iLast{ 0 };
 		for( uint i{}; (i = x.find(token, i))!=string::npos; iLast = (i=i+token.length()) )
@@ -240,36 +240,36 @@ namespace Jde
 		return y;
 	}
 
-	ⓣ Str::LTrim( bsv<TT> s, function<bool(char)> f )->bsv<TT>
+	Ŧ Str::LTrim( bsv<TT> s, function<bool(char)> f )->bsv<TT>
 	{
 		auto p = std::find_if( s.begin(), s.end(), f );
 		return p==s.end() ? bsv<TT>{} : p==s.begin() ? s : bsv<TT>{ s.data()+std::distance(s.begin(),p), s.size()-std::distance(s.begin(),p) };
 	}
 
 
-	ⓣ Str::LTrim( bsv<TT> s, const vector<char>& tokens )->bsv<TT>
+	Ŧ Str::LTrim( bsv<TT> s, const vector<char>& tokens )->bsv<TT>
 	{
 		auto f = [&tokens](int ch){ return !std::isspace(ch) && std::find(tokens.begin(), tokens.end(), ch)==tokens.end(); };
 		return LTrim<T>( s, f );
 	}
 
-	ⓣ Str::RTrim( bsv<TT> s, function<bool(char)> f )->bsv<TT>
+	Ŧ Str::RTrim( bsv<TT> s, function<bool(char)> f )->bsv<TT>
 	{
 		bsv<TT> y;
 		if( auto p = std::find_if(s.rbegin(), s.rend(), f); p!=s.rend() )
 			y = p==s.rbegin() ? s : bsv<TT>{ s.data(), s.size()-std::distance(s.rbegin(), p) };
 		return y;
 	}
-	ⓣ Str::RTrim( bsv<TT> s )->bsv<TT>
+	Ŧ Str::RTrim( bsv<TT> s )->bsv<TT>
 	{
 		return RTrim<T>( s, [](int ch){return !std::isspace(ch);} );
 	}
-	ⓣ Str::RTrim( bsv<TT> s, const vector<char>& tokens )->bsv<TT>
+	Ŧ Str::RTrim( bsv<TT> s, const vector<char>& tokens )->bsv<TT>
 	{
 		auto f = [&tokens](int ch){ return !std::isspace(ch) && std::find(tokens.begin(), tokens.end(), ch)==tokens.end(); };
 		return RTrim<T>( s, f );
 	}
-	ⓣ Str::TrimPunct( bsv<TT> s, bool leaveTrailingPeriod )->bsv<TT>
+	Ŧ Str::TrimPunct( bsv<TT> s, bool leaveTrailingPeriod )->bsv<TT>
 	{
 		const vector<char> v{ '.',',',':','-','*','_' };
 		auto y = RTrim<T>( LTrim<T>(s, v), v );
@@ -277,7 +277,7 @@ namespace Jde
 			y = { y.data(), y.size()+1 };
 		return y;
 	}
-	ⓣ Str::AddSeparators( T collection, sv separator, bool quote )ι->string
+	Ŧ Str::AddSeparators( T collection, sv separator, bool quote )ι->string
 	{
 		ostringstream os;
 		auto first = true;
@@ -295,7 +295,7 @@ namespace Jde
 		return os.str();
 	}
 
-	ⓣ Str::TryToFloat( const basic_string<T>& token )ι->float
+	Ŧ Str::TryToFloat( const basic_string<T>& token )ι->float
 	{
 		try
 		{
@@ -386,7 +386,7 @@ namespace Jde
 		return (uint)value<stringValues.size() ? string{ stringValues[(uint)value] } : std::to_string( (uint)value );
 	}
 
-	ⓣ Str::Trim( bsv<TT> s, bsv<TT> substring )ι->$
+	Ŧ Str::Trim( bsv<TT> s, bsv<TT> substring )ι->$
 	{
 		$ trimmed; uint current=0;
 		for( uint i; (i = s.find(substring, current))!=string::npos; current = i+substring.size() )
@@ -397,7 +397,7 @@ namespace Jde
 		return current ? trimmed : ${ s };
 	}
 
-	ⓣ Str::NextWordLocation( T x )ι->optional<tuple<T,uint>>
+	Ŧ Str::NextWordLocation( T x )ι->optional<tuple<T,uint>>
 	{
 		uint i = 0;
 		for( ; i<x.size() && x[i]>0 && ::isspace(x[i]); ++i );//msvc asserts if ch<0
@@ -408,7 +408,7 @@ namespace Jde
 
 	namespace Internal
 	{
-		ⓣ PorterStemmer( T s )->$//TODO get library or old code.
+		Ŧ PorterStemmer( T s )->$//TODO get library or old code.
 		{
 			return ${ s.ends_with('s') || s.ends_with('S') ? s.substr(0,s.size()-1) : s };
 		}
@@ -496,7 +496,7 @@ namespace Jde
 		}
 	}
 
-	ⓣ Str::LTrim( Str::bsv<TT> s )->Str::bsv<TT>
+	Ŧ Str::LTrim( Str::bsv<TT> s )->Str::bsv<TT>
 	{
 		uint i=0; wchar_t ch;
 		for( ch = Internal::GetChar<T>( s, i ); 
@@ -508,9 +508,9 @@ namespace Jde
 		//return s;
 	}
 
-	ⓣ Str::Words( bsv<TT> x )ι->vector<bsv<TT>>{ return get<0>( Internal::WordsLocation<T>(x) ); }
+	Ŧ Str::Words( bsv<TT> x )ι->vector<bsv<TT>>{ return get<0>( Internal::WordsLocation<T>(x) ); }
 
-	ⓣ Str::StemmedWords( bsv<TT> x )ι->vector<$>
+	Ŧ Str::StemmedWords( bsv<TT> x )ι->vector<$>
 	{
 		return get<0>( Internal::WordsLocation<$,true>(x) );
 	}
@@ -522,14 +522,14 @@ namespace Jde
 			: Internal::FindPhraseT( Internal::WordsLocation<$>( bsv<TT>{x.data(), x.size()} ), criteria );
 	}
 
-	ⓣ Str::Pascal( bsv<TT> x )ι->$
+	Ŧ Str::Pascal( bsv<TT> x )ι->$
 	{
 		$ y{ x };
 		if( y.size() )
 			y[0] = std::toupper( x[0] );
 		return y;
 	}
-	ⓣ Str::Camel( bsv<TT> x )ι->$
+	Ŧ Str::Camel( bsv<TT> x )ι->$
 	{
 		$ y{ x };
 		if( y.size() )
@@ -541,13 +541,13 @@ namespace Jde
 template<> struct fmt::formatter<Jde::iv>
 {
 	constexpr α parse( fmt::format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
-	ⓣ format( Jde::iv x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{}", Jde::ToSV(x) ); }
+	Ŧ format( Jde::iv x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{}", Jde::ToSV(x) ); }
 };
 
 template<> struct fmt::formatter<Jde::String>
 {
 	constexpr α parse( fmt::format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
-	ⓣ format( Jde::iv x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{}", Jde::ToStr(x) ); }
+	Ŧ format( Jde::iv x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{}", Jde::ToStr(x) ); }
 };
 
 #undef var

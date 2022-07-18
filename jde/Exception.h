@@ -190,9 +190,9 @@ namespace Jde
 
 	//https://stackoverflow.com/questions/35941045/can-i-obtain-c-type-names-in-a-constexpr-way/35943472#35943472
 #ifdef _MSC_VER
-	ⓣ constexpr GetTypeName()->sv
+	Ŧ constexpr GetTypeName()->sv
 #else
-	ⓣ consteval GetTypeName()->sv
+	Ŧ consteval GetTypeName()->sv
 #endif
 	{
 #ifdef _MSC_VER
@@ -231,7 +231,7 @@ namespace Jde
 		{}
 		return result;
 	}
-	ⓣ Try( std::function<T()> func )
+	Ŧ Try( std::function<T()> func )
 	{
 		optional<T> result;
 		try

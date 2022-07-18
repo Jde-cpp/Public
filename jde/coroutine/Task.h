@@ -33,8 +33,8 @@ namespace Jde::Coroutine
 		α Error()ι->up<IException>{ auto p = HasError() ? get<IException*>(_result) : nullptr; ASSERT(p); Clear(); return up<IException>{ p->Move() };  }
 		α Uninitialized()Ι{ return _result.index()==0 && get<0>(_result)==nullptr; }
 		α CheckError( SRCE )ε->void;
-		ⓣ SP( SRCE )ε->sp<T>;
-		ⓣ UP( SRCE )ε->up<T>;
+		Ŧ SP( SRCE )ε->sp<T>;
+		Ŧ UP( SRCE )ε->up<T>;
 		α Bool( SRCE )ε->bool;
 		Φ CheckUninitialized()ι->void;
 
@@ -73,10 +73,10 @@ namespace Jde::Coroutine
 		α SetResult( IException&& e )ι->void{ _result.Set( move(e) ); }
 		α SetResult( AwaitResult::Value&& r )ι->void{ _result.Set( move(r) ); }
 		template<IsPolymorphic T> auto SetResult( up<T>&& x )ι{ ASSERT(dynamic_cast<IException*>(x.get())==nullptr); _result.Set( x.release() ); }
-		ⓣ SetResult( up<T>&& x )ι{ _result.Set( x.release() ); }
+		Ŧ SetResult( up<T>&& x )ι{ _result.Set( x.release() ); }
 		α SetResult( AwaitResult&& r )ι->void{ _result = move( r ); }
 		template<IsPolymorphic T> α SetSP( const sp<T>& x )ι->void{ ASSERT( dynamic_pointer_cast<IException>(x)==nullptr ); _result.Set( x ); }
-		ⓣ SetSP( const sp<T>& x )ι{  _result.Set( x ); }
+		Ŧ SetSP( const sp<T>& x )ι{  _result.Set( x ); }
 		α SetBool( bool x )ι{ _result.SetBool(x); }
 	private:
 		AwaitResult _result;
@@ -85,7 +85,7 @@ namespace Jde::Coroutine
 namespace Jde
 {
 	using HCoroutine = coroutine_handle<Coroutine::Task::promise_type>;
-	ⓣ SP( Coroutine::AwaitResult& r, HCoroutine h, SRCE )ε->sp<T>;
+	Ŧ SP( Coroutine::AwaitResult& r, HCoroutine h, SRCE )ε->sp<T>;
 }
 
 namespace Jde::Coroutine
@@ -114,7 +114,7 @@ namespace Jde::Coroutine
 		}
 	}
 
-	ⓣ AwaitResult::UP( SL sl )ε->up<T>
+	Ŧ AwaitResult::UP( SL sl )ε->up<T>
 	{
 		CheckError( sl );
 		if( _result.index()==1 )
@@ -127,7 +127,7 @@ namespace Jde::Coroutine
 		return up<T>{ p };
 	}
 
-	ⓣ AwaitResult::SP( const source_location& sl )ε->sp<T>
+	Ŧ AwaitResult::SP( const source_location& sl )ε->sp<T>
 	{
 		CheckError( sl );
 		if( _result.index()==0 )
@@ -139,7 +139,7 @@ namespace Jde::Coroutine
 			throw Exception{ "Could not cast ptr." };//mysql
 		return p;
 	}
-	ⓣ SP( AwaitResult&& r, HCoroutine h, SRCE )ε->sp<T>
+	Ŧ SP( AwaitResult&& r, HCoroutine h, SRCE )ε->sp<T>
 	{
 		try
 		{

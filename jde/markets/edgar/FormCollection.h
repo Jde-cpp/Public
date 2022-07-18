@@ -32,7 +32,7 @@ namespace Jde::Markets::Edgar
 		Ṫ CreateForm( const Proto::Filing& filing, const Period& submitPeriod )ι->up<T>;
 	};
 
-	ⓣ IFormCollection::CreateForm( const Proto::Filing& filing, const Period& submitPeriod )ι->up<T>
+	Ŧ IFormCollection::CreateForm( const Proto::Filing& filing, const Period& submitPeriod )ι->up<T>
 	{
 		auto p = mu<T>(); auto& l = *p->add_lines();
 		l.set_quarter( submitPeriod.Quarter ); l.set_year( submitPeriod.Year ); l.set_line_number( filing.line_number() ); //l.set_cik( filing.cik() );
