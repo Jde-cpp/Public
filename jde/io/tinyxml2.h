@@ -1228,12 +1228,13 @@ struct Γ XMLElement : public XMLNode
     	int value = 10;
     	QueryIntAttribute( "foo", &value );		// if "foo" isn't found, value will still be 10
     	@endverbatim
-    * /
+    */
 	/// Sets the named attribute to value.
     void SetAttribute( sv name, sv value )	{
         XMLAttribute* a = FindOrCreateAttribute( name );
         a->SetAttribute( value );
     }
+	 /*
     /// Sets the named attribute to value.
     void SetAttribute( sv name, int value )			{
         XMLAttribute* a = FindOrCreateAttribute( name );
@@ -1272,10 +1273,7 @@ struct Γ XMLElement : public XMLNode
         XMLAttribute* a = FindOrCreateAttribute( name );
         a->SetAttribute( value );
     }
-
-    /**
-    	Delete an attribute.
-    */
+*/
     void DeleteAttribute( sv name );
 
     /// Return the first attribute in the list.
@@ -1284,6 +1282,7 @@ struct Γ XMLElement : public XMLNode
     }
     /// Query a specific attribute in the list.
 	 //Attr α AttributeValue( sv name )Ι->sv{ sv v; if( const auto p=FindAttribute(name); p ) v=p->Value(); return v; }
+
     const XMLAttribute* FindAttribute( sv name ) const;
 
     /** Convenience function for easy access to the text inside an element. Although easy
