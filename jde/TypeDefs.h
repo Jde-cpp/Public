@@ -134,7 +134,11 @@ namespace Jde
 	using boost::container::flat_multimap;
 	using boost::container::flat_set;
 #endif
+#ifdef _MSC_VER
+	using std::format;
+#else
 	using fmt::format;
+#endif
 	using path = const fs::path&;
 	using str = const std::string&;
 	template<class T> using vec = const vector<T>&;

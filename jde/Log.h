@@ -26,7 +26,7 @@ namespace Jde::IO{ class IncomingMessage; }
 namespace Jde::Logging
 {
 //#ifndef NDEBUG
-	Φ BreakLevel()noexcept->ELogLevel;
+	Φ BreakLevel()ι->ELogLevel;
 //#endif
 	namespace Messages{ struct ServerMessage; }
 #pragma region EFields
@@ -41,9 +41,9 @@ namespace Jde::Logging
 	{
 		using ID=uint32;
 		using ThreadID=uint;
-		consteval MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, ID messageId=0, ID fileId=0, ID functionId=0 )noexcept;
-		consteval MessageBase( sv message, const char* file, const char* function, uint_least32_t line )noexcept;
-		consteval MessageBase( const char* file, const char* function, uint_least32_t line )noexcept;
+		consteval MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, ID messageId=0, ID fileId=0, ID functionId=0 )ι;
+		consteval MessageBase( sv message, const char* file, const char* function, uint_least32_t line )ι;
+		consteval MessageBase( const char* file, const char* function, uint_least32_t line )ι;
 
 		EFields Fields{ EFields::None };
 		ELogLevel Level;
@@ -56,16 +56,16 @@ namespace Jde::Logging
 		uint_least32_t LineNumber;
 		ID UserId{0};
 		ThreadID ThreadId{0};
-		Γ MessageBase( ELogLevel level, sv message, const char* file, const char* function, uint_least32_t line )noexcept;
+		Γ MessageBase( ELogLevel level, sv message, const char* file, const char* function, uint_least32_t line )ι;
 	protected:
-		explicit Γ MessageBase( ELogLevel level, SL sl )noexcept;
+		explicit Γ MessageBase( ELogLevel level, SL sl )ι;
 	};
 	struct Message /*final*/ : MessageBase
 	{
-		Message( const MessageBase& b )noexcept;
-		Message( const Message& x )noexcept;
-		Γ Message( ELogLevel level, string message, SRCE )noexcept;
-		Γ Message( sv Tag, ELogLevel level, string message, SRCE )noexcept;
+		Message( const MessageBase& b )ι;
+		Message( const Message& x )ι;
+		Γ Message( ELogLevel level, string message, SRCE )ι;
+		Γ Message( sv Tag, ELogLevel level, string message, SRCE )ι;
 
 		sv Tag;
 		up<string> _pMessage;//todo move to protected
@@ -73,23 +73,23 @@ namespace Jde::Logging
 		string _fileName;
 	};
 
-	Φ SetTag( sv tag, ELogLevel l=ELogLevel::Debug, bool file=true )noexcept->void;
-	α Log( const Logging::MessageBase& messageBase )noexcept->void;
-	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )noexcept->void;
-	ψ Log( const Logging::MessageBase& messageBase, Args&&... args )noexcept->void;
+	Φ SetTag( sv tag, ELogLevel l=ELogLevel::Debug, bool file=true )ι->void;
+	α Log( const Logging::MessageBase& messageBase )ι->void;
+	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void;
+	ψ Log( const Logging::MessageBase& messageBase, Args&&... args )ι->void;
 
-	Φ ShouldLogOnce( const Logging::MessageBase& messageBase )noexcept->bool;
-	Φ LogOnce( const Logging::MessageBase& messageBase )noexcept->void;
-	ψ LogOnce( const Logging::MessageBase& messageBase, Args&&... args )noexcept->void;
-	α LogNoServer( const Logging::MessageBase& messageBase )noexcept->void;
-	ψ LogNoServer( const Logging::MessageBase& messageBase, Args&&... args )noexcept->void;
-	Φ LogServer( const Logging::MessageBase& messageBase )noexcept->void;
-	Φ LogServer( const Logging::MessageBase& messageBase, vector<string>& values )noexcept->void;
-	Φ LogServer( Logging::Messages::ServerMessage& message )noexcept->void;
-	Φ LogMemory( const Logging::MessageBase& messageBase )noexcept->void;
-	Φ LogMemory( const Logging::MessageBase& messageBase, vector<string> values )noexcept->void;
-	Φ LogMemory( Logging::Message&& m, vector<string> values )noexcept->void;
-	ψ Tag( sv tag, Logging::MessageBase m, Args&&... args )noexcept->void;
+	Φ ShouldLogOnce( const Logging::MessageBase& messageBase )ι->bool;
+	Φ LogOnce( const Logging::MessageBase& messageBase )ι->void;
+	ψ LogOnce( const Logging::MessageBase& messageBase, Args&&... args )ι->void;
+	α LogNoServer( const Logging::MessageBase& messageBase )ι->void;
+	ψ LogNoServer( const Logging::MessageBase& messageBase, Args&&... args )ι->void;
+	Φ LogServer( const Logging::MessageBase& messageBase )ι->void;
+	Φ LogServer( const Logging::MessageBase& messageBase, vector<string>& values )ι->void;
+	Φ LogServer( Logging::Messages::ServerMessage& message )ι->void;
+	Φ LogMemory( const Logging::MessageBase& messageBase )ι->void;
+	Φ LogMemory( const Logging::MessageBase& messageBase, vector<string> values )ι->void;
+	Φ LogMemory( Logging::Message&& m, vector<string> values )ι->void;
+	ψ Tag( sv tag, Logging::MessageBase m, Args&&... args )ι->void;
 }
 
 #define MY_FILE __FILE__
@@ -134,29 +134,29 @@ namespace Jde::Logging
 namespace spdlog
 {
 #ifdef _MSC_VER
-	namespace level{ enum level_enum : int;}
+	namespace level{ enum level_enum; }
 #endif
 }
 namespace Jde
 {
-	Ξ Log( ELogLevel sev, string&& x, SRCE )noexcept{ Logging::Log( Logging::Message{sev, move(x), sl} ); }
-	Ξ Dbg( string x, SRCE )noexcept{ Logging::Log( Logging::Message{ELogLevel::Debug, move(x), sl} ); }
+	Ξ Log( ELogLevel sev, string&& x, SRCE )ι{ Logging::Log( Logging::Message{sev, move(x), sl} ); }
+	Ξ Dbg( string x, SRCE )ι{ Logging::Log( Logging::Message{ELogLevel::Debug, move(x), sl} ); }
 
    using namespace std::literals;
-	Φ HaveLogger()noexcept->bool;
-	Φ ClearMemoryLog()noexcept->void;
-	Φ FindMemoryLog( uint32 messageId )noexcept->vector<Logging::Messages::ServerMessage>;
+	Φ HaveLogger()ι->bool;
+	Φ ClearMemoryLog()ι->void;
+	Φ FindMemoryLog( uint32 messageId )ι->vector<Logging::Messages::ServerMessage>;
 	struct LogTag{ string Id; ELogLevel Level{ELogLevel::NoLog}; };//loadLibrary dlls may disappear, so need string vs. sv
 	namespace Logging
 	{
 		Φ DestroyLogger()->void;
-		Φ Initialize()noexcept->void;
+		Φ Initialize()ι->void;
 
-		Φ TagLevel( sv tag )noexcept->const LogTag&;
-		Φ LogMemory()noexcept->bool;
-		Φ ServerLevel()noexcept->ELogLevel;
-		Φ ClientLevel()noexcept->ELogLevel;
-		Φ Default()noexcept->spdlog::logger&;
+		Φ TagLevel( sv tag )ι->const LogTag&;
+		Φ LogMemory()ι->bool;
+		Φ ServerLevel()ι->ELogLevel;
+		Φ ClientLevel()ι->ELogLevel;
+		Φ Default()ι->spdlog::logger&;
 	}
 
 	constexpr PortType ServerSinkDefaultPort = 4321;
@@ -164,10 +164,10 @@ namespace Jde
 	namespace Logging
 	{
 		namespace Proto{class Status;}
-		α StartTime()noexcept->TimePoint;
-		Φ SetStatus( const vector<string>& values )noexcept->void;
-		α SetLogLevel( ELogLevel client, ELogLevel server )noexcept->void;
-		α GetStatus()noexcept->up<Proto::Status>;
+		α StartTime()ι->TimePoint;
+		Φ SetStatus( const vector<string>& values )ι->void;
+		α SetLogLevel( ELogLevel client, ELogLevel server )ι->void;
+		α GetStatus()ι->up<Proto::Status>;
 	}
 #define var const auto
 	Ξ FileName( const char* file_ )->string
@@ -199,7 +199,7 @@ namespace Jde
 #endif
 	}
 #define SOURCE spdlog::source_loc{ FileName(m.File).c_str(), (int)m.LineNumber, m.Function }
-	Ξ Logging::Log( const Logging::MessageBase& m )noexcept->void
+	Ξ Logging::Log( const Logging::MessageBase& m )ι->void
 	{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
 		//if constexpr( _debug )
@@ -215,13 +215,13 @@ namespace Jde
 			LogServer( m );
 	}
 
-	ψ Logging::Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )noexcept->void
+	ψ Logging::Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void
 	{
 		m.Level = level;
 		Log( move(m), args... );
 	}
 
-	ψ Logging::Log( const Logging::MessageBase& m, Args&&... args )noexcept->void
+	ψ Logging::Log( const Logging::MessageBase& m, Args&&... args )ι->void
 	{//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
 		assert( m.Level<=ELogLevel::None );
 		if( m.Level>=ELogLevel::None )
@@ -252,18 +252,18 @@ namespace Jde
 				LogServer( m, values );
 		}
 	}
-	ψ Logging::LogOnce( const Logging::MessageBase& m, Args&&... args )noexcept->void
+	ψ Logging::LogOnce( const Logging::MessageBase& m, Args&&... args )ι->void
 	{
 		if( ShouldLogOnce(m) )
 			Log( m, args... );
 	}
 
-	Ξ Logging::LogNoServer( const Logging::MessageBase& m )noexcept->void
+	Ξ Logging::LogNoServer( const Logging::MessageBase& m )ι->void
 	{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
 	}
 
-	ψ Logging::LogNoServer( const Logging::MessageBase& m, Args&&... args )noexcept->void
+	ψ Logging::LogNoServer( const Logging::MessageBase& m, Args&&... args )ι->void
 	{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 	}
@@ -272,14 +272,14 @@ namespace Jde
 namespace Jde::Logging
 {
 
-	ψ LogMemoryDetail( Logging::Message&& m, Args&&... args )noexcept->void
+	ψ LogMemoryDetail( Logging::Message&& m, Args&&... args )ι->void
 	{
 		vector<string> values; values.reserve( sizeof...(args) );
 		ToVec::Append( values, args... );
 		LogMemory( move(m), move(values) );
 	}
 #pragma region MessageBase
-	consteval MessageBase::MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, ID messageId, ID fileId, ID functionId )noexcept:
+	consteval MessageBase::MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, ID messageId, ID fileId, ID functionId )ι:
 		Level{level},
 		MessageId{ messageId ? messageId : IO::Crc::Calc32(message.substr(0, 100)) },//{},
 		MessageView{message},
@@ -301,11 +301,11 @@ namespace Jde::Logging
 		if( LineNumber )
 			Fields |= EFields::LineNumber;
 	}
-	consteval MessageBase::MessageBase( sv message, const char* file, const char* function, uint_least32_t line )noexcept:
+	consteval MessageBase::MessageBase( sv message, const char* file, const char* function, uint_least32_t line )ι:
 		MessageBase{ message, ELogLevel::Trace, file, function, line }
 	{}
 
-	consteval MessageBase::MessageBase( const char* file, const char* function, uint_least32_t line )noexcept:
+	consteval MessageBase::MessageBase( const char* file, const char* function, uint_least32_t line )ι:
 		MessageBase( {}, file, function, line )
 	{}
 }

@@ -1171,37 +1171,6 @@ struct Γ XMLElement : public XMLNode
 
     α Accept( XMLVisitor* visitor ) const->bool override;
 
-    /** Given an attribute name, Attribute() returns the value
-    	for the attribute of that name, or null if none
-    	exists. For example:
-
-    	@verbatim
-    	const char* value = ele->Attribute( "foo" );
-    	@endverbatim
-
-    	The 'value' parameter is normally null. However, if specified,
-    	the attribute will only be returned if the 'name' and 'value'
-    	match. This allow you to write code:
-
-    	@verbatim
-    	if ( ele->Attribute( "foo", "bar" ) ) callFooIsBar();
-    	@endverbatim
-
-    	rather than:
-    	@verbatim
-    	if ( ele->Attribute( "foo" ) ) {
-    		if ( strcmp( ele->Attribute( "foo" ), "bar" ) == 0 ) callFooIsBar();
-    	}
-    	@endverbatim
-    */
-    //const char* Attribute( const char* name, const char* value=0 ) const;
-
-    /** Given an attribute name, IntAttribute() returns the value
-    	of the attribute interpreted as an integer. The default
-        value will be returned if the attribute isn't present,
-        or if there is an error. (For a method with error
-    	checking, see QueryIntAttribute()).
-    */
 	int IntAttribute(const char* name, int defaultValue = 0) const;
     /// See IntAttribute()
 	unsigned UnsignedAttribute(const char* name, unsigned defaultValue = 0) const;
