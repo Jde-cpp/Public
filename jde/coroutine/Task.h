@@ -42,6 +42,11 @@ namespace Jde::Coroutine
 		α Set( IException&& e )ι->void{ CheckUninitialized(); _result = e.Move().release(); }
 		α Set( Value&& result )ι{ _result = move(result); }
 		α SetBool( bool x )ι{ _result = x; }
+		α Push( SL& sl )ι->void
+		{
+			if( auto p = _result.index()==2 ? get<2>(_result) : nullptr; p )
+				p->Push( sl );
+		}
 	private:
 		Value _result;
 	};
@@ -68,13 +73,14 @@ namespace Jde::Coroutine
 		};
 		α Clear()ι->void{ _result.Clear(); }
 		α HasResult()Ι->bool{ return !_result.Uninitialized(); }
-		α HasError()Ι->bool{ return !_result.HasError(); }
+		α HasError()Ι->bool{ return _result.HasError(); }
 		α Result()ι->AwaitResult&{ return _result; }
 		α SetResult( IException&& e )ι->void{ _result.Set( move(e) ); }
 		α SetResult( AwaitResult::Value&& r )ι->void{ _result.Set( move(r) ); }
 		template<IsPolymorphic T> auto SetResult( up<T>&& x )ι{ ASSERT(dynamic_cast<IException*>(x.get())==nullptr); _result.Set( x.release() ); }
 		Ŧ SetResult( up<T>&& x )ι{ _result.Set( x.release() ); }
 		α SetResult( AwaitResult&& r )ι->void{ _result = move( r ); }
+		α Push( SL& sl )ι->void{ _result.Push( sl ); }
 		template<IsPolymorphic T> α SetSP( const sp<T>& x )ι->void{ ASSERT( dynamic_pointer_cast<IException>(x)==nullptr ); _result.Set( x ); }
 		Ŧ SetSP( const sp<T>& x )ι{  _result.Set( x ); }
 		α SetBool( bool x )ι{ _result.SetBool(x); }

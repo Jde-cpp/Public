@@ -136,8 +136,12 @@ namespace Jde
 #endif
 #ifdef _MSC_VER
 	using std::format;
+	using std::formatter;
+	using std::format_parse_context;
 #else
 	using fmt::format;
+	using fmt::formatter;
+	using fmt::format_parse_context;
 #endif
 	using path = const fs::path&;
 	using str = const std::string&;
