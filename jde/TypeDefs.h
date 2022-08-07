@@ -1,7 +1,11 @@
 ﻿#pragma once
 
+
 #ifdef _MSC_VER
-	#define NTDDI_VERSION NTDDI_WIN10_RS1 // work around linker failure MapViewOfFileNuma2@36
+	#pragma warning( push, 0  )
+	#pragma warning( disable: 4005 )
+		#define NTDDI_VERSION NTDDI_WIN10_RS1 // work around linker failure MapViewOfFileNuma2@36
+	#pragma warning( pop )
 #endif
 #include <map>
 #include <memory>
@@ -16,6 +20,7 @@
 #include <string_view>
 #include <vector>
 #include <memory>
+#include <format>
 
 #ifdef _MSC_VER
 	#ifndef WIN32_LEAN_AND_MEAN
@@ -37,18 +42,14 @@
 #define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )") _Pragma("warning( disable: 4701 )")
 #define ENABLE_WARNINGS  _Pragma("warning( pop  )")
 
-#ifndef NO_FORMAT
-	DISABLE_WARNINGS
+DISABLE_WARNINGS
 	#include <spdlog/spdlog.h>
 	#include <spdlog/sinks/basic_file_sink.h>
 	#include <spdlog/fmt/ostr.h>
-	ENABLE_WARNINGS
-#endif
+ENABLE_WARNINGS
 
-#ifndef NO_BOOST
-	#include <boost/container/flat_map.hpp>
-	#include <boost/container/flat_set.hpp>
-#endif
+#include <boost/container/flat_map.hpp>
+#include <boost/container/flat_set.hpp>
 
 #define α auto
 #define β virtual auto
