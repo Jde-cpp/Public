@@ -17,9 +17,13 @@ struct Contract;
 namespace Jde::Markets{ struct Contract; struct TwsClient; class EventManagerTests; class OptionTests; }
 namespace Jde::Markets::Proto::Results{ class ContractHours;}
 
-template<> struct std::formatter<Jde::Decimal>
+#ifdef _MSC_VER
+	template<> struct std::formatter<Jde::Decimal>
+#else
+	template<> struct fmt::formatter<Jde::Decimal>
+#endif
 {
-	constexpr α parse( std::format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
+	constexpr α parse( format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
 	Ŧ format( Jde::Decimal x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{:.2f}", (double)x ); }
 };
 
@@ -52,7 +56,7 @@ namespace Jde::Markets::MBlockly
 		friend α operator-( const Price& a, const Price& b )ε->Price{ check return Price{ *a._value-*b._value }; }
 		friend α operator+( const Price& a, const Price& b )ε->Price{ check return Price{ *a._value+*b._value }; }
 		friend α operator/( const Price& a, const Price& b )ε->double{ check return (double)(*a._value / *b._value); }
-		α ToString()Ι->string{ return (bool)*this ? std::format( "{}", *_value ) : "null"; }
+		α ToString()Ι->string{ return (bool)*this ? format( "{}", *_value ) : "null"; }
 	protected:
 
 	private:
@@ -66,7 +70,7 @@ namespace Jde::Markets::MBlockly
 	{
 		Size()=default;
 		//friend auto operator<=>( const Size&, const Size& )ι = default;
-		α ToString()Ι->string{ return *this ? std::format("{:.0f}", (double)*_value) : "null"; }
+		α ToString()Ι->string{ return *this ? format("{:.0f}", (double)*_value) : "null"; }
 		operator bool()Ι{ return _value.has_value(); }
 	private:
 		Size( Decimal value )ι:_value{ value }{}
@@ -83,7 +87,7 @@ namespace Jde::Markets::MBlockly
 		Amount()=default;
 		friend Amount operator*( const Amount& a, double b )ε{ CHECK(a); return Amount( Decimal(ToDouble(a)*b) ) ;}
 		//friend auto operator<=>( const Amount&, const Amount& )ι = default;
-		α ToString()Ι->string{return *this ? std::format("{:.2f}", (double)*_value) : "null";}
+		α ToString()Ι->string{return *this ? format("{:.2f}", (double)*_value) : "null";}
 		operator bool()Ι{ return _value.has_value(); }
 	private:
 		Amount( Decimal value )ι:_value{value}{}

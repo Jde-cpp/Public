@@ -63,8 +63,6 @@ namespace Jde::Markets::Edgar
 namespace Jde::Markets::Edgar
 {
 	using ContractPK = uint32;
-	Φ Process2( sp<Proto::MasterIndex> index_, flat_set<EForm> eForms, SRCE )noexcept(false)->AsyncAwait;
-
 	Φ Process( sp<Proto::MasterIndex> pIndex, sp<IFormCollection> pForms )noexcept(false)->void;
 	α Consolidate( path current, path consolidated )noexcept(false)->void;
 
