@@ -20,7 +20,13 @@
 #include <string_view>
 #include <vector>
 #include <memory>
-#include <format>
+
+#ifndef __GNUC__
+	#include <format>
+#else
+	#include <fmt/format.h>
+#endif
+
 
 #ifdef _MSC_VER
 	#ifndef WIN32_LEAN_AND_MEAN
@@ -45,7 +51,6 @@
 DISABLE_WARNINGS
 	#include <spdlog/spdlog.h>
 	#include <spdlog/sinks/basic_file_sink.h>
-	#include <spdlog/fmt/ostr.h>
 ENABLE_WARNINGS
 
 #include <boost/container/flat_map.hpp>

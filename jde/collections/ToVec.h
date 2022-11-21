@@ -17,7 +17,7 @@ namespace Jde::ToVec
 		return Apend( values, std::forward<Tail>(t)... );
 	}
 
-	Ŧ ToStringT( const T& x )->string
+	template<class T> inline α ToStringT( const T& x )->string
 	{
 		constexpr bool StringConcept = requires(const T& t) { t.data(); t.size(); };
 		if constexpr( StringConcept )

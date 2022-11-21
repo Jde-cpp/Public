@@ -94,26 +94,26 @@ namespace Jde::IO::Crc
 
 	template<char ...Chars> using Crc32 = Crc32Impl<0xFFFFFFFF, Chars...>;
 
-	constexpr α crc32_rec( unsigned int crc, const char *s )->unsigned int
+	inline constexpr α crc32_rec( unsigned int crc, const char *s )->unsigned int
 	{
 		return *s == 0
 			? crc ^ 0xFFFFFFFF
 			: crc32_rec( crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(*s)] ^ (crc >> 8), s + 1 );
 	}
 
-	constexpr α operator "" _crc32( const char *s, size_t )->unsigned int
+	inline constexpr α operator "" _crc32( const char *s, size_t )->unsigned int
 	{
 		return crc32_rec( 0xFFFFFFFF, s );
 	}
 
-	consteval α Calc32( sv value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int
+	inline consteval α Calc32( sv value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int
 	{
 		return index == value.size()
 			? crc ^ 0xFFFFFFFF
 			: Calc32( value, crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(value[index])] ^ (crc >> 8), index + 1 );
 	}
 
-	consteval α Calc32( const std::vector<char>& value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int
+	inline consteval α Calc32( const std::vector<char>& value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int
 	{
 		return index == value.size()
 			? crc ^ 0xFFFFFFFF
