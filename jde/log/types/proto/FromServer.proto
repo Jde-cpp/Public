@@ -7,9 +7,12 @@ package Jde.ApplicationServer.Web.FromServer;
 
 message Acknowledgement
 {
-	uint32 Id=1;
+	uint32 id=1;
 }
-
+enum EResults
+{
+	Authentication=0;
+}
 enum ELogLevel
 {
 	Trace = 0;
@@ -21,106 +24,117 @@ enum ELogLevel
 	None = 6;
 }
 
+message MessageValue
+{
+	EResults type=1;
+	oneof Value
+	{
+		string string_value = 2;
+		int32 int_value = 3;
+	}
+}
+
 message Application
 {
-	uint32 Id=1;
-	string Name=2;
-	ELogLevel DbLevel=3;
-	ELogLevel FileLevel=4;
+	uint32 id=1;
+	string name=2;
+	ELogLevel db_level=3;
+	ELogLevel file_level=4;
 }
 
 message Applications
 {
-	repeated Application Values=1;
+	repeated Application values=1;
 }
 
 message Status
 {
-	uint32 ApplicationId=1;
-	uint32 InstanceId=2;
-	string HostName=3;
-	uint32 StartTime=4;
-	uint64 Memory=5;
-	uint32 LogCount=6;
-	double Cpu=7;
-	ELogLevel DBLogLevel=8;
-	ELogLevel FileLogLevel=9;
-	repeated string Values=10;
+	uint32 application_id=1;
+	uint32 instance_id=2;
+	string host_name=3;
+	uint32 start_time=4;
+	uint64 memory=5;
+	uint32 log_count=6;
+	double cpu=7;
+	ELogLevel db_log_level=8;
+	ELogLevel file_log_level=9;
+	repeated string values=10;
 }
 
 message Statuses
 {
-	repeated Status Values=1;
+	repeated Status values=1;
 }
 
 message TraceMessage
 {
 	uint64 id=1;
-	uint64 InstanceId=2;
-	uint64 Time=3;
-	ELogLevel Level=4;
-	uint32 MessageId=5;
-	uint32 FileId=6;
-	uint32 FunctionId=7;
-	uint32 LineNumber=8;
-	uint32 UserId=9;
-	uint64 ThreadId=10;
-	repeated string Variables=11;
+	uint64 instance_id=2;
+	uint64 time=3;
+	ELogLevel level=4;
+	uint32 message_id=5;
+	uint32 file_id=6;
+	uint32 function_id=7;
+	uint32 line_number=8;
+	uint32 user_id=9;
+	uint64 thread_id=10;
+	repeated string variables=11;
 }
 
 message Traces
 {
-	uint32 ApplicationId=1;
-	repeated TraceMessage Values=2;
+	uint32 application_id=1;
+	repeated TraceMessage values=2;
 }
 
 message ApplicationString
 {
-	uint32 StringRequestType=1;
-	uint32 Id=2;
-	string Value=3;
+	uint32 string_request_type=1;
+	uint32 id=2;
+	string value=3;
 }
 
 message ApplicationStrings
 {
-	uint32 RequestId=1;
-	uint32 ApplicationId=2;
-	repeated ApplicationString Values=3;
+	uint32 request_id=1;
+	uint32 application_id=2;
+	repeated ApplicationString values=3;
 }
 
 message ErrorMessage
 {
-	uint32 RequestId=1;
-	string Message=2;
+	uint32 request_id=1;
+	string message=2;
 }
 
 message Custom
 {
-	uint32 RequestId=1;
-	bytes Message=2;
+	uint32 request_id=1;
+	bytes message=2;
 }
 
 message Complete
 {
-	uint32 RequestId=1;
+	uint32 request_id=1;
 }
 
 message MessageUnion
 {
-	oneof Value
+	oneof value
 	{
-		Traces Traces=1;
-		Statuses Statuses=2;
-		Acknowledgement Acknowledgement=3;
-		ApplicationStrings Strings=4;
-		Applications Applications=5;
-		ErrorMessage Error=6;
-		Custom Custom=7;
-		Complete Complete=8;
+		Traces traces=1;
+		Statuses statuses=2;
+		Acknowledgement acknowledgement=3;
+		ApplicationStrings strings=4;
+		Applications applications=5;
+		ErrorMessage error=6;
+		Custom custom=7;
+		Complete complete=8;
+		MessageValue message=9;
 	}
 }
 
 message Transmission
 {
-	repeated MessageUnion Messages=1;
+	repeated MessageUnion messages=1;
 }

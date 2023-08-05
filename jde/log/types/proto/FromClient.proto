@@ -16,33 +16,40 @@ enum ERequest
 	Power=2;
 	Logs=3;
 	Applications=4;
+	GoogleLogin=5;
 }
 
 message Request
 {
-	ERequest Value=1;
+	ERequest value=1;
 }
 
 message RequestId
 {
-	ERequest Value=1;
-	uint64 InstanceId=2;
+	ERequest value=1;
+	uint64 instance_id=2;
 }
+message StringRequest
+{
+	uint32 request_id=1;
+	ERequest type=2;
+	string value=3;
+};
 
 message RequestLogs
 {
-	uint64 ApplicationId=1;
-	uint64 InstanceId=2;/*unused*/
-	uint32 Value=3;
-	uint32 Start=4;
-	uint32 Limit=5;
+	uint64 application_id=1;
+	uint64 instance_id=2;/*unused*/
+	uint32 value=3;
+	uint32 start=4;
+	uint32 limit=5;
 }
 
 message LogValues
 {
-	uint64 InstanceId=1;
-	uint32 DbValue=2;
-	uint32 ClientValue=3;
+	uint64 instance_id=1;
+	uint32 db_value=2;
+	uint32 client_value=3;
 }
 
 enum EStringRequest
@@ -56,38 +63,46 @@ enum EStringRequest
 
 message RequestString
 {
-	uint32 ApplicationId=1;
-	EStringRequest Type=2;
-	uint32 Value=3;
+	uint32 application_id=1;
+	EStringRequest type=2;
+	uint32 value=3;
 }
 
 message RequestStrings
 {
-	uint32 RequestId=1;
-	repeated RequestString Values=2;
+	uint32 request_id=1;
+	repeated RequestString values=2;
 }
 
 message Custom
 {
-	uint32 RequestId=1;
-	uint32 ApplicationId=2;
-	bytes Message=3;
+	uint32 request_id=1;
+	uint32 application_id=2;
+	bytes message=3;
+}
+
+message Transmission
+{
+	repeated MessageUnion messages=1;
+}
+
+message GraphQL
+{
+	uint32 request_id=1;
+	string query=2;
 }
 
 message MessageUnion
 {
-	oneof Value
+	oneof value
 	{
-		Request Request=1;
-		//Request CancelRequest=2;
-		RequestId RequestId=3;
-		RequestLogs RequestLogs=4;
-		LogValues LogValues=5;
-		RequestStrings RequestStrings=6;
-		Custom Custom=7;
+		Request request=1;
+		StringRequest string_request=2;
+		RequestId request_id=3;
+		RequestLogs request_logs=4;
+		LogValues Log_values=5;
+		RequestStrings request_strings=6;
+		Custom custom=7;
+		GraphQL graph_ql=8;
 	}
-}
-message Transmission
-{
-	repeated MessageUnion Messages=1;
 }

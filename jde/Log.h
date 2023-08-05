@@ -161,7 +161,7 @@ namespace Jde
 		Φ Default()ι->spdlog::logger&;
 	}
 
-	constexpr PortType ServerSinkDefaultPort = 4321;
+	inline constexpr PortType ServerSinkDefaultPort = 4321;
 
 	namespace Logging
 	{
@@ -225,7 +225,7 @@ namespace Jde
 
 	ψ Logging::Log( const Logging::MessageBase& m, bool break_, Args&&... args )ι->void
 	{//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
-		assert( m.Level<=ELogLevel::None );
+		//assert( m.Level<=ELogLevel::None );
 		if( m.Level>=ELogLevel::None )
 			return;
 		try
