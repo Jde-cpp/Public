@@ -1,12 +1,18 @@
 ﻿#pragma once
 
+
 #ifdef _MSC_VER
-	#define NTDDI_VERSION NTDDI_WIN10_RS1 // work around linker failure MapViewOfFileNuma2@36
+	#pragma warning( push, 0  )
+	#pragma warning( disable: 4005 )
+		#define NTDDI_VERSION NTDDI_WIN10_RS1 // work around linker failure MapViewOfFileNuma2@36
+	#pragma warning( pop )
 #endif
+#include <assert.h>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <chrono>
+//#include <coroutine>
 #include <filesystem>
 
 #include <optional>
@@ -16,6 +22,13 @@
 #include <string_view>
 #include <vector>
 #include <memory>
+
+#ifndef __GNUC__
+	#include <format>
+#else
+	#include <fmt/format.h>
+#endif
+
 
 #ifdef _MSC_VER
 	#ifndef WIN32_LEAN_AND_MEAN
@@ -34,21 +47,16 @@
 	using std::suspend_never;
 #endif
 
-#define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )") _Pragma("warning( disable: 4701 )")
+#define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )") _Pragma("warning( disable: 4701 )")  _Pragma("warning( disable: 5260 )")
 #define ENABLE_WARNINGS  _Pragma("warning( pop  )")
 
-#ifndef NO_FORMAT
-	DISABLE_WARNINGS
+DISABLE_WARNINGS
 	#include <spdlog/spdlog.h>
 	#include <spdlog/sinks/basic_file_sink.h>
 	#include <spdlog/fmt/ostr.h>
-	ENABLE_WARNINGS
-#endif
-
-#ifndef NO_BOOST
 	#include <boost/container/flat_map.hpp>
 	#include <boost/container/flat_set.hpp>
-#endif
+ENABLE_WARNINGS
 
 #define α auto
 #define β virtual auto
@@ -149,7 +157,7 @@ namespace Jde
 	template<class T> using vec = const vector<T>&;
 
 #ifdef _MSC_VER
-	constexpr bool _msvc{ true };
+	inline constexpr bool _msvc{ true };
 	#ifndef WIN32_LEAN_AND_MEAN
 		#error WIN32_LEAN_AND_MEAN not defined
 	#endif
@@ -167,12 +175,12 @@ namespace Jde
 	using SL = const Jde::source_location&;
 
 	enum class ELogLevel : int8{ NoLog=-1, Trace=0, Debug=1, Information=2, Warning=3, Error=4, Critical=5, None=6 };
-	constexpr std::array<sv,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };
+	inline constexpr std::array<sv,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };
 	constexpr sv ToString( ELogLevel v )noexcept{ return (uint8)v<ELogLevelStrings.size() ? ELogLevelStrings[(uint8)v] : sv{}; }
 
 #ifdef NDEBUG
-	constexpr bool _debug{ false };
+	inline constexpr bool _debug{ false };
 #else
-	constexpr bool _debug{ true };
+	inline constexpr bool _debug{ true };
 #endif
 }

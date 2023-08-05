@@ -3,9 +3,9 @@
 #include <memory>
 #include <iostream> //TODO remove
 
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/fmt/ostr.h>
+// #include <spdlog/spdlog.h>
+// #include <spdlog/sinks/basic_file_sink.h>
+// #include <spdlog/fmt/ostr.h>
 
 #include <string_view>
 #include <shared_mutex>
@@ -66,7 +66,7 @@ namespace Jde::Logging
 		Message( const Message& x )ι;
 		Γ Message( ELogLevel level, string message, SRCE )ι;
 		Γ Message( sv Tag, ELogLevel level, string message, SRCE )ι;
-		Γ Message( sv Tag, ELogLevel level, string message, char const* file, char const * function, boost::uint_least32_t line )ι;
+		Γ Message( sv Tag, ELogLevel level, string message, char const* file_, char const * function_, boost::uint_least32_t line_ )ι;
 
 		sv Tag;
 		up<string> _pMessage;//todo move to protected
@@ -77,7 +77,8 @@ namespace Jde::Logging
 	Φ SetTag( sv tag, ELogLevel l=ELogLevel::Debug, bool file=true )ι->void;
 	α Log( const Logging::MessageBase& messageBase )ι->void;
 	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void;
-	ψ Log( const Logging::MessageBase& messageBase, Args&&... args )ι->void;
+	ψ Log( const Logging::MessageBase& messageBase, bool break_, Args&&... args )ι->void;
+	ψ Log( const Logging::MessageBase& m, Args&&... args )ι->void{ Log( m, true, args... ); }
 
 	Φ ShouldLogOnce( const Logging::MessageBase& messageBase )ι->bool;
 	Φ LogOnce( const Logging::MessageBase& messageBase )ι->void;
@@ -160,7 +161,7 @@ namespace Jde
 		Φ Default()ι->spdlog::logger&;
 	}
 
-	constexpr PortType ServerSinkDefaultPort = 4321;
+	inline constexpr PortType ServerSinkDefaultPort = 4321;
 
 	namespace Logging
 	{
@@ -222,9 +223,9 @@ namespace Jde
 		Log( move(m), args... );
 	}
 
-	ψ Logging::Log( const Logging::MessageBase& m, Args&&... args )ι->void
+	ψ Logging::Log( const Logging::MessageBase& m, bool break_, Args&&... args )ι->void
 	{//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
-		assert( m.Level<=ELogLevel::None );
+		//assert( m.Level<=ELogLevel::None );
 		if( m.Level>=ELogLevel::None )
 			return;
 		try
@@ -236,7 +237,7 @@ namespace Jde
 			//if constexpr( _debug )
 			{
 				DEBUG_IF( string{m.File}.ends_with("construct_at.h") );
-				DEBUG_IF( m.Level>=BreakLevel() );
+				DEBUG_IF( break_ && m.Level>=BreakLevel() );
 			}
 		}
 		catch( const fmt::format_error& )
