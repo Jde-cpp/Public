@@ -39,3 +39,7 @@ stage/*
 src/db/sqlite/.vscode/settings.json
 src/db/sqlite/.vscode/tasks.json
 jde/blockly/types/proto/ib.proto
+tests/ml/.vscode/launch.json
+tests/ml/.vscode/settings.json
+tests/ml/.vscode/tasks.json
+

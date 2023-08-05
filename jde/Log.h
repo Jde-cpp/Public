@@ -66,6 +66,7 @@ namespace Jde::Logging
 		Message( const Message& x )ι;
 		Γ Message( ELogLevel level, string message, SRCE )ι;
 		Γ Message( sv Tag, ELogLevel level, string message, SRCE )ι;
+		Γ Message( sv Tag, ELogLevel level, string message, char const* file, char const * function, boost::uint_least32_t line )ι;
 
 		sv Tag;
 		up<string> _pMessage;//todo move to protected

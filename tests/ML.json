@@ -1,0 +1,42 @@
+{
+	"ml":
+	{
+	},
+	"testing":
+	{
+		"_tests": "*",
+		"tests": "MainTests.Process"
+	},
+	"db":
+	{
+		"driver": "$(JDE_DB_DRIVER)",
+		"connectionString": "$(Jde_Markets_Connection)",
+		"_meta": "$(UM_META)"
+	},
+	"logging":
+	{
+		"tags": [ "", "settings", "_ql", "_threads" ],
+		"console":
+		{
+			"pattern-noline":  "\u001b]8;;file://%g\u001b\\%3!l-%H:%M:%S.%e %v\u001b]8;;\u001b\\",
+			"pattern-x":  "\u001b]8;;file://%@\u001b\\%3!l-%H:%M:%S.%e %v\u001b]8;;\u001b\\",
+			"pattern-color":  "\u001b]8;;file://c:\\temp\\unchanged.xml\u001b\\%^%3!l%$-%H:%M:%S.%e %-64@  %v\u001b]8;;\u001b\\"
+		},
+		"file":{ "path": ".." },
+		"flushOn": "Debug",
+		"_server": { "port": 4321, "level": "Debug", "diagnosticsLevel": "Debug", "tags": {"threads":"Debug"} }
+	},
+	"workers":
+	{
+		"drive":{ "threads":  1 }
+	},
+	"net":
+	{
+		"errorFile": "c:\\temp\\result.html"
+	},
+	"xml":
+	{
+		"errorFile": "c:\\temp\\error.xml",
+		"closeLog":  true
+	}
+}

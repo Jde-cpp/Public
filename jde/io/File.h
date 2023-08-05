@@ -28,6 +28,9 @@ namespace Jde::IO
 	Φ Copy( fs::path from, fs::path to, SRCE )->PoolAwait;
 	Φ CopySync( fs::path from, fs::path to, SRCE )->void;
 	Φ CreateDirectories( fs::path path )ε->void;
+	Φ ForEachLine( path p, function<void(const vector<double>&, uint lineIndex)> f, const flat_set<uint>& columnIndexes, uint maxLines=std::numeric_limits<uint>::max(), size_t startLine=0, size_t chunkSize=1073741824, size_t maxColumnCount=1500, Stopwatch* sw=nullptr, double emptyValue=0.0 )ε->uint;
+
+	Φ LoadColumnNames( path csvFileName, const vector<string>& columnNamesToFetch, bool notColumns=false )->tuple<vector<string>,flat_set<uint>>;
 
 	namespace FileUtilities
 	{
@@ -41,7 +44,7 @@ namespace Jde::IO
 		Γ up<std::set<fs::directory_entry>> GetDirectory( path directory );
 		Γ up<std::set<fs::directory_entry>> GetDirectories( path directory, up<std::set<fs::directory_entry>> pItems=nullptr );
 		Γ std::string ToString( path pszFilePath );
-		Γ std::vector<std::string> LoadColumnNames( path csvFileName );
+		Φ LoadColumnNames( path csvFileName )->vector<string>;
 		Γ std::string DateFileName( uint16 year, uint8 month=0, uint8 day=0 )noexcept;
 		Γ tuple<uint16,uint8,uint8> ExtractDate( path path )noexcept;
 
@@ -92,7 +95,6 @@ namespace Jde::IO
 	{
 		uint GetFileSize( std::ifstream& file );
 
-		std::pair<std::vector<std::string>,std::set<uint>> LoadColumnNames( sv csvFileName, std::vector<std::string>& columnNamesToFetch, bool notColumns=false );
 
 		uint Merge( path file, const vector<char>& original, const vector<char>& newData )ε;
 	};

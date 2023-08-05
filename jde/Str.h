@@ -197,7 +197,7 @@ namespace Jde
 	template<class T, class D> α Str::Split( bsv<TT> s, bsv<typename D::traits_type> delim, uint count, sv errorId, SL sl )ε->vector<bsv<TT>>
 	{
 		var y = Split( s, delim );
-		if( y.size()!=count ) 
+		if( y.size()!=count )
 			throw Jde::Exception{ sl, ELogLevel::Error, "({})'{}' expected '{}' tokens vs parsed='{}'", errorId, s, count, y.size() };
 		return y;
 	}
@@ -424,7 +424,7 @@ namespace Jde
 			for( auto p=words.begin(); (p=std::find(p, words.end(), firstWord))!=words.end(); ++p )
 			{
 				var iStartWord{ (uint)std::distance(words.begin(), p) }; uint i = iStartWord;
-				bool equal = true;//words.size()-iStartWord>=criteria.size();
+				bool equal = true;
 				uint j = 1;
 				for( ; equal && i<words.size()-1 && j<criteria.size(); ++j )
 					equal = words[++i]==T{ criteria[j].data(), criteria[j].size() };
@@ -443,7 +443,6 @@ namespace Jde
 			wchar_t ch = i<x.size() ? x[i] : '\0';
 			if( ch==L'\xffe2' && i+2<x.size() )
 			{
-						
 				ch =  x[++i];
 				ch = ch << 8;
 				wchar_t lo = x[++i] & 0xff; //lo &= 0xff;
@@ -459,21 +458,7 @@ namespace Jde
 			auto isSeparator = []( wchar_t ch )ι->bool{ return ::isspace(ch) || ch=='.' || ch==';' || ch==':' || ch=='(' || ch==')' || ch=='/' || ch==L'\x80af' || ch==L'\x8093'; };
 			for( uint iStart{0}, iEnd; iStart<x.size(); iStart=iEnd )
 			{
-/*				auto getChar = [&x]( uint& i )
-				{
-					wchar_t ch = i<x.size() ? x[i] : '\0';
-					if( ch==L'\xffe2' && i+2<x.size() )
-					{
-						
-						ch =  x[++i];
-						ch = ch << 8;
-						wchar_t lo = x[++i] & 0xff; //lo &= 0xff;
-						ch += lo;
-					}
-					return ch;
-				};*/
 				wchar_t ch=GetChar<T>( x, iStart );
-//	#define INCR(i) ch = ++i<x.size() ? x[i] : '\0'
 				for( ; isSeparator(ch); ch=GetChar<T>( x, ++iStart) );
 				iEnd=iStart;
 				for( ; ch!='\0' && !isSeparator(ch); ch=GetChar<T>(x, ++iEnd) );
@@ -499,8 +484,8 @@ namespace Jde
 	Ŧ Str::LTrim( Str::bsv<TT> s )->Str::bsv<TT>
 	{
 		uint i=0; wchar_t ch;
-		for( ch = Internal::GetChar<T>( s, i ); 
-			std::isspace(ch) || ch==L'\x80af' || ch==L'\x8093'; 
+		for( ch = Internal::GetChar<T>( s, i );
+			std::isspace(ch) || ch==L'\x80af' || ch==L'\x8093';
 			ch = Internal::GetChar<T>(s, ++i) );
 		if( ch>0xff && i>1 )
 			i-=2;

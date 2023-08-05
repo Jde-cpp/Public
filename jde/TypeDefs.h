@@ -96,10 +96,10 @@ namespace Jde
 	//using std::make_unique;//refactor remove
 	using std::make_shared;//refactor remove
 	using std::mutex;
-	template<class T> using sp = std::shared_ptr<T>;
+	Τ using sp = std::shared_ptr<T>;
 	using std::string;
 	using std::tuple;
-	template<class T> using up = std::unique_ptr<T>;
+	Τ using up = std::unique_ptr<T>;
 	using std::get;
 	using std::static_pointer_cast;
 	using std::unique_lock;//refactor remove
@@ -108,6 +108,7 @@ namespace Jde
 	using sl=std::shared_lock<std::shared_mutex>;
 	using std::shared_mutex;
 	using sv = std::string_view;
+	Τ using limits = std::numeric_limits<T>;
 	using std::find;
 	using std::find_if;
 	using std::move;
