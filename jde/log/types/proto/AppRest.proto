@@ -1,0 +1,11 @@
+//source $JDE_DIR/Framework/common.sh;toBashDir $JDE_DIR JDE_BASH;source=$JDE_BASH/Public/jde/log/types/proto;
+//file=AppRest;cd $source;$JDE_BASH/Public/stage/release/protoc --cpp_out . $file.proto
+//cd $JDE_BASH/AppServer/source;moveToDir types;moveToDir proto;mv $source/$file.pb.cc .;mklink $file.pb.h $source
+
+syntax = "proto3";
+package Jde.ApplicationServer.Web.AppRest;
+
+service SearchService {
+  rpc Search(SearchRequest) returns (SearchResponse);
+}
+

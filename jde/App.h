@@ -87,7 +87,7 @@ namespace Jde
 	{
 		ω Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->flat_set<string>;
 
-		Ω CompanyName()noexcept->str;
+		Ω CompanyName()noexcept->string;
 		Ω ProductName()ι->sv;
 		Ω CompanyRootDir()noexcept->fs::path;
 		ω FreeLibrary( void* p )noexcept->void;

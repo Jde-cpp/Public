@@ -17,23 +17,23 @@ enum ERequest
 	Logs=3;
 	Applications=4;
 	GoogleLogin=5;
+	GoogleAuthClientId=6;
 }
 
 message Request
 {
-	ERequest value=1;
+	ERequest type=1;
 }
 
-message RequestId
-{
-	ERequest value=1;
-	uint64 instance_id=2;
-}
-message StringRequest
+message RequestValue
 {
 	uint32 request_id=1;
 	ERequest type=2;
-	string value=3;
+	oneof value
+	{
+		string string=3;
+		int32 id=4;
+	}
 };
 
 message RequestLogs
@@ -61,17 +61,24 @@ enum EStringRequest
 	User=4;
 }
 
-message RequestString
+message RequestAppString
 {
 	uint32 application_id=1;
 	EStringRequest type=2;
 	uint32 value=3;
 }
 
+message RequestApp
+{
+	uint64 instance_id=1;
+	ERequest type=2;
+}
+
+
 message RequestStrings
 {
 	uint32 request_id=1;
-	repeated RequestString values=2;
+	repeated RequestAppString values=2;
 }
 
 message Custom
@@ -97,12 +104,13 @@ message MessageUnion
 	oneof value
 	{
 		Request request=1;
-		StringRequest string_request=2;
-		RequestId request_id=3;
-		RequestLogs request_logs=4;
-		LogValues Log_values=5;
-		RequestStrings request_strings=6;
-		Custom custom=7;
-		GraphQL graph_ql=8;
+		RequestAppString app_string_request=2;
+		RequestValue request_value=3;
+		RequestApp request_app=4;
+		RequestLogs request_logs=5;
+		LogValues Log_values=6;
+		RequestStrings request_strings=7;
+		Custom custom=8;
+		GraphQL graph_ql=9;
 	}
 }

@@ -23,11 +23,11 @@
 #include <vector>
 #include <memory>
 
-#ifndef __GNUC__
+//#if !defined(__clang__) && !defined(_MSC_VER)
 	#include <format>
-#else
-	#include <fmt/format.h>
-#endif
+//#else
+//	#include <fmt/format.h>
+//#endif
 
 
 #ifdef _MSC_VER
@@ -118,7 +118,7 @@ namespace Jde
 	using sv = std::string_view;
 	Τ using limits = std::numeric_limits<T>;
 	using std::find;
-	using std::find_if;
+	using std::variant;
 	using std::move;
 	using std::endl;
 	using std::optional;

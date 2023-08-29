@@ -34,6 +34,12 @@ message MessageValue
 	}
 }
 
+message StringValue
+{
+	uint32 request_id=1;
+	string value=2;
+}
+
 message Application
 {
 	uint32 id=1;
@@ -118,6 +124,12 @@ message Complete
 	uint32 request_id=1;
 }
 
+message GraphQL
+{
+	uint32 request_id=1;
+	string json=2;
+}
+
 message MessageUnion
 {
 	oneof value
@@ -131,6 +143,8 @@ message MessageUnion
 		Custom custom=7;
 		Complete complete=8;
 		MessageValue message=9;
+		StringValue string_value=10;
+		GraphQL graph_ql=11;
 	}
 }
 

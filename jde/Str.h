@@ -59,6 +59,7 @@ namespace Jde
 
 	template<Str::IsView T=sv> α ToWString( T x )ι->std::wstring
 	{
+		#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 		return converter.from_bytes( x.data(), x.data()+x.size() );
 	}
@@ -216,7 +217,7 @@ namespace Jde
 	template<class X, class Y> α Str::Split( bsv<typename X::traits_type> s, char delim, bool removeEmpty )ι->vector<bsv<typename Y::traits_type>>
 	{
 		vector<bsv<typename Y::traits_type>> results;
-		for( uint fieldStart=0, iField=0, fieldEnd;fieldStart<s.size();++iField, fieldStart = fieldEnd+1 )
+		for( uint fieldStart=0, fieldEnd;fieldStart<s.size();fieldStart = fieldEnd+1 )
 		{
 			fieldEnd = std::min( s.find_first_of(delim, fieldStart), s.size() );
 			Y v{s.data()+fieldStart, fieldEnd-fieldStart };
