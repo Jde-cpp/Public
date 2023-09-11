@@ -160,6 +160,7 @@ namespace Jde
 
 		Ŧ TryToFloat( const basic_string<T>& s )ι->float;
 		optional<double> TryToDouble( str s )ι;
+		α TryToUInt( const string& s, std::size_t* pos = nullptr, int base = 10 )ι->optional<uint>;
 
 		template<class TEnum, class Collection> α FromEnum( const Collection& stringValues, TEnum value )ι->string;
 		template<class TEnum, class TCollection, class TString> α ToEnum( const TCollection& s, TString text )ι->optional<TEnum>;

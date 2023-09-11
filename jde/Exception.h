@@ -56,7 +56,7 @@ namespace Jde
 		β Log()Ι->void;
 		α what()Ι->const char* override;
 		//α What()ι->string&&{ return move(_what); }
-		α What()Ι->const string&{ return _what; }
+		α What()Ι->const string&{ what(); return _what; }
 		α Level()Ι->ELogLevel{return _level;} α SetLevel( ELogLevel level )Ι{ _level=level;}
 		β Clone()ι->sp<IException> =0;
 		β Move()ι->up<IException> =0;

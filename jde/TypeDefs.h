@@ -90,6 +90,7 @@ namespace Jde
 	using uint=uint_fast64_t;
 	using _int=int_fast64_t;
 	using Handle=uint;
+	using SessionPK=uint32;
 
 	using Clock=std::chrono::system_clock;
 	using Duration=Clock::duration;
