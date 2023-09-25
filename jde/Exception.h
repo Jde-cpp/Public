@@ -83,6 +83,7 @@ namespace Jde
 	{
 		Exception( string what, ELogLevel l=ELogLevel::Debug, SRCE )ι;
 		Exception( Exception&& from )ι:IException{ move(from) }{}
+		Exception( string what, uint code, ELogLevel level=ELogLevel::Debug, SRCE )ι:IException{what, level, code, sl}{};
 
 		$ Exception( SL sl, std::exception&& inner, sv format_={}, Args&&... args )ι:IException{sl, move(inner), format_, args...}{}
 		$ Exception( SL sl, ELogLevel l, sv format_, Args&&... args )ι:IException( sl, l, format_, args... ){}

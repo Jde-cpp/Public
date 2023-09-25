@@ -46,9 +46,8 @@ namespace Jde::Web::Rest
 
 	α ISession::DoRead()ι->void
   {
-    Request = {};
-    Stream.expires_after( std::chrono::seconds(30) );
-    http::async_read( Stream, Buffer, Request, beast::bind_front_handler( &ISession::OnRead, MakeShared()) );
+    _stream.expires_after( std::chrono::seconds(30) );
+    http::async_read( _stream, _buffer, _request, beast::bind_front_handler( &ISession::OnRead, MakeShared()) );
   }
 
   α ISession::OnRead( beast::error_code ec, std::size_t bytes_transferred )ι->void
@@ -59,7 +58,7 @@ namespace Jde::Web::Rest
 
 		CHECK_EC( ec );
 
-		HandleRequest( std::move(Request), MakeShared() );
+		HandleRequest( Request{ MakeShared() } );
   }
 
 	α ISession::OnWrite( bool close, beast::error_code ec, std::size_t bytes_transferred )ι->void
@@ -72,7 +71,7 @@ namespace Jde::Web::Rest
 	α ISession::DoClose()ι->void
   {
       beast::error_code ec;
-      Stream.socket().shutdown(tcp::socket::shutdown_send, ec);
+      _stream.socket().shutdown(tcp::socket::shutdown_send, ec);
   }
 	Ŧ SetResponse( http::response<T>& res, bool keepAlive )ι->void
 	{
@@ -88,41 +87,42 @@ namespace Jde::Web::Rest
 		SetResponse<T>( res, keepAlive );
 		//https://www.boost.org/doc/libs/1_76_0/boost/beast/http/field.hpp
 	}
-	α ISession::Send( string value, http::request<http::string_body>&& req )ι->void
+	α ISession::Send( string&& value, Request&& req )ι->void
 	{
-		http::response<http::string_body> res{ std::piecewise_construct, std::make_tuple(std::move(value)), std::make_tuple(http::status::ok, req.version()) };
-		SetBodyResponse( res, req.keep_alive() );
-		Send(move(res));
+		auto res = ms<http::response<http::string_body>>( std::piecewise_construct, std::make_tuple(std::move(value)), std::make_tuple(http::status::ok, req.ClientRequest().version()) );
+		SetBodyResponse( *res, req.ClientRequest().keep_alive() );
+		Send( move(res), move(req.Session) );
 	}
-	α ISession::SendOptions( http::request<http::string_body>&& req )ι->void
+	α ISession::SendOptions( Request&& req )ι->void
 	{
-		http::response<http::empty_body> res{ http::status::no_content, req.version() };
-    res.set(http::field::access_control_allow_methods, "GET, POST");
-    res.set(http::field::access_control_allow_headers, "*");
-    res.set(http::field::access_control_max_age, "86400");
-		SetResponse( res, req.keep_alive() );
-    Send(move(res));
+		auto y = ms<http::response<http::empty_body>>( http::status::no_content, req.ClientRequest().version() );
+    y->set(http::field::access_control_allow_methods, "GET, POST");
+    y->set(http::field::access_control_allow_headers, "*");
+    y->set(http::field::access_control_max_age, "86400");
+		SetResponse( *y, req.ClientRequest().keep_alive() );
+    Send( move(y), move(req.Session) );
 	}
 
-	α ISession::Error( Exception&& e, http::request<http::string_body>&& req )ι->void
+	α ISession::Send( Exception&& e, Request&& req )ι->void
 	{
 		var p = dynamic_cast<IRequestException*>( &e );
-		Error( p ? p->Status() : http::status::internal_server_error, e.what(), move(req) );
+		string what = p ? p->what() : format("Internal Server Error:  '{:x}'.", e.Code);
+		Send( p ? p->Status() : http::status::internal_server_error, what, move(req) );
 	}
-	α Error( const IRequestException& e, string what, http::request<http::string_body>&& req )ι->void
+	α ISession::Send( const IRequestException&& e, Request&& req )ι->void
 	{
-		Error( e.Status(), what, move(req) );
+		Send( e.Status(), e.what(), move(req) );
 	}
 
-	α ISession::Error( http::status status, string what, http::request<http::string_body>&& req )ι->void
+	α ISession::Send( http::status status, string what, Request&& req )ι->void
 	{
-    http::response<http::string_body> res{status, req.version()};
+    auto y = ms<http::response<http::string_body>>( status, req.ClientRequest().version() );
 		var message = format( "{{\"message\": \"{}\"}}", move(what) );
 		Dbg( message );
-		SetBodyResponse( res, req.keep_alive() );
-    res.body() = message;
-    res.prepare_payload();
-		Send( move(res) );
+		SetBodyResponse( *y, req.ClientRequest().keep_alive() );
+    y->body() = message;
+    y->prepare_payload();
+		Send( move(y), move(req.Session) );
 	}
 
 	static flat_map<SessionPK, sp<SessionInfo>> _sessions; shared_mutex _sessionMutex;
@@ -143,11 +143,11 @@ namespace Jde::Web::Rest
 		return p;
 	}
 
-	α FetchSessionInfo( UserPK userId, HCoroutine h )ι->Task
+	α FetchSessionInfo( SessionPK sessionId, HCoroutine h )ι->Task
 	{
 		try
 		{
-			sp<SessionInfo> p{ (co_await Logging::Server()->FetchSessionInfo(userId)).UP<SessionInfo>().release() };
+			sp<SessionInfo> p{ (co_await Logging::Server::FetchSessionInfo(sessionId)).UP<SessionInfo>().release() };
 			h.promise().get_return_object().SetResult( p );
 			AddSession2(p);
 		}
@@ -163,15 +163,15 @@ namespace Jde::Web::Rest
 		sl _{ _sessionMutex };
 		if( auto p = _sessions.find( _sessionId ); p!=_sessions.end() )
 			_result.Set( p->second );
-		else if( Logging::Server()->IsLocal() )
+		else if( Logging::Server::IsLocal() )//if local, should have been in _sessions.
 			_result.Set( sp<SessionInfo>{} );
 		return _result.HasShared();
 	}
-	α SessionInfoAwait::await_suspend( HCoroutine h )ι->void{ IAwait::await_suspend(h); FetchSessionInfo( _sessionId, h ); }
+	α SessionInfoAwait::await_suspend( HCoroutine h )ι->void{ IAwaitCache::await_suspend(h); FetchSessionInfo( _sessionId, h ); }
 
 	α ParseUri( string&& uri )->tuple<string,flat_map<string,string>>
 	{
-	  var target{ uri.substr(0, uri.find('?')-1) };
+	  var target{ uri.substr(0, uri.find('?')) };
 		flat_map<string,string> params;
 		if( target.size()+1<uri.size() )
 		{
@@ -186,63 +186,40 @@ namespace Jde::Web::Rest
 		}
 		return make_tuple( target, params );
 	}
-	α ISession::HandleRequest( http::request<http::string_body>&& req, sp<ISession> s )ι->Task
+	α ISession::HandleRequest( Request req )ι->Task
 	{
-		auto [target, params] = ParseUri( Ssl::DecodeUri(string{req.target()}) );
-		DBG( "{}={}", target, req.body() );
-		var sessionString{ req.base()["session-id"] };
-		up<SessionInfo> pSessionInfo;
+		auto [target, params] = ParseUri( Ssl::DecodeUri(string{req.ClientRequest().target()}) );
+		LOG( "{}={}", target, req.ClientRequest().body() );
+		var sessionString{ req.ClientRequest().base()["session-id"] };
 		try
 		{
-			auto handled{ false };
 			if( !sessionString.empty() )
 			{
-				var sessionId = Str::TryToUInt( string{sessionString}, nullptr, 16 ); THROW_IFX(!sessionId, RequestException<http::status::bad_request>( SRCE_CUR, "Could not create sessionId {}.", sessionString); )
-				pSessionInfo = ( co_await FetchSessionInfo(*sessionId) ).UP<SessionInfo>();
-				if( pSessionInfo && pSessionInfo->expiration().seconds()<time(nullptr) )
+				var sessionId = Str::TryToUInt( string{sessionString}, nullptr, 16 ); THROW_IFX(!sessionId, RequestException<http::status::bad_request>(SRCE_CUR, "Could not create sessionId {}.", sessionString); )
+				req.SessionInfoPtr = ( co_await FetchSessionInfo(*sessionId) ).UP<SessionInfo>();
+				if( req.SessionInfoPtr && req.SessionInfoPtr->expiration().seconds()<time(nullptr) )
 					RequestException<http::status::unauthorized>( SRCE_CUR, "session timeout '{}'.", sessionString);
-				//check expired
 			}
-			var userId = pSessionInfo ? pSessionInfo->user_id() : 0;
-	    if( req.method() == http::verb::get )
+	    if( req.Method() == http::verb::get )
 			{
-				if( target.starts_with("/graphql?") && target.size()>9 )
+				if( target=="/graphql" )
 				{
-					sv target2 = "/graphql";
-					uint start = target2.size()+1;
-					auto psz = iv{target.data()+start, target.size()-start};
-					var params = Str::Split<iv,iv>(psz, '&');
-					for( auto param : params )
-					{
-						var keyValue = Str::Split<iv,iv>( param, '=' );
-						if( keyValue.size()==2 && keyValue[0]=="query" )
-						{
-							SendQuery( ToSV(keyValue[1]), userId, move(req), s );
-							break;
-						}
-					}
-					handled = true;
+					auto& query = params["query"]; THROW_IFX( query.empty(), RequestException<http::status::bad_request>(SRCE_CUR, "No query sent.") );
+					var y = ( co_await DB::CoQuery(move(query), req.UserId()) ).UP<nlohmann::json>();
+					Send( move(*y), move(req) );
 				}
 			}
-			if( !handled )
-				HandleRequest( move(target), move(params), move(pSessionInfo), move(req), move(s) );
+			if( req.Session )
+				HandleRequest( move(target), move(params), move(req) );
 		}
 		catch( Exception& e )
 		{
-			s->Error( move(e), move(req) );
+			Send( move(e), move(req) );
 		}
 	}
 
-	α ISession::SendQuery( sv query, UserPK userId, http::request<http::string_body>&& req, sp<ISession> s )ι->Task
+	α ISession::Send( const json& payload, Request&& req )ι->void
 	{
-		try
-		{
-			var result = ( co_await DB::CoQuery(string{query}, userId) ).UP<nlohmann::json>();
-			s->Send( result->dump(), move(req) );
-		}
-		catch( Exception& e )
-		{
-			s->Error( move(e), move(req) );
-		}
+		Send( payload.dump(), move(req) );
 	}
 }

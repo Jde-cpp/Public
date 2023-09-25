@@ -21,7 +21,7 @@ namespace Jde::IO::Sockets
 		std::atomic<SessionPK> _id{0};
 		sp<AsioContextThread> _pIOContext;
 		tcp::acceptor _acceptor;
-		flat_map<SessionPK,up<ProtoSession>> _sessions; std::shared_mutex _mutex;
+		flat_map<SessionPK,sp<ProtoSession>> _sessions; mutable std::shared_mutex _mutex;
 	private:
 		void Run()noexcept;
 	};
@@ -52,7 +52,7 @@ namespace Jde::IO::Sockets
 	protected:
 		β OnReceive( TToServer&& pValue )noexcept(false)->void=0;
 		α ReadBody( uint messageLength )noexcept->void override;
-		α Write( const TFromServer& message )noexcept->void;
+		α Write( TFromServer&& message )noexcept->void;
 		vector<google::protobuf::uint8> _message;
 	};
 
@@ -78,9 +78,9 @@ namespace Jde::IO::Sockets
 		{}
 	}
 
-	$ Write( const TFromServer& value )noexcept->void
+	$ Write( TFromServer&& value )noexcept->void
 	{
-		auto [p,size] = IO::Proto::SizePrefixed( value );
+		auto [p,size] = IO::Proto::SizePrefixed( move(value) );
 		ProtoSession::Write( move(p), size );
 	}
 
