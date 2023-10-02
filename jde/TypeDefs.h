@@ -101,7 +101,7 @@ namespace Jde
 	using std::atomic;
 	using std::atomic_flag;
 	using std::function;
-	using std::lock_guard;
+	using lg = std::lock_guard<std::mutex>;
 	//using std::make_unique;//refactor remove
 	using std::make_shared;//refactor remove
 	using std::mutex;
@@ -113,12 +113,12 @@ namespace Jde
 	using std::static_pointer_cast;
 	using std::unique_lock;//refactor remove
 	using ul=std::unique_lock<std::shared_mutex>;
-	using std::shared_lock;//refactor remove
 	using sl=std::shared_lock<std::shared_mutex>;
 	using std::shared_mutex;
 	using sv = std::string_view;
 	Τ using limits = std::numeric_limits<T>;
-	using std::find;
+	using std::ranges::find;
+	using std::ranges::find_if;
 	using std::variant;
 	using std::move;
 	using std::endl;
@@ -129,7 +129,7 @@ namespace Jde
 	using std::nullopt;
 
 	template<class T, class... Args> α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return up<T>( new T(std::forward<Args>(args)...) ); }
-  	template<class T, class... Args> α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
+  template<class T, class... Args> α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
 
 	using std::vector;
 	template<class T> using VectorPtr = std::shared_ptr<std::vector<T>>;
@@ -155,6 +155,7 @@ namespace Jde
 #endif
 	using path = const fs::path&;
 	using str = const std::string&;
+
 	template<class T> using vec = const vector<T>&;
 
 #ifdef _MSC_VER

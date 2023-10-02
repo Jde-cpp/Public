@@ -74,6 +74,7 @@ namespace Jde::Coroutine
 		α Clear()ι->void{ _result.Clear(); }
 		α HasResult()Ι->bool{ return !_result.Uninitialized(); }
 		α HasError()Ι->bool{ return _result.HasError(); }
+		α HasShared()Ι->bool{ return _result.HasShared(); }
 		α Result()ι->AwaitResult&{ return _result; }
 		α SetResult( IException&& e )ι->void{ _result.Set( move(e) ); }
 		α SetResult( AwaitResult::Value&& r )ι->void{ _result.Set( move(r) ); }
@@ -81,8 +82,8 @@ namespace Jde::Coroutine
 		Ŧ SetResult( up<T>&& x )ι{ _result.Set( x.release() ); }
 		α SetResult( AwaitResult&& r )ι->void{ _result = move( r ); }
 		α Push( SL& sl )ι->void{ _result.Push( sl ); }
-		template<IsPolymorphic T> α SetSP( const sp<T>& x )ι->void{ ASSERT( dynamic_pointer_cast<IException>(x)==nullptr ); _result.Set( x ); }
-		Ŧ SetSP( const sp<T>& x )ι{  _result.Set( x ); }
+		template<IsPolymorphic T> α SetSP( sp<T>&& x )ι->void{ ASSERT( dynamic_pointer_cast<IException>(x)==nullptr ); _result.Set( move(x) ); }
+		Ŧ SetSP( sp<T>&& x )ι{  _result.Set( move(x) ); }
 		α SetBool( bool x )ι{ _result.SetBool(x); }
 	private:
 		AwaitResult _result;
@@ -92,19 +93,22 @@ namespace Jde
 {
 	using HCoroutine = coroutine_handle<Coroutine::Task::promise_type>;
 	Ŧ SP( Coroutine::AwaitResult& r, HCoroutine h, SRCE )ε->sp<T>;
+	Ξ Result( HCoroutine h )ι->Coroutine::Task&{ return h.promise().get_return_object(); }
+	Ŧ ResumeSP( HCoroutine&& h, sp<T> y )ι->void{ Result(h).SetSP(move(y)); h.resume(); }
+	Ξ ResumeEx( HCoroutine&& h, Exception&& e )ι->void{ Result(h).SetResult(move(e)); h.resume(); }
 }
 
 namespace Jde::Coroutine
 {
-	struct CoException : IException
+	struct CoException final : IException
 	{
-		CoException( HCoroutine h, IException&& i, SRCE ):IException{sl, ELogLevel::NoLog, {} },_h{h},_pInner{ i.Move() }{}
+		CoException( HCoroutine h, IException&& i, SRCE )ι:IException{sl, ELogLevel::NoLog, {} },_h{h},_pInner{ i.Move() }{}
 		α Resume( Task::promise_type& pt )ι{ pt.get_return_object().SetResult( move(*_pInner) ); _h.resume(); }
 
-		α Clone()noexcept->sp<IException> override{ return ms<CoException>(move(*this)); }
-		α Move()noexcept->up<IException> override{ return mu<CoException>(move(*this)); }
-		α Ptr()->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }
-		[[noreturn]] α Throw()->void override{ throw move(*this); }
+		α Clone()ι->sp<IException> override{ return ms<CoException>(move(*this)); }
+		α Move()ι->up<IException> override{ return mu<CoException>(move(*this)); }
+		α Ptr()ι->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }
+		[[noreturn]] α Throw()ε->void override{ throw move(*this); }
 	private:
 		HCoroutine _h;
 		up<IException> _pInner;

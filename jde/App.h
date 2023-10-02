@@ -9,66 +9,66 @@ namespace Jde::Threading{ struct InterruptibleThread; struct IWorker; }
 namespace Jde
 {
 #ifdef _MSC_VER
-	consteval α IsWindows()noexcept->bool{return true;}
+	consteval α IsWindows()ι->bool{return true;}
 #else
-	consteval α IsWindows()noexcept->bool{return false;}
+	consteval α IsWindows()ι->bool{return false;}
 #endif
 
 	namespace Threading{ struct IPollWorker; }
 	struct IShutdown
 	{
-		β Shutdown()noexcept->void=0;
+		β Shutdown()ι->void=0;
 	};
 	struct IPollster
 	{
-		β WakeUp()noexcept->void=0;
-		β Sleep()noexcept->void=0;
+		β WakeUp()ι->void=0;
+		β Sleep()ι->void=0;
 	};
 
 	struct Γ IApplication //: IPollster
 	{
-		Ω Instance()noexcept->IApplication&{ /*assert(_pInstance);*/ return *_pInstance; }
-		α BaseStartup( int argc, char** argv, sv appName, string serviceDescription/*, sv companyName="jde-cpp"*/ )noexcept(false)->flat_set<string>;
-		β Install( str serviceDescription )noexcept(false)->void=0;
-		β Uninstall()noexcept(false)->void=0;
-		Ω EnvironmentVariable( str variable, SRCE )noexcept->string;
+		Ω Instance()ι->IApplication&{ /*assert(_pInstance);*/ return *_pInstance; }
+		α BaseStartup( int argc, char** argv, sv appName, string serviceDescription/*, sv companyName="jde-cpp"*/ )ε->flat_set<string>;
+		β Install( str serviceDescription )ε->void=0;
+		β Uninstall()ε->void=0;
+		Ω EnvironmentVariable( str variable, SRCE )ι->string;
 
-		Ω MemorySize()noexcept->size_t;
-		Ω ExePath()noexcept->fs::path;
-		Ω HostName()noexcept->string;
+		Ω MemorySize()ι->size_t;
+		Ω ExePath()ι->fs::path;
+		Ω HostName()ι->string;
 
-		Ω AddThread( sp<Threading::InterruptibleThread> pThread )noexcept->void;
-		Ω RemoveThread( sp<Threading::InterruptibleThread> pThread )noexcept->void;
-		Ω RemoveThread( sv name )noexcept->sp<Threading::InterruptibleThread>;
-		Ω GarbageCollect()noexcept->void;
-		Ω AddApplicationLog( ELogLevel level, str value )noexcept->void;//static to call in std::terminate.
-		Ṫ AddPollster( /*bool appThread*/ )noexcept->sp<T>;
-		Ω AddShutdown( sp<IShutdown> pShared )noexcept->void;
-		Ω RemoveShutdown( sp<IShutdown> pShared )noexcept->void;
-		Ω Add( sp<void> pShared )noexcept->void;
-		Ω Exit( int reason )noexcept->void;
-		Ω Kill( uint processId )noexcept{return _pInstance ? _pInstance->KillInstance( processId ) : false;}
-		Ω Remove( sp<void> pShared )noexcept->void;
-		Ω StartTime()noexcept->TimePoint;
-		Ω AddShutdownFunction( function<void()>&& shutdown )noexcept->void;
-		Ω Pause()noexcept->void;
-		Ω IsConsole()noexcept->bool;
+		Ω AddThread( sp<Threading::InterruptibleThread> pThread )ι->void;
+		Ω RemoveThread( sp<Threading::InterruptibleThread> pThread )ι->void;
+		Ω RemoveThread( sv name )ι->sp<Threading::InterruptibleThread>;
+		Ω GarbageCollect()ι->void;
+		Ω AddApplicationLog( ELogLevel level, str value )ι->void;//static to call in std::terminate.
+		Ṫ AddPollster( /*bool appThread*/ )ι->sp<T>;
+		Ω AddShutdown( sp<IShutdown> pShared )ι->void;
+		Ω RemoveShutdown( sp<IShutdown> pShared )ι->void;
+		Ω Add( sp<void> pShared )ι->void;
+		Ω Exit( int reason )ι->void;
+		Ω Kill( uint processId )ι{return _pInstance ? _pInstance->KillInstance( processId ) : false;}
+		Ω Remove( sp<void> pShared )ι->void;
+		Ω StartTime()ι->TimePoint;
+		Ω AddShutdownFunction( function<void()>&& shutdown )ι->void;
+		Ω Pause()ι->void;
+		Ω IsConsole()ι->bool;
 
-		Ω GetBackgroundThreads()noexcept{ return  *_pBackgroundThreads; }
-		Ω ApplicationName()noexcept->sv{ return _pApplicationName ? *_pApplicationName : ""sv;}
-		Ω ProgramDataFolder()noexcept->fs::path;
-		Ω ApplicationDataFolder()noexcept->fs::path;
-		Ω ShuttingDown()noexcept->bool;
-		Ω Shutdown()noexcept->void;
-		Ω Cleanup()noexcept->void;
-		Ω AddActiveWorker( Threading::IPollWorker* pWorker )noexcept->void;
-		Ω RemoveActiveWorker( Threading::IPollWorker* p )noexcept->void;
+		Ω GetBackgroundThreads()ι{ return  *_pBackgroundThreads; }
+		Ω ApplicationName()ι->sv{ return _pApplicationName ? *_pApplicationName : ""sv;}
+		Ω ProgramDataFolder()ι->fs::path;
+		Ω ApplicationDataFolder()ι->fs::path;
+		Ω ShuttingDown()ι->bool;
+		Ω Shutdown()ι->void;
+		Ω Cleanup()ι->void;
+		Ω AddActiveWorker( Threading::IPollWorker* pWorker )ι->void;
+		Ω RemoveActiveWorker( Threading::IPollWorker* p )ι->void;
 	protected:
 
-		Ω OnTerminate()noexcept->void;
-		β AsService()noexcept->bool=0;
-		β AddSignals()noexcept(false)->void=0;
-		β KillInstance( uint processId )noexcept->bool=0;
+		Ω OnTerminate()ι->void;
+		β AsService()ι->bool=0;
+		β AddSignals()ε->void=0;
+		β KillInstance( uint processId )ι->bool=0;
 
 		static mutex _threadMutex;
 		static VectorPtr<sp<Threading::InterruptibleThread>> _pBackgroundThreads;
@@ -76,7 +76,7 @@ namespace Jde
 		static sp<IApplication> _pInstance;
 		static up<string> _pApplicationName;
 	private:
-		β SetConsoleTitle( sv title )noexcept->void=0;
+		β SetConsoleTitle( sv title )ι->void=0;
 
 		static vector<sp<void>> _objects; static mutex _objectMutex;
 		static vector<Threading::IPollWorker*> _activeWorkers; static std::atomic_flag _activeWorkersMutex;
@@ -85,43 +85,43 @@ namespace Jde
 
 	struct OSApp final: IApplication
 	{
-		ω Startup( int argc, char** argv, sv appName, string serviceDescription )noexcept(false)->flat_set<string>;
+		ω Startup( int argc, char** argv, sv appName, string serviceDescription )ε->flat_set<string>;
 
-		Ω CompanyName()noexcept->string;
+		Ω CompanyName()ι->string;
 		Ω ProductName()ι->sv;
-		Ω CompanyRootDir()noexcept->fs::path;
-		ω FreeLibrary( void* p )noexcept->void;
-		ω LoadLibrary( path path )noexcept(false)->void*;
-		ω GetProcAddress( void* pModule, str procName )noexcept(false)->void*;
-		α Install( str serviceDescription )noexcept(false)->void override;
-		α Uninstall()noexcept(false)->void override;
-		ω ProcessId()noexcept->uint;
-		Ω Executable()noexcept->fs::path;
-		Ω Args()noexcept->const flat_multimap<string,string>&;
-		Ω Pause()noexcept->void;
-		Ω UnPause()noexcept->void;
-		Φ GetThreadId()noexcept->uint;
-		Φ GetThreadDescription()noexcept->const char*;
+		Ω CompanyRootDir()ι->fs::path;
+		ω FreeLibrary( void* p )ι->void;
+		ω LoadLibrary( path path )ε->void*;
+		ω GetProcAddress( void* pModule, str procName )ε->void*;
+		α Install( str serviceDescription )ε->void override;
+		α Uninstall()ε->void override;
+		ω ProcessId()ι->uint;
+		Ω Executable()ι->fs::path;
+		Ω Args()ι->const flat_multimap<string,string>&;
+		Ω Pause()ι->void;
+		Ω UnPause()ι->void;
+		Φ GetThreadId()ι->uint;
+		Φ GetThreadDescription()ι->const char*;
 
 	protected:
-		α KillInstance( uint processId )noexcept->bool override;
-		α SetConsoleTitle( sv title )noexcept->void override;
-		α AddSignals()noexcept(false)->void override;
-		α AsService()noexcept->bool override;
+		α KillInstance( uint processId )ι->bool override;
+		α SetConsoleTitle( sv title )ι->void override;
+		α AddSignals()ε->void override;
+		α AsService()ι->bool override;
 
-		//void OnTerminate()noexcept override;
+		//void OnTerminate()ι override;
 	private:
 		Ω ExitHandler( int s )->void;
 #ifdef _MSC_VER
-		BOOL HandlerRoutine( DWORD  ctrlType );
+		α HandlerRoutine( DWORD  ctrlType )->BOOL;
 #endif
 	};
 
-	Ŧ IApplication::AddPollster( /*bool appThread*/ )noexcept->sp<T>
+	Ŧ IApplication::AddPollster( /*bool appThread*/ )ι->sp<T>
 	{
 		static_assert(std::is_base_of<IShutdown, T>::value, "T must derive from IShutdown");
 		static_assert(std::is_base_of<Threading::IPollWorker, T>::value, "T must derive from IPollWorker");
-		lock_guard _{ _objectMutex };
+		lg _{ _objectMutex };
 		auto p = make_shared<T>();
 		_objects.push_back( p );
 		_shutdowns.push_back( static_pointer_cast<IShutdown>(p) );

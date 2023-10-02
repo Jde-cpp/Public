@@ -11,6 +11,7 @@
 
 namespace Jde::Str
 {
+	str Empty()ι;
 	template<class T> using bsv = std::basic_string_view<char,T>;
 	struct ci_traits : public std::char_traits<char>
 	{

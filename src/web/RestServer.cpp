@@ -205,7 +205,8 @@ namespace Jde::Web::Rest
 				if( target=="/graphql" )
 				{
 					auto& query = params["query"]; THROW_IFX( query.empty(), RequestException<http::status::bad_request>(SRCE_CUR, "No query sent.") );
-					var y = ( co_await DB::CoQuery(move(query), req.UserId()) ).UP<nlohmann::json>();
+					string threadDesc = format( "[{:x}]{}", req.SessionInfoPtr ? req.SessionInfoPtr->session_id() : 0, target );
+					var y = ( co_await DB::CoQuery(move(query), req.UserId(), threadDesc) ).UP<nlohmann::json>();
 					Send( move(*y), move(req) );
 				}
 			}
