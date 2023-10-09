@@ -61,7 +61,7 @@ namespace Jde
 		β Clone()ι->sp<IException> =0;
 		β Move()ι->up<IException> =0;
 		α Push( SL sl )ι{ _stack.stack.push_back(sl); }
-		α Stack()Ι->const StackTrace&{ _stack; }
+		α Stack()Ι->const StackTrace&{ return _stack; }
 		β Ptr()->std::exception_ptr =0;
 		[[noreturn]] β Throw()->void=0;
 	protected:

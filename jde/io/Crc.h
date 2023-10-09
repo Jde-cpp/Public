@@ -125,20 +125,21 @@ namespace Jde::IO::Crc
 }
 namespace Jde
 {
-#ifdef NO_BOOST
-	Ξ Calc32RunTime( sv value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int
+//#ifdef NO_BOOST
+	Ξ Calc32RunTime( sv value )->unsigned int
 	{
-		return index == value.size()
-			? crc ^ 0xFFFFFFFF
-			: Calc32RunTime( value, IO::Crc::crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(value[index])] ^ (crc >> 8), index + 1 );
+		unsigned int crc=0xFFFFFFFF;
+		for( uint index=0; index<value.size(); ++index )
+			crc = IO::Crc::crc32_table[static_cast<unsigned char>(crc) ^ value[index]] ^ (crc >> 8);
+		return crc ^ 0xFFFFFFFF;
 	}
-#else
-	Ξ Calc32RunTime( sv value )->uint32_t
-	{
-		//return Calc32( value );
-		boost::crc_32_type result;
-		result.process_bytes( value.data(), value.size() );
-		return result.checksum();
-	}
-#endif
+// #else
+// 	Ξ Calc32RunTime( sv value )->uint32_t
+// 	{
+// 		//return Calc32( value );
+// 		boost::crc_32_type result;
+// 		result.process_bytes( value.data(), value.size() );
+// 		return result.checksum();
+// 	}
+// #endif
 }
