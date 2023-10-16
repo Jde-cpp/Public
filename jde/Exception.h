@@ -44,11 +44,11 @@ namespace Jde
 	struct Γ IException : std::exception
 	{
 		using base=std::exception;
-		IException( vector<string>&& args, string&& format, SL sl, uint c, ELogLevel l=ELogLevel::Debug )ι;
-		IException( string value, ELogLevel level=ELogLevel::Debug, uint code=0, SRCE )ι;
+		IException( vector<string>&& args, string&& format, SL sl, uint c, ELogLevel l=DefaultLogLevel )ι;
+		IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, SRCE )ι;
 		IException( IException&& from )ι;
 
-		$ IException( SL sl, std::exception&& inner, sv format_={}, Args&&... args )ι;
+		$ IException( SL sl, std::exception&& inner, ELogLevel level, sv format_={}, Args&&... args )ι;
 		$ IException( SL sl, ELogLevel l, sv m, Args&& ...args )ι;
 
 		virtual ~IException();
@@ -73,6 +73,7 @@ namespace Jde
 		sp<std::exception> _pInner;//sp to save custom copy constructor
 		sv _format;
 		vector<string> _args;
+		static constexpr ELogLevel DefaultLogLevel{ ELogLevel::Debug };
 	public:
 		const uint Code;
 	private:
@@ -85,10 +86,10 @@ namespace Jde
 		Exception( string what, ELogLevel l=ELogLevel::Debug, SRCE )ι;
 		Exception( Exception&& from )ι:IException{ move(from) }{}
 		Exception( string what, uint code, ELogLevel level=ELogLevel::Debug, SRCE )ι:IException{what, level, code, sl}{};
-
-		$ Exception( SL sl, std::exception&& inner, sv format_={}, Args&&... args )ι:IException{sl, move(inner), format_, args...}{}
+		$ Exception( SL sl, std::exception&& inner, ELogLevel level=DefaultLogLevel, sv format_={}, Args&&... args )ι:IException{sl, move(inner), level, format_, args...}{}
+		$ Exception( SL sl, std::exception&& inner, sv format_={}, Args&&... args )ι:Exception{sl, move(inner), DefaultLogLevel, format_, args...}{}
 		$ Exception( SL sl, ELogLevel l, sv format_, Args&&... args )ι:IException( sl, l, format_, args... ){}
-		$ Exception( SL sl, sv fmt, Args&&... args )ι:IException( sl, ELogLevel::Error, fmt, args... ){}
+		$ Exception( SL sl, sv fmt, Args&&... args )ι:IException( sl, DefaultLogLevel, fmt, args... ){}
 		~Exception(){}
 		using T=Exception;
 		COMMON
@@ -194,14 +195,16 @@ namespace Jde
 		BreakLog();
 	}
 
-	$ IException::IException( SL sl, std::exception&& inner, sv format_, Args&&... args )ι:
+	$ IException::IException( SL sl, std::exception&& inner, ELogLevel l, sv format_, Args&&... args )ι:
 		_stack{ sl },
 		_pInner{ make_shared<std::exception>(move(inner)) },
 		_format{ format_ },
-		Code{ Calc32RunTime(format_) }
+		Code{ Calc32RunTime(format_) },
+		_level{ l }
 	{
 		_args.reserve( sizeof...(args) );
 		ToVec::Append( _args, args... );
+		BreakLog();
 	}
 
 	//https://stackoverflow.com/questions/35941045/can-i-obtain-c-type-names-in-a-constexpr-way/35943472#35943472

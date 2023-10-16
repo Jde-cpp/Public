@@ -210,6 +210,9 @@ namespace Jde::Web::Rest
 					Send( move(*y), move(req) );
 				}
 			}
+			else if( req.Method() == boost::beast::http::verb::options )
+				SendOptions( move(req) );
+
 			if( req.Session )
 				HandleRequest( move(target), move(params), move(req) );
 		}

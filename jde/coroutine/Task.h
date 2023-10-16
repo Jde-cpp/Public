@@ -94,8 +94,9 @@ namespace Jde
 	using HCoroutine = coroutine_handle<Coroutine::Task::promise_type>;
 	Ŧ SP( Coroutine::AwaitResult& r, HCoroutine h, SRCE )ε->sp<T>;
 	Ξ Result( HCoroutine h )ι->Coroutine::Task&{ return h.promise().get_return_object(); }
-	Ŧ ResumeSP( HCoroutine&& h, sp<T> y )ι->void{ Result(h).SetSP(move(y)); h.resume(); }
-	Ξ ResumeEx( HCoroutine&& h, Exception&& e )ι->void{ Result(h).SetResult(move(e)); h.resume(); }
+	Ŧ Resume( up<T> y, HCoroutine&& h )ι->void{ Result(h).SetResult(move(y)); h.resume(); }
+	Ŧ ResumeSP( sp<T> y, HCoroutine&& h )ι->void{ Result(h).SetSP(move(y)); h.resume(); }
+	Ξ ResumeEx( Exception&& e, HCoroutine&& h )ι->void{ Result(h).SetResult(move(e)); h.resume(); }
 }
 
 namespace Jde::Coroutine
