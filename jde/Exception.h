@@ -86,7 +86,7 @@ namespace Jde
 		Exception( string what, ELogLevel l=ELogLevel::Debug, SRCE )ι;
 		Exception( Exception&& from )ι:IException{ move(from) }{}
 		Exception( string what, uint code, ELogLevel level=ELogLevel::Debug, SRCE )ι:IException{what, level, code, sl}{};
-		$ Exception( SL sl, std::exception&& inner, ELogLevel level=DefaultLogLevel, sv format_={}, Args&&... args )ι:IException{sl, move(inner), level, format_, args...}{}
+		$ Exception( SL sl, std::exception&& inner, ELogLevel level, sv format_={}, Args&&... args )ι:IException{sl, move(inner), level, format_, args...}{}
 		$ Exception( SL sl, std::exception&& inner, sv format_={}, Args&&... args )ι:Exception{sl, move(inner), DefaultLogLevel, format_, args...}{}
 		$ Exception( SL sl, ELogLevel l, sv format_, Args&&... args )ι:IException( sl, l, format_, args... ){}
 		$ Exception( SL sl, sv fmt, Args&&... args )ι:IException( sl, DefaultLogLevel, fmt, args... ){}
@@ -122,8 +122,8 @@ namespace Jde
 
 	struct Γ CodeException final : IException
 	{
-		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE );
-		CodeException( string value, std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE );
+		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE )ι;
+		CodeException( string value, std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE )ι;
 
 		using T=CodeException;
 		COMMON

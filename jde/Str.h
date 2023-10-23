@@ -207,6 +207,8 @@ namespace Jde
 	template<class T, class D> α Str::Split( bsv<TT> s_, bsv<typename D::traits_type> delim )ι->vector<bsv<TT>>
 	{
 		vector<T> tokens;
+		if( s_.empty() )
+			return tokens;
 		uint i=0;
 		bsv<typename D::traits_type> s{ s_.data(), s_.size() };
 		for( uint next = s.find(delim); next!=string::npos; i=next+delim.size(), next = s.find(delim, i) )

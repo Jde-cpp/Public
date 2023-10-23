@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-
 #ifdef _MSC_VER
 	#pragma warning( push, 0  )
 	#pragma warning( disable: 4005 )
@@ -28,23 +27,22 @@
 //#else
 //	#include <fmt/format.h>
 //#endif
+#include <coroutine>
+#include <source_location>
 
+#pragma warning(push)
+#pragma warning( disable : 4715)
+#include <nlohmann/json.hpp>
+#pragma warning(pop)
+using std::coroutine_handle;
+using std::suspend_never;
 
 #ifdef _MSC_VER
 	#ifndef WIN32_LEAN_AND_MEAN
 		#error WIN32_LEAN_AND_MEAN not defined
 	#endif
-	#include <coroutine>
-	#include <source_location>
 	#define __PRETTY_FUNCTION__ __FUNCSIG__
-	using std::coroutine_handle;
-	using std::suspend_never;
 	using std::stop_token;
-#else
-	#include <coroutine>
-	#include <boost/assert/source_location.hpp>
-	using std::coroutine_handle;
-	using std::suspend_never;
 #endif
 
 #define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )") _Pragma("warning( disable: 4701 )")  _Pragma("warning( disable: 5260 )")
@@ -158,23 +156,24 @@ namespace Jde
 
 	template<class T> using vec = const vector<T>&;
 
+	using nlohmann::json;
+	using std::coroutine_handle;
+	using std::suspend_never;
+	using std::source_location;
+	#define SRCE_CUR std::source_location::current()
+	#define SRCE const Jde::source_location& sl=SRCE_CUR
+	using SL = const Jde::source_location&;
+
+	using nlohmann::json;
 #ifdef _MSC_VER
 	inline constexpr bool _msvc{ true };
 	#ifndef WIN32_LEAN_AND_MEAN
 		#error WIN32_LEAN_AND_MEAN not defined
 	#endif
 	#define __PRETTY_FUNCTION__ __FUNCSIG__
-	using std::coroutine_handle;
-	using std::suspend_never;
-	using std::source_location;
-	#define SRCE_CUR std::source_location::current()
 #else
 	constexpr bool _msvc{ false };
-	using boost::source_location;
-	#define SRCE_CUR boost::source_location{ __builtin_FILE(), __builtin_LINE(), __builtin_FUNCTION() }
 #endif
-	#define SRCE const Jde::source_location& sl=SRCE_CUR
-	using SL = const Jde::source_location&;
 
 	enum class ELogLevel : int8{ NoLog=-1, Trace=0, Debug=1, Information=2, Warning=3, Error=4, Critical=5, None=6 };
 	inline constexpr std::array<sv,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };

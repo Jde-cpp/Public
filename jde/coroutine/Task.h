@@ -58,7 +58,7 @@ namespace Jde::Coroutine
 		using TResult=AwaitResult;
 		struct promise_type
 		{
-			promise_type():_promiseHandle{ NextTaskPromiseHandle() }{ /*TRACE("({:x})promise_type()", (uint)this);*/ }
+			promise_type()ι:_promiseHandle{ NextTaskPromiseHandle() }{ /*TRACE("({:x})promise_type()", (uint)this);*/ }
 
 			α get_return_object()ι->Task&{ return _pReturnObject ? *_pReturnObject : *(_pReturnObject=mu<Task>()); }
 			suspend_never initial_suspend()ι{ return {}; }
