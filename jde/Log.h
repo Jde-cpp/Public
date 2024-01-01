@@ -126,10 +126,14 @@ namespace Jde::Logging
 #define ERR_IF(predicate, message,...) LOG_IFL( predicate, ELogLevel::Error, message, __VA_ARGS__ )
 #define LOG_MEMORY( tag, severity, message, ... ) LogMemoryDetail( Logging::Message{tag, severity, message} __VA_OPT__(,) __VA_ARGS__ );
 
-#ifdef _MSC_VER
-	#define BREAK DebugBreak()
+#ifdef NDEBUG
+	#define BREAK
 #else
-	#define BREAK ::raise( 5/*SIGTRAP*/ )
+	#ifdef _MSC_VER
+		#define BREAK DebugBreak()
+	#else
+		#define BREAK ::raise( 5/*SIGTRAP*/ )
+	#endif
 #endif
 #define DEBUG_IF(x) if( x ) BREAK;
 
@@ -174,9 +178,9 @@ namespace Jde
 #define var const auto
 	Ξ FileName( const char* file_ )->string
 	{
-#ifdef NDEBUG
+//#ifdef NDEBUG
 		return file_;
-#else
+/*#else
 		string file{ file_ };
 		if( file.starts_with('~') )
 			return file;
@@ -198,7 +202,7 @@ namespace Jde
 		}
 #endif
 		return homeDir;
-#endif
+#endif*/
 	}
 #define SOURCE spdlog::source_loc{ FileName(m.File).c_str(), (int)m.LineNumber, m.Function }
 	Ξ Logging::Log( const Logging::MessageBase& m )ι->void
@@ -206,8 +210,6 @@ namespace Jde
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
 		//if constexpr( _debug )
 		{
-			if( string{m.File}.ends_with("construct_at.h") )
-				BREAK;
 			if( m.Level>=BreakLevel() )
 				BREAK;
 		}

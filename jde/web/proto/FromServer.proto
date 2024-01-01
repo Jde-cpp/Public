@@ -1,0 +1,14 @@
+//source $JDE_DIR/Framework/common.sh;toBashDir $JDE_DIR JDE_BASH;webSource=$JDE_BASH/Public/jde/web/proto;
+//cd $webSource;protoc --cpp_out dllexport_decl=ΓW:. -I. FromServer.proto
+//cd $JDE_BASH/Public/src/web;moveToDir proto;mv $webSource/FromServer.pb.cc .;mklink FromServer.pb.h $webSource
+
+syntax = "proto3";
+package Jde.Web.FromServer;
+
+message Acknowledgement{
+	uint32 id=1;
+}
+message Exception{
+	uint32 request_id=1;
+	string message=2;
+}

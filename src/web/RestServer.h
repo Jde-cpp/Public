@@ -94,7 +94,7 @@ namespace Jde::Web::Rest
     sp<void> _message;
 	};
 
-	struct Γ IListener
+	struct ΓW IListener : IShutdown
 	{
 	  IListener( PortType defaultPort )ε;
 		virtual ~IListener(){}
@@ -104,6 +104,12 @@ namespace Jde::Web::Rest
 	  α OnAccept(beast::error_code ec, tcp::socket socket)ι->void;
 		β CreateSession( tcp::socket&& socket )ι->sp<ISession> =0;
 		virtual auto MakeShared()ι->sp<void> =0;
+		α Shutdown()ι->void{
+			_acceptor.close();
+			auto spThis = MakeShared();
+			DBG( "Rest::Shutdown use_count={}", spThis.use_count()-1 );//acceptor, global, shutdown
+			spThis=nullptr;
+		}
 
 		sp<IO::AsioContextThread> _pIOContext;
 		tcp::acceptor _acceptor;
@@ -114,6 +120,7 @@ namespace Jde::Web::Rest
 	struct TListener : IListener, std::enable_shared_from_this<TListener<TSession>>
 	{
 	  TListener( PortType port )ε:IListener{ port }{}
+		virtual ~TListener(){ DBG( "~TListener - Rest Server" ); }
 		β CreateSession( tcp::socket&& socket )ι->sp<ISession> override;
 		α MakeShared()ι->sp<void> override{ return this->shared_from_this(); }
 	};

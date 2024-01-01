@@ -4,7 +4,7 @@
 	[{
 		"label": "build",
 		"type": "shell",
-		"command": "tput reset; ../../Framework/cmake/buildc.sh ${workspaceFolder}",
+		"command": "tput reset; ../../../Framework/cmake/buildc.sh ${workspaceFolder}",
 		"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 		"group": { "kind": "build", "isDefault": false }
 	},

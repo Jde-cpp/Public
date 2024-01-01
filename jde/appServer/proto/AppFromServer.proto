@@ -1,20 +1,15 @@
-//source $JDE_DIR/Framework/common.sh;toBashDir $JDE_DIR JDE_BASH;source=$JDE_BASH/Public/jde/log/types/proto;
-//file=FromServer;cd $source;$JDE_BASH/Public/stage/release/protoc --cpp_out . $file.proto
-//cd $JDE_BASH/AppServer/source;moveToDir types;moveToDir proto;mv $source/$file.pb.cc .;mklink $file.pb.h $source
+//source $JDE_DIR/Framework/common.sh;toBashDir $JDE_DIR JDE_BASH;appSource=$JDE_BASH/Public/jde/appServer/proto;commonDir=$JDE_BASH/Public/src/web/proto
+//cd $appSource;mklink FromServer.proto $commonDir;protoc -I. --cpp_out . AppFromServer.proto
+//cd $JDE_BASH/AppServer/source;moveToDir types;moveToDir proto;mv $appSource/AppFromServer.pb.cc .;mklink AppFromServer.pb.h $appSource;mklink FromServer.pb.h $commonDir
 
 syntax = "proto3";
 package Jde.ApplicationServer.Web.FromServer;
+import "FromServer.proto";
 
-message Acknowledgement
-{
-	uint32 id=1;
-}
-enum EResults
-{
+enum EResults{
 	Authentication=0;
 }
-enum ELogLevel
-{
+enum ELogLevel{
 	Trace = 0;
 	Debug = 1;
 	Information = 2;
@@ -24,8 +19,7 @@ enum ELogLevel
 	None = 6;
 }
 
-message MessageValue
-{
+message MessageValue{
 	EResults type=1;
 	oneof Value
 	{
@@ -34,27 +28,23 @@ message MessageValue
 	}
 }
 
-message StringValue
-{
+message StringValue{
 	uint32 request_id=1;
 	string value=2;
 }
 
-message Application
-{
+message Application{
 	uint32 id=1;
 	string name=2;
 	ELogLevel db_level=3;
 	ELogLevel file_level=4;
 }
 
-message Applications
-{
+message Applications{
 	repeated Application values=1;
 }
 
-message Status
-{
+message Status{
 	uint32 application_id=1;
 	uint32 instance_id=2;
 	string host_name=3;
@@ -67,13 +57,11 @@ message Status
 	repeated string values=10;
 }
 
-message Statuses
-{
+message Statuses{
 	repeated Status values=1;
 }
 
-message TraceMessage
-{
+message TraceMessage{
 	uint64 id=1;
 	uint64 instance_id=2;
 	uint64 time=3;
@@ -87,68 +75,49 @@ message TraceMessage
 	repeated string variables=11;
 }
 
-message Traces
-{
+message Traces{
 	uint32 application_id=1;
 	repeated TraceMessage values=2;
 }
 
-message ApplicationString
-{
+message ApplicationString{
 	uint32 string_request_type=1;
 	uint32 id=2;
 	string value=3;
 }
 
-message ApplicationStrings
-{
+message ApplicationStrings{
 	uint32 request_id=1;
 	uint32 application_id=2;
 	repeated ApplicationString values=3;
 }
 
-message ErrorMessage
-{
-	uint32 request_id=1;
-	string message=2;
-}
-
-message Custom
-{
+message Custom{
 	uint32 request_id=1;
 	bytes message=2;
 }
 
-message Complete
-{
-	uint32 request_id=1;
-}
-
-message GraphQL
-{
+message GraphQL{
 	uint32 request_id=1;
 	string json=2;
 }
 
-message MessageUnion
-{
-	oneof value
-	{
+message MessageUnion{
+	oneof value{
 		Traces traces=1;
 		Statuses statuses=2;
-		Acknowledgement acknowledgement=3;
+		Jde.Web.FromServer.Acknowledgement acknowledgement=3;
 		ApplicationStrings strings=4;
 		Applications applications=5;
-		ErrorMessage error=6;
+		Jde.Web.FromServer.Exception exception=6;
 		Custom custom=7;
-		Complete complete=8;
+		Jde.Web.FromServer.Complete complete=8;
 		MessageValue message=9;
 		StringValue string_value=10;
 		GraphQL graph_ql=11;
 	}
 }
 
-message Transmission
-{
+message Transmission{
 	repeated MessageUnion messages=1;
 }

@@ -11,7 +11,6 @@
 #include <memory>
 #include <mutex>
 #include <chrono>
-//#include <coroutine>
 #include <filesystem>
 
 #include <optional>
@@ -22,8 +21,9 @@
 #include <vector>
 #include <memory>
 
-//#if !defined(__clang__) && !defined(_MSC_VER)
-	#include <format>
+
+//#if !defined(__clang__) && !defined(_MSC_VER) spdlog installs it anyways
+//	#include <format>
 //#else
 //	#include <fmt/format.h>
 //#endif
@@ -100,7 +100,6 @@ namespace Jde
 	using std::atomic_flag;
 	using std::function;
 	using lg = std::lock_guard<std::mutex>;
-	//using std::make_unique;//refactor remove
 	using std::make_shared;//refactor remove
 	using std::mutex;
 	Τ using sp = std::shared_ptr<T>;
@@ -117,9 +116,9 @@ namespace Jde
 	Τ using limits = std::numeric_limits<T>;
 	using std::ranges::find;
 	using std::ranges::find_if;
+	using std::ranges::for_each;
 	using std::variant;
 	using std::move;
-	using std::endl;
 	using std::optional;
 	using std::ostringstream;
 	using std::chrono::duration_cast;
@@ -144,12 +143,8 @@ namespace Jde
 #endif
 #ifdef _MSC_VER
 	using std::format;
-	using std::formatter;
-	using std::format_parse_context;
 #else
 	using fmt::format;
-	using fmt::formatter;
-	using fmt::format_parse_context;
 #endif
 	using path = const fs::path&;
 	using str = const std::string&;

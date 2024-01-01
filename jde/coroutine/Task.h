@@ -6,8 +6,7 @@
 #include <jde/Assert.h>
 
 #define Φ Γ auto
-namespace Jde::Coroutine
-{
+namespace Jde::Coroutine{
 	typedef uint Handle;
 	typedef Handle ClientHandle;
 
@@ -15,8 +14,7 @@ namespace Jde::Coroutine
 	Φ NextTaskHandle()ι->ClientHandle;
 	Φ NextTaskPromiseHandle()ι->ClientHandle;
 
-	struct AwaitResult
-	{
+	struct AwaitResult{
 		using UType=void*;//std::unique_ptr<void,decltype(Deleter)>;
 		using Value = std::variant<UType,sp<void>,IException*,bool>;
 		AwaitResult()=default;
@@ -30,7 +28,7 @@ namespace Jde::Coroutine
 		α HasShared()Ι{ return _result.index()==1 && get<1>( _result ); }
 		α HasError()Ι{ return _result.index()==2; }
 		α HasBool()Ι{ return _result.index()==3; }
-		α Error()ι->up<IException>{ auto p = HasError() ? get<IException*>(_result) : nullptr; ASSERT(p); Clear(); return up<IException>{ p->Move() };  }
+		α Error()ι->up<IException>{ auto p = HasError() ? get<IException*>(_result) : nullptr; ASSERT(p); Clear(); return p ? up<IException>{ p->Move() } : mu<Exception>("nullptr"); }
 		α Uninitialized()Ι{ return _result.index()==0 && get<0>(_result)==nullptr; }
 		α CheckError( SRCE )ε->void;
 		Ŧ SP( SRCE )ε->sp<T>;
@@ -42,8 +40,7 @@ namespace Jde::Coroutine
 		α Set( IException&& e )ι->void{ CheckUninitialized(); _result = e.Move().release(); }
 		α Set( Value&& result )ι{ _result = move(result); }
 		α SetBool( bool x )ι{ _result = x; }
-		α Push( SL& sl )ι->void
-		{
+		α Push( SL& sl )ι->void{
 			if( auto p = _result.index()==2 ? get<2>(_result) : nullptr; p )
 				p->Push( sl );
 		}
@@ -53,11 +50,9 @@ namespace Jde::Coroutine
 
 	template<class T> concept IsPolymorphic = std::is_polymorphic_v<T>;
 
-	struct Task final
-	{
+	struct Task final{
 		using TResult=AwaitResult;
-		struct promise_type
-		{
+		struct promise_type{
 			promise_type()ι:_promiseHandle{ NextTaskPromiseHandle() }{ /*TRACE("({:x})promise_type()", (uint)this);*/ }
 
 			α get_return_object()ι->Task&{ return _pReturnObject ? *_pReturnObject : *(_pReturnObject=mu<Task>()); }
@@ -89,8 +84,7 @@ namespace Jde::Coroutine
 		AwaitResult _result;
 	};
 }
-namespace Jde
-{
+namespace Jde{
 	using HCoroutine = coroutine_handle<Coroutine::Task::promise_type>;
 	Ŧ SP( Coroutine::AwaitResult& r, HCoroutine h, SRCE )ε->sp<T>;
 	Ξ Result( HCoroutine h )ι->Coroutine::Task&{ return h.promise().get_return_object(); }
@@ -99,10 +93,8 @@ namespace Jde
 	Ξ ResumeEx( Exception&& e, HCoroutine&& h )ι->void{ Result(h).SetResult(move(e)); h.resume(); }
 }
 
-namespace Jde::Coroutine
-{
-	struct CoException final : IException
-	{
+namespace Jde::Coroutine{
+	struct CoException final : IException{
 		CoException( HCoroutine h, IException&& i, SRCE )ι:IException{sl, ELogLevel::NoLog, {} },_h{h},_pInner{ i.Move() }{}
 		α Resume( Task::promise_type& pt )ι{ pt.get_return_object().SetResult( move(*_pInner) ); _h.resume(); }
 
@@ -115,18 +107,15 @@ namespace Jde::Coroutine
 		up<IException> _pInner;
 	};
 
-	Ξ AwaitResult::CheckError( SL sl )->void
-	{
-		if( _result.index()==2 )
-		{
+	Ξ AwaitResult::CheckError( SL sl )->void{
+		if( _result.index()==2 ){
 			up<IException> pException = Error(); ASSERT( pException );
 			pException->Push( sl );
 			pException->Throw();
 		}
 	}
 
-	Ŧ AwaitResult::UP( SL sl )ε->up<T>
-	{
+	Ŧ AwaitResult::UP( SL sl )ε->up<T>{
 		CheckError( sl );
 		if( _result.index()==1 )
 			throw Exception{ "Result is a shared_ptr.", ELogLevel::Critical, sl };
@@ -138,8 +127,7 @@ namespace Jde::Coroutine
 		return up<T>{ p };
 	}
 
-	Ŧ AwaitResult::SP( const source_location& sl )ε->sp<T>
-	{
+	Ŧ AwaitResult::SP( const source_location& sl )ε->sp<T>{
 		CheckError( sl );
 		if( _result.index()==0 )
 			throw Exception{ "Result is a unique_ptr.", ELogLevel::Critical, sl };
@@ -150,19 +138,15 @@ namespace Jde::Coroutine
 			throw Exception{ "Could not cast ptr." };//mysql
 		return p;
 	}
-	Ŧ SP( AwaitResult&& r, HCoroutine h, SRCE )ε->sp<T>
-	{
-		try
-		{
+	Ŧ SP( AwaitResult&& r, HCoroutine h, SRCE )ε->sp<T>{
+		try{
 			r.SP<T>( sl );
 		}
-		catch( IException& e )
-		{
+		catch( IException& e ){
 			throw CoException( h, move(e), sl );
 		}
 	}
-	Ξ AwaitResult::Bool( const source_location& sl )ε->bool
-	{
+	Ξ AwaitResult::Bool( const source_location& sl )ε->bool{
 		CheckError( sl );
 		if( _result.index()==0 )
 			throw Exception{ "Result is a unique_ptr.", ELogLevel::Critical, sl };

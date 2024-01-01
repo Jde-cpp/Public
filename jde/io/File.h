@@ -112,7 +112,7 @@ namespace Jde::IO
 				os << ",";
 			os << column;
 		}
-		os << endl;
+		os << std::endl;
 	}
 }
 #undef Φ

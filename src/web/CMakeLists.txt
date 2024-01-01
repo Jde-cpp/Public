@@ -12,8 +12,10 @@ include(SetUpConfigurations)
 #add_link_options( "LINKER:-z,origin-shared" )
 #add_link_options( "LINKER:-rpath=$ORIGIN" )
 set(CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS} "-Wl,-rpath=$ORIGIN")
+add_definitions( -DJDE_WEB_EXPORTS )
 
-add_library( Jde.Web SHARED ProtoServer.cpp RestServer.cpp )
+add_library( Jde.Web SHARED ProtoServer.cpp RestServer.cpp WebSocket.cpp
+	proto/FromServer.pb.cc )
 #######################################################
 target_link_libraries(Jde.Web Threads::Threads)
 #######################################################
