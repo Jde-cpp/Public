@@ -4,8 +4,8 @@
 #define var const auto
 namespace Jde::WebSocket
 {
-	static const LogTag& _logLevel = Logging::TagLevel( "webRequests" );
-	const LogTag& Session::_logLevel = Logging::TagLevel( "net" );;
+	const LogTag& _logLevel = Logging::TagLevel( "webRequests" );
+	//const LogTag& Session::_logLevel = Logging::TagLevel( "net" );;
 	WebListener::WebListener( PortType port )ε:
 		IServerSocket{ port },
 		_pContextThread{ IO::AsioContextThread::Instance() },

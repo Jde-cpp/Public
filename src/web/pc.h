@@ -7,4 +7,8 @@
 #include "../../../Framework/source/io/ProtoClient.h"
 #include "../../../Framework/source/io/ProtoUtilities.h"
 #include "../../../Framework/source/threading/InterruptibleThread.h"
-#include "../../..//Ssl/source/Ssl.h"
+DISABLE_WARNINGS
+_Pragma("warning(disable: 5054)")
+#include "../../../Framework/source/io/proto/messages.pb.h"
+ENABLE_WARNINGS
+#include "../../../Ssl/source/Ssl.h"

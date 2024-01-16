@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\duffyj\source\repos\jde\Public\src\web\ProtoServer.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\duffyj\source\repos\jde\Public\src\web\RestServer.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\duffyj\source\repos\jde\Public\src\web\WebSocket.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\duffyj\source\repos\jde\Public\src\web\proto\FromServer.pb.cc">
+      <Filter>Source\proto</Filter>
+    </ClCompile>
+    <ClCompile Include="pc.h">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Headers">
+      <UniqueIdentifier>{3bb889de-ae22-445b-8b27-e9172f9f9ced}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{ed130519-ab2c-4587-995d-3d751b020669}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\proto">
+      <UniqueIdentifier>{08f4e025-dbfe-4573-9785-b40010a86add}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Exports.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ProtoServer.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="RestServer.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="TypeDefs.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="WebSocket.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

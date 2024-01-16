@@ -161,7 +161,7 @@ namespace Jde
 
 		Ŧ TryToFloat( const basic_string<T>& s )ι->float;
 		optional<double> TryToDouble( str s )ι;
-		α TryToUInt( const string& s, std::size_t* pos = nullptr, int base = 10 )ι->optional<uint>;
+		template<class T=uint> α TryTo( str s, uint* pos = nullptr, int base = 10 )ι->optional<T>;
 
 		template<class TEnum, class Collection> α FromEnum( const Collection& stringValues, TEnum value )ι->string;
 		template<class TEnum, class TCollection, class TString> α ToEnum( const TCollection& s, TString text )ι->optional<TEnum>;
@@ -325,6 +325,19 @@ namespace Jde
 		}
 		return v;
 	}
+
+	Ŧ Str::TryTo( str s, uint* pos, int base )ι->optional<T>{
+		optional<T> y;
+		try{
+			y = static_cast<T>( std::stoull(s, pos, base) );
+		}
+		catch( const std::invalid_argument& )
+		{}
+		catch( const std::out_of_range& )
+		{}
+		return y;
+	}
+
 
 	Ξ Str::StartsWithInsensitive( sv value, sv starting )ι->bool
 	{

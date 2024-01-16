@@ -53,50 +53,43 @@ namespace Jde::Coroutine{
 	struct Task final{
 		using TResult=AwaitResult;
 		struct promise_type{
-			promise_type()ι:_promiseHandle{ NextTaskPromiseHandle() }{ /*TRACE("({:x})promise_type()", (uint)this);*/ }
+			promise_type()ι:_promiseHandle{ NextTaskPromiseHandle() }{}
 
-			α get_return_object()ι->Task&{ return _pReturnObject ? *_pReturnObject : *(_pReturnObject=mu<Task>()); }
+			α get_return_object()ι->Task{ return {}; }
 			suspend_never initial_suspend()ι{ return {}; }
 			suspend_never final_suspend()ι{ return {}; }
-			α return_void()ι{}
+			α return_void()ι->void{}
 			Φ unhandled_exception()ι->void;
-			α SetUnhandledResume( coroutine_handle<Task::promise_type> h )ι{ _unhandledResume=h; /*TRACE( "({:x})SetUnhandledResume({:x})", (uint)this, (uint)h.address() );*/ }
+
+			α SetResult( IException&& e )ι->void{ Result().Set( move(e) ); }
+			Ŧ SetResult( up<T>&& x )ι{ Result().Set( x.release() ); }
+			Ŧ SetResult( sp<T>&& x )ι{ Result().Set( move(x) ); }
+			template<IsPolymorphic T> α SetResult( up<T>&& x )ι{ ASSERT(dynamic_cast<IException*>(x.get())==nullptr); _result->Set( x.release() ); }
+			template<IsPolymorphic T> α SetResult( sp<T>&& x )ι->void{ ASSERT( dynamic_pointer_cast<IException>(x)==nullptr ); _result->Set( move(x) ); }
+			
+			α MoveResult()ι->AwaitResult{ if(!_result) return {}; auto y = move(*_result); _result=nullptr; return y;}
+			α HasError()Ι->bool{ return _result->HasError(); }
+			α HasResult()Ι->bool{ return _result && !_result->Uninitialized(); }
+			α Push( SL& sl )ι->void{ Result().Push( sl ); }
 		private:
-			up<Task> _pReturnObject;
+			α Result()ι->AwaitResult&{ if(!_result)_result=mu<AwaitResult>(); return *_result; }
+			up<AwaitResult> _result;
 			const Handle _promiseHandle;
-			coroutine_handle<Task::promise_type> _unhandledResume;
+			source_location _sl;
 		};
-		α Clear()ι->void{ _result.Clear(); }
-		α HasResult()Ι->bool{ return !_result.Uninitialized(); }
-		α HasError()Ι->bool{ return _result.HasError(); }
-		α HasShared()Ι->bool{ return _result.HasShared(); }
-		α Result()ι->AwaitResult&{ return _result; }
-		α SetResult( IException&& e )ι->void{ _result.Set( move(e) ); }
-		α SetResult( AwaitResult::Value&& r )ι->void{ _result.Set( move(r) ); }
-		template<IsPolymorphic T> auto SetResult( up<T>&& x )ι{ ASSERT(dynamic_cast<IException*>(x.get())==nullptr); _result.Set( x.release() ); }
-		Ŧ SetResult( up<T>&& x )ι{ _result.Set( x.release() ); }
-		α SetResult( AwaitResult&& r )ι->void{ _result = move( r ); }
-		α Push( SL& sl )ι->void{ _result.Push( sl ); }
-		template<IsPolymorphic T> α SetSP( sp<T>&& x )ι->void{ ASSERT( dynamic_pointer_cast<IException>(x)==nullptr ); _result.Set( move(x) ); }
-		Ŧ SetSP( sp<T>&& x )ι{  _result.Set( move(x) ); }
-		α SetBool( bool x )ι{ _result.SetBool(x); }
-	private:
-		AwaitResult _result;
 	};
 }
 namespace Jde{
 	using HCoroutine = coroutine_handle<Coroutine::Task::promise_type>;
-	Ŧ SP( Coroutine::AwaitResult& r, HCoroutine h, SRCE )ε->sp<T>;
-	Ξ Result( HCoroutine h )ι->Coroutine::Task&{ return h.promise().get_return_object(); }
-	Ŧ Resume( up<T> y, HCoroutine&& h )ι->void{ Result(h).SetResult(move(y)); h.resume(); }
-	Ŧ ResumeSP( sp<T> y, HCoroutine&& h )ι->void{ Result(h).SetSP(move(y)); h.resume(); }
-	Ξ ResumeEx( Exception&& e, HCoroutine&& h )ι->void{ Result(h).SetResult(move(e)); h.resume(); }
+	Ŧ Resume( up<T>&& y, HCoroutine&& h )ι->void{ h.promise().SetResult(move(y)); h.resume(); }
+	Ŧ Resume( sp<T>&& y, HCoroutine&& h )ι->void{ h.promise().SetResult(move(y)); h.resume(); }
+	Ξ Resume( IException&& e, HCoroutine&& h )ι->void{ h.promise().SetResult(move(e)); h.resume(); }
 }
 
 namespace Jde::Coroutine{
 	struct CoException final : IException{
 		CoException( HCoroutine h, IException&& i, SRCE )ι:IException{sl, ELogLevel::NoLog, {} },_h{h},_pInner{ i.Move() }{}
-		α Resume( Task::promise_type& pt )ι{ pt.get_return_object().SetResult( move(*_pInner) ); _h.resume(); }
+		α Resume( Task::promise_type& pt )ι{ pt.SetResult( move(*_pInner) ); _h.resume(); }
 
 		α Clone()ι->sp<IException> override{ return ms<CoException>(move(*this)); }
 		α Move()ι->up<IException> override{ return mu<CoException>(move(*this)); }

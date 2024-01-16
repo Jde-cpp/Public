@@ -1,4 +1,4 @@
-#include "RestServer.h"
+﻿#include "RestServer.h"
 #include <boost/beast/version.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/config.hpp>
@@ -49,10 +49,10 @@ namespace Jde::Web::Rest{
 		HandleRequest( Request{ MakeShared() } );
   }
 
-	α ISession::OnWrite( bool close, beast::error_code ec, std::size_t bytes_transferred )ι->void{
+	α ISession::OnWrite( bool /*close*/, beast::error_code ec, std::size_t bytes_transferred )ι->void{
       boost::ignore_unused( bytes_transferred );
 			if( ec )
-				CodeException{ ec };
+				CodeException{ ec, ec.value()==(int)boost::beast::error::timeout ? ELogLevel::Debug : ELogLevel::Error };
       DoClose();
   }
 
@@ -116,7 +116,7 @@ namespace Jde::Web::Rest{
 
 	α ISession::AddSession( UserPK userId )ι->sp<SessionInfo>{
 		auto p = ms<SessionInfo>();
-		auto pTimestamp = mu<google::protobuf::Timestamp>();
+		auto pTimestamp = mu<Logging::Proto::Timestamp>();
 		pTimestamp->set_seconds( time(nullptr)+60*60 );
 		p->set_allocated_expiration( pTimestamp.release() );
 		p->set_session_id( Math::Random() );
@@ -128,11 +128,11 @@ namespace Jde::Web::Rest{
 	α FetchSessionInfo( SessionPK sessionId, HCoroutine h )ι->Task{
 		try{
 			sp<SessionInfo> p{ (co_await Logging::Server::FetchSessionInfo(sessionId)).UP<SessionInfo>().release() };
-			h.promise().get_return_object().SetResult( p );
 			AddSession2(p);
+			h.promise().SetResult<SessionInfo>( move(p) );
 		}
 		catch( Exception& e ){
-			h.promise().get_return_object().SetResult( move(e) );
+			h.promise().SetResult( move(e) );
 		}
 		h.resume();
 	}
@@ -167,7 +167,7 @@ namespace Jde::Web::Rest{
 		var sessionString{ req.ClientRequest().base()["session-id"] };
 		try{
 			if( !sessionString.empty() ){
-				var sessionId = Str::TryToUInt( string{sessionString}, nullptr, 16 ); THROW_IFX(!sessionId, RequestException<http::status::bad_request>(SRCE_CUR, "Could not create sessionId {}.", sessionString); )
+				var sessionId = Str::TryTo<SessionPK>( string{sessionString}, nullptr, 16 ); THROW_IFX(!sessionId, RequestException<http::status::bad_request>(SRCE_CUR, "Could not create sessionId {}.", sessionString); )
 				req.SessionInfoPtr = ( co_await FetchSessionInfo(*sessionId) ).UP<SessionInfo>();
 				if( req.SessionInfoPtr && req.SessionInfoPtr->expiration().seconds()<time(nullptr) )
 					RequestException<http::status::unauthorized>( SRCE_CUR, "session timeout '{}'.", sessionString);
@@ -185,6 +185,8 @@ namespace Jde::Web::Rest{
 
 			if( req.Session )
 				HandleRequest( move(target), move(params), move(req) );
+			if( req.Session )
+				throw RequestException<http::status::not_found>( SRCE_CUR, "Could not find target '{}'.", target );
 		}
 		catch( Exception& e ){
 			Send( move(e), move(req) );

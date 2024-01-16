@@ -7,19 +7,20 @@
 	#pragma warning( pop )
 #endif
 #include <assert.h>
+#include <chrono>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <chrono>
-#include <filesystem>
-
 #include <optional>
 #include <set>
 #include <shared_mutex>
-#include <unordered_map>
 #include <string_view>
+#include <unordered_map>
+#include <variant>
 #include <vector>
-#include <memory>
+
+
 
 
 //#if !defined(__clang__) && !defined(_MSC_VER) spdlog installs it anyways
@@ -45,8 +46,8 @@ using std::suspend_never;
 	using std::stop_token;
 #endif
 
-#define DISABLE_WARNINGS _Pragma("warning( push, 0  )") _Pragma("warning( disable: 4702 )") _Pragma("warning( disable: 4715 )") _Pragma("warning( disable: 5105 )") _Pragma("warning( disable: 4701 )")  _Pragma("warning( disable: 5260 )")
-#define ENABLE_WARNINGS  _Pragma("warning( pop  )")
+#define DISABLE_WARNINGS _Pragma("warning(push, 0)") _Pragma("warning(disable: 4244)") _Pragma("warning(disable: 4702)") _Pragma("warning(disable: 4715)") _Pragma("warning(disable: 44996)") _Pragma("warning(disable: 5105 )") _Pragma("warning(disable: 4701)") _Pragma("warning(disable: 5054)") _Pragma("warning(disable: 5260)")
+#define ENABLE_WARNINGS  _Pragma("warning( pop )")
 
 DISABLE_WARNINGS
 	#include <spdlog/spdlog.h>
@@ -82,7 +83,7 @@ namespace Jde
 
 	using uint32=uint_fast32_t;
 	using PK=uint_fast64_t;
-	using UserPK=PK;
+	using UserPK=uint32;
 	using int32=int_fast32_t;
 
 	using uint=uint_fast64_t;

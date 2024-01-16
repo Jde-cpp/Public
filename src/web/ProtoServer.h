@@ -1,76 +1,69 @@
 ﻿#pragma once
 #include <jde/Exports.h>
 #include "google/protobuf/message.h"
+#include "Exports.h"
 
 #define var const auto
 
-namespace Jde::IO::Sockets
-{
+namespace Jde::IO::Sockets{
 	struct ProtoSession;
 
-	#define Φ Γ auto
-	struct ProtoServer : ISocket
-	{
-		Γ ProtoServer( PortType defaultPort )noexcept;
-		Γ virtual ~ProtoServer();
-		β CreateSession( tcp::socket&& socket, SessionPK id )noexcept->up<ProtoSession> =0;
-		α RemoveSession( SessionPK id )noexcept{ unique_lock l{_mutex}; _sessions.erase(id); }
+	#define Φ ΓW auto
+	struct ProtoServer : ISocket{
+		ΓW ProtoServer( PortType defaultPort )ι;
+		ΓW virtual ~ProtoServer();
+		β CreateSession( tcp::socket&& socket, SessionPK id )ι->up<ProtoSession> =0;
+		α RemoveSession( SessionPK id )ι { unique_lock l{_mutex}; _sessions.erase(id); }
 
 	protected:
-		Φ Accept()noexcept->void;
+		Φ Accept()ι->void;
 		std::atomic<SessionPK> _id{0};
 		sp<AsioContextThread> _pIOContext;
 		tcp::acceptor _acceptor;
 		flat_map<SessionPK,sp<ProtoSession>> _sessions; mutable std::shared_mutex _mutex;
 	private:
-		void Run()noexcept;
+		void Run()ι;
 	};
 
-	struct Γ ProtoSession
-	{
-		ProtoSession( tcp::socket&& socket, SessionPK id )noexcept;
+	struct ΓW ProtoSession{
+		ProtoSession( tcp::socket&& socket, SessionPK id )ι;
 		virtual ~ProtoSession()=default;
 		SessionPK Id;
-		β OnDisconnect()noexcept->void=0;
+		β OnDisconnect()ι->void=0;
 	protected:
-		α ReadHeader()noexcept->void;
-		α Write( up<google::protobuf::uint8[]> p, uint c )noexcept->void;
-
+		α ReadHeader()ι->void;
+		α Write( up<google::protobuf::uint8[]> p, uint c )ι->void;
+		Ω LogLevel()ι->const LogTag&;
 		tcp::socket _socket;
-		const static LogTag& _logLevel;
 	private:
-		β ReadBody( uint messageLength )noexcept->void=0;
+		β ReadBody( uint messageLength )ι->void=0;
 		char _readMessageSize[4];
 	};
 
 #pragma region TProtoSession
 #define $ template<class TToServer, class TFromServer> auto TProtoSession<TToServer,TFromServer>::
 	template<class TToServer, class TFromServer>
-	struct TProtoSession: public ProtoSession
-	{
-		TProtoSession( tcp::socket&& socket, SessionPK id )noexcept:ProtoSession{ move(socket), id } {}
+	struct TProtoSession: public ProtoSession{
+		TProtoSession( tcp::socket&& socket, SessionPK id )ι:ProtoSession{ move(socket), id } {}
 	protected:
-		β OnReceive( TToServer&& pValue )noexcept(false)->void=0;
-		α ReadBody( uint messageLength )noexcept->void override;
-		α Write( TFromServer&& message )noexcept->void;
+		β OnReceive( TToServer&& pValue )ε->void=0;
+		α ReadBody( uint messageLength )ι->void override;
+		α Write( TFromServer&& message )ι->void;
 		vector<google::protobuf::uint8> _message;
 	};
 
 //TODO consolidate with ProtoClientSession::ReadBody
-	$ ReadBody( uint messageLength )noexcept->void
-	{
+	$ ReadBody( uint messageLength )ι->void{
 		google::protobuf::uint8 buffer[4096];
 		var useHeap = messageLength>sizeof(buffer);
 		var pData = useHeap ? up<google::protobuf::uint8[]>{ new google::protobuf::uint8[messageLength] } : up<google::protobuf::uint8[]>{};
 		auto pBuffer = useHeap ? pData.get() : buffer;
-		try
-		{
+		try{
 			var length = net::read( _socket, net::buffer(reinterpret_cast<void*>(pBuffer), messageLength) ); THROW_IF( length!=messageLength, "'{}' read!='{}' expected", length, messageLength );
 			OnReceive( Proto::Deserialize<TToServer>(pBuffer, (int)length) );
 			ReadHeader();
 		}
-		catch( boost::system::system_error& e )
-		{
+		catch( boost::system::system_error& e ){
 			ERR( "Read Body Failed - {}"sv, e.what() );
 			_socket.close();
 		}
@@ -78,8 +71,7 @@ namespace Jde::IO::Sockets
 		{}
 	}
 
-	$ Write( TFromServer&& value )noexcept->void
-	{
+	$ Write( TFromServer&& value )ι->void{
 		auto [p,size] = IO::Proto::SizePrefixed( move(value) );
 		ProtoSession::Write( move(p), size );
 	}

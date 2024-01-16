@@ -1,44 +1,26 @@
 ﻿#pragma once
-#include <array>
-#include <memory>
-#include <iostream> //TODO remove
-
-// #include <spdlog/spdlog.h>
-// #include <spdlog/sinks/basic_file_sink.h>
-// #include <spdlog/fmt/ostr.h>
-
-#include <string_view>
-#include <shared_mutex>
-#include <sstream>
-#include "./Exports.h"
 #include "collections/ToVec.h"
 #include "io/Crc.h"
 #include "TypeDefs.h"
-//#ifndef NDEBUG
-	#ifndef _MSC_VER
-		#include <signal.h>
-	#endif
-//#endif
+#ifndef _MSC_VER
+	#include <signal.h>
+#endif
 
 #define Φ Γ auto
 
 namespace Jde::IO{ class IncomingMessage; }
-namespace Jde::Logging
-{
-//#ifndef NDEBUG
+namespace Jde::Logging{
 	Φ BreakLevel()ι->ELogLevel;
-//#endif
 	namespace Messages{ struct ServerMessage; }
-#pragma region EFields
+
 	enum class EFields : uint16{ None=0, Timestamp=0x1, MessageId=0x2, Message=0x4, Level=0x8, FileId=0x10, File=0x20, FunctionId=0x40, Function=0x80, LineNumber=0x100, UserId=0x200, User=0x400, ThreadId=0x800, Thread=0x1000, VariableCount=0x2000, SessionId=0x4000 };
 	constexpr inline EFields operator|(EFields a, EFields b){ return (EFields)( (uint16)a | (uint16)b ); }
 	constexpr inline EFields operator&(EFields a, EFields b){ return (EFields)( (uint16)a & (uint16)b ); }
 	constexpr inline EFields operator~(EFields a){ return (EFields)( ~(uint16)a ); }
 	constexpr inline EFields& operator|=(EFields& a, EFields b){ return a = a | b; }
 	inline std::ostream& operator<<( std::ostream& os, const EFields& value ){ os << (uint)value; return os; }
-#pragma endregion
-	struct MessageBase
-	{
+
+	struct MessageBase{
 		using ID=uint32;
 		using ThreadID=uint;
 		consteval MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, ID messageId=0, ID fileId=0, ID functionId=0 )ι;
@@ -60,8 +42,8 @@ namespace Jde::Logging
 	protected:
 		explicit Γ MessageBase( ELogLevel level, SL sl )ι;
 	};
-	struct Message /*final*/ : MessageBase
-	{
+	
+	struct Message /*final*/ : MessageBase{
 		Message( const MessageBase& b )ι;
 		Message( const Message& x )ι;
 		Γ Message( ELogLevel level, string message, SRCE )ι;
@@ -107,19 +89,19 @@ namespace Jde::Logging
 #define DBG(message,...) Jde::Logging::Log( Jde::Logging::MessageBase(message, Jde::ELogLevel::Debug, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define DBG_IF(predicate,message,...) if( predicate ) Logging::Log( Logging::MessageBase(message, ELogLevel::Debug, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define DBG_ONCE(message,...) Logging::LogOnce( Logging::MessageBase(message, ELogLevel::Debug, MY_FILE, __func__, __LINE__), __VA_ARGS__ )
-#define BREAK_IF( predicate, severity, message, ...) if( predicate ){ LOGL(severity, message, __VA_ARGS__); break; }
+#define BREAK_IFX( predicate, severity, message, ...) if( predicate ){ LOGL(severity, message, __VA_ARGS__); BREAK; }
 #define CONTINUE_IF( predicate, message, ...) if( predicate ){ LOG(message __VA_OPT__(,) __VA_ARGS__); continue; }
 #define RETURN_IF( predicate, message, ... ) if( predicate ){ LOG( message __VA_OPT__(,) __VA_ARGS__ ); return; }
-#define TRACE(message,...) if( _logLevel.Level==ELogLevel::Trace ) Logging::Log( Logging::MessageBase(message, ELogLevel::Trace, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define TRACE(message,...) if( _logLevel->Level==ELogLevel::Trace ) Logging::Log( Logging::MessageBase(message, ELogLevel::Trace, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 
 #define LOGL(severity,message,...) Logging::Log( severity, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOGT(severity,message,...) Logging::Log( severity.Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-#define LOGX(message,...) Logging::LogNoServer( Logging::Message(_logLevel.Level, message) __VA_OPT__(,) __VA_ARGS__ )
-#define LOG(message,...) Logging::Log( _logLevel.Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
-#define LOGS(message,...) Logging::Log( Logging::Message( _logLevel.Level, message ) __VA_OPT__(,) __VA_ARGS__ )
-#define LOGSL(message,...) Logging::Log( Logging::Message{_logLevel.Level, message, sl} __VA_OPT__(,) __VA_ARGS__ )
+#define LOGX(message,...) Logging::LogNoServer( Logging::Message(_logLevel->Level, message) __VA_OPT__(,) __VA_ARGS__ )
+#define LOG(message,...) Logging::Log( _logLevel->Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define LOGS(message,...) Logging::Log( Logging::Message( _logLevel->Level, message ) __VA_OPT__(,) __VA_ARGS__ )
+#define LOGSL(message,...) Logging::Log( Logging::Message{_logLevel->Level, message, sl} __VA_OPT__(,) __VA_ARGS__ )
 
-#define LOG_IF(predicate, message,...) if( predicate ) Logging::Log( _logLevel.Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
+#define LOG_IF(predicate, message,...) if( predicate ) Logging::Log( _logLevel->Level, Logging::MessageBase(message, MY_FILE, __func__, __LINE__) __VA_OPT__(,) __VA_ARGS__ )
 #define LOG_IFT(predicate, severity, message,...) if( predicate ) LOGT( severity, message __VA_OPT__(,) __VA_ARGS__ )
 #define LOG_IFL(predicate, severity, message,...) if( predicate ) LOGL( severity, message __VA_OPT__(,) __VA_ARGS__ )
 #define LOG_TAG_IF(predicate, tag, m,...) if( predicate ) LOGT( Logging::TagLevel(tag), m __VA_OPT__(,) __VA_ARGS__ )
@@ -128,23 +110,24 @@ namespace Jde::Logging
 
 #ifdef NDEBUG
 	#define BREAK
+	#define BREAK_IF(x)
 #else
 	#ifdef _MSC_VER
 		#define BREAK DebugBreak()
 	#else
 		#define BREAK ::raise( 5/*SIGTRAP*/ )
 	#endif
+	#define BREAK_IF(x) if( x ) BREAK;
 #endif
-#define DEBUG_IF(x) if( x ) BREAK;
 
-namespace spdlog
-{
-#ifdef _MSC_VER
-	namespace level{ enum level_enum; }
-#endif
-}
-namespace Jde
-{
+
+//namespace spdlog{
+//#ifdef _MSC_VER
+//	namespace level{ enum level_enum; }
+//#endif
+//}
+
+namespace Jde{
 	Ξ Log( ELogLevel sev, string&& x, SRCE )ι{ Logging::Log( Logging::Message{sev, move(x), sl} ); }
 	Ξ Dbg( string x, SRCE )ι{ Logging::Log( Logging::Message{ELogLevel::Debug, move(x), sl} ); }
 
@@ -153,12 +136,12 @@ namespace Jde
 	Φ ClearMemoryLog()ι->void;
 	Φ FindMemoryLog( uint32 messageId )ι->vector<Logging::Messages::ServerMessage>;
 	struct LogTag{ string Id; ELogLevel Level{ELogLevel::NoLog}; };//loadLibrary dlls may disappear, so need string vs. sv
-	namespace Logging
-	{
+	namespace Logging{
 		Φ DestroyLogger()->void;
 		Φ Initialize()ι->void;
 
-		Φ TagLevel( sv tag )ι->const LogTag&;
+		Φ TagLevel( sv tag )ι->sp<LogTag>;
+		Φ TagLevel( std::span<sv> tags )ι->vector<sp<LogTag>>;
 		Φ LogMemory()ι->bool;
 		Φ ServerLevel()ι->ELogLevel;
 		Φ ClientLevel()ι->ELogLevel;
@@ -167,8 +150,7 @@ namespace Jde
 
 	inline constexpr PortType ServerSinkDefaultPort = 4321;
 
-	namespace Logging
-	{
+	namespace Logging{
 		namespace Proto{class Status;}
 		α StartTime()ι->TimePoint;
 		Φ SetStatus( const vector<string>& values )ι->void;
@@ -176,8 +158,7 @@ namespace Jde
 		α GetStatus()ι->up<Proto::Status>;
 	}
 #define var const auto
-	Ξ FileName( const char* file_ )->string
-	{
+	Ξ FileName( const char* file_ )->string{
 //#ifdef NDEBUG
 		return file_;
 /*#else
@@ -205,11 +186,9 @@ namespace Jde
 #endif*/
 	}
 #define SOURCE spdlog::source_loc{ FileName(m.File).c_str(), (int)m.LineNumber, m.Function }
-	Ξ Logging::Log( const Logging::MessageBase& m )ι->void
-	{
+	Ξ Logging::Log( const Logging::MessageBase& m )ι->void{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
-		//if constexpr( _debug )
-		{
+		if constexpr( _debug ){
 			if( m.Level>=BreakLevel() )
 				BREAK;
 		}
@@ -219,35 +198,28 @@ namespace Jde
 			LogServer( m );
 	}
 
-	ψ Logging::Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void
-	{
+	ψ Logging::Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void{
 		m.Level = level;
 		Log( move(m), args... );
 	}
-
-	ψ Logging::Log( const Logging::MessageBase& m, bool break_, Args&&... args )ι->void
-	{//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
+#pragma warning(push)
+#pragma warning( disable : 4100)
+	ψ Logging::Log( const Logging::MessageBase& m, bool break_, Args&&... args )ι->void{
+		//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
 		//assert( m.Level<=ELogLevel::None );
 		if( m.Level>=ELogLevel::None )
 			return;
-		try
-		{
+		try{
 			if constexpr( sizeof...(args)>0 )
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(std::locale(""), m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 			else
 				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
-			//if constexpr( _debug )
-			{
-				DEBUG_IF( string{m.File}.ends_with("construct_at.h") );
-				DEBUG_IF( break_ && m.Level>=BreakLevel() );
-			}
+				BREAK_IF( break_ && m.Level>=BreakLevel() );
 		}
-		catch( const fmt::format_error& )
-		{
+		catch( const fmt::format_error& ){
 			Log( MessageBase(ELogLevel::Critical, "could not format {} - {}", m.File, m.Function, m.LineNumber), m.MessageView, sizeof...(args) );
 		}
-		if( ServerLevel()<=m.Level || LogMemory() )
-		{
+		if( ServerLevel()<=m.Level || LogMemory() ){
 			vector<string> values; values.reserve( sizeof...(args) );
 			ToVec::Append( values, args... );
 			if( LogMemory() )
@@ -256,28 +228,23 @@ namespace Jde
 				LogServer( m, values );
 		}
 	}
-	ψ Logging::LogOnce( const Logging::MessageBase& m, Args&&... args )ι->void
-	{
+#pragma warning(pop)
+	ψ Logging::LogOnce( const Logging::MessageBase& m, Args&&... args )ι->void{
 		if( ShouldLogOnce(m) )
 			Log( m, args... );
 	}
 
-	Ξ Logging::LogNoServer( const Logging::MessageBase& m )ι->void
-	{
+	Ξ Logging::LogNoServer( const Logging::MessageBase& m )ι->void{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
 	}
 
-	ψ Logging::LogNoServer( const Logging::MessageBase& m, Args&&... args )ι->void
-	{
+	ψ Logging::LogNoServer( const Logging::MessageBase& m, Args&&... args )ι->void{
 		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 	}
 }
 
-namespace Jde::Logging
-{
-
-	ψ LogMemoryDetail( Logging::Message&& m, Args&&... args )ι->void
-	{
+namespace Jde::Logging{
+	ψ LogMemoryDetail( Logging::Message&& m, Args&&... args )ι->void{
 		vector<string> values; values.reserve( sizeof...(args) );
 		ToVec::Append( values, args... );
 		LogMemory( move(m), move(values) );
@@ -291,9 +258,7 @@ namespace Jde::Logging
 		File{file},
 		FunctionId{ functionId ? functionId : IO::Crc::Calc32(function) },
 		Function{function},
-		LineNumber{line}
-	{
-		//ASSERT( file!=nullptr && function!=nullptr );
+		LineNumber{line}{
 		if( level!=ELogLevel::Trace )
 			Fields |= EFields::Level;
 		if( message.size() )

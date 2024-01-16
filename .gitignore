@@ -45,3 +45,5 @@ tests/ml/.vscode/tasks.json
 
 *.code-workspace
 src/web/.vscode/settings.json
+*.i
+src/web/build/*

@@ -22,7 +22,7 @@ namespace Jde::WebSocket
 #else
 	typedef websocket::stream<beast::tcp_stream> SocketStream;
 #endif
-	struct Γ WebListener /*abstract*/ : IO::Sockets::IServerSocket
+	struct ΓW WebListener /*abstract*/ : IO::Sockets::IServerSocket
 	{
 		WebListener( PortType port )ε;
 		~WebListener(){ _acceptor.close(); DBG("~WebListener - WebSocket"); }
@@ -53,19 +53,18 @@ namespace Jde::WebSocket
 		sp<tcp::acceptor> _pAcceptor;
 	};
 
-	struct Γ Session /*abstract*/: IO::Sockets::ISession, std::enable_shared_from_this<Session>
+	struct ΓW Session /*abstract*/: IO::Sockets::ISession, std::enable_shared_from_this<Session>
 	{
 		Session( WebListener& server, SessionPK id, tcp::socket&& socket ):ISession{id}, _ws{std::move(socket)}, _server{server}{ _ws.binary( true ); }
 		β Close()ι->void{};
 		β Run()ι->void;
 	protected:
 		α Disconnect( CodeException&& e )ι{ OnDisconnect(move(e)); /*_connected = false;*/ _server.RemoveSession( Id ); }
-		β OnDisconnect( CodeException&& e )ι->void{}
+		β OnDisconnect( CodeException&& )ι->void{}
 		β OnAccept( beast::error_code ec )ι->void;
 
 		SocketStream _ws;
 		WebListener& _server;
-		static const LogTag& _logLevel;
 	private:
 		α OnRun()ι->void;
 		α DoRead()ι->void;

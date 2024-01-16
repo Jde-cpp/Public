@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifdef Jde_WEB_EXPORTS
 	#ifdef _MSC_VER
 		#define ΓW __declspec( dllexport )

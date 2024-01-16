@@ -1,9 +1,10 @@
-#pragma once
+﻿#pragma once
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
 #include "TypeDefs.h"
+#include "Exports.h"
 #include <jde/coroutine/Task.h>
 
 	//https://www.boost.org/doc/libs/1_73_0/libs/beast/example/http/server/async/http_server_async.cpp
@@ -33,7 +34,7 @@ namespace Jde::Web::Rest
 		α Status()Ι->http::status{ return TStatus; }
 	};
 
-	struct SessionInfoAwait final : IAwaitCache
+	struct ΓW SessionInfoAwait final : IAwaitCache
 	{
 		SessionInfoAwait( SessionPK sessionId, SRCE )ι:IAwaitCache{sl}, _sessionId{sessionId}{}
 		α await_ready()ι->bool override;
@@ -54,7 +55,7 @@ namespace Jde::Web::Rest
 		α Method()Ι->http::verb{ return ClientRequest().method(); }
 	};
 
-	struct ISession
+	struct ΓW ISession
 	{
 		using TMessage = http::message<true, http::string_body, http::basic_fields<std::allocator<char>>>;
     ISession( tcp::socket&& socket )ι: _stream{move(socket)}//,_send{*this}
@@ -129,7 +130,8 @@ namespace Jde::Web::Rest
 	α ISession::Send( sp<http::message<isRequest, Body, Fields>>&& m, sp<ISession>&& s )->void
 	{
     s->_message = m;
-    http::async_write( s->_stream, *m, beast::bind_front_handler(&ISession::OnWrite, move(s), m->need_eof()) );
+		auto stream = move( s->_stream );//want to move s to clear.
+    http::async_write( stream, *m, beast::bind_front_handler(&ISession::OnWrite, move(s), m->need_eof()) );
 	}
 
 	template<class TSession>
