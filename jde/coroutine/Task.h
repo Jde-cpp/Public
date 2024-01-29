@@ -68,7 +68,7 @@ namespace Jde::Coroutine{
 			template<IsPolymorphic T> α SetResult( sp<T>&& x )ι->void{ ASSERT( dynamic_pointer_cast<IException>(x)==nullptr ); _result->Set( move(x) ); }
 			
 			α MoveResult()ι->AwaitResult{ if(!_result) return {}; auto y = move(*_result); _result=nullptr; return y;}
-			α HasError()Ι->bool{ return _result->HasError(); }
+			α HasError()Ι->bool{ return HasResult() && _result->HasError(); }
 			α HasResult()Ι->bool{ return _result && !_result->Uninitialized(); }
 			α Push( SL& sl )ι->void{ Result().Push( sl ); }
 		private:

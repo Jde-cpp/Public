@@ -110,7 +110,7 @@ namespace Jde
 #endif
 	}
 
-	constexpr iv operator "" _iv( const char* x, uint len )noexcept{ return iv(x, len); }
+	constexpr iv operator "" _iv( const char* x, uint len )ι{ return iv(x, len); }
 	Ŧ FromTraits( T x )->string{ return string{ x.data(), x.size() }; }
 	struct Γ CIString : String
 	{
@@ -124,7 +124,7 @@ namespace Jde
 		//uint find( sv sub, uint pos = 0 )Ι;
 		Ŧ operator==( const T& s )Ι->bool{ return size()==s.size() && base::compare( 0, s.size(), s.data(), s.size() )==0; }
 		α operator==( const char* psz )Ι->bool{ return size()==strlen(psz) && base::compare( 0, size(), psz, size() )==0; }
-		friend std::ostream& operator<<( std::ostream &os, const CIString& obj )noexcept{ os << (string)obj; return os; }
+		friend std::ostream& operator<<( std::ostream &os, const CIString& obj )ι{ os << (string)obj; return os; }
 		Ξ operator !=( sv s )Ι{ return size() == s.size() && base::compare(0, s.size(), s.data(), s.size())!=0; }
 		Ξ operator !=( str s )Ι{ return *this!=sv{s}; }
 		inline CIString& operator+=( sv s )ι

@@ -9,9 +9,9 @@ namespace boost::system{ class error_code; }
 #define THROW(x, ...) throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Error, x __VA_OPT__(,) __VA_ARGS__ }
 #define IO_EX( path, level, msg, ... ) IOException( SRCE_CUR, path, level, msg __VA_OPT__(,) __VA_ARGS__ )
 #define THROW_IF(condition, x, ...) if( condition ) THROW( x __VA_OPT__(,) __VA_ARGS__  )
-#define THROW_IFSL(condition, x, ...) if( condition ) throw Jde::Exception{ sl, _logLevel->Level, x __VA_OPT__(,) __VA_ARGS__ }
+#define THROW_IFSL(condition, x, ...) if( condition ) throw Jde::Exception{ sl, _logTag->Level, x __VA_OPT__(,) __VA_ARGS__ }
 #define THROW_IFX(condition, x) if( condition ) throw x
-#define THROW_IFL(condition, x, ...) if( condition ) throw Jde::Exception{ SRCE_CUR, _logLevel.Level, x __VA_OPT__(,) __VA_ARGS__ }
+#define THROW_IFL(condition, x, ...) if( condition ) throw Jde::Exception{ SRCE_CUR, _logTag.Level, x __VA_OPT__(,) __VA_ARGS__ }
 #define CHECK(condition) if( !(condition) ) throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Error, #condition }
 
 #define RETHROW(x, ...) catch( std::exception& e ){ throw Exception{SRCE_CUR, move(e), x __VA_OPT__(,) __VA_ARGS__}; }
@@ -22,6 +22,7 @@ namespace boost::system{ class error_code; }
 	[[noreturn]] α Throw()->void override{ throw move(*this); }
 namespace Jde
 {
+	struct LogTag;
 	Ξ make_exception_ptr( std::exception&& e )ι->std::exception_ptr
 	{
 		try
@@ -46,6 +47,7 @@ namespace Jde
 		using base=std::exception;
 		IException( vector<string>&& args, string&& format, SL sl, uint c, ELogLevel l=DefaultLogLevel )ι;
 		IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, SRCE )ι;
+		IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, sp<LogTag>&& tag={}, SRCE )ι;
 		IException( IException&& from )ι;
 
 		$ IException( SL sl, std::exception&& inner, ELogLevel level, sv format_={}, Args&&... args )ι;
@@ -72,6 +74,7 @@ namespace Jde
 		mutable string _what;
 		sp<std::exception> _pInner;//sp to save custom copy constructor
 		sv _format;
+		sp<LogTag> _pTag;
 		vector<string> _args;
 		static constexpr ELogLevel DefaultLogLevel{ ELogLevel::Debug };
 	public:
@@ -120,9 +123,9 @@ namespace Jde
 		COMMON
 	};
 
-	struct Γ CodeException final : IException
-	{
+	struct Γ CodeException final : IException{
 		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE )ι;
+		CodeException( std::error_code&& code, sp<LogTag> tag, ELogLevel level=ELogLevel::Error, SRCE )ι;
 		CodeException( string value, std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE )ι;
 
 		using T=CodeException;

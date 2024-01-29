@@ -15,12 +15,12 @@
 
 #define Φ Γ auto
 namespace Jde{ struct Stopwatch; }
-namespace Jde::IO
-{
-	Φ Native()noexcept->IO::IDrive&;
-	Ξ Read( path path, bool vector=true, bool cache=false, SRCE )noexcept{ return DriveAwaitable{path, vector, cache, sl}; }
-	Ξ Write( fs::path path, sp<vector<char>> data, SRCE )noexcept{ return DriveAwaitable{move(path), data, sl}; }
-	Ξ Write( fs::path path, sp<string> data, SRCE )noexcept{ return DriveAwaitable{move(path), data, sl}; }
+namespace Jde::IO{
+	Φ LogTag()ι->sp<LogTag>;
+	Φ Native()ι->IO::IDrive&;
+	Ξ Read( path path, bool vector=true, bool cache=false, SRCE )ι{ return DriveAwaitable{path, vector, cache, sl}; }
+	Ξ Write( fs::path path, sp<vector<char>> data, SRCE )ι{ return DriveAwaitable{move(path), data, sl}; }
+	Ξ Write( fs::path path, sp<string> data, SRCE )ι{ return DriveAwaitable{move(path), data, sl}; }
 	Φ Remove( const fs::path& path, SRCE )ε->void;
 
 	Φ FileSize( path path )ε->uint;
@@ -45,8 +45,8 @@ namespace Jde::IO
 		Γ up<std::set<fs::directory_entry>> GetDirectories( path directory, up<std::set<fs::directory_entry>> pItems=nullptr );
 		Γ std::string ToString( path pszFilePath );
 		Φ LoadColumnNames( path csvFileName )->vector<string>;
-		Γ std::string DateFileName( uint16 year, uint8 month=0, uint8 day=0 )noexcept;
-		Γ tuple<uint16,uint8,uint8> ExtractDate( path path )noexcept;
+		Γ std::string DateFileName( uint16 year, uint8 month=0, uint8 day=0 )ι;
+		Γ tuple<uint16,uint8,uint8> ExtractDate( path path )ι;
 
 		Γ void Replace( path source, path destination, const flat_map<string,string>& replacements )ε;
 
@@ -61,33 +61,33 @@ namespace Jde::IO
 			virtual fs::path Compress( path path, bool deleteAfter=true )ε;
 			virtual void Extract( path path )ε;
 			up<std::vector<char>> LoadBinary( path uncompressed, path compressed=fs::path(), bool setPermissions=false, bool leaveUncompressed=false )ε;
-			virtual const char* Extension()noexcept=0;
+			virtual const char* Extension()ι=0;
 			virtual bool CompressAutoDeletes(){return true;}
 		protected:
-			virtual std::string CompressCommand( path path )noexcept=0;
-			virtual std::string ExtractCommand( path compressedFile, fs::path destination )noexcept=0;
+			virtual std::string CompressCommand( path path )ι=0;
+			virtual std::string ExtractCommand( path compressedFile, fs::path destination )ι=0;
 		};
 		struct SevenZ : Compression
 		{
-			const char* Extension()noexcept final override{return ".7z";}
-			std::string CompressCommand( path path )noexcept  override{ return fmt::format( "7z a -y -bsp0 -bso0 {0}.7z  {0}", path.string() ); };
-			std::string ExtractCommand( path compressedFile, fs::path destination )noexcept override{ return fmt::format( "7z e {} -o{} -y -bsp0 -bso0", compressedFile.string(), destination.string() ); }
+			const char* Extension()ι final override{return ".7z";}
+			std::string CompressCommand( path path )ι  override{ return fmt::format( "7z a -y -bsp0 -bso0 {0}.7z  {0}", path.string() ); };
+			std::string ExtractCommand( path compressedFile, fs::path destination )ι override{ return fmt::format( "7z e {} -o{} -y -bsp0 -bso0", compressedFile.string(), destination.string() ); }
 		};
 
 		struct XZ : Compression
 		{
-			const char* Extension()noexcept final override{return ".xz";}
-			std::string CompressCommand( path path )noexcept final override{ return fmt::format( "xz -z -q {}", path.string() ); };
-			std::string ExtractCommand( path compressedFile, fs::path destination )noexcept final override{ return fmt::format( "xz -d -q -k {}", compressedFile.string() ); }
+			const char* Extension()ι final override{return ".xz";}
+			std::string CompressCommand( path path )ι final override{ return fmt::format( "xz -z -q {}", path.string() ); };
+			std::string ExtractCommand( path compressedFile, fs::path destination )ι final override{ return fmt::format( "xz -d -q -k {}", compressedFile.string() ); }
 		};
 		struct Zip : Compression
 		{
-			const char* Extension()noexcept final override{return ".zip";}
-			std::string CompressCommand( path path )noexcept final override{ return fmt::format( "zip -q -m -j {0}.zip {0}", path.string() ); };
+			const char* Extension()ι final override{return ".zip";}
+			std::string CompressCommand( path path )ι final override{ return fmt::format( "zip -q -m -j {0}.zip {0}", path.string() ); };
 #ifdef _MSC_VER
-			std::string ExtractCommand( path compressedFile, fs::path destination )noexcept final override{ return fmt::format( "\"C:\\Program Files\\7-Zip\\7z\" e {0} -y -o{1} > NUL: & del {0}", compressedFile.string(), destination.string() ); }
+			std::string ExtractCommand( path compressedFile, fs::path destination )ι final override{ return fmt::format( "\"C:\\Program Files\\7-Zip\\7z\" e {0} -y -o{1} > NUL: & del {0}", compressedFile.string(), destination.string() ); }
 #else
-			std::string ExtractCommand( path compressedFile, fs::path destination )noexcept final override{ return fmt::format( "unzip -n -q -d{} {}", destination.string(), compressedFile.string() ); }
+			std::string ExtractCommand( path compressedFile, fs::path destination )ι final override{ return fmt::format( "unzip -n -q -d{} {}", destination.string(), compressedFile.string() ); }
 #endif
 		};
 	}

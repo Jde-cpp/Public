@@ -25,20 +25,18 @@ namespace Jde
 	};
 	struct DllHelper
 	{
-		DllHelper( path path )noexcept(false):
+		DllHelper( path path )ε:
 			_path{path},
 			_module{ (HMODULE)OSApp::LoadLibrary(path) }
 		{}
 
-		~DllHelper()
-		{
-			Logging::LogNoServer( Logging::MessageBase{"({})Freeing", ELogLevel::Information, MY_FILE, __func__, __LINE__},  _path.string() );
+		~DllHelper(){
+			LOGX( ELogLevel::Trace, AppTag(), "({})Freeing", _path.string() );
 			OSApp::FreeLibrary( _module );
-			Logging::LogNoServer( Logging::MessageBase{"({})Freed", ELogLevel::Information, MY_FILE, __func__, __LINE__},  _path.string() );
+			LOGX( ELogLevel::Information, AppTag(), "({})Freed", _path.string() );
 		}
 
-		α operator[](str procName)const noexcept(false)->ProcPtr
-		{
+		α operator[](str procName)Ε->ProcPtr{
 			return ProcPtr( (FARPROC)OSApp::GetProcAddress(_module, procName) );
 		}
 	private:

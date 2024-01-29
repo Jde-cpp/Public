@@ -8,15 +8,14 @@
 #include <jde/coroutine/Task.h>
 
 	//https://www.boost.org/doc/libs/1_73_0/libs/beast/example/http/server/async/http_server_async.cpp
-
-namespace Jde::Web::Rest
-{
+#define _logTag RestTag()
+namespace Jde::Web::Rest{
+	α ΓW RestTag()ι->sp<LogTag>;
 	namespace beast = boost::beast;
 	namespace http = beast::http;
 	namespace net = boost::asio;
 	using tcp = boost::asio::ip::tcp;
-	struct IRequestException : Exception
-	{
+	struct IRequestException : Exception{
 		IRequestException()ι:Exception{""}{}
 		template<class... Args> IRequestException( SL sl, sv fmt, Args&&... args )ι:Exception( sl, ELogLevel::Debug, fmt, args... ){}
 		template<class... Args> IRequestException( SL sl, std::exception&& inner, sv format_={}, Args&&... args )ι:Exception{sl, move(inner), format_, args...}{}
@@ -139,5 +138,5 @@ namespace Jde::Web::Rest
   {
 		return  ms<TSession>( move(socket) );
   }
-
 }
+#undef _logTag

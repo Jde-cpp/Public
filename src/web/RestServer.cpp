@@ -8,7 +8,8 @@
 #define CHECK_EC(ec, ...) if( ec ){ CodeException x(ec __VA_OPT__(,) __VA_ARGS__); return; }
 
 namespace Jde::Web::Rest{
-	const LogTag& _logLevel = Logging::TagLevel( "rest" );
+	sp<LogTag> _logTag = Logging::Tag( "rest" );
+	α RestTag()ι->sp<LogTag>{ return _logTag; }
 	IListener::IListener( PortType port )ε:
 		_pIOContext{ IO::AsioContextThread::Instance() },
 		_acceptor{ _pIOContext->Context(), tcp::endpoint{ Settings::Get("net/ip").value_or("v6")=="v6" ? tcp::v6() : tcp::v4(), port } }{
@@ -23,7 +24,7 @@ namespace Jde::Web::Rest{
 	}
 
   α IListener::OnAccept( beast::error_code ec, tcp::socket socket )ι->void{
-		LOG( "ISession::OnAccept()" );
+		TRACE( "ISession::OnAccept()" );
 		if( ec ){
 			const ELogLevel level{ ec == net::error::operation_aborted ? ELogLevel::Debug : ELogLevel::Error };
 			CodeException{ ec, level };
@@ -90,7 +91,8 @@ namespace Jde::Web::Rest{
 
 	α ISession::Send( Exception&& e, Request&& req )ι->void{
 		var p = dynamic_cast<IRequestException*>( &e );
-		string what = p ? p->what() : format("Internal Server Error:  '{:x}'.", e.Code);
+		string what = p ? p->what() : format( "Internal Server Error:  '{:x}'.", e.Code );
+		e.Move();  //want the log to show here.
 		Send( p ? p->Status() : http::status::internal_server_error, what, move(req) );
 	}
 
@@ -163,7 +165,7 @@ namespace Jde::Web::Rest{
 	}
 	α ISession::HandleRequest( Request req )ι->Task{
 		auto [target, params] = ParseUri( Ssl::DecodeUri(string{req.ClientRequest().target()}) );
-		LOG( "{}={}", target, req.ClientRequest().body() );
+		TRACE( "{}={}", target, req.ClientRequest().body() );
 		var sessionString{ req.ClientRequest().base()["session-id"] };
 		try{
 			if( !sessionString.empty() ){

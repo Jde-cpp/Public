@@ -6,27 +6,20 @@
 namespace Jde::Threading{ struct InterruptibleThread; struct IWorker; }
 #define Φ Γ α
 #define ω Γ Ω
-namespace Jde
-{
-#ifdef _MSC_VER
-	consteval α IsWindows()ι->bool{return true;}
-#else
-	consteval α IsWindows()ι->bool{return false;}
-#endif
+namespace Jde{
+	Φ AppTag()ι->sp<LogTag>;
 
 	namespace Threading{ struct IPollWorker; }
-	struct IShutdown
-	{
+	struct IShutdown{
 		β Shutdown()ι->void=0;
 	};
-	struct IPollster
-	{
+	
+	struct IPollster{
 		β WakeUp()ι->void=0;
 		β Sleep()ι->void=0;
 	};
-
-	struct Γ IApplication //: IPollster
-	{
+	
+	struct Γ IApplication{
 		Ω Instance()ι->IApplication&{ /*assert(_pInstance);*/ return *_pInstance; }
 		α BaseStartup( int argc, char** argv, sv appName, string serviceDescription/*, sv companyName="jde-cpp"*/ )ε->flat_set<string>;
 		β Install( str serviceDescription )ε->void=0;
@@ -83,8 +76,7 @@ namespace Jde
 		static vector<sp<IShutdown>> _shutdowns;
 	};
 
-	struct OSApp final: IApplication
-	{
+	struct OSApp final: IApplication{
 		ω Startup( int argc, char** argv, sv appName, string serviceDescription )ε->flat_set<string>;
 
 		Ω CompanyName()ι->string;
@@ -117,8 +109,7 @@ namespace Jde
 #endif
 	};
 
-	Ŧ IApplication::AddPollster( /*bool appThread*/ )ι->sp<T>
-	{
+	Ŧ IApplication::AddPollster( /*bool appThread*/ )ι->sp<T>{
 		static_assert(std::is_base_of<IShutdown, T>::value, "T must derive from IShutdown");
 		static_assert(std::is_base_of<Threading::IPollWorker, T>::value, "T must derive from IPollWorker");
 		lg _{ _objectMutex };

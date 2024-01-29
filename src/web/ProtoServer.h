@@ -13,7 +13,7 @@ namespace Jde::IO::Sockets{
 		ΓW ProtoServer( PortType defaultPort )ι;
 		ΓW virtual ~ProtoServer();
 		β CreateSession( tcp::socket&& socket, SessionPK id )ι->up<ProtoSession> =0;
-		α RemoveSession( SessionPK id )ι { unique_lock l{_mutex}; _sessions.erase(id); }
+		α RemoveSession( SessionPK id )ι{ ul _{_mutex}; _sessions.erase(id); }
 
 	protected:
 		Φ Accept()ι->void;
@@ -33,7 +33,7 @@ namespace Jde::IO::Sockets{
 	protected:
 		α ReadHeader()ι->void;
 		α Write( up<google::protobuf::uint8[]> p, uint c )ι->void;
-		Ω LogLevel()ι->const LogTag&;
+		Ω LogTag()ι->sp<Jde::LogTag>;
 		tcp::socket _socket;
 	private:
 		β ReadBody( uint messageLength )ι->void=0;
@@ -64,7 +64,8 @@ namespace Jde::IO::Sockets{
 			ReadHeader();
 		}
 		catch( boost::system::system_error& e ){
-			ERR( "Read Body Failed - {}"sv, e.what() );
+			var _logTag = LogTag();
+			ERR( "Read Body Failed - {}", e.what() );
 			_socket.close();
 		}
 		catch( const IException& )

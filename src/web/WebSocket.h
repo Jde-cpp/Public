@@ -1,14 +1,16 @@
 ﻿#pragma once
+DISABLE_WARNINGS
 #include <boost/beast.hpp>
 #include <boost/asio.hpp>
 #include <boost/exception/diagnostic_information.hpp>
+ENABLE_WARNINGS
 #include <jde/App.h>
 //#include "../collections/UnorderedMap.h"
 #include "../../../Framework/source/io/Socket.h"
 #include "../../../Framework/source/io/ProtoUtilities.h"
 #include "../../../Framework/source/threading/Mutex.h"
 #define var const auto
-
+#define _logTag WebSocketTag()
 namespace Jde::WebSocket
 {
 	namespace beast = boost::beast;
@@ -22,10 +24,11 @@ namespace Jde::WebSocket
 #else
 	typedef websocket::stream<beast::tcp_stream> SocketStream;
 #endif
-	struct ΓW WebListener /*abstract*/ : IO::Sockets::IServerSocket
-	{
+	ΓW α WebSocketTag()ι->sp<Jde::LogTag>;
+
+	struct ΓW WebListener /*abstract*/ : IO::Sockets::IServerSocket{
 		WebListener( PortType port )ε;
-		~WebListener(){ _acceptor.close(); DBG("~WebListener - WebSocket"); }
+		~WebListener(){ _acceptor.close(); TRACE("~WebListener - WebSocket"); }
 		β CreateSession( WebListener& server, SessionPK id, tcp::socket&& socket )ι->sp<ISession> =0;
 	private:
 		α DoAccept()ι->void;
@@ -122,25 +125,21 @@ namespace Jde::WebSocket
 		auto result = co_await _writeLock.Lock();
 		auto l_ = result. template UP<CoGuard>();
 
-		_ws.async_write( b, [ this, b, l=move(l_), p=move(pData) ]( beast::error_code ec, uint bytes_transferred )mutable
-		{
+		_ws.async_write( b, [ this, b, l=move(l_), p=move(pData) ]( beast::error_code ec, uint bytes_transferred )mutable{
 			l = nullptr;
-			if( ec || p->size()!=bytes_transferred )
-			{
-				Logging::LogNoServer( Logging::Message(ELogLevel::Debug, "Error writing to Session:  '{}'"), boost::diagnostic_information(ec) );
-				try
-				{
+			if( ec || p->size()!=bytes_transferred ){
+				Logging::LogNoServer( Logging::Message(ELogLevel::Debug, "Error writing to Session:  '{}'"), _logTag, boost::diagnostic_information(ec) );
+				try{
 					_ws.close( websocket::close_code::none );
 				}
-				catch( const boost::exception& e2 )
-				{
-					Logging::LogNoServer( Logging::Message(ELogLevel::Debug, "Error closing:  '{}')"), boost::diagnostic_information(e2) );
+				catch( const boost::exception& e2 ){
+					Logging::LogNoServer( Logging::Message{ELogLevel::Debug, "Error closing:  '{}')"}, _logTag, boost::diagnostic_information(e2) );
 				}
 				Disconnect( CodeException{ec} );
 			}
 		} );
 	}
-
+}
 #undef $
 #undef var
-}
+#undef _logTag

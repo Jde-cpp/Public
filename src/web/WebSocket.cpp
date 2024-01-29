@@ -4,8 +4,8 @@
 #define var const auto
 namespace Jde::WebSocket
 {
-	const LogTag& _logLevel = Logging::TagLevel( "webRequests" );
-	//const LogTag& Session::_logLevel = Logging::TagLevel( "net" );;
+	sp<Jde::LogTag> _logTag = Logging::Tag( "webRequests" );
+	α WebSocketTag()ι->sp<Jde::LogTag>{ return _logTag; }
 	WebListener::WebListener( PortType port )ε:
 		IServerSocket{ port },
 		_pContextThread{ IO::AsioContextThread::Instance() },
@@ -30,8 +30,10 @@ namespace Jde::WebSocket
 					ELogLevel level = ec == net::error::operation_aborted ? ELogLevel::Debug : ELogLevel::Error;
 					CodeException x{ec, level};
 				}
-				if( /*ec.value() == 125 &&*/ IApplication::ShuttingDown() )//125 - Operation canceled
-					return INFO("Websocket shutdown");
+				if( /*ec.value() == 125 &&*/ IApplication::ShuttingDown() ){//125 - Operation canceled
+					INFO("Websocket shutdown");
+					return;
+				}
 				CHECK_EC( ec );
 				var id = ++_id;
 				sp<ISession> pSession = CreateSession( *this, id, move(socket) );//deadlock if included in _sessions.emplace
@@ -42,12 +44,12 @@ namespace Jde::WebSocket
 	}
 
 	α Session::Run()ι->void{
-		LOG( "({})Session::Run()", Id );
+		TRACE( "({})Session::Run()", Id );
 		net::dispatch( _ws.get_executor(), beast::bind_front_handler(&Session::OnRun, shared_from_this()) );
 	}
 
 	α Session::OnRun()ι->void{
-		LOG( "({})Session::OnRun()", Id );
+		TRACE( "({})Session::OnRun()", Id );
 		_ws.set_option( websocket::stream_base::timeout::suggested(beast::role_type::server) );
 		_ws.set_option( websocket::stream_base::decorator([]( websocket::response_type& res )
 			{
@@ -57,22 +59,23 @@ namespace Jde::WebSocket
 	}
 
 	α Session::OnAccept( beast::error_code ec )ι->void{
-		LOG( "({})Session::OnAccept()", Id );
+		TRACE( "({})Session::OnAccept()", Id );
 		CHECK_EC( ec );
 		DoRead();
 	}
 
 	α Session::DoRead()ι->void{
-		LOG( "({})Session::DoRead()", Id );
+		TRACE( "({})Session::DoRead()", Id );
 		_ws.async_read( _buffer, [this]( beast::error_code ec, uint c )ι{
 			boost::ignore_unused( c );
 			if( ec ){
 				using namespace boost::asio::error;
-				var level = ec == websocket::error::closed || ec==not_connected || ec==connection_reset ? LogLevel().Level : ELogLevel::Error;
+				bool aborted = ec == connection_aborted;
+				var level = ec == websocket::error::closed || aborted || ec==not_connected || ec==connection_reset ? ELogLevel::Trace : ELogLevel::Error;
 				Disconnect( CodeException{ec, level} );
 				return;
 			}
-			LOG( "({})Session::DoRead({})", Id, c );
+			TRACE( "({})Session::DoRead({})", Id, c );
 			OnRead( (char*)_buffer.data().data(), _buffer.size() );
 			_buffer.clear();
 			DoRead();
@@ -82,7 +85,7 @@ namespace Jde::WebSocket
 	α Session::OnWrite( beast::error_code ec, uint c )ι->void{
 		boost::ignore_unused( c );
 		try{
-			THROW_IFX( ec, CodeException(ec, ec == websocket::error::closed ? LogLevel().Level : ELogLevel::Error) );
+			THROW_IFX( ec, CodeException(ec, ec == websocket::error::closed ? ELogLevel::Trace : ELogLevel::Error) );
 		}
 		catch( const CodeException& )
 		{}
