@@ -121,11 +121,9 @@ namespace Jde::WebSocket
 	}
 	$::Write( up<string> pData )ι->Task
 	{
-		var b = net::buffer( (const void*)pData->data(), pData->size() );
-		auto result = co_await _writeLock.Lock();
-		auto l_ = result. template UP<CoGuard>();
-
-		_ws.async_write( b, [ this, b, l=move(l_), p=move(pData) ]( beast::error_code ec, uint bytes_transferred )mutable{
+		var buffer = net::buffer( (const void*)pData->data(), pData->size() );
+		auto lock = (co_await _writeLock.Lock() ).UP<CoGuard>();
+		_ws.async_write( buffer, [ this, pKeepAlive=shared_from_this(), buffer, l=move(lock), p=move(pData) ]( beast::error_code ec, uint bytes_transferred )mutable{
 			l = nullptr;
 			if( ec || p->size()!=bytes_transferred ){
 				Logging::LogNoServer( Logging::Message(ELogLevel::Debug, "Error writing to Session:  '{}'"), _logTag, boost::diagnostic_information(ec) );

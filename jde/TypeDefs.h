@@ -167,6 +167,10 @@ namespace Jde
 		#error WIN32_LEAN_AND_MEAN not defined
 	#endif
 	#define __PRETTY_FUNCTION__ __FUNCSIG__
+	#ifdef _CRTDBG_MAP_ALLOC
+		#include <stdlib.h>
+		#include <crtdbg.h>
+	#endif
 #else
 	constexpr bool _msvc{ false };
 #endif

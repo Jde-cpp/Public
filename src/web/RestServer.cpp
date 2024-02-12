@@ -103,7 +103,7 @@ namespace Jde::Web::Rest{
 	α ISession::Send( http::status status, string what, Request&& req )ι->void{
     auto y = ms<http::response<http::string_body>>( status, req.ClientRequest().version() );
 		var message = format( "{{\"message\": \"{}\"}}", move(what) );
-		Dbg( message );
+		Dbg( message, _logTag );
 		SetBodyResponse( *y, req.ClientRequest().keep_alive() );
     y->body() = message;
     y->prepare_payload();

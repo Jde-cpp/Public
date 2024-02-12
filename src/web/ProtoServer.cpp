@@ -19,7 +19,7 @@ namespace Jde::IO::Sockets
 			try{
 				THROW_IFX( ec, CodeException(ec.value()==125 ? "Sever shutting down" : "Accept Failed", move(ec), ec.value()==125 ? ELogLevel::Information : ELogLevel::Error) );
 				var id = ++_id;
-				DBG( "({})Accepted Connection", id );
+				DBG( "[{}]Accepted Connection", id );
 				ul _{ _mutex };
 				_sessions.emplace( id, CreateSession(move(socket), id) );
 				Accept();
@@ -37,7 +37,7 @@ namespace Jde::IO::Sockets
 	α ProtoSession::ReadHeader()ι->void{
 		net::async_read( _socket, net::buffer(static_cast<void*>(_readMessageSize), sizeof(_readMessageSize)), [&]( std::error_code ec, uint headerLength )ι{
 			try{
-				THROW_IFX( ec && ec.value()==2, CodeException(fmt::format("({}) - Disconnected", Id), move(ec), ELogLevel::Trace) );
+				THROW_IFX( ec && ec.value()==2, CodeException(fmt::format("[{}] - Disconnected", Id), move(ec), ELogLevel::Trace) );
 				THROW_IFX( ec, CodeException(move(ec), ec.value()==10054 || ec.value()==104 ? ELogLevel::Trace : ELogLevel::Error) );
 				THROW_IF( headerLength!=4, "only read '{}'"sv, headerLength );
 
@@ -55,7 +55,7 @@ namespace Jde::IO::Sockets
 		auto b = net::buffer( p.get(), c );
 		net::async_write( _socket, b, [_=move(p), b2=move(b)]( std::error_code ec, std::size_t length ){
 			if( ec )
-				DBG( "({})Write message returned '{}'.", ec.value(), ec.message() );
+				DBG( "[{}]Write message returned '{}'.", ec.value(), ec.message() );
 			else
 				TRACE( "Session::Write length:  '{}'.", length );
 		});

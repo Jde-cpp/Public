@@ -4,7 +4,7 @@
 # define ASSERT( actual ){ if( !(actual) ){ CRITICALT( AppTag(), "Assert:  {} is false"sv,  #actual ); } /*assert( actual );*/ }
 #endif
 
-#define ASSERTSL( actual, xsl ){ if( !(actual) )Log( ELogLevel::Critical, format("Assert:  {} is false"sv,  #actual), xsl ); }
+#define ASSERTSL( actual, xsl ){ if( !(actual) )Logging::Log( Logging::Message(ELogLevel::Critical, "Assert:  {} is false", xsl), AppTag(), #actual ); }
 
 #ifndef ASSERTX
 # define	ASSERTX( actual ){ if( !(actual) ){ Logging::LogNoServer( MessageBase{ELogLevel::Critical, "Assert:  {} is false", MY_FILE, __func__, __LINE__}, _logTag,  #actual ); } assert( actual ); }

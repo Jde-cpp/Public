@@ -42,8 +42,7 @@ namespace Jde
 		α size()Ι->uint{ return stack.size(); }
 		vector<source_location> stack;
 	};
-	struct Γ IException : std::exception
-	{
+	struct Γ IException : std::exception{
 		using base=std::exception;
 		IException( vector<string>&& args, string&& format, SL sl, uint c, ELogLevel l=DefaultLogLevel )ι;
 		IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, SRCE )ι;
@@ -57,8 +56,8 @@ namespace Jde
 
 		β Log()Ι->void;
 		α what()Ι->const char* override;
-		//α What()ι->string&&{ return move(_what); }
 		α What()Ι->const string&{ what(); return _what; }
+		α PrependWhat( const string& prepend )ι->void{ _what = prepend+_what; }
 		α Level()Ι->ELogLevel{return _level;} α SetLevel( ELogLevel level )Ι{ _level=level;}
 		β Clone()ι->sp<IException> =0;
 		β Move()ι->up<IException> =0;

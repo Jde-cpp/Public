@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <iostream>
 #include "collections/ToVec.h"
 #include "io/Crc.h"
 #include "TypeDefs.h"
@@ -60,14 +61,14 @@ namespace Jde::Logging{
 	};
 
 	Φ SetTag( sv tag, ELogLevel l=ELogLevel::Debug, bool file=true )ι->void;
-	α Log( const Logging::MessageBase& messageBase )ι->void;
+	//α Log( const Logging::MessageBase& messageBase )ι->void;
 	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void;
-	ψ Log( const Logging::MessageBase& m, bool break_, const sp<LogTag>& tag, Args&&... args )ι->void;
-	ψ Log( const Logging::MessageBase& m, const sp<LogTag>& tag, Args&&... args )ι->void{ Log( m, true, tag, args... ); }
+	ψ Log( const Logging::MessageBase& m, const sp<LogTag>& tag, bool logServer, bool break_, Args&&... args )ι->void;
+	ψ Log( const Logging::MessageBase& m, const sp<LogTag>& tag, Args&&... args )ι->void{ Log( m, tag, true, args... ); }
 
 	Φ ShouldLogOnce( const Logging::MessageBase& messageBase )ι->bool;
-	Φ LogOnce( const Logging::MessageBase& messageBase, sp<LogTag>& logTag )ι->void;
-	ψ LogOnce( const Logging::MessageBase& messageBase, sp<LogTag>& logTag, Args&&... args )ι->void;
+	Φ LogOnce( Logging::MessageBase&& messageBase, const sp<LogTag>& logTag )ι->void;
+	ψ LogOnce( const Logging::MessageBase& messageBase, const sp<LogTag>& logTag, Args&&... args )ι->void;
 	α LogNoServer( const Logging::MessageBase& messageBase, const sp<LogTag>& tag )ι->void;
 	ψ LogNoServer( const Logging::MessageBase& messageBase, const sp<LogTag>& tag, Args&&... args )ι->void;
 	Φ LogServer( const Logging::MessageBase& messageBase )ι->void;
@@ -132,8 +133,8 @@ namespace Jde::Logging{
 //}
 
 namespace Jde{
-	Ξ Log( ELogLevel sev, string&& x, SRCE )ι{ Logging::Log( Logging::Message{sev, move(x), sl} ); }
-	Ξ Dbg( string x, SRCE )ι{ Logging::Log( Logging::Message{ELogLevel::Debug, move(x), sl} ); }
+	Ξ Log( ELogLevel sev, string&& x, const sp<LogTag>& tag, SRCE )ι{ Logging::Log( Logging::Message{sev, move(x), sl}, tag ); }
+	Ξ Dbg( string x, const sp<LogTag>& tag, SRCE )ι{ Log( ELogLevel::Debug, move(x), tag, sl ); }
 
    using namespace std::literals;
 	Φ HaveLogger()ι->bool;
@@ -148,7 +149,7 @@ namespace Jde{
 		Φ LogMemory()ι->bool;
 		Φ ServerLevel()ι->ELogLevel;
 		Φ ClientLevel()ι->ELogLevel;
-		Φ Default()ι->spdlog::logger&;
+		Φ Default()ι->spdlog::logger*;
 	}
 
 	inline constexpr PortType ServerSinkDefaultPort = 4321;
@@ -189,8 +190,17 @@ namespace Jde{
 #endif*/
 	}
 #define SOURCE spdlog::source_loc{ FileName(m.File).c_str(), (int)m.LineNumber, m.Function }
-	Ξ Logging::Log( const Logging::MessageBase& m )ι->void{
-		Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
+/*	
+	Ξ Logging::Log( const Logging::MessageBase& m, sp<LogTag> /*tag* / )ι->void{
+		if( auto p=Default(); p )
+			p->log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
+		else{
+			if( m.Level>=ELogLevel::Error )
+				std::cerr << m.MessageView << std::endl;
+			else
+				std::cout << m.MessageView << std::endl;
+		}
+
 		if constexpr( _debug ){
 			if( m.Level>=BreakLevel() )
 				BREAK;
@@ -200,51 +210,59 @@ namespace Jde{
 		if( ServerLevel()!=ELogLevel::NoLog && ServerLevel()<=m.Level )
 			LogServer( m );
 	}
-
+	*/
 	ψ Logging::Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void{
 		m.Level = level;
 		Log( move(m), args... );
 	}
 #pragma warning(push)
 #pragma warning( disable : 4100)
-	ψ Logging::Log( const Logging::MessageBase& m, bool break_, const sp<LogTag>& tag, Args&&... args )ι->void{
+	ψ Logging::Log( const Logging::MessageBase& m, const sp<LogTag>& tag, bool logServer, bool break_, Args&&... args )ι->void{
 		//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
 		//assert( m.Level<=ELogLevel::None );
 		if( m.Level<tag->Level || m.Level==ELogLevel::NoLog )
 			return;
 		try{
-			if constexpr( sizeof...(args)>0 )
-				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(std::locale(""), m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
-			else
-				Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
+			if( auto p = Default(); p ){
+				if constexpr( sizeof...(args)>0 )
+					p->log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(std::locale(""), m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
+				else
+					p->log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
+			}
+			else{
+				if( m.Level>=ELogLevel::Error )
+					std::cerr << m.MessageView << std::endl;
+				else
+					std::cout << m.MessageView << std::endl;
+			}
+
 			BREAK_IF( break_ && m.Level>=BreakLevel() );
 		}
-		catch( const fmt::format_error& ){
-			Log( MessageBase(ELogLevel::Critical, "could not format {} - {}", m.File, m.Function, m.LineNumber), tag, m.MessageView, sizeof...(args) );
+		catch( const fmt::format_error& e ){
+			Log( MessageBase{ELogLevel::Critical, "could not format {} cargs={} - {}", m.File, m.Function, m.LineNumber}, tag, m.MessageView, sizeof...(args), e.what() );
 		}
-		if( ServerLevel()<=m.Level || LogMemory() ){
+		logServer = logServer && ServerLevel()!=ELogLevel::NoLog && ServerLevel()<=m.Level;
+		if( logServer || LogMemory() ){
 			vector<string> values; values.reserve( sizeof...(args) );
 			ToVec::Append( values, args... );
 			if( LogMemory() )
 				LogMemory( m, values );
-			if( ServerLevel()<=m.Level )
+			if( logServer )
 				LogServer( m, values );
 		}
 	}
 #pragma warning(pop)
-	ψ Logging::LogOnce( const Logging::MessageBase& m, sp<LogTag>& logTag, Args&&... args )ι->void{
+	ψ Logging::LogOnce( const Logging::MessageBase& m, const sp<LogTag>& logTag, Args&&... args )ι->void{
 		if( ShouldLogOnce(m) )
 			Log( m, logTag, args... );
 	}
 
 	Ξ Logging::LogNoServer( const Logging::MessageBase& m, const sp<LogTag>& tag )ι->void{
-		if( m.Level>=tag->Level && m.Level!=ELogLevel::NoLog )
-			Default().log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
+		Log( m, tag, false );
 	}
 
 	ψ Logging::LogNoServer( const Logging::MessageBase& m, const sp<LogTag>& tag, Args&&... args )ι->void{
-		if( m.Level>=tag->Level && m.Level!=ELogLevel::NoLog )
-			Default().log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
+		Log( m, tag, false, args... );
 	}
 }
 

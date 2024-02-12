@@ -31,6 +31,8 @@ namespace Jde::WebSocket
 					CodeException x{ec, level};
 				}
 				if( /*ec.value() == 125 &&*/ IApplication::ShuttingDown() ){//125 - Operation canceled
+					std::cout << "_CrtDumpMemoryLeaks" << std::endl;
+					_CrtDumpMemoryLeaks();
 					INFO("Websocket shutdown");
 					return;
 				}
@@ -44,12 +46,12 @@ namespace Jde::WebSocket
 	}
 
 	α Session::Run()ι->void{
-		TRACE( "({})Session::Run()", Id );
+		TRACE( "[{}]Socket::Run()", Id );
 		net::dispatch( _ws.get_executor(), beast::bind_front_handler(&Session::OnRun, shared_from_this()) );
 	}
 
 	α Session::OnRun()ι->void{
-		TRACE( "({})Session::OnRun()", Id );
+		TRACE( "[{}]Socket::OnRun()", Id );
 		_ws.set_option( websocket::stream_base::timeout::suggested(beast::role_type::server) );
 		_ws.set_option( websocket::stream_base::decorator([]( websocket::response_type& res )
 			{
@@ -59,26 +61,28 @@ namespace Jde::WebSocket
 	}
 
 	α Session::OnAccept( beast::error_code ec )ι->void{
-		TRACE( "({})Session::OnAccept()", Id );
+		TRACE( "[{}]Socket::OnAccept()", Id );
 		CHECK_EC( ec );
 		DoRead();
 	}
 
+	std::chrono::steady_clock::time_point readProcessingTime = std::chrono::steady_clock::now();
 	α Session::DoRead()ι->void{
-		TRACE( "({})Session::DoRead()", Id );
-		_ws.async_read( _buffer, [this]( beast::error_code ec, uint c )ι{
+		TRACE( "[{}]Socket::DoRead(readProcessingTime={})", Id, Chrono::ToString(readProcessingTime-std::chrono::steady_clock::now()) );
+		_ws.async_read( _buffer, [p=shared_from_this()]( beast::error_code ec, uint c )ι{
+			readProcessingTime = std::chrono::steady_clock::now();
 			boost::ignore_unused( c );
 			if( ec ){
 				using namespace boost::asio::error;
 				bool aborted = ec == connection_aborted;
 				var level = ec == websocket::error::closed || aborted || ec==not_connected || ec==connection_reset ? ELogLevel::Trace : ELogLevel::Error;
-				Disconnect( CodeException{ec, level} );
+				p->Disconnect( CodeException{ec, level} );
 				return;
 			}
-			TRACE( "({})Session::DoRead({})", Id, c );
-			OnRead( (char*)_buffer.data().data(), _buffer.size() );
-			_buffer.clear();
-			DoRead();
+			TRACE( "[{}]Socket::DoRead({})", p->Id, c );
+			p->OnRead( (char*)p->_buffer.data().data(), p->_buffer.size() );
+			p->_buffer.clear();
+			p->DoRead();
 		} );
 	}
 
