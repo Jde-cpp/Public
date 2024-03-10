@@ -1,4 +1,6 @@
 ﻿#pragma once
+#ifndef CRC_H
+#define CRC_H//gcc precompiled headers
 #include "../TypeDefs.h"
 DISABLE_WARNINGS
 #ifndef NO_BOOST
@@ -7,10 +9,8 @@ DISABLE_WARNINGS
 ENABLE_WARNINGS
 //https://gist.github.com/oktal/5573082
 
-namespace Jde::IO::Crc
-{
-	inline constexpr unsigned int crc32_table[] =
-	{
+namespace Jde::IO::Crc{
+	inline constexpr unsigned int crc32_table[] ={
 		0, 0x77073096, 0xEE0E612C, 0x990951BA,
 		0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
 		0x0EDB8832, 0x79DCB8A4, 0xE0D5E91E, 0x97D2D988,
@@ -78,43 +78,30 @@ namespace Jde::IO::Crc
 	};
 
 	template<unsigned int CRC, char ...Chars> struct Crc32Impl
-	{
-	};
+	{};
 #pragma warning( disable : 4309 )
-	template<unsigned int CRC, char Head, char ...Tail> struct Crc32Impl<CRC, Head, Tail...>
-	{
+	template<unsigned int CRC, char Head, char ...Tail> struct Crc32Impl<CRC, Head, Tail...>{
 		static constexpr unsigned int value = Crc32Impl<crc32_table[static_cast<unsigned char>(CRC) ^ static_cast<unsigned char>(Head)] ^ (CRC >> 8), Tail...>::value;
 	};
 #pragma warning( default : 4309 )
-	template<unsigned int CRC> struct Crc32Impl<CRC>
-	{
+	template<unsigned int CRC> struct Crc32Impl<CRC>{
 		static constexpr unsigned int value = CRC ^ 0xFFFFFFFF;
 	};
 
 
 	template<char ...Chars> using Crc32 = Crc32Impl<0xFFFFFFFF, Chars...>;
 
-	inline constexpr α crc32_rec( unsigned int crc, const char *s )->unsigned int
-	{
+	inline constexpr α crc32_rec( unsigned int crc, const char *s )->unsigned int{
 		return *s == 0
 			? crc ^ 0xFFFFFFFF
 			: crc32_rec( crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(*s)] ^ (crc >> 8), s + 1 );
 	}
 
-	inline constexpr α operator "" _crc32( const char *s, size_t )->unsigned int
-	{
+	inline constexpr α operator "" _crc32( const char *s, size_t )->unsigned int{
 		return crc32_rec( 0xFFFFFFFF, s );
 	}
 
-	inline consteval α Calc32( sv value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int
-	{
-		return index == value.size()
-			? crc ^ 0xFFFFFFFF
-			: Calc32( value, crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(value[index])] ^ (crc >> 8), index + 1 );
-	}
-
-	inline consteval α Calc32( const std::vector<char>& value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int
-	{
+	inline consteval α Calc32( sv value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int{
 		return index == value.size()
 			? crc ^ 0xFFFFFFFF
 			: Calc32( value, crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(value[index])] ^ (crc >> 8), index + 1 );
@@ -123,9 +110,7 @@ namespace Jde::IO::Crc
 	static_assert( "Hello"_crc32 == Crc32<'H', 'e', 'l', 'l', 'o'>::value, "CRC32 values don't match" );
 	static_assert( "0"_crc32 == Crc32<'0'>::value, "CRC32 values don't match" );
 }
-namespace Jde
-{
-//#ifdef NO_BOOST
+namespace Jde{
 	Ξ Calc32RunTime( sv value )->unsigned int
 	{
 		unsigned int crc=0xFFFFFFFF;
@@ -133,13 +118,5 @@ namespace Jde
 			crc = IO::Crc::crc32_table[static_cast<unsigned char>(crc) ^ value[index]] ^ (crc >> 8);
 		return crc ^ 0xFFFFFFFF;
 	}
-// #else
-// 	Ξ Calc32RunTime( sv value )->uint32_t
-// 	{
-// 		//return Calc32( value );
-// 		boost::crc_32_type result;
-// 		result.process_bytes( value.data(), value.size() );
-// 		return result.checksum();
-// 	}
-// #endif
 }
+#endif

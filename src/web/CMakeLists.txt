@@ -1,30 +1,24 @@
 cmake_minimum_required(VERSION 3.16)
-project(Web)
-set( CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../../../Framework/cmake )
-include(SetUpConfigurations)
+project(Jde.Web)
+set( CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../../build )
+include(common)
+link_directories( ${Protobuf_DIR}/../.. )
 #######################################################
-#if(MSVC)
-#	add_compile_options(PRIVATE /W4 /WX)
-#else()
-#	add_compile_options( -Wall -Wno-unknown-pragmas )
-#endif()
-#######################################################
-#add_link_options( "LINKER:-z,origin-shared" )
-#add_link_options( "LINKER:-rpath=$ORIGIN" )
 set(CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS} "-Wl,-rpath=$ORIGIN")
 add_definitions( -DJde_WEB_EXPORTS )
 find_package(OpenSSL)
+add_library( ${CMAKE_PROJECT_NAME} SHARED ProtoServer.cpp RestServer.cpp WebSocket.cpp 
+	proto/FromServer.pb.cc )
+
+target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
+target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )# libutf8_validity.a )
 if(MSVC)
 	add_definitions( -DWIN32_LEAN_AND_MEAN )
 else()
-	target_link_libraries(Jde.Web Threads::Threads)
+	target_link_libraries(${CMAKE_PROJECT_NAME} Threads::Threads)
 endif()
-add_library( Jde.Web SHARED ProtoServer.cpp RestServer.cpp WebSocket.cpp
-	proto/FromServer.pb.cc )
 #######################################################
-
-#######################################################
-target_precompile_headers(Jde.Web
+target_precompile_headers(${CMAKE_PROJECT_NAME}
   PRIVATE
 	"TypeDefs.h"
 	<jde/coroutine/Task.h>

@@ -47,3 +47,7 @@ tests/ml/.vscode/tasks.json
 src/web/.vscode/settings.json
 *.i
 src/web/build/*
+src/crypto/.vscode/c_cpp_properties.json
+src/crypto/.vscode/settings.json
+src/crypto/.vscode/tasks.json
+tests/crypto/.vscode/c_cpp_properties.json

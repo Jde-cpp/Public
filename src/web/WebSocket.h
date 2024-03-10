@@ -122,7 +122,9 @@ namespace Jde::WebSocket
 	$::Write( up<string> pData )ι->Task
 	{
 		var buffer = net::buffer( (const void*)pData->data(), pData->size() );
-		auto lock = (co_await _writeLock.Lock() ).UP<CoGuard>();
+		LockAwait await = _writeLock.Lock(); //gcc doesn't like co_await _writeLock.Lock();
+		AwaitResult task = co_await await;
+		auto lock = task.UP<CoGuard>();
 		_ws.async_write( buffer, [ this, pKeepAlive=shared_from_this(), buffer, l=move(lock), p=move(pData) ]( beast::error_code ec, uint bytes_transferred )mutable{
 			l = nullptr;
 			if( ec || p->size()!=bytes_transferred ){
@@ -133,7 +135,7 @@ namespace Jde::WebSocket
 				catch( const boost::exception& e2 ){
 					Logging::LogNoServer( Logging::Message{ELogLevel::Debug, "Error closing:  '{}')"}, _logTag, boost::diagnostic_information(e2) );
 				}
-				Disconnect( CodeException{ec} );
+				Disconnect( CodeException{move(static_cast<std::error_code>(ec))} );
 			}
 		} );
 	}

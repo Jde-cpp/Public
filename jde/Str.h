@@ -1,4 +1,6 @@
 ﻿#pragma once
+#ifndef JDE_STR_H
+#define JDE_STR_H
 #include <charconv>
 #include <codecvt>
 #include <boost/algorithm/string/trim.hpp>
@@ -13,8 +15,7 @@ namespace Jde::Str
 {
 	str Empty()ι;
 	template<class T> using bsv = std::basic_string_view<char,T>;
-	struct ci_traits : public std::char_traits<char>
-	{
+	struct ci_traits : public std::char_traits<char>{
 		Ω eq(char c1, char c2)ι{ return toupper(c1) == toupper(c2); }
 		Ω ne(char c1, char c2)ι{ return toupper(c1) != toupper(c2); }
 		Ω lt(char c1, char c2)ι{ return toupper(c1) <  toupper(c2); }
@@ -389,7 +390,7 @@ namespace Jde
 	{
 		typedef typename std::underlying_type<TEnum>::type T;
 		T v = (T)std::distance( std::begin(stringValues), std::find(std::begin(stringValues), std::end(stringValues), text) );
-		auto pResult = v<stringValues.size() ? optional<TEnum>((TEnum)v) : nullopt;
+		auto pResult = (uint)v<stringValues.size() ? optional<TEnum>((TEnum)v) : nullopt;
 		if( !pResult )
 		{
 			uint v2;
@@ -541,19 +542,16 @@ namespace Jde
 	}
 }
 
-template<> struct fmt::formatter<Jde::iv>
-{
-	constexpr α parse( fmt::format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
-	Ŧ format( Jde::iv x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{}", Jde::ToSV(x) ); }
+template<> struct fmt::formatter<Jde::iv> : fmt::formatter<std::string> {
+	α format( Jde::iv x, fmt::format_context& ctx )const{ return formatter<std::string>::format(fmt::format("{}", Jde::ToSV(x)), ctx); }
 };
 
-template<> struct fmt::formatter<Jde::String>
-{
-	constexpr α parse( fmt::format_parse_context& ctx )->decltype(ctx.begin()){ return ctx.end(); }
-	Ŧ format( Jde::iv x, T& ctx )->decltype(ctx.out()){ return format_to( ctx.out(), "{}", Jde::ToStr(x) ); }
+template<> struct fmt::formatter<Jde::String> : fmt::formatter<std::string>{
+	α format( Jde::String x, fmt::format_context& ctx )const{ return formatter<std::string>::format(fmt::format("{}", Jde::ToStr(x)), ctx); }
 };
 
 #undef var
 #undef Φ
 #undef $
 #undef TT
+#endif

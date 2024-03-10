@@ -3,7 +3,7 @@
 #define var const auto
 namespace Jde::IO::Sockets
 {
-	sp<Jde::LogTag> _logTag{ Logging::Tag("session") };
+	static sp<Jde::LogTag> _logTag{ Logging::Tag("session") };
 	α ProtoSession::LogTag()ι->sp<Jde::LogTag>{ return _logTag; }
 	ProtoServer::ProtoServer( PortType port )ι:
 		ISocket{ port },
@@ -37,7 +37,7 @@ namespace Jde::IO::Sockets
 	α ProtoSession::ReadHeader()ι->void{
 		net::async_read( _socket, net::buffer(static_cast<void*>(_readMessageSize), sizeof(_readMessageSize)), [&]( std::error_code ec, uint headerLength )ι{
 			try{
-				THROW_IFX( ec && ec.value()==2, CodeException(fmt::format("[{}] - Disconnected", Id), move(ec), ELogLevel::Trace) );
+				THROW_IFX( ec && ec.value()==2, CodeException(format("[{}] - Disconnected", Id), move(ec), ELogLevel::Trace) );
 				THROW_IFX( ec, CodeException(move(ec), ec.value()==10054 || ec.value()==104 ? ELogLevel::Trace : ELogLevel::Error) );
 				THROW_IF( headerLength!=4, "only read '{}'"sv, headerLength );
 

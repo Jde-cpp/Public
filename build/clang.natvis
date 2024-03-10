@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="std::__1::vector&lt;*&gt;">
+		<DisplayString>{{size={__end_-__begin_}}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>__end_-__begin_</Size>
+				<ValuePointer>__begin_</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="std::__1::__vector_base&lt;*&gt;">
+		<DisplayString>{{size={__end_-__begin_}}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>__end_-__begin_</Size>
+				<ValuePointer>__begin_</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="std::__1::span&lt;*&gt;">
+		<DisplayString>{{size={__size}}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>__size</Size>
+				<ValuePointer>__data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="boost::container::flat_map&lt;*&gt;">
+		<DisplayString>{{size={m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>m_flat_tree.m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_flat_tree.m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="boost::container::flat_map&lt;*&gt;&amp;&amp;">
+		<DisplayString>{{size={m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>m_flat_tree.m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_flat_tree.m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="boost::container::flat_multimap&lt;*,*,*,*&gt;">
+		<DisplayString>{{size=={m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>m_flat_tree.m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_flat_tree.m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="boost::container::flat_tree&lt;*&gt;::impl_tree_t">
+		<DisplayString>{{impl_tree_t}}</DisplayString>
+		<!-- <DisplayString>{{xxxsize = {m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString> -->
+	</Type>
+	<Type Name="boost::container::dtl::flat_tree&lt;*&gt;">
+		<DisplayString>{{size={m_data.m_seq.m_holder.m_size} xxx}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="boost::container::dtl::flat_tree&lt;*&gt;">
+		<DisplayString>{{container_type}}</DisplayString>
+		<!-- <DisplayString>{{xxxsize = {m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString> -->
+	</Type>
+	<Type Name="boost::container::vector&lt;*&gt;::alloc_holder_t">
+		<DisplayString>{{alloc_holder_t}}</DisplayString>
+		<!-- <DisplayString>{{xxxsize = {m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString> -->
+	</Type>
+	<Type Name="boost::container::vector&lt;*&gt;">
+		<DisplayString>{{ size={members_.m_size} }}</DisplayString>
+		<Expand>
+			<Item Name="[size]">members_.m_size</Item>
+			<Item Name="[capacity]">members_.m_capacity</Item>
+			<ArrayItems>
+					<Size>members_.m_size</Size>
+					<ValuePointer>members_.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="std::__1::basic_string&lt;*&gt;">
+		<DisplayString Condition="!__r_.__value_.__s.__is_long_">{{s={__r_.__value_.__s.__data_, s8b}}}</DisplayString>
+		<DisplayString Condition="__r_.__value_.__s.__is_long_">{{v={__r_.__value_.__l.__data_, s8b}}}</DisplayString>
+		<Expand>
+			<Item Name="[size z(packed)]" Condition="(!__r_.__value_.__s.__is_long_">__r_.__value_.__s.__size_ &gt;&gt; 1 % 256</Item>
+			<Item Name="[size]" Condition="__r_.__value_.__s.__is_long_">__r_.__value_.__l.__size_</Item>
+		</Expand>
+	</Type>
+	<Type Name="std::__1::string">
+		<DisplayString Condition="!__r_.__value_.__s.__is_long_">{{s2={__r_.__value_.__s.__data_, s8b}}}</DisplayString>
+		<DisplayString Condition="(nodeString.__r_.__value_.__s.__size_ \&amp; 1)==0">{{l2={__r_.__value_.__l.__data_, s8b}}}</DisplayString>
+		<Expand>
+			<Item Name="[size z(packed)]" Condition="!__r_.__value_.__s.__is_long_">__r_.__value_.__s.__size_ &gt;&gt; 1 % 256</Item>
+			<Item Name="[size]" Condition="(nodeString.__r_.__value_.__s.__size_ \&amp; 1)==0">__r_.__value_.__l.__size_</Item>
+		</Expand>
+	</Type>
+	<Type Name="std::__1::string&amp;&amp;">
+		<DisplayString Condition="!__r_.__value_.__s.__is_long_">{{s4={__r_.__value_.__s.__data_, s8b}}}</DisplayString>
+		<DisplayString Condition="__r_.__value_.__s.__is_long_">{{l4={__r_.__value_.__l.__data_, s8b}}}</DisplayString>
+		<Expand>
+			<Item Name="[size z(packed)]" Condition="(!__r_.__value_.__s.__is_long_">__r_.__value_.__s.__size_ &gt;&gt; 1 % 256</Item>
+			<Item Name="[size]" Condition="__r_.__value_.__s.__is_long_">__r_.__value_.__l.__size_</Item>
+		</Expand>
+	</Type>
+	<Type Name="std::__1::basic_string&lt;*&gt;&amp;">
+		<DisplayString Condition="!__r_.__value_.__s.__is_long_">{{s5={__r_.__value_.__s.__data_, s8b}}}</DisplayString>
+		<DisplayString Condition="__r_.__value_.__s.__is_long_">{{l5={__r_.__value_.__l.__data_, s8b}}}</DisplayString>
+		<Expand>
+			<Item Name="[size z(packed)]" Condition="!__r_.__value_.__s.__is_long_">__r_.__value_.__s.__size_ &gt;&gt; 1 % 256</Item>
+			<Item Name="[size]" Condition="__r_.__value_.__s.__is_long_">__r_.__value_.__l.__size_</Item>
+		</Expand>
+	</Type>
+	<Type Name="Jde::str">
+		<DisplayString Condition="(!__r_.__value_.__s.__is_long_">{{s1={__r_.__value_.__s.__data_, s8b}}}</DisplayString>
+		<DisplayString Condition="__r_.__value_.__s.__is_long_">{{l1={__r_.__value_.__l.__data_, s8b}}}</DisplayString>
+		<Expand>
+			<Item Name="[size z(packed)]" Condition="!__r_.__value_.__s.__is_long_">__r_.__value_.__s.__size_ &gt;&gt; 1 % 256</Item>
+			<Item Name="[size]" Condition="__r_.__value_.__s.__is_long_">__r_.__value_.__l.__size_</Item>
+		</Expand>
+	</Type>
+	<Type Name="Jde::DB::SchemaName">
+		<DisplayString Condition="!__r_.__value_.__s.__is_long_">{__r_.__value_.__s.__data_, s8b}</DisplayString>
+		<DisplayString Condition="__r_.__value_.__s.__is_long_">{__r_.__value_.__l.__data_, s8b}</DisplayString>
+		<Expand>
+			<Item Name="[size z(packed)]" Condition="!__r_.__value_.__s.__is_long_">__r_.__value_.__s.__size_ &gt;&gt; 1 % 256</Item>
+			<Item Name="[size]" Condition="__r_.__value_.__s.__is_long_">__r_.__value_.__l.__size_</Item>
+		</Expand>
+	</Type>
+	<Type Name="Jde::Coroutine::AwaitResult::Value">
+		<DisplayString Condition="index() ==  0" Optional="true">{{ up, value={_Head} }}</DisplayString>
+		<DisplayString Condition="index() ==  1" Optional="true">{{ sp, value={_Tail._Head} }}</DisplayString>
+		<DisplayString Condition="index() ==  2" Optional="true">{{ exception, value={_Tail._Tail._Head} }}</DisplayString>
+		<DisplayString Condition="index() ==  3" Optional="true">{{ bool, value={_Tail._Tail._Tail._Head} }}</DisplayString>
+	</Type>
+	<Type Name="std::__1::__fs::filesystem::path::string_type">
+		<DisplayString Condition="!__r_.__value_.__s.__is_long_">{__r_.__value_.__s.__data_, s8b}</DisplayString>
+		<DisplayString Condition="__r_.__value_.__s.__is_long_">{__r_.__value_.__l.__data_, s8b}</DisplayString>
+		<Expand>
+			<Item Name="[size z(packed)]" Condition="!__r_.__value_.__s.__is_long_">__r_.__value_.__s.__size_ &gt;&gt; 1 % 256</Item>
+			<Item Name="[size]" Condition="__r_.__value_.__s.__is_long_">__r_.__value_.__l.__size_</Item>
+		</Expand>
+	</Type>
+	<Type Name="std::__1::__fs::filesystem::path">
+		<DisplayString>{__pn_}</DisplayString>
+	</Type>
+	<Type Name="std::__1::string_view">
+		<DisplayString>{__data}</DisplayString>
+	</Type>
+	<Type Name="Jde::sv">
+		<DisplayString>{{x={__data_,[__size_]s8b}}}</DisplayString>
+		<Expand>
+			<Item Name="[size]">__size_</Item>
+			<Item Name="data">__data_</Item>
+		</Expand>
+	</Type>
+	<Type Name="std::__1::basic_string_view&lt;*&gt;">
+		<DisplayString>{__data_,[__size_]s8b}</DisplayString>
+		<Expand>
+			<Item Name="[size]">__size_</Item>
+			<Item Name="data">__data_</Item>
+		</Expand>
+	</Type>
+	<Type Name="Jde::sp&lt;*&gt;">
+		<!-- <DisplayString Condition="__ptr_!=0">{{__ptr_={*__ptr_}}}</DisplayString> -->
+		<DisplayString Condition="__ptr_==0">{{nullptr}}</DisplayString>
+		<Expand>
+      	<Item Name="[ptr]">*__ptr_</Item>
+    	</Expand>
+	</Type>
+	<Type Name="std::__1::shared_ptr&lt;*&gt;">
+		<DisplayString Condition="__ptr_!=0">{*__ptr_}</DisplayString>
+		<DisplayString Condition="__ptr_==0">{{nullptr}}</DisplayString>
+	</Type>
+	<Type Name="std::__1::unique_ptr&lt;*&gt;">
+		<DisplayString Condition="__ptr_!=0">{__ptr_}</DisplayString>
+		<DisplayString Condition="__ptr_==0">{{nullptr}}</DisplayString>
+	</Type>
+	<Type Name="std::__1::optional&lt;*&gt;">
+		<DisplayString Condition="__engaged_">{__val_}</DisplayString>
+		<DisplayString Condition="!__engaged_">{{null}}</DisplayString>
+	</Type>
+	<Type Name="std::__1::__compressed_pair_elem&lt;*&gt;">
+		<DisplayString>{__value_}</DisplayString>
+	</Type>
+	<!-- https://chromium.googlesource.com/chromium/src/+/HEAD/build/config/c++/libc++.natvis -->
+	<Type Name="std::__1::unordered_set&lt;*&gt;">
+		<DisplayString>{{sizex={*(size_type*)&amp;__table_.__p2_}}}</DisplayString>
+	</Type>
+<!-- https://github.com/KindDragon/CPPDebuggerVisualizers/blob/master/VS2019/Visualizers/boost_Containers.natvis -->
+	<Type Name="boost::container::flat_set&lt;*&gt;">
+		<DisplayString>{{sizep={m_data.m_seq.m_holder.m_size}}}</DisplayString>
+		 <Expand>
+			<ArrayItems>
+				<Size>m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="const boost::container::flat_set&lt;*&gt;">
+		<DisplayString>{{sizex={m_data.m_seq.m_holder.m_size}}}</DisplayString>
+		 <Expand>
+			<ArrayItems>
+				<Size>m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>	<Type Name="std::__1::map&lt;*&gt;">
+   	<DisplayString>{{size = {__tree_.__pair3_.__value_}}}</DisplayString>
+		<Expand>
+			<TreeItems>
+				<Size>__tree_.__pair3_.__value_</Size>
+				<HeadPointer>__begin_node</HeadPointer>
+				<LeftPointer>__left_</LeftPointer>
+				<RightPointer>__rigth_</RightPointer>
+				<ValueNode Condition="!((bool)_Isnil)">__value_</ValueNode>
+			</TreeItems>
+		</Expand>
+  </Type>
+	<Type Name="Jde::sp&lt;*&gt;">
+		<DisplayString Condition="__ptr_!=0">{__ptr_}</DisplayString>
+		<DisplayString Condition="__ptr_==0">{{nullptr}}</DisplayString>
+	</Type>
+	<Type Name="std::__1::__variant_detail::__impl&lt;*&gt;">
+		<DisplayString>index={__index}</DisplayString>
+	</Type>
+	<Type Name="std::variant&lt;*&gt;">
+			<Intrinsic Name="index" Expression="(int)_Which"/>
+			<DisplayString Condition="index() &lt; 0">[valueless_by_exception]</DisplayString>
+			<DisplayString Condition="index() ==  0" Optional="true">{{ index=0, value={_Head} }}</DisplayString>
+			<DisplayString Condition="index() ==  1" Optional="true">{{ index=1, value={_Tail._Head} }}</DisplayString>
+			<DisplayString Condition="index() ==  2" Optional="true">{{ index=2, value={_Tail._Tail._Head} }}</DisplayString>
+			<DisplayString Condition="index() ==  3" Optional="true">{{ index=3, value={_Tail._Tail._Tail._Head} }}</DisplayString>
+			<DisplayString Condition="index() ==  4" Optional="true">{{ index=4, value={_Tail._Tail._Tail._Tail._Head} }}</DisplayString>
+			<DisplayString Condition="index() ==  5" Optional="true">{{ index=5, value={_Tail._Tail._Tail._Tail._Tail._Head} }}</DisplayString>
+			<DisplayString Condition="index() ==  6" Optional="true">{{ index=6, value={_Tail._Tail._Tail._Tail._Tail._Tail._Head} }}</DisplayString>
+			<DisplayString Condition="index() ==  7" Optional="true">{{ index=7, value={_Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head} }}</DisplayString>
+			<DisplayString Condition="index() ==  8" Optional="true">{{ index=8, value={_Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head} }}</DisplayString>
+			<DisplayString Condition="index() ==  9" Optional="true">{{ index=9, value={_Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head} }}</DisplayString>
+			<DisplayString Condition="index() == 10" Optional="true">{{ index=10, value={_Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head} }}</DisplayString>
+			<Expand>
+				<Item Name="index">index()</Item>
+				<Item Name="[value]" Condition="index() ==  0" Optional="true">_Head</Item>
+				<Item Name="[value]" Condition="index() ==  1" Optional="true">_Tail._Head</Item>
+				<Item Name="[value]" Condition="index() ==  2" Optional="true">_Tail._Tail._Head</Item>
+				<Item Name="[value]" Condition="index() ==  3" Optional="true">_Tail._Tail._Tail._Head</Item>
+				<Item Name="[value]" Condition="index() ==  4" Optional="true">_Tail._Tail._Tail._Tail._Head</Item>
+				<Item Name="[value]" Condition="index() ==  5" Optional="true">_Tail._Tail._Tail._Tail._Tail._Head</Item>
+				<Item Name="[value]" Condition="index() ==  6" Optional="true">_Tail._Tail._Tail._Tail._Tail._Tail._Head</Item>
+				<Item Name="[value]" Condition="index() ==  7" Optional="true">_Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head</Item>
+				<Item Name="[value]" Condition="index() ==  8" Optional="true">_Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head</Item>
+				<Item Name="[value]" Condition="index() ==  9" Optional="true">_Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head</Item>
+				<Item Name="[value]" Condition="index() == 10" Optional="true">_Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Tail._Head</Item>
+			</Expand>
+	</Type>
+	<Type Name="std::__1::basic_string_view&lt;char,*&gt;">
+		<DisplayString>{__data,[__size]s8b}</DisplayString>
+		<Expand>
+			<Item Name="[size]">__size</Item>
+			<Item Name="data">__data</Item>
+		</Expand>
+	</Type>
+</AutoVisualizer>

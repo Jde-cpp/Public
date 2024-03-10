@@ -1,5 +1,9 @@
 ﻿#pragma once
+#ifndef LOG_H
+#define LOG_H
+
 #include <iostream>
+#include "Exports.h"
 #include "collections/ToVec.h"
 #include "io/Crc.h"
 #include "TypeDefs.h"
@@ -190,27 +194,6 @@ namespace Jde{
 #endif*/
 	}
 #define SOURCE spdlog::source_loc{ FileName(m.File).c_str(), (int)m.LineNumber, m.Function }
-/*	
-	Ξ Logging::Log( const Logging::MessageBase& m, sp<LogTag> /*tag* / )ι->void{
-		if( auto p=Default(); p )
-			p->log( SOURCE, (spdlog::level::level_enum)m.Level, m.MessageView );
-		else{
-			if( m.Level>=ELogLevel::Error )
-				std::cerr << m.MessageView << std::endl;
-			else
-				std::cout << m.MessageView << std::endl;
-		}
-
-		if constexpr( _debug ){
-			if( m.Level>=BreakLevel() )
-				BREAK;
-		}
-		if( LogMemory() )
-			LogMemory( m );
-		if( ServerLevel()!=ELogLevel::NoLog && ServerLevel()<=m.Level )
-			LogServer( m );
-	}
-	*/
 	ψ Logging::Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void{
 		m.Level = level;
 		Log( move(m), args... );
@@ -306,3 +289,4 @@ namespace Jde::Logging{
 #undef SOURCE
 #undef var
 #undef Φ
+#endif

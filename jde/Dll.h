@@ -2,18 +2,15 @@
 #include "App.h"
 
 #ifndef _MSC_VER
-	namespace Jde
-	{
+	namespace Jde{
 		typedef void* HMODULE;
 		typedef void* FARPROC;
 	}
 #endif
 
-namespace Jde
-{
+namespace Jde{
 	//https://blog.benoitblanchon.fr/getprocaddress-like-a-boss/
-	struct ProcPtr
-	{
+	struct ProcPtr{
 		ProcPtr( FARPROC ptr ):
 			_ptr(ptr)
 		{}
@@ -23,9 +20,8 @@ namespace Jde
 	private:
 		FARPROC _ptr;
 	};
-	struct DllHelper
-	{
-		DllHelper( path path )ε:
+	struct DllHelper{
+		DllHelper( const fs::path& path )ε:
 			_path{path},
 			_module{ (HMODULE)OSApp::LoadLibrary(path) }
 		{}

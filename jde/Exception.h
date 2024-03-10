@@ -1,5 +1,6 @@
 ﻿#pragma once
-
+#ifndef JDE_EXCEPTION_H //gcc pragma once is not supported
+#define JDE_EXCEPTION_H
 #include "./Exports.h"
 #include "io/Crc.h"
 #include "collections/ToVec.h"
@@ -51,6 +52,7 @@ namespace Jde
 
 		$ IException( SL sl, std::exception&& inner, ELogLevel level, sv format_={}, Args&&... args )ι;
 		$ IException( SL sl, ELogLevel l, sv m, Args&& ...args )ι;
+		$ IException( SL sl, ELogLevel l, uint code, fmt::format_string<Args...> m, Args&&... args )ι;
 
 		virtual ~IException();
 
@@ -63,7 +65,7 @@ namespace Jde
 		β Move()ι->up<IException> =0;
 		α Push( SL sl )ι{ _stack.stack.push_back(sl); }
 		α Stack()Ι->const StackTrace&{ return _stack; }
-		β Ptr()->std::exception_ptr =0;
+		β Ptr()ι->std::exception_ptr =0;
 		[[noreturn]] β Throw()->void=0;
 	protected:
 		IException( SRCE )ι:IException{ {}, ELogLevel::Debug, 0, sl }{}
@@ -74,7 +76,7 @@ namespace Jde
 		sp<std::exception> _pInner;//sp to save custom copy constructor
 		sv _format;
 		sp<LogTag> _pTag;
-		vector<string> _args;
+		vector<string> _args;//TODO change to array
 		static constexpr ELogLevel DefaultLogLevel{ ELogLevel::Debug };
 	public:
 		const uint Code;
@@ -92,6 +94,7 @@ namespace Jde
 		$ Exception( SL sl, std::exception&& inner, sv format_={}, Args&&... args )ι:Exception{sl, move(inner), DefaultLogLevel, format_, args...}{}
 		$ Exception( SL sl, ELogLevel l, sv format_, Args&&... args )ι:IException( sl, l, format_, args... ){}
 		$ Exception( SL sl, sv fmt, Args&&... args )ι:IException( sl, DefaultLogLevel, fmt, args... ){}
+		$ Exception( SL sl, ELogLevel l, uint code, fmt::format_string<Args...> fmt, Args&&... args )ι:IException( sl, l, code, fmt, std::forward<Args>(args)... ){}
 		~Exception(){}
 		using T=Exception;
 		COMMON
@@ -156,9 +159,9 @@ namespace Jde
 		IOException( fs::path path, uint code, string value, SRCE ):IException{ move(value), ELogLevel::Debug, code, sl }, _path{ move(path) }{ SetWhat(); }
 		IOException( fs::path path, string value, SRCE ): IOException{ move(path), 0, move(value), sl }{}
 		IOException( fs::filesystem_error&& e, SRCE ):IException{sl}, _pUnderLying( make_unique<fs::filesystem_error>(move(e)) ){ SetWhat(); }
-		$ IOException( SL sl, path path, ELogLevel level, sv value, Args&&... args ):IException( sl, level, value, args... ),_path{ path }{ SetWhat(); }
+		$ IOException( SL sl, const fs::path& path, ELogLevel level, sv value, Args&&... args ):IException( sl, level, value, args... ),_path{ path }{ SetWhat(); }
 
-		α Path()Ι->path; α SetPath( path x )ι{ _path=x; }
+		α Path()Ι->const fs::path&; α SetPath( const fs::path& x )ι{ _path=x; }
 		α what()Ι->const char* override;
 		using T=IOException;
 		COMMON
@@ -202,6 +205,17 @@ namespace Jde
 		_pInner{ make_shared<std::exception>(move(inner)) },
 		_format{ format_ },
 		Code{ Calc32RunTime(format_) },
+		_level{ l }
+	{
+		_args.reserve( sizeof...(args) );
+		ToVec::Append( _args, args... );
+		BreakLog();
+	}
+	$ IException::IException( SL sl, ELogLevel l, uint code, fmt::format_string<Args...> m, Args&&... args )ι:
+		_stack{ sl },
+		_format{ m.get() },
+		//_format{ sv{spdlog::details::to_string_view(m).data(), spdlog::details::to_string_view(m).size()} },
+		Code{ code },
 		_level{ l }
 	{
 		_args.reserve( sizeof...(args) );
@@ -270,3 +284,4 @@ namespace Jde
 #undef COMMON
 #undef var
 }
+#endif

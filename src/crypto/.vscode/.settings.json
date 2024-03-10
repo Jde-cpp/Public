@@ -1,0 +1,23 @@
+{
+	"window.title": "Crypto",
+	"files.associations": {
+		"*.ipp": "cpp",
+		"system_error": "cpp",
+		"string": "cpp",
+		"future": "cpp",
+		"random": "cpp",
+		"exception": "cpp",
+		"sstream": "cpp",
+		"array": "cpp",
+		"istream": "cpp",
+		"locale": "cpp",
+		"thread": "cpp",
+		"tuple": "cpp",
+		"variant": "cpp",
+		"*.tcc": "cpp",
+		"memory": "cpp",
+		"functional": "cpp",
+		"utility": "cpp",
+		"format": "cpp"
+	}
+}

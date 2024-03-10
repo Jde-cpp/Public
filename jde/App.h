@@ -1,4 +1,6 @@
 ﻿#pragma once
+#ifndef APP_H
+#define APP_H
 #include <jde/Exports.h>
 #include "Assert.h"
 #include "Log.h"
@@ -83,7 +85,7 @@ namespace Jde{
 		Ω ProductName()ι->sv;
 		Ω CompanyRootDir()ι->fs::path;
 		ω FreeLibrary( void* p )ι->void;
-		ω LoadLibrary( path path )ε->void*;
+		ω LoadLibrary( const fs::path& path )ε->void*;
 		ω GetProcAddress( void* pModule, str procName )ε->void*;
 		α Install( str serviceDescription )ε->void override;
 		α Uninstall()ε->void override;
@@ -127,3 +129,4 @@ namespace Jde{
 }
 #undef Φ
 #undef ω
+#endif

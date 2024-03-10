@@ -1,5 +1,6 @@
 ﻿#pragma once
-
+#ifndef TASK_H
+#define TASK_H
 #include <variant>
 #include <jde/Log.h>
 #include <jde/Exception.h>
@@ -150,3 +151,4 @@ namespace Jde::Coroutine{
 	}
 }
 #undef Φ
+#endif

@@ -1,0 +1,13 @@
+{
+	"logging":{
+		"tags": {
+			"Trace":[],
+			"Debug":["tests","settings"],
+			"Information":[],
+			"Warning":[],
+			"Error":[],
+			"Critical":[]
+		},
+		"console":{}
+	}
+}

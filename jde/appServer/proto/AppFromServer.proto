@@ -1,5 +1,5 @@
-//source $JDE_DIR/Framework/common.sh;toBashDir $JDE_DIR JDE_BASH;appSource=$JDE_BASH/Public/jde/appServer/proto;commonDir=$JDE_BASH/Public/src/web/proto
-//cd $appSource;mklink FromServer.proto $commonDir;protoc -I. --cpp_out . AppFromServer.proto
+//source $JDE_DIR/Framework/scripts/common.sh;toBashDir $JDE_DIR JDE_BASH;appSource=$JDE_BASH/Public/jde/appServer/proto;commonDir=$JDE_BASH/Public/src/web/proto
+//cd $appSource;mklink FromServer.proto $commonDir;protoc -I. --experimental_editions --cpp_out . AppFromServer.proto
 //cd $JDE_BASH/AppServer/source;moveToDir types;moveToDir proto;mv $appSource/AppFromServer.pb.cc .;mklink AppFromServer.pb.h $appSource;mklink FromServer.pb.h $commonDir
 
 syntax = "proto3";

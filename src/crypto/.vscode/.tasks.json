@@ -22,7 +22,7 @@
 	{
 		"label": "rebuild",
 		"type": "shell",
-		"command": "tput reset;../../build/so.sh ${workspaceFolder} asan 1",
+		"command": "tput reset;../../Framework/cmake/buildc.sh ${workspaceFolder} asan 1",
 		"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
 			"pattern": {
 				"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
@@ -33,7 +33,7 @@
 	{
 		"label": "rebuildRelease",
 		"type": "shell",
-		"command": "clear;../../build/so.sh ${workspaceFolder} RelWithDebInfo 1",
+		"command": "clear;../../Framework/cmake/buildc.sh ${workspaceFolder} RelWithDebInfo 1",
 		"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
 			"pattern": {
 				"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
@@ -44,7 +44,7 @@
 	{
 		"label": "release",
 		"type": "shell",
-		"command": "clear;../../build/so.sh ${workspaceFolder} RelWithDebInfo 0",
+		"command": "clear;../../Framework/cmake/buildc.sh ${workspaceFolder} RelWithDebInfo 0",
 		"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
 			"pattern": {
 				"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",

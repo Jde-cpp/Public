@@ -1,5 +1,5 @@
-//source $JDE_DIR/Framework/common.sh;toBashDir $JDE_DIR JDE_BASH;appSource=$JDE_BASH/Public/jde/appServer/proto;
-//cd $appSource;protoc -I. --cpp_out . AppFromClient.proto
+//source $JDE_DIR/Framework/scripts/common.sh;toBashDir $JDE_DIR JDE_BASH;appSource=$JDE_BASH/Public/jde/appServer/proto;
+//cd $appSource;protoc -I. --experimental_editions --cpp_out . AppFromClient.proto
 //cd $JDE_BASH/AppServer/source;moveToDir types;moveToDir proto;mv $appSource/AppFromClient.pb.cc .;mklink AppFromClient.pb.h $appSource
 
 //moveToDir types

@@ -20,14 +20,6 @@
 #include <variant>
 #include <vector>
 
-
-
-
-//#if !defined(__clang__) && !defined(_MSC_VER) spdlog installs it anyways
-//	#include <format>
-//#else
-//	#include <fmt/format.h>
-//#endif
 #include <coroutine>
 #include <source_location>
 
@@ -50,9 +42,9 @@ using std::suspend_never;
 #define ENABLE_WARNINGS  _Pragma("warning( pop )")
 
 DISABLE_WARNINGS
+#define SPDLOG_FMT_EXTERNAL
 	#include <spdlog/spdlog.h>
 	#include <spdlog/sinks/basic_file_sink.h>
-	#include <spdlog/fmt/ostr.h>
 	#include <boost/container/flat_map.hpp>
 	#include <boost/container/flat_set.hpp>
 ENABLE_WARNINGS
@@ -99,6 +91,7 @@ namespace Jde
 	using std::array;
 	using std::atomic;
 	using std::atomic_flag;
+	using std::byte;
 	using std::function;
 	using lg = std::lock_guard<std::mutex>;
 	using std::make_shared;//refactor remove
@@ -106,7 +99,7 @@ namespace Jde
 	Τ using sp = std::shared_ptr<T>;
 	using std::string;
 	using std::tuple;
-	Τ using up = std::unique_ptr<T>;
+	template <typename T, typename D = std::default_delete<T>> using up = std::unique_ptr<T,D>;
 	using std::get;
 	using std::static_pointer_cast;
 	using std::unique_lock;//refactor remove
@@ -142,12 +135,7 @@ namespace Jde
 	using boost::container::flat_multimap;
 	using boost::container::flat_set;
 #endif
-#ifdef _MSC_VER
-	using std::format;
-#else
 	using fmt::format;
-#endif
-	using path = const fs::path&;
 	using str = const std::string&;
 
 	template<class T> using vec = const vector<T>&;
@@ -176,6 +164,7 @@ namespace Jde
 #endif
 
 	enum class ELogLevel : int8{ NoLog=-1, Trace=0, Debug=1, Information=2, Warning=3, Error=4, Critical=5/*, None=6*/ };
+	Ξ operator<(ELogLevel a,ELogLevel b)ι->bool{ return (int)a<(int)b; };
 	inline constexpr std::array<sv,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };
 	constexpr sv ToString( ELogLevel v )ι{ return (uint8)v<ELogLevelStrings.size() ? ELogLevelStrings[(uint8)v] : sv{}; }
 

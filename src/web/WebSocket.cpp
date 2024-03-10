@@ -19,20 +19,18 @@ namespace Jde::WebSocket
 			DoAccept();
 		}
 		catch( boost::system::system_error& e ){
-			throw CodeException( e.what(), e.code() );
+			throw CodeException( e.what(), static_cast<std::error_code>(e.code()) );
 		}
 	}
 
-#define CHECK_EC(ec, ...) if( ec ){ CodeException x(ec __VA_OPT__(,) __VA_ARGS__); return; }
+#define CHECK_EC(ec, ...) if( ec ){ CodeException x(static_cast<std::error_code>(ec) __VA_OPT__(,) __VA_ARGS__); return; }
 	α WebListener::DoAccept()ι->void{
 		_acceptor.async_accept( net::make_strand(_pContextThread->Context()), [this]( beast::error_code ec, tcp::socket socket )ι{
 				if( ec ){
 					ELogLevel level = ec == net::error::operation_aborted ? ELogLevel::Debug : ELogLevel::Error;
-					CodeException x{ec, level};
+					CodeException x{static_cast<std::error_code>(ec), level};
 				}
 				if( /*ec.value() == 125 &&*/ IApplication::ShuttingDown() ){//125 - Operation canceled
-					std::cout << "_CrtDumpMemoryLeaks" << std::endl;
-					_CrtDumpMemoryLeaks();
 					INFO("Websocket shutdown");
 					return;
 				}
@@ -76,7 +74,7 @@ namespace Jde::WebSocket
 				using namespace boost::asio::error;
 				bool aborted = ec == connection_aborted;
 				var level = ec == websocket::error::closed || aborted || ec==not_connected || ec==connection_reset ? ELogLevel::Trace : ELogLevel::Error;
-				p->Disconnect( CodeException{ec, level} );
+				p->Disconnect( CodeException{static_cast<std::error_code>(ec), level} );
 				return;
 			}
 			TRACE( "[{}]Socket::DoRead({})", p->Id, c );
@@ -89,7 +87,7 @@ namespace Jde::WebSocket
 	α Session::OnWrite( beast::error_code ec, uint c )ι->void{
 		boost::ignore_unused( c );
 		try{
-			THROW_IFX( ec, CodeException(ec, ec == websocket::error::closed ? ELogLevel::Trace : ELogLevel::Error) );
+			THROW_IFX( ec, CodeException(static_cast<std::error_code>(ec), ec == websocket::error::closed ? ELogLevel::Trace : ELogLevel::Error) );
 		}
 		catch( const CodeException& )
 		{}

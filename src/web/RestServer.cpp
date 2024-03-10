@@ -5,7 +5,7 @@
 #include "../../../Framework/source/math/MathUtilities.h"
 
 #define var const auto
-#define CHECK_EC(ec, ...) if( ec ){ CodeException x(ec __VA_OPT__(,) __VA_ARGS__); return; }
+#define CHECK_EC(ec, ...) if( ec ){ CodeException x(static_cast<std::error_code>(ec) __VA_OPT__(,) __VA_ARGS__); return; }
 
 namespace Jde::Web::Rest{
 	sp<LogTag> _logTag = Logging::Tag( "rest" );
@@ -27,7 +27,7 @@ namespace Jde::Web::Rest{
 		TRACE( "ISession::OnAccept()" );
 		if( ec ){
 			const ELogLevel level{ ec == net::error::operation_aborted ? ELogLevel::Debug : ELogLevel::Error };
-			CodeException{ ec, level };
+			CodeException{ static_cast<std::error_code>(ec), level };
 		}
 		else{
 			CreateSession( std::move(socket) )->Run();
@@ -53,7 +53,7 @@ namespace Jde::Web::Rest{
 	α ISession::OnWrite( bool /*close*/, beast::error_code ec, std::size_t bytes_transferred )ι->void{
       boost::ignore_unused( bytes_transferred );
 			if( ec )
-				CodeException{ ec, ec.value()==(int)boost::beast::error::timeout ? ELogLevel::Debug : ELogLevel::Error };
+				CodeException{ static_cast<std::error_code>(ec), ec.value()==(int)boost::beast::error::timeout ? ELogLevel::Debug : ELogLevel::Error };
       DoClose();
   }
 
@@ -91,7 +91,7 @@ namespace Jde::Web::Rest{
 
 	α ISession::Send( Exception&& e, Request&& req )ι->void{
 		var p = dynamic_cast<IRequestException*>( &e );
-		string what = p ? p->what() : format( "Internal Server Error:  '{:x}'.", e.Code );
+		string what = p ? p->what() : Jde::format( "Internal Server Error:  '{:x}'.", e.Code );
 		e.Move();  //want the log to show here.
 		Send( p ? p->Status() : http::status::internal_server_error, what, move(req) );
 	}
@@ -102,7 +102,7 @@ namespace Jde::Web::Rest{
 
 	α ISession::Send( http::status status, string what, Request&& req )ι->void{
     auto y = ms<http::response<http::string_body>>( status, req.ClientRequest().version() );
-		var message = format( "{{\"message\": \"{}\"}}", move(what) );
+		var message = Jde::format( "{{\"message\": \"{}\"}}", move(what) );
 		Dbg( message, _logTag );
 		SetBodyResponse( *y, req.ClientRequest().keep_alive() );
     y->body() = message;
@@ -177,7 +177,7 @@ namespace Jde::Web::Rest{
 	    if( req.Method() == http::verb::get ){
 				if( target=="/graphql" ){
 					auto& query = params["query"]; THROW_IFX( query.empty(), RequestException<http::status::bad_request>(SRCE_CUR, "No query sent.") );
-					string threadDesc = format( "[{:x}]{}", req.SessionInfoPtr ? req.SessionInfoPtr->session_id() : 0, target );
+					string threadDesc = Jde::format( "[{:x}]{}", req.SessionInfoPtr ? req.SessionInfoPtr->session_id() : 0, target );
 					var y = ( co_await DB::CoQuery(move(query), req.UserId(), threadDesc) ).UP<nlohmann::json>();
 					Send( move(*y), move(req) );
 				}

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="std::__1::__vector_base&lt;*&gt;">
+		<DisplayString>{{size={__end_-__begin_}}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>__end_-__begin_</Size>
+				<ValuePointer>__begin_</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="boost::container::flat_map&lt;*,*,*,*&gt;">
+		<DisplayString>{{size=={m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>m_flat_tree.m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_flat_tree.m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="boost::container::flat_multimap&lt;*,*,*,*&gt;">
+		<DisplayString>{{size=={m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>m_flat_tree.m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_flat_tree.m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="boost::container::flat_tree&lt;*&gt;::impl_tree_t">
+		<DisplayString>{{impl_tree_t}}</DisplayString>
+		<!-- <DisplayString>{{xxxsize = {m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString> -->
+	</Type>
+	<Type Name="boost::container::dtl::flat_tree&lt;*&gt;::container_type">
+		<DisplayString>{{xxxxcontainer_type}}</DisplayString>
+		<!-- <DisplayString>{{xxxsize = {m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString> -->
+	</Type>
+	<Type Name="boost::container::dtl::flat_tree&lt;*&gt;">
+		<DisplayString>{{size = {m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>m_flat_tree.m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_flat_tree.m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>			
+	</Type>
+	<Type Name="boost::container::vector&lt;*&gt;::alloc_holder_t">
+		<DisplayString>{{alloc_holder_t}}</DisplayString>
+		<!-- <DisplayString>{{xxxsize = {m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString> -->
+	</Type>
+	<Type Name="boost::container::vector&lt;*&gt;">
+		<DisplayString>{{ size={members_.m_size} }}</DisplayString>
+		<Expand>
+			<Item Name="[size]">members_.m_size</Item>
+			<Item Name="[capacity]">members_.m_capacity</Item>
+			<ArrayItems>
+					<Size>members_.m_size</Size>
+					<ValuePointer>members_.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="std::__1::__basic_string_common&lt;true&gt;">
+		<DisplayString Condition="(__r_.__value_.__s.__size_ &amp; 1) == 0">{__r_.__value_.__s.__data_, s8b}</DisplayString>
+		<DisplayString Condition="(__r_.__value_.__s.__size_ &amp; 1) != 0">{__r_.__value_.__l.__data_, s8b}</DisplayString>
+		<Expand>
+			<Item Name="[size z(packed)]" Condition="(__r_.__value_.__s.__size_ &amp; 1) == 0">(__r_.__value_.__s.__size_ &gt;&gt; 1) % 256</Item>
+			<Item Name="[size]" Condition="(__r_.__value_.__s.__size_ &amp; 1) != 0">__r_.__value_.__l.__size_</Item>
+		</Expand>
+	</Type>
+	<Type Name="std::__1::__fs::filesystem::path">
+		<DisplayString>{__pn_}</DisplayString>
+	</Type>
+	<Type Name="std::__1::string_view">
+		<DisplayString>{__data}</DisplayString>
+	</Type>
+	<Type Name="std::__1::basic_string_view&lt;*&gt;">
+		<DisplayString>{__data}</DisplayString>
+	</Type>
+	<Type Name="std::__1::shared_ptr&lt;*&gt;">
+		<DisplayString Condition="__ptr_!=0">{__ptr_}</DisplayString>
+		<DisplayString Condition="__ptr_==0">{{nullptr}}</DisplayString>
+	</Type>
+	<Type Name="std::__1::unique_ptr&lt;*&gt;">
+		<DisplayString Condition="__ptr_!=0">{__ptr_}</DisplayString>
+		<DisplayString Condition="__ptr_==0">{{nullptr}}</DisplayString>
+	</Type>
+	<Type Name="std::__1::optional&lt;*&gt;">
+		<DisplayString Condition="__engaged_">{__val_}</DisplayString>
+		<DisplayString Condition="!__engaged_">{{null}}</DisplayString>
+	</Type>
+<!-- https://github.com/KindDragon/CPPDebuggerVisualizers/blob/master/VS2019/Visualizers/boost_Containers.natvis -->
+	<Type Name="boost::container::flat_set&lt;*&gt;">
+		<DisplayString>{{flat_set({m_flat_tree.m_data.m_seq.m_holder.m_size})}}</DisplayString>
+		 <Expand>
+			<ArrayItems>
+				<Size>m_flat_tree.m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_flat_tree.m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="std::__1::map&lt;*&gt;">
+   	<DisplayString>{{size = {__tree_.__pair3_.__value_}}}</DisplayString>
+		<Expand>
+			<TreeItems>
+				<Size>__tree_.__pair3_.__value_</Size>
+				<HeadPointer>__begin_node</HeadPointer>
+				<LeftPointer>__left_</LeftPointer>
+				<RightPointer>__rigth_</RightPointer>
+				<ValueNode Condition="!((bool)_Isnil)">__value_</ValueNode>
+			</TreeItems>
+		</Expand>
+  </Type>
+	<Type Name="Jde::sp&lt;*&gt;">
+		<DisplayString Condition="__ptr_!=0">{__ptr_}</DisplayString>
+		<DisplayString Condition="__ptr_==0">{{nullptr}}</DisplayString>
+	</Type>
+</AutoVisualizer>
