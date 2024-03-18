@@ -1,19 +1,16 @@
 #include <jde/crypto/OpenSsl.h>
+#include "OpenSslInternal.h"
 #include "../../../Ssl/source/Ssl.h"
 
 #define var const auto
 
 namespace Jde{
+	namespace Crypto{
+		auto _logTag = Logging::Tag( "crypto" );
+		α OpenSslException::CurrentError()ι->string{ char b[120]; ERR_error_string( ERR_get_error(), b ); return {b}; }
+	}
 	using namespace Jde::Crypto::Internal;
 
-	#define CALL( call ) if( int rc=call; rc!=1 ) throw Crypto::OpenSslException( "#call - {}", rc, SRCE_CUR, Crypto::OpenSslException::CurrentError() )
-	#define CHECK_NULL( p ) THROW_IFX( !p, Crypto::OpenSslException("{}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) )
-
-	template<typename T, typename D>
-	α MakeHandle( T* p, D deleter, SRCE )ε{
-		THROW_IFX( !p, Crypto::OpenSslException("MakeHandle - p is null - {}", 0, sl, Crypto::OpenSslException::CurrentError()) );
-		return up<T,D>{ p, deleter };
-	}
 	//https://stackoverflow.com/questions/5927164/how-to-generate-rsa-private-key-using-openssl
 	α Crypto::CreateKey( const fs::path& publicKeyPath, const fs::path& privateKeyPath )ε->void{
 		auto pctx = NewRsaCtx();
@@ -64,32 +61,24 @@ namespace Jde{
 		var pKey = RsaPemFromModExp( modulus, exponent );
 		CALL( EVP_VerifyFinal(pCtx.get(), (const unsigned char*)signature.c_str(), (int)signature.size(), pKey.get()) );
 	}
-	namespace Crypto{
-		α File( const fs::path& path, const char* rw )ε->BioPtr{
-			auto p = BIO_new_file(path.string().c_str(), rw); CHECK_NULL( p );
-			return BioPtr{ p, ::BIO_free };
-		}
-		α Internal::ReadFile( const fs::path& path )ε->BioPtr{ return File( path, "r" ); }
-		α Internal::ReadPublicKey( const fs::path& path )ε->KeyPtr{ 
-			//EVP_PKEY_print_public(publicBio.get(), pKey.get(), 0, nullptr) ); //Traditional PEM
-			EVP_PKEY* pkey = ::PEM_read_bio_PUBKEY( ReadFile(path).get(), nullptr, nullptr, nullptr ); CHECK_NULL( pkey );
-			return { pkey, ::EVP_PKEY_free };
-		}
-		α Internal::ReadPrivateKey( const fs::path& path )ε->KeyPtr{ 
-			EVP_PKEY* pkey = PEM_read_bio_PrivateKey( ReadFile(path).get(), nullptr, nullptr, nullptr ); CHECK_NULL( pkey );
-			return { pkey, ::EVP_PKEY_free };
-		}
-		α Internal::NewRsaCtx(SL sl)ε->CtxPtr{ 
-			auto pctx = MakeHandle( EVP_PKEY_CTX_new_from_name(nullptr, "RSA", nullptr), EVP_PKEY_CTX_free, sl ); 
-			EVP_PKEY_keygen_init( pctx.get() );
-			return pctx;
-		}
-		α Internal::NewCtx( const KeyPtr& key, SL sl )ε->CtxPtr{
-			return MakeHandle( EVP_PKEY_CTX_new(key.get(), nullptr), EVP_PKEY_CTX_free, sl );
-		}
-		α Internal::ToBigNum( const vector<unsigned char>& x )ε->BNPtr{
-			auto p = MakeHandle( BN_bin2bn( x.data(), (int)x.size(), nullptr ), ::BN_free, SRCE_CUR ); CHECK_NULL( p.get() );
-			return p;
-		}
+
+	α Crypto::ReadCertificate( const fs::path& certificate )ε->vector<byte>{
+		X509Ptr cert{ PEM_read_bio_X509(ReadFile(certificate).get(), nullptr, 0, nullptr), ::X509_free };  CHECK_NULL( cert );
+
+		auto len = i2d_X509( cert.get(), nullptr ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_X509 - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
+		vector<byte> y( len );
+		unsigned char* p = (unsigned char*)y.data();
+		len = i2d_X509( cert.get(), &p ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_X509 - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
+		int crit{};
+ 		GENERAL_NAMES* pNames = (GENERAL_NAMES*) X509_get_ext_d2i( cert.get(), NID_subject_alt_name, &crit, nullptr ); CHECK_NULL(pNames);
+		return y;
+	}
+	α Crypto::ReadPrivateKey( const fs::path& privateKeyPath, str passcode )ε->vector<byte>{
+		auto pkey = Internal::ReadPrivateKey( privateKeyPath, passcode );
+		auto len = i2d_PrivateKey( pkey.get(), nullptr ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_PrivateKey - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
+		vector<byte> y( len );
+		unsigned char* pTemp = (unsigned char*)y.data();
+		len = i2d_PrivateKey( pkey.get(), &pTemp ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_PrivateKey - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
+		return y;
 	}
 }

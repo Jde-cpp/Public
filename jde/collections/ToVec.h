@@ -32,7 +32,7 @@ namespace Jde::ToVec
 		}
 	}
 
-	Ξ FormatVectorArgs( sv fmt, const vector<string>& args )ι{
+	Ξ FormatVectorArgs( sv fmt, const vector<string>& args )ε{
 		return std::accumulate(
 			std::begin( args ),
 			std::end( args ),

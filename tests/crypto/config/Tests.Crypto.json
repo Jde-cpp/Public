@@ -1,4 +1,10 @@
 {
+	"testing":{
+		"testsx":"OpenSslTests.Certificate"
+	},
+	"cryptoTests":{
+		"clear": true
+	},
 	"logging":{
 		"tags": {
 			"Trace":[],

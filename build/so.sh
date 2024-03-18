@@ -7,7 +7,6 @@ compiler=${4:-g++-13}
 dir=../..;
 cwd=`pwd`
 export CXX=$compiler;
-echo $CXX
 cd $path
 if [ ! -d .obj ]; then mkdir .obj; fi;
 cd .obj;

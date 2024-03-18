@@ -68,7 +68,7 @@ namespace Jde::Logging{
 	//α Log( const Logging::MessageBase& messageBase )ι->void;
 	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void;
 	ψ Log( const Logging::MessageBase& m, const sp<LogTag>& tag, bool logServer, bool break_, Args&&... args )ι->void;
-	ψ Log( const Logging::MessageBase& m, const sp<LogTag>& tag, Args&&... args )ι->void{ Log( m, tag, true, args... ); }
+	ψ Log( const Logging::MessageBase& m, const sp<LogTag>& tag, Args&&... args )ι->void{ Log( m, tag, true, true, args... ); }
 
 	Φ ShouldLogOnce( const Logging::MessageBase& messageBase )ι->bool;
 	Φ LogOnce( Logging::MessageBase&& messageBase, const sp<LogTag>& logTag )ι->void;

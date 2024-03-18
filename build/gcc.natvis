@@ -1,20 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-	<Type Name="std::string">
-		<AlternativeType Name="std::__cxx11::basic_string&lt;*&gt;"/>
-		<AlternativeType Name="Jde::str"/>
-		<DisplayString>{{s={_M_dataplus._M_p,s}}}</DisplayString>
-		<Expand>
-				<Item Name="size">_M_string_length</Item>
-				<Item Name="string">_M_dataplus._M_p,s</Item>
-		</Expand>
-	</Type>	
-	<Type Name="std::filesystem::__cxx11::path">
-		<DisplayString>{_M_pathname._M_dataplus._M_p}</DisplayString>
-	</Type>
-	<Type Name="std::filesystem::path">
-    <DisplayString>{_M_pathname._M_dataplus}</DisplayString>
-  </Type>
 	<Type Name="std::optional&lt;*&gt;">
 		<DisplayString Condition="_M_payload._M_engaged == false">null</DisplayString>
 		<DisplayString>{_M_payload._M_payload._M_value}</DisplayString>
@@ -22,8 +7,12 @@
 				<ExpandedItem Condition="_M_payload._M_engaged == true">_M_payload._M_payload._M_value</ExpandedItem>
 		</Expand>
 	</Type>	
+	<Type Name="std::filesystem::path">
+		<AlternativeType Name="std::filesystem::__cxx11::path"/>
+		<AlternativeType Name="const std::filesystem::__cxx11::path &amp;"/>
+    <DisplayString>{_M_pathname._M_dataplus}</DisplayString>
+  </Type>
 	<Type Name="std::map&lt;*&gt;">
-		<AlternativeType Name="std::multimap&lt;*&gt;"/>
 		<DisplayString>{{ size={_M_t._M_impl._M_node_count} }}</DisplayString>
 		<Expand>
 				<Item Name="size">_M_t._M_impl._M_node_count</Item>
@@ -36,6 +25,16 @@
 				</TreeItems>
 		</Expand>
 	</Type>
+	<Type Name="std::string">
+		<AlternativeType Name="std::__cxx11::basic_string&lt;*&gt;"/>
+		<AlternativeType Name="Jde::str"/>
+		<AlternativeType Name="std::string&amp;&amp;"/>
+		<DisplayString>{{s={_M_dataplus._M_p,s}}}</DisplayString>
+		<Expand>
+				<Item Name="size">_M_string_length</Item>
+				<Item Name="string">_M_dataplus._M_p,s</Item>
+		</Expand>
+	</Type>	
  <Type Name="std::unique_ptr&lt;*&gt;">
 		<DisplayString Condition="_M_t._M_t.std::_Head_base&lt;0, $T1*, false&gt;::_M_head_impl == 0">{{nullptr}}</DisplayString>
 		<DisplayString>{*std::_Head_base&lt;0, $T1*, false&gt;::_M_head(_M_t._M_t)}</DisplayString>
@@ -44,25 +43,36 @@
 		</Expand>
 	</Type>
 	<Type Name="std::vector&lt;*&gt;">
+		<AlternativeType Name="std::__debug::vector&lt;*&gt;"/>
+		<AlternativeType Name="std::__cxx1998::_Vector_base&lt;*&gt;"/>
+		<AlternativeType Name="nlohmann::basic_json&lt;*&gt;::array_t"/>
     <DisplayString>{{size={_M_impl._M_finish - _M_impl._M_start}}}</DisplayString>
     <Expand>
       <Item Name="[size]" ExcludeView="simple">_M_impl._M_finish - _M_impl._M_start</Item>
-      <Item Name="[capacity]" ExcludeView="simple">_M_impl._M_end_of_storage - _M_impl._M_start</Item>
       <ArrayItems>
         <Size>_M_impl._M_finish - _M_impl._M_start</Size>
         <ValuePointer>_M_impl._M_start</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
-	<Type Name="std::__debug::vector&lt;*&gt;">
-    <DisplayString>{{size={_M_impl._M_finish - _M_impl._M_start}}}</DisplayString>
-    <Expand>
-      <Item Name="[size]" ExcludeView="simple">_M_impl._M_finish - _M_impl._M_start</Item>
-      <Item Name="[capacity]" ExcludeView="simple">_M_impl._M_end_of_storage - _M_impl._M_start</Item>
-      <ArrayItems>
-        <Size>_M_impl._M_finish - _M_impl._M_start</Size>
-        <ValuePointer>_M_impl._M_start</ValuePointer>
-      </ArrayItems>
-    </Expand>
-  </Type>	
+ 	<Type Name="nlohmann::basic_json&lt;*&gt;">
+ 		<AlternativeType Name="nlohmann::json"/>
+		<DisplayString Condition="m_type == nlohmann::detail::value_t::null">null</DisplayString>
+		<DisplayString Condition="m_type == nlohmann::detail::value_t::object">{*(m_value.object)}</DisplayString>
+		<DisplayString Condition="m_type == nlohmann::detail::value_t::array">{{array={*(m_value.array)}}}</DisplayString>
+		<DisplayString Condition="m_type == nlohmann::detail::value_t::string">{*(m_value.string)}</DisplayString>
+		<DisplayString Condition="m_type == nlohmann::detail::value_t::boolean">{m_value.boolean}</DisplayString>
+		<DisplayString Condition="m_type == nlohmann::detail::value_t::number_integer">{m_value.number_integer}</DisplayString>
+		<DisplayString Condition="m_type == nlohmann::detail::value_t::number_unsigned">{m_value.number_unsigned}</DisplayString>
+		<DisplayString Condition="m_type == nlohmann::detail::value_t::number_float">{m_value.number_float}</DisplayString>
+		<DisplayString Condition="m_type == nlohmann::detail::value_t::discarded">discarded</DisplayString>
+		<Expand>
+				<ExpandedItem Condition="m_type == nlohmann::detail::value_t::object">
+						*(m_value.object),view(simple)
+				</ExpandedItem>
+				<ExpandedItem Condition="m_type == nlohmann::detail::value_t::array">
+						*(m_value.array),view(simple)
+				</ExpandedItem>
+		</Expand>
+	</Type>	
 </AutoVisualizer>
