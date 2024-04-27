@@ -27,6 +27,9 @@
     <Filter Include="Source\proto">
       <UniqueIdentifier>{08f4e025-dbfe-4573-9785-b40010a86add}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Headers\proto">
+      <UniqueIdentifier>{19be74ae-235b-4d8a-bc27-77fc96b63d72}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Exports.h">
@@ -43,6 +46,9 @@
     </ClInclude>
     <ClInclude Include="WebSocket.h">
       <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\FromServer.pb.h">
+      <Filter>Headers\proto</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

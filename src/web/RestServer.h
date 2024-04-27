@@ -72,7 +72,7 @@ namespace Jde::Web::Rest{
 		β HandleRequest( string&& target, flat_map<string,string>&& params, Request&& req )ι->void=0;
 		α HandleRequest( Request req )ι->Task;
 
-		Ω Send( Exception&& e, Request&& req )ι->void;
+		Ω Send( IException&& e, Request&& req )ι->void;
 		Ω Send( http::status status, string what, Request&& req )ι->void;
 		Ω Send( const IRequestException&& e, Request&& req )ι->void;
 		Ω Send( string&& value, Request&& req )ι->void;

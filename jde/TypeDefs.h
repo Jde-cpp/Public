@@ -36,6 +36,11 @@ using std::suspend_never;
 	#endif
 	#define __PRETTY_FUNCTION__ __FUNCSIG__
 	using std::stop_token;
+	#ifdef NDEBUG
+		#pragma comment(lib, "fmt.lib")
+	#else
+		#pragma comment(lib, "fmtd.lib")
+	#endif
 #endif
 
 #define DISABLE_WARNINGS _Pragma("warning(push, 0)") _Pragma("warning(disable: 4244)") _Pragma("warning(disable: 4702)") _Pragma("warning(disable: 4715)") _Pragma("warning(disable: 44996)") _Pragma("warning(disable: 5105 )") _Pragma("warning(disable: 4701)") _Pragma("warning(disable: 5054)") _Pragma("warning(disable: 5260)")

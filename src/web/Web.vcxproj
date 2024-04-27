@@ -121,14 +121,13 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>libprotobufd.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libprotobufd.lib;fmtd.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);../../stage/$(ConfigurationName);C:\Program Files\OpenSSL-Win64\lib\VC\x64\MDd</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ImportLibrary>$(OutDir)$(TargetName).lib</ImportLibrary>
       <ProgramDataBaseFile>$(OutDir)$(TargetName).pdb</ProgramDataBaseFile>
       <SubSystem>Console</SubSystem>
-      <ShowProgress>NotSet</ShowProgress>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -175,8 +174,8 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>libprotobufd.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libprotobufd.lib;fmtd.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);../../stage/$(ConfigurationName);C:\Program Files\OpenSSL-Win64\lib\VC\x64\MDd</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ImportLibrary>$(OutDir)$(TargetName).lib</ImportLibrary>
@@ -228,8 +227,8 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <Link>
-      <AdditionalDependencies>libprotobuf.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libprotobuf.lib;fmt.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);../../stage/$(ConfigurationName);$(REPO_DIR)\vcpkg\installed\x64-windows\lib;C:\Program Files\OpenSSL-Win64\lib\VC\x64\MD</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ImportLibrary>$(OutDir)$(TargetName).lib</ImportLibrary>
@@ -264,14 +263,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="C:\Users\duffyj\source\repos\jde\Public\src\web\build\ZERO_CHECK.vcxproj">
-      <Project>{0A3F5DF8-9AA7-388E-A733-1C7F91485047}</Project>
-      <Name>ZERO_CHECK</Name>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="Exports.h" />
     <ClCompile Include="pc.h">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -291,6 +282,7 @@
       </ForcedIncludeFiles>
     </ClCompile>
     <ClInclude Include="ProtoServer.h" />
+    <ClInclude Include="proto\FromServer.pb.h" />
     <ClInclude Include="RestServer.h" />
     <ClInclude Include="TypeDefs.h" />
     <ClInclude Include="WebSocket.h" />

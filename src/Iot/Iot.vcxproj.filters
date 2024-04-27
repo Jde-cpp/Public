@@ -1,0 +1,162 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\async">
+      <UniqueIdentifier>{1e6766aa-1467-4038-b18d-997f1cd65b08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\uatypes">
+      <UniqueIdentifier>{f7abfc9c-8ea8-416c-ba6a-c51c5aaf326d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\types">
+      <UniqueIdentifier>{106f9ed5-7820-4ed9-8520-e093ce937ba0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\types\proto">
+      <UniqueIdentifier>{5f445cc4-01a1-4fec-a490-66368be6eec2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\uatypes">
+      <UniqueIdentifier>{b10f0224-1df2-40cd-b427-a916b7d9900e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\async">
+      <UniqueIdentifier>{b244bc3c-3d34-4d3c-8e3a-5a5e7653ab8f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\types">
+      <UniqueIdentifier>{f298d0c1-2c22-4259-80cf-a1ac68739d18}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\types\proto">
+      <UniqueIdentifier>{7e1b7670-a349-454e-a060-b612e6b8ac07}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\Windows\source\dllmain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pc.h">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="async\AsyncRequest.cpp">
+      <Filter>Source Files\async</Filter>
+    </ClCompile>
+    <ClCompile Include="async\Attributes.cpp">
+      <Filter>Source Files\async</Filter>
+    </ClCompile>
+    <ClCompile Include="async\ConnectAwait.cpp">
+      <Filter>Source Files\async</Filter>
+    </ClCompile>
+    <ClCompile Include="async\CreateSubscriptions.cpp">
+      <Filter>Source Files\async</Filter>
+    </ClCompile>
+    <ClCompile Include="async\DataChanges.cpp">
+      <Filter>Source Files\async</Filter>
+    </ClCompile>
+    <ClCompile Include="async\SessionAwait.cpp">
+      <Filter>Source Files\async</Filter>
+    </ClCompile>
+    <ClCompile Include="async\SetMonitoringMode.cpp">
+      <Filter>Source Files\async</Filter>
+    </ClCompile>
+    <ClCompile Include="async\Write.cpp">
+      <Filter>Source Files\async</Filter>
+    </ClCompile>
+    <ClCompile Include="uatypes\Browse.cpp">
+      <Filter>Source Files\uatypes</Filter>
+    </ClCompile>
+    <ClCompile Include="uatypes\Logger.cpp">
+      <Filter>Source Files\uatypes</Filter>
+    </ClCompile>
+    <ClCompile Include="uatypes\Node.cpp">
+      <Filter>Source Files\uatypes</Filter>
+    </ClCompile>
+    <ClCompile Include="uatypes\UAClient.cpp">
+      <Filter>Source Files\uatypes</Filter>
+    </ClCompile>
+    <ClCompile Include="uatypes\Value.cpp">
+      <Filter>Source Files\uatypes</Filter>
+    </ClCompile>
+    <ClCompile Include="types\MonitoringNodes.cpp">
+      <Filter>Source Files\types</Filter>
+    </ClCompile>
+    <ClCompile Include="types\OpcServer.cpp">
+      <Filter>Source Files\types</Filter>
+    </ClCompile>
+    <ClCompile Include="types\proto\IotCommon.pb.cc">
+      <Filter>Source Files\types\proto</Filter>
+    </ClCompile>
+    <ClCompile Include="types\proto\IotFromClient.pb.cc">
+      <Filter>Source Files\types\proto</Filter>
+    </ClCompile>
+    <ClCompile Include="types\proto\IotFromServer.pb.cc">
+      <Filter>Source Files\types\proto</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="TypeDefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\async\AsyncRequest.h">
+      <Filter>Header Files\async</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\async\ConnectAwait.h">
+      <Filter>Header Files\async</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\async\CreateSubscriptions.h">
+      <Filter>Header Files\async</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\async\DataChanges.h">
+      <Filter>Header Files\async</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\async\SessionAwait.h">
+      <Filter>Header Files\async</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\async\SetMonitoringMode.h">
+      <Filter>Header Files\async</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\async\Write.h">
+      <Filter>Header Files\async</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\uatypes\Browse.h">
+      <Filter>Header Files\uatypes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\uatypes\helpers.h">
+      <Filter>Header Files\uatypes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\uatypes\Logger.h">
+      <Filter>Header Files\uatypes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\uatypes\MonitoredItemCreateResult.h">
+      <Filter>Header Files\uatypes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\uatypes\Node.h">
+      <Filter>Header Files\uatypes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\uatypes\UAClient.h">
+      <Filter>Header Files\uatypes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\uatypes\UAException.h">
+      <Filter>Header Files\uatypes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\uatypes\Value.h">
+      <Filter>Header Files\uatypes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\types\FromServer.h">
+      <Filter>Header Files\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\types\MonitoringNodes.h">
+      <Filter>Header Files\types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jde\iot\types\OpcServer.h">
+      <Filter>Header Files\types</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

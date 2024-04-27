@@ -359,7 +359,7 @@ namespace Jde
 	{
 		boost::trim_left( s );
 #ifdef _MSC_VER
-		//auto w = Windows::ToWString( s );
+	#pragma warning( disable: 4996 )
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 		auto w = converter.from_bytes( s.data(), s.data()+s.size() );
 		boost::trim_left( w );

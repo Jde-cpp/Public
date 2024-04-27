@@ -40,8 +40,7 @@ namespace Jde::WebSocket
 	};
 
 	template<class TFromServer, class TServerSession>
-	struct TListener /*abstract*/ : WebListener, IShutdown
-	{
+	struct TListener /*abstract*/ : WebListener, IShutdown{
 		TListener( PortType port )ι: WebListener{ port } {}
 		~TListener()=0;
 		α Push( IO::Sockets::SessionPK sessionId, TFromServer&& m )ι->void;
@@ -56,8 +55,7 @@ namespace Jde::WebSocket
 		sp<tcp::acceptor> _pAcceptor;
 	};
 
-	struct ΓW Session /*abstract*/: IO::Sockets::ISession, std::enable_shared_from_this<Session>
-	{
+	struct ΓW Session /*abstract*/: IO::Sockets::ISession, std::enable_shared_from_this<Session>{
 		Session( WebListener& server, SessionPK id, tcp::socket&& socket ):ISession{id}, _ws{std::move(socket)}, _server{server}{ _ws.binary( true ); }
 		β Close()ι->void{};
 		β Run()ι->void;
@@ -77,8 +75,7 @@ namespace Jde::WebSocket
 		beast::flat_buffer _buffer;
 	};
 	template<class TFromServer, class TFromClient>
-	struct TSession /*abstract*/ : Session//, public std::enable_shared_from_this<TSession<TFromServer,TFromClient>>
-	{
+	struct TSession /*abstract*/ : Session{//, public std::enable_shared_from_this<TSession<TFromServer,TFromClient>>
 		TSession( WebListener& server, SessionPK id, tcp::socket&& socket )ε : Session{ server, id, move(socket) }{}
 
 		α OnRead( const char* p, uint size )ι->void;
@@ -96,8 +93,7 @@ namespace Jde::WebSocket
 	{}
 
 #define $ template<class TFromServer, class TServerSession> auto TListener<TFromServer,TServerSession>
-	$::Shutdown()ι->void
-	{
+	$::Shutdown()ι->void{
 		_shutdown = true;
 		shared_lock l{_sessionMutex};
 		for_each( _sessions.begin(), _sessions.end(), []( auto& pair ){ static_pointer_cast<TServerSession>(pair.second)->Close();} );
@@ -112,15 +108,13 @@ namespace Jde::WebSocket
 			auto t = IO::Proto::Deserialize<TFromClient>( (const google::protobuf::uint8*)p, (int)size );
 			OnRead( move(t) );
 		}
-		catch( const Exception& )
+		catch( const IException& )
 		{}
 	}
-	$::Write( TFromServer&& message )ε->Task
-	{
+	$::Write( TFromServer&& message )ε->Task{
 		return Write( mu<string>(IO::Proto::ToString(message)) );
 	}
-	$::Write( up<string> pData )ι->Task
-	{
+	$::Write( up<string> pData )ι->Task{
 		var buffer = net::buffer( (const void*)pData->data(), pData->size() );
 		LockAwait await = _writeLock.Lock(); //gcc doesn't like co_await _writeLock.Lock();
 		AwaitResult task = co_await await;

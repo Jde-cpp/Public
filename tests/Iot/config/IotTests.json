@@ -1,0 +1,28 @@
+{
+	"testing":{
+		"testsx":"OpenSslTests.Certificate"
+	},
+	"db":{
+		"driverx": "./libJde.MySql.so",
+		"connectionString": "DSN=iot",
+		"meta": "../config/IotWebSocketMeta.json"
+	},
+	"iot": {
+		"target":  "Default"
+	},
+	"logging":{
+		"tags": {
+			"Trace":["tests"],
+			"Debug":["settings"],
+			"Information":["alarm"],
+			"Warning":[],
+			"Error":[],
+			"Critical":[]
+		},
+		"console":{}
+	},
+	"workers":{
+		"drive":{ "threads":  1 },
+		"Alarm":{ "threads":  1 }
+	}
+}

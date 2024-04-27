@@ -2,6 +2,6 @@
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
     <IncludePath>$(BOOST_DIR);C:\Program Files\OpenSSL-Win64\include;$(REPO_DIR)/protobuf/src;$(REPO_DIR)/spdlog/include;$(REPO_DIR)/vcpkg/installed/x64-windows/include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(OutDir);$(JDE_DIR)/Public/stage/$(Configuration);$(REPO_DIR)/vcpkg/installed/x64-windows/$(Configuration)/lib;;$(REPO_DIR)/protobuf/cmake/build/$(Configuration)$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(OutDir);$(JDE_DIR)/Public/stage/$(Configuration);C:\Program Files\OpenSSL-Win64\lib;$(REPO_DIR)/vcpkg/installed/x64-windows/$(Configuration)/lib;$(REPO_DIR)\protobuf\cmake\build\sln\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
 </Project>

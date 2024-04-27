@@ -37,7 +37,9 @@ namespace Jde::ToVec
 			std::begin( args ),
 			std::end( args ),
 			string{ fmt },
-			[](sv toFmt, str arg){ return fmt::vformat( toFmt, fmt::make_format_args(arg) ); }
+			[](sv toFmt, str arg){ 
+				return fmt::vformat( toFmt, fmt::make_format_args(arg) ); 
+			}
 		);
 	}	
 

@@ -15,5 +15,8 @@
 			"Critical":[]
 		},
 		"console":{}
+	},
+	"workers":{
+		"drive": {"threads": 1}
 	}
 }

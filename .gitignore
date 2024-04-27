@@ -51,3 +51,10 @@ src/crypto/.vscode/c_cpp_properties.json
 src/crypto/.vscode/settings.json
 src/crypto/.vscode/tasks.json
 tests/crypto/.vscode/c_cpp_properties.json
+/src/crypto/build
+/src/crypto/Jde.Crypto.dir/Debug
+/src/crypto/packages/*
+/src/crypto/x64/Debug
+src/Iot/packages/*
+jde/iot/types/proto/google/*
+jde/iot/types/proto/FromServer.proto

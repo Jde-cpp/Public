@@ -49,6 +49,7 @@ namespace Jde
 		IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, SRCE )ι;
 		IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, sp<LogTag>&& tag={}, SRCE )ι;
 		IException( IException&& from )ι;
+		IException( const IException& from )ι;
 
 		$ IException( SL sl, std::exception&& inner, ELogLevel level, sv format_={}, Args&&... args )ι;
 		$ IException( SL sl, ELogLevel l, sv m, Args&& ...args )ι;
@@ -89,6 +90,7 @@ namespace Jde
 	{
 		Exception( string what, ELogLevel l=ELogLevel::Debug, SRCE )ι;
 		Exception( Exception&& from )ι:IException{ move(from) }{}
+		Exception( const Exception& from )ι:IException{ from }{}
 		Exception( string what, uint code, ELogLevel level=ELogLevel::Debug, SRCE )ι:IException{what, level, code, sl}{};
 		$ Exception( SL sl, std::exception&& inner, ELogLevel level, sv format_={}, Args&&... args )ι:IException{sl, move(inner), level, format_, args...}{}
 		$ Exception( SL sl, std::exception&& inner, sv format_={}, Args&&... args )ι:Exception{sl, move(inner), DefaultLogLevel, format_, args...}{}
@@ -213,7 +215,7 @@ namespace Jde
 	}
 	$ IException::IException( SL sl, ELogLevel l, uint code, fmt::format_string<Args...> m, Args&&... args )ι:
 		_stack{ sl },
-		_format{ m.get() },
+		_format{ sv{m.get().data(), m.get().size()} },
 		//_format{ sv{spdlog::details::to_string_view(m).data(), spdlog::details::to_string_view(m).size()} },
 		Code{ code },
 		_level{ l }

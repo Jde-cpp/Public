@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+﻿#include "gtest/gtest.h"
 #include "../../../Framework/source/Settings.h"
 #include "../../../Framework/source/Cache.h"
 #define var const auto

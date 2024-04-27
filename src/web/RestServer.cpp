@@ -89,7 +89,7 @@ namespace Jde::Web::Rest{
     Send( move(y), move(req.Session) );
 	}
 
-	α ISession::Send( Exception&& e, Request&& req )ι->void{
+	α ISession::Send( IException&& e, Request&& req )ι->void{
 		var p = dynamic_cast<IRequestException*>( &e );
 		string what = p ? p->what() : Jde::format( "Internal Server Error:  '{:x}'.", e.Code );
 		e.Move();  //want the log to show here.
@@ -133,7 +133,7 @@ namespace Jde::Web::Rest{
 			AddSession2(p);
 			h.promise().SetResult<SessionInfo>( move(p) );
 		}
-		catch( Exception& e ){
+		catch( IException& e ){
 			h.promise().SetResult( move(e) );
 		}
 		h.resume();
@@ -190,7 +190,7 @@ namespace Jde::Web::Rest{
 			if( req.Session )
 				throw RequestException<http::status::not_found>( SRCE_CUR, "Could not find target '{}'.", target );
 		}
-		catch( Exception& e ){
+		catch( IException& e ){
 			Send( move(e), move(req) );
 		}
 	}
