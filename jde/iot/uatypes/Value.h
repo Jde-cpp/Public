@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "../Exports.h"
+#include <jde/iot/types/proto/IotFromServer.pb.h>
 
 namespace Jde::Iot{
 	namespace Browse{ struct Response; }

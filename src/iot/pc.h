@@ -9,7 +9,7 @@
 #include <open62541/client_highlevel_async.h>
 #include <open62541/client_subscriptions.h>
 #include <open62541/plugin/log_stdout.h>
-#include <jde/iot/typedefs.h>
+#include <jde/iot/TypeDefs.h>
 #include <jde/Exports.h>
 #include <jde/Log.h>
 #include <jde/App.h>

@@ -1,4 +1,6 @@
 ﻿#pragma once
+#ifndef TYPEDEFS_H
+#define TYPEDEFS_H
 
 #ifdef _MSC_VER
 	#pragma warning( push, 0  )
@@ -179,3 +181,4 @@ namespace Jde
 	inline constexpr bool _debug{ true };
 #endif
 }
+#endif

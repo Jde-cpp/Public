@@ -1,7 +1,7 @@
 ﻿#pragma once
-#include "Exports.h"
+#include "exports.h"
 
-#define Φ __declspec( dllexport ) auto
+#define Φ ΓC auto
 
 namespace Jde::Crypto{
 	Φ CreateKey( const fs::path& publicKeyPath, const fs::path& privateKeyPath, str passcode )ε->void;

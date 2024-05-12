@@ -10,7 +10,10 @@
 	<Type Name="std::filesystem::path">
 		<AlternativeType Name="std::filesystem::__cxx11::path"/>
 		<AlternativeType Name="const std::filesystem::__cxx11::path &amp;"/>
-    <DisplayString>{_M_pathname._M_dataplus}</DisplayString>
+		<DisplayString>{{p2={_M_pathname._M_dataplus._M_p,s}}}</DisplayString>
+		<Expand>
+				<ExpandedItem>p={_M_pathname._M_dataplus}</ExpandedItem>
+		</Expand>
   </Type>
 	<Type Name="std::map&lt;*&gt;">
 		<DisplayString>{{ size={_M_t._M_impl._M_node_count} }}</DisplayString>
@@ -29,12 +32,22 @@
 		<AlternativeType Name="std::__cxx11::basic_string&lt;*&gt;"/>
 		<AlternativeType Name="Jde::str"/>
 		<AlternativeType Name="std::string&amp;&amp;"/>
+		<AlternativeType Name="Jde::DB::SchemaName"/>
 		<DisplayString>{{s={_M_dataplus._M_p,s}}}</DisplayString>
 		<Expand>
 				<Item Name="size">_M_string_length</Item>
 				<Item Name="string">_M_dataplus._M_p,s</Item>
 		</Expand>
 	</Type>	
+	<Type Name="std::shared_ptr&lt;*&gt;">
+		<!-- <DisplayString Condition="_M_ptr!=0">{*_M_ptr}</DisplayString> -->
+    <DisplayString Condition="_M_ptr!=0">{*_M_ptr}</DisplayString>
+		<DisplayString Condition="_M_ptr==0">{{nullptr}}</DisplayString>
+		<Expand>
+			<Item Name="strong refs">_M_refcount._M_pi-&gt;_M_use_count</Item>
+			<Item Name="weak refs">_M_refcount._M_pi-&gt;_M_weak_count</Item>
+    </Expand>		
+	</Type>
  <Type Name="std::unique_ptr&lt;*&gt;">
 		<DisplayString Condition="_M_t._M_t.std::_Head_base&lt;0, $T1*, false&gt;::_M_head_impl == 0">{{nullptr}}</DisplayString>
 		<DisplayString>{*std::_Head_base&lt;0, $T1*, false&gt;::_M_head(_M_t._M_t)}</DisplayString>
@@ -45,6 +58,7 @@
 	<Type Name="std::vector&lt;*&gt;">
 		<AlternativeType Name="std::__debug::vector&lt;*&gt;"/>
 		<AlternativeType Name="std::__cxx1998::_Vector_base&lt;*&gt;"/>
+		<AlternativeType Name="std::__debug::vector&lt;*&gt;"/>
 		<AlternativeType Name="nlohmann::basic_json&lt;*&gt;::array_t"/>
     <DisplayString>{{size={_M_impl._M_finish - _M_impl._M_start}}}</DisplayString>
     <Expand>
@@ -75,4 +89,13 @@
 				</ExpandedItem>
 		</Expand>
 	</Type>	
+	<Type Name="boost::container::flat_map&lt;*&gt;">
+		<DisplayString>{{size={m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Size>m_flat_tree.m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_flat_tree.m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
 </AutoVisualizer>

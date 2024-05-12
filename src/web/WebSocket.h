@@ -5,10 +5,11 @@ DISABLE_WARNINGS
 #include <boost/exception/diagnostic_information.hpp>
 ENABLE_WARNINGS
 #include <jde/App.h>
-//#include "../collections/UnorderedMap.h"
 #include "../../../Framework/source/io/Socket.h"
 #include "../../../Framework/source/io/ProtoUtilities.h"
 #include "../../../Framework/source/threading/Mutex.h"
+#include "Exports.h"
+
 #define var const auto
 #define _logTag WebSocketTag()
 namespace Jde::WebSocket

@@ -1,4 +1,6 @@
 ﻿#pragma once
+#ifndef REST_SERVER_H
+#define REST_SERVER_H
 #include <boost/asio/strand.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -140,3 +142,4 @@ namespace Jde::Web::Rest{
   }
 }
 #undef _logTag
+#endif

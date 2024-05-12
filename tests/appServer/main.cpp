@@ -1,24 +1,26 @@
-﻿#include "gtest/gtest.h"
+#include "gtest/gtest.h"
 #include "../../../Framework/source/Settings.h"
-#include "../../../Framework/source/Cache.h"
-#define var const auto
+#include <jde/App.h>
+#include "../../../AppServer/source/LogClient.h"
+#include "../../../AppServer/source/LogData.h"
+#include "../../../Framework/source/db/Database.h"
 
+#define var const auto
 namespace Jde{
 	α OSApp::ProductName()ι->sv{ return "Tests.Crypto"; }
-
- 	α Startup( int argc, char **argv )ι->void{
+ 	void Startup( int argc, char **argv )ι{
 #ifdef _MSC_VER
 		ASSERT( Settings::Get<uint>("workers/drive/threads")>0 )
 #endif
 		ASSERT( argc>1 && string{argv[1]}=="-c" )
+		OSApp::Startup( argc, argv, "Tests.Crypto", "Test app" );
 		Threading::SetThreadDscrptn( "Main" );
-		OSApp::Startup( argc, argv, "Tests.Crypto", "Crypto tests" );
 	}
 }
 
-α main( int argc, char **argv )->int{
+int main(int argc, char **argv){
 	using namespace Jde;
-	::testing::InitGoogleTest( &argc, argv );
+ 	::testing::InitGoogleTest( &argc, argv );
 	Startup( argc, argv );
 	auto result = EXIT_FAILURE;
 	{

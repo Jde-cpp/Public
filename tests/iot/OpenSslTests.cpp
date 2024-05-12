@@ -3,7 +3,7 @@
 #include "../../../Ssl/source/Ssl.h"
 
 #define var const auto
-namespace Jde::Crypto{
+namespace Jde::Iot{
 	static sp<Jde::LogTag> _logTag{ Logging::Tag( "tests" ) };
 	using namespace Crypto::Internal;
 
@@ -42,11 +42,11 @@ namespace Jde::Crypto{
 			INFO( "Created keys {} {}", PublicKeyFile, PrivateKeyFile );
 		}
 		if( clear || !fs::exists(CertificateFile) ){
-			Crypto::CreateCertificate( CertificateFile, PrivateKeyFile, passcode, "jde-cpp", "US", "localhost" );
+			Crypto::CreateCertificate( CertificateFile, PrivateKeyFile, passcode, "jde-cpp", "altName", "US", "localhost" );
 			INFO( "Created certificate {}", CertificateFile );
 		}
 	}
-	
+	//using namespace Jde::Crypto;
 	TEST_F( OpenSslTests, Main ){
 		auto [modulus2, exponent2] = GetModulusExponent( PublicKeyFile );
 		vector<unsigned char> modulus = modulus2;
@@ -54,7 +54,7 @@ namespace Jde::Crypto{
 		constexpr uint mdlen = SHA256_DIGEST_LENGTH;
 		unsigned char md[mdlen];
 		auto pDigest = SHA256( (unsigned char*)HeaderPayload.data(), HeaderPayload.size(), md ); CHECK_NULL( pDigest );
-		KeyPtr pKey{ Internal::ReadPrivateKey(PrivateKeyFile) };
+		KeyPtr pKey{ Crypto::Internal::ReadPrivateKey(PrivateKeyFile) };
 		CtxPtr ctx{ NewCtx(pKey) };
 		CALL( EVP_PKEY_sign_init(ctx.get()) );
 		CALL( EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_PADDING) );	
@@ -64,11 +64,11 @@ namespace Jde::Crypto{
 		string signature; signature.resize( siglen );
 		CALL( EVP_PKEY_sign(ctx.get(), (unsigned char*)signature.data(), &siglen, pDigest, mdlen) );
 		auto x = Ssl::Encode64( signature );
-		Verify( modulus, exponent, HeaderPayload, signature );
+		Crypto::Verify( modulus, exponent, HeaderPayload, signature );
 	}
 
 	TEST_F( OpenSslTests, Certificate ){
-		ReadCertificate( CertificateFile );
+		Crypto::ReadCertificate( CertificateFile );
 		//ReadCertificate( "/tmp/cert2.pem" );
 	}
 	TEST_F( OpenSslTests, PrivateKey ){
@@ -78,7 +78,7 @@ namespace Jde::Crypto{
 
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	α OpenSslTests::GetModulusExponent( fs::path publicKey )ε->tuple<vector<unsigned char>,vector<unsigned char>>{
-		KeyPtr pKey{ Internal::ReadPublicKey(publicKey) };
+		KeyPtr pKey{ Crypto::Internal::ReadPublicKey(publicKey) };
 		BIGNUM* n{}, *e{};
 		CALL( EVP_PKEY_get_bn_param(pKey.get(), "e", &e) );
 		CALL( EVP_PKEY_get_bn_param(pKey.get(), "n", &n) );

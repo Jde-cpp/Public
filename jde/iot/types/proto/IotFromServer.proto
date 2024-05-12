@@ -1,6 +1,5 @@
-//source $JDE_DIR/Framework/common.sh;toBashDir $JDE_DIR JDE_BASH;
-//cd $JDE_BASH/IotWebsocket/source/types/proto;webSource=$JDE_BASH/Public/src/web/proto;mklink FromServer.proto $webSource;mklink FromServer.pb.h $webSource;
-//protoc --cpp_out . IotFromServer.proto
+//FILE=IotFromServer #see ./IotCommon.proto
+//cd $include;mklink FromServer.proto $JDE_BASH/Public/src/web/proto;cd $source; mklink FromServer.pb.h $JDE_BASH/Public/src/web/proto
 
 syntax = "proto3";
 package Jde.Iot.FromServer;

@@ -4,6 +4,7 @@
 #include <boost/algorithm/hex.hpp>
 #include <google/protobuf/duration.pb.h>
 #include <google/protobuf/timestamp.pb.h>
+#include "../../../../Framework/source/DateTime.h"
 
 #define var const auto
 namespace Jde::Iot{

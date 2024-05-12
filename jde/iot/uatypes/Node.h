@@ -3,6 +3,7 @@
 #define NODE_H
 #include "../Exports.h"
 #include "helpers.h"
+#include <jde/iot/types/proto/IotCommon.pb.h>
 
 namespace Jde::Iot{
 	struct ΓI NodeId : UA_ExpandedNodeId{
