@@ -16,14 +16,14 @@ namespace Jde::Iot{
 	struct Value;
 
 	struct ΓI UAClient final : std::enable_shared_from_this<UAClient>{
-		UAClient( OpcServer&& opcServer )ε;
-		UAClient( str address )ε;
+		UAClient( OpcServer&& opcServer, str userId, str password )ε;
+		UAClient( str address, str userId, str password )ε;
 		~UAClient();
 
 		operator UA_Client* ()ι{ return _ptr; }
 		Ω Shutdown()ι->void;
-		Ω GetClient( string id, SRCE )ι->ConnectAwait{ return ConnectAwait{move(id), sl}; }
-		Ω Find( str id )ι->sp<UAClient>;
+		Ω GetClient( string id, string userId, string pw, SRCE )ι{ return ConnectAwait{move(id), move(userId), move(pw), sl}; }
+		Ω Find( str id, str userId )ι->sp<UAClient>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
 		α SubscriptionId()Ι->SubscriptionId{ return CreatedSubscriptionResponse ? CreatedSubscriptionResponse->subscriptionId : 0;}
@@ -55,7 +55,7 @@ namespace Jde::Iot{
 		sp<UA_SetMonitoringModeResponse> MonitoringModeResponse;
 		sp<UA_CreateSubscriptionResponse> CreatedSubscriptionResponse;
 		UA_ClientConfig _config{};//TODO move private.
-
+		string UserId;
 	private:
 		Ω LogTag()ι->sp<Jde::LogTag>;
 		α Configuration()ε->UA_ClientConfig*;
@@ -70,7 +70,8 @@ namespace Jde::Iot{
 
 		AsyncRequest _asyncRequest;
 		Logger _logger;
-		UA_Client* _ptr{};//needs to be after _logger & _config.
+		string Password;
+		UA_Client* _ptr{};//needs to be after _logger, _config, Password.
 		friend ConnectAwait;
 		friend α Read::OnResponse( UA_Client *client, void *userdata, RequestId requestId, StatusCode status, UA_DataValue *var )ι->void;
 		friend α Write::OnResonse( UA_Client *ua, void *userdata, RequestId requestId, UA_WriteResponse *response )ι->void;

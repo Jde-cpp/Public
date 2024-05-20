@@ -22,7 +22,7 @@ namespace Jde{
 		EVP_PKEY_generate(pctx.get(), &key); CHECK_NULL( key );
 		KeyPtr pKey( key, ::EVP_PKEY_free );
 
-		BioPtr publicBio{ BIO_new_file( publicKeyPath.string().c_str(), "w"), ::BIO_free };
+		BioPtr publicBio{ BIO_new_file( publicKeyPath.string().c_str(), "w"), ::BIO_free }; CHECK_NULL( publicBio );
 		CALL( PEM_write_bio_PUBKEY(publicBio.get(), pKey.get()) );
 		Internal::WritePrivateKey( privateKeyPath, move(pKey), passcode );
 	}

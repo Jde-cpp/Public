@@ -115,13 +115,21 @@ namespace Jde::Web::Rest{
 		ul _{ _sessionMutex };
 		_sessions.emplace( p->session_id(), p );
 	}
+	
+	α ISession::GetNewSessionId()ι->SessionPK{
+		ul _{ _sessionMutex };
+		auto sessionId{ Math::Random() };
+		while( _sessions.contains(sessionId) )
+			sessionId = Math::Random();
+		return sessionId;
+	}
 
 	α ISession::AddSession( UserPK userId )ι->sp<SessionInfo>{
 		auto p = ms<SessionInfo>();
 		auto pTimestamp = mu<Logging::Proto::Timestamp>();
 		pTimestamp->set_seconds( time(nullptr)+60*60 );
 		p->set_allocated_expiration( pTimestamp.release() );
-		p->set_session_id( Math::Random() );
+		p->set_session_id( GetNewSessionId() );
 		p->set_user_id( userId );
 		AddSession2( p );
 		return p;

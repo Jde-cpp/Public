@@ -11,21 +11,22 @@ add_definitions( -DJde_Iot_EXPORTS -DUA_ENABLE_ENCRYPTION )
 find_package(OpenSSL REQUIRED)
 find_package(open62541 REQUIRED)
 set( open62541Dir ${open62541_DIR}/../../.. )
-message( "open62541Dir=${open62541Dir}")
+#message( "open62541Dir=${open62541Dir}")
 link_directories( ${open62541Dir}/lib )
 include_directories( ${open62541Dir}/include )
 
 add_library( ${CMAKE_PROJECT_NAME} SHARED 
+	UM.cpp
 	async/AsyncRequest.cpp async/Attributes.cpp async/CreateSubscriptions.cpp async/ConnectAwait.cpp async/DataChanges.cpp async/SessionAwait.cpp async/SetMonitoringMode.cpp async/Write.cpp
 	types/MonitoringNodes.cpp	types/OpcServer.cpp
 	uatypes/Browse.cpp uatypes/Logger.cpp uatypes/Node.cpp uatypes/Value.cpp uatypes/UAClient.cpp
 	types/proto/IotCommon.pb.cc types/proto/IotFromClient.pb.cc types/proto/IotFromServer.pb.cc )
 #######################################################
 #target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
-target_link_libraries( ${CMAKE_PROJECT_NAME} libopen62541.a )
 target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
 target_link_libraries(${CMAKE_PROJECT_NAME} OpenSSL::SSL)
 target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf )
+target_link_libraries( ${CMAKE_PROJECT_NAME} libopen62541.a )
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
   PRIVATE

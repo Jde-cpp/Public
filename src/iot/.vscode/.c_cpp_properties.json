@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+								"/usr/include",
+								"/usr/include/c++/13",
+                "${workspaceFolder}/**",
+                "${BOOST_ROOT}",
+                "${REPO_DIR}/spdlog/include/",
+                "${REPO_DIR}/json/include",
+                "${JDE_DIR}/Public",
+                "${JDE_DIR}/open62541/include",
+                "${JDE_DIR}/open62541/plugins/include"
+            ],
+            "defines": [],
+            "forcedInclude": [
+                "${workspaceFolder}/pc.h"
+            ],
+            "compilerPath": "/usr/bin/g++-13",
+            "cStandard": "c17",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compilerArgs": []
+        }
+    ],
+    "version": 4
+}

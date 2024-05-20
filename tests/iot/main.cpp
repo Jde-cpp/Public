@@ -1,10 +1,11 @@
 ﻿#include "gtest/gtest.h"
 #include "../../../Framework/source/Settings.h"
 #include "../../../Framework/source/Cache.h"
+#include "../../../Framework/source/db/GraphQL.h"
 #define var const auto
 
 namespace Jde{
-	α OSApp::ProductName()ι->sv{ return "Tests.Crypto"; }
+	α OSApp::ProductName()ι->sv{ return "Tests.Iot"; }
 
  	α Startup( int argc, char **argv )ι->void{
 #ifdef _MSC_VER
@@ -12,6 +13,8 @@ namespace Jde{
 #endif
 		ASSERT( argc>1 && string{argv[1]}=="-c" )
 		OSApp::Startup( argc, argv, "Tests.Iot", "Iot tests" );
+		DB::CreateSchema();
+		DB::SetQLDataSource( DB::DataSourcePtr() );
 	}
 }
 

@@ -16,16 +16,18 @@
 namespace Jde::Iot{
 	sp<LogTag> _logTag{ Logging::Tag("app.client") };
 	α UAClient::LogTag()ι->sp<Jde::LogTag>{ return _logTag; }
-	flat_map<string,sp<UAClient>> _clients; shared_mutex _clientsMutex;
+	flat_map<tuple<string,string>,sp<UAClient>> _clients; shared_mutex _clientsMutex;
 	concurrent_flat_set<sp<UAClient>> _awaitingActivation;
 
-	UAClient::UAClient( str address )ε:
-		UAClient{ OpcServer{address} }
+	UAClient::UAClient( str address, str userId, str password )ε:
+		UAClient{ OpcServer{address}, userId, password }
 	{}
 
-	UAClient::UAClient( OpcServer&& opcServer )ε:
+	UAClient::UAClient( OpcServer&& opcServer, str userId, str password )ε:
+		UserId{ userId },
 		_opcServer{ move(opcServer) },
 		_logger{ 0 },
+		Password{ password },
 		_ptr{ Create() },
 		MonitoredNodes{ this }{
 		UA_ClientConfig_setDefault( Configuration() );
@@ -34,6 +36,7 @@ namespace Jde::Iot{
 	}
 
 	α UAClient::Shutdown()ι->void{
+		sl _1{ _clientsMutex };
 		for( var& [_,p] : _clients ){
 			p->MonitoredNodes.Shutdown();
 			p->_asyncRequest.Stop();
@@ -51,6 +54,8 @@ namespace Jde::Iot{
 		bool addSecurity = !uri.empty();//urn:JDE-CPP:Kepware.KEPServerEX.V6:UA%20Server
 		//TODO - test no security also
 		if( addSecurity && !fs::exists(certificateFile) ){
+			if( !fs::exists(root) )
+				fs::create_directories( root );
 			if( !fs::exists(privateKeyFile) )
 				Crypto::CreateKey( root/"public.pem", privateKeyFile, passcode );
 			Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Jde::format("URI:{}", uri), "jde-cpp", "US", "localhost" );
@@ -96,20 +101,21 @@ namespace Jde::Iot{
 			pClient->TriggerSessionAwaitables();
 			pClient->ClearRequest<UARequest>( std::numeric_limits<RequestId>::max() );
 		}
-		if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR){
+	if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED ){
 			_awaitingActivation.erase_if( [ua, sessionState,connectStatus]( sp<UAClient> pClient){
 				if( pClient->UAPointer()!=ua )return false;
 				pClient->ClearRequest<UARequest>( std::numeric_limits<RequestId>::max() );//previous clear didn't have pClient
+				var id{ make_tuple(pClient->Target(),pClient->UserId) };
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
 					{
 						ul _{ _clientsMutex };
-						ASSERT( _clients.find(pClient->Target())==_clients.end() );
-						_clients[pClient->Target()] = pClient;
+						ASSERT( _clients.find(id)==_clients.end() );
+						_clients[id] = pClient;
 					}
-					ConnectAwait::Resume( move(pClient), pClient->Target() );
+					ConnectAwait::Resume( move(pClient), get<0>(id), get<1>(id) );
 				}
 				else
-					ConnectAwait::Resume( move(pClient), pClient->Target(), UAException{connectStatus} );
+					ConnectAwait::Resume( move(pClient), pClient->Target(), pClient->UserId, UAException{connectStatus} );
 				return true;
 			});
 		}
@@ -129,6 +135,8 @@ namespace Jde::Iot{
 		_config.stateCallback = StateCallback;
 		_config.inactivityCallback = inactivityCallback;
 		_config.subscriptionInactivityCallback = subscriptionInactivityCallback;
+		if( UserId.size() )
+			UA_ClientConfig_setAuthenticationUsername( &_config, UserId.c_str(), Password.c_str() );
 		UA_ConnectionManager *udpCM = UA_ConnectionManager_new_POSIX_UDP( "udp connection manager"_uv );
 		_config.eventLoop->registerEventSource( _config.eventLoop, (UA_EventSource*)udpCM );
 		auto ua = UA_Client_newWithConfig( &_config );
@@ -159,10 +167,10 @@ namespace Jde::Iot{
 
 	α UAClient::Retry( function<void(sp<UAClient>&&, HCoroutine&&)> f, UAException e, sp<UAClient> pClient, HCoroutine h )ι->Task{
 		//TODO limit retry attempts.
-		str target = pClient->Target();
+		var id{ make_tuple(pClient->Target(), pClient->UserId) }; var password = pClient->Password;
 		{
 			ul _{ _clientsMutex };
-			if( auto p =_clients.find(target); p!=_clients.end() ){
+			if( auto p =_clients.find(id); p!=_clients.end() ){
 				DBG( "[{:x}]Removing client: ({:x}){}.", pClient->Handle(), e.Code, e.what() );
 				pClient->_asyncRequest.Stop();
 				_clients.erase(p);
@@ -173,7 +181,7 @@ namespace Jde::Iot{
 
 		if( e.Code==UA_STATUSCODE_BADCONNECTIONCLOSED || e.Code==UA_STATUSCODE_BADSERVERNOTCONNECTED ){
 			try{
-				pClient = ( co_await GetClient(target) ).SP<UAClient>();
+				pClient = ( co_await GetClient(get<0>(id), get<1>(id), password) ).SP<UAClient>();
 				f( move(pClient), move(h) );
 			}
 			catch( IException& e ){
@@ -344,10 +352,10 @@ namespace Jde::Iot{
 		return y;
 	}
 
-	α UAClient::Find( str id )ι->sp<UAClient>{
+	α UAClient::Find( str id, str userId )ι->sp<UAClient>{
 		sl _{ _clientsMutex };
 		sp<UAClient> y;
-		if( auto p = id.size() ? _clients.find(id) : find_if( _clients, [](var& c){return c.second->IsDefault();} ); p!=_clients.end() )
+		if( auto p = id.size() ? _clients.find(make_tuple(id,userId)) : find_if( _clients, [&userId](var& c){return c.second->IsDefault() && c.second->UserId==userId;} ); p!=_clients.end() )
 			y = p->second;
 		return y;
 	}

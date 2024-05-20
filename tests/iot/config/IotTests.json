@@ -1,20 +1,22 @@
 {
 	"testing":{
-		"testsx":"OpenSslTests.Certificate"
+		"testsx": "OpcServerTests.Crud",
+		"tests": "UAClientTests.Authenticate"
 	},
 	"db":{
-		"driverx": "./libJde.MySql.so",
-		"connectionString": "DSN=iot",
+		"driver": "$(JDE_DB_DRIVER)",
+		"connectionString": "$(JDE_TEST_IOT_CONNECTION)",
 		"meta": "../config/IotWebSocketMeta.json"
 	},
 	"iot": {
 		"target":  "Default"
 	},
 	"logging":{
+		"server": { "port": 4321, "level": "Information", "diagnosticsLevel": "Information", "tags": [] },
 		"tags": {
 			"Trace":["tests"],
-			"Debug":["settings"],
-			"Information":["alarm"],
+			"Debug":["settings", "UAEvent"],
+			"Information":["alarm", "threads"],
 			"Warning":[],
 			"Error":[],
 			"Critical":[]

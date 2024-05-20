@@ -22,14 +22,14 @@ namespace Browse{
 
 	struct Request :UA_BrowseRequest{
 		Request( NodeId&& node )ι;
-		Request( Request&& x )ι:UA_BrowseRequest{ x }{ Zero( x );}
+		Request( Request&& x )ι:UA_BrowseRequest{ x }{ UA_BrowseRequest_init( &x );}
 		Request( const Request& x )ι{ UA_BrowseRequest_copy( &x, this ); }
 		~Request(){ UA_BrowseRequest_clear(this); }
 	};
 
 	struct Response : UA_BrowseResponse{
-		Response( UA_BrowseResponse&& x )ι:UA_BrowseResponse{ x }{ Zero( x ); }
-		Response( Response&& x )ι:UA_BrowseResponse{ x }{ Zero( x ); }
+		Response( UA_BrowseResponse&& x )ι:UA_BrowseResponse{ x }{ UA_BrowseResponse_init( &x ); }
+		Response( Response&& x )ι:UA_BrowseResponse{ x }{ UA_BrowseResponse_init( &x ); }
 		~Response(){ UA_BrowseResponse_clear(this); }
 
 		α Nodes()ι->flat_set<NodeId>;

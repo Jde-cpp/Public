@@ -1,6 +1,6 @@
 {
 	"testing":{
-		"tests":"GroupTests.Crud"
+		"tests":"UserTests.Login_New_Opc"
 	},
 	"cryptoTests":{
 		"clear": true

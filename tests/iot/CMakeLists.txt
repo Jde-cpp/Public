@@ -7,11 +7,17 @@ link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
 link_directories( ${fmt_DIR}/../.. )
 link_directories( ${Protobuf_DIR}/../.. )
 
-add_executable( ${CMAKE_PROJECT_NAME} main.cpp 
-	OpenSslTests.cpp DBTests.cpp OpcUserTests.cpp )
+find_package(open62541 REQUIRED)
+set( open62541Dir ${open62541_DIR}/../../.. )
+message( "open62541LinkDir=${open62541Dir}/lib" )
+link_directories( ${open62541Dir}/lib )
+include_directories( ${open62541Dir}/include )
 
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde)
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde.Crypto)
+add_executable( ${CMAKE_PROJECT_NAME} main.cpp helpers.cpp OpcServerTests.cpp 
+	uatypes/UAClientTests.cpp )
+
+target_link_libraries( ${CMAKE_PROJECT_NAME} libopen62541.a )
+target_link_libraries( ${CMAKE_PROJECT_NAME} lzma )
 target_link_libraries( ${CMAKE_PROJECT_NAME} gtest_main)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	target_link_libraries( ${CMAKE_PROJECT_NAME} stdc++)
@@ -22,15 +28,24 @@ target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a)
 
 target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a libutf8_validity.a )
 target_link_libraries( ${CMAKE_PROJECT_NAME} absl::cord absl::log_internal_check_op absl::log_internal_conditions absl::log_internal_message absl::raw_hash_set absl::status absl::statusor ) #absl::strings
+target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.Crypto Jde.Ssl Jde.Iot Jde.Web Jde.XZ )
 
 target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
-	<openssl/engine.h>
-	<openssl/hmac.h>
-	<openssl/err.h>
-	<openssl/evp.h>
-	<openssl/rsa.h>
 	<gtest/gtest.h>
+	<boost/lexical_cast.hpp>
+	<boost/unordered/concurrent_flat_map.hpp>
+	<boost/unordered/concurrent_flat_set.hpp>
+	<boost/uuid/uuid.hpp>
+	<boost/uuid/uuid_io.hpp>
+	<open62541/client_config_default.h>
+	<open62541/client_highlevel.h>
+	<open62541/client_highlevel_async.h>
+	<open62541/client_subscriptions.h>
+	<open62541/plugin/log_stdout.h>
+	<jde/iot/TypeDefs.h>
 	<jde/TypeDefs.h>
 	<jde/Exception.h>
 	<jde/Log.h>
+	"../../src/web/Exports.h"
+	"../../../Framework/source/db/Database.h"
 )

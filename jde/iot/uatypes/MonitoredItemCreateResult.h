@@ -7,7 +7,7 @@ namespace Jde::Iot{
 		MonitoredItemCreateResult( UA_UInt32 id )ι:MonitoredItemCreateResult{}{ UA_MonitoredItemCreateResult_init(this); monitoredItemId=id; }
 		MonitoredItemCreateResult( const UA_MonitoredItemCreateResult& x )ι{UA_MonitoredItemCreateResult_copy( &x, this );}
 		MonitoredItemCreateResult( const MonitoredItemCreateResult& x )ι:MonitoredItemCreateResult{(UA_MonitoredItemCreateResult&)x}{}
-		MonitoredItemCreateResult( MonitoredItemCreateResult&& x )ι:MonitoredItemCreateResult{x}{ Zero(x); }
+		MonitoredItemCreateResult( MonitoredItemCreateResult&& x )ι:MonitoredItemCreateResult{x}{ UA_MonitoredItemCreateResult_init(&x); }
 		~MonitoredItemCreateResult(){ UA_MonitoredItemCreateResult_clear(this);}
 		α operator=( MonitoredItemCreateResult&& x )ι->MonitoredItemCreateResult&{ UA_MonitoredItemCreateResult_copy( &x, this ); return *this; }
 		α operator=( const MonitoredItemCreateResult& x )ι->MonitoredItemCreateResult&{ UA_MonitoredItemCreateResult_copy( &x, this ); return *this; }

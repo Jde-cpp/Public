@@ -56,8 +56,7 @@ namespace Jde::Web::Rest{
 		α Method()Ι->http::verb{ return ClientRequest().method(); }
 	};
 
-	struct ΓW ISession
-	{
+	struct ΓW ISession{
 		using TMessage = http::message<true, http::string_body, http::basic_fields<std::allocator<char>>>;
     ISession( tcp::socket&& socket )ι: _stream{move(socket)}//,_send{*this}
     {}
@@ -84,7 +83,8 @@ namespace Jde::Web::Rest{
 		β MakeShared()ι->sp<ISession> = 0;
 
 		α SendQuery( string&& query, Request&& req )ι->Task;
-		α AddSession( UserPK userId )ι->sp<SessionInfo>;
+		Ω AddSession( UserPK userId )ι->sp<SessionInfo>;
+		Ω GetNewSessionId()ι->SessionPK;
 		Ω FetchSessionInfo( SessionPK sessionId )ι->SessionInfoAwait{ return SessionInfoAwait{ sessionId }; }
 	private:
 	  template<bool isRequest, class Body, class Fields>
