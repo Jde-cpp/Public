@@ -6,7 +6,7 @@ namespace Jde::Iot{
 	struct SocketSession; struct UAClient; struct Value;
 
 	struct IDataChange{
-		β SendDataChange( const OpcId& opcId, const NodeId& node, const Value& value )ι->Task=0;
+		β SendDataChange( const OpcNK& opcId, const NodeId& node, const Value& value )ι->Task=0;
 		β to_string()Ι->string=0;
 	};
 
@@ -34,8 +34,7 @@ namespace Jde::Iot{
 		Ω LogTag()ι->sp<LogTag>;
 	private:
 		struct Subscription{
-			Subscription( /*OpcId opcId,*/ NodeId node, MonitoredItemCreateResult result, sp<IDataChange> clientCall )ι: /*OpcId{move(opcId)},*/ Node{ move(node) }, Result{ move(result) }, ClientCalls{ move(clientCall) }{}
-			//OpcId OpcId;
+			Subscription( /*OpcNK opcId,*/ NodeId node, MonitoredItemCreateResult result, sp<IDataChange> clientCall )ι: /*OpcNK{move(opcId)},*/ Node{ move(node) }, Result{ move(result) }, ClientCalls{ move(clientCall) }{}
 			NodeId Node;
 			MonitoredItemCreateResult Result;
 			flat_set<sp<IDataChange>> ClientCalls;

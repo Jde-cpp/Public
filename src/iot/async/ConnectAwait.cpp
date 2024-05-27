@@ -12,13 +12,14 @@ namespace Jde::Iot
 		if( auto pClient = UAClient::Find(_id, _userId); pClient )
 			Jde::Resume( move(pClient), move(h) );
 		else{
+			auto key = make_tuple( _id,_userId );
 			_requestMutex.lock();
-			if( auto p = _requests.find( make_tuple(_id,_userId) ); p!=_requests.end() ){
+			if( auto p = _requests.find( key ); p!=_requests.end() ){
 				p->second.push_back( move(h) );
 				_requestMutex.unlock();
 			}
 			else{
-				_requests[make_tuple(_id,_userId)] = {h};
+				_requests[key] = {h};
 				_requestMutex.unlock();
 				Create( _id, _userId, _password );
 			}
@@ -33,9 +34,10 @@ namespace Jde::Iot
 		catch( const IException& e ){
 			lg _{ _requestMutex };
 			var ua = dynamic_cast<const UAException*>( &e );
-			for( auto& h : _requests[make_tuple(opcServerId,userId)] )
+			auto key = make_tuple( move(opcServerId), move(userId) );
+			for( auto& h : _requests[key] )
 				Jde::Resume( ua ? UAException{*ua} : Exception{e.what(), e.Code, e.Level(), e.Stack().front()}, move(h) );
-			_requests.erase( make_tuple(move(opcServerId), move(userId)) );
+			_requests.erase( key );
 		}
 	}
 	α ConnectAwait::Resume( sp<UAClient> pClient, str target, str userId, function<void(HCoroutine&&)> resume )ι->void{
@@ -43,8 +45,11 @@ namespace Jde::Iot
 		vector<HCoroutine> handles;
 		{
 			lg _{ _requestMutex };
-			handles = move( _requests[make_tuple(target, userId)] );
-			_requests.erase( make_tuple(target, userId) );
+			auto key = make_tuple( target, userId );
+			if( auto p = _requests.find( key ); p!=_requests.end() ){
+				handles = move( _requests[key] );
+				_requests.erase( key );
+			}
 		}
 		for( auto h : handles )
 			resume( move(h) );

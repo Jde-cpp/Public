@@ -81,8 +81,6 @@ namespace Jde
 	using int16=int_fast16_t ;
 
 	using uint32=uint_fast32_t;
-	using PK=uint_fast64_t;
-	using UserPK=uint32;
 	using int32=int_fast32_t;
 
 	using uint=uint_fast64_t;
@@ -154,8 +152,6 @@ namespace Jde
 	#define SRCE_CUR std::source_location::current()
 	#define SRCE const Jde::source_location& sl=SRCE_CUR
 	using SL = const Jde::source_location&;
-
-	using nlohmann::json;
 #ifdef _MSC_VER
 	inline constexpr bool _msvc{ true };
 	#ifndef WIN32_LEAN_AND_MEAN

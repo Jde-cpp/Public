@@ -12,7 +12,7 @@ namespace Jde::IO::Sockets{
 	struct ProtoServer : ISocket{
 		ΓW ProtoServer( PortType defaultPort )ι;
 		ΓW virtual ~ProtoServer();
-		β CreateSession( tcp::socket&& socket, SessionPK id )ι->up<ProtoSession> =0;
+		β CreateSession( tcp::socket&& socket, SessionPK id )ι->sp<ProtoSession> =0;
 		α RemoveSession( SessionPK id )ι{ ul _{_mutex}; _sessions.erase(id); }
 
 	protected:
@@ -25,7 +25,7 @@ namespace Jde::IO::Sockets{
 		void Run()ι;
 	};
 
-	struct ΓW ProtoSession{
+	struct ΓW ProtoSession : std::enable_shared_from_this<ProtoSession>{
 		ProtoSession( tcp::socket&& socket, SessionPK id )ι;
 		virtual ~ProtoSession()=default;
 		SessionPK Id;

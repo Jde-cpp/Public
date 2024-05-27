@@ -3,12 +3,15 @@
 #include "../../../Framework/source/io/ServerSink.h"
 #include "../../../Framework/source/io/proto/messages.pb.h"
 #include <jde/iot/uatypes/UAClient.h>
+#include <jde/io/Json.h>
 
 #define var const auto
 
 namespace Jde::Iot{
-	boost::concurrent_flat_map<SessionPK,flat_map<string,tuple<string,string>>> _sessions; //opcId,loginName,password
-	α Authenticate( string loginName, string password, string opcId, HCoroutine h )ι->Task{
+	static sp<LogTag> _logTag = Logging::Tag( "iot.um" );
+
+	boost::concurrent_flat_map<SessionPK,flat_map<OpcNK,tuple<string,string>>> _sessions; //loginName,password
+	α Authenticate( string loginName, string password, OpcNK opcId, HCoroutine h )ι->Task{
 		try{
 			optional<bool> authenticated{};
 			_sessions.cvisit_while( [&loginName, &password, &opcId, &authenticated]( var& sessionMap )ι{
@@ -19,17 +22,10 @@ namespace Jde::Iot{
 			});
 			if( !authenticated.value_or(false) )
 				( co_await UAClient::GetClient(opcId, loginName, password) ).SP<UAClient>();
-			uint providerId; up<json> jProviderId;
-			try{
-				jProviderId = ( co_await Logging::Server::GraphQL(Jde::format("query{{ provider(filter:{{target:{{ eq:\"{}\"}}, providerTypeId:{{ eq:{}}}){{ id }} }}", opcId, (uint)Jde::UM::EProviderType::OpcServer)) ).UP<json>();
-				providerId = (*jProviderId)["data"]["provider"]["id"];
-			}
-			catch( const nlohmann::json::exception& e ){ 
-				THROW( "Provider not found for opcId='{}', provider_type_id='{}'.  result='{}'", opcId, (uint)Jde::UM::EProviderType::OpcServer, jProviderId->dump() );
-			}
-			var sessionId = *( co_await Logging::Server::AddLogin("opc", loginName, providerId) ).UP<SessionPK>();
-			flat_map<string,tuple<string,string>> init{ {opcId,{loginName,password}} };
-			std::pair<SessionPK, flat_map<string,tuple<string,string>>> init2 = make_pair(sessionId, init);
+			var providerId = await( ProviderPK, Logging::Server::GraphQL(opcId) );
+			var sessionId = await( SessionPK, Logging::Server::AddLogin(opcId, loginName, providerId) );
+			flat_map<OpcNK,tuple<string,string>> init{ {opcId,{loginName,password}} };
+			std::pair<SessionPK, flat_map<OpcNK,tuple<string,string>>> init2 = make_pair(sessionId, init);
 			_sessions.emplace_or_visit( init2, 
   			[&loginName, &password, &opcId]( auto& sessionMap )ι{
 					sessionMap.second.try_emplace( opcId, make_tuple(loginName,password) );
@@ -42,6 +38,65 @@ namespace Jde::Iot{
 	}
 	AuthenticateAwait::AuthenticateAwait( str loginName, str password, str opcId, SL sl )ι:
 		AsyncAwait{ [&](auto h){ return Authenticate(loginName, password, opcId, move(h)); }, sl, "Authenticate" }
+	{}
+
+	α LoadProvider( str opcId, HCoroutine h )ι->Task{
+		try{
+			auto h2 = move(h);
+			h = move(h2);
+			var query = Jde::format( "query{{ provider(filter:{{target:{{ eq:\"{}\"}}, providerTypeId:{{ eq:{}}}}}){{ id }} }}", opcId, (uint8)Jde::UM::EProviderType::OpcServer );
+			var j = await( json, Logging::Server::GraphQL(query) );
+			var providerId = Json::Getε<json>( j, "data" ).is_null() ? 0 : Json::Getε<ProviderPK>( j, {"data","provider","id"} );
+			Resume( mu<ProviderPK>(providerId), move(h) );
+		}
+		catch( IException& e ){
+			Resume( move(e), move(h) );
+		}
+	}
+	ProviderAwait::ProviderAwait( str opcId, SL sl )ι:
+		AsyncAwait{ [&](auto h){ LoadProvider(opcId, move(h)); }, sl, "Provider" }
+	{}
+
+	α InsertProvider( variant<OpcPK,OpcNK> pkNK, HCoroutine h )ι->Task{
+		try{
+			auto opcNK = pkNK.index()==1 ? get<OpcNK>( move(pkNK) ) : string{};
+			if( pkNK.index()==0 ){
+				auto server = ( co_await OpcServer::Select(get<OpcPK>(pkNK), true) ).UP<OpcServer>(); THROW_IF( !server, "Could not find OpcServer with id='{}'", get<uint>(pkNK) );
+				opcNK = move( server->Target );
+			}
+
+			var q = Jde::format( "{{ mutation {{ createProvider(  \"input\": {{\"target\":\"{}\",\"providerType\":\"OpcServer\"}} ){{id}} }} }}", opcNK );
+			auto j = await( json, Logging::Server::GraphQL(q) );
+			uint newPK = Json::Getε<OpcPK>( j, {"data","provider","id"} );
+			Resume( mu<OpcPK>(newPK), move(h) );
+		}
+		catch( Exception& e ){
+			Resume( move(e), move(h) );
+		}
+	}
+
+	α PurgeProvider( variant<OpcPK,OpcNK> pkNK, HCoroutine h )ι->Task{
+		auto opcNK = pkNK.index()==1 ? get<OpcNK>( move(pkNK) ) : string{};
+		try{
+			if( pkNK.index()==0 ){
+				auto server = ( co_await OpcServer::Select(get<OpcPK>(pkNK), true) ).UP<OpcServer>(); THROW_IF( !server, "Could not find OpcServer with id='{}'", get<OpcPK>(pkNK) );
+				opcNK = server->Target;
+			}
+			auto providerPK = await( ProviderPK, ProviderAwait{opcNK} );
+
+			var q = Jde::format( "{{ mutation{{purgeProvider( \"id\":{} ){{rowCount}}}} }}", providerPK );
+			auto j = await( json, Logging::Server::GraphQL(q) );
+			uint rowCount = Json::Getε<uint>( j, {"data","provider","rowCount"} );
+			Resume( move(mu<OpcPK>(rowCount)), move(h) );
+		}
+		catch( Exception& e ){
+			Resume( move(e), move(h) );
+		}
+	}
+	ProviderAwait::ProviderAwait( variant<OpcPK,OpcNK> pkNK, bool insert, SL sl )ι:
+		AsyncAwait{ [=,id=move(pkNK)](HCoroutine h){ 
+			insert ? InsertProvider(move(id), h) : PurgeProvider(move(id), h);}, 
+			sl, "ProviderAwait" }
 	{}
 }
 namespace Jde{

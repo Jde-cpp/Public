@@ -24,6 +24,7 @@ namespace Jde::Coroutine{
 		explicit AwaitResult( up<IException> e )ι:_result{e.release()}{};
 		AwaitResult( sp<void>&& p )ι:_result{ p }{};
 		AwaitResult( Exception&& e )ι:_result{ e.Move().release() }{};
+		AwaitResult( bool b )ι:_result{ b }{};
 		α Clear()ι->void{ _result = UType{}; }
 		α HasValue()Ι{ return _result.index()==0 && get<0>( _result ); }
 		α HasShared()Ι{ return _result.index()==1 && get<1>( _result ); }
@@ -65,8 +66,9 @@ namespace Jde::Coroutine{
 			α SetResult( IException&& e )ι->void{ Result().Set( move(e) ); }
 			Ŧ SetResult( up<T>&& x )ι{ Result().Set( x.release() ); }
 			Ŧ SetResult( sp<T>&& x )ι{ Result().Set( move(x) ); }
-			template<IsPolymorphic T> α SetResult( up<T>&& x )ι{ ASSERT(dynamic_cast<IException*>(x.get())==nullptr); _result->Set( x.release() ); }
-			template<IsPolymorphic T> α SetResult( sp<T>&& x )ι->void{ ASSERT( dynamic_pointer_cast<IException>(x)==nullptr ); _result->Set( move(x) ); }
+			α SetResultBool( bool x )ι{ Result().SetBool( x ); }
+			template<IsPolymorphic T> α SetResult( up<T>&& x )ι{ ASSERT(dynamic_cast<IException*>(x.get())==nullptr); Result().Set( x.release() ); }
+			template<IsPolymorphic T> α SetResult( sp<T>&& x )ι->void{ ASSERT( dynamic_pointer_cast<IException>(x)==nullptr ); Result().Set( move(x) ); }
 			
 			α MoveResult()ι->AwaitResult{ if(!_result) return {}; auto y = move(*_result); _result=nullptr; return y;}
 			α HasError()Ι->bool{ return HasResult() && _result->HasError(); }
@@ -82,9 +84,10 @@ namespace Jde::Coroutine{
 }
 namespace Jde{
 	using HCoroutine = coroutine_handle<Coroutine::Task::promise_type>;
-	Ŧ Resume( up<T>&& y, HCoroutine&& h )ι->void{ h.promise().SetResult(move(y)); h.resume(); }
-	Ŧ Resume( sp<T>&& y, HCoroutine&& h )ι->void{ h.promise().SetResult(move(y)); h.resume(); }
-	Ξ Resume( IException&& e, HCoroutine&& h )ι->void{ h.promise().SetResult(move(e)); h.resume(); }
+	Ŧ Resume( up<T>&& y, HCoroutine h )ι->void{ h.promise().SetResult(move(y)); h.resume(); }
+	Ŧ Resume( sp<T>&& y, HCoroutine h )ι->void{ h.promise().SetResult(move(y)); h.resume(); }
+	Ξ Resume( IException&& e, HCoroutine h )ι->void{ h.promise().SetResult(move(e)); h.resume(); }
+	Ξ ResumeBool( bool y, HCoroutine h )ι->void{ h.promise().SetResultBool(y); h.resume(); }
 }
 
 namespace Jde::Coroutine{

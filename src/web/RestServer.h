@@ -8,6 +8,7 @@
 #include "TypeDefs.h"
 #include "Exports.h"
 #include <jde/coroutine/Task.h>
+#include <jde/db/usings.h>
 
 	//https://www.boost.org/doc/libs/1_73_0/libs/beast/example/http/server/async/http_server_async.cpp
 #define _logTag RestTag()
@@ -54,6 +55,7 @@ namespace Jde::Web::Rest{
 		α ClientRequest()Ι->const http::request<http::string_body>&;
 		α UserId()Ι->UserPK{ return SessionInfoPtr ? SessionInfoPtr->user_id() : 0; }
 		α Method()Ι->http::verb{ return ClientRequest().method(); }
+		α Body()Ε->json;
 	};
 
 	struct ΓW ISession{

@@ -16,7 +16,7 @@ link_directories( ${open62541Dir}/lib )
 include_directories( ${open62541Dir}/include )
 
 add_library( ${CMAKE_PROJECT_NAME} SHARED 
-	UM.cpp
+	IotGraphQL.cpp UM.cpp
 	async/AsyncRequest.cpp async/Attributes.cpp async/CreateSubscriptions.cpp async/ConnectAwait.cpp async/DataChanges.cpp async/SessionAwait.cpp async/SetMonitoringMode.cpp async/Write.cpp
 	types/MonitoringNodes.cpp	types/OpcServer.cpp
 	uatypes/Browse.cpp uatypes/Logger.cpp uatypes/Node.cpp uatypes/Value.cpp uatypes/UAClient.cpp

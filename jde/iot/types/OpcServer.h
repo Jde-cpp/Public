@@ -3,15 +3,16 @@
 namespace Jde::Iot{
 	struct OpcServer{
 		OpcServer( str address )ι:Url{address}{}
-		OpcServer( const DB::IRow& r )ι;
-		Ω Select()ι->AsyncAwait;
-		Ω Select( str id )ι->AsyncAwait;
+		OpcServer( const DB::IRow& r )ε;
+		Ω Select()ι->AsyncAwait{ return Select(nullptr); };
+		//returns up<vector<OpcServer>> if id=nullptr, otherwise up<OpcServer>.
+		Ω Select( variant<nullptr_t,OpcPK,OpcNK> id, bool includeDeleted=false )ι->AsyncAwait;
 
-		uint32 Id;
+		OpcPK Id;
 		string Url;
 		string CertificateUri;
 		bool IsDefault;
 		string Name;
-		string Target;
+		OpcNK Target;
 	};
 }

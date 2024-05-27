@@ -10,11 +10,13 @@
 								"/usr/include/c++/13",
                 "${workspaceFolder}/**",
                 "${BOOST_ROOT}",
-                "${REPO_DIR}/spdlog/include/",
+								"${REPO_DIR}/install/g++-13/asan/absl/include/",
+								"${REPO_DIR}/install/g++-13/asan/fmt/include/",
+                "${REPO_DIR}/install/g++-13/asan/open62541/include/",
+                "${REPO_DIR}/install/g++-13/asan/protobuf/include/",
+                "${REPO_DIR}/install/g++-13/asan/spdlog/include/",
                 "${REPO_DIR}/json/include",
-                "${JDE_DIR}/Public",
-                "${JDE_DIR}/open62541/include",
-                "${JDE_DIR}/open62541/plugins/include"
+                "${JDE_DIR}/Public"
             ],
             "defines": [],
             "forcedInclude": [

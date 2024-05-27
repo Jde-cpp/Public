@@ -67,8 +67,8 @@ namespace Jde::Logging{
 	Φ SetTag( sv tag, ELogLevel l=ELogLevel::Debug, bool file=true )ι->void;
 	//α Log( const Logging::MessageBase& messageBase )ι->void;
 	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void;
-	ψ Log( const Logging::MessageBase& m, const sp<LogTag>& tag, bool logServer, bool break_, Args&&... args )ι->void;
-	ψ Log( const Logging::MessageBase& m, const sp<LogTag>& tag, Args&&... args )ι->void{ Log( m, tag, true, true, args... ); }
+	ψ Log( const Logging::MessageBase& m, const sp<LogTag> tag, bool logServer, bool break_, Args&&... args )ι->void;
+	ψ Log( const Logging::MessageBase& m, const sp<LogTag> tag, Args&&... args )ι->void{ Log( m, tag, true, true, args... ); }
 
 	Φ ShouldLogOnce( const Logging::MessageBase& messageBase )ι->bool;
 	Φ LogOnce( Logging::MessageBase&& messageBase, const sp<LogTag>& logTag )ι->void;
@@ -200,10 +200,10 @@ namespace Jde{
 	}
 #pragma warning(push)
 #pragma warning( disable : 4100)
-	ψ Logging::Log( const Logging::MessageBase& m, const sp<LogTag>& tag, bool logServer, bool break_, Args&&... args )ι->void{
+	ψ Logging::Log( const Logging::MessageBase& m, const sp<LogTag> tag, bool logServer, bool break_, Args&&... args )ι->void{
 		//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
 		//assert( m.Level<=ELogLevel::None );
-		if( m.Level<tag->Level || m.Level==ELogLevel::NoLog )
+		if( m.Level<tag->Level || m.Level==ELogLevel::NoLog || tag->Level==ELogLevel::NoLog )
 			return;
 		try{
 			if( auto p = Default(); p ){
@@ -222,7 +222,8 @@ namespace Jde{
 			BREAK_IF( break_ && m.Level>=BreakLevel() );
 		}
 		catch( const fmt::format_error& e ){
-			Log( MessageBase{ELogLevel::Critical, "could not format {} cargs={} - {}", m.File, m.Function, m.LineNumber}, tag, m.MessageView, sizeof...(args), e.what() );
+			MessageBase m2{ ELogLevel::Critical, "could not format '{}' cargs='{}' - '{}'", m.File, m.Function, m.LineNumber };
+			Log( m2, tag, m.MessageView, sizeof...(args), e.what() );
 		}
 		logServer = logServer && ServerLevel()!=ELogLevel::NoLog && ServerLevel()<=m.Level;
 		if( logServer || LogMemory() ){

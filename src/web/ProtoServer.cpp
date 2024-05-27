@@ -20,8 +20,11 @@ namespace Jde::IO::Sockets
 				THROW_IFX( ec, CodeException(ec.value()==125 ? "Sever shutting down" : "Accept Failed", move(ec), ec.value()==125 ? ELogLevel::Information : ELogLevel::Error) );
 				var id = ++_id;
 				DBG( "[{}]Accepted Connection", id );
-				ul _{ _mutex };
-				_sessions.emplace( id, CreateSession(move(socket), id) );
+				{
+					ul _{ _mutex };
+					auto p = CreateSession( move(socket), id );
+					_sessions.emplace( id, p );
+				}
 				Accept();
 			}
 			catch( const IException& ){}
@@ -52,8 +55,8 @@ namespace Jde::IO::Sockets
 	}
 
 	α ProtoSession::Write( up<google::protobuf::uint8[]> p, uint c )ι->void{
-		auto b = net::buffer( p.get(), c );
-		net::async_write( _socket, b, [_=move(p), b2=move(b)]( std::error_code ec, std::size_t length ){
+		auto buf = net::buffer( p.get(), c );
+		net::async_write( _socket, buf, [_=move(p), _1=move(buf), _2=shared_from_this()]( std::error_code ec, std::size_t length ){
 			if( ec )
 				DBG( "[{}]Write message returned '{}'.", ec.value(), ec.message() );
 			else

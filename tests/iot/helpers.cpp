@@ -22,8 +22,8 @@ namespace Jde{
 		return selectJson["data"].is_null() ? json{} : selectJson["data"]["opcServer"];
 	}
 
-	α Iot::PurgeOpcServer( uint id )ι->void{
-		var create = Jde::format( "{{ mutation {{ purgeOpcServer('id':{}) }} }}", id );
+	α Iot::PurgeOpcServer( uint pk )ι->void{
+		var create = Jde::format( "{{ mutation {{ purgeOpcServer('id':{}) }} }}", pk );
 		var createJson = DB::Query( Str::Replace(create, '\'', '"'), 0 );
 		TRACE( "PurgeOpcServer={}", createJson.dump() );
 	}

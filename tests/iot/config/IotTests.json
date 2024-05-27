@@ -1,7 +1,8 @@
 {
 	"testing":{
-		"testsx": "OpcServerTests.Crud",
-		"tests": "UAClientTests.Authenticate"
+		"tests": "OpcServerTests.CreateInsertFailed",
+		"testsy": "OpcServerTests.Crud",
+		"testsx": "UAClientTests.Authenticate"
 	},
 	"db":{
 		"driver": "$(JDE_DB_DRIVER)",
@@ -14,9 +15,9 @@
 	"logging":{
 		"server": { "port": 4321, "level": "Information", "diagnosticsLevel": "Information", "tags": [] },
 		"tags": {
-			"Trace":["tests"],
-			"Debug":["settings", "UAEvent"],
-			"Information":["alarm", "threads"],
+			"Trace":["tests", "alarm"],
+			"Debug":["settings", "UAEvent", "appServer", "iot.um", "sql"],
+			"Information":["threads", "UASecure"],
 			"Warning":[],
 			"Error":[],
 			"Critical":[]

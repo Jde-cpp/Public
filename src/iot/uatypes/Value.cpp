@@ -155,7 +155,7 @@ namespace Jde::Iot{
 			THROW( "Setting type '{}' has not been implemented.", type->typeName );
 	}
 
-	α Value::ToProto( const OpcId& opcId, const NodeId& node )Ι->FromServer::MessageUnion{
+	α Value::ToProto( const OpcNK& opcId, const NodeId& node )Ι->FromServer::MessageUnion{
 		var scaler = IsScaler();
 		var type = value.type;
 		auto nv = mu<FromServer::NodeValues>(); nv->set_allocated_node( new Proto::ExpandedNodeId{node.ToProto()} ); nv->set_opc_id( opcId );

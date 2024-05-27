@@ -2,9 +2,10 @@
 #include <jde/iot/types/OpcServer.h>
 #include <jde/iot/uatypes/UAClient.h>
 #include <jde/crypto/OpenSsl.h>
-
 #include <open62541/plugin/create_certificate.h>
 #include "../helpers.h"
+
+#include "../../../../Framework/source/um/UM.h"
 
 #define var const auto
 
@@ -39,6 +40,10 @@ namespace Jde::Iot{
 	up<IException> _exception;
 	α AuthenticateTest( bool badPassword=false )ι->Task{
 		try{
+			string opcId = UAClientTests::OpcServer["target"];
+			auto jProviderId = *( co_await Logging::Server::GraphQL(Jde::format("query{{ provider(filter:{{target:{{ eq:\"{}\"}}, providerTypeId:{{ eq:{}}}}}){{ id }} }}", opcId, (uint)Jde::UM::EProviderType::OpcServer)) ).UP<json>();
+			if( jProviderId["data"].is_null() )
+			  jProviderId = *( co_await Logging::Server::GraphQL( Jde::format("{{ mutation {{ createProvider(  \"input\": {{\"target\":\"{}\",\"providerType\":\"OpcServer\"}} ){{id}} }} }}", opcId)) ).UP<json>();
 			var sessionId = *( co_await Iot::Authenticate("user1", badPassword ? "xyz" :"password1", UAClientTests::OpcServer["target"]) ).UP<SessionPK>();
 			_sessionIds.push_back( sessionId );
 			//_pClient = ( co_await UAClient::GetClient("user1", badPassword ? "xyz" :"password1") ).SP<UAClient>();

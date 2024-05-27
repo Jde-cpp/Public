@@ -157,6 +157,10 @@ namespace Jde::Web::Rest{
 	}
 	α SessionInfoAwait::await_suspend( HCoroutine h )ι->void{ IAwaitCache::await_suspend(h); FetchSessionInfo( _sessionId, h ); }
 
+	α Request::Body()Ε->json{
+		return Json::Parse( ClientRequest().body() );
+	}
+
 	α ParseUri( string&& uri )->tuple<string,flat_map<string,string>>{
 	  var target{ uri.substr(0, uri.find('?')) };
 		flat_map<string,string> params;
