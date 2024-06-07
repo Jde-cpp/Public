@@ -31,9 +31,9 @@ namespace Jde{
 		// TRACE( "{}", createJson.dump() );
 		// var id = createJson["data"]["user"]["id"].get<int>();//{"data":{"user":{"id":7}}}
 
-		var selectAll = "query{ groups { id name attributes created updated deleted target description provider members } }";
-		var selectAllJson = DB::Query( selectAll, 0 );
-		TRACE( "{}", selectAllJson.dump() );		
+		// var selectAll = "query{ groups { id name attributes created updated deleted target description provider members } }";
+		// var selectAllJson = DB::Query( selectAll, 0 );
+		// TRACE( "{}", selectAllJson.dump() );		
 
 // 		var readGroups = "query{ users(filter:{isGroup:{ eq:true}}){ id name } }";
 // 		var readGroupsJson = DB::Query( readGroups, 0 );

@@ -86,6 +86,7 @@ namespace Jde::Web::Rest{
 
 		α SendQuery( string&& query, Request&& req )ι->Task;
 		Ω AddSession( UserPK userId )ι->sp<SessionInfo>;
+		Ω QuerySessions( SessionPK sessionId )ι->vector<sp<SessionInfo>>;
 		Ω GetNewSessionId()ι->SessionPK;
 		Ω FetchSessionInfo( SessionPK sessionId )ι->SessionInfoAwait{ return SessionInfoAwait{ sessionId }; }
 	private:

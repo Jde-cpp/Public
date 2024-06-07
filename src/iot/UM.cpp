@@ -11,24 +11,24 @@ namespace Jde::Iot{
 	static sp<LogTag> _logTag = Logging::Tag( "iot.um" );
 
 	boost::concurrent_flat_map<SessionPK,flat_map<OpcNK,tuple<string,string>>> _sessions; //loginName,password
-	α Authenticate( string loginName, string password, OpcNK opcId, HCoroutine h )ι->Task{
+	α Authenticate( string loginName, string password, OpcNK opcNK, HCoroutine h )ι->Task{
 		try{
 			optional<bool> authenticated{};
-			_sessions.cvisit_while( [&loginName, &password, &opcId, &authenticated]( var& sessionMap )ι{
+			_sessions.cvisit_while( [&loginName, &password, &opcNK, &authenticated]( var& sessionMap )ι{
 				var& map = sessionMap.second;
-				if( auto p = map.find(opcId); p!=map.end() && get<0>(p->second)==loginName )
+				if( auto p = map.find(opcNK); p!=map.end() && get<0>(p->second)==loginName )
 					authenticated = get<1>(p->second)==password;
 				return !authenticated.has_value();
 			});
 			if( !authenticated.value_or(false) )
-				( co_await UAClient::GetClient(opcId, loginName, password) ).SP<UAClient>();
-			var providerId = await( ProviderPK, Logging::Server::GraphQL(opcId) );
-			var sessionId = await( SessionPK, Logging::Server::AddLogin(opcId, loginName, providerId) );
-			flat_map<OpcNK,tuple<string,string>> init{ {opcId,{loginName,password}} };
+				( co_await UAClient::GetClient(opcNK, loginName, password) ).SP<UAClient>();
+			var providerId = await( ProviderPK, ProviderAwait{opcNK} ); THROW_IF( providerId==0, "Provider not found for '{}'.", opcNK );
+			var sessionId = await( SessionPK, Logging::Server::AddLogin(opcNK, loginName, providerId) );
+			flat_map<OpcNK,tuple<string,string>> init{ {opcNK,{loginName,password}} };
 			std::pair<SessionPK, flat_map<OpcNK,tuple<string,string>>> init2 = make_pair(sessionId, init);
 			_sessions.emplace_or_visit( init2, 
-  			[&loginName, &password, &opcId]( auto& sessionMap )ι{
-					sessionMap.second.try_emplace( opcId, make_tuple(loginName,password) );
+  			[&loginName, &password, &opcNK]( auto& sessionMap )ι{
+					sessionMap.second.try_emplace( opcNK, make_tuple(loginName,password) );
 			});
 			Resume( mu<SessionPK>(sessionId), move(h) );
 		} 
@@ -45,7 +45,7 @@ namespace Jde::Iot{
 			auto h2 = move(h);
 			h = move(h2);
 			var query = Jde::format( "query{{ provider(filter:{{target:{{ eq:\"{}\"}}, providerTypeId:{{ eq:{}}}}}){{ id }} }}", opcId, (uint8)Jde::UM::EProviderType::OpcServer );
-			var j = await( json, Logging::Server::GraphQL(query) );
+			var j = await( json, Logging::IServerSink::GraphQL(query, 0) );
 			var providerId = Json::Getε<json>( j, "data" ).is_null() ? 0 : Json::Getε<ProviderPK>( j, {"data","provider","id"} );
 			Resume( mu<ProviderPK>(providerId), move(h) );
 		}
@@ -66,7 +66,7 @@ namespace Jde::Iot{
 			}
 
 			var q = Jde::format( "{{ mutation {{ createProvider(  \"input\": {{\"target\":\"{}\",\"providerType\":\"OpcServer\"}} ){{id}} }} }}", opcNK );
-			auto j = await( json, Logging::Server::GraphQL(q) );
+			auto j = await( json, Logging::IServerSink::GraphQL(q, 0) );
 			uint newPK = Json::Getε<OpcPK>( j, {"data","provider","id"} );
 			Resume( mu<OpcPK>(newPK), move(h) );
 		}
@@ -85,7 +85,7 @@ namespace Jde::Iot{
 			auto providerPK = await( ProviderPK, ProviderAwait{opcNK} );
 
 			var q = Jde::format( "{{ mutation{{purgeProvider( \"id\":{} ){{rowCount}}}} }}", providerPK );
-			auto j = await( json, Logging::Server::GraphQL(q) );
+			auto j = await( json, Logging::IServerSink::GraphQL(q, 0) );
 			uint rowCount = Json::Getε<uint>( j, {"data","provider","rowCount"} );
 			Resume( move(mu<OpcPK>(rowCount)), move(h) );
 		}

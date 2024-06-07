@@ -16,6 +16,7 @@
 //namespace Jde::IO{ class IncomingMessage; }
 namespace Jde{ 
 	struct LogTag{ string Id; ELogLevel Level{ELogLevel::NoLog}; };//loadLibrary dlls may disappear, so need string vs. sv
+	Φ CanBreak()ι->bool;
 }
 namespace Jde::Logging{
 	Φ BreakLevel()ι->ELogLevel;
@@ -124,9 +125,9 @@ namespace Jde::Logging{
 	#ifdef _MSC_VER
 		#define BREAK DebugBreak()
 	#else
-		#define BREAK ::raise( 5/*SIGTRAP*/ )
+		#define BREAK if( CanBreak() ){ ::raise( 5/*SIGTRAP*/ ); }
 	#endif
-	#define BREAK_IF(x) if( x ) BREAK;
+	#define BREAK_IF(x) if( x ){ BREAK };
 #endif
 
 

@@ -25,12 +25,13 @@ namespace Jde::Coroutine{
 		AwaitResult( sp<void>&& p )ι:_result{ p }{};
 		AwaitResult( Exception&& e )ι:_result{ e.Move().release() }{};
 		AwaitResult( bool b )ι:_result{ b }{};
+		~AwaitResult();
 		α Clear()ι->void{ _result = UType{}; }
 		α HasValue()Ι{ return _result.index()==0 && get<0>( _result ); }
 		α HasShared()Ι{ return _result.index()==1 && get<1>( _result ); }
 		α HasError()Ι{ return _result.index()==2; }
 		α HasBool()Ι{ return _result.index()==3; }
-		α Error()ι->up<IException>{ auto p = HasError() ? get<IException*>(_result) : nullptr; ASSERT(p); Clear(); return p ? up<IException>{ p->Move() } : mu<Exception>("nullptr"); }
+		α Error()ι->up<IException>{ auto p = HasError() ? get<IException*>(_result) : nullptr; ASSERT(p); Clear(); return p ? up<IException>{ p } : mu<Exception>("nullptr"); }
 		α Uninitialized()Ι{ return _result.index()==0 && get<0>(_result)==nullptr; }
 		α CheckError( SRCE )ε->void;
 		Ŧ SP( SRCE )ε->sp<T>;
@@ -116,6 +117,8 @@ namespace Jde::Coroutine{
 		CheckError( sl );
 		if( _result.index()==1 )
 			throw Exception{ "Result is a shared_ptr.", ELogLevel::Critical, sl };
+		else if( _result.index()==3 )
+			throw Exception{ "Result is a bool.", ELogLevel::Critical, sl };
 		void* pUnique = get<0>( _result );
 		auto p = static_cast<T*>( pUnique );
 		if( pUnique && !p )

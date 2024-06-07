@@ -18,8 +18,9 @@ namespace Jde::Iot{
 		~UAClientTests()override{}
 
 		Ω SetUpTestCase()ι->void;
-		α SetUp()ι->void override{};
+		α SetUp()ι->void override{}
 		α TearDown()ι->void override{}
+		Ω TearDownTestSuite();
 	public:
 		static json OpcServer;
 	};
@@ -32,6 +33,10 @@ namespace Jde::Iot{
 			OpcServer = Iot::SelectOpcServer( id );
 		}
 	}
+	
+	α UAClientTests::TearDownTestSuite(){
+		Iot::PurgeOpcServer();
+	}
 
 	std::condition_variable_any cv;
 	std::shared_mutex mtx;
@@ -41,9 +46,6 @@ namespace Jde::Iot{
 	α AuthenticateTest( bool badPassword=false )ι->Task{
 		try{
 			string opcId = UAClientTests::OpcServer["target"];
-			auto jProviderId = *( co_await Logging::Server::GraphQL(Jde::format("query{{ provider(filter:{{target:{{ eq:\"{}\"}}, providerTypeId:{{ eq:{}}}}}){{ id }} }}", opcId, (uint)Jde::UM::EProviderType::OpcServer)) ).UP<json>();
-			if( jProviderId["data"].is_null() )
-			  jProviderId = *( co_await Logging::Server::GraphQL( Jde::format("{{ mutation {{ createProvider(  \"input\": {{\"target\":\"{}\",\"providerType\":\"OpcServer\"}} ){{id}} }} }}", opcId)) ).UP<json>();
 			var sessionId = *( co_await Iot::Authenticate("user1", badPassword ? "xyz" :"password1", UAClientTests::OpcServer["target"]) ).UP<SessionPK>();
 			_sessionIds.push_back( sessionId );
 			//_pClient = ( co_await UAClient::GetClient("user1", badPassword ? "xyz" :"password1") ).SP<UAClient>();
@@ -112,8 +114,8 @@ namespace Jde::Iot{
 		cv.wait( l );
 		//EXPECT_FALSE( _pClient );
 		EXPECT_TRUE( _exception );
-		EXPECT_TRUE( string{_exception->what()}.contains("BadUserAccessDenied") );
-		DBG( "{}", _exception->what() );
+		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadUserAccessDenied") );
+		DBG( "{}", _exception ? _exception->what() : "Error no exception." );
 		INFO( "~UAClientTests.Authenticate_BadPassword" );
 	}
 }

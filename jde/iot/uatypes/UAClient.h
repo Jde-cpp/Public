@@ -23,7 +23,7 @@ namespace Jde::Iot{
 		operator UA_Client* ()ι{ return _ptr; }
 		Ω Shutdown()ι->void;
 		Ω GetClient( string id, string userId, string pw, SRCE )ι{ return ConnectAwait{move(id), move(userId), move(pw), sl}; }
-		Ω Find( str id, str userId )ι->sp<UAClient>;
+		Ω Find( str id, str userId, str pw )ι->sp<UAClient>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
 		α SubscriptionId()Ι->SubscriptionId{ return CreatedSubscriptionResponse ? CreatedSubscriptionResponse->subscriptionId : 0;}

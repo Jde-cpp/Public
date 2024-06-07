@@ -20,6 +20,7 @@ namespace Jde{
 
 int main(int argc, char **argv){
 	using namespace Jde;
+
  	::testing::InitGoogleTest( &argc, argv );
 	Startup( argc, argv );
 	auto result = EXIT_FAILURE;
@@ -28,7 +29,7 @@ int main(int argc, char **argv){
 		var filter = p ? *p : "*";
 		::testing::GTEST_FLAG( filter ) = filter;
 	   result = RUN_ALL_TESTS();
-		IApplication::Shutdown();
+		IApplication::Shutdown( result );
 		IApplication::Cleanup();
 	}
 	return result;

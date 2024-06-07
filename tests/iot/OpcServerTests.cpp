@@ -13,26 +13,32 @@ namespace Jde::Iot{
 
 	class OpcServerTests : public ::testing::Test{
 	protected:
-		Ω SetUpTestCase()ι->void{
-			auto p = mu<IotGraphQL>();
-			_pHook = p.get();
-			DB::GraphQL::Hook::Add( move(p) );
-		};
-		static IotGraphQL* _pHook;
+		Ω SetUpTestCase()ι->void{};
 		static uint OpcProviderId;
 	};
 	uint OpcServerTests::OpcProviderId{};
-	IotGraphQL* OpcServerTests::_pHook{};
 
-	TEST_F( OpcServerTests, CreateInsertFailed ){
+	TEST_F( OpcServerTests, InsertFailed ){
+		var target = OpcServerTarget;
+		json jInsert = Json::Parse(Jde::format("{{\"input\":{{\"target\":\"{}\"}}}}", target) );
+		DB::MutationQL insert{ "opcServer", DB::EMutationQL::Create, jInsert, nullopt };
+
+		var pk = CreateOpcServer();
+
+		DB::DataSourcePtr()->Execute(	Jde::format("delete from iot_opc_servers where id='{}'", pk) ); //insert checks if failed because exists.
+		VFuture( move(*GetHook()->InsertFailure(insert, 0)) ).get();
+		ASSERT_EQ( 0, *Future<ProviderPK>(ProviderAwait{target}).get() );
+	}
+
+	TEST_F( OpcServerTests, PurgeFailed ){
 		var target = OpcServerTarget;
 		var pk = CreateOpcServer();
-		DB::MutationQL purge{ "opcServer", DB::EMutationQL::Create, { {"id", pk} }, nullopt };
-		DB::MutationQL insert{ "opcServer", DB::EMutationQL::Create, { {"input", {"target", target}} }, nullopt };
-		VFuture( move(*_pHook->PurgeFailure(purge)) );
-		ASSERT_EQ( 0, *Future<ProviderPK>(ProviderAwait{target}).get() );
-		VFuture( move(*_pHook->InsertFailure(insert)) );
-		ASSERT_EQ( 0, *Future<ProviderPK>(ProviderAwait{target}).get() );
+		Future<ProviderPK>( ProviderAwait{target, false} ).get();//BeforPurge mock.
+		json jPurge = Json::Parse( Jde::format("{{\"id\": {}}}", pk) );
+		DB::MutationQL purge{ "opcServer", DB::EMutationQL::Purge, jPurge, nullopt };
+		VFuture( move(*GetHook()->PurgeFailure(purge, 0)) ).get();
+		ASSERT_LT( 0, *Future<ProviderPK>(ProviderAwait{target}).get() );
+
 		PurgeOpcServer( pk );
 	}
 

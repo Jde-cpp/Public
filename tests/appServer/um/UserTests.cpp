@@ -30,13 +30,13 @@ namespace Jde{
 		var query = "{ __type(name: \"User\") { fields { name type { name kind ofType{name kind} } } }}";
 		var json = DB::Query( query, 0 );
 		TRACE( "{}", json.dump() );
-		ASSERT_EQ( Str::Replace( json.dump(), '"', '\'' ), "{'data':{'__type':{'fields':[{'name':'id','type':{'kind':7,'name':null,'ofType':{'kind':0,'name':'ID'}}},{'name':'name','type':{'kind':7,'name':null,'ofType':{'kind':0,'name':'String'}}},{'name':'attributes','type':{'kind':0,'name':'UInt'}},{'name':'created','type':{'kind':7,'name':null,'ofType':{'kind':0,'name':'DateTime'}}},{'name':'updated','type':{'kind':0,'name':'DateTime'}},{'name':'deleted','type':{'kind':0,'name':'DateTime'}},{'name':'target','type':{'kind':7,'name':null,'ofType':{'kind':0,'name':'String'}}},{'name':'description','type':{'kind':0,'name':'String'}},{'name':'isGroup','type':{'kind':7,'name':null,'ofType':{'kind':0,'name':'Boolean'}}},{'name':'provider','type':{'kind':1,'name':'Provider'}},{'name':'password','type':{'kind':0,'name':'String'}}],'name':'User'}}}" );
+		ASSERT_EQ( Str::Replace( json.dump(), '"', '\'' ), "{'data':{'__type':{'fields':[{'name':'id','type':{'kind':7,'name':null,'ofType':{'kind':0,'name':'ID'}}},{'name':'name','type':{'kind':7,'name':null,'ofType':{'kind':0,'name':'String'}}},{'name':'attributes','type':{'kind':0,'name':'UInt'}},{'name':'created','type':{'kind':7,'name':null,'ofType':{'kind':0,'name':'DateTime'}}},{'name':'updated','type':{'kind':0,'name':'DateTime'}},{'name':'deleted','type':{'kind':0,'name':'DateTime'}},{'name':'target','type':{'kind':7,'name':null,'ofType':{'kind':0,'name':'String'}}},{'name':'description','type':{'kind':0,'name':'String'}},{'name':'isGroup','type':{'kind':7,'name':null,'ofType':{'kind':0,'name':'Boolean'}}},{'name':'provider','type':{'kind':1,'name':'Provider'}},{'name':'loginName','type':{'kind':7,'name':null,'ofType':{'kind':0,'name':'String'}}},{'name':'password','type':{'kind':0,'name':'String'}}],'name':'User'}}}" );
 	}
-	α CreateUser( str name, uint providerId=(uint)UM::EProviderType::Google )->int{
-		var create = Jde::format( "{{ mutation {{ createUser(  'input': {{'loginName':'{0}','target':'{0}Target','provider':{1},'name':'{0} - name','description':'{0} - description'}} ){{id}} }} }}", name, providerId );
+	α CreateUser( str name, uint providerId=(uint)UM::EProviderType::Google )->UserPK{
+		var create = Jde::format( "{{ mutation {{ createUser(  'input': {{'loginName':'{0}','target':'{0}','provider':{1},'name':'{0} - name','description':'{0} - description'}} ){{id}} }} }}", name, providerId );
 		var createJson = DB::Query( Str::Replace(create, '\'', '"'), 0 );
 		TRACE( "{}", createJson.dump() );
-		return createJson["data"]["user"]["id"].get<int>();//{"data":{"user":{"id":7}}}
+		return createJson["data"]["user"]["id"].get<UserPK>();//{"data":{"user":{"id":7}}}
 	}
 	α PurgeUser( UserPK userId )->void{
 		var purge = Jde::format( "{{mutation {{ purgeUser(\"id\":{}) }} }}", userId );
@@ -44,9 +44,21 @@ namespace Jde{
 		TRACE( "purgeJson={}", purgeJson.dump() );
 	}
 
+	α SelectUser( string target )->json{
+		var selectArray = Jde::format( "query{{ user(target:[\"{}\"]){{id loginName provider{{id name}}}} }}", target );
+		var selectArrayJson = DB::Query( selectArray, 0 );
+		TRACE( "selectArrayJson={}", selectArrayJson.dump() );		
+		return selectArrayJson["data"];
+	}	
+
 	TEST_F( UserTests, Crud ){
 		const string user{ "crud" };
-		var id = CreateUser( user );
+		var existingUser = SelectUser( user );
+		auto id = existingUser.find("user")!=existingUser.end() ? existingUser["user"]["id"].get<UserPK>() : 0;
+		if( id )
+			PurgeUser( id );
+		id = CreateUser( user );
+		
 		var selectAll = "query{ users { id name attributes created updated deleted target description provider } }";
 		var selectAllJson = DB::Query( selectAll, 0 );
 		TRACE( "{}", selectAllJson.dump() );		
@@ -56,7 +68,7 @@ namespace Jde{
 		TRACE( "{}", readGroupsJson.dump() );
 		ASSERT_EQ( readGroupsJson["data"]["users"].size(), 0 );
 
-		var read = "query{ user(filter:{target:{ eq:\"id\"}}){ id name attributes created updated deleted target description isGroup provider{ id name } } }";
+		var read = Jde::format("query{{ user(filter:{{target:{{ eq:\"{}\"}}}}){{ id name attributes created updated deleted target description isGroup provider{{ id name }} }} }}", user );
 		var readJson = DB::Query( read, 0 );
 		TRACE( "{}", readJson.dump() );
 		var readId = readJson["data"]["user"]["id"].get<int>();
@@ -73,6 +85,15 @@ namespace Jde{
 		PurgeUser( id );
 	}
 	
+	TEST_F( UserTests, MultipleUsersSelect ){
+		UserPK a = CreateUser( "MultipleUsersA" );
+		UserPK b = CreateUser( "MultipleUsersB" );
+		var q = Jde::format( "query{{ users(id:[{},{}]){{id loginName provider{{id name}}}} }}", a, b );
+		auto j = DB::Query( q, 0 );
+		TRACE( "{}", j.dump() );
+		PurgeUser( a );
+		PurgeUser( b );
+	}
 	TEST_F( UserTests, ProvidersSelect ){
 		var readGroups = "query{ __type(name: \"Provider\") { enumValues { id name } } }";
 		var readGroupsJson = DB::Query( readGroups, 0 );

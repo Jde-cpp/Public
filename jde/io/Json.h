@@ -14,16 +14,19 @@ namespace Jde::Json{
 			throw Exception( sl, "json type_error: {}", e.what() );
 		}
 		catch( const nlohmann::detail::parse_error& e ){
-			throw Exception{ sl, "json parse_error: {}", e.what() };
+			throw Exception{ sl, "json parse_error: {} - {}", e.what() };
 		}
 		catch( const json::exception& e ){
 			throw Exception{ sl, "json exception: {}", e.what() };
+		}
+		catch( const nlohmann::detail::exception& e ){
+			throw Exception{ sl, "json parse_error: {}", e.what() };
 		}
 		catch( const std::exception& e ){
 			throw Exception{ sl, "json std::exception: {}", e.what() };
 		}
 	}
-#pragma GCC diagnostic pop	
+
 	template<class T=string> α Get( const json& j, str key, SRCE )ε->T{
 		auto p = j.find( key );
 		return p!=j.end() ? Routine<T>( [&](){return p->get<T>();}, sl ) : T{};
@@ -52,6 +55,13 @@ namespace Jde::Json{
 	}
 
 	Ξ Parse( str j, SRCE )ε{
-		return Routine<json>( [&](){return json::parse(j);}, sl );
+		try{
+			return Routine<json>( [&](){return json::parse(j);}, sl );
+		}
+		catch( IException& e ){
+			e.PrependWhat( Jde::format("{} - ", j) );
+			e.Throw();
+		}
 	}
+#pragma GCC diagnostic pop
 }

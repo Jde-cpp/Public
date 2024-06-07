@@ -39,6 +39,14 @@
 				<Item Name="string">_M_dataplus._M_p,s</Item>
 		</Expand>
 	</Type>	
+	<Type Name="std::string_view">
+		<AlternativeType Name="Jde::sv"/>
+		<DisplayString>_M_str,s</DisplayString>
+		<Expand>
+				<Item Name="size">_M_len</Item>
+				<Item Name="string">_M_str,s</Item>
+		</Expand>
+	</Type>	
 	<Type Name="std::shared_ptr&lt;*&gt;">
 		<!-- <DisplayString Condition="_M_ptr!=0">{*_M_ptr}</DisplayString> -->
     <DisplayString Condition="_M_ptr!=0">p={*_M_ptr}</DisplayString>
@@ -59,7 +67,7 @@
 	<Type Name="std::vector&lt;*&gt;">
 		<AlternativeType Name="std::__debug::vector&lt;*&gt;"/>
 		<AlternativeType Name="std::__cxx1998::_Vector_base&lt;*&gt;"/>
-		<AlternativeType Name="nlohmann::basic_json&lt;*&gt;::array_t"/>
+		<!-- <AlternativeType Name="nlohmann::basic_json&lt;*&gt;::array_t"/> -->
     <DisplayString>{{size={_M_impl._M_finish - _M_impl._M_start}}}</DisplayString>
     <Expand>
       <Item Name="[size]" ExcludeView="simple">_M_impl._M_finish - _M_impl._M_start</Item>
@@ -70,9 +78,11 @@
     </Expand>
   </Type>
  	<Type Name="nlohmann::basic_json&lt;*&gt;">
- 		<AlternativeType Name="nlohmann::json"/>
+		<AlternativeType Name="nlohmann::json"/>
+		<AlternativeType Name="nlohmann::basic_json&lt;*,*,*,*,*,*,*,*,*,*&gt;"/>
+		<!-- <AlternativeType Name="nlohmann::basic_json&lt;std::__debug::map, std::__debug::vector, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::__debug::vector&lt;unsigned char, std::allocator&lt;unsigned char&gt; &gt; &gt;"/> -->
 		<DisplayString Condition="m_type == nlohmann::detail::value_t::null">null</DisplayString>
-		<DisplayString Condition="m_type == nlohmann::detail::value_t::object">{*(m_value.object)}</DisplayString>
+		<DisplayString Condition="m_type == nlohmann::detail::value_t::object">o={*(m_value.object)}</DisplayString>
 		<DisplayString Condition="m_type == nlohmann::detail::value_t::array">{{array={*(m_value.array)}}}</DisplayString>
 		<DisplayString Condition="m_type == nlohmann::detail::value_t::string">{*(m_value.string)}</DisplayString>
 		<DisplayString Condition="m_type == nlohmann::detail::value_t::boolean">{m_value.boolean}</DisplayString>
@@ -80,14 +90,14 @@
 		<DisplayString Condition="m_type == nlohmann::detail::value_t::number_unsigned">{m_value.number_unsigned}</DisplayString>
 		<DisplayString Condition="m_type == nlohmann::detail::value_t::number_float">{m_value.number_float}</DisplayString>
 		<DisplayString Condition="m_type == nlohmann::detail::value_t::discarded">discarded</DisplayString>
-		<Expand>
-				<ExpandedItem Condition="m_type == nlohmann::detail::value_t::object">
+		<!-- <Expand>
+				 <ExpandedItem Condition="m_type == nlohmann::detail::value_t::object">
 						*(m_value.object),view(simple)
-				</ExpandedItem>
+				</ExpandedItem> 
 				<ExpandedItem Condition="m_type == nlohmann::detail::value_t::array">
 						*(m_value.array),view(simple)
 				</ExpandedItem>
-		</Expand>
+		</Expand> -->
 	</Type>	
 	<Type Name="boost::container::flat_map&lt;*&gt;">
 		<DisplayString>{{size={m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>

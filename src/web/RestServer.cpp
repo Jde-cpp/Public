@@ -8,7 +8,8 @@
 #define CHECK_EC(ec, ...) if( ec ){ CodeException x(static_cast<std::error_code>(ec) __VA_OPT__(,) __VA_ARGS__); return; }
 
 namespace Jde::Web::Rest{
-	sp<LogTag> _logTag = Logging::Tag( "rest" );
+	static sp<LogTag> _logTag = Logging::Tag( "restRequest" );
+	static sp<LogTag> _logTagResponse = Logging::Tag( "restResponse" );
 	α RestTag()ι->sp<LogTag>{ return _logTag; }
 	IListener::IListener( PortType port )ε:
 		_pIOContext{ IO::AsioContextThread::Instance() },
@@ -115,6 +116,20 @@ namespace Jde::Web::Rest{
 		ul _{ _sessionMutex };
 		_sessions.emplace( p->session_id(), p );
 	}
+	α ISession::QuerySessions( SessionPK sessionId )ι->vector<sp<SessionInfo>>{
+		ul _{ _sessionMutex };
+		vector<sp<SessionInfo>> sessions;
+		if( sessionId ){
+			if( auto p = _sessions.find(sessionId); p!=_sessions.end() )
+				sessions.push_back( p->second );
+		}
+		else{
+			sessions.reserve( sessionId ? 1 : _sessions.size() );
+			for( auto& [_,p] : _sessions )
+				sessions.push_back( p );
+		}
+		return sessions;
+	}
 	
 	α ISession::GetNewSessionId()ι->SessionPK{
 		ul _{ _sessionMutex };
@@ -151,9 +166,9 @@ namespace Jde::Web::Rest{
 		sl _{ _sessionMutex };
 		if( auto p = _sessions.find( _sessionId ); p!=_sessions.end() )
 			_result.Set( p->second );
-		else if( Logging::Server::IsLocal() )//if local, should have been in _sessions.
+		else if( Logging::Server::IsLocal() )//if local, should have been in _sessions, ie server reset
 			_result.Set( sp<SessionInfo>{} );
-		return _result.HasShared();
+		return Logging::Server::IsLocal() || _result.HasShared();
 	}
 	α SessionInfoAwait::await_suspend( HCoroutine h )ι->void{ IAwaitCache::await_suspend(h); FetchSessionInfo( _sessionId, h ); }
 
@@ -178,7 +193,7 @@ namespace Jde::Web::Rest{
 	α ISession::HandleRequest( Request req )ι->Task{
 		auto [target, params] = ParseUri( Ssl::DecodeUri(string{req.ClientRequest().target()}) );
 		TRACE( "{}={}", target, req.ClientRequest().body() );
-		var sessionString{ req.ClientRequest().base()["session-id"] };
+		var sessionString{ req.ClientRequest().base()["Session-Id"] };
 		try{
 			if( !sessionString.empty() ){
 				var sessionId = Str::TryTo<SessionPK>( string{sessionString}, nullptr, 16 ); THROW_IFX(!sessionId, RequestException<http::status::bad_request>(SRCE_CUR, "Could not create sessionId {}.", sessionString); )
@@ -189,9 +204,12 @@ namespace Jde::Web::Rest{
 	    if( req.Method() == http::verb::get ){
 				if( target=="/graphql" ){
 					auto& query = params["query"]; THROW_IFX( query.empty(), RequestException<http::status::bad_request>(SRCE_CUR, "No query sent.") );
-					string threadDesc = Jde::format( "[{:x}]{}", req.SessionInfoPtr ? req.SessionInfoPtr->session_id() : 0, target );
-					var y = ( co_await DB::CoQuery(move(query), req.UserId(), threadDesc) ).UP<nlohmann::json>();
-					Send( move(*y), move(req) );
+					var sessionId = req.SessionInfoPtr ? req.SessionInfoPtr->session_id() : 0;
+					TRACE( "[{:x}] - {}", sessionId, query );
+					string threadDesc = Jde::format( "[{:x}]{}", sessionId, target );
+					var y = await( json, DB::CoQuery(move(query), req.UserId(), threadDesc) );
+					TRACET( _logTagResponse, "[{:x}] - {}", sessionId, y.dump() );
+					Send( move(y), move(req) );
 				}
 			}
 			else if( req.Method() == boost::beast::http::verb::options )

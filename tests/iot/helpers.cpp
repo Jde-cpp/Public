@@ -1,11 +1,13 @@
 #include "helpers.h"
 #include "../../../Framework/source/db/GraphQL.h"
 #include "../../../Framework/source/db/Database.h"
+#include <jde/iot/IotGraphQL.h>
 
 #define var const auto
 
 namespace Jde{
 	static sp<Jde::LogTag> _logTag{ Logging::Tag( "tests" ) };
+	static Iot::IotGraphQL* _pHook;
 
 	α Iot::CreateOpcServer()ι->uint{
 		var certificateUri{ "urn:open62541.server.application" };
@@ -23,8 +25,17 @@ namespace Jde{
 	}
 
 	α Iot::PurgeOpcServer( uint pk )ι->void{
+		if( pk==0 )
+			pk = SelectOpcServer()["id"].get<uint>();
 		var create = Jde::format( "{{ mutation {{ purgeOpcServer('id':{}) }} }}", pk );
 		var createJson = DB::Query( Str::Replace(create, '\'', '"'), 0 );
 		TRACE( "PurgeOpcServer={}", createJson.dump() );
+	}
+	
+	α Iot::GetHook()ι->IotGraphQL*{ return _pHook; }
+	α Iot::AddHook()ι->void{
+		auto p = mu<IotGraphQL>();
+		_pHook = p.get();
+		DB::GraphQL::Hook::Add( move(p) );
 	}
 }

@@ -1,6 +1,6 @@
 {
 	"testing":{
-		"tests":"UserTests.Login_New_Opc"
+		"testsx":"UserTests.Crud"
 	},
 	"cryptoTests":{
 		"clear": true
@@ -13,8 +13,9 @@
 		"ql_schema": "../config/ql.json"
 	},
 	"logging":{
+		"breakLevel": "Trace",
 		"tags": {
-			"Trace":["tests"],
+			"Trace":["tests", "sql", "ql"],
 			"Debug":["settings"],
 			"Information":[],
 			"Warning":[],

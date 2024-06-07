@@ -352,10 +352,10 @@ namespace Jde::Iot{
 		return y;
 	}
 
-	α UAClient::Find( str id, str userId )ι->sp<UAClient>{
+	α UAClient::Find( str id, str userId, str pw )ι->sp<UAClient>{
 		sl _{ _clientsMutex };
 		sp<UAClient> y;
-		if( auto p = id.size() ? _clients.find(make_tuple(id,userId)) : find_if( _clients, [&userId](var& c){return c.second->IsDefault() && c.second->UserId==userId;} ); p!=_clients.end() )
+		if( auto p = id.size() ? _clients.find(make_tuple(id,userId)) : find_if( _clients, [&](var& c){return c.second->IsDefault() && c.second->UserId==userId; } ); p!=_clients.end() && p->second->Password==pw )
 			y = p->second;
 		return y;
 	}

@@ -46,7 +46,7 @@ namespace Jde{
 		Ω Remove( sp<void> pShared )ι->void;
 		Ω StartTime()ι->TimePoint;
 		Ω AddShutdownFunction( function<void()>&& shutdown )ι->void;
-		Ω Pause()ι->void;
+		Ω Pause()ι->int;
 		Ω IsConsole()ι->bool;
 
 		Ω GetBackgroundThreads()ι{ return  *_pBackgroundThreads; }
@@ -54,7 +54,7 @@ namespace Jde{
 		Ω ProgramDataFolder()ι->fs::path;
 		Ω ApplicationDataFolder()ι->fs::path;
 		Ω ShuttingDown()ι->bool;
-		Ω Shutdown()ι->void;
+		Ω Shutdown( int exitReason )ι->void;
 		Ω Cleanup()ι->void;
 		Ω AddActiveWorker( Threading::IPollWorker* pWorker )ι->void;
 		Ω RemoveActiveWorker( Threading::IPollWorker* p )ι->void;

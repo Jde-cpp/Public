@@ -9,7 +9,7 @@ namespace Jde::Iot
 
 	α ConnectAwait::await_suspend( HCoroutine h )ι->void{
 		IAwait::await_suspend( h );
-		if( auto pClient = UAClient::Find(_id, _userId); pClient )
+		if( auto pClient = UAClient::Find(_id, _userId, _password); pClient )
 			Jde::Resume( move(pClient), move(h) );
 		else{
 			auto key = make_tuple( _id,_userId );

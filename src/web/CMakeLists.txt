@@ -7,7 +7,7 @@ link_directories( ${Protobuf_DIR}/../.. )
 set(CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS} "-Wl,-rpath=$ORIGIN")
 add_definitions( -DJde_WEB_EXPORTS )
 find_package(OpenSSL)
-add_library( ${CMAKE_PROJECT_NAME} SHARED ProtoServer.cpp RestServer.cpp WebSocket.cpp 
+add_library( ${CMAKE_PROJECT_NAME} SHARED ProtoServer.cpp RestServer.cpp WebGraphQL.cpp WebSocket.cpp 
 	proto/FromServer.pb.cc )
 
 target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
