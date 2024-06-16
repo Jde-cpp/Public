@@ -30,6 +30,11 @@ target_link_libraries( ${CMAKE_PROJECT_NAME} libopen62541.a )
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
   PRIVATE
+		<boost/asio.hpp>
+		<boost/beast.hpp>
+		<boost/asio/strand.hpp>
+		<boost/beast/core.hpp>
+		<boost/beast/http.hpp>	
 		<boost/lexical_cast.hpp>
 		<boost/unordered/concurrent_flat_map.hpp>
 		<boost/unordered/concurrent_flat_set.hpp>
@@ -47,7 +52,7 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 		<jde/Str.h>
 		<jde/coroutine/Task.h>
 		<jde/crypto/OpenSsl.h>
-		"../web/Exports.h"
+		<jde/web/exports.h>
 		"../../../Framework/source/DateTime.h"
 		"../../../Framework/source/coroutine/Alarm.h"
 		"../../../Framework/source/coroutine/Awaitable.h"

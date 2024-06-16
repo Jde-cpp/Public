@@ -32,6 +32,8 @@ target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.Crypto Jde.Ssl Jde.Iot Jde.
 
 target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
 	<gtest/gtest.h>
+	<boost/asio.hpp>
+	<boost/beast.hpp>
 	<boost/lexical_cast.hpp>
 	<boost/unordered/concurrent_flat_map.hpp>
 	<boost/unordered/concurrent_flat_set.hpp>
@@ -46,6 +48,6 @@ target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
 	<jde/TypeDefs.h>
 	<jde/Exception.h>
 	<jde/Log.h>
-	"../../src/web/Exports.h"
+	<jde/web/exports.h>
 	"../../../Framework/source/db/Database.h"
 )

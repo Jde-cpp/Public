@@ -1,0 +1,22 @@
+{
+	"testing":{
+		"testsx":"OpenSslTests.Certificate"
+	},
+	"cryptoTests":{
+		"clear": true
+	},
+	"logging":{
+		"tags": {
+			"Trace":["tests"],
+			"Debug":["settings"],
+			"Information":[],
+			"Warning":[],
+			"Error":[],
+			"Critical":[]
+		},
+		"console":{}
+	},
+	"workers":{
+		"drive": {"threads": 1}
+	}
+}

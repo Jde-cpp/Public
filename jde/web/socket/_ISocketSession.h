@@ -1,33 +1,22 @@
-﻿#pragma once
+#pragma once
 #include <jde/Exports.h>
+#include <jde/web/exports.h>
 #include "google/protobuf/message.h"
-#include "Exports.h"
+#include "../../../../Framework/source/io/ProtoUtilities.h"
 
 #define var const auto
 
 namespace Jde::IO::Sockets{
-	struct ProtoSession;
+	namespace beast = boost::beast;
+	namespace http = beast::http;
+	namespace websocket = beast::websocket;
+	namespace net = boost::asio;
+	using tcp = net::ip::tcp;
+//	using namespace Jde::IO::Sockets;
 
-	#define Φ ΓW auto
-	struct ProtoServer : ISocket{
-		ΓW ProtoServer( PortType defaultPort )ι;
-		ΓW virtual ~ProtoServer();
-		β CreateSession( tcp::socket&& socket, SessionPK id )ι->sp<ProtoSession> =0;
-		α RemoveSession( SessionPK id )ι{ ul _{_mutex}; _sessions.erase(id); }
-
-	protected:
-		Φ Accept()ι->void;
-		std::atomic<SessionPK> _id{0};
-		sp<AsioContextThread> _pIOContext;
-		tcp::acceptor _acceptor;
-		flat_map<SessionPK,sp<ProtoSession>> _sessions; mutable std::shared_mutex _mutex;
-	private:
-		void Run()ι;
-	};
-
-	struct ΓW ProtoSession : std::enable_shared_from_this<ProtoSession>{
-		ProtoSession( tcp::socket&& socket, SessionPK id )ι;
-		virtual ~ProtoSession()=default;
+	struct ΓW ISocketSession : std::enable_shared_from_this<ISocketSession>{
+		ISocketSession( tcp::socket&& socket, SessionPK id )ι;
+		virtual ~ISocketSession()=default;
 		SessionPK Id;
 		β OnDisconnect()ι->void=0;
 	protected:
@@ -40,11 +29,9 @@ namespace Jde::IO::Sockets{
 		char _readMessageSize[4];
 	};
 
-#pragma region TProtoSession
-#define $ template<class TToServer, class TFromServer> auto TProtoSession<TToServer,TFromServer>::
 	template<class TToServer, class TFromServer>
-	struct TProtoSession: public ProtoSession{
-		TProtoSession( tcp::socket&& socket, SessionPK id )ι:ProtoSession{ move(socket), id } {}
+	struct TSocketSession: public ISocketSession{
+		TSocketSession( tcp::socket&& socket, SessionPK id )ι:ISocketSession{ move(socket), id } {}
 	protected:
 		β OnReceive( TToServer&& pValue )ε->void=0;
 		α ReadBody( uint messageLength )ι->void override;
@@ -52,6 +39,7 @@ namespace Jde::IO::Sockets{
 		vector<google::protobuf::uint8> _message;
 	};
 
+#define $ template<class TToServer, class TFromServer> auto TSocketSession<TToServer,TFromServer>::
 //TODO consolidate with ProtoClientSession::ReadBody
 	$ ReadBody( uint messageLength )ι->void{
 		google::protobuf::uint8 buffer[4096];
@@ -60,7 +48,7 @@ namespace Jde::IO::Sockets{
 		auto pBuffer = useHeap ? pData.get() : buffer;
 		try{
 			var length = net::read( _socket, net::buffer(reinterpret_cast<void*>(pBuffer), messageLength) ); THROW_IF( length!=messageLength, "'{}' read!='{}' expected", length, messageLength );
-			OnReceive( Proto::Deserialize<TToServer>(pBuffer, (int)length) );
+			OnReceive( IO::Proto::Deserialize<TToServer>(pBuffer, (int)length) );
 			ReadHeader();
 		}
 		catch( boost::system::system_error& e ){
@@ -74,10 +62,7 @@ namespace Jde::IO::Sockets{
 
 	$ Write( TFromServer&& value )ι->void{
 		auto [p,size] = IO::Proto::SizePrefixed( move(value) );
-		ProtoSession::Write( move(p), size );
+		ISocketSession::Write( move(p), size );
 	}
-
-#pragma endregion
-#undef Φ
 #undef $
 }

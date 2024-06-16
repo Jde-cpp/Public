@@ -1,19 +1,20 @@
-﻿#pragma once
+﻿/*
+#pragma once
 DISABLE_WARNINGS
 #include <boost/beast.hpp>
 #include <boost/asio.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 ENABLE_WARNINGS
 #include <jde/App.h>
+#include <jde/web/exports.h>
 #include "../../../Framework/source/io/Socket.h"
 #include "../../../Framework/source/io/ProtoUtilities.h"
 #include "../../../Framework/source/threading/Mutex.h"
-#include "Exports.h"
+
 
 #define var const auto
 #define _logTag WebSocketTag()
-namespace Jde::WebSocket
-{
+namespace Jde::WebSocket{
 	namespace beast = boost::beast;
 	namespace http = beast::http;
 	namespace websocket = beast::websocket;
@@ -27,7 +28,7 @@ namespace Jde::WebSocket
 #endif
 	ΓW α WebSocketTag()ι->sp<Jde::LogTag>;
 
-	struct ΓW WebListener /*abstract*/ : IO::Sockets::IServerSocket{
+	struct ΓW WebListener /*abstract* / : IO::Sockets::IServerSocket{
 		WebListener( PortType port )ε;
 		~WebListener(){ _acceptor.close(); TRACE("~WebListener - WebSocket"); }
 		β CreateSession( WebListener& server, SessionPK id, tcp::socket&& socket )ι->sp<ISession> =0;
@@ -41,7 +42,7 @@ namespace Jde::WebSocket
 	};
 
 	template<class TFromServer, class TServerSession>
-	struct TListener /*abstract*/ : WebListener, IShutdown{
+	struct TListener /*abstract* / : WebListener, IShutdown{
 		TListener( PortType port )ι: WebListener{ port } {}
 		~TListener()=0;
 		α Push( IO::Sockets::SessionPK sessionId, TFromServer&& m )ι->void;
@@ -56,12 +57,12 @@ namespace Jde::WebSocket
 		sp<tcp::acceptor> _pAcceptor;
 	};
 
-	struct ΓW Session /*abstract*/: IO::Sockets::ISession, std::enable_shared_from_this<Session>{
+	struct ΓW Session /*abstract* /: IO::Sockets::ISession, std::enable_shared_from_this<Session>{
 		Session( WebListener& server, SessionPK id, tcp::socket&& socket ):ISession{id}, _ws{std::move(socket)}, _server{server}{ _ws.binary( true ); }
 		β Close()ι->void{};
 		β Run()ι->void;
 	protected:
-		α Disconnect( CodeException&& e )ι{ OnDisconnect(move(e)); /*_connected = false;*/ _server.RemoveSession( Id ); }
+		α Disconnect( CodeException&& e )ι{ OnDisconnect(move(e)); /*_connected = false;* / _server.RemoveSession( Id ); }
 		β OnDisconnect( CodeException&& )ι->void{}
 		β OnAccept( beast::error_code ec )ι->void;
 
@@ -76,7 +77,7 @@ namespace Jde::WebSocket
 		beast::flat_buffer _buffer;
 	};
 	template<class TFromServer, class TFromClient>
-	struct TSession /*abstract*/ : Session{//, public std::enable_shared_from_this<TSession<TFromServer,TFromClient>>
+	struct TSession /*abstract* / : Session{//, public std::enable_shared_from_this<TSession<TFromServer,TFromClient>>
 		TSession( WebListener& server, SessionPK id, tcp::socket&& socket )ε : Session{ server, id, move(socket) }{}
 
 		α OnRead( const char* p, uint size )ι->void;
@@ -138,3 +139,4 @@ namespace Jde::WebSocket
 #undef $
 #undef var
 #undef _logTag
+*/

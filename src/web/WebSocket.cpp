@@ -2,8 +2,8 @@
 #include <jde/Exception.h>
 
 #define var const auto
-namespace Jde::WebSocket
-{
+namespace Jde::WebSocket{
+	
 	sp<Jde::LogTag> _logTag = Logging::Tag( "webRequests" );
 	α WebSocketTag()ι->sp<Jde::LogTag>{ return _logTag; }
 	WebListener::WebListener( PortType port )ε:

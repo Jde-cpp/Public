@@ -1,5 +1,5 @@
 #include <jde/web/WebGraphQL.h>
-#include "RestServer.h"
+#include <jde/web/rest/IRestSession.h>
 #include "../../../Framework/source/db/GraphQL.h"
 #include "../../../Framework/source/io/ServerSink.h"
 #include "../../../Framework/source/io/ProtoUtilities.h"
@@ -14,7 +14,7 @@ namespace Jde::Web{
 	α Select( DB::TableQL query, UserPK executerPK, HCoroutine h, SL sl )ι->Task{
 		try{
 			var sessionId = Json::Get<SessionPK>( query.Args, "id", sl );
-			var sessions = Rest::ISession::QuerySessions( sessionId );
+			var sessions = Rest::IRestSession::QuerySessions( sessionId );
 			if( sessions.empty() )
 				co_return Resume( mu<json>(), h ); //(Json::Parse( "{\"data\": null}"))
 			flat_map<UserPK, tuple<string,string>> userDomainLoginNames;

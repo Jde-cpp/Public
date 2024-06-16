@@ -3,8 +3,11 @@
 #include <jde/iot/uatypes/Value.h>
 #include "../async/Attributes.h"
 #include <jde/iot/async/SessionAwait.h>
+#include <jde/web/rest/IRestSession.h>
+#include <jde/web/rest/RestException.h>
 
 namespace Jde::Iot::Browse{
+	using Jde::Web::Rest::IRestSession;
 	sp<Jde::LogTag> _logTag{ Logging::Tag("app.browse") };
 	α Tag()ι->sp<LogTag>{return _logTag;}
 
@@ -27,18 +30,18 @@ namespace Jde::Iot::Browse{
 			if( snapshot )
 			 	pValues = ( co_await Read::SendRequest(nodes, ua) ).UP<flat_map<NodeId, Value>>();
 			auto pDataTypes = (co_await Attributes::ReadDataTypeAttributes( move(nodes), move(ua) )).UP<flat_map<NodeId, NodeId>>();
-			Web::Rest::ISession::Send(y->ToJson(move(pValues), move(*pDataTypes)), move(req) );
+			IRestSession::Send(y->ToJson(move(pValues), move(*pDataTypes)), move(req) );
 		}
 		catch( UAException& e ){
 			if( retry=e.IsBadSession(); retry )
 				e.PrependWhat( "Retry ObjectsFolder.  " );
 			else{
 				TRACE( "ObjectsFolder - Failed {}", e.what() );
-				Web::Rest::ISession::Send( move(e), move(req) );
+				IRestSession::Send( move(e), move(req) );
 			}
 		}
 		catch( IException& e ){
-			Web::Rest::ISession::Send( move(e), move(req) );
+			IRestSession::Send( move(e), move(req) );
 		}
 		if( retry ){
 			co_await AwaitSessionActivation( ua );

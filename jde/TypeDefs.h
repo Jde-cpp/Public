@@ -121,6 +121,7 @@ namespace Jde
 	using std::optional;
 	using std::ostringstream;
 	using std::chrono::duration_cast;
+	using std::chrono::steady_clock;
 	using std::make_tuple;
 	using std::nullopt;
 

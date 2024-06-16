@@ -7,8 +7,11 @@ link_directories( ${Protobuf_DIR}/../.. )
 set(CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS} "-Wl,-rpath=$ORIGIN")
 add_definitions( -DJde_WEB_EXPORTS )
 find_package(OpenSSL)
-add_library( ${CMAKE_PROJECT_NAME} SHARED ProtoServer.cpp RestServer.cpp WebGraphQL.cpp WebSocket.cpp 
-	proto/FromServer.pb.cc )
+add_library( ${CMAKE_PROJECT_NAME} SHARED WebGraphQL.cpp
+	proto/FromServer.pb.cc
+	flex/Flex.cpp flex/Sessions.cpp
+	rest/RestServer.cpp rest/IRestSession.cpp
+	socket/WebSocketServer.cpp socket/IWebSocketSession.cpp socket/_ISocketSession.cpp socket/_SocketServer.cpp )
 
 target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
 target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )# libutf8_validity.a )
@@ -20,7 +23,10 @@ endif()
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
   PRIVATE
-	"TypeDefs.h"
+	<boost/beast.hpp>
+	<boost/asio.hpp>
+	<boost/exception/diagnostic_information.hpp>
+	<jde/web/usings.h>
 	<jde/coroutine/Task.h>
 	"../../../Framework/source/coroutine/Awaitable.h"
 	"../../../Framework/source/db/GraphQL.h"

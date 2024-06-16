@@ -93,7 +93,7 @@ namespace Jde{
 
 namespace Jde::Coroutine{
 	struct CoException final : IException{
-		CoException( HCoroutine h, IException&& i, SRCE )ι:IException{sl, ELogLevel::NoLog, {} },_h{h},_pInner{ i.Move() }{}
+		CoException( HCoroutine h, IException&& i, SRCE )ι:IException{sl, ELogLevel::NoLog, "" },_h{h},_pInner{ i.Move() }{}
 		α Resume( Task::promise_type& pt )ι{ pt.SetResult( move(*_pInner) ); _h.resume(); }
 
 		α Clone()ι->sp<IException> override{ return ms<CoException>(move(*this)); }

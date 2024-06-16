@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <jde/iot/uatypes/Node.h>
 #include "Value.h"
-#include "../../../src/web/RestServer.h"
+#include <jde/web/rest/IRestSession.h>
 
 namespace Jde::Iot{
 	struct UAClient;

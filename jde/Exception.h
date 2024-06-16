@@ -46,8 +46,8 @@ namespace Jde{
 		IException( IException&& from )ι;
 		IException( const IException& from )ι;
 
-		$ IException( SL sl, std::exception&& inner, ELogLevel level, sv format_={}, Args&&... args )ι;
-		$ IException( SL sl, ELogLevel l, sv m, Args&& ...args )ι;
+		$ IException( SL sl, std::exception&& inner, ELogLevel level, fmt::format_string<Args...> format_="", Args&&... args )ι;
+		$ IException( SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&& ...args )ι;
 		$ IException( SL sl, ELogLevel l, uint code, fmt::format_string<Args...> m, Args&&... args )ι;
 		Ω FromExceptionPtr( const std::exception_ptr& from, SRCE )ι->up<IException>;
 
@@ -76,7 +76,7 @@ namespace Jde{
 		vector<string> _args;//TODO change to array
 		static constexpr ELogLevel DefaultLogLevel{ ELogLevel::Debug };
 	public:
-		const uint Code;
+		const uint Code; //after _format
 	private:
 		mutable ELogLevel _level;
 	};
@@ -87,10 +87,10 @@ namespace Jde{
 		Exception( Exception&& from )ι:IException{ move(from) }{}
 		Exception( const Exception& from )ι:IException{ from }{}
 		Exception( string what, uint code, ELogLevel level=ELogLevel::Debug, SRCE )ι:IException{what, level, code, sl}{};
-		$ Exception( SL sl, std::exception&& inner, ELogLevel level, sv format_={}, Args&&... args )ι:IException{sl, move(inner), level, format_, args...}{}
-		$ Exception( SL sl, std::exception&& inner, sv format_={}, Args&&... args )ι:Exception{sl, move(inner), DefaultLogLevel, format_, args...}{}
-		$ Exception( SL sl, ELogLevel l, sv format_, Args&&... args )ι:IException( sl, l, format_, args... ){}
-		$ Exception( SL sl, sv fmt, Args&&... args )ι:IException( sl, DefaultLogLevel, fmt, args... ){}
+		$ Exception( SL sl, std::exception&& inner, ELogLevel level, fmt::format_string<Args...> m="", Args&&... args )ι:IException{sl, move(inner), level, m, std::forward<Args>(args)...}{}
+		$ Exception( SL sl, std::exception&& inner, fmt::format_string<Args...> m="", Args&&... args )ι:Exception{sl, move(inner), DefaultLogLevel, m, std::forward<Args>(args)...}{}
+		$ Exception( SL sl, ELogLevel l, fmt::format_string<Args...> fmt, Args&&... args )ι:IException( sl, l, fmt, std::forward<Args>(args)... ){}
+		$ Exception( SL sl, fmt::format_string<Args...> m, Args&&... args )ι:IException( sl, DefaultLogLevel, m, std::forward<Args>(args)... ){}
 		$ Exception( SL sl, ELogLevel l, uint code, fmt::format_string<Args...> fmt, Args&&... args )ι:IException( sl, l, code, fmt, std::forward<Args>(args)... ){}
 		~Exception(){}
 		using T=Exception;
@@ -150,7 +150,7 @@ namespace Jde{
 		IOException( fs::path path, uint code, string value, SRCE ):IException{ move(value), ELogLevel::Debug, code, sl }, _path{ move(path) }{ SetWhat(); }
 		IOException( fs::path path, string value, SRCE ): IOException{ move(path), 0, move(value), sl }{}
 		IOException( fs::filesystem_error&& e, SRCE ):IException{sl}, _pUnderLying( make_unique<fs::filesystem_error>(move(e)) ){ SetWhat(); }
-		$ IOException( SL sl, const fs::path& path, ELogLevel level, sv value, Args&&... args ):IException( sl, level, value, args... ),_path{ path }{ SetWhat(); }
+		$ IOException( SL sl, const fs::path& path, ELogLevel level, fmt::format_string<Args...> m, Args&&... args ):IException( sl, level, m, std::forward<Args>(args)... ),_path{ path }{ SetWhat(); }
 
 		α Path()Ι->const fs::path&; α SetPath( const fs::path& x )ι{ _path=x; }
 		α what()Ι->const char* override;
@@ -179,21 +179,21 @@ namespace Jde{
 	};
 
 #define var const auto
-	$ IException::IException( SL sl, ELogLevel l, sv format_, Args&&... args )ι:
+	$ IException::IException( SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&&... args )ι:
 		_stack{ sl },
-		_format{ format_ },
-		Code{ Calc32RunTime(format_) },
+		_format{ sv{m.get().data(), m.get().size()} },
+		Code{ Calc32RunTime(_format) },
 		_level{ l }{
 		_args.reserve( sizeof...(args) );
 		ToVec::Append( _args, args... );
 		BreakLog();
 	}
 
-	$ IException::IException( SL sl, std::exception&& inner, ELogLevel l, sv format_, Args&&... args )ι:
+	$ IException::IException( SL sl, std::exception&& inner, ELogLevel l, fmt::format_string<Args...> m, Args&&... args )ι:
 		_stack{ sl },
 		_pInner{ make_shared<std::exception>(move(inner)) },
-		_format{ format_ },
-		Code{ Calc32RunTime(format_) },
+		_format{ sv{m.get().data(), m.get().size()} },
+		Code{ Calc32RunTime(_format) },
 		_level{ l }{
 		_args.reserve( sizeof...(args) );
 		ToVec::Append( _args, args... );
