@@ -1,5 +1,5 @@
 #pragma once
-#include "HttpRequestAwait.h"
+//#include "HttpRequestAwait.h"
 
 
 namespace Jde::Web::Flex::Sessions{
@@ -11,11 +11,12 @@ namespace Jde::Web::Flex::Sessions{
 //		α operator==(const Info& b)const{ return SessionId==b.SessionId && UserEndpoint==b.UserEndpoint; }
 //		struct HashFunction{ α operator()(const Info& x)const{ return std::hash<SessionPK>()(x.SessionId) ^ std::hash<tcp::endpoint>()(x.UserEndpoint); } };
 
-		steady_clock::time_point Expiration;
 		SessionPK SessionId;
 		Jde::UserPK UserPK;
 		tcp::endpoint UserEndpoint;
+		steady_clock::time_point Expiration;
 		steady_clock::time_point LastServerUpdate;
+		bool IsNew{};
   };
 	α GetNewSessionId()ι->SessionPK;
 	α UpdateExpiration( SessionPK sessionId, const tcp::endpoint& UserEndpoint )ε->optional<Info>;

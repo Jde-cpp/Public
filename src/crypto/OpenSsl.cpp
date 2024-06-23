@@ -11,6 +11,10 @@ namespace Jde{
 	}
 	using namespace Jde::Crypto::Internal;
 
+	α Crypto::CreateKeyCertificate( const CryptoSettings& settings )ε->void{
+		CreateKey( settings.PublicKeyPath, settings.PrivateKeyPath, settings.Passcode );
+		CreateCertificate( settings.CertPath, settings.PrivateKeyPath, settings.Passcode, settings.AltName, settings.Company, settings.Country, settings.Domain );
+	}
 	//https://stackoverflow.com/questions/5927164/how-to-generate-rsa-private-key-using-openssl
 	α Crypto::CreateKey( const fs::path& publicKeyPath, const fs::path& privateKeyPath, str& passcode )ε->void{
 		auto pctx = NewRsaCtx();
@@ -46,7 +50,8 @@ namespace Jde{
 			ExtPtr ex{ X509V3_EXT_conf_nid(nullptr, &ctx, nid, value), ::X509_EXTENSION_free }; CHECK_NULL( ex );
 			X509_add_ext( pCert, ex.get(), -1 );
 		};
-		add_x509V3ext( NID_subject_alt_name, string{altName}.c_str() );
+		if( altName.size() )
+			add_x509V3ext( NID_subject_alt_name, string{altName}.c_str() );
 
 		auto name{ ::X509_get_subject_name(pCert) };
 		::X509_NAME_add_entry_by_txt( name, "C", MBSTRING_ASC, (unsigned char*)string{country}.c_str(), -1, -1, 0 );
@@ -84,7 +89,7 @@ namespace Jde{
 	α Crypto::Verify( const vector<unsigned char>& modulus, const vector<unsigned char>& exponent, str decrypted, str signature )ε->void{
 		using ContextPtr = std::unique_ptr<EVP_MD_CTX, decltype(&::EVP_MD_CTX_free)>;
 		ContextPtr pCtx{ EVP_MD_CTX_create(), ::EVP_MD_CTX_free };
-		var pMd = EVP_get_digestbyname( "SHA256" ); CHECK_NULL( pMd ); // do not need to be freed with EVP_MD_free 
+		var pMd = EVP_get_digestbyname( "SHA256" ); CHECK_NULL( pMd ); // do not need to be freed with EVP_MD_free
 		CALL( EVP_VerifyInit_ex( pCtx.get(), pMd, nullptr) );
 		CALL( EVP_VerifyUpdate( pCtx.get(), decrypted.c_str(), decrypted.size()) );
 		var pKey = RsaPemFromModExp( modulus, exponent );
@@ -110,14 +115,14 @@ namespace Jde{
 		len = i2d_PrivateKey( pkey.get(), &pTemp ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_PrivateKey - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
 		return y;
 	}
-	
+
 	α Crypto::WritePrivateKey( const fs::path& path, vector<byte>&& privateKey, str passcode )ε->void{
 		auto bio = Internal::ToBio( move(privateKey) );
 		KeyPtr pkey{ ::d2i_PrivateKey_bio(bio.get(), nullptr), ::EVP_PKEY_free }; CHECK_NULL( pkey );
 		Internal::WritePrivateKey( path, move(pkey), passcode );
 	}
 
-	α Crypto::WriteCertificate( const fs::path& path, vector<byte>&& certificate )ε->void{	
+	α Crypto::WriteCertificate( const fs::path& path, vector<byte>&& certificate )ε->void{
 		BioPtr mem{ Internal::ToBio(move(certificate)) };
 		X509Ptr cert{ d2i_X509_bio(mem.get(), nullptr), ::X509_free };  CHECK_NULL( cert );
 		BioPtr file{ File(path, true) };

@@ -1,7 +1,7 @@
 #pragma once
 
 namespace Jde::Web::Flex{
-	struct CancellationSignals{
+	struct CancellationSignals final{
 		std::list<net::cancellation_signal> sigs;
 		mutex mtx;
 		α emit(net::cancellation_type ct = net::cancellation_type::all)->void{
@@ -11,7 +11,7 @@ namespace Jde::Web::Flex{
 		}
 		α slot()->net::cancellation_slot{
 			lg _(mtx);
-			auto p = find_if( sigs, [](net::cancellation_signal & sig){ return !sig.slot().has_handler();} ); 
+			auto p = find_if( sigs, [](net::cancellation_signal & sig){ return !sig.slot().has_handler();} );
 			return p == sigs.end() ? sigs.emplace_back().slot() : p->slot();
 		}
 	};

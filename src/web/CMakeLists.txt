@@ -9,7 +9,7 @@ add_definitions( -DJde_WEB_EXPORTS )
 find_package(OpenSSL)
 add_library( ${CMAKE_PROJECT_NAME} SHARED WebGraphQL.cpp
 	proto/FromServer.pb.cc
-	flex/Flex.cpp flex/Sessions.cpp
+	flex/Flex.cpp flex/HttpRequestAwait.cpp flex/HttpRequest.cpp flex/Sessions.cpp flex/WebSocketSession.cpp flex/Streams.cpp
 	rest/RestServer.cpp rest/IRestSession.cpp
 	socket/WebSocketServer.cpp socket/IWebSocketSession.cpp socket/_ISocketSession.cpp socket/_SocketServer.cpp )
 

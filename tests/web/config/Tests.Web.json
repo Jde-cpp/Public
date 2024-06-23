@@ -1,13 +1,15 @@
 {
 	"testing":{
-		"testsx":"OpenSslTests.Certificate"
+		"tests":"CertificateTests.NewDirectory",
+		"testsz":"WebTests.TestTimeout",
+		"testsy":"WebTests.BadSessionId"
 	},
 	"cryptoTests":{
 		"clear": true
 	},
 	"logging":{
 		"tags": {
-			"Trace":["tests"],
+			"Trace":["tests", "web.request", "web.response"],
 			"Debug":["settings"],
 			"Information":[],
 			"Warning":[],
@@ -15,6 +17,28 @@
 			"Critical":[]
 		},
 		"console":{}
+	},
+	"http":{
+		"address": null,
+		"port": 5005,
+		"threads": 1,
+		"timeout": "PT10S",
+		"accessControl": {
+			"allowOrigin": "*",
+			"allowMethods": "GET, POST, OPTIONS",
+			"allowHeaders": "Content-Type, Authorization"
+		},
+		"ssl": {
+			"_certificate": "{ApplicationDataFolder}/ssl/certs/server.pem",
+			"certificateAltName": "DNS:localhost,IP:127.0.0.1",
+			"_certficateCompany": "Jde-Cpp",
+			"_certficateCountry": "US",
+			"_certficateDomain": "localhost",
+			"_privateKey": "{ApplicationDataFolder}/ssl/private/server.pem",
+			"_publicKey": "{ApplicationDataFolder}/ssl/public/server.pem",
+			"_dh": "{ApplicationDataFolder}/certs/dh.pem",
+			"_passcode": "$(JDE_PASSCODE)"
+		}
 	},
 	"workers":{
 		"drive": {"threads": 1}

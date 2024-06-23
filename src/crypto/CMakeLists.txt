@@ -10,7 +10,7 @@ add_definitions( -DJde_CRYPTO_EXPORTS )
 
 find_package(OpenSSL REQUIRED)
 
-add_library( ${CMAKE_PROJECT_NAME} SHARED OpenSsl.cpp OpenSslInternal.cpp )
+add_library( ${CMAKE_PROJECT_NAME} SHARED OpenSsl.cpp OpenSslInternal.cpp CryptoSettings.cpp )
 #######################################################
 target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
 target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )

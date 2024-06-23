@@ -5,7 +5,7 @@
 #define var const auto
 
 namespace Jde{
-	α OSApp::ProductName()ι->sv{ return "Tests.Crypto"; }
+	α OSApp::ProductName()ι->sv{ return "Tests.Web"; }
 
  	α Startup( int argc, char **argv )ι->void{
 #ifdef _MSC_VER
@@ -13,7 +13,7 @@ namespace Jde{
 #endif
 		ASSERT( argc>1 && string{argv[1]}=="-c" )
 		Threading::SetThreadDscrptn( "Main" );
-		OSApp::Startup( argc, argv, "Tests.Crypto", "Crypto tests" );
+		OSApp::Startup( argc, argv, "Tests.Web", "Web tests" );
 	}
 }
 

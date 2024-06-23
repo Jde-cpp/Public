@@ -1,9 +1,11 @@
 ﻿#pragma once
 #include "exports.h"
+#include "CryptoSettings.h"
 
 #define Φ ΓC auto
 
 namespace Jde::Crypto{
+	Φ CreateKeyCertificate( const CryptoSettings& settings )ε->void;
 	Φ CreateKey( const fs::path& publicKeyPath, const fs::path& privateKeyPath, str passcode )ε->void;
 	Φ CreateCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain )ε->void;
 	Φ RsaSign( sv value, sv key )ι->string;

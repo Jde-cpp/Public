@@ -9,7 +9,7 @@ namespace Jde::Web::Rest{
 		IRestException()ι:Exception{""}{}
 		template<class... Args> IRestException( SL sl, fmt::format_string<Args...> fmt, Args&&... args )ι:Exception( sl, ELogLevel::Debug, fmt, std::forward<Args>(args)... ){}
 		template<class... Args> IRestException( SL sl, std::exception&& inner, fmt::format_string<Args...> fmt={}, Args&&... args )ι:Exception{sl, move(inner), fmt, std::forward<Args>(args)...}{}
-		β Status()Ι->http::status=0;
+		consteval β Status()Ι->http::status=0;
 		α Response( const Flex::HttpRequest&& req )Ι->http::response<http::string_body>;
 	private:
 		string _clientMessage;
@@ -20,11 +20,11 @@ namespace Jde::Web::Rest{
 		RestException()ι:IRestException{}{}
 		template<class... Args> RestException( SL sl, fmt::format_string<Args...> fmt, Args&&... args )ι:IRestException( sl, fmt, std::forward<Args>(args)... ){}
 		template<class... Args> RestException( SL sl, std::exception&& inner, fmt::format_string<Args...> fmt={}, Args&&... args )ι:IRestException{sl, move(inner), fmt, std::forward<Args>(args)...}{}
-		α Status()Ι->http::status{ return TStatus; }
+		consteval α Status()Ι->http::status{ return TStatus; }
 	};
 
 	Ξ IRestException::Response( const Flex::HttpRequest&& req )Ι->http::response<http::string_body>{
-		auto res = req.Response<http::string_body>( Status() ); 
+		auto res = req.Response<http::string_body>( Status() );
 		res.body() = what();
 		res.prepare_payload();
 		auto& sl = Stack().front();
