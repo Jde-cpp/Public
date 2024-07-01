@@ -3,10 +3,11 @@
 //cd $JDE_BASH/Public/jde/web;moveToDir proto;mklink FromServer.pb.h $webSource
 
 syntax = "proto3";
-package Jde.Web.FromServer;
+package Jde.Http.FromServer;
+option optimize_for = LITE_RUNTIME;
 
-message Acknowledgement{
-	uint32 id=1;
+message Ack{
+	uint32 session_id = 1;
 }
 
 message Complete{

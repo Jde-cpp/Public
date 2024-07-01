@@ -1,17 +1,17 @@
 ﻿#include <execution>
 #include <jde/web/flex/Flex.h>
 #include "../../../Ssl/source/Ssl.h"
-#include "../../../Framework/source/Stopwatch.h"
-#include "TestRequestAwait.h"
+#include "mocks/ServerMock.h"
 
 #define var const auto
 
 namespace Jde::Web{
 	static sp<Jde::LogTag> _logTag{ Logging::Tag( "tests" ) };
+	using Mock::Host; using Mock::Port;
 
-	struct WebTests : public ::testing::Test{
+	struct WebTests : ::testing::Test{
 	protected:
-		WebTests():_pRequestHandler(ms<Flex::TestRequestHandler>()) {}
+		WebTests():_pRequestHandler(ms<Mock::RequestHandler>()) {}
 		~WebTests() override{}
 
 		Ω SetUpTestCase()->void;
@@ -19,19 +19,19 @@ namespace Jde::Web{
 		α TearDown()->void override{}
 		Ω TearDownTestCase()->void;
 
-		sp<Flex::RequestHandler> _pRequestHandler;
+		sp<Flex::IRequestHandler> _pRequestHandler;
 	};
 	constexpr sv ContentType{ "application/x-www-form-urlencoded" };
 
 
 	α WebTests::SetUpTestCase()->void{
 		Stopwatch _{ "WebTests::SetUpTestCase", _logTag };
-		StartTestServer();
+		Mock::Start();
 	}
 
 	α WebTests::TearDownTestCase()->void{
 		Stopwatch _{ "WebTests::TearDownTestCase", _logTag };
-		StopTestServer();
+		Mock::Stop();
 	}
 
 	TEST_F( WebTests, IsSsl ){
@@ -44,7 +44,7 @@ namespace Jde::Web{
 		var result = Http::Send( Host, "/", "PING", Port, {}, "text/ping", http::verb::post, &headers );
 		ASSERT_EQ( "SSL=false", headers["Summary"] );
 	}
-//#pragma GCC diagnostic ignored "-Wuninitialized"
+
 	TEST_F( WebTests, EchoAttack ){
 		constexpr uint count=1000;
 		vector<uint> indexes( count );
@@ -112,7 +112,6 @@ namespace Jde::Web{
 			DBG( "~asio::post" );
 		});
 		sl l{ mtx };
-		DBG( "cv.wait" );
 		cv.wait( l );
 		std::this_thread::sleep_for( std::chrono::seconds{delay}+500ms );
 		//TODO find out why server is not getting the disconnect.

@@ -6,13 +6,33 @@
 		<Expand>
 				<ExpandedItem Condition="_M_payload._M_engaged == true">_M_payload._M_payload._M_value</ExpandedItem>
 		</Expand>
-	</Type>	
+	</Type>
 	<Type Name="std::filesystem::path">
 		<AlternativeType Name="std::filesystem::__cxx11::path"/>
 		<AlternativeType Name="const std::filesystem::__cxx11::path &amp;"/>
 		<DisplayString>{{p2={_M_pathname._M_dataplus._M_p,s}}}</DisplayString>
 		<Expand>
 				<ExpandedItem>p={_M_pathname._M_dataplus}</ExpandedItem>
+		</Expand>
+  </Type>
+ <Type Name="std::tuple&lt;*&gt;">
+		<DisplayString Condition="strlen($T6) != 0">{{ {std::_Head_base&lt;0, $T1, false&gt;::_M_head(*this)}, {std::_Head_base&lt;1, $T2, false&gt;::_M_head(*this)}, {std::_Head_base&lt;2, $T3, false&gt;::_M_head(*this)}, {std::_Head_base&lt;3, $T4, false&gt;::_M_head(*this)}, {std::_Head_base&lt;4, $T5, false&gt;::_M_head(*this)}, ... }}</DisplayString>
+		<DisplayString Condition="strlen($T5) != 0">{{ {std::_Head_base&lt;0, $T1, false&gt;::_M_head(*this)}, {std::_Head_base&lt;1, $T2, false&gt;::_M_head(*this)}, {std::_Head_base&lt;2, $T3, false&gt;::_M_head(*this)}, {std::_Head_base&lt;3, $T4, false&gt;::_M_head(*this)}, {std::_Head_base&lt;4, $T5, false&gt;::_M_head(*this)} }}</DisplayString>
+		<DisplayString Condition="strlen($T4) != 0">{{ {std::_Head_base&lt;0, $T1, false&gt;::_M_head(*this)}, {std::_Head_base&lt;1, $T2, false&gt;::_M_head(*this)}, {std::_Head_base&lt;2, $T3, false&gt;::_M_head(*this)}, {std::_Head_base&lt;3, $T4, false&gt;::_M_head(*this)} }}</DisplayString>
+		<DisplayString Condition="strlen($T3) != 0">{{ {std::_Head_base&lt;0, $T1, false&gt;::_M_head(*this)}, {std::_Head_base&lt;1, $T2, false&gt;::_M_head(*this)}, {std::_Head_base&lt;2, $T3, false&gt;::_M_head(*this)} }}</DisplayString>
+		<DisplayString Condition="strlen($T2) != 0">{{ {std::_Head_base&lt;0, $T1, false&gt;::_M_head(*this)}, {std::_Head_base&lt;1, $T2, false&gt;::_M_head(*this)} }}</DisplayString>
+		<DisplayString>{{ {std::_Head_base&lt;0, $T1, false&gt;::_M_head(*this)} }}</DisplayString>
+		<Expand>
+				<Item Name="[0]" Condition="strlen($T1) != 0">std::_Head_base&lt;0, $T1, false&gt;::_M_head(*this)</Item>
+				<Item Name="[1]" Condition="strlen($T2) != 0">std::_Head_base&lt;1, $T2, false&gt;::_M_head(*this)</Item>
+				<Item Name="[2]" Condition="strlen($T3) != 0">std::_Head_base&lt;2, $T3, false&gt;::_M_head(*this)</Item>
+				<Item Name="[3]" Condition="strlen($T4) != 0">std::_Head_base&lt;3, $T4, false&gt;::_M_head(*this)</Item>
+				<Item Name="[4]" Condition="strlen($T5) != 0">std::_Head_base&lt;4, $T5, false&gt;::_M_head(*this)</Item>
+				<Item Name="[5]" Condition="strlen($T6) != 0">std::_Head_base&lt;5, $T6, false&gt;::_M_head(*this)</Item>
+				<Item Name="[6]" Condition="strlen($T7) != 0">std::_Head_base&lt;6, $T7, false&gt;::_M_head(*this)</Item>
+				<Item Name="[7]" Condition="strlen($T8) != 0">std::_Head_base&lt;7, $T8, false&gt;::_M_head(*this)</Item>
+				<Item Name="[8]" Condition="strlen($T9) != 0">std::_Head_base&lt;8, $T9, false&gt;::_M_head(*this)</Item>
+				<Item Name="[9]" Condition="strlen($T10) != 0">std::_Head_base&lt;9, $T10, false&gt;::_M_head(*this)</Item>
 		</Expand>
   </Type>
 	<Type Name="std::map&lt;*&gt;">
@@ -33,12 +53,12 @@
 		<AlternativeType Name="Jde::str"/>
 		<AlternativeType Name="std::string&amp;&amp;"/>
 		<AlternativeType Name="Jde::DB::SchemaName"/>
-		<DisplayString>{{s={_M_dataplus._M_p,s}}}</DisplayString>
+		<DisplayString>{{{_M_dataplus._M_p,s}}}</DisplayString>
 		<Expand>
 				<Item Name="size">_M_string_length</Item>
 				<Item Name="string">_M_dataplus._M_p,s</Item>
 		</Expand>
-	</Type>	
+	</Type>
 	<Type Name="std::string_view">
 		<AlternativeType Name="Jde::sv"/>
 		<DisplayString>_M_str,s</DisplayString>
@@ -46,7 +66,7 @@
 				<Item Name="size">_M_len</Item>
 				<Item Name="string">_M_str,s</Item>
 		</Expand>
-	</Type>	
+	</Type>
 	<Type Name="std::shared_ptr&lt;*&gt;">
 		<!-- <DisplayString Condition="_M_ptr!=0">{*_M_ptr}</DisplayString> -->
     <DisplayString Condition="_M_ptr!=0">p={*_M_ptr}</DisplayString>
@@ -54,7 +74,7 @@
 		<Expand>
 			<Item Name="strong">_M_refcount._M_pi-&gt;_M_use_count</Item>
 			<Item Name="weak">_M_refcount._M_pi-&gt;_M_weak_count</Item>
-    </Expand>		
+    </Expand>
 	</Type>
  <Type Name="std::unique_ptr&lt;*&gt;">
  		<AlternativeType Name="Jde::up&lt;*&gt;"/>
@@ -93,12 +113,12 @@
 		<!-- <Expand>
 				 <ExpandedItem Condition="m_type == nlohmann::detail::value_t::object">
 						*(m_value.object),view(simple)
-				</ExpandedItem> 
+				</ExpandedItem>
 				<ExpandedItem Condition="m_type == nlohmann::detail::value_t::array">
 						*(m_value.array),view(simple)
 				</ExpandedItem>
 		</Expand> -->
-	</Type>	
+	</Type>
 	<Type Name="boost::container::flat_map&lt;*&gt;">
 		<DisplayString>{{size={m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>
 		<Expand>
@@ -121,7 +141,7 @@
 					<ValueNode>($T1)_M_storage</ValueNode>
 			</LinkedListItems>
 	</Expand>
-</Type>	
+</Type>
 <Type Name="std::variant&lt;*&gt;">
 	<DisplayString Condition="_M_index == 0">{_M_u._M_first._M_storage}</DisplayString>
 	<DisplayString Condition="_M_index == 1">{_M_u._M_rest._M_first._M_storage}</DisplayString>

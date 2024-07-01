@@ -13,13 +13,12 @@ namespace Jde::Web{
 	α Flex::ResponseTag()ι->sp<LogTag>{ return _responseTag; }
 	Flex::CancellationSignals _cancellationSignals;
 
-	sp<Flex::RequestHandler> _requestHandler;
-	α Flex::SetRequestHandler( sp<RequestHandler> handler )ι->void{ _requestHandler = handler; }
-	α Flex::GetRequestHandler()ι->sp<RequestHandler>&{ return _requestHandler; }
+	sp<Flex::IRequestHandler> _requestHandler;
+	α Flex::GetRequestHandler()ι->sp<IRequestHandler>{ return _requestHandler; }
 
 	namespace Flex{
 		α LoadServerCertificate( ssl::context& ctx )->void;
-		α Internal::HandleCustomRequest( HttpRequest req, sp<Streams> stream )ι->HttpTask{
+		α Internal::HandleCustomRequest( HttpRequest req, sp<RestStream> stream )ι->HttpTask{
 			if( auto p = GetRequestHandler(); p ){
 				try{
 					auto result = co_await *( p->HandleRequest(move(req)) );
@@ -61,7 +60,8 @@ namespace Jde::Web{
 	α Flex::GetIOContext()ι->sp<net::io_context>{ return _ioc; }
 
 	//PortType port, sv address={}, uint8 threadCount=1
-	α Flex::Start()ε->void{
+	α Flex::Start( sp<IRequestHandler> pHandler )ε->void{
+		_requestHandler = pHandler;
 		ssl::context ctx{ ssl::context::tlsv12 };
 		LoadServerCertificate( ctx );
 		var port = Settings::Get<PortType>( "http/port" ).value_or( 6809 );
@@ -138,7 +138,7 @@ namespace Jde::Web{
     return true;
 	}
 
-	α Flex::DetectSession( StreamType stream, net::ssl::context& ctx, tcp::endpoint userEndpoint)ι->net::awaitable<void, executor_type>{
+	α Flex::DetectSession( StreamType stream, net::ssl::context& ctx, tcp::endpoint userEndpoint )ι->net::awaitable<void, executor_type>{
     beast::flat_buffer buffer;
     stream.expires_after( std::chrono::seconds(30) );// Set the timeout.
     auto [ec, result] = co_await beast::async_detect_ssl( stream, buffer );// on_run
@@ -157,7 +157,7 @@ namespace Jde::Web{
 			co_await RunSession( stream, buffer, move(userEndpoint), false );
 	}
 namespace Flex{
-	α Internal::HandleRequest( HttpRequest req, sp<Streams> stream )ι->Task{
+	α Internal::HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Task{
 		var authorization{ req.Header("authorization") };
 		if( !authorization.empty() ){
 			try{
@@ -225,46 +225,29 @@ namespace Flex{
 	}
 
 }
-	α Flex::Send( HttpRequest&& req, sp<Streams> stream, json j )ι->void{
+	α Flex::Send( HttpRequest&& req, sp<RestStream> stream, json j )ι->void{
 		auto res = req.Response( move(j) );
 		stream->AsyncWrite( move(res) );
 	}
 
-	α Flex::Send( IRestException&& e, sp<Streams> stream )ι->void{
+	α Flex::Send( IRestException&& e, sp<RestStream> stream )ι->void{
 		auto res = e.Response();
-		//http::message_generator m{ move(res) };
 		stream->AsyncWrite( move(res) );
 	}
 
 
-	α Flex::LoadServerCertificate( ssl::context& ctx )->void{//TODO
-	//Linux - /etc/ssl/certs/server.crt and /etc/ssl/private/server.key
-		Crypto::CryptoSettings settings{ "http/ssl" };
-		// const fs::path certPath = Settings::Get<fs::path>("http/ssl/certificate").value_or( IApplication::ApplicationDataFolder()/"ssl/certs/server.pem" );
-		// const fs::path privateKeyPath = Settings::Get<fs::path>("http/ssl/privateKey").value_or( IApplication::ApplicationDataFolder()/"ssl/private/server.pem" );
-		// const fs::path publicKeyPath = Settings::Get<fs::path>("http/ssl/publicKey").value_or( IApplication::ApplicationDataFolder()/"ssl/public/server.pem" );
-		// const fs::path dhPath = Settings::Get<fs::path>("http/ssl/dh").value_or( IApplication::ApplicationDataFolder()/"ssl/dh.pem" );
-		// const string passcode = OSApp::EnvironmentVariable( "JDE_PASSCODE" );
-		// for( var& path : vector<fs::path>{certPath, privateKeyPath, publicKeyPath, dhPath} ){
-		// 	if( !fs::exists(path.parent_path()) )
-		// 		fs::create_directories( path.parent_path() );
-		// }
+	α Flex::LoadServerCertificate( ssl::context& ctx )->void{
+		Crypto::CryptoSettings settings{ "http/ssl" };//Linux - /etc/ssl/certs/server.crt and /etc/ssl/private/server.key
 		if( !fs::exists(settings.PrivateKeyPath) ){
 			settings.CreateDirectories();
 			Crypto::CreateKeyCertificate( settings );
-			//Crypto::CreateKey( publicKeyPath, privateKeyPath, passcode );
-			// var altName = Settings::Get<string>( "http/ssl/certificateAltName" ).value_or( "" );
-			// var company = Settings::Get<string>( "http/ssl/certificateCompany" ).value_or( "Jde-Cpp" );
-			// var country = Settings::Get<string>( "http/ssl/certificateCountry" ).value_or( "US" );
-			// var domain = Settings::Get<string>( "http/ssl/certificateDomain" ).value_or( "localhost" );
-			//Crypto::CreateCertificate( certPath, privateKeyPath, passcode, altName, company, country, domain );
 		}
+    ctx.set_options( boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2 | boost::asio::ssl::context::single_dh_use );
 		var cert = IO::FileUtilities::Load( settings.CertPath );
-		var key = IO::FileUtilities::Load( settings.PrivateKeyPath );
+    ctx.use_certificate_chain( boost::asio::buffer(cert.data(), cert.size()) );
 
 		ctx.set_password_callback( [=](uint, boost::asio::ssl::context_base::password_purpose){ return settings.Passcode; } );
-    ctx.set_options( boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2 | boost::asio::ssl::context::single_dh_use );
-    ctx.use_certificate_chain( boost::asio::buffer(cert.data(), cert.size()) );
+		var key = IO::FileUtilities::Load( settings.PrivateKeyPath );
     ctx.use_private_key( boost::asio::buffer(key.data(), key.size()), boost::asio::ssl::context::file_format::pem );
     static const string dhStatic =
         "-----BEGIN DH PARAMETERS-----\n"

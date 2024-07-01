@@ -63,6 +63,7 @@ namespace Jde{
 		α Push( SL sl )ι{ _stack.stack.push_back(sl); }
 		α Stack()Ι->const StackTrace&{ return _stack; }
 		β Ptr()ι->std::exception_ptr =0;
+		α SetTag( sp<LogTag> x )ι{ _pTag=x; }
 		[[noreturn]] β Throw()->void=0;
 	protected:
 		IException( SRCE )ι:IException{ {}, ELogLevel::Debug, 0, sl }{}

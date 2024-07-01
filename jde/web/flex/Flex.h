@@ -3,7 +3,7 @@
 #include <boost/beast/websocket.hpp>//
 #include <boost/asio/experimental/parallel_group.hpp>
 #include <boost/asio/ssl.hpp>
-#include "WebSocketSession.h"
+//#include "WebSocketSession.h"
 //#include "HttpRequest.h"
 #include "Sessions.h"
 #include "RestException2.h"
@@ -11,22 +11,22 @@
 #define var const auto
 
 namespace Jde::Web::Flex{
-	struct RequestHandler{
+	struct IRequestHandler{
 		β HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> =0;
+		β RunWebsocketSession( RestStream&& stream, beast::flat_buffer&& buffer, TRequestType req )ι->void =0;
 	};
-	α SetRequestHandler( sp<RequestHandler> handler )ι->void;
-	α GetRequestHandler()ι->sp<RequestHandler>&;
+	α GetRequestHandler()ι->sp<IRequestHandler>;
 	α GetIOContext()ι->sp<net::io_context>;
 
 	struct CancellationSignals;
 	α HasStarted()ι->bool;
-	α Start()ε->void;
+	α Start( sp<IRequestHandler> )ε->void;
 	α Stop( bool terminate=false )ι->void;
 
 	α Fail( beast::error_code ec, char const* what )ι->void;
 	α OnWrite( beast::error_code ec, std::size_t bytes_transferred )ι->void;
-	α Send( HttpRequest&& req, sp<Streams> stream, json j )ι->void;
-	α Send( IRestException&& e, sp<Streams> stream )ι->void;
+	α Send( HttpRequest&& req, sp<RestStream> stream, json j )ι->void;
+	α Send( IRestException&& e, sp<RestStream> stream )ι->void;
 
 	Ŧ DoEof( T& stream )ι->net::awaitable<void, executor_type>{
 		beast::error_code ec;
@@ -47,8 +47,8 @@ namespace Jde::Web::Flex{
 	namespace Internal{
 		α SendOptions( const HttpRequest&& req )ι->http::message_generator;
 		//Ŧ HandleRequest( HttpRequest req, up<T> stream, SessionPK sessionId )->Task;
-		α HandleRequest( HttpRequest req, sp<Streams> stream )ι->Task;
-		α HandleCustomRequest( HttpRequest req, sp<Streams> stream )ι->HttpTask;
+		α HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Task;
+		α HandleCustomRequest( HttpRequest req, sp<RestStream> stream )ι->HttpTask;
 	}
 }
 
@@ -67,8 +67,8 @@ namespace Jde::Web{
     for( auto cs = co_await net::this_coro::cancellation_state; cs.cancelled() == net::cancellation_type::none; cs = co_await net::this_coro::cancellation_state ){
       if( websocket::is_upgrade(parser->get()) ){
         beast::get_lowest_layer(stream).expires_never();// Disable the timeout. The websocket::stream uses its own timeout settings.
-        co_await RunWebsocketSession( stream, buffer, parser->release() );
-        co_return;
+				GetRequestHandler()->RunWebsocketSession( RestStream(mu<T>(move(stream))), move(buffer), parser->release() );
+				co_return;
       }
 			HttpRequest req{ parser->release(), move(userEndpoint) };
 			optional<http::message_generator> res;
@@ -87,7 +87,7 @@ namespace Jde::Web{
 				res = move(pingRes);
 			}
 			if( !res ){
-				Internal::HandleRequest( move(req), ms<Streams>(mu<T>(move(stream))) );
+				Internal::HandleRequest( move(req), ms<RestStream>(mu<T>(move(stream))) );
 				co_return;
 			}
 			if( res && !res->keep_alive() ){

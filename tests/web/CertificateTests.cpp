@@ -1,13 +1,16 @@
 //#include <execution>
 #include <jde/web/flex/Flex.h>
 #include <jde/crypto/OpenSsl.h>
-#include "TestRequestAwait.h"
+#include "mocks/ServerMock.h"
 #include "../../../Ssl/source/Ssl.h"
 // #include "../../../Framework/source/Stopwatch.h"
 // #include "TestRequestAwait.h"
 
 #define var const auto
 namespace Jde::Web{
+	using Mock::Host;
+	using Mock::Port;
+
 	static sp<Jde::LogTag> _logTag{ Logging::Tag( "tests" ) };
 	using CryptoSettings = Crypto::CryptoSettings;
 	struct CertificateTests : public ::testing::Test{
@@ -31,13 +34,13 @@ namespace Jde::Web{
 	}
 
 	α CertificateTests::TearDown()->void{
-		StopTestServer();
+		Mock::Stop();
 		Settings::Global().Json() = OriginalSettings;
 	}
 
 	TEST_F( CertificateTests, DefaultSettings ){
 		ResetSettings( IApplication::ApplicationDataFolder()/"ssl" );
-		StartTestServer();
+		Mock::Start();
 		var result = Ssl::Send<string>( Host, "/isSsl", {}, Port, "text/ping", {}, http::verb::get );
 		ASSERT_EQ( "SSL=true", result );
 	}
@@ -46,7 +49,7 @@ namespace Jde::Web{
 		ResetSettings( "/tmp/WebTests/ssl" );
 		fs::remove_all( "/tmp/WebTests/ssl" );
 		Settings::Set( "http/ssl/passcode", "PaSsCoDe", false );
-		StartTestServer();
+		Mock::Start();
 		var result = Ssl::Send<string>( Host, "/isSsl", {}, Port, "text/ping", {}, http::verb::get );
 		ASSERT_EQ( "SSL=true", result );
 	}

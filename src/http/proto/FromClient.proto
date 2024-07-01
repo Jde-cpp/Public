@@ -1,0 +1,8 @@
+syntax = "proto3";
+package Jde.Http.FromClient;
+option optimize_for = LITE_RUNTIME;
+
+message Connect{
+	uint32 request_id = 1;
+	uint32 session_id = 2;
+}

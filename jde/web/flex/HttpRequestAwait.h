@@ -4,13 +4,13 @@
 #include <jde/web/flex/HttpRequest.h>
 #include <jde/web/flex/RestException2.h>
 
-#define Φ Γ auto
+#define Φ ΓW auto
 namespace Jde::Web::Flex{
 	using TRequestType = http::request<TBody, http::basic_fields<TAllocator>>;
 	using TBody = http::string_body;
 	using TAllocator = std::allocator<char>;
-	//using HttpTaskResult = json;
-struct HttpTaskResult{
+
+	struct HttpTaskResult{
 		HttpTaskResult()=default;
 		HttpTaskResult( HttpRequest&& req )ι:Request{move(req)}{}
 		HttpTaskResult( HttpTaskResult&& rhs )ι;

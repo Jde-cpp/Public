@@ -7,9 +7,9 @@
 //#include "../../../../Framework/source/db/GraphQL.h"
 
 namespace Jde::Web::Flex{
-	α WebTag()ι->sp<LogTag>;
-	α RequestTag()ι->sp<LogTag>;
-	α ResponseTag()ι->sp<LogTag>;
+	α WebTag()ι->sp<Jde::LogTag>;
+	α RequestTag()ι->sp<Jde::LogTag>;
+	α ResponseTag()ι->sp<Jde::LogTag>;
 	α AccessControlAllowOrigin()ι->string;
 
 	constexpr string ServerVersion()ι{ return Jde::format("({})Jde.Web - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION); }//TODO cache

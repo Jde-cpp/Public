@@ -1,0 +1,30 @@
+syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
+
+package Jde.Http.Proto;
+import "FromServer.proto";
+import "FromClient.proto";
+
+message TestFromServerUnion{
+	oneof Value{
+		FromServer.Ack ack=1;
+		FromServer.Complete complete=2;
+		FromServer.Exception exception=3;
+		string description=4;
+	}
+}
+
+message TestFromServer{
+	repeated TestFromServerUnion messages = 1;
+}
+
+message TestFromClientUnion{
+	oneof Value{
+		FromClient.Connect connect=1;
+		string description=2;
+	}
+}
+
+message TestFromClient{
+	repeated TestFromClientUnion messages = 1;
+}

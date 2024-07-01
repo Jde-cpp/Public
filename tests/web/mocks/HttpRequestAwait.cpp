@@ -1,26 +1,8 @@
-#include "TestRequestAwait.h"
+#include "HttpRequestAwait.h"
 #define var const auto
 
-namespace Jde{
-	optional<std::jthread> _webThread;
-	α Web::StartTestServer()ι->void{
-		_webThread = std::jthread{ []{
-			Flex::Start(); //blocking
-		} };
-		while( !Flex::HasStarted() )
-			std::this_thread::sleep_for( 100ms );
-		Flex::SetRequestHandler( ms<Flex::TestRequestHandler>() );
-	}
-	α Web::StopTestServer()ι->void{
-		Flex::Stop();
-		if( _webThread && _webThread->joinable() ){
-			_webThread->join();
-			_webThread = {};
-		}
-	}
-}
-namespace Jde::Web::Flex{
-	TestRequestAwait::TestRequestAwait( HttpRequest&& req, SL sl )ι:
+namespace Jde::Web::Mock{
+	HttpRequestAwait::HttpRequestAwait( HttpRequest&& req, SL sl )ι:
 		base{ move(req), sl }
 	{}
 
@@ -40,7 +22,7 @@ namespace Jde::Web::Flex{
 		return y;
 	}
 
-	α TestRequestAwait::await_ready()ι->bool{
+	α HttpRequestAwait::await_ready()ι->bool{
 		optional<json> result;
 		if( _input->Target()=="/echo" )
 			result = EchoResult( _input->Params() );
@@ -59,7 +41,7 @@ namespace Jde::Web::Flex{
 		}
 		return _result.has_value();
 	}
-	α TestRequestAwait::await_suspend( HttpCo h )ε->void{
+	α HttpRequestAwait::await_suspend( HttpCo h )ε->void{
 		base::await_suspend(h);
 		if( _input->Target()=="/delay" ){
 			 _thread = std::jthread( [this,h]()mutable->void{
@@ -84,7 +66,7 @@ namespace Jde::Web::Flex{
 		else
 			throw RestException<http::status::not_found>( SRCE_CUR, move(*_input), "Unknown target '{}'", _input->Target() );
 	}
-	α TestRequestAwait::await_resume()ε->HttpTaskResult{
+	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		ASSERT( _pPromise || _result );
 		if( _pPromise )
 			_pPromise->TestException();

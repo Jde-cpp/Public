@@ -15,12 +15,12 @@ namespace Jde{
 	struct IShutdown{
 		β Shutdown()ι->void=0;
 	};
-	
+
 	struct IPollster{
 		β WakeUp()ι->void=0;
 		β Sleep()ι->void=0;
 	};
-	
+
 	struct Γ IApplication{
 		Ω Instance()ι->IApplication&{ /*assert(_pInstance);*/ return *_pInstance; }
 		α BaseStartup( int argc, char** argv, sv appName, string serviceDescription/*, sv companyName="jde-cpp"*/ )ε->flat_set<string>;
@@ -85,6 +85,7 @@ namespace Jde{
 
 		Ω CompanyName()ι->string;
 		Ω ProductName()ι->sv;
+		Ω SetProductName( sv productName )ι->void;
 		Ω CompanyRootDir()ι->fs::path;
 		ω FreeLibrary( void* p )ι->void;
 		ω LoadLibrary( const fs::path& path )ε->void*;

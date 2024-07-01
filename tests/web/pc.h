@@ -8,3 +8,5 @@
 
 #include <jde/TypeDefs.h>
 #include <jde/Exception.h>
+#include "../../../Framework/source/Settings.h"
+#include "../../../Framework/source/Stopwatch.h"

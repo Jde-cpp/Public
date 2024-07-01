@@ -5,7 +5,7 @@
 #define var const auto
 
 namespace Jde{
-	α OSApp::ProductName()ι->sv{ return "Tests.Web"; }
+	α OSApp::SetProductName( "Tests.Web" );
 
  	α Startup( int argc, char **argv )ι->void{
 #ifdef _MSC_VER
