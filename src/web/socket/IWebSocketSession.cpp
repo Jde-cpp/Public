@@ -3,9 +3,9 @@
 
 #define var const auto
 namespace Jde::Web::Socket{
-	sp<Jde::LogTag> _logTag = Logging::Tag( "webSocketRequests" );
+	sp<Jde::LogTag> _logTag = Logging::Tag( "webSocket.Requests" );
 	α WebSocketRequestTag()ι->sp<Jde::LogTag>{ return _logTag; }
-	
+
 	α IWebSocketSession::Run()ι->void{
 		TRACE( "[{}]Socket::Run()", Id );
 		net::dispatch( _ws.get_executor(), beast::bind_front_handler(&IWebSocketSession::OnRun, shared_from_this()) );

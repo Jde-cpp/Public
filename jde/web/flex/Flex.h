@@ -13,7 +13,7 @@
 namespace Jde::Web::Flex{
 	struct IRequestHandler{
 		β HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> =0;
-		β RunWebsocketSession( RestStream&& stream, beast::flat_buffer&& buffer, TRequestType req )ι->void =0;
+		β RunWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint )ι->void =0;
 	};
 	α GetRequestHandler()ι->sp<IRequestHandler>;
 	α GetIOContext()ι->sp<net::io_context>;
@@ -47,7 +47,7 @@ namespace Jde::Web::Flex{
 	namespace Internal{
 		α SendOptions( const HttpRequest&& req )ι->http::message_generator;
 		//Ŧ HandleRequest( HttpRequest req, up<T> stream, SessionPK sessionId )->Task;
-		α HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Task;
+		α HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task;
 		α HandleCustomRequest( HttpRequest req, sp<RestStream> stream )ι->HttpTask;
 	}
 }
@@ -59,7 +59,7 @@ namespace Jde::Web{
     parser->body_limit(10000); // Apply a reasonable limit to the allowed size  of the body in bytes to prevent abuse.
     auto [ec, bytes_transferred] = co_await http::async_read( stream, buffer, *parser );
     if( ec == http::error::end_of_stream )
-        co_await DoEof( stream );
+       co_await DoEof( stream );
     if( ec )
       co_return Fail( ec, "read" );
 
@@ -67,7 +67,7 @@ namespace Jde::Web{
     for( auto cs = co_await net::this_coro::cancellation_state; cs.cancelled() == net::cancellation_type::none; cs = co_await net::this_coro::cancellation_state ){
       if( websocket::is_upgrade(parser->get()) ){
         beast::get_lowest_layer(stream).expires_never();// Disable the timeout. The websocket::stream uses its own timeout settings.
-				GetRequestHandler()->RunWebsocketSession( RestStream(mu<T>(move(stream))), move(buffer), parser->release() );
+				GetRequestHandler()->RunWebsocketSession( ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint );
 				co_return;
       }
 			HttpRequest req{ parser->release(), move(userEndpoint) };

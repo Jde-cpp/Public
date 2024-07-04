@@ -157,62 +157,38 @@ namespace Jde::Web{
 			co_await RunSession( stream, buffer, move(userEndpoint), false );
 	}
 namespace Flex{
-	α Internal::HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Task{
-		var authorization{ req.Header("authorization") };
-		if( !authorization.empty() ){
-			try{
-				optional<SessionPK> sessionId;
-				if( sessionId = Str::TryTo<SessionPK>(string{authorization}, nullptr, 16);  !sessionId )
-					throw RestException<http::status::unauthorized>{ SRCE_CUR, move(req), "Could not create sessionId:  '{}'.", authorization };
-				if( auto pInfo = Sessions::UpdateExpiration(*sessionId, req.UserEndpoint); pInfo )
-					req.SessionInfo = *pInfo;
-				else{
-					THROW_IFX( Logging::Server::IsLocal(), RestException<http::status::unauthorized>(SRCE_CUR, move(req), "[{}]Session not found.", *sessionId) );
-					auto pServerInfo = awaitp( SessionInfo, Logging::Server::FetchSessionInfo(*sessionId, req.UserEndpoint) ); THROW_IF( !pServerInfo, "[{}]AppServer did not have sessionInfo.", *sessionId );
-					req.SessionInfo = { *pServerInfo, req.UserEndpoint };
-					Sessions::Upsert( req.SessionInfo );
-				}
-				// else if( !Logging::Server::IsLocal() && pInfo->LastServerUpdate<steady_clock::now()-5min ) //TODO update expiration on server also.
-				// 	await( SessionInfo, Logging::Server::UpdateSession(sessionId, req.UserEndpoint) ); THROW_IF( !pServerInfo, "[{}]AppServer did not have sessionInfo.", sessionId );
-			}
-			catch( IRestException& e ){
-				Send( move(e), move(stream) );
-				co_return;
-			}
-			catch( IException& e ){
-				Send( RestException<http::status::unauthorized>(SRCE_CUR, move(req), move(e), "Could not get sessionInfo."), move(stream) );
-				co_return;
-			}
+	α GraphQL( HttpRequest req, sp<RestStream> stream )->Task{
+		try{
+			auto& query = req["query"]; THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
+			var sessionId = req.SessionInfo.SessionId;
+			TRACET( RequestTag(), "[{:x}] - {}", sessionId, query );
+			string threadDesc = Jde::format( "[{:x}]{}", sessionId, req.Target() );
+			var y = await( json, DB::CoQuery(move(query), req.UserPK(), threadDesc) );
+			TRACET( ResponseTag(), "[{:x}] - {}", sessionId, y.dump() );
+			Send( move(req), move(stream), move(y) );
 		}
-		else{
-			Sessions::Info newSession{ Sessions::GetNewSessionId(), req.UserEndpoint };//TODO create sessionId.
-			Sessions::Upsert( newSession );
-			req.SessionInfo = newSession;
+		catch( IRestException& e ){
+			Send( move(e), move(stream) );
+			co_return;
+		}
+		catch( IException& e ){
+			Send( RestException(SRCE_CUR, move(req), move(e), "Query failed."), move(stream) );
+			co_return;
+		}
+	}
+	α Internal::HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task{
+		try{
+			req.SessionInfo = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint, false );
+		}
+		catch( IException& e ){
+			Send( RestException<http::status::unauthorized>(SRCE_CUR, move(req), move(e), "Could not get sessionInfo."), move(stream) );
+			co_return;
 		}
 		if( req.Method() == http::verb::get && req.Target()=="/graphql" ){
-			try{
-				auto& query = req["query"]; THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
-				var sessionId = req.SessionInfo.SessionId;
-				TRACET( RequestTag(), "[{:x}] - {}", sessionId, query );
-				string threadDesc = Jde::format( "[{:x}]{}", sessionId, req.Target() );
-				var y = await( json, DB::CoQuery(move(query), req.UserPK(), threadDesc) );
-				TRACET( ResponseTag(), "[{:x}] - {}", sessionId, y.dump() );
-				Send( move(req), move(stream), move(y) );
-			}
-			catch( IRestException& e ){
-				Send( move(e), move(stream) );
-				co_return;
-			}
-			catch( IException& e ){
-				Send( RestException(SRCE_CUR, move(req), move(e), "Query failed."), move(stream) );
-				co_return;
-			}
+			GraphQL( move(req), stream );
 		}
 		else
 			HandleCustomRequest( move(req), move(stream) );
-
-
-		//handle custom.
 		co_return;
 	}
 

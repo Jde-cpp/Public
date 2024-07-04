@@ -4,10 +4,15 @@
 #define var const auto
 namespace Jde::Http{
 	HttpSocketStream::HttpSocketStream( net::io_context& ioc, optional<ssl::context>& ctx )ι:
+		_ioc{ ioc },
 		_ws{ ctx
 			? Stream{ websocket::stream<beast::ssl_stream<BaseStream>>{net::make_strand(ioc), *ctx} }
 			: Stream{ websocket::stream<BaseStream>{net::make_strand(ioc)} }}
-	{}
+	{
+		std::visit( [](auto&& ws)->void {
+			ws.binary(true);
+		}, _ws );
+	}
 
 	α HttpSocketStream::OnResolve( tcp::resolver::results_type results, sp<IClientSocketSession> session )ι->void{
 		std::visit( [this,&results,session](auto&& ws)->void {
@@ -52,6 +57,31 @@ namespace Jde::Http{
 		_buffer.consume( _buffer.size() );
 		std::visit( [this,&session](auto&& ws)->void {
 			ws.async_read( _buffer, beast::bind_front_handler(&IClientSocketSession::OnRead, session) );
+		}, _ws );
+	}
+
+	auto _logTag = Logging::Tag( "tests" );
+	α HttpSocketStream::AsyncWrite( string&& buffer, sp<IClientSocketSession> /*session*/ )ι->Task{
+		LockAwait await = _writeLock.Lock(); //gcc doesn't like co_await _writeLock.Lock();
+		_writeGuard = (co_await await).UP<CoGuard>();
+		_writeBuffer = move(buffer);
+		std::visit( [this](auto&& ws)->void {
+			boost::asio::post( _ioc, [this, &ws](){
+				ws.async_write( net::buffer(_writeBuffer), beast::bind_front_handler(&HttpSocketStream::OnWrite, shared_from_this()) );
+			});
+		}, _ws );
+	}
+	α HttpSocketStream::OnWrite( beast::error_code ec, uint bytes_transferred )ι->void{
+		_writeBuffer.clear();
+		_writeGuard = nullptr;
+		boost::ignore_unused( bytes_transferred );
+		if( ec )
+			CodeException{ static_cast<std::error_code>(ec) };
+	}
+
+	α HttpSocketStream::Close( sp<IClientSocketSession> session )ι->void{
+		std::visit( [session](auto&& ws)->void {
+			ws.async_close( websocket::close_code::normal, beast::bind_front_handler(&IClientSocketSession::OnClose, session) );
 		}, _ws );
 	}
 }

@@ -50,9 +50,28 @@ namespace Jde::Coroutine{
 	private:
 		Value _result;
 	};
+	template<class T>
+	struct PromiseType{
+		PromiseType()ι{}
+		α get_return_object()ι->T{ return {}; }
+		suspend_never initial_suspend()ι{ return {}; }
+		suspend_never final_suspend()ι{ return {}; }
+		α return_void()ι->void{}
+		α unhandled_exception()ι->void;
+		up<IException> Exception;
+	};
+	struct VoidTask{//TODO move to jde ns
+		struct promise_type :PromiseType<VoidTask>{};
+	};
+
+	template<class T>
+	struct TTask final{
+		struct promise_type : PromiseType<TTask<T>>{
+			optional<T> Result;
+		};
+	};
 
 	template<class T> concept IsPolymorphic = std::is_polymorphic_v<T>;
-
 	struct Task final{
 		using TResult=AwaitResult;
 		struct promise_type{
@@ -70,7 +89,7 @@ namespace Jde::Coroutine{
 			α SetResultBool( bool x )ι{ Result().SetBool( x ); }
 			template<IsPolymorphic T> α SetResult( up<T>&& x )ι{ ASSERT(dynamic_cast<IException*>(x.get())==nullptr); Result().Set( x.release() ); }
 			template<IsPolymorphic T> α SetResult( sp<T>&& x )ι->void{ ASSERT( dynamic_pointer_cast<IException>(x)==nullptr ); Result().Set( move(x) ); }
-			
+
 			α MoveResult()ι->AwaitResult{ if(!_result) return {}; auto y = move(*_result); _result=nullptr; return y;}
 			α HasError()Ι->bool{ return HasResult() && _result->HasError(); }
 			α HasResult()Ι->bool{ return _result && !_result->Uninitialized(); }
@@ -154,6 +173,26 @@ namespace Jde::Coroutine{
 			throw Exception{ "Result is a shared_ptr.", ELogLevel::Critical, sl };
 
 		return get<bool>( _result );
+	}
+
+	Ŧ PromiseType<T>::unhandled_exception()ι->void{
+		try{
+			BREAK;
+			throw;
+		}
+		catch( IException& e ){
+			Exception = e.Move();
+			e.SetLevel( ELogLevel::Critical );
+		}
+		catch( nlohmann::json::exception& e ){
+			Exception = mu<Jde::Exception>( Jde::Exception{SRCE_CUR, move(e), ELogLevel::Critical, "json exception - {}", e.what()} );
+		}
+		catch( std::exception& e ){
+			Exception = mu<Jde::Exception>( Jde::Exception{SRCE_CUR, move(e), ELogLevel::Critical, "std::exception - {}", e.what()} );
+		}
+		catch( ... ){
+			Exception = mu<Jde::Exception>( Jde::Exception{SRCE_CUR, ELogLevel::Critical, "unknown exception"} );
+		}
 	}
 }
 #undef Φ

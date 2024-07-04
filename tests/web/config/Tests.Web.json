@@ -1,28 +1,30 @@
 {
 	"testing":{
-		"tests":"CertificateTests.NewDirectory",
-		"testsz":"WebTests.TestTimeout",
+		"testsa":"CertificateTests.NewDirectory",
+		"tests":"SocketTests.BadTransmissionServer",
 		"testsy":"WebTests.BadSessionId"
 	},
 	"cryptoTests":{
 		"clear": true
 	},
 	"logging":{
+		"defaultLevel": "Information",
 		"tags": {
-			"Trace":["tests", "web.request", "web.response"],
+			"Trace":["tests", "web.request", "web.response", "client.socket.incoming", "client.socket.outgoing"],
 			"Debug":["settings"],
 			"Information":[],
 			"Warning":[],
 			"Error":[],
 			"Critical":[]
 		},
-		"console":{}
+		"console":{},
+		"memory": true
 	},
 	"http":{
 		"address": null,
 		"port": 5005,
 		"threads": 1,
-		"timeout": "PT10S",
+		"timeout": "PT30M",
 		"accessControl": {
 			"allowOrigin": "*",
 			"allowMethods": "GET, POST, OPTIONS",

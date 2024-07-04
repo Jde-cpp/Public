@@ -6,13 +6,13 @@
 
 namespace Jde::Web::Mock{
 	using namespace Jde::Web::Flex;
-	constexpr sv Host{ "localhost" };
-	constexpr sv Port{ "5005" };
+	constexpr string Host{ "localhost" };
+	constexpr PortType Port{ 5005 };
 	α Start()ι->void;
 	α Stop()ι->void;
 
 	struct RequestHandler final : IRequestHandler{
 		α HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> override{ return mu<HttpRequestAwait>( move(req), sl ); }
-		α RunWebsocketSession( RestStream&& stream, beast::flat_buffer&& buffer, TRequestType req )ι->void override;
+		α RunWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint )ι->void override;
 	};
 }

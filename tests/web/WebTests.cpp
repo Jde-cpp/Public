@@ -35,7 +35,7 @@ namespace Jde::Web{
 	}
 
 	TEST_F( WebTests, IsSsl ){
-		var result = Ssl::Send<string>( Host, "/isSsl", {}, Port, "text/ping", {}, http::verb::get );
+		var result = Ssl::Send<string>( Host, "/isSsl", {}, std::to_string(Port), "text/ping", {}, http::verb::get );
 		ASSERT_EQ( "SSL=true", result );
 	}
 
@@ -84,7 +84,7 @@ namespace Jde::Web{
 		auto ioc = Flex::GetIOContext();
 		tcp::resolver resolver{ *ioc };
     auto stream = mu<beast::tcp_stream>( *ioc );
-		var results = resolver.resolve( Host, Port );
+		var results = resolver.resolve( Host, std::to_string(Port) );
     stream->connect( results );
 		uint delay = 1;
 		http::request<http::empty_body> req{ http::verb::get, Jde::format("/delay?seconds={}", delay), 11 };

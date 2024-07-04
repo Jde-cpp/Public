@@ -24,7 +24,7 @@ namespace Jde::Web::Flex{
 	};
 
 	template<http::status TStatus=http::status::internal_server_error>
-	struct RestException : IRestException{
+	struct RestException final: IRestException{
 		//RestException()ι:IRestException{}{}
 		template<class... Args> RestException( SL sl, HttpRequest&& req, fmt::format_string<Args...> fmt, Args&&... args )ι:IRestException( sl, move(req), fmt, std::forward<Args>(args)... ){}
 		template<class... Args> RestException( SL sl, HttpRequest&& req, std::exception&& inner, fmt::format_string<Args...> fmt={}, Args&&... args )ι:IRestException{sl, move(req), move(inner), fmt, std::forward<Args>(args)...}{}

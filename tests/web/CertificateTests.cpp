@@ -41,7 +41,7 @@ namespace Jde::Web{
 	TEST_F( CertificateTests, DefaultSettings ){
 		ResetSettings( IApplication::ApplicationDataFolder()/"ssl" );
 		Mock::Start();
-		var result = Ssl::Send<string>( Host, "/isSsl", {}, Port, "text/ping", {}, http::verb::get );
+		var result = Ssl::Send<string>( Host, "/isSsl", {}, std::to_string(Port), "text/ping", {}, http::verb::get );
 		ASSERT_EQ( "SSL=true", result );
 	}
 
@@ -50,7 +50,7 @@ namespace Jde::Web{
 		fs::remove_all( "/tmp/WebTests/ssl" );
 		Settings::Set( "http/ssl/passcode", "PaSsCoDe", false );
 		Mock::Start();
-		var result = Ssl::Send<string>( Host, "/isSsl", {}, Port, "text/ping", {}, http::verb::get );
+		var result = Ssl::Send<string>( Host, "/isSsl", {}, std::to_string(Port), "text/ping", {}, http::verb::get );
 		ASSERT_EQ( "SSL=true", result );
 	}
 }

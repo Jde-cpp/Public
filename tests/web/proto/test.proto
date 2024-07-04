@@ -5,12 +5,17 @@ package Jde.Http.Proto;
 import "FromServer.proto";
 import "FromClient.proto";
 
+message Echo{
+	uint32 request_id=1;
+	string echo_text=2;
+}
+
 message TestFromServerUnion{
 	oneof Value{
 		FromServer.Ack ack=1;
-		FromServer.Complete complete=2;
+//		FromServer.Complete complete=2;
 		FromServer.Exception exception=3;
-		string description=4;
+		Echo echo=4;
 	}
 }
 
@@ -18,10 +23,18 @@ message TestFromServer{
 	repeated TestFromServerUnion messages = 1;
 }
 
+message CloseServerSide{
+};
+
+message BadTransmissionServer{
+};
+
 message TestFromClientUnion{
 	oneof Value{
 		FromClient.Connect connect=1;
-		string description=2;
+		Echo echo=2;
+		CloseServerSide close_server_side=3;
+		BadTransmissionServer bad_transmission_server=4;
 	}
 }
 

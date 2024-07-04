@@ -30,8 +30,9 @@ namespace Jde::Http{
 		α OnConnect( tcp::resolver::results_type::endpoint_type ep, string& host, sp<IClientSocketSession> session )ι->void;
 		α AfterHandshake( const string& host, sp<IClientSocketSession> session )ι->void;
 		α AsyncRead( sp<IClientSocketSession> session )ι->void;
-		// α Write( string&& buffer )ι->Task;
-		// α GetExecutor()ι->executor_type;
+		α AsyncWrite( string&& buffer, sp<IClientSocketSession> session )ι->Task;
+		α Close( sp<IClientSocketSession> session )ι->void;
+		α OnWrite( beast::error_code ec, uint bytes_transferred )ι->void;
 		// α OnRun( sp<IWebsocketSession> session )ι->void;
 		// α DoRead( sp<IWebsocketSession> session )ι->void;
 		α ReadBuffer()ι{ return std::basic_string_view<uint8_t>{(uint8_t*)_buffer.data().data(), _buffer.size()}; }
@@ -39,6 +40,9 @@ namespace Jde::Http{
 		α IsSsl()ι->bool{ return _ws.index()==1; }
 		beast::flat_buffer _buffer;
 		CoLock _writeLock;
+		net::io_context& _ioc;
+		up<CoGuard> _writeGuard;
+		string _writeBuffer;
 		Stream _ws;
 	};
 }

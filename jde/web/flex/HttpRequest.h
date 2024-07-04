@@ -54,7 +54,7 @@ namespace Jde::Web::Flex{
 		http::response<T> res{ status, _request.version() };
 		res.set( http::field::server, ServerVersion() );
 		res.set( http::field::access_control_allow_origin, AccessControlAllowOrigin() );
-		if( SessionInfo.IsNew )
+		if( SessionInfo.IsInitialRequest )
 			res.set( http::field::authorization, Jde::format("{:x}", SessionInfo.SessionId) );
 		for( auto& [key,value] : ResponseHeaders )
 			res.set( key, value );

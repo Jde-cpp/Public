@@ -1,7 +1,7 @@
 {
     "configurations": [{
 			"name": "Linux",
-			"browse": { 
+			"browse": {
 				"path": [
 					"${workspaceFolder}",
 					"${env:REPO_DIR}/install/asan/fmt/include/",
@@ -9,11 +9,11 @@
 					"${env:REPO_DIR}/install/asan/protobuf/include/",
 					"${env:REPO_DIR}/install/asan/spdlog/include/",
 					"${env:REPO_DIR}/json/include",
-					"${env:REPO_DIR}/Public",
 					"${env:JDE_DIR}/Public",
 					"${env:JDE_DIR}/Framework/tests/.obj/asan/googletest-src/googletest/include",
+					"${env:JDE_DIR}/Public/src/web/.obj/asan",
 					".."
-				], 
+				],
 				"limitSymbolsToIncludedHeaders": true },
 				"includePath": [
 					"/usr/include/c++/13",

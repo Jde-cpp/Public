@@ -14,7 +14,7 @@
 #define Φ Γ auto
 
 //namespace Jde::IO{ class IncomingMessage; }
-namespace Jde{ 
+namespace Jde{
 	struct LogTag{ string Id; ELogLevel Level{ELogLevel::NoLog}; };//loadLibrary dlls may disappear, so need string vs. sv
 	Φ CanBreak()ι->bool;
 }
@@ -51,7 +51,7 @@ namespace Jde::Logging{
 	protected:
 		explicit Γ MessageBase( ELogLevel level, SL sl )ι;
 	};
-	
+
 	struct Message /*final*/ : MessageBase{
 		Message( const MessageBase& b )ι;
 		Message( const Message& x )ι;
@@ -145,6 +145,7 @@ namespace Jde{
 	Φ HaveLogger()ι->bool;
 	Φ ClearMemoryLog()ι->void;
 	Φ FindMemoryLog( uint32 messageId )ι->vector<Logging::Messages::ServerMessage>;
+	Φ FindMemoryLog( str tag, uint code )ι->vector<Logging::Messages::ServerMessage>;
 	namespace Logging{
 		Φ DestroyLogger()->void;
 		Φ Initialize()ι->void;

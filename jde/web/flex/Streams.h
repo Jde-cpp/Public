@@ -17,13 +17,15 @@ namespace Jde::Web::Flex{
 		up<beast::ssl_stream<StreamType>> Ssl;
 		friend struct SocketStream;
 	};
+
 	struct SocketStream final: std::enable_shared_from_this<SocketStream>{
 		using Stream = std::variant<websocket::stream<StreamType>,websocket::stream<beast::ssl_stream<StreamType>>>;
-		SocketStream( RestStream&& stream, beast::flat_buffer&& buffer )ι;
+		SocketStream( sp<RestStream>&& stream, beast::flat_buffer&& buffer )ι;
 		α Write( string&& buffer )ι->Task;
 		α GetExecutor()ι->executor_type;
-		α OnRun( sp<IWebsocketSession> session )ι->void;
+		α DoAccept( TRequestType request, sp<IWebsocketSession> session )ι->void;
 		α DoRead( sp<IWebsocketSession> session )ι->void;
+		α Close( sp<IWebsocketSession> session )ι->void;
 	private:
 		beast::flat_buffer _buffer;
 		CoLock _writeLock;
