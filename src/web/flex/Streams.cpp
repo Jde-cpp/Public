@@ -23,7 +23,7 @@ namespace Jde::Web::Flex{
 	α RestStream::OnWrite( beast::error_code ec, uint bytes_transferred )ι->void{
 		boost::ignore_unused( bytes_transferred );
 		if( ec )
-			CodeException{ static_cast<std::error_code>(ec), ec.value()==(int)boost::beast::error::timeout ? ELogLevel::Debug : ELogLevel::Error };
+			CodeException{ static_cast<std::error_code>(ec), _responseTag, ec.value()==(int)boost::beast::error::timeout ? ELogLevel::Debug : ELogLevel::Error };
   }
 
 	α Test( beast::ssl_stream<StreamType>&& stream )ι->void{
@@ -72,7 +72,7 @@ namespace Jde::Web::Flex{
 				ws.async_read( _buffer, [this,session]( beast::error_code ec, uint c )mutable{
 					if( ec ){
 						ELogLevel level = ec==websocket::error::closed || ec==boost::asio::error::connection_aborted || ec==boost::asio::error::not_connected || ec==boost::asio::error::connection_reset ? ELogLevel::Trace : ELogLevel::Error;
-						CodeException{ static_cast<std::error_code>(ec), _requestTag, level };
+						CodeException{ static_cast<std::error_code>(ec), _requestTag, "Server::DoRead", level };
 						return;
 					}
 					session->OnRead( (char*)_buffer.data().data(), _buffer.size() );
@@ -100,7 +100,7 @@ namespace Jde::Web::Flex{
 						catch( const boost::exception& e2 ){
 							Logging::LogNoServer( Logging::Message{ELogLevel::Debug, "Error closing:  '{}')"}, _responseTag, boost::diagnostic_information(e2) );
 						}
-						CodeException{ move(static_cast<std::error_code>(ec)) };
+						CodeException{ move(static_cast<std::error_code>(ec)), _requestTag };
 					}
 				});
 			}, _ws );
@@ -111,7 +111,7 @@ namespace Jde::Web::Flex{
 			[&]( auto&& ws ){
 				ws.async_close( websocket::close_code::normal, [session]( beast::error_code ec ){
 					if( ec )
-						CodeException{ static_cast<std::error_code>(ec) };
+						CodeException{ static_cast<std::error_code>(ec), _requestTag };
 					INFO( "[{:x}]Closed.", session->Id() );
 				});
 			}, _ws );

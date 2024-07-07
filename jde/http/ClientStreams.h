@@ -20,6 +20,7 @@ namespace Jde::Http{
 		friend struct SocketStream;
 	};*/
 	//template<class TStream=beast::tcp_stream>// client=beast::tcp_stream vs server=beast::tcp_stream::rebind_executor<executor_with_default>::other
+	//TODO consider weak_ptr to session
 	struct HttpSocketStream final: std::enable_shared_from_this<HttpSocketStream>{
 	  using BaseStream = beast::tcp_stream;
 		using SslStream = websocket::stream<beast::ssl_stream<BaseStream>>;
@@ -36,8 +37,8 @@ namespace Jde::Http{
 		// α OnRun( sp<IWebsocketSession> session )ι->void;
 		// α DoRead( sp<IWebsocketSession> session )ι->void;
 		α ReadBuffer()ι{ return std::basic_string_view<uint8_t>{(uint8_t*)_buffer.data().data(), _buffer.size()}; }
-	private:
 		α IsSsl()ι->bool{ return _ws.index()==1; }
+	private:
 		beast::flat_buffer _buffer;
 		CoLock _writeLock;
 		net::io_context& _ioc;

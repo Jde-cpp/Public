@@ -29,7 +29,7 @@ namespace Jde::Http{
 			// Set SNI Hostname (many hosts need this to handshake successfully)
 			if( !SSL_set_tlsext_host_name(stream.next_layer().native_handle(), host.c_str()) ){
 				var ec = beast::error_code( static_cast<int>(::ERR_get_error()), net::error::get_ssl_category() );
-				CodeException{ static_cast<std::error_code>(ec) };
+				CodeException{ static_cast<std::error_code>(ec), IncomingTag() };
 				return;
 			}
 			host += ':' + std::to_string( ep.port() ); // Update the _host string. This will provide the value of the Host HTTP header during the WebSocket handshake. See https://tools.ietf.org/html/rfc7230#section-5.4
@@ -76,7 +76,7 @@ namespace Jde::Http{
 		_writeGuard = nullptr;
 		boost::ignore_unused( bytes_transferred );
 		if( ec )
-			CodeException{ static_cast<std::error_code>(ec) };
+			CodeException{ static_cast<std::error_code>(ec), OutgoingTag() };
 	}
 
 	α HttpSocketStream::Close( sp<IClientSocketSession> session )ι->void{

@@ -23,10 +23,10 @@ namespace Jde::Web::Flex{
 	// 	TRACE( "[{}]Socket::OnRun()", _id );
 	// 	Stream.OnRun( shared_from_this() );
 	// }
-#define CHECK_EC(ec, ...) if( ec ){ CodeException x(static_cast<std::error_code>(ec) __VA_OPT__(,) __VA_ARGS__); return; }
+#define CHECK_EC(ec,tag,  ...) if( ec ){ CodeException x(static_cast<std::error_code>(ec), tag __VA_OPT__(,) __VA_ARGS__); return; }
 	α IWebsocketSession::OnAccept( beast::error_code ec )ι->void{
 		TRACE( "[{}]Socket::OnAccept()", _id );
-		CHECK_EC( ec );
+		CHECK_EC( ec, _logTag );
 		DoRead();
 	}
 
@@ -37,7 +37,7 @@ namespace Jde::Web::Flex{
 	α IWebsocketSession::OnWrite( beast::error_code ec, uint c )ι->void{
 		boost::ignore_unused( c );
 		try{
-			THROW_IFX( ec, CodeException(static_cast<std::error_code>(ec), ec == websocket::error::closed ? ELogLevel::Trace : ELogLevel::Error) );
+			THROW_IFX( ec, CodeException(static_cast<std::error_code>(ec), _logTag, ec == websocket::error::closed ? ELogLevel::Trace : ELogLevel::Error) );
 		}
 		catch( const CodeException& )
 		{}

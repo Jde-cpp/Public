@@ -3,8 +3,6 @@
 #include <jde/crypto/OpenSsl.h>
 #include "mocks/ServerMock.h"
 #include "../../../Ssl/source/Ssl.h"
-// #include "../../../Framework/source/Stopwatch.h"
-// #include "TestRequestAwait.h"
 
 #define var const auto
 namespace Jde::Web{
@@ -23,7 +21,7 @@ namespace Jde::Web{
 		α TearDown()->void override;
 		static json OriginalSettings;
 	};
-	json CertificateTests::OriginalSettings{ Settings::Global().Json() };
+	json CertificateTests::OriginalSettings = Settings::Global().Json();
 
 	α ResetSettings( const fs::path& baseDir = {} )ι->void{
 		//sv what, const Container::Variant& v, bool save=true, SRCE )ε->void;

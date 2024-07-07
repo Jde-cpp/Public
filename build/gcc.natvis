@@ -68,12 +68,13 @@
 		</Expand>
 	</Type>
 	<Type Name="std::shared_ptr&lt;*&gt;">
-		<!-- <DisplayString Condition="_M_ptr!=0">{*_M_ptr}</DisplayString> -->
-    <DisplayString Condition="_M_ptr!=0">p={*_M_ptr}</DisplayString>
+		<AlternativeType Name="Jde::sp"/>
+    <DisplayString Condition="_M_ptr!=0">{*($T1*)_M_ptr}</DisplayString>
 		<DisplayString Condition="_M_ptr==0">{{nullptr}}</DisplayString>
 		<Expand>
 			<Item Name="strong">_M_refcount._M_pi-&gt;_M_use_count</Item>
 			<Item Name="weak">_M_refcount._M_pi-&gt;_M_weak_count</Item>
+			<ExpandedItem>*($T1*)_M_ptr</ExpandedItem>
     </Expand>
 	</Type>
  <Type Name="std::unique_ptr&lt;*&gt;">

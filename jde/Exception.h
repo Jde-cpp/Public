@@ -40,13 +40,13 @@ namespace Jde{
 	};
 	struct Γ IException : std::exception{
 		using base=std::exception;
-		IException( vector<string>&& args, string&& format, SL sl, uint c, ELogLevel l=DefaultLogLevel )ι;
+
 		IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, SRCE )ι;
 		IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, sp<LogTag>&& tag={}, SRCE )ι;
 		IException( IException&& from )ι;
 		IException( const IException& from )ι;
 
-		$ IException( SL sl, std::exception&& inner, ELogLevel level, fmt::format_string<Args...> format_="", Args&&... args )ι;
+		$ IException( SL sl, std::exception&& inner, ELogLevel level, fmt::format_string<Args...> m="", Args&&... args )ι;
 		$ IException( SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&& ...args )ι;
 		$ IException( SL sl, ELogLevel l, uint code, fmt::format_string<Args...> m, Args&&... args )ι;
 		Ω FromExceptionPtr( const std::exception_ptr& from, SRCE )ι->up<IException>;
@@ -120,9 +120,9 @@ namespace Jde{
 	};
 
 	struct Γ CodeException final : IException{
-		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE )ι;
+//		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE )ι;
 		CodeException( std::error_code&& code, sp<LogTag> tag, ELogLevel level=ELogLevel::Error, SRCE )ι;
-		CodeException( string value, std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE )ι;
+		CodeException( std::error_code&& code, sp<LogTag> tag, string value, ELogLevel level=ELogLevel::Error, SRCE )ι;
 
 		using T=CodeException;
 		COMMON

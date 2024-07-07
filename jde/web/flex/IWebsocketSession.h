@@ -2,7 +2,7 @@
 #include <jde/App.h>
 #include <jde/web/exports.h>
 //#include <jde/web/socket/WebsocketServer.h>
-#include "../../../../Framework/source/io/Socket.h"
+//#include "../../../../Framework/source/io/Socket.h"
 #include "../../../../Framework/source/io/ProtoUtilities.h"
 #include "../../../../Framework/source/threading/Mutex.h"
 #include "Streams.h"
@@ -16,7 +16,7 @@ namespace Jde::Web::Flex{
 	namespace websocket = beast::websocket;
 	namespace net = boost::asio;
 	using tcp = net::ip::tcp;
-	using namespace Jde::IO::Sockets;
+	//using namespace Jde::IO::Sockets;
 	ΓW α WebsocketRequestTag()ι->sp<Jde::LogTag>;
 
 	struct ΓW IWebsocketSession /*abstract*/: std::enable_shared_from_this<IWebsocketSession>{

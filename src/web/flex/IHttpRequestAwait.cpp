@@ -1,4 +1,4 @@
-#include <jde/web/flex/HttpRequestAwait.h>
+#include <jde/web/flex/IHttpRequestAwait.h>
 
 namespace Jde::Web::Flex{
 	HttpTaskResult::HttpTaskResult( HttpTaskResult&& rhs )ι:

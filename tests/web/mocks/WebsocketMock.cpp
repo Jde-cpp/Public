@@ -4,43 +4,43 @@
 
 
 namespace Jde::Web::Mock{
-	α WebsocketSession::OnConnect( SessionPK sessionId, Http::RequestId requestId )ι->Sessions::UpsertAwait::Task{
+	α WebsocketSession::OnConnect( SessionPK sessionId, Http::RequestId requestId )ι->App::Client::UpsertAwait::Task{
 		try{
-			Proto::TestFromServer t;
-			auto p = t.add_messages()->mutable_ack();
-			auto info = co_await Sessions::UpsertAwait( Jde::format("{:x}", sessionId), _userEndpoint, true );
-			p->set_session_id( info.SessionId  );
-			p->set_request_id( requestId );
+			Proto::FromServerTransmission t;
+			auto m = t.add_messages();
+			auto info = co_await App::Client::UpsertAwait( Jde::format("{:x}", sessionId), _userEndpoint.address().to_string(), true );
+			m->set_ack( info.SessionId );
+			m->set_request_id( requestId );
 			Write( move(t) );
 		}
 		catch( IException& e ){
-			Proto::TestFromServer t;
-			auto p = t.add_messages()->mutable_exception();
-			p->set_request_id( requestId );
-			p->set_message( e.what() );
+			Proto::FromServerTransmission t;
+			auto m = t.add_messages();
+			m->set_request_id( requestId );
+			m->set_exception( e.what() );
 			Write( move(t) );
 		}
 	}
 	α WebsocketSession::WriteException( const IException& e )ι->void{
-		Proto::TestFromServer t;
-		auto p = t.add_messages()->mutable_exception();
-		p->set_message( e.what() );
+		Proto::FromServerTransmission t;
+		auto m = t.add_messages();
+		m->set_exception( e.what() );
 		Write( move(t) );
 	}
 
-	α WebsocketSession::OnRead( Proto::TestFromClient&& messages )ι->void{
-		for( const Proto::TestFromClientUnion& m : messages.messages() ){
-			using enum Proto::TestFromClientUnion::ValueCase;
+	α WebsocketSession::OnRead( Proto::FromClientTransmission&& messages )ι->void{
+		for( const Proto::FromClientMessage& m : messages.messages() ){
+			using enum Proto::FromClientMessage::ValueCase;
+			var requestId = m.request_id();
 			switch( m.Value_case() ){
-			case kConnect:
-				OnConnect( m.connect().session_id(), m.connect().request_id() );
+			case kSessionId:
+				OnConnect( m.session_id(), requestId );
 			break;
 			case kEcho:{
-				//Proto::TestFromServerUnion result;
-				Proto::TestFromServer t;
-				auto p = t.add_messages()->mutable_echo();
-				p->set_request_id( m.echo().request_id() );
-				p->set_echo_text( m.echo().echo_text() );
+				Proto::FromServerTransmission t;
+				auto res = t.add_messages();
+				res->set_request_id( requestId );
+				res->set_echo_text( m.echo() );
 				Write( move(t) );
 				break;
 			}

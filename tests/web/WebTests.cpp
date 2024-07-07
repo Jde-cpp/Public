@@ -1,6 +1,7 @@
 ﻿#include <execution>
 #include <jde/web/flex/Flex.h>
 #include "../../../Ssl/source/Ssl.h"
+#include "../../../Framework/source/io/AsioContextThread.h"
 #include "mocks/ServerMock.h"
 
 #define var const auto
@@ -81,7 +82,7 @@ namespace Jde::Web{
 		Stopwatch _{ "WebTests::CloseMidRequest", _logTag };
 
 		namespace beast = boost::beast;
-		auto ioc = Flex::GetIOContext();
+		auto ioc = IO::AsioContextThread();
 		tcp::resolver resolver{ *ioc };
     auto stream = mu<beast::tcp_stream>( *ioc );
 		var results = resolver.resolve( Host, std::to_string(Port) );

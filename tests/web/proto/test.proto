@@ -2,25 +2,18 @@ syntax = "proto3";
 option optimize_for = LITE_RUNTIME;
 
 package Jde.Http.Proto;
-import "FromServer.proto";
-import "FromClient.proto";
 
-message Echo{
+message FromServerMessage{
 	uint32 request_id=1;
-	string echo_text=2;
-}
-
-message TestFromServerUnion{
 	oneof Value{
-		FromServer.Ack ack=1;
-//		FromServer.Complete complete=2;
-		FromServer.Exception exception=3;
-		Echo echo=4;
+		uint32 ack=2;
+		string exception=3;
+		string echo_text=4;
 	}
 }
 
-message TestFromServer{
-	repeated TestFromServerUnion messages = 1;
+message FromServerTransmission{
+	repeated FromServerMessage messages = 1;
 }
 
 message CloseServerSide{
@@ -29,15 +22,16 @@ message CloseServerSide{
 message BadTransmissionServer{
 };
 
-message TestFromClientUnion{
+message FromClientMessage{
+	uint32 request_id=1;
 	oneof Value{
-		FromClient.Connect connect=1;
-		Echo echo=2;
-		CloseServerSide close_server_side=3;
-		BadTransmissionServer bad_transmission_server=4;
+		uint32 session_id=2;
+		string echo=3;
+		CloseServerSide close_server_side=4;
+		BadTransmissionServer bad_transmission_server=5;
 	}
 }
 
-message TestFromClient{
-	repeated TestFromClientUnion messages = 1;
+message FromClientTransmission{
+	repeated FromClientMessage messages = 1;
 }

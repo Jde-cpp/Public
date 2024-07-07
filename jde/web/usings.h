@@ -1,12 +1,13 @@
 #pragma once
+#include <boost/unordered/concurrent_flat_map.hpp>
 #include <jde/TypeDefs.h>
 #include <jde/Exports.h>
-#include "../../../Framework/source/io/ServerSink.h"
 #include "exports.h"
 
 namespace Jde::Web{
 	using SessionPK=uint32;
-	using SessionInfo=Logging::Proto::SessionInfo;
+	//using SessionInfo=Logging::Proto::SessionInfo;
+	using boost::concurrent_flat_map;
 	namespace Flex{
 		namespace net = boost::asio;
 		namespace beast = boost::beast;

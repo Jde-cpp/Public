@@ -50,49 +50,39 @@ namespace Jde::Web{
 				level = ELogLevel::Trace;
 			break;
 		}
-		CodeException{ static_cast<std::error_code>(ec), level };
+		CodeException{ static_cast<std::error_code>(ec), WebTag(), level };
 	}
 
 	bool _started{};
 	α Flex::HasStarted()ι->bool{ return _started; }
 
-	sp<Flex::net::io_context> _ioc;
-	α Flex::GetIOContext()ι->sp<net::io_context>{ return _ioc; }
-
-	//PortType port, sv address={}, uint8 threadCount=1
 	α Flex::Start( sp<IRequestHandler> pHandler )ε->void{
 		_requestHandler = pHandler;
 		ssl::context ctx{ ssl::context::tlsv12 };
 		LoadServerCertificate( ctx );
 		var port = Settings::Get<PortType>( "http/port" ).value_or( 6809 );
-		var threadCount = Settings::Get<uint8>( "http/threads" ).value_or( 1 );
-		_ioc = ms<net::io_context>( threadCount );
-    net::co_spawn( *_ioc, Listen(ctx, tcp::endpoint{net::ip::make_address(Settings::Get<string>("http/address").value_or("0.0.0.0")), port}), net::bind_cancellation_slot(_cancellationSignals.slot(), net::detached) );
 
-/*    net::signal_set signals( *_ioc, SIGINT, SIGTERM );//TODO Shutdown routine
-    signals.async_wait( [&]( const beast::error_code&, int sig ){
-     	if( sig == SIGINT )
-				cancellation.emit( net::cancellation_type::all );
-			else
-				_ioc->stop(); // Stop the `io_context`. This will cause `run()` to return immediately, eventually destroying the `io_context` and all of the sockets in it.
-    });
-*/
-    std::vector<std::jthread> v; // Run the I/O service on the requested number of threadCount
-    v.reserve( threadCount - 1 );
-    for( auto i = threadCount - 1; i > 0; --i ){
-      v.emplace_back( [=]{ Threading::SetThreadDscrptn( Jde::format("Beast[{}]", i) ); _ioc->run(); } );
-		}
+		var threadCount = Settings::Get<uint8>( "http/threads" ).value_or( 1 );
+		auto ioc = IO::AsioContextThread( threadCount );
+    net::co_spawn( *ioc, Listen(ctx, tcp::endpoint{net::ip::make_address(Settings::Get<string>("http/address").value_or("0.0.0.0")), port}), net::bind_cancellation_slot(_cancellationSignals.slot(), net::detached) );
+
+    std::vector<std::jthread> v; v.reserve( threadCount - 1 );
+    for( auto i = threadCount - 1; i > 0; --i )
+      v.emplace_back( [=]{ Threading::SetThreadDscrptn( Jde::format("Beast[{}]", i) ); ioc->run(); } );
+
 		_started = true;
 		Threading::SetThreadDscrptn( "Beast[0]" );
-    _ioc->run();
+    ioc->run();
 		_started = false;
     for( auto& t : v )// (If we get here, it means we got a SIGINT or SIGTERM)
       t.join();
+		IO::DeleteContextThread();
 	}
 
 	α Flex::Stop( bool terminate )ι->void{
-		if( terminate )
-			_ioc->stop(); // Stop the `io_context`. This will cause `run()` to return immediately, eventually destroying the `io_context` and all of the sockets in it.
+		auto ioc = IO::AsioContextThread();
+		if( ioc && terminate )
+			ioc->stop(); // Stop the `io_context`. This will cause `run()` to return immediately, eventually destroying the `io_context` and all of the sockets in it.
 		else
 			_cancellationSignals.emit( net::cancellation_type::all );
 	}
@@ -176,9 +166,10 @@ namespace Flex{
 			co_return;
 		}
 	}
-	α Internal::HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task{
+	using App::Client::UpsertAwait;
+	α Internal::HandleRequest( HttpRequest req, sp<RestStream> stream )ι->UpsertAwait::Task{
 		try{
-			req.SessionInfo = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint, false );
+			req.SessionInfo = co_await UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false );
 		}
 		catch( IException& e ){
 			Send( RestException<http::status::unauthorized>(SRCE_CUR, move(req), move(e), "Could not get sessionInfo."), move(stream) );

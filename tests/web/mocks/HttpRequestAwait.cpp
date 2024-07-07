@@ -1,4 +1,5 @@
 #include "HttpRequestAwait.h"
+#include "../../../Framework/source/io/AsioContextThread.h"
 #define var const auto
 
 namespace Jde::Web::Mock{
@@ -50,7 +51,7 @@ namespace Jde::Web::Mock{
 				std::this_thread::sleep_for( std::chrono::seconds{seconds} );
 				_pPromise->SetRequest( move(*_input) );
 				_pPromise->SetResult( json() );
-				boost::asio::post( *Flex::GetIOContext(), [h](){ h.resume(); } );
+				boost::asio::post( *IO::AsioContextThread(), [h](){ h.resume(); } );
 				DBGT( Flex::ResponseTag(), "~/delay handler" );
 			});
 		}
@@ -58,8 +59,7 @@ namespace Jde::Web::Mock{
 			_thread = std::jthread( [this,h]()mutable->void{
 				Threading::SetThreadDscrptn( "BadAwaitable" );
 				h.promise().SetException( RestException(SRCE_CUR, move(*_input), "BadAwaitable") );
-				//boost::asio::post( *Flex::GetIOContext(), [h](){ h.resume(); } );
-				boost::asio::post( *Flex::GetIOContext(), [h](){ h.resume(); } );
+				boost::asio::post( *IO::AsioContextThread(), [h](){ h.resume(); } );
 				DBGT( Flex::ResponseTag(), "~/BadAwaitable handler" );
 			 });
 		}

@@ -1,22 +1,23 @@
 #pragma once
-#include <boost/beast/http.hpp>//
-#include <boost/beast/websocket.hpp>//
+//#include <boost/beast/http.hpp>//
+//#include <boost/beast/websocket.hpp>//
 #include <boost/asio/experimental/parallel_group.hpp>
-#include <boost/asio/ssl.hpp>
-//#include "WebSocketSession.h"
-//#include "HttpRequest.h"
-#include "Sessions.h"
+//#include <boost/asio/ssl.hpp>
+#include <jde/appClient/Sessions.h>
 #include "RestException2.h"
-#include "HttpRequestAwait.h"
+#include <jde/web/flex/Streams.h>
+#include <jde/web/flex/IHttpRequestAwait.h>
+
 #define var const auto
 
+struct IHttpRequestAwait;
 namespace Jde::Web::Flex{
 	struct IRequestHandler{
 		β HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> =0;
 		β RunWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint )ι->void =0;
 	};
 	α GetRequestHandler()ι->sp<IRequestHandler>;
-	α GetIOContext()ι->sp<net::io_context>;
+	//α GetIOContext()ι->sp<net::io_context>;
 
 	struct CancellationSignals;
 	α HasStarted()ι->bool;
@@ -47,7 +48,7 @@ namespace Jde::Web::Flex{
 	namespace Internal{
 		α SendOptions( const HttpRequest&& req )ι->http::message_generator;
 		//Ŧ HandleRequest( HttpRequest req, up<T> stream, SessionPK sessionId )->Task;
-		α HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task;
+		α HandleRequest( HttpRequest req, sp<RestStream> stream )ι->App::Client::UpsertAwait::Task;
 		α HandleCustomRequest( HttpRequest req, sp<RestStream> stream )ι->HttpTask;
 	}
 }

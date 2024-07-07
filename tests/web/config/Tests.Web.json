@@ -1,8 +1,8 @@
 {
 	"testing":{
 		"testsa":"CertificateTests.NewDirectory",
-		"tests":"SocketTests.BadTransmissionServer",
-		"testsy":"WebTests.BadSessionId"
+		"testsb":"SocketTests.CloseClientSide",
+		"tests":"WebTests.*"
 	},
 	"cryptoTests":{
 		"clear": true
@@ -24,7 +24,8 @@
 		"address": null,
 		"port": 5005,
 		"threads": 1,
-		"timeout": "PT30M",
+		"timeout": "PT5S",
+		"maxLogLength": 31,
 		"accessControl": {
 			"allowOrigin": "*",
 			"allowMethods": "GET, POST, OPTIONS",

@@ -1,7 +1,10 @@
 #pragma once
 #include "../usings.h"
+#include <jde/coroutine/Task.h>
+#include "../../../Framework/source/threading/Mutex.h"
 
 namespace Jde::Web::Flex{
+	using namespace Jde::Coroutine;
 	struct IWebsocketSession;
 	struct SocketStream;
 	struct RestStream final: std::enable_shared_from_this<RestStream>{
@@ -21,7 +24,7 @@ namespace Jde::Web::Flex{
 	struct SocketStream final: std::enable_shared_from_this<SocketStream>{
 		using Stream = std::variant<websocket::stream<StreamType>,websocket::stream<beast::ssl_stream<StreamType>>>;
 		SocketStream( sp<RestStream>&& stream, beast::flat_buffer&& buffer )ι;
-		α Write( string&& buffer )ι->Task;
+		α Write( string&& buffer )ι->Coroutine::Task;
 		α GetExecutor()ι->executor_type;
 		α DoAccept( TRequestType request, sp<IWebsocketSession> session )ι->void;
 		α DoRead( sp<IWebsocketSession> session )ι->void;

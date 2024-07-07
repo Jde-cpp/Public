@@ -1,0 +1,47 @@
+syntax = "proto3";
+package Jde.App.Proto.FromServer;
+
+import "google/protobuf/timestamp.proto";
+import "Common.proto";
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+message LogLevels{
+	Jde.Proto.ELogLevel server=1;
+	Jde.Proto.ELogLevel client=2;
+}
+
+message SessionInfo{
+	google.protobuf.Timestamp expiration=1;
+	uint32 session_id=2;
+	uint32 user_pk=3;
+	string user_endpoint=4;
+	bool has_socket=5;
+};
+
+message Strings{
+	repeated uint32 messages = 1;
+	repeated uint32 files = 2;
+	repeated uint32 functions = 3;
+	repeated uint32 threads = 4;
+}
+
+message Message{
+	uint32 request_id=1;
+	oneof Value{
+		uint32 ack = 2;
+		string generic = 3;
+		Strings strings = 4;
+		LogLevels log_levels = 5;
+		bytes custom = 6;
+		double progress = 7;
+		SessionInfo session_info = 8;
+		uint32 add_session_result = 9;
+		string graph_ql = 10;
+		string exception = 11;
+	}
+}
+
+message Transmission{
+	repeated Message Messages = 1;
+}

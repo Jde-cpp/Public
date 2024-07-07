@@ -20,8 +20,6 @@ namespace Jde{
 }
 namespace Jde::Logging{
 	Φ BreakLevel()ι->ELogLevel;
-	namespace Messages{ struct ServerMessage; }
-
 	enum class EFields : uint16{ None=0, Timestamp=0x1, MessageId=0x2, Message=0x4, Level=0x8, FileId=0x10, File=0x20, FunctionId=0x40, Function=0x80, LineNumber=0x100, UserId=0x200, User=0x400, ThreadId=0x800, Thread=0x1000, VariableCount=0x2000, SessionId=0x4000 };
 	constexpr inline EFields operator|(EFields a, EFields b){ return (EFields)( (uint16)a | (uint16)b ); }
 	constexpr inline EFields operator&(EFields a, EFields b){ return (EFields)( (uint16)a & (uint16)b ); }
@@ -76,9 +74,10 @@ namespace Jde::Logging{
 	ψ LogOnce( const Logging::MessageBase& messageBase, const sp<LogTag>& logTag, Args&&... args )ι->void;
 	α LogNoServer( const Logging::MessageBase& messageBase, const sp<LogTag>& tag )ι->void;
 	ψ LogNoServer( const Logging::MessageBase& messageBase, const sp<LogTag>& tag, Args&&... args )ι->void;
-	Φ LogServer( const Logging::MessageBase& messageBase )ι->void;
-	Φ LogServer( const Logging::MessageBase& messageBase, vector<string>& values )ι->void;
-	Φ LogServer( Logging::Messages::ServerMessage& message )ι->void;
+	Φ LogExternal( const Logging::MessageBase& messageBase )ι->void;
+	Φ LogExternal( const Logging::MessageBase& messageBase, const vector<string>& values )ι->void;
+	struct ExternalMessage;
+	Φ LogExternal( const Logging::ExternalMessage& message )ι->void;
 	Φ LogMemory( const Logging::MessageBase& messageBase )ι->void;
 	Φ LogMemory( const Logging::MessageBase& messageBase, vector<string> values )ι->void;
 	Φ LogMemory( Logging::Message&& m, vector<string> values )ι->void;
@@ -144,8 +143,8 @@ namespace Jde{
    using namespace std::literals;
 	Φ HaveLogger()ι->bool;
 	Φ ClearMemoryLog()ι->void;
-	Φ FindMemoryLog( uint32 messageId )ι->vector<Logging::Messages::ServerMessage>;
-	Φ FindMemoryLog( str tag, uint code )ι->vector<Logging::Messages::ServerMessage>;
+	Φ FindMemoryLog( uint32 messageId )ι->vector<Logging::ExternalMessage>;
+	Φ FindMemoryLog( str tag, uint code )ι->vector<Logging::ExternalMessage>;
 	namespace Logging{
 		Φ DestroyLogger()->void;
 		Φ Initialize()ι->void;
@@ -153,19 +152,40 @@ namespace Jde{
 		Φ Tag( sv tag )ι->sp<LogTag>;
 		Φ Tag( const std::span<const sv> tags )ι->vector<sp<LogTag>>;
 		Φ LogMemory()ι->bool;
-		Φ ServerLevel()ι->ELogLevel;
-		Φ ClientLevel()ι->ELogLevel;
+		Φ ServerMinLevel()ι->ELogLevel;
+		Φ MinLevel( sv externalName )ι->ELogLevel;
+		Φ ClientMinLevel()ι->ELogLevel;
 		Φ Default()ι->spdlog::logger*;
-	}
+		Φ HaveExternal()ι->bool;
 
-	inline constexpr PortType ServerSinkDefaultPort = 4321;
-
-	namespace Logging{
+//	inline constexpr PortType ServerSinkDefaultPort = 4321;
 		namespace Proto{class Status;}
 		α StartTime()ι->TimePoint;
 		Φ SetStatus( const vector<string>& values )ι->void;
 		α SetLogLevel( ELogLevel client, ELogLevel server )ι->void;
 		α GetStatus()ι->up<Proto::Status>;
+
+		struct Γ ExternalMessage final : Message{
+			ExternalMessage( const MessageBase& base )ι:ExternalMessage{ base, {} }{}
+			ExternalMessage( const MessageBase& base, vector<string> values )ι:ExternalMessage{ Message{base}, move(values) }{}
+			ExternalMessage( const ExternalMessage& rhs ):Message{ rhs }, Timestamp{rhs.Timestamp}, Variables{rhs.Variables}{}
+			ExternalMessage( const Message& b, vector<string> values )ι: Message{ b }, Variables{ move(values) }{}
+			const TimePoint Timestamp{ Clock::now() };
+			vector<string> Variables;
+		//private:
+		//	string _function;
+		};
+		struct IExternalLogger{
+			β Destroy(SRCE)ι->void=0;
+			β Name()ι->string=0;
+			β Log( ExternalMessage&& m, SRCE )ι->void=0;
+			β Log( const ExternalMessage& m, const vector<string>* args=nullptr, SRCE )ι->void=0;
+			β MinLevel()ι->ELogLevel{ return _minLevel; }
+			β SetMinLevel(ELogLevel level)ι->void=0;
+			vector<LogTag> Tags;
+		protected:
+			ELogLevel	_minLevel{ ELogLevel::NoLog };
+		};
 	}
 #define var const auto
 	Ξ FileName( const char* file_ )->string{
@@ -227,14 +247,14 @@ namespace Jde{
 			MessageBase m2{ ELogLevel::Critical, "could not format '{}' cargs='{}' - '{}'", m.File, m.Function, m.LineNumber };
 			Log( m2, tag, m.MessageView, sizeof...(args), e.what() );
 		}
-		logServer = logServer && ServerLevel()!=ELogLevel::NoLog && ServerLevel()<=m.Level;
+		logServer = logServer && ServerMinLevel()!=ELogLevel::NoLog && ServerMinLevel()<=m.Level;
 		if( logServer || LogMemory() ){
 			vector<string> values; values.reserve( sizeof...(args) );
 			ToVec::Append( values, args... );
 			if( LogMemory() )
 				LogMemory( m, values );
 			if( logServer )
-				LogServer( m, values );
+				LogExternal( m, values );
 		}
 	}
 #pragma warning(pop)

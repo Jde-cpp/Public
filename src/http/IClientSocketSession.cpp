@@ -4,8 +4,9 @@ namespace Jde{
 	static sp<LogTag> _incomingTag{ Logging::Tag( "client.socket.incoming" ) };
 	static sp<LogTag> _outgoingTag{ Logging::Tag( "client.socket.outgoing" ) };
 	α Http::IncomingTag()ι->sp<LogTag>{ return _incomingTag; }
+	α Http::OutgoingTag()ι->sp<LogTag>{ return _outgoingTag; }
 }
-#define CHECK_EC if( ec ){ CodeException{ static_cast<std::error_code>(ec), GetLogLevel(ec) }; return; }
+#define CHECK_EC(tag) if( ec ){ CodeException{ static_cast<std::error_code>(ec), tag, GetLogLevel(ec) }; return; }
 namespace Jde::Http{
 	α GetLogLevel( beast::error_code ec )->ELogLevel{
 		return ec == net::error::operation_aborted
@@ -30,15 +31,13 @@ namespace Jde::Http{
 	}
 
 	CreateClientSocketSessionAwait::CreateClientSocketSessionAwait( sp<IClientSocketSession> session, string host, PortType port, SL sl )ι:
+		base{ sl },
 		_session{ session },
 		_host{ host },
-		_port{ port },
-		_sl{ sl }
+		_port{ port }
 	{}
 
-
-
-	α CreateClientSocketSessionAwait::await_suspend( THandle h )ι->void{
+	α CreateClientSocketSessionAwait::await_suspend( base::Handle h )ι->void{
 		base::await_suspend( h );
 		_session->Run( _host, _port, h );
 	}
@@ -52,11 +51,12 @@ namespace Jde::Http{
 		_resolver{ *ioc },
 		_stream{ ms<HttpSocketStream>(*ioc, ctx) },
 		_readTimer{ "", _incomingTag },
-		_ioContext{ ioc }
+		_ioContext{ ioc },
+		_maxLogLength{ Settings::Get<uint16>("http/maxLogLength").value_or(30) }
 	{}
 
-	α IClientSocketSession::Run( string host, PortType port, coroutine_handle<CreateClientSocketSessionAwait::TPromise> h )ι->void{// Start the asynchronous operation
-		_connectPromise = h;
+	α IClientSocketSession::Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void{// Start the asynchronous operation
+		_connectHandle = h;
 		_host = host;
 		boost::asio::post( *_ioContext, [&, port_=port, self=shared_from_this()]{
 			beast::error_code ec;
@@ -67,24 +67,24 @@ namespace Jde::Http{
 	}
 
 	α IClientSocketSession::OnResolve( beast::error_code ec, tcp::resolver::results_type results )ι->void{
-		CHECK_EC
+		CHECK_EC( _outgoingTag )
 		_stream->OnResolve( results, shared_from_this() );
 	}
 
 	α IClientSocketSession::OnConnect( beast::error_code ec, tcp::resolver::results_type::endpoint_type ep )ι->void{
-		CHECK_EC
+		CHECK_EC( _incomingTag )
 		_stream->OnConnect( ep, _host, shared_from_this() );
 	}
 
 	α IClientSocketSession::OnSslHandshake( beast::error_code ec )ι->void{
-		CHECK_EC
+		CHECK_EC( _incomingTag )
 		_stream->AfterHandshake( _host, shared_from_this() );
 	}
 
 	α IClientSocketSession::OnHandshake( beast::error_code ec )ι->void{
-		CHECK_EC
-		if( _connectPromise )
-			_connectPromise.resume();
+		CHECK_EC( _incomingTag )
+		if( _connectHandle )
+			_connectHandle.resume();
 		_stream->AsyncRead( shared_from_this() );
 	}
 	α IClientSocketSession::Write( string&& m )ι->void{
@@ -99,8 +99,9 @@ namespace Jde::Http{
 	α IClientSocketSession::OnRead( beast::error_code ec, uint bytes_transferred )ι->void{
 		boost::ignore_unused( bytes_transferred );
 		if( ec ){
-			Close();
-			//OnClose( ec );
+			CodeException{ static_cast<std::error_code>(ec), _incomingTag, "Client::DoRead", GetLogLevel(ec) };
+			if( ec!=net::error::operation_aborted )
+				_stream->Close( shared_from_this() );
 			return;
 		}
 		_readTimer.Restart();//Set on Client.
@@ -108,9 +109,17 @@ namespace Jde::Http{
 		_readTimer.Finish();
 		_stream->AsyncRead( shared_from_this() );
 	}
-
+	α CloseClientSocketSessionAwait::await_suspend( base::Handle h )ι->void{
+		base::await_suspend( h );
+		_session->_closeHandle = h;
+		_session->_stream->Close( _session );
+	}
 	α IClientSocketSession::OnClose( beast::error_code ec )ι->void{
-		CHECK_EC
-		TRACET( _incomingTag, "OnClose" );
+		CHECK_EC( _outgoingTag )
+		CloseTasks( [](std::any&& h){} );
+		TRACET( _outgoingTag, "OnClose" );
+		if( _closeHandle )
+			_closeHandle.resume();
+		_closeHandle = nullptr;
 	}
 }

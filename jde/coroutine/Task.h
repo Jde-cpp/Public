@@ -72,6 +72,7 @@ namespace Jde::Coroutine{
 	};
 
 	template<class T> concept IsPolymorphic = std::is_polymorphic_v<T>;
+
 	struct Task final{
 		using TResult=AwaitResult;
 		struct promise_type{

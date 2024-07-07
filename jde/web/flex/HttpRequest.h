@@ -3,7 +3,7 @@
 #include <jde/db/usings.h>
 #include <jde/io/Json.h>
 #include <jde/web/usings.h>
-#include "Sessions.h"
+#include <jde/appClient/Sessions.h>
 //#include "../../../../Framework/source/db/GraphQL.h"
 
 namespace Jde::Web::Flex{
@@ -36,7 +36,7 @@ namespace Jde::Web::Flex{
 
 		template<class T=http::string_body> α Response( http::status status=http::status::ok )Ι->http::response<T>;
 		α Response( json j )Ι->http::response<http::string_body>;
-		Sessions::Info SessionInfo;
+		App::Client::SessionInfo SessionInfo;
 		const tcp::endpoint UserEndpoint;
 		flat_map<string,string> ResponseHeaders;
 

@@ -9,7 +9,8 @@ add_definitions( -DJde_WEB_EXPORTS )
 find_package(OpenSSL)
 add_library( ${CMAKE_PROJECT_NAME} SHARED )
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
-file(GLOB src_files   "**/*.cpp")
+#file(GLOB src_files   "**/*.cpp")
+file(GLOB src_files WebGraphQL.cpp flex/*.cpp )
 file(GLOB hdr_files   "**/*.h")
 target_sources( "${CMAKE_PROJECT_NAME}"
     PRIVATE
@@ -34,8 +35,8 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 	"../../../Framework/source/coroutine/Awaitable.h"
 	"../../../Framework/source/db/GraphQL.h"
 	"../../../Framework/source/io/AsioContextThread.h"
-	"../../../Framework/source/io/Socket.h"
-	"../../../Framework/source/io/ProtoClient.h"
+#	"../../../Framework/source/io/Socket.h"
+#	"../../../Framework/source/io/ProtoClient.h"
 	"../../../Framework/source/io/ProtoUtilities.h"
 	"../../../Framework/source/threading/InterruptibleThread.h"
 	"../../../Ssl/source/Ssl.h"

@@ -5,40 +5,48 @@
 #include "ClientStreams.h"
 #include "../../../Framework/source/io/ProtoUtilities.h"
 #include "../../../Framework/source/Stopwatch.h"
-#include <FromServer.pb.h>
+//#include <FromServer.pb.h>
 
 namespace Jde::Http{
 	α IncomingTag()ι->sp<LogTag>;
+	α OutgoingTag()ι->sp<LogTag>;
 	struct IClientSocketSession;
-	struct CreateClientSocketSessionAwait final : TAwait<void,VoidTask>{
-		using base = TAwait<void,VoidTask>;
+	struct CreateClientSocketSessionAwait final : VoidAwait<>{
+		using base = VoidAwait<>;
 		CreateClientSocketSessionAwait( sp<IClientSocketSession> session, string host, PortType port, SRCE )ι;
-		α await_suspend( THandle h )ι->void override;
+		α await_suspend( base::Handle h )ι->void override;
 		α await_resume()ι->void override;
 	private:
-		sp<IClientSocketSession> _session;
-		string _host;
-		PortType _port;
-		SL _sl;
+		sp<IClientSocketSession> _session; string _host; PortType _port;
 	};
+	struct CloseClientSocketSessionAwait final : VoidAwait<>{
+		using base = VoidAwait<>;
+		CloseClientSocketSessionAwait( sp<IClientSocketSession> session, SRCE )ι:base{sl}, _session{session}{};
+		α await_suspend( base::Handle h )ι->void override;
+	private:
+		sp<IClientSocketSession> _session;
+	};
+	//TODO check what should be protected
 	struct ΓH IClientSocketSession : std::enable_shared_from_this<IClientSocketSession>{
 		IClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι;// Resolver and socket require an io_context
 		α AddTask( RequestId requestId, std::any hCoroutine )ι->void;
 		α GetTask( RequestId requestId )ι->std::any;
-		α CloseTasks( function<void(std::any&&)> f )ι->void;
 
-		α Run( string host, PortType port, coroutine_handle<CreateClientSocketSessionAwait::TPromise> h )ι->void;// Start the asynchronous operation
+		α Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void;// Start the asynchronous operation
 		α RunSession( string host, PortType port )ι{ return CreateClientSocketSessionAwait{shared_from_this(), host, port}; }
 
-		α HandleAck( const Proto::FromServer::Ack& ack )ι{ _sessionId = ack.session_id(); }
-		//α Write( google::protobuf::MessageLite& m )ε->void{ Write( IO::Proto::ToString(m) ); }
+		α MaxLogLength()Ι->uint16{ return _maxLogLength; };
 		α Write( string&& m )ι->void;
 		α NextRequestId()ι->uint32;
 		//α OnWrite( beast::error_code ec, uint bytes_transferred )ι->void;
 		α SessionId()ι->SessionPK{ return _sessionId; }
-		α Close()ι->void{ _stream->Close( shared_from_this() ); }
+		[[nodiscard]] α Close()ι{ return CloseClientSocketSessionAwait(shared_from_this()); }
+		α Host()Ι->str{ return _host; }
 	protected:
+		α CloseTasks( function<void(std::any&&)> f )ι->void;
+		α SetSessionId( SessionPK sessionId )ι{ _sessionId = sessionId; }
 		β OnClose( beast::error_code ec )ι->void;
+		α IsSsl()Ι->bool{ return _stream->IsSsl(); }
 	private:
 		α OnResolve( beast::error_code ec, tcp::resolver::results_type results )ι->void;
 		α OnConnect( beast::error_code ec, tcp::resolver::results_type::endpoint_type ep )ι->void;
@@ -53,25 +61,28 @@ namespace Jde::Http{
 		string _host;
 		sp<net::io_context> _ioContext;
 		SessionPK _sessionId{};
-		coroutine_handle<CreateClientSocketSessionAwait::TPromise> _connectPromise;
+		CreateClientSocketSessionAwait::Handle _connectHandle;
+		CloseClientSocketSessionAwait::Handle _closeHandle;
 		boost::concurrent_flat_map<RequestId,std::any> _tasks;
-		friend struct HttpSocketStream;
+		uint16 _maxLogLength;
+		friend struct HttpSocketStream; friend struct CloseClientSocketSessionAwait;
 	};
 
 	template<class TFromClientMsgs, class TFromServerMsgs>
 	struct TClientSocketSession : IClientSocketSession{
+		using base=IClientSocketSession;
 		TClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι:IClientSocketSession{ ioc, ctx }{}
+		α Write( TFromClientMsgs&& m )ε->void;
 	protected:
 		α OnReadData( std::basic_string_view<uint8_t> transmission )ι->void override;
 		β OnRead( TFromServerMsgs&& m )ι->void=0;
-		α Write( TFromClientMsgs&& m )ε->void;
 		//[[nodiscard]] α Write( TFromClientMsgs&& m, ICheckRequestId&& checkRequestId )ι{ return ClientSocketAwait<TFromServerMsgs>{ move(m), move(checkRequestId); shared_from_this() }; }
 		//α WriteRequestId( TFromClientMsgs&& m )ι;
 	};
 
 	#define $ template<class TFromClientMsgs, class TFromServerMsgs> α TClientSocketSession<TFromClientMsgs,TFromServerMsgs>
 	$::Write( TFromClientMsgs&& m )ε->void{
-		Write( IO::Proto::ToString(m) );
+		base::Write( IO::Proto::ToString(m) );
 	}
 	$::OnReadData( std::basic_string_view<uint8_t> transmission )ι->void{
 		try{

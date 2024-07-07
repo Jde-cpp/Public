@@ -11,6 +11,7 @@ if [ $all -eq 1 ]; then
 	$BUILD $JDE_DIR/Ssl/source $type $clean $compiler || exit 1;
 	$BUILD src/crypto $type $clean $compiler || exit 1;
 	$BUILD src/http $type $clean $compiler || exit 1;
+	$BUILD src/appClient $type $clean $compiler || exit 1;
 	$BUILD src/web $type $clean $compiler || exit 1;
 fi
 cd tests/web;

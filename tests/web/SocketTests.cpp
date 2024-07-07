@@ -1,10 +1,14 @@
-#include "../../../Framework/source/math/MathUtilities.h"
-#include "../../../Ssl/source/Ssl.h"
 #include "mocks/ServerMock.h"
+#include "../../../Framework/source/math/MathUtilities.h"
+#include "../../../Framework/source/io/AsioContextThread.h"
+#include "../../../Ssl/source/Ssl.h"
 #include "mocks/ClientSocketSessionMock.h"
+#include <jde/web/flex/IHttpRequestAwait.h>
+#include <jde/http/ClientSocketAwait.h>
 
 #define var const auto
 namespace Jde::Web{
+	using Http::ClientSocketAwait;
 	static sp<Jde::LogTag> _logTag{ Logging::Tag( "tests" ) };
 	constexpr sv ContentType{ "application/x-www-form-urlencoded" };
 	using Mock::Host; using Mock::Port;
@@ -15,37 +19,57 @@ namespace Jde::Web{
 		~SocketTests() override{}
 
 		Ω SetUpTestCase()->void;
-		α SetUp()->void override{};
-		α TearDown()->void override{}
+		α SetUp()->void override;
+		α TearDown()->void override;
 		Ω TearDownTestCase()->void;
 
 		sp<Flex::IRequestHandler> _pRequestHandler;
 	};
 
-	sp<Mock::ClientSocketSession> _pSession;
+	sp<Mock::ClientSocketSession> _pSession{};
 	SessionPK _sessionId;
 	α SocketTests::SetUpTestCase()->void{
 		Stopwatch _{ "SocketTests::SetUpTestCase", _logTag };
 		Mock::Start();
-		_pSession = nullptr;
-		_sessionId = 0;
-		ClearMemoryLog();
 	}
-
 	α SocketTests::TearDownTestCase()->void{
 		Stopwatch _{ "SocketTests::TearDownTestCase", _logTag };
-		_pSession->Close();
-		_pSession = nullptr;
 		Mock::Stop();
 	}
+
+	α SocketTests::SetUp()->void{
+		ClearMemoryLog();
+	}
+	#define NOTIFY sl l{ _mutex }; cv.notify_one()
 	std::shared_mutex _mutex;
 	std::condition_variable_any cv;
+	α Notify()ι{
+		sl l{ _mutex };
+		cv.notify_one();
+	}
+	α Close()ι->VoidTask{
+		co_await _pSession->Close();
+		Notify();
+	}
 	#define WAIT sl l{ _mutex }; cv.wait( l )
-	#define NOTIFY sl l{ _mutex }; cv.notify_one()
+	α Wait()ι{
+		WAIT;
+	}
+
+	α SocketTests::TearDown()->void{
+		if( _pSession ){
+			Close();
+			Wait();
+			//ASSERT( _pSession.use_count()==1 );
+			_pSession = nullptr;
+		}
+		_sessionId = 0;
+	}
+
 	up<IException> _exception;
-	α Connect()->Http::HttpTask<Http::Proto::FromServer::Ack>{
+	α Connect()->ClientSocketAwait<SessionPK>::Task{
 		try{
-			Http::Proto::FromServer::Ack ack = co_await _pSession->Connect( _sessionId );
+			[[maybe_unused]] auto sessionId = co_await _pSession->Connect( _sessionId );
 		}
 		catch( IException& e ){
 			_exception = e.Move();
@@ -58,7 +82,7 @@ namespace Jde::Web{
 			Http::Send( Host, "/timeout", {}, Port, {}, ContentType, http::verb::get, &headers );
 			_sessionId = *Str::TryTo<SessionPK>( headers["Authorization"], nullptr, 16 );
 		}
-		_pSession = ms<Mock::ClientSocketSession>( Flex::GetIOContext(), ctx );
+		_pSession = ms<Mock::ClientSocketSession>( IO::AsioContextThread(), ctx );
 		co_await _pSession->RunSession( Host, Port );
 		Connect();
 	}
@@ -77,12 +101,12 @@ namespace Jde::Web{
 	}
 
 	flat_map<Http::RequestId,string> _requests; flat_map<Http::RequestId,string> _responses; mutex _echoMutex;
-	α EchoText( string text )->Http::HttpTask<Http::Proto::Echo>{
-		Http::Proto::Echo y = co_await _pSession->Echo( text );
+	α EchoText( uint requestId, string text )->ClientSocketAwait<string>::Task{
+		string y = co_await _pSession->Echo( text );
 		{
 			lg _{ _echoMutex };
-			_requests.emplace( y.request_id(), move(text) );
-			_responses.emplace( y.request_id(), move(*y.mutable_echo_text()) );
+			_requests.emplace( requestId, move(text) );
+			_responses.emplace( requestId, move(y) );
 		}
 	}
 	TEST_F( SocketTests, EchoAttack ){
@@ -91,7 +115,7 @@ namespace Jde::Web{
 		WAIT;
 		string text( 32000, 'a' );
 		for( uint i=1; i<=1000; ++i )
-			EchoText( text.substr(0,i*32) );
+			EchoText( i, text.substr(0,i*32) );
 		for( ;; ){
 			{
 				lg _{ _echoMutex };
@@ -114,32 +138,38 @@ namespace Jde::Web{
 	TEST_F( SocketTests, CloseClientSide ){
 		CreateSession();
 		WAIT;
-		_pSession->Close();
-		var msgId = Calc32RunTime( "[1]The WebSocket stream was gracefully closed at both endpoints" );
+		Close();
+		Wait();
+		_pSession = nullptr;
+		var msgId = Calc32RunTime( "[1]Server::DoRead - The WebSocket stream was gracefully closed at both endpoints" );
 		std::this_thread::sleep_for( 100ms );
 		auto logs = FindMemoryLog( msgId );
 		ASSERT_TRUE( logs.size()>0 );
 	}
 
-	α CloseServerSideCall()ι->Http::HttpTask<Http::Proto::Echo>{
+	α CloseServerSideCall()ι->ClientSocketAwait<string>::Task{
 		try{
-			Http::Proto::Echo y = co_await _pSession->CloseServerSide();
+		 [[maybe_unused]]	string y = co_await _pSession->CloseServerSide();
 		}
 		catch( IException& e ){
 			_exception = e.Move();
 		}
 		NOTIFY;
 	}
+
 	TEST_F( SocketTests, CloseServerSide ){
 		{ CreateSession(); WAIT; }
 		CloseServerSideCall();
 		WAIT;
 		ASSERT_NE( nullptr, _exception );
+		Close();
+		Wait();
+		ASSERT_EQ( _pSession.use_count(), 1 );//Read call & _pSession.
 	}
 
-	α BadTransmissionClientCall()ι->Http::HttpTask<Http::Proto::Echo>{
+	α BadTransmissionClientCall()ι->ClientSocketAwait<string>::Task{
 		try{
-			Http::Proto::Echo y = co_await _pSession->BadTransmissionClient();
+			[[maybe_unused]] string y = co_await _pSession->BadTransmissionClient();
 		}
 		catch( IException& e ){
 			_exception = e.Move();
@@ -151,7 +181,7 @@ namespace Jde::Web{
 		WAIT;
 		BadTransmissionClientCall();
 		var expiration = steady_clock::now() + 20s;
-		vector<Logging::Messages::ServerMessage> logs;
+		vector<Logging::ExternalMessage> logs;
 		while( logs.size()==0 && steady_clock::now()<expiration ){
 			std::this_thread::sleep_for( 100ms );
 			logs = FindMemoryLog( Calc32RunTime("Failed to process incomming exception '{}'.") );
@@ -159,9 +189,9 @@ namespace Jde::Web{
 		ASSERT_TRUE( logs.size()>0 );
 	}
 
-	α BadTransmissionServerCall()ι->Http::HttpTask<Http::Proto::Echo>{
+	α BadTransmissionServerCall()ι->ClientSocketAwait<string>::Task{
 		try{
-			Http::Proto::Echo y = co_await _pSession->BadTransmissionServer();
+			[[maybe_unused]] string y = co_await _pSession->BadTransmissionServer();
 		}
 		catch( IException& e ){
 			_exception = e.Move();
@@ -173,7 +203,7 @@ namespace Jde::Web{
 		WAIT;
 		BadTransmissionServerCall();
 		var expiration = steady_clock::now() + 20s;
-		vector<Logging::Messages::ServerMessage> logs;
+		vector<Logging::ExternalMessage> logs;
 		while( logs.size()==0 && steady_clock::now()<expiration ){
 			std::this_thread::sleep_for( 100ms );
 			logs = FindMemoryLog( Calc32RunTime("MergePartialFromCodedStream returned false.") );//TODO send a exception to server.
