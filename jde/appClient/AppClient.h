@@ -1,17 +1,22 @@
 #pragma once
 #include <jde/appClient/Sessions.h>
+#include <jde/appClient/usings.h>
 
-namespace Jde::App::Client{
-	α SetStatusDetailsFunction( function<vector<string>()>&& f )ι->void;
+namespace Jde::App{
+	α IsAppServer()ι->bool; α SetIsAppServer( bool isAppServer )ι->void;
+	// α AppId()ι->AppPK; α SetAppId( AppPK x )ι->void;
+	// α InstanceId()ι->AppInstancePK; α SetInstanceId( AppInstancePK x )ι->void;
+
+namespace Client{
 	α UpdateStatus()ι->void;
-	α IsAppServer()ι->bool;
+	α SetStatusDetailsFunction( function<vector<string>()>&& f )ι->void;
 
-	struct SessionInfoAwait : TAwait<SessionInfo>{
-		using base = TAwait<SessionInfo>;
+	struct SessionInfoAwait : TAwait<Web::SessionInfo>{
+		using base = TAwait<Web::SessionInfo>;
 		SessionInfoAwait( SessionPK sessionId, SRCE )ι:base{sl}, _sessionId{sessionId}{}
 		α await_ready()ι->bool{ return IApplication::ShuttingDown(); }
 		α await_suspend( base::Handle h )ι->void;
-		α await_resume()ε->SessionInfo;
+		α await_resume()ε->Web::SessionInfo;
 		SessionPK _sessionId;
 	};
 
@@ -29,7 +34,4 @@ namespace Jde::App::Client{
 		const Logging::ExternalMessage _message;
 		const vector<string>* _args;
 	};
-
-
-
-}
+}}

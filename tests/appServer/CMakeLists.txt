@@ -7,7 +7,7 @@ link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
 link_directories( ${fmt_DIR}/../.. )
 link_directories( ${Protobuf_DIR}/../.. )
 
-add_executable( ${CMAKE_PROJECT_NAME} main.cpp 
+add_executable( ${CMAKE_PROJECT_NAME} main.cpp
 	ThreadingTest.cpp DBTests.cpp um/UserTests.cpp um/GroupTests.cpp )
 
 target_link_libraries( ${CMAKE_PROJECT_NAME} Jde)
@@ -20,5 +20,5 @@ target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
 	<gtest/gtest.h>
 	<jde/TypeDefs.h>
 	<jde/Exception.h>
-	<jde/Log.h>
+	<jde/log/Log.h>
 )

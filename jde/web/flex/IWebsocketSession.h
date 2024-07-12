@@ -17,16 +17,19 @@ namespace Jde::Web::Flex{
 	namespace net = boost::asio;
 	using tcp = net::ip::tcp;
 	//using namespace Jde::IO::Sockets;
-	ΓW α WebsocketRequestTag()ι->sp<Jde::LogTag>;
+	ΓW α SocketServerReceivedTag()ι->sp<Jde::LogTag>;
+	ΓW α SocketServerSentTag()ι->sp<Jde::LogTag>;
 
 	struct ΓW IWebsocketSession /*abstract*/: std::enable_shared_from_this<IWebsocketSession>{
-		IWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint )ι;
+		IWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α Run()ι->void;
 		α Id()ι{ return _id; }
 	protected:
 		sp<SocketStream> Stream;
 		tcp::endpoint _userEndpoint;
 		β Close()ι->void{ Stream->Close( shared_from_this() ); }
+		β OnClose()ι->void;
+		α LogReceived( string&& what )ι->void;
 	private:
 		α Disconnect( CodeException&& e )ι{ OnDisconnect(move(e)); /*_connected = false; _server.RemoveSession( Id );*/ }
 		β OnDisconnect( CodeException&& )ι->void{}
@@ -43,7 +46,8 @@ namespace Jde::Web::Flex{
 
 	template<class TFromServer, class TFromClient>
 	struct TWebsocketSession /*abstract*/ : IWebsocketSession{
-		TWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint userEndpoint )ε : IWebsocketSession{ move(stream), move(buffer), move(request), move(userEndpoint) }{}
+		TWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint userEndpoint, uint32 connectionIndex )ι :
+			IWebsocketSession{ move(stream), move(buffer), move(request), move(userEndpoint), connectionIndex }{}
 
 		α OnRead( const char* p, uint size )ι->void;
 		β OnRead( TFromClient&& transmission )ι->void = 0;

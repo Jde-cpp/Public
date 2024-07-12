@@ -50,10 +50,12 @@ using std::suspend_never;
 
 DISABLE_WARNINGS
 #define SPDLOG_FMT_EXTERNAL
-	#include <spdlog/spdlog.h>
-	#include <spdlog/sinks/basic_file_sink.h>
-	#include <boost/container/flat_map.hpp>
-	#include <boost/container/flat_set.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <boost/container/flat_map.hpp>
+#include <boost/container/flat_set.hpp>
+#include <boost/unordered/concurrent_flat_map.hpp>
+#include <boost/unordered/concurrent_flat_set.hpp>
 ENABLE_WARNINGS
 
 #define α auto
@@ -140,6 +142,8 @@ namespace Jde
 	using boost::container::flat_map;
 	using boost::container::flat_multimap;
 	using boost::container::flat_set;
+	using boost::concurrent_flat_map;
+	using boost::concurrent_flat_set;
 #endif
 	using fmt::format;
 	using str = const std::string&;

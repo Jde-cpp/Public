@@ -5,11 +5,11 @@
 #include "ClientStreams.h"
 #include "../../../Framework/source/io/ProtoUtilities.h"
 #include "../../../Framework/source/Stopwatch.h"
-//#include <FromServer.pb.h>
 
+//TODO rename webClient
 namespace Jde::Http{
-	α IncomingTag()ι->sp<LogTag>;
-	α OutgoingTag()ι->sp<LogTag>;
+	α SocketClientSentTag()ι->sp<LogTag>;
+	α SocketClientReceivedTag()ι->sp<LogTag>;
 	struct IClientSocketSession;
 	struct CreateClientSocketSessionAwait final : VoidAwait<>{
 		using base = VoidAwait<>;
@@ -35,18 +35,19 @@ namespace Jde::Http{
 		α Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void;// Start the asynchronous operation
 		α RunSession( string host, PortType port )ι{ return CreateClientSocketSessionAwait{shared_from_this(), host, port}; }
 
-		α MaxLogLength()Ι->uint16{ return _maxLogLength; };
 		α Write( string&& m )ι->void;
 		α NextRequestId()ι->uint32;
 		//α OnWrite( beast::error_code ec, uint bytes_transferred )ι->void;
 		α SessionId()ι->SessionPK{ return _sessionId; }
 		[[nodiscard]] α Close()ι{ return CloseClientSocketSessionAwait(shared_from_this()); }
 		α Host()Ι->str{ return _host; }
+		α Id()ι->uint32{ return _id; }
 	protected:
 		α CloseTasks( function<void(std::any&&)> f )ι->void;
 		α SetSessionId( SessionPK sessionId )ι{ _sessionId = sessionId; }
 		β OnClose( beast::error_code ec )ι->void;
 		α IsSsl()Ι->bool{ return _stream->IsSsl(); }
+		α SetId( uint32 id )ι{ _id=id; }
 	private:
 		α OnResolve( beast::error_code ec, tcp::resolver::results_type results )ι->void;
 		α OnConnect( beast::error_code ec, tcp::resolver::results_type::endpoint_type ep )ι->void;
@@ -64,7 +65,8 @@ namespace Jde::Http{
 		CreateClientSocketSessionAwait::Handle _connectHandle;
 		CloseClientSocketSessionAwait::Handle _closeHandle;
 		boost::concurrent_flat_map<RequestId,std::any> _tasks;
-		uint16 _maxLogLength;
+		uint32 _id{};//_serverSocketIndex
+
 		friend struct HttpSocketStream; friend struct CloseClientSocketSessionAwait;
 	};
 
@@ -91,7 +93,7 @@ namespace Jde::Http{
 			OnRead( move(proto) );
 		}
 		catch( IException& e ){
-			e.SetTag( IncomingTag() );
+			e.SetTag( SocketClientReceivedTag() );
 		}
 	}
 }

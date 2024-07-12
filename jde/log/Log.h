@@ -3,67 +3,24 @@
 #define LOG_H
 
 #include <iostream>
-#include "Exports.h"
-#include "collections/ToVec.h"
-#include "io/Crc.h"
-#include "TypeDefs.h"
+#include "../Exports.h"
+#include "../collections/ToVec.h"
+#include "../io/Crc.h"
+#include "../TypeDefs.h"
+#include "LogTags.h"
+#include "Message.h"
+#include "IExternalLogger.h"
 #ifndef _MSC_VER
 	#include <signal.h>
 #endif
 
 #define Φ Γ auto
-
-//namespace Jde::IO{ class IncomingMessage; }
 namespace Jde{
-	struct LogTag{ string Id; ELogLevel Level{ELogLevel::NoLog}; };//loadLibrary dlls may disappear, so need string vs. sv
 	Φ CanBreak()ι->bool;
 }
 namespace Jde::Logging{
 	Φ BreakLevel()ι->ELogLevel;
-	enum class EFields : uint16{ None=0, Timestamp=0x1, MessageId=0x2, Message=0x4, Level=0x8, FileId=0x10, File=0x20, FunctionId=0x40, Function=0x80, LineNumber=0x100, UserId=0x200, User=0x400, ThreadId=0x800, Thread=0x1000, VariableCount=0x2000, SessionId=0x4000 };
-	constexpr inline EFields operator|(EFields a, EFields b){ return (EFields)( (uint16)a | (uint16)b ); }
-	constexpr inline EFields operator&(EFields a, EFields b){ return (EFields)( (uint16)a & (uint16)b ); }
-	constexpr inline EFields operator~(EFields a){ return (EFields)( ~(uint16)a ); }
-	constexpr inline EFields& operator|=(EFields& a, EFields b){ return a = a | b; }
-	inline std::ostream& operator<<( std::ostream& os, const EFields& value ){ os << (uint)value; return os; }
 
-	struct MessageBase{
-		using ID=uint32;
-		using ThreadID=uint;
-		consteval MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, ID messageId=0, ID fileId=0, ID functionId=0 )ι;
-		consteval MessageBase( sv message, const char* file, const char* function, uint_least32_t line )ι;
-		consteval MessageBase( const char* file, const char* function, uint_least32_t line )ι;
-
-		EFields Fields{ EFields::None };
-		ELogLevel Level;
-		ID MessageId{0};
-		sv MessageView;
-		ID FileId{0};
-		const char* File;
-		ID FunctionId{0};
-		const char* Function;
-		uint_least32_t LineNumber;
-		ID UserId{0};
-		ThreadID ThreadId{0};
-		Γ MessageBase( ELogLevel level, sv message, const char* file, const char* function, uint_least32_t line )ι;
-	protected:
-		explicit Γ MessageBase( ELogLevel level, SL sl )ι;
-	};
-
-	struct Message /*final*/ : MessageBase{
-		Message( const MessageBase& b )ι;
-		Message( const Message& x )ι;
-		Γ Message( ELogLevel level, string message, SRCE )ι;
-		Γ Message( sv Tag, ELogLevel level, string message, SRCE )ι;
-		Γ Message( sv Tag, ELogLevel level, string message, char const* file_, char const * function_, boost::uint_least32_t line_ )ι;
-
-		sv Tag;
-		up<string> _pMessage;//todo move to protected
-	protected:
-		string _fileName;
-	};
-
-	Φ SetTag( sv tag, ELogLevel l=ELogLevel::Debug, bool file=true )ι->void;
 	//α Log( const Logging::MessageBase& messageBase )ι->void;
 	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void;
 	ψ Log( const Logging::MessageBase& m, const sp<LogTag> tag, bool logServer, bool break_, Args&&... args )ι->void;
@@ -74,10 +31,6 @@ namespace Jde::Logging{
 	ψ LogOnce( const Logging::MessageBase& messageBase, const sp<LogTag>& logTag, Args&&... args )ι->void;
 	α LogNoServer( const Logging::MessageBase& messageBase, const sp<LogTag>& tag )ι->void;
 	ψ LogNoServer( const Logging::MessageBase& messageBase, const sp<LogTag>& tag, Args&&... args )ι->void;
-	Φ LogExternal( const Logging::MessageBase& messageBase )ι->void;
-	Φ LogExternal( const Logging::MessageBase& messageBase, const vector<string>& values )ι->void;
-	struct ExternalMessage;
-	Φ LogExternal( const Logging::ExternalMessage& message )ι->void;
 	Φ LogMemory( const Logging::MessageBase& messageBase )ι->void;
 	Φ LogMemory( const Logging::MessageBase& messageBase, vector<string> values )ι->void;
 	Φ LogMemory( Logging::Message&& m, vector<string> values )ι->void;
@@ -149,14 +102,9 @@ namespace Jde{
 		Φ DestroyLogger()->void;
 		Φ Initialize()ι->void;
 
-		Φ Tag( sv tag )ι->sp<LogTag>;
-		Φ Tag( const std::span<const sv> tags )ι->vector<sp<LogTag>>;
 		Φ LogMemory()ι->bool;
-		Φ ServerMinLevel()ι->ELogLevel;
-		Φ MinLevel( sv externalName )ι->ELogLevel;
 		Φ ClientMinLevel()ι->ELogLevel;
 		Φ Default()ι->spdlog::logger*;
-		Φ HaveExternal()ι->bool;
 
 //	inline constexpr PortType ServerSinkDefaultPort = 4321;
 		namespace Proto{class Status;}
@@ -164,28 +112,6 @@ namespace Jde{
 		Φ SetStatus( const vector<string>& values )ι->void;
 		α SetLogLevel( ELogLevel client, ELogLevel server )ι->void;
 		α GetStatus()ι->up<Proto::Status>;
-
-		struct Γ ExternalMessage final : Message{
-			ExternalMessage( const MessageBase& base )ι:ExternalMessage{ base, {} }{}
-			ExternalMessage( const MessageBase& base, vector<string> values )ι:ExternalMessage{ Message{base}, move(values) }{}
-			ExternalMessage( const ExternalMessage& rhs ):Message{ rhs }, Timestamp{rhs.Timestamp}, Variables{rhs.Variables}{}
-			ExternalMessage( const Message& b, vector<string> values )ι: Message{ b }, Variables{ move(values) }{}
-			const TimePoint Timestamp{ Clock::now() };
-			vector<string> Variables;
-		//private:
-		//	string _function;
-		};
-		struct IExternalLogger{
-			β Destroy(SRCE)ι->void=0;
-			β Name()ι->string=0;
-			β Log( ExternalMessage&& m, SRCE )ι->void=0;
-			β Log( const ExternalMessage& m, const vector<string>* args=nullptr, SRCE )ι->void=0;
-			β MinLevel()ι->ELogLevel{ return _minLevel; }
-			β SetMinLevel(ELogLevel level)ι->void=0;
-			vector<LogTag> Tags;
-		protected:
-			ELogLevel	_minLevel{ ELogLevel::NoLog };
-		};
 	}
 #define var const auto
 	Ξ FileName( const char* file_ )->string{
@@ -229,6 +155,8 @@ namespace Jde{
 			return;
 		try{
 			if( auto p = Default(); p ){
+				if( m.MessageView.empty() )
+					BREAK;
 				if constexpr( sizeof...(args)>0 )
 					p->log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(std::locale(""), m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 				else
@@ -247,14 +175,13 @@ namespace Jde{
 			MessageBase m2{ ELogLevel::Critical, "could not format '{}' cargs='{}' - '{}'", m.File, m.Function, m.LineNumber };
 			Log( m2, tag, m.MessageView, sizeof...(args), e.what() );
 		}
-		logServer = logServer && ServerMinLevel()!=ELogLevel::NoLog && ServerMinLevel()<=m.Level;
 		if( logServer || LogMemory() ){
 			vector<string> values; values.reserve( sizeof...(args) );
 			ToVec::Append( values, args... );
 			if( LogMemory() )
 				LogMemory( m, values );
 			if( logServer )
-				LogExternal( m, values );
+				External::Log( m, values );
 		}
 	}
 #pragma warning(pop)
@@ -278,37 +205,7 @@ namespace Jde::Logging{
 		ToVec::Append( values, args... );
 		LogMemory( move(m), move(values) );
 	}
-#pragma region MessageBase
-	consteval MessageBase::MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, ID messageId, ID fileId, ID functionId )ι:
-		Level{level},
-		MessageId{ messageId ? messageId : IO::Crc::Calc32(message.substr(0, 100)) },//{},
-		MessageView{message},
-		FileId{ fileId ? fileId : IO::Crc::Calc32(file) },
-		File{file},
-		FunctionId{ functionId ? functionId : IO::Crc::Calc32(function) },
-		Function{function},
-		LineNumber{line}{
-		if( level!=ELogLevel::Trace )
-			Fields |= EFields::Level;
-		if( message.size() )
-			Fields |= EFields::Message | EFields::MessageId;
-		if( File[0]!='\0' )
-			Fields |= EFields::File | EFields::FileId;
-		if( Function[0]!='\0' )
-			Fields |= EFields::Function | EFields::FunctionId;
-		if( LineNumber )
-			Fields |= EFields::LineNumber;
-	}
-	consteval MessageBase::MessageBase( sv message, const char* file, const char* function, uint_least32_t line )ι:
-		MessageBase{ message, ELogLevel::Trace, file, function, line }
-	{}
-
-	consteval MessageBase::MessageBase( const char* file, const char* function, uint_least32_t line )ι:
-		MessageBase( {}, file, function, line )
-	{}
 }
-#pragma endregion
-
 #undef SOURCE
 #undef var
 #undef Φ

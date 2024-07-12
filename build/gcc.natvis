@@ -61,7 +61,8 @@
 	</Type>
 	<Type Name="std::string_view">
 		<AlternativeType Name="Jde::sv"/>
-		<DisplayString>_M_str,s</DisplayString>
+		<AlternativeType Name="std::basic_string_view&lt;*&gt;"/>
+		<DisplayString>{{{_M_str,s}}}</DisplayString>
 		<Expand>
 				<Item Name="size">_M_len</Item>
 				<Item Name="string">_M_str,s</Item>

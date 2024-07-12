@@ -72,7 +72,7 @@ namespace Jde::Web::Flex{
 				ws.async_read( _buffer, [this,session]( beast::error_code ec, uint c )mutable{
 					if( ec ){
 						ELogLevel level = ec==websocket::error::closed || ec==boost::asio::error::connection_aborted || ec==boost::asio::error::not_connected || ec==boost::asio::error::connection_reset ? ELogLevel::Trace : ELogLevel::Error;
-						CodeException{ static_cast<std::error_code>(ec), _requestTag, "Server::DoRead", level };
+						CodeException{ static_cast<std::error_code>(ec), _requestTag, Jde::format("[{:x}]Server::DoRead", session->Id()), level };
 						return;
 					}
 					session->OnRead( (char*)_buffer.data().data(), _buffer.size() );
@@ -112,7 +112,7 @@ namespace Jde::Web::Flex{
 				ws.async_close( websocket::close_code::normal, [session]( beast::error_code ec ){
 					if( ec )
 						CodeException{ static_cast<std::error_code>(ec), _requestTag };
-					INFO( "[{:x}]Closed.", session->Id() );
+					session->OnClose();
 				});
 			}, _ws );
 	}

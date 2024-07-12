@@ -6,7 +6,7 @@
 #include "collections/ToVec.h"
 
 namespace boost::system{ class error_code; }
-
+#undef THROW //mysql
 #define THROW(x, ...) throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Error, x __VA_OPT__(,) __VA_ARGS__ }
 #define IO_EX( path, level, msg, ... ) IOException( SRCE_CUR, path, level, msg __VA_OPT__(,) __VA_ARGS__ )
 #define THROW_IF(condition, x, ...) if( condition ) THROW( x __VA_OPT__(,) __VA_ARGS__  )

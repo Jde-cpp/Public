@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/Log.h>
+#include <jde/log/Log.h>
 
 namespace Jde::App::Client{
 	struct AppClientSocketSession;

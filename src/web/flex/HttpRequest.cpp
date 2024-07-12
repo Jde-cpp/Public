@@ -1,15 +1,24 @@
 #include <jde/web/flex/HttpRequest.h>
+#include <jde/web/flex/Flex.h>
 #define var const auto
 
+namespace Jde{
+	static sp<LogTag> _httpServerSentTag = Logging::Tag( ELogTags::HttpServerSent );
+	static sp<LogTag> _httpServerReceivedTag = Logging::Tag( ELogTags::HttpServerReceived );
+	α Web::HttpServerSentTag()ι->sp<LogTag>{ return _httpServerSentTag; }
+	α Web::HttpServerReceivedTag()ι->sp<LogTag>{ return _httpServerReceivedTag; }
+}
 namespace Jde::Web::Flex{
-
+	static atomic<uint32> _sequence = 0;
 	string _accessControlAllowOrigin = Settings::Get("http/accessControl/allowOrigin").value_or("*");
 	α AccessControlAllowOrigin()ι->string{ return _accessControlAllowOrigin; };
 
-	HttpRequest::HttpRequest( TRequestType&& request, tcp::endpoint userEndpoint )ι:
+	HttpRequest::HttpRequest( TRequestType&& request, tcp::endpoint userEndpoint, uint32 connectionId )ι:
 		UserEndpoint{ move(userEndpoint) },
 		_request{ move(request) },
-		_start{ steady_clock::now() }{
+		_start{ steady_clock::now() },
+		_connectionId{ connectionId },
+		_index{ ++_sequence }{
 		ParseUri();
 	}
 
@@ -31,6 +40,11 @@ namespace Jde::Web::Flex{
 		auto y = Response<http::string_body>();
 		y.body() = j.dump();
 		y.prepare_payload();
+		TRACET( HttpServerSentTag(), "[{:x}.{:x}.{:x}]HttpRequest:  {}{} - {}", SessionInfo.SessionId, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
 		return y;
+	}
+
+	α HttpRequest::LogReceived( str text )Ι->void{
+		TRACET( HttpServerReceivedTag(), "[{:x}.{:x}.{:x}]HttpRequest:  {}{} - {}", SessionInfo.SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
 	}
 }

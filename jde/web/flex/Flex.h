@@ -8,13 +8,16 @@
 #include <jde/web/flex/Streams.h>
 #include <jde/web/flex/IHttpRequestAwait.h>
 
-#define var const auto
+//#define var const auto
 
 struct IHttpRequestAwait;
+namespace Jde::Web{
+	α MaxLogLength()ι->uint16;
+}
 namespace Jde::Web::Flex{
 	struct IRequestHandler{
 		β HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> =0;
-		β RunWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint )ι->void =0;
+		β RunWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->void =0;
 	};
 	α GetRequestHandler()ι->sp<IRequestHandler>;
 	//α GetIOContext()ι->sp<net::io_context>;
@@ -39,7 +42,7 @@ namespace Jde::Web::Flex{
 		co_await stream.async_shutdown();
 	}
 
-	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, bool isSsl )ι->net::awaitable<void, executor_type>;
+	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, bool isSsl, uint32 connectionIndex )ι->net::awaitable<void, executor_type>;
 
 	[[nodiscard]] α DetectSession( StreamType stream, net::ssl::context& ctx, tcp::endpoint userEndpoint)ι->net::awaitable<void, executor_type>;
 	α InitListener( typename tcp::acceptor::rebind_executor<executor_with_default>::other& acceptor, const tcp::endpoint& endpoint )ι->bool;
@@ -48,13 +51,13 @@ namespace Jde::Web::Flex{
 	namespace Internal{
 		α SendOptions( const HttpRequest&& req )ι->http::message_generator;
 		//Ŧ HandleRequest( HttpRequest req, up<T> stream, SessionPK sessionId )->Task;
-		α HandleRequest( HttpRequest req, sp<RestStream> stream )ι->App::Client::UpsertAwait::Task;
-		α HandleCustomRequest( HttpRequest req, sp<RestStream> stream )ι->HttpTask;
+		α HandleRequest( HttpRequest req, sp<RestStream> stream )ι->UpsertAwait::Task;
+		α HandleCustomRequest( HttpRequest req, sp<RestStream> stream )ι->IHttpRequestAwait::Task;
 	}
 }
 
 namespace Jde::Web{
-	Ŧ Flex::RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl )ι->net::awaitable<void, executor_type>{
+	Ŧ Flex::RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex )ι->net::awaitable<void, executor_type>{
     optional<http::request_parser<http::string_body>> parser;// a new parser must be used for every message so we use an optional to reconstruct it every time.
     parser.emplace();
     parser->body_limit(10000); // Apply a reasonable limit to the allowed size  of the body in bytes to prevent abuse.
@@ -68,10 +71,10 @@ namespace Jde::Web{
     for( auto cs = co_await net::this_coro::cancellation_state; cs.cancelled() == net::cancellation_type::none; cs = co_await net::this_coro::cancellation_state ){
       if( websocket::is_upgrade(parser->get()) ){
         beast::get_lowest_layer(stream).expires_never();// Disable the timeout. The websocket::stream uses its own timeout settings.
-				GetRequestHandler()->RunWebsocketSession( ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint );
+				GetRequestHandler()->RunWebsocketSession( ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint, connectionIndex );
 				co_return;
       }
-			HttpRequest req{ parser->release(), move(userEndpoint) };
+			HttpRequest req{ parser->release(), move(userEndpoint), connectionIndex };
 			optional<http::message_generator> res;
 			if( req.Method() == http::verb::options )
 				res = Internal::SendOptions( move(req) );
@@ -89,7 +92,7 @@ namespace Jde::Web{
 			}
 			if( !res ){
 				Internal::HandleRequest( move(req), ms<RestStream>(mu<T>(move(stream))) );
-				co_return;
+				co_return;//TODO handle keepalive
 			}
 			if( res && !res->keep_alive() ){
 				//http::message_generator msg{ move(res) };

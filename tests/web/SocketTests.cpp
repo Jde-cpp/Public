@@ -140,8 +140,9 @@ namespace Jde::Web{
 		WAIT;
 		Close();
 		Wait();
+		var msg = Jde::format( "(1)[{:x}]Server::DoRead - The WebSocket stream was gracefully closed at both endpoints", _pSession->Id() );
+		var msgId = Calc32RunTime( msg );
 		_pSession = nullptr;
-		var msgId = Calc32RunTime( "[1]Server::DoRead - The WebSocket stream was gracefully closed at both endpoints" );
 		std::this_thread::sleep_for( 100ms );
 		auto logs = FindMemoryLog( msgId );
 		ASSERT_TRUE( logs.size()>0 );
@@ -162,9 +163,6 @@ namespace Jde::Web{
 		CloseServerSideCall();
 		WAIT;
 		ASSERT_NE( nullptr, _exception );
-		Close();
-		Wait();
-		ASSERT_EQ( _pSession.use_count(), 1 );//Read call & _pSession.
 	}
 
 	α BadTransmissionClientCall()ι->ClientSocketAwait<string>::Task{

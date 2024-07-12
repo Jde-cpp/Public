@@ -1,7 +1,7 @@
 {
 	"testing":{
-		"testsa":"CertificateTests.NewDirectory",
-		"testsb":"SocketTests.CloseClientSide",
+		"testsa":"CertificateTests.*",
+		"testsb":"SocketTests.*",
 		"tests":"WebTests.*"
 	},
 	"cryptoTests":{
@@ -10,7 +10,9 @@
 	"logging":{
 		"defaultLevel": "Information",
 		"tags": {
-			"Trace":["tests", "web.request", "web.response", "client.socket.incoming", "client.socket.outgoing"],
+			"Trace":["tests",
+				"http.client.sent", "http.client.received", "http.server.sent", "http.server.received", "socket.client.sent", "socket.client.received", "socket.server.sent", "socket.server.received"
+			],
 			"Debug":["settings"],
 			"Information":[],
 			"Warning":[],

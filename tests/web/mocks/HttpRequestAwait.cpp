@@ -25,51 +25,50 @@ namespace Jde::Web::Mock{
 
 	α HttpRequestAwait::await_ready()ι->bool{
 		optional<json> result;
-		if( _input->Target()=="/echo" )
-			result = EchoResult( _input->Params() );
-		else if( _input->Target()=="/Authorization" ){
-			_input->ResponseHeaders.emplace( "Authorization", Jde::format("{:x}", _input->SessionInfo.SessionId) );
+		if( _request.Target()=="/echo" )
+			result = EchoResult( _request.Params() );
+		else if( _request.Target()=="/Authorization" ){
+			_request.ResponseHeaders.emplace( "Authorization", Jde::format("{:x}", _request.SessionInfo.SessionId) );
 			result = json();
 		}
-		else if( _input->Target()=="/timeout" ){
+		else if( _request.Target()=="/timeout" ){
 			json j;
-			var expiration = Chrono::ToClock<Clock,steady_clock>( _input->SessionInfo.Expiration );
+			var expiration = Chrono::ToClock<Clock,steady_clock>( _request.SessionInfo.Expiration );
 			j["value"] = ToIsoString( expiration );
 			result = j;
 		}
 		if( result ){
-			_result = HttpTaskResult{move(*_input), move(*result)};
+			_result = HttpTaskResult{move(_request), move(*result)};
 		}
 		return _result.has_value();
 	}
-	α HttpRequestAwait::await_suspend( HttpCo h )ε->void{
+	α HttpRequestAwait::await_suspend( base::Handle h )ε->void{
 		base::await_suspend(h);
-		if( _input->Target()=="/delay" ){
+		if( _request.Target()=="/delay" ){
 			 _thread = std::jthread( [this,h]()mutable->void{
 				Threading::SetThreadDscrptn( "DelayHandler" );
-				uint seconds = To<uint>( (*_input)["seconds"] );
+				uint seconds = To<uint>( _request["seconds"] );
 				std::this_thread::sleep_for( std::chrono::seconds{seconds} );
-				_pPromise->SetRequest( move(*_input) );
-				_pPromise->SetResult( json() );
+				//Promise()->SetRequest( move(_request) );
+				Promise()->SetValue( {move(_request),json()} );
 				boost::asio::post( *IO::AsioContextThread(), [h](){ h.resume(); } );
-				DBGT( Flex::ResponseTag(), "~/delay handler" );
+				DBGT( HttpServerSentTag(), "~/delay handler" );
 			});
 		}
-		else if( _input->Target()=="/BadAwaitable" ){
+		else if( _request.Target()=="/BadAwaitable" ){
 			_thread = std::jthread( [this,h]()mutable->void{
 				Threading::SetThreadDscrptn( "BadAwaitable" );
-				h.promise().SetException( RestException(SRCE_CUR, move(*_input), "BadAwaitable") );
+				h.promise().SetError( mu<RestException<>>(RestException{SRCE_CUR, move(_request), "BadAwaitable"}) );
 				boost::asio::post( *IO::AsioContextThread(), [h](){ h.resume(); } );
-				DBGT( Flex::ResponseTag(), "~/BadAwaitable handler" );
+				DBGT( HttpServerSentTag(), "~/BadAwaitable handler" );
 			 });
 		}
 		else
-			throw RestException<http::status::not_found>( SRCE_CUR, move(*_input), "Unknown target '{}'", _input->Target() );
+			throw RestException<http::status::not_found>( SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() );
 	}
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
-		ASSERT( _pPromise || _result );
-		if( _pPromise )
-			_pPromise->TestException();
-		return _pPromise ? _pPromise->MoveResult() : move(*_result);
+		ASSERT( Promise() || _result );
+		base::AwaitResume();
+		return Promise() ? move(*Promise()->Value()) : move(*_result);
 	}
 }

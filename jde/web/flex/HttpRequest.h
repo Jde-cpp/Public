@@ -6,16 +6,22 @@
 #include <jde/appClient/Sessions.h>
 //#include "../../../../Framework/source/db/GraphQL.h"
 
+namespace Jde::Web{
+	namespace Flex{ struct HttpRequest; }
+//	α LogHttpServerReceived( const Flex::HttpRequest& _request, const json& j )ι;
+//	α LogHttpServerSent( const Flex::HttpRequest& _request, const json& j, ELogLevel l=ELogLevel::Trace )ι;
+	α HttpServerSentTag()ι->sp<LogTag>;
+	α HttpServerReceivedTag()ι->sp<LogTag>;
+}
+
 namespace Jde::Web::Flex{
 	α WebTag()ι->sp<Jde::LogTag>;
-	α RequestTag()ι->sp<Jde::LogTag>;
-	α ResponseTag()ι->sp<Jde::LogTag>;
 	α AccessControlAllowOrigin()ι->string;
 
 	constexpr string ServerVersion()ι{ return Jde::format("({})Jde.Web - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION); }//TODO cache
 	//template<class TBody, class TAllocator>
 	struct HttpRequest final{
-		HttpRequest( TRequestType&& request, tcp::endpoint userEndpoint )ι;
+		HttpRequest( TRequestType&& request, tcp::endpoint userEndpoint, uint32 connectionId )ι;
 		HttpRequest( const HttpRequest& ) = delete;
 		HttpRequest( HttpRequest&& ) = default;
 		α operator=( const HttpRequest& ) = delete;
@@ -33,10 +39,11 @@ namespace Jde::Web::Flex{
 		α Version()Ι->uint{ return _request.version(); }//TODO get rid of
 		ψ BadRequest( SL sl, fmt::format_string<Args...> format, Args&&... args )Ι->http::response<http::string_body>;
 		//ψ InternalServerError( IException&& e, fmt::format_string<Args...> format, Args&&... args )Ι->http::response<http::string_body>;
+		α LogReceived( str text="" )Ι->void;
 
 		template<class T=http::string_body> α Response( http::status status=http::status::ok )Ι->http::response<T>;
 		α Response( json j )Ι->http::response<http::string_body>;
-		App::Client::SessionInfo SessionInfo;
+		Web::SessionInfo SessionInfo;
 		const tcp::endpoint UserEndpoint;
 		flat_map<string,string> ResponseHeaders;
 
@@ -47,6 +54,8 @@ namespace Jde::Web::Flex{
 		TRequestType _request;
 		steady_clock::time_point _start;
 		string _target;
+		uint32 _connectionId;
+		uint32 _index;
 	};
 
 	template<class T>
@@ -70,8 +79,7 @@ namespace Jde::Web::Flex{
 		auto res = Response<http::string_body>( http::status::bad_request );
 		res.body() = Jde::format( format, args... );
 		res.prepare_payload();
-		auto _logTag = ResponseTag();
-		TRACESL( "BadRequest={}", res.body() );
+		//LogHttpServerSent( *this, res ); TODO try log at end
 		return res;
 	}
 /*	template<class... Args>

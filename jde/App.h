@@ -3,7 +3,7 @@
 #define APP_H
 #include <jde/Exports.h>
 #include "Assert.h"
-#include "Log.h"
+#include "log/Log.h"
 
 namespace Jde::Threading{ struct InterruptibleThread; struct IWorker; }
 #define Φ Γ α

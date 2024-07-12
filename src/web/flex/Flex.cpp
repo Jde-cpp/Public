@@ -2,15 +2,16 @@
 #include <jde/crypto/OpenSsl.h>
 //#include <jde/crypto/CryptoSettings.h>
 #include "CancellationSignals.h"
+#define var const auto
 
-
+namespace Jde{
+	uint16 _maxLogLength{ Settings::Get<uint16>("http/maxLogLength").value_or(30) };
+	α Web::MaxLogLength()ι->uint16{ return _maxLogLength; }
+}
 namespace Jde::Web{
 	static sp<LogTag> _logTag = Logging::Tag( "web" );
-	static sp<LogTag> _requestTag = Logging::Tag( "web.request" );
-	static sp<LogTag> _responseTag = Logging::Tag( "web.response" );
 	α Flex::WebTag()ι->sp<LogTag>{ return _logTag; }
-	α Flex::RequestTag()ι->sp<LogTag>{ return _requestTag; }
-	α Flex::ResponseTag()ι->sp<LogTag>{ return _responseTag; }
+
 	Flex::CancellationSignals _cancellationSignals;
 
 	sp<Flex::IRequestHandler> _requestHandler;
@@ -18,10 +19,10 @@ namespace Jde::Web{
 
 	namespace Flex{
 		α LoadServerCertificate( ssl::context& ctx )->void;
-		α Internal::HandleCustomRequest( HttpRequest req, sp<RestStream> stream )ι->HttpTask{
+		α Internal::HandleCustomRequest( HttpRequest req, sp<RestStream> stream )ι->IHttpRequestAwait::Task{
 			if( auto p = GetRequestHandler(); p ){
 				try{
-					auto result = co_await *( p->HandleRequest(move(req)) );
+					HttpTaskResult result = co_await *( p->HandleRequest(move(req)) );
 					if( !result.Request ) THROW( "Request not set." );
 					Send( move(*result.Request), move(stream), move(result.Json) );
 				}
@@ -127,13 +128,14 @@ namespace Jde::Web{
     }
     return true;
 	}
-
+	atomic<uint32> _sequence;
 	α Flex::DetectSession( StreamType stream, net::ssl::context& ctx, tcp::endpoint userEndpoint )ι->net::awaitable<void, executor_type>{
     beast::flat_buffer buffer;
     stream.expires_after( std::chrono::seconds(30) );// Set the timeout.
     auto [ec, result] = co_await beast::async_detect_ssl( stream, buffer );// on_run
     if( ec )
 			co_return Fail(ec, "detect");
+		uint32 index = ++_sequence;
     if( result ){
 			beast::ssl_stream<StreamType> ssl_stream{ move(stream), ctx };
 			auto [ec, bytes_used] = co_await ssl_stream.async_handshake( net::ssl::stream_base::server, buffer.data() );
@@ -141,20 +143,19 @@ namespace Jde::Web{
 				co_return Fail( ec, "handshake" );
 
 			buffer.consume(bytes_used);
-			co_await RunSession( ssl_stream, buffer, move(userEndpoint), true );
+			co_await RunSession( ssl_stream, buffer, move(userEndpoint), true, index );
     }
     else
-			co_await RunSession( stream, buffer, move(userEndpoint), false );
+			co_await RunSession( stream, buffer, move(userEndpoint), false, index );
 	}
 namespace Flex{
 	α GraphQL( HttpRequest req, sp<RestStream> stream )->Task{
 		try{
 			auto& query = req["query"]; THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
 			var sessionId = req.SessionInfo.SessionId;
-			TRACET( RequestTag(), "[{:x}] - {}", sessionId, query );
+			req.LogReceived( query );
 			string threadDesc = Jde::format( "[{:x}]{}", sessionId, req.Target() );
 			var y = await( json, DB::CoQuery(move(query), req.UserPK(), threadDesc) );
-			TRACET( ResponseTag(), "[{:x}] - {}", sessionId, y.dump() );
 			Send( move(req), move(stream), move(y) );
 		}
 		catch( IRestException& e ){
@@ -166,7 +167,7 @@ namespace Flex{
 			co_return;
 		}
 	}
-	using App::Client::UpsertAwait;
+
 	α Internal::HandleRequest( HttpRequest req, sp<RestStream> stream )ι->UpsertAwait::Task{
 		try{
 			req.SessionInfo = co_await UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false );

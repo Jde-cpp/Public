@@ -5,6 +5,7 @@
 #include <jde/web/flex/RestException2.h>
 
 #define Φ ΓW auto
+
 namespace Jde::Web::Flex{
 	using TRequestType = http::request<TBody, http::basic_fields<TAllocator>>;
 	using TBody = http::string_body;
@@ -20,7 +21,7 @@ namespace Jde::Web::Flex{
 		optional<HttpRequest> Request;
 		json Json;
 	};
-//TODO:  Does anyone use this.
+/*
 	struct HttpTask{
 		struct promise_type{
 			promise_type()ι{}
@@ -42,18 +43,16 @@ namespace Jde::Web::Flex{
 		};
 	};
 	using HttpCo = coroutine_handle<HttpTask::promise_type>;
-
-//	template<class TBody, class TAllocator>
-	struct IHttpRequestAwait{
-		IHttpRequestAwait( HttpRequest&& req, SRCE )ι:_input{ move(req) }, _sl{sl}{}
+*/
+	struct IHttpRequestAwait : TAwait<HttpTaskResult> {
+		using base = TAwait<HttpTaskResult>;
+		IHttpRequestAwait( HttpRequest&& req, SRCE )ι:base{sl},_request{ move(req) }{}
 		virtual ~IHttpRequestAwait()=0;
-		β await_ready()ι->bool{ return false; }
-		β await_suspend( HttpCo h )ε->void{ _pPromise = &h.promise(); /*_pPromise->SetRequest( move(*_input) );*/}; //derived can throw
-		β await_resume()ε->HttpTaskResult;
+		//α await_resume()ε->HttpTaskResult;
 	protected:
-		HttpTask::promise_type* _pPromise{};
-		optional<HttpRequest> _input;
-		SL _sl;
+		HttpRequest _request;
+		up<json> _readyResult;
 	};
+	inline IHttpRequestAwait::~IHttpRequestAwait(){}
 }
 #undef Φ

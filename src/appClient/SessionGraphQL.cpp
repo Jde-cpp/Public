@@ -8,7 +8,7 @@
 
 #define var const auto
 
-namespace Jde::App::Client{
+namespace Jde::Web{
 	using namespace Jde::App::Client;
 	static sp<LogTag> _logTag = Logging::Tag( "web.sessions" );
 	//using DB::GraphQL::Hook::Operation;

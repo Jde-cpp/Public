@@ -9,7 +9,7 @@ add_definitions( -DJde_APP_CLIENT_EXPORTS )
 find_package(OpenSSL)
 add_library( ${CMAKE_PROJECT_NAME} SHARED )
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
-file(GLOB src_files *.cpp )
+file(GLOB src_files *.cpp proto/*.cpp )
 file(GLOB hdr_files  **/*.h )
 file(GLOB proto_files proto/*.proto )
 target_sources( "${CMAKE_PROJECT_NAME}"
@@ -31,9 +31,12 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 	<boost/beast.hpp>
 	<boost/asio.hpp>
 	<boost/beast/ssl/ssl_stream.hpp>
+	#include "App.FromServer.pb.h"
+#include "App.FromClient.pb.h"
+
 #	<boost/exception/diagnostic_information.hpp>
 <jde/TypeDefs.h>
-<jde/Log.h>
+<jde/log/Log.h>
 #	<jde/web/usings.h>
 #	<jde/coroutine/Task.h>
 "../../../Framework/source/coroutine/Awaitable.h"
@@ -49,3 +52,7 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 protobuf_generate(
 	TARGET "${CMAKE_PROJECT_NAME}"
 	IMPORT_DIRS proto )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} COMMAND ${CMAKE_COMMAND} -E create_symlink "/home/duffyj/code/jde/Public/jde/appClient/proto/App.FromServer.pb.h" "/home/duffyj/code/jde/Public/src/appClient/.obj/asan/App.FromServer.pb.h"
+	DEPENDS App.FromServer.pb.h
+  VERBATIM ON
+)

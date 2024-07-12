@@ -2,14 +2,20 @@
 #include <jde/web/flex/IWebsocketSession.h>
 #include "ServerMock.h"
 
-
+#define var const auto
 namespace Jde::Web::Mock{
-	α WebsocketSession::OnConnect( SessionPK sessionId, Http::RequestId requestId )ι->App::Client::UpsertAwait::Task{
+	WebsocketSession::WebsocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
+		base{ move(stream), move(buffer), move(request), move(userEndpoint), connectionIndex }
+	{}
+
+	α WebsocketSession::OnConnect( SessionPK sessionId, Http::RequestId requestId )ι->Web::UpsertAwait::Task{
 		try{
 			Proto::FromServerTransmission t;
 			auto m = t.add_messages();
-			auto info = co_await App::Client::UpsertAwait( Jde::format("{:x}", sessionId), _userEndpoint.address().to_string(), true );
-			m->set_ack( info.SessionId );
+			auto info = co_await Web::UpsertAwait{ Jde::format("{:x}", sessionId), _userEndpoint.address().to_string(), true };
+			auto ack = m->mutable_ack();
+			ack->set_session_id( info.SessionId );
+			ack->set_server_socket_id( Id() );
 			m->set_request_id( requestId );
 			Write( move(t) );
 		}
@@ -56,8 +62,8 @@ namespace Jde::Web::Mock{
 			}
 		}
 	}
-	α RequestHandler::RunWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint )ι->void{
-		auto pSession = ms<WebsocketSession>( move(stream), move(buffer), move(req), move(userEndpoint) );
+	α RequestHandler::RunWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->void{
+		auto pSession = ms<WebsocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
 		pSession->Run();
 	};
 

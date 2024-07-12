@@ -1,10 +1,10 @@
 #pragma once
 
 namespace Jde::Web::Flex{
-
+//TODO move to cpp
 	struct DetectSession : public std::enable_shared_from_this<DetectSession>{
-    explicit DetectSession( tcp::socket&& socket, ssl::context& ctx ): 
-			_stream( move(socket) ), 
+    explicit DetectSession( tcp::socket&& socket, ssl::context& ctx ):
+			_stream( move(socket) ),
 			_ctx( ctx )
     {}
 
@@ -21,7 +21,7 @@ namespace Jde::Web::Flex{
     α OnDetect( beast::error_code ec, bool result )->void{
 			if( ec )
         return fail( ec, "detect" );
-      
+
 			if(result)
         ms<ssl_http_session>( move(_stream), _ctx, move(_buffer) )->Run();
 			else

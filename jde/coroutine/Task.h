@@ -2,7 +2,7 @@
 #ifndef TASK_H
 #define TASK_H
 #include <variant>
-#include <jde/Log.h>
+#include <jde/log/Log.h>
 #include <jde/Exception.h>
 #include <jde/Assert.h>
 
@@ -50,25 +50,43 @@ namespace Jde::Coroutine{
 	private:
 		Value _result;
 	};
-	template<class T>
-	struct PromiseType{
-		PromiseType()ι{}
-		α get_return_object()ι->T{ return {}; }
+	template<class TTask,class TResult>
+	struct IPromise{
+		α get_return_object()ι->TTask{ return {}; }
 		suspend_never initial_suspend()ι{ return {}; }
 		suspend_never final_suspend()ι{ return {}; }
 		α return_void()ι->void{}
 		α unhandled_exception()ι->void;
-		up<IException> Exception;
-	};
-	struct VoidTask{//TODO move to jde ns
-		struct promise_type :PromiseType<VoidTask>{};
+		β Error()ι->up<IException> =0;
+		β SetError( up<IException>&& x )ι->void =0;
+	protected:
+		TResult Expected;
 	};
 
-	template<class T>
-	struct TTask final{
-		struct promise_type : PromiseType<TTask<T>>{
-			optional<T> Result;
+	template<class TTask,class TResult,class TError=up<IException>>
+	struct IExpectedPromise : IPromise<TTask,variant<up<IException>,TResult>>{
+		using base = IPromise<TTask,variant<up<IException>,TResult>>;
+		using TExpected=variant<TError,TResult>;
+		α Error()ι->up<IException> override{ return base::Expected.index()==0 ? move(std::get<0>(base::Expected)) : up<IException>{}; }
+		α SetError( up<IException>&& x )ι->void override{ base::Expected = move(x); }
+		α Value()ι->TResult*{ return base::Expected.index()==1 ? &std::get<1>(base::Expected) : nullptr; }
+		α SetValue( TResult&& x )ι->void{ base::Expected = move(x); }
+	};
+
+
+	struct VoidTask{//TODO move to jde ns
+		struct promise_type : IPromise<VoidTask,up<IException>>{
+			using base = IPromise<VoidTask,up<IException>>;
+			α Error()ι->up<IException> override{ return move(base::Expected); }
+			α SetError( up<IException>&& x )ι->void override{ base::Expected = move(x); }
 		};
+	};
+
+	template<class TResult>
+	struct TTask final{
+		using Expected=variant<up<IException>,TResult>;
+		struct promise_type : IExpectedPromise<TTask<TResult>, TResult, up<IException>>
+		{};
 	};
 
 	template<class T> concept IsPolymorphic = std::is_polymorphic_v<T>;
@@ -176,23 +194,24 @@ namespace Jde::Coroutine{
 		return get<bool>( _result );
 	}
 
-	Ŧ PromiseType<T>::unhandled_exception()ι->void{
+	template<class TTask,class TExpected>
+	α IPromise<TTask,TExpected>::unhandled_exception()ι->void{
 		try{
 			BREAK;
 			throw;
 		}
 		catch( IException& e ){
-			Exception = e.Move();
-			e.SetLevel( ELogLevel::Critical );
+			SetError( e.Move() );
+			Error()->SetLevel( ELogLevel::Critical );
 		}
 		catch( nlohmann::json::exception& e ){
-			Exception = mu<Jde::Exception>( Jde::Exception{SRCE_CUR, move(e), ELogLevel::Critical, "json exception - {}", e.what()} );
+			SetError( mu<Jde::Exception>(Jde::Exception{SRCE_CUR, move(e), ELogLevel::Critical, "json exception - {}", e.what()}) );
 		}
 		catch( std::exception& e ){
-			Exception = mu<Jde::Exception>( Jde::Exception{SRCE_CUR, move(e), ELogLevel::Critical, "std::exception - {}", e.what()} );
+			SetError( mu<Jde::Exception>(Jde::Exception{SRCE_CUR, move(e), ELogLevel::Critical, "std::exception - {}", e.what()}) );
 		}
 		catch( ... ){
-			Exception = mu<Jde::Exception>( Jde::Exception{SRCE_CUR, ELogLevel::Critical, "unknown exception"} );
+			SetError( mu<Jde::Exception>(Jde::Exception{SRCE_CUR, ELogLevel::Critical, "unknown exception"}) );
 		}
 	}
 }

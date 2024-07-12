@@ -6,42 +6,62 @@
 #include <jde/http/IClientSocketSession.h>
 
 namespace Jde::Http{
-	//TODO - derive from TAwait
+	α SocketClientReceivedTag()ι->sp<LogTag>;
+
 	template<class T>
-	struct ClientSocketAwait final{
-		using Task = TTask<T>;
-		using PromiseType = Task::promise_type;
-		using Handle = coroutine_handle<PromiseType>;
+	struct TTimedTask final{
+		struct promise_type : IExpectedPromise<TTimedTask<T>,T>{
+			ψ Log( fmt::format_string<Args...> m, Args&& ...args )ι->void{
+				ResponseMessage = { m.get().data(), m.get().size() };
+				MessageArgs.reserve( sizeof...(args) );
+				ToVec::Append( MessageArgs, args... );
+			}
+			sv ResponseMessage;
+			vector<string> MessageArgs;
+		};
+	};
+
+	template<class T>
+	struct ClientSocketAwait final : TAwait<T,TTimedTask<T>>{
+		using base = TAwait<T,TTimedTask<T>>;
 		ClientSocketAwait( sp<IClientSocketSession> session, RequestId requestId, string&& request, SRCE )ι;
-		α await_ready()ι->bool{ return false; }
-		α await_suspend( Handle h )ι->void;
-		α await_resume()ε->T;
+		α await_suspend( base::Handle h )ε->void override;
+		//α await_suspend( coroutine_handle<typename Http::TTimedTask<T>::promise_type> h )ε->void override;
+		α await_resume()ε->T override;
 	private:
-		PromiseType* _promise{};
 		string _request;
-		RequestId _requestId;
+		const RequestId _requestId;
 		sp<IClientSocketSession> _session;
-		SL _sl;
+		steady_clock::time_point _start;
 	};
 
 	Τ ClientSocketAwait<T>::ClientSocketAwait( sp<IClientSocketSession> session, RequestId requestId, string&& request, SL sl )ι:
+		base{ sl },
 		_request{ move(request) },
 		_requestId{ requestId },
 		_session{ session },
-		_sl{ sl }
+		_start{ steady_clock::now() }
 	{}
 
-	Ŧ ClientSocketAwait<T>::await_suspend( coroutine_handle<PromiseType> h )ι->void{
+	Ŧ ClientSocketAwait<T>::await_suspend( base::Handle h )ε->void{
+	//Ŧ ClientSocketAwait<T>::await_suspend( base::Handle h )ε->void{
+		base::await_suspend( h );
 		_session->AddTask( _requestId, h );
-		_promise = &h.promise();
 		_session->Write( move(_request) );
 	}
 
 	Ŧ ClientSocketAwait<T>::await_resume()ε->T{
-		ASSERT( _promise && (_promise->Result || _promise->Exception) );
-		if( _promise->Exception )
-			_promise->Exception->Throw();
-		return move( *_promise->Result );
+		base::AwaitResume();
+		typename base::TPromise* p = base::Promise();
+		ASSERT( p );
+		if( auto e = p->Error(); e )
+			e->Throw();
+		ASSERT( p->Value() );
+		if( ShouldTrace(SocketClientReceivedTag()) ){
+			const auto msg = Str::ToString( p->ResponseMessage, p->MessageArgs );
+			Logging::Log( Logging::Message(ELogLevel::Trace, "[{}]HttpReceive - {} - {}", base::_sl), SocketClientReceivedTag(), _session->Id(), msg, Chrono::ToString(steady_clock::now()-_start) );
+		}
+		return move( *p->Value() );
 	}
 }
 

@@ -11,12 +11,10 @@ namespace Jde::Web::Flex{
 			Request.emplace( move(*rhs.Request) );
 		else
 			Request.reset();
-		std::cout << "rhs.Json=" << rhs.Json.dump() << std::endl;
 		Json=move( rhs.Json );
-		std::cout << "Json=" << Json.dump() << std::endl;
 		return *this;
 	}
-
+/*
 	α HttpTask::promise_type::unhandled_exception()ι->void{
 		try{
 			BREAK;
@@ -46,4 +44,5 @@ namespace Jde::Web::Flex{
 			_pPromise->TestException();
 		return _pPromise ? _pPromise->MoveResult() : HttpTaskResult{};
 	}
+*/
 }

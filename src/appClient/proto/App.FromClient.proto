@@ -1,7 +1,9 @@
 syntax = "proto3";
 package Jde.App.Proto.FromClient;
+
 import "google/protobuf/timestamp.proto";
 import "Common.proto";
+import "App.proto";
 
 message Instance{
 	string application=1;
@@ -20,11 +22,11 @@ message LogEntry{
 	uint32 message_id=3;
 	uint32 file_id=4;
 	uint32 function_id=5;
-	uint32 line_number=6;
-	uint32 user_id=7;
+	uint32 line=6;
+	uint32 user_pk=7;
 	uint64 thread_id=8;
 	uint64 tags=9;
-	repeated string variables=10;
+	repeated string args=10;
 }
 
 enum EFields{
@@ -66,18 +68,29 @@ message AddSession{
 	uint32 provider_id=4;
 }
 
+message ForwardExecution{
+	uint32 app_pk = 1;
+	uint32 app_instance_pk = 2; //0 for any
+	bytes executionTransmission = 3;
+}
+
 message Message{
 	uint32 request_id=1;
 	oneof Value{
-		Instance instance = 2;
-		LogEntry log_entry = 3;
-		RequestString string = 4;
-		Status status = 5;
-		bytes custom=6;
-		uint32 session_id=8;
-		AddSession add_session=9;
-		uint32 session_info=10;
-		string graph_ql=11;
+		AddSession add_session=2;
+		string graph_ql=3;
+		Instance instance = 4;
+		LogEntry log_entry = 5;
+		uint32 session_id=6;
+		uint32 session_info=7;
+		Status status = 8;
+		RequestString string = 9;
+
+		ForwardExecution forward_execution = 31;//webPage->appServer to call execute with creds.
+		ForwardExecution forward_execution_anonymous = 32;//call execute with no creds.
+		bytes execute_anonymous = 33;//appServer->2ndServer, no user context.
+		Jde.App.Proto.Execute execute = 34;//execute with user context.
+		bytes execute_response = 35;
 	}
 }
 

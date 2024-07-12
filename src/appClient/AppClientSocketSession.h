@@ -1,7 +1,7 @@
 #pragma once
 #include <jde/http/ClientSocketAwait.h>
 #include <jde/http/IClientSocketSession.h>
-#include "usings.h"
+#include <jde/appClient/usings.h>
 #include "App.FromClient.pb.h"
 #include "App.FromServer.pb.h"
 
@@ -22,7 +22,7 @@ namespace Jde::App::Client{
 		α SessionInfo( SessionPK sessionId, SRCE )ι->Http::ClientSocketAwait<Proto::FromServer::SessionInfo>;
 
 	private:
-		α HandleException( std::any&& h, string&& what )ι->void;
+		α HandleException( std::any&& h, string&& what, bool fromRequest )ι->void;
 		α OnRead( Proto::FromServer::Transmission&& transmission )ι->void override;
 		α OnClose( beast::error_code ec )ι->void override;
 	};

@@ -8,8 +8,6 @@ link_directories( ${fmt_DIR}/../.. )
 link_directories( ${Protobuf_DIR}/../.. )
 include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
-#add_executable( ${CMAKE_PROJECT_NAME} main.cpp WebTests.cpp TestRequestAwait.cpp CertificateTests.cpp
-#	proto/test.pb.cc )
 add_executable( ${CMAKE_PROJECT_NAME} )
 file(GLOB src_files *.cpp **/*.cpp )
 file(GLOB hdr_files   "**/*.h")
@@ -50,7 +48,7 @@ target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
 	<boost/beast/websocket.hpp>
 	<jde/TypeDefs.h>
 	<jde/Exception.h>
-	<jde/Log.h>
+	<jde/log/Log.h>
 	<jde/App.h>
 	"../../../Framework/source/Settings.h"
 	"../../../Framework/source/Stopwatch.h"

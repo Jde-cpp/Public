@@ -1,8 +1,10 @@
 #pragma once
 #include <jde/coroutine/Task.h>
 #include <jde/db/usings.h>
+#include "../../../Framework/source/coroutine/Awaitable.h"
 
-namespace Jde::App::Client{
+//Holds web session information.  Requires AppServer, so in AppClient
+namespace Jde::Web{
 	using namespace Coroutine;
 	using tcp = boost::asio::ip::tcp;
 	struct SessionInfo{
@@ -23,14 +25,15 @@ namespace Jde::App::Client{
 	//TODO - change to GraphQL.
 	α FindSession( SessionPK sessionId )ι->optional<SessionInfo>;
 	α GetSessions()ι->vector<SessionInfo>;
-	//TODO TAwait<SessionInfo>
-	struct UpsertAwait{
-		using Task = TTask<SessionInfo>; using Promise = Task::promise_type; using Handle = coroutine_handle<Promise>;
-		UpsertAwait( str authorization, str endpoint, bool socket, SRCE )ι:_authorization{authorization}, _endpoint{endpoint}, _socket{socket}, _sl{sl}{}
-		α await_ready()ι->bool{ return false; }
+	α SessionSize()ι->uint;
+
+	struct UpsertAwait : TAwait<SessionInfo>{
+		using base = TAwait<SessionInfo>;
+		//using Task = TTask<SessionInfo>; using Promise = Task::promise_type; using Handle = coroutine_handle<Promise>;
+		UpsertAwait( str authorization, str endpoint, bool socket, SRCE )ι:base{sl},_authorization{authorization}, _endpoint{endpoint}, _socket{socket}{}
 		α await_suspend( Handle h )ι->void;
 		α await_resume()ε->SessionInfo;
 	private:
-		string _authorization; string _endpoint; bool _socket; SL _sl; Promise* _promise;
+		string _authorization; string _endpoint; bool _socket;
 	};
 }

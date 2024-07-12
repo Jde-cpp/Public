@@ -5,35 +5,36 @@
 #define var const auto
 
 namespace Jde::Web::Mock{
-	static sp<LogTag> _incomingTag{ Logging::Tag( "client.socket.incoming" ) };
-	static sp<LogTag> _outgoingTag{ Logging::Tag( "client.socket.outgoing" ) };
 	ClientSocketSession::ClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι:
 		base{ ioc, ctx }
 	{}
 
-	α ClientSocketSession::OnAck( RequestId requestId, SessionPK sessionId )ι->void{
+	α ClientSocketSession::OnAck( RequestId requestId, const Proto::Ack& ack )ι->void{
+		SetSessionId( ack.session_id() );
+		SetId( ack.server_socket_id() );
+		INFOT( Http::SocketClientReceivedTag(), "[{:x}]ClientSocketSession Created - {:x}.", Id(), SessionId() );
 		std::any hAny = IClientSocketSession::GetTask( requestId );
 		auto h = std::any_cast<ClientSocketAwait<SessionPK>::Handle>( &hAny );
 		if( h ){
-			h->promise().Result = move( sessionId );
-			h->resume();//TODO 1 function
+			h->promise().SetValue( move(SessionId()) );
+			h->resume();
 		}
 		else
-			CRITICALT( Http::IncomingTag(), "RequestId '{}' not found.", requestId );
+			CRITICALT( Http::SocketClientReceivedTag(), "RequestId '{}' not found.", requestId );
 	}
 
 
 	α ClientSocketSession::HandleException( std::any&& h, string&& what )ι{
 		if( auto pEcho = std::any_cast<ClientSocketAwait<string>::Handle>( &h ) ){
-			pEcho->promise().Exception = mu<Exception>( what );
+			pEcho->promise().SetError( mu<Exception>(what) );
 			pEcho->resume();
 		}
 		else if( auto pAck = std::any_cast<ClientSocketAwait<SessionPK>::Handle>( &h ) ){
-			pAck->promise().Exception = mu<Exception>( what );
+			pAck->promise().SetError( mu<Exception>(what) );
 			pAck->resume();
 		}
 		else{
-			WARNT( _incomingTag, "Failed to process incomming exception '{}'.", what );
+			WARNT( Http::SocketClientReceivedTag(), "Failed to process incomming exception '{}'.", what );
 		}
 	}
 
@@ -46,13 +47,11 @@ namespace Jde::Web::Mock{
 			var requestId = m->request_id();
 			switch( m->Value_case() ){
 			case kAck:
-				SetSessionId( m->ack() );
 				OnAck( requestId, m->ack() );
-				INFOT( IncomingTag(), "[{:x}]ClientSocketSession Created.", m->ack() );
 				break;
 			case kEchoText:{
 				auto h = std::any_cast<ClientSocketAwait<string>::Handle>( IClientSocketSession::GetTask(requestId) );
-				h.promise().Result = move( *m->mutable_echo_text() );
+				h.promise().SetValue( move(*m->mutable_echo_text()) );
 				h.resume();
 				}break;
 			case kException:{
@@ -102,7 +101,7 @@ namespace Jde::Web::Mock{
 	}
 
 	α ClientSocketSession::OnClose( beast::error_code ec )ι->void{
-		auto f = [this, ec](std::any&& h)->void { HandleException(move(h), CodeException{ec, _outgoingTag}.what() ); };
+		auto f = [this, ec](std::any&& h)->void { HandleException(move(h), CodeException{ec, Http::SocketClientSentTag(), ELogLevel::NoLog}.what()); };
 		CloseTasks( f );
 		base::OnClose( ec );
 	}

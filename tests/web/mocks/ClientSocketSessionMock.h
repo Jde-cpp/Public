@@ -18,6 +18,6 @@ namespace Jde::Web::Mock{
 		α HandleException( std::any&& h, string&& what )ι;
 		α OnRead( Http::Proto::FromServerTransmission&& transmission )ι->void override;
 		α OnClose( beast::error_code ec )ι->void override;
-		α OnAck( RequestId requestId, SessionPK sessionId )ι->void;
+		α OnAck( RequestId requestId, const Proto::Ack& ack )ι->void;
 	};
 }
