@@ -2,13 +2,13 @@
 #include <jde/iot/types/OpcServer.h>
 #include <jde/iot/UM.h>
 #include <jde/io/Json.h>
-#include "../../../Framework/source/io/ServerSink.h"
+//#include "../../../Framework/source/io/ServerSink.h"
 #include "../../../Framework/source/db/GraphQL.h"
 
 #define var const auto
 
 namespace Jde::Iot{
-	static sp<LogTag> _logTag = Logging::Tag( "iot.graphQL" );
+	static sp<LogTag> _logTag{ Logging::Tag( "iot.graphQL" ) };
 	using Jde::DB::GraphQL::Hook::Operation;
 
 	α Query( const DB::MutationQL& m, UserPK /*userPK*/, Operation op, HCoroutine h )ι->Task{
@@ -34,7 +34,7 @@ namespace Jde::Iot{
 			Resume( move(e), move(h) );
 		}
 	}
-	
+
 	struct IotGraphQLAwait final: AsyncAwait{
 		IotGraphQLAwait( const DB::MutationQL& m, UserPK userPK_, Operation op_, SL sl )ι:
 			AsyncAwait{ [&, userPK=userPK_, op=op_](HCoroutine h){ Query(m, userPK, op, move(h));}, sl, "IotGraphQLAwait" }

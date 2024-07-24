@@ -47,8 +47,8 @@ target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
 	<boost/beast/ssl.hpp>
 	<boost/beast/websocket.hpp>
 	<jde/TypeDefs.h>
-	<jde/Exception.h>
 	<jde/log/Log.h>
+	<jde/Exception.h>
 	<jde/App.h>
 	"../../../Framework/source/Settings.h"
 	"../../../Framework/source/Stopwatch.h"

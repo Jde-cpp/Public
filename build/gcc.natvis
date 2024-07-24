@@ -78,8 +78,20 @@
 			<ExpandedItem>*($T1*)_M_ptr</ExpandedItem>
     </Expand>
 	</Type>
- <Type Name="std::unique_ptr&lt;*&gt;">
- 		<AlternativeType Name="Jde::up&lt;*&gt;"/>
+ 	<Type Name="std::__uniq_ptr_data&lt;*&gt;">
+		<DisplayString Condition="_M_t.std::_Head_base&lt;0, $T1*, false&gt;::_M_head_impl == 0">{{nullptr}}</DisplayString>
+		<DisplayString>{*std::_Head_base&lt;0, $T1*, false&gt;::_M_head(_M_t)}</DisplayString>
+		<Expand>
+				<ExpandedItem>*std::_Head_base&lt;0, $T1*, false&gt;::_M_head(_M_t)</ExpandedItem>
+		</Expand>
+	</Type>
+	<Type Name="Jde::up&lt;*&gt;">
+		<AlternativeType Name="Jde::up&lt;*&gt; &amp;&amp;"/>
+		<AlternativeType Name="Jde::up"/>
+		<DisplayString>{_M_t}</DisplayString>
+	</Type>
+ 	<Type Name="std::unique_ptr&lt;*&gt;">
+		<AlternativeType Name="std::unique_ptr&lt;*&gt; &amp;&amp;"/>
 		<DisplayString Condition="_M_t._M_t.std::_Head_base&lt;0, $T1*, false&gt;::_M_head_impl == 0">{{nullptr}}</DisplayString>
 		<DisplayString>{*std::_Head_base&lt;0, $T1*, false&gt;::_M_head(_M_t._M_t)}</DisplayString>
 		<Expand>

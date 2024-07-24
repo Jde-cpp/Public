@@ -1,7 +1,0 @@
-syntax = "proto3";
-package Jde.App.Proto;
-
-message Execute{
-	uint32 user_pk = 1;
-	bytes transmission = 2;
-}

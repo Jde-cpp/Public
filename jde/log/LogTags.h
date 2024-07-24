@@ -4,7 +4,7 @@ namespace Jde{
 
 	struct LogTag{ string Id; ELogLevel Level{ELogLevel::NoLog}; };//loadLibrary dlls may disappear, so need string vs. sv
 	enum class ELogTags : uint{
-		None = 0x0,
+		None 					= 0x0,
 		Sql						= 1ul << 0,
 		Exception			= 1ul << 1,
 		Users					= 1ul << 2,
@@ -20,25 +20,32 @@ namespace Jde{
 		Socket  			= 1ul << 12,
 		Client  			= 1ul << 13,
 		Server  			= 1ul << 14,
-		Sent	  			= 1ul << 15,
-		Received 			= 1ul << 16,
+		Read	  			= 1ul << 15,
+		Write		 			= 1ul << 16,
 		Startup 			= 1ul << 17,
 		Shutdown 			= 1ul << 18,
-		HttpClientSent			= Http | Client | Sent,
-		HttpClientReceived	= Http | Client | Received,
-		HttpServerSent			= Http | Server | Sent,
-		HttpServerReceived	= Http | Server | Received,
-		SocketClientSent		= Socket | Client | Sent,
-		SocketClientReceived= Socket | Client | Received,
-		SocketServerSent		= Socket | Server | Sent,
-		SocketServerReceived= Socket | Client | Received,
+		Subscription 	= 1ul << 19,
+		ExternalLogger= 1ul << 20,
+		GraphQL 			= 1ul << 21,
+		Parsing 			= 1ul << 22,
+		HttpClientRead	= Http | Client | Read,
+		HttpClientWrite			= Http | Client | Write,
+		HttpServerRead	= Http | Server | Read,
+		HttpServerWrite			= Http | Server | Write,
+		SocketClientRead= Socket | Client | Read,
+		SocketClientWrite		= Socket | Client | Write,
+		SocketServerRead= Socket | Server | Read,
+		SocketServerWrite		= Socket | Server | Write
 	};
-	α ToString( ELogTags tags )ι->string;
+	constexpr ELogTags DefaultTag=ELogTags::App;
 	α ShouldTrace( sp<LogTag> pTag )ι->bool;
-	α ToELogTags( str name )ι->ELogTags;
+	α FileMinLevel( ELogTags tags )ι->ELogLevel;
+	α ToString( ELogTags tags )ι->string;
+	α ToLogTags( str name )ι->ELogTags;
 
 namespace Logging{
 	α AddTags( vector<LogTag>& sinkTags, sv path )ι->void;
+	α TagSettings( string name, str path )ι->concurrent_flat_map<ELogTags,ELogLevel>;
 	α AddFileTags()ι->void;
 	Φ SetTag( sv tag, ELogLevel l=ELogLevel::Debug, bool file=true )ι->void;
 	struct ExternalMessage;

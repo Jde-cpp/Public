@@ -3,10 +3,12 @@
 #define JDE_STR_H
 #include <charconv>
 #include <codecvt>
-#include <boost/algorithm/string/trim.hpp>
 #include <span>
-#include "Exception.h"
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
 #include "log/Log.h"
+#include "Exception.h"
 
 #define var const auto
 #define Φ Γ auto
@@ -182,6 +184,8 @@ namespace Jde{
 		//[start,start of next word] of phrase index.  start of next word because of stemming
 		TSV Pascal( X s )ι->$;
 		TSV Camel( X s )ι->$;
+		template<class T, class I=T::const_iterator> α Encode64( const T& val )ι->string;
+		α ToHex( byte* p, uint size )ι->string;
 #undef X
 	}
 	template<class T, class D> α Str::Split( bsv<TT> s, bsv<typename D::traits_type> delim, uint count, sv errorId, SL sl )ε->vector<bsv<TT>>{
@@ -349,7 +353,7 @@ namespace Jde{
 
 	template<class TEnum, class TCollection, class TString>
 	α Str::ToEnum( const TCollection& stringValues, TString text )ι->optional<TEnum>{
-		typedef typename std::underlying_type<TEnum>::type T;
+		using T = typename std::underlying_type<TEnum>::type;
 		T v = (T)std::distance( std::begin(stringValues), std::find(std::begin(stringValues), std::end(stringValues), text) );
 		auto pResult = (uint)v<stringValues.size() ? optional<TEnum>((TEnum)v) : nullopt;
 		if( !pResult ){
@@ -481,6 +485,15 @@ namespace Jde{
 		if( y.size() )
 			y[0] = std::tolower( x[0] );
 		return y;
+	}
+
+	//https://stackoverflow.com/questions/7053538/how-do-i-encode-a-string-to-base64-using-only-boost
+	template<class T, class I> α Str::Encode64( const T& val )ι->string{
+		//typename T;
+		using namespace boost::archive::iterators;
+		using It = base64_from_binary<transform_width<I, 6, 8>>;
+		auto t = string( It(std::begin(val)), It(std::end(val)) );
+		return t.append( (3 - val.size() % 3) % 3, '=' );
 	}
 }
 template<> struct fmt::formatter<Jde::iv> : fmt::formatter<std::string> {

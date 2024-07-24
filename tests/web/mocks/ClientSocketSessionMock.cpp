@@ -12,7 +12,7 @@ namespace Jde::Web::Mock{
 	α ClientSocketSession::OnAck( RequestId requestId, const Proto::Ack& ack )ι->void{
 		SetSessionId( ack.session_id() );
 		SetId( ack.server_socket_id() );
-		INFOT( Http::SocketClientReceivedTag(), "[{:x}]ClientSocketSession Created - {:x}.", Id(), SessionId() );
+		INFOT( Http::SocketClientReadTag(), "[{:x}]ClientSocketSession Created - {:x}.", Id(), SessionId() );
 		std::any hAny = IClientSocketSession::GetTask( requestId );
 		auto h = std::any_cast<ClientSocketAwait<SessionPK>::Handle>( &hAny );
 		if( h ){
@@ -20,7 +20,7 @@ namespace Jde::Web::Mock{
 			h->resume();
 		}
 		else
-			CRITICALT( Http::SocketClientReceivedTag(), "RequestId '{}' not found.", requestId );
+			CRITICALT( Http::SocketClientReadTag(), "RequestId '{}' not found.", requestId );
 	}
 
 
@@ -34,7 +34,7 @@ namespace Jde::Web::Mock{
 			pAck->resume();
 		}
 		else{
-			WARNT( Http::SocketClientReceivedTag(), "Failed to process incomming exception '{}'.", what );
+			WARNT( Http::SocketClientReadTag(), "Failed to process incomming exception '{}'.", what );
 		}
 	}
 
@@ -101,7 +101,7 @@ namespace Jde::Web::Mock{
 	}
 
 	α ClientSocketSession::OnClose( beast::error_code ec )ι->void{
-		auto f = [this, ec](std::any&& h)->void { HandleException(move(h), CodeException{ec, Http::SocketClientSentTag(), ELogLevel::NoLog}.what()); };
+		auto f = [this, ec](std::any&& h)->void { HandleException(move(h), CodeException{ec, Http::SocketClientWriteTag(), ELogLevel::NoLog}.what()); };
 		CloseTasks( f );
 		base::OnClose( ec );
 	}

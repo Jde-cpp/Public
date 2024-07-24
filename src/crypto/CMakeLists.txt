@@ -26,6 +26,7 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
   <openssl/rsa.h>
 
   <jde/TypeDefs.h>
+	<jde/log/Log.h>
 	<jde/Exception.h>
   <jde/crypto/exports.h>
 )

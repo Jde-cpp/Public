@@ -3,11 +3,11 @@
 #include <jde/iot/uatypes/Value.h>
 #include "../async/Attributes.h"
 #include <jde/iot/async/SessionAwait.h>
-#include <jde/web/rest/IRestSession.h>
-#include <jde/web/rest/RestException.h>
+//#include <jde/web/rest/IRestSession.h>
+//#include <jde/web/rest/RestException.h>
 
 namespace Jde::Iot::Browse{
-	using Jde::Web::Rest::IRestSession;
+//	using Jde::Web::Rest::IRestSession;
 	sp<Jde::LogTag> _logTag{ Logging::Tag("app.browse") };
 	α Tag()ι->sp<LogTag>{return _logTag;}
 
@@ -17,36 +17,53 @@ namespace Jde::Iot::Browse{
 	}
 
 	α Folders( NodeId node, sp<UAClient>& c )ι->FoldersAwait{ return FoldersAwait{ move(node), c }; }
+	ObjectsFolderAwait::ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SL sl )ι:
+		base{ sl },
+		_ua{ua},
+		_node{node},
+		_snapshot{snapshot}
+	{}
 
-	α ObjectsFolder( sp<UAClient> ua, NodeId node, Web::Rest::Request req, bool snapshot )ι->Task{
+
+	α ObjectsFolderAwait::Execute()ι->Coroutine::Task{
 		bool retry{};
 		try{
-			auto y = ( co_await Folders(node, ua) ).SP<Response>();
+			auto y = ( co_await Folders(_node, _ua) ).SP<Response>();
 			flat_set<NodeId> nodes = y->Nodes();
-			THROW_IF( nodes.size()==0, "No items found for: {}", node.to_string() );
+			THROW_IF( nodes.size()==0, "No items found for: {}", _node.to_string() );
 
 			up<flat_map<NodeId, Value>> pValues;
-
-			if( snapshot )
-			 	pValues = ( co_await Read::SendRequest(nodes, ua) ).UP<flat_map<NodeId, Value>>();
-			auto pDataTypes = (co_await Attributes::ReadDataTypeAttributes( move(nodes), move(ua) )).UP<flat_map<NodeId, NodeId>>();
-			IRestSession::Send(y->ToJson(move(pValues), move(*pDataTypes)), move(req) );
+			if( _snapshot )
+			 	pValues = ( co_await Read::SendRequest(nodes, _ua) ).UP<flat_map<NodeId, Value>>();
+			auto pDataTypes = (co_await Attributes::ReadDataTypeAttributes( move(nodes), _ua )).UP<flat_map<NodeId, NodeId>>();
+			Promise()->SetValue( y->ToJson(move(pValues), move(*pDataTypes)) );
 		}
 		catch( UAException& e ){
 			if( retry=e.IsBadSession(); retry )
 				e.PrependWhat( "Retry ObjectsFolder.  " );
-			else{
-				TRACE( "ObjectsFolder - Failed {}", e.what() );
-				IRestSession::Send( move(e), move(req) );
-			}
+			else
+				Promise()->SetError( move(e) );
 		}
 		catch( IException& e ){
-			IRestSession::Send( move(e), move(req) );
+			Promise()->SetError( move(e) );
 		}
 		if( retry ){
-			co_await AwaitSessionActivation( ua );
-			ObjectsFolder( ua, node, move(req), snapshot );
+			try{ co_await AwaitSessionActivation( _ua ); }catch(IException& e){ Promise()->SetError( move(e) ); }
+			[this]()->Task{
+				try{
+					auto j = co_await ObjectsFolderAwait{ _node, _snapshot, _ua, _sl };
+					Promise()->SetValue( move(j) );
+				}
+				catch( IException& e ){
+					Promise()->SetError( move(e) );
+				}
+			}();
+			_h.resume();
 		}
+	}
+	α ObjectsFolderAwait::await_suspend( base::Handle h )ι->void{
+		base::await_suspend( h );
+		Execute();
 	}
 
 	α OnResponse( UA_Client *ua, void* userdata, RequestId requestId, UA_BrowseResponse* response )ι->void{

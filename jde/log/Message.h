@@ -2,16 +2,74 @@
 #include "../db/usings.h"
 
 namespace Jde::Logging{
+	α Default()ι->spdlog::logger*;
 	enum class EFields : uint16{ None=0, Timestamp=0x1, MessageId=0x2, Message=0x4, Level=0x8, FileId=0x10, File=0x20, FunctionId=0x40, Function=0x80, LineNumber=0x100, UserPK=0x200, User=0x400, ThreadId=0x800, Thread=0x1000, VariableCount=0x2000, SessionId=0x4000 };
-	//TODO common enum operators
-	constexpr inline EFields operator|(EFields a, EFields b){ return (EFields)( (uint16)a | (uint16)b ); }
-	constexpr inline EFields operator&(EFields a, EFields b){ return (EFields)( (uint16)a & (uint16)b ); }
-	constexpr inline EFields operator~(EFields a){ return (EFields)( ~(uint16)a ); }
-	constexpr inline EFields& operator|=(EFields& a, EFields b){ return a = a | b; }
-	//inline std::ostream& operator<<( std::ostream& os, const EFields& value ){ os << (uint)value; return os; }
 
+#define FormatString const fmt::format_string<TArgs const&...>
+#define ARGS const TArgs&
+
+	template<ELogLevel TLevel, typename... TArgs>
+	struct Logger{
+		using enum ELogLevel;
+		explicit Logger( ELogTags tags, FormatString m, ARGS... args, SL sl )ι{
+			if( auto fileMinLevel = FileMinLevel(tags); fileMinLevel!=NoLog && fileMinLevel<=TLevel ){
+				try{
+					if( auto p = Logging::Default(); p ){
+//TODO!						BREAK_IF( m.get().empty() );
+						const auto level = (spdlog::level::level_enum)TLevel;
+						const spdlog::source_loc spdSL{ sl.file_name(), sl.line(), sl.function_name() };
+						p->log( spdSL, level, std::forward<FormatString>(m), std::forward<ARGS>(args)... );
+					}
+					else{
+						auto& out = TLevel>Information ? std::cerr : std::cout;
+						fmt::vformat_to( std::ostream_iterator<char>(out), m.get(), fmt::make_format_args(args...) );
+					}
+//TODO!					BREAK_IF( break_ && m.Level>=BreakLevel() );
+				}
+				catch( const fmt::format_error& e ){
+//					BREAK;TODO
+//					MessageBase mLogger2{ ELogLevel::Critical, "could not format '{}' cargs='{}' - '{}'", m.File, m.Function, m.LineNumber };
+//					Log( m2, tag, m.MessageView, sizeof...(args), e.what() );
+				}
+				// if( logServer || LogMemory() ){TODO
+				// 	vector<string> values; values.reserve( sizeof...(args) );
+				// 	ToVec::Append( values, args... );
+				// 	if( LogMemory() )
+				// 		LogMemory( m, values );
+				// 	if( logServer )
+				// 		External::Log( m, values );
+				// }
+			}
+		}
+	};
+}
+namespace Jde{
+#define LoggerLevel( Level )	\
+	template<typename... TArgs> \
+	struct Level : Logging::Logger<ELogLevel::Level,TArgs...>{ \
+    explicit Level(ELogTags tags, FormatString m, ARGS... args, SRCE): \
+			Logging::Logger<ELogLevel::Level,TArgs...>{ tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)..., sl } \
+		{} \
+    explicit Level( SL sl, ELogTags tags, FormatString m, ARGS... args ): \
+			Logging::Logger<ELogLevel::Level,TArgs...>{ tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)..., sl } \
+		{} \
+	}; \
+	template<class... TArgs> \
+	Level( ELogTags tags, FormatString, ARGS... )->Level<TArgs...>
+
+	LoggerLevel( Trace );
+	LoggerLevel( Debug );
+	LoggerLevel( Information );
+	LoggerLevel( Warning );
+	LoggerLevel( Error );
+	LoggerLevel( Critical );
+#undef LoggerLevel
+#undef FormatString
+#undef ARGS
+
+namespace Logging{
 	struct MessageBase{
-		using ID=uint32;
+		using ID=LogMessagePK;
 		using ThreadID=uint;
 		consteval MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, ID messageId=0, ID fileId=0, ID functionId=0 )ι;
 		consteval MessageBase( sv message, const char* file, const char* function, uint_least32_t line )ι;
@@ -19,11 +77,11 @@ namespace Jde::Logging{
 
 		EFields Fields{ EFields::None };
 		ELogLevel Level;
-		ID MessageId{0};
+		mutable ID MessageId{0};
 		sv MessageView;
-		ID FileId{0};
+		mutable ID FileId{0};
 		const char* File;
-		ID FunctionId{0};
+		mutable ID FunctionId{0};
 		const char* Function;
 		uint_least32_t LineNumber;
 		Jde::UserPK UserPK{0};
@@ -41,10 +99,10 @@ namespace Jde::Logging{
 		Γ Message( sv Tag, ELogLevel level, string message, SRCE )ι;
 		Γ Message( sv Tag, ELogLevel level, string message, char const* file_, char const * function_, boost::uint_least32_t line_ )ι;
 
-		sv Tag;//TODO array
+		sv Tag;//TODO ELogTags
 		up<string> _pMessage;//TODO move to protected
-	protected:
 		string _fileName;
+	protected:
 	};
 
 	consteval MessageBase::MessageBase( sv message, ELogLevel level, const char* file, const char* function, uint_least32_t line, ID messageId, ID fileId, ID functionId )ι:
@@ -74,4 +132,4 @@ namespace Jde::Logging{
 	consteval MessageBase::MessageBase( const char* file, const char* function, uint_least32_t line )ι:
 		MessageBase( {}, file, function, line )
 	{}
-}
+}}

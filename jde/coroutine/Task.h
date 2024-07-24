@@ -57,8 +57,11 @@ namespace Jde::Coroutine{
 		suspend_never final_suspend()ι{ return {}; }
 		α return_void()ι->void{}
 		α unhandled_exception()ι->void;
-		β Error()ι->up<IException> =0;
-		β SetError( up<IException>&& x )ι->void =0;
+		//α HasError()Ι->bool=0;
+		β Error()Ι->const up<IException>& =0;
+		β MoveError()ι->up<IException> =0;
+		β SetError( IException&& x )ι->void =0;
+		α ResumeWithError( IException&& x, coroutine_handle<> h )ι->void{ SetError( move(x) ); h.resume(); };
 	protected:
 		TResult Expected;
 	};
@@ -67,18 +70,23 @@ namespace Jde::Coroutine{
 	struct IExpectedPromise : IPromise<TTask,variant<up<IException>,TResult>>{
 		using base = IPromise<TTask,variant<up<IException>,TResult>>;
 		using TExpected=variant<TError,TResult>;
-		α Error()ι->up<IException> override{ return base::Expected.index()==0 ? move(std::get<0>(base::Expected)) : up<IException>{}; }
-		α SetError( up<IException>&& x )ι->void override{ base::Expected = move(x); }
+		//α HasError()Ι->bool override{ return base::Expected.index()==0 && std::get<0>(base::Expected)!=nullptr; }
+		α Error()Ι->const up<IException>& override{ return base::Expected.index()==0 ? std::get<0>(base::Expected) : IException::EmptyPtr(); }
+		α MoveError()ι->up<IException> override{ return base::Expected.index()==0 ? move(std::get<0>(base::Expected)) : up<IException>{}; }
+		α SetError( IException&& x )ι->void override{ base::Expected = x.Move(); }
 		α Value()ι->TResult*{ return base::Expected.index()==1 ? &std::get<1>(base::Expected) : nullptr; }
 		α SetValue( TResult&& x )ι->void{ base::Expected = move(x); }
+		α Resume( TResult&& x, coroutine_handle<> h )ι->void{ SetValue(move(x)); h.resume(); };
 	};
 
 
 	struct VoidTask{//TODO move to jde ns
 		struct promise_type : IPromise<VoidTask,up<IException>>{
 			using base = IPromise<VoidTask,up<IException>>;
-			α Error()ι->up<IException> override{ return move(base::Expected); }
-			α SetError( up<IException>&& x )ι->void override{ base::Expected = move(x); }
+			//α HasError()Ι->bool override{ return base::Expected!=nullptr; }
+			α Error()Ι->const up<IException>& override{ return base::Expected; }
+			α MoveError()ι->up<IException> override{ return move(base::Expected); }
+			α SetError( IException&& x )ι->void override{ base::Expected = x.Move(); }
 		};
 	};
 
@@ -201,17 +209,17 @@ namespace Jde::Coroutine{
 			throw;
 		}
 		catch( IException& e ){
-			SetError( e.Move() );
-			Error()->SetLevel( ELogLevel::Critical );
+			e.SetLevel( ELogLevel::Critical );
+			SetError( move(e) );
 		}
 		catch( nlohmann::json::exception& e ){
-			SetError( mu<Jde::Exception>(Jde::Exception{SRCE_CUR, move(e), ELogLevel::Critical, "json exception - {}", e.what()}) );
+			SetError( Jde::Exception{SRCE_CUR, move(e), ELogLevel::Critical, "json exception - {}", e.what()} );
 		}
 		catch( std::exception& e ){
-			SetError( mu<Jde::Exception>(Jde::Exception{SRCE_CUR, move(e), ELogLevel::Critical, "std::exception - {}", e.what()}) );
+			SetError( Jde::Exception{SRCE_CUR, move(e), ELogLevel::Critical, "std::exception - {}", e.what()} );
 		}
 		catch( ... ){
-			SetError( mu<Jde::Exception>(Jde::Exception{SRCE_CUR, ELogLevel::Critical, "unknown exception"}) );
+			SetError( Jde::Exception{SRCE_CUR, ELogLevel::Critical, "unknown exception"} );
 		}
 	}
 }

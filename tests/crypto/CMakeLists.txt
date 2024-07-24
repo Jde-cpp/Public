@@ -15,7 +15,7 @@ target_link_libraries( ${CMAKE_PROJECT_NAME} gtest_main)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	target_link_libraries( ${CMAKE_PROJECT_NAME} stdc++)
 	target_link_libraries( ${CMAKE_PROJECT_NAME} stdc++fs)
-endif()	
+endif()
 target_link_libraries( ${CMAKE_PROJECT_NAME} libcrypto.a)
 target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a)
 
@@ -30,5 +30,6 @@ target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
 	<openssl/rsa.h>
 	<gtest/gtest.h>
 	<jde/TypeDefs.h>
+	<jde/log/Log.h>
 	<jde/Exception.h>
 )

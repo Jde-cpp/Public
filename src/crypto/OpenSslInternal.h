@@ -11,6 +11,8 @@ namespace Jde::Crypto::Internal{
 	using CtxPtr = up<EVP_PKEY_CTX, decltype(&::EVP_PKEY_CTX_free)>;
 	using BNPtr = up<BIGNUM, decltype(&::BN_free)>;
 	using X509Ptr = up<X509, decltype(&::X509_free)>;
+	using MDCtxPtr = std::unique_ptr<EVP_MD_CTX, decltype(&::EVP_MD_CTX_free)>;
+
 	α File( const fs::path& path, bool write )ε->BioPtr;
 	α ReadFile( const fs::path& path )ε->BioPtr;
 	α ReadPublicKey( const fs::path& path )ε->KeyPtr;
@@ -19,6 +21,8 @@ namespace Jde::Crypto::Internal{
 	α WritePrivateKey( const fs::path& path, KeyPtr&& key, str passcode={} )ε->void;
 	α NewRsaCtx( SRCE )ε->CtxPtr;
 	α NewCtx( const KeyPtr& key, SRCE )ε->CtxPtr;
+	Ξ NewMDCtx()ι->MDCtxPtr{ return MDCtxPtr{ EVP_MD_CTX_create(), ::EVP_MD_CTX_free}; }
 	α ToBigNum( const vector<unsigned char>& x )ε->BNPtr;
+	α ToBigNum( uint32 x )ε->BNPtr;
 	α ToBio( const vector<byte>&& bytes )ε->BioPtr;
 }

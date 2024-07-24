@@ -10,12 +10,12 @@ namespace Jde::Crypto{
 	}
 
 	CryptoSettings::CryptoSettings( str prefix )ι:
-		CertPath{ GetPath(prefix+"/certificate", "certs/server.pem") },
-		PrivateKeyPath{ GetPath(prefix+"/privateKey", "private/server.pem") },
-		PublicKeyPath{ GetPath(prefix+"/publicKey", "public/server.pem") },
+		CertPath{ GetPath(prefix+"/certificate", "certs/cert.pem") },
+		PrivateKeyPath{ GetPath(prefix+"/privateKey", "private/private.pem") },
+		PublicKeyPath{ GetPath(prefix+"/publicKey", "public/public.pem") },
 		DhPath{ GetPath(prefix+"/dh", "dh.pem") },
 		Passcode{ Get(prefix+"/passcode").value_or("") },
-		AltName{ Get(prefix+"/certificateAltName").value_or("localhost") },
+		AltName{ Get(prefix+"/certificateAltName").value_or("DNS:localhost,IP:127.0.0.1") },
 		Company{ Get(prefix+"/certficateCompany").value_or("Jde-Cpp") },
 		Country{ Get(prefix+"/certficateCountry").value_or("US") },
 		Domain{ Get(prefix+"/certficateDomain").value_or("localhost") }

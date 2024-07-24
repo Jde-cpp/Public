@@ -1,6 +1,7 @@
 ﻿#include "gtest/gtest.h"
 #include "../../../Framework/source/Settings.h"
 #include "../../../Framework/source/Cache.h"
+#include "../../../Framework/source/threading/Thread.h"
 #define var const auto
 
 namespace Jde{
@@ -26,7 +27,7 @@ namespace Jde{
 		var filter = p ? *p : "*";
 		::testing::GTEST_FLAG( filter ) = filter;
 	   result = RUN_ALL_TESTS();
-		IApplication::Shutdown();
+		IApplication::Shutdown( result );
 		IApplication::Cleanup();
 	}
 	return result;

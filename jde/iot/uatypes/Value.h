@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "../Exports.h"
-#include <jde/iot/types/proto/IotFromServer.pb.h>
 
 namespace Jde::Iot{
 	namespace Browse{ struct Response; }
@@ -17,7 +16,7 @@ namespace Jde::Iot{
 
 		α operator=( Value&& x )ι->Value&{ UA_DataValue_copy( &x, this ); return *this; }
 		α IsScaler()Ι->bool{ return UA_Variant_isScalar( &value ); }
-		α ToProto( const OpcNK& opcId, const NodeId& nodeId )Ι->FromServer::MessageUnion;
+		α ToProto( const OpcNK& opcId, const NodeId& nodeId )Ι->FromServer::Message;
 		α ToJson()Ι->json;
 		α Set( const json& j )ε->void;
 		Ŧ Get( uint index )Ι->const T&{ return ((T*)value.data)[index]; };

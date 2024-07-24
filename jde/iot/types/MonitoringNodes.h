@@ -3,10 +3,10 @@
 #include <jde/iot/uatypes/Node.h>
 
 namespace Jde::Iot{
-	struct SocketSession; struct UAClient; struct Value;
+	/*struct SocketSession;*/ struct UAClient; struct Value;
 
 	struct IDataChange{
-		β SendDataChange( const OpcNK& opcId, const NodeId& node, const Value& value )ι->Task=0;
+		β SendDataChange( const OpcNK& opcId, const NodeId& node, const Value& value )ι->void=0;
 		β to_string()Ι->string=0;
 	};
 

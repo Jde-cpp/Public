@@ -52,7 +52,7 @@ namespace Jde::Web::Mock{
 				//Promise()->SetRequest( move(_request) );
 				Promise()->SetValue( {move(_request),json()} );
 				boost::asio::post( *IO::AsioContextThread(), [h](){ h.resume(); } );
-				DBGT( HttpServerSentTag(), "~/delay handler" );
+				DBGT( HttpServerWriteTag(), "~/delay handler" );
 			});
 		}
 		else if( _request.Target()=="/BadAwaitable" ){
@@ -60,7 +60,7 @@ namespace Jde::Web::Mock{
 				Threading::SetThreadDscrptn( "BadAwaitable" );
 				h.promise().SetError( mu<RestException<>>(RestException{SRCE_CUR, move(_request), "BadAwaitable"}) );
 				boost::asio::post( *IO::AsioContextThread(), [h](){ h.resume(); } );
-				DBGT( HttpServerSentTag(), "~/BadAwaitable handler" );
+				DBGT( HttpServerWriteTag(), "~/BadAwaitable handler" );
 			 });
 		}
 		else

@@ -27,7 +27,7 @@ namespace Jde::Web::Mock{
 			Write( move(t) );
 		}
 	}
-	α WebsocketSession::WriteException( const IException& e )ι->void{
+	α WebsocketSession::WriteException( IException&& e )ι->void{
 		Proto::FromServerTransmission t;
 		auto m = t.add_messages();
 		m->set_exception( e.what() );

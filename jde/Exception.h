@@ -48,6 +48,7 @@ namespace Jde{
 
 		$ IException( SL sl, std::exception&& inner, ELogLevel level, fmt::format_string<Args...> m="", Args&&... args )ι;
 		$ IException( SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&& ...args )ι;
+		$ IException( ELogTags tags, SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&& ...args )ι;
 		$ IException( SL sl, ELogLevel l, uint code, fmt::format_string<Args...> m, Args&&... args )ι;
 		Ω FromExceptionPtr( const std::exception_ptr& from, SRCE )ι->up<IException>;
 
@@ -64,6 +65,8 @@ namespace Jde{
 		α Stack()Ι->const StackTrace&{ return _stack; }
 		β Ptr()ι->std::exception_ptr =0;
 		α SetTag( sp<LogTag> x )ι{ _pTag=x; }
+		α Tags()Ι->ELogTags{ return _pTag ? ToLogTags( _pTag->Id ) : ELogTags::None; }
+		Ω EmptyPtr()ι->const up<IException>&;
 		[[noreturn]] β Throw()->void=0;
 	protected:
 		IException( SRCE )ι:IException{ {}, ELogLevel::Debug, 0, sl }{}
@@ -92,6 +95,7 @@ namespace Jde{
 		$ Exception( SL sl, std::exception&& inner, fmt::format_string<Args...> m="", Args&&... args )ι:Exception{sl, move(inner), DefaultLogLevel, m, std::forward<Args>(args)...}{}
 		$ Exception( SL sl, ELogLevel l, fmt::format_string<Args...> fmt, Args&&... args )ι:IException( sl, l, fmt, std::forward<Args>(args)... ){}
 		$ Exception( SL sl, fmt::format_string<Args...> m, Args&&... args )ι:IException( sl, DefaultLogLevel, m, std::forward<Args>(args)... ){}
+		$ Exception( ELogTags tags, SL sl, fmt::format_string<Args...> m, Args&&... args )ι:IException( tags, sl, DefaultLogLevel, m, std::forward<Args>(args)... ){}
 		$ Exception( SL sl, ELogLevel l, uint code, fmt::format_string<Args...> fmt, Args&&... args )ι:IException( sl, l, code, fmt, std::forward<Args>(args)... ){}
 		~Exception(){}
 		using T=Exception;
@@ -183,6 +187,16 @@ namespace Jde{
 	$ IException::IException( SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&&... args )ι:
 		_stack{ sl },
 		_format{ sv{m.get().data(), m.get().size()} },
+		Code{ Calc32RunTime(_format) },
+		_level{ l }{
+		_args.reserve( sizeof...(args) );
+		ToVec::Append( _args, args... );
+		BreakLog();
+	}
+	$ IException::IException( ELogTags tags, SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&& ...args )ι:
+		_stack{ sl },
+		_format{ sv{m.get().data(), m.get().size()} },
+		_pTag{ Logging::Tag(tags | ELogTags::Exception) },
 		Code{ Calc32RunTime(_format) },
 		_level{ l }{
 		_args.reserve( sizeof...(args) );

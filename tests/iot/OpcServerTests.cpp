@@ -44,8 +44,8 @@ namespace Jde::Iot{
 
 	TEST_F( OpcServerTests, Crud ){
 		var createdId = CreateOpcServer();
-		
-		var selectAll = "query{ opcServers { id name attributes created updated deleted target description certificateUri isDefault url } }";
+
+		var selectAll = "query opcServers{ id name attributes created updated deleted target description certificateUri isDefault url }";
 		var selectAllJson = DB::Query( selectAll, 0 );
 		TRACE( "selectAllJson={}", selectAllJson.dump() );
 		var id = selectAllJson["data"]["opcServers"][0]["id"].get<OpcPK>();

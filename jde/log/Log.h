@@ -21,7 +21,7 @@ namespace Jde{
 namespace Jde::Logging{
 	Φ BreakLevel()ι->ELogLevel;
 
-	//α Log( const Logging::MessageBase& messageBase )ι->void;
+	//α Log( const Logging::ILogEntry& m )ι->void;
 	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void;
 	ψ Log( const Logging::MessageBase& m, const sp<LogTag> tag, bool logServer, bool break_, Args&&... args )ι->void;
 	ψ Log( const Logging::MessageBase& m, const sp<LogTag> tag, Args&&... args )ι->void{ Log( m, tag, true, true, args... ); }
@@ -93,6 +93,43 @@ namespace Jde{
 	Ξ Log( ELogLevel sev, string&& x, const sp<LogTag>& tag, SRCE )ι{ Logging::Log( Logging::Message{sev, move(x), sl}, tag ); }
 	Ξ Dbg( string x, const sp<LogTag>& tag, SRCE )ι{ Log( ELogLevel::Debug, move(x), tag, sl ); }
 
+	template<ELogLevel TLevel, typename... Args>
+	struct Logger{
+    explicit Logger(ELogTags logTags, fmt::format_string<Args&...> m, const Args&... args, std::source_location source = std::source_location::current()) {
+			Logging::Log( Logging::MessageBase{ TLevel, sv{m.get().data(), m.get().size()}, source.file_name(), source.function_name(), source.line() }, logTags, std::forward<const Args>(args)... );
+		}
+	};
+
+	template<typename... Args>
+	struct Trace_ : Logger<ELogLevel::Trace,Args...>{
+    explicit Trace_(ELogTags tags, fmt::format_string<Args&...> m, const Args&... args, std::source_location source = std::source_location::current()):
+			Logger<ELogLevel::Trace,Args...>{ tags, std::forward<fmt::format_string<Args&...>>(m), std::forward<const Args>(args)..., source }
+		{}
+	};
+#define LoggerLevel( Level )	\
+	template<typename... Args> \
+	struct Level : Logger<ELogLevel::Level,Args...>{ \
+    explicit Level( ELogTags tags, fmt::format_string<Args&...> m, const Args&... args, SRCE ): \
+		Logger<ELogLevel::Level,Args...>{ tags, std::forward<fmt::format_string<Args&...>>(m), std::forward<const Args>(args)..., sl } \
+		{} \
+	}; \
+	template<class... Args> \
+	Level( ELogTags tags, const fmt::format_string<Args&...>, const Args&... )->Level<Args...>
+
+	template<class... Args>
+	Trace_( ELogTags tags, const fmt::format_string<Args&...>, const Args&... )->Trace_<Args...>;
+	// LoggerLevel( Debug );
+	// LoggerLevel( Information );
+	// LoggerLevel( Warning );
+	// LoggerLevel( Error );
+	// LoggerLevel( Critical );
+	/*
+	template<class... Args>
+	debug( ELogTags logTags, const fmt::format_string<Args const&...>, const Args&... )->Logger<ELogLevel::Debug,Args...>;
+
+	template<class... Args>
+	critical( ELogTags logTags, const fmt::format_string<Args const&...>, const Args&... )->Logger<ELogLevel::Critical,Args...>;
+*/
    using namespace std::literals;
 	Φ HaveLogger()ι->bool;
 	Φ ClearMemoryLog()ι->void;

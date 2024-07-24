@@ -1,0 +1,111 @@
+syntax = "proto3";
+package Jde.App.Proto.FromClient;
+
+import "google/protobuf/timestamp.proto";
+import "Common.proto";
+import "App.proto";
+
+message Instance{
+	string application=1;
+	string host=2;
+	uint32 pid=3;
+	Jde.Proto.ELogLevel server_log_level=4;
+	Jde.Proto.ELogLevel client_log_level=5;
+	uint32 start_time=6;
+	uint32 web_port=7;
+	string instance_name=8;
+}
+
+message LogEntry{
+	google.protobuf.Timestamp time=1;
+	Jde.Proto.ELogLevel level=2;
+	uint32 message_id=3;
+	uint32 file_id=4;
+	uint32 function_id=5;
+	uint32 line=6;
+	uint32 user_pk=7;
+	uint64 thread_id=8;
+	uint64 tags=9;
+	repeated string args=10;
+}
+
+enum EFields{
+	FieldsNone=0;
+	TimestampField=0x1;
+	MessageId=0x2;
+	MessageField=0x4;
+	Level=0x8;
+	FileId=0x10;
+	File=0x20;
+	FunctionId=0x40;
+	Function=0x80;
+	LineNumber=0x100;
+	UserId=0x200;
+	User=0x400;
+	ThreadId=0x800;
+	Thread=0x1000;
+	VariableCount=0x2000;
+	SessionId=0x4000;
+}
+
+message StringValue{
+	EFields field=1;
+	uint32 id=2;
+	string value=3;
+}
+
+message Status{
+	google.protobuf.Timestamp start_time=1;
+	uint64 memory=2;
+	Jde.Proto.ELogLevel server_min_log_level=3;
+	Jde.Proto.ELogLevel client_min_log_level=4;
+	repeated string details=5;
+}
+
+message AddSession{
+	string domain=1;
+	string login_name=2;
+	uint32 provider_id=3;
+	string user_endpoint=4;
+	bool is_socket = 5;
+}
+
+message ForwardExecution{
+	uint32 app_pk = 1;
+	uint32 app_instance_pk = 2; //0 for any
+	bytes execution_transmission = 3;
+}
+
+enum ERequestIdType{
+	ERequestIdTypeNone = 0;
+	UnsubscribeLogs = 1;
+}
+
+message Message{
+	uint32 request_id=1;
+	oneof Value{
+		AddSession add_session=2;//called from authenticators like iotWebsocket
+		string graph_ql=3;
+		Instance instance = 4;
+		LogEntry log_entry = 5;
+		uint32 session_id=6;  //Attach session id for the socket.
+		uint32 session_info=7;//called from other apps/web page to request information about session TODO graphql
+		Status status = 8; //send current app status.
+		StringValue string_value = 9; //send a string.
+		Jde.App.Proto.StringPKs request_strings=10;
+		bool subscribe_status = 11;//subscribe to application statuses.
+		string subscribe_logs = 12;//subscribe to application logs.  TODO graphql
+		Jde.Proto.Exception exception = 13;
+		ERequestIdType request_id_type = 14;//Just the request id is needed.
+
+		ForwardExecution forward_execution = 31;//webPage->appServer to call execute with creds.
+		ForwardExecution forward_execution_anonymous = 32;//call execute with no creds.
+		bytes execute_anonymous = 33;//appServer->2ndServer, no user context.
+		Jde.App.Proto.Execute execute = 34;//execute with user context.
+		bytes execute_response = 35;
+	}
+}
+
+message Transmission{
+	repeated Message messages = 1;
+}

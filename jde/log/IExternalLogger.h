@@ -23,8 +23,8 @@ namespace Jde::Logging{
 		β Log( ExternalMessage&& m, SRCE )ι->void=0;
 		β Log( const ExternalMessage& m, const vector<string>* args=nullptr, SRCE )ι->void=0;
 		β MinLevel()ι->ELogLevel{ return _minLevel; }
-		β SetMinLevel(ELogLevel level)ι->void=0;
-		vector<LogTag> Tags;
+		β SetMinLevel( ELogLevel level )ι->void=0;
+		concurrent_flat_map<ELogTags,ELogLevel> Tags;
 	protected:
 		ELogLevel	_minLevel{ ELogLevel::NoLog };
 	};

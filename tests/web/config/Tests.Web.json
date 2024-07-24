@@ -1,8 +1,8 @@
 {
 	"testing":{
-		"testsa":"CertificateTests.*",
-		"testsb":"SocketTests.*",
-		"tests":"WebTests.*"
+		"tests":"CertificateTests.*",
+		"testsb":"SocketTests.BadTransmissionClient",
+		"testsc":"WebTests.*"
 	},
 	"cryptoTests":{
 		"clear": true
@@ -11,7 +11,7 @@
 		"defaultLevel": "Information",
 		"tags": {
 			"Trace":["tests",
-				"http.client.sent", "http.client.received", "http.server.sent", "http.server.received", "socket.client.sent", "socket.client.received", "socket.server.sent", "socket.server.received"
+				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
 			],
 			"Debug":["settings"],
 			"Information":[],

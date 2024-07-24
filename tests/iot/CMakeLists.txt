@@ -12,8 +12,9 @@ set( open62541Dir ${open62541_DIR}/../../.. )
 message( "open62541LinkDir=${open62541Dir}/lib" )
 link_directories( ${open62541Dir}/lib )
 include_directories( ${open62541Dir}/include )
+include_directories( $ENV{JDE_DIR}/Public/jde/app/shared/proto )
 
-add_executable( ${CMAKE_PROJECT_NAME} main.cpp helpers.cpp OpcServerTests.cpp 
+add_executable( ${CMAKE_PROJECT_NAME} main.cpp helpers.cpp OpcServerTests.cpp
 	uatypes/UAClientTests.cpp )
 
 target_link_libraries( ${CMAKE_PROJECT_NAME} libopen62541.a )
@@ -22,13 +23,13 @@ target_link_libraries( ${CMAKE_PROJECT_NAME} gtest_main)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	target_link_libraries( ${CMAKE_PROJECT_NAME} stdc++)
 	target_link_libraries( ${CMAKE_PROJECT_NAME} stdc++fs)
-endif()	
+endif()
 target_link_libraries( ${CMAKE_PROJECT_NAME} libcrypto.a)
 target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a)
 
 target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a libutf8_validity.a )
 target_link_libraries( ${CMAKE_PROJECT_NAME} absl::cord absl::log_internal_check_op absl::log_internal_conditions absl::log_internal_message absl::raw_hash_set absl::status absl::statusor ) #absl::strings
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.Crypto Jde.Ssl Jde.Iot Jde.Web Jde.XZ )
+target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.App.Shared Jde.App.Client Jde.Crypto Jde.Iot Jde.Ssl Jde.Web.Client Jde.Web.Server Jde.XZ )
 
 target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
 	<gtest/gtest.h>
@@ -45,9 +46,12 @@ target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
 	<open62541/client_subscriptions.h>
 	<open62541/plugin/log_stdout.h>
 	<jde/iot/TypeDefs.h>
+	<jde/iot/types/proto/Iot.Common.pb.h>
+	<jde/iot/types/proto/Iot.FromClient.pb.h>
+	<jde/iot/types/proto/Iot.FromServer.pb.h>
 	<jde/TypeDefs.h>
+	<jde/log/Log.h>
 	<jde/Exception.h>
-	<jde/Log.h>
-	<jde/web/exports.h>
+	<jde/web/server/exports.h>
 	"../../../Framework/source/db/Database.h"
 )

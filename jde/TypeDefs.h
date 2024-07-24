@@ -145,7 +145,6 @@ namespace Jde
 	using boost::concurrent_flat_map;
 	using boost::concurrent_flat_set;
 #endif
-	using fmt::format;
 	using str = const std::string&;
 
 	template<class T> using vec = const vector<T>&;
@@ -171,10 +170,22 @@ namespace Jde
 	constexpr bool _msvc{ false };
 #endif
 
+	using fmt::format;
+	ψ 𐢜( fmt::format_string<Args...> fmt, Args&&... args )ε{ return fmt::format<Args...>( fmt, std::forward<Args>(args)... ); }
+
 	enum class ELogLevel : int8{ NoLog=-1, Trace=0, Debug=1, Information=2, Warning=3, Error=4, Critical=5/*, None=6*/ };
-	Ξ operator<(ELogLevel a,ELogLevel b)ι->bool{ return (int)a<(int)b; };
-	inline constexpr std::array<sv,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };
-	constexpr sv ToString( ELogLevel v )ι{ return (uint8)v<ELogLevelStrings.size() ? ELogLevelStrings[(uint8)v] : sv{}; }
+	inline constexpr std::array<sv,7> ELogLevelStrings = { "Trace", "Debug", "Information", "Warning", "Error", "Critical", "None" };
+	constexpr sv ToString( ELogLevel v )ι{ return (uint8)v<ELogLevelStrings.size() ? ELogLevelStrings[(uint8)v] : sv{}; }//TODO remove
+
+	Τ concept IsEnum = std::is_enum_v<T>;
+	template<IsEnum T> constexpr α operator|( T a, T b )ι->T{ return (T)( std::to_underlying<T>(a)|std::to_underlying<T>(b) ); };
+	template<IsEnum T> constexpr α operator&( T a, T b )ι->T{ return (T)(std::to_underlying<T>(a)&std::to_underlying<T>(b)); };
+	template<IsEnum T> constexpr α operator<( T a, T b )ι->bool{ return std::to_underlying<T>(a)<std::to_underlying<T>(b); };
+	template<IsEnum T> constexpr α operator~(T a)ι{ return (T)( ~std::to_underlying<T>(a) ); }
+	template<IsEnum T> constexpr α operator|=(T& a, T b){ return a = a | b; }
+	template<IsEnum T> constexpr α empty( T a )ι->bool{ return std::to_underlying<T>(a)==0; };
+	template<IsEnum T> constexpr α underlying( T a )ι{ return std::to_underlying<T>(a); };
+
 
 #ifdef NDEBUG
 	inline constexpr bool _debug{ false };
