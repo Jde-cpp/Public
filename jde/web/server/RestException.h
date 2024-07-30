@@ -40,9 +40,6 @@ namespace Jde::Web::Server{
 		auto res = _request.Response<http::string_body>( Status() );
 		res.body() = what();
 		res.prepare_payload();
-		auto& sl = Stack().front();
-		auto _logTag = WebTag();
-		TRACESL( "InternalServerError={}", res.body() );
 		return res;
 	}
 }

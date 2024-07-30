@@ -1,8 +1,8 @@
 {
 	"testing":{
-		"tests":"CertificateTests.*",
-		"testsb":"SocketTests.BadTransmissionClient",
-		"testsc":"WebTests.*"
+		"testsa":"CertificateTests.DefaultSettings",
+		"testsb":"SocketTests.*",
+		"tests":"WebTests.BadSessionId"
 	},
 	"cryptoTests":{
 		"clear": true
@@ -13,7 +13,7 @@
 			"Trace":["tests",
 				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
 			],
-			"Debug":["settings"],
+			"Debug":["settings", "app"],
 			"Information":[],
 			"Warning":[],
 			"Error":[],
@@ -25,8 +25,7 @@
 	"http":{
 		"address": null,
 		"port": 5005,
-		"threads": 1,
-		"timeout": "PT5S",
+		"timeout": "PT60S",
 		"maxLogLength": 31,
 		"accessControl": {
 			"allowOrigin": "*",
@@ -46,6 +45,7 @@
 		}
 	},
 	"workers":{
+		"executor": 1,
 		"drive": {"threads": 1}
 	}
 }

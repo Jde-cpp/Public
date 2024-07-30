@@ -1,8 +1,8 @@
-//#include <execution>
-#include <jde/web/flex/Flex.h>
+#include <jde/web/client/http/ClientHttpAwait.h>
+#include <jde/web/server/Flex.h>
 #include <jde/crypto/OpenSsl.h>
 #include "mocks/ServerMock.h"
-#include "../../../Ssl/source/Ssl.h"
+
 
 #define var const auto
 namespace Jde::Web{
@@ -16,8 +16,8 @@ namespace Jde::Web{
 		CertificateTests(){}
 		~CertificateTests() override{}
 
-		static α SetUpTestCase()->void{};
-		α SetUp()->void override{};
+		Ω SetUpTestCase()->void{};
+		α SetUp()->void override{ Mock::Start(); }
 		α TearDown()->void override;
 		static json OriginalSettings;
 	};
@@ -35,20 +35,21 @@ namespace Jde::Web{
 		Mock::Stop();
 		Settings::Global().Json() = OriginalSettings;
 	}
-
+	using Web::Client::ClientHttpAwait;
+	using Web::Client::ClientHttpRes;
 	TEST_F( CertificateTests, DefaultSettings ){
 		ResetSettings( IApplication::ApplicationDataFolder()/"ssl" );
-		Mock::Start();
-		var result = Ssl::Send<string>( Host, "/isSsl", {}, std::to_string(Port), "text/ping", {}, http::verb::get );
-		ASSERT_EQ( "SSL=true", result );
+		auto await = ClientHttpAwait{ Host, "/isSsl", Port, {.ContentType="text/ping"} };
+		var res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
+		ASSERT_EQ( "SSL=true", res.Body() );
 	}
 
 	TEST_F( CertificateTests, NewDirectory ){
 		ResetSettings( "/tmp/WebTests/ssl" );
 		fs::remove_all( "/tmp/WebTests/ssl" );
 		Settings::Set( "http/ssl/passcode", "PaSsCoDe", false );
-		Mock::Start();
-		var result = Ssl::Send<string>( Host, "/isSsl", {}, std::to_string(Port), "text/ping", {}, http::verb::get );
-		ASSERT_EQ( "SSL=true", result );
+		auto await = ClientHttpAwait{ Host, "/isSsl", Port, {.ContentType="text/ping"} };
+		var res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
+		ASSERT_EQ( "SSL=true", res.Body() );
 	}
 }

@@ -1,22 +1,20 @@
-#include "WebsocketMock.h"
-#include <jde/web/flex/IWebsocketSession.h>
+#include "ServerSocketSession.h"
+#include <jde/web/server/IWebsocketSession.h>
 #include "ServerMock.h"
 
 #define var const auto
 namespace Jde::Web::Mock{
-	WebsocketSession::WebsocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
+	ServerSocketSession::ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
 		base{ move(stream), move(buffer), move(request), move(userEndpoint), connectionIndex }
 	{}
 
-	α WebsocketSession::OnConnect( SessionPK sessionId, Http::RequestId requestId )ι->Web::UpsertAwait::Task{
-		try{
+	α ServerSocketSession::OnConnect( SessionPK sessionId, RequestId requestId )ι->Server::Sessions::UpsertAwait::Task{
+			try{
+			auto info = co_await Server::Sessions::UpsertAwait{ 𐢜("{:x}", sessionId), _userEndpoint.address().to_string(), true };
 			Proto::FromServerTransmission t;
 			auto m = t.add_messages();
-			auto info = co_await Web::UpsertAwait{ Jde::format("{:x}", sessionId), _userEndpoint.address().to_string(), true };
-			auto ack = m->mutable_ack();
-			ack->set_session_id( info.SessionId );
-			ack->set_server_socket_id( Id() );
 			m->set_request_id( requestId );
+			m->set_session_id( sessionId );
 			Write( move(t) );
 		}
 		catch( IException& e ){
@@ -27,14 +25,23 @@ namespace Jde::Web::Mock{
 			Write( move(t) );
 		}
 	}
-	α WebsocketSession::WriteException( IException&& e )ι->void{
+
+	α ServerSocketSession::WriteException( IException&& e )ι->void{
 		Proto::FromServerTransmission t;
 		auto m = t.add_messages();
 		m->set_exception( e.what() );
 		Write( move(t) );
 	}
 
-	α WebsocketSession::OnRead( Proto::FromClientTransmission&& messages )ι->void{
+	α ServerSocketSession::SendAck( uint id )ι->void{
+		LogWrite( 𐢜("Ack id: {:x}", id), 0 );
+		Proto::FromServerTransmission t;
+		t.add_messages()->set_ack( id );
+		Write( move(t) );
+	}
+
+
+	α ServerSocketSession::OnRead( Proto::FromClientTransmission&& messages )ι->void{
 		for( const Proto::FromClientMessage& m : messages.messages() ){
 			using enum Proto::FromClientMessage::ValueCase;
 			var requestId = m.request_id();
@@ -63,7 +70,7 @@ namespace Jde::Web::Mock{
 		}
 	}
 	α RequestHandler::RunWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->void{
-		auto pSession = ms<WebsocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
+		auto pSession = ms<ServerSocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
 		pSession->Run();
 	};
 

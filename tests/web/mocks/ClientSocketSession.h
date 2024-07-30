@@ -1,12 +1,12 @@
 #pragma once
-#include <jde/http/IClientSocketSession.h>
+#include <jde/web/client/socket/IClientSocketSession.h>
 #include <web/proto/test.pb.h>
-#include <jde/http/ClientSocketAwait.h>
+#include <jde/web/client/socket/ClientSocketAwait.h>
 
 namespace Jde::Web::Mock{
-	using namespace Jde::Http;
-	struct ClientSocketSession final : TClientSocketSession<Http::Proto::FromClientTransmission,Http::Proto::FromServerTransmission>{
-		using base = TClientSocketSession<Http::Proto::FromClientTransmission,Http::Proto::FromServerTransmission>;
+	using namespace Jde::Web::Client;
+	struct ClientSocketSession final : TClientSocketSession<Proto::FromClientTransmission,Proto::FromServerTransmission>{
+		using base = TClientSocketSession<Proto::FromClientTransmission,Proto::FromServerTransmission>;
 		ClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι;
 
 		α Connect( SessionPK sessionId, SRCE )ι->ClientSocketAwait<SessionPK>;
@@ -16,8 +16,8 @@ namespace Jde::Web::Mock{
 		α BadTransmissionServer( SRCE )ι->ClientSocketAwait<string>;
 	private:
 		α HandleException( std::any&& h, string&& what )ι;
-		α OnRead( Http::Proto::FromServerTransmission&& transmission )ι->void override;
+		α OnRead( Proto::FromServerTransmission&& transmission )ι->void override;
 		α OnClose( beast::error_code ec )ι->void override;
-		α OnAck( RequestId requestId, const Proto::Ack& ack )ι->void;
+		α OnAck( uint32 ack )ι->void;
 	};
 }

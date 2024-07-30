@@ -1,19 +1,15 @@
 syntax = "proto3";
 option optimize_for = LITE_RUNTIME;
 
-package Jde.Http.Proto;
-
-message Ack{
-	uint32 session_id = 1;
-	uint32 server_socket_id = 2;
-}
+package Jde.Web.Proto;
 
 message FromServerMessage{
 	uint32 request_id=1;
 	oneof Value{
-		Ack ack=2;
-		string exception=3;
-		string echo_text=4;
+		uint32 ack=2;
+		uint32 session_id=3;
+		string exception=4;
+		string echo_text=5;
 	}
 }
 

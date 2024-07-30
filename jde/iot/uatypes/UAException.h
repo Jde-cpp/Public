@@ -12,7 +12,6 @@ namespace Jde::Iot{
 		Ω Message( StatusCode x )ι->const char*{ return UA_StatusCode_name(x); }
 		Ω Message( StatusCode x, UA_Client* ua, RequestId requestId )ι->string{ return format("[{:x}.{}] - {}", (uint)ua, requestId, UA_StatusCode_name(x)); }
 
-		α Clone()ι->sp<IException> override{ return ms<UAException>(move(*this)); }
 		α Move()ι->up<IException> override{ return mu<UAException>(move(*this)); }
 		α Ptr()ι->std::exception_ptr override{ return make_exception_ptr(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }

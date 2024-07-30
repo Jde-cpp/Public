@@ -17,8 +17,8 @@ namespace boost::system{ class error_code; }
 
 #define RETHROW(x, ...) catch( std::exception& e ){ throw Exception{SRCE_CUR, move(e), x __VA_OPT__(,) __VA_ARGS__}; }
 #define $ template<class... Args>
-#define COMMON α Clone()ι->sp<IException> override{ return ms<T>(move(*this)); }\
-	α Move()ι->up<IException> override{ return mu<T>(move(*this)); }\
+//α Clone()ι->sp<IException> override{ return ms<T>(move(*this)); }
+#define COMMON α Move()ι->up<IException> override{ return mu<T>(move(*this)); }\
 	α Ptr()ι->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }\
 	[[noreturn]] α Throw()->void override{ throw move(*this); }
 namespace Jde{
@@ -59,7 +59,7 @@ namespace Jde{
 		α What()Ι->const string&{ what(); return _what; }
 		α PrependWhat( const string& prepend )ι->void{ _what = prepend+_what; }
 		α Level()Ι->ELogLevel{return _level;} α SetLevel( ELogLevel level )Ι{ _level=level;}
-		β Clone()ι->sp<IException> =0;
+		//β Clone()ι->sp<IException> =0;
 		β Move()ι->up<IException> =0;
 		α Push( SL sl )ι{ _stack.stack.push_back(sl); }
 		α Stack()Ι->const StackTrace&{ return _stack; }
@@ -123,10 +123,10 @@ namespace Jde{
 		COMMON
 	};
 
-	struct Γ CodeException final : IException{
-//		CodeException( std::error_code&& code, ELogLevel level=ELogLevel::Error, SRCE )ι;
-		CodeException( std::error_code&& code, sp<LogTag> tag, ELogLevel level=ELogLevel::Error, SRCE )ι;
-		CodeException( std::error_code&& code, sp<LogTag> tag, string value, ELogLevel level=ELogLevel::Error, SRCE )ι;
+	struct Γ CodeException /*final*/ : IException{
+		CodeException( std::error_code code, sp<LogTag> tag, ELogLevel level=ELogLevel::Error, SRCE )ι;
+		CodeException( std::error_code code, sp<LogTag> tag, string value, ELogLevel level=ELogLevel::Error, SRCE )ι;
+		CodeException( std::error_code code, ELogTags tags, ELogLevel level=ELogLevel::Debug, SRCE )ι;
 
 		using T=CodeException;
 		COMMON
@@ -134,7 +134,7 @@ namespace Jde{
 		Ω ToString( const std::error_code& pErrorCode )ι->string;
 		Ω ToString( const std::error_category& errorCategory )ι->string;
 		Ω ToString( const std::error_condition& errorCondition )ι->string;
-	private:
+	protected:
 		std::error_code _errorCode;
 	};
 
@@ -168,20 +168,6 @@ namespace Jde{
 		fs::path _path;
 	};
 
-	struct Γ NetException : IException{
-		NetException( sv host, sv target, uint code, string result, ELogLevel level=ELogLevel::Debug, SRCE )ι;
-		NetException( NetException&& f )ι:IException{ move(f) }, Host{ f.Host }, Target{ f.Target }, Result{ f.Result }{}
-		~NetException(){ Log(); }
-		α Log()Ι->void override{ Log( {} ); }
-		α Log( string extra )Ι->void;
-
-		using T=NetException;
-		COMMON
-
-		const string Host;
-		const string Target;
-		const string Result;
-	};
 
 #define var const auto
 	$ IException::IException( SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&&... args )ι:

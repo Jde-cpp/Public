@@ -52,6 +52,9 @@ DISABLE_WARNINGS
 #define SPDLOG_FMT_EXTERNAL
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#ifndef NDEBUG
+	#define BOOST_USE_ASAN
+#endif
 #include <boost/container/flat_map.hpp>
 #include <boost/container/flat_set.hpp>
 #include <boost/unordered/concurrent_flat_map.hpp>
@@ -131,8 +134,6 @@ namespace Jde
   template<class T, class... Args> α ms( Args&&... args )ι(noexcept(T(std::forward<Args>(args)...)))->sp<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
 
 	using std::vector;
-	template<class T> using VectorPtr = std::shared_ptr<std::vector<T>>;
-
 	using PortType=unsigned short;
 	using DayIndex=uint_fast16_t;//TODO Refactor remove
 	using Day=uint_fast16_t;
@@ -178,13 +179,14 @@ namespace Jde
 	constexpr sv ToString( ELogLevel v )ι{ return (uint8)v<ELogLevelStrings.size() ? ELogLevelStrings[(uint8)v] : sv{}; }//TODO remove
 
 	Τ concept IsEnum = std::is_enum_v<T>;
-	template<IsEnum T> constexpr α operator|( T a, T b )ι->T{ return (T)( std::to_underlying<T>(a)|std::to_underlying<T>(b) ); };
-	template<IsEnum T> constexpr α operator&( T a, T b )ι->T{ return (T)(std::to_underlying<T>(a)&std::to_underlying<T>(b)); };
-	template<IsEnum T> constexpr α operator<( T a, T b )ι->bool{ return std::to_underlying<T>(a)<std::to_underlying<T>(b); };
-	template<IsEnum T> constexpr α operator~(T a)ι{ return (T)( ~std::to_underlying<T>(a) ); }
-	template<IsEnum T> constexpr α operator|=(T& a, T b){ return a = a | b; }
-	template<IsEnum T> constexpr α empty( T a )ι->bool{ return std::to_underlying<T>(a)==0; };
 	template<IsEnum T> constexpr α underlying( T a )ι{ return std::to_underlying<T>(a); };
+	template<IsEnum T> constexpr α operator|( T a, T b )ι->T{ return (T)( underlying(a)|underlying(b) ); };
+	template<IsEnum T> constexpr α operator&( T a, T b )ι->T{ return (T)(underlying(a)&underlying(b)); };
+	template<IsEnum T> constexpr α operator<( T a, T b )ι->bool{ return underlying(a)<underlying(b); };
+	template<IsEnum T> constexpr α operator~( T a )ι{ return (T)( ~underlying(a) ); }
+	template<IsEnum T> constexpr α operator|=( T& a, T b ){ return a = a | b; }
+	template<IsEnum T> constexpr α operator!( T x ){ return underlying(x)!=0; }
+	template<IsEnum T> constexpr α empty( T a )ι->bool{ return underlying(a)==0; };
 
 
 #ifdef NDEBUG

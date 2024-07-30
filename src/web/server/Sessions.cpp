@@ -81,7 +81,7 @@ namespace	Sessions{
 				info = existing;
 			}
 			else
-				TRACET( Web::Server::WebTag(), "[{}]Session expired:  '{}'", sessionId, DateTime{existingExpiration}.ToIsoString() );
+				Trace( ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, DateTime{existingExpiration}.ToIsoString() );
 		} );
 		if( _lastTrim<steady_clock::now()-_restExpirationDuration ){
 			_sessions.erase_if( []( auto& kv ){ return kv.second->Expiration<steady_clock::now(); } );

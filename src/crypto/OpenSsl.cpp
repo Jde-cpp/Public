@@ -1,6 +1,7 @@
 ﻿#include <jde/crypto/OpenSsl.h>
 #include "OpenSslInternal.h"
-#include "../../../Ssl/source/Ssl.h"
+#include <jde/Assert.h>
+#include <jde/Str.h>
 
 #define var const auto
 
@@ -75,7 +76,7 @@ namespace Jde{
 		BioPtr file{ BIO_new_file(outputFile.string().c_str(), "w"), ::BIO_free };
 		CALL( PEM_write_bio_X509(file.get(), pCert) );
 	}
-	α RsaPemFromModExp( const Crypto::Modulus& modulus, const Crypto::Exponent& exponent )ε->KeyPtr;
+	α RsaPemFromModExp( Crypto::Modulus modulus, const Crypto::Exponent& exponent )ε->KeyPtr;
 
 	α Crypto::Fingerprint( const Modulus& modulus, const Exponent& exponent )ι->MD5{
 		//openssl pkey -pubin -in server.pem -outform DER | openssl dgst -md5 -c
@@ -117,7 +118,7 @@ namespace Jde{
 	}
 
 	//https://stackoverflow.com/questions/28770426/rsa-public-key-conversion-with-just-modulus
-	α RsaPemFromModExp( const Crypto::Modulus& modulus, const Crypto::Exponent& exponent )ε->KeyPtr{
+	α RsaPemFromModExp( Crypto::Modulus modulus, const Crypto::Exponent& exponent )ε->KeyPtr{//this changes the modulus.
 		//uint32_t bigEndian{ __builtin_bswap32(exponent) };
 //		array<unsigned char,3> bigEndianBytes{ 1, 0, 1 };
 		OSSL_PARAM params[]{

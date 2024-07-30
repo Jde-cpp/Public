@@ -1,9 +1,9 @@
 #pragma once
 #include "HttpRequestAwait.h"
-#include <jde/web/flex/Flex.h>
+#include <jde/web/server/Flex.h>
 
 namespace Jde::Web::Mock{
-	using namespace Jde::Web::Flex;
+	using namespace Jde::Web::Server;
 	constexpr string Host{ "localhost" };
 	constexpr PortType Port{ 5005 };
 	α Start()ι->void;

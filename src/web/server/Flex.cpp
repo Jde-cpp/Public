@@ -1,26 +1,24 @@
 #include <jde/web/server/Flex.h>
 #include <jde/crypto/OpenSsl.h>
 #include <jde/web/server/IApplicationServer.h>
+#include <jde/thread/Execution.h>
 #include "CancellationSignals.h"
+#include <jde/web/usings.h>
 #define var const auto
 
 namespace Jde::Web{
-	static sp<LogTag> _logTag = Logging::Tag( "web" );
-	α Server::WebTag()ι->sp<LogTag>{ return _logTag; }
-
-
-	Server::CancellationSignals _cancellationSignals;
+	optional<ssl::context> _ctx;
 
 	up<Server::IRequestHandler> _requestHandler;//TODO make optional
 	up<Server::IApplicationServer> _appServer;
 	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<json>>{ return _appServer->GraphQL( move(q), userPK, sl ); }
 	α Server::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Server::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
 	α Server::GetRequestHandler()ι->IRequestHandler&{ return *_requestHandler; }
-	uint16 _maxLogLength{ Settings::Get<uint16>("http/maxLogLength").value_or(255) };
+	static uint16 _maxLogLength{ Settings::Get<uint16>("http/maxLogLength").value_or(1024) };
 	α Server::MaxLogLength()ι->uint16{ return _maxLogLength; }
 
 	namespace Server{
-		α LoadServerCertificate( ssl::context& ctx )ε->void;
+		α LoadServerCertificate()ε->void;
 		α Internal::HandleCustomRequest( HttpRequest req, sp<RestStream> stream )ι->IHttpRequestAwait::Task{
 			try{
 				HttpTaskResult result = co_await *( GetRequestHandler().HandleRequest(move(req)) );
@@ -37,66 +35,65 @@ namespace Jde::Web{
 		}
 	}
 
-	α Server::Fail( beast::error_code ec, char const* what )ι->void{
+	α Server::ReadSeverity( beast::error_code ec )ι->ELogLevel{
 		auto level{ ELogLevel::Error };
 		switch( ec.value() ){
 			case net::error::operation_aborted: //EOF
 				level = ELogLevel::Debug;
 			break;
-			case net::ssl::error::stream_truncated: //also known as an SSL "short read", peer closed the connection without performing the required closing handshake.
+			case ssl::error::stream_truncated: //also known as an SSL "short read", peer closed the connection without performing the required closing handshake.
 			case 0xA000416: //ERR_SSL_SSLV3_ALERT_CERTIFICATE_UNKNOWN: The client doesn't trust the certificate.
 				level = ELogLevel::Trace;
 			break;
 		}
-		CodeException{ static_cast<std::error_code>(ec), WebTag(), level };
+		return level;
 	}
 
-	bool _started{};
-	α Server::HasStarted()ι->bool{ return _started; }
-
+	atomic_flag _started{};
+	sp<net::cancellation_signal> _cancelSignal;
 	α Server::Start( up<IRequestHandler> handler, up<IApplicationServer>&& server )ε->void{
 		_requestHandler = move( handler );
 		_appServer = move(server);
-		ssl::context ctx{ ssl::context::tlsv12 };
-		LoadServerCertificate( ctx );
+		if( !_ctx ){
+			_ctx = ssl::context{ ssl::context::tlsv12 };
+			LoadServerCertificate();
+		}
 		var port = Settings::Get<PortType>( "http/port" ).value_or( 6809 );
 
-		var threadCount = Settings::Get<uint8>( "http/threads" ).value_or( 1 );
-		auto ioc = IO::AsioContextThread( threadCount );
-    net::co_spawn( *ioc, Listen(ctx, tcp::endpoint{net::ip::make_address(Settings::Get<string>("http/address").value_or("0.0.0.0")), port}), net::bind_cancellation_slot(_cancellationSignals.slot(), net::detached) );
-
-    std::vector<std::jthread> v; v.reserve( threadCount - 1 );
-    for( auto i = threadCount - 1; i > 0; --i )
-      v.emplace_back( [=]{ Threading::SetThreadDscrptn( Jde::format("Beast[{}]", i) ); ioc->run(); } );
-
-		_started = true;
-		Threading::SetThreadDscrptn( "Beast[0]" );
-    ioc->run();
-		_started = false;
-    for( auto& t : v )// (If we get here, it means we got a SIGINT or SIGTERM)
-      t.join();
-		IO::DeleteContextThread();
+		_cancelSignal = ms<net::cancellation_signal>();
+		auto address = tcp::endpoint{ net::ip::make_address(Settings::Get<string>("http/address").value_or("0.0.0.0")), port };
+    net::co_spawn( *Executor(), Listen(address), net::bind_cancellation_slot(_cancelSignal->slot(), net::detached) );
+		Execution::AddCancelSignal( _cancelSignal );
+		Execution::Run();
+		_started.wait( true );
 	}
 
 	α Server::Stop( bool terminate )ι->void{
-		auto ioc = IO::AsioContextThread();
-		if( ioc && terminate )
-			ioc->stop(); // Stop the `io_context`. This will cause `run()` to return immediately, eventually destroying the `io_context` and all of the sockets in it.
-		else
-			_cancellationSignals.emit( net::cancellation_type::all );
+		ASSERT( _cancelSignal );
+		_started.clear();
+		_started.notify_all();
+		if( _cancelSignal )
+			_cancelSignal->emit( net::cancellation_type::all );
+		_cancelSignal = nullptr;
+		_ctx.reset();
 	}
 
-	α Server::Listen( ssl::context& ctx, tcp::endpoint endpoint )ι->net::awaitable<void, executor_type>{
+	α Server::Listen( tcp::endpoint endpoint )ι->net::awaitable<void, executor_type>{
     typename tcp::acceptor::rebind_executor<executor_with_default>::other acceptor{ co_await net::this_coro::executor };
     if( !InitListener(acceptor, endpoint) )
       co_return;
 
+		_started.test_and_set();
+		_started.notify_all();
     while( (co_await net::this_coro::cancellation_state).cancelled() == net::cancellation_type::none ){
 			auto [ec, sock] = co_await acceptor.async_accept();
 			const auto exec = sock.get_executor();
 			var userEndpoint = sock.remote_endpoint();
-			if( !ec )
-				net::co_spawn( exec, DetectSession(StreamType(move(sock)), ctx, move(userEndpoint)), net::bind_cancellation_slot(_cancellationSignals.slot(), net::detached) );// We dont't need a strand, since the awaitable is an implicit strand.
+			if( !ec ){
+				auto cancelSignal = ms<net::cancellation_signal>();
+				net::co_spawn( exec, DetectSession(StreamType(move(sock)), move(userEndpoint), cancelSignal), net::bind_cancellation_slot(cancelSignal->slot(), net::detached) );// We dont't need a strand, since the awaitable is an implicit strand.
+				Execution::AddCancelSignal( cancelSignal );
+			}
     }
 	}
 
@@ -104,47 +101,51 @@ namespace Jde::Web{
     beast::error_code ec;
     acceptor.open( endpoint.protocol(), ec );
     if( ec ){
-			Fail( ec, "open" );
+			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Critical };
 			return false;
     }
 
     acceptor.set_option( net::socket_base::reuse_address(true), ec );// Allow address reuse
     if( ec ){
-			Fail( ec, "set_option" );
+			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Critical };
 			return false;
     }
 
     acceptor.bind( endpoint, ec );// Bind to the server address
     if( ec ){
-			Fail( ec, "bind" );
+			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Critical };
 			return false;
     }
     acceptor.listen( net::socket_base::max_listen_connections, ec );
     if( ec ){
-			Fail( ec, "listen" );
+			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Critical };
 			return false;
     }
     return true;
 	}
 	atomic<uint32> _sequence;
-	α Server::DetectSession( StreamType stream, net::ssl::context& ctx, tcp::endpoint userEndpoint )ι->net::awaitable<void, executor_type>{
+	α Server::DetectSession( StreamType stream, tcp::endpoint userEndpoint, sp<net::cancellation_signal> cancel )ι->net::awaitable<void, executor_type>{
     beast::flat_buffer buffer;
     stream.expires_after( std::chrono::seconds(30) );// Set the timeout.
     auto [ec, result] = co_await beast::async_detect_ssl( stream, buffer );// on_run
-    if( ec )
-			co_return Fail(ec, "detect");
+    if( ec ){
+			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Warning };
+			co_return;
+		}
 		uint32 index = ++_sequence;
     if( result ){
-			beast::ssl_stream<StreamType> ssl_stream{ move(stream), ctx };
-			auto [ec, bytes_used] = co_await ssl_stream.async_handshake( net::ssl::stream_base::server, buffer.data() );
-			if(ec)
-				co_return Fail( ec, "handshake" );
+			beast::ssl_stream<StreamType> ssl_stream{ move(stream), *_ctx };
+			auto [ec, bytes_used] = co_await ssl_stream.async_handshake( ssl::stream_base::server, buffer.data() );
+			if(ec){
+				CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Warning };
+				co_return;
+			}
 
 			buffer.consume(bytes_used);
-			co_await RunSession( ssl_stream, buffer, move(userEndpoint), true, index );
+			co_await RunSession( ssl_stream, buffer, move(userEndpoint), true, index, cancel );
     }
     else
-			co_await RunSession( stream, buffer, move(userEndpoint), false, index );
+			co_await RunSession( stream, buffer, move(userEndpoint), false, index, cancel );
 	}
 namespace Server{
 	α GraphQL( HttpRequest req, sp<RestStream> stream )->Task{
@@ -169,19 +170,17 @@ namespace Server{
 		}
 	}
 
-	α Internal::HandleRequest( HttpRequest req, sp<RestStream> stream )ι->void{
+	α Internal::HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task{
 		try{
-			[&]()->Sessions::UpsertAwait::Task {
-				req.SessionInfo = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false );
-			}();
+			req.SessionInfo = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false );
 		}
 		catch( IException& e ){
 			//Add error code.
 			//capture error code on client.
 			Send( RestException<http::status::unauthorized>(SRCE_CUR, move(req), move(e), "Could not get sessionInfo."), move(stream) );
-			return;
+			co_return;
 		}
-		if( req.Method() == http::verb::get && req.Target()=="/graphql" ){
+		if( req.IsGet("/graphql") ){
 			GraphQL( move(req), stream );
 		}
 		else
@@ -191,6 +190,7 @@ namespace Server{
 	α Internal::SendOptions( const HttpRequest&& req )ι->http::message_generator{
 		auto res = req.Response<http::empty_body>( http::status::no_content );
 		res.set( http::field::access_control_allow_methods, "GET, POST, OPTIONS" );
+		res.set( http::field::accept_encoding, "gzip" );
 		res.set( http::field::access_control_allow_headers, "*" );//Access-Control-Allow-Origin, Authorization, Content-Type,
 		res.set( http::field::access_control_expose_headers, "Authorization" );
 		res.set( http::field::access_control_max_age, "7200" ); //2 hours chrome max
@@ -209,19 +209,19 @@ namespace Server{
 	}
 
 
-	α Server::LoadServerCertificate( ssl::context& ctx )ε->void{
+	α Server::LoadServerCertificate()ε->void{
 		Crypto::CryptoSettings settings{ "http/ssl" };//Linux - /etc/ssl/certs/server.crt and /etc/ssl/private/server.key
 		if( !fs::exists(settings.PrivateKeyPath) ){
 			settings.CreateDirectories();
 			Crypto::CreateKeyCertificate( settings );
 		}
-    ctx.set_options( boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2 | boost::asio::ssl::context::single_dh_use );
+    _ctx->set_options( ssl::context::default_workarounds | ssl::context::no_sslv2 | ssl::context::single_dh_use );
 		var cert = IO::FileUtilities::Load( settings.CertPath );
-    ctx.use_certificate_chain( boost::asio::buffer(cert.data(), cert.size()) );
+    _ctx->use_certificate_chain( net::buffer(cert.data(), cert.size()) );
 
-		ctx.set_password_callback( [=](uint, boost::asio::ssl::context_base::password_purpose){ return settings.Passcode; } );
+		_ctx->set_password_callback( [=](uint, ssl::context_base::password_purpose){ return settings.Passcode; } );
 		var key = IO::FileUtilities::Load( settings.PrivateKeyPath );
-    ctx.use_private_key( boost::asio::buffer(key.data(), key.size()), boost::asio::ssl::context::file_format::pem );
+    _ctx->use_private_key( net::buffer(key.data(), key.size()), ssl::context::file_format::pem );
     static const string dhStatic =
         "-----BEGIN DH PARAMETERS-----\n"
         "MIIBCAKCAQEArzQc5mpm0Fs8yahDeySj31JZlwEphUdZ9StM2D8+Fo7TMduGtSi+\n"
@@ -232,6 +232,121 @@ namespace Server{
         "QMUk26jPTIVTLfXmmwU0u8vUkpR7LQKkwwIBAg==\n"
         "-----END DH PARAMETERS-----\n";
 		string dh = fs::exists( settings.DhPath ) ? IO::FileUtilities::Load( settings.DhPath ) : dhStatic;
-    ctx.use_tmp_dh( boost::asio::buffer(dh.data(), dh.size()) );
+    _ctx->use_tmp_dh( net::buffer(dh.data(), dh.size()) );
 	}
+#ifdef UNZIP
+	α Unzip( string zip )ι->string{
+		const u8 *compressed_data = in->mmap_mem;
+		size_t compressed_size = in->mmap_size;
+		void *uncompressed_data = NULL;
+		size_t uncompressed_size;
+		size_t max_uncompressed_size;
+		size_t actual_in_nbytes;
+		size_t actual_out_nbytes;
+		enum libdeflate_result result;
+		int ret = 0;
+
+		if (compressed_size < GZIP_MIN_OVERHEAD ||
+				compressed_data[0] != GZIP_ID1 ||
+				compressed_data[1] != GZIP_ID2) {
+			if (options->force && options->to_stdout)
+				return full_write(out, compressed_data, compressed_size);
+			msg("%"TS": not in gzip format", in->name);
+			return -1;
+		}
+
+		/*
+		* Use the ISIZE field as a hint for the decompressed data size.  It may
+		* need to be increased later, however, because the file may contain
+		* multiple gzip members and the particular ISIZE we happen to use may
+		* not be the largest; or the real size may be >= 4 GiB, causing ISIZE
+		* to overflow.  In any case, make sure to allocate at least one byte.
+		*/
+		uncompressed_size =
+			get_unaligned_le32(&compressed_data[compressed_size - 4]);
+		if (uncompressed_size == 0)
+			uncompressed_size = 1;
+
+		/*
+		* DEFLATE cannot expand data more than 1032x, so there's no need to
+		* ever allocate a buffer more than 1032 times larger than the
+		* compressed data.  This is a fail-safe, albeit not a very good one, if
+		* ISIZE becomes corrupted on a small file.  (The 1032x number comes
+		* from each 2 bits generating a 258-byte match.  This is a hard upper
+		* bound; the real upper bound is slightly smaller due to overhead.)
+		*/
+		if (compressed_size <= SIZE_MAX / 1032)
+			max_uncompressed_size = compressed_size * 1032;
+		else
+			max_uncompressed_size = SIZE_MAX;
+
+		do {
+			if (uncompressed_data == NULL) {
+				uncompressed_size = MIN(uncompressed_size,
+							max_uncompressed_size);
+				uncompressed_data = xmalloc(uncompressed_size);
+				if (uncompressed_data == NULL) {
+					msg("%"TS": file is probably too large to be "
+							"processed by this program", in->name);
+					ret = -1;
+					goto out;
+				}
+			}
+
+			result = libdeflate_gzip_decompress_ex(decompressor,
+										compressed_data,
+										compressed_size,
+										uncompressed_data,
+										uncompressed_size,
+										&actual_in_nbytes,
+										&actual_out_nbytes);
+
+			if (result == LIBDEFLATE_INSUFFICIENT_SPACE) {
+				if (uncompressed_size >= max_uncompressed_size) {
+					msg("Bug in libdeflate_gzip_decompress_ex(): data expanded too much!");
+					ret = -1;
+					goto out;
+				}
+				if (uncompressed_size * 2 <= uncompressed_size) {
+					msg("%"TS": file corrupt or too large to be "
+							"processed by this program", in->name);
+					ret = -1;
+					goto out;
+				}
+				uncompressed_size *= 2;
+				free(uncompressed_data);
+				uncompressed_data = NULL;
+				continue;
+			}
+
+			if (result != LIBDEFLATE_SUCCESS) {
+				msg("%"TS": file corrupt or not in gzip format",
+						in->name);
+				ret = -1;
+				goto out;
+			}
+
+			if (actual_in_nbytes == 0 ||
+					actual_in_nbytes > compressed_size ||
+					actual_out_nbytes > uncompressed_size) {
+				msg("Bug in libdeflate_gzip_decompress_ex(): impossible actual_nbytes value!");
+				ret = -1;
+				goto out;
+			}
+
+			if (!options->test) {
+				ret = full_write(out, uncompressed_data, actual_out_nbytes);
+				if (ret != 0)
+					goto out;
+			}
+
+			compressed_data += actual_in_nbytes;
+			compressed_size -= actual_in_nbytes;
+
+		} while (compressed_size != 0);
+	out:
+		free(uncompressed_data);
+		return ret;
+	}
+#endif
 }

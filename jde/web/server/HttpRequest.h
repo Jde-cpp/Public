@@ -12,18 +12,16 @@ namespace Jde::Web{
 }
 
 namespace Jde::Web::Server{
-	α WebTag()ι->sp<Jde::LogTag>;
 	α AccessControlAllowOrigin()ι->string;
-
-	constexpr string ServerVersion()ι{ return Jde::format("({})Jde.Web - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION); }//TODO cache
+	α ServerVersion( bool isSsl )ι->string;
 	//template<class TBody, class TAllocator>
 	struct HttpRequest final{
-		HttpRequest( TRequestType&& request, tcp::endpoint userEndpoint, uint32 connectionId )ι;
+		HttpRequest( TRequestType&& request, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionId )ι;
 		HttpRequest( const HttpRequest& ) = delete;
 		HttpRequest( HttpRequest&& ) = default;
 		α operator=( const HttpRequest& ) = delete;
 		α operator[]( str x )ι->string&{ return _params[x]; }
-		//α RemoteEndpoint()Ι->boost::asio::ip::tcp::endpoint{ return beast::get_lowest_layer(stream).remote_endpoint(); }
+		//α RemoteEndpoint()Ι->net::ip::tcp::endpoint{ return beast::get_lowest_layer(stream).remote_endpoint(); }
 
 		α StringBody()Ι->const string&{ return _request.body(); }
 		α Body()Ε->json{ return Json::Parse( _request.body() ); }
@@ -53,18 +51,19 @@ namespace Jde::Web::Server{
 	private:
 		α ParseUri()->void;
 
+		uint32 _connectionId;
+		uint32 _index;
+		bool _isSsl;
 		flat_map<string,string> _params;
 		TRequestType _request;
 		steady_clock::time_point _start;
 		string _target;
-		uint32 _connectionId;
-		uint32 _index;
 	};
 
 	template<class T>
 	α HttpRequest::Response( http::status status )Ι->http::response<T>{
 		http::response<T> res{ status, _request.version() };
-		res.set( http::field::server, ServerVersion() );
+		res.set( http::field::server, ServerVersion(_isSsl) );
 		res.set( http::field::access_control_allow_origin, AccessControlAllowOrigin() );
 		if( SessionInfo && SessionInfo->IsInitialRequest ){
 			res.set( http::field::access_control_expose_headers, "Authorization" );

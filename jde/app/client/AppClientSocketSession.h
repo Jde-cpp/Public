@@ -1,6 +1,6 @@
 #pragma once
-#include <jde/web/client/ClientSocketAwait.h>
-#include <jde/web/client/IClientSocketSession.h>
+#include <jde/web/client/socket/ClientSocketAwait.h>
+#include <jde/web/client/socket/IClientSocketSession.h>
 #include <jde/app/client/usings.h>
 #include <jde/app/shared/proto/App.FromClient.h>
 

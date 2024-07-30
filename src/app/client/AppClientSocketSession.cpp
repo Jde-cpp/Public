@@ -1,9 +1,9 @@
 #include <jde/app/client/AppClientSocketSession.h>
-#include "../../../../Framework/source/io/AsioContextThread.h"
+#include <jde/thread/Execution.h>
 #include <jde/web/server/Flex.h>
 #include <jde/app/shared/proto/App.FromClient.h>
 #include <jde/app/shared/proto/Common.h>
-#include <jde/web/client/ClientSocketAwait.h>
+#include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/app/shared/StringCache.h>
 
 #define var const auto
@@ -30,8 +30,7 @@ namespace Client{
 
 	α StartSocketAwait::await_suspend( base::Handle h )ι->void{
 		base::await_suspend( h );
-		ASSERT( IO::AsioContextThread() );
-		_pSession = ms<Client::AppClientSocketSession>( IO::AsioContextThread(), _isSsl ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{} );
+		_pSession = ms<Client::AppClientSocketSession>( Executor(), _isSsl ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{} );
 		[this,h]()->VoidTask { co_await _pSession->RunSession( _host, _port ); h.resume(); }();
 	}
 

@@ -1,14 +1,21 @@
+//#include <boost/beast/ssl.hpp>
 #include "mocks/ServerMock.h"
+#include <jde/web/client/http/ClientHttpAwait.h>
+#include <jde/web/client/Jwt.h>
 #include "../../../Framework/source/math/MathUtilities.h"
-#include "../../../Framework/source/io/AsioContextThread.h"
-#include "../../../Ssl/source/Ssl.h"
-#include "mocks/ClientSocketSessionMock.h"
-#include <jde/web/flex/IHttpRequestAwait.h>
-#include <jde/http/ClientSocketAwait.h>
+//#include "../../../Framework/source/io/AsioContextThread.h"
+#include <jde/web/client/http/ClientHttpAwait.h>
+
+#include "mocks/ClientSocketSession.h"
+#include <jde/web/server/IHttpRequestAwait.h>
+#include <jde/web/client/socket/ClientSocketAwait.h>
 
 #define var const auto
 namespace Jde::Web{
-	using Http::ClientSocketAwait;
+	using Client::ClientSocketAwait;
+	using Client::ClientHttpAwait;
+	using Client::ClientHttpRes;
+
 	static sp<Jde::LogTag> _logTag{ Logging::Tag( "tests" ) };
 	constexpr sv ContentType{ "application/x-www-form-urlencoded" };
 	using Mock::Host; using Mock::Port;
@@ -23,17 +30,17 @@ namespace Jde::Web{
 		α TearDown()->void override;
 		Ω TearDownTestCase()->void;
 
-		sp<Flex::IRequestHandler> _pRequestHandler;
+		sp<Server::IRequestHandler> _pRequestHandler;
 	};
 
 	sp<Mock::ClientSocketSession> _pSession{};
 	SessionPK _sessionId;
 	α SocketTests::SetUpTestCase()->void{
-		Stopwatch _{ "SocketTests::SetUpTestCase", _logTag };
+		Stopwatch _{ "SocketTests::SetUpTestCase", ELogTags::Test };
 		Mock::Start();
 	}
 	α SocketTests::TearDownTestCase()->void{
-		Stopwatch _{ "SocketTests::TearDownTestCase", _logTag };
+		Stopwatch _{ "SocketTests::TearDownTestCase", ELogTags::Test };
 		Mock::Stop();
 	}
 
@@ -78,29 +85,35 @@ namespace Jde::Web{
 	}
 	α CreateSession( optional<ssl::context> ctx=nullopt )->VoidTask{
 		if( _sessionId==0 ){
-			flat_map<string,string> headers{ {"Authorization", ""} };
-			Http::Send( Host, "/timeout", {}, Port, {}, ContentType, http::verb::get, &headers );
-			_sessionId = *Str::TryTo<SessionPK>( headers["Authorization"], nullptr, 16 );
+			Crypto::CryptoSettings settings{ "http/ssl" };
+			auto [mod,exp] = Crypto::ModulusExponent( settings.PublicKeyPath );
+			Web::Jwt jwt{ move(mod), move(exp), "testUser", "testUserCallSign", "127.0.0.1", {}/*description*/, settings.PrivateKeyPath };
+			auto await = ClientHttpAwait{ Host, "/CertificateLogin", json{{"jwt", jwt.Payload()}}.dump(), Port };
+			var res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
+			_sessionId = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
+			Information( ELogTags::Test, "({:x})Loggin Complete.", _sessionId );//TODOBuild change to test
 		}
-		_pSession = ms<Mock::ClientSocketSession>( IO::AsioContextThread(), ctx );
+		_pSession = ms<Mock::ClientSocketSession>( Executor(), ctx );
 		co_await _pSession->RunSession( Host, Port );
 		Connect();
 	}
 	TEST_F( SocketTests, CreatePlain ){
-		Stopwatch sw{ "WebTests::CreatePlain", _logTag };
+		Stopwatch sw{ "WebTests::CreatePlain", ELogTags::Test };
 		CreateSession();
 		WAIT;
 		ASSERT_EQ( _sessionId, _pSession->SessionId() );
 	}
 
 	TEST_F( SocketTests, CreateSsl ){
-		Stopwatch sw{ "WebTests::CreateSsl", _logTag };
+		std::this_thread::sleep_for( 1s );
+		Trace( ELogTags::Test, "WebTests::CreateSsl" );
+		Stopwatch sw{ "WebTests::CreateSsl", ELogTags::Test };
 		CreateSession( ssl::context(ssl::context::tlsv12_client) );
 		WAIT;
 		ASSERT_EQ( _sessionId, _pSession->SessionId() );
 	}
 
-	flat_map<Http::RequestId,string> _requests; flat_map<Http::RequestId,string> _responses; mutex _echoMutex;
+	flat_map<RequestId,string> _requests; flat_map<RequestId,string> _responses; mutex _echoMutex;
 	α EchoText( uint requestId, string text )->ClientSocketAwait<string>::Task{
 		string y = co_await _pSession->Echo( text );
 		{
@@ -110,7 +123,7 @@ namespace Jde::Web{
 		}
 	}
 	TEST_F( SocketTests, EchoAttack ){
-		Stopwatch sw{ "WebTests::EchoAttack", _logTag };
+		Stopwatch sw{ "WebTests::EchoAttack", ELogTags::Test };
 		CreateSession();
 		WAIT;
 		string text( 32000, 'a' );

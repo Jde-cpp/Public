@@ -6,6 +6,8 @@
 #include <span>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/remove_whitespace.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
 #include "log/Log.h"
 #include "Exception.h"
@@ -184,7 +186,9 @@ namespace Jde{
 		//[start,start of next word] of phrase index.  start of next word because of stemming
 		TSV Pascal( X s )ι->$;
 		TSV Camel( X s )ι->$;
-		template<class T, class I=T::const_iterator> α Encode64( const T& val )ι->string;
+		template<class T, class I=T::const_iterator> α Encode64( const T& val, bool convertFromFileSafe=false )ι->string;
+		template<class T=string> α Decode64( sv s, bool convertFromFileSafe=false )ε->T;
+		Φ DecodeUri( sv str )ι->string;
 		α ToHex( byte* p, uint size )ι->string;
 #undef X
 	}
@@ -427,7 +431,7 @@ namespace Jde{
 
 		template<class T=sv, bool TStem=false> α WordsLocation( Str::bsv<TT> x )ι->tuple<vector<T>,vector<uint>>{ //[words, endIndex]
 			tuple<vector<T>,vector<uint>> y;
-			auto isSeparator = []( wchar_t ch )ι->bool{ return ::isspace(ch) || ch=='.' || ch==';' || ch==':' || ch=='(' || ch==')' || ch=='/' || ch==L'\x80af' || ch==L'\x8093'; };
+			auto isSeparator = []( wchar_t ch )ι->bool { return ::isspace(ch) || ch=='.' || ch==';' || ch==':' || ch=='(' || ch==')' || ch=='/' || ch==L'\x80af' || ch==L'\x8093'; };
 			for( uint iStart{0}, iEnd; iStart<x.size(); iStart=iEnd ){
 				wchar_t ch=GetChar<T>( x, iStart );
 				for( ; isSeparator(ch); ch=GetChar<T>( x, ++iStart) );
@@ -488,12 +492,27 @@ namespace Jde{
 	}
 
 	//https://stackoverflow.com/questions/7053538/how-do-i-encode-a-string-to-base64-using-only-boost
-	template<class T, class I> α Str::Encode64( const T& val )ι->string{
+	template<class T, class I> α Str::Encode64( const T& val, bool convertFromFileSafe )ι->string{
 		//typename T;
 		using namespace boost::archive::iterators;
 		using It = base64_from_binary<transform_width<I, 6, 8>>;
-		auto t = string( It(std::begin(val)), It(std::end(val)) );
-		return t.append( (3 - val.size() % 3) % 3, '=' );
+		auto t = string{ It(std::begin(val)), It(std::end(val)) };
+		auto encoded = t.append( (3 - val.size() % 3) % 3, '=' );
+		if( convertFromFileSafe )
+			encoded = Replace( Replace( encoded, '/', '_' ), '+', '-' );
+		return encoded;
+	}
+	Ŧ Str::Decode64( sv s, bool convertFromFileSafe )ε->T{ //https://stackoverflow.com/questions/10521581/base64-encode-using-boost-throw-exception
+		string encoded{ s };
+		if( convertFromFileSafe )
+			encoded = Str::Replace( Str::Replace(encoded, '_', '/'), '-', '+' );
+
+		using namespace boost::archive::iterators;
+		using TW = transform_width<binary_from_base64<remove_whitespace<string::const_iterator>>, 8, 6>;
+		T y{ TW(encoded.begin()), TW(encoded.end()) };
+		while( y.size() && y.back()==0 )
+			y.pop_back();
+		return y;
 	}
 }
 template<> struct fmt::formatter<Jde::iv> : fmt::formatter<std::string> {

@@ -1,6 +1,6 @@
 #pragma once
-#include <jde/web/client/IClientSocketSession.h>
-#include "usings.h"
+#include <jde/web/client/socket/IClientSocketSession.h>
+#include "../usings.h"
 
 namespace Jde::Web::Client{
 	α SocketClientReadTag()ι->sp<LogTag>;

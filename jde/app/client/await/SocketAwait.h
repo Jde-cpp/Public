@@ -1,7 +1,7 @@
 #pragma once
 #include <jde/web/server/Sessions.h>
 #include <jde/app/client/AppClientSocketSession.h>
-#include <jde/web/client/ClientSocketAwait.h>
+#include <jde/web/client/socket/ClientSocketAwait.h>
 
 namespace Jde::App::Client{
 
@@ -9,7 +9,7 @@ namespace Jde::App::Client{
 	struct SocketAwait : TAwait<TResult>{
 		using base = TAwait<TResult>;
 		SocketAwait( SL sl )ι:base{sl}{}
-		α await_ready()ι->bool final{ return IApplication::ShuttingDown(); }
+		α await_ready()ι->bool final{ return Process::ShuttingDown(); }
 		α await_suspend( base::Handle h )ι->void final;
 		β Execute( sp<AppClientSocketSession> pSession )ι->Web::Client::ClientSocketAwait<TProto>::Task=0;
 		α await_resume()ε->TResult final;

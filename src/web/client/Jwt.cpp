@@ -1,42 +1,41 @@
 #include <jde/web/client/Jwt.h>
 #include <jde/io/Json.h>
 #include <jde/Str.h>
-#include "../../../../Ssl/source/Ssl.h"
 
 #define var const auto
 
 namespace Jde::Web{
-	Jwt::Jwt( Crypto::Modulus mod, Crypto::Exponent exp, string userName, string userTarget, string myEndpoint, string description, sv privateKey )ι:
-		Modulus{mod},Exponent{exp},UserName{userName},UserTarget{userTarget},MyEndpoint{myEndpoint},Description{description}{
-
-		array<unsigned char,4> bigEndian;
-		for( uint i=0; i<4; ++i )
-			bigEndian[i] = (unsigned char)( (exp >> (i*8)) & 0xFF);
+	Jwt::Jwt( Crypto::Modulus mod, Crypto::Exponent exp, str userName, str userTarget, str myEndpoint, str description, const fs::path& privateKeyPath )ι:
+		Modulus{move(mod)},Exponent{move(exp)}, Host{myEndpoint}, Iat{time(nullptr)},UserName{userName},UserTarget{userTarget},Description{description}{
 		Body = json{
-			{ "n", Str::Encode64(mod) },
-			{ "e", Str::Encode64(bigEndian) },
-			{"name",userName},
-			{"target",userTarget},
-			{"description",description}
+			{ "n", Str::Encode64(Modulus, true) },
+			{ "e", Str::Encode64(Exponent, true) },
+			{ "iat",Iat },
+			{ "host",Host },
+			{ "name",userName },
+			{ "target",userTarget },
+			{ "description",description }
 		};
+		auto bodyMod = Json::Getε(Body, "n");
 		var head = json{ {"alg","RS256"}, {"typ","JWT"} };
-		HeaderBodyEncoded = Str::Encode64( head.dump() + "." + Body.dump() );
-		Fingerprint = Crypto::RsaSign( HeaderBodyEncoded, privateKey );
+		HeaderBodyEncoded = Str::Encode64( head.dump(), true )+ "." + Str::Encode64( Body.dump(), true );
+		Signature = Crypto::RsaSign( HeaderBodyEncoded, privateKeyPath );
 	}
 	Jwt::Jwt( str encoded )ε{
 		var fpIndex = encoded.find_last_of( '.' );
 		var bodyIndex = encoded.find_first_of( '.' );
-		if( fpIndex==string::npos || fpIndex==encoded.size() || bodyIndex==string::npos )
+		if( fpIndex==string::npos || fpIndex==encoded.size() || bodyIndex==string::npos || fpIndex==bodyIndex )
 			THROW( "Invalid jwt.  Expected 3 parts." );
 		HeaderBodyEncoded = encoded.substr( 0, fpIndex );
-		var header = Json::Parse( Ssl::Decode64(HeaderBodyEncoded.substr(0, bodyIndex), true) );//{"alg":"RS256","kid":"fed80fec56db99233d4b4f60fbafdbaeb9186c73","typ":"JWT"}
+		var headerEncoded = HeaderBodyEncoded.substr( 0, bodyIndex );
+		var header = Json::Parse( Str::Decode64(headerEncoded, true) );//{"alg":"RS256","kid":"fed80fec56db99233d4b4f60fbafdbaeb9186c73","typ":"JWT"}
 		if( auto alg = Json::Getε(header, "alg"); alg!="RS256" )
 			THROW( "Invalid jwt.  Expected alg=RS256, found '{}'.", alg );
 		if( auto type = Json::Getε(header, "typ"); type!="JWT" )
 			THROW( "Invalid jwt.  Expected typ=JWT, found '{}'.", type );
 		Kid = Json::Get( header, "kid" );
-		Fingerprint = Ssl::Decode64<Crypto::Signature>( encoded.substr(fpIndex+1), true );
-		Body = Json::Parse( Ssl::Decode64(HeaderBodyEncoded.substr(bodyIndex+1), true) );
+		Signature = Str::Decode64<Crypto::Signature>( encoded.substr(fpIndex+1, HeaderBodyEncoded.find_first_of('=')), true );
+		Body = Json::Parse( Str::Decode64(HeaderBodyEncoded.substr(bodyIndex+1 ), true) );
 		SetModulus( Json::Getε(Body, "n") );
 		SetExponent( Json::Getε(Body, "e") );
 		auto fpKey = Crypto::Fingerprint( Modulus, Exponent );
@@ -50,15 +49,21 @@ namespace Jde::Web{
 		};
 		Description = Json::TryGet(Body, "description").value_or( 𐢜("Public key md5: {}", fpText(fpKey)) );
 	}
-
+	α Jwt::Payload()Ι->string{
+		auto signature = Str::Encode64( Signature, true );
+		auto modString = Str::Encode64( Modulus, true );
+		auto mod = Str::Decode64<Crypto::Modulus>( modString, true );
+		auto bodyMod = Json::Getε( Body, "n" );
+		auto mod2 = Str::Decode64<Crypto::Modulus>( bodyMod, true );
+		Crypto::Verify( mod2, Exponent, HeaderBodyEncoded, Signature );
+		auto signature2 = Str::Decode64<Crypto::Signature>( signature, true );
+		auto payload = 𐢜( "{}.{}", HeaderBodyEncoded, signature );
+		return payload;
+	}
 	α Jwt::SetModulus( str encoded )ι->void{
-		Modulus = Ssl::Decode64<vector<unsigned char>>( encoded, true );
-		// vector<char> temp{ Ssl::Decode64<vector<char>>(encoded, true) };
-		// std::copy( (byte*)temp.data(), (byte*)temp.data()+temp.size(), Modulus.begin() );
+		Modulus = Str::Decode64<Crypto::Modulus>( encoded, true );
 	}
 	α Jwt::SetExponent( str encoded )ι->void{
-		var decoded = Ssl::Decode64<string>( encoded, true );
-		for( uint i=0; i<std::min(4ul,decoded.size()); ++i )
-			Exponent |= decoded[i] << (i*8);
+		Exponent = Str::Decode64<Crypto::Exponent>( encoded, true );
 	}
 }

@@ -1,5 +1,6 @@
 #include <jde/web/server/Streams.h>
 #include <jde/web/server/IWebsocketSession.h>
+#include <jde/web/server/HttpRequest.h>
 
 #define var const auto
 namespace Jde::Web::Server{
@@ -59,8 +60,8 @@ namespace Jde::Web::Server{
 		std::visit(
 			[&]( auto&& ws ){
 				ws.set_option( websocket::stream_base::timeout::suggested(beast::role_type::server) );
-				ws.set_option( websocket::stream_base::decorator( []( websocket::response_type& res ){
-					res.set( http::field::server, string(BOOST_BEAST_VERSION_STRING) + " websocket-server-async" );//TODO fix.
+				ws.set_option( websocket::stream_base::decorator( [&]( websocket::response_type& res ){
+					res.set( http::field::server, ServerVersion(_ws.index()==1) );
 				}) );
 				ws.async_accept( req, beast::bind_front_handler(&IWebsocketSession::OnAccept, session) );
 			}, _ws );
@@ -71,8 +72,8 @@ namespace Jde::Web::Server{
 			[&]( auto&& ws ){
 				ws.async_read( _buffer, [this,session]( beast::error_code ec, uint c )mutable{
 					if( ec ){
-						ELogLevel level = ec==websocket::error::closed || ec==boost::asio::error::connection_aborted || ec==boost::asio::error::not_connected || ec==boost::asio::error::connection_reset ? ELogLevel::Trace : ELogLevel::Error;
-						CodeException{ static_cast<std::error_code>(ec), _requestTag, Jde::format("[{:x}]Server::DoRead", session->Id()), level };
+						ELogLevel level = ec==websocket::error::closed || ec==net::error::connection_aborted || ec==net::error::not_connected || ec==net::error::connection_reset ? ELogLevel::Trace : ELogLevel::Error;
+						CodeException{ static_cast<std::error_code>(ec), _requestTag, 𐢜("[{:x}]Server::DoRead", session->Id()), level };
 						return;
 					}
 					session->OnRead( (char*)_buffer.data().data(), _buffer.size() );
@@ -99,7 +100,7 @@ namespace Jde::Web::Server{
 						catch( const boost::exception& e2 ){
 							Logging::LogNoServer( Logging::Message{ELogLevel::Debug, "Error closing:  '{}')"}, _responseTag, boost::diagnostic_information(e2) );
 						}
-						CodeException{ move(static_cast<std::error_code>(ec)), _requestTag };
+						CodeException{ ec, _requestTag };
 					}
 				});
 			}, _ws );

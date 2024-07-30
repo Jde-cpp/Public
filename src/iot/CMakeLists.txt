@@ -46,6 +46,8 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 		<boost/asio/strand.hpp>
 		<boost/beast/core.hpp>
 		<boost/beast/http.hpp>
+		<boost/beast/ssl.hpp>
+		<boost/beast/ssl/ssl_stream.hpp>
 		<boost/lexical_cast.hpp>
 		<boost/unordered/concurrent_flat_map.hpp>
 		<boost/unordered/concurrent_flat_set.hpp>

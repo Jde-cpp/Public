@@ -1,17 +1,17 @@
 #pragma once
-#include "usings.h"
-#include "../../../../Framework/source/threading/Mutex.h"
+#include "../usings.h"
+#include "../../../../../Framework/source/threading/Mutex.h"
 
 namespace Jde::Web::Client{
 	struct IWebsocketSession;
 	struct SocketStream;
 	struct IClientSocketSession;
 	//TODO consider weak_ptr to session
-	struct HttpSocketStream final: std::enable_shared_from_this<HttpSocketStream>{
+	struct ClientSocketStream final: std::enable_shared_from_this<ClientSocketStream>{
 	  using BaseStream = beast::tcp_stream;
 		using SslStream = websocket::stream<beast::ssl_stream<BaseStream>>;
 		using Stream = std::variant<websocket::stream<BaseStream>,SslStream>;
-		HttpSocketStream( net::io_context& ioc, optional<ssl::context>& ctx )ι;
+		ClientSocketStream( net::io_context& ioc, optional<ssl::context>& ctx )ι;
 
 		α OnResolve( tcp::resolver::results_type results, sp<IClientSocketSession> session )ι->void;
 		α OnConnect( tcp::resolver::results_type::endpoint_type ep, string& host, sp<IClientSocketSession> session )ι->void;

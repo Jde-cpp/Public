@@ -1,10 +1,11 @@
 #pragma once
 #include <boost/unordered/concurrent_flat_map.hpp>
-#include "usings.h"
-#include "exports.h"
-#include "ClientStreams.h"
-#include "../../../../Framework/source/io/ProtoUtilities.h"
-#include "../../../../Framework/source/Stopwatch.h"
+#include "../usings.h"
+#include "../exports.h"
+#include "ClientSocketStream.h"
+#include <jde/coroutine/Await.h>
+#include "../../../../../Framework/source/io/ProtoUtilities.h"
+#include "../../../../../Framework/source/Stopwatch.h"
 
 
 namespace Jde::Web::Client{
@@ -21,6 +22,7 @@ namespace Jde::Web::Client{
 	private:
 		sp<IClientSocketSession> _session; string _host; PortType _port;
 	};
+
 	struct CloseClientSocketSessionAwait final : VoidAwait<>{
 		using base = VoidAwait<>;
 		CloseClientSocketSessionAwait( sp<IClientSocketSession> session, SRCE )ι:base{sl}, _session{session}{};
@@ -28,6 +30,7 @@ namespace Jde::Web::Client{
 	private:
 		sp<IClientSocketSession> _session;
 	};
+
 	//TODO check what should be protected
 	struct ΓWC IClientSocketSession : std::enable_shared_from_this<IClientSocketSession>{
 		IClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι;// Resolver and socket require an io_context
@@ -46,7 +49,7 @@ namespace Jde::Web::Client{
 		α Id()ι->uint32{ return _id; }
 	protected:
 		α CloseTasks( function<void(std::any&&)> f )ι->void;
-		//α SetSessionId( SessionPK sessionId )ι{ _sessionId = sessionId; }
+		α SetSessionId( SessionPK sessionId )ι{ _sessionId = sessionId; }
 		β OnClose( beast::error_code ec )ι->void;
 		α IsSsl()Ι->bool{ return _stream->IsSsl(); }
 		α SetId( uint32 id )ι{ _id=id; }
@@ -60,7 +63,7 @@ namespace Jde::Web::Client{
 		β OnReadData( std::basic_string_view<uint8_t> transmission )ι->void=0;
 
 		tcp::resolver _resolver;
-		sp<HttpSocketStream> _stream;
+		sp<ClientSocketStream> _stream;
 		Stopwatch _readTimer;
 		string _host;
 		sp<net::io_context> _ioContext;
@@ -70,7 +73,7 @@ namespace Jde::Web::Client{
 		boost::concurrent_flat_map<RequestId,std::any> _tasks;
 		uint32 _id{};//_serverSocketIndex
 
-		friend struct HttpSocketStream; friend struct CloseClientSocketSessionAwait;
+		friend struct ClientSocketStream; friend struct CloseClientSocketSessionAwait;
 	};
 
 	template<class TFromClientMsgs, class TFromServerMsgs>

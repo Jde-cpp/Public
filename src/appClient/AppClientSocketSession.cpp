@@ -90,9 +90,8 @@ namespace Client{
 			switch( m->Value_case() ){
 			[[unlikely]] case kAck:{
 				var serverSocketId = m->ack();
-				//SetSessionId( ack.session_id() ); TODO!
 				SetId( serverSocketId );
-				INFOT( Http::SocketClientReadTag(), "{} AppClientSocketSession created: {}.", Id(), IsSsl() ? "Ssl" : "Plain", Host() );
+				INFOT( Http::SocketClientReadTag(), "[{}] {} AppClientSocketSession created: {}.", Id(), IsSsl() ? "Ssl" : "Plain", Host() );
 				ResumeScaler<SessionPK>( move(hAny), SessionId() );
 				}break;
 			case kGeneric:

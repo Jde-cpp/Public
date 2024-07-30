@@ -1,9 +1,9 @@
 #pragma once
-#include <jde/web/flex/IHttpRequestAwait.h>
+#include <jde/web/server/IHttpRequestAwait.h>
 //#include <jde/web/flex/Flex.h>
 
 namespace Jde::Web::Mock{
-	using namespace Jde::Web::Flex;
+	using namespace Jde::Web::Server;
 	struct HttpRequestAwait final: IHttpRequestAwait{
 		using base = IHttpRequestAwait;
 		HttpRequestAwait( HttpRequest&& req, SRCE )ι;

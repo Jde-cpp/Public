@@ -4,11 +4,12 @@
 namespace Jde::Web{
 	struct Jwt{
 		Jwt( str jwt )ε;
-		Jwt( Crypto::Modulus mod, Crypto::Exponent exp, string userName, string userTarget, string myEndpoint, string description, sv privateKey )ι;
+		Jwt( Crypto::Modulus mod, Crypto::Exponent exp, str userName, str userTarget, str myEndpoint, str description, const fs::path& privateKeyPath )ι;
+		α Payload()Ι->string;
 		string Kid;
 		json Body;
 		string HeaderBodyEncoded;
-		Crypto::Signature Fingerprint;
+		Crypto::Signature Signature;
 		Crypto::Modulus Modulus;
 		Crypto::Exponent Exponent;
 
@@ -16,7 +17,6 @@ namespace Jde::Web{
 		time_t Iat;
 		string UserName;
 		string UserTarget;
-		string MyEndpoint;
 		string Description;
 	private:
 		α SetModulus( str encoded )ι->void;

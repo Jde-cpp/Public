@@ -26,8 +26,7 @@ namespace Jde{
 		var filter = p ? *p : "*";
 		::testing::GTEST_FLAG( filter ) = filter;
 	   result = RUN_ALL_TESTS();
-		IApplication::Shutdown( result );
-		IApplication::Cleanup();
+		Process::Shutdown( result );
 	}
 	return result;
 }

@@ -19,13 +19,8 @@ target_sources("${CMAKE_PROJECT_NAME}"
         "${hdr_files}"
         "${proto_files}")
 
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde )
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde.Crypto )
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde.Ssl )
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde.Http )
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde.App.Client )
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde.Web )
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde.XZ )
+target_link_libraries( ${CMAKE_PROJECT_NAME} ZLIB::ZLIB )
+target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.Crypto Jde.Web.Client Jde.Web.Server )
 target_link_libraries( ${CMAKE_PROJECT_NAME} gtest_main )
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	target_link_libraries( ${CMAKE_PROJECT_NAME} stdc++ )
@@ -37,6 +32,7 @@ target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range
 target_link_libraries( ${CMAKE_PROJECT_NAME} lzma )
 target_link_libraries( ${CMAKE_PROJECT_NAME} libssl.a )
 target_link_libraries( ${CMAKE_PROJECT_NAME} libcrypto.a )
+#target_link_libraries( ${CMAKE_PROJECT_NAME} libboost_context.a )
 
 target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
 	<gtest/gtest.h>
@@ -50,6 +46,7 @@ target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
 	<jde/log/Log.h>
 	<jde/Exception.h>
 	<jde/App.h>
+	<jde/thread/Execution.h>
 	"../../../Framework/source/Settings.h"
 	"../../../Framework/source/Stopwatch.h"
 )

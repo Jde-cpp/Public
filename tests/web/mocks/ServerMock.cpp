@@ -1,22 +1,20 @@
 #include "ServerMock.h"
+#include <jde/web/server/IApplicationServer.h>
 
 namespace Jde::Web{
 	optional<std::jthread> _webThread;
 
+	struct ApplicationServer final : Server::IApplicationServer{
+		β GraphQL( string&& q, UserPK userPK, SRCE )ι->up<TAwait<json>>{ return {}; }
+		β SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<Server::SessionInfo>>{ return {}; }
+	};
+
 	α Mock::Start()ι->void{
-		_webThread = std::jthread{ []{
-			Flex::Start( ms<RequestHandler>() ); //blocking
-		} };
-		while( !Flex::HasStarted() )
-			std::this_thread::sleep_for( 100ms );
+		Server::Start( mu<RequestHandler>(), mu<ApplicationServer>() );
 	}
 
 	α Mock::Stop()ι->void{
-		Flex::Stop();
-		if( _webThread && _webThread->joinable() ){
-			_webThread->join();
-			_webThread = {};
-		}
+		Server::Stop();
 	}
 
 }

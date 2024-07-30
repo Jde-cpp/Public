@@ -1,5 +1,5 @@
 #pragma once
-//#include <jde/app/client/Sessions.h>
+#include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/app/client/usings.h>
 #include <jde/crypto/OpenSsl.h>
 #include <jde/web/client/Jwt.h>
@@ -12,10 +12,10 @@ namespace Jde::App::Client{
 
 	struct LoginAwait final : TAwait<SessionPK>{
 		using base = TAwait<SessionPK>;
-		LoginAwait( Crypto::Modulus mod, Crypto::Exponent exp, string userName, string userTarget, string myEndpoint, string description, SRCE )ι;
+		LoginAwait( Crypto::Modulus mod, Crypto::Exponent exp, string userName, string userTarget, string myEndpoint, string description, const fs::path& privateKeyPath, SRCE )ι;
 		α await_suspend( base::Handle h )ι->void{ base::await_suspend(h); Execute(); };
 	private:
-		α Execute()ι->void;
+		α Execute()ι->Web::Client::ClientHttpAwait::Task;
 		Web::Jwt _jwt;
 		//Crypto::Modulus _modulus; Crypto::Exponent _exponent; string _userName; string _userTarget; string _myEndpoint; string _description;
 	};

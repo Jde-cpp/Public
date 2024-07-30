@@ -39,5 +39,5 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 #	"../../../../Framework/source/io/ProtoClient.h"
 	"../../../../Framework/source/io/ProtoUtilities.h"
 	"../../../../Framework/source/threading/InterruptibleThread.h"
-	"../../../../Ssl/source/Ssl.h"
+#	"../../../../Ssl/source/Ssl.h"
 )

@@ -1,4 +1,4 @@
-#include <jde/web/client/IClientSocketSession.h>
+#include <jde/web/client/socket/IClientSocketSession.h>
 
 namespace Jde::Web{
 	static sp<LogTag> _socketClientReadTag = Logging::Tag( ELogTags::SocketClientRead );
@@ -6,7 +6,7 @@ namespace Jde::Web{
 	α Client::SocketClientReadTag()ι->sp<LogTag>{ return _socketClientReadTag; }
 	α Client::SocketClientWriteTag()ι->sp<LogTag>{ return _socketClientWriteTag; }
 
-	uint16 _maxLogLength{ Settings::Get<uint16>("http/maxLogLength").value_or(255) };
+	static uint16 _maxLogLength{ Settings::Get<uint16>("http/maxLogLength").value_or(255) };
 	α Client::MaxLogLength()ι->uint16{ return _maxLogLength; }
 }
 #define CHECK_EC(tag) if( ec ){ CodeException{ static_cast<std::error_code>(ec), tag, GetLogLevel(ec) }; return; }
@@ -53,15 +53,15 @@ namespace Jde::Web::Client{
 
 	IClientSocketSession::IClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι:
 		_resolver{ *ioc },
-		_stream{ ms<HttpSocketStream>(*ioc, ctx) },
-		_readTimer{ "", SocketClientReadTag() },
+		_stream{ ms<ClientSocketStream>(*ioc, ctx) },
+		_readTimer{ "", ELogTags::SocketClientRead },
 		_ioContext{ ioc }
 	{}
 
 	α IClientSocketSession::Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void{// Start the asynchronous operation
 		_connectHandle = h;
 		_host = host;
-		boost::asio::post( *_ioContext, [&, port_=port, self=shared_from_this()]{
+		net::post( *_ioContext, [&, port_=port, self=shared_from_this()]{
 			beast::error_code ec;
 			auto results = _resolver.resolve( _host, std::to_string(port_), ec );//async_resolve starts another thread.
 			//_resolver.async_resolve( _host, std::to_string(port_), beast::bind_front_handler(&IClientSocketSession::OnResolve, shared_from_this()) );// Look up the domain name
@@ -102,7 +102,7 @@ namespace Jde::Web::Client{
 	α IClientSocketSession::OnRead( beast::error_code ec, uint bytes_transferred )ι->void{
 		boost::ignore_unused( bytes_transferred );
 		if( ec ){
-			CodeException{ static_cast<std::error_code>(ec), SocketClientReadTag(), Jde::format("[{:x}]Client::DoRead", Id()), GetLogLevel(ec) };
+			CodeException{ static_cast<std::error_code>(ec), SocketClientReadTag(), Jde::format("[{:x}]ClientSocket::DoRead", Id()), GetLogLevel(ec) };
 			if( ec!=net::error::operation_aborted )
 				_stream->Close( shared_from_this() );
 			return;

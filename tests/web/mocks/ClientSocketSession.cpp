@@ -1,6 +1,6 @@
-#include "ClientSocketSessionMock.h"
+#include "ClientSocketSession.h"
 #include <boost/unordered/concurrent_flat_map.hpp>
-#include <jde/http/usings.h>
+#include <jde/web/client/usings.h>
 
 #define var const auto
 
@@ -9,36 +9,28 @@ namespace Jde::Web::Mock{
 		base{ ioc, ctx }
 	{}
 
-	α ClientSocketSession::OnAck( RequestId requestId, const Proto::Ack& ack )ι->void{
-		SetSessionId( ack.session_id() );
-		SetId( ack.server_socket_id() );
-		INFOT( Http::SocketClientReadTag(), "[{:x}]ClientSocketSession Created - {:x}.", Id(), SessionId() );
-		std::any hAny = IClientSocketSession::GetTask( requestId );
-		auto h = std::any_cast<ClientSocketAwait<SessionPK>::Handle>( &hAny );
-		if( h ){
-			h->promise().SetValue( move(SessionId()) );
-			h->resume();
-		}
-		else
-			CRITICALT( Http::SocketClientReadTag(), "RequestId '{}' not found.", requestId );
+	α ClientSocketSession::OnAck( uint32 serverSocketId )ι->void{
+		SetId( serverSocketId );
+		INFOT( Client::SocketClientReadTag(), "[{}] {} AppClientSocketSession created: {}.", Id(), IsSsl() ? "Ssl" : "Plain", Host() );
+		//ResumeScaler<SessionPK>( move(hAny), SessionId() );
 	}
 
 
 	α ClientSocketSession::HandleException( std::any&& h, string&& what )ι{
 		if( auto pEcho = std::any_cast<ClientSocketAwait<string>::Handle>( &h ) ){
-			pEcho->promise().SetError( mu<Exception>(what) );
+			pEcho->promise().SetError( Exception{what} );
 			pEcho->resume();
 		}
 		else if( auto pAck = std::any_cast<ClientSocketAwait<SessionPK>::Handle>( &h ) ){
-			pAck->promise().SetError( mu<Exception>(what) );
+			pAck->promise().SetError( Exception{what} );
 			pAck->resume();
 		}
 		else{
-			WARNT( Http::SocketClientReadTag(), "Failed to process incomming exception '{}'.", what );
+			WARNT( Client::SocketClientReadTag(), "Failed to process incomming exception '{}'.", what );
 		}
 	}
 
-	α ClientSocketSession::OnRead( Http::Proto::FromServerTransmission&& transmission )ι->void{
+	α ClientSocketSession::OnRead( Proto::FromServerTransmission&& transmission )ι->void{
 		auto size = transmission.messages_size();
 		for( auto i=0; i<size; ++i ){
 		//for( auto&& m : transmission.mutable_messages() ){
@@ -47,17 +39,22 @@ namespace Jde::Web::Mock{
 			var requestId = m->request_id();
 			switch( m->Value_case() ){
 			case kAck:
-				OnAck( requestId, m->ack() );
+				OnAck( m->ack() );
 				break;
+			case kSessionId:{
+				auto h = std::any_cast<ClientSocketAwait<SessionPK>::Handle>( IClientSocketSession::GetTask(requestId) );
+				SetSessionId( m->session_id() );
+				h.promise().Resume( m->session_id(), h );
+				break;}
 			case kEchoText:{
 				auto h = std::any_cast<ClientSocketAwait<string>::Handle>( IClientSocketSession::GetTask(requestId) );
 				h.promise().SetValue( move(*m->mutable_echo_text()) );
 				h.resume();
-				}break;
+				break;}
 			case kException:{
 				std::any h = requestId==0 ? coroutine_handle<>{} : GetTask( requestId );
 				HandleException( move(h), move(*m->mutable_exception()) );
-			}break;
+				break;}
 			default:
 				BREAK;
 			}
@@ -69,7 +66,7 @@ namespace Jde::Web::Mock{
 		request->set_session_id( sessionId );
 		var requestId = NextRequestId();
 		request->set_request_id( requestId );
-		return ClientSocketAwait<SessionPK>{ shared_from_this(), requestId, IO::Proto::ToString(t), sl };
+		return ClientSocketAwait<SessionPK>{ IO::Proto::ToString(t), requestId, shared_from_this(), sl };
 	}
 	α ClientSocketSession::Echo( str x, SL sl )ι->ClientSocketAwait<string>{
 		Proto::FromClientTransmission t;
@@ -77,7 +74,7 @@ namespace Jde::Web::Mock{
 		request->set_echo( x );
 		var requestId = NextRequestId();
 		request->set_request_id( requestId );
-		return ClientSocketAwait<string>{ shared_from_this(), requestId, IO::Proto::ToString(t), sl };
+		return ClientSocketAwait<string>{ IO::Proto::ToString(t), requestId, shared_from_this(), sl };
 	}
 	α ClientSocketSession::CloseServerSide( SL sl )ι->ClientSocketAwait<string>{
 		Proto::FromClientTransmission t;
@@ -85,11 +82,11 @@ namespace Jde::Web::Mock{
 		request->mutable_close_server_side();
 		var requestId = NextRequestId();
 		request->set_request_id( requestId );
-		return ClientSocketAwait<string>{ shared_from_this(), requestId, IO::Proto::ToString(t), sl };
+		return ClientSocketAwait<string>{ IO::Proto::ToString(t), requestId, shared_from_this(), sl };
 	}
 	α ClientSocketSession::BadTransmissionClient( SL sl )ι->ClientSocketAwait<string>{
 		var requestId =  NextRequestId();
-		return ClientSocketAwait<string>{ shared_from_this(), requestId, "ABCDEFG", sl }; //need destructed.
+		return ClientSocketAwait<string>{ "ABCDEFG", requestId, shared_from_this(), sl }; //need destructed.
 	}
 	α ClientSocketSession::BadTransmissionServer( SL sl )ι->ClientSocketAwait<string>{
 		Proto::FromClientTransmission t;
@@ -97,11 +94,11 @@ namespace Jde::Web::Mock{
 		request->mutable_bad_transmission_server();
 		var requestId = NextRequestId();
 		request->set_request_id( requestId );
-		return ClientSocketAwait<string>{ shared_from_this(), requestId, IO::Proto::ToString(t), sl };
+		return ClientSocketAwait<string>{ IO::Proto::ToString(t), requestId, shared_from_this(), sl };
 	}
 
 	α ClientSocketSession::OnClose( beast::error_code ec )ι->void{
-		auto f = [this, ec](std::any&& h)->void { HandleException(move(h), CodeException{ec, Http::SocketClientWriteTag(), ELogLevel::NoLog}.what()); };
+		auto f = [this, ec](std::any&& h)->void { HandleException(move(h), CodeException{ec, Client::SocketClientWriteTag(), ELogLevel::NoLog}.what()); };
 		CloseTasks( f );
 		base::OnClose( ec );
 	}

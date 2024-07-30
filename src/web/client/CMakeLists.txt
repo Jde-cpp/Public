@@ -9,7 +9,7 @@ add_definitions( -DJde_WEB_CLIENT_EXPORTS )
 find_package(OpenSSL)
 
 add_library( ${CMAKE_PROJECT_NAME} SHARED )
-file(GLOB src_files *.cpp)
+file(GLOB src_files *.cpp http/*.cpp socket/*.cpp)
 file(GLOB hdr_files *.h)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -32,7 +32,9 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 	<boost/asio.hpp>
 	<boost/asio/ip/tcp.hpp>
 	<boost/beast/ssl.hpp>
+	<boost/beast/ssl/ssl_stream.hpp>
 	<jde/TypeDefs.h>
 	<jde/log/Log.h>
 	<jde/Exception.h>
+	"../../../../Framework/source/coroutine/Awaitable.h"
 )

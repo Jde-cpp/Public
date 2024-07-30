@@ -7,6 +7,7 @@
 #include "../collections/ToVec.h"
 #include "../io/Crc.h"
 #include "../TypeDefs.h"
+#include "../App.h"
 #include "LogTags.h"
 #include "Message.h"
 #include "IExternalLogger.h"
@@ -131,7 +132,6 @@ namespace Jde{
 	critical( ELogTags logTags, const fmt::format_string<Args const&...>, const Args&... )->Logger<ELogLevel::Critical,Args...>;
 */
    using namespace std::literals;
-	Φ HaveLogger()ι->bool;
 	Φ ClearMemoryLog()ι->void;
 	Φ FindMemoryLog( uint32 messageId )ι->vector<Logging::ExternalMessage>;
 	Φ FindMemoryLog( str tag, uint code )ι->vector<Logging::ExternalMessage>;
@@ -186,6 +186,7 @@ namespace Jde{
 #pragma warning(push)
 #pragma warning( disable : 4100)
 	ψ Logging::Log( const Logging::MessageBase& m, const sp<LogTag> tag, bool logServer, bool break_, Args&&... args )ι->void{
+		ASSERT( !Process::Finalizing() );
 		//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
 		//assert( m.Level<=ELogLevel::None );
 		if( m.Level<tag->Level || m.Level==ELogLevel::NoLog || tag->Level==ELogLevel::NoLog )
@@ -212,6 +213,7 @@ namespace Jde{
 			MessageBase m2{ ELogLevel::Critical, "could not format '{}' cargs='{}' - '{}'", m.File, m.Function, m.LineNumber };
 			Log( m2, tag, m.MessageView, sizeof...(args), e.what() );
 		}
+		logServer = logServer && !(ToLogTags(tag->Id) & ELogTags::ExternalLogger);
 		if( logServer || LogMemory() ){
 			vector<string> values; values.reserve( sizeof...(args) );
 			ToVec::Append( values, args... );

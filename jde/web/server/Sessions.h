@@ -1,14 +1,12 @@
 #pragma once
-#include <jde/coroutine/Task.h>
+//#include <jde/coroutine/Task.h>
 #include <jde/db/usings.h>
-#include "../../../../Framework/source/coroutine/Awaitable.h"
+#include <jde/coroutine/Await.h>
 
 //Holds web session information.  Requires AppServer, so in AppClient
 namespace Jde::Web::Server{
 	struct SessionInfo;
 	namespace Sessions::Internal{ α CreateSession( UserPK userPK, str endpoint, bool isSocket, bool add )ι->sp<SessionInfo>; }
-	using namespace Coroutine;
-	//using tcp = boost::asio::ip::tcp;
 	struct SessionInfo{
 		SessionInfo()ι=default;
 		SessionInfo( SessionPK sessionPK, steady_clock::time_point expiration, Jde::UserPK userPK, str userEndpointAddress, bool hasSocket )ι;
