@@ -2,6 +2,9 @@
 #include "../../../Framework/source/Settings.h"
 #include "../../../Framework/source/Cache.h"
 #include "../../../Framework/source/db/GraphQL.h"
+#include <jde/app/client/AppClient.h>
+#include <jde/iot/uatypes/Logger.h>
+#include <jde/thread/Execution.h>
 #include "helpers.h"
 #define var const auto
 
@@ -13,7 +16,18 @@ namespace Jde{
 		ASSERT( Settings::Get<uint>("workers/drive/threads")>0 )
 #endif
 		ASSERT( argc>1 && string{argv[1]}=="-c" )
+		TagParser( Iot::LogTagParser );
 		OSApp::Startup( argc, argv, "Tests.Iot", "Iot tests" );
+		Crypto::CryptoSettings settings{ "http/ssl" };
+		if( !fs::exists(settings.PrivateKeyPath) ){
+			settings.CreateDirectories();
+			Crypto::CreateKey( settings.PublicKeyPath, settings.PrivateKeyPath, settings.Passcode );
+		}
+
+		App::Client::Connect();
+		Execution::Run();
+
+		std::this_thread::sleep_for( 1s );
 		DB::CreateSchema();
 		DB::SetQLDataSource( DB::DataSourcePtr() );
 		Iot::AddHook();
@@ -30,8 +44,7 @@ namespace Jde{
 		var filter = p ? *p : "*";
 		::testing::GTEST_FLAG( filter ) = filter;
 	  result = RUN_ALL_TESTS();
-		IApplication::Shutdown( result );
-		IApplication::Cleanup();
+		Process::Shutdown( result );
 	}
 	return result;
 }

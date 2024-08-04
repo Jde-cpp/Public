@@ -5,8 +5,8 @@
 #define var const auto
 
 namespace Jde::Iot{
-	static sp<LogTag> _logTag{ Logging::Tag( "app.monitoring" ) };
-	α UAMonitoringNodes::LogTag()ι->sp<Jde::LogTag>{ return _logTag; }
+	static ELogTags _tag{ MonitoringTag };
+	//α UAMonitoringNodes::LogTag()ι->sp<Jde::LogTag>{ return _logTag; }
 
 	//until orphaned UAClient's go away.
 	α UAMonitoringNodes::Shutdown()ι->void{
@@ -50,7 +50,7 @@ namespace Jde::Iot{
 			lock.unlock();
 			string nodeString;
 			nodeString = accumulate( newNodes.begin(), newNodes.end(), nodeString, []( string&& s, const NodeId& n ){return s+=n.to_string()+",";} );
-//			DBG( "DataSubscriptions: [{}]", nodeString.substr(0, nodeString.size()-1) );
+//			Debug( _tag, "DataSubscriptions: [{}]", nodeString.substr(0, nodeString.size()-1) );
 			_pClient->DataSubscriptions( CreateMonitoredItemsRequest{move(newNodes)}, requestId, move(h) );
 		}
 	}
@@ -65,12 +65,12 @@ namespace Jde::Iot{
 			for( auto pNode = nodes.begin(); i<response->resultsSize && pNode!=nodes.end(); ++pNode, ++i ){
 		  	MonitoredItemCreateResult result{ move(response->results[i]) };
 				if( result.statusCode ){
-					DBG( "[{:x}]Could not create monitored item for node '{}':  {}.", requestId, pNode->to_string(), UAException::Message(result.statusCode) );
+					Debug( _tag, "[{:x}]Could not create monitored item for node '{}':  {}.", requestId, pNode->to_string(), UAException::Message(result.statusCode) );
 					_errors.try_emplace( requestId ).first->second.try_emplace( move(*pNode), result.statusCode );
 				}
 				else{
 					var h = MonitorHandle{ requestHandle.SubId(), result.monitoredItemId };
-					TRACE( "[{:x}.{:x}]Monitoring '{}'", _pClient->Handle(), (Handle)h, pNode->to_string() );
+					Trace( _tag, "[{:x}.{:x}]Monitoring '{}'", _pClient->Handle(), (Handle)h, pNode->to_string() );
 					_subscriptions.emplace( h, Subscription{move(*pNode), move(result), dataChange} );
 					if( _subscriptions.size()==1 )
 						_pClient->ProcessDataSubscriptions();
@@ -79,7 +79,7 @@ namespace Jde::Iot{
 			_calls.erase( requestId );
 		}
 		else
-			CRITICAL( "Could not find call for subscription='{:x}' index='{:x}'.", requestHandle.SubId(), requestHandle.MonitorId() );
+			Critical( _tag, "Could not find call for subscription='{:x}' index='{:x}'.", requestHandle.SubId(), requestHandle.MonitorId() );
 	}
 	α UAMonitoringNodes::GetResult( Handle requestId, StatusCode sc )ι->FromServer::SubscriptionAck{
 		FromServer::SubscriptionAck y;
@@ -98,7 +98,7 @@ namespace Jde::Iot{
 				else{
 					nodeResult->set_status_code( sc ? sc : UA_STATUSCODE_BADCONFIGURATIONERROR );
 					if( !sc )
-						CRITICAL( "[{:x}]Could not find subscription for node '{}'.", requestId, n.to_string() );
+						Critical( _tag, "[{:x}]Could not find subscription for node '{}'.", requestId, n.to_string() );
 				}
 			}
 			_requests.erase( pRequest );
@@ -118,11 +118,11 @@ namespace Jde::Iot{
 			for_each( args.ClientCalls, [&opcId=_pClient->Target(),value,&args](var& x){x->SendDataChange(opcId, args.Node, value);} );
 		}
 		else
-			TRACE( "Could not find subscription:  {:x}.", h );
+			Trace( _tag, "Could not find subscription:  {:x}.", h );
 		return calls;
 	}
 	α UAMonitoringNodes::Unsubscribe( sp<IDataChange> dataChange )ι->void{
-		DBG( "[{}]UAMonitoringNodes::Unsubscribe()", dataChange->to_string() );
+		Debug( _tag, "[{}]UAMonitoringNodes::Unsubscribe()", dataChange->to_string() );
 		flat_set<MonitorHandle> handles;
 		auto f = [&dataChange]( var& hNodeDataChange ){return get<1>(hNodeDataChange.second)==dataChange;};
 		ul _{ _mutex };
@@ -154,7 +154,7 @@ namespace Jde::Iot{
 					toDelete.try_emplace( id.SubId() ).first->second.emplace( id.MonitorId() );
 			}
 			else{
-				TRACE( "Could not find node '{}' for unsubscription.", node.to_string() );
+				Trace( _tag, "Could not find node '{}' for unsubscription.", node.to_string() );
 				get<1>(successFailures).emplace( move(node) );
 			}
 		}
@@ -165,7 +165,7 @@ namespace Jde::Iot{
 
 	α UAMonitoringNodes::DeleteMonitoring( UA_Client* ua, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->Task{
 		auto wait = 5s;
-		TRACE( "[{:x}]DeleteMonitoring count={}, wait={}", (uint)ua, requested.size(), Chrono::ToString(wait) ); //duration_cast<std::chrono::seconds>(wait).count()
+		Trace( _tag, "[{:x}]DeleteMonitoring count={}, wait={}", (uint)ua, requested.size(), Chrono::ToString(wait) ); //duration_cast<std::chrono::seconds>(wait).count()
 		co_await Threading::Alarm::Wait( wait );
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) co_return;
 
@@ -175,7 +175,7 @@ namespace Jde::Iot{
 			for( auto& monitoredId : monitoredIds ){
 				const MonitorHandle h{subscriptionId,monitoredId};
 				if( auto p = _subscriptions.find(h); p!=_subscriptions.end() && p->second.ClientCalls.empty() ){
-					TRACE( "[{:x}.{:x}]DeleteMonitoring for:  {}", _pClient->Handle(), (Handle)h, p->second.Node.to_string() );
+					Trace( _tag, "[{:x}.{:x}]DeleteMonitoring for:  {}", _pClient->Handle(), (Handle)h, p->second.Node.to_string() );
 					_subscriptions.erase( h );
 					toDelete.try_emplace( subscriptionId ).first->second.emplace( monitoredId );
 				}

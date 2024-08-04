@@ -19,6 +19,7 @@ namespace Jde::Logging{
 
 	struct IExternalLogger{
 		β Destroy(SRCE)ι->void=0;
+		β DefaultLevel()ι->ELogLevel{ return _defaultLevel; }
 		β Name()ι->string=0;
 		β Log( ExternalMessage&& m, SRCE )ι->void=0;
 		β Log( const ExternalMessage& m, const vector<string>* args=nullptr, SRCE )ι->void=0;
@@ -27,6 +28,7 @@ namespace Jde::Logging{
 		concurrent_flat_map<ELogTags,ELogLevel> Tags;
 	protected:
 		ELogLevel	_minLevel{ ELogLevel::NoLog };
+		ELogLevel _defaultLevel{ ELogLevel::NoLog };
 	};
 namespace External{
 	Φ Add( up<IExternalLogger>&& l )ι->void;
@@ -37,6 +39,7 @@ namespace External{
 	Φ Log( const Logging::ExternalMessage& message )ι->void;
 	Φ MinLevel()ι->ELogLevel;
 	Φ MinLevel( sv externalName )ι->ELogLevel;
+	Φ MinLevel( ELogTags tags )ι->ELogLevel;
 	Φ DestroyLoggers()ι->void;
 	Φ SetMinLevel( ELogLevel level )ι->void;
 }}

@@ -27,7 +27,8 @@ namespace Jde{
 		Startup 			= 1ul << 20,
 		Subscription 	= 1ul << 21,
 		Test					= 1ul << 22,
-		Users					= 1ul << 23,
+		Threads				= 1ul << 23,
+		Users					= 1ul << 24,
 
 		HttpClientRead	  = Http | Client | Read,
 		HttpClientWrite		= Http | Client | Write,
@@ -41,8 +42,12 @@ namespace Jde{
 	constexpr ELogTags DefaultTag=ELogTags::App;
 	α ShouldTrace( sp<LogTag> pTag )ι->bool;
 	α FileMinLevel( ELogTags tags )ι->ELogLevel;
+	α MinLevel( ELogTags tags )ι->ELogLevel;
+	α Min( ELogLevel a, ELogLevel b )ι->ELogLevel;
+	α Min( ELogTags tags, const concurrent_flat_map<ELogTags,ELogLevel>& tagSettings )ι->optional<ELogLevel>;
 	α ToString( ELogTags tags )ι->string;
 	α ToLogTags( str name )ι->ELogTags;
+	α TagParser( function<optional<ELogTags>(sv)> parser )ι->void;
 
 namespace Logging{
 	α AddTags( vector<LogTag>& sinkTags, sv path )ι->void;

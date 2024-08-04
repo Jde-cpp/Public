@@ -3,13 +3,12 @@
 #define var const auto
 
 namespace Jde::Iot{
-	static sp<LogTag> _logTag{ Logging::Tag( "app.monitoring" ) };
-	static sp<LogTag> _logDataChanges{ Logging::Tag( "app.dataChanges" ) };
+	static ELogTags _tag{ (ELogTags)(EIotLogTags::Iot | EIotLogTags::Monitoring) };
 	α CreateDataChangesCallback( UA_Client* ua, void *userdata, RequestId requestId, void *response )ι->void{
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
 		auto pResponse = static_cast<UA_CreateMonitoredItemsResponse*>( response );
-		auto pRequest = pClient->ClearRequest<UARequest>( requestId );  RETURN_IF( !pRequest, ELogLevel::Critical, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId );
-		TRACE( "[{:x}.{:x}]CreateDataChangesCallback - {:x}", (uint)ua, requestId, (Handle)userdata );
+		auto pRequest = pClient->ClearRequest<UARequest>( requestId );  if( !pRequest ){ Critical(_tag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId ); return; }
+		Trace( _tag, "[{:x}.{:x}]CreateDataChangesCallback - {:x}", (uint)ua, requestId, (Handle)userdata );
 		if( var sc = pResponse->responseHeader.serviceResult; sc )
 			Resume( UAException{sc}, move(pRequest->CoHandle) );
 		else{
@@ -21,12 +20,12 @@ namespace Jde::Iot{
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
 		auto pResponse = static_cast<UA_DeleteMonitoredItemsResponse*>( response );
 		pClient->ClearRequest<UARequest>( requestId );
-		TRACE( "[{:x}.{:x}]MonitoredItemsDeleteCallback", (uint)ua, requestId );
+		Trace( _tag, "[{:x}.{:x}]MonitoredItemsDeleteCallback", (uint)ua, requestId );
 		if( var sc = pResponse->responseHeader.serviceResult; sc )
-			WARN( "[{:x}.{:x}]Could not delete monitored items:  {}.", (uint)ua, requestId, UAException::Message(sc) );
+			Warning( _tag, "[{:x}.{:x}]Could not delete monitored items:  {}.", (uint)ua, requestId, UAException::Message(sc) );
     for( auto sc : Iterable<UA_StatusCode>(pResponse->results, pResponse->resultsSize) ){
 			if( sc )
-				WARN( "[{:x}.{:x}]Could not delete monitored item:  {}.", (uint)ua, requestId, UAException::Message(sc) );
+				Warning( _tag, "[{:x}.{:x}]Could not delete monitored item:  {}.", (uint)ua, requestId, UAException::Message(sc) );
 		}
 	}
 
@@ -34,13 +33,13 @@ namespace Jde::Iot{
 		auto pClient = UAClient::TryFind(ua); if(!pClient) return;
 		Value value{ move(*uaValue) };
 		var h = MonitorHandle{ subId, monId };
-		TRACET( _logDataChanges, "[{:x}.{:x}] DataChangesCallback - {}", (uint)ua, (Handle)h, value.ToJson().dump() );
+		Trace( DataChangesTag, "[{:x}.{:x}] DataChangesCallback - {}", (uint)ua, (Handle)h, value.ToJson().dump() );
 		if( !pClient->MonitoredNodes.SendDataChange(h, move(value)) )
-			DBGT( _logDataChanges, "[{:x}.{:x}]Could not find node monitored item.", (uint)ua, (Handle)MonitorHandle{subId, monId} );
+			Debug( DataChangesTag, "[{:x}.{:x}]Could not find node monitored item.", (uint)ua, (Handle)MonitorHandle{subId, monId} );
 	}
 
 	α DataChangesDeleteCallback( UA_Client* ua, SubscriptionId subId, void* _subContext_, MonitorId monId, void* _monContext_ )->void{
-		TRACE( "[{:x}.{:x}]DataChangesDeleteCallback", (uint)ua, (Handle)MonitorHandle{subId, monId} );
+		Trace( _tag, "[{:x}.{:x}]DataChangesDeleteCallback", (uint)ua, (Handle)MonitorHandle{subId, monId} );
 	}
 
 	α DatachangeAwait::await_suspend( HCoroutine h )ι->void{

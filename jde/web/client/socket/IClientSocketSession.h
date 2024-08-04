@@ -18,7 +18,6 @@ namespace Jde::Web::Client{
 		using base = VoidAwait<>;
 		CreateClientSocketSessionAwait( sp<IClientSocketSession> session, string host, PortType port, SRCE )ι;
 		α await_suspend( base::Handle h )ι->void override;
-		α await_resume()ι->void override;
 	private:
 		sp<IClientSocketSession> _session; string _host; PortType _port;
 	};

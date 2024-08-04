@@ -11,7 +11,7 @@ namespace Jde::Web::Client{
 	struct HttpAwaitArgs {
 		string Authorization;
 		string ContentType{ "application/x-www-form-urlencoded" };
-		optional<boost::beast::http::verb> Verb{ http::verb::unknown };
+		optional<http::verb> Verb{ http::verb::unknown };
 		const bool IsSsl{ true };
 	};
 	struct ClientHttpAwait : TAwait<ClientHttpRes>, HttpAwaitArgs{

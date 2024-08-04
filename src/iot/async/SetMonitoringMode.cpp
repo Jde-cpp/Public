@@ -46,7 +46,7 @@ namespace Jde::Iot{
 			for( auto h : x.second )
 				resume( move(h) );
 			}) )
-			CRITICALT( AppTag(), "Could not find client ({:x}) for SetMonitoringModeAwait", (uint)pClient->UAPointer() );
+			Critical( ELogTags::App, "Could not find client ({:x}) for SetMonitoringModeAwait", (uint)pClient->UAPointer() );
 
 		_monitoringRequests.erase( pClient );
 	}

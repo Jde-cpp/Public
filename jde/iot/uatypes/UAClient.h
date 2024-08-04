@@ -21,7 +21,7 @@ namespace Jde::Iot{
 		~UAClient();
 
 		operator UA_Client* ()ι{ return _ptr; }
-		Ω Shutdown()ι->void;
+		Ω Shutdown( bool terminate )ι->void;
 		Ω GetClient( string id, string userId, string pw, SRCE )ι{ return ConnectAwait{move(id), move(userId), move(pw), sl}; }
 		Ω Find( str id, str userId, str pw )ι->sp<UAClient>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
@@ -84,7 +84,7 @@ namespace Jde::Iot{
 
 #define _logTag LogTag()
 	Ŧ UAClient::ClearRequest( UA_Client* ua, RequestId requestId )ι->up<T>{
-		auto p = TryFind( ua ); 
+		auto p = TryFind( ua );
 		return p ? p->ClearRequest<T>( requestId ) : up<T>{};
 	}
 

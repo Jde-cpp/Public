@@ -20,12 +20,13 @@ namespace Jde::Iot{
 
 	TEST_F( OpcServerTests, InsertFailed ){
 		var target = OpcServerTarget;
-		json jInsert = Json::Parse(Jde::format("{{\"input\":{{\"target\":\"{}\"}}}}", target) );
+		json jInsert = Json::Parse(𐢜("{{\"input\":{{\"target\":\"{}\"}}}}", target) );
 		DB::MutationQL insert{ "opcServer", DB::EMutationQL::Create, jInsert, nullopt };
 
-		var pk = CreateOpcServer();
+		auto readJson = SelectOpcServer();
+		var pk = readJson.contains( "id" ) ? readJson["id"].get<uint32>() : CreateOpcServer();
 
-		DB::DataSourcePtr()->Execute(	Jde::format("delete from iot_opc_servers where id='{}'", pk) ); //insert checks if failed because exists.
+		DB::DataSourcePtr()->Execute(	𐢜("delete from iot_opc_servers where id='{}'", pk) ); //insert checks if failed because exists.
 		VFuture( move(*GetHook()->InsertFailure(insert, 0)) ).get();
 		ASSERT_EQ( 0, *Future<ProviderPK>(ProviderAwait{target}).get() );
 	}
@@ -34,7 +35,7 @@ namespace Jde::Iot{
 		var target = OpcServerTarget;
 		var pk = CreateOpcServer();
 		Future<ProviderPK>( ProviderAwait{target, false} ).get();//BeforPurge mock.
-		json jPurge = Json::Parse( Jde::format("{{\"id\": {}}}", pk) );
+		json jPurge = Json::Parse( 𐢜("{{\"id\": {}}}", pk) );
 		DB::MutationQL purge{ "opcServer", DB::EMutationQL::Purge, jPurge, nullopt };
 		VFuture( move(*GetHook()->PurgeFailure(purge, 0)) ).get();
 		ASSERT_LT( 0, *Future<ProviderPK>(ProviderAwait{target}).get() );
@@ -57,13 +58,13 @@ namespace Jde::Iot{
 		ASSERT_NE( 0, *Future<ProviderPK>(ProviderAwait{target}).get() );
 
 		var description = "new description";
-		var update = Jde::format( "{{ mutation {{ updateOpcServer( 'id':{}, 'input': {{'description':'{}'}} ) }} }}", id, description );
+		var update = 𐢜( "{{ mutation {{ updateOpcServer( 'id':{}, 'input': {{'description':'{}'}} ) }} }}", id, description );
 		var updateJson = DB::Query( Str::Replace(update, '\'', '"'), 0 );
 		TRACE( "updateJson={}", updateJson.dump() );
 		var updated = SelectOpcServer( id );
 		ASSERT_EQ( description, Json::Getε(updated, "description") );
 
-		var del = Jde::format( "{{mutation {{ deleteOpcServer('id':{}) }} }}", id );
+		var del = 𐢜( "{{mutation {{ deleteOpcServer('id':{}) }} }}", id );
 		var deleteJson = DB::Query( Str::Replace(del, '\'', '"'), 0 );
 		TRACE( "deleted={}", deleteJson.dump() );
 	 	auto readJson2 = SelectOpcServer( id );

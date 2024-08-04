@@ -77,15 +77,9 @@ namespace Jde::Web{
 			optional<http::message_generator> res;
 			if( req.Method() == http::verb::options )
 				res = Internal::SendOptions( move(req) );
-			else if( req.IsPost("PING") ){
+			else if( req.IsPost("/ping") ){
 				auto pingRes{ req.Response<http::empty_body>() };
 				pingRes.set( http::field::summary, Jde::format("SSL={}", isSsl) );
-				pingRes.prepare_payload();
-				res = move(pingRes);
-			}
-			else if( req.IsGet("/isSsl") ){//TODO: remove this, ssl client isn't returning headers...
-				auto pingRes{ req.Response<http::string_body>() };
-				pingRes.body() = Jde::format( "SSL={}", isSsl );
 				pingRes.prepare_payload();
 				res = move(pingRes);
 			}

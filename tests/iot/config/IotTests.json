@@ -11,13 +11,29 @@
 	"iot": {
 		"target":  "Default"
 	},
+	"http": {
+		"ssl": {
+			"_certificate": "{ApplicationDataFolder}/ssl/certs/cert.pem",
+			"certificateAltName": "DNS:localhost,IP:"
+		}
+	},
+	"credentials":{
+		"name": "IotTests",
+		"target": "IotTests"
+	},
 	"logging":{
-		"breakLevel": "Trace",
+		"breakLevel": "Warning",
+		"defaultLevel": "Information",
 		"server": { "port": 4321, "level": "Information", "diagnosticsLevel": "Information", "tags": [] },
 		"tags": {
-			"Trace":["tests", "appServer"],
-			"Debug":["settings", "alarm", "appServer", "UAEvent", "iot.um", "sql"],
-			"Information":["threads", "UASecure"],
+			"Trace":["test",
+				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
+				"graphQL"
+				],
+			"Debug":["settings", "scheduler", "uaEvent", "iot.users", "sql",
+				"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
+				"monitoring", "browse", "processingLoop", "monitoring.pedantic"],
+			"Information":["threads", "uaSecure"],
 			"Warning":[],
 			"Error":[],
 			"Critical":[]
@@ -26,6 +42,7 @@
 	},
 	"workers":{
 		"drive":{ "threads":  1 },
-		"Alarm":{ "threads":  1 }
+		"Alarm":{ "threads":  1 },
+		"executor": 1
 	}
 }

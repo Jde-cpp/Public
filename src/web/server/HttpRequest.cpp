@@ -14,7 +14,7 @@ namespace Jde::Web{
 	α Server::AccessControlAllowOrigin()ι->string{ return _accessControlAllowOrigin; };
 
 	string _plainVersion{ 𐢜("({})Jde.Web.Server - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
-	string _sslVersion{ 𐢜("({})Jde.Web.Server - SSL{}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
+	string _sslVersion{ 𐢜("({})Jde.Web.Server SSL - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
 	α Server::ServerVersion( bool isSsl )ι->string{ return isSsl ? _sslVersion : _plainVersion; }//TODO cache
 
 }
@@ -48,7 +48,8 @@ namespace Jde::Web::Server{
 
 	α HttpRequest::Response( json j, SL sl )Ι->http::response<http::string_body>{
 		auto y = Response<http::string_body>();
-		y.body() = j.dump();
+		if( !j.is_null() )
+			y.body() = j.dump();
 		y.prepare_payload();
 		Trace( sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
 		return y;

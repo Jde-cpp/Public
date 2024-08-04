@@ -3,14 +3,8 @@
 #include <jde/iot/uatypes/Value.h>
 #include "../async/Attributes.h"
 #include <jde/iot/async/SessionAwait.h>
-//#include <jde/web/rest/IRestSession.h>
-//#include <jde/web/rest/RestException.h>
 
 namespace Jde::Iot::Browse{
-//	using Jde::Web::Rest::IRestSession;
-	sp<Jde::LogTag> _logTag{ Logging::Tag("app.browse") };
-	α Tag()ι->sp<LogTag>{return _logTag;}
-
 	α FoldersAwait::await_suspend( HCoroutine h )ι->void{
 		IAwait::await_suspend( h );
 		_client->SendBrowseRequest( Request{move(_node)}, move(h) );
@@ -49,7 +43,7 @@ namespace Jde::Iot::Browse{
 		}
 		if( retry ){
 			try{ co_await AwaitSessionActivation( _ua ); }catch(IException& e){ Promise()->SetError( move(e) ); }
-			[this]()->Task{
+			[this]()->Task {
 				try{
 					auto j = co_await ObjectsFolderAwait{ _node, _snapshot, _ua, _sl };
 					Promise()->SetValue( move(j) );
@@ -67,8 +61,7 @@ namespace Jde::Iot::Browse{
 	}
 
 	α OnResponse( UA_Client *ua, void* userdata, RequestId requestId, UA_BrowseResponse* response )ι->void{
-		auto h = UAClient::ClearRequestH( ua, requestId ); RETURN_IF( !h, ELogLevel::Critical, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId );
-
+		auto h = UAClient::ClearRequestH( ua, requestId ); if( !h ){ Critical( BrowseTag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId ); return; }
 		if( !response->responseHeader.serviceResult )
 			Resume( ms<Response>(move(*response)), move(h) );
 		else
@@ -106,7 +99,7 @@ namespace Jde::Iot::Browse{
 					if( auto p = dataTypes.find(nodeId); p!=dataTypes.end() )
 						reference["dataType"] = Iot::ToJson( p->second );
 					else
-						WARN( "Could not find data type for node={}.", nodeId.ToJson().dump() );
+						Warning( BrowseTag, "Could not find data type for node={}.", nodeId.ToJson().dump() );
 					reference["referenceType"] = Iot::ToJson( ref.referenceTypeId );
 					reference["isForward"] = ref.isForward;
 					reference["node"] = Iot::ToJson( nodeId );
@@ -133,8 +126,7 @@ namespace Jde::Iot::Browse{
 			j["references"] = references;
 			return j;
 		}
-		catch( json::exception& e )
-		{
+		catch( json::exception& e ){
 			throw Exception{ SRCE_CUR, move(e), ELogLevel::Critical };
 		}
 	}

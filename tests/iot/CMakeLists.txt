@@ -35,6 +35,7 @@ target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
 	<gtest/gtest.h>
 	<boost/asio.hpp>
 	<boost/beast.hpp>
+	<boost/beast/ssl/ssl_stream.hpp>
 	<boost/lexical_cast.hpp>
 	<boost/unordered/concurrent_flat_map.hpp>
 	<boost/unordered/concurrent_flat_set.hpp>

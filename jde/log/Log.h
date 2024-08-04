@@ -189,7 +189,8 @@ namespace Jde{
 		ASSERT( !Process::Finalizing() );
 		//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
 		//assert( m.Level<=ELogLevel::None );
-		if( m.Level<tag->Level || m.Level==ELogLevel::NoLog || tag->Level==ELogLevel::NoLog )
+		var tagLevel = FileMinLevel( ToLogTags(tag->Id) );
+		if( m.Level<tagLevel || m.Level==ELogLevel::NoLog || tagLevel==ELogLevel::NoLog )
 			return;
 		try{
 			if( auto p = Default(); p ){

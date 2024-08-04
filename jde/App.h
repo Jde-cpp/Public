@@ -52,7 +52,7 @@ namespace Jde{
 
 		Ω AddThread( sp<Threading::InterruptibleThread> pThread )ι->void;
 		Ω RemoveThread( sp<Threading::InterruptibleThread> pThread )ι->void;
-		Ω RemoveThread( sv name )ι->void;
+		Ω RemoveThread( sv name )ι->sp<Threading::InterruptibleThread>;
 		Ω AddApplicationLog( ELogLevel level, str value )ι->void;//static to call in std::terminate.
 
 		Ω Kill( uint processId )ι->bool;
@@ -67,7 +67,7 @@ namespace Jde{
 		Ω AddActiveWorker( Threading::IPollWorker* pWorker )ι->void;
 		Ω RemoveActiveWorker( Threading::IPollWorker* p )ι->void;
 
-		constexpr static sv ProductVersion="2024.06.01";
+		constexpr static sv ProductVersion="2024.08.01";
 	protected:
 
 		Ω OnTerminate()ι->void;

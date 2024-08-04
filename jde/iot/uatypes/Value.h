@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "../Exports.h"
+#include "Logger.h"
 
 namespace Jde::Iot{
 	namespace Browse{ struct Response; }
@@ -25,12 +26,10 @@ namespace Jde::Iot{
 	};
 
 	namespace Read{
-		ΓI α LogTag()ι->sp<LogTag>;
-		struct ΓI Await final : IAwait
-		{
+		struct ΓI Await final : IAwait{
 			Await( flat_set<NodeId>&& x, sp<UAClient>&& c, SRCE )ι;
 			α await_suspend( HCoroutine h )ι->void override;
-			α await_resume()ι->AwaitResult override{ TRACET(LogTag(), "Read::await_resume"); return IAwait::await_resume(); }
+			α await_resume()ι->AwaitResult override{ Trace(IotReadTag, "Read::await_resume"); return IAwait::await_resume(); }
 		private:
 			flat_set<NodeId> _nodes;
 			sp<UAClient> _client;

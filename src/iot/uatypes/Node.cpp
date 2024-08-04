@@ -37,10 +37,10 @@ namespace Jde::Iot{
 				ToGuid( p->second, nodeId.identifier.guid );
 			}
 			else
-				DBGT( AppTag(), "No identifier in nodeId" );
+				Debug( ELogTags::App, "No identifier in nodeId" );
 		}
 		catch( json::exception& e ){
-			CRITICALT( AppTag(), "Could not create json: {}", e.what() );
+			Critical( ELogTags::App, "Could not create json: {}", e.what() );
 		}
 	}
 

@@ -75,7 +75,7 @@ message Strings{
 message Message{
 	uint32 request_id=1;
 	oneof Value{
-		uint32 ack = 2;
+		uint32 ack = 2;//sends on handshake
 		string generic = 3;
 		Jde.App.Proto.StringPKs string_pks = 4;//pks stored in db.
 		LogLevels log_levels = 5;

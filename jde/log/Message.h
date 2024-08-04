@@ -11,14 +11,13 @@ namespace Jde::Logging{
 	template<ELogLevel TLevel, typename... TArgs>
 	struct Logger{
 		using enum ELogLevel;
-		explicit Logger( ELogTags tags, FormatString m, ARGS... args, SL sl )ι{
+		explicit Logger( ELogTags tags, FormatString m, ARGS... args, const spdlog::source_loc& sl )ι{
 			if( auto fileMinLevel = FileMinLevel(tags); fileMinLevel!=NoLog && fileMinLevel<=TLevel ){
 				try{
 					if( auto p = Logging::Default(); p ){
 //TODO!						BREAK_IF( m.get().empty() );
 						const auto level = (spdlog::level::level_enum)TLevel;
-						const spdlog::source_loc spdSL{ sl.file_name(), sl.line(), sl.function_name() };
-						p->log( spdSL, level, std::forward<FormatString>(m), std::forward<ARGS>(args)... );
+						p->log( sl, level, std::forward<FormatString>(m), std::forward<ARGS>(args)... );
 					}
 					else{
 						auto& out = TLevel>Information ? std::cerr : std::cout;
@@ -41,6 +40,9 @@ namespace Jde::Logging{
 				// }
 			}
 		}
+		explicit Logger( ELogTags tags, FormatString m, ARGS... args, SL sl )ι:
+			Logger( tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)..., {sl.file_name(), (int)sl.line(), sl.function_name()} )
+		{}
 	};
 }
 namespace Jde{
@@ -64,8 +66,24 @@ namespace Jde{
 	LoggerLevel( Error );
 	LoggerLevel( Critical );
 #undef LoggerLevel
-#undef FormatString
+
+#define CMD(Level)	Logging::Logger<ELogLevel::Level,TArgs...>{ tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)..., sl };
+template<typename... TArgs>
+α Log( ELogLevel level, ELogTags tags, const spdlog::source_loc& sl, FormatString m, ARGS... args )ι->void{
+	Trace( SRCE_CUR, tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)... );
+	//Trace( tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)..., sl );
+	switch( level ){
+		case ELogLevel::Trace: CMD( Trace ); break;
+		case ELogLevel::Debug: CMD( Debug ); break;
+		case ELogLevel::Information: CMD( Information ); break;
+		case ELogLevel::Warning: CMD( Warning ); break;
+		case ELogLevel::Error: CMD( Error ); break;
+		case ELogLevel::Critical: CMD( Critical ); break;
+	}
+}
+
 #undef ARGS
+#undef FormatString
 
 namespace Logging{
 	struct MessageBase{

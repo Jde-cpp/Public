@@ -51,12 +51,6 @@ namespace Jde::Web{
 	}
 	α Jwt::Payload()Ι->string{
 		auto signature = Str::Encode64( Signature, true );
-		auto modString = Str::Encode64( Modulus, true );
-		auto mod = Str::Decode64<Crypto::Modulus>( modString, true );
-		auto bodyMod = Json::Getε( Body, "n" );
-		auto mod2 = Str::Decode64<Crypto::Modulus>( bodyMod, true );
-		Crypto::Verify( mod2, Exponent, HeaderBodyEncoded, Signature );
-		auto signature2 = Str::Decode64<Crypto::Signature>( signature, true );
 		auto payload = 𐢜( "{}.{}", HeaderBodyEncoded, signature );
 		return payload;
 	}

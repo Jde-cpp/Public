@@ -2,7 +2,7 @@
 #define var const auto
 
 namespace Jde::Iot{
-	static sp<LogTag> _logTag{ Logging::Tag( "app.monitoring" ) };
+	static ELogTags _tag{ (ELogTags)(EIotLogTags::Iot | EIotLogTags::Monitoring) };
 	boost::concurrent_flat_map<sp<UAClient>,vector<HCoroutine>> _subscriptionRequests;
 	α CreateSubscriptionCallback(UA_Client* ua, void* /*userdata*/, RequestId requestId, void *response)ι->void{
 		auto pResponse = static_cast<UA_CreateSubscriptionResponse*>( response );
@@ -11,7 +11,7 @@ namespace Jde::Iot{
 		if( var sc = pResponse->responseHeader.serviceResult; sc )
 			CreateSubscriptionAwait::Resume( UAException{sc}, move(pClient) );
 		else{
-			TRACE( "[{:x}.{}]CreateSubscriptionCallback - subscriptionId={}", (uint)ua, requestId, pResponse->subscriptionId );
+			Trace( _tag, "[{:x}.{}]CreateSubscriptionCallback - subscriptionId={}", (uint)ua, requestId, pResponse->subscriptionId );
 			pClient->CreatedSubscriptionResponse = ms<UA_CreateSubscriptionResponse>(move(*pResponse));
 			CreateSubscriptionAwait::Resume( move(pClient) );
 		}
@@ -19,12 +19,12 @@ namespace Jde::Iot{
 
 	α StatusChangeNotificationCallback(UA_Client* ua, UA_UInt32 subId, void *subContext, UA_StatusChangeNotification *notification)ι->void{
 		BREAK;
-		TRACE( "[{:x}.{}]StatusChangeNotificationCallback", (uint)ua, subId );
+		Trace( _tag, "[{:x}.{}]StatusChangeNotificationCallback", (uint)ua, subId );
 	}
 
 	α DeleteSubscriptionCallback( UA_Client* ua, UA_UInt32 subId, void* /*subContext*/ )ι->void{
-		TRACE( "[{:x}.{}]DeleteSubscriptionCallback", (uint)ua, subId );
-		auto pClient = UAClient::TryFind(ua); 
+		Trace( _tag, "[{:x}.{}]DeleteSubscriptionCallback", (uint)ua, subId );
+		auto pClient = UAClient::TryFind(ua);
 		if( pClient )
 			pClient->CreatedSubscriptionResponse = nullptr;
 	}
@@ -45,7 +45,7 @@ namespace Jde::Iot{
 	α CreateSubscriptionAwait::Resume( sp<UAClient> pClient, function<void(HCoroutine&&)> resume )ι->void{
 		ASSERT( pClient );
 		if( !_subscriptionRequests.cvisit(pClient, [resume](var& x){for( auto h : x.second ) resume( move(h) );}) )
-			CRITICAL( "Could not find client ({:x}) for CreateSubscriptionAwait", (uint)pClient->UAPointer() );
+			Critical( _tag, "Could not find client ({:x}) for CreateSubscriptionAwait", (uint)pClient->UAPointer() );
 
 		_subscriptionRequests.erase( pClient );
 	}

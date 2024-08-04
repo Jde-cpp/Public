@@ -3,19 +3,19 @@
 #define var const auto
 
 namespace Jde::Iot{
-	static sp<LogTag> _logTag{ Logging::Tag("app.processingLoop") };
-	α AsyncRequest::LogTag()ι->sp<Jde::LogTag>{ return _logTag; }
+	constexpr ELogTags _tag{ (ELogTags)EIotLogTags::ProcessingLoop };
+//	α AsyncRequest::LogTag()ι->sp<Jde::LogTag>{ return _logTag; }
 
 	// 1 per UAClient
 	α AsyncRequest::ProcessingLoop()ι->Task{
 		auto logPrefix = format( "[{:x}]", _pClient->Handle() );
-		DBG( "{}ProcessingLoop started", logPrefix );
+		Debug( _tag, "{}ProcessingLoop started", logPrefix );
 		while( _running.test() ){
 			auto pClient = _pClient;
 			auto max = [this]()ι->RequestId{ lg _{_requestMutex}; return _requests.empty() ? 0 : _requests.rbegin()->first; };
 			var preMax = max();
 			if( auto sc = UA_Client_run_iterate(*pClient, 0); sc /*&& (sc!=UA_STATUSCODE_BADINTERNALERROR || i!=0)*/ ){
-				ERR( "{}UA_Client_run_iterate returned ({:x}){}", logPrefix, sc, UAException::Message(sc) );
+				Error( _tag, "{}UA_Client_run_iterate returned ({:x}){}", logPrefix, sc, UAException::Message(sc) );
 				_running.clear();
 				break;
 			}
@@ -31,8 +31,8 @@ namespace Jde::Iot{
 				Threading::SetThreadDscrptn( "ProcessingLoop" );
 			}
 		}
-		
-		DBG( "{}ProcessingLoop stopped", logPrefix );
+
+		Debug( _tag, "{}ProcessingLoop stopped", logPrefix );
 	}
 
 	α AsyncRequest::Process( RequestId requestId, up<UARequest>&& userData )ι->void{

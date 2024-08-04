@@ -66,6 +66,7 @@ namespace Jde::Web{
 		Execution::AddCancelSignal( _cancelSignal );
 		Execution::Run();
 		_started.wait( true );
+		Information( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
 	α Server::Stop( bool terminate )ι->void{

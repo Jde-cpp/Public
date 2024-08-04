@@ -7,9 +7,9 @@
 namespace Jde::App::Client{
 	struct StartSocketAwait : VoidAwait<>{
 		using base = VoidAwait<>;
-		StartSocketAwait( str host, PortType port, bool isSsl, SRCE )ι:base{sl}, _host{host}, _port{port}, _isSsl{isSsl}{}
+		StartSocketAwait( SessionPK sessionId, SRCE )ι;
 		α await_suspend( base::Handle h )ι->void override;
-		string _host; PortType _port; bool _isSsl;
+		SessionPK _sessionId;
 	};
 	α CloseSocketSession( SRCE )ι->VoidTask;
 	α GraphQL( str query, SRCE )ε->Web::Client::ClientSocketAwait<string>;
@@ -18,7 +18,7 @@ namespace Jde::App::Client{
 		using base = Web::Client::TClientSocketSession<Proto::FromClient::Transmission,Proto::FromServer::Transmission>;
 		Ω Instance()ι->sp<AppClientSocketSession>;
 		AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx )ι;
-//		α Connect( SessionPK sessionId, SRCE )ι->Web::Client::ClientSocketAwait<SessionPK>;
+		α Connect( SessionPK sessionId, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>;
 		α SessionInfo( SessionPK sessionId, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>;
 		α GraphQL( string&& q, UserPK userPK, SRCE )ι->Web::Client::ClientSocketAwait<string>;
 

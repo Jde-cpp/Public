@@ -8,13 +8,15 @@ namespace Jde::Web::Client{
 		ClientHttpRes()ι=default;//for await_resume default
 		ClientHttpRes( const http::response<http::string_body>& res )ε;
 
+		α operator[]( http::field field )Ι->string{ return _headers[field]; }
+
+		α Body()Ι->string{ return _body; }
+		α Headers()Ι->const http::header<true, http::fields>&{ return _headers; }
+		α Json()Ι->json{ return Json::Parse(_body); }
+		α IsError()Ι->bool{ using enum http::status; return _status!=ok && _status!=no_content && _status!=found; }
 		α IsRedirect()Ι->bool{ return _status==http::status::moved_permanently || _status==http::status::found || _status==http::status::see_other || _status==http::status::temporary_redirect || _status==http::status::permanent_redirect; }
 		α RedirectVariables()Ι->tuple<string,string,PortType>;
-		α operator[]( http::field field )Ι->string{ return _headers[field]; }
-		α Body()Ι->string{ return _body; }
-		α Json()Ι->json{ return Json::Parse(_body); }
 		α Status()Ι->http::status{ return _status; }
-		α IsError()Ι->bool{ using enum http::status; return _status!=ok && _status!=no_content && _status!=found; }
 	private:
 		string _body;
 		http::status _status;

@@ -65,16 +65,16 @@ namespace Jde::Web::Mock{
 		return _result.has_value();
 	}
 	α HttpRequestAwait::await_suspend( base::Handle h )ε->void{
-		base::await_suspend(h);
+		base::await_suspend( h );
 		if( _request.Target()=="/delay" ){
-			 _thread = std::jthread( [this,h]()mutable->void{
+			 _thread = std::jthread( [this,h]()mutable->void {
 				Threading::SetThreadDscrptn( "DelayHandler" );
 				uint seconds = To<uint>( _request["seconds"] );
+				Debug( ELogTags::HttpServerWrite, "server sleeping for {}", seconds );
 				std::this_thread::sleep_for( std::chrono::seconds{seconds} );
-				//Promise()->SetRequest( move(_request) );
 				Promise()->SetValue( {json{}, move(_request)} );
 				net::post( *Executor(), [h](){ h.resume(); } );
-				DBGT( HttpServerWriteTag(), "~/delay handler" );
+				Debug( ELogTags::HttpServerWrite, "~/delay handler" );
 			});
 		}
 		else if( _request.Target()=="/BadAwaitable" ){

@@ -9,7 +9,14 @@ namespace Jde::Web{
 	static uint16 _maxLogLength{ Settings::Get<uint16>("http/maxLogLength").value_or(255) };
 	α Client::MaxLogLength()ι->uint16{ return _maxLogLength; }
 }
-#define CHECK_EC(tag) if( ec ){ CodeException{ static_cast<std::error_code>(ec), tag, GetLogLevel(ec) }; return; }
+#define CHECK_EC(tag) if( ec ){ \
+	CodeException e{ static_cast<std::error_code>(ec), tag, GetLogLevel(ec) }; \
+	if( _connectHandle ){ \
+		_connectHandle.promise().SetError( move(e) ); \
+		_connectHandle.resume(); \
+		return; \
+	}\
+}
 namespace Jde::Web::Client{
 	α GetLogLevel( beast::error_code ec )->ELogLevel{
 		return ec == net::error::operation_aborted
@@ -44,8 +51,6 @@ namespace Jde::Web::Client{
 	α CreateClientSocketSessionAwait::await_suspend( base::Handle h )ι->void{
 		base::await_suspend( h );
 		_session->Run( _host, _port, h );
-	}
-	α CreateClientSocketSessionAwait::await_resume()ι->void{
 	}
 
 	atomic<RequestId> _requestId{ 1 };
@@ -102,7 +107,7 @@ namespace Jde::Web::Client{
 	α IClientSocketSession::OnRead( beast::error_code ec, uint bytes_transferred )ι->void{
 		boost::ignore_unused( bytes_transferred );
 		if( ec ){
-			CodeException{ static_cast<std::error_code>(ec), SocketClientReadTag(), Jde::format("[{:x}]ClientSocket::DoRead", Id()), GetLogLevel(ec) };
+			CodeException{ static_cast<std::error_code>(ec), SocketClientReadTag(), 𐢜("[{:x}]ClientSocket::DoRead", Id()), GetLogLevel(ec) };
 			if( ec!=net::error::operation_aborted )
 				_stream->Close( shared_from_this() );
 			return;

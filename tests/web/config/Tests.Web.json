@@ -2,7 +2,7 @@
 	"testing":{
 		"testsa":"CertificateTests.DefaultSettings",
 		"testsb":"SocketTests.*",
-		"tests":"WebTests.BadSessionId"
+		"tests":"WebTests.*"
 	},
 	"cryptoTests":{
 		"clear": true
@@ -10,7 +10,7 @@
 	"logging":{
 		"defaultLevel": "Information",
 		"tags": {
-			"Trace":["tests",
+			"Trace":["test",
 				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
 			],
 			"Debug":["settings", "app"],
@@ -25,7 +25,7 @@
 	"http":{
 		"address": null,
 		"port": 5005,
-		"timeout": "PT60S",
+		"timeout": "PT10S",
 		"maxLogLength": 31,
 		"accessControl": {
 			"allowOrigin": "*",

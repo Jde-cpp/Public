@@ -16,7 +16,7 @@ namespace Jde::Web{
 	using Client::ClientHttpAwait;
 	using Client::ClientHttpRes;
 
-	static sp<Jde::LogTag> _logTag{ Logging::Tag( "tests" ) };
+	static sp<Jde::LogTag> _logTag{ Logging::Tag( "test" ) };
 	constexpr sv ContentType{ "application/x-www-form-urlencoded" };
 	using Mock::Host; using Mock::Port;
 

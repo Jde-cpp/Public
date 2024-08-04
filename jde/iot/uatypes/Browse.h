@@ -6,11 +6,9 @@
 namespace Jde::Iot{
 	struct UAClient;
 namespace Browse{
-	α Tag()ι->sp<LogTag>;
 	α OnResponse( UA_Client *ua, void* userdata, RequestId requestId, UA_BrowseResponse* response )ι->void;
 
-	struct FoldersAwait final : IAwait
-	{
+	struct FoldersAwait final : IAwait{
 		FoldersAwait( NodeId&& node, sp<UAClient>& c, SRCE )ι:IAwait{sl}, _node{move(node)},_client{c}{}
 		α await_suspend( HCoroutine h )ι->void override;
 		α await_resume()ι->AwaitResult override{ return _pPromise->MoveResult(); }

@@ -30,14 +30,12 @@ namespace Jde::Web::Client{
 		if( IsSsl() ){
 			auto& stream = get<1>( _ws );
 			beast::get_lowest_layer( stream ).expires_after( std::chrono::seconds(30) );// Set a timeout on the operation
-			// Set SNI Hostname (many hosts need this to handshake successfully)
-			if( !SSL_set_tlsext_host_name(stream.next_layer().native_handle(), host.c_str()) ){
+			if( !SSL_set_tlsext_host_name(stream.next_layer().native_handle(), host.c_str()) ){// Set SNI Hostname (many hosts need this to handshake successfully)
 				var ec = beast::error_code( static_cast<int>(::ERR_get_error()), net::error::get_ssl_category() );
 				CodeException{ static_cast<std::error_code>(ec), SocketClientReadTag() };
 				return;
 			}
 			host += ':' + std::to_string( ep.port() ); // Update the _host string. This will provide the value of the Host HTTP header during the WebSocket handshake. See https://tools.ietf.org/html/rfc7230#section-5.4
-			// Perform the SSL handshake
 			stream.next_layer().async_handshake( ssl::stream_base::client, beast::bind_front_handler( &IClientSocketSession::OnSslHandshake, session) );
 		}
 		else{
@@ -64,7 +62,7 @@ namespace Jde::Web::Client{
 		}, _ws );
 	}
 
-	auto _logTag = Logging::Tag( "tests" );
+	auto _logTag = Logging::Tag( "test" );
 	α ClientSocketStream::AsyncWrite( string&& buffer, sp<IClientSocketSession> /*session*/ )ι->Task{
 		LockAwait await = _writeLock.Lock(); //gcc doesn't like co_await _writeLock.Lock();
 		_writeGuard = (co_await await).UP<CoGuard>();

@@ -30,15 +30,15 @@ namespace Jde{
 		α SetValue( TResult&& x )ι->void{ base::Expected = move(x); }
 		α Resume( TResult&& x, coroutine_handle<> h )ι->void{ SetValue(move(x)); h.resume(); };
 	};
-
-	struct VoidTask{//TODO move to jde ns
-		struct promise_type : IPromise<VoidTask,up<IException>>{
-			using base = IPromise<VoidTask,up<IException>>;
-			//α HasError()Ι->bool override{ return base::Expected!=nullptr; }
-			α Error()Ι->const up<IException>& override{ return base::Expected; }
-			α MoveError()ι->up<IException> override{ return move(base::Expected); }
-			α SetError( IException&& x )ι->void override{ base::Expected = x.Move(); }
-		};
+	template<class TTask>
+	struct VoidPromise : IPromise<TTask,up<IException>>{
+		using base = IPromise<TTask,up<IException>>;
+		α Error()Ι->const up<IException>& override{ return base::Expected; }
+		α MoveError()ι->up<IException> override{ return move(base::Expected); }
+		α SetError( IException&& x )ι->void override{ base::Expected = x.Move(); }
+	};
+	struct VoidTask{
+		struct promise_type : VoidPromise<VoidTask>{};
 	};
 
 	template<class TResult>

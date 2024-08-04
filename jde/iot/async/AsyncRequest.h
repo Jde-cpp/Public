@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <jde/iot/uatypes/Node.h>
+#include "../uatypes/Logger.h"
 
 namespace Jde::Iot{
 	struct UAClient;
@@ -11,7 +12,7 @@ namespace Jde::Iot{
 		HCoroutine CoHandle;
 	};
 	//Τ struct TUARequest : UARequest{TUARequest( T&& args, HCoroutine&& h )ι:UARequest{move(h)}, Args{move(args)}{}T Args;};
-	
+
 	Τ struct UARequestMulti{
 		flat_map<UA_UInt32, NodeId> Requests;
 		sp<UAClient> ClientPtr;
@@ -26,7 +27,7 @@ namespace Jde::Iot{
 		α Stop()ι->void;
 	private:
 		α UAHandle()ι->Handle;
-		α LogTag()ι->sp<LogTag>;
+		//α LogTag()ι->sp<LogTag>;
 		α ProcessingLoop()ι->Task;
 		flat_map<RequestId, up<UARequest>> _requests; mutex _requestMutex;
 		sp<UAClient> _pClient;
@@ -38,11 +39,11 @@ namespace Jde::Iot{
 		up<T> userData;
 		lg _{_requestMutex};
 		if( auto p = _requests.find(requestId); p!=_requests.end() ){
-			userData.reset( dynamic_cast<T*>(p->second.release()) ); 
+			userData.reset( dynamic_cast<T*>(p->second.release()) );
 			_requests.erase( p );
 		}
 		else
-			CRITICALT( LogTag(), "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
+			Critical( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
 		return userData;
 	}
 }

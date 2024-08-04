@@ -4,10 +4,7 @@
 #define var const auto
 
 namespace Jde::Iot{
-	static sp<Jde::LogTag> _logTag = Logging::Tag( "app.read" );
-	α Read::LogTag()ι->sp<Jde::LogTag>{ return _logTag; }
 	namespace Read{
-
 		Await::Await( flat_set<NodeId>&& x, sp<UAClient>&& c, SL sl )ι:IAwait{sl}, _nodes{move(x)}, _client{move(c)}{}
 
 		α Await::await_suspend( HCoroutine h )ι->void{
@@ -20,25 +17,25 @@ namespace Jde::Iot{
 			var handle = userdata ? (RequestId)(uint)userdata : requestId;
 			string logPrefix = format( "[{:x}.{}.{}]", (uint)ua, handle, requestId );
 			if( sc )
-				TRACE( "{}Value::OnResponse ({})-{} Value={}", logPrefix, sc, UAException::Message(sc), val ? Value{*val}.ToJson().dump() : "null" );
+				Trace( IotReadTag, "{}Value::OnResponse ({})-{} Value={}", logPrefix, sc, UAException::Message(sc), val ? Value{*val}.ToJson().dump() : "null" );
 			auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
 			up<flat_map<NodeId, Value>> results;
 			bool visited = pClient->_readRequests.visit( handle, [requestId, sc, val, &results, &logPrefix]( auto& pair ){
 				auto& x = pair.second;
 				if( auto pRequest=x.Requests.find(requestId); pRequest!=x.Requests.end() ){
 					auto p = x.Results.try_emplace( pRequest->second, sc ? Value{ sc } : Value{ *val } ).first;
-					TRACE( "{} Value={}", logPrefix, sc ? format("[{:x}]{}", sc, UAException::Message(sc)) : p->second.ToJson().dump() );
+					Trace( IotReadTag, "{} Value={}", logPrefix, sc ? format("[{:x}]{}", sc, UAException::Message(sc)) : p->second.ToJson().dump() );
 					if( x.Results.size()==x.Requests.size() )
 						results = mu<flat_map<NodeId, Value>>( move(x.Results) );
 				}
 			});
 			if( !visited )
-				CRITICAL( "{}Could not find handle.", logPrefix );
+				Critical( IotReadTag,  "{}Could not find handle.", logPrefix );
 			else if( results ){
 				pClient->_readRequests.erase( handle );
-				auto h = pClient->ClearRequestH( handle ); RETURN_IF( !h, ELogLevel::Critical, "[{}]Could not find handle.", logPrefix );
-				TRACE( "{}Resume", logPrefix );
-				Resume( move(results), move(h) );
+				auto h = pClient->ClearRequestH( handle ); if( !h ){ Critical{ IotReadTag, "[{}]Could not find handle.", logPrefix}; return; };
+				Trace( IotReadTag, "{}Resume", logPrefix );
+				Resume( move(results), h );
 			}
 			//DBG( "[{}]Value::~OnResponse()", logPrefix );
 		}
@@ -59,7 +56,7 @@ namespace Jde::Iot{
 					j.push_back(v);
 			}
 			catch( json::exception& e ){
-				CRITICAL( "Error converting to json.  {}", e.what() );
+				Critical( IotReadTag, "Error converting to json.  {}", e.what() );
 				j = { "error", e.what() };
 			}
 		};
@@ -107,7 +104,7 @@ namespace Jde::Iot{
 			else if( IS(UA_TYPES_XMLELEMENT) ) [[unlikely]]
 				addExplicit( ToSV(((UA_XmlElement*)value.data)[i]) );
 			else{
-				WARN( "Unsupported type {}.", type->typeName );
+				Warning( IotReadTag, "Unsupported type {}.", type->typeName );
 				addExplicit( format("Unsupported type {}.", type->typeName) );
 			}
 		}
@@ -203,7 +200,7 @@ namespace Jde::Iot{
 			else if( IS(UA_TYPES_XMLELEMENT) ) [[unlikely]]
 				v.set_allocated_xml_element( new string{ToSV(Get<UA_XmlElement>(i))} );
 			else{
-				WARN( "Unsupported type {}.", type->typeName );
+				Warning( IotReadTag, "Unsupported type {}.", type->typeName );
 				v.set_status_code( UA_STATUSCODE_BADNOTIMPLEMENTED );
 			}
 		}

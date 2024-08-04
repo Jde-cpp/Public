@@ -60,7 +60,8 @@ namespace Jde::Web::Client{
 	α ClientHttpAwait::Execute()ι->ClientHttpAwaitSingle::Task{
 		auto firstAttempt = ClientHttpAwaitSingle{ move(*this) };
 		try{
-			SetValue( co_await firstAttempt );
+			auto res = co_await firstAttempt;
+			SetValue( move(res) );
 		}
 		catch( ClientHttpException& e ){
 			if( !e.SslStreamTruncated() )
@@ -83,7 +84,7 @@ namespace Jde::Web::Client{
 		ClientHttpRes res = base::await_resume();
 		if( res.IsError() )
 			throw ClientHttpResException( move(res) );
-		return base::await_resume();
+		return res;
 	}
 
 	α ClientHttpAwaitSingle::Execute()ι->void{

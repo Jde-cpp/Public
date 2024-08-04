@@ -131,7 +131,7 @@ namespace Jde::Web::Client{
 			if( ec )
 				ResumeExp( ClientHttpException{ec, _session, &_req} );
 			else{
-				auto res = ClientHttpRes{ move(_res) };
+				ClientHttpRes res{ move(_res) };
 				if( res.IsRedirect() && _session->AllowRedirects ){
 					auto [host,target,port] = res.RedirectVariables();
 					Debug( tags, "redirecting from {}{} to {}", _session->Host, _req.target(), res[http::field::location] );

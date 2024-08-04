@@ -9,16 +9,12 @@ namespace Jde::App::Client{
 	α UpdateStatus()ι->void;
 	α SetStatusDetailsFunction( function<vector<string>()>&& f )ι->void;
 	α AppServiceUserPK()ι->UserPK;	//for internal queries.
+	α Connect( bool wait=false, SRCE )ι->void;
 
-	struct LoginAwait final : TAwait<SessionPK>{
-		using base = TAwait<SessionPK>;
-		LoginAwait( Crypto::Modulus mod, Crypto::Exponent exp, string userName, string userTarget, string myEndpoint, string description, const fs::path& privateKeyPath, SRCE )ι;
-		α await_suspend( base::Handle h )ι->void{ base::await_suspend(h); Execute(); };
-	private:
-		α Execute()ι->Web::Client::ClientHttpAwait::Task;
-		Web::Jwt _jwt;
-		//Crypto::Modulus _modulus; Crypto::Exponent _exponent; string _userName; string _userTarget; string _myEndpoint; string _description;
-	};
+	α IsSsl()ι->bool;
+	α Host()ι->string;
+	α Port()ι->PortType;
+
 /*
 	//TODO change to functions, not returning anything.
 	struct LogAwait : VoidAwait<>{

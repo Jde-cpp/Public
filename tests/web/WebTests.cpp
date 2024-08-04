@@ -7,7 +7,7 @@
 #define var const auto
 
 namespace Jde::Web{
-	static sp<Jde::LogTag> _logTag{ Logging::Tag( "tests" ) };
+	static sp<Jde::LogTag> _logTag{ Logging::Tag( "test" ) };
 	using Mock::Host; using Mock::Port;
 
 	struct WebTests : ::testing::Test{
@@ -39,15 +39,16 @@ namespace Jde::Web{
 	using Web::Client::ClientHttpResException;
 
 	TEST_F( WebTests, IsSsl ){
-		auto await = ClientHttpAwait{ Host, "/isSsl", Port, {.ContentType="text/ping"} };
+		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} };
 		var res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
-		ASSERT_EQ( "SSL=true", res.Body() );
+		//Debug( ELogTags::Test, "Headers.Size: {}", res.Headers().size() );
+		ASSERT_TRUE( res[http::field::server].contains("SSL") );
 	}
 
-	TEST_F( WebTests, PingPlain ){
-		auto await = ClientHttpAwait{ Host, "/isSsl", Port, {.ContentType="text/ping", .IsSsl=false} };
+	TEST_F( WebTests, IsPlain ){
+		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post, .IsSsl=false} };
 		var res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
-		ASSERT_EQ( "SSL=false", res.Body() );
+		ASSERT_FALSE( res[http::field::server].contains("SSL") );
 	}
 
 	TEST_F( WebTests, EchoAttack ){
@@ -114,40 +115,45 @@ namespace Jde::Web{
 		Stopwatch _{ "WebTests::CloseMidRequest", ELogTags::Test };
 
 		namespace beast = boost::beast;
-		auto ioc = Executor();
-		tcp::resolver resolver{ *ioc };
-    auto stream = mu<beast::tcp_stream>( *ioc );
+		net::any_io_executor strand = net::make_strand( *Executor() );
+		tcp::resolver resolver{ strand };
+    auto stream = mu<beast::tcp_stream>( strand );
 		var results = resolver.resolve( Host, std::to_string(Port) );
     stream->connect( results );
-		uint delay = 1;
+		uint delay = 2;
 		http::request<http::empty_body> req{ http::verb::get, 𐢜("/delay?seconds={}", delay), 11 };
 		req.set( http::field::content_type, ContentType );
 		std::condition_variable_any cv;
 		std::shared_mutex mtx;
-		auto written = []( beast::error_code ec, uint bytes_transferred )ι{};
-    http::async_write( *stream, req, written );
-		auto read = [&]( beast::error_code ec, uint bytes_transferred )ε{
-			if( ec )
-				throw CodeException{ ec, ELogTags::Test };
+		auto onWrite = []( beast::error_code ec, uint bytes_transferred )ι{
+			ASSERT( !ec );
+			Debug( ELogTags::Test, "onWrite" );
+		};
+		net::post( strand, [&]{
+    	http::async_write( *stream, req, onWrite );
+		});
+		auto onRead = [&]( beast::error_code ec, uint bytes_transferred )ε{
+			CodeException{ ec, ELogTags::Test }; //expected.
 			sl l{ mtx };
 			cv.notify_one();
 		};
 		beast::flat_buffer buffer;
 		http::request_parser<http::string_body> parser;
-		http::async_read( *stream, buffer, parser, read );
-		net::post( *ioc, [&]{
+		http::async_read( *stream, buffer, parser, onRead );
+		//std::this_thread::sleep_for( std::chrono::seconds{1} );
+		net::post( strand, [&]{
 			beast::error_code ec;
-			stream->socket().shutdown( tcp::socket::shutdown_both, ec );
+			stream->socket().shutdown( tcp::socket::shutdown_both, ec );//TODO use cancellation token.
 			ASSERT( !ec );
 			stream->socket().close( ec );
 			ASSERT( !ec );
 			stream = nullptr;
-			DBG( "~net::post" );
+			Debug( ELogTags::Test, "client stream shutdown" );
 		});
 		sl l{ mtx };
 		cv.wait( l );
 		std::this_thread::sleep_for( std::chrono::seconds{delay}+500ms );
-		//TODO find out why server is not getting the disconnect.
+		//TODO rest stream write succeeds even though stream is shutdown.
 	}
 	TEST_F( WebTests, BadTarget ){
 		try{
