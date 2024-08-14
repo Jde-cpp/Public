@@ -1,7 +1,7 @@
 ﻿#pragma once
 //#include "App.h"
 #ifndef ASSERT
-# define ASSERT( actual ){ if( !(actual) ){ Critical{ ELogTags::App, "Assert:  {} is false"sv,  #actual }; } /*assert( actual );*/ }
+# define ASSERT( actual ){ if( !(actual) ){ Critical( ELogTags::App, "Assert:  {} is false",  #actual ); } }
 #endif
 
 #define ASSERTSL( actual, xsl ){ if( !(actual) )Critical{xsl, ELogTags::App, "Assert:  {} is false", #actual}; }

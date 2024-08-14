@@ -7,7 +7,7 @@ namespace Jde{
 	struct IPromise{
 		α get_return_object()ι->TTask{ return {}; }
 		suspend_never initial_suspend()ι{ return {}; }
-		suspend_never final_suspend()ι{ return {}; }
+		suspend_never final_suspend()noexcept{ return {}; }
 		α return_void()ι->void{}
 		α unhandled_exception()ι->void;
 		β Error()Ι->const up<IException>& =0;

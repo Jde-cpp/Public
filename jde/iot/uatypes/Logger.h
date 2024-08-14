@@ -22,6 +22,7 @@ namespace Jde::Iot{
 	constexpr ELogTags MonitoringTag{ (ELogTags)EIotLogTags::Monitoring };
 	constexpr ELogTags DataChangesTag{ MonitoringTag | ELogTags::Pedantic };
 	constexpr ELogTags BrowseTag{ (ELogTags)EIotLogTags::Browse };
+	constexpr ELogTags BrowseTagPedantic{ (ELogTags)EIotLogTags::Browse | ELogTags::Pedantic };
 	constexpr ELogTags ProcessingLoopTag{ (ELogTags)EIotLogTags::ProcessingLoop };
 
 	α LogTagParser( sv name )ι->optional<ELogTags>;

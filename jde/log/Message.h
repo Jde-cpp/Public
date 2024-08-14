@@ -5,19 +5,19 @@ namespace Jde::Logging{
 	α Default()ι->spdlog::logger*;
 	enum class EFields : uint16{ None=0, Timestamp=0x1, MessageId=0x2, Message=0x4, Level=0x8, FileId=0x10, File=0x20, FunctionId=0x40, Function=0x80, LineNumber=0x100, UserPK=0x200, User=0x400, ThreadId=0x800, Thread=0x1000, VariableCount=0x2000, SessionId=0x4000 };
 
-#define FormatString const fmt::format_string<TArgs const&...>
-#define ARGS const TArgs&
+#define FormatString const fmt::format_string<Args const&...>
+#define ARGS const Args&
 
-	template<ELogLevel TLevel, typename... TArgs>
+	template<ELogLevel TLevel, typename... Args>
 	struct Logger{
 		using enum ELogLevel;
-		explicit Logger( ELogTags tags, FormatString m, ARGS... args, const spdlog::source_loc& sl )ι{
+		explicit Logger( ELogTags tags, FormatString&& m, ARGS... args, const spdlog::source_loc& sl )ι{
 			if( auto fileMinLevel = FileMinLevel(tags); fileMinLevel!=NoLog && fileMinLevel<=TLevel ){
 				try{
 					if( auto p = Logging::Default(); p ){
 //TODO!						BREAK_IF( m.get().empty() );
 						const auto level = (spdlog::level::level_enum)TLevel;
-						p->log( sl, level, std::forward<FormatString>(m), std::forward<ARGS>(args)... );
+						p->log( sl, level, FWD(m), FWD(args)... );
 					}
 					else{
 						auto& out = TLevel>Information ? std::cerr : std::cout;
@@ -40,24 +40,24 @@ namespace Jde::Logging{
 				// }
 			}
 		}
-		explicit Logger( ELogTags tags, FormatString m, ARGS... args, SL sl )ι:
-			Logger( tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)..., {sl.file_name(), (int)sl.line(), sl.function_name()} )
+		explicit Logger( ELogTags tags, FormatString&& m, ARGS... args, SL sl )ι:
+			Logger( tags, FWD(m), FWD(args)..., {sl.file_name(), (int)sl.line(), sl.function_name()} )
 		{}
 	};
 }
 namespace Jde{
 #define LoggerLevel( Level )	\
-	template<typename... TArgs> \
-	struct Level : Logging::Logger<ELogLevel::Level,TArgs...>{ \
-    explicit Level(ELogTags tags, FormatString m, ARGS... args, SRCE): \
-			Logging::Logger<ELogLevel::Level,TArgs...>{ tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)..., sl } \
+	template<typename... Args> \
+	struct Level : Logging::Logger<ELogLevel::Level,Args...>{ \
+    explicit Level(ELogTags tags, FormatString&& m, ARGS... args, SRCE): \
+			Logging::Logger<ELogLevel::Level,Args...>{ tags, FWD(m), FWD(args)..., sl } \
 		{} \
-    explicit Level( SL sl, ELogTags tags, FormatString m, ARGS... args ): \
-			Logging::Logger<ELogLevel::Level,TArgs...>{ tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)..., sl } \
+    explicit Level( SL sl, ELogTags tags, FormatString&& m, ARGS... args ): \
+			Logging::Logger<ELogLevel::Level,Args...>{ tags, FWD(m), FWD(args)..., sl } \
 		{} \
 	}; \
-	template<class... TArgs> \
-	Level( ELogTags tags, FormatString, ARGS... )->Level<TArgs...>
+	template<class... Args> \
+	Level( ELogTags tags, FormatString&&, ARGS... )->Level<Args...>
 
 	LoggerLevel( Trace );
 	LoggerLevel( Debug );
@@ -67,11 +67,9 @@ namespace Jde{
 	LoggerLevel( Critical );
 #undef LoggerLevel
 
-#define CMD(Level)	Logging::Logger<ELogLevel::Level,TArgs...>{ tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)..., sl };
-template<typename... TArgs>
-α Log( ELogLevel level, ELogTags tags, const spdlog::source_loc& sl, FormatString m, ARGS... args )ι->void{
-	Trace( SRCE_CUR, tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)... );
-	//Trace( tags, std::forward<FormatString>(m), std::forward<const TArgs>(args)..., sl );
+#define CMD(Level)	Logging::Logger<ELogLevel::Level,Args...>{ tags, FWD(m), std::forward<const Args>(args)..., sl };
+template<typename... Args>
+α Log( ELogLevel level, ELogTags tags, const spdlog::source_loc& sl, FormatString&& m, ARGS... args )ι->void{
 	switch( level ){
 		case ELogLevel::Trace: CMD( Trace ); break;
 		case ELogLevel::Debug: CMD( Debug ); break;

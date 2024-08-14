@@ -20,6 +20,14 @@ message SessionInfo{
 	bool has_socket=5;
 };
 
+message ConnectionInfo{
+	uint32 app_pk = 1;
+	uint32 instance_pk = 2;
+	LogLevels log_levels = 3;
+	SessionInfo session_info = 4;
+}
+
+
 ////////////Web/////////////////
 message Trace{
 	uint64 id=1;

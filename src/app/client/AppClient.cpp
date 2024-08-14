@@ -76,6 +76,7 @@ namespace Jde::App{
 					}();
 				}
 				catch( IException& e ){
+					Trace( ELogTags::App, "Could not connect to App Server:  {}"sv, e.what() );
 					if( e.Code!=2406168687 )//port=0
 						Connect( true );
 				}

@@ -28,6 +28,7 @@ namespace Jde{
 	struct TAwait : VoidAwait<Result,TTask>{
 		using base = VoidAwait<Result,TTask>;
 		TAwait( SRCE )ι:base{sl}{}
+		virtual ~TAwait()=0;
 		β await_resume()ε->Result{
 			base::AwaitResume();
 			if( !base::Promise() )
@@ -42,14 +43,16 @@ namespace Jde{
 		α Resume()ι{ ASSERT(base::Promise()); base::_h.resume(); }
 
 		α Resume( Result&& r )ι{ ASSERT(base::Promise()); base::Promise()->Resume( move(r), base::_h ); }
-		α ResumeScaler( Result r )ι{ ASSERT(base::Promise()); base::Promise()->Resume( r, base::_h ); }
+		α ResumeScaler( Result r )ι{ ASSERT(base::Promise()); base::Promise()->Resume( move(r), base::_h ); }
 	};
+	template<class Result,class TTask>
+	TAwait<Result,TTask>::~TAwait(){};
 
 	template<class Result,class TExecuteResult=void, class TTask=TTask<Result>>
 	struct TAwaitEx : TAwait<Result,TTask>{
 		using base = TAwait<Result,TTask>;
 		TAwaitEx( SRCE )ι:base{sl}{}
-		α await_suspand()ε->void{ base::await_suspend(base::_h); Execute(); }
+		α await_suspend( base::Handle h )ε->void override{ base::await_suspend(h); Execute(); }
 		β Execute()ι->TExecuteResult=0;
 	};
 

@@ -1,7 +1,7 @@
 {
 	"testing":{
-		"testsa": "OpcServerTests.*",
-		"testsb": "UAClientTests.*"
+		"testsa": "OpcServerTests.Crud",
+		"tests": "UAClientTests.Authenticate_BadPassword"
 	},
 	"db":{
 		"driver": "$(JDE_DB_DRIVER)",
@@ -28,7 +28,7 @@
 		"tags": {
 			"Trace":["test",
 				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
-				"graphQL"
+				"graphQL", "app", "sql"
 				],
 			"Debug":["settings", "scheduler", "uaEvent", "iot.users", "sql",
 				"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",

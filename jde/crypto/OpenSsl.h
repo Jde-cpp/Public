@@ -22,12 +22,14 @@ namespace Jde::Crypto{
 	Φ WriteCertificate( const fs::path& path, vector<byte>&& certificate )ε->void;
 	Φ WritePrivateKey( const fs::path& path, vector<byte>&& privateKey, str passcode = {} )ε->void;
 
-	struct OpenSslException final : Exception{
+	struct OpenSslException final : IException{
 		template<class... Args>
 		OpenSslException( fmt::format_string<Args...> fmt, uint rc, SL sl, Args&&... args )ι:
-			Exception{ sl, ELogLevel::Warning, rc, fmt, std::forward<Args>(args)... }
+			IException{ sl, ELogLevel::Warning, rc, fmt, std::forward<Args>(args)... }
 		{}
 		static Φ CurrentError()ι->string;
+		α Move()ι->up<IException>{ return mu<OpenSslException>(move(*this)); }
+		[[noreturn]] α Throw()->void override{ throw move(*this); }
   };
 }
 #undef Φ

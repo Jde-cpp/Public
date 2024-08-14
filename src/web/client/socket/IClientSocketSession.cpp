@@ -28,7 +28,7 @@ namespace Jde::Web::Client{
 		_tasks.emplace( requestId, hCoroutine );
 	}
 
-	α IClientSocketSession::GetTask( RequestId requestId )ι->std::any{
+	α IClientSocketSession::PopTask( RequestId requestId )ι->std::any{
 		std::any h;
 		if( !_tasks.erase_if(requestId, [&h](auto&& kv){ h=kv.second; return true;}) )
 			CRITICALT( SocketClientReadTag(), "[{:x}]RequestId '{}' not found.", Id(), requestId );
@@ -114,7 +114,7 @@ namespace Jde::Web::Client{
 		}
 		_readTimer.Restart();//Set on Client.
 		OnReadData( _stream->ReadBuffer() );
-		_readTimer.Finish();
+		//_readTimer.Finish();  TODO no description & it is rounded up to nearest second.
 		_stream->AsyncRead( shared_from_this() );
 	}
 	α CloseClientSocketSessionAwait::await_suspend( base::Handle h )ι->void{

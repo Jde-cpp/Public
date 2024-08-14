@@ -35,8 +35,12 @@ namespace Jde::Iot
 			lg _{ _requestMutex };
 			var ua = dynamic_cast<const UAException*>( &e );
 			auto key = make_tuple( move(opcServerId), move(userId) );
-			for( auto& h : _requests[key] )
-				Jde::Resume( ua ? UAException{*ua} : Exception{e.what(), e.Code, e.Level(), e.Stack().front()}, move(h) );
+			for( auto& h : _requests[key] ){
+				if( ua )
+					Jde::Resume( UAException{*ua}, move(h) );
+				else
+					Jde::Resume( Exception{e.what(), e.Code, e.Level(), e.Stack().front()}, move(h) );
+			}
 			_requests.erase( key );
 		}
 	}

@@ -1,15 +1,20 @@
 #pragma once
+#include <jde/coroutine/Await.h>
+#include <jde/app/shared/proto/App.FromServer.pb.h>
 
 namespace Jde::Iot{
-	struct AuthenticateAwait : AsyncAwait{
-		AuthenticateAwait( str loginName, str password, str opcId, SRCE )ι;
+	struct AuthenticateAwait : TAwaitEx<App::Proto::FromServer::SessionInfo,Jde::Task>{
+		using base = TAwaitEx<App::Proto::FromServer::SessionInfo,Jde::Task>;
+		AuthenticateAwait( str loginName, str password, str opcNK, str endpoint, bool isSocket, SRCE )ι;
+		α Execute()ι->Jde::Task override;
+	private:
+		string _loginName; string _password; string _opcNK; string _endpoint; bool _isSocket;
 	};
 	//CRD - Insert/Purge/Select from um_providers table
 	struct ProviderAwait : AsyncAwait{
 		ProviderAwait( str opcId, SRCE )ι;//select
 		ProviderAwait( variant<uint32,string> opcIdTarget, bool insert, SRCE )ι;//insert/purge
-	};	
-	Ξ Authenticate( str loginName, str password, str opcId, SRCE )ι{ return AuthenticateAwait{loginName, password, opcId, sl}; }
+	};
 	α Credentials( SessionPK sessionId, str opcId )ι->tuple<string,string>;
 
 }

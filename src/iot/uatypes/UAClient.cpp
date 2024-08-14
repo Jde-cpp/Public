@@ -31,8 +31,7 @@ namespace Jde::Iot{
 		_ptr{ Create() },
 		MonitoredNodes{ this }{
 		UA_ClientConfig_setDefault( Configuration() );
-		DBG( "[{:x}] Creating UAClient( '{}', '{}' )", Handle(), Target(), Url() );
-//		DBG( "sizeof(UA_Client)={}", sizeof(UA_Client) );
+		DBG( "[{:x}]Creating UAClient target: '{}' url: '{}' user: '{}' )", Handle(), Target(), Url(), UserId );
 	}
 
 	α UAClient::Shutdown( bool terminate )ι->void{
@@ -196,6 +195,7 @@ namespace Jde::Iot{
 			RequestId requestId{};
 			Trace( BrowseTag, "[{:x}]SendBrowseRequest", Handle() );
 			UAε( UA_Client_sendAsyncBrowseRequest(_ptr, &request, Browse::OnResponse, nullptr, &requestId) );
+			Trace( BrowseTagPedantic, "[{:x}.{}]SendBrowseRequest", Handle(), requestId );
 			Process( requestId, mu<UARequest>(move(h)) );
 		}
 		catch( UAException& e ){

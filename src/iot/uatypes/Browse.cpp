@@ -30,29 +30,33 @@ namespace Jde::Iot::Browse{
 			if( _snapshot )
 			 	pValues = ( co_await Read::SendRequest(nodes, _ua) ).UP<flat_map<NodeId, Value>>();
 			auto pDataTypes = (co_await Attributes::ReadDataTypeAttributes( move(nodes), _ua )).UP<flat_map<NodeId, NodeId>>();
-			Promise()->SetValue( y->ToJson(move(pValues), move(*pDataTypes)) );
+			Resume( y->ToJson(move(pValues), move(*pDataTypes)) );
 		}
 		catch( UAException& e ){
 			if( retry=e.IsBadSession(); retry )
 				e.PrependWhat( "Retry ObjectsFolder.  " );
 			else
-				Promise()->SetError( move(e) );
+				ResumeExp( move(e) );
 		}
 		catch( IException& e ){
-			Promise()->SetError( move(e) );
+			ResumeExp( move(e) );
 		}
 		if( retry ){
-			try{ co_await AwaitSessionActivation( _ua ); }catch(IException& e){ Promise()->SetError( move(e) ); }
-			[this]()->Task {
-				try{
-					auto j = co_await ObjectsFolderAwait{ _node, _snapshot, _ua, _sl };
-					Promise()->SetValue( move(j) );
-				}
-				catch( IException& e ){
-					Promise()->SetError( move(e) );
-				}
-			}();
-			_h.resume();
+			try{
+				co_await AwaitSessionActivation( _ua );
+				[]( ObjectsFolderAwait& self )->Task {
+					try{
+						auto j = co_await ObjectsFolderAwait{ self._node, self._snapshot, self._ua, self._sl };
+						self.Resume( move(j) );
+					}
+					catch( IException& e ){
+						self.ResumeExp( move(e) );
+					}
+				}( *this );
+			}
+			catch(IException& e){
+				ResumeExp( move(e) );
+			}
 		}
 	}
 	α ObjectsFolderAwait::await_suspend( base::Handle h )ι->void{
@@ -62,6 +66,7 @@ namespace Jde::Iot::Browse{
 
 	α OnResponse( UA_Client *ua, void* userdata, RequestId requestId, UA_BrowseResponse* response )ι->void{
 		auto h = UAClient::ClearRequestH( ua, requestId ); if( !h ){ Critical( BrowseTag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId ); return; }
+		Trace( BrowseTag, "[{:x}.{}]OnResponse", (uint)ua, requestId );
 		if( !response->responseHeader.serviceResult )
 			Resume( ms<Response>(move(*response)), move(h) );
 		else

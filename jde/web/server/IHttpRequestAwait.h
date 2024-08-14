@@ -21,29 +21,7 @@ namespace Jde::Web::Server{
 		json Json;
 		optional<HttpRequest> Request;//why optional?
 	};
-/*
-	struct HttpTask{
-		struct promise_type{
-			promise_type()ι{}
 
-			α get_return_object()ι->HttpTask{ return {}; }
-			suspend_never initial_suspend()ι{ return {}; }
-			suspend_never final_suspend()ι{ return {}; }
-			α return_void()ι->void{}
-			Φ unhandled_exception()ι->void;
-
-			α MoveResult()ι->HttpTaskResult{ ASSERT(_result.Request); return move(_result); }//std::make_unique<HttpTaskResult>( move(x) ); }
-			α SetRequest( HttpRequest&& req )ι->void{ ASSERT(!_result.Request); _result.Request.emplace( move(req) ); }//std::make_unique<HttpTaskResult>( move(x) ); }
-			α SetResult( json&& j )ι->void{ ASSERT(_result.Request); _result.Json = move(j); }//std::make_unique<HttpTaskResult>( move(x) ); }
-			template<http::status T> α SetException( RestException<T>&& e )ι->void{ _pException = mu<RestException<T>>(move(e)); }
-			α TestException()ε->void{ if( _pException ) _pException->Throw(); }
-		private:
-			HttpTaskResult _result;
-			up<IRestException> _pException;
-		};
-	};
-	using HttpCo = coroutine_handle<HttpTask::promise_type>;
-*/
 	struct IHttpRequestAwait : TAwait<HttpTaskResult> {
 		using base = TAwait<HttpTaskResult>;
 		IHttpRequestAwait( HttpRequest&& req, SRCE )ι:base{sl},_request{ move(req) }{}

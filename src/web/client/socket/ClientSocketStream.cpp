@@ -78,7 +78,7 @@ namespace Jde::Web::Client{
 		_writeGuard = nullptr;
 		boost::ignore_unused( bytes_transferred );
 		if( ec )
-			CodeException{ static_cast<std::error_code>(ec), SocketClientWriteTag() };
+			CodeException{ static_cast<std::error_code>(ec), SocketClientWriteTag() };//TODO look at returning an error to caller.
 	}
 
 	α ClientSocketStream::Close( sp<IClientSocketSession> session )ι->void{

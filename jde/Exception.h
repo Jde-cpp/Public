@@ -15,11 +15,9 @@ namespace boost::system{ class error_code; }
 #define THROW_IFL(condition, x, ...) if( condition ) throw Jde::Exception{ SRCE_CUR, ELogLevel::Error, x __VA_OPT__(,) __VA_ARGS__ }
 #define CHECK(condition) if( !(condition) ) throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Error, #condition }
 
-#define RETHROW(x, ...) catch( std::exception& e ){ throw Exception{SRCE_CUR, move(e), x __VA_OPT__(,) __VA_ARGS__}; }
 #define $ template<class... Args>
-//α Clone()ι->sp<IException> override{ return ms<T>(move(*this)); }
+
 #define COMMON α Move()ι->up<IException> override{ return mu<T>(move(*this)); }\
-	α Ptr()ι->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }\
 	[[noreturn]] α Throw()->void override{ throw move(*this); }
 namespace Jde{
 	struct LogTag;
@@ -41,8 +39,9 @@ namespace Jde{
 	struct Γ IException : std::exception{
 		using base=std::exception;
 
-		IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, SRCE )ι;
+		//IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, SRCE )ι;
 		IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, sp<LogTag>&& tag={}, SRCE )ι;
+		$ IException( IException&& from, fmt::format_string<Args...> m, Args&& ...args )ι;
 		IException( IException&& from )ι;
 		IException( const IException& from )ι;
 
@@ -55,21 +54,20 @@ namespace Jde{
 		virtual ~IException();
 
 		β Log()Ι->void;
-		α what()Ι->const char* override;
+		α what()const noexcept->const char* override;
 		α What()Ι->const string&{ what(); return _what; }
 		α PrependWhat( const string& prepend )ι->void{ _what = prepend+_what; }
 		α Level()Ι->ELogLevel{return _level;} α SetLevel( ELogLevel level )Ι{ _level=level;}
-		//β Clone()ι->sp<IException> =0;
 		β Move()ι->up<IException> =0;
+		[[noreturn]] β Throw()->void=0;
 		α Push( SL sl )ι{ _stack.stack.push_back(sl); }
 		α Stack()Ι->const StackTrace&{ return _stack; }
-		β Ptr()ι->std::exception_ptr =0;
+		β Ptr()ι->std::exception_ptr{ return Jde::make_exception_ptr(move(*this)); }
 		α SetTag( sp<LogTag> x )ι{ _pTag=x; }
 		α Tags()Ι->ELogTags{ return _pTag ? ToLogTags( _pTag->Id ) : ELogTags::None; }
 		Ω EmptyPtr()ι->const up<IException>&;
-		[[noreturn]] β Throw()->void=0;
 	protected:
-		IException( SRCE )ι:IException{ {}, ELogLevel::Debug, 0, sl }{}
+		IException( SRCE )ι:IException{ {}, ELogLevel::Debug, 0, {}, sl }{}
 		α BreakLog()Ι->void;
 		StackTrace _stack;
 
@@ -86,11 +84,11 @@ namespace Jde{
 	};
 	struct Exception;
 	α make_exception_ptr( Exception&& e )ι->std::exception_ptr;
-	struct Γ Exception : IException{
+	struct Γ Exception final : IException{
 		Exception( string what, ELogLevel l=ELogLevel::Debug, SRCE )ι;
 		Exception( Exception&& from )ι:IException{ move(from) }{}
 		Exception( const Exception& from )ι:IException{ from }{}
-		Exception( string what, uint code, ELogLevel level=ELogLevel::Debug, SRCE )ι:IException{what, level, code, sl}{};
+		Exception( string what, uint code, ELogLevel level=ELogLevel::Debug, SRCE )ι:IException{what, level, code, {}, sl}{};
 		$ Exception( SL sl, std::exception&& inner, ELogLevel level, fmt::format_string<Args...> m="", Args&&... args )ι:IException{sl, move(inner), level, m, std::forward<Args>(args)...}{}
 		$ Exception( SL sl, std::exception&& inner, fmt::format_string<Args...> m="", Args&&... args )ι:Exception{sl, move(inner), DefaultLogLevel, m, std::forward<Args>(args)...}{}
 		$ Exception( SL sl, ELogLevel l, fmt::format_string<Args...> fmt, Args&&... args )ι:IException( sl, l, fmt, std::forward<Args>(args)... ){}
@@ -152,13 +150,13 @@ namespace Jde{
 
 #define CHECK_PATH( path, sl ) THROW_IFX( !fs::exists(path), IOException(path, "path does not exist", sl) );
 	struct Γ IOException final : IException{
-		IOException( fs::path path, uint code, string value, SRCE ):IException{ move(value), ELogLevel::Debug, code, sl }, _path{ move(path) }{ SetWhat(); }
+		IOException( fs::path path, uint code, string value, SRCE ):IException{ move(value), ELogLevel::Debug, code, {}, sl }, _path{ move(path) }{ SetWhat(); }
 		IOException( fs::path path, string value, SRCE ): IOException{ move(path), 0, move(value), sl }{}
 		IOException( fs::filesystem_error&& e, SRCE ):IException{sl}, _pUnderLying( make_unique<fs::filesystem_error>(move(e)) ){ SetWhat(); }
 		$ IOException( SL sl, const fs::path& path, ELogLevel level, fmt::format_string<Args...> m, Args&&... args ):IException( sl, level, m, std::forward<Args>(args)... ),_path{ path }{ SetWhat(); }
 
 		α Path()Ι->const fs::path&; α SetPath( const fs::path& x )ι{ _path=x; }
-		α what()Ι->const char* override;
+		α what()const noexcept->const char* override;
 		using T=IOException;
 		COMMON
 	private:
@@ -170,6 +168,16 @@ namespace Jde{
 
 
 #define var const auto
+	$ IException::IException( IException&& from, fmt::format_string<Args...> m, Args&& ...args )ι:
+		_stack{ from._stack },
+		_format{ sv{m.get().data(), m.get().size()} },
+		Code{ Calc32RunTime(_format) },
+		_level{ ELogLevel::Debug }{
+		_args.reserve( sizeof...(args) );
+		ToVec::Append( _args, args... );
+		BreakLog();
+	}
+
 	$ IException::IException( SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&&... args )ι:
 		_stack{ sl },
 		_format{ sv{m.get().data(), m.get().size()} },

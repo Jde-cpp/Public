@@ -59,7 +59,7 @@ namespace Jde::Coroutine{
 
 			α get_return_object()ι->Task{ return {}; }
 			suspend_never initial_suspend()ι{ return {}; }
-			suspend_never final_suspend()ι{ return {}; }
+			suspend_never final_suspend()noexcept{ return {}; }
 			α return_void()ι->void{}
 			Φ unhandled_exception()ι->void;
 

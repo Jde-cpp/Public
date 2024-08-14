@@ -129,9 +129,9 @@ namespace Jde
 	using std::chrono::steady_clock;
 	using std::make_tuple;
 	using std::nullopt;
-
-	template<class T, class... Args> α mu( Args&&... args )ι(noexcept(T(std::forward<Args>(args)...)))->up<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return up<T>( new T(std::forward<Args>(args)...) ); }
-  template<class T, class... Args> α ms( Args&&... args )ι(noexcept(T(std::forward<Args>(args)...)))->sp<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
+	#define FWD(a) std::forward<decltype(a)>(a)
+	template<class T, class... Args> α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return up<T>( new T(std::forward<Args>(args)...) ); }
+  template<class T, class... Args> α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
 
 	using std::vector;
 	using PortType=unsigned short;

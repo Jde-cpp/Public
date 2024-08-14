@@ -1383,8 +1383,8 @@ struct Γ XMLElement : public XMLNode
       //return optional<T>{};
    }
 
-	α TryChildText( sv elementName )noexcept->sv;
-	α ChildText( sv elementName )noexcept(false)->sv;
+	α TryChildText( sv elementName )ι->sv;
+	α ChildText( sv elementName )ε->sv;
 	α TryChildAttribute( sv elementName, sv pAttribute )Ι->sv;
 	/// See QueryIntText()
 	XMLError QueryUnsigned64Text(uint64_t* uval) const;

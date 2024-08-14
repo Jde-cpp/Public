@@ -6,10 +6,8 @@ namespace Jde::Web::Client{
 	α SocketClientReadTag()ι->sp<LogTag>;
 
 	struct TimedPromiseType{
-		ψ Log( fmt::format_string<Args...> m, Args&& ...args )ι->void{
-			ResponseMessage = { m.get().data(), m.get().size() };
-			MessageArgs.reserve( sizeof...(args) );
-			ToVec::Append( MessageArgs, args... );
+		ψ Log( const fmt::format_string<Args const&...>&& m2, const Args&... args )ι->void{
+			Trace{ ELogTags::SocketClientRead, FWD(m2), FWD(args)... };
 		}
 		α Log( SessionPK sessionId, steady_clock::time_point start, SL sl)ι->void{
 			if( ShouldTrace(SocketClientReadTag()) ){

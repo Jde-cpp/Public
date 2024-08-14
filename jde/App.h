@@ -9,6 +9,7 @@ namespace Jde::Threading{ struct InterruptibleThread; struct IWorker; }
 #define ω Γ Ω
 namespace Jde{ struct IShutdown; }
 namespace Jde::Process{
+	Φ ApplicationName()ι->const string&;
 	α AddKeepAlive( sp<void> pShared )ι->void;
 	Φ RemoveKeepAlive( sp<void> pShared )ι->void;
 

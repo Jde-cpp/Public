@@ -5,22 +5,23 @@ namespace Jde::Web::Server{
 	namespace beast = boost::beast;
 	namespace http = beast::http;
 
-	struct IRestException : Exception{
+	struct IRestException : IException{
 	protected:
-		IRestException( std::exception&& inner, HttpRequest&& req, SL sl )ι:Exception{ sl, move(inner) },_request{move(req)}{}
+		IRestException( IException&& inner, HttpRequest&& req )ι:IException{ move(inner) },_request{move(req)}{}
 
 		template<class... Args> IRestException( SL sl, HttpRequest&& req, fmt::format_string<Args...> fmt, Args&&... args )ι:
-			Exception( sl, ELogLevel::Debug, fmt, std::forward<Args>(args)... ),
+			IException( sl, ELogLevel::Debug, fmt, FWD(args)... ),
 			_request{ move(req) }
 		{}
-		template<class... Args> IRestException( SL sl, HttpRequest&& req, std::exception&& inner, fmt::format_string<Args...> fmt={}, Args&&... args )ι:
-			Exception{sl, move(inner), fmt, std::forward<Args>(args)...},
+		template<class... Args> IRestException( IException&& inner, HttpRequest&& req, fmt::format_string<Args...> fmt={}, Args&&... args )ι:
+			IException{ move(inner), fmt, FWD(args)... },
 			_request{ move(req) }
 		{}
 	public:
 		constexpr β Status()Ι->http::status=0;
 		α Response()Ι->http::response<http::string_body>;
 		α Request()ι->HttpRequest&{ return _request; }
+		α Ptr()ι->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }
 	private:
 		string _clientMessage;
 		HttpRequest _request;
@@ -28,9 +29,9 @@ namespace Jde::Web::Server{
 
 	template<http::status TStatus=http::status::internal_server_error>
 	struct RestException final: IRestException{
-		RestException( std::exception&& inner, HttpRequest&& req, SRCE )ι:IRestException{ move(inner), move(req), sl}{}
-		template<class... Args> RestException( SL sl, HttpRequest&& req, fmt::format_string<Args...> fmt, Args&&... args )ι:IRestException( sl, move(req), fmt, std::forward<Args>(args)... ){}
-		template<class... Args> RestException( SL sl, HttpRequest&& req, std::exception&& inner, fmt::format_string<Args...> fmt, Args&&... args )ι:IRestException{sl, move(req), move(inner), fmt, std::forward<Args>(args)...}{}
+		RestException( IException&& inner, HttpRequest&& req )ι:IRestException{ move(inner), move(req)}{}
+		template<class... Args> RestException( SL sl, HttpRequest&& req, fmt::format_string<Args...> fmt, Args&&... args )ι:IRestException( sl, move(req), fmt, FWD(args)... ){}
+		template<class... Args> RestException( IException&& inner, HttpRequest&& req, fmt::format_string<Args...> fmt, Args&&... args )ι:IRestException{ move(inner), move(req), fmt, FWD(args)...}{}
 		constexpr α Status()Ι->http::status{ return TStatus; }
 		α Move()ι->up<IException> override{ return mu<RestException<TStatus>>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }

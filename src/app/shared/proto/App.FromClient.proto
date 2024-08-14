@@ -11,9 +11,10 @@ message Instance{
 	uint32 pid=3;
 	Jde.Proto.ELogLevel server_log_level=4;
 	Jde.Proto.ELogLevel client_log_level=5;
-	uint32 start_time=6;
+	google.protobuf.Timestamp start_time=6;
 	uint32 web_port=7;
 	string instance_name=8;
+	uint32 session_id=9;
 }
 
 message LogEntry{
@@ -65,7 +66,7 @@ message Status{
 message AddSession{
 	string domain=1;
 	string login_name=2;
-	uint32 provider_id=3;
+	uint32 provider_pk=3;
 	string user_endpoint=4;
 	bool is_socket = 5;
 }

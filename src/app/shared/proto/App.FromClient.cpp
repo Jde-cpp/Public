@@ -2,6 +2,19 @@
 #include "../../../../Framework/source/io/ProtoUtilities.h"
 
 namespace Jde::App{
+	α FromClient::AddSession( str domain, str loginName, ProviderPK providerPK, str userEndPoint, bool isSocket, RequestId requestId )ι->PFromClient::Transmission{
+		PFromClient::Transmission t;
+		auto& m = *t.add_messages();
+		m.set_request_id( requestId );
+		auto& s = *m.mutable_add_session();
+		s.set_domain( domain );
+		s.set_login_name( loginName );
+		s.set_provider_pk( providerPK );
+		s.set_user_endpoint( userEndPoint );
+		s.set_is_socket( isSocket );
+		return t;
+	}
+
 	α FromClient::AddStringField( PFromClient::Transmission& t, PFromClient::EFields field, uint32 id, str value )ι->void{
 		auto& m = *t.add_messages()->mutable_string_value();
 		m.set_field( field );
@@ -23,7 +36,23 @@ namespace Jde::App{
 		*m.mutable_graph_ql() = query;
 		return t;
 	}
+	α FromClient::Instance( str application, str instanceName, SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission{
+		PFromClient::Transmission t;
+		auto& m = *t.add_messages();
+		m.set_request_id( requestId );
+		auto& i = *m.mutable_instance();
+		i.set_application( application );
+		i.set_instance_name( instanceName );
+		i.set_session_id( sessionId );
+		i.set_host( IApplication::HostName() );
+		i.set_pid( OSApp::ProcessId() );
+		i.set_server_log_level( (Jde::Proto::ELogLevel)Logging::External::MinLevel("db") );
+		i.set_client_log_level( (Jde::Proto::ELogLevel)Logging::ClientMinLevel() );
+		*i.mutable_start_time() = IO::Proto::ToTimestamp( Logging::StartTime() );
+		i.set_web_port( Settings::Get<PortType>("http/port").value_or(0) );
 
+		return t;
+	}
 	α FromClient::ToStatus( vector<string>&& details )ι->PFromClient::Status{
 		PFromClient::Status y;
 		*y.mutable_start_time() = IO::Proto::ToTimestamp( Logging::StartTime() );

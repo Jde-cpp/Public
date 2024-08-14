@@ -34,7 +34,7 @@ namespace Jde::Web::Client{
 	struct ΓWC IClientSocketSession : std::enable_shared_from_this<IClientSocketSession>{
 		IClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι;// Resolver and socket require an io_context
 		α AddTask( RequestId requestId, std::any hCoroutine )ι->void;
-		α GetTask( RequestId requestId )ι->std::any;
+		α PopTask( RequestId requestId )ι->std::any;
 
 		α Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void;// Start the asynchronous operation
 		α RunSession( string host, PortType port )ι{ return CreateClientSocketSessionAwait{shared_from_this(), host, port}; }

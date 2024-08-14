@@ -25,7 +25,7 @@ namespace Jde::App::Client{
 	struct SessionInfoAwait : SocketAwait<Proto::FromServer::SessionInfo,Web::Server::SessionInfo>{
 		using base = SocketAwait<Proto::FromServer::SessionInfo,Web::Server::SessionInfo>;
 		SessionInfoAwait( SessionPK sessionId, SRCE )ι:base{sl}, _sessionId{sessionId}{}
-		α Execute( sp<AppClientSocketSession> pSession )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>::Task override;
+		α Execute( sp<AppClientSocketSession> session )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>::Task override;
 		SessionPK _sessionId;
 	};
 

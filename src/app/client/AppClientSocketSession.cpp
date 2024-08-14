@@ -22,9 +22,17 @@ namespace Jde::App{
 			Information( sl, tags, "ClosedSocketSession" );
 		}
 	}
+	α Client::AddSession( str domain, str loginName, ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>{
+		auto p = _pSession; THROW_IF( !p, "Not connected." );
+		auto requestId = p->NextRequestId();
+		Trace( sl, ELogTags::SocketClientWrite, "AddSession domain: '{}', loginName: '{}', providerPK: {}, userEndPoint: '{}', isSocket: {}.", domain, loginName, providerPK, userEndPoint, isSocket );
+		return ClientSocketAwait<Proto::FromServer::SessionInfo>{ ToString(FromClient::AddSession(domain, loginName, providerPK, userEndPoint, isSocket, requestId)), requestId, p, sl };
+	}
+
 	α Client::GraphQL( str query, SL sl )ε->ClientSocketAwait<string>{
 		auto p = _pSession; THROW_IF( !p, "Not connected." );
 		auto requestId = p->NextRequestId();
+		Trace( sl, ELogTags::SocketClientWrite, "GraphQL: '{}'.", query.substr(0, Web::Client::MaxLogLength()) );
 		return ClientSocketAwait<string>{ ToString(FromClient::GraphQL(query, requestId)), requestId, p, sl };
 	}
 namespace Client{
@@ -39,10 +47,10 @@ namespace Client{
 			auto sessionId = _sessionId;
 			try{
 				co_await _pSession->RunSession( Host(), Port() );//Web::Client
-				[=]()->ClientSocketAwait<Proto::FromServer::SessionInfo>::Task {
+				[=]()->ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task {
 					auto h3 = h2;
 					try{
-						co_await session->Connect( sessionId );
+						co_await session->Connect( sessionId );//handshake
 					}
 					catch( IException& e ){
 						h3.promise().SetError( move(e) );
@@ -60,9 +68,12 @@ namespace Client{
 	AppClientSocketSession::AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx )ι:
 		base( ioc, ctx )
 	{}
-	α AppClientSocketSession::Connect( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::SessionInfo>{
+	α AppClientSocketSession::Connect( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>{
 		var requestId = NextRequestId();
-		return ClientSocketAwait<Proto::FromServer::SessionInfo>{ ToString(FromClient::Session(sessionId, requestId)), requestId, shared_from_this(), sl };
+		string instanceName = Settings::Get<string>("instanceName").value_or( "" );
+		if( instanceName.empty() )
+			instanceName = _debug ? "Debug" : "Release";
+		return ClientSocketAwait<Proto::FromServer::ConnectionInfo>{ ToString(FromClient::Instance(Process::ApplicationName(), instanceName, sessionId, requestId)), requestId, shared_from_this(), sl };
 	}
 
 	α AppClientSocketSession::OnClose( beast::error_code ec )ι->void{
@@ -84,20 +95,23 @@ namespace Client{
 		return ClientSocketAwait<string>{ ToString(FromClient::GraphQL(move(q), requestId)), requestId, shared_from_this(), sl };
 	}
 
-	template<class T,class... Args> α Resume( std::any&& h, T& v, fmt::format_string<Args...> m="", Args&&... args )ι->void{
-		auto p = std::any_cast<typename ClientSocketAwait<T>::Handle>( &h );
-		p->promise().Log( m, std::forward<Args>(args)... );
-		p->promise().SetValue( std::forward<T>(move(v)) );
-		p->resume();
+	template<class T,class... Args> α Resume( std::any&& hAny, T& v, fmt::format_string<Args const&...>&& m="", const Args&... args )ι->void{
+		auto h = std::any_cast<typename ClientSocketAwait<T>::Handle>( &hAny );
+		ASSERT( h );
+		if( h ){
+			h->promise().Log( FWD(m), FWD(args)... );
+			h->promise().SetValue( move(v) );
+			h->resume();
+		}
 	}
-	ψ ResumeVoid( std::any&& h, fmt::format_string<Args...> m="", Args&&... args )ι->void{
+	ψ ResumeVoid( std::any&& h, const fmt::format_string<Args...> m="", Args&&... args )ι->void{
 		auto p = std::any_cast<Web::Client::ClientSocketVoidAwait::Handle>( &h );
 		p->promise().Log( m, std::forward<Args>(args)... );
 		p->resume();
 	}
 
-	template<class T,class... Args> auto ResumeScaler( std::any&& h, T v, fmt::format_string<Args...> m="", Args&&... args )ι->void{
-		Resume( move(h), v, m, std::forward<Args>(args)... );
+	template<class T,class... Args> auto ResumeScaler( std::any&& h, T v, fmt::format_string<Args const&...>&& m="", const Args&... args )ι->void{
+		Resume( move(h), v, FWD(m), FWD(args)... );
 	}
 
 	α AppClientSocketSession::Execute( string&& bytes, optional<UserPK> userPK, RequestId clientRequestId )ι->void{
@@ -119,7 +133,7 @@ namespace Client{
 			auto m = t.mutable_messages( i );
 			using enum Proto::FromServer::Message::ValueCase;
 			var requestId = clientRequestId.value_or( m->request_id() );
-			std::any hAny = requestId ? IClientSocketSession::GetTask( requestId ) : nullptr;
+			std::any hAny = requestId ? IClientSocketSession::PopTask( requestId ) : nullptr;
 			switch( m->Value_case() ){
 			[[unlikely]] case kAck:{
 				var serverSocketId = m->ack();
@@ -142,7 +156,7 @@ namespace Client{
 				break;
 			case kSessionInfo:{
 				auto& res = *m->mutable_session_info();
-				Resume( move(hAny), res, "SessionInfo: expiration: '{}', session_id: '{}', user_pk: '{}', user_endpoint: '{}'.", ToIsoString(IO::Proto::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
+				Resume( move(hAny), res, "SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", ToIsoString(IO::Proto::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
 				}break;
 			case kGraphQl:
 				Resume( move(hAny), *m->mutable_graph_ql(), "GraphQl: '{}'.", m->graph_ql().substr(0, Web::Client::MaxLogLength()) );

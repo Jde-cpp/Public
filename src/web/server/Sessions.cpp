@@ -6,10 +6,13 @@
 
 #define var const auto
 namespace Jde::Web::Server{
+	constexpr ELogTags _tags{ ELogTags::Sessions };
 	concurrent_flat_map<SessionPK,sp<SessionInfo>> _sessions;
 	α Upsert( sp<SessionInfo>& info )ι->void{
-		_sessions.emplace_or_visit( info->SessionId, info, [&info]( auto& existing ){ existing.second->Expiration=existing.second->NewExpiration(); } );
+		if( _sessions.emplace_or_visit(info->SessionId, info, [&info]( auto& existing ){ existing.second->Expiration=existing.second->NewExpiration();}) )
+			Trace( _tags, "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK, info->UserEndpoint );
 	}
+
 	α GetNewSessionId()ι->SessionPK{
 		auto sessionId{ Math::Random() };
 		while( _sessions.contains(sessionId) )
@@ -101,10 +104,11 @@ namespace Sessions{
 				if( auto pInfo = UpdateExpiration(*sessionId, _endpoint); pInfo )
 					info = pInfo;
 				else{
-					auto pAwait = Server::SessionInfoAwait( *sessionId );
-					if( !pAwait )
+					up<TAwait<Web::Server::SessionInfo>> pAwait = Server::SessionInfoAwait( *sessionId ); //3rd party, eg AppServer
+					if( !pAwait )  //no 3rd party
 						throw Exception( SRCE_CUR, ELogLevel::Debug, "[{}]Session not found.", 𐢜("{:x}", *sessionId) );
 					info = ms<SessionInfo>( co_await *pAwait );
+					pAwait.reset();
 					info->UserEndpoint = _endpoint;
 					info->HasSocket = _socket;
 					Upsert( info );

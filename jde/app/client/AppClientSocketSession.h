@@ -11,6 +11,7 @@ namespace Jde::App::Client{
 		α await_suspend( base::Handle h )ι->void override;
 		SessionPK _sessionId;
 	};
+	α AddSession( str domain, str loginName, ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>;
 	α CloseSocketSession( SRCE )ι->VoidTask;
 	α GraphQL( str query, SRCE )ε->Web::Client::ClientSocketAwait<string>;
 
@@ -18,7 +19,7 @@ namespace Jde::App::Client{
 		using base = Web::Client::TClientSocketSession<Proto::FromClient::Transmission,Proto::FromServer::Transmission>;
 		Ω Instance()ι->sp<AppClientSocketSession>;
 		AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx )ι;
-		α Connect( SessionPK sessionId, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>;
+		α Connect( SessionPK sessionId, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::ConnectionInfo>;
 		α SessionInfo( SessionPK sessionId, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>;
 		α GraphQL( string&& q, UserPK userPK, SRCE )ι->Web::Client::ClientSocketAwait<string>;
 

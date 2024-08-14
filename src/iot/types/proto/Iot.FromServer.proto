@@ -55,18 +55,12 @@ message UnsubscribeAck{
 	repeated Jde.Iot.Proto.ExpandedNodeId failures=2;
 }
 
-enum ERequestIdType{
-	RequestIdTypeNone = 0;
-	SessionId = 1;
-}
-
 message Message{
 	uint32 request_id = 1;
 	oneof Value{
 		uint32 ack = 2;	//SocketSessionId
 		NodeValues node_values = 3; //Subscription Broadcast
 		Jde.Proto.Exception exception = 4;
-		ERequestIdType request_id_type = 6;
 		SubscriptionAck subscription_ack = 5; //Subscription acknowledgement
 		UnsubscribeAck unsubscribe_ack = 7; //Unsubscribe acknowledgement
 	}

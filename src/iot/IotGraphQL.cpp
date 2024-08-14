@@ -24,14 +24,14 @@ namespace Jde::Iot{
 				if( pOpcServer ) //assume failed because already exists.
 					rowCount = 0;
 			}
-			if( !rowCount ){
+			if( !rowCount.has_value() ){
 				var insert = op==(Operation::Insert | Operation::Before) || op==(Operation::Purge | Operation::Failure);
 				rowCount = await( uint, ProviderAwait(move(id), insert) );
 			}
-			Resume( mu<uint>(*rowCount), move(h) );
+			Resume( mu<uint>(*rowCount), h );
 		}
-		catch( Exception& e ){
-			Resume( move(e), move(h) );
+		catch( IException& e ){
+			Resume( move(e), h );
 		}
 	}
 

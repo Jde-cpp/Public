@@ -8,16 +8,19 @@
 #define var const auto
 
 namespace Jde::Web::Server{
-	static sp<LogTag> _logTag = Logging::Tag( "web.sessions" );
+	constexpr ELogTags _tags{ ELogTags::Sessions };
 
-	//query{ session(filter:{ id:{eq:${this.sessionId}} }){ domain loginName } }
+	//query{ session(filter:{ id:${a0b1cef2} }){ domain loginName } }
 	α Select( DB::TableQL query, UserPK executerPK, HCoroutine h, SL sl )ι->TAwait<json>::Task{
 		try{
-			var sessionId = Json::Get<SessionPK>( query.Args, "id", ELogTags::HttpServerRead, sl );
+			var sessionString = Json::Get<string>( query.Args, "id", ELogTags::HttpServerRead, sl );
+			var sessionId = sessionString.empty() ? nullopt : Str::TryTo<SessionPK>(sessionString, nullptr, 16 );
+			if( !sessionString.empty() && !sessionId )
+				co_return Resume( Exception(_tags, sl, "Could not parse sessionid: '{}'", sessionString), h );
 			vector<sp<Server::SessionInfo>> sessions;
-			if( !sessionId )
+			if( sessionString.empty() )
 				sessions = Sessions::Get();
-			else if( auto p = Sessions::Find(sessionId); p )
+			else if( auto p = Sessions::Find(*sessionId); p )
 				sessions.push_back( p );
 			if( sessions.empty() )
 				co_return Resume( mu<json>(), h ); //(Json::Parse( "{\"data\": null}"))
@@ -29,8 +32,7 @@ namespace Jde::Web::Server{
 					inClause += std::to_string( session->UserPK ) + ",";
 				auto q = "query{ users(id:["+inClause.substr(0, inClause.size()-1)+"]){id loginName provider{id name}} }";
 				users = co_await (*AppGraphQLAwait(move(q), executerPK) );
-				//await( json, Logging::IServerSink::GraphQL("query{ users(id:["+inClause.substr(0, inClause.size()-1)+"]){id loginName provider{id name}} }", executerPK, sl) );
-				DBG( "users={}"sv, users.dump() );
+				Trace( _tags | ELogTags::Pedantic, "users={}"sv, users.dump() );
 				for( var& user : users["data"]["users"] )
 					userDomainLoginNames[Json::Get<UserPK>(user,"id")] = make_tuple( Json::Getε(user,std::vector<sv>{"provider","name"}), Json::Get(user,"loginName") );
 			}
@@ -43,6 +45,14 @@ namespace Jde::Web::Server{
 					if( query.FindColumn("loginName") )
 						j["loginName"] = std::get<1>(pUser->second);
 				}
+#ifndef NDEBUG
+				if( query.FindColumn("id") )
+					j["id"] = 𐢜( "{:x}", session->SessionId );
+#endif
+				if( query.FindColumn("endpoint") )
+					j["endpoint"] = session->UserEndpoint;
+				if( query.FindColumn("endpoint") )
+					j["lastUpdate"] = DateTime{ session->Expiration }.ToIsoString();
 				if( query.FindColumn("expiration") )
 					j["expiration"] = DateTime{ session->Expiration }.ToIsoString();
 				if( query.IsPlural() )

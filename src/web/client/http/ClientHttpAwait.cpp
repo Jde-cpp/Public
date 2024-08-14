@@ -105,7 +105,7 @@ namespace Jde::Web::Client{
 	}
 	α ClientHttpAwaitSingle::await_resume()ε->ClientHttpRes{
 		if( !Promise() )
-			throw Exception( "Shutting down." );
+			throw Exception( "Executor down." );
 		return base::await_resume();
 	}
 }

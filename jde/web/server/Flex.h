@@ -26,7 +26,7 @@ namespace Jde::Web::Server{
 
 	α ReadSeverity( beast::error_code ec )ι->ELogLevel;
 	α OnWrite( beast::error_code ec, std::size_t bytes_transferred )ι->void;
-	α Send( HttpRequest&& req, sp<RestStream> stream, json j )ι->void;
+	α Send( HttpRequest&& req, sp<RestStream> stream, json j, SRCE )ι->void;
 	α Send( IRestException&& e, sp<RestStream> stream )ι->void;
 
 	Ŧ DoEof( T& stream )ι->net::awaitable<void, executor_type>{

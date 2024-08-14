@@ -30,7 +30,7 @@ namespace Jde::Web{
 			}
 			catch( IException& e ){
 				e.SetLevel( ELogLevel::Critical );//no request object...
-				Send( RestException<http::status::internal_server_error>(SRCE_CUR, move(req), move(e), "Error handling request."), move(stream) );
+				Send( RestException<>{move(e), move(req), "Error handling request."}, move(stream) );
 			}
 		}
 	}
@@ -65,7 +65,7 @@ namespace Jde::Web{
     net::co_spawn( *Executor(), Listen(address), net::bind_cancellation_slot(_cancelSignal->slot(), net::detached) );
 		Execution::AddCancelSignal( _cancelSignal );
 		Execution::Run();
-		_started.wait( true );
+		_started.wait( false );
 		Information( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
@@ -84,6 +84,7 @@ namespace Jde::Web{
     if( !InitListener(acceptor, endpoint) )
       co_return;
 
+		Trace( ELogTags::App, "Web Server accepting." );
 		_started.test_and_set();
 		_started.notify_all();
     while( (co_await net::this_coro::cancellation_state).cancelled() == net::cancellation_type::none ){
@@ -164,9 +165,9 @@ namespace Server{
 		}
 		catch( IException& e ){
 			if( !empty(e.Tags() & ELogTags::Parsing) )
-				Send( RestException<http::status::bad_request>(SRCE_CUR, move(req), move(e), "Query parsing failed."), move(stream) );
+				Send( RestException<http::status::bad_request>{move(e), move(req), "Query parsing failed."}, move(stream) );
 			else
-				Send( RestException(SRCE_CUR, move(req), move(e), "Query failed."), move(stream) );
+				Send( RestException{move(e), move(req), "Query failed."}, move(stream) );
 			co_return;
 		}
 	}
@@ -178,7 +179,7 @@ namespace Server{
 		catch( IException& e ){
 			//Add error code.
 			//capture error code on client.
-			Send( RestException<http::status::unauthorized>(SRCE_CUR, move(req), move(e), "Could not get sessionInfo."), move(stream) );
+			Send( RestException<http::status::unauthorized>{move(e), move(req), "Could not get sessionInfo."}, move(stream) );
 			co_return;
 		}
 		if( req.IsGet("/graphql") ){
@@ -199,8 +200,8 @@ namespace Server{
 	}
 
 }
-	α Server::Send( HttpRequest&& req, sp<RestStream> stream, json j )ι->void{
-		auto res = req.Response( move(j) );
+	α Server::Send( HttpRequest&& req, sp<RestStream> stream, json j, SL sl )ι->void{
+		auto res = req.Response( move(j), sl );
 		stream->AsyncWrite( move(res) );
 	}
 
