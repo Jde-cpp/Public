@@ -9,7 +9,7 @@ namespace Jde::App::Client{
 	α AppLog::Destroy( SL )ι->void{
 		CloseSocketSession();
 	}
-	α AppLog::Log( const ExternalMessage& m, const vector<string>* args, SL sl )ι->void{
+	α AppLog::Log( const ExternalMessage& m, const vector<string>* /*args*/, SL /*sl*/ )ι->void{
 		Proto::FromClient::Transmission t;
 		if( StringCache::AddFile(m.FileId, m.File) )
 			FromClient::AddStringField( t, Proto::FromClient::EFields::File, m.FileId, m.File );

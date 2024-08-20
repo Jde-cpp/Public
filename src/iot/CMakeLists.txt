@@ -5,7 +5,6 @@ include(common)
 link_directories( ${fmt_DIR}/../.. )
 link_directories( ${Protobuf_DIR}/../.. )
 #######################################################
-set(CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS} "-Wl,-rpath=$ORIGIN")
 add_definitions( -DJde_Iot_EXPORTS -DUA_ENABLE_ENCRYPTION )
 
 find_package(OpenSSL REQUIRED)

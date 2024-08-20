@@ -39,7 +39,7 @@ namespace Jde::Web::Server{
 		co_await stream.async_shutdown();
 	}
 
-	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, bool isSsl, uint32 connectionIndex )ι->net::awaitable<void, executor_type>;
+	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> cancel )ι->net::awaitable<void, executor_type>;
 
 	[[nodiscard]] α DetectSession( StreamType stream, tcp::endpoint userEndpoint, sp<net::cancellation_signal> cancel )ι->net::awaitable<void, executor_type>;
 	α InitListener( typename tcp::acceptor::rebind_executor<executor_with_default>::other& acceptor, const tcp::endpoint& endpoint )ι->bool;

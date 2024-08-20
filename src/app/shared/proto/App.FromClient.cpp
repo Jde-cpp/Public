@@ -25,7 +25,7 @@ namespace Jde::App{
 		PFromClient::Transmission t;
 		auto& proto = *t.add_messages()->mutable_exception();
 		proto.set_what( e.what() );
-		proto.set_code( e.Code );
+		proto.set_code( (uint32)e.Code );
 		return t;
 	}
 

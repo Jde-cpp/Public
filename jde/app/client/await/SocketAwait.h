@@ -10,7 +10,7 @@ namespace Jde::App::Client{
 		using base = TAwait<TResult>;
 		SocketAwait( SL sl )ι:base{sl}{}
 		α await_ready()ι->bool final{ return Process::ShuttingDown(); }
-		α await_suspend( base::Handle h )ι->void final;
+		α Suspend()ι->void override final;
 		β Execute( sp<AppClientSocketSession> pSession )ι->Web::Client::ClientSocketAwait<TProto>::Task=0;
 		α await_resume()ε->TResult final;
 	};
@@ -30,12 +30,11 @@ namespace Jde::App::Client{
 	};
 
 #define $ template<class TProto,class TResult> α SocketAwait<TProto,TResult>
-	$::await_suspend( base::Handle h )ι->void{
-		base::await_suspend( h );
+	$::Suspend()ι->void{
 		if( auto pSession = AppClientSocketSession::Instance(); pSession )
 			Execute( pSession );
 		else
-			h.resume();
+			base::Resume();
 	}
 
 	$::await_resume()ε->TResult{

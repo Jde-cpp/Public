@@ -2,6 +2,7 @@
 //#include <jde/coroutine/Task.h>
 #include <jde/db/usings.h>
 #include <jde/coroutine/Await.h>
+#include <jde/coroutine/Task.h>
 
 //Holds web session information.  Requires AppServer, so in AppClient
 namespace Jde::Web::Server{

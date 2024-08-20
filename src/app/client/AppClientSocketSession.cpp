@@ -1,6 +1,6 @@
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/thread/Execution.h>
-#include <jde/web/server/Flex.h>
+//#include <jde/web/server/Flex.h>
 #include <jde/app/shared/proto/App.FromClient.h>
 #include <jde/app/shared/proto/Common.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
@@ -38,30 +38,26 @@ namespace Jde::App{
 namespace Client{
 	StartSocketAwait::StartSocketAwait( SessionPK sessionId, SL sl )ι:base{sl}, _sessionId{ sessionId }{}
 
-	α StartSocketAwait::await_suspend( base::Handle h )ι->void{
-		base::await_suspend( h );
+	α StartSocketAwait::Suspend()ι->void{
 		_pSession = ms<Client::AppClientSocketSession>( Executor(), IsSsl() ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{} );
-		[this,h]()->VoidTask {
+		[](StartSocketAwait& self, base::Handle h)->VoidTask {
 			auto h2 = h;
-			auto session = _pSession;
-			auto sessionId = _sessionId;
 			try{
 				co_await _pSession->RunSession( Host(), Port() );//Web::Client
-				[=]()->ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task {
-					auto h3 = h2;
+				[=]( base::Handle h )->ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task {
 					try{
-						co_await session->Connect( sessionId );//handshake
+						co_await _pSession->Connect( self._sessionId );//handshake
 					}
 					catch( IException& e ){
-						h3.promise().SetError( move(e) );
+						h.promise().SetError( move(e) );
 					}
-				}();
+				}( h );
 			}
 			catch( IException& e ){
-				h2.promise().SetError( move(e) );
+				h.promise().SetError( move(e) );
 			}
-			h2.resume();
-		}();
+			h.resume();
+		}(*this, _h);
 	}
 
 	α AppClientSocketSession::Instance()ι->sp<AppClientSocketSession>{ return _pSession; }
@@ -90,7 +86,7 @@ namespace Client{
 		var requestId = NextRequestId();
 		return ClientSocketAwait<Proto::FromServer::SessionInfo>{ ToString(FromClient::Session(sessionId, requestId)), requestId, shared_from_this(), sl };
 	}
-	α AppClientSocketSession::GraphQL( string&& q, UserPK userPK, SL sl )ι->ClientSocketAwait<string>{
+	α AppClientSocketSession::GraphQL( string&& q, UserPK, SL sl )ι->ClientSocketAwait<string>{
 		var requestId = NextRequestId();
 		return ClientSocketAwait<string>{ ToString(FromClient::GraphQL(move(q), requestId)), requestId, shared_from_this(), sl };
 	}
@@ -128,7 +124,7 @@ namespace Client{
 		ProcessTransmission( move(t), _userPK, nullopt );
 	}
 
-	α AppClientSocketSession::ProcessTransmission( Proto::FromServer::Transmission&& t, optional<UserPK> userPK, optional<RequestId> clientRequestId )ι->void{
+	α AppClientSocketSession::ProcessTransmission( Proto::FromServer::Transmission&& t, optional<UserPK> /*userPK*/, optional<RequestId> clientRequestId )ι->void{
 		for( auto i=0; i<t.messages_size(); ++i ){
 			auto m = t.mutable_messages( i );
 			using enum Proto::FromServer::Message::ValueCase;
@@ -168,9 +164,9 @@ namespace Client{
 			case kExecuteAnonymous:{
 				bool isAnonymous = m->Value_case()==kExecuteAnonymous;
 				auto bytes = isAnonymous ? move( *m->mutable_execute_anonymous() ) : move( *m->mutable_execute()->mutable_transmission() );
-				optional<UserPK> userPK = m->Value_case()==kExecuteAnonymous ? nullopt : optional<UserPK>(m->execute().user_pk() );
+				optional<UserPK> runAsPK = m->Value_case()==kExecuteAnonymous ? nullopt : optional<UserPK>(m->execute().user_pk() );
 				LogRead( "Execute{} size: {:10L}", isAnonymous ? "Anonymous" : "", bytes.size()  );
-				Execute( move(bytes), userPK, requestId );
+				Execute( move(bytes), runAsPK, requestId );
 				break;}
 			case kExecuteResponse://wait for use case.
 			case kStringPks://strings already saved in db, no need to send.  not being requested by client yet.
@@ -185,7 +181,7 @@ namespace Client{
 		}
 	}
 	α AppClientSocketSession::HandleException( std::any&& h, IException&& e, RequestId requestId )ι->void{
-		auto handle = [&]( sv msg, auto pAwait ){
+		auto handle = [&]( sv /*msg*/, auto pAwait ){
 			pAwait->promise().ResponseMessage = "Error: {}";
 			pAwait->promise().MessageArgs.emplace_back( e.what() );
 			pAwait->promise().SetError( move(e) );
@@ -204,7 +200,7 @@ namespace Client{
 			Logging::Log( Logging::Message(severity, "[0]Failed to process incoming exception '{}'."), Web::Client::SocketClientReadTag(), requestId, e.what() );
 		}
 	}
-	α AppClientSocketSession::WriteException( IException&& e, RequestId requestId )->void{
+	α AppClientSocketSession::WriteException( IException&& e, RequestId /*requestId*/ )->void{
 		Write( FromClient::Exception(move(e)) );
 	}
 }}

@@ -45,7 +45,7 @@ namespace Jde::Web{
 		Iat = Json::Get<time_t>( Body, "iat" );
 
 		auto fpText = []( const Crypto::MD5& fp ) {
-			return std::accumulate(fp.begin(), fp.end(), 𐢜("{:x}", fp[0]), [&](string s, byte b){return move(s)+𐢜("{:x}", fp[0]);} );
+			return std::accumulate(fp.begin(), fp.end(), 𐢜("{:x}", fp[0]), [&](string s, byte /*b*/){return move(s)+𐢜("{:x}", fp[0]);} );
 		};
 		Description = Json::TryGet(Body, "description").value_or( 𐢜("Public key md5: {}", fpText(fpKey)) );
 	}

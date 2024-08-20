@@ -17,7 +17,7 @@ namespace Jde::Web{
 	}
 	struct SessionShutdown final : IShutdown{
 		SessionShutdown()ι{ Execution::AddShutdown(this); }
-		α Shutdown( bool terminate )ι->void{
+		α Shutdown( bool /*terminate*/ )ι->void{
 			while( _sessions.size() ){
 				_sessions.visit_all( []( auto&& kv )mutable{
 					for( auto p = kv.second.begin(); p!=kv.second.end(); ){

@@ -1,10 +1,10 @@
 #include <jde/web/client/socket/IClientSocketSession.h>
 
 namespace Jde::Web{
-	static sp<LogTag> _socketClientReadTag = Logging::Tag( ELogTags::SocketClientRead );
-	static sp<LogTag> _socketClientWriteTag = Logging::Tag( ELogTags::SocketClientWrite );
-	α Client::SocketClientReadTag()ι->sp<LogTag>{ return _socketClientReadTag; }
-	α Client::SocketClientWriteTag()ι->sp<LogTag>{ return _socketClientWriteTag; }
+	//static sp<LogTag> _socketClientReadTag = Logging::Tag( ELogTags::SocketClientRead );
+	//static sp<LogTag> _socketClientWriteTag = Logging::Tag( ELogTags::SocketClientWrite );
+	//α Client::SocketClientReadTag()ι->sp<LogTag>{ return _socketClientReadTag; }
+	//α Client::SocketClientWriteTag()ι->sp<LogTag>{ return _socketClientWriteTag; }
 
 	static uint16 _maxLogLength{ Settings::Get<uint16>("http/maxLogLength").value_or(255) };
 	α Client::MaxLogLength()ι->uint16{ return _maxLogLength; }
@@ -31,7 +31,7 @@ namespace Jde::Web::Client{
 	α IClientSocketSession::PopTask( RequestId requestId )ι->std::any{
 		std::any h;
 		if( !_tasks.erase_if(requestId, [&h](auto&& kv){ h=kv.second; return true;}) )
-			CRITICALT( SocketClientReadTag(), "[{:x}]RequestId '{}' not found.", Id(), requestId );
+			Critical( ELogTags::SocketClientRead, "[{:x}]RequestId '{}' not found.", Id(), requestId );
 		return h;
 	}
 	α IClientSocketSession::CloseTasks( function<void(std::any&&)> f )ι->void{
@@ -48,9 +48,8 @@ namespace Jde::Web::Client{
 		_port{ port }
 	{}
 
-	α CreateClientSocketSessionAwait::await_suspend( base::Handle h )ι->void{
-		base::await_suspend( h );
-		_session->Run( _host, _port, h );
+	α CreateClientSocketSessionAwait::Suspend()ι->void{
+		_session->Run( _host, _port, _h );
 	}
 
 	atomic<RequestId> _requestId{ 1 };
@@ -117,9 +116,8 @@ namespace Jde::Web::Client{
 		//_readTimer.Finish();  TODO no description & it is rounded up to nearest second.
 		_stream->AsyncRead( shared_from_this() );
 	}
-	α CloseClientSocketSessionAwait::await_suspend( base::Handle h )ι->void{
-		base::await_suspend( h );
-		_session->_closeHandle = h;
+	α CloseClientSocketSessionAwait::Suspend()ι->void{
+		_session->_closeHandle = _h;
 		_session->_stream->Close( _session );
 	}
 	α IClientSocketSession::OnClose( beast::error_code ec )ι->void{
@@ -127,7 +125,7 @@ namespace Jde::Web::Client{
 			CodeException{ static_cast<std::error_code>(ec), SocketClientReadTag(), Jde::format("[{:x}]Client::OnClose", Id()), GetLogLevel(ec) };
 		else
 			TRACET( SocketClientWriteTag(), "[{:x}]Client::OnClose", Id() );
-		CloseTasks( [](std::any&& h){} );
+		CloseTasks( [](std::any&&){} );
 		if( _closeHandle )
 			_closeHandle.resume();
 		_closeHandle = nullptr;

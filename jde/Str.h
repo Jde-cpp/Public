@@ -16,7 +16,7 @@
 #define Φ Γ auto
 
 namespace Jde::Str{
-	α ToString( sv format, vector<string> args )ι->string;
+	Φ ToString( sv format, vector<string> args )ι->string;
 	str Empty()ι;
 	template<class T> using bsv = std::basic_string_view<char,T>;
 	struct ci_traits : public std::char_traits<char>{
@@ -189,7 +189,7 @@ namespace Jde{
 		template<class T, class I=T::const_iterator> α Encode64( const T& val, bool convertFromFileSafe=false )ι->string;
 		template<class T=string> α Decode64( sv s, bool convertFromFileSafe=false )ε->T;
 		Φ DecodeUri( sv str )ι->string;
-		α ToHex( byte* p, uint size )ι->string;
+		Φ ToHex( byte* p, uint size )ι->string;
 #undef X
 	}
 	template<class T, class D> α Str::Split( bsv<TT> s, bsv<typename D::traits_type> delim, uint count, sv errorId, SL sl )ε->vector<bsv<TT>>{

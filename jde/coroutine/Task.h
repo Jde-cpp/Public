@@ -3,9 +3,9 @@
 #define TASK_H
 
 namespace Jde{
-	template<class TTask,class TResult>
+	template<class Task,class TResult>
 	struct IPromise{
-		α get_return_object()ι->TTask{ return {}; }
+		α get_return_object()ι->Task{ return {}; }
 		suspend_never initial_suspend()ι{ return {}; }
 		suspend_never final_suspend()noexcept{ return {}; }
 		α return_void()ι->void{}
@@ -18,9 +18,9 @@ namespace Jde{
 		TResult Expected;
 	};
 
-	template<class TTask,class TResult,class TError=up<IException>>
-	struct IExpectedPromise : IPromise<TTask,variant<up<IException>,TResult>>{
-		using base = IPromise<TTask,variant<up<IException>,TResult>>;
+	template<class Task,class TResult,class TError=up<IException>>
+	struct IExpectedPromise : IPromise<Task,variant<up<IException>,TResult>>{
+		using base = IPromise<Task,variant<up<IException>,TResult>>;
 		using TExpected=variant<TError,TResult>;
 		α Error()Ι->const up<IException>& override{ return base::Expected.index()==0 ? std::get<0>(base::Expected) : IException::EmptyPtr(); }
 		α MoveError()ι->up<IException> override{ return base::Expected.index()==0 ? move(std::get<0>(base::Expected)) : up<IException>{}; }
@@ -30,9 +30,9 @@ namespace Jde{
 		α SetValue( TResult&& x )ι->void{ base::Expected = move(x); }
 		α Resume( TResult&& x, coroutine_handle<> h )ι->void{ SetValue(move(x)); h.resume(); };
 	};
-	template<class TTask>
-	struct VoidPromise : IPromise<TTask,up<IException>>{
-		using base = IPromise<TTask,up<IException>>;
+	template<class Task>
+	struct VoidPromise : IPromise<Task,up<IException>>{
+		using base = IPromise<Task,up<IException>>;
 		α Error()Ι->const up<IException>& override{ return base::Expected; }
 		α MoveError()ι->up<IException> override{ return move(base::Expected); }
 		α SetError( IException&& x )ι->void override{ base::Expected = x.Move(); }
@@ -48,8 +48,8 @@ namespace Jde{
 		{};
 	};
 
-	template<class TTask,class TExpected>
-	α IPromise<TTask,TExpected>::unhandled_exception()ι->void{
+	template<class Task,class TExpected>
+	α IPromise<Task,TExpected>::unhandled_exception()ι->void{
 		try{
 			BREAK;
 			throw;

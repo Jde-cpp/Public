@@ -76,11 +76,11 @@ namespace Jde::Logging{
 	#define BREAK_IF(x)
 #else
 	#ifdef _MSC_VER
-		#define BREAK DebugBreak()
+		#define BREAK DebugBreak();
 	#else
 		#define BREAK if( CanBreak() ){ ::raise( 5/*SIGTRAP*/ ); }
 	#endif
-	#define BREAK_IF(x) if( x ){ BREAK };
+	#define BREAK_IF(x) if( x ){ BREAK; }
 #endif
 
 
@@ -141,11 +141,11 @@ namespace Jde{
 
 		Φ LogMemory()ι->bool;
 		Φ ClientMinLevel()ι->ELogLevel;
-		Φ Default()ι->spdlog::logger*;
+		//Φ Default()ι->spdlog::logger*;
 
 //	inline constexpr PortType ServerSinkDefaultPort = 4321;
 		namespace Proto{class Status;}
-		α StartTime()ι->TimePoint;
+		Φ StartTime()ι->TimePoint;
 		Φ SetStatus( const vector<string>& values )ι->void;
 		α SetLogLevel( ELogLevel client, ELogLevel server )ι->void;
 		α GetStatus()ι->up<Proto::Status>;
@@ -195,7 +195,7 @@ namespace Jde{
 		try{
 			if( auto p = Default(); p ){
 				if( m.MessageView.empty() )
-					BREAK;
+					BREAK
 				if constexpr( sizeof...(args)>0 )
 					p->log( SOURCE, (spdlog::level::level_enum)m.Level, fmt::vformat(std::locale(""), m.MessageView, fmt::make_format_args(std::forward<Args>(args)...)) );
 				else

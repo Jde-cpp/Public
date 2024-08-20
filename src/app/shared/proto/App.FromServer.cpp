@@ -8,7 +8,7 @@
 #define var const auto
 
 namespace Jde::App{
-	α FromServer::Ack( uint serverSocketId )ι->Proto::FromServer::Transmission{
+	α FromServer::Ack( uint32 serverSocketId )ι->Proto::FromServer::Transmission{
 		Proto::FromServer::Transmission t;
 		t.add_messages()->set_ack( serverSocketId );
 		return t;

@@ -3,7 +3,7 @@
 #include "../usings.h"
 
 namespace Jde::Web::Client{
-	α SocketClientReadTag()ι->sp<LogTag>;
+	//ΓWC α SocketClientReadTag()ι->sp<LogTag>;
 
 	struct TimedPromiseType{
 		ψ Log( const fmt::format_string<Args const&...>&& m2, const Args&... args )ι->void{
@@ -26,7 +26,7 @@ namespace Jde::Web::Client{
 	struct ClientSocketVoidAwait final : VoidAwait<void,TimedVoidTask>{
 		using base = VoidAwait<void,TimedVoidTask>;
 		ClientSocketVoidAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι;
-		α await_suspend( base::Handle h )ε->void override;
+		α Suspend()ι->void override;
 		α await_resume()ε->void override;
 	private:
 		string _request;
@@ -39,9 +39,8 @@ namespace Jde::Web::Client{
 		base{ sl }, _request{ move(request) }, _requestId{ requestId }, _session{ session }, _start{ steady_clock::now() }
 	{}
 
-	Ξ ClientSocketVoidAwait::await_suspend( base::Handle h )ε->void{
-		base::await_suspend( h );
-		_session->AddTask( _requestId, h );
+	Ξ ClientSocketVoidAwait::Suspend()ι->void{
+		_session->AddTask( _requestId, _h );
 		_session->Write( move(_request) );
 	}
 
@@ -62,7 +61,7 @@ namespace Jde::Web::Client{
 	struct ClientSocketAwait final : TAwait<T,TTimedTask<T>>{
 		using base = TAwait<T,TTimedTask<T>>;
 		ClientSocketAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι;
-		α await_suspend( base::Handle h )ε->void override;
+		α Suspend()ι->void override;
 		α await_resume()ε->T override;
 	private:
 		string _request;
@@ -75,9 +74,8 @@ namespace Jde::Web::Client{
 		base{ sl }, _request{ move(request) }, _requestId{ requestId }, _session{ session }, _start{ steady_clock::now() }
 	{}
 
-	Ŧ ClientSocketAwait<T>::await_suspend( base::Handle h )ε->void{
-		base::await_suspend( h );
-		_session->AddTask( _requestId, h );
+	Ŧ ClientSocketAwait<T>::Suspend()ι->void{
+		_session->AddTask( _requestId, base::_h );
 		_session->Write( move(_request) );
 	}
 

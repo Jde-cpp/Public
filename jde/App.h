@@ -62,7 +62,6 @@ namespace Jde{
 		Ω IsConsole()ι->bool;
 
 //		Ω GetBackgroundThreads()ι{ return  *_pBackgroundThreads; }
-		Ω ApplicationName()ι->sv{ return _pApplicationName ? *_pApplicationName : ""sv;}
 		Ω ProgramDataFolder()ι->fs::path;
 		Ω ApplicationDataFolder()ι->fs::path;
 		Ω AddActiveWorker( Threading::IPollWorker* pWorker )ι->void;
@@ -76,7 +75,6 @@ namespace Jde{
 		β AddSignals()ε->void=0;
 		β KillInstance( uint processId )ι->bool=0;
 
-		static up<string> _pApplicationName;
 	private:
 		β SetConsoleTitle( sv title )ι->void=0;
 
@@ -95,7 +93,7 @@ namespace Jde{
 		ω GetProcAddress( void* pModule, str procName )ε->void*;
 		α Install( str serviceDescription )ε->void override;
 		α Uninstall()ε->void override;
-		ω ProcessId()ι->uint;
+		ω ProcessId()ι->uint32;
 		Ω Executable()ι->fs::path;
 		Ω Args()ι->const flat_multimap<string,string>&;
 		Ω Pause()ι->void;

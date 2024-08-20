@@ -42,12 +42,12 @@ namespace Jde::Crypto{
 		auto p = MakeHandle( BN_bin2bn( (unsigned char*)x.data(), (int)x.size(), nullptr ), ::BN_free, SRCE_CUR ); CHECK_NULL( p.get() );
 		return p;
 	}
-	α Internal::ToBigNum( uint32 x )ε->BNPtr{
+/*	α Internal::ToBigNum( uint32 x )ε->BNPtr{
 		uint32_t bigEndian{ __builtin_bswap32(x) }; //_byteswap_ulong msvc
 		auto p = MakeHandle( BN_bin2bn( (const unsigned char*)&bigEndian, (int)sizeof(uint32_t), nullptr ), ::BN_free, SRCE_CUR ); CHECK_NULL( p.get() );
 		return p;
 	}
-
+*/
 	α Internal::ToBio( const vector<byte>&& bytes )ε->BioPtr{
 		auto p = MakeHandle( BIO_new_mem_buf( bytes.data(), (int)bytes.size() ), ::BIO_free, SRCE_CUR ); CHECK_NULL( p.get() );
 		return p;

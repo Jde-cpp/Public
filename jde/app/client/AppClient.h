@@ -9,7 +9,7 @@ namespace Jde::App::Client{
 	α UpdateStatus()ι->void;
 	α SetStatusDetailsFunction( function<vector<string>()>&& f )ι->void;
 	α AppServiceUserPK()ι->UserPK;	//for internal queries.
-	α Connect( bool wait=false, SRCE )ι->void;
+	α Connect( bool wait=false )ι->void;
 
 	α IsSsl()ι->bool;
 	α Host()ι->string;

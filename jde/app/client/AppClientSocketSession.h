@@ -8,7 +8,7 @@ namespace Jde::App::Client{
 	struct StartSocketAwait : VoidAwait<>{
 		using base = VoidAwait<>;
 		StartSocketAwait( SessionPK sessionId, SRCE )ι;
-		α await_suspend( base::Handle h )ι->void override;
+		α Suspend()ι->void override;
 		SessionPK _sessionId;
 	};
 	α AddSession( str domain, str loginName, ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>;

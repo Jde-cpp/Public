@@ -6,9 +6,9 @@
 namespace boost::asio{ class io_context; class cancellation_signal; }
 #define Φ Γ α
 namespace Jde{
-	α Executor()ι->sp<boost::asio::io_context>;
+	Φ Executor()ι->sp<boost::asio::io_context>;
 	namespace Execution{
-		α AddShutdown( IShutdown* pShutdown )ι->void;
+		Φ AddShutdown( IShutdown* pShutdown )ι->void;
 		α AddCancelSignal( sp<boost::asio::cancellation_signal> s )ι->void;
 		α Run()->void;
 	}

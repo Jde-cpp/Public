@@ -1,8 +1,9 @@
 #pragma once
 #include <jde/crypto/OpenSsl.h>
+#include "exports.h"
 
 namespace Jde::Web{
-	struct Jwt{
+	struct ΓWC Jwt{
 		Jwt( str jwt )ε;
 		Jwt( Crypto::Modulus mod, Crypto::Exponent exp, str userName, str userTarget, str myEndpoint, str description, const fs::path& privateKeyPath )ι;
 		α Payload()Ι->string;
