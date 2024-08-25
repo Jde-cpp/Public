@@ -28,12 +28,15 @@ target_sources( "${CMAKE_PROJECT_NAME}"
         "${hdr_files}")
 
 if(MSVC)
+<<<<<<< HEAD
 	find_package( fmt )
 	find_package( ZLIB )
 
 	target_link_libraries( ${CMAKE_PROJECT_NAME} Jde )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} fmt::fmt )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} ZLIB::ZLIB )
+=======
+>>>>>>> 2a3c326db5998c266a3eb61f540584f896dd5c81
 else()
 	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
