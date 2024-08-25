@@ -3,7 +3,7 @@
 
 namespace Jde::Web::Client
 {
-	ClientHttpException::ClientHttpException( beast::error_code ec, ELogTags tags, ELogLevel level, SL sl )ι:
+	ClientHttpException::ClientHttpException( beast::error_code ec, ELogTags /*tags*/, ELogLevel level, SL sl )ι:
 		ClientHttpException{ ec, {}, {}, level, sl }
 	{}
 

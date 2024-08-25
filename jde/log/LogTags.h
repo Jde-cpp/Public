@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 namespace Jde{
 	#define Φ Γ auto
 	struct LogTag{ string Id; ELogLevel Level{ELogLevel::NoLog}; };//loadLibrary dlls may disappear, so need string vs. sv
@@ -40,13 +40,14 @@ namespace Jde{
 		SocketServerWrite	= Socket | Server | Write
 	};
 	constexpr ELogTags DefaultTag=ELogTags::App;
-	α ShouldTrace( sp<LogTag> pTag )ι->bool;
-	α FileMinLevel( ELogTags tags )ι->ELogLevel;
+	Φ ShouldTrace( sp<LogTag> pTag )ι->bool;
+	Φ ShouldTrace( ELogTags tags )ι->bool;
+	Φ FileMinLevel( ELogTags tags )ι->ELogLevel;
 	α MinLevel( ELogTags tags )ι->ELogLevel;
 	α Min( ELogLevel a, ELogLevel b )ι->ELogLevel;
 	α Min( ELogTags tags, const concurrent_flat_map<ELogTags,ELogLevel>& tagSettings )ι->optional<ELogLevel>;
 	α ToString( ELogTags tags )ι->string;
-	α ToLogTags( str name )ι->ELogTags;
+	Φ ToLogTags( str name )ι->ELogTags;
 	α TagParser( function<optional<ELogTags>(sv)> parser )ι->void;
 
 namespace Logging{

@@ -3,8 +3,8 @@
 
 #define var const auto
 namespace Jde::Web::Client{
-	static string _userAgent{ 𐢜("({})Jde.Web.Client - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
-	string _sslUserAgent{ 𐢜("({})Jde.Web.Client SSL - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
+	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
+	string _sslUserAgent{ Ƒ("({})Jde.Web.Client SSL - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
 
 
 	ClientSocketStream::ClientSocketStream( net::io_context& ioc, optional<ssl::context>& ctx )ι:
@@ -32,7 +32,7 @@ namespace Jde::Web::Client{
 			beast::get_lowest_layer( stream ).expires_after( std::chrono::seconds(30) );// Set a timeout on the operation
 			if( !SSL_set_tlsext_host_name(stream.next_layer().native_handle(), host.c_str()) ){// Set SNI Hostname (many hosts need this to handshake successfully)
 				var ec = beast::error_code( static_cast<int>(::ERR_get_error()), net::error::get_ssl_category() );
-				CodeException{ static_cast<std::error_code>(ec), SocketClientReadTag() };
+				CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientRead };
 				return;
 			}
 			host += ':' + std::to_string( ep.port() ); // Update the _host string. This will provide the value of the Host HTTP header during the WebSocket handshake. See https://tools.ietf.org/html/rfc7230#section-5.4
@@ -78,7 +78,7 @@ namespace Jde::Web::Client{
 		_writeGuard = nullptr;
 		boost::ignore_unused( bytes_transferred );
 		if( ec )
-			CodeException{ static_cast<std::error_code>(ec), SocketClientWriteTag() };//TODO look at returning an error to caller.
+			CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientWrite };//TODO look at returning an error to caller.
 	}
 
 	α ClientSocketStream::Close( sp<IClientSocketSession> session )ι->void{

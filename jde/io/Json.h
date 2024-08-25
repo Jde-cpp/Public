@@ -2,6 +2,8 @@
 #include "../Str.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wreturn-type"
+#pragma warning( push )
+#pragma warning( disable : 4715)
 namespace Jde::Json{
 	Ŧ Routine( std::function<T()>&& f, ELogTags tags=DefaultTag, SRCE )ε->T{
 		try{
@@ -18,9 +20,6 @@ namespace Jde::Json{
 		}
 		catch( const json::exception& e ){
 			throw Exception{ tags, sl, "json::exception: {}", e.what() };
-		}
-		catch( const nlohmann::detail::exception& e ){
-			throw Exception{ tags, sl, "detail::exception exception: {}", e.what() };
 		}
 		catch( const std::exception& e ){
 			throw Exception{ tags, sl, "json std::exception: {}", e.what() };
@@ -39,7 +38,7 @@ namespace Jde::Json{
 			try{
 				y = Routine<T>( [&](){return p->get<T>();}, tags, sl );
 			}
-			catch( IException& e ){}
+			catch( IException& ){}
 		}
 		return y;
 	}
@@ -76,4 +75,5 @@ namespace Jde::Json{
 		}
 	}
 #pragma GCC diagnostic pop
+#pragma warning( pop )
 }

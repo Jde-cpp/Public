@@ -1,14 +1,31 @@
-cmake_minimum_required(VERSION 3.16)
-project(Jde.App.Client)
+cmake_minimum_required(VERSION 3.20.0)
 set( CMAKE_MODULE_PATH $ENV{JDE_DIR}/Public/build )
 include(common)
-link_directories( ${Protobuf_DIR}/../.. )
+findBoost()
+
+if( ${VCPKG} )
+	SET(CMAKE_TOOLCHAIN_FILE "$ENV{REPO_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"  CACHE STRING "Vcpkg toolchain file")
+endif()
+project(Jde.App.Client)
+include(compiler)
+
+find_package( OpenSSL REQUIRED )
+#dump_cmake_variables()
+if(MSVC)
+	include_directories( ${OPENSSL_INCLUDE_DIR} )
+	find_package( Protobuf REQUIRED )
+	find_package( fmt )
+	link_directories( $ENV{JDE_DIR}/Framework/source/.build/.bin/${outDir} )
+	link_directories( $ENV{JDE_DIR}/Public/src/app/shared/.build/.bin/${outDir} )
+	link_directories( $ENV{JDE_DIR}/Public/src/crypto/.build/.bin/${outDir} )
+	link_directories( $ENV{JDE_DIR}/Public/src/web/client/.build/.bin/${outDir} )
+else()
+	link_directories( ${Protobuf_DIR}/../.. )
+endif()
+
 #######################################################
-set(CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS} "-Wl,-rpath=$ORIGIN")
-add_definitions( -DJde_APP_CLIENT_EXPORTS )
-find_package(OpenSSL)
 add_library( ${CMAKE_PROJECT_NAME} SHARED )
-set( CMAKE_INCLUDE_CURRENT_DIR ON )
+#set( CMAKE_INCLUDE_CURRENT_DIR ON )
 file(GLOB src_files *.cpp await/*.cpp )
 file(GLOB hdr_files  **/*.h )
 target_sources( "${CMAKE_PROJECT_NAME}"
@@ -16,13 +33,17 @@ target_sources( "${CMAKE_PROJECT_NAME}"
         "${src_files}"
         "${hdr_files}")
 
-target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
-target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )
 if(MSVC)
-	add_definitions( -DWIN32_LEAN_AND_MEAN )
+	target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.App.Shared Jde.Web.Client )
+	target_link_libraries( ${CMAKE_PROJECT_NAME} fmt::fmt )
+	target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf )
 else()
-	target_link_libraries(${CMAKE_PROJECT_NAME} Threads::Threads)
+	add_definitions( -DJde_App_Client_EXPORTS )
+	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
+	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
+	target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )
 endif()
+target_link_libraries( ${CMAKE_PROJECT_NAME} OpenSSL::SSL )
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
   PRIVATE
@@ -30,20 +51,11 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 	<boost/asio.hpp>
 	<boost/beast/ssl/ssl_stream.hpp>
 
-#	<boost/exception/diagnostic_information.hpp>
-<jde/TypeDefs.h>
-<jde/log/Log.h>
-#	<jde/web/usings.h>
-#	<jde/coroutine/Task.h>
-<jde/app/shared/proto/App.FromClient.pb.h>
-<jde/app/shared/proto/App.FromServer.pb.h>
-"../../../../Framework/source/coroutine/Awaitable.h"
-#	"../../../Framework/source/db/GraphQL.h"
-#	"../../../Framework/source/io/AsioContextThread.h"
-#	"../../../Framework/source/io/Socket.h"
-#	"../../../Framework/source/io/ProtoClient.h"
-#	"../../../Framework/source/io/ProtoUtilities.h"
-#	"../../../Framework/source/threading/InterruptibleThread.h"
-#	"../../../Ssl/source/Ssl.h"
+	<jde/TypeDefs.h>
+	<jde/log/Log.h>
+	<jde/Exception.h>
+	<jde/app/shared/exports.h>
+	<jde/app/shared/proto/App.FromClient.pb.h>
+	<jde/app/shared/proto/App.FromServer.pb.h>
 )
 

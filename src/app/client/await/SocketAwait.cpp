@@ -17,7 +17,7 @@ namespace Jde::App::Client{
 		try{
 			auto info = co_await pSession->SessionInfo( _sessionId );
 			var expiration = Chrono::ToClock<steady_clock,Clock>( IO::Proto::ToTimePoint(info.expiration()) );
-			Resume( Web::Server::SessionInfo{info.session_id(), expiration, info.user_pk(), info.user_endpoint(), info.has_socket()} );
+			Resume( move(info) );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );

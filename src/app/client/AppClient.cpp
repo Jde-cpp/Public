@@ -12,7 +12,7 @@ namespace Jde::App{
 	α Client::Host()ι->string{ return Settings::Get("server/host").value_or("localhost"); }
 	α Client::Port()ι->PortType{ return Settings::Get<PortType>("server/port").value_or(1967); }
 
-	function<vector<string>()> _statusDetails = []->vector<string>{ return {}; };
+	function<vector<string>()> _statusDetails = []()->vector<string>{ return {}; };
   α Client::SetStatusDetailsFunction( function<vector<string>()>&& f )ι->void{ _statusDetails = f; }
 
 	#define IF_OK if( auto pSession = Process::ShuttingDown() ? nullptr : AppClientSocketSession::Instance(); pSession )
@@ -25,7 +25,7 @@ namespace Jde::App::Client{
 	struct LoginAwait final : TAwait<SessionPK>{
 		using base = TAwait<SessionPK>;
 		LoginAwait( SRCE )ι;
-		α await_suspend( base::Handle h )ι->void{ base::await_suspend(h); Execute(); };
+		α Suspend()ι->void{ Execute(); };
 	private:
 		α Execute()ι->Web::Client::ClientHttpAwait::Task;
 		Web::Jwt _jwt;
@@ -57,7 +57,7 @@ namespace Jde::App::Client{
 	}
 }
 namespace Jde::App{
-	α Client::Connect( bool wait, SL sl )ι->void{
+	α Client::Connect( bool wait )ι->void{
 		if( Process::ShuttingDown() )
 			return;
 		[wait]()->Task{
@@ -70,7 +70,7 @@ namespace Jde::App{
 						try{
 							co_await StartSocketAwait{ sessionId };
 						}
-						catch( IException& e ){
+						catch( IException& ){
 							Connect( true );
 						}
 					}();

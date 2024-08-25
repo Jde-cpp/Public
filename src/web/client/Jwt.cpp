@@ -45,13 +45,13 @@ namespace Jde::Web{
 		Iat = Json::Get<time_t>( Body, "iat" );
 
 		auto fpText = []( const Crypto::MD5& fp ) {
-			return std::accumulate(fp.begin(), fp.end(), 𐢜("{:x}", fp[0]), [&](string s, byte b){return move(s)+𐢜("{:x}", fp[0]);} );
+			return std::accumulate(fp.begin(), fp.end(), Ƒ("{:x}", fp[0]), [&](string s, byte /*b*/){return move(s)+Ƒ("{:x}", fp[0]);} );
 		};
-		Description = Json::TryGet(Body, "description").value_or( 𐢜("Public key md5: {}", fpText(fpKey)) );
+		Description = Json::TryGet(Body, "description").value_or( Ƒ("Public key md5: {}", fpText(fpKey)) );
 	}
 	α Jwt::Payload()Ι->string{
 		auto signature = Str::Encode64( Signature, true );
-		auto payload = 𐢜( "{}.{}", HeaderBodyEncoded, signature );
+		auto payload = Ƒ( "{}.{}", HeaderBodyEncoded, signature );
 		return payload;
 	}
 	α Jwt::SetModulus( str encoded )ι->void{

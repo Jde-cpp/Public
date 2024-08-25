@@ -1,5 +1,5 @@
 #pragma once
-#ifdef Jde_APP_CLIENT_EXPORTS
+#ifdef Jde_App_Client_EXPORTS
 	#ifdef _MSC_VER
 		#define ΓAC __declspec( dllexport )
 	#else

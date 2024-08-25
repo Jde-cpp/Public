@@ -3,19 +3,21 @@
 #include <jde/coroutine/Await.h>
 #include "../../../../Framework/source/coroutine/Awaitable.h"
 
-
+#pragma warning(push)
+#pragma warning( disable : 4100 )
 namespace Jde::DB{ struct MutationQL; struct TableQL; }
 namespace Jde::DB::GraphQL{
 	struct IMutationAwait;
 	struct IGraphQLHook{
-		β InsertBefore( const DB::MutationQL& mutation, UserPK userPK, SRCE )ι->up<IAwait>{ return {}; }
-		β InsertFailure( const DB::MutationQL& mutation, UserPK userPK, SRCE )ι->up<IAwait>{ return {}; }
-		β PurgeBefore( const DB::MutationQL& mutation, UserPK userPK, SRCE )ι->up<IAwait>{ return {}; }
-		β PurgeFailure( const DB::MutationQL& mutation, UserPK userPK, SRCE )ι->up<IAwait>{ return {}; }
-		β Select( const DB::TableQL& query, UserPK userPK, SRCE )ι->up<IAwait>{ return {}; }
-		β Start( sp<DB::MutationQL> mu, UserPK userPK, SRCE )ι->up<IMutationAwait>{ return {}; }
-		β Stop( sp<DB::MutationQL> mu, UserPK userPK, SRCE )ι->up<IMutationAwait>{ return {}; }
+		β InsertBefore( const DB::MutationQL&, UserPK, SRCE )ι->up<IAwait>{ return {}; }
+		β InsertFailure( const DB::MutationQL&, UserPK, SRCE )ι->up<IAwait>{ return {}; }
+		β PurgeBefore( const DB::MutationQL&, UserPK, SRCE )ι->up<IAwait>{ return {}; }
+		β PurgeFailure( const DB::MutationQL&, UserPK, SRCE )ι->up<IAwait>{ return {}; }
+		β Select( const DB::TableQL&, UserPK, SRCE )ι->up<IAwait>{ return {}; }
+		β Start( sp<DB::MutationQL>, UserPK, SRCE )ι->up<IMutationAwait>{ return {}; }
+		β Stop( sp<DB::MutationQL>, UserPK, SRCE )ι->up<IMutationAwait>{ return {}; }
 	};
+#pragma warning(pop)
 
 	namespace Hook{
 		α Add( up<GraphQL::IGraphQLHook>&& hook )ι->void;
@@ -49,7 +51,7 @@ namespace Jde::DB::GraphQL{
 		using base=IMutationAwait;
 		MutationAwaits( sp<DB::MutationQL> mutation, UserPK userPK, Hook::Operation op, SRCE )ι;
 		α await_ready()ι->bool override;
-		α await_suspend( base::Handle h )ι->void override;
+		α Suspend()ι->void override;
 	private:
 		vector<up<IMutationAwait>> _awaitables;
 		Hook::Operation _op;

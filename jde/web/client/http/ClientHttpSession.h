@@ -11,10 +11,10 @@ namespace Jde::Web::Client{
 		optional<boost::beast::http::verb> _verb{ http::verb::unknown };
 	};
 
-	struct ClientHttpSession : public std::enable_shared_from_this<ClientHttpSession>{
+	struct ΓWC ClientHttpSession : public std::enable_shared_from_this<ClientHttpSession>{
     ClientHttpSession( str host, PortType port, net::any_io_executor strand )ε;
 		ClientHttpSession( str host, PortType port, net::any_io_executor strand, bool isPlain )ε;
-		Ω Key( str host, PortType port, bool isSsl)ι->string{ return 𐢜("http{}//{}:{}", isSsl ? "s" : "", host, port); }
+		Ω Key( str host, PortType port, bool isSsl)ι->string{ return Ƒ("http{}//{}:{}", isSsl ? "s" : "", host, port); }
 
 		α Close()ε->VoidTask;
 		α IsRunning()Ι{ return _isRunning.test(); } α SetIsRunning( bool x )ι->void{ if( x ) _isRunning.test_and_set(); else _isRunning.clear(); }

@@ -9,15 +9,15 @@
 
 
 namespace Jde::Web::Client{
-	α MaxLogLength()ι->uint16;
+	ΓWC α MaxLogLength()ι->uint16;
 
-	α SocketClientReadTag()ι->sp<LogTag>;
-	α SocketClientWriteTag()ι->sp<LogTag>;
+	//α SocketClientReadTag()ι->sp<LogTag>;
+	//α SocketClientWriteTag()ι->sp<LogTag>;
 	struct IClientSocketSession;
 	struct CreateClientSocketSessionAwait final : VoidAwait<>{
 		using base = VoidAwait<>;
 		CreateClientSocketSessionAwait( sp<IClientSocketSession> session, string host, PortType port, SRCE )ι;
-		α await_suspend( base::Handle h )ι->void override;
+		α Suspend()ι->void override;
 	private:
 		sp<IClientSocketSession> _session; string _host; PortType _port;
 	};
@@ -25,7 +25,7 @@ namespace Jde::Web::Client{
 	struct CloseClientSocketSessionAwait final : VoidAwait<>{
 		using base = VoidAwait<>;
 		CloseClientSocketSessionAwait( sp<IClientSocketSession> session, SRCE )ι:base{sl}, _session{session}{};
-		α await_suspend( base::Handle h )ι->void override;
+		α Suspend()ι->void override;
 	private:
 		sp<IClientSocketSession> _session;
 	};
@@ -94,11 +94,11 @@ namespace Jde::Web::Client{
 	$::OnReadData( std::basic_string_view<uint8_t> transmission )ι->void{
 		try{
 			sv x{ (char*)transmission.data(), transmission.size() };
-			auto proto = IO::Proto::Deserialize<TFromServerMsgs>( transmission.data(), transmission.size() );
+			auto proto = IO::Proto::Deserialize<TFromServerMsgs>( transmission.data(), (int)transmission.size() );
 			OnRead( move(proto) );
 		}
 		catch( IException& e ){
-			e.SetTag( SocketClientReadTag() );
+			e.SetTags( ELogTags::SocketClientRead );
 		}
 	}
 

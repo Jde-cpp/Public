@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifndef EXTERNAL_LOGGER_H
 #define EXTERNAL_LOGGER_H
 #include "Message.h"
@@ -18,6 +18,7 @@ namespace Jde::Logging{
 	};
 
 	struct IExternalLogger{
+		virtual ~IExternalLogger(){}
 		β Destroy(SRCE)ι->void=0;
 		β DefaultLevel()ι->ELogLevel{ return _defaultLevel; }
 		β Name()ι->string=0;

@@ -24,7 +24,7 @@ namespace Jde::Crypto{
 
 	struct OpenSslException final : IException{
 		template<class... Args>
-		OpenSslException( fmt::format_string<Args...> fmt, uint rc, SL sl, Args&&... args )ι:
+		OpenSslException( fmt::format_string<Args...> fmt, uint32 rc, SL sl, Args&&... args )ι:
 			IException{ sl, ELogLevel::Warning, rc, fmt, std::forward<Args>(args)... }
 		{}
 		static Φ CurrentError()ι->string;

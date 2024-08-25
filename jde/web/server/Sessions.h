@@ -2,12 +2,14 @@
 //#include <jde/coroutine/Task.h>
 #include <jde/db/usings.h>
 #include <jde/coroutine/Await.h>
+#include <jde/coroutine/Task.h>
+//#include "exports.h"
 
 //Holds web session information.  Requires AppServer, so in AppClient
 namespace Jde::Web::Server{
 	struct SessionInfo;
 	namespace Sessions::Internal{ α CreateSession( UserPK userPK, str endpoint, bool isSocket, bool add )ι->sp<SessionInfo>; }
-	struct SessionInfo{
+	struct /*ΓWS*/ SessionInfo{
 		SessionInfo()ι=default;
 		SessionInfo( SessionPK sessionPK, steady_clock::time_point expiration, Jde::UserPK userPK, str userEndpointAddress, bool hasSocket )ι;
 

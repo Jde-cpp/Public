@@ -1,8 +1,8 @@
-#pragma once
+﻿#pragma once
 #include "../db/usings.h"
 
 namespace Jde::Logging{
-	α Default()ι->spdlog::logger*;
+	Γ auto Default()ι->spdlog::logger*;
 	enum class EFields : uint16{ None=0, Timestamp=0x1, MessageId=0x2, Message=0x4, Level=0x8, FileId=0x10, File=0x20, FunctionId=0x40, Function=0x80, LineNumber=0x100, UserPK=0x200, User=0x400, ThreadId=0x800, Thread=0x1000, VariableCount=0x2000, SessionId=0x4000 };
 
 #define FormatString const fmt::format_string<Args const&...>
@@ -25,8 +25,8 @@ namespace Jde::Logging{
 					}
 //TODO!					BREAK_IF( break_ && m.Level>=BreakLevel() );
 				}
-				catch( const fmt::format_error& e ){
-//					BREAK;TODO
+				catch( const fmt::format_error& /*e*/ ){
+//					BREAK;TODO!
 //					MessageBase mLogger2{ ELogLevel::Critical, "could not format '{}' cargs='{}' - '{}'", m.File, m.Function, m.LineNumber };
 //					Log( m2, tag, m.MessageView, sizeof...(args), e.what() );
 				}
@@ -78,6 +78,10 @@ template<typename... Args>
 		case ELogLevel::Error: CMD( Error ); break;
 		case ELogLevel::Critical: CMD( Critical ); break;
 	}
+}
+template<typename... Args>
+α Log( ELogLevel level, ELogTags tags, const std::source_location& sl, FormatString&& m, ARGS... args )ι->void{
+	Log( level, tags, { sl.file_name(), (int)sl.line(), sl.function_name() }, FWD( m ), FWD( args )... );
 }
 
 #undef ARGS

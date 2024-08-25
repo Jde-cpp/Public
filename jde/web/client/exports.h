@@ -1,5 +1,5 @@
 #pragma once
-#ifdef Jde_WEB_CLIENT_EXPORTS
+#ifdef Jde_Web_Client_EXPORTS
 	#ifdef _MSC_VER
 		#define ΓWC __declspec( dllexport )
 	#else

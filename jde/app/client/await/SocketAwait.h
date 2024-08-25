@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/web/server/Sessions.h>
+//#include <jde/web/server/Sessions.h>
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 
@@ -10,7 +10,7 @@ namespace Jde::App::Client{
 		using base = TAwait<TResult>;
 		SocketAwait( SL sl )ι:base{sl}{}
 		α await_ready()ι->bool final{ return Process::ShuttingDown(); }
-		α await_suspend( base::Handle h )ι->void final;
+		α Suspend()ι->void override final;
 		β Execute( sp<AppClientSocketSession> pSession )ι->Web::Client::ClientSocketAwait<TProto>::Task=0;
 		α await_resume()ε->TResult final;
 	};
@@ -22,20 +22,19 @@ namespace Jde::App::Client{
 		string _query; UserPK _userPK;
 	};
 
-	struct SessionInfoAwait : SocketAwait<Proto::FromServer::SessionInfo,Web::Server::SessionInfo>{
-		using base = SocketAwait<Proto::FromServer::SessionInfo,Web::Server::SessionInfo>;
+	struct SessionInfoAwait : SocketAwait<Proto::FromServer::SessionInfo,Proto::FromServer::SessionInfo>{
+		using base = SocketAwait<Proto::FromServer::SessionInfo,Proto::FromServer::SessionInfo>;
 		SessionInfoAwait( SessionPK sessionId, SRCE )ι:base{sl}, _sessionId{sessionId}{}
 		α Execute( sp<AppClientSocketSession> session )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>::Task override;
 		SessionPK _sessionId;
 	};
 
 #define $ template<class TProto,class TResult> α SocketAwait<TProto,TResult>
-	$::await_suspend( base::Handle h )ι->void{
-		base::await_suspend( h );
+	$::Suspend()ι->void{
 		if( auto pSession = AppClientSocketSession::Instance(); pSession )
 			Execute( pSession );
 		else
-			h.resume();
+			base::Resume();
 	}
 
 	$::await_resume()ε->TResult{

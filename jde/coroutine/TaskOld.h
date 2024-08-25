@@ -25,7 +25,7 @@ namespace Jde::Coroutine{
 		AwaitResult( sp<void>&& p )ι:_result{ p }{};
 		AwaitResult( Exception&& e )ι:_result{ e.Move().release() }{};
 		AwaitResult( bool b )ι:_result{ b }{};
-		~AwaitResult();
+		//~AwaitResult(){};
 		α Clear()ι->void{ _result = UType{}; }
 		α HasValue()Ι{ return _result.index()==0 && get<0>( _result ); }
 		α HasShared()Ι{ return _result.index()==1 && get<1>( _result ); }
@@ -93,6 +93,7 @@ namespace Jde{
 namespace Jde::Coroutine{
 	struct CoException final : IException{
 		CoException( HCoroutine h, IException&& i, SRCE )ι:IException{sl, ELogLevel::NoLog, "" },_h{h},_pInner{ i.Move() }{}
+		//CoException( const CoException& )ι=default;
 		α Resume( Task::promise_type& pt )ι{ pt.SetResult( move(*_pInner) ); _h.resume(); }
 
 		α Move()ι->up<IException> override{ return mu<CoException>(move(*this)); }
@@ -100,7 +101,7 @@ namespace Jde::Coroutine{
 		[[noreturn]] α Throw()ε->void override{ throw move(*this); }
 	private:
 		HCoroutine _h;
-		up<IException> _pInner;
+		sp<IException> _pInner;
 	};
 
 	Ξ AwaitResult::CheckError( SL sl )->void{

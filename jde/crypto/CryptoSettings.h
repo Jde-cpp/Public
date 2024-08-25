@@ -1,6 +1,8 @@
 #pragma once
+#include "exports.h"
 namespace Jde::Crypto{
-	struct CryptoSettings final{
+
+	struct ΓC CryptoSettings final{
 		CryptoSettings( str settingsPrefix )ι;
 		α CreateDirectories()ι->void;
 
