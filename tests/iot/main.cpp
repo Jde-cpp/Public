@@ -3,6 +3,7 @@
 #include "../../../Framework/source/Cache.h"
 #include "../../../Framework/source/db/GraphQL.h"
 #include <jde/app/client/AppClient.h>
+#include <jde/app/client/AppClientSocketSession.h>
 #include <jde/iot/uatypes/Logger.h>
 #include <jde/thread/Execution.h>
 #include "helpers.h"
@@ -23,11 +24,12 @@ namespace Jde{
 			settings.CreateDirectories();
 			Crypto::CreateKey( settings.PublicKeyPath, settings.PrivateKeyPath, settings.Passcode );
 		}
-
-		App::Client::Connect();
+		using namespace App::Client;
+		Connect();
 		Execution::Run();
 
-		std::this_thread::sleep_for( 1s );
+		while( !AppClientSocketSession::Instance() || !AppClientSocketSession::Instance()->Id() )
+			std::this_thread::yield();
 		DB::CreateSchema();
 		DB::SetQLDataSource( DB::DataSourcePtr() );
 		Iot::AddHook();

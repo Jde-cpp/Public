@@ -5,8 +5,9 @@
 #define var const auto
 
 namespace Jde{
+#ifndef _MSC_VER
 	α OSApp::ProductName()ι->sv{ return "Tests.Crypto"; }
-
+#endif
  	α Startup( int argc, char **argv )ι->void{
 #ifdef _MSC_VER
 		ASSERT( Settings::Get<uint>("workers/drive/threads")>0 )
@@ -27,8 +28,7 @@ namespace Jde{
 		var filter = p ? *p : "*";
 		::testing::GTEST_FLAG( filter ) = filter;
 	   result = RUN_ALL_TESTS();
-		IApplication::Shutdown( result );
-		IApplication::Cleanup();
+		Process::Shutdown( result );
 	}
 	return result;
 }

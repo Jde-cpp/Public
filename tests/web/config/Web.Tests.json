@@ -1,8 +1,8 @@
 {
 	"testing":{
-		"testsa":"CertificateTests.DefaultSettings",
-		"testsb":"SocketTests.*",
-		"tests":"WebTests.*"
+		"testsa":"CertificateTests.*",
+		"tests":"SocketTests.BadTransmissionClient",
+		"testsc":"WebTests.EchoAttack"
 	},
 	"cryptoTests":{
 		"clear": true
@@ -10,10 +10,10 @@
 	"logging":{
 		"defaultLevel": "Information",
 		"tags": {
-			"Trace":["test",
+			"Trace":["test", "exception", "app",
 				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
 			],
-			"Debug":["settings", "app"],
+			"Debug":["settings"],
 			"Information":[],
 			"Warning":[],
 			"Error":[],

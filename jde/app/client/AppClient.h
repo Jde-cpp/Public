@@ -1,6 +1,7 @@
 #pragma once
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/app/client/usings.h>
+#include <jde/app/client/exports.h>
 #include <jde/crypto/OpenSsl.h>
 #include <jde/web/client/Jwt.h>
 
@@ -9,7 +10,7 @@ namespace Jde::App::Client{
 	α UpdateStatus()ι->void;
 	α SetStatusDetailsFunction( function<vector<string>()>&& f )ι->void;
 	α AppServiceUserPK()ι->UserPK;	//for internal queries.
-	α Connect( bool wait=false )ι->void;
+	ΓAC α Connect( bool wait=false )ι->void;
 
 	α IsSsl()ι->bool;
 	α Host()ι->string;

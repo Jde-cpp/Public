@@ -1,6 +1,7 @@
 ﻿#pragma once
 #ifndef JDE_STR_H
 #define JDE_STR_H
+DISABLE_WARNINGS
 #include <charconv>
 #include <codecvt>
 #include <span>
@@ -9,6 +10,7 @@
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/remove_whitespace.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
+ENABLE_WARNINGS
 #include "log/Log.h"
 #include "Exception.h"
 

@@ -45,7 +45,7 @@ namespace Jde{
 		α BaseStartup( int argc, char** argv, sv appName, string serviceDescription )ε->flat_set<string>;
 		β Install( str serviceDescription )ε->void=0;
 		β Uninstall()ε->void=0;
-		Ω EnvironmentVariable( str variable, SRCE )ι->string;
+		Ω EnvironmentVariable( str variable, SRCE )ι->optional<string>;
 
 		Ω MemorySize()ι->size_t;
 		Ω ExePath()ι->fs::path;
@@ -86,7 +86,7 @@ namespace Jde{
 
 		Ω CompanyName()ι->string;
 		Ω ProductName()ι->sv;
-		Ω SetProductName( sv productName )ι->void;
+		ω SetProductName( sv productName )ι->void;
 		Ω CompanyRootDir()ι->fs::path;
 		ω FreeLibrary( void* p )ι->void;
 		ω LoadLibrary( const fs::path& path )ε->void*;

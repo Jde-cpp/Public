@@ -34,7 +34,7 @@ namespace Jde::Iot{
 		DBG( "[{:x}]Creating UAClient target: '{}' url: '{}' user: '{}' )", Handle(), Target(), Url(), UserId );
 	}
 
-	α UAClient::Shutdown( bool terminate )ι->void{
+	α UAClient::Shutdown( bool /*terminate*/ )ι->void{
 		sl _1{ _clientsMutex };
 		for( var& [_,p] : _clients ){
 			p->MonitoredNodes.Shutdown();
@@ -48,7 +48,7 @@ namespace Jde::Iot{
 		const fs::path root = IApplication::ApplicationDataFolder();
 		const fs::path certificateFile = root/"cert.pem";
 		const fs::path privateKeyFile = root/"private.pem";
-		const string passcode = OSApp::EnvironmentVariable("JDE_PASSCODE");
+		const string passcode = OSApp::EnvironmentVariable("JDE_PASSCODE").value_or( "" );
 		var uri = Str::Replace( _opcServer.CertificateUri, " ", "%20" );
 		bool addSecurity = !uri.empty();//urn:JDE-CPP:Kepware.KEPServerEX.V6:UA%20Server
 		//TODO - test no security also
@@ -69,13 +69,13 @@ namespace Jde::Iot{
 			config->clientDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
 			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
-			sc = UA_SecurityPolicy_Basic256Sha256(&securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAException(sc, _ptr, 0, ELogLevel::Debug) );
+			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAException(sc, _ptr, 0, ELogLevel::Debug) );
 		}
 		config->securityPolicies = securityPolicies.release();
 		config->securityPoliciesSize = size;
 		return config;
 	}
-	α UAClient::AddSessionAwait( HCoroutine&& h )ι->void{
+	α UAClient::AddSessionAwait( HCoroutine h )ι->void{
 		{
 			lg _{_sessionAwaitableMutex};
 			_sessionAwaitables.emplace_back( move(h) );
@@ -119,10 +119,10 @@ namespace Jde::Iot{
 			});
 		}
 	}
-	α inactivityCallback(UA_Client *client)->void{
+	α inactivityCallback( UA_Client* /*client*/ )->void{
 		BREAK;
 	}
-	α subscriptionInactivityCallback( UA_Client *client, SubscriptionId subscriptionId, void *subContext ){
+	α subscriptionInactivityCallback( UA_Client *client, SubscriptionId subscriptionId, void* /*subContext*/ ){
 		DBG( "[{:x}.{:x}]subscriptionInactivityCallback", (uint)client, subscriptionId );
 	}
 	α UAClient::Create()ι->UA_Client*{
@@ -190,7 +190,7 @@ namespace Jde::Iot{
 		else
 			Resume( move(e), move(h) );
 	}
-	α UAClient::SendBrowseRequest( Browse::Request&& request, HCoroutine&& h )ι->void{
+	α UAClient::SendBrowseRequest( Browse::Request&& request, HCoroutine h )ι->void{
 		try{
 			RequestId requestId{};
 			Trace( BrowseTag, "[{:x}]SendBrowseRequest", Handle() );
@@ -203,7 +203,7 @@ namespace Jde::Iot{
 		}
 	}
 
-	α UAClient::SendReadRequest( const flat_set<NodeId>&& nodeIds, HCoroutine&& h )ι->void{
+	α UAClient::SendReadRequest( const flat_set<NodeId>&& nodeIds, HCoroutine h )ι->void{
 		if( nodeIds.empty() )
 			return Resume( Exception{"no nodes sent"}, move(h) );
 		flat_map<UA_UInt32, NodeId> ids;
@@ -225,7 +225,7 @@ namespace Jde::Iot{
 			Retry( [n=move(nodeIds)]( sp<UAClient>&& p, HCoroutine&& h )mutable{p->SendReadRequest( move(n), move(h) );}, move(e), shared_from_this(), move(h) );
 		}
 	}
-	α UAClient::SendWriteRequest( flat_map<NodeId,Value>&& values, HCoroutine&& h )ι->void{
+	α UAClient::SendWriteRequest( flat_map<NodeId,Value>&& values, HCoroutine h )ι->void{
 		if( values.empty() )
 			return Resume( Exception("no nodes sent"), move(h) );
 		flat_map<UA_UInt32, NodeId> ids;
@@ -254,7 +254,7 @@ namespace Jde::Iot{
 			Process( requestId, nullptr );//if retry fails, don't want to process.
 		}
 		catch( UAException& e ){
-			Retry( [subscriptionId]( sp<UAClient>&& p, HCoroutine&& h )mutable{p->SetMonitoringMode( subscriptionId );}, move(e), shared_from_this(), {} );
+			Retry( [subscriptionId]( sp<UAClient>&& p, HCoroutine )mutable{p->SetMonitoringMode( subscriptionId );}, move(e), shared_from_this(), {} );
 		}
 	}
 
@@ -266,7 +266,7 @@ namespace Jde::Iot{
 			Process( requestId, nullptr );
 		}
 		catch( UAException& e ){
-			Retry( []( sp<UAClient>&& p, HCoroutine&& h )mutable{p->CreateSubscriptions();}, move(e), shared_from_this(), {} );
+			Retry( []( sp<UAClient>&& p, HCoroutine )mutable{p->CreateSubscriptions();}, move(e), shared_from_this(), {} );
 		}
 	}
 
@@ -309,7 +309,7 @@ namespace Jde::Iot{
 		{}
 	}
 
-	α UAClient::RequestDataTypeAttributes( const flat_set<NodeId>&& x, HCoroutine&& h )ι->void
+	α UAClient::RequestDataTypeAttributes( const flat_set<NodeId>&& x, HCoroutine h )ι->void
 	{
 		flat_map<UA_UInt32, NodeId> ids;
 		Iot::RequestId firstRequestId{};

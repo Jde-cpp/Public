@@ -24,14 +24,14 @@ find_package(OpenSSL)
 add_library( ${CMAKE_PROJECT_NAME} SHARED )
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 #message( "CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}" )
-file(GLOB src_files *.cpp proto/*.cpp )
-file(GLOB hdr_files  **/*.h )
-file(GLOB proto_files proto/*.proto )
+file(GLOB sources *.cpp proto/*.cpp )
+file(GLOB headers  **/*.h )
+file(GLOB protos proto/*.proto )
 target_sources( "${CMAKE_PROJECT_NAME}"
     PRIVATE
-        "${src_files}"
-        "${hdr_files}"
-        "${proto_files}")
+        ${sources}
+        ${headers}
+        ${protos})
 
 if(MSVC)
 	target_link_libraries( ${CMAKE_PROJECT_NAME} fmt::fmt )
@@ -46,12 +46,7 @@ endif()
 
 if(MSVC)
 	string( REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG} )
-#	message( CMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG} )
-	set_source_files_properties(
-		${src_files}
-		PROPERTIES
-		COMPILE_FLAGS "/W4"
-	)
+	set_source_files_properties( ${sources} PROPERTIES COMPILE_FLAGS "/W4" )
 endif()
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
@@ -66,10 +61,23 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 	<jde/Exception.h>
 )
 
-protobuf_generate( TARGET "${CMAKE_PROJECT_NAME}" IMPORT_DIRS proto EXPORT_MACRO Jde_App_Shared_EXPORT )
+protobuf_generate( TARGET ${CMAKE_PROJECT_NAME} IMPORT_DIRS proto EXPORT_MACRO Jde_App_Shared_EXPORT )
 
-add_custom_command( TARGET ${CMAKE_PROJECT_NAME} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}//App.FromServer.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/App.FromServer.pb.h" COMMENT "mklink FromServer" )
-add_custom_command( TARGET ${CMAKE_PROJECT_NAME} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/App.FromClient.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/App.FromClient.pb.h" COMMENT "mklink FromClient" )
-add_custom_command( TARGET ${CMAKE_PROJECT_NAME} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/Common.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/Common.pb.h" COMMENT "mklink Common" )
-add_custom_command( TARGET ${CMAKE_PROJECT_NAME} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/App.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/App.pb.h" COMMENT "mklink App" )
-add_custom_command( TARGET ${CMAKE_PROJECT_NAME} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/proto/Common.proto" "$ENV{JDE_DIR}/Public/src/iot/types/proto/Common.proto" COMMENT "mklink Common->iot" )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/App.FromServer.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/App.FromServer.pb.h" COMMENT "mklink FromServer" )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/App.FromClient.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/App.FromClient.pb.h" COMMENT "mklink FromClient" )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/Common.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/Common.pb.h" COMMENT "mklink Common" )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/App.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/App.pb.h" COMMENT "mklink App" )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/proto/Common.proto" "$ENV{JDE_DIR}/Public/src/iot/types/proto/Common.proto" COMMENT "mklink Common->iot" )
+
+if( MSVC )
+	set( CMAKE_INSTALL_PREFIX $ENV{JDE_DIR}/installed )
+	set( installDir ${CMAKE_INSTALL_PREFIX}/$<CONFIGURATION> )
+	set( configStem jdeAppSharedConfig )
+	install( TARGETS ${CMAKE_PROJECT_NAME}
+		EXPORT ${configStem}
+		RUNTIME DESTINATION ${installDir}/bin
+		ARCHIVE DESTINATION ${installDir}/lib )
+	install( FILES $<TARGET_PDB_FILE:${CMAKE_PROJECT_NAME}> CONFIGURATIONS Debug RelWithDebInfo DESTINATION ${installDir}/bin )
+	export( TARGETS ${CMAKE_PROJECT_NAME} NAMESPACE Jde:: FILE ${CMAKE_CURRENT_BINARY_DIR}/${configStem}.cmake )
+	install( EXPORT ${configStem} DESTINATION ${CMAKE_INSTALL_PREFIX}/cmake NAMESPACE Jde:: )
+endif()

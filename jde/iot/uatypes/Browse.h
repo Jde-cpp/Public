@@ -10,7 +10,7 @@ namespace Browse{
 
 	struct FoldersAwait final : IAwait{
 		FoldersAwait( NodeId&& node, sp<UAClient>& c, SRCE )ι:IAwait{sl}, _node{move(node)},_client{c}{}
-		α await_suspend( HCoroutine h )ι->void override;
+		α Suspend()ι->void override;
 		α await_resume()ι->AwaitResult override{ return _pPromise->MoveResult(); }
 	private:
 		NodeId _node;
@@ -37,7 +37,7 @@ namespace Browse{
 	struct ΓI ObjectsFolderAwait final : TAwait<json>{
 		using base = TAwait<json>;
 		ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SRCE )ι;
-		α await_suspend( base::Handle h )ι->void override;
+		α Suspend()ι->void override;
 	private:
 		α Execute()ι->Coroutine::Task;
 		sp<UAClient> _ua; NodeId _node; bool _snapshot;

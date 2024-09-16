@@ -42,7 +42,6 @@ namespace Client{
 	α StartSocketAwait::Suspend()ι->void{
 		_pSession = ms<Client::AppClientSocketSession>( Executor(), IsSsl() ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{} );
 		[](StartSocketAwait& self, base::Handle h)->VoidTask {
-			auto h2 = h;
 			try{
 				co_await _pSession->RunSession( Host(), Port() );//Web::Client
 				[=]( base::Handle h )->ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task {

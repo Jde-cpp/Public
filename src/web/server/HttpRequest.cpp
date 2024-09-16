@@ -4,17 +4,17 @@
 #define var const auto
 
 namespace Jde{
-	static sp<LogTag> _httpServerReadTag = Logging::Tag( ELogTags::HttpServerRead );
-	static sp<LogTag> _httpServerWriteTag = Logging::Tag( ELogTags::HttpServerWrite );
-	α Web::HttpServerReadTag()ι->sp<LogTag>{ return _httpServerReadTag; }
-	α Web::HttpServerWriteTag()ι->sp<LogTag>{ return _httpServerWriteTag; }
+//	static sp<LogTag> _httpServerReadTag = Logging::Tag( ELogTags::HttpServerRead );
+//	static sp<LogTag> _httpServerWriteTag = Logging::Tag( ELogTags::HttpServerWrite );
+//	α Web::HttpServerReadTag()ι->sp<LogTag>{ return _httpServerReadTag; }
+//	α Web::HttpServerWriteTag()ι->sp<LogTag>{ return _httpServerWriteTag; }
 }
 namespace Jde::Web{
 	string _accessControlAllowOrigin = Settings::Get("http/accessControl/allowOrigin").value_or("*");
 	α Server::AccessControlAllowOrigin()ι->string{ return _accessControlAllowOrigin; };
 
-	string _plainVersion{ 𐢜("({})Jde.Web.Server - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
-	string _sslVersion{ 𐢜("({})Jde.Web.Server SSL - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
+	string _plainVersion{ Ƒ("({})Jde.Web.Server - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
+	string _sslVersion{ Ƒ("({})Jde.Web.Server SSL - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
 	α Server::ServerVersion( bool isSsl )ι->string{ return isSsl ? _sslVersion : _plainVersion; }//TODO cache
 
 }

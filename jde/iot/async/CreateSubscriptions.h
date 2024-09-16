@@ -6,7 +6,7 @@ namespace Jde::Iot{
 	{
 		CreateSubscriptionAwait( sp<UAClient>&& c, SRCE )ι:IAwait{sl}, _client{move(c)}{}
 		α await_ready()ι->bool override;
-		α await_suspend( HCoroutine h )ι->void override;
+		α Suspend()ι->void override;
 		α await_resume()ι->AwaitResult override;
 
 		Ω Resume( sp<UAClient> pClient, function<void(HCoroutine&&)> resume )ι->void;

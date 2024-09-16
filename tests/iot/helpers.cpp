@@ -10,8 +10,9 @@ namespace Jde::Iot{
 	static Iot::IotGraphQL* _pHook;
 
 	α CreateOpcServerAwait::Execute()ι->Jde::Task{
-		var certificateUri{ "urn:open62541.server.application" };
-		var create = 𐢜( "{{ mutation createOpcServer(  'input': {{'target':'{}','name':'My Test Server','certificateUri':'{}','description':'Test basic functionality','url':'opc.tcp://127.0.0.1:4840','isDefault':false}} ){{id}} }}", OpcServerTarget, certificateUri );
+		var certificateUri{ Settings::Get("opc/urn").value_or("urn:open62541.server.application") };
+		var url{ Settings::Get("opc/url").value_or( "opc.tcp://127.0.0.1:4840") };
+		var create = Ƒ( "{{ mutation createOpcServer(  'input': {{'target':'{}','name':'My Test Server','certificateUri':'{}','description':'Test basic functionality','url':'{}','isDefault':false}} ){{id}} }}", OpcServerTarget, certificateUri, url );
 		var createJson = ( co_await DB::CoQuery( Str::Replace(create, '\'', '"'), 0, "CreateOpcServerAwait") ).UP<json>();
 		Trace( _tags, "CreateOpcServer={}", createJson->dump() );
 		Resume( Json::Getε<OpcPK>(*createJson, {"data", "opcServer", "id"}) );
@@ -20,7 +21,7 @@ namespace Jde::Iot{
 	α PurgeOpcServerAwait::Execute()ι->Jde::Task{
 		if( !_pk.has_value() )
 			_pk = SelectOpcServer()["id"].get<uint>();
-		var q = 𐢜( "{{ mutation purgeOpcServer('id':{}) }}", *_pk );
+		var q = Ƒ( "{{ mutation purgeOpcServer('id':{}) }}", *_pk );
 		var result = ( co_await DB::CoQuery(Str::Replace(q, '\'', '"'), 0, "PurgeOpcServer") ).UP<json>();
 		Trace( _tags, "PurgeOpcServer={}", result->dump() );
 		ResumeScaler( 1 );
@@ -53,8 +54,8 @@ namespace Jde{
 	}
 
 	α Iot::SelectOpcServer( uint id )ι->json{
-		var subQuery = id ? 𐢜( "id:{{eq:{}}}", id ) : 𐢜( "target: {{eq:\"{}\"}}", OpcServerTarget );
-		var select = 𐢜( "{{ query opcServer(filter:{{ {} }}){{ id name attributes created updated deleted target description certificateUri isDefault url }} }}", subQuery );
+		var subQuery = id ? Ƒ( "id:{{eq:{}}}", id ) : Ƒ( "target: {{eq:\"{}\"}}", OpcServerTarget );
+		var select = Ƒ( "{{ query opcServer(filter:{{ {} }}){{ id name attributes created updated deleted target description certificateUri isDefault url }} }}", subQuery );
 		var selectJson = DB::Query( select, 0 );
 		Trace( _tags, "SelectOpcServer={}", selectJson.dump() );
 		return selectJson["data"].is_null() ? json{} : selectJson["data"]["opcServer"];

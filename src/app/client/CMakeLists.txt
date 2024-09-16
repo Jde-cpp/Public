@@ -58,4 +58,15 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 	<jde/app/shared/proto/App.FromClient.pb.h>
 	<jde/app/shared/proto/App.FromServer.pb.h>
 )
-
+if( MSVC )
+	set( CMAKE_INSTALL_PREFIX $ENV{JDE_DIR}/installed )
+	set( installDir ${CMAKE_INSTALL_PREFIX}/$<CONFIGURATION> )
+	set( configStem jdeAppClientConfig )
+	install( TARGETS ${CMAKE_PROJECT_NAME}
+		EXPORT ${configStem}
+		RUNTIME DESTINATION ${installDir}/bin
+		ARCHIVE DESTINATION ${installDir}/lib )
+	install( FILES $<TARGET_PDB_FILE:${CMAKE_PROJECT_NAME}> CONFIGURATIONS Debug RelWithDebInfo DESTINATION ${installDir}/bin )
+	export( TARGETS ${CMAKE_PROJECT_NAME} NAMESPACE Jde:: FILE ${CMAKE_CURRENT_BINARY_DIR}/${configStem}.cmake )
+	install( EXPORT ${configStem} DESTINATION ${CMAKE_INSTALL_PREFIX}/cmake NAMESPACE Jde:: )
+endif()

@@ -29,27 +29,29 @@ namespace Jde::Iot{
 
 	α OpcServerTests::InsertFailedImpl()ε->Task{
 		var target = OpcServerTarget;
-		json jInsert = Json::Parse( 𐢜("{{\"input\":{{\"target\":\"{}\"}}}}", target) );
+		json jInsert = Json::Parse( Ƒ("{{\"input\":{{\"target\":\"{}\"}}}}", target) );
 		DB::MutationQL insert{ "opcServer", DB::EMutationQL::Create, jInsert, nullopt };
 
 		var existingProviderPK = *( co_await ProviderAwait{target} ).UP<ProviderPK>();
 		var existingServer = SelectOpcServer();
 		var existingOpcPK = Json::Get<OpcPK>( existingServer, "id" );
 		if( !existingOpcPK && !existingProviderPK ){
-			[insert,this]()->CreateOpcServerAwait::Task {
+			[](auto&& insert, auto self)->CreateOpcServerAwait::Task {
 				auto pk = co_await CreateOpcServerAwait();
-				DB::DataSourcePtr()->Execute(	𐢜("delete from iot_opc_servers where id='{}'", pk) ); //InsertFailed checks if failure occurs because exists.
-				[=,this]()->Task{
+				DB::DataSourcePtr()->Execute(	Ƒ("delete from iot_opc_servers where id='{}'", pk) ); //InsertFailed checks if failure occurs because exists.
+				[](auto&& insert, auto self)->Task{
 					co_await *GetHook()->InsertFailure( insert, 0 );
-					Wait.test_and_set();
-					Wait.notify_one();
-				}();
-			}();
+					self->Id = *( co_await ProviderAwait{ OpcServerTarget } ).UP<ProviderPK>();
+					self->Wait.test_and_set();
+					self->Wait.notify_one();
+				}( insert, self );
+			}( insert, this );
 		}
 		else{
 			if( existingOpcPK )
-				DB::DataSourcePtr()->Execute(	𐢜("delete from iot_opc_servers where id='{}'", existingOpcPK) ); //InsertFailed checks if failure occurs because exists.
+				DB::DataSourcePtr()->Execute(	Ƒ("delete from iot_opc_servers where id='{}'", existingOpcPK) ); //InsertFailed checks if failure occurs because exists.
 			co_await *GetHook()->InsertFailure( insert, 0 );
+			Id = *( co_await ProviderAwait{ OpcServerTarget } ).UP<ProviderPK>();
 			Wait.test_and_set();
 			Wait.notify_one();
 		}
@@ -58,7 +60,7 @@ namespace Jde::Iot{
 	TEST_F( OpcServerTests, InsertFailed ){
 		InsertFailedImpl();
 		Wait.wait( false );
-		ASSERT_EQ( 0, *Future<ProviderPK>(ProviderAwait{OpcServerTarget}).get() );
+		ASSERT_EQ( 0, std::any_cast<ProviderPK>(Id) );
 	}
 
 	α OpcServerTests::PurgeFailedImpl()ε->CreateOpcServerAwait::Task{
@@ -67,17 +69,15 @@ namespace Jde::Iot{
 		if( !opcPK )
 			opcPK = co_await CreateOpcServerAwait();
 		Id = opcPK;
-		[=,this]()->Task {
-			var id = opcPK;
-			auto self = this;
+		[](auto opcPK, auto self)->Task {
 			co_await ProviderAwait{OpcServerTarget, false};//BeforePurge mock.
-			json jPurge = json{ {"id", id} };
+			json jPurge = json{ {"id", opcPK} };
 			DB::MutationQL purge{ "opcServer", DB::EMutationQL::Purge, jPurge, nullopt };
 			co_await *GetHook()->PurgeFailure( purge, 0 );
 			self->Result = *( co_await ProviderAwait{OpcServerTarget} ).UP<ProviderPK>();
 			self->Wait.test_and_set();
 			self->Wait.notify_one();
-		}();
+		}(opcPK, this);
 	}
 	TEST_F( OpcServerTests, PurgeFailed ){
 		PurgeFailedImpl();
@@ -109,13 +109,13 @@ namespace Jde::Iot{
 		THROW_IF( providerId==0, "providerId==0" );;
 
 		var description = "new description";
-		var update = 𐢜( "{{ mutation updateOpcServer( 'id':{}, 'input': {{'description':'{}'}} ) }}", id, description );
+		var update = Ƒ( "{{ mutation updateOpcServer( 'id':{}, 'input': {{'description':'{}'}} ) }}", id, description );
 		var updateJson = DB::Query( Str::Replace(update, '\'', '"'), 0 );
 		Trace( _tags, "updateJson={}", updateJson.dump() );
 		var updated = SelectOpcServer( id );
 		THROW_IF( Json::Getε( updated, "description" )!=description, "description={} updated={}", description, updated.dump() );
 
-		var del = 𐢜( "{{mutation deleteOpcServer('id':{}) }}", id );
+		var del = Ƒ( "{{mutation deleteOpcServer('id':{}) }}", id );
 		var deleteJson = DB::Query( Str::Replace(del, '\'', '"'), 0 );
 		Trace( _tags, "deleted={}", deleteJson.dump() );
 	 	auto readJson2 = SelectOpcServer( id );

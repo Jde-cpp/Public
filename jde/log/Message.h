@@ -1,7 +1,21 @@
 ﻿#pragma once
 #include "../db/usings.h"
 
+#ifdef NDEBUG
+	#define BREAK
+	#define BREAK_IF(x)
+#else
+	#ifdef _MSC_VER
+		#define BREAK DebugBreak();
+	#else
+		#define BREAK if( CanBreak() ){ ::raise( 5/*SIGTRAP*/ ); }
+	#endif
+	#define BREAK_IF(x) if( x ){ BREAK; }
+#endif
+#define Φ Γ auto
+#define var const auto
 namespace Jde::Logging{
+	Φ BreakLevel()ι->ELogLevel;
 	Γ auto Default()ι->spdlog::logger*;
 	enum class EFields : uint16{ None=0, Timestamp=0x1, MessageId=0x2, Message=0x4, Level=0x8, FileId=0x10, File=0x20, FunctionId=0x40, Function=0x80, LineNumber=0x100, UserPK=0x200, User=0x400, ThreadId=0x800, Thread=0x1000, VariableCount=0x2000, SessionId=0x4000 };
 
@@ -11,38 +25,8 @@ namespace Jde::Logging{
 	template<ELogLevel TLevel, typename... Args>
 	struct Logger{
 		using enum ELogLevel;
-		explicit Logger( ELogTags tags, FormatString&& m, ARGS... args, const spdlog::source_loc& sl )ι{
-			if( auto fileMinLevel = FileMinLevel(tags); fileMinLevel!=NoLog && fileMinLevel<=TLevel ){
-				try{
-					if( auto p = Logging::Default(); p ){
-//TODO!						BREAK_IF( m.get().empty() );
-						const auto level = (spdlog::level::level_enum)TLevel;
-						p->log( sl, level, FWD(m), FWD(args)... );
-					}
-					else{
-						auto& out = TLevel>Information ? std::cerr : std::cout;
-						fmt::vformat_to( std::ostream_iterator<char>(out), m.get(), fmt::make_format_args(args...) );
-					}
-//TODO!					BREAK_IF( break_ && m.Level>=BreakLevel() );
-				}
-				catch( const fmt::format_error& /*e*/ ){
-//					BREAK;TODO!
-//					MessageBase mLogger2{ ELogLevel::Critical, "could not format '{}' cargs='{}' - '{}'", m.File, m.Function, m.LineNumber };
-//					Log( m2, tag, m.MessageView, sizeof...(args), e.what() );
-				}
-				// if( logServer || LogMemory() ){TODO
-				// 	vector<string> values; values.reserve( sizeof...(args) );
-				// 	ToVec::Append( values, args... );
-				// 	if( LogMemory() )
-				// 		LogMemory( m, values );
-				// 	if( logServer )
-				// 		External::Log( m, values );
-				// }
-			}
-		}
-		explicit Logger( ELogTags tags, FormatString&& m, ARGS... args, SL sl )ι:
-			Logger( tags, FWD(m), FWD(args)..., {sl.file_name(), (int)sl.line(), sl.function_name()} )
-		{}
+		explicit Logger( ELogTags tags, FormatString&& m, ARGS... args, const spdlog::source_loc& sl )ι;
+		explicit Logger( ELogTags tags, FormatString&& m, ARGS... args, SL sl )ι: Logger( tags, FWD(m), FWD(args)..., {sl.file_name(), (int)sl.line(), sl.function_name()} ){}
 	};
 }
 namespace Jde{
@@ -83,9 +67,6 @@ template<typename... Args>
 α Log( ELogLevel level, ELogTags tags, const std::source_location& sl, FormatString&& m, ARGS... args )ι->void{
 	Log( level, tags, { sl.file_name(), (int)sl.line(), sl.function_name() }, FWD( m ), FWD( args )... );
 }
-
-#undef ARGS
-#undef FormatString
 
 namespace Logging{
 	struct MessageBase{
@@ -152,4 +133,48 @@ namespace Logging{
 	consteval MessageBase::MessageBase( const char* file, const char* function, uint_least32_t line )ι:
 		MessageBase( {}, file, function, line )
 	{}
+
+	Φ LogMemory()ι->bool;
+	Φ LogMemory( const Logging::MessageBase& messageBase, vector<string> values )ι->void;
+	namespace External{
+		Φ Log( const Logging::MessageBase& messageBase, const vector<string>& values )ι->void;
+	}
+
+
+	template<ELogLevel TLevel, typename... Args>
+	Logger<TLevel,Args...>::Logger( ELogTags tags, FormatString&& m, ARGS... args, const spdlog::source_loc& sl )ι{
+		if( Process::Finalizing() )
+			return;
+		if( auto fileMinLevel = FileMinLevel(tags); fileMinLevel!=NoLog && fileMinLevel<=TLevel ){
+			try{
+				if( auto p = Logging::Default(); p ){
+					BREAK_IF( m.get().size()==0 );
+					const auto level = (spdlog::level::level_enum)TLevel;
+					p->log( sl, level, FWD(m), FWD(args)... );
+				}
+				else{
+					auto& out = TLevel>Information ? std::cerr : std::cout;
+					fmt::vformat_to( std::ostream_iterator<char>(out), m.get(), fmt::make_format_args(args...) );
+				}
+				BREAK_IF( /*break_ &&*/ TLevel>=BreakLevel() );
+			}
+			catch( const fmt::format_error& e ){
+				Jde::Critical{ ELogTags::App, "could not format '{}' cargs: {} error: '{}'", m.get(), sizeof...(args), e.what() };
+			}
+			var logServer = !(tags & ELogTags::ExternalLogger);
+			if( logServer || LogMemory() ){
+			 	vector<string> values; values.reserve( sizeof...(args) );
+			 	ToVec::Append( values, args... );
+				MessageBase msg{ TLevel, sv{m.get().data(), m.get().size()}, sl.filename, sl.funcname, (uint_least32_t)sl.line };
+			 	if( LogMemory() )
+					LogMemory( msg, values );
+			 	if( logServer )
+			 		External::Log( msg, values );
+			}
+		}
+	}
 }}
+#undef ARGS
+#undef FormatString
+#undef Φ
+#undef var

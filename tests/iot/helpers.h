@@ -3,7 +3,7 @@
 
 namespace Jde::Iot{
 	struct IotGraphQL;
-	constexpr static string OpcServerTarget{ "OpcServerTests" };
+	const static string OpcServerTarget{ "OpcServerTests" };
 	struct CreateOpcServerAwait : TAwaitEx<OpcPK,Task>{ α Execute()ι->Jde::Task override; };
 	α CreateOpcServer()ι->OpcPK;
 

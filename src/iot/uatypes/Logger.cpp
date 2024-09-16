@@ -14,7 +14,7 @@ namespace Jde::Iot{
 		m.resize( len );  // remove the NULL
 		return m;
 	}
-	α Clear( UA_Logger* context )ι->void{}
+	α Clear( UA_Logger* /*context*/ )ι->void{}
 
 	α UA_Log_Stdout_log( void *context, UA_LogLevel uaLevel, UA_LogCategory category, const char* file, const char* function, uint32_t line, const char *m, va_list args )ι->void{
 		var level = (ELogLevel)( (int)uaLevel/100-1 ); //level==UA_LOGLEVEL_DEBUG=200

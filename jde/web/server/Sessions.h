@@ -2,12 +2,14 @@
 #include <jde/db/usings.h>
 #include <jde/coroutine/Await.h>
 #include <jde/coroutine/Task.h>
+#include "exports.h"
 
-//Holds web session information.  Requires AppServer, so in AppClient
+#define Φ auto ΓWS
+//Holds web session information.
 namespace Jde::Web::Server{
 	struct SessionInfo;
 	namespace Sessions::Internal{ α CreateSession( UserPK userPK, str endpoint, bool isSocket, bool add )ι->sp<SessionInfo>; }
-	struct /*ΓWS*/ SessionInfo{
+	struct SessionInfo{
 		SessionInfo()ι=default;
 		SessionInfo( SessionPK sessionPK, steady_clock::time_point expiration, Jde::UserPK userPK, str userEndpointAddress, bool hasSocket )ι;
 
@@ -26,19 +28,20 @@ namespace Jde::Web::Server{
 
 	//TODO - change to GraphQL.
 	namespace Sessions{
-		α Add( UserPK userPK, string&& endpoint, bool isSocket )ι->sp<SessionInfo>;
-		α Find( SessionPK sessionId )ι->sp<SessionInfo>;
+		Φ Add( UserPK userPK, string&& endpoint, bool isSocket )ι->sp<SessionInfo>;
+		Φ Find( SessionPK sessionId )ι->sp<SessionInfo>;
 		α Get()ι->vector<sp<SessionInfo>>;
 		α Size()ι->uint;
 
-		struct UpsertAwait : TAwait<sp<SessionInfo>>{//TODO rename UpsertSessionAwait or Sessions::UpsertAwait
+		struct ΓWS UpsertAwait : TAwait<sp<SessionInfo>>{//TODO rename UpsertSessionAwait or Sessions::UpsertAwait
 			using base = TAwait<sp<SessionInfo>>;
 			UpsertAwait( str authorization, str endpoint, bool socket, SRCE )ι:base{sl},_authorization{authorization}, _endpoint{endpoint}, _socket{socket}{}
-			α await_suspend( Handle h )ι->void;
+			α Suspend()ι->void;
 			α await_resume()ε->sp<SessionInfo>;
 		private:
-			α Execute()ι->TTask<SessionInfo>;
+			α Execute()ι->TTask<App::Proto::FromServer::SessionInfo>;
 			string _authorization; string _endpoint; bool _socket;
 		};
 	}
 }
+#undef Φ

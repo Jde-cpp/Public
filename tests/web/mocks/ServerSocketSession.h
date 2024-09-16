@@ -11,7 +11,7 @@ namespace Jde::Web::Mock{
 		using base = TWebsocketSession<Proto::FromServerTransmission,Proto::FromClientTransmission>;
 		ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α OnRead( Proto::FromClientTransmission&& transmission )ι->void override;
-		α SendAck( uint serverSocketId )ι->void override;
+		α SendAck( uint32 serverSocketId )ι->void override;
 	private:
 		α WriteException( IException&& e )ι->void;
 		α OnConnect( SessionPK sessionId, RequestId requestId )ι->Server::Sessions::UpsertAwait::Task;

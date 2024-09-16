@@ -3,7 +3,9 @@
 #include <jde/web/client/socket/IClientSocketSession.h>
 #include <jde/app/client/usings.h>
 #include <jde/app/shared/proto/App.FromClient.h>
+#include "exports.h"
 
+#define Φ ΓAC auto
 namespace Jde::App::Client{
 	struct StartSocketAwait : VoidAwait<>{
 		using base = VoidAwait<>;
@@ -11,13 +13,13 @@ namespace Jde::App::Client{
 		α Suspend()ι->void override;
 		SessionPK _sessionId;
 	};
-	α AddSession( str domain, str loginName, ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>;
+	Φ AddSession( str domain, str loginName, ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>;
 	α CloseSocketSession( SRCE )ι->VoidTask;
-	α GraphQL( str query, SRCE )ε->Web::Client::ClientSocketAwait<string>;
+	Φ GraphQL( str query, SRCE )ε->Web::Client::ClientSocketAwait<string>;
 
 	struct AppClientSocketSession final : Web::Client::TClientSocketSession<Jde::App::Proto::FromClient::Transmission,Jde::App::Proto::FromServer::Transmission>{
 		using base = Web::Client::TClientSocketSession<Proto::FromClient::Transmission,Proto::FromServer::Transmission>;
-		Ω Instance()ι->sp<AppClientSocketSession>;
+		ΓAC Ω Instance()ι->sp<AppClientSocketSession>;
 		AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx )ι;
 		α Connect( SessionPK sessionId, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::ConnectionInfo>;
 		α SessionInfo( SessionPK sessionId, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>;
@@ -33,3 +35,4 @@ namespace Jde::App::Client{
 		UserPK _userPK{};//TODO
 	};
 }
+#undef Φ

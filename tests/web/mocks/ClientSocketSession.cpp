@@ -11,7 +11,7 @@ namespace Jde::Web::Mock{
 
 	α ClientSocketSession::OnAck( uint32 serverSocketId )ι->void{
 		SetId( serverSocketId );
-		INFOT( Client::SocketClientReadTag(), "[{}] {} AppClientSocketSession created: {}.", Id(), IsSsl() ? "Ssl" : "Plain", Host() );
+		Information( ELogTags::SocketClientRead, "[{}] {} AppClientSocketSession created: {}.", Id(), IsSsl() ? "Ssl" : "Plain", Host() );
 		//ResumeScaler<SessionPK>( move(hAny), SessionId() );
 	}
 
@@ -26,7 +26,7 @@ namespace Jde::Web::Mock{
 			pAck->resume();
 		}
 		else{
-			WARNT( Client::SocketClientReadTag(), "Failed to process incomming exception '{}'.", what );
+			Warning( ELogTags::SocketClientRead, "Failed to process incomming exception '{}'.", what );
 		}
 	}
 
@@ -42,17 +42,17 @@ namespace Jde::Web::Mock{
 				OnAck( m->ack() );
 				break;
 			case kSessionId:{
-				auto h = std::any_cast<ClientSocketAwait<SessionPK>::Handle>( IClientSocketSession::GetTask(requestId) );
+				auto h = std::any_cast<ClientSocketAwait<SessionPK>::Handle>( IClientSocketSession::PopTask(requestId) );
 				SetSessionId( m->session_id() );
 				h.promise().Resume( m->session_id(), h );
 				break;}
 			case kEchoText:{
-				auto h = std::any_cast<ClientSocketAwait<string>::Handle>( IClientSocketSession::GetTask(requestId) );
+				auto h = std::any_cast<ClientSocketAwait<string>::Handle>( IClientSocketSession::PopTask(requestId) );
 				h.promise().SetValue( move(*m->mutable_echo_text()) );
 				h.resume();
 				break;}
 			case kException:{
-				std::any h = requestId==0 ? coroutine_handle<>{} : GetTask( requestId );
+				std::any h = requestId==0 ? coroutine_handle<>{} : PopTask( requestId );
 				HandleException( move(h), move(*m->mutable_exception()) );
 				break;}
 			default:
@@ -98,7 +98,7 @@ namespace Jde::Web::Mock{
 	}
 
 	α ClientSocketSession::OnClose( beast::error_code ec )ι->void{
-		auto f = [this, ec](std::any&& h)->void { HandleException(move(h), CodeException{ec, Client::SocketClientWriteTag(), ELogLevel::NoLog}.what()); };
+		auto f = [this, ec](std::any&& h)->void { HandleException(move(h), CodeException{ec, ELogTags::SocketClientWrite, ELogLevel::NoLog}.what()); };
 		CloseTasks( f );
 		base::OnClose( ec );
 	}

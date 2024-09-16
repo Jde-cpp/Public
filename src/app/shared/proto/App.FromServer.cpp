@@ -1,5 +1,5 @@
 #include <jde/app/shared/proto/App.FromServer.h>
-#include <jde/web/server/Sessions.h>
+//#include <jde/web/server/Sessions.h>
 #include "../../../../Framework/source/db/Row.h"
 #include "../../../../Framework/source/db/GraphQL.h"
 #include "../../../../Framework/source/db/types/Table.h"
@@ -17,19 +17,6 @@ namespace Jde::App{
 	α FromServer::Complete( RequestId requestId )ι->Proto::FromServer::Transmission{
 		Proto::FromServer::Transmission t;
 		t.add_messages()->set_request_id( requestId );
-		return t;
-	}
-
-	α FromServer::SessionInfo( const Web::Server::SessionInfo& session, RequestId requestId )ι->Proto::FromServer::Transmission{
-		Proto::FromServer::Transmission t;
-		auto& m = *t.add_messages();
-		m.set_request_id( requestId );
-		auto& response = *m.mutable_session_info();
-		*response.mutable_expiration() = IO::Proto::ToTimestamp( Chrono::ToClock<Clock,steady_clock>(session.Expiration) );
-		response.set_session_id( session.SessionId );
-		response.set_user_pk( session.UserPK );
-		response.set_user_endpoint( session.UserEndpoint );
-		response.set_has_socket( session.HasSocket );
 		return t;
 	}
 

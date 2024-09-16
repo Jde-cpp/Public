@@ -52,7 +52,7 @@ namespace Jde::Web::Server{
 	}
 	α IWebsocketSession::LogWriteException( const IException& e, RequestId requestId, ELogLevel level, SL sl )ι->void{
 		e.SetLevel( ELogLevel::NoLog );
-		auto e2 = Exception{ sl, level, "[{}.{}]{}", 𐢜("{:x}", Id()), 𐢜("{:x}", requestId), e.what() };
+		auto e2 = Exception{ sl, level, "[{}.{}]{}", Ƒ("{:x}", Id()), Ƒ("{:x}", requestId), e.what() };
 	}
 
 	α IWebsocketSession::OnClose()ι->void{

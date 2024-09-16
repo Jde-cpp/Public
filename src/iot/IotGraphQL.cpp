@@ -26,7 +26,8 @@ namespace Jde::Iot{
 			}
 			if( !rowCount.has_value() ){
 				var insert = op==(Operation::Insert | Operation::Before) || op==(Operation::Purge | Operation::Failure);
-				rowCount = await( uint, ProviderAwait(move(id), insert) );
+				auto rowCount2 = ( co_await ProviderAwait(move(id), insert) ).UP<uint32>();
+				rowCount = *rowCount2;
 			}
 			Resume( mu<uint>(*rowCount), h );
 		}

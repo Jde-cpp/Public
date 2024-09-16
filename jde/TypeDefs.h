@@ -38,14 +38,14 @@ using std::suspend_never;
 	#endif
 	#define __PRETTY_FUNCTION__ __FUNCSIG__
 	using std::stop_token;
-	#ifdef NDEBUG
-		#pragma comment(lib, "fmt.lib")
-	#else
-		#pragma comment(lib, "fmtd.lib")
-	#endif
+	// #ifdef NDEBUG
+	// 	#pragma comment(lib, "fmt.lib")
+	// #else
+	// 	#pragma comment(lib, "fmtd.lib")
+	// #endif
 #endif
 
-#define DISABLE_WARNINGS _Pragma("warning(push, 0)") _Pragma("warning(disable: 4244)") _Pragma("warning(disable: 4702)") _Pragma("warning(disable: 4715)") _Pragma("warning(disable: 44996)") _Pragma("warning(disable: 5105 )") _Pragma("warning(disable: 4701)") _Pragma("warning(disable: 5054)") _Pragma("warning(disable: 5260)")
+#define DISABLE_WARNINGS _Pragma("warning(push, 0)") _Pragma("warning(disable: 4244)")  _Pragma("warning(disable: 4701)") _Pragma("warning(disable: 4702)") _Pragma("warning(disable: 4715)")  _Pragma("warning(disable: 5054)") _Pragma("warning(disable: 5104 )") _Pragma("warning(disable: 5105 )") _Pragma("warning(disable: 5260)")
 #define ENABLE_WARNINGS  _Pragma("warning( pop )")
 
 DISABLE_WARNINGS
@@ -130,8 +130,18 @@ namespace Jde
 	using std::make_tuple;
 	using std::nullopt;
 	#define FWD(a) std::forward<decltype(a)>(a)
-	template<class T, class... Args> α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return up<T>( new T(std::forward<Args>(args)...) ); }
-  template<class T, class... Args> α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
+	
+	template<class T, class... Args>
+	requires std::constructible_from<T, Args...>
+	α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{ 
+		return up<T>( new T(std::forward<Args>(args)...) ); 
+	}
+  
+	template<class T, class... Args>
+	requires std::constructible_from<T, Args...>
+	α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{ 
+		return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); 
+	}
 
 	using std::vector;
 	using PortType=unsigned short;
@@ -159,9 +169,6 @@ namespace Jde
 	using SL = const Jde::source_location&;
 #ifdef _MSC_VER
 	inline constexpr bool _msvc{ true };
-	#ifndef WIN32_LEAN_AND_MEAN
-		#error WIN32_LEAN_AND_MEAN not defined
-	#endif
 	#define __PRETTY_FUNCTION__ __FUNCSIG__
 	#ifdef _CRTDBG_MAP_ALLOC
 		#include <stdlib.h>

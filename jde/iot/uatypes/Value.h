@@ -28,7 +28,7 @@ namespace Jde::Iot{
 	namespace Read{
 		struct ΓI Await final : IAwait{
 			Await( flat_set<NodeId>&& x, sp<UAClient>&& c, SRCE )ι;
-			α await_suspend( HCoroutine h )ι->void override;
+			α Suspend()ι->void override;
 			α await_resume()ι->AwaitResult override{ Trace(IotReadTag, "Read::await_resume"); return IAwait::await_resume(); }
 		private:
 			flat_set<NodeId> _nodes;

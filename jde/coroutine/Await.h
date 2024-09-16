@@ -52,7 +52,7 @@ namespace Jde{
 	struct TAwaitEx : TAwait<Result,TTask>{
 		using base1 = TAwait<Result,TTask>;
 		TAwaitEx( SRCE )ι:base1{sl}{}
-		α await_suspend( base1::Handle h )ε->void override{ base1::await_suspend(h); Execute(); }
+		α Suspend()ι->void override{ Execute(); }
 		β Execute()ι->TExecuteResult=0;
 	};
 

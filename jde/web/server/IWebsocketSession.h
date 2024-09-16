@@ -31,7 +31,7 @@ namespace Jde::Web::Server{
 		β Close()ι->void{ Stream->Close( shared_from_this() ); }
 		β OnClose()ι->void;
 		β OnRead( const char* p, uint size )ι->void=0;
-		β SendAck( uint id )ι->void=0;
+		β SendAck( uint32 id )ι->void=0;
 
 		α LogRead( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;
 		α LogWriteException( const IException& e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
@@ -45,7 +45,7 @@ namespace Jde::Web::Server{
 		α DoRead()ι->void;
 		α OnWrite( beast::error_code ec, std::size_t bytes_transferred )ι->void;
 		TRequestType _initialRequest;
-		const uint _id{};
+		const uint32 _id{};
 		SessionPK _sessionId{};
 		friend struct SocketStream;
 	};

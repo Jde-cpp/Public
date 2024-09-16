@@ -20,7 +20,7 @@ namespace Jde::Web::Mock{
 			req.SessionInfo->IsInitialRequest = true;  //expecting sessionId to be set.
 			return j;
 		}
-		catch( IException& e ){
+		catch( IException& ){
 			ASSERT(false);
 			return {};
 		}
@@ -64,10 +64,9 @@ namespace Jde::Web::Mock{
 		}
 		return _result.has_value();
 	}
-	α HttpRequestAwait::await_suspend( base::Handle h )ε->void{
-		base::await_suspend( h );
+	α HttpRequestAwait::Suspend()ι->void{
 		if( _request.Target()=="/delay" ){
-			 _thread = std::jthread( [this,h]()mutable->void {
+			 _thread = std::jthread( [this,h=_h]()mutable->void {
 				Threading::SetThreadDscrptn( "DelayHandler" );
 				uint seconds = To<uint>( _request["seconds"] );
 				Debug( ELogTags::HttpServerWrite, "server sleeping for {}", seconds );
@@ -78,15 +77,15 @@ namespace Jde::Web::Mock{
 			});
 		}
 		else if( _request.Target()=="/BadAwaitable" ){
-			_thread = std::jthread( [this,h]()mutable->void {
+			_thread = std::jthread( [this,h=_h]()mutable->void {
 				Threading::SetThreadDscrptn( "BadAwaitable" );
 				h.promise().SetError( RestException{SRCE_CUR, move(_request), "BadAwaitable"} );
 				net::post( *Executor(), [h](){ h.resume(); } );
-				DBGT( HttpServerWriteTag(), "~/BadAwaitable handler" );
+				Debug( ELogTags::HttpServerWrite, "~/BadAwaitable handler" );
 			 });
 		}
 		else
-			throw RestException<http::status::not_found>( SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() );
+			ResumeExp( RestException<http::status::not_found>(SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target()) );
 	}
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		ASSERT( Promise() || _result );

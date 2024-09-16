@@ -20,7 +20,7 @@ namespace Jde::DB::GraphQL{
 #pragma warning(pop)
 
 	namespace Hook{
-		α Add( up<GraphQL::IGraphQLHook>&& hook )ι->void;
+		Γ α Add( up<GraphQL::IGraphQLHook>&& hook )ι->void;
 		enum class Operation : uint8{ Before=0x1, After=0x2, Failure=0x4, Insert=0x8, Purge=0x10, Select=0x20, Start=0x40, Stop=0x80 };
 	}
 

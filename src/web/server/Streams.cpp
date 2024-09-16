@@ -70,10 +70,10 @@ namespace Jde::Web::Server{
 	α SocketStream::DoRead( sp<IWebsocketSession> session )ι->void{
 		std::visit(
 			[&]( auto&& ws ){
-				ws.async_read( _buffer, [this,session]( beast::error_code ec, uint c )mutable{
+				ws.async_read( _buffer, [this,session]( beast::error_code ec, uint /*c*/ )mutable{
 					if( ec ){
 						ELogLevel level = ec==websocket::error::closed || ec==net::error::connection_aborted || ec==net::error::not_connected || ec==net::error::connection_reset ? ELogLevel::Trace : ELogLevel::Error;
-						CodeException{ static_cast<std::error_code>(ec), _requestTag, 𐢜("[{:x}]Server::DoRead", session->Id()), level };
+						CodeException{ static_cast<std::error_code>(ec), _requestTag, Ƒ("[{:x}]Server::DoRead", session->Id()), level };
 						return;
 					}
 					session->OnRead( (char*)_buffer.data().data(), _buffer.size() );

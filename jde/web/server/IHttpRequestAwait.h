@@ -11,7 +11,7 @@ namespace Jde::Web::Server{
 	using TBody = http::string_body;
 	using TAllocator = std::allocator<char>;
 
-	struct HttpTaskResult{
+	struct ΓWS HttpTaskResult{
 		HttpTaskResult()=default;
 		HttpTaskResult( HttpRequest&& req )ι:Request{move(req)}{}
 		HttpTaskResult( HttpTaskResult&& rhs )ι;

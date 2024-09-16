@@ -7,6 +7,7 @@
 #define var const auto
 
 namespace Jde::Web{
+	constexpr ELogTags _tags{ ELogTags::Test };
 	static sp<Jde::LogTag> _logTag{ Logging::Tag( "test" ) };
 	using Mock::Host; using Mock::Port;
 
@@ -26,12 +27,12 @@ namespace Jde::Web{
 	up<IException> _pException;
 
 	α WebTests::SetUpTestCase()->void{
-		Stopwatch _{ "WebTests::SetUpTestCase", ELogTags::Test };
+		Stopwatch _{ "WebTests::SetUpTestCase", _tags };
 		Mock::Start();
 	}
 
 	α WebTests::TearDownTestCase()->void{
-		Stopwatch _{ "WebTests::TearDownTestCase", ELogTags::Test };
+		Stopwatch _{ "WebTests::TearDownTestCase", _tags };
 		Mock::Stop();
 	}
 	using Web::Client::ClientHttpAwait;
@@ -41,7 +42,7 @@ namespace Jde::Web{
 	TEST_F( WebTests, IsSsl ){
 		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} };
 		var res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
-		//Debug( ELogTags::Test, "Headers.Size: {}", res.Headers().size() );
+		//Debug( _tags, "Headers.Size: {}", res.Headers().size() );
 		ASSERT_TRUE( res[http::field::server].contains("SSL") );
 	}
 
@@ -52,42 +53,47 @@ namespace Jde::Web{
 	}
 
 	TEST_F( WebTests, EchoAttack ){
-		constexpr uint count=1000;
+		constexpr uint count=200; //windows seems to limit Socket.Listen(backlog) to 200.
 		array<uint,count> indexes;
 		for( uint i=0; i<count; ++i )
 			indexes[i] = i;
 		array<SessionPK,count> sessionIds{};
-		Stopwatch _{ "WebTests::EchoAttack", ELogTags::Test };
+		Stopwatch _{ "WebTests::EchoAttack", _tags };
 		try{
-			std::for_each( std::execution::par_unseq, indexes.begin(), indexes.end(), [&sessionIds]( uint index )mutable{
-				[index, &sessionIds]()->ClientHttpAwait::Task{
+			atomic<uint> connections = 0;
+			std::for_each( std::execution::par_unseq, indexes.begin(), indexes.end(), [&sessionIds,&connections]( uint index )mutable{
+				[index, &sessionIds,&connections]()->ClientHttpAwait::Task{
 					if( _pException )
 						co_return;
 					auto pSessionIds = &sessionIds;
 					const uint idx = index;
 					try{
-						ClientHttpRes res = co_await ClientHttpAwait{ Host, 𐢜("/echo?{}", idx), Port };
+						++connections;
+						ClientHttpRes res = co_await ClientHttpAwait{ Host, Ƒ("/echo?{}", idx), Port };
+						--connections;
 						auto jsonResult = Json::Parse( res.Body() )["params"][0];
 						var echoIndex = To<SessionPK>( jsonResult.template get<string>() );
 						if( echoIndex!=idx )
 							THROW( "index={} echoIndex={}", idx, echoIndex );
-						(*pSessionIds)[idx] = *Str::TryTo<uint>( res[http::field::authorization], nullptr, 16 );
+						(*pSessionIds)[idx] = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 					}
 					catch( IException& e ){
+						Debug( _tags, "connections={}", connections.load() );
 						_pException = e.Move();
 					}
 				}();
 			});
+			while( std::ranges::contains(sessionIds, 0) && !_pException )
+				std::this_thread::yield();
 			if( _pException )
 				_pException->Throw();
-			while( std::ranges::contains(sessionIds, 0) )
-				std::this_thread::yield();
-			std::for_each( std::execution::par_unseq, indexes.begin(), indexes.end(), [&sessionIds]( auto index )mutable{
+			//std::for_each( std::execution::par_unseq, indexes.begin(), indexes.end(), [&sessionIds]( auto index )mutable{
+			for_each( indexes, [&sessionIds]( auto index )mutable{
 				[&sessionIds,index]()->ClientHttpAwait::Task{
 					auto pSessionIds=&sessionIds;
 					uint idx = index;
 					var sessionId = (*pSessionIds)[idx];
-					ClientHttpRes res = co_await ClientHttpAwait{ Host, "/Authorization", Port, {.Authorization=𐢜("{:x}", sessionId)} };
+					ClientHttpRes res = co_await ClientHttpAwait{ Host, "/Authorization", Port, {.Authorization=Ƒ("{:x}", sessionId)} };
 					if( sessionId!=*Str::TryTo<uint>(res[http::field::authorization], nullptr, 16) )
 						THROW( "sessionId={} authorization={}", sessionId, res[http::field::authorization] );
 					(*pSessionIds)[idx] = 0;
@@ -95,13 +101,15 @@ namespace Jde::Web{
 			});
 		}
 		catch( const IException& e ){
+			e.SetLevel( ELogLevel::Critical );
+			e.Log();
 			ASSERT_FALSE( true );
 		}
 		while( find_if(sessionIds, [](auto s){return s!=0;})!=sessionIds.end() )
 			std::this_thread::yield();
 	}
 	TEST_F( WebTests, BadSessionId ){
-		Stopwatch _{ "WebTests::BadSessionId", ELogTags::Test };
+		Stopwatch _{ "WebTests::BadSessionId", _tags };
 		try{
 			auto await = ClientHttpAwait{ Host, "/echo?InvalidSessionId", Port, {.Authorization="xxxxxx"} };
 			var res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
@@ -112,7 +120,7 @@ namespace Jde::Web{
 		}
 	}
 	TEST_F( WebTests, CloseMidRequest ){
-		Stopwatch _{ "WebTests::CloseMidRequest", ELogTags::Test };
+		Stopwatch _{ "WebTests::CloseMidRequest", _tags };
 
 		namespace beast = boost::beast;
 		net::any_io_executor strand = net::make_strand( *Executor() );
@@ -121,19 +129,19 @@ namespace Jde::Web{
 		var results = resolver.resolve( Host, std::to_string(Port) );
     stream->connect( results );
 		uint delay = 2;
-		http::request<http::empty_body> req{ http::verb::get, 𐢜("/delay?seconds={}", delay), 11 };
+		http::request<http::empty_body> req{ http::verb::get, Ƒ("/delay?seconds={}", delay), 11 };
 		req.set( http::field::content_type, ContentType );
 		std::condition_variable_any cv;
 		std::shared_mutex mtx;
-		auto onWrite = []( beast::error_code ec, uint bytes_transferred )ι{
+		auto onWrite = []( beast::error_code ec, uint /*bytes_transferred*/ )ι{
 			ASSERT( !ec );
-			Debug( ELogTags::Test, "onWrite" );
+			Debug( _tags, "onWrite" );
 		};
 		net::post( strand, [&]{
     	http::async_write( *stream, req, onWrite );
 		});
-		auto onRead = [&]( beast::error_code ec, uint bytes_transferred )ε{
-			CodeException{ ec, ELogTags::Test }; //expected.
+		auto onRead = [&]( beast::error_code ec, uint /*bytes_transferred*/ )ε{
+			CodeException{ ec, _tags }; //expected.
 			sl l{ mtx };
 			cv.notify_one();
 		};
@@ -148,7 +156,7 @@ namespace Jde::Web{
 			stream->socket().close( ec );
 			ASSERT( !ec );
 			stream = nullptr;
-			Debug( ELogTags::Test, "client stream shutdown" );
+			Debug( _tags, "client stream shutdown" );
 		});
 		sl l{ mtx };
 		cv.wait( l );
@@ -175,7 +183,7 @@ namespace Jde::Web{
 		}
 	}
 	TEST_F( WebTests, TestTimeout ){
-		Stopwatch sw{ "WebTests::TestTimeout", ELogTags::Test };
+		Stopwatch sw{ "WebTests::TestTimeout", _tags };
 		var systemStartTime = Chrono::ToClock<Clock,steady_clock>( sw.StartTime() );
 		var timeoutString = Settings::Get("http/timeout").value_or( "PT30S" );
 		var timeout = Chrono::ToDuration( timeoutString );

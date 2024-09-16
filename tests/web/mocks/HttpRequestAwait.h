@@ -8,7 +8,7 @@ namespace Jde::Web::Mock{
 		using base = IHttpRequestAwait;
 		HttpRequestAwait( HttpRequest&& req, SRCE )ι;
 		α await_ready()ι->bool override;
-		α await_suspend( base::Handle h )ε->void override;
+		α Suspend()ι->void override;
 		α await_resume()ε->HttpTaskResult override;
 	private:
 		optional<HttpTaskResult> _result;

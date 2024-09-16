@@ -122,11 +122,7 @@ namespace Jde::Web::Client{
 		if( ec )
 			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{:x}]Client::OnClose", Id()), GetLogLevel(ec) };
 		else
-<<<<<<< HEAD
 			Trace( _writeTag, "[{:x}]Client::OnClose", Id() );
-=======
-			TRACET( SocketClientWriteTag(), "[{:x}]Client::OnClose", Id() );
->>>>>>> 2a3c326db5998c266a3eb61f540584f896dd5c81
 		CloseTasks( [](std::any&&){} );
 		if( _closeHandle )
 			_closeHandle.resume();

@@ -25,7 +25,7 @@ namespace Jde::Iot{
 		UAMonitoringNodes(UAClient* p)ι:_pClient{p}{}
 		~UAMonitoringNodes(){_pClient = nullptr;}
 		α Shutdown()ι->void;
-		α Subscribe( sp<IDataChange>&& dataChange, flat_set<NodeId>&& nodes, HCoroutine&& h, Handle& requestId )ι->void;
+		α Subscribe( sp<IDataChange>&& dataChange, flat_set<NodeId>&& nodes, HCoroutine h, Handle& requestId )ι->void;
 		α Unsubscribe( flat_set<NodeId>&& nodes, sp<IDataChange> dataChange )ι->tuple<flat_set<NodeId>,flat_set<NodeId>>;
 		α Unsubscribe( sp<IDataChange> )ι->void;
 		α SendDataChange( Handle h, const Value&& value )ι->uint;

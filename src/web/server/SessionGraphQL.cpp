@@ -47,7 +47,7 @@ namespace Jde::Web::Server{
 				}
 #ifndef NDEBUG
 				if( query.FindColumn("id") )
-					j["id"] = 𐢜( "{:x}", session->SessionId );
+					j["id"] = Ƒ( "{:x}", session->SessionId );
 #endif
 				if( query.FindColumn("endpoint") )
 					j["endpoint"] = session->UserEndpoint;
@@ -71,7 +71,7 @@ namespace Jde::Web::Server{
 		SessionGraphQLAwait( const DB::TableQL& query, UserPK userPK_, SRCE )ι:
 			AsyncAwait{
 				[&, userPK=userPK_]( HCoroutine h ){ Select( query, userPK, h, _sl ); },
-				_sl, "WebGraphQLAwait" }
+				sl, "WebGraphQLAwait" }
 		{}
 	};
 

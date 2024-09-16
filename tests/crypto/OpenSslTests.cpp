@@ -1,10 +1,11 @@
 ﻿#include <jde/crypto/OpenSsl.h>
 #include "../../src/crypto/OpenSslInternal.h"
-#include "../../../Ssl/source/Ssl.h"
+//#include "../../src/crypto/OpenSslInternal.h"
+#include "../../../Framework/source/Settings.h"
 
 #define var const auto
 namespace Jde::Crypto{
-	static sp<Jde::LogTag> _logTag{ Logging::Tag( "tests" ) };
+	static sp<Jde::LogTag> _logTag{ Logging::Tag( "test" ) };
 	using namespace Crypto::Internal;
 
 	struct OpenSslTests : public ::testing::Test{
@@ -38,6 +39,8 @@ namespace Jde::Crypto{
 		LOG( ELogLevel::Information, _logTag, "clear={}", clear );
 		Logging::Log(Logging::MessageBase("clear={}", ELogLevel::Information, __FILE__, __func__, __LINE__), _logTag, true);
 		if( clear || (!fs::exists(PublicKeyFile) || !fs::exists(PrivateKeyFile)) ){
+			if( !fs::exists(fs::path{PublicKeyFile}.parent_path()) )
+				fs::create_directories( fs::path{PublicKeyFile}.parent_path() );
 			Crypto::CreateKey( PublicKeyFile, PrivateKeyFile, passcode );
 			INFO( "Created keys {} {}", PublicKeyFile, PrivateKeyFile );
 		}

@@ -1,5 +1,4 @@
 #pragma once
-//#include <jde/web/server/Sessions.h>
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 
@@ -15,14 +14,14 @@ namespace Jde::App::Client{
 		α await_resume()ε->TResult final;
 	};
 
-	struct GraphQLAwait : SocketAwait<string,json>{
+	struct ΓAC GraphQLAwait : SocketAwait<string,json>{
 		using base = SocketAwait<string,json>;
 		GraphQLAwait( string&& q, UserPK userPK, SRCE )ι:base{sl}, _query{q}, _userPK{userPK}{}
 		α Execute( sp<AppClientSocketSession> pSession )ι->Web::Client::ClientSocketAwait<string>::Task override;
 		string _query; UserPK _userPK;
 	};
 
-	struct SessionInfoAwait : SocketAwait<Proto::FromServer::SessionInfo,Proto::FromServer::SessionInfo>{
+	struct ΓAC SessionInfoAwait : SocketAwait<Proto::FromServer::SessionInfo,Proto::FromServer::SessionInfo>{
 		using base = SocketAwait<Proto::FromServer::SessionInfo,Proto::FromServer::SessionInfo>;
 		SessionInfoAwait( SessionPK sessionId, SRCE )ι:base{sl}, _sessionId{sessionId}{}
 		α Execute( sp<AppClientSocketSession> session )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>::Task override;

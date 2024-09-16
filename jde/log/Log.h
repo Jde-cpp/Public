@@ -20,7 +20,6 @@ namespace Jde{
 	Φ CanBreak()ι->bool;
 }
 namespace Jde::Logging{
-	Φ BreakLevel()ι->ELogLevel;
 
 	//α Log( const Logging::ILogEntry& m )ι->void;
 	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void;
@@ -33,7 +32,6 @@ namespace Jde::Logging{
 	α LogNoServer( const Logging::MessageBase& messageBase, const sp<LogTag>& tag )ι->void;
 	ψ LogNoServer( const Logging::MessageBase& messageBase, const sp<LogTag>& tag, Args&&... args )ι->void;
 	Φ LogMemory( const Logging::MessageBase& messageBase )ι->void;
-	Φ LogMemory( const Logging::MessageBase& messageBase, vector<string> values )ι->void;
 	Φ LogMemory( Logging::Message&& m, vector<string> values )ι->void;
 	ψ Tag( sv tag, Logging::MessageBase m, Args&&... args )ι->void;
 }
@@ -70,19 +68,6 @@ namespace Jde::Logging{
 #define LOG_IFT( predicate, severity, logTag, message,... ) if( predicate ){ LOG( severity, logTag, message __VA_OPT__(,) __VA_ARGS__ ); }
 #define ERR_IF( predicate, message, ... ) LOG_IFL( predicate, ELogLevel::Error, message, __VA_ARGS__ )
 #define LOG_MEMORY( tag, severity, message, ... ) LogMemoryDetail( Logging::Message{tag, severity, message} __VA_OPT__(,) __VA_ARGS__ );
-
-#ifdef NDEBUG
-	#define BREAK
-	#define BREAK_IF(x)
-#else
-	#ifdef _MSC_VER
-		#define BREAK DebugBreak();
-	#else
-		#define BREAK if( CanBreak() ){ ::raise( 5/*SIGTRAP*/ ); }
-	#endif
-	#define BREAK_IF(x) if( x ){ BREAK; }
-#endif
-
 
 //namespace spdlog{
 //#ifdef _MSC_VER
@@ -139,7 +124,6 @@ namespace Jde{
 		Φ DestroyLogger()->void;
 		Φ Initialize()ι->void;
 
-		Φ LogMemory()ι->bool;
 		Φ ClientMinLevel()ι->ELogLevel;
 		//Φ Default()ι->spdlog::logger*;
 

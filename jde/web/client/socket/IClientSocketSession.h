@@ -70,7 +70,7 @@ namespace Jde::Web::Client{
 		CreateClientSocketSessionAwait::Handle _connectHandle;
 		CloseClientSocketSessionAwait::Handle _closeHandle;
 		boost::concurrent_flat_map<RequestId,std::any> _tasks;
-		uint32 _id{};//_serverSocketIndex
+		atomic<uint32> _id;//_serverSocketIndex
 
 		friend struct ClientSocketStream; friend struct CloseClientSocketSessionAwait;
 	};

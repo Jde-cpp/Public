@@ -10,7 +10,7 @@ namespace Jde::DB{
 		Ω QLType( const DB::Column& db, SRCE )ε->string;
 	};
 
-	struct TableQL final{
+	struct Γ TableQL final{
 		α DBName()Ι->string;
 		α FindColumn( sv jsonName )Ι->const ColumnQL*{ auto p = find_if( Columns, [&](var& c){return c.JsonName==jsonName;}); return p==Columns.end() ? nullptr : &*p; }
 		α FindTable( sv jsonTableName )Ι->const TableQL*{ auto p = find_if( Tables, [&](var& t){return t.JsonName==jsonTableName;}); return p==Tables.end() ? nullptr : &*p; }
@@ -24,7 +24,7 @@ namespace Jde::DB{
 	};
 	enum class EMutationQL : uint8{ Create=0, Update=1, Delete=2, Restore=3, Purge=4, Add=5, Remove=6, Start=7, Stop=8 };
 	constexpr array<sv,9> MutationQLStrings = { "create", "update", "delete", "restore", "purge", "add", "remove", "start", "stop" };
-	struct MutationQL final{
+	struct Γ MutationQL final{
 		MutationQL( sv j, EMutationQL type, const json& args, optional<TableQL> resultPtr ):JsonName{j}, Type{type}, Args(args), ResultPtr{resultPtr}{}
 		α TableSuffix()Ι->string; //json name=user returns users
 		α Input(SRCE)Ε->json;

@@ -3,11 +3,10 @@
 
 namespace Jde::Iot
 {
-	struct SetMonitoringModeAwait final : IAwait
-	{
+	struct SetMonitoringModeAwait final : IAwait{
 		SetMonitoringModeAwait( sp<UAClient>&& c, uint32 subscriptionId, SRCE )ι:IAwait{sl}, _client{move(c)}, _subscriptionId{subscriptionId}{}
 		α await_ready()ι->bool override;
-		α await_suspend( HCoroutine h )ι->void override;
+		α Suspend()ι->void override;
 		α await_resume()ι->AwaitResult override;//{ return _pPromise->get_return_object().Result(); }
 
 		Ω Resume( sp<UAClient> pClient, function<void(HCoroutine&&)> resume )ι->void;

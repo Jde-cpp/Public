@@ -7,15 +7,16 @@
 
 namespace Jde::Web{
 	namespace Server{ struct HttpRequest; }
-	α HttpServerReadTag()ι->sp<LogTag>;
-	α HttpServerWriteTag()ι->sp<LogTag>;
+//	α HttpServerReadTag()ι->sp<LogTag>;
+//	α HttpServerWriteTag()ι->sp<LogTag>;
 }
 
 namespace Jde::Web::Server{
 	α AccessControlAllowOrigin()ι->string;
 	α ServerVersion( bool isSsl )ι->string;
-	//template<class TBody, class TAllocator>
-	struct HttpRequest final{
+
+	struct IRestException;
+	struct ΓWS HttpRequest final{
 		HttpRequest( TRequestType&& request, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionId )ι;
 		HttpRequest( const HttpRequest& ) = delete;
 		HttpRequest( HttpRequest&& ) = default;
@@ -58,6 +59,8 @@ namespace Jde::Web::Server{
 		TRequestType _request;
 		steady_clock::time_point _start;
 		string _target;
+
+		friend IRestException;
 	};
 
 	template<class T>

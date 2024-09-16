@@ -12,7 +12,7 @@ namespace Jde::Web{
 	up<Server::IRequestHandler> _requestHandler;//TODO make optional
 	up<Server::IApplicationServer> _appServer;
 	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<json>>{ return _appServer->GraphQL( move(q), userPK, sl ); }
-	α Server::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Server::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
+	α Server::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<App::Proto::FromServer::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
 	α Server::GetRequestHandler()ι->IRequestHandler&{ return *_requestHandler; }
 	static uint16 _maxLogLength{ Settings::Get<uint16>("http/maxLogLength").value_or(1024) };
 	α Server::MaxLogLength()ι->uint16{ return _maxLogLength; }
@@ -69,7 +69,7 @@ namespace Jde::Web{
 		Information( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
-	α Server::Stop( bool terminate )ι->void{
+	α Server::Stop( bool /*terminate*/ )ι->void{
 		ASSERT( _cancelSignal );
 		_started.clear();
 		_started.notify_all();

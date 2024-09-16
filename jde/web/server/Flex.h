@@ -6,23 +6,24 @@
 #include <jde/web/server/IHttpRequestAwait.h>
 
 //#define var const auto
-
+#define Φ ΓWS auto
 struct IHttpRequestAwait;
 namespace Jde::Web::Server{
 	α MaxLogLength()ι->uint16;
 
 	struct IApplicationServer;//TODO! move this here or IRequestHandler there
 	struct IRequestHandler{
+		virtual ~IRequestHandler()=default; //msvc error
 		β HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> =0; //abstract, can't return a copy.
 		β RunWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->void =0;
 	};
 	α GetRequestHandler()ι->IRequestHandler&;
 	α AppGraphQLAwait( string&& q, UserPK userPK, SRCE )ι->up<TAwait<json>>;
-	α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<SessionInfo>>;
+	α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<App::Proto::FromServer::SessionInfo>>;
 	struct CancellationSignals;
 //	α HasStarted()ι->bool;
-	α Start( up<IRequestHandler> handler, up<Server::IApplicationServer>&& server )ε->void;
-	α Stop( bool terminate=false )ι->void;
+	Φ Start( up<IRequestHandler> handler, up<Server::IApplicationServer>&& server )ε->void;
+	Φ Stop( bool terminate=false )ι->void;
 
 	α ReadSeverity( beast::error_code ec )ι->ELogLevel;
 	α OnWrite( beast::error_code ec, std::size_t bytes_transferred )ι->void;
@@ -112,3 +113,4 @@ namespace Jde::Web{
 	  }
 	}
 }
+#undef Φ

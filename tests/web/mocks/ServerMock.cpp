@@ -5,8 +5,8 @@ namespace Jde::Web{
 	optional<std::jthread> _webThread;
 
 	struct ApplicationServer final : Server::IApplicationServer{
-		β GraphQL( string&& q, UserPK userPK, SRCE )ι->up<TAwait<json>>{ return {}; }
-		β SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<Server::SessionInfo>>{ return {}; }
+		β GraphQL( string&&, UserPK, SL )ι->up<TAwait<json>>{ return {}; }
+		β SessionInfoAwait( SessionPK, SL )ι->up<TAwait<App::Proto::FromServer::SessionInfo>>{ return {}; }
 	};
 
 	α Mock::Start()ι->void{
@@ -16,5 +16,4 @@ namespace Jde::Web{
 	α Mock::Stop()ι->void{
 		Server::Stop();
 	}
-
 }

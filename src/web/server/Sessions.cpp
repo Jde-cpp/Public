@@ -94,7 +94,7 @@ namespace	Sessions{
 	}
 
 namespace Sessions{
-	α UpsertAwait::Execute()ι->TTask<SessionInfo>{
+	α UpsertAwait::Execute()ι->TTask<App::Proto::FromServer::SessionInfo>{
 		sp<SessionInfo> info;
 		if( !_authorization.empty() ){
 			optional<SessionPK> sessionId;
@@ -104,10 +104,12 @@ namespace Sessions{
 				if( auto pInfo = UpdateExpiration(*sessionId, _endpoint); pInfo )
 					info = pInfo;
 				else{
-					up<TAwait<Web::Server::SessionInfo>> pAwait = Server::SessionInfoAwait( *sessionId ); //3rd party, eg AppServer
+					up<TAwait<App::Proto::FromServer::SessionInfo>> pAwait = Server::SessionInfoAwait( *sessionId ); //3rd party, eg AppServer
 					if( !pAwait )  //no 3rd party
-						throw Exception( SRCE_CUR, ELogLevel::Debug, "[{}]Session not found.", 𐢜("{:x}", *sessionId) );
-					info = ms<SessionInfo>( co_await *pAwait );
+						throw Exception( SRCE_CUR, ELogLevel::Debug, "[{}]Session not found.", Ƒ("{:x}", *sessionId) );
+					App::Proto::FromServer::SessionInfo proto = co_await *pAwait;
+					steady_clock::time_point expiration = Chrono::ToClock<steady_clock,Clock>( IO::Proto::ToTimePoint(proto.expiration()) );
+					info = ms<SessionInfo>( *sessionId, expiration, proto.user_pk(), proto.user_endpoint(), proto.has_socket() );
 					pAwait.reset();
 					info->UserEndpoint = _endpoint;
 					info->HasSocket = _socket;
@@ -128,8 +130,7 @@ namespace Sessions{
 		_h.resume();
 	}
 
-	α UpsertAwait::await_suspend( Handle h )ι->void{
-		base::await_suspend( h );
+	α UpsertAwait::Suspend()ι->void{
 		try{
 			Execute();
 		}

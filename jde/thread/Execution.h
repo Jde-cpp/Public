@@ -9,8 +9,8 @@ namespace Jde{
 	Φ Executor()ι->sp<boost::asio::io_context>;
 	namespace Execution{
 		Φ AddShutdown( IShutdown* pShutdown )ι->void;
-		α AddCancelSignal( sp<boost::asio::cancellation_signal> s )ι->void;
-		α Run()->void;
+		Φ AddCancelSignal( sp<boost::asio::cancellation_signal> s )ι->void;
+		Φ Run()->void;
 	}
 }
 #endif

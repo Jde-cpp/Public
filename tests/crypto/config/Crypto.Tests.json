@@ -1,14 +1,14 @@
 {
 	"testing":{
-		"tests":"OpenSslTests.Main"
+		"testsx":"OpenSslTests.Main"
 	},
 	"cryptoTests":{
 		"clear": false
 	},
 	"logging":{
 		"tags": {
-			"Trace":[],
-			"Debug":["tests","settings"],
+			"Trace":["test"],
+			"Debug":["settings"],
 			"Information":[],
 			"Warning":[],
 			"Error":[],

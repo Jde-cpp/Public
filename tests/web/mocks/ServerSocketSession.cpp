@@ -10,7 +10,7 @@ namespace Jde::Web::Mock{
 
 	α ServerSocketSession::OnConnect( SessionPK sessionId, RequestId requestId )ι->Server::Sessions::UpsertAwait::Task{
 			try{
-			auto info = co_await Server::Sessions::UpsertAwait{ 𐢜("{:x}", sessionId), _userEndpoint.address().to_string(), true };
+			auto info = co_await Server::Sessions::UpsertAwait{ Ƒ("{:x}", sessionId), _userEndpoint.address().to_string(), true };
 			Proto::FromServerTransmission t;
 			auto m = t.add_messages();
 			m->set_request_id( requestId );
@@ -33,8 +33,8 @@ namespace Jde::Web::Mock{
 		Write( move(t) );
 	}
 
-	α ServerSocketSession::SendAck( uint id )ι->void{
-		LogWrite( 𐢜("Ack id: {:x}", id), 0 );
+	α ServerSocketSession::SendAck( uint32 id )ι->void{
+		LogWrite( Ƒ("Ack id: {:x}", id), 0 );
 		Proto::FromServerTransmission t;
 		t.add_messages()->set_ack( id );
 		Write( move(t) );

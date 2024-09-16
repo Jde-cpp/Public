@@ -22,7 +22,7 @@ namespace Jde::DB{
 		α Test( const DB::object& value, ELogTags logTags )Ι->bool;
 	};
 	using JsonColumnName=string;
-	struct FilterQL final{//filter:
+	struct Γ FilterQL final{//filter:
 		flat_map<JsonColumnName,vector<FilterValueQL>> ColumnFilters;
 		Ω Test( const DB::object& value, const vector<FilterValueQL>& filters, ELogTags logTags )ι->bool;
 	};
