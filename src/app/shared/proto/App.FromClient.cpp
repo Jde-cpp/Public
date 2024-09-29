@@ -73,15 +73,7 @@ namespace Jde::App{
 		for_each( details, [&status](auto&& detail){ status.add_details(move(detail)); } );
 		return t;
 	}
-/*
-	α FromClient::ConnectTransmission( SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission{
-		PFromClient::Transmission t;
-		auto req = t.add_messages();
-		req->set_connect_session_id( sessionId );
-		req->set_request_id( requestId );
-		return t;
-	}
-*/
+
 	α FromClient::Session( SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission{
 		PFromClient::Transmission t;
 		auto req = t.add_messages();
@@ -89,13 +81,7 @@ namespace Jde::App{
 		req->set_request_id( requestId );
 		return t;
 	}
-	/**/
-/*	α ToExternalLogEntry( PFromClient::LogEntry&& proto )ι->Logging::ExternalMessage{
-		Logging::ExternalMessage m{ Logging::MessageBase{ (ELogLevel)proto.level(), proto.message_id(), proto.file_id(), proto.function_id(), proto.line(), proto.user_pk(), proto.thread_id()}, {}, IO::Proto::ToTimePoint( proto.time() ) };
-		m.TimePoint = ;
-		return m;
-	}
-*/
+
 	α FromClient::ToLogEntry( Logging::ExternalMessage m )ι->PFromClient::LogEntry{
 		PFromClient::LogEntry proto;
 		proto.set_level( (Jde::Proto::ELogLevel)m.Level );
@@ -108,7 +94,4 @@ namespace Jde::App{
 		*proto.mutable_time() = IO::Proto::ToTimestamp( m.TimePoint );
 		return proto;
 	}
-//	α ToExternalMessage( const PFromClient::LogEntry& m )ι->Logging::ExternalMessage{
-//		return message;
-//	}
 }

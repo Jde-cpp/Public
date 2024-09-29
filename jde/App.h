@@ -97,7 +97,7 @@ namespace Jde{
 		Ω Executable()ι->fs::path;
 		Ω Args()ι->const flat_multimap<string,string>&;
 		Ω Pause()ι->void;
-		Ω UnPause()ι->void;
+		ω UnPause()ι->void;
 		Φ GetThreadId()ι->uint;
 		Φ GetThreadDescription()ι->const char*;
 

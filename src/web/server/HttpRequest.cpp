@@ -1,14 +1,7 @@
 #include <jde/web/server/HttpRequest.h>
-#include <jde/web/server/Flex.h>
-//#include <jde/web/client/IClientSocketSession.h>//maxloglength
+#include <jde/web/server/Server.h>
 #define var const auto
 
-namespace Jde{
-//	static sp<LogTag> _httpServerReadTag = Logging::Tag( ELogTags::HttpServerRead );
-//	static sp<LogTag> _httpServerWriteTag = Logging::Tag( ELogTags::HttpServerWrite );
-//	α Web::HttpServerReadTag()ι->sp<LogTag>{ return _httpServerReadTag; }
-//	α Web::HttpServerWriteTag()ι->sp<LogTag>{ return _httpServerWriteTag; }
-}
 namespace Jde::Web{
 	string _accessControlAllowOrigin = Settings::Get("http/accessControl/allowOrigin").value_or("*");
 	α Server::AccessControlAllowOrigin()ι->string{ return _accessControlAllowOrigin; };
@@ -16,11 +9,10 @@ namespace Jde::Web{
 	string _plainVersion{ Ƒ("({})Jde.Web.Server - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
 	string _sslVersion{ Ƒ("({})Jde.Web.Server SSL - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
 	α Server::ServerVersion( bool isSsl )ι->string{ return isSsl ? _sslVersion : _plainVersion; }//TODO cache
-
 }
+
 namespace Jde::Web::Server{
 	static atomic<uint32> _sequence = 0;
-
 
 	HttpRequest::HttpRequest( TRequestType&& request, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionId )ι:
 		UserEndpoint{ move(userEndpoint) },
@@ -51,11 +43,11 @@ namespace Jde::Web::Server{
 		if( !j.is_null() )
 			y.body() = j.dump();
 		y.prepare_payload();
-		Trace( sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
+		Trace{ sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) };
 		return y;
 	}
 
 	α HttpRequest::LogRead( str text, SL sl )Ι->void{
-		Trace( sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {}{} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
+		Trace{ sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {}{} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) };
 	}
 }

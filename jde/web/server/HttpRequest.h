@@ -1,15 +1,8 @@
 #pragma once
-//#include "HttpRequestAwait.h"
 #include <jde/db/usings.h>
 #include <jde/io/Json.h>
 #include "Sessions.h"
 #include "usings.h"
-
-namespace Jde::Web{
-	namespace Server{ struct HttpRequest; }
-//	α HttpServerReadTag()ι->sp<LogTag>;
-//	α HttpServerWriteTag()ι->sp<LogTag>;
-}
 
 namespace Jde::Web::Server{
 	α AccessControlAllowOrigin()ι->string;
@@ -22,7 +15,6 @@ namespace Jde::Web::Server{
 		HttpRequest( HttpRequest&& ) = default;
 		α operator=( const HttpRequest& ) = delete;
 		α operator[]( str x )ι->string&{ return _params[x]; }
-		//α RemoteEndpoint()Ι->net::ip::tcp::endpoint{ return beast::get_lowest_layer(stream).remote_endpoint(); }
 
 		α StringBody()Ι->const string&{ return _request.body(); }
 		α Body()Ε->json{ return Json::Parse( _request.body() ); }
@@ -74,10 +66,7 @@ namespace Jde::Web::Server{
 		}
 		for( auto& [key,value] : ResponseHeaders )
 			res.set( key, value );
-		//res.set(http::field::content_type, "text/html");
 		res.keep_alive( _request.keep_alive() );
-		//res.body() = "The resource '" + std::string(target) + "' was not found.";
-		//res.prepare_payload();//This function will adjust the Content-Length and Transfer-Encoding field values based on the properties of the body.
 		return res;
 	}
 
@@ -86,17 +75,7 @@ namespace Jde::Web::Server{
 		auto res = Response<http::string_body>( http::status::bad_request );
 		res.body() = Jde::format( format, args... );
 		res.prepare_payload();
-		//LogHttpServerSent( *this, res ); TODO try log at end
+		//LogHttpServerSent( *this, res ); try log at end
 		return res;
 	}
-/*	template<class... Args>
-	HttpRequest::InternalServerError( IException&& e, fmt::format_string<Args...> format, Args&&... args )Ι->http::response<http::string_body>{
-		auto res = Response<http::string_body>( http::status::internal_server_error );
-		res.body() = Jde::format( format, args... );
-		res.prepare_payload();
-		auto& sl = e.Stack().front();
-		TRACESL( "InternalServerError={}", res.body() );
-		return res;
-	}	*/
-
 }

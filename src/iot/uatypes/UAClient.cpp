@@ -35,19 +35,21 @@ namespace Jde::Iot{
 	}
 
 	α UAClient::Shutdown( bool /*terminate*/ )ι->void{
-		sl _1{ _clientsMutex };
-		for( var& [_,p] : _clients ){
-			p->MonitoredNodes.Shutdown();
-			p->_asyncRequest.Stop();
-			WARN_IF( p.use_count()>1, "[{:x}]use_count={}", p->Handle(), p.use_count() );
+		{
+			sl _1{ _clientsMutex };
+			for( var& [_,p] : _clients ){
+				p->MonitoredNodes.Shutdown();
+				p->_asyncRequest.Stop();
+				WARN_IF( p.use_count()>1, "[{:x}]use_count={}", p->Handle(), p.use_count() );
+			}
 		}
 		ul _{ _clientsMutex };
 		_clients.clear();
 	}
 	α UAClient::Configuration()ε->UA_ClientConfig*{
-		const fs::path root = IApplication::ApplicationDataFolder();
-		const fs::path certificateFile = root/"cert.pem";
-		const fs::path privateKeyFile = root/"private.pem";
+		const fs::path root = IApplication::ApplicationDataFolder()/"ssl";
+		const fs::path certificateFile = root/Ƒ("certs/{}.pem", Target());
+		const fs::path privateKeyFile = root/Ƒ("private/{}.pem", Target());
 		const string passcode = OSApp::EnvironmentVariable("JDE_PASSCODE").value_or( "" );
 		var uri = Str::Replace( _opcServer.CertificateUri, " ", "%20" );
 		bool addSecurity = !uri.empty();//urn:JDE-CPP:Kepware.KEPServerEX.V6:UA%20Server
@@ -56,7 +58,7 @@ namespace Jde::Iot{
 			if( !fs::exists(root) )
 				fs::create_directories( root );
 			if( !fs::exists(privateKeyFile) )
-				Crypto::CreateKey( root/"public.pem", privateKeyFile, passcode );
+				Crypto::CreateKey( root/Ƒ("public/{}.pem", Target()), privateKeyFile, passcode );
 			Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Jde::format("URI:{}", uri), "jde-cpp", "US", "localhost" );
 		}
 		auto config = UA_Client_getConfig( _ptr );
@@ -100,7 +102,8 @@ namespace Jde::Iot{
 			pClient->TriggerSessionAwaitables();
 			pClient->ClearRequest<UARequest>( std::numeric_limits<RequestId>::max() );
 		}
-	if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED ){
+		//UA_SESSIONSTATE_CLOSED
+	if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED || connectStatus==UA_STATUSCODE_BADSECURITYCHECKSFAILED ){
 			_awaitingActivation.erase_if( [ua, sessionState,connectStatus]( sp<UAClient> pClient){
 				if( pClient->UAPointer()!=ua )return false;
 				pClient->ClearRequest<UARequest>( std::numeric_limits<RequestId>::max() );//previous clear didn't have pClient

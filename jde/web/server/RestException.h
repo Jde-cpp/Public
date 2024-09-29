@@ -2,9 +2,6 @@
 #include "HttpRequest.h"
 
 namespace Jde::Web::Server{
-	namespace beast = boost::beast;
-	namespace http = beast::http;
-
 	struct IRestException : IException{
 	protected:
 		IRestException( IException&& inner, HttpRequest&& req )ι:IException{ move(inner) },_request{move(req)}{}
@@ -45,7 +42,7 @@ namespace Jde::Web::Server{
 		IException{rhs},
 		_clientMessage{rhs._clientMessage},
 		_request{TRequestType{rhs._request._request}, rhs._request.UserEndpoint, rhs._request._isSsl, rhs._request._connectionId }{
-		ASSERT(false); 
+		ASSERT(false);
 	}
 	Ξ IRestException::Response()Ι->http::response<http::string_body>{
 		auto res = _request.Response<http::string_body>( Status() );

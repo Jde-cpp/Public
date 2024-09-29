@@ -54,10 +54,11 @@ namespace Jde::Iot{
 	sp<UAClient> _pClient;
 	vector<SessionPK> _sessionIds;
 	up<IException> _exception;
+	const string _password = "0123456789ABCD";
 	α AuthenticateTest( bool badPassword=false )ι->Iot::AuthenticateAwait::Task{
 		try{
 			OpcNK opcId = Json::Getε( UAClientTests::OpcServer, "target" );
-			auto sessionInfo = co_await Iot::AuthenticateAwait{ "user1", badPassword ? "xyz" :"password1", UAClientTests::OpcServer["target"], "localhost", true };
+			auto sessionInfo = co_await Iot::AuthenticateAwait{ "user1", badPassword ? "xyz" : _password, UAClientTests::OpcServer["target"], "localhost", true };
 			_sessionIds.push_back( sessionInfo.session_id() );
 		}
 		catch( IException& e ){
@@ -81,7 +82,7 @@ namespace Jde::Iot{
 		cv.wait( l );
 		var creds = Credentials( _sessionIds[2], OpcServer["target"] );
 		EXPECT_EQ( "user1", get<0>(creds) );
-		EXPECT_EQ( "password1", get<1>(creds) );
+		EXPECT_EQ( _password, get<1>(creds) );
 		EXPECT_NE( _sessionIds[0], _sessionIds[1] );
 		EXPECT_NE( _sessionIds[0], _sessionIds[2] );
 		EXPECT_NE( _sessionIds[1], _sessionIds[2] );

@@ -1,26 +1,13 @@
 #pragma once
 #include <jde/App.h>
 #include <jde/web/server/exports.h>
-//#include <jde/web/socket/WebsocketServer.h>
-//#include "../../../../Framework/source/io/Socket.h"
+#include <jde/web/server/usings.h>
 #include "../../../../Framework/source/io/ProtoUtilities.h"
 #include "../../../../Framework/source/threading/Mutex.h"
-#include "Streams.h"
-
-#define var const auto
-#define _logTag WebsocketRequestTag()
 
 namespace Jde::Web::Server{
-	namespace beast = boost::beast;
-	namespace http = beast::http;
-	namespace websocket = beast::websocket;
-	namespace net = boost::asio;
-	using tcp = net::ip::tcp;
-	//using namespace Jde::IO::Sockets;
-	ΓWS α SocketServerReadTag()ι->sp<Jde::LogTag>;
-	ΓWS α SocketServerWriteTag()ι->sp<Jde::LogTag>;
-
-	struct ΓWS IWebsocketSession /*abstract*/: std::enable_shared_from_this<IWebsocketSession>{
+	struct RestStream; struct SocketStream;
+	struct ΓWS IWebsocketSession : std::enable_shared_from_this<IWebsocketSession>{
 		IWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α Run()ι->void;
 		α Id()Ι{ return _id; }
@@ -28,7 +15,7 @@ namespace Jde::Web::Server{
 	protected:
 		sp<SocketStream> Stream;
 		tcp::endpoint _userEndpoint;
-		β Close()ι->void{ Stream->Close( shared_from_this() ); }
+		β Close()ι->void;
 		β OnClose()ι->void;
 		β OnRead( const char* p, uint size )ι->void=0;
 		β SendAck( uint32 id )ι->void=0;
@@ -36,6 +23,8 @@ namespace Jde::Web::Server{
 		α LogRead( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;
 		α LogWriteException( const IException& e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α SessionId()ι{ return _sessionId; } α SetSessionId( SessionPK sessionId )ι{ _sessionId = sessionId; }
+		α Write( string&& m )ι->void;
+
 	private:
 		α Disconnect( CodeException&& e )ι{ OnDisconnect(move(e)); /*_connected = false; _server.RemoveSession( Id );*/ }
 		β OnDisconnect( CodeException&& )ι->void{}
@@ -77,9 +66,7 @@ namespace Jde::Web::Server{
 	}
 
 	$::Write( TFromServer&& message )ι->void{
-		Stream->Write( message.SerializeAsString() );
+		IWebsocketSession::Write( message.SerializeAsString() );
 	}
 }
 #undef $
-#undef var
-#undef _logTag

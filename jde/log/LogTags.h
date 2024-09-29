@@ -4,22 +4,22 @@ namespace Jde{
 	struct LogTag{ string Id; ELogLevel Level{ELogLevel::NoLog}; };//loadLibrary dlls may disappear, so need string vs. sv
 	enum class ELogTags : uint{
 		None 					= 0x0,
-		App 					= 1ul << 0,
-		Cache	 	  		= 1ul << 1,
-		Client  			= 1ul << 2,
-		DBDriver			= 1ul << 3,
-		Exception			= 1ul << 4,
-		ExternalLogger= 1ul << 5,
-		GraphQL 			= 1ul << 6,
-		Http  				= 1ul << 7,
-		IO			 			= 1ul << 8,
+		App 					= 1ul << 0, //0x1
+		Cache	 	  		= 1ul << 1, //0x2
+		Client  			= 1ul << 2, //0x4
+		DBDriver			= 1ul << 3, //0x8
+		Exception			= 1ul << 4, //0x10
+		ExternalLogger= 1ul << 5, //0x20
+		GraphQL 			= 1ul << 6, //0x40
+		Http  				= 1ul << 7, //0x80
+		IO			 			= 1ul << 8, //0x100
 		Locks	 	  		= 1ul << 9,
 		Parsing 			= 1ul << 10,
-		Pedantic 			= 1ul << 11,
-		Read	  			= 1ul << 12,
+		Pedantic 			= 1ul << 11, //0x0800
+		Read	  			= 1ul << 12, //0x1000
 		Write		 			= 1ul << 13,
-		Scheduler	 		= 1ul << 14,
-		Server  			= 1ul << 15,
+		Scheduler	 		= 1ul << 14, //0x4000
+		Server  			= 1ul << 15, //0x8000
 		Sessions  		= 1ul << 16,
 		Settings 			= 1ul << 17,
 		Shutdown 			= 1ul << 18,

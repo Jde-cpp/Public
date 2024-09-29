@@ -1,8 +1,7 @@
 #include <jde/web/client/http/ClientHttpException.h>
 #include <jde/web/client/http/ClientHttpSession.h>
 
-namespace Jde::Web::Client
-{
+namespace Jde::Web::Client{
 	ClientHttpException::ClientHttpException( beast::error_code ec, ELogTags /*tags*/, ELogLevel level, SL sl )ι:
 		ClientHttpException{ ec, {}, {}, level, sl }
 	{}
@@ -19,6 +18,4 @@ namespace Jde::Web::Client
 		Target{ _req ? string{_req->target()} : "" },
 		Port{ session->Port }
 	{}
-
-
 }

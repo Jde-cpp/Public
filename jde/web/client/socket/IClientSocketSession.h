@@ -7,12 +7,9 @@
 #include "../../../../../Framework/source/io/ProtoUtilities.h"
 #include "../../../../../Framework/source/Stopwatch.h"
 
-
 namespace Jde::Web::Client{
 	ΓWC α MaxLogLength()ι->uint16;
 
-	//α SocketClientReadTag()ι->sp<LogTag>;
-	//α SocketClientWriteTag()ι->sp<LogTag>;
 	struct IClientSocketSession;
 	struct CreateClientSocketSessionAwait final : VoidAwait<>{
 		using base = VoidAwait<>;
@@ -41,7 +38,6 @@ namespace Jde::Web::Client{
 
 		α Write( string&& m )ι->void;
 		α NextRequestId()ι->uint32;
-		//α OnWrite( beast::error_code ec, uint bytes_transferred )ι->void;
 		α SessionId()ι->SessionPK{ return _sessionId; }
 		[[nodiscard]] α Close()ι{ return CloseClientSocketSessionAwait(shared_from_this()); }
 		α Host()Ι->str{ return _host; }
@@ -83,8 +79,6 @@ namespace Jde::Web::Client{
 	protected:
 		α OnReadData( std::basic_string_view<uint8_t> transmission )ι->void override;
 		β OnRead( TFromServerMsgs&& m )ι->void=0;
-		//[[nodiscard]] α Write( TFromClientMsgs&& m, ICheckRequestId&& checkRequestId )ι{ return ClientSocketAwait<TFromServerMsgs>{ move(m), move(checkRequestId); shared_from_this() }; }
-		//α WriteRequestId( TFromClientMsgs&& m )ι;
 	};
 
 	#define $ template<class TFromClientMsgs, class TFromServerMsgs> α TClientSocketSession<TFromClientMsgs,TFromServerMsgs>
@@ -107,4 +101,3 @@ namespace Jde::Web::Client{
 	}
 }
 #undef $
-#undef var

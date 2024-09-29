@@ -64,8 +64,16 @@ namespace Jde::App{
 			if( wait )
 				co_await Threading::Alarm::Wait( _reconnectWait );
 			[]()->LoginAwait::Task {
+				SessionPK sessionId{};
 				try{
-					var sessionId = co_await LoginAwait{};
+					sessionId = co_await LoginAwait{};
+				}
+				catch( IException& e ){
+					Trace( ELogTags::App, "Could not login to App Server:  {}", e.what() );
+					if( e.Code!=2406168687 )//port=0
+						Connect( true );
+				}
+				if( sessionId ){
 					[sessionId]()->StartSocketAwait::Task {
 						try{
 							co_await StartSocketAwait{ sessionId };
@@ -74,11 +82,6 @@ namespace Jde::App{
 							Connect( true );
 						}
 					}();
-				}
-				catch( IException& e ){
-					Trace( ELogTags::App, "Could not connect to App Server:  {}"sv, e.what() );
-					if( e.Code!=2406168687 )//port=0
-						Connect( true );
 				}
 			}();
 		}();

@@ -2,15 +2,14 @@
 #include "../../../../Framework/source/db/GraphQL.h"
 #include "../../../../Framework/source/io/ProtoUtilities.h"
 #include <jde/io/Json.h>
-#include <jde/web/server/Flex.h>
 #include <jde/web/server/Sessions.h>
+#include "ServerImpl.h"
 
 #define var const auto
 
 namespace Jde::Web::Server{
 	constexpr ELogTags _tags{ ELogTags::Sessions };
 
-	//query{ session(filter:{ id:${a0b1cef2} }){ domain loginName } }
 	α Select( DB::TableQL query, UserPK executerPK, HCoroutine h, SL sl )ι->TAwait<json>::Task{
 		try{
 			var sessionString = Json::Get<string>( query.Args, "id", ELogTags::HttpServerRead, sl );

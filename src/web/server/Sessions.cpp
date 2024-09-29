@@ -1,8 +1,8 @@
 #include <jde/web/server/Sessions.h>
 
-#include <jde/web/server/Flex.h>
 #include <jde/web/server/HttpRequest.h>
 #include "../../../../Framework/source/math/MathUtilities.h"
+#include "ServerImpl.h"
 
 #define var const auto
 namespace Jde::Web::Server{
@@ -10,7 +10,7 @@ namespace Jde::Web::Server{
 	concurrent_flat_map<SessionPK,sp<SessionInfo>> _sessions;
 	α Upsert( sp<SessionInfo>& info )ι->void{
 		if( _sessions.emplace_or_visit(info->SessionId, info, [&info]( auto& existing ){ existing.second->Expiration=existing.second->NewExpiration();}) )
-			Trace( _tags, "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK, info->UserEndpoint );
+			Trace{ _tags, "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK, info->UserEndpoint };
 	}
 
 	α GetNewSessionId()ι->SessionPK{
@@ -37,9 +37,10 @@ namespace	Sessions{
 
 	α Sessions::Find( SessionPK sessionId )ι->sp<SessionInfo>{
 		sp<SessionInfo> y;
-		_sessions.cvisit( sessionId, [&y]( auto& kv ){ y = kv.second; } );
+		_sessions.cvisit( sessionId, [&y](auto& kv){ y = kv.second; } );
 		return y;
 	}
+
 	α Sessions::Get()ι->vector<sp<SessionInfo>>{
 		vector<sp<SessionInfo>> y;
 		_sessions.cvisit_all( [&y]( auto& kv ){ y.emplace_back(kv.second); } );
@@ -84,7 +85,7 @@ namespace	Sessions{
 				info = existing;
 			}
 			else
-				Trace( ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, DateTime{existingExpiration}.ToIsoString() );
+				Trace{ ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, DateTime{existingExpiration}.ToIsoString() };
 		} );
 		if( _lastTrim<steady_clock::now()-_restExpirationDuration ){
 			_sessions.erase_if( []( auto& kv ){ return kv.second->Expiration<steady_clock::now(); } );

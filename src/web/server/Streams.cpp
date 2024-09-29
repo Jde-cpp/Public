@@ -1,13 +1,9 @@
-#include <jde/web/server/Streams.h>
+#include "Streams.h"
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/HttpRequest.h>
 
 #define var const auto
 namespace Jde::Web::Server{
-	static sp<Jde::LogTag> _logTag = Logging::Tag( "web" );
-	static sp<Jde::LogTag> _requestTag = Logging::Tag( ELogTags::SocketClientRead );
-	static sp<Jde::LogTag> _responseTag = Logging::Tag( ELogTags::SocketClientWrite );
-
 	α RestStream::operator=( RestStream&& rhs )ι->RestStream&{
 		Plain = move(rhs.Plain);
 		Ssl = move(rhs.Ssl);
@@ -24,7 +20,7 @@ namespace Jde::Web::Server{
 	α RestStream::OnWrite( beast::error_code ec, uint bytes_transferred )ι->void{
 		boost::ignore_unused( bytes_transferred );
 		if( ec )
-			CodeException{ static_cast<std::error_code>(ec), _responseTag, ec.value()==(int)boost::beast::error::timeout ? ELogLevel::Debug : ELogLevel::Error };
+			CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientWrite, ec.value()==(int)boost::beast::error::timeout ? ELogLevel::Debug : ELogLevel::Error };
   }
 
 	α Test( beast::ssl_stream<StreamType>&& stream )ι->void{
@@ -33,29 +29,23 @@ namespace Jde::Web::Server{
 
 	α CreateWS( sp<RestStream>&& stream )ι->optional<SocketStream::Stream>{
 		optional<SocketStream::Stream> y;
-		//beast::ssl_stream<StreamType>& s2 = *stream.Ssl;
-		//websocket::stream<beast::ssl_stream<StreamType>> x{ move(*stream.Ssl) };
 		if( stream->Plain )
 		 	y.emplace( websocket::stream<StreamType>{ move(*stream->Plain) } );
-		else{
-      //websocket::stream<beast::ssl_stream<StreamType>> x2{ move(*stream.Ssl) };
+		else
 		 	y.emplace( websocket::stream<beast::ssl_stream<StreamType>>{ move(*stream->Ssl) } );
-		}
+
 		std::visit( [](auto&& ws){ ws.binary(true); }, *y );
 		return y;
 	}
 	SocketStream::SocketStream( sp<RestStream>&& stream, beast::flat_buffer&& buffer )ι:
 		_buffer{ move(buffer) },
 		_ws{ *CreateWS(move(stream)) }
-	{
-		//set binary
-		//?_ws.set_option( websocket::stream_base::timeout::suggested(beast::role_type::server) );
-	}
+	{}
+
 	α SocketStream::GetExecutor()ι->executor_type{
-		//executor_type executor;
 		return std::visit( [&]( auto&& ws ){	return ws.get_executor(); }, _ws );
-		//return executor;
 	}
+
 	α SocketStream::DoAccept( TRequestType req, sp<IWebsocketSession> session )ι->void{
 		std::visit(
 			[&]( auto&& ws ){
@@ -73,7 +63,7 @@ namespace Jde::Web::Server{
 				ws.async_read( _buffer, [this,session]( beast::error_code ec, uint /*c*/ )mutable{
 					if( ec ){
 						ELogLevel level = ec==websocket::error::closed || ec==net::error::connection_aborted || ec==net::error::not_connected || ec==net::error::connection_reset ? ELogLevel::Trace : ELogLevel::Error;
-						CodeException{ static_cast<std::error_code>(ec), _requestTag, Ƒ("[{:x}]Server::DoRead", session->Id()), level };
+						CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientRead, Ƒ("[{:x}]Server::DoRead", session->Id()), level };
 						return;
 					}
 					session->OnRead( (char*)_buffer.data().data(), _buffer.size() );
@@ -92,15 +82,16 @@ namespace Jde::Web::Server{
 			[&]( auto&& ws ){
 				ws.async_write( buffer, [this, &ws, pKeepAlive=shared_from_this(), buffer, l=move(lock), out=move(outputPtr) ]( beast::error_code ec, uint bytes_transferred )mutable{
 					l = nullptr;
+					var tags = ELogTags::SocketClientWrite | ELogTags::ExternalLogger;
 					if( ec || out->size()!=bytes_transferred ){
-						Logging::LogNoServer( Logging::Message(ELogLevel::Debug, "Error writing to Session:  '{}'"), _responseTag, boost::diagnostic_information(ec) );
+						Debug{ tags, "Error writing to Session:  '{}'", boost::diagnostic_information(ec) };
 						try{
 							ws.close( websocket::close_code::none );
 						}
-						catch( const boost::exception& e2 ){
-							Logging::LogNoServer( Logging::Message{ELogLevel::Debug, "Error closing:  '{}')"}, _responseTag, boost::diagnostic_information(e2) );
+						catch( const boost::exception& ){
+							Debug{ tags, "Error closing:  '{}')", boost::diagnostic_information(ec) };
 						}
-						CodeException{ ec, _requestTag };
+						CodeException{ ec, ELogTags::SocketClientRead };
 					}
 				});
 			}, _ws );
@@ -111,7 +102,7 @@ namespace Jde::Web::Server{
 			[&]( auto&& ws ){
 				ws.async_close( websocket::close_code::normal, [session]( beast::error_code ec ){
 					if( ec )
-						CodeException{ static_cast<std::error_code>(ec), _requestTag };
+						CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientRead };
 					session->OnClose();
 				});
 			}, _ws );
