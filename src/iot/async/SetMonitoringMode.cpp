@@ -3,7 +3,7 @@
 
 namespace Jde::Iot{
 	boost::concurrent_flat_map<sp<UAClient>,vector<HCoroutine>> _monitoringRequests;
-	α SetMonitoringModeCallback( UA_Client* ua, void* userdata, RequestId requestId, void* response )ι->void
+	α SetMonitoringModeCallback( UA_Client* ua, void* /*userdata*/, RequestId requestId, void* response )ι->void
 	{
 		var pResponse = static_cast<UA_SetMonitoringModeResponse*>( response );
 		auto ppClient = Try<sp<UAClient>>( [ua](){return UAClient::Find(ua);} ); if( !ppClient ) return;
@@ -24,9 +24,8 @@ namespace Jde::Iot{
 	}
 
 	α SetMonitoringModeAwait::await_ready()ι->bool{ return _client->MonitoringModeResponse!=nullptr; }
-	α SetMonitoringModeAwait::await_suspend( HCoroutine h )ι->void{
-		IAwait::await_suspend( h );
-		if( _monitoringRequests.try_emplace_or_visit(_client, vector<HCoroutine>{h}, [ h2=move(h)](auto x){x.second.push_back(move(h2));}) )
+	α SetMonitoringModeAwait::Suspend()ι->void{
+		if( _monitoringRequests.try_emplace_or_visit(_client, vector<HCoroutine>{_h}, [ h=_h](auto x){x.second.push_back(h);}) )
 			_client->SetMonitoringMode( _subscriptionId );
 	}
 
@@ -46,7 +45,7 @@ namespace Jde::Iot{
 			for( auto h : x.second )
 				resume( move(h) );
 			}) )
-			CRITICALT( AppTag(), "Could not find client ({:x}) for SetMonitoringModeAwait", (uint)pClient->UAPointer() );
+			Critical( ELogTags::App, "Could not find client ({:x}) for SetMonitoringModeAwait", (uint)pClient->UAPointer() );
 
 		_monitoringRequests.erase( pClient );
 	}

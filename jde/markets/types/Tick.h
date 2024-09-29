@@ -17,7 +17,7 @@ namespace Jde::Markets
 	namespace Proto
 	{
 		namespace Requests{ enum ETickList:int; }
-		namespace Results{ class OptionCalculation; class TickNews; enum ETickType:int; class MessageUnion; }
+		namespace Results{ class OptionCalculation; class TickNews; enum ETickType:int; class Message; }
 	}
 	using Proto::Requests::ETickList; using Proto::Results::ETickType;
 	struct OptionComputation
@@ -66,9 +66,9 @@ namespace Jde::Markets
 		α AddNews( News&& news )noexcept->void;
 		α SetFields()const noexcept->Fields{ return _setFields; }
 		α Ratios()const noexcept->std::map<string,double>;//don't use boost because of blockly
-		α ToProto( ETickType type )const noexcept->Proto::Results::MessageUnion;
+		α ToProto( ETickType type )const noexcept->Proto::Results::Message;
 		α ToProto()const noexcept->up<Jde::Markets::Proto::Tick>;
-		α AddProto( ETickType type, std::vector<Proto::Results::MessageUnion>& messages )const noexcept->void;
+		α AddProto( ETickType type, std::vector<Proto::Results::Message>& messages )const noexcept->void;
 		α AllSet( Markets::Tick::Fields fields )const noexcept->bool;
 		static Fields PriceFields()noexcept;
 		ContractPK ContractId{0};

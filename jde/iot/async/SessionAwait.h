@@ -7,7 +7,7 @@ namespace Jde::Iot{
 	struct UAClient;
 	struct ΓI SessionAwait final : IAwait{
 		SessionAwait( sp<UAClient> client, SRCE )ι:IAwait{sl}, _client{move(client)}{}
-		α await_suspend( HCoroutine h )ι->void override;
+		α Suspend()ι->void override;
 		Ω Trigger( sp<UAClient>&& pClient )ι->void;
 		α await_resume()ι->AwaitResult override{ return {}; }
 	private:

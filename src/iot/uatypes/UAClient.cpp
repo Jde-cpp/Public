@@ -31,25 +31,26 @@ namespace Jde::Iot{
 		_ptr{ Create() },
 		MonitoredNodes{ this }{
 		UA_ClientConfig_setDefault( Configuration() );
-		DBG( "[{:x}] Creating UAClient( '{}', '{}' )", Handle(), Target(), Url() );
-//		DBG( "sizeof(UA_Client)={}", sizeof(UA_Client) );
+		DBG( "[{:x}]Creating UAClient target: '{}' url: '{}' user: '{}' )", Handle(), Target(), Url(), UserId );
 	}
 
-	α UAClient::Shutdown()ι->void{
-		sl _1{ _clientsMutex };
-		for( var& [_,p] : _clients ){
-			p->MonitoredNodes.Shutdown();
-			p->_asyncRequest.Stop();
-			WARN_IF( p.use_count()>1, "[{:x}]use_count={}", p->Handle(), p.use_count() );
+	α UAClient::Shutdown( bool /*terminate*/ )ι->void{
+		{
+			sl _1{ _clientsMutex };
+			for( var& [_,p] : _clients ){
+				p->MonitoredNodes.Shutdown();
+				p->_asyncRequest.Stop();
+				WARN_IF( p.use_count()>1, "[{:x}]use_count={}", p->Handle(), p.use_count() );
+			}
 		}
 		ul _{ _clientsMutex };
 		_clients.clear();
 	}
 	α UAClient::Configuration()ε->UA_ClientConfig*{
-		const fs::path root = IApplication::ApplicationDataFolder();
-		const fs::path certificateFile = root/"cert.pem";
-		const fs::path privateKeyFile = root/"private.pem";
-		const string passcode = OSApp::EnvironmentVariable("JDE_PASSCODE");
+		const fs::path root = IApplication::ApplicationDataFolder()/"ssl";
+		const fs::path certificateFile = root/Ƒ("certs/{}.pem", Target());
+		const fs::path privateKeyFile = root/Ƒ("private/{}.pem", Target());
+		const string passcode = OSApp::EnvironmentVariable("JDE_PASSCODE").value_or( "" );
 		var uri = Str::Replace( _opcServer.CertificateUri, " ", "%20" );
 		bool addSecurity = !uri.empty();//urn:JDE-CPP:Kepware.KEPServerEX.V6:UA%20Server
 		//TODO - test no security also
@@ -57,10 +58,10 @@ namespace Jde::Iot{
 			if( !fs::exists(root) )
 				fs::create_directories( root );
 			if( !fs::exists(privateKeyFile) )
-				Crypto::CreateKey( root/"public.pem", privateKeyFile, passcode );
+				Crypto::CreateKey( root/Ƒ("public/{}.pem", Target()), privateKeyFile, passcode );
 			Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Jde::format("URI:{}", uri), "jde-cpp", "US", "localhost" );
 		}
-		auto config = UA_Client_getConfig( _ptr ); 
+		auto config = UA_Client_getConfig( _ptr );
 		using SecurityPolicyPtr = up<UA_SecurityPolicy, decltype(&UA_free)>;
 		const uint size = addSecurity ? 2 : 1; ASSERT( !config->securityPoliciesSize );
 		SecurityPolicyPtr securityPolicies{ (UA_SecurityPolicy*)UA_malloc( sizeof(UA_SecurityPolicy)*size), &UA_free };
@@ -70,23 +71,23 @@ namespace Jde::Iot{
 			config->clientDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
 			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
-			sc = UA_SecurityPolicy_Basic256Sha256(&securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAException(sc, _ptr, 0, ELogLevel::Debug) );
+			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAException(sc, _ptr, 0, ELogLevel::Debug) );
 		}
 		config->securityPolicies = securityPolicies.release();
 		config->securityPoliciesSize = size;
 		return config;
 	}
-	α UAClient::AddSessionAwait( HCoroutine&& h )ι->void{ 
+	α UAClient::AddSessionAwait( HCoroutine h )ι->void{
 		{
-			lg _{_sessionAwaitableMutex}; 
-			_sessionAwaitables.emplace_back( move(h) ); 
+			lg _{_sessionAwaitableMutex};
+			_sessionAwaitables.emplace_back( move(h) );
 		}
 		Process( std::numeric_limits<RequestId>::max(), nullptr );
 	}
 	α UAClient::TriggerSessionAwaitables()ι->void{
 		vector<HCoroutine> handles;
 		{
-			lg _{_sessionAwaitableMutex}; 
+			lg _{_sessionAwaitableMutex};
 			for_each(_sessionAwaitables, [&handles](auto&& h){handles.emplace_back(move(h));} );
 			_sessionAwaitables.clear();
 		}
@@ -101,7 +102,8 @@ namespace Jde::Iot{
 			pClient->TriggerSessionAwaitables();
 			pClient->ClearRequest<UARequest>( std::numeric_limits<RequestId>::max() );
 		}
-	if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED ){
+		//UA_SESSIONSTATE_CLOSED
+	if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED || connectStatus==UA_STATUSCODE_BADSECURITYCHECKSFAILED ){
 			_awaitingActivation.erase_if( [ua, sessionState,connectStatus]( sp<UAClient> pClient){
 				if( pClient->UAPointer()!=ua )return false;
 				pClient->ClearRequest<UARequest>( std::numeric_limits<RequestId>::max() );//previous clear didn't have pClient
@@ -120,10 +122,10 @@ namespace Jde::Iot{
 			});
 		}
 	}
-	α inactivityCallback(UA_Client *client)->void{
+	α inactivityCallback( UA_Client* /*client*/ )->void{
 		BREAK;
 	}
-	α subscriptionInactivityCallback( UA_Client *client, SubscriptionId subscriptionId, void *subContext ){
+	α subscriptionInactivityCallback( UA_Client *client, SubscriptionId subscriptionId, void* /*subContext*/ ){
 		DBG( "[{:x}.{:x}]subscriptionInactivityCallback", (uint)client, subscriptionId );
 	}
 	α UAClient::Create()ι->UA_Client*{
@@ -156,11 +158,11 @@ namespace Jde::Iot{
 	α UAClient::Process( RequestId requestId, up<UARequest>&& userData )ι->void{
 		_asyncRequest.Process( requestId, move(userData) );
 	}
-	
+
 	α UAClient::ProcessDataSubscriptions()ι->void{
 		Process( 0, nullptr );
 	}
-	
+
 	α UAClient::StopProcessDataSubscriptions()ι->void{
 		ClearRequest<UARequest>( 0 );
 	}
@@ -191,11 +193,12 @@ namespace Jde::Iot{
 		else
 			Resume( move(e), move(h) );
 	}
-	α UAClient::SendBrowseRequest( Browse::Request&& request, HCoroutine&& h )ι->void{
+	α UAClient::SendBrowseRequest( Browse::Request&& request, HCoroutine h )ι->void{
 		try{
 			RequestId requestId{};
-			TRACET( Browse::Tag(), "[{:x}]SendBrowseRequest", Handle() );
+			Trace( BrowseTag, "[{:x}]SendBrowseRequest", Handle() );
 			UAε( UA_Client_sendAsyncBrowseRequest(_ptr, &request, Browse::OnResponse, nullptr, &requestId) );
+			Trace( BrowseTagPedantic, "[{:x}.{}]SendBrowseRequest", Handle(), requestId );
 			Process( requestId, mu<UARequest>(move(h)) );
 		}
 		catch( UAException& e ){
@@ -203,7 +206,7 @@ namespace Jde::Iot{
 		}
 	}
 
-	α UAClient::SendReadRequest( const flat_set<NodeId>&& nodeIds, HCoroutine&& h )ι->void{
+	α UAClient::SendReadRequest( const flat_set<NodeId>&& nodeIds, HCoroutine h )ι->void{
 		if( nodeIds.empty() )
 			return Resume( Exception{"no nodes sent"}, move(h) );
 		flat_map<UA_UInt32, NodeId> ids;
@@ -217,7 +220,7 @@ namespace Jde::Iot{
 					firstRequestId = requestId;
 				ids.emplace( requestId, nodeId );
 	 		}
-			TRACET( Read::LogTag(), "[{:x}.{}]SendReadRequest - count={}", Handle(), firstRequestId, ids.size() );
+			Trace( IotReadTag, "[{:x}.{}]SendReadRequest - count={}", Handle(), firstRequestId, ids.size() );
 			_readRequests.try_emplace( firstRequestId, UARequestMulti<Value>{move(ids)} );
 			Process( firstRequestId, mu<UARequest>(move(h)) );
 		}
@@ -225,7 +228,7 @@ namespace Jde::Iot{
 			Retry( [n=move(nodeIds)]( sp<UAClient>&& p, HCoroutine&& h )mutable{p->SendReadRequest( move(n), move(h) );}, move(e), shared_from_this(), move(h) );
 		}
 	}
-	α UAClient::SendWriteRequest( flat_map<NodeId,Value>&& values, HCoroutine&& h )ι->void{
+	α UAClient::SendWriteRequest( flat_map<NodeId,Value>&& values, HCoroutine h )ι->void{
 		if( values.empty() )
 			return Resume( Exception("no nodes sent"), move(h) );
 		flat_map<UA_UInt32, NodeId> ids;
@@ -254,7 +257,7 @@ namespace Jde::Iot{
 			Process( requestId, nullptr );//if retry fails, don't want to process.
 		}
 		catch( UAException& e ){
-			Retry( [subscriptionId]( sp<UAClient>&& p, HCoroutine&& h )mutable{p->SetMonitoringMode( subscriptionId );}, move(e), shared_from_this(), {} );
+			Retry( [subscriptionId]( sp<UAClient>&& p, HCoroutine )mutable{p->SetMonitoringMode( subscriptionId );}, move(e), shared_from_this(), {} );
 		}
 	}
 
@@ -262,11 +265,11 @@ namespace Jde::Iot{
 		try{
 			RequestId requestId{};
 			UAε( UA_Client_Subscriptions_create_async(UAPointer(), UA_CreateSubscriptionRequest_default(), nullptr, StatusChangeNotificationCallback, DeleteSubscriptionCallback, CreateSubscriptionCallback, nullptr, &requestId) );
-			TRACET( UAMonitoringNodes::LogTag(), "[{:x}.{:x}]CreateSubscription", Handle(), requestId );
+			Trace( MonitoringTag, "[{:x}.{:x}]CreateSubscription", Handle(), requestId );
 			Process( requestId, nullptr );
 		}
 		catch( UAException& e ){
-			Retry( []( sp<UAClient>&& p, HCoroutine&& h )mutable{p->CreateSubscriptions();}, move(e), shared_from_this(), {} );
+			Retry( []( sp<UAClient>&& p, HCoroutine )mutable{p->CreateSubscriptions();}, move(e), shared_from_this(), {} );
 		}
 	}
 
@@ -282,7 +285,7 @@ namespace Jde::Iot{
 
 			RequestId requestId{};
 			UAε( UA_Client_MonitoredItems_createDataChanges_async(UAPointer(), request, contexts, dataChangeCallbacks.data(), deleteCallbacks.data(), CreateDataChangesCallback, (void*)requestHandle, &requestId) );
-			TRACET( UAMonitoringNodes::LogTag(), "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, request.ToJson().dump() );
+			Trace( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, request.ToJson().dump() );
 			Process( requestId, mu<UARequest>(move(h)) );//TODO handle BadSubscriptionIdInvalid
 		}
 		catch( UAException& e ){
@@ -309,7 +312,7 @@ namespace Jde::Iot{
 		{}
 	}
 
-	α UAClient::RequestDataTypeAttributes( const flat_set<NodeId>&& x, HCoroutine&& h )ι->void
+	α UAClient::RequestDataTypeAttributes( const flat_set<NodeId>&& x, HCoroutine h )ι->void
 	{
 		flat_map<UA_UInt32, NodeId> ids;
 		Iot::RequestId firstRequestId{};
@@ -345,7 +348,7 @@ namespace Jde::Iot{
 	α UAClient::TryFind( UA_Client* ua, SL srce )ι->sp<UAClient>{
 		sl _{ _clientsMutex };
 		sp<UAClient> y;
-		if( IApplication::ShuttingDown() )
+		if( Process::ShuttingDown() )
 			Logging::Log( Logging::Message{ELogLevel::Trace, "Application is shutting down.", srce}, _logTag );
 		else if( auto p = find_if(_clients, [ua](var& c){return c.second->_ptr==ua;}); p!=_clients.end() )
 			y = p->second;

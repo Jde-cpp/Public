@@ -1,0 +1,38 @@
+syntax = "proto3";
+option optimize_for = LITE_RUNTIME;
+
+package Jde.Web.Proto;
+
+message FromServerMessage{
+	uint32 request_id=1;
+	oneof Value{
+		uint32 ack=2;
+		uint32 session_id=3;
+		string exception=4;
+		string echo_text=5;
+	}
+}
+
+message FromServerTransmission{
+	repeated FromServerMessage messages = 1;
+}
+
+message CloseServerSide{
+};
+
+message BadTransmissionServer{
+};
+
+message FromClientMessage{
+	uint32 request_id=1;
+	oneof Value{
+		uint32 session_id=2;
+		string echo=3;
+		CloseServerSide close_server_side=4;
+		BadTransmissionServer bad_transmission_server=5;
+	}
+}
+
+message FromClientTransmission{
+	repeated FromClientMessage messages = 1;
+}

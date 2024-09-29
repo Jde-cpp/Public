@@ -6,7 +6,7 @@ namespace Jde::Iot{
 		OpcServer( const DB::IRow& r )ε;
 		Ω Select()ι->AsyncAwait{ return Select(nullptr); };
 		//returns up<vector<OpcServer>> if id=nullptr, otherwise up<OpcServer>.
-		Ω Select( variant<nullptr_t,OpcPK,OpcNK> id, bool includeDeleted=false )ι->AsyncAwait;
+		ΓI Ω Select( variant<nullptr_t,OpcPK,OpcNK> id, bool includeDeleted=false )ι->AsyncAwait;
 
 		OpcPK Id;
 		string Url;

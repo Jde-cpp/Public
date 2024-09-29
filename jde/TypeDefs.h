@@ -38,22 +38,27 @@ using std::suspend_never;
 	#endif
 	#define __PRETTY_FUNCTION__ __FUNCSIG__
 	using std::stop_token;
-	#ifdef NDEBUG
-		#pragma comment(lib, "fmt.lib")
-	#else
-		#pragma comment(lib, "fmtd.lib")
-	#endif
+	// #ifdef NDEBUG
+	// 	#pragma comment(lib, "fmt.lib")
+	// #else
+	// 	#pragma comment(lib, "fmtd.lib")
+	// #endif
 #endif
 
-#define DISABLE_WARNINGS _Pragma("warning(push, 0)") _Pragma("warning(disable: 4244)") _Pragma("warning(disable: 4702)") _Pragma("warning(disable: 4715)") _Pragma("warning(disable: 44996)") _Pragma("warning(disable: 5105 )") _Pragma("warning(disable: 4701)") _Pragma("warning(disable: 5054)") _Pragma("warning(disable: 5260)")
+#define DISABLE_WARNINGS _Pragma("warning(push, 0)") _Pragma("warning(disable: 4244)")  _Pragma("warning(disable: 4701)") _Pragma("warning(disable: 4702)") _Pragma("warning(disable: 4715)")  _Pragma("warning(disable: 5054)") _Pragma("warning(disable: 5104 )") _Pragma("warning(disable: 5105 )") _Pragma("warning(disable: 5260)")
 #define ENABLE_WARNINGS  _Pragma("warning( pop )")
 
 DISABLE_WARNINGS
 #define SPDLOG_FMT_EXTERNAL
-	#include <spdlog/spdlog.h>
-	#include <spdlog/sinks/basic_file_sink.h>
-	#include <boost/container/flat_map.hpp>
-	#include <boost/container/flat_set.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#ifndef NDEBUG
+	#define BOOST_USE_ASAN
+#endif
+#include <boost/container/flat_map.hpp>
+#include <boost/container/flat_set.hpp>
+#include <boost/unordered/concurrent_flat_map.hpp>
+#include <boost/unordered/concurrent_flat_set.hpp>
 ENABLE_WARNINGS
 
 #define α auto
@@ -121,15 +126,24 @@ namespace Jde
 	using std::optional;
 	using std::ostringstream;
 	using std::chrono::duration_cast;
+	using std::chrono::steady_clock;
 	using std::make_tuple;
 	using std::nullopt;
-
-	template<class T, class... Args> α mu( Args&&... args )ι(noexcept(T(std::forward<Args>(args)...)))->up<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return up<T>( new T(std::forward<Args>(args)...) ); }
-  template<class T, class... Args> α ms( Args&&... args )ι(noexcept(T(std::forward<Args>(args)...)))->sp<T>{ static_assert(std::is_constructible_v<T,Args&&...>,"not constructable"); return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); }
+	#define FWD(a) std::forward<decltype(a)>(a)
+	
+	template<class T, class... Args>
+	requires std::constructible_from<T, Args...>
+	α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{ 
+		return up<T>( new T(std::forward<Args>(args)...) ); 
+	}
+  
+	template<class T, class... Args>
+	requires std::constructible_from<T, Args...>
+	α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{ 
+		return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); 
+	}
 
 	using std::vector;
-	template<class T> using VectorPtr = std::shared_ptr<std::vector<T>>;
-
 	using PortType=unsigned short;
 	using DayIndex=uint_fast16_t;//TODO Refactor remove
 	using Day=uint_fast16_t;
@@ -139,8 +153,9 @@ namespace Jde
 	using boost::container::flat_map;
 	using boost::container::flat_multimap;
 	using boost::container::flat_set;
+	using boost::concurrent_flat_map;
+	using boost::concurrent_flat_set;
 #endif
-	using fmt::format;
 	using str = const std::string&;
 
 	template<class T> using vec = const vector<T>&;
@@ -154,9 +169,6 @@ namespace Jde
 	using SL = const Jde::source_location&;
 #ifdef _MSC_VER
 	inline constexpr bool _msvc{ true };
-	#ifndef WIN32_LEAN_AND_MEAN
-		#error WIN32_LEAN_AND_MEAN not defined
-	#endif
 	#define __PRETTY_FUNCTION__ __FUNCSIG__
 	#ifdef _CRTDBG_MAP_ALLOC
 		#include <stdlib.h>
@@ -166,10 +178,22 @@ namespace Jde
 	constexpr bool _msvc{ false };
 #endif
 
+	using fmt::format;
+	ψ Ƒ( fmt::format_string<Args...> fmt, Args&&... args )ε{ return fmt::format<Args...>( fmt, std::forward<Args>(args)... ); }
 	enum class ELogLevel : int8{ NoLog=-1, Trace=0, Debug=1, Information=2, Warning=3, Error=4, Critical=5/*, None=6*/ };
-	Ξ operator<(ELogLevel a,ELogLevel b)ι->bool{ return (int)a<(int)b; };
-	inline constexpr std::array<sv,7> ELogLevelStrings = { "Trace"sv, "Debug"sv, "Information"sv, "Warning"sv, "Error"sv, "Critical"sv, "None"sv };
-	constexpr sv ToString( ELogLevel v )ι{ return (uint8)v<ELogLevelStrings.size() ? ELogLevelStrings[(uint8)v] : sv{}; }
+	inline constexpr std::array<sv,7> ELogLevelStrings = { "Trace", "Debug", "Information", "Warning", "Error", "Critical", "None" };
+	constexpr sv ToString( ELogLevel v )ι{ return (uint8)v<ELogLevelStrings.size() ? ELogLevelStrings[(uint8)v] : sv{}; }//TODO remove
+
+	Τ concept IsEnum = std::is_enum_v<T>;
+	template<IsEnum T> constexpr α underlying( T a )ι{ return std::to_underlying<T>(a); };
+	template<IsEnum T> constexpr α operator|( T a, T b )ι->T{ return (T)( underlying(a)|underlying(b) ); };
+	template<IsEnum T> constexpr α operator&( T a, T b )ι->T{ return (T)(underlying(a)&underlying(b)); };
+	template<IsEnum T> constexpr α operator<( T a, T b )ι->bool{ return underlying(a)<underlying(b); };
+	template<IsEnum T> constexpr α operator~( T a )ι{ return (T)( ~underlying(a) ); }
+	template<IsEnum T> constexpr α operator|=( T& a, T b ){ return a = a | b; }
+	template<IsEnum T> constexpr α operator!( T x ){ return underlying(x)!=0; }
+	template<IsEnum T> constexpr α empty( T a )ι->bool{ return underlying(a)==0; };
+
 
 #ifdef NDEBUG
 	inline constexpr bool _debug{ false };

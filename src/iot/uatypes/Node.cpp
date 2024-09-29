@@ -37,10 +37,10 @@ namespace Jde::Iot{
 				ToGuid( p->second, nodeId.identifier.guid );
 			}
 			else
-				DBGT( AppTag(), "No identifier in nodeId" );
+				Debug( ELogTags::App, "No identifier in nodeId" );
 		}
 		catch( json::exception& e ){
-			CRITICALT( AppTag(), "Could not create json: {}", e.what() );
+			Critical( ELogTags::App, "Could not create json: {}", e.what() );
 		}
 	}
 
@@ -80,7 +80,7 @@ namespace Jde::Iot{
 	}
 	NodeId::NodeId( Proto::ExpandedNodeId&& x )ι{
 		const auto& proto = x.node();
-		nodeId.namespaceIndex = proto.namespace_index();
+		nodeId.namespaceIndex = (int16)proto.namespace_index();
 		if( proto.has_numeric() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
 			nodeId.identifier.numeric = proto.numeric();

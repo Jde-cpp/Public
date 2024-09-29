@@ -21,7 +21,7 @@ namespace Jde::Iot{
 		~UAClient();
 
 		operator UA_Client* ()ι{ return _ptr; }
-		Ω Shutdown()ι->void;
+		Ω Shutdown( bool terminate )ι->void;
 		Ω GetClient( string id, string userId, string pw, SRCE )ι{ return ConnectAwait{move(id), move(userId), move(pw), sl}; }
 		Ω Find( str id, str userId, str pw )ι->sp<UAClient>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
@@ -31,11 +31,11 @@ namespace Jde::Iot{
 		α DataSubscriptions( CreateMonitoredItemsRequest&& r, Handle requestHandle, HCoroutine&& h )ι->void;
 		α DataSubscriptionDelete( Iot::SubscriptionId subscriptionId, flat_set<MonitorId>&& monitoredItemIds )ι->void;
 
-		α SendBrowseRequest( Browse::Request&& request, HCoroutine&& h )ι->void;
-		α SendReadRequest( const flat_set<NodeId>&& nodes, HCoroutine&& h )ι->void;
-		α SendWriteRequest( flat_map<NodeId,Value>&& values, HCoroutine&& h )ι->void;
+		α SendBrowseRequest( Browse::Request&& request, HCoroutine h )ι->void;
+		α SendReadRequest( const flat_set<NodeId>&& nodes, HCoroutine h )ι->void;
+		α SendWriteRequest( flat_map<NodeId,Value>&& values, HCoroutine h )ι->void;
 		α SetMonitoringMode( Iot::SubscriptionId subscriptionId )ι->void;
-		α RequestDataTypeAttributes( const flat_set<NodeId>&& x, HCoroutine&& h )ι->void;
+		α RequestDataTypeAttributes( const flat_set<NodeId>&& x, HCoroutine h )ι->void;
 		Ṫ ClearRequest( UA_Client* ua, RequestId requestId )ι->up<T>;
 		Ω ClearRequestH( UA_Client* ua , RequestId requestId)ι->HCoroutine{ auto r = ClearRequest<UARequest>( ua, requestId ); return r ? r->CoHandle : nullptr; }
 		Ŧ ClearRequest( RequestId requestId )ι->up<T>;
@@ -44,7 +44,7 @@ namespace Jde::Iot{
 		α Process( RequestId requestId, up<UARequest>&& userData )ι->void;
 		α ProcessDataSubscriptions()ι->void;
 		α StopProcessDataSubscriptions()ι->void;
-		α AddSessionAwait( HCoroutine&& h )ι->void;
+		α AddSessionAwait( HCoroutine h )ι->void;
 		α TriggerSessionAwaitables()ι->void;
 
 		α Target()ι->str{ return _opcServer.Target; }
@@ -84,7 +84,7 @@ namespace Jde::Iot{
 
 #define _logTag LogTag()
 	Ŧ UAClient::ClearRequest( UA_Client* ua, RequestId requestId )ι->up<T>{
-		auto p = TryFind( ua ); 
+		auto p = TryFind( ua );
 		return p ? p->ClearRequest<T>( requestId ) : up<T>{};
 	}
 

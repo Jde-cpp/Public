@@ -5,50 +5,66 @@
 #include <jde/iot/async/SessionAwait.h>
 
 namespace Jde::Iot::Browse{
-	sp<Jde::LogTag> _logTag{ Logging::Tag("app.browse") };
-	α Tag()ι->sp<LogTag>{return _logTag;}
-
-	α FoldersAwait::await_suspend( HCoroutine h )ι->void{
-		IAwait::await_suspend( h );
-		_client->SendBrowseRequest( Request{move(_node)}, move(h) );
+	α FoldersAwait::Suspend()ι->void{
+		_client->SendBrowseRequest( Request{move(_node)}, _h );
 	}
 
 	α Folders( NodeId node, sp<UAClient>& c )ι->FoldersAwait{ return FoldersAwait{ move(node), c }; }
+	ObjectsFolderAwait::ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SL sl )ι:
+		base{ sl },
+		_ua{ua},
+		_node{node},
+		_snapshot{snapshot}
+	{}
 
-	α ObjectsFolder( sp<UAClient> ua, NodeId node, Web::Rest::Request req, bool snapshot )ι->Task{
+
+	α ObjectsFolderAwait::Execute()ι->Coroutine::Task{
 		bool retry{};
 		try{
-			auto y = ( co_await Folders(node, ua) ).SP<Response>();
+			auto y = ( co_await Folders(_node, _ua) ).SP<Response>();
 			flat_set<NodeId> nodes = y->Nodes();
-			THROW_IF( nodes.size()==0, "No items found for: {}", node.to_string() );
+			THROW_IF( nodes.size()==0, "No items found for: {}", _node.to_string() );
 
 			up<flat_map<NodeId, Value>> pValues;
-
-			if( snapshot )
-			 	pValues = ( co_await Read::SendRequest(nodes, ua) ).UP<flat_map<NodeId, Value>>();
-			auto pDataTypes = (co_await Attributes::ReadDataTypeAttributes( move(nodes), move(ua) )).UP<flat_map<NodeId, NodeId>>();
-			Web::Rest::ISession::Send(y->ToJson(move(pValues), move(*pDataTypes)), move(req) );
+			if( _snapshot )
+			 	pValues = ( co_await Read::SendRequest(nodes, _ua) ).UP<flat_map<NodeId, Value>>();
+			auto pDataTypes = (co_await Attributes::ReadDataTypeAttributes( move(nodes), _ua )).UP<flat_map<NodeId, NodeId>>();
+			Resume( y->ToJson(move(pValues), move(*pDataTypes)) );
 		}
 		catch( UAException& e ){
 			if( retry=e.IsBadSession(); retry )
 				e.PrependWhat( "Retry ObjectsFolder.  " );
-			else{
-				TRACE( "ObjectsFolder - Failed {}", e.what() );
-				Web::Rest::ISession::Send( move(e), move(req) );
-			}
+			else
+				ResumeExp( move(e) );
 		}
 		catch( IException& e ){
-			Web::Rest::ISession::Send( move(e), move(req) );
+			ResumeExp( move(e) );
 		}
 		if( retry ){
-			co_await AwaitSessionActivation( ua );
-			ObjectsFolder( ua, node, move(req), snapshot );
+			try{
+				co_await AwaitSessionActivation( _ua );
+				[]( ObjectsFolderAwait& self )->Task {
+					try{
+						auto j = co_await ObjectsFolderAwait{ self._node, self._snapshot, self._ua, self._sl };
+						self.Resume( move(j) );
+					}
+					catch( IException& e ){
+						self.ResumeExp( move(e) );
+					}
+				}( *this );
+			}
+			catch(IException& e){
+				ResumeExp( move(e) );
+			}
 		}
 	}
+	α ObjectsFolderAwait::Suspend()ι->void{
+		Execute();
+	}
 
-	α OnResponse( UA_Client *ua, void* userdata, RequestId requestId, UA_BrowseResponse* response )ι->void{
-		auto h = UAClient::ClearRequestH( ua, requestId ); RETURN_IF( !h, ELogLevel::Critical, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId );
-
+	α OnResponse( UA_Client *ua, void* /*userdata*/, RequestId requestId, UA_BrowseResponse* response )ι->void{
+		auto h = UAClient::ClearRequestH( ua, requestId ); if( !h ){ Critical( BrowseTag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId ); return; }
+		Trace( BrowseTag, "[{:x}.{}]OnResponse", (uint)ua, requestId );
 		if( !response->responseHeader.serviceResult )
 			Resume( ms<Response>(move(*response)), move(h) );
 		else
@@ -86,7 +102,7 @@ namespace Jde::Iot::Browse{
 					if( auto p = dataTypes.find(nodeId); p!=dataTypes.end() )
 						reference["dataType"] = Iot::ToJson( p->second );
 					else
-						WARN( "Could not find data type for node={}.", nodeId.ToJson().dump() );
+						Warning( BrowseTag, "Could not find data type for node={}.", nodeId.ToJson().dump() );
 					reference["referenceType"] = Iot::ToJson( ref.referenceTypeId );
 					reference["isForward"] = ref.isForward;
 					reference["node"] = Iot::ToJson( nodeId );
@@ -113,8 +129,7 @@ namespace Jde::Iot::Browse{
 			j["references"] = references;
 			return j;
 		}
-		catch( json::exception& e )
-		{
+		catch( json::exception& e ){
 			throw Exception{ SRCE_CUR, move(e), ELogLevel::Critical };
 		}
 	}
