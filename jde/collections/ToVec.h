@@ -20,13 +20,11 @@ namespace Jde::ToVec
 
 	template<class T> inline α ToStringT( const T& x )ι->string{
 		constexpr bool StringConcept = requires(const T& t) { t.data(); t.size(); };
-		if constexpr( StringConcept )
-		{
+		if constexpr( StringConcept ){
 			return string{ x.data(), x.size() };
 		}
-		else
-		{
-			ostringstream os;
+		else{
+			std::ostringstream os;
 			os << x;
 			return os.str();
 		}
@@ -37,11 +35,11 @@ namespace Jde::ToVec
 			std::begin( args ),
 			std::end( args ),
 			string{ fmt },
-			[](sv toFmt, str arg){ 
-				return fmt::vformat( toFmt, fmt::make_format_args(arg) ); 
+			[](sv toFmt, str arg){
+				return fmt::vformat( toFmt, fmt::make_format_args(arg) );
 			}
 		);
-	}	
+	}
 
 	template<typename Head, typename... Tail>
 	void Append( vector<string>& values, Head&& h, Tail&&... t )ι{

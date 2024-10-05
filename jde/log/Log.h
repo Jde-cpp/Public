@@ -16,9 +16,6 @@
 #endif
 
 #define Φ Γ auto
-namespace Jde{
-	Φ CanBreak()ι->bool;
-}
 namespace Jde::Logging{
 
 	//α Log( const Logging::ILogEntry& m )ι->void;

@@ -55,6 +55,7 @@ DISABLE_WARNINGS
 #ifndef NDEBUG
 	#define BOOST_USE_ASAN
 #endif
+#include <boost/json.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/container/flat_set.hpp>
 #include <boost/unordered/concurrent_flat_map.hpp>
@@ -75,8 +76,7 @@ ENABLE_WARNINGS
 #define ε noexcept(false)
 #define Ε const noexcept(false)
 //#define Φ Γ auto
-namespace Jde
-{
+namespace Jde{
 	using namespace std::literals::string_view_literals;
 
 	using uint8=uint_fast8_t;
@@ -124,23 +124,22 @@ namespace Jde
 	using std::variant;
 	using std::move;
 	using std::optional;
-	using std::ostringstream;
 	using std::chrono::duration_cast;
 	using std::chrono::steady_clock;
 	using std::make_tuple;
 	using std::nullopt;
 	#define FWD(a) std::forward<decltype(a)>(a)
-	
+
 	template<class T, class... Args>
 	requires std::constructible_from<T, Args...>
-	α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{ 
-		return up<T>( new T(std::forward<Args>(args)...) ); 
+	α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{
+		return up<T>( new T(std::forward<Args>(args)...) );
 	}
-  
+
 	template<class T, class... Args>
 	requires std::constructible_from<T, Args...>
-	α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{ 
-		return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... ); 
+	α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{
+		return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... );
 	}
 
 	using std::vector;
@@ -149,13 +148,16 @@ namespace Jde
 	using Day=uint_fast16_t;
 
 	namespace fs=std::filesystem;
-#ifndef NO_BOOST
 	using boost::container::flat_map;
 	using boost::container::flat_multimap;
 	using boost::container::flat_set;
 	using boost::concurrent_flat_map;
 	using boost::concurrent_flat_set;
-#endif
+	using jvalue=boost::json::value;
+	using jarray=boost::json::array;
+	using jobject=boost::json::object;
+	using boost::json::parse;
+	using boost::json::serialize;
 	using str = const std::string&;
 
 	template<class T> using vec = const vector<T>&;
@@ -165,8 +167,8 @@ namespace Jde
 	using std::suspend_never;
 	using std::source_location;
 	#define SRCE_CUR std::source_location::current()
-	#define SRCE const Jde::source_location& sl=SRCE_CUR
-	using SL = const Jde::source_location&;
+	#define SRCE const std::source_location& sl=SRCE_CUR
+	using SL = const std::source_location&;
 #ifdef _MSC_VER
 	inline constexpr bool _msvc{ true };
 	#define __PRETTY_FUNCTION__ __FUNCSIG__

@@ -99,7 +99,7 @@ namespace Jde{
 		auto [end, ec] = std::to_chars( b.data(), b.data() + b.size(), x, std::chars_format::fixed, (int)precision );
 		return ec == std::errc{} ? string{} : std::string{ b.data(), end };
 #else
-		ostringstream os; os.precision( precision );
+		std::ostringstream os; os.precision( precision );
 		os << x;
 		return os.str();
 #endif
@@ -269,7 +269,7 @@ namespace Jde{
 	}
 	//TODO rename join
 	Ŧ Str::AddSeparators( T collection, sv separator, bool quote )ι->string{
-		ostringstream os;
+		std::ostringstream os;
 		auto first = true;
 		for( const auto& item : collection ){
 			if( first )

@@ -1,4 +1,9 @@
 ﻿#pragma once
+#ifndef MESSAGE_H
+#define MESSAGE_H
+#ifndef _MSC_VER
+	#include <signal.h>
+#endif
 #include "../db/usings.h"
 
 #ifdef NDEBUG
@@ -14,6 +19,9 @@
 #endif
 #define Φ Γ auto
 #define var const auto
+namespace Jde{
+	Φ CanBreak()ι->bool;
+}
 namespace Jde::Logging{
 	Φ BreakLevel()ι->ELogLevel;
 	Γ auto Default()ι->spdlog::logger*;
@@ -178,3 +186,4 @@ namespace Logging{
 #undef FormatString
 #undef Φ
 #undef var
+#endif
