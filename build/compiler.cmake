@@ -98,7 +98,7 @@ else()
 	include_directories(${absl_DIR}/../../../include)
 endif()
 
-include_directories( "$ENV{JDE_DIR}/Public" )
+include_directories( "$ENV{JDE_DIR}/Public/include" )
 if(MSVC)
 	include_directories( $ENV{INCLUDE} )
 	include_directories( $ENV{REPO_DIR}/vcpkg/installed/x64-windows/include )
