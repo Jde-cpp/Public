@@ -37,7 +37,7 @@ namespace Jde::DB::MySql{
 		return os.str();
 	}
 
-	α ProcSql( bool addSchema )ι->string{
+	α Sql::ProcSql( bool addSchema )ι->string{
 		std::ostringstream os{ "select SPECIFIC_NAME from INFORMATION_SCHEMA.ROUTINES", std::ios::ate };
 		if( addSchema )
 			os << " where ROUTINE_SCHEMA=?";

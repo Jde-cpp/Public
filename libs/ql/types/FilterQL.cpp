@@ -1,7 +1,7 @@
-#include <jde/ql/FilterQL.h>
-#include <jde/ql/TableQL.h>
+#include <jde/ql/types/FilterQL.h>
+#include <jde/ql/types/TableQL.h>
 #include <jde/db/meta/Column.h>
-#include <jde/db/meta/Schema.h>
+#include <jde/db/names.h>
 #include <jde/db/meta/Table.h>
 #include <regex>
 
@@ -56,12 +56,12 @@ namespace Jde{
 		return ToEnum<DB::EOperator>( QLOperatorStrings, op ).value_or( DB::EOperator::Equal );
 	}
 
-	α QL::ToWhereClause( const TableQL& table, const DB::Table& schemaTable )->DB::WhereClause{
+	α QL::ToWhereClause( const TableQL& table, const DB::View& dbTable )->DB::WhereClause{
 		let pFilter = Json::FindObject( table.Args, "filter" );
-		let& j = pFilter ? table.Args : *pFilter;
+		let& j = pFilter ? *pFilter : table.Args;
 		DB::WhereClause where;
 		for( let& [name,value] : j ){
-			auto pColumn = schemaTable.GetColumnPtr( DB::Schema::FromJson(name) );
+			auto pColumn = dbTable.GetColumnPtr( DB::Names::FromJson(name) );
 			using enum DB::EOperator;
 			DB::EOperator op = Equal;
 			const jvalue* pJson{};
@@ -80,11 +80,8 @@ namespace Jde{
 					pJson = &first.value();
 				}
 				else
-					THROW("Invalid filter value type '{}'.", Json::TypeName(value) );
-				if( pJson ){
-					where << op << "?";
-					parameters.push_back( ToObject(pColumn->Type, *pJson, name) );
-				}
+					THROW("Invalid filter value type '{}'.", Json::Kind(value.kind()) );
+				where.Add( pColumn, op, DB::Value{pColumn->Type, *pJson} );
 			}
 		}
 		return where;

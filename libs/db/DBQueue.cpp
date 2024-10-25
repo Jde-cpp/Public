@@ -62,9 +62,8 @@ namespace Jde::DB{
 				else
 					_spDataSource->ExecuteNoLog( pStatement->Sql, pStatement->Parameters.get() );
 			}
-			catch( const IException& e )
-			{
-				DB::LogNoServer( pStatement->Sql, pStatement->Parameters.get(), ELogLevel::Error, e.what(), pStatement->SourceLocation );
+			catch( const IException& e ){
+				//DB::LogNoServer( pStatement->Sql, pStatement->Parameters.get(), ELogLevel::Error, e.what(), pStatement->SourceLocation );
 			}
 		}
 		_stopped = true;

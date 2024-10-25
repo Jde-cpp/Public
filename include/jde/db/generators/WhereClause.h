@@ -1,4 +1,5 @@
-﻿#include <jde/db/Value.h>
+﻿#pragma once
+#include <jde/db/Value.h>
 #include <jde/db/generators/Syntax.h>
 
 namespace Jde::DB{
@@ -15,6 +16,8 @@ namespace Jde::DB{
 
 		α Add( sp<Column> col, Value param, SRCE )ε->void{ Add( col, EOperator::Equal, move(param), sl ); }
 		α Add( sp<Column> col, vector<Value> inParams, SRCE )ε->void{ Add( col, EOperator::Equal, move(inParams), sl ); }
+		α Add( string clause )ε{ _clauses.push_back(move(clause)); }
+		α Empty()Ι->bool{ return _clauses.empty(); }
 		α Move()ι->string;
 
 		α Params()ι->vector<Value>&{ return _params; }

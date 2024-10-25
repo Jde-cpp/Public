@@ -4,7 +4,7 @@
 #include <jde/access/usings.h>
 #include "Permission.h"
 
-namespace Jde::DB{ struct Schema; }
+namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Access{
 	using ResourcePK=uint16;
 //	using ProviderPK=uint16;
@@ -18,10 +18,10 @@ namespace Jde::Access{
 	};
 
 	struct ResourceLoadAwait final : TAwait<flat_map<ResourcePK,Resource>>{
-		ResourceLoadAwait( sp<DB::Schema> schema, vector<AppPK> appPKs )ι;
+		ResourceLoadAwait( sp<DB::AppSchema> schema, vector<AppPK> appPKs )ι;
 		const vector<AppPK> AppPKs;
 	private:
 		α Suspend()ι->void override;
-		sp<DB::Schema> _schema;
+		sp<DB::AppSchema> _schema;
 	};
 }

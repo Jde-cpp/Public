@@ -1,6 +1,8 @@
 #include "Purge.h"
-#include <jde/ql/GraphQL.h>
+#include <jde/access/IAcl.h>
+//#include "../GraphQL.h"
 #include <jde/ql/GraphQLHook.h>
+#include <jde/ql/types/MutationQL.h>
 #include <jde/db/Database.h>
 #include <jde/db/meta/Column.h>
 #include "../GraphQuery.h"
@@ -8,19 +10,19 @@
 #define let const auto
 
 namespace Jde::QL{
-	PurgeAwait::PurgeAwait( const DB::Table& table, const MutationQL& mutation, UserPK userPK, sp<DB::IDataSource> ds, SL sl )ι:
-		AsyncAwait{ [&,user=userPK](HCoroutine h){ Execute( table, mutation, user, ds, h ); }, sl, "PurgeAwait" }
+	PurgeAwait::PurgeAwait( const DB::Table& table, const MutationQL& mutation, UserPK userPK, SL sl )ι:
+		AsyncAwait{ [&,user=userPK](HCoroutine h){ Execute( table, mutation, user, h ); }, sl, "PurgeAwait" }
 	{}
 
 	α PurgeStatements( const DB::Table& table, const MutationQL& m, UserPK userPK, vector<DB::Value>& parameters, SRCE )ε->vector<string>{
-		let pId = m.Args.find( "id" ); THROW_IF( pId==m.Args.end(), "Could not find id argument. {}", m.Args.dump() );
-		parameters.push_back( ToObject(DB::EType::ULong, *pId, "id") );
-		if( let p=UM::FindAuthorizer(table.Name); p )
-			p->TestPurge( *pId, userPK );
+		let id = Json::AsNumber<uint>( m.Args, "id");
+		parameters.push_back( DB::Value{DB::EType::ULong, id} );
+		if( let p=table.Schema->Authorizer; p )
+			p->Test(Access::ERights::Purge, table.Name, userPK);
 
-		sp<const DB::Table> pExtendedFromTable;
+		let pExtendedFromTable = table.GetExtendedFromTable();
 		auto pk = table.GetPK();
-		vector<string> statements{ table.PurgeProcName.size() ? Ƒ("{}( ? )", table.PurgeProcName) : Ƒ("delete from {} where {}=?", table.DBName, pk.Name) };
+		vector<string> statements{ table.PurgeProcName.size() ? Ƒ("{}( ? )", table.PurgeProcName) : Ƒ("delete from {} where {}=?", table.DBName, pk->Name) };
 		if( pExtendedFromTable ){
 			let extendedPurge = PurgeStatements( *pExtendedFromTable, m, userPK, parameters, sl );
 			statements.insert( end(statements), begin(extendedPurge), end(extendedPurge) );
@@ -28,7 +30,7 @@ namespace Jde::QL{
 		return statements;
 	}
 
-	α PurgeAwait::Execute( const DB::Table& table, MutationQL mutation, UserPK userPK, sp<DB::IDataSource> ds, HCoroutine h )ι->Task{
+	α PurgeAwait::Execute( const DB::Table& table, MutationQL mutation, UserPK userPK, HCoroutine h )ι->Task{
 		try{
 			( co_await Hook::PurgeBefore(mutation, userPK) ).CheckError();
 		}
@@ -43,6 +45,7 @@ namespace Jde::QL{
 
 			//TODO for mysql allow CLIENT_MULTI_STATEMENTS return ds->Execute( Str::AddSeparators(statements, ";"), parameters, sl );
 			auto result{ mu<uint>() };
+			sp<DB::IDataSource> ds = table.Schema->DS();
 			for( auto& statement : statements ){
 				auto a = statement.starts_with("delete ")
 					? ds->ExecuteCo(move(statement), vector<DB::Value>{parameters.front()}, _sl) //right now, parameters should singular and the same.

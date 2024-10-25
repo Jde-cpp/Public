@@ -1,6 +1,8 @@
-#include <jde/ql/TableQL.h>
-#include <jde/ql/FilterQL.h>
-#include <jde/db/meta/Schema.h>
+#include <jde/ql/types/TableQL.h>
+#include <jde/ql/types/FilterQL.h>
+#include <jde/db/names.h>
+#include <jde/db/meta/AppSchema.h>
+#include <jde/db/meta/DBSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/generators/Syntax.h>
 
@@ -8,7 +10,7 @@
 namespace Jde::QL{
 	using DB::EOperator;
 	α TableQL::DBName()Ι->string{
-		return DB::Schema::ToPlural( DB::Schema::FromJson(JsonName) );
+		return DB::Names::ToPlural( DB::Names::FromJson(JsonName) );
 	}
 	α TableQL::Filter()Ε->FilterQL{
 		FilterQL filters;
@@ -25,24 +27,10 @@ namespace Jde::QL{
 			else if( value.is_array() ) //(id: [1,2,3]) or (name: ["charlie","bob"])
 				columnFilters.emplace_back( EOperator::In, value );
 			else
-				THROW("Invalid filter value type '{}'.", value.TypeName() );
+				THROW("Invalid filter value type '{}'.", Json::Kind(value.kind()) );
 			filters.ColumnFilters.emplace( jsonColumnName, columnFilters );
 		}
 		return filters;
-	}
-
-	α MutationQL::TableName()Ι->string{
-		if( _tableName.empty() )
-			_tableName = DB::Schema::ToPlural<string>( DB::Schema::FromJson<string,string>(JsonName) );
-		return _tableName;
-	}
-
-	α MutationQL::InputParam( sv name )Ε->JValue{
-		return Input().Get<JValue>( name );
-	}
-
-	α MutationQL::Input(SL sl)Ε->jobject{
-		return Args.Get<jobject>( "input", sl );
 	}
 
 	α ColumnQL::QLType( const DB::Column& column, SL sl )ε->string{

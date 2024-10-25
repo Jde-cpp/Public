@@ -22,13 +22,15 @@ namespace Jde::DB{
 		case Int8: value = AsNumber<int8>(j, sl); break;
 		case Int16: case Int: value = AsNumber<int>( j ); break;
 		case Long: value = AsNumber<_int>( j ); break;
-		case UInt16: case UInt: value = AsNumber<uint32>( j ); break;
+		case UInt8: value = AsNumber<uint8>( j ); break;
+		case UInt16: value = AsNumber<uint16>( j ); break;
+		case UInt: value = AsNumber<uint32>( j ); break;
 		case ULong: value = AsNumber<uint>( j ); break;
 		case SmallFloat: case Float: case Decimal: case Numeric: case Money: value = AsNumber<double>( j ); break;
-		case DateTime: case SmallDateTime: value = Jde::DateTime{AsString(j)}.GetTimePoint(); break;
+		case DateTime: case SmallDateTime: value = AsString( j ); break; //should be $now
 		case None: case Binary: case VarBinary: case Guid: case Cursor: case RefCursor: case Image: case Blob: case TimeSpan:
 			throw Exception{ sl, "EValue {} is not implemented.", (uint)type };
-		case WChar: case UInt8: case Char: default:
+		case WChar: case Char: default:
 			throw Exception{ sl, "char EValue {} is not implemented.", (uint)type };
 		}
 		return value;
@@ -76,7 +78,7 @@ namespace Jde::DB{
 		case String: j = get_string(); break;
 		case Null: j = nullptr; break;
 		case Bool: j = get_bool(); break;
-		case Int64: j = get_int32(); break;
+		case Int64: j = get_int(); break;
 		case UInt64: j = get_uint(); break;
 		case Int32: j = get_int32(); break;
 		case Double: j = get_double(); break;
@@ -86,7 +88,8 @@ namespace Jde::DB{
 	}
 }
 namespace Jde{
-	α DB::ToType( sv typeName )ι->DB::EType{
+	α DB::ToType( sv csTypeName )ι->DB::EType{
+		iv typeName{ ToIV(csTypeName) };
 		//String typeName{ t };
 		EType type{ EType::None };
 		if( typeName=="dateTime" )
@@ -101,7 +104,7 @@ namespace Jde{
 			type=EType::Bit;
 		else if( typeName=="int" )
 			type = EType::Int;
-		else if( typeName=="uint32" )
+		else if( typeName=="uint" )
 			type = EType::UInt;
 		else if( typeName=="uint64" )
 			type = EType::ULong;

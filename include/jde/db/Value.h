@@ -11,10 +11,11 @@ namespace Jde::DB{
 		using Underlying=variant<std::nullptr_t,string,bool,int8_t,int,_int,uint32_t,uint,double,DBTimePoint>;
 		Value()=default;
 		Value( Underlying v )ι:Variant{v}{}
+		//explicit Value( sv v )ι:Variant{string{v}}{}
 		Value( EType type, const jvalue& j, SRCE )ε;
 
 		α ToJson( jvalue& j )Ι->void;
-		α ToJson()Ι->jvalue{ jvalue j; ToJson(j); return j; };
+		α ToJson()Ι->jvalue{ jvalue v; ToJson(v); return v; };
 
 		α ToString()Ι->string;
 		α TypeName()Ι->string;
@@ -31,7 +32,7 @@ namespace Jde::DB{
 		α get_uint()Ι->uint{ return get<uint>(Variant); }
 		α get_double()Ι->double{ return get<double>(Variant); }
 		α get_time()Ι->DBTimePoint{ return get<DBTimePoint>(Variant); }
-
+		Ŧ get_number( SRCE )Ε->T;
 		α is_null()Ι->bool{ return holds_alternative<nullptr_t>(Variant); }
 		α is_bool()Ι->bool{ return holds_alternative<bool>(Variant); }
 		α is_double()Ι->bool{ return holds_alternative<double>(Variant); }
@@ -40,11 +41,25 @@ namespace Jde::DB{
 		α is_string()Ι->bool{ return holds_alternative<string>(Variant); }
 
 		α set_bool( bool v )ι->void{ Variant=v; }
+		α operator=( uint v )ι{ Variant=v; return *this; }
 		Underlying Variant;
 	};
 
 	Ŧ ToValue( vec<T> x )ι->vector<Value>;
-
+#define GET(x) static_cast<T>( get_##x() )
+	Ŧ Value::get_number( SL sl )Ε->T{
+		switch( Type() ){
+			using enum EValue;
+		case Int8: return GET(int8);
+		case Int32: return GET(int32);
+		case Int64: return GET(int);
+		case UInt32: return GET(uint32);
+		case UInt64: return GET(uint);
+		case Double: return GET(double);
+		default: THROW( "Type '{}' not implemented.", TypeName() );
+		}
+	}
+#undef GET
 }
 namespace Jde{
 	Ŧ DB::ToValue( vec<T> x )ι->vector<Value>{

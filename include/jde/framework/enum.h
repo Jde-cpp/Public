@@ -1,4 +1,5 @@
 #pragma once
+#include <charconv>
 
 #define $ template<IsEnum T> constexpr α
 #define let const auto

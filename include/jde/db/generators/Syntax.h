@@ -7,6 +7,7 @@ namespace Jde::DB{
 	enum class EOperator : uint8{Equal,NotEqual,Regex,Glob,In,NotIn,Greater,GreaterOrEqual,Less,LessOrEqual,ElementMatch};
 	α ToOperator( sv op )ι->EOperator;
 	struct Syntax{
+		Ω Instance()->const Syntax&;
 		virtual ~Syntax()=default;
 		α FormatOperator( const Column& col, EOperator op, uint size=1, SRCE )Ε->string;
 		β AddDefault( sv tableName, sv columnName, Value dflt )Ι->string;
@@ -28,6 +29,7 @@ namespace Jde::DB{
 		β SchemaDropsObjects()Ι->bool{ return false; }
 		β SchemaSelect()Ι->sv{ return "select schema_name();"; }
 		β SpecifyIndexCluster()Ι->bool{ return true; }
+		β SysSchema()Ι->sv{ return "dbo"; }
 		α ToString( EType type )Ι->string;
 
 		β UniqueIndexNames()Ι->bool{ return false; }
@@ -37,6 +39,7 @@ namespace Jde::DB{
 	};
 
 	struct MySqlSyntax final: Syntax{
+		Ω Instance()->const MySqlSyntax&;
 		α AddDefault( sv tableName, sv columnName, Value dflt )Ι->string;
 		α AltDelimiter()Ι->sv override{ return "$$"; }
 		α CanSetDefaultSchema()Ι->bool{ return true; }
@@ -53,9 +56,10 @@ namespace Jde::DB{
 		α ProcParameterPrefix()Ι->sv override{ return {}; }
 		α ProcStart()Ι->sv override{ return "begin"; }
 		α ProcEnd()Ι->sv override{ return "end"; }
-		β SchemaDropsObjects()Ι->bool override{ return true; }
+		α SchemaDropsObjects()Ι->bool override{ return true; }
 		α SchemaSelect()Ι->sv override{ return "select database() from dual;"; }
 		α SpecifyIndexCluster()Ι->bool override{ return false; }
+		α SysSchema()Ι->sv override{ return "sys"; }
 		α UsingClause( const Column& c0, const Column& c1 )Ι->string override;
 		α UtcNow()Ι->iv override{ return "CURRENT_TIMESTAMP()"; }
 		α ZeroSequenceMode()Ι->sv override{ return "SET @@session.sql_mode = CASE WHEN @@session.sql_mode NOT LIKE '%NO_AUTO_VALUE_ON_ZERO%' THEN CASE WHEN LENGTH(@@session.sql_mode)>0 THEN CONCAT_WS(',',@@session.sql_mode,'NO_AUTO_VALUE_ON_ZERO') ELSE 'NO_AUTO_VALUE_ON_ZERO' END ELSE @@session.sql_mode END"; }

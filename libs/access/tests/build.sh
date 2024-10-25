@@ -14,8 +14,8 @@ if [ $all -eq 1 ]; then
 	$BUILD libs/access/src $type $clean $compiler || exit 1;
 	$BUILD libs/ql $type $clean $compiler || exit 1;
 fi
-
-cd tests/access;
+echo `pwd`;
+cd libs/access/tests;
 $BUILD `pwd` $type $clean $compiler || exit 1;
 
 # if [ ! -f $JDE_DIR/bin/config/Tests.UM.json ]; then ln -s `pwd`/config/Tests.UM.json $JDE_DIR/bin/config; fi;

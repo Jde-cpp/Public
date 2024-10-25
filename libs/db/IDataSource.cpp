@@ -44,7 +44,7 @@ namespace Jde::DB{
 
 	α IDataSource::CatalogName( SL sl )ε->string{
 		if( !_catalog ){
-			let sql = _syntax->CatalogSelect();
+			let sql = Syntax().CatalogSelect();
 			_catalog = sql.size()
 				? Scaler<string>( string{sql}, {}, sl )
 				: string{};
@@ -54,7 +54,7 @@ namespace Jde::DB{
 
 	α IDataSource::SchemaName( SL sl )ε->string{
 		if( _schema.empty() ){
-			let schema = Scaler<string>( string{_syntax->SchemaSelect()}, {}, sl ); THROW_IF( !schema, "Schema name is empty." );
+			let schema = Scaler<string>( string{Syntax().SchemaSelect()}, {}, sl ); THROW_IF( !schema, "Schema name is empty." );
 			_schema = *schema;
 		}
 		return _schema;

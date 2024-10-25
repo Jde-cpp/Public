@@ -2,7 +2,7 @@
 #include <jde/db/generators/WhereClause.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/meta/Column.h>
-#include <jde/db/meta/Schema.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/View.h>
 
@@ -25,13 +25,16 @@ namespace Jde::DB{
 		SingleTable{ tables.size()==1 ? std::dynamic_pointer_cast<View>(tables[0]) : nullptr },
 		Joins{ tables.size()!=1 ? GetJoins(tables, sl) : vector<Join>{} }
 	{}
+	FromClause::FromClause( const sp<Table>& t )ι:
+		SingleTable{std::dynamic_pointer_cast<View>(t)}
+	{}
 
 	α FromClause::ToString()Ε->string{
 		if( Joins.size()==0 )
 			return "from "+SingleTable->DBName;
 
 		let& syntax = Joins[0].From->Table->Schema->Syntax();
-		string sql{ Ƒ("from {}\n", Joins[0].From->Table->DBName) }; sql.reserve( 255 );
+		string sql{ "from "+Joins[0].From->Table->DBName }; sql.reserve( 255 );
 		for( let& join : Joins )
 			sql += syntax.UsingClause( *join.From, *join.To );
 		return sql;
@@ -40,6 +43,13 @@ namespace Jde::DB{
 	α FromClause::operator+=( Join&& join )ι->FromClause&{
 		SingleTable = nullptr;
 		Joins.push_back(move(join)); return *this;
+	}
+
+	α FromClause::Contains( sv tableName )ι->bool{
+		bool y = SingleTable && SingleTable->Name==tableName;
+		for( auto p = Joins.begin(); !y && p!=Joins.end(); ++p )
+			y = p->From->Table->Name==tableName || p->To->Table->Name==tableName;
+		return y;
 	}
 
 	α FromClause::GetColumnPtr( sv name, SL sl )Ε->sp<Column>{
@@ -57,7 +67,7 @@ namespace Jde::DB{
 
 	α FromClause::GetFirstTable( SL sl )Ε->sp<View>{
 		THROW_IFSL( !SingleTable && Joins.size()==0, "!SingleTable and Joins.size()==0" );
-		return SingleTable ? SingleTable : Joins[0].From->View();
+		return SingleTable ? SingleTable : Joins[0].From->Table;
 	}
 	//add 'deleted is null'
 	α FromClause::SetActive( WhereClause& where, SL sl )ε->void{

@@ -3,9 +3,9 @@
 #include <jde/db/Value.h>
 #include <jde/framework/io/json.h>
 
-namespace Jde::DB{ struct Syntax; struct IDataSource; }
+namespace Jde::DB{ struct IDataSource; struct AppSchema; struct Statement; struct Syntax; struct WhereClause; }
 namespace Jde::QL{
 	struct TableQL;
-	α Query( const TableQL& table, jobject& jData, UserPK userId, sp<DB::IDataSource> ds )ε->void;
-	α SelectStatement( const TableQL& table, bool includeIdColumn, const DB::Syntax& syntax, string* whereString=nullptr )ι->tuple<string,vector<DB::Value>>;
+	α Query( const TableQL& table, jobject& jData, UserPK userId )ε->void;
+	α SelectStatement( sp<DB::AppSchema> schema, const TableQL& table, bool includeIdColumn, optional<DB::WhereClause> where )ι->optional<DB::Statement>;
 }

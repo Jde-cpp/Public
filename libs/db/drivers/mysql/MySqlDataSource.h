@@ -2,6 +2,7 @@
 #include "exports.h"
 #include <jde/db/Value.h>
 #include <jde/db/IDataSource.h>
+#include <jde/db/generators/Syntax.h>
 
 extern "C" ΓMY Jde::DB::IDataSource* GetDataSource();
 
@@ -18,9 +19,11 @@ namespace Jde::DB::MySql{
 		α ExecuteCo( string sql, vector<Value> p, SRCE )ι->up<IAwait> override{ return ExecuteCo(move(sql), move(p), false, sl); }
 		α ExecuteCo( string sql, vector<Value> p, bool proc, SRCE )ι->up<IAwait>;
 		α ExecuteCo( string sql, vector<Value> p, bool proc, RowΛ f, SRCE )ε->up<IAwait>;
-		α Select( Statement&& s, SRCE )Ε->vector<up<IRow>> override;
+		β SchemaNameConfig( SRCE )ε->string override;
+		α Select( Sql&& s, SRCE )Ε->vector<up<IRow>> override;
 		α SelectCo( ISelect* pAwait, string sql, vector<Value>&& params, SL sl )ι->up<IAwait> override;
 		α ServerMeta()ι->IServerMeta& override;
+		α Syntax()ι->const DB::Syntax& override{ return MySqlSyntax::Instance(); }
 
 		α ExecuteNoLog( string sql, const vector<Value>* pParameters, RowΛ* f, bool isStoredProc, SL sl )ε->uint override;
 		α ExecuteProcNoLog( string sql, vec<Value> parameters, SL sl )ε->uint override;

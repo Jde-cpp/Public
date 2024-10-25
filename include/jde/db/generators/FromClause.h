@@ -10,13 +10,16 @@ namespace Jde::DB{
 		sp<Column> To;
 	};
 	struct FromClause final{
+		FromClause()=default;
 		FromClause( sp<View>& v )ι:SingleTable{v}{};
-		FromClause( sp<Table>& t )ι:SingleTable{std::dynamic_pointer_cast<View>(t)}{};
+		FromClause( const sp<Table>& t )ι;
 		FromClause( vec<sp<Table>>& tables, SRCE )ε;
 		FromClause( Join&& j )ι:Joins{move(j)}{};
 		α ToString()Ε->string;
 		α operator+=( Join&& join )ι->FromClause&;
 
+		α Contains( sv tableName )ι->bool;
+		α Empty()Ι->bool{ return !SingleTable && Joins.empty(); }
 		α GetColumnPtr( sv name, SL sl )Ε->sp<Column>;
 		α GetFirstTable( SL sl )Ε->sp<View>;
 		α SetActive( WhereClause& where, SRCE )ε->void;

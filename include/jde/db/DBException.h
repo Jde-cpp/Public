@@ -1,10 +1,10 @@
 ﻿#pragma once
-//#include "exports.h"
-#include <jde/db/Value.h>
+#include "exports.h"
 
-//#define DB_TRY(x) try{x;}catch( const DB::DBException& ){}
-//#define THROW_DB(sql,params)
+#define Φ ΓDB auto
 namespace Jde::DB{
+	struct Value;
+
 	struct DBException final: IException{
 		DBException( int32 errorCode, string sql, const vector<Value>* pValues, string what, SRCE )ι;
 		DBException( string sql, const vector<Value>* pValues, string what, SRCE )ι:DBException{ 0, move(sql), pValues, move(what), sl }{}
@@ -23,3 +23,4 @@ namespace Jde::DB{
 		const vector<Value> Parameters;
 	};
 }
+#undef Φ

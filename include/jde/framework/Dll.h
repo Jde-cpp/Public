@@ -27,9 +27,7 @@ namespace Jde{
 		{}
 
 		~DllHelper(){
-			Trace( ELogTags::App | ELogTags::ExternalLogger, "({})Freeing", _path.string() );
 			OSApp::FreeLibrary( _module );
-			Information( ELogTags::App | ELogTags::ExternalLogger, "({})Freed", _path.string() );
 		}
 
 		α operator[](str procName)Ε->ProcPtr{

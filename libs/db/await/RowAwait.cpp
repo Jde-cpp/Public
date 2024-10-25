@@ -10,6 +10,6 @@ namespace Jde::DB{
 	}
 
 	α RowAwait::await_resume()ι->vector<up<IRow>>{
-		return _ds->Select( move(_statement), _sl );
+		return _ds->Select( move(_sql), _sl );
 	}
 }

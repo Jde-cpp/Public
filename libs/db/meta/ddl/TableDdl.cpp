@@ -11,14 +11,13 @@ namespace Jde::DB{
 
 	α TableDdl::CreateStatement()Ι->string{
 		std::ostringstream createStatement;
-		createStatement << "create table " << Name << "(" << endl;
+		createStatement << "create table " << Name << "(";
 		string suffix = "";
 		string pk;
-		for( let& column : Columns ){
-			let& c = dynamic_cast<const ColumnDdl&>( *column );
-			if( c.IsSequence )
-				pk = Ƒ( "primary key({})"sv, c.Name );
-			createStatement << suffix << endl << "\t" << c.CreateStatement( Syntax() );
+		for( let& c : Columns ){
+			if( c->IsSequence )
+				pk = Ƒ( "primary key({})"sv, c->Name );
+			createStatement << suffix << endl << "\t" << ColumnDdl::CreateStatement( *c );
 			suffix = ",";
 		}
 		if( pk.size() )
@@ -34,18 +33,18 @@ namespace Jde::DB{
 		osValues << "\t\tvalues(";
 		let prefix = Syntax().ProcParameterPrefix().empty() ? "_"sv : Syntax().ProcParameterPrefix();
 		char delimiter = ' ';
-		for( let& column : Columns ){
-			let& c = dynamic_cast<const ColumnDdl&>( *column );
-			auto value{ Ƒ("{}{}"sv, prefix, c.Name) };
-			if( c.Insertable )
-				osCreate << delimiter << prefix << c.Name << " " << c.DataTypeString( Syntax() );
+		for( let& c : Columns ){
+			//let& c = dynamic_cast<const ColumnDdl&>( *column );
+			auto value{ Ƒ("{}{}"sv, prefix, c->Name) };
+			if( c->Insertable )
+				osCreate << delimiter << prefix << c->Name << " " << ColumnDdl::DataTypeString( *c );
 			else{
-				if( c.IsNullable || !c.Default )
+				if( c->IsNullable || !c->Default )
 				 	continue;
-				if( c.Default->is_string() && c.Default->get_string()=="$now" )
+				if( c->Default->is_string() && c->Default->get_string()=="$now" )
 					value = ToSV( Syntax().UtcNow() );
 			}
-			osInsert << delimiter << c.Name;
+			osInsert << delimiter << c->Name;
 			osValues << delimiter  << value;
 			delimiter = ',';
 		}

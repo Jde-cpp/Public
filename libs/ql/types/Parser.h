@@ -1,9 +1,8 @@
 #pragma once
-#include <jde/ql/GraphQL.h>
+#include <jde/ql/types/MutationQL.h>
+#include <jde/ql/types/TableQL.h>
 
 namespace Jde::QL{
-	α Parse( sv query )ε->RequestQL;
-
 	struct Parser{
 		Parser( sv text, sv delimiters )ι: _text{text}, Delimiters{delimiters}{}
 		α Next()ι->sv;

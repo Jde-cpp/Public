@@ -76,6 +76,8 @@ template<typename... Args>
 }
 
 namespace Logging{
+	α Initialized()ι->bool;
+
 	struct MessageBase{
 		using ID=LogEntryPK;
 		using ThreadID=uint;
@@ -152,6 +154,12 @@ namespace Logging{
 	Logger<TLevel,Args...>::Logger( ELogTags tags, FormatString&& m, ARGS... args, const spdlog::source_loc& sl )ι{
 		if( Process::Finalizing() )
 			return;
+		if( !Logging::Initialized() ){
+			sv msg{ m.get() };
+			auto base = MessageBase{ TLevel, msg, sl.filename, sl.funcname, (uint_least32_t)sl.line };
+			LogMemoryDetail( base, FWD(args)... );
+			return;
+		}
 		if( auto fileMinLevel = FileMinLevel(tags); fileMinLevel!=NoLog && fileMinLevel<=TLevel ){
 			try{
 				if( auto p = Logging::Default(); p ){

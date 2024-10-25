@@ -1,7 +1,9 @@
 ﻿#include <jde/db/meta/Table.h>
+#include <jde/db/names.h>
 #include <jde/db/meta/Cluster.h>
 #include <jde/db/meta/Catalog.h>
-#include <jde/db/meta/Schema.h>
+#include <jde/db/meta/AppSchema.h>
+#include <jde/db/meta/DBSchema.h>
 #include <jde/db/meta/Column.h>
 //#include <jde/db/Value.h>
 #include <jde/db/IDataSource.h>
@@ -17,11 +19,14 @@ namespace Jde::DB{
 		optional<tuple<sp<Column>,sp<Column>>> parentChildMap;
 		if( auto kv = j.find("map"); kv!=j.end() ){
 			let& map = kv->value();
-			let parentId = map.at("parentId").as_string();
-			auto pParentColumn = view.FindColumn( parentId ); THROW_IF( !pParentColumn, "Could not find parentId: '{}' in '{}'", string{parentId}, view.Name );
-			auto childId = DB::Schema::FromJson( map.at("childId").as_string() );
-			auto pChildColumn = view.FindColumn( childId ); THROW_IF( !pChildColumn, "Could not find childId: '{}' in '{}'", string{childId}, view.Name );
-			parentChildMap = make_tuple( pParentColumn, pChildColumn );
+			if( let parentId = Json::FindSV(map, "parentId"); parentId ){
+				auto parentColumn = view.GetColumnPtr( *parentId );
+				auto childId = Json::AsSV( map, "childId" );
+				auto childColumn = view.GetColumnPtr( childId );
+				parentChildMap = make_tuple( parentColumn, childColumn );
+			}
+			else
+				parentChildMap = make_tuple( nullptr, nullptr );//acl doesn't have parent/child.
 		}
 		return parentChildMap;
 	}
@@ -49,7 +54,7 @@ namespace Jde::DB{
 		QLView{ j.contains("qlView") ? ms<View>(j.at("qlView").as_string()) : nullptr }
 	{}
 
-	α Table::Initialize( sp<DB::Schema> schema, sp<Table> self )ε->void{
+	α Table::Initialize( sp<DB::AppSchema> schema, sp<Table> self )ε->void{
 		self->Schema = schema;
 		if( QLView )
 			QLView = schema->GetViewPtr( QLView->Name );
@@ -57,17 +62,18 @@ namespace Jde::DB{
 			c->Initialize( self );
 
 		//if mssql & schema is not default & ds schema!=config schema.
+		bool representsDBTable = !DBName.empty();//db tables copy constructed will already have db name set.
+		DBName.clear();
 		if( !Syntax().CanSetDefaultSchema() && !Schema->Name.empty() && Schema->DS()->SchemaName()!=Schema->Name )
 			DBName = Ƒ( "{}.", Schema->Name );
-		if( Schema->Catalog->Cluster->ShouldPrefixTable )
-			DBName += Schema->Name;
+		if( !representsDBTable && Schema->Prefix.size() )
+			DBName += Schema->Prefix;
 		DBName+=Name;
 	}
-	α Table::Syntax()Ι->const DB::Syntax&{ return Schema->Syntax(); }
 
 	α Table::InsertProcName()Ι->string{
 		let haveSequence = find_if( Columns, [](let& c){return c->IsSequence;} )!=Columns.end();
-		return !haveSequence || HasCustomInsertProc ? string{} : Ƒ( "{}_insert", DB::Schema::ToSingular(Name) );
+		return !haveSequence || HasCustomInsertProc ? string{} : Ƒ( "{}_insert", Names::ToSingular(Name) );
 	}
 
 	α Table::GetExtendedFromTable()Ι->sp<Table>{//groups return access_identities.  Assumes ExtendedFrom is 1st surrogate key.
@@ -76,7 +82,7 @@ namespace Jde::DB{
 	}
 
 	α Table::FindColumn( sv name )Ι->sp<Column>{
-		auto pColumn = FindColumn( name );
+		auto pColumn = View::FindColumn( name );
 		if( let pExtendedFrom = pColumn ? nullptr : GetExtendedFromTable(); pExtendedFrom )
 			pColumn = pExtendedFrom->FindColumn( name );
 		return pColumn;
@@ -90,23 +96,25 @@ namespace Jde::DB{
 		auto pColumn = FindColumn( name ); THROW_IFSL( !pColumn, "[{}.{}]Could not find column.", Name, name );
 		return pColumn;
 	}
-
-/*	α ColumnStartingWith( const Table& table, sv part )ι->string{
-		let pColumn = find_if( table.Columns, [&part](let& c){return c->Name.starts_with(part);} );
-		return pColumn==table.Columns.end() ? string{} : pColumn->Name;
-	}*/
+	
+	α Table::GetColumns( vector<string> names, SL sl )Ε->vector<sp<Column>>{
+		vector<sp<Column>> columns;
+		for( let& name : names )
+			columns.push_back( GetColumnPtr(name, sl) );
+		return columns;
+	}
 
 	α TableNamePart( const Table& table, uint8 index )ι->string{
 		let name = table.NameWithoutType();//split returns temp
 		let nameParts = Str::Split( name, '_' );
-		return nameParts.size()>index ? DB::Schema::ToSingular( nameParts[index] ) : "";
+		return nameParts.size()>index ? Names::ToSingular( nameParts[index] ) : "";
 	}
 	α Table::Prefix()Ι->sv{ return Str::Split( Name, '_' )[0]; }
 	α Table::NameWithoutType()Ι->sv{ let underscore = Name.find_first_of('_'); return underscore==string::npos ? Name : sv{Name.data()+underscore+1, Name.size()-underscore-1 }; }
 
-	α Table::FKName()Ι->string{ return string{Schema::ToSingular(NameWithoutType())}+"_id"; }
+	α Table::FKName()Ι->string{ return string{Names::ToSingular(NameWithoutType())}+"_id"; }
 	α Table::JsonTypeName()Ι->string{
-		auto name = Schema::ToJson( Schema::ToSingular(NameWithoutType()) );
+		auto name = Names::ToJson( Names::ToSingular(NameWithoutType()) );
 		if( name.size() )
 			name[0] = (char)std::toupper( name[0] );
 		return name;
@@ -128,6 +136,6 @@ namespace Jde::DB{
 		return pColumn ? pColumn->PKTable : sp<Table>{};
 	}
 	α Table::IsEnum()Ι->bool{
-		return Columns.size()==2 && Columns[1]->Name=="name";
+		return QLView ? QLView->IsEnum() : View::IsEnum();
 	}
 }

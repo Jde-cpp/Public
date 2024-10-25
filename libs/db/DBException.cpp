@@ -1,5 +1,9 @@
 ﻿#include <jde/db/DBException.h>
-#include <jde/db/Database.h>
+#include <jde/db/Value.h>
+#include "DBLog.h"
+
+
+#define let const auto
 
 namespace Jde::DB{
 	DBException::DBException( int32 errorCode, string sql, const vector<Value>* pValues, string what, SL sl )ι:

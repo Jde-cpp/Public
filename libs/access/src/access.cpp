@@ -1,8 +1,8 @@
 ﻿#include <jde/access/access.h>
-#include <jde/access/IAuthorize.h>
+#include <jde/access/IAcl.h>
 #include <boost/container/flat_set.hpp>
 #include <jde/framework/str.h>
-#include <jde/framework/io/File.h>
+#include <jde/framework/io/file.h>
 #include <jde/db/Database.h>
 #include "types/Acl.h"
 #include "types/Resource.h"
@@ -14,24 +14,24 @@
 
 namespace Jde::Access{
 	constexpr ELogTags _tags{ ELogTags::Access };
-	sp<DB::Schema> _schema;
+	static sp<DB::AppSchema> _schema;
 
-	struct Authorize : IAuthorize{
+	struct Authorize : IAcl{
 		Authorize()ε{}
-		α Test( ERights access, str resource, UserPK userPK, AppPK appPK )ε->void override;
-		concurrent_flat_map<AppPK, flat_map<string,Access::ResourcePK>> AppResources;
+		α Test( ERights access, str resource, UserPK userPK )ε->void override;
+		concurrent_flat_map<Access::AppPK, flat_map<string,Access::ResourcePK>> AppResources;
 		concurrent_flat_map<ResourcePK,Resource> Resources;
 		flat_multimap<RolePK,PermissionPK> Roles;
 		flat_multimap<IdentityPK,PermissionPK> Acl;
-		sp<DB::Schema> Schema;
+		sp<DB::AppSchema> Schema;
 	private:
 		concurrent_flat_map<UserPK,AllowedDisallowed> _users;
 	};
-	Authorize _authorize;
+	sp<Authorize> _authorize = ms<Authorize>();
 
-	α Authorize::Test( ERights access, str resourceName, UserPK userId, AppPK appPK )ε->void{
+	α Authorize::Test( ERights access, str resourceName, UserPK userId )ε->void{
 		optional<ResourcePK> resourcePK;
-		if( !AppResources.cvisit(appPK,[&](auto& kv){
+		if( !AppResources.cvisit(AppPK,[&](auto& kv){
 			if( let p = kv.second.find(resourceName); p!=kv.second.end() )
 				resourcePK = p->second;
 		}) || !resourcePK ){
@@ -54,7 +54,7 @@ namespace Jde::Access{
 	α LoadAcl( ConfigureAwait& await )->RoleLoadAwait::Task{
 		try{
 			let acl = co_await AclLoadAwait{ _schema };
-			_authorize.Acl = move(acl);
+			_authorize->Acl = move(acl);
 		}
 		catch( IException& e ){
 			await.ResumeExp( move(e) );
@@ -63,7 +63,7 @@ namespace Jde::Access{
   α LoadRoles( ConfigureAwait& await )->RoleLoadAwait::Task{
 		try{
 			let roles = co_await RoleLoadAwait{ _schema };
-			_authorize.Roles = move(roles);
+			_authorize->Roles = move(roles);
 			LoadAcl( await );
 		}
 		catch( IException& e ){
@@ -75,11 +75,11 @@ namespace Jde::Access{
 			flat_map<ResourcePK,Resource> resources = co_await ResourceLoadAwait{ _schema, await.AppPKs };
 			for( let& [pk, resource] : resources ){
 				if( resource.Filter.empty() ){
-					_authorize.AppResources.try_emplace_or_visit( resource.AppPK, flat_map<string,ResourcePK>{{resource.Target, pk}}, [&](auto& kv){
+					_authorize->AppResources.try_emplace_or_visit( resource.AppPK, flat_map<string,ResourcePK>{{resource.Target, pk}}, [&](auto& kv){
 					 	kv.second.emplace( resource.Target, pk );
 					});
 				}
-				_authorize.Resources.emplace( pk, move(resource) );
+				_authorize->Resources.emplace( pk, move(resource) );
 			}
 			LoadRoles( await );
 		}
@@ -103,12 +103,43 @@ namespace Jde::Access{
 }
 
 namespace Jde{
-	α Access::Configure( sp<DB::Schema> schema, vec<AppPK> appPKs )ε->ConfigureAwait{
+	α Access::LocalAcl()ι->sp<IAcl>{
+		return _authorize;
+	}
+
+	α Access::Configure( sp<DB::AppSchema> schema, vec<AppPK> appPKs )ε->ConfigureAwait{
 		_schema = schema;
 		return {appPKs};
 		//schema->GetTable( "um_users" )->Load();
 	}
-
+namespace Access{
+	α AuthTask( string&& loginName, uint providerId, string&& opcServer, HCoroutine h )ι->Task{
+		let opcServerParam = opcServer.size() ? DB::Value{opcServer} : DB::Value{nullptr};
+		vector<DB::Value> parameters = { {move(loginName)}, {providerId} };
+		if( opcServer.size() )
+			parameters.push_back( {opcServer} );
+		let sql = Ƒ( "select e.id from um_entities e join um_users u on e.id=u.entity_id join um_providers p on p.id=e.provider_id where u.login_name=? and p.id=? and p.target{}", opcServer.size() ? "=?" : " is null" );
+		try{
+			auto task = _schema->DS()->ScalerCo<UserPK>( string{sql}, parameters );
+			auto p = (co_await task).UP<UserPK>(); //gcc compile issue
+			auto userId = p ? *p : 0;
+			if( !userId ){
+				if( !opcServer.size() )
+					parameters.push_back( {move(opcServer)} );
+				_schema->DS()->ExecuteProc( "um_user_insert_login(?,?,?)", move(parameters), [&userId](let& row){userId=row.GetUInt32(0);} );
+			}
+			h.promise().SetResult( mu<UserPK>(userId) );
+		}
+		catch( IException& e ){
+			h.promise().SetResult( move(e) );
+		}
+		h.resume();
+	}
+}
+	α Access::Authenticate( string loginName, uint providerId, string opcServer, SL sl )ι->AsyncAwait{
+		//auto f = [l=move(loginName), type, o=move(opcServer)](HCoroutine h)mutable{ LoginTask(move(l), type, move(o), move(h)); };
+		return AsyncAwait{ [l=move(loginName), providerId, o=move(opcServer)](HCoroutine h)mutable{ return AuthTask(move(l), providerId, move(o), move(h)); }, sl, "Access::Authenticate" };
+	}
 	//AccessSettings _settings;
 	//sp<DB::IDataSource> _ds;
 	//up<QL::GraphQL> _ql;
@@ -118,13 +149,13 @@ namespace Jde{
 	flat_map<RolePK,flat_map<PermissionPK,EAccess>> _rolePermissions; shared_mutex _rolePermissionMutex;
 	flat_map<UserPK, flat_map<PermissionPK,EAccess>> _userAccess; shared_mutex _userAccessMutex;
 
-	flat_map<sv, IAuthorize*> _authorizers; shared_mutex _authorizerMutex;
+	flat_map<sv, IAcl*> _authorizers; shared_mutex _authorizerMutex;
 */
 	//GroupAuthorize _groupAuthorize;
 }
 namespace Jde{
-/*	α Access::AddAuthorizer( Access::IAuthorize* p )ι->void{ _authorizers.emplace( p->TableName, p ); }//pre-main
-	α Access::FindAuthorizer( sv table )ι->IAuthorize*{
+/*	α Access::AddAuthorizer( Access::IAcl* p )ι->void{ _authorizers.emplace( p->TableName, p ); }//pre-main
+	α Access::FindAuthorizer( sv table )ι->IAcl*{
 		auto p = _authorizers.find( table );
 		return p==_authorizers.end() ? nullptr : p->second;
 	}
@@ -161,7 +192,7 @@ namespace Jde{
 		_rolePermissions.clear();
 		DB::DataSource().Select( "select permission_id, role_id, right_id from um_role_permissions p join um_roles r on p.role_id=r.id where r.deleted is null", [&](const DB::IRow& r){_rolePermissions.try_emplace(r.GetUInt(1)).first->second.emplace( r.GetUInt(0), (Access::EAccess)r.GetUInt(2) );} );
 	}*/
-/*	α Access::Configure( sp<DB::Schema> schema )ε->void{
+/*	α Access::Configure( sp<DB::AppSchema> schema )ε->void{
 		let pApis = _ds->SelectEnumSync<uint,string>( "um_apis" );
 		auto pId = FindKey( *pApis, "UM" ); THROW_IF( !pId, "no user management in api table." );
 		let umPermissionId = _ds->Scaler<uint>( "select id from um_permissions where api_id=? and name is null", {*pId} ).value_or(0); THROW_IF( umPermissionId==0, "no user management permission." );
@@ -255,37 +286,10 @@ namespace Jde{
 			}
 		}
 	}
-
-	α LoginTask( string&& loginName, uint providerId, string&& opcServer, HCoroutine h )ι->Task{
-		let opcServerParam = opcServer.size() ? DB::Value{opcServer} : DB::Value{nullptr};
-		vector<DB::Value> parameters = { move(loginName), providerId };
-		if( opcServer.size() )
-			parameters.push_back( opcServer );
-		let sql = Ƒ( "select e.id from um_entities e join um_users u on e.id=u.entity_id join um_providers p on p.id=e.provider_id where u.login_name=? and p.id=? and p.target{}", opcServer.size() ? "=?" : " is null" );
-		try{
-			auto task = DB::ScalerCo<UserPK>( string{sql}, parameters );
-			auto p = (co_await task).UP<UserPK>(); //gcc compile issue
-			auto userId = p ? *p : 0;
-			if( !userId ){
-				if( !opcServer.size() )
-					parameters.push_back( move(opcServer) );
-				DB::ExecuteProc( "um_user_insert_login(?,?,?)", move(parameters), [&userId](let& row){userId=row.GetUInt32(0);} );
-			}
-			h.promise().SetResult( mu<UserPK>(userId) );
-		}
-		catch( IException& e ){
-			h.promise().SetResult( move(e) );
-		}
-		h.resume();
-	}
-	α Access::Login( string loginName, uint providerId, string opcServer, SL sl )ι->AsyncAwait{
-		//auto f = [l=move(loginName), type, o=move(opcServer)](HCoroutine h)mutable{ LoginTask(move(l), type, move(o), move(h)); };
-		return AsyncAwait{ [l=move(loginName), providerId, o=move(opcServer)](HCoroutine h)mutable{ return LoginTask(move(l), providerId, move(o), move(h)); }, sl, "Access::Login" };
-	}
 }
 
 #pragma warning(disable:4100)
-	α IAuthorize::TestPurge( uint pk, UserPK userId, SL sl )ε->void{
+	α IAcl::TestPurge( uint pk, UserPK userId, SL sl )ε->void{
 		THROW_IFSL( !CanPurge(pk, userId), "Access to purge record denied" );
 	}
 	*/

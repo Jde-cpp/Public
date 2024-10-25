@@ -2,7 +2,7 @@
 #include "../usings.h"
 
 namespace Jde::DB{
-	struct Cluster; struct ForeignKey; struct IDataSource;  struct Index; struct Procedure; struct Schema; struct SchemaDdl; struct Table;
+	struct Cluster; struct ForeignKey; struct IDataSource;  struct Index; struct Procedure; struct AppSchema; struct SchemaDdl; struct Table;
 
 	struct IServerMeta{
 		IServerMeta( sp<IDataSource> p ):_pDataSource{p}{}

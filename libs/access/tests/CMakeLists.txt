@@ -14,6 +14,11 @@ else()
 	link_directories( ${fmt_DIR}/../.. )
 	link_directories( ${Protobuf_DIR}/../.. )
 	link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
+#	if( CMAKE_BUILD_TYPE MATCHES Asan )
+		link_directories( $ENV{REPO_DIR}/install/g++-13/asan/jsonnet/lib/ )
+#	else()
+#		link_directories( $ENV{REPO_DIR}/vcpkg/installed/x64-linux/lib )
+#	endif()
 endif()
 #######################################################
 add_executable( ${CMAKE_PROJECT_NAME} )
@@ -30,13 +35,13 @@ if( MSVC )
 else()
 	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
+	target_link_libraries( ${CMAKE_PROJECT_NAME} Boost::json )	
+	target_link_libraries( ${CMAKE_PROJECT_NAME} jsonnet++ ) #libjsonnet.a  libryml.a 
 endif()
 target_link_libraries( ${CMAKE_PROJECT_NAME} gtest_main )
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.UM Jde.QL Jde.DB )
+target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.Access Jde.QL Jde.DB )
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
   PRIVATE
-		<jde/usings.h>
-		<jde/log/Log.h>
-		<jde/Exception.h>
+		"pc.h"
 )

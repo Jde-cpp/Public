@@ -1,7 +1,7 @@
 #pragma once
 #include <jde/access/usings.h>
 
-namespace Jde::DB{ struct Schema; struct Table; }
+namespace Jde::DB{ struct AppSchema; struct Table; }
 
 namespace Jde::Access{
 	using PermissionPK=uint16;

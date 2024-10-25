@@ -2,11 +2,13 @@
 #include "c_api.h"
 #include <jde/db/IDataSource.h>
 #include <jde/framework/process.h>
-#include <jde/framework/io/File.h>
+#include <jde/framework/io/file.h>
 #include <jde/framework/Dll.h>
 #include <jde/db/generators/Syntax.h>
+#include <jde/framework/Dll.h>
 
 #define let const auto
+#ifdef unused
 namespace Jde{
 	static let _logTag{ Logging::Tag("sql") };
 	α DB::SqlTag()ι->sp<LogTag>{ return _logTag; }
@@ -102,7 +104,7 @@ namespace Jde{
 		}
 		Trace{ ELogTags::Sql | ELogTags::Shutdown, "~CleanDataSources" };
 	}
-	#define db DataSource()
+	//#define db DataSource()
 	// DB::Schema _schema;
 	// α DB::DefaultSchema()ι->Schema&{ return _schema; }
 	// α DB::CreateSchema()ε->void{
@@ -115,11 +117,11 @@ namespace Jde{
 	// 	_schema = db.SchemaProc()->CreateSchema( j, path.parent_path() );
 	// }
 
-	α DB::DefaultSyntax()ι->const DB::Syntax&{
-		if( !_pSyntax )
-			_pSyntax = Driver()=="Jde.DB.Odbc.dll" ? make_shared<Syntax>() : make_shared<MySqlSyntax>();
-		return *_pSyntax;
-	}
+	//α DB::DefaultSyntax()ι->const DB::Syntax&{
+	//	if( !_pSyntax )
+	//		_pSyntax = Driver()=="Jde.DB.Odbc.dll" ? make_shared<Syntax>() : make_shared<MySqlSyntax>();
+	//	return *_pSyntax;
+	//}
 
 	α CreateDataSourceLocal( const fs::path& libraryName )ε->sp<DB::IDataSource>{
 		static DataSourceApi api{ libraryName };
@@ -128,11 +130,11 @@ namespace Jde{
 		}};
 	}
 
-	α DB::CreateDataSource( str connectionString, optional<fs::path> driver )ε->sp<IDataSource>{
-		auto p = CreateDataSourceLocal( driver.value_or(Driver()) );
-		p->SetConnectionString( connectionString );
-		return p;
-	}
+	//α DB::CreateDataSource( str connectionString, optional<fs::path> driver )ε->sp<IDataSource>{
+	//	auto p = CreateDataSourceLocal( driver.value_or(Driver()) );
+	//	p->SetConnectionString( connectionString );
+	//	return p;
+	//}
 /*
 	α DB::DataSourcePtr()ε->sp<IDataSource>{
 		if( !_pDefault ){
@@ -143,11 +145,11 @@ namespace Jde{
 		return _pDefault;
 	}
 */
-	α DB::DataSource()ι->IDataSource&{
-		auto p = DataSourcePtr();
-		THROW_IF( !p, "No default datasource" );//ie terminate
-		return *p;
-	}
+	//α DB::DataSource()ι->IDataSource&{
+	//	auto p = DataSourcePtr();
+	//	THROW_IF( !p, "No default datasource" );//ie terminate
+	//	return *p;
+	//}
 
 	std::once_flag _singleShutdown;
 	α DB::DataSource( const fs::path& libraryName, sv connectionString )->sp<DB::IDataSource>{
@@ -161,23 +163,23 @@ namespace Jde{
 		return pSource->second->Emplace( string{connectionString} );
 	}
 
-	α DB::Select( string sql, function<void(const IRow&)> f, SL sl )ε->void{ db.Select(move(sql), f, sl); }
-	α DB::Select( string sql, function<void(const IRow&)> f, const vector<Value>& values, SL sl )ε->void{ db.Select(move(sql), f, values, sl); }
+	//α DB::Select( string sql, function<void(const IRow&)> f, SL sl )ε->void{ db.Select(move(sql), f, sl); }
+	//α DB::Select( string sql, function<void(const IRow&)> f, const vector<Value>& values, SL sl )ε->void{ db.Select(move(sql), f, values, sl); }
 
-	α DB::IdFromName( sv tableName, string name, SL sl )ι->SelectAwait<uint>{
-		return db.ScalerCo<uint>( Ƒ("select id from {} where name=?", tableName), {Value{name}}, sl );
-	}
+	//α DB::IdFromName( sv tableName, string name, SL sl )ι->SelectAwait<uint>{
+	//	return db.ScalerCo<uint>( Ƒ("select id from {} where name=?", tableName), {Value{name}}, sl );
+	//}
 
-	α DB::Execute( string sql, vector<Value>&& parameters, SL sl )ε->uint{
-		return db.Execute( move(sql), parameters, sl );
-	}
+	//α DB::Execute( string sql, vector<Value>&& parameters, SL sl )ε->uint{
+	//	return db.Execute( move(sql), parameters, sl );
+	//}
 
-	α DB::SelectName( string sql, uint id, sv cacheName, SL sl )ε->CIString{
-		CIString y;
-		if( auto p = cacheName.size() ? Cache::GetValue<uint,CIString>(string{cacheName}, id) : sp<CIString>{}; p )
-			y = CIString{ *p };
+	α DB::SelectName( string sql, uint id, sv cacheName, SL sl )ε->string{
+		string y;
+		if( auto p = cacheName.size() ? Cache::GetValue<uint,string>(string{cacheName}, id) : sp<string>{}; p )
+			y = string{ *p };
 		if( y.empty() )
-			y = Scaler<CIString>( move(sql), {Value{id}}, sl ).value_or( CIString{} );
+			y = Scaler<string>( move(sql), {Value{id}}, sl ).value_or( string{} );
 		return y;
 	}
 
@@ -194,3 +196,4 @@ namespace Jde{
 		Select( Ƒ("{}({})", move(sql), s), f, params, sl );
 	}
 }
+#endif

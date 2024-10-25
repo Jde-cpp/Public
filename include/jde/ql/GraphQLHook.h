@@ -45,7 +45,6 @@ namespace Jde::QL{
 	};
 	inline IMutationAwait::~IMutationAwait(){}
 
-	//collection of IMutationAwait
 	struct MutationAwaits : IMutationAwait{
 		using base=IMutationAwait;
 		MutationAwaits( sp<MutationQL> mutation, UserPK userPK, Hook::Operation op, SRCE )ι;

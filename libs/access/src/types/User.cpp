@@ -3,14 +3,14 @@
 #include <jde/framework/coroutine/Await.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Statement.h>
-#include <jde/db/meta/Schema.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 
 #define let const auto
 namespace Jde::Access{
 	using namespace Jde::Coroutine;
 
-	UserLoadAwait::UserLoadAwait( sp<DB::Schema> schema )ι:
+	UserLoadAwait::UserLoadAwait( sp<DB::AppSchema> schema )ι:
 		_schema{ schema }
 	{}
 

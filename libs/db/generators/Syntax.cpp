@@ -9,6 +9,11 @@ namespace Jde{
 }
 namespace Jde::DB{
 	constexpr ELogTags _tags{ ELogTags::Sql };
+	static Syntax _sqlInstance;
+	static MySqlSyntax _mySqlInstance;
+	α Syntax::Instance()->const Syntax&{ return _sqlInstance; }
+	α MySqlSyntax::Instance()->const MySqlSyntax&{ return _mySqlInstance; }
+
 	α Syntax::FormatOperator( const Column& col, EOperator op, uint size, SL sl )Ε->string{
 		if( op!=EOperator::In && op!=EOperator::NotIn )
 			return Ƒ( "{}{}?", col.FQName(), OperatorStrings[(uint)op] );
@@ -50,10 +55,10 @@ namespace Jde::DB{
 	};
 
 	α Syntax::UsingClause( const Column& c0, const Column& c1 )Ι->string{
-		return Ƒ( "\njoin {2} on {0}.{1}={2}.{3}", c0.Table->DBName, c0.Name, c1.Table->DBName, c1.Name );
+		return Ƒ( "\n\tjoin {2} on {0}.{1}={2}.{3}", c0.Table->DBName, c0.Name, c1.Table->DBName, c1.Name );
 	}
 	α MySqlSyntax::UsingClause( const Column& _, const Column& c1 )Ι->string{
-		return Ƒ( "\njoin {} using ({})", c1.Table->DBName, c1.Name );
+		return Ƒ( "\n\tjoin {} using({})", c1.Table->DBName, c1.Name );
 	}
 
 	α Syntax::ToString( EType type )Ι->string{

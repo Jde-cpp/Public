@@ -38,7 +38,7 @@ local sqlFunctions = {
 };
 
 local smallSequenced = types.uint16+{ sequence: true, sk:0, i:0 };
-local pkSeqenced = types.uint+{ sequence: true, sk:0, i:0 };
+local pkSequenced = types.uint+{ sequence: true, sk:0, i:0 };
 local valuesColumns = { name: types.varchar+{ length: 256, i:10 } };
 
 local valuesNK = ["name"];
@@ -54,7 +54,7 @@ local targetColumns = valuesColumns+{
 
 local targetNKs = [valuesNK, ["target"]];
 {
-	scripts: ["providers_ql.sql", "provider_purge.sql", "user_insert.sql", "user_insert_login.sql", "user_insert_key.sql"],
+	scripts: ["providers_ql.sql", "provider_purge.sql", "user_insert.sql", "user_insert_key.sql", "user_insert_login.sql"],
 	local tables = self.tables,
 	views:{
 		providersQL:{
@@ -69,8 +69,8 @@ local targetNKs = [valuesNK, ["target"]];
 		identities:{
 			comment: "Group or User",
 			columns:{
-				identityId: pkSeqenced,
-				providerId: tables.providers.columns.providerId+{ parent: "providers", i: 15 },
+				identityId: pkSequenced,
+				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true, i: 15 },
 				isGroup: types.bit+{ default: false, i: 101 },
 			}+targetColumns,
 			naturalKeys:[ ["name","provider_id"], ["target"] ],
@@ -88,7 +88,7 @@ local targetNKs = [valuesNK, ["target"]];
 				exponent: types.uint+{ nullable:true, comment: "Used for RSA", i:103 }
 			}
 		},
-		groups:{
+		userGroups:{
 			columns: {
 				identityId: tables.identities.columns.identityId+{ pkTable: "identities", sequenced: false },
 				memberId: 	tables.identities.columns.identityId+{ pkTable: "identities", name: "member_id", sk: 1, i:1 },
@@ -97,7 +97,7 @@ local targetNKs = [valuesNK, ["target"]];
 		},
 		providerTypes:{
 			columns: {
-				providerTypeId: types.uint8+{i:0},
+				providerTypeId: types.uint8+{sk:0, i:0},
 			}+valuesColumns,
 			data: [
 				{id:1, name:"Google"},
@@ -112,12 +112,12 @@ local targetNKs = [valuesNK, ["target"]];
 		providers:{
 			columns: {
 				providerId: smallSequenced,
-				providerTypeId: tables.providerTypes.columns.providerTypeId+{ parent: "provider_types", i:1 },
+				providerTypeId: tables.providerTypes.columns.providerTypeId+{ pkTable: "provider_types", i:1 },
 				target: targetColumns.target+{ nullable: true, comment: "Points to target in another table (eg OpcServer)" }
 			},
 			naturalKeys:[["provider_type_id","target"]],
 			purgeProc: "um_provider_purge",
-			data: [{id:1, providerTypeId:1}, {id:2, providerTypeId:2}, {id:3, providerTypeId:3}, {id:4, providerTypeId:4}, {id:5, providerTypeId:5}, {id:6, providerTypeId:6}, {id:7, providerTypeId:7} ],
+			data: [{id:1, providerTypeId:1}, {id:2, providerTypeId:2}, {id:3, providerTypeId:3}, {id:4, providerTypeId:4}, {id:5, providerTypeId:5}, {id:6, providerTypeId:6} ],
 			qlView: "providers_ql"
 		},
 		resources:{
@@ -126,7 +126,7 @@ local targetNKs = [valuesNK, ["target"]];
 				appId: types.uint16+{ i:1 },
 				filter: types.varchar+{ nullable: true, length:1024, i:25 },
 			}+targetColumns,
-			naturalKeys:[["appId","target"]]
+			naturalKeys:[["app_id","target"]]
 		},
 		permissions:{
 			columns: {
@@ -134,8 +134,7 @@ local targetNKs = [valuesNK, ["target"]];
 				resourceId: tables.resources.columns.resourceId+{ pkTable: "resources", i:1 },
 				allowed: tables.rights.columns.rightId+{ i:2 },
 				denied: tables.rights.columns.rightId+{ i:3 },
-			},
-			naturalKeys:[["appId","target"]]
+			}
 		},
 		roles:{
 			columns: {
@@ -146,21 +145,21 @@ local targetNKs = [valuesNK, ["target"]];
 		roleRights:{
 			columns: {
 				roleId: tables.roles.columns.roleId+{ pkTable: "roles", sk: 0, i:0 },
-				permissionId: tables.permissions.columns.permissionId+{ pkTable: "permission_id", sk: 1, i:1 }
+				permissionId: tables.permissions.columns.permissionId+{ pkTable: "permissions", sk: 1, i:1 }
 			},
 			map: {parentId:"role_id", childId:"resource_right_id"}
 		},
 		rights:{
 			columns: {
-				rightId: types.uint8+{ i:0 },
-				name: types.varchar+{ length: 7, i:1 }
+				rightId: types.uint8+{ sk:0, i:0 },
+				name: types.varchar+{ length: 11, i:1 }
 			},
 			flagsData: ["None", "Read", "Subscribe", "Update", "Insert", "Delete", "Purge", "Execute", "Permissions"]
 		},
 		acl:{
 			columns: {
-				identityId: tables.identities.columns.identityId+{ pkTable: {name:"identities" card:"∞:∞"}, sk: 0 },
-				permissionId: tables.permissions.columns.resourceRightId+{ pkTable: {name:"permission_id", card:"∞:∞", sk: 1, i:1 } }
+				identityId: tables.identities.columns.identityId+{ pkTable: {name:"identities", card:"∞:∞"}, sk: 0 },
+				permissionId: tables.permissions.columns.permissionId+{ pkTable: {name:"permissions", card:"∞:∞"}, sk: 1, i:1 }
 			},
 			map: {}
 		}

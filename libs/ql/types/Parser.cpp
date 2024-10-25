@@ -1,9 +1,8 @@
 #include "Parser.h"
+#include <jde/ql/ql.h>
 #define let const auto
-namespace Jde::QL{
-	constexpr ELogTags _tags{ ELogTags::QL | ELogTags::Parsing };
-
-	α Parse( sv query )ε->RequestQL{
+namespace Jde{
+	α QL::Parse( sv query )ε->RequestQL{
 		uint i = query.find_first_of( "{" ); THROW_IF( i==sv::npos || i>query.size()-2, "Invalid query '{}'", query );
 		Parser parser{ query.substr(i+1), "{}()," };
 		auto name = parser.Next();
@@ -12,6 +11,10 @@ namespace Jde::QL{
 
 		return name=="mutation" ? RequestQL{ parser.LoadMutation() } : RequestQL{ parser.LoadTables(name) };
 	}
+}
+namespace Jde::QL{
+	constexpr ELogTags _tags{ ELogTags::QL | ELogTags::Parsing };
+	constexpr array<sv,9> MutationQLStrings = { "create", "update", "delete", "restore", "purge", "add", "remove", "start", "stop" };
 
 	α Parser::Next()ι->sv{
 		sv result = _peekValue;

@@ -3,6 +3,7 @@
 #include <jde/db/DBException.h>
 #include "MySqlRow.h"
 #include "MySqlServerMeta.h"
+#include "../../DBLog.h"
 
 #define let const auto
 
@@ -54,7 +55,7 @@ namespace Jde::DB::MySql{
 				os << std::setprecision(6) << std::fixed << fraction2;
 				auto fractionString = os.str().substr(1);
 
-				string value2 = Jde::format( "{}{}", stringValue, fractionString );//:.6
+				string value2 = Ƒ( "{}{}", stringValue, fractionString );//:.6
 				if( value2.find('e')!=string::npos )
 					Error{ _tags, "{} has {} for {} returning {}, nanos={}"sv, value2, fractionString, fraction, value2, value.time_since_epoch().count() };//2019-12-13 20:43:04.305e-06 has .305e-06 for 9.30500e-06 returning 2019-12-13 20:43:04.305e-06, nanos=1576269784000009305
 				return mysqlx::Value( value2 );
@@ -66,9 +67,9 @@ namespace Jde::DB::MySql{
 
 //https://dev.mysql.com/doc/refman/8.0/en/c-api-prepared-call-statements.html
 	α Execute( str cs, string&& sql, const vector<Value>* pParameters, const RowΛ* pFunction, bool proc, SL sl, bool log=true )ε->uint{
-		let fullSql = proc ? Jde::format( "call {}", move(sql) ) : move( sql );
+		let fullSql = proc ? Ƒ( "call {}", move(sql) ) : move( sql );
 		if( log )
-			DBLOG( fullSql, pParameters );
+			DB::Log( fullSql, pParameters, sl );
 		mysqlx::Session session = Session( cs );
 		auto statement = session.sql( fullSql );
 		if( pParameters ){
@@ -105,7 +106,7 @@ namespace Jde::DB::MySql{
 		}
 		try{
 			if( log )
-				DBLOG( sql, pValues );
+				DB::Log( sql, pValues, sl );
 			auto result = statement.execute();
 			std::list<mysqlx::Row> rows = result.fetchAll();//
 			for( mysqlx::Row& row : rows ){
@@ -123,19 +124,29 @@ namespace Jde::DB::MySql{
 		Critical{ _tags, "MySql doesn't have catalogs." };
 		return shared_from_this();
 	}
+	α MySqlDataSource::SchemaNameConfig( SL sl )ε->string{
+		uint start = _connectionString.find_last_of('/');
+		uint end = _connectionString.find_last_of('?');
+		return end>start && start!=string::npos ? _connectionString.substr( start+1, end-start-1 ) : string{};
+	}
 
 	α MySqlDataSource::AtSchema( sv schema, SL sl )ε->sp<IDataSource>{
+		string schemaName;
+		try{
+			schemaName = SchemaName();	
+		}
+		catch( const IException& e ){//assume can't connect on current schema.
+		}
 		sp<IDataSource> pDataSource;
-		if( schema==SchemaName() )
+		if( schema==schemaName )
 			pDataSource = shared_from_this();
 		else{
 			pDataSource = sp<IDataSource>( GetDataSource() );
-			let csSpecified = _connectionString.find( SchemaName() )!=string::npos;
-			pDataSource->SetConnectionString( csSpecified ? Str::Replace( _connectionString, SchemaName(), schema ) : _connectionString );
-			if( !csSpecified ){
-				pDataSource->Execute( Jde::format("use `{}`", schema), sl );
-				_schema = schema;
-			}
+			let csSpecified = schemaName.size() && _connectionString.find( schemaName )!=string::npos;
+			let cs = csSpecified 
+				? Str::Replace( _connectionString, SchemaName(), schema )
+				: _connectionString.substr( 0, _connectionString.find_last_of('/')+1 )+string{schema}+_connectionString.substr( _connectionString.find_last_of('?') );
+			pDataSource->SetConnectionString( cs );
 		}
 		return pDataSource;
 	}
@@ -163,10 +174,10 @@ namespace Jde::DB::MySql{
 			_pSchemaProc = mu<MySqlServerMeta>( shared_from_this() );
 		return *_pSchemaProc;
 	}
-	α MySqlDataSource::Select( Statement&& s, SL sl )Ε->vector<up<IRow>>{
+	α MySqlDataSource::Select( Sql&& s, SL sl )Ε->vector<up<IRow>>{
 		vector<up<IRow>> rows;
 		RowΛ f = [&rows]( IRow& r ){ rows.push_back(r.Move()); };
-		MySql::Select( CS(), move(s.Sql), f, &s.Params, sl );
+		MySql::Select( CS(), move(s.Text), f, &s.Params, sl );
 		return rows;
 	}
 	α MySqlDataSource::Select( string sql, RowΛ f, const vector<Value>* pValues, SL sl )ε->uint{

@@ -12,7 +12,7 @@
 namespace Jde::Settings{
 	Φ Value()ι->const jvalue&;
 	α FileStem()ι->string; //used as base path for logs.
-	Φ Set( sv path, jvalue v, bool save=true, SRCE )ε->void;
+	Φ Set( sv path, jvalue v, SRCE )ε->jvalue*;
 	α Load()ι->void;
 
 	Ξ AsObject( sv path, SRCE )ι->const jobject&{ return Json::AsObject(Value(), path); }

@@ -61,7 +61,7 @@ namespace Jde::DB::MySql{
 	}
 
 	_int MySqlRow::GetInt( uint i, SL sl )Ε{
-		return _values[i].get_int32();
+		return _values[i].get_number<_int>();
 	}
 
 		optional<_int> MySqlRow::GetIntOpt( uint i, SL sl )Ε{
@@ -70,7 +70,7 @@ namespace Jde::DB::MySql{
 	}
 
 	uint MySqlRow::GetUInt( uint i, SL sl )Ε{
-		return _values[i].get_uint();
+		return _values[i].get_number<uint>();
 	}
 
 	bool MySqlRow::GetBit( uint i, SL sl )Ε{return GetInt( i )!=0;}

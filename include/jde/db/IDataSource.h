@@ -5,13 +5,12 @@
 #include "await/ContainerAwait.h"
 #include "await/DBAwait.h"
 #include "IRow.h"
-#include "meta/Schema.h"
-#include "generators/Statement.h"
+//#include "meta/DBSchema.h"
+#include "generators/Sql.h"
 
 
-#define DBLOG(sql,params) Jde::DB::Log( sql, params, sl )
 namespace Jde::DB{
-	struct IServerMeta; struct Syntax;
+	struct IServerMeta; struct Sql; struct Syntax;
 	namespace Types{ struct IRow; }
 
 	struct Γ IDataSource : std::enable_shared_from_this<IDataSource>{
@@ -19,6 +18,7 @@ namespace Jde::DB{
 
 		α CatalogName( SRCE )ε->string;
 		α SchemaName( SRCE )ε->string;
+		β SchemaNameConfig( SRCE )ε->string{ return {}; }
 		β AtCatalog( sv catalog, SRCE )ε->sp<IDataSource> = 0; //create new pointing to other catalog.  If have catalogs.
 		β AtSchema( sv schema, SRCE )ε->sp<IDataSource> = 0; //create new pointing to other schema.  If can specify schema in connection.
 		β ServerMeta()ι->IServerMeta& =0;
@@ -28,18 +28,19 @@ namespace Jde::DB{
 		ẗ SelectEnumSync( sv tableName, SRCE )ε->sp<flat_map<K,V>>{ ASSERT(tableName.size()); return SFuture<flat_map<K,V>>( SelectEnum<K,V>( tableName, sl) ).get(); }
 		ẗ SelectMap( string sql, SRCE )ι->SelectAwait<flat_map<K,V>>;
 		ẗ SelectMap( string sql, string cacheName, SRCE )ι->SelectCacheAwait<flat_map<K,V>>;
-		ẗ SelectMultiMap( Statement&& statement, SRCE )Ι->up<TAwait<flat_multimap<K,V>>>;
+		ẗ SelectMultiMap( Sql&& statement, SRCE )Ι->up<TAwait<flat_multimap<K,V>>>;
 		Ŧ SelectSet( string sql, vector<Value>&& params, SL sl )ι->SelectAwait<flat_set<T>>;
-		Ŧ SelectSet( Statement&& statement, SRCE )ι->SelectAwait<flat_set<T>>{ return SelectSet<T>( move(statement.Sql), move(statement.Params), sl ); }
+		Ŧ SelectSet( Sql&& sql, SRCE )ι->SelectAwait<flat_set<T>>{ return SelectSet<T>( move(sql.Text), move(sql.Params), sl ); }
 		Ŧ SelectSet( string sql, vector<Value>&& params, string cacheName, SL sl )ι->SelectCacheAwait<flat_set<T>>;
 
 		α ScalerNonNull( string sql, vec<Value> params, SRCE )ε->uint;
 
 		Ŧ TryScaler( string sql, vec<Value> params, SRCE )ι->optional<T>;
 		Ŧ Scaler( string sql, vec<Value> params, SRCE )ε->optional<T>;
+		Ŧ Scaler( Sql&& sql, SRCE )ε->optional<T>{ return Scaler<T>( move(sql.Text), move(sql.Params), sl ); }
 		Ŧ ScalerCo( string sql, vec<Value> params, SRCE )ε->SelectAwait<T>;
 		Ŧ SelectCo( string sql, vec<Value> params, CoRowΛ<T> fnctn, SRCE )ε->SelectAwait<T>;
-		α SelectCo( Statement&& statement, SRCE )Ι->RowAwait{ return RowAwait{ shared_from_this(), move(statement), sl }; }
+		α SelectCo( Sql&& statement, SRCE )Ι->RowAwait{ return RowAwait{ shared_from_this(), move(statement), sl }; }
 
 		α TryExecute( string sql, SRCE )ι->optional<uint>;
 		α TryExecute( string sql, vec<Value> params, SRCE )ι->optional<uint>;
@@ -59,18 +60,18 @@ namespace Jde::DB{
 		α Select( string sql, RowΛ f, vec<Value> params, SRCE )ε->void;
 		α Select( string sql, RowΛ f, SRCE )ε->void;
 		β Select( string sql, RowΛ f, const vector<Value>* pValues, SRCE )ε->uint=0;
-		β Select( Statement&& s, SRCE )Ε->vector<up<IRow>> =0;
+		β Select( Sql&& s, SRCE )Ε->vector<up<IRow>> =0;
 		β SelectNoLog( string sql, RowΛ f, const vector<Value>* pValues, SRCE )ε->uint=0;
 		α TrySelect( string sql, RowΛ f, SRCE )ι->bool;
 
 		α CS()const ι->str{ return _connectionString; }
-		β SetConnectionString( string x )ι->void{ _connectionString = move(x); }
+		β SetConnectionString( string x )ι->void{ _connectionString = move(x); _schema.clear(); _catalog.reset(); }
 		//α Schema()ι->const Schema&{ return _schema; }
-		α Syntax()ι->const Syntax&{ return *_syntax; }
+		β Syntax()ι->const Syntax& = 0;
+
 	protected:
 		string _connectionString;
 		//DB::Schema _schema;  idea is to keep separate since db/schema can have multiple configured schemas.
-		sp<DB::Syntax> _syntax;
 		optional<string> _catalog; //db catalog name ie dbo
 		string _schema;  //db schema name ie dbo
 	private:
@@ -112,7 +113,7 @@ namespace Jde::DB{
 	ẗ IDataSource::SelectMap( string sql, string cacheName, SL sl )ι->SelectCacheAwait<flat_map<K,V>>{
 		return SelectCacheAwait<flat_map<K,V>>( shared_from_this(), move(sql), move(cacheName), zInternal::ProcessMapRow<K,V>, {}, sl );
 	}
-	ẗ IDataSource::SelectMultiMap( Statement&& s, SL sl )Ι->up<TAwait<flat_multimap<K,V>>>{
+	ẗ IDataSource::SelectMultiMap( Sql&& s, SL sl )Ι->up<TAwait<flat_multimap<K,V>>>{
 		MultimapAwait<K,V> m{ shared_from_this(), move(s), sl };
 		return mu<MultimapAwait<K,V>>( move(m) );
 		//return mu<MultimapAwait<K,V>>( shared_from_this(), move(s), sl );

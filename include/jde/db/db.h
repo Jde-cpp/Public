@@ -1,14 +1,16 @@
 #pragma once
 #include <jde/framework/io/json.h>
 
+namespace Jde::Access{ struct IAcl; }
 namespace Jde::DB{
-	struct Cluster; struct Schema;
+	struct Cluster; struct IDataSource; struct AppSchema;
 
-	α GetSchema( sv name )ε->sp<Schema>;
-	α SyncSchema( sv name )ε->sp<Schema>;
+	α DataSource( const fs::path& libraryName, sv connectionString )ε->sp<IDataSource>;
+	α GetAppSchema( str name, sp<Access::IAcl> )ε->sp<AppSchema>;
+	α SyncSchema( str name, sp<Access::IAcl> )ε->sp<AppSchema>;
 #ifndef PROD
 	namespace NonProd{
-		α Recreate( sp<Schema>& schema )ε->void;
+		α Recreate( const AppSchema& schema )ε->void;
 	}
 #endif
 }

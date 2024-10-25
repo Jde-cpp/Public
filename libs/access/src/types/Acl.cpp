@@ -1,10 +1,11 @@
 #include "Acl.h"
 #include <jde/db/IDataSource.h>
+#include <jde/db/meta/AppSchema.h>
+#include <jde/db/meta/Table.h>
 
 #define let const auto
 namespace Jde::Access{
-
-	α LoadAcl( sp<DB::Schema> schema, AclLoadAwait& await )ι->DB::RowAwait::Task{
+	α LoadAcl( sp<DB::AppSchema> schema, AclLoadAwait& await )ι->DB::RowAwait::Task{
 		try{
 			sp<DB::Table> aclTable = schema->GetTablePtr( "acl" );
 			let ds = aclTable->Schema->DS();

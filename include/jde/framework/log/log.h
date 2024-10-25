@@ -7,7 +7,7 @@
 #include "../collections/Vector.h"
 #include "../io/crc.h"
 #include "../process.h"
-#include "LogTags.h"
+#include "logTags.h"
 #include "Message.h"
 #include "IExternalLogger.h"
 #ifndef _MSC_VER
@@ -21,8 +21,6 @@ namespace Jde{
 	α LogLevelStrings()ι->const std::array<sv,7>;
 }
 namespace Jde::Logging{
-
-	//α Log( const Logging::ILogEntry& m )ι->void;
 	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void;
 	ψ Log( const Logging::MessageBase& m, const sp<LogTag> tag, bool logServer, bool break_, Args&&... args )ι->void;
 	ψ Log( const Logging::MessageBase& m, const sp<LogTag> tag, Args&&... args )ι->void{ Log( m, tag, true, true, args... ); }
@@ -69,12 +67,6 @@ namespace Jde::Logging{
 #define LOG_IFT( predicate, severity, logTag, message,... ) if( predicate ){ LOG( severity, logTag, message __VA_OPT__(,) __VA_ARGS__ ); }
 #define ERR_IF( predicate, message, ... ) LOG_IFL( predicate, ELogLevel::Error, message, __VA_ARGS__ )
 #define LOG_MEMORY( tag, severity, message, ... ) LogMemoryDetail( Logging::Message{tag, severity, message} __VA_OPT__(,) __VA_ARGS__ );
-
-//namespace spdlog{
-//#ifdef _MSC_VER
-//	namespace level{ enum level_enum; }
-//#endif
-//}
 
 namespace Jde{
 	Ξ Log( ELogLevel sev, string&& x, const sp<LogTag>& tag, SRCE )ι{ Logging::Log( Logging::Message{sev, move(x), sl}, tag ); }

@@ -1,13 +1,13 @@
 #include "Role.h"
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Statement.h>
-#include <jde/db/meta/Schema.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 
 #define let const auto
 
 namespace Jde::Access{
-	α LoadRoles( sp<DB::Schema> schema, RoleLoadAwait& await )ι->DB::RowAwait::Task{
+	α LoadRoles( sp<DB::AppSchema> schema, RoleLoadAwait& await )ι->DB::RowAwait::Task{
 		flat_map<RolePK,Role> roles;
 		try{
 			sp<DB::Table> roleRightsTable = schema->GetTablePtr( "role_rights" );

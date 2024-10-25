@@ -86,7 +86,7 @@ namespace Jde::DB::MySql{
 	α MySqlServerMeta::ToType( sv typeName )Ι->EType{
 		using enum EType;
 		auto type{ None };
-		if(typeName=="datetime")
+		if( typeName=="datetime" || typeName=="timestamp" )
 			type = DateTime;
 		else if( typeName=="smalldatetime" )
 			type = SmallDateTime;

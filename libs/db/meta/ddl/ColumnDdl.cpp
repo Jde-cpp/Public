@@ -19,22 +19,25 @@ namespace Jde::DB{
 		SKIndex = skIndex;
 	}
 
-	α ColumnDdl::DataTypeString( const Syntax& syntax )Ι->string{
-		return MaxLength ? Ƒ("{}({})", syntax.ToString(Type), *MaxLength) : syntax.ToString( Type );
+	α ColumnDdl::DataTypeString( const Column& config )ι->string{
+		let& syntax = config.Table->Syntax();
+		return config.MaxLength ? Ƒ("{}({})", syntax.ToString(config.Type), *config.MaxLength) : syntax.ToString( config.Type );
 	}
 
-	α ColumnDdl::CreateStatement( const Syntax& syntax )Ε->string{
-		let null = IsNullable ? "null"sv : "not null"sv;
-		const string sequence = IsSequence ?  " "+string{syntax.IdentityColumnSyntax()} : string{};
-		string dflt;
-		if( Default && !Default->is_null() ){
-			if( Default->is_bool() )
-				dflt = Ƒ( " default {}", Default->get_bool() ? 1 : 0 );
-			else if( string s = Default->is_string() ? Default->get_string() : string{}; s.size() )
-				dflt = Ƒ( " default {}", s=="$now" ? ToStr(Table->Syntax().NowDefault()) : Ƒ("'{}'", s) );
+	α ColumnDdl::CreateStatement( const Column& config )ε->string{
+		let& syntax = config.Table->Syntax();
+		let null = config.IsNullable ? "null"sv : "not null"sv;
+		const string sequence = config.IsSequence ?  " "+string{syntax.IdentityColumnSyntax()} : string{};
+		string defaultClause;
+		let& dflt = config.Default;
+		if( dflt && !dflt->is_null() ){
+			if( dflt->is_bool() )
+				defaultClause = Ƒ( " default {}", dflt->get_bool() ? 1 : 0 );
+			else if( string s = dflt->is_string() ? dflt->get_string() : string{}; s.size() )
+				defaultClause = Ƒ( " default {}", s=="$now" ? ToStr(syntax.NowDefault()) : Ƒ("'{}'", s) );
 			else
-				THROW( "{}Default type not implemented.", Default->TypeName() );
+				THROW( "{}Default type not implemented.", dflt->TypeName() );
 		}
-		return Ƒ( "{} {} {}{}{}", Name, DataTypeString(syntax), null, sequence, dflt );
+		return Ƒ( "{} {} {}{}{}", config.Name, DataTypeString(config), null, sequence, defaultClause );
 	}
 }

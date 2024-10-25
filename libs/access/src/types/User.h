@@ -5,7 +5,7 @@
 #include <jde/framework/coroutine/TaskOld.h>
 #include "Group.h"
 
-namespace Jde::DB{ struct Schema; }
+namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Access{
 	struct AllowedDisallowed final{
 		ERights Allowed;
@@ -22,9 +22,9 @@ namespace Jde::Access{
 	};
 
 	struct UserLoadAwait final : TAwaitEx<concurrent_flat_map<UserPK,User>,Coroutine::Task>{
-		UserLoadAwait( sp<DB::Schema> schema )ι;
+		UserLoadAwait( sp<DB::AppSchema> schema )ι;
 	private:
 		α Execute()ι->Coroutine::Task override;
-		sp<DB::Schema> _schema;
+		sp<DB::AppSchema> _schema;
 	};
 }

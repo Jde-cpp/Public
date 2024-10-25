@@ -33,3 +33,11 @@ buildLibrary mysql-connector-cpp
 context-impl=ucontext;
 b2 cxxstd=23 cxxflags="$CXX_FLAGS" -j 8 --prefix=$REPO_DIR/install/$CXX/asan/boost --build-type=complete --layout=tagged
 #--with-atomic --with-chrono --with-date_time --with-filesystem --with-program_options --with-regex --with-serialization --with-system --with-thread --with-test --with-locale --with-iostreams --with-log --with-timer --with-exception
+
+#jsonnet
+cls;rm CMakeCache.txt; BT=asan;cmake -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/duffyj/code/libraries/install/g++-13/$BT/jsonnet -DCMAKE_POSITION_INDEPENDENT_CODE=1 -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-rpath=$ORIGIN" -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer"  ../..
+cls;make -j8
+make install
+cd /home/duffyj/code/jde/bin/asan
+ln -s /home/duffyj/code/libraries/install/g++-13/asan/jsonnet/lib/libjsonnet.so.0
+ln -s /home/duffyj/code/libraries/install/g++-13/asan/jsonnet/lib/libjsonnet++.so.0

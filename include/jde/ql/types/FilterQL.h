@@ -1,8 +1,7 @@
 #pragma once
-#include <jde/db/Value.h>
-#include <jde/db/generators/Syntax.h>
 #include <jde/db/generators/WhereClause.h>
-#include <jde/framework/io/json/JValue.h>
+
+namespace Jde::DB{ struct Value; struct View; }
 
 namespace Jde::QL{
 	struct TableQL;
@@ -19,5 +18,5 @@ namespace Jde::QL{
 		flat_map<JColName,vector<FilterValueQL>> ColumnFilters;
 		Ω Test( const DB::Value& value, const vector<FilterValueQL>& filters, ELogTags logTags )ι->bool;
 	};
-	α ToWhereClause( const TableQL& table, const DB::Table& schemaTable )->DB::WhereClause;
+	α ToWhereClause( const TableQL& table, const DB::View& schemaTable )->DB::WhereClause;
 }

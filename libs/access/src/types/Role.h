@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Jde::DB{ struct Schema; }
+namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Access{
 	using RolePK=uint16;
 	using PermissionPK=uint16;
@@ -16,9 +16,9 @@ namespace Jde::Access{
 	};
 
 	struct RoleLoadAwait final : TAwait<flat_multimap<RolePK,PermissionPK>>{
-		RoleLoadAwait( sp<DB::Schema> schema )ι: _schema{schema}{};
+		RoleLoadAwait( sp<DB::AppSchema> schema )ι: _schema{schema}{};
 	private:
 		α Suspend()ι->void override;
-		sp<DB::Schema> _schema;
+		sp<DB::AppSchema> _schema;
 	};
 }

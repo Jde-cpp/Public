@@ -45,7 +45,7 @@ namespace Jde::DB{
 			indexes.emplace_back( "pk", t.Name, true, &names );
 		}
 		for( uint i=0; i<t.NaturalKeys.size(); ++i ){
-			let name = Ƒ( "nk{}", i );
+			let name = t.NaturalKeys.size()==1 ? "nk" : Ƒ( "nk{}", i );
 			indexes.emplace_back( name, t.Name, false, &t.NaturalKeys[i] );
 		}
 		return indexes;

@@ -1,37 +1,53 @@
 ﻿#include "gtest/gtest.h"
 #include <jde/framework/process.h>
 #include <jde/framework/settings.h>
+#include <jde/access/access.h>
 #include <jde/db/db.h>
-#include <jde/access/Access.h>
+#include <jde/ql/ql.h>
+#include "globals.h"
+
 #define let const auto
 
 namespace Jde{
 	α OSApp::ProductName()ι->sv{ return "Tests.UM"; }
 
- 	α Startup( int argc, char **argv )ι->void{
+ 	α Startup( int argc, char **argv )ε->void{
 #ifdef _MSC_VER
-		ASSERT( Settings::Get<uint>("workers/drive/threads")>0 )
+		ASSERT( Settings::Get<uint>("/workers/drive/threads")>0 )
 #endif
 		ASSERT( argc>1 && string{argv[1]}=="-c" )
 		OSApp::Startup( argc, argv, OSApp::ProductName(), "UM tests" );
 
 		let metaDataName{ "access" };
-		auto schema = DB::GetSchema( metaDataName );
-		if( Settings::Find<bool>("testing/recreateDB").value_or(false) )
-			DB::NonProd::Recreate( schema );
-		Access::Configure( schema );
+		sp<Access::IAcl> authorize = Access::LocalAcl();
+		auto schema = DB::GetAppSchema( metaDataName, authorize );
+		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
+			DB::NonProd::Recreate( *schema );
+		Access::Configure( schema, {} );
+		QL::Configure( {schema} );
+		Access::Tests::SetSchema( schema );
 	}
 }
 
 α main( int argc, char **argv )->int{
 	using namespace Jde;
+
+	//jsonnet::Jsonnet vm;
+	//vm.init();
+	//string j;
+	//vm.evaluateFile( "path.string()", &j );
+	//Json::Parse( j, sl );
+
 	::testing::InitGoogleTest( &argc, argv );
-	Startup( argc, argv );
-	auto result = EXIT_FAILURE;
-	{
-		::testing::GTEST_FLAG( filter ) = Settings::Find( "testing/tests" ).value_or( "*" );
-	   result = RUN_ALL_TESTS();
-		Process::Shutdown( result );
+	try{
+		Startup( argc, argv );
+	}catch( const IException& e ){
+		std::cerr << e.what() << std::endl;
+		return EXIT_FAILURE;
 	}
+	::testing::GTEST_FLAG( filter ) = Settings::FindSV( "/testing/tests" ).value_or( "*" );
+	let result = RUN_ALL_TESTS();
+	Process::Shutdown( result );
+
 	return result;
 }

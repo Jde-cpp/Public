@@ -2,7 +2,7 @@
 #include <jde/db/Value.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/await/RowAwait.h>
-#include <jde/db/meta/Schema.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/generators/FromClause.h>
 #include <jde/db/generators/WhereClause.h>
@@ -11,12 +11,12 @@
 namespace Jde::Access{
 	constexpr ELogTags _tags{ ELogTags::Access };
 
-	ResourceLoadAwait::ResourceLoadAwait( sp<DB::Schema> schema, vector<AppPK> appPKs )ι:
+	ResourceLoadAwait::ResourceLoadAwait( sp<DB::AppSchema> schema, vector<AppPK> appPKs )ι:
 		AppPKs{ appPKs },
 		_schema{ schema }
 	{}
 
-	α LoadResources( sp<DB::Schema> schema, ResourceLoadAwait& await )ι->DB::RowAwait::Task{
+	α LoadResources( sp<DB::AppSchema> schema, ResourceLoadAwait& await )ι->DB::RowAwait::Task{
 		flat_map<ResourcePK,Resource> resources;
 		try{
 			sp<DB::Table> resourceTable = schema->GetTablePtr( "resources" );
