@@ -1,11 +1,14 @@
 ﻿#pragma once
+#ifndef SYNTAX_H
+#define SYNTAX_H
 #include <jde/framework/str.h>
 #include <jde/db/Value.h>
 
 namespace Jde::DB{
-	struct Column; struct Table;
+	struct Column; struct Join; struct Table;
 	enum class EOperator : uint8{Equal,NotEqual,Regex,Glob,In,NotIn,Greater,GreaterOrEqual,Less,LessOrEqual,ElementMatch};
 	α ToOperator( sv op )ι->EOperator;
+	α ToString( EOperator op )ι->string;
 	struct Syntax{
 		Ω Instance()->const Syntax&;
 		virtual ~Syntax()=default;
@@ -33,7 +36,7 @@ namespace Jde::DB{
 		α ToString( EType type )Ι->string;
 
 		β UniqueIndexNames()Ι->bool{ return false; }
-		β UsingClause( const Column& c0, const Column& c1 )Ι->string;
+		β UsingClause( const Join& join )Ι->string;
 		β UtcNow()Ι->iv{ return "getutcdate()"; }
 		β ZeroSequenceMode()Ι->sv{ return {}; }
 	};
@@ -44,7 +47,7 @@ namespace Jde::DB{
 		α AltDelimiter()Ι->sv override{ return "$$"; }
 		α CanSetDefaultSchema()Ι->bool{ return true; }
 		α CatalogSelect()Ι->sv override{ return {}; }
-		α DateTimeSelect( sv columnName )Ι->string override{ return Ƒ( "UNIX_TIMESTAMP(CONVERT_TZ({}, '+00:00', @@session.time_zone))", columnName ); }
+		α DateTimeSelect( sv columnName )Ι->string override{ return Ƒ( "UNIX_TIMESTAMP({})", columnName ); }
 		α HasCatalogs()Ι->bool{ return false; }
 		α HasUnsigned()Ι->bool override{ return true; }
 		α IdentityColumnSyntax()Ι->sv override{ return "AUTO_INCREMENT"; }
@@ -60,8 +63,9 @@ namespace Jde::DB{
 		α SchemaSelect()Ι->sv override{ return "select database() from dual;"; }
 		α SpecifyIndexCluster()Ι->bool override{ return false; }
 		α SysSchema()Ι->sv override{ return "sys"; }
-		α UsingClause( const Column& c0, const Column& c1 )Ι->string override;
+		α UsingClause( const Join& join )Ι->string override;
 		α UtcNow()Ι->iv override{ return "CURRENT_TIMESTAMP()"; }
 		α ZeroSequenceMode()Ι->sv override{ return "SET @@session.sql_mode = CASE WHEN @@session.sql_mode NOT LIKE '%NO_AUTO_VALUE_ON_ZERO%' THEN CASE WHEN LENGTH(@@session.sql_mode)>0 THEN CONCAT_WS(',',@@session.sql_mode,'NO_AUTO_VALUE_ON_ZERO') ELSE 'NO_AUTO_VALUE_ON_ZERO' END ELSE @@session.sql_mode END"; }
 	};
 }
+#endif

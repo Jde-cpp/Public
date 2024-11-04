@@ -17,7 +17,7 @@ namespace Jde::DB{
 			auto pk = from.SurrogateKeys[0];
 			let& to = *tables[i];
 			let fk = to.GetColumnPtr( pk->Name, sl );
-			joins.emplace_back( pk, fk );
+			joins.emplace_back( pk, fk, true );
 		}
 		return joins;
 	}
@@ -36,13 +36,17 @@ namespace Jde::DB{
 		let& syntax = Joins[0].From->Table->Schema->Syntax();
 		string sql{ "from "+Joins[0].From->Table->DBName }; sql.reserve( 255 );
 		for( let& join : Joins )
-			sql += syntax.UsingClause( *join.From, *join.To );
+			sql += syntax.UsingClause( join );
 		return sql;
 	}
 
 	α FromClause::operator+=( Join&& join )ι->FromClause&{
 		SingleTable = nullptr;
 		Joins.push_back(move(join)); return *this;
+	}
+	α FromClause::TryAdd( Join&& join )ι->void{
+		if( !Contains(join.To->Table->Name) )
+			*this += move(join);
 	}
 
 	α FromClause::Contains( sv tableName )ι->bool{
@@ -75,7 +79,7 @@ namespace Jde::DB{
 		if( let pDeleted=table->FindColumn("deleted"); pDeleted ){
 			where.Add( pDeleted, Value{} );
 			if( pDeleted->Table->Name!=table->Name && table->SurrogateKeys.size()>1 )
-				*this += {table->SurrogateKeys[0], pDeleted->Table->GetPK()}; //table=groups, pDeleted=identities.  Extension tables have extension_id first.
+				TryAdd( {table->SurrogateKeys[0], pDeleted->Table->GetPK(), true} ); //table=groups, pDeleted=identities.  Extension tables have extension_id first.
 		}
 	}
 }

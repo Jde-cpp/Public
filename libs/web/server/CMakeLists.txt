@@ -43,20 +43,7 @@ target_link_libraries( ${CMAKE_PROJECT_NAME} OpenSSL::SSL )
 #######################################################
 target_precompile_headers( ${CMAKE_PROJECT_NAME}
   PRIVATE
-	<boost/beast.hpp>
-	<boost/asio.hpp>
-	<boost/exception/diagnostic_information.hpp>
-	<jde/log/Log.h>
-	<jde/Exception.h>
-	<jde/web/server/usings.h>
-	<jde/coroutine/Task.h>
-	<jde/app/shared/exports.h>
-	<jde/app/shared/proto/App.FromServer.pb.h>
-
-	"../../../../Framework/source/coroutine/Awaitable.h"
-	"../../../../Framework/source/db/GraphQL.h"
-	"../../../../Framework/source/io/ProtoUtilities.h"
-	"../../../../Framework/source/threading/InterruptibleThread.h"
+	"pc.h"
 )
 
 if( MSVC )

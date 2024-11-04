@@ -11,8 +11,8 @@ if [ $all -eq 1 ]; then
 	$BUILD libs/db $type $clean $compiler || exit 1;
 	export Boost_INCLUDE_DIR=/home/duffyj/code/libraries/boostorg/boost_1_86_0;
 	$BUILD libs/db/drivers/mysql $type $clean $compiler || exit 1;
-	$BUILD libs/access/src $type $clean $compiler || exit 1;
 	$BUILD libs/ql $type $clean $compiler || exit 1;
+	$BUILD libs/access/src $type $clean $compiler || exit 1;
 fi
 echo `pwd`;
 cd libs/access/tests;

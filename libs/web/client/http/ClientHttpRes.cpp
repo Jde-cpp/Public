@@ -1,7 +1,7 @@
 #include <jde/web/client/http/ClientHttpRes.h>
 #include <zlib.h>
 #include <jde/web/client/usings.h>
-#define var const auto
+#define let const auto
 
 namespace Jde::Web::Client{
 	α GetBody( const http::response<http::string_body>& res )ε->string{
@@ -30,11 +30,11 @@ namespace Jde::Web::Client{
 	{}
 
 	α ClientHttpRes::RedirectVariables()Ι->tuple<string,string,PortType>{
-		var location = _headers[http::field::location];
-		var startHost = location.find_first_of( "//" );
+		let location = _headers[http::field::location];
+		let startHost = location.find_first_of( "//" );
 		if( startHost==string::npos || startHost+3>location.size() )
 			THROW( "Could not parse redirect:  {}", location );
-		var startTarget = location.find_first_of( "/", startHost+2 );
+		let startTarget = location.find_first_of( "/", startHost+2 );
 		auto host = location.substr( startHost+2, startTarget-startHost-2 );
 		auto target = startTarget==string::npos ? string{} : string{ location.substr(startTarget) };
 		constexpr PortType defaultPort{ 443 };

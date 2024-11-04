@@ -5,9 +5,11 @@ namespace Jde::DB{
 
 	struct Join final{
 		//JoinTable( sp<DB::View> view )ι:View{view}{}
-		Join( sp<Column> from, sp<Column> to )ι:From{from},To{to}{}
+		//Join( sp<Column> from, sp<Column> to, bool inner )ι:From{from},To{to},Inner{inner}{}
 		sp<Column> From;
 		sp<Column> To;
+		bool Inner;
+		string ToAlias;
 	};
 	struct FromClause final{
 		FromClause()=default;
@@ -17,6 +19,7 @@ namespace Jde::DB{
 		FromClause( Join&& j )ι:Joins{move(j)}{};
 		α ToString()Ε->string;
 		α operator+=( Join&& join )ι->FromClause&;
+		α TryAdd( Join&& join )ι->void;
 
 		α Contains( sv tableName )ι->bool;
 		α Empty()Ι->bool{ return !SingleTable && Joins.empty(); }

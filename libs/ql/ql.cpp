@@ -2,6 +2,7 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/types/MutationQL.h>
+#include <jde/ql/types/Introspection.h>
 
 #define let const auto
 
@@ -10,15 +11,21 @@ namespace Jde::QL{
 	vector<sp<DB::AppSchema>> _schemas;
   α Mutation( const MutationQL& m, UserPK userPK )ε->uint;
   α QueryTables( const vector<TableQL>& tables, UserPK userPK )ε->jobject;
+	α SetIntrospection( Introspection&& x )ι->void;
 }
 namespace Jde{
-	α QL::Configure( vector<sp<DB::AppSchema>>&& schemas )ι->void{
+	α QL::Configure( vector<sp<DB::AppSchema>>&& schemas )ε->void{
 		_schemas = move( schemas );
+		for( let& schema : _schemas ){
+			if( let path = Settings::FindSV(schema->ConfigPath()+"/ql"); path ){
+				SetIntrospection( {Json::ReadJsonNet(*path)} );
+			}
+		}
 	}
 
-	α QL::Query( sv query, UserPK userPK, SL sl )ε->jobject{
-		Trace{ sl, _tags | ELogTags::Pedantic, "QL::Query: {}", query };
-		let qlType = Parse( query );
+	α QL::Query( string query, UserPK userPK, SL sl )ε->jobject{
+		Trace{ sl, _tags | ELogTags::Pedantic, "QL: {}", query };
+		let qlType = Parse( move(query) );
 		vector<TableQL> tableQueries;
 		jobject j;
 		if( qlType.index()==1 ){
@@ -34,7 +41,7 @@ namespace Jde{
 		else
 			tableQueries = get<vector<TableQL>>( qlType );
 		jobject y = tableQueries.size() ? QueryTables( tableQueries, userPK ) : j;
-		//Dbg( y.dump() );
+		Trace{ _tags | ELogTags::Pedantic, "QL::Result: {}", serialize(y) };
 		return y;
 	}
 
@@ -46,6 +53,12 @@ namespace Jde{
 }
 
 namespace Jde::QL{
+	QLAwait::QLAwait( string query, UserPK userPK, SL sl )ε:
+		TAwait<jobject>{sl},
+		_request{ Parse(move(query)) },
+		_userPK{ userPK }
+	{}
+
 	α FindTable( str tableName )ε->sp<DB::View>{
 		for( let& schema : _schemas ){
 			if( let pTable = schema->GetTablePtr(tableName); pTable )

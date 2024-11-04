@@ -6,7 +6,6 @@
 
 #define let const auto
 namespace Jde::Access{
-	constexpr ELogTags _tags{ ELogTags::Test };
 	using namespace Json;
 	using namespace Tests;
 
@@ -20,67 +19,41 @@ namespace Jde::Access{
 	TEST_F( UserTests, Fields ){
 		let query = "{ __type(name: \"User\") { fields { name type { name kind ofType{name kind} } } }}";
 		let json = QL::Query( query, 0 );
-		Trace{ _tags, "{}", serialize(json) };
 		let actual = Str::Replace( serialize(json), '"', '\'' );
-		let expected = "{'data':{'__type':{'name':'User','fields':[{'name':'id','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'ID','kind':'SCALAR'}}},{'name':'name','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'String','kind':'SCALAR'}}},{'name':'provider','type':{'name':'Provider','kind':'OBJECT'}},{'name':'target','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'String','kind':'SCALAR'}}},{'name':'attributes','type':{'name':'UInt','kind':'SCALAR'}},{'name':'created','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'DateTime','kind':'SCALAR'}}},{'name':'updated','type':{'name':'DateTime','kind':'SCALAR'}},{'name':'deleted','type':{'name':'DateTime','kind':'SCALAR'}},{'name':'description','type':{'name':'String','kind':'SCALAR'}},{'name':'isGroup','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'Boolean','kind':'SCALAR'}}},{'name':'loginName','type':{'name':'String','kind':'SCALAR'}},{'name':'modulus','type':{'name':'String','kind':'SCALAR'}},{'name':'exponent','type':{'name':'UInt','kind':'SCALAR'}}]}}}";
+		let expected = "{'data':{'__type':{'name':'User','fields':[{'name':'id','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'ID','kind':'SCALAR'}}},{'name':'name','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'String','kind':'SCALAR'}}},{'name':'provider','type':{'name':'Provider','kind':'ENUM'}},{'name':'target','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'String','kind':'SCALAR'}}},{'name':'attributes','type':{'name':'UInt','kind':'SCALAR'}},{'name':'created','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'DateTime','kind':'SCALAR'}}},{'name':'updated','type':{'name':'DateTime','kind':'SCALAR'}},{'name':'deleted','type':{'name':'DateTime','kind':'SCALAR'}},{'name':'description','type':{'name':'String','kind':'SCALAR'}},{'name':'isGroup','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'Boolean','kind':'SCALAR'}}},{'name':'loginName','type':{'name':'String','kind':'SCALAR'}},{'name':'modulus','type':{'name':'String','kind':'SCALAR'}},{'name':'exponent','type':{'name':'UInt','kind':'SCALAR'}}]}}}";
 		ASSERT_EQ( actual, expected );
 	}
 
-	α SelectUser( string target )->jobject{
-		let selectArray = Ƒ( "query{{ user(target:[\"{}\"]){{id loginName provider{{id name}}}} }}", target );
-		let selectArrayJson = QL::Query( selectArray, 0 );
-		Trace{ _tags, "selectArrayJson={}", serialize(selectArrayJson) };
-		return AsObject( selectArrayJson, "data" );
-	}
-
 	TEST_F( UserTests, Crud ){
-		const string user{ "crud" };
-		let existingUser = SelectUser( user );
-		auto id = FindNumberPath<UserPK>( existingUser, "user/id" ).value_or( 0 );
-		if( id )
-			PurgeUser( id );
-		id = CreateUser( user );
+		const string target{ "crud" };
+		let existingUser = GetUser( target, GetRoot() );
+		auto id = FindNumberPath<UserPK>( existingUser, "id" ).value_or( 0 );
+		ASSERT_NE( id, 0 );
 
-	//	auto id = 3;
-		let selectAll = "query{ users { id name attributes created updated deleted target description provider } }";
-		let selectAllJson = QL::Query( selectAll, 0 );
-		Trace{ _tags, "{}", serialize(selectAllJson) };
-
-		let readGroups = "query{ users(filter:{isGroup:{ eq:true}}){ id name } }";
-		let readGroupsJson = QL::Query( readGroups, 0 );
-		Trace{ _tags, "{}", serialize(readGroupsJson) };
-		ASSERT_EQ( AsArray(readGroupsJson, "data/users").size(), 0 );
-
-		let read = Ƒ("query{{ user(filter:{{target:{{ eq:\"{}\"}}}}){{ id name attributes created updated deleted target description isGroup provider{{ id name }} }} }}", user );
-		let readJson = QL::Query( read, 0 );
-		Trace{ _tags, "{}", serialize(readJson) };
-		let readId = AsNumber<UserPK>( readJson, "data/user/id" );
-		ASSERT_EQ( id, readId );
-
-		let update = Ƒ( "{{ mutation {{ updateUser( \"id\":{}, \"input\": {{\"name\":\"{}\"}} ) }} }}", readId, "newName" );
+		let update = Ƒ( "{{ mutation updateUser( \"id\":{}, \"input\": {{\"name\":\"{}\"}} ) }}", id, "newName" );
 		let updateJson = QL::Query( update, 0 );
-		Trace{ _tags, "{}", serialize(updateJson) };
+		ASSERT_TRUE( AsSV(Tests::GetUser(target, GetRoot()), "name")=="newName" );
 
-		let del = Ƒ( "{{mutation {{ deleteUser(\"id\":{}) }} }}", readId );
+		let del = Ƒ( "{{ mutation deleteUser(\"id\":{}) }}", id );
 		let deleteJson = QL::Query( del, 0 );
-		Trace{ _tags, "{}", serialize(deleteJson) };
+		ASSERT_TRUE( Tests::SelectUser(target, GetRoot()).empty() );
+		ASSERT_TRUE( !Tests::GetUser(target, GetRoot(), true).empty() );
 
-		PurgeUser( id );
+		PurgeUser( id, GetRoot() );
+		ASSERT_TRUE( Tests::SelectUser(target, GetRoot(), true).empty() );
 	}
 
 	TEST_F( UserTests, MultipleUsersSelect ){
-		UserPK a = CreateUser( "MultipleUsersA" );
-		UserPK b = CreateUser( "MultipleUsersB" );
-		let q = Ƒ( "query{{ users(id:[{},{}]){{id loginName provider{{id name}}}} }}", a, b );
-		auto j = QL::Query( q, 0 );
-		Trace{ _tags, "{}", serialize(j) };
-		PurgeUser( a );
-		PurgeUser( b );
+		let a = Json::AsNumber<UserPK>( GetUser("MultipleUsersA", GetRoot()), "id" );
+		let b = Json::AsNumber<UserPK>( GetUser("MultipleUsersB", GetRoot()), "id" );
+		let q = Ƒ( "query{{ users(id:[{},{}]){{id loginName provider}} }}", a, b );
+		auto j = QL::Query( q, GetRoot() );
+		PurgeUser( a, GetRoot() );
+		PurgeUser( b, GetRoot() );
 	}
 	TEST_F( UserTests, ProvidersSelect ){
 		let readGroups = "query{ __type(name: \"Provider\") { enumValues { id name } } }";
 		let readGroupsJson = QL::Query( readGroups, 0 );
-		Trace{ _tags, "{}", serialize(readGroupsJson) };
-		ASSERT_TRUE( AsArray(readGroupsJson, "data/__type/enumValues").size()>0 );
+		ASSERT_TRUE( AsArrayPath(readGroupsJson, "data/__type/enumValues").size()>0 );
 	}
 }

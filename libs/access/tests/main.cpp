@@ -4,6 +4,7 @@
 #include <jde/access/access.h>
 #include <jde/db/db.h>
 #include <jde/ql/ql.h>
+#include <jde/ql/GraphQLHook.h>
 #include "globals.h"
 
 #define let const auto
@@ -25,6 +26,7 @@ namespace Jde{
 			DB::NonProd::Recreate( *schema );
 		Access::Configure( schema, {} );
 		QL::Configure( {schema} );
+
 		Access::Tests::SetSchema( schema );
 	}
 }

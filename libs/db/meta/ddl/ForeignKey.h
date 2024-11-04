@@ -1,9 +1,9 @@
 #pragma once
 
 namespace Jde::DB{
-	struct Table;
+	struct View;
 	struct ForeignKey final{
-		Ω Create( sv name, sv columnName, const DB::Table& pk, const DB::Table& foreignTable )ε->string;
+		Ω Create( sv name, sv columnName, const DB::View& pk, const DB::View& foreignTable )ε->string;
 
 		string Name;
 		string Table;

@@ -18,50 +18,56 @@ namespace Jde{
 		α AsValue( const jobject& o, sv path, SRCE )ε->const jvalue&;
 		α AsArray( const jvalue& v, SRCE )ε->const jarray&;
 		α AsArray( const jobject& o, sv key, SRCE )ε->const jarray&;
+		α AsArrayPath( const jobject& o, sv path, SRCE )ε->const jarray&;
 		Ξ AsBool( const jvalue& v, SRCE )ε->bool{ return $(bool); }
 		Ŧ AsNumber( const jvalue& v, SRCE )ε->T;
 		Ŧ AsNumber( const jobject& o, sv path, SRCE )ε->T{ return AsNumber<T>( AsValue(o,path,sl), sl ); }
 		Ξ AsSV( const jvalue& v, sv path, SRCE )ε->sv{ return $(string); }
 		Ξ AsSV( const jvalue& v, SRCE )ε->sv{ return $(string); }
-		α AsSV( const jobject& j, sv key, SRCE )ε->sv;
+		α AsSV( const jobject& o, sv key, SRCE )ε->sv;
 		Ξ AsString( const jvalue& v, SRCE )ε->string{ return string{ $(string) }; }
-		Ξ AsString( const jobject& j, sv key, SRCE )ε->string{ return string{AsSV(j,key,sl)}; }
+		Ξ AsString( const jobject& o, sv key, SRCE )ε->string{ return string{AsSV(o,key,sl)}; }
 		α AsObject( const jvalue& v, SRCE )ε->const jobject&;
 		α AsObject( const jvalue& v, sv path, SRCE )ε->const jobject&;
-		α AsObject( const jobject& j, sv key, SRCE )ε->const jobject&;
+		α AsObject( const jobject& o, sv key, SRCE )ε->const jobject&;
+		α AsObjectPath( const jobject& o, sv path, SRCE )ε->const jobject&;
 
 #undef $
-		Ξ FindValue( const jvalue& j, sv path )ι->optional<jvalue>{ auto y = j.try_at_pointer(path); return y.has_value() ? *y : optional<jvalue>{}; }
-		Ξ FindValuePtr( const jvalue& j, sv path )ι->const jvalue*{ auto y = j.try_at_pointer(path); return y.has_value() ? &*y : nullptr; }
-		α FindValue( const jobject& j, sv path )ι->const jvalue*;
-		α FindArray( const jvalue& j, sv path )ι->const jarray*;
-		α FindArray( const jobject& j, sv key )ι->const jarray*;
-		Ξ FindBool( const jvalue& j, sv path )ι->optional<bool>{ auto p = FindValue(j,path); return p && p->is_bool() ? p->get_bool() : optional<bool>{}; }
-		α FindBool( const jobject& j, sv key )ι->optional<bool>;
-		Ξ FindObject( const jvalue& j, sv path )ι->const jobject*{ auto p = FindValuePtr(j,path); return p ? p->if_object() : nullptr; }
-		Ξ FindSV( const jvalue& j, sv path )ι->optional<sv>{ auto p = FindValuePtr(j,path); return p && p->is_string() ? p->get_string() : optional<sv>{}; }
-		Ξ FindString( const jvalue& j, sv path )ι->optional<string>{ auto sv = FindSV(j, path); return sv ? string{ *sv } : optional<string>{}; }
-		Ŧ FindNumber( const jvalue& j, sv path )ι->optional<T>;
-		Ŧ FindNumberPath( const jobject& j, sv path )ε->optional<T>;
-		template<IsEnum T, class ToEnum> α FindEnum( const jobject& j, sv key, ToEnum&& toEnum )ι->optional<T>;
-		template<IsEnum T, class ToEnum> α FindEnum( const jvalue& j, sv path, ToEnum&& toEnum )ι->optional<T>;
+		Ξ FindValue( const jvalue& v, sv path )ι->optional<jvalue>{ auto y = v.try_at_pointer(path); return y.has_value() ? *y : optional<jvalue>{}; }
+		Ξ FindValuePtr( const jvalue& v, sv path )ι->const jvalue*{ auto y = v.try_at_pointer(path); return y.has_value() ? &*y : nullptr; }
+		α FindValue( const jobject& o, sv path )ι->const jvalue*;
+		α FindArray( const jvalue& v, sv path )ι->const jarray*;
+		α FindArray( const jobject& o, sv key )ι->const jarray*;
+		Ξ FindBool( const jvalue& v, sv path )ι->optional<bool>{ auto p = FindValue(v,path); return p && p->is_bool() ? p->get_bool() : optional<bool>{}; }
+		α FindBool( const jobject& o, sv key )ι->optional<bool>;
+		Ξ FindObject( const jvalue& v, sv path )ι->const jobject*{ auto p = FindValuePtr(v,path); return p ? p->if_object() : nullptr; }
+		Ξ FindSV( const jvalue& v, sv path )ι->optional<sv>{ auto p = FindValuePtr(v,path); return p && p->is_string() ? p->get_string() : optional<sv>{}; }
+		Ξ FindSV( const jobject& o, sv key )ι->optional<sv>{ auto p = o.if_contains(key); return p && p->is_string() ? p->get_string() : optional<sv>{}; }
+		α FindSVPath( const jobject& o, sv path )ι->optional<sv>;
+
+		Ξ FindString( const jvalue& v, sv path )ι->optional<string>{ auto sv = FindSV(v, path); return sv ? string{ *sv } : optional<string>{}; }
+		Ŧ FindNumber( const jvalue& v, sv path )ι->optional<T>;
+		Ŧ FindNumberPath( const jobject& o, sv path )ε->optional<T>;
+		template<IsEnum T, class ToEnum> α FindEnum( const jobject& o, sv key, ToEnum&& toEnum )ι->optional<T>;
+		template<IsEnum T, class ToEnum> α FindEnumPath( const jobject& o, sv path, ToEnum&& toEnum )ι->optional<T>;
+		template<IsEnum T, class ToEnum> α FindEnum( const jvalue& v, sv path, ToEnum&& toEnum )ι->optional<T>;
 
 		α Find( const jvalue& container, const jvalue& item )ι->const jvalue*;
 
-		α FindDefaultArray( const jvalue& j, sv path )ι->const jarray&;
-		α FindDefaultArray( const jobject& j, sv key )ι->const jarray&;
-		α FindDefaultObject( const jvalue& j, sv path )ι->const jobject&;
+		α FindDefaultArray( const jvalue& v, sv path )ι->const jarray&;
+		α FindDefaultArray( const jobject& o, sv key )ι->const jarray&;
+		α FindDefaultObject( const jvalue& v, sv path )ι->const jobject&;
+		α FindDefaultObjectPath( const jobject& o, sv path )ι->const jobject&;
 
 		α Kind( boost::json::kind value )ι->string;
 
-		Ŧ FindNumber( const jobject& j, sv key )ι->optional<T>;
-		Ξ FindObject( const jobject& j, sv key )ι->const jobject*{ auto p = j.if_contains(key); return p ? p->if_object() : nullptr; }
-		Ξ FindSV( const jobject& j, sv key )ι->optional<sv>{ auto p = j.if_contains(key); return p && p->is_string() ? p->get_string() : optional<sv>{}; }
-		Ξ FindString( const jobject& j, sv key )ι->optional<string>{ return string{ FindSV(j,key).value_or(sv{}) }; }
+		Ŧ FindNumber( const jobject& o, sv key )ι->optional<T>;
+		Ξ FindObject( const jobject& o, sv key )ι->const jobject*{ auto p = o.if_contains(key); return p ? p->if_object() : nullptr; }
+		α FindString( const jobject& o, sv key )ι->optional<string>;
 
-		Ξ FindDefaultBool( const jobject& j, sv key )ι->bool{ auto p = j.if_contains(key); return p && p->is_bool() ? p->get_bool() : false; }
-		Ξ FindDefaultSV( const jobject& j, sv key )ι->sv{ auto p = j.if_contains(key); return p && p->is_string() ? p->get_string() : sv{}; }
-		Ξ FindDefaultSV( const jvalue& j, sv path )ι->sv{ auto p = FindSV(j,path); return p ? *p : sv{}; }
+		Ξ FindDefaultBool( const jobject& o, sv key )ι->bool{ auto p = o.if_contains(key); return p && p->is_bool() ? p->get_bool() : false; }
+		Ξ FindDefaultSV( const jobject& o, sv key )ι->sv{ auto p = o.if_contains(key); return p && p->is_string() ? p->get_string() : sv{}; }
+		Ξ FindDefaultSV( const jvalue& v, sv path )ι->sv{ auto p = FindSV(v,path); return p ? *p : sv{}; }
 
 		α Parse( sv json, SRCE )ε->jobject;
 	}
@@ -71,39 +77,43 @@ namespace Jde{
 		return Eval( y, Ƒ("'{}', Could not convert to number.", serialize(v)), sl );
 	}
 
-	Ŧ Json::FindNumber( const jvalue& j, sv path )ι->optional<T>{
-		auto p = FindValue(j,path);
+	Ŧ Json::FindNumber( const jvalue& v, sv path )ι->optional<T>{
+		auto p = FindValue(v,path);
 		optional<T> y;
 		if( p ){
-			if( auto n = j.try_to_number<T>(); n )
+			if( auto n = v.try_to_number<T>(); n )
 				y = *n;
 		}
 		return y;
 	}
 
-	template<IsEnum T, class ToEnum> α Json::FindEnum( const jvalue& j, sv path, ToEnum&& toEnum )ι->optional<T>{
-		auto p = FindSV(j, path);
+	template<IsEnum T, class ToEnum> α Json::FindEnum( const jvalue& v, sv path, ToEnum&& toEnum )ι->optional<T>{
+		auto p = FindSV( v, path );
 		return p ? toEnum( *p ) : optional<T>{};
 	}
-	template<IsEnum T, class ToEnum> α Json::FindEnum( const jobject& j, sv key, ToEnum&& toEnum )ι->optional<T>{
-		auto p = FindSV(j, key);
+	template<IsEnum T, class ToEnum> α Json::FindEnum( const jobject& o, sv key, ToEnum&& toEnum )ι->optional<T>{
+		auto p = FindSV( o, key );
 		return p ? toEnum( *p ) : optional<T>{};
 	}
-	Ŧ Json::FindNumber( const jobject& j, sv member )ι->optional<T>{
+	template<IsEnum T, class ToEnum> α Json::FindEnumPath( const jobject& o, sv path, ToEnum&& toEnum )ι->optional<T>{
+		auto v = FindValue( o, path );
+		return v && v->is_string() ? toEnum( v->get_string() ) : optional<T>{};
+	}
+	Ŧ Json::FindNumber( const jobject& o, sv member )ι->optional<T>{
 		optional<T> y;
-		if( auto m = j.if_contains(member); m )
+		if( auto m = o.if_contains(member); m )
 			if( auto v = m->try_to_number<T>(); v )
 				y = *v;
 		return y;
 	}
 #define let const auto
-	Ŧ Json::FindNumberPath( const jobject& o, sv path )ε->optional<T>{ 
+	Ŧ Json::FindNumberPath( const jobject& o, sv path )ε->optional<T>{
 		optional<T> y;
 		if( let v = FindValue(o,path); v ){
 			if( let n = v->try_to_number<T>(); n )
 				y = *n;
 		}
-		return y; 
+		return y;
 	}
 }
 Ŧ Jde::Eval( const boost::system::result<T>& x, string&& message, SL sl )ε->T{

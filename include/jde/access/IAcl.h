@@ -5,6 +5,6 @@ namespace Jde::Access{
 		//α TestRead( str tableName, UserPK userId )ε->void;
 		β Test( ERights rights, str resource, UserPK userPK )ε->void=0;
 
-		Access::AppPK AppPK;
+		string SchemaName;
 	};
 }

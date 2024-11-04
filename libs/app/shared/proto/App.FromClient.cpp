@@ -1,8 +1,8 @@
 #include <jde/app/shared/proto/App.FromClient.h>
-#include "../../../../Framework/source/io/ProtoUtilities.h"
+#include <jde/framework/io/proto.h>
 
 namespace Jde::App{
-	α FromClient::AddSession( str domain, str loginName, ProviderPK providerPK, str userEndPoint, bool isSocket, RequestId requestId )ι->PFromClient::Transmission{
+	α FromClient::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, RequestId requestId )ι->PFromClient::Transmission{
 		PFromClient::Transmission t;
 		auto& m = *t.add_messages();
 		m.set_request_id( requestId );
@@ -49,7 +49,7 @@ namespace Jde::App{
 		i.set_server_log_level( (Jde::Proto::ELogLevel)Logging::External::MinLevel("db") );
 		i.set_client_log_level( (Jde::Proto::ELogLevel)Logging::ClientMinLevel() );
 		*i.mutable_start_time() = IO::Proto::ToTimestamp( Logging::StartTime() );
-		i.set_web_port( Settings::Get<PortType>("http/port").value_or(0) );
+		i.set_web_port( Settings::FindNumber<PortType>("http/port").value_or(0) );
 
 		return t;
 	}

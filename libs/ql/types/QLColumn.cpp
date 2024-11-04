@@ -6,9 +6,9 @@
 namespace Jde::QL{
 	α QLColumn::MemberName()Ι->string{
 		string y;
-		if( Column->IsFlags() || Column->IsEnum() ){
+		if( Column->IsEnum() && !Column->IsFlags() && Column->Name.ends_with("_id") ){
 			y = DB::Names::ToJson( Table().Name );
-			if( Column->IsEnum() )
+			if( !Column->IsFlags() )
 				y = DB::Names::ToSingular( y );
 		}
 		else

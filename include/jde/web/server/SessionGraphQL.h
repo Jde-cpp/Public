@@ -1,9 +1,10 @@
 #pragma once
-#include <jde/db/graphQL/GraphQLHook.h>
+#include <jde/ql/GraphQLHook.h>
 #include "exports.h"
 
+namespace Jde::QL{ struct TableQL; }
 namespace Jde::Web::Server{
-	struct ΓWS SessionGraphQL : DB::GraphQL::IGraphQLHook{
-		α Select( const DB::TableQL& query, UserPK userPK, SRCE )ι->up<IAwait> override;
+	struct ΓWS SessionGraphQL : QL::IGraphQLHook{
+		α Select( const QL::TableQL& query, UserPK userPK, SRCE )ι->up<IAwait> override;
 	};
 }

@@ -15,22 +15,6 @@
 
 namespace Jde::DB{
 	using std::endl;
-	α GetParentChildMap( const jobject& j, const View& view )ε->optional<tuple<sp<Column>,sp<Column>>>{
-		optional<tuple<sp<Column>,sp<Column>>> parentChildMap;
-		if( auto kv = j.find("map"); kv!=j.end() ){
-			let& map = kv->value();
-			if( let parentId = Json::FindSV(map, "parentId"); parentId ){
-				auto parentColumn = view.GetColumnPtr( *parentId );
-				auto childId = Json::AsSV( map, "childId" );
-				auto childColumn = view.GetColumnPtr( childId );
-				parentChildMap = make_tuple( parentColumn, childColumn );
-			}
-			else
-				parentChildMap = make_tuple( nullptr, nullptr );//acl doesn't have parent/child.
-		}
-		return parentChildMap;
-	}
-
 	α GetNaturalKeys( const jobject& j )ε->vector<vector<string>>{
 		vector<vector<string>> naturalKeys;
 		if( auto kv = j.find("naturalKeys"); kv!=j.end() ){
@@ -46,45 +30,21 @@ namespace Jde::DB{
 
 	Table::Table( sv name, const jobject& j )ε:
 		View{ name, j },
-		HasCustomInsertProc{ j.contains("customInsertProc") ? j.at("customInsertProc").as_bool() : false },
-		IsFlags{ j.contains("flagsData") },
 		NaturalKeys{ GetNaturalKeys(j) },
-		ParentChildMap{ GetParentChildMap(j,*this) },
 		PurgeProcName{ j.contains("purgeProc") ? string{j.at("purgeProc").as_string()} : string{} },
-		QLView{ j.contains("qlView") ? ms<View>(j.at("qlView").as_string()) : nullptr }
+		Extends{ j.contains("extends") ? ms<DB::Table>(Json::AsString(j,"extends")) : nullptr }
 	{}
 
 	α Table::Initialize( sp<DB::AppSchema> schema, sp<Table> self )ε->void{
-		self->Schema = schema;
-		if( QLView )
-			QLView = schema->GetViewPtr( QLView->Name );
-		for( let& c : Columns )
-			c->Initialize( self );
-
-		//if mssql & schema is not default & ds schema!=config schema.
-		bool representsDBTable = !DBName.empty();//db tables copy constructed will already have db name set.
-		DBName.clear();
-		if( !Syntax().CanSetDefaultSchema() && !Schema->Name.empty() && Schema->DS()->SchemaName()!=Schema->Name )
-			DBName = Ƒ( "{}.", Schema->Name );
-		if( !representsDBTable && Schema->Prefix.size() )
-			DBName += Schema->Prefix;
-		DBName+=Name;
-	}
-
-	α Table::InsertProcName()Ι->string{
-		let haveSequence = find_if( Columns, [](let& c){return c->IsSequence;} )!=Columns.end();
-		return !haveSequence || HasCustomInsertProc ? string{} : Ƒ( "{}_insert", Names::ToSingular(Name) );
-	}
-
-	α Table::GetExtendedFromTable()Ι->sp<Table>{//groups return access_identities.  Assumes ExtendedFrom is 1st surrogate key.
-		auto pFirstSK = SurrogateKeys.size()>0 ? SurrogateKeys.front() : nullptr;
-		return pFirstSK ? pFirstSK->PKTable : sp<Table>{};
+		View::Initialize( schema, self );
+		if( Extends )
+			Extends = schema->GetTablePtr( Extends->Name );
 	}
 
 	α Table::FindColumn( sv name )Ι->sp<Column>{
 		auto pColumn = View::FindColumn( name );
-		if( let pExtendedFrom = pColumn ? nullptr : GetExtendedFromTable(); pExtendedFrom )
-			pColumn = pExtendedFrom->FindColumn( name );
+		if( !pColumn && Extends )
+			pColumn = Extends->FindColumn( name );
 		return pColumn;
 	}
 
@@ -96,7 +56,7 @@ namespace Jde::DB{
 		auto pColumn = FindColumn( name ); THROW_IFSL( !pColumn, "[{}.{}]Could not find column.", Name, name );
 		return pColumn;
 	}
-	
+
 	α Table::GetColumns( vector<string> names, SL sl )Ε->vector<sp<Column>>{
 		vector<sp<Column>> columns;
 		for( let& name : names )
@@ -113,29 +73,4 @@ namespace Jde::DB{
 	α Table::NameWithoutType()Ι->sv{ let underscore = Name.find_first_of('_'); return underscore==string::npos ? Name : sv{Name.data()+underscore+1, Name.size()-underscore-1 }; }
 
 	α Table::FKName()Ι->string{ return string{Names::ToSingular(NameWithoutType())}+"_id"; }
-	α Table::JsonTypeName()Ι->string{
-		auto name = Names::ToJson( Names::ToSingular(NameWithoutType()) );
-		if( name.size() )
-			name[0] = (char)std::toupper( name[0] );
-		return name;
-	}
-
-	α Table::ChildTable()Ι->sp<Table>{
-		let pColumn = ChildColumn();
-		return pColumn ? pColumn->PKTable : sp<Table>{};
-		// let part = TableNamePart( *this, 0 );
-		// return part.empty() ? sp<const Table>{} : schema.TryFindTableSuffix( Schema::ToPlural(part) );
-	}
-
-	α Table::HaveSequence()Ι->bool{
-		return find_if( Columns, [](let& c){return c->IsSequence;} )!=Columns.end();
-	}
-
-	α Table::ParentTable()Ι->sp<Table>{
-		let pColumn = ParentColumn();
-		return pColumn ? pColumn->PKTable : sp<Table>{};
-	}
-	α Table::IsEnum()Ι->bool{
-		return QLView ? QLView->IsEnum() : View::IsEnum();
-	}
 }

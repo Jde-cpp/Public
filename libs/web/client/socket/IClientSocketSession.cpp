@@ -6,7 +6,7 @@ namespace Jde::Web{
 	constexpr ELogTags _writeTag{ ELogTags::SocketClientWrite };
 	constexpr ELogTags _readTag{ ELogTags::SocketClientRead };
 
-	static uint16 _maxLogLength{ Settings::Get<uint16>("http/maxLogLength").value_or(255) };
+	static uint16 _maxLogLength{ Settings::FindNumber<uint16>("http/maxLogLength").value_or(255) };
 	α Client::MaxLogLength()ι->uint16{ return _maxLogLength; }
 }
 #define CHECK_EC(tag) if( ec ){ \
@@ -68,7 +68,7 @@ namespace Jde::Web::Client{
 		net::post( *_ioContext, [=, self=shared_from_this()]{
 			Trace{ _connectPedanticTag, "[{}:{}]resolve socket.", self->_host, port };
 			beast::error_code ec;
-			auto results = _resolver.resolve( _host, std::to_string(port), ec );//async_resolve starts another thread.
+			auto results = self->_resolver.resolve( self->_host, std::to_string(port), ec );//async_resolve starts another thread.
 			//_resolver.async_resolve( _host, std::to_string(port_), beast::bind_front_handler(&IClientSocketSession::OnResolve, shared_from_this()) );// Look up the domain name
 			self->OnResolve( ec, results );
 		});

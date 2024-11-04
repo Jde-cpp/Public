@@ -7,7 +7,7 @@
 #include <jde/app/client/AppClient.h>
 #include <jde/app/shared/StringCache.h>
 
-#define var const auto
+#define let const auto
 
 namespace Jde::App{
 	using Web::Client::ClientSocketAwait; using IO::Proto::ToString;
@@ -16,7 +16,7 @@ namespace Jde::App{
 	sp<Client::AppClientSocketSession> _pSession;
 	α Client::CloseSocketSession( SL sl )ι->VoidTask{
 		if( _pSession ){
-			var tags = ELogTags::Client | ELogTags::Socket;
+			let tags = ELogTags::Client | ELogTags::Socket;
 			Trace( sl, tags, "ClosingSocketSession" );
 			co_await _pSession->Close();
 			_pSession = nullptr;
@@ -65,7 +65,7 @@ namespace Client{
 		base( ioc, ctx )
 	{}
 	α AppClientSocketSession::Connect( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>{
-		var requestId = NextRequestId();
+		let requestId = NextRequestId();
 		string instanceName = Settings::Get<string>("instanceName").value_or( "" );
 		if( instanceName.empty() )
 			instanceName = _debug ? "Debug" : "Release";
@@ -83,11 +83,11 @@ namespace Client{
 			App::Client::Connect();
 	}
 	α AppClientSocketSession::SessionInfo( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::SessionInfo>{
-		var requestId = NextRequestId();
+		let requestId = NextRequestId();
 		return ClientSocketAwait<Proto::FromServer::SessionInfo>{ ToString(FromClient::Session(sessionId, requestId)), requestId, shared_from_this(), sl };
 	}
 	α AppClientSocketSession::GraphQL( string&& q, UserPK, SL sl )ι->ClientSocketAwait<string>{
-		var requestId = NextRequestId();
+		let requestId = NextRequestId();
 		return ClientSocketAwait<string>{ ToString(FromClient::GraphQL(move(q), requestId)), requestId, shared_from_this(), sl };
 	}
 
@@ -128,11 +128,11 @@ namespace Client{
 		for( auto i=0; i<t.messages_size(); ++i ){
 			auto m = t.mutable_messages( i );
 			using enum Proto::FromServer::Message::ValueCase;
-			var requestId = clientRequestId.value_or( m->request_id() );
+			let requestId = clientRequestId.value_or( m->request_id() );
 			std::any hAny = requestId ? IClientSocketSession::PopTask( requestId ) : nullptr;
 			switch( m->Value_case() ){
 			[[unlikely]] case kAck:{
-				var serverSocketId = m->ack();
+				let serverSocketId = m->ack();
 				SetId( serverSocketId );
 				Information( _tags, "[{:x}]AppClientSocketSession created: {}://{}.", Id(), IsSsl() ? "https" : "http", Host() );
 				}break;
@@ -196,7 +196,7 @@ namespace Client{
 		else if( auto pAwait = std::any_cast<ClientSocketAwait<Proto::FromServer::SessionInfo>::Handle>(&h) )
 			handle( "Exception<SessionInfo>: '{}'.", pAwait );
 		else{
-			var severity{ requestId ? ELogLevel::Critical : ELogLevel::Debug };
+			let severity{ requestId ? ELogLevel::Critical : ELogLevel::Debug };
 			Log( severity, _tags, SRCE_CUR, "[0]Failed to process incoming exception '{}'.", requestId, e.what() );
 		}
 	}

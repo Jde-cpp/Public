@@ -56,12 +56,16 @@ namespace Jde{
 		return ToEnum<DB::EOperator>( QLOperatorStrings, op ).value_or( DB::EOperator::Equal );
 	}
 
-	α QL::ToWhereClause( const TableQL& table, const DB::View& dbTable )->DB::WhereClause{
+	α QL::ToWhereClause( const TableQL& table, const DB::View& dbTable, bool includeDeleted )->DB::WhereClause{
 		let pFilter = Json::FindObject( table.Args, "filter" );
 		let& j = pFilter ? *pFilter : table.Args;
 		DB::WhereClause where;
 		for( let& [name,value] : j ){
-			auto pColumn = dbTable.GetColumnPtr( DB::Names::FromJson(name) );
+			auto pColumn = name!="id"
+				? dbTable.GetColumnPtr( DB::Names::FromJson(name) )
+				: AsTable(dbTable).Extends ? AsTable(dbTable).Extends->GetPK() : dbTable.GetPK(); //can't have left join users where users.id=?
+			if(name=="deleted" )
+				includeDeleted = false;
 			using enum DB::EOperator;
 			DB::EOperator op = Equal;
 			const jvalue* pJson{};
@@ -74,7 +78,7 @@ namespace Jde{
 			else{
 				if( value.is_string() || value.is_number() || value.is_null() )
 					pJson = &value;
-				else if( let o = value.is_object() && value.as_object().size() ? value.as_object() : optional<jobject>{}; o ){
+				else if( let o = value.try_as_object(); o && o->size() ){
 					let& first = *o->begin();
 					op = DB::ToOperator( first.key() );
 					pJson = &first.value();
@@ -84,6 +88,8 @@ namespace Jde{
 				where.Add( pColumn, op, DB::Value{pColumn->Type, *pJson} );
 			}
 		}
+		if( auto deleted = includeDeleted ? nullptr : dbTable.FindColumn("deleted"); deleted )
+			where.Add( deleted, DB::Value{} );
 		return where;
 	}
 }

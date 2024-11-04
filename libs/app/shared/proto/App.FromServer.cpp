@@ -1,11 +1,12 @@
 #include <jde/app/shared/proto/App.FromServer.h>
 //#include <jde/web/server/Sessions.h>
-#include "../../../../Framework/source/db/Row.h"
-#include "../../../../Framework/source/db/GraphQL.h"
-#include "../../../../Framework/source/db/types/Table.h"
-#include "../../../../Framework/source/io/ProtoUtilities.h"
+#include <jde/db/IRow.h>
+#include <jde/ql/types/TableQL.h>
+#include <jde/db/meta/Table.h>
+#include <jde/db/meta/Column.h>
+#include <jde/framework/io/proto.h>
 
-#define var const auto
+#define let const auto
 
 namespace Jde::App{
 	α FromServer::Ack( uint32 serverSocketId )ι->Proto::FromServer::Transmission{
@@ -79,14 +80,14 @@ namespace Jde::App{
 		toServer->set_graph_ql( move(queryResults) );
 		return t;
 	}
-	α FromServer::ToTrace( const DB::IRow& row, const vector<DB::ColumnQL>& columns )ι->Proto::FromServer::Trace{
+	α FromServer::ToTrace( const DB::IRow& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace{
 		Proto::FromServer::Trace t;
 		uint i=0;
 		for( auto&& c : columns ){
-			if( !c.SchemaColumnPtr )
+			if( !c.DBColumn )
 				continue;
 
-			str name = c.SchemaColumnPtr->Name;
+			str name = c.DBColumn->Name;
 			if( name=="id" )
 				t.set_id( row.GetUInt32(i) );
 			else if( name=="instance_id" )
@@ -128,7 +129,7 @@ namespace Jde::App{
 		proto->set_line( m.LineNumber );
 		proto->set_user_pk( m.UserPK );
 		proto->set_thread_id( m.ThreadId );
-		for( var& arg : args )
+		for( let& arg : args )
 			proto->add_args( arg );
 		return t;
 	}

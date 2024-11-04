@@ -1,7 +1,7 @@
 #include <jde/web/client/socket/ClientSocketStream.h>
 #include <jde/web/client/socket/IClientSocketSession.h>
 
-#define var const auto
+#define let const auto
 namespace Jde::Web::Client{
 	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
 	string _sslUserAgent{ Ƒ("({})Jde.Web.Client SSL - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
@@ -31,7 +31,7 @@ namespace Jde::Web::Client{
 			auto& stream = get<1>( _ws );
 			beast::get_lowest_layer( stream ).expires_after( std::chrono::seconds(30) );// Set a timeout on the operation
 			if( !SSL_set_tlsext_host_name(stream.next_layer().native_handle(), host.c_str()) ){// Set SNI Hostname (many hosts need this to handshake successfully)
-				var ec = beast::error_code( static_cast<int>(::ERR_get_error()), net::error::get_ssl_category() );
+				let ec = beast::error_code( static_cast<int>(::ERR_get_error()), net::error::get_ssl_category() );
 				CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientRead };
 				return;
 			}

@@ -1,6 +1,7 @@
 #include "Resource.h"
 #include <jde/db/Value.h>
 #include <jde/db/IDataSource.h>
+#include <jde/db/names.h>
 #include <jde/db/await/RowAwait.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
@@ -22,11 +23,11 @@ namespace Jde::Access{
 			sp<DB::Table> resourceTable = schema->GetTablePtr( "resources" );
 			let ds = resourceTable->Schema->DS();
 			const DB::WhereClause where{ resourceTable->GetColumnPtr("app_id"), DB::ToValue(await.AppPKs) };
-			auto statement = DB::SelectSql( {"resource_id","app_id","target","filter"}, resourceTable, where );
+			auto statement = DB::SelectSql( {"resource_id","schema","target","filter"}, resourceTable, where );
 			auto rows = co_await ds->SelectCo( move(statement) );
 			for( let& row : rows ){
 				let pk = row->GetUInt16(0);
-				resources.emplace( pk, Resource{pk, row->GetUInt16(1), row->GetString(2), row->GetString(3)} );
+				resources.emplace( pk, Resource{pk, row->GetString(1), row->GetString(2), row->GetString(3)} );
 			}
 			sp<DB::Table> resourceRightsTable = schema->GetTablePtr( "resource_rights" );
 			vector<string> columns{"permission_id","resource_id", "allowed", "denied"};
@@ -50,5 +51,27 @@ namespace Jde::Access{
 
 	α ResourceLoadAwait::Suspend()ι->void{
 		LoadResources( _schema, *this );
+	}
+
+	α GetSchema()ε->sp<DB::AppSchema>;
+	α Resources::Sync()ε->void{
+		using DB::Value;
+		let& schema = *GetSchema();
+		let& resourceTable = schema.GetTable( "resources" );
+		if( schema.DS()->Scaler<uint>( Ƒ("select count(*) from {} where schema_name=?", resourceTable.DBName), {Value{schema.Name}} )>0 )
+			return;
+		flat_map<string,Value> ops;
+		for( let& [name,table] : schema.Tables ){
+			if( !empty(table->Operations) )
+				ops.emplace( name, Value{underlying(table->Operations)} );
+		}
+		let sql = Ƒ( "insert into {0}(name,target,rights,description,schema_name,created,deleted) values(?,?,?,?,?,{1},{1})", resourceTable.DBName, schema.Syntax().UtcNow() );
+		vector<Value> params{ {}, {}, {}, Value{"From installation"}, Value{schema.Name} };
+		for( let& [name, value] : ops ){
+			params[0] = Value{ name };
+			params[1] = Value{ DB::Names::ToJson(name) };
+			params[2] = value;
+			schema.DS()->Execute( sql, params );
+		}
 	}
 }

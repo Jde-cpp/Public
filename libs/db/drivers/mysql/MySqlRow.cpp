@@ -30,7 +30,7 @@ namespace Jde::DB::MySql{
 		Value v;
 		switch( value.getType() ){
 			using enum mysqlx::Value::Type;
-			case VNULL: v = Value{nullptr}; break;
+			case VNULL: v = Value{ nullptr }; break;
 			case STRING: v = Value{ value.get<string>() }; break;
 			case BOOL: v = Value{ value.get<bool>() };  break;
 			case INT64: v = Value{ static_cast<_int>(value.get<_int>()) };  break;
@@ -53,6 +53,8 @@ namespace Jde::DB::MySql{
 	{}
 
 	α MySqlRow::Move()ι->up<IRow>{
+		//using Ptr = std::unique_ptr<IRow, function<void(IRow* r)>>;
+		//return Ptr{ new MySqlRow{ move(*this) }, [](IRow* r){ delete dynamic_cast<MySqlRow*>(r); } };
 		return mu<MySqlRow>( move(*this) );
 	}
 

@@ -3,7 +3,7 @@ set( CMAKE_MODULE_PATH $ENV{JDE_DIR}/Public/build )
 include(common)
 findBoost()
 if( ${VCPKG} )
-	SET( CMAKE_TOOLCHAIN_FILE $ENV{REPO_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake  CACHE STRING "Vcpkg toolchain file" )
+	SET( CMAKE_TOOLCHAIN_FILE $ENV{REPO_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake CACHE STRING "Vcpkg toolchain file" )
 endif()
 
 project( Jde.Web.Client )
@@ -39,22 +39,14 @@ if( MSVC )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} ZLIB::ZLIB )
 else()
 	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )
+	#target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
 endif()
 target_link_libraries( ${CMAKE_PROJECT_NAME} OpenSSL::SSL )
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
   PRIVATE
-	<boost/beast.hpp>
-	<boost/asio.hpp>
-	<boost/asio/ip/tcp.hpp>
-	<boost/beast/ssl.hpp>
-	<boost/beast/ssl/ssl_stream.hpp>
-	<jde/TypeDefs.h>
-	<jde/log/Log.h>
-	<jde/Exception.h>
-	../../../../Framework/source/coroutine/Awaitable.h
+	"pc.h"
 )
 
 if( MSVC )

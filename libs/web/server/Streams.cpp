@@ -2,7 +2,7 @@
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/HttpRequest.h>
 
-#define var const auto
+#define let const auto
 namespace Jde::Web::Server{
 	α RestStream::operator=( RestStream&& rhs )ι->RestStream&{
 		Plain = move(rhs.Plain);
@@ -75,14 +75,14 @@ namespace Jde::Web::Server{
 
 	α SocketStream::Write( string&& output )ι->Task{
 		auto outputPtr = mu<string>( move(output) );
-		var buffer = net::buffer( (const void*)outputPtr->data(), outputPtr->size() );
+		let buffer = net::buffer( (const void*)outputPtr->data(), outputPtr->size() );
 		LockAwait await = _writeLock.Lock(); //gcc doesn't like co_await _writeLock.Lock();
 		auto lock = ( co_await await ).UP<CoGuard>();
 		std::visit(
 			[&]( auto&& ws ){
 				ws.async_write( buffer, [this, &ws, pKeepAlive=shared_from_this(), buffer, l=move(lock), out=move(outputPtr) ]( beast::error_code ec, uint bytes_transferred )mutable{
 					l = nullptr;
-					var tags = ELogTags::SocketClientWrite | ELogTags::ExternalLogger;
+					let tags = ELogTags::SocketClientWrite | ELogTags::ExternalLogger;
 					if( ec || out->size()!=bytes_transferred ){
 						Debug{ tags, "Error writing to Session:  '{}'", boost::diagnostic_information(ec) };
 						try{

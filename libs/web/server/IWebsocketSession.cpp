@@ -1,7 +1,7 @@
 #include <jde/web/server/IWebsocketSession.h>
 #include "Streams.h"
 
-#define var const auto
+#define let const auto
 
 namespace Jde::Web::Server{
 	IWebsocketSession::IWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
@@ -10,7 +10,7 @@ namespace Jde::Web::Server{
 		_initialRequest{ move(request) },
 		_id{ connectionIndex }
 	{}
-	
+
 	α IWebsocketSession::Run()ι->void{
 		LogRead( "Run", 0 );
 		Stream->DoAccept( move(_initialRequest), shared_from_this() );

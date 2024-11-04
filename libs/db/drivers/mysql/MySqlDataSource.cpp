@@ -67,6 +67,7 @@ namespace Jde::DB::MySql{
 
 //https://dev.mysql.com/doc/refman/8.0/en/c-api-prepared-call-statements.html
 	α Execute( str cs, string&& sql, const vector<Value>* pParameters, const RowΛ* pFunction, bool proc, SL sl, bool log=true )ε->uint{
+		ASSERT( cs.size() );
 		let fullSql = proc ? Ƒ( "call {}", move(sql) ) : move( sql );
 		if( log )
 			DB::Log( fullSql, pParameters, sl );
@@ -112,7 +113,7 @@ namespace Jde::DB::MySql{
 			for( mysqlx::Row& row : rows ){
 				MySqlRow r{ row };
 				f( r );
-}
+			}
 			return rows.size();
 		}
 		catch( ::mysqlx::Error& e ){
@@ -133,7 +134,7 @@ namespace Jde::DB::MySql{
 	α MySqlDataSource::AtSchema( sv schema, SL sl )ε->sp<IDataSource>{
 		string schemaName;
 		try{
-			schemaName = SchemaName();	
+			schemaName = SchemaName();
 		}
 		catch( const IException& e ){//assume can't connect on current schema.
 		}
@@ -143,7 +144,7 @@ namespace Jde::DB::MySql{
 		else{
 			pDataSource = sp<IDataSource>( GetDataSource() );
 			let csSpecified = schemaName.size() && _connectionString.find( schemaName )!=string::npos;
-			let cs = csSpecified 
+			let cs = csSpecified
 				? Str::Replace( _connectionString, SchemaName(), schema )
 				: _connectionString.substr( 0, _connectionString.find_last_of('/')+1 )+string{schema}+_connectionString.substr( _connectionString.find_last_of('?') );
 			pDataSource->SetConnectionString( cs );
@@ -176,7 +177,9 @@ namespace Jde::DB::MySql{
 	}
 	α MySqlDataSource::Select( Sql&& s, SL sl )Ε->vector<up<IRow>>{
 		vector<up<IRow>> rows;
-		RowΛ f = [&rows]( IRow& r ){ rows.push_back(r.Move()); };
+		RowΛ f = [&rows]( IRow& r ){
+			rows.push_back(r.Move());
+		};
 		MySql::Select( CS(), move(s.Text), f, &s.Params, sl );
 		return rows;
 	}

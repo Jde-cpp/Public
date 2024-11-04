@@ -3,7 +3,8 @@
 #include <jde/access/usings.h>
 #include <jde/framework/coroutine/Await.h>
 #include <jde/framework/coroutine/TaskOld.h>
-#include "Group.h"
+#include <jde/ql/GraphQLHook.h>
+//#include "Group.h"
 
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Access{
@@ -26,5 +27,9 @@ namespace Jde::Access{
 	private:
 		α Execute()ι->Coroutine::Task override;
 		sp<DB::AppSchema> _schema;
+	};
+
+	struct UserGraphQL final : QL::IGraphQLHook{
+		α Select( const QL::TableQL& ql, UserPK userPK, SRCE )ι->up<IAwait> override;
 	};
 }

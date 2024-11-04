@@ -1,6 +1,6 @@
 {
 	testing:{
-		tests: "UserTests.Crud",
+		tests: "AclTests.DisabledPermission",
 		recreateDB:: true
 	},
 	dbServers: {
@@ -14,7 +14,7 @@
 						test_access:{ //for sqlserver, test with schema, debug with default schema ie dbo.
 							access:{
 								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet",
-								ql: "$(JDE_DIR)/Public/libs/access/config/access-ql.json",
+								ql: "$(JDE_DIR)/Public/libs/access/config/access-ql.jsonnet",
 								prefix: null  //test with null prefix, debug with prefix
 							}
 						}

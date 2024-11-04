@@ -18,5 +18,5 @@ namespace Jde::QL{
 		flat_map<JColName,vector<FilterValueQL>> ColumnFilters;
 		Ω Test( const DB::Value& value, const vector<FilterValueQL>& filters, ELogTags logTags )ι->bool;
 	};
-	α ToWhereClause( const TableQL& table, const DB::View& schemaTable )->DB::WhereClause;
+	α ToWhereClause( const TableQL& table, const DB::View& schemaTable, bool includeDeleted=false )->DB::WhereClause;
 }

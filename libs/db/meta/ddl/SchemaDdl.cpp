@@ -30,10 +30,7 @@ namespace Jde::DB{
 	α UniqueIndexName( const Index& index, bool uniqueName, const vector<Index>& indexes )ε->string;
 
 	α ConfigurationJson( const AppSchema& config )ε->const jobject{
-		let dbSchema = config.DBSchema;
-		let catalog = dbSchema->Catalog;
-		let cluster = catalog->Cluster;
-		let appSchema = Settings::AsObject( Ƒ("/dbServers/{}/catalogs/{}/schemas/{}/{}", cluster->ConfigName, catalog->Name, dbSchema->Name, config.Name) );
+		let appSchema = Settings::AsObject( config.ConfigPath() );
 		auto appMeta = Json::ReadJsonNet( Json::AsSV(appSchema, "meta") );
 		if( let prefix = Json::FindString(appSchema, "prefix"); prefix )
 			appMeta["prefix"] = *prefix;
@@ -128,7 +125,7 @@ namespace Jde::DB{
 				if( find_if(FKs, [&,t=tableName](let& fk){return fk.second.Table==t && fk.second.Columns==vector<string>{column->Name};})!=FKs.end() )
 					continue;
 				let pPKTable = column->PKTable;
-				if( !column->IsFlags() ){
+				if( !column->IsFlags() ) {
 					auto getName = [&, &t=tableName](auto i)->string{//&t for clang
 						return Ƒ( "{}_{}{}_fk", AbbrevName(t), AbbrevName(pPKTable->Name), i==0 ? "" : std::to_string(i) );
 					};

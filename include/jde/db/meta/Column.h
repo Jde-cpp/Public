@@ -4,7 +4,7 @@
 
 namespace Jde::DB{
 	struct Table; struct View;
-
+	enum class ECardinality : uint8{ Zero=0, One=1, Many=2 };
 	struct ΓDB Column{
 		Column()=default;
 		Column( sv name )ι;  //placeholder
@@ -26,7 +26,9 @@ namespace Jde::DB{
 		optional<uint> MaxLength;
 		optional<uint> NumericPrecision; //currently for db schema columns
 		optional<uint> NumericScale; //currently for db schema columns
-		sp<DB::Table> PKTable; //pk table if any.
+		sp<DB::View> PKTable; //pk table if any.
+		//tuple<ECardinality,ECardinality> PKCardinality;
+
 		bool IsSequence; //uses db sequence.  TODO look to move to ddl.
 		bool Insertable;
 		optional<uint8> SKIndex; //Is part of the surrogate key for the table.
@@ -34,6 +36,6 @@ namespace Jde::DB{
 		sp<DB::View> Table;
 		EType Type;
 		bool Updateable;
-		optional<Value> Default; //nullable=Value{} 
+		optional<Value> Default; //nullable=Value{}
 	};
 }

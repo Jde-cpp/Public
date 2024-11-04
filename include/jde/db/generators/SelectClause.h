@@ -5,10 +5,11 @@ namespace Jde::DB{
 	struct SelectClause final{
 		SelectClause()=default;
 		SelectClause( sp<Column> c )ι:Columns{c}{}
-		α Add( sp<DB::Column> c )ι->void;
+		α TryAdd( sp<DB::Column> c )ι->void;
 		vector<sp<DB::Column>> Columns;
 		α ToString()Ι->string;
-	private:
 		α FindColumn( sv name )Ι->sp<Column>;
+	private:
+		α FindColumn( const DB::Column& c )Ι->sp<Column>;
 	};
 }

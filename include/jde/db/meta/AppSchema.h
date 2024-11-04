@@ -8,7 +8,7 @@ namespace Jde::DB{
 		AppSchema( sv name, flat_map<string,sp<Table>> tables )ι:Name{name},Tables{tables}{}
 
 		Ω Initialize( sp<DB::DBSchema> db, sp<AppSchema> self )ε->void;
-
+		α ConfigPath()Ι->string;
 		α DS()Ε->sp<IDataSource>;
 		α ResetDS()Ι->void; //testing schema doesn't exist at startup.
 		α Syntax()Ι->const Syntax&;
@@ -20,7 +20,7 @@ namespace Jde::DB{
 		α FindView( str name )Ι->sp<View>;
 		α GetView( str name, SRCE )ε->const View&;
 		α GetViewPtr( str name, SRCE )ε->sp<View>;
-		
+
 		α FindDefTable( const Table& t1, const Table& t2 )Ι->sp<Table>;
 
 		string Name;

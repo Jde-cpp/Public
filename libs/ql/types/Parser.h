@@ -4,13 +4,13 @@
 
 namespace Jde::QL{
 	struct Parser{
-		Parser( sv text, sv delimiters )ι: _text{text}, Delimiters{delimiters}{}
-		α Next()ι->sv;
-		α Next( char end )ι->sv;
-		α Peek()ι->sv{ return _peekValue.empty() ? _peekValue = Next() : _peekValue; }
+		Parser( string text, sv delimiters )ι: _text{move(text)}, Delimiters{delimiters}{}
+		α Next()ι->string;
+		α Next( char end )ι->string;
+		α Peek()ι->str{ return _peekValue.empty() ? _peekValue = Next() : _peekValue; }
 		α Index()ι->uint{ return i; }
-		α Text()ι->sv{ return i<_text.size() ? _text.substr(i) : sv{}; }
-		α AllText()ι->sv{ return _text; }
+		α Text()ι->string{ return i<_text.size() ? _text.substr(i) : string{}; }
+		α AllText()ι->string{ return _text; }
 
 		α LoadMutation()ε->MutationQL;
 		α LoadTables( sv jsonName )ε->vector<TableQL>;
@@ -18,8 +18,8 @@ namespace Jde::QL{
 		α LoadTable( sv jsonName )ε->TableQL;
 		α ParseJson()ε->jobject;
 		uint i{0};
-		sv _text;
+		string _text;
 		sv Delimiters;
-		sv _peekValue;
+		string _peekValue;
 	};
 }

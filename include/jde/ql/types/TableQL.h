@@ -3,7 +3,7 @@
 #include <jde/framework/io/json.h>
 #define let const auto
 
-namespace Jde::DB{ struct Column; };
+namespace Jde::DB{ struct Column; struct IRow; };
 namespace Jde::QL{
 	struct ColumnQL final{
 		Ω QLType( const DB::Column& db, SRCE )ε->string;
@@ -11,18 +11,22 @@ namespace Jde::QL{
 		string JsonName;
 		mutable sp<DB::Column> DBColumn;
 	};
-
+	struct JsonMembers{ string ParentTable; string ColumnName; };
 	struct TableQL final{
 		α DBName()Ι->string;
 		α FindColumn( sv jsonName )Ι->const ColumnQL*{ auto p = find_if( Columns, [&](let& c){return c.JsonName==jsonName;}); return p==Columns.end() ? nullptr : &*p; }
+		α FindDBColumn( sp<DB::Column> dbColumn )Ι->const ColumnQL*;
 		α FindTable( sv jsonTableName )Ι->const TableQL*{ auto p = find_if( Tables, [&](let& t){return t.JsonName==jsonTableName;}); return p==Tables.end() ? nullptr : &*p; }
 		α Input()Ε->const jobject&{ return Json::AsObject( Args, "input" ); }
 		α IsPlural()Ι{ return JsonName.ends_with( "s" ); }
 		α Filter()Ε->FilterQL;
+		α ToJson( const DB::IRow& row, const vector<sp<DB::Column>>& dbColumns )Ι->jobject;
+		α SetResult( jobject& o, const sp<DB::Column> dbColumn, const DB::Value& value )Ι->void;
 		string JsonName;
 		jobject Args;
 		vector<ColumnQL> Columns;
 		vector<TableQL> Tables;
+		mutable vector<QL::JsonMembers> JsonMembers;
 	};
 }
 #undef let

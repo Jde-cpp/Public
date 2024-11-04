@@ -6,6 +6,7 @@
 
 namespace Jde::DB{
 	struct IRow{
+		virtual ~IRow(){}
 		β Move()ι->up<IRow> =0;
 		β operator[]( uint value )Ε->Value=0;
 		β GetBit( uint position, SRCE )Ε->bool=0;
@@ -23,6 +24,7 @@ namespace Jde::DB{
 		β GetUInt16( uint position, SRCE )Ε->uint16_t{ return static_cast<uint16_t>(GetUInt(position, sl)); }
 		β GetUIntOpt( uint position, SRCE )Ε->std::optional<uint> = 0;
 		Ŧ Get( uint position, SRCE )Ε->T;
+		β Size()Ι->uint=0;
 
 		friend α operator>>( const IRow& row, string& str )ε->const IRow&{ str=row.GetString(row._index++); return row; }
 		friend α operator>>( const IRow& row, uint8_t& value )ε->const IRow&{ value=static_cast<uint8_t>(row.GetUInt(row._index++)); return row; }

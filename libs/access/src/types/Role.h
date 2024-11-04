@@ -1,4 +1,5 @@
 #pragma once
+#include <jde/framework/coroutine/Await.h>
 
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Access{

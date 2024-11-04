@@ -3,6 +3,8 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/DBSchema.h>
+#include <jde/db/meta/Catalog.h>
+#include <jde/db/meta/Cluster.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/View.h>
 #define let const auto
@@ -25,14 +27,14 @@ namespace Jde::DB{
 		}
 		return views;
 	}
-	
+
 	AppSchema::AppSchema( sv name, sv prefix, const jobject& meta, sp<Access::IAcl> authorizer )ε:
 		Name{ name },
 		Prefix{ prefix },
 		Tables{ GetTables(Json::AsObject(meta,"tables")) },
 		Views{ GetViews(Json::AsObject(meta,"views")) }
 	{}
-	
+
 	AppSchema::AppSchema( sv name, const jobject& appSchema, sp<Access::IAcl> authorizer )ε:
 		AppSchema{ name, Json::FindDefaultSV(appSchema,"prefix"), Json::ReadJsonNet(Json::AsString(appSchema,"meta")), authorizer }
 	{}
@@ -42,7 +44,11 @@ namespace Jde::DB{
 		for_each(self->Tables, [self](auto&& kv){ kv.second->Initialize(self,kv.second); });
 		for_each(self->Views, [self](auto&& kv){ kv.second->Initialize(self,kv.second); });
 	}
-
+	α AppSchema::ConfigPath()Ι->string{
+		let catalog = DBSchema->Catalog;
+		let cluster = catalog->Cluster;
+		return Ƒ( "/dbServers/{}/catalogs/{}/schemas/{}/{}", cluster->ConfigName, catalog->Name, DBSchema->Name, Name );
+	}
 	α AppSchema::DS()Ε->sp<IDataSource>{
 		return DBSchema->DS();
 	}

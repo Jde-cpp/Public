@@ -8,7 +8,7 @@ namespace Jde::Web{
 		Jwt( Crypto::Modulus mod, Crypto::Exponent exp, str userName, str userTarget, str myEndpoint, str description, const fs::path& privateKeyPath )ι;
 		α Payload()Ι->string;
 		string Kid;
-		json Body;
+		jobject Body;
 		string HeaderBodyEncoded;
 		Crypto::Signature Signature;
 		Crypto::Modulus Modulus;

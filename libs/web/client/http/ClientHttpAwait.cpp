@@ -1,9 +1,9 @@
 #include <jde/web/client/http/ClientHttpAwait.h>
-#include <jde/thread/Execution.h>
+#include <jde/framework/thread/execution.h>
 #include <jde/web/client/http/ClientHttpSession.h>
 #include <jde/web/client/http/ClientHttpResException.h>
 
-#define var const auto
+#define let const auto
 
 namespace Jde::Web{
 	concurrent_flat_map<string,vector<sp<Client::ClientHttpSession>>> _sessions;

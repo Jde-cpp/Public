@@ -56,9 +56,7 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 	<App.pb.h>
 	<App.FromServer.pb.h>
 	<App.FromClient.pb.h>
-	<jde/TypeDefs.h>
-	<jde/log/Log.h>
-	<jde/Exception.h>
+	<jde/framework.h>
 )
 
 protobuf_generate( TARGET ${CMAKE_PROJECT_NAME} IMPORT_DIRS proto EXPORT_MACRO Jde_App_Shared_EXPORT )

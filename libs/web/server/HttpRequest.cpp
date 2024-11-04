@@ -1,6 +1,6 @@
 #include <jde/web/server/HttpRequest.h>
 #include <jde/web/server/Server.h>
-#define var const auto
+#define let const auto
 
 namespace Jde::Web{
 	string _accessControlAllowOrigin = Settings::Get("http/accessControl/allowOrigin").value_or("*");
@@ -25,20 +25,20 @@ namespace Jde::Web::Server{
 	}
 
 	α HttpRequest::ParseUri()->void{
-		var& uri = Str::DecodeUri( _request.target() );
+		let& uri = Str::DecodeUri( _request.target() );
 	  _target = uri.substr( 0, uri.find('?') );
 		if( _target.size()+1<uri.size() ){
-			var start = _target.size()+1;
+			let start = _target.size()+1;
 			sv paramString = sv{ uri.data()+start, uri.size()-start };
-			var paramStringSplit = Str::Split( paramString, '&' );
+			let paramStringSplit = Str::Split( paramString, '&' );
 			for( auto param : paramStringSplit ){
-				var keyValue = Str::Split( param, '=' );
+				let keyValue = Str::Split( param, '=' );
 				_params[string{keyValue[0]}]=keyValue.size()==2 ? string{keyValue[1]} : string{};
 			}
 		}
 	}
 
-	α HttpRequest::Response( json j, SL sl )Ι->http::response<http::string_body>{
+	α HttpRequest::Response( jobject j, SL sl )Ι->http::response<http::string_body>{
 		auto y = Response<http::string_body>();
 		if( !j.is_null() )
 			y.body() = j.dump();

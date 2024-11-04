@@ -11,6 +11,10 @@
 
 namespace Jde::QL{
 	using namespace Json;
+	α FindTable( str tableName )ε->sp<DB::View>;
+	Introspection _introspection;
+	α SetIntrospection( Introspection&& x )ι->void{ _introspection = move(x); }
+
 	constexpr array<sv,8> FieldKindStrings = { "SCALAR", "OBJECT", "INTERFACE", "UNION", "ENUM", "INPUT_OBJECT", "LIST", "NON_NULL" };
 	α ToFieldKind( sv x ){ return ToEnum<EFieldKind>( FieldKindStrings, x ); }
 	α ToString( EFieldKind x ){ return FromEnum<EFieldKind>( FieldKindStrings, x ); }
@@ -124,7 +128,7 @@ namespace Jde::QL{
 			}
 			fields.push_back( field );
 		};
-		function<void(const DB::Table&, bool, string)> addColumns = [&addColumns,&addField,&mainTable]( const DB::Table& dbTable, bool isMap, string prefix={} ){
+		function<void(const DB::View&, bool, string)> addColumns = [&addColumns,&addField,&mainTable]( const DB::View& dbTable, bool isMap, string prefix={} ){
 			for( let& c : dbTable.Columns ){
 				let& column = *c;
 //				BREAK_IF( column.Name=="provider_id" );
@@ -138,11 +142,11 @@ namespace Jde::QL{
 					qlTypeName = ColumnQL::QLType( column );//column.PKTable.empty() ? ColumnQL::QLType( column ) : dbTable.JsonTypeName();
 				}
 				else if( column.PKTable ){
-					auto pChildColumn = dbTable.ChildColumn();
+					auto pChildColumn = dbTable.Map ? dbTable.Map->Child : nullptr;
 					if( !isMap || column.PKTable->IsFlags || (pChildColumn && pChildColumn->Name==column.Name)  ){ //!RolePermission || right_id || um_groups.member_id
 						if( find_if(dbTable.Columns, [&column](let& c){return c->QLAppend==column.Name;})!=dbTable.Columns.end() )
 							continue;
-						if( auto pExtendedFromTable = mainTable.GetExtendedFromTable(); pExtendedFromTable && mainTable.GetPK()->Name==column.Name ){//extension table
+						if( mainTable.Extends && mainTable.Extends->GetPK()->Name==column.Name ){//extension table
 							addColumns( *column.PKTable, false, prefix );
 							continue;
 						}
@@ -169,7 +173,7 @@ namespace Jde::QL{
 				else
 					THROW( "[{}]Could not find table.", column.PKTable->Name );
 
-				auto pChildColumn = dbTable.ChildColumn();//group.member_id may not exist.
+				auto pChildColumn = dbTable.Map ? dbTable.Map->Child : nullptr;
 				let isNullable = pChildColumn || column.IsNullable;
 				let typeName2 = isNullable ? qlTypeName : "";
 				let typeKind = isNullable ? rootType : EFieldKind::NonNull;
@@ -179,7 +183,7 @@ namespace Jde::QL{
 				addField( fieldName, typeName2, typeKind, ofTypeName, ofTypeKind );
 			}
 		};
-		addColumns( mainTable, mainTable.IsMap(), {} );
+		addColumns( mainTable, mainTable.Map.has_value(), {} );
 		for( let& [name,pTable] : mainTable.Schema->Tables ){
 			auto fnctn = [addField,pTable,&mainTable]( let& c1Name, let& c2Name ){
 				if( let pColumn1=pTable->FindColumn(c1Name), pColumn2=pTable->FindColumn(c2Name) ; pColumn1 && pColumn2 /*&& pColumn->PKTable==n*/ ){
@@ -190,8 +194,8 @@ namespace Jde::QL{
 					}
 				}
 			};
-			let child = pTable->ChildColumn();
-			let parent = pTable->ParentColumn();
+			let child = pTable->Map ? pTable->Map->Child : nullptr;
+			let parent = pTable->Map ? pTable->Map->Parent : nullptr;
 			if( child && parent ){
 				fnctn( child->Name, parent->Name );
 				fnctn( parent->Name, child->Name );
@@ -201,26 +205,45 @@ namespace Jde::QL{
 		jData["__type"] = jTable;
 	}
 
-α IntrospectEnum( sv /*typeName*/, const DB::Table& baseTable, const TableQL& fieldTable, jobject& jData )ε->void{
-		const DB::View& dbTable = baseTable.QLView ? *baseTable.QLView : dynamic_cast<const DB::View&>(baseTable);
-		std::ostringstream sql{ "select ", std::ios::ate };
-		vector<string> columns;
-		for_each( fieldTable.Columns, [&columns, &dbTable](let& x){ if(dbTable.FindColumn(x.JsonName)) columns.push_back(x.JsonName);} );//sb only id/name.
-		sql << Str::AddCommas( columns ) << " from " << dbTable.Name << " order by id";
+α IntrospectEnum( const sp<DB::Table> baseTable, const TableQL& fieldTable, jobject& jData )ε->jobject{
+		auto dbTable = baseTable->QLView ? baseTable->QLView : AsView(baseTable);
+		DB::SelectClause select;
+		for_each( fieldTable.Columns, [&select, &dbTable](let& x){
+			if( let c = x.JsonName=="id" ? dbTable->GetPK() : dbTable->FindColumn( x.JsonName ); c )
+				select.TryAdd( c );
+		});//sb only id/name.
+		const string sql{ Ƒ("{} from {} order by {}", select.ToString(), dbTable->Name, dbTable->GetPK()->Name) };
 		jarray fields;
-		dbTable.Schema->DS()->Select( sql.str(), [&]( const DB::IRow& row ){
+		dbTable->Schema->DS()->Select( sql, [&]( const DB::IRow& row ){
 			jobject j;
-			for( uint i=0; i<columns.size(); ++i ){
-				if( columns[i]=="id" )
-					j[columns[i]] = row.GetUInt( i );
+			for( uint i=0; i<select.Columns.size(); ++i ){
+				auto& c = *select.Columns[i];
+				if( c.IsPK() )
+					j["id"] = row.GetUInt( i );
 				else
-					j[columns[i]] = row.GetString( i );
+					j[c.Name] = row.GetString( i );
 			}
 			fields.push_back( j );
 		} );
 		jobject jTable;
 		jTable["enumValues"] = fields;
-		jData["__type"] = jTable;
+		return jTable;
+	}
+
+	α QueryType( const TableQL& typeTable, jobject& jData )ε->void{
+		let typeName = Json::AsString( typeTable.Args, "name" );
+		auto dbTable = DB::AsTable( FindTable(ToPlural(FromJson(typeName))) );
+		for( let& qlTable : typeTable.Tables ){
+			if( qlTable.JsonName=="fields" ){
+				if( let pObject = _introspection.Find(typeName); pObject )
+					jData["__type"] = pObject->ToJson( qlTable );
+				else
+					IntrospectFields( typeName, *dbTable, qlTable, jData );
+			}
+			else if( qlTable.JsonName=="enumValues" )
+				jData["__type"] = IntrospectEnum( dbTable, qlTable, jData );
+			else
+				THROW( "__type data for '{}' not supported", qlTable.JsonName );
+		}
 	}
 }
-

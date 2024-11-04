@@ -62,3 +62,4 @@ tests/*.proto
 **/.vscode/c_cpp_properties.json
 **/*.vcxproj
 **/*.vcxproj.filters
+libs/access/config/sql/.sandbox.sql

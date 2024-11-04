@@ -1,13 +1,13 @@
 #include <jde/web/client/http/ClientHttpSession.h>
 #include <jde/web/client/http/ClientHttpRes.h>
 #include <jde/web/client/socket/IClientSocketSession.h>
-#include <jde/thread/Execution.h>
+#include <jde/framework/thread/execution.h>
 
 
 namespace Jde::Web::Client{
-	Duration _handshakeTimeout{ Settings::Get<Duration>("web/client/timeoutHandshake").value_or(std::chrono::seconds(30)) };
-	Duration _timeout{ Settings::Get<Duration>("web/client/timeout").value_or(std::chrono::seconds(30)) };
-	Duration _closeTimeout{ Settings::Get<Duration>("web/client/timeoutClose").value_or(std::chrono::seconds(30)) };
+	Duration _handshakeTimeout{ Settings::FindDuration("web/client/timeoutHandshake").value_or(std::chrono::seconds(30)) };
+	Duration _timeout{ Settings::FindDuration("web/client/timeout").value_or(std::chrono::seconds(30)) };
+	Duration _closeTimeout{ Settings::FindDuration("web/client/timeoutClose").value_or(std::chrono::seconds(30)) };
 	ssl::context _ctx{ ssl::context::tlsv12_client };// The SSL context is required, and should hold certificates
 	ELogTags _tags{ ELogTags::HttpClientWrite };
 	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };

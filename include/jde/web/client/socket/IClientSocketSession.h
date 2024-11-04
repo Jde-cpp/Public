@@ -4,8 +4,8 @@
 #include "../exports.h"
 #include "ClientSocketStream.h"
 #include <jde/framework/coroutine/Await.h>
-#include "../../../../../Framework/source/io/ProtoUtilities.h"
-#include "../../../../../Framework/source/Stopwatch.h"
+#include "../../../../../../Framework/source/io/proto.h"
+#include "../../../../../../Framework/source/Stopwatch.h"
 
 namespace Jde::Web::Client{
 	ΓWC α MaxLogLength()ι->uint16;

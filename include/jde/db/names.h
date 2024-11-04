@@ -6,15 +6,16 @@
 #define YRESULT std::basic_string<char,typename Y::traits_type>
 
 namespace Jde::DB::Names{
+	Ξ Capitalize( str name )ι->string{ ASSERT(name.size()>1); return string{(char)std::toupper(name[0])} + name.substr(1); }
 	template<class X=string,class Y=string> Ω FromJson( Str::bsv<typename X::traits_type> jsonName )ι->YRESULT;
 	template<class X=string,class Y=string> Ω ToJson( Str::bsv<typename X::traits_type> schemaName )ι->YRESULT;
-	Ω ToSingular( sv plural )ι->string;
+	α ToSingular( sv plural )ι->string;
 	template<class T=string> Ω ToPlural( BSV singular )ι->RESULT;
 }
 namespace Jde::DB{
 #define let const auto
 	template<class X,class Y> α Names::FromJson( Str::bsv<typename X::traits_type> jsonName )ι->YRESULT{
-		YRESULT sqlName; 
+		YRESULT sqlName;
 		for( uint i=0; i<jsonName.size(); ++i ){
 			let ch = jsonName[i];
 			if( std::isupper(ch) ){
@@ -22,7 +23,7 @@ namespace Jde::DB{
 					sqlName+="_";
 				sqlName +=(char)std::tolower( ch );
 			}
-			else			
+			else
 				sqlName+=ch;
 		}
 		return sqlName;
@@ -54,7 +55,9 @@ namespace Jde::DB{
 	}
 	Ŧ Names::ToPlural( BSV singular )ι->RESULT{
 		RESULT y{ singular };
-		if( singular.ends_with("y") )
+		if( singular=="acl" )
+			y = singular;
+		else if( singular.ends_with("y") )
 			y = RESULT{ singular }.substr(0, singular.size()-1)+"ies";
 		else if( !singular.ends_with('s') )
 			y = RESULT{ singular }+"s";

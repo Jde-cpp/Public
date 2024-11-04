@@ -4,7 +4,7 @@
 #include "CancellationSignals.h"
 #include <jde/web/usings.h>
 #include "ServerImpl.h"
-#define var const auto
+#define let const auto
 
 namespace Jde::Web{
 	static uint16 _maxLogLength{ Settings::Get<uint16>("http/maxLogLength").value_or(1024) };

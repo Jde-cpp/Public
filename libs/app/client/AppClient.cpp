@@ -3,7 +3,7 @@
 #include <jde/app/client/usings.h>
 #include "../../../../Framework/source/coroutine/Alarm.h"
 
-#define var const auto
+#define let const auto
 
 namespace Jde::App{
 	using Web::Client::ClientHttpAwait;

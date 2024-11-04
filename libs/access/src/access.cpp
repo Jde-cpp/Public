@@ -5,6 +5,7 @@
 #include <jde/framework/io/file.h>
 #include <jde/db/Database.h>
 #include "types/Acl.h"
+#include "types/IdentityGroup.h"
 #include "types/Resource.h"
 #include "types/Role.h"
 #include "types/User.h"
@@ -14,12 +15,19 @@
 
 namespace Jde::Access{
 	constexpr ELogTags _tags{ ELogTags::Access };
+	constexpr array<sv,8> ProviderTypeStrings = { "None", "Google", "Facebook", "Amazon", "Microsoft", "VK", "key", "OpcServer" };
+	α ToString( ERights x )ι->sv{ return FromEnum<ERights>( RightsStrings, x ); }
+	α ToProviderType( sv x )ι->EProviderType{ return ToEnum<EProviderType>( ProviderTypeStrings, x ).value_or(EProviderType::None); }
+	α ToString( EProviderType x )ι->sv{ return FromEnum<EProviderType>( ProviderTypeStrings, x ); }
+
 	static sp<DB::AppSchema> _schema;
+	α GetTable( str name )ε->sp<DB::Table>{ return _schema->GetTablePtr( name ); }
+	α GetSchema()ε->sp<DB::AppSchema>{ return _schema; }
 
 	struct Authorize : IAcl{
 		Authorize()ε{}
 		α Test( ERights access, str resource, UserPK userPK )ε->void override;
-		concurrent_flat_map<Access::AppPK, flat_map<string,Access::ResourcePK>> AppResources;
+		concurrent_flat_map<string, flat_map<string,Access::ResourcePK>> AppResources;//string=schema
 		concurrent_flat_map<ResourcePK,Resource> Resources;
 		flat_multimap<RolePK,PermissionPK> Roles;
 		flat_multimap<IdentityPK,PermissionPK> Acl;
@@ -31,7 +39,7 @@ namespace Jde::Access{
 
 	α Authorize::Test( ERights access, str resourceName, UserPK userId )ε->void{
 		optional<ResourcePK> resourcePK;
-		if( !AppResources.cvisit(AppPK,[&](auto& kv){
+		if( !AppResources.cvisit(SchemaName,[&](auto& kv){
 			if( let p = kv.second.find(resourceName); p!=kv.second.end() )
 				resourcePK = p->second;
 		}) || !resourcePK ){
@@ -51,7 +59,7 @@ namespace Jde::Access{
 		AppPKs{appPKs}
 	{}
 
-	α LoadAcl( ConfigureAwait& await )->RoleLoadAwait::Task{
+	α loadAcl( ConfigureAwait& await )->RoleLoadAwait::Task{
 		try{
 			let acl = co_await AclLoadAwait{ _schema };
 			_authorize->Acl = move(acl);
@@ -60,37 +68,37 @@ namespace Jde::Access{
 			await.ResumeExp( move(e) );
 		}
 	}
-  α LoadRoles( ConfigureAwait& await )->RoleLoadAwait::Task{
+  α loadRoles( ConfigureAwait& await )->RoleLoadAwait::Task{
 		try{
 			let roles = co_await RoleLoadAwait{ _schema };
 			_authorize->Roles = move(roles);
-			LoadAcl( await );
+			loadAcl( await );
 		}
 		catch( IException& e ){
 			await.ResumeExp( move(e) );
 		}
 	}
-	α LoadResources( ConfigureAwait& await )->ResourceLoadAwait::Task{
+	α loadResources( ConfigureAwait& await )->ResourceLoadAwait::Task{
 		try{
 			flat_map<ResourcePK,Resource> resources = co_await ResourceLoadAwait{ _schema, await.AppPKs };
 			for( let& [pk, resource] : resources ){
 				if( resource.Filter.empty() ){
-					_authorize->AppResources.try_emplace_or_visit( resource.AppPK, flat_map<string,ResourcePK>{{resource.Target, pk}}, [&](auto& kv){
+					_authorize->AppResources.try_emplace_or_visit( resource.Schema, flat_map<string,ResourcePK>{{resource.Target, pk}}, [&](auto& kv){
 					 	kv.second.emplace( resource.Target, pk );
 					});
 				}
 				_authorize->Resources.emplace( pk, move(resource) );
 			}
-			LoadRoles( await );
+			loadRoles( await );
 		}
 		catch( IException& e ){
 			await.ResumeExp( move(e) );
 		}
 	}
-	α LoadUsers( ConfigureAwait& await )->UserLoadAwait::Task{
+	α loadUsers( ConfigureAwait& await )->UserLoadAwait::Task{
 		try{
 			let users = co_await UserLoadAwait{ _schema };
-			LoadResources( await );
+			loadResources( await );
 		}
 		catch( IException& e ){
 			await.ResumeExp( move(e) );
@@ -98,7 +106,7 @@ namespace Jde::Access{
 	}
 
 	α ConfigureAwait::Suspend()ι->void{
-		LoadUsers( *this );
+		loadUsers( *this );
 	};
 }
 
@@ -109,6 +117,9 @@ namespace Jde{
 
 	α Access::Configure( sp<DB::AppSchema> schema, vec<AppPK> appPKs )ε->ConfigureAwait{
 		_schema = schema;
+		Resources::Sync();
+		QL::Hook::Add( mu<Access::UserGraphQL>() );
+		QL::Hook::Add( mu<Access::GroupGraphQL>() );
 		return {appPKs};
 		//schema->GetTable( "um_users" )->Load();
 	}

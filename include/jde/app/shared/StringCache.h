@@ -1,5 +1,6 @@
 #pragma once
 #include <jde/db/usings.h>
+#include <jde/app/shared/usings.h>
 
 #define Φ ΓAS α
 namespace Jde::App::StringCache{

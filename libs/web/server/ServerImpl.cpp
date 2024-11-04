@@ -6,11 +6,11 @@
 #include <jde/web/server/IRequestHandler.h>
 #include <jde/web/server/RestException.h>
 #include <jde/thread/Execution.h>
-#define var const auto
+#define let const auto
 
 namespace Jde::Web{
 	up<Server::IApplicationServer> _appServer;
-	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<json>>{ return _appServer->GraphQL( move(q), userPK, sl ); }
+	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<jobject>>{ return _appServer->GraphQL( move(q), userPK, sl ); }
 	α Server::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<App::Proto::FromServer::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
 
 	sp<net::cancellation_signal> _cancelSignal;
@@ -47,7 +47,7 @@ namespace Server{
 			co_await RunSession( stream, buffer, move(userEndpoint), false, index, cancel );
 	}
 
-	α Send( HttpRequest&& req, sp<RestStream> stream, json j, SRCE )ι->void{
+	α Send( HttpRequest&& req, sp<RestStream> stream, jobject j, SRCE )ι->void{
 		auto res = req.Response( move(j), sl );
 		stream->AsyncWrite( move(res) );
 	}
@@ -60,10 +60,10 @@ namespace Server{
 	α GraphQL( HttpRequest req, sp<RestStream> stream )->Task{
 		try{
 			auto& query = req["query"]; THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
-			var sessionId = req.SessionInfo->SessionId;
+			let sessionId = req.SessionInfo->SessionId;
 			req.LogRead( query );
 			string threadDesc = Jde::format( "[{:x}]{}", sessionId, req.Target() );
-			var y = await( json, DB::CoQuery(move(query), req.UserPK(), threadDesc) );
+			let y = await( json, DB::CoQuery(move(query), req.UserPK(), threadDesc) );
 			Send( move(req), move(stream), move(y) );
 		}
 		catch( IRestException& e ){
@@ -129,11 +129,11 @@ namespace Server{
 			Crypto::CreateKeyCertificate( settings );
 		}
 		_ctx->set_options( ssl::context::default_workarounds | ssl::context::no_sslv2 | ssl::context::single_dh_use );
-		var cert = IO::FileUtilities::Load( settings.CertPath );
+		let cert = IO::FileUtilities::Load( settings.CertPath );
 		_ctx->use_certificate_chain( net::buffer(cert.data(), cert.size()) );
 
 		_ctx->set_password_callback( [=](uint, ssl::context_base::password_purpose){ return settings.Passcode; } );
-		var key = IO::FileUtilities::Load( settings.PrivateKeyPath );
+		let key = IO::FileUtilities::Load( settings.PrivateKeyPath );
 		_ctx->use_private_key( net::buffer(key.data(), key.size()), ssl::context::file_format::pem );
 		static const string dhStatic =
 			"-----BEGIN DH PARAMETERS-----\n"
@@ -159,7 +159,7 @@ namespace Server{
 		while( (co_await net::this_coro::cancellation_state).cancelled() == net::cancellation_type::none ){
 			auto [ec, sock] = co_await acceptor.async_accept();
 			const auto exec = sock.get_executor();
-			var userEndpoint = sock.remote_endpoint();
+			let userEndpoint = sock.remote_endpoint();
 			if( !ec ){
 				auto cancelSignal = ms<net::cancellation_signal>();
 				net::co_spawn( exec, DetectSession(StreamType(move(sock)), move(userEndpoint), cancelSignal), net::bind_cancellation_slot(cancelSignal->slot(), net::detached) );// We dont't need a strand, since the awaitable is an implicit strand.
@@ -174,7 +174,7 @@ namespace Server{
 		if( !_ctx )
 			LoadServerCertificate();
 
-		var port = Settings::Get<PortType>( "http/port" ).value_or( 6809 );
+		let port = Settings::Get<PortType>( "http/port" ).value_or( 6809 );
 
 		_cancelSignal = ms<net::cancellation_signal>();
 		auto address = tcp::endpoint{ net::ip::make_address(Settings::Get<string>("http/address").value_or("0.0.0.0")), port };

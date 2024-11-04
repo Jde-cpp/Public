@@ -4,6 +4,8 @@
 #include <jde/framework/coroutine/Await.h>
 #include "await/ContainerAwait.h"
 #include "await/DBAwait.h"
+#include "meta/Column.h"
+#include "meta/View.h"
 #include "IRow.h"
 //#include "meta/DBSchema.h"
 #include "generators/Sql.h"
@@ -24,8 +26,8 @@ namespace Jde::DB{
 		β ServerMeta()ι->IServerMeta& =0;
 
 		template<class K=uint,class V=string>
-		α SelectEnum( sv tableName, SRCE )ι->SelectCacheAwait<flat_map<K,V>>{ return SelectMap<K,V>( Ƒ("select id, name from {}", tableName), string{tableName}, sl ); }
-		ẗ SelectEnumSync( sv tableName, SRCE )ε->sp<flat_map<K,V>>{ ASSERT(tableName.size()); return SFuture<flat_map<K,V>>( SelectEnum<K,V>( tableName, sl) ).get(); }
+		α SelectEnum( const View& table, SRCE )ε->SelectCacheAwait<flat_map<K,V>>{ return SelectMap<K,V>( Ƒ("select {}, name from {}", table.GetPK()->Name, table.DBName), table.Name, sl ); }
+		ẗ SelectEnumSync( const View& table, SRCE )ε->sp<flat_map<K,V>>{ return SFuture<flat_map<K,V>>( SelectEnum<K,V>( table, sl) ).get(); }
 		ẗ SelectMap( string sql, SRCE )ι->SelectAwait<flat_map<K,V>>;
 		ẗ SelectMap( string sql, string cacheName, SRCE )ι->SelectCacheAwait<flat_map<K,V>>;
 		ẗ SelectMultiMap( Sql&& statement, SRCE )Ι->up<TAwait<flat_multimap<K,V>>>;

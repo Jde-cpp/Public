@@ -4,7 +4,7 @@
 #include "../../../../Framework/source/math/MathUtilities.h"
 #include "ServerImpl.h"
 
-#define var const auto
+#define let const auto
 namespace Jde::Web::Server{
 	constexpr ELogTags _tags{ ELogTags::Sessions };
 	concurrent_flat_map<SessionPK,sp<SessionInfo>> _sessions;
@@ -77,7 +77,7 @@ namespace	Sessions{
 		sp<SessionInfo> info;
 		_sessions.visit( sessionId, [&info, &userEndpoint, sessionId]( auto& kv ){
 			sp<SessionInfo> existing = kv.second;
-			var& existingAddress = existing->UserEndpoint;
+			let& existingAddress = existing->UserEndpoint;
 			THROW_IF( existingAddress!=userEndpoint, "[{}]existingAddress='{}' does not match userEndpoint='{}'", sessionId, existingAddress, userEndpoint );
 			auto& existingExpiration = existing->Expiration;
 			if( existingExpiration>steady_clock::now() ){

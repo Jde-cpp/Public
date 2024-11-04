@@ -1,11 +1,17 @@
 #include "gtest/gtest.h"
 #include <jde/ql/ql.h>
+#include <jde/ql/types/Introspection.h>
+#include <jde/ql/ql.h>
+#include <jde/ql/types/TableQL.h>
+#include <jde/ql/types/MutationQL.h>
 #include <jde/framework/str.h>
+#include "globals.h"
 
 #define let const auto
-namespace Jde{
+namespace Jde::Access{
 	constexpr ELogTags _tags{ ELogTags::Test };
-
+	using namespace Json;
+	using namespace Tests;
 	class GroupTests : public ::testing::Test{
 	protected:
 		Ω SetUpTestCase()->void;
@@ -15,47 +21,58 @@ namespace Jde{
 	}
 
 	TEST_F( GroupTests, Fields ){
-		let query = "{ __type(name: \"Group\") { fields { name type { name kind ofType{name kind ofType{name kind ofType{name kind}}} } } }}";
+		//const QL::TableQL ql{ "" };
+		let query = "{ __type(name: \"IdentityGroup\") { fields { name type { name kind ofType{name kind ofType{name kind ofType{name kind}}} } } } }";
 		let json = QL::Query( query, 0 );
-		Trace{ _tags, "{}", serialize(json) };
-		ASSERT_EQ( Str::Replace( serialize(json), '"', '\'' ), "{'data':{'__type':{'fields':[{'name':'id','type':{'kind':'NON_NULL','name':null,'ofType':{'kind':'SCALAR','name':'ID'}}},{'name':'name','type':{'kind':'NON_NULL','name':null,'ofType':{'kind':'SCALAR','name':'String'}}},{'name':'attributes','type':{'kind':'SCALAR','name':'PositiveInt'}},{'name':'created','type':{'kind':'NON_NULL','name':null,'ofType':{'kind':'SCALAR','name':'DateTime'}}},{'name':'updated','type':{'kind':'SCALAR','name':'DateTime'}},{'name':'deleted','type':{'kind':'SCALAR','name':'DateTime'}},{'name':'target','type':{'kind':'NON_NULL','name':null,'ofType':{'kind':'SCALAR','name':'ID'}}},{'name':'description','type':{'kind':'SCALAR','name':'String'}},{'name':'provider','type':{'kind':'ENUM','name':'Provider'}},{'name':'members','type':{'kind':'LIST','name':null,'ofType':{'kind':'NON_NULL','name':null,'ofType':{'kind':'UNION','name':'Entity'}}}}],'name':'Group'}}}" );
-//		                                                  {'data':{'__type':{'fields':[{'name':'id','type':{'kind':'NON_NULL','name':null,'ofType':{'kind':'SCALAR','name':'ID'}}},{'name':'name','type':{'kind':'NON_NULL','name':null,'ofType':{'kind':'SCALAR','name':'String'}}},{'name':'attributes','type':{'kind':'SCALAR','name':'PositiveInt'}},{'name':'created','type':{'kind':'NON_NULL','name':null,'ofType':{'kind':'SCALAR','name':'DateTime'}}},{'name':'updated','type':{'kind':'SCALAR','name':'DateTime'}},{'name':'deleted','type':{'kind':'SCALAR','name':'DateTime'}},{'name':'target','type':{'kind':'NON_NULL','name':null,'ofType':{'kind':'SCALAR','name':'ID'}}},{'name':'description','type':{'kind':'SCALAR','name':'String'}},{'name':'provider','type':{'kind':'ENUM','name':'Provider'}},{'name':'members','type':{'kind':'LIST','name':'',  'ofType':{'kind':'NON_NULL','name':null,'ofType':{'kind':'UNION','name':'Entity'}}}}],'name':'Group'}}}
-		//{'name':'members','type':{'kind':6,'name':'Entity'}}],'name':'Group'}}}
-		//{'name':'members','type':{'kind':6,'name':null,'ofType':{'kind':7,'name':null,ofType':{'kind':3,'name':'Entity'}}}}
-		//enum class FieldKind : uint8{ Scalar=0, Object=1, Interface=2, Union=3, Enum=4, InputObject=5, List=6, NonNull=7 };
+		auto obj = Json::ReadJsonNet( Ƒ("{}/Public/libs/access/config/access-ql.jsonnet", OSApp::EnvironmentVariable("JDE_DIR").value_or("./")) );
+		QL::Introspection intro{ move(obj) };
+		jobject expected;
+		QL::RequestQL request = QL::Parse( query );
+		expected["data"].emplace_object()["__type"] = intro.Find("IdentityGroup")->ToJson( get<0>(request)[0].Tables[0] );
+		ASSERT_EQ( serialize(json), serialize(expected) );
 	}
 
 	TEST_F( GroupTests, Crud ){
-		// let create = "{ mutation { createUser(  'input': {'target':'id','provider':1,'name':'name','description':'description'} ){id} } }";
-		// let createJson = DB::Query( Str::Replace(create, '\'', '"'), 0 );
-		// Trace{ _tags, "{}", createJson.dump() };
-		// let id = createJson["data"]["user"]["id"].get<int>();//{"data":{"user":{"id":7}}}
+		let group = Tests::GetGroup( "groupTest", GetRoot() );
+		let id = Json::AsNumber<GroupPK>( group, "id" );
 
-		// let selectAll = "query{ groups { id name attributes created updated deleted target description provider members } }";
-		// let selectAllJson = DB::Query( selectAll, 0 );
-		// Trace{ _tags, "{}", selectAllJson.dump() };
+ 		let update = Ƒ( "{{ mutation updateIdentityGroup( \"id\":{}, \"input\": {{\"name\":\"{}\"}} ) }} }}", id, "newName" );
+ 		let updateJson = QL::Query( update, GetRoot() );
+		ASSERT_TRUE( AsSV(Tests::SelectGroup("groupTest", GetRoot()), "name")=="newName" );
 
-// 		let readGroups = "query{ users(filter:{isGroup:{ eq:true}}){ id name } }";
-// 		let readGroupsJson = DB::Query( readGroups, 0 );
-// 		Trace{ _tags, "{}", readGroupsJson.dump() };
-// 		ASSERT_EQ( readGroupsJson["data"]["users"].size(), 0 );
+ 		let del = Ƒ( "{{mutation deleteIdentityGroup(\"id\":{}) }}", id );
+ 		let deleteJson = QL::Query( del, GetRoot() );
+		ASSERT_TRUE( Tests::SelectGroup("groupTest", GetRoot()).empty() );
+		ASSERT_TRUE( !Tests::SelectGroup("groupTest", GetRoot(), true).empty() );
 
-// 		let read = "query{ user(filter:{target:{ eq:\"id\"}}){ id name attributes created updated deleted target description isGroup provider{ id name } } }";
-// 		let readJson = DB::Query( read, 0 );
-// 		Trace{ _tags, "{}", readJson.dump() };
-// 		let readId = readJson["data"]["user"]["id"].get<int>();
-// //		ASSERT_EQ( id, readId );
-
-// 		let update = Jde::format( "{{ mutation {{ updateUser( \"id\":{}, \"input\": {{\"name\":\"{}\"}} ) }} }}", readId, "newName" );
-// 		let updateJson = DB::Query( update, 0 );
-// 		Trace{ _tags, "{}", updateJson.dump() };
-
-// 		let del = Jde::format( "{{mutation {{ deleteUser(\"id\":{}) }} }}", readId );
-// 		let deleteJson = DB::Query( del, 0 );
-// 		Trace{ _tags, "{}", readJson.dump() };
-
-// 		let purge = Jde::format( "{{mutation {{ purgeUser(\"id\":{}) }} }}", readId );
-// 		let purgeJson = DB::Query( purge, 0 );
-// 		Trace{ "{}", readJson.dump() };
+ 		PurgeGroup( id, GetRoot() );
+ 		ASSERT_TRUE( Tests::SelectGroup("groupTest", GetRoot(), true).empty() );
 	}
+	TEST_F( GroupTests, AddRemove ){
+		let hrManagers = Json::AsNumber<UserPK>( Tests::GetGroup("HR-Managers", GetRoot()), "id" );
+		let manager = Json::AsNumber<UserPK>( Tests::GetUser("manager", GetRoot()), "id" );
+		Tests::AddToGroup( hrManagers, {manager}, GetRoot() );
+		constexpr sv ql = "query{{ identityGroup(id:{}){{ members{{id name}} }} }}";
+		ASSERT_EQ( Json::AsArrayPath(QL::Query( Ƒ(ql, hrManagers), GetRoot() ), "data/identityGroup/members" ).size(), 1 );
+
+		let hr = Json::AsNumber<UserPK>( Tests::GetGroup("HR", GetRoot()), "id" );
+		let associate = Json::AsNumber<UserPK>(Tests::GetUser("associate", GetRoot()), "id");
+		Tests::AddToGroup( hr, {hrManagers, associate}, GetRoot() );
+		let members = QL::Query( Ƒ(ql, hr), GetRoot() );
+		let array = Json::AsArrayPath( members, "data/identityGroup/members" );
+		ASSERT_EQ( array.size(), 2 );
+
+		constexpr sv userQL = "query{{ user(id:{}){{ identityGroups{{id name}} }} }}";
+		ASSERT_EQ( Json::AsArrayPath(QL::Query( Ƒ(userQL, manager), GetRoot() ), "data/user/identityGroups" ).size(), 1 );
+
+		Tests::RemoveFromGroup( hr, {hrManagers, associate}, GetRoot() );
+		Tests::RemoveFromGroup( hrManagers, {manager}, GetRoot() );
+		Tests::PurgeGroup( hr, GetRoot() );
+		Tests::PurgeGroup( hrManagers, GetRoot() );
+		Tests::PurgeUser( associate, GetRoot() );
+		Tests::PurgeUser( manager, GetRoot() );
+	}
+	//add
+	//remove
+	//user groups
 }

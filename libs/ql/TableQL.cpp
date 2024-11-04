@@ -1,5 +1,6 @@
 #include <jde/ql/types/TableQL.h>
 #include <jde/ql/types/FilterQL.h>
+#include <jde/db/IRow.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/DBSchema.h>
@@ -62,5 +63,25 @@ namespace Jde::QL{
 			}
 		}
 		return qlTypeName;
+	}
+	α TableQL::ToJson( const DB::IRow& row, const vector<sp<DB::Column>>& dbColumns )Ι->jobject{
+		jobject y;
+		for( uint i=0; i<dbColumns.size() && i<row.Size(); ++i )
+			SetResult( y, dbColumns[i], row[i] );
+		return y;
+	}
+	α ValueToJson( const DB::Value& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue;
+	α TableQL::SetResult( jobject& o, const sp<DB::Column> dbColumn, const DB::Value& value )Ι->void{
+		for( let& c : Columns ){
+			if( c.DBColumn==dbColumn ){
+				o[c.JsonName] = ValueToJson( value, &c );
+				return;
+			}
+		}
+		for( let& t : Tables ){
+			if( !o.contains(t.JsonName) )
+				o[t.JsonName] = jobject{};
+			t.SetResult( o.at(t.JsonName).as_object(), dbColumn, value );
+		}
 	}
 }

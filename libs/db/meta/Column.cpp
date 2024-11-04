@@ -1,12 +1,16 @@
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/AppSchema.h>
+#include <jde/framework/str.h>
 
 #define let const auto
 
 namespace Jde::DB{
+	constexpr array<sv,3> CardinalityStrings = { "0", "1", "N" };
+
 	α Column::Count()ι->sp<Column>{ return ms<Column>( "count(*)" ); }
-	α GetDefault( const jobject& j, bool isNullable, EType type, str name )ε->optional<Value>{
+
+	α getDefault( const jobject& j, bool isNullable, EType type, str name )ε->optional<Value>{
 		optional<Value> obj;
 		if( j.contains("default") )
 			obj = Value{ type, j.at("default") };
@@ -15,7 +19,7 @@ namespace Jde::DB{
 		return obj;
 	}
 
-	α GetPK( const jobject& j )ε->sp<Table>{
+	α getPK( const jobject& j )ε->sp<Table>{
 		sp<Table> table;
 		if( auto name = Json::FindSV(j, "pkTable"); name )
 			table = ms<Table>( *name );
@@ -33,14 +37,14 @@ namespace Jde::DB{
 		Criteria{ FindDefaultSV(j, "criteria") },
 		IsNullable{ FindDefaultBool(j, "nullable") },
 		MaxLength{ FindNumber<uint16>(j, "length") },
-		PKTable{ GetPK(j) },
+		PKTable{ getPK(j) },
 		IsSequence{ PKTable ? false : FindDefaultBool(j, "sequence") },
 		Insertable{ FindBool(j, "insertable").value_or(!IsSequence) },
 		SKIndex{ IsSequence ? optional<uint8>{0} : FindNumber<uint8>(j, "sk") },
 		QLAppend{ FindDefaultSV(j, "qlAppend") },
 		Type{ ToType(FindSV(j, "type").value_or("VarChar")) },
 		Updateable{ FindBool(j, "updateable").value_or(true) },
-		Default{ GetDefault(j, IsNullable, Type, Name) }
+		Default{ getDefault(j, IsNullable, Type, Name) }
 	{}
 
 	α Column::Initialize( sp<DB::View> table )ε->void{

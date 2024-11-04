@@ -11,7 +11,7 @@ namespace Internal{
 	α Start( up<IRequestHandler>&& handler, up<Server::IApplicationServer>&& server )ε->void;
 	α Stop( bool terminate=false )ι->void;
 }
-	α AppGraphQLAwait( string&& q, UserPK userPK, SRCE )ι->up<TAwait<json>>;
+	α AppGraphQLAwait( string&& q, UserPK userPK, SRCE )ι->up<TAwait<jobject>>;
 	Τ [[nodiscard]] α DoEof( T& stream )ι->net::awaitable<void, executor_type>{ beast::error_code ec; stream.socket().shutdown( tcp::socket::shutdown_send, ec ); co_return; }
 	Τ [[nodiscard]] α DoEof( beast::ssl_stream<T>& stream )ι->net::awaitable<void, executor_type>{ co_await stream.async_shutdown(); }
 	α HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task;

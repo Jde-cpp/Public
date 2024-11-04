@@ -1,11 +1,12 @@
 #pragma once
 #include "../usings.h"
 #include "../exports.h"
+#include <jde/access/usings.h>
 
 #define Φ ΓAS auto
 namespace Jde::App::FromClient{
 	namespace PFromClient = Jde::App::Proto::FromClient;
-	Φ AddSession( str domain, str loginName, ProviderPK providerPK, str userEndPoint, bool isSocket, RequestId requestId )ι->PFromClient::Transmission;
+	Φ AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, RequestId requestId )ι->PFromClient::Transmission;
 	Φ Exception( IException&& e )ι->PFromClient::Transmission;
 	Φ GraphQL( str query, RequestId requestId )ι->PFromClient::Transmission;
 	Φ Instance( str application, str instanceName, SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission;
