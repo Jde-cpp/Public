@@ -59,3 +59,6 @@ src/Iot/packages/*
 jde/iot/types/proto/google/*
 jde/iot/types/proto/FromServer.proto
 src/iot/.vscode/c_cpp_properties.json
+**/.build/**
+**/packages/**
+
