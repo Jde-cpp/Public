@@ -1,0 +1,31 @@
+//FILE=IotFromClient #see ./IotCommon.proto
+
+
+syntax = "proto3";
+package Jde.Iot.FromClient;
+//import "google/protobuf/timestamp.proto";
+import "Iot.Common.proto";
+
+message Subscribe{
+	string opc_id=1;
+	repeated Jde.Iot.Proto.ExpandedNodeId nodes=2;
+}
+
+message Unsubscribe{
+	string opc_id=1;
+	repeated Jde.Iot.Proto.ExpandedNodeId nodes=2;
+}
+
+
+message Message{
+	uint32 request_id = 1;
+	oneof Value{
+		uint32 session_id = 2;
+		Subscribe subscribe = 3;
+		Unsubscribe unsubscribe = 4;
+	}
+}
+
+message Transmission{
+	repeated Message messages=1;
+}

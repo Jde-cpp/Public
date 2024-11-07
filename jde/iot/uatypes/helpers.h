@@ -17,7 +17,7 @@ namespace Jde::Iot{
 	Ξ ToJson( UA_UInt64 v )ι->json{ return json{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",true} }; };
 	Ξ ToJson( UA_Int64 v )ι->json{ return json{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",false} }; };
 	Ξ ToJson( UA_Guid v )ι->json{ boost::uuids::uuid id; memcpy(&id.data, &v, id.size() ); return json{ boost::uuids::to_string(id) }; }
-	Ξ ByteStringToJson( const UA_ByteString& v )ι->json{ string hex; hex.reserve( v.length*2 ); boost::algorithm::hex_lower( ToSV(v), std::back_inserter(hex) ); return json{hex}; }
+	Ξ ByteStringToJson( const UA_ByteString& v )ι->json{ string hex; hex.reserve( v.length*2 ); boost::algorithm::hex_lower( ToSV(v), std::back_inserter(hex) ); return json{hex}; }//TODO combine with Str::
 	Ξ ToGuid( string x, UA_Guid& ua )ι->void{ std::erase( x, '-' ); var uuid{boost::lexical_cast<boost::uuids::uuid>(x)}; ::memcpy( &ua, &uuid, sizeof(UA_Guid) ); }
 	Ξ ToBinaryString( const UA_Guid& ua )ι->string{ return {(const char*)&ua, sizeof(UA_Guid)}; }
 	using ByteStringPtr = up<UA_ByteString,decltype(&UA_ByteString_delete)>;
@@ -60,7 +60,7 @@ namespace Jde::Iot{
 		}
 
 	private:
-		α ToParts()Ι->tuple<_int,int>{ 
+		α ToParts()Ι->tuple<_int,int>{
 			var dts = UA_DateTime_toStruct( _dateTime );
 			_int seconds = Clock::to_time_t( Chrono::ToTimePoint((int16)dts.year, (int8)dts.month, (int8)dts.day, (int8)dts.hour, (int8)dts.min, (int8)dts.sec) );
 			int nanos = dts.milliSec*TimeSpan::MicrosPerMilli*TimeSpan::NanosPerMicro+dts.microSec*TimeSpan::NanosPerMicro+dts.nanoSec;

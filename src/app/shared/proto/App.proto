@@ -1,0 +1,15 @@
+syntax = "proto3";
+package Jde.App.Proto;
+
+message Execute{
+	uint32 user_pk = 1;
+	bytes transmission = 2;
+}
+
+message StringPKs{
+	repeated uint32 messages = 1;
+	repeated uint32 files = 2;
+	repeated uint32 functions = 3;
+	repeated uint32 threads = 4;
+	repeated uint32 userPKs = 5; //targets for web.
+}

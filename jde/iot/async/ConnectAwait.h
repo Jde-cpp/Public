@@ -6,7 +6,7 @@ namespace Jde::Iot{
 	
 	struct ΓI ConnectAwait final : IAwait{
 		ConnectAwait( string&& id, string&& userId, string&& pw, SRCE )ι:IAwait{sl},_id{move(id)}, _userId{move(userId)}, _password{move(pw)}{}
-		α await_suspend( HCoroutine h )ι->void override;
+		α Suspend()ι->void override;
 		α await_resume()ι->AwaitResult override{ return _pPromise ? _pPromise->MoveResult() : _result; }
 		Ω Resume( sp<UAClient>&& pClient, str target, str userId )ι->void;
 		Ω Resume( sp<UAClient>&& pClient, str target, str userId, const UAException&& e )ι->void;

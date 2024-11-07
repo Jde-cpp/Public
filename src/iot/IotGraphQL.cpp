@@ -2,13 +2,13 @@
 #include <jde/iot/types/OpcServer.h>
 #include <jde/iot/UM.h>
 #include <jde/io/Json.h>
-#include "../../../Framework/source/io/ServerSink.h"
+//#include "../../../Framework/source/io/ServerSink.h"
 #include "../../../Framework/source/db/GraphQL.h"
 
 #define var const auto
 
 namespace Jde::Iot{
-	static sp<LogTag> _logTag = Logging::Tag( "iot.graphQL" );
+	static sp<LogTag> _logTag{ Logging::Tag( "iot.graphQL" ) };
 	using Jde::DB::GraphQL::Hook::Operation;
 
 	α Query( const DB::MutationQL& m, UserPK /*userPK*/, Operation op, HCoroutine h )ι->Task{
@@ -24,17 +24,18 @@ namespace Jde::Iot{
 				if( pOpcServer ) //assume failed because already exists.
 					rowCount = 0;
 			}
-			if( !rowCount ){
+			if( !rowCount.has_value() ){
 				var insert = op==(Operation::Insert | Operation::Before) || op==(Operation::Purge | Operation::Failure);
-				rowCount = await( uint, ProviderAwait(move(id), insert) );
+				auto rowCount2 = ( co_await ProviderAwait(move(id), insert) ).UP<uint32>();
+				rowCount = *rowCount2;
 			}
-			Resume( mu<uint>(*rowCount), move(h) );
+			Resume( mu<uint>(*rowCount), h );
 		}
-		catch( Exception& e ){
-			Resume( move(e), move(h) );
+		catch( IException& e ){
+			Resume( move(e), h );
 		}
 	}
-	
+
 	struct IotGraphQLAwait final: AsyncAwait{
 		IotGraphQLAwait( const DB::MutationQL& m, UserPK userPK_, Operation op_, SL sl )ι:
 			AsyncAwait{ [&, userPK=userPK_, op=op_](HCoroutine h){ Query(m, userPK, op, move(h));}, sl, "IotGraphQLAwait" }

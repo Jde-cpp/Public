@@ -1,19 +1,16 @@
 ﻿#pragma once
 #include <jde/iot/uatypes/Node.h>
 #include "Value.h"
-#include "../../../src/web/RestServer.h"
+#include <jde/coroutine/Await.h>
 
 namespace Jde::Iot{
 	struct UAClient;
 namespace Browse{
-	α Tag()ι->sp<LogTag>;
-	ΓI α ObjectsFolder( sp<UAClient> ua, NodeId node, Web::Rest::Request req, bool snapShot )ι->Task;
 	α OnResponse( UA_Client *ua, void* userdata, RequestId requestId, UA_BrowseResponse* response )ι->void;
 
-	struct FoldersAwait final : IAwait
-	{
+	struct FoldersAwait final : IAwait{
 		FoldersAwait( NodeId&& node, sp<UAClient>& c, SRCE )ι:IAwait{sl}, _node{move(node)},_client{c}{}
-		α await_suspend( HCoroutine h )ι->void override;
+		α Suspend()ι->void override;
 		α await_resume()ι->AwaitResult override{ return _pPromise->MoveResult(); }
 	private:
 		NodeId _node;
@@ -34,5 +31,15 @@ namespace Browse{
 
 		α Nodes()ι->flat_set<NodeId>;
 		α ToJson( up<flat_map<NodeId, Value>>&& pSnapshot, flat_map<NodeId, NodeId>&& dataTypes )ε->json;
+	};
+	//ΓI α ObjectsFolder( sp<UAClient> ua, NodeId node, bool snapshot )ι->Task;
+
+	struct ΓI ObjectsFolderAwait final : TAwait<json>{
+		using base = TAwait<json>;
+		ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SRCE )ι;
+		α Suspend()ι->void override;
+	private:
+		α Execute()ι->Coroutine::Task;
+		sp<UAClient> _ua; NodeId _node; bool _snapshot;
 	};
 }}

@@ -1,5 +1,5 @@
 #pragma once
-#ifdef Jde_CRYPTO_EXPORTS
+#ifdef Jde_Crypto_EXPORTS
 	#ifdef _MSC_VER 
 		#define ΓC __declspec( dllexport )
 	#else

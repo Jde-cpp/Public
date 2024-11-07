@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Exports-Executor.h"
-#include <jde/Log.h>
+#include <jde/log/Log.h>
 #include <jde/blockly/IBlockly.h>
 #include <jde/coroutine/Task.h>
 #include <jde/markets/types/Tick.h>

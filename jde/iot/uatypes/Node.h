@@ -3,7 +3,6 @@
 #define NODE_H
 #include "../Exports.h"
 #include "helpers.h"
-#include <jde/iot/types/proto/IotCommon.pb.h>
 
 namespace Jde::Iot{
 	struct ΓI NodeId : UA_ExpandedNodeId{
@@ -11,7 +10,7 @@ namespace Jde::Iot{
 		NodeId( UA_NodeId&& x )ι:UA_ExpandedNodeId{move(x), UA_EXPANDEDNODEID_NULL.namespaceUri, UA_EXPANDEDNODEID_NULL.serverIndex}{}
 		NodeId( const UA_NodeId& x )ι:NodeId{}{ UA_NodeId_copy( &x, &nodeId ); }
 		NodeId( const UA_ExpandedNodeId& x )ι:NodeId{}{ UA_ExpandedNodeId_copy( &x, this ); }
-		NodeId( const flat_map<string,string>& x )ι;
+		NodeId( const flat_map<string,string>& x )ι;//rest params
 		NodeId( const json& j )ε;
 		NodeId( const NodeId& x )ι;
 		NodeId( Proto::ExpandedNodeId&& x )ι;
