@@ -1,5 +1,6 @@
 ﻿#include "GraphQuery.h"
 #include "GraphQL.h"
+#include <jde/ql/ql.h>
 #include <jde/ql/GraphQLHook.h>
 #include <jde/db/Database.h>
 #include <jde/db/meta/Column.h>
@@ -18,7 +19,7 @@ namespace Jde::QL{
 	using std::endl;
 	constexpr ELogTags _tags{ ELogTags::QL };
 	using namespace DB::Names;
-	α FindTable( str tableName )ε->sp<DB::View>;
+	α GetTable( str tableName )ε->sp<DB::View>;
 	α GetEnumValues( const DB::View& table, SRCE )ε->sp<flat_map<uint,string>>{
 		return table.Schema->DS()->SelectEnumSync<uint,string>( table, sl );
 	}
@@ -178,7 +179,7 @@ namespace Jde::QL{
 				rowToJson2( qlTable.Columns, false, jSubRow, index );
 				for( let& childTable : qlTable.Tables ){
 					let childDbName = childTable.DBName();
-					let pkTable = FindTable( childDbName );
+					let pkTable = GetTable( childDbName );
 					if( fk ){
 						jobject jChildTable;
 						rowToJson2( childTable.Columns, false, jChildTable, index );
@@ -194,16 +195,16 @@ namespace Jde::QL{
 	}
 }
 namespace Jde{
-	α QL::SelectStatement( sp<DB::AppSchema> schema, const TableQL& qlTable, bool includeIdColumn/*, optional<DB::WhereClause> where*/ )ι->optional<DB::Statement>{
-		let dbTable = schema->GetTablePtr( qlTable.DBName() );
+	α QL::SelectStatement( const TableQL& qlTable )ι->optional<DB::Statement>{
+		let dbView = GetTable( qlTable.DBName() );
 		DB::Statement statement;
-		ColumnSql( qlTable, *dbTable, false, statement );
+		ColumnSql( qlTable, *dbView, false, statement );
 		if( statement.Empty() )
 			return {};
 		if( statement.From.Empty() )
-			statement.From.SingleTable = dbTable;
-
-		if( string criteria = dbTable->Extends ? dbTable->SurrogateKeys[0]->Criteria : ""; criteria.size() ) //identities is_group
+			statement.From.SingleTable = dbView;
+		auto dbTable = dbView->IsView() ? nullptr : AsTable(dbView);
+		if( string criteria = dbTable && dbTable->Extends ? dbTable->SurrogateKeys[0]->Criteria : ""; criteria.size() ) //identities is_group
 			statement.Where.Add( criteria );//group with no members.
 
 		return statement;
@@ -222,8 +223,8 @@ namespace Jde{
 		if( *hookData )
 			return;
 		let isPlural = qlTable.IsPlural();
-		let dbTable = FindTable( qlTable.DBName() );
-		DB::Statement statement = SelectStatement( dbTable->Schema, qlTable, true ).value();
+		let dbTable = GetTable( qlTable.DBName() );
+		DB::Statement statement = SelectStatement( qlTable ).value();
 /*		ColumnSql( qlTable, *dbTable, nullptr, flags, false, nullptr, statement, &jsonMembers );
 
 		if( let addId = qlTable.Tables.size() && !qlTable.FindColumn("id") && qlTable.Columns.size(); addId ) //Why?

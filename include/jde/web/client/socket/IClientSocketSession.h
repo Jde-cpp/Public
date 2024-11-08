@@ -4,7 +4,7 @@
 #include "../exports.h"
 #include "ClientSocketStream.h"
 #include <jde/framework/coroutine/Await.h>
-#include "../../../../../../Framework/source/io/proto.h"
+#include <jde/framework/io/proto.h>
 #include "../../../../../../Framework/source/Stopwatch.h"
 
 namespace Jde::Web::Client{

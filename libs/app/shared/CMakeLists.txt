@@ -61,11 +61,11 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 
 protobuf_generate( TARGET ${CMAKE_PROJECT_NAME} IMPORT_DIRS proto EXPORT_MACRO Jde_App_Shared_EXPORT )
 
-add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/App.FromServer.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/App.FromServer.pb.h" COMMENT "mklink FromServer" )
-add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/App.FromClient.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/App.FromClient.pb.h" COMMENT "mklink FromClient" )
-add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/Common.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/Common.pb.h" COMMENT "mklink Common" )
-add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/App.pb.h" "$ENV{JDE_DIR}/Public/jde/app/shared/proto/App.pb.h" COMMENT "mklink App" )
-add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/proto/Common.proto" "$ENV{JDE_DIR}/Public/src/iot/types/proto/Common.proto" COMMENT "mklink Common->iot" )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/App.FromServer.pb.h" "$ENV{JDE_DIR}/Public/include/jde/app/shared/proto/App.FromServer.pb.h" COMMENT "mklink FromServer" )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/App.FromClient.pb.h" "$ENV{JDE_DIR}/Public/include/jde/app/shared/proto/App.FromClient.pb.h" COMMENT "mklink FromClient" )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/Common.pb.h" "$ENV{JDE_DIR}/Public/include/jde/app/shared/proto/Common.pb.h" COMMENT "mklink Common" )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/App.pb.h" "$ENV{JDE_DIR}/Public/include/jde/app/shared/proto/App.pb.h" COMMENT "mklink App" )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/proto/Common.proto" "$ENV{JDE_DIR}/Public/libs/iot/types/proto/Common.proto" COMMENT "mklink Common->iot" )
 
 if( MSVC )
 	set( CMAKE_INSTALL_PREFIX $ENV{JDE_DIR}/installed )

@@ -13,6 +13,7 @@
 		#define Jde_App_Shared_EXPORT __declspec( dllimport )
 		#pragma comment(lib, "Jde.App.Shared.lib")
 	#else
+		#define ΓAS
 		#define Jde_App_Shared_EXPORT
 	#endif
 #endif

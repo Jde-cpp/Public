@@ -12,10 +12,10 @@ if( NOT ${VCPKG} )
 	include( tests )
 endif()
 
-find_package( Protobuf REQUIRED )
-find_package( OpenSsl REQUIRED )
+#find_package( Protobuf REQUIRED ) in compiler.cmake
 #include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 if( MSVC )
+	find_package( OpenSsl REQUIRED )
   link_directories( $ENV{JDE_DIR}/Framework/source/.build/.bin/${outDir} )
   link_directories( ../../src/web/client/.build/.bin/${outDir} )
   link_directories( ../../src/web/server/.build/.bin/${outDir} )
@@ -61,22 +61,7 @@ else()
 	#target_link_libraries( ${CMAKE_PROJECT_NAME} libboost_context.a )
 endif()
 target_precompile_headers( ${CMAKE_PROJECT_NAME} PRIVATE
-	<gtest/gtest.h>
-	<boost/asio.hpp>
-	<boost/asio/ip/tcp.hpp>
-	<boost/beast.hpp>
-	<boost/beast/http.hpp>
-	<boost/beast/ssl.hpp>
-	<boost/beast/websocket.hpp>
-	<jde/TypeDefs.h>
-	<jde/log/Log.h>
-	<jde/Exception.h>
-	<jde/App.h>
-	<jde/thread/Execution.h>
-	<jde/app/shared/exports.h>
-	<jde/app/shared/proto/App.FromServer.pb.h>
-	"../../../Framework/source/Settings.h"
-	"../../../Framework/source/Stopwatch.h"
+	pc.h
 )
 
 set( protoExeImportDir ${CMAKE_CURRENT_LIST_DIR}/.. )

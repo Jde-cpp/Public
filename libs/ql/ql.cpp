@@ -22,14 +22,12 @@ namespace Jde{
 			}
 		}
 	}
-
-	α QL::Query( string query, UserPK userPK, SL sl )ε->jobject{
-		Trace{ sl, _tags | ELogTags::Pedantic, "QL: {}", query };
-		let qlType = Parse( move(query) );
+namespace QL{
+	Ω query( RequestQL&& ql, UserPK userPK, SL sl )ε->jobject{
 		vector<TableQL> tableQueries;
 		jobject j;
-		if( qlType.index()==1 ){
-			let& mutation = get<MutationQL>( qlType );
+		if( ql.index()==1 ){
+			let& mutation = get<MutationQL>( ql );
 			uint result = Mutation( mutation, userPK );
 			sv resultMemberName = mutation.Type==EMutationQL::Create ? "id" : "rowCount";
 			let wantResults = mutation.ResultPtr && mutation.ResultPtr->Columns.size()>0;
@@ -39,10 +37,15 @@ namespace Jde{
 				tableQueries.push_back( *mutation.ResultPtr );
 		}
 		else
-			tableQueries = get<vector<TableQL>>( qlType );
+			tableQueries = get<vector<TableQL>>( ql );
 		jobject y = tableQueries.size() ? QueryTables( tableQueries, userPK ) : j;
 		Trace{ _tags | ELogTags::Pedantic, "QL::Result: {}", serialize(y) };
 		return y;
+	}
+}
+	α QL::Query( string ql, UserPK userPK, SL sl )ε->jobject{
+		Trace{ sl, _tags | ELogTags::Pedantic, "QL: {}", ql };
+		return query( Parse(move(ql)), userPK, sl );
 	}
 
 	α QL::CoQuery( string q_, UserPK u_, SL sl )ι->TPoolAwait<jobject>{
@@ -59,7 +62,15 @@ namespace Jde::QL{
 		_userPK{ userPK }
 	{}
 
-	α FindTable( str tableName )ε->sp<DB::View>{
+	α QLAwait::Suspend()ι->void{
+		CoroutinePool::Resume( _h );
+	}
+
+	α QLAwait::await_resume()ε->jobject{
+		return query( move(_request), _userPK, _sl );
+	}
+
+	α GetTable( str tableName )ε->sp<DB::View>{
 		for( let& schema : _schemas ){
 			if( let pTable = schema->GetTablePtr(tableName); pTable )
 				return DB::AsView( pTable );

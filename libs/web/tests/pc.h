@@ -6,7 +6,6 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/websocket.hpp>
 
-#include <jde/TypeDefs.h>
-#include <jde/Exception.h>
-#include "../../../Framework/source/Settings.h"
-#include "../../../Framework/source/Stopwatch.h"
+#include <jde/framework.h>
+#include <jde/framework/settings.h>
+#include "../../../../Framework/source/Stopwatch.h"

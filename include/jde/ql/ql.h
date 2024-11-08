@@ -4,7 +4,7 @@
 #include "types/TableQL.h"
 #include "types/MutationQL.h"
 
-namespace Jde::DB{ struct AppSchema; }
+namespace Jde::DB{ struct AppSchema; struct Statement; }
 namespace Jde::QL{
 	struct MutationQL; struct TableQL;
 	using RequestQL=std::variant<vector<TableQL>,MutationQL>;
@@ -18,9 +18,9 @@ namespace Jde::QL{
 		RequestQL _request;
 		UserPK _userPK;
 	};
-
+	α Query( const TableQL& table, jobject& jData, UserPK userId )ε->void;
+	α SelectStatement( const TableQL& qlTable )ι->optional<DB::Statement>;
 	α Query( string query, UserPK userId, SRCE )ε->jobject;
-	α CoQuery( string query, UserPK userId, SRCE )ι->Coroutine::TPoolAwait<jobject>;
 	α Parse( string query )ε->RequestQL;
 	α Configure( vector<sp<DB::AppSchema>>&& schemas )ε->void;
 }

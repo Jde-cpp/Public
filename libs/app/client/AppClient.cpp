@@ -7,10 +7,10 @@
 
 namespace Jde::App{
 	using Web::Client::ClientHttpAwait;
-	const Duration _reconnectWait{ Settings::Get<Duration>("server/reconnectWait").value_or(5s) };
-	α Client::IsSsl()ι->bool{ return Settings::Get<bool>("server/isSsl").value_or( false ); }
-	α Client::Host()ι->string{ return Settings::Get("server/host").value_or("localhost"); }
-	α Client::Port()ι->PortType{ return Settings::Get<PortType>("server/port").value_or(1967); }
+	const Duration _reconnectWait{ Settings::FindDuration("server/reconnectWait").value_or(5s) };
+	α Client::IsSsl()ι->bool{ return Settings::FindBool("server/isSsl").value_or( false ); }
+	α Client::Host()ι->string{ return Settings::FindString("server/host").value_or("localhost"); }
+	α Client::Port()ι->PortType{ return Settings::FindNumber<PortType>("server/port").value_or(1967); }
 
 	function<vector<string>()> _statusDetails = []()->vector<string>{ return {}; };
   α Client::SetStatusDetailsFunction( function<vector<string>()>&& f )ι->void{ _statusDetails = f; }
@@ -34,8 +34,8 @@ namespace Jde::App::Client{
 	α GetJwt()ι->Web::Jwt{
 		Crypto::CryptoSettings settings{ "http/ssl" };
 		auto [mod,exp] = Crypto::ModulusExponent( settings.PublicKeyPath );
-		auto name = Settings::Get("credentials/name").value_or( "" );
-		auto target = Settings::Get("credentials/target").value_or( name );
+		auto name = Settings::FindString("credentials/name").value_or( "" );
+		auto target = Settings::FindString("credentials/target").value_or( name );
 		return Web::Jwt{ move(mod), exp, move(name), move(target), {}, {}, settings.PrivateKeyPath };
 	}
 	LoginAwait::LoginAwait( SL sl )ι:
@@ -45,8 +45,8 @@ namespace Jde::App::Client{
 
 	α LoginAwait::Execute()ι->ClientHttpAwait::Task{
 		try{
-			json j{ {"jwt", _jwt.Payload()} };
-			auto res = co_await ClientHttpAwait{ Host(), "/CertificateLogin", j.dump(), Port() };
+			jobject j{ {"jwt", _jwt.Payload()} };
+			auto res = co_await ClientHttpAwait{ Host(), "/CertificateLogin", serialize(j), Port() };
 			auto sessionPK = Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 			THROW_IF( !sessionPK, "Invalid authorization: {}.", res[http::field::authorization] );
 			Resume( move(*sessionPK) );

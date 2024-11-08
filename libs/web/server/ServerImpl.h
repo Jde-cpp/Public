@@ -3,9 +3,10 @@
 #include "Streams.h"
 #include <jde/web/server/HttpRequest.h>
 #include <jde/web/server/usings.h>
+#include <jde/web/server/IRequestHandler.h>
 
 namespace Jde::Web::Server{
-	struct IRequestHandler; struct IApplicationServer;
+	struct IApplicationServer;
 
 namespace Internal{
 	α Start( up<IRequestHandler>&& handler, up<Server::IApplicationServer>&& server )ε->void;

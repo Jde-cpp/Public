@@ -14,8 +14,8 @@ namespace Jde::App::Client{
 		α await_resume()ε->TResult final;
 	};
 
-	struct ΓAC GraphQLAwait : SocketAwait<string,json>{
-		using base = SocketAwait<string,json>;
+	struct ΓAC GraphQLAwait : SocketAwait<string,jobject>{
+		using base = SocketAwait<string,jobject>;
 		GraphQLAwait( string&& q, UserPK userPK, SRCE )ι:base{sl}, _query{q}, _userPK{userPK}{}
 		α Execute( sp<AppClientSocketSession> pSession )ι->Web::Client::ClientSocketAwait<string>::Task override;
 		string _query; UserPK _userPK;

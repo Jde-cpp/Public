@@ -8,10 +8,10 @@ namespace Jde::Web::Server{
 		HttpTaskResult()=default;
 		HttpTaskResult( HttpRequest&& req )ι:Request{move(req)}{}
 		HttpTaskResult( HttpTaskResult&& rhs )ι;
-		HttpTaskResult( json&& j, HttpRequest&& req )ι:Json( move(j) ), Request{ move(req) }{}
+		HttpTaskResult( jobject&& j, HttpRequest&& req )ι:Json( move(j) ), Request{ move(req) }{}
 		α operator=( HttpTaskResult&& rhs)ι->HttpTaskResult&;
 
-		json Json;
+		jobject Json;
 		optional<HttpRequest> Request; //why optional?
 	};
 
@@ -21,7 +21,7 @@ namespace Jde::Web::Server{
 		virtual ~IHttpRequestAwait()=0;
 	protected:
 		HttpRequest _request;
-		up<json> _readyResult;
+		up<jobject> _readyResult;
 	};
 	inline IHttpRequestAwait::~IHttpRequestAwait(){}
 }

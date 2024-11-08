@@ -2,8 +2,8 @@
 #include <jde/framework/process.h>
 #include <jde/web/server/exports.h>
 #include <jde/web/server/usings.h>
-#include "../../../../Framework/source/io/ProtoUtilities.h"
-#include "../../../../Framework/source/threading/Mutex.h"
+#include <jde/framework/io/proto.h>
+#include "../../../../../Framework/source/threading/Mutex.h"
 
 namespace Jde::Web::Server{
 	struct RestStream; struct SocketStream;

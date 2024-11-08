@@ -4,6 +4,7 @@
 #include <jde/app/client/usings.h>
 #include <jde/app/shared/proto/App.FromClient.h>
 #include "exports.h"
+#include <jde/access/usings.h>
 
 #define Φ ΓAC auto
 namespace Jde::App::Client{
@@ -13,7 +14,7 @@ namespace Jde::App::Client{
 		α Suspend()ι->void override;
 		SessionPK _sessionId;
 	};
-	Φ AddSession( str domain, str loginName, ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>;
+	Φ AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>;
 	α CloseSocketSession( SRCE )ι->VoidTask;
 	Φ GraphQL( str query, SRCE )ε->Web::Client::ClientSocketAwait<string>;
 

@@ -25,6 +25,7 @@ namespace Jde{
 		Ξ AsSV( const jvalue& v, sv path, SRCE )ε->sv{ return $(string); }
 		Ξ AsSV( const jvalue& v, SRCE )ε->sv{ return $(string); }
 		α AsSV( const jobject& o, sv key, SRCE )ε->sv;
+		α AsSVPath( const jobject& o, sv path, SRCE )ε->sv;
 		Ξ AsString( const jvalue& v, SRCE )ε->string{ return string{ $(string) }; }
 		Ξ AsString( const jobject& o, sv key, SRCE )ε->string{ return string{AsSV(o,key,sl)}; }
 		α AsObject( const jvalue& v, SRCE )ε->const jobject&;

@@ -6,7 +6,8 @@
 #include <jde/web/usings.h>
 #include <jde/framework/coroutine/Task.h>
 #include "../../../../Framework/source/coroutine/Awaitable.h"
-//#include "../../../../Framework/source/db/GraphQL.h"
-#include "../../../../Framework/source/io/proto.h"
+#include <jde/app/shared/exports.h>
+#include <jde/app/shared/proto/App.FromServer.pb.h>
+#include <jde/framework/io/proto.h>
 #include "../../../../Framework/source/threading/InterruptibleThread.h"
-//#include "../../../../Ssl/source/Ssl.h"
+#include "../../../../Framework/source/DateTime.h"

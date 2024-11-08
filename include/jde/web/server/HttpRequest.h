@@ -17,7 +17,7 @@ namespace Jde::Web::Server{
 		α operator[]( str x )ι->string&{ return _params[x]; }
 
 		α StringBody()Ι->const string&{ return _request.body(); }
-		α Body()Ε->json{ return Json::Parse( _request.body() ); }
+		α Body()Ε->jobject{ return Json::Parse( _request.body() ); }
 		α Contains( str param )Ι->bool{ return _params.contains( param ); }
 		α Header( sv header )Ι->string{ return _request.base()[header]; }
 		α IsGet()Ι->bool{ return _request.method() == http::verb::get; }
@@ -36,7 +36,7 @@ namespace Jde::Web::Server{
 		α LogRead( str text="", SRCE )Ι->void;
 		template<class T=http::string_body>
 		α Response( http::status status=http::status::ok )Ι->http::response<T>;
-		α Response( json j, SRCE )Ι->http::response<http::string_body>;
+		α Response( jobject j, SRCE )Ι->http::response<http::string_body>;
 		sp<Server::SessionInfo> SessionInfo;
 		const tcp::endpoint UserEndpoint;
 		flat_map<string,string> ResponseHeaders;

@@ -59,6 +59,17 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 	scripts: ["providers_ql.sql", "provider_purge.sql", "user_insert.sql", "user_insert_key.sql", "user_insert_login.sql"],
 	local tables = self.tables,
 	views:{
+		groupMembers:{
+			comment: "Group Members",
+			columns:{
+				groupId: tables.identityGroups.columns.identityId+{ criteria: null },
+				memberId: tables.identityGroups.columns.memberId,
+				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true },
+				isGroup: tables.identities.columns.isGroup
+			}+targetColumns,
+			surrogateKeys: tables.identityGroups.surrogateKeys,
+			naturalKeys: tables.identities.naturalKeys,
+		},
 		providersQL:{
 			columns: {
 				providerId: tables.providers.columns.providerId,

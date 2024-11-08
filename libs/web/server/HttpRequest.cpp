@@ -1,9 +1,12 @@
 #include <jde/web/server/HttpRequest.h>
 #include <jde/web/server/Server.h>
+#include <jde/framework/str.h>
+#include "../../../../Framework/source/DateTime.h"
+
 #define let const auto
 
 namespace Jde::Web{
-	string _accessControlAllowOrigin = Settings::Get("http/accessControl/allowOrigin").value_or("*");
+	string _accessControlAllowOrigin = Settings::FindString("http/accessControl/allowOrigin").value_or("*");
 	α Server::AccessControlAllowOrigin()ι->string{ return _accessControlAllowOrigin; };
 
 	string _plainVersion{ Ƒ("({})Jde.Web.Server - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
@@ -40,8 +43,8 @@ namespace Jde::Web::Server{
 
 	α HttpRequest::Response( jobject j, SL sl )Ι->http::response<http::string_body>{
 		auto y = Response<http::string_body>();
-		if( !j.is_null() )
-			y.body() = j.dump();
+		if( !j.empty() )
+			y.body() = serialize(j);
 		y.prepare_payload();
 		Trace{ sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) };
 		return y;

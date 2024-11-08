@@ -5,7 +5,8 @@
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/server/IRequestHandler.h>
 #include <jde/web/server/RestException.h>
-#include <jde/thread/Execution.h>
+#include <jde/ql/ql.h>
+#include <jde/framework/thread/execution.h>
 #define let const auto
 
 namespace Jde::Web{
@@ -57,13 +58,13 @@ namespace Server{
 		stream->AsyncWrite( move(res) );
 	}
 
-	α GraphQL( HttpRequest req, sp<RestStream> stream )->Task{
+	α GraphQL( HttpRequest req, sp<RestStream> stream )->QL::QLAwait::Task{
 		try{
 			auto& query = req["query"]; THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
 			let sessionId = req.SessionInfo->SessionId;
 			req.LogRead( query );
 			string threadDesc = Jde::format( "[{:x}]{}", sessionId, req.Target() );
-			let y = await( json, DB::CoQuery(move(query), req.UserPK(), threadDesc) );
+			let y = co_await QL::QLAwait{move(query), req.UserPK() };
 			Send( move(req), move(stream), move(y) );
 		}
 		catch( IRestException& e ){
@@ -174,10 +175,10 @@ namespace Server{
 		if( !_ctx )
 			LoadServerCertificate();
 
-		let port = Settings::Get<PortType>( "http/port" ).value_or( 6809 );
+		let port = Settings::FindNumber<PortType>( "http/port" ).value_or( 6809 );
 
 		_cancelSignal = ms<net::cancellation_signal>();
-		auto address = tcp::endpoint{ net::ip::make_address(Settings::Get<string>("http/address").value_or("0.0.0.0")), port };
+		auto address = tcp::endpoint{ net::ip::make_address(Settings::FindSV("http/address").value_or("0.0.0.0")), port };
 		net::co_spawn( *Executor(), Listen(address), net::bind_cancellation_slot(_cancelSignal->slot(), net::detached) );
 		Execution::AddCancelSignal( _cancelSignal );
 		Execution::Run();

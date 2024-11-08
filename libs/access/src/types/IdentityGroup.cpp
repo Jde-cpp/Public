@@ -7,58 +7,66 @@
 #include <jde/db/meta/Table.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/ql/types/TableQL.h>
+#include <jde/ql/ql.h>
 
 #define let const auto
 
 namespace Jde::Access{
 	α GetTable( str name )ι->sp<DB::Table>;
 
-	Ω select( const QL::TableQL& query, GroupPK groupPK, UserPK userPK, HCoroutine h, SRCE )ι->DB::RowAwait::Task{
+	Ω select( QL::TableQL query, GroupPK groupPK, UserPK userPK, HCoroutine h, SRCE )ι->QL::QLAwait::Task{
 		try{
-			//find members and remove.
-			auto groupOnlyQL = query;
-			groupOnlyQL.Tables.erase( find_if(query.Tables, [](let& t){ return t.JsonName=="members"; }) );
-			jobject y;
-			[]( auto&& ql, auto userPK, auto& result, auto sl )->Coroutine::Task{
-				try{
-					result = co_await QL::QueryAwait( move(ql), userPK, sl );
-				}
-				catch( IException& e ){
-					Resume( move(e), h );
-				}
-			}( move(groupOnlyQL), userPK, y, sl );
-			//run regular ql
-			//run query on members.
-			//add members to output.
-			let& extension = GetTable( "identities" );
-			auto pk = extension->GetPK();
-			let& users = GetTable( "users" );
-			DB::Statement statement;
-			statement.From+={ pk, groups->GetColumnPtr("member_id"), true };
-			statement.From+={ groups->SurrogateKeys[0], pk, true, "groups_" };
-			statement.Where.Add( pk, DB::Value{pk->Type, Json::AsNumber<GroupPK>(query.Args, "id")} );
-			statement.Where.Add( extension->GetColumnPtr("deleted"), DB::Value{} );
-			auto groupTable = find_if( query.Tables, [](let& t){ return t.JsonName=="identityGroups";} );
-			flat_map<uint8,string> qlColumns;
-			uint i=0;
-			for( auto& c : groupTable->Columns ){
-				if( let dbCol = groups->FindColumn( c.JsonName=="id" ? "identity_id" : DB::Names::FromJson(c.JsonName)); dbCol ){
-					auto alias = ms<DB::Column>( *dbCol );
-					alias->Table = ms<DB::Table>( "groups_" );
-					statement.Select.TryAdd( alias );
-					qlColumns.emplace( i++, c.JsonName );
-				}
+			//group_id, member_id & member columns.
+			QL::TableQL membersQL = [&]()->QL::TableQL {
+				auto p = find_if( query.Tables, [](let& t){ return t.JsonName=="members"; } );
+				THROW_IF( p==query.Tables.end(), "members table not found." );
+				auto ql = *p;
+				query.Tables.erase( p );
+				return ql;
+			}();
+			membersQL.Columns.push_back( QL::ColumnQL{"group_id"} );
+			membersQL.Columns.push_back( QL::ColumnQL{"member_id"} );
+			membersQL.JsonName = "groupMembers";
+			auto statement = QL::SelectStatement( membersQL );
+			jobject members;
+			if( statement ){
+				statement->Where = QL::ToWhereClause( membersQL, *GetTable("identities"), membersQL.FindColumn("deleted")!=nullptr );
+				statement->Where.Replace( "identities.", "identityGroups." );
+				members = co_await QL::QLAwait( move(membersQL), statement, sl );
 			}
-			let rows = co_await extension->Schema->DS()->SelectCo( statement.Move(), sl );
-			jarray identityGroups;
-			for( auto& row : rows ){
-				jobject group;
-				for( auto& [i, name] : qlColumns )
-					group[name] = (*row)[i].ToJson();
-				identityGroups.push_back( group );
+
+			groupOnlyQL.Columns.push_back( QL::ColumnQL{"member_id"} );
+			jobject groups = co_await QL::QLAwait( move(groupOnlyQL), userPK, sl );
+			if( !membersQL )
+				Resume( mu<jobject>(move(groups)), h );
+
+			jarray groupPKs;
+			if( groupOnlyQL.IsPlural() ){
+				for( let& v : Json::AsArrayPath( groups, "data/groups") )
+					groupPKs.emplace_back( Json::AsNumber<GroupPK>(Json::AsObject(v), "id") );
 			}
-			jobject y;
-			y["identityGroups"] = identityGroups;
+			else
+				groupPKs.emplace_back( Json::AsNumber<GroupPK>(groups, "data/group/id") );
+			let members = Json::AsArray( co_await QL::QLAwait(move(*membersQL), userPK, sl), "data/identities" );
+			flat_map<IdentityPK,jobject> identities;
+			for( let& member : members )
+				identities.emplace( Json::AsNumber<GroupPK>(Json::AsObject(member), "id"), move(member) );
+
+			for( let& member : members ){
+				auto groupPK = Json::AsNumber<GroupPK>( Json::AsObject(member), "group/id" );
+				groupMembers[groupPK].emplace_back( move(member) );
+			}
+
+			if( groupOnlyQL.IsPlural() ){
+				for( let& group : Json::AsArrayPath(groups, "data/groups") ){
+					auto groupPK = Json::AsNumber<GroupPK>( Json::AsObject(group), "id" );
+
+					groupPKs.emplace_back( Json::AsNumber<GroupPK>(Json::AsObject(v), "id") );
+			}
+			else
+				groupPKs.emplace_back( Json::AsNumber<GroupPK>(groups, "data/group/id") );
+
+			auto Json::AsObject(groups, "data"); ["members"] = Json::AsArray( members, "data/identities" );
 			Resume( mu<jobject>( move(y) ), h );
 		}
 		catch( IException& e ){

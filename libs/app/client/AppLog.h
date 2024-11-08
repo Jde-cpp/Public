@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/log/Log.h>
+//#include <jde/framework/log/Log.h>
 
 namespace Jde::App::Client{
 	struct AppLog final : Logging::IExternalLogger{

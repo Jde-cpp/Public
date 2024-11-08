@@ -1,7 +1,8 @@
 #pragma once
 #include <jde/web/client/socket/IClientSocketSession.h>
 #include "../usings.h"
-//#include "../exports.h"
+#include <jde/framework/str.h>
+#include "../../../../../../Framework/source/DateTime.h"
 
 namespace Jde::Web::Client{
 

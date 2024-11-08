@@ -47,16 +47,7 @@ target_link_libraries( ${CMAKE_PROJECT_NAME} OpenSSL::SSL )
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
   PRIVATE
-	<boost/beast.hpp>
-	<boost/asio.hpp>
-	<boost/beast/ssl/ssl_stream.hpp>
-
-	<jde/TypeDefs.h>
-	<jde/log/Log.h>
-	<jde/Exception.h>
-	<jde/app/shared/exports.h>
-	<jde/app/shared/proto/App.FromClient.pb.h>
-	<jde/app/shared/proto/App.FromServer.pb.h>
+	pc.h
 )
 if( MSVC )
 	set( CMAKE_INSTALL_PREFIX $ENV{JDE_DIR}/installed )

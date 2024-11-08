@@ -14,7 +14,7 @@ if [ $all -eq 1 ]; then
 	$BUILD web/client $type $clean $compiler || exit 1;
 	$BUILD web/server $type $clean $compiler || exit 1;
 fi
-cd tests/web;
+cd web/tests;
 $BUILD `pwd` $type $clean $compiler || exit 1;
 
 if [ ! -f $JDE_DIR/bin/config/Tests.Web.json ]; then ln -s `pwd`/config/Tests.Web.json $JDE_DIR/bin/config; fi;

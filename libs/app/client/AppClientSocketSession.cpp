@@ -1,5 +1,5 @@
 #include <jde/app/client/AppClientSocketSession.h>
-#include <jde/thread/Execution.h>
+#include <jde/framework/thread/execution.h>
 //#include <jde/web/server/Flex.h>
 #include <jde/app/shared/proto/App.FromClient.h>
 #include <jde/app/shared/proto/Common.h>
@@ -23,7 +23,7 @@ namespace Jde::App{
 			Information( sl, tags, "ClosedSocketSession" );
 		}
 	}
-	α Client::AddSession( str domain, str loginName, ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>{
+	α Client::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>{
 		auto p = _pSession; THROW_IF( !p, "Not connected." );
 		auto requestId = p->NextRequestId();
 		Trace( sl, ELogTags::SocketClientWrite, "AddSession domain: '{}', loginName: '{}', providerPK: {}, userEndPoint: '{}', isSocket: {}.", domain, loginName, providerPK, userEndPoint, isSocket );
@@ -66,7 +66,7 @@ namespace Client{
 	{}
 	α AppClientSocketSession::Connect( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>{
 		let requestId = NextRequestId();
-		string instanceName = Settings::Get<string>("instanceName").value_or( "" );
+		auto instanceName = Settings::FindString("instanceName").value_or( "" );
 		if( instanceName.empty() )
 			instanceName = _debug ? "Debug" : "Release";
 		return ClientSocketAwait<Proto::FromServer::ConnectionInfo>{ ToString(FromClient::Instance(Process::ApplicationName(), instanceName, sessionId, requestId)), requestId, shared_from_this(), sl };
