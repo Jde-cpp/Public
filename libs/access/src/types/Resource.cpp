@@ -12,24 +12,24 @@
 namespace Jde::Access{
 	constexpr ELogTags _tags{ ELogTags::Access };
 
-	ResourceLoadAwait::ResourceLoadAwait( sp<DB::AppSchema> schema, vector<AppPK> appPKs )ι:
-		AppPKs{ appPKs },
-		_schema{ schema }
+	ResourceLoadAwait::ResourceLoadAwait( sp<DB::AppSchema> schema )ι:
+		Schema{ schema }
 	{}
 
-	α LoadResources( sp<DB::AppSchema> schema, ResourceLoadAwait& await )ι->DB::RowAwait::Task{
+	Ω loadResources( ResourceLoadAwait& await )ι->DB::RowAwait::Task{
 		flat_map<ResourcePK,Resource> resources;
+		let& schema = *await.Schema;
 		try{
-			sp<DB::Table> resourceTable = schema->GetTablePtr( "resources" );
+			sp<DB::Table> resourceTable = schema.GetTablePtr( "resources" );
 			let ds = resourceTable->Schema->DS();
-			const DB::WhereClause where{ resourceTable->GetColumnPtr("app_id"), DB::ToValue(await.AppPKs) };
+			const DB::WhereClause where{ resourceTable->GetColumnPtr("schema_name"), DB::Value{schema.Name} };
 			auto statement = DB::SelectSql( {"resource_id","schema","target","filter"}, resourceTable, where );
 			auto rows = co_await ds->SelectCo( move(statement) );
 			for( let& row : rows ){
 				let pk = row->GetUInt16(0);
 				resources.emplace( pk, Resource{pk, row->GetString(1), row->GetString(2), row->GetString(3)} );
 			}
-			sp<DB::Table> resourceRightsTable = schema->GetTablePtr( "resource_rights" );
+			sp<DB::Table> resourceRightsTable = schema.GetTablePtr( "resource_rights" );
 			vector<string> columns{"permission_id","resource_id", "allowed", "denied"};
 			DB::FromClause from{ {resourceTable, resourceRightsTable} };
 			statement = DB::SelectSql( columns, from, where );
@@ -50,7 +50,7 @@ namespace Jde::Access{
 	}
 
 	α ResourceLoadAwait::Suspend()ι->void{
-		LoadResources( _schema, *this );
+		loadResources( *this );
 	}
 
 	α GetSchema()ε->sp<DB::AppSchema>;

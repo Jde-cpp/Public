@@ -24,7 +24,7 @@ namespace Jde{
 		auto schema = DB::GetAppSchema( metaDataName, authorize );
 		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 			DB::NonProd::Recreate( *schema );
-		Access::Configure( schema, {} );
+		Access::Configure( schema );
 		QL::Configure( {schema} );
 
 		Access::Tests::SetSchema( schema );

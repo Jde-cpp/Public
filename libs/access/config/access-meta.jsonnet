@@ -56,7 +56,7 @@ local targetNKs = [valuesNK, ["target"]];
 local rights = ["None", "Create", "Read", "Update", "Delete", "Purge", "Administer", "Subscribe", "Execute"];
 local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"];
 {
-	scripts: ["providers_ql.sql", "provider_purge.sql", "user_insert.sql", "user_insert_key.sql", "user_insert_login.sql"],
+	scripts: ["providers_ql.sql", "group_members.sql", "provider_purge.sql", "user_insert.sql", "user_insert_key.sql", "user_insert_login.sql"],
 	local tables = self.tables,
 	views:{
 		groupMembers:{
@@ -67,7 +67,6 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true },
 				isGroup: tables.identities.columns.isGroup
 			}+targetColumns,
-			surrogateKeys: tables.identityGroups.surrogateKeys,
 			naturalKeys: tables.identities.naturalKeys,
 		},
 		providersQL:{

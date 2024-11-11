@@ -10,53 +10,65 @@
 #define let const auto
 
 namespace Jde::QL{
-	PurgeAwait::PurgeAwait( const DB::Table& table, const MutationQL& mutation, UserPK userPK, SL sl )ι:
-		AsyncAwait{ [&,user=userPK](HCoroutine h){ Execute( table, mutation, user, h ); }, sl, "PurgeAwait" }
+	PurgeAwait::PurgeAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
+		TAwait<jvalue>{sl},
+		_mutation{ move(mutation) },
+		_table{ table },
+		_userPK{ userPK }
 	{}
 
-	α PurgeStatements( const DB::Table& table, const MutationQL& m, UserPK userPK, vector<DB::Value>& parameters, SRCE )ε->vector<string>{
-		let id = Json::AsNumber<uint>( m.Args, "id");
+	α PurgeAwait::Before()ι->MutationAwaits::Task{
+		try{
+			co_await Hook::PurgeBefore( _mutation, _userPK );
+			Execute();
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+			co_return;
+		}
+	}
+	α PurgeAwait::Statements( const DB::Table& table, vector<DB::Value>& parameters )ε->vector<string>{
+		let id = Json::AsNumber<uint>( _mutation.Args, "id" );
 		parameters.push_back( DB::Value{DB::EType::ULong, id} );
 		if( let p=table.Schema->Authorizer; p )
-			p->Test(Access::ERights::Purge, table.Name, userPK);
+			p->Test( Access::ERights::Purge, table.Name, _userPK );
 
 		auto pk = table.Extends ? table.SurrogateKeys[0] : table.GetPK();
 		vector<string> statements{ table.PurgeProcName.size() ? Ƒ("{}( ? )", table.PurgeProcName) : Ƒ("delete from {} where {}=?", table.DBName, pk->Name) };
 		if( table.Extends ){
-			let extendedPurge = PurgeStatements( AsTable(*table.Extends), m, userPK, parameters, sl );
+			let extendedPurge = Statements( AsTable(*table.Extends), parameters );
 			statements.insert( end(statements), begin(extendedPurge), end(extendedPurge) );
 		}
 		return statements;
 	}
 
-	α PurgeAwait::Execute( const DB::Table& table, MutationQL mutation, UserPK userPK, HCoroutine h )ι->Task{
+	α PurgeAwait::Execute()ι->Coroutine::Task{
 		try{
-			( co_await Hook::PurgeBefore(mutation, userPK) ).CheckError();
-		}
-		catch( IException& e ){
-			Resume( move(e), move(h) );
-			co_return;
-		}
-		bool success{ true };
-		try{
-		vector<DB::Value> parameters;
-		auto statements = PurgeStatements( table, mutation, userPK, parameters, _sl );
-
+			vector<DB::Value> parameters;
+			auto statements = Statements( *_table, parameters );
 			//TODO for mysql allow CLIENT_MULTI_STATEMENTS return ds->Execute( Str::AddSeparators(statements, ";"), parameters, sl );
-			auto result{ mu<uint>() };
-			sp<DB::IDataSource> ds = table.Schema->DS();
+			uint y;
+			DB::IDataSource& ds = *_table->Schema->DS();
 			for( auto& statement : statements ){
 				auto a = statement.starts_with("delete ")
-					? ds->ExecuteCo(move(statement), vector<DB::Value>{parameters.front()}, _sl) //right now, parameters should singular and the same.
-					: ds->ExecuteProcCo( move(statement), move(parameters), _sl );
-			 	*result += *( co_await *a ).UP<uint>(); //gcc compiler error.
+					? ds.ExecuteCo(move(statement), vector<DB::Value>{parameters.front()}, _sl) //right now, parameters should singular and the same.
+					: ds.ExecuteProcCo( move(statement), move(parameters), _sl );
+				y += *( co_await *a ).UP<uint>(); //gcc compiler error.
 			}
-			Resume( move(result), move(h) );
+			Resume( jvalue{y} );
 		}
-		catch( IException& ){
-			success = false;
+		catch( IException& e ){
+			After( e.Move() );
 		}
-		if( !success )
-			co_await Hook::PurgeFailure( mutation, userPK );
+	}
+	α PurgeAwait::After( up<IException>&& e )ι->MutationAwaits::Task{
+		try{
+			co_await Hook::PurgeFailure( _mutation, _userPK );
+			ResumeExp( move(*e) );
+		}
+		catch( IException& inner ){
+			//e->_pInner TODO
+			ResumeExp( move(inner) );
+		}
 	}
 }

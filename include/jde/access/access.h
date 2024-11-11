@@ -14,11 +14,11 @@ namespace Jde::QL{ struct MutationQL; enum class EMutationQL : uint8; }
 namespace Jde::Access{
 	struct IAcl;
 	struct ConfigureAwait : VoidAwait<>{
-		ConfigureAwait( vec<AppPK> appPKs )ι;
+		ConfigureAwait( /*vec<AppPK> appPKs*/ )ι;
 		α Suspend()ι->void override;
-		vector<AppPK> AppPKs;
+		//vector<AppPK> AppPKs;
 	};
-	Φ Configure( sp<DB::AppSchema> schema, vec<AppPK> appPKs )ε->ConfigureAwait;
+	Φ Configure( sp<DB::AppSchema> schema/*, vec<AppPK> appPKs*/ )ε->ConfigureAwait;
 	α LocalAcl()ι->sp<IAcl>;
 	α Authenticate( string loginName, uint providerId, string opcServer, SRCE )ι->AsyncAwait;
 	//α IsTarget( sv url )ι->bool;

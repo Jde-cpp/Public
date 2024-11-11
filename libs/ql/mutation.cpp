@@ -18,7 +18,7 @@ namespace Jde::QL{
 	using namespace DB::Names;
 
 	constexpr ELogTags _tags{ ELogTags::QL };
-	α FindTable( str tableName )ε->sp<DB::View>;
+	α GetTable( str tableName )ε->sp<DB::View>;
 
 
 	α Update( const DB::View& table, const MutationQL& m )->tuple<uint,DB::Value>{
@@ -91,78 +91,81 @@ namespace Jde::QL{
 		return SetDeleted( table, m.Id(), {} );
 	}
 
-
-	α Start( sp<MutationQL> m, UserPK userPK )ε->uint{
-		optional<uint> result;
+	α Start( MutationQL m, UserPK userPK )ε->optional<jvalue>{
+		optional<jvalue> result;
+		bool set{};
 		[&]()ι->MutationAwaits::Task {
-			auto await_ = Hook::Start( m, userPK );
+			auto await_ = Hook::Start( move(m), userPK );
 			result = co_await await_;
+			set = true;
 		}();
-		while( !result )
+		while( !set )
 			std::this_thread::yield();//TODO remove this when async.
-		return *result;
+		return result;
 	}
 
-	α Stop( sp<MutationQL> m, UserPK userPK )ε->uint{
-		optional<uint> result;
+	α Stop( MutationQL m, UserPK userPK )ε->optional<jvalue>{
+		optional<jvalue> result;
+		bool set{};
 		[&]()ι->MutationAwaits::Task {
-			result = co_await Hook::Stop( m, userPK );
+			result = co_await Hook::Stop( move(m), userPK );
+			set = true;
 		}();
-	while( !result )
+	while( !set )
 			std::this_thread::yield();//TODO remove this when async.
-		return *result;
+		return result;
 	}
 
 //#pragma warning( disable : 4701 )
-	α Mutation( const MutationQL& m, UserPK userPK )ε->uint{
-		let& table = DB::AsTable( FindTable(m.TableName()) );
+	α Mutation( const MutationQL& m, UserPK userPK )ε->optional<jvalue>{
+		let& table = DB::AsTable( GetTable(m.TableName()) );
 		// if( let authorizer = table.Schema->Authorizer; authorizer )
 		// 	authorizer->Test( m.Type, userPK );
-		optional<uint> result;
+		optional<jvalue> y;
 		switch( m.Type ){
 		using enum EMutationQL;
 		case Create:{
-			[] (auto& table, auto& m, auto userPK, auto& result)ι->Task {
-				AwaitResult awaitResult = co_await InsertAwait( *table, m, userPK );
-				result = *( awaitResult.UP<uint>() );
-			}(table, m, userPK, result);
-			while (!result)
+			[]( auto& table, auto& m, auto userPK, auto& result )ι->TAwait<jvalue>::Task {
+				result = co_await InsertAwait( table, m, userPK );
+			}( table, m, userPK, y );
+			while( !y )
 				std::this_thread::yield();
 		break;}
 		case Update:
-			result = get<0>( QL::Update(*table, m) );
+			y = get<0>( QL::Update(*table, m) );
 			break;
 		case Delete:
-			result = QL::Delete( *table, m);
+			y = QL::Delete( *table, m);
 			break;
 		case Restore:
-			result = QL::Restore( *table, m );
+			y = QL::Restore( *table, m );
 			break;
-		case Purge:
-			[] (auto& table, auto& m, auto userPK, auto& result )ι->Task {
-				AwaitResult awaitResult = co_await PurgeAwait{ *table, m, userPK };
-				result = *( awaitResult.UP<uint>() );
-			}( table, m, userPK, result );
-			while (!result)
+		case Purge:{
+			bool set{};
+			[] (auto& table, auto& m, auto userPK, auto& result, auto& set )ι->TAwait<jvalue>::Task {
+				result = co_await PurgeAwait{ table, m, userPK };
+				set = true;
+			}( table, m, userPK, y, set );
+			while( !set )
 				std::this_thread::yield();
-			break;
+			break;}
 		case Add:
-		case Remove:
-			[] (auto& table, auto& m, auto userPK, auto& result )ι->AddRemoveAwait::Task {
+		case Remove:{
+			bool set{};
+			[] (auto& table, auto& m, auto userPK, auto& result, bool& set )ι->AddRemoveAwait::Task {
 				result = co_await AddRemoveAwait{ table, m, userPK };
-			}( table, m, userPK, result );
-			while (!result)
+				set = true;
+			}( table, m, userPK, y, set );
+			while( !set )
 				std::this_thread::yield();
-			break;
+			break;}
 		case Start:
-			QL::Start( ms<MutationQL>(m), userPK );
-			result = 1;
+			y = QL::Start( move(m), userPK );
 			break;
 		case Stop:
-			QL::Stop( ms<MutationQL>(m), userPK );
-			result = 1;
+			y = QL::Stop( move(m), userPK );
 			break;
 		}
-		return *result;
+		return y;
 	}
 }

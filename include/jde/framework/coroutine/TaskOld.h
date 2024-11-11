@@ -39,7 +39,7 @@ namespace Jde::Coroutine{
 		α Set( IException&& e )ι->void{ CheckUninitialized(); _result = e.Move().release(); }
 		α Set( Value&& result )ι{ _result = move(result); }
 		α SetBool( bool x )ι{ _result = x; }
-		α Push( SL& sl )ι->void{
+		α Push( SL sl )ι->void{
 			if( auto p = _result.index()==2 ? get<2>(_result) : nullptr; p )
 				p->Push( sl );
 		}
@@ -69,7 +69,7 @@ namespace Jde::Coroutine{
 			α MoveResult()ι->AwaitResult{ if(!_result) return {}; auto y = move(*_result); _result=nullptr; return y;}
 			α HasError()Ι->bool{ return HasResult() && _result->HasError(); }
 			α HasResult()Ι->bool{ return _result && !_result->Uninitialized(); }
-			α Push( SL& sl )ι->void{ Result().Push( sl ); }
+			α Push( SL sl )ι->void{ Result().Push( sl ); }
 		private:
 			α Result()ι->AwaitResult&{ if(!_result)_result=mu<AwaitResult>(); return *_result; }
 			up<AwaitResult> _result;
@@ -122,7 +122,7 @@ namespace Jde::Coroutine{
 		return up<T>{ p };
 	}
 
-	Ŧ AwaitResult::SP( const source_location& sl )ε->sp<T>{
+	Ŧ AwaitResult::SP( SL sl )ε->sp<T>{
 		CheckError( sl );
 		if( _result.index()==0 )
 			throw Exception{ "Result is a unique_ptr.", ELogLevel::Critical, sl };
@@ -141,7 +141,7 @@ namespace Jde::Coroutine{
 			throw CoException( h, move(e), sl );
 		}
 	}
-	Ξ AwaitResult::Bool( const source_location& sl )ε->bool{
+	Ξ AwaitResult::Bool( SL sl )ε->bool{
 		CheckError( sl );
 		if( _result.index()==0 )
 			throw Exception{ "Result is a unique_ptr.", ELogLevel::Critical, sl };

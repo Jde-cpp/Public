@@ -11,7 +11,7 @@
 
 namespace Jde::QL{
 	using namespace Json;
-	α FindTable( str tableName )ε->sp<DB::View>;
+	α GetTable( str tableName )ε->sp<DB::View>;
 	Introspection _introspection;
 	α SetIntrospection( Introspection&& x )ι->void{ _introspection = move(x); }
 
@@ -232,7 +232,7 @@ namespace Jde::QL{
 
 	α QueryType( const TableQL& typeTable, jobject& jData )ε->void{
 		let typeName = Json::AsString( typeTable.Args, "name" );
-		auto dbTable = DB::AsTable( FindTable(ToPlural(FromJson(typeName))) );
+		auto dbTable = DB::AsTable( GetTable(ToPlural(FromJson(typeName))) );
 		for( let& qlTable : typeTable.Tables ){
 			if( qlTable.JsonName=="fields" ){
 				if( let pObject = _introspection.Find(typeName); pObject )

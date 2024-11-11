@@ -14,6 +14,6 @@
 #define Ε const noexcept(false)
 
 #define SRCE_CUR std::source_location::current()
-#define SRCE const std::source_location& sl=SRCE_CUR
+#define SRCE std::source_location sl=SRCE_CUR
 
 //#define Φ Γ auto

@@ -13,27 +13,24 @@
 namespace Jde::QL{
 	using DB::Value;
 	constexpr ELogTags _tags{ ELogTags::QL };
-	α getEnumValue( const DB::Column& c, const QLColumn& qlCol, const jvalue& v )->Value;
+	Ω getEnumValue( const DB::Column& c, const QLColumn& qlCol, const jvalue& v )->Value;
 	α GetEnumValues( const DB::View& table, SRCE )ε->sp<flat_map<uint,string>>;
 
-	InsertAwait::InsertAwait( const DB::Table& table, const MutationQL& mutation, UserPK userPK_, SL sl )ι:
-		AsyncReadyAwait{
-			[&](){ return CreateQuery( table ); },
-			[&,userPK=userPK_](HCoroutine h){ Execute( move(h), userPK, table.Schema->DS() ); },
-			sl,
-			"InsertAwait"
-		},
-		_mutation{ mutation }
+	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
+	 	TAwait<jvalue>{sl},
+		_mutation{ move(mutation) },
+		_table{ table },
+		_userPK{ userPK }
 	{}
 
-	α InsertAwait::CreateQuery( const DB::Table& table )ι->optional<AwaitResult>{
+	α InsertAwait::await_ready()ι->bool{
 		try{
-			CreateQuery( table, _mutation.Input() );
-			return _statements.empty() ? optional<AwaitResult>{ mu<uint>(0) } : nullopt;
+			CreateQuery( *_table, _mutation.Input() );
 		}
 		catch( IException& e ){
-			return AwaitResult{ e.Move() };
+			_exception = e.Move();
 		}
+		return _exception || _statements.empty();
 	}
 
 	α InsertAwait::CreateQuery( const DB::Table& table, const jobject& input, bool nested )ε->void{
@@ -85,16 +82,20 @@ namespace Jde::QL{
 		}
 	}
 
-	α InsertAwait::Execute( HCoroutine h, UserPK userPK, sp<DB::IDataSource> ds )ι->Task{
+	α InsertAwait::Execute()ι->MutationAwaits::Task{
 		try{
-				( co_await Hook::InsertBefore(_mutation, userPK) ).UP<uint>();
+			co_await Hook::InsertBefore( _mutation, _userPK );
 		}
 		catch( IException& e ){
-			Resume( move(e), move(h) );
+			ResumeExp( move(e) );
 			co_return;
 		}
-		up<IException> exception;
+		ExecuteProc();
+	}
+
+	α InsertAwait::ExecuteProc()->Coroutine::Task{
 		uint mainId{};
+		auto& ds = *_table->Schema->DS();
 		try{
 			for( uint i=0; i<_statements.size(); ++i ){
 				auto& statement = _statements[i];
@@ -106,9 +107,9 @@ namespace Jde::QL{
 				uint id;
 				auto sql = statement.Move();
 				if( statement.IsStoredProc )
-					(co_await *ds->ExecuteProcCo(sql.Text, move(sql.Params), [&](const DB::IRow& row){id = (int32)row.GetInt(0);}) ).CheckError();
+					( co_await *ds.ExecuteProcCo(sql.Text, move(sql.Params), [&](const DB::IRow& row){id = (int32)row.GetInt(0);}) ).CheckError();
 				else
-					co_await *ds->ExecuteCo( sql.Text, move(sql.Params) );
+					( co_await *ds.ExecuteCo(sql.Text, move(sql.Params)) ).CheckError();
 
 
 				auto table = statement.Values.size() ? statement.Values.begin()->first->Table : nullptr;
@@ -117,16 +118,30 @@ namespace Jde::QL{
 				if( !mainId )
 					mainId = id;
 			}
-			Resume( mu<uint>(mainId), h );
+			ResumeScaler( mainId );
 		}
 		catch( IException& e ){
-			exception = e.Move();
-		}
-		if( exception ){
-			( co_await Hook::InsertFailure(_mutation, userPK) ).UP<uint>();
-			Resume( move(*exception), h );
+			InsertFailure();
+			ResumeExp( move(e) );
 		}
 	}
+	α InsertAwait::InsertFailure()->MutationAwaits::Task{
+		try{
+			co_await Hook::InsertFailure( _mutation, _userPK );
+			ResumeExp( move(*_exception) );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α InsertAwait::await_resume()ε->jvalue{
+		if( _exception )
+			_exception->Throw();
+		return Promise()
+			? TAwait<jvalue>::await_resume()
+			: jvalue{};
+	}
+
 	α getEnumValue( const DB::Column& c, const QLColumn& qlCol, const jvalue& v )->Value{
 		Value y;
 		let values = GetEnumValues( qlCol.Table() );

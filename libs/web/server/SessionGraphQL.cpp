@@ -10,77 +10,76 @@
 
 namespace Jde::Web::Server{
 	constexpr ELogTags _tags{ ELogTags::Sessions };
+	struct SessionGraphQLAwait final: TAwait<jvalue>{
+		SessionGraphQLAwait( const QL::TableQL& query, UserPK userPK, SRCE )ι: TAwait<jvalue>{ sl }, Query{ query }, UserPK{ userPK }{}
+		α Suspend()ι->void override{ Select(); }
+		α Select()ι->TAwait<jobject>::Task;
+		QL::TableQL Query;
+		Jde::UserPK UserPK;
+	};
 
-	α Select( QL::TableQL query, UserPK executerPK, HCoroutine h, SL sl )ι->TAwait<jobject>::Task{
+	α SessionGraphQLAwait::Select()ι->TAwait<jobject>::Task{
 		try{
-			let sessionString = Json::FindString( query.Args, "id" );
+			let sessionString = Json::FindString( Query.Args, "id" );
 			let sessionId = sessionString ? Str::TryTo<SessionPK>(*sessionString, nullptr, 16 ) : nullopt;
 			if( sessionString && !sessionId )
-				co_return Resume( Exception(_tags, sl, "Could not parse sessionid: '{}'", *sessionString), h );
+				co_return ResumeExp( Exception{_tags, _sl, "Could not parse sessionid: '{}'", *sessionString} );
 			vector<sp<Server::SessionInfo>> sessions;
 			if( !sessionString )
 				sessions = Sessions::Get();
 			else if( auto p = Sessions::Find(*sessionId); p )
 				sessions.push_back( p );
 			if( sessions.empty() )
-				co_return Resume( mu<jobject>(), h ); //(Json::Parse( "{\"data\": null}"))
-			flat_map<UserPK, tuple<string,string>> userDomainLoginNames;
+				co_return Resume( jobject{} ); //(Json::Parse( "{\"data\": null}"))
+			flat_map<Jde::UserPK, tuple<string,string>> userDomainLoginNames;
 			jobject users;
-			if( query.FindColumn("domain") || query.FindColumn("loginName") ){
+			if( Query.FindColumn("domain") || Query.FindColumn("loginName") ){
 				string inClause; inClause.reserve( sessions.size()*5 );
 				for( let& session : sessions )
 					inClause += std::to_string( session->UserPK ) + ",";
 				auto q = "query{ users(id:["+inClause.substr(0, inClause.size()-1)+"]){id loginName provider{id name}} }";
-				users = co_await (*AppGraphQLAwait(move(q), executerPK) );
+				users = co_await (*AppGraphQLAwait(move(q), UserPK) );
 				Trace( _tags | ELogTags::Pedantic, "users={}"sv, serialize(users) );
 				for( let& vuser : Json::AsArrayPath(users, "data/users") ){
 					let& user = Json::AsObject(vuser);
-					userDomainLoginNames[Json::AsNumber<UserPK>(user,"id")] = make_tuple( Json::AsSVPath(user, "provider/name"), Json::AsString(user, "loginName") );
+					userDomainLoginNames[Json::AsNumber<Jde::UserPK>(user,"id")] = make_tuple( Json::AsSVPath(user, "provider/name"), Json::AsString(user, "loginName") );
 				}
 			}
-			auto array = query.IsPlural() ? jarray{} : optional<jarray>{};
+			auto array = Query.IsPlural() ? jarray{} : optional<jarray>{};
 			for( let& session : sessions ){
 				jobject j;
 				if( auto pUser = userDomainLoginNames.find(session->UserPK); pUser!=userDomainLoginNames.end() ){
-					if( query.FindColumn("domain") )
+					if( Query.FindColumn("domain") )
 						j["domain"] = std::get<0>(pUser->second);
-					if( query.FindColumn("loginName") )
+					if( Query.FindColumn("loginName") )
 						j["loginName"] = std::get<1>(pUser->second);
 				}
 #ifndef NDEBUG
-				if( query.FindColumn("id") )
+				if( Query.FindColumn("id") )
 					j["id"] = Ƒ( "{:x}", session->SessionId );
 #endif
-				if( query.FindColumn("endpoint") )
+				if( Query.FindColumn("endpoint") )
 					j["endpoint"] = session->UserEndpoint;
-				if( query.FindColumn("endpoint") )
+				if( Query.FindColumn("endpoint") )
 					j["lastUpdate"] = DateTime{ session->Expiration }.ToIsoString();
-				if( query.FindColumn("expiration") )
+				if( Query.FindColumn("expiration") )
 					j["expiration"] = DateTime{ session->Expiration }.ToIsoString();
 				if( array )
 					array->emplace_back( move(j) );
 				else{
-					Resume( mu<jobject>(move(j)), h );
+					Resume( move(j) );
 					break;
 				}
 			}
 			if( array )
-				Resume( mu<jarray>(move(*array)), h );
+				Resume( move(*array) );
 		}
 		catch( IException& e ){
-			Resume( move(e), h );
+			ResumeExp( move(e) );
 		}
 	}
 
-	struct SessionGraphQLAwait final: AsyncAwait{
-		SessionGraphQLAwait( const QL::TableQL& query, UserPK userPK_, SRCE )ι:
-			AsyncAwait{
-				[&, userPK=userPK_]( HCoroutine h ){ Select( query, userPK, h, _sl ); },
-				sl, "WebGraphQLAwait" }
-		{}
-	};
-
-	α SessionGraphQL::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<IAwait>{
+	α SessionGraphQL::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
 		return query.JsonName.starts_with( "session" ) ? mu<SessionGraphQLAwait>( query, userPK, sl ) : nullptr;
 	}
 }

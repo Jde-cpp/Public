@@ -1,7 +1,7 @@
 {
 	testing:{
-		tests: "AclTests.DisabledPermission",
-		recreateDB:: true
+		tests:: "RoleTests.Crud",
+		recreateDB: true
 	},
 	dbServers: {
 		scriptPath: "$(JDE_DIR)/Public/libs/access/config/sql",
@@ -25,7 +25,7 @@
 	},
 	logging:{
 		tags: {
-			trace:["test", "ql", "sql"],
+			trace:["test", "ql", "sql", "access"],
 			debug:["settings", "app"],
 			information:[],
 			warning:[],

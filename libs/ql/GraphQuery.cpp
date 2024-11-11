@@ -23,7 +23,9 @@ namespace Jde::QL{
 	α GetEnumValues( const DB::View& table, SRCE )ε->sp<flat_map<uint,string>>{
 		return table.Schema->DS()->SelectEnumSync<uint,string>( table, sl );
 	}
-
+	using SubTables=flat_map<string,flat_multimap<uint,jobject>>;//tableName,pk, row
+	Ω query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK userPK, const SubTables* subTables=nullptr )ε->jvalue;
+	Ω addSubTables( const TableQL& parentQL, const SubTables& subTables, jobject& parent, uint parentId )ι->void;
 	α numberToJson( const DB::Value& dbValue, const DB::Column& c, SRCE )ε->jvalue{
 		jvalue y;
 		if( c.Type==DB::EType::DateTime ){
@@ -134,8 +136,8 @@ namespace Jde::QL{
 		}
 	}
 	//returns [qlTableName[parentTableId, jChildData]]
-	α SelectSubTables( const vector<TableQL>& tables, const DB::Table& parentTable, DB::WhereClause where )->flat_map<string,flat_multimap<uint,jobject>>{
-		flat_map<string,flat_multimap<uint,jobject>> subTables;
+	α SelectSubTables( const vector<TableQL>& tables, const DB::Table& parentTable, DB::WhereClause where )->SubTables{
+		SubTables subTables;
 		for( auto& qlTable : tables ){//members
 			auto fk = findFK( parentTable, qlTable.DBName() );
 			DB::Statement statement;
@@ -211,20 +213,27 @@ namespace Jde{
 	}
 
 	α QL::Query( const TableQL& qlTable, jobject& jData, UserPK userPK )ε->void{
-		optional<up<jobject>> hookData;
-		[]( auto& qlTable, auto userPK, auto& jData, auto& hookData )->Task {
-			AwaitResult result = co_await QL::Hook::Select( qlTable, userPK );
-			hookData = result.UP<jobject>();
-			if( *hookData )
-				jData[qlTable.JsonName] = *(*hookData);
-		}( qlTable, userPK, jData, hookData );
-		while( !hookData )
+		optional<std::pair<bool,up<IException>>> hookExp;
+		[]( auto& qlTable, auto userPK, auto& jData, auto& hookExp )->TAwait<optional<jvalue>>::Task {
+			try{
+				auto j = co_await QL::Hook::Select( qlTable, userPK );
+				let hasValue = j.has_value();
+				if( hasValue )
+					jData[qlTable.JsonName] = move( *j );
+				hookExp = std::make_pair( hasValue, nullptr );
+			}
+			catch( IException& e ){
+				hookExp = std::make_pair( true, e.Move() );
+			}
+		}( qlTable, userPK, jData, hookExp );
+		while( !hookExp )
 			std::this_thread::yield();
-		if( *hookData )
+		if( hookExp->second )
+			hookExp->second->Throw();
+		if( hookExp->first )
 			return;
-		let isPlural = qlTable.IsPlural();
 		let dbTable = GetTable( qlTable.DBName() );
-		DB::Statement statement = SelectStatement( qlTable ).value();
+		auto statement = SelectStatement( qlTable );
 /*		ColumnSql( qlTable, *dbTable, nullptr, flags, false, nullptr, statement, &jsonMembers );
 
 		if( let addId = qlTable.Tables.size() && !qlTable.FindColumn("id") && qlTable.Columns.size(); addId ) //Why?
@@ -237,45 +246,51 @@ namespace Jde{
 		if( pExtendedFrom && dbTable->GetPK()->Criteria.size() ) //um_entities is_group
 			statement.Where.Add( dbTable->GetPK()->Criteria );
 */
-		let subTables = SelectSubTables( qlTable.Tables, *DB::AsTable(dbTable), statement.Where );
+		let subTables = SelectSubTables( qlTable.Tables, *DB::AsTable(dbTable), statement ? statement->Where : DB::WhereClause{} );
 		let jsonTableName = qlTable.JsonName;
-		auto addSubTables = [&]( jobject& jParent, uint id=0 ){
-			for( let& qlTable : qlTable.Tables ){
-				let subPlural = qlTable.JsonName.ends_with( "s" );
-				if( subPlural )
-					jParent[qlTable.JsonName] = jarray{};
-				let pResultTable = subTables.find( qlTable.JsonName );
-				if( pResultTable==subTables.end() )
-					continue;
-				let& subResults = pResultTable->second;
-				if( !id && subResults.size() )
-					id = subResults.begin()->first;
-				auto range = subResults.equal_range( id );
-				for( auto pRow = range.first; pRow!=range.second; ++pRow ){
-					if( subPlural )
-						jParent[qlTable.JsonName].get_array().emplace_back( pRow->second );
-					else
-						jParent[qlTable.JsonName] = pRow->second;
-				}
-			}
-		};
-		if( !statement.Empty() ){
-			if( isPlural )
-				jData[jsonTableName] = jarray{};
-			auto rows = dbTable->Schema->DS()->Select( statement.Move() );
-			for( let& row : rows ){
-				auto jRow = qlTable.ToJson( *row, statement.Select.Columns );
-				if( isPlural )
-					jData[jsonTableName].get_array().emplace_back( move(jRow) );
-				else
-					jData[jsonTableName] = move(jRow);
-				addSubTables( jRow, Json::FindNumber<uint>(jRow, "id").value_or(0) );
-			}
-		}
+		if( statement )
+			jData[jsonTableName] = query( qlTable, move(*statement), *dbTable->Schema->DS(), userPK, &subTables );
 		else{
 			jobject jRow;
-			addSubTables( jRow );
+			addSubTables( qlTable, subTables, jRow, 0 );
 			jData[jsonTableName] = jRow;
 		}
+	}
+	α QL::addSubTables( const TableQL& parentQL, const SubTables& subTables, jobject& parent, uint parentId )ι->void{
+//		auto addSubTables = [&]( jobject& jParent, uint id=0 ){
+		for( let& qlTable : parentQL.Tables ){
+			let subPlural = qlTable.JsonName.ends_with( "s" );
+			if( subPlural )
+				parent[qlTable.JsonName] = jarray{};
+			let pResultTable = subTables.find( qlTable.JsonName );
+			if( pResultTable==subTables.end() )
+				continue;
+			let& subResults = pResultTable->second;
+			if( !parentId && subResults.size() )
+				parentId = subResults.begin()->first;
+			auto range = subResults.equal_range( parentId );
+			for( auto pRow = range.first; pRow!=range.second; ++pRow ){
+				if( subPlural )
+					parent[qlTable.JsonName].get_array().emplace_back( pRow->second );
+				else
+					parent[qlTable.JsonName] = pRow->second;
+			}
+		};
+	}
+	α QL::query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK userPK, const SubTables* subTables )ε->jvalue{
+		jvalue y;
+		if( ql.IsPlural() )
+			y = jarray{};
+		auto rows = ds.Select( statement.Move() );
+		for( let& row : rows ){
+			auto jrow = ql.ToJson( *row, statement.Select.Columns );
+			if( subTables && subTables->size() )
+				addSubTables( ql, *subTables, jrow, row->GetUInt(0) );
+			if( ql.IsPlural() )
+				y.get_array().emplace_back( move(jrow) );
+			else
+				y.emplace_object() = move( jrow );
+		}
+		return y;
 	}
 }

@@ -14,77 +14,91 @@
 namespace Jde::Access{
 	α GetTable( str name )ι->sp<DB::Table>;
 
-	Ω select( QL::TableQL query, GroupPK groupPK, UserPK userPK, HCoroutine h, SRCE )ι->QL::QLAwait::Task{
+	struct GroupGraphQLAwait final : TAwait<jvalue>{
+		GroupGraphQLAwait( const QL::TableQL& query, UserPK userPK, SRCE )ι:
+			TAwait<jvalue>{ sl },
+			Query{ query },
+			UserPK{ userPK }
+		{}
+		α Suspend()ι->void override{ Select(); }
+		QL::TableQL Query;
+		Access::UserPK UserPK;
+	private:
+		α Select()ι->QL::QLAwait::Task;
+	};
+
+	α GroupGraphQL::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
+		return query.JsonName.starts_with( "identityGroup" ) && find_if(query.Tables, [](const auto& t){ return t.JsonName=="members"; })!=query.Tables.end()
+			? mu<GroupGraphQLAwait>( query, userPK, sl )
+			: nullptr;
+	}
+
+	α GroupGraphQLAwait::Select()ι->QL::QLAwait::Task{
 		try{
 			//group_id, member_id & member columns.
 			QL::TableQL membersQL = [&]()->QL::TableQL {
-				auto p = find_if( query.Tables, [](let& t){ return t.JsonName=="members"; } );
-				THROW_IF( p==query.Tables.end(), "members table not found." );
+				auto p = find_if( Query.Tables, [](let& t){ return t.JsonName=="members"; } ); THROW_IF( p==Query.Tables.end(), "members table not found." );
 				auto ql = *p;
-				query.Tables.erase( p );
+				Query.Tables.erase( p );
 				return ql;
 			}();
-			membersQL.Columns.push_back( QL::ColumnQL{"group_id"} );
-			membersQL.Columns.push_back( QL::ColumnQL{"member_id"} );
+			let& groupTable = *GetTable( "group_members" );
+			let haveId = membersQL.FindColumn( "id" );
+			if( haveId )
+				membersQL.EraseColumn( "id" );
+			membersQL.Columns.push_back( QL::ColumnQL{"groupId", groupTable.GetColumnPtr("group_id")} );
+			membersQL.Columns.push_back( QL::ColumnQL{"memberId", groupTable.GetColumnPtr("member_id")} );
 			membersQL.JsonName = "groupMembers";
 			auto statement = QL::SelectStatement( membersQL );
-			jobject members;
+			jobject membersResult;
 			if( statement ){
-				statement->Where = QL::ToWhereClause( membersQL, *GetTable("identities"), membersQL.FindColumn("deleted")!=nullptr );
-				statement->Where.Replace( "identities.", "identityGroups." );
-				members = co_await QL::QLAwait( move(membersQL), statement, sl );
+				for( let& [name,value] : Query.Args )
+					membersQL.Args[ name=="id" ? "groupId" : name] = value;
+				statement->Where = QL::ToWhereClause( membersQL, groupTable, membersQL.FindColumn("deleted")!=nullptr );
+				//statement->Where.Remove( "is_group" );
+				//statement->Where.Replace( "identities.", "identity_groups." );
+				membersResult = co_await QL::QLAwait( move(membersQL), move(*statement), UserPK, _sl );
 			}
+			auto& members = membersResult.at( "data" ).at( "groupMembers" ).as_array();
+			jobject groups = co_await QL::QLAwait( move(Query), UserPK, _sl );
+			if( !statement )
+				Resume( jvalue{move(groups)} );
 
-			groupOnlyQL.Columns.push_back( QL::ColumnQL{"member_id"} );
-			jobject groups = co_await QL::QLAwait( move(groupOnlyQL), userPK, sl );
-			if( !membersQL )
-				Resume( mu<jobject>(move(groups)), h );
-
-			jarray groupPKs;
-			if( groupOnlyQL.IsPlural() ){
-				for( let& v : Json::AsArrayPath( groups, "data/groups") )
-					groupPKs.emplace_back( Json::AsNumber<GroupPK>(Json::AsObject(v), "id") );
+			auto addMembers = [&](jobject& group){
+				let groupPK = Json::FindNumber<GroupPK>( group, "id" );//did not ask for group_id.
+				jarray groupMembers;
+				for( auto&& memberValue : members ){
+					auto& member = memberValue.as_object();
+					let memberGroupPK = Json::AsNumber<IdentityPK>( member, "groupId" );
+					if( !groupPK || memberGroupPK==groupPK ){
+						member.erase( "groupId" );
+						if( haveId )
+							member["id"] = Json::AsNumber<IdentityPK>( member, "memberId" );
+						member.erase( "memberId" );
+						groupMembers.emplace_back( move(member) );
+					}
+				}
+				group["members"] = groupMembers;
+			};
+			auto& data = groups.at( "data" );
+			jvalue value;
+			if( auto jgroups = data.try_at_pointer("/identityGroups"); jgroups ){
+				value = move(*jgroups);
+				for( auto& vGroup : value.as_array() )
+					addMembers( vGroup.as_object() );
 			}
-			else
-				groupPKs.emplace_back( Json::AsNumber<GroupPK>(groups, "data/group/id") );
-			let members = Json::AsArray( co_await QL::QLAwait(move(*membersQL), userPK, sl), "data/identities" );
-			flat_map<IdentityPK,jobject> identities;
-			for( let& member : members )
-				identities.emplace( Json::AsNumber<GroupPK>(Json::AsObject(member), "id"), move(member) );
-
-			for( let& member : members ){
-				auto groupPK = Json::AsNumber<GroupPK>( Json::AsObject(member), "group/id" );
-				groupMembers[groupPK].emplace_back( move(member) );
+			else if( auto vGroup = data.try_at_pointer("/identityGroup"); vGroup && vGroup->is_object() ){ /*vs null.*/
+				value = move(*vGroup);
+				addMembers( value.get_object() );
 			}
-
-			if( groupOnlyQL.IsPlural() ){
-				for( let& group : Json::AsArrayPath(groups, "data/groups") ){
-					auto groupPK = Json::AsNumber<GroupPK>( Json::AsObject(group), "id" );
-
-					groupPKs.emplace_back( Json::AsNumber<GroupPK>(Json::AsObject(v), "id") );
-			}
-			else
-				groupPKs.emplace_back( Json::AsNumber<GroupPK>(groups, "data/group/id") );
-
-			auto Json::AsObject(groups, "data"); ["members"] = Json::AsArray( members, "data/identities" );
-			Resume( mu<jobject>( move(y) ), h );
+			Trace( ELogTags::Access, "{}", serialize(groups) );
+			Resume( move(value) );
+		}
+		catch( boost::system::system_error& e ){
+			ResumeExp( CodeException{e.code(), ELogTags::Access, ELogLevel::Debug} );
 		}
 		catch( IException& e ){
-			Resume( move(e), h );
+			ResumeExp( move(e) );
 		}
-
-	}
-	struct GroupGraphQLAwait final: AsyncAwait{
-		GroupGraphQLAwait( const QL::TableQL& query, GroupPK groupPK_, SRCE )ι:
-			AsyncAwait{
-				[&, groupPK=groupPK_]( HCoroutine h ){ select( query, groupPK, h, _sl ); },
-				sl, "GroupGraphQLAwait" }
-		{}
-	};
-
-	α GroupGraphQL::Select( const QL::TableQL& query, GroupPK groupPK, SL sl )ι->up<IAwait>{
-		return query.JsonName.starts_with( "groupIdentit" ) && find_if(query.Tables, [](const auto& t){ return t.JsonName=="members"; })!=query.Tables.end()
-			? mu<GroupGraphQLAwait>( query, groupPK, sl )
-			: nullptr;
 	}
 }

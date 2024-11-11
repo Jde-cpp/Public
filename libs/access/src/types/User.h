@@ -30,6 +30,6 @@ namespace Jde::Access{
 	};
 
 	struct UserGraphQL final : QL::IGraphQLHook{
-		α Select( const QL::TableQL& ql, UserPK userPK, SRCE )ι->up<IAwait> override;
+		α Select( const QL::TableQL& ql, UserPK userPK, SRCE )ι->up<TAwait<jvalue>> override;
 	};
 }

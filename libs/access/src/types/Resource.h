@@ -21,10 +21,9 @@ namespace Resources{
 	};
 
 	struct ResourceLoadAwait final : TAwait<flat_map<ResourcePK,Resource>>{
-		ResourceLoadAwait( sp<DB::AppSchema> schema, vector<AppPK> appPKs )ι;
-		const vector<AppPK> AppPKs;
+		ResourceLoadAwait( sp<DB::AppSchema> schema )ι;
+		sp<DB::AppSchema> Schema;
 	private:
 		α Suspend()ι->void override;
-		sp<DB::AppSchema> _schema;
 	};
 }

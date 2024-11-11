@@ -1,21 +1,24 @@
 #pragma once
 #include "../../../../Framework/source/coroutine/Awaitable.h"
 #include <jde/framework/coroutine/Await.h>
+#include <jde/db/generators/Statement.h>
 #include "types/TableQL.h"
 #include "types/MutationQL.h"
 
-namespace Jde::DB{ struct AppSchema; struct Statement; }
+namespace Jde::DB{ struct AppSchema; }
 namespace Jde::QL{
 	struct MutationQL; struct TableQL;
 	using RequestQL=std::variant<vector<TableQL>,MutationQL>;
 
 	struct QLAwait final : TAwait<jobject>{
 		QLAwait( TableQL&& ql, UserPK userPK, SRCE )ι:TAwait<jobject>{sl},_request{vector{move(ql)}}, _userPK{userPK}{}
+		QLAwait( TableQL&& ql, DB::Statement&& statement, UserPK userPK, SRCE )ι;
 		QLAwait( string query, UserPK userPK, SRCE )ε;
 		α Suspend()ι->void override;
 		α await_resume()ε->jobject override;
 	private:
 		RequestQL _request;
+		optional<DB::Statement> _statement;
 		UserPK _userPK;
 	};
 	α Query( const TableQL& table, jobject& jData, UserPK userId )ε->void;

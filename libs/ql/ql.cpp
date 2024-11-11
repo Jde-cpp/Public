@@ -9,9 +9,10 @@
 namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL };
 	vector<sp<DB::AppSchema>> _schemas;
-  α Mutation( const MutationQL& m, UserPK userPK )ε->uint;
+  α Mutation( const MutationQL& m, UserPK userPK )ε->optional<jvalue>;
   α QueryTables( const vector<TableQL>& tables, UserPK userPK )ε->jobject;
 	α SetIntrospection( Introspection&& x )ι->void;
+	Ω query( RequestQL&& ql, UserPK userPK, SL sl )ε->jobject;
 }
 namespace Jde{
 	α QL::Configure( vector<sp<DB::AppSchema>>&& schemas )ε->void{
@@ -22,43 +23,29 @@ namespace Jde{
 			}
 		}
 	}
-namespace QL{
-	Ω query( RequestQL&& ql, UserPK userPK, SL sl )ε->jobject{
-		vector<TableQL> tableQueries;
-		jobject j;
-		if( ql.index()==1 ){
-			let& mutation = get<MutationQL>( ql );
-			uint result = Mutation( mutation, userPK );
-			sv resultMemberName = mutation.Type==EMutationQL::Create ? "id" : "rowCount";
-			let wantResults = mutation.ResultPtr && mutation.ResultPtr->Columns.size()>0;
-			if( wantResults && mutation.ResultPtr->Columns.front().JsonName==resultMemberName )
-				j["data"].emplace_object()[mutation.JsonName].emplace_object()[resultMemberName] = result;
-			else if( mutation.ResultPtr )
-				tableQueries.push_back( *mutation.ResultPtr );
-		}
-		else
-			tableQueries = get<vector<TableQL>>( ql );
-		jobject y = tableQueries.size() ? QueryTables( tableQueries, userPK ) : j;
-		Trace{ _tags | ELogTags::Pedantic, "QL::Result: {}", serialize(y) };
-		return y;
-	}
-}
+
 	α QL::Query( string ql, UserPK userPK, SL sl )ε->jobject{
 		Trace{ sl, _tags | ELogTags::Pedantic, "QL: {}", ql };
 		return query( Parse(move(ql)), userPK, sl );
 	}
 
-	α QL::CoQuery( string q_, UserPK u_, SL sl )ι->TPoolAwait<jobject>{
+/*	α QL::CoQuery( string q_, UserPK u_, SL sl )ι->TPoolAwait<jobject>{
 		return Coroutine::TPoolAwait<jobject>( [q=move(q_), u=u_](){
 			return mu<jobject>(Query(q,u));
 		}, {}, sl );
-	}
+	}*/
 }
 
 namespace Jde::QL{
 	QLAwait::QLAwait( string query, UserPK userPK, SL sl )ε:
 		TAwait<jobject>{sl},
 		_request{ Parse(move(query)) },
+		_userPK{ userPK }
+	{}
+	QLAwait::QLAwait( TableQL&& ql, DB::Statement&& statement, UserPK userPK, SL sl )ι:
+		TAwait<jobject>{sl},
+		_request{ vector<TableQL>{move(ql)} },
+		_statement{ move(statement) },
 		_userPK{ userPK }
 	{}
 
@@ -72,12 +59,31 @@ namespace Jde::QL{
 
 	α GetTable( str tableName )ε->sp<DB::View>{
 		for( let& schema : _schemas ){
-			if( let pTable = schema->GetTablePtr(tableName); pTable )
-				return DB::AsView( pTable );
+			if( let pTable = schema->FindView(tableName); pTable )
+				return pTable;
 		}
 		THROW( "Could not find table '{}'", tableName );
 	}
   α Schemas()ι->const vector<sp<DB::AppSchema>>&{
     return _schemas;
   }
+	α query( RequestQL&& ql, UserPK userPK, SL sl )ε->jobject{
+		vector<TableQL> tableQueries;
+		jobject j;
+		if( ql.index()==1 ){
+			let m = get<MutationQL>( move(ql) );
+			sv resultMemberName = m.Type==EMutationQL::Create ? "id" : "rowCount";
+			auto result = Mutation( m, userPK );
+			let wantResults = m.ResultPtr && m.ResultPtr->Columns.size()>0;
+			if( wantResults && m.ResultPtr->Columns.front().JsonName==resultMemberName && result )
+				j["data"].emplace_object()[m.JsonName].emplace_object()[resultMemberName] = *result;
+			else if( m.ResultPtr )
+				tableQueries.push_back( *m.ResultPtr );
+		}
+		else
+			tableQueries = get<vector<TableQL>>( ql );
+		jobject y = tableQueries.size() ? QueryTables( tableQueries, userPK ) : j;
+		Trace{ sl, _tags | ELogTags::Pedantic, "QL::Result: {}", serialize(y) };
+		return y;
+	}
 }

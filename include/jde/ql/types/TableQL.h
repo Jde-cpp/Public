@@ -15,6 +15,7 @@ namespace Jde::QL{
 	struct TableQL final{
 		α DBName()Ι->string;
 		α FindColumn( sv jsonName )Ι->const ColumnQL*{ auto p = find_if( Columns, [&](let& c){return c.JsonName==jsonName;}); return p==Columns.end() ? nullptr : &*p; }
+		α EraseColumn( sv jsonName )ι->void{ Columns.erase( remove_if( Columns.begin(), Columns.end(), [&](let& c){return c.JsonName==jsonName;}), Columns.end() ); }
 		α FindDBColumn( sp<DB::Column> dbColumn )Ι->const ColumnQL*;
 		α FindTable( sv jsonTableName )Ι->const TableQL*{ auto p = find_if( Tables, [&](let& t){return t.JsonName==jsonTableName;}); return p==Tables.end() ? nullptr : &*p; }
 		α Input()Ε->const jobject&{ return Json::AsObject( Args, "input" ); }

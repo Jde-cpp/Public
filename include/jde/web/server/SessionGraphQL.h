@@ -5,6 +5,6 @@
 namespace Jde::QL{ struct TableQL; }
 namespace Jde::Web::Server{
 	struct ΓWS SessionGraphQL : QL::IGraphQLHook{
-		α Select( const QL::TableQL& query, UserPK userPK, SRCE )ι->up<IAwait> override;
+		α Select( const QL::TableQL& query, UserPK userPK, SRCE )ι->up<TAwait<jvalue>> override;
 	};
 }

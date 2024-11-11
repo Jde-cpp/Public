@@ -32,4 +32,16 @@ namespace Jde::DB{
 		string prefix{ _clauses.size() ? "where " : "" };
 		return prefix + Str::Join( move(_clauses), " and " );
 	}
+	α WhereClause::Remove( sv clause )ι->void{
+		for( auto it=_clauses.begin(); it!=_clauses.end(); ++it ){
+			if( *it==clause ){
+				_clauses.erase( it );
+				break;
+			}
+		}
+	}
+	α WhereClause::Replace( sv tablePrefix1, sv tablePrefix2 )ι->void{
+		for( auto&& clause : _clauses )
+			clause = Str::Replace( clause, tablePrefix1, tablePrefix2 );
+	}
 }

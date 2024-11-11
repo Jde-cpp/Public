@@ -15,14 +15,15 @@ namespace Jde::Access{
 	};
 
 	struct GroupLoadAwait final : TAwaitEx<concurrent_flat_map<GroupPK,Group>,Coroutine::Task>{
-		GroupLoadAwait( sp<DB::AppSchema> schema )ι;
+		GroupLoadAwait( sp<DB::AppSchema> schema, UserPK userPK )ι;
 	private:
 		α Execute()ι->Coroutine::Task override;
 		sp<DB::AppSchema> _schema;
+		UserPK _userPK;
 	};
 
 	struct GroupGraphQL final : QL::IGraphQLHook{
-		α Select( const QL::TableQL& ql, GroupPK groupPK, SRCE )ι->up<IAwait> override;
+		α Select( const QL::TableQL& ql, UserPK userPK, SRCE )ι->up<TAwait<jvalue>> override;
 	};
 
 }

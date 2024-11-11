@@ -25,6 +25,8 @@ namespace Jde::DB{
 
 		α Params()ι->vector<Value>&{ return _params; }
 		α Params()Ι->const vector<Value>&{ return _params; }
+		α Remove( sv clause )ι->void;
+		α Replace( sv tablePrefix1, sv tablePrefix2 )ι->void;
 		α Size()Ι->uint{ return _clauses.size(); }
 	private:
 		vector<string> _clauses;

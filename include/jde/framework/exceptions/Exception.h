@@ -32,7 +32,7 @@ namespace Jde{
 	}
 	struct StackTrace{
 		StackTrace( SL sl )ι{ stack.push_back(sl); }
-		α front()Ι->SL&{ return stack.front(); }
+		α front()Ι->SL{ return stack.front(); }
 		α size()Ι->uint{ return stack.size(); }
 		vector<source_location> stack;
 	};

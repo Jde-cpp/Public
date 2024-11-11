@@ -21,7 +21,7 @@ namespace Jde::Access{
 	α ToString( EProviderType x )ι->sv{ return FromEnum<EProviderType>( ProviderTypeStrings, x ); }
 
 	static sp<DB::AppSchema> _schema;
-	α GetTable( str name )ε->sp<DB::Table>{ return _schema->GetTablePtr( name ); }
+	α GetTable( str name )ε->sp<DB::View>{ return _schema->GetViewPtr( name ); }
 	α GetSchema()ε->sp<DB::AppSchema>{ return _schema; }
 
 	struct Authorize : IAcl{
@@ -55,8 +55,8 @@ namespace Jde::Access{
 /*	α LoadPermissions( const concurrent_flat_map<UserPK,User>& users, ConfigureAwait& await )->UserLoadAwait::Task{
 		let permissions = co_await PermissionLoadAwait( _schema );
 	}*/
-	ConfigureAwait::ConfigureAwait( vec<AppPK> appPKs )ι:
-		AppPKs{appPKs}
+	ConfigureAwait::ConfigureAwait()ι// vec<AppPK> appPKs )ι:
+		//AppPKs{appPKs}
 	{}
 
 	α loadAcl( ConfigureAwait& await )->RoleLoadAwait::Task{
@@ -80,7 +80,7 @@ namespace Jde::Access{
 	}
 	α loadResources( ConfigureAwait& await )->ResourceLoadAwait::Task{
 		try{
-			flat_map<ResourcePK,Resource> resources = co_await ResourceLoadAwait{ _schema, await.AppPKs };
+			flat_map<ResourcePK,Resource> resources = co_await ResourceLoadAwait{ _schema };
 			for( let& [pk, resource] : resources ){
 				if( resource.Filter.empty() ){
 					_authorize->AppResources.try_emplace_or_visit( resource.Schema, flat_map<string,ResourcePK>{{resource.Target, pk}}, [&](auto& kv){
@@ -115,12 +115,12 @@ namespace Jde{
 		return _authorize;
 	}
 
-	α Access::Configure( sp<DB::AppSchema> schema, vec<AppPK> appPKs )ε->ConfigureAwait{
+	α Access::Configure( sp<DB::AppSchema> schema )ε->ConfigureAwait{
 		_schema = schema;
 		Resources::Sync();
 		QL::Hook::Add( mu<Access::UserGraphQL>() );
 		QL::Hook::Add( mu<Access::GroupGraphQL>() );
-		return {appPKs};
+		return {};
 		//schema->GetTable( "um_users" )->Load();
 	}
 namespace Access{

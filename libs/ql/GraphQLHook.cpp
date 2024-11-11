@@ -9,9 +9,42 @@ namespace Jde::QL{
 		_hooks.push_back( move(hook) );
 	}
 	using Hook::Operation;
-#pragma warning(disable:4063)
-	α GraphQLHookAwait::CollectAwaits( const MutationQL& mutation, UserPK userPK, Operation op )ι->optional<AwaitResult>{
-		up<IAwait> p;
+/*#pragma warning(disable:4063)
+	QueryHookAwaits::QueryHookAwaits( const MutationQL& mutation, UserPK userPK_, Operation op_, SL sl )ι:
+		TAwait<jvalue>{ sl },
+		_op{op_},
+		_ql{ mutation },
+		_userPK{ userPK_ }
+	{}
+*/
+	QueryHookAwaits::QueryHookAwaits( const TableQL& ql, UserPK userPK_, Operation op_, SL sl )ι:
+		TAwait<optional<jvalue>>{ sl },
+		_op{op_},
+		_ql{ ql },
+		_userPK{ userPK_ }
+	{}
+
+//[&, userPK=userPK_, op=op_](){return CollectAwaits(ql, userPK, op);},
+//			[&](HCoroutine h){Await(h);}, sl, "QueryHookAwaits" }
+
+	α QueryHookAwaits::await_ready()ι->bool{
+		sl l{ _hooks.Mutex };
+		_awaitables.reserve( _hooks.size(l) );
+		for( auto ppHook = _hooks.begin(l); ppHook!=_hooks.end(l); ++ppHook ){
+			auto& hook = **ppHook;
+			if( auto p = hook.Select( _ql, _userPK ); p )
+				_awaitables.emplace_back( move(p) );
+		}
+		return _awaitables.empty();
+	}
+	α QueryHookAwaits::await_resume()ε->optional<jvalue>{
+		return Promise()
+			? TAwait<optional<jvalue>>::await_resume()
+			: optional<jvalue>{};
+	}
+/*
+	α QueryHookAwaits::CollectAwaits( const MutationQL& mutation, UserPK userPK, Operation op )ι->optional<AwaitResult>{
+		up<TAwait<jvalue>> p;
 		sl l{ _hooks.Mutex };
 		_awaitables.reserve( _hooks.size(l) );
 		for( auto ppHook = _hooks.begin(l); ppHook!=_hooks.end(l); ++ppHook ){
@@ -28,61 +61,37 @@ namespace Jde::QL{
 		return _awaitables.empty() ? optional<AwaitResult>{up<uint>{}} : nullopt;
 	}
 
-	α GraphQLHookAwait::CollectAwaits( const TableQL& ql, UserPK userPK, Operation op )ι->optional<AwaitResult>{
-		up<IAwait> p;
-		sl l{ _hooks.Mutex };
-		_awaitables.reserve( _hooks.size(l) );
-		for( auto ppHook = _hooks.begin(l); ppHook!=_hooks.end(l); ++ppHook ){
-			auto& hook = **ppHook;
-			switch( op ){
-				case Operation::Select: p = hook.Select( ql, userPK ); break;
-			}
-			if( p )
-				_awaitables.emplace_back( move(p) );
-		}
-		return _awaitables.empty() ? optional<AwaitResult>{up<jobject>()} : nullopt;
-	}
-
-	α GraphQLHookAwait::AwaitMutation( HCoroutine h )ι->Task{
-		uint y{};
+			//[&, userPK=userPK_, op=op_](){return CollectAwaits(mutation, userPK, op);},
+			//[&](HCoroutine h){AwaitMutation(h);}, sl, "QueryHookAwaits" }
+	α QueryHookAwaits::AwaitMutation()ι->TAwait<jvalue>::Task{
+		jarray y;
 		for( auto& awaitable : _awaitables ){
 			try{
-				y+=*( co_await *awaitable ).UP<uint>();
+				y.push_back( co_await *awaitable );
 			}
 			catch( IException& e ){
-				Resume( move(e), h );
+				ResumeExp( move(e) );
 				co_return;
 			}
 		}
-		Resume( mu<uint>(y), h );
+		Resume( move(y) );
 	}
-
-	α GraphQLHookAwait::Await( HCoroutine h )ι->Task{
-		up<jobject> pResult;
+*/
+	α QueryHookAwaits::Execute()ι->TAwait<jvalue>::Task{
+		jarray results;
 		for( auto& awaitable : _awaitables ){
 			try{
-				pResult = awaitp( jobject, *awaitable );
+				results.push_back( co_await *awaitable );
 			}
 			catch( IException& e ){
-				Resume( move(e), h );
+				ResumeExp( move(e) );
 				co_return;
 			}
 		}
-		Resume( move(pResult), h );
+		Resume( results.size()==1 ? move(results[0]) : jvalue{results} );
 	}
 
-	GraphQLHookAwait::GraphQLHookAwait( const MutationQL& mutation, UserPK userPK_, Operation op_, SL sl )ι:
-		AsyncReadyAwait{
-			[&, userPK=userPK_, op=op_](){return CollectAwaits(mutation, userPK, op);},
-			[&](HCoroutine h){AwaitMutation(h);}, sl, "GraphQLHookAwait" }
-	{}
-
-	GraphQLHookAwait::GraphQLHookAwait( const TableQL& ql, UserPK userPK_, Operation op_, SL sl )ι:
-		AsyncReadyAwait{ [&, userPK=userPK_, op=op_](){return CollectAwaits(ql, userPK, op);},
-			[&](HCoroutine h){Await(h);}, sl, "GraphQLHookAwait" }
-	{}
-
-	MutationAwaits::MutationAwaits( sp<MutationQL> mutation, UserPK userPK, Hook::Operation op, SL sl )ι:
+	MutationAwaits::MutationAwaits( MutationQL mutation, UserPK userPK, Hook::Operation op, SL sl )ι:
 		base{ mutation, userPK, sl },
 		 _op{op}
 	{}
@@ -102,35 +111,34 @@ namespace Jde::QL{
 		}
 		return _awaitables.empty();
 	}
-
 	α MutationAwaits::Suspend()ι->void{
-		uint result{};
-		for( auto& awaitable : _awaitables ){
-			up<IException> pException;
-			[&]()->IMutationAwait::Task {
-				try{
-					result+=co_await *awaitable;
-				}
-				catch( IException& e ){
-					pException = e.Move();
-				}
-			}();
-			if( pException ){
-				Promise()->SetError( move(*pException) );
-				break;
+		Execute();
+	}
+	α MutationAwaits::Execute()ι->IMutationAwait::Task{
+		jarray y;
+		try{
+ 			for( auto& awaitable : _awaitables ){
+				if( auto result = co_await *awaitable; result )
+					y.push_back( *result );
 			}
+			Resume( y.size()==1 ? move(y[0]) : jvalue{y} );
 		}
-		if( !Promise()->Error() )
-			Promise()->SetValue( move(result) );
-		_h.resume();
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α MutationAwaits::await_resume()ι->optional<jvalue>{
+		return Promise()
+			? TAwait<optional<jvalue>>::await_resume()
+			: optional<jvalue>{};
 	}
 
-	α Hook::Select( const TableQL& ql, UserPK userPK, SL sl )ι->GraphQLHookAwait{ return GraphQLHookAwait{ ql, userPK, Operation::Select, sl }; };
-	α Hook::InsertBefore( const MutationQL& mutation, UserPK userPK, SL sl )ι->GraphQLHookAwait{ return GraphQLHookAwait{ mutation, userPK, Operation::Insert|Operation::Before, sl }; }
-	α Hook::InsertFailure( const MutationQL& mutation, UserPK userPK, SL sl )ι->GraphQLHookAwait{ return GraphQLHookAwait{ mutation, userPK, Operation::Insert|Operation::Failure, sl }; }
-	α Hook::PurgeBefore( const MutationQL& mutation, UserPK userPK, SL sl )ι->GraphQLHookAwait{ return GraphQLHookAwait{ mutation, userPK, Operation::Purge|Operation::Before, sl }; }
-	α Hook::PurgeFailure( const MutationQL& mutation, UserPK userPK, SL sl )ι->GraphQLHookAwait{ return GraphQLHookAwait{ mutation, userPK, Operation::Purge|Operation::Failure, sl }; }
-	α Hook::Start( sp<MutationQL> mutation, UserPK userId, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userId, Operation::Start, sl }; }
-	α Hook::Stop( sp<MutationQL> mutation, UserPK userId, SL sl )ι->MutationAwaits{; return MutationAwaits{ mutation, userId, Operation::Stop, sl }; }
+	α Hook::Select( const TableQL& ql, UserPK userPK, SL sl )ι->QueryHookAwaits{ return QueryHookAwaits{ ql, userPK, Operation::Select, sl }; };
+	α Hook::InsertBefore( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Insert|Operation::Before, sl }; }
+	α Hook::InsertFailure( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Insert|Operation::Failure, sl }; }
+	α Hook::PurgeBefore( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Purge|Operation::Before, sl }; }
+	α Hook::PurgeFailure( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Purge|Operation::Failure, sl }; }
+	α Hook::Start( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Start, sl }; }
+	α Hook::Stop( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Stop, sl }; }
 
 }

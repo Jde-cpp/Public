@@ -18,17 +18,17 @@ namespace Jde::Access{
 	α Tests::DS()ι->DB::IDataSource&{ return *_schema->DS(); }
 	α Tests::GetTable( str name )ι->sp<DB::Table>{ return _schema->GetTablePtr( FromJson(name) ); }
 	using namespace Json;
-	α addRemove( sv op, const DB::Table& groupTable, uint groupId, vector<uint> members, UserPK userPK )ε->jobject{
+	α addRemove( sv op, const DB::Table& groupTable, uint groupPK, vector<uint> members, UserPK userPK )ε->jobject{
 		let& map = *groupTable.Map;
 		let parentTable = map.Parent->Table;
 		let parentTableName = Capitalize( parentTable->Name );
 		let memberString = members.size()==1 ? Ƒ( "{}", members[0] ) : '['+Str::Join( members )+']';
-		let ql = Ƒ( "{{ mutation {}{}( \"id\":{}, \"{}\":{} ) }}", op, parentTable->Name, groupId, ToJson(map.Child->Name), memberString );
+		let ql = Ƒ( "{{ mutation {}{}( \"id\":{}, \"{}\":{} ) }}", op, parentTable->Name, groupPK, ToJson(map.Child->Name), memberString );
 		let y = QL::Query( ql, userPK );
 		return y;
 	}
-	α Tests::Add( const DB::Table& table, uint groupId, vector<uint> members, UserPK userPK )ε->void{
-		addRemove( "add", table, groupId, members, userPK );
+	α Tests::Add( const DB::Table& table, uint groupPK, vector<uint> members, UserPK userPK )ε->void{
+		addRemove( "add", table, groupPK, members, userPK );
 	}
 
 	α Tests::AddToGroup( GroupPK id, vector<IdentityPK> members, UserPK userPK )ε->void{
@@ -38,8 +38,8 @@ namespace Jde::Access{
 		let addJson = QL::Query( add, userPK );
 	}
 
-	α Tests::Remove( const DB::Table& table, uint groupId, vector<uint> members, UserPK userPK )ε->void{
-		addRemove( "remove", table, groupId, members, userPK );
+	α Tests::Remove( const DB::Table& table, uint groupPK, vector<uint> members, UserPK userPK )ε->void{
+		addRemove( "remove", table, groupPK, members, userPK );
 	}
 	α Tests::RemoveFromGroup( GroupPK id, vector<IdentityPK> members, UserPK userPK )ε->void{
 		let remove = members.size()==1
@@ -55,8 +55,8 @@ namespace Jde::Access{
 		return AsNumber<uint>( createJson, Ƒ("data/{}/id",ToJson(table)) );//{"data":{"user":{"id":7}}}
 	}
 
-	α CreateUser( str target, uint providerId, UserPK userPK )ε->UserPK{
-		let create = Ƒ( "{{ mutation createUser(  'input': {{'loginName':'{0}','target':'{0}','provider':{1},'name':'{0} - name','description':'{0} - description'}} ){{id}} }}", target, providerId );
+	Ω createUser( str target, EProviderType providerId, UserPK userPK )ε->UserPK{
+		let create = Ƒ( "{{ mutation createUser(  'input': {{'loginName':'{0}','target':'{0}','provider':{1},'name':'{0} - name','description':'{0} - description'}} ){{id}} }}", target, (uint)providerId );
 		let createJson = QL::Query( Str::Replace(create, '\'', '"'), userPK );
 		return AsNumber<UserPK>( createJson, "data/user/id" );//{"data":{"user":{"id":7}}}
 	}
@@ -114,31 +114,32 @@ namespace Jde::Access{
 
 		auto root = SelectUser( "root", 0 );
 		_root = root.empty()
-			? GetId(CreateUser( "root", 0, 0 ) )
+			? createUser( "root", EProviderType::Google, 0 )
 			: GetId(root);
 		return *_root;
 	}
 
-	α Tests::GetUser( str target, uint providerId, UserPK userPK, bool includeDeleted )ε->jobject{
+	α Tests::GetUser( str target, UserPK userPK, bool includeDeleted, EProviderType provider )ε->jobject{
 		if( userPK==0 )
 			userPK = GetRoot();
 		auto user = SelectUser( target, userPK, true );
 		if( user.empty() ){
-			CreateUser( target, providerId, userPK );
+			createUser( target, provider, userPK );
 			user = SelectUser( target, userPK );
 		}
 		return user;
 	}
-	α Tests::GetGroup( str target, UserPK userPK, bool includeDeleted )ε->jobject{
-		auto y = SelectGroup( target, userPK, includeDeleted );
+	α Tests::GetGroup( str target, UserPK userPK )ε->jobject{
+		auto y = SelectGroup( target, userPK, true );
+		Trace{ _tags, "{}", serialize(y) };
 		if( y.empty() ){
 			CreateGroup( target, userPK );
-			y = SelectGroup( target, userPK, includeDeleted );
+			y = SelectGroup( target, userPK, false );
 		}
 		return y;
 	}
 
-	α Tests::Purge( str table, UserPK userPK, uint id )ε->jobject{
+	α Tests::Purge( str table, uint id, UserPK userPK )ε->jobject{
 		let ql = Ƒ( "mutation purge{}(\"id\":{})", Capitalize(table), id );
 		let y = QL::Query( ql, userPK );
 		return y;
@@ -156,27 +157,27 @@ namespace Jde::Access{
 		return QL::Query( del, userPK );
 	}
 
-	α Tests::TestAdd( str tableName, uint groupId, vector<uint> members, UserPK userPK )->void{
-		Add( *GetTable(tableName), groupId, members, userPK );
-		let o = Select( ToSingular(tableName), groupId, GetRoot(), {"members{id}"}, userPK );
+	α Tests::TestAdd( str tableName, uint groupPK, vector<uint> members, UserPK userPK )->void{
+		Add( *GetTable(tableName), groupPK, members, userPK );
+		let o = Select( ToSingular(tableName), groupPK, GetRoot(), {"members{id}"}, userPK );
 		flat_set<uint> memberIds;
 		for( let& member : AsArray(o, "members") )
-			memberIds.emplace( AsNumber<uint>(member) );
+			memberIds.emplace( AsNumber<IdentityPK>(AsObject(member), "id") );
 		for( let member : members )
-			ASSERT_TRUE( memberIds.contains(member) );
+			ASSERT_TRUE( memberIds.contains(member) ) << "member not found: " << member;
 	}
-	α Tests::TestRemove( str tableName, uint groupId, vector<uint> members, UserPK userPK )->void{
-		Remove( *GetTable(tableName), groupId, members, userPK );
-		let o = Select( ToSingular(tableName), groupId, GetRoot(), {"members{id}"}, userPK );
+	α Tests::TestRemove( str tableName, uint groupPK, vector<uint> members, UserPK userPK )->void{
+		Remove( *GetTable(tableName), groupPK, members, userPK );
+		let o = Select( ToSingular(tableName), groupPK, GetRoot(), {"members{id}"}, userPK );
 		flat_set<uint> memberIds;
 		for( let& member : AsArray(o, "members") )
-			memberIds.emplace( AsNumber<uint>(member) );
+			memberIds.emplace( AsNumber<IdentityPK>(AsObject(member), "id") );
 		for( let member : members )
 			ASSERT_TRUE( !memberIds.contains(member) );
 	}
 
 	α Tests::TestCrud( str table, str target, UserPK userPK )ε->uint{
-		let row = Get( table, target, userPK );
+		let row = Get( table, target, userPK, {}, true );
 		let id = GetId( row );
 		TestUpdateName( table, id, userPK );
 		TestDelete( table, id, userPK );

@@ -88,7 +88,7 @@ namespace Jde{
 	using std::coroutine_handle;
 	using std::suspend_never;
 	using std::source_location;
-	using SL = const std::source_location&;
+	using SL = std::source_location;
 	using LogEntryPK=uint;
 	using UserPK=uint32;
 

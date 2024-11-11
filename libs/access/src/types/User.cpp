@@ -42,7 +42,20 @@ namespace Jde::Access{
 	}
 	α GetTable( str name )ι->sp<DB::Table>;
 
-	Ω select( const QL::TableQL& query, UserPK userPK, HCoroutine h, SRCE )ι->DB::RowAwait::Task{
+	struct UserGraphQLAwait final : TAwait<jvalue>{
+		UserGraphQLAwait( const QL::TableQL& query, UserPK userPK, SRCE )ι:
+			TAwait<jvalue>{ sl },
+			Query{ query },
+			UserPK{ userPK }
+		{}
+		α Suspend()ι->void override{ Select(); }
+		QL::TableQL Query;
+		Access::UserPK UserPK;
+	private:
+		α Select()ι->DB::RowAwait::Task;
+	};
+
+	α UserGraphQLAwait::Select()ι->DB::RowAwait::Task{
 		try{
 			let& extension = GetTable( "identities" );
 			auto pk = extension->GetPK();
@@ -50,9 +63,9 @@ namespace Jde::Access{
 			DB::Statement statement;
 			statement.From+={ pk, groups->GetColumnPtr("member_id"), true };
 			statement.From+={ groups->SurrogateKeys[0], pk, true, "groups_" };
-			statement.Where.Add( pk, DB::Value{pk->Type, Json::AsNumber<UserPK>(query.Args, "id")} );
+			statement.Where.Add( pk, DB::Value{pk->Type, Json::AsNumber<Access::UserPK>(Query.Args, "id")} );
 			statement.Where.Add( extension->GetColumnPtr("deleted"), DB::Value{} );
-			auto groupTable = find_if( query.Tables, [](const auto& t){ return t.JsonName=="identityGroups";} );
+			auto groupTable = find_if( Query.Tables, [](let& t){ return t.JsonName=="identityGroups";} );
 			flat_map<uint8,string> qlColumns;
 			uint i=0;
 			for( auto& c : groupTable->Columns ){
@@ -63,7 +76,7 @@ namespace Jde::Access{
 					qlColumns.emplace( i++, c.JsonName );
 				}
 			}
-			let rows = co_await extension->Schema->DS()->SelectCo( statement.Move(), sl );
+			let rows = co_await extension->Schema->DS()->SelectCo( statement.Move(), _sl );
 			jarray identityGroups;
 			for( auto& row : rows ){
 				jobject group;
@@ -73,22 +86,15 @@ namespace Jde::Access{
 			}
 			jobject y;
 			y["identityGroups"] = identityGroups;
-			Resume( mu<jobject>( move(y) ), h );
+			Resume( move(y) );
 		}
 		catch( IException& e ){
-			Resume( move(e), h );
+			ResumeExp( move(e) );
 		}
-
 	}
-	struct UserGraphQLAwait final: AsyncAwait{
-		UserGraphQLAwait( const QL::TableQL& query, UserPK userPK_, SRCE )ι:
-			AsyncAwait{
-				[&, userPK=userPK_]( HCoroutine h ){ select( query, userPK, h, _sl ); },
-				sl, "UserGraphQLAwait" }
-		{}
-	};
 
-	α UserGraphQL::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<IAwait>{
+	α UserGraphQL::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
+		UserGraphQLAwait t{ query, userPK, sl };
 		return query.JsonName.starts_with( "user" ) && find_if(query.Tables, [](const auto& t){ return t.JsonName=="identityGroups"; })!=query.Tables.end()
 			? mu<UserGraphQLAwait>( query, userPK, sl )
 			: nullptr;
