@@ -137,7 +137,8 @@ namespace Jde::QL{
 		let j = Peek()=="(" ? ParseJson() : jobject{};
 
 		TableQL table{ string{jsonName}, j };
-		if( Next()=="{" ){//has columns
+		if( Peek()=="{" ){//has columns
+			Next();
 			for( auto token = Next(); token!="}" && token.size(); token = Next() ){
 				if( Peek()=="{" || Peek()=="(" )
 					table.Tables.push_back( LoadTable(token) );

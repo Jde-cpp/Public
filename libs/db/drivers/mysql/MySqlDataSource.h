@@ -20,7 +20,7 @@ namespace Jde::DB::MySql{
 		α ExecuteCo( string sql, vector<Value> p, bool proc, SRCE )ι->up<IAwait>;
 		α ExecuteCo( string sql, vector<Value> p, bool proc, RowΛ f, SRCE )ε->up<IAwait>;
 		β SchemaNameConfig( SRCE )ε->string override;
-		α Select( Sql&& s, SRCE )Ε->vector<up<IRow>> override;
+		α Select( Sql&& s, bool storedProc, SRCE )Ε->vector<up<IRow>> override;
 		α SelectCo( ISelect* pAwait, string sql, vector<Value>&& params, SL sl )ι->up<IAwait> override;
 		α ServerMeta()ι->IServerMeta& override;
 		α Syntax()ι->const DB::Syntax& override{ return MySqlSyntax::Instance(); }

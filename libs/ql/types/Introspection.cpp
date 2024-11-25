@@ -214,14 +214,14 @@ namespace Jde::QL{
 		});//sb only id/name.
 		const string sql{ Ƒ("{} from {} order by {}", select.ToString(), dbTable->Name, dbTable->GetPK()->Name) };
 		jarray fields;
-		dbTable->Schema->DS()->Select( sql, [&]( const DB::IRow& row ){
+		dbTable->Schema->DS()->Select( sql, [&]( DB::IRow& row ){
 			jobject j;
 			for( uint i=0; i<select.Columns.size(); ++i ){
 				auto& c = *select.Columns[i];
 				if( c.IsPK() )
 					j["id"] = row.GetUInt( i );
 				else
-					j[c.Name] = row.GetString( i );
+					j[c.Name] = row.MoveString( i );
 			}
 			fields.push_back( j );
 		} );

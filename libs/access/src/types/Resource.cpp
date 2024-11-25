@@ -2,7 +2,6 @@
 #include <jde/db/Value.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
-#include <jde/db/await/RowAwait.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/generators/FromClause.h>
@@ -12,45 +11,51 @@
 namespace Jde::Access{
 	constexpr ELogTags _tags{ ELogTags::Access };
 
-	ResourceLoadAwait::ResourceLoadAwait( sp<DB::AppSchema> schema )ι:
-		Schema{ schema }
+	Resource::Resource( DB::IRow& row )ι{
+		PK = row.GetUInt16(0);
+		Schema = row.MoveString(1);
+		Target = row.MoveString(2);
+		Filter = row.MoveString(3);
+		Deleted = row.GetTimePointOpt(4);
+	}
+	Resource::Resource( ResourcePK pk, const jobject& j )ι:
+		PK{ pk },
+		Schema{ string{Json::FindDefaultSV(j, "schemaName")} },
+		Target{ string{Json::FindDefaultSV(j, "target")} },
+		Filter{ string{Json::FindDefaultSV(j, "criteria")} },
+		Deleted{ Json::FindTimePoint(j, "deleted") }
 	{}
 
-	Ω loadResources( ResourceLoadAwait& await )ι->DB::RowAwait::Task{
-		flat_map<ResourcePK,Resource> resources;
-		let& schema = *await.Schema;
+	ResourceLoadAwait::ResourceLoadAwait( sp<DB::AppSchema> schema )ι:
+		_schema{ schema }
+	{}
+
+	α ResourceLoadAwait::Load()ι->DB::RowAwait::Task{
+		ResourcePermissions y;
 		try{
-			sp<DB::Table> resourceTable = schema.GetTablePtr( "resources" );
-			let ds = resourceTable->Schema->DS();
-			const DB::WhereClause where{ resourceTable->GetColumnPtr("schema_name"), DB::Value{schema.Name} };
-			auto statement = DB::SelectSql( {"resource_id","schema","target","filter"}, resourceTable, where );
+			auto resourceTable = _schema->GetTablePtr( "resources" );
+			let ds = _schema->DS();
+			const DB::WhereClause where{ resourceTable->GetColumnPtr("schema_name"), DB::Value{_schema->Name} };
+			auto statement = DB::SelectSql( {"resource_id","schema_name","target","criteria", "deleted"}, resourceTable, where );
 			auto rows = co_await ds->SelectCo( move(statement) );
-			for( let& row : rows ){
-				let pk = row->GetUInt16(0);
-				resources.emplace( pk, Resource{pk, row->GetString(1), row->GetString(2), row->GetString(3)} );
-			}
-			sp<DB::Table> resourceRightsTable = schema.GetTablePtr( "resource_rights" );
-			vector<string> columns{"permission_id","resource_id", "allowed", "denied"};
-			DB::FromClause from{ {resourceTable, resourceRightsTable} };
+			for( auto& row : rows )
+				y.Resources.emplace( row->GetUInt16(0), Resource{*row} );
+
+			auto permissionRights = _schema->GetTablePtr( "permission_rights" );
+			vector<string> columns{"permission_id","resource_id", "allowed", "denied", "deleted"};
+			DB::FromClause from{ {permissionRights->GetColumnPtr("resource_id"), resourceTable->GetPK(), true} };
 			statement = DB::SelectSql( columns, from, where );
 			rows = co_await ds->SelectCo( move(statement) );
 			for( let& row : rows ){
 				let pk = row->GetUInt16(0);
 				let resourceId = row->GetUInt16(1);
-				if( auto p = resources.find(resourceId); p!=resources.end() )
-					p->second.Permissions.emplace( pk, Permission{pk, (ERights)row->GetUInt16(2), (ERights)row->GetUInt16(3)} );
-				else
-					Warning{ _tags, "[{}]Resource not found for permission: {}.", resourceId, pk };
+				y.Permissions.emplace( pk, Permission{pk, resourceId, (ERights)row->GetUInt16(2), (ERights)row->GetUInt16(3)} );
 			}
-			await.Resume( move(resources) );
+			Resume( move(y) );
 		}
 		catch( IException& e ){
-			await.ResumeExp( move(e) );
+			ResumeExp( move(e) );
 		}
-	}
-
-	α ResourceLoadAwait::Suspend()ι->void{
-		loadResources( *this );
 	}
 
 	α GetSchema()ε->sp<DB::AppSchema>;
@@ -65,7 +70,7 @@ namespace Jde::Access{
 			if( !empty(table->Operations) )
 				ops.emplace( name, Value{underlying(table->Operations)} );
 		}
-		let sql = Ƒ( "insert into {0}(name,target,rights,description,schema_name,created,deleted) values(?,?,?,?,?,{1},{1})", resourceTable.DBName, schema.Syntax().UtcNow() );
+		let sql = Ƒ( "insert into {0}(name,target,allowed,description,schema_name,created,deleted) values(?,?,?,?,?,{1},{1})", resourceTable.DBName, schema.Syntax().UtcNow() );
 		vector<Value> params{ {}, {}, {}, Value{"From installation"}, Value{schema.Name} };
 		for( let& [name, value] : ops ){
 			params[0] = Value{ name };

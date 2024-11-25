@@ -5,6 +5,7 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/names.h>
+#include <jde/access/IAcl.h>
 
 #define let const auto
 
@@ -52,6 +53,8 @@ constexpr Access::ERights DefaultOps{ Access::ERights::Create | Access::ERights:
 		Name{name},
 		Columns{ toColumns(o) },
 		HasCustomInsertProc{ Json::FindBool(o, "customInsertProc").value_or(false) },
+		AddProc{ string{Json::FindDefaultSV(o, "addProc")} },
+		RemoveProc{ string{Json::FindDefaultSV(o, "removeProc")} },
 		IsFlags{ o.contains("flagsData") },
 		Map{ getMap(o,*this) },
 		QLView{ o.contains("qlView") ? ms<View>( Json::AsString(o,"qlView")) : nullptr },
@@ -78,6 +81,10 @@ constexpr Access::ERights DefaultOps{ Access::ERights::Create | Access::ERights:
 		if( !representsDBTable && Schema->Prefix.size() )
 			DBName += Schema->Prefix;
 		DBName+=Name;
+	}
+	α View::Authorize( Access::ERights rights, UserPK userPK, SL sl )Ε->void{
+		if( let p=Schema->Authorizer; p )
+			p->Test( Schema->Name, Names::ToJson(Name), rights, userPK, sl );
 	}
 
 	α View::ChildTable()Ι->sp<View>{
@@ -123,13 +130,14 @@ constexpr Access::ERights DefaultOps{ Access::ERights::Create | Access::ERights:
 		return SurrogateKeys.size()==1 ? SurrogateKeys.front() : sp<Column>{};
 	}
 
-	α View::HaveSequence()Ι->bool{
-		return find_if( Columns, [](let& c){return c->IsSequence;} )!=Columns.end();
+	α View::SequenceColumn()Ι->sp<Column>{
+		auto p = find_if( Columns, [](let& c){return c->IsSequence;} );
+		return p==Columns.end() ? nullptr : *p;
 	}
 
 	α View::InsertProcName()Ι->string{
 		let haveSequence = find_if( Columns, [](let& c){return c->IsSequence;} )!=Columns.end();
-		return !haveSequence || HasCustomInsertProc ? string{} : Ƒ( "{}_insert", Names::ToSingular(Name) );
+		return !haveSequence && !HasCustomInsertProc ? string{} : Ƒ( "{}_insert", Names::ToSingular(DBName) );
 	}
 
 	α View::IsEnum()Ι->bool{

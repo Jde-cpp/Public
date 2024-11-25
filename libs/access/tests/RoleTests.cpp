@@ -1,12 +1,12 @@
 #include "gtest/gtest.h"
 #include "../src/types/Role.h"
 #include <jde/framework/io/json.h>
+#include <jde/ql/ql.h>
 #include "../src/types/Resource.h"
 #include "globals.h"
 
 #define let const auto
 namespace Jde::Access::Tests{
-	α GetPermission( ResourcePK resourcePK, ERights allowed, ERights denied, UserPK userPK )ε->jobject;
 	using namespace Json;
 	class RoleTests : public ::testing::Test{
 	protected:
@@ -15,27 +15,55 @@ namespace Jde::Access::Tests{
 
 	α RoleTests::SetUpTestCase()->void{
 	}
+	α RemoveRolePermission( RolePK rolePK, PermissionPK permissionPK, UserPK userPK )ε->jobject{
+		let remove = Ƒ( "mutation removeRole( id:{}, permissionRight:{{id:{}}} )", rolePK, permissionPK );
+		return QL::Query( remove, userPK );
+	}
+	α GetRolePermission( RolePK rolePK, sv resourceName, UserPK userPK )ε->jobject{
+		let ql = Ƒ("query{{ role( id:{} ){{permissionRight{{id allowed denied resource(target:\"{}\",criteria:null)}} }} }}", rolePK, resourceName );
+		return QL::Query( ql, userPK ); //{"role":{"member":{"id":1,"allowed":[],"denied":[]}}}
+	}
+	α AddRolePermission( RolePK rolePK, sv resourceName, ERights allowed, ERights denied, UserPK userPK )ε->jobject{
+		auto y = GetRolePermission( rolePK, resourceName, userPK );
+		let member = Json::FindDefaultObjectPath( y, "role/member" );
+		if( !member.empty() ){
+			let existingAllowed = ToRights( Json::AsArray(member, "allowed") );
+			let existingDenied = ToRights( Json::AsArray(member, "denied") );
+			if( allowed!=existingAllowed || denied!=existingDenied ){
+				let update = Ƒ( "mutation updatePermissionRight( id:{}, input:{{ allowed:{}, denied:{} }} )", GetId(member), underlying(allowed), underlying(denied) );
+				QL::Query( update, userPK );
+				y = GetRolePermission( rolePK, resourceName, userPK );
+			}
+		}
+		else{
+			let add = Ƒ( "{{ mutation addRole( id:{}, allowed:{}, denied:{}, resource:{{target:\"{}\"}} ) }}", rolePK, underlying(allowed), underlying(denied), resourceName );
+			QL::Query( add, userPK );
+			y = GetRolePermission( rolePK, resourceName, userPK );
+		}
+		return y;
+	}
 
 	TEST_F( RoleTests, Crud ){
-		let role = Tests::Get( "role", "roleTest", GetRoot() );
-		let id = AsNumber<RolePK>( role, "id" );
-		Tests::TestUpdateName( "role", id, GetRoot() );
-		Tests::TestDelete( "role", id, GetRoot() );
-		Tests::TestPurge( "role", id, GetRoot() );
+		let pk = TestCrud( "role", "roleTest", GetRoot() );
+		TestPurge( "role", pk, GetRoot() );
 	}
 	TEST_F( RoleTests, AddRemove ){
-//		DS().Execute( "delete from role_permissions" );
-		let resourcePK = Json::AsNumber<ResourcePK>( SelectResource("users", GetRoot()), "id" );
-		let permissionId = Json::AsNumber<ResourcePK>( GetPermission(resourcePK, ERights::None, ERights::None, GetRoot()), "id" );
-		let roleId = Json::AsNumber<RolePK>( Tests::Get("role", "rolePermissionsTest", GetRoot()), "id" );
-		Tests::Add( *GetTable("role_permissions"), roleId, {permissionId}, GetRoot() );
-		auto role = Tests::Get( "role", "rolePermissionsTest", GetRoot(), {"permissions{id allowed denied}"} );
-		ASSERT_EQ( Json::AsArrayPath(role, "permissions").size(), 1 );
+		DS().Execute( "delete from role_members" );
+		DS().Execute( "delete from roles" );
+		let rolePK = GetId( Get("role", "rolePermissionsTest", GetRoot()) );
+		auto initial = AddRolePermission( rolePK, "users", ERights::All, ERights::None, GetRoot() );
+		ASSERT_EQ( ToRights( Json::AsArrayPath(initial, "role/permissionRight/allowed") ), ERights::All );
+		ASSERT_EQ( ToRights( Json::AsArrayPath(initial, "role/permissionRight/denied") ), ERights::None );
 
-		Tests::Remove( *GetTable("role_permissions"), roleId, {permissionId}, GetRoot() );
-		role = Tests::Get( "role", "rolePermissionsTest", GetRoot(), {"permissions{id allowed denied}"} );
-		ASSERT_EQ( Json::AsArrayPath(role, "permissions").size(), 0 );
+		//auto updated = AddRolePermission( rolePK, "users", ERights::Read, ERights::Update, GetRoot() );
+		//ASSERT_EQ( ToRights( Json::AsArrayPath(updated, "role/permissionRight/allowed") ), ERights::Read );
+		//ASSERT_EQ( ToRights( Json::AsArrayPath(updated, "role/permissionRight/denied") ), ERights::Update );
 
-		Tests::Purge( "role", roleId, GetRoot() );
+		RemoveRolePermission( rolePK, Json::AsNumber<PermissionPK>(initial, "role/permissionRight/id"), GetRoot() );
+		auto roleMember = GetRolePermission( rolePK, "users", GetRoot() );
+		ASSERT_TRUE( Json::FindDefaultObjectPath( roleMember, "role/permissionRight" ).empty() );
+
+		AddRolePermission( rolePK, "users", ERights::Read, ERights::Update, GetRoot() );//purge with permissions.
+		Purge( "role", rolePK, GetRoot() );
 	}
 }

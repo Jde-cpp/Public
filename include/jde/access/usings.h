@@ -4,6 +4,9 @@ namespace Jde::Access{
 	using IdentityPK=uint32;
 	using GroupPK=IdentityPK;
 	using ProviderPK=uint32;
+	using PermissionIdentityPK=uint32;
+	using PermissionPK=PermissionIdentityPK;
+	using RolePK=PermissionIdentityPK;
 	using UserPK=IdentityPK;
 
 	enum class EProviderType : uint8{
@@ -38,5 +41,5 @@ namespace Jde::Access{
 			rights |= Access::ToRight( v.is_string() ? v.get_string() : "None" );
 		return rights;
 	}
-
+	Ξ ToString( ERights r )ι->string{ return FromEnumFlag<ERights>( RightsStrings, r );  }
 }

@@ -1,7 +1,6 @@
 #pragma once
-#include <jde/ql/GraphQLHook.h>
+#include <jde/ql/QLHook.h>
 #include <jde/ql/types/MutationQL.h>
-#include "../GraphQL.h"
 #include <jde/framework/coroutine/Await.h>
 #include <jde/db/meta/Table.h>
 #include "../../../../Framework/source/coroutine/Awaitable.h"

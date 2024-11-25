@@ -9,6 +9,7 @@ namespace Jde::QL{
 		α TableName()Ι->string; //json name=user returns users
 		α Input(SRCE)Ε->const jobject&;
 		template<class T=uint> auto Id( ELogTags tags=ELogTags::None, SRCE )Ε->T{ return Json::AsNumber<T>(Args, "id"); }
+		α FindParam( sv name )Ε->const jvalue*;
 		α InputParam( sv name )Ε->const jvalue&;
 		α ParentPK()Ε->uint;
 		α ChildPK()Ε->uint;

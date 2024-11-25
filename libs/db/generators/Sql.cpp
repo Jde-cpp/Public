@@ -17,14 +17,22 @@ namespace Jde::DB{
 namespace Jde{
 	α DB::SelectSql( const vector<sp<Column>>& columns, FromClause from, WhereClause where, SL sl )ε->Sql{
 		string sql; sql.reserve( 1023 );
-		from.SetActive( where, sl );
-
 		sql += "select ";
-		for( let& column : columns )
-			sql += column->Table->DBName+'.'+column->Name + ',';
+		bool haveDeleted{};
+		for( let& c : columns ){
+			let columnName = c->Table->DBName+'.'+c->Name;
+			if( c->Type==EType::DateTime ){
+				sql += c->Table->Syntax().DateTimeSelect( columnName )+' '+c->Name + ',';
+				if( c->Name=="deleted" )
+					haveDeleted = true;
+			}
+			else
+				sql += columnName + ',';
+		}
+		if( !haveDeleted )
+			from.SetActive( where, sl );
 		sql[sql.size()-1] = '\n';
-		sql += "from ";
-		sql += from.ToString();
+		sql += from.ToString()+'\n';
 		sql += where.Move();
 		return {move(sql), move(where.Params())};
 	}

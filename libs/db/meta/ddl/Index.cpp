@@ -40,9 +40,13 @@ namespace Jde::DB{
 		vector<Index> indexes;
 		if( t.SurrogateKeys.size() ){
 			vector<string> names;
-			for( let& c : t.SurrogateKeys )
+			bool haveNullColumn{};
+			for( let& c : t.SurrogateKeys ){
 				names.push_back( c->Name );
-			indexes.emplace_back( "pk", t.Name, true, &names );
+				if( c->IsNullable )
+					haveNullColumn = true;
+			}
+			indexes.emplace_back( "pk", t.Name, !haveNullColumn, &names );
 		}
 		for( uint i=0; i<t.NaturalKeys.size(); ++i ){
 			let name = t.NaturalKeys.size()==1 ? "nk" : Ƒ( "nk{}", i );

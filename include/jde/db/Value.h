@@ -11,11 +11,11 @@ namespace Jde::DB{
 		using Underlying=variant<std::nullptr_t,string,bool,int8_t,int,_int,uint32_t,uint,double,DBTimePoint>;
 		Value()=default;
 		Value( Underlying v )ι:Variant{v}{}
-		//explicit Value( sv v )ι:Variant{string{v}}{}
 		Value( EType type, const jvalue& j, SRCE )ε;
 
 		α ToJson( jvalue& j )Ι->void;
 		α ToJson()Ι->jvalue{ jvalue v; ToJson(v); return v; };
+		α Move()ι->jvalue;
 
 		α ToString()Ι->string;
 		α TypeName()Ι->string;
@@ -24,6 +24,7 @@ namespace Jde::DB{
 		α Type()Ι->EValue{ return (EValue)Variant.index(); }
 
 		α get_string()Ι->const string&{ return get<string>(Variant); }
+		α get_string()ι->string&{ return get<string>(Variant); }
 		α get_bool()Ι->bool{ return get<bool>(Variant); }
 		α get_int8()Ι->int8_t{ return get<int8_t>(Variant); }
 		α get_int32()Ι->int{ return get<int>(Variant); }
@@ -46,6 +47,7 @@ namespace Jde::DB{
 	};
 
 	Ŧ ToValue( vec<T> x )ι->vector<Value>;
+	Ŧ ToValue( const flat_set<T>& x )ι->vector<Value>;
 #define GET(x) static_cast<T>( get_##x() )
 	Ŧ Value::get_number( SL sl )Ε->T{
 		switch( Type() ){
@@ -63,6 +65,13 @@ namespace Jde::DB{
 }
 namespace Jde{
 	Ŧ DB::ToValue( vec<T> x )ι->vector<Value>{
+		vector<Value> y;
+		y.reserve( x.size() );
+		for( auto& i : x )
+			y.push_back( Value{i} );
+		return y;
+	}
+	Ŧ DB::ToValue( const flat_set<T>& x )ι->vector<Value>{
 		vector<Value> y;
 		y.reserve( x.size() );
 		for( auto& i : x )

@@ -2,7 +2,7 @@
 #include <jde/web/client/usings.h>
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/Sessions.h>
-#include <web/proto/test.pb.h>
+#include <tests/proto/test.pb.h>
 
 namespace Jde::Web::Mock{
 	using namespace Jde::Web::Server;

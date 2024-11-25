@@ -8,8 +8,9 @@ namespace Jde::DB::MySql{
 		MySqlRow( MySqlRow&& rhs )ι:_values{move(rhs._values)}{};
 		virtual ~MySqlRow(){}
 		α Move()ι->up<IRow> override;
-		α operator[]( uint position )Ε->Value override;
-		α GetString( uint position, SRCE )Ε->std::string override;
+		α operator[]( uint position )Ι->const Value& override;
+		α operator[]( uint position )ι->Value& override;
+		α MoveString( uint position, SRCE )ε->std::string override;
 		α GetBit( uint position, SRCE )Ε->bool override;
 		α GetInt( uint position, SRCE )Ε->_int override;
 		α GetInt32( uint position, SRCE )Ε->int32_t override{ return static_cast<int32_t>( GetInt(position) ); }
@@ -23,6 +24,7 @@ namespace Jde::DB::MySql{
 		α GetTimePointOpt( uint position, SRCE )Ε->std::optional<DBTimePoint> override;
 		α Size()Ι->uint override{ return _values.size(); }
 	private:
+		α GetString( uint i, SRCE )Ε->string override;
 		vector<Value> _values;
 	};
 }

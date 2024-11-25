@@ -1,5 +1,5 @@
 #include "IdentityGroup.h"
-#include <jde/db/await/RowAwait.h>
+#include <jde/db/awaits/RowAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/AppSchema.h>
@@ -27,8 +27,8 @@ namespace Jde::Access{
 		α Select()ι->QL::QLAwait::Task;
 	};
 
-	α GroupGraphQL::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
-		return query.JsonName.starts_with( "identityGroup" ) && find_if(query.Tables, [](const auto& t){ return t.JsonName=="members"; })!=query.Tables.end()
+	α GroupGraphQL::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->HookResult{
+		return query.JsonName.starts_with( "identityGroup" ) && find_if(query.Tables, [](let& t){ return t.JsonName=="members"; })!=query.Tables.end()
 			? mu<GroupGraphQLAwait>( query, userPK, sl )
 			: nullptr;
 	}
@@ -50,24 +50,27 @@ namespace Jde::Access{
 			membersQL.Columns.push_back( QL::ColumnQL{"memberId", groupTable.GetColumnPtr("member_id")} );
 			membersQL.JsonName = "groupMembers";
 			auto statement = QL::SelectStatement( membersQL );
-			jobject membersResult;
+			optional<jarray> members;
 			if( statement ){
 				for( let& [name,value] : Query.Args )
-					membersQL.Args[ name=="id" ? "groupId" : name] = value;
+					membersQL.Args[name=="id" ? "groupId" : name] = value;
 				statement->Where = QL::ToWhereClause( membersQL, groupTable, membersQL.FindColumn("deleted")!=nullptr );
 				//statement->Where.Remove( "is_group" );
 				//statement->Where.Replace( "identities.", "identity_groups." );
-				membersResult = co_await QL::QLAwait( move(membersQL), move(*statement), UserPK, _sl );
+				auto membersResult = co_await QL::QLAwait( move(membersQL), move(*statement), UserPK, _sl );
+				if( membersResult.is_array() )
+					members = move( membersResult.get_array() );
+				else if( membersResult.is_object() )
+					members = jarray{ move(membersResult.get_object()) };
 			}
-			auto& members = membersResult.at( "data" ).at( "groupMembers" ).as_array();
-			jobject groups = co_await QL::QLAwait( move(Query), UserPK, _sl );
-			if( !statement )
+			jobject groups = Json::AsObject( co_await QL::QLAwait( move(Query), UserPK, _sl) );
+			if( !members )
 				Resume( jvalue{move(groups)} );
 
 			auto addMembers = [&](jobject& group){
 				let groupPK = Json::FindNumber<GroupPK>( group, "id" );//did not ask for group_id.
 				jarray groupMembers;
-				for( auto&& memberValue : members ){
+				for( auto&& memberValue : *members ){
 					auto& member = memberValue.as_object();
 					let memberGroupPK = Json::AsNumber<IdentityPK>( member, "groupId" );
 					if( !groupPK || memberGroupPK==groupPK ){
@@ -80,14 +83,13 @@ namespace Jde::Access{
 				}
 				group["members"] = groupMembers;
 			};
-			auto& data = groups.at( "data" );
 			jvalue value;
-			if( auto jgroups = data.try_at_pointer("/identityGroups"); jgroups ){
+			if( auto jgroups = groups.try_at("identityGroups"); jgroups ){
 				value = move(*jgroups);
 				for( auto& vGroup : value.as_array() )
 					addMembers( vGroup.as_object() );
 			}
-			else if( auto vGroup = data.try_at_pointer("/identityGroup"); vGroup && vGroup->is_object() ){ /*vs null.*/
+			else if( auto vGroup = groups.try_at("identityGroup"); vGroup && vGroup->is_object() ){ /*vs null.*/
 				value = move(*vGroup);
 				addMembers( value.get_object() );
 			}

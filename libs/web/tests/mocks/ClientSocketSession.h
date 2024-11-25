@@ -1,6 +1,6 @@
 #pragma once
 #include <jde/web/client/socket/IClientSocketSession.h>
-#include <web/proto/test.pb.h>
+#include <tests/proto/test.pb.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 
 namespace Jde::Web::Mock{

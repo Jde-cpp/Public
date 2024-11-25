@@ -15,26 +15,26 @@ namespace Jde::Access::Tests{
 		let targetFilter = target.size() ? Ƒ( ", target:\"{}\"", target ) : "";
 		if( filter.size() )
 			filter = Ƒ( ", criteria:\"{}\"", filter );
-		let ql = Ƒ( "query{{ resources( schemaName:\"access\"{}{} ){{ id schemaName rights name attributes created {} updated target description }} }}", targetFilter, filter, includeDeleted ? "deleted" : "" );
+		let ql = Ƒ( "query{{ resources( schemaName:\"access\"{}{} ){{ id schemaName allowed denied name attributes created {} updated target description }} }}", targetFilter, filter, includeDeleted ? "deleted" : "" );
 		let qlResult = QL::Query( ql, 0 );
-		return Json::AsArrayPath( qlResult, "data/resources" );
+		return Json::AsArrayPath( qlResult, "resources" );
 	}
 
 	TEST_F( ResourceTests, CheckDefaults ){
-		let ql = "query{ resources( schemaName:\"access\" ){ id rights name attributes created deleted updated target description } }";
+		let ql = "query{ resources( schemaName:\"access\" ){ id allowed denied name attributes created deleted updated target description } }";
 		let qlResult = QL::Query( ql, 0 );
-		let& resources = Json::AsArrayPath( qlResult, "data/resources" );
+		let& resources = Json::AsArrayPath( qlResult, "resources" );
 		ASSERT_EQ( resources.size(), 4 ); //"users", identityGroups", "providerTypes", "roles", "resources"
 		constexpr ERights base = ERights::Create | ERights::Read | ERights::Update | ERights::Delete | ERights::Purge | ERights::Administer;
 		for( let& v : resources ){
 			let& o = Json::AsObject( v );
 			let target = Json::AsSV( o, "target" );
-			let ops = ToRights( Json::AsArray(o, "rights") );
-
+			auto allowed = ToRights( Json::AsArray(o, "allowed") );
+			//let denied = ToRights( Json::AsArray(o, "denied") );
 			auto expected = base;
 			if( target=="users" )
-				expected = base | ERights::Execute;
-			ASSERT_EQ( expected, ops ) << "target=" << target;
+				allowed = base | ERights::Execute;
+			ASSERT_EQ( expected, allowed ) << "target=" << target;
 		}
 	}
 
@@ -52,9 +52,9 @@ namespace Jde::Access::Tests{
 		}
 		let id = Json::AsNumber<ResourcePK>( Json::AsObject(resources[0]), "id" );
 
-		let update = Ƒ( "{{ mutation updateResource( \"id\":{}, \"input\": {{\"rights\": [\"Read\"] }}) }}", id );
+		let update = Ƒ( "{{ mutation updateResource( \"id\":{}, \"input\": {{\"allowed\": [\"Read\"] }}) }}", id );
 		let updateJson = QL::Query( update, 0 );
-		let rights = selectResources(target, filter)[0].at("rights").as_array();
+		let rights = selectResources(target, filter)[0].at("allowed").as_array();
 		ASSERT_TRUE( rights.size()==1 );
 		ASSERT_EQ( Json::AsSV(rights[0]), "Read" );
 
@@ -68,6 +68,6 @@ namespace Jde::Access::Tests{
 		ASSERT_TRUE( !selectResources(target, filter).empty() );
 
  		let purge = Ƒ( "{{mutation purgeResource(\"id\":{}) }}", id );
- 		ASSERT_TRUE( Tests::SelectGroup("groupTest", true).empty() );
+ 		ASSERT_TRUE( Tests::SelectGroup("groupTest", GetRoot(), true).empty() );
 	}
 }

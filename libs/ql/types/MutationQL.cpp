@@ -9,6 +9,9 @@ namespace Jde::QL{
 		return _tableName;
 	}
 
+	α MutationQL::FindParam( sv name )Ε->const jvalue*{
+		return Json::FindValue( Input(), name );
+	}
 	α MutationQL::InputParam( sv key )Ε->const jvalue&{
 		return Json::AsValue( Input(), key );
 	}

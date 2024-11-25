@@ -8,4 +8,6 @@
 
 #include <jde/framework.h>
 #include <jde/framework/settings.h>
+#include <jde/app/shared/exports.h>
+#include <jde/app/shared/proto/App.FromServer.pb.h>
 #include "../../../../Framework/source/Stopwatch.h"

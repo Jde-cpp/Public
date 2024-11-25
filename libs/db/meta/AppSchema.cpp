@@ -30,6 +30,7 @@ namespace Jde::DB{
 
 	AppSchema::AppSchema( sv name, sv prefix, const jobject& meta, sp<Access::IAcl> authorizer )ε:
 		Name{ name },
+		Authorizer{ authorizer },
 		Prefix{ prefix },
 		Tables{ GetTables(Json::AsObject(meta,"tables")) },
 		Views{ GetViews(Json::AsObject(meta,"views")) }

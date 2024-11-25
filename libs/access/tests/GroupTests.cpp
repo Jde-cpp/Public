@@ -53,17 +53,17 @@ namespace Jde::Access{
 		let manager = Json::AsNumber<UserPK>( Tests::GetUser("manager", GetRoot()), "id" );
 		Tests::AddToGroup( hrManagers, {manager}, GetRoot() );
 		constexpr sv ql = "query{{ identityGroup(id:{}){{ members{{id name}} }} }}";
-		ASSERT_EQ( Json::AsArrayPath(QL::Query( Ƒ(ql, hrManagers), GetRoot() ), "data/identityGroup/members" ).size(), 1 );
+		ASSERT_EQ( Json::AsArrayPath(QL::Query( Ƒ(ql, hrManagers), GetRoot() ), "identityGroup/members" ).size(), 1 );
 
 		let hr = Json::AsNumber<UserPK>( Tests::GetGroup("HR", GetRoot()), "id" );
 		let associate = Json::AsNumber<UserPK>(Tests::GetUser("associate", GetRoot()), "id");
 		Tests::AddToGroup( hr, {hrManagers, associate}, GetRoot() );
 		let members = QL::Query( Ƒ(ql, hr), GetRoot() );
-		let array = Json::AsArrayPath( members, "data/identityGroup/members" );
+		let array = Json::AsArrayPath( members, "identityGroup/members" );
 		ASSERT_EQ( array.size(), 2 );
 
 		constexpr sv userQL = "query{{ user(id:{}){{ identityGroups{{id name}} }} }}";
-		ASSERT_EQ( Json::AsArrayPath(QL::Query( Ƒ(userQL, manager), GetRoot() ), "data/user/identityGroups" ).size(), 1 );
+		ASSERT_EQ( Json::AsArrayPath(QL::Query( Ƒ(userQL, manager), GetRoot() ), "user/identityGroups" ).size(), 1 );
 
 		Tests::RemoveFromGroup( hr, {hrManagers, associate}, GetRoot() );
 		Tests::RemoveFromGroup( hrManagers, {manager}, GetRoot() );

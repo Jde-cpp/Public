@@ -3,16 +3,17 @@
 #include <jde/db/meta/Table.h>
 #include <jde/ql/types/MutationQL.h>
 #include <jde/ql/types/Introspection.h>
+#include "MutationAwait.h"
 
 #define let const auto
 
 namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL };
 	vector<sp<DB::AppSchema>> _schemas;
-  α Mutation( const MutationQL& m, UserPK userPK )ε->optional<jvalue>;
   α QueryTables( const vector<TableQL>& tables, UserPK userPK )ε->jobject;
 	α SetIntrospection( Introspection&& x )ι->void;
 	Ω query( RequestQL&& ql, UserPK userPK, SL sl )ε->jobject;
+	α Query( const TableQL& ql, DB::Statement&& statement, UserPK userPK )ε->jvalue;
 }
 namespace Jde{
 	α QL::Configure( vector<sp<DB::AppSchema>>&& schemas )ε->void{
@@ -38,12 +39,12 @@ namespace Jde{
 
 namespace Jde::QL{
 	QLAwait::QLAwait( string query, UserPK userPK, SL sl )ε:
-		TAwait<jobject>{sl},
+		TAwait<jvalue>{sl},
 		_request{ Parse(move(query)) },
 		_userPK{ userPK }
 	{}
 	QLAwait::QLAwait( TableQL&& ql, DB::Statement&& statement, UserPK userPK, SL sl )ι:
-		TAwait<jobject>{sl},
+		TAwait<jvalue>{sl},
 		_request{ vector<TableQL>{move(ql)} },
 		_statement{ move(statement) },
 		_userPK{ userPK }
@@ -53,8 +54,13 @@ namespace Jde::QL{
 		CoroutinePool::Resume( _h );
 	}
 
-	α QLAwait::await_resume()ε->jobject{
-		return query( move(_request), _userPK, _sl );
+	α QLAwait::await_resume()ε->jvalue{
+		jvalue y;
+		if( _statement )
+			y = Query( get<0>(_request).front(), move(*_statement), _userPK );
+		else
+			y = query( move(_request), _userPK, _sl );
+		return y;
 	}
 
 	α GetTable( str tableName )ε->sp<DB::View>{
@@ -71,19 +77,36 @@ namespace Jde::QL{
 		vector<TableQL> tableQueries;
 		jobject j;
 		if( ql.index()==1 ){
-			let m = get<MutationQL>( move(ql) );
-			sv resultMemberName = m.Type==EMutationQL::Create ? "id" : "rowCount";
-			auto result = Mutation( m, userPK );
-			let wantResults = m.ResultPtr && m.ResultPtr->Columns.size()>0;
-			if( wantResults && m.ResultPtr->Columns.front().JsonName==resultMemberName && result )
-				j["data"].emplace_object()[m.JsonName].emplace_object()[resultMemberName] = *result;
-			else if( m.ResultPtr )
-				tableQueries.push_back( *m.ResultPtr );
+			bool set{};
+			up<IException> e;
+			[&]( auto& j, auto& tableQueries, bool& set, auto& e )->MutationAwait::Task {
+				let m = get<MutationQL>( move(ql) );
+				sv resultMemberName = m.Type==EMutationQL::Create ? "id" : "rowCount";
+				try{
+					auto y = co_await MutationAwait( m, userPK );
+					let wantResults = m.ResultPtr && m.ResultPtr->Columns.size()>0;
+					if( wantResults && m.ResultPtr->Columns.front().JsonName==resultMemberName && !y.is_null() )
+						j[m.JsonName].emplace_object()[resultMemberName] = move(y);
+					else if( m.ResultPtr )
+						tableQueries.push_back( *m.ResultPtr );
+				}
+				catch( IException& ex ){
+					e = ex.Move();
+				}
+				set = true;
+			}( j, tableQueries, set, e );
+			while( !set ){
+				std::this_thread::yield();
+			}
+			if( e )
+				e->Throw();
 		}
-		else
+		else{
 			tableQueries = get<vector<TableQL>>( ql );
-		jobject y = tableQueries.size() ? QueryTables( tableQueries, userPK ) : j;
-		Trace{ sl, _tags | ELogTags::Pedantic, "QL::Result: {}", serialize(y) };
-		return y;
+			if( tableQueries.size() )
+				j = QueryTables( tableQueries, userPK );
+		}
+		Trace{ sl, _tags | ELogTags::Pedantic, "QL::Result: {}", serialize(j) };
+		return j;
 	}
 }

@@ -5,7 +5,7 @@
 namespace Jde::DB{
 	struct Column;
 
-	struct UpdateStatement final{
+	struct UpdateClause final{
 		α Move()ι->DB::Sql;
 		α Add( sp<Column> column, Value value, SRCE )ε{ Values.try_emplace( column, move(value) ); }
 		flat_map<sp<Column>,Value> Values;

@@ -1,4 +1,4 @@
-#include <jde/db/generators/UpdateStatement.h>
+#include <jde/db/generators/UpdateClause.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
@@ -6,11 +6,11 @@
 #define let const auto
 
 namespace Jde::DB{
-	α UpdateStatement::Move()ι->DB::Sql{
+	α UpdateClause::Move()ι->DB::Sql{
 		DB::Sql sql; sql.Text.reserve( 128 );
 		if( !Values.size() || Where.Empty() )
 			return sql;
-		
+
 		ASSERT( Values.begin()->first->Table );
 		let& table = *Values.begin()->first->Table;
 		sql.Text += "update ";

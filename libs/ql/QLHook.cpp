@@ -1,11 +1,11 @@
-#include <jde/ql/GraphQLHook.h>
+#include <jde/ql/QLHook.h>
 #include <jde/framework/collections/Vector.h>
 
 #pragma GCC diagnostic ignored "-Wswitch"
 
 namespace Jde::QL{
-	Vector<up<IGraphQLHook>> _hooks;
-	α Hook::Add( up<IGraphQLHook>&& hook )ι->void{
+	Vector<up<IQLHook>> _hooks;
+	α Hook::Add( up<IQLHook>&& hook )ι->void{
 		_hooks.push_back( move(hook) );
 	}
 	using Hook::Operation;
@@ -92,8 +92,15 @@ namespace Jde::QL{
 	}
 
 	MutationAwaits::MutationAwaits( MutationQL mutation, UserPK userPK, Hook::Operation op, SL sl )ι:
-		base{ mutation, userPK, sl },
-		 _op{op}
+		MutationAwaits{ mutation, userPK, op, 0, sl }
+	{}
+
+	MutationAwaits::MutationAwaits( MutationQL m, UserPK userPK, Hook::Operation op, uint pk, SL sl )ι:
+		base{ sl },
+		_mutation{ m },
+		_op{ op },
+		_pk{ pk },
+		_userPK{ userPK }
 	{}
 
 	α MutationAwaits::await_ready()ι->bool{
@@ -101,10 +108,19 @@ namespace Jde::QL{
 		_awaitables.reserve( _hooks.size(l) );
 		for( auto ppHook = _hooks.begin(l); ppHook!=_hooks.end(l); ++ppHook ){
 			auto& hook = **ppHook;
-			up<IMutationAwait> p;
+			up<TAwait<jvalue>> p;
 			switch( _op ){
-				case Operation::Start: p = hook.Start( _mutation, _userPK ); break;
-				case Operation::Stop: p = hook.Stop( _mutation, _userPK ); break;
+				using enum Hook::Operation;
+				case Add: p = hook.Add( _mutation, _userPK ); break;
+				case Remove: p = hook.Remove( _mutation, _userPK ); break;
+				case (Insert | Before): p = hook.InsertBefore( _mutation, _userPK ); break;
+				case (Insert | After): p = hook.InsertAfter( _mutation, _userPK, _pk ); break;
+				case (Insert | Failure): p = hook.InsertFailure( _mutation, _userPK ); break;
+				case (Purge | Before): p = hook.PurgeBefore( _mutation, _userPK ); break;
+				case (Purge | Failure): p = hook.PurgeFailure( _mutation, _userPK ); break;
+				case (Update | After): p = hook.UpdateAfter( _mutation, _userPK ); break;
+				case Start: p = hook.Start( _mutation, _userPK ); break;
+				case Stop: p = hook.Stop( _mutation, _userPK ); break;
 			}
 			if( p )
 				_awaitables.emplace_back( move(p) );
@@ -115,30 +131,31 @@ namespace Jde::QL{
 		Execute();
 	}
 	α MutationAwaits::Execute()ι->IMutationAwait::Task{
-		jarray y;
 		try{
- 			for( auto& awaitable : _awaitables ){
-				if( auto result = co_await *awaitable; result )
-					y.push_back( *result );
-			}
-			Resume( y.size()==1 ? move(y[0]) : jvalue{y} );
+			jarray y;
+ 			for( auto& awaitable : _awaitables )
+				y.push_back( co_await *awaitable );
+			Resume( y );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α MutationAwaits::await_resume()ι->optional<jvalue>{
+	α MutationAwaits::await_resume()ι->optional<jarray>{
 		return Promise()
-			? TAwait<optional<jvalue>>::await_resume()
-			: optional<jvalue>{};
+			? TAwait<optional<jarray>>::await_resume()
+			: optional<jarray>{};
 	}
-
 	α Hook::Select( const TableQL& ql, UserPK userPK, SL sl )ι->QueryHookAwaits{ return QueryHookAwaits{ ql, userPK, Operation::Select, sl }; };
-	α Hook::InsertBefore( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Insert|Operation::Before, sl }; }
-	α Hook::InsertFailure( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Insert|Operation::Failure, sl }; }
-	α Hook::PurgeBefore( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Purge|Operation::Before, sl }; }
-	α Hook::PurgeFailure( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Purge|Operation::Failure, sl }; }
-	α Hook::Start( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Start, sl }; }
-	α Hook::Stop( const MutationQL& mutation, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ mutation, userPK, Operation::Stop, sl }; }
 
+	α Hook::Add( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Add, sl }; }
+	α Hook::Remove( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Add, sl }; }
+	α Hook::InsertBefore( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Insert|Operation::Before, sl }; }
+	α Hook::InsertAfter( uint pk, const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Insert|Operation::After, pk, sl }; }
+	α Hook::InsertFailure( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Insert|Operation::Failure, sl }; }
+	α Hook::PurgeBefore( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Purge|Operation::Before, sl }; }
+	α Hook::PurgeFailure( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Purge|Operation::Failure, sl }; }
+	α Hook::Start( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Start, sl }; }
+	α Hook::Stop( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Stop, sl }; }
+	α Hook::UpdateAfter( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Update|Operation::After, sl }; }
 }

@@ -21,8 +21,8 @@ namespace Jde::DB::MySql{
 			auto& table = tables.emplace( tableName, ms<TableDdl>(tableName) ).first->second;
 			table->Columns.push_back( ms<ColumnDdl>(name, (uint)ordinalPosition, dflt, isNullable!="NO", ToType(type), maxLength.value_or(0), isIdentity!=0, isId!=0, numericPrecision, numericScale) );
 		};
-		auto onRow = [&]( const IRow& row ){
-			fromColumns( row.GetString(0), row.GetString(1), row.GetInt(2), row.GetString(3), row.GetString(4), row.GetString(5), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
+		auto onRow = [&]( IRow& row ){
+			fromColumns( row.MoveString(0), row.MoveString(1), row.GetInt(2), row.MoveString(3), row.MoveString(4), row.MoveString(5), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
 		};
 		let sql = Sql::ColumnSql( false );
 		_pDataSource->Select( sql, onRow, {Value{schema}} );
@@ -33,9 +33,9 @@ namespace Jde::DB::MySql{
 		let schema{ _pDataSource->SchemaName() };
 
 		vector<Index> indexes;
-		auto result = [&]( const IRow& row ){
+		auto result = [&]( IRow& row ){
 			uint i=0;
-			let tableName = row.GetString(i++); let indexName = row.GetString(i++); let columnName = row.GetString(i++); let unique = row.GetBit(i++)==0;
+			let tableName = row.MoveString(i++); let indexName = row.MoveString(i++); let columnName = row.MoveString(i++); let unique = row.GetBit(i++)==0;
 			vector<string>* pColumns;
 			auto pExisting = find_if( indexes, [&](auto& index){ return index.Name==indexName && index.TableName==tableName; } );
 			if( pExisting==indexes.end() ){
@@ -59,8 +59,8 @@ namespace Jde::DB::MySql{
 	α MySqlServerMeta::LoadProcs()Ε->flat_map<string,Procedure>{
 		let schema{ _pDataSource->SchemaName() };
 		flat_map<string,Procedure> values;
-		auto fnctn = [&values]( const IRow& row ){
-			string name = row.GetString(0);
+		auto fnctn = [&values]( IRow& row ){
+			string name = row.MoveString(0);
 			values.try_emplace( name, Procedure{name} );
 		};
 		_pDataSource->Select( Sql::ProcSql(true), fnctn, {Value{schema}} );
@@ -70,9 +70,9 @@ namespace Jde::DB::MySql{
 	α MySqlServerMeta::LoadForeignKeys()Ε->flat_map<string,ForeignKey>{
 		let schema{ _pDataSource->SchemaName() };
 		flat_map<string,ForeignKey> fks;
-		auto result = [&]( const IRow& row ){
+		auto result = [&]( IRow& row ){
 			uint i=0;
-			let name = row.GetString(i++); let fkTable = row.GetString(i++); let column = row.GetString(i++); let pkTable = row.GetString(i++); //let pkColumn = row.GetString(i++); let ordinal = row.GetUInt(i);
+			let name = row.MoveString(i++); let fkTable = row.MoveString(i++); let column = row.MoveString(i++); let pkTable = row.MoveString(i++); //let pkColumn = row.GetString(i++); let ordinal = row.GetUInt(i);
 			auto pExisting = fks.find( name );
 			if( pExisting==fks.end() )
 				fks.emplace( name, ForeignKey{name, fkTable, {column}, pkTable} );

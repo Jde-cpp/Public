@@ -3,12 +3,13 @@
 #include <jde/framework/coroutine/Await.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
-#include <jde/db/await/RowAwait.h>
+#include <jde/db/awaits/RowAwait.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/types/TableQL.h>
+#include "Permission.h"
 
 #define let const auto
 namespace Jde::Access{
@@ -18,27 +19,59 @@ namespace Jde::Access{
 		_schema{ schema }
 	{}
 
-	α UserLoadAwait::Execute()ι->Coroutine::Task{
-		let userTable{ _schema->GetTablePtr("users") };
+	α UserLoadAwait::Execute()ι->DB::MapAwait<IdentityPK,optional<TimePoint>>::Task{
+		let userTable{ _schema->GetTablePtr("identities") };
 		let ds = userTable->Schema->DS();
 		try{
-			auto pks = ( co_await ds->SelectSet<UserPK>(DB::SelectSKsSql(userTable)) ).UP<flat_set<UserPK>>();
-			[this]( auto ds, auto pks )ι->TAwait<flat_multimap<GroupPK,UserPK>>::Task {
+			DB::SelectClause select{ {userTable->GetPK(), userTable->GetColumnPtr("deleted")} };
+			DB::Statement statement{ move(select), {userTable}, {userTable->GetColumnPtr("is_group"), DB::Value{false}} };
+			auto users = co_await ds->SelectMap<UserPK,optional<TimePoint>>( statement.Move() );
+			[]( auto& self, auto ds, auto users )ι->TAwait<flat_multimap<GroupPK,IdentityPK>>::Task {
 				try{
-					let userGroups = co_await *ds->template SelectMultiMap<GroupPK,UserPK>( DB::SelectSKsSql(_schema->GetTablePtr("groups")) );
-					concurrent_flat_map<UserPK,User> users;
-					for( auto&& [groupPk,userPk] : userGroups )
-						users.visit( userPk, [&](auto& kv){ kv.second.Groups.emplace(groupPk); } );
-					Resume( std::move(users) );
+					Identities identities;
+					for( let [pk,deleted] : users )
+						identities.Users.emplace( pk, User{pk, deleted.has_value()} );
+					let userGroups = co_await *ds->template SelectMultiMap<GroupPK,IdentityPK>( DB::SelectSKsSql(self._schema->GetTablePtr("identity_groups")) );
+					for( auto&& [groupPk,userPK] : userGroups )
+						identities.GroupMembers.emplace( groupPk, userPK );
+					self.Resume( std::move(identities) );
 				}
 				catch( IException& e ){
-					ResumeExp( move(e) );
+					self.ResumeExp( move(e) );
 				}
-			}(ds, std::move(pks));
+			}( *this, ds, move(users) );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
+	}
+
+	α User::UpdatePermission( PermissionPK permissionPK, optional<ERights> allowed, optional<ERights> denied )ε->void{
+		auto permission = Permissions.find(permissionPK);
+		if( permission==Permissions.end() )
+			return;
+		let resourcePK = permission->second.ResourcePK;
+		permission->second.Update( allowed, denied );
+		AllowedDisallowed rights{ ERights::None, ERights::None };
+		for( auto&& [_,p] : Permissions ){
+			if( p.ResourcePK==resourcePK ){
+				p.Update( allowed, denied );
+				if( allowed )
+					rights.Allowed |= *allowed;
+				if( denied )
+					rights.Denied |= *denied;
+			}
+		}
+		Rights[resourcePK] = rights;
+	}
+
+	α User::operator+=( const Permission& permission )ι->User&{
+		Permissions[permission.PK] = permission;
+		auto& rights = Rights[permission.ResourcePK];
+		rights.Allowed |= permission.Allowed;
+		rights.Denied |= permission.Denied;
+
+		return *this;
 	}
 	α GetTable( str name )ι->sp<DB::Table>;
 
@@ -94,7 +127,6 @@ namespace Jde::Access{
 	}
 
 	α UserGraphQL::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
-		UserGraphQLAwait t{ query, userPK, sl };
 		return query.JsonName.starts_with( "user" ) && find_if(query.Tables, [](const auto& t){ return t.JsonName=="identityGroups"; })!=query.Tables.end()
 			? mu<UserGraphQLAwait>( query, userPK, sl )
 			: nullptr;

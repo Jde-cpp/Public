@@ -1,5 +1,5 @@
 #include "AddRemoveAwait.h"
-#include <jde/ql/GraphQLHook.h>
+#include <jde/ql/QLHook.h>
 #include <jde/db/Database.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/names.h>
@@ -20,8 +20,7 @@ namespace Jde::QL{
 		_userPK{ userPK }
 	{}
 
-	α GetChildParentParams( sp<DB::Column> parentCol, sp<DB::Column> childCol, const jobject& input )ε->ChildParentParams{
-		Trace{ _tags, "GetChildParentParams '{}'", serialize(input) };
+	Ω getChildParentParams( sp<DB::Column> parentCol, sp<DB::Column> childCol, const jobject& input )ε->ChildParentParams{
 		ChildParentParams params{ parentCol, childCol };
 		let parentColName = DB::Names::ToJson( parentCol->Name );
 		if( let p = Json::FindNumber<uint>(input, parentColName); p )
@@ -43,17 +42,6 @@ namespace Jde::QL{
 		return params;
 	};
 
-	α AddRemoveAwait::await_ready()ι->bool{
-		try{
-			THROW_IF( !_table->Map, "'{}' does not support add.", _table->Name );
-			_params = GetChildParentParams( _table->Map->Parent, _table->Map->Child, _mutation.Args );
-			return false;
-		}
-		catch( IException& e ){
-			_exception = e.Move();
-			return true;
-		}
-	}
 	α AddRemoveAwait::Add()ι->Coroutine::Task{
 		let& map = *_table->Map;
 		let& parentId = map.Parent->Name; let& childId =map.Child->Name;
@@ -94,25 +82,57 @@ namespace Jde::QL{
 				auto a = _table->Schema->DS()->ExecuteCo( sql, params, _sl );
 				result += *( co_await *a ).UP<uint>();
 			}
-			ResumeScaler( result );
+			Resume( jvalue{result} );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
 	}
 
+	α AddRemoveAwait::AddHook()ι->MutationAwaits::Task{
+		try{
+			auto y = co_await Hook::Add(move(_mutation), _userPK);
+			THROW_IF( !y, "Hook::Add returned null." );
+			Resume( move(*y) );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α AddRemoveAwait::RemoveHook()ι->MutationAwaits::Task{
+		try{
+			auto y = co_await Hook::Remove( move(_mutation), _userPK );
+			THROW_IF( !y, "Hook::Add returned null." );
+			Resume( move(*y) );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
+	}
 	α AddRemoveAwait::Suspend()ι->void{
-		if( _mutation.Type==EMutationQL::Add )
+		try{
+			_table->Authorize( Access::ERights::Update, _userPK, _sl );
+			if( _mutation.Type==EMutationQL::Add && _table->AddProc.size() ){
+				AddHook();
+				return;
+			}
+			if( _mutation.Type==EMutationQL::Remove && _table->RemoveProc.size() ){
+				RemoveHook();
+				return;
+			}
+			THROW_IF( !_table->Map, "'{}' does not support add.", _table->Name );
+			_params = getChildParentParams( _table->Map->Parent, _table->Map->Child, _mutation.Args );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+			return;
+		}
+		if( _mutation.Type==EMutationQL::Add ){
 			Add();
+		}
 		else if( _mutation.Type==EMutationQL::Remove )
 			Remove();
 		else
 			ASSERT( false );
-	}
-
-	α AddRemoveAwait::await_resume()ε->uint{
-		if( _exception )
-			_exception->Throw();
-		return TAwait<uint>::await_resume();
 	}
 }

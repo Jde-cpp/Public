@@ -9,11 +9,13 @@ namespace Jde::DB{
 		View( sv name )ι:Name{name},DBName{name}{}  //placeholder columns populated in Initialize
 		View( sv name, const jobject& j )ε;
 		α Initialize( sp<DB::AppSchema> schema, sp<View> self )ε->void;
+
+		α Authorize( Access::ERights rights, UserPK userPK, SL sl )Ε->void;
 		β FindColumn( sv name )Ι->sp<Column>;
 		β GetColumn( sv name, SRCE )Ε->const Column&;
 		β GetColumnPtr( sv name, SRCE )Ε->sp<Column>;
 		β GetColumns( vector<string> names, SRCE )Ε->vector<sp<Column>>;
-		α HaveSequence()Ι->bool;
+		α SequenceColumn()Ι->sp<Column>;
 		α FindPK()Ι->sp<Column>;
 		α FindFK( sv pkTableName )Ι->sp<Column>;
 		α GetPK( SRCE )Ε->sp<Column>;
@@ -30,7 +32,9 @@ namespace Jde::DB{
 		string Name; //provider_id
 		vector<sp<Column>> Columns;
 		string DBName; //[schema.][um_]Name
-		bool HasCustomInsertProc{}; //ddl?
+		bool HasCustomInsertProc;
+		string AddProc;
+		string RemoveProc;
 		bool IsFlags; //e.g. read=1, update=2, purge=4, execute=8, rights=16
 		struct ParentChildMap{ sp<Column> Parent; sp<Column> Child; };
 		optional<ParentChildMap> Map;//groups: identity_id, member_id

@@ -54,6 +54,6 @@ namespace Jde::Access{
 	TEST_F( UserTests, ProvidersSelect ){
 		let readGroups = "query{ __type(name: \"Provider\") { enumValues { id name } } }";
 		let readGroupsJson = QL::Query( readGroups, 0 );
-		ASSERT_TRUE( AsArrayPath(readGroupsJson, "data/__type/enumValues").size()>0 );
+		ASSERT_TRUE( AsArrayPath(readGroupsJson, "__type/enumValues").size()>0 );
 	}
 }

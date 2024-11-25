@@ -1,5 +1,4 @@
-﻿#include "GraphQL.h"
-#include <jde/framework/str.h>
+﻿#include <jde/framework/str.h>
 #include <jde/framework/io/json.h>
 //#include <jde/ql/GraphQLHook.h>
 //#include <jde/framework/coroutine/TaskOld.h>
@@ -10,9 +9,10 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/Syntax.h>
-#include <jde/db/generators/UpdateStatement.h>
+//#include <jde/db/generators/UpdateStatement.h>
 #include <jde/db/generators/WhereClause.h>
 #include <jde/db/meta/Column.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/View.h>
 #include "../../../Framework/source/DateTime.h"
@@ -48,7 +48,7 @@ namespace QL{
 					jobject field;
 					jarray args;
 					for( let& column : pDBTable->Columns ){
-						if(   (column->IsPK() && !idColumn) || (!column->IsPK() && !allColumns) )
+						if( (column->IsPK() && !idColumn) || (!column->IsPK() && !allColumns) )
 							continue;
 						jobject arg;
 						arg["name"] = ToJson( column->Name );
@@ -81,9 +81,8 @@ namespace QL{
 		jobject jSchema; jSchema["mutationType"] = jmutationType;
 		jData["__schema"] = jmutationType;
 	}
-#define TEST_ACCESS(a,b,c) //Trace( _tags, "TEST_ACCESS({},{},{})", a, b, c )
+
 	α QueryTable( const TableQL& table, UserPK userPK, jobject& jData )ε->void{
-		TEST_ACCESS( "Read", table.DBName(), userPK ); //TODO implement.
 		if( table.JsonName=="__type" )
 			QueryType( table, jData );
 		else if( table.JsonName=="__schema" )
@@ -96,9 +95,6 @@ namespace QL{
 		jobject data;
 		for( let& table : tables )
 			QueryTable( table, userPK, data );
-
-		jobject y;
-		y["data"] = data;
-		return y;
+		return data;
 	}
 }}

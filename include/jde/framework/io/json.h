@@ -58,6 +58,7 @@ namespace Jde{
 		α FindDefaultArray( const jvalue& v, sv path )ι->const jarray&;
 		α FindDefaultArray( const jobject& o, sv key )ι->const jarray&;
 		α FindDefaultObject( const jvalue& v, sv path )ι->const jobject&;
+		α FindDefaultObject( const jobject& o, sv key )ι->const jobject&;
 		α FindDefaultObjectPath( const jobject& o, sv path )ι->const jobject&;
 
 		α Kind( boost::json::kind value )ι->string;
@@ -65,6 +66,7 @@ namespace Jde{
 		Ŧ FindNumber( const jobject& o, sv key )ι->optional<T>;
 		Ξ FindObject( const jobject& o, sv key )ι->const jobject*{ auto p = o.if_contains(key); return p ? p->if_object() : nullptr; }
 		α FindString( const jobject& o, sv key )ι->optional<string>;
+		α FindTimePoint( const jobject& o, sv key )ι->optional<TimePoint>;
 
 		Ξ FindDefaultBool( const jobject& o, sv key )ι->bool{ auto p = o.if_contains(key); return p && p->is_bool() ? p->get_bool() : false; }
 		Ξ FindDefaultSV( const jobject& o, sv key )ι->sv{ auto p = o.if_contains(key); return p && p->is_string() ? p->get_string() : sv{}; }

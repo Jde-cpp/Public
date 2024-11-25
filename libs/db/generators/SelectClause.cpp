@@ -11,7 +11,12 @@ namespace Jde::DB{
 		if( !FindColumn(*c) )
 			Columns.push_back( c );
 	}
-
+	α SelectClause::operator+=( SelectClause&& x )ι->SelectClause&{
+		for( let& c : x.Columns )
+			TryAdd( c );
+		x.Columns.clear();
+		return *this;
+	}
 	α SelectClause::FindColumn( const DB::Column& f )Ι->sp<Column>{
 		auto p = find_if( Columns, [=](let& c){return c->Name==f.Name && (!c->Table || !f.Table || c->Table->Name==f.Table->Name);} );
 		return p==Columns.end() ? nullptr : *p;

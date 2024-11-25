@@ -17,7 +17,7 @@ else()
 endif()
 #######################################################
 add_library( ${CMAKE_PROJECT_NAME} SHARED )
-file(GLOB source *.cpp awaits/*.cpp config/*.cpp types/*.cpp )
+file(GLOB source *.cpp awaits/*.cpp config/*.cpp hooks/*.cpp types/*.cpp )
 file(GLOB headers *.h)
 target_sources(${CMAKE_PROJECT_NAME}
     PRIVATE

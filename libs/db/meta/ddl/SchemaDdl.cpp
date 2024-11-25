@@ -82,7 +82,7 @@ namespace Jde::DB{
 				for( uint i=0; where.Empty() && i<table->NaturalKeys.size(); ++i )
 					where = getWhere( table->GetColumns(table->NaturalKeys[i]) );
 				THROW_IF( where.Empty(), "Could not find keys in data for '{}'", tableName );
-				Statement statement{ {Column::Count()}, {table}, where };
+				Statement statement{ {Column::Count()}, {table}, move(where) };
 				if( ds.Scaler<uint>( statement.Move() )>0 )
 					continue;
 
@@ -106,7 +106,7 @@ namespace Jde::DB{
 					}
 				}
 				std::ostringstream sql;
-				let identityInsert = table->HaveSequence() && ds.Syntax().NeedsIdentityInsert();
+				let identityInsert = table->SequenceColumn() && ds.Syntax().NeedsIdentityInsert();
 				if( identityInsert )
 					sql << "SET IDENTITY_INSERT " << tableName << " ON;" << std::endl;
 				sql << Ƒ( "insert into {}({})values({})", tableName, osInsertColumns.str(), osInsertValues.str() );
@@ -192,7 +192,7 @@ namespace Jde::DB{
 				dbTable = ms<TableDdl>( *table );
 				ds.Execute( dbTable->CreateStatement() );
 				Information{ _tags, "Created table '{}'.", tableName };
-				if( table->HaveSequence() )
+				if( table->SequenceColumn() )
 					dbTable->Indexes = ds.ServerMeta().LoadIndexes( dbTable->Name );
 				Tables().emplace( tableName, dbTable );
 			}
@@ -207,7 +207,7 @@ namespace Jde::DB{
 				dbIndexes.push_back( Index{name, tableName, index} );
 				Information{ _tags, "Created index '{}.{}'.", tableName, name };
 			}
-			if( let procName = table->InsertProcName(); procName.size() && Procs.find(procName)==Procs.end() ){
+			if( let procName = table->HasCustomInsertProc ? "" : table->InsertProcName(); procName.size() && Procs.find(procName)==Procs.end() ){
 				ds.Execute( dbTable->InsertProcCreateStatement() );
 				Procs.emplace( procName, Procedure{procName} );
 				Information{ _tags, "Created proc '{}'.", table->InsertProcName() };

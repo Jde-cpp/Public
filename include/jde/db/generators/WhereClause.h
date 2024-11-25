@@ -9,8 +9,8 @@ namespace Jde::DB{
 	struct WhereClause final{
 		WhereClause()ι=default;
 		//WhereClause( string init )ι{ Add(move(init)); }
-		WhereClause( sp<Column> columnName, Value param, SRCE )ε{ Add(columnName, move(param), sl); }
-		WhereClause( sp<Column> columnName, vector<Value> inParams, SRCE )ε{ Add(columnName, move(inParams), sl); }
+		WhereClause( sp<Column> c, Value param, SRCE )ε{ Add(c, move(param), sl); }
+		WhereClause( sp<Column> c, vector<Value> inParams, SRCE )ε{ Add(c, move(inParams), sl); }
 		//friend α operator<<( WhereClause &self, string clause )ι->WhereClause&{ self.Add(move(clause)); return self; }
 		α operator+=( const WhereClause& subTable )ι->WhereClause&;
 

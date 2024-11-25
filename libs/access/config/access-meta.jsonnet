@@ -56,7 +56,8 @@ local targetNKs = [valuesNK, ["target"]];
 local rights = ["None", "Create", "Read", "Update", "Delete", "Purge", "Administer", "Subscribe", "Execute"];
 local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"];
 {
-	scripts: ["providers_ql.sql", "group_members.sql", "provider_purge.sql", "user_insert.sql", "user_insert_key.sql", "user_insert_login.sql"],
+	scripts: ["providers_ql.sql", "group_members.sql", "provider_purge.sql", "user_insert.sql", "user_insert_key.sql", "user_insert_login.sql",
+	"acl_insert_permission.sql", "acl_insert_role.sql", "role_insert.sql", "role_add.sql", "role_remove.sql", "role_purge.sql"],
 	local tables = self.tables,
 	views:{
 		groupMembers:{
@@ -132,7 +133,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				target: targetColumns.target+{ nullable: true, comment: "Points to target in another table (eg OpcServer)" }
 			},
 			naturalKeys:[["provider_type_id","target"]],
-			purgeProc: "um_provider_purge",
+			purgeProc: "provider_purge",
 			data: [{id:1, providerTypeId:1}, {id:2, providerTypeId:2}, {id:3, providerTypeId:3}, {id:4, providerTypeId:4}, {id:5, providerTypeId:5}, {id:6, providerTypeId:6} ],
 			qlView: "providers_ql",
 			ops: ["None"]
@@ -142,13 +143,21 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				resourceId: smallSequenced,
 				schemaName: valuesColumns.name+{ i:1 },
 				criteria: types.varchar+{ nullable: true, length:1024, i:100 },
-				rights: tables.rights.columns.rightId+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource" },
+				allowed: tables.rights.columns.rightId+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource" },
+				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:102, nullable:true, comment: "available rights for this resource" },
 			}+targetColumns,
 			ops: ["None"]//handled through admin op.
 		},
 		permissions:{
 			columns: {
-				permissionId: smallSequenced+{ comment: "standalone or part of a role" },
+				permissionId: pkSequenced,
+				isRole: types.bit+{ default: false, i: 101 },
+			},
+			ops: ["None"]
+		},
+		permissionRights:{
+			columns: {
+				permissionId: tables.permissions.columns.permissionId+{ pkTable: "permissions", i:0, sk:0 },
 				resourceId: tables.resources.columns.resourceId+{ pkTable: "resources", i:1 },
 				allowed: tables.rights.columns.rightId+{ pkTable: "rights", i:2 },
 				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:3 },
@@ -157,16 +166,21 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		},
 		roles:{
 			columns: {
-				roleId: smallSequenced,
+				roleId: tables.permissions.columns.permissionId+{ insertable:false, pkTable: "permissions", i:0, sk:0 },
 			}+targetColumns,
+			customInsertProc: true,
+			purgeProc: "role_purge",
+			addProc: "role_add",
+			removeProc: "role_remove",
 			naturalKeys: targetNKs
 		},
-		rolePermissions:{
+		roleMembers:{
 			columns: {
-				roleId: tables.roles.columns.roleId+{ pkTable: "roles", sk: 0, i:0 },
-				permissionId: tables.permissions.columns.permissionId+{ pkTable: "permissions", sk: 1, i:1 }
+				roleId: tables.permissions.columns.permissionId+{ pkTable: "roles", sk: 0, i:0 },
+				memberId: tables.permissions.columns.permissionId+{ pkTable: "permissions", sk:1, i:1 },
 			},
-			map: {parentId:"role_id", childId:"permission_id"},
+			extends: "roles",
+			map: {parentId:"role_id", childId:"member_id"},
 			ops: ["None"]
 		},
 		rights:{
@@ -179,11 +193,12 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		},
 		acl:{
 			columns: {
-				identityId: tables.identities.columns.identityId+{ pkTable: {name:"identities"}, sk: 0 },
-				permissionId: tables.permissions.columns.permissionId+{ pkTable: {name:"permissions"}, sk: 1, i:1 }
+				identityId: tables.identities.columns.identityId+{ pkTable: {name:"identities"}, sk: 0, i:0 },
+				permissionId: tables.permissions.columns.permissionId+{ pkTable: "permissions", sk: 1, i:1 }
 			},
+			customInsertProc: true,
 			map:: { parentId:"identity_id", childId:"permission_id" },//not a map, but connector.
-			ops: ["None"]
+			ops: ["None"] //handled through admin op.
 		}
 	}
 }

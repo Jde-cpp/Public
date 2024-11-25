@@ -4,7 +4,7 @@
 #include <jde/access/access.h>
 #include <jde/db/db.h>
 #include <jde/ql/ql.h>
-#include <jde/ql/GraphQLHook.h>
+#include <jde/ql/QLHook.h>
 #include "globals.h"
 
 #define let const auto
@@ -12,7 +12,7 @@
 namespace Jde{
 	α OSApp::ProductName()ι->sv{ return "Tests.UM"; }
 
- 	α Startup( int argc, char **argv )ε->void{
+ 	α Startup( int argc, char **argv, bool& set )ε->Access::ConfigureAwait::Task{
 #ifdef _MSC_VER
 		ASSERT( Settings::Get<uint>("/workers/drive/threads")>0 )
 #endif
@@ -24,10 +24,11 @@ namespace Jde{
 		auto schema = DB::GetAppSchema( metaDataName, authorize );
 		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 			DB::NonProd::Recreate( *schema );
-		Access::Configure( schema );
+		co_await Access::Configure( schema );
 		QL::Configure( {schema} );
 
 		Access::Tests::SetSchema( schema );
+		set = true;
 	}
 }
 
@@ -42,7 +43,10 @@ namespace Jde{
 
 	::testing::InitGoogleTest( &argc, argv );
 	try{
-		Startup( argc, argv );
+		bool set{};
+		Startup( argc, argv, set );
+		while( !set )
+			std::this_thread::yield();
 	}catch( const IException& e ){
 		std::cerr << e.what() << std::endl;
 		return EXIT_FAILURE;

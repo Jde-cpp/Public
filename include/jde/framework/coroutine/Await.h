@@ -12,9 +12,9 @@ namespace Jde{
 		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }  //msvc internal compiler error if virtual.
 		β await_resume()ε->TResult{ AwaitResume(); return TResult{}; }
 		α ResumeExp( IException&& e )ι{ ASSERT(Promise()); Promise()->ResumeWithError( move(e), _h ); }
+		α Resume()ι{ ASSERT(_h); _h.resume(); }
 
 	protected:
-		α Resume()ι{ ASSERT(_h); _h.resume(); }
 		α SetError( IException&& e )ι{ ASSERT(Promise()); Promise()->SetError( move(e) ); }
 		β Suspend()ι->void=0;
 		α AwaitResume()ε->void{ if( up<IException> e = Promise() ? Promise()->MoveError() : nullptr; e ) e->Throw(); }

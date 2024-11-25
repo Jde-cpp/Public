@@ -1,17 +1,15 @@
 #include "PurgeAwait.h"
-#include <jde/access/IAcl.h>
-//#include "../GraphQL.h"
-#include <jde/ql/GraphQLHook.h>
 #include <jde/ql/types/MutationQL.h>
 #include <jde/db/Database.h>
 #include <jde/db/meta/Column.h>
+#include <jde/db/meta/AppSchema.h>
 #include "../GraphQuery.h"
 
 #define let const auto
 
 namespace Jde::QL{
 	PurgeAwait::PurgeAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
-		TAwait<jvalue>{sl},
+		TAwait<jvalue>{ sl },
 		_mutation{ move(mutation) },
 		_table{ table },
 		_userPK{ userPK }
@@ -30,8 +28,7 @@ namespace Jde::QL{
 	α PurgeAwait::Statements( const DB::Table& table, vector<DB::Value>& parameters )ε->vector<string>{
 		let id = Json::AsNumber<uint>( _mutation.Args, "id" );
 		parameters.push_back( DB::Value{DB::EType::ULong, id} );
-		if( let p=table.Schema->Authorizer; p )
-			p->Test( Access::ERights::Purge, table.Name, _userPK );
+		table.Authorize( Access::ERights::Purge, _userPK, _sl );
 
 		auto pk = table.Extends ? table.SurrogateKeys[0] : table.GetPK();
 		vector<string> statements{ table.PurgeProcName.size() ? Ƒ("{}( ? )", table.PurgeProcName) : Ƒ("delete from {} where {}=?", table.DBName, pk->Name) };

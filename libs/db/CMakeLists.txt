@@ -17,7 +17,7 @@ else()
 endif()
 add_library( ${CMAKE_PROJECT_NAME} SHARED )
 #######################################################
-file(GLOB sources await/*.cpp generators/*.cpp *.cpp meta/*.cpp meta/ddl/*.cpp )
+file(GLOB sources awaits/*.cpp generators/*.cpp *.cpp meta/*.cpp meta/ddl/*.cpp )
 file(GLOB headers *.h ../../jde/db/*.h ../../jde/db/meta/*.h ../../jde/db/syntax/*.h )
 target_sources(${CMAKE_PROJECT_NAME}
     PRIVATE

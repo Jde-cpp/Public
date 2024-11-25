@@ -175,12 +175,13 @@ namespace Jde::DB::MySql{
 			_pSchemaProc = mu<MySqlServerMeta>( shared_from_this() );
 		return *_pSchemaProc;
 	}
-	α MySqlDataSource::Select( Sql&& s, SL sl )Ε->vector<up<IRow>>{
+	α MySqlDataSource::Select( Sql&& s, bool storedProc, SL sl )Ε->vector<up<IRow>>{
 		vector<up<IRow>> rows;
 		RowΛ f = [&rows]( IRow& r ){
 			rows.push_back(r.Move());
 		};
-		MySql::Select( CS(), move(s.Text), f, &s.Params, sl );
+		auto fullSql = storedProc ? Ƒ( "call {}", move(s.Text) ) : move( s.Text );
+		MySql::Select( CS(), move(fullSql), f, &s.Params, sl );
 		return rows;
 	}
 	α MySqlDataSource::Select( string sql, RowΛ f, const vector<Value>* pValues, SL sl )ε->uint{

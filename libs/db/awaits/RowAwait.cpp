@@ -1,4 +1,4 @@
-#include <jde/db/await/RowAwait.h>
+#include <jde/db/awaits/RowAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/IRow.h>
 
@@ -10,6 +10,6 @@ namespace Jde::DB{
 	}
 
 	α RowAwait::await_resume()ι->vector<up<IRow>>{
-		return _ds->Select( move(_sql), _sl );
+		return _ds->Select( move(_sql), _storedProc, _sl );
 	}
 }

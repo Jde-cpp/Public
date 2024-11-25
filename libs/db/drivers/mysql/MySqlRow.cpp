@@ -26,7 +26,7 @@ namespace Jde::DB::MySql{
 		return value;
 	}
 
-	α ToObject( const mysqlx::Value& value, SL sl )ε->Value{
+	Ω toValue( const mysqlx::Value& value, SL sl )ε->Value{
 		Value v;
 		switch( value.getType() ){
 			using enum mysqlx::Value::Type;
@@ -41,24 +41,25 @@ namespace Jde::DB::MySql{
 		return v;
 	}
 
-	α GetValues( const mysqlx::Row& row, SL sl )->vector<Value>{
+	Ω getValues( const mysqlx::Row& row, SL sl )->vector<Value>{
 		vector<Value> values;
 		for( uint i=0; i<row.colCount(); ++i )
-			values.push_back( ToObject(row[i], sl) );
+			values.push_back( toValue(row[i], sl) );
 		return values;
 	}
 
 	MySqlRow::MySqlRow( const mysqlx::Row& row, SL sl )ε:
-		_values{ GetValues(row, sl) }
+		_values{ getValues(row, sl) }
 	{}
 
 	α MySqlRow::Move()ι->up<IRow>{
-		//using Ptr = std::unique_ptr<IRow, function<void(IRow* r)>>;
-		//return Ptr{ new MySqlRow{ move(*this) }, [](IRow* r){ delete dynamic_cast<MySqlRow*>(r); } };
 		return mu<MySqlRow>( move(*this) );
 	}
 
-	Value MySqlRow::operator[]( uint i )const{
+	α MySqlRow::operator[]( uint i )Ι->const Value&{
+		return _values[i];
+	}
+	α MySqlRow::operator[]( uint i )ι->Value&{
 		return _values[i];
 	}
 
@@ -82,8 +83,12 @@ namespace Jde::DB::MySql{
 		return value.is_null() ? optional<uint>{} : GetUInt( i );
 	}
 
+	α MySqlRow::MoveString( uint i, SL sl )ε->string{
+		auto& value = _values[i];
+		return value.is_null() ? string{} : move(value.get_string());
+	}
 	α MySqlRow::GetString( uint i, SL sl )Ε->string{
-		let& value = _values[i];
+		auto& value = _values[i];
 		return value.is_null() ? string{} : value.get_string();
 	}
 

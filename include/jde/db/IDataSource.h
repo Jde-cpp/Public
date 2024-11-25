@@ -2,12 +2,13 @@
 #ifndef DATA_SOURCE_H
 #define DATA_SOURCE_H
 #include <jde/framework/coroutine/Await.h>
-#include "await/ContainerAwait.h"
-#include "await/DBAwait.h"
+#include "awaits/MapAwait.h"
+#include "awaits/DBAwait.h"
+#include "awaits/ExecuteAwait.h"
+#include "awaits/ScalerAwait.h"
 #include "meta/Column.h"
 #include "meta/View.h"
 #include "IRow.h"
-//#include "meta/DBSchema.h"
 #include "generators/Sql.h"
 
 
@@ -30,7 +31,8 @@ namespace Jde::DB{
 		ẗ SelectEnumSync( const View& table, SRCE )ε->sp<flat_map<K,V>>{ return SFuture<flat_map<K,V>>( SelectEnum<K,V>( table, sl) ).get(); }
 		ẗ SelectMap( string sql, SRCE )ι->SelectAwait<flat_map<K,V>>;
 		ẗ SelectMap( string sql, string cacheName, SRCE )ι->SelectCacheAwait<flat_map<K,V>>;
-		ẗ SelectMultiMap( Sql&& statement, SRCE )Ι->up<TAwait<flat_multimap<K,V>>>;
+		ẗ SelectMap( Sql&& sql, SRCE )Ι->MapAwait<K,V>{ return MapAwait<K,V>{shared_from_this(), move(sql), sl}; }
+		ẗ SelectMultiMap( Sql&& sql, SRCE )Ι->up<TAwait<flat_multimap<K,V>>>;
 		Ŧ SelectSet( string sql, vector<Value>&& params, SL sl )ι->SelectAwait<flat_set<T>>;
 		Ŧ SelectSet( Sql&& sql, SRCE )ι->SelectAwait<flat_set<T>>{ return SelectSet<T>( move(sql.Text), move(sql.Params), sl ); }
 		Ŧ SelectSet( string sql, vector<Value>&& params, string cacheName, SL sl )ι->SelectCacheAwait<flat_set<T>>;
@@ -52,17 +54,20 @@ namespace Jde::DB{
 		β Execute( string sql, vec<Value> params, SRCE )ε->uint=0;
 		β Execute( string sql, const vector<Value>* params, const RowΛ* f, bool isStoredProc=false, SRCE )ε->uint=0;
 		β ExecuteCo( string sql, vector<Value> p, SRCE )ι->up<IAwait> =0;
+		β ExecuteCo( Sql&& sql, SRCE )ι->ExecuteAwait{ return ExecuteAwait{shared_from_this(), move(sql), false, sl}; }
 		β ExecuteNoLog( string sql, const vector<Value>* params, RowΛ* f=nullptr, bool isStoredProc=false, SRCE )ε->uint=0;
 		β ExecuteProc( string sql, vec<Value> params, SRCE )ε->uint=0;
 		β ExecuteProc( string sql, vec<Value> params, RowΛ f, SRCE )ε->uint=0;
 		β ExecuteProcCo( string sql, vector<Value> params, SRCE )ι->up<IAwait> =0;
+		β ExecuteProcCo( Sql&& sql, SRCE )ι->ExecuteAwait{ return ExecuteAwait{shared_from_this(), move(sql), true, sl}; }
+		Ŧ ExecuteScaler( Sql&& sql, SRCE )ι{ return ScalerAwait<T>{ shared_from_this(), move(sql), true, sl }; }
 		β ExecuteProcCo( string sql, vector<Value> params, RowΛ f, SRCE )ε->up<IAwait> =0;
 		β ExecuteProcNoLog( string sql, vec<Value> params, SRCE )ε->uint=0;
 
 		α Select( string sql, RowΛ f, vec<Value> params, SRCE )ε->void;
 		α Select( string sql, RowΛ f, SRCE )ε->void;
 		β Select( string sql, RowΛ f, const vector<Value>* pValues, SRCE )ε->uint=0;
-		β Select( Sql&& s, SRCE )Ε->vector<up<IRow>> =0;
+		β Select( Sql&& s, bool storedProc=false, SRCE )Ε->vector<up<IRow>> =0;
 		β SelectNoLog( string sql, RowΛ f, const vector<Value>* pValues, SRCE )ε->uint=0;
 		α TrySelect( string sql, RowΛ f, SRCE )ι->bool;
 
@@ -115,10 +120,10 @@ namespace Jde::DB{
 	ẗ IDataSource::SelectMap( string sql, string cacheName, SL sl )ι->SelectCacheAwait<flat_map<K,V>>{
 		return SelectCacheAwait<flat_map<K,V>>( shared_from_this(), move(sql), move(cacheName), zInternal::ProcessMapRow<K,V>, {}, sl );
 	}
+
 	ẗ IDataSource::SelectMultiMap( Sql&& s, SL sl )Ι->up<TAwait<flat_multimap<K,V>>>{
 		MultimapAwait<K,V> m{ shared_from_this(), move(s), sl };
 		return mu<MultimapAwait<K,V>>( move(m) );
-		//return mu<MultimapAwait<K,V>>( shared_from_this(), move(s), sl );
 	}
 
 	Ŧ IDataSource::SelectSet( string sql, vector<Value>&& params, SL sl )ι->SelectAwait<flat_set<T>>{

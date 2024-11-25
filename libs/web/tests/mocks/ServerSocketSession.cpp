@@ -1,5 +1,6 @@
 #include "ServerSocketSession.h"
 #include <jde/web/server/IWebsocketSession.h>
+#include <jde/Public/libs/web/server/Streams.h>
 #include "ServerMock.h"
 
 #define let const auto

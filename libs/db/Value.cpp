@@ -72,6 +72,15 @@ namespace Jde::DB{
 		return y;
 	}
 
+	α Value::Move()ι->jvalue{
+		jvalue y;
+		if( Type()==EValue::String )
+			y = std::get<string>( move(Variant) );
+		else
+			ToJson( y );
+		return y;
+	}
+
 	α Value::ToJson( jvalue& j )Ι->void{
 		switch( Type() ){
 			using enum EValue;

@@ -1,10 +1,10 @@
 ﻿#include "GraphQuery.h"
-#include "GraphQL.h"
 #include <jde/ql/ql.h>
-#include <jde/ql/GraphQLHook.h>
+#include <jde/ql/QLHook.h>
 #include <jde/db/Database.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/names.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/View.h>
 #include <jde/db/generators/FromClause.h>
@@ -25,6 +25,7 @@ namespace Jde::QL{
 	}
 	using SubTables=flat_map<string,flat_multimap<uint,jobject>>;//tableName,pk, row
 	Ω query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK userPK, const SubTables* subTables=nullptr )ε->jvalue;
+	α Query( const TableQL& ql, DB::Statement&& statement, UserPK userPK )ε->jvalue;
 	Ω addSubTables( const TableQL& parentQL, const SubTables& subTables, jobject& parent, uint parentId )ι->void;
 	α numberToJson( const DB::Value& dbValue, const DB::Column& c, SRCE )ε->jvalue{
 		jvalue y;
@@ -74,12 +75,12 @@ namespace Jde::QL{
 	}
 	α findMap( const DB::View& dbTable, string qlName )ε->optional<DB::View::ParentChildMap>{
 		optional<DB::View::ParentChildMap> map;
-		if( auto mapTable = find_if(dbTable.Children, [&](auto& c){return c->Map->Child->PKTable->Name==qlName;}); mapTable!=dbTable.Children.end() ) //role_permissions
+		if( auto mapTable = find_if(dbTable.Children, [&](auto& c){return c->Map->Child->PKTable->Name==qlName;}); mapTable!=dbTable.Children.end() ) //role_members
 			map = (*mapTable)->Map;//permissionId
 		return map;
 	}
 
-	α AddColumn( const ColumnQL& c, const TableQL& qlTable, const DB::View& dbTable, DB::Statement& statement, bool excludeId )ε->void{
+	Ω addColumn( const ColumnQL& c, const TableQL& qlTable, const DB::View& dbTable, DB::Statement& statement, bool excludeId )ε->void{
 		auto pk = dbTable.FindPK();
 		let isPK = c.JsonName=="id";
 		if( let table = isPK ? dynamic_cast<const DB::Table*>(&dbTable) : nullptr; table )
@@ -110,26 +111,26 @@ namespace Jde::QL{
 		qlTable.JsonMembers.push_back( {qlTable.JsonName, c.JsonName} );
 	}
 
-	α ColumnSql( const TableQL& qlTable, const DB::View& dbTable, bool excludeId, DB::Statement& statement )->void{
+	Ω columnSql( const TableQL& qlTable, const DB::View& dbTable, bool excludeId, DB::Statement& statement, optional<bool> includeDeleted=nullopt )->void{
 		for( let& c : qlTable.Columns )
-			AddColumn( c, qlTable, dbTable, statement, excludeId );
+			addColumn( c, qlTable, dbTable, statement, excludeId );
 
-		statement.Where += QL::ToWhereClause( qlTable, dbTable, statement.Select.FindColumn("deleted")!=nullptr );
+		statement.Where += QL::ToWhereClause( qlTable, dbTable, includeDeleted.value_or(statement.Select.FindColumn("deleted")!=nullptr) );
 		for( let& qlChild : qlTable.Tables ){
 			auto pFK = findFK( dbTable, qlChild.DBName() ); //members.
-			if( !pFK ){
+/*		if( !pFK ){
 				if( auto pExtendedFromTable = AsTable(dbTable).Extends; pExtendedFromTable ){
-					pFK = pExtendedFromTable->FindFK( pFK->PKTable->Name );
+					pFK = pExtendedFromTable->FindFK( qlChild.DBName() );
 					if( pFK )
 						statement.From.TryAdd( {pExtendedFromTable->GetPK(), dbTable.GetPK(), false} );
 				}
-			}
+			}*/
 			if( pFK ){
 				auto pkTable = pFK->PKTable;
 				if( sp<DB::Table> table = AsTable( pkTable ); table && table->QLView )
 					pkTable = table->QLView;
 				statement.From.TryAdd( {pFK, pkTable->GetPK(), !pFK->IsNullable} );
-				ColumnSql( qlChild, *pkTable, false, statement );
+				columnSql( qlChild, *pkTable, false, statement, includeDeleted );
 			}
 			//else
 			//	Error{ _tags, "Could not extract data {}->{}", dbTable.Name, qlChild.DBName() }; handle in subtables.
@@ -143,15 +144,15 @@ namespace Jde::QL{
 			DB::Statement statement;
 			if( auto map = fk ? fk->Table->Map : nullopt; map ){ //identity_groups.member_id  if not a map, get it in main table.
 				statement.Select.TryAdd( fk->Table->SurrogateKeys[0] );//add identity_id of groups for result.
-				ColumnSql( qlTable, *fk->PKTable, false, statement );
+				columnSql( qlTable, *fk->PKTable, false, statement );
 				statement.From.TryAdd( {fk->PKTable->GetPK(), fk, true} ); //identities join identity_groups
 			}
-			else if( auto map = findMap(parentTable, qlTable.DBName()); map ){ //role_permissions
+			else if( auto map = findMap(parentTable, qlTable.DBName()); map ){ //role_members
 				auto parent = map->Parent; //role_id
 				auto child = map->Child; //permission_id
 				statement.Select.TryAdd( parent );
-				ColumnSql( qlTable, *child->PKTable, false, statement ); //select id, allowed, denied
-				statement.From.TryAdd( {parent->PKTable->GetPK(), parent, true} ); //from roles join role_permissions
+				columnSql( qlTable, *child->PKTable, false, statement ); //select id, allowed, denied
+				statement.From.TryAdd( {parent->PKTable->GetPK(), parent, true} ); //from roles join role_members
 				statement.From.TryAdd( {child, child->PKTable->GetPK(), true} ); //join permissions
 			}
 			else
@@ -197,10 +198,10 @@ namespace Jde::QL{
 	}
 }
 namespace Jde{
-	α QL::SelectStatement( const TableQL& qlTable )ι->optional<DB::Statement>{
+	α QL::SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted )ι->optional<DB::Statement>{
 		let dbView = GetTable( qlTable.DBName() );
 		DB::Statement statement;
-		ColumnSql( qlTable, *dbView, false, statement );
+		columnSql( qlTable, *dbView, false, statement, includeDeleted );
 		if( statement.Empty() )
 			return {};
 		if( statement.From.Empty() )
@@ -232,9 +233,11 @@ namespace Jde{
 			hookExp->second->Throw();
 		if( hookExp->first )
 			return;
+
 		let dbTable = GetTable( qlTable.DBName() );
+		dbTable->Authorize( Access::ERights::Read, userPK, SRCE_CUR );
 		auto statement = SelectStatement( qlTable );
-/*		ColumnSql( qlTable, *dbTable, nullptr, flags, false, nullptr, statement, &jsonMembers );
+/*		columnSql( qlTable, *dbTable, nullptr, flags, false, nullptr, statement, &jsonMembers );
 
 		if( let addId = qlTable.Tables.size() && !qlTable.FindColumn("id") && qlTable.Columns.size(); addId ) //Why?
 			statement.Select.TryAdd( dbTable->GetPK() );
@@ -277,6 +280,11 @@ namespace Jde{
 			}
 		};
 	}
+	α QL::Query( const TableQL& ql, DB::Statement&& statement, UserPK userPK )ε->jvalue{
+		auto dbTable = GetTable( ql.DBName() );
+		return query( ql, move(statement), *dbTable->Schema->DS(), userPK );
+	}
+
 	α QL::query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK userPK, const SubTables* subTables )ε->jvalue{
 		jvalue y;
 		if( ql.IsPlural() )

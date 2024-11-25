@@ -1,10 +1,10 @@
 #include "InsertAwait.h"
-#include <jde/ql/GraphQLHook.h>
 #include <jde/db/Database.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
+#include <jde/access/IAcl.h>
 #include "../GraphQuery.h"
 #include "../types/QLColumn.h"
 
@@ -25,6 +25,7 @@ namespace Jde::QL{
 
 	α InsertAwait::await_ready()ι->bool{
 		try{
+			_table->Authorize( Access::ERights::Create, _userPK, _sl );
 			CreateQuery( *_table, _mutation.Input() );
 		}
 		catch( IException& e ){
@@ -51,7 +52,7 @@ namespace Jde::QL{
 	α InsertAwait::AddStatement( const DB::Table& table, const jobject& input, bool nested, str criteria )ε->void{
 		uint cNonDefaultArgs{};
 		string missingColumnsError{};
-		DB::InsertStatement statement;
+		DB::InsertClause statement;
 		vector<sp<DB::Column>> missingColumns;
 		for( let& c : table.Columns ){
 			if( !c->Insertable )
@@ -65,35 +66,45 @@ namespace Jde::QL{
 					? getEnumValue( *c, qlCol, *jvalue )
 					: Value{ c->Type, *jvalue };
 			}
-			else if( !c->Default && c->Insertable ){ //insertable=not populated by stored proc, may not be an extension record.
+			else if( !c->Default && c->Insertable ){ //insertable=not populated by stored proc, may [not] be an extension record.
 				THROW_IF( !c->PKTable, "No default for {} in {}", c->Name, table.Name );
 				++cNonDefaultArgs;
 				missingColumns.emplace_back( c );//also needs to be inserted, insert null for now.
 			}
 			else if( c->Name==criteria )
 				value = Value{ true };
+/*			else if( auto p = find_if(_statements, [&](let& s){let sequence = s.SequenceColumn(); return sequence && sequence->Name==c->Name;}); p!=_statements.end() ){
+				missingColumns.emplace_back( c );//inserting acl with permission,
+				++cNonDefaultArgs;
+			}*/
 			else
 				value = *c->Default;
 			statement.Add( c, value );
 		}
 		if( (cNonDefaultArgs || missingColumns.size()) && cNonDefaultArgs!=missingColumns.size() ){//don't want to insert just identity_id in users table.
-			_statements.emplace_back( cNonDefaultArgs>0 ? move(statement) : DB::InsertStatement{} );
+			_statements.emplace_back( cNonDefaultArgs>0 ? move(statement) : DB::InsertClause{} );
 			_missingColumns.emplace_back( move(missingColumns) );
 		}
 	}
 
-	α InsertAwait::Execute()ι->MutationAwaits::Task{
+	α InsertAwait::InsertBefore()ι->MutationAwaits::Task{
 		try{
-			co_await Hook::InsertBefore( _mutation, _userPK );
+			optional<jarray> result = co_await Hook::InsertBefore( _mutation, _userPK );
+			let result0 = result ? result->if_contains(0) : nullptr;
+			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){
+				result0->get_object().erase("complete");
+				Resume( move(*result0) );
+				co_return;
+			}
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
 			co_return;
 		}
-		ExecuteProc();
+		Execute();
 	}
 
-	α InsertAwait::ExecuteProc()->Coroutine::Task{
+	α InsertAwait::Execute()ι->Coroutine::Task{
 		uint mainId{};
 		auto& ds = *_table->Schema->DS();
 		try{
@@ -111,21 +122,30 @@ namespace Jde::QL{
 				else
 					( co_await *ds.ExecuteCo(sql.Text, move(sql.Params)) ).CheckError();
 
-
 				auto table = statement.Values.size() ? statement.Values.begin()->first->Table : nullptr;
 				if( auto sequence = statement.Values.size() && table->SurrogateKeys.size() ? table->SurrogateKeys[0] : nullptr; sequence )
 					_nestedIds.emplace( sequence->Name, id );
 				if( !mainId )
 					mainId = id;
 			}
-			ResumeScaler( mainId );
+			InsertAfter( mainId );
 		}
 		catch( IException& e ){
+			_exception = e.Move();
 			InsertFailure();
 			ResumeExp( move(e) );
 		}
 	}
-	α InsertAwait::InsertFailure()->MutationAwaits::Task{
+	α InsertAwait::InsertAfter( uint mainId )ι->MutationAwaits::Task{
+		try{
+			co_await Hook::InsertAfter( mainId, _mutation, _userPK );
+			ResumeScaler( mainId );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α InsertAwait::InsertFailure()ι->MutationAwaits::Task{
 		try{
 			co_await Hook::InsertFailure( _mutation, _userPK );
 			ResumeExp( move(*_exception) );

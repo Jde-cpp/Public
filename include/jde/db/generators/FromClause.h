@@ -8,7 +8,7 @@ namespace Jde::DB{
 		//Join( sp<Column> from, sp<Column> to, bool inner )ι:From{from},To{to},Inner{inner}{}
 		sp<Column> From;
 		sp<Column> To;
-		bool Inner;
+		bool Inner{};
 		string ToAlias;
 	};
 	struct FromClause final{
