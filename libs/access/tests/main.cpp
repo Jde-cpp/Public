@@ -13,22 +13,27 @@ namespace Jde{
 	α OSApp::ProductName()ι->sv{ return "Tests.UM"; }
 
  	α Startup( int argc, char **argv, bool& set )ε->Access::ConfigureAwait::Task{
-#ifdef _MSC_VER
-		ASSERT( Settings::Get<uint>("/workers/drive/threads")>0 )
-#endif
-		ASSERT( argc>1 && string{argv[1]}=="-c" )
-		OSApp::Startup( argc, argv, OSApp::ProductName(), "UM tests" );
+		try{
+	#ifdef _MSC_VER
+			ASSERT( Settings::Get<uint>("/workers/drive/threads")>0 )
+	#endif
+			ASSERT( argc>1 && string{argv[1]}=="-c" )
+			OSApp::Startup( argc, argv, OSApp::ProductName(), "UM tests" );
 
-		let metaDataName{ "access" };
-		sp<Access::IAcl> authorize = Access::LocalAcl();
-		auto schema = DB::GetAppSchema( metaDataName, authorize );
-		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
-			DB::NonProd::Recreate( *schema );
-		co_await Access::Configure( schema );
-		QL::Configure( {schema} );
+			let metaDataName{ "access" };
+			sp<Access::IAcl> authorize = Access::LocalAcl();
+			auto schema = DB::GetAppSchema( metaDataName, authorize );
+			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
+				DB::NonProd::Recreate( *schema );
+			co_await Access::Configure( schema );
+			QL::Configure( {schema} );
 
-		Access::Tests::SetSchema( schema );
-		set = true;
+			Access::Tests::SetSchema( schema );
+			set = true;
+		}
+		catch( IException& e ){//don't want unhandeled exception routine.
+			e.Throw();
+		}
 	}
 }
 

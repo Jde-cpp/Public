@@ -12,6 +12,7 @@ namespace Jde::Access{
 	α GetTable( str name )ε->sp<DB::View>;
 	α AddAcl( IdentityPK identityPK, uint permissionPK, ERights allowed, ERights denied, ResourcePK resourcePK )ι->void;
 	α AddAcl( IdentityPK identityPK, RolePK rolePK )ι->void;
+	α AuthorizeAdmin( ResourcePK resourcePK, UserPK userPK, SL sl )ε->void;
 	α UpdatePermission( PermissionPK permissionPK, optional<ERights> allowed, optional<ERights> denied )ε->void;
 	α CreateResource( Resource&& args )ε->void;
 	α UpdateResourceDeleted( str schemaName, const jobject& args, bool restored )ε->void;
@@ -84,7 +85,8 @@ namespace Jde::Access{
 				let allowed = (ERights)Json::FindNumber<uint8>( permission, "allowed" ).value_or(0);
 				let denied = (ERights)Json::FindNumber<uint8>( permission, "denied" ).value_or(0);
 				let resourcePK = Json::AsNumber<ResourcePK>( permission, "resource/id" );
-				DB::InsertClause insert{ table->InsertProcName()+"_permission" };
+				AuthorizeAdmin( resourcePK, UserPK, _sl );
+				DB::InsertClause insert{ table->UpsertProcName()+"_permission" };
 				insert.Add( identityPK );
 
 				insert.Add( underlying(allowed) );
@@ -299,7 +301,7 @@ namespace Jde::Access{
 								if( !right )
 									right = &entry["permissionRight"].emplace_object();
 								if( column->Table->Name=="permission_rights" )
-									(*right)[key] = value.Move();
+									(*right)[key=="permissionId" ? "id" : key] = value.Move();
 								else{
 									if( !resource )
 										resource = &(*right)["resource"].emplace_object();

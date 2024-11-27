@@ -36,7 +36,7 @@ namespace Jde::Web::Server{
 		α LogRead( str text="", SRCE )Ι->void;
 		template<class T=http::string_body>
 		α Response( http::status status=http::status::ok )Ι->http::response<T>;
-		α Response( jobject j, SRCE )Ι->http::response<http::string_body>;
+		α Response( jvalue j, SRCE )Ι->http::response<http::string_body>;
 		sp<Server::SessionInfo> SessionInfo;
 		const tcp::endpoint UserEndpoint;
 		flat_map<string,string> ResponseHeaders;

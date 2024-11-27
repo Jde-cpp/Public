@@ -32,6 +32,7 @@ namespace Jde{
 		α AsObject( const jvalue& v, sv path, SRCE )ε->const jobject&;
 		α AsObject( const jobject& o, sv key, SRCE )ε->const jobject&;
 		α AsObjectPath( const jobject& o, sv path, SRCE )ε->const jobject&;
+		α AsTimePointOpt( const jobject& o, sv key )ι->optional<TimePoint>;
 
 #undef $
 		Ξ FindValue( const jvalue& v, sv path )ι->optional<jvalue>{ auto y = v.try_at_pointer(path); return y.has_value() ? *y : optional<jvalue>{}; }

@@ -10,25 +10,30 @@
 #define let const auto
 namespace Jde::Access{
 	α GetTable( str name )ε->sp<DB::View>;
+	α AuthorizeAdmin( str resource, UserPK userPK, SL sl )ε->void;
 
 	struct RoleMutationAwait final : TAwait<jvalue>{
-		RoleMutationAwait( const QL::MutationQL& m, SL sl )ι:TAwait<jvalue>{ sl },Mutation{ m } {}
+		RoleMutationAwait( const QL::MutationQL& m, UserPK userPK, SL sl )ι:TAwait<jvalue>{ sl }, Mutation{m}, _userPK{userPK}{}
 		α Suspend()ι->void override{ if(Mutation.Type==QL::EMutationQL::Remove) Remove(); else Add(); }
-		QL::MutationQL Mutation;
 	private:
 		α Add()ι->TAwait<PermissionPK>::Task;
 		α Remove()ι->TAwait<PermissionPK>::Task;
+
+		QL::MutationQL Mutation;
+		UserPK _userPK;
 	};
 
 	//{ mutation addRole( id:42, allowed:255, denied:0, resource:{target:"users"} ) }
 	α RoleMutationAwait::Add()ι->TAwait<PermissionPK>::Task{
 		try{
+			const string resource{ Json::AsSVPath(Mutation.Args, "resource/target") };
+			AuthorizeAdmin( resource, _userPK, _sl );
 			let table = GetTable( "roles" );
 			DB::InsertClause insert{ DB::Names::ToSingular(table->DBName)+"_add" };
 			insert.Add( Json::AsNumber<RolePK>(Mutation.Args, "id") );
 			insert.Add( Json::FindNumber<uint8>(Mutation.Args, "allowed").value_or(0) );
 			insert.Add( Json::FindNumber<uint8>(Mutation.Args, "denied").value_or(0) );
-			insert.Add( string{Json::AsSVPath(Mutation.Args, "resource/target")} );
+			insert.Add( resource );
 			let permissionPK = co_await table->Schema->DS()->ExecuteScaler<PermissionPK>( insert.Move() );
 			jobject y;
 			y["id"] = permissionPK;
@@ -161,10 +166,10 @@ namespace Jde::Access{
 	}
 
 	α RoleHook::Add( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.TableName()=="roles" ? mu<RoleMutationAwait>( m, sl ) : nullptr;
+		return m.TableName()=="roles" ? mu<RoleMutationAwait>( m, userPK, sl ) : nullptr;
 	}
 
 	α RoleHook::Remove( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.TableName()=="roles" ? mu<RoleMutationAwait>( m, sl ) : nullptr;
+		return m.TableName()=="roles" ? mu<RoleMutationAwait>( m, userPK, sl ) : nullptr;
 	}
 }

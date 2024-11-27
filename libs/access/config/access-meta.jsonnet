@@ -56,8 +56,6 @@ local targetNKs = [valuesNK, ["target"]];
 local rights = ["None", "Create", "Read", "Update", "Delete", "Purge", "Administer", "Subscribe", "Execute"];
 local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"];
 {
-	scripts: ["providers_ql.sql", "group_members.sql", "provider_purge.sql", "user_insert.sql", "user_insert_key.sql", "user_insert_login.sql",
-	"acl_insert_permission.sql", "acl_insert_role.sql", "role_insert.sql", "role_add.sql", "role_remove.sql", "role_purge.sql"],
 	local tables = self.tables,
 	views:{
 		groupMembers:{

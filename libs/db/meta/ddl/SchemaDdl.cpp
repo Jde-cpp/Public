@@ -141,24 +141,25 @@ namespace Jde::DB{
 			}
 		}
 	}
-	α SchemaDdl::SyncScripts( const AppSchema& config, const jobject& initConfig )->void{
-		let& syntax = config.DS()->Syntax();
+	α SchemaDdl::SyncScripts( const AppSchema& config, const jobject& initConfig )ε->void{
+		//let& syntax = config.DS()->Syntax();
 		let configPrefix = Json::FindString( initConfig, "prefix" ).value_or("");
-		let stdPrefix = config.Name+"_";
+		let stdPrefix = config.Name+"_"; //access_
 		let scriptPath = Settings::FindString( "/dbServers/scriptPath" );
 		const fs::path scriptRoot{ scriptPath.value_or("./") };
-		let& scripts = Json::FindDefaultArray( initConfig, "scripts" );
-//		let& scripts = Json::AsArray( initConfig, "scripts" );
-		for( let& script : scripts ){
-			auto scriptFile = fs::path{ Json::AsString(script) }; //user_insert.sql
+		THROW_IF( !fs::exists(scriptRoot) || !fs::is_directory(scriptRoot), "Script path '{}' does not exist.", scriptRoot.string() );
+    for( let& entry : fs::directory_iterator(scriptRoot) ){
+			let& scriptFile = entry.path();
+			if( scriptFile.extension()!=".sql" || scriptFile.string().starts_with(".") )
+				continue;
 			let procName = configPrefix+scriptFile.stem().string(); //[access_]user_insert
 			if( Procs.find(procName)!=Procs.end() )
 				continue;
-			if( syntax.ProcFileSuffix().size() )//.ms
-				scriptFile = scriptFile.parent_path()/( scriptFile.stem().string()+string{syntax.ProcFileSuffix()}+scriptFile.extension().string() );
-			let path = scriptRoot/( stdPrefix+scriptFile.string() );
-			let text = IO::FileUtilities::Load( path );
-			Trace{ _tags, "Executing '{}'", path.string() };
+			//if( syntax.ProcFileSuffix().size() )//.ms
+			//	scriptFile = scriptFile.parent_path()/( scriptFile.stem().string()+string{syntax.ProcFileSuffix()}+scriptFile.extension().string() );
+			//let path = scriptRoot/( stdPrefix+scriptFile.string() );
+			let text = IO::FileUtilities::Load( scriptFile );
+			Trace{ _tags, "Executing '{}'", scriptFile.string() };
 			let queries = Str::Split<sv,iv>( text, "\ngo"_iv );
 			for( let& text : queries ){
 				let query = Str::Replace( text, stdPrefix, configPrefix );
@@ -171,7 +172,7 @@ namespace Jde::DB{
 				}
 				config.DS()->Execute( os.str(), nullptr, nullptr, false ); //TODO! - add views for app server. ??
 			}
-			Information{ _tags, "Finished '{}'", path.string() };
+			Information{ _tags, "Finished '{}'", scriptFile.string() };
 		}
 	}
 

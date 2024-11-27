@@ -27,6 +27,8 @@ namespace Jde::Access{
 	struct Authorize : IAcl{
 		Authorize()ε{}
 		α Test( str schemaName, str resourceName, ERights rights, UserPK userPK, SRCE )ε->void override;
+		α TestAdmin( str resource, UserPK userPK, SL sl )ε->void;
+		α TestAdmin( ResourcePK resourcePK, UserPK userPK, SL sl )ε->void;
 		α CalculateUsers( flat_set<UserPK>&& users, const ul& l )ι->void;
 		α RecalcGroupMembers( GroupPK groupPK, const ul& l, bool remove=false )ι->void;
 		α Recalc( const ul& l )ι->void;
@@ -43,6 +45,8 @@ namespace Jde::Access{
 		flat_multimap<GroupPK,UserPK> GroupMembers;
 		flat_map<RolePK,flat_set<PermissionRole>> RoleMembers;
 		flat_multimap<IdentityPK,PermissionRole> Acl;
+	private:
+		α TestAdmin( const Resource& resource, UserPK userPK, SL sl )ε->void;
 	};
 
 	sp<Authorize> _authorize = ms<Authorize>();
@@ -63,7 +67,34 @@ namespace Jde::Access{
 		}
 		else
 			throw Exception{ sl, ELogLevel::Debug, "[{}]User not found.", userPK };
+	}
 
+	α Authorize::TestAdmin( ResourcePK resourcePK, UserPK userPK, SL sl )ε->void{
+		Jde::sl _{Mutex};
+		auto resource=Resources.find( resourcePK );
+		if( resource!=Resources.end() && !resource->second.Deleted )
+			TestAdmin( resource->second, userPK, sl );
+	}
+	α Authorize::TestAdmin( str resourceTarget, UserPK userPK, SL sl )ε->void{
+		Jde::sl l{ _authorize->Mutex };
+		auto resource = find_if( Resources, [&](let& r){ return r.second.Target==resourceTarget; } );
+		if( resource!=Resources.end() && !resource->second.Deleted )
+			TestAdmin( resource->second, userPK, sl );
+	}
+	α Authorize::TestAdmin( const Resource& resource, UserPK userPK, SL sl )ε->void{
+		auto user = Users.find(userPK);
+		THROW_IFSL( user==Users.end(), "[{}]User not found.", userPK );
+		THROW_IFSL( user->second.Deleted, "[{}]User is deleted.", userPK );
+		let configured = user->second.ResourceRights( resource.PK );
+		THROW_IFSL( !empty(configured.Denied & ERights::Administer), "[{}]User denied admin access to '{}'.", userPK, resource.Target );
+		THROW_IFSL( empty(configured.Allowed & ERights::Administer), "[{}]User does not have admin access to '{}'.", userPK, resource.Target );
+	}
+
+	α AuthorizeAdmin( ResourcePK resourcePK, UserPK userPK, SL sl )ε->void{
+		_authorize->TestAdmin( resourcePK, userPK, sl );
+	}
+	α AuthorizeAdmin( str resource, UserPK userPK, SL sl )ε->void{
+		_authorize->TestAdmin( resource, userPK, sl );
 	}
 
 	ConfigureAwait::ConfigureAwait()ι

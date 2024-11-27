@@ -41,10 +41,10 @@ namespace Jde::Web::Server{
 		}
 	}
 
-	α HttpRequest::Response( jobject j, SL sl )Ι->http::response<http::string_body>{
+	α HttpRequest::Response( jvalue j, SL sl )Ι->http::response<http::string_body>{
 		auto y = Response<http::string_body>();
-		if( !j.empty() )
-			y.body() = serialize(j);
+		//if( !j.empty() )
+		y.body() = serialize( move(j) );
 		y.prepare_payload();
 		Trace{ sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) };
 		return y;

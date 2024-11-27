@@ -170,10 +170,10 @@ namespace Tests{
 	α Tests::GetUser( str target, UserPK userPK, bool includeDeleted, EProviderType provider )ε->jobject{
 		if( userPK==0 )
 			userPK = GetRoot();
-		auto user = SelectUser( target, userPK, true );
+		auto user = SelectUser( target, userPK, includeDeleted );
 		if( user.empty() ){
 			createUser( target, provider, userPK );
-			user = SelectUser( target, userPK );
+			user = SelectUser( target, userPK, includeDeleted );
 		}
 		return user;
 	}

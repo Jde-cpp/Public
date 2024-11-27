@@ -21,11 +21,12 @@ namespace Jde::Access::Tests{
 	}
 
 	TEST_F( ResourceTests, CheckDefaults ){
-		let ql = "query{ resources( schemaName:\"access\" ){ id allowed denied name attributes created deleted updated target description } }";
+		let ql = "query{ resources( schemaName:\"access\", criteria:null ){ id allowed denied name attributes created deleted updated target description } }";
 		let qlResult = QL::Query( ql, 0 );
 		let& resources = Json::AsArrayPath( qlResult, "resources" );
-		ASSERT_EQ( resources.size(), 4 ); //"users", identityGroups", "providerTypes", "roles", "resources"
+		ASSERT_EQ( resources.size(), 4 ); //"users", identityGroups", "roles", "resources"
 		constexpr ERights base = ERights::Create | ERights::Read | ERights::Update | ERights::Delete | ERights::Purge | ERights::Administer;
+		Trace{ ELogTags::Test, "base={:x}"sv, underlying(base) };
 		for( let& v : resources ){
 			let& o = Json::AsObject( v );
 			let target = Json::AsSV( o, "target" );
@@ -33,7 +34,7 @@ namespace Jde::Access::Tests{
 			//let denied = ToRights( Json::AsArray(o, "denied") );
 			auto expected = base;
 			if( target=="users" )
-				allowed = base | ERights::Execute;
+				expected = base | ERights::Execute;
 			ASSERT_EQ( expected, allowed ) << "target=" << target;
 		}
 	}

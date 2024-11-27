@@ -48,7 +48,7 @@ namespace Server{
 			co_await RunSession( stream, buffer, move(userEndpoint), false, index, cancel );
 	}
 
-	α Send( HttpRequest&& req, sp<RestStream> stream, jobject j, SRCE )ι->void{
+	α Send( HttpRequest&& req, sp<RestStream> stream, jvalue j, SRCE )ι->void{
 		auto res = req.Response( move(j), sl );
 		stream->AsyncWrite( move(res) );
 	}
@@ -64,7 +64,8 @@ namespace Server{
 			let sessionId = req.SessionInfo->SessionId;
 			req.LogRead( query );
 			string threadDesc = Jde::format( "[{:x}]{}", sessionId, req.Target() );
-			let y = co_await QL::QLAwait{move(query), req.UserPK() };
+			auto y = co_await QL::QLAwait{move(query), req.UserPK() };
+
 			Send( move(req), move(stream), move(y) );
 		}
 		catch( IRestException& e ){

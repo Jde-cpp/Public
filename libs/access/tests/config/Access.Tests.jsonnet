@@ -1,10 +1,10 @@
 {
 	testing:{
-		tests:: "RoleTests.AddRemove",
-		recreateDB:: true
+		tests:: "AclTests.DeletedUser",
+		recreateDB: true
 	},
 	dbServers: {
-		scriptPath: "$(JDE_DIR)/Public/libs/access/config/sql",
+		scriptPath: "$(JDE_DIR)/Public/libs/access/config/sql/mysql",
 		localhost:{
 			driver: "$(JDE_DIR)/bin/asan/libJde.MySql.so",
 			connectionString: "$(JDE_CONNECTION)",

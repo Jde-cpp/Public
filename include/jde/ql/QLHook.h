@@ -63,7 +63,7 @@ namespace Jde::QL{
 		α await_ready()ι->bool override;
 		α Suspend()ι->void override;
 		α Execute()ι->IMutationAwait::Task;
-		α await_resume()ι->optional<jarray> override;
+		α await_resume()ε->optional<jarray> override;
 	private:
 		vector<up<TAwait<jvalue>>> _awaitables;
 		MutationQL _mutation;

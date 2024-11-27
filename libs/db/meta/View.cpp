@@ -139,6 +139,9 @@ constexpr Access::ERights DefaultOps{ Access::ERights::Create | Access::ERights:
 		let haveSequence = find_if( Columns, [](let& c){return c->IsSequence;} )!=Columns.end();
 		return !haveSequence && !HasCustomInsertProc ? string{} : Ƒ( "{}_insert", Names::ToSingular(DBName) );
 	}
+	α View::UpsertProcName()Ι->string{
+		return Ƒ( "{}_upsert", Names::ToSingular(DBName) );
+	}
 
 	α View::IsEnum()Ι->bool{
 		return QLView ? QLView->IsEnum() : Columns.size()==2 && Columns[1]->Name=="name";

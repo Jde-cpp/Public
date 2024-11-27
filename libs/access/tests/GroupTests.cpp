@@ -23,13 +23,13 @@ namespace Jde::Access{
 	TEST_F( GroupTests, Fields ){
 		//const QL::TableQL ql{ "" };
 		let query = "{ __type(name: \"IdentityGroup\") { fields { name type { name kind ofType{name kind ofType{name kind ofType{name kind}}} } } } }";
-		let json = QL::Query( query, 0 );
+		let actual = QL::Query( query, 0 );
 		auto obj = Json::ReadJsonNet( Ƒ("{}/Public/libs/access/config/access-ql.jsonnet", OSApp::EnvironmentVariable("JDE_DIR").value_or("./")) );
 		QL::Introspection intro{ move(obj) };
-		jobject expected;
 		QL::RequestQL request = QL::Parse( query );
-		expected["data"].emplace_object()["__type"] = intro.Find("IdentityGroup")->ToJson( get<0>(request)[0].Tables[0] );
-		ASSERT_EQ( serialize(json), serialize(expected) );
+		jobject expected;
+		expected["__type"] = intro.Find("IdentityGroup")->ToJson( get<0>(request)[0].Tables[0] );
+		ASSERT_EQ( serialize(actual), serialize(expected) );
 	}
 
 	TEST_F( GroupTests, Crud ){

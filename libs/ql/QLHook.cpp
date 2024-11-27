@@ -141,7 +141,7 @@ namespace Jde::QL{
 			ResumeExp( move(e) );
 		}
 	}
-	α MutationAwaits::await_resume()ι->optional<jarray>{
+	α MutationAwaits::await_resume()ε->optional<jarray>{
 		return Promise()
 			? TAwait<optional<jarray>>::await_resume()
 			: optional<jarray>{};

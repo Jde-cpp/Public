@@ -25,7 +25,7 @@ namespace Jde::Access::Tests{
 	}
 	α AddRolePermission( RolePK rolePK, sv resourceName, ERights allowed, ERights denied, UserPK userPK )ε->jobject{
 		auto y = GetRolePermission( rolePK, resourceName, userPK );
-		let member = Json::FindDefaultObjectPath( y, "role/member" );
+		let member = Json::FindDefaultObjectPath( y, "role/permissionRight" );
 		if( !member.empty() ){
 			let existingAllowed = ToRights( Json::AsArray(member, "allowed") );
 			let existingDenied = ToRights( Json::AsArray(member, "denied") );
@@ -48,16 +48,12 @@ namespace Jde::Access::Tests{
 		TestPurge( "role", pk, GetRoot() );
 	}
 	TEST_F( RoleTests, AddRemove ){
-		DS().Execute( "delete from role_members" );
-		DS().Execute( "delete from roles" );
+		//DS().Execute( "delete from role_members" );
+		//DS().Execute( "delete from roles" );
 		let rolePK = GetId( Get("role", "rolePermissionsTest", GetRoot()) );
 		auto initial = AddRolePermission( rolePK, "users", ERights::All, ERights::None, GetRoot() );
 		ASSERT_EQ( ToRights( Json::AsArrayPath(initial, "role/permissionRight/allowed") ), ERights::All );
 		ASSERT_EQ( ToRights( Json::AsArrayPath(initial, "role/permissionRight/denied") ), ERights::None );
-
-		//auto updated = AddRolePermission( rolePK, "users", ERights::Read, ERights::Update, GetRoot() );
-		//ASSERT_EQ( ToRights( Json::AsArrayPath(updated, "role/permissionRight/allowed") ), ERights::Read );
-		//ASSERT_EQ( ToRights( Json::AsArrayPath(updated, "role/permissionRight/denied") ), ERights::Update );
 
 		RemoveRolePermission( rolePK, Json::AsNumber<PermissionPK>(initial, "role/permissionRight/id"), GetRoot() );
 		auto roleMember = GetRolePermission( rolePK, "users", GetRoot() );

@@ -33,6 +33,14 @@ namespace Jde::QL{
 		}
 		return filters;
 	}
+	α TableQL::FindTable( sv jsonTableName )Ι->const TableQL*{
+		const TableQL* y{};
+		if( auto p = find_if( Tables, [&](let& t){return t.JsonName==jsonTableName;}); p!=Tables.end() )
+			y = &*p;
+		else if( auto p = find_if( Tables.begin(), Tables.end(), [&](let& t){return t.JsonName==DB::Names::ToSingular(jsonTableName);}); p!=Tables.end() )
+			y = &*p;
+		return y;
+	}
 
 	α ColumnQL::QLType( const DB::Column& column, SL sl )ε->string{
 		string qlTypeName = "ID";
