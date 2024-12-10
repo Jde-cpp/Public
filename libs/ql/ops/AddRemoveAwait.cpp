@@ -66,12 +66,22 @@ namespace Jde::QL{
 				auto a = _table->Schema->DS()->ExecuteCo( sql, params, _sl );
 				result += *( co_await *a ).UP<uint>();
 			}
-			ResumeScaler( result );
+			AddAfter( result );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
 	}
+	α AddRemoveAwait::AddAfter( jvalue v )ι->MutationAwaits::Task{
+		try{
+			co_await Hook::AddAfter( move(_mutation), _userPK );
+			Resume( move(v) );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
+	}
+
 	α AddRemoveAwait::Remove()->Coroutine::Task{
 		let& map = *_table->Map;
 		let sql = Ƒ( "delete from {} where {}=? and {}=?", _table->Name, map.Parent->Name, map.Child->Name );
@@ -82,7 +92,16 @@ namespace Jde::QL{
 				auto a = _table->Schema->DS()->ExecuteCo( sql, params, _sl );
 				result += *( co_await *a ).UP<uint>();
 			}
-			Resume( jvalue{result} );
+			RemoveAfter( result );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α AddRemoveAwait::RemoveAfter( jvalue v )ι->MutationAwaits::Task{
+		try{
+			co_await Hook::AddAfter( move(_mutation), _userPK );
+			Resume( move(v) );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );

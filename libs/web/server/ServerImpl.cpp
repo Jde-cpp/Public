@@ -1,6 +1,5 @@
 ﻿#include "ServerImpl.h"
 #include <jde/crypto/OpenSsl.h>
-//#include <jde/web/server/Server.h>
 #include <jde/web/server/IApplicationServer.h>
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/server/IRequestHandler.h>
@@ -11,7 +10,7 @@
 
 namespace Jde::Web{
 	up<Server::IApplicationServer> _appServer;
-	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<jobject>>{ return _appServer->GraphQL( move(q), userPK, sl ); }
+	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{ return _appServer->GraphQL( move(q), userPK, sl ); }
 	α Server::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<App::Proto::FromServer::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
 
 	sp<net::cancellation_signal> _cancelSignal;
@@ -152,8 +151,10 @@ namespace Server{
 
 	α Listen( tcp::endpoint endpoint )ι->net::awaitable<void, executor_type>{
 		typename tcp::acceptor::rebind_executor<executor_with_default>::other acceptor{ co_await net::this_coro::executor };
-		if( !InitListener(acceptor, endpoint) )
+		if( !InitListener(acceptor, endpoint) ){
+			Debug{ ELogTags::App, "!InitListener" };
 			co_return;
+		}
 
 		Trace( ELogTags::App, "Web Server accepting." );
 		_started.test_and_set();
@@ -176,10 +177,10 @@ namespace Server{
 		if( !_ctx )
 			LoadServerCertificate();
 
-		let port = Settings::FindNumber<PortType>( "http/port" ).value_or( 6809 );
-
+		let port = Settings::FindNumber<PortType>( "/http/port" ).value_or( 6809 );
 		_cancelSignal = ms<net::cancellation_signal>();
-		auto address = tcp::endpoint{ net::ip::make_address(Settings::FindSV("http/address").value_or("0.0.0.0")), port };
+		let addressString = Settings::FindSV("http/address").value_or("0.0.0.0");
+		let address = tcp::endpoint{ net::ip::make_address(addressString), port };
 		net::co_spawn( *Executor(), Listen(address), net::bind_cancellation_slot(_cancelSignal->slot(), net::detached) );
 		Execution::AddCancelSignal( _cancelSignal );
 		Execution::Run();
@@ -193,7 +194,7 @@ namespace Server{
 		_started.notify_all();
 		if( _cancelSignal )
 			_cancelSignal->emit( net::cancellation_type::all );
-		_cancelSignal = nullptr;
+//		_cancelSignal = nullptr; heap use after free.
 		_ctx.reset();
 	}
 }

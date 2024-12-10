@@ -4,6 +4,17 @@
 
 #define let const auto
 namespace Jde::DB{
+	Ω getParams( vector<Value>&& values )ι->vector<std::pair<sp<Column>,Value>>{
+		vector<std::pair<sp<Column>,Value>> params;
+		for( auto& v : values )
+			params.emplace_back( std::make_pair(sp<Column>{}, move(v)) );
+		return params;
+	}
+	InsertClause::InsertClause( sv name, vector<Value>&& params )ι:
+		Values{ getParams(move(params)) },
+		_procName{ name }
+	{}
+
 	α InsertClause::Move()ι->DB::Sql{
 		DB::Sql sql;
 		if( _procName )

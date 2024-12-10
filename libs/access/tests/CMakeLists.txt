@@ -32,7 +32,7 @@ else()
 	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} Boost::json )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} jsonnet++ ) #libjsonnet.a  libryml.a
+	target_link_libraries( ${CMAKE_PROJECT_NAME} jsonnet++ )
 endif()
 target_link_libraries( ${CMAKE_PROJECT_NAME} gtest_main )
 target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.Access Jde.QL Jde.DB )

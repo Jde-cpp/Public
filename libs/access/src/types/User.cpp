@@ -24,7 +24,7 @@ namespace Jde::Access{
 		let ds = userTable->Schema->DS();
 		try{
 			DB::SelectClause select{ {userTable->GetPK(), userTable->GetColumnPtr("deleted")} };
-			DB::Statement statement{ move(select), {userTable}, {userTable->GetColumnPtr("is_group"), DB::Value{false}} };
+			DB::Statement statement{ move(select), {userTable}, {userTable->GetColumnPtr("is_group"), false} };
 			auto users = co_await ds->SelectMap<UserPK,optional<TimePoint>>( statement.Move() );
 			[]( auto& self, auto ds, auto users )ι->TAwait<flat_multimap<GroupPK,IdentityPK>>::Task {
 				try{

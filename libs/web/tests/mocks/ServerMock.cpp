@@ -1,11 +1,12 @@
 #include "ServerMock.h"
 #include <jde/web/server/IApplicationServer.h>
+#include <jde/web/server/Server.h>
 
 namespace Jde::Web{
 	optional<std::jthread> _webThread;
 
 	struct ApplicationServer final : Server::IApplicationServer{
-		β GraphQL( string&&, UserPK, SL )ι->up<TAwait<json>>{ return {}; }
+		β GraphQL( string&&, UserPK, SL )ι->up<TAwait<jobject>>{ return {}; }
 		β SessionInfoAwait( SessionPK, SL )ι->up<TAwait<App::Proto::FromServer::SessionInfo>>{ return {}; }
 	};
 

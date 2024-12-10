@@ -21,7 +21,7 @@ namespace Jde::Web{
 		HeaderBodyEncoded = Str::Encode64( serialize(head), true )+ "." + Str::Encode64( serialize(Body), true );
 		Signature = Crypto::RsaSign( HeaderBodyEncoded, privateKeyPath );
 	}
-	Jwt::Jwt( str encoded )ε{
+	Jwt::Jwt( sv encoded )ε{
 		let fpIndex = encoded.find_last_of( '.' );
 		let bodyIndex = encoded.find_first_of( '.' );
 		if( fpIndex==string::npos || fpIndex==encoded.size() || bodyIndex==string::npos || fpIndex==bodyIndex )
@@ -33,7 +33,7 @@ namespace Jde::Web{
 			THROW( "Invalid jwt.  Expected alg=RS256, found '{}'.", alg );
 		if( auto type = Json::AsSV(header, "typ"); type!="JWT" )
 			THROW( "Invalid jwt.  Expected typ=JWT, found '{}'.", type );
-		Kid = Json::AsSV( header, "kid" );
+		Kid = Json::FindSV( header, "kid" ).value_or( "" );
 		Signature = Str::Decode64<Crypto::Signature>( encoded.substr(fpIndex+1, HeaderBodyEncoded.find_first_of('=')), true );
 		Body = Json::Parse( Str::Decode64(HeaderBodyEncoded.substr(bodyIndex+1 ), true) );
 		SetModulus( Json::AsString(Body, "n") );

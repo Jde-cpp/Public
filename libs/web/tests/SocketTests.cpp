@@ -3,9 +3,8 @@
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/client/Jwt.h>
 #include "../../../../Framework/source/math/MathUtilities.h"
-//#include "../../../Framework/source/io/AsioContextThread.h"
+#include <jde/framework/thread/execution.h>
 #include <jde/web/client/http/ClientHttpAwait.h>
-
 #include "mocks/ClientSocketSession.h"
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
@@ -88,7 +87,7 @@ namespace Jde::Web{
 			Crypto::CryptoSettings settings{ "http/ssl" };
 			auto [mod,exp] = Crypto::ModulusExponent( settings.PublicKeyPath );
 			Web::Jwt jwt{ move(mod), move(exp), "testUser", "testUserCallSign", "127.0.0.1", {}/*description*/, settings.PrivateKeyPath };
-			auto await = ClientHttpAwait{ Host, "/CertificateLogin", json{{"jwt", jwt.Payload()}}.dump(), Port };
+			auto await = ClientHttpAwait{ Host, "/CertificateLogin", serialize(jobject{{"jwt", jwt.Payload()}}), Port };
 			let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 			_sessionId = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 			Information( ELogTags::Test, "({:x})Loggin Complete.", _sessionId );//TODOBuild change to test
@@ -153,11 +152,17 @@ namespace Jde::Web{
 		WAIT;
 		Close();
 		Wait();
-		let msg = Jde::format( "(1)[{:x}]Server::DoRead - The WebSocket stream was gracefully closed at both endpoints", _pSession->Id() );
-		let msgId = Calc32RunTime( msg );
+		let sessionId = _pSession->Id();
 		_pSession = nullptr;
 		std::this_thread::sleep_for( 100ms );
-		auto logs = FindMemoryLog( msgId );
+		auto logs = FindMemoryLog( [=](const Logging::ExternalMessage& m){
+			//"(1)The WebSocket stream was gracefully closed at both endpoints - [{:x}]Server::DoRead"
+			// if( m.Args.size()==3 ){
+			// 	auto f = Ƒ( "{}|{}|{}", m.Args[0], m.Args[1], m.Args[2] );
+			// 	std::cout << f << std::endl;
+			// }
+			return m.Args.size()==3 && m.Args[0]=="1" && m.Args[1]=="The WebSocket stream was gracefully closed at both endpoints" && m.Args[2]==Ƒ("[{:x}]Server::DoRead", sessionId);
+		});
 		ASSERT_TRUE( logs.size()>0 );
 	}
 

@@ -77,10 +77,8 @@ namespace Jde{
 	}
 
 
-	α DB::SyncSchema( str metaName, sp<Access::IAcl> authorize )ε->sp<AppSchema>{
-		auto schema = GetAppSchema( metaName, authorize );
-		SchemaDdl::Sync( *schema );
-		return schema;
+	α DB::SyncSchema( AppSchema& schema )ε->void{
+		SchemaDdl::Sync( schema );
 	}
 }
 

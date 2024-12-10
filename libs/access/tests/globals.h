@@ -46,6 +46,8 @@ namespace Jde::Access::Tests{
 //	α TestUpdateName( str table, uint id, UserPK userPK, sv update="newName" )ε->void;
 
 	α TestUnauthCrud( str table, str target, UserPK userPK )ε->uint;
+	α TestUnauthUpdateName( str table, uint id, UserPK userPK, sv updatedName )ε->void;
+	α TestUnauthDeleteRestore( str table, uint id, UserPK userPK )ε->void;
 	α TestUnauthAddRemove( str tableName, uint groupId, vector<uint> members, UserPK userPK )->void;
 	α TestUnauthPurge( str table, uint id, UserPK userPK )ε->void;
 }

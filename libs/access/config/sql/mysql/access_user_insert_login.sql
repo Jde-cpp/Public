@@ -2,18 +2,15 @@ drop procedure if exists access_user_insert_login;
 go
 
 #DELIMITER $$
-create procedure access_user_insert_login( _login_name varchar(255), provider_id int unsigned,_provider_target varchar(255) )
+create procedure access_user_insert_login( _login_name varchar(255), _provider_id int unsigned,_provider_target varchar(255) )
 begin
-	declare entity_id int unsigned; declare provider_target varchar(255); declare provider_name varchar(255); declare provider_id int unsigned;
+	declare identity_id int unsigned; declare provider_target varchar(255); declare provider_name varchar(255);
 
 	if( _provider_target is not null ) then
-		select id into provider_id from access_providers where target = _provider_target;
+		select provider_id into _provider_id from access_providers where target = _provider_target;
 		set provider_name = _provider_target;
-	else
-		set provider_id = provider_id;
-		if( provider_id is not null ) then
-			select name into provider_name from access_provider_types where id = provider_id;
-		end if;
+	elseif( _provider_id is not null ) then
+		select name into provider_name from access_provider_types where provider_type_id = _provider_id;
 	end if;
 
 	if( provider_name is not null ) then
@@ -21,12 +18,11 @@ begin
 	else
 		set provider_target = _login_name;
 	end if;
-	CALL access_entity_insert(_login_name, 0, provider_target, null, false, provider_id);
-	SET entity_id = LAST_INSERT_ID();
+	CALL access_identity_insert(_login_name, _provider_id, provider_target, null, null, false);
+	SET identity_id = LAST_INSERT_ID();
 
-	insert into access_users(entity_id, login_name) values(entity_id, _login_name);
-	SELECT entity_id;
+	insert into access_users(identity_id, login_name) values(identity_id, _login_name);
+	SELECT identity_id;
 end
 #$$
 #DELIMITER ;
-#call access_user_insert_login( 'a', 1, null );

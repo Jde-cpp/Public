@@ -16,7 +16,7 @@ namespace Jde::QL{
 	using JColName=string;
 	struct FilterQL final{//filter:
 		flat_map<JColName,vector<FilterValueQL>> ColumnFilters;
-		Ω Test( const DB::Value& value, const vector<FilterValueQL>& filters, ELogTags logTags )ι->bool;
+		Ω Test( const DB::Value::Underlying& value, const vector<FilterValueQL>& filters, ELogTags logTags )ι->bool;
 	};
 	α ToWhereClause( const TableQL& table, const DB::View& schemaTable, bool includeDeleted=false )->DB::WhereClause;
 }

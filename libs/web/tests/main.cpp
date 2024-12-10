@@ -20,7 +20,7 @@ namespace Jde{
 	Startup( argc, argv );
 	auto result = EXIT_FAILURE;
 	{
-		let filter=Settings::FindSV( "testing/tests" ).value_or( "*" );
+		let filter=Settings::FindSV( "/testing/tests" ).value_or( "*" );
 		::testing::GTEST_FLAG( filter ) = filter;
 	   result = RUN_ALL_TESTS();
 		Process::Shutdown( result );

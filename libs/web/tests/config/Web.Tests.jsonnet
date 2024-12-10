@@ -1,25 +1,24 @@
 {
 	testing:{
-		testsa:"CertificateTests.*",
-		tests:"SocketTests.BadTransmissionClient",
-		testsc:"WebTests.EchoAttack"
-	},
-	cryptoTests:{
-		clear: true
+		testsa:: "CertificateTests.*",
+		testsb:: "SocketTests.CloseClientSide",
+		tests: "WebTests.*"
 	},
 	logging:{
-		defaultLevel: "Information",
+		defaultLevel:: "Information",
 		tags: {
-			Trace:["test", "exception", "app",
+			trace:["test", "exception", "app",
 				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
 			],
-			Debug:["settings"],
-			Information:[],
-			Warning:[],
-			Error:[],
-			Critical:[]
+			debug:["settings"],
+			information:[],
+			warning:[],
+			"error":[],
+			critical:[]
 		},
-		console:{},
+		sinks:{
+			console:{}
+		},
 		memory: true
 	},
 	http:{
@@ -33,15 +32,15 @@
 			allowHeaders: "Content-Type, Authorization"
 		},
 		ssl: {
-			_certificate: "{ApplicationDataFolder}/ssl/certs/server.pem",
+			certificate:: "{ApplicationDataFolder}/ssl/certs/server.pem",
 			certificateAltName: "DNS:localhost,IP:127.0.0.1",
-			_certficateCompany: "Jde-Cpp",
-			_certficateCountry: "US",
-			_certficateDomain: "localhost",
-			_privateKey: "{ApplicationDataFolder}/ssl/private/server.pem",
-			_publicKey: "{ApplicationDataFolder}/ssl/public/server.pem",
-			_dh: "{ApplicationDataFolder}/certs/dh.pem",
-			_passcode: "$(JDE_PASSCODE)"
+			certficateCompany:: "Jde-Cpp",
+			certficateCountry:: "US",
+			certficateDomain:: "localhost",
+			privateKey:: "{ApplicationDataFolder}/ssl/private/server.pem",
+			publicKey:: "{ApplicationDataFolder}/ssl/public/server.pem",
+			dh:: "{ApplicationDataFolder}/certs/dh.pem",
+			passcode:: "$(JDE_PASSCODE)"
 		}
 	},
 	workers:{

@@ -35,7 +35,7 @@ namespace Jde::Access{
 		try{
 			auto resourceTable = _schema->GetTablePtr( "resources" );
 			let ds = _schema->DS();
-			const DB::WhereClause where{ resourceTable->GetColumnPtr("schema_name"), DB::Value{_schema->Name} };
+			const DB::WhereClause where{ resourceTable->GetColumnPtr("schema_name"), _schema->Name };
 			auto statement = DB::SelectSql( {"resource_id","schema_name","target","criteria", "deleted"}, resourceTable, where );
 			auto rows = co_await ds->SelectCo( move(statement) );
 			for( auto& row : rows )
@@ -58,7 +58,7 @@ namespace Jde::Access{
 		}
 	}
 
-	α GetSchema()ε->sp<DB::AppSchema>;
+	α GetSchema()ι->sp<DB::AppSchema>;
 	α Resources::Sync()ε->void{
 		using DB::Value;
 		let& schema = *GetSchema();

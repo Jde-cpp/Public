@@ -1,6 +1,7 @@
 #pragma once
 #include "FilterQL.h"
 #include <jde/framework/io/json.h>
+#include <jde/db/names.h>
 #define let const auto
 
 namespace Jde::DB{ struct Column; struct IRow; };
@@ -19,7 +20,7 @@ namespace Jde::QL{
 		α FindDBColumn( sp<DB::Column> dbColumn )Ι->const ColumnQL*;
 		α FindTable( sv jsonTableName )Ι->const TableQL*;
 		α Input()Ε->const jobject&{ return Json::AsObject( Args, "input" ); }
-		α IsPlural()Ι{ return JsonName.ends_with( "s" ); }
+		α IsPlural()Ι{ return DB::Names::IsPlural(JsonName); }
 		α Filter()Ε->FilterQL;
 		α ToJson( const DB::IRow& row, const vector<sp<DB::Column>>& dbColumns )Ι->jobject;
 		α SetResult( jobject& o, const sp<DB::Column> dbColumn, const DB::Value& value )Ι->void;

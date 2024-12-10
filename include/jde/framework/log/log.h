@@ -112,7 +112,8 @@ namespace Jde{
    using namespace std::literals;
 	Φ ClearMemoryLog()ι->void;
 	Φ FindMemoryLog( uint32 messageId )ι->vector<Logging::ExternalMessage>;
-	Φ FindMemoryLog( str tag, uint code )ι->vector<Logging::ExternalMessage>;
+	Φ FindMemoryLog( function<bool(const Logging::ExternalMessage&)> f )ι->vector<Logging::ExternalMessage>;
+	//Φ FindMemoryLog( str tag, uint code )ι->vector<Logging::ExternalMessage>;
 	namespace Logging{
 		Φ DestroyLogger()->void;
 		Φ Initialize()ι->void;

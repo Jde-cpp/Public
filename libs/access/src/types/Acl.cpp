@@ -10,6 +10,7 @@
 #define let const auto
 namespace Jde::Access{
 	α GetTable( str name )ε->sp<DB::View>;
+	α GetDS()ι->sp<DB::IDataSource>;
 	α AddAcl( IdentityPK identityPK, uint permissionPK, ERights allowed, ERights denied, ResourcePK resourcePK )ι->void;
 	α AddAcl( IdentityPK identityPK, RolePK rolePK )ι->void;
 	α AuthorizeAdmin( ResourcePK resourcePK, UserPK userPK, SL sl )ε->void;
@@ -22,7 +23,7 @@ namespace Jde::Access{
 
 	α	DeleteRole( RolePK rolePK )ι->void;
 	α RestoreRole( RolePK rolePK, flat_set<PermissionRole> members )ι->void;
-	α AddToRole( RolePK rolePK, flat_set<PermissionRole> members )ι->void;
+	//α AddToRole( RolePK rolePK, flat_set<PermissionRole> members )ι->void;
 	α RemoveFromRole(	RolePK rolePK, flat_set<PermissionIdentityPK> toRemove )ι->void;
 
 	α DeleteGroup( IdentityPK identityPK )ι->void;
@@ -32,17 +33,20 @@ namespace Jde::Access{
 
 	α LoadAcl( sp<DB::AppSchema> schema, AclLoadAwait& await )ι->DB::RowAwait::Task{
 		try{
-			sp<DB::Table> aclTable = schema->GetTablePtr( "acl" );
+			auto aclTable = schema->GetTablePtr( "acl" );
+			auto permissionsTable = schema->GetTablePtr( "permissions" );
 			let ds = aclTable->Schema->DS();
-			auto statement = DB::SelectSKsSql( aclTable );
-			let rows = co_await ds->SelectCo( move(statement) );
+			DB::SelectClause select{ {aclTable->GetColumnPtr("identity_id"), aclTable->GetColumnPtr("permission_id"), permissionsTable->GetColumnPtr("is_role")} };
+			DB::FromClause from{ DB::Join{aclTable->GetColumnPtr("permission_id"), permissionsTable->GetColumnPtr("permission_id"), true} };
+			let rows = co_await ds->SelectCo( DB::Statement{move(select), move(from), {}}.Move() );
 			flat_multimap<IdentityPK,PermissionRole> acl;
 			for( let& row : rows ){
-				let identityPK = row->GetUInt16(0);
-				if( auto permissionPK = row->GetUIntOpt(1); permissionPK )
-					acl.emplace( identityPK, PermissionRole{std::in_place_index<0>, *permissionPK} );
-				else if( auto rolePK = row->GetUIntOpt(2); rolePK )
-					acl.emplace( identityPK, PermissionRole{std::in_place_index<1>, *rolePK} );
+				let identityPK = row->Get<IdentityPK>(0);
+				let permissionPK = row->Get<PermissionPK>(1);
+				if( row->GetBit(2) )
+					acl.emplace( identityPK, PermissionRole{std::in_place_index<1>, permissionPK} );
+				else
+					acl.emplace( identityPK, PermissionRole{std::in_place_index<0>, permissionPK} );
 			}
 			await.Resume( move(acl) );
 		}
@@ -66,7 +70,7 @@ namespace Jde::Access{
 		α InsertAcl()ι->Coroutine::Task;
 		α RestoreGroup( uint pk )ι->Coroutine::Task;
 		α RestoreRole( uint pk )ι->DB::RowAwait::Task;
-		α AddToRole( RolePK rolePK, flat_set<PermissionIdentityPK> members )ι->DB::MapAwait<PermissionIdentityPK,bool>::Task;
+		//α AssignToRole( RolePK rolePK, flat_set<IdentityPK> members )ι->DB::MapAwait<IdentityPK,bool>::Task;
 		QL::MutationQL Mutation;
 		uint PK;
 		Access::UserPK UserPK;
@@ -120,7 +124,7 @@ namespace Jde::Access{
 	α AclQLAwait::RestoreGroup( uint pk )ι->Coroutine::Task{
 		auto table = GetTable( "identity_groups" );
 		auto memberCol = table->GetColumnPtr( "member_id" );
-		DB::Statement statement{ {{table->GetColumnPtr("identity_id"), memberCol}}, {table}, {memberCol, DB::Value{pk}} };
+		DB::Statement statement{ {{table->GetColumnPtr("identity_id"), memberCol}}, {table}, {memberCol, pk} };
 		try{
 			auto userGroups = ( co_await table->Schema->DS()->template SelectSet<IdentityPK>(statement.Move()) ).UP<flat_set<IdentityPK>>();
 			Access::RestoreGroup( pk, move(*userGroups) );
@@ -138,7 +142,7 @@ namespace Jde::Access{
 		let memberCol = membersTable->GetColumnPtr( "member_id" );
 		DB::FromClause from;
 		from+=DB::Join{ memberCol, idTable->GetColumnPtr("permission_id"), true };
-		DB::Statement statement{ {{memberCol, idTable->GetColumnPtr("is_role")}}, move(from), {roleCol, DB::Value{pk}} };
+		DB::Statement statement{ {{memberCol, idTable->GetColumnPtr("is_role")}}, move(from), {roleCol, pk} };
 		try{
 			flat_set<PermissionRole> members;
 			auto rows = co_await idTable->Schema->DS()->SelectCo( statement.Move() );
@@ -155,9 +159,9 @@ namespace Jde::Access{
 			ResumeExp( move(e) );
 		}
 	}
-	α AclQLAwait::AddToRole( RolePK rolePK, flat_set<PermissionIdentityPK> members )ι->DB::MapAwait<PermissionIdentityPK,bool>::Task{
-		auto table = GetTable( "permissions" );
+/*	α AclQLAwait::AssignToRole( RolePK rolePK, flat_set<PermissionIdentityPK> members )ι->DB::MapAwait<PermissionIdentityPK,bool>::Task{
 		try{
+			auto table = GetTable( "permissions" );
 			DB::WhereClause where{ table->GetColumnPtr("permission_id"), DB::ToValue(members) };
 			DB::Statement s{ table->Columns, {table}, move(where) };
 			let pkIsRole = co_await table->Schema->DS()->SelectMap<PermissionIdentityPK,bool>( s.Move() );
@@ -168,14 +172,14 @@ namespace Jde::Access{
 				else
 					members.emplace( PermissionRole{std::in_place_index<0>, pk} );
 			}
-			Access::AddToRole( rolePK, move(members) );
+			Access::AssignToRole( rolePK, move(members) );
 			Resume( jvalue{} );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
 	}
-
+*/
 	α AclQLAwait::Suspend()ι->void{
 		try{
 			using enum QL::EMutationQL;
@@ -231,19 +235,17 @@ namespace Jde::Access{
 				case Restore:
 					RestoreRole( PK );
 					return;
-				case Add:
+/*				case Add:
 				case Remove:{
 					auto members = Json::AsArray( Mutation.Args, "members" );
 					flat_set<IdentityPK> memberPKs; memberPKs.reserve( members.size() );
 					for( let& member : members )
 						memberPKs.emplace( Json::AsNumber<IdentityPK>(member) );
-					if( Mutation.Type==Add ){
-						AddToRole( PK, move(memberPKs) );
-						return;
-					}
+					if( Mutation.Type==Add )
+						AssignToRole( PK, move(memberPKs) );
 					else if( Mutation.Type==Remove )
 						RemoveFromRole( PK, move(memberPKs) );
-					break;}
+					break;}*/
 				default: break;
 				}
 			}
@@ -266,57 +268,100 @@ namespace Jde::Access{
 			Query{ ql },
 			UserPK{ userPK }
 		{}
-		α Suspend()ι->void{ Load(); }
+		α Suspend()ι->void;
 	private:
-		α Load()ι->DB::RowAwait::Task;
+		α GetStatement( const QL::TableQL& childTable, sp<DB::Column> joinColumn )ε->optional<DB::Statement>;
+		α LoadRoles( const QL::TableQL& permissionRightsQL )ι->DB::RowAwait::Task;
+		α LoadPermissionRights( const QL::TableQL& permissionRightsQL )ι->DB::RowAwait::Task;
 		QL::TableQL Query;
 		Access::UserPK UserPK;
 	};
-	α AclQLSelectAwait::Load()ι->DB::RowAwait::Task{
+	α AclQLSelectAwait::Suspend()ι->void{
+		if( auto rights = Query.FindTable("permissionRights"); rights )
+			LoadPermissionRights( *rights );
+		else if( auto roles = Query.FindTable("roles"); roles )
+			LoadRoles( *roles );
+		else
+			ResumeExp( Exception{"query not implemented"} );
+	}
+	α AclQLSelectAwait::GetStatement( const QL::TableQL& childTable, sp<DB::Column> joinColumn )ε->optional<DB::Statement>{
+		let table = GetTable( "acl" );
+		auto statement = QL::SelectStatement( childTable );
+		if( auto aclStatement = !statement ? optional<DB::Statement>{} : QL::SelectStatement(Query); aclStatement ){
+			statement->Select += move(aclStatement->Select);
+			statement->Where += aclStatement->Where;
+			statement->From += { joinColumn, table->GetColumnPtr("permission_id"), true };
+		}
+		return statement;
+	}
+	α AclQLSelectAwait::LoadRoles( const QL::TableQL& roleQL )ι->DB::RowAwait::Task{
+		jvalue y;
 		try{
-			jvalue y;
-			let table = GetTable( "acl" );
-			if( let rights = Query.FindTable("permissionRights"); rights ){
-				let rightsTable = GetTable( "permission_rights" );
-				auto statement = QL::SelectStatement( *rights );
-				Trace{ ELogTags::Access, "{}", statement->Select.ToString() };
-				if( auto aclStatement = !statement ? optional<DB::Statement>{} : QL::SelectStatement(Query); aclStatement ){
-					statement->Select += move(aclStatement->Select);
-					statement->Where += aclStatement->Where;
-					statement->From += { rightsTable->FindColumn("permission_id"), table->FindColumn("permission_id"), true };
-				}
-				if( statement ){
-					auto rows = co_await table->Schema->DS()->SelectCo( statement->Move() );
-					let& columns = statement->Select.Columns;
-					jarray j;
-					for( auto& row : rows ){
-						jobject entry;
-						jobject* right{};
-						jobject* resource{};
-						for( uint i=0; i<row->Size() && i<columns.size(); ++i ){
-							let& column = columns[i];
-							auto& value = (*row)[i];
-							let key = DB::Names::ToJson(column->Name);
-							if( column->Table->Name=="permission_rights" || column->Table->Name=="resources" ){
-								if( !right )
-									right = &entry["permissionRight"].emplace_object();
-								if( column->Table->Name=="permission_rights" )
-									(*right)[key=="permissionId" ? "id" : key] = value.Move();
-								else{
-									if( !resource )
-										resource = &(*right)["resource"].emplace_object();
-									(*resource)[key] = value.Move();
-								}
-							}
-							else
-								entry[key] = value.Move();
+			if( auto statement = GetStatement(roleQL, GetTable("roles")->GetColumnPtr("role_id")); statement ){
+				auto rows = co_await GetDS()->SelectCo( statement->Move() );
+				let& columns = statement->Select.Columns;
+				jarray j;
+				for( auto& row : rows ){
+					jobject entry;
+					jobject* role{};
+					for( uint i=0; i<row->Size() && i<columns.size(); ++i ){
+						let& column = columns[i];
+						auto& value = (*row)[i];
+						let key = DB::Names::ToJson(column->Name);
+						if( column->Table->Name=="roles" ){
+							if( !role )
+								role = &entry["role"].emplace_object();
+							(*role)[key=="roleId" ? "id" : key] = value.Move();
 						}
-						j.emplace_back( move(entry) );
+						else
+							entry[key] = value.Move();
 					}
-					y = Query.IsPlural()
-						? move(j)
-						: j.empty() ? jvalue{} : move(j.front());
+					j.emplace_back( move(entry) );
 				}
+				y = Query.IsPlural()
+					? move( j )
+					: j.empty() ? jvalue{} : move(j.front());
+			}
+			Resume( move(y) );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α AclQLSelectAwait::LoadPermissionRights( const QL::TableQL& permissionRights )ι->DB::RowAwait::Task{
+		jvalue y;
+		try{
+			if( auto statement = GetStatement(permissionRights, GetTable("permission_rights")->GetColumnPtr("permission_id")); statement ){
+				auto rows = co_await GetDS()->SelectCo( statement->Move() );
+				let& columns = statement->Select.Columns;
+				jarray j;
+				for( auto& row : rows ){
+					jobject entry;
+					jobject* right{};
+					jobject* resource{};
+					for( uint i=0; i<row->Size() && i<columns.size(); ++i ){
+						let& column = columns[i];
+						auto& value = (*row)[i];
+						let key = DB::Names::ToJson(column->Name);
+						if( column->Table->Name=="permission_rights" || column->Table->Name=="resources" ){
+							if( !right )
+								right = &entry["permissionRight"].emplace_object();
+							if( column->Table->Name=="permission_rights" )
+								(*right)[key=="permissionId" ? "id" : key] = value.Move();
+							else{
+								if( !resource )
+									resource = &(*right)["resource"].emplace_object();
+								(*resource)[key] = value.Move();
+							}
+						}
+						else
+							entry[key] = value.Move();
+					}
+					j.emplace_back( move(entry) );
+				}
+				y = Query.IsPlural()
+					? move(j)
+					: j.empty() ? jvalue{} : move(j.front());
 			}
 			Resume( move(y) );
 		}

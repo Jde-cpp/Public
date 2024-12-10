@@ -82,10 +82,10 @@ namespace Jde{
 	}
 
 	Ŧ Json::FindNumber( const jvalue& v, sv path )ι->optional<T>{
-		auto p = FindValue(v,path);
+		auto p = path.size() ? FindValue(v,path) : optional<jvalue>{v};
 		optional<T> y;
 		if( p ){
-			if( auto n = v.try_to_number<T>(); n )
+			if( auto n = p->try_to_number<T>(); n )
 				y = *n;
 		}
 		return y;

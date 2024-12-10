@@ -53,9 +53,9 @@ namespace Jde{
 
 	template<IsEnum TEnum, class TCollection, class TString>
 	α ToFlag( const TCollection& stringValues, TString text )ι->optional<TEnum>{
-		using T = typename std::underlying_type<TEnum>::type;
+		//using T = typename std::underlying_type<TEnum>::type;
 		let index = std::distance( std::begin(stringValues), std::find(std::begin(stringValues), std::end(stringValues), text) );
-		return index && index<stringValues.size()
+		return index && index<std::ssize( stringValues )
 			? (TEnum)( 1<<(index-1) )
 			: optional<TEnum>{};
 	}

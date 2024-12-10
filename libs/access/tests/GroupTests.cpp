@@ -72,7 +72,4 @@ namespace Jde::Access{
 		Tests::PurgeUser( associate, GetRoot() );
 		Tests::PurgeUser( manager, GetRoot() );
 	}
-	//add
-	//remove
-	//user groups
 }

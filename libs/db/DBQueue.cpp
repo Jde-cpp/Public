@@ -1,4 +1,4 @@
-﻿#include "DBQueue.h"
+﻿#include <jde/db/DBQueue.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/Database.h>
 #include "../../../Framework/source/threading/InterruptibleThread.h"

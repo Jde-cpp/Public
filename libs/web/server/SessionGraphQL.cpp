@@ -13,12 +13,12 @@ namespace Jde::Web::Server{
 	struct SessionGraphQLAwait final: TAwait<jvalue>{
 		SessionGraphQLAwait( const QL::TableQL& query, UserPK userPK, SRCE )ι: TAwait<jvalue>{ sl }, Query{ query }, UserPK{ userPK }{}
 		α Suspend()ι->void override{ Select(); }
-		α Select()ι->TAwait<jobject>::Task;
+		α Select()ι->TAwait<jvalue>::Task;
 		QL::TableQL Query;
 		Jde::UserPK UserPK;
 	};
 
-	α SessionGraphQLAwait::Select()ι->TAwait<jobject>::Task{
+	α SessionGraphQLAwait::Select()ι->TAwait<jvalue>::Task{
 		try{
 			let sessionString = Json::FindString( Query.Args, "id" );
 			let sessionId = sessionString ? Str::TryTo<SessionPK>(*sessionString, nullptr, 16 ) : nullopt;
@@ -38,7 +38,7 @@ namespace Jde::Web::Server{
 				for( let& session : sessions )
 					inClause += std::to_string( session->UserPK ) + ",";
 				auto q = "query{ users(id:["+inClause.substr(0, inClause.size()-1)+"]){id loginName provider{id name}} }";
-				users = co_await (*AppGraphQLAwait(move(q), UserPK) );
+				users = Json::AsObject(co_await (*AppGraphQLAwait(move(q), UserPK)) );
 				Trace( _tags | ELogTags::Pedantic, "users={}"sv, serialize(users) );
 				for( let& vuser : Json::AsArrayPath(users, "data/users") ){
 					let& user = Json::AsObject(vuser);

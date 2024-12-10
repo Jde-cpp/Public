@@ -62,6 +62,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			comment: "Group Members",
 			columns:{
 				groupId: tables.identityGroups.columns.identityId+{ criteria: null },
+				groupTarget: targetColumns.target,
 				memberId: tables.identityGroups.columns.memberId,
 				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true },
 				isGroup: tables.identities.columns.isGroup

@@ -6,6 +6,7 @@
 #define YRESULT std::basic_string<char,typename Y::traits_type>
 
 namespace Jde::DB::Names{
+	Ξ IsPlural( sv name )ι->bool{ return name.ends_with("s"); }
 	Ξ Capitalize( str name )ι->string{ ASSERT(name.size()>1); return string{(char)std::toupper(name[0])} + name.substr(1); }
 	template<class X=string,class Y=string> Ω FromJson( Str::bsv<typename X::traits_type> jsonName )ι->YRESULT;
 	template<class X=string,class Y=string> Ω ToJson( Str::bsv<typename X::traits_type> schemaName )ι->YRESULT;

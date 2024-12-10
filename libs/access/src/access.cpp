@@ -1,10 +1,12 @@
 ﻿#include <jde/access/access.h>
 #include <jde/access/IAcl.h>
 #include <jde/access/hooks/RoleHook.h>
+#include <jde/access/hooks/GroupHook.h>
 #include <boost/container/flat_set.hpp>
 #include <jde/framework/str.h>
 #include <jde/framework/io/file.h>
-#include <jde/db/Database.h>
+#include <jde/db/IDataSource.h>
+#include <jde/db/generators/InsertClause.h>
 #include "types/Acl.h"
 #include "types/IdentityGroup.h"
 #include "types/Resource.h"
@@ -23,7 +25,8 @@ namespace Jde::Access{
 
 	static sp<DB::AppSchema> _schema;
 	α GetTable( str name )ε->sp<DB::View>{ return _schema->GetViewPtr( name ); }
-	α GetSchema()ε->sp<DB::AppSchema>{ return _schema; }
+	α GetSchema()ι->sp<DB::AppSchema>{ return _schema; }
+	α GetDS()ι->sp<DB::IDataSource>{ return _schema->DS(); }
 	struct Authorize : IAcl{
 		Authorize()ε{}
 		α Test( str schemaName, str resourceName, ERights rights, UserPK userPK, SRCE )ε->void override;
@@ -171,25 +174,50 @@ namespace Jde{
 		Resources::Sync();
 		QL::Hook::Add( mu<Access::AclHook>() );
 		QL::Hook::Add( mu<Access::UserGraphQL>() );
-		QL::Hook::Add( mu<Access::GroupGraphQL>() );
+		QL::Hook::Add( mu<Access::GroupHook>() );
 		QL::Hook::Add( mu<Access::RoleHook>() );
 		return {};
 	}
 namespace Access{
-	α AuthTask( string&& loginName, uint providerId, string&& opcServer, HCoroutine h )ι->Task{
-		let opcServerParam = opcServer.size() ? DB::Value{opcServer} : DB::Value{nullptr};
-		vector<DB::Value> parameters = { {move(loginName)}, {providerId} };
-		if( opcServer.size() )
-			parameters.push_back( {opcServer} );
-		let sql = Ƒ( "select e.id from um_entities e join um_users u on e.id=u.entity_id join um_providers p on p.id=e.provider_id where u.login_name=? and p.id=? and p.target{}", opcServer.size() ? "=?" : " is null" );
+	α insertUser( vector<DB::Value>&& params, HCoroutine h )->TAwait<uint>::Task{
 		try{
-			auto task = _schema->DS()->ScalerCo<UserPK>( string{sql}, parameters );
+			let userPK = co_await _schema->DS()->ExecuteProcCo( DB::InsertClause{ "user_insert_login", move(params) }.Move() );
+			h.promise().SetResult( mu<UserPK>(userPK) );
+		}
+		catch( IException& e ){
+			h.promise().SetResult( move(e) );
+		}
+		h.resume();
+	}
+
+	α AuthTask( string&& loginName, uint providerId, string&& opcServer, HCoroutine h )ι->Task{
+		let identities = GetTable( "identities" );
+		let identityPK = identities->GetColumnPtr( "identity_id" );
+		let providerFK = identities->GetColumnPtr( "provider_id" );
+		DB::SelectClause select{ identityPK };
+		DB::FromClause from;
+		let usersTable = GetTable( "users" );
+		from.TryAdd( {identityPK, usersTable->GetPK(), true} );
+		let providers = GetTable( "providers" );
+		from.TryAdd( {providerFK, providers->GetPK(), true} );
+		DB::WhereClause where;
+		where.Add( usersTable->GetColumnPtr("login_name"), loginName );
+		where.Add( providerFK, providerId );
+		auto targetColumn = providers->GetColumnPtr("target");
+		if( opcServer.size() )
+			where.Add( targetColumn, opcServer );
+		else
+			where.Add( targetColumn, nullptr );
+		auto sql = DB::Statement{ move(select), move(from), move(where) }.Move();
+		try{
+			auto task = _schema->DS()->ScalerCo<UserPK>( sql.Text, sql.Params );
 			auto p = (co_await task).UP<UserPK>(); //gcc compile issue
 			auto userPK = p ? *p : 0;
 			if( !userPK ){
-				if( !opcServer.size() )
-					parameters.push_back( {move(opcServer)} );
-				_schema->DS()->ExecuteProc( "um_user_insert_login(?,?,?)", move(parameters), [&userPK](let& row){userPK=row.GetUInt32(0);} );
+				if( opcServer.empty() )
+					sql.Params.emplace_back( nullptr );
+				insertUser( move(sql.Params), h );
+				co_return;
 			}
 			h.promise().SetResult( mu<UserPK>(userPK) );
 		}
@@ -252,9 +280,35 @@ namespace Access{
 		_authorize->RoleMembers[rolePK] = members;
 		_authorize->Recalc( l );
 	}
-	α AddToRole( RolePK rolePK, flat_set<PermissionRole> members )ι->void{
-		RestoreRole( rolePK, move(members) );
+/*	α AssignToRole( RolePK rolePK, flat_set<PermissionRole> members )ι->void{
+		ul l{ _authorize->Mutex };
+		for( let& member : members ){
+			_authorize->RoleMembers[rolePK].emplace( member );
+			_authorize->Recalc( l );
+
+				members.emplace( PermissionRole{std::in_place_index<0>, member} );
+			else
+				members.emplace( PermissionRole{std::in_place_index<1>, member} );
+		}
+	}*/
+	α AddToRole( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, str resourceName )ι->void{
+		ul l{ _authorize->Mutex };
+		if( auto permssion = _authorize->Permissions.find(member); permssion!=_authorize->Permissions.end() ){
+			permssion->second.Allowed = allowed;
+			permssion->second.Denied = denied;
+		}
+		else if( auto resource = find_if(_authorize->Resources, [&](let& r){ return r.second.Target==resourceName;}); resource!=_authorize->Resources.end() )
+			_authorize->Permissions.emplace( member, Permission{member, resource->first, allowed, denied} );
+
+		_authorize->RoleMembers[rolePK].emplace( PermissionRole{std::in_place_index<0>, member} );
+		_authorize->Recalc( l );
 	}
+	α AddToRole( RolePK parentRolePK, RolePK childRolePK )ι->void{
+		ul l{ _authorize->Mutex };
+		_authorize->RoleMembers[parentRolePK].emplace( PermissionRole{std::in_place_index<1>, childRolePK} );
+		_authorize->Recalc( l );
+	}
+
 	α RemoveFromRole(	RolePK rolePK, flat_set<PermissionIdentityPK> toRemove )ι->void{
 		if( !toRemove.size() )
 			return;
@@ -401,13 +455,13 @@ namespace Access{
 				pkUser->second += p->second;
 			else if( auto rolePermissions = RoleMembers.find(get<1>(permissionRole)); rolePermissions!=RoleMembers.end() ){
 				for( let& rolePermission : rolePermissions->second )
-					AddPermission( identityPK, rolePermission, users, l );
+					AddPermission( identityPK, rolePermission, users, l );//13
 			}
 		}
 		else{
-			auto groupIt = GroupMembers.equal_range( identityPK );
+			auto groupIt = GroupMembers.equal_range( identityPK );//HierarchyGroupUsers
 			for( auto group = groupIt.first; group!=groupIt.second; ++group )
-				AddPermission( group->second, permissionRole, users, l );
+				AddPermission( group->second, permissionRole, users, l );//user
 		}
 	}
 	α Authorize::CalculateUsers( flat_set<UserPK>&& users, const ul& l )ι->void{

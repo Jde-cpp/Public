@@ -4,7 +4,7 @@
 
 namespace Jde::Web{
 	struct ΓWC Jwt{
-		Jwt( str jwt )ε;
+		Jwt( sv jwt )ε;
 		Jwt( Crypto::Modulus mod, Crypto::Exponent exp, str userName, str userTarget, str myEndpoint, str description, const fs::path& privateKeyPath )ι;
 		α Payload()Ι->string;
 		string Kid;

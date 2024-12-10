@@ -19,21 +19,19 @@ namespace Jde::Web{
 		Ω SetUpTestCase()->void{};
 		α SetUp()->void override{ Mock::Start(); }
 		α TearDown()->void override;
-		static json OriginalSettings;
 	};
-	json CertificateTests::OriginalSettings = Settings::Global().Json();
 
 	α ResetSettings( const fs::path& baseDir = {} )ι->void{
 		//sv what, const Container::Variant& v, bool save=true, SRCE )ε->void;
-		let prefix = "http/ssl"s;
-		Settings::Set( prefix+"/certificate", (baseDir/"certs/server.pem").string(), false );
-		Settings::Set( prefix+"/privateKey", (baseDir/"private/server.pem").string(), false );
-		Settings::Set( prefix+"/publicKey", (baseDir/"public/server.pem").string(), false );
+		let prefix = "/http/ssl"s;
+		Settings::Set( prefix+"/certificate", jvalue{(baseDir/"certs/server.pem").string()} );
+		Settings::Set( prefix+"/privateKey", jvalue{(baseDir/"private/server.pem").string()} );
+		Settings::Set( prefix+"/publicKey", jvalue{(baseDir/"public/server.pem").string()} );
 	}
 
 	α CertificateTests::TearDown()->void{
 		Mock::Stop();
-		Settings::Global().Json() = OriginalSettings;
+		Settings::Load();
 	}
 	using Web::Client::ClientHttpAwait;
 	using Web::Client::ClientHttpRes;
@@ -47,7 +45,7 @@ namespace Jde::Web{
 	TEST_F( CertificateTests, NewDirectory ){
 		ResetSettings( "/tmp/WebTests/ssl" );
 		fs::remove_all( "/tmp/WebTests/ssl" );
-		Settings::Set( "http/ssl/passcode", "PaSsCoDe", false );
+		Settings::Set( "http/ssl/passcode", jvalue{"PaSsCoDe"} );
 		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} };
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 		ASSERT_TRUE( res[http::field::server].contains("SSL") );

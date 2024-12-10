@@ -1,7 +1,7 @@
 {
 	testing:{
-		tests:: "AclTests.DeletedUser",
-		recreateDB: true
+		tests: "RoleTests.AddRemove",
+		recreateDB:: true
 	},
 	dbServers: {
 		scriptPath: "$(JDE_DIR)/Public/libs/access/config/sql/mysql",

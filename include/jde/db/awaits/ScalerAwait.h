@@ -20,7 +20,7 @@ namespace Jde::DB{
 	Ŧ ScalerAwait<T>::Execute()ι->RowAwait::Task{
 		try{
 			let rows = co_await RowAwait{ _ds, move(_sql), _storedProc, base::_sl };
-			THROW_IF( rows.empty(), "no resluts." );
+			THROW_IF( rows.empty(), "no results." );
 			base::ResumeScaler( rows[0]->template Get<T>(0) );
 		}
 		catch( IException& e ){

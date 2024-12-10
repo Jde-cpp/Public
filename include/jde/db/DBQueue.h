@@ -3,7 +3,7 @@
 #include <jde/db/exports.h>
 #include <jde/db/Value.h>
 #include <jde/framework/process.h>
-#include "../../../Framework/source/collections/Queue.h"
+#include "../../../../Framework/source/collections/Queue.h"
 
 
 namespace Jde::Threading{struct InterruptibleThread;}

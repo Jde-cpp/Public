@@ -6,8 +6,9 @@ namespace Jde::DB{
 	struct InsertClause final{
 		InsertClause()ι=default;
 		InsertClause( sv name )ι:_procName{ name }{}
+		InsertClause( sv name, vector<Value>&& params )ι;
 		α Move()ι->DB::Sql;
-		α Add( sp<Column> column, Value value )ι{ Values.emplace_back( make_pair(column, move(value)) ); }
+		α Add( sp<Column> column, Value::Underlying value )ι{ Values.emplace_back( make_pair(column, move(value)) ); }
 		α Add( Value::Underlying value )ι{ Values.emplace_back( make_pair(sp<Column>{}, move(value)) ); }
 		α SetValue( sp<Column> column, Value value )ε->void;
 		α SequenceColumn()Ι->sp<Column>;

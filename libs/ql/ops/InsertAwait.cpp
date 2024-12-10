@@ -79,7 +79,7 @@ namespace Jde::QL{
 			}*/
 			else
 				value = *c->Default;
-			statement.Add( c, value );
+			statement.Add( c, value.Variant );
 		}
 		if( (cNonDefaultArgs || missingColumns.size()) && cNonDefaultArgs!=missingColumns.size() ){//don't want to insert just identity_id in users table.
 			_statements.emplace_back( cNonDefaultArgs>0 ? move(statement) : DB::InsertClause{} );

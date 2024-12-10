@@ -1,8 +1,10 @@
 ﻿#include <execution>
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/client/http/ClientHttpResException.h>
-//#include <jde/web/server/Flex.h>
+#include <jde/framework/str.h>
+#include <jde/framework/thread/execution.h>
 #include "mocks/ServerMock.h"
+#include "../../Framework/source/DateTime.h"
 
 #define let const auto
 
@@ -62,7 +64,7 @@ namespace Jde::Web{
 		try{
 			atomic<uint> connections = 0;
 			std::for_each( std::execution::par_unseq, indexes.begin(), indexes.end(), [&sessionIds,&connections]( uint index )mutable{
-				[index, &sessionIds,&connections]()->ClientHttpAwait::Task{
+				[]( auto index, auto& sessionIds, auto& connections )->ClientHttpAwait::Task {
 					if( _pException )
 						co_return;
 					auto pSessionIds = &sessionIds;
@@ -71,8 +73,8 @@ namespace Jde::Web{
 						++connections;
 						ClientHttpRes res = co_await ClientHttpAwait{ Host, Ƒ("/echo?{}", idx), Port };
 						--connections;
-						auto jsonResult = Json::Parse( res.Body() )["params"][0];
-						let echoIndex = To<SessionPK>( jsonResult.template get<string>() );
+						auto jsonResult = Json::Parse( res.Body() )["params"].at(0);
+						let echoIndex = To<SessionPK>( Json::AsString(jsonResult) );
 						if( echoIndex!=idx )
 							THROW( "index={} echoIndex={}", idx, echoIndex );
 						(*pSessionIds)[idx] = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
@@ -81,7 +83,7 @@ namespace Jde::Web{
 						Debug( _tags, "connections={}", connections.load() );
 						_pException = e.Move();
 					}
-				}();
+				}( index, sessionIds, connections );
 			});
 			while( std::ranges::contains(sessionIds, 0) && !_pException )
 				std::this_thread::yield();
@@ -185,13 +187,13 @@ namespace Jde::Web{
 	TEST_F( WebTests, TestTimeout ){
 		Stopwatch sw{ "WebTests::TestTimeout", _tags };
 		let systemStartTime = Chrono::ToClock<Clock,steady_clock>( sw.StartTime() );
-		let timeoutString = Settings::Get("http/timeout").value_or( "PT30S" );
+		let timeoutString = Settings::FindSV("http/timeout").value_or( "PT30S" );
 		let timeout = Chrono::ToDuration( timeoutString );
 		ASSERT( timeout<=30s );//too long to wait.
 
 		auto await = ClientHttpAwait{ Host, "/timeout", Port };
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
-		let output = Json::Parse( res.Body() )["value"].template get<string>();
+		let output = Json::AsString( Json::Parse(res.Body()), "value" );
 		let systemResult = Chrono::to_timepoint( output );
 		DBG( "Expected:  '{}'  Actual:  '{}'", ToIsoString(systemStartTime+timeout), ToIsoString(systemResult) );
 		ASSERT_LE( systemStartTime+timeout-1s, systemResult );
@@ -199,7 +201,7 @@ namespace Jde::Web{
 
 		auto await2 = ClientHttpAwait{ Host, "/timeout", Port, {.Authorization=authorization} };
 		let res2 = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await2) );
-		let nextSystemEndTime = Chrono::to_timepoint(Json::Parse(res2.Body())["value"].template get<string>());
+		let nextSystemEndTime = Chrono::to_timepoint( Json::AsSV(Json::Parse(res2.Body()), "value") );
 		ASSERT_GT( nextSystemEndTime, systemStartTime );
 		DBG( "newTimeout:  '{}'", ToIsoString(nextSystemEndTime) );
 

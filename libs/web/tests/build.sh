@@ -17,5 +17,5 @@ fi
 cd web/tests;
 $BUILD `pwd` $type $clean $compiler || exit 1;
 
-if [ ! -f $JDE_DIR/bin/config/Tests.Web.json ]; then ln -s `pwd`/config/Tests.Web.json $JDE_DIR/bin/config; fi;
+if [ ! -f $JDE_DIR/bin/config/Web.Tests.jsonnet ]; then ln -s `pwd`/config/Web.Tests.jsonnet $JDE_DIR/bin/config; fi;
 exit $?

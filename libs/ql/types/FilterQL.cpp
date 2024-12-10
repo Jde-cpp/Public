@@ -10,7 +10,7 @@
 namespace Jde::QL{
 	inline constexpr std::array<sv,11> QLOperatorStrings = { "eq", "ne", "regex", "glob", "in", "nin", "gt", "gte", "lt", "lte", "elemMatch" };//matches GraphQL
 
-	α FilterQL::Test( const DB::Value& value, const vector<FilterValueQL>& filters, ELogTags logTags )ι->bool{
+	α FilterQL::Test( const DB::Value::Underlying& value, const vector<FilterValueQL>& filters, ELogTags logTags )ι->bool{
 		bool passesFilters{true};
 		for( auto p=filters.begin(); passesFilters && p!=filters.end(); ++p )
 			passesFilters = p->Test( value, logTags );

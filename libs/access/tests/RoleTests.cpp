@@ -23,6 +23,11 @@ namespace Jde::Access::Tests{
 		let ql = Ƒ("query{{ role( id:{} ){{permissionRight{{id allowed denied resource(target:\"{}\",criteria:null)}} }} }}", rolePK, resourceName );
 		return QL::Query( ql, userPK ); //{"role":{"member":{"id":1,"allowed":[],"denied":[]}}}
 	}
+	α GetRoleChild( RolePK parentRolePK, RolePK childRolePK, UserPK userPK )ε->jobject{
+		let ql = Ƒ("query{{ role( id:{} ){{role(id:{}){{id target deleted}} }} }}", parentRolePK, childRolePK );
+		return Json::FindDefaultObjectPath( QL::Query(ql, userPK), "role/role" );
+	}
+
 	α AddRolePermission( RolePK rolePK, sv resourceName, ERights allowed, ERights denied, UserPK userPK )ε->jobject{
 		auto y = GetRolePermission( rolePK, resourceName, userPK );
 		let member = Json::FindDefaultObjectPath( y, "role/permissionRight" );
@@ -39,6 +44,15 @@ namespace Jde::Access::Tests{
 			let add = Ƒ( "{{ mutation addRole( id:{}, allowed:{}, denied:{}, resource:{{target:\"{}\"}} ) }}", rolePK, underlying(allowed), underlying(denied), resourceName );
 			QL::Query( add, userPK );
 			y = GetRolePermission( rolePK, resourceName, userPK );
+		}
+		return y;
+	}
+	α AddRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK userPK )ε->jobject{
+		auto y = GetRoleChild( parentRolePK, childRolePK, userPK );
+		if( y.empty() ){
+			let add = Ƒ( "{{ mutation addRole( id:{}, role:{{id:{}}} ) }}", parentRolePK, childRolePK );
+			QL::Query( add, userPK );
+			y = GetRoleChild( parentRolePK, childRolePK, userPK );
 		}
 		return y;
 	}

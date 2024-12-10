@@ -77,7 +77,7 @@ namespace Jde::DB{
 	α FromClause::SetActive( WhereClause& where, SL sl )ε->void{
 		auto table = GetFirstTable( sl );
 		if( let pDeleted=table->FindColumn("deleted"); pDeleted ){
-			where.Add( pDeleted, Value{} );
+			where.Add( pDeleted, nullptr );
 			if( pDeleted->Table->Name!=table->Name && table->SurrogateKeys.size()>1 )
 				TryAdd( {table->SurrogateKeys[0], pDeleted->Table->GetPK(), true} ); //table=groups, pDeleted=identities.  Extension tables have extension_id first.
 		}

@@ -9,15 +9,17 @@ namespace Jde::DB{
 	struct WhereClause final{
 		WhereClause()ι=default;
 		//WhereClause( string init )ι{ Add(move(init)); }
-		WhereClause( sp<Column> c, Value param, SRCE )ε{ Add(c, move(param), sl); }
+		WhereClause( sp<Column> c, Value::Underlying param, SRCE )ε{ Add(c, move(param), sl); }
 		WhereClause( sp<Column> c, vector<Value> inParams, SRCE )ε{ Add(c, move(inParams), sl); }
 		//friend α operator<<( WhereClause &self, string clause )ι->WhereClause&{ self.Add(move(clause)); return self; }
 		α operator+=( const WhereClause& subTable )ι->WhereClause&;
 
 		α Add( sp<Column> col, EOperator op, Value param, SRCE )ε->void;
+		α Add( sp<Column> col, EOperator op, Value::Underlying param, SRCE )ε->void{ Add( col, op, Value{move(param)}, sl ); }
 		α Add( sp<Column> col, EOperator op, vector<Value> inParams, SRCE )ε->void;
 
-		α Add( sp<Column> col, Value param, SRCE )ε->void{ Add( col, EOperator::Equal, move(param), sl ); }
+		α Add( sp<Column> col, Value::Underlying param, SRCE )ε->void{ Add( col, EOperator::Equal, move(param), sl ); }
+		α Add( sp<Column> col, Value param, SRCE )ε->void{ Add( col, EOperator::Equal, move(param.Variant), sl ); }
 		α Add( sp<Column> col, vector<Value> inParams, SRCE )ε->void{ Add( col, EOperator::In, move(inParams), sl ); }
 		α Add( string clause )ε{ _clauses.push_back(move(clause)); }
 		α Empty()Ι->bool{ return _clauses.empty(); }

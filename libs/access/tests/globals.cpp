@@ -33,9 +33,6 @@ namespace Tests{
  		let updateJson = QL::Query( updateNameQL(table, id, updatedName), userPK );
 		ASSERT_TRUE( Json::AsSV(Select(table,id, GetRoot(), {}, true), "name")==updatedName );
 	}
-	Ω testUnauthUpdateName( str table, uint id, UserPK userPK, sv updatedName )ε->void{
- 		EXPECT_THROW( QL::Query(updateNameQL(table, id, updatedName), userPK), IException );
-	}
 
 	Ω deleteQL( str table, uint id )ι->string{ return Ƒ( "mutation delete{}( \"id\":{} )", Capitalize(table), id ); }
 	Ω restoreQL( str table, uint id )ι->string{ return Ƒ( "mutation restore{}( \"id\":{} )", Capitalize(table), id ); }
@@ -48,10 +45,6 @@ namespace Tests{
  		let restoreJson = QL::Query( restoreQL(table, id), userPK );
 		ASSERT_FALSE( Select(table, id, userPK).empty() );
 	}
-	Ω testUnauthDeleteRestore( str table, uint id, UserPK userPK )ε->void{
-		EXPECT_THROW( QL::Query(deleteQL(table,id), userPK), IException );
-		EXPECT_THROW( QL::Query(restoreQL(table,id), userPK), IException );
-	}
 	Ω addRemoveQL( sv op, const DB::Table& table, uint pk, vector<uint> members )ε->string{
 		let& map = *table.Map;
 		let parentTable = map.Parent->Table;
@@ -63,6 +56,13 @@ namespace Tests{
 		return QL::Query( addRemoveQL(op, table, pk, members), userPK );
 	}
 }
+	α Tests::TestUnauthUpdateName( str table, uint id, UserPK userPK, sv updatedName )ε->void{
+ 		EXPECT_THROW( QL::Query(updateNameQL(table, id, updatedName), userPK), IException );
+	}
+	α Tests::TestUnauthDeleteRestore( str table, uint id, UserPK userPK )ε->void{
+		EXPECT_THROW( QL::Query(deleteQL(table,id), userPK), IException );
+		EXPECT_THROW( QL::Query(restoreQL(table,id), userPK), IException );
+	}
 
 	α Tests::SetSchema( sp<DB::AppSchema> schema )ι->void{_schema = schema;}
 	α Tests::DS()ι->DB::IDataSource&{ return *_schema->DS(); }
@@ -93,8 +93,8 @@ namespace Tests{
 
 	α Tests::Create( str table, sv target, UserPK userPK, str input )ε->uint{
 		let create = Ƒ( "{{ mutation create{0}(  'input': {{'target':'{1}','name':'{1} - name','description':'{1} - description' {2} }} ){{id}} }}", Capitalize(table), target, input.size() ? ","s+input : "" );
-		let createJson = QL::Query( Str::Replace(create, '\'', '"'), userPK );
-		return AsNumber<uint>( createJson, Ƒ("{}/id",ToJson(table)) );//{"data":{"user":{"id":7}}}
+		let createJson = FindDefaultObject( QL::Query(Str::Replace(create, '\'', '"'), userPK), table );
+		return GetId( createJson );//{"data":{"user":{"id":7}}}
 	}
 
 	Ω createUser( str target, EProviderType providerId, UserPK userPK )ε->UserPK{
@@ -117,11 +117,11 @@ namespace Tests{
 	}
 
 	α Tests::Select( sv table, uint id, UserPK userPK, sv cols, bool includeDeleted )ε->jobject{
-		return select( table, Ƒ("id:{} ", id), columns(cols, includeDeleted), userPK );
+		return select( DB::Names::ToSingular(table), Ƒ("id:{} ", id), columns(cols, includeDeleted), userPK );
 	}
 
 	α Tests::Select( sv table, str target, UserPK userPK, sv cols, bool includeDeleted )ε->jobject{
-		return select( table, Ƒ("target:\"{}\" ", target), columns(cols, includeDeleted), userPK );
+		return select( DB::Names::ToSingular(table), Ƒ("target:\"{}\" ", target), columns(cols, includeDeleted), userPK );
 	}
 
 	α Tests::SelectGroup( str target, UserPK userPK, bool includeDeleted )ε->jobject{
@@ -244,8 +244,8 @@ namespace Jde::Access{
 	α Tests::TestUnauthCrud( str table, str target, UserPK userPK )ε->uint{
 		let row = testUnauthGet( table, target, userPK, {}, true );
 		let id = GetId( row );
-		testUnauthUpdateName( table, id, userPK, "newName" );
-		testUnauthDeleteRestore( table, id, userPK );
+		TestUnauthUpdateName( table, id, userPK, "newName" );
+		TestUnauthDeleteRestore( table, id, userPK );
 		return id;
 	}
 	α Tests::TestUnauthAddRemove( str tableName, uint pk, vector<uint> members, UserPK userPK )->void{
