@@ -60,5 +60,7 @@ namespace Jde::DB{
 	template<> Ξ IRow::Get<uint8>( uint i, SL sl )Ε->uint8{ return (uint8)GetUInt16(i, sl); }
 	template<> Ξ IRow::Get<long>( uint i, SL sl )Ε->long{ return (long)GetInt32(i,sl); }
 	template<> Ξ IRow::Get<optional<TimePoint>>( uint i, SL sl )Ε->optional<TimePoint>{ return GetTimePointOpt(i, sl); }
+	Ŧ IRow::Get( uint i, SL sl )Ε->T{ return T{Get<typename T::Type>(i, sl)}; }//for pk
+
 }
 #endif

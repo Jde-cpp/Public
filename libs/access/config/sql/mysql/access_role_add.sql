@@ -6,7 +6,7 @@ create procedure access_role_add( _role_id int unsigned, _allowed tinyint unsign
 begin
 	declare _permission_id int unsigned;
 
-	select _role_id
+	select permission_id
 	into _permission_id
 	from role_members
 		join permission_rights on role_members.member_id=permission_rights.permission_id

@@ -2,25 +2,21 @@
 
 #include <jde/framework.h>
 #include <jde/framework/coroutine/Await.h>
+#include <jde/db/meta/AppSchema.h>
+#include <jde/access/awaits/AuthenticateAwait.h>
+#include "awaits/ConfigureAwait.h"
 #include "exports.h"
 #include "usings.h"
-#include <jde/db/meta/AppSchema.h>
-#include <jde/framework/coroutine/Await.h>
-#include "../../../../Framework/source/coroutine/Awaitable.h"
+//#include "../../../../Framework/source/coroutine/Awaitable.h"
 
 namespace Jde::QL{ struct MutationQL; enum class EMutationQL : uint8; }
 
 #define Φ ΓA auto
 namespace Jde::Access{
 	struct IAcl;
-	struct ConfigureAwait : VoidAwait<>{
-		ConfigureAwait( /*vec<AppPK> appPKs*/ )ι;
-		α Suspend()ι->void override;
-		//vector<AppPK> AppPKs;
-	};
-	Φ Configure( sp<DB::AppSchema> schema/*, vec<AppPK> appPKs*/ )ε->ConfigureAwait;
+	Φ Configure( sp<DB::AppSchema> schema, sp<QL::IQL> qlServer, UserPK executer )ε->ConfigureAwait;
 	α LocalAcl()ι->sp<IAcl>;
-	α Authenticate( string loginName, uint providerId, string opcServer={}, SRCE )ι->AsyncAwait;
+	α Authenticate( str loginName, uint providerId, str opcServer={}, SRCE )ι->AuthenticateAwait;
 	//α Login( string loginName, uint providerId, string opcServer={}, SRCE )ι->AsyncAwait;
 	//α IsTarget( sv url )ι->bool;
 	//α ApplyMutation( const QL::MutationQL& m, UserPK id )ε->void;

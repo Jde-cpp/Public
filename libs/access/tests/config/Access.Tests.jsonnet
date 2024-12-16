@@ -1,6 +1,6 @@
 {
 	testing:{
-		tests: "RoleTests.AddRemove",
+		tests:: "AclTests.EnabledPermissions",
 		recreateDB:: true
 	},
 	dbServers: {

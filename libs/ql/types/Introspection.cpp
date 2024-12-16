@@ -230,20 +230,22 @@ namespace Jde::QL{
 		return jTable;
 	}
 
-	α QueryType( const TableQL& typeTable, jobject& jData )ε->void{
+	α QueryType( const TableQL& typeTable )ε->jobject{
 		let typeName = Json::AsString( typeTable.Args, "name" );
 		auto dbTable = DB::AsTable( GetTable(ToPlural(FromJson(typeName))) );
+		jobject y;
 		for( let& qlTable : typeTable.Tables ){
 			if( qlTable.JsonName=="fields" ){
 				if( let pObject = _introspection.Find(typeName); pObject )
-					jData["__type"] = pObject->ToJson( qlTable );
+					y = pObject->ToJson( qlTable );
 				else
-					IntrospectFields( typeName, *dbTable, qlTable, jData );
+					IntrospectFields( typeName, *dbTable, qlTable, y );
 			}
 			else if( qlTable.JsonName=="enumValues" )
-				jData["__type"] = IntrospectEnum( dbTable, qlTable, jData );
+				y = IntrospectEnum( dbTable, qlTable, y );
 			else
 				THROW( "__type data for '{}' not supported", qlTable.JsonName );
 		}
+		return y;
 	}
 }

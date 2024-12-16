@@ -14,38 +14,6 @@
 #define let const auto
 namespace Jde::Access{
 	using namespace Jde::Coroutine;
-
-	UserLoadAwait::UserLoadAwait( sp<DB::AppSchema> schema )ι:
-		_schema{ schema }
-	{}
-
-	α UserLoadAwait::Execute()ι->DB::MapAwait<IdentityPK,optional<TimePoint>>::Task{
-		let userTable{ _schema->GetTablePtr("identities") };
-		let ds = userTable->Schema->DS();
-		try{
-			DB::SelectClause select{ {userTable->GetPK(), userTable->GetColumnPtr("deleted")} };
-			DB::Statement statement{ move(select), {userTable}, {userTable->GetColumnPtr("is_group"), false} };
-			auto users = co_await ds->SelectMap<UserPK,optional<TimePoint>>( statement.Move() );
-			[]( auto& self, auto ds, auto users )ι->TAwait<flat_multimap<GroupPK,IdentityPK>>::Task {
-				try{
-					Identities identities;
-					for( let [pk,deleted] : users )
-						identities.Users.emplace( pk, User{pk, deleted.has_value()} );
-					let userGroups = co_await *ds->template SelectMultiMap<GroupPK,IdentityPK>( DB::SelectSKsSql(self._schema->GetTablePtr("identity_groups")) );
-					for( auto&& [groupPk,userPK] : userGroups )
-						identities.GroupMembers.emplace( groupPk, userPK );
-					self.Resume( std::move(identities) );
-				}
-				catch( IException& e ){
-					self.ResumeExp( move(e) );
-				}
-			}( *this, ds, move(users) );
-		}
-		catch( IException& e ){
-			ResumeExp( move(e) );
-		}
-	}
-
 	α User::UpdatePermission( PermissionPK permissionPK, optional<ERights> allowed, optional<ERights> denied )ε->void{
 		auto permission = Permissions.find(permissionPK);
 		if( permission==Permissions.end() )
@@ -66,14 +34,13 @@ namespace Jde::Access{
 	}
 
 	α User::operator+=( const Permission& permission )ι->User&{
-		Permissions[permission.PK] = permission;
+		Permissions.insert_or_assign( permission.PK, permission );
 		auto& rights = Rights[permission.ResourcePK];
 		rights.Allowed |= permission.Allowed;
 		rights.Denied |= permission.Denied;
 
 		return *this;
 	}
-	α GetTable( str name )ι->sp<DB::Table>;
 
 	struct UserGraphQLAwait final : TAwait<jvalue>{
 		UserGraphQLAwait( const QL::TableQL& query, UserPK userPK, SRCE )ι:
@@ -83,7 +50,7 @@ namespace Jde::Access{
 		{}
 		α Suspend()ι->void override{ Select(); }
 		QL::TableQL Query;
-		Access::UserPK UserPK;
+		Jde::UserPK UserPK;
 	private:
 		α Select()ι->DB::RowAwait::Task;
 	};
@@ -96,7 +63,7 @@ namespace Jde::Access{
 			DB::Statement statement;
 			statement.From+={ pk, groups->GetColumnPtr("member_id"), true };
 			statement.From+={ groups->SurrogateKeys[0], pk, true, "groups_" };
-			statement.Where.Add( pk, DB::Value{pk->Type, Json::AsNumber<Access::UserPK>(Query.Args, "id")} );
+			statement.Where.Add( pk, DB::Value{pk->Type, Json::AsNumber<Jde::UserPK::Type>(Query.Args, "id")} );
 			statement.Where.Add( extension->GetColumnPtr("deleted"), DB::Value{} );
 			auto groupTable = find_if( Query.Tables, [](let& t){ return t.JsonName=="identityGroups";} );
 			flat_map<uint8,string> qlColumns;

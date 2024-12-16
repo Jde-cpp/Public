@@ -30,9 +30,9 @@ namespace Jde{
 
 namespace QL{
 	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
-	α QueryType( const TableQL& typeTable, jobject& jData )ε->void;
+	α QueryType( const TableQL& typeTable )ε->jobject;
 
-	α QuerySchema( const TableQL& schemaTable, jobject& jData )ε->void{
+	α QuerySchema( const TableQL& schemaTable )ε->jobject{
 		THROW_IF( schemaTable.Tables.size()!=1, "Only Expected 1 table type for __schema {}", schemaTable.Tables.size() );
 		let& mutationTable = schemaTable.Tables[0]; THROW_IF( mutationTable.JsonName!="mutationType", "Only mutationType implemented for __schema - {}", mutationTable.JsonName );
 		jarray fields;
@@ -79,22 +79,33 @@ namespace QL{
 		jmutationType["fields"] = fields;
 		jmutationType["name"] = "Mutation";
 		jobject jSchema; jSchema["mutationType"] = jmutationType;
-		jData["__schema"] = jmutationType;
+		return jmutationType;
 	}
 
-	α QueryTable( const TableQL& table, UserPK userPK, jobject& jData )ε->void{
+	α QueryTable( const TableQL& table, UserPK executer )ε->jvalue{
+		jvalue y;
 		if( table.JsonName=="__type" )
-			QueryType( table, jData );
+			y = QueryType( table );
 		else if( table.JsonName=="__schema" )
-			QuerySchema( table, jData );
-		else
-			QL::Query( table, jData, userPK );
+			y = QuerySchema( table );
+		else{
+			y = QL::Query( table, executer );
+		}
+		return y;
 	}
 
-	α QueryTables( const vector<TableQL>& tables, UserPK userPK )ε->jobject{
-		jobject data;
-		for( let& table : tables )
-			QueryTable( table, userPK, data );
-		return data;
+	α QueryTables( const vector<TableQL>& tables, UserPK userPK )ε->jvalue{
+		optional<jvalue> y;
+		for( let& table : tables ){
+			auto result = QueryTable( table, userPK );
+			if( table.ReturnRaw )
+				y = result;
+			else{
+				if( !y || !y->is_object() )
+					y = jobject{};
+				y->get_object()[table.JsonName] = move(result);
+			}
+		}
+		return y ? *y : jvalue{};
 	}
 }}

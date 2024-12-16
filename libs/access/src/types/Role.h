@@ -1,12 +1,12 @@
 #pragma once
 #include <jde/access/usings.h>
 #include <jde/framework/coroutine/Await.h>
+#include <jde/ql/ql.h>
+#include "../accessInternal.h"
 
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Access{
 	using PermissionRightPK=uint32;
-	using PermissionRole=variant<PermissionRightPK,RolePK>;
-
 
 	struct RoleRights final{
 		Access::RolePK RolePK;
@@ -14,14 +14,18 @@ namespace Jde::Access{
 	};
 
 	struct Role{
+		Role( const jobject& j )ι;
 		RolePK PK;
-		flat_set<PermissionPK> Permissions;
+		bool Deleted;
+		flat_set<PermissionRole> Members;
 	};
 
-	struct RoleLoadAwait final : TAwait<flat_map<RolePK,flat_set<PermissionRole>>>{
-		RoleLoadAwait( sp<DB::AppSchema> schema )ι: _schema{schema}{};
+	struct RoleLoadAwait final : TAwait<flat_map<RolePK,Role>>{
+		RoleLoadAwait( sp<QL::IQL> qlServer, UserPK executer )ι:_executer{executer}, _qlServer{qlServer}{};
 	private:
-		α Suspend()ι->void override;
-		sp<DB::AppSchema> _schema;
+		α Suspend()ι->void override{ Load();}
+		α Load()ι->QL::QLAwait::Task;
+		UserPK _executer;
+		sp<QL::IQL> _qlServer;
 	};
 }

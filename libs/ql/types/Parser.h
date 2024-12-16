@@ -13,7 +13,7 @@ namespace Jde::QL{
 		α AllText()ι->string{ return _text; }
 
 		α LoadMutation()ε->MutationQL;
-		α LoadTables( sv jsonName )ε->vector<TableQL>;
+		α LoadTables( sv jsonName, bool returnRaw )ε->vector<TableQL>;
 	private:
 		α LoadTable( sv jsonName )ε->TableQL;
 		α ParseJson()ε->jobject;

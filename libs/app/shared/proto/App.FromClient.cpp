@@ -90,7 +90,7 @@ namespace Jde::App{
 		proto.set_function_id( m.FunctionId );
 		proto.set_line( m.LineNumber );
 		proto.set_thread_id( m.ThreadId );
-		proto.set_user_pk( m.UserPK );
+		proto.set_user_pk( m.UserPK.Value );
 		*proto.mutable_time() = IO::Proto::ToTimestamp( m.TimePoint );
 		return proto;
 	}

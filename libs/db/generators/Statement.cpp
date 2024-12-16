@@ -2,6 +2,7 @@
 #include <jde/db/meta/View.h>
 
 namespace Jde::DB{
+
 	α Statement::Move()ε->Sql{
 		Sql sql;
 		sql.Text += Select.ToString()+'\n';

@@ -7,7 +7,7 @@
 #include <CommonDefs.h>
 #pragma warning( default : 4267 )
 #pragma pop_macro("assert")
-#include "../Exports.h"
+#include "../exports.h"
 #include <jde/markets/Decimal.h>
 #pragma warning( disable : 4244 )
 #pragma warning( disable : 4996 )

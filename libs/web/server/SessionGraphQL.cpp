@@ -36,13 +36,13 @@ namespace Jde::Web::Server{
 			if( Query.FindColumn("domain") || Query.FindColumn("loginName") ){
 				string inClause; inClause.reserve( sessions.size()*5 );
 				for( let& session : sessions )
-					inClause += std::to_string( session->UserPK ) + ",";
+					inClause += std::to_string( session->UserPK.Value ) + ",";
 				auto q = "query{ users(id:["+inClause.substr(0, inClause.size()-1)+"]){id loginName provider{id name}} }";
 				users = Json::AsObject(co_await (*AppGraphQLAwait(move(q), UserPK)) );
 				Trace( _tags | ELogTags::Pedantic, "users={}"sv, serialize(users) );
 				for( let& vuser : Json::AsArrayPath(users, "data/users") ){
 					let& user = Json::AsObject(vuser);
-					userDomainLoginNames[Json::AsNumber<Jde::UserPK>(user,"id")] = make_tuple( Json::AsSVPath(user, "provider/name"), Json::AsString(user, "loginName") );
+					userDomainLoginNames[{Json::AsNumber<Jde::UserPK::Type>(user,"id")}] = make_tuple( Json::AsSVPath(user, "provider/name"), Json::AsString(user, "loginName") );
 				}
 			}
 			auto array = Query.IsPlural() ? jarray{} : optional<jarray>{};

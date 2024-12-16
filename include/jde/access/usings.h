@@ -1,13 +1,23 @@
 #pragma once
 namespace Jde::Access{
-//	using AppPK=uint16;
-	using IdentityPK=uint32;
-	using GroupPK=IdentityPK;
+	struct GroupPK final : PK<uint32>{};
 	using ProviderPK=uint32;
 	using PermissionIdentityPK=uint32;
 	using PermissionPK=PermissionIdentityPK;
 	using RolePK=PermissionIdentityPK;
-	using UserPK=IdentityPK;
+	struct IdentityPK{
+		IdentityPK( Jde::UserPK pk )ι:Value{pk}{}
+		IdentityPK( Access::GroupPK pk )ι:Value{pk}{}
+		using Type=Jde::UserPK::Type;
+		α IsUser()Ι->bool{ return Value.index()==0; }
+		α UserPK()Ι->Jde::UserPK{ return get<Jde::UserPK>(Value); }
+		α GroupPK()Ι->Access::GroupPK{ return get<Access::GroupPK>(Value); }
+		α Underlying()Ι->Type{ return Value.index()==0 ? UserPK().Value : GroupPK().Value; }
+		α operator!=( IdentityPK rhs )Ι->bool{ return Value!=rhs.Value; }
+		α operator<( IdentityPK rhs )Ι->bool{ return Underlying() < rhs.Underlying(); }
+
+		variant<Jde::UserPK,Access::GroupPK> Value;
+	};
 
 	enum class EProviderType : uint8{
 		None = 0,

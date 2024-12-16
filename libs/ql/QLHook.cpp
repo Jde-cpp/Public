@@ -111,8 +111,10 @@ namespace Jde::QL{
 			up<TAwait<jvalue>> p;
 			switch( _op ){
 				using enum Hook::Operation;
+				case (Add | Before): p = hook.AddBefore( _mutation, _userPK ); break;
 				case Add: p = hook.Add( _mutation, _userPK ); break;
 				case (Add | After): p = hook.AddAfter( _mutation, _userPK ); break;
+				//case (Remove | Before): p = hook.RemoveBefore( _mutation, _userPK ); break;
 				case Remove: p = hook.Remove( _mutation, _userPK ); break;
 				case (Remove | After): p = hook.RemoveAfter( _mutation, _userPK ); break;
 				case (Insert | Before): p = hook.InsertBefore( _mutation, _userPK ); break;
@@ -150,8 +152,10 @@ namespace Jde::QL{
 	}
 	α Hook::Select( const TableQL& ql, UserPK userPK, SL sl )ι->QueryHookAwaits{ return QueryHookAwaits{ ql, userPK, Operation::Select, sl }; };
 
+	α Hook::AddBefore( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Add|Operation::Before, sl }; }
 	α Hook::Add( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Add, sl }; }
 	α Hook::AddAfter( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Add|Operation::After, sl }; }
+	//α Hook::RemoveBefore( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Remove|Operation::Before, sl }; }
 	α Hook::Remove( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Remove, sl }; }
 	α Hook::RemoveAfter( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Remove|Operation::After, sl }; }
 	α Hook::InsertBefore( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Insert|Operation::Before, sl }; }

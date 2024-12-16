@@ -13,7 +13,7 @@ namespace Jde::DB{
 	};
 	struct FromClause final{
 		FromClause()=default;
-		FromClause( sp<View>& v )ι:SingleTable{v}{};
+		FromClause( const sp<View>& v )ι:SingleTable{v}{};
 		FromClause( const sp<Table>& t )ι;
 		FromClause( vec<sp<Table>>& tables, SRCE )ε;
 		FromClause( Join&& j )ι:Joins{move(j)}{};

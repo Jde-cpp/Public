@@ -79,6 +79,7 @@ namespace Jde{
 	using jvalue=boost::json::value;
 	using jarray=boost::json::array;
 	using jobject=boost::json::object;
+	using jstring=boost::json::string;
 	using boost::json::parse;
 	using boost::json::serialize;
 	using str = const std::string&;
@@ -90,7 +91,16 @@ namespace Jde{
 	using std::source_location;
 	using SL = std::source_location;
 	using LogEntryPK=uint;
-	using UserPK=uint32;
+	Τ struct PK{
+		using Type=T;
+		Type Value;
+		operator bool()Ι{ return Value!=0; }
+		α operator !()Ι{ return Value==0; }
+		α operator ==( const PK& rhs )Ι{ return Value==rhs.Value; }
+		α operator !=( const PK& rhs )Ι{ return Value!=rhs.Value; }
+		α operator <( const PK& rhs )Ι{ return Value<rhs.Value; }
+	};
+	struct UserPK final: PK<uint32>{};
 
 	using std::coroutine_handle;
 	using std::suspend_never;

@@ -53,6 +53,8 @@ namespace Jde::QL{
 			else //enum but not flags
 				y = Find( *values, value ).value_or( std::to_string(value) );
 		}
+		else if( c.Type==DB::EType::Bit )
+			y = dbValue.ToUInt()!=0;
 		else
 			y = dbValue.ToJson();
 		return y;
@@ -213,29 +215,30 @@ namespace Jde{
 		return statement;
 	}
 
-	α QL::Query( const TableQL& qlTable, jobject& jData, UserPK userPK )ε->void{
+	α QL::Query( const TableQL& qlTable, UserPK executer )ε->jvalue{
+		jvalue y;
 		optional<std::pair<bool,up<IException>>> hookExp;
-		[]( auto& qlTable, auto userPK, auto& jData, auto& hookExp )->TAwait<optional<jvalue>>::Task {
+		[]( auto& qlTable, auto executer, auto& y, auto& hookExp )->TAwait<optional<jvalue>>::Task {
 			try{
-				auto j = co_await QL::Hook::Select( qlTable, userPK );
+				auto j = co_await QL::Hook::Select( qlTable, executer );
 				let hasValue = j.has_value();
 				if( hasValue )
-					jData[qlTable.JsonName] = move( *j );
+					y = move( *j );
 				hookExp = std::make_pair( hasValue, nullptr );
 			}
 			catch( IException& e ){
 				hookExp = std::make_pair( true, e.Move() );
 			}
-		}( qlTable, userPK, jData, hookExp );
+		}( qlTable, executer, y, hookExp );
 		while( !hookExp )
 			std::this_thread::yield();
 		if( hookExp->second )
 			hookExp->second->Throw();
 		if( hookExp->first )
-			return;
+			return y;
 
 		let dbTable = GetTable( qlTable.DBName() );
-		dbTable->Authorize( Access::ERights::Read, userPK, SRCE_CUR );
+		dbTable->Authorize( Access::ERights::Read, executer, SRCE_CUR );
 		auto statement = SelectStatement( qlTable );
 /*		columnSql( qlTable, *dbTable, nullptr, flags, false, nullptr, statement, &jsonMembers );
 
@@ -250,14 +253,14 @@ namespace Jde{
 			statement.Where.Add( dbTable->GetPK()->Criteria );
 */
 		let subTables = SelectSubTables( qlTable.Tables, *DB::AsTable(dbTable), statement ? statement->Where : DB::WhereClause{} );
-		let jsonTableName = qlTable.JsonName;
 		if( statement )
-			jData[jsonTableName] = query( qlTable, move(*statement), *dbTable->Schema->DS(), userPK, &subTables );
+			y = query( qlTable, move(*statement), *dbTable->Schema->DS(), executer, &subTables );
 		else{
 			jobject jRow;
 			addSubTables( qlTable, subTables, jRow, 0 );
-			jData[jsonTableName] = jRow;
+			y = jRow;
 		}
+		return y;
 	}
 	α QL::addSubTables( const TableQL& parentQL, const SubTables& subTables, jobject& parent, uint parentId )ι->void{
 //		auto addSubTables = [&]( jobject& jParent, uint id=0 ){

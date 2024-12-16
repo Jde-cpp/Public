@@ -4,7 +4,7 @@
 #include <map>
 #include <bitset>
 #include <CommonDefs.h>
-#include "../Exports.h"
+#include "../exports.h"
 #include "../TypeDefs.h"
 #include <jde/markets/types/proto/ib.pb.h>
 

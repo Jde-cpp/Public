@@ -15,12 +15,12 @@ namespace Jde::Access{
 	static sp<DB::AppSchema> _schema;
 
 namespace Tests{
-	Ω testUnauthGet( str table, str target, UserPK userPK, sv cols, bool includeDeleted )ε->jobject{
+	Ω testUnauthGet( str table, str target, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
 		auto y = Select( table, target, GetRoot(), cols, includeDeleted );
 		if( y.empty() ){
-			EXPECT_THROW( Create(table, target, userPK), IException );
+			EXPECT_THROW( Create(table, target, executer), IException );
 			Create( table, target, GetRoot() );
-			EXPECT_THROW( Select(table, target, userPK, cols, includeDeleted), IException );
+			EXPECT_THROW( Select(table, target, executer, cols, includeDeleted), IException );
 			y = Select( table, target, GetRoot(), cols, includeDeleted );
 		}
 		return y;
@@ -53,7 +53,7 @@ namespace Tests{
 		return Ƒ( "{{ mutation {}{}( \"id\":{}, \"{}\":{} ) }}", op, parentTable->Name, pk, ToJson(map.Child->Name), memberString );
 	}
 	Ω addRemove( sv op, const DB::Table& table, uint pk, vector<uint> members, UserPK userPK )ε->jobject{
-		return QL::Query( addRemoveQL(op, table, pk, members), userPK );
+		return QL::QueryObject( addRemoveQL(op, table, pk, members), userPK );
 	}
 }
 	α Tests::TestUnauthUpdateName( str table, uint id, UserPK userPK, sv updatedName )ε->void{
@@ -73,21 +73,26 @@ namespace Tests{
 		addRemove( "add", table, groupPK, members, userPK );
 	}
 
+	α memberString( vector<IdentityPK> members )ε->string{
+		string memberString;
+		for( let member : members )
+			memberString+= std::to_string(member.Underlying()) + ',';
+		memberString.pop_back();
+		if( members.size()>1 )
+			memberString = "["+memberString+"]";
+		return memberString;
+	}
 	α Tests::AddToGroup( GroupPK id, vector<IdentityPK> members, UserPK userPK )ε->void{
-		let add = members.size()==1
-			? Ƒ( "{{ mutation addIdentityGroup( \"id\":{}, \"memberId\":{} ) }}", id, members[0] )
-			: Ƒ( "{{ mutation addIdentityGroup( \"id\":{}, \"memberId\":[{}] ) }}", id, Str::Join(members) );
-		let addJson = QL::Query( add, userPK );
+		let ql =	Ƒ( "{{ mutation addIdentityGroup( \"id\":{}, \"memberId\":{} ) }}", id.Value, memberString(members) );
+		let addJson = QL::Query( ql, userPK );
 	}
 
 	α Tests::Remove( const DB::Table& table, uint groupPK, vector<uint> members, UserPK userPK )ε->void{
 		addRemove( "remove", table, groupPK, members, userPK );
 	}
 	α Tests::RemoveFromGroup( GroupPK id, vector<IdentityPK> members, UserPK userPK )ε->void{
-		let remove = members.size()==1
-			? Ƒ( "{{ mutation removeIdentityGroup( \"id\":{}, \"memberId\":{} ) }}", id, members[0] )
-			: Ƒ( "{{ mutation removeIdentityGroup( \"id\":{}, \"memberId\":[{}] ) }}", id, Str::Join(members) );
-		let removeJson = QL::Query( remove, userPK );
+		let ql = Ƒ( "{{ mutation removeIdentityGroup( \"id\":{}, \"memberId\":{} ) }}", id.Value, memberString(members) );
+		let removeJson = QL::Query( ql, userPK );
 	}
 
 
@@ -99,21 +104,20 @@ namespace Tests{
 
 	Ω createUser( str target, EProviderType providerId, UserPK userPK )ε->UserPK{
 		let create = Ƒ( "{{ mutation createUser(  'input': {{'loginName':'{0}','target':'{0}','provider':{1},'name':'{0} - name','description':'{0} - description'}} ){{id}} }}", target, (uint)providerId );
-		let createJson = QL::Query( Str::Replace(create, '\'', '"'), userPK );
-		return AsNumber<UserPK>( createJson, "user/id" );//{"data":{"user":{"id":7}}}
+		let createJson = QL::QueryObject( Str::Replace(create, '\'', '"'), userPK );
+		return { AsNumber<UserPK::Type>( createJson, "user/id") };//{"data":{"user":{"id":7}}}
 	}
-	α CreateGroup( str target, UserPK userPK )ε->IdentityPK{
+	α createGroup( str target, UserPK userPK )ε->GroupPK{
 		let create = Ƒ( "{{ mutation createIdentityGroup(  'input': {{'target':'{0}','name':'{0} - name','description':'{0} - description'}} ){{id}} }}", target );
-		let createJson = QL::Query( Str::Replace(create, '\'', '"'), userPK );
-		return AsNumber<UserPK>( createJson, "identityGroup/id" );
+		let createJson = QL::QueryObject( Str::Replace(create, '\'', '"'), userPK );
+		return {AsNumber<GroupPK::Type>( createJson, "identityGroup/id")};
 	}
 	α columns( sv cols, bool includeDeleted )ε->string{
 		return Ƒ( "id name attributes created updated target description {} {}", cols, includeDeleted ? "deleted" : "" );
 	}
 	α select( sv table, str filter, str cols, UserPK userPK )ε->jobject{
-		let ql = Ƒ( "query{{ {}({}){{ {} }} }}", table, filter, cols );
-		let y = QL::Query( ql, userPK );
-		return FindDefaultObject( y, table );
+		let ql = Ƒ( "{}({}){{ {} }}", table, filter, cols );
+		return QL::QueryObject( ql, userPK );
 	}
 
 	α Tests::Select( sv table, uint id, UserPK userPK, sv cols, bool includeDeleted )ε->jobject{
@@ -160,15 +164,15 @@ namespace Tests{
 		if( _root )
 			return *_root;
 
-		auto root = SelectUser( "root", 0 );
+		auto root = SelectUser( "root", {0} );
 		_root = root.empty()
-			? createUser( "root", EProviderType::Google, 0 )
-			: GetId(root);
+			? createUser( "root", EProviderType::Google, {0} )
+			: UserPK{ GetId(root) };
 		return *_root;
 	}
 
 	α Tests::GetUser( str target, UserPK userPK, bool includeDeleted, EProviderType provider )ε->jobject{
-		if( userPK==0 )
+		if( userPK==UserPK{0} )
 			userPK = GetRoot();
 		auto user = SelectUser( target, userPK, includeDeleted );
 		if( user.empty() ){
@@ -181,7 +185,7 @@ namespace Tests{
 		auto y = SelectGroup( target, userPK, true );
 		Trace{ _tags, "{}", serialize(y) };
 		if( y.empty() ){
-			CreateGroup( target, userPK );
+			createGroup( target, userPK );
 			y = SelectGroup( target, userPK, false );
 		}
 		return y;
@@ -189,40 +193,40 @@ namespace Tests{
 
 	α Tests::Purge( str table, uint id, UserPK userPK )ε->jobject{
 		let ql = Ƒ( "mutation purge{}(\"id\":{})", Capitalize(table), id );
-		let y = QL::Query( ql, userPK );
+		let y = QL::QueryObject( ql, userPK );
 		return y;
 	}
 	α Tests::PurgeUser( UserPK userId, UserPK userPK )ε->void{
-		let purge = Ƒ( "mutation purgeUser(\"id\":{})", userId );
+		let purge = Ƒ( "mutation purgeUser(\"id\":{})", userId.Value );
 		let purgeJson = QL::Query( purge, userPK );
 	}
 	α Tests::PurgeGroup( GroupPK id, UserPK userPK )ε->void{
-		let purge = Ƒ( "mutation purgeIdentityGroup(\"id\":{})", id );
+		let purge = Ƒ( "mutation purgeIdentityGroup(\"id\":{})", id.Value );
 		let purgeJson = QL::Query( purge, userPK );
 	}
 	α Tests::Delete( str table, uint id, UserPK userPK )ε->jobject{
 		let del = Ƒ( "mutation delete{}( \"id\":{} )", Capitalize(table), id );
-		return QL::Query( del, userPK );
+		return QL::QueryObject( del, userPK );
 	}
 	α Tests::Restore( str table, uint id, UserPK userPK )ε->jobject{
 		let ql = Ƒ( "mutation restore{}( \"id\":{} )", Capitalize(table), id );
-		return QL::Query( ql, userPK );
+		return QL::QueryObject( ql, userPK );
 	}
 	α Tests::TestAdd( str tableName, uint groupPK, vector<uint> members, UserPK userPK )->void{
 		Add( *GetTable(tableName), groupPK, members, userPK );
-		let o = Select( ToSingular(tableName), groupPK, GetRoot(), {"members{id}"}, userPK );
+		let o = Select( ToSingular(tableName), groupPK, userPK, {"members{id}"}, true );
 		flat_set<uint> memberIds;
 		for( let& member : AsArray(o, "members") )
-			memberIds.emplace( AsNumber<IdentityPK>(AsObject(member), "id") );
+			memberIds.emplace( GetId(AsObject(member)) );
 		for( let member : members )
 			ASSERT_TRUE( memberIds.contains(member) ) << "member not found: " << member;
 	}
 	α Tests::TestRemove( str tableName, uint groupPK, vector<uint> members, UserPK userPK )->void{
 		Remove( *GetTable(tableName), groupPK, members, userPK );
-		let o = Select( ToSingular(tableName), groupPK, GetRoot(), {"members{id}"}, userPK );
+		let o = Select( ToSingular(tableName), groupPK, GetRoot(), {"members{id}"}, true );
 		flat_set<uint> memberIds;
 		for( let& member : AsArray(o, "members") )
-			memberIds.emplace( AsNumber<IdentityPK>(AsObject(member), "id") );
+			memberIds.emplace( AsNumber<uint>(AsObject(member), "id") );
 		for( let member : members )
 			ASSERT_TRUE( !memberIds.contains(member) );
 	}
@@ -241,11 +245,11 @@ namespace Jde::Access{
  		ASSERT_TRUE( Select(table, id, userPK, {}, true).empty() );
 	}
 
-	α Tests::TestUnauthCrud( str table, str target, UserPK userPK )ε->uint{
-		let row = testUnauthGet( table, target, userPK, {}, true );
+	α Tests::TestUnauthCrud( str table, str target, UserPK executer )ε->uint{
+		let row = testUnauthGet( table, target, executer, {}, true );
 		let id = GetId( row );
-		TestUnauthUpdateName( table, id, userPK, "newName" );
-		TestUnauthDeleteRestore( table, id, userPK );
+		TestUnauthUpdateName( table, id, executer, "newName" );
+		TestUnauthDeleteRestore( table, id, executer );
 		return id;
 	}
 	α Tests::TestUnauthAddRemove( str tableName, uint pk, vector<uint> members, UserPK userPK )->void{

@@ -7,7 +7,7 @@ namespace Jde::Access::Tests{
 //	constexpr ELogTags _tags{ ELogTags::Test };
 	using namespace Tests;
 
-	uint _userId{};
+	UserPK _userId{};
 
 	class AuthTests : public ::testing::Test{
 	protected:
@@ -30,9 +30,8 @@ namespace Jde::Access::Tests{
 		}
 	}
 
-	α Login( str loginName, uint8 providerId, string opcServer )ε->Task{
-		up<UserPK> pUserId = ( co_await Authenticate(loginName, providerId, opcServer) ).UP<UserPK>();
-		_userId = *pUserId;
+	α Login( str loginName, uint8 providerId, string opcServer )ε->AuthenticateAwait::Task{
+		_userId = co_await Authenticate( loginName, providerId, opcServer );
 		std::shared_lock l{ _mtx };
 		_cv.notify_one();
 	}
@@ -40,7 +39,7 @@ namespace Jde::Access::Tests{
 	TEST_F( AuthTests, Login_Existing ){
 		const string user{ "Login_Existing" };
 		let provider = Access::EProviderType::Google;
-		let userId = GetId( GetUser(user, underlying(provider)) );
+		const UserPK userId{ GetId( GetUser(user, GetRoot(), true, provider) ) };
 		Login( user, underlying(provider), {} );
 		std::shared_lock l{ _mtx };
 		_cv.wait( l );
@@ -53,7 +52,7 @@ namespace Jde::Access::Tests{
 		Login( user, underlying(Access::EProviderType::Google), {} );
 		std::shared_lock l{ _mtx };
 		_cv.wait( l );
-		PurgeUser( _userId, GetRoot() );
+		PurgeUser( {_userId}, GetRoot() );
 	}
 
 	TEST_F( AuthTests, Login_Existing_Opc ){
@@ -62,8 +61,8 @@ namespace Jde::Access::Tests{
 		Login( user, OpcProviderId, string{OpcServer} );
 		std::shared_lock l{ _mtx };
 		_cv.wait( l );
-		ASSERT_EQ( userId, _userId );
-		PurgeUser( userId, GetRoot() );
+		ASSERT_EQ( UserPK{userId}, _userId );
+		PurgeUser( {userId}, GetRoot() );
 	}
 
 	TEST_F( AuthTests, Login_New_Opc ){
@@ -71,6 +70,6 @@ namespace Jde::Access::Tests{
 		Login( user, OpcProviderId, string{OpcServer} );
 		std::shared_lock l{ _mtx };
 		_cv.wait( l );
-		PurgeUser( _userId, GetRoot() );
+		PurgeUser( {_userId}, GetRoot() );
 	}
 }

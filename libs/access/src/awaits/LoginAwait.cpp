@@ -37,9 +37,9 @@ namespace Jde::Access{
 			};
 			auto sql = statement.Move();
 			auto ds = GetSchema()->DS();
-			auto task = ds->ScalerCo<UserPK>( sql.Text, sql.Params );
-			auto p = ( co_await task ).UP<UserPK>(); //gcc compile issue
-			auto userPK = p ? *p : 0;
+			auto task = ds->ScalerCo<UserPK::Type>( sql.Text, sql.Params );
+			auto p = ( co_await task ).UP<UserPK::Type>(); //gcc compile issue
+			auto userPK = p ? UserPK{*p} : UserPK{};
 			if( !userPK )
 				InsertUser( move(modulusHex), exponent, *ds );
 			else

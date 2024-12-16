@@ -8,12 +8,11 @@
 #include <jde/db/generators/Statement.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/ql/ql.h>
+#include "../Authorize.h"
 
 #define let const auto
 
 namespace Jde::Access{
-	α GetTable( str name )ι->sp<DB::Table>;
-	α AddToGroup( GroupPK groupPK, flat_set<IdentityPK> members )ι->void;
 	α RemoveFromGroup( GroupPK groupPK, flat_set<IdentityPK> members )ι->void;
 	struct GroupGraphQLAwait final : TAwait<jvalue>{
 		GroupGraphQLAwait( const QL::TableQL& query, UserPK userPK, SRCE )ι:
@@ -23,7 +22,7 @@ namespace Jde::Access{
 		{}
 		α Suspend()ι->void override{ Select(); }
 		QL::TableQL Query;
-		Access::UserPK UserPK;
+		Jde::UserPK UserPK;
 	private:
 		α Select()ι->QL::QLAwait::Task;
 	};
@@ -67,15 +66,15 @@ namespace Jde::Access{
 				Resume( jvalue{move(groups)} );
 
 			auto addMembers = [&](jobject& group){
-				let groupPK = Json::FindNumber<GroupPK>( group, "id" );//did not ask for group_id.
+				optional<GroupPK> groupPK = Json::FindKey<GroupPK>(group);//did not ask for group_id.
 				jarray groupMembers;
 				for( auto&& memberValue : *members ){
 					auto& member = memberValue.as_object();
-					let memberGroupPK = Json::AsNumber<IdentityPK>( member, "groupId" );
-					if( !groupPK || memberGroupPK==groupPK ){
+					const GroupPK memberGroupPK{ Json::AsNumber<GroupPK::Type>(member, "groupId") };
+					if( !groupPK || memberGroupPK==*groupPK ){
 						member.erase( "groupId" );
 						if( haveId )
-							member["id"] = Json::AsNumber<IdentityPK>( member, "memberId" );
+							member["id"] = Json::AsNumber<IdentityPK::Type>( member, "memberId" );
 						member.erase( "memberId" );
 						groupMembers.emplace_back( move(member) );
 					}
@@ -110,31 +109,51 @@ namespace Jde::Access{
 	}
 
 	//{ mutation addIdentityGroup( "id":14, "memberId":[15,13] ) }
-	α GroupHook::AddRemoveArgs( const QL::MutationQL& m )ι->std::pair<GroupPK, flat_set<IdentityPK>>{
-		let groupPK = Json::AsNumber<GroupPK>( m.Args, "id" );
-		flat_set<IdentityPK> memberPKs;
+	α GroupHook::AddRemoveArgs( const QL::MutationQL& m )ι->std::pair<GroupPK, flat_set<IdentityPK::Type>>{
+		const GroupPK groupPK{ Json::AsNumber<GroupPK::Type>(m.Args, "id") };
+		flat_set<IdentityPK::Type> memberPKs;
 		auto members = Json::FindValue( m.Args, "memberId" );
 		if( members ){
 			if( members->is_array() ){
 				for( auto& member : members->get_array() ){
-					memberPKs.emplace( Json::FindNumber<IdentityPK>(member,{}).value_or(0) );
+					memberPKs.emplace( Json::FindNumber<IdentityPK::Type>(member,{}).value_or(0) );
 				}
 			}else if( members->is_number() )
-				memberPKs.emplace( Json::FindNumber<IdentityPK>(*members,{}).value_or(0) );
+				memberPKs.emplace( Json::FindNumber<IdentityPK::Type>(*members,{}).value_or(0) );
 		}
 		return {groupPK, memberPKs};
 	}
-	α GroupHook::AddAfter( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
+	struct ExceptionAwait final : TAwait<jvalue>{
+		ExceptionAwait( up<IException>&& e, SRCE )ι:TAwait<jvalue>{ sl }, _exception{ move(e) }{}
+		α await_ready()ι->bool override{ return true; }
+		α Suspend()ι->void override{}
+		α await_resume()ε->jvalue override{ _exception->Throw(); return {}; }
+		up<IException> _exception;
+	};
+	α GroupHook::AddBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
 		if( m.JsonName.starts_with("identityGroup") ){
 			auto [groupPK, memberPKs] = AddRemoveArgs( m );
-			AddToGroup( groupPK, memberPKs );
+			try{
+				Authorizer().TestAddGroupMember( groupPK, move(memberPKs) );
+			}catch( IException& e ){
+				return mu<ExceptionAwait>( e.Move() );
+			}
 		}
 		return {};
 	}
+
+	α GroupHook::AddAfter( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
+		if( m.JsonName.starts_with("identityGroup") ){
+			auto [groupPK, memberPKs] = AddRemoveArgs( m );
+			Authorizer().AddToGroup( groupPK, memberPKs );
+		}
+		return {};
+	}
+
 	α GroupHook::RemoveAfter( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
 		if( m.JsonName.starts_with("identityGroup") ){
 			auto [groupPK, memberPKs] = AddRemoveArgs( m );
-			AddToGroup( groupPK, memberPKs );
+			Authorizer().RemoveFromGroup( groupPK, memberPKs );
 		}
 		return {};
 	}

@@ -10,8 +10,10 @@ namespace Jde::QL{
 	struct IMutationAwait; struct MutationQL; struct TableQL;
 	struct IQLHook{
 		using HookResult=up<TAwait<jvalue>>;
+		β AddBefore( const MutationQL& mutation, UserPK userPK, SRCE )ι->HookResult{ return {}; }
 		β Add( const MutationQL& mutation, UserPK userPK, SRCE )ι->HookResult{ return {}; }
 		β AddAfter( const MutationQL& mutation, UserPK userPK, SRCE )ι->HookResult{ return {}; }
+//		β RemoveBefore( const MutationQL& mutation, UserPK userPK, SRCE )ι->HookResult{ return {}; }
 		β Remove( const MutationQL& mutation, UserPK userPK, SRCE )ι->HookResult{ return {}; }
 		β RemoveAfter( const MutationQL& mutation, UserPK userPK, SRCE )ι->HookResult{ return {}; }
 		β InsertBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
@@ -76,8 +78,10 @@ namespace Jde::QL{
 
 	namespace Hook{
 		α Select( const TableQL& ql, UserPK userPK, SRCE )ι->QueryHookAwaits;
+		α AddBefore( const MutationQL& m, UserPK userPK, SRCE )ι->MutationAwaits;
 		α Add( const MutationQL& m, UserPK userPK, SRCE )ι->MutationAwaits;
 		α AddAfter( const MutationQL& m, UserPK userPK, SRCE )ι->MutationAwaits;
+		//α RemoveBefore( const MutationQL& m, UserPK userPK, SRCE )ι->MutationAwaits;
 		α Remove( const MutationQL& m, UserPK userPK, SRCE )ι->MutationAwaits;
 		α RemoveAfter( const MutationQL& m, UserPK userPK, SRCE )ι->MutationAwaits;
 		α InsertBefore( const MutationQL& m, UserPK userPK, SRCE )ι->MutationAwaits;

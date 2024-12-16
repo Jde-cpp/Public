@@ -2,7 +2,7 @@
 #include "../../../../../Framework/source/DateTime.h"
 #include "../../../../../Framework/source/coroutine/Awaitable.h"
 #include <jde/io/tinyxml2.h>
-#include "../Exports.h"
+#include "../exports.h"
 #include "../EdgarDefs.h"
 
 #define Φ ΓE auto

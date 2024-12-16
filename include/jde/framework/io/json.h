@@ -20,6 +20,7 @@ namespace Jde{
 		α AsArray( const jobject& o, sv key, SRCE )ε->const jarray&;
 		α AsArrayPath( const jobject& o, sv path, SRCE )ε->const jarray&;
 		Ξ AsBool( const jvalue& v, SRCE )ε->bool{ return $(bool); }
+		Ξ AsBool( const jobject& o, sv path, SRCE )ε->bool{ return AsBool( AsValue(o,path,sl), sl ); }
 		Ŧ AsNumber( const jvalue& v, SRCE )ε->T;
 		Ŧ AsNumber( const jobject& o, sv path, SRCE )ε->T{ return AsNumber<T>( AsValue(o,path,sl), sl ); }
 		Ξ AsSV( const jvalue& v, sv path, SRCE )ε->sv{ return $(string); }
@@ -65,6 +66,7 @@ namespace Jde{
 		α Kind( boost::json::kind value )ι->string;
 
 		Ŧ FindNumber( const jobject& o, sv key )ι->optional<T>;
+		Ŧ FindKey( const jobject& o, sv key="id" )ι->optional<T>;
 		Ξ FindObject( const jobject& o, sv key )ι->const jobject*{ auto p = o.if_contains(key); return p ? p->if_object() : nullptr; }
 		α FindString( const jobject& o, sv key )ι->optional<string>;
 		α FindTimePoint( const jobject& o, sv key )ι->optional<TimePoint>;
@@ -116,6 +118,14 @@ namespace Jde{
 		if( let v = FindValue(o,path); v ){
 			if( let n = v->try_to_number<T>(); n )
 				y = *n;
+		}
+		return y;
+	}
+	Ŧ Json::FindKey( const jobject& o, sv key )ι->optional<T>{
+		optional<T> y;
+		if( let m = o.if_contains(key); m ){
+			if( let v = m->try_to_number<typename T::Type>(); v )
+				y = T{ *v };
 		}
 		return y;
 	}

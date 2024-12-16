@@ -25,12 +25,33 @@ namespace Jde::Access{
 		Filter{ string{Json::FindDefaultSV(j, "criteria")} },
 		Deleted{ Json::FindTimePoint(j, "deleted") }
 	{}
-
-	ResourceLoadAwait::ResourceLoadAwait( sp<DB::AppSchema> schema )ι:
-		_schema{ schema }
+	Resource::Resource( const jobject& j )ι:
+		Resource{ Json::FindNumber<ResourcePK>(j, "id").value_or(0), j }
 	{}
 
-	α ResourceLoadAwait::Load()ι->DB::RowAwait::Task{
+	α ResourceLoadAwait::Load()ι->QL::QLAwait::Task{
+		ResourcePermissions y;
+		try{
+			let ql = Ƒ( "resources( schemaName:\"[{}]\" ){{ id schemaName target criteria deleted }}", Str::Join(_schemaNames, ",", true) );
+			let resources = co_await _qlServer->Query( ql, _executer );
+			for( let& value : Json::AsArray(resources) ){
+				auto resource = Resource{ Json::AsObject(value) };
+				y.Resources.emplace( resource.PK, move(resource) );
+			}
+
+			let qlPermissions = Ƒ( "permissionRights{{ id allowed denied resources( schemaName:\"[{}]\" ){{id}} }}", Str::Join(_schemaNames, ",", true) );
+			let permissions = co_await _qlServer->Query( qlPermissions, _executer );
+			for( let& value : Json::AsArray(permissions) ){
+				let permission = Permission{ Json::AsObject(value) };
+				y.Permissions.emplace( permission.PK, move(permission) );
+			}
+			Resume( move(y) );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
+	}
+/*	α ResourceLoadAwait::Load()ι->DB::RowAwait::Task{
 		ResourcePermissions y;
 		try{
 			auto resourceTable = _schema->GetTablePtr( "resources" );
@@ -57,8 +78,8 @@ namespace Jde::Access{
 			ResumeExp( move(e) );
 		}
 	}
-
-	α GetSchema()ι->sp<DB::AppSchema>;
+*/
+//	α GetSchema()ι->sp<DB::AppSchema>;
 	α Resources::Sync()ε->void{
 		using DB::Value;
 		let& schema = *GetSchema();

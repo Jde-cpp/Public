@@ -12,7 +12,7 @@ namespace Jde::Web::Server{
 	concurrent_flat_map<SessionPK,sp<SessionInfo>> _sessions;
 	α Upsert( sp<SessionInfo>& info )ι->void{
 		if( _sessions.emplace_or_visit(info->SessionId, info, [&info]( auto& existing ){ existing.second->Expiration=existing.second->NewExpiration();}) )
-			Trace{ _tags, "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK, info->UserEndpoint };
+			Trace{ _tags, "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK.Value, info->UserEndpoint };
 	}
 
 	α GetNewSessionId()ι->SessionPK{
@@ -112,7 +112,7 @@ namespace Sessions{
 						throw Exception( SRCE_CUR, ELogLevel::Debug, "[{}]Session not found.", Ƒ("{:x}", *sessionId) );
 					App::Proto::FromServer::SessionInfo proto = co_await *pAwait;
 					steady_clock::time_point expiration = Chrono::ToClock<steady_clock,Clock>( IO::Proto::ToTimePoint(proto.expiration()) );
-					info = ms<SessionInfo>( *sessionId, expiration, proto.user_pk(), proto.user_endpoint(), proto.has_socket() );
+					info = ms<SessionInfo>( *sessionId, expiration, UserPK{proto.user_pk()}, proto.user_endpoint(), proto.has_socket() );
 					pAwait.reset();
 					info->UserEndpoint = _endpoint;
 					info->HasSocket = _socket;

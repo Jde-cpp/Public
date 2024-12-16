@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../Exports.h"
+#include "../exports.h"
 #include <jde/markets/types/proto/edgar.pb.h>
 
 namespace Jde::Markets::Edgar

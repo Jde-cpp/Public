@@ -164,7 +164,7 @@ namespace Client{
 			case kExecuteAnonymous:{
 				bool isAnonymous = m->Value_case()==kExecuteAnonymous;
 				auto bytes = isAnonymous ? move( *m->mutable_execute_anonymous() ) : move( *m->mutable_execute()->mutable_transmission() );
-				optional<UserPK> runAsPK = m->Value_case()==kExecuteAnonymous ? nullopt : optional<UserPK>(m->execute().user_pk() );
+				optional<UserPK> runAsPK = m->Value_case()==kExecuteAnonymous ? nullopt : optional<UserPK>( {m->execute().user_pk()} );
 				LogRead( "Execute{} size: {:10L}", isAnonymous ? "Anonymous" : "", bytes.size()  );
 				Execute( move(bytes), runAsPK, requestId );
 				break;}

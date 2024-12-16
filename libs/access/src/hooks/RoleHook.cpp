@@ -6,12 +6,12 @@
 #include <jde/db/meta/View.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/ql/ql.h>
+#include "../Authorize.h"
 
 #define let const auto
 namespace Jde::Access{
 	α GetTable( str name )ε->sp<DB::View>;
 	α AuthorizeAdmin( str resource, UserPK userPK, SL sl )ε->void;
-	using PermissionRole=variant<PermissionPK,RolePK>;
 	α AddToRole( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, str resource )ι->void;
 	α AddToRole( RolePK parentRolePK, RolePK childRolePK )ι->void;
 
@@ -40,10 +40,11 @@ namespace Jde::Access{
 	}
 	α RoleMutationAwait::AddRole( RolePK parentRolePK, const jobject& childRole )ι->TAwait<uint>::Task{
 		try{
+			let childRolePK = Json::AsNumber<RolePK>(childRole, "id");
+			Authorizer().TestAddRoleMember( parentRolePK, childRolePK, _sl );
 			let table = GetTable( "role_members" );
 			DB::InsertClause insert;
 			insert.Add( table->GetColumnPtr("role_id"), parentRolePK );
-			let childRolePK = Json::AsNumber<RolePK>(childRole, "id");
 			insert.Add( table->GetColumnPtr("member_id"), childRolePK );
 			let rowCount = co_await table->Schema->DS()->ExecuteCo( insert.Move() );
 			AddToRole( parentRolePK, childRolePK );
@@ -96,7 +97,7 @@ namespace Jde::Access{
 		α Suspend()ι->void override{ Select(); }
 		sp<DB::View> MemberTable;
 		QL::TableQL Query;
-		Access::UserPK UserPK;
+		Jde::UserPK UserPK;
 	private:
 		α PermissionsStatement( QL::TableQL& permissionQL )ε->optional<DB::Statement>;
 		α RoleStatement( QL::TableQL& roleQL )ε->optional<DB::Statement>;

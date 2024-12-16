@@ -6,11 +6,12 @@ namespace Jde{
 		sv trimmed = Str::Trim(query);//TODO move(query).
 		Parser parser{ string{trimmed.starts_with("{") ? trimmed.substr(1) : trimmed}, "{}()," };
 		auto name = parser.Next();
-		if( name=="query" ){
+		bool returnRaw = name!="query";
+		if( !returnRaw ){
 			parser.Next();
 			name = parser.Next();
 		}
-		return name=="mutation" ? RequestQL{ parser.LoadMutation() } : RequestQL{ parser.LoadTables(name) };
+		return name=="mutation" ? RequestQL{ parser.LoadMutation() } : RequestQL{ parser.LoadTables(name, returnRaw) };
 	}
 }
 namespace Jde::QL{
@@ -149,10 +150,12 @@ namespace Jde::QL{
 		return table;
 	}
 
-	α Parser::LoadTables( sv jsonName )ε->vector<TableQL>{
+	α Parser::LoadTables( sv jsonName, bool returnRaw )ε->vector<TableQL>{
 		vector<TableQL> results;
 		do{
-			results.push_back( LoadTable(jsonName) );
+			auto table = LoadTable(jsonName);
+			table.ReturnRaw = returnRaw;
+			results.push_back( move(table) );
 			jsonName = {};
 			if( Peek()=="," ){
 				Next();
@@ -161,5 +164,4 @@ namespace Jde::QL{
 		}while( jsonName.size() );
 		return results;
 	}
-
 }

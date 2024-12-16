@@ -107,7 +107,15 @@ namespace Jde::QL{
 			ResumeExp( move(e) );
 		}
 	}
-
+	α AddRemoveAwait::AddBefore()ι->MutationAwaits::Task{
+		try{
+			co_await Hook::AddBefore( _mutation, _userPK );
+			Add();
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
+	}
 	α AddRemoveAwait::AddHook()ι->MutationAwaits::Task{
 		try{
 			auto y = co_await Hook::Add(move(_mutation), _userPK);
@@ -147,7 +155,7 @@ namespace Jde::QL{
 			return;
 		}
 		if( _mutation.Type==EMutationQL::Add ){
-			Add();
+			AddBefore();
 		}
 		else if( _mutation.Type==EMutationQL::Remove )
 			Remove();

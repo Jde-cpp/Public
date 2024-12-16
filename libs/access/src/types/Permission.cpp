@@ -8,6 +8,17 @@
 #define let const auto
 
 namespace Jde::Access{
+	Permission::Permission( PermissionPK pk, Access::ResourcePK resourcePK, ERights allowed, ERights denied )ι:
+		PK{pk}, ResourcePK{resourcePK}, Allowed{allowed}, Denied{denied}
+	{}
+
+	Permission::Permission( const jobject& o )ι:
+		PK{ Json::FindNumber<PermissionPK>(o, "id").value_or(0) },
+		ResourcePK{ Json::FindNumber<Access::ResourcePK>(o, "resource/id").value_or(0) },
+		Allowed{ ToRights(Json::AsArray(o, "allowed")) },
+		Denied{ ToRights(Json::AsArray(o, "denied")) }
+	{}
+
 	α Permission::Update( optional<ERights> allowed, optional<ERights> denied )ι->void{
 		if( allowed )
 			Allowed = *allowed;

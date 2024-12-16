@@ -11,10 +11,11 @@ namespace Jde::QL{
 		AddRemoveAwait( sp<DB::Table> table, const MutationQL& mutation, UserPK userPK, SRCE )ι;
 		α Suspend()ι->void override;
 	private:
+		α AddBefore()ι->MutationAwaits::Task;
 		α AddHook()ι->MutationAwaits::Task;
-		α RemoveHook()ι->MutationAwaits::Task;
 		α Add()ι->Coroutine::Task;
 		α AddAfter( jvalue v )ι->MutationAwaits::Task;
+		α RemoveHook()ι->MutationAwaits::Task;
 		α Remove()->Coroutine::Task;
 		α RemoveAfter( jvalue v )ι->MutationAwaits::Task;
 

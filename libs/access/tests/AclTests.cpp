@@ -7,42 +7,44 @@
 
 #define let const auto
 namespace Jde::Access::Tests{
+	α GetRolePermission( RolePK rolePK, sv resourceName, UserPK userPK )ε->jobject;
 	α AddRolePermission( RolePK rolePK, sv resourceName, ERights allowed, ERights denied, UserPK userPK )ε->jobject;
 	α AddRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK userPK )ε->jobject;
+	α RemoveRolePermission( RolePK rolePK, PermissionPK permissionPK, UserPK userPK )ε->jobject;
 	using namespace Json;
 	class AclTests : public ::testing::Test{
 	protected:
 		Ω SetUpTestCase()->void;
 
-		α TestEnabeledPermissions( UserPK userPK )ε;
+		α TestEnabeledPermissions( str resourceName, str target, UserPK userPK )ε;
 		static flat_map<string,jobject> _users;
-		static flat_map<string,uint> _usersPKs;
+		static flat_map<string,UserPK> _usersPKs;
 		static ResourcePK _resourcePK;
 	};
 	flat_map<string,jobject> AclTests::_users;
-	flat_map<string,uint> AclTests::_usersPKs;
+	flat_map<string,UserPK> AclTests::_usersPKs;
 	ResourcePK AclTests::_resourcePK;
 
 	α SelectAcl( IdentityPK identityPK, string resourceTarget )ε->jobject{
-		let ql = Ƒ( "query< acl( identityId:{} )< identityId permissionRight< id allowed denied resource(target:\"{}\")<deleted>> > >", identityPK, resourceTarget );
-		let qlResult = QL::Query( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
-		return Json::FindDefaultObjectPath( qlResult, "acl/permissionRight" );
+		let ql = Ƒ( "acl( identityId:{} )< identityId permissionRight< id allowed denied resource(target:\"{}\")<deleted>> >", identityPK.Underlying(), resourceTarget );
+		let qlResult = QL::QueryObject( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
+		return Json::FindDefaultObjectPath( qlResult, "permissionRight" );
 	}
 	α SelectAcl( IdentityPK identityPK, RolePK rolePK )ε->jobject{
-		let ql = Ƒ( "query< acl(identityId:{})<identityId role(id:{})<id target deleted>> >", identityPK, rolePK );
-		let qlResult = QL::Query( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
-		return Json::FindDefaultObjectPath( qlResult, "acl/role" );
+		let ql = Ƒ( "acl(identityId:{})<identityId role(id:{})<id target deleted>>", identityPK.Underlying(), rolePK );
+		let qlResult = QL::QueryObject( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
+		return Json::FindDefaultObjectPath( qlResult, "role" );
 	}
 	α CreateAcl( IdentityPK identityPK, ERights allowed, ERights denied, string resource, UserPK userPK )ε->jobject{
-		let resourcePK = AsNumber<ResourcePK>( SelectResource(resource, true), "id" );
-		let create = Ƒ( "mutation createAcl( input:{{ identityId:{}, permission:{{ allowed:{}, denied:{}, resource:{{id:{}}}}} }} )", identityPK, underlying(allowed), underlying(denied), resourcePK );
+		let resourcePK = AsNumber<ResourcePK>( SelectResource(resource, userPK, true), "id" );
+		let create = Ƒ( "mutation createAcl( input:{{ identityId:{}, permission:{{ allowed:{}, denied:{}, resource:{{id:{}}}}} }} )", identityPK.Underlying(), underlying(allowed), underlying(denied), resourcePK );
 		let createJson = QL::Query( create, userPK );
 		return Json::FindDefaultObject( createJson, "permissionRight" );
 	}
 	α CreateAcl( IdentityPK identityPK, RolePK rolePK, UserPK userPK )ε->void{
 		let existing = SelectAcl( identityPK, rolePK );
 		if( existing.empty() ){
-			let create = Ƒ( "mutation createAcl( input:{{ identityId:{}, role:{{id:{}}} }} )", identityPK, rolePK );
+			let create = Ƒ( "mutation createAcl( input:{{ identityId:{}, role:{{id:{}}} }} )", identityPK.Underlying(), rolePK );
 			QL::Query( create, userPK );
 		}
 	}
@@ -58,7 +60,7 @@ namespace Jde::Access::Tests{
 			let existingDenied = (ERights)Json::AsNumber<uint8>( entry, "denied" ); //ToRights( Json::AsArray(entry, "denied") );
 			if( allowed!=existingAllowed || existingDenied!=denied ){
 				let update = Ƒ( "mutation updatePermissionRight( id:{}, input:{{ allowed:{}, denied:{} }} )", Json::AsNumber<PermissionPK>(entry, "id"), underlying(allowed), underlying(denied) );
-				let updateJson = QL::Query( update, 0 );
+				let updateJson = QL::Query( update, GetRoot() );
 				entry = SelectAcl( identityPK, resource );
 			}
 		}
@@ -73,15 +75,15 @@ namespace Jde::Access::Tests{
 	α AclTests::SetUpTestCase()->void{
 		array<string,10> users{ "intruder", "creator", "reader", "updater", "deleter", "purger", "admin", "subscriber", "executor", "root" };
 		let resourceTarget = "identityGroups";
-		let resource = SelectResource( resourceTarget, true );
-		_resourcePK = AsNumber<UserPK>( resource, "id" );
+		let resource = SelectResource( resourceTarget, GetRoot(), true );
+		_resourcePK = GetId( resource );
 		if( resource.at("deleted").is_null() )
 			Delete( "resources", GetId(resource), GetRoot() );
 
 		auto allowed = ERights::None;
 		for( let& user : users ){
 			let& juser = Tests::Get( "user", user, GetRoot() );
-			let userPK = GetId( juser );
+			UserPK userPK{ GetId(juser) };
 			_usersPKs.emplace( user, userPK );
 			let acl = GetAcl( userPK, resourceTarget, allowed, ERights::None );
 			allowed = allowed==ERights::None
@@ -97,52 +99,52 @@ namespace Jde::Access::Tests{
 			Delete( "resources", GetId(resource), GetRoot() );
 		let intruderPK = _usersPKs["intruder"];
 		let groupId = TestCrud( "identityGroup", "DisabledPermission-Test-Group", intruderPK );
-		TestAdd( "identityGroups", groupId, {_usersPKs["intruder"], _usersPKs["creator"], _usersPKs["reader"]}, intruderPK );
-		TestRemove( "identityGroups", groupId, {_usersPKs["intruder"], _usersPKs["creator"]}, intruderPK );
+		TestAdd( "identityGroups", groupId, {_usersPKs["intruder"].Value, _usersPKs["creator"].Value, _usersPKs["reader"].Value}, intruderPK );
+		TestRemove( "identityGroups", groupId, {_usersPKs["intruder"].Value, _usersPKs["creator"].Value}, intruderPK );
 		TestPurge( "identityGroups", groupId, intruderPK );
 	}
 
-	α AclTests::TestEnabeledPermissions( UserPK userPK )ε{
-		let resourceName = "identityGroups";
-		restoreResource( resourceName, GetRoot() );
-		let groupId = TestUnauthCrud( "identityGroup", "DeniedPermission-Test", userPK );
-		TestUnauthAddRemove( resourceName, groupId, {_usersPKs["intruder"], _usersPKs["creator"], _usersPKs["reader"]}, userPK );
-		TestUnauthPurge( resourceName, groupId, userPK );
-		EXPECT_THROW( CreateAcl(_usersPKs["intruder"], ERights::All, ERights::None, resourceName, userPK), IException );
+	α AclTests::TestEnabeledPermissions( str resourceName, str target, UserPK executer )ε{
+		let groupId = TestUnauthCrud( resourceName, target, executer );
+		TestUnauthAddRemove( resourceName, groupId, {_usersPKs["intruder"].Value, _usersPKs["creator"].Value, _usersPKs["reader"].Value}, executer );
+		TestUnauthPurge( resourceName, groupId, executer );
+		EXPECT_THROW( CreateAcl(_usersPKs["intruder"], ERights::All, ERights::None, resourceName, executer), IException );
 		let rolePK = GetId( Get("role", "EnabledPermissionsTest", GetRoot()) );
-		EXPECT_THROW( AddRolePermission(rolePK, resourceName, ERights::All, ERights::None, userPK), IException );
+		EXPECT_THROW( AddRolePermission(rolePK, resourceName, ERights::All, ERights::None, executer), IException );
 	}
 
 	TEST_F( AclTests, EnabledPermissions ){
-		TestEnabeledPermissions( _usersPKs["intruder"] );
+		let resourceName = "identityGroups";
+		restoreResource( resourceName, GetRoot() );
+		TestEnabeledPermissions( resourceName, "EnabledPermissions-Group3", _usersPKs["intruder"] );
 	}
 
 	TEST_F( AclTests, DeletedUser ){
 		let resourceName = "identityGroups";
 		restoreResource( resourceName, GetRoot() );
 		auto juser = GetUser( "deletedRoot", GetRoot(), true );
-		UserPK userPK = GetId( juser );
+		UserPK userPK{ GetId( juser ) };
 		GetAcl( userPK, "identityGroups", ERights::All, ERights::None );
 		if( !Json::AsTimePointOpt(juser, "deleted") )
 			Delete( "users", GetId(juser), GetRoot() );
-		TestEnabeledPermissions( userPK );
+		TestEnabeledPermissions( resourceName, "AclTests-DeletedUser-Group", userPK );
 	}
 
 	TEST_F( AclTests, TestHierarchy ){
 		let resourceName = "identityGroups";
 		restoreResource( resourceName, GetRoot() );
 		let adminGroup = Tests::GetGroup( "HierarchyGroupAdmin", GetRoot() );
-		let adminGroupPK = GetId( adminGroup );
+		GroupPK adminGroupPK{ GetId( adminGroup ) };
 
 		let userGroup = Tests::GetGroup( "HierarchyGroupUsers", GetRoot() );
 		let userGroupMembers = AsArray( userGroup, "members" );
-		let userGroupPK = GetId( userGroup );
-		let userPK = GetId( GetUser("hierarchyUser", GetRoot()) );
-		if( find_if(userGroupMembers, [userPK](const jvalue& member){ return GetId(Json::AsObject(member))==userPK; })==userGroupMembers.end() )
-			AddToGroup( userGroupPK, {userPK,adminGroupPK}, GetRoot() );
-		let adminPK = GetId( GetUser("hierarchyAdmin", GetRoot()) );
+		GroupPK userGroupPK{ GetId( userGroup ) };
+		UserPK executer{ GetId( GetUser("hierarchyUser", GetRoot()) ) };
+		if( find_if(userGroupMembers, [executer](const jvalue& member){ return GetId(Json::AsObject(member))==executer.Value; })==userGroupMembers.end() )
+			AddToGroup( userGroupPK, {executer,adminGroupPK}, GetRoot() );
+		const UserPK adminPK{ GetId( GetUser("hierarchyAdmin", GetRoot()) ) };
 		let adminGroupMembers = AsArray( adminGroup, "members" );
-		if( find_if(adminGroupMembers, [adminPK](const jvalue& member){ return GetId(Json::AsObject(member))==adminPK; })==adminGroupMembers.end() )
+		if( find_if(adminGroupMembers, [adminPK](const jvalue& member){ return GetId(Json::AsObject(member))==adminPK.Value; })==adminGroupMembers.end() )
 			AddToGroup( adminGroupPK, {adminPK}, GetRoot() );
 
 		let userRolePK = GetId( Get("role", "HierarchyGroupUserRole", GetRoot()) );
@@ -154,33 +156,57 @@ namespace Jde::Access::Tests{
 		CreateAcl( adminGroupPK, adminRolePK, GetRoot() );
 
 		string testGroupTarget{ "hierarchyGroupTest" };
-		auto testGroup = SelectGroup( testGroupTarget, userPK, true );
+		auto testGroup = SelectGroup( testGroupTarget, executer, true );
 		if( !testGroup.empty() )
-			PurgeGroup( GetId(testGroup), adminPK );
-		EXPECT_THROW( Create(resourceName, testGroupTarget, userPK), IException );
+			PurgeGroup( {GetId(testGroup)}, adminPK );
+		EXPECT_THROW( Create(resourceName, testGroupTarget, executer), IException );
 		Create( resourceName, testGroupTarget, adminPK );
-		testGroup = GetGroup( testGroupTarget, userPK );
-		let testGroupPK = GetId( testGroup );
-		TestUnauthUpdateName( resourceName, testGroupPK, userPK, "newName" );
-		TestUnauthDeleteRestore( resourceName, testGroupPK, userPK );
-		vector<IdentityPK> members{ userGroupPK,adminGroupPK, userPK, adminPK };
-		TestUnauthAddRemove( resourceName, testGroupPK, members, userPK );
-		TestUnauthPurge( resourceName, testGroupPK, userPK );
+		testGroup = GetGroup( testGroupTarget, executer );
+		GroupPK testGroupPK{ GetId(testGroup) };
+		TestUnauthUpdateName( resourceName, testGroupPK.Value, executer, "newName" );
+		TestUnauthDeleteRestore( resourceName, testGroupPK.Value, executer );
+		vector<uint> members{ userGroupPK.Value,adminGroupPK.Value, executer.Value, adminPK.Value };
+		TestUnauthAddRemove( resourceName, testGroupPK.Value, members, executer );
+		TestUnauthPurge( resourceName, testGroupPK.Value, executer );
 		PurgeGroup( testGroupPK, adminPK );
 
 		let testGroupPK2 = TestCrud( resourceName, testGroupTarget, adminPK );
 		TestAdd( resourceName, testGroupPK2, members, adminPK );
-		TestRemove( resourceName, testGroupPK2, {userPK, adminPK}, adminPK );
+		TestRemove( resourceName, testGroupPK2, {executer.Value, adminPK.Value}, adminPK );
 		TestPurge( resourceName, testGroupPK2, adminPK );
 
-		EXPECT_THROW( CreateAcl(_usersPKs["intruder"], ERights::All, ERights::None, resourceName, userPK), IException );
+		EXPECT_THROW( CreateAcl(_usersPKs["intruder"], ERights::All, ERights::None, resourceName, executer), IException );
 		let rolePK = GetId( Get("role", "HierarchyPermissionsTest", GetRoot()) );
-		EXPECT_THROW( AddRolePermission(rolePK, resourceName, ERights::All, ERights::None, userPK), IException );
+		if( auto permission = GetRolePermission(rolePK, resourceName, GetRoot()); !permission.empty() )
+			RemoveRolePermission( rolePK, GetId(permission), GetRoot() );
+		EXPECT_THROW( AddRolePermission(rolePK, resourceName, ERights::All, ERights::None, executer), IException );
 		CreateAcl( _usersPKs["intruder"], ERights::All, ERights::None, resourceName, adminPK );
 		AddRolePermission( rolePK, resourceName, ERights::All, ERights::None, adminPK );
 	}
+	TEST_F( AclTests, TestDeny ){
+		let resourceName = "identityGroups";
+		restoreResource( resourceName, GetRoot() );
 
-	//test deny
-	//add group to group which it belongs to.
+		let deniedGroup = Tests::GetGroup( "DeniedGroup", GetRoot() );
+		let deniedGroupPK = GetId( deniedGroup );
+		let allowedGroup = Tests::GetGroup( "allowedGroup", GetRoot() );
+		let allowedGroupMembers = AsArray( allowedGroup, "members" );
+		let allowedGroupPK = GetId( allowedGroup );
+		UserPK userPK{ GetId(GetUser("deniedUser", GetRoot())) };
+		if( find_if(allowedGroupMembers, [userPK](const jvalue& member){ return GetId(Json::AsObject(member))==userPK.Value; })==allowedGroupMembers.end() )
+			AddToGroup( {allowedGroupPK}, {userPK}, GetRoot() );
+		let deniedGroupMembers = AsArray( deniedGroup, "members" );
+		if( find_if(deniedGroupMembers, [userPK](const jvalue& member){ return GetId(Json::AsObject(member))==userPK.Value; })==deniedGroupMembers.end() )
+			AddToGroup( {deniedGroupPK}, {userPK}, GetRoot() );
+
+		let deniedRolePK = GetId( Get("role", "DeniedRole", GetRoot()) );
+		AddRolePermission( deniedRolePK, resourceName, ERights::None, ERights::All, GetRoot() );
+		let allowedRolePK = GetId( Get("role", "AllowedRole", GetRoot()) );
+		AddRolePermission( allowedRolePK, resourceName, ERights::All, ERights::None, GetRoot() );
+		CreateAcl( GroupPK{deniedGroupPK}, deniedRolePK, GetRoot() );
+		CreateAcl( GroupPK{allowedGroupPK}, allowedRolePK, GetRoot() );
+		TestEnabeledPermissions( resourceName, "AclTests-TestDeny-Group", userPK );
+	}
 	//add role to role which it belongs to.
+	//remove user from group/role.
 }
