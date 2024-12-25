@@ -1,5 +1,6 @@
 #pragma once
 #include <jde/framework/coroutine/Await.h>
+#include <jde/access/usings.h>
 #include <jde/app/shared/proto/App.FromServer.pb.h>
 #include <jde/db/Key.h>
 #include <jde/db/awaits/RowAwait.h>

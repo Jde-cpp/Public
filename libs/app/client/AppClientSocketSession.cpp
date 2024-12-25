@@ -4,7 +4,7 @@
 #include <jde/app/shared/proto/App.FromClient.h>
 #include <jde/app/shared/proto/Common.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
-#include <jde/app/client/AppClient.h>
+#include <jde/app/client/appClient.h>
 #include <jde/app/shared/StringCache.h>
 
 #define let const auto

@@ -18,12 +18,16 @@ namespace Jde::QL{
 		α FindColumn( sv jsonName )Ι->const ColumnQL*{ auto p = find_if( Columns, [&](let& c){return c.JsonName==jsonName;}); return p==Columns.end() ? nullptr : &*p; }
 		α EraseColumn( sv jsonName )ι->void{ Columns.erase( remove_if( Columns.begin(), Columns.end(), [&](let& c){return c.JsonName==jsonName;}), Columns.end() ); }
 		α FindDBColumn( sp<DB::Column> dbColumn )Ι->const ColumnQL*;
-		α FindTable( sv jsonTableName )Ι->const TableQL*;
+		α FindTable( sv jsonPluralName )Ι->const TableQL*;
+		α FindTable( sv jsonPluralName )ι->TableQL*;
+		α FindTablePrefix( sv jsonPluralName )Ι->const TableQL*;
 		α Input()Ε->const jobject&{ return Json::AsObject( Args, "input" ); }
 		α IsPlural()Ι{ return DB::Names::IsPlural(JsonName); }
 		α Filter()Ε->FilterQL;
-		α ToJson( const DB::IRow& row, const vector<sp<DB::Column>>& dbColumns )Ι->jobject;
-		α SetResult( jobject& o, const sp<DB::Column> dbColumn, const DB::Value& value )Ι->void;
+		α AddFilter( const string& column, const jvalue& value )ι->void;
+		α ToJson( DB::IRow& row, const vector<sp<DB::Column>>& dbColumns )Ι->jobject;
+		α ToString()Ι->string;
+		α SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void;
 		string JsonName;
 		jobject Args;
 		vector<ColumnQL> Columns;

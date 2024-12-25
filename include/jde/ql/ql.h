@@ -22,7 +22,7 @@ namespace Jde::QL{
 	};
 
 	struct IQL{
-		β Query( string query, UserPK executer, SRCE )ε->QLAwait=0;
+		β Query( string query, UserPK executer, SRCE )ε->up<TAwait<jvalue>> =0;
 	};
 	α Local()ι->sp<IQL>;
 
@@ -31,6 +31,7 @@ namespace Jde::QL{
 	α SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted=nullopt )ι->optional<DB::Statement>;
 	α Query( string query, UserPK executer, SRCE )ε->jvalue;
 	α QueryObject( string query, UserPK executer, SRCE )ε->jobject;
+	α QueryArray( string query, UserPK executer, SRCE )ε->jarray;
 	α Execute( string query, UserPK executer, SRCE )ε->jobject;
 	α Mutation( string m, UserPK executer, SRCE )ε->jobject;
 	α Parse( string query )ε->RequestQL;

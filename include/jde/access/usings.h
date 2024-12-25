@@ -4,7 +4,10 @@ namespace Jde::Access{
 	using ProviderPK=uint32;
 	using PermissionIdentityPK=uint32;
 	using PermissionPK=PermissionIdentityPK;
+	using ResourcePK=uint16;
 	using RolePK=PermissionIdentityPK;
+	using PermissionRole=variant<PermissionPK,RolePK>;
+
 	struct IdentityPK{
 		IdentityPK( Jde::UserPK pk )ι:Value{pk}{}
 		IdentityPK( Access::GroupPK pk )ι:Value{pk}{}

@@ -1,11 +1,12 @@
 #include "gtest/gtest.h"
-#include "../../../Framework/source/db/GraphQL.h"
-#include "../../../Framework/source/db/Database.h"
-#include "helpers.h"
+#include <jde/framework/io/json.h>
 #include <jde/opc/types/OpcServer.h>
-#include <jde/io/Json.h>
 #include <jde/opc/UM.h>
-#include <jde/opc/IotGraphQL.h>
+#include <jde/opc/OpcQLHook.h>
+#include <jde/db/IDataSource.h>
+#include <jde/db/meta/Table.h>
+#include <jde/ql/ql.h>
+#include "helpers.h"
 
 #define let const auto
 namespace Jde::Opc{
@@ -19,105 +20,114 @@ namespace Jde::Opc{
 		Ω SetUpTestCase()ι->void{};
 		α SetUp()ι->void{ Wait.clear(); }
 		static uint OpcProviderId;
-		α InsertFailedImpl()ε->Task;
+		α InsertFailedImpl()ε->CreateOpcServerAwait::Task;
 		α PurgeFailedImpl()ε->CreateOpcServerAwait::Task;
 		α CrudImpl()ε->CreateOpcServerAwait::Task;
-		α CrudImpl2( OpcPK id )ε->Task;
+		α CrudImpl2( OpcPK id )ε->ProviderSelectAwait::Task;
 		α CrudPurge( OpcPK id )ε->PurgeOpcServerAwait::Task;
 	};
 	uint OpcServerTests::OpcProviderId{};
 
-	α OpcServerTests::InsertFailedImpl()ε->Task{
-		let target = OpcServerTarget;
-		json jInsert = Json::Parse( Ƒ("{{\"input\":{{\"target\":\"{}\"}}}}", target) );
-		DB::MutationQL insert{ "opcServer", DB::EMutationQL::Create, jInsert, nullopt };
+	α GetProviderPK( string target )ε->Access::ProviderPK{
+		return BlockAwait<ProviderSelectAwait,Access::ProviderPK>( ProviderSelectAwait{target} );
+	}
+	α GetOpcServers( optional<DB::Key> key=nullopt, bool includeDeleted=false )->vector<OpcServer>{
+		return BlockAwait<OpcServerAwait,vector<OpcServer>>( OpcServerAwait{} );
+	}
 
-		let existingProviderPK = *( co_await ProviderAwait{target} ).UP<ProviderPK>();
+	α OpcServerTests::InsertFailedImpl()ε->CreateOpcServerAwait::Task{
+		let target = OpcServerTarget;
+		let jInsert = Json::Parse( Ƒ("{{\"input\":{{\"target\":\"{}\"}}}}", target) );
+		QL::MutationQL insert{ "opcServer", QL::EMutationQL::Create, jInsert, nullopt };
+
+		let existingProviderPK = GetProviderPK( target);
 		let existingServer = SelectOpcServer();
-		let existingOpcPK = Json::Get<OpcPK>( existingServer, "id" );
+		let existingOpcPK = Json::AsNumber<OpcPK>( existingServer, "id" );
+		let& table = GetViewPtr( "opc_servers" );
 		if( !existingOpcPK && !existingProviderPK ){
-			[](auto&& insert, auto self)->CreateOpcServerAwait::Task {
-				auto pk = co_await CreateOpcServerAwait();
-				DB::DataSourcePtr()->Execute(	Ƒ("delete from iot_opc_servers where id='{}'", pk) ); //InsertFailed checks if failure occurs because exists.
-				[](auto&& insert, auto self)->Task{
-					co_await *GetHook()->InsertFailure( insert, 0 );
-					self->Id = *( co_await ProviderAwait{ OpcServerTarget } ).UP<ProviderPK>();
-					self->Wait.test_and_set();
-					self->Wait.notify_one();
-				}( insert, self );
+			auto pk = co_await CreateOpcServerAwait();
+			DS().Execute(	Ƒ("delete from {} where id='{}'", table->DBName, pk) ); //InsertFailed checks if failure occurs because exists.
+			[&](auto&& insert, auto self)->TAwait<jvalue>::Task {
+				co_await *GetHook()->InsertFailure( insert, {UserPK::System} );
+				self->Id = GetProviderPK( target );
+				self->Wait.test_and_set();
+				self->Wait.notify_one();
 			}( insert, this );
 		}
 		else{
 			if( existingOpcPK )
-				DB::DataSourcePtr()->Execute(	Ƒ("delete from iot_opc_servers where id='{}'", existingOpcPK) ); //InsertFailed checks if failure occurs because exists.
-			co_await *GetHook()->InsertFailure( insert, 0 );
-			Id = *( co_await ProviderAwait{ OpcServerTarget } ).UP<ProviderPK>();
-			Wait.test_and_set();
-			Wait.notify_one();
+				DS().Execute(	Ƒ("delete from {} where id='{}'", table->DBName, existingOpcPK) ); //InsertFailed checks if failure occurs because exists.
+			[=,this](auto&& insert, auto self)->TAwait<jvalue>::Task {
+				co_await *GetHook()->InsertFailure( insert, {UserPK::System} );
+				Id = GetProviderPK( target );
+				Wait.test_and_set();
+				Wait.notify_one();
+			}( insert, this );
 		}
 	}
 
 	TEST_F( OpcServerTests, InsertFailed ){
 		InsertFailedImpl();
 		Wait.wait( false );
-		ASSERT_EQ( 0, std::any_cast<ProviderPK>(Id) );
+		ASSERT_EQ( 0, std::any_cast<Access::ProviderPK>(Id) );
 	}
 
 	α OpcServerTests::PurgeFailedImpl()ε->CreateOpcServerAwait::Task{
 		let existingServer = SelectOpcServer();
-		auto opcPK = Json::Get<OpcPK>( existingServer, "id" );
+		auto opcPK = Json::AsNumber<OpcPK>( existingServer, "id" );
 		if( !opcPK )
 			opcPK = co_await CreateOpcServerAwait();
 		Id = opcPK;
-		[](auto opcPK, auto self)->Task {
-			co_await ProviderAwait{OpcServerTarget, false};//BeforePurge mock.
-			json jPurge = json{ {"id", opcPK} };
-			DB::MutationQL purge{ "opcServer", DB::EMutationQL::Purge, jPurge, nullopt };
-			co_await *GetHook()->PurgeFailure( purge, 0 );
-			self->Result = *( co_await ProviderAwait{OpcServerTarget} ).UP<ProviderPK>();
-			self->Wait.test_and_set();
-			self->Wait.notify_one();
+		[](auto opcPK, auto self)->ProviderCreatePurgeAwait::Task {
+			co_await ProviderCreatePurgeAwait{OpcServerTarget, false};//BeforePurge mock.
+			[](auto opcPK, auto self)->TAwait<jvalue>::Task {
+				QL::MutationQL purge{ "opcServer", QL::EMutationQL::Purge, { {"id", opcPK} }, nullopt };
+				co_await *GetHook()->PurgeFailure( purge, {UserPK::System} );
+				self->Result = GetProviderPK( OpcServerTarget );
+				self->Wait.test_and_set();
+				self->Wait.notify_one();
+			}(opcPK, self);
 		}(opcPK, this);
 	}
 	TEST_F( OpcServerTests, PurgeFailed ){
 		PurgeFailedImpl();
 		Wait.wait( false );
-		ASSERT_NE( 0, std::any_cast<ProviderPK>(Result) );
+		ASSERT_NE( 0, std::any_cast<Access::ProviderPK>(Result) );
 		PurgeOpcServer( std::any_cast<OpcPK>(Id) );
 	}
 
 	α OpcServerTests::CrudImpl()ε->CreateOpcServerAwait::Task{
 		let existingServer = SelectOpcServer();
-		let existingOpcPK = Json::Get<OpcPK>( existingServer, "id" );
+		let existingOpcPK = Json::AsNumber<OpcPK>( existingServer, "id" );
 		if( existingOpcPK )
 			PurgeOpcServer( existingOpcPK );
 		let createdId = co_await CreateOpcServerAwait();
-		let selectAll = "{ query opcServers{ id name attributes created updated deleted target description certificateUri isDefault url } }";
-		let selectAllJson = DB::Query( selectAll, 0 );
-		Trace( _tags, "selectAllJson={}", selectAllJson.dump() );
-		let id = selectAllJson["data"]["opcServers"][0]["id"].get<OpcPK>();
+		let selectAll = "opcServers{ id name attributes created updated deleted target description certificateUri isDefault url }";
+		let selectAllJson = QL::QueryArray( selectAll, {UserPK::System} );
+		Trace( _tags, "selectAllJson={}", serialize(selectAllJson) );
+		let id = Json::AsNumber<OpcPK>( Json::AsObject(selectAllJson[0]), "id" );
 		THROW_IF( createdId!=id, "createdId={} id={}", createdId, id );
 		CrudImpl2( id );
 	}
 
-	α OpcServerTests::CrudImpl2( OpcPK id )ε->Task{
+	α OpcServerTests::CrudImpl2( OpcPK id )ε->ProviderSelectAwait::Task{
 		auto readJson = SelectOpcServer();
-		THROW_IF( Json::Getε<OpcPK>(readJson, "id")!=id, "id={} readJson={}", id, readJson.dump() );
-		let target = Json::Getε( readJson, "target" );
+		THROW_IF( Json::AsNumber<OpcPK>(readJson, "id")!=id, "id={} readJson={}", id, serialize(readJson) );
+		let target = Json::AsString( readJson, "target" );
 
-		let providerId = *( co_await ProviderAwait{target} ).UP<ProviderPK>();
+		let providerId = co_await ProviderSelectAwait{target};
 		THROW_IF( providerId==0, "providerId==0" );;
 
 		let description = "new description";
 		let update = Ƒ( "{{ mutation updateOpcServer( 'id':{}, 'input': {{'description':'{}'}} ) }}", id, description );
-		let updateJson = DB::Query( Str::Replace(update, '\'', '"'), 0 );
-		Trace( _tags, "updateJson={}", updateJson.dump() );
+		let updateJson = QL::Query( Str::Replace(update, '\'', '"'), {UserPK::System} );
+		Trace( _tags, "updateJson={}", serialize(updateJson) );
 		let updated = SelectOpcServer( id );
-		THROW_IF( Json::Getε( updated, "description" )!=description, "description={} updated={}", description, updated.dump() );
+		THROW_IF( Json::AsString( updated, "description" )!=description, "description={} updated={}", description, serialize(updated) );
 
 		let del = Ƒ( "{{mutation deleteOpcServer('id':{}) }}", id );
-		let deleteJson = DB::Query( Str::Replace(del, '\'', '"'), 0 );
-		Trace( _tags, "deleted={}", deleteJson.dump() );
+		let deleteJson = QL::Query( Str::Replace(del, '\'', '"'), {UserPK::System} );
+		Trace( _tags, "deleted={}", serialize(deleteJson) );
 	 	auto readJson2 = SelectOpcServer( id );
 		THROW_IF( readJson2["deleted"].is_null(), "deleted failed" );
 
@@ -126,20 +136,18 @@ namespace Jde::Opc{
 
 	α OpcServerTests::CrudPurge( OpcPK id )ε->PurgeOpcServerAwait::Task{
 		co_await PurgeOpcServerAwait{ id };
-		[]( OpcPK id, OpcServerTests& self )->Task {
-			let opcServer = ( co_await OpcServer::Select(id, true) ).UP<OpcServer>();
-			THROW_IF( opcServer, "Purge Failed" );
-			self.Result = *( co_await ProviderAwait{OpcServerTarget} ).UP<ProviderPK>();
-			self.Wait.test_and_set();
-			self.Wait.notify_one();
-		}(id, *this);
+		let opcServers = GetOpcServers( id, true );
+		THROW_IF( opcServers.size(), "Purge Failed" );
+		Result = GetProviderPK( OpcServerTarget );
+		Wait.test_and_set();
+		Wait.notify_one();
 	}
 
 	TEST_F( OpcServerTests, Crud ){
 		try{
 			CrudImpl();
 			Wait.wait( false );
-			ASSERT_EQ( 0, std::any_cast<ProviderPK>(Result) );
+			ASSERT_EQ( 0, std::any_cast<Access::ProviderPK>(Result) );
 		}
 		catch( const IException& e ){
 			ASSERT_DESC( false, e.what() );

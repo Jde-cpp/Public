@@ -272,7 +272,7 @@ namespace Jde{
 			else
 				os << separator;
 			if( quote )
-				os << "'" << item << "'";
+				os << '"' << item << '"';
 			else
 				os << item;
 		}

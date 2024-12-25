@@ -33,13 +33,23 @@ namespace Jde::QL{
 		}
 		return filters;
 	}
-	α TableQL::FindTable( sv jsonTableName )Ι->const TableQL*{
-		const TableQL* y{};
-		if( auto p = find_if( Tables, [&](let& t){return t.JsonName==jsonTableName;}); p!=Tables.end() )
+	α TableQL::AddFilter( const string& column, const jvalue& value )ι->void{
+		auto destination = &Args;
+		if( auto filter = Args.find( "filter" ); filter!=Args.end() )
+			destination = &filter->value().as_object();
+		(*destination)[column] = value;
+	}
+
+	α TableQL::FindTable( sv jsonPluralName )ι->TableQL*{
+		TableQL* y{};
+		if( auto p = find_if( Tables, [&](let& t){return t.JsonName==jsonPluralName;}); p!=Tables.end() )
 			y = &*p;
-		else if( auto p = find_if( Tables.begin(), Tables.end(), [&](let& t){return t.JsonName==DB::Names::ToSingular(jsonTableName);}); p!=Tables.end() )
+		else if( auto p = find_if( Tables.begin(), Tables.end(), [&](let& t){return t.JsonName==DB::Names::ToSingular(jsonPluralName);}); p!=Tables.end() )
 			y = &*p;
 		return y;
+	}
+	α TableQL::FindTable( sv jsonPluralName )Ι->const TableQL*{
+		return const_cast<TableQL*>(this)->FindTable( jsonPluralName );
 	}
 
 	α ColumnQL::QLType( const DB::Column& column, SL sl )ε->string{
@@ -72,24 +82,49 @@ namespace Jde::QL{
 		}
 		return qlTypeName;
 	}
-	α TableQL::ToJson( const DB::IRow& row, const vector<sp<DB::Column>>& dbColumns )Ι->jobject{
+	α TableQL::ToJson( DB::IRow& row, const vector<sp<DB::Column>>& dbColumns )Ι->jobject{
 		jobject y;
 		for( uint i=0; i<dbColumns.size() && i<row.Size(); ++i )
-			SetResult( y, dbColumns[i], row[i] );
+			SetResult( y, dbColumns[i], move(row[i]) );
 		return y;
 	}
-	α ValueToJson( const DB::Value& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue;
-	α TableQL::SetResult( jobject& o, const sp<DB::Column> dbColumn, const DB::Value& value )Ι->void{
+	α ValueToJson( DB::Value&& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue;
+	α TableQL::SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void{
 		for( let& c : Columns ){
 			if( c.DBColumn==dbColumn ){
-				o[c.JsonName] = ValueToJson( value, &c );
+				o[dbColumn->IsPK() && !dbColumn->IsEnum() ? "id" : c.JsonName] = ValueToJson( move(value), &c );
+//				let x = serialize( o );
+//				Trace{ ELogTags::Test, "{}", x };
 				return;
 			}
 		}
 		for( let& t : Tables ){
 			if( !o.contains(t.JsonName) )
 				o[t.JsonName] = jobject{};
-			t.SetResult( o.at(t.JsonName).as_object(), dbColumn, value );
+			t.SetResult( o.at(t.JsonName).as_object(), dbColumn, move(value) );
 		}
+	}
+	α TableQL::ToString()Ι->string{
+		string y = JsonName;
+		y.resize( 64*(1+Tables.size()) );
+		if( Args.size() )
+			y += '('+serialize(Args)+')';
+		y += '{';
+		if( Columns.size() ){
+			vector<string> cols;
+			for_each( Columns, [&cols](let& c){cols.push_back(c.JsonName);} );
+			y += Str::Join( cols, " " );
+		}
+		if( Tables.size() ){
+			for( let& t : Tables ){
+				if( t.Args.size() || t.Columns.size() || t.Tables.size() ){
+					y += ' '+t.JsonName+'{';
+					y += ' '+t.JsonName+'('+serialize(t.Args)+')';
+					y += '}';
+				}
+			}
+		}
+		y += '}';
+		return y;
 	}
 }

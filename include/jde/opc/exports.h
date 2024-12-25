@@ -1,4 +1,7 @@
 ﻿#pragma once
+#ifndef Jde_Opc_EXPORTS_H
+#define Jde_Opc_EXPORTS_H
+
 #ifdef Jde_Opc_EXPORTS
 	#ifdef _MSC_VER
 		#define ΓOPC __declspec( dllexport )
@@ -20,4 +23,6 @@
 		#define ΓOPC
 		#define Jde_Opc_EXPORTS
 	#endif
+#endif
+
 #endif

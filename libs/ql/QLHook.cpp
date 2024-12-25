@@ -32,7 +32,7 @@ namespace Jde::QL{
 		_awaitables.reserve( _hooks.size(l) );
 		for( auto ppHook = _hooks.begin(l); ppHook!=_hooks.end(l); ++ppHook ){
 			auto& hook = **ppHook;
-			if( auto p = hook.Select( _ql, _userPK ); p )
+			if( auto p = hook.Select( _ql, _userPK, _sl ); p )
 				_awaitables.emplace_back( move(p) );
 		}
 		return _awaitables.empty();
@@ -121,6 +121,7 @@ namespace Jde::QL{
 				case (Insert | After): p = hook.InsertAfter( _mutation, _userPK, _pk ); break;
 				case (Insert | Failure): p = hook.InsertFailure( _mutation, _userPK ); break;
 				case (Purge | Before): p = hook.PurgeBefore( _mutation, _userPK ); break;
+				case (Purge | After): p = hook.PurgeAfter( _mutation, _userPK ); break;
 				case (Purge | Failure): p = hook.PurgeFailure( _mutation, _userPK ); break;
 				case (Update | After): p = hook.UpdateAfter( _mutation, _userPK ); break;
 				case Start: p = hook.Start( _mutation, _userPK ); break;
@@ -162,6 +163,7 @@ namespace Jde::QL{
 	α Hook::InsertAfter( uint pk, const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Insert|Operation::After, pk, sl }; }
 	α Hook::InsertFailure( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Insert|Operation::Failure, sl }; }
 	α Hook::PurgeBefore( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Purge|Operation::Before, sl }; }
+	α Hook::PurgeAfter( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Purge|Operation::After, sl }; }
 	α Hook::PurgeFailure( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Purge|Operation::Failure, sl }; }
 	α Hook::Start( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Start, sl }; }
 	α Hook::Stop( const MutationQL& m, UserPK userPK, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, userPK, Operation::Stop, sl }; }

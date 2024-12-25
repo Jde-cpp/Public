@@ -8,7 +8,7 @@ namespace Jde::QL{
 		MutationQL( sv j, EMutationQL type, const jobject& args, optional<TableQL> resultPtr ):JsonName{j}, Type{type}, Args(args), ResultPtr{resultPtr}{}
 		α TableName()Ι->string; //json name=user returns users
 		α Input(SRCE)Ε->const jobject&;
-		template<class T=uint> auto Id( ELogTags tags=ELogTags::None, SRCE )Ε->T{ return Json::AsNumber<T>(Args, "id"); }
+		template<class T=uint> α Id()Ι->T;
 		α FindParam( sv name )Ε->const jvalue*;
 		α InputParam( sv name )Ε->const jvalue&;
 		α ParentPK()Ε->uint;
@@ -21,4 +21,10 @@ namespace Jde::QL{
 	private:
 		mutable string _tableName;
 	};
+
+	Ŧ MutationQL::Id()Ι->T{
+		const auto y = Json::FindNumber<T>( Args, "id" );
+		ASSERT( y );
+		return y.value_or( 0 );
+	}
 }

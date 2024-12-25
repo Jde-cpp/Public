@@ -11,8 +11,5 @@ namespace Jde::Access{
 		UserPK Executer;
 		sp<QL::IQL> QlServer;
 		vector<string> SchemaNames;
-	private:
-		//α LoadUsers();
-	//vector<AppPK> AppPKs;
 	};
 }

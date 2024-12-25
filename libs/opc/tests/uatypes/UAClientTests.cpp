@@ -1,12 +1,12 @@
 ﻿#include <jde/opc/UM.h>
-#include <jde/io/Json.h>
+#include <jde/framework/io/json.h>
 #include <jde/opc/types/OpcServer.h>
 #include <jde/opc/uatypes/UAClient.h>
 #include <jde/crypto/OpenSsl.h>
 #include <open62541/plugin/create_certificate.h>
 #include "../helpers.h"
 
-#include "../../../../Framework/source/um/UM.h"
+//#include "../../../../Framework/source/um/UM.h"
 
 #define let const auto
 
@@ -23,16 +23,16 @@ namespace Jde::Opc{
 		α TearDown()ι->void override{}
 		Ω TearDownTestSuite();
 	public:
-		static json OpcServer;
+		static jobject OpcServer;
 	};
-	json UAClientTests::OpcServer{};
+	jobject UAClientTests::OpcServer{};
 
 	α UAClientTests::SetUpTestCase()ι->void{
 		OpcServer = Opc::SelectOpcServer();
 		if( OpcServer.empty() ){
 			atomic_flag done;
-			[](atomic_flag& done)->Task {
-				co_await ProviderAwait{ OpcServerTarget, false };//remove dangling.
+			[](atomic_flag& done)->ProviderCreatePurgeAwait::Task {
+				co_await ProviderCreatePurgeAwait{ OpcServerTarget, false };//remove dangling.
 				[](atomic_flag& done)->CreateOpcServerAwait::Task {
 					auto id = co_await CreateOpcServerAwait();
 					UAClientTests::OpcServer = Opc::SelectOpcServer( id );
@@ -42,7 +42,6 @@ namespace Jde::Opc{
 			}( done );
 			done.wait( false );
 		}
-		Trace( _tags, "OpcServer={}", OpcServer.dump() );
 	}
 
 	α UAClientTests::TearDownTestSuite(){
@@ -57,8 +56,8 @@ namespace Jde::Opc{
 	const string _password = "0123456789ABCD";
 	α AuthenticateTest( bool badPassword=false )ι->Opc::AuthenticateAwait::Task{
 		try{
-			OpcNK opcId = Json::Getε( UAClientTests::OpcServer, "target" );
-			auto sessionInfo = co_await Opc::AuthenticateAwait{ "user1", badPassword ? "xyz" : _password, UAClientTests::OpcServer["target"], "localhost", true };
+			OpcNK opcId = Json::AsString( UAClientTests::OpcServer, "target" );
+			auto sessionInfo = co_await Opc::AuthenticateAwait{ "user1", badPassword ? "xyz" : _password, Json::AsString(UAClientTests::OpcServer,"target"), "localhost", true };
 			_sessionIds.push_back( sessionInfo.session_id() );
 		}
 		catch( IException& e ){
@@ -80,7 +79,7 @@ namespace Jde::Opc{
 		std::shared_lock l{ mtx };
 		cv.wait( l );
 		cv.wait( l );
-		let creds = Credentials( _sessionIds[2], OpcServer["target"] );
+		let creds = Credentials( _sessionIds[2], Json::AsString(OpcServer,"target") );
 		EXPECT_EQ( "user1", get<0>(creds) );
 		EXPECT_EQ( _password, get<1>(creds) );
 		EXPECT_NE( _sessionIds[0], _sessionIds[1] );

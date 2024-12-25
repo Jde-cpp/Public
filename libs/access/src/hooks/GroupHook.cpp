@@ -1,5 +1,5 @@
-#include <jde/access/hooks/GroupHook.h>
-#include <jde/db/awaits/RowAwait.h>
+#include "GroupHook.h"
+//#include <jde/db/awaits/RowAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/AppSchema.h>
@@ -8,7 +8,8 @@
 #include <jde/db/generators/Statement.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/ql/ql.h>
-#include "../Authorize.h"
+#include <jde/access/Authorize.h>
+#include "../accessInternal.h"
 
 #define let const auto
 
@@ -61,7 +62,9 @@ namespace Jde::Access{
 				else if( membersResult.is_object() )
 					members = jarray{ move(membersResult.get_object()) };
 			}
-			jobject groups = Json::AsObject( co_await QL::QLAwait( move(Query), UserPK, _sl) );
+			Query.JsonName = Query.IsPlural() ? "identities" : "identity"; //from identityGroups, want distinct + nothing in identityGroups table except for members.
+			Query.AddFilter( "is_group", true );
+			auto groups = co_await QL::QLAwait( move(Query), UserPK, _sl );
 			if( !members )
 				Resume( jvalue{move(groups)} );
 
@@ -70,7 +73,7 @@ namespace Jde::Access{
 				jarray groupMembers;
 				for( auto&& memberValue : *members ){
 					auto& member = memberValue.as_object();
-					const GroupPK memberGroupPK{ Json::AsNumber<GroupPK::Type>(member, "groupId") };
+					const GroupPK memberGroupPK{ Json::FindNumber<GroupPK::Type>(member, "groupId").value_or(0) };//group already assigned
 					if( !groupPK || memberGroupPK==*groupPK ){
 						member.erase( "groupId" );
 						if( haveId )
@@ -81,18 +84,14 @@ namespace Jde::Access{
 				}
 				group["members"] = groupMembers;
 			};
-			jvalue value;
-			if( auto jgroups = groups.try_at("identityGroups"); jgroups ){
-				value = move(*jgroups);
-				for( auto& vGroup : value.as_array() )
-					addMembers( vGroup.as_object() );
+			if( groups.is_array() ){
+				for( auto& group : groups.as_array() )
+					addMembers( group.as_object() );
 			}
-			else if( auto vGroup = groups.try_at("identityGroup"); vGroup && vGroup->is_object() ){ /*vs null.*/
-				value = move(*vGroup);
-				addMembers( value.get_object() );
-			}
-			Trace( ELogTags::Access, "{}", serialize(groups) );
-			Resume( move(value) );
+			else if( groups.is_object() ) /*vs null.*/
+				addMembers( groups.get_object() );
+			//Trace( ELogTags::Access, "{}", serialize(groups) );
+			Resume( move(groups) );
 		}
 		catch( boost::system::system_error& e ){
 			ResumeExp( CodeException{e.code(), ELogTags::Access, ELogLevel::Debug} );
@@ -123,20 +122,14 @@ namespace Jde::Access{
 		}
 		return {groupPK, memberPKs};
 	}
-	struct ExceptionAwait final : TAwait<jvalue>{
-		ExceptionAwait( up<IException>&& e, SRCE )ι:TAwait<jvalue>{ sl }, _exception{ move(e) }{}
-		α await_ready()ι->bool override{ return true; }
-		α Suspend()ι->void override{}
-		α await_resume()ε->jvalue override{ _exception->Throw(); return {}; }
-		up<IException> _exception;
-	};
+
 	α GroupHook::AddBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
 		if( m.JsonName.starts_with("identityGroup") ){
 			auto [groupPK, memberPKs] = AddRemoveArgs( m );
 			try{
 				Authorizer().TestAddGroupMember( groupPK, move(memberPKs) );
 			}catch( IException& e ){
-				return mu<ExceptionAwait>( e.Move() );
+				return mu<QL::ExceptionAwait>( e.Move() );
 			}
 		}
 		return {};
@@ -155,6 +148,21 @@ namespace Jde::Access{
 			auto [groupPK, memberPKs] = AddRemoveArgs( m );
 			Authorizer().RemoveFromGroup( groupPK, memberPKs );
 		}
+		return {};
+	}
+	α GroupHook::UpdateAfter( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
+		if( m.TableName()!="identityGroups" )
+			return {};
+		GroupPK pk{ m.Id<GroupPK::Type>() };
+		if( m.Type==QL::EMutationQL::Delete )
+			Authorizer().DeleteGroup( pk );
+		else if( m.Type==QL::EMutationQL::Restore )
+			Authorizer().RestoreGroup( pk );
+		return {};
+	}
+	α GroupHook::PurgeAfter( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
+		if( m.TableName()!="identityGroups" )
+			Authorizer().PurgeGroup( GroupPK{m.Id<GroupPK::Type>()} );
 		return {};
 	}
 }

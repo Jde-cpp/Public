@@ -52,10 +52,19 @@ namespace Jde::QL{
 					: ds.ExecuteProcCo( move(statement), move(parameters), _sl );
 				y += *( co_await *a ).UP<uint>(); //gcc compiler error.
 			}
-			Resume( jvalue{y} );
+			After( y );
 		}
 		catch( IException& e ){
 			After( e.Move() );
+		}
+	}
+	α PurgeAwait::After( uint y )ι->MutationAwaits::Task{
+		try{
+			co_await Hook::PurgeAfter( _mutation, _userPK );
+			Resume( jvalue{y} );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
 		}
 	}
 	α PurgeAwait::After( up<IException>&& e )ι->MutationAwaits::Task{

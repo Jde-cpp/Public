@@ -9,9 +9,9 @@ namespace Jde{
 	Ξ operator>( const jvalue& a, const jvalue& b )ι->bool{ return b<a; }
 	Ξ operator>=( const jvalue& a, const jvalue& b )ι->bool{ return a>b || a==b; }
 	//α operator==( const jvalue& a, const jvalue& b )ι->bool{ return a.is_primitive() && !(b<a) && !(b>a); }
-
 	Ŧ Eval( const boost::system::result<T>& x, string&& message, SRCE )ε->T;//TODO forward args...
 	namespace Json{
+		α FromValue( jvalue&& v, function<void(jobject&& o)> op )ε->void;
 		α ReadJsonNet( fs::path path, SRCE )ε->jobject;
 		constexpr sv errorFromat = "'{}' could not convert to {}.";
 #define $(type) Eval( v.try_as_##type(), Ƒ(errorFromat, serialize(v), #type), sl )
@@ -76,6 +76,7 @@ namespace Jde{
 		Ξ FindDefaultSV( const jvalue& v, sv path )ι->sv{ auto p = FindSV(v,path); return p ? *p : sv{}; }
 
 		α Parse( sv json, SRCE )ε->jobject;
+		α ParseValue( string&& json, SRCE )ε->jvalue;
 	}
 
 	Ŧ Json::AsNumber( const jvalue& v, SL sl )ε->T{

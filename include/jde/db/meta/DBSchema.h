@@ -11,7 +11,7 @@ namespace Jde::DB{
 	//Cluster > Catalog > Schema > Table > Columns & Rows
 	struct DBSchema{
 		DBSchema( sv name, const jobject& DBSchema, sp<Access::IAcl> authorizer )ε;
-		DBSchema( sv name, flat_map<string,sp<Table>> tables )ι;
+		DBSchema( sv name, flat_map<string,sp<Table>> tables, sv prefix )ι;
 		α ResetDS()Ι{ _dataSource = nullptr; }
 		α DS()Ε->sp<IDataSource>;
 

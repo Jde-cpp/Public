@@ -2,7 +2,7 @@
 #include "globals.h"
 #include <jde/ql/ql.h>
 #include <jde/db/meta/Table.h>
-#include "../src/types/Resource.h"
+#include <jde/access/types/Resource.h>
 
 #define let const auto
 namespace Jde::Access::Tests{

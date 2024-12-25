@@ -40,7 +40,7 @@ namespace QL{
 			for( let& nameTablePtr : schema->Tables ){
 				let pDBTable = nameTablePtr.second;
 				let childColumn = pDBTable->Map ? pDBTable->Map->Child : nullptr;
-				let jsonType = pDBTable->JsonTypeName();
+				let jsonType = pDBTable->JsonName();
 
 				jobject field;
 				field["name"] = Ƒ( "create{}"sv, jsonType );
@@ -82,7 +82,9 @@ namespace QL{
 		return jmutationType;
 	}
 
-	α QueryTable( const TableQL& table, UserPK executer )ε->jvalue{
+	α QueryTable( const TableQL& table, UserPK executer, bool log, SRCE )ε->jvalue{
+		if( log )
+			Trace{ sl, _tags, "{}.", table.ToString() };
 		jvalue y;
 		if( table.JsonName=="__type" )
 			y = QueryType( table );
@@ -94,10 +96,10 @@ namespace QL{
 		return y;
 	}
 
-	α QueryTables( const vector<TableQL>& tables, UserPK userPK )ε->jvalue{
+	α QueryTables( const vector<TableQL>& tables, UserPK userPK, bool log, SRCE )ε->jvalue{
 		optional<jvalue> y;
 		for( let& table : tables ){
-			auto result = QueryTable( table, userPK );
+			auto result = QueryTable( table, userPK, log, sl );
 			if( table.ReturnRaw )
 				y = result;
 			else{

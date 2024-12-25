@@ -1,7 +1,7 @@
 #pragma once
 #include <jde/access/usings.h>
 #include <jde/ql/ql.h>
-#include "../types/Permission.h"
+#include <jde/access/types/Permission.h>
 
 namespace Jde::Access{
 	struct AclLoadAwait final : TAwait<flat_multimap<IdentityPK,PermissionRole>>{

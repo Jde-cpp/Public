@@ -100,7 +100,9 @@ namespace Jde{
 		α operator !=( const PK& rhs )Ι{ return Value!=rhs.Value; }
 		α operator <( const PK& rhs )Ι{ return Value<rhs.Value; }
 	};
-	struct UserPK final: PK<uint32>{};
+	struct UserPK final: PK<uint32>{
+		const static UserPK::Type System{ std::numeric_limits<UserPK::Type>::max() };
+	};
 
 	using std::coroutine_handle;
 	using std::suspend_never;

@@ -1,10 +1,14 @@
 #include <jde/access/awaits/ConfigureAwait.h>
+
+#include <jde/access/Authorize.h>
+//#include <jde/access/types/Group.h>
+//#include <jde/access/types/Role.h>
+//#include <jde/access/types/User.h>
+#include "../accessInternal.h"
 #include "IdentityLoadAwait.h"
-#include "../awaits/AclLoadAwait.h"
-#include "../types/Group.h"
-#include "../types/Role.h"
-#include "../types/User.h"
-#include "../Authorize.h"
+#include "AclLoadAwait.h"
+#include "ResourceLoadAwait.h"
+#include "RoleLoadAwait.h"
 
 #define let const auto
 
@@ -15,7 +19,7 @@ namespace Jde::Access{
 			let acl = co_await AclLoadAwait{ await.QlServer, await.Executer };
 			ul l{ Authorizer().Mutex };
 			Authorizer().Acl = move( acl );
-			Authorizer().CalculateUsers( {}, l );
+			Authorizer().SetUserPermissions( {}, l );
 			await.Resume();
 		}
 		catch( IException& e ){
@@ -41,13 +45,14 @@ namespace Jde::Access{
 			auto loaded = co_await ResourceLoadAwait{ await.QlServer, await.SchemaNames, await.Executer };
 			ul l{ Authorizer().Mutex };
 			for( let& [pk, resource] : loaded.Resources ){
-				if( resource.Filter.empty() && !resource.Deleted ){
+				if( resource.Filter.empty() && !resource.IsDeleted ){
 					auto& namePK = Authorizer().SchemaResources.emplace( resource.Schema, flat_map<string,ResourcePK>{} ).first->second;
 					namePK.emplace( resource.Target, pk );
 				}
 				Authorizer().Resources.emplace( pk, move(resource) );
 			}
 			Authorizer().Permissions = move( loaded.Permissions );
+			//Trace( ELogTags::Test, "{}", (uint)Authorizer().Permissions.at(10).Allowed );
 			l.unlock();
 			loadRoles( await );
 		}

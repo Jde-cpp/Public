@@ -34,8 +34,7 @@ namespace Jde::Access::Tests{
 		auto obj = Json::ReadJsonNet( Ƒ("{}/Public/libs/access/config/access-ql.jsonnet", OSApp::EnvironmentVariable("JDE_DIR").value_or("./")) );
 		QL::Introspection intro{ move(obj) };
 		QL::RequestQL request = QL::Parse( query );
-		jobject expected;
-		expected["__type"] = intro.Find("IdentityGroup")->ToJson( get<0>(request)[0].Tables[0] );
+		jobject expected = intro.Find("IdentityGroup")->ToJson( get<0>(request)[0].Tables[0] );
 		ASSERT_EQ( serialize(actual), serialize(expected) );
 	}
 
@@ -70,7 +69,7 @@ namespace Jde::Access::Tests{
 		ASSERT_EQ( array.size(), 2 );
 
 		constexpr sv userQL = "user(id:{}){{ identityGroups{{id name}} }}";
-		ASSERT_EQ( Json::AsArrayPath(QL::QueryObject( Ƒ(userQL, manager.Value), GetRoot() ), "identityGroups" ).size(), 1 );
+		ASSERT_EQ( Json::AsArrayPath(QL::QueryObject(Ƒ(userQL, manager.Value), GetRoot()), "identityGroups" ).size(), 1 );
 
 		RemoveFromGroup( hr, {hrManagers, associate}, GetRoot() );
 		RemoveFromGroup( hrManagers, {manager}, GetRoot() );

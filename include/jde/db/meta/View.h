@@ -24,7 +24,7 @@ namespace Jde::DB{
 		α UpsertProcName()Ι->string;
 		α IsEnum()Ι->bool;
 		β IsView()Ι->bool{ return true; }
-		α JsonTypeName()Ι->string;
+		α JsonName()Ι->string;
 		α Syntax()Ι->const DB::Syntax&;
 
 		α ChildTable()Ι->sp<View>;

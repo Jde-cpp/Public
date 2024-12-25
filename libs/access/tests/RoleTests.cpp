@@ -1,8 +1,9 @@
 #include "gtest/gtest.h"
-#include "../src/types/Role.h"
+#include <jde/access/types/Role.h>
+
 #include <jde/framework/io/json.h>
 #include <jde/ql/ql.h>
-#include "../src/types/Resource.h"
+#include <jde/access/types/Resource.h>
 #include "globals.h"
 
 #define let const auto

@@ -99,7 +99,7 @@ namespace Jde::QL{
 		let haveName = fieldTable.FindColumn( "name" )!=nullptr;
 		let pOfTypeTable = pTypeTable->FindTable( "ofType" );
 		jobject jTable;
-		jTable["name"] = mainTable.JsonTypeName();
+		jTable["name"] = mainTable.JsonName();
 
 		auto addField = [&]( sv name, sv typeName, EFieldKind typeKind, sv ofTypeName, optional<EFieldKind> ofTypeKind ){
 			jobject field;
@@ -139,7 +139,7 @@ namespace Jde::QL{
 					if( column.Type==DB::EType::VarBinary || (prefix.size() && column.SKIndex) )//use NID see RolePermission's permissions, varbinary use case is passwords
 						continue;
 					fieldName = column.IsPK() ? "id" : ToJson( column.Name );
-					qlTypeName = ColumnQL::QLType( column );//column.PKTable.empty() ? ColumnQL::QLType( column ) : dbTable.JsonTypeName();
+					qlTypeName = ColumnQL::QLType( column );//column.PKTable.empty() ? ColumnQL::QLType( column ) : dbTable.JsonName();
 				}
 				else if( column.PKTable ){
 					auto pChildColumn = dbTable.Map ? dbTable.Map->Child : nullptr;
@@ -150,7 +150,7 @@ namespace Jde::QL{
 							addColumns( *column.PKTable, false, prefix );
 							continue;
 						}
-						qlTypeName = column.PKTable->JsonTypeName();
+						qlTypeName = column.PKTable->JsonName();
 						if( column.PKTable->IsFlags ){
 							fieldName = ToPlural<sv>( fieldName );
 							rootType = EFieldKind::List;
@@ -165,8 +165,8 @@ namespace Jde::QL{
 						}
 					}
 					else{ //isMap
-						//if( !typeName.starts_with(pPKTable->JsonTypeName()) )//typeName==RolePermission, don't want role columns, just permissions.
-						addColumns( *column.PKTable, false, column.PKTable->JsonTypeName() );
+						//if( !typeName.starts_with(pPKTable->JsonName()) )//typeName==RolePermission, don't want role columns, just permissions.
+						addColumns( *column.PKTable, false, column.PKTable->JsonName() );
 						continue;
 					}
 				}
@@ -189,7 +189,7 @@ namespace Jde::QL{
 				if( let pColumn1=pTable->FindColumn(c1Name), pColumn2=pTable->FindColumn(c2Name) ; pColumn1 && pColumn2 /*&& pColumn->PKTable==n*/ ){
 					if( pColumn1->PKTable->Name==mainTable.Name ){
 						let pTable2 = pColumn2->PKTable;
-						let jsonType = pTable->Columns.size()==2 ? pTable2->JsonTypeName() : pTable->JsonTypeName();
+						let jsonType = pTable->Columns.size()==2 ? pTable2->JsonName() : pTable->JsonName();
 						addField( ToPlural<string>(ToJson<sv>(jsonType)), {}, EFieldKind::List, jsonType, EFieldKind::Object );
 					}
 				}

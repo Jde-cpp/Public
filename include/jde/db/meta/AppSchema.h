@@ -5,7 +5,7 @@ namespace Jde::DB{
 	struct Catalog; struct DBSchema; struct IDataSource;  struct Syntax; struct Table; struct View;
 	struct AppSchema{
 		AppSchema( sv name, const jobject& appSchema, sp<Access::IAcl> authorizer )ε;
-		AppSchema( sv name, flat_map<string,sp<Table>> tables )ι:Name{name},Tables{tables}{}
+		AppSchema( sv name, flat_map<string,sp<Table>> tables, sv prefix )ι:Name{name},Prefix{prefix},Tables{tables}{}
 
 		Ω Initialize( sp<DB::DBSchema> db, sp<AppSchema> self )ε->void;
 		α ConfigPath()Ι->string;

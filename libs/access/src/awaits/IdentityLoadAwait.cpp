@@ -1,25 +1,24 @@
 #include "IdentityLoadAwait.h"
-#include "../types/Group.h"
-#include "../types/User.h"
+#include <jde/access/types/Group.h>
+#include <jde/access/types/User.h>
 
 #define let const auto
 
 namespace Jde::Access{
 	α IdentityLoadAwait::Load()ι->QL::QLAwait::Task{
-		let values = co_await _ql->Query( "identities{ id deleted is_group }", _executer, _sl );
+		let values = co_await *_ql->Query( "identities{ id deleted is_group }", _executer, _sl );
 		Identities identities;
 		for( let value : Json::AsArray(values) ){
 			let& identity = Json::AsObject(value);
 			let isGroup = Json::AsBool(identity, "is_group");
 			let pk{ Json::AsNumber<IdentityPK::Type>(identity, "id") };
-			//let identityPK = isGroup ? IdentityPK{ GroupPK{pk} } : IdentityPK{ UserPK{pk} };
 			let deleted = Json::FindTimePoint( identity, "deleted" ).has_value();
 			if( isGroup )
 				identities.Groups.emplace( GroupPK{pk}, Group{GroupPK{pk}, deleted} );
 			else
 				identities.Users.emplace( UserPK{pk}, User{UserPK{pk}, deleted} );
 		}
-		let jgroups = co_await _ql->Query( "identityGroups{ id members{id} }", _executer, _sl );
+		let jgroups = co_await *_ql->Query( "identityGroups{ id deleted members{id} }", _executer, _sl );
 		for( let value : Json::AsArray(jgroups) ){
 			let& group = Json::AsObject(value);
 			const GroupPK groupPK{ Json::AsNumber<GroupPK::Type>(group, "id") };
@@ -34,7 +33,7 @@ namespace Jde::Access{
 
 
 /*	α IdentityLoadAwait::Execute()ι->DB::MapAwait<UserPK,optional<TimePoint>>::Task{
-		let ql = "users{{ id, deleted }}";
+		let ql = "users{{ id deleted }}";
 
 		let userTable{ _schema->GetTablePtr("identities") };
 		let ds = userTable->Schema->DS();

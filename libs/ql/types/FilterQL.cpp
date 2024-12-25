@@ -76,7 +76,7 @@ namespace Jde{
 				where.Add( pColumn, params );
 			}
 			else{
-				if( value.is_string() || value.is_number() || value.is_null() )
+				if( value.is_string() || value.is_number() || value.is_null() || value.is_bool() )
 					pJson = &value;
 				else if( let o = value.try_as_object(); o && o->size() ){
 					let& first = *o->begin();

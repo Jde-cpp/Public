@@ -1,10 +1,10 @@
-#include "Group.h"
+#include <jde/access/types/Group.h>
 
 namespace Jde{
 
 	α Access::IsChild( const flat_map<GroupPK,Group>& groups, GroupPK parentPK, GroupPK childPK )ι->bool{
-		auto group = groups.find(parentPK); ASSERT( group!=groups.end() );
-		if( group==groups.end() )
+		auto group = groups.find(parentPK);
+		if( group==groups.end() )//memberless group.
 			return false;
 		bool isChild{};
 		for( auto member = group->second.Members.begin(); !isChild && member!=group->second.Members.end(); ++member )

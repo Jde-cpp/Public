@@ -4,8 +4,6 @@
 namespace Jde::DB{ struct AppSchema; struct IDataSource; struct View; }
 namespace Jde::Access{
 	struct Authorize;
-	using PermissionRole=variant<PermissionPK,RolePK>;
-	using ResourcePK=uint16;
 
 	α GetTable( str name )ε->sp<DB::View>;
 	α GetSchema()ι->sp<DB::AppSchema>;

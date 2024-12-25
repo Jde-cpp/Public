@@ -1,6 +1,6 @@
 #include "AppLog.h"
 #include <jde/app/client/AppClientSocketSession.h>
-#include <jde/app/client/AppClient.h>
+#include <jde/app/client/appClient.h>
 #include <jde/app/shared/StringCache.h>
 #include <jde/app/shared/proto/App.FromClient.h>
 

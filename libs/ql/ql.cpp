@@ -10,13 +10,13 @@
 namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL };
 	vector<sp<DB::AppSchema>> _schemas;
-  α QueryTables( const vector<TableQL>& tables, UserPK userPK )ε->jvalue;
+  α QueryTables( const vector<TableQL>& tables, UserPK executer, bool log=false, SRCE )ε->jvalue;
 	α SetIntrospection( Introspection&& x )ι->void;
-	Ω query( RequestQL&& ql, UserPK userPK, SL sl )ε->jvalue;
-	α Query( const TableQL& ql, DB::Statement&& statement, UserPK userPK )ε->jvalue;
+	Ω query( RequestQL&& ql, UserPK executer, SL sl )ε->jvalue;
+	α Query( const TableQL& ql, DB::Statement&& statement, UserPK executer, SRCE )ε->jvalue;
 
 	struct LocalQL final : IQL{
-		α Query( string query, UserPK executer, SRCE )ε->QLAwait override{ return QLAwait{ move(query), executer, sl }; }
+		α Query( string query, UserPK executer, SRCE )ε->up<TAwait<jvalue>> override{ return mu<QLAwait>( move(query), executer, sl ); }
 	};
 }
 namespace Jde{
@@ -31,27 +31,32 @@ namespace Jde{
 
 	α QL::Local()ι->sp<IQL>{ return ms<LocalQL>(); }
 
-	α QL::Query( string ql, UserPK userPK, SL sl )ε->jvalue{
+	α QL::Query( string ql, UserPK executer, SL sl )ε->jvalue{
 		Trace{ sl, _tags | ELogTags::Pedantic, "QL: {}", ql };
-		return query( Parse(move(ql)), userPK, sl );
+		return query( Parse(move(ql)), executer, sl );
 	}
 	α QL::QueryObject( string ql, UserPK executer, SL sl )ε->jobject{
 		let y = Query( ql, executer, sl );
 		return y.is_object() ? move( y.get_object() ) : jobject{};
 	}
+	α QL::QueryArray( string query, UserPK executer, SL sl )ε->jarray{
+		let y = Query( move(query), executer, sl );
+		ASSERT( y.is_array() );
+		return y.is_array() ? move( y.get_array() ) : jarray{};
+	}
 }
 
 namespace Jde::QL{
-	QLAwait::QLAwait( string query, UserPK userPK, SL sl )ε:
+	QLAwait::QLAwait( string query, UserPK executer, SL sl )ε:
 		TAwait<jvalue>{sl},
 		_request{ Parse(move(query)) },
-		_executer{ userPK }
+		_executer{ executer }
 	{}
-	QLAwait::QLAwait( TableQL&& ql, DB::Statement&& statement, UserPK userPK, SL sl )ι:
+	QLAwait::QLAwait( TableQL&& ql, DB::Statement&& statement, UserPK executer, SL sl )ι:
 		TAwait<jvalue>{sl},
 		_request{ vector<TableQL>{move(ql)} },
 		_statement{ move(statement) },
-		_executer{ userPK }
+		_executer{ executer }
 	{}
 
 	α QLAwait::Suspend()ι->void{
@@ -61,7 +66,7 @@ namespace Jde::QL{
 	α QLAwait::await_resume()ε->jvalue{
 		jvalue y;
 		if( _statement )
-			y = Query( get<0>(_request).front(), move(*_statement), _executer );
+			y = Query( get<0>(_request).front(), move(*_statement), _executer, _sl );
 		else
 			y = query( move(_request), _executer, _sl );
 		return y;
@@ -77,7 +82,7 @@ namespace Jde::QL{
   α Schemas()ι->const vector<sp<DB::AppSchema>>&{
     return _schemas;
   }
-	α query( RequestQL&& ql, UserPK userPK, SL sl )ε->jvalue{
+	α query( RequestQL&& ql, UserPK executer, SL sl )ε->jvalue{
 		vector<TableQL> tableQueries;
 		jvalue j;
 		if( ql.index()==1 ){
@@ -87,7 +92,7 @@ namespace Jde::QL{
 				let m = get<MutationQL>( move(ql) );
 				sv resultMemberName = m.Type==EMutationQL::Create ? "id" : "rowCount";
 				try{
-					auto y = co_await MutationAwait( m, userPK );
+					auto y = co_await MutationAwait( m, executer );
 					let wantResults = m.ResultPtr && m.ResultPtr->Columns.size()>0;
 					if( wantResults && m.ResultPtr->Columns.front().JsonName==resultMemberName && !y.is_null() ){
 						jobject jResult;
@@ -110,9 +115,8 @@ namespace Jde::QL{
 		}
 		else
 			tableQueries = get<vector<TableQL>>( ql );
-		if( tableQueries.size() ){
-			j = QueryTables( tableQueries, userPK );
-		}
+		if( tableQueries.size() )
+			j = QueryTables( tableQueries, executer, true, sl );
 
 		Trace{ sl, _tags | ELogTags::Pedantic, "QL::Result: {}", serialize(j) };
 		return j;

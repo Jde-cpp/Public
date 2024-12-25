@@ -14,6 +14,7 @@ namespace Jde::QL{
 		α Statements( const DB::Table& table, vector<DB::Value>& parameters )->vector<string>;
 		α Execute()ι->Coroutine::Task;
 		α After( up<IException>&& e )ι->MutationAwaits::Task;
+		α After( uint y )ι->MutationAwaits::Task;
 		const MutationQL _mutation;
 		sp<DB::Table> _table;
 		UserPK _userPK;

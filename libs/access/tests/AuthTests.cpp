@@ -21,12 +21,11 @@ namespace Jde::Access::Tests{
 	uint AuthTests::OpcProviderId{};
 
 	α AuthTests::SetUpTestCase()ε->void{
-		auto existing = QL::Query( Ƒ("query{{ provider(target:\"{}\"){{id}} }}", OpcServer), GetRoot() );
-		if( auto o = Json::FindObject(existing, "provider"); o )
-			OpcProviderId = GetId( *o );
+	if( auto o = QL::QueryObject(Ƒ("provider(target:\"{}\"){{id}}", OpcServer), GetRoot()); !o.empty() )
+			OpcProviderId = GetId( o );
 		else{
 			let createQL = Ƒ( "mutation createProvider( input:{{ target:\"{}\", providerType:{} }} ){{id}}", OpcServer, underlying(EProviderType::OpcServer) );
-			OpcProviderId = GetId( Json::AsObject(QL::Query(createQL, GetRoot()), "provider") );
+			OpcProviderId = GetId( Json::AsObject(QL::Query(createQL, GetRoot()), "/provider") );
 		}
 	}
 

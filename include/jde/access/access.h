@@ -14,7 +14,7 @@ namespace Jde::QL{ struct MutationQL; enum class EMutationQL : uint8; }
 #define Φ ΓA auto
 namespace Jde::Access{
 	struct IAcl;
-	Φ Configure( sp<DB::AppSchema> schema, sp<QL::IQL> qlServer, UserPK executer )ε->ConfigureAwait;
+	Φ Configure( sp<DB::AppSchema> access, vector<string> schemaNames, sp<QL::IQL> qlServer, UserPK executer )ε->ConfigureAwait;
 	α LocalAcl()ι->sp<IAcl>;
 	α Authenticate( str loginName, uint providerId, str opcServer={}, SRCE )ι->AuthenticateAwait;
 	//α Login( string loginName, uint providerId, string opcServer={}, SRCE )ι->AsyncAwait;

@@ -1,5 +1,6 @@
 #pragma once
 #include "usings.h"
+#include <jde/framework/coroutine/Await.h>
 
 namespace Jde::Web::Server{
 	struct IApplicationServer{

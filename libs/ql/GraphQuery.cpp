@@ -24,8 +24,8 @@ namespace Jde::QL{
 		return table.Schema->DS()->SelectEnumSync<uint,string>( table, sl );
 	}
 	using SubTables=flat_map<string,flat_multimap<uint,jobject>>;//tableName,pk, row
-	Ω query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK userPK, const SubTables* subTables=nullptr )ε->jvalue;
-	α Query( const TableQL& ql, DB::Statement&& statement, UserPK userPK )ε->jvalue;
+	//Ω query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK userPK, const SubTables* subTables=nullptr )ε->jvalue;
+	//α Query( const TableQL& ql, DB::Statement&& statement, UserPK userPK )ε->jvalue;
 	Ω addSubTables( const TableQL& parentQL, const SubTables& subTables, jobject& parent, uint parentId )ι->void;
 	α numberToJson( const DB::Value& dbValue, const DB::Column& c, SRCE )ε->jvalue{
 		jvalue y;
@@ -59,12 +59,12 @@ namespace Jde::QL{
 			y = dbValue.ToJson();
 		return y;
 	}
-	α ValueToJson( const DB::Value& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue {
+	α ValueToJson( DB::Value&& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue {
 		using enum DB::EValue;
 		jvalue json;
 		switch( dbValue.Type() ){
 			case UInt64: case Int32: case Int64: json = pMember && pMember->DBColumn ? numberToJson( dbValue, *pMember->DBColumn ) : dbValue.ToJson(); break;
-			default: json = dbValue.ToJson();
+			default: json = dbValue.Move();
 		}
 		return json;
 	};
@@ -162,7 +162,7 @@ namespace Jde::QL{
 
 			statement.Where = where;
 			auto& rows = subTables.emplace( qlTable.JsonName, flat_multimap<uint,jobject>{} ).first->second;
-			auto forEachRow = [&]( const DB::IRow& row ){
+			auto forEachRow = [&]( DB::IRow& row ){
 				jobject jSubRow;
 				uint index = 0;
 				let rowToJson2 = [&row, &parentTable]( const vector<ColumnQL>& columns, bool checkId, jobject& jRow, uint& index2 ){
@@ -178,7 +178,7 @@ namespace Jde::QL{
 							jRow[c.JsonName] = name.empty() ? pEnum->find(pk)->second : Ƒ( "{}\\{}", pEnum->find(pk)->second, name );
 						}
 						else*/
-							jRow[c.JsonName] = ValueToJson( row[i++], &c );
+							jRow[c.JsonName] = ValueToJson( move(row[i++]), &c );
 					}
 				};
 				rowToJson2( qlTable.Columns, false, jSubRow, index );
@@ -197,6 +197,31 @@ namespace Jde::QL{
 			parentTable.Schema->DS()->Select( move(sql.Text), forEachRow, move(sql.Params) );
 		}
 		return subTables;
+	}
+
+	Ω query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK userPK, const SubTables* subTables=nullptr, SRCE )ε->jvalue{
+		jvalue y;
+		if( ql.IsPlural() )
+			y = jarray{};
+		auto rows = ds.Select( statement.Move() );
+		for( let& row : rows ){
+			auto jrow = ql.ToJson( *row, statement.Select.Columns );
+			if( subTables && subTables->size() )
+				addSubTables( ql, *subTables, jrow, row->GetUInt(0) );
+			if( ql.IsPlural() )
+				y.get_array().emplace_back( move(jrow) );
+			else
+				y.emplace_object() = move( jrow );
+		}
+		return y;
+	}
+
+	α Query( const TableQL& ql, DB::Statement&& statement, UserPK executer, SL sl )ε->jvalue{
+		Trace{ sl, _tags, "{}", ql.ToString() };
+		auto dbTable = GetTable( ql.DBName() );
+		let result = query( ql, move(statement), *dbTable->Schema->DS(), executer, nullptr, sl );
+		Trace{ sl, _tags, "{}", serialize(result).substr(0,1024) };
+		return result;
 	}
 }
 namespace Jde{
@@ -282,26 +307,5 @@ namespace Jde{
 					parent[qlTable.JsonName] = pRow->second;
 			}
 		};
-	}
-	α QL::Query( const TableQL& ql, DB::Statement&& statement, UserPK userPK )ε->jvalue{
-		auto dbTable = GetTable( ql.DBName() );
-		return query( ql, move(statement), *dbTable->Schema->DS(), userPK );
-	}
-
-	α QL::query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK userPK, const SubTables* subTables )ε->jvalue{
-		jvalue y;
-		if( ql.IsPlural() )
-			y = jarray{};
-		auto rows = ds.Select( statement.Move() );
-		for( let& row : rows ){
-			auto jrow = ql.ToJson( *row, statement.Select.Columns );
-			if( subTables && subTables->size() )
-				addSubTables( ql, *subTables, jrow, row->GetUInt(0) );
-			if( ql.IsPlural() )
-				y.get_array().emplace_back( move(jrow) );
-			else
-				y.emplace_object() = move( jrow );
-		}
-		return y;
 	}
 }

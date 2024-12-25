@@ -18,8 +18,8 @@ namespace Jde::Access::Tests{
 	α RemoveFromGroup( GroupPK id, vector<IdentityPK> members, UserPK userPK )ε->void;
 
 	α Create( str table, sv target, UserPK userPK, str input={} )ε->uint;
-	α Delete( str table, uint id, UserPK userPK )ε->jobject;
-	α Restore( str table, uint id, UserPK userPK )ε->jobject;
+	α Delete( str table, uint id, UserPK userPK )ε->jvalue;
+	α Restore( str table, uint id, UserPK userPK )ε->jvalue;
 	α Get( str table, str target, UserPK userPK, sv cols={}, bool includeDeleted=false )ε->jobject;
 	Ξ GetId( const jobject& j )ε->uint{ return Json::AsNumber<uint>( j, "id" ); }
 	α GetGroup( str target, UserPK userPK )ε->jobject;

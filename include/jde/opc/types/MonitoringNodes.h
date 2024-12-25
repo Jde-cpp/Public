@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "../uatypes/MonitoredItemCreateResult.h"
 #include <jde/opc/uatypes/Node.h>
+#include "../../../../../Framework/source/coroutine/Awaitable.h"
 
 namespace Jde::Opc{
 	/*struct SocketSession;*/ struct UAClient; struct Value;

@@ -1,4 +1,4 @@
-#include "Permission.h"
+#include <jde/access/types/Permission.h>
 
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Statement.h>
@@ -13,8 +13,8 @@ namespace Jde::Access{
 	{}
 
 	Permission::Permission( const jobject& o )ι:
-		PK{ Json::FindNumber<PermissionPK>(o, "id").value_or(0) },
-		ResourcePK{ Json::FindNumber<Access::ResourcePK>(o, "resource/id").value_or(0) },
+		PK{ Json::AsNumber<PermissionPK>(o, "id") },
+		ResourcePK{ Json::AsNumber<Access::ResourcePK>(o, "resource/id") },
 		Allowed{ ToRights(Json::AsArray(o, "allowed")) },
 		Denied{ ToRights(Json::AsArray(o, "denied")) }
 	{}
