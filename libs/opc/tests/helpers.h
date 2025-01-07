@@ -3,24 +3,24 @@
 #include <jde/db/db.h>
 #include <jde/db/Key.h>
 #include <jde/db/meta/Table.h>
-#include <jde/ql/ql.h>
+#include <jde/ql/QLAwait.h>
 
 namespace Jde::Opc{
 	struct OpcQLHook;
 
-	α SetSchema( sp<DB::AppSchema> schema )ι->void;
-	α GetViewPtr( str name )ι->sp<DB::View>;
-	α DS()ι->DB::IDataSource&;
+	//α SetTestSchema( sp<DB::AppSchema> opc )ι->void;
+	//α GetViewPtr( str name )ι->sp<DB::View>;
+	//α DS()ι->DB::IDataSource&;
 
 	const static string OpcServerTarget{ "OpcServerTests" };
-	struct CreateOpcServerAwait : TAwaitEx<OpcPK,QL::QLAwait::Task>{
-		α Execute()ι->QL::QLAwait::Task override;
+	struct CreateOpcServerAwait : TAwaitEx<OpcPK,QL::QLAwait<>::Task>{
+		α Execute()ι->QL::QLAwait<>::Task override;
 	};
 	α CreateOpcServer()ι->OpcPK;
 
-	struct PurgeOpcServerAwait : TAwaitEx<uint,QL::QLAwait::Task>{
+	struct PurgeOpcServerAwait : TAwaitEx<uint,QL::QLAwait<>::Task>{
 		PurgeOpcServerAwait( optional<OpcPK> pk )ι:_pk{pk}{}
-		α Execute()ι->QL::QLAwait::Task override;
+		α Execute()ι->QL::QLAwait<>::Task override;
 	private:
 		optional<OpcPK> _pk;
 	};

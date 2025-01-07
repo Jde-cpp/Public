@@ -6,3 +6,5 @@
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <jde/framework.h>
 #include "../../../../Framework/source/coroutine/Awaitable.h"
+#include <jde/web/client/exports.h>
+#include <Web.FromServer.pb.h>

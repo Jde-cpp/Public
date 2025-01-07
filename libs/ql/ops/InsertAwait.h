@@ -8,6 +8,7 @@
 namespace Jde::DB{ struct Table; struct IDataSource; struct InsertClause; }
 namespace Jde::QL{
 	struct InsertAwait final: TAwait<jvalue>{
+		using base=TAwait<jvalue>;
 		InsertAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SRCE )ι;
 		α await_ready()ι->bool override;
 		α Suspend()ι->void override{ InsertBefore(); }
@@ -17,8 +18,9 @@ namespace Jde::QL{
 		α AddStatement( const DB::Table& table, const jobject& input, bool nested, str criteria={} )ε->void;
 		α InsertBefore()ι->MutationAwaits::Task;
 		α Execute()ι->Coroutine::Task;
-		α InsertAfter( uint mainId )ι->MutationAwaits::Task;
-		α InsertFailure()ι->MutationAwaits::Task;
+		α InsertAfter( jarray&& result )ι->MutationAwaits::Task;
+		α InsertFailure( IException&& e )ι->MutationAwaits::Task;
+		α Resume( jarray&& v )ι->void;
 
 		const MutationQL _mutation;
 		sp<DB::Table> _table;

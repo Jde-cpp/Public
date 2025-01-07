@@ -8,6 +8,7 @@
 namespace Jde::DB{ struct Table; struct IDataSource; }
 namespace Jde::QL{
 	struct UpdateAwait final: TAwait<jvalue>{
+		using base=TAwait<jvalue>;
 		UpdateAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SRCE )ι;
 		α await_ready()ι->bool override;
 		α Suspend()ι->void override{ Execute(); }
@@ -18,6 +19,7 @@ namespace Jde::QL{
 		α UpdateAfter( uint rowCount )ι->MutationAwaits::Task;
 		α AddStatement( const DB::Table& table, const jobject& input, bool nested, str criteria={} )ε->void;
 		α Execute()ι->TAwait<uint>::Task;
+		α Resume( jvalue&& v )ι->void;
 
 		const MutationQL _mutation;
 		sp<DB::Table> _table;

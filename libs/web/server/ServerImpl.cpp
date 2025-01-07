@@ -5,13 +5,14 @@
 #include <jde/web/server/IRequestHandler.h>
 #include <jde/web/server/RestException.h>
 #include <jde/ql/ql.h>
+#include <jde/ql/QLAwait.h>
 #include <jde/framework/thread/execution.h>
 #define let const auto
 
 namespace Jde::Web{
 	up<Server::IApplicationServer> _appServer;
 	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{ return _appServer->GraphQL( move(q), userPK, sl ); }
-	α Server::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<App::Proto::FromServer::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
+	α Server::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
 
 	sp<net::cancellation_signal> _cancelSignal;
 	optional<ssl::context> _ctx;
@@ -57,12 +58,10 @@ namespace Server{
 		stream->AsyncWrite( move(res) );
 	}
 
-	α GraphQL( HttpRequest req, sp<RestStream> stream )->QL::QLAwait::Task{
+	α GraphQL( HttpRequest req, sp<RestStream> stream )->QL::QLAwait<>::Task{
 		try{
 			auto& query = req["query"]; THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
-			let sessionId = req.SessionInfo->SessionId;
 			req.LogRead( query );
-			string threadDesc = Jde::format( "[{:x}]{}", sessionId, req.Target() );
 			auto y = co_await QL::QLAwait{move(query), req.UserPK() };
 
 			Send( move(req), move(stream), move(y) );

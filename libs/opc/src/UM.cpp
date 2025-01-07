@@ -3,8 +3,9 @@
 //#include "../../../Framework/source/io/ServerSink.h"
 //#include "../../../Framework/source/io/proto/messages.pb.h"
 #include <jde/opc/uatypes/UAClient.h>
+#include <jde/ql/IQL.h>
 #include <jde/app/client/AppClientSocketSession.h>
-//#include <jde/io/Json.h>
+#include <jde/app/client/appClient.h>
 
 #define let const auto
 
@@ -42,7 +43,7 @@ namespace Jde::Opc{
 			ResumeExp( move(e) );
 		}
 	}
-	α AuthenticateAwait::AddSession( Access::ProviderPK providerPK )ι->Web::Client::ClientSocketAwait<App::Proto::FromServer::SessionInfo>::Task{
+	α AuthenticateAwait::AddSession( Access::ProviderPK providerPK )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>::Task{
 		try{
 			auto sessionInfo = co_await App::Client::AddSession( _opcNK, _loginName, providerPK, _endpoint, false );
 			flat_map<OpcNK,tuple<string,string>> init{ {_opcNK,{_loginName,_password}} };
@@ -58,11 +59,11 @@ namespace Jde::Opc{
 		}
 	}
 
-	α ProviderSelectAwait::Select()ι->Web::Client::ClientSocketAwait<string>::Task{
+	α ProviderSelectAwait::Select()ι->TAwait<jobject>::Task{
 		try{
-			let query = Ƒ( "query provider(target:\"{}\", providerTypeId:{}){{ id }}", _opcId, (uint8)Access::EProviderType::OpcServer );
-			let j = Json::Parse( co_await App::Client::GraphQL(query) );
-			let providerId = Json::FindNumberPath<Access::ProviderPK>( j, "data/provider/id" ).value_or(0);
+			let query = Ƒ( "provider(target:\"{}\", providerTypeId:{}){{ id }}", _opcId, (uint8)Access::EProviderType::OpcServer );
+			let j = co_await *App::Client::QLServer()->QueryObject(query, App::Client::AppServiceUserPK() );
+			let providerId = Json::FindNumber<Access::ProviderPK>( j, "id" ).value_or(0);
 			ResumeScaler( providerId );
 		}
 		catch( IException& e ){
@@ -83,11 +84,11 @@ namespace Jde::Opc{
 			ResumeExp( move(e) );
 		}
 	}
-	α ProviderCreatePurgeAwait::Insert( str target )ι->Web::Client::ClientSocketAwait<string>::Task{
-		let q = Jde::format( "{{ mutation createProvider(  \"input\": {{\"target\":\"{}\",\"providerType\":\"OpcServer\"}} ){{id}} }}", target );
+	α ProviderCreatePurgeAwait::Insert( str target )ι->TAwait<jobject>::Task{
+		let q = Jde::format( "createProvider( target:\"{}\", providerType:\"OpcServer\" ){{id}}", target );
 		try{
-			let j = Json::Parse( co_await App::Client::GraphQL(q) );
-			let newPK = Json::AsNumber<Access::ProviderPK>( j, "data/provider/id" );
+			let j = co_await *App::Client::QLServer()->QueryObject( q, App::Client::AppServiceUserPK() );
+			let newPK = QL::AsId<Access::ProviderPK>( j );
 			ResumeScaler( newPK );
 		}
 		catch( IException& e ){
@@ -104,10 +105,10 @@ namespace Jde::Opc{
 			ResumeExp( move(e) );
 		}
 	}
-	α ProviderCreatePurgeAwait::Purge( Access::ProviderPK providerPK )ι->Web::Client::ClientSocketAwait<string>::Task{
-		let q = Ƒ( "{{ mutation purgeProvider( \"id\":{} ) }}", providerPK );
+	α ProviderCreatePurgeAwait::Purge( Access::ProviderPK providerPK )ι->TAwait<jvalue>::Task{
+		let q = Ƒ( "purgeProvider( id:{} )", providerPK );
 		try{
-			let j = Json::Parse( co_await App::Client::GraphQL(q) );
+			co_await *App::Client::QLServer()->Query( q, App::Client::AppServiceUserPK() );
 			ResumeScaler( providerPK );
 		}
 		catch( IException& e ){

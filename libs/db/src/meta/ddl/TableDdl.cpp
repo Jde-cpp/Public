@@ -29,7 +29,7 @@ namespace Jde::DB{
 	α TableDdl::InsertProcCreateStatement()Ι->string{
 		std::ostringstream osCreate, osInsert, osValues;
 		osCreate << "create procedure " << InsertProcName() << "(";
-		osInsert << "\tinsert into " << Name << "(";
+		osInsert << "\tinsert into " << DBName << "(";
 		osValues << "\t\tvalues(";
 		let prefix = Syntax().ProcParameterPrefix().empty() ? "_"sv : Syntax().ProcParameterPrefix();
 		char delimiter = ' ';

@@ -6,8 +6,9 @@
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/generators/Statement.h>
-#include <jde/ql/types/TableQL.h>
 #include <jde/ql/ql.h>
+#include <jde/ql/types/TableQL.h>
+#include <jde/ql/QLAwait.h>
 #include <jde/access/Authorize.h>
 #include "../accessInternal.h"
 
@@ -25,10 +26,10 @@ namespace Jde::Access{
 		QL::TableQL Query;
 		Jde::UserPK UserPK;
 	private:
-		α Select()ι->QL::QLAwait::Task;
+		α Select()ι->QL::QLAwait<>::Task;
 	};
 
-	α GroupGraphQLAwait::Select()ι->QL::QLAwait::Task{
+	α GroupGraphQLAwait::Select()ι->QL::QLAwait<>::Task{
 		try{
 			//group_id, member_id & member columns.
 			QL::TableQL membersQL = [&]()->QL::TableQL {
@@ -124,7 +125,7 @@ namespace Jde::Access{
 	}
 
 	α GroupHook::AddBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		if( m.JsonName.starts_with("identityGroup") ){
+		if( m.TableName()=="identity_groups" ){
 			auto [groupPK, memberPKs] = AddRemoveArgs( m );
 			try{
 				Authorizer().TestAddGroupMember( groupPK, move(memberPKs) );
@@ -132,37 +133,6 @@ namespace Jde::Access{
 				return mu<QL::ExceptionAwait>( e.Move() );
 			}
 		}
-		return {};
-	}
-
-	α GroupHook::AddAfter( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		if( m.JsonName.starts_with("identityGroup") ){
-			auto [groupPK, memberPKs] = AddRemoveArgs( m );
-			Authorizer().AddToGroup( groupPK, memberPKs );
-		}
-		return {};
-	}
-
-	α GroupHook::RemoveAfter( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		if( m.JsonName.starts_with("identityGroup") ){
-			auto [groupPK, memberPKs] = AddRemoveArgs( m );
-			Authorizer().RemoveFromGroup( groupPK, memberPKs );
-		}
-		return {};
-	}
-	α GroupHook::UpdateAfter( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
-		if( m.TableName()!="identityGroups" )
-			return {};
-		GroupPK pk{ m.Id<GroupPK::Type>() };
-		if( m.Type==QL::EMutationQL::Delete )
-			Authorizer().DeleteGroup( pk );
-		else if( m.Type==QL::EMutationQL::Restore )
-			Authorizer().RestoreGroup( pk );
-		return {};
-	}
-	α GroupHook::PurgeAfter( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
-		if( m.TableName()!="identityGroups" )
-			Authorizer().PurgeGroup( GroupPK{m.Id<GroupPK::Type>()} );
 		return {};
 	}
 }

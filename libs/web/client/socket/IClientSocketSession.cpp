@@ -1,4 +1,5 @@
 #include <jde/web/client/socket/IClientSocketSession.h>
+#include <jde/ql/QLSubscriptions.h>
 
 namespace Jde::Web{
 	constexpr ELogTags _connectTag{ ELogTags::Socket | ELogTags::Client };
@@ -85,7 +86,15 @@ namespace Jde::Web::Client{
 		Trace{ _connectPedanticTag, "[{}]connect succeeded.", _host };
 		_stream->OnConnect( ep, _host, shared_from_this() );
 	}
-
+	α IClientSocketSession::OnMessage( string&& j, RequestId requestId )ι->void{
+		Trace{ _readTag | ELogTags::Pedantic, "[{:x}]OnMessage", requestId, j.substr(0, MaxLogLength()) };
+		try{
+			QL::Subscriptions::Push( Json::Parse(j), requestId );
+		}
+		catch( IException& e ){
+			e.SetLevel( ELogLevel::Error );
+		}
+	}
 	α IClientSocketSession::OnSslHandshake( beast::error_code ec )ι->void{
 		CHECK_EC( _readTag )
 		Trace{ _connectPedanticTag, "[{}]SslHandshake succeeded.", _host };

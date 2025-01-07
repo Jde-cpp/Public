@@ -19,10 +19,10 @@ namespace Jde::DB{
 		if( _clusters.empty() ){
 			let& clusters = Settings::AsObject( "/dbServers" );
 			for( auto&& [name, value] : clusters ){
-				if( name!="scriptPath" )
-					_clusters.emplace_back( ms<Cluster>(name, Json::AsObject(value), authorize) );
-				else
+				if( value.is_object() ){ //vs sync script dir
+					_clusters.emplace_back( ms<Cluster>(name, value.get_object(), authorize) );
 					Cluster::Initialize( _clusters.back() );
+				}
 			}
 			THROW_IF( _clusters.empty(), "No db servers found." );
 		}

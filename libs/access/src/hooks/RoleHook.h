@@ -7,7 +7,5 @@ namespace Jde::Access{
 		α Select( const QL::TableQL&, UserPK, SRCE )ι->HookResult override;
 		α Add( const QL::MutationQL& m, UserPK userPK, SRCE )ι->HookResult override;
 		α Remove( const QL::MutationQL& m, UserPK userPK, SRCE )ι->HookResult override;
-		α UpdateAfter( const QL::MutationQL& m, UserPK executer, SRCE )ι->HookResult override;
-		α PurgeAfter( const QL::MutationQL& m, UserPK executer, SRCE )ι->HookResult override;
 	};
 }

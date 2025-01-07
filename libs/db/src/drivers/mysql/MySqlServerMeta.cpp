@@ -21,7 +21,7 @@ namespace Jde::DB::MySql{
 			if( tablePrefix.size() && tableName.size()>tablePrefix.size() )
 				tableName = tableName.substr( tablePrefix.size() );
 			auto& table = tables.emplace( tableName, ms<TableDdl>(tableName) ).first->second;
-			table->Columns.push_back( ms<ColumnDdl>(name, (uint)ordinalPosition, dflt, isNullable!="NO", ToType(type), maxLength.value_or(0), isIdentity!=0, isId!=0, numericPrecision, numericScale) );
+			table->Columns.push_back( ms<ColumnDdl>(name, (uint)ordinalPosition, dflt, isNullable!="NO", ToType(type), maxLength, isIdentity!=0, isId!=0, numericPrecision, numericScale) );
 		};
 		auto onRow = [&]( IRow& row ){
 			fromColumns( row.MoveString(0), row.MoveString(1), row.GetInt(2), row.MoveString(3), row.MoveString(4), row.MoveString(5), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
@@ -95,7 +95,7 @@ namespace Jde::DB::MySql{
 			else
 				pExisting->second.Columns.push_back( column );
 		};
-		_pDataSource->Select( Sql::ForeignKeySql(true), result, {Value{schema}} );
+		_pDataSource->Select( Sql::ForeignKeySql(true), result, {Value{schema},Value{schema}} );
 		return fks;
 	}
 

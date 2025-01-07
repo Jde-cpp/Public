@@ -19,7 +19,7 @@ namespace Jde::App::Client{
 	α Host()ι->string;
 	α Port()ι->PortType;
 	α RemoteAcl()ι->sp<Access::IAcl>;
-	α QLServer()ι->sp<QL::IQL>;
+	α QLServer()ε->sp<QL::IQL>;
 
 /*
 	//TODO change to functions, not returning anything.

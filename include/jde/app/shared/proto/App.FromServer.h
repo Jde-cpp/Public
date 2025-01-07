@@ -1,6 +1,7 @@
 #pragma once
 #include "../exports.h"
 #include "../usings.h"
+#include <jde/ql/usings.h>
 
 #define Φ ΓAS α
 namespace Jde::DB{ struct IRow; }
@@ -13,6 +14,8 @@ namespace Jde::App::FromServer{
 	Φ ExecuteRequest( RequestId serverRequestId, UserPK userPK, string&& fromClient )ι->Proto::FromServer::Transmission;
 	Φ GraphQL( string&& queryResults, RequestId requestId )ι->Proto::FromServer::Transmission;
 	Φ StatusBroadcast( Proto::FromServer::Status status )ι->Proto::FromServer::Transmission;
+	Φ SubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->Proto::FromServer::Transmission;
+	Φ Subscription( string&& s, RequestId requestId )ι->Proto::FromServer::Transmission;
 	Φ ToStatus( AppPK appId, AppInstancePK instanceId, str hostName, Proto::FromClient::Status&& input )ι->Proto::FromServer::Status;
 	Φ ToTrace( const DB::IRow& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace;
 	Φ TraceBroadcast( LogPK id, AppPK appId, AppInstancePK instanceId, const Logging::ExternalMessage& m, const vector<string>& args )ι->Proto::FromServer::Transmission;

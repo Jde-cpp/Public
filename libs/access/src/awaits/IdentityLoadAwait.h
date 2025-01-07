@@ -2,7 +2,7 @@
 #include <jde/access/usings.h>
 //#include "../types/User.h"
 //#include <jde/db/meta/AppSchema.h>
-#include <jde/ql/ql.h>
+#include <jde/ql/QLAwait.h>
 
 
 namespace Jde::QL{ struct IQL; }
@@ -17,7 +17,7 @@ namespace Jde::Access{
 		IdentityLoadAwait( sp<QL::IQL> ql, UserPK executer, SRCE )ι:TAwait<Identities>{sl},_executer{executer},_ql{ql}{};
 		α Suspend()ι->void override{ Load(); }
 	private:
-		α Load()ι->QL::QLAwait::Task;
+		α Load()ι->QL::QLAwait<jarray>::Task;
 		UserPK _executer;
 		sp<QL::IQL> _ql;
 	};

@@ -22,7 +22,7 @@ begin
 		set _permission_id = LAST_INSERT_ID();
 
 		insert into access_permission_rights( permission_id, allowed, denied, resource_id )
-		values( _permission_id, _allowed, _denied, ( select resource_id from access_resources where target = _resourceTarget ) );
+		values( _permission_id, _allowed, _denied, ( select resource_id from access_resources where target = _resourceTarget and criteria is null ) );
 
 		insert into access_role_members( role_id, member_id ) values( _role_id, _permission_id );
 	end if;

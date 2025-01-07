@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "../exports.h"
 #include "Logger.h"
+#include "../../../../../Framework/source/coroutine/Awaitable.h"
 
 namespace Jde::Opc{
 	namespace Browse{ struct Response; }

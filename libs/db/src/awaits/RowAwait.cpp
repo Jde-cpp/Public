@@ -9,7 +9,7 @@ namespace Jde::DB{
 		CoroutinePool::Resume( _h );
 	}
 
-	α RowAwait::await_resume()ι->vector<up<IRow>>{
+	α RowAwait::await_resume()ε->vector<up<IRow>>{
 		return _ds->Select( move(_sql), _storedProc, _sl );
 	}
 }

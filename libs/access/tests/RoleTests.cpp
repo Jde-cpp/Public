@@ -20,9 +20,9 @@ namespace Jde::Access::Tests{
 		let remove = Ƒ( "mutation removeRole( id:{}, permissionRight:{{id:{}}} )", rolePK, permissionPK );
 		return QL::QueryObject( remove, userPK );
 	}
-	α GetRolePermission( RolePK rolePK, sv resourceName, UserPK userPK )ε->jobject{
+	α GetRolePermission( RolePK rolePK, sv resourceName, UserPK executer )ε->jobject{
 		let ql = Ƒ("role( id:{} ){{permissionRight{{id allowed denied resource(target:\"{}\",criteria:null)}} }}", rolePK, resourceName );
-		let role = QL::QueryObject( ql, userPK ); //{"role":{"member":{"id":1,"allowed":[],"denied":[]}}}
+		let role = QL::QueryObject( ql, executer ); //{"role":{"member":{"id":1,"allowed":[],"denied":[]}}}
 		return Json::FindDefaultObjectPath( role, "permissionRight" );
 	}
 	α GetRoleChild( RolePK parentRolePK, RolePK childRolePK, UserPK userPK )ε->jobject{
@@ -36,13 +36,13 @@ namespace Jde::Access::Tests{
 			let existingAllowed = ToRights( Json::AsArray(permission, "allowed") );
 			let existingDenied = ToRights( Json::AsArray(permission, "denied") );
 			if( allowed!=existingAllowed || denied!=existingDenied ){
-				let update = Ƒ( "mutation updatePermissionRight( id:{}, input:{{ allowed:{}, denied:{} }} )", GetId(permission), underlying(allowed), underlying(denied) );
+				let update = Ƒ( "mutation updatePermissionRight( id:{}, allowed:{}, denied:{} )", GetId(permission), underlying(allowed), underlying(denied) );
 				QL::Query( update, userPK );
 				permission = GetRolePermission( rolePK, resourceName, userPK );
 			}
 		}
 		else{
-			let add = Ƒ( "{{ mutation addRole( id:{}, allowed:{}, denied:{}, resource:{{target:\"{}\"}} ) }}", rolePK, underlying(allowed), underlying(denied), resourceName );
+			let add = Ƒ( "mutation addRole( id:{}, permissionRight:{{allowed:{}, denied:{}, resource:{{target:\"{}\"}}}} )", rolePK, underlying(allowed), underlying(denied), resourceName );
 			QL::Query( add, userPK );
 			permission = GetRolePermission( rolePK, resourceName, userPK );
 		}
@@ -51,7 +51,7 @@ namespace Jde::Access::Tests{
 	α AddRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK userPK )ε->jobject{
 		auto y = GetRoleChild( parentRolePK, childRolePK, userPK );
 		if( y.empty() ){
-			let add = Ƒ( "{{ mutation addRole( id:{}, role:{{id:{}}} ) }}", parentRolePK, childRolePK );
+			let add = Ƒ( "mutation addRole( id:{}, role:{{id:{}}} )", parentRolePK, childRolePK );
 			QL::Query( add, userPK );
 			y = GetRoleChild( parentRolePK, childRolePK, userPK );
 		}

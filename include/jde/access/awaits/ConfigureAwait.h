@@ -4,12 +4,12 @@
 
 namespace Jde::Access{
 	struct ConfigureAwait : VoidAwait<>{
-		ConfigureAwait( sp<QL::IQL> qlServer, vector<string> schemaNames, UserPK executer )ι:
-			Executer{executer},QlServer{qlServer}, SchemaNames{schemaNames}{};
+		ConfigureAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, UserPK executer )ι:
+			Executer{executer},QlServer{qlServer}, Schemas{schemas}{};
 		α Suspend()ι->void override;
 
 		UserPK Executer;
 		sp<QL::IQL> QlServer;
-		vector<string> SchemaNames;
+		vector<sp<DB::AppSchema>> Schemas;
 	};
 }

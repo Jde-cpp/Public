@@ -93,8 +93,6 @@ namespace Jde::QL{
 		for( let& c : Columns ){
 			if( c.DBColumn==dbColumn ){
 				o[dbColumn->IsPK() && !dbColumn->IsEnum() ? "id" : c.JsonName] = ValueToJson( move(value), &c );
-//				let x = serialize( o );
-//				Trace{ ELogTags::Test, "{}", x };
 				return;
 			}
 		}
@@ -107,8 +105,12 @@ namespace Jde::QL{
 	α TableQL::ToString()Ι->string{
 		string y = JsonName;
 		y.resize( 64*(1+Tables.size()) );
-		if( Args.size() )
-			y += '('+serialize(Args)+')';
+		if( Args.size() ){
+			auto args = serialize( Args );
+			args.front() = '(';
+			args.back() = ')';
+			y += move( args );
+		}
 		y += '{';
 		if( Columns.size() ){
 			vector<string> cols;
@@ -117,14 +119,23 @@ namespace Jde::QL{
 		}
 		if( Tables.size() ){
 			for( let& t : Tables ){
-				if( t.Args.size() || t.Columns.size() || t.Tables.size() ){
-					y += ' '+t.JsonName+'{';
-					y += ' '+t.JsonName+'('+serialize(t.Args)+')';
-					y += '}';
-				}
+				if( t.Args.size() || t.Columns.size() || t.Tables.size() )
+					y += ' '+t.ToString();
 			}
 		}
 		y += '}';
+		return y;
+	}
+	α TableQL::TrimColumns( const jobject& fullOutput )Ι->jobject{
+		jobject y;
+		for( let& c : Columns ){
+			if( auto p = fullOutput.if_contains(c.JsonName); p )
+				y[c.JsonName] = *p;
+		}
+		for( let& t : Tables ){
+			if( auto p = fullOutput.if_contains(t.JsonName); p )
+				y[t.JsonName] = t.TrimColumns( Json::AsObject(*p) );
+		}
 		return y;
 	}
 }

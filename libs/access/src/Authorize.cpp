@@ -6,6 +6,8 @@
 
 #define let const auto
 namespace Jde::Access{
+	constexpr ELogTags _tags{ ELogTags::Access };
+	constexpr ELogTags _ptags{ ELogTags::Access | ELogTags::Pedantic };
 
 	α Authorize::Test( str schemaName, str resourceName, ERights rights, UserPK executer, SL sl )ε->void{
 		optional<ResourcePK> resourcePK;
@@ -79,6 +81,7 @@ namespace Jde::Access{
 			else{
 				GroupPK childGroup{ member };
 				existing.Members.emplace( childGroup );
+				Trace{ _ptags, "[{}+{}]AddToGroup", groupPK.Value, childGroup.Value };
 				let groupUsers = RecursiveUsers( childGroup, l, true );
 				for( let user : groupUsers )
 					users.emplace( user );
@@ -87,14 +90,6 @@ namespace Jde::Access{
 		if( users.size() )
 			SetUserPermissions( move(users), l );
 	}
-	α Authorize::RestoreGroup( GroupPK groupPK )ι->void{
-		ul l{ Mutex };
-		if( auto p = Groups.find(groupPK); p!=Groups.end() ){
-			p->second.IsDeleted = false;
-			RecalcGroupMembers( groupPK, l );
-		}
-	}
-
 	α Authorize::RemoveFromGroup( GroupPK groupPK, flat_set<IdentityPK::Type> members )ι->void{
 		ul l{ Mutex };
 		flat_set<UserPK> users;
@@ -118,16 +113,27 @@ namespace Jde::Access{
 		if( users.size() )
 			SetUserPermissions( move(users), l );
 	}
+
+
+	α Authorize::RestoreGroup( GroupPK groupPK )ι->void{
+		ul l{ Mutex };
+		if( auto p = Groups.find(groupPK); p!=Groups.end() ){
+			p->second.IsDeleted = false;
+			RecalcGroupMembers( groupPK, l );
+		}
+	}
+
 	α Authorize::RecalcGroupMembers( GroupPK groupPK, const ul& l, bool remove )ι->void{
 		auto users = RecursiveUsers( groupPK, l, true );
 		if( remove )
-		Groups.erase( groupPK );
+			Groups.erase( groupPK );
 		if( users.size() )
 			SetUserPermissions( move(users), l );
 	}
 	α Authorize::AddAcl( IdentityPK::Type userGroupPK, uint permissionPK, ERights allowed, ERights denied, ResourcePK resourcePK )ι->void{
 		ul l{ Mutex };
 		const PermissionRole permissionRole{ std::in_place_index<0>, permissionPK };
+		ASSERT( resourcePK );
 		const Permission permission{ permissionPK, resourcePK, allowed, denied };
 		Permissions.emplace( permissionPK, permission );
 		auto user = Users.find({userGroupPK});
@@ -149,12 +155,32 @@ namespace Jde::Access{
 		else
 			RecalcGroupMembers( identityPK.GroupPK(), l );
 	}
+	α Authorize::RemoveAcl( IdentityPK::Type userGroupPK, PermissionRole rolePK )ι->void{
+		ul l{ Mutex };
+		let identityPK = ToIdentityPK( userGroupPK, l );
+		auto permissionRoles = Acl.equal_range( ToIdentityPK(userGroupPK, l) );
+		for( auto p=permissionRoles.first; p!=permissionRoles.second; ++p ){
+			if( p->second==rolePK ){
+				Acl.erase( p );
+				break;
+			}
+		}
+		if( identityPK.IsUser() )
+			SetUserPermissions( {identityPK.UserPK()}, l );
+		else
+			RecalcGroupMembers( identityPK.GroupPK(), l );
+	}
+
+	α Authorize::ToIdentityPK( IdentityPK::Type userGroupPK, const ul& l )Ι->IdentityPK{
+		auto user = Users.find({userGroupPK});
+		return user!=Users.end() ? IdentityPK{ user->first } : IdentityPK{ GroupPK{userGroupPK} };
+	}
 
 	α Authorize::CreateResource( Resource&& resource )ε->void{
 		ul _{Mutex};
 		Resources[resource.PK] = move(resource);
 	}
-	α Authorize::UpdateResourceDeleted( str schemaName, const jobject& args, bool restored )ε->void{
+	α Authorize::UpdateResourceDeleted( sv schemaName, const jobject& args, bool restored )ε->void{
 		ul _{Mutex};
 		let pk = Json::FindNumber<ResourcePK>( args, "id" );
 		let target = Json::FindSV( args, "target" );
@@ -162,15 +188,19 @@ namespace Jde::Access{
 			let& r = pkResource.second;
 			return (pk && *pk==r.PK) || ( r.Schema==schemaName && target && *target==r.Target );
 		} );
-		THROW_IF( pkResource==Resources.end(), "Resource not found schema:{}, args:{}", schemaName, serialize(args) );
+		THROW_IF( pkResource==Resources.end(), "Resource not found schema:'{}', args:'{}'", schemaName, serialize(args) );
 		auto& resource = pkResource->second;
 
 		resource.IsDeleted = restored ? optional<DB::DBTimePoint>{} : DB::DBClock::now();
 		if( resource.Filter.empty() ){
-			if( auto resources = resource.IsDeleted ? SchemaResources.find( resource.Schema ) : SchemaResources.end(); resources!=SchemaResources.end() )
+			if( auto resources = resource.IsDeleted ? SchemaResources.find( resource.Schema ) : SchemaResources.end(); resources!=SchemaResources.end() ){
 				resources->second.erase( resource.Target );
-			else if( !resource.IsDeleted )
-				SchemaResources.try_emplace( schemaName ).first->second.emplace( resource.Target, resource.PK );
+				Debug{ _ptags, "[{}.{}.{}]Deleted from schema resource.", resource.Schema, resource.Target, resource.PK };
+			}
+			else if( !resource.IsDeleted ){
+				SchemaResources.try_emplace( string{resource.Schema} ).first->second.emplace( resource.Target, resource.PK );
+				Debug{ _ptags, "[{}.{}.{}]Restored from schema resource.", resource.Schema, resource.Target, resource.PK };
+			}
 		}
 	}
 
@@ -183,6 +213,10 @@ namespace Jde::Access{
 		ul _{Mutex};
 		if( auto p = Users.find(identityPK); p!=Users.end() )
 			p->second.IsDeleted = true;
+	}
+	α Authorize::PurgeUser( UserPK identityPK )ι->void{
+		ul _{Mutex};
+		Users.erase( identityPK );
 	}
 	α Authorize::RestoreUser( UserPK identityPK )ι->void{
 		ul _{Mutex};
@@ -231,7 +265,7 @@ namespace Jde::Access{
 		std::shared_lock _{ Mutex };
 		THROW_IFSL( isChild(child, parent), "Role '{}' cannot be a member of '{}' because it is a ancester.", child, parent );
 	}
-	α Authorize::AddRolePermission( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, str resourceName )ι->void{
+	α Authorize::AddRolePermission( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, sv resourceName )ι->void{
 		ul l{ Mutex };
 		if( auto permssion = Permissions.find(member); permssion!=Permissions.end() ){
 			permssion->second.Allowed = allowed;
@@ -240,30 +274,32 @@ namespace Jde::Access{
 		else if( auto resource = find_if(Resources, [&](let& r){ return r.second.Target==resourceName;}); resource!=Resources.end() )
 			Permissions.emplace( member, Permission{member, resource->first, allowed, denied} );
 
-		auto role = Roles.try_emplace(rolePK, rolePK, false);
+		auto role = Roles.try_emplace( rolePK, rolePK, false );
 		role.first->second.Members.emplace( PermissionRole{std::in_place_index<0>, member} );
 		Recalc( l );
+		Trace{ _ptags, "[{}+{}]Added role permission.", rolePK, member };
 	}
 	α Authorize::AddRoleChild( RolePK parentRolePK, RolePK childRolePK )ι->void{
 		ul l{ Mutex };
 
-		auto role = Roles.try_emplace(parentRolePK, parentRolePK, false);
+		auto role = Roles.try_emplace( parentRolePK, parentRolePK, false );
 		role.first->second.Members.emplace( PermissionRole{std::in_place_index<1>,childRolePK} );
 		Recalc( l );
+		Trace{ _ptags, "[{}+{}]Added role child.", parentRolePK, childRolePK };
 	}
 
-	α Authorize::RemoveFromRole(	RolePK rolePK, flat_set<PermissionIdentityPK> toRemove )ι->void{
+	α Authorize::RemoveRoleChildren(	RolePK rolePK, flat_set<PermissionPK> toRemove )ι->void{
 		if( !toRemove.size() )
 			return;
 		ul l{ Mutex };
+		auto role = Roles.find( rolePK );
+		ASSERT( role!=Roles.end() );
+		if( role==Roles.end() )
+			return;
 		for( let& member : toRemove ){
-			auto role = Roles.find( rolePK );
-			ASSERT( role!=Roles.end() );
-			if( role==Roles.end() )
-				continue;
 			auto& members = role->second.Members;
 			for( auto p = members.begin(); p!=members.end(); ++p ){
-				if( member==std::visit([](auto id)->PermissionIdentityPK{return id;}, *p) ){
+				if( member==std::visit([](auto id)->PermissionRightsPK{return id;}, *p) ){
 					members.erase( p );
 					break;
 				}
@@ -274,7 +310,7 @@ namespace Jde::Access{
 
 	α	Authorize::DeleteRestoreRole( RolePK rolePK, bool deleted )ι->void{
 		ul l{ Mutex };
-		if( auto p = Roles.find(rolePK); p==Roles.end() )
+		if( auto p = Roles.find(rolePK); p!=Roles.end() )
 			p->second.IsDeleted = deleted;
 		Recalc( l );//not sure a better way than recalc all users.
 	}

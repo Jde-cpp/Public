@@ -21,13 +21,14 @@ namespace Jde::QL{
 		α FindTable( sv jsonPluralName )Ι->const TableQL*;
 		α FindTable( sv jsonPluralName )ι->TableQL*;
 		α FindTablePrefix( sv jsonPluralName )Ι->const TableQL*;
-		α Input()Ε->const jobject&{ return Json::AsObject( Args, "input" ); }
+		//α Input()Ε->const jobject&{ return Json::AsObject( Args, "input" ); }
 		α IsPlural()Ι{ return DB::Names::IsPlural(JsonName); }
 		α Filter()Ε->FilterQL;
 		α AddFilter( const string& column, const jvalue& value )ι->void;
 		α ToJson( DB::IRow& row, const vector<sp<DB::Column>>& dbColumns )Ι->jobject;
 		α ToString()Ι->string;
 		α SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void;
+		α TrimColumns( const jobject& fullOutput )Ι->jobject;
 		string JsonName;
 		jobject Args;
 		vector<ColumnQL> Columns;

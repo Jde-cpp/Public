@@ -12,11 +12,19 @@ namespace Jde::Access{
 		PK{pk}, ResourcePK{resourcePK}, Allowed{allowed}, Denied{denied}
 	{}
 
+	α getRights( const jobject& o, sv key )ι->ERights{
+		auto rights{ ERights::None };
+		if( let array = Json::FindArray(o, key); array )
+			rights = ToRights( *array );
+		else
+			rights = (ERights)Json::AsNumber<uint8>(o, key);
+		return rights;
+	}
 	Permission::Permission( const jobject& o )ι:
 		PK{ Json::AsNumber<PermissionPK>(o, "id") },
-		ResourcePK{ Json::AsNumber<Access::ResourcePK>(o, "resource/id") },
-		Allowed{ ToRights(Json::AsArray(o, "allowed")) },
-		Denied{ ToRights(Json::AsArray(o, "denied")) }
+		ResourcePK{ Json::FindNumberPath<Access::ResourcePK>(o, "resource/id").value_or(0) },
+		Allowed{ getRights(o, "allowed") },
+		Denied{ getRights(o, "denied") }
 	{}
 
 	α Permission::Update( optional<ERights> allowed, optional<ERights> denied )ι->void{

@@ -8,14 +8,14 @@
 #include <jde/opc/async/ConnectAwait.h>
 
 namespace Jde::Opc{
-	struct ΓOPC AuthenticateAwait : TAwait<App::Proto::FromServer::SessionInfo>{
-		using base = TAwait<App::Proto::FromServer::SessionInfo>;
+	struct ΓOPC AuthenticateAwait : TAwait<Web::FromServer::SessionInfo>{
+		using base = TAwait<Web::FromServer::SessionInfo>;
 		AuthenticateAwait( str loginName, str password, str opcNK, str endpoint, bool isSocket, SRCE )ι;
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->ConnectAwait::Task;
 	private:
 		α CheckProvider()ι->TAwait<Access::ProviderPK>::Task;
-		α AddSession( Access::ProviderPK providerPK )ι->Web::Client::ClientSocketAwait<App::Proto::FromServer::SessionInfo>::Task;
+		α AddSession( Access::ProviderPK providerPK )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>::Task;
 		string _loginName; string _password; string _opcNK; string _endpoint; bool _isSocket;
 	};
 	//CRD - Insert/Purge/Select from um_providers table
@@ -23,7 +23,7 @@ namespace Jde::Opc{
 		ProviderSelectAwait( string opcId, SRCE )ι:TAwait<Access::ProviderPK>{sl},_opcId{move(opcId)}{};//select
 		α Suspend()ι->void override{ Select(); }
 	private:
-		α Select()ι->Web::Client::ClientSocketAwait<string>::Task;
+		α Select()ι->TAwait<jobject>::Task;
 		string _opcId;
 	};
 	struct ΓOPC ProviderCreatePurgeAwait : TAwait<Access::ProviderPK>{
@@ -31,9 +31,9 @@ namespace Jde::Opc{
 		α Suspend()ι->void override;
 	private:
 		α Execute( OpcPK opcPK )ι->OpcServerAwait::Task;
-		α Insert( str target )ι->Web::Client::ClientSocketAwait<string>::Task;
+		α Insert( str target )ι->TAwait<jobject>::Task;
 		α Purge( str target )ι->ProviderSelectAwait::Task;
-		α Purge( Access::ProviderPK pk )ι->Web::Client::ClientSocketAwait<string>::Task;
+		α Purge( Access::ProviderPK pk )ι->TAwait<jvalue>::Task;
 
 		bool _insert;
 		DB::Key _opcKey;

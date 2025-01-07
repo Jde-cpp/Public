@@ -67,7 +67,7 @@ namespace Jde::Opc{
 		  	MonitoredItemCreateResult result{ move(response->results[i]) };
 				if( result.statusCode ){
 					Debug( _tag, "[{:x}]Could not create monitored item for node '{}':  {}.", requestId, pNode->to_string(), UAException::Message(result.statusCode) );
-					_errors.try_emplace( requestId ).first->second.try_emplace( move(*pNode), result.statusCode );
+					_errors.try_emplace( {requestId} ).first->second.try_emplace( move(*pNode), result.statusCode );
 				}
 				else{
 					let h = MonitorHandle{ requestHandle.SubId(), result.monitoredItemId };
@@ -128,7 +128,7 @@ namespace Jde::Opc{
 		auto f = [&dataChange]( let& hNodeDataChange ){return get<1>(hNodeDataChange.second)==dataChange;};
 		ul _{ _mutex };
 		for( auto p = find_if(_calls, f); p!=_calls.end(); p=find_if(++p, _calls.end(), f) )
-			handles.emplace( p->first );
+			handles.emplace( MonitorHandle{p->first} );
 		for( let& h : handles ){
 			_calls.erase( h );
 			_requests.erase( h );

@@ -1,12 +1,13 @@
 #include "RoleHook.h"
+#include <jde/access/Authorize.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/View.h>
-#include <jde/ql/types/TableQL.h>
 #include <jde/ql/ql.h>
-#include <jde/access/Authorize.h>
+#include <jde/ql/QLAwait.h>
+#include <jde/ql/types/TableQL.h>
 #include "../accessInternal.h"
 
 #define let const auto
@@ -19,7 +20,7 @@ namespace Jde::Access{
 	private:
 		α Add()ι->void;
 		α AddRole( RolePK parentRolePK, const jobject& childRole )ι->TAwait<uint>::Task;
-		α AddPermission( const jobject& resource )ι->TAwait<PermissionPK>::Task;
+		α AddPermission( RolePK parentRolePK, const jobject& permissionRights )ι->TAwait<PermissionPK>::Task;
 		α Remove()ι->TAwait<PermissionPK>::Task;
 
 		QL::MutationQL Mutation;
@@ -29,10 +30,11 @@ namespace Jde::Access{
 	//{ mutation addRole( id:42, allowed:255, denied:0, resource:{target:"users"} ) }
 	//{ mutation addRole( id:11, role:{id:13} ) }
 	α RoleMutationAwait::Add()ι->void{
+		let rolePK = Mutation.Id<RolePK>();
 		if( auto role = Mutation.Args.find("role"); role!=Mutation.Args.end() )
-			AddRole( Mutation.Id<RolePK>(), Json::AsObject(role->value()) );
-		else if( auto resource = Mutation.Args.find("resource"); resource!=Mutation.Args.end() )
-			AddPermission( Json::AsObject(resource->value()) );
+			AddRole( rolePK, Json::AsObject(role->value()) );
+		else if( auto rights = Mutation.Args.find("permissionRight"); rights!=Mutation.Args.end() )
+			AddPermission( rolePK, Json::AsObject(rights->value()) );
 		else
 			ResumeExp( Exception{"Invalid mutation."} );
 	}
@@ -45,33 +47,29 @@ namespace Jde::Access{
 			insert.Add( table->GetColumnPtr("role_id"), parentRolePK );
 			insert.Add( table->GetColumnPtr("member_id"), childRolePK );
 			let rowCount = co_await table->Schema->DS()->ExecuteCo( insert.Move() );
-			Authorizer().AddRoleChild( parentRolePK, childRolePK );
 			Resume( rowCount );
 		}
-		catch( Exception& e ){
+		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α RoleMutationAwait::AddPermission( const jobject& resource )ι->TAwait<PermissionPK>::Task{
+	α RoleMutationAwait::AddPermission( RolePK rolePK, const jobject& rights )ι->TAwait<PermissionPK>::Task{
 		try{
-			const string resource{ Json::AsSVPath(Mutation.Args, "resource/target") };
+			const string resource{ Json::AsSVPath(rights, "resource/target") };
 			Authorizer().TestAdmin( resource, _userPK );
 			let table = GetTable( "roles" );
 			DB::InsertClause insert{ DB::Names::ToSingular(table->DBName)+"_add" };
-			let rolePK = Json::AsNumber<RolePK>(Mutation.Args, "id");
-			let allowed = Json::FindNumber<uint8>(Mutation.Args, "allowed").value_or(0);
-			let denied = Json::FindNumber<uint8>(Mutation.Args, "denied").value_or(0);
 			insert.Add( rolePK );
-			insert.Add( allowed );
-			insert.Add( denied );
+			insert.Add( Json::FindNumber<uint8>(rights, "allowed").value_or(0) );
+			insert.Add( Json::FindNumber<uint8>(rights, "denied").value_or(0) );
 			insert.Add( resource );
-			let permissionPK = co_await table->Schema->DS()->ExecuteScaler<PermissionPK>( insert.Move() );
-			Authorizer().AddRolePermission( rolePK, permissionPK, (ERights)allowed, (ERights)denied, resource );
+			let permissionPK = co_await table->Schema->DS()->ExecuteScaler<PermissionRightsPK>( insert.Move() );
 			jobject y;
-			y["id"] = permissionPK;
+			y["permissionRight"].emplace_object()["id"] = permissionPK;
+			Trace{ ELogTags::Test, "RoleMutationAwait::AddPermission - '{}'", serialize(y) };
 			Resume( y );
 		}
-		catch( Exception& e ){
+		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -79,7 +77,7 @@ namespace Jde::Access{
 	α RoleMutationAwait::Remove()ι->TAwait<PermissionPK>::Task{ //removeRole( id:42, permissionRight:{id:420} )
 		let table = GetTable( "roles" );
 		DB::InsertClause remove{ DB::Names::ToSingular(table->DBName)+"_remove" };
-		remove.Add( Json::AsNumber<RolePK>(Mutation.Args, "id") );
+		remove.Add( Mutation.Id<RolePK>() );
 		remove.Add( Json::AsNumber<PermissionPK>(Mutation.Args, "permissionRight/id") );
 		let rowCount = co_await table->Schema->DS()->ExecuteProcCo( remove.Move() );
 		Resume( rowCount );
@@ -99,7 +97,7 @@ namespace Jde::Access{
 	private:
 		α PermissionsStatement( QL::TableQL& permissionQL )ε->optional<DB::Statement>;
 		α RoleStatement( QL::TableQL& roleQL )ε->optional<DB::Statement>;
-		α Select()ι->QL::QLAwait::Task;
+		α Select()ι->QL::QLAwait<>::Task;
 	};
 
 	α RoleSelectAwait::RoleStatement( QL::TableQL& roleQL )ε->optional<DB::Statement>{ //role( id:11 ){ role(id:13){id target deleted} }
@@ -135,7 +133,7 @@ namespace Jde::Access{
 	}
 
 	//query{ role( id:42 ){permissionRights{id allowed denied resource(target:"users",criteria:null)}} }} }}
-	α RoleSelectAwait::Select()ι->QL::QLAwait::Task{
+	α RoleSelectAwait::Select()ι->QL::QLAwait<>::Task{
 		try{
 			optional<jvalue> permissions;
 			optional<jvalue> roleMembers;
@@ -180,7 +178,7 @@ namespace Jde::Access{
 					else if( !roleMembers.is_array() )
 						jmember[memberName].get_array().emplace_back( move(member) );
 				};
-				Json::FromValue( move(roleMembers), addRoleMember );
+				Json::Visit( move(roleMembers), addRoleMember );
 			};
 
 			if( permissions )
@@ -207,7 +205,7 @@ namespace Jde::Access{
 					}else
 						roles.emplace( rolePK, role );
 				};
-				Json::FromValue( move(qlRoles), addRole );
+				Json::Visit( move(qlRoles), addRole );
 			}
 			jvalue y;
 			if( returnArray ){
@@ -241,21 +239,4 @@ namespace Jde::Access{
 	α RoleHook::Remove( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
 		return m.TableName()=="roles" ? mu<RoleMutationAwait>( m, userPK, sl ) : nullptr;
 	}
-
-	α RoleHook::UpdateAfter( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
-		if( m.TableName()!="roles" )
-			return {};
-		let pk{ m.Id<RolePK>() };
-		if( m.Type==QL::EMutationQL::Delete )
-			Authorizer().DeleteRestoreRole( pk, true );
-		else if( m.Type==QL::EMutationQL::Restore )
-			Authorizer().DeleteRestoreRole( pk, false );
-		return {};
-	}
-	α RoleHook::PurgeAfter( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
-		if( m.TableName()=="roles" )
-			Authorizer().PurgeRole( m.Id<RolePK>() );
-		return {};
-	}
-
 }

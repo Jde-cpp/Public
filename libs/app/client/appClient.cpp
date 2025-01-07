@@ -2,6 +2,7 @@
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/app/client/usings.h>
 #include <jde/access/Authorize.h>
+#include <jde/web/client/socket/ClientQL.h>
 #include "../../../../Framework/source/coroutine/Alarm.h"
 
 #define let const auto
@@ -24,6 +25,15 @@ namespace Jde::App{
 		IF_OK
 			pSession->Write( FromClient::Status(_statusDetails()) );
 	}
+	α Client::AppServiceUserPK()ι->UserPK{
+		//AppClientSocketSession a{ nullptr, nullopt };
+		let session = AppClientSocketSession::Instance();
+		return session ? session->UserPK() : UserPK{};
+	}
+	α Client::QLServer()ε->sp<QL::IQL>{
+		auto session = Process::ShuttingDown() ? nullptr : AppClientSocketSession::Instance(); THROW_IF( !session, "Not connected." );
+		return ms<Web::Client::ClientQL>( session );
+	};
 }
 namespace Jde::App::Client{
 	struct LoginAwait final : TAwait<SessionPK>{

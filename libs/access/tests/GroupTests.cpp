@@ -34,7 +34,7 @@ namespace Jde::Access::Tests{
 		auto obj = Json::ReadJsonNet( Ƒ("{}/Public/libs/access/config/access-ql.jsonnet", OSApp::EnvironmentVariable("JDE_DIR").value_or("./")) );
 		QL::Introspection intro{ move(obj) };
 		QL::RequestQL request = QL::Parse( query );
-		jobject expected = intro.Find("IdentityGroup")->ToJson( get<0>(request)[0].Tables[0] );
+		jobject expected = intro.Find("IdentityGroup")->ToJson( request.TableQLs()[0].Tables[0] );
 		ASSERT_EQ( serialize(actual), serialize(expected) );
 	}
 
@@ -42,7 +42,7 @@ namespace Jde::Access::Tests{
 		let group = GetGroup( "groupTest", GetRoot() );
 		let id = GetId( group );
 
- 		let update = Ƒ( "{{ mutation updateIdentityGroup( \"id\":{}, \"input\": {{\"name\":\"{}\"}} ) }} }}", id, "newName" );
+ 		let update = Ƒ( "mutation updateIdentityGroup( \"id\":{}, \"name\":\"{}\" )", id, "newName" );
  		let updateJson = QL::Query( update, GetRoot() );
 		ASSERT_TRUE( AsSV(SelectGroup("groupTest", GetRoot()), "name")=="newName" );
 

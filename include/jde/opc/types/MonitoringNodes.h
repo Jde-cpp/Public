@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "../uatypes/MonitoredItemCreateResult.h"
 #include <jde/opc/uatypes/Node.h>
+#include <jde/framework/math/HiLow.h>
 #include "../../../../../Framework/source/coroutine/Awaitable.h"
 
 namespace Jde::Opc{
@@ -11,14 +12,11 @@ namespace Jde::Opc{
 		β to_string()Ι->string=0;
 	};
 
-	struct MonitorHandle{
-		MonitorHandle( SubscriptionId s, MonitorId m )ι:Key{ (uint64_t) s<<32 | m }{}
-		MonitorHandle( Handle x )ι:Key{ x }{}
-		operator Handle()Ι{return Key;}
-		α SubId()Ι->SubscriptionId{ return Key>>32; }
-		α MonitorId()Ι->MonitorId{ return Key & 0x00000000FFFFFFFF; }
-		α operator<=>( const MonitorHandle& )Ι=default;
-		Handle Key;
+	struct MonitorHandle final : HiLow{
+		MonitorHandle( SubscriptionId s, MonitorId m )ι:HiLow{ s, m }{}
+		MonitorHandle( Handle x )ι:HiLow{ x }{}
+		α SubId()Ι->SubscriptionId{ return Hi(); }
+		α MonitorId()Ι->MonitorId{ return Low(); }
 	};
 
 

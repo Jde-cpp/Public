@@ -1,6 +1,7 @@
 #include <jde/db/meta/View.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/AppSchema.h>
+#include <jde/db/meta/DBSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Syntax.h>
@@ -76,11 +77,14 @@ namespace Jde::DB{
 
 		//if mssql & schema is not default & ds schema!=config schema.
 		bool representsDBTable = !DBName.empty();//db tables copy constructed will already have db name set.
-		DBName.clear();
-		if( !Syntax().CanSetDefaultSchema() && !Schema->Name.empty() && Schema->DS()->SchemaName()!=Schema->Name )
-			DBName = Ƒ( "{}.", Schema->Name );
-		if( /*!representsDBTable &&*/ Schema->Prefix.size() )
-			DBName += Schema->Prefix;
+		let isPhysical = Schema->DBSchema->IsPhysical();
+		if( isPhysical ){
+			DBName.clear();
+			if( !Syntax().CanSetDefaultSchema() && !Schema->Name.empty() && Schema->DS()->SchemaName()!=Schema->Name )
+				DBName = Ƒ( "{}.", Schema->Name );
+			if( /*!representsDBTable &&*/ Schema->Prefix.size() )
+				DBName += Schema->Prefix;
+		}
 		DBName+=Name;
 	}
 	α View::Authorize( Access::ERights rights, UserPK userPK, SL sl )Ε->void{

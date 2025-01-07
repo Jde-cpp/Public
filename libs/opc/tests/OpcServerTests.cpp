@@ -6,6 +6,7 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/ql.h>
+#include "../src/opcInternal.h"
 #include "helpers.h"
 
 #define let const auto
@@ -37,8 +38,8 @@ namespace Jde::Opc{
 
 	α OpcServerTests::InsertFailedImpl()ε->CreateOpcServerAwait::Task{
 		let target = OpcServerTarget;
-		let jInsert = Json::Parse( Ƒ("{{\"input\":{{\"target\":\"{}\"}}}}", target) );
-		QL::MutationQL insert{ "opcServer", QL::EMutationQL::Create, jInsert, nullopt };
+		auto jInsert = Json::Parse( Ƒ("{{\"target\":\"{}\"}}", target) );
+		QL::MutationQL insert{ "createOpcServer", move(jInsert), nullopt, true };
 
 		let existingProviderPK = GetProviderPK( target);
 		let existingServer = SelectOpcServer();
@@ -46,7 +47,7 @@ namespace Jde::Opc{
 		let& table = GetViewPtr( "opc_servers" );
 		if( !existingOpcPK && !existingProviderPK ){
 			auto pk = co_await CreateOpcServerAwait();
-			DS().Execute(	Ƒ("delete from {} where id='{}'", table->DBName, pk) ); //InsertFailed checks if failure occurs because exists.
+			DS()->Execute(	Ƒ("delete from {} where id='{}'", table->DBName, pk) ); //InsertFailed checks if failure occurs because exists.
 			[&](auto&& insert, auto self)->TAwait<jvalue>::Task {
 				co_await *GetHook()->InsertFailure( insert, {UserPK::System} );
 				self->Id = GetProviderPK( target );
@@ -56,7 +57,7 @@ namespace Jde::Opc{
 		}
 		else{
 			if( existingOpcPK )
-				DS().Execute(	Ƒ("delete from {} where id='{}'", table->DBName, existingOpcPK) ); //InsertFailed checks if failure occurs because exists.
+				DS()->Execute(	Ƒ("delete from {} where id='{}'", table->DBName, existingOpcPK) ); //InsertFailed checks if failure occurs because exists.
 			[=,this](auto&& insert, auto self)->TAwait<jvalue>::Task {
 				co_await *GetHook()->InsertFailure( insert, {UserPK::System} );
 				Id = GetProviderPK( target );
@@ -81,7 +82,7 @@ namespace Jde::Opc{
 		[](auto opcPK, auto self)->ProviderCreatePurgeAwait::Task {
 			co_await ProviderCreatePurgeAwait{OpcServerTarget, false};//BeforePurge mock.
 			[](auto opcPK, auto self)->TAwait<jvalue>::Task {
-				QL::MutationQL purge{ "opcServer", QL::EMutationQL::Purge, { {"id", opcPK} }, nullopt };
+				QL::MutationQL purge{ "purgeOpcServer", { {"id", opcPK} }, nullopt, true };
 				co_await *GetHook()->PurgeFailure( purge, {UserPK::System} );
 				self->Result = GetProviderPK( OpcServerTarget );
 				self->Wait.test_and_set();

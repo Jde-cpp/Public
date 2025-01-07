@@ -21,26 +21,21 @@ endif()
 #######################################################
 
 find_package(OpenSSL)
-add_library( ${CMAKE_PROJECT_NAME} SHARED )
+add_library( ${CMAKE_PROJECT_NAME} )
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
-#message( "CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}" )
 file(GLOB sources *.cpp proto/*.cpp )
-file(GLOB headers  **/*.h )
+file(GLOB headers  **/*.h $ENV{JDE_DIR}/Public/include/jde/app/shared/*.h )
 file(GLOB protos proto/*.proto )
-target_sources( "${CMAKE_PROJECT_NAME}"
-    PRIVATE
-        ${sources}
-        ${headers}
-        ${protos})
+target_sources( "${CMAKE_PROJECT_NAME}" PRIVATE ${sources} ${headers} ${protos} )
 
 if(MSVC)
 	target_link_libraries( ${CMAKE_PROJECT_NAME} fmt::fmt )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} Jde )
 else()
-	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )
 endif()
 
 
@@ -51,6 +46,8 @@ endif()
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
   PRIVATE
+	<jde/web/client/exports.h>
+	<jde/web/client/proto/Web.FromServer.pb.h>
 	<jde/app/shared/exports.h>
 	<Common.pb.h>
 	<App.pb.h>

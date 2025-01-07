@@ -8,7 +8,7 @@ namespace Jde::DB{
 	struct DBException final: IException{
 		DBException( int32 errorCode, string sql, const vector<Value>* pValues, string what, SRCE )ι;
 		DBException( string sql, const vector<Value>* pValues, string what, SRCE )ι:DBException{ 0, move(sql), pValues, move(what), sl }{}
-		DBException( DBException&& from )ι:IException{move(from)}, Sql{from.Sql}, Parameters{from.Parameters}{}
+		DBException( DBException&& from )ι:IException{move(from)}, Sql{move(from.Sql)}, Parameters{move(from.Parameters)}{}
 		DBException( const DBException& from )ι=default;
 		~DBException(){ Log(); SetLevel( ELogLevel::NoLog ); };
 

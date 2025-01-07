@@ -14,17 +14,17 @@ namespace Jde::App::Client{
 		α await_resume()ε->TResult final;
 	};
 
-	struct ΓAC GraphQLAwait : SocketAwait<string,jobject>{
+/*	struct ΓAC GraphQLAwait : SocketAwait<string,jobject>{
 		using base = SocketAwait<string,jobject>;
 		GraphQLAwait( string&& q, UserPK userPK, SRCE )ι:base{sl}, _query{q}, _userPK{userPK}{}
 		α Execute( sp<AppClientSocketSession> pSession )ι->Web::Client::ClientSocketAwait<string>::Task override;
 		string _query; UserPK _userPK;
 	};
-
-	struct ΓAC SessionInfoAwait : SocketAwait<Proto::FromServer::SessionInfo,Proto::FromServer::SessionInfo>{
-		using base = SocketAwait<Proto::FromServer::SessionInfo,Proto::FromServer::SessionInfo>;
+*/
+	struct ΓAC SessionInfoAwait : SocketAwait<Web::FromServer::SessionInfo,Web::FromServer::SessionInfo>{
+		using base = SocketAwait<Web::FromServer::SessionInfo,Web::FromServer::SessionInfo>;
 		SessionInfoAwait( SessionPK sessionId, SRCE )ι:base{sl}, _sessionId{sessionId}{}
-		α Execute( sp<AppClientSocketSession> session )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>::Task override;
+		α Execute( sp<AppClientSocketSession> session )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>::Task override;
 		SessionPK _sessionId;
 	};
 

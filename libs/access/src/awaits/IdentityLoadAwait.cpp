@@ -1,14 +1,15 @@
 #include "IdentityLoadAwait.h"
 #include <jde/access/types/Group.h>
 #include <jde/access/types/User.h>
+#include <jde/ql/IQL.h>
 
 #define let const auto
 
 namespace Jde::Access{
-	α IdentityLoadAwait::Load()ι->QL::QLAwait::Task{
-		let values = co_await *_ql->Query( "identities{ id deleted is_group }", _executer, _sl );
+	α IdentityLoadAwait::Load()ι->QL::QLAwait<jarray>::Task{
+		let values = co_await *_ql->QueryArray( "identities{ id deleted is_group }", _executer, _sl );
 		Identities identities;
-		for( let value : Json::AsArray(values) ){
+		for( let value : values ){
 			let& identity = Json::AsObject(value);
 			let isGroup = Json::AsBool(identity, "is_group");
 			let pk{ Json::AsNumber<IdentityPK::Type>(identity, "id") };
@@ -18,8 +19,8 @@ namespace Jde::Access{
 			else
 				identities.Users.emplace( UserPK{pk}, User{UserPK{pk}, deleted} );
 		}
-		let jgroups = co_await *_ql->Query( "identityGroups{ id deleted members{id} }", _executer, _sl );
-		for( let value : Json::AsArray(jgroups) ){
+		let jgroups = co_await *_ql->QueryArray( "identityGroups{ id deleted members{id} }", _executer, _sl );
+		for( let value : jgroups ){
 			let& group = Json::AsObject(value);
 			const GroupPK groupPK{ Json::AsNumber<GroupPK::Type>(group, "id") };
 			auto p = identities.Groups.find(groupPK); THROW_IF( p==identities.Groups.end(), "[{}]Group not found", groupPK.Value );

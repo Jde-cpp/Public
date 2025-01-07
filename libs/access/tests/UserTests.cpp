@@ -30,11 +30,11 @@ namespace Jde::Access{
 		auto id = FindNumberPath<UserPK::Type>( existingUser, "id" ).value_or( 0 );
 		ASSERT_NE( id, 0 );
 
-		let update = Ƒ( "{{ mutation updateUser( \"id\":{}, \"input\": {{\"name\":\"{}\"}} ) }}", id, "newName" );
+		let update = Ƒ( "mutation updateUser( \"id\":{}, \"name\":\"{}\" )", id, "newName" );
 		let updateJson = QL::Query( update, GetRoot() );
 		ASSERT_TRUE( AsSV(Tests::GetUser(target, GetRoot()), "name")=="newName" );
 
-		let del = Ƒ( "{{ mutation deleteUser(\"id\":{}) }}", id );
+		let del = Ƒ( "mutation deleteUser(\"id\":{})", id );
 		let deleteJson = QL::Query( del, GetRoot() );
 		ASSERT_TRUE( Tests::SelectUser(target, GetRoot()).empty() );
 		ASSERT_TRUE( !Tests::GetUser(target, GetRoot(), true).empty() );

@@ -1,6 +1,5 @@
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/framework/thread/execution.h>
-//#include <jde/web/server/Flex.h>
 #include <jde/app/shared/proto/App.FromClient.h>
 #include <jde/app/shared/proto/Common.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
@@ -10,7 +9,7 @@
 #define let const auto
 
 namespace Jde::App{
-	using Web::Client::ClientSocketAwait; using IO::Proto::ToString;
+	using Web::Client::ClientSocketAwait; using Jde::Proto::ToString;
 	constexpr ELogTags _tags{ ELogTags::SocketClientRead };
 
 	sp<Client::AppClientSocketSession> _pSession;
@@ -23,19 +22,13 @@ namespace Jde::App{
 			Information( sl, tags, "ClosedSocketSession" );
 		}
 	}
-	α Client::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ι->Web::Client::ClientSocketAwait<Proto::FromServer::SessionInfo>{
+	α Client::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>{
 		auto p = _pSession; THROW_IF( !p, "Not connected." );
 		auto requestId = p->NextRequestId();
 		Trace( sl, ELogTags::SocketClientWrite, "AddSession domain: '{}', loginName: '{}', providerPK: {}, userEndPoint: '{}', isSocket: {}.", domain, loginName, providerPK, userEndPoint, isSocket );
-		return ClientSocketAwait<Proto::FromServer::SessionInfo>{ ToString(FromClient::AddSession(domain, loginName, providerPK, userEndPoint, isSocket, requestId)), requestId, p, sl };
+		return ClientSocketAwait<Web::FromServer::SessionInfo>{ ToString(FromClient::AddSession(domain, loginName, providerPK, userEndPoint, isSocket, requestId)), requestId, p, sl };
 	}
 
-	α Client::GraphQL( str query, SL sl )ε->ClientSocketAwait<string>{
-		auto p = _pSession; THROW_IF( !p, "Not connected." );
-		auto requestId = p->NextRequestId();
-		Trace( sl, ELogTags::SocketClientWrite, "GraphQL: '{}'.", query.substr(0, Web::Client::MaxLogLength()) );
-		return ClientSocketAwait<string>{ ToString(FromClient::GraphQL(query, requestId)), requestId, p, sl };
-	}
 namespace Client{
 	StartSocketAwait::StartSocketAwait( SessionPK sessionId, SL sl )ι:base{sl}, _sessionId{ sessionId }{}
 
@@ -82,16 +75,22 @@ namespace Client{
 		if( !Process::ShuttingDown() )
 			App::Client::Connect();
 	}
-	α AppClientSocketSession::SessionInfo( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::SessionInfo>{
+	α AppClientSocketSession::SessionInfo( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Web::FromServer::SessionInfo>{
 		let requestId = NextRequestId();
-		return ClientSocketAwait<Proto::FromServer::SessionInfo>{ ToString(FromClient::Session(sessionId, requestId)), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<Web::FromServer::SessionInfo>{ ToString(FromClient::Session(sessionId, requestId)), requestId, shared_from_this(), sl };
 	}
-	α AppClientSocketSession::GraphQL( string&& q, UserPK, SL sl )ι->ClientSocketAwait<string>{
+	α AppClientSocketSession::Query( string&& q, SL sl )ι->ClientSocketAwait<jvalue>{
 		let requestId = NextRequestId();
-		return ClientSocketAwait<string>{ ToString(FromClient::GraphQL(move(q), requestId)), requestId, shared_from_this(), sl };
+		Trace( sl, ELogTags::SocketClientWrite, "[{:x}]GraphQL: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
+
+		return ClientSocketAwait<jvalue>{ ToString(FromClient::Query(move(q), requestId)), requestId, shared_from_this(), sl };
+	}
+	α AppClientSocketSession::Subscribe( string&& q, RequestId subscriptionClientId, Jde::UserPK executer, SL sl )ι->await<jarray>{
+		Trace( sl, ELogTags::SocketClientWrite, "[{:x}]GraphQL: '{}'.", subscriptionClientId, q.substr(0, Web::Client::MaxLogLength()) );
+		return ClientSocketAwait<jarray>{ ToString(FromClient::Subscription(move(q), subscriptionClientId)), subscriptionClientId, shared_from_this(), sl };
 	}
 
-	template<class T,class... Args> α Resume( std::any&& hAny, T& v, fmt::format_string<Args const&...>&& m="", const Args&... args )ι->void{
+	template<class T,class... Args> α Resume( std::any&& hAny, T&& v, fmt::format_string<Args const&...>&& m="", const Args&... args )ι->void{
 		auto h = std::any_cast<typename ClientSocketAwait<T>::Handle>( &hAny );
 		ASSERT( h );
 		if( h ){
@@ -100,6 +99,21 @@ namespace Client{
 			h->resume();
 		}
 	}
+
+	template<class... Args> α ResumeJValue( std::any&& hAny, string&& v, fmt::format_string<Args const&...>&& m="", const Args&... args )ι->void{
+		try{
+			Resume<jvalue>( move(hAny), Json::ParseValue(move(v)), FWD(m), FWD(args)... );
+		}
+		catch( IException& e ){
+			if( auto h = std::any_cast<typename ClientSocketAwait<jvalue>::Handle>(&hAny); h ){
+				h->promise().SetError( move(e) );
+				h->resume();
+			}
+			else
+				ASSERT_DESC( false, "hAny is null for jvalue." );
+		}
+	}
+
 	ψ ResumeVoid( std::any&& h, const fmt::format_string<Args...> m="", Args&&... args )ι->void{
 		auto p = std::any_cast<Web::Client::ClientSocketVoidAwait::Handle>( &h );
 		p->promise().Log( m, std::forward<Args>(args)... );
@@ -107,12 +121,12 @@ namespace Client{
 	}
 
 	template<class T,class... Args> auto ResumeScaler( std::any&& h, T v, fmt::format_string<Args const&...>&& m="", const Args&... args )ι->void{
-		Resume( move(h), v, FWD(m), FWD(args)... );
+		Resume( move(h), move(v), FWD(m), FWD(args)... );
 	}
 
-	α AppClientSocketSession::Execute( string&& bytes, optional<UserPK> userPK, RequestId clientRequestId )ι->void{
+	α AppClientSocketSession::Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void{
 		try{
-			auto t = IO::Proto::Deserialize<Proto::FromServer::Transmission>( move(bytes) );
+			auto t = Jde::Proto::Deserialize<Proto::FromServer::Transmission>( move(bytes) );
 			ProcessTransmission( move(t), userPK, clientRequestId );
 		}
 		catch( IException& e ){
@@ -124,7 +138,7 @@ namespace Client{
 		ProcessTransmission( move(t), _userPK, nullopt );
 	}
 
-	α AppClientSocketSession::ProcessTransmission( Proto::FromServer::Transmission&& t, optional<UserPK> /*userPK*/, optional<RequestId> clientRequestId )ι->void{
+	α AppClientSocketSession::ProcessTransmission( Proto::FromServer::Transmission&& t, optional<Jde::UserPK> /*userPK*/, optional<RequestId> clientRequestId )ι->void{
 		for( auto i=0; i<t.messages_size(); ++i ){
 			auto m = t.mutable_messages( i );
 			using enum Proto::FromServer::Message::ValueCase;
@@ -137,26 +151,34 @@ namespace Client{
 				Information( _tags, "[{:x}]AppClientSocketSession created: {}://{}.", Id(), IsSsl() ? "https" : "http", Host() );
 				}break;
 			case kGeneric:
-				Resume( move(hAny), *m->mutable_generic(), "Generic - '{}'.", m->generic() );
+				Resume( move(hAny), move(*m->mutable_generic()), "Generic - '{}'.", m->generic() );
 				break;
 			[[likely]] case kStrings:{
 				auto& res = *m->mutable_strings();
-				Resume( move(hAny), *m->mutable_strings(), "Strings count='{}'.", res.messages().size()+res.files().size()+res.functions().size()+res.threads().size() );
+				Resume( move(hAny), move(*m->mutable_strings()), "Strings count='{}'.", res.messages().size()+res.files().size()+res.functions().size()+res.threads().size() );
 				}break;
 			case kLogLevels:{//TODO implement when have tags.
 				auto& res = *m->mutable_log_levels();
-				Resume( move(hAny), res, "LogLevel server='{}', client='{}'.", ToString((ELogLevel)res.server()), ToString((ELogLevel)res.client()) );
+				Resume( move(hAny), move(res), "LogLevel server='{}', client='{}'.", ToString((ELogLevel)res.server()), ToString((ELogLevel)res.client()) );
 				}break;
 			case kProgress://TODO not awaitable
 				ResumeScaler( move(hAny), m->progress(), "Progress: '{}'.", m->progress() );
 				break;
 			case kSessionInfo:{
 				auto& res = *m->mutable_session_info();
-				Resume( move(hAny), res, "SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", ToIsoString(IO::Proto::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
+				Resume( move(hAny), move(res), "SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", ToIsoString(Jde::Proto::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
 				}break;
 			case kGraphQl:
-				Resume( move(hAny), *m->mutable_graph_ql(), "GraphQl: '{}'.", m->graph_ql().substr(0, Web::Client::MaxLogLength()) );
+				ResumeJValue( move(hAny), move(*m->mutable_graph_ql()), "GraphQl: '{}'.", m->graph_ql().substr(0, Web::Client::MaxLogLength()) );
 				break;
+			case kSubscriptionAck:{
+					jarray y;
+					for_each( m->subscription_ack().server_ids(), [&]( auto id ){ y.emplace_back(id); } );
+					Resume( move(hAny), move(y), "SubscriptionAck: '{}'.", serialize(y) );
+				}break;
+			[[likely]]case kSubscription:
+				OnMessage( move(*m->mutable_subscription()), requestId );
+			break;
 			case kException:
 				HandleException( move(hAny), Jde::Proto::ToException(move(*m->mutable_exception())), requestId );
 				break;
@@ -164,7 +186,7 @@ namespace Client{
 			case kExecuteAnonymous:{
 				bool isAnonymous = m->Value_case()==kExecuteAnonymous;
 				auto bytes = isAnonymous ? move( *m->mutable_execute_anonymous() ) : move( *m->mutable_execute()->mutable_transmission() );
-				optional<UserPK> runAsPK = m->Value_case()==kExecuteAnonymous ? nullopt : optional<UserPK>( {m->execute().user_pk()} );
+				optional<Jde::UserPK> runAsPK = m->Value_case()==kExecuteAnonymous ? nullopt : optional<Jde::UserPK>( {m->execute().user_pk()} );
 				LogRead( "Execute{} size: {:10L}", isAnonymous ? "Anonymous" : "", bytes.size()  );
 				Execute( move(bytes), runAsPK, requestId );
 				break;}
@@ -193,7 +215,7 @@ namespace Client{
 			handle( "Exception<string>: '{}'.", pAwait );
 		else if( auto pAwait = std::any_cast<ClientSocketAwait<Proto::FromServer::Strings>::Handle>(&h) )
 			handle( "Exception<Strings>: '{}'.", pAwait );
-		else if( auto pAwait = std::any_cast<ClientSocketAwait<Proto::FromServer::SessionInfo>::Handle>(&h) )
+		else if( auto pAwait = std::any_cast<ClientSocketAwait<Web::FromServer::SessionInfo>::Handle>(&h) )
 			handle( "Exception<SessionInfo>: '{}'.", pAwait );
 		else{
 			let severity{ requestId ? ELogLevel::Critical : ELogLevel::Debug };

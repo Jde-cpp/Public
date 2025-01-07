@@ -55,7 +55,9 @@ namespace Jde::DB{
 	}
 	α AppSchema::ResetDS()Ι->void{ DBSchema->ResetDS(); }
 	α AppSchema::Syntax()Ι->const DB::Syntax&{
-		return DS()->Syntax();
+		let isPhysical = DBSchema->IsPhysical();
+		let& syntax = isPhysical ? DS()->Syntax() : DB::Syntax::Instance();
+		return syntax;
 	}
 
 	α AppSchema::FindTable( str name )Ι->sp<Table>{

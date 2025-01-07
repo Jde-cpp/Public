@@ -3,6 +3,7 @@ package Jde.App.Proto.FromServer;
 
 import "google/protobuf/timestamp.proto";
 import "Common.proto";
+import "Web.FromServer.proto";
 import "App.proto";
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -12,19 +13,11 @@ message LogLevels{
 	Jde.Proto.ELogLevel client=2;
 }
 
-message SessionInfo{
-	google.protobuf.Timestamp expiration=1;
-	uint32 session_id=2;
-	uint32 user_pk=3;
-	string user_endpoint=4;
-	bool has_socket=5;
-};
-
 message ConnectionInfo{
 	uint32 app_pk = 1;
 	uint32 instance_pk = 2;
 	LogLevels log_levels = 3;
-	SessionInfo session_info = 4;
+	Jde.Web.FromServer.SessionInfo session_info = 4;
 }
 
 
@@ -79,6 +72,9 @@ message Strings{
 	map<uint32,string> threads = 4;
 	map<uint32,string> userTargets = 5; //targets for web.
 }
+message SubscriptionAck{
+	repeated uint32 server_ids = 1;
+}
 
 message Message{
 	uint32 request_id=1;
@@ -88,13 +84,15 @@ message Message{
 		Jde.App.Proto.StringPKs string_pks = 4;//pks stored in db.
 		LogLevels log_levels = 5;
 		double progress = 7;
-		SessionInfo session_info = 8;
+		Jde.Web.FromServer.SessionInfo session_info = 8;
 		string graph_ql = 10;
 		Jde.Proto.Exception exception = 11;
 		Traces traces = 12;
 //		Applications applications = 13;
 		Status status = 14;
 		Strings strings = 15;
+		SubscriptionAck subscription_ack = 16;
+		string subscription= 17;
 
 		bytes execute_anonymous = 33;//appServer->2ndServer, no user context.
 		Jde.App.Proto.Execute execute = 34;//execute with user context.

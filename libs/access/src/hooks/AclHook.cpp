@@ -14,41 +14,45 @@ namespace Jde::Access{
 	α GetTable( str name )ε->sp<DB::View>;
 
 	struct AclQLAwait final : TAwait<jvalue>{
-		AclQLAwait( const QL::MutationQL& m, UserPK userPK, uint pk, SL sl )ι:
+		AclQLAwait( const QL::MutationQL& m, UserPK executer, uint pk, SL sl )ι:
 			TAwait<jvalue>{ sl },
 			Mutation{ m },
 			PK{ pk },
-			UserPK{ userPK }
+			Executer{ executer }
 		{}
 		α Suspend()ι->void override;
 		α InsertAcl()ι->void;
+
 		QL::MutationQL Mutation;
 		uint PK;
-		Jde::UserPK UserPK;
+		Jde::UserPK Executer;
 	private:
 		α Table()ε->sp<DB::View>{ return GetTable( "acl" ); }
 		α InsertPermission( const jobject& permission )ι->DB::ScalerAwait<PermissionPK>::Task;
 		α InsertRole()ι->DB::ExecuteAwait::Task;
 	};
+	α AclQLAwait::Suspend()ι->void{
+		InsertAcl();
+	}
 
 	α AclQLAwait::InsertAcl()ι->void{
-		let& input = Mutation.Input();
-		if( auto p = input.find("permission"); p!=input.end() ) //identityId:x, permission:{ allowed:x, denied:x, resource:{id:x} }
+		let& input = Mutation.Args;
+		if( auto p = input.find("permissionRight"); p!=input.end() ) //identity{id:x}, permission:{ allowed:x, denied:x, resource:{id:x} }
 			InsertPermission( Json::AsObject(p->value()) );
-		else if( auto r = input.find("role"); r!=input.end() ) //identityId:x, role:{ id:x }
+		else if( auto r = input.find("role"); r!=input.end() ) //identity{id:x}, role:{ id:x }
 			InsertRole();
 	}
 	α AclQLAwait::InsertRole()ι->DB::ExecuteAwait::Task{
 		jobject y;
 		try{
 			DB::InsertClause insert{ Table()->InsertProcName()+"_role" };
-			let identityPK = Json::AsNumber<IdentityPK::Type>( Mutation.Input(), "identityId" );
+			let identityPK = Json::AsNumber<IdentityPK::Type>( Mutation.Args, "identity/id" );
 			insert.Add( identityPK );
-			let rolePK = Json::AsNumber<ResourcePK>( Mutation.Input(), "role/id" );
+			let rolePK = Json::AsNumber<ResourcePK>( Mutation.Args, "role/id" );
 			insert.Add( rolePK );
 			y["rowCount"] = co_await DS()->ExecuteProcCo( insert.Move() );
 			y["complete"] = true;
-			Authorizer().AddAcl( identityPK, rolePK );
+			//Authorizer().AddAcl( identityPK, rolePK );
 			Resume( jvalue{y} );
 		}
 		catch( IException& e ){
@@ -61,18 +65,18 @@ namespace Jde::Access{
 			let allowed = (ERights)Json::FindNumber<uint8>( permission, "allowed" ).value_or(0);
 			let denied = (ERights)Json::FindNumber<uint8>( permission, "denied" ).value_or(0);
 			let resourcePK = Json::AsNumber<ResourcePK>( permission, "resource/id" );
-			Authorizer().TestAdmin( resourcePK, UserPK, _sl );
+			Authorizer().TestAdmin( resourcePK, Executer, _sl );
 			DB::InsertClause insert{ Table()->UpsertProcName()+"_permission" };
-			let identityPK = Json::AsNumber<IdentityPK::Type>( Mutation.Input(), "identityId" );
+			let identityPK = Json::AsNumber<IdentityPK::Type>( Mutation.Args, "identity/id" );
 			insert.Add( identityPK );
 
 			insert.Add( underlying(allowed) );
 			insert.Add( underlying(denied) );
 			insert.Add( resourcePK );
 			let permissionPK = co_await DS()->ExecuteScaler<PermissionPK>( insert.Move() );
-			y["permission"].emplace_object()["id"] = permissionPK;
+			y["permissionRight"].emplace_object()["id"] = permissionPK;
 			y["complete"]=true;
-			Authorizer().AddAcl( identityPK, permissionPK, allowed, denied, resourcePK );
+			//Authorizer().AddAcl( identityPK, permissionPK, allowed, denied, resourcePK );
 			Resume( y );
 		}
 		catch( IException& e ){
@@ -80,68 +84,11 @@ namespace Jde::Access{
 		}
 	}
 
-/*	α AclQLAwait::AssignToRole( RolePK rolePK, flat_set<PermissionIdentityPK> members )ι->DB::MapAwait<PermissionIdentityPK,bool>::Task{
-		try{
-			auto table = GetTable( "permissions" );
-			DB::WhereClause where{ table->GetColumnPtr("permission_id"), DB::ToValue(members) };
-			DB::Statement s{ table->Columns, {table}, move(where) };
-			let pkIsRole = co_await table->Schema->DS()->SelectMap<PermissionIdentityPK,bool>( s.Move() );
-			flat_set<PermissionRole> members;
-			for( let [pk,isRole] : pkIsRole ){
-				if( isRole )
-					members.emplace( PermissionRole{std::in_place_index<1>, pk} );
-				else
-					members.emplace( PermissionRole{std::in_place_index<0>, pk} );
-			}
-			Access::AssignToRole( rolePK, move(members) );
-			Resume( jvalue{} );
-		}
-		catch( IException& e ){
-			ResumeExp( move(e) );
-		}
-	}
-*/
-	α AclQLAwait::Suspend()ι->void{
-		try{
-			using enum QL::EMutationQL;
-			let table = GetTable( Mutation.TableName() );
-			if( table->Name=="permissions" && Mutation.Type==Update ){//id:x, input:{ allowed:y, denied:z }}
-				let allowed = Json::FindNumber<uint8>( Mutation.Input(), "allowed" );
-				let denied = Json::FindNumber<uint8>( Mutation.Input(), "denied" );
-				Authorizer().UpdatePermission( Json::AsNumber<PermissionPK>(Mutation.Args, "id"), allowed ? optional<ERights>((ERights)*allowed) : nullopt, denied ? optional<ERights>((ERights)*denied) : nullopt );
-			}
-			else if( table->Name=="acl" ){
-				if( Mutation.Type==Create ){
-					InsertAcl();
-					return;
-				}
-			}
-			else if( table->Name=="users" ){
-				if( Mutation.Type==Create )
-					Authorizer().CreateUser( Jde::UserPK{PK} );
-				else if( Mutation.Type==Delete )
-					Authorizer().DeleteUser( Jde::UserPK{Mutation.Id()} );
-				else if( Mutation.Type==Restore )
-					Authorizer().RestoreUser( Jde::UserPK{Mutation.Id()} );
-			}
-			else if( table->Name=="resources" ){
-				if( Mutation.Type==Create )
-					Authorizer().CreateResource( {PK, Mutation.Input()} );
-				else if( Mutation.Type==Delete || Mutation.Type==Restore )
-					Authorizer().UpdateResourceDeleted( table->Schema->Name, Mutation.Args, Mutation.Type==Restore );
-			}
-			Resume( jvalue{} );
-		}
-		catch( IException& e ){
-			ResumeExp( move(e) );
-		}
-	}
-
 	struct AclQLSelectAwait final : TAwait<jvalue>{
-		AclQLSelectAwait( const QL::TableQL& ql, UserPK userPK, SL sl )ι:
+		AclQLSelectAwait( const QL::TableQL& ql, UserPK executer, SL sl )ι:
 			TAwait<jvalue>{ sl },
 			Query{ ql },
-			UserPK{ userPK }
+			Executer{ executer }
 		{}
 		α Suspend()ι->void;
 	private:
@@ -150,7 +97,7 @@ namespace Jde::Access{
 		α LoadPermissionRights( const QL::TableQL& permissionRightsQL )ι->DB::RowAwait::Task;
 		α LoadPermissions( const QL::TableQL& permissionsQL )ι->DB::RowAwait::Task;
 		QL::TableQL Query;
-		Jde::UserPK UserPK;
+		Jde::UserPK Executer;
 	};
 	α AclQLSelectAwait::Suspend()ι->void{
 		if( auto rights = Query.FindTable("permissionRights"); rights )
@@ -270,27 +217,15 @@ namespace Jde::Access{
 		}
 	}
 
-	α AclHook::Select( const QL::TableQL& ql, UserPK userPK, SL sl )ι->HookResult{
+	α AclHook::Select( const QL::TableQL& ql, UserPK executer, SL sl )ι->HookResult{
 		return ql.DBName()=="acl"
-			? mu<AclQLSelectAwait>( ql, userPK, sl )
+			? mu<AclQLSelectAwait>( ql, executer, sl )
 			: nullptr;
 	}
 
-	α AclHook::InsertBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.TableName()=="acl"
-			? mu<AclQLAwait>( m, userPK, 0, sl )
-			: nullptr;
-	}
-  α AclHook::InsertAfter( const QL::MutationQL& m, UserPK executer, uint pk, SL sl )ι->HookResult{
-		let& tableName = m.TableName();
-		return tableName=="users" || tableName=="resources"
-			? mu<AclQLAwait>( m, executer, pk, sl )
-			: nullptr;
-	}
-	α AclHook::UpdateAfter( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		let& tableName = m.TableName();
-		return tableName=="permissions" || tableName=="resources" || tableName=="users"
-			? mu<AclQLAwait>( m, userPK, 0, sl )
+	α AclHook::InsertBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="acl" && m.Type==QL::EMutationQL::Create
+			? mu<AclQLAwait>( m, executer, 0, sl )
 			: nullptr;
 	}
 }

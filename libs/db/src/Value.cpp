@@ -155,6 +155,8 @@ namespace Jde{
 			type = EType::Numeric;
 		else if( typeName=="money" )
 			type = EType::Money;
+		else if( typeName=="Uri" )
+			type = EType::Uri;
 		else
 			Trace{ _tags, "Unknown datatype({}).", typeName };
 		return type;

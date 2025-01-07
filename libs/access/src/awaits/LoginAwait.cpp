@@ -27,8 +27,8 @@ namespace Jde::Access{
 			let userTable = schema->GetViewPtr( "users" );
 			let identityTable = schema->GetViewPtr( "identities" );
 			DB::WhereClause where;
-			where.Add( identityTable->GetColumnPtr("modulus"), DB::Value{modulusHex} );
-			where.Add( identityTable->GetColumnPtr("exponent"), DB::Value{exponent} );
+			where.Add( userTable->GetColumnPtr("modulus"), DB::Value{modulusHex} );
+			where.Add( userTable->GetColumnPtr("exponent"), DB::Value{exponent} );
 			where.Add( userTable->GetColumnPtr("provider_id"), DB::Value{underlying(EProviderType::Key)} );
 			DB::Statement statement{
 				{userTable->GetPK()},
@@ -50,7 +50,7 @@ namespace Jde::Access{
 		}
 	}
 	α LoginAwait::InsertUser( string&& modulusHex, uint32_t exponent, DB::IDataSource& ds )ι->DB::ScalerAwait<UserPK>::Task{
-		DB::InsertClause insert{ "user_insert_key",
+		DB::InsertClause insert{ GetSchema()->Prefix+"user_insert_key",
 			{ DB::Value{move(modulusHex)}, DB::Value{exponent}, DB::Value{underlying(EProviderType::Key)},
 				DB::Value{move(_name)}, DB::Value{move(_target)}, DB::Value{move(_description)}} };
 		try{

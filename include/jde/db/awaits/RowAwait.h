@@ -9,7 +9,7 @@ namespace Jde::DB{
 		RowAwait( sp<const IDataSource> ds, Sql&& s, SL sl )ι:RowAwait{ds, move(s), false, sl}{}
 		RowAwait( sp<const IDataSource> ds, Sql&& s, bool storedProc, SL sl )ι:TAwait{sl},_ds{ds},_sql{move(s)},_storedProc{storedProc}{}
 		α Suspend()ι->void override;
-		α await_resume()ι->vector<up<IRow>> override;
+		α await_resume()ε->vector<up<IRow>> override;
 	private:
 		sp<const IDataSource> _ds;
 		Sql _sql;

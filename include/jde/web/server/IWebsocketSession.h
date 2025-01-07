@@ -3,6 +3,7 @@
 #include <jde/web/server/exports.h>
 #include <jde/web/server/usings.h>
 #include <jde/framework/io/proto.h>
+#include <jde/ql/usings.h>
 #include "../../../../../Framework/source/threading/Mutex.h"
 
 namespace Jde::Web::Server{
@@ -10,8 +11,13 @@ namespace Jde::Web::Server{
 	struct ΓWS IWebsocketSession : std::enable_shared_from_this<IWebsocketSession>{
 		IWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α Run()ι->void;
-		α Id()Ι{ return _id; }
+		α Id()Ι->SocketId{ return _id; }
 		α LogWrite( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;
+		β WriteSubscription( jvalue&& j, RequestId requestId )ι->void=0;
+		β WriteSubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void=0;
+		β WriteComplete( RequestId requestId )ι->void=0;
+		β WriteException( IException&& e, RequestId requestId )ι->void=0;
+		α UserPK()Ι{ return _userPK; }
 	protected:
 		sp<SocketStream> Stream;
 		tcp::endpoint _userEndpoint;
@@ -34,8 +40,9 @@ namespace Jde::Web::Server{
 		α DoRead()ι->void;
 		α OnWrite( beast::error_code ec, std::size_t bytes_transferred )ι->void;
 		TRequestType _initialRequest;
-		const uint32 _id{};
+		const SocketId _id{};
 		SessionPK _sessionId{};
+		Jde::UserPK _userPK{};
 		friend struct SocketStream;
 	};
 
@@ -47,21 +54,18 @@ namespace Jde::Web::Server{
 		α OnRead( const char* p, uint size )ι->void;
 		β OnRead( TFromClient&& transmission )ι->void = 0;
 		α Write( TFromServer&& message )ι->void;
-		α UserId()Ι{ return _userId; }
 	protected:
-		β WriteException( IException&& e )ι->void=0;
-	private:
-		uint32 _userId{};
+		//β WriteException( IException&& e )ι->void=0;
 	};
 
 #define $ template<class TFromServer, class TFromClient> auto TWebsocketSession<TFromServer,TFromClient>
 	$::OnRead( const char* p, uint size )ι->void{
 		try{
-			auto t = IO::Proto::Deserialize<TFromClient>( (const google::protobuf::uint8*)p, (int)size );
+			auto t = Proto::Deserialize<TFromClient>( (const google::protobuf::uint8*)p, (int)size );
 			OnRead( move(t) );
 		}
 		catch( IException& e ){
-			WriteException( move(e) );
+			WriteException( move(e), RequestId{0} );
 		}
 	}
 

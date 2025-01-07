@@ -1,4 +1,6 @@
 ﻿#pragma once
+#ifndef OPEN_SSL_H
+#define OPEN_SSL_H
 #include "exports.h"
 #include "CryptoSettings.h"
 
@@ -16,11 +18,11 @@ namespace Jde::Crypto{
 	Φ Fingerprint( const Modulus& modulus, const Exponent& exponent )ι->MD5;
 	Φ ModulusExponent( const fs::path& publicKey )ε->tuple<Modulus,Exponent>;
 	Φ ReadCertificate( const fs::path& certificate )ε->vector<byte>;
-	Φ ReadPrivateKey( const fs::path& privateKeyPath, str passcode={} )ε->vector<byte>;
+	Φ ReadPrivateKey( const fs::path& privateKeyPath, str passcode )ε->vector<byte>;
 	Φ RsaSign( str content, const fs::path& privateKeyFile )ε->Signature;
 	Φ Verify( const Modulus& modulus, const Exponent&, str decrypted, const Signature& signature )ε->void;
 	Φ WriteCertificate( const fs::path& path, vector<byte>&& certificate )ε->void;
-	Φ WritePrivateKey( const fs::path& path, vector<byte>&& privateKey, str passcode = {} )ε->void;
+	Φ WritePrivateKey( const fs::path& path, vector<byte>&& privateKey, str passcode )ε->void;
 
 	struct OpenSslException final : IException{
 		template<class... Args>
@@ -33,3 +35,4 @@ namespace Jde::Crypto{
   };
 }
 #undef Φ
+#endif

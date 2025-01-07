@@ -9,6 +9,7 @@ project( Jde.Opc )
 include( compiler )
 find_package( OpenSSL )
 find_package( open62541 REQUIRED )
+include_directories( $ENV{JDE_DIR}/Public/include/jde/web/client/proto )
 if( MSVC )
 	find_package( Protobuf REQUIRED )
 	find_package(nlohmann_json REQUIRED)
@@ -34,7 +35,7 @@ endif()
 include_directories( $ENV{JDE_DIR}/Public/include/jde/app/shared/proto )
 add_definitions( -DUA_ENABLE_ENCRYPTION )
 #######################################################
-add_library( ${CMAKE_PROJECT_NAME} SHARED )
+add_library( ${CMAKE_PROJECT_NAME} )
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 
 file( GLOB_RECURSE sources *.cpp )
@@ -63,17 +64,18 @@ if(MSVC)
 
 	string( REPLACE "/W4" "/W0" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG} )
 	set_source_files_properties( ${sources} PROPERTIES COMPILE_FLAGS "/W4" )
+	if( WIN32 )
+		target_link_libraries( ${CMAKE_PROJECT_NAME} wsock32 ws2_32 )
+		target_link_libraries( ${CMAKE_PROJECT_NAME} Iphlpapi )
+	endif()
+	target_link_libraries( ${CMAKE_PROJECT_NAME} OpenSSL::SSL )
+	target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf )
+
 else()
-	#target_link_libraries( ${CMAjdeKE_PROJECT_NAME} Threads::Threads )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} libopen62541.a )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} libopen62541.a )
 endif()
-if( WIN32 )
-  target_link_libraries( ${CMAKE_PROJECT_NAME} wsock32 ws2_32 )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} Iphlpapi )
-endif()
-target_link_libraries( ${CMAKE_PROJECT_NAME} OpenSSL::SSL )
-target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf )
 
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
@@ -104,6 +106,8 @@ target_precompile_headers(${CMAKE_PROJECT_NAME}
 		<jde/crypto/OpenSsl.h>
 		<jde/db/meta/AppSchema.h>
 		<jde/db/meta/View.h>
+		<jde/web/client/exports.h>
+		<jde/web/client/proto/Web.FromServer.pb.h>
 		<jde/app/shared/exports.h>
 		<jde/app/shared/proto/App.FromClient.pb.h>
 		<jde/app/shared/proto/App.FromClient.h>

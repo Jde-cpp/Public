@@ -39,7 +39,7 @@ namespace Jde::Web::Server{
 			α Suspend()ι->void;
 			α await_resume()ε->sp<SessionInfo>;
 		private:
-			α Execute()ι->TTask<App::Proto::FromServer::SessionInfo>;
+			α Execute()ι->TTask<Web::FromServer::SessionInfo>;
 			string _authorization; string _endpoint; bool _socket;
 		};
 	}

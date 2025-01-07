@@ -35,16 +35,16 @@ namespace Jde::Access::Tests{
 		let acl = QL::QueryArray( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
 		return acl.empty() ? jobject{} : Json::AsObject(acl[0], "/role");
 	}
-	α CreateAcl( IdentityPK identityPK, ERights allowed, ERights denied, string resource, UserPK executer )ε->jobject{
+	α CreateAcl( IdentityPK identityPK, ERights allowed, ERights denied, string resource, UserPK executer )ε->PermissionRightsPK{
 		let resourcePK = AsNumber<ResourcePK>( SelectResource(resource, executer, true), "id" );
-		let create = Ƒ( "mutation createAcl( input:{{ identityId:{}, permission:{{ allowed:{}, denied:{}, resource:{{id:{}}}}} }} )", identityPK.Underlying(), underlying(allowed), underlying(denied), resourcePK );
-		let createJson = QL::Query( create, executer );
-		return Json::FindDefaultObject( createJson, "permissionRight" );
+		let create = Ƒ( "createAcl( identity:{{ id:{} }}, permissionRight:{{ allowed:{}, denied:{}, resource:{{id:{}}}}} ){{permissionRight{{id}}}}", identityPK.Underlying(), underlying(allowed), underlying(denied), resourcePK );
+		let createJson = QL::QueryObject( create, executer );
+		return Json::AsNumber<PermissionRightsPK>( createJson, "permissionRight/id" );
 	}
 	α CreateAcl( IdentityPK identityPK, RolePK rolePK, UserPK executer )ε->void{
 		let existing = SelectAcl( identityPK, rolePK );
 		if( existing.empty() ){
-			let create = Ƒ( "mutation createAcl( input:{{ identityId:{}, role:{{id:{}}} }} )", identityPK.Underlying(), rolePK );
+			let create = Ƒ( "mutation createAcl( identity:{{ id:{} }}, role:{{id:{}}} )", identityPK.Underlying(), rolePK );
 			QL::Query( create, executer );
 		}
 	}
@@ -52,14 +52,14 @@ namespace Jde::Access::Tests{
 	α GetAcl( IdentityPK identityPK, string resource, ERights allowed, ERights denied )ε->jobject{
 		auto entry = SelectAcl( identityPK, resource );
 		if( entry.empty() ){
-			let createJson = CreateAcl( identityPK, allowed, denied, resource, GetRoot() );
+			CreateAcl( identityPK, allowed, denied, resource, GetRoot() );
 			entry = SelectAcl( identityPK, resource );
 		}
 		else{
 			let existingAllowed = (ERights)Json::AsNumber<uint8>( entry, "allowed" ); //ToRights( Json::AsArray(entry, "allowed") );
 			let existingDenied = (ERights)Json::AsNumber<uint8>( entry, "denied" ); //ToRights( Json::AsArray(entry, "denied") );
 			if( allowed!=existingAllowed || existingDenied!=denied ){
-				let update = Ƒ( "mutation updatePermissionRight( id:{}, input:{{ allowed:{}, denied:{} }} )", Json::AsNumber<PermissionPK>(entry, "id"), underlying(allowed), underlying(denied) );
+				let update = Ƒ( "mutation updatePermissionRight( id:{}, allowed:{}, denied:{} )", Json::AsNumber<PermissionPK>(entry, "id"), underlying(allowed), underlying(denied) );
 				let updateJson = QL::Query( update, GetRoot() );
 				entry = SelectAcl( identityPK, resource );
 			}
@@ -111,6 +111,8 @@ namespace Jde::Access::Tests{
 		TestUnauthPurge( resourceName, groupId, executer );
 		EXPECT_THROW( CreateAcl(_usersPKs["intruder"], ERights::All, ERights::None, resourceName, executer), IException );
 		let rolePK = GetId( Get("role", "EnabledPermissionsTest", GetRoot()) );
+		//auto existingPermission = GetRolePermission( RolePK rolePK, sv resourceName, UserPK executer )ε->jobject{
+		//QL::Query( Ƒ("removeRole( id:{}, permissionRight:{{ resource:{{target:\"{}\"}}}} )", rolePK, resourceName), GetRoot() );
 		EXPECT_THROW( AddRolePermission(rolePK, resourceName, ERights::All, ERights::None, executer), IException );
 	}
 
@@ -208,6 +210,6 @@ namespace Jde::Access::Tests{
 		CreateAcl( GroupPK{allowedGroupPK}, allowedRolePK, GetRoot() );
 		TestEnabeledPermissions( resourceName, "AclTests-TestDeny-Group", executer );
 	}
-	//add role to role which it belongs to.
 	//remove user from group/role.
+	//purge acl
 }

@@ -19,15 +19,23 @@ else()
 	add_definitions( -DJde_Web_Client_EXPORTS )
 endif()
 #######################################################
-add_library( ${CMAKE_PROJECT_NAME} SHARED OpenSsl.cpp OpenSslInternal.cpp CryptoSettings.cpp )
+add_library( ${CMAKE_PROJECT_NAME} )
+file(GLOB sources *.cpp )
+file(GLOB headers "**/*.h" $ENV{JDE_DIR}/Public/include/jde/crypto )
+target_sources(${CMAKE_PROJECT_NAME}
+    PRIVATE
+        ${sources}
+        ${headers}
+)
+
 #######################################################
 if(MSVC)
 	find_package(fmt)
 	target_link_libraries( ${CMAKE_PROJECT_NAME} fmt::fmt )
 else()
 	add_definitions( -DJde_Crypto_EXPORTS )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
 	#target_link_libraries( ${CMAKE_PROJECT_NAME} libcrypto.a )
 endif()
 target_link_libraries( ${CMAKE_PROJECT_NAME} OpenSSL::SSL )

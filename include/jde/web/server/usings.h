@@ -3,6 +3,7 @@
 #include "../usings.h"
 
 namespace Jde::Web::Server{
+	using SocketId = uint32;
 	using executor_type = net::io_context::executor_type;
 	using executor_with_default = net::as_tuple_t<net::use_awaitable_t<executor_type>>::executor_with_default<executor_type>;
 

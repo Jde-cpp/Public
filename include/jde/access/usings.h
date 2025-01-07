@@ -2,10 +2,11 @@
 namespace Jde::Access{
 	struct GroupPK final : PK<uint32>{};
 	using ProviderPK=uint32;
-	using PermissionIdentityPK=uint32;
-	using PermissionPK=PermissionIdentityPK;
+	//using PermissionIdentityPK=uint32;
+	using PermissionPK=uint32;
+	using PermissionRightsPK=PermissionPK;
+	using RolePK=PermissionPK;
 	using ResourcePK=uint16;
-	using RolePK=PermissionIdentityPK;
 	using PermissionRole=variant<PermissionPK,RolePK>;
 
 	struct IdentityPK{

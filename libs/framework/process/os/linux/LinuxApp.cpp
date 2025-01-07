@@ -27,7 +27,9 @@ namespace Jde{
 	α OSApp::Install( str serviceDescription )ε->void{
 		THROW( "Not Implemeented" );
 	}
-	α OSApp::UnPause()ι->void{ ASSERT(false); }//not sure of use case
+	α OSApp::UnPause()ι->void{
+		::raise( SIGKILL );
+	}
 	α OSApp::Uninstall()ε->void{
 		THROW( "Not Implemeented");
 	}
@@ -87,17 +89,8 @@ namespace Jde{
 	vector<sp<Threading::IWorker>> _workers;
 
 	α OSApp::Pause()ι->void{
-//		LOG( "Pausing main thread. {}", getpid() );
 		::pause();
-/*		for( ;; )
-		{
-			break;//not implemented yet.
-			auto pWorker = _activeWorkers.WaitAndPop();
-			if( pWorker->Poll() )
-				AddActiveWorker( pWorker );//make sure doesn't loop forever.
-		}*/
-//		LOG( "::pause errno={}.", errno );
-		//IApplication::Wait();
+		std::cout << "pause returned" << std::endl;
 	}
 
 	bool OSApp::AsService()ι{
@@ -127,6 +120,7 @@ namespace Jde{
 	}
 
 	α OSApp::ExitHandler( int s )->void{
+		std::cout << "Caught signal " << s << std::endl;
 		if( !Process::ExitReason() )
 			Process::SetExitReason( s, s==SIGTERM );
 		//Handled in main.cpp
@@ -140,7 +134,7 @@ namespace Jde{
 	}
 
 	α OSApp::KillInstance( uint processId )ι->bool{
-		var result = ::kill( processId, 14 );
+		var result = ::kill( processId, 14 ); //SIGALRM
 		if( result )
 			Error{ _tag, "kill failed with '{}'.", result };
 		else
@@ -178,12 +172,12 @@ namespace Jde{
 		sigIntHandler.sa_handler = ExitHandler;
 		sigemptyset( &sigIntHandler.sa_mask );
 		sigIntHandler.sa_flags = 0;*/
-		signal( SIGINT, OSApp::ExitHandler );
-		signal( SIGSTOP, OSApp::ExitHandler );
-		signal( SIGKILL, OSApp::ExitHandler );
-		signal( SIGTERM, OSApp::ExitHandler );
-		signal( SIGALRM, OSApp::ExitHandler );
-		signal( SIGUSR1, OSApp::ExitHandler );
+		::signal( SIGINT, OSApp::ExitHandler );
+		::signal( SIGSTOP, OSApp::ExitHandler );
+		::signal( SIGKILL, OSApp::ExitHandler );
+		::signal( SIGTERM, OSApp::ExitHandler );
+		::signal( SIGALRM, OSApp::ExitHandler );
+		::signal( SIGUSR1, OSApp::ExitHandler );
 
 /*		struct sigaction sa;
 	   sa.sa_flags = SA_RESTART | SA_SIGINFO;

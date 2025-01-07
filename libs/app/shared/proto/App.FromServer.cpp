@@ -8,6 +8,15 @@
 
 #define let const auto
 
+namespace Jde::App::FromServer{
+	Ω setMessage( RequestId requestId, function<void(Proto::FromServer::Message&)> set )ι->Proto::FromServer::Transmission{
+		Proto::FromServer::Transmission t;
+		auto& m = *t.add_messages();
+		m.set_request_id( requestId );
+		set( m );
+		return t;
+	}
+}
 namespace Jde::App{
 	α FromServer::Ack( uint32 serverSocketId )ι->Proto::FromServer::Transmission{
 		Proto::FromServer::Transmission t;
@@ -49,6 +58,17 @@ namespace Jde::App{
 		Proto::FromServer::Transmission t;
 		*t.add_messages()->mutable_status() = move( status );
 		return t;
+	}
+	α FromServer::SubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->Proto::FromServer::Transmission{
+		return setMessage( requestId, [&](auto& m){
+			auto& ack = *m.mutable_subscription_ack();
+			for_each( subscriptionIds, [&](auto id){ ack.add_server_ids(id); } );
+		});
+	}
+	α FromServer::Subscription( string&& s, RequestId requestId )ι->Proto::FromServer::Transmission{
+		return setMessage( requestId, [&](auto& m){
+			*m.mutable_subscription() = move(s);
+		});
 	}
 
 	α FromServer::ExecuteRequest( RequestId serverRequestId, UserPK userPK, string&& fromClient )ι->Proto::FromServer::Transmission{
@@ -105,7 +125,7 @@ namespace Jde::App{
 			else if( name=="thread_id" )
 				t.set_thread_id( row.GetUInt32(i) );
 			else if( name=="time" )
-				*t.mutable_time() = IO::Proto::ToTimestamp( row.GetTimePoint(i) );
+				*t.mutable_time() = Jde::Proto::ToTimestamp( row.GetTimePoint(i) );
 			else if( name=="user_pk" )
 				t.set_user_pk( row.GetUInt32(i) );
 			else
@@ -121,7 +141,7 @@ namespace Jde::App{
 		auto proto = traces->add_values();
 		proto->set_id( id );
 		proto->set_instance_id( instanceId );
-		*proto->mutable_time() = IO::Proto::ToTimestamp( m.TimePoint );
+		*proto->mutable_time() = Jde::Proto::ToTimestamp( m.TimePoint );
 		proto->set_level( (Jde::Proto::ELogLevel)m.Level );
 		proto->set_message_id( m.MessageId );
 		proto->set_file_id( m.FileId );

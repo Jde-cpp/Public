@@ -1,9 +1,10 @@
 #include "Parser.h"
 #include <jde/ql/ql.h>
+
 #define let const auto
 namespace Jde{
 	α QL::Parse( string query )ε->RequestQL{
-		sv trimmed = Str::Trim(query);//TODO move(query).
+		sv trimmed = Str::Trim( query );//TODO move(query).
 		Parser parser{ string{trimmed.starts_with("{") ? trimmed.substr(1) : trimmed}, "{}()," };
 		auto name = parser.Next();
 		bool returnRaw = name!="query";
@@ -11,12 +12,19 @@ namespace Jde{
 			parser.Next();
 			name = parser.Next();
 		}
-		return name=="mutation" ? RequestQL{ parser.LoadMutation() } : RequestQL{ parser.LoadTables(name, returnRaw) };
+		if( name=="subscription" )
+			return RequestQL{ parser.LoadSubscriptions() };
+		else if( name=="unsubscribe" )
+			return RequestQL{ parser.LoadUnsubscriptions() };
+		else if( MutationQL::IsMutation(name) ){
+			returnRaw = name!="mutation";
+			return RequestQL{ parser.LoadMutation(!returnRaw ? parser.Next() : name, returnRaw) };
+		}else
+			return RequestQL{ parser.LoadTables(name, returnRaw) };
 	}
 }
 namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL | ELogTags::Parsing };
-	constexpr array<sv,9> MutationQLStrings = { "create", "update", "delete", "restore", "purge", "add", "remove", "start", "stop" };
 
 	α Parser::Next()ι->string{
 		string result = move( _peekValue );
@@ -51,7 +59,7 @@ namespace Jde::QL{
 		return result;
 	};
 
-	α stringifyKeys( sv json )ε->string{
+	Ω stringifyKeys( sv json )ε->string{
 		string y{}; y.reserve( json.size()*2 );
 		bool inValue{};
 		for( uint i=0; i<json.size(); ++i ){
@@ -109,33 +117,25 @@ namespace Jde::QL{
 		return y;
 	}
 
-	α Parser::ParseJson()ε->jobject{
-		string params{ Next(')') }; THROW_IF( params.front()!='(', "Expected '(' vs {} @ '{}' to start function - '{}'.",  params.front(), Index()-1, Text() );
+	α Parser::ParseArgs()ε->jobject{
+		string params{ Next(')') };
+		THROW_IF( params.empty(), "params.empty()" );
+		THROW_IF( params.front()!='(', "Expected '(' vs {} @ '{}' to start function - '{}'.",  params.front(), Index()-1, Text() );
 		params.front()='{'; params.back() = '}';
 		params = stringifyKeys( params );
 		return Json::Parse( params );
 	}
 
-	α Parser::LoadMutation()ε->MutationQL{
-		if( Peek()=="{" )
-			throw Exception{ _tags, SRCE_CUR, "mutation not expecting '{{' as 1st character." };
-		let command = Next();
-		uint iType=0;
-		for( ;iType<MutationQLStrings.size() && !command.starts_with(MutationQLStrings[iType]); ++iType );
-		THROW_IF( iType==MutationQLStrings.size(), "Could not find mutation {}", command );
-
-		auto tableJsonName = string{ command.substr(MutationQLStrings[iType].size()) };
-		tableJsonName[0] = (char)tolower( tableJsonName[0] );
-		let type = (EMutationQL)iType;
-		let j = ParseJson();
-		let wantsResult  = Peek()=="{";
-		optional<TableQL> result = wantsResult ? LoadTable( tableJsonName ) : optional<TableQL>{};
-		MutationQL ql{ string{tableJsonName}, type, j, result/*, parentJsonName*/ };
+	α Parser::LoadMutation( string&& command, bool returnRaw )ε->MutationQL{
+		auto args = ParseArgs();
+		let wantsResult = Peek()=="{";
+		optional<TableQL> result = wantsResult ? LoadTable("") : optional<TableQL>{};
+		MutationQL ql{ move(command), move(args), move(result), returnRaw };
 		return ql;
 	}
 
 	α Parser::LoadTable( sv jsonName )ε->TableQL{//__type(name: "Account") { fields { name type { name kind ofType{name kind} } } }
-		let j = Peek()=="(" ? ParseJson() : jobject{};
+		let j = Peek()=="(" ? ParseArgs() : jobject{};
 
 		TableQL table{ string{jsonName}, j };
 		if( Peek()=="{" ){//has columns
@@ -163,5 +163,35 @@ namespace Jde::QL{
 			}
 		}while( jsonName.size() );
 		return results;
+	}
+	α Parser::LoadSubscription()ε->Subscription{
+		let name = Next();
+		//Sync with MutationQL::EMutationQL
+		constexpr array<sv,9> SubscriptionSuffexes{ "Created", "Updated", "Deleted", "Restored", "Purged", "Added", "Removed", "Started", "Stopped" };
+		optional<EMutationQL> type; string tableName;
+		for( uint i=0; !type && i<SubscriptionSuffexes.size(); ++i ){
+			if( name.ends_with(SubscriptionSuffexes[i]) && name.size()>SubscriptionSuffexes[i].size() ){
+				tableName = DB::Names::ToPlural(DB::Names::FromJson( name.substr(0, name.size()-SubscriptionSuffexes[i].size())) );
+				type = (EMutationQL)i;
+			}
+		}
+		THROW_IF( !type, "Could not find subscription type for '{}'", name );
+		Next();	//{
+		return Subscription( tableName, *type, LoadTable(Next()) );
+
+	}
+	α Parser::LoadSubscriptions()ε->vector<Subscription>{
+		vector<Subscription> y;
+		do{
+			y.push_back( LoadSubscription() );
+		}while( Next()=="subscription" );
+
+		return y;
+	}
+	α Parser::LoadUnsubscriptions()ε->vector<SubscriptionId>{
+		let text{ Next('}') };
+		THROW_IF( text.empty(), "text.empty()" );
+		THROW_IF( text.front()!='{', "Expected '{{' vs {} @ '{}' to start unsubscribe - '{}'.", text.front(), Index()-1, Text() );
+		return Json::FromArray<SubscriptionId>( Json::AsArray(Json::Parse(stringifyKeys(text)), "id") );
 	}
 }

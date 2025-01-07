@@ -10,7 +10,7 @@
 #include <jde/framework/io/file.h>
 
 #define let const auto
-namespace Jde::IO::Proto{
+namespace Jde::Proto{
 	Ŧ Load( const fs::path& path, SRCE )ε->up<T>;
 	Ŧ TryLoad( const fs::path& path, SRCE )ι->up<T>;
 	Ŧ Load( const fs::path& path, T& p, SRCE )ε->void;
@@ -18,7 +18,9 @@ namespace Jde::IO::Proto{
 	Ŧ Deserialize( const vector<char>& data )ε->up<T>;
 	Ŧ Deserialize( const google::protobuf::uint8* p, int size )ε->T;
 	Ŧ Deserialize( string&& x )ε->T;
-	Ŧ ToVector( const google::protobuf::RepeatedPtrField<T>& x )ι->vector<T>;
+	Ŧ FromVector( vector<T>& x )ι->google::protobuf::RepeatedField<T>;
+	Ŧ ToVector( google::protobuf::RepeatedPtrField<T>&& x )ι->vector<T>;
+	Ŧ ToVector( const google::protobuf::RepeatedField<T>& x )ι->vector<T>;
 
 	α Save( const google::protobuf::MessageLite& msg, fs::path path, SL )ε->void;
 	α ToString( const google::protobuf::MessageLite& msg )ι->string;
@@ -35,7 +37,7 @@ namespace Jde::IO::Proto{
 }
 
 
-namespace Jde::IO{
+namespace Jde{
 	Ξ Proto::ToString( const google::protobuf::MessageLite& msg )ι->string{
 		string output;
 		msg.SerializeToString( &output );
@@ -50,13 +52,14 @@ namespace Jde::IO{
 		const char* pLength = reinterpret_cast<const char*>( &length )+3;
 		for( auto i=0; i<4; ++i )
 			*pDestination++ = *pLength--;
-		let result = m.SerializeToArray( pDestination, (int)length ); LOG_IFT( !result, ELogLevel::Critical, IO::LogTag(), "Could not serialize to an array:{:x}", result );
+		if( let success = m.SerializeToArray( pDestination, (int)length ); !success )
+			Jde::Critical( ELogTags::IO, "Could not serialize to an array:{:x}", success );
 		return make_tuple( move(pData), size );
 	}
 	Ξ Proto::Save( const google::protobuf::MessageLite& msg, fs::path path, SRCE )ε->void{
 		let p = ms<string>();
 		msg.SerializeToString( p.get() );
-		FileUtilities::Save( move(path), p, sl );
+		IO::FileUtilities::Save( move(path), p, sl );
 	}
 
 	Ŧ Proto::Deserialize( const vector<char>& data )ε->up<T>{
@@ -109,10 +112,13 @@ namespace Jde::IO{
 		return pValue;
 	}
 
-	Ŧ Proto::ToVector( const google::protobuf::RepeatedPtrField<T>& x )ι->vector<T>{
+	Ŧ Proto::ToVector( google::protobuf::RepeatedPtrField<T>&& x )ι->vector<T>{
 		vector<T> y; y.reserve( x.size() );
-		for_each( x.begin(), x.end(), [&y]( auto item ){ y.push_back(item); } );
+		for_each( x, [&y]( auto& item ){ y.push_back(move(item)); } );
 		return y;
+	}
+	Ŧ Proto::ToVector( const google::protobuf::RepeatedField<T>& field )ι->vector<T>{
+		return vector<T>{ std::begin(field), std::end(field) };
 	}
 
 	Ξ Proto::ToTimestamp( TimePoint t )ι->google::protobuf::Timestamp{

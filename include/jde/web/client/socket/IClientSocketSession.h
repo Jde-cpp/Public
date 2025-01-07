@@ -3,13 +3,12 @@
 #include "../usings.h"
 #include "../exports.h"
 #include "ClientSocketStream.h"
+#include "ClientSocketAwait.h"
 #include <jde/framework/coroutine/Await.h>
 #include <jde/framework/io/proto.h>
 #include "../../../../../../Framework/source/Stopwatch.h"
 
 namespace Jde::Web::Client{
-	ΓWC α MaxLogLength()ι->uint16;
-
 	struct IClientSocketSession;
 	struct CreateClientSocketSessionAwait final : VoidAwait<>{
 		using base = VoidAwait<>;
@@ -35,7 +34,9 @@ namespace Jde::Web::Client{
 
 		α Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void;// Start the asynchronous operation
 		α RunSession( string host, PortType port )ι{ return CreateClientSocketSessionAwait{shared_from_this(), host, port}; }
-
+		β Query( string&& query, SRCE )ι->ClientSocketAwait<jvalue> = 0;
+		β Subscribe( string&& query, RequestId subscriptionClientId, UserPK executer, SRCE )ι->ClientSocketAwait<jarray> = 0;
+		α OnMessage( string&& j, RequestId requestId )ι->void;
 		α Write( string&& m )ι->void;
 		α NextRequestId()ι->uint32;
 		α SessionId()ι->SessionPK{ return _sessionId; }
@@ -83,12 +84,12 @@ namespace Jde::Web::Client{
 
 	#define $ template<class TFromClientMsgs, class TFromServerMsgs> α TClientSocketSession<TFromClientMsgs,TFromServerMsgs>
 	$::Write( TFromClientMsgs&& m )ε->void{
-		base::Write( IO::Proto::ToString(m) );
+		base::Write( Proto::ToString(m) );
 	}
 	$::OnReadData( std::basic_string_view<uint8_t> transmission )ι->void{
 		try{
 			sv x{ (char*)transmission.data(), transmission.size() };
-			auto proto = IO::Proto::Deserialize<TFromServerMsgs>( transmission.data(), (int)transmission.size() );
+			auto proto = Proto::Deserialize<TFromServerMsgs>( transmission.data(), (int)transmission.size() );
 			OnRead( move(proto) );
 		}
 		catch( IException& e ){

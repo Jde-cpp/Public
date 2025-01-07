@@ -122,7 +122,9 @@ namespace Jde::DB{
 			for( auto& column : table->Columns ){
 				if( !column->PKTable )
 					continue;
-				if( find_if(FKs, [&,t=table->DBName](let& fk){return fk.second.Table==t && fk.second.Columns==vector<string>{column->Name};})!=FKs.end() )
+				if( find_if(FKs, [&,t=table->DBName](let& fk){
+					return fk.second.Table==t && fk.second.Columns==vector<string>{column->Name};
+				})!=FKs.end() )
 					continue;
 				let pPKTable = column->PKTable;
 				if( !column->IsFlags() ) {
@@ -188,7 +190,8 @@ namespace Jde::DB{
 			if( let kv=Tables().find(tableName); kv!=Tables().end() ){
 				dbTable = std::dynamic_pointer_cast<TableDdl>( kv->second );
 				for( auto& column : table->Columns ){
-					let pDBColumn = dbTable->FindColumn( column->Name ); if( !pDBColumn ){ Error{_tags,"Could not find db column {}.{}", tableName, column->Name}; continue; }
+					auto pDBColumn = dbTable->FindColumn( column->Name ); if( !pDBColumn ){ Critical{_tags,"Could not find db column {}.{}", tableName, column->Name}; continue; }
+					pDBColumn->Insertable = column->Insertable;
 					if( pDBColumn->Default && pDBColumn->Default->is_string() && pDBColumn->Default->get_string()!="$now" )
 						ds.TryExecute( syntax.AddDefault(table->DBName, column->Name, *pDBColumn->Default) );
 				}

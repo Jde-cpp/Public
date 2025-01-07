@@ -11,7 +11,9 @@ namespace Jde{
 	//α operator==( const jvalue& a, const jvalue& b )ι->bool{ return a.is_primitive() && !(b<a) && !(b>a); }
 	Ŧ Eval( const boost::system::result<T>& x, string&& message, SRCE )ε->T;//TODO forward args...
 	namespace Json{
-		α FromValue( jvalue&& v, function<void(jobject&& o)> op )ε->void;
+		α Combine( const jobject& a, const jobject& b )ι->jobject;
+		α Visit( jvalue&& v, function<void(jobject&& o)> op )ε->void;
+		α Visit( const jvalue& v, function<void(const jvalue& o)> op )ε->void;
 		α ReadJsonNet( fs::path path, SRCE )ε->jobject;
 		constexpr sv errorFromat = "'{}' could not convert to {}.";
 #define $(type) Eval( v.try_as_##type(), Ƒ(errorFromat, serialize(v), #type), sl )
@@ -77,6 +79,8 @@ namespace Jde{
 
 		α Parse( sv json, SRCE )ε->jobject;
 		α ParseValue( string&& json, SRCE )ε->jvalue;
+		Ŧ FromArray( const jarray& a, SRCE )ε->vector<T>;
+
 	}
 
 	Ŧ Json::AsNumber( const jvalue& v, SL sl )ε->T{
@@ -128,6 +132,12 @@ namespace Jde{
 			if( let v = m->try_to_number<typename T::Type>(); v )
 				y = T{ *v };
 		}
+		return y;
+	}
+	Ŧ Json::FromArray( const jarray& a, SL sl )ε->vector<T>{
+		vector<T> y;
+		for( let& item : a )
+			y.push_back( Json::AsNumber<T>(item, sl) );
 		return y;
 	}
 }

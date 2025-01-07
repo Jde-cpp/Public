@@ -20,12 +20,13 @@ namespace Jde::DB::MySql{
 	α Sql::ForeignKeySql( bool addSchema )ι->string{
 		std::ostringstream os;
 		os << "select	fk.CONSTRAINT_NAME name, fk.TABLE_NAME foreign_table, fk.COLUMN_NAME fk, pk.TABLE_NAME primary_table, pk.COLUMN_NAME pk, pk.ORDINAL_POSITION ordinal" << endl
-			<< "from		INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS con" << endl
-			<< "	join INFORMATION_SCHEMA.KEY_COLUMN_USAGE fk on con.CONSTRAINT_NAME=fk.CONSTRAINT_NAME" << endl
-			<< "	join INFORMATION_SCHEMA.KEY_COLUMN_USAGE pk on pk.CONSTRAINT_NAME COLLATE utf8_general_ci=con.UNIQUE_CONSTRAINT_NAME and pk.ORDINAL_POSITION=fk.ORDINAL_POSITION and pk.TABLE_NAME=con.REFERENCED_TABLE_NAME" << endl;
-		if( addSchema )
+			<< "from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS con" << endl
+			<< "  join INFORMATION_SCHEMA.KEY_COLUMN_USAGE fk on con.CONSTRAINT_NAME=fk.CONSTRAINT_NAME" << endl
+			<< "  join INFORMATION_SCHEMA.KEY_COLUMN_USAGE pk on pk.CONSTRAINT_NAME COLLATE utf8_general_ci=con.UNIQUE_CONSTRAINT_NAME and pk.ORDINAL_POSITION=fk.ORDINAL_POSITION and pk.TABLE_NAME=con.REFERENCED_TABLE_NAME" << endl;
+		if( addSchema ){
 			os << "where pk.TABLE_SCHEMA=?" << endl;
-
+			os << "  and fk.TABLE_SCHEMA=?" << endl;
+		}
 		os << "order by name, ordinal";
 		return os.str();
 	}

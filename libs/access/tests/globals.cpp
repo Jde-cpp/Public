@@ -27,15 +27,15 @@ namespace Tests{
 	}
 
 	Ω updateNameQL( str table, uint id, sv updatedName )ε->string{
-		return Str::Replace( Ƒ("mutation update{}( 'id':{}, 'input': {{'name':'{}'}} ) }}", Capitalize(table), id, updatedName), '\'', '"' );
+		return Str::Replace( Ƒ("mutation update{}( id:{}, name:'{}' )", Capitalize(table), id, updatedName), '\'', '"' );
 	}
 	Ω testUpdateName( str table, uint id, UserPK executer, sv updatedName )ε->void{
  		let updateJson = QL::Query( updateNameQL(table, id, updatedName), executer );
 		ASSERT_TRUE( Json::AsSV(Select(table,id, GetRoot(), {}, true), "name")==updatedName );
 	}
 
-	Ω deleteQL( str table, uint id )ι->string{ return Ƒ( "mutation delete{}( \"id\":{} )", Capitalize(table), id ); }
-	Ω restoreQL( str table, uint id )ι->string{ return Ƒ( "mutation restore{}( \"id\":{} )", Capitalize(table), id ); }
+	Ω deleteQL( str table, uint id )ι->string{ return Ƒ( "mutation delete{}( id:{} )", Capitalize(table), id ); }
+	Ω restoreQL( str table, uint id )ι->string{ return Ƒ( "mutation restore{}( id:{} )", Capitalize(table), id ); }
 	Ω testDeleteRestore( str table, uint id, UserPK executer )ε->void{
 		let del = Ƒ( "mutation delete{}(\"id\":{})", Capitalize(table), id );
 		let deleteJson = QL::Query( deleteQL(table, id), executer );
@@ -50,7 +50,7 @@ namespace Tests{
 		let parentTable = map.Parent->Table;
 		let parentTableName = Capitalize( parentTable->JsonName() );
 		let memberString = members.size()==1 ? Ƒ( "{}", members[0] ) : '['+Str::Join( members )+']';
-		return Ƒ( "{{ mutation {}{}( \"id\":{}, \"{}\":{} ) }}", op, parentTable->Name, pk, ToJson(map.Child->Name), memberString );
+		return Ƒ( "mutation {}{}( \"id\":{}, \"{}\":{} )", op, parentTable->Name, pk, ToJson(map.Child->Name), memberString );
 	}
 	Ω addRemove( sv op, const DB::Table& table, uint pk, vector<uint> members, UserPK executer )ε->jobject{
 		return QL::QueryObject( addRemoveQL(op, table, pk, members), executer );
@@ -83,7 +83,7 @@ namespace Tests{
 		return memberString;
 	}
 	α Tests::AddToGroup( GroupPK id, vector<IdentityPK> members, UserPK executer )ε->void{
-		let ql =	Ƒ( "{{ mutation addIdentityGroup( \"id\":{}, \"memberId\":{} ) }}", id.Value, memberString(members) );
+		let ql =	Ƒ( "mutation addIdentityGroup( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
 		let addJson = QL::Query( ql, executer );
 	}
 
@@ -91,26 +91,26 @@ namespace Tests{
 		addRemove( "remove", table, groupPK, members, executer );
 	}
 	α Tests::RemoveFromGroup( GroupPK id, vector<IdentityPK> members, UserPK executer )ε->void{
-		let ql = Ƒ( "{{ mutation removeIdentityGroup( \"id\":{}, \"memberId\":{} ) }}", id.Value, memberString(members) );
+		let ql = Ƒ( "mutation removeIdentityGroup( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
 		let removeJson = QL::Query( ql, executer );
 	}
 
 
-	α Tests::Create( str table, sv target, UserPK executer, str input )ε->uint{
-		let create = Ƒ( "mutation create{0}(  'input': {{'target':'{1}','name':'{1} - name','description':'{1} - description' {2} }} ){{id}}", Capitalize(table), target, input.size() ? ","s+input : "" );
-		let createJson = FindDefaultObject( QL::Query(Str::Replace(create, '\'', '"'), executer), '/'+table );
+	α Tests::Create( str table, sv target, UserPK executer, str input, SL sl )ε->uint{
+		let create = Ƒ( "create{0}(  target:'{1}', name:'{1} - name', description:'{1} - description' {2} ){{id}}", Capitalize(table), target, input.size() ? ","s+input : "" );
+		let createJson = QL::QueryObject( Str::Replace(create, '\'', '"'), executer, sl );
 		return GetId( createJson );//{"user":{"id":7}}
 	}
 
 	Ω createUser( str target, EProviderType providerId, UserPK executer )ε->UserPK{
-		let create = Ƒ( "{{ mutation createUser(  'input': {{'loginName':'{0}','target':'{0}','provider':{1},'name':'{0} - name','description':'{0} - description'}} ){{id}} }}", target, (uint)providerId );
+		let create = Ƒ( "createUser(  loginName:'{0}', target:'{0}', provider:{1}, name:'{0} - name', description:'{0} - description' ){{id}}", target, (uint)providerId );
 		let createJson = QL::QueryObject( Str::Replace(create, '\'', '"'), executer );
-		return { AsNumber<UserPK::Type>( createJson, "user/id") };//{"data":{"user":{"id":7}}}
+		return { Tests::GetId(createJson) };//{"user":{"id":7}}}
 	}
 	α createGroup( str target, UserPK executer )ε->GroupPK{
-		let create = Ƒ( "{{ mutation createIdentityGroup(  'input': {{'target':'{0}','name':'{0} - name','description':'{0} - description'}} ){{id}} }}", target );
+		let create = Ƒ( "mutation createIdentityGroup(  target:'{0}', name:'{0} - name', description:'{0} - description' ){{id}}", target );
 		let createJson = QL::QueryObject( Str::Replace(create, '\'', '"'), executer );
-		return {AsNumber<GroupPK::Type>( createJson, "identityGroup/id")};
+		return {AsNumber<GroupPK::Type>( createJson, "createIdentityGroup/id")};
 	}
 	α columns( sv cols, bool includeDeleted )ε->string{
 		return Ƒ( "id name attributes created updated target description {} {}", cols, includeDeleted ? "deleted" : "" );

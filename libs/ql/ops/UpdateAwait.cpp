@@ -7,6 +7,8 @@
 #include <jde/db/meta/Table.h>
 #include <jde/access/IAcl.h>
 #include "../GraphQuery.h"
+#include <jde/ql/QLSubscriptions.h>
+
 #include "../types/QLColumn.h"
 #include <jde/db/generators/UpdateClause.h>
 
@@ -16,7 +18,7 @@ namespace Jde::QL{
 	using DB::Value;
 	constexpr ELogTags _tags{ ELogTags::QL };
 	UpdateAwait::UpdateAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
-	 	TAwait<jvalue>{sl},
+		base{ sl },
 		_mutation{ move(mutation) },
 		_table{ table },
 		_userPK{ userPK }
@@ -60,7 +62,7 @@ namespace Jde::QL{
 			rowKey = update.Where.Params()[0];
 		}
 
-		let& input = _mutation.Input();
+		let& input = _mutation.Args;
 		for( let& c : table.Columns ){
 			if( !c->Updateable )
 				continue;
@@ -118,13 +120,16 @@ namespace Jde::QL{
 	α UpdateAwait::UpdateAfter( uint rowCount )ι->MutationAwaits::Task{
 		try{
 			co_await Hook::UpdateAfter( _mutation, _userPK );
-			ResumeScaler( jvalue{rowCount} );
+			Resume( jvalue{rowCount} );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
 	}
-
+	α UpdateAwait::Resume( jvalue&& v )ι->void{
+		Subscriptions::Push( _mutation, v );
+		base::Resume( move(v) );
+	}
 	α UpdateAwait::await_resume()ε->jvalue{
 		if( _exception )
 			_exception->Throw();

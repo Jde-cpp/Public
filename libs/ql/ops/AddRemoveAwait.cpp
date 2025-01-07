@@ -1,10 +1,11 @@
 #include "AddRemoveAwait.h"
-#include <jde/ql/QLHook.h>
 #include <jde/db/Database.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
+#include <jde/ql/QLHook.h>
+#include <jde/ql/QLSubscriptions.h>
 #include "../GraphQuery.h"
 #include "../types/QLColumn.h"
 
@@ -14,7 +15,7 @@ namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL };
 
 	AddRemoveAwait::AddRemoveAwait( sp<DB::Table> table, const MutationQL& mutation, UserPK userPK, SL sl )ι:
-		TAwait{ sl },
+		base{ sl },
 		_mutation{ mutation },
 		_table{ table },
 		_userPK{ userPK }
@@ -74,7 +75,7 @@ namespace Jde::QL{
 	}
 	α AddRemoveAwait::AddAfter( jvalue v )ι->MutationAwaits::Task{
 		try{
-			co_await Hook::AddAfter( move(_mutation), _userPK );
+			co_await Hook::AddAfter( _mutation, _userPK );
 			Resume( move(v) );
 		}
 		catch( IException& e ){
@@ -100,7 +101,7 @@ namespace Jde::QL{
 	}
 	α AddRemoveAwait::RemoveAfter( jvalue v )ι->MutationAwaits::Task{
 		try{
-			co_await Hook::AddAfter( move(_mutation), _userPK );
+			co_await Hook::AddAfter( _mutation, _userPK );
 			Resume( move(v) );
 		}
 		catch( IException& e ){
@@ -118,8 +119,9 @@ namespace Jde::QL{
 	}
 	α AddRemoveAwait::AddHook()ι->MutationAwaits::Task{
 		try{
-			auto y = co_await Hook::Add(move(_mutation), _userPK);
+			auto y = co_await Hook::Add(_mutation, _userPK);
 			THROW_IF( !y, "Hook::Add returned null." );
+			Trace{ _tags, "AddHook::Add returned '{}'", serialize(*y) };
 			Resume( move(*y) );
 		}
 		catch( IException& e ){
@@ -128,7 +130,7 @@ namespace Jde::QL{
 	}
 	α AddRemoveAwait::RemoveHook()ι->MutationAwaits::Task{
 		try{
-			auto y = co_await Hook::Remove( move(_mutation), _userPK );
+			auto y = co_await Hook::Remove( _mutation, _userPK );
 			THROW_IF( !y, "Hook::Add returned null." );
 			Resume( move(*y) );
 		}
@@ -161,5 +163,9 @@ namespace Jde::QL{
 			Remove();
 		else
 			ASSERT( false );
+	}
+	α AddRemoveAwait::Resume( jvalue&& v )ι->void{
+		Subscriptions::Push( _mutation, v );
+		base::Resume( move(v) );
 	}
 }

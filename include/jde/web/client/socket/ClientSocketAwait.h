@@ -1,11 +1,12 @@
 #pragma once
-#include <jde/web/client/socket/IClientSocketSession.h>
+//#include <jde/web/client/socket/IClientSocketSession.h>
 #include "../usings.h"
 #include <jde/framework/str.h>
+#include "../client.h"
 #include "../../../../../../Framework/source/DateTime.h"
 
 namespace Jde::Web::Client{
-
+	struct IClientSocketSession;
 	struct TimedPromiseType{
 		ψ Log( const fmt::format_string<Args const&...>&& m2, const Args&... args )ι->void{
 			Trace{ ELogTags::SocketClientRead, FWD(m2), FWD(args)... };
@@ -24,34 +25,26 @@ namespace Jde::Web::Client{
 		struct promise_type : VoidPromise<TimedVoidTask>, TimedPromiseType{};
 	};
 
-	struct ClientSocketVoidAwait final : VoidAwait<void,TimedVoidTask>{
-		using base = VoidAwait<void,TimedVoidTask>;
-		ClientSocketVoidAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι;
-		α Suspend()ι->void override;
-		α await_resume()ε->void override;
-	private:
+	struct IClientSocketVoidAwait{
+		IClientSocketVoidAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι:
+			_request{ move(request) }, _requestId{ requestId }, _session{ session }, _start{ steady_clock::now() }{}
+
+		α Suspend( coroutine_handle<> h )ι->void;
+	protected:
+		α SessionId()ι->SessionPK;
 		string _request;
 		const RequestId _requestId;
 		sp<IClientSocketSession> _session;
 		steady_clock::time_point _start;
 	};
 
-	inline ClientSocketVoidAwait::ClientSocketVoidAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SL sl )ι:
-		base{ sl }, _request{ move(request) }, _requestId{ requestId }, _session{ session }, _start{ steady_clock::now() }
-	{}
-
-	Ξ ClientSocketVoidAwait::Suspend()ι->void{
-		_session->AddTask( _requestId, _h );
-		_session->Write( move(_request) );
-	}
-
-	Ξ ClientSocketVoidAwait::await_resume()ε->void{
-		base::AwaitResume();
-		typename base::TPromise* p = base::Promise(); THROW_IF( !p, "Not Connected" );
-		if( auto e = p->MoveError(); e )
-			e->Throw();
-		p->Log( _session->Id(), _start, _sl );
-	}
+	struct ClientSocketVoidAwait final : VoidAwait<void,TimedVoidTask>, IClientSocketVoidAwait{
+		using base = VoidAwait<void,TimedVoidTask>;
+		ClientSocketVoidAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι:
+			base{ sl }, IClientSocketVoidAwait{ move(request), requestId, session }{}
+		α Suspend()ι->void{ IClientSocketVoidAwait::Suspend( _h ); }
+		α await_resume()ε->void override;
+	};
 
 	template<class T>
 	struct TTimedTask final{
@@ -59,26 +52,21 @@ namespace Jde::Web::Client{
 	};
 
 	template<class T>
-	struct ClientSocketAwait final : TAwait<T,TTimedTask<T>>{
+	struct ClientSocketAwait final : IClientSocketVoidAwait, TAwait<T,TTimedTask<T>>{
 		using base = TAwait<T,TTimedTask<T>>;
 		ClientSocketAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι;
-		α Suspend()ι->void override;
+		α Suspend()ι->void{ IClientSocketVoidAwait::Suspend( base::_h ); }
 		α await_resume()ε->T override;
-	private:
-		string _request;
-		const RequestId _requestId;
-		sp<IClientSocketSession> _session;
-		steady_clock::time_point _start;
 	};
 
 	Τ ClientSocketAwait<T>::ClientSocketAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SL sl )ι:
-		base{ sl }, _request{ move(request) }, _requestId{ requestId }, _session{ session }, _start{ steady_clock::now() }
+		IClientSocketVoidAwait{ move(request), requestId, session }, base{ sl }
 	{}
 
-	Ŧ ClientSocketAwait<T>::Suspend()ι->void{
-		_session->AddTask( _requestId, base::_h );
-		_session->Write( move(_request) );
-	}
+	//Ŧ ClientSocketAwait<T>::Suspend()ι->void{
+	//	_session->AddTask( _requestId, base::_h );
+	//	_session->Write( move(_request) );
+	//}
 
 	Ŧ ClientSocketAwait<T>::await_resume()ε->T{
 		base::AwaitResume();
@@ -87,8 +75,7 @@ namespace Jde::Web::Client{
 		if( auto e = p->MoveError(); e )
 			e->Throw();
 		ASSERT( p->Value() );
-		p->Log( _session->Id(), _start, base::_sl );
+		p->Log( SessionId(), _start, base::_sl );
 		return move( *p->Value() );
 	}
 }
-

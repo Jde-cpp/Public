@@ -10,6 +10,7 @@ project(Jde.App.Client)
 include(compiler)
 
 find_package( OpenSSL REQUIRED )
+include_directories( $ENV{JDE_DIR}/Public/include/jde/web/client/proto )
 #dump_cmake_variables()
 if(MSVC)
 	include_directories( ${OPENSSL_INCLUDE_DIR} )
@@ -24,14 +25,14 @@ else()
 endif()
 
 #######################################################
-add_library( ${CMAKE_PROJECT_NAME} SHARED )
+add_library( ${CMAKE_PROJECT_NAME} )
 #set( CMAKE_INCLUDE_CURRENT_DIR ON )
-file(GLOB src_files *.cpp await/*.cpp )
-file(GLOB hdr_files  **/*.h )
+file(GLOB sources *.cpp awaits/*.cpp )
+file(GLOB headers  **/*.h )
 target_sources( "${CMAKE_PROJECT_NAME}"
     PRIVATE
-        "${src_files}"
-        "${hdr_files}")
+        "${sources}"
+        "${headers}")
 
 if(MSVC)
 	target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.App.Shared Jde.Web.Client )
@@ -39,9 +40,9 @@ if(MSVC)
 	target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf )
 else()
 	add_definitions( -DJde_App_Client_EXPORTS )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )
 endif()
 target_link_libraries( ${CMAKE_PROJECT_NAME} OpenSSL::SSL )
 #######################################################

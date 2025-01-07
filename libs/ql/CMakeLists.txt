@@ -15,24 +15,24 @@ else()
 	link_directories( ${Protobuf_DIR}/../.. )
 	add_definitions( -DJde_QL_EXPORTS )
 endif()
-add_library( ${CMAKE_PROJECT_NAME} SHARED )
 #######################################################
-file(GLOB src_files *.cpp **/*.cpp **/**/*.cpp )
-file(GLOB hdr_files   "**/*.h")
+add_library( ${CMAKE_PROJECT_NAME} )
+file( GLOB sources *.cpp **/*.cpp **/**/*.cpp )
+file( GLOB headers **/*.h $ENV{JDE_DIR}/Public/include/jde/ql )
 target_sources(${CMAKE_PROJECT_NAME}
     PRIVATE
-        ${src_files}
-        ${hdr_files}
+        ${sources}
+        ${headers}
 )
 #######################################################
 if(MSVC)
+	target_link_libraries( ${CMAKE_PROJECT_NAME} fmt::fmt )
 else()
-	add_definitions( -DJde_Crypto_EXPORTS )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
+	#add_definitions( -DJde_Crypto_EXPORTS )
+	#target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
 	#target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
 	#target_link_libraries( ${CMAKE_PROJECT_NAME} libcrypto.a )
 endif()
-	target_link_libraries( ${CMAKE_PROJECT_NAME} fmt::fmt )
 #######################################################
 
 target_precompile_headers(${CMAKE_PROJECT_NAME}

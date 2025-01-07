@@ -1,5 +1,6 @@
 #pragma once
 #include "../../../../../Framework/source/coroutine/Awaitable.h"
+#include <jde/framework/coroutine/Await.h>
 
 namespace Jde::DB{ struct Value; }
 namespace Jde::Access{

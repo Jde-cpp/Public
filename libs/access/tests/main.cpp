@@ -26,7 +26,8 @@ namespace Jde{
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 				DB::NonProd::Recreate( *schema );
 			QL::Configure( {schema} );
-			co_await Access::Configure( schema, QL::Local(), UserPK{std::numeric_limits<UserPK::Type>::max()} );
+			auto await = Access::Configure( schema, {metaDataName}, QL::Local(), UserPK{UserPK::System} );
+			co_await await;
 
 			Access::Tests::SetSchema( schema );
 			set = true;

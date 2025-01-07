@@ -46,25 +46,25 @@ namespace Jde::Access::Tests{
 		auto resources = selectResources( target, filter );
 		if( !resources.size() ){
 			let& userTable = *GetTable( "users" );
-			let create = Ƒ( "{{ mutation createResource( input:{{ schemaName:\"access\", name:\"creator\", target:\"{}\", criteria:\"{}\", rights:{} }} ) }}", target, filter, underlying(userTable.Operations) );
+			let create = Ƒ( "mutation createResource( schemaName:\"access\", name:\"creator\", target:\"{}\", criteria:\"{}\", rights:{} )", target, filter, underlying(userTable.Operations) );
 			let createJson = QL::Query( create, GetRoot() );
 			resources = selectResources( target, filter );
 			ASSERT_EQ( resources.size(), 1 );
 		}
 		let id = GetId( Json::AsObject(resources[0]) );
 
-		let update = Ƒ( "{{ mutation updateResource( \"id\":{}, \"input\": {{\"allowed\": [\"Read\"] }}) }}", id );
+		let update = Ƒ( "mutation updateResource( \"id\":{}, \"allowed\": [\"Read\"] )", id );
 		let updateJson = QL::Query( update, GetRoot() );
 		let rights = selectResources(target, filter)[0].at("allowed").as_array();
 		ASSERT_TRUE( rights.size()==1 );
 		ASSERT_EQ( Json::AsSV(rights[0]), "Read" );
 
- 		let del = Ƒ( "{{ mutation deleteResource(\"id\":{}) }}", id );
+ 		let del = Ƒ( "mutation deleteResource(\"id\":{})", id );
  		let deleteJson = QL::Query( del, GetRoot() );
 		ASSERT_TRUE( selectResources(target, filter).empty() );
 		ASSERT_TRUE( !selectResources(target, filter, true).empty() );
 
- 		let restore = Ƒ( "{{ mutation restoreResource(\"id\":{}) }}", id );
+ 		let restore = Ƒ( "mutation restoreResource(\"id\":{})", id );
  		let restoreJson = QL::Query( restore, GetRoot() );
 		ASSERT_TRUE( !selectResources(target, filter).empty() );
 

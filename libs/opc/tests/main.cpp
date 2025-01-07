@@ -34,9 +34,11 @@ namespace Jde{
 
 		let metaDataName{ "opc" };
 		auto schema = DB::GetAppSchema( metaDataName, App::Client::RemoteAcl() );
+		auto accessSchema = DB::GetAppSchema( "access", App::Client::RemoteAcl() );
 		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 			DB::NonProd::Recreate( *schema );
-		co_await Access::Configure( schema, App::Client::QLServer(), {UserPK::System} );
+		auto await = Access::Configure( accessSchema, {schema}, App::Client::QLServer(), {UserPK::System} );
+		co_await await;
 		QL::Configure( {schema} );
 		Opc::AddHook();
 	}

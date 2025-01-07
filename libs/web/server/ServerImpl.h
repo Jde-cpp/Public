@@ -20,7 +20,7 @@ namespace Internal{
 	α GetRequestHandler()ι->IRequestHandler&;
 	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> cancel )ι->net::awaitable<void, executor_type>;
 	α SendOptions( const HttpRequest&& req )ι->http::message_generator;
-	α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<App::Proto::FromServer::SessionInfo>>;
+	α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<Web::FromServer::SessionInfo>>;
 }
 
 namespace Jde::Web{

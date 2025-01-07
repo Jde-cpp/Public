@@ -5,6 +5,7 @@
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/access/IAcl.h>
+#include <jde/ql/QLSubscriptions.h>
 #include "../GraphQuery.h"
 #include "../types/QLColumn.h"
 
@@ -17,7 +18,7 @@ namespace Jde::QL{
 	α GetEnumValues( const DB::View& table, SRCE )ε->sp<flat_map<uint,string>>;
 
 	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
-	 	TAwait<jvalue>{sl},
+		base{sl},
 		_mutation{ move(mutation) },
 		_table{ table },
 		_executer{ userPK }
@@ -26,17 +27,17 @@ namespace Jde::QL{
 	α InsertAwait::await_ready()ι->bool{
 		try{
 			_table->Authorize( Access::ERights::Create, _executer, _sl );
-			CreateQuery( *_table, _mutation.Input() );
+			CreateQuery( *_table, _mutation.Args );
 		}
 		catch( IException& e ){
 			_exception = e.Move();
 		}
-		return _exception || _statements.empty();
+		return _exception || ( _statements.empty() && !_table->HasCustomInsertProc );
 	}
 
 	α InsertAwait::CreateQuery( const DB::Table& table, const jobject& input, bool nested )ε->void{
 		for( let& [key,value] : input ){ //look for nested tables.
-			if( auto nestedTable = value.is_object() ? table.Schema->FindTable(DB::Names::ToPlural(key)) : nullptr; nestedTable ){
+			if( auto nestedTable = value.is_object() ? table.Schema->FindTable(DB::Names::FromJson(DB::Names::ToPlural(key))) : nullptr; nestedTable ){
 				let& o = value.get_object();
 				if( o.size()==1 && o.contains("id") && nestedTable->SurrogateKeys.size() )
 					_nestedIds.emplace( nestedTable->SurrogateKeys[0]->Name, DB::Value{Json::AsNumber<uint>(o, "id")} );
@@ -73,10 +74,6 @@ namespace Jde::QL{
 			}
 			else if( c->Name==criteria )
 				value = Value{ true };
-/*			else if( auto p = find_if(_statements, [&](let& s){let sequence = s.SequenceColumn(); return sequence && sequence->Name==c->Name;}); p!=_statements.end() ){
-				missingColumns.emplace_back( c );//inserting acl with permission,
-				++cNonDefaultArgs;
-			}*/
 			else
 				value = *c->Default;
 			statement.Add( c, value.Variant );
@@ -90,10 +87,10 @@ namespace Jde::QL{
 	α InsertAwait::InsertBefore()ι->MutationAwaits::Task{
 		try{
 			optional<jarray> result = co_await Hook::InsertBefore( _mutation, _executer );
-			let result0 = result ? result->if_contains(0) : nullptr;
+			auto result0 = result ? result->if_contains(0) : nullptr;
 			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){
-				result0->get_object().erase("complete");
-				Resume( move(*result0) );
+				result0->get_object().erase( "complete" );
+				Resume( jarray{ move(*result0) } );
 				co_return;
 			}
 		}
@@ -105,7 +102,7 @@ namespace Jde::QL{
 	}
 
 	α InsertAwait::Execute()ι->Coroutine::Task{
-		uint mainId{};
+		jarray y;
 		auto& ds = *_table->Schema->DS();
 		try{
 			for( uint i=0; i<_statements.size(); ++i ){
@@ -115,45 +112,50 @@ namespace Jde::QL{
 						statement.SetValue( missingCol, move(missingValue->second) );
 				}
 
-				uint id;
+				uint id{};
 				auto sql = statement.Move();
-				if( statement.IsStoredProc )
+				if( statement.IsStoredProc ){
 					( co_await *ds.ExecuteProcCo(sql.Text, move(sql.Params), [&](const DB::IRow& row){id = (int32)row.GetInt(0);}) ).CheckError();
-				else
+					y.push_back( jobject{ {"id", id}, {"rowCount",1} } );
+				}else{
 					( co_await *ds.ExecuteCo(sql.Text, move(sql.Params)) ).CheckError();
+					y.push_back( jobject{ {"rowCount",1} } );
+				}
 
 				auto table = statement.Values.size() ? statement.Values.begin()->first->Table : nullptr;
 				if( auto sequence = statement.Values.size() && table->SurrogateKeys.size() ? table->SurrogateKeys[0] : nullptr; sequence )
 					_nestedIds.emplace( sequence->Name, id );
-				if( !mainId )
-					mainId = id;
 			}
-			InsertAfter( mainId );
+			InsertAfter( move(y) );
 		}
 		catch( IException& e ){
-			_exception = e.Move();
-			InsertFailure();
-			ResumeExp( move(e) );
+			InsertFailure( move(e) );
 		}
 	}
-	α InsertAwait::InsertAfter( uint mainId )ι->MutationAwaits::Task{
+	α InsertAwait::InsertAfter( jarray&& result )ι->MutationAwaits::Task{
 		try{
-			co_await Hook::InsertAfter( mainId, _mutation, _executer );
-			ResumeScaler( mainId );
+			let id = result.size() ? Json::FindNumber<uint>(result[0], "id").value_or(0) : 0;
+			co_await Hook::InsertAfter( id, _mutation, _executer );
+			Resume( move(result) );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α InsertAwait::InsertFailure()ι->MutationAwaits::Task{
+	α InsertAwait::InsertFailure( IException&& e )ι->MutationAwaits::Task{
 		try{
 			co_await Hook::InsertFailure( _mutation, _executer );
-			ResumeExp( move(*_exception) );
-		}
-		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
+		catch( IException& e2 ){
+			ResumeExp( move(e2) );
+		}
 	}
+	α InsertAwait::Resume( jarray&& v )ι->void{
+		Subscriptions::Push( _mutation, v.size() ? v[0] : jvalue{} );
+		base::Resume( move(v) );
+	}
+
 	α InsertAwait::await_resume()ε->jvalue{
 		if( _exception )
 			_exception->Throw();

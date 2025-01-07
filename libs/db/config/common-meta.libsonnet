@@ -35,8 +35,8 @@
 		varWChar: {type: "VarWChar"},
 		wchar: {type: "WChar"},
 	},
-
-	sqlFunctions::{
+	local sqlFunctions = self.sqlFunctions,
+	sqlFunctions:{
 		now: { name: "$now" }
 	},
 
@@ -44,14 +44,15 @@
 	smallSequenced:: types.uint16+{ sequence: true, sk:0, i:0 },
 	pkSequenced: types.uint+{ sequence: true, sk:0, i:0 },
 	longSequenced: types.ulong+{ sequence: true, sk:0, i:0 },
+	local valuesColumns = self.valuesColumns,
 	valuesColumns: { name: types.varchar+{ length: 256, i:10 } },
 
 	valuesNK: ["name"],
 
-	targetColumns: self.valuesColumns+{
-		target: types.varchar+{ length: self.valuesColumns.name.length, i:20 },
+	targetColumns: valuesColumns+{
+		target: types.varchar+{ length: valuesColumns.name.length, i:20 },
 		attributes: types.uint16+{ nullable: true, i:30 },
-		created: types.dateTime+{ insertable: false, updateable: false, default: self.sqlFunctions.now.name, i:40 },
+		created: types.dateTime+{ insertable: false, updateable: false, default: sqlFunctions.now.name, i:40 },
 		updated: types.dateTime+{ nullable: true, insertable: false, updateable: false, i:50 },
 		deleted:types.dateTime+{ nullable: true, insertable: false, updateable: false, i:60 },
 		description: types.varchar+{ length: 2048, nullable: true, i:70 }

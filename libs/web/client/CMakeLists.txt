@@ -21,14 +21,14 @@ else()
 endif()
 #######################################################
 
-add_library( ${CMAKE_PROJECT_NAME} SHARED )
-file( GLOB src_files *.cpp http/*.cpp socket/*.cpp )
-file( GLOB hdr_files *.h )
+add_library( ${CMAKE_PROJECT_NAME} )
+set( CMAKE_INCLUDE_CURRENT_DIR ON )
+file( GLOB sources *.cpp http/*.cpp socket/*.cpp )
+set( includeDir $ENV{JDE_DIR}/Public/include/jde/web/client )
+file( GLOB headers *.h ${includeDir}/*.h ${includeDir}/http/*.h ${includeDir}/proto/*.h ${includeDir}/socket/*.h  )
+file( GLOB protos proto/*.proto )
 
-target_sources( ${CMAKE_PROJECT_NAME}
-    PRIVATE
-        ${src_files}
-        ${hdr_files} )
+target_sources( ${CMAKE_PROJECT_NAME} PRIVATE ${sources} ${headers} ${protos} )
 
 if( MSVC )
 	find_package( fmt )
@@ -37,17 +37,26 @@ if( MSVC )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} Jde )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} fmt::fmt )
 	target_link_libraries( ${CMAKE_PROJECT_NAME} ZLIB::ZLIB )
+	target_link_libraries( ${CMAKE_PROJECT_NAME} OpenSSL::SSL )
 else()
-	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
-	#target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} protobuf::libprotobuf libutf8_range.a )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
 endif()
-target_link_libraries( ${CMAKE_PROJECT_NAME} OpenSSL::SSL )
+
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
   PRIVATE
 	"pc.h"
 )
+
+protobuf_generate( TARGET ${CMAKE_PROJECT_NAME} IMPORT_DIRS proto EXPORT_MACRO Jde_Web_Client_EXPORT )
+set( protoIncludeDir ${includeDir}/proto )
+file(MAKE_DIRECTORY ${protoIncludeDir})
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_BINARY_DIR}/Web.FromServer.pb.h" "${protoIncludeDir}/Web.FromServer.pb.h" COMMENT "mklink web/client/proto/Web.FromServer.pb.h" )
+add_custom_command( TARGET ${CMAKE_PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.proto" "$ENV{JDE_DIR}/Public/libs/app/shared/proto/Web.FromServer.proto" COMMENT "mklink libs/app/shared/Web.FromServer.proto" )
+
+
 
 if( MSVC )
 	set( CMAKE_INSTALL_PREFIX $ENV{JDE_DIR}/installed )
