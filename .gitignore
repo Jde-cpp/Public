@@ -64,3 +64,4 @@ tests/*.proto
 **/*.vcxproj.filters
 libs/access/config/sql/.sandbox.sql
 libs/app/shared/proto/Web.FromServer.proto
+**/.*.sql

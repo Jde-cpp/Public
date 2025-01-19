@@ -10,6 +10,7 @@ namespace Jde::QL{
 		α TableName()Ι->string; //json name=user returns users
 		//α Input(SRCE)Ε->const jobject&;
 		template<class T=uint> α Id()Ι->T;
+		template<class T=uint> α FindId()Ι->optional<T>;
 		α FindParam( sv name )Ε->const jvalue*;
 		//α InputParam( sv name )Ε->const jvalue&;
 		α ParentPK()Ε->uint;
@@ -25,8 +26,12 @@ namespace Jde::QL{
 		mutable string _tableName;
 	};
 
+	Ŧ MutationQL::FindId()Ι->optional<T>{
+		return Json::FindNumber<T>( Args, "id" );
+	}
+
 	Ŧ MutationQL::Id()Ι->T{
-		const auto y = Json::FindNumber<T>( Args, "id" );
+		const auto y = FindId();
 		ASSERT( y );
 		return y.value_or( 0 );
 	}

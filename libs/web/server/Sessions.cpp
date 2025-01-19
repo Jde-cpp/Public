@@ -120,7 +120,7 @@ namespace Sessions{
 				}
 			}
 			catch( IException& e ){
-				Promise()->SetError( move(e) );
+				Promise()->SetExp( move(e) );
 			}
 		}
 		else{
@@ -138,7 +138,7 @@ namespace Sessions{
 			Execute();
 		}
 		catch( IException& e ){
-			Promise()->SetError( move(e) );
+			Promise()->SetExp( move(e) );
 		}
 	}
 	α UpsertAwait::await_resume()ε->sp<SessionInfo>{

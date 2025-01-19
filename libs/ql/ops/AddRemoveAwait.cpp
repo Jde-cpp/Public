@@ -5,7 +5,7 @@
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLHook.h>
-#include <jde/ql/QLSubscriptions.h>
+#include <jde/ql/LocalSubscriptions.h>
 #include "../GraphQuery.h"
 #include "../types/QLColumn.h"
 
@@ -165,7 +165,7 @@ namespace Jde::QL{
 			ASSERT( false );
 	}
 	α AddRemoveAwait::Resume( jvalue&& v )ι->void{
-		Subscriptions::Push( _mutation, v );
+		Subscriptions::OnMutation( _mutation, v );
 		base::Resume( move(v) );
 	}
 }

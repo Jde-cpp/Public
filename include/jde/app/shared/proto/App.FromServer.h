@@ -9,7 +9,7 @@ namespace Jde::QL{ struct ColumnQL; }
 namespace Jde::App::FromServer{
 	Φ Ack( uint32 serverSocketId )ι->Proto::FromServer::Transmission;
 	Φ Complete( RequestId requestId )ι->Proto::FromServer::Transmission;
-	Φ Exception( const IException& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission;
+	Φ Exception( const exception& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission;
 	Φ Execute( string&& executionResult, RequestId clientRequestId )ι->Proto::FromServer::Transmission;
 	Φ ExecuteRequest( RequestId serverRequestId, UserPK userPK, string&& fromClient )ι->Proto::FromServer::Transmission;
 	Φ GraphQL( string&& queryResults, RequestId requestId )ι->Proto::FromServer::Transmission;

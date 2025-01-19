@@ -1,6 +1,6 @@
 #pragma once
 #include <jde/ql/ql.h>
-#include <jde/ql/SubscriptionAwait.h>
+//#include <jde/ql/SubscriptionAwait.h>
 #include "../accessInternal.h"
 
 namespace Jde::Access{
@@ -9,7 +9,7 @@ namespace Jde::Access{
 			VoidAwait{_sl}, _qlServer{qlServer}, _name{ move(name) }, _type{ type }, _cols{ cols }, _events{ events }, _executer{executer} {}
 	private:
 		α Suspend()ι->void override{ Subscribe(); }
-		α Subscribe()ι->QL::SubscriptionAwait::Task;
+		α Subscribe()ι->TAwait<vector<QL::SubscriptionId>>::Task;
 		sp<QL::IQL> _qlServer; string _name; ESubscription _type; sv _cols; ESubscription _events; UserPK _executer;
 	};
 	struct EventsSubscribeAwait : VoidAwait<>{

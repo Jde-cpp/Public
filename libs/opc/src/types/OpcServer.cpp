@@ -18,13 +18,13 @@ namespace Jde::Opc{
 	{}
 
 	α OpcServerAwait::Select()ι->DB::RowAwait::Task{
-		let view = GetViewPtr( "opc_servers" );
+		let view = GetViewPtr( "servers" );
 		DB::WhereClause where;
 		if( !_includeDeleted )
 			where.Add( view->GetColumnPtr("deleted"), nullptr );
 		if( _key ){
 			if( _key->IsPrimary() )
-				where.Add( view->GetColumnPtr("id"), _key->PK() );
+				where.Add( view->GetColumnPtr("server_id"), _key->PK() );
 			else{
 				if( _key->NK().size() )
 					where.Add( view->GetColumnPtr("target"), _key->NK() );
@@ -32,7 +32,7 @@ namespace Jde::Opc{
 					where.Add( view->GetColumnPtr("is_default"), true );
 			}
 		}
-		auto statement = DB::Statement{ {view->GetColumns({"opc_id", "url", "certificate_uri", "is_default", "name", "target"})}, {view}, move(where) };
+		auto statement = DB::Statement{ {view->GetColumns({"server_id", "url", "certificate_uri", "is_default", "name", "target"})}, {view}, move(where) };
 		try{
 			vector<OpcServer> y;
 			let rows = co_await DS()->SelectCo( statement.Move() );

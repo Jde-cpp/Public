@@ -28,12 +28,8 @@
 		uint8: {type: "UInt8", length:: 8},
 		uint16: {type: "UInt16", length:: 16},
 		ulong: {type: "ULong", length:: 64},
-		uri: {type: "Uri"},
 		varbinary: {type: "VarBinary"},
 		varchar: {type: "Varchar"},
-		varTChar: {type: "VarTChar"},
-		varWChar: {type: "VarWChar"},
-		wchar: {type: "WChar"},
 	},
 	local sqlFunctions = self.sqlFunctions,
 	sqlFunctions:{

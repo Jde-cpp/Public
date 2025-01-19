@@ -1,6 +1,6 @@
 {
 	testing:{
-		tests: "AclTests.EnabledPermissions",
+		tests:: "AclTests.EnabledPermissions",
 		recreateDB:: true
 	},
 	dbServers: {

@@ -11,12 +11,13 @@ namespace Jde::QL{
 		using base=TAwait<jvalue>;
 		UpdateAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SRCE )ι;
 		α await_ready()ι->bool override;
-		α Suspend()ι->void override{ Execute(); }
+		α Suspend()ι->void override{ UpdateBefore(); }
 		α await_resume()ε->jvalue override;
 	private:
 		α CreateUpdate( const DB::Table& table )ε->DB::Value;
 		α CreateDeleteRestore( const DB::Table& table )ε->void;
 		α UpdateAfter( uint rowCount )ι->MutationAwaits::Task;
+		α UpdateBefore()ι->MutationAwaits::Task;
 		α AddStatement( const DB::Table& table, const jobject& input, bool nested, str criteria={} )ε->void;
 		α Execute()ι->TAwait<uint>::Task;
 		α Resume( jvalue&& v )ι->void;

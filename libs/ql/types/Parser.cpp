@@ -3,7 +3,7 @@
 
 #define let const auto
 namespace Jde{
-	α QL::Parse( string query )ε->RequestQL{
+	α QL::Parse( string query, SL sl )ε->RequestQL{
 		sv trimmed = Str::Trim( query );//TODO move(query).
 		Parser parser{ string{trimmed.starts_with("{") ? trimmed.substr(1) : trimmed}, "{}()," };
 		auto name = parser.Next();
@@ -21,6 +21,10 @@ namespace Jde{
 			return RequestQL{ parser.LoadMutation(!returnRaw ? parser.Next() : name, returnRaw) };
 		}else
 			return RequestQL{ parser.LoadTables(name, returnRaw) };
+	}
+	α QL::ParseSubscriptions( string query, SL sl )ε->vector<Subscription>{
+		auto request = Parse( move(query), sl ); THROW_IFSL( !request.IsSubscription(), "Expected subscription query." );
+		return request.Subscriptions();
 	}
 }
 namespace Jde::QL{

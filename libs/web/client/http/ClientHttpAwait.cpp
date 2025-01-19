@@ -28,7 +28,6 @@ namespace Jde::Web{
 					}
 				});
 				_sessions.erase_if( [](auto&& kv){ return kv.second.empty(); } );
-				_sessions.clear();
 			};
 		}
 	};

@@ -15,9 +15,6 @@ namespace Jde::DB{
 		α GetColumn( sv name, SRCE )Ε->const Column& override;//also looks into extended from table
 		α GetColumnPtr( sv name, SRCE )Ε->sp<Column> override;
 		α GetColumns( vector<string> names, SRCE )Ε->vector<sp<Column>> override;
-		//α GetExtendedFromTable()Ι->sp<View>;//um_users return um_entities
-		α NameWithoutType()Ι->sv;//users in um_users.
-		α Prefix()Ι->sv;//um in um_users.
 
 		α FKName()Ι->string;
 		α IsView()Ι->bool override{ return false; }

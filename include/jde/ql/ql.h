@@ -18,7 +18,8 @@ namespace Jde::QL{
 	α QueryArray( string query, UserPK executer, SRCE )ε->jarray;
 	α Execute( string query, UserPK executer, SRCE )ε->jobject;
 	α Mutation( string m, UserPK executer, SRCE )ε->jobject;
-	α Parse( string query )ε->RequestQL;
+	α Parse( string query, SRCE )ε->RequestQL;
+	α ParseSubscriptions( string query, SRCE )ε->vector<Subscription>;
 	α Configure( vector<sp<DB::AppSchema>>&& schemas )ε->void;
 
 	Ŧ AsId( const jobject& j, SRCE )ε->T;

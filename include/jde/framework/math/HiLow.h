@@ -1,3 +1,5 @@
+#pragma once
+
 namespace Jde{
 	struct HiLow{
 		HiLow( uint32 hi, uint32 low )ι:_combined{ (uint64_t) hi<<32 | low }{}

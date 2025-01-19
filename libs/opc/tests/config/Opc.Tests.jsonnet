@@ -1,6 +1,7 @@
 {
 	testing:{
-		tests: "AclTests.EnabledPermissions",
+		tests: "OpcServerTests.InsertFailed",
+		//
 		recreateDB:: true
 	},
 	opc:{
@@ -66,7 +67,7 @@
 		}
 	},
 	workers:{
-		executer: 1,
+		executor: 1,
 		drive: {threads: 1},
 		alarm: {threads: 1}
 	}

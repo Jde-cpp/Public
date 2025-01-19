@@ -25,8 +25,8 @@ namespace Jde::Web::Client{
 		Await _await;
 	};
 
-	α ClientQL::Subscribe( string&& query, QL::SubscriptionClientId clientId, UserPK executer, SL sl )ε->up<TAwait<vector<QL::SubscriptionId>>>{
-		auto await = _session->Subscribe( move(query), clientId, executer, sl );
+	α ClientQL::Subscribe( string&& query, sp<QL::IListener> listener, UserPK /*executer*/, SL sl )ε->up<TAwait<vector<QL::SubscriptionId>>>{
+		auto await = _session->Subscribe( move(query), listener, sl );
 		return mu<SubscribeQueryAwait>( move(await), sl );
 	}
 
@@ -52,11 +52,13 @@ namespace Jde::Web::Client{
 	template<> Ξ QueryAwait<jobject>::Resume( jvalue&& result )ι->void{
 		if( result.is_object() )
 			base::Resume( move(result.get_object()) );
+		else if( result.is_null() )
+			base::Resume( jobject{} );
 		else
 			ResumeExp( Exception{_sl, "Expected object."} );
 	}
 	template<> Ξ QueryAwait<jarray>::Resume( jvalue&& result )ι->void{
-		if( result.is_object() )
+		if( result.is_array() )
 			base::Resume( move(result.get_array()) );
 		else
 			ResumeExp( Exception{_sl, "Expected object."} );

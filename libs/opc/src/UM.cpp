@@ -62,7 +62,7 @@ namespace Jde::Opc{
 	α ProviderSelectAwait::Select()ι->TAwait<jobject>::Task{
 		try{
 			let query = Ƒ( "provider(target:\"{}\", providerTypeId:{}){{ id }}", _opcId, (uint8)Access::EProviderType::OpcServer );
-			let j = co_await *App::Client::QLServer()->QueryObject(query, App::Client::AppServiceUserPK() );
+			let j = co_await *App::Client::QLServer()->QueryObject( query, App::Client::AppServiceUserPK() );
 			let providerId = Json::FindNumber<Access::ProviderPK>( j, "id" ).value_or(0);
 			ResumeScaler( providerId );
 		}

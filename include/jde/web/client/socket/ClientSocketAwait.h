@@ -12,7 +12,7 @@ namespace Jde::Web::Client{
 			Trace{ ELogTags::SocketClientRead, FWD(m2), FWD(args)... };
 		}
 		α Log( SessionPK sessionId, steady_clock::time_point start, SL sl)ι->void{
-			if( ShouldTrace(ELogTags::SocketClientRead) ){
+			if( ShouldTrace(ELogTags::SocketClientRead) && ResponseMessage.size() ){
 				const auto msg = sv{Str::ToString(ResponseMessage, MessageArgs)}.substr( 0, MaxLogLength() );
 				Trace{ sl, ELogTags::SocketClientRead, "[{:x}]SocketReceive - {} - {}", sessionId, msg, Chrono::ToString( steady_clock::now() - start ) };
 			}
@@ -29,7 +29,7 @@ namespace Jde::Web::Client{
 		IClientSocketVoidAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι:
 			_request{ move(request) }, _requestId{ requestId }, _session{ session }, _start{ steady_clock::now() }{}
 
-		α Suspend( coroutine_handle<> h )ι->void;
+		α Suspend( std::any hCoroutine )ι->void;
 	protected:
 		α SessionId()ι->SessionPK;
 		string _request;
@@ -55,7 +55,9 @@ namespace Jde::Web::Client{
 	struct ClientSocketAwait final : IClientSocketVoidAwait, TAwait<T,TTimedTask<T>>{
 		using base = TAwait<T,TTimedTask<T>>;
 		ClientSocketAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι;
-		α Suspend()ι->void{ IClientSocketVoidAwait::Suspend( base::_h ); }
+		α Suspend()ι->void{
+			IClientSocketVoidAwait::Suspend( base::_h );
+		}
 		α await_resume()ε->T override;
 	};
 
@@ -72,7 +74,7 @@ namespace Jde::Web::Client{
 		base::AwaitResume();
 		typename base::TPromise* p = base::Promise();
 		THROW_IF( !p, "Not Connected" );
-		if( auto e = p->MoveError(); e )
+		if( auto e = p->MoveExp(); e )
 			e->Throw();
 		ASSERT( p->Value() );
 		p->Log( SessionId(), _start, base::_sl );

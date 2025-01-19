@@ -1,19 +1,20 @@
 ﻿#include "gtest/gtest.h"
 #include <jde/framework/settings.h>
 #include "../../../../Framework/source/Cache.h"
+#include <jde/framework/thread/execution.h>
+#include <jde/db/db.h>
 #include <jde/access/access.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/AppClientSocketSession.h>
-#include <jde/db/db.h>
 #include <jde/opc/uatypes/Logger.h>
-#include <jde/framework/thread/execution.h>
+#include <jde/opc/opc.h>
 #include "helpers.h"
 #define let const auto
 
 namespace Jde{
 	α OSApp::ProductName()ι->sv{ return "Tests.Opc"; }
 
- 	α Startup( int argc, char **argv )ι->Access::ConfigureAwait::Task{
+ 	α Startup( int argc, char **argv )ε->void{
 #ifdef _MSC_VER
 		ASSERT( Settings::Get<uint>("workers/drive/threads")>0 )
 #endif
@@ -34,13 +35,20 @@ namespace Jde{
 
 		let metaDataName{ "opc" };
 		auto schema = DB::GetAppSchema( metaDataName, App::Client::RemoteAcl() );
+		Opc::Configure( schema );
 		auto accessSchema = DB::GetAppSchema( "access", App::Client::RemoteAcl() );
-		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
-			DB::NonProd::Recreate( *schema );
-		auto await = Access::Configure( accessSchema, {schema}, App::Client::QLServer(), {UserPK::System} );
-		co_await await;
-		QL::Configure( {schema} );
-		Opc::AddHook();
+		try{
+			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
+				DB::NonProd::Recreate( *schema );
+			auto await = Access::Configure( accessSchema, {schema}, App::Client::QLServer(), {UserPK::System} );
+			BlockVoidAwait<Access::ConfigureAwait>( move(await) );
+			QL::Configure( {schema} );
+			Opc::AddHook();
+		}
+		catch( IException& e ){
+			e.Log();
+			e.Throw();
+		}
 	}
 }
 

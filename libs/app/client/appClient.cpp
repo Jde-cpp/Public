@@ -31,30 +31,31 @@ namespace Jde::App{
 		return session ? session->UserPK() : UserPK{};
 	}
 	α Client::QLServer()ε->sp<QL::IQL>{
-		auto session = Process::ShuttingDown() ? nullptr : AppClientSocketSession::Instance(); THROW_IF( !session, "Not connected." );
-		return ms<Web::Client::ClientQL>( session );
+		auto session = Process::ShuttingDown() ? nullptr : AppClientSocketSession::Instance();
+		THROW_IF( !session, "Not connected." );
+		return session->QLServer();
 	};
 }
 namespace Jde::App::Client{
 	struct LoginAwait final : TAwait<SessionPK>{
 		using base = TAwait<SessionPK>;
-		LoginAwait( SRCE )ι;
+		LoginAwait( SRCE )ε;
 		α Suspend()ι->void{ Execute(); };
 	private:
 		α Execute()ι->Web::Client::ClientHttpAwait::Task;
 		Web::Jwt _jwt;
 	};
 
-	α GetJwt()ι->Web::Jwt{
+	Ω getJwt()ε->Web::Jwt{
 		Crypto::CryptoSettings settings{ "http/ssl" };
 		auto [mod,exp] = Crypto::ModulusExponent( settings.PublicKeyPath );
-		auto name = Settings::FindString("credentials/name").value_or( "" );
-		auto target = Settings::FindString("credentials/target").value_or( name );
-		return Web::Jwt{ move(mod), exp, move(name), move(target), {}, {}, settings.PrivateKeyPath };
+		auto name = Settings::FindString("/credentials/name"); THROW_IF( !name, "credentials/name not found in settings." );
+		auto target = Settings::FindString("/credentials/target").value_or( *name );
+		return Web::Jwt{ move(mod), exp, move(*name), move(target), {}, {}, settings.PrivateKeyPath };
 	}
-	LoginAwait::LoginAwait( SL sl )ι:
+	LoginAwait::LoginAwait( SL sl )ε:
 		base{sl},
-		_jwt{ GetJwt() }
+		_jwt{ getJwt() }
 	{}
 
 	α LoginAwait::Execute()ι->ClientHttpAwait::Task{
@@ -78,9 +79,9 @@ namespace Jde::App{
 			if( wait )
 				co_await Threading::Alarm::Wait( _reconnectWait );
 			[]()->LoginAwait::Task {
-				SessionPK sessionId{};
+				SessionPK sessionId;
 				try{
-					sessionId = co_await LoginAwait{};
+					sessionId = co_await LoginAwait{};//http call
 				}
 				catch( IException& e ){
 					Trace( ELogTags::App, "Could not login to App Server:  {}", e.what() );
@@ -90,7 +91,7 @@ namespace Jde::App{
 				if( sessionId ){
 					[sessionId]()->StartSocketAwait::Task {
 						try{
-							co_await StartSocketAwait{ sessionId };
+							co_await StartSocketAwait{ sessionId };//create socket.
 						}
 						catch( IException& ){
 							Connect( true );

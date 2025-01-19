@@ -6,26 +6,26 @@
 
 #define let const auto
 namespace Jde::Access{
-	α EventTypeSubscribeAwait::Subscribe()ι->QL::SubscriptionAwait::Task{
+	α EventTypeSubscribeAwait::Subscribe()ι->TAwait<vector<QL::SubscriptionId>>::Task{
 		using enum ESubscription;
-		constexpr sv format{ "subscription {0}{2}{{ {1}{2}{{{3}}} }}" };
+		constexpr sv format{ "subscription {0}{2}{{ {1}{2}(subscriptionId:{3}){{{4}}} }}" };
 		let capitalized = DB::Names::Capitalize( _name );
 		auto listener = AccessListener::Instance();
 		try{
 			if( !empty(_events & Created) )
-				co_await _qlServer->Subscribe( Ƒ(format, capitalized, _name, "Created", _cols), listener, underlying(_type | Created), _executer );
+				co_await *_qlServer->Subscribe( Ƒ(format, capitalized, _name, "Created", underlying(_type | Created), _cols), listener, _executer );
 			if( !empty(_events & Deleted) )
-				co_await _qlServer->Subscribe( Ƒ(format, capitalized, _name, "Deleted", _cols), listener, underlying(_type | Deleted), _executer );
+				co_await *_qlServer->Subscribe( Ƒ(format, capitalized, _name, "Deleted", underlying(_type | Deleted), _cols), listener, _executer );
 			if( !empty(_events & Restored) )
-				co_await _qlServer->Subscribe( Ƒ(format, capitalized, _name, "Restored", _cols), listener, underlying(_type | Restored), _executer );
+				co_await *_qlServer->Subscribe( Ƒ(format, capitalized, _name, "Restored", underlying(_type | Restored), _cols), listener, _executer );
 			if( !empty(_events & Purged) )
-				co_await _qlServer->Subscribe( Ƒ(format, capitalized, _name, "Purged", _cols), listener, underlying(_type | Purged), _executer );
+				co_await *_qlServer->Subscribe( Ƒ(format, capitalized, _name, "Purged", underlying(_type | Purged), _cols), listener, _executer );
 			if( !empty(_events & Added) )
-				co_await _qlServer->Subscribe( Ƒ(format, capitalized, _name, "Added", _cols), listener, underlying(_type | Added), _executer );
+				co_await *_qlServer->Subscribe( Ƒ(format, capitalized, _name, "Added", underlying(_type | Added), _cols), listener, _executer );
 			if( !empty(_events & Removed) )
-				co_await _qlServer->Subscribe( Ƒ(format, capitalized, _name, "Removed", _cols), listener, underlying(_type | Removed), _executer );
+				co_await *_qlServer->Subscribe( Ƒ(format, capitalized, _name, "Removed", underlying(_type | Removed), _cols), listener, _executer );
 			if( !empty(_events & Updated) )
-				co_await _qlServer->Subscribe( Ƒ(format, capitalized, _name, "Updated", _cols), listener, underlying(_type | Updated), _executer );
+				co_await *_qlServer->Subscribe( Ƒ(format, capitalized, _name, "Updated", underlying(_type | Updated), _cols), listener, _executer );
 			Resume();
 		}
 		catch( IException& e ){

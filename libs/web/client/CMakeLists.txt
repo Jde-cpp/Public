@@ -22,10 +22,11 @@ endif()
 #######################################################
 
 add_library( ${CMAKE_PROJECT_NAME} )
+
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 file( GLOB sources *.cpp http/*.cpp socket/*.cpp )
 set( includeDir $ENV{JDE_DIR}/Public/include/jde/web/client )
-file( GLOB headers *.h ${includeDir}/*.h ${includeDir}/http/*.h ${includeDir}/proto/*.h ${includeDir}/socket/*.h  )
+file( GLOB headers *.h ${includeDir}/*.h ${includeDir}/http/*.h ${includeDir}/socket/*.h  )
 file( GLOB protos proto/*.proto )
 
 target_sources( ${CMAKE_PROJECT_NAME} PRIVATE ${sources} ${headers} ${protos} )

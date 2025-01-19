@@ -26,7 +26,7 @@ namespace Jde::Opc{
 	};
 	α PurgeOpcServer( optional<OpcPK> id=nullopt )ι->uint;
 
-	α SelectOpcServer( DB::Key id=0 )ι->jobject;
+	α SelectOpcServer( DB::Key id )ι->jobject;
 	α AddHook()ι->void;
 	α GetHook()ι->OpcQLHook*;
 }

@@ -3,7 +3,7 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLAwait.h>
-#include <jde/ql/QLSubscriptions.h>
+#include <jde/ql/LocalSubscriptions.h>
 #include <jde/ql/types/MutationQL.h>
 #include <jde/ql/types/Introspection.h>
 #include "LocalQL.h"
@@ -16,8 +16,6 @@ namespace Jde::QL{
 	vector<sp<DB::AppSchema>> _schemas;
   α QueryTables( const vector<TableQL>& tables, UserPK executer, bool log=false, SRCE )ε->jvalue;
 	α SetIntrospection( Introspection&& x )ι->void;
-//	α Query( RequestQL&& ql, UserPK executer, SL sl )ε->jvalue;
-//	α Query( const TableQL& ql, DB::Statement&& statement, UserPK executer, SRCE )ε->jvalue;
 }
 namespace Jde{
 	α QL::Configure( vector<sp<DB::AppSchema>>&& schemas )ε->void{
@@ -79,10 +77,10 @@ namespace Jde{
 		}
 		else if( ql.IsTableQL() )
 			tableQueries = move( ql.TableQLs() );
-		else if( ql.IsSubscription())
-			y = jobject{ {"subscriptions", Subscriptions::Add(move(ql.Subscriptions()))} };
+		else if( ql.IsSubscription() )
+			throw Exception{ sl, "Subscriptions are not supported in this context." }; //would need a listener
 		else
-			Subscriptions::Remove( move(ql.UnSubscribes()) );
+			throw Exception{ sl, "Unsubscribe is not supported in this context." }; //would need a listener
 
 		if( tableQueries.size() )
 		y = QueryTables( tableQueries, executer, true, sl );
@@ -97,6 +95,11 @@ namespace Jde::QL{
 		for( let& schema : _schemas ){
 			if( let pTable = schema->FindView(tableName); pTable )
 				return pTable;
+		}
+		//table was prefixed with schema name.
+		for( let& schema : _schemas ){
+			if( tableName.starts_with(schema->Name) && tableName.size()>schema->Name.size() )
+				return GetTable( tableName.substr(schema->Name.size()+1) );
 		}
 		THROW( "Could not find table '{}'", tableName );
 	}

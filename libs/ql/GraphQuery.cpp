@@ -217,10 +217,10 @@ namespace Jde::QL{
 	}
 
 	α Query( const TableQL& ql, DB::Statement&& statement, UserPK executer, SL sl )ε->jvalue{
-		Trace{ sl, _tags, "{}", ql.ToString() };
+		Trace{ sl, _tags, "QL Request: {}", ql.ToString() };
 		auto dbTable = GetTable( ql.DBName() );
 		let result = query( ql, move(statement), *dbTable->Schema->DS(), executer, nullptr, sl );
-		Trace{ sl, _tags, "{}", serialize(result).substr(0,1024) };
+		Trace{ sl, _tags, "QL Result: {}", serialize(result).substr(0,1024) };
 		return result;
 	}
 }

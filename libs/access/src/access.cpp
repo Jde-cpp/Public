@@ -11,12 +11,12 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/InsertClause.h>
 #include "accessInternal.h"
-//#include "awaits/EventsSubscribeAwait.h"
 #include "awaits/ResourceLoadAwait.h"
 #include "hooks/AclHook.h"
 #include "hooks/GroupHook.h"
 #include "hooks/RoleHook.h"
 #include "hooks/UserHook.h"
+
 
 #define let const auto
 
@@ -36,10 +36,10 @@ namespace Jde{
 		SetSchema( access );
 		Resources::Sync( schemas, qlServer, executer );
 		if( access ){
-			QL::Hook::Add( mu<Access::AclHook>() );
-			QL::Hook::Add( mu<Access::GroupHook>() );
-			QL::Hook::Add( mu<Access::RoleHook>() );
-			QL::Hook::Add( mu<Access::UserHook>() );
+			QL::Hook::Add( mu<Access::AclHook>() );//select, insertBefore
+			QL::Hook::Add( mu<Access::GroupHook>() );//add before
+			QL::Hook::Add( mu<Access::RoleHook>() );//add remove
+			QL::Hook::Add( mu<Access::UserHook>() );//select
 		}
 		return { qlServer, move(schemas), executer };
 	}

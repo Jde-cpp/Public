@@ -41,15 +41,15 @@ namespace Jde{
 
 		//IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, SRCE )ι;
 		IException( string value, ELogLevel level=DefaultLogLevel, uint32 code=0, sp<LogTag>&& tag={}, SRCE )ι;
-		$ IException( IException&& from, fmt::format_string<Args...> m, Args&& ...args )ι;
-		IException( IException&& from )ι;
-		IException( const IException& from )ι;
+		$ IException( IException&& e, fmt::format_string<Args...> m, Args&& ...args )ι;
+		IException( IException&& e )ι;
+		IException( const IException& e )ι;
 
 		$ IException( SL sl, std::exception&& inner, ELogLevel level, fmt::format_string<Args...> m="", Args&&... args )ι;
 		$ IException( SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&& ...args )ι;
 		$ IException( ELogTags tags, SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&& ...args )ι;
 		$ IException( SL sl, ELogLevel l, uint32 code, fmt::format_string<Args...> m, Args&&... args )ι;
-		Ω FromExceptionPtr( const std::exception_ptr& from, SRCE )ι->up<IException>;
+		Ω FromExceptionPtr( const std::exception_ptr& e, SRCE )ι->up<IException>;
 
 		virtual ~IException();
 
@@ -87,8 +87,9 @@ namespace Jde{
 	α make_exception_ptr( Exception&& e )ι->std::exception_ptr;
 	struct Γ Exception final : IException{
 		Exception( string what, ELogLevel l=ELogLevel::Debug, SRCE )ι;
-		Exception( Exception&& from )ι:IException{ move(from) }{}
-		Exception( const Exception& from )ι:IException{ from }{}
+		Exception( Exception&& e )ι:IException{ move(e) }{}
+		Exception( exception&& e, SRCE )ι:IException{ e.what(), DefaultLogLevel, 0, {}, sl }{}
+		Exception( const Exception& e )ι:IException{ e }{}
 		Exception( string what, uint32 code, ELogLevel level=ELogLevel::Debug, SRCE )ι:IException{what, level, code, {}, sl}{};
 		$ Exception( SL sl, std::exception&& inner, ELogLevel level, fmt::format_string<Args...> m="", Args&&... args )ι:IException{sl, move(inner), level, m, std::forward<Args>(args)...}{}
 		$ Exception( SL sl, std::exception&& inner, fmt::format_string<Args...> m="", Args&&... args )ι:Exception{sl, move(inner), DefaultLogLevel, m, std::forward<Args>(args)...}{}
@@ -171,8 +172,8 @@ namespace Jde{
 
 
 #define let const auto
-	$ IException::IException( IException&& from, fmt::format_string<Args...> m, Args&& ...args )ι:
-		_stack{ from._stack },
+	$ IException::IException( IException&& e, fmt::format_string<Args...> m, Args&& ...args )ι:
+		_stack{ e._stack },
 		_format{ sv{m.get().data(), m.get().size()} },
 		Code{ Calc32RunTime(_format) },
 		_level{ ELogLevel::Debug }{

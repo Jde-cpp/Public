@@ -1,9 +1,17 @@
 #include <jde/web/server/IWebsocketSession.h>
+#include <jde/ql/ql.h>
+#include <jde/ql/LocalSubscriptions.h>
 #include "Streams.h"
 
 #define let const auto
 
 namespace Jde::Web::Server{
+	struct SocketServerListener : QL::IListener{
+		SocketServerListener( sp<IWebsocketSession> session )ι: QL::IListener{Ƒ("[{}]Socket", session->Id())}, _session{ session }{}
+		α OnChange( const jvalue& j, uint clientId )ε->void{ _session->WriteSubscription( j, clientId ); }
+		sp<IWebsocketSession> _session;
+	};
+
 	IWebsocketSession::IWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
 		Stream{ ms<SocketStream>(move(stream), move(buffer)) },
 		_userEndpoint{ userEndpoint },
@@ -13,6 +21,7 @@ namespace Jde::Web::Server{
 
 	α IWebsocketSession::Run()ι->void{
 		LogRead( "Run", 0 );
+		_listener = ms<SocketServerListener>( shared_from_this() );
 		Stream->DoAccept( move(_initialRequest), shared_from_this() );
 	}
 
@@ -49,13 +58,38 @@ namespace Jde::Web::Server{
 		Log( level, ELogTags::SocketServerWrite, sl, "[{:x}.{:x}]{}", Id(), requestId, move(what) );
 	}
 
-	α IWebsocketSession::LogWriteException( const IException& e, RequestId requestId, ELogLevel level, SL sl )ι->void{
-		e.SetLevel( ELogLevel::NoLog );
+	α IWebsocketSession::LogWriteException( const exception& e, RequestId requestId, ELogLevel level, SL sl )ι->void{
+		if( let p = dynamic_cast<const IException*>(&e); p )
+			p->SetLevel( ELogLevel::NoLog );
 		Exception{ sl, level, "[{}.{}]{}", Ƒ("{:x}", Id()), Ƒ("{:x}", requestId), e.what() }; //:x doesn't work with exception formatter
 	}
 
-	α IWebsocketSession::Close()ι->void{ Stream->Close( shared_from_this() ); }
+	α IWebsocketSession::Close()ι->void{
+		if( _listener ){
+			QL::Subscriptions::StopListen( _listener );
+			_listener = nullptr;
+		}
+		Stream->Close( shared_from_this() );
+	}
 	α IWebsocketSession::OnClose()ι->void{
 		LogRead( "OnClose.", 0 );
+	}
+
+	α IWebsocketSession::AddSubscription( string&& query, RequestId requestId, SL sl )ε->vector<QL::SubscriptionId>{
+		auto subs = QL::ParseSubscriptions( move(query) );
+		vector<QL::SubscriptionId> subscriptionIds;
+		for( auto& sub : subs )
+			subscriptionIds.emplace_back( sub.Id );
+		if( _listener )
+			QL::Subscriptions::Listen( _listener, move(subs) );
+		return subscriptionIds;
+	}
+	α IWebsocketSession::RemoveSubscription( vector<QL::SubscriptionId>&& ids, RequestId requestId, SL sl )ι->void{
+		try{
+			QL::Subscriptions::StopListen( _listener, move(ids) );
+		}
+		catch( std::exception& e ){
+			WriteException( move(e), requestId );
+		}
 	}
 }

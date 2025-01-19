@@ -76,7 +76,6 @@ namespace Jde::DB{
 			Map->Parent->PKTable->Children.emplace_back( self );
 
 		//if mssql & schema is not default & ds schema!=config schema.
-		bool representsDBTable = !DBName.empty();//db tables copy constructed will already have db name set.
 		let isPhysical = Schema->DBSchema->IsPhysical();
 		if( isPhysical ){
 			DBName.clear();

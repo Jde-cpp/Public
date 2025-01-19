@@ -5,10 +5,10 @@
 namespace Jde::QL{ struct IQL; }
 namespace Jde::Access{
 	struct AccessListener : QL::IListener, IShutdown{
-		AccessListener( sp<QL::IQL> qlServer )ι:_qlServer{qlServer}{}
+		AccessListener( sp<QL::IQL> qlServer )ι:QL::IListener{"Access"},_qlServer{qlServer}{}
 		Ω Instance()ι->sp<AccessListener>;
 		Ω SetInstance( sp<QL::IQL> qlServer )ι->void;
-		α OnChange( const jvalue& j, QL::SubscriptionClientId clientId )ε->void override;
+		α OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void override;
 		α Shutdown( bool /*terminate*/ )ι->void;
 		sp<QL::IQL> _qlServer;
 	private:

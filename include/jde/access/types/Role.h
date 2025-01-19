@@ -1,6 +1,5 @@
 #pragma once
 #include <jde/access/usings.h>
-//#include "../accessInternal.h"
 
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Access{

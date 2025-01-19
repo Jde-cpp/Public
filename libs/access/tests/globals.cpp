@@ -18,7 +18,11 @@ namespace Tests{
 	Ω testUnauthGet( str table, str target, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
 		auto y = Select( table, target, GetRoot(), cols, includeDeleted );
 		if( y.empty() ){
-			EXPECT_THROW( Create(table, target, executer), IException );
+			try{
+				Create(table, target, executer);
+				throw std::runtime_error( "Should not be able to create." );
+			}
+			catch( IException& e ){ e.SetLevel(ELogLevel::NoLog); }
 			Create( table, target, GetRoot() );
 			EXPECT_THROW( Select(table, target, executer, cols, includeDeleted), IException );
 			y = Select( table, target, GetRoot(), cols, includeDeleted );
@@ -50,7 +54,7 @@ namespace Tests{
 		let parentTable = map.Parent->Table;
 		let parentTableName = Capitalize( parentTable->JsonName() );
 		let memberString = members.size()==1 ? Ƒ( "{}", members[0] ) : '['+Str::Join( members )+']';
-		return Ƒ( "mutation {}{}( \"id\":{}, \"{}\":{} )", op, parentTable->Name, pk, ToJson(map.Child->Name), memberString );
+		return Ƒ( "mutation {}{}( id:{}, {}:{} )", op, parentTableName, pk, ToJson(map.Child->Name), memberString );
 	}
 	Ω addRemove( sv op, const DB::Table& table, uint pk, vector<uint> members, UserPK executer )ε->jobject{
 		return QL::QueryObject( addRemoveQL(op, table, pk, members), executer );
@@ -200,11 +204,11 @@ namespace Tests{
 		let purgeJson = QL::Query( purge, executer );
 	}
 	α Tests::Delete( str table, uint id, UserPK executer )ε->jvalue{
-		let del = Ƒ( "mutation delete{}( \"id\":{} )", Capitalize(table), id );
+		let del = Ƒ( "mutation delete{}( id:{} )", Capitalize(table), id );
 		return QL::Query( del, executer );
 	}
 	α Tests::Restore( str table, uint id, UserPK executer )ε->jvalue{
-		let ql = Ƒ( "mutation restore{}( \"id\":{} )", Capitalize(table), id );
+		let ql = Ƒ( "mutation restore{}( id:{} )", Capitalize(table), id );
 		return QL::Query( ql, executer );
 	}
 	α Tests::TestAdd( str tableName, uint groupPK, vector<uint> members, UserPK executer )->void{

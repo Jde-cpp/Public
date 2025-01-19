@@ -25,6 +25,7 @@ namespace Jde{
 	using std::atomic;
 	using std::atomic_flag;
 	using std::byte;
+	using std::exception;
 	using std::function;
 	using lg = std::lock_guard<std::mutex>;
 	using std::make_shared;//refactor remove

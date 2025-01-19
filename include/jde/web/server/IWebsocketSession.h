@@ -13,10 +13,12 @@ namespace Jde::Web::Server{
 		α Run()ι->void;
 		α Id()Ι->SocketId{ return _id; }
 		α LogWrite( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;
-		β WriteSubscription( jvalue&& j, RequestId requestId )ι->void=0;
+		α AddSubscription( string&& query, RequestId requestId, SRCE )ε->vector<QL::SubscriptionId>;
+		α RemoveSubscription( vector<QL::SubscriptionId>&& ids, RequestId requestId, SRCE )ι->void;
+		β WriteSubscription( const jvalue& j, RequestId requestId )ι->void=0;
 		β WriteSubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void=0;
 		β WriteComplete( RequestId requestId )ι->void=0;
-		β WriteException( IException&& e, RequestId requestId )ι->void=0;
+		β WriteException( exception&& e, RequestId requestId )ι->void=0;
 		α UserPK()Ι{ return _userPK; }
 	protected:
 		sp<SocketStream> Stream;
@@ -27,7 +29,7 @@ namespace Jde::Web::Server{
 		β SendAck( uint32 id )ι->void=0;
 
 		α LogRead( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;
-		α LogWriteException( const IException& e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
+		α LogWriteException( const exception& e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α SessionId()ι{ return _sessionId; } α SetSessionId( SessionPK sessionId )ι{ _sessionId = sessionId; }
 		α Write( string&& m )ι->void;
 
@@ -42,6 +44,7 @@ namespace Jde::Web::Server{
 		TRequestType _initialRequest;
 		const SocketId _id{};
 		SessionPK _sessionId{};
+		sp<QL::IListener> _listener;
 		Jde::UserPK _userPK{};
 		friend struct SocketStream;
 	};

@@ -171,7 +171,7 @@ namespace Logging{
 					auto& out = TLevel>Information ? std::cerr : std::cout;
 					fmt::vformat_to( std::ostream_iterator<char>(out), m.get(), fmt::make_format_args(args...) );
 				}
-				BREAK_IF( /*break_ &&*/ TLevel>=BreakLevel() );
+				BREAK_IF( tags<=ELogTags::Write && TLevel>=BreakLevel() );//don't want to break for opc server.
 			}
 			catch( const fmt::format_error& e ){
 				Jde::Critical{ ELogTags::App, "could not format '{}' cargs: {} error: '{}'", m.get(), sizeof...(args), e.what() };

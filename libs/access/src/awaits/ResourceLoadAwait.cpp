@@ -4,6 +4,7 @@
 #include <jde/db/meta/Table.h>
 #include "../accessInternal.h"
 #include <jde/ql/IQL.h>
+#include "../../../../../Framework/source/DateTime.h"
 
 #define let const auto
 namespace Jde::Access{
@@ -44,8 +45,8 @@ namespace Jde::Access{
 			targets.emplace( Json::AsString(Json::AsObject(resource), "target") );
 		return targets;
 	}
-	α createExisting( string&& query, sp<QL::IQL> qlServer, UserPK executor )ε->void{
-		BlockAwait<TAwait<jvalue>, jvalue>( *qlServer->Query(move(query), executor) );
+	α createExisting( string&& query, sp<QL::IQL> qlServer, UserPK executor )ε->jvalue{
+		return BlockAwait<TAwait<jvalue>, jvalue>( *qlServer->Query(move(query), executor) );
 	}
 
 	α Resources::Sync( const vector<sp<DB::AppSchema>>& schemas, sp<QL::IQL> qlServer, UserPK executor )ε->void{
@@ -58,8 +59,10 @@ namespace Jde::Access{
 				if( empty(table->Operations) || existing.contains(jsonName) )
 					continue;
 
-				auto q = Ƒ( "createResource( schemaName:\"{}\", name:\"{}\", target:\"{}\", allowed:{}, description:\"From installation\" )", schema->Name, table->Name, move(jsonName), underlying(table->Operations) );
-				createExisting( move(q), qlServer, executor );
+				auto q = Ƒ( "createResource( schemaName:\"{}\", name:\"{}\", target:\"{}\", allowed:{}, description:\"From installation\" ){{id}}",
+					schema->Name, table->Name, move(jsonName), underlying(table->Operations) );
+				let result = createExisting( move(q), qlServer, executor );
+				QL::Query( Ƒ("deleteResource( id:{} )", QL::AsId<UserPK::Type>(result)), executor );
 			}
 		}
 	}

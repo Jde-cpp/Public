@@ -64,13 +64,5 @@ namespace Jde::DB{
 		return columns;
 	}
 
-	α TableNamePart( const Table& table, uint8 index )ι->string{
-		let name = table.NameWithoutType();//split returns temp
-		let nameParts = Str::Split( name, '_' );
-		return nameParts.size()>index ? Names::ToSingular( nameParts[index] ) : "";
-	}
-	α Table::Prefix()Ι->sv{ return Str::Split( Name, '_' )[0]; }
-	α Table::NameWithoutType()Ι->sv{ let underscore = Name.find_first_of('_'); return underscore==string::npos ? Name : sv{Name.data()+underscore+1, Name.size()-underscore-1 }; }
-
-	α Table::FKName()Ι->string{ return string{Names::ToSingular(NameWithoutType())}+"_id"; }
+	α Table::FKName()Ι->string{ return string{Names::ToSingular(Name)}+"_id"; }
 }

@@ -11,7 +11,7 @@
 
 namespace Jde{
 	α OSApp::ProductName()ι->sv{ return "Tests.UM"; }
-
+	up<exception> _exception;
  	α Startup( int argc, char **argv, bool& set )ε->Access::ConfigureAwait::Task{
 		try{
 	#ifdef _MSC_VER
@@ -26,15 +26,15 @@ namespace Jde{
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 				DB::NonProd::Recreate( *schema );
 			QL::Configure( {schema} );
-			auto await = Access::Configure( schema, {metaDataName}, QL::Local(), UserPK{UserPK::System} );
+			auto await = Access::Configure( schema, {schema}, QL::Local(), UserPK{UserPK::System} );
 			co_await await;
 
 			Access::Tests::SetSchema( schema );
-			set = true;
 		}
-		catch( IException& e ){//don't want unhandeled exception routine.
-			e.Throw();
+		catch( exception& e ){//don't want unhandeled exception routine.
+			_exception = mu<exception>( move(e) );
 		}
+		set = true;
 	}
 }
 
@@ -48,15 +48,15 @@ namespace Jde{
 	//Json::Parse( j, sl );
 
 	::testing::InitGoogleTest( &argc, argv );
-	try{
-		bool set{};
-		Startup( argc, argv, set );
-		while( !set )
-			std::this_thread::yield();
-	}catch( const IException& e ){
-		std::cerr << e.what() << std::endl;
+	bool set{};
+	Startup( argc, argv, set );
+	while( !set )
+		std::this_thread::yield();
+	if( _exception ){
+		std::cerr << _exception->what() << std::endl;
 		return EXIT_FAILURE;
 	}
+
 	::testing::GTEST_FLAG( filter ) = Settings::FindSV( "/testing/tests" ).value_or( "*" );
 	let result = RUN_ALL_TESTS();
 	Process::Shutdown( result );

@@ -14,6 +14,7 @@ namespace Jde::QL{
 		β InsertBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
 		β InsertAfter( const MutationQL&, UserPK, uint pk, SRCE )ι->HookResult{ return {}; }
 		β InsertFailure( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β UpdateBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
 		β UpdateAfter( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }//includes delete/restore.
 		β PurgeBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
 		β PurgeAfter( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
@@ -84,6 +85,7 @@ namespace Jde::QL{
 		α InsertBefore( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 		α InsertAfter( uint pk, const MutationQL&, UserPK, SRCE )ι->MutationAwaits;
 		α InsertFailure( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
+		α UpdateBefore( const MutationQL&, UserPK, SRCE )ι->MutationAwaits;
 		α UpdateAfter( const MutationQL&, UserPK executer, SRCE )ι->MutationAwaits;//includes delete/restore.
 		α PurgeBefore( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 		α PurgeAfter( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;

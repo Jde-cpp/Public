@@ -24,7 +24,7 @@ namespace Jde::QL{
 	template<class T=jvalue>
 	struct QLAwait : TAwait<T>{
 		using base = TAwait<T>;
-		QLAwait( TableQL&& ql, UserPK executer, SRCE )ι:_request{move(ql)}, _executer{executer}{}
+		QLAwait( TableQL&& ql, UserPK executer, SRCE )ι:base{sl},_request{move(ql)}, _executer{executer}{}
 		QLAwait( TableQL&& ql, DB::Statement&& statement, UserPK executer, SRCE )ι:
 		base{sl}, _request{ move(ql) }, _statement{ move(statement) }, _executer{ executer }{}
 		QLAwait( string query, UserPK executer, SRCE )ε:

@@ -23,7 +23,7 @@ namespace Jde::Access{
 			THROW_IFSL( !empty(configured.Denied & rights), "[{}]User denied '{}' access to '{}'.", executer.Value, ToString(rights), resourceName );
 			THROW_IFSL( empty(configured.Allowed & rights), "[{}]User does not have '{}' access to '{}'.", executer.Value, ToString(rights), resourceName );
 		}
-		else
+		else if( executer!=UserPK::System )
 			throw Exception{ sl, ELogLevel::Debug, "[{}]User not found.", executer.Value };
 	}
 	α Authorize::TestAdmin( ResourcePK resourcePK, UserPK executer, SL sl )ε->void{
@@ -46,6 +46,15 @@ namespace Jde::Access{
 		let configured = user->second.ResourceRights( resource.PK );
 		THROW_IFSL( !empty(configured.Denied & ERights::Administer), "[{}]User denied admin access to '{}'.", executer.Value, resource.Target );
 		THROW_IFSL( empty(configured.Allowed & ERights::Administer), "[{}]User does not have admin access to '{}'.", executer.Value, resource.Target );
+	}
+	α Authorize::TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SL sl )ε->void{
+		Jde::sl l{Mutex};
+		if( auto permission = Permissions.find(permissionPK); permission!=Permissions.end() ){
+			l.unlock();
+			TestAdmin( permission->second.ResourcePK, userPK, sl );
+		}
+		else
+			THROW( "[{}]Permission not found.", permissionPK );
 	}
 
 	α Authorize::RecursiveUsers( GroupPK groupPK, const ul& l, bool clear )ι->flat_set<UserPK>{

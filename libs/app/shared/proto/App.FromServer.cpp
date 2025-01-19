@@ -30,14 +30,15 @@ namespace Jde::App{
 		return t;
 	}
 
-	α FromServer::Exception( const IException& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission{
+	α FromServer::Exception( const exception& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission{
 		Proto::FromServer::Transmission t;
 		auto& m = *t.add_messages();
 		if( requestId )
 			m.set_request_id( *requestId );
 		auto& proto = *m.mutable_exception();
 		proto.set_what( e.what() );
-		proto.set_code( e.Code );
+		if( let p = dynamic_cast<const IException*>(&e); p )
+			proto.set_code( p->Code );
 		return t;
 	}
 

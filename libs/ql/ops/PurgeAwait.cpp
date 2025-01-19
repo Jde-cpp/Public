@@ -2,7 +2,7 @@
 #include <jde/db/Database.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/AppSchema.h>
-#include <jde/ql/QLSubscriptions.h>
+#include <jde/ql/LocalSubscriptions.h>
 #include <jde/ql/types/MutationQL.h>
 #include "../GraphQuery.h"
 
@@ -32,7 +32,7 @@ namespace Jde::QL{
 		table.Authorize( Access::ERights::Purge, _userPK, _sl );
 
 		auto pk = table.Extends ? table.SurrogateKeys[0] : table.GetPK();
-		vector<string> statements{ table.PurgeProcName.size() ? Ƒ("{}( ? )", table.PurgeProcName) : Ƒ("delete from {} where {}=?", table.DBName, pk->Name) };
+		vector<string> statements{ table.PurgeProcName.size() ? Ƒ("{}( ? )", table.Schema->Prefix+table.PurgeProcName) : Ƒ("delete from {} where {}=?", table.DBName, pk->Name) };
 		if( table.Extends ){
 			let extendedPurge = Statements( AsTable(*table.Extends), parameters );
 			statements.insert( end(statements), begin(extendedPurge), end(extendedPurge) );
@@ -79,7 +79,7 @@ namespace Jde::QL{
 		}
 	}
 	α PurgeAwait::Resume( jvalue&& v )ι->void{
-		Subscriptions::Push( _mutation, v );
+		Subscriptions::OnMutation( _mutation, v );
 		base::Resume( move(v) );
 	}
 }

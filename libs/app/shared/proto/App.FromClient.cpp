@@ -30,11 +30,12 @@ namespace Jde::App{
 		m.set_id( id );
 		m.set_value( value );
 	}
-	α FromClient::Exception( IException&& e )ι->PFromClient::Transmission{
+	α FromClient::Exception( exception&& e )ι->PFromClient::Transmission{
 		PFromClient::Transmission t;
 		auto& proto = *t.add_messages()->mutable_exception();
 		proto.set_what( e.what() );
-		proto.set_code( (uint32)e.Code );
+		if( auto p = dynamic_cast<IException*>(&e); p )
+			proto.set_code( (uint32)p->Code );
 		return t;
 	}
 

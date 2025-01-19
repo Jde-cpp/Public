@@ -17,7 +17,8 @@ cls;BT=asan;cmake -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_CXX_STANDARD=23 -DCMAKE_BU
 export CMAKE_CXX_FLAGS=-DCMAKE_CXX_FLAGS=\"$CXX_FLAGS\"
 #cmake -DCMAKE_INSTALL_PREFIX=$REPO_DIR/install/$CXX/$CMAKE_BUILD_TYPE/$LIB -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_STANDARD=$CMAKE_CXX_STANDARD -DCMAKE_POSITION_INDEPENDENT_CODE=$CMAKE_POSITION_INDEPENDENT_CODE -DCMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH $CMAKE_CXX_FLAGS $ARGS ../../..;
 cd $JDE_DIR/open62541/.build/g++-13/Debug;
-cmake -DCMAKE_INSTALL_PREFIX=/home/duffyj/code/libraries/install/g++-13/asan/open62541 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=23 -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_PREFIX_PATH=/home/duffyj/code/libraries/install/g++-13/asan -DUA_ENABLE_ENCRYPTION_OPENSSL=ON -DCMAKE_CXX_FLAGS="-ggdb -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -D_GLIBCXX_DEBUG -DUA_ENABLE_ENCRYPTION -static-libstdc++ -static-libasan -lrt" ../../..
+#CMAKE_C_COMPILER:STRING=/usr/bin/gcc-13
+cmake -DCMAKE_INSTALL_PREFIX=/home/duffyj/code/libraries/install/g++-13/asan/open62541 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=23 -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_PREFIX_PATH=/home/duffyj/code/libraries/install/g++-13/asan -DUA_ENABLE_ENCRYPTION_OPENSSL=ON -DCMAKE_CXX_FLAGS="-ggdb -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -D_GLIBCXX_DEBUG -DCMAKE_C_COMPILER=gcc-13 -DUA_ENABLE_ENCRYPTION -static-libstdc++ -static-libasan -lrt" ../../..
 #$ cls;rm CMakeCache.txt; cmake -DUA_LOGLEVEL=100 -DUA_ENABLE_ENCRYPTION=OPENSSL ..
 
 export CMAKE_BUILD_TYPE=RelWithDebInfo;

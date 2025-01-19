@@ -28,7 +28,7 @@ namespace Jde::Opc{
 	jobject UAClientTests::OpcServer{};
 
 	α UAClientTests::SetUpTestCase()ι->void{
-		OpcServer = Opc::SelectOpcServer();
+		OpcServer = Opc::SelectOpcServer( OpcServerTarget );
 		if( OpcServer.empty() ){
 			atomic_flag done;
 			[](atomic_flag& done)->ProviderCreatePurgeAwait::Task {
@@ -79,6 +79,7 @@ namespace Jde::Opc{
 		std::shared_lock l{ mtx };
 		cv.wait( l );
 		cv.wait( l );
+		THROW_IF( _sessionIds.size()!=3, "Expected 3 sessions, found {}.", _sessionIds.size() );
 		let creds = Credentials( _sessionIds[2], Json::AsString(OpcServer,"target") );
 		EXPECT_EQ( "user1", get<0>(creds) );
 		EXPECT_EQ( _password, get<1>(creds) );

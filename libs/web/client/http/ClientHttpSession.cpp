@@ -154,7 +154,7 @@ namespace Jde::Web::Client{
 		}
 		catch( IException& e ){
 			SetIsRunning( false );
-			h.promise().ResumeWithError( move(e), h );
+			h.promise().ResumeExp( move(e), h );
 		}
   }
 
@@ -180,7 +180,7 @@ namespace Jde::Web::Client{
 			//SetIsRunning( false );  //TODO implement keep-alive
 		}
 		catch( IException& e ){
-			h.promise().SetError( move(e) );
+			h.promise().SetExp( move(e) );
 		}
 		Close();
 		h.resume();

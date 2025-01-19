@@ -11,10 +11,13 @@
 #define Φ ΓAC auto
 namespace Jde::QL{ struct IListener; }
 namespace Jde::App::Client{
-	struct StartSocketAwait : VoidAwait<>{
-		using base = VoidAwait<>;
+	struct StartSocketAwait : TAwait<Proto::FromServer::ConnectionInfo>{
+		using base = TAwait<Proto::FromServer::ConnectionInfo>;
 		StartSocketAwait( SessionPK sessionId, SRCE )ι;
+	private:
 		α Suspend()ι->void override;
+		α RunSession()ι->VoidTask;
+		α SendSessionId()ι->Web::Client::ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task;
 		SessionPK _sessionId;
 	};
 	Φ AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>;
@@ -31,17 +34,19 @@ namespace Jde::App::Client{
 		α Connect( SessionPK sessionId, SRCE )ι->await<Proto::FromServer::ConnectionInfo>;
 		α SessionInfo( SessionPK sessionId, SRCE )ι->await<Web::FromServer::SessionInfo>;
 		α Query( string&& q, SRCE )ι->await<jvalue> override;
-		α Subscribe( string&& query, RequestId subscriptionClientId, Jde::UserPK executer, SRCE )ι->await<jarray> override;
+		α Subscribe( string&& query, sp<QL::IListener> listener, SRCE )ε->await<jarray> override;
 		α Unsubscribe( string&& query, SRCE )ε->await<vector<QL::SubscriptionId>>;
 		α UserPK()Ι{ return _userPK; }
+		α QLServer()ι{ return _qlServer; }
 	private:
 		α Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void;
-		α WriteException( IException&&, RequestId requestId )->void;
+		α WriteException( exception&&, RequestId requestId )->void;
 		α ProcessTransmission( Proto::FromServer::Transmission&& t, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId )ι->void;
 		α HandleException( std::any&& h, IException&& what, RequestId requestId )ι->void;
 		α OnRead( Proto::FromServer::Transmission&& transmission )ι->void override;
 		α OnClose( beast::error_code ec )ι->void override;
 		Jde::UserPK _userPK{};
+		sp<QL::IQL> _qlServer;
 	};
 }
 #undef Φ

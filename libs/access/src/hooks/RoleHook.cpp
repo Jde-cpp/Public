@@ -132,7 +132,7 @@ namespace Jde::Access{
 		return permissionStatement;
 	}
 
-	//query{ role( id:42 ){permissionRights{id allowed denied resource(target:"users",criteria:null)}} }} }}
+	//query{ role( id:42 ){permissionRights{id allowed denied resource(target:"users",criteria:null)}} }
 	α RoleSelectAwait::Select()ι->QL::QLAwait<>::Task{
 		try{
 			optional<jvalue> permissions;

@@ -10,7 +10,7 @@ namespace Jde::Opc{
 		using base = TAwait<sp<UAClient>>;
 		ConnectAwait( string&& opcTarget, string&& loginName, string&& pw, SRCE )ι:base{sl},_opcTarget{move(opcTarget)}, _loginName{move(loginName)}, _password{move(pw)}{}
 		α Suspend()ι->void override;
-		α await_resume()ι->sp<UAClient> override{ return Promise() ? base::await_resume() : _result; }
+		α await_resume()ε->sp<UAClient> override{ return Promise() ? base::await_resume() : _result; }
 		Ω Resume( sp<UAClient> pClient, str target, str loginName )ι->void;
 		Ω Resume( sp<UAClient> pClient, str target, str loginName, const UAException&& e )ι->void;
 	private:

@@ -21,8 +21,8 @@ namespace Jde::Opc{
 		Ω SetUpTestCase()ι->void{};
 		α SetUp()ι->void{ Wait.clear(); }
 		static uint OpcProviderId;
-		α InsertFailedImpl()ε->CreateOpcServerAwait::Task;
-		α PurgeFailedImpl()ε->CreateOpcServerAwait::Task;
+		α InsertFailedImpl()ε->Access::ProviderPK;
+		α PurgeFailedImpl()ε->Access::ProviderPK;
 		α CrudImpl()ε->CreateOpcServerAwait::Task;
 		α CrudImpl2( OpcPK id )ε->ProviderSelectAwait::Task;
 		α CrudPurge( OpcPK id )ε->PurgeOpcServerAwait::Task;
@@ -36,70 +36,52 @@ namespace Jde::Opc{
 		return BlockAwait<OpcServerAwait,vector<OpcServer>>( OpcServerAwait{} );
 	}
 
-	α OpcServerTests::InsertFailedImpl()ε->CreateOpcServerAwait::Task{
+	α OpcServerTests::InsertFailedImpl()ε->Access::ProviderPK{
 		let target = OpcServerTarget;
 		auto jInsert = Json::Parse( Ƒ("{{\"target\":\"{}\"}}", target) );
 		QL::MutationQL insert{ "createOpcServer", move(jInsert), nullopt, true };
 
-		let existingProviderPK = GetProviderPK( target);
-		let existingServer = SelectOpcServer();
-		let existingOpcPK = Json::AsNumber<OpcPK>( existingServer, "id" );
-		let& table = GetViewPtr( "opc_servers" );
+		let existingProviderPK = GetProviderPK( target );
+		let existingServer = SelectOpcServer( target );
+		let existingOpcPK = Json::FindNumber<OpcPK>( existingServer, "id" ).value_or(0);
+		let& table = GetViewPtr( "servers" );
 		if( !existingOpcPK && !existingProviderPK ){
-			auto pk = co_await CreateOpcServerAwait();
-			DS()->Execute(	Ƒ("delete from {} where id='{}'", table->DBName, pk) ); //InsertFailed checks if failure occurs because exists.
-			[&](auto&& insert, auto self)->TAwait<jvalue>::Task {
-				co_await *GetHook()->InsertFailure( insert, {UserPK::System} );
-				self->Id = GetProviderPK( target );
-				self->Wait.test_and_set();
-				self->Wait.notify_one();
-			}( insert, this );
+			auto pk = BlockAwait<CreateOpcServerAwait,OpcPK>( CreateOpcServerAwait{} );
+			DS()->Execute( Ƒ("delete from {} where server_id='{}'", table->DBName, pk) ); //InsertFailed checks if failure occurs because exists.
 		}
 		else{
 			if( existingOpcPK )
-				DS()->Execute(	Ƒ("delete from {} where id='{}'", table->DBName, existingOpcPK) ); //InsertFailed checks if failure occurs because exists.
-			[=,this](auto&& insert, auto self)->TAwait<jvalue>::Task {
-				co_await *GetHook()->InsertFailure( insert, {UserPK::System} );
-				Id = GetProviderPK( target );
-				Wait.test_and_set();
-				Wait.notify_one();
-			}( insert, this );
+				DS()->Execute(	Ƒ("delete from {} where server_id='{}'", table->DBName, existingOpcPK) ); //InsertFailed checks if failure occurs because exists.
 		}
+		BlockAwait<TAwait<jvalue>,jvalue>( *GetHook()->InsertFailure(insert, {UserPK::System}) );
+		return GetProviderPK( target );
 	}
 
 	TEST_F( OpcServerTests, InsertFailed ){
-		InsertFailedImpl();
-		Wait.wait( false );
-		ASSERT_EQ( 0, std::any_cast<Access::ProviderPK>(Id) );
+		ASSERT_EQ( 0, InsertFailedImpl() );
 	}
 
-	α OpcServerTests::PurgeFailedImpl()ε->CreateOpcServerAwait::Task{
-		let existingServer = SelectOpcServer();
-		auto opcPK = Json::AsNumber<OpcPK>( existingServer, "id" );
+	α OpcServerTests::PurgeFailedImpl()ε->Access::ProviderPK{
+		let existingServer = SelectOpcServer( OpcServerTarget );
+		auto opcPK = Json::FindNumber<OpcPK>( existingServer, "id" ).value_or(0);
 		if( !opcPK )
-			opcPK = co_await CreateOpcServerAwait();
+			opcPK = BlockAwait<CreateOpcServerAwait,OpcPK>( CreateOpcServerAwait{} );
 		Id = opcPK;
-		[](auto opcPK, auto self)->ProviderCreatePurgeAwait::Task {
-			co_await ProviderCreatePurgeAwait{OpcServerTarget, false};//BeforePurge mock.
-			[](auto opcPK, auto self)->TAwait<jvalue>::Task {
-				QL::MutationQL purge{ "purgeOpcServer", { {"id", opcPK} }, nullopt, true };
-				co_await *GetHook()->PurgeFailure( purge, {UserPK::System} );
-				self->Result = GetProviderPK( OpcServerTarget );
-				self->Wait.test_and_set();
-				self->Wait.notify_one();
-			}(opcPK, self);
-		}(opcPK, this);
+		BlockAwait<ProviderCreatePurgeAwait,Access::ProviderPK>( ProviderCreatePurgeAwait{OpcServerTarget, false} );//BeforePurge mock.
+
+		QL::MutationQL purge{ "purgeOpcServer", { {"id", opcPK} }, nullopt, true };
+		BlockAwait<TAwait<jvalue>,jvalue>( *GetHook()->PurgeFailure(purge, {UserPK::System}) );
+		return GetProviderPK( OpcServerTarget );
 	}
 	TEST_F( OpcServerTests, PurgeFailed ){
-		PurgeFailedImpl();
-		Wait.wait( false );
-		ASSERT_NE( 0, std::any_cast<Access::ProviderPK>(Result) );
-		PurgeOpcServer( std::any_cast<OpcPK>(Id) );
+		let providerPK = PurgeFailedImpl();
+		ASSERT_NE( 0, providerPK );
+		PurgeOpcServer();
 	}
 
 	α OpcServerTests::CrudImpl()ε->CreateOpcServerAwait::Task{
-		let existingServer = SelectOpcServer();
-		let existingOpcPK = Json::AsNumber<OpcPK>( existingServer, "id" );
+		let existingServer = SelectOpcServer( OpcServerTarget );
+		let existingOpcPK = Json::FindNumber<OpcPK>( existingServer, "id" ).value_or(0);
 		if( existingOpcPK )
 			PurgeOpcServer( existingOpcPK );
 		let createdId = co_await CreateOpcServerAwait();
@@ -112,7 +94,7 @@ namespace Jde::Opc{
 	}
 
 	α OpcServerTests::CrudImpl2( OpcPK id )ε->ProviderSelectAwait::Task{
-		auto readJson = SelectOpcServer();
+		auto readJson = SelectOpcServer( OpcServerTarget );
 		THROW_IF( Json::AsNumber<OpcPK>(readJson, "id")!=id, "id={} readJson={}", id, serialize(readJson) );
 		let target = Json::AsString( readJson, "target" );
 
@@ -120,8 +102,8 @@ namespace Jde::Opc{
 		THROW_IF( providerId==0, "providerId==0" );;
 
 		let description = "new description";
-		let update = Ƒ( "{{ mutation updateOpcServer( 'id':{}, 'input': {{'description':'{}'}} ) }}", id, description );
-		let updateJson = QL::Query( Str::Replace(update, '\'', '"'), {UserPK::System} );
+		let update = Ƒ( "mutation updateOpcServer( id:{}, description:\"{}\" ) }}", id, description );
+		let updateJson = QL::Query( update, {UserPK::System} );
 		Trace( _tags, "updateJson={}", serialize(updateJson) );
 		let updated = SelectOpcServer( id );
 		THROW_IF( Json::AsString( updated, "description" )!=description, "description={} updated={}", description, serialize(updated) );

@@ -14,6 +14,7 @@ else()
 	link_directories( ${fmt_DIR}/../.. )
 	link_directories( ${Protobuf_DIR}/../.. )
 	link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
+	link_directories( ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} )
 	link_directories( $ENV{REPO_DIR}/install/g++-13/asan/jsonnet/lib/ )
 endif()
 #######################################################
@@ -35,7 +36,12 @@ else()
 	target_link_libraries( ${CMAKE_PROJECT_NAME} jsonnet++ )
 endif()
 target_link_libraries( ${CMAKE_PROJECT_NAME} gtest_main )
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.Access Jde.QL Jde.DB )
+target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.DB )
+#if(	${USE_SHARED_LIBS} )
+#	target_link_libraries( ${CMAKE_PROJECT_NAME} Jde.Accessxxx Jde.QLxxx )
+#else()
+	target_link_libraries( ${CMAKE_PROJECT_NAME} libJde.Access.a libJde.QL.a )
+#endif()
 #######################################################
 target_precompile_headers(${CMAKE_PROJECT_NAME}
   PRIVATE

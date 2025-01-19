@@ -26,7 +26,8 @@ namespace Jde::Opc
 	}
 	α ConnectAwait::Create()ι->OpcServerAwait::Task{
 		try{
-			auto servers = co_await OpcServerAwait{ _opcTarget }; THROW_IF( !servers.size()==0, "Could not find opc server:  '{}'", _opcTarget );
+			auto servers = co_await OpcServerAwait{ _opcTarget };
+			THROW_IF( servers.empty(), "Could not find opc server:  '{}'", _opcTarget );
 			auto pClient = ms<UAClient>( move(servers.front()), _loginName, _password );
 			pClient->Connect();
 		}
@@ -36,9 +37,9 @@ namespace Jde::Opc
 			auto key = make_tuple( move(_opcTarget), move(_loginName) );
 			for( auto& h : _requests[key] ){
 				if( ua )
-					h.promise().ResumeWithError( UAException{*ua}, h );
+					h.promise().ResumeExp( UAException{*ua}, h );
 				else
-					h.promise().ResumeWithError( Exception{e.what(), e.Code, e.Level(), e.Stack().front()}, h );
+					h.promise().ResumeExp( Exception{e.what(), e.Code, e.Level(), e.Stack().front()}, h );
 			}
 			_requests.erase( key );
 		}
@@ -62,6 +63,6 @@ namespace Jde::Opc
 		Resume( client, target, loginName, [=](ConnectAwait::Handle h)mutable{ h.promise().Resume(move(client), h); } );
 	}
 	α ConnectAwait::Resume( sp<UAClient> client, str target, str loginName, const UAException&& e )ι->void{
-		Resume( move(client), target, loginName, [sc=e.Code](ConnectAwait::Handle h){ h.promise().ResumeWithError(UAException{(StatusCode)sc}, h); } );
+		Resume( move(client), target, loginName, [sc=e.Code](ConnectAwait::Handle h){ h.promise().ResumeExp(UAException{(StatusCode)sc}, h); } );
 	}
 }

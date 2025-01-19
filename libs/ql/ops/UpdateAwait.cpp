@@ -7,8 +7,7 @@
 #include <jde/db/meta/Table.h>
 #include <jde/access/IAcl.h>
 #include "../GraphQuery.h"
-#include <jde/ql/QLSubscriptions.h>
-
+#include <jde/ql/LocalSubscriptions.h>
 #include "../types/QLColumn.h"
 #include <jde/db/generators/UpdateClause.h>
 
@@ -106,6 +105,15 @@ namespace Jde::QL{
 		_updates.push_back( move(update) );
 	}
 
+	α UpdateAwait::UpdateBefore()ι->MutationAwaits::Task{
+		try{
+			co_await Hook::UpdateBefore( _mutation, _userPK );
+			Execute();
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
 	α UpdateAwait::Execute()ι->TAwait<uint>::Task{
 		try{
 			uint rowCount{};
@@ -127,7 +135,7 @@ namespace Jde::QL{
 		}
 	}
 	α UpdateAwait::Resume( jvalue&& v )ι->void{
-		Subscriptions::Push( _mutation, v );
+		Subscriptions::OnMutation( _mutation, v );
 		base::Resume( move(v) );
 	}
 	α UpdateAwait::await_resume()ε->jvalue{

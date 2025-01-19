@@ -13,6 +13,7 @@ namespace Jde::Access{
 		α Test( str schemaName, str resourceName, ERights rights, UserPK userPK, SRCE )ε->void override;
 		α TestAdmin( str resource, UserPK userPK, SRCE )ε->void;
 		α TestAdmin( ResourcePK resourcePK, UserPK userPK, SRCE )ε->void;
+		α TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SRCE )ε->void;
 
 		α TestAddGroupMember( GroupPK groupPK, flat_set<IdentityPK::Type>&& memberPKs, SRCE )ε->void;
 		α TestAddRoleMember( RolePK parent, RolePK child, SRCE )ε->void;

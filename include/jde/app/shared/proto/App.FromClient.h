@@ -7,7 +7,7 @@
 namespace Jde::App::FromClient{
 	namespace PFromClient = Jde::App::Proto::FromClient;
 	Φ AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, RequestId requestId )ι->PFromClient::Transmission;
-	Φ Exception( IException&& e )ι->PFromClient::Transmission;
+	Φ Exception( exception&& e )ι->PFromClient::Transmission;
 	Φ Query( string query, RequestId requestId )ι->PFromClient::Transmission;
 	Φ Instance( str application, str instanceName, SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission;
 	Φ ToStatus( vector<string>&& details )ι->PFromClient::Status;

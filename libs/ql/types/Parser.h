@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/ql/QLSubscriptions.h>
+#include <jde/ql/LocalSubscriptions.h>
 #include <jde/ql/types/MutationQL.h>
 #include <jde/ql/types/TableQL.h>
 
@@ -7,7 +7,7 @@
 namespace Jde::QL{
 	struct Subscription;
 	constexpr array<sv,9> MutationQLStrings = { "create", "update", "delete", "restore", "purge", "add", "remove", "start", "stop" };
-
+	Ξ ToString( EMutationQL type )ι->string{ return FromEnum(MutationQLStrings, type); }
 	struct Parser{
 		Parser( string text, sv delimiters )ι: _text{move(text)}, Delimiters{delimiters}{}
 		α Next()ι->string;
