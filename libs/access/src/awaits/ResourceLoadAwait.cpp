@@ -12,18 +12,23 @@ namespace Jde::Access{
 	α ResourceLoadAwait::Load()ι->QL::QLAwait<jarray>::Task{
 		ResourcePermissions y;
 		try{
-			string schemas; schemas.reserve( 1024 );
-			for( let& schema : _schemas )
-				schemas += Ƒ( "\"{}\",", schema->Name );
-			schemas.pop_back();
-			let ql = Ƒ( "resources( schemaName:[{}] ){{ id schemaName target criteria deleted }}", schemas );
-			let resources = co_await *_qlServer->QueryArray( ql, _executer );
+			string ql{ "resources" }; ql.reserve( 1024 );
+			string schemaInput;
+			if( _schemas.size() ){
+				schemaInput.reserve( 256 );
+				schemaInput+="(schemaName:[";
+				for( let& schema : _schemas )
+					schemaInput += Ƒ( "\"{}\",", schema->Name );
+				schemaInput.back() = ']';
+				schemaInput += ')';
+			}
+			let resources = co_await *_qlServer->QueryArray( Ƒ("resources{}{{ id schemaName target criteria deleted }}", schemaInput), _executer );
 			for( let& value : resources ){
 				auto resource = Resource{ Json::AsObject(value) };
 				y.Resources.emplace( resource.PK, move(resource) );
 			}
 
-			let qlPermissions = Ƒ( "permissionRights{{ id allowed denied resource( schemaName:[{}] ){{id}} }}", move(schemas) );
+			let qlPermissions = Ƒ( "permissionRights{{ id allowed denied resource{}{{id}} }}", move(schemaInput) );
 			let permissions = co_await *_qlServer->QueryArray( qlPermissions, _executer );
 			for( let& value : permissions ){
 				let permission = Permission{ Json::AsObject(value) };

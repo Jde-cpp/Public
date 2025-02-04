@@ -13,5 +13,5 @@ namespace Jde::Access{
 		flat_set<IdentityPK> Members;
 	};
 
-	α IsChild( const flat_map<GroupPK,Group>& groups, GroupPK parentPK, GroupPK childPK )ι->bool;
+	α IsChild( const flat_map<GroupPK,Group>& members, GroupPK parentPK, GroupPK childPK )ι->bool;
 }

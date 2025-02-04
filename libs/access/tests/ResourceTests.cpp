@@ -24,7 +24,7 @@ namespace Jde::Access::Tests{
 		let ql = "resources( schemaName:\"access\", criteria:null ){ id allowed denied name attributes created deleted updated target description }";
 		let qlResult = QL::Query( ql, GetRoot() );
 		let& resources = Json::AsArray( qlResult );
-		ASSERT_EQ( resources.size(), 4 ); //"users", identityGroups", "roles", "resources"
+		ASSERT_EQ( resources.size(), 4 ); //"users", "members", "roles", "resources"
 		constexpr ERights base = ERights::Create | ERights::Read | ERights::Update | ERights::Delete | ERights::Purge | ERights::Administer;
 		Trace{ ELogTags::Test, "base={:x}"sv, underlying(base) };
 		for( let& v : resources ){
@@ -40,7 +40,7 @@ namespace Jde::Access::Tests{
 	}
 
 	TEST_F( ResourceTests, Crud ){
-		constexpr sv target = "identityGroups";
+		constexpr sv target = "members";
 		let userPK = GetId( GetUser("resourceTester", GetRoot()) );
 		let filter = Ƒ( "userId:{{ eq: {} }}", userPK );
 		auto resources = selectResources( target, filter );

@@ -39,7 +39,9 @@ namespace Jde{
 		auto accessSchema = DB::GetAppSchema( "access", App::Client::RemoteAcl() );
 		try{
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
-				DB::NonProd::Recreate( *schema );
+				DB::NonProd::Recreate( *schema, QL::Local() );
+			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
+				DB::SyncSchema( *schema, QL::Local() );
 			auto await = Access::Configure( accessSchema, {schema}, App::Client::QLServer(), {UserPK::System} );
 			BlockVoidAwait<Access::ConfigureAwait>( move(await) );
 			QL::Configure( {schema} );

@@ -56,8 +56,12 @@ namespace Jde::App{
 
 		return t;
 	}
-	α FromClient::Query( string query, RequestId requestId )ι->PFromClient::Transmission{
-		return setMessage( requestId, [&](auto& m){ *m.mutable_query()=move(query); } );
+	α FromClient::Query( string query, RequestId requestId, bool returnRaw )ι->PFromClient::Transmission{
+		return setMessage( requestId, [&](auto& m){
+			auto& request = *m.mutable_query();
+			request.set_text( query );
+			request.set_return_raw( returnRaw );
+		} );
 	}
 
 	α FromClient::ToStatus( vector<string>&& details )ι->PFromClient::Status{

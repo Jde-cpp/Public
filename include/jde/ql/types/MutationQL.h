@@ -1,4 +1,5 @@
 #pragma once
+#include <jde/db/Key.h>
 #include "TableQL.h"
 #include "../usings.h"
 
@@ -11,10 +12,13 @@ namespace Jde::QL{
 		//α Input(SRCE)Ε->const jobject&;
 		template<class T=uint> α Id()Ι->T;
 		template<class T=uint> α FindId()Ι->optional<T>;
-		α FindParam( sv name )Ε->const jvalue*;
-		//α InputParam( sv name )Ε->const jvalue&;
+		α GetKey(SRCE)ε->DB::Key;
+		α FindKey(SRCE)ι->optional<DB::Key>;
+		α FindParam( sv name )Ι->const jvalue*;
+		α GetParam( sv name, SRCE )Ε->const jvalue&;
 		α ParentPK()Ε->uint;
 		α ChildPK()Ε->uint;
+		α ToString()Ι->string;
 
 		string CommandName;
 		string JsonTableName;

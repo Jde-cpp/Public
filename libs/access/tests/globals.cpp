@@ -87,7 +87,7 @@ namespace Tests{
 		return memberString;
 	}
 	α Tests::AddToGroup( GroupPK id, vector<IdentityPK> members, UserPK executer )ε->void{
-		let ql =	Ƒ( "mutation addIdentityGroup( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
+		let ql =	Ƒ( "mutation addGrouping( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
 		let addJson = QL::Query( ql, executer );
 	}
 
@@ -95,7 +95,7 @@ namespace Tests{
 		addRemove( "remove", table, groupPK, members, executer );
 	}
 	α Tests::RemoveFromGroup( GroupPK id, vector<IdentityPK> members, UserPK executer )ε->void{
-		let ql = Ƒ( "mutation removeIdentityGroup( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
+		let ql = Ƒ( "mutation removeGrouping( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
 		let removeJson = QL::Query( ql, executer );
 	}
 
@@ -112,9 +112,9 @@ namespace Tests{
 		return { Tests::GetId(createJson) };//{"user":{"id":7}}}
 	}
 	α createGroup( str target, UserPK executer )ε->GroupPK{
-		let create = Ƒ( "mutation createIdentityGroup(  target:'{0}', name:'{0} - name', description:'{0} - description' ){{id}}", target );
+		let create = Ƒ( "mutation createGrouping(  target:'{0}', name:'{0} - name', description:'{0} - description' ){{id}}", target );
 		let createJson = QL::QueryObject( Str::Replace(create, '\'', '"'), executer );
-		return {AsNumber<GroupPK::Type>( createJson, "createIdentityGroup/id")};
+		return {AsNumber<GroupPK::Type>( createJson, "createGrouping/id")};
 	}
 	α columns( sv cols, bool includeDeleted )ε->string{
 		return Ƒ( "id name attributes created updated target description {} {}", cols, includeDeleted ? "deleted" : "" );
@@ -133,7 +133,7 @@ namespace Tests{
 	}
 
 	α Tests::SelectGroup( str target, UserPK executer, bool includeDeleted )ε->jobject{
-		let ql = Ƒ( "identityGroup(target:\"{}\"){{ id name attributes created updated target description {} members{{id name}} }}", target, includeDeleted ? "deleted" : "" );
+		let ql = Ƒ( "grouping(target:\"{}\"){{ id name attributes created updated target description {} members{{id name}} }}", target, includeDeleted ? "deleted" : "" );
 		return QL::QueryObject( ql, executer );
 	}
 	α Tests::SelectPermission( ResourcePK resourcePK, UserPK executer )ε->jobject{
@@ -167,6 +167,7 @@ namespace Tests{
 		_root = root.empty()
 			? createUser( "root", EProviderType::Google, {0} )
 			: UserPK{ GetId(root) };
+//		ASSERT( DS().Scaler<uint>( "select count(*) from users where identity_id=?", {{*_root}})==0 );
 		return *_root;
 	}
 
@@ -200,7 +201,7 @@ namespace Tests{
 		let purgeJson = QL::Query( purge, executer );
 	}
 	α Tests::PurgeGroup( GroupPK id, UserPK executer )ε->void{
-		let purge = Ƒ( "mutation purgeIdentityGroup(\"id\":{})", id.Value );
+		let purge = Ƒ( "mutation purgeGrouping(\"id\":{})", id.Value );
 		let purgeJson = QL::Query( purge, executer );
 	}
 	α Tests::Delete( str table, uint id, UserPK executer )ε->jvalue{

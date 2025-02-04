@@ -27,13 +27,13 @@ namespace Jde::Access{
 		try{
 			let& extension = GetTable( "identities" );
 			auto pk = extension->GetPK();
-			let& groups = GetTable( "identity_groups" );
+			let& groups = GetTable( "groupings" );
 			DB::Statement statement;
 			statement.From+={ pk, groups->GetColumnPtr("member_id"), true };
 			statement.From+={ groups->SurrogateKeys[0], pk, true, "groups_" };
 			statement.Where.Add( pk, DB::Value{pk->Type, Json::AsNumber<Jde::UserPK::Type>(Query.Args, "id")} );
 			statement.Where.Add( extension->GetColumnPtr("deleted"), DB::Value{} );
-			auto groupTable = find_if( Query.Tables, [](let& t){ return t.JsonName=="identityGroups";} );
+			auto groupTable = find_if( Query.Tables, [](let& t){ return t.JsonName=="groupings";} );
 			flat_map<uint8,string> qlColumns;
 			uint i=0;
 			for( auto& c : groupTable->Columns ){
@@ -45,24 +45,22 @@ namespace Jde::Access{
 				}
 			}
 			let rows = co_await extension->Schema->DS()->SelectCo( statement.Move(), _sl );
-			jarray identityGroups;
+			jarray jgroups;
 			for( auto& row : rows ){
 				jobject group;
 				for( auto& [i, name] : qlColumns )
 					group[name] = (*row)[i].ToJson();
-				identityGroups.push_back( group );
+				jgroups.push_back( group );
 			}
-			jobject y;
-			y["identityGroups"] = identityGroups;
-			Resume( move(y) );
+			Resume( jobject{{"groupings", jgroups}} );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
-	} 
+	}
 
 	α UserHook::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
-		return query.JsonName.starts_with( "user" ) && query.FindTable("identityGroups")
+		return query.JsonName.starts_with( "user" ) && query.FindTable("groupings")
 			? mu<UserGraphQLAwait>( query, userPK, sl )
 			: nullptr;
 	}

@@ -56,14 +56,14 @@ namespace Jde::Access{
 				}
 				statement->Where = QL::ToWhereClause( membersQL, groupTable, membersQL.FindColumn("deleted")!=nullptr );
 				//statement->Where.Remove( "is_group" );
-				//statement->Where.Replace( "identities.", "identity_groups." );
+				//statement->Where.Replace( "identities.", "members." );
 				auto membersResult = co_await QL::QLAwait( move(membersQL), move(*statement), UserPK, _sl );
 				if( membersResult.is_array() )
 					members = move( membersResult.get_array() );
 				else if( membersResult.is_object() )
 					members = jarray{ move(membersResult.get_object()) };
 			}
-			Query.JsonName = Query.IsPlural() ? "identities" : "identity"; //from identityGroups, want distinct + nothing in identityGroups table except for members.
+			Query.JsonName = Query.IsPlural() ? "identities" : "identity"; //from members, want distinct + nothing in members table except for members.
 			Query.AddFilter( "is_group", true );
 			auto groups = co_await QL::QLAwait( move(Query), UserPK, _sl );
 			if( !members )
@@ -91,7 +91,6 @@ namespace Jde::Access{
 			}
 			else if( groups.is_object() ) /*vs null.*/
 				addMembers( groups.get_object() );
-			//Trace( ELogTags::Access, "{}", serialize(groups) );
 			Resume( move(groups) );
 		}
 		catch( boost::system::system_error& e ){
@@ -103,12 +102,12 @@ namespace Jde::Access{
 	}
 
 	α GroupHook::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->HookResult{
-		return query.JsonName.starts_with( "identityGroup" ) && find_if(query.Tables, [](let& t){ return t.JsonName=="members"; })!=query.Tables.end()
+		return query.JsonName.starts_with( "grouping" ) && query.FindTable("members")
 			? mu<GroupGraphQLAwait>( query, userPK, sl )
 			: nullptr;
 	}
 
-	//{ mutation addIdentityGroup( "id":14, "memberId":[15,13] ) }
+	//{ mutation addGrouping( "id":14, "memberId":[15,13] ) }
 	α GroupHook::AddRemoveArgs( const QL::MutationQL& m )ι->std::pair<GroupPK, flat_set<IdentityPK::Type>>{
 		const GroupPK groupPK{ Json::AsNumber<GroupPK::Type>(m.Args, "id") };
 		flat_set<IdentityPK::Type> memberPKs;
@@ -125,7 +124,7 @@ namespace Jde::Access{
 	}
 
 	α GroupHook::AddBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		if( m.TableName()=="identity_groups" ){
+		if( m.TableName()=="groupings" ){
 			auto [groupPK, memberPKs] = AddRemoveArgs( m );
 			try{
 				Authorizer().TestAddGroupMember( groupPK, move(memberPKs) );

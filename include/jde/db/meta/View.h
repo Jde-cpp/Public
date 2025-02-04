@@ -38,7 +38,7 @@ namespace Jde::DB{
 		string RemoveProc;
 		bool IsFlags; //e.g. read=1, update=2, purge=4, execute=8, rights=16
 		struct ParentChildMap{ sp<Column> Parent; sp<Column> Child; };
-		optional<ParentChildMap> Map;//groups: identity_id, member_id
+		optional<ParentChildMap> Map;//members: identity_id, member_id
 		sp<View> QLView;
 		sp<DB::AppSchema> Schema;
 		vector<sp<Column>> SurrogateKeys;

@@ -11,7 +11,7 @@
 
 namespace Jde::Web{
 	up<Server::IApplicationServer> _appServer;
-	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{ return _appServer->GraphQL( move(q), userPK, sl ); }
+	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{ return _appServer->GraphQL( move(q), userPK, true, sl ); }
 	α Server::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
 
 	sp<net::cancellation_signal> _cancelSignal;
@@ -48,33 +48,39 @@ namespace Server{
 			co_await RunSession( stream, buffer, move(userEndpoint), false, index, cancel );
 	}
 
-	α Send( HttpRequest&& req, sp<RestStream> stream, jvalue j, SRCE )ι->void{
+	Ω send( HttpRequest&& req, sp<RestStream> stream, jvalue j, sv contentType={}, SRCE )ι->void{
 		auto res = req.Response( move(j), sl );
+		if( contentType.size() )
+			res.set( http::field::content_type, contentType );
 		stream->AsyncWrite( move(res) );
 	}
 
-	α Send( IRestException&& e, sp<RestStream> stream )ι->void{
+	Ω send( IRestException&& e, sp<RestStream> stream, sv contentType={} )ι->void{
 		auto res = e.Response();
+		if( contentType.size() )
+			res.set( http::field::content_type, contentType );
 		stream->AsyncWrite( move(res) );
 	}
 
 	α GraphQL( HttpRequest req, sp<RestStream> stream )->QL::QLAwait<>::Task{
+		constexpr sv contentType = "application/graphql-response+json";
 		try{
+			let returnRaw = req.Params().contains("raw");
 			auto& query = req["query"]; THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
 			req.LogRead( query );
-			auto y = co_await QL::QLAwait{move(query), req.UserPK() };
-
-			Send( move(req), move(stream), move(y) );
+			auto result = co_await QL::QLAwait{ move(query), req.UserPK(), returnRaw };
+			jobject y{ {"data", result} };
+			send( move(req), move(stream), move(y), contentType );
 		}
 		catch( IRestException& e ){
-			Send( move(e), move(stream) );
+			send( move(e), move(stream), contentType );
 			co_return;
 		}
 		catch( IException& e ){
 			if( !empty(e.Tags() & ELogTags::Parsing) )
-				Send( RestException<http::status::bad_request>{move(e), move(req), "Query parsing failed."}, move(stream) );
+				send( RestException<http::status::bad_request>{move(e), move(req), "Query parsing failed."}, move(stream), contentType );
 			else
-				Send( RestException{move(e), move(req), "Query failed."}, move(stream) );
+				send( RestException{move(e), move(req), "Query failed."}, move(stream), contentType );
 			co_return;
 		}
 	}
@@ -83,14 +89,14 @@ namespace Server{
 		try{
 			HttpTaskResult result = co_await *( GetRequestHandler().HandleRequest(move(req)) );
 			if( !result.Request ) THROW( "Request not set." );
-			Send( move(*result.Request), move(stream), move(result.Json) );
+			send( move(*result.Request), move(stream), move(result.Json) );
 		}
 		catch( IRestException& e ){
-			Send( move(e), move(stream) );
+			send( move(e), move(stream) );
 		}
 		catch( IException& e ){
 			e.SetLevel( ELogLevel::Critical );//no request object...
-			Send( RestException<>{move(e), move(req), "Error handling request."}, move(stream) );
+			send( RestException<>{move(e), move(req), "Error handling request."}, move(stream) );
 		}
 	}
 
@@ -204,7 +210,7 @@ namespace Server{
 		catch( IException& e ){
 			//Add error code.
 			//capture error code on client.
-			Send( RestException<http::status::unauthorized>{move(e), move(req), "Could not get sessionInfo."}, move(stream) );
+			send( RestException<http::status::unauthorized>{move(e), move(req), "Could not get sessionInfo."}, move(stream) );
 			co_return;
 		}
 		if( req.IsGet("/graphql") ){

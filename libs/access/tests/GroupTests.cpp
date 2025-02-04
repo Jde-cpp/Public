@@ -29,12 +29,12 @@ namespace Jde::Access::Tests{
 	}
 	TEST_F( GroupTests, Fields ){
 		//const QL::TableQL ql{ "" };
-		let query = "{ __type(name: \"IdentityGroup\") { fields { name type { name kind ofType{name kind ofType{name kind ofType{name kind}}} } } } }";
+		let query = "{ __type(name: \"grouping\") { fields { name type { name kind ofType{name kind ofType{name kind ofType{name kind}}} } } } }";
 		let actual = QL::Query( query, GetRoot() );
 		auto obj = Json::ReadJsonNet( Ƒ("{}/Public/libs/access/config/access-ql.jsonnet", OSApp::EnvironmentVariable("JDE_DIR").value_or("./")) );
 		QL::Introspection intro{ move(obj) };
 		QL::RequestQL request = QL::Parse( query );
-		jobject expected = intro.Find("IdentityGroup")->ToJson( request.TableQLs()[0].Tables[0] );
+		jobject expected = intro.Find("grouping")->ToJson( request.TableQLs()[0].Tables[0] );
 		ASSERT_EQ( serialize(actual), serialize(expected) );
 	}
 
@@ -42,11 +42,11 @@ namespace Jde::Access::Tests{
 		let group = GetGroup( "groupTest", GetRoot() );
 		let id = GetId( group );
 
- 		let update = Ƒ( "mutation updateIdentityGroup( \"id\":{}, \"name\":\"{}\" )", id, "newName" );
+ 		let update = Ƒ( "mutation updateGrouping( \"id\":{}, \"name\":\"{}\" )", id, "newName" );
  		let updateJson = QL::Query( update, GetRoot() );
 		ASSERT_TRUE( AsSV(SelectGroup("groupTest", GetRoot()), "name")=="newName" );
 
- 		let del = Ƒ( "{{mutation deleteIdentityGroup(\"id\":{}) }}", id );
+ 		let del = Ƒ( "{{mutation deleteGrouping(\"id\":{}) }}", id );
  		let deleteJson = QL::Query( del, GetRoot() );
 		ASSERT_TRUE( SelectGroup("groupTest", GetRoot()).empty() );
 		ASSERT_TRUE( !SelectGroup("groupTest", GetRoot(), true).empty() );
@@ -58,8 +58,8 @@ namespace Jde::Access::Tests{
 		const GroupPK hrManagers{ GetId(GetGroup("HR-Managers", GetRoot())) };
 		const UserPK manager{ GetId(GetUser("manager", GetRoot())) };
 		AddToGroup( hrManagers, {manager}, GetRoot() );
-		constexpr sv ql = "identityGroup(id:{}){{ members{{id name}} }}";
-		ASSERT_EQ( Json::AsArrayPath(QL::QueryObject( Ƒ(ql, hrManagers.Value), GetRoot() ), "members" ).size(), 1 );
+		constexpr sv ql = "grouping(id:{}){{ members{{id name}} }}";
+		ASSERT_EQ( Json::AsArray(QL::QueryObject( Ƒ(ql, hrManagers.Value), GetRoot() ), "members" ).size(), 1 );
 
 		const GroupPK hr{ GetId( GetGroup("HR", GetRoot()) ) };
 		const UserPK associate{ GetId( GetUser("associate", GetRoot()) ) };
@@ -68,8 +68,8 @@ namespace Jde::Access::Tests{
 		let array = Json::AsArrayPath( members, "members" );
 		ASSERT_EQ( array.size(), 2 );
 
-		constexpr sv userQL = "user(id:{}){{ identityGroups{{id name}} }}";
-		ASSERT_EQ( Json::AsArrayPath(QL::QueryObject(Ƒ(userQL, manager.Value), GetRoot()), "identityGroups" ).size(), 1 );
+		constexpr sv userQL = "user(id:{}){{ groupings{{id name}} }}";
+		ASSERT_EQ( Json::AsArrayPath(QL::QueryObject(Ƒ(userQL, manager.Value), GetRoot()), "groupings" ).size(), 1 );
 
 		RemoveFromGroup( hr, {hrManagers, associate}, GetRoot() );
 		RemoveFromGroup( hrManagers, {manager}, GetRoot() );
@@ -93,6 +93,6 @@ namespace Jde::Access::Tests{
 		if( !IsMember( "groupC", groupD, GetRoot()) )
 			AddToGroup( groupC, {groupD}, GetRoot() );
 		EXPECT_THROW( AddToGroup( groupD, {groupA}, GetRoot() ), IException );
-		//TODO test implement deleted groups.
+		//TODO test implement deleted members.
 	}
 }

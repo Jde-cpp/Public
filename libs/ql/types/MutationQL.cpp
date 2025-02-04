@@ -20,9 +20,8 @@ namespace Jde::QL{
 
 	MutationQL::MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw )ε:
 		CommandName{move(commandName)}, Args(move(args)), ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{
-			std::tie(JsonTableName,Type) = parseCommandName( CommandName );
-		}
-
+		std::tie(JsonTableName,Type) = parseCommandName( CommandName );
+	}
 
 	α MutationQL::TableName()Ι->string{
 		if( _tableName.empty() )
@@ -30,16 +29,32 @@ namespace Jde::QL{
 		return _tableName;
 	}
 
-	α MutationQL::FindParam( sv name )Ε->const jvalue*{
+	α MutationQL::ToString()Ι->string{
+		return Ƒ( "{}({}){}", CommandName, serialize(Args), ResultRequest ? ResultRequest->ToString() : "" );
+	}
+
+	α MutationQL::FindParam( sv name )Ι->const jvalue*{
 		return Json::FindValue( Args, name );
 	}
-	//α MutationQL::InputParam( sv key )Ε->const jvalue&{
-	//	return Json::AsValue( Input(), key );
-	//}
+	α MutationQL::GetParam( sv name, SL sl )Ε->const jvalue&{
+		auto p = FindParam( name );
+		THROW_IFSL( !p, "Could not find param '{}'", name );
+		return *p;
+	}
 
-	//α MutationQL::Input(SL sl)Ε->const jobject&{
-	//	return Json::AsObject( Args, "input", sl );
-	//}
+	α MutationQL::GetKey(SL sl)ε->DB::Key{
+		let y = FindKey( sl );
+		THROW_IFSL( !y, "Could not find id or target in mutation '{}'", ToString() );
+		return *y;
+	}
+	α MutationQL::FindKey(SL sl )ι->optional<DB::Key>{
+		optional<DB::Key> y;
+		if( let id = FindId<uint>(); id )
+			y = DB::Key{ *id };
+		else if( let target = FindParam("target"); target )
+			y = DB::Key{ Json::AsString(move(*target)) };
+		return y;
+	}
 
 	α MutationQL::IsMutation( sv name )ι->bool{
 		bool isMutation{ name=="mutation" };

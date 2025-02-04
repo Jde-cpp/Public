@@ -1,4 +1,5 @@
 #include "SchemaDdl.h"
+#include <jde/framework/io/file.h>
 #include "TableDdl.h"
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
@@ -7,8 +8,8 @@
 #include <jde/db/meta/Catalog.h>
 #include <jde/db/meta/Cluster.h>
 #include <jde/db/meta/Column.h>
-#include <jde/framework/io/file.h>
 #include "../IServerMeta.h"
+#include <jde/ql/IQL.h>
 #include "Index.h"
 #include "Procedure.h"
 
@@ -17,10 +18,11 @@
 namespace Jde::DB{
 	constexpr ELogTags _tags{ ELogTags::Sql };
 
-	SchemaDdl::SchemaDdl( sv name, sv tablePrefix, const IServerMeta& loader )ε:
+	SchemaDdl::SchemaDdl( sv name, sv tablePrefix, const IServerMeta& loader, sp<QL::IQL> ql )ε:
 		DBSchema{ name, loader.LoadTables(tablePrefix), tablePrefix },
 		Procs{ loader.LoadProcs() },
-		FKs{ loader.LoadForeignKeys() }
+		FKs{ loader.LoadForeignKeys() },
+		_ql{ql}
 	{}
 
 	α AbbrevName( sv schemaName )ι->string;
@@ -38,13 +40,13 @@ namespace Jde::DB{
 	}
 //todo doc relativeScriptPath
 //todo add db version table.
-	α SchemaDdl::Sync( const AppSchema& config )ε->void{
+	α SchemaDdl::Sync( const AppSchema& config, sp<QL::IQL> ql )ε->void{
 		if( !Exists( *config.DBSchema ) ){
 			Create( *config.DBSchema );
 			config.ResetDS();
 		}
 		let& initConfig = ConfigurationJson( config );//has data, scripts.
-		auto db = ms<SchemaDdl>( config.DBSchema->Name, config.Prefix, config.DS()->ServerMeta() );
+		auto db = ms<SchemaDdl>( config.DBSchema->Name, config.Prefix, config.DS()->ServerMeta(), ql );
 		auto catalog = ms<DB::Catalog>( config.DS() );
 		db->Initialize( catalog, db );
 
@@ -52,69 +54,6 @@ namespace Jde::DB{
 		db->SyncScripts( config, initConfig );
 		db->SyncData( config, Json::AsObject(initConfig, "tables") );
 		db->SyncFKs( config );
-	}
-
-	α SchemaDdl::SyncData( const AppSchema& config, const jobject& initConfig )ε->void{
-		IDataSource& ds = *DS();
-		for( let& [tableName, table] : config.Tables ){
-			const jobject& jTable = Json::AsObject( initConfig, Names::ToJson(tableName) );
-			let flagsData = GetFlagsData( jTable );
-			if( flagsData.size() ){
-				auto pk = table->GetPK()->Name;
-				for( let& [id,value] : flagsData ){
-					if( ds.Scaler<uint>( Ƒ("select count(*) from {} where {}=?", table->DBName, pk), {Value{id}})==0 )
-						ds.Execute( Ƒ("insert into {}({},name)values( ?, ? )", table->DBName, pk), vector{Value{id}, value} );
-				}
-				continue;
-			}
-			for( let& row : GetData(*table, jTable) ){
-				let getWhere = [&row]( const vector<sp<Column>>& keys )->WhereClause {
-					WhereClause where;
-					for( auto& c : keys ){
-						if( auto pKeyValue = row.find( c->Name ); pKeyValue!=row.end() )
-							where.Add( c, pKeyValue->second );
-						else
-							break;
-					}
-					return where.Size()==keys.size() ? where : WhereClause{};
-				};
-				auto where = getWhere( table->SurrogateKeys );
-				for( uint i=0; where.Empty() && i<table->NaturalKeys.size(); ++i )
-					where = getWhere( table->GetColumns(table->NaturalKeys[i]) );
-				THROW_IF( where.Empty(), "Could not find keys in data for '{}'", tableName );
-				Statement statement{ {Column::Count()}, {table}, move(where) };
-				if( ds.Scaler<uint>( statement.Move() )>0 )
-					continue;
-
-				std::ostringstream osInsertValues;
-				std::ostringstream osInsertColumns;
-				vector<Value> params;
-				for( let& c : table->Columns ){
-					auto value = row.find( c->Name )!=row.end() ? row.find( c->Name )->second : c->Default;
-					if( !value )
-						continue;
-					if( params.size() ){
-						osInsertValues << ",";
-						osInsertColumns << ",";
-					}
-					osInsertColumns << c->Name;
-					if( value->is_string() && value->get_string()=="$now" )
-						osInsertValues << table->Syntax().UtcNow();
-					else{
-						osInsertValues << "?";
-						params.push_back( *value );
-					}
-				}
-				std::ostringstream sql;
-				let identityInsert = table->SequenceColumn() && ds.Syntax().NeedsIdentityInsert();
-				if( identityInsert )
-					sql << "SET IDENTITY_INSERT " << table->DBName << " ON;" << std::endl;
-				sql << Ƒ( "insert into {}({})values({})", table->DBName, osInsertColumns.str(), osInsertValues.str() );
-				if( identityInsert )
-					sql << std::endl << "SET IDENTITY_INSERT " << table->DBName << " OFF;";
-				ds.Execute( sql.str(), params );
-			}
-		}
 	}
 
 	α SchemaDdl::SyncFKs( const AppSchema& config )ε->void{
@@ -143,26 +82,136 @@ namespace Jde::DB{
 			}
 		}
 	}
+	Ω forEachFile( sv jpath, sv extension, sv prefix, function<void(const fs::path& file)> process )ε{
+		let scriptPath = Settings::FindString( jpath );
+		const fs::path scriptRoot{ scriptPath.value_or("./") };
+		THROW_IF( !fs::exists(scriptRoot) || !fs::is_directory(scriptRoot), "Script path '{}' does not exist.", scriptRoot.string() );
+		for( let& entry : fs::directory_iterator(scriptRoot) ){
+			if( let& path = entry.path();
+			 !entry.is_directory()
+				&& path.extension().string().starts_with(extension)
+				&& (prefix.empty() || path.filename().string().starts_with(prefix)) ){
+				process( entry.path() );
+			}
+		}
+	}
+
+	α SchemaDdl::SyncData( const AppSchema& config, const jobject& initConfig )ε->void{
+		forEachFile( "/dbServers/dataPath", ".mutation", config.Name, [this](const fs::path& file){
+			let text = IO::FileUtilities::Load( file );
+			Information{ _tags, "Mutation: '{}'", file.string() };
+			_ql->Upsert( text, {UserPK::System} );
+		});
+		//IDataSource& ds = *DS();
+		//	QL::Parse( text, ds );
+		//	let data = Json::ReadJsonNet( file );
+		//	let& tables = Json::AsArrayPath( data, "/appSchemas/"+config.Name );
+		//	for( let& vTable : tables ){
+		//		let& table = Json::AsObject( vTable );
+		//		let tableName = Json::AsSV( table, "table" );
+		//		let& rows = Json::AsArray( table, "rows" );
+		//		for( let& vRow : rows ){
+		//			string where = row.contains("id")
+		//				? "id:"+Json::AsNumber<uint>( row, "id" )
+		//				: "target:\""+row.contains("id")+'"';
+		//			for( let& [name, value] : Json::AsObject(vRow) ){
+		//				if( name=="id" )
+		//					where = Ƒ( "id:{}", Json::AsNumber<uint>(value) );
+		//				else{
+
+		//				let c = config.Tables[tableName]->GetColumnPtr( name );
+		//				if( c )
+		//					values[c->Name] = Value{c->Type, value};
+		//			}
+		//			if( values.size() )
+		//				ds.Execute( InsertClause{ {Column::Count()}, {config.Tables[tableName]}, values }.Move() );
+		//		}
+		//		for( let& row : data.get_array() ){
+		//			if( row.is_object() ){
+		//				auto where = WhereClause{};
+		//				for( let& [name, value] : row.get_object() ){
+		//					let c = config.Tables[tableName]->GetColumnPtr( name );
+		//					if( c )
+		//						where.Add( c, Value{c->Type, value} );
+		//				}
+		//				if( where.Size() )
+		//					ds.Execute( Statement{ {Column::Count()}, {config.Tables[tableName]}, move(where) }.Move() );
+		//			}
+		//		}
+		//	}
+		//});
+		//for( let& [tableName, table] : config.Tables ){
+		//	const jobject& jTable = Json::AsObject( initConfig, Names::ToJson(tableName) );
+		//	let flagsData = GetFlagsData( jTable );
+		//	if( flagsData.size() ){
+		//		auto pk = table->GetPK()->Name;
+		//		for( let& [id,value] : flagsData ){
+		//			if( ds.Scaler<uint>( Ƒ("select count(*) from {} where {}=?", table->DBName, pk), {Value{id}})==0 )
+		//				ds.Execute( Ƒ("insert into {}({},name)values( ?, ? )", table->DBName, pk), vector{Value{id}, value} );
+		//		}
+		//		continue;
+		//	}
+		//	for( let& row : GetData(*table, jTable) ){
+		//		let getWhere = [&row]( const vector<sp<Column>>& keys )->WhereClause {
+		//			WhereClause where;
+		//			for( auto& c : keys ){
+		//				if( auto pKeyValue = row.find( c->Name ); pKeyValue!=row.end() )
+		//					where.Add( c, pKeyValue->second );
+		//				else
+		//					break;
+		//			}
+		//			return where.Size()==keys.size() ? where : WhereClause{};
+		//		};
+		//		auto where = getWhere( table->SurrogateKeys );
+		//		for( uint i=0; where.Empty() && i<table->NaturalKeys.size(); ++i )
+		//			where = getWhere( table->GetColumns(table->NaturalKeys[i]) );
+		//		THROW_IF( where.Empty(), "Could not find keys in data for '{}'", tableName );
+		//		Statement statement{ {Column::Count()}, {table}, move(where) };
+		//		if( ds.Scaler<uint>( statement.Move() )>0 )
+		//			continue;
+
+		//		std::ostringstream osInsertValues;
+		//		std::ostringstream osInsertColumns;
+		//		vector<Value> params;
+		//		for( let& c : table->Columns ){
+		//			auto value = row.find( c->Name )!=row.end() ? row.find( c->Name )->second : c->Default;
+		//			if( !value )
+		//				continue;
+		//			if( params.size() ){
+		//				osInsertValues << ",";
+		//				osInsertColumns << ",";
+		//			}
+		//			osInsertColumns << c->Name;
+		//			if( value->is_string() && value->get_string()=="$now" )
+		//				osInsertValues << table->Syntax().UtcNow();
+		//			else{
+		//				osInsertValues << "?";
+		//				params.push_back( *value );
+		//			}
+		//		}
+		//		std::ostringstream sql;
+		//		let identityInsert = table->SequenceColumn() && ds.Syntax().NeedsIdentityInsert();
+		//		if( identityInsert )
+		//			sql << "SET IDENTITY_INSERT " << table->DBName << " ON;" << std::endl;
+		//		sql << Ƒ( "insert into {}({})values({})", table->DBName, osInsertColumns.str(), osInsertValues.str() );
+		//		if( identityInsert )
+		//			sql << std::endl << "SET IDENTITY_INSERT " << table->DBName << " OFF;";
+		//		ds.Execute( sql.str(), params );
+		//	}
+		//}
+	}
+
 	α SchemaDdl::SyncScripts( const AppSchema& config, const jobject& initConfig )ε->void{
 		//let& syntax = config.DS()->Syntax();
 		let configPrefix = Json::FindString( initConfig, "prefix" ).value_or("");
 		let stdPrefix = config.Name+"_"; //access_
-		let scriptPath = Settings::FindString( "/dbServers/scriptPath" );
-		const fs::path scriptRoot{ scriptPath.value_or("./") };
-		THROW_IF( !fs::exists(scriptRoot) || !fs::is_directory(scriptRoot), "Script path '{}' does not exist.", scriptRoot.string() );
-    for( let& entry : fs::directory_iterator(scriptRoot) ){
-			let& scriptFile = entry.path();
+		forEachFile( "/dbServers/scriptPath", ".sql", stdPrefix, [&](const fs::path& scriptFile){
 			let fileName = scriptFile.filename(); //[access_]user_insert.sql
 			let stem = fileName.stem().string();
-			if( fileName.extension()!=".sql" || !stem.starts_with(stdPrefix) )
-				continue;
 			let procViewName = stem.substr( stdPrefix.size() );
 			let dbName = configPrefix+procViewName;
 			if( Procs.find(dbName)!=Procs.end() || Tables().find(procViewName)!=Tables().end() )
-				continue;
-			//if( syntax.ProcFileSuffix().size() )//.ms
-			//	scriptFile = scriptFile.parent_path()/( scriptFile.stem().string()+string{syntax.ProcFileSuffix()}+scriptFile.extension().string() );
-			//let path = scriptRoot/( stdPrefix+scriptFile.string() );
+				return;
 			let text = IO::FileUtilities::Load( scriptFile );
 			Trace{ _tags, "Executing '{}'", scriptFile.string() };
 			let queries = Str::Split<sv,iv>( text, "\ngo"_iv );
@@ -178,7 +227,7 @@ namespace Jde::DB{
 				config.DS()->Execute( os.str(), nullptr, nullptr, false ); //TODO! - add views for app server. ??
 			}
 			Information{ _tags, "Finished '{}'", scriptFile.string() };
-		}
+		});
 	}
 
 	α SchemaDdl::SyncTables( const AppSchema& config )ε->void{

@@ -12,23 +12,16 @@ namespace Jde::QL{
 	α Query( const TableQL& ql, DB::Statement&& statement, UserPK executer, SRCE )ε->jvalue;
 	α Query( RequestQL&& ql, UserPK executer, SL sl )ε->jvalue;
 
-/*	struct IQLAwait{
-		IQLAwait( TableQL&& ql, UserPK executer, SRCE )ι:_request{move(ql)}, _executer{executer}{}
-		IQLAwait( TableQL&& ql, DB::Statement&& statement, UserPK executer, SRCE )ι;
-		IQLAwait( string query, UserPK executer, SRCE )ε;
-	private:
-		RequestQL _request;
-		optional<DB::Statement> _statement;
-		UserPK _executer;
-	};*/
 	template<class T=jvalue>
 	struct QLAwait : TAwait<T>{
 		using base = TAwait<T>;
 		QLAwait( TableQL&& ql, UserPK executer, SRCE )ι:base{sl},_request{move(ql)}, _executer{executer}{}
 		QLAwait( TableQL&& ql, DB::Statement&& statement, UserPK executer, SRCE )ι:
-		base{sl}, _request{ move(ql) }, _statement{ move(statement) }, _executer{ executer }{}
-		QLAwait( string query, UserPK executer, SRCE )ε:
-		base{sl}, _request{ Parse(move(query)) }, _executer{ executer }{}
+			base{sl}, _request{ move(ql) }, _statement{ move(statement) }, _executer{ executer }{}
+		QLAwait( MutationQL&& m, UserPK executer, SRCE )ι:
+			base{sl}, _request{{move(m)}}, _executer{executer}{}
+		QLAwait( string query, UserPK executer, bool returnRaw=true, SRCE )ε:
+			base{sl}, _request{ Parse(move(query), returnRaw) }, _executer{ executer }{}
 
 		α Suspend()ι->void override{ CoroutinePool::Resume( base::_h ); }
 		α Run()ε->jvalue;
@@ -48,6 +41,9 @@ namespace Jde::QL{
 		return y;
 	}
 	template<> Ξ QLAwait<jvalue>::await_resume()ε->jvalue{ return Run(); }
-	template<> Ξ QLAwait<jobject>::await_resume()ε->jobject{ return Json::AsObject(Run(), _sl); }
+	template<> Ξ QLAwait<jobject>::await_resume()ε->jobject{
+		auto y = Run();
+		return y.is_null() ? jobject{} : Json::AsObject(y, _sl);
+	}
 	template<> Ξ QLAwait<jarray>::await_resume()ε->jarray{ return Json::AsArray(Run(), _sl); }
 }

@@ -15,19 +15,19 @@ namespace Jde::Opc{
 	constexpr ELogTags _tags{ ELogTags::Test };
 	static Opc::OpcQLHook* _pHook;
 
-	α CreateOpcServerAwait::Execute()ι->QL::QLAwait<>::Task{
+	α CreateOpcServerAwait::Execute()ι->QL::QLAwait<jobject>::Task{
 		let certificateUri{ Settings::FindSV("opc/urn").value_or("urn:open62541.server.application") };
 		let url{ Settings::FindSV("opc/url").value_or( "opc.tcp://127.0.0.1:4840") };
 		let create = Ƒ( "mutation createOpcServer( target:'{}', name:'My Test Server', certificateUri:'{}', description:'Test basic functionality', url:'{}', isDefault:false ){{id}}", OpcServerTarget, certificateUri, url );
-		let createJson = co_await QL::QLAwait( Str::Replace(create, '\'', '"'), {UserPK::System}, _sl );
-		ResumeScaler( Json::AsNumber<OpcPK>(Json::AsObject(createJson), "createOpcServer/id") );
+		let createJson = co_await QL::QLAwait<jobject>( Str::Replace(create, '\'', '"'), {UserPK::System}, true, _sl );
+		ResumeScaler( Json::AsNumber<OpcPK>(createJson, "id") );
 	}
 
 	α PurgeOpcServerAwait::Execute()ι->QL::QLAwait<>::Task{
 		if( !_pk.has_value() )
 			_pk = Json::AsNumber<OpcPK>( SelectOpcServer(OpcServerTarget), "id" );
 		let q = Ƒ( "{{ mutation purgeOpcServer('id':{}) }}", *_pk );
-		let result = co_await QL::QLAwait( Str::Replace(q, '\'', '"'), {UserPK::System}, _sl );
+		let result = co_await QL::QLAwait( Str::Replace(q, '\'', '"'), {UserPK::System}, true, _sl );
 		ResumeScaler( 1 );
 	}
 }

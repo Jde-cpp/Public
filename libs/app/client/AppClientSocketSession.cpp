@@ -83,11 +83,11 @@ namespace Client{
 		let requestId = NextRequestId();
 		return ClientSocketAwait<Web::FromServer::SessionInfo>{ ToString(FromClient::Session(sessionId, requestId)), requestId, shared_from_this(), sl };
 	}
-	α AppClientSocketSession::Query( string&& q, SL sl )ι->ClientSocketAwait<jvalue>{
+	α AppClientSocketSession::Query( string&& q, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
 		let requestId = NextRequestId();
 		Trace( sl, ELogTags::SocketClientWrite, "[{:x}]GraphQL: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
 
-		return ClientSocketAwait<jvalue>{ ToString(FromClient::Query(move(q), requestId)), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<jvalue>{ ToString(FromClient::Query(move(q), requestId, returnRaw)), requestId, shared_from_this(), sl };
 	}
 	concurrent_flat_map<RequestId, std::pair<sp<QL::IListener>,vector<QL::Subscription>>> _subscriptionRequests;
 	α AppClientSocketSession::Subscribe( string&& q, sp<QL::IListener> listener, SL sl )ε->await<jarray>{

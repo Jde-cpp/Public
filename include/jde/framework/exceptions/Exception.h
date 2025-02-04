@@ -83,6 +83,12 @@ namespace Jde{
 	private:
 		mutable ELogLevel _level;
 	};
+
+	Ξ ToUP( exception&& e )ι->up<exception>{
+		auto p = dynamic_cast<IException*>( &e );
+		return p ? p->Move() : mu<exception>( move(e) );
+	}
+
 	struct Exception;
 	α make_exception_ptr( Exception&& e )ι->std::exception_ptr;
 	struct Γ Exception final : IException{

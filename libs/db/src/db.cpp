@@ -77,16 +77,16 @@ namespace Jde{
 	}
 
 
-	α DB::SyncSchema( AppSchema& schema )ε->void{
-		SchemaDdl::Sync( schema );
+	α DB::SyncSchema( AppSchema& schema, sp<QL::IQL> ql )ε->void{
+		SchemaDdl::Sync( schema, ql );
 	}
 }
 
 #ifndef PROD
 namespace Jde::DB{
-	α NonProd::Recreate( const AppSchema& schema )ε->void{
+	α NonProd::Recreate( const AppSchema& schema, sp<QL::IQL> ql )ε->void{
 		CatalogDdl::NonProd::Drop( schema );
-		return SchemaDdl::Sync( schema );
+		return SchemaDdl::Sync( schema, ql );
 	}
 #endif
 }

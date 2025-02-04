@@ -38,8 +38,8 @@ namespace Jde::Access{
 		AccessListener::SetInstance( _qlServer );
 		try{
 			co_await EventTypeSubscribeAwait{ _qlServer, "user", User, "id", Created | Deleted | Restored | Purged, _executer, _sl };
-			co_await EventTypeSubscribeAwait{ _qlServer, "identityGroup", Group, "id", Deleted | Restored | Purged, _executer, _sl };
-			co_await EventTypeSubscribeAwait{ _qlServer, "identityGroup", Group, "id memberId", Added | Removed, _executer, _sl };
+			co_await EventTypeSubscribeAwait{ _qlServer, "grouping", Group, "id", Deleted | Restored | Purged, _executer, _sl };
+			co_await EventTypeSubscribeAwait{ _qlServer, "grouping", Group, "id memberId", Added | Removed, _executer, _sl };
 			co_await EventTypeSubscribeAwait{ _qlServer, "role", Role, "id", Deleted | Restored | Purged, _executer, _sl };
 			co_await EventTypeSubscribeAwait{ _qlServer, "role", Role, "id permissionRight{id allowed denied resource{target}} role{id}", Added | Removed, _executer, _sl };
 			co_await EventTypeSubscribeAwait{ _qlServer, "resources", Resources, "id schemaName target criteria deleted", Created, _executer, _sl };

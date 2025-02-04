@@ -7,29 +7,34 @@
 
 namespace Jde::Access{
 	α IdentityLoadAwait::Load()ι->QL::QLAwait<jarray>::Task{
-		let values = co_await *_ql->QueryArray( "identities{ id deleted is_group }", _executer, _sl );
-		Identities identities;
-		for( let value : values ){
-			let& identity = Json::AsObject(value);
-			let isGroup = Json::AsBool(identity, "is_group");
-			let pk{ Json::AsNumber<IdentityPK::Type>(identity, "id") };
-			let deleted = Json::FindTimePoint( identity, "deleted" ).has_value();
-			if( isGroup )
-				identities.Groups.emplace( GroupPK{pk}, Group{GroupPK{pk}, deleted} );
-			else
-				identities.Users.emplace( UserPK{pk}, User{UserPK{pk}, deleted} );
-		}
-		let jgroups = co_await *_ql->QueryArray( "identityGroups{ id deleted members{id} }", _executer, _sl );
-		for( let value : jgroups ){
-			let& group = Json::AsObject(value);
-			const GroupPK groupPK{ Json::AsNumber<GroupPK::Type>(group, "id") };
-			auto p = identities.Groups.find(groupPK); THROW_IF( p==identities.Groups.end(), "[{}]Group not found", groupPK.Value );
-			for( let member : Json::AsArray(group, "members") ){
-				let memberPK{ Json::AsNumber<IdentityPK::Type>(Json::AsObject(member), "id") };
-				p->second.Members.emplace( identities.Users.contains(UserPK{memberPK}) ? IdentityPK{UserPK{memberPK}} : IdentityPK{GroupPK{memberPK}} );
+		try{
+			let values = co_await *_ql->QueryArray( "identities{ id deleted is_group }", _executer, true, _sl );
+			Identities identities;
+			for( let value : values ){
+				let& identity = Json::AsObject(value);
+				let isGroup = Json::AsBool(identity, "is_group");
+				let pk{ Json::AsNumber<IdentityPK::Type>(identity, "id") };
+				let deleted = Json::FindTimePoint( identity, "deleted" ).has_value();
+				if( isGroup )
+					identities.Groups.emplace( GroupPK{pk}, Group{GroupPK{pk}, deleted} );
+				else
+					identities.Users.emplace( UserPK{pk}, User{UserPK{pk}, deleted} );
 			}
+			let jgroups = co_await *_ql->QueryArray( "groupings{ id deleted members{id} }", _executer, true, _sl );
+			for( let value : jgroups ){
+				let& group = Json::AsObject(value);
+				const GroupPK groupPK{ Json::AsNumber<GroupPK::Type>(group, "id") };
+				auto p = identities.Groups.find(groupPK); THROW_IF( p==identities.Groups.end(), "[{}]Group not found", groupPK.Value );
+				for( let member : Json::AsArray(group, "members") ){
+					let memberPK{ Json::AsNumber<IdentityPK::Type>(Json::AsObject(member), "id") };
+					p->second.Members.emplace( identities.Users.contains(UserPK{memberPK}) ? IdentityPK{UserPK{memberPK}} : IdentityPK{GroupPK{memberPK}} );
+				}
+			}
+			Resume( std::move(identities) );
 		}
-		Resume( std::move(identities) );
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
 	}
 
 
@@ -47,7 +52,7 @@ namespace Jde::Access{
 					Identities identities;
 					for( let [pk,deleted] : users )
 						identities.Users.emplace( pk, User{pk, deleted.has_value()} );
-					let groupMembers = co_await *ds->template SelectMultiMap<GroupPK,IdentityPK::Type>( DB::SelectSKsSql(self._schema->GetTablePtr("identity_groups")) );
+					let groupMembers = co_await *ds->template SelectMultiMap<GroupPK,IdentityPK::Type>( DB::SelectSKsSql(self._schema->GetTablePtr("members")) );
 					for( auto&& [groupPk,memberPK] : groupMembers ){
 						let user = identities.Users.find(UserPK{memberPK});
 						IdentityPK pk = user==identities.Users.end() ? IdentityPK{GroupPK{memberPK}} : IdentityPK{UserPK{memberPK}};

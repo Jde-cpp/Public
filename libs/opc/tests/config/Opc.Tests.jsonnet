@@ -1,8 +1,7 @@
 {
 	testing:{
-		tests: "OpcServerTests.InsertFailed",
-		//
-		recreateDB:: true
+		tests:: "OpcServerTests.InsertFailed",
+		recreateDB: true
 	},
 	opc:{
 		urn: "urn:JDE-CPP:Kepware.KEPServerEX.V6:UA%20Server",

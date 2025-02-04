@@ -74,7 +74,7 @@ namespace Jde::Access::Tests{
 
 	α AclTests::SetUpTestCase()->void{
 		array<string,10> users{ "intruder", "creator", "reader", "updater", "deleter", "purger", "admin", "subscriber", "executor", "root" };
-		let resourceTarget = "identityGroups";
+		let resourceTarget = "groupings";
 		let resource = SelectResource( resourceTarget, GetRoot(), true );
 		_resourcePK = GetId( resource );
 		if( resource.at("deleted").is_null() )
@@ -94,12 +94,12 @@ namespace Jde::Access::Tests{
 	}
 
 	TEST_F( AclTests, DisabledPermissions ){
-		let resourceName = "identityGroups";
+		let resourceName = "groupings";
 		let resource = SelectResource( resourceName, GetRoot() );
 		if( resource.at("deleted").is_null() )
 			Delete( "resources", GetId(resource), GetRoot() );
 		let intruderPK = _usersPKs["intruder"];
-		let groupId = TestCrud( "identityGroup", "DisabledPermission-Test-Group", intruderPK );
+		let groupId = TestCrud( "grouping", "DisabledPermission-Test-Member", intruderPK );
 		TestAdd( resourceName, groupId, {_usersPKs["intruder"].Value, _usersPKs["creator"].Value, _usersPKs["reader"].Value}, intruderPK );
 		TestRemove( resourceName, groupId, {_usersPKs["intruder"].Value, _usersPKs["creator"].Value}, intruderPK );
 		TestPurge( resourceName, groupId, intruderPK );
@@ -117,24 +117,24 @@ namespace Jde::Access::Tests{
 	}
 
 	TEST_F( AclTests, EnabledPermissions ){
-		let resourceName = "identityGroups";
+		let resourceName = "groupings";
 		restoreResource( resourceName, GetRoot() );
 		TestEnabeledPermissions( resourceName, "EnabledPermissions-Group3", _usersPKs["intruder"] );
 	}
 
 	TEST_F( AclTests, DeletedUser ){
-		let resourceName = "identityGroups";
+		let resourceName = "groupings";
 		restoreResource( resourceName, GetRoot() );
 		auto juser = GetUser( "deletedRoot", GetRoot(), true );
 		UserPK executer{ GetId( juser ) };
-		GetAcl( executer, "identityGroups", ERights::All, ERights::None );
+		GetAcl( executer, "groupings", ERights::All, ERights::None );
 		if( !Json::AsTimePointOpt(juser, "deleted") )
 			Delete( "users", GetId(juser), GetRoot() );
-		TestEnabeledPermissions( resourceName, "AclTests-DeletedUser-Group", executer );
+		TestEnabeledPermissions( resourceName, "AclTests-DeletedUser-Member", executer );
 	}
 
 	TEST_F( AclTests, TestHierarchy ){
-		let resourceName = "identityGroups";
+		let resourceName = "groupings";
 		restoreResource( resourceName, GetRoot() );
 		let adminGroup = Tests::GetGroup( "HierarchyGroupAdmin", GetRoot() );
 		GroupPK adminGroupPK{ GetId( adminGroup ) };
@@ -187,7 +187,7 @@ namespace Jde::Access::Tests{
 		AddRolePermission( rolePK, resourceName, ERights::All, ERights::None, adminPK );
 	}
 	TEST_F( AclTests, TestDeny ){
-		let resourceName = "identityGroups";
+		let resourceName = "groupings";
 		restoreResource( resourceName, GetRoot() );
 
 		let deniedGroup = Tests::GetGroup( "DeniedGroup", GetRoot() );

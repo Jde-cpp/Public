@@ -18,7 +18,7 @@ namespace Jde::QL{
 	using namespace DB::Names;
 
 	constexpr ELogTags _tags{ ELogTags::QL };
-	α GetTable( str tableName )ε->sp<DB::View>;
+	α GetTable( str tableName, SRCE )ε->sp<DB::View>;
 
 	MutationAwait::MutationAwait( MutationQL mutation, UserPK userPK, SL sl )ι:
 		TAwait<jvalue>{ sl },

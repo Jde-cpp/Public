@@ -57,7 +57,7 @@ namespace Jde::DB{
 		HasCustomInsertProc{ Json::FindBool(o, "customInsertProc").value_or(false) },
 		AddProc{ string{Json::FindDefaultSV(o, "addProc")} },
 		RemoveProc{ string{Json::FindDefaultSV(o, "removeProc")} },
-		IsFlags{ o.contains("flagsData") },
+		IsFlags{ Json::FindBool(o, "isFlags").value_or(false) },
 		Map{ getMap(o,*this) },
 		QLView{ o.contains("qlView") ? ms<View>( Json::AsString(o,"qlView")) : nullptr },
 		SurrogateKeys{ getSurrogateKeys(Columns) },

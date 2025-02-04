@@ -50,8 +50,8 @@ namespace	Sessions{
 	}
 	α Sessions::Size()ι->uint{ return _sessions.size(); }
 
-	steady_clock::duration _restExpirationDuration{ Chrono::ToDuration(Settings::FindSV("http/timeout").value_or("PT30S")) };
-	steady_clock::duration _sockExpirationDuration{ Chrono::ToDuration(Settings::FindSV("http/timeout").value_or("P1D")) };
+	steady_clock::duration _restExpirationDuration{ Chrono::ToDuration(Settings::FindSV("/http/timeout").value_or("PT30S")) };
+	steady_clock::duration _sockExpirationDuration{ Chrono::ToDuration(Settings::FindSV("/http/timeout").value_or("P1D")) };
 	steady_clock::time_point _lastTrim{ steady_clock::now() };
 
 	SessionInfo::SessionInfo( SessionPK sessionPK, str userEndpoint, bool hasSocket )ι:

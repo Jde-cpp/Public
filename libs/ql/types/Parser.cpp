@@ -3,12 +3,12 @@
 
 #define let const auto
 namespace Jde{
-	α QL::Parse( string query, SL sl )ε->RequestQL{
+	α QL::Parse( string query, bool returnRaw, SL sl )ε->RequestQL{
 		sv trimmed = Str::Trim( query );//TODO move(query).
 		Parser parser{ string{trimmed.starts_with("{") ? trimmed.substr(1) : trimmed}, "{}()," };
 		auto name = parser.Next();
-		bool returnRaw = name!="query";
-		if( !returnRaw ){
+		if( name=="query" ){
+			returnRaw = true;
 			parser.Next();
 			name = parser.Next();
 		}
@@ -18,12 +18,14 @@ namespace Jde{
 			return RequestQL{ parser.LoadUnsubscriptions() };
 		else if( MutationQL::IsMutation(name) ){
 			returnRaw = name!="mutation";
-			return RequestQL{ parser.LoadMutation(!returnRaw ? parser.Next() : name, returnRaw) };
+			if( parser.Peek()=="{" )
+				parser.Next();
+			return RequestQL{ {parser.LoadMutations(returnRaw ? name : parser.Next(), returnRaw)} };
 		}else
 			return RequestQL{ parser.LoadTables(name, returnRaw) };
 	}
 	α QL::ParseSubscriptions( string query, SL sl )ε->vector<Subscription>{
-		auto request = Parse( move(query), sl ); THROW_IFSL( !request.IsSubscription(), "Expected subscription query." );
+		auto request = Parse( move(query), true, sl ); THROW_IFSL( !request.IsSubscription(), "Expected subscription query." );
 		return request.Subscriptions();
 	}
 }
@@ -63,6 +65,111 @@ namespace Jde::QL{
 		return result;
 	};
 
+	Ω parseWhitespace( sv json, string& y )ε->uint{
+		if( json.empty() )
+			return 0;
+		uint i{};
+		for( char ch=json[i]; isspace(ch) && i<json.size(); ch=json[++i] ){
+			y += ch;
+			if( i+1==json.size() )
+				break;
+		}
+		return i;
+	}
+	Ω parseValue( sv json, string& y )ε->uint;
+	Ω parseArray( sv json, string& y )ε->uint{
+		uint i=0;
+		char ch = json[i++];
+		ASSERT( ch=='[' );
+		y += ch;
+		i += parseWhitespace( json.substr(i), y );
+		THROW_IF( i>=json.size(), "Expected ']' vs '{}' @ '{}'.", json, i );
+		for( char ch = json[i]; ch!=']'; ch = json[i] ){
+			i += parseValue( json.substr(i), y );
+			i += parseWhitespace( json.substr(i), y );
+			THROW_IF( i>=json.size(), "Expected ']' vs '{}' @ '{}'.", json, i );
+			if( json[i]==',' )
+				y += json[i++];
+		}
+		y += json[i++];
+		return i;
+	}
+	Ω parseString( sv json, string& y )ε->uint{
+		uint i=0;
+		char ch = json[i++]; THROW_IF( i==json.size() || ch!='"', "Expected ending quote '{}' @ '{}'.", json, i );
+		ASSERT( ch=='"' );
+		y += ch;
+		for( char ch=json[i++]; ch!='"' && i<json.size(); ch = json[i++] )
+			y += ch;
+		y += ch;
+		return i;
+	}
+	Ω parseObject( sv json, string& y )ε->uint;
+	Ω parseValue( sv json, string& y )ε->uint{
+		uint i=0;
+		i += parseWhitespace( json.substr(i), y );
+		char ch=json[i];
+		if( ch=='{' )
+			i += parseObject( json.substr(i), y );
+		else if( ch=='[' )
+			i += parseArray( json.substr(i), y );
+		else if( ch=='"' )
+			i += parseString( json.substr(i), y );
+		else if( ch=='n' ){
+			THROW_IF( json.size()-i<5, "Unexpected end vs '{}' @ '{}'.", json, i );
+			let null = json.substr( i, 4 );
+			THROW_IF( null!="null", "Expected 'null' vs '{}' in '{}' @ '{}'.", null, json, i );
+			y += null;
+			i += 4;
+		}else if( isdigit(ch) || ch=='-' || ch=='.' ){
+			for( ; i<json.size() && isdigit(ch); ch = json[++i] ){
+				y += ch;
+				if( i+1==json.size() )
+					break;
+			}
+		}
+		else if( ch!=',' )
+			THROW( "Unexpected character '{}' @ '{}'.", ch, i );
+		return i;
+	}
+
+	Ω parseObject( sv json, string& y )ε->uint{
+		uint i=0;
+		ASSERT( json[i]=='{' );
+		y += json[i++];
+		function<void()> memberValueParse = [&]()->void {
+			i += parseWhitespace( json.substr(i), y );
+			THROW_IF( i>=json.size(), "Expected object to end '{}' @ '{}'.", json, i );
+			char ch = json[i];
+			if( ch=='}' ){
+//				y += json[i++];
+				return;
+			}
+			else if( ch=='"' )
+				i += parseString( json.substr(i), y )+1;
+			else{
+				string name{'"'};
+				for( ++i; ch!=':' && i<json.size(); ch=json[i++] ){
+					name += ch;
+					THROW_IF( i==json.size(), "Could not find ':' in '{}' @ {}", json, i );
+				}
+				y += Str::RTrim( name+'"' );
+			}
+			y += ":";
+			i += parseValue( json.substr(i), y );
+			i+=parseWhitespace( json.substr(i), y );
+			THROW_IF( i>=json.size(), "Expected '}}' vs '{}' in '{}' @ '{}'.", json[i], json, i );
+			if( json[i]==',' ){
+				y += json[i++];
+				memberValueParse();
+			}
+		};
+		memberValueParse();
+		THROW_IF( i>=json.size() || json[i]!='}', "Expected '}}' vs '{}' in {} @ '{}'.", json[i], json, i );
+		y+=json[i++];
+		return i;
+	}
+/*
 	Ω stringifyKeys( sv json )ε->string{
 		string y{}; y.reserve( json.size()*2 );
 		bool inValue{};
@@ -87,8 +194,11 @@ namespace Jde::QL{
 					}
 				}
 				else if( ch=='[' ){//array
-					for( ; i<json.size() && ch!=']'; ch = json[++i] )
+					for( ; i<json.size() && ch!=']'; ch = json[++i] ){
+						if( ch=='{' )
+							y += parseObject( json.substr(i), y );
 						y += ch;
+					}
 					y += ']';
 				}
 				else if( ch=='"' ){//string
@@ -110,7 +220,7 @@ namespace Jde::QL{
 				if( !quoted ) --i;
 				for( ch = '"'; i<json.size() && ch!=':'; ch=json[++i] ){
 					y += ch;
-					THROW_IF( i+1==json.size(), "Could not find ':' in '{}'", json );
+					THROW_IF( i+1==json.size(), "Could not find ':' in '{}' @ {}", json, i );
 				}
 				if( !quoted )
 					y += '"';
@@ -120,22 +230,28 @@ namespace Jde::QL{
 		}
 		return y;
 	}
-
+*/
 	α Parser::ParseArgs()ε->jobject{
 		string params{ Next(')') };
 		THROW_IF( params.empty(), "params.empty()" );
 		THROW_IF( params.front()!='(', "Expected '(' vs {} @ '{}' to start function - '{}'.",  params.front(), Index()-1, Text() );
 		params.front()='{'; params.back() = '}';
-		params = stringifyKeys( params );
-		return Json::Parse( params );
+		string stringified; stringified.reserve( params.size()*2 );
+		parseObject( params, stringified );
+		return Json::Parse( stringified );
 	}
 
-	α Parser::LoadMutation( string&& command, bool returnRaw )ε->MutationQL{
-		auto args = ParseArgs();
-		let wantsResult = Peek()=="{";
-		optional<TableQL> result = wantsResult ? LoadTable("") : optional<TableQL>{};
-		MutationQL ql{ move(command), move(args), move(result), returnRaw };
-		return ql;
+	α Parser::LoadMutations( string&& command, bool returnRaw )ε->vector<MutationQL>{
+		vector<MutationQL> y;
+		do{
+			auto args = ParseArgs();
+			let wantsResult = Peek()=="{";
+			optional<TableQL> result = wantsResult ? LoadTable("") : optional<TableQL>{};
+			//MutationQL ql{ move(command), move(args), move(result), returnRaw };
+			y.push_back( { move(command), move(args), move(result), returnRaw } );
+			command = Next();
+		}while( MutationQL::IsMutation(command) );
+		return y;
 	}
 
 	α Parser::LoadTable( sv jsonName )ε->TableQL{//__type(name: "Account") { fields { name type { name kind ofType{name kind} } } }
@@ -196,6 +312,8 @@ namespace Jde::QL{
 		let text{ Next('}') };
 		THROW_IF( text.empty(), "text.empty()" );
 		THROW_IF( text.front()!='{', "Expected '{{' vs {} @ '{}' to start unsubscribe - '{}'.", text.front(), Index()-1, Text() );
-		return Json::FromArray<SubscriptionId>( Json::AsArray(Json::Parse(stringifyKeys(text)), "id") );
+		string stringified; stringified.reserve( text.size()*2 );
+		parseObject(text, stringified);
+		return Json::FromArray<SubscriptionId>( Json::AsArray(Json::Parse(stringified), "id") );
 	}
 }

@@ -17,7 +17,7 @@ namespace Jde::QL{
 		α Text()ι->string{ return i<_text.size() ? _text.substr(i) : string{}; }
 		α AllText()ι->string{ return _text; }
 
-		α LoadMutation( string&& command, bool returnRaw )ε->MutationQL;
+		α LoadMutations( string&& command, bool returnRaw )ε->vector<MutationQL>;
 		α LoadTables( sv jsonName, bool returnRaw )ε->vector<TableQL>;
 		α LoadSubscriptions()ε->vector<Subscription>;
 		α LoadUnsubscriptions()ε->vector<SubscriptionId>;

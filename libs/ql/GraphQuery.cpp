@@ -19,7 +19,7 @@ namespace Jde::QL{
 	using std::endl;
 	constexpr ELogTags _tags{ ELogTags::QL };
 	using namespace DB::Names;
-	α GetTable( str tableName )ε->sp<DB::View>;
+	α GetTable( str tableName, SRCE )ε->sp<DB::View>;
 	α GetEnumValues( const DB::View& table, SRCE )ε->sp<flat_map<uint,string>>{
 		return table.Schema->DS()->SelectEnumSync<uint,string>( table, sl );
 	}
@@ -113,7 +113,7 @@ namespace Jde::QL{
 		qlTable.JsonMembers.push_back( {qlTable.JsonName, c.JsonName} );
 	}
 
-	Ω columnSql( const TableQL& qlTable, const DB::View& dbTable, bool excludeId, DB::Statement& statement, optional<bool> includeDeleted=nullopt )->void{
+	Ω columnSql( const TableQL& qlTable, const DB::View& dbTable, bool excludeId, DB::Statement& statement, optional<bool> includeDeleted=nullopt )ε->void{
 		for( let& c : qlTable.Columns )
 			addColumn( c, qlTable, dbTable, statement, excludeId );
 
@@ -144,10 +144,10 @@ namespace Jde::QL{
 		for( auto& qlTable : tables ){//members
 			auto fk = findFK( parentTable, qlTable.DBName() );
 			DB::Statement statement;
-			if( auto map = fk ? fk->Table->Map : nullopt; map ){ //identity_groups.member_id  if not a map, get it in main table.
-				statement.Select.TryAdd( fk->Table->SurrogateKeys[0] );//add identity_id of groups for result.
+			if( auto map = fk ? fk->Table->Map : nullopt; map ){ //members.member_id  if not a map, get it in main table.
+				statement.Select.TryAdd( fk->Table->SurrogateKeys[0] );//add identity_id of members for result.
 				columnSql( qlTable, *fk->PKTable, false, statement );
-				statement.From.TryAdd( {fk->PKTable->GetPK(), fk, true} ); //identities join identity_groups
+				statement.From.TryAdd( {fk->PKTable->GetPK(), fk, true} ); //identities join members
 			}
 			else if( auto map = findMap(parentTable, qlTable.DBName()); map ){ //role_members
 				auto parent = map->Parent; //role_id
@@ -225,7 +225,7 @@ namespace Jde::QL{
 	}
 }
 namespace Jde{
-	α QL::SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted )ι->optional<DB::Statement>{
+	α QL::SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted )ε->optional<DB::Statement>{
 		let dbView = GetTable( qlTable.DBName() );
 		DB::Statement statement;
 		columnSql( qlTable, *dbView, false, statement, includeDeleted );

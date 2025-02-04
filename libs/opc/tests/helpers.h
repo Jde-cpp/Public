@@ -13,8 +13,8 @@ namespace Jde::Opc{
 	//α DS()ι->DB::IDataSource&;
 
 	const static string OpcServerTarget{ "OpcServerTests" };
-	struct CreateOpcServerAwait : TAwaitEx<OpcPK,QL::QLAwait<>::Task>{
-		α Execute()ι->QL::QLAwait<>::Task override;
+	struct CreateOpcServerAwait : TAwaitEx<OpcPK,QL::QLAwait<jobject>::Task>{
+		α Execute()ι->QL::QLAwait<jobject>::Task override;
 	};
 	α CreateOpcServer()ι->OpcPK;
 

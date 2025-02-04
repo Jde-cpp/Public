@@ -1,10 +1,13 @@
 {
 	testing:{
-		tests:: "AclTests.EnabledPermissions",
-		recreateDB:: true
+		tests: "AclTests.TestDeny",
+		recreateDB:: true,
+//[  FAILED  ] ResourceTests.Crud
 	},
 	dbServers: {
 		scriptPath: "$(JDE_DIR)/Public/libs/access/config/sql/mysql",
+		dataPath: "$(JDE_DIR)/Public/libs/access/config",
+		sync:: true,
 		localhost:{
 			driver: "$(JDE_DIR)/bin/asan/libJde.MySql.so",
 			connectionString: "$(JDE_CONNECTION)",

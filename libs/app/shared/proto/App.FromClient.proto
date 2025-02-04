@@ -5,6 +5,38 @@ import "google/protobuf/timestamp.proto";
 import "Common.proto";
 import "App.proto";
 
+message AddSession{
+	string domain=1;
+	string login_name=2;
+	uint32 provider_pk=3;
+	string user_endpoint=4;
+	bool is_socket = 5;
+}
+
+enum EFields{
+	FieldsNone=0;
+	TimestampField=0x1;
+	MessageId=0x2;
+	MessageField=0x4;
+	Level=0x8;
+	FileId=0x10;
+	File=0x20;
+	FunctionId=0x40;
+	Function=0x80;
+	LineNumber=0x100;
+	UserId=0x200;
+	User=0x400;
+	ThreadId=0x800;
+	Thread=0x1000;
+	VariableCount=0x2000;
+	SessionId=0x4000;
+}
+
+enum ERequestIdType{
+	ERequestIdTypeNone = 0;
+	UnsubscribeLogs = 1;
+}
+
 message Instance{
 	string application=1;
 	string host=2;
@@ -30,23 +62,9 @@ message LogEntry{
 	repeated string args=10;
 }
 
-enum EFields{
-	FieldsNone=0;
-	TimestampField=0x1;
-	MessageId=0x2;
-	MessageField=0x4;
-	Level=0x8;
-	FileId=0x10;
-	File=0x20;
-	FunctionId=0x40;
-	Function=0x80;
-	LineNumber=0x100;
-	UserId=0x200;
-	User=0x400;
-	ThreadId=0x800;
-	Thread=0x1000;
-	VariableCount=0x2000;
-	SessionId=0x4000;
+message Query{
+	string text=1;
+	bool return_raw=2;
 }
 
 message StringValue{
@@ -63,35 +81,21 @@ message Status{
 	repeated string details=5;
 }
 
-message AddSession{
-	string domain=1;
-	string login_name=2;
-	uint32 provider_pk=3;
-	string user_endpoint=4;
-	bool is_socket = 5;
-}
-
 message ForwardExecution{
 	uint32 app_pk = 1;
 	uint32 app_instance_pk = 2; //0 for any
 	bytes execution_transmission = 3;
 }
 
-
 message Unsubscription{
 	repeated uint32 request_ids = 1;
-}
-
-enum ERequestIdType{
-	ERequestIdTypeNone = 0;
-	UnsubscribeLogs = 1;
 }
 
 message Message{
 	uint32 request_id=1;
 	oneof Value{
 		AddSession add_session=2;//called from authenticators like iotWebsocket
-		string query=3;
+		Query query=3;
 		Instance instance = 4;
 		LogEntry log_entry = 5;
 		uint32 session_id=6;  //Attach session id for the socket.

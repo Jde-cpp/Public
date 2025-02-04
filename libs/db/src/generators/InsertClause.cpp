@@ -22,7 +22,7 @@ namespace Jde::DB{
 		else if( Values.size() && Values.begin()->first ){
 			let& table = *Values.begin()->first->Table;
 			let procName = _procName.value_or( table.InsertProcName() );
-			sql = procName.size() ? Proc( procName ) : Insert( table.DBName );
+			sql = IsStoredProc && procName.size() ? Proc( procName ) : Insert( table.DBName );
 		}
 		return sql;
 	}

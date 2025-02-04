@@ -34,7 +34,7 @@ namespace Jde::Web::Client{
 
 		α Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void;// Start the asynchronous operation
 		α RunSession( string host, PortType port )ι{ return CreateClientSocketSessionAwait{shared_from_this(), host, port}; }
-		β Query( string&& query, SRCE )ι->ClientSocketAwait<jvalue> = 0;
+		β Query( string&& query, bool returnRaw, SRCE )ι->ClientSocketAwait<jvalue> = 0;
 		β Subscribe( string&& query, sp<QL::IListener> listener, SRCE )ε->ClientSocketAwait<jarray> = 0;
 		α OnMessage( string&& j, RequestId requestId )ι->void;
 		α Write( string&& m )ι->void;

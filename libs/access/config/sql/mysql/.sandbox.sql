@@ -15,7 +15,9 @@ select * from role_members where role_id=8
 
 delete from role_members;
 delete from roles;
+select * from access_resources
 select * from resources
+
 
 
 select count(*)
@@ -37,6 +39,15 @@ where identity_id=3
 select resources.resource_id, resources.schema_name, resources.target, resources.criteria, UNIX_TIMESTAMP(resources.deleted) deleted
 from resources
 where resources.schema_name in('access')
+
+select access_providers_ql.provider_id, access_providers_ql.name from providers_ql order by provider_id
+
+ SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Custom error2';
+select * from access_identities
+delete from access_identities where identity_id=3
+delete from access_users where identity_id=3
+select version()
+delete from resources
 
 select * from rights
 select * from resources where resource_id=2
@@ -204,3 +215,12 @@ where identities.target='groupTest' and identities.deleted is null and is_group
 delete from identities where identity_id=8
 delete from identity_groups where identity_id=13
 
+call resource_insert('access','identity_groups','identityGroups',null,'From installation',null,63,null)
+select * from rights
+
+call identity_insert('root - name',1,'root',null,'root - description',false)
+select * from providers
+select * from provider_types
+
+select access_resources.resource_id, access_resources.schema_name, access_resources.name, access_resources.target, access_resources.attributes, UNIX_TIMESTAMP(access_resources.created) created, UNIX_TIMESTAMP(access_resources.updated) updated, UNIX_TIMESTAMP(access_resources.deleted) deleted, access_resources.description
+from access_resources

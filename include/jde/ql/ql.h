@@ -11,16 +11,16 @@ namespace Jde::QL{
 	struct IQL;
 	α Local()ι->sp<IQL>;
 
-	α Query( const TableQL& table, UserPK executer )ε->jvalue;
-	α SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted=nullopt )ι->optional<DB::Statement>;
-	α Query( string query, UserPK executer, SRCE )ε->jvalue;
-	α QueryObject( string query, UserPK executer, SRCE )ε->jobject;
-	α QueryArray( string query, UserPK executer, SRCE )ε->jarray;
-	α Execute( string query, UserPK executer, SRCE )ε->jobject;
-	α Mutation( string m, UserPK executer, SRCE )ε->jobject;
-	α Parse( string query, SRCE )ε->RequestQL;
-	α ParseSubscriptions( string query, SRCE )ε->vector<Subscription>;
 	α Configure( vector<sp<DB::AppSchema>>&& schemas )ε->void;
+	//α Mutation( string m, UserPK executer, SRCE )ε->jobject;
+	α Parse( string query, bool returnRaw=true, SRCE )ε->RequestQL;
+	α ParseSubscriptions( string query, SRCE )ε->vector<Subscription>;
+	//α Execute( string query, UserPK executer, SRCE )ε->jobject;
+	α Query( const TableQL& table, UserPK executer )ε->jvalue;
+	α Query( string query, UserPK executer, SRCE )ε->jvalue;
+	α QueryArray( string query, UserPK executer, SRCE )ε->jarray;
+	α QueryObject( string query, UserPK executer, SRCE )ε->jobject;
+	α SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted=nullopt )ε->optional<DB::Statement>;
 
 	Ŧ AsId( const jobject& j, SRCE )ε->T;
 	Ŧ AsId( const jvalue& j, SRCE )ε->T;

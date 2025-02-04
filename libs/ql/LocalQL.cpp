@@ -1,11 +1,14 @@
 #include "LocalQL.h"
+#include <jde/db/meta/View.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalSubscriptions.h>
-//#include <jde/ql/UnsubscribeAwait.h>
+#include "ops/InsertAwait.h"
 
 #define let const auto
 
 namespace Jde::QL{
+	α GetTable( str tableName, SRCE )ε->sp<DB::View>;
+
 	constexpr ELogTags _tags{ ELogTags::QL };
 
 	struct SubscribeQueryAwait : TAwait<vector<SubscriptionId>>{
@@ -28,5 +31,34 @@ namespace Jde::QL{
 	};
 	α LocalQL::Subscribe( string&& query, sp<IListener> listener, UserPK executer, SL sl )ε->up<TAwait<vector<SubscriptionId>>>{
 		return mu<SubscribeQueryAwait>( ParseSubscriptions(move(query)), listener, executer, sl );
+	}
+	α LocalQL::Upsert( string query, UserPK executer )ε->jarray{
+		auto result = QL::Parse( query ); THROW_IF( !result.IsMutation(), "Query is not a mutation" );
+		jarray y;
+		for( auto&& m : result.Mutations() ){
+			auto key = m.FindKey();
+			if( !key ){
+				let shift = m.GetParam( "shift" );
+				key = { shift.is_null() ? 0 : 1ul << (Json::AsNumber<uint8>(shift)) };
+				m.Args["id"] = key->PK();
+				m.Args.erase( "shift" );
+			}
+			auto input = key->IsPrimary()
+				? "id:"+std::to_string(key->PK())
+				: "target:\""+move(key->NK())+'"';
+			auto ql = Ƒ( "{}({}){{ id }}", DB::Names::ToSingular(m.JsonTableName), move(input) );
+			if( auto existing = BlockAwait<TAwait<jobject>,jobject>(*QueryObject(move(ql), executer)); existing.empty() ){
+				if( auto name = m.Args.contains("name") ? nullptr : m.Args.if_contains("target"); name ){
+					string name2 = Json::AsString(*name);
+					m.Args["name"] = name2;
+				}
+				if( auto t = key->IsPrimary() ? GetTable(m.TableName()) : nullptr; t && t->SequenceColumn() )
+					y.push_back( BlockAwait<InsertAwait,jvalue>({DB::AsTable(t), move(m), true, executer}) );
+				else
+					y.push_back( BlockAwait<QLAwait<jvalue>,jvalue>(QLAwait<jvalue>{move(m), executer}) );
+			}else
+				y.push_back( {} );
+		}
+		return y;
 	}
 }

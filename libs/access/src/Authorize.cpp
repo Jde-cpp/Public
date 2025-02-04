@@ -70,6 +70,7 @@ namespace Jde::Access{
 					user->second.Clear();
 			}
 			else{
+				ASSERT( groupPK!=member.GroupPK() );
 				let groupUsers = RecursiveUsers( member.GroupPK(), l );
 				users.insert( groupUsers.begin(), groupUsers.end() );
 			}
@@ -236,7 +237,7 @@ namespace Jde::Access{
 		ul l{ Mutex };
 		RecalcGroupMembers( groupPK, l, true );
 	}
-	//TODO test on deleted groups.
+	//TODO test on deleted members.
 	α Authorize::TestAddGroupMember( GroupPK parentGroupPK/*groupD*/, flat_set<IdentityPK::Type>&& memberPKs, SL sl )ε->void{
 		std::shared_lock _{ Mutex };
 		for( let memberPK : memberPKs ){

@@ -53,7 +53,6 @@ local targetColumns = valuesColumns+{
 };
 
 local targetNKs = [valuesNK, ["target"]];
-local rights = ["None", "Create", "Read", "Update", "Delete", "Purge", "Administer", "Subscribe", "Execute"];
 local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"];
 {
 	local tables = self.tables,
@@ -61,9 +60,9 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		groupMembers:{
 			comment: "Group Members",
 			columns:{
-				groupId: tables.identityGroups.columns.identityId+{ criteria: null },
+				groupId: tables.groupings.columns.identityId+{ criteria: null },
 				groupTarget: targetColumns.target,
-				memberId: tables.identityGroups.columns.memberId,
+				memberId: tables.groupings.columns.memberId,
 				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true },
 				isGroup: tables.identities.columns.isGroup
 			}+targetColumns,
@@ -82,19 +81,15 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			comment: "Group or User",
 			columns:{
 				identityId: pkSequenced,
-				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true, i: 15 },
+				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true, i: 15, sk:null },
 				isGroup: types.bit+{ default: false, i: 101 },
 			}+targetColumns,
 			naturalKeys:[ ["name","provider_id"], ["target"] ],
-			data: [
-				{ id:1, attributes:5, name:"Everyone", target:"everyone", isGroup:true },
-				{ id:2, attributes:6, name:"Users", target:"users", isGroup:true }
-			],
 			ops: ["None"]
 		},
 		users:{
 			columns: {
-				identityId: tables.identities.columns.identityId+{ pkTable: {name: "identities"} },
+				identityId: tables.identities.columns.identityId+{ pkTable:"identities", criteria: "not is_group" },
 				loginName: valuesColumns.name+{ nullable: true },
 				password: types.varbinary+{ length: 2048, encrypted:true, nullable: true, i:101 },
 				modulus: types.varchar+{ length: 2048, nullable:true, comment: "Used for RSA", i:102 },
@@ -103,7 +98,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			ops: ["Create", "Read", "Update", "Delete", "Purge", "Administer", "Execute"],
 			extends: "identities"
 		},
-		identityGroups:{
+		groupings:{
 			columns: {
 				identityId: tables.identities.columns.identityId+{ pkTable: "identities", criteria: "is_group"  },
 				memberId: 	tables.identities.columns.identityId+{ pkTable: "identities", name: "member_id", sk: 1, i:1 },
@@ -114,26 +109,16 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		providerTypes:{
 			columns: {
 				providerTypeId: types.uint8+{sk:0, i:0},
-			}+valuesColumns,
-			data: [
-				{id:1, name:"Google"},
-				{id:2, name:"Facebook"},
-				{id:3, name:"Amazon"},
-				{id:4, name:"Microsoft"},
-				{id:5, name:"VK"},
-				{id:6, name:"Key", comment:"RSA connection"},
-				{id:7, name:"OpcServer"}
-			],
+			}+valuesColumns
 		},
 		providers:{
 			columns: {
 				providerId: smallSequenced,
-				providerTypeId: tables.providerTypes.columns.providerTypeId+{ pkTable: "provider_types", i:1 },
+				providerTypeId: tables.providerTypes.columns.providerTypeId+{ sk:null, pkTable: "provider_types", i:1 },
 				target: targetColumns.target+{ nullable: true, comment: "Points to target in another table (eg OpcServer)" }
 			},
 			naturalKeys:[["provider_type_id","target"]],
 			purgeProc: "provider_purge",
-			data: [{id:1, providerTypeId:1}, {id:2, providerTypeId:2}, {id:3, providerTypeId:3}, {id:4, providerTypeId:4}, {id:5, providerTypeId:5}, {id:6, providerTypeId:6} ],
 			qlView: "providers_ql",
 			ops: ["None"]
 		},
@@ -142,8 +127,8 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				resourceId: smallSequenced,
 				schemaName: valuesColumns.name+{ i:1 },
 				criteria: types.varchar+{ nullable: true, length:1024, i:100 },
-				allowed: tables.rights.columns.rightId+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource" },
-				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:102, nullable:true, comment: "available rights for this resource" },
+				allowed: tables.rights.columns.rightId+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource", sk:null },
+				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:102, nullable:true, comment: "available rights for this resource", sk:null },
 			}+targetColumns,
 			ops: ["None"]//handled through admin op.
 		},
@@ -157,7 +142,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		permissionRights:{
 			columns: {
 				permissionId: tables.permissions.columns.permissionId+{ pkTable: "permissions", i:0, sk:0 },
-				resourceId: tables.resources.columns.resourceId+{ pkTable: "resources", i:1 },
+				resourceId: tables.resources.columns.resourceId+{ sk:null, pkTable: "resources", i:1 },
 				allowed: tables.rights.columns.rightId+{ pkTable: "rights", i:2 },
 				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:3 },
 			},
@@ -187,8 +172,8 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				rightId: types.uint8+{ sk:0, i:0 },
 				name: types.varchar+{ length: 11, i:1 }
 			},
-			flagsData: rights,
-			ops: ["None"]
+			ops: ["None"],
+			isFlags: true
 		},
 		acl:{
 			columns: {

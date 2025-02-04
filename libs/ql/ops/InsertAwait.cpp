@@ -17,11 +17,15 @@ namespace Jde::QL{
 	Ω getEnumValue( const DB::Column& c, const QLColumn& qlCol, const jvalue& v )->Value;
 	α GetEnumValues( const DB::View& table, SRCE )ε->sp<flat_map<uint,string>>;
 
-	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
+	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL m, UserPK executer, SL sl )ι:
+		InsertAwait( table, move(m), false, executer, sl )
+	{}
+	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL&& m, bool identityInsert, UserPK executer, SL sl )ι:
 		base{sl},
-		_mutation{ move(mutation) },
-		_table{ table },
-		_executer{ userPK }
+		_executer{ executer },
+		_identityInsert{ identityInsert },
+		_mutation{ move(m) },
+		_table{ table }
 	{}
 
 	α InsertAwait::await_ready()ι->bool{
@@ -56,7 +60,7 @@ namespace Jde::QL{
 		DB::InsertClause statement;
 		vector<sp<DB::Column>> missingColumns;
 		for( let& c : table.Columns ){
-			if( !c->Insertable )
+			if( !c->Insertable && (!_identityInsert || !c->IsPK()) )
 				continue;
 			const QLColumn qlCol{ c };
 			Value value;
@@ -67,8 +71,10 @@ namespace Jde::QL{
 					? getEnumValue( *c, qlCol, *jvalue )
 					: Value{ c->Type, *jvalue };
 			}
+			else if( let id = c->IsPK() ? input.if_contains("id") : nullptr; id )
+				value = Value{ c->Type, *id };
 			else if( !c->Default && c->Insertable ){ //insertable=not populated by stored proc, may [not] be an extension record.
-				THROW_IF( !c->PKTable, "No default for {} in {}", c->Name, table.Name );
+				THROW_IF( !c->PKTable, "No default for {} in {}. mutation={}", c->Name, table.Name, _mutation.ToString() );
 				++cNonDefaultArgs;
 				missingColumns.emplace_back( c );//also needs to be inserted, insert null for now.
 			}
@@ -113,11 +119,15 @@ namespace Jde::QL{
 				}
 
 				uint id{};
+				if( _identityInsert )
+					statement.IsStoredProc = false;
 				auto sql = statement.Move();
 				if( statement.IsStoredProc ){
 					( co_await *ds.ExecuteProcCo(sql.Text, move(sql.Params), [&](const DB::IRow& row){id = (int32)row.GetInt(0);}) ).CheckError();
 					y.push_back( jobject{ {"id", id}, {"rowCount",1} } );
 				}else{
+					if( _identityInsert && ds.Syntax().NeedsIdentityInsert() )
+						sql.Text = Ƒ("SET IDENTITY_INSERT {0} ON;{1};SET IDENTITY_INSERT {0} OFF;", _table->DBName, sql.Text );
 					( co_await *ds.ExecuteCo(sql.Text, move(sql.Params)) ).CheckError();
 					y.push_back( jobject{ {"rowCount",1} } );
 				}

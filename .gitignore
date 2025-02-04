@@ -65,3 +65,4 @@ tests/*.proto
 libs/access/config/sql/.sandbox.sql
 libs/app/shared/proto/Web.FromServer.proto
 **/.*.sql
+**/my-workspace*/**

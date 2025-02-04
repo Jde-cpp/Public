@@ -9,7 +9,8 @@ namespace Jde::DB{ struct Table; struct IDataSource; struct InsertClause; }
 namespace Jde::QL{
 	struct InsertAwait final: TAwait<jvalue>{
 		using base=TAwait<jvalue>;
-		InsertAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SRCE )ι;
+		InsertAwait( sp<DB::Table> table, MutationQL mutation, UserPK executer, SRCE )ι;
+		InsertAwait( sp<DB::Table> table, MutationQL&& m, bool identityInsert, UserPK executer, SRCE )ι;
 		α await_ready()ι->bool override;
 		α Suspend()ι->void override{ InsertBefore(); }
 		α await_resume()ε->jvalue override;
@@ -22,9 +23,11 @@ namespace Jde::QL{
 		α InsertFailure( IException&& e )ι->MutationAwaits::Task;
 		α Resume( jarray&& v )ι->void;
 
+		UserPK _executer;
+		bool _identityInsert;
 		const MutationQL _mutation;
 		sp<DB::Table> _table;
-		UserPK _executer;
+
 		up<IException> _exception;
 		vector<vector<sp<DB::Column>>> _missingColumns;
 		flat_map<string,DB::Value> _nestedIds;
