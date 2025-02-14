@@ -1,6 +1,7 @@
 #include <jde/ql/types/TableQL.h>
 #include <jde/ql/types/FilterQL.h>
 #include <jde/db/IRow.h>
+#include <jde/db/Key.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/DBSchema.h>
@@ -50,6 +51,14 @@ namespace Jde::QL{
 	}
 	α TableQL::FindTable( sv jsonPluralName )Ι->const TableQL*{
 		return const_cast<TableQL*>(this)->FindTable( jsonPluralName );
+	}
+	α TableQL::FindArgKey()Ι->optional<DB::Key>{
+		optional<DB::Key> y;
+		if( let id = Json::FindValue( Args, "id" ); id )
+			y = DB::Key{ Json::AsString(move(*id)) };
+		else if( let target = Json::FindValue( Args, "target" ); target )
+			y = DB::Key{ Json::AsString(move(*target)) };
+		return y;
 	}
 
 	α ColumnQL::QLType( const DB::Column& column, SL sl )ε->string{

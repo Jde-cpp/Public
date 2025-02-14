@@ -4,7 +4,7 @@
 #include <jde/db/names.h>
 #define let const auto
 
-namespace Jde::DB{ struct Column; struct IRow; };
+namespace Jde::DB{ struct Column; struct IRow; struct Key; };
 namespace Jde::QL{
 	struct ColumnQL final{
 		Ω QLType( const DB::Column& db, SRCE )ε->string;
@@ -21,9 +21,9 @@ namespace Jde::QL{
 		α FindTable( sv jsonPluralName )Ι->const TableQL*;
 		α FindTable( sv jsonPluralName )ι->TableQL*;
 		α FindTablePrefix( sv jsonPluralName )Ι->const TableQL*;
-		//α Input()Ε->const jobject&{ return Json::AsObject( Args, "input" ); }
 		α IsPlural()Ι{ return DB::Names::IsPlural(JsonName); }
 		α Filter()Ε->FilterQL;
+		α FindArgKey()Ι->optional<DB::Key>;
 		α AddFilter( const string& column, const jvalue& value )ι->void;
 		α ToJson( DB::IRow& row, const vector<sp<DB::Column>>& dbColumns )Ι->jobject;
 		α ToString()Ι->string;

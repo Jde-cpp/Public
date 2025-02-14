@@ -118,16 +118,30 @@ namespace Jde::Access{
 		auto permissionStatement = QL::SelectStatement( permissionQL, true );
 		if( permissionStatement ){
 			let rolePKCol = MemberTable->GetColumnPtr( "role_id" );
-			if( auto roleId = Query.Args.find("id"); roleId!=permissionQL.Args.end() )
-				permissionStatement->Where.Add( rolePKCol, DB::Value{roleId->value().to_number<RolePK>()} );//role_id=?
-			let& rightsTable = *GetTable( "permission_rights" );
+			let& permissionsTable = *GetTable( "permission_rights" );
+			if( auto roleKey = Query.FindArgKey(); roleKey ){
+				if( roleKey->IsPrimary() ){//role(id:?)
+					permissionStatement->Where.Add( rolePKCol, DB::Value::FromKey(*roleKey) );
+					permissionStatement->From+={ MemberTable->GetColumnPtr("member_id"), permissionsTable.GetPK(), true };
+				}
+				else{//role(target:?)
+					auto rolesTable = GetTable( "roles" );
+					permissionStatement->Where.Add( rolesTable->GetColumnPtr("target"), DB::Value::FromKey(*roleKey) );
+					DB::FromClause from{ {rolesTable->GetPK(), MemberTable->GetSK0()} };
+					from+={ MemberTable->GetColumnPtr("member_id"), permissionsTable.GetPK(), true };
+					from+={ permissionsTable.GetColumnPtr("resource_id"), GetTable("resources")->GetPK(), true };
+					permissionStatement->From = move( from );
+				}
+			}
+			else
+				permissionStatement->From+={ MemberTable->GetColumnPtr("member_id"), permissionsTable.GetPK(), true };
+
 			if( !permissionQL.FindColumn( "id" ) ){
-				permissionStatement->Select+=rightsTable.GetPK();
-				permissionQL.Columns.push_back( QL::ColumnQL{"id", rightsTable.GetPK()} );
+				permissionStatement->Select+=permissionsTable.GetPK();
+				permissionQL.Columns.push_back( QL::ColumnQL{"id", permissionsTable.GetPK()} );
 			}
 			permissionStatement->Select+=rolePKCol;
 			permissionQL.Columns.push_back( QL::ColumnQL{"parentRoleId", rolePKCol} );
-			permissionStatement->From+={ rightsTable.GetPK(), MemberTable->GetColumnPtr("member_id"), true };
 		}
 		return permissionStatement;
 	}
@@ -138,13 +152,14 @@ namespace Jde::Access{
 			optional<jvalue> permissions;
 			optional<jvalue> roleMembers;
 			string memberName{};
+			optional<bool> permissionQLPlural;
 			if( auto permissionQL = Query.FindTable("permissionRights"); permissionQL ){
 				if( auto statement = PermissionsStatement( *permissionQL ); statement ){
+					permissionQLPlural = permissionQL->IsPlural();
 					memberName = permissionQL->JsonName;
-					let tableName = permissionQL->JsonName;
 					auto rights = co_await QL::QLAwait( move(*permissionQL), move(*statement), UserPK );
 					if( rights.is_array() )
-						permissions = rights.get_array().empty() ? optional<jvalue>{} : move( rights.get_array() );
+						permissions = move( rights.get_array() );
 					else if( rights.is_object() )
 						permissions = move( rights.get_object() );
 				}
@@ -152,7 +167,6 @@ namespace Jde::Access{
 			else if( auto roleQL = Query.FindTable("roles"); roleQL ){
 				if( auto statement = RoleStatement(*roleQL); statement ){
 					memberName = roleQL->JsonName;
-					let tableName = roleQL->JsonName;
 					auto dbMembers = co_await QL::QLAwait( move(*roleQL), move(*statement), UserPK );
 					if( dbMembers.is_array() )
 						roleMembers = dbMembers.get_array().empty() ? optional<jvalue>{} : move( dbMembers.get_array() );
@@ -190,20 +204,25 @@ namespace Jde::Access{
 			if( !Query.FindColumn("id") )
 				Query.Columns.push_back( QL::ColumnQL{"id", roleTable.GetPK()} );
 			let returnArray = Query.IsPlural();
+			let returnRaw = Query.ReturnRaw;
 			if( auto roleStatement = QL::SelectStatement( Query ); roleStatement ){
 				//Trace{ ELogTags::Test, "{}", Query.ToString() };
 				//let roleMemberRolePKColumn = MemberTable->GetColumnPtr("role_id");
 				//Query.Columns.push_back( QL::ColumnQL{"memberId", MemberTable->GetColumnPtr("member_id")} );
 				//Query.Columns.push_back( QL::ColumnQL{"roleId", roleMemberRolePKColumn} );
 				//roleStatement->From+={ roleTable.GetPK(), roleMemberRolePKColumn, true };
+				Query.ReturnRaw = true;
 				auto qlRoles = co_await QL::QLAwait( move(Query), UserPK );
-				auto addRole = [&roles]( jobject&& role ){
+				auto addRole = [&roles,permissionQLPlural]( jobject&& role ){
 					let rolePK = Json::AsNumber<RolePK>( role, "id" );
 					if( auto existing = roles.find(rolePK); existing!=roles.end() ){
 						for( auto&& [key,value] : role )
 							existing->second[key] = move( value );
-					}else
+					}else{
+						if( permissionQLPlural )
+							role["permissionRights"] = *permissionQLPlural ? (jvalue)jarray{} : (jvalue)jobject{};
 						roles.emplace( rolePK, role );
+					}
 				};
 				Json::Visit( move(qlRoles), addRole );
 			}

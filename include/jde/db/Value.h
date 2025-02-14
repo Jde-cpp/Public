@@ -1,8 +1,10 @@
 ﻿#pragma once
 #include <jde/db/usings.h>
 #include <jde/framework/io/json.h>
+#include <jde/db/Key.h>
 
 namespace Jde::DB{
+	struct Key;
 	enum class EValue:uint8{ Null, String, Bool, Int8, Int32, Int64, UInt32, UInt64, Double, Time };
 	α ToType( sv typeName )ι->EType;
 
@@ -12,6 +14,7 @@ namespace Jde::DB{
 		Value()=default;
 		Value( Underlying v )ι:Variant{v}{}
 		Value( EType type, const jvalue& j, SRCE )ε;
+		Ω FromKey( Key key )ι->Value{ return key.IsPrimary() ? Value{key.PK()} : Value{move(key.NK())}; }
 
 		α ToJson( jvalue& j )Ι->void;
 		α ToJson()Ι->jvalue{ jvalue v; ToJson(v); return v; };

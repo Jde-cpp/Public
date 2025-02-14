@@ -6,8 +6,8 @@ import { ComponentSidenav } from 'jde-material';
 
 import{ Applications, GraphQLComponent, GraphQLDetailComponent, LoginPageComponent } from 'jde-framework';
 import{ AccessService } from 'jde-access';
-import { RoleProperties } from '../../projects/jde-access/src/lib/pages/roles/role-properties';
-import { RoleResolver } from '../../projects/jde-access/src/lib/services/role.resolver.';
+import { RoleDetail } from '../../projects/jde-access/src/lib/pages/roles/role-detail';
+import { RoleResolver } from '../../projects/jde-access/src/lib/services/role.resolver';
 
 
 export const routes: Routes = [
@@ -33,10 +33,12 @@ export const routes: Routes = [
 				pageSettings:{ summary: "View/Modify Groups", type:"groupings", excludedColumns:["isGroup"] }
 			}},
 			{
-				path: 'roles/:id',
-				component: RoleProperties,
-				providers: [ {provide: 'IGraphQL', useClass: AccessService}],
-				resolve: { data: RoleResolver }
+				path: 'roles/:target',
+				component: RoleDetail,
+				providers: [
+					RoleResolver,
+					{provide: 'IGraphQL', useClass: AccessService}],
+				resolve: { roleData: RoleResolver }
 			},
 			{ path: 'roles', title: "Roles", component: GraphQLComponent, providers: [ {provide: 'IGraphQL', useClass: AccessService}], data: {
 				pageSettings:{ summary: "View/Modify Roles" }

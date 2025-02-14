@@ -10,7 +10,7 @@ namespace Jde::DB{
 	constexpr ELogTags _tags{ ELogTags::Sql };
 	constexpr array<sv,10> EValueStrings = { "null", "string", "bool", "int8", "int32", "int64", "uint32", "uint64", "double", "time" };
 
-	α FromJson( EType type, const jvalue& j, SL sl )->Value::Underlying{
+	Ω fromJson( EType type, const jvalue& j, SL sl )->Value::Underlying{
 		Value::Underlying value{ nullptr };
 		if( j.is_null() )
 			return value;
@@ -37,7 +37,7 @@ namespace Jde::DB{
 	}
 
 	Value::Value( EType type, const jvalue& j, SL sl )ε:
-		Variant{ FromJson(type, j, sl) }
+		Variant{ fromJson(type, j, sl) }
 	{}
 
 	α Value::ToString()Ι->string{

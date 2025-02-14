@@ -128,9 +128,9 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				schemaName: valuesColumns.name+{ i:1 },
 				criteria: types.varchar+{ nullable: true, length:1024, i:100 },
 				allowed: tables.rights.columns.rightId+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource", sk:null },
-				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:102, nullable:true, comment: "available rights for this resource", sk:null },
+				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:102, nullable:true, comment: "available rights for this resource", sk:null },//why?
 			}+targetColumns,
-			ops: ["None"]//handled through admin op.
+			ops: ["Delete"],
 		},
 		permissions:{
 			columns: {

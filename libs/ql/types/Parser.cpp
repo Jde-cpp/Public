@@ -121,6 +121,12 @@ namespace Jde::QL{
 			THROW_IF( null!="null", "Expected 'null' vs '{}' in '{}' @ '{}'.", null, json, i );
 			y += null;
 			i += 4;
+		}else if( ch=='N' ){
+			THROW_IF( json.size()-i<4, "Unexpected end vs '{}' @ '{}'.", json, i );
+			let nan = json.substr( i, 3 );
+			THROW_IF( nan!="NaN", "Expected 'NaN' vs '{}' in '{}' @ '{}'.", nan, json, i );
+			y += nan;
+			i += 3;
 		}else if( isdigit(ch) || ch=='-' || ch=='.' ){
 			for( ; i<json.size() && isdigit(ch); ch = json[++i] ){
 				y += ch;
@@ -263,8 +269,10 @@ namespace Jde::QL{
 			for( auto token = Next(); token!="}" && token.size(); token = Next() ){
 				if( Peek()=="{" || Peek()=="(" )
 					table.Tables.push_back( LoadTable(token) );
-				else
+				else{
+					THROW_IF( token==",", "Unexpected column ',' '{}' @ '{}'.", _text, Index()-1 );
 					table.Columns.emplace_back( ColumnQL{string{token}} );
+				}
 			}
 		}
 		return table;
