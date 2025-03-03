@@ -3,11 +3,11 @@
 #include "MySqlStatements.h"
 #include <jde/db/IRow.h>
 #include <jde/db/generators/Syntax.h>
-#include "../../meta/ddl/ColumnDdl.h"
-#include "../../meta/ddl/ForeignKey.h"
-#include "../../meta/ddl/Index.h"
-#include "../../meta/ddl/Procedure.h"
-#include "../../meta/ddl/TableDdl.h"
+#include "../../src/meta/ddl/ColumnDdl.h"
+#include "../../src/meta/ddl/ForeignKey.h"
+#include "../../src/meta/ddl/Index.h"
+#include "../../src/meta/ddl/Procedure.h"
+#include "../../src/meta/ddl/TableDdl.h"
 
 #define let const auto
 

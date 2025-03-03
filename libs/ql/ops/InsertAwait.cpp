@@ -123,13 +123,13 @@ namespace Jde::QL{
 					statement.IsStoredProc = false;
 				auto sql = statement.Move();
 				if( statement.IsStoredProc ){
-					( co_await *ds.ExecuteProcCo(sql.Text, move(sql.Params), [&](const DB::IRow& row){id = (int32)row.GetInt(0);}) ).CheckError();
-					y.push_back( jobject{ {"id", id}, {"rowCount",1} } );
+					let rowCount = ( co_await *ds.ExecuteProcCo(sql.Text, move(sql.Params), [&](const DB::IRow& row){id = (int32)row.GetInt(0);}) ).UP<uint>();
+					y.push_back( jobject{ {"id", id}, {"rowCount",*rowCount} } );
 				}else{
 					if( _identityInsert && ds.Syntax().NeedsIdentityInsert() )
 						sql.Text = Ƒ("SET IDENTITY_INSERT {0} ON;{1};SET IDENTITY_INSERT {0} OFF;", _table->DBName, sql.Text );
-					( co_await *ds.ExecuteCo(sql.Text, move(sql.Params)) ).CheckError();
-					y.push_back( jobject{ {"rowCount",1} } );
+					let rowCount = ( co_await *ds.ExecuteCo(sql.Text, move(sql.Params)) ).UP<uint>();
+					y.push_back( jobject{ {"rowCount",*rowCount} } );
 				}
 
 				auto table = statement.Values.size() ? statement.Values.begin()->first->Table : nullptr;

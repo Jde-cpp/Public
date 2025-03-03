@@ -63,7 +63,7 @@ namespace Jde::Web::Client{
 		if( result.is_array() )
 			base::Resume( move(result.get_array()) );
 		else
-			ResumeExp( Exception{_sl, "Expected object."} );
+			ResumeExp( Exception{_sl, "Expected array."} );
 	}
 
 

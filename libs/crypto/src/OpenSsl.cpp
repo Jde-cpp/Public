@@ -157,7 +157,6 @@ namespace Jde{
 		unsigned char* p = (unsigned char*)y.data();
 		len = i2d_X509( cert.get(), &p ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_X509 - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
 		int crit{};
- 		GENERAL_NAMES* pNames = (GENERAL_NAMES*) X509_get_ext_d2i( cert.get(), NID_subject_alt_name, &crit, nullptr ); CHECK_NULL(pNames);
 		return y;
 	}
 	α Crypto::ReadPrivateKey( const fs::path& privateKeyPath, str passcode )ε->vector<byte>{

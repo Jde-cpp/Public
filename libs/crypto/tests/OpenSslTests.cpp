@@ -5,7 +5,7 @@
 
 #define let const auto
 namespace Jde::Crypto{
-	static sp<Jde::LogTag> _logTag{ Logging::Tag( "test" ) };
+	constexpr ELogTags _tags = ELogTags::Test;
 	using namespace Crypto::Internal;
 
 	struct OpenSslTests : public ::testing::Test{
@@ -34,19 +34,17 @@ namespace Jde::Crypto{
 
 	α OpenSslTests::SetUpTestCase()->void{
 		let clear = Settings::FindBool( "cryptoTests/clear" ).value_or( true );
-		INFO( "clear={}", clear );
-		INFO( "clear={}", HeaderPayload );
-		LOG( ELogLevel::Information, _logTag, "clear={}", clear );
-		Logging::Log(Logging::MessageBase("clear={}", ELogLevel::Information, __FILE__, __func__, __LINE__), _logTag, true);
+		Information( _tags, "clear={}", clear );
+		Information( _tags, "clear={}", HeaderPayload );
 		if( clear || (!fs::exists(PublicKeyFile) || !fs::exists(PrivateKeyFile)) ){
 			if( !fs::exists(fs::path{PublicKeyFile}.parent_path()) )
 				fs::create_directories( fs::path{PublicKeyFile}.parent_path() );
 			Crypto::CreateKey( PublicKeyFile, PrivateKeyFile, passcode );
-			INFO( "Created keys {} {}", PublicKeyFile, PrivateKeyFile );
+			Information( _tags, "Created keys {} {}", PublicKeyFile, PrivateKeyFile );
 		}
 		if( clear || !fs::exists(CertificateFile) ){
 			Crypto::CreateCertificate( CertificateFile, PrivateKeyFile, passcode, "URI:urn:my.server.application", "jde-cpp", "US", "localhost" );
-			INFO( "Created certificate {}", CertificateFile );
+			Information( _tags, "Created certificate {}", CertificateFile );
 		}
 	}
 
@@ -68,7 +66,7 @@ namespace Jde::Crypto{
 		//vector<unsigned char> modulus = modulus2;//natvis issues.
 		//vector<unsigned char> exponent = exponent2;
 
-		Verify( modulus2, exponent2, HeaderPayload, signature );
+		Crypto::Verify( modulus2, exponent2, HeaderPayload, signature );
 	}
 
 	TEST_F( OpenSslTests, Certificate ){
@@ -76,7 +74,7 @@ namespace Jde::Crypto{
 		//ReadCertificate( "/tmp/cert2.pem" );
 	}
 	TEST_F( OpenSslTests, PrivateKey ){
-		Crypto::ReadPrivateKey( PrivateKeyFile );
+		Crypto::ReadPrivateKey( PrivateKeyFile, {} );
 	}
 
 

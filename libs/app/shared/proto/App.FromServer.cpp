@@ -29,6 +29,13 @@ namespace Jde::App{
 		t.add_messages()->set_request_id( requestId );
 		return t;
 	}
+	α FromServer::ConnectionInfo( AppPK appPK, AppInstancePK instancePK, RequestId clientRequestId )ι->Proto::FromServer::Transmission{
+		return setMessage( clientRequestId, [&](auto& m){
+			auto& connectionInfo = *m.mutable_connection_info();
+			connectionInfo.set_app_pk( appPK );
+			connectionInfo.set_instance_pk( instancePK );
+		});
+	}
 
 	α FromServer::Exception( const exception& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission{
 		Proto::FromServer::Transmission t;

@@ -55,7 +55,7 @@ namespace Jde::QL{
 	α TableQL::FindArgKey()Ι->optional<DB::Key>{
 		optional<DB::Key> y;
 		if( let id = Json::FindValue( Args, "id" ); id )
-			y = DB::Key{ Json::AsString(move(*id)) };
+			y = DB::Key{ Json::AsNumber<uint>(move(*id)) };
 		else if( let target = Json::FindValue( Args, "target" ); target )
 			y = DB::Key{ Json::AsString(move(*target)) };
 		return y;

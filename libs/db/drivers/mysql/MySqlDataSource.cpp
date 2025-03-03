@@ -3,7 +3,11 @@
 #include <jde/db/DBException.h>
 #include "MySqlRow.h"
 #include "MySqlServerMeta.h"
-#include "../../DBLog.h"
+#include "../../src/DBLog.h"
+
+#ifndef _GLIBCXX_DEBUG
+    #error "_GLIBCXX_DEBUG must be defined to compile this code."
+#endif
 
 #define let const auto
 

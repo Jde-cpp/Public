@@ -93,6 +93,7 @@ message Message{
 		Strings strings = 15;
 		SubscriptionAck subscription_ack = 16;
 		string subscription= 17;
+		ConnectionInfo connection_info = 18;
 
 		bytes execute_anonymous = 33;//appServer->2ndServer, no user context.
 		Jde.App.Proto.Execute execute = 34;//execute with user context.

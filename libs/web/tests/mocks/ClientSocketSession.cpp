@@ -18,11 +18,11 @@ namespace Jde::Web::Mock{
 
 	α ClientSocketSession::HandleException( std::any&& h, string&& what )ι{
 		if( auto pEcho = std::any_cast<ClientSocketAwait<string>::Handle>( &h ) ){
-			pEcho->promise().SetError( Exception{what} );
+			pEcho->promise().SetExp( Exception{what} );
 			pEcho->resume();
 		}
 		else if( auto pAck = std::any_cast<ClientSocketAwait<SessionPK>::Handle>( &h ) ){
-			pAck->promise().SetError( Exception{what} );
+			pAck->promise().SetExp( Exception{what} );
 			pAck->resume();
 		}
 		else{
@@ -66,7 +66,7 @@ namespace Jde::Web::Mock{
 		request->set_session_id( sessionId );
 		let requestId = NextRequestId();
 		request->set_request_id( requestId );
-		return ClientSocketAwait<SessionPK>{ IO::Proto::ToString(t), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<SessionPK>{ Jde::Proto::ToString(t), requestId, shared_from_this(), sl };
 	}
 	α ClientSocketSession::Echo( str x, SL sl )ι->ClientSocketAwait<string>{
 		Proto::FromClientTransmission t;
@@ -74,7 +74,7 @@ namespace Jde::Web::Mock{
 		request->set_echo( x );
 		let requestId = NextRequestId();
 		request->set_request_id( requestId );
-		return ClientSocketAwait<string>{ IO::Proto::ToString(t), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<string>{ Jde::Proto::ToString(t), requestId, shared_from_this(), sl };
 	}
 	α ClientSocketSession::CloseServerSide( SL sl )ι->ClientSocketAwait<string>{
 		Proto::FromClientTransmission t;
@@ -82,7 +82,7 @@ namespace Jde::Web::Mock{
 		request->mutable_close_server_side();
 		let requestId = NextRequestId();
 		request->set_request_id( requestId );
-		return ClientSocketAwait<string>{ IO::Proto::ToString(t), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<string>{ Jde::Proto::ToString(t), requestId, shared_from_this(), sl };
 	}
 	α ClientSocketSession::BadTransmissionClient( SL sl )ι->ClientSocketAwait<string>{
 		let requestId =  NextRequestId();
@@ -94,7 +94,7 @@ namespace Jde::Web::Mock{
 		request->mutable_bad_transmission_server();
 		let requestId = NextRequestId();
 		request->set_request_id( requestId );
-		return ClientSocketAwait<string>{ IO::Proto::ToString(t), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<string>{ Jde::Proto::ToString(t), requestId, shared_from_this(), sl };
 	}
 
 	α ClientSocketSession::OnClose( beast::error_code ec )ι->void{

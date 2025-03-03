@@ -2,6 +2,7 @@
 #ifndef JDE_STR_H
 #define JDE_STR_H
 DISABLE_WARNINGS
+#pragma GCC diagnostic ignored "-Wsubobject-linkage"
 #include <charconv>
 #include <codecvt>
 #include <span>
@@ -482,6 +483,7 @@ namespace Jde{
 			encoded = Replace( Replace( encoded, '/', '_' ), '+', '-' );
 		return encoded;
 	}
+
 	Ŧ Str::Decode64( sv s, bool convertFromFileSafe )ε->T{ //https://stackoverflow.com/questions/10521581/base64-encode-using-boost-throw-exception
 		string encoded{ s };
 		if( convertFromFileSafe )

@@ -2,7 +2,7 @@
 #include <jde/web/client/usings.h>
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/Sessions.h>
-#include <tests/proto/test.pb.h>
+#include "../proto/test.pb.h"
 
 namespace Jde::Web::Mock{
 	using namespace Jde::Web::Server;
@@ -14,6 +14,10 @@ namespace Jde::Web::Mock{
 		α SendAck( uint32 serverSocketId )ι->void override;
 	private:
 		α WriteException( IException&& e )ι->void;
+		α WriteSubscription( const jvalue& j, RequestId requestId )ι->void override{ ASSERT(false); }
+		α WriteSubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void override{ ASSERT(false); }
+		α WriteComplete( RequestId requestId )ι->void override{ ASSERT(false); }
+		α WriteException( exception&& e, RequestId requestId )ι->void override{ ASSERT(false); }
 		α OnConnect( SessionPK sessionId, RequestId requestId )ι->Server::Sessions::UpsertAwait::Task;
 	};
 }

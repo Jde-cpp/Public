@@ -7,7 +7,7 @@ namespace Jde{
 			ThreadId = pthread_self();
 			let rc = pthread_getname_np( ThreadId, ThreadName, NameLength );
 			if (rc != 0)
-					ERR( "pthread_getname_np returned {}"sv, rc );
+					Error( ELogTags::Threads, "pthread_getname_np returned {}"sv, rc );
 		}
 		return ThreadName;
 	}

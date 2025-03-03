@@ -1,5 +1,5 @@
 #pragma once
-#include "../../meta/IServerMeta.h"
+#include "../../src/meta/IServerMeta.h"
 
 namespace Jde::DB{
 	struct IDataSource; struct ForeignKey; struct Index; struct Procedure; struct Table;

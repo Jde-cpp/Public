@@ -4,26 +4,24 @@
 
 namespace Jde::Opc{
 	static ELogTags _tag{ (ELogTags)(EOpcLogTags::Opc | EOpcLogTags::Monitoring) };
-	α CreateDataChangesCallback( UA_Client* ua, void *userdata, RequestId requestId, void *response )ι->void{
+	α CreateDataChangesCallback( UA_Client* ua, void *userdata, RequestId requestId, UA_CreateMonitoredItemsResponse* response )ι->void{
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
-		auto pResponse = static_cast<UA_CreateMonitoredItemsResponse*>( response );
 		auto pRequest = pClient->ClearRequest<UARequest>( requestId );  if( !pRequest ){ Critical(_tag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId ); return; }
 		Trace( _tag, "[{:x}.{:x}]CreateDataChangesCallback - {:x}", (uint)ua, requestId, (Handle)userdata );
-		if( let sc = pResponse->responseHeader.serviceResult; sc )
+		if( let sc = response->responseHeader.serviceResult; sc )
 			Resume( UAException{sc}, move(pRequest->CoHandle) );
 		else{
-			pClient->MonitoredNodes.OnCreateResponse( pResponse, (Handle)userdata );
+			pClient->MonitoredNodes.OnCreateResponse( response, (Handle)userdata );
 			pRequest->CoHandle.resume();
 		}
 	}
-	α MonitoredItemsDeleteCallback( UA_Client* ua, void* /*_userdata_*/, RequestId requestId, void* response )ι->void{
+	α MonitoredItemsDeleteCallback( UA_Client* ua, void* /*_userdata_*/, RequestId requestId, UA_DeleteMonitoredItemsResponse* response )ι->void{
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
-		auto pResponse = static_cast<UA_DeleteMonitoredItemsResponse*>( response );
 		pClient->ClearRequest<UARequest>( requestId );
 		Trace( _tag, "[{:x}.{:x}]MonitoredItemsDeleteCallback", (uint)ua, requestId );
-		if( let sc = pResponse->responseHeader.serviceResult; sc )
+		if( let sc = response->responseHeader.serviceResult; sc )
 			Warning( _tag, "[{:x}.{:x}]Could not delete monitored items:  {}.", (uint)ua, requestId, UAException::Message(sc) );
-    for( auto sc : Iterable<UA_StatusCode>(pResponse->results, pResponse->resultsSize) ){
+    for( auto sc : Iterable<UA_StatusCode>(response->results, response->resultsSize) ){
 			if( sc )
 				Warning( _tag, "[{:x}.{:x}]Could not delete monitored item:  {}.", (uint)ua, requestId, UAException::Message(sc) );
 		}

@@ -19,6 +19,7 @@ namespace Jde::DB{
 		FromClause( Join&& j )ι:Joins{move(j)}{};
 		α ToString()Ε->string;
 		α operator+=( Join&& join )ι->FromClause&;
+		α Add( sp<Column> from, sp<Column> to, bool inner=true )ι->void;
 		α TryAdd( Join&& join )ι->void;
 
 		α Contains( sv tableName )ι->bool;

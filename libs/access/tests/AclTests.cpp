@@ -111,8 +111,8 @@ namespace Jde::Access::Tests{
 		TestUnauthPurge( resourceName, groupId, executer );
 		EXPECT_THROW( CreateAcl(_usersPKs["intruder"], ERights::All, ERights::None, resourceName, executer), IException );
 		let rolePK = GetId( Get("role", "EnabledPermissionsTest", GetRoot()) );
-		//auto existingPermission = GetRolePermission( RolePK rolePK, sv resourceName, UserPK executer )ε->jobject{
-		//QL::Query( Ƒ("removeRole( id:{}, permissionRight:{{ resource:{{target:\"{}\"}}}} )", rolePK, resourceName), GetRoot() );
+		if( let existingPermission = GetRolePermission( rolePK, resourceName, GetRoot() ); !existingPermission.empty() )
+			RemoveRolePermission( rolePK, GetId(existingPermission), GetRoot() );
 		EXPECT_THROW( AddRolePermission(rolePK, resourceName, ERights::All, ERights::None, executer), IException );
 	}
 

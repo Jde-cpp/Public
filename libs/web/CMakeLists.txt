@@ -1,0 +1,17 @@
+cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
+enable_testing()
+include( ../../build/functions.cmake )
+
+project( Jde.Web VERSION ${JDE_VERSION} LANGUAGES CXX )
+
+add_subdirectory( ../crypto crypto )
+add_subdirectory( ../app/shared app/shared )
+add_subdirectory( ../db/src db )
+add_subdirectory( ../ql ql )
+add_subdirectory( client web/client )
+add_subdirectory( server web/server )
+if( buildTests OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
+	add_subdirectory( tests web/tests )
+	set( CMAKE_CTEST_ARGUMENTS -c -settings=$ENV{JDE_DIR}/Public/libs/web/tests/config/Web.Tests.jsonnet )
+	add_test( NAME WebTests COMMAND $<TARGET_FILE:Jde.Web.Tests> )
+endif()

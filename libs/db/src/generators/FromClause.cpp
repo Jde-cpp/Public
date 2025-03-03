@@ -44,6 +44,16 @@ namespace Jde::DB{
 		SingleTable = nullptr;
 		Joins.push_back(move(join)); return *this;
 	}
+	// Change a single column to a join.
+	α FromClause::Add( sp<Column> from, sp<Column> to, bool inner )ι->void{
+		// TODO improve logic as use cases arise.
+		if( SingleTable ){
+			Joins.push_back( {from, to, inner} );
+			SingleTable = nullptr;
+		}
+		else
+			Joins.push_back( {from, to, inner} );
+	}
 	α FromClause::TryAdd( Join&& join )ι->void{
 		if( !Contains(join.To->Table->Name) )
 			*this += move(join);

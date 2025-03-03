@@ -7,7 +7,7 @@
 #include <jde/framework/process.h>
 #include "../../Framework/source/threading/InterruptibleThread.h"
 
-#define var const auto
+#define let const auto
 namespace Jde{
 	auto _tag{ ELogTags::App };
 	α OSApp::FreeLibrary( void* p )ι->void{
@@ -134,7 +134,7 @@ namespace Jde{
 	}
 
 	α OSApp::KillInstance( uint processId )ι->bool{
-		var result = ::kill( processId, 14 ); //SIGALRM
+		let result = ::kill( processId, 14 ); //SIGALRM
 		if( result )
 			Error{ _tag, "kill failed with '{}'.", result };
 		else
@@ -143,7 +143,7 @@ namespace Jde{
 	}
 
 	up<flat_multimap<string,string>> _pArgs;
-	α OSApp::Args()ι->const flat_multimap<string,string>&{
+	α Process::Args()ι->const flat_multimap<string,string>&{
 		if( !_pArgs ){
 			_pArgs = mu<flat_multimap<string,string>>();
 			std::ifstream file( "/proc/self/cmdline" );
@@ -152,7 +152,11 @@ namespace Jde{
 				if( current.starts_with('-') ){
 					if( key )
 						_pArgs->emplace( *key, string{} );
-					key = current;
+					if( uint i=current.find('='); i<current.size() ){
+						_pArgs->emplace( current.substr(0, i), current.substr(i+1) );
+						key.reset();
+					}else
+						key = current;
 				}
 				else if( key )
 					_pArgs->emplace( *key, current );
@@ -164,6 +168,11 @@ namespace Jde{
 		}
 		return *_pArgs;
 	}
+	α Process::FindArg( string key )ι->optional<string>{
+		auto p = Args().find( key );
+		return p!=Args().end() ? p->second : optional<string>{};
+	}
+
 	α OSApp::CompanyRootDir()ι->fs::path{ return fs::path{ "."+OSApp::CompanyName() }; };
 
 	α OSApp::AddSignals()ε->void{/*ε for windows*/
@@ -192,5 +201,34 @@ namespace Jde{
 
 	α OSApp::SetConsoleTitle( sv title )ι->void{
 		std::cout << "\033]0;" << title << "\007";
+	}
+
+	// https://stackoverflow.com/questions/3596781/how-to-detect-if-the-current-process-is-being-run-by-gdb
+	α Process::IsDebuggerPresent()ι->bool{
+		char buf[4096];
+
+    const int status_fd = open("/proc/self/status", O_RDONLY);
+    if (status_fd == -1)
+			return false;
+
+    const ssize_t num_read = read( status_fd, buf, sizeof(buf) - 1 );
+    close( status_fd );
+
+    if( num_read <= 0 )
+			return false;
+
+    buf[num_read] = '\0';
+    constexpr char tracerPidString[] = "TracerPid:";
+    let tracer_pid_ptr = strstr( buf, tracerPidString );
+    if( !tracer_pid_ptr )
+			return false;
+
+    for( const char* characterPtr = tracer_pid_ptr + sizeof(tracerPidString) - 1; characterPtr <= buf + num_read; ++characterPtr ){
+			if (isspace(*characterPtr))
+				continue;
+			else
+				return isdigit(*characterPtr) != 0 && *characterPtr != '0';
+    }
+    return false;
 	}
 }

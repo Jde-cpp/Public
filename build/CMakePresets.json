@@ -1,0 +1,69 @@
+{
+  "version": 8,
+	"cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 3
+  },
+  "configurePresets": [
+		{
+			"name": "linux",
+			"hidden": true,
+			"environment": {
+				"CC": "gcc-14",
+				"CXX": "g++-14",
+				"LIB_ROOT": "$env{REPO_DIR}/install/$env{CXX}"
+			},
+			"cacheVariables":{
+				"CMAKE_CXX_COMPILER": "g++-14",
+				"CMAKE_C_COMPILER": "gcc-14",
+				"CMAKE_CXX_STANDARD": "23",
+				"JDE_VERSION": "2025.03.01",
+				"MIN_REQ_CMAKE_VERSION": "3.28.3"
+			}
+		},
+    {
+      "name": "linux-relWithDebInfo",
+			"inherits": "linux",
+			"environment":{
+				"BUILD_TYPE": "RelWithDebInfo",
+				"LIB_DIR": "$env{LIB_ROOT}/$env{BUILD_TYPE}"
+			},
+      "cacheVariables": {
+				"CMAKE_BUILD_TYPE": "$env{BUILD_TYPE}",
+				"CMAKE_BINARY_DIR": "$env(JDE_DIR)/bin/$env{BUILD_TYPE}"
+			}
+    },
+    {
+      "name": "linux-debug",
+			"inherits": "linux",
+			"environment":{
+				"BUILD_TYPE": "Debug",
+				"LIB_DIR": "$env{LIB_ROOT}/$env{BUILD_TYPE}"
+			},
+      "cacheVariables": {
+				"CMAKE_BUILD_TYPE": "$env{BUILD_TYPE}",
+				"CMAKE_BINARY_DIR": "$env(JDE_DIR)/bin/$env{BUILD_TYPE}",
+				"CMAKE_CXX_FLAGS_DEBUG": "-ggdb -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -D_GLIBCXX_DEBUG=ON -static-libstdc++ -static-libasan -lrt"
+			}
+    },
+		{
+			"name": "linux-jde",
+			"hidden": true,
+			"inherits": "linux",
+			"cacheVariables": {
+				"CMAKE_C_COMPILER": null,
+				"CMAKE_PREFIX_PATH": "$env{LIB_DIR}",
+				"Boost_USE_STATIC_LIBS": false,
+				"BOOST_VERSION": "1.87.0"
+			}
+		},
+		{
+			"name": "linux-jde-debug",
+			"inherits": ["linux-jde","linux-debug"],
+			"cacheVariables": {
+				"CMAKE_PREFIX_PATH": "$env{LIB_DIR}"
+			}
+		}
+  ]
+}

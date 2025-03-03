@@ -82,22 +82,24 @@ namespace Jde::DB{
 			}
 		}
 	}
-	Ω forEachFile( sv jpath, sv extension, sv prefix, function<void(const fs::path& file)> process )ε{
-		let scriptPath = Settings::FindString( jpath );
-		const fs::path scriptRoot{ scriptPath.value_or("./") };
-		THROW_IF( !fs::exists(scriptRoot) || !fs::is_directory(scriptRoot), "Script path '{}' does not exist.", scriptRoot.string() );
-		for( let& entry : fs::directory_iterator(scriptRoot) ){
-			if( let& path = entry.path();
-			 !entry.is_directory()
-				&& path.extension().string().starts_with(extension)
-				&& (prefix.empty() || path.filename().string().starts_with(prefix)) ){
-				process( entry.path() );
+	Ω forEachDir( sv jpath, sv extension, sv prefix, function<void(const fs::path& file)> process )ε{
+		let dirs = Settings::FindStringArray( jpath );
+		for( let& scriptDir : dirs ){
+			const fs::path scriptRoot{ scriptDir };
+			THROW_IF( !fs::exists(scriptRoot) || !fs::is_directory(scriptRoot), "Script path '{}' does not exist.", scriptRoot.string() );
+			for( let& entry : fs::directory_iterator(scriptRoot) ){
+				if( let& path = entry.path();
+					!entry.is_directory()
+						&& path.extension().string().starts_with(extension)
+						&& (prefix.empty() || path.filename().string().starts_with(prefix)) ){
+					process( entry.path() );
+				}
 			}
 		}
 	}
 
 	α SchemaDdl::SyncData( const AppSchema& config, const jobject& initConfig )ε->void{
-		forEachFile( "/dbServers/dataPath", ".mutation", config.Name, [this](const fs::path& file){
+		forEachDir( "/dbServers/dataPaths", ".mutation", config.Name, [this](const fs::path& file){
 			let text = IO::FileUtilities::Load( file );
 			Information{ _tags, "Mutation: '{}'", file.string() };
 			_ql->Upsert( text, {UserPK::System} );
@@ -205,7 +207,7 @@ namespace Jde::DB{
 		//let& syntax = config.DS()->Syntax();
 		let configPrefix = Json::FindString( initConfig, "prefix" ).value_or("");
 		let stdPrefix = config.Name+"_"; //access_
-		forEachFile( "/dbServers/scriptPath", ".sql", stdPrefix, [&](const fs::path& scriptFile){
+		forEachDir( "/dbServers/scriptPaths", ".sql", stdPrefix, [&](const fs::path& scriptFile){
 			let fileName = scriptFile.filename(); //[access_]user_insert.sql
 			let stem = fileName.stem().string();
 			let procViewName = stem.substr( stdPrefix.size() );

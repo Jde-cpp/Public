@@ -66,6 +66,7 @@ namespace Client{
 		auto instanceName = Settings::FindString("instanceName").value_or( "" );
 		if( instanceName.empty() )
 			instanceName = _debug ? "Debug" : "Release";
+		Trace( sl, ELogTags::SocketClientWrite, "[{:x}]Connect: '{}'.", requestId, instanceName );
 		return ClientSocketAwait<Proto::FromServer::ConnectionInfo>{ ToString(FromClient::Instance(Process::ApplicationName(), instanceName, sessionId, requestId)), requestId, shared_from_this(), sl };
 	}
 

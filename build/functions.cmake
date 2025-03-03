@@ -1,0 +1,16 @@
+function(boost)
+	set( Boost_INCLUDE_DIR $ENV{LIB_DIR}/boost/include )
+	find_package(Boost ${BOOST_VERSION} REQUIRED COMPONENTS json)
+	include_directories( ${Boost_INCLUDE_DIRS} )
+endfunction()
+
+function(dumpVariables)
+    get_cmake_property(_variableNames VARIABLES)
+    list (SORT _variableNames)
+    foreach (_variableName ${_variableNames})
+#        if ((NOT DEFINED ${ARGV0}) OR _variableName MATCHES ${ARGV0})
+            message(STATUS "${_variableName}=${${_variableName}}")
+#        endif()
+    endforeach()
+endfunction()
+

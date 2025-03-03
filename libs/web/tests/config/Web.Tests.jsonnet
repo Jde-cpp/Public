@@ -1,8 +1,6 @@
 {
 	testing:{
-		testsa:: "CertificateTests.*",
-		testsb:: "SocketTests.CloseClientSide",
-		tests: "WebTests.*"
+		tests: "CertificateTests.NewDirectory"
 	},
 	logging:{
 		defaultLevel:: "Information",

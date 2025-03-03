@@ -8,9 +8,9 @@
 		url: "opc.tcp://127.0.0.1:49320"
 	},
 	dbServers: {
-		scriptPath: "$(JDE_DIR)/IotWebsocket/config/sql/mysql",
+		scriptPaths: ["$(JDE_DIR)/IotWebsocket/config/sql/mysql"],
 		localhost:{
-			driver: "$(JDE_DIR)/bin/asan/libJde.MySql.so",
+			driver: "db/drivers/mysql/libJde.DB.MySql.so",
 			connectionString: "$(JDE_CONNECTION)",
 			catalogs: {
 				_appCatalog:{
@@ -26,7 +26,7 @@
 					schemas:{
 						test_opc:{ //for sqlserver, test with schema, debug with default schema ie dbo.
 							opc:{
-								meta: "$(JDE_DIR)/IotWebsocket/config/IotWebSocketMeta.jsonnet",
+								meta: "$(JDE_DIR)/IotWebsocket/config/opcGateway-meta.jsonnet",
 								prefix: null  //test with null prefix, debug with prefix
 							}
 						}

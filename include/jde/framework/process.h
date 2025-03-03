@@ -23,6 +23,10 @@ namespace Jde::Process{
 	Φ ShuttingDown()ι->bool;
 	Φ Finalizing()ι->bool;
 	Ŧ AddPollster( /*bool appThread*/ )ι->sp<T>;
+
+	Φ Args()ι->const flat_multimap<string,string>&;
+	Φ FindArg( string key )ι->optional<string>;
+	Φ IsDebuggerPresent()ι->bool;
 }
 
 namespace Jde{
@@ -93,7 +97,6 @@ namespace Jde{
 		α Uninstall()ε->void override;
 		ω ProcessId()ι->uint32;
 		Ω Executable()ι->fs::path;
-		Ω Args()ι->const flat_multimap<string,string>&;
 		Ω Pause()ι->void;
 		ω UnPause()ι->void;
 		Φ GetThreadId()ι->uint;

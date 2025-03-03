@@ -18,5 +18,5 @@ namespace Jde::Opc{
 	Ξ CreateSubscription( sp<UAClient> c )ι->CreateSubscriptionAwait{ return CreateSubscriptionAwait{ move(c) }; }
 	α StatusChangeNotificationCallback(UA_Client* ua, UA_UInt32 subId, void *subContext, UA_StatusChangeNotification *notification)ι->void;
 	α DeleteSubscriptionCallback(UA_Client* ua, UA_UInt32 subId, void *subContext)ι->void;
-	α CreateSubscriptionCallback(UA_Client* ua, void *userdata, RequestId requestId, void *response)ι->void;
+	α CreateSubscriptionCallback(UA_Client* ua, void *userdata, RequestId requestId, UA_CreateSubscriptionResponse* response)ι->void;
 }

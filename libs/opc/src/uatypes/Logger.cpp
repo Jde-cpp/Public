@@ -79,7 +79,15 @@ namespace Jde::Opc{
 	}
 	α Clear( UA_Logger* /*context*/ )ι->void{}
 
-	α UA_Log_Stdout_log( void *context, UA_LogLevel uaLevel, UA_LogCategory category, const char* file, const char* function, uint32_t line, const char *m, va_list args )ι->void{
+	α UA_Log_Stdout_log( void *context, UA_LogLevel uaLevel, UA_LogCategory category, const char *m, va_list args )ι->void{
+		let level = (ELogLevel)( (int)uaLevel/100-1 ); //level==UA_LOGLEVEL_DEBUG=200
+		uint tag_ = 1ull << (uint)(33ull+category);
+		const EOpcLogTags tag = (EOpcLogTags)( tag_ );
+
+		std::source_location source = std::source_location::current();
+		Log( level, (ELogTags)tag, spdlog::source_loc{source.file_name(), (int)source.line(), source.function_name()}, "[{:x}]{}", (uint)context, Opc::Format(m,args) );
+	}
+	α UA_Log_Stdout_log_file( void *context, UA_LogLevel uaLevel, UA_LogCategory category, const char* file, const char* function, uint32_t line, const char *m, va_list args )ι->void{
 		let level = (ELogLevel)( (int)uaLevel/100-1 ); //level==UA_LOGLEVEL_DEBUG=200
 		uint tag_ = 1ull << (uint)(33ull+category);
 		const EOpcLogTags tag = (EOpcLogTags)( tag_ );

@@ -1,16 +1,15 @@
 {
 	testing:{
-		tests: "AclTests.TestDeny",
+		tests: "AclTests.EnabledPermissions",
 		recreateDB:: true,
-//[  FAILED  ] ResourceTests.Crud
 	},
 	dbServers: {
-		scriptPath: "$(JDE_DIR)/Public/libs/access/config/sql/mysql",
-		dataPath: "$(JDE_DIR)/Public/libs/access/config",
+		scriptPaths: ["$(JDE_DIR)/Public/libs/access/config/sql/mysql"],
+		dataPaths: ["$(JDE_DIR)/Public/libs/access/config"],
 		sync:: true,
 		localhost:{
-			driver: "$(JDE_DIR)/bin/asan/libJde.MySql.so",
-			connectionString: "$(JDE_CONNECTION)",
+			driver: "db/drivers/mysql/libJde.DB.MySql.so",
+			connectionString: "mysqlx://$(JDE_MYSQL_CREDS)@127.0.0.1:33060/test_access?ssl-mode=disabled",
 			catalogs: {
 				jde_test: {
 					schemas:{

@@ -6,9 +6,9 @@
 
 #define let const auto
 namespace Jde::Access{
+	constexpr sv format{ "subscription {0}{2}{{ {1}{2}(subscriptionId:{3}){{{4}}} }}" };
 	α EventTypeSubscribeAwait::Subscribe()ι->TAwait<vector<QL::SubscriptionId>>::Task{
 		using enum ESubscription;
-		constexpr sv format{ "subscription {0}{2}{{ {1}{2}(subscriptionId:{3}){{{4}}} }}" };
 		let capitalized = DB::Names::Capitalize( _name );
 		auto listener = AccessListener::Instance();
 		try{

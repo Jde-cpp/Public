@@ -1,7 +1,7 @@
 #include "MySqlRow.h"
 #include <jde/db/Value.h>
 #include <jde/db/DBException.h>
-#include "../../../../../../Framework/source/math/MathUtilities.h"
+#include "../../../../../Framework/source/math/MathUtilities.h"
 #define let const auto
 
 namespace Jde::DB::MySql{

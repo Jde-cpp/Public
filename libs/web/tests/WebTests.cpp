@@ -186,23 +186,22 @@ namespace Jde::Web{
 	}
 	TEST_F( WebTests, TestTimeout ){
 		Stopwatch sw{ "WebTests::TestTimeout", _tags };
-		let systemStartTime = Chrono::ToClock<Clock,steady_clock>( sw.StartTime() );
-		let timeoutString = Settings::FindSV("http/timeout").value_or( "PT30S" );
+		let testStartTime = Chrono::ToClock<Clock,steady_clock>( sw.StartTime() );
+		let timeoutString = Settings::FindSV("/http/timeout").value_or( "PT30S" );
 		let timeout = Chrono::ToDuration( timeoutString );
 		ASSERT( timeout<=30s );//too long to wait.
 
-		auto await = ClientHttpAwait{ Host, "/timeout", Port };
-		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
-		let output = Json::AsString( Json::Parse(res.Body()), "value" );
-		let systemResult = Chrono::to_timepoint( output );
-		DBG( "Expected:  '{}'  Actual:  '{}'", ToIsoString(systemStartTime+timeout), ToIsoString(systemResult) );
-		ASSERT_LE( systemStartTime+timeout-1s, systemResult );
+		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/timeout", Port} );//fetch timeout
+		let currentTimeoutString = Json::AsString( res.Json(), "value" );//
+		let currentTimeout = Chrono::to_timepoint( currentTimeoutString );
+		DBG( "Expected: ({}+{}) '{}'  Actual:  '{}'", ToIsoString(testStartTime), timeoutString, ToIsoString(testStartTime+timeout), ToIsoString(currentTimeout) );
+		ASSERT_LE( testStartTime+timeout-1s, currentTimeout );
 		let authorization = res[http::field::authorization];
 
 		auto await2 = ClientHttpAwait{ Host, "/timeout", Port, {.Authorization=authorization} };
 		let res2 = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await2) );
 		let nextSystemEndTime = Chrono::to_timepoint( Json::AsSV(Json::Parse(res2.Body()), "value") );
-		ASSERT_GT( nextSystemEndTime, systemStartTime );
+		ASSERT_GT( nextSystemEndTime, testStartTime );
 		DBG( "newTimeout:  '{}'", ToIsoString(nextSystemEndTime) );
 
 		std::this_thread::sleep_for( timeout+1s );

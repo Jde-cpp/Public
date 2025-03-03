@@ -20,7 +20,7 @@ namespace Jde::Web::Mock{
 				THROW( "Invalid iat.  Expected ~'{}', found '{}'.", time(nullptr), jwt.Iat );
 
 			Crypto::Verify( jwt.Modulus, jwt.Exponent, jwt.HeaderBodyEncoded, jwt.Signature );
-			req.SessionInfo->UserPK = 42;
+			req.SessionInfo->UserPK = {42};
 			jobject j{ {"expiration", ToIsoString(req.SessionInfo->Expiration)} };
 			req.SessionInfo->IsInitialRequest = true;  //expecting sessionId to be set.
 			return j;
@@ -82,7 +82,7 @@ namespace Jde::Web::Mock{
 		else if( _request.Target()=="/BadAwaitable" ){
 			_thread = std::jthread( [this,h=_h]()mutable->void {
 				Threading::SetThreadDscrptn( "BadAwaitable" );
-				h.promise().SetError( RestException{SRCE_CUR, move(_request), "BadAwaitable"} );
+				h.promise().SetExp( RestException{SRCE_CUR, move(_request), "BadAwaitable"} );
 				net::post( *Executor(), [h](){ h.resume(); } );
 				Debug( ELogTags::HttpServerWrite, "~/BadAwaitable handler" );
 			 });

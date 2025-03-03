@@ -1,6 +1,6 @@
 #pragma once
 #include <jde/web/client/socket/IClientSocketSession.h>
-#include <tests/proto/test.pb.h>
+#include "../proto/test.pb.h"
 #include <jde/web/client/socket/ClientSocketAwait.h>
 
 namespace Jde::Web::Mock{
@@ -15,6 +15,9 @@ namespace Jde::Web::Mock{
 		α BadTransmissionClient( SRCE )ι->ClientSocketAwait<string>;
 		α BadTransmissionServer( SRCE )ι->ClientSocketAwait<string>;
 	private:
+		α Query( string&& query, bool returnRaw, SRCE )ι->ClientSocketAwait<jvalue> override{ ASSERT(false); return { {}, {}, {} }; }
+		α Subscribe( string&& query, sp<QL::IListener> listener, SRCE )ε->ClientSocketAwait<jarray> override{ ASSERT(false); return { {}, {}, {} }; }
+
 		α HandleException( std::any&& h, string&& what )ι;
 		α OnRead( Proto::FromServerTransmission&& transmission )ι->void override;
 		α OnClose( beast::error_code ec )ι->void override;

@@ -4,15 +4,14 @@
 namespace Jde::Opc{
 	static ELogTags _tag{ (ELogTags)(EOpcLogTags::Opc | EOpcLogTags::Monitoring) };
 	boost::concurrent_flat_map<sp<UAClient>,vector<HCoroutine>> _subscriptionRequests;
-	α CreateSubscriptionCallback(UA_Client* ua, void* /*userdata*/, RequestId requestId, void *response)ι->void{
-		auto pResponse = static_cast<UA_CreateSubscriptionResponse*>( response );
+	α CreateSubscriptionCallback(UA_Client* ua, void* /*userdata*/, RequestId requestId, UA_CreateSubscriptionResponse* response)ι->void{
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
 		pClient->ClearRequest<UARequest>( requestId );
-		if( let sc = pResponse->responseHeader.serviceResult; sc )
+		if( let sc = response->responseHeader.serviceResult; sc )
 			CreateSubscriptionAwait::Resume( UAException{sc}, move(pClient) );
 		else{
-			Trace( _tag, "[{:x}.{}]CreateSubscriptionCallback - subscriptionId={}", (uint)ua, requestId, pResponse->subscriptionId );
-			pClient->CreatedSubscriptionResponse = ms<UA_CreateSubscriptionResponse>(move(*pResponse));
+			Trace( _tag, "[{:x}.{}]CreateSubscriptionCallback - subscriptionId={}", (uint)ua, requestId, response->subscriptionId );
+			pClient->CreatedSubscriptionResponse = ms<UA_CreateSubscriptionResponse>(move(*response));
 			CreateSubscriptionAwait::Resume( move(pClient) );
 		}
 	}

@@ -122,7 +122,7 @@ namespace Jde::Access{
 			if( auto roleKey = Query.FindArgKey(); roleKey ){
 				if( roleKey->IsPrimary() ){//role(id:?)
 					permissionStatement->Where.Add( rolePKCol, DB::Value::FromKey(*roleKey) );
-					permissionStatement->From+={ MemberTable->GetColumnPtr("member_id"), permissionsTable.GetPK(), true };
+					permissionStatement->From.Add( permissionsTable.GetPK(), MemberTable->GetColumnPtr("member_id"), true );
 				}
 				else{//role(target:?)
 					auto rolesTable = GetTable( "roles" );
@@ -153,6 +153,7 @@ namespace Jde::Access{
 			optional<jvalue> roleMembers;
 			string memberName{};
 			optional<bool> permissionQLPlural;
+			// QL: role( id:16 ){permissionRight{id allowed denied resource(target:"users",criteria:null)} }
 			if( auto permissionQL = Query.FindTable("permissionRights"); permissionQL ){
 				if( auto statement = PermissionsStatement( *permissionQL ); statement ){
 					permissionQLPlural = permissionQL->IsPlural();

@@ -7,4 +7,4 @@
 #include <jde/framework.h>
 #include "../../../../Framework/source/coroutine/Awaitable.h"
 #include <jde/web/client/exports.h>
-#include <Web.FromServer.pb.h>
+#include "proto/Web.FromServer.pb.h"

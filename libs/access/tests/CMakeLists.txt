@@ -1,49 +1,29 @@
-cmake_minimum_required(VERSION 3.20.0)
-set( CMAKE_MODULE_PATH $ENV{JDE_DIR}/Public/build )
-include(common)
-findBoost()
-if( ${VCPKG} )
-	SET( CMAKE_TOOLCHAIN_FILE "$ENV{REPO_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"  CACHE STRING "Vcpkg toolchain file" )
-endif()
-project( Jde.Access.Tests )
-include( compiler )
-include( tests )
+cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
+include( ../../../build/functions.cmake )
+project( Jde.Access.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
+include( ../../../build/dependencies.cmake )
 
-if( MSVC )
-else()
-	link_directories( ${fmt_DIR}/../.. )
-	link_directories( ${Protobuf_DIR}/../.. )
-	link_directories( ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
-	link_directories( ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} )
-	link_directories( $ENV{REPO_DIR}/install/g++-13/asan/jsonnet/lib/ )
-endif()
-#######################################################
-add_executable( ${CMAKE_PROJECT_NAME} )
+link_directories( ${JSONNET_DIR}/lib )
 
+set( targetName Jde.Access.Tests )
+add_executable( ${targetName} )
 file(GLOB sources *.cpp )
 file(GLOB headers "**/*.h")
-target_sources(${CMAKE_PROJECT_NAME}
-	PRIVATE
-		${sources}
-		${headers}
-)
-#######################################################
-if( MSVC )
-else()
-	target_link_libraries( ${CMAKE_PROJECT_NAME} Threads::Threads )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} debug libfmtd.a optimized libfmt.a )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} Boost::json )
-	target_link_libraries( ${CMAKE_PROJECT_NAME} jsonnet++ )
+target_sources(${targetName} PRIVATE ${sources} ${headers} )
+
+if( WIN32 )
+	set_target_properties( ${CMAKE_PROJECT_NAME} PROPERTIES
+		VS_DEBUGGER_COMMAND_ARGUMENTS "-c"
+		VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		VS_DEBUGGER_COMMAND ${installDir}/${CMAKE_PROJECT_NAME}.exe )
 endif()
-target_link_libraries( ${CMAKE_PROJECT_NAME} gtest_main )
-target_link_libraries( ${CMAKE_PROJECT_NAME} Jde Jde.DB )
-#if(	${USE_SHARED_LIBS} )
-#	target_link_libraries( ${CMAKE_PROJECT_NAME} Jde.Accessxxx Jde.QLxxx )
-#else()
-	target_link_libraries( ${CMAKE_PROJECT_NAME} libJde.Access.a libJde.QL.a )
-#endif()
-#######################################################
-target_precompile_headers(${CMAKE_PROJECT_NAME}
-  PRIVATE
+find_package( GTest REQUIRED )
+target_link_libraries( ${targetName} Boost::json )
+target_link_libraries( ${targetName} jsonnet )
+target_link_libraries( ${targetName} GTest::gtest )
+target_link_libraries( ${targetName} Jde.Access Jde.QL Jde )
+
+target_precompile_headers(${targetName}
+  PUBLIC
 		"pc.h"
 )

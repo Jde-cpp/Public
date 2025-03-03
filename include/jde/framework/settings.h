@@ -20,6 +20,7 @@ namespace Jde::Settings{
 	Ξ FindObject( sv path )ι->const jobject*{ return Json::FindObject(Value(), path); }
 	Ξ FindSV( sv path )ι->optional<sv>{ return Json::FindSV(Value(), path); }
 	α FindString( sv path )ι->optional<string>;
+	α FindStringArray( sv path )ι->vector<string>;
 	Ξ FindPath( sv path )ι->optional<fs::path>{ auto s = FindString(path); return s ? fs::path{*s} : optional<fs::path>{}; }
 	Ŧ FindNumber( sv path )ι->optional<T>{ return Json::FindNumber<T>(Value(), path); }
 

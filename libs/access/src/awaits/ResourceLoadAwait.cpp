@@ -67,7 +67,7 @@ namespace Jde::Access{
 				auto q = Ƒ( "createResource( schemaName:\"{}\", name:\"{}\", target:\"{}\", allowed:{}, description:\"From installation\" ){{id}}",
 					schema->Name, table->Name, move(jsonName), underlying(table->Operations) );
 				let result = createExisting( move(q), qlServer, executor );
-				QL::Query( Ƒ("deleteResource( id:{} )", QL::AsId<UserPK::Type>(result)), executor );
+				qlServer->Query( Ƒ("deleteResource( id:{} )", QL::AsId<UserPK::Type>(result)), executor );
 			}
 		}
 	}

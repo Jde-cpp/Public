@@ -73,7 +73,9 @@ namespace	Sessions{
 		LastServerUpdate{ steady_clock::now() }
 	{}
 
-	α SessionInfo::NewExpiration()Ι->steady_clock::time_point{ return steady_clock::now()+(HasSocket ? _sockExpirationDuration : _restExpirationDuration); }
+	α SessionInfo::NewExpiration()Ι->steady_clock::time_point{
+		return steady_clock::now()+(HasSocket ? _sockExpirationDuration : _restExpirationDuration);
+	}
 
 	α UpdateExpiration( SessionPK sessionId, str userEndpoint )ε->sp<SessionInfo>{
 		sp<SessionInfo> info;

@@ -6,5 +6,4 @@
 
 #include <gtest/gtest.h>
 
-#include <jde/TypeDefs.h>
-#include <jde/Exception.h>
+#include <jde/framework.h>

@@ -3,22 +3,21 @@
 
 namespace Jde::Opc{
 	boost::concurrent_flat_map<sp<UAClient>,vector<HCoroutine>> _monitoringRequests;
-	α SetMonitoringModeCallback( UA_Client* ua, void* /*userdata*/, RequestId requestId, void* response )ι->void
+	α SetMonitoringModeCallback( UA_Client* ua, void* /*userdata*/, RequestId requestId, UA_SetMonitoringModeResponse* response )ι->void
 	{
-		let pResponse = static_cast<UA_SetMonitoringModeResponse*>( response );
 		auto ppClient = Try<sp<UAClient>>( [ua](){return UAClient::Find(ua);} ); if( !ppClient ) return;
 		(*ppClient)->ClearRequest<UARequest>( requestId );
-		StatusCode sc{ pResponse->responseHeader.serviceResult };
-		for( uint i=0; i<pResponse->resultsSize; ++i )
+		StatusCode sc{ response->responseHeader.serviceResult };
+		for( uint i=0; i<response->resultsSize; ++i )
 		{
-			sc = pResponse->results[i];
+			sc = response->results[i];
 			if( !sc )
 				break;
 		}
 		if( sc )
 			SetMonitoringModeAwait::Resume( sc, move(*ppClient) );
 		else{
-			(*ppClient)->MonitoringModeResponse = ms<UA_SetMonitoringModeResponse>(move(*pResponse));
+			(*ppClient)->MonitoringModeResponse = ms<UA_SetMonitoringModeResponse>(move(*response));
 			SetMonitoringModeAwait::Resume( move(*ppClient) );
 		}
 	}

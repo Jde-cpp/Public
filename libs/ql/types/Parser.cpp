@@ -17,7 +17,7 @@ namespace Jde{
 		else if( name=="unsubscribe" )
 			return RequestQL{ parser.LoadUnsubscriptions() };
 		else if( MutationQL::IsMutation(name) ){
-			returnRaw = name!="mutation";
+			//returnRaw = name!="mutation"; should be what parameter is
 			if( parser.Peek()=="{" )
 				parser.Next();
 			return RequestQL{ {parser.LoadMutations(returnRaw ? name : parser.Next(), returnRaw)} };
@@ -115,6 +115,13 @@ namespace Jde::QL{
 			i += parseArray( json.substr(i), y );
 		else if( ch=='"' )
 			i += parseString( json.substr(i), y );
+		else if( ch=='f' ){
+			THROW_IF( json.size()-i<6, "Unexpected end vs '{}' @ '{}'.", json, i );
+			let false_ = json.substr( i, 5 );
+			THROW_IF( false_!="false", "Expected 'false' vs '{}' in '{}' @ '{}'.", false_, json, i );
+			y += false_;
+			i += 5;
+		}
 		else if( ch=='n' ){
 			THROW_IF( json.size()-i<5, "Unexpected end vs '{}' @ '{}'.", json, i );
 			let null = json.substr( i, 4 );
@@ -127,7 +134,14 @@ namespace Jde::QL{
 			THROW_IF( nan!="NaN", "Expected 'NaN' vs '{}' in '{}' @ '{}'.", nan, json, i );
 			y += nan;
 			i += 3;
-		}else if( isdigit(ch) || ch=='-' || ch=='.' ){
+		}else if( ch=='t' ){
+			THROW_IF( json.size()-i<5, "Unexpected end vs '{}' @ '{}'.", json, i );
+			let true_ = json.substr( i, 4 );
+			THROW_IF( true_!="true", "Expected 'true' vs '{}' in '{}' @ '{}'.", true_, json, i );
+			y += true_;
+			i += 4;
+		}
+		else if( isdigit(ch) || ch=='-' || ch=='.' ){
 			for( ; i<json.size() && isdigit(ch); ch = json[++i] ){
 				y += ch;
 				if( i+1==json.size() )
