@@ -1,6 +1,6 @@
 {
 	testing:{
-		tests: "CertificateTests.NewDirectory"
+		tests:: "CertificateTests.NewDirectory"
 	},
 	logging:{
 		defaultLevel:: "Information",

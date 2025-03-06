@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <stacktrace>
 #ifndef MESSAGE_H
 #define MESSAGE_H
 #ifndef _MSC_VER
@@ -28,13 +29,27 @@ namespace Jde::Logging{
 
 #define FormatString const fmt::format_string<Args const&...>
 #define ARGS const Args&
-
 	template<ELogLevel TLevel, typename... Args>
 	struct Logger{
 		using enum ELogLevel;
 		explicit Logger( ELogTags tags, FormatString&& m, ARGS... args, const spdlog::source_loc& sl )ι;
 		explicit Logger( ELogTags tags, FormatString&& m, ARGS... args, SL sl )ι: Logger( tags, FWD(m), FWD(args)..., {sl.file_name(), (int)sl.line(), sl.function_name()} ){}
 	};
+
+	template<ELogLevel TLevel, typename... Args>
+	α LogStack( ELogTags tags, std::stacktrace::size_type stackTraceIndex, FormatString&& m, ARGS... args )ι->void{
+		if( auto fileMinLevel = FileMinLevel(tags); fileMinLevel==ELogLevel::NoLog || fileMinLevel>TLevel )
+			return;
+
+		let stacktrace = std::stacktrace::current();
+		if( stacktrace.size() ){
+			let& entry = stacktrace[ std::min(stacktrace.size()-1,stackTraceIndex+1) ];
+			Logger<TLevel,Args...>{ tags, FWD(m), FWD(args)..., spdlog::source_loc{entry.source_file().c_str(), (int)entry.source_line(), nullptr} };
+		}
+		else{
+			Logger<TLevel,Args...>{ tags, FWD(m), FWD(args)..., source_location::current() };
+		}
+	}
 }
 namespace Jde{
 #define LoggerLevel( Level )	\
@@ -70,6 +85,20 @@ template<typename... Args>
 		case ELogLevel::Critical: CMD( Critical ); break;
 	}
 }
+#undef CMD
+#define CMD(Level) Logging::LogStack<ELogLevel::Level,Args...>( tags, stackTraceIndex+1, FWD(m), FWD(args)... )
+template<typename... Args>
+α Log( ELogLevel level, ELogTags tags, std::stacktrace::size_type stackTraceIndex, FormatString&& m, ARGS... args )ι->void{
+	switch( level ){
+		case ELogLevel::Trace: CMD( Trace ); break;
+		case ELogLevel::Debug: CMD( Debug ); break;
+		case ELogLevel::Information: CMD( Information ); break;
+		case ELogLevel::Warning: CMD( Warning ); break;
+		case ELogLevel::Error: CMD( Error ); break;
+		case ELogLevel::Critical: CMD( Critical ); break;
+	}
+}
+#undef CMD
 template<typename... Args>
 α Log( ELogLevel level, ELogTags tags, const std::source_location& sl, FormatString&& m, ARGS... args )ι->void{
 	Log( level, tags, { sl.file_name(), (int)sl.line(), sl.function_name() }, FWD( m ), FWD( args )... );

@@ -26,6 +26,7 @@ target_link_libraries( ${targetName} Boost::json )
 target_link_libraries( ${targetName} jsonnet )
 target_link_libraries( ${targetName} Jde Jde.Crypto Jde.QL Jde.Access Jde.App.Shared Jde.App.Client Jde.Web.Client Jde.Opc )
 target_link_libraries( ${targetName} protobuf::libprotobuf )
+target_link_libraries( ${targetName} stdc++exp )#for stacktrace
 
 target_precompile_headers( ${targetName} PRIVATE
 	<gtest/gtest.h>

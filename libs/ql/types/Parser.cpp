@@ -20,7 +20,7 @@ namespace Jde{
 			//returnRaw = name!="mutation"; should be what parameter is
 			if( parser.Peek()=="{" )
 				parser.Next();
-			return RequestQL{ {parser.LoadMutations(returnRaw ? name : parser.Next(), returnRaw)} };
+			return RequestQL{ {parser.LoadMutations(name=="mutation" ? parser.Next() : name, returnRaw)} };
 		}else
 			return RequestQL{ parser.LoadTables(name, returnRaw) };
 	}

@@ -3,6 +3,8 @@ include( ../../../build/functions.cmake )
 project( Jde.Web.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
+#link_directories( ${JSONNET_DIR}/lib )
+
 set( targetName Jde.Web.Tests )
 add_executable( ${targetName} )
 file( GLOB sources *.cpp **/*.cpp )
@@ -32,8 +34,6 @@ target_link_libraries( ${targetName} protobuf::libprotobuf ) #libutf8_range.a li
 target_link_libraries( ${targetName} libssl.a )
 target_link_libraries( ${targetName} libcrypto.a )
 target_link_libraries( ${targetName} Boost::json )
-link_directories( $ENV{LIB_DIR}/jsonnet )
-target_link_libraries( ${targetName} ${JSONNET_DIR}/lib/libjsonnet++.so ${JSONNET_DIR}/lib/libjsonnet.so )
 
 include_directories( ${targetName} $ENV{JDE_DIR}/Public/include/jde/web/client/proto )
 include_directories( ${targetName} $ENV{JDE_DIR}/Public/include/app/shared/proto )

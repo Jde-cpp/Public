@@ -72,9 +72,14 @@ namespace Jde::Opc{
 			auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
 			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
 			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAException(sc, _ptr, 0, ELogLevel::Debug) );
+
+			config->authSecurityPolicies = (UA_SecurityPolicy *)UA_realloc( config->authSecurityPolicies, sizeof(UA_SecurityPolicy) *(config->authSecurityPoliciesSize + 1) );
+			UA_SecurityPolicy_Basic256Sha256( &config->authSecurityPolicies[config->authSecurityPoliciesSize], *certificate.get(), *privateKey.get(), config->logging );
+			config->authSecurityPoliciesSize++;
 		}
 		config->securityPolicies = securityPolicies.release();
 		config->securityPoliciesSize = size;
+
 		return config;
 	}
 	α UAClient::AddSessionAwait( HCoroutine h )ι->void{
