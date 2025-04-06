@@ -61,12 +61,18 @@ namespace Jde::DB{
 	α Syntax::UsingClause( const Join& join )Ι->string{
 		let& c0 = *join.From;
 		let& c1 = *join.To;
-		let& tableName1 = join.ToAlias.size() ? join.ToAlias : c1.Table->DBName;
-		return Ƒ( "\n\t{0}join {3}{4} on {1}.{2}={5}.{6}", joinType(join.Inner), c0.Table->DBName, c0.Name, c1.Table->DBName, join.ToAlias.empty() ? "" : " "+join.ToAlias, tableName1, c1.Name );
+		return Ƒ( "\n\t{0}join {3}{4} on {1}.{2}={5}.{6}",
+			joinType(join.Inner),
+			join.FromAlias.empty() ? c0.Table->DBName : join.FromAlias,
+			c0.Name,
+			c1.Table->DBName,
+			join.ToAlias.empty() ? "" : " "+join.ToAlias,
+			join.ToAlias.empty() ? c1.Table->DBName : join.ToAlias,
+			c1.Name );
 	}
 	α MySqlSyntax::UsingClause( const Join& join )Ι->string{
 		let& c1 = *join.To;
-		return join.From->Name==c1.Name && join.ToAlias.empty()
+		return join.From->Name==c1.Name && join.ToAlias.empty() && join.FromAlias.empty()
 			? Ƒ( "\n\t{}join {} using({})", joinType(join.Inner), c1.Table->DBName, c1.Name )
 			: Syntax::UsingClause( join );
 	}

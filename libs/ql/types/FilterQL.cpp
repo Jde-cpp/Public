@@ -64,7 +64,7 @@ namespace Jde{
 			auto pColumn = name!="id"
 				? dbTable.GetColumnPtr( DB::Names::FromJson(name) )
 				: AsTable(dbTable).Extends ? AsTable(dbTable).Extends->GetPK() : dbTable.GetPK(); //can't have left join users where users.id=?
-			if(name=="deleted" )
+			if( name=="deleted" )
 				includeDeleted = false;
 			using enum DB::EOperator;
 			DB::EOperator op = Equal;
@@ -80,12 +80,15 @@ namespace Jde{
 					pJson = &value;
 				else if( let o = value.try_as_object(); o && o->size() ){
 					let& first = *o->begin();
-					op = DB::ToOperator( first.key() );
+					op = first.key()=="notIn" ? DB::EOperator::NotIn : DB::ToOperator( first.key() );
 					pJson = &first.value();
 				}
 				else
 					THROW("Invalid filter value type '{}'.", Json::Kind(value.kind()) );
-				where.Add( pColumn, op, DB::Value{pColumn->Type, *pJson} );
+				if( pJson->is_array() )
+						where.Add( pColumn, op, DB::ToValue<uint>(Json::FromArray<uint>(pJson->get_array())) );
+					else
+						where.Add( pColumn, op, DB::Value{pColumn->Type, *pJson} );
 			}
 		}
 		if( auto deleted = includeDeleted ? nullptr : dbTable.FindColumn("deleted"); deleted )

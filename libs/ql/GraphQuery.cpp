@@ -120,13 +120,6 @@ namespace Jde::QL{
 		statement.Where += QL::ToWhereClause( qlTable, dbTable, includeDeleted.value_or(statement.Select.FindColumn("deleted")!=nullptr) );
 		for( let& qlChild : qlTable.Tables ){
 			auto pFK = findFK( dbTable, qlChild.DBName() ); //members.
-/*		if( !pFK ){
-				if( auto pExtendedFromTable = AsTable(dbTable).Extends; pExtendedFromTable ){
-					pFK = pExtendedFromTable->FindFK( qlChild.DBName() );
-					if( pFK )
-						statement.From.TryAdd( {pExtendedFromTable->GetPK(), dbTable.GetPK(), false} );
-				}
-			}*/
 			if( pFK ){
 				auto pkTable = pFK->PKTable;
 				if( sp<DB::Table> table = AsTable( pkTable ); table && table->QLView )
@@ -134,8 +127,6 @@ namespace Jde::QL{
 				statement.From.TryAdd( {pFK, pkTable->GetPK(), !pFK->IsNullable} );
 				columnSql( qlChild, *pkTable, false, statement, includeDeleted );
 			}
-			//else
-			//	Error{ _tags, "Could not extract data {}->{}", dbTable.Name, qlChild.DBName() }; handle in subtables.
 		}
 	}
 	//returns [qlTableName[parentTableId, jChildData]]
@@ -229,10 +220,10 @@ namespace Jde{
 		let dbView = GetTable( qlTable.DBName() );
 		DB::Statement statement;
 		columnSql( qlTable, *dbView, false, statement, includeDeleted );
-		if( statement.Empty() )
-			return {};
+		// if( statement.Empty() ) could be a join with only where clause.
+		// 	return {};
 		if( statement.From.Empty() )
-			statement.From.SingleTable = dbView;
+			statement.From += { dbView->Columns[0] };
 		auto dbTable = dbView->IsView() ? nullptr : AsTable(dbView);
 		if( string criteria = dbTable && dbTable->Extends ? dbTable->SurrogateKeys[0]->Criteria : ""; criteria.size() ) //identities is_group
 			statement.Where.Add( criteria );//group with no members.

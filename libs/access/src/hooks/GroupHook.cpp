@@ -32,43 +32,48 @@ namespace Jde::Access{
 	α GroupGraphQLAwait::Select()ι->QL::QLAwait<>::Task{
 		try{
 			//group_id, member_id & member columns.
-			QL::TableQL membersQL = [&]()->QL::TableQL {
-				auto p = find_if( Query.Tables, [](let& t){ return t.JsonName=="members"; } ); THROW_IF( p==Query.Tables.end(), "members table not found." );
+			optional<QL::TableQL> membersQL = [&]()->QL::TableQL{
+				auto p = find_if( Query.Tables, [](let& t){ return t.JsonName=="members"; } );
+				if( p==Query.Tables.end() )
+					return {};
 				auto ql = *p;
 				Query.Tables.erase( p );
 				return ql;
 			}();
-			let& groupTable = *GetTable( "group_members" );
-			let haveId = membersQL.FindColumn( "id" );
-			if( haveId )
-				membersQL.EraseColumn( "id" );
-			membersQL.Columns.push_back( QL::ColumnQL{"groupId", groupTable.GetColumnPtr("group_id")} );
-			membersQL.Columns.push_back( QL::ColumnQL{"memberId", groupTable.GetColumnPtr("member_id")} );
-			membersQL.JsonName = "groupMembers";
-			auto statement = QL::SelectStatement( membersQL );
 			optional<jarray> members;
-			if( statement ){
-				for( let& [name,value] : Query.Args ){
-					string groupName = name=="id"
-						? "groupId"
-						: name=="target" ? "group_target" : name;
-					membersQL.Args[groupName] = value;
-				}
-				statement->Where = QL::ToWhereClause( membersQL, groupTable, membersQL.FindColumn("deleted")!=nullptr );
-				//statement->Where.Remove( "is_group" );
-				//statement->Where.Replace( "identities.", "members." );
-				auto membersResult = co_await QL::QLAwait( move(membersQL), move(*statement), UserPK, _sl );
-				if( membersResult.is_array() )
-					members = move( membersResult.get_array() );
-				else if( membersResult.is_object() )
-					members = jarray{ move(membersResult.get_object()) };
-			}
+			bool haveId{};
 			Query.JsonName = Query.IsPlural() ? "identities" : "identity"; //from members, want distinct + nothing in members table except for members.
 			Query.AddFilter( "is_group", true );
+			Query.ReturnRaw = true;
 			auto groups = co_await QL::QLAwait( move(Query), UserPK, _sl );
-			if( !members )
-				Resume( jvalue{move(groups)} );
-
+			if( membersQL ){
+				let& groupTable = *GetTable( "group_members" );
+				haveId = membersQL->FindColumn( "id" );
+				if( haveId )
+					membersQL->EraseColumn( "id" );
+				membersQL->Columns.push_back( QL::ColumnQL{"groupId", groupTable.GetColumnPtr("group_id")} );
+				membersQL->Columns.push_back( QL::ColumnQL{"memberId", groupTable.GetColumnPtr("member_id")} );
+				membersQL->JsonName = "groupMembers";
+				auto statement = QL::SelectStatement( *membersQL );
+				if( statement ){
+					for( let& [name,value] : Query.Args ){
+						string groupName = name=="id"
+							? "groupId"
+							: name=="target" ? "group_target" : name;
+							membersQL->Args[groupName] = value;
+					}
+					statement->Where = QL::ToWhereClause( *membersQL, groupTable, membersQL->FindColumn("deleted")!=nullptr );
+					//statement->Where.Remove( "is_group" );
+					//statement->Where.Replace( "identities.", "members." );
+					auto membersResult = co_await QL::QLAwait( move(*membersQL), move(*statement), UserPK, _sl );
+					if( membersResult.is_array() )
+						members = move( membersResult.get_array() );
+					else if( membersResult.is_object() )
+						members = jarray{ move(membersResult.get_object()) };
+				}
+				if( !members )
+					Resume( jvalue{move(groups)} );
+			}
 			auto addMembers = [&](jobject& group){
 				optional<GroupPK> groupPK = Json::FindKey<GroupPK>(group);//did not ask for group_id.
 				jarray groupMembers;
@@ -102,9 +107,7 @@ namespace Jde::Access{
 	}
 
 	α GroupHook::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->HookResult{
-		return query.JsonName.starts_with( "grouping" ) && query.FindTable("members")
-			? mu<GroupGraphQLAwait>( query, userPK, sl )
-			: nullptr;
+		return query.JsonName.starts_with("grouping") ? mu<GroupGraphQLAwait>( query, userPK, sl ) : nullptr;
 	}
 
 	//{ mutation addGrouping( "id":14, "memberId":[15,13] ) }

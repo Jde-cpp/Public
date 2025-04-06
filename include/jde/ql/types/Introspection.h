@@ -22,7 +22,7 @@ namespace Jde::QL{
 	struct Object final{
 		Object( sv name, const jobject& j )ε;
 		α ToJson( const TableQL& query )Ε->jobject;
-		string Name;
+		string Name; //User
 		vector<Field> Fields;
 	};
 

@@ -18,12 +18,19 @@ namespace Jde::QL{
 
 	α PurgeAwait::Before()ι->MutationAwaits::Task{
 		try{
-			co_await Hook::PurgeBefore( _mutation, _userPK );
-			Execute();
+			optional<jarray> result = co_await Hook::PurgeBefore( _mutation, _userPK );
+			if( result )
+				Trace{ ELogTags::Test, "Hook::PurgeBefore: {}", serialize(*result) };
+			auto result0 = result ? result->if_contains(0) : nullptr;
+			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){
+				result0->get_object().erase( "complete" );
+				Resume( jarray{move(*result0)} );
+			}
+			else
+				Execute();
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
-			co_return;
 		}
 	}
 	α PurgeAwait::Statements( const DB::Table& table, vector<DB::Value>& parameters )ε->vector<string>{

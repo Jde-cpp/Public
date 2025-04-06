@@ -14,6 +14,7 @@ namespace Jde{
 		α Combine( const jobject& a, const jobject& b )ι->jobject;
 		α Visit( jvalue&& v, function<void(jobject&& o)> op )ε->void;
 		α Visit( const jvalue& v, function<void(const jvalue& o)> op )ε->void;
+		α Visit( jvalue& v, function<void(jobject& o)> op )ε->void;
 		α ReadJsonNet( fs::path path, SRCE )ε->jobject;
 		constexpr sv errorFromat = "'{}' could not convert to {}.";
 #define $(type) Eval( v.try_as_##type(), Ƒ(errorFromat, serialize(v), #type), sl )
@@ -80,6 +81,7 @@ namespace Jde{
 		α Parse( sv json, SRCE )ε->jobject;
 		α ParseValue( string&& json, SRCE )ε->jvalue;
 		Ŧ FromArray( const jarray& a, SRCE )ε->vector<T>;
+		Ŧ ToVector( const jvalue& a, SRCE )ε->vector<T>;
 
 	}
 
@@ -134,12 +136,39 @@ namespace Jde{
 		}
 		return y;
 	}
+	template<> Ξ Json::FromArray<string>( const jarray& a, SL sl )ε->vector<string>{
+		vector<string> y;
+		for( let& item : a )
+			y.push_back( Json::AsString(item, sl) );
+		return y;
+	}
+
 	Ŧ Json::FromArray( const jarray& a, SL sl )ε->vector<T>{
 		vector<T> y;
 		for( let& item : a )
 			y.push_back( Json::AsNumber<T>(item, sl) );
 		return y;
 	}
+	template<> Ξ Json::ToVector( const jvalue& v, SL sl )ε->vector<string>{
+		vector<string> y;
+		if( v.is_array() )
+			y = FromArray<string>( v.as_array(), sl );
+		else if( v.is_string() )
+			y.push_back( string{v.get_string()} );
+		else
+			THROW( "'{}' is not an array or string.", Kind(v.kind()) );
+		return y;
+	}
+	Ŧ Json::ToVector( const jvalue& v, SL sl )ε->vector<T>{
+		vector<T> y;
+		if( v.is_array() )
+			y = FromArray<T>( v.as_array(), sl );
+		else
+			y.push_back( AsNumber<T>(v, sl) );
+
+		return y;
+	}
+
 }
 Ŧ Jde::Eval( const boost::system::result<T>& x, string&& message, SL sl )ε->T{
 	if( !x )

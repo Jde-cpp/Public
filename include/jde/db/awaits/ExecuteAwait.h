@@ -11,7 +11,7 @@ namespace Jde::DB{
 			base{ sl }, _ds{ move(ds) }, _isStoredProc{isStoredProc}, _sql{ move(s) }
 		{}
 		α Suspend()ι->void override{ Coroutine::CoroutinePool::Resume( _h ); }
-		α await_resume()ι->uint override;
+		α await_resume()ε->uint override;
 	private:
 		sp<IDataSource> _ds;
 		bool _isStoredProc;

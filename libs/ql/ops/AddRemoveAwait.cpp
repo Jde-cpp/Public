@@ -46,7 +46,7 @@ namespace Jde::QL{
 	α AddRemoveAwait::Add()ι->Coroutine::Task{
 		let& map = *_table->Map;
 		let& parentId = map.Parent->Name; let& childId =map.Child->Name;
-		let prefix = Ƒ( "insert into {}({},{})values(?,?", _table->Name, parentId, childId );
+		let prefix = Ƒ( "insert into {}({},{})values(?,?", _table->DBName, parentId, childId );
 		string extraParamsString;
 		vector<DB::Value> extraParams;
 		try{
@@ -85,7 +85,7 @@ namespace Jde::QL{
 
 	α AddRemoveAwait::Remove()->Coroutine::Task{
 		let& map = *_table->Map;
-		let sql = Ƒ( "delete from {} where {}=? and {}=?", _table->Name, map.Parent->Name, map.Child->Name );
+		let sql = Ƒ( "delete from {} where {}=? and {}=?", _table->DBName, map.Parent->Name, map.Child->Name );
 		uint result{};
 		try{
 			for( let& p : _params.ChildParams ){
@@ -149,7 +149,7 @@ namespace Jde::QL{
 				RemoveHook();
 				return;
 			}
-			THROW_IF( !_table->Map, "'{}' does not support add.", _table->Name );
+			THROW_IF( !_table->Map, "'{}' does not support add/remove.", _table->Name );
 			_params = getChildParentParams( _table->Map->Parent, _table->Map->Child, _mutation.Args );
 		}
 		catch( IException& e ){

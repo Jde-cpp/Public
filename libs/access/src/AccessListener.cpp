@@ -104,7 +104,7 @@ namespace Jde::Access{
 				}
 				else if( auto child = Json::FindObject(o, "role"); child ){
 					if( event==Added )
-						Authorizer().AddRoleChild( rolePK, Json::AsNumber<RolePK>(*child, "id") );
+						Authorizer().AddRoleChild( rolePK, Json::ToVector<RolePK>(Json::AsValue(*child, "id")) );
 					else{
 						flat_set<PermissionRightPK> members;
 						Json::Visit( Json::AsValue(o, "id"), [&](const jvalue& v){ members.insert( Json::AsNumber<RolePK>(v) );} );

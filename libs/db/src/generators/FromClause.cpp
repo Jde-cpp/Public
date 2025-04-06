@@ -9,8 +9,8 @@
 #define let const auto
 
 namespace Jde::DB{
-	vector<Join> GetJoins( vec<sp<Table>>& tables, SL sl )ε{
-		THROW_IF( tables.size()<2, "Invalid number of tables." );
+	α getJoins( vec<sp<Table>>& tables, SL sl )ε->vector<Join>{
+		THROW_IF( tables.empty(), "tables.empty()" );
 		vector<Join> joins;
 		for( uint i=1; i<tables.size(); ++i ){
 			let& from = *tables[i-1]; THROW_IFSL( from.SurrogateKeys.size()!=1, "Invalid number of surrogate keys." );
@@ -19,55 +19,67 @@ namespace Jde::DB{
 			let fk = to.GetColumnPtr( pk->Name, sl );
 			joins.emplace_back( pk, fk, true );
 		}
+		if( joins.empty() )
+			joins.push_back( {tables[0]->Columns[0]} );
+
 		return joins;
 	}
+	FromClause::FromClause( const sp<View>& v )ι:
+		Joins{ {v->Columns[0]} }
+	{};
 	FromClause::FromClause( vec<sp<Table>>& tables, SL sl )ε:
-		SingleTable{ tables.size()==1 ? std::dynamic_pointer_cast<View>(tables[0]) : nullptr },
-		Joins{ tables.size()!=1 ? GetJoins(tables, sl) : vector<Join>{} }
+		Joins{ getJoins(tables, sl) }
 	{}
-	FromClause::FromClause( const sp<Table>& t )ι:
-		SingleTable{std::dynamic_pointer_cast<View>(t)}
+	FromClause::FromClause( const sp<Table>& t )ε:
+		Joins{ {t->GetPK()} }
 	{}
 
 	α FromClause::ToString()Ε->string{
 		if( Joins.size()==0 )
-			return "from "+SingleTable->DBName;
+			throw Exception( "Joins.size()==0" );
 
 		let& syntax = Joins[0].From->Table->Schema->Syntax();
 		string sql{ "from "+Joins[0].From->Table->DBName }; sql.reserve( 255 );
-		for( let& join : Joins )
-			sql += syntax.UsingClause( join );
+		if( Joins[0].FromAlias.size() )
+			sql += " "+Joins[0].FromAlias;
+		if( Joins[0].To ){
+			for( let& join : Joins )
+				sql += syntax.UsingClause( join );
+		}
 		return sql;
 	}
 
 	α FromClause::operator+=( Join&& join )ι->FromClause&{
-		SingleTable = nullptr;
-		Joins.push_back(move(join)); return *this;
+		if( Joins.size()==0 )
+			Joins.push_back( move(join) );
+		else if( !Joins[0].To ){
+			Joins[0].To = join.To;
+			Joins[0].Inner = join.Inner;
+			Joins[0].ToAlias = join.ToAlias;
+		}
+		else
+			Joins.push_back( move(join) );
+		return *this;
 	}
 	// Change a single column to a join.
 	α FromClause::Add( sp<Column> from, sp<Column> to, bool inner )ι->void{
-		// TODO improve logic as use cases arise.
-		if( SingleTable ){
-			Joins.push_back( {from, to, inner} );
-			SingleTable = nullptr;
-		}
-		else
-			Joins.push_back( {from, to, inner} );
+		Joins.push_back( {from, to, inner} );
 	}
+
 	α FromClause::TryAdd( Join&& join )ι->void{
 		if( !Contains(join.To->Table->Name) )
 			*this += move(join);
 	}
 
 	α FromClause::Contains( sv tableName )ι->bool{
-		bool y = SingleTable && SingleTable->Name==tableName;
-		for( auto p = Joins.begin(); !y && p!=Joins.end(); ++p )
-			y = p->From->Table->Name==tableName || p->To->Table->Name==tableName;
-		return y;
+		bool contains{};
+		for( auto p = Joins.begin(); !contains && p!=Joins.end(); ++p )
+			contains = p->From->Table->Name==tableName || p->To->Table->Name==tableName;
+		return contains;
 	}
 
 	α FromClause::GetColumnPtr( sv name, SL sl )Ε->sp<Column>{
-		sp<Column> column = SingleTable ? SingleTable->FindColumn( name ) : nullptr;
+		sp<Column> column{};
 		for( uint i=0; !column && i<Joins.size(); ++i ){
 			let& join = Joins[i];
 			if( i==0 )
@@ -80,8 +92,8 @@ namespace Jde::DB{
 	}
 
 	α FromClause::GetFirstTable( SL sl )Ε->sp<View>{
-		THROW_IFSL( !SingleTable && Joins.size()==0, "!SingleTable and Joins.size()==0" );
-		return SingleTable ? SingleTable : Joins[0].From->Table;
+		THROW_IFSL( Joins.size()==0, "!SingleTable and Joins.size()==0" );
+		return Joins[0].From->Table;
 	}
 	//add 'deleted is null'
 	α FromClause::SetActive( WhereClause& where, SL sl )ε->void{

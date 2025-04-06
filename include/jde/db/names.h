@@ -6,7 +6,7 @@
 #define YRESULT std::basic_string<char,typename Y::traits_type>
 
 namespace Jde::DB::Names{
-	Ξ IsPlural( sv name )ι->bool{ return name.ends_with("s"); }
+	Ξ IsPlural( sv name )ι->bool{ return name.ends_with("ed") || name.ends_with('s') || name=="acl"; }
 	Ξ Capitalize( str name )ι->string{ ASSERT(name.size()>1); return string{(char)std::toupper(name[0])} + name.substr(1); }
 	template<class X=string,class Y=string> Ω FromJson( Str::bsv<typename X::traits_type> jsonName )ι->YRESULT;
 	template<class X=string,class Y=string> Ω ToJson( Str::bsv<typename X::traits_type> schemaName )ι->YRESULT;
@@ -48,6 +48,8 @@ namespace Jde::DB{
 	}
 	Ξ Names::ToSingular( sv plural )ι->string{
 		string y{ plural };
+		if( plural=="acl" )
+			y = "ac";
 		if( plural.ends_with("ies") )
 			y = string{plural.substr( 0, plural.size()-3 )}+"y";
 		else if( plural.ends_with('s') )
@@ -56,12 +58,14 @@ namespace Jde::DB{
 	}
 	Ŧ Names::ToPlural( BSV singular )ι->RESULT{
 		RESULT y{ singular };
-		if( singular=="acl" )
-			y = singular;
-		else if( singular.ends_with("y") )
-			y = RESULT{ singular }.substr(0, singular.size()-1)+"ies";
-		else if( !singular.ends_with('s') )
-			y = RESULT{ singular }+"s";
+		if( singular=="ac" )
+			y = "acl";
+		if( !IsPlural(singular) ){
+			if( singular.ends_with("y") )
+				y = RESULT{ singular }.substr(0, singular.size()-1)+"ies";
+			else
+				y = RESULT{ singular }+"s";
+		}
 		return y;
 	}
 }

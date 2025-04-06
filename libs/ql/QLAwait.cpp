@@ -19,7 +19,7 @@ namespace Jde{
 				jarray mutationResults;
 				try{
 					for( auto& m : move(ql.Mutations()) ){
-						Trace{ ELogTags::QL, "QL {}", m.ToString() };
+						Trace{ ELogTags::QL, "QL: {}", m.ToString() };
 						auto mutationResult = co_await MutationAwait( m, executer, sl );
 						if( m.ResultRequest ){
 							if( auto array = mutationResult.try_as_array(); array && array->size() )

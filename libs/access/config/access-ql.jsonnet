@@ -5,7 +5,7 @@ local Attributes = { kind:"SCALAR", name: 'PositiveInt' };
 local DateTime = { kind:"SCALAR",name:'DateTime' };
 local NonNullDateTime = { kind:'NON_NULL',name:null, ofType: DateTime };
 {
-grouping:{
+Grouping:{
 	fields: [
 			{ name: 'id', type: Id },
 			{ name: 'name', type: NonNullString },
@@ -13,7 +13,7 @@ grouping:{
 			{ name: 'created', type: NonNullDateTime },
 			{ name: 'updated', type: DateTime },
 			{ name: 'deleted', type:DateTime },
-			{ name: 'target',  type:Id },
+			{ name: 'target',  type:String },
 			{ name: 'description', type: String },
 			{ name: 'provider', type: {kind:"ENUM", name:'Provider'} },
 			{ name: 'members', type: {name: null, kind: "LIST", ofType: {name: "Identity", kind: "UNION"}} }

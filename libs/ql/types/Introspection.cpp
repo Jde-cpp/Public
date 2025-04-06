@@ -155,7 +155,7 @@ namespace Jde::QL{
 							fieldName = "id";
 							qlTypeName = "ID";
 						}else if( column.PKTable->IsFlags ){
-							fieldName = ToPlural<sv>( fieldName );
+							fieldName = ToPlural( ToJson(column.Name) );
 							rootType = EFieldKind::List;
 						}
 						else if( childColumn ){

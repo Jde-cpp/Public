@@ -5,6 +5,7 @@
 #include <jde/db/meta/Table.h>
 #include <jde/db/names.h>
 #include <jde/ql/ql.h>
+#include <jde/ql/QLAwait.h>
 #include <jde/access/types/Resource.h>
 #include <jde/access/Authorize.h>
 #include "../accessInternal.h"
@@ -30,17 +31,58 @@ namespace Jde::Access{
 		α Table()ε->sp<DB::View>{ return GetTable( "acl" ); }
 		α InsertPermission( const jobject& permission )ι->DB::ScalerAwait<PermissionPK>::Task;
 		α InsertRole()ι->DB::ExecuteAwait::Task;
+		α PurgeAcl()ι->QL::QLAwait<jobject>::Task;
+		α PurgeAcl( IdentityPK::Type identityPK, PermissionPK permissionPK )ι->DB::ExecuteAwait::Task;
 	};
 	α AclQLAwait::Suspend()ι->void{
-		InsertAcl();
+		if( Mutation.Type==QL::EMutationQL::Purge )
+			PurgeAcl();
+		else if( Mutation.Type==QL::EMutationQL::Create )
+			InsertAcl();
 	}
-
+	α AclQLAwait::PurgeAcl()ι->QL::QLAwait<jobject>::Task{
+		try{
+			let identityPK = Json::AsNumber<IdentityPK::Type>( Mutation.Args, "identity/id" );
+			auto permissionPK = Json::FindNumberPath<PermissionPK>( Mutation.Args, "permissionRight/id" );
+			if( !permissionPK ){
+				permissionPK = Json::FindNumberPath<PermissionPK>( Mutation.Args, "role/id" );
+				Authorizer().TestAdmin( "roles", Executer, _sl );
+			}
+			else{
+				let resourcePK = co_await QL::QLAwait<jobject>( Ƒ("permissionRight(id:{}){{resource{{id}}}}", *permissionPK), {UserPK::System} );
+				Authorizer().TestAdmin( Json::AsNumber<ResourcePK>(resourcePK, "resource/id"), Executer, _sl );
+			}
+			THROW_IF( !permissionPK, "Could not find permissionRight or role id in '{}'", serialize(Mutation.Args) );
+			PurgeAcl( identityPK, *permissionPK );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α AclQLAwait::PurgeAcl( IdentityPK::Type identityPK, PermissionPK permissionPK )ι->DB::ExecuteAwait::Task{
+		try{
+			let ds = Table()->Schema->DS();
+			let aclCount = co_await ds->ExecuteCo(
+				DB::Sql{ Ƒ("delete from {} where identity_id=? and permission_id=?", Table()->DBName), vector<DB::Value>{{identityPK}, {permissionPK}}}, _sl );
+			co_await ds->ExecuteCo(
+				DB::Sql{ Ƒ("delete from {} where permission_id=?", GetTable("permission_rights")->DBName), vector<DB::Value>{{permissionPK}}}, _sl );
+			jobject y;
+			y["rowCount"] = aclCount;
+			y["complete"] = true;
+			Resume( move(y) );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
 	α AclQLAwait::InsertAcl()ι->void{
 		let& input = Mutation.Args;
 		if( auto p = input.find("permissionRight"); p!=input.end() ) //identity{id:x}, permission:{ allowed:x, denied:x, resource:{id:x} }
 			InsertPermission( Json::AsObject(p->value()) );
 		else if( auto r = input.find("role"); r!=input.end() ) //identity{id:x}, role:{ id:x }
 			InsertRole();
+		else
+			ResumeExp( Exception{"Invalid ACL mutation"} );
 	}
 	α AclQLAwait::InsertRole()ι->DB::ExecuteAwait::Task{
 		jobject y;
@@ -96,6 +138,7 @@ namespace Jde::Access{
 		α LoadRoles( const QL::TableQL& permissionRightsQL )ι->DB::RowAwait::Task;
 		α LoadPermissionRights( const QL::TableQL& permissionRightsQL )ι->DB::RowAwait::Task;
 		α LoadPermissions( const QL::TableQL& permissionsQL )ι->DB::RowAwait::Task;
+		α LoadIdentities( const QL::TableQL& identitiesQL )ι->DB::RowAwait::Task;
 		QL::TableQL Query;
 		Jde::UserPK Executer;
 	};
@@ -106,6 +149,8 @@ namespace Jde::Access{
 			LoadRoles( *roles );
 		else if( auto roles = Query.FindTable("permissions"); roles )
 			LoadPermissions( *roles );
+		else if( auto identities = Query.FindTable("identities"); identities )
+			LoadIdentities( *identities );
 		else
 			ResumeExp( Exception{"query not implemented"} );
 	}
@@ -122,6 +167,32 @@ namespace Jde::Access{
 			}
 		}
 		return statement;
+	}
+	α AclQLSelectAwait::LoadIdentities( const QL::TableQL& identitiesQL )ι->DB::RowAwait::Task{
+		jarray identities;
+		try{
+			auto statement = QL::SelectStatement( identitiesQL );
+			if( auto aclStatement = !statement ? optional<DB::Statement>{} : QL::SelectStatement(Query); aclStatement ){
+				aclStatement->Select += move(statement->Select);
+				aclStatement->From = DB::Join{ GetTable("acl")->GetColumnPtr("identity_id"), GetTable("identities")->GetColumnPtr("identity_id"), true };
+				auto rows = co_await DS()->SelectCo( aclStatement->Move() );
+				let& columns = aclStatement->Select.Columns;
+				for( auto& row : rows ){
+					jobject jrow;
+					for( uint i=0; i<row->Size() && i<columns.size(); ++i )
+						identitiesQL.SetResult( jrow, columns[i], move((*row)[i]) );
+					identities.emplace_back( move(jrow) );
+				}
+			}
+			jobject o{ {"identities", identities} };
+			if( Query.IsPlural() )
+				Resume( jarray{o} );
+			else
+				Resume( o );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
 	}
 	Ω addIdentityColumn( jobject& jrow, jobject*& identity, str key, DB::Value&& value )ι->void{
 		if( !identity )
@@ -201,7 +272,7 @@ namespace Jde::Access{
 							else{
 								if( !resource )
 									resource = &(*right)["resource"].emplace_object();
-								(*resource)[key] = value.Move();
+								(*resource)[key=="resourceId" ? "id" : key] = value.Move();
 							}
 						}
 						else
@@ -223,9 +294,10 @@ namespace Jde::Access{
 			: nullptr;
 	}
 
+	α AclHook::PurgeBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="acl" ? mu<AclQLAwait>( m, executer, 0, sl ) : nullptr;
+	}
 	α AclHook::InsertBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
-		return m.TableName()=="acl" && m.Type==QL::EMutationQL::Create
-			? mu<AclQLAwait>( m, executer, 0, sl )
-			: nullptr;
+		return m.TableName()=="acl" ? mu<AclQLAwait>( m, executer, 0, sl ) : nullptr;
 	}
 }

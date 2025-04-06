@@ -1,67 +1,103 @@
 #include "UserHook.h"
 #include <jde/db/IDataSource.h>
+#include <jde/db/IRow.h>
 #include <jde/db/awaits/RowAwait.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/View.h>
+#include <jde/ql/QLAwait.h>
 #include "../accessInternal.h"
 #define let const auto
 
 namespace Jde::Access{
 	struct UserGraphQLAwait final : TAwait<jvalue>{
-		UserGraphQLAwait( const QL::TableQL& query, UserPK userPK, SRCE )ι:
+		UserGraphQLAwait( const QL::TableQL& query, UserPK executer, SRCE )ι:
 			TAwait<jvalue>{ sl },
 			Query{ query },
-			UserPK{ userPK }
+			Executer{ executer }
 		{}
-		α Suspend()ι->void override{ Select(); }
+		α Suspend()ι->void override{ QueryGroups(); }
 		QL::TableQL Query;
-		Jde::UserPK UserPK;
+		UserPK Executer;
 	private:
-		α Select()ι->DB::RowAwait::Task;
+		α QueryGroups()ι->QL::QLAwait<jarray>::Task;
+		α QueryTables( jarray groups )ι->QL::QLAwait<jvalue>::Task;
+		α GroupStatement()->DB::Statement;
+		flat_map<uint8,string> _groupColumns;
 	};
+	α UserGraphQLAwait::GroupStatement()->DB::Statement{
+		let& identityTable = GetTable( "identities" );
+		auto pk = identityTable->GetPK();
+		let& groupDBTable = GetTable( "groupings" );
+		DB::Statement statement;
+		auto& groupTable = Query.GetTable( "groupings" );
+		let memberIdColumn = groupDBTable->GetColumnPtr( "member_id" );
+		groupTable.Columns.emplace_back( QL::ColumnQL{"memberId", memberIdColumn} );
 
-	α UserGraphQLAwait::Select()ι->DB::RowAwait::Task{
-		try{
-			let& extension = GetTable( "identities" );
-			auto pk = extension->GetPK();
-			let& groups = GetTable( "groupings" );
-			DB::Statement statement;
-			statement.From+={ pk, groups->GetColumnPtr("member_id"), true };
-			statement.From+={ groups->SurrogateKeys[0], pk, true, "groups_" };
-			statement.Where.Add( pk, DB::Value{pk->Type, Json::AsNumber<Jde::UserPK::Type>(Query.Args, "id")} );
-			statement.Where.Add( extension->GetColumnPtr("deleted"), DB::Value{} );
-			auto groupTable = find_if( Query.Tables, [](let& t){ return t.JsonName=="groupings";} );
-			flat_map<uint8,string> qlColumns;
-			uint i=0;
-			for( auto& c : groupTable->Columns ){
-				if( let dbCol = groups->FindColumn( c.JsonName=="id" ? "identity_id" : DB::Names::FromJson(c.JsonName)); dbCol ){
-					auto alias = ms<DB::Column>( *dbCol );
-					alias->Table = ms<DB::Table>( "groups_" );
-					statement.Select.TryAdd( alias );
-					qlColumns.emplace( i++, c.JsonName );
-				}
+		statement.From+={ pk, memberIdColumn, true };
+		statement.From+={ groupDBTable->SurrogateKeys[0], pk, true, "groups_" };
+		if( let key = Query.FindArgKey(); key )
+			statement.Where.Add( key->IsPrimary() ? pk : identityTable->GetColumnPtr("target"), DB::Value::FromKey(*key) );
+
+		statement.Where.Add( identityTable->GetColumnPtr("deleted"), DB::Value{} );
+		uint i=0;
+		statement.Select.TryAdd( memberIdColumn );
+		for( auto& c : groupTable.Columns ){
+			if( c.JsonName=="memberId" ){
+				c.DBColumn = memberIdColumn;
+				statement.Select.TryAdd( c.DBColumn );
 			}
-			let rows = co_await extension->Schema->DS()->SelectCo( statement.Move(), _sl );
-			jarray jgroups;
-			for( auto& row : rows ){
-				jobject group;
-				for( auto& [i, name] : qlColumns )
-					group[name] = (*row)[i].ToJson();
-				jgroups.push_back( group );
+			else{
+				let dbColumn = c.JsonName=="id" ? pk : identityTable->GetColumnPtr( DB::Names::FromJson(c.JsonName) );
+				c.DBColumn = statement.Select.TryAdd( dbColumn, "groups_" );
 			}
-			Resume( jobject{{"groupings", jgroups}} );
 		}
-		catch( IException& e ){
+		return statement;
+	}
+	α UserGraphQLAwait::QueryGroups()ι->QL::QLAwait<jarray>::Task{
+		try{
+			auto groupStatement = GroupStatement();
+			auto groupInfo = co_await QL::QLAwait<jarray>{ move(Query.GetTable("groupings")), move(groupStatement), Executer, _sl };
+			QueryTables( move(groupInfo) );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α UserGraphQLAwait::QueryTables( jarray groups )ι->QL::QLAwait<jvalue>::Task{
+		try{
+			Query.Tables.clear();
+			//let returnRaw = Query.ReturnRaw;
+			Query.ReturnRaw = true;
+			auto userInfo = co_await QL::QLAwait<jvalue>( move(Query), Executer, _sl );
+			if( !userInfo.is_null() ){
+				Json::Visit( userInfo, [&](jobject& user){
+					let userPK = QL::AsId<UserPK::Type>( user );
+					jarray userGroups;
+					for( auto v=groups.begin(); v!=groups.end(); ){
+						auto& group = v->as_object();
+						if( let memberId = Json::AsNumber<UserPK::Type>( group, "memberId" ); memberId==userPK ){
+							group.erase( "memberId" );
+							userGroups.push_back( move(group) );
+							v = groups.erase( v );
+						}else
+							v = std::next(v);
+					}
+					user["groupings"] = userGroups;
+				} );
+			}
+			Resume( move(userInfo) );
+		}
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
 
-	α UserHook::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
+	α UserHook::Select( const QL::TableQL& query, UserPK executer, SL sl )ι->up<TAwait<jvalue>>{
 		return query.JsonName.starts_with( "user" ) && query.FindTable("groupings")
-			? mu<UserGraphQLAwait>( query, userPK, sl )
+			? mu<UserGraphQLAwait>( query, executer, sl )
 			: nullptr;
 	}
 }

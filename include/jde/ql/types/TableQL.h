@@ -20,6 +20,7 @@ namespace Jde::QL{
 		α FindDBColumn( sp<DB::Column> dbColumn )Ι->const ColumnQL*;
 		α FindTable( sv jsonPluralName )Ι->const TableQL*;
 		α FindTable( sv jsonPluralName )ι->TableQL*;
+		α GetTable( sv jsonPluralName, SRCE )ε->TableQL&;
 		α FindTablePrefix( sv jsonPluralName )Ι->const TableQL*;
 		α IsPlural()Ι{ return DB::Names::IsPlural(JsonName); }
 		α Filter()Ε->FilterQL;

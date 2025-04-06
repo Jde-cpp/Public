@@ -88,6 +88,8 @@ namespace Jde::QL{
 							value |= pFlag->second;
 					}
 				}
+				else if( jvalue->is_number() )
+					value = Json::AsNumber<uint>( *jvalue );
 				update.Add( c, {value} );
 			}
 		}

@@ -1,4 +1,5 @@
 #include <jde/access/Authorize.h>
+#include <jde/framework/str.h>
 #include <jde/db/usings.h>
 #include <jde/access/types/Group.h>
 #include <jde/access/types/User.h>
@@ -289,13 +290,14 @@ namespace Jde::Access{
 		Recalc( l );
 		Trace{ _ptags, "[{}+{}]Added role permission.", rolePK, member };
 	}
-	α Authorize::AddRoleChild( RolePK parentRolePK, RolePK childRolePK )ι->void{
+	α Authorize::AddRoleChild( RolePK parentRolePK, vector<RolePK>&& childRolePKs )ι->void{
 		ul l{ Mutex };
-
 		auto role = Roles.try_emplace( parentRolePK, parentRolePK, false );
-		role.first->second.Members.emplace( PermissionRole{std::in_place_index<1>,childRolePK} );
+		for( let childRolePK : childRolePKs )
+			role.first->second.Members.emplace( PermissionRole{std::in_place_index<1>,childRolePK} );
+
 		Recalc( l );
-		Trace{ _ptags, "[{}+{}]Added role child.", parentRolePK, childRolePK };
+		Trace{ _ptags, "[{}+{}]Added role child.", parentRolePK, Str::Join(childRolePKs) };
 	}
 
 	α Authorize::RemoveRoleChildren(	RolePK rolePK, flat_set<PermissionPK> toRemove )ι->void{

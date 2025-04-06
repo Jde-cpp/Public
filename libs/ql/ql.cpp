@@ -52,7 +52,7 @@ namespace Jde::QL{
 			if( tableName.starts_with(schema->Name) && tableName.size()>schema->Name.size() )
 				return GetTable( tableName.substr(schema->Name.size()+1), sl );
 		}
-		throw new Exception{ sl, "Could not find table '{}'", tableName };
+		throw Exception{ sl, "Could not find table '{}'", tableName };
 	}
   α Schemas()ι->const vector<sp<DB::AppSchema>>&{
     return _schemas;

@@ -1,7 +1,7 @@
 #!/bin/bash
 clean=${1:-0};
 branch=${2:-master};
-shouldFetch=${2:-1};
+shouldFetch=${2:-0};
 scriptsDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )";
 if ! source $scriptsDir/env.sh; then exit 1; fi;
 cd $webDir;

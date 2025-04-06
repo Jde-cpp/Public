@@ -43,7 +43,7 @@ namespace Jde::Access{
 		α DeleteRestoreRole( RolePK rolePK, bool deleted )ι->void;
 		α PurgeRole( RolePK rolePK )ι->void;
 		α AddRolePermission( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, sv resourceName )ι->void;
-		α AddRoleChild( RolePK parentRolePK, RolePK childRolePK )ι->void;
+		α AddRoleChild( RolePK parentRolePK, vector<RolePK>&& childRolePK )ι->void;
 		α RemoveRoleChildren(	RolePK rolePK, flat_set<RolePK> toRemove )ι->void;
 
 		α CreateUser( UserPK userPK )ι->void;

@@ -8,14 +8,14 @@ begin
 
 	select permission_id
 	into _permission_id
-	from role_members
-		join permission_rights on role_members.member_id=permission_rights.permission_id
-		join resources using(resource_id)
-	where role_members.role_id=_role_id
+	from access_role_members members
+		join access_permission_rights permissions on members.member_id=permissions.permission_id
+		join access_resources resources using(resource_id)
+	where members.role_id=_role_id
 		and resources.target=_resourceTarget;
 
 	if _permission_id is not null then
-		update permission_rights set allowed=_allowed, denied=_denied
+		update access_permission_rights set allowed=_allowed, denied=_denied
 		where permission_id=_permission_id;
 	else
 		insert into access_permissions( is_role ) values( false );

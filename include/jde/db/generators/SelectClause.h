@@ -8,6 +8,7 @@ namespace Jde::DB{
 		SelectClause( vector<sp<Column>> cols )ι:Columns{move(cols)}{}//{ Columns.
 		α operator+=( SelectClause&& x )ι->SelectClause&;
 		α TryAdd( sp<DB::Column> c )ι->void;
+		α TryAdd( sp<DB::Column> c, string tableAlias )ι->sp<DB::Column>;
 		α ToString()Ι->string;
 		α FindColumn( sv name )Ι->sp<Column>;
 

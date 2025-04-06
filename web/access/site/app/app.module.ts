@@ -18,7 +18,7 @@ import { AppRoutingModule } from './app_routing_module';
   	imports: [
 		AppComponent,
 		RouterModule, HttpClientModule, BrowserAnimationsModule, FormsModule, ReactiveFormsModule,
-		MatDialogModule, MatSnackBarModule, MatAutocompleteModule, MatSelectModule,// MatInputModule,//MatFormFieldModule,
+		MatDialogModule, MatSnackBarModule, MatAutocompleteModule, MatSelectModule,
 		AppRoutingModule,NavBar
   ],
   providers: [

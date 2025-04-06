@@ -11,6 +11,15 @@ namespace Jde::DB{
 		if( !FindColumn(*c) )
 			Columns.push_back( c );
 	}
+	α SelectClause::TryAdd( sp<DB::Column> c, string tableAlias )ι->sp<DB::Column>{
+		if( tableAlias.size() ){
+			c = ms<Column>( c->Name );
+			c->Table = ms<Table>( tableAlias );
+		}
+		TryAdd( c );
+		return c;
+	}
+
 	α SelectClause::operator+=( SelectClause&& x )ι->SelectClause&{
 		for( let& c : x.Columns )
 			TryAdd( c );

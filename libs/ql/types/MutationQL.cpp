@@ -30,6 +30,9 @@ namespace Jde::QL{
 	}
 
 	α MutationQL::ToString()Ι->string{
+		auto args = serialize(Args);
+		if( args.size()>3 && args[0]=='{' )
+			args = args.substr(1, args.size()-2);
 		return Ƒ( "{}({}){}", CommandName, serialize(Args), ResultRequest ? ResultRequest->ToString() : "" );
 	}
 

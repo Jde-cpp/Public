@@ -52,6 +52,13 @@ namespace Jde::QL{
 	α TableQL::FindTable( sv jsonPluralName )Ι->const TableQL*{
 		return const_cast<TableQL*>(this)->FindTable( jsonPluralName );
 	}
+
+	α TableQL::GetTable( sv jsonPluralName, SL sl )ε->TableQL&{
+		TableQL* y = FindTable( jsonPluralName );
+		THROW_IF( !y, "Could not find table '{}'.", jsonPluralName );
+		return *y;
+	}
+
 	α TableQL::FindArgKey()Ι->optional<DB::Key>{
 		optional<DB::Key> y;
 		if( let id = Json::FindValue( Args, "id" ); id )
