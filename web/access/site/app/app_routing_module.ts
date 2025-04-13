@@ -2,12 +2,12 @@ import { NgModule } from '@angular/core';
 import {Routes, ROUTES, RouterModule} from '@angular/router';
 
 import { ComponentCategoryList, ComponentSidenav } from 'jde-material';
-import{ Applications, QLList, QLListResolver, LoginPageComponent } from 'jde-framework';
-import{ AccessService, DetailResolver, RoleDetail, UserDetail, GroupDetail, User, Group, Role } from 'jde-access';
+import{ Applications, DetailResolver, Home, LoginPageComponent, QLList, QLListResolver } from 'jde-framework';
+import{ AccessService, Group, Role, RoleDetail, UserDetail, GroupDetail, User } from 'jde-access';
 
 const accessProvider = { provide: 'IGraphQL', useClass: AccessService };
 export const routes: Routes = [
-	{ path: '', title: "Home", component: ComponentCategoryList, data: {summary: "Welcome" } },
+	{ path: '', title: "Home", component: Home, data: {summary: "Welcome" } },
 	{ path: 'login', title: "Login", component: LoginPageComponent, data: {summary: "Login to Site"} },
 	{ path: 'access', title: "Access", component: ComponentSidenav, data: { summary: "Configure Access"},
 			children :[
@@ -19,7 +19,7 @@ export const routes: Routes = [
 				resolve: { pageData: DetailResolver<User> }
 			},
 			{
-				path: 'groupings/:target',
+				path: 'groups/:target',
 				component: GroupDetail,
 				providers: [ DetailResolver<Group>, accessProvider ],
 				resolve: { pageData: DetailResolver<Group> }
@@ -32,14 +32,16 @@ export const routes: Routes = [
 				resolve: { pageData: DetailResolver<Role> }
 			},
 			{
-				path: ':collectionName',
+				path: ':collectionDisplay',
 				component: QLList,
 				runGuardsAndResolvers: "always",
 				providers: [ QLListResolver, accessProvider ],
 				resolve: { data: QLListResolver },
-				data: { types: ["users",
-					{id:"groupings", name:"Groups"}, "roles",
-					{id:"resources", name:"Resources", canPurge:false}] }
+				data: { collections: [
+					"users",
+					{id:"groups", collectionName: "groupings"},
+					"roles",
+					{id:"resources", canPurge:false}] }
 			},
 		]
 	},

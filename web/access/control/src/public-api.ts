@@ -7,4 +7,3 @@ export * from './lib/pages/groups/group-detail';
 export * from './lib/pages/roles/role-detail';
 export * from './lib/pages/users/user-detail';
 export * from './lib/services/access.service';
-export * from './lib/services/detail.resolver';

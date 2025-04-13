@@ -1,21 +1,17 @@
 import { Component, computed, effect, OnInit, OnDestroy, Inject, signal, ViewEncapsulation, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {ActivatedRoute, NavigationEnd, Params, Router, RouterModule, Routes} from '@angular/router';
-import { MatDialog } from '@angular/material/dialog';
 
 import { ComponentPageTitle } from 'jde-material';
 
-import { Properties, IErrorService, IGraphQL, IProfile, Settings, TableSchema, arraysEqual, cloneClassArray, TargetRow, toIdArray} from 'jde-framework';
-import { HttpErrorResponse } from '@angular/common/http';
+import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, IProfile, Properties, QLSelector, TargetRow, toIdArray} from 'jde-framework';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Role, RolePK } from '../../model/Role';
-import { IRoleData, UserSettings } from '../../services/role.resolver';
 import { PermissionTable } from '../../shared/permissions/permission-table';
 import { MatIcon } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { Permission } from '../../model/Permission';
-import { QLSelector } from '../../../../../jde-framework/src/lib/pages/ql/selector/ql-selector';
-import { AccessService, DetailResolverData } from 'jde-access';
+import { AccessService } from 'jde-access';
 import { SelectionModel } from '@angular/cdk/collections';
 import { GroupPK } from '../../model/Group';
 import { UserPK } from '../../model/User';

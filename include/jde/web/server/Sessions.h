@@ -30,6 +30,8 @@ namespace Jde::Web::Server{
 	namespace Sessions{
 		Φ Add( UserPK userPK, string&& endpoint, bool isSocket )ι->sp<SessionInfo>;
 		Φ Find( SessionPK sessionId )ι->sp<SessionInfo>;
+		Φ Remove( SessionPK sessionId )ι->bool;
+		α RestSessionTimeout()ι->steady_clock::duration;
 		α Get()ι->vector<sp<SessionInfo>>;
 		α Size()ι->uint;
 

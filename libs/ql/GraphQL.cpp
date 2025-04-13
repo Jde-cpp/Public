@@ -100,10 +100,10 @@ namespace QL{
 		optional<jvalue> y;
 		for( let& table : tables ){
 			auto result = QueryTable( table, userPK, log, sl );
-			if( table.ReturnRaw )
+			if( table.ReturnRaw && tables.size()==1 )
 				y = result;
 			else{
-				if( !y || !y->is_object() )
+				if( !y )
 					y = jobject{};
 				y->get_object()[table.JsonName] = move(result);
 			}

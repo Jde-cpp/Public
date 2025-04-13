@@ -11,9 +11,11 @@ namespace Jde{
 	//α operator==( const jvalue& a, const jvalue& b )ι->bool{ return a.is_primitive() && !(b<a) && !(b>a); }
 	Ŧ Eval( const boost::system::result<T>& x, string&& message, SRCE )ε->T;//TODO forward args...
 	namespace Json{
+		α AddOrAssign( jvalue& objOrArray, jvalue&& item, SRCE )ε->void;
 		α Combine( const jobject& a, const jobject& b )ι->jobject;
 		α Visit( jvalue&& v, function<void(jobject&& o)> op )ε->void;
 		α Visit( const jvalue& v, function<void(const jvalue& o)> op )ε->void;
+		α Visit( const jvalue& v, function<void(sv s)> op )ε->void;
 		α Visit( jvalue& v, function<void(jobject& o)> op )ε->void;
 		α ReadJsonNet( fs::path path, SRCE )ε->jobject;
 		constexpr sv errorFromat = "'{}' could not convert to {}.";

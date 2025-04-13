@@ -9,7 +9,7 @@ namespace Jde::Access{
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->Jde::Task;
 	private:
-		α InsertUser( vector<DB::Value>&& params )->TAwait<UserPK::Type>::Task;
+		α InsertUser( str prefix, vector<DB::Value>&& params )->TAwait<UserPK::Type>::Task;
 		string _loginName;
 		uint _providerId;
 		string _opcServer;

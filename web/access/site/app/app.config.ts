@@ -5,7 +5,6 @@ import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { AppService, DefaultErrorService,LocalStorageProfile } from 'jde-framework'
 import {AccessService} from 'jde-access';
 import {EnvironmentService} from './services/environment.service';
-import { DisabledAuthService } from 'jde-material';
 import { routes } from './app_routing_module';
 
 export const appConfig: ApplicationConfig = {
@@ -15,7 +14,7 @@ export const appConfig: ApplicationConfig = {
 		{provide: 'IEnvironment', useClass: EnvironmentService},
 		{provide: 'IErrorService', useClass: DefaultErrorService},
 		{provide: 'IProfile', useClass: LocalStorageProfile},
-		{provide: 'IAuth', useClass: DisabledAuthService},
+		{provide: 'IAuth', useClass: AppService},
 		{provide: 'AppService', useClass: AppService},
 		{provide: 'AccessService', useClass: AccessService},
 	]

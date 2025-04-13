@@ -44,7 +44,7 @@ namespace Jde{
 	struct Γ IApplication{
 		Ω Instance()ι->IApplication&;
 		Ω SetInstance( sp<IApplication> app )ι->void;
-		α BaseStartup( int argc, char** argv, sv appName, string serviceDescription )ε->flat_set<string>;
+		α BaseStartup( int argc, char** argv, sv appName, string serviceDescription, optional<bool> console )ε->flat_set<string>;
 		β Install( str serviceDescription )ε->void=0;
 		β Uninstall()ε->void=0;
 		Ω EnvironmentVariable( str variable, SRCE )ι->optional<string>;
@@ -84,7 +84,7 @@ namespace Jde{
 	};
 
 	struct OSApp final: IApplication{
-		ω Startup( int argc, char** argv, sv appName, string serviceDescription )ε->flat_set<string>;
+		ω Startup( int argc, char** argv, sv appName, string serviceDescription, optional<bool> console=nullopt )ε->flat_set<string>;
 
 		Ω CompanyName()ι->string;
 		Ω ProductName()ι->sv;

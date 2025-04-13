@@ -3,10 +3,11 @@
 #include "Streams.h"
 #include <jde/web/server/HttpRequest.h>
 #include <jde/web/server/usings.h>
+#include <jde/web/server/IApplicationServer.h>
 #include <jde/web/server/IRequestHandler.h>
+//#include "../../../../Framework/source/DateTime.h"
 
 namespace Jde::Web::Server{
-	struct IApplicationServer;
 
 namespace Internal{
 	α Start( up<IRequestHandler>&& handler, up<Server::IApplicationServer>&& server )ε->void;
@@ -52,6 +53,17 @@ namespace Jde::Web{
 				pingRes.set( http::field::summary, Jde::format("SSL={}", isSsl) );
 				pingRes.prepare_payload();
 				res = move(pingRes);
+			}
+			else if( req.IsGet("/serverSettings") ){
+				jobject j;
+				j["restSessionTimeout"] = Chrono::ToString( Sessions::RestSessionTimeout() );
+				j["serverInstance"] = IApplicationServer::InstancePK();
+				auto settingsResponse{ req.Response<http::string_body>() };
+				settingsResponse.set( http::field::content_type, "application/json" );
+				settingsResponse.body() = serialize(j);
+				//settingsResponse.set( http::field::content_length, settingsResponse.body().size() );
+				settingsResponse.prepare_payload();
+				res = move(settingsResponse);
 			}
 			if( !res ){
 				HandleRequest( move(req), ms<RestStream>(mu<T>(move(stream))) );

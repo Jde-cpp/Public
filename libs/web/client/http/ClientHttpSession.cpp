@@ -165,7 +165,8 @@ namespace Jde::Web::Client{
 			Trace{ _tags, "{}:{}{} - {}", Host, Port, target, body.substr(0, Client::MaxLogLength()) };
 		http::request<http::string_body> req{ *args.Verb, target, version };
 		req.set( http::field::user_agent, _userAgent );
-		req.set( http::field::content_type, args.ContentType );
+		if( args.ContentType.size() )
+			req.set( http::field::content_type, args.ContentType );
 		req.set( http::field::accept_encoding, "gzip" );
 		if( args.Authorization.size() )
 			req.set( http::field::authorization, args.Authorization );
@@ -175,7 +176,7 @@ namespace Jde::Web::Client{
 		try{
 			auto res = co_await AsyncWriteAwait{ move(req), args, shared_from_this() };
 			if( _log )
-				Trace{ ELogTags::HttpClientRead, "{}:{}{} - {}", Host, Port, target, res.Body().substr(0, Client::MaxLogLength()) };
+				Trace{ ELogTags::HttpClientRead, "{}:{}{} - {}", Host, Port, target, res.Body().substr(0/*, Client::MaxLogLength()*/) };
 			h.promise().SetValue( move(res) );
 			//SetIsRunning( false );  //TODO implement keep-alive
 		}

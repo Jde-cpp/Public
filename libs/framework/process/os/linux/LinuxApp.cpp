@@ -80,10 +80,10 @@ namespace Jde{
 
 	uint OSApp::ProcessId()ι{ return getpid(); }
 
-	α OSApp::Startup( int argc, char** argv, sv appName, string serviceDescription )ε->flat_set<string>{
+	α OSApp::Startup( int argc, char** argv, sv appName, string serviceDescription, optional<bool> console )ε->flat_set<string>{
 		auto pInstance = ms<OSApp>();
 		IApplication::SetInstance( pInstance );
-		return pInstance->BaseStartup( argc, argv, appName, serviceDescription );
+		return pInstance->BaseStartup( argc, argv, appName, serviceDescription, console );
 	}
 	atomic<bool> _workerMutex{false};
 	vector<sp<Threading::IWorker>> _workers;

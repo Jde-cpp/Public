@@ -71,10 +71,14 @@ export class AccessService extends AppService implements OnDestroy{
 		switch( collectionName ){
 			case "users": columns = ["isGroup"]; break;
 			case "roles": columns = ["permissions"]; break;
-			case "groupings": columns = ["isGroup", "members"]; break;
+			case "groups": columns = ["isGroup", "members"]; break;
 		}
 		return columns;
 	}
+	override toCollectionName( collectionDisplay:string ):string{
+		return collectionDisplay=="groups" ? "groupings" : collectionDisplay;
+	}
+
 
 	#resourceSignal = signal<Resource[]>(new Array<Resource>());
   resources = this.#resourceSignal.asReadonly();

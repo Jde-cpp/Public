@@ -22,26 +22,39 @@ namespace Jde::Web{
 		Signature = Crypto::RsaSign( HeaderBodyEncoded, privateKeyPath );
 	}
 	Jwt::Jwt( sv encoded )ε{
+		// let parts = Str::Split( encoded, '.' );
+		// for( uint i=0; i<parts.size(); ++i ){
+		// 	Trace{ ELogTags::Test, "encoded[{}]: '{}'", i, parts[i] };
+		// 	Trace{ ELogTags::Test, "part[{}]: '{}'", i, Str::Decode64(parts[i], true) };
+		// }
+		// Trace{ ELogTags::Test, "jwt: '{}'", encoded };
 		let fpIndex = encoded.find_last_of( '.' );
 		let bodyIndex = encoded.find_first_of( '.' );
 		if( fpIndex==string::npos || fpIndex==encoded.size() || bodyIndex==string::npos || fpIndex==bodyIndex )
 			THROW( "Invalid jwt.  Expected 3 parts." );
 		HeaderBodyEncoded = encoded.substr( 0, fpIndex );
 		let headerEncoded = HeaderBodyEncoded.substr( 0, bodyIndex );
+		//Trace{ ELogTags::Test, "header: '{}'", Str::Decode64(headerEncoded, true) };
 		let header = Json::Parse( Str::Decode64(headerEncoded, true) );//{"alg":"RS256","kid":"fed80fec56db99233d4b4f60fbafdbaeb9186c73","typ":"JWT"}
 		if( auto alg = Json::AsSV(header, "alg"); alg!="RS256" )
 			THROW( "Invalid jwt.  Expected alg=RS256, found '{}'.", alg );
 		if( auto type = Json::AsSV(header, "typ"); type!="JWT" )
 			THROW( "Invalid jwt.  Expected typ=JWT, found '{}'.", type );
 		Kid = Json::FindSV( header, "kid" ).value_or( "" );
-		Signature = Str::Decode64<Crypto::Signature>( encoded.substr(fpIndex+1, HeaderBodyEncoded.find_first_of('=')), true );
-		Body = Json::Parse( Str::Decode64(HeaderBodyEncoded.substr(bodyIndex+1 ), true) );
-		SetModulus( Json::AsString(Body, "n") );
-		SetExponent( Json::AsString(Body, "e") );
+		let fp = encoded.substr(fpIndex+1);
+		Signature = Str::Decode64<Crypto::Signature>( fp.substr(0, fp.find_first_of('=')), true );
+
+		auto body = Str::Decode64( HeaderBodyEncoded.substr(bodyIndex+1 ), true );
+//		Trace{ ELogTags::Test, "body: '{}'", body };
+		Body = Json::Parse( body );
+		if( auto modulus = Json::FindString(Body, "n"); modulus ){
+			SetModulus( move(*modulus) );
+			SetExponent( Json::AsString(Body, "e") );
+		}
 		auto fpKey = Crypto::Fingerprint( Modulus, Exponent );
 		UserName = Json::FindString(Body, "name").value_or( Str::ToHex(fpKey.data(), fpKey.size()) );
 		UserTarget = Json::FindString( Body, "target" ).value_or( UserName );
-		Host = Json::AsSV( Body, "host" );
+		Host = Json::FindString( Body, "host" ).value_or("");
 		Iat = Json::AsNumber<time_t>( Body, "iat" );
 
 		auto fpText = []( const Crypto::MD5& fp ) {

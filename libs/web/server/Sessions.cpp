@@ -3,12 +3,16 @@
 #include <jde/web/server/HttpRequest.h>
 #include <jde/framework/str.h>
 #include "../../../../Framework/source/math/MathUtilities.h"
-//#include "../../../../Framework/source/DateTime.h"
 #include "ServerImpl.h"
 
 #define let const auto
 namespace Jde::Web::Server{
 	constexpr ELogTags _tags{ ELogTags::Sessions };
+	steady_clock::duration _restExpirationDuration{ Chrono::ToDuration(Settings::FindSV("/http/timeout").value_or("PT30S")) };
+	α Sessions::RestSessionTimeout()ι->steady_clock::duration{ return _restExpirationDuration; }
+	steady_clock::duration _sockExpirationDuration{ Chrono::ToDuration(Settings::FindSV("/http/timeout").value_or("P1D")) };
+	steady_clock::time_point _lastTrim{ steady_clock::now() };
+
 	concurrent_flat_map<SessionPK,sp<SessionInfo>> _sessions;
 	α Upsert( sp<SessionInfo>& info )ι->void{
 		if( _sessions.emplace_or_visit(info->SessionId, info, [&info]( auto& existing ){ existing.second->Expiration=existing.second->NewExpiration();}) )
@@ -37,6 +41,10 @@ namespace	Sessions{
 		return newSession;
 	}
 
+	α Sessions::Remove( SessionPK sessionId )ι->bool{
+		return _sessions.erase( sessionId );
+	}
+
 	α Sessions::Find( SessionPK sessionId )ι->sp<SessionInfo>{
 		sp<SessionInfo> y;
 		_sessions.cvisit( sessionId, [&y](auto& kv){ y = kv.second; } );
@@ -49,10 +57,6 @@ namespace	Sessions{
 		return y;
 	}
 	α Sessions::Size()ι->uint{ return _sessions.size(); }
-
-	steady_clock::duration _restExpirationDuration{ Chrono::ToDuration(Settings::FindSV("/http/timeout").value_or("PT30S")) };
-	steady_clock::duration _sockExpirationDuration{ Chrono::ToDuration(Settings::FindSV("/http/timeout").value_or("P1D")) };
-	steady_clock::time_point _lastTrim{ steady_clock::now() };
 
 	SessionInfo::SessionInfo( SessionPK sessionPK, str userEndpoint, bool hasSocket )ι:
 		SessionId{ sessionPK },

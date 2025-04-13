@@ -25,6 +25,10 @@ target_link_libraries( ${targetName} GTest::gtest GTest::gtest_main )
 target_link_libraries( ${targetName} fmt::fmt )
 target_link_libraries( ${targetName} Jde.Crypto Jde )
 
+gtest_discover_tests( ${targetName} )
+set( CMAKE_CTEST_ARGUMENTS "-c" "-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Crypto.Tests.jsonnet" )
+add_test( NAME CryptoTests COMMAND $<TARGET_FILE:Jde.Crypto.Tests> )
+
 target_precompile_headers( ${targetName} PRIVATE
 	<openssl/engine.h>
 	<openssl/hmac.h>
