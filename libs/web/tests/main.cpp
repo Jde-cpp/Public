@@ -3,14 +3,17 @@
 #define let const auto
 
 namespace Jde{
+#ifndef _MSC_VER
+	α OSApp::ProductName()ι->sv{ return "Tests.Web"; }
+#endif
+
  	α Startup( int argc, char **argv )ι->void{
 #ifdef _MSC_VER
 		ASSERT( Settings::Get<uint>("workers/drive/threads")>0 )
 #endif
-		OSApp::SetProductName( "Tests.Web" );
 		ASSERT( argc>1 && string{argv[1]}=="-c" )
 		Threading::SetThreadDscrptn( "Main" );
-		OSApp::Startup( argc, argv, "Tests.Web", "Web tests" );
+		OSApp::Startup( argc, argv, "Tests.Web", "Web tests", true );
 	}
 }
 

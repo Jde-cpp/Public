@@ -24,8 +24,8 @@ namespace Jde::Access::Tests{
 	if( auto o = QL::QueryObject(Ƒ("provider(target:\"{}\"){{id}}", OpcServer), GetRoot()); !o.empty() )
 			OpcProviderId = GetId( o );
 		else{
-			let createQL = Ƒ( "mutation createProvider( target:\"{}\", providerType:{} ){{id}}", OpcServer, underlying(EProviderType::OpcServer) );
-			OpcProviderId = GetId( Json::AsObject(QL::Query(createQL, GetRoot()), "/createProvider") );
+			let createQL = Ƒ( "createProvider( target:\"{}\", providerType:{} ){{id}}", OpcServer, underlying(EProviderType::OpcServer) );
+			OpcProviderId = GetId( QL::QueryObject(createQL, GetRoot()) );
 		}
 	}
 

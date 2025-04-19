@@ -3,6 +3,7 @@
 #include <jde/web/client/socket/IClientSocketSession.h>
 #include <jde/framework/thread/execution.h>
 
+#define let const auto
 
 namespace Jde::Web::Client{
 	Duration _handshakeTimeout{ Settings::FindDuration("web/client/timeoutHandshake").value_or(std::chrono::seconds(30)) };
@@ -12,16 +13,18 @@ namespace Jde::Web::Client{
 	ELogTags _tags{ ELogTags::HttpClientWrite };
 	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
 
-	ClientHttpSession::ClientHttpSession( str host, PortType port, net::any_io_executor strand, bool isPlain, bool log )ε:
+	ClientHttpSession::ClientHttpSession( str host, PortType port, net::any_io_executor strand, bool isPlain, bool log, SL sl )ε:
 		Host{ host }, Port{ port }, IsSsl{ false }, _log{log}, _resolver{ strand },
-		_stream{ beast::tcp_stream{strand} }{
+		_stream{ beast::tcp_stream{strand} },
+		_sl{ sl }{
 		ASSERT( isPlain );
 		_isRunning.test_and_set();
 	}
 
-	ClientHttpSession::ClientHttpSession( str host, PortType port, net::any_io_executor strand )ε:
+	ClientHttpSession::ClientHttpSession( str host, PortType port, net::any_io_executor strand, SL sl )ε:
 		Host{ host }, Port{ port }, IsSsl{ true }, _log{true}, _resolver{ strand },
-		_stream{ beast::ssl_stream<beast::tcp_stream>{strand, _ctx} }{
+		_stream{ beast::ssl_stream<beast::tcp_stream>{strand, _ctx} },
+		_sl{ sl }{
 		_stream.SetSslTlsExtHostName(Host);
 		_isRunning.test_and_set();
 	}
@@ -162,7 +165,7 @@ namespace Jde::Web::Client{
 		ASSERT( args.Verb.has_value() );
 		constexpr int version{ 11 };
 		if( _log )
-			Trace{ _tags, "{}:{}{} - {}", Host, Port, target, body.substr(0, Client::MaxLogLength()) };
+			Trace{ _sl, _tags, "{}:{}{} - {}", Host, Port, target, body.substr(0, Client::MaxLogLength()) };
 		http::request<http::string_body> req{ *args.Verb, target, version };
 		req.set( http::field::user_agent, _userAgent );
 		if( args.ContentType.size() )
@@ -176,9 +179,8 @@ namespace Jde::Web::Client{
 		try{
 			auto res = co_await AsyncWriteAwait{ move(req), args, shared_from_this() };
 			if( _log )
-				Trace{ ELogTags::HttpClientRead, "{}:{}{} - {}", Host, Port, target, res.Body().substr(0/*, Client::MaxLogLength()*/) };
+				Trace{ _sl, ELogTags::HttpClientRead, "{}:{}{} - {}", Host, Port, target, res.Body().substr(0/*, Client::MaxLogLength()*/) };
 			h.promise().SetValue( move(res) );
-			//SetIsRunning( false );  //TODO implement keep-alive
 		}
 		catch( IException& e ){
 			h.promise().SetExp( move(e) );
@@ -188,6 +190,9 @@ namespace Jde::Web::Client{
 	}
 
 	α ClientHttpSession::Close()ε->VoidTask{
-		co_await ShutdownAwait{ shared_from_this() };
+		let self = shared_from_this();
+		co_await ShutdownAwait{ self };
+		RemoveHttpSession( self );//TODO implement keep-alive
+		SetIsRunning( false );
 	}
 }

@@ -13,11 +13,11 @@ namespace Jde::Web::Mock{
 		α OnRead( Proto::FromClientTransmission&& transmission )ι->void override;
 		α SendAck( uint32 serverSocketId )ι->void override;
 	private:
-		α WriteException( IException&& e )ι->void;
+		α WriteException( exception&& e, RequestId requestId )ι->void override;
+		α WriteException( IException&& e )ι->void{ WriteException( move(e), 0 ); }
 		α WriteSubscription( const jvalue& j, RequestId requestId )ι->void override{ ASSERT(false); }
 		α WriteSubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void override{ ASSERT(false); }
 		α WriteComplete( RequestId requestId )ι->void override{ ASSERT(false); }
-		α WriteException( exception&& e, RequestId requestId )ι->void override{ ASSERT(false); }
 		α OnConnect( SessionPK sessionId, RequestId requestId )ι->Server::Sessions::UpsertAwait::Task;
 	};
 }

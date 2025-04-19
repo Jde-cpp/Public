@@ -1,14 +1,14 @@
 {
 	testing:{
-		tests: "AclTests.EnabledPermissions",
-		recreateDB:: true,
+		tests:: "AuthTests.*",
+		recreateDB:: true
 	},
 	dbServers: {
 		scriptPaths: ["$(JDE_DIR)/Public/libs/access/config/sql/mysql"],
 		dataPaths: ["$(JDE_DIR)/Public/libs/access/config"],
 		sync:: true,
 		localhost:{
-			driver: "db/drivers/mysql/libJde.DB.MySql.so",
+			driver: "$(JDE_BUILD_DIR)/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",
 			connectionString: "mysqlx://$(JDE_MYSQL_CREDS)@127.0.0.1:33060/test_access?ssl-mode=disabled",
 			catalogs: {
 				jde_test: {
@@ -27,15 +27,16 @@
 	},
 	logging:{
 		tags: {
-			trace:["test", "ql", "sql", "access"],
-			debug:["settings", "app"],
+			trace:["test", "access"],
+			debug:["settings", "app", "ql", "sql"],
 			information:[],
 			warning:[],
 			"error":[],
 			critical:[]
 		},
 		sinks:{
-			console:{}
+			console:{},
+			file:{ path: "/tmp", md: false }
 		}
 	},
 	workers:{

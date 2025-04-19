@@ -72,7 +72,7 @@ namespace Jde::QL{
 				//case (Remove | Before): p = hook.RemoveBefore( _mutation, _userPK ); break;
 				case Remove: p = hook.Remove( _mutation, _userPK ); break;
 				case (Remove | After): p = hook.RemoveAfter( _mutation, _userPK ); break;
-				case (Insert | Before): p = hook.InsertBefore( _mutation, _userPK ); break;
+				case (Insert | Before): p = hook.InsertBefore( _mutation, _userPK, _sl ); break;
 				case (Insert | After): p = hook.InsertAfter( _mutation, _userPK, _pk ); break;
 				case (Insert | Failure): p = hook.InsertFailure( _mutation, _userPK ); break;
 				case (Purge | Before): p = hook.PurgeBefore( _mutation, _userPK ); break;

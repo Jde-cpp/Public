@@ -91,7 +91,7 @@ namespace QL{
 		else if( table.JsonName=="__schema" )
 			y = QuerySchema( table );
 		else{
-			y = QL::Query( table, executer );
+			y = QL::Query( table, executer, sl );
 		}
 		return y;
 	}
@@ -99,6 +99,7 @@ namespace QL{
 	α QueryTables( const vector<TableQL>& tables, UserPK userPK, bool log, SRCE )ε->jvalue{
 		optional<jvalue> y;
 		for( let& table : tables ){
+			THROW_IFSL( table.Columns.empty() && table.Tables.empty(), "TableQL '{}' has no columns", table.ToString() );
 			auto result = QueryTable( table, userPK, log, sl );
 			if( table.ReturnRaw && tables.size()==1 )
 				y = result;

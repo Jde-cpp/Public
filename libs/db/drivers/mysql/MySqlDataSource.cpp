@@ -5,8 +5,10 @@
 #include "MySqlServerMeta.h"
 #include "../../src/DBLog.h"
 
-#ifndef _GLIBCXX_DEBUG
-    #error "_GLIBCXX_DEBUG must be defined to compile this code."
+#ifndef NDEBUG
+	#ifndef _GLIBCXX_DEBUG
+			#error "_GLIBCXX_DEBUG must be defined to compile this code."
+	#endif
 #endif
 
 #define let const auto

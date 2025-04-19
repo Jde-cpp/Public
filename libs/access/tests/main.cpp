@@ -10,7 +10,7 @@
 #define let const auto
 
 namespace Jde{
-	α OSApp::ProductName()ι->sv{ return "Tests.UM"; }
+	α OSApp::ProductName()ι->sv{ return "Tests.Access"; }
 	up<exception> _exception;
  	α Startup( int argc, char **argv, bool& set )ε->Access::ConfigureAwait::Task{
 		try{
@@ -18,7 +18,7 @@ namespace Jde{
 			ASSERT( Settings::Get<uint>("/workers/drive/threads")>0 )
 	#endif
 			ASSERT( argc>1 && string{argv[1]}=="-c" )
-			OSApp::Startup( argc, argv, OSApp::ProductName(), "UM tests" );
+			OSApp::Startup( argc, argv, OSApp::ProductName(), "Access tests", true );
 
 			let metaDataName{ "access" };
 			sp<Access::IAcl> authorize = Access::LocalAcl();

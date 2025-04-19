@@ -4,7 +4,7 @@ project( Jde.App.DB VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
 set( targetName Jde.DB )
-add_library( ${targetName} )
+add_library( ${targetName} SHARED )
 
 set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
 

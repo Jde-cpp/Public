@@ -7,17 +7,20 @@
 
 namespace Jde::Web{
 	concurrent_flat_map<string,vector<sp<Client::ClientHttpSession>>> _sessions;
-	α Client::RemoveHttpSession( sp<ClientHttpSession> pSession )ι{
-		_sessions.erase_if( ClientHttpSession::Key(pSession->Host,pSession->Port, pSession->IsSsl), [pSession]( auto& kv ){
+	α Client::RemoveHttpSession( sp<ClientHttpSession> session )ι->void{
+		Trace{ ELogTags::HttpClientSessions, "[{:x}]Remove session: {}:{} {}.", (uint)session.get(), session->Host,session->Port, session->IsSsl ? "SSL" : "HTTP" };
+		_sessions.erase_if( ClientHttpSession::Key(session->Host,session->Port, session->IsSsl), [session]( auto& kv ){
 			auto& sessions = kv.second;
-			if( auto p = find( sessions, pSession ); p!=sessions.end() )
+			if( auto p = find( sessions, session ); p!=sessions.end() ){
+				Trace{ ELogTags::HttpClientSessions, "[{:x}]Remove session: {}:{} {}.", (uint)session.get(), session->Host,session->Port, session->IsSsl ? "SSL" : "HTTP" };
 				sessions.erase( p );
+			}
 			return sessions.empty();
 		});
 	}
 	struct SessionShutdown final : IShutdown{
 		SessionShutdown()ι{ Execution::AddShutdown(this); }
-		α Shutdown( bool /*terminate*/ )ι->void{
+		α Shutdown( bool terminate )ι->void{
 			while( _sessions.size() ){
 				_sessions.visit_all( []( auto&& kv )mutable{
 					for( auto p = kv.second.begin(); p!=kv.second.end(); ){
@@ -27,7 +30,11 @@ namespace Jde::Web{
 						p = running ? std::next(p) : kv.second.erase( p );
 					}
 				});
-				_sessions.erase_if( [](auto&& kv){ return kv.second.empty(); } );
+				std::this_thread::sleep_for( 100ms );
+				if( terminate )
+					_sessions.clear();
+				else
+					_sessions.erase_if( [](auto&& kv){ return kv.second.empty(); } );
 			};
 		}
 	};
@@ -57,7 +64,7 @@ namespace Jde::Web::Client{
 	{}
 
 	α ClientHttpAwait::Execute()ι->ClientHttpAwaitSingle::Task{
-		auto firstAttempt = ClientHttpAwaitSingle{ move(*this) };
+		auto firstAttempt = ClientHttpAwaitSingle{ move(*this), _sl };
 		try{
 			auto res = co_await firstAttempt;
 			SetValue( move(res) );
@@ -88,6 +95,7 @@ namespace Jde::Web::Client{
 
 	α ClientHttpAwaitSingle::Execute()ι->void{
 		sp<ClientHttpSession> session;
+
 		_sessions.visit( ClientHttpSession::Key(_host,_port, IsSsl), [&session]( auto& kv ){
 			auto& sessions = kv.second;
 			if( auto p=find_if(sessions, [](auto&& s){ return !s->IsRunning(); }); p!=sessions.end() ){
@@ -97,7 +105,8 @@ namespace Jde::Web::Client{
 		});
 		if( !session ){
       net::any_io_executor strand = net::make_strand( *_ioContext );
-			session = IsSsl ?  ms<ClientHttpSession>( _host, _port, strand ) : ms<ClientHttpSession>( _host, _port, strand, true );
+			session = IsSsl ?  ms<ClientHttpSession>( _host, _port, strand, _sl ) : ms<ClientHttpSession>( _host, _port, strand, true, true, _sl );
+			Trace{ ELogTags::HttpClientSessions, "[{:x}]New session: {}:{} {}.", (uint)session.get(), _host, _port, IsSsl ? "SSL" : "HTTP" };
 			_sessions.emplace_or_visit( ClientHttpSession::Key(_host,_port, IsSsl), vector<sp<ClientHttpSession>>{session}, [session]( auto&& kv ){ kv.second.push_back(session);} );
 		}
 		session->Send( _target, _body, *this, _h );

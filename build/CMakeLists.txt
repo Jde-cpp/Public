@@ -28,11 +28,13 @@ ExternalProject_Add(gtest
 
 ExternalProject_Add(fmt
 	GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-	GIT_TAG 11.1.3
+	GIT_TAG 11.1.4
 	PREFIX fmt
 #	UPDATE_COMMAND git pull https://github.com/fmtlib/fmt.git
 	INSTALL_DIR $ENV{LIB_DIR}/fmt
 	CMAKE_ARGS ${stdArgs}
+		-DBUILD_SHARED_LIBS=ON
+#-DCMAKE_POSITION_INDEPENDENT_CODE
 )
 ExternalProject_Add(spdlog
 	GIT_REPOSITORY https://github.com/gabime/spdlog.git

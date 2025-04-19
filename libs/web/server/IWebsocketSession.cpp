@@ -1,7 +1,7 @@
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalSubscriptions.h>
-#include "Streams.h"
+#include "ServerImpl.h"
 
 #define let const auto
 
@@ -72,7 +72,9 @@ namespace Jde::Web::Server{
 		Stream->Close( shared_from_this() );
 	}
 	α IWebsocketSession::OnClose()ι->void{
-		LogRead( "OnClose.", 0 );
+		LogRead( "SererSocket::OnClose.", 0 );
+		Internal::RemoveSocketSession( Id() );
+		_listener = nullptr;
 	}
 
 	α IWebsocketSession::AddSubscription( string&& query, RequestId requestId, SL sl )ε->vector<QL::SubscriptionId>{

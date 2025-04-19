@@ -1,8 +1,8 @@
-drop procedure if exists access_acl_upsert_permission;
+drop procedure if exists access_ac_upsert_permission;
 go
 
 #DELIMITER $$
-create procedure access_acl_upsert_permission( _identityId int unsigned, _allowed tinyint unsigned, _denied tinyint unsigned, _resourceId int unsigned )
+create procedure access_ac_upsert_permission( _identityId int unsigned, _allowed tinyint unsigned, _denied tinyint unsigned, _resourceId int unsigned )
 begin
 	declare _permission_id int unsigned;
 	set _permission_id = (

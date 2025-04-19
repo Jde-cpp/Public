@@ -29,12 +29,12 @@ namespace Jde::Access::Tests{
 	}
 	TEST_F( GroupTests, Fields ){
 		//const QL::TableQL ql{ "" };
-		let query = "{ __type(name: \"grouping\") { fields { name type { name kind ofType{name kind ofType{name kind ofType{name kind}}} } } } }";
+		let query = "{ __type(name: \"Grouping\") { fields { name type { name kind ofType{name kind ofType{name kind ofType{name kind}}} } } } }";
 		let actual = QL::Query( query, GetRoot() );
 		auto obj = Json::ReadJsonNet( Ƒ("{}/Public/libs/access/config/access-ql.jsonnet", OSApp::EnvironmentVariable("JDE_DIR").value_or("./")) );
 		QL::Introspection intro{ move(obj) };
 		QL::RequestQL request = QL::Parse( query );
-		jobject expected = intro.Find("grouping")->ToJson( request.TableQLs()[0].Tables[0] );
+		jobject expected = intro.Find("Grouping")->ToJson( request.TableQLs()[0].Tables[0] );
 		ASSERT_EQ( serialize(actual), serialize(expected) );
 	}
 
@@ -55,28 +55,31 @@ namespace Jde::Access::Tests{
  		ASSERT_TRUE( SelectGroup("groupTest", GetRoot(), true).empty() );
 	}
 	TEST_F( GroupTests, AddRemove ){
-		const GroupPK hrManagers{ GetId(GetGroup("HR-Managers", GetRoot())) };
-		const UserPK manager{ GetId(GetUser("manager", GetRoot())) };
-		AddToGroup( hrManagers, {manager}, GetRoot() );
+		let root = GetRoot();
+		const GroupPK hrManagers{ GetId(GetGroup("HR-Managers", root)) };
+		const UserPK manager{ GetId(GetUser("manager", root)) };
+		RemoveFromGroup( hrManagers, {manager}, root );
+		AddToGroup( hrManagers, {manager}, root );
 		constexpr sv ql = "grouping(id:{}){{ members{{id name}} }}";
-		ASSERT_EQ( Json::AsArray(QL::QueryObject( Ƒ(ql, hrManagers.Value), GetRoot() ), "members" ).size(), 1 );
+		ASSERT_EQ( Json::AsArray(QL::QueryObject( Ƒ(ql, hrManagers.Value), root), "members").size(), 1 );
 
-		const GroupPK hr{ GetId( GetGroup("HR", GetRoot()) ) };
-		const UserPK associate{ GetId( GetUser("associate", GetRoot()) ) };
-		AddToGroup( {hr}, {hrManagers, associate}, GetRoot() );
-		let members = QL::QueryObject( Ƒ(ql, hr.Value), GetRoot() );
+		const GroupPK hr{ GetId( GetGroup("HR", root) ) };
+		const UserPK associate{ GetId( GetUser("associate", root) ) };
+		RemoveFromGroup( hr, {hrManagers, associate}, root );
+		AddToGroup( {hr}, {hrManagers, associate}, root );
+		let members = QL::QueryObject( Ƒ(ql, hr.Value), root );
 		let array = Json::AsArrayPath( members, "members" );
 		ASSERT_EQ( array.size(), 2 );
 
 		constexpr sv userQL = "user(id:{}){{ groupings{{id name}} }}";
-		ASSERT_EQ( Json::AsArrayPath(QL::QueryObject(Ƒ(userQL, manager.Value), GetRoot()), "groupings" ).size(), 1 );
+		ASSERT_EQ( Json::AsArrayPath(QL::QueryObject(Ƒ(userQL, manager.Value), root), "groupings" ).size(), 1 );
 
-		RemoveFromGroup( hr, {hrManagers, associate}, GetRoot() );
-		RemoveFromGroup( hrManagers, {manager}, GetRoot() );
-		PurgeGroup( hr, GetRoot() );
-		PurgeGroup( hrManagers, GetRoot() );
-		PurgeUser( associate, GetRoot() );
-		PurgeUser( manager, GetRoot() );
+		RemoveFromGroup( hr, {hrManagers, associate}, root );
+		RemoveFromGroup( hrManagers, {manager}, root );
+		PurgeGroup( hr, root );
+		PurgeGroup( hrManagers, root );
+		PurgeUser( associate, root );
+		PurgeUser( manager, root );
 	}
 
 	TEST_F( GroupTests, Recursion ){

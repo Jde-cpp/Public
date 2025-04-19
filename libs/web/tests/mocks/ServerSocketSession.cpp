@@ -27,7 +27,7 @@ namespace Jde::Web::Mock{
 		}
 	}
 
-	α ServerSocketSession::WriteException( IException&& e )ι->void{
+	α ServerSocketSession::WriteException( exception&& e, RequestId requestId )ι->void{
 		Proto::FromServerTransmission t;
 		auto m = t.add_messages();
 		m->set_exception( e.what() );
@@ -70,9 +70,8 @@ namespace Jde::Web::Mock{
 			}
 		}
 	}
-	α RequestHandler::RunWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->void{
-		auto pSession = ms<ServerSocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
-		pSession->Run();
+	α RequestHandler::GetWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession>{
+		return ms<ServerSocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
 	};
 
 }

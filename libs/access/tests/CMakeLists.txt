@@ -3,7 +3,11 @@ include( ../../../build/functions.cmake )
 project( Jde.Access.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
-link_directories( ${JSONNET_DIR}/lib )
+add_subdirectory( $ENV{JDE_DIR}/Framework/source ../../framework )
+add_subdirectory( ../../db/src ../../db/lib )
+add_subdirectory( ../../db/drivers/mysql ../../db/drivers/mysql )
+add_subdirectory( ../../ql ../../ql )
+
 
 set( targetName Jde.Access.Tests )
 add_executable( ${targetName} )
@@ -19,9 +23,11 @@ if( WIN32 )
 endif()
 find_package( GTest REQUIRED )
 target_link_libraries( ${targetName} Boost::json )
-target_link_libraries( ${targetName} jsonnet )
 target_link_libraries( ${targetName} GTest::gtest )
-target_link_libraries( ${targetName} Jde.Access Jde.QL Jde )
+target_link_libraries( ${targetName} Jde.Access Jde.DB Jde.QL Jde )
+
+set( CMAKE_CTEST_ARGUMENTS -c -settings=$ENV{JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet )
+add_test( NAME AccessTests COMMAND $<TARGET_FILE:Jde.Access.Tests> )
 
 target_precompile_headers(${targetName}
   PUBLIC

@@ -1,11 +1,11 @@
 {
 	testing:{
-		tests:: "CertificateTests.NewDirectory"
+		tests:: "SocketTests.CloseClientSide"
 	},
 	logging:{
 		defaultLevel:: "Information",
 		tags: {
-			trace:["test", "exception", "app",
+			trace:["test", "exception", "app", "http.client.sessions",
 				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
 			],
 			debug:["settings"],
@@ -15,7 +15,8 @@
 			critical:[]
 		},
 		sinks:{
-			console:{}
+			console:{},
+			file:{ path: "/tmp", md: false }
 		},
 		memory: true
 	},

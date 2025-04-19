@@ -3,6 +3,7 @@
 #include <jde/web/server/IApplicationServer.h>
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/server/IRequestHandler.h>
+#include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/RestException.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/QLAwait.h>
@@ -189,7 +190,7 @@ namespace Server{
 		net::co_spawn( *Executor(), Listen(address), net::bind_cancellation_slot(_cancelSignal->slot(), net::detached) );
 		Execution::AddCancelSignal( _cancelSignal );
 		Execution::Run();
-		_started.wait( false );
+		_started.wait( false ); // wait for boost to end.
 		Information( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
@@ -201,6 +202,17 @@ namespace Server{
 			_cancelSignal->emit( net::cancellation_type::all );
 //		_cancelSignal = nullptr; heap use after free.
 		_ctx.reset();
+	}
+
+	concurrent_flat_map<SessionPK, sp<IWebsocketSession>> _socketSessions;
+	α Internal::RunSocketSession( sp<IWebsocketSession>&& session )ι->void{
+		let id = session->Id();
+		_socketSessions.emplace( id, session );
+		session->Run();
+	}
+
+	α Internal::RemoveSocketSession( SocketId id )ι->void{
+		Trace{ ELogTags::SocketServerRead, "erased socket: {:x}", _socketSessions.erase( id ) };
 	}
 }
 	α Server::HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task{

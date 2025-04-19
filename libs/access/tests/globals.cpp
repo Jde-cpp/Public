@@ -5,6 +5,7 @@
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/ql.h>
+#include "../src/awaits/ResourceLoadAwait.h"
 
 #define let const auto
 
@@ -15,6 +16,8 @@ namespace Jde::Access{
 	static sp<DB::AppSchema> _schema;
 
 namespace Tests{
+	α CreateAcl( IdentityPK identityPK, ERights allowed, ERights denied, string resource, UserPK executer )ε->PermissionRightsPK;
+
 	Ω testUnauthGet( str table, str target, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
 		auto y = Select( table, target, GetRoot(), cols, includeDeleted );
 		if( y.empty() ){
@@ -114,7 +117,7 @@ namespace Tests{
 	α createGroup( str target, UserPK executer )ε->GroupPK{
 		let create = Ƒ( "mutation createGrouping(  target:'{0}', name:'{0} - name', description:'{0} - description' ){{id}}", target );
 		let createJson = QL::QueryObject( Str::Replace(create, '\'', '"'), executer );
-		return {AsNumber<GroupPK::Type>( createJson, "createGrouping/id")};
+		return {AsNumber<GroupPK::Type>( createJson, "id")};
 	}
 	α columns( sv cols, bool includeDeleted )ε->string{
 		return Ƒ( "id name attributes created updated target description {} {}", cols, includeDeleted ? "deleted" : "" );
@@ -141,9 +144,9 @@ namespace Tests{
 		return QL::QueryObject( ql, executer );
 	}
 
-	α Tests::SelectResource( str target, UserPK executer, bool includeDeleted )ε->jobject{
+	α Tests::SelectResource( str target, UserPK executer, bool includeDeleted, SL sl )ε->jobject{
 		let ql = Ƒ( "resource( schemaName:\"access\", target:\"{}\", criteria:null ){{ id schemaName allowed denied name attributes created {} updated target description }}", target, includeDeleted ? "deleted" : "" );
-		return QL::QueryObject( ql, executer );
+		return QL::QueryObject( ql, executer, sl );
 	}
 	α Tests::SelectUser( str target, UserPK executer, bool includeDeleted )->jobject{
 		let selectAll = Ƒ( "user(target:\"{}\"){{ id name attributes created updated target description provider {} }}", target, includeDeleted ? "deleted" : "" );
@@ -163,10 +166,15 @@ namespace Tests{
 		if( _root )
 			return *_root;
 
-		auto root = SelectUser( "root", {0} );
-		_root = root.empty()
-			? createUser( "root", EProviderType::Google, {0} )
-			: UserPK{ GetId(root) };
+		auto root = SelectUser( "root", {UserPK::System} );
+		if( root.empty() ){
+			_root = createUser( "root", EProviderType::Google, {UserPK::System} );
+			let resourcePermissions = BlockAwait<ResourceLoadAwait,ResourcePermissions>( ResourceLoadAwait(QL::Local(), {GetTable("acl")->Schema}, {UserPK::System}) );
+			for( let& [pk,resource] : resourcePermissions.Resources )
+				CreateAcl( *_root, ERights::All, ERights::None, resource.Target, {UserPK::System} );
+		}
+		else
+			_root = UserPK{ GetId(root) };
 //		ASSERT( DS().Scaler<uint>( "select count(*) from users where identity_id=?", {{*_root}})==0 );
 		return *_root;
 	}

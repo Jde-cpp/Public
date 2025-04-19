@@ -12,6 +12,8 @@ namespace Jde::Web::Server{
 namespace Internal{
 	α Start( up<IRequestHandler>&& handler, up<Server::IApplicationServer>&& server )ε->void;
 	α Stop( bool terminate=false )ι->void;
+	α RunSocketSession( sp<IWebsocketSession>&& session )ι->void;
+	α RemoveSocketSession( SocketId id )ι->void;
 }
 	α AppGraphQLAwait( string&& q, UserPK userPK, SRCE )ι->up<TAwait<jvalue>>;
 	Τ [[nodiscard]] α DoEof( T& stream )ι->net::awaitable<void, executor_type>{ beast::error_code ec; stream.socket().shutdown( tcp::socket::shutdown_send, ec ); co_return; }
@@ -41,7 +43,7 @@ namespace Jde::Web{
 		for( auto cs = co_await net::this_coro::cancellation_state; cs.cancelled() == net::cancellation_type::none; cs = co_await net::this_coro::cancellation_state ){
 			if( websocket::is_upgrade(parser->get()) ){
 				beast::get_lowest_layer(stream).expires_never();// Disable the timeout. The websocket::stream uses its own timeout settings.
-				GetRequestHandler().RunWebsocketSession( ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint, connectionIndex );
+				Internal::RunSocketSession( GetRequestHandler().GetWebsocketSession( ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint, connectionIndex) );
 				co_return;
 			}
 			HttpRequest req{ parser->release(), move(userEndpoint), isSsl, connectionIndex };

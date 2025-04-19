@@ -19,14 +19,18 @@ namespace Jde{
 
 α main( int argc, char **argv )->int{
 	using namespace Jde;
+	let filterSet = Process::Args().find("--gtest_filter")!= Process::Args().end();
 	::testing::InitGoogleTest( &argc, argv );
 	Startup( argc, argv );
 	auto result = EXIT_FAILURE;
 	{
 		let p=Settings::FindSV( "testing/tests" );
 		let filter = p ? *p : "*";
-		::testing::GTEST_FLAG( filter ) = filter;
-	   result = RUN_ALL_TESTS();
+		if( !filterSet ){
+			Information{ ELogTags::App, "filter:'{}'", filter };
+			::testing::GTEST_FLAG( filter ) = filter;
+		}
+		result = RUN_ALL_TESTS();
 		Process::Shutdown( result );
 	}
 	return result;

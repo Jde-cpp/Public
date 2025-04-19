@@ -18,7 +18,7 @@
 				"CMAKE_CXX_COMPILER": "g++-14",
 				"CMAKE_C_COMPILER": "gcc-14",
 				"CMAKE_CXX_STANDARD": "23",
-				"JDE_VERSION": "2025.03.01",
+				"JDE_VERSION": "2025.04.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3"
 			}
 		},
@@ -55,12 +55,19 @@
 				"CMAKE_C_COMPILER": null,
 				"CMAKE_PREFIX_PATH": "$env{LIB_DIR}",
 				"Boost_USE_STATIC_LIBS": false,
-				"BOOST_VERSION": "1.87.0"
+				"BOOST_VERSION": "1.88.0"
 			}
 		},
 		{
 			"name": "linux-jde-debug",
 			"inherits": ["linux-jde","linux-debug"],
+			"cacheVariables": {
+				"CMAKE_PREFIX_PATH": "$env{LIB_DIR}"
+			}
+		},
+		{
+			"name": "linux-jde-relWithDebInfo",
+			"inherits": ["linux-jde","linux-relWithDebInfo"],
 			"cacheVariables": {
 				"CMAKE_PREFIX_PATH": "$env{LIB_DIR}"
 			}

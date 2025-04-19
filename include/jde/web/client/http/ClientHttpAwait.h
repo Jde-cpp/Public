@@ -7,7 +7,7 @@
 
 namespace Jde::Web::Client{
 	struct ClientHttpSession;
-	α RemoveHttpSession( sp<ClientHttpSession> pSession )ι;
+	α RemoveHttpSession( sp<ClientHttpSession> pSession )ι->void;
 
 	struct HttpAwaitArgs {
 		string Authorization;
@@ -33,11 +33,12 @@ namespace Jde::Web::Client{
 
 	struct ΓWC ClientHttpAwaitSingle final : ClientHttpAwait{
 		using base = ClientHttpAwait;
-		ClientHttpAwaitSingle( ClientHttpAwait&& from )ι:base{ move(from) }{};
+		ClientHttpAwaitSingle( ClientHttpAwait&& from, SRCE )ι:base{ move(from) }, _sl{sl}{};
 		α await_ready()ι->bool override{ return _ioContext==nullptr; }
 		α Suspend()ι->void override{ Execute(); }
 		α await_resume()ε->ClientHttpRes override;
 	private:
 		α Execute()ι->void;
+		SL _sl;
 	};
 }

@@ -71,14 +71,14 @@ namespace Jde::Access{
 			Query.Tables.clear();
 			//let returnRaw = Query.ReturnRaw;
 			Query.ReturnRaw = true;
-			auto userInfo = co_await QL::QLAwait<jvalue>( move(Query), Executer, _sl );
+			auto userInfo = Query.Columns.size() ? co_await QL::QLAwait<jvalue>( move(Query), Executer, _sl ) : jobject{};
 			if( !userInfo.is_null() ){
 				Json::Visit( userInfo, [&](jobject& user){
-					let userPK = QL::AsId<UserPK::Type>( user );
+					let userPK = user.contains("id") ? QL::AsId<UserPK::Type>( user ) : optional<UserPK::Type>{};
 					jarray userGroups;
 					for( auto v=groups.begin(); v!=groups.end(); ){
 						auto& group = v->as_object();
-						if( let memberId = Json::AsNumber<UserPK::Type>( group, "memberId" ); memberId==userPK ){
+						if( let memberId = Json::AsNumber<UserPK::Type>( group, "memberId" ); !userPK || memberId==*userPK ){
 							group.erase( "memberId" );
 							userGroups.push_back( move(group) );
 							v = groups.erase( v );

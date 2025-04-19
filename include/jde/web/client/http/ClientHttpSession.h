@@ -10,8 +10,8 @@ namespace Jde::Web::Client{
 	};
 
 	struct ΓWC ClientHttpSession : public std::enable_shared_from_this<ClientHttpSession>{
-    ClientHttpSession( str host, PortType port, net::any_io_executor strand )ε;
-		ClientHttpSession( str host, PortType port, net::any_io_executor strand, bool isPlain, bool log=true )ε;
+    ClientHttpSession( str host, PortType port, net::any_io_executor strand, SRCE )ε;
+		ClientHttpSession( str host, PortType port, net::any_io_executor strand, bool isPlain, bool log=true, SRCE )ε;
 		Ω Key( str host, PortType port, bool isSsl)ι->string{ return Ƒ("http{}//{}:{}", isSsl ? "s" : "", host, port); }
 
 		α Close()ε->VoidTask;
@@ -36,5 +36,6 @@ namespace Jde::Web::Client{
     http::response<http::string_body> _res;
 		tcp::resolver _resolver;
 		ClientHttpStream _stream;
+		SL _sl;
 	};
 }

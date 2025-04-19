@@ -63,7 +63,7 @@ namespace Jde::Web{
 		Stopwatch _{ "WebTests::EchoAttack", _tags };
 		try{
 			atomic<uint> connections = 0;
-			std::for_each( std::execution::par_unseq, indexes.begin(), indexes.end(), [&sessionIds,&connections]( uint index )mutable{
+			std::for_each( indexes.begin(), indexes.end(), [&sessionIds,&connections]( uint index )mutable{
 				[]( auto index, auto& sessionIds, auto& connections )->ClientHttpAwait::Task {
 					if( _pException )
 						co_return;

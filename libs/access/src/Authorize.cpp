@@ -24,7 +24,7 @@ namespace Jde::Access{
 			THROW_IFSL( !empty(configured.Denied & rights), "[{}]User denied '{}' access to '{}'.", executer.Value, ToString(rights), resourceName );
 			THROW_IFSL( empty(configured.Allowed & rights), "[{}]User does not have '{}' access to '{}'.", executer.Value, ToString(rights), resourceName );
 		}
-		else if( executer!=UserPK::System )
+		else if( executer.Value!=UserPK::System )
 			throw Exception{ sl, ELogLevel::Debug, "[{}]User not found.", executer.Value };
 	}
 	α Authorize::TestAdmin( ResourcePK resourcePK, UserPK executer, SL sl )ε->void{
@@ -40,7 +40,9 @@ namespace Jde::Access{
 			TestAdmin( resource->second, executer, sl );
 	}
 	α Authorize::TestAdmin( const Resource& resource, UserPK executer, SL sl )ε->void{
-		auto user = Users.find(executer);
+		if( executer==UserPK{UserPK::System} )
+			return;
+		auto user = Users.find( executer );
 		if( user==Users.end() )
 			THROW_IFSL( user==Users.end(), "[{}]User not found.", executer.Value );
 		THROW_IFSL( user->second.IsDeleted, "[{}]User is deleted.", executer .Value);

@@ -35,6 +35,7 @@ namespace Jde{
 
 		HttpClientRead	  = Http | Client | Read,
 		HttpClientWrite		= Http | Client | Write,
+		HttpClientSessions= Http | Client | Sessions,
 		HttpServerRead	  = Http | Server | Read,
 		HttpServerWrite		= Http | Server | Write,
 		SocketClientRead  = Socket | Client | Read,

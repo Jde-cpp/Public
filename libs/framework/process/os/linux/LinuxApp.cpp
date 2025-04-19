@@ -54,9 +54,7 @@ namespace Jde{
 	}
 	const string _companyName{ "Jde-Cpp" }; string _productName{ "productName" };
 	α OSApp::CompanyName()ι->string{ return _companyName; }
-	//α OSApp::SetProductName( sv n )ι->str{ _productName=v; }
-	α OSApp::ProductName()ι->sv{ return _productName; }
-	α OSApp::SetProductName( sv productName )ι->void{ _productName = productName; }
+	//α OSApp::ProductName()ι->sv{ return _productName; }  //use in main.cpp
 	α IApplication::MemorySize()ι->size_t{//https://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-runtime-using-c
 		uint size = 0;
 		FILE* fp = fopen( "/proc/self/statm", "r" );

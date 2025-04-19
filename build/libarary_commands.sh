@@ -1,7 +1,16 @@
-DST_DIR=$REPO_DIR/install/GNU-14.2.0/Debug/boost
+#need to add set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG" ) to mysql-concpp/src/mysql-connector-cpp/CMakeLists.txt
+cd /mnt/ram/external/Debug
+cls;rm -f CMakeCache.txt;cmake /home/duffyj/code/jde/Public/build --preset linux-debug;
+
+DST_DIR=$REPO_DIR/install/g++-14/Debug/boost
 ./bootstrap.sh --prefix=${DST_DIR} --includedir=headers --libdir=dist --with-libraries=json
 echo "using gcc : : /usr/bin/g++-14 ; " >> tools/build/src/user-config.jam
 ./b2 --prefix=${DST_DIR} install
+
+DST_DIR=$REPO_DIR/install/g++-14/RelWithDebInfo/boost
+./bootstrap.sh --prefix=${DST_DIR} --includedir=headers --libdir=dist --with-libraries=json
+./b2 --prefix=${DST_DIR} variant=release inlining=off debug-symbols=on install
+
 
 export CXX=g++-14;
 export CC=gcc-14;
@@ -49,9 +58,6 @@ buildLibrary mysql-connector-cpp
 
 context-impl=ucontext;
 
-./bootstrap.sh
-b2 cxxstd=23 --prefix=$REPO_DIR/install/$CXX/Debug/boost --layout=tagged --with-json
-#--with-atomic --with-chrono --with-date_time --with-filesystem --with-program_options --with-regex --with-serialization --with-system --with-thread --with-test --with-locale --with-iostreams --with-log --with-timer --with-exception
 
 #jsonnet
 cls;rm CMakeCache.txt; BT=asan;cmake -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/duffyj/code/libraries/install/g++-13/$BT/jsonnet -DCMAKE_POSITION_INDEPENDENT_CODE=1 -DCMAKE_C_COMPILER=$CC -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-rpath=$ORIGIN" -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer"  ../..

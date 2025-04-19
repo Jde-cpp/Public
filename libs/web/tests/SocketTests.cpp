@@ -32,7 +32,7 @@ namespace Jde::Web{
 		sp<Server::IRequestHandler> _pRequestHandler;
 	};
 
-	sp<Mock::ClientSocketSession> _pSession{};
+	sp<Mock::ClientSocketSession> _clientSession{};
 	SessionPK _sessionId;
 	α SocketTests::SetUpTestCase()->void{
 		Stopwatch _{ "SocketTests::SetUpTestCase", ELogTags::Test };
@@ -54,7 +54,7 @@ namespace Jde::Web{
 		cv.notify_one();
 	}
 	α Close()ι->VoidTask{
-		co_await _pSession->Close();
+		co_await _clientSession->Close();
 		Notify();
 	}
 	#define WAIT sl l{ _mutex }; cv.wait( l )
@@ -63,11 +63,11 @@ namespace Jde::Web{
 	}
 
 	α SocketTests::TearDown()->void{
-		if( _pSession ){
+		if( _clientSession ){
 			Close();
 			Wait();
-			//ASSERT( _pSession.use_count()==1 );
-			_pSession = nullptr;
+			ASSERT( _clientSession.use_count()==1 );
+			_clientSession = nullptr;
 		}
 		_sessionId = 0;
 	}
@@ -75,7 +75,7 @@ namespace Jde::Web{
 	up<IException> _exception;
 	α Connect()->ClientSocketAwait<SessionPK>::Task{
 		try{
-			[[maybe_unused]] auto sessionId = co_await _pSession->Connect( _sessionId );
+			[[maybe_unused]] auto sessionId = co_await _clientSession->Connect( _sessionId );
 		}
 		catch( IException& e ){
 			_exception = e.Move();
@@ -92,15 +92,15 @@ namespace Jde::Web{
 			_sessionId = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 			Information( ELogTags::Test, "({:x})Loggin Complete.", _sessionId );//TODOBuild change to test
 		}
-		_pSession = ms<Mock::ClientSocketSession>( Executor(), ctx );
-		co_await _pSession->RunSession( Host, Port );
+		_clientSession = ms<Mock::ClientSocketSession>( Executor(), ctx );
+		co_await _clientSession->RunSession( Host, Port );
 		Connect();
 	}
 	TEST_F( SocketTests, CreatePlain ){
 		Stopwatch sw{ "WebTests::CreatePlain", ELogTags::Test };
 		CreateSession();
 		WAIT;
-		ASSERT_EQ( _sessionId, _pSession->SessionId() );
+		ASSERT_EQ( _sessionId, _clientSession->SessionId() );
 	}
 
 	TEST_F( SocketTests, CreateSsl ){
@@ -109,12 +109,12 @@ namespace Jde::Web{
 		Stopwatch sw{ "WebTests::CreateSsl", ELogTags::Test };
 		CreateSession( ssl::context(ssl::context::tlsv12_client) );
 		WAIT;
-		ASSERT_EQ( _sessionId, _pSession->SessionId() );
+		ASSERT_EQ( _sessionId, _clientSession->SessionId() );
 	}
 
 	flat_map<RequestId,string> _requests; flat_map<RequestId,string> _responses; mutex _echoMutex;
 	α EchoText( uint requestId, string text )->ClientSocketAwait<string>::Task{
-		string y = co_await _pSession->Echo( text );
+		string y = co_await _clientSession->Echo( text );
 		{
 			lg _{ _echoMutex };
 			_requests.emplace( requestId, move(text) );
@@ -152,23 +152,19 @@ namespace Jde::Web{
 		WAIT;
 		Close();
 		Wait();
-		let sessionId = _pSession->Id();
-		_pSession = nullptr;
+		let sessionId = _clientSession->Id();
+		_clientSession = nullptr;
 		std::this_thread::sleep_for( 100ms );
 		auto logs = FindMemoryLog( [=](const Logging::ExternalMessage& m){
-			//"(1)The WebSocket stream was gracefully closed at both endpoints - [{:x}]Server::DoRead"
-			// if( m.Args.size()==3 ){
-			// 	auto f = Ƒ( "{}|{}|{}", m.Args[0], m.Args[1], m.Args[2] );
-			// 	std::cout << f << std::endl;
-			// }
 			return m.Args.size()==3 && m.Args[0]=="1" && m.Args[1]=="The WebSocket stream was gracefully closed at both endpoints" && m.Args[2]==Ƒ("[{:x}]Server::DoRead", sessionId);
 		});
 		ASSERT_TRUE( logs.size()>0 );
+		std::this_thread::sleep_for( 100ms );
 	}
 
 	α CloseServerSideCall()ι->ClientSocketAwait<string>::Task{
 		try{
-		 [[maybe_unused]]	string y = co_await _pSession->CloseServerSide();
+		 [[maybe_unused]]	string y = co_await _clientSession->CloseServerSide();
 		}
 		catch( IException& e ){
 			_exception = e.Move();
@@ -185,7 +181,7 @@ namespace Jde::Web{
 
 	α BadTransmissionClientCall()ι->ClientSocketAwait<string>::Task{
 		try{
-			[[maybe_unused]] string y = co_await _pSession->BadTransmissionClient();
+			[[maybe_unused]] string y = co_await _clientSession->BadTransmissionClient();
 		}
 		catch( IException& e ){
 			_exception = e.Move();
@@ -202,12 +198,13 @@ namespace Jde::Web{
 			std::this_thread::sleep_for( 100ms );
 			logs = FindMemoryLog( Calc32RunTime("Failed to process incomming exception '{}'.") );
 		}
+		Trace{ ELogTags::Test, "logs.size(): {}", logs.size() };
 		ASSERT_TRUE( logs.size()>0 );
 	}
 
 	α BadTransmissionServerCall()ι->ClientSocketAwait<string>::Task{
 		try{
-			[[maybe_unused]] string y = co_await _pSession->BadTransmissionServer();
+			[[maybe_unused]] string y = co_await _clientSession->BadTransmissionServer();
 		}
 		catch( IException& e ){
 			_exception = e.Move();

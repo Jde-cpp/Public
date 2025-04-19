@@ -3,8 +3,6 @@ include( ../../../build/functions.cmake )
 project( Jde.Web.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
-#link_directories( ${JSONNET_DIR}/lib )
-
 set( targetName Jde.Web.Tests )
 add_executable( ${targetName} )
 file( GLOB sources *.cpp **/*.cpp )
@@ -12,15 +10,11 @@ file( GLOB headers *.h **/*.h )
 file( GLOB protos **/*.proto )
 
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
-if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
-	add_subdirectory( $ENV{JDE_DIR}/Framework/source framework )
-	add_subdirectory( ../../app/shared app/shared )
-	add_subdirectory( ../../crypto/src crypto )
-	add_subdirectory( ../../db/src db )
-	add_subdirectory( ../../ql ql )
-	add_subdirectory( ../client web/client )
-	add_subdirectory( ../server web/server )
-endif()
+	add_subdirectory( $ENV{JDE_DIR}/Framework/source ../../framework )
+	add_subdirectory( ../../app/shared ../../app/shared )
+	add_subdirectory( ../../crypto/src ../../crypto/lib )
+	add_subdirectory( ../../db/src ../../db/lib )
+	add_subdirectory( ../../ql ../../ql )
 
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 
@@ -37,6 +31,9 @@ target_link_libraries( ${targetName} Boost::json )
 
 include_directories( ${targetName} $ENV{JDE_DIR}/Public/include/jde/web/client/proto )
 include_directories( ${targetName} $ENV{JDE_DIR}/Public/include/app/shared/proto )
+
+add_test( NAME WebTests COMMAND $<TARGET_FILE:Jde.Web.Tests> )
+set( CMAKE_CTEST_ARGUMENTS "-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet" )
 
 target_precompile_headers( ${targetName} PRIVATE
 	pc.h

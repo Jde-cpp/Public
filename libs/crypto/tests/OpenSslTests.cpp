@@ -49,34 +49,16 @@ namespace Jde::Crypto{
 	}
 
 	TEST_F( OpenSslTests, Main ){
-		// array<unsigned char, SHA256_DIGEST_LENGTH> md;
-		// auto pDigest = SHA256( (unsigned char*)HeaderPayload.data(), HeaderPayload.size(), md.data() ); CHECK_NULL( pDigest );
-		// KeyPtr pKey{ Internal::ReadPrivateKey(PrivateKeyFile) };
-		// CtxPtr ctx{ NewCtx(pKey) };
-		// CALL( EVP_PKEY_sign_init(ctx.get()) );
-		// CALL( EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_PADDING) );
-		// CALL( EVP_PKEY_CTX_set_signature_md(ctx.get(), EVP_sha256()) );
-		// uint siglen;
-		// CALL( EVP_PKEY_sign(ctx.get(), nullptr, &siglen, pDigest, md.size()) );
-		// Signature signature(siglen);
-		// CALL( EVP_PKEY_sign(ctx.get(), (unsigned char*)signature.data(), &siglen, pDigest, md.size()) );
-		// auto x = Str::Encode64( signature );
 		let signature = Crypto::RsaSign( HeaderPayload, PrivateKeyFile );
 		auto [modulus2, exponent2] = Crypto::ModulusExponent( PublicKeyFile );
-		//vector<unsigned char> modulus = modulus2;//natvis issues.
-		//vector<unsigned char> exponent = exponent2;
 
 		Crypto::Verify( modulus2, exponent2, HeaderPayload, signature );
 	}
 
 	TEST_F( OpenSslTests, Certificate ){
 		ReadCertificate( CertificateFile );
-		//ReadCertificate( "/tmp/cert2.pem" );
 	}
 	TEST_F( OpenSslTests, PrivateKey ){
 		Crypto::ReadPrivateKey( PrivateKeyFile, {} );
 	}
-
-
-//#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 }

@@ -1,10 +1,9 @@
-function buildDir() {
-	fileWorkspaceFolder=$1;#/home/duffyj/code/jde/Framework/source
-	buildRoot=$2;#/mnt/ram/jde/Public/libs/web/Debug
+function buildRelativePath() {
+	fileWorkspaceFolder=$1; #/home/duffyj/code/jde/Public/libs/web/tests
 	if [[ $fileWorkspaceFolder == *"jde/Framework/source" ]]; then
-		relativePath="/framework";
-	elif [[ $fileWorkspaceFolder == *"tests" ]]; then
-		relativePath="/tests";
+		relativePath="/libs/framework";
+	elif [[ ${fileWorkspaceFolder##*Public/} != $fileWorkspaceFolder ]]; then
+		relativePath=${fileWorkspaceFolder##*Public/};
 	elif [[ $fileWorkspaceFolder == *"web/client" ]]; then
 		relativePath="/web/client";
 	elif [[ $fileWorkspaceFolder == *"web/server" ]]; then
@@ -28,7 +27,7 @@ function buildDir() {
 	else
 		relativePath="";
 	fi;
-	echo "$buildRoot$relativePath";
+	echo $relativePath;
 }
 function absoluteFile() {
 	workspaceFolder=$1;
@@ -39,27 +38,22 @@ function absoluteFile() {
 function buildProject() {
 	fileWorkspaceFolder=$1;
 	buildRoot=$2;
-	buildDir=`buildDir $fileWorkspaceFolder $buildRoot`;
-	cd $buildDir;
+	buildRelativePath=`buildRelativePath $fileWorkspaceFolder`;
+	echo "fileWorkspaceFolder:$fileWorkspaceFolder, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath";
+	cd $buildRoot/$buildRelativePath;
 	make -j;
 }
 function compile() {
-	workspaceFolder=$1
-	fileWorkspaceFolder=$2;
-	relativeFile=$3;
-	buildRoot=$4;
-	#echo workspaceFolder=$workspaceFolder;
-	#echo fileWorkspaceFolder=$fileWorkspaceFolder;
-	#echo relativeFile=$relativeFile;
+	workspaceFolder=$1; #/home/duffyj/code/jde/Public/libs/web/client
+	fileWorkspaceFolder=$2; #/home/duffyj/code/jde/Public/libs/web/tests
+	relativeFile=$3; #../tests/mocks/ServerSocketSession.cpp
+	buildRoot=$4;  #/mnt/ram/jde/Debug/libs
+	buildRelativePath=`buildRelativePath $fileWorkspaceFolder`; #/mnt/ram/jde/Debug/libs/tests
+	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/home/duffyj/code/jde/Public/libs/web/tests/mocks/ServerSocketSession.cpp
 
-	#fileBasename=$(basename $relativeFile);
-	#echo fileBasename=$fileBasename;
-	buildDir=`buildDir $fileWorkspaceFolder $buildRoot`;
-	cd $buildDir;
-	#echo buildDir=`pwd`;
-	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`;
-	#echo absoluteFile=$absoluteFile;
+	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, projectName=$projectName, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile";
+	cd $buildRoot/$buildRelativePath;
 	buildFile=${absoluteFile#"$fileWorkspaceFolder/"}
-	#echo buildFile=$buildFile;
+	echo $buildRoot/$buildRelativePath/make $buildFile.o;
 	make ${buildFile}.o;
 }

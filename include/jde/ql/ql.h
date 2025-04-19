@@ -12,11 +12,9 @@ namespace Jde::QL{
 	α Local()ι->sp<IQL>;
 
 	α Configure( vector<sp<DB::AppSchema>>&& schemas )ε->void;
-	//α Mutation( string m, UserPK executer, SRCE )ε->jobject;
 	α Parse( string query, bool returnRaw=true, SRCE )ε->RequestQL;
 	α ParseSubscriptions( string query, SRCE )ε->vector<Subscription>;
-	//α Execute( string query, UserPK executer, SRCE )ε->jobject;
-	α Query( const TableQL& table, UserPK executer )ε->jvalue;
+	α Query( const TableQL& table, UserPK executer, SRCE )ε->jvalue;
 	α Query( string query, UserPK executer, SRCE )ε->jvalue;
 	α QueryArray( string query, UserPK executer, SRCE )ε->jarray;
 	α QueryObject( string query, UserPK executer, SRCE )ε->jobject;

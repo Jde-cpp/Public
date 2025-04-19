@@ -194,7 +194,7 @@ namespace Jde::QL{
 		jvalue y;
 		if( ql.IsPlural() )
 			y = jarray{};
-		auto rows = ds.Select( statement.Move() );
+		auto rows = ds.Select( statement.Move(), false, sl );
 		for( let& row : rows ){
 			auto jrow = ql.ToJson( *row, statement.Select.Columns );
 			if( subTables && subTables->size() )
@@ -231,12 +231,12 @@ namespace Jde{
 		return statement;
 	}
 
-	α QL::Query( const TableQL& qlTable, UserPK executer )ε->jvalue{
+	α QL::Query( const TableQL& qlTable, UserPK executer, SL sl )ε->jvalue{
 		jvalue y;
 		optional<std::pair<bool,up<IException>>> hookExp;
-		[]( auto& qlTable, auto executer, auto& y, auto& hookExp )->TAwait<optional<jvalue>>::Task {
+		[sl]( auto& qlTable, auto executer, auto& y, auto& hookExp )->TAwait<optional<jvalue>>::Task {
 			try{
-				auto j = co_await QL::Hook::Select( qlTable, executer );
+				auto j = co_await QL::Hook::Select( qlTable, executer, sl );
 				let hasValue = j.has_value();
 				if( hasValue )
 					y = move( *j );
@@ -254,7 +254,7 @@ namespace Jde{
 			return y;
 
 		let dbTable = GetTable( qlTable.DBName() );
-		dbTable->Authorize( Access::ERights::Read, executer, SRCE_CUR );
+		dbTable->Authorize( Access::ERights::Read, executer, sl );
 		auto statement = SelectStatement( qlTable );
 /*		columnSql( qlTable, *dbTable, nullptr, flags, false, nullptr, statement, &jsonMembers );
 

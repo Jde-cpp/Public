@@ -15,8 +15,9 @@
 			critical:[]
 		},
 		sinks:{
-			console:{}
-		}
+			console:{},
+			file:{ path: "/tmp", md: false }
+		},
 	},
 	workers:{
 		drive: {threads: 1}
