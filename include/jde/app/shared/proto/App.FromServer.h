@@ -11,6 +11,7 @@ namespace Jde::App::FromServer{
 	Φ Complete( RequestId requestId )ι->Proto::FromServer::Transmission;
 	Φ ConnectionInfo( AppPK appPK, AppInstancePK instancePK, RequestId clientRequestId )ι->Proto::FromServer::Transmission;
 	Φ Exception( const exception& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission;
+	Φ Exception( string&& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission;
 	Φ Execute( string&& executionResult, RequestId clientRequestId )ι->Proto::FromServer::Transmission;
 	Φ ExecuteRequest( RequestId serverRequestId, UserPK userPK, string&& fromClient )ι->Proto::FromServer::Transmission;
 	Φ GraphQL( string&& queryResults, RequestId requestId )ι->Proto::FromServer::Transmission;

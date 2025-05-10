@@ -3,7 +3,8 @@
 namespace Jde::Web::Server{
 	HttpTaskResult::HttpTaskResult( HttpTaskResult&& rhs )ι:
 		Json( move(rhs.Json) ),
-		Request{ move(rhs.Request) }
+		Request{ move(rhs.Request) },
+		Source{ move(rhs.Source) }
 	{}
 
 	α HttpTaskResult::operator=( HttpTaskResult&& rhs )ι->HttpTaskResult&{

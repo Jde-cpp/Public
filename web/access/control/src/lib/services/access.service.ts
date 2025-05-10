@@ -1,15 +1,15 @@
 import { Injectable, Inject, signal, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { IEnvironment } from 'jde-material';
-import { AppService, TableSchema } from 'jde-framework';
+import { AppService, AuthStore, TableSchema } from 'jde-framework';
 import { Resource } from '../model/Resource';
 
 
 
 @Injectable( {providedIn: 'root'} )
 export class AccessService extends AppService implements OnDestroy{
-	constructor( http: HttpClient, @Inject('IEnvironment') environment: IEnvironment ){
-		super( http, environment );
+	constructor( http: HttpClient, @Inject('IEnvironment') environment: IEnvironment, @Inject("AuthStore") authStore:AuthStore ){
+		super( http, environment, authStore );
 	}
 	ngOnDestroy(): void {
 		console.log( 'AccessService.ngOnDestroy' );

@@ -8,12 +8,10 @@
 namespace Jde::Opc{
 	struct OpcQLHook;
 
-	//α SetTestSchema( sp<DB::AppSchema> opc )ι->void;
-	//α GetViewPtr( str name )ι->sp<DB::View>;
-	//α DS()ι->DB::IDataSource&;
-
 	const static string OpcServerTarget{ "OpcServerTests" };
 	struct CreateOpcServerAwait : TAwaitEx<OpcPK,QL::QLAwait<jobject>::Task>{
+		using base = TAwaitEx<OpcPK,QL::QLAwait<jobject>::Task>;
+		CreateOpcServerAwait( SRCE )ι:base{ sl }{}
 		α Execute()ι->QL::QLAwait<jobject>::Task override;
 	};
 	α CreateOpcServer()ι->OpcPK;

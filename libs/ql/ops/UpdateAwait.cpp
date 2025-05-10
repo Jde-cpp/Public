@@ -6,7 +6,6 @@
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/access/IAcl.h>
-#include "../GraphQuery.h"
 #include <jde/ql/LocalSubscriptions.h>
 #include "../types/QLColumn.h"
 #include <jde/db/generators/UpdateClause.h>

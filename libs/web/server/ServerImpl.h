@@ -5,7 +5,8 @@
 #include <jde/web/server/usings.h>
 #include <jde/web/server/IApplicationServer.h>
 #include <jde/web/server/IRequestHandler.h>
-//#include "../../../../Framework/source/DateTime.h"
+
+#define let const auto
 
 namespace Jde::Web::Server{
 
@@ -15,6 +16,7 @@ namespace Internal{
 	α RunSocketSession( sp<IWebsocketSession>&& session )ι->void;
 	α RemoveSocketSession( SocketId id )ι->void;
 }
+	α AppServerLocal()ι->bool;
 	α AppGraphQLAwait( string&& q, UserPK userPK, SRCE )ι->up<TAwait<jvalue>>;
 	Τ [[nodiscard]] α DoEof( T& stream )ι->net::awaitable<void, executor_type>{ beast::error_code ec; stream.socket().shutdown( tcp::socket::shutdown_send, ec ); co_return; }
 	Τ [[nodiscard]] α DoEof( beast::ssl_stream<T>& stream )ι->net::awaitable<void, executor_type>{ co_await stream.async_shutdown(); }
@@ -23,6 +25,7 @@ namespace Internal{
 	α GetRequestHandler()ι->IRequestHandler&;
 	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> cancel )ι->net::awaitable<void, executor_type>;
 	α SendOptions( const HttpRequest&& req )ι->http::message_generator;
+	α SendServerSettings( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task;
 	α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<Web::FromServer::SessionInfo>>;
 }
 
@@ -57,15 +60,8 @@ namespace Jde::Web{
 				res = move(pingRes);
 			}
 			else if( req.IsGet("/serverSettings") ){
-				jobject j;
-				j["restSessionTimeout"] = Chrono::ToString( Sessions::RestSessionTimeout() );
-				j["serverInstance"] = IApplicationServer::InstancePK();
-				auto settingsResponse{ req.Response<http::string_body>() };
-				settingsResponse.set( http::field::content_type, "application/json" );
-				settingsResponse.body() = serialize(j);
-				//settingsResponse.set( http::field::content_length, settingsResponse.body().size() );
-				settingsResponse.prepare_payload();
-				res = move(settingsResponse);
+				SendServerSettings( move(req), ms<RestStream>(mu<T>(move(stream))) );
+				co_return;
 			}
 			if( !res ){
 				HandleRequest( move(req), ms<RestStream>(mu<T>(move(stream))) );
@@ -95,3 +91,4 @@ namespace Jde::Web{
 		}
 	}
 }
+#undef let

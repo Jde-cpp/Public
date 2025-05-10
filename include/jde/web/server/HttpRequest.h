@@ -27,7 +27,7 @@ namespace Jde::Web::Server{
 		α KeepAlive()Ι->bool{ return _request.keep_alive(); }//TODO get rid of
 		α Method()Ι->http::verb{ return _request.method(); }
 		α Params()Ι->const flat_map<string,string>&{ return _params; }
-		α SessionId()Ι->SessionPK{ return SessionInfo->SessionId; }
+		α SessionId()Ι->SessionPK;
 		α Target()Ι->const string&{ return _target; }
 		α UserPK()Ι->UserPK{ return SessionInfo->UserPK; }
 		α Version()Ι->uint{ return _request.version(); }//TODO get rid of

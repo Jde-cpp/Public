@@ -48,6 +48,12 @@ namespace Jde::App{
 			proto.set_code( p->Code );
 		return t;
 	}
+	α FromServer::Exception( string&& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission{
+		return setMessage( requestId.value_or(0), [&](auto& m){
+			auto& proto = *m.mutable_exception();
+			proto.set_what( move(e) );
+		});
+	}
 
 	α FromServer::ToStatus( AppPK appId, AppInstancePK instanceId, str hostName, Proto::FromClient::Status&& input )ι->Proto::FromServer::Status{
 		Proto::FromServer::Status output;

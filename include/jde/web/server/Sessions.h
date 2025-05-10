@@ -35,14 +35,14 @@ namespace Jde::Web::Server{
 		α Get()ι->vector<sp<SessionInfo>>;
 		α Size()ι->uint;
 
-		struct ΓWS UpsertAwait : TAwait<sp<SessionInfo>>{//TODO rename UpsertSessionAwait or Sessions::UpsertAwait
+		struct ΓWS UpsertAwait : TAwait<sp<SessionInfo>>{
 			using base = TAwait<sp<SessionInfo>>;
-			UpsertAwait( str authorization, str endpoint, bool socket, SRCE )ι:base{sl},_authorization{authorization}, _endpoint{endpoint}, _socket{socket}{}
+			UpsertAwait( str authorization, str endpoint, bool socket, bool throw_=true, SRCE )ι:base{sl},_authorization{authorization}, _endpoint{endpoint}, _socket{socket}, _throw{throw_}{}
 			α Suspend()ι->void;
 			α await_resume()ε->sp<SessionInfo>;
 		private:
 			α Execute()ι->TTask<Web::FromServer::SessionInfo>;
-			string _authorization; string _endpoint; bool _socket;
+			string _authorization; string _endpoint; bool _socket; bool _throw;
 		};
 	}
 }

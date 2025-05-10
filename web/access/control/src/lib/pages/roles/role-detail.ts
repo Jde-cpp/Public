@@ -1,8 +1,8 @@
-import { Component, computed, effect, OnInit, OnDestroy, Inject, signal, ViewEncapsulation, inject } from '@angular/core';
+import { Component, effect, OnInit, OnDestroy, Inject, signal, inject, model } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {ActivatedRoute, NavigationEnd, Params, Router, RouterModule, Routes} from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
 
-import { ComponentPageTitle } from 'jde-material';
+import { ComponentPageTitle, DocItem } from 'jde-material';
 
 import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, IProfile, Properties, QLSelector, TargetRow, toIdArray} from 'jde-framework';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -49,22 +49,24 @@ export class RoleDetail implements OnDestroy, OnInit{
 			if( this.permissions() && !Permission.arraysEqual(this.role.permissions, this.permissions()) )
 				this.isChanged.set( true );
 		});
+
+		route.data.subscribe( (data)=>{
+			this.pageData = data["pageData"];
+			this.role = new Role( this.pageData.row );
+			this.pageData.row = null;
+
+			this.properties.set( this.role.properties );
+			this.permissions.set( cloneClassArray(this.role.permissions, Permission) );
+			this.childRoles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.role.childRoles)) );
+			this.groups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.role.groups)) );
+			this.users.set( new SelectionModel<UserPK>(true, TargetRow.idArray(this.role.users)) );
+		});
 	}
 	ngOnDestroy(){
 		this.profile.save();
 	}
-	async ngOnInit(){
-		this.pageData = await this.route.data["value"]["pageData"];
-		this.role = new Role( this.pageData.row );
-		this.pageData.row = null;
-
-		this.properties.set( this.role.properties );
-		this.permissions.set( cloneClassArray(this.role.permissions, Permission) );
-		this.childRoles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.role.childRoles)) );
-		this.groups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.role.groups)) );
-		this.users.set( new SelectionModel<UserPK>(true, TargetRow.idArray(this.role.users)) );
-
-		this.isLoading.set( false );
+	ngOnInit(){
+		this.sideNav.set( this.pageData.routing );
 	}
 	tabIndexChanged( index:number ){ this.profile.value.tabIndex = index;}
 
@@ -95,7 +97,6 @@ export class RoleDetail implements OnDestroy, OnInit{
 	pageData:DetailResolverData<Role>;
 	ctor:new (item: any) => any = Role;
 	isChanged = signal<boolean>( false );
-	isLoading = signal<boolean>( true );
 	get profile(){ return this.pageData.pageSettings.profile;}
 
 	permissions = signal<Permission[]>( null );
@@ -103,8 +104,9 @@ export class RoleDetail implements OnDestroy, OnInit{
 	childRoles = signal<SelectionModel<RolePK>>( null );
 
 	groups = signal<SelectionModel<RolePK>>( null );
-
+	sideNav = model.required<DocItem>();
 	users = signal<SelectionModel<RolePK>>( null );
+
 	get schema(){ return this.pageData.schema; }
 
 	ql:IGraphQL = inject( AccessService );

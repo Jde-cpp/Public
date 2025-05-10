@@ -107,8 +107,7 @@ namespace Jde::Opc{
 			pClient->TriggerSessionAwaitables();
 			pClient->ClearRequest<UARequest>( std::numeric_limits<RequestId>::max() );
 		}
-		//UA_SESSIONSTATE_CLOSED
-	if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED || connectStatus==UA_STATUSCODE_BADSECURITYCHECKSFAILED ){
+		if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED || connectStatus==UA_STATUSCODE_BADSECURITYCHECKSFAILED || connectStatus == UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
 			_awaitingActivation.erase_if( [ua, sessionState,connectStatus]( sp<UAClient> pClient){
 				if( pClient->UAPointer()!=ua )return false;
 				pClient->ClearRequest<UARequest>( std::numeric_limits<RequestId>::max() );//previous clear didn't have pClient

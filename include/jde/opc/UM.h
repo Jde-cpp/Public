@@ -40,5 +40,5 @@ namespace Jde::Opc{
 	};
 
 	ΓOPC α Credentials( SessionPK sessionId, str opcId )ι->tuple<string,string>;
-
+	ΓOPC α Logout( SessionPK sessionId )ι->void;
 }

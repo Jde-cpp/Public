@@ -20,7 +20,7 @@ message Unsubscribe{
 message Message{
 	uint32 request_id = 1;
 	oneof Value{
-		uint32 session_id = 2;
+		string session_id = 2;
 		Subscribe subscribe = 3;
 		Unsubscribe unsubscribe = 4;
 	}

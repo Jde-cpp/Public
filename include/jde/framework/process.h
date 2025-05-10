@@ -8,6 +8,10 @@ namespace Jde::Threading{ struct InterruptibleThread; struct IWorker; }
 namespace Jde{ struct IShutdown; }
 namespace Jde::Process{
 	Φ ApplicationName()ι->const string&;
+
+	Φ IsConsole()ι->bool;
+	Φ SetConsole( bool isConsole )ι->void;
+
 	α AddKeepAlive( sp<void> pShared )ι->void;
 	Φ RemoveKeepAlive( sp<void> pShared )ι->void;
 
@@ -61,7 +65,6 @@ namespace Jde{
 		Ω Kill( uint processId )ι->bool;
 		Ω StartTime()ι->TimePoint;
 		Ω Pause()ι->int;
-		Ω IsConsole()ι->bool;
 
 //		Ω GetBackgroundThreads()ι{ return  *_pBackgroundThreads; }
 		Ω ProgramDataFolder()ι->fs::path;

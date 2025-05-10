@@ -46,8 +46,16 @@ namespace Jde::Web::Server{
 		//if( !j.empty() )
 		y.body() = serialize( move(j) );
 		y.prepare_payload();
-		Trace{ sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) };
+		Trace{ sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo ? SessionInfo->SessionId : 0, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) };
 		return y;
+	}
+
+	α HttpRequest::SessionId()Ι->SessionPK{
+		SessionPK sessionId{ SessionInfo ? SessionInfo->SessionId : 0 };
+		if( auto authorization = sessionId ? string{} : Header("authorization"); authorization.size() )
+			sessionId = Str::TryTo<SessionPK>( authorization, nullptr, 16 ).value_or( 0 );
+
+		return sessionId;
 	}
 
 	α HttpRequest::LogRead( str text, SL sl )Ι->void{

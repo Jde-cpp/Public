@@ -76,16 +76,14 @@ namespace Jde::Web::Client{
 	struct TClientSocketSession : IClientSocketSession{
 		using base=IClientSocketSession;
 		TClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι:IClientSocketSession{ ioc, ctx }{}
-		α Write( TFromClientMsgs&& m )ε->void;
+		α Write( TFromClientMsgs&& m )ι->void;
 	protected:
 		α OnReadData( std::basic_string_view<uint8_t> transmission )ι->void override;
 		β OnRead( TFromServerMsgs&& m )ι->void=0;
 	};
 
 	#define $ template<class TFromClientMsgs, class TFromServerMsgs> α TClientSocketSession<TFromClientMsgs,TFromServerMsgs>
-	$::Write( TFromClientMsgs&& m )ε->void{
-		base::Write( Proto::ToString(m) );
-	}
+	$::Write( TFromClientMsgs&& m )ι->void{ base::Write( Proto::ToString(m) ); }
 	$::OnReadData( std::basic_string_view<uint8_t> transmission )ι->void{
 		try{
 			sv x{ (char*)transmission.data(), transmission.size() };

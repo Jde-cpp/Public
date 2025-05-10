@@ -20,7 +20,7 @@ namespace Jde::QL{
 		α InsertBefore()ι->MutationAwaits::Task;
 		α Execute()ι->Coroutine::Task;
 		α InsertAfter( jarray&& result )ι->MutationAwaits::Task;
-		α InsertFailure( IException&& e )ι->MutationAwaits::Task;
+		α InsertFailure( exception e )ι->MutationAwaits::Task;
 		α Resume( jarray&& v )ι->void;
 
 		UserPK _executer;

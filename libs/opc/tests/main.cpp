@@ -20,7 +20,7 @@ namespace Jde{
 #endif
 		ASSERT( argc>1 && string{argv[1]}=="-c" )
 		TagParser( Opc::LogTagParser );
-		OSApp::Startup( argc, argv, "Tests.Opc", "Opc tests" );
+		OSApp::Startup( argc, argv, "Tests.Opc", "Opc tests", true );
 		Crypto::CryptoSettings settings{ "http/ssl" };
 		if( !fs::exists(settings.PrivateKeyPath) ){
 			settings.CreateDirectories();
@@ -55,6 +55,15 @@ namespace Jde{
 }
 
 α main( int argc, char **argv )->int{
+	boost::json::value v = boost::json::parse( "[0,1,2,3]" );
+	auto a = v.try_as_array();
+	if( !a ){
+		std::error_code ec = a.error();
+		auto code = ec.value();
+		auto message = ec.message();
+		std::cout << '(' << code << ')' << message << std::endl;
+	}
+
 	using namespace Jde;
 	::testing::InitGoogleTest( &argc, argv );
 	Startup( argc, argv );

@@ -40,7 +40,8 @@ namespace Jde::App::Client{
 		α QLServer()ι{ return _qlServer; }
 	private:
 		α Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void;
-		α WriteException( exception&&, RequestId requestId )->void;
+		α WriteException( exception&&, RequestId requestId )ι->void;
+		α WriteException( string&& e, RequestId requestId )ι->void;
 		α ProcessTransmission( Proto::FromServer::Transmission&& t, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId )ι->void;
 		α HandleException( std::any&& h, IException&& what, RequestId requestId )ι->void;
 		α OnRead( Proto::FromServer::Transmission&& transmission )ι->void override;

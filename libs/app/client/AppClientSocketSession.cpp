@@ -1,5 +1,6 @@
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/framework/thread/execution.h>
+#include <jde/web/server/IApplicationServer.h>
 #include <jde/app/shared/proto/App.FromClient.h>
 #include <jde/app/shared/proto/Common.h>
 #include <jde/web/client/socket/ClientQL.h>
@@ -50,6 +51,7 @@ namespace Client{
 	α StartSocketAwait::SendSessionId()ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task{
 		try{
 			auto connectionInfo =  co_await _session->Connect( _sessionId );//handshake
+			Web::Server::IApplicationServer::SetInstancePK( connectionInfo.instance_pk() );
 			Resume( move(connectionInfo) );
 		}
 		catch( exception& e ){
@@ -164,6 +166,9 @@ namespace Client{
 				Information( _tags, "[{:x}]AppClientSocketSession created: {}://{}.", Id(), IsSsl() ? "https" : "http", Host() );
 //				resumeVoid( move(hAny), "Ack: '{}'.", serverSocketId );
 				}break;
+			case kConnectionInfo:
+				resume( move(hAny), move(*m->mutable_connection_info()), "ConnectionInfo: {{applicationInstance: '{}'}}", m->connection_info().instance_pk() );
+				break;
 			case kGeneric:
 				resume( move(hAny), move(*m->mutable_generic()), "Generic - '{}'.", m->generic() );
 				break;
@@ -226,26 +231,32 @@ namespace Client{
 		}
 	}
 	α AppClientSocketSession::HandleException( std::any&& h, IException&& e, RequestId requestId )ι->void{
-		auto handle = [&]( sv /*msg*/, auto pAwait ){
-			pAwait->promise().ResponseMessage = "Error: {}";
-			pAwait->promise().MessageArgs.emplace_back( e.what() );
-			pAwait->promise().SetExp( move(e) );
-			pAwait->resume();
+		auto handle = [&]( sv /*msg*/, auto await ){
+			await->promise().ResponseMessage = "Error: {}";
+			await->promise().MessageArgs.emplace_back( e.what() );
+			await->promise().SetExp( move(e) );
+			await->resume();
 		};
-		if( auto pAwait = std::any_cast<ClientSocketAwait<uint32>::Handle>(&h) )
-			handle( "Exception<uint32>: '{}'.", pAwait );
-		else if( auto pAwait = std::any_cast<ClientSocketAwait<string>::Handle>(&h) )
-			handle( "Exception<string>: '{}'.", pAwait );
-		else if( auto pAwait = std::any_cast<ClientSocketAwait<Proto::FromServer::Strings>::Handle>(&h) )
-			handle( "Exception<Strings>: '{}'.", pAwait );
-		else if( auto pAwait = std::any_cast<ClientSocketAwait<Web::FromServer::SessionInfo>::Handle>(&h) )
-			handle( "Exception<SessionInfo>: '{}'.", pAwait );
+		if( auto await = std::any_cast<ClientSocketAwait<uint32>::Handle>(&h) )
+			handle( "Exception<uint32>: '{}'.", await );
+		else if( auto await = std::any_cast<ClientSocketAwait<string>::Handle>(&h) )
+			handle( "Exception<string>: '{}'.", await );
+		else if( auto await = std::any_cast<ClientSocketAwait<Proto::FromServer::Strings>::Handle>(&h) )
+			handle( "Exception<Strings>: '{}'.", await );
+		else if( auto await = std::any_cast<ClientSocketAwait<Web::FromServer::SessionInfo>::Handle>(&h) )
+			handle( "Exception<SessionInfo>: '{}'.", await );
+		else if( auto await = std::any_cast<ClientSocketAwait<jvalue>::Handle>(&h) )
+			handle( "Exception<SessionInfo>: '{}'.", await );
 		else{
 			let severity{ requestId ? ELogLevel::Critical : ELogLevel::Debug };
-			Log( severity, _tags, SRCE_CUR, "[0]Failed to process incoming exception '{}'.", requestId, e.what() );
+			ASSERT_DESC( !requestId, Ƒ("Type Not Expected={}", h.type().name()) );
+			Log( severity, _tags, SRCE_CUR, "[{:x}]Failed to process incoming exception '{}'.", requestId, e.what() );
 		}
 	}
-	α AppClientSocketSession::WriteException( exception&& e, RequestId /*requestId*/ )->void{
-		Write( FromClient::Exception(move(e)) );
+	α AppClientSocketSession::WriteException( exception&& e, RequestId requestId )ι->void{
+		Write( FromClient::Exception(move(e), requestId) );
+	}
+	α AppClientSocketSession::WriteException( string&& e, RequestId requestId )ι->void{
+		Write( FromClient::Exception(move(e), requestId) );
 	}
 }}

@@ -52,15 +52,15 @@ namespace Jde::Opc{
 	}
 
 	α OpcQLHook::InsertBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.JsonTableName=="opcServer" ? mu<HookAwait>( m, userPK, Operation::Insert | Operation::Before, sl ) : nullptr;
+		return m.JsonTableName=="opcServer" || m.JsonTableName=="server" ? mu<HookAwait>( m, userPK, Operation::Insert | Operation::Before, sl ) : nullptr;
 	}
 	α OpcQLHook::InsertFailure( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.JsonTableName=="opcServer" ? mu<HookAwait>( m, userPK, Operation::Insert | Operation::Failure, sl ) : nullptr;
+		return m.JsonTableName=="opcServer" || m.JsonTableName=="server" ? mu<HookAwait>( m, userPK, Operation::Insert | Operation::Failure, sl ) : nullptr;
 	}
 	α OpcQLHook::PurgeBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.JsonTableName=="opcServer" ? mu<HookAwait>( m, userPK, Operation::Purge | Operation::Before, sl ) : nullptr;
+		return m.JsonTableName=="opcServer" || m.JsonTableName=="server" ? mu<HookAwait>( m, userPK, Operation::Purge | Operation::Before, sl ) : nullptr;
 	}
 	α OpcQLHook::PurgeFailure( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.JsonTableName=="opcServer" ? mu<HookAwait>( m, userPK, Operation::Purge | Operation::Failure, sl ) : nullptr;
+		return m.JsonTableName=="opcServer" || m.JsonTableName=="server" ? mu<HookAwait>( m, userPK, Operation::Purge | Operation::Failure, sl ) : nullptr;
 	}
 }

@@ -30,13 +30,19 @@ namespace Jde::App{
 		m.set_id( id );
 		m.set_value( value );
 	}
-	α FromClient::Exception( exception&& e )ι->PFromClient::Transmission{
-		PFromClient::Transmission t;
-		auto& proto = *t.add_messages()->mutable_exception();
-		proto.set_what( e.what() );
-		if( auto p = dynamic_cast<IException*>(&e); p )
-			proto.set_code( (uint32)p->Code );
-		return t;
+	α FromClient::Exception( exception&& e, RequestId requestId )ι->PFromClient::Transmission{
+		return setMessage( requestId, [&](auto& m){
+			auto& request = *m.mutable_exception();
+			request.set_what( e.what() );
+			if( auto p = dynamic_cast<IException*>(&e); p )
+				request.set_code( (uint32)p->Code );
+		} );
+	}
+	α FromClient::Exception( string&& e, RequestId requestId )ι->PFromClient::Transmission{
+		return setMessage( requestId, [&](auto& m){
+			auto& request = *m.mutable_exception();
+			request.set_what( move(e) );
+		} );
 	}
 
 	α FromClient::Instance( str application, str instanceName, SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission{
@@ -52,7 +58,7 @@ namespace Jde::App{
 		i.set_server_log_level( (Jde::Proto::ELogLevel)Logging::External::MinLevel("db") );
 		i.set_client_log_level( (Jde::Proto::ELogLevel)Logging::ClientMinLevel() );
 		*i.mutable_start_time() = Jde::Proto::ToTimestamp( Logging::StartTime() );
-		i.set_web_port( Settings::FindNumber<PortType>("http/port").value_or(0) );
+		i.set_web_port( Settings::FindNumber<PortType>("/http/port").value_or(0) );
 
 		return t;
 	}

@@ -46,7 +46,7 @@ namespace Jde::Web::Server{
 	}
 	Ξ IRestException::Response()Ι->http::response<http::string_body>{
 		auto res = _request.Response<http::string_body>( Status() );
-		res.body() = "{ \"errors\":\""+_what+"\"}";
+		res.body() = what();
 		res.prepare_payload();
 		return res;
 	}

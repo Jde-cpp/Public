@@ -87,7 +87,7 @@ namespace Jde::Web{
 			Crypto::CryptoSettings settings{ "http/ssl" };
 			auto [mod,exp] = Crypto::ModulusExponent( settings.PublicKeyPath );
 			Web::Jwt jwt{ move(mod), move(exp), "testUser", "testUserCallSign", "127.0.0.1", {}/*description*/, settings.PrivateKeyPath };
-			auto await = ClientHttpAwait{ Host, "/CertificateLogin", serialize(jobject{{"jwt", jwt.Payload()}}), Port };
+			auto await = ClientHttpAwait{ Host, "/loginCertificate", serialize(jobject{{"jwt", jwt.Payload()}}), Port };
 			let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 			_sessionId = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 			Information( ELogTags::Test, "({:x})Loggin Complete.", _sessionId );//TODOBuild change to test

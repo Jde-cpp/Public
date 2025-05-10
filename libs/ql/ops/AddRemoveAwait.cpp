@@ -6,7 +6,6 @@
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLHook.h>
 #include <jde/ql/LocalSubscriptions.h>
-#include "../GraphQuery.h"
 #include "../types/QLColumn.h"
 
 #define let const auto

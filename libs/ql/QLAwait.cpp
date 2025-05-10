@@ -13,16 +13,18 @@ namespace Jde{
 		vector<TableQL> tableQueries;
 		jvalue y;
 		if( ql.IsMutation() ){
-			bool set{};
+			atomic_flag set;
 			up<IException> e;
-			[&]( auto& y, auto& tableQueries, bool& set, auto& e )->MutationAwait::Task {
+			[&]( auto& y, auto& tableQueries, atomic_flag& set, auto& e )->MutationAwait::Task {
 				jarray mutationResults;
 				try{
 					for( auto& m : move(ql.Mutations()) ){
 						Trace{ ELogTags::QL, "QL: {}", m.ToString() };
 						auto mutationResult = co_await MutationAwait( m, executer, sl );
 						if( m.ResultRequest ){
-							if( auto array = mutationResult.try_as_array(); array && array->size() )
+							Trace{ ELogTags::Test, "{}", serialize(mutationResult) };
+							let foo = mutationResult.try_as_array();
+							if( auto array = mutationResult.is_array() ? &mutationResult.get_array() : nullptr; array && array->size() )
 								mutationResult = Json::AsObject( move((*array)[0]) );
 							let available = mutationResult.is_object() ? Json::Combine( m.Args, mutationResult.get_object() ) : move(m.Args);
 							jobject result;
@@ -36,11 +38,10 @@ namespace Jde{
 				catch( IException& ex ){
 					e = ex.Move();
 				}
-				set = true;
+				set.test_and_set();
+				set.notify_all();
 			}( y, tableQueries, set, e );
-			while( !set ){
-				std::this_thread::yield();
-			}
+			set.wait( false );
 			if( e )
 				e->Throw();
 		}

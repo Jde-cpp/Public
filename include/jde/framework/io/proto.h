@@ -30,7 +30,7 @@ namespace Jde::Proto{
 
 	namespace Internal{
 		Ŧ Deserialize( const google::protobuf::uint8* p, int size, T& proto )ε->void{
-			google::protobuf::io::CodedInputStream input{ p, (int)size };
+			google::protobuf::io::CodedInputStream input{ p, size };
 			THROW_IF( !proto.MergePartialFromCodedStream(&input), "MergePartialFromCodedStream returned false." );
 		}
 	}

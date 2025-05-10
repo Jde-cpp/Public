@@ -1,5 +1,4 @@
-﻿#include "GraphQuery.h"
-#include <jde/ql/ql.h>
+﻿#include <jde/ql/ql.h>
 #include <jde/ql/QLHook.h>
 #include <jde/db/Database.h>
 #include <jde/db/meta/Column.h>
@@ -24,8 +23,6 @@ namespace Jde::QL{
 		return table.Schema->DS()->SelectEnumSync<uint,string>( table, sl );
 	}
 	using SubTables=flat_map<string,flat_multimap<uint,jobject>>;//tableName,pk, row
-	//Ω query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK userPK, const SubTables* subTables=nullptr )ε->jvalue;
-	//α Query( const TableQL& ql, DB::Statement&& statement, UserPK userPK )ε->jvalue;
 	Ω addSubTables( const TableQL& parentQL, const SubTables& subTables, jobject& parent, uint parentId )ι->void;
 	α numberToJson( const DB::Value& dbValue, const DB::Column& c, SRCE )ε->jvalue{
 		jvalue y;

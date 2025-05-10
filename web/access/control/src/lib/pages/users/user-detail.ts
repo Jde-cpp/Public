@@ -1,4 +1,4 @@
-import { Component, computed, effect, OnInit, OnDestroy, signal, inject, Inject } from '@angular/core';
+import { Component, effect, OnInit, OnDestroy, signal, inject, Inject, model } from '@angular/core';
 import { SelectionModel } from '@angular/cdk/collections';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -6,13 +6,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle } from 'jde-material';
+import { ComponentPageTitle, DocItem } from 'jde-material';
 import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, IProfile, Properties, QLSelector, TargetRow, toIdArray} from 'jde-framework';
 
 import { RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
 import { Permission } from '../../model/Permission';
-import {  } from 'jde-framework';
 import { AccessService } from 'jde-access';
 import { GroupPK } from '../../model/Group';
 import { User } from '../../model/User';
@@ -46,20 +45,24 @@ export class UserDetail implements OnDestroy, OnInit{
 			if( !arraysEqual(this?.user?.permissions, this.permissions()) )
 				this.isChanged.set( true );
 		});
+		route.data.subscribe( (data)=>{
+			this.pageData = data["pageData"];
+			this.user = new User( this.pageData.row );
+			this.sideNav.set( this.pageData.routing );
+			this.pageData.row = null;
+			this.properties.set( this.user.properties );
+			this.groups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.user.groups)) );
+			this.permissions.set( cloneClassArray(this.user.permissions ?? [], Permission) );
+			this.roles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.user.roles ?? [])) );
+			this.componentPageTitle.title = this.user.name;
+			this.isLoading.set( false );
+		});
 	}
 	ngOnDestroy(){
 		this.profile.save();
 	}
-	async ngOnInit(){
-		this.pageData = await this.route.data["value"]["pageData"];
-		this.user = new User( this.pageData.row );
-		this.pageData.row = null;
-		this.properties.set( this.user.properties );
-		this.groups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.user.groups)) );
-		this.permissions.set( cloneClassArray(this.user.permissions ?? [], Permission) );
-		this.roles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.user.roles ?? [])) );
-		this.componentPageTitle.title = this.user.name;
-		this.isLoading.set( false );
+	ngOnInit(){
+		this.sideNav.set( this.pageData.routing );
 	}
 	tabIndexChanged( index:number ){ this.profile.value.tabIndex = index;}
 
@@ -88,6 +91,8 @@ export class UserDetail implements OnDestroy, OnInit{
 	groups = signal<SelectionModel<GroupPK>>( null );
 	permissions = signal<Permission[]>( null );
 	roles = signal<SelectionModel<RolePK>>( null );
+
+	sideNav = model.required<DocItem>();
 
 	pageData:DetailResolverData<User>;
 	get profile(){ return this.pageData.pageSettings.profile;}

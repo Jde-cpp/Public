@@ -1,4 +1,5 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
+enable_testing()
 include( ../../../build/functions.cmake )
 project( Jde.Web.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
@@ -8,13 +9,13 @@ add_executable( ${targetName} )
 file( GLOB sources *.cpp **/*.cpp )
 file( GLOB headers *.h **/*.h )
 file( GLOB protos **/*.proto )
-
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
-	add_subdirectory( $ENV{JDE_DIR}/Framework/source ../../framework )
-	add_subdirectory( ../../app/shared ../../app/shared )
-	add_subdirectory( ../../crypto/src ../../crypto/lib )
-	add_subdirectory( ../../db/src ../../db/lib )
-	add_subdirectory( ../../ql ../../ql )
+
+add_subdirectory( $ENV{JDE_DIR}/Framework/source ../../framework )
+add_subdirectory( ../../app/shared ../../app/shared )
+add_subdirectory( ../../crypto/src ../../crypto/lib )
+add_subdirectory( ../../db/src ../../db/lib )
+add_subdirectory( ../../ql ../../ql )
 
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 

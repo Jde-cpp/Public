@@ -58,6 +58,7 @@ namespace Jde::Opc{
 	}
 
 	TEST_F( OpcServerTests, InsertFailed ){
+		Trace{ _tags, "InsertFailed::Started" };
 		ASSERT_EQ( 0, InsertFailedImpl() );
 	}
 

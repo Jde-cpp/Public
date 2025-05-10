@@ -8,11 +8,12 @@ namespace Jde::Web::Server{
 		HttpTaskResult()=default;
 		HttpTaskResult( HttpRequest&& req )ι:Request{move(req)}{}
 		HttpTaskResult( HttpTaskResult&& rhs )ι;
-		HttpTaskResult( jobject&& j, HttpRequest&& req )ι:Json( move(j) ), Request{ move(req) }{}
+		HttpTaskResult( jobject&& j, HttpRequest&& req, SRCE )ι:Json( move(j) ), Request{ move(req) }, Source{sl}{}
 		α operator=( HttpTaskResult&& rhs)ι->HttpTaskResult&;
 
 		jobject Json;
 		optional<HttpRequest> Request; //why optional?
+		optional<SL> Source;
 	};
 
 	struct IHttpRequestAwait : TAwait<HttpTaskResult> {

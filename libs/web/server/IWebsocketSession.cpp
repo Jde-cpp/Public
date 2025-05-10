@@ -63,6 +63,9 @@ namespace Jde::Web::Server{
 			p->SetLevel( ELogLevel::NoLog );
 		Exception{ sl, level, "[{}.{}]{}", Ƒ("{:x}", Id()), Ƒ("{:x}", requestId), e.what() }; //:x doesn't work with exception formatter
 	}
+	α IWebsocketSession::LogWriteException( str e, RequestId requestId, ELogLevel level, SL sl )ι->void{
+		Exception{ sl, level, "[{}.{}]{}", Ƒ("{:x}", Id()), Ƒ("{:x}", requestId), move(e) }; //:x doesn't work with exception formatter
+	}
 
 	α IWebsocketSession::Close()ι->void{
 		if( _listener ){

@@ -61,7 +61,7 @@ namespace Jde::App::Client{
 	α LoginAwait::Execute()ι->ClientHttpAwait::Task{
 		try{
 			jobject j{ {"jwt", _jwt.Payload()} };
-			auto res = co_await ClientHttpAwait{ Host(), "/CertificateLogin", serialize(j), Port() };
+			auto res = co_await ClientHttpAwait{ Host(), "/loginCertificate", serialize(j), Port() };
 			auto sessionPK = Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 			THROW_IF( !sessionPK, "Invalid authorization: {}.", res[http::field::authorization] );
 			Resume( move(*sessionPK) );
@@ -91,7 +91,7 @@ namespace Jde::App{
 				if( sessionId ){
 					[sessionId]()->StartSocketAwait::Task {
 						try{
-							co_await StartSocketAwait{ sessionId };//create socket.
+							co_await StartSocketAwait{ sessionId };//create socket, doesn't return until closed.
 						}
 						catch( IException& ){
 							Connect( true );

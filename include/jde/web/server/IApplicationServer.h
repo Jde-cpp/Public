@@ -7,6 +7,7 @@ namespace Jde::Web::Server{
 	struct IApplicationServer{
 		virtual ~IApplicationServer()=default;//msvc warning
 
+		β IsLocal()ι->bool = 0;
 		Ω InstancePK()ι->App::AppInstancePK;
 		Ω SetInstancePK( App::AppInstancePK x )ι->void;
 

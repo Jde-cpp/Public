@@ -114,8 +114,14 @@ namespace Sessions{
 					info = pInfo;
 				else{
 					up<TAwait<Web::FromServer::SessionInfo>> pAwait = Server::SessionInfoAwait( *sessionId ); //3rd party, eg AppServer
-					if( !pAwait )  //no 3rd party
-						throw Exception( SRCE_CUR, ELogLevel::Debug, "[{}]Session not found.", Ƒ("{:x}", *sessionId) );
+					if( !pAwait ){  //no 3rd party
+						if( _throw )
+							throw Exception( SRCE_CUR, ELogLevel::Debug, "[{}]Session not found.", Ƒ("{:x}", *sessionId) );
+						else{
+							_h.resume();
+							co_return;
+						}
+					}
 					Web::FromServer::SessionInfo proto = co_await *pAwait;
 					steady_clock::time_point expiration = Chrono::ToClock<steady_clock,Clock>( Proto::ToTimePoint(proto.expiration()) );
 					info = ms<SessionInfo>( *sessionId, expiration, UserPK{proto.user_pk()}, proto.user_endpoint(), proto.has_socket() );

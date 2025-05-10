@@ -4,7 +4,6 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/ql/LocalSubscriptions.h>
 #include <jde/ql/types/MutationQL.h>
-#include "../GraphQuery.h"
 
 #define let const auto
 

@@ -1,11 +1,10 @@
-import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot} from '@angular/router';
-import {Role, RoleNK} from '../model/Role';
-import {inject, Inject, Injectable} from '@angular/core';
-import {FieldKind, IEnum, IErrorService, IProfile, IQueryResult, Settings, TableSchema} from 'jde-framework';
+import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
+import { Role, RoleNK } from '../model/Role';
+import { inject, Inject, Injectable } from '@angular/core';
+import { IErrorService, IProfile, Settings, TableSchema } from 'jde-framework';
 import { AccessService } from 'jde-access';
 
 export class IRoleData{
-//	enums: Map<string, IEnum[]>;
 	profile:Settings<UserSettings>;
 	role:Role;
 	schema: TableSchema;

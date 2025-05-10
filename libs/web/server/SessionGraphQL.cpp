@@ -79,7 +79,40 @@ namespace Jde::Web::Server{
 		}
 	}
 
+	struct PurgeSessionAwait final: TAwait<jvalue>{
+		PurgeSessionAwait( const QL::MutationQL& m, UserPK executer, SRCE )ι: TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer }{}
+		α await_resume()ε->jvalue;
+		α await_ready()ι->bool override;
+	private:
+		QL::MutationQL _mutation;
+		Jde::UserPK _executer;
+		jobject _result{ {"complete", true} };
+		up<IException> _exception;
+	};
+	α PurgeSessionAwait::await_ready()ι->bool{
+		//TODO check permissions
+		uint rows = 0;
+		try{
+			if( auto sessionId = _mutation.FindParam("id"); sessionId )
+				rows = Sessions::Remove( Str::TryTo<SessionPK>(Json::AsString(*sessionId), nullptr, 16).value_or(0) ) ? 1 : 0;
+			_result["rowCount"] =	rows;
+		}
+		catch( IException& e ){
+			_exception = e.Move();
+		}
+		return true;
+	}
+	α PurgeSessionAwait::await_resume()ε->jvalue{
+		if( _exception )
+			_exception->Throw();
+		return _result;
+	}
+
 	α SessionGraphQL::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
 		return query.JsonName.starts_with( "session" ) ? mu<SessionGraphQLAwait>( query, userPK, sl ) : nullptr;
+	}
+
+	α SessionGraphQL::PurgeBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="sessions" ? mu<PurgeSessionAwait>( m, executer, sl ) : nullptr;
 	}
 }

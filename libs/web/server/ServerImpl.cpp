@@ -12,7 +12,10 @@
 
 namespace Jde::Web{
 	up<Server::IApplicationServer> _appServer;
-	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{ return _appServer->GraphQL( move(q), userPK, true, sl ); }
+	α Server::AppServerLocal()ι->bool{ return _appServer->IsLocal(); }
+	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
+		return _appServer->GraphQL( move(q), userPK, true, sl );
+	}
 	α Server::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
 
 	sp<net::cancellation_signal> _cancelSignal;
@@ -89,8 +92,8 @@ namespace Server{
 	α HandleCustomRequest( HttpRequest req, sp<RestStream> stream )ι->IHttpRequestAwait::Task{
 		try{
 			HttpTaskResult result = co_await *( GetRequestHandler().HandleRequest(move(req)) );
-			if( !result.Request ) THROW( "Request not set." );
-			send( move(*result.Request), move(stream), move(result.Json) );
+			THROW_IF( !result.Request, "Request not set." );
+			send( move(*result.Request), move(stream), move(result.Json), {}, result.Source.value_or(SRCE_CUR) );
 		}
 		catch( IRestException& e ){
 			send( move(e), move(stream) );
@@ -370,5 +373,20 @@ namespace Server{
 		res.set( http::field::access_control_expose_headers, "Authorization" );
 		res.set( http::field::access_control_max_age, "7200" ); //2 hours chrome max
 		return res;
+	}
+	α Server::SendServerSettings( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task{
+		jobject j;
+		j["restSessionTimeout"] = Chrono::ToString( Sessions::RestSessionTimeout() );
+		j["serverInstance"] = IApplicationServer::InstancePK();
+		try{
+			let session = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false, false );
+			j["active"] = (bool)session;
+		}
+		catch( IException& e ){
+			j["active"] = false;
+			e.SetLevel( ELogLevel::Trace );
+		}
+
+		send( move(req), move(stream), j, "application/json" );
 	}
 }

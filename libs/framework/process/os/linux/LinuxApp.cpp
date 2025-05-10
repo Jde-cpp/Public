@@ -140,31 +140,31 @@ namespace Jde{
 		return result==0;
 	}
 
-	up<flat_multimap<string,string>> _pArgs;
+	up<flat_multimap<string,string>> _args;
 	α Process::Args()ι->const flat_multimap<string,string>&{
-		if( !_pArgs ){
-			_pArgs = mu<flat_multimap<string,string>>();
+		if( !_args ){
+			_args = mu<flat_multimap<string,string>>();
 			std::ifstream file( "/proc/self/cmdline" );
 			optional<string> key;
 			for( string current; std::getline<char>(file, current, '\0'); ){
 				if( current.starts_with('-') ){
 					if( key )
-						_pArgs->emplace( *key, string{} );
+						_args->emplace( *key, string{} );
 					if( uint i=current.find('='); i<current.size() ){
-						_pArgs->emplace( current.substr(0, i), current.substr(i+1) );
+						_args->emplace( current.substr(0, i), current.substr(i+1) );
 						key.reset();
 					}else
 						key = current;
 				}
 				else if( key )
-					_pArgs->emplace( *key, current );
+					_args->emplace( *key, current );
 				else
-					_pArgs->emplace( string{}, current );
+					_args->emplace( string{}, current );
 			}
 			if( key )
-				_pArgs->emplace( *key, string{} );
+				_args->emplace( *key, string{} );
 		}
-		return *_pArgs;
+		return *_args;
 	}
 	α Process::FindArg( string key )ι->optional<string>{
 		auto p = Args().find( key );

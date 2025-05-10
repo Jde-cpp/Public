@@ -1,7 +1,5 @@
 ﻿#include <jde/framework/str.h>
 #include <jde/framework/io/json.h>
-//#include <jde/ql/GraphQLHook.h>
-//#include <jde/framework/coroutine/TaskOld.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/types/Introspection.h>
 #include <jde/db/IRow.h>
@@ -9,23 +7,18 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/Syntax.h>
-//#include <jde/db/generators/UpdateStatement.h>
 #include <jde/db/generators/WhereClause.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/View.h>
 #include "../../../Framework/source/DateTime.h"
-#include "GraphQuery.h"
-//#include "types/QLColumn.h"
-//#include "types/Parser.h"
 
 #define let const auto
 namespace Jde{
 	using DB::EValue;
 	using DB::EType;
 	using namespace DB::Names;
-//	using QL::EFieldKind;
 	constexpr ELogTags _tags{ ELogTags::QL };
 
 namespace QL{

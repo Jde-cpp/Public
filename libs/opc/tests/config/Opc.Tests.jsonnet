@@ -1,6 +1,6 @@
 {
 	testing:{
-		tests:: "OpcServerTests.InsertFailed",
+		tests:: "UAClientTests.Authenticate",
 		recreateDB: true
 	},
 	opc:{
@@ -10,7 +10,7 @@
 	dbServers: {
 		scriptPaths: ["$(JDE_DIR)/IotWebsocket/config/sql/mysql"],
 		localhost:{
-			driver: "db/drivers/mysql/libJde.DB.MySql.so",
+			driver: "$(JDE_BUILD_DIR)/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",
 			connectionString: "$(JDE_CONNECTION)",
 			catalogs: {
 				_appCatalog:{
@@ -49,6 +49,7 @@
 		target: "IotTests"
 	},
 	logging:{
+		defaultLevel:: "Information",
 		tags: {
 			trace:["test",
 				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
@@ -62,8 +63,10 @@
 			critical:[]
 		},
 		sinks:{
-			console:{}
-		}
+			console:{},
+			file:{ path: "/tmp", md: false }
+		},
+		memory: true
 	},
 	workers:{
 		executor: 1,

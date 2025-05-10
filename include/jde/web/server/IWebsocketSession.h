@@ -19,6 +19,7 @@ namespace Jde::Web::Server{
 		β WriteSubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void=0;
 		β WriteComplete( RequestId requestId )ι->void=0;
 		β WriteException( exception&& e, RequestId requestId )ι->void=0;
+		β WriteException( string&& e, RequestId requestId )ι->void=0;
 		α UserPK()Ι{ return _userPK; }
 	protected:
 		sp<SocketStream> Stream;
@@ -30,6 +31,7 @@ namespace Jde::Web::Server{
 
 		α LogRead( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;
 		α LogWriteException( const exception& e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
+		α LogWriteException( str e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α SessionId()ι{ return _sessionId; } α SetSessionId( SessionPK sessionId )ι{ _sessionId = sessionId; }
 		α Write( string&& m )ι->void;
 
@@ -57,8 +59,6 @@ namespace Jde::Web::Server{
 		α OnRead( const char* p, uint size )ι->void;
 		β OnRead( TFromClient&& transmission )ι->void = 0;
 		α Write( TFromServer&& message )ι->void;
-	protected:
-		//β WriteException( IException&& e )ι->void=0;
 	};
 
 #define $ template<class TFromServer, class TFromClient> auto TWebsocketSession<TFromServer,TFromClient>

@@ -1,4 +1,4 @@
-import { Component, computed, effect, OnInit, OnDestroy, signal, inject, Inject } from '@angular/core';
+import { Component, computed, effect, OnInit, OnDestroy, signal, inject, Inject, model } from '@angular/core';
 import { SelectionModel } from '@angular/cdk/collections';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -6,13 +6,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle } from 'jde-material';
+import { ComponentPageTitle, DocItem } from 'jde-material';
 import { arraysEqual, cloneClassArray, DetailResolverData, Properties, IErrorService, IGraphQL, QLSelector, toIdArray, TargetRow, IProfile} from 'jde-framework';
 
 import { RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
 import { Permission } from '../../model/Permission';
-import {  } from 'jde-framework';
 import { AccessService } from 'jde-access';
 import { Group, GroupPK } from '../../model/Group';
 import { User, UserPK } from '../../model/User';
@@ -50,21 +49,24 @@ export class GroupDetail implements OnDestroy, OnInit{
 			if( !arraysEqual(this?.group?.permissions, this.permissions()) )
 				this.isChanged.set( true );
 		});
+
+		route.data.subscribe( (data)=>{
+			this.pageData = data["pageData"];
+			this.group = new Group( this.pageData.row );
+			this.pageData.row = null;
+			this.properties.set( this.group.properties );
+			this.users.set( new SelectionModel<UserPK>(true, TargetRow.idArray(this.group.users)) );
+			this.childGroups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.group.childGroups)) );
+			this.permissions.set( cloneClassArray(this.group.permissions, Permission) );
+			this.roles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.group.roles)) );
+			this.componentPageTitle.title = this.group.name;
+		});
 	}
 	ngOnDestroy(){
 		this.profile.save();
 	}
 	async ngOnInit(){
-		this.pageData = await this.route.data["value"]["pageData"];
-		this.group = new Group( this.pageData.row );
-		this.pageData.row = null;
-		this.properties.set( this.group.properties );
-		this.users.set( new SelectionModel<UserPK>(true, TargetRow.idArray(this.group.users)) );
-		this.childGroups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.group.childGroups)) );
-		this.permissions.set( cloneClassArray(this.group.permissions, Permission) );
-		this.roles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.group.roles)) );
-		this.componentPageTitle.title = this.group.name;
-		this.isLoading.set( false );
+		this.sideNav.set( this.pageData.routing );
 	}
 	tabIndexChanged( index:number ){ this.profile.value.tabIndex = index;}
 
@@ -86,7 +88,6 @@ export class GroupDetail implements OnDestroy, OnInit{
 	get id(){ return this.group.id; }
 	ctor:new (item: any) => any = User;
 	isChanged = signal<boolean>( false );
-	isLoading = signal<boolean>( true );
 	properties = signal<Group>( null );
 	users = signal<SelectionModel<UserPK>>( null );
 	childGroups = signal<SelectionModel<GroupPK>>( null );
@@ -96,5 +97,6 @@ export class GroupDetail implements OnDestroy, OnInit{
 	pageData:DetailResolverData<Group>;
 	get profile(){ return this.pageData.pageSettings.profile;}
 	get schema(){ return this.pageData.schema; }
+	sideNav = model.required<DocItem>();
 	ql:IGraphQL = inject( AccessService );
 }

@@ -1,7 +1,4 @@
 #include <jde/opc/UM.h>
-//#include "../../../Framework/source/um/UM.h"
-//#include "../../../Framework/source/io/ServerSink.h"
-//#include "../../../Framework/source/io/proto/messages.pb.h"
 #include <jde/opc/uatypes/UAClient.h>
 #include <jde/ql/IQL.h>
 #include <jde/app/client/AppClientSocketSession.h>
@@ -13,6 +10,7 @@ namespace Jde::Opc{
 	static sp<LogTag> _logTag = Logging::Tag( "iot.um" );
 
 	boost::concurrent_flat_map<SessionPK,flat_map<OpcNK,tuple<string,string>>> _sessions; //loginName,password
+
 	AuthenticateAwait::AuthenticateAwait( str loginName, str password, str opcNK, str endpoint, bool isSocket, SL sl )ι:
 		base{ sl }, _loginName{ loginName }, _password{ password }, _opcNK{ opcNK }, _endpoint{ endpoint }, _isSocket{ isSocket }{}
 
@@ -125,6 +123,14 @@ namespace Jde::Opc{
 	}
 }
 namespace Jde{
+	α Opc::Logout( SessionPK sessionId )ι->void{
+		let erased = _sessions.erase( sessionId );
+		if( erased )
+			Trace( ELogTags::App, "Session {:x} erased.", sessionId );
+		else
+			Trace( ELogTags::App, "Session {:x} not found.", sessionId );
+	}
+
 	α Opc::Credentials( SessionPK sessionId, str opcId )ι->tuple<string,string>{
 		string loginName, password;
 		_sessions.cvisit( sessionId, [&loginName, &password, &opcId]( let& sessionMap )ι{

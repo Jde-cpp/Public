@@ -56,18 +56,6 @@ export class Role extends TargetRow<Role>{
 		return y;
 	}
 
-/*	private childMutations( originalChildren:RolePK[], children:RolePK[] ):Mutation[]{
-		let y = [];
-		const removed = originalChildren.filter( (x)=>!children.includes(x) );
-		if( removed.length )
-			y.push( new Mutation( "role", this.id, {role:{id:removed}}, MutationType.Remove ) );
-		const added = children.filter( (x)=>!originalChildren.includes(x) );
-		if( added.length )
-			y.push( new Mutation( "role", this.id, {role:{id:added}}, MutationType.Add ) );
-
-		return y;
-	}
-*/
 	childRoles: Role[];
 	groups: Group[];
 	permissions: Permission[];

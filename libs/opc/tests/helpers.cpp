@@ -6,21 +6,21 @@
 
 #define let const auto
 
-namespace Jde{
-	//static sp<DB::AppSchema> _schema;
-	//α Opc::SetTestSchema( sp<DB::AppSchema> opc )ι->void{ _schema = opc; }
-	//α Opc::GetViewPtr( str name )ι->sp<DB::View>{ return _schema->GetViewPtr( name ); }
-}
 namespace Jde::Opc{
 	constexpr ELogTags _tags{ ELogTags::Test };
 	static Opc::OpcQLHook* _pHook;
 
 	α CreateOpcServerAwait::Execute()ι->QL::QLAwait<jobject>::Task{
-		let certificateUri{ Settings::FindSV("opc/urn").value_or("urn:open62541.server.application") };
-		let url{ Settings::FindSV("opc/url").value_or( "opc.tcp://127.0.0.1:4840") };
-		let create = Ƒ( "mutation createOpcServer( target:'{}', name:'My Test Server', certificateUri:'{}', description:'Test basic functionality', url:'{}', isDefault:false ){{id}}", OpcServerTarget, certificateUri, url );
-		let createJson = co_await QL::QLAwait<jobject>( Str::Replace(create, '\'', '"'), {UserPK::System}, true, _sl );
-		ResumeScaler( Json::AsNumber<OpcPK>(createJson, "id") );
+		try{
+			let certificateUri{ Settings::FindSV("opc/urn").value_or("urn:open62541.server.application") };
+			let url{ Settings::FindSV("opc/url").value_or( "opc.tcp://127.0.0.1:4840") };
+			let create = Ƒ( "mutation createOpcServer( target:'{}', name:'My Test Server', certificateUri:'{}', description:'Test basic functionality', url:'{}', isDefault:false ){{id}}", OpcServerTarget, certificateUri, url );
+			let createJson = co_await QL::QLAwait<jobject>( Str::Replace(create, '\'', '"'), {UserPK::System}, true, _sl );
+			ResumeScaler( Json::AsNumber<OpcPK>(createJson, "id") );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
 	}
 
 	α PurgeOpcServerAwait::Execute()ι->QL::QLAwait<>::Task{
@@ -51,7 +51,7 @@ namespace Jde{
 
 	α Opc::SelectOpcServer( DB::Key id )ι->jobject{
 		let subQuery = id.IsPrimary() ? Ƒ( "server_id:{{eq:{}}}", id.PK() ) : Ƒ( "target: {{eq:\"{}\"}}", id.NK() );
-		let select = Ƒ( "server(filter:{{ {} }}){{ server_id name attributes created updated deleted target description certificateUri isDefault url }}", subQuery );
+		let select = Ƒ( "opcServer(filter:{{ {} }}){{ server_id name attributes created updated deleted target description certificateUri isDefault url }}", subQuery );
 		return QL::QueryObject( select, {UserPK::System} );
 	}
 

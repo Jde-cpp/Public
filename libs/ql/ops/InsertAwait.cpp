@@ -6,7 +6,6 @@
 #include <jde/db/meta/Table.h>
 #include <jde/access/IAcl.h>
 #include <jde/ql/LocalSubscriptions.h>
-#include "../GraphQuery.h"
 #include "../types/QLColumn.h"
 
 #define let const auto
@@ -123,7 +122,9 @@ namespace Jde::QL{
 					statement.IsStoredProc = false;
 				auto sql = statement.Move();
 				if( statement.IsStoredProc ){
-					let rowCount = ( co_await *ds.ExecuteProcCo(sql.Text, move(sql.Params), [&](const DB::IRow& row){id = (int32)row.GetInt(0);}) ).UP<uint>();
+					let rowCount = ( co_await *ds.ExecuteProcCo(sql.Text, move(sql.Params), [&](const DB::IRow& row){
+						id = (int32)row.GetInt(0);
+					}) ).UP<uint>();
 					y.push_back( jobject{ {"id", id}, {"rowCount",*rowCount} } );
 				}else{
 					if( _identityInsert && ds.Syntax().NeedsIdentityInsert() )
@@ -136,9 +137,10 @@ namespace Jde::QL{
 				if( auto sequence = statement.Values.size() && table->SurrogateKeys.size() ? table->SurrogateKeys[0] : nullptr; sequence )
 					_nestedIds.emplace( sequence->Name, id );
 			}
+			Trace{ _tags, "InsertAwait::Execute: {}", serialize(y) };
 			InsertAfter( move(y) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			InsertFailure( move(e) );
 		}
 	}
@@ -152,7 +154,7 @@ namespace Jde::QL{
 			ResumeExp( move(e) );
 		}
 	}
-	α InsertAwait::InsertFailure( IException&& e )ι->MutationAwaits::Task{
+	α InsertAwait::InsertFailure( exception e )ι->MutationAwaits::Task{
 		try{
 			co_await Hook::InsertFailure( _mutation, _executer );
 			ResumeExp( move(e) );
