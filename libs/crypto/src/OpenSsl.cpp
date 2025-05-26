@@ -6,7 +6,7 @@
 
 namespace Jde{
 	namespace Crypto{
-		auto _logTag = Logging::Tag( "crypto" );
+		constexpr ELogTags _logTag{ ELogTags::Crypto };
 		α OpenSslException::CurrentError()ι->string{ char b[120]; ERR_error_string( ERR_get_error(), b ); return {b}; }
 	}
 	using namespace Jde::Crypto::Internal;
@@ -118,8 +118,6 @@ namespace Jde{
 
 	//https://stackoverflow.com/questions/28770426/rsa-public-key-conversion-with-just-modulus
 	α RsaPemFromModExp( Crypto::Modulus modulus, const Crypto::Exponent& exponent )ε->KeyPtr{//this changes the modulus.
-		//uint32_t bigEndian{ __builtin_bswap32(exponent) };
-//		array<unsigned char,3> bigEndianBytes{ 1, 0, 1 };
 		OSSL_PARAM params[]{
 			OSSL_PARAM_construct_BN( "n", (unsigned char*)modulus.data(), modulus.size() ),
 			OSSL_PARAM_construct_BN( "e", (unsigned char*)exponent.data(), exponent.size() ),

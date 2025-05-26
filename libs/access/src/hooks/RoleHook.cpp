@@ -21,7 +21,7 @@ namespace Jde::Access{
 		α Add()ι->void;
 		α AddRole( RolePK parentRolePK, const jobject& childRole )ι->TAwait<uint>::Task;
 		α AddPermission( RolePK parentRolePK, const jobject& permissionRights )ι->TAwait<PermissionPK>::Task;
-		α Remove()ι->TAwait<PermissionPK>::Task;
+		α Remove()ι->TAwait<uint>::Task;
 
 		QL::MutationQL Mutation;
 		UserPK _userPK;
@@ -76,13 +76,13 @@ namespace Jde::Access{
 		}
 	}
 
-	α RoleMutationAwait::Remove()ι->TAwait<PermissionPK>::Task{ //removeRole( id:42, permissionRight:{id:420} )
+	α RoleMutationAwait::Remove()ι->TAwait<uint>::Task{ //removeRole( id:42, permissionRight:{id:420} )
 		let table = GetTable( "roles" );
 		DB::InsertClause remove{ DB::Names::ToSingular(table->DBName)+"_remove" };
 		remove.Add( Mutation.Id<RolePK>() );
 		remove.Add( Json::AsNumber<PermissionPK>(Mutation.Args, "permissionRight/id") );
-		let rowCount = co_await table->Schema->DS()->ExecuteProcCo( remove.Move() );
-		Resume( rowCount );
+		let pk = (PermissionPK)co_await table->Schema->DS()->ExecuteProcCo( remove.Move() );
+		Resume( pk );
 	}
 
 	struct RoleSelectAwait final : TAwait<jvalue>{
@@ -205,12 +205,10 @@ namespace Jde::Access{
 				createRolesFromMembers( *permissions, "permissionRights" );
 			if( roleMembers )
 				createRolesFromMembers( *roleMembers, "roles" );
-			//Trace{ ELogTags::Test, "[{}]{}", roles.begin()->first, serialize(roles.begin()->second) };
 			let& roleTable = *GetTable( "roles" );
 			if( !Query.FindColumn("id") )
 				Query.Columns.push_back( QL::ColumnQL{"id", roleTable.GetPK()} );
 			let returnArray = Query.IsPlural();
-			let returnRaw = Query.ReturnRaw;
 			if( auto roleStatement = QL::SelectStatement( Query ); roleStatement ){
 				Query.ReturnRaw = true;
 				auto qlRoles = co_await QL::QLAwait( move(Query), UserPK );

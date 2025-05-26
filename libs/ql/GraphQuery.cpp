@@ -32,7 +32,7 @@ namespace Jde::QL{
 		}
 		else if( c.PKTable && (c.IsEnum() || c.IsFlags()) ){
 			let values = GetEnumValues( *c.PKTable );
-			let value = dbValue.get_number<uint>();
+			let value = dbValue.get_number<uint>( sl );
 			if( c.IsFlags() ){
 				jarray flags;
 				auto remainingFlags = value;
@@ -152,8 +152,7 @@ namespace Jde::QL{
 			auto& rows = subTables.emplace( qlTable.JsonName, flat_multimap<uint,jobject>{} ).first->second;
 			auto forEachRow = [&]( DB::IRow& row ){
 				jobject jSubRow;
-				uint index = 0;
-				let rowToJson2 = [&row, &parentTable]( const vector<ColumnQL>& columns, bool checkId, jobject& jRow, uint& index2 ){
+				let rowToJson2 = [&row, &parentTable]( const vector<ColumnQL>& columns, jobject& jRow ){
 					int i = 1;//first should be pk of parent table.
 					for( let& c : columns ){
 						//auto i = checkId && c.DBColumn->IsPK() ? 1 : (index2++)+2;
@@ -169,13 +168,13 @@ namespace Jde::QL{
 							jRow[c.JsonName] = ValueToJson( move(row[i++]), &c );
 					}
 				};
-				rowToJson2( qlTable.Columns, false, jSubRow, index );
+				rowToJson2( qlTable.Columns, jSubRow );
 				for( let& childTable : qlTable.Tables ){
 					let childDbName = childTable.DBName();
 					let pkTable = GetTable( childDbName );
 					if( fk ){
 						jobject jChildTable;
-						rowToJson2( childTable.Columns, false, jChildTable, index );
+						rowToJson2( childTable.Columns, jChildTable );
 						jSubRow[childTable.JsonName] = jChildTable;
 					}
 				}
@@ -187,7 +186,7 @@ namespace Jde::QL{
 		return subTables;
 	}
 
-	Ω query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK userPK, const SubTables* subTables=nullptr, SRCE )ε->jvalue{
+	Ω query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK /*executer*/, const SubTables* subTables=nullptr, SRCE )ε->jvalue{
 		jvalue y;
 		if( ql.IsPlural() )
 			y = jarray{};
@@ -222,8 +221,8 @@ namespace Jde{
 		if( statement.From.Empty() )
 			statement.From += { dbView->Columns[0] };
 		auto dbTable = dbView->IsView() ? nullptr : AsTable(dbView);
-		if( string criteria = dbTable && dbTable->Extends ? dbTable->SurrogateKeys[0]->Criteria : ""; criteria.size() ) //identities is_group
-			statement.Where.Add( criteria );//group with no members.
+		if( optional<DB::Criteria> criteria = dbTable && dbTable->Extends ? dbTable->SurrogateKeys[0]->Criteria : nullopt; criteria ) //identities is_group
+			statement.Where.Add( *criteria );//group with no members.
 
 		return statement;
 	}

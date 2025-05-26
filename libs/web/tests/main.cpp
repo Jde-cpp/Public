@@ -9,9 +9,8 @@ namespace Jde{
 
  	α Startup( int argc, char **argv )ι->void{
 #ifdef _MSC_VER
-		ASSERT( Settings::Get<uint>("workers/drive/threads")>0 )
+		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
 #endif
-		ASSERT( argc>1 && string{argv[1]}=="-c" )
 		Threading::SetThreadDscrptn( "Main" );
 		OSApp::Startup( argc, argv, "Tests.Web", "Web tests", true );
 	}

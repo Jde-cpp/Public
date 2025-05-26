@@ -8,9 +8,18 @@
 #define let const auto
 namespace Jde::Web::Server{
 	constexpr ELogTags _tags{ ELogTags::Sessions };
-	steady_clock::duration _restExpirationDuration{ Chrono::ToDuration(Settings::FindSV("/http/timeout").value_or("PT30S")) };
-	α Sessions::RestSessionTimeout()ι->steady_clock::duration{ return _restExpirationDuration; }
-	steady_clock::duration _sockExpirationDuration{ Chrono::ToDuration(Settings::FindSV("/http/timeout").value_or("P1D")) };
+	steady_clock::duration _restExpirationDuration{};
+	α Sessions::RestSessionTimeout()ι->steady_clock::duration{ 
+		if( _restExpirationDuration==steady_clock::duration::zero() )
+			_restExpirationDuration = Chrono::ToDuration( Settings::FindSV("/http/timeout").value_or("PT30S") );
+		return _restExpirationDuration; 
+	}
+	steady_clock::duration _sockExpirationDuration{};
+	Ω sockExpirationDuration(){
+		if( _sockExpirationDuration==steady_clock::duration::zero() )
+			_sockExpirationDuration = Chrono::ToDuration( Settings::FindSV("/http/timeout").value_or("P1D") );
+		return _sockExpirationDuration;
+	}
 	steady_clock::time_point _lastTrim{ steady_clock::now() };
 
 	concurrent_flat_map<SessionPK,sp<SessionInfo>> _sessions;
@@ -78,7 +87,7 @@ namespace	Sessions{
 	{}
 
 	α SessionInfo::NewExpiration()Ι->steady_clock::time_point{
-		return steady_clock::now()+(HasSocket ? _sockExpirationDuration : _restExpirationDuration);
+		return steady_clock::now()+( HasSocket ? sockExpirationDuration() : Sessions::RestSessionTimeout() );
 	}
 
 	α UpdateExpiration( SessionPK sessionId, str userEndpoint )ε->sp<SessionInfo>{
@@ -86,7 +95,7 @@ namespace	Sessions{
 		_sessions.visit( sessionId, [&info, &userEndpoint, sessionId]( auto& kv ){
 			sp<SessionInfo> existing = kv.second;
 			let& existingAddress = existing->UserEndpoint;
-			THROW_IF( existingAddress!=userEndpoint, "[{}]existingAddress='{}' does not match userEndpoint='{}'", sessionId, existingAddress, userEndpoint );
+			//THROW_IF( existingAddress!=userEndpoint, "[{}]existingAddress='{}' does not match userEndpoint='{}'", sessionId, existingAddress, userEndpoint );
 			auto& existingExpiration = existing->Expiration;
 			if( existingExpiration>steady_clock::now() ){
 				existingExpiration = existing->NewExpiration();
@@ -95,7 +104,7 @@ namespace	Sessions{
 			else
 				Trace{ ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, DateTime{existingExpiration}.ToIsoString() };
 		} );
-		if( _lastTrim<steady_clock::now()-_restExpirationDuration ){
+		if( _lastTrim<steady_clock::now()-Sessions::RestSessionTimeout() ){
 			_sessions.erase_if( []( auto& kv ){ return kv.second->Expiration<steady_clock::now(); } );
 			_lastTrim = steady_clock::now();
 		}

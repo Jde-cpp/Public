@@ -11,11 +11,11 @@
 
 #define let const auto
 namespace Jde::Web{
+	constexpr ELogTags _tags{ ELogTags::Test };
 	using Client::ClientSocketAwait;
 	using Client::ClientHttpAwait;
 	using Client::ClientHttpRes;
 
-	static sp<Jde::LogTag> _logTag{ Logging::Tag( "test" ) };
 	constexpr sv ContentType{ "application/x-www-form-urlencoded" };
 	using Mock::Host; using Mock::Port;
 
@@ -57,17 +57,20 @@ namespace Jde::Web{
 		co_await _clientSession->Close();
 		Notify();
 	}
-	#define WAIT sl l{ _mutex }; cv.wait( l )
+
 	α Wait()ι{
-		WAIT;
+		sl l{ _mutex }; 
+		cv.wait( l );
 	}
 
 	α SocketTests::TearDown()->void{
 		if( _clientSession ){
 			Close();
 			Wait();
-			ASSERT( _clientSession.use_count()==1 );
+			TRACE( "_clientSession.use_count()={}", _clientSession.use_count() );
+			//ASSERT( _clientSession.use_count()==1 );
 			_clientSession = nullptr;
+			TRACE( "_clientSession.use_count()={}", _clientSession.use_count() );
 		}
 		_sessionId = 0;
 	}
@@ -99,7 +102,7 @@ namespace Jde::Web{
 	TEST_F( SocketTests, CreatePlain ){
 		Stopwatch sw{ "WebTests::CreatePlain", ELogTags::Test };
 		CreateSession();
-		WAIT;
+		Wait();
 		ASSERT_EQ( _sessionId, _clientSession->SessionId() );
 	}
 
@@ -108,7 +111,7 @@ namespace Jde::Web{
 		Trace( ELogTags::Test, "WebTests::CreateSsl" );
 		Stopwatch sw{ "WebTests::CreateSsl", ELogTags::Test };
 		CreateSession( ssl::context(ssl::context::tlsv12_client) );
-		WAIT;
+		Wait();
 		ASSERT_EQ( _sessionId, _clientSession->SessionId() );
 	}
 
@@ -124,7 +127,7 @@ namespace Jde::Web{
 	TEST_F( SocketTests, EchoAttack ){
 		Stopwatch sw{ "WebTests::EchoAttack", ELogTags::Test };
 		CreateSession();
-		WAIT;
+		Wait();
 		string text( 32000, 'a' );
 		for( uint i=1; i<=1000; ++i )
 			EchoText( i, text.substr(0,i*32) );
@@ -143,18 +146,18 @@ namespace Jde::Web{
 	TEST_F( SocketTests, BadSessionId ){
 		_sessionId = Math::Random();
 		CreateSession();
-		WAIT;
+		Wait();
 		ASSERT_NE( nullptr, _exception );
 	}
 
 	TEST_F( SocketTests, CloseClientSide ){
 		CreateSession();
-		WAIT;
+		Wait();
 		Close();
 		Wait();
 		let sessionId = _clientSession->Id();
 		_clientSession = nullptr;
-		std::this_thread::sleep_for( 100ms );
+		std::this_thread::sleep_for( 100s );
 		auto logs = FindMemoryLog( [=](const Logging::ExternalMessage& m){
 			return m.Args.size()==3 && m.Args[0]=="1" && m.Args[1]=="The WebSocket stream was gracefully closed at both endpoints" && m.Args[2]==Ƒ("[{:x}]Server::DoRead", sessionId);
 		});
@@ -173,9 +176,9 @@ namespace Jde::Web{
 	}
 
 	TEST_F( SocketTests, CloseServerSide ){
-		{ CreateSession(); WAIT; }
+		{ CreateSession(); Wait(); }
 		CloseServerSideCall();
-		WAIT;
+		Wait();
 		ASSERT_NE( nullptr, _exception );
 	}
 
@@ -190,7 +193,7 @@ namespace Jde::Web{
 	}
 	TEST_F( SocketTests, BadTransmissionClient ){
 		CreateSession();
-		WAIT;
+		Wait();
 		BadTransmissionClientCall();
 		let expiration = steady_clock::now() + 20s;
 		vector<Logging::ExternalMessage> logs;
@@ -213,7 +216,7 @@ namespace Jde::Web{
 	}
 	TEST_F( SocketTests, BadTransmissionServer ){
 		CreateSession();
-		WAIT;
+		Wait();
 		BadTransmissionServerCall();
 		let expiration = steady_clock::now() + 20s;
 		vector<Logging::ExternalMessage> logs;

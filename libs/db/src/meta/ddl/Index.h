@@ -1,9 +1,9 @@
 #pragma once
-
+#include <jde/db/exports.h>
 
 namespace Jde::DB{
 	struct Syntax; struct Table;
-	struct Index final{
+	struct ΓDB Index final{
 		Index( sv indexName, sv tableName, bool primaryKey, const vector<string>* pColumns=nullptr, bool unique=true, optional<bool> clustered=optional<bool>{} )ι;//, bool clustered=false
 		Index( sv indexName, sv tableName, const Index& other )ι;
 

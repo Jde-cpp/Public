@@ -27,7 +27,7 @@ namespace Jde::DB{
 		string unique = Unique ? "unique" : "";
 		std::ostringstream os;
 		if( PrimaryKey )
-			os << "alter table " << tableName << " add constraint " << name << (Clustered || !syntax.SpecifyIndexCluster() ? "" : " nonclustered") << " primary key(";
+			os << "alter table " << tableName << " add constraint " << Str::Replace(tableName, '.', '_') << "_" << name << (Clustered || !syntax.SpecifyIndexCluster() ? "" : " nonclustered") << " primary key(";
 		else
 			os << "create " << (Clustered && syntax.SpecifyIndexCluster() ? "clustered " : " ") << unique << " index "<< name << " on " << std::endl << tableName << "(";
 

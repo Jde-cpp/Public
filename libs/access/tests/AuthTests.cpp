@@ -4,9 +4,6 @@
 
 #define let const auto
 namespace Jde::Access::Tests{
-//	constexpr ELogTags _tags{ ELogTags::Test };
-	using namespace Tests;
-
 	UserPK _userId{};
 
 	class AuthTests : public ::testing::Test{
@@ -14,11 +11,11 @@ namespace Jde::Access::Tests{
 		Ω SetUpTestCase()->void;
 
 		constexpr static sv OpcServer{"AuthTests::OpcServer1"};
-		static uint OpcProviderId;
+		static ProviderPK OpcProviderId;
 	};
 	std::condition_variable_any _cv;
 	std::shared_mutex _mtx;
-	uint AuthTests::OpcProviderId{};
+	ProviderPK AuthTests::OpcProviderId{};
 
 	α AuthTests::SetUpTestCase()ε->void{
 	if( auto o = QL::QueryObject(Ƒ("provider(target:\"{}\"){{id}}", OpcServer), GetRoot()); !o.empty() )
@@ -29,7 +26,7 @@ namespace Jde::Access::Tests{
 		}
 	}
 
-	α Login( str loginName, uint8 providerId, string opcServer )ε->AuthenticateAwait::Task{
+	α login( str loginName, ProviderPK providerId, string opcServer )ε->AuthenticateAwait::Task{
 		_userId = co_await Authenticate( loginName, providerId, opcServer );
 		std::shared_lock l{ _mtx };
 		_cv.notify_one();
@@ -38,8 +35,8 @@ namespace Jde::Access::Tests{
 	TEST_F( AuthTests, Login_Existing ){
 		const string user{ "Login_Existing" };
 		let provider = Access::EProviderType::Google;
-		const UserPK userId{ GetId( GetUser(user, GetRoot(), true, provider) ) };
-		Login( user, underlying(provider), {} );
+		const UserPK userId{ GetId( GetUser(user, GetRoot(), true, (ProviderPK)provider) ) };
+		login( user, underlying(provider), {} );
 		std::shared_lock l{ _mtx };
 		_cv.wait( l );
 		ASSERT_EQ( userId, _userId );
@@ -48,7 +45,7 @@ namespace Jde::Access::Tests{
 
 	TEST_F( AuthTests, Login_New ){
 		const string user{ "Login_New" };
-		Login( user, underlying(Access::EProviderType::Google), {} );
+		login( user, underlying(Access::EProviderType::Google), {} );
 		std::shared_lock l{ _mtx };
 		_cv.wait( l );
 		PurgeUser( {_userId}, GetRoot() );
@@ -56,8 +53,8 @@ namespace Jde::Access::Tests{
 
 	TEST_F( AuthTests, Login_Existing_Opc ){
 		const string user{ "Login_Existing_Opc" };
-		let userId = GetId( GetUser(user, GetRoot(), true, (EProviderType)OpcProviderId) );
-		Login( user, OpcProviderId, string{OpcServer} );
+		let userId = GetId( GetUser(user, GetRoot(), true, OpcProviderId) );
+		login( user, OpcProviderId, string{OpcServer} );
 		std::shared_lock l{ _mtx };
 		_cv.wait( l );
 		ASSERT_EQ( UserPK{userId}, _userId );
@@ -66,7 +63,7 @@ namespace Jde::Access::Tests{
 
 	TEST_F( AuthTests, Login_New_Opc ){
 		const string user{ "Login_New_Opc" };
-		Login( user, OpcProviderId, string{OpcServer} );
+		login( user, OpcProviderId, string{OpcServer} );
 		std::shared_lock l{ _mtx };
 		_cv.wait( l );
 		PurgeUser( {_userId}, GetRoot() );

@@ -5,7 +5,6 @@
 
 #define let const auto
 namespace Jde::DB{
-	static sp<LogTag> _logTag{ Logging::Tag("sql") };
 	QStatement::QStatement( string sql, sp<vector<Value>> parameters, bool isStoredProc, SL sl ):
 		Sql{ move(sql) },
 		Parameters{ parameters },
@@ -62,12 +61,12 @@ namespace Jde::DB{
 				else
 					_spDataSource->ExecuteNoLog( pStatement->Sql, pStatement->Parameters.get() );
 			}
-			catch( const IException& e ){
+			catch( const IException& ){
 				//DB::LogNoServer( pStatement->Sql, pStatement->Parameters.get(), ELogLevel::Error, e.what(), pStatement->SourceLocation );
 			}
 		}
 		_stopped = true;
 		_spDataSource = nullptr;
-		TRACE( "DBQueue::Run - Ending"sv );
+		Trace{ ELogTags::App, "DBQueue::Run - Stopped" };
 	}
 }

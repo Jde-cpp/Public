@@ -7,9 +7,9 @@ namespace Jde::App::StringCache{
 	using App::Proto::FromClient::EFields;
 
 	Φ Add( EFields field, StringPK id, str value, ELogTags logTags )ι->bool;
-	Φ AddFile( StringPK& id, str path )ι->bool;
-	Φ AddFunction( StringPK& id, str name )ι->bool;
-	Φ AddMessage( StringPK& id, str m )ι->bool;
+	Φ AddFile( StringPK id, str path )ι->bool;
+	Φ AddFunction( StringPK id, str name )ι->bool;
+	Φ AddMessage( StringPK id, str m )ι->bool;
 	α AddThread( StringPK& id, str name )ι->bool;
 	Φ GetMessage( StringPK id )ι->string;
 	Φ GetFile( StringPK id )ι->string;

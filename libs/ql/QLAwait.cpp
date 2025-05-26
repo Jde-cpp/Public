@@ -19,11 +19,10 @@ namespace Jde{
 				jarray mutationResults;
 				try{
 					for( auto& m : move(ql.Mutations()) ){
-						Trace{ ELogTags::QL, "QL: {}", m.ToString() };
+						Trace{ sl, ELogTags::QL, "QL: {}", m.ToString() };
 						auto mutationResult = co_await MutationAwait( m, executer, sl );
 						if( m.ResultRequest ){
 							Trace{ ELogTags::Test, "{}", serialize(mutationResult) };
-							let foo = mutationResult.try_as_array();
 							if( auto array = mutationResult.is_array() ? &mutationResult.get_array() : nullptr; array && array->size() )
 								mutationResult = Json::AsObject( move((*array)[0]) );
 							let available = mutationResult.is_object() ? Json::Combine( m.Args, mutationResult.get_object() ) : move(m.Args);

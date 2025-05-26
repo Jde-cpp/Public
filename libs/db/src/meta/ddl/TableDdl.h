@@ -8,7 +8,7 @@ namespace Jde::DB{
 		TableDdl( const Table& table )ι:Table{table}{};
 
 		α InsertProcCreateStatement()Ι->string;
-		α CreateStatement()Ι->string;
+		α CreateStatement()Ε->string;
 
 		sp<DB::SchemaDdl> Schema;
 		vector<Index> Indexes;

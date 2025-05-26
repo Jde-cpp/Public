@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifndef TASK_OLD_H
 #define TASK_OLD_H
 

@@ -38,7 +38,7 @@ namespace Jde::DB{
 			try{
 				name = ds->SchemaName();
 			}
-			catch( IException& e ){
+			catch( IException& ){
 				if( !canSetSchema )
 					throw;
 				if( ds->SchemaNameConfig()==Name ){

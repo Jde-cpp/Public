@@ -1,8 +1,7 @@
-﻿#include <jde/App.h>
+﻿#include <jde/framework/process.h>
 #include <Psapi.h>
 #include <shellapi.h>
 #include <strsafe.h>
-#include "../../Framework/source/threading/InterruptibleThread.h"
 #include "WindowsDrive.h"
 #include "WindowsSvc.h"
 #include "WindowsWorker.h"
@@ -10,14 +9,12 @@
 
 #define var const auto
 
-namespace Jde
-{
-	static var& _logTag{ Logging::Tag("app") };
+namespace Jde{
+	constexpr ELogTags _tags{ ELogTags::App };
 
-	flat_set<string> OSApp::Startup( int argc, char** argv, sv appName, string serviceDescription )ε
-	{
+	α OSApp::Startup( int argc, char** argv, sv appName, string serviceDescription, optional<bool> console )ε->flat_set<string>{
 		IApplication::SetInstance( ms<OSApp>() );
-		return IApplication::Instance().BaseStartup( argc, argv, appName, serviceDescription );
+		return IApplication::Instance().BaseStartup( argc, argv, appName, serviceDescription, console );
 	}
 
 	bool OSApp::KillInstance( uint processId )ι{
@@ -47,13 +44,7 @@ namespace Jde
     }
 		if( handled )
 			Windows::WindowsWorkerMain::Stop( ctrlType );
-		//for( auto pThread : IApplication::GetBackgroundThreads() )
-		//	pThread->Interrupt();
-		//for( auto pThread : IApplication::GetBackgroundThreads() )
-		//	pThread->Join();
-		//exit( 1 );
 		return handled;
-//		unreachable... return TRUE;
 	}
 	void AddSignals2()ε
 	{
@@ -98,41 +89,48 @@ namespace Jde
 		return true;
 	}
 
-	up<flat_multimap<string,string>> _pArgs;
-	α OSApp::Args()ι->const flat_multimap<string,string>&{
-		if( !_pArgs ){
-			_pArgs = mu<flat_multimap<string,string>>();
+	up<flat_multimap<string,string>> _args;
+	α Process::Args()ι->const flat_multimap<string,string>&{
+		if( !_args ){
+			_args = mu<flat_multimap<string,string>>();
 			int nArgs;
 			LPWSTR* szArglist = ::CommandLineToArgvW( ::GetCommandLineW(), &nArgs );
 			if( !szArglist )
 				std::cerr << "CommandLineToArgvW failed\n";
-		   else
-			{
-				for( int i=0; i<nArgs; ++i )
-				{
+		   else{
+				optional<string> key;
+				for( int i=0; i<nArgs; ++i ){
 					var current = Windows::ToString( szArglist[i] );
-					if( current.starts_with('-') )
-					{
-						var value{ ++i<nArgs ? Windows::ToString(szArglist[i]) : string{} };
-						if( value.starts_with('-') )
-							--i;
-						_pArgs->emplace( current, value );
+					if( current.starts_with('-') ){
+						if( key )
+							_args->emplace( *key, string{} );
+						if( uint i=current.find('='); i<current.size() ){
+							_args->emplace( current.substr(0, i), current.substr(i+1) );
+							key.reset();
+						}else
+							key = current;
 					}
+					else if( key )
+						_args->emplace( *key, current );
 					else
-						_pArgs->emplace( string{}, current );
+						_args->emplace( string{}, current );
 				}
-			   LocalFree(szArglist);
+				if( key )
+					_args->emplace( *key, string{} );
+			  LocalFree(szArglist);
 			}
 		}
-		return *_pArgs;
+		return *_args;
 	}
-	α OSApp::Executable()ι->fs::path
-	{
-		return fs::path{ Args().find( {} )->second };
+	α Process::IsDebuggerPresent()ι->bool{
+		return ::IsDebuggerPresent() != 0;
 	}
 
-	α OSApp::UnPause()ι->void
-	{
+	α OSApp::Executable()ι->fs::path{
+		return fs::path{ Process::Args().find( {} )->second };
+	}
+
+	α OSApp::UnPause()ι->void{
 		Windows::WindowsWorkerMain::Stop( 0 );
 	}
 
@@ -174,10 +172,8 @@ namespace Jde
 		return y;
 	}
 
-	α OSApp::CompanyName()ι->string
-	{
-		if(! _companyName.size() )
-		{
+	α OSApp::CompanyName()ι->string{
+		if(! _companyName.size() ){
 			_companyName = LoadResource( "CompanyName" );
 			if( _companyName.empty() )
 				_companyName = "Jde-cpp";
@@ -203,7 +199,7 @@ namespace Jde
 		char buffer[32767];
 		optional<string> result;
 		if( !::GetEnvironmentVariable(string(variable).c_str(), buffer, sizeof(buffer)) )
-			Logging::LogOnce( Logging::Message{ELogLevel::Debug, "GetEnvironmentVariable('{}') failed:  {:x}", sl}, Logging::Tag("settings"), variable, ::GetLastError() );
+			Logging::LogOnce( Logging::Message{ELogLevel::Debug, "GetEnvironmentVariable('{}') failed:  {:x}", sl}, ELogTags::Settings, variable, ::GetLastError() );
 		else
 			result = buffer;
 

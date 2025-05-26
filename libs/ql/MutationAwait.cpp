@@ -43,7 +43,6 @@ namespace Jde::QL{
 				break;
 			case Create:
 				y = co_await InsertAwait( table, move(_mutation), _userPK, _sl );
-				//Trace{ _tags, "MutationAwait::Execute - Create '{}'", serialize(y) };
 				break;
 			case Purge:
 				y = co_await PurgeAwait{ table, move(_mutation), _userPK, _sl };

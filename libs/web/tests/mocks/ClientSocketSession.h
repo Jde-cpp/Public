@@ -8,6 +8,7 @@ namespace Jde::Web::Mock{
 	struct ClientSocketSession final : TClientSocketSession<Proto::FromClientTransmission,Proto::FromServerTransmission>{
 		using base = TClientSocketSession<Proto::FromClientTransmission,Proto::FromServerTransmission>;
 		ClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι;
+		~ClientSocketSession(){ Trace{ ELogTags::Test, "ClientSocketSession::~ClientSocketSession" }; }
 
 		α Connect( SessionPK sessionId, SRCE )ι->ClientSocketAwait<SessionPK>;
 		α Echo( str x, SRCE )ι->ClientSocketAwait<string>;
@@ -15,8 +16,8 @@ namespace Jde::Web::Mock{
 		α BadTransmissionClient( SRCE )ι->ClientSocketAwait<string>;
 		α BadTransmissionServer( SRCE )ι->ClientSocketAwait<string>;
 	private:
-		α Query( string&& query, bool returnRaw, SRCE )ι->ClientSocketAwait<jvalue> override{ ASSERT(false); return { {}, {}, {} }; }
-		α Subscribe( string&& query, sp<QL::IListener> listener, SRCE )ε->ClientSocketAwait<jarray> override{ ASSERT(false); return { {}, {}, {} }; }
+		α Query( string&&, bool, SL )ι->ClientSocketAwait<jvalue> override{ ASSERT(false); return { {}, {}, {} }; }
+		α Subscribe( string&&, sp<QL::IListener>, SL )ε->ClientSocketAwait<jarray> override{ ASSERT(false); return { {}, {}, {} }; }
 
 		α HandleException( std::any&& h, string&& what )ι;
 		α OnRead( Proto::FromServerTransmission&& transmission )ι->void override;

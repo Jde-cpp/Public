@@ -1,8 +1,9 @@
 #pragma once
+#include "../exports.h"
 
 namespace Jde::DB{
 	struct Column;
-	struct SelectClause final{
+	struct ΓDB SelectClause final{
 		SelectClause()=default;
 		SelectClause( sp<Column> c )ι:Columns{c}{}
 		SelectClause( vector<sp<Column>> cols )ι:Columns{move(cols)}{}//{ Columns.

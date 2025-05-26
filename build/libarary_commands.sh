@@ -5,12 +5,16 @@ cls;rm -f CMakeCache.txt;cmake /home/duffyj/code/jde/Public/build --preset linux
 DST_DIR=$REPO_DIR/install/g++-14/Debug/boost
 ./bootstrap.sh --prefix=${DST_DIR} --includedir=headers --libdir=dist --with-libraries=json
 echo "using gcc : : /usr/bin/g++-14 ; " >> tools/build/src/user-config.jam
-./b2 --prefix=${DST_DIR} install
+./b2 --prefix=${DST_DIR} address-sanitizer=on install
 
 DST_DIR=$REPO_DIR/install/g++-14/RelWithDebInfo/boost
 ./bootstrap.sh --prefix=${DST_DIR} --includedir=headers --libdir=dist --with-libraries=json
 ./b2 --prefix=${DST_DIR} variant=release inlining=off debug-symbols=on install
 
+cd /c/Users/duffyj/source/repos/libs/boostorg/boost_1_88_0
+destinationDir=$REPO_DIR\\install\\msvc\\boost;
+./bootstrap.bat --prefix=${destinationDir};
+./b2.exe address-sanitizer=on --prefix=${destinationDir} --with-json -q install;
 
 export CXX=g++-14;
 export CC=gcc-14;

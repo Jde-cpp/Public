@@ -76,14 +76,11 @@ namespace Jde::DB{
 			Map->Parent->PKTable->Children.emplace_back( self );
 
 		//if mssql & schema is not default & ds schema!=config schema.
-		let isPhysical = Schema->DBSchema->IsPhysical();
-		if( isPhysical ){
-			DBName.clear();
-			if( !Syntax().CanSetDefaultSchema() && !Schema->Name.empty() && Schema->DS()->SchemaName()!=Schema->Name )
-				DBName = Ƒ( "{}.", Schema->Name );
-			if( /*!representsDBTable &&*/ Schema->Prefix.size() )
-				DBName += Schema->Prefix;
-		}
+		let& dbSchema = *Schema->DBSchema;
+		DBName.clear();
+		if( let isPhysical = dbSchema.IsPhysical(); !isPhysical && Schema->Prefix.size() ) //vs config.
+			DBName += Schema->Prefix;
+
 		DBName+=Name;
 	}
 	α View::Authorize( Access::ERights rights, UserPK userPK, SL sl )Ε->void{

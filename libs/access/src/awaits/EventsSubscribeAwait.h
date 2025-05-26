@@ -6,7 +6,7 @@
 namespace Jde::Access{
 	struct EventTypeSubscribeAwait : VoidAwait<>{
 		EventTypeSubscribeAwait( sp<QL::IQL> qlServer, string name, ESubscription type, sv cols, ESubscription events, UserPK executer, SRCE )ι:
-			VoidAwait{_sl}, _qlServer{qlServer}, _name{ move(name) }, _type{ type }, _cols{ cols }, _events{ events }, _executer{executer} {}
+			VoidAwait{sl}, _qlServer{qlServer}, _name{ move(name) }, _type{ type }, _cols{ cols }, _events{ events }, _executer{executer} {}
 	private:
 		α Suspend()ι->void override{ Subscribe(); }
 		α Subscribe()ι->TAwait<vector<QL::SubscriptionId>>::Task;
@@ -14,7 +14,7 @@ namespace Jde::Access{
 	};
 	struct EventsSubscribeAwait : VoidAwait<>{
 		EventsSubscribeAwait( sp<QL::IQL> qlServer, UserPK executer, SRCE )ι:
-			VoidAwait{_sl}, _qlServer{qlServer}, _executer{ executer }{}
+			VoidAwait{sl}, _qlServer{qlServer}, _executer{ executer }{}
 	private:
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->EventTypeSubscribeAwait::Task;

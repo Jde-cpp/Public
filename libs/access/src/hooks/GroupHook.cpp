@@ -33,7 +33,7 @@ namespace Jde::Access{
 		try{
 			//group_id, member_id & member columns.
 			optional<QL::TableQL> membersQL = [&]()->QL::TableQL{
-				auto p = find_if( Query.Tables, [](let& t){ return t.JsonName=="members"; } );
+				auto p = find_if( Query.Tables, [](let& t){ return t.JsonName.starts_with("member"); } );
 				if( p==Query.Tables.end() )
 					return {};
 				auto ql = *p;
@@ -46,7 +46,8 @@ namespace Jde::Access{
 			Query.JsonName = Query.IsPlural() ? "identities" : "identity"; //from members, want distinct + nothing in members table except for members.
 			Query.AddFilter( "is_group", true );
 			Query.ReturnRaw = true;
-			auto groups = Query.Columns.size() ? co_await QL::QLAwait( move(Query), Executer, _sl ) : jobject{};
+			let onlyHaveId = Query.Columns.size()==1 && Query.Columns[0].JsonName=="id";
+			auto groups = !onlyHaveId && Query.Columns.size() ? co_await QL::QLAwait( move(Query), Executer, _sl ) : jobject{};
 			if( membersQL ){
 				let& groupTable = *GetTable( "group_members" );
 				haveId = membersQL->FindColumn( "id" );
@@ -54,6 +55,11 @@ namespace Jde::Access{
 					membersQL->EraseColumn( "id" );
 				membersQL->Columns.push_back( QL::ColumnQL{"groupId", groupTable.GetColumnPtr("group_id")} );
 				membersQL->Columns.push_back( QL::ColumnQL{"memberId", groupTable.GetColumnPtr("member_id")} );
+				if( let idArg = membersQL->Args.if_contains("id"); idArg ){
+					auto id = *idArg;
+					membersQL->Args["memberId"] = id;
+					membersQL->Args.erase( "id" );
+				}
 				membersQL->JsonName = "groupMembers";
 				auto statement = QL::SelectStatement( *membersQL );
 				if( statement ){
@@ -125,11 +131,11 @@ namespace Jde::Access{
 		return {groupPK, memberPKs};
 	}
 
-	α GroupHook::AddBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
+	α GroupHook::AddBefore( const QL::MutationQL& m, UserPK /*executer*/, SL sl )ι->HookResult{
 		if( m.TableName()=="groupings" ){
 			auto [groupPK, memberPKs] = AddRemoveArgs( m );
 			try{
-				Authorizer().TestAddGroupMember( groupPK, move(memberPKs) );
+				Authorizer().TestAddGroupMember( groupPK, move(memberPKs), sl );
 			}catch( IException& e ){
 				return mu<QL::ExceptionAwait>( e.Move() );
 			}

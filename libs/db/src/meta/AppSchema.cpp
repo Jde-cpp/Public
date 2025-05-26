@@ -42,8 +42,10 @@ namespace Jde::DB{
 
 	α AppSchema::Initialize( sp<DB::DBSchema> db, sp<AppSchema> self )ε->void{
 		self->DBSchema = db;
-		for_each(self->Tables, [self](auto&& kv){ kv.second->Initialize(self,kv.second); });
-		for_each(self->Views, [self](auto&& kv){ kv.second->Initialize(self,kv.second); });
+		if( !self->Syntax().CanSetDefaultSchema() && db->DS()->SchemaName() != db->Name )
+			self->Prefix = Ƒ( "{}.{}", db->Name, self->Prefix );
+		for_each( self->Tables, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
+		for_each( self->Views, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
 	}
 	α AppSchema::ConfigPath()Ι->string{
 		let catalog = DBSchema->Catalog;
@@ -55,9 +57,16 @@ namespace Jde::DB{
 	}
 	α AppSchema::ResetDS()Ι->void{ DBSchema->ResetDS(); }
 	α AppSchema::Syntax()Ι->const DB::Syntax&{
-		let isPhysical = DBSchema->IsPhysical();
-		let& syntax = isPhysical ? DS()->Syntax() : DB::Syntax::Instance();
-		return syntax;
+//		let isPhysical = DBSchema->IsPhysical();
+		const DB::Syntax* syntax = &DB::Syntax::Instance();
+/*		try{
+			syntax = isPhysical ? &DS()->Syntax() : &DB::Syntax::Instance();
+		}
+		catch( IException& e ){
+			e.SetLevel( ELogLevel::Error );
+			syntax = &DB::Syntax::Instance();
+		}*/
+		return *syntax;
 	}
 
 	α AppSchema::FindTable( str name )Ι->sp<Table>{
@@ -99,5 +108,11 @@ namespace Jde::DB{
 			}
 		}
 		return result;
+	}
+	α AppSchema::ObjectPrefix()Ι->string{
+		string y{ Prefix };
+		if( let index = Prefix.find( '.' ); index!=string::npos )
+			y = index < Prefix.size() - 2 ? Prefix.substr( index + 1 ) : string{};
+		return y;
 	}
 }

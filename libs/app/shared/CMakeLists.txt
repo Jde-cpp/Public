@@ -3,10 +3,11 @@ include( ../../../build/functions.cmake )
 project( Jde.App.Shared VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
-find_package( OpenSSL REQUIRED )
 set( targetName Jde.App.Shared )
 add_library( ${targetName} )
-set( CMAKE_INCLUDE_CURRENT_DIR ON )
+compileOptions( ${targetName} )
+#set( CMAKE_INCLUDE_CURRENT_DIR ON )
+target_include_directories( ${targetName} PRIVATE ${PROJECT_SOURCE_DIR}/proto )
 
 file(GLOB sources *.cpp proto/*.cpp )
 file(GLOB headers  **/*.h $ENV{JDE_DIR}/Public/include/jde/app/shared/*.h )

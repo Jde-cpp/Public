@@ -131,7 +131,6 @@ namespace Jde::QL{
 		function<void(const DB::View&, bool, string)> addColumns = [&addColumns,&addField,&mainTable]( const DB::View& dbTable, bool isMap, string prefix={} ){
 			for( let& c : dbTable.Columns ){
 				let& column = *c;
-//				BREAK_IF( column.Name=="provider_id" );
 				string fieldName;
 				string qlTypeName;
 				auto rootType{ EFieldKind::Scalar };
@@ -206,7 +205,7 @@ namespace Jde::QL{
 		return jTable;
 	}
 
-α IntrospectEnum( const sp<DB::Table> baseTable, const TableQL& fieldTable, jobject& jData )ε->jobject{
+α introspectEnum( const sp<DB::Table> baseTable, const TableQL& fieldTable)ε->jobject{
 		auto dbTable = baseTable->QLView ? baseTable->QLView : AsView(baseTable);
 		DB::SelectClause select;
 		for_each( fieldTable.Columns, [&select, &dbTable](let& x){
@@ -243,7 +242,7 @@ namespace Jde::QL{
 					y = IntrospectFields( typeName, *dbTable, qlTable );
 			}
 			else if( qlTable.JsonName=="enumValues" )
-				y = IntrospectEnum( dbTable, qlTable, y );
+				y = introspectEnum( dbTable, qlTable );
 			else
 				THROW( "__type data for '{}' not supported", qlTable.JsonName );
 		}

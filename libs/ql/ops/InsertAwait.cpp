@@ -1,10 +1,8 @@
 #include "InsertAwait.h"
-#include <jde/db/Database.h>
+#include <jde/db/IDataSource.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/names.h>
-#include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
-#include <jde/access/IAcl.h>
 #include <jde/ql/LocalSubscriptions.h>
 #include "../types/QLColumn.h"
 
@@ -49,11 +47,11 @@ namespace Jde::QL{
 			}
 		}
 		if( table.Extends && !nested )
-			AddStatement( *table.Extends, input, false, table.GetSK0()->Criteria );
-		AddStatement( table, input, nested );
+			AddStatement( *table.Extends, input, table.GetSK0()->Criteria );
+		AddStatement( table, input );
 	}
 
-	α InsertAwait::AddStatement( const DB::Table& table, const jobject& input, bool nested, str criteria )ε->void{
+	α InsertAwait::AddStatement( const DB::Table& table, const jobject& input, optional<DB::Criteria> criteria )ε->void{
 		uint cNonDefaultArgs{};
 		string missingColumnsError{};
 		DB::InsertClause statement;
@@ -77,8 +75,8 @@ namespace Jde::QL{
 				++cNonDefaultArgs;
 				missingColumns.emplace_back( c );//also needs to be inserted, insert null for now.
 			}
-			else if( c->Name==criteria )
-				value = Value{ true };
+			else if( criteria && c->Name==criteria->Column->Name )
+				value = criteria->Value;
 			else
 				value = *c->Default;
 			statement.Add( c, value.Variant );

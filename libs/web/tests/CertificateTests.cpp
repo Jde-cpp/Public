@@ -9,7 +9,6 @@ namespace Jde::Web{
 	using Mock::Host;
 	using Mock::Port;
 
-	static sp<Jde::LogTag> _logTag{ Logging::Tag( "test" ) };
 	using CryptoSettings = Crypto::CryptoSettings;
 	struct CertificateTests : public ::testing::Test{
 	protected:

@@ -105,7 +105,7 @@ template<typename... Args>
 }
 
 namespace Logging{
-	α Initialized()ι->bool;
+	Φ Initialized()ι->bool;
 
 	struct MessageBase{
 		using ID=LogEntryPK;
@@ -131,14 +131,14 @@ namespace Logging{
 		explicit Γ MessageBase( ELogLevel level, SL sl )ι;
 	};
 
-	struct Message /*final*/ : MessageBase{
+	struct Γ Message /*final*/ : MessageBase{
 		Message( const MessageBase& b )ι;
 		Message( const Message& x )ι;
-		Γ Message( ELogLevel level, string message, SRCE )ι;
-		Γ Message( sv Tag, ELogLevel level, string message, SRCE )ι;
-		Γ Message( sv Tag, ELogLevel level, string message, char const* file_, char const * function_, boost::uint_least32_t line_ )ι;
+		Message( ELogLevel level, string message, SRCE )ι;
+		Message( ELogTags tags, ELogLevel level, string message, SRCE )ι;
+		Message( ELogTags tags, ELogLevel level, string message, char const* file_, char const * function_, boost::uint_least32_t line_ )ι;
 
-		sv Tag;//TODO ELogTags
+		ELogTags Tags;
 		up<string> _pMessage;//TODO move to protected
 		string _fileName;
 	protected:

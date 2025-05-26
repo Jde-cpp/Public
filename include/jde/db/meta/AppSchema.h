@@ -1,9 +1,10 @@
 #pragma once
+#include <jde/db/exports.h>
 
 namespace Jde::Access{ struct IAcl; }
 namespace Jde::DB{
 	struct Catalog; struct DBSchema; struct IDataSource;  struct Syntax; struct Table; struct View;
-	struct AppSchema{
+	struct ΓDB AppSchema{
 		AppSchema( sv name, const jobject& appSchema, sp<Access::IAcl> authorizer )ε;
 		AppSchema( sv name, flat_map<string,sp<Table>> tables, sv prefix )ι:Name{name},Prefix{prefix},Tables{tables}{}
 
@@ -22,6 +23,7 @@ namespace Jde::DB{
 		α GetViewPtr( str name, SRCE )ε->sp<View>;
 
 		α FindDefTable( const Table& t1, const Table& t2 )Ι->sp<Table>;
+		α ObjectPrefix()Ι->string;
 
 		string Name;
 		sp<DB::DBSchema> DBSchema;

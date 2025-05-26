@@ -1,4 +1,4 @@
-
+﻿
 #define α auto
 #define β virtual auto
 #define Ω static auto

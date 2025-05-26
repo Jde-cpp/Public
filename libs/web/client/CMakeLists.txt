@@ -1,12 +1,20 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( ../../../build/functions.cmake )
+message( Jde.Web.Client)
 project( Jde.Web.Client VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
-find_package( OpenSSL REQUIRED )
+if( WIN32 )
+	add_definitions( -DZLIB_USE_STATIC_LIBS -D )
+	set( ZLIB_ROOT ${LIB_ROOT}/zlib )
+endif()
+find_package( ZLIB REQUIRED )
+include_directories( ${ZLIB_INCLUDE_DIRS} )
+
 set( targetName Jde.Web.Client )
 add_library( ${targetName} )
-
+compileOptions( ${targetName} )
+target_compile_options( ${targetName} PRIVATE /bigobj )
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 file( GLOB sources *.cpp http/*.cpp socket/*.cpp )
 set( includeDir $ENV{JDE_DIR}/Public/include/jde/web/client )

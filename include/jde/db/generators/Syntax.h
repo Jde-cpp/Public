@@ -3,21 +3,26 @@
 #define SYNTAX_H
 #include <jde/framework/str.h>
 #include <jde/db/Value.h>
+#include "../exports.h"
 
+#define Φ ΓDB α
 namespace Jde::DB{
 	struct Column; struct Join; struct Table;
 	enum class EOperator : uint8{Equal,NotEqual,Regex,Glob,In,NotIn,Greater,GreaterOrEqual,Less,LessOrEqual,ElementMatch};
-	α ToOperator( sv op )ι->EOperator;
+	Φ ToOperator( sv op )ι->EOperator;
 	α ToString( EOperator op )ι->string;
 	struct Syntax{
-		Ω Instance()->const Syntax&;
+		ΓDB Ω Instance()->const Syntax&;
 		virtual ~Syntax()=default;
 		α FormatOperator( const Column& col, EOperator op, uint size=1, SRCE )Ε->string;
 		β AddDefault( sv tableName, sv columnName, Value dflt )Ι->string;
 		β AltDelimiter()Ι->sv{ return {}; }
 		β CanSetDefaultSchema()Ι->bool{ return false; }
 		β CatalogSelect()Ι->sv{ return "select db_name();"; }
+		β CreatePrimaryKey( str tableName, str columnName )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
 		β DateTimeSelect( sv columnName )Ι->string{ return string{ columnName }; }
+		β EscapeDdl( sv sql )Ι->string;
+		β HasLength( EType type )Ι->bool{ return type == EType::VarChar || type == EType::Binary || type == EType::Char || type == EType::VarBinary; }
 		β HasCatalogs()Ι->bool{ return true; }
 		β HasUnsigned()Ι->bool{ return false; }
 		β IdentityColumnSyntax()Ι->sv{ return "identity(1001,1)"; }
@@ -25,7 +30,6 @@ namespace Jde::DB{
 		β Limit( str syntax, uint limit )Ε->string;
 		β NeedsIdentityInsert()Ι->bool{ return true; }
 		β NowDefault()Ι->iv{ return UtcNow(); }
-		//β ProcFileSuffix()Ι->sv{ return ".ms"; }
 		β ProcParameterPrefix()Ι->sv{ return "@"; }
 		β ProcStart()Ι->sv{ return "as\n\tset nocount on;\n"; }
 		β ProcEnd()Ι->sv{ return {}; }
@@ -47,7 +51,9 @@ namespace Jde::DB{
 		α AltDelimiter()Ι->sv override{ return "$$"; }
 		α CanSetDefaultSchema()Ι->bool{ return true; }
 		α CatalogSelect()Ι->sv override{ return {}; }
+		α CreatePrimaryKey( str tableName, str columnName )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
 		α DateTimeSelect( sv columnName )Ι->string override{ return Ƒ( "UNIX_TIMESTAMP({})", columnName ); }
+		α HasLength( EType /*type*/ )Ι->bool { return true; }
 		α HasCatalogs()Ι->bool{ return false; }
 		α HasUnsigned()Ι->bool override{ return true; }
 		α IdentityColumnSyntax()Ι->sv override{ return "AUTO_INCREMENT"; }
@@ -55,7 +61,6 @@ namespace Jde::DB{
 		α Limit( str sql, uint limit )Ι->string override{ return Ƒ("{} limit {}", sql, limit); }
 		α NeedsIdentityInsert()Ι->bool override{ return false; }
 		α NowDefault()Ι->iv override{ return "CURRENT_TIMESTAMP"; }
-		//α ProcFileSuffix()Ι->sv override{ return {}; }
 		α ProcParameterPrefix()Ι->sv override{ return {}; }
 		α ProcStart()Ι->sv override{ return "begin"; }
 		α ProcEnd()Ι->sv override{ return "end"; }
@@ -68,4 +73,5 @@ namespace Jde::DB{
 		α ZeroSequenceMode()Ι->sv override{ return "SET @@session.sql_mode = CASE WHEN @@session.sql_mode NOT LIKE '%NO_AUTO_VALUE_ON_ZERO%' THEN CASE WHEN LENGTH(@@session.sql_mode)>0 THEN CONCAT_WS(',',@@session.sql_mode,'NO_AUTO_VALUE_ON_ZERO') ELSE 'NO_AUTO_VALUE_ON_ZERO' END ELSE @@session.sql_mode END"; }
 	};
 }
+#undef Φ
 #endif

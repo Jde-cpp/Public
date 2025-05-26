@@ -29,10 +29,9 @@ namespace CatalogDdl{
 			let catalogName = schema.DBSchema->Catalog->Name;
 			if( ds->CatalogName()==catalogName )
 				ds = SysDS( ds );
-
 			DropCatalog( *ds, catalogName );
 			Create( *ds, catalogName );
-			ds = ds->AtCatalog( catalogName );
+			schema.DBSchema->Catalog->SetDS( ds->AtCatalog(catalogName) );
 		}
 		SchemaDdl::Drop( schema );
 	}

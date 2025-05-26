@@ -10,7 +10,7 @@ namespace Jde::QL{
 
 	struct IListener{
 		IListener( str name )ι:Name{name}{}
-		β OnChange( const jvalue& j, uint clientId )ε->void=0;
+		β OnChange( const jvalue& j, SubscriptionId clientId )ε->void=0;
 		flat_set<SubscriptionId> Ids;
 		string Name;
 	};

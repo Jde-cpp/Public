@@ -1,4 +1,5 @@
 #pragma once
+#include "../exports.h"
 
 namespace Jde::DB{
 	struct Column; struct Table; struct View; struct WhereClause;
@@ -10,7 +11,7 @@ namespace Jde::DB{
 		string ToAlias;
 		string FromAlias;
 	};
-	struct FromClause final{
+	struct ΓDB FromClause final{
 		FromClause()=default;
 		FromClause( const sp<View>& v )ι;
 		FromClause( const sp<Table>& t )ε;

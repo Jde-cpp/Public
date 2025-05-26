@@ -62,7 +62,6 @@ namespace Jde::Web::Client{
 		}, _ws );
 	}
 
-	auto _logTag = Logging::Tag( "test" );
 	α ClientSocketStream::AsyncWrite( string&& buffer, sp<IClientSocketSession> /*session*/ )ι->Task{
 		LockAwait await = _writeLock.Lock(); //gcc doesn't like co_await _writeLock.Lock();
 		_writeGuard = (co_await await).UP<CoGuard>();

@@ -10,7 +10,7 @@ namespace Jde::Opc{
 		NodeId( UA_NodeId&& x )ι:UA_ExpandedNodeId{move(x), UA_EXPANDEDNODEID_NULL.namespaceUri, UA_EXPANDEDNODEID_NULL.serverIndex}{}
 		NodeId( const UA_NodeId& x )ι:NodeId{}{ UA_NodeId_copy( &x, &nodeId ); }
 		NodeId( const UA_ExpandedNodeId& x )ι:NodeId{}{ UA_ExpandedNodeId_copy( &x, this ); }
-		NodeId( const flat_map<string,string>& x )ι;//rest params
+		NodeId( const flat_map<string,string>& x )ε;//rest params
 		NodeId( const jobject& j )ε;
 		NodeId( const NodeId& x )ι;
 		NodeId( Proto::ExpandedNodeId&& x )ι;

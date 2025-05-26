@@ -6,7 +6,8 @@ namespace Jde::Web{
 	optional<std::jthread> _webThread;
 
 	struct ApplicationServer final : Server::IApplicationServer{
-		α GraphQL( string&& q, UserPK userPK, bool returnRaw=true, SRCE )ι->up<TAwait<jvalue>>{ return {}; }
+		α IsLocal()ι->bool{ return true; }
+		α GraphQL( string&&, UserPK, bool, SL )ι->up<TAwait<jvalue>>{ return {}; }
 		α SessionInfoAwait( SessionPK, SL )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return {}; }
 	};
 

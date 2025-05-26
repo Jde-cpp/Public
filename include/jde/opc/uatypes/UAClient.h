@@ -57,7 +57,6 @@ namespace Jde::Opc{
 		UA_ClientConfig _config{};//TODO move private.
 		string UserId;
 	private:
-		Ω LogTag()ι->sp<Jde::LogTag>;
 		α Configuration()ε->UA_ClientConfig*;
 		α Create()ι->UA_Client*;
 		α Connect()ε->void;
@@ -82,7 +81,6 @@ namespace Jde::Opc{
 		UAMonitoringNodes MonitoredNodes;//destroy first
 	};
 
-#define _logTag LogTag()
 	Ŧ UAClient::ClearRequest( UA_Client* ua, RequestId requestId )ι->up<T>{
 		auto p = TryFind( ua );
 		return p ? p->ClearRequest<T>( requestId ) : up<T>{};
@@ -92,4 +90,3 @@ namespace Jde::Opc{
 		return _asyncRequest.ClearRequest<T>( requestId );
 	}
 }
-#undef _logTag

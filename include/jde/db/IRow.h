@@ -62,5 +62,27 @@ namespace Jde::DB{
 	template<> Ξ IRow::Get<optional<TimePoint>>( uint i, SL sl )Ε->optional<TimePoint>{ return GetTimePointOpt(i, sl); }
 	Ŧ IRow::Get( uint i, SL sl )Ε->T{ return T{Get<typename T::Type>(i, sl)}; }//for pk
 
+	struct Row final: IRow {
+		Row( vector<Value>&& values )ι:_values{move(values)}{}
+		α Move()ι->up<IRow> override{ return mu<Row>( move(_values)); }
+		α operator[]( uint i )Ι->const Value&{ return _values[i]; }
+		α operator[]( uint i )ι->Value&{ return _values[i]; }
+		α GetBit( uint i, SL )Ι->bool override{ return _values[i].get_bool(); }
+		α MoveString( uint i, SL )ι->string{ return _values[i].move_string(); }
+		α GetInt( uint i, SL )Ι->int64_t{ return _values[i].get_int(); }
+		α GetInt32( uint i, SL )Ι->int32_t{ return _values[i].get_int32(); }
+		α GetIntOpt( uint i, SL )Ι->std::optional<_int>{ return IsNull(i) ? std::optional<_int>{} : _values[i].get_int(); }
+		α GetDouble( uint i, SL )Ι->double{ return _values[i].get_double(); }
+		α GetDoubleOpt( uint i, SL )Ι->std::optional<double>{ return IsNull(i) ? std::optional<double>{} : _values[i].get_double(); }
+		α GetTimePoint( uint i, SL )Ι->DBTimePoint{ return _values[i].get_time(); }
+		α GetTimePointOpt( uint i, SL )Ι->std::optional<DBTimePoint>{ return IsNull(i) ? std::optional<DBTimePoint>{} : _values[i].get_time(); }
+		α GetUInt( uint i, SL )Ι->uint{ return _values[i].get_number<uint>(); }
+		α GetUIntOpt( uint i, SL )Ι->std::optional<uint>{ return IsNull(i) ? std::optional<uint>{} : _values[i].get_uint(); }
+		α IsNull( uint i )Ι{ return _values[i].Type() == EValue::Null; }
+		α Size()Ι->uint{ return _values.size(); }
+	private:
+		α GetString( uint i, SRCE )Ι->string{ ASSERTSL(i<_values.size(), sl); return _values[i].get_string(); }
+		vector<Value> _values;
+	};
 }
 #endif

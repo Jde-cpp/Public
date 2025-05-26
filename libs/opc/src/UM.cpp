@@ -7,8 +7,6 @@
 #define let const auto
 
 namespace Jde::Opc{
-	static sp<LogTag> _logTag = Logging::Tag( "iot.um" );
-
 	boost::concurrent_flat_map<SessionPK,flat_map<OpcNK,tuple<string,string>>> _sessions; //loginName,password
 
 	AuthenticateAwait::AuthenticateAwait( str loginName, str password, str opcNK, str endpoint, bool isSocket, SL sl )ι:

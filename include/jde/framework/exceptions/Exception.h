@@ -40,7 +40,7 @@ namespace Jde{
 		using base=std::exception;
 
 		//IException( string value, ELogLevel level=DefaultLogLevel, uint code=0, SRCE )ι;
-		IException( string value, ELogLevel level=DefaultLogLevel, uint32 code=0, sp<LogTag>&& tag={}, SRCE )ι;
+		IException( string value, ELogLevel level=DefaultLogLevel, uint32 code=0, ELogTags tags={}, SRCE )ι;
 		$ IException( IException&& e, fmt::format_string<Args...> m, Args&& ...args )ι;
 		IException( IException&& e )ι;
 		IException( const IException& e )ι;
@@ -63,9 +63,9 @@ namespace Jde{
 		α Push( SL sl )ι{ _stack.stack.push_back(sl); }
 		α Stack()Ι->const StackTrace&{ return _stack; }
 		β Ptr()ι->std::exception_ptr{ return Jde::make_exception_ptr(move(*this)); }
-		α SetTag( sp<LogTag> x )ι{ _pTag=x; }
-		α Tags()Ι->ELogTags{ return _pTag ? ToLogTags( _pTag->Id ) : ELogTags::None; }
-		α SetTags( ELogTags tags )ι{ _pTag = Logging::Tag(tags | ELogTags::Exception); }
+		//α SetTag( sp<LogTag> x )ι{ _pTag=x; }
+		α Tags()Ι->ELogTags{ return _tags; }
+		α SetTags( ELogTags tags )ι{ _tags = tags | ELogTags::Exception; }
 		Ω EmptyPtr()ι->const up<IException>&;
 	protected:
 		IException( SRCE )ι:IException{ {}, ELogLevel::Debug, 0, {}, sl }{}
@@ -75,7 +75,7 @@ namespace Jde{
 		mutable string _what;
 		sp<std::exception> _pInner;//sp to save custom copy constructor
 		sv _format;
-		sp<LogTag> _pTag;
+		ELogTags _tags{ELogTags::None};
 		vector<string> _args;//TODO change to array
 		static constexpr ELogLevel DefaultLogLevel{ ELogLevel::Debug };
 	public:
@@ -130,8 +130,6 @@ namespace Jde{
 	};
 
 	struct Γ CodeException /*final*/ : IException{
-		CodeException( std::error_code code, sp<LogTag> tag, ELogLevel level=ELogLevel::Error, SRCE )ι;
-		CodeException( std::error_code code, sp<LogTag> tag, string value, ELogLevel level=ELogLevel::Error, SRCE )ι;
 		CodeException( std::error_code code, ELogTags tags, ELogLevel level=ELogLevel::Debug, SRCE )ι;
 		CodeException( std::error_code code, ELogTags tags, string value, ELogLevel level=ELogLevel::Debug, SRCE )ι;
 
@@ -200,7 +198,7 @@ namespace Jde{
 	$ IException::IException( ELogTags tags, SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&& ...args )ι:
 		_stack{ sl },
 		_format{ sv{m.get().data(), m.get().size()} },
-		_pTag{ Logging::Tag(tags | ELogTags::Exception) },
+		_tags{ tags | ELogTags::Exception },
 		Code{ Calc32RunTime(_format) },
 		_level{ l }{
 		_args.reserve( sizeof...(args) );

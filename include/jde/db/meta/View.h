@@ -2,6 +2,8 @@
 #include "../exports.h"
 #include <jde/access/usings.h>
 
+#define Φ ΓDB α
+
 namespace Jde::DB{
 	struct Column; struct AppSchema; struct Syntax; struct Table;
 
@@ -15,7 +17,6 @@ namespace Jde::DB{
 		β GetColumn( sv name, SRCE )Ε->const Column&;
 		β GetColumnPtr( sv name, SRCE )Ε->sp<Column>;
 		β GetColumns( vector<string> names, SRCE )Ε->vector<sp<Column>>;
-		α SequenceColumn()Ι->sp<Column>;
 		α FindPK()Ι->sp<Column>;
 		α FindFK( sv pkTableName )Ι->sp<Column>;
 		α GetPK( SRCE )Ε->sp<Column>;
@@ -25,6 +26,7 @@ namespace Jde::DB{
 		α IsEnum()Ι->bool;
 		β IsView()Ι->bool{ return true; }
 		α JsonName()Ι->string;
+		α SequenceColumn()Ι->sp<Column>;
 		α Syntax()Ι->const DB::Syntax&;
 
 		α ChildTable()Ι->sp<View>;
@@ -45,6 +47,7 @@ namespace Jde::DB{
 		Access::ERights Operations; //user operations.
 		vector<sp<View>> Children;
 	};
-	α AsTable(sp<View> v)ι->sp<Table>;
-	α AsTable(const View& v)ε->const Table&;
+	Φ AsTable(sp<View> v)ι->sp<Table>;
+	Φ AsTable(const View& v)ε->const Table&;
 }
+#undef Φ

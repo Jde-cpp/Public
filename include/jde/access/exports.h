@@ -1,5 +1,5 @@
 #pragma once
-#ifdef Jde_EXPORTS
+#ifdef Jde_ACCESS_EXPORTS
 	#ifdef _MSC_VER
 		#define ΓA __declspec( dllexport )
 	#else

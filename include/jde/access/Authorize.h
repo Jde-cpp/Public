@@ -64,6 +64,6 @@ namespace Jde::Access{
 		flat_map<RolePK,Role> Roles;
 		flat_multimap<IdentityPK,PermissionRole> Acl;
 
-		friend class AccessListener; friend class Loader;
+		friend struct AccessListener; friend struct Loader;
 	};
 }

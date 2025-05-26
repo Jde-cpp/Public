@@ -16,7 +16,7 @@
 			</ng-template>
 		</mat-tab>
 		<mat-tab>
-			<ng-template mat-tab-label>Groups</ng-template>
+			<ng-template mat-tab-label title="Child Groups">Groups</ng-template>
 			<ng-template matTabContent>
 				<ql-selector type=Grouping [ql]=ql [excludedIds]=[id] [(selections)]=childGroups></ql-selector>
 			</ng-template>
@@ -24,7 +24,7 @@
 		<mat-tab>
 			<ng-template mat-tab-label>Roles</ng-template>
 			<ng-template matTabContent>
-				<ql-selector type=Role [ql]=ql [(selections)]=roles ></ql-selector>
+				<ql-selector type=Role [ql]=ql [(selections)]=roles></ql-selector>
 			</ng-template>
 		</mat-tab>
 		<mat-tab>

@@ -3,22 +3,20 @@
 #include "WindowsUtilities.h"
 #include "../../Framework/source/DateTime.h"
 
-namespace Jde
-{
-	α Windows::ToWString( const string& value)ι->std::wstring
-	{
+#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+#pragma warning( disable : 4996 )
+namespace Jde{
+	α Windows::ToWString( const string& value)ι->std::wstring{
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 		return converter.from_bytes( value );
 	}
 
-	α  Windows::ToString( const std::wstring& value)ι->string
-	{
+	α Windows::ToString( const std::wstring& value)ι->string{
 		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 		return converter.to_bytes( value );
 	}
 
-	α Windows::ToSystemTime( TimePoint time )ι->SYSTEMTIME
-	{
+	α Windows::ToSystemTime( TimePoint time )ι->SYSTEMTIME{
 		DateTime date{time};
 		SYSTEMTIME systemTime;
 		systemTime.wYear = static_cast<WORD>( date.Year() );

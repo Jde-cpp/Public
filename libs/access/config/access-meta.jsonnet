@@ -89,7 +89,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		},
 		users:{
 			columns: {
-				identityId: tables.identities.columns.identityId+{ pkTable:"identities", criteria: "not is_group" },
+				identityId: tables.identities.columns.identityId+{ pkTable:"identities", criteria: {columnName:"is_group", value: false} },
 				loginName: valuesColumns.name+{ nullable: true },
 				password: types.varbinary+{ length: 2048, encrypted:true, nullable: true, i:101 },
 				modulus: types.varchar+{ length: 2048, nullable:true, comment: "Used for RSA", i:102 },
@@ -100,7 +100,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		},
 		groupings:{
 			columns: {
-				identityId: tables.identities.columns.identityId+{ pkTable: "identities", criteria: "is_group"  },
+				identityId: tables.identities.columns.identityId+{ pkTable: "identities", criteria: {columnName:"is_group", value: true} },
 				memberId: 	tables.identities.columns.identityId+{ pkTable: "identities", name: "member_id", sk: 1, i:1 },
 			},
 			map: {parentId:"identity_id", childId:"member_id"},
@@ -131,6 +131,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:102, nullable:true, comment: "available rights for this resource", sk:null },//why?
 			}+targetColumns,
 			ops: ["Delete"],
+			naturalKeys: [["target", "criteria"]],
 		},
 		permissions:{
 			columns: {

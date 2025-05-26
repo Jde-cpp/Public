@@ -1,13 +1,13 @@
 #pragma once
-//#include <jde/db/Value.h>
-#include <jde/db/generators/FromClause.h>
-#include <jde/db/generators/SelectClause.h>
-#include <jde/db/generators/Sql.h>
-#include <jde/db/generators/WhereClause.h>
+#include "../exports.h"
+#include "FromClause.h"
+#include "SelectClause.h"
+#include "Sql.h"
+#include "WhereClause.h"
 
 namespace Jde::DB{
 	struct Value;
-	struct Statement final{
+	struct ΓDB Statement final{
 //		Statement( string&& sql, vector<DB::Value>&& params )ι:Sql{move(sql)}, Parameters{params} {}
 		Statement()ι=default;
 		Statement( SelectClause&& select, FromClause&& from, WhereClause&& where )ι:Select{move(select)}, From{move(from)}, Where{move(where)} {}
@@ -19,6 +19,5 @@ namespace Jde::DB{
 		WhereClause Where;
 	private:
 		uint _limit{};
-		//vector<Value> Params;
 	};
 }

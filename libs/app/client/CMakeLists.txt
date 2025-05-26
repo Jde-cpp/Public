@@ -3,12 +3,13 @@ include( ../../../build/functions.cmake )
 project( Jde.App.Client VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
-find_package( OpenSSL REQUIRED )
+#find_package( OpenSSL REQUIRED )
 include_directories( $ENV{JDE_DIR}/Public/include/jde/web/client/proto )
 #link_directories( ${Protobuf_DIR}/../.. )
 
 set( targetName Jde.App.Client )
 add_library( ${targetName} )
+compileOptions( ${targetName} )
 file(GLOB sources *.cpp awaits/*.cpp )
 file(GLOB headers  **/*.h )
 target_sources( ${targetName}

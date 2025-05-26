@@ -143,7 +143,7 @@ namespace Jde::Access{
 		if( users.size() )
 			SetUserPermissions( move(users), l );
 	}
-	α Authorize::AddAcl( IdentityPK::Type userGroupPK, uint permissionPK, ERights allowed, ERights denied, ResourcePK resourcePK )ι->void{
+	α Authorize::AddAcl( IdentityPK::Type userGroupPK, PermissionPK permissionPK, ERights allowed, ERights denied, ResourcePK resourcePK )ι->void{
 		ul l{ Mutex };
 		const PermissionRole permissionRole{ std::in_place_index<0>, permissionPK };
 		ASSERT( resourcePK );
@@ -184,7 +184,7 @@ namespace Jde::Access{
 			RecalcGroupMembers( identityPK.GroupPK(), l );
 	}
 
-	α Authorize::ToIdentityPK( IdentityPK::Type userGroupPK, const ul& l )Ι->IdentityPK{
+	α Authorize::ToIdentityPK( IdentityPK::Type userGroupPK, const ul& )Ι->IdentityPK{
 		auto user = Users.find({userGroupPK});
 		return user!=Users.end() ? IdentityPK{ user->first } : IdentityPK{ GroupPK{userGroupPK} };
 	}

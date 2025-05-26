@@ -3,8 +3,13 @@
 #include "../Value.h"
 
 namespace Jde::DB{
-	struct Table; struct View;
+	struct Column; struct Table; struct View;
 	enum class ECardinality : uint8{ Zero=0, One=1, Many=2 };
+	struct Criteria {
+		sp<DB::Column> Column;
+		Value Value;
+	};
+
 	struct ΓDB Column{
 		Column()=default;
 		Column( sv name )ι;  //placeholder
@@ -17,11 +22,10 @@ namespace Jde::DB{
 		α IsFlags()Ι->bool;
 		α Initialize( sp<DB::View> view )ε->void;
 		α IsPK()Ι->bool;  //surrogate keys==1 && SKIndex==0
-		//α View()Ι->sp<DB::View>;
 
 		string Name;
 
-		string Criteria;//unUsers=not is_group
+		optional<DB::Criteria> Criteria;//unUsers=not is_group
 		bool IsNullable;
 		optional<uint> MaxLength;
 		optional<uint> NumericPrecision; //currently for db schema columns

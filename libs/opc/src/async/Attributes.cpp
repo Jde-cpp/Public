@@ -2,7 +2,7 @@
 #define let const auto
 
 namespace Jde::Opc::Attributes{
-	let _logTag = Logging::Tag( "app.attributes" );
+	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::Opc };
 	α OnResonse( UA_Client* ua, void* userdata, RequestId requestId, StatusCode /*status*/, UA_NodeId* dataType )ι->void{
 		let handle = userdata ? (RequestId)(uint)userdata : requestId;
 		string logPrefix = format( "[{:x}.{}.{}]", (uint)ua, handle, requestId );

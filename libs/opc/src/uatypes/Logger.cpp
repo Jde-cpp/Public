@@ -45,7 +45,19 @@ namespace Jde::Opc{
 	{}
 }
 namespace Jde{
-	α Opc::LogTagParser( sv name )ι->optional<ELogTags>{
+	α Opc::TagToString( ELogTags tags )ι->string{
+		string y;
+		for( uint i=0; i<EOpcLogTagstrings.size(); ++i ){
+			if( (uint)tags & (1ull << (32+i)) )
+				y += string{ EOpcLogTagstrings[i] }+'.';
+		}
+		if( y.size() )
+			y.pop_back();
+		else
+			y = "NotFound";
+		return y;
+	}
+	α Opc::TagFromString( sv name )ι->optional<ELogTags>{
 		optional<ELogTags> tag;
 		for( uint i=0; !tag && i<EOpcLogTagstrings.size(); ++i )
 			if( EOpcLogTagstrings[i]==name )

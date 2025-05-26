@@ -16,12 +16,12 @@ namespace Jde::DB{
 	struct IServerMeta; struct Sql; struct Syntax;
 	namespace Types{ struct IRow; }
 
-	struct Γ IDataSource : std::enable_shared_from_this<IDataSource>{
+	struct ΓDB IDataSource : std::enable_shared_from_this<IDataSource>{
 		virtual ~IDataSource(){}//warning
-
+		β Disconnect()ε->void = 0;
 		α CatalogName( SRCE )ε->string;
 		α SchemaName( SRCE )ε->string;
-		β SchemaNameConfig( SRCE )ε->string{ return {}; }
+		β SchemaNameConfig( SL=SRCE_CUR )ε->string{ return {}; }
 		β AtCatalog( sv catalog, SRCE )ε->sp<IDataSource> = 0; //create new pointing to other catalog.  If have catalogs.
 		β AtSchema( sv schema, SRCE )ε->sp<IDataSource> = 0; //create new pointing to other schema.  If can specify schema in connection.
 		β ServerMeta()ι->IServerMeta& =0;

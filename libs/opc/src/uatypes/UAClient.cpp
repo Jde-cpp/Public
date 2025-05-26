@@ -14,8 +14,7 @@
 #define let const auto
 
 namespace Jde::Opc{
-	sp<LogTag> _logTag{ Logging::Tag("app.client") };
-	α UAClient::LogTag()ι->sp<Jde::LogTag>{ return _logTag; }
+	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::Opc };
 	flat_map<tuple<string,string>,sp<UAClient>> _clients; shared_mutex _clientsMutex;
 	concurrent_flat_set<sp<UAClient>> _awaitingActivation;
 
@@ -79,6 +78,7 @@ namespace Jde::Opc{
 		}
 		config->securityPolicies = securityPolicies.release();
 		config->securityPoliciesSize = size;
+		config->secureChannelLifeTime = 60 * 60 * 1000;
 
 		return config;
 	}
@@ -182,7 +182,7 @@ namespace Jde::Opc{
 				_clients.erase(p);
 			}
 			else
-				DBG( "[{:x}]({:x}) - could not find client={:x}.", pClient->Handle(), e.Code, e.what() );
+				DBG( "[{:x}]({:x}) - could not find client='{}'.", pClient->Handle(), e.Code, e.what() );
 		}
 
 		if( e.Code==UA_STATUSCODE_BADCONNECTIONCLOSED || e.Code==UA_STATUSCODE_BADSERVERNOTCONNECTED ){
@@ -353,7 +353,7 @@ namespace Jde::Opc{
 		sl _{ _clientsMutex };
 		sp<UAClient> y;
 		if( Process::ShuttingDown() )
-			Logging::Log( Logging::Message{ELogLevel::Trace, "Application is shutting down.", srce}, _logTag );
+			Warning{ srce, _tags, "Application is shutting down." };
 		else if( auto p = find_if(_clients, [ua](let& c){return c.second->_ptr==ua;}); p!=_clients.end() )
 			y = p->second;
 		return y;

@@ -6,9 +6,18 @@
 #define let const auto
 
 namespace Jde::Web::Client{
-	Duration _handshakeTimeout{ Settings::FindDuration("web/client/timeoutHandshake").value_or(std::chrono::seconds(30)) };
-	Duration _timeout{ Settings::FindDuration("web/client/timeout").value_or(std::chrono::seconds(30)) };
-	Duration _closeTimeout{ Settings::FindDuration("web/client/timeoutClose").value_or(std::chrono::seconds(30)) };
+	Duration _handshakeTimeout{};
+	α handshakeTimeout()ι{
+		if( _handshakeTimeout==Duration::zero() )
+			_handshakeTimeout = Settings::FindDuration("web/client/timeoutHandshake").value_or(std::chrono::seconds(30));
+		return _handshakeTimeout;
+	}
+	Duration _timeout{};
+	α Timeout()ι{
+		if( _timeout==Duration::zero() )
+			_timeout = Settings::FindDuration("web/client/timeout").value_or( std::chrono::seconds(30) );
+		return _timeout;
+	}
 	ssl::context _ctx{ ssl::context::tlsv12_client };// The SSL context is required, and should hold certificates
 	ELogTags _tags{ ELogTags::HttpClientWrite };
 	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
@@ -37,7 +46,7 @@ namespace Jde::Web::Client{
 			_session{session}
 		{}
 		α Suspend()ι->void override{
-			_session->Stream().expires_after( _handshakeTimeout );
+			_session->Stream().expires_after( handshakeTimeout() );
 			_session->Stream().async_connect( _resolvedResults, beast::bind_front_handler(&ConnectAwait::OnConnect, this) );
 		}
 		α OnConnect( beast::error_code ec, tcp::resolver::results_type::endpoint_type )->void{
@@ -54,7 +63,7 @@ namespace Jde::Web::Client{
 		using base=VoidAwait<>;
 		HandshakeAwait( sp<ClientHttpSession> session, SRCE )ι:base{ sl }, _session{session}{}
 		α Suspend()ι->void override{
-			_session->Stream().expires_after( _handshakeTimeout );
+			_session->Stream().expires_after( handshakeTimeout() );
 			_session->Stream().async_handshake( beast::bind_front_handler(&HandshakeAwait::OnHandshake, this) );
 		}
 		α OnHandshake( beast::error_code ec )->void{
@@ -93,7 +102,7 @@ namespace Jde::Web::Client{
 		AsyncWriteAwait( http::request<http::string_body> req, const HttpAwaitArgs& args, sp<ClientHttpSession> session, SRCE )ι:base{ sl }, _req{move(req)}, _args{args}, _session{session}{}
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->void{
-			_session->Stream().expires_after( _timeout );
+			_session->Stream().expires_after( Timeout() );
 			_session->Stream().async_write( _req, beast::bind_front_handler(&AsyncWriteAwait::OnWrite, this) );
 		}
 		α OnWrite( beast::error_code ec, std::size_t bytes_transferred )->void{
@@ -135,7 +144,7 @@ namespace Jde::Web::Client{
 		ShutdownAwait( sp<ClientHttpSession> session, SRCE )ι:base{ sl }, _session{session}{}
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->void{
-			_session->Stream().expires_after( _handshakeTimeout );
+			_session->Stream().expires_after( handshakeTimeout() );
       _session->Stream().async_shutdown( [this](beast::error_code ec){ ShutdownAwait::OnShutdown(ec); } );
 		}
 		α OnShutdown( beast::error_code ec )->void{

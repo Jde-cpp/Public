@@ -3,7 +3,7 @@
 
 #define let const auto
 namespace Jde{
-	α QL::Parse( string query, bool returnRaw, SL sl )ε->RequestQL{
+	α QL::Parse( string query, bool returnRaw, SL /*sl*/ )ε->RequestQL{
 		sv trimmed = Str::Trim( query );//TODO move(query).
 		Parser parser{ string{trimmed.starts_with("{") ? trimmed.substr(1) : trimmed}, "{}()," };
 		auto name = parser.Next();
@@ -311,10 +311,10 @@ namespace Jde::QL{
 		//Sync with MutationQL::EMutationQL
 		constexpr array<sv,9> SubscriptionSuffexes{ "Created", "Updated", "Deleted", "Restored", "Purged", "Added", "Removed", "Started", "Stopped" };
 		optional<EMutationQL> type; string tableName;
-		for( uint i=0; !type && i<SubscriptionSuffexes.size(); ++i ){
-			if( name.ends_with(SubscriptionSuffexes[i]) && name.size()>SubscriptionSuffexes[i].size() ){
-				tableName = DB::Names::ToPlural(DB::Names::FromJson( name.substr(0, name.size()-SubscriptionSuffexes[i].size())) );
-				type = (EMutationQL)i;
+		for( uint iSuffix=0; !type && iSuffix<SubscriptionSuffexes.size(); ++iSuffix ){
+			if( name.ends_with(SubscriptionSuffexes[iSuffix]) && name.size()>SubscriptionSuffexes[iSuffix].size() ){
+				tableName = DB::Names::ToPlural(DB::Names::FromJson( name.substr(0, name.size()-SubscriptionSuffexes[iSuffix].size())) );
+				type = (EMutationQL)iSuffix;
 			}
 		}
 		THROW_IF( !type, "Could not find subscription type for '{}'", name );

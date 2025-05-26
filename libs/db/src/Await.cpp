@@ -1,8 +1,7 @@
 ﻿#include <jde/db/awaits/DBAwait.h>
 #include <jde/db/IDataSource.h>
 
-namespace Jde::DB
-{
+namespace Jde::DB{
 	α ICacheAwait::await_ready()ι->bool{
 		_pValue = Cache::Get<void>( _name );
 		return !!_pValue;

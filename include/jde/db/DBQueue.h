@@ -20,7 +20,7 @@ namespace Jde::DB
 
 	struct IDataSource;
 
-	struct Γ DBQueue final : IShutdown{//, std::enable_shared_from_this<DBQueue>
+	struct ΓDB DBQueue final : IShutdown{//, std::enable_shared_from_this<DBQueue>
 		DBQueue( sp<IDataSource> spDataSource )ι;
 		α Push( string sql, sp<vector<Value>> parameters, bool isStoredProc=true, SRCE )ι->void;
 		α Shutdown( bool terminate )ι->void override;

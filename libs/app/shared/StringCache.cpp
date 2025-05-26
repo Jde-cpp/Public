@@ -31,9 +31,9 @@ namespace Jde::App{
 		return save;
 	}
 
-	α StringCache::AddFile( StringPK& id, str path )ι->bool{ return Emplace( _files, id, path ); }
-	α StringCache::AddFunction( StringPK& id, str name )ι->bool{ return Emplace( _functions, id, name ); }
-	α StringCache::AddMessage( StringPK& id, str m )ι->bool{ return Emplace( _messages, id, m ); }
+	α StringCache::AddFile( StringPK id, str path )ι->bool{ return Emplace( _files, id, path ); }
+	α StringCache::AddFunction( StringPK id, str name )ι->bool{ return Emplace( _functions, id, name ); }
+	α StringCache::AddMessage( StringPK id, str m )ι->bool{ return Emplace( _messages, id, m ); }
 	α StringCache::AddThread( StringPK& id, str name )ι->bool{ return Emplace( _threads, id, name ); }
 
 	α Get( StringPK id, const concurrent_flat_map<StringPK,string>& map  )ι->string{ string y; map.cvisit(id, [&y](auto kv){ y=kv.second;}); return y; }

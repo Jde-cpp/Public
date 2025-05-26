@@ -27,7 +27,7 @@ namespace Jde::Opc{
 		string _opcId;
 	};
 	struct ΓOPC ProviderCreatePurgeAwait : TAwait<Access::ProviderPK>{
-		ProviderCreatePurgeAwait( DB::Key opcKey, bool insert, SRCE )ι:TAwait<Access::ProviderPK>{_sl},_insert{insert},_opcKey{move(opcKey)}{}
+		ProviderCreatePurgeAwait( DB::Key opcKey, bool insert, SRCE )ι:TAwait<Access::ProviderPK>{sl},_insert{insert},_opcKey{move(opcKey)}{}
 		α Suspend()ι->void override;
 	private:
 		α Execute( OpcPK opcPK )ι->OpcServerAwait::Task;

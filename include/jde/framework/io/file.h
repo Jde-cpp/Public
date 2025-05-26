@@ -17,7 +17,6 @@
 #define Φ Γ auto
 namespace Jde{ struct Stopwatch; }
 namespace Jde::IO{
-	Φ LogTag()ι->sp<Jde::LogTag>;
 	Φ Native()ι->IO::IDrive&;
 	Ξ Read( const fs::path& path, bool vector=true, bool cache=false, SRCE )ι{ return DriveAwaitable{path, vector, cache, sl}; }
 	Ξ Write( fs::path path, sp<vector<char>> data, SRCE )ι{ return DriveAwaitable{move(path), data, sl}; }

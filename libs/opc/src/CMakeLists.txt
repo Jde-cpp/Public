@@ -1,9 +1,12 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( ../../../build/functions.cmake )
+message( Jde.Opc )
 project( Jde.Opc VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
-
-find_package( OpenSSL )
+if( WIN32 )
+else()
+	find_package( OpenSSL )
+endif()
 find_package( open62541 REQUIRED )
 set( open62541Dir ${open62541_DIR}/../../.. )
 cmake_path( ABSOLUTE_PATH open62541Dir NORMALIZE OUTPUT_VARIABLE open62541Dir )
@@ -12,7 +15,7 @@ add_definitions( -DUA_ENABLE_ENCRYPTION )
 
 set( targetName Jde.Opc )
 add_library( ${targetName} )
-
+compileOptions( ${targetName} )
 file( GLOB_RECURSE sources *.cpp )
 file( GLOB_RECURSE headers  *.h )
 file( GLOB protos types/proto/*.proto )

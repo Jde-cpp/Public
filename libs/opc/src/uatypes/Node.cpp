@@ -10,7 +10,7 @@ namespace Jde::Opc{
 		serverIndex = x.serverIndex;
 	}
 
-	NodeId::NodeId( const flat_map<string,string>& x )ι:
+	NodeId::NodeId( const flat_map<string,string>& x )ε:
 		UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{
 		if( auto p = x.find("nsu"); p!=x.end() )
 			namespaceUri = UA_String_fromChars( p->second.c_str() );

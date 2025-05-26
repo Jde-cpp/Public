@@ -2,7 +2,7 @@
 #define let const auto
 
 namespace Jde::Opc::Write{
-	sp<LogTag> _logTag{ Logging::Tag("app.write") };
+	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::Opc };
 	α OnResonse( UA_Client *ua, void *userdata, RequestId requestId, UA_WriteResponse *response )ι->void{
 		let handle = userdata ? (RequestId)(uint)userdata : requestId;
 		string logPrefix = format( "[{:x}.{}.{}]", (uint)ua, handle, requestId );

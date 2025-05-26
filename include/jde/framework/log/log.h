@@ -16,20 +16,20 @@
 
 #define Φ Γ auto
 namespace Jde{
-	α ToString( ELogLevel l )ι->string;
+	Φ ToString( ELogLevel l )ι->string;
 	α ToLogLevel( sv op )ι->ELogLevel;
 	α LogLevelStrings()ι->const std::array<sv,7>;
 }
 namespace Jde::Logging{
 	ψ Log( ELogLevel level, Logging::MessageBase&& m, Args&&... args )ι->void;
-	ψ Log( const Logging::MessageBase& m, const sp<LogTag> tag, bool logServer, bool break_, Args&&... args )ι->void;
-	ψ Log( const Logging::MessageBase& m, const sp<LogTag> tag, Args&&... args )ι->void{ Log( m, tag, true, true, args... ); }
+	ψ Log( const Logging::MessageBase& m, ELogTags tags, bool logServer, bool break_, Args&&... args )ι->void;
+	ψ Log( const Logging::MessageBase& m, ELogTags tags, Args&&... args )ι->void{ Log( m, tags, true, true, args... ); }
 
 	Φ ShouldLogOnce( const Logging::MessageBase& messageBase )ι->bool;
-	Φ LogOnce( Logging::MessageBase&& messageBase, const sp<LogTag>& logTag )ι->void;
-	ψ LogOnce( const Logging::MessageBase& messageBase, const sp<LogTag>& logTag, Args&&... args )ι->void;
-	α LogNoServer( const Logging::MessageBase& messageBase, const sp<LogTag>& tag )ι->void;
-	ψ LogNoServer( const Logging::MessageBase& messageBase, const sp<LogTag>& tag, Args&&... args )ι->void;
+	Φ LogOnce( Logging::MessageBase&& messageBase, ELogTags tags )ι->void;
+	ψ LogOnce( const Logging::MessageBase& messageBase, ELogTags tags, Args&&... args )ι->void;
+	α LogNoServer( const Logging::MessageBase& messageBase, ELogTags tags )ι->void;
+	ψ LogNoServer( const Logging::MessageBase& messageBase, ELogTags tags, Args&&... args )ι->void;
 	Φ LogMemory( const Logging::MessageBase& messageBase )ι->void;
 	Φ LogMemory( Logging::Message&& m, vector<string> values )ι->void;
 	ψ Tag( sv tag, Logging::MessageBase m, Args&&... args )ι->void;
@@ -37,40 +37,40 @@ namespace Jde::Logging{
 
 #define MY_FILE __FILE__
 
-#define CRITICAL(message,...) CRITICALT( _logTag, message __VA_OPT__(,) __VA_ARGS__ )
+#define CRITICAL(message,...) CRITICALT( _tags, message __VA_OPT__(,) __VA_ARGS__ )
 #define CRITICALT(logTag, message,...) LOG( ELogLevel::Critical, logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define ERR( message, ... ) ERRT( _logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define ERRT( logTag, message, ... ) LOG( ELogLevel::Error, logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define ERRX(message,...) LOGX( ELogLevel::Error, _logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define WARN(message,...) WARNT( _logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define WARNT(logTag, message, ...) LOG( ELogLevel::Warning, logTag, message __VA_OPT__(,) __VA_ARGS__ )
+#define ERR( message, ... ) ERRT( _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define ERRT( tags, message, ... ) LOG( ELogLevel::Error, tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define ERRX(message,...) LOGX( ELogLevel::Error, _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define WARN(message,...) WARNT( _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define WARNT(tags, message, ...) Warning{ tags, message __VA_OPT__(,) __VA_ARGS__ }
 #define WARN_IF(predicate, message,...) if( predicate ) WARN( message __VA_OPT__(,) __VA_ARGS__ )
-#define INFO(message,...) INFOT( _logTag, message __VA_OPT__(,) __VA_ARGS__ )
+#define INFO(message,...) INFOT( _tags, message __VA_OPT__(,) __VA_ARGS__ )
 #define INFOT(logTag, message,...) LOG( ELogLevel::Information, logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define DBG(message,...) DBGT( _logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define DBGSL(message,...) LOGSL( ELogLevel::Debug, _logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define DBGT(logTag, message,...) LOG( ELogLevel::Debug, logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define DBGX(message,...) LOGX( ELogLevel::Debug, _logTag, message __VA_OPT__(,) __VA_ARGS__ )
+#define DBG(message,...) DBGT( _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define DBGSL(message,...) LOGSL( ELogLevel::Debug, _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define DBGT(tags, message,...) Debug{ tags, message __VA_OPT__(,) __VA_ARGS__ }
+#define DBGX(message,...) LOGX( ELogLevel::Debug, _tags, message __VA_OPT__(,) __VA_ARGS__ )
 #define DBG_IF(predicate,message,...) if( predicate ) DBG( message __VA_OPT__(,) __VA_ARGS__ )
-#define RETURN_IF( predicate, severity, message, ... ) if( predicate ){ LOG(severity, _logTag, message __VA_OPT__(,) __VA_ARGS__); return; }
-#define TRACE(message,...) TRACET( _logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define TRACET(logTag, message,...) LOG( ELogLevel::Trace, logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define TRACEX(message,...) LOGX( ELogLevel::Trace, _logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define TRACESL(message,...) LOGSL( ELogLevel::Trace, _logTag, message __VA_OPT__(,) __VA_ARGS__ )
+#define RETURN_IF( predicate, severity, message, ... ) if( predicate ){ LOG(severity, _tags, message __VA_OPT__(,) __VA_ARGS__); return; }
+#define TRACE(message,...) TRACET( _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define TRACET(tags, message,...) LOG( ELogLevel::Trace, tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define TRACEX(message,...) LOGX( ELogLevel::Trace, _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define TRACESL(message,...) LOGSL( ELogLevel::Trace, _tags, message __VA_OPT__(,) __VA_ARGS__ )
 
-#define LOG( severity, logTag, message, ...) Logging::Log( Logging::MessageBase(message, severity, MY_FILE, __func__, __LINE__), logTag __VA_OPT__(,) __VA_ARGS__ )
-#define LOGX( severity, logTag, message, ...) Logging::LogNoServer( Logging::MessageBase(message, severity, MY_FILE, __func__, __LINE__), logTag __VA_OPT__(,) __VA_ARGS__ )
+#define LOG( severity, tags, message, ...) Log( severity, tags, SRCE_CUR, message __VA_OPT__(,) __VA_ARGS__ )
+#define LOGX( severity, tags, message, ...) Logging::LogNoServer( Logging::MessageBase(message, severity, MY_FILE, __func__, __LINE__), tags __VA_OPT__(,) __VA_ARGS__ )
 #define LOGSL( severity, logTag, message, ...) Logging::Log( Logging::Message(severity, message, sl), logTag __VA_OPT__(,) __VA_ARGS__ )
-#define LOG_ONCE( severity, logTag, message, ... ) Logging::LogOnce( Logging::MessageBase( message, severity, MY_FILE, __func__, __LINE__), logTag  __VA_OPT__(,) __VA_ARGS__ )
+#define LOG_ONCE( severity, tags, message, ... ) Logging::LogOnce( Logging::MessageBase( message, severity, MY_FILE, __func__, __LINE__), tags  __VA_OPT__(,) __VA_ARGS__ )
 
-#define LOG_IF( predicate, severity, message,... ) LOG_IFT( predicate, severity, _logTag, message __VA_OPT__(,) __VA_ARGS__ )
-#define LOG_IFT( predicate, severity, logTag, message,... ) if( predicate ){ LOG( severity, logTag, message __VA_OPT__(,) __VA_ARGS__ ); }
+#define LOG_IF( predicate, severity, message,... ) LOG_IFT( predicate, severity, _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define LOG_IFT( predicate, severity, tags, message,... ) if( predicate ){ LOG( severity, tags, message __VA_OPT__(,) __VA_ARGS__ ); }
 #define ERR_IF( predicate, message, ... ) LOG_IFL( predicate, ELogLevel::Error, message, __VA_ARGS__ )
 #define LOG_MEMORY( tag, severity, message, ... ) LogMemoryDetail( Logging::Message{tag, severity, message} __VA_OPT__(,) __VA_ARGS__ );
 
 namespace Jde{
-	Ξ Log( ELogLevel sev, string&& x, const sp<LogTag>& tag, SRCE )ι{ Logging::Log( Logging::Message{sev, move(x), sl}, tag ); }
-	Ξ Dbg( string x, const sp<LogTag>& tag, SRCE )ι{ Log( ELogLevel::Debug, move(x), tag, sl ); }
+//	Ξ Log( ELogLevel sev, string&& x, const sp<LogTag>& tag, SRCE )ι{ Logging::Log( Logging::Message{sev, move(x), sl}, tag ); }
+//	Ξ Dbg( string x, const sp<LogTag>& tag, SRCE )ι{ Log( ELogLevel::Debug, move(x), tag, sl ); }
 
 	template<ELogLevel TLevel, typename... Args>
 	struct Logger{
@@ -163,11 +163,11 @@ namespace Jde{
 	}
 #pragma warning(push)
 #pragma warning( disable : 4100)
-	ψ Logging::Log( const Logging::MessageBase& m, const sp<LogTag> tag, bool logServer, bool break_, Args&&... args )ι->void{
+	ψ Logging::Log( const Logging::MessageBase& m, ELogTags tags, bool logServer, bool break_, Args&&... args )ι->void{
 		ASSERT( !Process::Finalizing() );
 		//TODO just use format vs vformat catch fmt::v8::format_error in vformat version
 		//assert( m.Level<=ELogLevel::None );
-		let tagLevel = FileMinLevel( ToLogTags(tag->Id) );
+		let tagLevel = FileMinLevel( tags );
 		if( m.Level<tagLevel || m.Level==ELogLevel::NoLog || tagLevel==ELogLevel::NoLog )
 			return;
 		try{
@@ -190,9 +190,9 @@ namespace Jde{
 		}
 		catch( const fmt::format_error& e ){
 			MessageBase m2{ ELogLevel::Critical, "could not format '{}' cargs='{}' - '{}'", m.File, m.Function, m.LineNumber };
-			Log( m2, tag, m.MessageView, sizeof...(args), e.what() );
+			Log( m2, tags, m.MessageView, sizeof...(args), e.what() );
 		}
-		logServer = logServer && !(ToLogTags(tag->Id) & ELogTags::ExternalLogger);
+		logServer = logServer && !(tags & ELogTags::ExternalLogger);
 		if( logServer || LogMemory() ){
 			vector<string> values; values.reserve( sizeof...(args) );
 			ToVec::Append( values, args... );
@@ -203,17 +203,17 @@ namespace Jde{
 		}
 	}
 #pragma warning(pop)
-	ψ Logging::LogOnce( const Logging::MessageBase& m, const sp<LogTag>& logTag, Args&&... args )ι->void{
+	ψ Logging::LogOnce( const Logging::MessageBase& m, ELogTags tags, Args&&... args )ι->void{
 		if( ShouldLogOnce(m) )
-			Log( m, logTag, args... );
+			Log( m, tags, args... );
 	}
 
-	Ξ Logging::LogNoServer( const Logging::MessageBase& m, const sp<LogTag>& tag )ι->void{
-		Log( m, tag, false );
+	Ξ Logging::LogNoServer( const Logging::MessageBase& m, ELogTags tags )ι->void{
+		Log( m, tags, false );
 	}
 
-	ψ Logging::LogNoServer( const Logging::MessageBase& m, const sp<LogTag>& tag, Args&&... args )ι->void{
-		Log( m, tag, false, args... );
+	ψ Logging::LogNoServer( const Logging::MessageBase& m, ELogTags tags, Args&&... args )ι->void{
+		Log( m, tags, false, args... );
 	}
 }
 

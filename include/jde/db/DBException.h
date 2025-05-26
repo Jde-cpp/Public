@@ -1,11 +1,12 @@
 ﻿#pragma once
 #include "exports.h"
+#include "Value.h"
 
 #define Φ ΓDB auto
 namespace Jde::DB{
 	struct Value;
 
-	struct DBException final: IException{
+	struct ΓDB DBException final: IException{
 		DBException( int32 errorCode, string sql, const vector<Value>* pValues, string what, SRCE )ι;
 		DBException( string sql, const vector<Value>* pValues, string what, SRCE )ι:DBException{ 0, move(sql), pValues, move(what), sl }{}
 		DBException( DBException&& from )ι:IException{move(from)}, Sql{move(from.Sql)}, Parameters{move(from.Parameters)}{}

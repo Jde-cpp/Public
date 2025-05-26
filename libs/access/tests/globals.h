@@ -21,11 +21,11 @@ namespace Jde::Access::Tests{
 	α Delete( str table, uint id, UserPK userPK )ε->jvalue;
 	α Restore( str table, uint id, UserPK userPK )ε->jvalue;
 	α Get( str table, str target, UserPK userPK, sv cols={}, bool includeDeleted=false )ε->jobject;
-	Ξ GetId( const jobject& j )ε->uint{ return Json::AsNumber<uint>( j, "id" ); }
+	Ξ GetId( const jobject& j )ε->uint32{ return Json::AsNumber<uint32>( j, "id" ); }
 	α GetGroup( str target, UserPK userPK )ε->jobject;
 //	α GetPermission( ResourcePK resourcePK, ERights allowed, ERights denied, UserPK userPK )ε->jobject;
 	α GetRoot()ε->UserPK;
-	α GetUser( str target, UserPK userPK, bool includeDeleted=false, EProviderType providerId=Access::EProviderType::Google )ε->jobject;
+	α GetUser( str target, UserPK userPK, bool includeDeleted=false, ProviderPK providerId=(ProviderPK)Access::EProviderType::Google )ε->jobject;
 
 	α Purge( str table, uint id, UserPK userPK )ε->jobject;
 	α PurgeGroup( GroupPK id, UserPK userPK )ε->void;

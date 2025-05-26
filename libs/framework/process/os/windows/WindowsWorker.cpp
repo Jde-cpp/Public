@@ -5,10 +5,9 @@
 
 #define var const auto
 
-namespace Jde::Windows
-{
+namespace Jde::Windows{
 	up<WindowsWorkerMain> WindowsWorkerMain::_pInstance;
-	sp<LogTag> _logTag{ Logging::Tag("threads") };
+	constexpr ELogTags _tags{ ELogTags::Threads };
 
 #define CREATE_EVENT ::CreateEvent(nullptr, TRUE, FALSE, nullptr)
 
@@ -58,7 +57,7 @@ namespace Jde::Windows
 			_objects.push_back( e.WindowsEvent );
 		}
 		else
-			ERR( "Stopped can't add event."sv );
+			ERR( "Stopped can't add event." );
 	}
 
 	void WindowsWorker::HandleEvent( Event&& e )ι

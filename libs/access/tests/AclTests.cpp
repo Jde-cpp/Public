@@ -93,12 +93,6 @@ namespace Jde::Access::Tests{
 		}
 	}
 
-	TEST_F( AclTests, Foo ){
-		let ql = "acl( permissionId:1 ){ identities{id isGroup} }";
-		let result = QL::Query( ql, GetRoot() );
-		Trace{ ELogTags::Test, "Select: {}", serialize(result) };
-	}
-
 	TEST_F( AclTests, DisabledPermissions ){
 		let resourceName = "groupings";
 		let resource = SelectResource( resourceName, GetRoot() );

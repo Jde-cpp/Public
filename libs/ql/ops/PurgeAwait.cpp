@@ -51,7 +51,7 @@ namespace Jde::QL{
 			vector<DB::Value> parameters;
 			auto statements = Statements( *_table, parameters );
 			//TODO for mysql allow CLIENT_MULTI_STATEMENTS return ds->Execute( Str::AddSeparators(statements, ";"), parameters, sl );
-			uint y;
+			uint y{};
 			DB::IDataSource& ds = *_table->Schema->DS();
 			for( auto& statement : statements ){
 				auto a = statement.starts_with("delete ")

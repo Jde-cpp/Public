@@ -10,10 +10,10 @@ namespace Jde::DB{
 
 	//Cluster > Catalog > Schema > Table > Columns & Rows
 	struct SchemaDdl : DBSchema, std::enable_shared_from_this<SchemaDdl>{
-		SchemaDdl( sv name, sv tablePrefix, const IServerMeta& loader, sp<QL::IQL> ql )ε;
+		SchemaDdl( str name, sv tablePrefix, const IServerMeta& loader, sp<QL::IQL> ql )ε;
 		Ω Sync( const AppSchema& config, sp<QL::IQL> ql )ε->void;
 		Ω Create( const DBSchema& config )ε->void;
-
+		α IsPhysical()Ι->bool { return true; }
 		α Tables()ι->flat_map<string,sp<Table>>&{ return Meta()->Tables; }
 		α Views()ι->flat_map<string,sp<View>>&{ return Meta()->Views; }
 

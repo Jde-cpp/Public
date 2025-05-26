@@ -1,29 +1,26 @@
 ﻿#include "WindowsDrive.h"
 #include "WindowsUtilities.h"
-#include <jde/io/File.h>
+#include <jde/framework/io/File.h>
 #include "../../Framework/source/Cache.h"
 #include "../../Framework/source/io/drive/DriveApi.h"
 #include "../../Framework/source/DateTime.h"
 #define var const auto
 
-namespace Jde
-{
+namespace Jde{
 	IO::Drive::WindowsDrive _native;
 	α IO::Native()ι->IDrive&{ return _native; }
 }
-namespace Jde::IO
-{
-	static sp<Jde::LogTag> _logTag{ Logging::Tag("io") };
-	α FileIOArg::Open()ε->void
-	{
+namespace Jde::IO{
+	constexpr ELogTags _tags{ ELogTags::IO };
+
+	α FileIOArg::Open()ε->void{
 		const DWORD access = IsRead ? GENERIC_READ : GENERIC_WRITE;
 		const DWORD sharing = IsRead ? FILE_SHARE_READ : 0;
 		const DWORD creationDisposition = IsRead ? OPEN_EXISTING : CREATE_ALWAYS;
 		const DWORD dwFlagsAndAttributes = IsRead ? FILE_FLAG_SEQUENTIAL_SCAN : FILE_ATTRIBUTE_ARCHIVE;
 		Handle = HandlePtr( WinHandle(::CreateFile((string{"\\\\?\\"}+Path.string()).c_str(), access, sharing, nullptr, creationDisposition, FILE_FLAG_OVERLAPPED | dwFlagsAndAttributes, nullptr), [&](){return IOException(move(Path), GetLastError(), "CreateFile");}) );
-		if( IsRead )
-		{
-			LARGE_INTEGER fileSize; 
+		if( IsRead )		{
+			LARGE_INTEGER fileSize;
 			THROW_IFX( !::GetFileSizeEx(Handle.get(), &fileSize), IOException(move(Path), GetLastError(), "GetFileSizeEx") );
 			std::visit( [fileSize](auto&& b){b->resize(fileSize.QuadPart);}, Buffer );
 		}
@@ -109,10 +106,14 @@ namespace Jde::IO
 		_indexes.push_back( _index );
 		return _index++;
 	}
-*/	
-	Duration _keepAlive = Settings::Get<Duration>( "workers/drive/keepalive" ).value_or( 5s );
-	α WinDriveWorker::Poll()ι->optional<bool>
-	{
+*/
+	optional<Duration> _keepAlive;
+	Ω keepAlive()->Duration{ 
+		if( !_keepAlive )
+			_keepAlive = Settings::FindDuration( "workers/drive/keepalive" ).value_or( 5s );
+		return *_keepAlive;
+	}
+	α WinDriveWorker::Poll()ι->optional<bool>{
 		var newQueueItem = base::Poll().value();
 		AtomicGuard l{ _argMutex };
 		bool ioItem = _args.size();
@@ -125,7 +126,7 @@ namespace Jde::IO
 		var result = newQueueItem || ioItem;
 		if( result )
 			_lastRequest = Clock::now();
-		return result ? result : _lastRequest.load()+_keepAlive<Clock::now() ? optional<bool>{ false } : std::nullopt;//(nullopt || true)==continue 
+		return result ? result : _lastRequest.load()+keepAlive()<Clock::now() ? optional<bool>{ false } : std::nullopt;//(nullopt || true)==continue
 	}
 
 	α WinDriveWorker::HandleRequest( FileIOArg*&& pArg )ι->void
@@ -135,7 +136,7 @@ namespace Jde::IO
 		for( uint i=0; i<std::min<uint8>((uint8)pArg->Chunks.size(), DriveWorker::ThreadSize()); ++i )
 			IO::Send( (FileChunkArg&)*pArg->Chunks[i] );
 	}
-	
+
 	void WinDriveWorker::Remove( FileIOArg* pArg )ι
 	{
 		if( auto pInstance=dynamic_pointer_cast<WinDriveWorker>(_pInstance); pInstance )
@@ -262,7 +263,7 @@ namespace Jde::IO::Drive{
 		var hr = CreateSymbolicLinkW( ((const std::wstring&)to).c_str(), ((const std::wstring&)from).c_str(), 0 );
 		THROW_IFX( !hr, IOException( from, GetLastError(), format("Creating symbolic link from to '{}'", to.string().c_str())) );
 	}
-	
+
 	/*
 	AwaitResult DriveAwaitable::await_resume()ι
 	{

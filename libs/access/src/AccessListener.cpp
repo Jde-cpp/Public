@@ -21,8 +21,8 @@ namespace Jde::Access{
 		try{
 			BlockVoidAwait<QL::UnsubscribeAwait>( _qlServer->Unsubscribe(move(Ids)) );
 		}
-		catch( IException& e ){
-		}
+		catch( IException& )
+		{}
 		_listener = nullptr;
 	}
 	α AccessListener::OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void{
@@ -38,7 +38,7 @@ namespace Jde::Access{
 			return;
 		}
 
-		let pk = Json::AsNumber<uint>( object, "id" );
+		let pk = Json::AsNumber<uint32>( object, "id" );
 		if( !empty(event & User) )
 			UserChanged( {pk}, event & ~User, object );
 		else if( !empty(event & Group) )
@@ -51,7 +51,7 @@ namespace Jde::Access{
 			PermissionUpdated( pk, object );
 	}
 #pragma GCC diagnostic ignored "-Wswitch"
-	α AccessListener::UserChanged( UserPK userPK, ESubscription event, const jobject& o )ι->void{
+	α AccessListener::UserChanged( UserPK userPK, ESubscription event, const jobject& )ι->void{
 		using enum ESubscription;
 		switch( event ){
 			case Created: Authorizer().CreateUser( userPK ); break;

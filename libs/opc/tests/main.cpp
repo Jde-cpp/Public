@@ -16,10 +16,10 @@ namespace Jde{
 
  	α Startup( int argc, char **argv )ε->void{
 #ifdef _MSC_VER
-		ASSERT( Settings::Get<uint>("workers/drive/threads")>0 )
+		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
 #endif
-		ASSERT( argc>1 && string{argv[1]}=="-c" )
-		TagParser( Opc::LogTagParser );
+		TagFromString( Opc::TagFromString );
+		TagToString( Opc::TagToString );
 		OSApp::Startup( argc, argv, "Tests.Opc", "Opc tests", true );
 		Crypto::CryptoSettings settings{ "http/ssl" };
 		if( !fs::exists(settings.PrivateKeyPath) ){

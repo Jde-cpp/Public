@@ -70,10 +70,10 @@ namespace Jde::Web::Client{
 	α ClientQL::Query( string query, UserPK, bool returnRaw, SL sl )ι->up<TAwait<jvalue>>{
 		return mu<QueryAwait<jvalue>>( move(query), _session, returnRaw, sl );
 	}
-	α ClientQL::QueryObject( string query, UserPK executer, bool returnRaw, SL sl )ε->up<TAwait<jobject>>{
+	α ClientQL::QueryObject( string query, UserPK /*executer*/, bool returnRaw, SL sl )ε->up<TAwait<jobject>>{
 		return mu<QueryAwait<jobject>>( move(query), _session, returnRaw, sl );
 	}
-	α ClientQL::QueryArray( string query, UserPK executer, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
+	α ClientQL::QueryArray( string query, UserPK /*executer*/, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
 		return mu<QueryAwait<jarray>>( move(query), _session, returnRaw, sl );
 	}
 }

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <charconv>
 
 #define $ template<IsEnum T> constexpr α
@@ -19,6 +19,8 @@ namespace Jde{
 		return (uint)value<stringValues.size() ? string{ stringValues[(uint)value] } : std::to_string( (uint)value );
 	}
 
+#pragma warning( push )
+#pragma warning( disable: 4334 )
 	template<IsEnum Flag, class Collection>
 	α FromEnumFlag( const Collection& stringValues, Flag flag )ι->string{
 		let uflag = underlying( flag );
@@ -37,7 +39,7 @@ namespace Jde{
 			flags.pop_back();
 		return flags;
 	}
-
+#pragma warning( pop )
 	template<IsEnum TEnum, class TCollection, class TString>
 	α ToEnum( const TCollection& stringValues, TString text )ι->optional<TEnum>{
 		using T = typename std::underlying_type<TEnum>::type;

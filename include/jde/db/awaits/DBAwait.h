@@ -2,6 +2,7 @@
 #ifndef JDE_DB_AWAIT_H
 #define JDE_DB_AWAIT_H
 #include "../usings.h"
+#include "../exports.h"
 #include <jde/db/IRow.h>
 
 #include "../../../../../Framework/source/Cache.h"
@@ -57,7 +58,7 @@ namespace Jde::DB{
 	}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-	#define Φ Γ auto
+	#define Φ ΓDB auto
 	class ICacheAwait : public IAwait{
 		using base=IAwait;
 	public:

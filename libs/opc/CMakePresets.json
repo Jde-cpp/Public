@@ -1,1 +1,6 @@
-/home/duffyj/code/jde/Public/libs/CMakePresets.json
+{
+  "version": 8,
+  "include": [
+    "$penv{JDE_BASH}/Public/build/CMakePresets.json"
+  ]
+}

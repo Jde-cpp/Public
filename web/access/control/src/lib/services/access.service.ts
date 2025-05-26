@@ -37,7 +37,7 @@ export class AccessService extends AppService implements OnDestroy{
 				fields.push( `groupings{id}` );
 				break;
 			case "groupings":
-				fields.push( `members{id isGroup}` );
+				fields[fields.findIndex(f=>f.startsWith("members"))] = `members{id isGroup}`;
 				break;
 			case "roles":
 				fields.push( ...[`permissionRights{id allowed denied resource{id}}`, `roles{id}`] );
@@ -71,7 +71,7 @@ export class AccessService extends AppService implements OnDestroy{
 		switch( collectionName ){
 			case "users": columns = ["isGroup"]; break;
 			case "roles": columns = ["permissions"]; break;
-			case "groups": columns = ["isGroup", "members"]; break;
+			case "groupings": columns = ["isGroup", "members"]; break;
 		}
 		return columns;
 	}

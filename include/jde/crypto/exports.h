@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifdef Jde_Crypto_EXPORTS
 	#ifdef _MSC_VER 
 		#define ΓC __declspec( dllexport )
@@ -6,9 +6,8 @@
 		#define ΓC __attribute__((visibility("default")))
 	#endif
 #else 
-	#ifdef _MSC_VER
+	#if defined(_MSC_VER) && defined(_WINDLL)
 		#define ΓC __declspec( dllimport )
-		#pragma comment(lib, "Jde.Crypto.lib")
 	#else
 		#define ΓC
 	#endif

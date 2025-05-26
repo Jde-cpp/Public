@@ -10,17 +10,17 @@ namespace Jde::Settings{
 	Φ Value()ι->const jvalue&;
 	α FileStem()ι->string; //used as base path for logs.
 	Φ Set( sv path, jvalue v, SRCE )ε->jvalue*;
-	α Load()ι->void;
+	Φ Load()ι->void;
 
-	Ξ AsObject( sv path, SRCE )ι->const jobject&{ return Json::AsObject(Value(), path); }
+	Ξ AsObject( sv path, SRCE )ι->const jobject&{ return Json::AsObject(Value(), path, sl); }
 
 	Ξ FindArray( sv path )ι->const jarray*{ return Json::FindArray(Value(), path); }
 	Ξ FindBool( sv path )ι->optional<bool>{ return Json::FindBool(Value(), path); }
-	α FindDuration( sv path )ι->optional<Duration>;
+	Φ FindDuration( sv path )ι->optional<Duration>;
 	Ξ FindObject( sv path )ι->const jobject*{ return Json::FindObject(Value(), path); }
 	Ξ FindSV( sv path )ι->optional<sv>{ return Json::FindSV(Value(), path); }
-	α FindString( sv path )ι->optional<string>;
-	α FindStringArray( sv path )ι->vector<string>;
+	Φ FindString( sv path )ι->optional<string>;
+	Φ FindStringArray( sv path )ι->vector<string>;
 	Ξ FindPath( sv path )ι->optional<fs::path>{ auto s = FindString(path); return s ? fs::path{*s} : optional<fs::path>{}; }
 	Ŧ FindNumber( sv path )ι->optional<T>{ return Json::FindNumber<T>(Value(), path); }
 

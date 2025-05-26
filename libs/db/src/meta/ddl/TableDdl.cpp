@@ -9,14 +9,14 @@
 namespace Jde::DB{
 	using std::endl;
 
-	α TableDdl::CreateStatement()Ι->string{
+	α TableDdl::CreateStatement()Ε->string{
 		std::ostringstream createStatement;
 		createStatement << "create table " << DBName << "(";
 		string suffix = "";
 		string pk;
 		for( let& c : Columns ){
 			if( c->IsSequence )
-				pk = Ƒ( "primary key({})"sv, c->Name );
+				pk = Syntax().CreatePrimaryKey( Name, c->Name );
 			createStatement << suffix << endl << "\t" << ColumnDdl::CreateStatement( *c );
 			suffix = ",";
 		}
@@ -27,11 +27,12 @@ namespace Jde::DB{
 	}
 
 	α TableDdl::InsertProcCreateStatement()Ι->string{
+		let& syntax = Syntax();
 		std::ostringstream osCreate, osInsert, osValues;
-		osCreate << "create procedure " << InsertProcName() << "(";
+		osCreate << "create procedure " << syntax.EscapeDdl(InsertProcName()) << "(";
 		osInsert << "\tinsert into " << DBName << "(";
 		osValues << "\t\tvalues(";
-		let prefix = Syntax().ProcParameterPrefix().empty() ? "_"sv : Syntax().ProcParameterPrefix();
+		let prefix = syntax.ProcParameterPrefix().empty() ? "_" : syntax.ProcParameterPrefix();
 		char delimiter = ' ';
 		for( let& c : Columns ){
 			//let& c = dynamic_cast<const ColumnDdl&>( *column );
@@ -42,7 +43,7 @@ namespace Jde::DB{
 				if( c->IsNullable || !c->Default )
 				 	continue;
 				if( c->Default->is_string() && c->Default->get_string()=="$now" )
-					value = ToSV( Syntax().UtcNow() );
+					value = ToSV( syntax.UtcNow() );
 			}
 			osInsert << delimiter << c->Name;
 			osValues << delimiter  << value;
@@ -50,9 +51,9 @@ namespace Jde::DB{
 		}
 		osInsert << " )" << endl;
 		osValues << " );" << endl;
-		osCreate << " )" << endl << Syntax().ProcStart() << endl;
+		osCreate << " )" << endl << syntax.ProcStart() << endl;
 		osCreate << osInsert.str() << osValues.str();
-		osCreate << "\tselect " << Syntax().IdentitySelect() <<";" << endl << Syntax().ProcEnd() << endl;// into _id
+		osCreate << "\tselect " << syntax.IdentitySelect() <<";" << endl << syntax.ProcEnd() << endl;// into _id
 		return osCreate.str();
 	}
 }

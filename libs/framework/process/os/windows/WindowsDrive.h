@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "WindowsHandle.h"
-#include <jde/coroutine/Task.h>
+#include <jde/framework/process/os/windows/WindowsHandle.h>
+#include <jde/framework/coroutine/Task.h>
 #include "../../Framework/source/io/DiskWatcher.h"
 #include "../../Framework/source/io/FileCo.h"
 #include "../../Framework/source/coroutine/Awaitable.h"
@@ -17,7 +17,7 @@ namespace Jde::IO
 			EndIndex{ std::min((Index+1)*DriveWorker::ChunkSize(), FileArg().Size()) },
 			Overlap{ .Pointer=(PVOID)(Index*DriveWorker::ChunkSize()), .hEvent=this },
 			Bytes{ EndIndex-Overlap.Offset }
-		{ 
+		{
 		}
 		α Buffer(){ return FileArg().Data()+(size_t)Overlap.Pointer; }
 		α StartIndex(){ return (uint)Overlap.Pointer; }

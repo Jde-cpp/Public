@@ -27,7 +27,6 @@ namespace Jde::Opc{
 		α Stop()ι->void;
 	private:
 		α UAHandle()ι->Handle;
-		//α LogTag()ι->sp<LogTag>;
 		α ProcessingLoop()ι->Task;
 		flat_map<RequestId, up<UARequest>> _requests; mutex _requestMutex;
 		sp<UAClient> _pClient;

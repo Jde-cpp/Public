@@ -7,8 +7,12 @@ namespace Jde::Web{
 	constexpr ELogTags _writeTag{ ELogTags::SocketClientWrite };
 	constexpr ELogTags _readTag{ ELogTags::SocketClientRead };
 
-	static uint16 _maxLogLength{ Settings::FindNumber<uint16>("http/maxLogLength").value_or(255) };
-	α Client::MaxLogLength()ι->uint16{ return _maxLogLength; }
+	static optional<uint16> _maxLogLength;
+	α Client::MaxLogLength()ι->uint16{ 
+		if( !_maxLogLength )
+			_maxLogLength = Settings::FindNumber<uint16>( "http/maxLogLength" ).value_or( 255 );
+		return *_maxLogLength; 
+	}
 }
 #define CHECK_EC(tag) if( ec ){ \
 	CodeException e{ static_cast<std::error_code>(ec), tag, GetLogLevel(ec) }; \
@@ -31,8 +35,7 @@ namespace Jde::Web::Client{
 
 	α IClientSocketSession::PopTask( RequestId requestId )ι->std::any{
 		std::any h;
-		if( !_tasks.erase_if(requestId, [&h](auto&& kv){ h=kv.second; return true;}) )
-			Critical( ELogTags::SocketClientRead, "[{:x}]RequestId '{}' not found.", Id(), requestId );
+		_tasks.erase_if( requestId, [&h](auto&& kv){ h=kv.second; return true;} );//Subscriptions aren't in tasks.
 		return h;
 	}
 	α IClientSocketSession::CloseTasks( function<void(std::any&&)> f )ι->void{

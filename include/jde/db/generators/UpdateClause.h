@@ -5,9 +5,9 @@
 namespace Jde::DB{
 	struct Column;
 
-	struct UpdateClause final{
+	struct ΓDB UpdateClause final{
 		α Move()ι->DB::Sql;
-		α Add( sp<Column> column, Value value, SRCE )ε{ Values.try_emplace( column, move(value) ); }
+		α Add( sp<Column> column, Value value )ε{ Values.try_emplace( column, move(value) ); }
 		flat_map<sp<Column>,Value> Values;
 		WhereClause Where;
 	};

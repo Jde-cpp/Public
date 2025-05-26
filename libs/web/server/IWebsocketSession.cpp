@@ -8,7 +8,7 @@
 namespace Jde::Web::Server{
 	struct SocketServerListener : QL::IListener{
 		SocketServerListener( sp<IWebsocketSession> session )ι: QL::IListener{Ƒ("[{}]Socket", session->Id())}, _session{ session }{}
-		α OnChange( const jvalue& j, uint clientId )ε->void{ _session->WriteSubscription( j, clientId ); }
+		α OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void{ _session->WriteSubscription( j, clientId ); }
 		sp<IWebsocketSession> _session;
 	};
 
@@ -21,6 +21,7 @@ namespace Jde::Web::Server{
 
 	α IWebsocketSession::Run()ι->void{
 		LogRead( "Run", 0 );
+		SocketServerListener foo{ shared_from_this() };
 		_listener = ms<SocketServerListener>( shared_from_this() );
 		Stream->DoAccept( move(_initialRequest), shared_from_this() );
 	}
@@ -80,7 +81,7 @@ namespace Jde::Web::Server{
 		_listener = nullptr;
 	}
 
-	α IWebsocketSession::AddSubscription( string&& query, RequestId requestId, SL sl )ε->vector<QL::SubscriptionId>{
+	α IWebsocketSession::AddSubscription( string&& query, RequestId /*requestId*/, SL /*sl*/ )ε->vector<QL::SubscriptionId>{
 		auto subs = QL::ParseSubscriptions( move(query) );
 		vector<QL::SubscriptionId> subscriptionIds;
 		for( auto& sub : subs )
@@ -89,7 +90,7 @@ namespace Jde::Web::Server{
 			QL::Subscriptions::Listen( _listener, move(subs) );
 		return subscriptionIds;
 	}
-	α IWebsocketSession::RemoveSubscription( vector<QL::SubscriptionId>&& ids, RequestId requestId, SL sl )ι->void{
+	α IWebsocketSession::RemoveSubscription( vector<QL::SubscriptionId>&& ids, RequestId requestId, SL /*sl*/ )ι->void{
 		try{
 			QL::Subscriptions::StopListen( _listener, move(ids) );
 		}

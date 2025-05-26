@@ -57,7 +57,7 @@ namespace Jde::QL{
 		_pk{ pk },
 		_userPK{ executer }
 	{}
-
+#pragma warning(disable: 4063)
 	α MutationAwaits::await_ready()ι->bool{
 		sl l{ _hooks.Mutex };
 		_awaitables.reserve( _hooks.size(l) );

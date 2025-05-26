@@ -12,8 +12,8 @@ namespace Jde::Opc{
 
 	α CreateOpcServerAwait::Execute()ι->QL::QLAwait<jobject>::Task{
 		try{
-			let certificateUri{ Settings::FindSV("opc/urn").value_or("urn:open62541.server.application") };
-			let url{ Settings::FindSV("opc/url").value_or( "opc.tcp://127.0.0.1:4840") };
+			let certificateUri{ Settings::FindSV("/opc/urn").value_or("urn:open62541.server.application") };
+			let url{ Settings::FindSV("/opc/url").value_or( "opc.tcp://127.0.0.1:4840") };
 			let create = Ƒ( "mutation createOpcServer( target:'{}', name:'My Test Server', certificateUri:'{}', description:'Test basic functionality', url:'{}', isDefault:false ){{id}}", OpcServerTarget, certificateUri, url );
 			let createJson = co_await QL::QLAwait<jobject>( Str::Replace(create, '\'', '"'), {UserPK::System}, true, _sl );
 			ResumeScaler( Json::AsNumber<OpcPK>(createJson, "id") );

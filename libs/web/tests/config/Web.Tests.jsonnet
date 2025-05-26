@@ -1,6 +1,7 @@
+local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "SocketTests.CloseClientSide"
+		tests: "WebTests.*"
 	},
 	logging:{
 		defaultLevel:: "Information",
@@ -16,7 +17,7 @@
 		},
 		sinks:{
 			console:{},
-			file:{ path: "/tmp", md: false }
+			file:{ path: args.logDir, md: false }
 		},
 		memory: true
 	},

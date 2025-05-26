@@ -6,8 +6,12 @@
 #define let const auto
 
 namespace Jde::Web{
-	string _accessControlAllowOrigin = Settings::FindString("http/accessControl/allowOrigin").value_or("*");
-	α Server::AccessControlAllowOrigin()ι->string{ return _accessControlAllowOrigin; };
+	string _accessControlAllowOrigin;
+	α Server::AccessControlAllowOrigin()ι->string{ 
+		if( _accessControlAllowOrigin.empty() )
+			_accessControlAllowOrigin = Settings::FindString( "http/accessControl/allowOrigin" ).value_or( "*" );
+		return _accessControlAllowOrigin; 
+	}
 
 	string _plainVersion{ Ƒ("({})Jde.Web.Server - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
 	string _sslVersion{ Ƒ("({})Jde.Web.Server SSL - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };

@@ -7,7 +7,7 @@
 
 namespace Jde::DB{
 	DBException::DBException( int32 errorCode, string sql, const vector<Value>* pValues, string what, SL sl )ι:
-		IException{ move(what), ELogLevel::NoLog, (uint)errorCode, {}, sl },
+		IException{ move(what), ELogLevel::NoLog, (uint32)errorCode, {}, sl },
 		Sql{ sql },
 		Parameters{ pValues ? *pValues : vector<Value>{} }{
 		SetLevel( ELogLevel::Error );

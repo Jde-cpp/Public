@@ -48,9 +48,9 @@ namespace Jde::DB{
 	}
 	Ξ Names::ToSingular( sv plural )ι->string{
 		string y{ plural };
-		if( plural=="acl" )
-			y = "ac";
-		if( plural.ends_with("ies") )
+		if( plural.ends_with("acl") )
+			y = string{ plural.substr(0, plural.size() - 3) } + "ac";
+		else if( plural.ends_with("ies") )
 			y = string{plural.substr( 0, plural.size()-3 )}+"y";
 		else if( plural.ends_with('s') )
 			y = plural.substr( 0, plural.size()-1 );

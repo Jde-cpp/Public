@@ -13,7 +13,7 @@ namespace Jde::QL{
 		template<class T=uint> α Id()Ι->T;
 		template<class T=uint> α FindId()Ι->optional<T>;
 		α GetKey(SRCE)ε->DB::Key;
-		α FindKey(SRCE)ι->optional<DB::Key>;
+		α FindKey()ι->optional<DB::Key>;
 		α FindParam( sv name )Ι->const jvalue*;
 		α GetParam( sv name, SRCE )Ε->const jvalue&;
 		α ParentPK()Ε->uint;
@@ -35,8 +35,8 @@ namespace Jde::QL{
 	}
 
 	Ŧ MutationQL::Id()Ι->T{
-		const auto y = FindId();
+		const optional<T> y = FindId<T>();
 		ASSERT( y );
-		return y.value_or( 0 );
+		return y.value_or( T{} );
 	}
 }

@@ -55,7 +55,7 @@ namespace Jde::QL{
 
 	α TableQL::GetTable( sv jsonPluralName, SL sl )ε->TableQL&{
 		TableQL* y = FindTable( jsonPluralName );
-		THROW_IF( !y, "Could not find table '{}'.", jsonPluralName );
+		THROW_IFSL( !y, "Could not find table '{}'.", jsonPluralName );
 		return *y;
 	}
 

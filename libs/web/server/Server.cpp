@@ -7,8 +7,12 @@
 #define let const auto
 
 namespace Jde::Web{
-	static uint16 _maxLogLength{ Settings::FindNumber<uint16>("http/maxLogLength").value_or(1024) };
-	α Server::MaxLogLength()ι->uint16{ return _maxLogLength; }
+	static optional<uint16> _maxLogLength;
+	α Server::MaxLogLength()ι->uint16{ 
+		if( !_maxLogLength )
+			_maxLogLength = Settings::FindNumber<uint16>( "http/maxLogLength" ).value_or( 1024 );
+		return *_maxLogLength; 
+	}
 	α Server::Start( up<IRequestHandler>&& handler, up<IApplicationServer>&& server )ε->void{ Internal::Start( move(handler), move(server) ); }
 	α Server::Stop( bool terminate )ι->void{ Internal::Stop(terminate); }
 }

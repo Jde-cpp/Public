@@ -46,11 +46,11 @@ namespace Jde::QL{
 	}
 
 	α MutationQL::GetKey(SL sl)ε->DB::Key{
-		let y = FindKey( sl );
+		let y = FindKey();
 		THROW_IFSL( !y, "Could not find id or target in mutation '{}'", ToString() );
 		return *y;
 	}
-	α MutationQL::FindKey(SL sl )ι->optional<DB::Key>{
+	α MutationQL::FindKey()ι->optional<DB::Key>{
 		optional<DB::Key> y;
 		if( let id = FindId<uint>(); id )
 			y = DB::Key{ *id };

@@ -109,7 +109,7 @@ namespace Tests{
 		return GetId( createJson );//{"user":{"id":7}}
 	}
 
-	Ω createUser( str target, EProviderType providerId, UserPK executer )ε->UserPK{
+	Ω createUser( str target, ProviderPK providerId, UserPK executer )ε->UserPK{
 		let create = Ƒ( "createUser(  loginName:'{0}', target:'{0}', provider:{1}, name:'{0} - name', description:'{0} - description' ){{id}}", target, (uint)providerId );
 		let createJson = QL::QueryObject( Str::Replace(create, '\'', '"'), executer );
 		return { Tests::GetId(createJson) };//{"user":{"id":7}}}
@@ -168,7 +168,7 @@ namespace Tests{
 
 		auto root = SelectUser( "root", {UserPK::System} );
 		if( root.empty() ){
-			_root = createUser( "root", EProviderType::Google, {UserPK::System} );
+			_root = createUser( "root", (ProviderPK)EProviderType::Google, {UserPK::System} );
 			let resourcePermissions = BlockAwait<ResourceLoadAwait,ResourcePermissions>( ResourceLoadAwait(QL::Local(), {GetTable("acl")->Schema}, {UserPK::System}) );
 			for( let& [pk,resource] : resourcePermissions.Resources )
 				CreateAcl( *_root, ERights::All, ERights::None, resource.Target, {UserPK::System} );
@@ -179,7 +179,7 @@ namespace Tests{
 		return *_root;
 	}
 
-	α Tests::GetUser( str target, UserPK executer, bool includeDeleted, EProviderType provider )ε->jobject{
+	α Tests::GetUser( str target, UserPK executer, bool includeDeleted, ProviderPK provider )ε->jobject{
 		if( executer==UserPK{0} )
 		executer = GetRoot();
 		auto user = SelectUser( target, executer, includeDeleted );

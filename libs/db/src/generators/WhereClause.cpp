@@ -27,6 +27,10 @@ namespace Jde::DB{
 			_params.emplace_back( move(param) );
 		_clauses.push_back( col->Table->Syntax().FormatOperator(*col, op, inParams.size(), sl) );
 	}
+	
+	α WhereClause::Add( const DB::Criteria& criteria )ε->void{
+		Add( criteria.Column, EOperator::Equal, criteria.Value );
+	}
 
 	α WhereClause::Move()ι->string{
 		string prefix{ _clauses.size() ? "where " : "" };

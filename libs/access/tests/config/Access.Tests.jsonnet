@@ -1,34 +1,23 @@
+local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "AuthTests.*",
+		tests:: "UserTests.Fields",
 		recreateDB:: true
 	},
 	dbServers: {
-		scriptPaths: ["$(JDE_DIR)/Public/libs/access/config/sql/mysql"],
+		scriptPaths: ["$(JDE_DIR)/Public/libs/access/config/sql/"+args.sqlType],
 		dataPaths: ["$(JDE_DIR)/Public/libs/access/config"],
 		sync:: true,
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",
-			connectionString: "mysqlx://$(JDE_MYSQL_CREDS)@127.0.0.1:33060/test_access?ssl-mode=disabled",
-			catalogs: {
-				jde_test: {
-					schemas:{
-						test_access:{ //for sqlserver, test with schema, debug with default schema ie dbo.
-							access:{
-								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet",
-								ql: "$(JDE_DIR)/Public/libs/access/config/access-ql.jsonnet",
-								prefix: null  //test with null prefix, debug with prefix
-							}
-						}
-					}
-				}
-			}
+			driver: args.dbDriver,
+			connectionString: args.dbConnectionString,
+			catalogs: args.catalogs
 		}
 	},
 	logging:{
 		tags: {
-			trace:["test", "access"],
-			debug:["settings", "app", "ql", "sql"],
+			trace:["test", "app", "access", "ql", "sql"],
+			debug:["settings"],
 			information:[],
 			warning:[],
 			"error":[],
@@ -36,7 +25,7 @@
 		},
 		sinks:{
 			console:{},
-			file:{ path: "/tmp", md: false }
+			file:{ path: args.logDir, md: false }
 		}
 	},
 	workers:{

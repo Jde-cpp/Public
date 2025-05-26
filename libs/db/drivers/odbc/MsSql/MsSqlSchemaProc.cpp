@@ -1,0 +1,173 @@
+﻿#include "MsSqlSchemaProc.h"
+#include <jde/framework/Str.h>
+#include <jde/db/IRow.h>
+#include <jde/db/meta/Table.h>
+#include "../../../src/meta/ddl/ForeignKey.h"
+#include "../../../src/meta/ddl/Index.h"
+#include "../../../src/meta/ddl/Procedure.h"
+#include "../../../src/meta/ddl/TableDdl.h"
+#include "MsSqlStatements.h"
+#include "../OdbcDataSource.h"
+#define let const auto
+
+namespace Jde::DB::MsSql{
+	α MsSqlSchemaProc::LoadTables( sv schemaName, sv tablePrefix )Ε->flat_map<string,sp<Table>>{
+//		if( schema.empty() )
+//			schema = "dbo"sv;/*_pDataSource->Catalog( MsSql::Sql::CatalogSql )*/;
+		flat_map<string,sp<Table>> tables;
+		auto result2 = [&]( sv tableName, sv name, _int /*ordinalPosition*/, sv dflt, bool isNullable, sv type, optional<_int> maxLength, _int isIdentity, _int /*isId*/, optional<_int> numericPrecision, optional<_int> numericScale ){
+			//let trimmed = tablePrefix.size() ? tableName.substr(tablePrefix.size()) : tableName;
+			auto table = tables.emplace( tableName, ms<TableDdl>(Table{tableName}) ).first->second;
+			let dataType = ToType(type);
+			optional<Value> defaultValue;
+			if( !dflt.empty() ){
+				if( dataType==EType::Int ){
+					auto start = dflt.find_first_of( '\'' );
+					auto end = dflt.find_last_of( '\'' );
+					if( end-start<2 && dflt.size()>4 ){//"((?))
+						start = 1;
+						end = dflt.size()-4;
+					}
+					if( let value = end-start>1 ? Str::TryTo<_int>(string{dflt.substr(start+1, end-start)}) : std::optional<_int>{}; value )
+						defaultValue = *value;
+				}
+				else if( dataType==EType::Bit )
+					defaultValue = dflt!="((0))";
+			}
+			auto c = ms<Column>( string{name} );
+			c->Default = defaultValue;
+			c->IsNullable = isNullable;
+			c->IsSequence = isIdentity != 0;
+			c->Type = dataType;
+			c->MaxLength = maxLength.value_or(0);
+			c->NumericPrecision = numericPrecision.value_or(0);
+			c->NumericScale = numericScale.value_or(0);
+			table->Columns.push_back( c );
+		};
+		auto result = [&]( IRow& row ){
+			result2( row.MoveString(0), row.MoveString(1), row.GetInt(2), row.MoveString(3), row.GetBit(4), row.MoveString(5), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
+		};
+		auto sql = Sql::ColumnSql( tablePrefix.size() );
+		vector<Value> values{ Value{string{schemaName}} };
+		if (tablePrefix.size())
+			values.push_back(Value{ string{tablePrefix}+'%' });
+		_pDataSource->Select( move(sql), result, values );
+
+
+		let indexes = LoadIndexes( schemaName, {} );
+		for( auto& index : indexes ){
+			if( auto pTable = tables.find(index.TableName); pTable != tables.end() )
+				std::dynamic_pointer_cast<TableDdl>( pTable->second )->Indexes.push_back( index );
+		}
+		return tables;
+	}
+
+	α MsSqlSchemaProc::LoadIndexes( sv schema, sv tableName )Ε->vector<Index>{
+		if( schema.empty() )
+			schema = "dbo";// _pDataSource->Catalog( MsSql::Sql::CatalogSql );
+
+		vector<Index> indexes;
+		auto result = [&]( IRow& row ){
+			uint i=0;
+			let tableName = row.MoveString(i++); let indexName = row.MoveString(i++); let columnName = row.MoveString(i++); let unique = row.GetBit(i++)==0;
+
+			vector<string>* pColumns;
+			auto pExisting = std::find_if( indexes.begin(), indexes.end(), [&](auto index){ return index.Name==indexName && index.TableName==tableName; } );
+			if( pExisting==indexes.end() ){
+				bool clustered = false;//Boolean.Parse( row["CLUSTERED"].ToString() );
+				let primaryKey = indexName==Ƒ( "{}_pk", tableName );//Boolean.Parse( row["PRIMARY_KEY"].ToString() );
+				pColumns = &indexes.emplace_back( indexName, tableName, primaryKey, nullptr, unique, clustered ).Columns;
+			}
+			else
+				pColumns = &pExisting->Columns;
+			pColumns->push_back( columnName );
+		};
+
+		vector<Value> values{ Value{string{schema}} };
+		if( tableName.size() )
+			values.push_back( Value{string{tableName}} );
+		let sql = Sql::IndexSql( tableName.size() );
+		_pDataSource->Select( sql, result, values );
+
+		return indexes;
+	}
+
+	α MsSqlSchemaProc::LoadProcs( str schemaName )Ε->flat_map<string,Procedure>{
+		flat_map<string,Procedure> values;
+		auto fnctn = [&]( IRow& row ){
+			let name = row.MoveString( 0 );
+			values.try_emplace( name, Procedure{name, schemaName} );
+		};
+		_pDataSource->Select( Sql::ProcSql(true), fnctn, {Value{schemaName}} );
+		return values;
+	}
+
+	α MsSqlSchemaProc::ToType( sv typeName )Ι->EType{
+		EType type{ EType::None };
+		using enum EType;
+		if(typeName=="datetime")
+			type=DateTime;
+		else if( typeName=="smalldatetime" )
+			type=SmallDateTime;
+		else if(typeName=="float")
+			type=Float;
+		else if(typeName=="real")
+			type=SmallFloat;
+		else if( typeName=="int" )
+			type = Int;
+		else if( Str::StartsWith(typeName, "bigint") )
+			type=Long;
+		else if( typeName=="nvarchar" || typeName=="sysname" )
+			type=VarWChar;
+		else if(typeName=="nchar")
+			type=WChar;
+		else if( Str::StartsWith(typeName, "smallint") )
+			type=Int16;
+		else if(typeName=="tinyint")
+			type=Int8;
+		else if( typeName=="tinyint unsigned" )
+			type=UInt8;
+		else if( typeName=="uniqueidentifier" )
+			type=Guid;
+		else if(typeName=="varbinary")
+			type=VarBinary;
+		else if( Str::StartsWithInsensitive(typeName, "varchar") )
+			type=VarChar;
+		else if(typeName=="ntext")
+			type=NText;
+		else if(typeName=="text")
+			type=Text;
+		else if(typeName=="char")
+			type=Char;
+		else if(typeName=="image")
+			type=Image;
+		else if(Str::StartsWith(typeName, "bit") )
+			type=Bit;
+		else if( Str::StartsWith(typeName, "binary") )
+			type=Binary;
+		else if( Str::StartsWith(typeName, "decimal") )
+			type=Decimal;
+		else if(typeName=="numeric")
+			type=Numeric;
+		else if(typeName=="money")
+			type=Money;
+		else
+			Warning( ELogTags::App, "Unknown datatype({}).  need to implement, no big deal if not our table.", typeName );
+		return type;
+	}
+
+	α MsSqlSchemaProc::LoadForeignKeys( str schemaName )Ε->flat_map<string,ForeignKey>{
+		flat_map<string,ForeignKey> fks;
+		auto result = [&]( IRow& row ){
+			uint i=0;
+			let name = row.MoveString(i++); let fkTable = row.MoveString(i++); let column = row.MoveString(i++); let pkTable = row.MoveString(i++); //let pkColumn = row.MoveString(i++); let ordinal = row.GetUInt(i);
+			auto pExisting = fks.find( name );
+			if( pExisting==fks.end() )
+				fks.emplace( name, ForeignKey{name, fkTable, {column}, pkTable} );
+			else
+				pExisting->second.Columns.push_back( column );
+		};
+		_pDataSource->Select( Sql::ForeignKeySql(schemaName.size()), result, {Value{schemaName}} );
+		return fks;
+	}
+}

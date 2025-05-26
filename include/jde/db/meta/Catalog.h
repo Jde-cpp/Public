@@ -12,6 +12,7 @@ namespace Jde::DB{
 
 		Ω Initialize( sp<DB::Cluster> cluster, sp<Catalog> self )ε->void;
 		α DS()Ε->sp<IDataSource>;
+		α SetDS( sp<IDataSource> ds )ι->void{ _dataSource = ds; }
 		α FindAppSchema( str name )ι->sp<AppSchema>;
 		string Name;
 		sp<DB::Cluster> Cluster;

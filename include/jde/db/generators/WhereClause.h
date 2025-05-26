@@ -1,12 +1,15 @@
 ﻿#pragma once
 #ifndef WHERE_CLAUSE_H
 #define WHERE_CLAUSE_H
-#include <jde/db/Value.h>
-#include <jde/db/generators/Syntax.h>
+#include "../exports.h"
+#include "../Value.h"
+#include "Syntax.h"
+
 
 namespace Jde::DB{
 	struct Column;
-	struct WhereClause final{
+	struct Criteria;
+	struct ΓDB WhereClause final{
 		WhereClause()ι=default;
 		//WhereClause( string init )ι{ Add(move(init)); }
 		WhereClause( sp<Column> c, Value::Underlying param, SRCE )ε{ Add(c, move(param), sl); }
@@ -22,6 +25,7 @@ namespace Jde::DB{
 		α Add( sp<Column> col, Value param, SRCE )ε->void{ Add( col, EOperator::Equal, move(param.Variant), sl ); }
 		α Add( sp<Column> col, vector<Value> inParams, SRCE )ε->void{ Add( col, EOperator::In, move(inParams), sl ); }
 		α Add( string clause )ε{ _clauses.push_back(move(clause)); }
+		α Add( const DB::Criteria& criteria )ε->void;
 		α Empty()Ι->bool{ return _clauses.empty(); }
 		α Move()ι->string;
 

@@ -1,53 +1,55 @@
-#pragma once
+﻿#pragma once
 #ifndef JSON_H
 #define JSON_H
-//#include <jde/framework/io/json/JValue.h>
-
+#include <expected>
+#define Φ Γ α
 namespace Jde{
-	α operator<( const jvalue& a, const jvalue& b )ι->bool;
+	Φ operator<( const jvalue& a, const jvalue& b )ι->bool;
 	Ξ operator<=( const jvalue& a, const jvalue& b )ι->bool{ return a<b || a==b; }
 	Ξ operator>( const jvalue& a, const jvalue& b )ι->bool{ return b<a; }
 	Ξ operator>=( const jvalue& a, const jvalue& b )ι->bool{ return a>b || a==b; }
 	//α operator==( const jvalue& a, const jvalue& b )ι->bool{ return a.is_primitive() && !(b<a) && !(b>a); }
 	Ŧ Eval( const boost::system::result<T>& x, string&& message, SRCE )ε->T;//TODO forward args...
 	namespace Json{
-		α AddOrAssign( jvalue& objOrArray, jvalue&& item, SRCE )ε->void;
-		α Combine( const jobject& a, const jobject& b )ι->jobject;
-		α Visit( jvalue&& v, function<void(jobject&& o)> op )ε->void;
-		α Visit( const jvalue& v, function<void(const jvalue& o)> op )ε->void;
-		α Visit( const jvalue& v, function<void(sv s)> op )ε->void;
-		α Visit( jvalue& v, function<void(jobject& o)> op )ε->void;
-		α ReadJsonNet( fs::path path, SRCE )ε->jobject;
+		Φ AddOrAssign( jvalue& objOrArray, jvalue&& item, SRCE )ε->void;
+		Φ Combine( const jobject& a, const jobject& b )ι->jobject;
+		Φ Visit( jvalue&& v, function<void(jobject&& o)> op )ε->void;
+		Φ Visit( const jvalue& v, function<void(const jvalue& o)> op )ε->void;
+		Φ Visit( const jvalue& v, function<void(sv s)> op )ε->void;
+		Φ Visit( jvalue& v, function<void(jobject& o)> op )ε->void;
+		Φ AddImportPath( fs::path path )ι->void;
+		Φ TryReadJsonNet( fs::path path, SRCE )ι->std::expected<jobject,string>;
+		Φ ReadJsonNet( fs::path path, SRCE )ε->jobject;
 		constexpr sv errorFromat = "'{}' could not convert to {}.";
 #define $(type) Eval( v.try_as_##type(), Ƒ(errorFromat, serialize(v), #type), sl )
-		α AsValue( const jobject& o, sv path, SRCE )ε->const jvalue&;
-		α AsArray( const jvalue& v, SRCE )ε->const jarray&;
-		α AsArray( const jobject& o, sv key, SRCE )ε->const jarray&;
-		α AsArrayPath( const jobject& o, sv path, SRCE )ε->const jarray&;
+		Φ AsValue( const jobject& o, sv path, SRCE )ε->const jvalue&;
+		Φ AsArray( const jvalue& v, SRCE )ε->const jarray&;
+		Φ AsArray( const jobject& o, sv key, SRCE )ε->const jarray&;
+		Φ AsArrayPath( const jobject& o, sv path, SRCE )ε->const jarray&;
 		Ξ AsBool( const jvalue& v, SRCE )ε->bool{ return $(bool); }
 		Ξ AsBool( const jobject& o, sv path, SRCE )ε->bool{ return AsBool( AsValue(o,path,sl), sl ); }
 		Ŧ AsNumber( const jvalue& v, SRCE )ε->T;
 		Ŧ AsNumber( const jobject& o, sv path, SRCE )ε->T{ return AsNumber<T>( AsValue(o,path,sl), sl ); }
-		Ξ AsSV( const jvalue& v, sv path, SRCE )ε->sv{ return $(string); }
+		Ξ AsSV( const jvalue& v, sv /*path*/, SRCE )ε->sv{ return $(string); }
 		Ξ AsSV( const jvalue& v, SRCE )ε->sv{ return $(string); }
-		α AsSV( const jobject& o, sv key, SRCE )ε->sv;
-		α AsSVPath( const jobject& o, sv path, SRCE )ε->sv;
+		Φ AsSV( const jobject& o, sv key, SRCE )ε->sv;
+		Φ AsSVPath( const jobject& o, sv path, SRCE )ε->sv;
 		Ξ AsString( const jvalue& v, SRCE )ε->string{ return string{ $(string) }; }
 		Ξ AsString( const jobject& o, sv key, SRCE )ε->string{ return string{AsSV(o,key,sl)}; }
-		α AsObject( const jvalue& v, SRCE )ε->const jobject&;
-		α AsObject( const jvalue& v, sv path, SRCE )ε->const jobject&;
-		α AsObject( const jobject& o, sv key, SRCE )ε->const jobject&;
+		Φ AsObject( const jvalue& v, SRCE )ε->const jobject&;
+		Φ AsObject( const jvalue& v, sv path, SRCE )ε->const jobject&;
+		Φ AsObject( const jobject& o, sv key, SRCE )ε->const jobject&;
 		α AsObjectPath( const jobject& o, sv path, SRCE )ε->const jobject&;
-		α AsTimePointOpt( const jobject& o, sv key )ι->optional<TimePoint>;
+		Φ AsTimePointOpt( const jobject& o, sv key )ι->optional<TimePoint>;
 
 #undef $
 		Ξ FindValue( const jvalue& v, sv path )ι->optional<jvalue>{ auto y = v.try_at_pointer(path); return y.has_value() ? *y : optional<jvalue>{}; }
 		Ξ FindValuePtr( const jvalue& v, sv path )ι->const jvalue*{ auto y = v.try_at_pointer(path); return y.has_value() ? &*y : nullptr; }
-		α FindValue( const jobject& o, sv path )ι->const jvalue*;
+		Φ FindValue( const jobject& o, sv path )ι->const jvalue*;
 		α FindArray( const jvalue& v, sv path )ι->const jarray*;
-		α FindArray( const jobject& o, sv key )ι->const jarray*;
+		Φ FindArray( const jobject& o, sv key )ι->const jarray*;
 		Ξ FindBool( const jvalue& v, sv path )ι->optional<bool>{ auto p = FindValue(v,path); return p && p->is_bool() ? p->get_bool() : optional<bool>{}; }
-		α FindBool( const jobject& o, sv key )ι->optional<bool>;
+		Φ FindBool( const jobject& o, sv key )ι->optional<bool>;
 		Ξ FindObject( const jvalue& v, sv path )ι->const jobject*{ auto p = FindValuePtr(v,path); return p ? p->if_object() : nullptr; }
 		Ξ FindSV( const jvalue& v, sv path )ι->optional<sv>{ auto p = FindValuePtr(v,path); return p && p->is_string() ? p->get_string() : optional<sv>{}; }
 		Ξ FindSV( const jobject& o, sv key )ι->optional<sv>{ auto p = o.if_contains(key); return p && p->is_string() ? p->get_string() : optional<sv>{}; }
@@ -60,28 +62,28 @@ namespace Jde{
 		template<IsEnum T, class ToEnum> α FindEnumPath( const jobject& o, sv path, ToEnum&& toEnum )ι->optional<T>;
 		template<IsEnum T, class ToEnum> α FindEnum( const jvalue& v, sv path, ToEnum&& toEnum )ι->optional<T>;
 
-		α Find( const jvalue& container, const jvalue& item )ι->const jvalue*;
+		Φ Find( const jvalue& container, const jvalue& item )ι->const jvalue*;
 
 		α FindDefaultArray( const jvalue& v, sv path )ι->const jarray&;
 		α FindDefaultArray( const jobject& o, sv key )ι->const jarray&;
 		α FindDefaultObject( const jvalue& v, sv path )ι->const jobject&;
 		α FindDefaultObject( const jobject& o, sv key )ι->const jobject&;
-		α FindDefaultObjectPath( const jobject& o, sv path )ι->const jobject&;
+		Φ FindDefaultObjectPath( const jobject& o, sv path )ι->const jobject&;
 
-		α Kind( boost::json::kind value )ι->string;
+		Φ Kind( boost::json::kind value )ι->string;
 
 		Ŧ FindNumber( const jobject& o, sv key )ι->optional<T>;
 		Ŧ FindKey( const jobject& o, sv key="id" )ι->optional<T>;
 		Ξ FindObject( const jobject& o, sv key )ι->const jobject*{ auto p = o.if_contains(key); return p ? p->if_object() : nullptr; }
-		α FindString( const jobject& o, sv key )ι->optional<string>;
-		α FindTimePoint( const jobject& o, sv key )ι->optional<TimePoint>;
+		Φ FindString( const jobject& o, sv key )ι->optional<string>;
+		Φ FindTimePoint( const jobject& o, sv key )ι->optional<TimePoint>;
 
 		Ξ FindDefaultBool( const jobject& o, sv key )ι->bool{ auto p = o.if_contains(key); return p && p->is_bool() ? p->get_bool() : false; }
 		Ξ FindDefaultSV( const jobject& o, sv key )ι->sv{ auto p = o.if_contains(key); return p && p->is_string() ? p->get_string() : sv{}; }
 		Ξ FindDefaultSV( const jvalue& v, sv path )ι->sv{ auto p = FindSV(v,path); return p ? *p : sv{}; }
 
-		α Parse( sv json, SRCE )ε->jobject;
-		α ParseValue( string&& json, SRCE )ε->jvalue;
+		Φ Parse( sv json, SRCE )ε->jobject;
+		Φ ParseValue( string&& json, SRCE )ε->jvalue;
 		Ŧ FromArray( const jarray& a, SRCE )ε->vector<T>;
 		Ŧ ToVector( const jvalue& a, SRCE )ε->vector<T>;
 
@@ -177,5 +179,6 @@ namespace Jde{
 		throw CodeException{ x.error(), ELogTags::Parsing, move(message), ELogLevel::Debug, sl };
 	return *x;
 }
+#undef Φ
 #undef let
 #endif

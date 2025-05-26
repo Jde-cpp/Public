@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 namespace Jde::Access{
 	struct GroupPK final : PK<uint32>{};
 	using ProviderPK=uint32;
@@ -23,7 +23,7 @@ namespace Jde::Access{
 		variant<Jde::UserPK,Access::GroupPK> Value;
 	};
 
-	enum class EProviderType : uint8{
+	enum class EProviderType : ProviderPK{
 		None = 0,
 		Google=1,
 		Facebook=2,

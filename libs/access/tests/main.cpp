@@ -11,13 +11,12 @@
 
 namespace Jde{
 	α OSApp::ProductName()ι->sv{ return "Tests.Access"; }
-	up<exception> _exception;
+	up<exception> _error;
  	α Startup( int argc, char **argv, bool& set )ε->Access::ConfigureAwait::Task{
 		try{
 	#ifdef _MSC_VER
-			ASSERT( Settings::Get<uint>("/workers/drive/threads")>0 )
+			ASSERT( Settings::FindNumber<uint>("/workers/drive/threadSize").value_or(5)>0 )
 	#endif
-			ASSERT( argc>1 && string{argv[1]}=="-c" )
 			OSApp::Startup( argc, argv, OSApp::ProductName(), "Access tests", true );
 
 			let metaDataName{ "access" };
@@ -34,7 +33,7 @@ namespace Jde{
 			Access::Tests::SetSchema( schema );
 		}
 		catch( exception& e ){//don't want unhandeled exception routine.
-			_exception = ToUP( move(e) );
+			_error = ToUP( move(e) );
 		}
 		set = true;
 	}
@@ -48,9 +47,9 @@ namespace Jde{
 	while( !set )
 		std::this_thread::yield();
 	int result = EXIT_FAILURE;
-	if( _exception ){
-		std::cerr << _exception->what() << std::endl;
-		_exception = nullptr; //logging at finalize doesn't work.
+	if( _error ){
+		std::cerr << _error->what() << std::endl;
+		_error = nullptr; //logging at finalize doesn't work.
 	}
 	else{
 		::testing::GTEST_FLAG( filter ) = Settings::FindSV( "/testing/tests" ).value_or( "*" );

@@ -1,5 +1,5 @@
 #pragma once
-#ifdef Jde_EXPORTS
+#ifdef Jde_DB_EXPORTS
 	#ifdef _MSC_VER
 		#define ΓDB __declspec( dllexport )
 	#else

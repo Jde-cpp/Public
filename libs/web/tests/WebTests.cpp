@@ -10,7 +10,6 @@
 
 namespace Jde::Web{
 	constexpr ELogTags _tags{ ELogTags::Test };
-	static sp<Jde::LogTag> _logTag{ Logging::Tag( "test" ) };
 	using Mock::Host; using Mock::Port;
 
 	struct WebTests : ::testing::Test{

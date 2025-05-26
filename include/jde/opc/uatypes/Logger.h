@@ -26,7 +26,8 @@ namespace Jde::Opc{
 	constexpr ELogTags BrowseTagPedantic{ (ELogTags)EOpcLogTags::Browse | ELogTags::Pedantic };
 	constexpr ELogTags ProcessingLoopTag{ (ELogTags)EOpcLogTags::ProcessingLoop };
 
-	ΓOPC α LogTagParser( sv name )ι->optional<ELogTags>;
+	α TagFromString( sv name )ι->optional<ELogTags>;
+	α TagToString( ELogTags tags )ι->string;
 	struct Logger : UA_Logger{
 		Logger( Handle context=0 )ι;
 

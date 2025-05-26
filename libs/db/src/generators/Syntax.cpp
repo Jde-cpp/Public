@@ -16,7 +16,7 @@ namespace Jde::DB{
 	α Syntax::Instance()->const Syntax&{ return _sqlInstance; }
 	α MySqlSyntax::Instance()->const MySqlSyntax&{ return _mySqlInstance; }
 
-	α Syntax::FormatOperator( const Column& col, EOperator op, uint size, SL sl )Ε->string{
+	α Syntax::FormatOperator( const Column& col, EOperator op, uint size, SL )Ε->string{
 		if( op!=EOperator::In && op!=EOperator::NotIn )
 			return Ƒ( "{}{}?", col.FQName(), OperatorStrings[(uint)op] );
 
@@ -49,6 +49,15 @@ namespace Jde::DB{
 			Critical{ ELogTags::Sql, "Default for index={} not implemented.", dflt.TypeName() };
 
 		return Ƒ( "ALTER TABLE {} ALTER COLUMN {} SET DEFAULT {}", tableName, columnName, v );
+	}
+
+	α Syntax::EscapeDdl( sv sql )Ι->string{
+		let parts = Str::Split( sql, '.' );
+		string y;
+		for( let part : parts )
+			y += '['+string{part}+"].";
+		y.pop_back();
+		return y;
 	}
 
 	α Syntax::Limit( str sql, uint limit )Ε->string{

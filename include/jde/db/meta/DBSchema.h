@@ -16,7 +16,7 @@ namespace Jde::DB{
 		α FindAppSchema( str name )ι->sp<AppSchema>;
 		α FindDefTable( const Table& t1, const Table& t2 )Ι->sp<Table>;//route, route_steps-> -> route_definition
 		Ω Initialize( sp<DB::Catalog> catalog, sp<DBSchema> self )ε->void;
-		α IsPhysical()Ι->bool{ return Name.size() && Name[0]!='_'; }
+		β IsPhysical()Ι->bool{ return false; }
 
 		const string Name; //empty=default, acutal name ie [jde_test].
 		sp<DB::Catalog> Catalog;

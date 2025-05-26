@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 namespace Jde{
 	using namespace std::literals::string_view_literals;
 

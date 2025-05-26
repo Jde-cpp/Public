@@ -8,9 +8,9 @@ namespace Jde::Web::Client{
 		α Query( string query, UserPK executer, bool returnRaw=true, SRCE )ι->up<TAwait<jvalue>> override;
 		α QueryObject( string query, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jobject>> override;
 		α QueryArray( string query, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jarray>> override;
-		α MutateIfNotFound( string query, UserPK executer )ε->jarray{ throw Exception("Not implemented."); }
+		α MutateIfNotFound( string query, UserPK /*executer*/ )ε->jarray{ throw Exception("Not implemented."); }
 		α Subscribe( string&& query, sp<QL::IListener> listener, UserPK executer, SRCE )ε->up<TAwait<vector<QL::SubscriptionId>>> override;
-		β Upsert( string query, UserPK executer )ε->jarray{ throw Exception{"Not implemented."}; }
+		β Upsert( string query, UserPK /*executer*/ )ε->jarray{ throw Exception{"Not implemented."}; }
 	private:
 		sp<IClientSocketSession> _session;
 	};

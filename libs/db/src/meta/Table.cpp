@@ -9,7 +9,6 @@
 #include <jde/db/generators/Syntax.h>
 #include <jde/framework/str.h>
 
-
 #define let const auto
 
 namespace Jde::DB{
@@ -35,9 +34,9 @@ namespace Jde::DB{
 	{}
 
 	α Table::Initialize( sp<DB::AppSchema> schema, sp<Table> self )ε->void{
-		View::Initialize( schema, self );
 		if( Extends )
 			Extends = schema->GetTablePtr( Extends->Name );
+		View::Initialize( schema, self );
 	}
 
 	α Table::FindColumn( sv name )Ι->sp<Column>{

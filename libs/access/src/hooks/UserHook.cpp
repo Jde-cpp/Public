@@ -42,7 +42,6 @@ namespace Jde::Access{
 			statement.Where.Add( key->IsPrimary() ? pk : identityTable->GetColumnPtr("target"), DB::Value::FromKey(*key) );
 
 		statement.Where.Add( identityTable->GetColumnPtr("deleted"), DB::Value{} );
-		uint i=0;
 		statement.Select.TryAdd( memberIdColumn );
 		for( auto& c : groupTable.Columns ){
 			if( c.JsonName=="memberId" ){

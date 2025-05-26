@@ -1,9 +1,10 @@
 #pragma once
+#include "../exports.h"
 #include "Sql.h"
 
 namespace Jde::DB{
 	struct Column;
-	struct InsertClause final{
+	struct ΓDB InsertClause final{
 		InsertClause()ι=default;
 		InsertClause( sv name )ι:_procName{ name }{}
 		InsertClause( sv name, vector<Value>&& params )ι;
