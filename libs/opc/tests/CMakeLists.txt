@@ -54,14 +54,7 @@ endif()
 
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Tests.jsonnet" )
-	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/../framework/$<CONFIG>/Jde.dll" $<TARGET_FILE_DIR:${targetName}> )
-	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/../framework/$<CONFIG>/Jde.pdb" $<TARGET_FILE_DIR:${targetName}> )
-	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/../db/lib/$<CONFIG>/Jde.DB.dll" $<TARGET_FILE_DIR:${targetName}> )
-	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/../db/lib/$<CONFIG>/Jde.DB.pdb" $<TARGET_FILE_DIR:${targetName}> )
-	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/../db/drivers/odbc/$<CONFIG>/Jde.DB.Odbc.dll" $<TARGET_FILE_DIR:${targetName}> )
-	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/../db/drivers/odbc/$<CONFIG>/Jde.DB.Odbc.pdb" $<TARGET_FILE_DIR:${targetName}> )
-	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_DIR}/fmt/bin/fmtd.dll" $<TARGET_FILE_DIR:${targetName}> )
-	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_DIR}/zlib/bin/zlibd.dll" $<TARGET_FILE_DIR:${targetName}> )
+	copyCommonDlls()
 endif()
 target_precompile_headers( ${targetName} PRIVATE
 	<gtest/gtest.h>

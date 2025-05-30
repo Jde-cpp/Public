@@ -1,4 +1,4 @@
-create or alter proc access_ac_upsert_permission( @identityId int, @allowed tinyint, @denied tinyint, @resourceId int ) as
+create or alter proc [dbo].access_ac_upsert_permission( @identityId int, @allowed tinyint, @denied tinyint, @resourceId int ) as
 begin
 	set nocount on;
 	declare @permission_id int;

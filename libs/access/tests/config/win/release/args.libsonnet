@@ -1,10 +1,10 @@
 {
 	sqlType: "sqlServer",
 	logDir: "$(JDE_BUILD_DIR)",
-	dbDriver: "$(JDE_BUILD_DIR)/msvc/jde/libs/access/bin/debug/Jde.DB.Odbc.dll",
-	dbConnectionString: "DSN=AccessTestDebug",
+	dbDriver: "$(JDE_BUILD_DIR)/msvc/jde/libs/access/bin/RelWithDebInfo/Jde.DB.Odbc.dll",
+	dbConnectionString: "DSN=AccessTestRelease",
 	catalogs: {
-		jde_test_access_debug: {
+		test_access_release: {
 			schemas:{
 				acc:{
 					access:{  //test debug with schema, debug with default schema ie dbo.

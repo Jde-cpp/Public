@@ -68,10 +68,10 @@ namespace Jde::DB{
 		α operator[]( uint i )Ι->const Value&{ return _values[i]; }
 		α operator[]( uint i )ι->Value&{ return _values[i]; }
 		α GetBit( uint i, SL )Ι->bool override{ return _values[i].get_bool(); }
-		α MoveString( uint i, SL )ι->string{ return _values[i].move_string(); }
-		α GetInt( uint i, SL )Ι->int64_t{ return _values[i].get_int(); }
-		α GetInt32( uint i, SL )Ι->int32_t{ return _values[i].get_int32(); }
-		α GetIntOpt( uint i, SL )Ι->std::optional<_int>{ return IsNull(i) ? std::optional<_int>{} : _values[i].get_int(); }
+		α MoveString( uint i, SL )ι->string{ return IsNull(i) ? string{} : _values[i].move_string(); }
+		α GetInt( uint i, SL )Ι->int64_t{ return _values[i].get_number<int64_t>(); }
+		α GetInt32( uint i, SL )Ι->int32_t{ return _values[i].get_number<int32_t>(); }
+		α GetIntOpt( uint i, SL )Ι->std::optional<_int>{ return IsNull(i) ? std::optional<_int>{} : _values[i].get_number<_int>(); }
 		α GetDouble( uint i, SL )Ι->double{ return _values[i].get_double(); }
 		α GetDoubleOpt( uint i, SL )Ι->std::optional<double>{ return IsNull(i) ? std::optional<double>{} : _values[i].get_double(); }
 		α GetTimePoint( uint i, SL )Ι->DBTimePoint{ return _values[i].get_time(); }

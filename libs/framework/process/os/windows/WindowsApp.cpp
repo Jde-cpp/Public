@@ -234,7 +234,7 @@ namespace Jde{
 		auto service = ServiceHandle{ ::CreateService(schSCManager.get(), serviceName.c_str(), (serviceName).c_str(), SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, ExePath().string().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr) };
 		if( !service.get() ){
 			if( ::GetLastError()==ERROR_SERVICE_EXISTS )
-				THROW( "Service allready exists." );
+				THROW( "Service already exists." );
 			else
 				THROW( "CreateService failed - {}", ::GetLastError() );
 		}

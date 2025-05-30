@@ -32,12 +32,10 @@ namespace Jde::QL{
 				if( let array = result.try_as_array(); array && array->size() )
 					result = (*array)[0];
 				available = result.is_object() ? Json::Combine( m.Args, result.get_object() ) : m.Args;
-				Trace{ ELogTags::Test, "result:  '{}', Args: '{}'", serialize(result), serialize(m.Args) };
 			}
 			jobject j;
 			j[sub.Fields.JsonName] = sub.Fields.TrimColumns( available );
 			try{
-				Trace{ ELogTags::Test, "OnChange:  '{}', Args: '{}'", serialize(j), serialize(m.Args) };
 				sub.Listener->OnChange( j, sub.Id );
 			}
 			catch( std::exception& )

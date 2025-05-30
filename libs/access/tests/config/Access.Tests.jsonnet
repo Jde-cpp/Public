@@ -7,7 +7,7 @@ local args = import 'args.libsonnet';
 	dbServers: {
 		scriptPaths: ["$(JDE_DIR)/Public/libs/access/config/sql/"+args.sqlType],
 		dataPaths: ["$(JDE_DIR)/Public/libs/access/config"],
-		sync:: true,
+		sync: true,
 		localhost:{
 			driver: args.dbDriver,
 			connectionString: args.dbConnectionString,

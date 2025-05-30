@@ -4,8 +4,12 @@ include( ExternalProject )
 include( ${CMAKE_CURRENT_SOURCE_DIR}/functions.cmake )
 project( libs VERSION ${JDE_VERSION} LANGUAGES CXX )
 if( CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT )
+	message( CMAKE_INSTALL_PREFIXA: ${CMAKE_INSTALL_PREFIX} )
   set( CMAKE_INSTALL_PREFIX ${LIB_DIR} CACHE PATH <comment> FORCE )
 endif()
+message( CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX} )
+message( CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH} )
+
 
 set( stdArgs
 	-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
@@ -29,7 +33,9 @@ ExternalProject_Add(gtest
 	GIT_REPOSITORY https://github.com/google/googletest.git
 	GIT_TAG v1.17.0
 	PREFIX gtest
-	INSTALL_DIR ${LIB_DIR}/gtest
+	INSTALL_DIR ${LIB_DIR}/gtest/${CMAKE_BUILD_TYPE}
+#	CMAKE_INSTALL_LIBDIR ${LIB_DIR}/gtest/${CMAKE_BUILD_TYPE}
+#	CMAKE_INSTALL_BINDIR ${LIB_DIR}/gtest/${CMAKE_BUILD_TYPE}
 	LOG_CONFIGURE ON
   LOG_BUILD ON
 	CMAKE_ARGS ${stdArgs}
@@ -45,6 +51,8 @@ ExternalProject_Add(fmt
 	INSTALL_DIR ${LIB_DIR}/fmt
 	CMAKE_ARGS ${stdArgs}
 		-DBUILD_SHARED_LIBS=ON
+		-DFMT_MASTER_PROJECT=OFF
+		-DFMT_DOC=OFF
 #-DCMAKE_POSITION_INDEPENDENT_CODE
 )
 ExternalProject_Add(spdlog
@@ -98,14 +106,6 @@ IF( WIN32 )
 			-DZLIB_BUILD_SHARED=OFF
 			-DZLIB_BUILD_TESTING=OFF
 	)
-	ExternalProject_Add(openssl
-		GIT_REPOSITORY https://github.com/openssl/openssl.git
-		GIT_TAG "openssl-3.5.0"
-		PREFIX openssl
-		INSTALL_DIR ${LIB_DIR}/openssl
-		CMAKE_ARGS ${stdArgs}
-	)
-
 	else()
 		#need to add set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG" ) to mysql-concpp/src/mysql-connector-cpp/CMakeLists.txt
 		ExternalProject_Add(mysql-connector-cpp

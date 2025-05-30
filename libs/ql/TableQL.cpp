@@ -120,7 +120,7 @@ namespace Jde::QL{
 	}
 	α TableQL::ToString()Ι->string{
 		string y = JsonName;
-		y.resize( 64*(1+Tables.size()) );
+		y.reserve( 64*(1+Tables.size()) );
 		if( Args.size() ){
 			auto args = serialize( Args );
 			args.front() = '(';

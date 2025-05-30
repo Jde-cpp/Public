@@ -2,6 +2,7 @@
 #include "ColumnDdl.h"
 #include <jde/db/generators/Syntax.h>
 #include "Index.h"
+#include "SchemaDdl.h"
 #include <jde/db/meta/Table.h>
 
 #define let const auto
@@ -26,15 +27,18 @@ namespace Jde::DB{
 		return createStatement.str();
 	}
 
-	α TableDdl::InsertProcCreateStatement()Ι->string{
+	α TableDdl::InsertProcCreateStatement( const Table& config )Ι->string{
 		let& syntax = Syntax();
 		std::ostringstream osCreate, osInsert, osValues;
-		osCreate << "create procedure " << syntax.EscapeDdl(InsertProcName()) << "(";
+		string procName = InsertProcName();
+		if( let index = procName.find_first_of('.'); index<procName.size()-1 )
+			procName = procName.substr( index+1 );
+		osCreate << "create procedure " << this->Schema->DBSchema->Name << ".[" << procName << "](";
 		osInsert << "\tinsert into " << DBName << "(";
 		osValues << "\t\tvalues(";
 		let prefix = syntax.ProcParameterPrefix().empty() ? "_" : syntax.ProcParameterPrefix();
 		char delimiter = ' ';
-		for( let& c : Columns ){
+		for( let& c : config.Columns ){
 			//let& c = dynamic_cast<const ColumnDdl&>( *column );
 			auto value{ Ƒ("{}{}"sv, prefix, c->Name) };
 			if( c->Insertable )

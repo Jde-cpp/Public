@@ -41,7 +41,7 @@ namespace Jde::DB::MsSql::Sql
 		os << "select  fk.CONSTRAINT_NAME name, fk.TABLE_NAME foreign_table, fk.COLUMN_NAME fk, pk.TABLE_NAME primary_table, pk.COLUMN_NAME pk, pk.ORDINAL_POSITION ordinal" << endl
 			<< "from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS con" << endl
 			<< "\tjoin INFORMATION_SCHEMA.KEY_COLUMN_USAGE fk on con.CONSTRAINT_NAME=fk.CONSTRAINT_NAME" << endl
-			<< "\tjoin INFORMATION_SCHEMA.KEY_COLUMN_USAGE pk on pk.CONSTRAINT_NAME=con.UNIQUE_CONSTRAINT_NAME and pk.ORDINAL_POSITION=fk.ORDINAL_POSITION --and pk.TABLE_NAME=con.REFERENCED_TABLE_NAME" << endl;
+			<< "\tjoin INFORMATION_SCHEMA.KEY_COLUMN_USAGE pk on con.UNIQUE_CONSTRAINT_NAME=pk.CONSTRAINT_NAME and fk.TABLE_SCHEMA=pk.TABLE_SCHEMA and fk.ORDINAL_POSITION=pk.ORDINAL_POSITION" << endl;
 		if( addSchema )
 			os << "where pk.TABLE_SCHEMA=?" << endl;
 		os << "order by name, ordinal";

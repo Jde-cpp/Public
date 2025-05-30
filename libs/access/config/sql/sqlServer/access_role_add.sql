@@ -1,4 +1,4 @@
-create or alter proc access_role_add( @role_id int, @allowed tinyint, @denied tinyint, @resourceTarget varchar(256) ) as begin
+create or alter proc [dbo].access_role_add( @role_id int, @allowed tinyint, @denied tinyint, @resourceTarget varchar(256) ) as begin
 	set nocount on;
 	declare @permission_id int;
 

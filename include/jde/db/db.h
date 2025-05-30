@@ -11,7 +11,7 @@ namespace Jde::DB{
 
 	α DataSource( const fs::path& libraryName, sv connectionString )ε->sp<IDataSource>;
 	Φ GetAppSchema( str name, sp<Access::IAcl> )ε->sp<AppSchema>;
-	Φ SyncSchema( AppSchema& schema, sp<QL::IQL> ql )ε->void;
+	Φ SyncSchema( const AppSchema& schema, sp<QL::IQL> ql )ε->void;
 #ifndef PROD
 	namespace NonProd{
 		Φ Recreate( const AppSchema& schema, sp<QL::IQL> ql )ε->void;

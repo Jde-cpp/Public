@@ -6,7 +6,7 @@ namespace Jde::DB{
 	α IDataSource::Select( string sql, RowΛ f, SL sl )ε->void{
 		Select( move(sql), f, nullptr, sl );
 	}
-	α IDataSource::Select( string sql, RowΛ f, const vector<Value>& values, SL sl )ε->void{
+	α IDataSource::Select( string sql, RowΛ&& f, const vector<Value>& values, SL sl )ε->void{
 		Select( move(sql), f, &values, sl );
 	}
 	α IDataSource::TrySelect( string sql, RowΛ f, SL sl )ι->bool{

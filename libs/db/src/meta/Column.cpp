@@ -56,9 +56,10 @@ namespace Jde::DB{
 	{}
 
 	α Column::Initialize( sp<DB::View> view )ε->void{
-		Table= view;
-		if( PKTable )
+		Table = view;
+		if( PKTable ){
 			PKTable = view->Schema->GetTablePtr( PKTable->Name );
+		}
 		if( let table = Criteria ? dynamic_pointer_cast<DB::Table>(view) : sp<DB::Table>{}; table && table->Extends ){
 			Criteria->Column = table->Extends->GetColumnPtr( Criteria->Column->Name );
 			if( Criteria->Value.Type()==EValue::String )//physical table will have config value, not json from constructor.

@@ -66,6 +66,7 @@ namespace Jde{
 			pSource = _dataSources.emplace( key, ms<DataSourceApi>(libraryName) ).first;
 		return pSource->second->Emplace( string{connectionString} );
 	}
+
 	α DB::GetAppSchema( str metaName, sp<Access::IAcl> authorize )ε->sp<AppSchema>{
 		for( auto& cluster : GetClusters(authorize) ){
 			for( auto& catalog : cluster->Catalogs ){
@@ -77,7 +78,7 @@ namespace Jde{
 	}
 
 
-	α DB::SyncSchema( AppSchema& schema, sp<QL::IQL> ql )ε->void{
+	α DB::SyncSchema( const AppSchema& schema, sp<QL::IQL> ql )ε->void{
 		SchemaDdl::Sync( schema, ql );
 	}
 }

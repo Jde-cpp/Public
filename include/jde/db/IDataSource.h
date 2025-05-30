@@ -64,7 +64,7 @@ namespace Jde::DB{
 		β ExecuteProcCo( string sql, vector<Value> params, RowΛ f, SRCE )ε->up<IAwait> =0;
 		β ExecuteProcNoLog( string sql, vec<Value> params, SRCE )ε->uint=0;
 
-		α Select( string sql, RowΛ f, vec<Value> params, SRCE )ε->void;
+		α Select( string sql, RowΛ&& f, vec<Value> params, SRCE )ε->void;
 		α Select( string sql, RowΛ f, SRCE )ε->void;
 		β Select( string sql, RowΛ f, const vector<Value>* pValues, SRCE )ε->uint=0;
 		β Select( Sql&& s, bool storedProc=false, SRCE )Ε->vector<up<IRow>> =0;

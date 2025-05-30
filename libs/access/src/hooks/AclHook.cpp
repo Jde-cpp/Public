@@ -49,7 +49,7 @@ namespace Jde::Access{
 				Authorizer().TestAdmin( "roles", Executer, _sl );
 			}
 			else{
-				let resourcePK = co_await QL::QLAwait<jobject>( Ƒ("permissionRight(id:{}){{resource{{id}}}}", *permissionPK), {UserPK::System} );
+				let resourcePK = co_await QL::QLAwait<jobject>( Ƒ("permissionRight(id:{}){{resource{{id deleted}}}}", *permissionPK), {UserPK::System} );
 				Authorizer().TestAdmin( Json::AsNumber<ResourcePK>(resourcePK, "resource/id"), Executer, _sl );
 			}
 			THROW_IF( !permissionPK, "Could not find permissionRight or role id in '{}'", serialize(Mutation.Args) );

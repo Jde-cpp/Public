@@ -7,10 +7,9 @@ namespace Jde::DB{
 	struct TableDdl final: Table{
 		TableDdl( const Table& table )ι:Table{table}{};
 
-		α InsertProcCreateStatement()Ι->string;
+		α InsertProcCreateStatement( const Table& config )Ι->string;
 		α CreateStatement()Ε->string;
 
-		sp<DB::SchemaDdl> Schema;
 		vector<Index> Indexes;
 	};
 }

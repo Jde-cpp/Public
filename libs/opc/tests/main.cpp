@@ -34,10 +34,11 @@ namespace Jde{
 			std::this_thread::yield();
 
 		let metaDataName{ "opc" };
-		auto schema = DB::GetAppSchema( metaDataName, App::Client::RemoteAcl() );
-		Opc::Configure( schema );
-		auto accessSchema = DB::GetAppSchema( "access", App::Client::RemoteAcl() );
 		try{
+			auto schema = DB::GetAppSchema( metaDataName, App::Client::RemoteAcl() );
+			Opc::Configure( schema );
+			auto accessSchema = DB::GetAppSchema( "access", App::Client::RemoteAcl() );
+
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 				DB::NonProd::Recreate( *schema, QL::Local() );
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
@@ -55,15 +56,6 @@ namespace Jde{
 }
 
 α main( int argc, char **argv )->int{
-	boost::json::value v = boost::json::parse( "[0,1,2,3]" );
-	auto a = v.try_as_array();
-	if( !a ){
-		std::error_code ec = a.error();
-		auto code = ec.value();
-		auto message = ec.message();
-		std::cout << '(' << code << ')' << message << std::endl;
-	}
-
 	using namespace Jde;
 	::testing::InitGoogleTest( &argc, argv );
 	Startup( argc, argv );

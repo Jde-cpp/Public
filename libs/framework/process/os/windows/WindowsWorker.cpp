@@ -80,28 +80,23 @@ namespace Jde::Windows{
 		}
 	}
 
-	α WindowsWorkerMain::HandleWorkerEvent()ι->void
-	{
+	α WindowsWorkerMain::HandleWorkerEvent()ι->void{
 		for( auto pp = _workerBuffers.begin(); pp!=_workerBuffers.end(); pp = (*pp)->Stopped() ? _workerBuffers.erase(pp) : next(pp) );
 	}
 
-	DWORD WindowsWorker::Loop()ι
-	{
+	DWORD WindowsWorker::Loop()ι{
 		PreLoop();
 		DWORD waitResult;
-		for( ;; )
-		{
+		for( ;; ){
 			TRACE( "WaitForMultipleObjects" );
 			waitResult = ::WaitForMultipleObjects( (DWORD)_objects.size(), _objects.data(), FALSE, INFINITE );
 			TRACE( "WaitForMultipleObjects - returned {}", waitResult );
-			if( waitResult==1 )//_eventStop
-			{
+			if( waitResult==1 ){//_eventStop
 				LOG_IF( !::ResetEvent(_objects[waitResult]), ELogLevel::Error, "ResetEvent failed for event object" );
 				break;
 			}
 			ASSERT( false );//not sure of use case here.
-			if( waitResult<_coroutines.size() )
-			{
+			if( waitResult<_coroutines.size() ){
 				auto pCoroutine = _coroutines.begin() + waitResult;
 				if( pCoroutine->CoEvent )
 					Coroutine::CoroutinePool::Resume( move(pCoroutine->CoEvent) );

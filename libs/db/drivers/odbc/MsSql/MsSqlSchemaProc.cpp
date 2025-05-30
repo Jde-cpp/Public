@@ -11,13 +11,8 @@
 #define let const auto
 
 namespace Jde::DB::MsSql{
-	α MsSqlSchemaProc::LoadTables( sv schemaName, sv tablePrefix )Ε->flat_map<string,sp<Table>>{
-//		if( schema.empty() )
-//			schema = "dbo"sv;/*_pDataSource->Catalog( MsSql::Sql::CatalogSql )*/;
-		flat_map<string,sp<Table>> tables;
-		auto result2 = [&]( sv tableName, sv name, _int /*ordinalPosition*/, sv dflt, bool isNullable, sv type, optional<_int> maxLength, _int isIdentity, _int /*isId*/, optional<_int> numericPrecision, optional<_int> numericScale ){
-			//let trimmed = tablePrefix.size() ? tableName.substr(tablePrefix.size()) : tableName;
-			auto table = tables.emplace( tableName, ms<TableDdl>(Table{tableName}) ).first->second;
+		α processRow( flat_map<string,sp<Table>>& tables, sv tableName, sv name, _int /*ordinalPosition*/, sv dflt, bool isNullable, sv type, optional<_int> maxLength, _int isIdentity, _int /*isId*/, optional<_int> numericPrecision, optional<_int> numericScale )->void{
+			auto& table = tables.emplace( tableName, ms<TableDdl>(Table{tableName}) ).first->second;
 			let dataType = ToType(type);
 			optional<Value> defaultValue;
 			if( !dflt.empty() ){
@@ -42,24 +37,40 @@ namespace Jde::DB::MsSql{
 			c->MaxLength = maxLength.value_or(0);
 			c->NumericPrecision = numericPrecision.value_or(0);
 			c->NumericScale = numericScale.value_or(0);
+			c->Table = table;
 			table->Columns.push_back( c );
-		};
-		auto result = [&]( IRow& row ){
-			result2( row.MoveString(0), row.MoveString(1), row.GetInt(2), row.MoveString(3), row.GetBit(4), row.MoveString(5), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
-		};
-		auto sql = Sql::ColumnSql( tablePrefix.size() );
-		vector<Value> values{ Value{string{schemaName}} };
-		if (tablePrefix.size())
-			values.push_back(Value{ string{tablePrefix}+'%' });
-		_pDataSource->Select( move(sql), result, values );
+		}
 
-
-		let indexes = LoadIndexes( schemaName, {} );
-		for( auto& index : indexes ){
-			if( auto pTable = tables.find(index.TableName); pTable != tables.end() )
-				std::dynamic_pointer_cast<TableDdl>( pTable->second )->Indexes.push_back( index );
+	α MsSqlSchemaProc::LoadColumns( DB::Sql&& sql )Ε->flat_map<string,sp<Table>>{
+		let rows = _pDataSource->Select( move(sql) );
+		flat_map<string,sp<Table>> tables;
+		for( auto& prow : rows ){
+			auto& row = *prow;
+			processRow( tables, row.MoveString(0), row.MoveString(1), row.GetInt(2), row.MoveString(3), row.GetBit(4), row.MoveString(5), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
 		}
 		return tables;
+	}
+
+	α MsSqlSchemaProc::LoadTables( sv schemaName, sv tablePrefix )Ε->flat_map<string,sp<Table>>{
+		DB::Sql sql{ Sql::ColumnSql(tablePrefix.size()), {Value{string{schemaName}}} };
+		if (tablePrefix.size())
+			sql.Params.push_back( Value{string{tablePrefix}+'%'} );
+		
+		auto tables = LoadColumns( move(sql) );
+		let indexes = LoadIndexes( schemaName, {} );
+		for( auto& index : indexes ){
+			if( auto table = tables.find(index.TableName); table != tables.end() )
+				std::dynamic_pointer_cast<TableDdl>( table->second )->Indexes.push_back( index );
+		}
+		return tables;
+	}
+	α MsSqlSchemaProc::LoadTable( str schemaName, str tableName, SL sl )Ε->sp<TableDdl>{
+		auto sql = DB::Sql{ Sql::ColumnSql(true), {Value{schemaName}, Value{tableName}} };
+		auto tables = LoadColumns( move(sql) );
+		THROW_IFSL( tables.size()!=1, "Table not found '{}.{}'. size={}", schemaName, tableName, tables.size() );
+		auto dbTable = dynamic_pointer_cast<TableDdl>( tables.begin()->second );
+		dbTable->Indexes = LoadIndexes( schemaName, dbTable->Name );
+		return dbTable;
 	}
 
 	α MsSqlSchemaProc::LoadIndexes( sv schema, sv tableName )Ε->vector<Index>{

@@ -111,13 +111,15 @@ namespace Jde{
 			type=EType::SmallFloat;
 		else if( typeName=="bool" )
 			type=EType::Bit;
+		else if( typeName=="tinyint" )
+			type = EType::Int8;
 		else if( typeName=="int" )
 			type = EType::Int;
 		else if( typeName=="uint" )
 			type = EType::UInt;
 		else if( typeName=="uint64" || typeName=="ULong" )
 			type = EType::ULong;
-		else if( typeName=="Long" )
+		else if( typeName=="Long" || typeName=="bigint" )
 			type = EType::Long;
 		else if( typeName=="nvarchar" )
 			type = EType::VarWChar;

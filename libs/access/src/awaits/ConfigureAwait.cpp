@@ -69,7 +69,6 @@ namespace Jde::Access{
 				Authorizer().Resources.emplace( pk, move(resource) );
 			}
 			Authorizer().Permissions = move( loaded.Permissions );
-			//Trace( ELogTags::Test, "{}", (uint)Authorizer().Permissions.at(10).Allowed );
 			l.unlock();
 			Roles( await );
 		}

@@ -1,4 +1,4 @@
-create or alter proc access_user_insert_login( @login_name varchar(255), @provider_id int, @provider_target varchar(255) ) as begin
+create or alter proc [dbo].access_user_insert_login( @login_name varchar(255), @provider_id int, @provider_target varchar(255) ) as begin
 	set nocount on;
 	declare @identity_id int; declare @provider_name varchar(255);
 
@@ -17,7 +17,7 @@ create or alter proc access_user_insert_login( @login_name varchar(255), @provid
 	else
 		set @provider_target = @login_name;
 
-	exec [access_identity_insert] @login_name, @provider_id, @provider_target, null, null, 0;
+	exec [dbo].[access_identity_insert] @login_name, @provider_id, @provider_target, null, null, 0;
 	SET @identity_id = @@IDENTITY;
 
 	insert into access_users(identity_id, login_name) values(@identity_id, @login_name);

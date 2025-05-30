@@ -16,45 +16,61 @@
 			}
 		},
 		{
-			"name": "debug",
-			"inherits": "common",
-			"hidden": true,
-			"environment":{
-				"BUILD_TYPE": "Debug"
-			}
-		},
-		{
 			"name": "win-msvc",
+			"inherits": "common",
 			"environment": {
 			},
 			"cacheVariables":{
-				"LIB_ROOT": "$env{REPO_DIR}/install/msvc",
+				"OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}",
+				"OPENSSL_USE_STATIC_LIBS": true,
 				"LIB_DIR": "$env{REPO_DIR}/install/msvc",
-				"xCMAKE_GENERATOR": "Ninja",
 				"CMAKE_CXX_COMPILER": "cl.exe",
+				"CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL",
 				"CMAKE_CXX_FLAGS": "/EHsc /D_CRT_SECURE_NO_WARNINGS /D_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING /TP",
+				"CMAKE_CXX_FLAGS_DEBUG": "/Od /Zi /D_DEBUG /JMC /fsanitize=address",
+				"CMAKE_CXX_FLAGS_RELEASE": "/O2 /Zi /DNDEBUG",
+				"CMAKE_EXE_LINKER_FLAGS": "/INCREMENTAL:NO",
 				"CMAKE_PREFIX_PATH": "$env{REPO_DIR}/install/msvc"
 			}
 		},
 		{
-			"name": "win-msvc-debug",
-			"inherits": ["win-msvc","debug"],
-			"environment": {
-			},
+			"name": "win-msvc-repo-debug",
+			"inherits": "win-msvc",
 			"cacheVariables":{
-				"CMAKE_CXX_FLAGS_DEBUG": "/EHsc /D_CRT_SECURE_NO_WARNINGS /D_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING /Od /Zi /MDd /D_DEBUG /JMC /TP /fsanitize=address",
-				"OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}"
+				"CMAKE_PREFIX_PATH": "$env{REPO_DIR}/install/msvc/Debug"
 			}
 		},
 		{
-			"name": "win-msvc-jde-debug",
-			"inherits": "win-msvc-debug",
-			"environment": {
-			},
+			"name": "win-msvc-repo-relWithDebInfo",
+			"inherits": "win-msvc",
 			"cacheVariables":{
-				"OPENSSL_CRYPTO_LIBRARY_DIR": "$env{OPENSSL_ROOT_DIR}/lib/VC/x64/MDd",
-				"JSONNET_LIB_DIR": "$env{REPO_DIR}/jsonnet/vs2017/x64/Debug",
+				"CMAKE_PREFIX_PATH": "$env{REPO_DIR}/install/msvc/RelWithDebInfo",
+				"CMAKE_INSTALL_PREFIX": "$env{REPO_DIR}/install/msvc/RelWithDebInfo"
+			}
+		},
+		{
+			"name": "win-msvc-jde",
+			"inherits": "win-msvc",
+			"cacheVariables":{
+				"LIB_ROOT": "$env{REPO_DIR}/install/msvc",
+				"JSONNET_LIB_DIR": "$env{REPO_DIR}/jsonnet/vs2017/x64/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:RelWithDebInfo>:Release>",
 				"JSONNET_ROOT": "$env{REPO_DIR}/jsonnet"
+			}
+		},
+		{
+			"name": "debug",
+			"inherits": "common",
+			"hidden": true,
+			"cacheVariables":{
+				"BUILD_TYPE": "Debug"
+			}
+		},
+		{
+			"name": "relWithDebInfo",
+			"inherits": "common",
+			"hidden": true,
+			"cacheVariables":{
+				"BUILD_TYPE": "RelWithDebInfo"
 			}
 		},
 		{

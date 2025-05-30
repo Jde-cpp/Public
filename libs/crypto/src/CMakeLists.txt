@@ -3,6 +3,11 @@ include( ../../../build/functions.cmake )
 project( Jde.Crypto.lib VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
+if( WIN32 )
+	message( OPENSSL_ROOT_DIR: ${OPENSSL_ROOT_DIR} )
+	find_package( OpenSSL REQUIRED )
+endif()
+
 set( targetName Jde.Crypto )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
@@ -10,11 +15,7 @@ file(GLOB sources *.cpp )
 file(GLOB headers "**/*.h" $ENV{JDE_DIR}/Public/include/jde/crypto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
-if( WIN32 )
-	target_link_libraries( ${targetName} libcrypto libssl )
-else()
-	target_link_libraries( ${targetName} OpenSSL::SSL )
-endif()
+target_link_libraries( ${targetName} OpenSSL::SSL )
 
 target_precompile_headers(${targetName}
   PUBLIC

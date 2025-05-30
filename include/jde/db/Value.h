@@ -7,7 +7,7 @@
 namespace Jde::DB{
 	struct Key;
 	enum class EValue:uint8{ Null, String, Bool, Int8, Int32, Int64, UInt32, UInt64, Double, Time, Byte };
-	α ToType( sv typeName )ι->EType;
+	α ΓDB ToType( sv typeName )ι->EType;
 
 	struct Syntax;
 	struct ΓDB Value{
@@ -58,6 +58,7 @@ namespace Jde::DB{
 	Ŧ Value::get_number( SL sl )Ε->T{
 		switch( Type() ){
 			using enum EValue;
+		case Bool: return GET( bool ) ? 1 : 0;
 		case Int8: return GET(int8);
 		case Int32: return GET(int32);
 		case Int64: return GET(int);

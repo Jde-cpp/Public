@@ -25,7 +25,7 @@ namespace Jde::DB{
 		_ql{ql}
 	{}
 
-	α AbbrevName( sv schemaName )ι->string;
+	α abbrevName( sv schemaName )ι->string;
 	α GetData( const Table& table, const jobject& j )ε->vector<flat_map<string,Value>>;
 	α Exists( const DBSchema& config )ε->bool;
 	α GetFlagsData( const jobject& j )ε->flat_map<uint,Value>;
@@ -67,21 +67,22 @@ namespace Jde::DB{
 					continue;
 				if( find_if(FKs, [&,t=config.ObjectPrefix()+table->Name](let& fk){
 					return fk.second.Table==t && fk.second.Columns==vector<string>{column->Name};
-				})!=FKs.end() )
+				})!=FKs.end() ){
 					continue;
-				let pPKTable = column->PKTable;
+				}
+				let pkTable = column->PKTable;
 				if( column->IsFlags() )
 					continue;
-				auto getName = [&, &t=tableName](auto i)->string{//&t for clang
-					return Ƒ( "{}_{}{}_fk", AbbrevName(t), AbbrevName(pPKTable->Name), i==0 ? "" : std::to_string(i) );
+				auto getName = [&, &t=tableName](auto i)->string {//&t for clang
+					return Ƒ( "{}_{}{}_fk", abbrevName(t), abbrevName(pkTable->Name), i==0 ? "" : std::to_string(i) );
 				};
 				uint i{};
 				auto name = getName( i++ );
 				for( ; FKs.find(name)!=FKs.end(); name = getName(i++) );
 
-				let createStatement = ForeignKey::Create( name, column->Name, *pPKTable, *table );
+				let createStatement = ForeignKey::Create( name, column->Name, *pkTable, *table );
 				config.DS()->Execute( createStatement );
-				FKs.emplace( name, ForeignKey{name, table->DBName, {column->Name}, pPKTable->Name} );
+				FKs.emplace( name, ForeignKey{name, table->Name, {column->Name}, pkTable->Name} );
 				Information{ _tags, "Created fk '{}'.", name };
 			}
 		}
@@ -90,6 +91,7 @@ namespace Jde::DB{
 		let dirs = Settings::FindStringArray( jpath );
 		for( let& scriptDir : dirs ){
 			const fs::path scriptRoot{ scriptDir };
+			Debug{ ELogTags::App, "Processing '{}'.  Prefixes: [{}], extension: {}", scriptRoot.string(), Str::Join(prefixes, ", "), extension };
 			THROW_IF( !fs::exists(scriptRoot) || !fs::is_directory(scriptRoot), "Script path '{}' does not exist.", scriptRoot.string() );
 			for( let& entry : fs::directory_iterator(scriptRoot) ){
 				if( let& path = entry.path();
@@ -104,10 +106,10 @@ namespace Jde::DB{
 
 	α SchemaDdl::SyncData( const AppSchema& config, const jobject& initConfig )ε->void{
 		vector<string> prefixes{ config.Name };
-		if( let& configPrefixes = Json::FindArray(initConfig, "dataPrefixes"); configPrefixes )
-			prefixes = Json::FromArray<string>( *configPrefixes );
-
-			prefixes.emplace_back( "test" );
+		if( let& configPrefixes = Json::FindArray(initConfig, "dataPrefixes"); configPrefixes ){
+			auto additional = Json::FromArray<string>( *configPrefixes );
+			move( additional.begin(), additional.end(), std::back_inserter(prefixes) );
+		}
 		forEachDir( "/dbServers/dataPaths", ".mutation", prefixes, [this](const fs::path& file){
 			let text = IO::FileUtilities::Load( file );
 			Information{ _tags, "Mutation: '{}'", file.string() };
@@ -132,7 +134,10 @@ namespace Jde::DB{
 			Trace{ _tags, "Executing '{}'", scriptFile.string() };
 			let queries = Str::Split<sv,iv>( text, "\ngo"_iv );
 			for( let& text : queries ){
-				let query = Str::Replace( text, stdPrefix, prefix );
+				let query = Str::Replace(
+					Str::Replace(text, "[dbo]", Ƒ("[{}]", config.DBSchema->Name) ),
+					stdPrefix, prefix );
+
 				std::ostringstream os;
 				for( uint i=0; i<query.size(); ++i ){
 					if( query[i]=='#' )
@@ -149,6 +154,7 @@ namespace Jde::DB{
 	α SchemaDdl::SyncTables( const AppSchema& config )ε->void{
 		const DB::Syntax& syntax = config.DS()->Syntax();
 		IDataSource& ds = *DS();
+		let& schemaName = config.DBSchema->Name;
 		for( let& [tableName, table] : config.Tables ){
 			sp<TableDdl> dbTable;
 			if( let kv=Tables().find(config.ObjectPrefix()+tableName); kv!=Tables().end() ){
@@ -164,9 +170,9 @@ namespace Jde::DB{
 				dbTable = ms<TableDdl>( *table );
 				ds.Execute( dbTable->CreateStatement() );
 				Information{ _tags, "Created table '{}'.", table->DBName };
-				if( table->SequenceColumn() )
-					dbTable->Indexes = ds.ServerMeta().LoadIndexes( config.DBSchema->Name, config.ObjectPrefix()+table->Name );
-				Tables().emplace( table->Name, dbTable );
+				dbTable = ds.ServerMeta().LoadTable( schemaName, table->Name );
+				dbTable->Schema = FindAppSchema( "" );
+				Tables().emplace( dbTable->Name, dbTable );
 			}
 
 			auto& dbIndexes = dbTable->Indexes;
@@ -174,12 +180,17 @@ namespace Jde::DB{
 				if( find_if(dbIndexes, [&](let& db){ return db.TableName==config.ObjectPrefix()+tableName && db.Columns==index.Columns;} )!=dbIndexes.end() )
 					continue;
 				let name = UniqueIndexName( index, syntax.UniqueIndexNames(), dbIndexes );
-				ds.Execute( index.Create(name, dbTable->DBName, syntax) );
+				ds.Execute( index.Create(name, schemaName+'.'+dbTable->DBName, syntax) );
 				dbIndexes.push_back( Index{name, tableName, index} );
 				Information{ _tags, "Created index '{}.{}'.", table->DBName, name };
 			}
-			if( let procName = table->HasCustomInsertProc ? "" : table->InsertProcName(); procName.size() && Procs.find(procName)==Procs.end() ){
-				ds.Execute( dbTable->InsertProcCreateStatement() );
+			if( auto procName = table->HasCustomInsertProc ? "" : table->InsertProcName(); procName.size() ){
+				if( let index = procName.find_first_of('.'); index<procName.size()-1 )
+					procName = procName.substr( index+1 );
+				if( Procs.find(procName)!=Procs.end() )
+						continue;
+
+				ds.Execute( dbTable->InsertProcCreateStatement(*table) );
 				Procs.emplace( procName, Procedure{procName} );
 				Information{ _tags, "Created proc '{}'.", table->InsertProcName() };
 			}
@@ -227,7 +238,7 @@ namespace Jde::DB{
 	α SchemaDdl::Drop( const AppSchema& config )ε->void{
 		if( Exists(*config.DBSchema) ){
 			// if catalogs, would have dropped catalog
-			//if( !config.DS()->Syntax().SchemaDropsObjects() ) 
+			//if( !config.DS()->Syntax().SchemaDropsObjects() )
 			//	DropObjects( config );
 			let catalogName = config.DS()->CatalogName();
 			config.DS()->Execute( Ƒ("DROP SCHEMA {}", config.DBSchema->Name) );
@@ -235,7 +246,7 @@ namespace Jde::DB{
 	}
 #endif
 
-	α AbbrevName( sv schemaName )ι->string{
+	α abbrevName( sv schemaName )ι->string{
 		auto fnctn = []( let& word )->string {
 			std::ostringstream os;
 			for( let ch : word ){

@@ -19,7 +19,6 @@ namespace Jde::Web::Client{
 			_subs.try_emplace( s.Id ).first->second.emplace( listener );
 	}
 	α Subscriptions::OnWebsocketReceive( const jobject& m, QL::SubscriptionId clientId )ι->void{
-		Trace{ ELogTags::Test, "OnWebsocketReceive:  '{}'", serialize(m) };
 		sl l{ _mutex };
 		if( auto kv = _subs.find( clientId ); kv!=_subs.end() ){
 			for( let listener : kv->second )

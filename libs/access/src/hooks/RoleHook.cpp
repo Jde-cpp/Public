@@ -68,7 +68,6 @@ namespace Jde::Access{
 			let permissionPK = co_await table->Schema->DS()->ExecuteScaler<PermissionRightsPK>( insert.Move() );
 			jobject y;
 			y["permissionRight"].emplace_object()["id"] = permissionPK;
-			Trace{ ELogTags::Test, "RoleMutationAwait::AddPermission - '{}'", serialize(y) };
 			Resume( y );
 		}
 		catch( IException& e ){
@@ -225,7 +224,6 @@ namespace Jde::Access{
 						role["permissionRights"] = permissions->is_array() ? (jvalue)jarray{} : (jvalue)jobject{};
 					if( roleMembers && !role.contains(roleKey) )
 						role["roles"] = roleMembers->is_array() ? (jvalue)jarray{} : (jvalue)jobject{};
-					Trace{ ELogTags::Test, "role={}", serialize(role) };
 				};
 				Json::Visit( move(qlRoles), addRole );
 			}

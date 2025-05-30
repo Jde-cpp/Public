@@ -54,7 +54,7 @@ namespace Jde::Access{
 		return BlockAwait<TAwait<jvalue>, jvalue>( *qlServer->Query(move(query), executor) );
 	}
 
-	α Resources::Sync( const vector<sp<DB::AppSchema>> schemas, sp<QL::IQL> qlServer, UserPK executor )ε->TAwait<jvalue>::Task{
+	α Resources::Sync( const vector<sp<DB::AppSchema>> schemas, sp<QL::IQL> qlServer, UserPK executor )ε->void{
 		using DB::Value;
 		for( let schema : schemas ){
 			auto existing = loadExisting( schema->Name, qlServer, executor );
@@ -67,7 +67,7 @@ namespace Jde::Access{
 				auto q = Ƒ( "createResource( schemaName:\"{}\", name:\"{}\", target:\"{}\", allowed:{}, description:\"From installation\" ){{id}}",
 					schema->Name, table->Name, move(jsonName), underlying(table->Operations) );
 				let result = createExisting( move(q), qlServer, executor );
-				co_await *(qlServer->Query(Ƒ("deleteResource( id:{} )", QL::AsId<UserPK::Type>(result)), executor) );
+				BlockAwait<TAwait<jvalue>, jvalue>( *(qlServer->Query(Ƒ("deleteResource( id:{} )", QL::AsId<UserPK::Type>(result)), executor)) );
 			}
 		}
 	}

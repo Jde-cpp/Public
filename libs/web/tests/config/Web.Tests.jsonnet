@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "WebTests.*"
+		tests:: "WebTests.*"
 	},
 	logging:{
 		defaultLevel:: "Information",
