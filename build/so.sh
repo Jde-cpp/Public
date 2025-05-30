@@ -12,7 +12,6 @@ if [ ! -d .obj ]; then mkdir .obj; fi;
 cd .obj;
 if [ ! -d $type ]; then mkdir $type; fi;
 cd $type
-#echo `pwd`;
 if (( $clean == 1 )) || [ ! -f CMakeCache.txt ]; then
 	echo cleaning $path;
 	if [ -f CMakeCache.txt ]; then rm CMakeCache.txt; fi;

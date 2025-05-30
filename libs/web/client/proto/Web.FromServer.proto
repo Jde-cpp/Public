@@ -1,0 +1,14 @@
+syntax = "proto3";
+package Jde.Web.FromServer;
+
+import "google/protobuf/timestamp.proto";
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+message SessionInfo{
+	google.protobuf.Timestamp expiration=1;
+	uint32 session_id=2;
+	uint32 user_pk=3;
+	string user_endpoint=4;
+	bool has_socket=5;
+};

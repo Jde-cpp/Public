@@ -36,19 +36,15 @@ stage/*
 **/.vs/*
 **/.bin/*
 *.user
-src/db/sqlite/.vscode/settings.json
 src/db/sqlite/.vscode/tasks.json
 jde/blockly/types/proto/ib.proto
 tests/ml/.vscode/launch.json
-tests/ml/.vscode/settings.json
 tests/ml/.vscode/tasks.json
 
 *.code-workspace
-src/web/.vscode/settings.json
 *.i
 src/web/build/*
 src/crypto/.vscode/c_cpp_properties.json
-src/crypto/.vscode/settings.json
 src/crypto/.vscode/tasks.json
 tests/crypto/.vscode/c_cpp_properties.json
 /src/crypto/build
@@ -62,3 +58,11 @@ tests/*.proto
 **/.build/*
 **/packages/*
 **/x64/*
+**/.vscode/settings.json
+**/.vscode/c_cpp_properties.json
+**/*.vcxproj
+**/*.vcxproj.filters
+libs/app/shared/proto/Web.FromServer.proto
+**/.*.sql
+**/my-workspace*/**
+*.7z

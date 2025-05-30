@@ -9,17 +9,19 @@ function(findBoost)
 	set(Boost_USE_STATIC_RUNTIME OFF)
 	#set( Boost_DEBUG ON )
 	#set( Boost_VERBOSE ON )
-
-#set( Boost_DIR $ENV{Boost_INCLUDE_DIR}/tools/cmake/config CACHE STRING "Boost_DIR" )
-#	set( boost_headers_DIR $ENV{Boost_INCLUDE_DIR} CACHE STRING "boost_headers_DIR" )
-set( Boost_INCLUDE_DIR $ENV{Boost_INCLUDE_DIR} )
-#message( "Boost_DIR: ${Boost_DIR}, Boost_DEBUG: ${Boost_DEBUG}, Boost_VERBOSE: ${Boost_VERBOSE}, boost_headers_DIR=${boost_headers_DIR}" )
+	#set( Boost_DIR $ENV{Boost_INCLUDE_DIR}/tools/cmake/config CACHE STRING "Boost_DIR" )
+	#set( boost_headers_DIR $ENV{Boost_INCLUDE_DIR} CACHE STRING "boost_headers_DIR" )
+	set( Boost_INCLUDE_DIR $ENV{REPO_DIR}/install/g++-13/asan/boost/include/ )
+	message( "Boost_DIR: ${Boost_DIR}, Boost_DEBUG: ${Boost_DEBUG}, Boost_VERBOSE: ${Boost_VERBOSE}, boost_headers_DIR=${boost_headers_DIR}" )
 
 #	if( ${VCPKG} )
 #		find_package(Boost)
 #	else()
-		find_package(Boost 1.86.0 COMPONENTS)
-		#message( "Boost_INCLUDE_DIR=$ENV{Boost_INCLUDE_DIR}")
+#./bootstrap.sh --prefix=$REPO_DIR/install/boost --with-libraries=json
+#./b2 --libdir=$REPO_DIR/install/g++-13/asan/boost/lib --include-dir=$REPO_DIR/install/g++-13/asan/boost/include --build-dir/../.obj variant=debug link=static cxxflags=--std=c++23
+#./b2 install
+		find_package(Boost 1.86.0 COMPONENTS json )
+		message( "Boost_INCLUDE_DIRS=${Boost_INCLUDE_DIRS}")
 		if(Boost_FOUND)
 			include_directories(${Boost_INCLUDE_DIRS})
 			link_directories( ${Boost_LIBRARY_DIRS} )

@@ -1,0 +1,16 @@
+mutation{
+	createRights( name: "None", shift: null )
+	createRights( name: "Create", shift: 0 )
+	createRights( name: "Read", shift: 1 )
+	createRights( name: "Update", shift: 2 )
+	createRights( name: "Delete", shift: 3 )
+	createRights( name: "Purge", shift: 4 )
+	createRights( name: "Administer", shift: 5 )
+	createRights( name: "Subscribe", shift: 6 )
+	createRights( name: "Execute", shift: 7 )
+
+	createProviderTypes( id:6, name:"Key", comment:"RSA connection" )
+	createProviderTypes( id:7, name:"OpcServer" )
+
+	createProvider( id:6, providerType:6 )
+}

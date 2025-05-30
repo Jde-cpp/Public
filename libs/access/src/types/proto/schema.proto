@@ -1,0 +1,42 @@
+syntax = "proto3";
+package Jde.Access;
+
+import "google/protobuf/timestamp.proto";
+
+message User{
+	uint32 identity_id = 1;
+	string login_name = 11;
+	uint16 provider_id = 16;
+	string target = 21;
+	uint16 attributes = 31;
+	google.protobuf.Timestamp created = 41;
+	google.protobuf.Timestamp updated = 51;
+	google.protobuf.Timestamp deleted = 61;
+	string description = 71;
+	bool is_group = 101;
+	string password = 102;
+	string modulus = 103;
+	uint32 exponent = 104;
+}
+
+message Group{
+	uint32 identity_id = 1;
+	repeated uint32 members = 2;
+	string target = 21;
+	uint16 attributes = 31;
+	google.protobuf.Timestamp created = 41;
+	google.protobuf.Timestamp updated = 51;
+	google.protobuf.Timestamp deleted = 61;
+	string description = 71;
+}
+
+message Roles{
+	uint32 role_id = 1;
+	repeated uint32 members = 2;
+	string target = 21;
+	uint16 attributes = 31;
+	google.protobuf.Timestamp created = 41;
+	google.protobuf.Timestamp updated = 51;
+	google.protobuf.Timestamp deleted = 61;
+	string description = 71;
+};

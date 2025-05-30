@@ -1,0 +1,35 @@
+.mat-mdc-header-cell{
+	text-align: center;
+}
+
+.mat-column-schema {
+	flex: 0 0 7em;
+}
+
+.mat-column-resource {
+	flex: 0 0 8em;
+}
+
+.mat-column-deleted {
+	flex: 0 0 5em;
+}
+
+.mat-column-permission{
+  display: flex;
+	justify-content: center;
+}
+
+.mat-column-None {
+	background-color: var(--mat-sys-error-container);
+}
+
+.mat-column-alt {
+	background-color: var(--mat-sys-secondary-container);
+}
+
+.denied{
+	width:100%;
+	text-align: center;
+	vertical-align: middle;
+	cursor: pointer;
+}

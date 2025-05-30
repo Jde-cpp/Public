@@ -1,0 +1,40 @@
+@if( !isLoading() ){
+	<mat-table matSort #mainTable [dataSource]="availablePermissions" class="mat-elevation-z8" (matSortChange)="sortData($event)" [matSortActive]="sort.active" [matSortDirection]="sort.direction">
+		<ng-container matColumnDef="schema">
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header>Schema</mat-header-cell>
+			<mat-cell *matCellDef="let row"> {{row.resource.schema}} </mat-cell>
+		</ng-container>
+		<ng-container matColumnDef="resource">
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header>Resource</mat-header-cell>
+			<mat-cell *matCellDef="let row"> {{row.resource.name}} </mat-cell>
+		</ng-container>
+		<ng-container matColumnDef="deleted">
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header>Deleted</mat-header-cell>
+			<mat-cell *matCellDef="let row">
+				<mat-checkbox disabled=true [checked]=row.resource.deleted></mat-checkbox>
+			</mat-cell>
+		</ng-container>
+		<ng-container matColumnDef="target">
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header>Target</mat-header-cell>
+			<mat-cell *matCellDef="let row"> {{row.resource.target}} </mat-cell>
+		</ng-container>
+		@for( kv of rights | enumKeys; track kv.key; let i = $index; ){
+			<ng-container matColumnDef={{kv.value}}>
+				<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header [class.mat-column-alt]="i%2==0" class="mat-column-permission">{{kv.value}}</mat-header-cell>
+					<mat-cell *matCellDef="let row" class="mat-column-permission" [class.mat-column-alt]="i%2==0">
+						@if( isDenied(row, kv.key) ){
+							<span class="material-symbols-outlined denied" (click)="toggle($event, row, kv.key)">cancel</span>
+						}
+						@else if( isAvailable(row, kv.key) ){
+							<mat-checkbox
+								(change)="toggle($event, row, kv.key)"
+								[disabled]="kv.key==0 && isAllowed(row, kv.key)"
+								[checked]="isAllowed(row, kv.key)"></mat-checkbox>
+						}
+					</mat-cell>
+			</ng-container>
+		}
+		<mat-header-row *matHeaderRowDef="displayedColumnNames; sticky: true"></mat-header-row>
+		<mat-row mat-row *matRowDef="let row; columns: displayedColumnNames;"></mat-row>
+	</mat-table>
+}

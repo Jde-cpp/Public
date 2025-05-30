@@ -1,0 +1,67 @@
+﻿#include <jde/opc/uatypes/Logger.h>
+#include <stacktrace>
+
+#define let const auto
+int mp_vsnprintf(char* s, size_t count, const char* format, va_list arg); //open62541/deps/mp_printf.h
+namespace Jde::Opc{
+	constexpr array<sv,14> EOpcLogTagstrings{ "iot",
+		"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
+		"monitoring", "browse", "processingLoop" };
+
+	α Format( const char* format, va_list args )->string{
+		UA_Byte buffer[512];
+		UA_String str{ 512, buffer };
+		let result = UA_String_vprintf( &str, format, args );
+		if( result!=UA_STATUSCODE_GOOD ){
+			return Ƒ( "({:x})UA_String_vprintf failed for: '{}'.", result, format );
+		}
+		const string y{ (char*)str.data, str.length };
+		return y;
+	}
+	α Clear( UA_Logger* /*context*/ )ι->void{}
+
+	α UA_Log_Stdout_log( void *context, UA_LogLevel uaLevel, UA_LogCategory category, const char *m, va_list args )ι->void{
+		let level = (ELogLevel)( (int)uaLevel/100-1 ); //level==UA_LOGLEVEL_DEBUG=200
+		uint tag_ = 1ull << (uint)(33ull+category);
+		const EOpcLogTags tag = (EOpcLogTags)( tag_ );
+
+		string message = Opc::Format(m,args);
+		Log( level, (ELogTags)tag, 2, "[{:x}]{}", (uint)context, message );
+
+		if( level>ELogLevel::Information ){
+			message+="\n";
+		}
+	}
+	α UA_Log_Stdout_log_file( void *context, UA_LogLevel uaLevel, UA_LogCategory category, const char* file, const char* function, uint32_t line, const char *m, va_list args )ι->void{
+		let level = (ELogLevel)( (int)uaLevel/100-1 ); //level==UA_LOGLEVEL_DEBUG=200
+		uint tag_ = 1ull << (uint)(33ull+category);
+		const EOpcLogTags tag = (EOpcLogTags)( tag_ );
+
+		Log( level, (ELogTags)tag, spdlog::source_loc{file, (int)line, function}, "[{:x}]{}", (uint)context, Opc::Format(m,args) );
+	}
+
+	Logger::Logger( Handle uaHandle )ι:
+		UA_Logger{ UA_Log_Stdout_log, (void*)uaHandle, Clear }
+	{}
+}
+namespace Jde{
+	α Opc::TagToString( ELogTags tags )ι->string{
+		string y;
+		for( uint i=0; i<EOpcLogTagstrings.size(); ++i ){
+			if( (uint)tags & (1ull << (32+i)) )
+				y += string{ EOpcLogTagstrings[i] }+'.';
+		}
+		if( y.size() )
+			y.pop_back();
+		else
+			y = "NotFound";
+		return y;
+	}
+	α Opc::TagFromString( sv name )ι->optional<ELogTags>{
+		optional<ELogTags> tag;
+		for( uint i=0; !tag && i<EOpcLogTagstrings.size(); ++i )
+			if( EOpcLogTagstrings[i]==name )
+				tag = (ELogTags)(1ull << (32+i));
+		return tag;
+	}
+}

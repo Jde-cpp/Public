@@ -1,0 +1,23 @@
+mutation{
+	createRole( name:"read", name:"readers", target:"readers", description: "test-data" )
+	addRole( target:"readers", permissionRight:{allowed:2, denied:0, resource:{target:"groupings"}} )
+	addRole( target:"readers", permissionRight:{allowed:2, denied:0, resource:{target:"providerTypes"}} )
+	addRole( target:"readers", permissionRight:{allowed:2, denied:0, resource:{target:"roles"}} )
+	addRole( target:"readers", permissionRight:{allowed:2, denied:0, resource:{target:"users"}} )
+	addRole( target:"readers", permissionRight:{allowed:2, denied:0, resource:{target:"servers"}} )
+	createRole( name:"write", target:"writers", description: "test-data" )
+	createRole( name:"root", target:"root", description: "test-data" )
+	createRole( name:"security", target:"security", description: "test-data" )
+	createRole( name:"Opc Gateway Permissions", target:"OpcGateway", description: "test-data" )
+
+	createGroupings( target:"admins" )
+	createGroupings( target:"operators" )
+	createGroupings( target:"managers" )
+	createGroupings( target:"complianceOfficers" )
+	createGroupings( target:"opcGateways" )
+
+	createUser( target:"admin1" )
+	createUser( target:"op1" )
+	createUser( target:"manager1" )
+	createUser( target:"compliance1" )
+}
