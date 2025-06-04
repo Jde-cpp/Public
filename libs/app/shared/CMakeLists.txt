@@ -18,10 +18,10 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 target_precompile_headers(${targetName}
   PUBLIC
 	<jde/web/client/exports.h>
+	<jde/app/shared/exports.h>
 	<jde/web/client/proto/Web.FromServer.pb.h>
 	<jde/framework.h>
 	PRIVATE
-	<jde/app/shared/exports.h>
 	<Common.pb.h>
 	proto/App.pb.h
 	proto/App.FromServer.pb.h

@@ -43,7 +43,7 @@ namespace Jde::DB{
 					throw;
 				if( ds->SchemaNameConfig()==Name ){
 					ds = ds->AtSchema( MySqlSyntax::Instance().SysSchema() );//no connection, can't figure out syntax.
-					ds->Execute( Ƒ("create schema {}", Name) );
+					ds->Execute( {Ƒ("create schema {}", Name)} );
 				}
 			}
 			_dataSource = name==Name || !canSetSchema

@@ -5,6 +5,7 @@
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/View.h>
+#include <jde/db/awaits/ExecuteAwait.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/QLAwait.h>
 #include <jde/ql/types/TableQL.h>
@@ -19,9 +20,9 @@ namespace Jde::Access{
 		α Suspend()ι->void override{ if(Mutation.Type==QL::EMutationQL::Remove) Remove(); else Add(); }
 	private:
 		α Add()ι->void;
-		α AddRole( RolePK parentRolePK, const jobject& childRole )ι->TAwait<uint>::Task;
+		α AddRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task;
 		α AddPermission( RolePK parentRolePK, const jobject& permissionRights )ι->TAwait<PermissionPK>::Task;
-		α Remove()ι->TAwait<uint>::Task;
+		α Remove()ι->DB::ExecuteAwait::Task;
 
 		QL::MutationQL Mutation;
 		UserPK _userPK;
@@ -38,7 +39,7 @@ namespace Jde::Access{
 		else
 			ResumeExp( Exception{"Invalid mutation."} );
 	}
-	α RoleMutationAwait::AddRole( RolePK parentRolePK, const jobject& childRole )ι->TAwait<uint>::Task{
+	α RoleMutationAwait::AddRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task{
 		try{
 			let table = GetTable( "role_members" );
 			uint rowCount{};
@@ -47,7 +48,7 @@ namespace Jde::Access{
 				DB::InsertClause insert;
 				insert.Add( table->GetColumnPtr("role_id"), parentRolePK );
 				insert.Add( table->GetColumnPtr("member_id"), childRolePK );
-				rowCount += co_await table->Schema->DS()->ExecuteCo( insert.Move() );
+				rowCount += co_await table->Schema->DS()->ExecuteAsync( insert.Move() );
 			}
 			Resume( rowCount );
 		}
@@ -65,7 +66,7 @@ namespace Jde::Access{
 			insert.Add( Json::FindNumber<uint8>(rights, "allowed").value_or(0) );
 			insert.Add( Json::FindNumber<uint8>(rights, "denied").value_or(0) );
 			insert.Add( resource );
-			let permissionPK = co_await table->Schema->DS()->ExecuteScaler<PermissionRightsPK>( insert.Move() );
+			let permissionPK = co_await table->Schema->DS()->ScalerAsync<PermissionRightsPK>( insert.Move() );
 			jobject y;
 			y["permissionRight"].emplace_object()["id"] = permissionPK;
 			Resume( y );
@@ -75,13 +76,13 @@ namespace Jde::Access{
 		}
 	}
 
-	α RoleMutationAwait::Remove()ι->TAwait<uint>::Task{ //removeRole( id:42, permissionRight:{id:420} )
+	α RoleMutationAwait::Remove()ι->DB::ExecuteAwait::Task{ //removeRole( id:42, permissionRight:{id:420} )
 		let table = GetTable( "roles" );
 		DB::InsertClause remove{ DB::Names::ToSingular(table->DBName)+"_remove" };
 		remove.Add( Mutation.Id<RolePK>() );
 		remove.Add( Json::AsNumber<PermissionPK>(Mutation.Args, "permissionRight/id") );
-		let pk = (PermissionPK)co_await table->Schema->DS()->ExecuteProcCo( remove.Move() );
-		Resume( pk );
+		let y = co_await table->Schema->DS()->ExecuteAsync( remove.Move() );
+		ResumeScaler( y );
 	}
 
 	struct RoleSelectAwait final : TAwait<jvalue>{

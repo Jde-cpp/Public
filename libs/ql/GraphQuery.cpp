@@ -1,6 +1,6 @@
 ﻿#include <jde/ql/ql.h>
 #include <jde/ql/QLHook.h>
-#include <jde/db/Database.h>
+#include <jde/db/IDataSource.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/AppSchema.h>
@@ -19,7 +19,9 @@ namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL };
 	using namespace DB::Names;
 	α GetTable( str tableName, SRCE )ε->sp<DB::View>;
-	α GetEnumValues( const DB::View& table, SRCE )ε->sp<flat_map<uint,string>>{
+	α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>{
+		flat_map<uint,string> foo;
+		Trace{ ELogTags::Test, "QL.sizeof: {}", sizeof(foo) };
 		return table.Schema->DS()->SelectEnumSync<uint,string>( table, sl );
 	}
 	using SubTables=flat_map<string,flat_multimap<uint,jobject>>;//tableName,pk, row
@@ -39,7 +41,7 @@ namespace Jde::QL{
 				for( uint iFlag=0x1; remainingFlags!=0; iFlag <<= 1 ){
 					if( (remainingFlags & iFlag)==0 )
 						continue;
-					if( let flag = values->find(iFlag); flag!=values->end() )
+					if( let flag = values.find(iFlag); flag!=values.end() )
 						flags.emplace_back( flag->second );
 					else
 						flags.emplace_back( std::to_string(iFlag) );
@@ -48,7 +50,7 @@ namespace Jde::QL{
 				y = flags;
 			}
 			else //enum but not flags
-				y = Find( *values, value ).value_or( std::to_string(value) );
+				y = Find( values, value ).value_or( std::to_string(value) );
 		}
 		else if( c.Type==DB::EType::Bit )
 			y = dbValue.ToUInt()!=0;
@@ -150,7 +152,7 @@ namespace Jde::QL{
 
 			statement.Where = where;
 			auto& rows = subTables.emplace( qlTable.JsonName, flat_multimap<uint,jobject>{} ).first->second;
-			auto forEachRow = [&]( DB::IRow& row ){
+			auto forEachRow = [&]( DB::Row&& row ){
 				jobject jSubRow;
 				let rowToJson2 = [&row, &parentTable]( const vector<ColumnQL>& columns, jobject& jRow ){
 					int i = 1;//first should be pk of parent table.
@@ -181,20 +183,20 @@ namespace Jde::QL{
 				rows.emplace( row.GetUInt(0), jSubRow );
 			};
 			auto sql = statement.Move();
-			parentTable.Schema->DS()->Select( move(sql.Text), forEachRow, move(sql.Params) );
+			parentTable.Schema->DS()->Select( move(sql), forEachRow );
 		}
 		return subTables;
 	}
 
-	Ω query( const TableQL& ql, DB::Statement&& statement, const DB::IDataSource& ds, UserPK /*executer*/, const SubTables* subTables=nullptr, SRCE )ε->jvalue{
+	Ω query( const TableQL& ql, DB::Statement&& statement, DB::IDataSource& ds, UserPK /*executer*/, const SubTables* subTables=nullptr, SRCE )ε->jvalue{
 		jvalue y;
 		if( ql.IsPlural() )
 			y = jarray{};
-		auto rows = ds.Select( statement.Move(), false, sl );
-		for( let& row : rows ){
-			auto jrow = ql.ToJson( *row, statement.Select.Columns );
+		auto rows = ds.Select( statement.Move(), sl );
+		for( auto&& row : rows ){
+			auto jrow = ql.ToJson( row, statement.Select.Columns );
 			if( subTables && subTables->size() )
-				addSubTables( ql, *subTables, jrow, row->GetUInt(0) );
+				addSubTables( ql, *subTables, jrow, row.GetUInt(0) );
 			if( ql.IsPlural() )
 				y.get_array().emplace_back( move(jrow) );
 			else

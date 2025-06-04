@@ -66,7 +66,7 @@ namespace Jde::QL{
 
 	Object::Object( sv name, const jobject& j )ε:
 		Name{ name }{
-		for( let field : AsArray(j, "fields") ){
+		for( let& field : AsArray(j, "fields") ){
 			Fields.emplace_back( AsObject(field) );
 		}
 	}
@@ -214,7 +214,7 @@ namespace Jde::QL{
 		});//sb only id/name.
 		const string sql{ Ƒ("{} from {} order by {}", select.ToString(), dbTable->DBName, dbTable->GetPK()->Name) };
 		jarray fields;
-		dbTable->Schema->DS()->Select( sql, [&]( DB::IRow& row ){
+		dbTable->Schema->DS()->Select( {sql}, [&]( DB::Row&& row ){
 			jobject j;
 			for( uint i=0; i<select.Columns.size(); ++i ){
 				auto& c = *select.Columns[i];

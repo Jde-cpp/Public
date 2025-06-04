@@ -43,7 +43,7 @@ namespace Jde::IO::Drive
 		α Load( const IDirEntry& dirEntry )ε->sp<vector<char>> override;
 		α Remove( const fs::path& )ε->void override;
 		α TrashDisposal( TimePoint /*latestDate*/ )ε->void override{ THROW("Not Implemented"); };
-		α Restore( sv name )ε->void override{ THROW("Not Implemented"); };
+		α Restore( sv /*name*/ )ε->void override{ THROW("Not Implemented"); };
 		α SoftLink( const fs::path& existingFile, const fs::path& newSymLink )ε->void override;
 	};
 }

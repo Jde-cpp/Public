@@ -7,11 +7,14 @@ local args = import 'args.libsonnet';
 	opc: args.opc,
 	dbServers: {
 		scriptPaths: ["$(JDE_DIR)/IotWebsocket/config/sql/"+args.sqlType],
-		sync:: true,
+		sync: true,
 		localhost:{
-			driver: args.dbDriver,
-			connectionString: args.dbConnectionString,
-			catalogs: args.catalogs
+			driver: args.dbServers.localhost.driver,
+			connectionString: args.dbServers.localhost.connectionString,
+			username: args.dbServers.localhost.username,
+			password: args.dbServers.localhost.password,
+			schema: args.dbServers.localhost.schema,
+			catalogs: args.dbServers.localhost.catalogs
 		}
 	},
 	iot: {
@@ -48,7 +51,7 @@ local args = import 'args.libsonnet';
 		memory: true
 	},
 	workers:{
-		executor: 1,
+		executor: 2,
 		drive: {threads: 1},
 		alarm: {threads: 1}
 	}

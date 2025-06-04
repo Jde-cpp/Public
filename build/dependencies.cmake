@@ -19,6 +19,6 @@ get_filename_component( protobuf_INCLUDE_DIRS ${protobuf_DIR}/../../../include A
 include_directories( ${protobuf_INCLUDE_DIRS} )
 include_directories( ${absl_DIR}/../../../include )
 
-include_directories( $ENV{LIB_DIR}/jsonnet/include )
+#include_directories( $ENV{LIB_DIR}/jsonnet/include )
 
 include_directories( $ENV{JDE_DIR}/Public/include )

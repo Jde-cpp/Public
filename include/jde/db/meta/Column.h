@@ -7,7 +7,7 @@ namespace Jde::DB{
 	enum class ECardinality : uint8{ Zero=0, One=1, Many=2 };
 	struct Criteria {
 		sp<DB::Column> Column;
-		Value Value;
+		DB::Value Value;
 	};
 
 	struct ΓDB Column{

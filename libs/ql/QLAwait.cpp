@@ -15,7 +15,7 @@ namespace Jde{
 		if( ql.IsMutation() ){
 			atomic_flag set;
 			up<IException> e;
-			[&]( auto& y, auto& tableQueries, atomic_flag& set, auto& e )->MutationAwait::Task {
+			[&]( auto& y, atomic_flag& set, auto& e )->MutationAwait::Task {
 				jarray mutationResults;
 				try{
 					for( auto& m : move(ql.Mutations()) ){
@@ -38,7 +38,7 @@ namespace Jde{
 				}
 				set.test_and_set();
 				set.notify_all();
-			}( y, tableQueries, set, e );
+			}( y, set, e );
 			set.wait( false );
 			if( e )
 				e->Throw();

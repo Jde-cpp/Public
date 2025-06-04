@@ -9,10 +9,10 @@
 namespace Jde::Web::Server{
 	constexpr ELogTags _tags{ ELogTags::Sessions };
 	steady_clock::duration _restExpirationDuration{};
-	α Sessions::RestSessionTimeout()ι->steady_clock::duration{ 
+	α Sessions::RestSessionTimeout()ι->steady_clock::duration{
 		if( _restExpirationDuration==steady_clock::duration::zero() )
 			_restExpirationDuration = Chrono::ToDuration( Settings::FindSV("/http/timeout").value_or("PT30S") );
-		return _restExpirationDuration; 
+		return _restExpirationDuration;
 	}
 	steady_clock::duration _sockExpirationDuration{};
 	Ω sockExpirationDuration(){
@@ -94,7 +94,7 @@ namespace	Sessions{
 		sp<SessionInfo> info;
 		_sessions.visit( sessionId, [&info, &userEndpoint, sessionId]( auto& kv ){
 			sp<SessionInfo> existing = kv.second;
-			let& existingAddress = existing->UserEndpoint;
+			//let& existingAddress = existing->UserEndpoint;
 			//THROW_IF( existingAddress!=userEndpoint, "[{}]existingAddress='{}' does not match userEndpoint='{}'", sessionId, existingAddress, userEndpoint );
 			auto& existingExpiration = existing->Expiration;
 			if( existingExpiration>steady_clock::now() ){

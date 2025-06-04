@@ -1,10 +1,10 @@
 #pragma once
 #include <jde/ql/types/MutationQL.h>
-#include <jde/ql/QLHook.h>
 #include <jde/framework/coroutine/Await.h>
+#include <jde/db/awaits/ExecuteAwait.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/generators/InsertClause.h>
-#include "../../../../Framework/source/coroutine/Awaitable.h"
+#include <jde/ql/QLHook.h>
 
 namespace Jde::DB{ struct Criteria; struct IDataSource; struct InsertClause; struct Table; }
 namespace Jde::QL{
@@ -19,7 +19,7 @@ namespace Jde::QL{
 		α CreateQuery( const DB::Table& table, const jobject& input, bool nested=false )ε->void;
 		α AddStatement( const DB::Table& table, const jobject& input, optional<DB::Criteria> criteria=nullopt )ε->void;
 		α InsertBefore()ι->MutationAwaits::Task;
-		α Execute()ι->Coroutine::Task;
+		α Execute()ι->DB::QueryAwait::Task;
 		α InsertAfter( jarray&& result )ι->MutationAwaits::Task;
 		α InsertFailure( exception e )ι->MutationAwaits::Task;
 		α Resume( jarray&& v )ι->void;

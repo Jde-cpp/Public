@@ -1,7 +1,6 @@
 #include "UserHook.h"
 #include <jde/db/IDataSource.h>
 #include <jde/db/IRow.h>
-#include <jde/db/awaits/RowAwait.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>

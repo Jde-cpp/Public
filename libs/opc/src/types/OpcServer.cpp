@@ -8,7 +8,7 @@
 #define let const auto
 
 namespace Jde::Opc{
-	OpcServer::OpcServer( DB::IRow& r )ε:
+	OpcServer::OpcServer( DB::Row&& r )ε:
 		Id{ r.GetUInt32(0) },
 		Url{ r.MoveString(1) },
 		CertificateUri{ r.MoveString(2) },
@@ -17,7 +17,7 @@ namespace Jde::Opc{
 		Target{ r.MoveString(5) }
 	{}
 
-	α OpcServerAwait::Select()ι->DB::RowAwait::Task{
+	α OpcServerAwait::Select()ι->DB::SelectAwait::Task{
 		let view = GetViewPtr( "servers" );
 		DB::WhereClause where;
 		if( !_includeDeleted )
@@ -35,9 +35,9 @@ namespace Jde::Opc{
 		auto statement = DB::Statement{ {view->GetColumns({"server_id", "url", "certificate_uri", "is_default", "name", "target"})}, {view}, move(where) };
 		try{
 			vector<OpcServer> y;
-			let rows = co_await DS()->SelectCo( statement.Move() );
-			for( auto& row : rows )
-				y.push_back( OpcServer{*row} );
+			auto rows = co_await DS()->SelectAsync( statement.Move() );
+			for( auto&& row : rows )
+				y.push_back( OpcServer{move(row)} );
 			Resume( move(y) );
 		}
 		catch( IException& e ){

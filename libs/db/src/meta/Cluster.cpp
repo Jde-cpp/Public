@@ -1,10 +1,10 @@
 #include <jde/db/meta/Cluster.h>
 #include <jde/framework/io/json.h>
 #include <jde/db/meta/Catalog.h>
-#include <jde/db/Database.h>
 #include <jde/framework/io/file.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/db.h>
+#include <jde/db/IDataSource.h>
 
 #define let const auto
 
@@ -12,14 +12,14 @@ namespace Jde::DB{
 	α GetCatalogs( const jobject& catalogs, sp<Access::IAcl> authorizer )ε->vector<sp<Catalog>>{
 		vector<sp<Catalog>> y;
 		for( let& [name,catalog] : catalogs )
-			y.emplace_back( ms<Catalog>(name, Json::AsObject(catalog), authorizer) );
+				y.emplace_back( ms<Catalog>(name, catalog.get_object(), authorizer) );
 		return y;
 	}
 
 	Cluster::Cluster( sv name, const jobject& config, sp<Access::IAcl> authorizer )ε:
 		ConfigName{ name },
 		Catalogs{ GetCatalogs( Json::AsObject(config, "catalogs"), authorizer) },
-		DataSource{ DB::DataSource( Json::AsString(config, "driver"), Json::AsSV(config,"connectionString")) }
+		DataSource{ DB::DataSource(config) }
 	{}
 
 	α Cluster::Initialize( sp<Cluster> self )ε->void{

@@ -39,32 +39,25 @@ namespace Jde{
 		{}
 		decltype(GetDataSource) *GetDataSourceFunction;
 
-		α Emplace( str connectionString )->sp<DB::IDataSource>{
-			std::unique_lock l{ _connectionsMutex };
-			auto pDataSource = _connections.find( connectionString );
-			if( pDataSource == _connections.end() ){
-				auto pNew = sp<Jde::DB::IDataSource>{ GetDataSourceFunction() };
-				pNew->SetConnectionString( connectionString );
-				pDataSource = _connections.emplace( connectionString, pNew ).first;
-			}
-			return pDataSource->second;
+		α Emplace( const jobject& config )ε->sp<DB::IDataSource>{
+			auto ds = sp<Jde::DB::IDataSource>{ GetDataSourceFunction() };
+			ds->SetConfig( config );
+			return ds;
 		}
-		static flat_map<string,sp<Jde::DB::IDataSource>> _connections; static mutex _connectionsMutex;
 	};
-	flat_map<string,sp<DB::IDataSource>> DataSourceApi::_connections; mutex DataSourceApi::_connectionsMutex;
 
 	flat_map<string,sp<DataSourceApi>> _dataSources; mutex _dsMutex;
 	std::once_flag _singleShutdown;
-	α DB::DataSource( const fs::path& libraryName, sv connectionString )ε->sp<IDataSource>{
-		THROW_IF( !fs::is_regular_file(libraryName), "Library '{}' not found.", libraryName.string() );
-		THROW_IF( connectionString.empty(), "Connection string is empty." );
+	α DB::DataSource( const jobject& config )ε->sp<IDataSource>{
+		const fs::path driver{ Json::AsString(config, "driver") };
+		THROW_IF( !fs::is_regular_file(driver), "Library '{}' not found.", driver.string() );
 		sp<IDataSource> pDataSource;
 		std::unique_lock l{_dsMutex};
-		string key = libraryName.string();
+		string key = driver.string();
 		auto pSource = _dataSources.find( key );
 		if( pSource==_dataSources.end() )
-			pSource = _dataSources.emplace( key, ms<DataSourceApi>(libraryName) ).first;
-		return pSource->second->Emplace( string{connectionString} );
+			pSource = _dataSources.emplace( key, ms<DataSourceApi>(driver) ).first;
+		return pSource->second->Emplace( config );
 	}
 
 	α DB::GetAppSchema( str metaName, sp<Access::IAcl> authorize )ε->sp<AppSchema>{

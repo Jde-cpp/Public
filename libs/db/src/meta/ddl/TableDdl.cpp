@@ -33,7 +33,7 @@ namespace Jde::DB{
 		string procName = InsertProcName();
 		if( let index = procName.find_first_of('.'); index<procName.size()-1 )
 			procName = procName.substr( index+1 );
-		osCreate << "create procedure " << this->Schema->DBSchema->Name << ".[" << procName << "](";
+		osCreate << "create procedure " << this->Schema->DBSchema->Name << "." << syntax.EscapeDdl( procName ) << "(";
 		osInsert << "\tinsert into " << DBName << "(";
 		osValues << "\t\tvalues(";
 		let prefix = syntax.ProcParameterPrefix().empty() ? "_" : syntax.ProcParameterPrefix();

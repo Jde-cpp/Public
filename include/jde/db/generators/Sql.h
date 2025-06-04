@@ -9,6 +9,7 @@ namespace Jde::DB{
 		α operator+=( WhereClause&& sql )ι->Sql&;
 		string Text;
 		vector<Value> Params;
+		bool IsProc{ false };
 	};
 
 	α SelectSql( vec<sp<Column>> columns, FromClause from, WhereClause where, SRCE )ε->Sql;
