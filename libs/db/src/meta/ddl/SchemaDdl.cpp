@@ -172,7 +172,7 @@ namespace Jde::DB{
 				dbTable = ms<TableDdl>( *table );
 				ds.Execute( {dbTable->CreateStatement()} );
 				Information{ _tags, "Created table '{}'.", table->DBName };
-				dbTable = ds.ServerMeta().LoadTable( schemaName, table->DBName );
+				dbTable = ds.ServerMeta().LoadTable( schemaName, config.ObjectPrefix()+table->Name );
 				dbTable->Schema = FindAppSchema( "" );
 				Tables().emplace( dbTable->Name, dbTable );
 			}

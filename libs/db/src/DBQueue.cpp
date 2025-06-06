@@ -26,7 +26,7 @@ namespace Jde::DB{
 		if( _stopped )
 			return;
 		try{
-			_spDataSource->ExecuteNoLog( move(sql), nullptr, sl );
+			_spDataSource->ExecuteNoLog( move(sql), sl );
 		}
 		catch( const IException& e ){
 			e.SetLevel( ELogLevel::NoLog );
@@ -41,7 +41,7 @@ namespace Jde::DB{
 			if( !statement )
 				continue;
 			try{
-				_spDataSource->ExecuteNoLog( move(statement->_sql), nullptr, statement->_sl );
+				_spDataSource->ExecuteNoLog( move(statement->_sql), statement->_sl );
 			}
 			catch( const IException& ){
 				//DB::LogNoServer( pStatement->Sql, pStatement->Parameters.get(), ELogLevel::Error, e.what(), pStatement->SourceLocation );

@@ -4,9 +4,7 @@
 #include <jde/db/awaits/QueryAwait.h>
 #include "MySqlDataSource.h"
 
-
 namespace Jde::DB::MySql{
-
 	struct MySqlQueryAwait final : TAwait<Result>{
 		MySqlQueryAwait( sp<MySqlDataSource> ds, Sql&& s, SL sl )ι;
 	private:

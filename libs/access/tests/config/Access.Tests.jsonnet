@@ -32,7 +32,7 @@ local args = import 'args.libsonnet';
 		}
 	},
 	workers:{
-		executor: 1,
+		executor: 2,
 		drive: {threads: 1}
 	}
 }

@@ -42,10 +42,9 @@ namespace Jde::DB::MsSql{
 		}
 
 	α MsSqlSchemaProc::LoadColumns( DB::Sql&& sql )Ε->flat_map<string,sp<Table>>{
-		let rows = _pDataSource->Select( move(sql) );
+		auto rows = _pDataSource->Select( move(sql) );
 		flat_map<string,sp<Table>> tables;
-		for( auto& prow : rows ){
-			auto& row = *prow;
+		for( auto&& row : rows ){
 			processRow( tables, row.MoveString(0), row.MoveString(1), row.GetInt(2), row.MoveString(3), row.GetBit(4), row.MoveString(5), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
 		}
 		return tables;
@@ -78,7 +77,7 @@ namespace Jde::DB::MsSql{
 			schema = "dbo";// _pDataSource->Catalog( MsSql::Sql::CatalogSql );
 
 		vector<Index> indexes;
-		auto result = [&]( IRow& row ){
+		auto result = [&]( Row&& row ){
 			uint i=0;
 			let tableName = row.MoveString(i++); let indexName = row.MoveString(i++); let columnName = row.MoveString(i++); let unique = row.GetBit(i++)==0;
 
@@ -98,18 +97,18 @@ namespace Jde::DB::MsSql{
 		if( tableName.size() )
 			values.push_back( Value{string{tableName}} );
 		let sql = Sql::IndexSql( tableName.size() );
-		_pDataSource->Select( sql, result, values );
+		_pDataSource->Select( {sql, values}, result );
 
 		return indexes;
 	}
 
 	α MsSqlSchemaProc::LoadProcs( str schemaName )Ε->flat_map<string,Procedure>{
 		flat_map<string,Procedure> values;
-		auto fnctn = [&]( IRow& row ){
+		auto fnctn = [&]( Row&& row ){
 			let name = row.MoveString( 0 );
 			values.try_emplace( name, Procedure{name, schemaName} );
 		};
-		_pDataSource->Select( Sql::ProcSql(true), fnctn, {Value{schemaName}} );
+		_pDataSource->Select( {Sql::ProcSql(true), {Value{schemaName}}}, fnctn );
 		return values;
 	}
 
@@ -169,7 +168,7 @@ namespace Jde::DB::MsSql{
 
 	α MsSqlSchemaProc::LoadForeignKeys( str schemaName )Ε->flat_map<string,ForeignKey>{
 		flat_map<string,ForeignKey> fks;
-		auto result = [&]( IRow& row ){
+		auto result = [&]( Row&& row ){
 			uint i=0;
 			let name = row.MoveString(i++); let fkTable = row.MoveString(i++); let column = row.MoveString(i++); let pkTable = row.MoveString(i++); //let pkColumn = row.MoveString(i++); let ordinal = row.GetUInt(i);
 			auto pExisting = fks.find( name );
@@ -178,7 +177,7 @@ namespace Jde::DB::MsSql{
 			else
 				pExisting->second.Columns.push_back( column );
 		};
-		_pDataSource->Select( Sql::ForeignKeySql(schemaName.size()), result, {Value{schemaName}} );
+		_pDataSource->Select( {Sql::ForeignKeySql(schemaName.size()), {Value{schemaName}}}, result );
 		return fks;
 	}
 }

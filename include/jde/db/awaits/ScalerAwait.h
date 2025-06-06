@@ -6,7 +6,7 @@
 #define let const auto
 
 namespace Jde::DB{
-	α ScalerAwaitExecute( sp<IDataSource>&& _ds, Sql&& _sql, function<void(variant<optional<Row>,up<IException>>&&)> callback, SL sl )ι->SelectAwait::Task;
+	ΓDB α ScalerAwaitExecute( sp<IDataSource>&& _ds, Sql&& _sql, function<void(variant<optional<Row>,up<IException>>&&)> callback, SL sl )ι->SelectAwait::Task;
 
 	Τ struct ScalerAwaitOpt : TAwaitEx<optional<T>,void>{
 		using base=TAwaitEx<optional<T>,void>;

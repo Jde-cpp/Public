@@ -52,19 +52,16 @@ namespace Jde::DB{
 		α TryExecute( Sql&& sql, SRCE )ι->optional<uint>;
 
 		β Execute( Sql&& sql, bool prepare=false, SRCE )ε->uint=0;
+		β ExecuteNoLog( Sql&& sql, SRCE )ε->uint=0;
 		α ExecuteAsync( Sql&& sql, SRCE )ε->ExecuteAwait{ return ExecuteAwait{shared_from_this(), move(sql), sl}; }
-		β ExecuteNoLog( Sql&& sql, RowΛ* f=nullptr, SRCE )ε->uint=0;
 		β Query( Sql&& sql, SRCE )ε->QueryAwait =0;
 
 		α TrySelect( Sql&& s, RowΛ f, SRCE )ι->bool;
 
-		α CS()const ι->str{ return _connectionString; }
-		β SetConnectionString( string x )ι->void{ _connectionString = move(x); _schema.clear(); _catalog.reset(); }
+		//β SetConnectionString( string x )ι->void{ _connectionString = move(x); _schema.clear(); _catalog.reset(); }
 		β Syntax()ι->const Syntax& = 0;
 
 	protected:
-		string _connectionString;
-		//DB::Schema _schema;  idea is to keep separate since db/schema can have multiple configured schemas.
 		optional<string> _catalog; //db catalog name ie jde
 		string _schema;  //db schema name ie dbo
 	private:

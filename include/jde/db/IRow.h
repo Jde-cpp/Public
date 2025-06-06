@@ -7,7 +7,6 @@
 namespace Jde::DB{
 	struct IRow{
 		virtual ~IRow(){}
-		β Move()ι->up<IRow> =0;
 		β operator[]( uint value )Ι->const Value& = 0;
 		β operator[]( uint i )ι->Value& = 0;
 		β GetBit( uint i )Ε->bool=0;
@@ -48,7 +47,7 @@ namespace Jde::DB{
 		friend α operator>>( const IRow& row, optional<DBTimePoint>& value)ε->const IRow&{ value=row.GetTimePointOpt(row._index++); return row; }
 
 	protected:
-		β GetString( uint i, SRCE )Ε->string=0;
+		β GetString( uint i )Ε->string=0;
 		mutable uint _index{0};
 	};
 
@@ -64,7 +63,6 @@ namespace Jde::DB{
 
 	struct Row final: IRow {
 		Row( vector<Value>&& values )ι:_values{move(values)}{}
-		α Move()ι->up<IRow> override{ return mu<Row>( move(_values)); }
 		α operator[]( uint i )Ι->const Value&{ return _values[i]; }
 		α operator[]( uint i )ι->Value&{ return _values[i]; }
 		α GetBit( uint i )Ι->bool override{ return _values[i].Type()==EValue::Bool ? _values[i].get_bool() : _values[i].get_number<uint8>(); }
@@ -81,7 +79,7 @@ namespace Jde::DB{
 		α IsNull( uint i )Ι->bool{ return _values[i].Type() == EValue::Null; }
 		α Size()Ι->uint{ return _values.size(); }
 	private:
-		α GetString( uint i, SRCE )Ι->string{ ASSERTSL(i<_values.size(), sl); return _values[i].get_string(); }
+		α GetString( uint i )Ι->string{ return _values[i].get_string(); }
 		vector<Value> _values;
 	};
 }

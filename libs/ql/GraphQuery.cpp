@@ -21,7 +21,6 @@ namespace Jde::QL{
 	α GetTable( str tableName, SRCE )ε->sp<DB::View>;
 	α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>{
 		flat_map<uint,string> foo;
-		Trace{ ELogTags::Test, "QL.sizeof: {}", sizeof(foo) };
 		return table.Schema->DS()->SelectEnumSync<uint,string>( table, sl );
 	}
 	using SubTables=flat_map<string,flat_multimap<uint,jobject>>;//tableName,pk, row

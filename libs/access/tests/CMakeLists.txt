@@ -15,6 +15,7 @@ add_subdirectory( ../../ql ../../ql )
 
 add_executable( ${targetName} )
 if( WIN32)
+	set( CMAKE_EXE_LINKER_FLAGS_DEBUG "/debug /INCREMENTAL:NO" )
 	set_target_properties( ${targetName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>" )
 endif()
 
