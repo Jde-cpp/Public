@@ -4,7 +4,10 @@ project( Jde.Crypto.lib VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
 if( WIN32 )
-	message( OPENSSL_ROOT_DIR: ${OPENSSL_ROOT_DIR} )
+	if( ${OPENSSL_ROOT_DIR} STREQUAL "" )
+		message( FATAL_ERROR "Set OPENSSL_ROOT_DIR cmake variable" )
+	endif()
+	set( OPENSSL_USE_STATIC_LIBS ON )
 	find_package( OpenSSL REQUIRED )
 endif()
 

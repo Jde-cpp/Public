@@ -16,10 +16,14 @@
 #include <coroutine>
 #include <source_location>
 
-#define DISABLE_WARNINGS _Pragma("warning(push, 0)") _Pragma("warning(disable: 4244)")  _Pragma("warning(disable: 4701)") _Pragma("warning(disable: 4702)") _Pragma("warning(disable: 4715)")  _Pragma("warning(disable: 5054)") _Pragma("warning(disable: 5104 )") _Pragma("warning(disable: 5105 )") _Pragma("warning(disable: 5260)")
-#define ENABLE_WARNINGS  _Pragma("warning( pop )")
+#if _MSC_VER
+	#define DISABLE_WARNINGS _Pragma("warning(push, 0)") _Pragma("warning(disable: 4244)")  _Pragma("warning(disable: 4701)") _Pragma("warning(disable: 4702)") _Pragma("warning(disable: 4715)")  _Pragma("warning(disable: 5054)") _Pragma("warning(disable: 5104 )") _Pragma("warning(disable: 5105 )") _Pragma("warning(disable: 5260)")
+	#define ENABLE_WARNINGS  _Pragma("warning( pop )")
+#else
+	#define DISABLE_WARNINGS
+	#define ENABLE_WARNINGS
+#endif
 
-DISABLE_WARNINGS
 #include <boost/json.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/container/flat_set.hpp>

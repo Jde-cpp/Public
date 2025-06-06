@@ -3,7 +3,6 @@
 #include <jde/ql/ql.h>
 #include <jde/ql/types/Introspection.h>
 #include <jde/db/IRow.h>
-#include <jde/db/Database.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/Syntax.h>

@@ -33,7 +33,7 @@ namespace Jde::Opc{
 		return BlockAwait<ProviderSelectAwait,Access::ProviderPK>( ProviderSelectAwait{target} );
 	}
 	α GetOpcServers( optional<DB::Key> key=nullopt, bool includeDeleted=false )->vector<OpcServer>{
-		return BlockAwait<OpcServerAwait,vector<OpcServer>>( OpcServerAwait{} );
+		return BlockAwait<OpcServerAwait,vector<OpcServer>>( OpcServerAwait{key, includeDeleted} );
 	}
 
 	α OpcServerTests::InsertFailedImpl()ε->Access::ProviderPK{
@@ -47,11 +47,11 @@ namespace Jde::Opc{
 		let& table = GetViewPtr( "servers" );
 		if( !existingOpcPK && !existingProviderPK ){
 			auto pk = BlockAwait<CreateOpcServerAwait,OpcPK>( CreateOpcServerAwait{} );
-			DS()->Execute( Ƒ("delete from {} where server_id='{}'", table->DBName, pk) ); //InsertFailed checks if failure occurs because exists.
+			DS()->Execute( {Ƒ("delete from {} where server_id='{}'", table->DBName, pk)} ); //InsertFailed checks if failure occurs because exists.
 		}
 		else{
 			if( existingOpcPK )
-				DS()->Execute(	Ƒ("delete from {} where server_id='{}'", table->DBName, existingOpcPK) ); //InsertFailed checks if failure occurs because exists.
+				DS()->Execute(	{Ƒ("delete from {} where server_id='{}'", table->DBName, existingOpcPK)} ); //InsertFailed checks if failure occurs because exists.
 		}
 		BlockAwait<TAwait<jvalue>,jvalue>( *GetHook()->InsertFailure(insert, {UserPK::System}) );
 		return GetProviderPK( target );

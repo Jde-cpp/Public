@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "UserTests.Fields",
+		tests:: "AuthTests.Login_New",
 		recreateDB:: true
 	},
 	dbServers: {
@@ -9,9 +9,12 @@ local args = import 'args.libsonnet';
 		dataPaths: ["$(JDE_DIR)/Public/libs/access/config"],
 		sync: true,
 		localhost:{
-			driver: args.dbDriver,
-			connectionString: args.dbConnectionString,
-			catalogs: args.catalogs
+			driver: args.dbServers.localhost.driver,
+			connectionString: args.dbServers.localhost.connectionString,
+			username: args.dbServers.localhost.username,
+			password: args.dbServers.localhost.password,
+			schema: args.dbServers.localhost.schema,
+			catalogs: args.dbServers.localhost.catalogs
 		}
 	},
 	logging:{
@@ -29,7 +32,7 @@ local args = import 'args.libsonnet';
 		}
 	},
 	workers:{
-		executer: 1,
+		executor: 2,
 		drive: {threads: 1}
 	}
 }

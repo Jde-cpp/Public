@@ -42,7 +42,7 @@ namespace Jde::DB{
 
 	α AppSchema::Initialize( sp<DB::DBSchema> db, sp<AppSchema> self )ε->void{
 		self->DBSchema = db;
-		if( !self->Syntax().CanSetDefaultSchema() && db->DS()->SchemaName() != db->Name )
+		if( !db->IsQLOnly() && !self->Syntax().CanSetDefaultSchema() && db->DS()->SchemaName() != db->Name )
 			self->Prefix = Ƒ( "{}.{}", db->Name, self->Prefix );
 		for_each( self->Tables, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
 		for_each( self->Views, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
@@ -56,18 +56,7 @@ namespace Jde::DB{
 		return DBSchema->DS();
 	}
 	α AppSchema::ResetDS()Ι->void{ DBSchema->ResetDS(); }
-	α AppSchema::Syntax()Ι->const DB::Syntax&{
-//		let isPhysical = DBSchema->IsPhysical();
-		const DB::Syntax* syntax = &DB::Syntax::Instance();
-/*		try{
-			syntax = isPhysical ? &DS()->Syntax() : &DB::Syntax::Instance();
-		}
-		catch( IException& e ){
-			e.SetLevel( ELogLevel::Error );
-			syntax = &DB::Syntax::Instance();
-		}*/
-		return *syntax;
-	}
+	α AppSchema::Syntax()Ι->const DB::Syntax&{ return DBSchema->DS()->Syntax(); }
 
 	α AppSchema::FindTable( str name )Ι->sp<Table>{
 		let y = Tables.find( name );

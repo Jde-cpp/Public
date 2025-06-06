@@ -1,6 +1,7 @@
 ﻿#include "Utilities.h"
 #include <sqlext.h>
 #include <jde/db/DBException.h>
+#include <jde/db/generators/Sql.h>
 
 #define var const auto
 namespace Jde::DB::Odbc{
@@ -27,7 +28,7 @@ namespace Jde::DB::Odbc{
 				if( functionName=="SQLDriverConnect" && level==ELogLevel::Error )
 					throw Exception{ sl, ELogLevel::Critical, "[{:<5}] {} {}", state, (char*)szMessage, iError };
 				else if( retCode==1 && state=="23000" )//23000=Integrity constraint violation.  multiple statements why retCode==1.
-					throw DBException{ "", nullptr, msg, sl };
+					throw DBException{ Sql{}, msg, sl };
 				else if( iError )
 					TRACEX( "({}){} - {}", iError, functionName, msg );
 

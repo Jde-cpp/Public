@@ -310,7 +310,7 @@ namespace Jde::DB::Odbc{
 		case Null: pBinding = mu<BindingNull>(); break;
 		case String: pBinding = mu<BindingString>( param.get_string() ); break;
 		case Bool: pBinding = mu<BindingBit>( param.get_bool() ); break;
-		case Byte: pBinding = mu<BindingBinary>( move( param ) ); break;
+		case Bytes: pBinding = mu<BindingBinary>( move( param ) ); break;
 		case Int8: pBinding = mu<BindingInt8>( param.get_int8() ); break;
 		case Int32:
 			pBinding = mu<BindingInt32>( param.get_int32() );

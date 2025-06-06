@@ -24,6 +24,7 @@ namespace Jde::DB{
 			let procName = _procName.value_or( table.InsertProcName() );
 			sql = IsStoredProc && procName.size() ? Proc( procName ) : Insert( table.DBName );
 		}
+		sql.IsProc = IsStoredProc;
 		return sql;
 	}
 	α InsertClause::SequenceColumn()Ι->sp<Column>{

@@ -1,4 +1,6 @@
 ﻿#pragma once
+#ifndef ACCESS_USINGS_H
+#define ACCESS_USINGS_H
 namespace Jde::Access{
 	struct GroupPK final : PK<uint32>{};
 	using ProviderPK=uint32;
@@ -57,3 +59,4 @@ namespace Jde::Access{
 	}
 	Ξ ToString( ERights r )ι->string{ return FromEnumFlag<ERights>( RightsStrings, r );  }
 }
+#endif

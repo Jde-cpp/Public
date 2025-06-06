@@ -1,92 +1,101 @@
 ﻿#pragma once
 #ifndef JDE_DB_AWAIT_H
 #define JDE_DB_AWAIT_H
+
 #include "../usings.h"
 #include "../exports.h"
 #include <jde/db/IRow.h>
+#include <jde/db/awaits/SelectAwait.h>
 
 #include "../../../../../Framework/source/Cache.h"
 #include "../../../../../Framework/source/coroutine/Awaitable.h"
-
+#define let const auto
 namespace Jde::DB{
 	struct IDataSource;
 	using namespace Coroutine;
-	using RowΛ=function<void( IRow& )ε>;
-	Τ using CoRowΛ=function<void( T& pResult, const IRow& r )ε>;
-	struct ISelect{
-		ISelect( sp<IDataSource> ds )ι:_ds{ds}{}
-		β Results()ι->void* = 0;
-		β OnRow( const IRow& r )ε->void=0;
-		β SelectCo( string sql, vector<Value>&& params, SRCE )ι->up<IAwait>;
-	protected:
-		sp<IDataSource> _ds;
-	};
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-	Τ class TSelect : public ISelect{  //TODO need a TSelect for scaler, _pResult can be null in that case.
-	protected:
-		TSelect( IAwait& base_, sp<IDataSource> ds, string sql, CoRowΛ<T> fnctn, vector<Value> params )ι:ISelect{ds}, _base{base_},_sql{move(sql)}, _fnctn{fnctn}, _params{move(params)}{}
-		virtual ~TSelect()=0;
-		α Select( HCoroutine h )->Task;
-		α Results()ι->void* override{ return _pResult.release(); }
-		α OnRow( const IRow& r )ε->void override{ _fnctn( *_pResult, r ); }
-		string ToString()ι;
-		IAwait& _base;
-		string _sql;
-		CoRowΛ<T> _fnctn;
-		vector<Value> _params;
-	private:
-		up<T> _pResult{ mu<T>() };
-	};
+	using RowΛ=function<void( Row&& )ε>;
+	Τ using CoRowΛ=function<void( T& pResult, Row&& r )ε>;
 
-	Τ struct SelectAwait final: IAwait, TSelect<T>{
-		SelectAwait( sp<IDataSource> ds, string sql, CoRowΛ<T> fnctn, vector<Value> params, SL sl )ι:IAwait{sl},TSelect<T>( *this, ds, move(sql), fnctn, move(params) ){}
-		α Suspend()ι->void override{ TSelect<T>::Select( move(_h) ); }
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+	α ΓDB TAwaitExecute( sp<IDataSource>&& _ds, Sql&& _sql, function<void(vector<Row>&&)> onRows, function<void(IException&&)> onError, SL sl )ι->SelectAwait::Task;
+	Τ class TSelect{  //TODO need a TSelect for scaler, _pResult can be null in that case.
+	protected:
+		TSelect( sp<IDataSource> ds, Sql&& sql, CoRowΛ<T> fnctn, SL sl )ι:
+			_ds{ds}, _fnctn{fnctn}, _sql{move(sql)}, _sl{sl}
+		{}
+		virtual ~TSelect()=0;
+		α Select( TAwait<T>::Handle h )ι->void;
+		//α Result()ι->T&{ return _result; }
+		α OnRow( Row&& r )ε->void{ _fnctn( _result, move(r) ); }
+		T _result{};
+		up<IException> _exception;
+	private:
+		sp<IDataSource> _ds;
+		CoRowΛ<T> _fnctn;
+		TAwait<T>::Handle _h;
+		Sql _sql;
+		SL _sl;
 	};
 
 	Τ TSelect<T>::~TSelect(){};
-	Ŧ TSelect<T>::Select( HCoroutine h )ε->Task{//called from await_suspend, noexcept derived
-		try{
-			auto pAwait = this->SelectCo( move(_sql), move(_params), _base._sl );
-			auto result = co_await *pAwait;
-			result.CheckError();
-			_base.Set<T>( move(_pResult) );
-		}
-		catch( IException& e ){
-			_base.SetException( e.Move() );
-		}
-		h.resume();
+	Ŧ TSelect<T>::Select( TAwait<T>::Handle h )ι->void{
+		_h = h;
+		TAwaitExecute( move(_ds), move(_sql),
+			[&](vector<Row>&& rows){
+				for( auto&& r : rows )
+					OnRow( move(r) );
+				_h.resume();
+			},
+			[&](IException&& e){ _exception = e.Move(); _h.resume(); },
+			_sl );
+		// try{
+		// 	auto rows = ( co_await *_ds->SelectAsync(move(_sql), _sl) ).Rows;
+		// 	for( let& r : rows )
+		// 		OnRow( *r );
+		// }
+		// catch( IException& e ){
+		// 	_exception = e.Move();
+		// }
 	}
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-	#define Φ ΓDB auto
-	class ICacheAwait : public IAwait{
-		using base=IAwait;
-	public:
-		ICacheAwait( string name, SL sl ):base{sl},_name{move(name)}{ ASSERT(_name.size()); }
-		virtual ~ICacheAwait()=0;
-		Φ await_ready()ι->bool;
-		Φ await_resume()ι->AwaitResult;
-	protected:
-		sp<void> _pValue;
-		string _name;
-	};
-	inline ICacheAwait::~ICacheAwait(){};
-	Τ struct SelectCacheAwait final: ICacheAwait, TSelect<T>{
-		SelectCacheAwait( sp<IDataSource> ds, string sql, string cache, CoRowΛ<T> fnctn, vector<Value> params, SL sl ):ICacheAwait{cache,sl},TSelect<T>{ *this, ds, move(sql), fnctn, move(params) }{}
-		α Suspend()ι->void override{ TSelect<T>::Select( _h ); }
-		α await_resume()ι->AwaitResult override;
+
+	Τ struct TSelectAwait : TAwait<T>, TSelect<T>{
+		TSelectAwait( sp<IDataSource> ds, Sql&& sql, CoRowΛ<T> fnctn, SL sl )ι:
+			TAwait<T>{sl},TSelect<T>( ds, move(sql), fnctn, sl )
+		{}
+		α Suspend()ι->void override{ TSelect<T>::Select( TAwait<T>::_h ); }
+		α await_resume()ι->T{
+			if( TSelect<T>::_exception )
+				TSelect<T>::_exception->Throw();
+			return TSelect<T>::_result;
+		}
 	};
 
-	Ŧ SelectCacheAwait<T>::await_resume()ι->AwaitResult{
-		const bool haveValue = (bool)_pValue;
-		auto y = haveValue ? AwaitResult{ move(_pValue) } : IAwait::await_resume();
-		if( !haveValue && y.HasValue() ){
-			sp<T> p{ y. template UP<T>().release() };
-			Cache::Set<void>( _name, p );
-			y.Set( p );
-		}
+	Τ struct CacheAwait final: TSelectAwait<T>{
+		CacheAwait( sp<IDataSource> ds, Sql&& sql, CoRowΛ<T> fnctn, string cacheName, SL sl ):
+			TSelectAwait<T>{ ds, move(sql), fnctn, sl },
+			_cacheName{ move(cacheName) }
+		{}
+		α await_ready()ι->bool override;
+		α await_resume()ι->T override;
+	private:
+		sp<T> _cache;
+		string _cacheName;
+	};
+
+	Ŧ CacheAwait<T>::await_ready()ι->bool{
+		_cache = Cache::Get<T>( _cacheName );
+		return _cache!=nullptr;
+	}
+
+	Ŧ CacheAwait<T>::await_resume()ι->T{
+		if( _cache )
+			return *_cache;
+		let y = TSelectAwait<T>::await_resume();
+		Cache::Set<T>( _cacheName, ms<T>(y) );
+		Trace{ ELogTags::Test, "Cache.sizeof: {}", sizeof(T) };
 		return y;
 	}
 }
-#undef Φ
+#undef let
 #endif

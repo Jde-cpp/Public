@@ -1,6 +1,5 @@
 #include "gtest/gtest.h"
 #include <jde/ql/ql.h>
-#include <jde/db/Database.h>
 #include <jde/access/usings.h>
 #include "globals.h"
 

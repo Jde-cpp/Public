@@ -53,6 +53,7 @@ namespace Jde::DB{
 		α CatalogSelect()Ι->sv override{ return {}; }
 		α CreatePrimaryKey( str tableName, str columnName )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
 		α DateTimeSelect( sv columnName )Ι->string override{ return Ƒ( "UNIX_TIMESTAMP({})", columnName ); }
+		α EscapeDdl( sv sql )Ι->string;
 		α HasLength( EType /*type*/ )Ι->bool { return true; }
 		α HasCatalogs()Ι->bool{ return false; }
 		α HasUnsigned()Ι->bool override{ return true; }

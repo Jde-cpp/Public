@@ -9,7 +9,7 @@
 
 namespace Jde::DB{
 	α CatalogDdl::Create( IDataSource& ds, sv catalog )ε->void{
-		ds.Execute( Ƒ("create database {}", catalog) );
+		ds.Execute( {Ƒ("create database {}", catalog)} );
 	}
 
 #ifndef PROD
@@ -20,7 +20,7 @@ namespace CatalogDdl{
 			: ds;
 	}
 	α DropCatalog( IDataSource& ds, sv catalog )ε->void{
-		ds.Execute( Ƒ("DROP DATABASE IF EXISTS {}", catalog) );
+		ds.Execute( {Ƒ("DROP DATABASE IF EXISTS {}", catalog)} );
 	}
 
 	α NonProd::Drop( const AppSchema& schema )ε->void{

@@ -59,6 +59,14 @@ namespace Jde::DB{
 		y.pop_back();
 		return y;
 	}
+	α MySqlSyntax::EscapeDdl( sv sql )Ι->string{
+		let parts = Str::Split( sql, '.' );
+		string y;
+		for( let part : parts )
+			y += '`'+string{part}+"`.";
+		y.pop_back();
+		return y;
+	}
 
 	α Syntax::Limit( str sql, uint limit )Ε->string{
 		THROW_IF( sql.size()<7, "expecting sql length>7 - {}", sql );

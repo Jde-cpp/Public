@@ -24,7 +24,7 @@ namespace Jde{
 		auto p = ::dlsym( pModule, procName.c_str() ); CHECK( p );
 		return p;
 	}
-	α OSApp::Install( str serviceDescription )ε->void{
+	α OSApp::Install( str /*serviceDescription*/ )ε->void{
 		THROW( "Not Implemeented" );
 	}
 	α OSApp::UnPause()ι->void{
@@ -108,7 +108,7 @@ namespace Jde{
 		exit( EXIT_FAILURE );
 	}
 
-	α IApplication::EnvironmentVariable( str variable, SL sl )ι->optional<string>{
+	α IApplication::EnvironmentVariable( str variable, SL /*sl*/ )ι->optional<string>{
 		char* pEnv = std::getenv( string{variable}.c_str() );
 		return pEnv ? string{pEnv} : optional<string>{};
 	}
@@ -165,10 +165,6 @@ namespace Jde{
 				_args->emplace( *key, string{} );
 		}
 		return *_args;
-	}
-	α Process::FindArg( string key )ι->optional<string>{
-		auto p = Args().find( key );
-		return p!=Args().end() ? p->second : optional<string>{};
 	}
 
 	α OSApp::CompanyRootDir()ι->fs::path{ return fs::path{ "."+OSApp::CompanyName() }; };

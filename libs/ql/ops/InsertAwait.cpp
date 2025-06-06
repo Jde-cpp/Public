@@ -12,7 +12,7 @@ namespace Jde::QL{
 	using DB::Value;
 	constexpr ELogTags _tags{ ELogTags::QL };
 	Ω getEnumValue( const DB::Column& c, const QLColumn& qlCol, const jvalue& v )->Value;
-	α GetEnumValues( const DB::View& table, SRCE )ε->sp<flat_map<uint,string>>;
+	α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>;
 
 	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL m, UserPK executer, SL sl )ι:
 		InsertAwait( table, move(m), false, executer, sl )
@@ -104,7 +104,7 @@ namespace Jde::QL{
 		Execute();
 	}
 
-	α InsertAwait::Execute()ι->Coroutine::Task{
+	α InsertAwait::Execute()ι->DB::QueryAwait::Task{
 		jarray y;
 		auto& ds = *_table->Schema->DS();
 		try{
@@ -120,15 +120,15 @@ namespace Jde::QL{
 					statement.IsStoredProc = false;
 				auto sql = statement.Move();
 				if( statement.IsStoredProc ){
-					let rowCount = ( co_await *ds.ExecuteProcCo(sql.Text, move(sql.Params), [&](const DB::IRow& row){
-						id = (int32)row.GetInt(0);
-					}) ).UP<uint>();
-					y.push_back( jobject{ {"id", id}, {"rowCount",*rowCount} } );
+					let result = co_await ds.Query( move(sql), _sl );
+					for( let& row : result.Rows )
+						id = row.GetInt32( 0 );
+					y.push_back( jobject{ {"id", id}, {"rowCount",result.RowsAffected} } );
 				}else{
 					if( _identityInsert && ds.Syntax().NeedsIdentityInsert() )
 						sql.Text = Ƒ("SET IDENTITY_INSERT {0} ON;{1};SET IDENTITY_INSERT {0} OFF;", _table->DBName, sql.Text );
-					let rowCount = ( co_await *ds.ExecuteCo(sql.Text, move(sql.Params)) ).UP<uint>();
-					y.push_back( jobject{ {"rowCount",*rowCount} } );
+					let rowCount = ( co_await ds.Query( move(sql)) ).RowsAffected;
+					y.push_back( jobject{ {"rowCount",rowCount} } );
 				}
 
 				auto table = statement.Values.size() ? statement.Values.begin()->first->Table : nullptr;
@@ -178,7 +178,7 @@ namespace Jde::QL{
 		Value y;
 		let values = GetEnumValues( qlCol.Table() );
 		if( v.is_string() ){
-			let enum_ = FindKey( *values, string{v.get_string()} ); THROW_IF( !enum_, "Could not find '{}' for {}", string{v.get_string()}, qlCol.MemberName() );
+			let enum_ = FindKey( values, string{v.get_string()} ); THROW_IF( !enum_, "Could not find '{}' for {}", string{v.get_string()}, qlCol.MemberName() );
 			y = *enum_;
 		}
 		else{
@@ -187,7 +187,7 @@ namespace Jde::QL{
 			for( let& jflag : jflags ){
 				if( !jflag.is_string() )
 					continue;
-				let flag = FindKey( *values, string{jflag.get_string()} ); THROW_IF( !flag, "Could not find '{}' for {}", string{jflag.get_string()}, qlCol.MemberName() );
+				let flag = FindKey( values, string{jflag.get_string()} ); THROW_IF( !flag, "Could not find '{}' for {}", string{jflag.get_string()}, qlCol.MemberName() );
 				flags |= *flag;
 			}
 			y = Value{ c.Type, flags };

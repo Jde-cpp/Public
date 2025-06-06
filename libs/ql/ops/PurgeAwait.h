@@ -2,9 +2,11 @@
 #include <jde/ql/QLHook.h>
 #include <jde/ql/types/MutationQL.h>
 #include <jde/framework/coroutine/Await.h>
+#include <jde/db/awaits/ExecuteAwait.h>
 #include <jde/db/meta/Table.h>
 #include "../../../../Framework/source/coroutine/Awaitable.h"
 
+namespace Jde::DB{ struct Sql; }
 namespace Jde::QL{
 	struct PurgeAwait final: TAwait<jvalue>{
 		using base=TAwait<jvalue>;
@@ -12,8 +14,8 @@ namespace Jde::QL{
 		α Suspend()ι->void override{ Before(); }
 	private:
 		α Before()ι->MutationAwaits::Task;
-		α Statements( const DB::Table& table, vector<DB::Value>& parameters )->vector<string>;
-		α Execute()ι->Coroutine::Task;
+		α Statements( const DB::Table& table )ε->vector<DB::Sql>;
+		α Execute()ι->DB::ExecuteAwait::Task;
 		α After( up<IException>&& e )ι->MutationAwaits::Task;
 		α After( uint y )ι->MutationAwaits::Task;
 		α Resume( jvalue&& v )ι->void;

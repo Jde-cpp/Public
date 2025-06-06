@@ -1,5 +1,5 @@
 #include "PurgeAwait.h"
-#include <jde/db/Database.h>
+#include <jde/db/IDataSource.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/ql/LocalSubscriptions.h>
@@ -30,33 +30,32 @@ namespace Jde::QL{
 			ResumeExp( move(e) );
 		}
 	}
-	α PurgeAwait::Statements( const DB::Table& table, vector<DB::Value>& parameters )ε->vector<string>{
-		let id = Json::AsNumber<uint>( _mutation.Args, "id" );
-		parameters.push_back( DB::Value{DB::EType::ULong, id} );
+	α PurgeAwait::Statements( const DB::Table& table )ε->vector<DB::Sql>{
 		table.Authorize( Access::ERights::Purge, _userPK, _sl );
 
 		auto pk = table.Extends ? table.SurrogateKeys[0] : table.GetPK();
-		vector<string> statements{ table.PurgeProcName.size() ? Ƒ("{}( ? )", table.Schema->Prefix+table.PurgeProcName) : Ƒ("delete from {} where {}=?", table.DBName, pk->Name) };
+		DB::Sql sql{
+			table.PurgeProcName.size() ? Ƒ("{}( ? )", table.Schema->Prefix+table.PurgeProcName) : Ƒ("delete from {} where {}=?", table.DBName, pk->Name),
+			{ DB::Value{DB::EType::ULong, Json::AsNumber<uint>(_mutation.Args, "id")} },
+			!table.PurgeProcName.empty()
+		};
+		vector<DB::Sql> statements{ move(sql) };
+
 		if( table.Extends ){
-			let extendedPurge = Statements( AsTable(*table.Extends), parameters );
+			let extendedPurge = Statements( AsTable(*table.Extends) );
 			statements.insert( end(statements), begin(extendedPurge), end(extendedPurge) );
 		}
 		return statements;
 	}
 
-	α PurgeAwait::Execute()ι->Coroutine::Task{
+	α PurgeAwait::Execute()ι->DB::ExecuteAwait::Task{
 		try{
-			vector<DB::Value> parameters;
-			auto statements = Statements( *_table, parameters );
+			auto statements = Statements( *_table );
 			//TODO for mysql allow CLIENT_MULTI_STATEMENTS return ds->Execute( Str::AddSeparators(statements, ";"), parameters, sl );
 			uint y{};
 			DB::IDataSource& ds = *_table->Schema->DS();
-			for( auto& statement : statements ){
-				auto a = statement.starts_with("delete ")
-					? ds.ExecuteCo(move(statement), vector<DB::Value>{parameters.front()}, _sl) //right now, parameters should singular and the same.
-					: ds.ExecuteProcCo( move(statement), move(parameters), _sl );
-				y += *( co_await *a ).UP<uint>(); //gcc compiler error.
-			}
+			for( auto& statement : statements )
+				y += co_await ds.ExecuteAsync(move(statement), _sl);
 			After( y );
 		}
 		catch( IException& e ){

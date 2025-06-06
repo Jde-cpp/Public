@@ -91,6 +91,7 @@ namespace Jde::QL{
 				break;
 			case WChar: case UInt8: case Char:
 				qlTypeName = "Char";
+				break;
 			case DateTime: case SmallDateTime:
 				qlTypeName = "DateTime";
 				break;

@@ -15,7 +15,7 @@ namespace Jde::DB{
 		if( j.contains("default") )
 			obj = Value{ type, j.at("default") };
 		else if( isNullable )
-			obj = type == EType::VarBinary ? Value{vector<byte>()} : Value{};  //odbc handles varbinary nulls differently.
+			obj = type == EType::VarBinary ? Value{vector<uint8_t>()} : Value{};  //odbc handles varbinary nulls differently.
 		return obj;
 	}
 

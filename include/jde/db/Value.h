@@ -6,12 +6,12 @@
 
 namespace Jde::DB{
 	struct Key;
-	enum class EValue:uint8{ Null, String, Bool, Int8, Int32, Int64, UInt32, UInt64, Double, Time, Byte };
+	enum class EValue:uint8{ Null, String=1, Bool=2, Int8=3, Int32=4, Int64=5, UInt32=6, UInt64=7, Double, Time, Bytes };
 	α ΓDB ToType( sv typeName )ι->EType;
 
 	struct Syntax;
 	struct ΓDB Value{
-		using Underlying=variant<std::nullptr_t,string,bool,int8_t,int,_int,uint32_t,uint,double,DBTimePoint,vector<byte>>;
+		using Underlying=variant<std::nullptr_t,string,bool,int8_t,int,_int,uint32_t,uint,double,DBTimePoint,vector<uint8_t>>;
 		Value()=default;
 		Value( Underlying v )ι:Variant{v}{}
 		Value( EType type, const jvalue& j, SRCE )ε;
@@ -30,8 +30,8 @@ namespace Jde::DB{
 		α get_string()Ι->const string&{ return get<string>(Variant); }
 		α move_string()ι->string{ return get<string>(move(Variant)); }
 		α get_bool()Ι->bool{ return get<bool>(Variant); }
-		α get_bytes()Ι->const vector<byte>&{ return const_cast<Value*>(this)->get_bytes(); }
-		α get_bytes()ι->vector<byte>& { return get<vector<byte>>( Variant ); }
+		α get_bytes()Ι->const vector<uint8_t>&{ return const_cast<Value*>(this)->get_bytes(); }
+		α get_bytes()ι->vector<uint8_t>& { return get<vector<uint8_t>>( Variant ); }
 		α get_int8()Ι->int8_t{ return get<int8_t>(Variant); }
 		α get_int32()Ι->int{ return get<int>(Variant); }
 		α get_uint32()Ι->uint32_t{ return get<uint32_t>(Variant); }
@@ -65,7 +65,7 @@ namespace Jde::DB{
 		case UInt32: return GET(uint32);
 		case UInt64: return GET(uint);
 		case Double: return GET(double);
-		default: 
+		default:
 			throw Exception{ sl, Jde::ELogLevel::Error, "Type '{}' not implemented.", TypeName() };
 		}
 	}

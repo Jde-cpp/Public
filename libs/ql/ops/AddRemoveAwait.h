@@ -2,6 +2,7 @@
 #include <jde/ql/types/MutationQL.h>
 #include <jde/framework/coroutine/Await.h>
 #include "../../../../Framework/source/coroutine/Awaitable.h"
+#include <jde/db/awaits/ExecuteAwait.h>
 #include <jde/ql/QLHook.h>
 
 namespace Jde::DB{ struct Table; struct IDataSource; }
@@ -14,10 +15,10 @@ namespace Jde::QL{
 	private:
 		α AddBefore()ι->MutationAwaits::Task;
 		α AddHook()ι->MutationAwaits::Task;
-		α Add()ι->Coroutine::Task;
+		α Add()ι->DB::ExecuteAwait::Task;
 		α AddAfter( jvalue v )ι->MutationAwaits::Task;
 		α RemoveHook()ι->MutationAwaits::Task;
-		α Remove()->Coroutine::Task;
+		α Remove()->DB::ExecuteAwait::Task;
 		α RemoveAfter( jvalue v )ι->MutationAwaits::Task;
 		α Resume( jvalue&& v )ι->void;
 

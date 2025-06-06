@@ -1,4 +1,5 @@
 #include "LocalQL.h"
+#include <jde/db/IRow.h>
 #include <jde/db/meta/View.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalSubscriptions.h>

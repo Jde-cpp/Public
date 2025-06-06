@@ -48,7 +48,7 @@ namespace Jde::Web::Server{
 		jvalue _result;
 	};
 
-	α SettingQL::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
+	α SettingQL::Select( const QL::TableQL& query, UserPK /*executer*/, SL sl )ι->up<TAwait<jvalue>>{
 		return query.JsonName.starts_with( "setting" ) ? mu<SettingQLAwait>( query, sl ) : nullptr;
 	}
 }
