@@ -212,16 +212,21 @@ namespace Jde::QL{
 			if( let c = x.JsonName=="id" ? dbTable->GetPK() : dbTable->FindColumn( x.JsonName ); c )
 				select.TryAdd( c );
 		});//sb only id/name.
-		const string sql{ Ƒ("{} from {} order by {}", select.ToString(), dbTable->DBName, dbTable->GetPK()->Name) };
+		DB::Statement statement{
+			select,
+			DB::FromClause{ {dbTable} },
+			{},
+			dbTable->GetPK()->Name
+		};
 		jarray fields;
-		dbTable->Schema->DS()->Select( {sql}, [&]( DB::Row&& row ){
+		dbTable->Schema->DS()->Select( statement.Move(), [&]( DB::Row&& row ){
 			jobject j;
 			for( uint i=0; i<select.Columns.size(); ++i ){
-				auto& c = *select.Columns[i];
+				auto& c = *select.Columns[i].Column;
 				if( c.IsPK() )
 					j["id"] = row.GetUInt( i );
 				else
-					j[c.Name] = row.MoveString( i );
+					j[c.Name] = move( row.GetString(i) );
 			}
 			fields.push_back( j );
 		} );

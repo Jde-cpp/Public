@@ -11,7 +11,7 @@ namespace Jde::DB::MySql{
 	struct MySqlServerMeta;
 	struct MySqlDataSource final : IDataSource{
 		α Execute( Sql&& sql, bool prepare, SL sl )ε->uint override;
-		α ExecuteNoLog( Sql&& sql, RowΛ* f=nullptr, SRCE )ε->uint override;
+		α ExecuteNoLog( Sql&& sql, SRCE )ε->uint override;
 		//α ExecuteAsync( Sql&& sql, SRCE )ε->ExecuteAwait override;
 		α Select( Sql&& s, SRCE )ε->vector<Row> override;
 		//α SelectAsync( Sql&& sql, SRCE )ι->SelectAwait override;

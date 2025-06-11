@@ -16,7 +16,6 @@
 
 namespace Jde::DB{
 	struct IServerMeta; struct Sql; struct Syntax;
-	namespace Types{ struct IRow; }
 
 	struct ΓDB IDataSource : std::enable_shared_from_this<IDataSource>{
 		virtual ~IDataSource(){}//warning
@@ -78,13 +77,13 @@ namespace Jde::DB{
 	}
 	Ŧ IDataSource::Scaler( Sql&& sql, SL sl )ε->optional<T>{
 		optional<T> result;
-		Select( move(sql), [&result](const IRow& row){ result = row.Get<T>(0); }, sl );
+		Select( move(sql), [&result](Row&& row){ result = row.Get<T>(0); }, sl );
 		return result;
 	}
 
 	namespace zInternal{
 		ẗ ProcessMapRow( flat_map<K,V>& y, Row&& row )ε{ y.emplace( row.Get<K>(0), row.Get<V>(1) ); }
-		Ŧ ProcessSetRow( flat_set<T>& y, const IRow& row )ε{ y.emplace( row.Get<T>(0) ); }
+		Ŧ ProcessSetRow( flat_set<T>& y, Row&& row )ε{ y.emplace( row.Get<T>(0) ); }
 	}
 
 	ẗ IDataSource::SelectMap( Sql&& sql, string cacheName, SL sl )ι->CacheAwait<flat_map<K,V>>{

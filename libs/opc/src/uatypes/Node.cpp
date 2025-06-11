@@ -1,4 +1,5 @@
 ﻿#include <jde/opc/uatypes/Node.h>
+#include <jde/db/IRow.h>
 
 #define let const auto
 namespace Jde::Opc{
@@ -99,6 +100,30 @@ namespace Jde::Opc{
 		}
 		namespaceUri = UA_String_fromChars( x.namespace_uri().c_str() );
 		serverIndex = x.server_index();
+	}
+	NodeId::NodeId( const DB::Row& r, uint8 nsIndex, uint8 iIndex, uint8 sIndex, uint8 gIndex, uint8 bIndex, uint8 uriIndex, uint8 serverIndex )ε{
+		nodeId.namespaceIndex = r.Get<uint16>( nsIndex );
+		namespaceUri = UA_String_fromChars( r.GetString(uriIndex).c_str() );
+		serverIndex = r.GetUInt32Opt( serverIndex ).value_or( 0 );
+		if( !r.IsNull(iIndex) ){
+			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
+			nodeId.identifier.numeric = r.Get<UA_UInt32>( iIndex );
+		}
+		else if( !r.IsNull(sIndex) ){
+			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
+			nodeId.identifier.string = UA_String_fromChars( r.GetString(sIndex).c_str() );
+		}
+		else if( !r.IsNull(bIndex) ){
+			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
+			auto bytes = r.GetBytes( bIndex );
+			UA_ByteString_allocBuffer( &nodeId.identifier.byteString, bytes.size() );
+			::memcpy( nodeId.identifier.byteString.data, bytes.data(), bytes.size() );
+		}
+		else if( !r.IsNull(gIndex) ){
+			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
+			let guid = r.GetGuid( gIndex );
+			::memcpy( &nodeId.identifier.guid, &guid, sizeof(UA_Guid) );
+		}
 	}
 	α NodeId::operator=( NodeId&& x )ι->NodeId&{
 		nodeId = x.Move();

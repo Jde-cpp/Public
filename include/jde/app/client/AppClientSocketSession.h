@@ -6,6 +6,7 @@
 #include <jde/ql/types/Subscription.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/client/socket/IClientSocketSession.h>
+#include "../shared/proto/App.FromServer.pb.h"
 #include "exports.h"
 
 #define Φ ΓAC auto

@@ -19,7 +19,7 @@ target_sources( ${targetName}
 
 add_definitions( -DJde_App_Client_EXPORTS )
 #target_link_libraries( ${targetName} OpenSSL::SSL )
-target_link_libraries( ${targetName} Jde.App.Shared )
+target_link_libraries( ${targetName} Jde.Access Jde.App.Shared )
 target_precompile_headers(${targetName}
   PRIVATE
 	pc.h

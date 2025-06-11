@@ -181,7 +181,7 @@ namespace Jde::Access{
 				for( auto& row : rows ){
 					jobject jrow;
 					for( uint i=0; i<row.Size() && i<columns.size(); ++i )
-						identitiesQL.SetResult( jrow, columns[i], move(row[i]) );
+						identitiesQL.SetResult( jrow, columns[i].Column, move(row[i]) );
 					identities.emplace_back( move(jrow) );
 				}
 			}
@@ -211,7 +211,7 @@ namespace Jde::Access{
 					jobject* role{};
 					jobject* identity{};
 					for( uint i=0; i<row.Size() && i<columns.size(); ++i ){
-						let& column = columns[i];
+						let& column = columns[i].Column;
 						auto& value = row[i];
 						let key = DB::Names::ToJson(column->Name);
 						if( column->Table->Name=="roles" ){
@@ -240,7 +240,7 @@ namespace Jde::Access{
 				for( auto& row : rows ){
 					jobject jrow;
 					for( uint i=0; i<row.Size() && i<columns.size(); ++i )
-						Query.SetResult( jrow, columns[i], move(row[i]) );
+						Query.SetResult( jrow, columns[i].Column, move(row[i]) );
 					y.emplace_back( move(jrow) );
 				}
 			}
@@ -262,7 +262,7 @@ namespace Jde::Access{
 					jobject* resource{};
 					jobject* identity{};
 					for( uint i=0; i<row.Size() && i<columns.size(); ++i ){
-						let& column = columns[i];
+						let& column = columns[i].Column;
 						auto& value = row[i];
 						let key = DB::Names::ToJson(column->Name);
 						if( column->Table->Name=="permission_rights" || column->Table->Name=="resources" ){

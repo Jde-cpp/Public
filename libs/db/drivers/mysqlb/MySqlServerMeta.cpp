@@ -15,12 +15,12 @@ namespace Jde::DB::MySql{
 //	constexpr ELogTags _tags{ ELogTags::Sql };
 	Ω loadTables( sp<IDataSource> ds, const MySqlServerMeta& meta, str schemaName, sv tablePrefix, bool like )ε->flat_map<string,sp<Table>>{
 		flat_map<string,sp<Table>> tables;
-		auto fromColumns = [&]( sv tableName, sv name, _int ordinalPosition, sv dflt, string isNullable, sv type, optional<_int> maxLength, _int isIdentity, _int isId, optional<_int> numericPrecision, optional<_int> numericScale ){
+		auto fromColumns = [&]( string&& tableName, string&& name, _int ordinalPosition, string&& dflt, string&& isNullable, sv type, optional<_int> maxLength, _int isIdentity, _int isId, optional<_int> numericPrecision, optional<_int> numericScale ){
 			auto& table = tables.emplace( tableName, ms<TableDdl>(tableName) ).first->second;
 			table->Columns.push_back( ms<ColumnDdl>(name, (uint)ordinalPosition, dflt, isNullable!="NO", meta.ToType(type), maxLength, isIdentity!=0, isId!=0, numericPrecision, numericScale) );
 		};
 		auto onRow = [&]( Row&& row ){
-			fromColumns( row.MoveString(0), row.MoveString(1), row.GetInt(2), row.MoveString(3), row.MoveString(4), row.MoveString(5), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
+			fromColumns( move(row.GetString(0)), move(row.GetString(1)), move(row.GetInt(2)), move(row.GetString(3)), move(row.GetString(4)), move(row.GetString(5)), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
 		};
 		Sql sql{ Ddl::ColumnSql(tablePrefix), {Value{schemaName}} };
 		if( tablePrefix.size() )
@@ -48,11 +48,11 @@ namespace Jde::DB::MySql{
 		vector<Index> indexes;
 		auto onRow = [&]( Row&& row ){
 			uint i=0;
-			auto tableName = row.MoveString(i++);
+			auto tableName = row.GetString(i++);
 			// if( tablePrefix.size() && tableName.size()>tablePrefix.size() )
 			// 	tableName = tableName.substr( tablePrefix.size() );
 
-			let indexName = row.MoveString(i++); let columnName = row.MoveString(i++); let unique = row.GetInt(i++)==0;
+			let indexName = row.GetString(i++); let columnName = row.GetString(i++); let unique = row.GetInt(i++)==0;
 			vector<string>* pColumns;
 			auto pExisting = find_if( indexes, [&](auto& index){ return index.Name==indexName && index.TableName==tableName; } );
 			if( pExisting==indexes.end() ){
@@ -79,7 +79,7 @@ namespace Jde::DB::MySql{
 		let schema{ _pDataSource->SchemaName() };
 		flat_map<string,Procedure> values;
 		auto fnctn = [&values]( Row&& row ){
-			string name = row.MoveString(0);
+			string name = move( row.GetString(0) );
 			values.try_emplace( name, Procedure{name} );
 		};
 		_pDataSource->Select( {Ddl::ProcSql(true), {Value{schema}}}, fnctn );
@@ -91,7 +91,7 @@ namespace Jde::DB::MySql{
 		flat_map<string,ForeignKey> fks;
 		auto result = [&]( Row&& row ){
 			uint i=0;
-			let name = row.MoveString(i++); let fkTable = row.MoveString(i++); let column = row.MoveString(i++); let pkTable = row.MoveString(i++); //let pkColumn = row.GetString(i++); let ordinal = row.GetUInt(i);
+			let name = row.GetString(i++); let fkTable = row.GetString(i++); let column = row.GetString(i++); let pkTable = row.GetString(i++); //let pkColumn = row.GetString(i++); let ordinal = row.GetUInt(i);
 			auto pExisting = fks.find( name );
 			if( pExisting==fks.end() )
 				fks.emplace( name, ForeignKey{name, fkTable, {column}, pkTable} );

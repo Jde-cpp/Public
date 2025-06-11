@@ -114,7 +114,7 @@ namespace Jde::App{
 		toServer->set_graph_ql( move(queryResults) );
 		return t;
 	}
-	α FromServer::ToTrace( const DB::IRow& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace{
+	α FromServer::ToTrace( DB::Row&& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace{
 		Proto::FromServer::Trace t;
 		uint i=0;
 		for( auto&& c : columns ){

@@ -99,10 +99,10 @@ namespace Jde::QL{
 		}
 		return qlTypeName;
 	}
-	α TableQL::ToJson( DB::IRow& row, const vector<sp<DB::Column>>& dbColumns )Ι->jobject{
+	α TableQL::ToJson( DB::Row& row, const vector<DB::AliasCol>& dbColumns )Ι->jobject{
 		jobject y;
 		for( uint i=0; i<dbColumns.size() && i<row.Size(); ++i )
-			SetResult( y, dbColumns[i], move(row[i]) );
+			SetResult( y, dbColumns[i].Column, move(row[i]) );
 		return y;
 	}
 	α ValueToJson( DB::Value&& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue;

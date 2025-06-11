@@ -2,6 +2,7 @@
 #include "../usings.h"
 #include "../exports.h"
 #include <jde/access/usings.h>
+#include "App.FromClient.pb.h"
 
 #define Φ ΓAS auto
 namespace Jde::App::FromClient{

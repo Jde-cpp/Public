@@ -3,7 +3,9 @@
 #define NODE_H
 #include "../exports.h"
 #include "helpers.h"
+#include <jde/opc/types/proto/Opc.Common.pb.h>
 
+namespace Jde::DB{ struct Row; }
 namespace Jde::Opc{
 	struct ΓOPC NodeId : UA_ExpandedNodeId{
 		NodeId()ι:UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{}
@@ -15,6 +17,7 @@ namespace Jde::Opc{
 		NodeId( const NodeId& x )ι;
 		NodeId( Proto::ExpandedNodeId&& x )ι;
 		NodeId( NodeId&& x )ι;
+		NodeId( const DB::Row& r, uint8 nsIndex, uint8 iIndex, uint8 sIndex, uint8 gIndex, uint8 bIndex, uint8 uriIndex, uint8 serverIndex  )ε;
 		Ω ToNodes( google::protobuf::RepeatedPtrField<Proto::ExpandedNodeId>&& proto )ι->flat_set<NodeId>;
 		α operator=( NodeId&& x )ι->NodeId&;
 		~NodeId(){ Clear(); }

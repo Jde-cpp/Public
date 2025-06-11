@@ -1,1 +1,6 @@
-../../../../build/CMakePresets.json
+{
+  "version": 8,
+  "include": [
+    "$penv{JDE_BASH}/Public/build/CMakePresets.json"
+  ]
+}

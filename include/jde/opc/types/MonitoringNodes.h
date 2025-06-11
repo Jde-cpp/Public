@@ -8,7 +8,7 @@ namespace Jde::Opc{
 	/*struct SocketSession;*/ struct UAClient; struct Value;
 
 	struct IDataChange{
-		β SendDataChange( const OpcNK& opcId, const NodeId& node, const Value& value )ι->void=0;
+		β SendDataChange( const OpcClientNK& opcId, const NodeId& node, const Value& value )ι->void=0;
 		β to_string()Ι->string=0;
 	};
 
@@ -32,7 +32,7 @@ namespace Jde::Opc{
 		α GetResult( Handle requestId, StatusCode status )ι->FromServer::SubscriptionAck;
 	private:
 		struct Subscription{
-			Subscription( /*OpcNK opcId,*/ NodeId node, MonitoredItemCreateResult result, sp<IDataChange> clientCall )ι: /*OpcNK{move(opcId)},*/ Node{ move(node) }, Result{ move(result) }, ClientCalls{ move(clientCall) }{}
+			Subscription( /*OpcClientNK opcId,*/ NodeId node, MonitoredItemCreateResult result, sp<IDataChange> clientCall )ι: /*OpcClientNK{move(opcId)},*/ Node{ move(node) }, Result{ move(result) }, ClientCalls{ move(clientCall) }{}
 			NodeId Node;
 			MonitoredItemCreateResult Result;
 			flat_set<sp<IDataChange>> ClientCalls;

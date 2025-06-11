@@ -8,7 +8,7 @@ namespace Jde::DB{
 	struct Column; struct AppSchema; struct Syntax; struct Table;
 
 	struct ΓDB View{
-		View( sv name )ι:Name{name},DBName{name}{}  //placeholder columns populated in Initialize
+		View( string name )ι:Name{name},DBName{move(name)}{}  //placeholder columns populated in Initialize
 		View( sv name, const jobject& j )ε;
 		α Initialize( sp<DB::AppSchema> schema, sp<View> self )ε->void;
 

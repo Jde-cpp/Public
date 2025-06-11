@@ -6,7 +6,7 @@ namespace Jde::DB{
 	struct AppSchema; struct Column;
 
 	struct ΓDB Table : View{
-		Table( sv name )ι:View{name}{}  //placeholder
+		Table( string name )ι:View{move(name)}{}  //placeholder
 		Table( sv name, const jobject& j )ε;
 		α Initialize( sp<DB::AppSchema> schema, sp<Table> self )ε->void;
 

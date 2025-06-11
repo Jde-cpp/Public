@@ -9,7 +9,7 @@
 		dateTime: {type: "DateTime", length:: 64},
 		decimal: {type: "Decimal"},
 		float: {type:"Float", length:: 64},
-		guid: {type: "Guid", length:: 128},
+		guid: {type: "Guid" },
 		image: {type: "Image"},
 		int: {type:"Int", length:: 32},
 		int8: {type: "Int8", length:: 8},
@@ -42,7 +42,6 @@
 	longSequenced: types.ulong+{ sequence: true, sk:0, i:0 },
 	local valuesColumns = self.valuesColumns,
 	valuesColumns: { name: types.varchar+{ length: 256, i:10 } },
-
 	valuesNK: ["name"],
 
 	targetColumns: valuesColumns+{

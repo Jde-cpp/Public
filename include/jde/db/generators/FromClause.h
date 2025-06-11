@@ -5,11 +5,14 @@ namespace Jde::DB{
 	struct Column; struct Table; struct View; struct WhereClause;
 
 	struct Join final{
+		Join( sp<Column> from )ι:From{move(from)}{};
+		Join( sp<Column> from, sp<Column> to, bool inner=false )ι:From{move(from)}, To{move(to)}, Inner{inner}{};
+		Join( sp<Column> from, string fromAlias, sp<Column> to, string toAlias, bool inner={} )ι;
 		sp<Column> From;
-		sp<Column> To;
-		bool Inner{};
-		string ToAlias;
 		string FromAlias;
+		sp<Column> To;
+		string ToAlias;
+		bool Inner{};
 	};
 	struct ΓDB FromClause final{
 		FromClause()=default;
@@ -27,6 +30,7 @@ namespace Jde::DB{
 		α GetColumnPtr( sv name, SL sl )Ε->sp<Column>;
 		α GetFirstTable( SRCE )Ε->sp<View>;
 		α SetActive( WhereClause& where, SRCE )ε->void;
+		α HasJoin()Ι->bool{ return Joins.size() && Joins[0].To; }
 		vector<Join> Joins;
 	};
 }

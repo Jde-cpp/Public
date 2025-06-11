@@ -1,8 +1,38 @@
 #include <jde/db/generators/WhereClause.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
+#include <jde/db/generators/Coalesce.h>
 
 namespace Jde::DB{
+	WhereClause::WhereClause( Object a, EOperator op, Object b, SL /*sl*/ )ε{
+		auto clause = ToString( a );
+		if( b.index()==underlying(EObject::Value) && get<Value>(b).is_null() ){
+			if( op==EOperator::Equal )
+				clause = Ƒ( "{} is null", move(clause) );
+			else if( op==EOperator::NotEqual )
+				clause = Ƒ( "{} is not null", move(clause) );
+		}
+		else{
+			clause = Ƒ( "{} {} {}", move(clause), ToString(op), ToString(b) );
+			auto aParams = GetParams( a );
+			auto bParams = GetParams( b );
+			move(aParams.begin(), aParams.end(), back_inserter(_params));
+			move(bParams.begin(), bParams.end(), back_inserter(_params));
+		}
+		_clauses.push_back( move(clause) );
+	}
+	WhereClause::WhereClause( AliasCol&& c, Value::Underlying param, SL sl )ε:
+		WhereClause{ move(c), EOperator::Equal, Value{move(param)}, sl }
+	{}
+
+	WhereClause::WhereClause( vector<WhereClause>&& clauses )ε{
+		_clauses.reserve( clauses.size() );
+		for( auto&& subTable : clauses ){
+			move( begin(subTable._clauses), end(subTable._clauses), back_inserter(_clauses) );
+			move( begin(subTable._params), end(subTable._params), back_inserter(_params) );
+		}
+	}
+
 	α WhereClause::operator+=( const WhereClause& subTable )ι->WhereClause&{
 		_clauses.insert( end(_clauses), begin(subTable._clauses), end(subTable._clauses) );
 		_params.insert( end(_params), begin(subTable._params), end(subTable._params) );
@@ -27,7 +57,7 @@ namespace Jde::DB{
 			_params.emplace_back( move(param) );
 		_clauses.push_back( col->Table->Syntax().FormatOperator(*col, op, inParams.size(), sl) );
 	}
-	
+
 	α WhereClause::Add( const DB::Criteria& criteria )ε->void{
 		Add( criteria.Column, EOperator::Equal, criteria.Value );
 	}

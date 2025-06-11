@@ -5,11 +5,11 @@
 namespace Jde::Access{
 	constexpr ELogTags _tags{ ELogTags::Access };
 
-	Resource::Resource( DB::IRow& row )ι{
+	Resource::Resource( DB::Row&& row )ι{
 		PK = row.GetUInt16(0);
-		Schema = row.MoveString(1);
-		Target = row.MoveString(2);
-		Filter = row.MoveString(3);
+		Schema = move( row.GetString(1) );
+		Target = move( row.GetString(2) );
+		Filter = move( row.GetString(3) );
 		IsDeleted = row.GetTimePointOpt(4);
 	}
 	Resource::Resource( ResourcePK pk, const jobject& j )ι:

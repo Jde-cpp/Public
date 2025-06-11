@@ -22,10 +22,11 @@ namespace Jde::DB::MySql{
 
 		mysql::any_connection conn( co_await asio::this_coro::executor );
 		co_await conn.async_connect( _ds->ConnectionParams() );
-		let sql = _sql.IsProc ? Ƒ( "call {}", move(_sql.Text) ) : move( _sql.Text );
+		if( _sql.IsProc )
+			_sql.Text = Ƒ( "call {}", move(_sql.Text) );
 		if( log )
-			DB::Log( sql, &_sql.Params, _sl );
-    auto stmt = co_await conn.async_prepare_statement( sql );
+			DB::Log( _sql, _sl );
+    auto stmt = co_await conn.async_prepare_statement( _sql.Text );
 
 		mysql::results mySqlResult;
 		co_await conn.async_execute( stmt.bind(params.begin(), params.end()), mySqlResult );
@@ -54,7 +55,7 @@ namespace Jde::DB::MySql{
 					std::rethrow_exception( e );
 				}
 				catch( mysql::error_with_diagnostics& e ){
-					ResumeExp( MySqlException{_tags, _sl, ELogLevel::Error, move(e)} );
+					ResumeExp( MySqlException{_tags, _sl, ELogLevel::Error, move(e), move(_sql.Text)} );
 				}
 				catch( IException& e ){
 					ResumeExp( move(e) );

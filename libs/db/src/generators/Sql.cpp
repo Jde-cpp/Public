@@ -13,6 +13,23 @@ namespace Jde::DB{
 		Params.insert( Params.end(), std::make_move_iterator(where.Params().begin()), std::make_move_iterator(where.Params().end()) );
 		return *this;
 	}
+	α Sql::EmbedParams()Ι->string{
+		string fullSql; fullSql.reserve( Text.size()+Params.size()*2 );
+		uint iStart=0;
+		for( uint i=Text.find('?'), iParam=0; iParam<Params.size() && i<Text.size(); iStart=i+1, i=Text.find('?', i+1) ){
+			fullSql.append( Text, iStart, i-iStart );
+			auto& param = Params[iParam++];
+			if( param.Type()==EValue::String )
+				fullSql.append( '\''+Str::Replace(param.get_string(), "\'", "''")+'\'' );
+			else if( param.Type()==EValue::Null )
+				fullSql.append( "null" );
+			else
+				fullSql.append( param.ToString() );
+		}
+		if( iStart<Text.size() )
+			fullSql.append( Text, iStart, Text.size()-iStart );
+		return fullSql;
+	}
 }
 namespace Jde{
 	α DB::SelectSql( const vector<sp<Column>>& columns, FromClause from, WhereClause where, SL sl )ε->Sql{
@@ -47,5 +64,4 @@ namespace Jde{
 	α DB::SelectSKsSql( sp<Table> table )ε->Sql{
 		return SelectSql( table->SurrogateKeys, {table}, {} );
 	}
-
 }

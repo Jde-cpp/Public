@@ -24,9 +24,9 @@ namespace Jde::Opc
 			}
 		}
 	}
-	α ConnectAwait::Create()ι->OpcServerAwait::Task{
+	α ConnectAwait::Create()ι->OpcClientAwait::Task{
 		try{
-			auto servers = co_await OpcServerAwait{ _opcTarget };
+			auto servers = co_await OpcClientAwait{ _opcTarget };
 			THROW_IF( servers.empty(), "Could not find opc server:  '{}'", _opcTarget );
 			auto pClient = ms<UAClient>( move(servers.front()), _loginName, _password );
 			pClient->Connect();

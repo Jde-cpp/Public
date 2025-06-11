@@ -2,6 +2,9 @@
 #ifndef IOT_UA_HELPERS_H
 #define IOT_UA_HELPERS_H
 #include <boost/algorithm/hex.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
 #include <google/protobuf/duration.pb.h>
 #include <google/protobuf/timestamp.pb.h>
 #include "../../../../../Framework/source/DateTime.h"
@@ -9,6 +12,7 @@
 #define let const auto
 namespace Jde::Opc{
 	Ξ ToSV( const UA_String& s )ι->sv{ return sv{ (const char*)s.data, s.length }; }
+	Ξ ToString( const UA_String& s )ι->string{ return string{ (const char*)s.data, s.length }; }
 	Ξ ToUV( sv s )ι->UA_String{ return { s.size(), (UA_Byte*)s.data() }; }
 	//Ξ mum( sv s )ι->UA_String{ return { s.size(), (UA_Byte*)s.data() }; }
 	Ŧ Zero( T& x )ι->void{ ::memset( &x, 0, sizeof(T) ); }
@@ -19,6 +23,7 @@ namespace Jde::Opc{
 	Ξ ToJson( UA_Guid v )ι->jstring{ boost::uuids::uuid id; memcpy(&id.data, &v, id.size() ); return jstring{ boost::uuids::to_string(id) }; }
 	Ξ ByteStringToJson( const UA_ByteString& v )ι->jstring{ string hex; hex.reserve( v.length*2 ); boost::algorithm::hex_lower( ToSV(v), std::back_inserter(hex) ); return jstring{hex}; }//TODO combine with Str::
 	Ξ ToGuid( string x, UA_Guid& ua )ι->void{ std::erase( x, '-' ); let uuid{boost::lexical_cast<boost::uuids::uuid>(x)}; ::memcpy( &ua, &uuid, sizeof(UA_Guid) ); }
+	Ξ ToGuid( UA_Guid ua )ι->boost::uuids::uuid{ boost::uuids::uuid uuid; ::memcpy( &uuid, &ua, sizeof(UA_Guid) ); return uuid; }
 	Ξ ToBinaryString( const UA_Guid& ua )ι->string{ return {(const char*)&ua, sizeof(UA_Guid)}; }
 	using ByteStringPtr = up<UA_ByteString,decltype(&UA_ByteString_delete)>;
 	Ξ ToUAByteString( const vector<byte>&& bytes )->ByteStringPtr{
@@ -27,6 +32,15 @@ namespace Jde::Opc{
 		memcpy( y->data, bytes.data(), bytes.size() );
 		return y;
 	};
+	Ξ FromByteString( const UA_ByteString& bytes )ι->vector<uint8_t>{
+		vector<uint8_t> y;
+		if( bytes.length ){
+			y.resize( bytes.length );
+			memcpy( y.data(), bytes.data, bytes.length );
+		}
+		return y;
+	};
+
 
 	Τ struct Iterable{
 		Iterable( T* begin, uint size )ι:_begin{begin}, _size{size}{}

@@ -1,4 +1,4 @@
-﻿#include <jde/opc/types/OpcServer.h>
+﻿#include <jde/opc/types/OpcClient.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/IRow.h>
 #include <jde/db/generators/Statement.h>
@@ -8,16 +8,16 @@
 #define let const auto
 
 namespace Jde::Opc{
-	OpcServer::OpcServer( DB::Row&& r )ε:
-		Id{ r.GetUInt32(0) },
-		Url{ r.MoveString(1) },
-		CertificateUri{ r.MoveString(2) },
+	OpcClient::OpcClient( DB::Row&& r )ε:
+		Id{ r.Get<uint32>(0) },
+		Url{ move(r.GetString(1)) },
+		CertificateUri{ move(r.GetString(2)) },
 		IsDefault{ r.GetBit(3) },
-		Name{ r.MoveString(4) },
-		Target{ r.MoveString(5) }
+		Name{ move(r.GetString(4)) },
+		Target{ move(r.GetString(5)) }
 	{}
 
-	α OpcServerAwait::Select()ι->DB::SelectAwait::Task{
+	α OpcClientAwait::Select()ι->DB::SelectAwait::Task{
 		let view = GetViewPtr( "servers" );
 		DB::WhereClause where;
 		if( !_includeDeleted )
@@ -34,10 +34,10 @@ namespace Jde::Opc{
 		}
 		auto statement = DB::Statement{ {view->GetColumns({"server_id", "url", "certificate_uri", "is_default", "name", "target"})}, {view}, move(where) };
 		try{
-			vector<OpcServer> y;
+			vector<OpcClient> y;
 			auto rows = co_await DS()->SelectAsync( statement.Move() );
 			for( auto&& row : rows )
-				y.push_back( OpcServer{move(row)} );
+				y.push_back( OpcClient{move(row)} );
 			Resume( move(y) );
 		}
 		catch( IException& e ){

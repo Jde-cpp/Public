@@ -4,7 +4,6 @@
 #include <jde/opc/async/CreateSubscriptions.h>
 #include <jde/opc/uatypes/Node.h>
 #include <jde/opc/uatypes/Value.h>
-#include "Variant.h"
 #include "../async/Attributes.h"
 #include <jde/opc/async/DataChanges.h>
 #include <jde/opc/async/SetMonitoringMode.h>
@@ -19,10 +18,10 @@ namespace Jde::Opc{
 	concurrent_flat_set<sp<UAClient>> _awaitingActivation;
 
 	UAClient::UAClient( str address, str userId, str password )ε:
-		UAClient{ OpcServer{address}, userId, password }
+		UAClient{ OpcClient{address}, userId, password }
 	{}
 
-	UAClient::UAClient( OpcServer&& opcServer, str userId, str password )ε:
+	UAClient::UAClient( OpcClient&& opcServer, str userId, str password )ε:
 		UserId{ userId },
 		_opcServer{ move(opcServer) },
 		_logger{ 0 },

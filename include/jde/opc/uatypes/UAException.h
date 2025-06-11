@@ -1,4 +1,7 @@
 ﻿#pragma once
+#ifndef OPC_UAEXCEPTION_H
+#define OPC_UAEXCEPTION_H
+#include "../usings.h"
 
 #define UAε(x) if( let sc = x; sc ) throw UAException{ sc, _ptr, requestId, ELogLevel::Debug };
 
@@ -19,3 +22,4 @@ namespace Jde::Opc{
 		α IsBadSession()Ι->bool{ return Code==UA_STATUSCODE_BADSESSIONIDINVALID;}
 	};
 }
+#endif

@@ -1,0 +1,4 @@
+mutation{
+	createObjectAttributes( name: "Pump (Manual)", target: "manualPump" );
+
+}

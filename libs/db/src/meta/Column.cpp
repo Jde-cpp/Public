@@ -29,10 +29,10 @@ namespace Jde::DB{
 
 	α getPK( const jobject& j )ε->sp<Table>{
 		sp<Table> table;
-		if( auto name = Json::FindSV(j, "pkTable"); name )
+		if( auto name = Json::FindString(j, "pkTable"); name )
 			table = ms<Table>( *name );
 		else if( let pk = Json::FindObject(j, "pkTable"); pk )
-			table = ms<Table>( Json::AsSV(*pk,"name") );
+			table = ms<Table>( Json::AsString(*pk,"name") );
 		return table;
 	}
 
@@ -63,7 +63,7 @@ namespace Jde::DB{
 		if( let table = Criteria ? dynamic_pointer_cast<DB::Table>(view) : sp<DB::Table>{}; table && table->Extends ){
 			Criteria->Column = table->Extends->GetColumnPtr( Criteria->Column->Name );
 			if( Criteria->Value.Type()==EValue::String )//physical table will have config value, not json from constructor.
-				Criteria->Value = { Criteria->Column->Type, Json::ParseValue(move(Criteria->Value.move_string())) };
+				Criteria->Value = { Criteria->Column->Type, Json::ParseValue(move(Criteria->Value.get_string())) };
 		}
 	}
 

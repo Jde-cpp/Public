@@ -157,8 +157,6 @@ namespace Jde::DB{
 		let& schemaName = config.DBSchema->Name;
 		for( let& [tableName, table] : config.Tables ){
 			sp<TableDdl> dbTable;
-			auto& tables = Tables();
-			Trace{ _tags, "Syncing table '{}'.", tables.size() };
 			if( let kv=Tables().find(config.ObjectPrefix()+tableName); kv!=Tables().end() ){
 				dbTable = std::dynamic_pointer_cast<TableDdl>( kv->second );
 				for( auto& column : table->Columns ){

@@ -81,7 +81,7 @@
 				"LIB_ROOT": "$env{REPO_DIR}/install/$env{CXX}"
 			},
 			"cacheVariables":{
-				"CMAKE_CXX_FLAGS": "-Wno-unknown-pragmas -Wno-missing-field-initializers",
+				"CMAKE_CXX_FLAGS": "-Wno-unknown-pragmas -Wno-missing-field-initializers -Wno-changes-meaning",
 				"CMAKE_CXX_COMPILER": "g++-14",
 				"CMAKE_C_COMPILER": "gcc-14"
 			}

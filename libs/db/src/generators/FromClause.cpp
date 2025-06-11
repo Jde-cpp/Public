@@ -1,6 +1,7 @@
 #include <jde/db/generators/FromClause.h>
-#include <jde/db/generators/WhereClause.h>
+#include <jde/db/generators/Coalesce.h>
 #include <jde/db/generators/Syntax.h>
+#include <jde/db/generators/WhereClause.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
@@ -9,6 +10,14 @@
 #define let const auto
 
 namespace Jde::DB{
+	Join::Join( sp<Column> from, string fromAlias, sp<Column> to, string toAlias, bool inner )ι:
+		From{move(from)},
+		FromAlias{move(fromAlias)},
+		To{move(to)},
+		ToAlias{move(toAlias)},
+		Inner{inner}
+	{}
+
 	α getJoins( vec<sp<Table>>& tables, SL sl )ε->vector<Join>{
 		THROW_IF( tables.empty(), "tables.empty()" );
 		vector<Join> joins;
@@ -61,9 +70,9 @@ namespace Jde::DB{
 			Joins.push_back( move(join) );
 		return *this;
 	}
-	// Change a single column to a join.
+
 	α FromClause::Add( sp<Column> from, sp<Column> to, bool inner )ι->void{
-		Joins.push_back( {from, to, inner} );
+		Joins.push_back( {from, {}, to, {}, inner} );
 	}
 
 	α FromClause::TryAdd( Join&& join )ι->void{

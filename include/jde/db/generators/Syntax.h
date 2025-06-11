@@ -22,6 +22,7 @@ namespace Jde::DB{
 		β CreatePrimaryKey( str tableName, str columnName )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
 		β DateTimeSelect( sv columnName )Ι->string{ return string{ columnName }; }
 		β EscapeDdl( sv sql )Ι->string;
+		β GuidType()Ι->sv{ return "uniqueidentifier"; }
 		β HasLength( EType type )Ι->bool{ return type == EType::VarChar || type == EType::Binary || type == EType::Char || type == EType::VarBinary; }
 		β HasCatalogs()Ι->bool{ return true; }
 		β HasUnsigned()Ι->bool{ return false; }
@@ -54,6 +55,7 @@ namespace Jde::DB{
 		α CreatePrimaryKey( str tableName, str columnName )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
 		α DateTimeSelect( sv columnName )Ι->string override{ return Ƒ( "UNIX_TIMESTAMP({})", columnName ); }
 		α EscapeDdl( sv sql )Ι->string;
+		α GuidType()Ι->sv{ return "binary"; }
 		α HasLength( EType /*type*/ )Ι->bool { return true; }
 		α HasCatalogs()Ι->bool{ return false; }
 		α HasUnsigned()Ι->bool override{ return true; }

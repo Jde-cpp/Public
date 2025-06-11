@@ -2,9 +2,10 @@
 #include "FilterQL.h"
 #include <jde/framework/io/json.h>
 #include <jde/db/names.h>
+#include <jde/db/generators/SelectClause.h>
 #define let const auto
 
-namespace Jde::DB{ struct Column; struct IRow; struct Key; };
+namespace Jde::DB{ struct Column; struct Row; struct Key; };
 namespace Jde::QL{
 	struct ColumnQL final{
 		Ω QLType( const DB::Column& db, SRCE )ε->string;
@@ -29,7 +30,7 @@ namespace Jde::QL{
 		α GetTable( sv jsonPluralName, SRCE )ε->TableQL&;
 		α IsPlural()Ι->bool{ return DB::Names::IsPlural(JsonName); }
 		α SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void;
-		α ToJson( DB::IRow& row, const vector<sp<DB::Column>>& dbColumns )Ι->jobject;
+		α ToJson( DB::Row& row, const vector<DB::AliasCol>& dbColumns )Ι->jobject;
 		α ToString()Ι->string;
 		α TrimColumns( const jobject& fullOutput )Ι->jobject;
 

@@ -32,7 +32,7 @@ namespace Jde::DB::MySql{
 				Conn.connect( cs );
 			}
 			catch( mysql::error_with_diagnostics& e ){
-				throw MySqlException{ ELogTags::DBDriver, sl, ELogLevel::Critical, move(e) };
+				throw MySqlException{ ELogTags::DBDriver, sl, ELogLevel::Critical, move(e), {} };
 			}
 		}
 	private:
@@ -53,9 +53,10 @@ namespace Jde::DB::MySql{
 	}
 
 	α MySqlDataSource::Execute( DB::Sql&& sql, const RowΛ* f, bool prepare, SL sl, bool log )ε->uint{
-		let fullSql = sql.IsProc ? Ƒ( "call {}", move(sql.Text) ) : move( sql.Text );
+		if( sql.IsProc )
+			sql.Text = Ƒ( "call {}", move(sql.Text) );
 		if( log )
-			DB::Log( fullSql, &sql.Params, sl );
+			DB::Log( sql, sl );
 
 		auto session = Session( _cs, sl );
 		vector<mysql::field_view> params; params.reserve( sql.Params.size() );
@@ -65,32 +66,16 @@ namespace Jde::DB::MySql{
 		mysql::statement stmt;
 		try{
 			if( prepare && sql.Params.size() ){
-				stmt = session.Conn.prepare_statement( fullSql );
+				stmt = session.Conn.prepare_statement( move(sql.Text) );
 				session.Conn.execute( stmt.bind(params.begin(), params.end()), result );
 			}
 			else if( sql.Params.empty() )
-				session.Conn.execute( fullSql, result );
-			else{
-				string parameterizedSql; parameterizedSql.reserve( fullSql.size()*2 );
-				uint iStart=0;
-				for( uint i=fullSql.find('?'), iParam=0; iParam<sql.Params.size() && i<fullSql.size(); iStart=i+1, i=fullSql.find('?', i+1) ){
-					parameterizedSql.append( fullSql, iStart, i-iStart );
-					auto& param = sql.Params[iParam++];
-					if( param.Type()==EValue::String )
-						parameterizedSql.append( '\''+Str::Replace(param.move_string(), "\'", "''")+'\'' );
-					else if( param.Type()==EValue::Null )
-						parameterizedSql.append( "null" );
-					else
-						parameterizedSql.append( param.ToString() );
-				}
-				if( iStart<fullSql.size() )
-					parameterizedSql.append( fullSql, iStart, fullSql.size()-iStart );
-				Trace{ _tags, "{}", parameterizedSql };
-				session.Conn.execute( parameterizedSql, result );
-			}
+				session.Conn.execute( sql.Text, result );
+			else
+				session.Conn.execute( sql.EmbedParams(), result );
 		}
 		catch( mysql::error_with_diagnostics& e ){
-			throw MySqlException{ ELogTags::DBDriver, sl, ELogLevel::Error, move(e) };
+			throw MySqlException{ ELogTags::DBDriver, sl, ELogLevel::Error, move(e), move(sql.Text) };
 		}
 		if( f && result.has_value() ){
 			auto rows = result.rows();
@@ -155,7 +140,7 @@ namespace Jde::DB::MySql{
 		return QueryAwait{ mu<MySqlQueryAwait>(dynamic_pointer_cast<MySqlDataSource>(shared_from_this()), move(sql), sl), sl };
 	}
 
-	α MySqlDataSource::ExecuteNoLog( Sql&& sql, RowΛ* f, SL sl )ε->uint{
-		return Execute( move(sql), f, true, sl, false );
+	α MySqlDataSource::ExecuteNoLog( Sql&& sql, SL sl )ε->uint{
+		return Execute( move(sql), nullptr, true, sl, false );
 	}
 }
