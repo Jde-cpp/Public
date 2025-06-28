@@ -15,7 +15,7 @@ namespace Jde::DB{
 		WhereClause( sp<Column> c, Value::Underlying param, SRCE )ε{ Add(c, move(param), sl); }
 		WhereClause( AliasCol&& c, Value::Underlying param, SRCE )ε;
 		WhereClause( sp<Column> c, vector<Value> inParams, SRCE )ε{ Add(c, move(inParams), sl); }
-		WhereClause( Object a, EOperator op, Object b, SRCE )ε;
+		WhereClause( const Object& a, EOperator op, const Object& b, SRCE )ε;
 		WhereClause( vector<WhereClause>&& clauses )ε;
 		α operator+=( const WhereClause& subTable )ι->WhereClause&;
 

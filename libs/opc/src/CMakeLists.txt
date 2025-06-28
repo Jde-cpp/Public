@@ -34,48 +34,7 @@ target_sources( ${targetName}
 
 target_precompile_headers(${targetName}
   PRIVATE
-		<boost/asio.hpp>
-		<boost/beast.hpp>
-		<boost/asio/strand.hpp>
-		<boost/beast/core.hpp>
-		<boost/beast/http.hpp>
-		<boost/beast/ssl.hpp>
-		<boost/beast/ssl/ssl_stream.hpp>
-		<boost/lexical_cast.hpp>
-		<boost/unordered/concurrent_flat_map.hpp>
-		<boost/unordered/concurrent_flat_set.hpp>
-		<boost/uuid/uuid.hpp>
-		<boost/uuid/uuid_io.hpp>
-		<open62541/client_config_default.h>
-		<open62541/client_highlevel.h>
-		<open62541/client_highlevel_async.h>
-		<open62541/client_subscriptions.h>
-		<open62541/plugin/log_stdout.h>
-		<jde/framework.h>
-		<jde/framework/str.h>
-		<jde/framework/coroutine/Task.h>
-		"../../../../Framework/source/DateTime.h"
-		"../../../../Framework/source/coroutine/Alarm.h"
-		"../../../../Framework/source/coroutine/Awaitable.h"
-		<jde/crypto/OpenSsl.h>
-		<jde/db/meta/AppSchema.h>
-		<jde/db/meta/View.h>
-		<jde/web/client/exports.h>
-		<jde/web/client/proto/Web.FromServer.pb.h>
-		<jde/app/shared/exports.h>
-		<jde/app/shared/proto/App.FromClient.pb.h>
-		<jde/app/shared/proto/App.FromClient.h>
-		<jde/app/shared/proto/Common.pb.h>
-		<jde/app/shared/proto/App.FromServer.pb.h>
-		<jde/app/shared/proto/App.FromServer.h>
-		<jde/app/shared/proto/App.pb.h>
-		<jde/opc/usings.h>
-		<jde/opc/exports.h>
-		types/proto/Opc.Common.pb.h
-		types/proto/Opc.FromServer.pb.h
-		types/proto/Opc.FromClient.pb.h
-		<jde/opc/uatypes/helpers.h>
-		<jde/opc/uatypes/UAException.h>
+		"pc.h"
 )
 set(PROTO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 

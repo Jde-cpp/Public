@@ -1,0 +1,35 @@
+mutation{
+	createObject( parent:{id: 85}, ref:{id: 35}, browseName:{ns:1, name:"pumpManual"}, type:{id: 58},
+		name: "Pump (Manual)", description:"Test Explicit Object",
+		variables:[
+			{ value: "Pump King Ltd.", name: "Manufacturer Name", accessLevel: ["read", "write"], ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"manufacturerName"} },
+			{ value: "Mega Pump 3000", name: "Model Name", ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"modelName"} },
+			{ value: true, name: "Status", accessLevel: ["read", "write"], ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"status"} },
+			{ value: 50.0, dataType:"double", name: "Motor RPM", accessLevel: ["read", "write"], ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"motorRpm"} }
+		]
+	)
+	createObjectType( parent:{id: 58}, ref:{id: 45}, browseName:{ns:1, name:"devices"},
+		name: "Devices", description: "Device Type",
+		variables:[{
+				name: "Manufacturer Name", accessLevel: ["read", "write"], ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"manufacturerName"},
+			  refs: [{refType:{id: 37}, target:{id: 78}, forward:true}]
+			},
+			{ name: "Model Name", ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"modelName"} }
+		],
+		children:[{
+			id:{ns:1, number:1001}, ref:{id: 45}, browseName:{ns:1, name:"pumpType"},
+				name: "Pump Type", description:"A Pump Device",
+				variables:[
+					{ dataType: "bool", name: "Status", valueRank: "scalar", accessLevel: ["read", "write"], ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"status"},
+				 		refs: [{refType:{id: 37}, target:{id: 78}, forward:true}]
+					},
+					{ dataType: "double", name: "Motor RPM", valueRank: "scalar", accessLevel: ["read", "write"], ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"motorRpm"} }
+				]
+		}]
+	)
+	createObject( parent:{id: 85}, ref:{id: 35}, browseName:{ns:1, name:"pump1"}, type:{ns:1, number:1001}, name: "Pump 1" )
+	createObject( parent:{id: 85}, ref:{id: 35}, browseName:{ns:1, name:"pump2"}, type:{ns:1, number:1001}, name: "Pump 2" )
+	createConstructor( node:{ns:1, number:1001}, values:[ {browseName:{ns:1, name:"status"}, value: true} ] )
+	createObject( parent:{id: 85}, ref:{id: 35}, browseName:{ns:1, name:"pump3"}, type:{ns:1, number:1001}, name: "Pump 3" )
+	createObject( parent:{id: 85}, ref:{id: 35}, browseName:{ns:1, name:"pump4"}, type:{ns:1, number:1001}, name: "Pump 4" )
+}

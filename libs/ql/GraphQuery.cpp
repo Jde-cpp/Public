@@ -1,16 +1,17 @@
 ﻿#include <jde/ql/ql.h>
-#include <jde/ql/QLHook.h>
+#include "../../../Framework/source/DateTime.h"
 #include <jde/db/IDataSource.h>
-#include <jde/db/meta/Column.h>
 #include <jde/db/names.h>
-#include <jde/db/meta/AppSchema.h>
-#include <jde/db/meta/Table.h>
-#include <jde/db/meta/View.h>
 #include <jde/db/generators/FromClause.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/SelectClause.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/generators/WhereClause.h>
-#include "../../../Framework/source/DateTime.h"
+#include <jde/db/meta/Column.h>
+#include <jde/db/meta/AppSchema.h>
+#include <jde/db/meta/Table.h>
+#include <jde/db/meta/View.h>
+#include <jde/ql/QLHook.h>
 
 #define let const auto
 

@@ -55,9 +55,15 @@ namespace Jde::DB{
 		}
 		osInsert << " )" << endl;
 		osValues << " );" << endl;
+		let seqCol = /*syntax.DriverReturnsLastInsertId() ? nullptr :*/ SequenceColumn();
+		if( seqCol )
+			osCreate << delimiter << " out " << prefix << SequenceColumn()->Name << " " << ColumnDdl::DataTypeString( *seqCol );
+
 		osCreate << " )" << endl << syntax.ProcStart() << endl;
 		osCreate << osInsert.str() << osValues.str();
-		osCreate << "\tselect " << syntax.IdentitySelect() <<";" << endl << syntax.ProcEnd() << endl;// into _id
+		if( seqCol )
+			osCreate << "\tset " << prefix << seqCol->Name << " = " << syntax.IdentitySelect() << ";" << endl;
+		osCreate << syntax.ProcEnd();
 		return osCreate.str();
 	}
 }

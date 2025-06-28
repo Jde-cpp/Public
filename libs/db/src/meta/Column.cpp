@@ -66,6 +66,9 @@ namespace Jde::DB{
 				Criteria->Value = { Criteria->Column->Type, Json::ParseValue(move(Criteria->Value.get_string())) };
 		}
 	}
+	α Column::operator==( const Column& b )Ι->bool{
+		return Name==b.Name && Table!=nullptr && b.Table!=nullptr && Table->Name==b.Table->Name;
+	}
 
 	α Column::FQName()Ι->string{
 		return Ƒ( "{}.{}", Table->DBName, Name );

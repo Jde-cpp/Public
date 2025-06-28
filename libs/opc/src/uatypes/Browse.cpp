@@ -31,13 +31,13 @@ namespace Jde::Opc::Browse{
 			auto pDataTypes = (co_await Attributes::ReadDataTypeAttributes( move(nodes), _ua )).UP<flat_map<NodeId, NodeId>>();
 			Resume( y->ToJson(move(pValues), move(*pDataTypes)) );
 		}
-		catch( UAException& e ){
+		catch( Client::UAClientException& e ){
 			if( retry=e.IsBadSession(); retry )
 				e.PrependWhat( "Retry ObjectsFolder.  " );
 			else
 				ResumeExp( move(e) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 		if( retry ){
@@ -68,7 +68,7 @@ namespace Jde::Opc::Browse{
 		if( !response->responseHeader.serviceResult )
 			Resume( ms<Response>(move(*response)), move(h) );
 		else
-			Resume( UAException{response->responseHeader.serviceResult, ua, requestId}, move(h) );
+			Resume( Client::UAClientException{response->responseHeader.serviceResult, ua, requestId}, move(h) );
 	}
 
 	Request::Request( NodeId&& node )ι{

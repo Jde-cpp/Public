@@ -7,10 +7,10 @@ namespace Jde::Opc::Server {
 	α ObjectTypeAttrAwait::Execute()ι->DB::SelectAwait::Task{
 		try{
 			let nodeTable = GetViewPtr("server_nodes");
-			let table = GetViewPtr( "type_attrs" );
+			let table = GetViewPtr( "object_type_attrs" );
 			DB::Statement stmt{
 				{ table->Columns, "a" },
-				{ {nodeTable->GetColumnPtr("type_attr_id"), "n", table->GetColumnPtr("type_attr_id"), "a", true} },
+				{ {nodeTable->GetColumnPtr("object_type_attr_id"), "n", table->GetColumnPtr("object_type_attr_id"), "a", true} },
 				ServerConfigAwait::ServerWhereClause( *nodeTable, "n" )
 			};
 			auto rows = co_await DS().SelectAsync( stmt.Move() );

@@ -1,5 +1,5 @@
 #include <jde/access/types/Resource.h>
-#include <jde/db/IRow.h>
+#include <jde/db/Row.h>
 
 #define let const auto
 namespace Jde::Access{

@@ -6,8 +6,9 @@
 namespace Jde::Opc{
 	using boost::concurrent_flat_map;
 	using boost::concurrent_flat_set;
+	using boost::uuids::uuid;
 
-	using NamespaceId = uint16;
+	using NsIndex = UA_UInt16;
 	using OpcClientNK = string;
 	using OpcClientPK = uint32;
 	using MonitorId = UA_UInt32;

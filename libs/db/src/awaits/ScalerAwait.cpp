@@ -1,14 +1,19 @@
 #include <jde/db/awaits/ScalerAwait.h>
 #include <jde/db/IDataSource.h>
 
+#define let const auto
 namespace Jde{
-	α DB::ScalerAwaitExecute( sp<IDataSource>&& _ds, Sql&& _sql, function<void(variant<optional<Row>,up<IException>>&&)> callback, SL sl )ι->SelectAwait::Task{
+	α DB::ScalerAwaitExecute( IDataSource& ds, variant<Sql,InsertClause>&& _sql, function<void(optional<Row>)> onRow, function<void(IException&&)> onError, SL sl )ι->QueryAwait::Task{
+		let outParams = _sql.index()==1;
+		if( outParams )
+			get<InsertClause>(_sql).Add( 0ul );
+		auto sql = outParams ? get<InsertClause>( move(_sql) ).Move() : get<Sql>( move(_sql) );
 		try{
-			auto rows = co_await _ds->SelectAsync( move(_sql), sl );
-			callback( rows.size() ? move(rows[0]) : optional<Row>{} );
+			auto result = co_await ds.Query( move(sql), outParams, sl );
+			onRow( result.Rows.size() ? move(result.Rows[0]) : optional<Row>{} );
 		}
 		catch( IException& e ){
-			callback( e.Move() );
+			onError( move(e) );
 		}
 	}
 }

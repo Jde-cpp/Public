@@ -8,22 +8,25 @@
 #include <google/protobuf/duration.pb.h>
 #include <google/protobuf/timestamp.pb.h>
 #include "../../../../../Framework/source/DateTime.h"
+#include "../usings.h"
 
 #define let const auto
 namespace Jde::Opc{
 	Ξ ToSV( const UA_String& s )ι->sv{ return sv{ (const char*)s.data, s.length }; }
 	Ξ ToString( const UA_String& s )ι->string{ return string{ (const char*)s.data, s.length }; }
 	Ξ ToUV( sv s )ι->UA_String{ return { s.size(), (UA_Byte*)s.data() }; }
+	Ξ AllocUAString( str s )ι->UA_String{ return UA_String_fromChars( s.c_str() ); }
+	Ξ AllocUAString( sv s )ι->UA_String{ return AllocUAString( string{s} ); }
 	//Ξ mum( sv s )ι->UA_String{ return { s.size(), (UA_Byte*)s.data() }; }
 	Ŧ Zero( T& x )ι->void{ ::memset( &x, 0, sizeof(T) ); }
 	constexpr α operator "" _uv( const char* x, uint len )ι->UA_String{ return UA_String{ len, static_cast<UA_Byte*>((void*)x) }; } //(UA_Byte*) gcc error
 	Ξ ToJson( UA_UInt64 v )ι->jobject{ return jobject{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",true} }; };
 	Ξ ToJson( UA_Int64 v )ι->jobject{ return jobject{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",false} }; };
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
-	Ξ ToJson( UA_Guid v )ι->jstring{ boost::uuids::uuid id; memcpy(&id.data, &v, id.size() ); return jstring{ boost::uuids::to_string(id) }; }
+	Ξ ToJson( UA_Guid v )ι->jstring{ uuid id; memcpy(&id.data, &v, id.size() ); return jstring{ boost::uuids::to_string(id) }; }
 	Ξ ByteStringToJson( const UA_ByteString& v )ι->jstring{ string hex; hex.reserve( v.length*2 ); boost::algorithm::hex_lower( ToSV(v), std::back_inserter(hex) ); return jstring{hex}; }//TODO combine with Str::
 	Ξ ToGuid( string x, UA_Guid& ua )ι->void{ std::erase( x, '-' ); let uuid{boost::lexical_cast<boost::uuids::uuid>(x)}; ::memcpy( &ua, &uuid, sizeof(UA_Guid) ); }
-	Ξ ToGuid( UA_Guid ua )ι->boost::uuids::uuid{ boost::uuids::uuid uuid; ::memcpy( &uuid, &ua, sizeof(UA_Guid) ); return uuid; }
+	Ξ ToGuid( UA_Guid ua )ι->uuid{ uuid uuid; ::memcpy( &uuid, &ua, sizeof(UA_Guid) ); return uuid; }
 	Ξ ToBinaryString( const UA_Guid& ua )ι->string{ return {(const char*)&ua, sizeof(UA_Guid)}; }
 	using ByteStringPtr = up<UA_ByteString,decltype(&UA_ByteString_delete)>;
 	Ξ ToUAByteString( const vector<byte>&& bytes )->ByteStringPtr{
@@ -53,8 +56,7 @@ namespace Jde::Opc{
 		const uint _size;
 	};
 
-	struct UADateTime
-	{
+	struct UADateTime{
 		UADateTime( const UA_DateTime& dt )ι:_dateTime{dt}{}
 		α ToJson()Ι->jobject{
 			let [seconds,nanos] = ToParts();

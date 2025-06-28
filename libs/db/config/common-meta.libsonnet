@@ -36,7 +36,6 @@
 		now: { name: "$now" }
 	},
 
-	//local smallSequenced: {type: "UInt16", length:: 16, sequence: true, sk:0, i:0 };
 	smallSequenced:: types.uint16+{ sequence: true, sk:0, i:0 },
 	pkSequenced: types.uint+{ sequence: true, sk:0, i:0 },
 	longSequenced: types.ulong+{ sequence: true, sk:0, i:0 },
@@ -53,4 +52,15 @@
 		description: types.varchar+{ length: 2048, nullable: true, i:70 }
 	},
 	targetNKs: [self.valuesNK, ["target"]],
+
+	filter(obj, ignore)::
+    std.foldl(
+			function(filtered, field)(
+				if std.member(ignore, field) then
+					filtered
+				else
+					filtered + { [field]: obj[field] }
+			),
+     	std.objectFields(obj), {}
+		)
 }

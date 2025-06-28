@@ -6,10 +6,10 @@
 #define YRESULT std::basic_string<char,typename Y::traits_type>
 
 namespace Jde::DB::Names{
-	Ξ IsPlural( sv name )ι->bool{ return name.ends_with("ed") || name.ends_with('s') || name=="acl"; }
+	α IsPlural( sv name )ι->bool;
 	Ξ Capitalize( str name )ι->string{ ASSERT(name.size()>1); return string{(char)std::toupper(name[0])} + name.substr(1); }
 	template<class X=string,class Y=string> Ω FromJson( Str::bsv<typename X::traits_type> jsonName )ι->YRESULT;
-	template<class X=string,class Y=string> Ω ToJson( Str::bsv<typename X::traits_type> schemaName )ι->YRESULT;
+	α ToJson( str schemaName )ι->string;
 	α ToSingular( sv plural )ι->string;
 	template<class T=string> Ω ToPlural( BSV singular )ι->RESULT;
 }
@@ -28,23 +28,6 @@ namespace Jde::DB{
 				sqlName+=ch;
 		}
 		return sqlName;
-	}
-	template<class X,class Y> α Names::ToJson( Str::bsv<typename X::traits_type> schemaName )ι->YRESULT{
-		std::ostringstream j;
-		bool upper = false;
-		for( let ch : schemaName ){
-			if( ch=='_' )
-				upper = true;
-			else if( upper ){
-				j << (char)std::toupper( ch );
-				upper = false;
-			}
-			else if( j.tellp()==0 )
-				j << (char)tolower( ch );
-			else
-				j << ch;
-		}
-		return j.str();
 	}
 	Ξ Names::ToSingular( sv plural )ι->string{
 		string y{ plural };

@@ -1,6 +1,5 @@
 #include <jde/app/shared/proto/App.FromServer.h>
-//#include <jde/web/server/Sessions.h>
-#include <jde/db/IRow.h>
+#include <jde/db/Row.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/Column.h>

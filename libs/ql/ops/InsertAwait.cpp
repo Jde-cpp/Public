@@ -1,5 +1,6 @@
 #include "InsertAwait.h"
 #include <jde/db/IDataSource.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/Table.h>
@@ -90,6 +91,7 @@ namespace Jde::QL{
 	α InsertAwait::InsertBefore()ι->MutationAwaits::Task{
 		try{
 			optional<jarray> result = co_await Hook::InsertBefore( _mutation, _executer );
+			Trace{ ELogTags::Test, "{}", result ? serialize(*result) : "null" };
 			auto result0 = result ? result->if_contains(0) : nullptr;
 			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){
 				result0->get_object().erase( "complete" );
@@ -120,7 +122,7 @@ namespace Jde::QL{
 					statement.IsStoredProc = false;
 				auto sql = statement.Move();
 				if( statement.IsStoredProc ){
-					let result = co_await ds.Query( move(sql), _sl );
+					let result = co_await ds.Query( move(sql), false, _sl );
 					for( let& row : result.Rows )
 						id = row.GetInt32( 0 );
 					y.push_back( jobject{ {"id", id}, {"rowCount",result.RowsAffected} } );

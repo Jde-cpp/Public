@@ -48,7 +48,7 @@ namespace Jde::Access{
 				DB::InsertClause insert;
 				insert.Add( table->GetColumnPtr("role_id"), parentRolePK );
 				insert.Add( table->GetColumnPtr("member_id"), childRolePK );
-				rowCount += co_await table->Schema->DS()->ExecuteAsync( insert.Move() );
+				rowCount += co_await table->Schema->DS()->Execute( insert.Move() );
 			}
 			Resume( rowCount );
 		}
@@ -66,7 +66,7 @@ namespace Jde::Access{
 			insert.Add( Json::FindNumber<uint8>(rights, "allowed").value_or(0) );
 			insert.Add( Json::FindNumber<uint8>(rights, "denied").value_or(0) );
 			insert.Add( resource );
-			let permissionPK = co_await table->Schema->DS()->ScalerAsync<PermissionRightsPK>( insert.Move() );
+			let permissionPK = co_await table->Schema->DS()->Scaler<PermissionRightsPK>( insert.Move() );
 			jobject y;
 			y["permissionRight"].emplace_object()["id"] = permissionPK;
 			Resume( y );
@@ -81,7 +81,7 @@ namespace Jde::Access{
 		DB::InsertClause remove{ DB::Names::ToSingular(table->DBName)+"_remove" };
 		remove.Add( Mutation.Id<RolePK>() );
 		remove.Add( Json::AsNumber<PermissionPK>(Mutation.Args, "permissionRight/id") );
-		let y = co_await table->Schema->DS()->ExecuteAsync( remove.Move() );
+		let y = co_await table->Schema->DS()->Execute( remove.Move() );
 		ResumeScaler( y );
 	}
 

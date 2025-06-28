@@ -43,9 +43,7 @@ namespace Jde::Opc{
 	Logger::Logger( Handle uaHandle )ι:
 		UA_Logger{ UA_Log_Stdout_log, (void*)uaHandle, Clear }
 	{}
-}
-namespace Jde{
-	α Opc::TagToString( ELogTags tags )ι->string{
+	α UALogParser::ToString( ELogTags tags )Ι->string{
 		string y;
 		for( uint i=0; i<EOpcLogTagstrings.size(); ++i ){
 			if( (uint)tags & (1ull << (32+i)) )
@@ -57,9 +55,9 @@ namespace Jde{
 			y = "NotFound";
 		return y;
 	}
-	α Opc::TagFromString( sv name )ι->optional<ELogTags>{
-		optional<ELogTags> tag;
-		for( uint i=0; !tag && i<EOpcLogTagstrings.size(); ++i )
+	α UALogParser::ToTag( str name )Ι->ELogTags{
+		ELogTags tag{};
+		for( uint i=0; empty(tag) && i<EOpcLogTagstrings.size(); ++i )
 			if( EOpcLogTagstrings[i]==name )
 				tag = (ELogTags)(1ull << (32+i));
 		return tag;

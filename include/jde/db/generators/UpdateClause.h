@@ -7,7 +7,7 @@ namespace Jde::DB{
 
 	struct ΓDB UpdateClause final{
 		α Move()ι->DB::Sql;
-		α Add( sp<Column> column, Value value )ε{ Values.try_emplace( column, move(value) ); }
+		α Add( sp<Column> column, Value value )ε->void;
 		flat_map<sp<Column>,Value> Values;
 		WhereClause Where;
 	};

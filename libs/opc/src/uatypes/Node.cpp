@@ -1,5 +1,6 @@
 ﻿#include <jde/opc/uatypes/Node.h>
-#include <jde/db/IRow.h>
+#include <jde/db/Row.h>
+#include <jde/db/Value.h>
 
 #define let const auto
 namespace Jde::Opc{
@@ -40,15 +41,24 @@ namespace Jde::Opc{
 			Debug( ELogTags::App, "No identifier in nodeId" );
 	}
 
-	α getNodeId( const jobject& j )ε->UA_NodeId{
-		UA_NodeId nodeId{ UA_NODEID_NULL };
+	α getNodeId( const jvalue& v, UA_UInt16 ns=0 )ε->UA_NodeId;
+	α getNodeId( const jobject& j, UA_UInt16 ns=0 )ε->UA_NodeId{
+		UA_NodeId nodeId{ ns };
+//		Trace{ ELogTags::Test, "getNodeId({})", serialize(j) };
 		if( auto p = j.find("ns"); p!=j.end() && p->value().is_number() )
 			nodeId.namespaceIndex = Json::AsNumber<UA_UInt16>( p->value() );
-		if( auto p = j.find("s"); p!=j.end() ){
+
+		if( auto p = j.find("id"); p!=j.end() )
+			return getNodeId( p->value(), nodeId.namespaceIndex );
+		else if( auto p = j.find("s"); p!=j.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
 			nodeId.identifier.string = UA_String_fromChars( Json::AsString(p->value()).c_str() );
 		}
 		else if( auto p = j.find("i"); p!=j.end() ){
+			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
+			nodeId.identifier.numeric = Json::AsNumber<UA_UInt32>( p->value() );
+		}
+		else if( auto p = j.find("number"); p!=j.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
 			nodeId.identifier.numeric = Json::AsNumber<UA_UInt32>( p->value() );
 		}
@@ -63,7 +73,23 @@ namespace Jde::Opc{
 		}
 		return nodeId;
 	};
-	NodeId::NodeId( const jobject& j )ε:
+	α getNodeId( const jvalue& v, UA_UInt16 ns )ε->UA_NodeId{
+		UA_NodeId nodeId{ ns };
+		if( v.is_object() )
+			nodeId = getNodeId( v.get_object(), ns );
+		else if( v.is_number() ){
+			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
+			nodeId.identifier.numeric = Json::AsNumber<UA_UInt32>( v );
+		}
+		else if( v.is_string() ){
+			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
+			nodeId.identifier.string = UA_String_fromChars( string{v.get_string()}.c_str() );
+		}
+		else
+			THROW( "Could not parse nodeId: {}", serialize(v) );
+		return nodeId;
+	}
+	NodeId::NodeId( const jvalue& j )ε:
 		UA_ExpandedNodeId{
 			getNodeId(j),
 			UA_String_fromChars(string{Json::FindDefaultSV(j, "nsu")}.c_str()),
@@ -101,30 +127,56 @@ namespace Jde::Opc{
 		namespaceUri = UA_String_fromChars( x.namespace_uri().c_str() );
 		serverIndex = x.server_index();
 	}
-	NodeId::NodeId( const DB::Row& r, uint8 nsIndex, uint8 iIndex, uint8 sIndex, uint8 gIndex, uint8 bIndex, uint8 uriIndex, uint8 serverIndex )ε{
-		nodeId.namespaceIndex = r.Get<uint16>( nsIndex );
-		namespaceUri = UA_String_fromChars( r.GetString(uriIndex).c_str() );
-		serverIndex = r.GetUInt32Opt( serverIndex ).value_or( 0 );
-		if( !r.IsNull(iIndex) ){
+	NodeId::NodeId( DB::Row& r, uint8 index, bool extended )ε{
+		nodeId.namespaceIndex = r.Get<uint16>( index );
+		if( !r.IsNull(index+1) ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
-			nodeId.identifier.numeric = r.Get<UA_UInt32>( iIndex );
+			nodeId.identifier.numeric = r.Get<UA_UInt32>( index+1 );
 		}
-		else if( !r.IsNull(sIndex) ){
+		else if( !r.IsNull(index+2) ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
-			nodeId.identifier.string = UA_String_fromChars( r.GetString(sIndex).c_str() );
+			nodeId.identifier.string = UA_String_fromChars( r.GetString(index+2).c_str() );
 		}
-		else if( !r.IsNull(bIndex) ){
+		else if( !r.IsNull(index+3) ){
+			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
+			let guid = r.GetGuid( index+3 );
+			::memcpy( &nodeId.identifier.guid, &guid, sizeof(UA_Guid) );
+		}
+		else if( !r.IsNull(index+4) ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
-			auto bytes = r.GetBytes( bIndex );
+			auto bytes = r.GetBytes( index+4 );
 			UA_ByteString_allocBuffer( &nodeId.identifier.byteString, bytes.size() );
 			::memcpy( nodeId.identifier.byteString.data, bytes.data(), bytes.size() );
 		}
-		else if( !r.IsNull(gIndex) ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
-			let guid = r.GetGuid( gIndex );
-			::memcpy( &nodeId.identifier.guid, &guid, sizeof(UA_Guid) );
-		}
+		namespaceUri = extended ? UA_String_fromChars( r.GetString(index+5).c_str() ) : UA_STRING_NULL;
+		serverIndex = extended ? r.GetUInt32Opt( index+6 ).value_or( 0 ) : 0;
 	}
+	α NodeId::IsSystem( const UA_NodeId& id )ι->bool{ return !id.namespaceIndex && id.identifierType==UA_NODEIDTYPE_NUMERIC && id.identifier.numeric<=32750; }
+
+	α NodeId::InsertParams( bool extended )Ι->vector<DB::Value>{
+		vector<DB::Value> params; params.reserve( 64 );
+		using enum UA_NodeIdType;
+		params.emplace_back( nodeId.namespaceIndex );
+		params.emplace_back( IsNumeric() ? DB::Value{*Numeric()} : DB::Value{} );
+		params.emplace_back( IsString() ? DB::Value{*String()} : DB::Value{} );
+		params.emplace_back( IsGuid() ? DB::Value{*Guid()} : DB::Value{} );
+		params.emplace_back( IsBytes() ? DB::Value{FromByteString(*Bytes())} : DB::Value{} );
+		if( extended ){
+			params.emplace_back( namespaceUri.length ? DB::Value{ToString(namespaceUri)} : DB::Value{} );
+			params.emplace_back( serverIndex );
+		}
+		return params;
+	}
+
+	α NodeId::SetNodeId( UA_NodeId&& x )ι->void{
+		nodeId.namespaceIndex = x.namespaceIndex;
+		nodeId.identifierType = x.identifierType;
+		nodeId.identifier = x.identifier;
+    UA_String_clear( &namespaceUri );
+    serverIndex = 0;
+		UA_NodeId_clear(&x);
+	}
+
 	α NodeId::operator=( NodeId&& x )ι->NodeId&{
 		nodeId = x.Move();
 		namespaceUri=x.namespaceUri;

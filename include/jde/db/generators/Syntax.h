@@ -21,9 +21,10 @@ namespace Jde::DB{
 		β CatalogSelect()Ι->sv{ return "select db_name();"; }
 		β CreatePrimaryKey( str tableName, str columnName )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
 		β DateTimeSelect( sv columnName )Ι->string{ return string{ columnName }; }
+		β DriverReturnsLastInsertId()Ι->bool{ return true; }
 		β EscapeDdl( sv sql )Ι->string;
 		β GuidType()Ι->sv{ return "uniqueidentifier"; }
-		β HasLength( EType type )Ι->bool{ return type == EType::VarChar || type == EType::Binary || type == EType::Char || type == EType::VarBinary; }
+		β HasLength( EType type )Ι->bool;
 		β HasCatalogs()Ι->bool{ return true; }
 		β HasUnsigned()Ι->bool{ return false; }
 		β IdentityColumnSyntax()Ι->sv{ return "identity(1001,1)"; }
@@ -54,6 +55,7 @@ namespace Jde::DB{
 		α CatalogSelect()Ι->sv override{ return {}; }
 		α CreatePrimaryKey( str tableName, str columnName )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
 		α DateTimeSelect( sv columnName )Ι->string override{ return Ƒ( "UNIX_TIMESTAMP({})", columnName ); }
+		α DriverReturnsLastInsertId()Ι->bool override{ return true; }
 		α EscapeDdl( sv sql )Ι->string;
 		α GuidType()Ι->sv{ return "binary"; }
 		α HasLength( EType /*type*/ )Ι->bool { return true; }

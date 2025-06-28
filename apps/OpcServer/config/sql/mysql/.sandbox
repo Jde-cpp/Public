@@ -1,9 +1,0 @@
--- Active: 1740907425083@@127.0.0.1@3306@debug
-delete from opc_node_ids
-select * from opc_node_ids;
-select count(*) from opc_node_ids;
-
-select opc_object_attrs.object_attr_id, opc_object_attrs.specified, opc_object_attrs.name, opc_object_attrs.description, opc_object_attrs.write_mask, opc_object_attrs.user_write_mask, opc_object_attrs.event_notifier
-from opc_server_nodes a
-        join opc_object_attrs on a.object_attr_id=opc_object_attrs.object_attr_id
-where a.server_deleted is null and coalesce( a.server_name, 'TestServer') = 'TestServer'

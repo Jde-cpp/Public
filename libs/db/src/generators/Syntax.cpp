@@ -69,6 +69,10 @@ namespace Jde::DB{
 		y.pop_back();
 		return y;
 	}
+	α Syntax::HasLength( EType type )Ι->bool{
+		using enum EType;
+		return type == VarChar || type == Binary || type == Char || type == VarBinary;
+	}
 
 	α Syntax::Limit( str sql, uint limit )Ε->string{
 		THROW_IF( sql.size()<7, "expecting sql length>7 - {}", sql );
@@ -99,7 +103,7 @@ namespace Jde::DB{
 	α Syntax::ToString( EType type )Ι->string{
 		using enum EType;
 		string typeName;
-		if( HasUnsigned() && type == EType::UInt ) typeName = "int unsigned";
+		if( HasUnsigned() && type == UInt ) typeName = "int unsigned";
 		else if( type == Int || type == UInt ) typeName = "int";
 		else if( HasUnsigned() && type == ULong ) typeName = "bigint(20) unsigned";
 		else if( type == Long || type == ULong ) typeName="bigint";

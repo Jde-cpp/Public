@@ -63,9 +63,9 @@ namespace Jde::Access{
 	α AclQLAwait::PurgeAcl( IdentityPK::Type identityPK, PermissionPK permissionPK )ι->DB::ExecuteAwait::Task{
 		try{
 			let ds = Table()->Schema->DS();
-			let aclCount = co_await ds->ExecuteAsync(
+			let aclCount = co_await ds->Execute(
 				DB::Sql{ Ƒ("delete from {} where identity_id=? and permission_id=?", Table()->DBName), vector<DB::Value>{{identityPK}, {permissionPK}}}, _sl );
-			co_await ds->ExecuteAsync(
+			co_await ds->Execute(
 				DB::Sql{ Ƒ("delete from {} where permission_id=?", GetTable("permission_rights")->DBName), vector<DB::Value>{{permissionPK}}}, _sl );
 			jobject y;
 			y["rowCount"] = aclCount;
@@ -93,7 +93,7 @@ namespace Jde::Access{
 			insert.Add( identityPK );
 			let rolePK = Json::AsNumber<ResourcePK>( Mutation.Args, "role/id" );
 			insert.Add( rolePK );
-			y["rowCount"] = co_await DS()->ExecuteAsync( insert.Move() );
+			y["rowCount"] = co_await DS()->Execute( insert.Move() );
 			y["complete"] = true;
 			//Authorizer().AddAcl( identityPK, rolePK );
 			Resume( jvalue{y} );
@@ -116,7 +116,7 @@ namespace Jde::Access{
 			insert.Add( underlying(allowed) );
 			insert.Add( underlying(denied) );
 			insert.Add( resourcePK );
-			let permissionPK = co_await DS()->ScalerAsync<PermissionPK>( insert.Move() );
+			let permissionPK = co_await DS()->Scaler<PermissionPK>( insert.Move() );
 			y["permissionRight"].emplace_object()["id"] = permissionPK;
 			y["complete"]=true;
 			//Authorizer().AddAcl( identityPK, permissionPK, allowed, denied, resourcePK );
@@ -181,7 +181,7 @@ namespace Jde::Access{
 				for( auto& row : rows ){
 					jobject jrow;
 					for( uint i=0; i<row.Size() && i<columns.size(); ++i )
-						identitiesQL.SetResult( jrow, columns[i].Column, move(row[i]) );
+						identitiesQL.SetResult( jrow, get<DB::AliasCol>(columns[i]).Column, move(row[i]) );
 					identities.emplace_back( move(jrow) );
 				}
 			}
@@ -211,7 +211,7 @@ namespace Jde::Access{
 					jobject* role{};
 					jobject* identity{};
 					for( uint i=0; i<row.Size() && i<columns.size(); ++i ){
-						let& column = columns[i].Column;
+						let& column = get<DB::AliasCol>(columns[i]).Column;
 						auto& value = row[i];
 						let key = DB::Names::ToJson(column->Name);
 						if( column->Table->Name=="roles" ){
@@ -240,7 +240,7 @@ namespace Jde::Access{
 				for( auto& row : rows ){
 					jobject jrow;
 					for( uint i=0; i<row.Size() && i<columns.size(); ++i )
-						Query.SetResult( jrow, columns[i].Column, move(row[i]) );
+						Query.SetResult( jrow, get<DB::AliasCol>(columns[i]).Column, move(row[i]) );
 					y.emplace_back( move(jrow) );
 				}
 			}
@@ -262,7 +262,7 @@ namespace Jde::Access{
 					jobject* resource{};
 					jobject* identity{};
 					for( uint i=0; i<row.Size() && i<columns.size(); ++i ){
-						let& column = columns[i].Column;
+						let& column = get<DB::AliasCol>(columns[i]).Column;
 						auto& value = row[i];
 						let key = DB::Names::ToJson(column->Name);
 						if( column->Table->Name=="permission_rights" || column->Table->Name=="resources" ){

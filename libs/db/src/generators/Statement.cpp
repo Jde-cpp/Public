@@ -1,4 +1,5 @@
 #include <jde/db/generators/Statement.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/View.h>
 
 namespace Jde::DB{
@@ -9,6 +10,9 @@ namespace Jde::DB{
 		OrderBy{move(orderBy)}
 	{}
 
+	α Statement::Empty()ι->bool{
+		return Select.Columns.empty();
+	}
 	α Statement::Move()ε->Sql{
 		Sql sql; sql.Text.reserve( 512 );
 		sql.Text += Select.ToString( From.HasJoin() );

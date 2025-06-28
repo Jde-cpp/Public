@@ -1,5 +1,6 @@
 ﻿#include <jde/db/DBQueue.h>
 #include <jde/db/IDataSource.h>
+#include <jde/db/generators/Functions.h>
 #include "../../../../Framework/source/threading/InterruptibleThread.h"
 
 #define let const auto

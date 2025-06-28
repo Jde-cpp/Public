@@ -26,7 +26,7 @@ namespace Jde::DB{
 		α TryAdd( Join&& join )ι->void;
 
 		α Contains( sv tableName )ι->bool;
-		α Empty()Ι->bool{ return Joins.empty(); }
+		α Empty()Ι->bool;
 		α GetColumnPtr( sv name, SL sl )Ε->sp<Column>;
 		α GetFirstTable( SRCE )Ε->sp<View>;
 		α SetActive( WhereClause& where, SRCE )ε->void;

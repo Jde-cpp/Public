@@ -2,7 +2,7 @@
 	sqlType: "mysql",
 	logDir: "$(JDE_BUILD_DIR)",
 	dbServers: {
-		dataPaths: ["$(JDE_DIR)/Public/apps/OpcServer/config"],
+		dataPaths: [],
 		scriptPaths:  ["$(JDE_DIR)/Public/apps/OpcServer/config/sql/mysql"],
 		localhost:{
 			driver: "$(JDE_BUILD_DIR)/jde/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",

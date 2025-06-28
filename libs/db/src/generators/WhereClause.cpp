@@ -1,10 +1,10 @@
 #include <jde/db/generators/WhereClause.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
-#include <jde/db/generators/Coalesce.h>
+#include <jde/db/generators/Functions.h>
 
 namespace Jde::DB{
-	WhereClause::WhereClause( Object a, EOperator op, Object b, SL /*sl*/ )ε{
+	WhereClause::WhereClause( const Object& a, EOperator op, const Object& b, SL /*sl*/ )ε{
 		auto clause = ToString( a );
 		if( b.index()==underlying(EObject::Value) && get<Value>(b).is_null() ){
 			if( op==EOperator::Equal )

@@ -8,7 +8,7 @@
 namespace Jde::DB{
 	using uuid=boost::uuids::uuid;
 	struct Key;
-	enum class EValue:uint8{ Null, String=1, Bool=2, Int8=3, Int32=4, Int64=5, UInt32=6, UInt64=7, Double, Time, Bytes };
+	enum class EValue:uint8{ Null, String=1, Bool=2, Int8=3, Int32=4, Int64=5, UInt32=6, UInt64=7, Double=8, Time=9, Bytes=10 };
 	α ΓDB ToType( sv typeName )ι->EType;
 
 	struct Syntax;
@@ -16,6 +16,7 @@ namespace Jde::DB{
 		using Underlying=variant<std::nullptr_t,string,bool,int8_t,int,_int,uint32_t,uint,double,DBTimePoint,vector<uint8_t>>;
 		Value()=default;
 		Value( Underlying v )ι:Variant{v}{}
+		Value( Underlying v, Underlying nullValue )ι:Variant{v==nullValue ? nullptr : v}{}
 		Value( uuid guid )ι:Variant{vector<uint8_t>( (uint8_t*)guid.data(), (uint8_t*)guid.data()+16 )}{}
 		Value( EType type, const jvalue& j, SRCE )ε;
 		Ω FromKey( Key key )ι->Value{ return key.IsPrimary() ? Value{key.PK()} : Value{move(key.NK())}; }
@@ -41,6 +42,7 @@ namespace Jde::DB{
 		α get_int32()Ι->int{ return get<int>(Variant); }
 		α get_int()Ι->_int{ return get<_int>(Variant); }
 		Ŧ get_number( SRCE )Ε->T;
+		Ŧ Get( SRCE )Ε->T;
 		α get_uint32()Ι->uint32_t{ return get<uint32_t>(Variant); }
 		α get_uint()Ι->uint{ return get<uint>(Variant); }
 		α get_time()Ι->DBTimePoint{ return get<DBTimePoint>(Variant); }
@@ -66,6 +68,7 @@ namespace Jde::DB{
 	Ŧ ToValue( const flat_set<T>& x )ι->vector<Value>;
 #define GET(x) static_cast<T>( get_##x() )
 	Ŧ Value::get_number( SL sl )Ε->T{
+		THROW_IFSL( is_null(), "Number is null" );
 		switch( Type() ){
 			using enum EValue;
 		case Bool: return GET( bool ) ? 1 : 0;
@@ -77,6 +80,16 @@ namespace Jde::DB{
 		case Double: return GET(double);
 		default:
 			throw Exception{ sl, Jde::ELogLevel::Error, "Type '{}' not implemented.", TypeName() };
+		}
+	}
+	Ŧ Value::Get( SL sl )Ε->T{
+		switch( Type() ){
+			using enum EValue;
+		case String:
+			THROW_IFSL( !is_string(), "Value is not a string." );
+			return GET(string);
+		default:
+			return get_number<T>( sl );
 		}
 	}
 #undef GET

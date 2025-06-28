@@ -1,5 +1,5 @@
 #include <jde/db/generators/FromClause.h>
-#include <jde/db/generators/Coalesce.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/generators/WhereClause.h>
 #include <jde/db/meta/Column.h>
@@ -74,7 +74,7 @@ namespace Jde::DB{
 	α FromClause::Add( sp<Column> from, sp<Column> to, bool inner )ι->void{
 		Joins.push_back( {from, {}, to, {}, inner} );
 	}
-
+	α FromClause::Empty()Ι->bool{ return Joins.empty(); }
 	α FromClause::TryAdd( Join&& join )ι->void{
 		if( !Contains(join.To->Table->Name) )
 			*this += move(join);

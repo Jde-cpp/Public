@@ -1,5 +1,5 @@
 #include "ServerConfigAwait.h"
-#include <jde/db/generators/Coalesce.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/meta/AppSchema.h>
@@ -12,84 +12,144 @@
 
 #define let const auto
 namespace Jde::Opc::Server{
-	α ServerConfigAwait::ServerWhereClause( const DB::View& snTable, string alias )ε->DB::WhereClause{
-		DB::Value serverName{ServerName()};
-		return {{ {DB::AliasCol{alias, snTable.GetColumnPtr("deleted")}, DB::EOperator::Equal, DB::Value{} },
-					  { DB::Coalesce{DB::AliasCol{alias, snTable.GetColumnPtr("server_name")}, serverName}, DB::EOperator::Equal, serverName }
-				}};
+		constexpr std::array<UA_UInt16,5> _objectPKs{ UA_NS0ID_MODELLINGRULE_MANDATORY, UA_NS0ID_OBJECTSFOLDER, UA_NS0ID_TYPESFOLDER, UA_NS0ID_SERVER, UA_NS0ID_SERVERCONFIGURATION };
+		constexpr std::array<UA_UInt16,6> _refPKs{ UA_NS0ID_ORGANIZES, UA_NS0ID_HASCOMPONENT, UA_NS0ID_HASPROPERTY, UA_NS0ID_HASMODELLINGRULE, UA_NS0ID_HASEVENTSOURCE, UA_NS0ID_HASSUBTYPE };
+		constexpr std::array<UA_UInt16,2> _objectTypePKs{ UA_NS0ID_BASEOBJECTTYPE, UA_NS0ID_FOLDERTYPE };
+		constexpr std::array<UA_UInt16,2> _variableTypePKs{ UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_BASEVARIABLETYPE };
+
+	α ServerConfigAwait::ServerWhereClause( const DB::View& snTable, string alias, bool includeDeleted, SL sl )ε->DB::WhereClause{
+		DB::Value serverId{ServerId()};
+		DB::WhereClause where{ DB::Coalesce{DB::AliasCol{alias, snTable.GetColumnPtr("server_id", sl)}, serverId}, DB::EOperator::Equal, serverId };
+		// if( !includeDeleted )
+		// 	where+={ DB::AliasCol{alias, snTable.GetColumnPtr("deleted", sl)}, DB::EOperator::Equal, DB::Value{} };
+		return where;
 	}
-	α ServerConfigAwait::Execute()ι->NodeAwait::Task{
+
+	α ServerConfigAwait::LoadBrowseNames()ι->BrowseNameAwait::Task{
 		try{
-			_nodes = co_await NodeAwait{};
-			SaveSystem();
+			GetUAServer()._browseNames = co_await BrowseNameAwait{};
+			LoadConstructors();
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α ServerConfigAwait::SaveSystem()ι->DB::ExecuteAwait::Task{
+	α ServerConfigAwait::LoadConstructors()ι->ConstructorAwait::Task{
 		try{
-			for( uint i=0; i<UA_TYPES_COUNT; ++i ){
-				//BREAK;//find out what to do about binary encoding, fill in rest of data_type.
-				NodeId extNodeId{ DataType(i).typeId };
-				let& nodeId = extNodeId.nodeId;
-				ASSERT( nodeId.namespaceIndex==0 && nodeId.identifierType==UA_NODEIDTYPE_NUMERIC );
-				if( _nodes.contains(nodeId.identifier.numeric) )
-					continue;
-				let table = GetViewPtr( "node_ids" );
-				DB::InsertClause proc{
-					table->InsertProcName(),
-					{ {nodeId.namespaceIndex},
-						nodeId.identifierType==UA_NODEIDTYPE_NUMERIC ? DB::Value{nodeId.identifier.numeric} : DB::Value{},
-						nodeId.identifierType==UA_NODEIDTYPE_STRING ? DB::Value{ToString(nodeId.identifier.string)} : DB::Value{},
-						nodeId.identifierType==UA_NODEIDTYPE_GUID ? DB::Value{ToGuid(nodeId.identifier.guid)} : DB::Value{},
-						nodeId.identifierType==UA_NODEIDTYPE_BYTESTRING ? DB::Value{FromByteString(nodeId.identifier.byteString)} : DB::Value{},
-						DB::Value{}, // namespaceUri
-						DB::Value{}, // serverIndex
-						DB::Value{} // isGlobal
-					},
-				};
-				let nodePK = co_await DS().ScalerAsync<NodePK>( proc.Move() );
-				_nodes.try_emplace( nodePK, nodePK, move(extNodeId) );
-			}
-			LoadObjectAttrs();
+			GetUAServer()._constructors = co_await ConstructorAwait{};
+			LoadObjectTypes();
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
 
-	α ServerConfigAwait::LoadObjectAttrs()ι->ObjectAttrAwait::Task{
+	α ServerConfigAwait::LoadObjectTypes()ι->ObjectTypeAwait::Task{
 		try{
-			_objectAttrs = co_await ObjectAttrAwait{};
-			LoadObjectTypeAttr();
+			GetUAServer()._typeDefs = co_await ObjectTypeAwait{};
+			LoadObjects();
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
 
-	α ServerConfigAwait::LoadObjectTypeAttr()ι->ObjectTypeAttrAwait::Task{
+	α ServerConfigAwait::LoadObjects()ι->ObjectAwait::Task{
 		try{
-			_typeAttribs = co_await ObjectTypeAttrAwait{};
+			GetUAServer()._objects = co_await ObjectAwait{};
 			LoadReferences();
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
+
 	α ServerConfigAwait::LoadReferences()ι->ReferenceAwait::Task{
 		try{
-			_refs = co_await ReferenceAwait{};
-			LoadVAttrs();
+			GetUAServer()._refs = co_await ReferenceAwait{};
+			LoadVariables();
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α ServerConfigAwait::LoadVAttrs()ι->VariableAttrAwait::Task{
+	α ServerConfigAwait::LoadVariables()ι->VariableAwait::Task{
 		try{
-			_vAttrs = co_await VariableAttrAwait{};
+			GetUAServer()._variables = co_await VariableAwait{};
+			AllocateNodes();
+			//SaveSystem( /*move(nodes)*/ );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+
+	α ServerConfigAwait::AllocateNodes()ι->NodeAwait::Task{
+		try{
+			auto nodes = co_await NodeAwait{};
+			auto& ua = GetUAServer();
+			for( auto&& [pk, node] : nodes ){
+				bool found{ true };
+				if( pk==0 || pk>32750 )
+					continue;
+				if( find(_refPKs, pk)!=_refPKs.end() )
+				  ua._refTypes.try_emplace( pk, move(node.nodeId) );
+				else if( find(_objectPKs, pk)!=_objectPKs.end() )
+				  ua._objects.try_emplace( pk, node.nodeId );
+				else if( find(_objectTypePKs, pk)!=_objectTypePKs.end() || find(_variableTypePKs,pk)!=_variableTypePKs.end() )
+					ua._typeDefs.try_emplace( pk, ms<ObjectType>(node.nodeId) );
+				else
+					found = ua.FindDataType( pk );
+				if( !found )
+					Error{ ELogTags::App, "Unknown node type: {}", serialize(node.ToJson()) };
+			}
+			SaveSystem( /*move(nodes)*/ );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+
+	α ServerConfigAwait::SaveSystem( /*flat_map<NodePK, NodeId> nodes*/ )ι->DB::ExecuteAwait::Task{
+		let& table = GetView( "node_ids" );
+		auto insertNodeIdClause = [&table]( const NodeId& nodeId )->DB::InsertClause {
+			auto params = nodeId.InsertParams( true );
+			params.emplace_back( DB::Value{} );//isGlobal
+			return DB::InsertClause{
+				table.InsertProcName(),
+				move(params)
+			};
+		};
+		UAServer& ua = GetUAServer();
+		try{
+			for( auto pk : _objectPKs ){
+				if( ua._objects.contains(pk) )
+					continue;
+				NodeId id{pk};
+				let nodePK = co_await DS().InsertSeq<NodePK>( insertNodeIdClause(id) );
+				ua._objects.try_emplace( nodePK, id.nodeId );
+			}
+			for( auto pk : _refPKs ){
+				if( ua._refTypes.contains(pk) )
+					continue;
+				NodeId node{pk};
+				let nodePK = co_await DS().InsertSeq<NodePK>( insertNodeIdClause(node) );
+				ua._refTypes.try_emplace( nodePK, move(node) );
+			}
+			for( auto pk : _objectTypePKs ){
+				if( ua._typeDefs.contains(pk) )
+					continue;
+				NodeId node{pk};
+				let nodePK = co_await DS().InsertSeq<NodePK>( insertNodeIdClause(node) );
+				ua._typeDefs.try_emplace( nodePK, ms<ObjectType>(node.nodeId) );
+			}
+			for( auto pk : _variableTypePKs ){
+				if( ua._typeDefs.contains(pk) )
+					continue;
+				NodeId node{pk};
+				let nodePK = co_await DS().InsertSeq<NodePK>( insertNodeIdClause(node) );
+				ua._variables.try_emplace( pk, node.nodeId );
+			}
 			Set();
 		}
 		catch( exception& e ){
@@ -98,83 +158,38 @@ namespace Jde::Opc::Server{
 	}
 
 	α ServerConfigAwait::Set()ι->void{
-		let ua = GetUAServer()._ua;
+		auto& ua = GetUAServer();
 		flat_set<NodePK> done;
-		function<void(const Node&)> process = [&]( const Node& node ){
-
-			let parent = _nodes.at( node.ParentNodeId.value_or(0) );
-			if( parent.ExNode.nodeId.namespaceIndex!=0 && !done.contains(*node.ParentNodeId) )
-				process( parent );
-
-			let referenceType = _nodes.at( node.ReferenceTypeId.value_or(0) );
-			if( referenceType.ExNode.nodeId.namespaceIndex!=0 && !done.contains(*node.ReferenceTypeId) )
-				process( referenceType );
-
-			let typeDef = _nodes.at( node.TypeDefId.value_or(0) );
-			if( typeDef.ExNode.nodeId.namespaceIndex!=0 && !done.contains(*node.TypeDefId) )
-				process( typeDef );
-
-			if( node.OAttributeId ){
-				UA_Server_addObjectNode(
-					ua,
-					node.ExNode.nodeId,
-					parent.ExNode.nodeId,
-					referenceType.ExNode.nodeId,
-					UA_QualifiedName{1, ToUV(node.Name)},//TODO find out what to dow with ns.
-					typeDef.ExNode.nodeId,
-					_objectAttrs.at(node.OAttributeId),
-					(void*)node.NodeId, nullptr
-				);
+		for( auto&&	[pk,node] : GetUAServer()._typeDefs ){
+			if( done.contains(pk) || node->IsSystem() )
+				continue;
+			ua.AddObjectType( node );
+			done.insert( pk );
+			if( auto p = ua._constructors.find(pk); p!=ua._constructors.end() )
+				ua.AddConstructor( node->nodeId );
+			for( auto&& [pk,variable] : ua._variables ){
+				if( variable.ParentNodePK==pk )
+					ua.AddVariable( variable );
 			}
-			else if( node.VAttributeId ){
-				UA_Server_addVariableNode(
-					ua,
-					node.ExNode.nodeId,
-					parent.ExNode.nodeId,
-					referenceType.ExNode.nodeId,
-					UA_QualifiedName{1, ToUV(node.Name)},
-					typeDef.ExNode.nodeId,
-					_vAttrs.at(node.VAttributeId),
-					(void*)node.NodeId, nullptr
-				);
+		}
+		for( auto&&	[pk,node] : GetUAServer()._objects ){
+			if( done.contains(pk) || node.IsSystem() )
+				continue;
+			ua.AddObject( node );
+			for( auto&& [pk,variable] : ua._variables ){
+				if( variable.ParentNodePK==pk )
+					ua.AddVariable( variable );
 			}
-			else if( node.TypeAttribId ){
-				UA_Server_addObjectTypeNode(
-					ua,
-					node.ExNode.nodeId,
-					parent.ExNode.nodeId,
-					referenceType.ExNode.nodeId,
-					UA_QualifiedName{ 1, ToUV(node.Name) },
-					_typeAttribs.at( node.TypeAttribId ),
-					(void*)node.NodeId, nullptr
-				);
-			}
-			if( let ref = _refs.contains(node.NodeId) ? _refs.at(node.NodeId) : optional<Reference>{}; ref ){
-				let& target = _nodes.at( ref->TargetPK );
-				let type = _nodes.at( ref->TypePK );
-				if( !done.contains(ref->TargetPK) )
-					process( target );
-				if( !done.contains(ref->TypePK) )
-					process( type );
-				UA_Server_addReference(
-					ua,
-					node.ExNode.nodeId,
-					type.ExNode.nodeId,
-					target.ExNode,
-					ref->IsForward ? UA_TRUE : UA_FALSE
-				);
-			}
-			done.insert( node.NodeId );
-		};
-		for( auto&&	[nodeId,node] : _nodes ){
-			if( !done.contains(nodeId) && node.ExNode.nodeId.namespaceIndex!=0 )
-				process( node );
+		}
+		for( auto&&	[pk,ref] : ua._refs ){
+			UA_Server_addReference(
+				ua._ua,
+				ua.GetVariable(ref.SourcePK).nodeId,
+				ua.GetRefType(ref.RefTypePK).nodeId,
+				ua.GetObjectish(ref.TargetPK),
+				ref.IsForward
+			);
 		}
 		Resume();
-		// _ua._server = UA_Server_new();
-		// UA_ServerConfig config = getConfiguration();
-		// UA_StatusCode status = UA_Server_run_startup(_ua._server, &config);
-		// if( status!=UA_STATUSCODE_GOOD )
-		// 	throw Exception{ SRCE, "Failed to start UA_Server: {}", UA_StatusCode_name(status) };
 	}
 }

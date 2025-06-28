@@ -1,35 +1,31 @@
 #pragma once
+#include "ObjectAttr.h"
+#include "BrowseName.h"
 
-namespace Jde::Opc::Server {
-	using NodePK = uint;
-	struct Node final{
-		Node( NodePK pk, NodeId&& r )ι:
-			NodeId{ pk },
-			ExNode{ move(r) }
-		{}
+namespace Jde::Opc::Server{
+	struct ObjectType;
+	struct Node : NodeId{
+		Node( UA_NodeId nodeId )ι;
+		Node( const jobject& j, NodePK parentPK, BrowseName browse )ε;
+		Node( UA_NodeId nodeId, NodePK parentPK, NodePK refPK, sp<ObjectType> typeDef, BrowseName browseName )ι;
+		Node( NodePK pk );
+		Node( DB::Row&& r, sp<ObjectType> typeDef )ι;
 
-		Node( DB::Row&& r )ι:
-			NodeId{ r.GetUInt(0) },
-			ExNode{ r, 1, 2, 3, 4, 5, 6, 7 },
-			IsGlobal{ r.GetBitOpt(8).value_or(false) },
-			ParentNodeId{ r.GetUInt32Opt(9) },
-			ReferenceTypeId{ r.GetUInt32Opt(10) },
-			TypeDefId{ r.GetUInt32Opt(11) },
-			OAttributeId{ r.GetUInt32Opt(12).value_or(0) },
-			TypeAttribId{ r.GetUInt32Opt(13).value_or(0) },
-			VAttributeId{ r.GetUInt32Opt(14).value_or(0) },
-			Name{ r.GetString(15) }
-		{}
+		β IsObjectType()Ι->bool{ return false; }
+		α InsertParams( bool extended )ι->vector<DB::Value>;
 
-		NodePK NodeId;
-		Opc::NodeId ExNode;
-		bool IsGlobal;
-		optional<NodePK> ParentNodeId;
-		optional<NodePK> ReferenceTypeId;
-		optional<NodePK> TypeDefId;
-		uint32 OAttributeId;
-		uint32 TypeAttribId;
-		uint32 VAttributeId;
-		string Name;
+		NodePK PK{};
+		bool IsGlobal{};
+		Server::NodePK ParentNodePK{};
+		Server::NodePK ReferenceTypePK{};
+		BrowseName Browse;
+		sp<ObjectType> TypeDef;
+		β ToString( const Node& parent )Ι->string;
+		β Specified()Ι->UA_UInt32=0;
+		α BrowseName()Ι->str{ return Browse.Name; }
+		β Name()Ι->UA_LocalizedText=0;
+		β Description()Ι->UA_LocalizedText=0;
+		β WriteMask()Ι->UA_UInt32=0;
+		β UserWriteMask()Ι->UA_UInt32=0;
 	};
 }

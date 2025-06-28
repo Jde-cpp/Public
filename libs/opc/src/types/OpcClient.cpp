@@ -1,6 +1,7 @@
 ﻿#include <jde/opc/types/OpcClient.h>
 #include <jde/db/IDataSource.h>
-#include <jde/db/IRow.h>
+#include <jde/db/Row.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/db/generators/WhereClause.h>
 #include "../opcInternal.h"

@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <jde/framework/coroutine/Await.h>
-#include <jde/db/IRow.h>
+#include <jde/db/Row.h>
 #include <jde/db/Key.h>
 #include <jde/db/awaits/SelectAwait.h>
 #include <jde/opc/usings.h>

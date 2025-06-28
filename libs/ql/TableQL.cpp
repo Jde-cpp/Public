@@ -1,12 +1,13 @@
 #include <jde/ql/types/TableQL.h>
 #include <jde/ql/types/FilterQL.h>
-#include <jde/db/IRow.h>
+#include <jde/db/Row.h>
 #include <jde/db/Key.h>
 #include <jde/db/names.h>
+#include <jde/db/generators/Functions.h>
+#include <jde/db/generators/Syntax.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/DBSchema.h>
 #include <jde/db/meta/Column.h>
-#include <jde/db/generators/Syntax.h>
 
 #define let const auto
 namespace Jde::QL{
@@ -99,10 +100,15 @@ namespace Jde::QL{
 		}
 		return qlTypeName;
 	}
-	α TableQL::ToJson( DB::Row& row, const vector<DB::AliasCol>& dbColumns )Ι->jobject{
+	α TableQL::ToJson( DB::Row& row, const vector<DB::Object>& dbColumns )Ι->jobject{
 		jobject y;
-		for( uint i=0; i<dbColumns.size() && i<row.Size(); ++i )
-			SetResult( y, dbColumns[i].Column, move(row[i]) );
+		for( uint i=0; i<dbColumns.size() && i<row.Size(); ++i ){
+			let col = std::get_if<DB::AliasCol>( &dbColumns[i] );
+			if( col )
+				SetResult( y, col->Column, move(row[i]) );
+			else
+				Critical{ ELogTags::QL, "Column {} is not an AliasCol.", i };
+		}
 		return y;
 	}
 	α ValueToJson( DB::Value&& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue;

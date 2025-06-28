@@ -1,6 +1,7 @@
 #include <jde/db/db.h>
 #include <jde/framework/settings.h>
 #include <jde/db/IDataSource.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/Cluster.h>
 #include <jde/db/meta/Catalog.h>
 #include <jde/db/meta/AppSchema.h>

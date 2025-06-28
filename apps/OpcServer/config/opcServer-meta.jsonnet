@@ -2,26 +2,100 @@ local common = import 'common-meta.libsonnet';
 {
 	local types = common.types,
 	local tables = self.tables,
+	local views = self.views,
 	local nodeId = types.ulong,
 	local nodeIdNull = nodeId+{nullable: true},
 	local nsIndex = types.uint16,
+	local nodeTableProps = {
+		extends: "node_ids",
+		customInsertProc: true,
+		naturalKeys: [ ["parent_node_id", "browse_id"] ]
+	},
+	local nodeColumns = {
+		nodeId: nodeId+{ sk:0, pkTable:"node_ids", i:200, insertable: false },
+		parentNodeId: nodeIdNull+{ pkTable:"node_ids", i:201 },
+		refTypeId: nodeId+{ pkTable:"node_ids", i:202 },
+		browseId: tables.browseNames.columns.browseId+{ sk:null, pkTable: "browse_names", i:203 },
+		typeDefId: nodeId+{ pkTable:"node_ids", i:204 },
+		specified: types.uint+{ i:205, nullable: true },
+		name: common.targetColumns.name+{ i:206 },
+		description: common.targetColumns.description+{ i:207, nullable: true },
+		writeMask: types.uint+{ i:208, nullable: true },
+		userWriteMask: types.uint+{ i:209, nullable: true },
+		created: common.targetColumns.created+{ i:210 },
+		deleted: common.targetColumns.deleted+{ i:211 },
+		updated: common.targetColumns.updated+{ i:212 }
+	},
 	views:{
-		serverNodes:{
+		objectNodes:{
+			comment: "Objects nodes of a server",
+			columns:{serverId: tables.servers.columns.serverId}
+				+tables.nodeIds.columns
+				+common.filter(tables.objects.columns, "nodeId"),
+			customInsertProc: true
+		},
+		objectTypeNodes:{
+			comment: "Objects nodes of a server",
+			columns:{serverId: tables.servers.columns.serverId}
+				+tables.nodeIds.columns
+				+common.filter(tables.objectTypes.columns, "nodeId"),
+			customInsertProc: true
+		},
+		serverBrowseNames:{
+			comment: "Browse names of a server",
+			columns:{
+				serverId: tables.servers.columns.serverId,
+				browseId: tables.browseNames.columns.browseId+{ i:1 },
+				ns: tables.browseNames.columns.ns+{ i:2 },
+				name: tables.browseNames.columns.name+{ i:3 }
+			}
+		},
+		serverNodeIds:{
 			comment: "Nodes of a server",
 			columns:{
-				serverId: types.uint+{ i:200 },
-				serverName: types.varchar+{ i:201 },
-				serverTarget: types.varchar+{ i:202 },
-				serverCreated: types.dateTime+{ i:203 },
-				serverUpdated: types.dateTime+{ i:204 },
-				serverDeleted: types.dateTime+{ i:205 },
-				serverDescription: types.varchar+{ i:206 }
-			}+tables.nodeIds.columns+tables.nodes.columns,
+				serverId: tables.servers.columns.serverId+{ i:0 },
+				nodeId: tables.nodeIds.columns.nodeId+{ i:1 },
+				ns: tables.nodeIds.columns.ns+{ i:2 },
+				number: tables.nodeIds.columns.number+{ i:3 },
+				string: tables.nodeIds.columns.string+{ i:4 },
+				guid: tables.nodeIds.columns.guid+{ i:5 },
+				bytes: tables.nodeIds.columns.bytes+{ i:6 },
+				namespaceUri: tables.nodeIds.columns.namespaceUri+{ i:7 },
+				serverIndex: tables.nodeIds.columns.serverIndex+{ i:8 },
+				isGlobal: tables.nodeIds.columns.isGlobal+{ i:9 }
+			},
+			customInsertProc: true
+		},
+		variableNodes:{
+			comment: "Variable nodes of a server",
+			columns:{serverId: tables.servers.columns.serverId}
+				+tables.nodeIds.columns
+				+common.filter(tables.variables.columns, "nodeId")+{
+				variantDataTypeId: tables.variants.columns.dataTypeId+{ i:331 },
+				variantArrayDims: tables.variants.columns.arrayDims+{i:332}
+			},
+			customInsertProc: true
 		}
 	},
 	tables:{
-		dataTypes: {
-			columns: {
+		browseNames:{
+			columns:{
+				browseId: common.pkSequenced+{ sk:0, i:0 },
+				ns: nsIndex+{ i:1 },
+				name: common.targetColumns.name+{ i:2 }
+			},
+			naturalKeys: [ ["ns", "name"] ],
+		},
+		constructors:{
+			columns:{
+				nodeId: nodeId+{ pkTable:"node_ids", sk:0, i:1, comment:"parent" },
+				browseId: tables.browseNames.columns.browseId+{ sk:1, pkTable:"browse_names", i:1 },
+				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:2 },
+			},
+			customInsertProc: true
+		},
+		dataTypes:{
+			columns:{
 				dataTypeId: nodeId+{ pkTable:"node_ids", length: 256, sk:0, i:1 },
 				binaryEncodingId: nodeId+{ pkTable:"node_ids", i:2 },
 				memSize: types.uint+{ i:3, default: 16 },
@@ -32,32 +106,32 @@ local common = import 'common-meta.libsonnet';
 			}
 		},
 		dataTypeMemberMap:{
-			columns: {
+			columns:{
 				dataTypeId: nodeId+{ pkTable:"data_types", i:0 },
 				memberId: nodeId+{ pkTable:"data_types", i:1 }
 			},
-			map: {parentId:"data_type_id", childId:"member_id"},
+			map:{parentId:"data_type_id", childId:"member_id"},
 		},
-		dataTypeMembers: {
+		dataTypeMembers:{
 			columns:{
+				dataTypeId: nodeId+{ pkTable:"node_ids", i:2 },
 				name: types.varchar+{ length: 256, i:1 },
-				dataTypeId: nodeId+{ pkTable:"data_types", i:2 },
 				padding: types.uint8+{ i:3 },
 				isArray: types.bit+{ i:4 },
 				isOptional: types.bit+{ i:5 }
 			}
 		},
-		nodeIds: {
-			columns: {
-				nodeId: nodeId+{ i:0, sk: 0 },
-				ns: nsIndex+{ i:1 },
-				number: types.uint+{ i:2, nullable: true },
-				string: types.varchar+{ i:3, length:256, nullable: true },
-				guid: types.guid+{ i:4, nullable: true, length:16 },
-				bytes: types.varbinary+{ i:5, length:256, nullable: true },
-				namespaceUri: types.varchar+{ i:6, length: 256, nullable: true },
-				serverIndex: types.uint+{ i:7, nullable: true },
-				isGlobal: types.bit+{ i:8, nullable: true },
+		nodeIds:{
+			columns:{
+				nodeId: nodeId+{ i:100, sk: 0, insertable: false },
+				ns: nsIndex+{ i:101, default: 0 },
+				number: types.uint+{ i:102, nullable: true },
+				string: types.varchar+{ i:103, length:256, nullable: true },
+				guid: types.guid+{ i:104, nullable: true, length:16 },
+				bytes: types.varbinary+{ i:105, length:256, nullable: true },
+				namespaceUri: types.varchar+{ i:106, length: 256, nullable: true },
+				serverIndex: types.uint+{ i:107, nullable: true },
+				isGlobal: types.bit+{ i:108, nullable: true },
 			},
 			customInsertProc: true,
 			naturalKeys: [
@@ -65,99 +139,61 @@ local common = import 'common-meta.libsonnet';
 				["server_index", "namespace_uri"]
 			]
 		},
-		nodes: {
-			columns: {
-				nodeId: nodeId+{ pkTable:"node_ids", sk: 0, i:100 },
-				parentNodeId: nodeIdNull+{ pkTable:"node_ids", i:101 },
-				referenceTypeId: nodeId+{ pkTable:"node_ids", i:102 },
-				typeDefinitionId: nodeId+{ pkTable:"node_ids", i:103 },
-				objectAttrId:tables.objectAttrs.columns.objectAttrId+{ pkTable: "object_attrs", i:104 },
-				typeAttrId: tables.typeAttrs.columns.typeAttrId+{ pkTable: "type_attrs", i:105 },
-				variableAttrId: tables.variableAttrs.columns.variableAttrId+{ pkTable: "variable_attrs", i:106 },
-				name: common.targetColumns.name+{ i:107 },
-				created: common.targetColumns.created+{ i:108 },
-				deleted: common.targetColumns.deleted+{ i:109 },
-				updated: common.targetColumns.updated+{ i:110 }
+		objects:nodeTableProps+{
+			columns: nodeColumns+{
+				eventNotifier: types.uint8+{ i:213, nullable: true },
 			}
 		},
-		nodeBrowseNames: {
-			columns: {
-				nodeId: nodeId+{ pkTable:"node_ids", i:0 },
-				ns: nsIndex+{ i:1 },
-				browseName: common.targetColumns.name+{ i:2 }
+		objectTypes:nodeTableProps+{
+			columns: common.filter(nodeColumns, "typeDefId") + {
+				isAbstract: types.bit+{ i:213, nullable: true },
 			}
 		},
-		typeAttrs:{
-			columns: {
-				typeAttrId: common.pkSequenced,
-				name: types.varchar+{ length: common.valuesColumns.name.length, i:1 },
-				description: types.varchar+{ length: common.targetColumns.description.length, nullable: true, i:2 },
-				writeMask: types.uint+{ i:3 },
-				userWriteMask: types.uint+{ i:4 },
-				isAbstract: types.bit+{ i:5 }
-			}
-		},
-		objectAttrs:{
-			columns: {
-				objectAttrId: common.pkSequenced+{ sk:0 },
-				specified: types.uint+{ i:1 },
-				name: types.varchar+{ length: common.valuesColumns.name.length, i:2 },
-				description: types.varchar+{ length: 2048, nullable: true, i:3 },
-				writeMask: types.uint+{ i:4 },
-				userWriteMask: types.uint+{ i:5 },
-				eventNotifier: types.uint8+{ i:6 },
-			}
-		},
-		reference_node_map:{
-			columns: {
+		references:{
+			columns:{
 				sourceNodeId: nodeId+{ pkTable:"node_ids", sk:0, i:0 },
 				targetNodeId: nodeId+{ pkTable:"node_ids", sk:1, i:1 },
-				referenceTypeId: nodeId+{ pkTable:"node_ids", sk:2, i:2 },
+				refTypeId: nodeId+{ pkTable:"node_ids", sk:2, i:2 },
 				isForward: types.bit+{ i:3, comment: "null=true" },
 			}
 		},
-		servers: {
-			columns: {
+		servers:{
+			columns:{
 				serverId: common.pkSequenced,
 			}+common.targetColumns,
 		},
-		serverNodeMap: {
-			columns: {
+		serverNodeMap:{
+			columns:{
 				serverId: tables.servers.columns.serverId+{ pkTable: "servers", i:0, sk: 0 },
-				nodeId: nodeId+{ pkTable: "nodes", i:1, sk: 1 },
+				nodeId: nodeId+{ pkTable: "node_ids", i:1, sk: 1 },
 			},
-			map: {parentId:"server_id", childId:"node_id"}
+			map:{parentId:"server_id", childId:"node_id"}
 		},
-		variableAttrs:{
-			columns: {
-				variableAttrId: common.pkSequenced,
-				specified: types.uint+{ i:101 },
-				name: common.targetColumns.name+{ i:102 },
-				description: common.targetColumns.description+{ i:103 },
-				writeMask: types.uint+{ i:104 },
-				userWriteMask: types.uint+{ i:105 },
-				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:106 },
-				dataType: nodeId+{ pkTable:"data_types", i:107 },
-				valueRank: types.int+{ i:108 },
-				arrayDims: types.varchar+{ length: 256, nullable: true, i:109 },
-				accessLevel: types.uint8+{ i:110 },
-				userAccessLevel: types.uint8+{ i:111 },
-				minimumSamplingInterval: types.float+{ i:112 },
-				historizing: types.bit+{ i:113 }
+		variables:nodeTableProps+{
+			columns: nodeColumns+{
+				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:223, nullable: true },
+				dataTypeId: nodeId+{ pkTable: "node_ids", i:224 },
+				valueRank: types.int+{ i:225, nullable: true },
+				arrayDims: types.varchar+{ i:226, length: 256, nullable: true },
+				accessLevel: types.uint8+{ i:227, nullable: true },
+				userAccessLevel: types.uint8+{ i:228, nullable: true },
+				minimumSamplingInterval: types.float+{ i:229, nullable: true },
+				historizing: types.bit+{ i:230, nullable: true }
 			}
 		},
 		variants:{
-			columns: {
-				variantId: common.pkSequenced,
-				dataTypeId: nodeId+{ pkTable:"data_types", i:1 },
-				arrayDims: types.varchar+{ length: 256, nullable: true, i:2 },
-			}
+			columns:{
+				variantId: common.pkSequenced+{ i:400 },
+				dataTypeId: nodeId+{ pkTable:"node_ids", i:401 },
+				arrayDims: types.varchar+{ length: 256, nullable: true, i:402 },
+			},
+			customInsertProc: true
 		},
-		variantMembers: {
-			columns: {
+		variantMembers:{
+			columns:{
 				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:0, sk:0 },
 				idx: types.uint+{ i:1, sk:1 },
-				value: types.varchar+{ i:2, length: 2048, nullable: true },
+				value: types.varchar+{ i:2, length: 2096, nullable: true },
 			}
 		},
 	}

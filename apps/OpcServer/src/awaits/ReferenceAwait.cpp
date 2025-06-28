@@ -6,8 +6,8 @@
 namespace Jde::Opc::Server {
 	α ReferenceAwait::Execute()ι->DB::SelectAwait::Task{
 		try{
-			let nodeTable = GetViewPtr( "server_nodes" );
-			let table = GetViewPtr( "reference_node_map" );
+			let nodeTable = GetViewPtr( "server_node_ids" );
+			let table = GetViewPtr( "references" );
 			DB::Statement stmt{
 				{ table->Columns, "ref" },
 				{ {nodeTable->GetColumnPtr("node_id"), "n", table->GetColumnPtr("source_node_id"), "ref", true} },

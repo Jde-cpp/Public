@@ -16,7 +16,7 @@ local args = import 'args.libsonnet';
 	logging:{
 		flushOn: "Trace",
 		tags: {
-			trace:["test", "sql"],
+			trace:["test", "sql", "ql"],
 			debug:["settings", "app"],
 			information:["app", "appServer", "net",
 				"UASession", "UAServer", "UAUser", "UASecurity", "UAEvent", "sql", "threads", "UAClient", "UANet", "UASecure"],
@@ -30,11 +30,12 @@ local args = import 'args.libsonnet';
 	},
 	credentials:{
 		name: "OpcServer.Test.$(JDE_BUILD_TYPE)",
-		target:: "OpcGateway"
+		target:: "OpcServer"
 	},
 	opcServer:{
-		name: "TestServer",
+		target: "TestServer",
 		description: "Test OPC",
+		configDir: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps"
 	},
 	tcp:{
 		port:  4840,

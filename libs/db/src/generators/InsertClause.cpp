@@ -27,6 +27,14 @@ namespace Jde::DB{
 		sql.IsProc = IsStoredProc;
 		return sql;
 	}
+	α InsertClause::Add( sp<Column> column, Value::Underlying value )ι->void{
+		Values.emplace_back( make_pair(column, move(value)) );
+	}
+
+	α InsertClause::Add( Value::Underlying value )ι->void{
+		Values.emplace_back( make_pair(sp<Column>{}, move(value)) );
+	}
+
 	α InsertClause::SequenceColumn()Ι->sp<Column>{
 		auto table = Values.size() ? Values.begin()->first->Table : nullptr;
 		return table ? table->SequenceColumn() : nullptr;

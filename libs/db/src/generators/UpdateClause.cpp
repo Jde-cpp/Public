@@ -1,4 +1,5 @@
 #include <jde/db/generators/UpdateClause.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
@@ -33,5 +34,8 @@ namespace Jde::DB{
 		sql.Params.insert( sql.Params.end(), Where.Params().begin(), Where.Params().end() );
 		sql.Text += '\n' + Where.Move();
 		return sql;
+	}
+	α UpdateClause::Add( sp<Column> column, Value value )ε->void{
+		Values.try_emplace( column, move(value) );
 	}
 }
