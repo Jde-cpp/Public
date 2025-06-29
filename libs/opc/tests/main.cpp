@@ -12,14 +12,13 @@
 #define let const auto
 
 namespace Jde{
-	α OSApp::ProductName()ι->sv{ return "Tests.Opc"; }
+	α Process::ProductName()ι->sv{ return "Tests.Opc"; }
 
  	α Startup( int argc, char **argv )ε->void{
 #ifdef _MSC_VER
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
 #endif
-		TagFromString( Opc::TagFromString );
-		TagToString( Opc::TagToString );
+		Logging::AddTagParser( mu<Opc::UALogParser>() );
 		OSApp::Startup( argc, argv, "Tests.Opc", "Opc tests", true );
 		Crypto::CryptoSettings settings{ "http/ssl" };
 		if( !fs::exists(settings.PrivateKeyPath) ){

@@ -53,7 +53,7 @@ namespace Jde::Access{
 			{ DB::Value{move(modulusHex)}, DB::Value{exponent}, DB::Value{underlying(EProviderType::Key)},
 				DB::Value{move(_name)}, DB::Value{move(_target)}, DB::Value{move(_description)}} };
 		try{
-			let userPK = co_await ds.Scaler<UserPK::Type>( insert.Move() );
+			let userPK = co_await ds.InsertSeq<UserPK::Type>( move(insert) );
 			ResumeScaler( {userPK} );
 		}
 		catch( IException& e ){

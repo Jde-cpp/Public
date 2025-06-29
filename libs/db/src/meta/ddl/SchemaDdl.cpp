@@ -28,7 +28,7 @@ namespace Jde::DB{
 
 	α abbrevName( sv schemaName )ι->string;
 	α GetData( const Table& table, const jobject& j )ε->vector<flat_map<string,Value>>;
-	α Exists( const DBSchema& config )ε->bool;
+	α Exists( const DBSchema& config )ι->bool;
 	α GetFlagsData( const jobject& j )ε->flat_map<uint,Value>;
 	α UniqueIndexName( const Index& index, bool uniqueName, const vector<Index>& indexes )ε->string;
 
@@ -42,7 +42,7 @@ namespace Jde::DB{
 //todo doc relativeScriptPath
 //todo add db version table.
 	α SchemaDdl::Sync( const AppSchema& config, sp<QL::IQL> ql )ε->void{
-		if( !Exists( *config.DBSchema ) ){
+		if( !Exists(*config.DBSchema) ){
 			Create( *config.DBSchema );
 			config.ResetDS();
 		}
@@ -267,7 +267,7 @@ namespace Jde::DB{
 		return name.str();
 	}
 
-	α Exists( const DBSchema& config )ε->bool{
+	α Exists( const DBSchema& config )ι->bool{
 		try{
 			return config.DS()->ScalerSyncOpt<string>( {"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", {Value{config.Name}}} ).has_value();
 		}

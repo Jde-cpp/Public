@@ -66,7 +66,7 @@ namespace Jde::Access{
 			insert.Add( Json::FindNumber<uint8>(rights, "allowed").value_or(0) );
 			insert.Add( Json::FindNumber<uint8>(rights, "denied").value_or(0) );
 			insert.Add( resource );
-			let permissionPK = co_await table->Schema->DS()->Scaler<PermissionRightsPK>( insert.Move() );
+			let permissionPK = co_await table->Schema->DS()->InsertSeq<PermissionRightsPK>( move(insert) );
 			jobject y;
 			y["permissionRight"].emplace_object()["id"] = permissionPK;
 			Resume( y );

@@ -56,8 +56,10 @@ namespace Jde::DB{
 		IsStoredProc = false;
 		DB::Sql sql; sql.Text.reserve( 256 );
 		sql.Text = "insert into "+tableName+" (";
-		string params{"?"};
+		string params{ "?" };
 		for( auto& [column,value] : Values ){
+			if( !column ) //out param
+				continue;
 			if( sql.Params.size() ){
 				sql.Text += ",";
 				params += ",?";

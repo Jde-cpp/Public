@@ -83,6 +83,8 @@ namespace Jde::QL{
 			statement.Add( c, value.Variant );
 		}
 		if( (cNonDefaultArgs || missingColumns.size()) && cNonDefaultArgs!=missingColumns.size() ){//don't want to insert just identity_id in users table.
+			if( /*table.SequenceColumn() &&*/ !_identityInsert ) //role does not have a seq column, but has a return param.
+				statement.Add( table.SequenceColumn(), 0ul );
 			_statements.emplace_back( cNonDefaultArgs>0 ? move(statement) : DB::InsertClause{} );
 			_missingColumns.emplace_back( move(missingColumns) );
 		}
@@ -91,7 +93,6 @@ namespace Jde::QL{
 	α InsertAwait::InsertBefore()ι->MutationAwaits::Task{
 		try{
 			optional<jarray> result = co_await Hook::InsertBefore( _mutation, _executer );
-			Trace{ ELogTags::Test, "{}", result ? serialize(*result) : "null" };
 			auto result0 = result ? result->if_contains(0) : nullptr;
 			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){
 				result0->get_object().erase( "complete" );
@@ -122,9 +123,11 @@ namespace Jde::QL{
 					statement.IsStoredProc = false;
 				auto sql = statement.Move();
 				if( statement.IsStoredProc ){
-					let result = co_await ds.Query( move(sql), false, _sl );
-					for( let& row : result.Rows )
-						id = row.GetInt32( 0 );
+					let result = co_await ds.Query( move(sql), true, _sl );
+					for( let& row : result.Rows ){
+						ASSERT( row.Size() );
+						id = row.Size() ? row.GetInt32( 0 ) : 0;
+					}
 					y.push_back( jobject{ {"id", id}, {"rowCount",result.RowsAffected} } );
 				}else{
 					if( _identityInsert && ds.Syntax().NeedsIdentityInsert() )

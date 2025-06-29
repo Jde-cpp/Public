@@ -10,7 +10,7 @@
 namespace Jde::Access{
 	α AuthenticateAwait::InsertUser( str prefix, vector<DB::Value>&& params )->TAwait<UserPK::Type>::Task{
 		try{
-			let userPK = co_await DS()->Scaler<UserPK::Type>( DB::InsertClause{Ƒ("{}user_insert_login", prefix), move(params)}.Move() );
+			let userPK = co_await DS()->InsertSeq<UserPK::Type>( DB::InsertClause{Ƒ("{}user_insert_login", prefix), move(params)} );
 			ResumeScaler( {userPK} );
 		}
 		catch( IException& e ){

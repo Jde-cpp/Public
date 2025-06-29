@@ -9,7 +9,7 @@ add_subdirectory( ../../db/src ../../db/lib )
 if( WIN32 )
 	add_subdirectory( ../../db/drivers/odbc ../../db/drivers/odbc )
 else()
-	add_subdirectory( ../../db/drivers/mysqlb ../../db/drivers/mysql )
+	add_subdirectory( ../../db/drivers/mysql ../../db/drivers/mysql )
 endif()
 add_subdirectory( ../../ql ../../ql )
 

@@ -29,7 +29,7 @@ namespace Jde::DB{
 		β ServerMeta()ι->IServerMeta& =0;
 
 		Ŧ ScalerSync( Sql&& sql, SRCE )ε->T;
-		Ŧ ScalerSyncOpt( Sql&& sql, SRCE )ι->optional<T>;
+		Ŧ ScalerSyncOpt( Sql&& sql, SRCE )ε->optional<T>;
 		Ŧ Scaler( Sql&& sql, SRCE )ι{ return ScalerAwait<T>{ shared_from_this(), move(sql), sl }; }
 		Ŧ ScalerOpt( Sql&& sql, SRCE )ι{ return ScalerAwaitOpt<T>{ shared_from_this(), move(sql), sl }; }
 
@@ -69,7 +69,7 @@ namespace Jde::DB{
 		friend struct ISelect;
 	};
 #define let const auto
-	Ŧ IDataSource::ScalerSyncOpt( Sql&& sql, SL sl )ι->optional<T>{
+	Ŧ IDataSource::ScalerSyncOpt( Sql&& sql, SL sl )ε->optional<T>{
 		optional<T> y;
 		Select( move(sql), [&y](Row&& row){ y = row.GetOpt<T>(0); }, sl );
 		return y;

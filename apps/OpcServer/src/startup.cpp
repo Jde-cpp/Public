@@ -53,7 +53,7 @@ namespace Jde::Opc{
 			{
 				let startTime = Clock::now();
 				let connectTimeout = Settings::FindDuration("/appServer/connectTimeout").value_or(5s);
-				while( startTime<Clock::now()+connectTimeout && (App::Client::AppClientSocketSession::Instance()==nullptr || App::Client::QLServer()==nullptr) )
+				while( startTime+connectTimeout>Clock::now() && (App::Client::AppClientSocketSession::Instance()==nullptr || App::Client::QLServer()==nullptr) )
 					std::this_thread::yield();
 				THROW_IF( App::Client::AppClientSocketSession::Instance()==nullptr || App::Client::QLServer()==nullptr, "Could not connect to appServer.  timeout: {}", Chrono::ToString(connectTimeout) );
 			}

@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 #include <jde/framework/io/json.h>
-#include <jde/opc/types/OpcServer.h>
+#include <jde/opc/types/OpcClient.h>
 #include <jde/opc/UM.h>
 #include <jde/opc/OpcQLHook.h>
 #include <jde/db/IDataSource.h>
@@ -23,35 +23,35 @@ namespace Jde::Opc{
 		static uint OpcProviderId;
 		α InsertFailedImpl()ε->Access::ProviderPK;
 		α PurgeFailedImpl()ε->Access::ProviderPK;
-		α CrudImpl()ε->CreateOpcServerAwait::Task;
-		α CrudImpl2( OpcPK id )ε->ProviderSelectAwait::Task;
-		α CrudPurge( OpcPK id )ε->PurgeOpcServerAwait::Task;
+		α CrudImpl()ε->CreateOpcClientAwait::Task;
+		α CrudImpl2( OpcClientPK id )ε->ProviderSelectAwait::Task;
+		α CrudPurge( OpcClientPK id )ε->PurgeOpcClientAwait::Task;
 	};
 	uint OpcServerTests::OpcProviderId{};
 
 	α GetProviderPK( string target )ε->Access::ProviderPK{
 		return BlockAwait<ProviderSelectAwait,Access::ProviderPK>( ProviderSelectAwait{target} );
 	}
-	α GetOpcServers( optional<DB::Key> key=nullopt, bool includeDeleted=false )->vector<OpcServer>{
-		return BlockAwait<OpcServerAwait,vector<OpcServer>>( OpcServerAwait{key, includeDeleted} );
+	α GetOpcServers( optional<DB::Key> key=nullopt, bool includeDeleted=false )->vector<OpcClient>{
+		return BlockAwait<OpcClientAwait,vector<OpcClient>>( OpcClientAwait{key, includeDeleted} );
 	}
 
 	α OpcServerTests::InsertFailedImpl()ε->Access::ProviderPK{
 		let target = OpcServerTarget;
 		auto jInsert = Json::Parse( Ƒ("{{\"target\":\"{}\"}}", target) );
-		QL::MutationQL insert{ "createOpcServer", move(jInsert), nullopt, true };
+		QL::MutationQL insert{ "createOpcClient", move(jInsert), nullopt, true };
 
 		let existingProviderPK = GetProviderPK( target );
-		let existingServer = SelectOpcServer( target );
-		let existingOpcPK = Json::FindNumber<OpcPK>( existingServer, "id" ).value_or(0);
-		let& table = GetViewPtr( "servers" );
+		let existingServer = SelectOpcClient( target );
+		let existingOpcPK = Json::FindNumber<OpcClientPK>( existingServer, "id" ).value_or(0);
+		let& table = GetViewPtr( "clients" );
 		if( !existingOpcPK && !existingProviderPK ){
-			auto pk = BlockAwait<CreateOpcServerAwait,OpcPK>( CreateOpcServerAwait{} );
-			DS()->Execute( {Ƒ("delete from {} where server_id='{}'", table->DBName, pk)} ); //InsertFailed checks if failure occurs because exists.
+			auto pk = BlockAwait<CreateOpcClientAwait,OpcClientPK>( CreateOpcClientAwait{} );
+			DS()->ExecuteSync( {Ƒ("delete from {} where client_id='{}'", table->DBName, pk)} ); //InsertFailed checks if failure occurs because exists.
 		}
 		else{
 			if( existingOpcPK )
-				DS()->Execute(	{Ƒ("delete from {} where server_id='{}'", table->DBName, existingOpcPK)} ); //InsertFailed checks if failure occurs because exists.
+				DS()->ExecuteSync( {Ƒ("delete from {} where client_id='{}'", table->DBName, existingOpcPK)} ); //InsertFailed checks if failure occurs because exists.
 		}
 		BlockAwait<TAwait<jvalue>,jvalue>( *GetHook()->InsertFailure(insert, {UserPK::System}) );
 		return GetProviderPK( target );
@@ -63,63 +63,63 @@ namespace Jde::Opc{
 	}
 
 	α OpcServerTests::PurgeFailedImpl()ε->Access::ProviderPK{
-		let existingServer = SelectOpcServer( OpcServerTarget );
-		auto opcPK = Json::FindNumber<OpcPK>( existingServer, "id" ).value_or(0);
+		let existingServer = SelectOpcClient( OpcServerTarget );
+		auto opcPK = Json::FindNumber<OpcClientPK>( existingServer, "id" ).value_or(0);
 		if( !opcPK )
-			opcPK = BlockAwait<CreateOpcServerAwait,OpcPK>( CreateOpcServerAwait{} );
+			opcPK = BlockAwait<CreateOpcClientAwait,OpcClientPK>( CreateOpcClientAwait{} );
 		Id = opcPK;
 		BlockAwait<ProviderCreatePurgeAwait,Access::ProviderPK>( ProviderCreatePurgeAwait{OpcServerTarget, false} );//BeforePurge mock.
 
-		QL::MutationQL purge{ "purgeOpcServer", { {"id", opcPK} }, nullopt, true };
+		QL::MutationQL purge{ "purgeOpcClient", { {"id", opcPK} }, nullopt, true };
 		BlockAwait<TAwait<jvalue>,jvalue>( *GetHook()->PurgeFailure(purge, {UserPK::System}) );
 		return GetProviderPK( OpcServerTarget );
 	}
 	TEST_F( OpcServerTests, PurgeFailed ){
 		let providerPK = PurgeFailedImpl();
 		ASSERT_NE( 0, providerPK );
-		PurgeOpcServer();
+		PurgeOpcClient();
 	}
 
-	α OpcServerTests::CrudImpl()ε->CreateOpcServerAwait::Task{
-		let existingServer = SelectOpcServer( OpcServerTarget );
-		let existingOpcPK = Json::FindNumber<OpcPK>( existingServer, "id" ).value_or(0);
+	α OpcServerTests::CrudImpl()ε->CreateOpcClientAwait::Task{
+		let existingServer = SelectOpcClient( OpcServerTarget );
+		let existingOpcPK = Json::FindNumber<OpcClientPK>( existingServer, "id" ).value_or(0);
 		if( existingOpcPK )
-			PurgeOpcServer( existingOpcPK );
-		let createdId = co_await CreateOpcServerAwait();
-		let selectAll = "opcServers{ id name attributes created updated deleted target description certificateUri isDefault url }";
+			PurgeOpcClient( existingOpcPK );
+		let createdId = co_await CreateOpcClientAwait();
+		let selectAll = "opcClients{ id name attributes created updated deleted target description certificateUri isDefault url }";
 		let selectAllJson = QL::QueryArray( selectAll, {UserPK::System} );
 		Trace( _tags, "selectAllJson={}", serialize(selectAllJson) );
-		let id = Json::AsNumber<OpcPK>( Json::AsObject(selectAllJson[0]), "id" );
+		let id = Json::AsNumber<OpcClientPK>( Json::AsObject(selectAllJson[0]), "id" );
 		THROW_IF( createdId!=id, "createdId={} id={}", createdId, id );
 		CrudImpl2( id );
 	}
 
-	α OpcServerTests::CrudImpl2( OpcPK id )ε->ProviderSelectAwait::Task{
-		auto readJson = SelectOpcServer( OpcServerTarget );
-		THROW_IF( Json::AsNumber<OpcPK>(readJson, "id")!=id, "id={} readJson={}", id, serialize(readJson) );
+	α OpcServerTests::CrudImpl2( OpcClientPK id )ε->ProviderSelectAwait::Task{
+		auto readJson = SelectOpcClient( OpcServerTarget );
+		THROW_IF( Json::AsNumber<OpcClientPK>(readJson, "id")!=id, "id={} readJson={}", id, serialize(readJson) );
 		let target = Json::AsString( readJson, "target" );
 
 		let providerId = co_await ProviderSelectAwait{target};
 		THROW_IF( providerId==0, "providerId==0" );;
 
 		let description = "new description";
-		let update = Ƒ( "mutation updateOpcServer( id:{}, description:\"{}\" ) }}", id, description );
+		let update = Ƒ( "mutation updateOpcClient( id:{}, description:\"{}\" ) }}", id, description );
 		let updateJson = QL::Query( update, {UserPK::System} );
 		Trace( _tags, "updateJson={}", serialize(updateJson) );
-		let updated = SelectOpcServer( id );
+		let updated = SelectOpcClient( id );
 		THROW_IF( Json::AsString( updated, "description" )!=description, "description={} updated={}", description, serialize(updated) );
 
-		let del = Ƒ( "{{mutation deleteOpcServer('id':{}) }}", id );
+		let del = Ƒ( "{{mutation deleteOpcClient('id':{}) }}", id );
 		let deleteJson = QL::Query( Str::Replace(del, '\'', '"'), {UserPK::System} );
 		Trace( _tags, "deleted={}", serialize(deleteJson) );
-	 	auto readJson2 = SelectOpcServer( id );
+	 	auto readJson2 = SelectOpcClient( id );
 		THROW_IF( readJson2["deleted"].is_null(), "deleted failed" );
 
 		CrudPurge( id );
 	}
 
-	α OpcServerTests::CrudPurge( OpcPK id )ε->PurgeOpcServerAwait::Task{
-		co_await PurgeOpcServerAwait{ id };
+	α OpcServerTests::CrudPurge( OpcClientPK id )ε->PurgeOpcClientAwait::Task{
+		co_await PurgeOpcClientAwait{ id };
 		let opcServers = GetOpcServers( id, true );
 		THROW_IF( opcServers.size(), "Purge Failed" );
 		Result = GetProviderPK( OpcServerTarget );

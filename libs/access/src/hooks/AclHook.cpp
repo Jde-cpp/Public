@@ -116,7 +116,7 @@ namespace Jde::Access{
 			insert.Add( underlying(allowed) );
 			insert.Add( underlying(denied) );
 			insert.Add( resourcePK );
-			let permissionPK = co_await DS()->Scaler<PermissionPK>( insert.Move() );
+			let permissionPK = co_await DS()->InsertSeq<PermissionPK>( move(insert) );
 			y["permissionRight"].emplace_object()["id"] = permissionPK;
 			y["complete"]=true;
 			//Authorizer().AddAcl( identityPK, permissionPK, allowed, denied, resourcePK );

@@ -8,6 +8,9 @@ create procedure opc_variable_insert(
 	out _node_id bigint unsigned )
 begin
 	declare _is_node bit;
+	if( _data_type_id=0 ) then
+		signal sqlstate '45000' set message_text = 'Data type ID cannot be zero';
+	end if;
 	set _is_node = _number is not null or _string is not null or _guid is not null or _bytes is not null;
 	if( _is_node ) then
 		call opc_node_id_insert( _ns, _number, _string, _guid, _bytes, null, null, null, _node_id );
