@@ -29,7 +29,7 @@ namespace Jde::Opc::Server {
 		_node{ move(node) }
 	{}
 
-	α ObjectInsertAwait::Execute()ι->DB::ScalerAwait<uint32>::Task{
+	α ObjectInsertAwait::Execute()ι->DB::ScalerAwait<NodePK>::Task{
 		try{
 			auto& ua = GetUAServer();
 			BrowseNameAwait::GetOrInsert( _node.Browse );

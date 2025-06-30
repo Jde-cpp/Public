@@ -9,12 +9,12 @@ namespace Jde::Opc::Server{
 		ConstructorQLAwait( const QL::MutationQL& m, UserPK executer, SL sl )ι: TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer } {}
 	private:
 		α Suspend()ι->void override{ Execute(); }
-		α Execute()ι->TAwait<uint32>::Task;
+		α Execute()ι->TAwait<VariantPK>::Task;
 		QL::MutationQL _mutation;
 		Jde::UserPK _executer;
 	};
 
-	α ConstructorQLAwait::Execute()ι->TAwait<uint32>::Task{
+	α ConstructorQLAwait::Execute()ι->TAwait<VariantPK>::Task{
 		auto& ua = GetUAServer();
 		try{
 			auto& m = _mutation;

@@ -1,6 +1,5 @@
-create or alter proc [dbo].access_role_add( @role_id int, @allowed tinyint, @denied tinyint, @resourceTarget varchar(256) ) as begin
+create or alter proc [dbo].access_role_add( @role_id int, @allowed tinyint, @denied tinyint, @resourceTarget varchar(256), @permission_id int output ) as begin
 	set nocount on;
-	declare @permission_id int;
 
 	select @permission_id=permission_id
 	from access_role_members members
@@ -21,5 +20,4 @@ create or alter proc [dbo].access_role_add( @role_id int, @allowed tinyint, @den
 
 		insert into access_role_members( role_id, member_id ) values( @role_id, @permission_id );
 	end;
-	select @permission_id;
 end

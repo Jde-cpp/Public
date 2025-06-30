@@ -1,7 +1,6 @@
 #include "Variant.h"
 
 namespace Jde::Opc::Server{
-
 	α getDataType( const jvalue& v )ι->const UA_DataType*{
 		if( v.is_bool() )
 			return &UA_TYPES[UA_TYPES_BOOLEAN];
@@ -112,7 +111,7 @@ namespace Jde::Opc::Server{
 		}
 		return values;
 	}
-	α Variant::ToUAValues( const UA_DataType& type, flat_map<uint32, string>&& values )ι->tuple<uint,void*>{
+	α Variant::ToUAValues( const UA_DataType& type, flat_map<uint, string>&& values )ι->tuple<uint,void*>{
 		void* data = nullptr;
 		let size = values.size();
 		try{

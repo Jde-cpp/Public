@@ -45,15 +45,11 @@ target_precompile_headers( ${targetName} PRIVATE
 	<gtest/gtest.h>
 	<jde/framework.h>
 )
-#dumpVariables()
 if( WIN32 )
 	set( buildLibDir ${CMAKE_BINARY_DIR}/../../libs )
 	cmake_path( ABSOLUTE_PATH buildLibDir NORMALIZE OUTPUT_VARIABLE buildLibDir )
-	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Crypto.Tests.jsonnet" )
+	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Crypto.Tests.jsonnet" )
 	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${buildLibDir}/framework/$<CONFIG>/Jde.dll" $<TARGET_FILE_DIR:${targetName}> )
-	if( CMAKE_BUILD_TYPE STREQUAL "Debug" )
-		add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_DIR}/fmt/bin/fmtd.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "copy fmtd" )
-	else()
-		add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_DIR}/fmt/bin/fmt.dll" $<TARGET_FILE_DIR:${targetName}> COMMENT "copy fmt" )
-	endif()
+	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_DIR}/fmt/bin/fmtd.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "fmtd.dll" )
+	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_DIR}/fmt/bin/fmt.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "fmt.dll" )
 endif()

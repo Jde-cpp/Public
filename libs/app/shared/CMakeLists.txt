@@ -6,8 +6,7 @@ include( ../../../build/dependencies.cmake )
 set( targetName Jde.App.Shared )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
-#set( CMAKE_INCLUDE_CURRENT_DIR ON )
-target_include_directories( ${targetName} PRIVATE ${PROJECT_SOURCE_DIR}/proto )
+target_include_directories( ${targetName} PRIVATE $ENV{JDE_DIR}/Public/include/jde/web/client/proto )
 
 file(GLOB sources *.cpp proto/*.cpp )
 file(GLOB headers  **/*.h $ENV{JDE_DIR}/Public/include/jde/app/shared/*.h )
@@ -22,7 +21,7 @@ target_precompile_headers(${targetName}
 	<jde/web/client/proto/Web.FromServer.pb.h>
 	<jde/framework.h>
 	PRIVATE
-	<Common.pb.h>
+	proto/Common.pb.h
 	proto/App.pb.h
 	proto/App.FromServer.pb.h
 	proto/App.FromClient.pb.h
@@ -31,7 +30,7 @@ target_precompile_headers(${targetName}
 set( protoOutDir ${PROJECT_SOURCE_DIR}/proto )
 protobuf_generate(
 	TARGET ${targetName}
-	IMPORT_DIRS proto
+	IMPORT_DIRS proto ../../web/client/proto
 	PROTOC_OUT_DIR ${protoOutDir}
 	EXPORT_MACRO Jde_App_Shared_EXPORT
 )

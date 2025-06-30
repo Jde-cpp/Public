@@ -1,11 +1,4 @@
-﻿#include <iostream>
-#include <signal.h>
-#include <open62541/server.h>
-#include <open62541/plugin/log_stdout.h>
-#include <jde/opc/uatypes/Logger.h>
-#include <jde/opc/uatypes/Node.h>
-#include "usings.h"
-#include "globals.h"
+﻿#include <jde/opc/uatypes/Logger.h>
 #include "startup.h"
 
 #define let const auto

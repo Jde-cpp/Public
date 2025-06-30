@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../exports.h"
+#include <open62541/server.h>
 
 namespace Jde::Opc{
 	enum class EOpcLogTags : uint{

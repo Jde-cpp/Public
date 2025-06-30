@@ -103,14 +103,14 @@ namespace Jde::Opc::Server{
 				if( !found )
 					Error{ ELogTags::App, "Unknown node type: {}", serialize(node.ToJson()) };
 			}
-			SaveSystem( /*move(nodes)*/ );
+			SaveSystem();
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
 
-	α ServerConfigAwait::SaveSystem( /*flat_map<NodePK, NodeId> nodes*/ )ι->DB::ExecuteAwait::Task{
+	α ServerConfigAwait::SaveSystem()ι->TAwait<NodePK>::Task{
 		let& table = GetView( "node_ids" );
 		auto insertNodeIdClause = [&table]( const NodeId& nodeId )->DB::InsertClause {
 			auto params = nodeId.InsertParams( true );

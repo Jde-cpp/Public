@@ -1,7 +1,6 @@
-create or alter proc [dbo].access_ac_upsert_permission( @identityId int, @allowed tinyint, @denied tinyint, @resourceId int ) as
+create or alter proc [dbo].access_ac_upsert_permission( @identityId int, @allowed tinyint, @denied tinyint, @resourceId int, @permission_id int output ) as
 begin
 	set nocount on;
-	declare @permission_id int;
 	set @permission_id = (
 		select max( acl.permission_id )
 		from access_acl acl
@@ -18,6 +17,4 @@ begin
 		insert into access_acl( identity_id, permission_id ) values( @identityId, @permission_id );
 	end else
 		update access_permission_rights set allowed=@allowed, denied=@denied where permission_id=@permission_id;
-
-	select @permission_id;
 end

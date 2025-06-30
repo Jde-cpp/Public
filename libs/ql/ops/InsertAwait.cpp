@@ -84,7 +84,7 @@ namespace Jde::QL{
 		}
 		if( (cNonDefaultArgs || missingColumns.size()) && cNonDefaultArgs!=missingColumns.size() ){//don't want to insert just identity_id in users table.
 			if( /*table.SequenceColumn() &&*/ !_identityInsert ) //role does not have a seq column, but has a return param.
-				statement.Add( table.SequenceColumn(), 0ul );
+				statement.Add( table.SequenceColumn(), (uint)0ul );
 			_statements.emplace_back( cNonDefaultArgs>0 ? move(statement) : DB::InsertClause{} );
 			_missingColumns.emplace_back( move(missingColumns) );
 		}
@@ -132,7 +132,7 @@ namespace Jde::QL{
 				}else{
 					if( _identityInsert && ds.Syntax().NeedsIdentityInsert() )
 						sql.Text = Ƒ("SET IDENTITY_INSERT {0} ON;{1};SET IDENTITY_INSERT {0} OFF;", _table->DBName, sql.Text );
-					let rowCount = ( co_await ds.Query( move(sql)) ).RowsAffected;
+					let rowCount = ( co_await ds.Query(move(sql), false, _sl) ).RowsAffected;
 					y.push_back( jobject{ {"rowCount",rowCount} } );
 				}
 

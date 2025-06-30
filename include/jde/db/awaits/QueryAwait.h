@@ -10,7 +10,7 @@ namespace Jde::DB{
 		vector<Row> Rows;
 	};
 
-	struct QueryAwait : TAwait<Result>{
+	struct ΓDB QueryAwait : TAwait<Result>{
 		using base=TAwait<Result>;
 		QueryAwait( up<TAwait<Result>>&& awaitable, SRCE )ι:base{sl},_awaitable{move(awaitable)}{}
 	private:

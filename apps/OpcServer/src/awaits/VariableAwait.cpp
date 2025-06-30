@@ -54,12 +54,11 @@ namespace Jde::Opc::Server {
 		_node{ move(node) }
 	{}
 
-	α VariableInsertAwait::Execute()ι->DB::ScalerAwait<uint32>::Task{
+	α VariableInsertAwait::Execute()ι->DB::ScalerAwait<uint>::Task{
 		try{
 			auto& ua = GetUAServer();
 			BrowseNameAwait::GetOrInsert( _node.Browse );
 			UA_NodeId vAttrId;
-			//auto refs = move( _node._refs );
 			_node = ua.AddVariable( move(_node) );
 			DB::Value variantPK;
 			if( _node.value.type ){
@@ -68,36 +67,49 @@ namespace Jde::Opc::Server {
 					 {{_node.value.type->typeId.identifier.numeric},
 						{_node.arrayDimensionsSize ? DB::Value{VariableAttr::ArrayDimensionsString( _node.arrayDimensionsSize, _node.arrayDimensions)} : DB::Value{}}}
 				};
-				variantPK = co_await DS().InsertSeq<VariantPK>( move(insert), _sl );
+				variantPK = co_await DS().InsertSeq<uint>( move(insert), _sl );
 			}
-			_node.PK = co_await DS().InsertSeq<VariablePK>( DB::InsertClause{
+			_node.PK = co_await DS().InsertSeq<uint>( DB::InsertClause{
 				GetSchema().DBName( "variable_insert" ),
 				_node.InsertParams( variantPK )
 			} );
 			ua._variables.try_emplace( _node.PK, _node );
-			if( !variantPK.is_null() ){
-				Variant v{ _node.value };
+			InsertMembers( variantPK );
+		}
+		catch (exception& e) {
+			ResumeExp( move(e) );
+		}
+	}
+	α VariableInsertAwait::InsertMembers( DB::Value variantPK )ι->DB::ExecuteAwait::Task{
+		if( !variantPK.is_null() ){
+			Variant v{ _node.value };
+			try{
 				for( auto&& [index, j] : v.ToJson() ){
 					co_await DS().Execute( DB::Sql{
-							Ƒ("INSERT INTO {}(variant_id, idx, value) VALUES (?,?,?)", GetSchema().DBName("variant_members")),
-							{ variantPK,
-								{index},
-								{j}
-							}} );
+						Ƒ("INSERT INTO {}(variant_id, idx, value) VALUES (?,?,?)", GetSchema().DBName("variant_members")),
+						{ variantPK,{index},{j} }
+					} );
 				}
 			}
-			for( auto&& ref : _node._refs ){
-				ref->SourcePK = _node.PK;
+			catch (exception& e) {
+				ResumeExp( move( e ) );
+				co_return;
+			}
+		}
+		for( auto&& ref : _node._refs ){
+			ref->SourcePK = _node.PK;
+			try{
 				co_await DS().Execute( DB::Sql{
 					Ƒ("INSERT INTO {}(source_node_id, target_node_id, ref_type_id, is_forward) VALUES (?,?,?,?)", GetSchema().DBName("references")),
 					{ {ref->SourcePK}, {ref->TargetPK}, {ref->RefTypePK}, {ref->IsForward} }
 				});
-				ua.AddReference( *ref );
+				GetUAServer().AddReference( *ref );
 			}
-			Resume( move(_node) );
+			catch( exception& e ){
+				ResumeExp( move(e) );
+				co_return;
+			}
 		}
-		catch( exception& e ){
-			ResumeExp( move(e) );
-		}
+		Resume( move(_node) );
 	}
 }

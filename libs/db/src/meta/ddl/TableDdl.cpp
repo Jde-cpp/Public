@@ -39,7 +39,6 @@ namespace Jde::DB{
 		let prefix = syntax.ProcParameterPrefix().empty() ? "_" : syntax.ProcParameterPrefix();
 		char delimiter = ' ';
 		for( let& c : config.Columns ){
-			//let& c = dynamic_cast<const ColumnDdl&>( *column );
 			auto value{ Ƒ("{}{}"sv, prefix, c->Name) };
 			if( c->Insertable )
 				osCreate << delimiter << prefix << c->Name << " " << ColumnDdl::DataTypeString( *c );
@@ -56,8 +55,14 @@ namespace Jde::DB{
 		osInsert << " )" << endl;
 		osValues << " );" << endl;
 		let seqCol = /*syntax.DriverReturnsLastInsertId() ? nullptr :*/ SequenceColumn();
-		if( seqCol )
-			osCreate << delimiter << " out " << prefix << SequenceColumn()->Name << " " << ColumnDdl::DataTypeString( *seqCol );
+		if( seqCol ){
+			osCreate << delimiter;
+			if( syntax.PrefixOut() )
+				osCreate << " out";
+			osCreate << " " << prefix << SequenceColumn()->Name << " " << ColumnDdl::DataTypeString( *seqCol );
+			if( !syntax.PrefixOut() )
+				osCreate << " output";
+		}
 
 		osCreate << " )" << endl << syntax.ProcStart() << endl;
 		osCreate << osInsert.str() << osValues.str();

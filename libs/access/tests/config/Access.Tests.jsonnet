@@ -1,8 +1,8 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "AclTests.*",
-		recreateDB: true
+		tests:: "AuthTests.Login_New",
+		recreateDB:: true
 	},
 	dbServers: {
 		scriptPaths: ["$(JDE_DIR)/Public/libs/access/config/sql/"+args.sqlType],

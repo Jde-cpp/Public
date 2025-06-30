@@ -10,7 +10,7 @@ namespace Jde::Process{
 	Φ ApplicationName()ι->const string&;
 	Φ CompanyName()ι->string;
 
-	α Pause()ι->int;
+	Φ Pause()ι->int;
 
 	Φ IsConsole()ι->bool;
 	Φ SetConsole( bool isConsole )ι->void;
@@ -70,7 +70,6 @@ namespace Jde{
 		Ω Kill( uint processId )ι->bool;
 		Ω StartTime()ι->TimePoint;
 
-//		Ω GetBackgroundThreads()ι{ return  *_pBackgroundThreads; }
 		Ω ProgramDataFolder()ι->fs::path;
 		Ω ApplicationDataFolder()ι->fs::path;
 		Ω AddActiveWorker( Threading::IPollWorker* pWorker )ι->void;
@@ -86,8 +85,6 @@ namespace Jde{
 
 	private:
 		β SetConsoleTitle( sv title )ι->void=0;
-
-		//static vector<Threading::IPollWorker*> _activeWorkers; static std::atomic_flag _activeWorkersMutex;
 	};
 
 	struct OSApp final: IApplication{

@@ -27,7 +27,7 @@ namespace Jde::Opc::Server {
 		α LoadReferences()ι->ReferenceAwait::Task;
 		α LoadVariables()ι->VariableAwait::Task;
 		α AllocateNodes()ι->NodeAwait::Task;
-		α SaveSystem( /*flat_map<NodePK, NodeId> nodes*/ )ι->DB::ExecuteAwait::Task;
+		α SaveSystem()ι->TAwait<NodePK>::Task;
 		α Set()ι->void;
 	};
 }

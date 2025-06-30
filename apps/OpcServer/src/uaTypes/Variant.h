@@ -13,7 +13,7 @@ namespace Jde::Opc::Server{
 		α operator=( const Variant& v )ι->Variant&;
 		α operator=( Variant&& v )ι->Variant&;
 
-		Ω ToUAValues( const UA_DataType& type, flat_map<uint32, string>&& values )ι->tuple<uint,void*>;
+		Ω ToUAValues( const UA_DataType& type, flat_map<uint, string>&& values )ι->tuple<uint,void*>;
 		Ω ToArrayDims( str csv )ι->tuple<UA_UInt32*, uint>;
 
 		α ToJson()ε->flat_map<uint32, string>;

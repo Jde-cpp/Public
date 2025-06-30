@@ -4,7 +4,7 @@
 namespace Jde::DB{
 	struct Column; struct Table; struct View; struct WhereClause;
 
-	struct Join final{
+	struct ΓDB Join final{
 		Join( sp<Column> from )ι:From{move(from)}{};
 		Join( sp<Column> from, sp<Column> to, bool inner=false )ι:From{move(from)}, To{move(to)}, Inner{inner}{};
 		Join( sp<Column> from, string fromAlias, sp<Column> to, string toAlias, bool inner={} )ι;

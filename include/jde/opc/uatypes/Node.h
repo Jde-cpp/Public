@@ -3,7 +3,6 @@
 #define NODE_H
 #include "../exports.h"
 #include "helpers.h"
-#include <jde/opc/types/proto/Opc.Common.pb.h>
 
 namespace Jde::DB{ struct Row; struct Value; }
 namespace Jde::Opc{

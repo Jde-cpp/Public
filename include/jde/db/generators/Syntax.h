@@ -32,6 +32,7 @@ namespace Jde::DB{
 		β Limit( str syntax, uint limit )Ε->string;
 		β NeedsIdentityInsert()Ι->bool{ return true; }
 		β NowDefault()Ι->iv{ return UtcNow(); }
+		β PrefixOut()Ι->bool{ return false; }
 		β ProcParameterPrefix()Ι->sv{ return "@"; }
 		β ProcStart()Ι->sv{ return "as\n\tset nocount on;\n"; }
 		β ProcEnd()Ι->sv{ return {}; }
@@ -66,6 +67,7 @@ namespace Jde::DB{
 		α Limit( str sql, uint limit )Ι->string override{ return Ƒ("{} limit {}", sql, limit); }
 		α NeedsIdentityInsert()Ι->bool override{ return false; }
 		α NowDefault()Ι->iv override{ return "CURRENT_TIMESTAMP"; }
+		α PrefixOut()Ι->bool{ return true; }
 		α ProcParameterPrefix()Ι->sv override{ return {}; }
 		α ProcStart()Ι->sv override{ return "begin"; }
 		α ProcEnd()Ι->sv override{ return "end"; }

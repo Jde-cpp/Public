@@ -16,11 +16,14 @@ namespace Jde::DB {
 namespace Jde::DB::Odbc{
 	using namespace Coroutine;
 	struct OdbcDataSource : IDataSource{
+		α Select( Sql&& s, RowΛ f, bool outParams, SRCE )ε->uint;
 		α Select( Sql&& s, RowΛ f, SRCE )ε->uint override;
 		α Select( Sql&& s, SRCE )ε->vector<Row> override;
-		α Execute( Sql&& sql, bool prepare=false, SRCE )ε->uint;
+		α ExecuteSync( Sql&& sql, SRCE )ε->uint override;
+		α ExecuteScalerSync( Sql&& sql, EValue outValue, SRCE )ε->DB::Value override;
 		α ExecuteNoLog( Sql&& sql, SRCE )ε->uint override;
-		α Query( Sql&& sql, SRCE )ε->QueryAwait override;
+		α InsertSeqSyncUInt( InsertClause&& insert, SRCE )ε->uint;
+		α Query( Sql&& sql, bool outParams, SRCE )ε->QueryAwait override;
 
 		α Syntax()ι->const DB::Syntax& override{ return Syntax::Instance(); }
 		α Disconnect()ε->void override;
@@ -30,7 +33,14 @@ namespace Jde::DB::Odbc{
 		α SetConfig( const jobject& config )ε->void override;
 		α SetConnectionString( string x )ι->void;
 	private:
-		α ExecDirect( Sql&& sql, const RowΛ* f, bool prepare, SL sl, bool log = true )Ε->uint;
+		struct Params final{
+			α HasOut()Ι->bool{ return OutValue!=EValue::Null; }
+			RowΛ* Function{};
+			EValue OutValue{EValue::Null};
+			bool Log{true};
+			bool Sequence{};
+		};
+		α ExecDirect( Sql&& sql, SL sl, Params&& params )Ε->uint;
 		up<MsSql::MsSqlSchemaProc> _schemaProc;
 		string _connectionString;
 	};

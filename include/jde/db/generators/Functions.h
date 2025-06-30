@@ -2,9 +2,10 @@
 #include "../Value.h"
 #include "../meta/Column.h"
 #include "Object.h"
+#include <jde/db/exports.h>
 
 namespace Jde::DB{
-	struct Coalesce final{
+	struct ΓDB Coalesce final{
 		Coalesce( Object&& a, Object&& b )ι;
 		α ToString()Ι->string;
 		α Params()ι->vector<Value>;

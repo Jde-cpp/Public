@@ -1,15 +1,17 @@
 #pragma once
 #include <jde/framework/str.h>
+#include "exports.h"
 
 #define BSV Str::bsv<typename T::traits_type>
 #define RESULT std::basic_string<char,typename T::traits_type>
 #define YRESULT std::basic_string<char,typename Y::traits_type>
+#define Φ ΓDB auto
 
 namespace Jde::DB::Names{
-	α IsPlural( sv name )ι->bool;
+	Φ IsPlural( sv name )ι->bool;
 	Ξ Capitalize( str name )ι->string{ ASSERT(name.size()>1); return string{(char)std::toupper(name[0])} + name.substr(1); }
 	template<class X=string,class Y=string> Ω FromJson( Str::bsv<typename X::traits_type> jsonName )ι->YRESULT;
-	α ToJson( str schemaName )ι->string;
+	Φ ToJson( str schemaName )ι->string;
 	α ToSingular( sv plural )ι->string;
 	template<class T=string> Ω ToPlural( BSV singular )ι->RESULT;
 }
@@ -56,3 +58,4 @@ namespace Jde::DB{
 #undef BSV
 #undef RESULT
 #undef YRESULT
+#undef Φ

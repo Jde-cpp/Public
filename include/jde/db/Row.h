@@ -3,7 +3,9 @@
 #define ROW_H
 #include "Value.h"
 #include <jde/framework/str.h>
+#include "exports.h"
 
+#define Φ ΓDB auto
 namespace Jde::DB{
 	struct Row final/*: IRow*/ {
 		Row( vector<Value>&& values )ι:_values{move(values)}{}
@@ -11,8 +13,8 @@ namespace Jde::DB{
 		α operator[]( uint i )ι->Value&{ return _values[i]; }
 		Ŧ Get( uint i )Ι->T;
 		Ŧ GetOpt( uint i )Ι->optional<T>;
-		α GetBit( uint i )Ι->bool;
-		α GetBitOpt( uint i )Ι->optional<bool>;
+		Φ GetBit( uint i )Ι->bool;
+		Φ GetBitOpt( uint i )Ι->optional<bool>;
 		α GetBytes( uint i )Ι->const vector<uint8_t>&{ return _values[i].get_bytes(); }
 		α GetDouble( uint i )Ι->double{ return _values[i].get_double(); }
 		α GetDoubleOpt( uint i )Ι->optional<double>{ return IsNull(i) ? optional<double>{} : _values[i].get_double(); }
@@ -31,7 +33,7 @@ namespace Jde::DB{
 		α GetUInt16( uint i )Ε->uint16_t{ return static_cast<uint16_t>(GetUInt(i)); }
 		α GetUInt32( uint i )Ε->uint32_t{ return static_cast<uint32_t>(GetUInt(i)); }
 		α GetUInt32Opt( uint i )Ι->optional<uint32_t>{ return IsNull(i) ? optional<uint32_t>{} : _values[i].get_number<uint32_t>(); }
-		α IsNull( uint i )Ι->bool;
+		Φ IsNull( uint i )Ι->bool;
 		α Size()Ι->uint{ return _values.size(); }
 	private:
 		vector<Value> _values;
@@ -40,4 +42,5 @@ namespace Jde::DB{
 	Ŧ Row::Get( uint i )Ι->T{ return _values[i].get_number<T>(); }
 	Ŧ Row::GetOpt( uint i )Ι->optional<T>{ return IsNull(i) ? optional<T>() : Get<T>(i); }
 }
+#undef Φ
 #endif

@@ -59,7 +59,7 @@ namespace Jde{
 	size_t IApplication::MemorySize()ι
 	{
 		PROCESS_MEMORY_COUNTERS memCounter;
-		/*BOOL result =*/ ::GetProcessMemoryInfo( ::GetCurrentProcess(), &memCounter, sizeof(memCounter) );
+		::GetProcessMemoryInfo( ::GetCurrentProcess(), &memCounter, sizeof(memCounter) );
 		return memCounter.WorkingSetSize;
 	}
 	fs::path IApplication::ExePath()ι
@@ -172,7 +172,7 @@ namespace Jde{
 		return y;
 	}
 
-	α OSApp::CompanyName()ι->string{
+	α Process::CompanyName()ι->string{
 		if(! _companyName.size() ){
 			_companyName = LoadResource( "CompanyName" );
 			if( _companyName.empty() )
@@ -181,7 +181,7 @@ namespace Jde{
 		return _companyName;
 	}
 	string _productName;
-	α OSApp::ProductName()ι->sv{
+	α Process::ProductName()ι->sv{
 		if( _productName.empty() ){
 			_productName = LoadResource( "ProductName" );
 			if( _productName.empty() )
@@ -190,10 +190,10 @@ namespace Jde{
 		return _productName;
 	}
 	α OSApp::SetProductName( sv productName )ι->void{
-		if( ProductName() == "Jde-cpp" )
+		if( Process::ProductName() == "Jde-cpp" )
 			_productName = productName;
 	}
-	α OSApp::CompanyRootDir()ι->fs::path{ return CompanyName(); }
+	α OSApp::CompanyRootDir()ι->fs::path{ return Process::CompanyName(); }
 
 	α IApplication::EnvironmentVariable( str variable, SL sl )ι->optional<string>{
 		char buffer[32767];
@@ -229,7 +229,6 @@ namespace Jde{
 	α OSApp::Install( str serviceDescription )ε->void
 	{
 		auto schSCManager = MyOpenSCManager();
-		//auto schSCManager = ::OpenSCManager( nullptr, nullptr, SC_MANAGER_ALL_ACCESS ); THROW_IF( schSCManager==nullptr, "OpenSCManager failed - {}", ::GetLastError() );
 		const string serviceName{ Process::ApplicationName() };
 		auto service = ServiceHandle{ ::CreateService(schSCManager.get(), serviceName.c_str(), (serviceName).c_str(), SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, ExePath().string().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr) };
 		if( !service.get() ){

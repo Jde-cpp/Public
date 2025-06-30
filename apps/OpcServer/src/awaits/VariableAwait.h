@@ -10,11 +10,12 @@ namespace Jde::Opc::Server {
 		α LoadVariants( vector<DB::Value>&& variants, vector<DB::Row> rows )ι->VariantMembersAwait::Task;
 	};
 
-	struct VariableInsertAwait final : TAwaitEx<Variable,DB::ScalerAwait<uint32>::Task>{
-		using base = TAwaitEx<Variable,DB::ScalerAwait<uint32>::Task>;
+	struct VariableInsertAwait final : TAwaitEx<Variable,DB::ScalerAwait<uint>::Task>{
+		using base = TAwaitEx<Variable,DB::ScalerAwait<uint>::Task>;
 		VariableInsertAwait( Variable&& node, SRCE )ι;
 	private:
-		α Execute()ι->DB::ScalerAwait<uint32>::Task override;
+		α Execute()ι->DB::ScalerAwait<uint>::Task override;
+		α InsertMembers( DB::Value variantPK )ι->DB::ExecuteAwait::Task;
 		Variable _node;
 	};
 }
