@@ -1,6 +1,7 @@
 #pragma once
 #include <jde/ql/types/MutationQL.h>
 #include <jde/ql/QLHook.h>
+#include <jde/db/awaits/ExecuteAwait.h>
 #include <jde/db/generators/UpdateClause.h>
 #include <jde/framework/coroutine/Await.h>
 #include "../../../../Framework/source/coroutine/Awaitable.h"
@@ -19,7 +20,7 @@ namespace Jde::QL{
 		α UpdateAfter( uint rowCount )ι->MutationAwaits::Task;
 		α UpdateBefore()ι->MutationAwaits::Task;
 		α AddStatement( const DB::Table& table, const jobject& input, bool nested, str criteria={} )ε->void;
-		α Execute()ι->TAwait<uint>::Task;
+		α Execute()ι->DB::ExecuteAwait::Task;
 		α Resume( jvalue&& v )ι->void;
 
 		const MutationQL _mutation;

@@ -10,14 +10,14 @@
 #define let const auto
 
 namespace Jde{
-	α OSApp::ProductName()ι->sv{ return "Tests.Access"; }
+	α Process::ProductName()ι->sv{ return "Tests.Access"; }
 	up<exception> _error;
  	α Startup( int argc, char **argv, bool& set )ε->Access::ConfigureAwait::Task{
 		try{
 	#ifdef _MSC_VER
 			ASSERT( Settings::FindNumber<uint>("/workers/drive/threadSize").value_or(5)>0 )
 	#endif
-			OSApp::Startup( argc, argv, OSApp::ProductName(), "Access tests", true );
+			OSApp::Startup( argc, argv, Process::ProductName(), "Access tests", true );
 
 			let metaDataName{ "access" };
 			sp<Access::IAcl> authorize = Access::LocalAcl();

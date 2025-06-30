@@ -24,7 +24,7 @@ namespace Jde{
 		auto p = ::dlsym( pModule, procName.c_str() ); CHECK( p );
 		return p;
 	}
-	α OSApp::Install( str serviceDescription )ε->void{
+	α OSApp::Install( str /*serviceDescription*/ )ε->void{
 		THROW( "Not Implemeented" );
 	}
 	α OSApp::UnPause()ι->void{
@@ -53,7 +53,7 @@ namespace Jde{
 		syslog( osLevel, "%s",  value.c_str() );
 	}
 	const string _companyName{ "Jde-Cpp" }; string _productName{ "productName" };
-	α OSApp::CompanyName()ι->string{ return _companyName; }
+	α Process::CompanyName()ι->string{ return _companyName; }
 	//α OSApp::ProductName()ι->sv{ return _productName; }  //use in main.cpp
 	α IApplication::MemorySize()ι->size_t{//https://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-runtime-using-c
 		uint size = 0;
@@ -108,7 +108,7 @@ namespace Jde{
 		exit( EXIT_FAILURE );
 	}
 
-	α IApplication::EnvironmentVariable( str variable, SL sl )ι->optional<string>{
+	α IApplication::EnvironmentVariable( str variable, SL /*sl*/ )ι->optional<string>{
 		char* pEnv = std::getenv( string{variable}.c_str() );
 		return pEnv ? string{pEnv} : optional<string>{};
 	}
@@ -166,12 +166,8 @@ namespace Jde{
 		}
 		return *_args;
 	}
-	α Process::FindArg( string key )ι->optional<string>{
-		auto p = Args().find( key );
-		return p!=Args().end() ? p->second : optional<string>{};
-	}
 
-	α OSApp::CompanyRootDir()ι->fs::path{ return fs::path{ "."+OSApp::CompanyName() }; };
+	α OSApp::CompanyRootDir()ι->fs::path{ return fs::path{ "."+Process::CompanyName() }; };
 
 	α OSApp::AddSignals()ε->void{/*ε for windows*/
 /* 		struct sigaction sigIntHandler;//_XOPEN_SOURCE

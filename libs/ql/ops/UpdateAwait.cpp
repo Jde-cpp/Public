@@ -1,14 +1,15 @@
 #include "UpdateAwait.h"
 #include <jde/ql/QLHook.h>
-#include <jde/db/Database.h>
-#include <jde/db/meta/AppSchema.h>
+#include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
+#include <jde/db/generators/Functions.h>
+#include <jde/db/generators/UpdateClause.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/access/IAcl.h>
 #include <jde/ql/LocalSubscriptions.h>
 #include "../types/QLColumn.h"
-#include <jde/db/generators/UpdateClause.h>
 
 #define let const auto
 
@@ -75,9 +76,8 @@ namespace Jde::QL{
 				uint value = 0;
 				if( let flags = jvalue->if_array(); flags && flags->size() ){
 					optional<flat_map<string,uint>> values;
-					[] (auto& values, auto& t)ι->Coroutine::Task {
-						AwaitResult result = co_await t.Schema->DS()-> template SelectMap<string,uint>( Ƒ("select name, {} from {}", t.GetPK()->Name, t.DBName) );
-						values = *( result.UP<flat_map<string,uint>>() );
+					[] (auto& values, auto& t)ι->DB::MapAwait<string,uint>::Task {
+						values = co_await t.Schema->DS()-> template SelectMap<string,uint>( {Ƒ("select name, {} from {}", t.GetPK()->Name, t.DBName)} );
 					}( values, qlColumn.Table() );
 					while( !values )
 						std::this_thread::yield();
@@ -115,11 +115,11 @@ namespace Jde::QL{
 			ResumeExp( move(e) );
 		}
 	}
-	α UpdateAwait::Execute()ι->TAwait<uint>::Task{
+	α UpdateAwait::Execute()ι->DB::ExecuteAwait::Task{
 		try{
 			uint rowCount{};
 			for( auto& update : _updates )
-				rowCount += co_await _table->Schema->DS()->ExecuteCo( update.Move() );
+				rowCount += co_await _table->Schema->DS()->Execute( update.Move() );
 			UpdateAfter( rowCount );
 		}
 		catch( IException& e ){

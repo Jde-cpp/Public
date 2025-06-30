@@ -1,4 +1,6 @@
 #include "LocalQL.h"
+#include <jde/db/Row.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/View.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalSubscriptions.h>
@@ -33,7 +35,7 @@ namespace Jde::QL{
 		return mu<SubscribeQueryAwait>( ParseSubscriptions(move(query)), listener, executer, sl );
 	}
 	α LocalQL::Upsert( string query, UserPK executer )ε->jarray{
-		auto result = QL::Parse( query ); THROW_IF( !result.IsMutation(), "Query is not a mutation" );
+		auto result = QL::Parse( move(query) ); THROW_IF( !result.IsMutation(), "Query is not a mutation" );
 		jarray y;
 		for( auto&& m : result.Mutations() ){
 			auto key = m.FindKey();

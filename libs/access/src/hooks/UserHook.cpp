@@ -1,7 +1,6 @@
 #include "UserHook.h"
 #include <jde/db/IDataSource.h>
-#include <jde/db/IRow.h>
-#include <jde/db/awaits/RowAwait.h>
+#include <jde/db/Row.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
@@ -37,7 +36,7 @@ namespace Jde::Access{
 		groupTable.Columns.emplace_back( QL::ColumnQL{"memberId", memberIdColumn} );
 
 		statement.From+={ pk, memberIdColumn, true };
-		statement.From+={ groupDBTable->SurrogateKeys[0], pk, true, "groups_" };
+		statement.From+={ groupDBTable->SurrogateKeys[0], {}, pk, "groups_", true };
 		if( let key = Query.FindArgKey(); key )
 			statement.Where.Add( key->IsPrimary() ? pk : identityTable->GetColumnPtr("target"), DB::Value::FromKey(*key) );
 
@@ -50,7 +49,7 @@ namespace Jde::Access{
 			}
 			else{
 				let dbColumn = c.JsonName=="id" ? pk : identityTable->GetColumnPtr( DB::Names::FromJson(c.JsonName) );
-				c.DBColumn = statement.Select.TryAdd( dbColumn, "groups_" );
+				/*c.DBColumn =*/ statement.Select.TryAdd( {"groups_", dbColumn} );
 			}
 		}
 		return statement;

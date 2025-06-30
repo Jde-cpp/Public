@@ -1,4 +1,6 @@
 #pragma once
+#ifndef AWAIT_H
+#define AWAIT_H
 #include "Task.h"
 
 namespace Jde{
@@ -110,10 +112,11 @@ namespace Jde{
 	α BlockAwait( TAwait&& a )ε->TResult{
 		atomic_flag done;
 		optional<TResult> y; up<IException> e;
-		BlockAwaitExecute( a, y, e, done );
+		BlockAwaitExecute<TAwait,TResult>( a, y, e, done );
 		done.wait( false );
 		if( e )
 			e->Throw();
 		return *y;
 	}
 }
+#endif

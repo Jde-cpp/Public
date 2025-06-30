@@ -15,6 +15,13 @@
 				<ExpandedItem>p={_M_pathname._M_dataplus}</ExpandedItem>
 		</Expand>
   </Type>
+	<Type Name="std::__pair_base&lt;*&gt;">
+		<DisplayString>{{{first}, {second}}}</DisplayString>
+		<Expand>
+				<Item Name="first">first</Item>
+				<Item Name="second">second</Item>
+		</Expand>
+	</Type>
  <Type Name="std::tuple&lt;*&gt;">
 		<DisplayString Condition="strlen($T6) != 0">{{ {std::_Head_base&lt;0, $T1, false&gt;::_M_head(*this)}, {std::_Head_base&lt;1, $T2, false&gt;::_M_head(*this)}, {std::_Head_base&lt;2, $T3, false&gt;::_M_head(*this)}, {std::_Head_base&lt;3, $T4, false&gt;::_M_head(*this)}, {std::_Head_base&lt;4, $T5, false&gt;::_M_head(*this)}, ... }}</DisplayString>
 		<DisplayString Condition="strlen($T5) != 0">{{ {std::_Head_base&lt;0, $T1, false&gt;::_M_head(*this)}, {std::_Head_base&lt;1, $T2, false&gt;::_M_head(*this)}, {std::_Head_base&lt;2, $T3, false&gt;::_M_head(*this)}, {std::_Head_base&lt;3, $T4, false&gt;::_M_head(*this)}, {std::_Head_base&lt;4, $T5, false&gt;::_M_head(*this)} }}</DisplayString>
@@ -48,17 +55,6 @@
 				</TreeItems>
 		</Expand>
 	</Type>
-	<Type Name="std::string">
-		<AlternativeType Name="std::__cxx11::basic_string&lt;*&gt;"/>
-		<AlternativeType Name="Jde::str"/>
-		<AlternativeType Name="std::string&amp;&amp;"/>
-		<AlternativeType Name="Jde::DB::SchemaName"/>
-		<DisplayString>{{{_M_dataplus._M_p,s}}}</DisplayString>
-		<Expand>
-				<Item Name="size">_M_string_length</Item>
-				<Item Name="string">_M_dataplus._M_p,s</Item>
-		</Expand>
-	</Type>
 	<Type Name="std::string_view">
 		<AlternativeType Name="Jde::sv"/>
 		<AlternativeType Name="std::basic_string_view&lt;*&gt;"/>
@@ -67,16 +63,6 @@
 				<Item Name="size">_M_len</Item>
 				<Item Name="string">_M_str,s</Item>
 		</Expand>
-	</Type>
-	<Type Name="std::shared_ptr&lt;*&gt;">
-		<AlternativeType Name="Jde::sp"/>
-    <DisplayString Condition="_M_ptr!=0">{*($T1*)_M_ptr}</DisplayString>
-		<DisplayString Condition="_M_ptr==0">{{nullptr}}</DisplayString>
-		<Expand>
-			<Item Name="strong">_M_refcount._M_pi-&gt;_M_use_count</Item>
-			<Item Name="weak">_M_refcount._M_pi-&gt;_M_weak_count</Item>
-			<ExpandedItem>*($T1*)_M_ptr</ExpandedItem>
-    </Expand>
 	</Type>
  	<Type Name="std::__uniq_ptr_data&lt;*&gt;">
 		<DisplayString Condition="_M_t.std::_Head_base&lt;0, $T1*, false&gt;::_M_head_impl == 0">{{nullptr}}</DisplayString>
@@ -111,30 +97,8 @@
       </ArrayItems>
     </Expand>
   </Type>
- 	<Type Name="nlohmann::basic_json&lt;*&gt;">
-		<AlternativeType Name="nlohmann::json"/>
-		<AlternativeType Name="nlohmann::basic_json&lt;*,*,*,*,*,*,*,*,*,*&gt;"/>
-		<!-- <AlternativeType Name="nlohmann::basic_json&lt;std::__debug::map, std::__debug::vector, std::__cxx11::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, bool, long, unsigned long, double, std::allocator, nlohmann::adl_serializer, std::__debug::vector&lt;unsigned char, std::allocator&lt;unsigned char&gt; &gt; &gt;"/> -->
-		<DisplayString Condition="m_type == nlohmann::detail::value_t::null">null</DisplayString>
-		<DisplayString Condition="m_type == nlohmann::detail::value_t::object">o={*(m_value.object)}</DisplayString>
-		<DisplayString Condition="m_type == nlohmann::detail::value_t::array">{{array={*(m_value.array)}}}</DisplayString>
-		<DisplayString Condition="m_type == nlohmann::detail::value_t::string">{*(m_value.string)}</DisplayString>
-		<DisplayString Condition="m_type == nlohmann::detail::value_t::boolean">{m_value.boolean}</DisplayString>
-		<DisplayString Condition="m_type == nlohmann::detail::value_t::number_integer">{m_value.number_integer}</DisplayString>
-		<DisplayString Condition="m_type == nlohmann::detail::value_t::number_unsigned">{m_value.number_unsigned}</DisplayString>
-		<DisplayString Condition="m_type == nlohmann::detail::value_t::number_float">{m_value.number_float}</DisplayString>
-		<DisplayString Condition="m_type == nlohmann::detail::value_t::discarded">discarded</DisplayString>
-		<!-- <Expand>
-				 <ExpandedItem Condition="m_type == nlohmann::detail::value_t::object">
-						*(m_value.object),view(simple)
-				</ExpandedItem>
-				<ExpandedItem Condition="m_type == nlohmann::detail::value_t::array">
-						*(m_value.array),view(simple)
-				</ExpandedItem>
-		</Expand> -->
-	</Type>
 	<Type Name="boost::container::flat_map&lt;*&gt;">
-		<DisplayString>{{size={m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>
+		<DisplayString>{{Size={m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>
 		<Expand>
 			<ArrayItems>
 				<Size>m_flat_tree.m_data.m_seq.m_holder.m_size</Size>
@@ -142,71 +106,160 @@
 			</ArrayItems>
 		</Expand>
 	</Type>
- <Type Name="std::list&lt;*&gt;">
-	<AlternativeType Name="std::__cxx11::list&lt;*&gt;"/>
-	<AlternativeType Name="std::__debug::list&lt;*&gt;"/>
-	<DisplayString>{{ size={_M_impl._M_node._M_size} }}</DisplayString>
-	<Expand>
-			<Item Name="size">_M_impl._M_node._M_size</Item>
-			<LinkedListItems Condition="_M_impl._M_node._M_next != &amp;_M_impl._M_node"> <!-- this condition doesn't affect anything here. <Size> matters -->
-					<Size>_M_impl._M_node._M_size</Size>
-					<HeadPointer>(std::__cxx11::list&lt;$T1,$T2&gt;::_Node*)_M_impl._M_node</HeadPointer>
-					<NextPointer>_M_next</NextPointer>
-					<ValueNode>($T1)_M_storage</ValueNode>
-			</LinkedListItems>
-	</Expand>
-</Type>
-<Type Name="std::variant&lt;*&gt;">
-	<DisplayString Condition="_M_index == 0">{_M_u._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 1">{_M_u._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 2">{_M_u._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 3">{_M_u._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 4">{_M_u._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 5">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 6">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 7">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 8">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 9">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 10">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 11">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 12">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 13">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 14">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<DisplayString Condition="_M_index == 15">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
-	<Expand>
-		<Item Name="type" Condition="_M_index == 0">"$T1",s</Item>
-		<Item Name="value" Condition="_M_index == 0">_M_u._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 1">"$T2",s</Item>
-		<Item Name="value" Condition="_M_index == 1">_M_u._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 2">"$T3",s</Item>
-		<Item Name="value" Condition="_M_index == 2">_M_u._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 3">"$T4",s</Item>
-		<Item Name="value" Condition="_M_index == 3">_M_u._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 4">"$T5",s</Item>
-		<Item Name="value" Condition="_M_index == 4">_M_u._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 5">"$T6",s</Item>
-		<Item Name="value" Condition="_M_index == 5">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 6">"$T7",s</Item>
-		<Item Name="value" Condition="_M_index == 6">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 7">"$T8",s</Item>
-		<Item Name="value" Condition="_M_index == 7">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 8">"$T9",s</Item>
-		<Item Name="value" Condition="_M_index == 8">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 9">"$T10",s</Item>
-		<Item Name="value" Condition="_M_index == 9">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 10">"$T11",s</Item>
-		<Item Name="value" Condition="_M_index == 10">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 11">"$T12",s</Item>
-		<Item Name="value" Condition="_M_index == 11">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 12">"$T13",s</Item>
-		<Item Name="value" Condition="_M_index == 12">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 13">"$T14",s</Item>
-		<Item Name="value" Condition="_M_index == 13">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 14">"$T15",s</Item>
-		<Item Name="value" Condition="_M_index == 14">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-		<Item Name="type" Condition="_M_index == 15">"$T16",s</Item>
-		<Item Name="value" Condition="_M_index == 15">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
-	</Expand>
-</Type>
+	<Type Name="std::variant&lt;*&gt;">
+		<DisplayString Condition="_M_index == 0">{_M_u._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 1">{_M_u._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 2">{_M_u._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 3">{_M_u._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 4">{_M_u._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 5">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 6">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 7">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 8">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 9">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 10">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 11">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 12">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 13">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 14">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<DisplayString Condition="_M_index == 15">{_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage}</DisplayString>
+		<Expand>
+			<Item Name="type" Condition="_M_index == 0">"$T1",s</Item>
+			<Item Name="value" Condition="_M_index == 0">_M_u._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 1">"$T2",s</Item>
+			<Item Name="value" Condition="_M_index == 1">_M_u._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 2">"$T3",s</Item>
+			<Item Name="value" Condition="_M_index == 2">_M_u._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 3">"$T4",s</Item>
+			<Item Name="value" Condition="_M_index == 3">_M_u._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 4">"$T5",s</Item>
+			<Item Name="value" Condition="_M_index == 4">_M_u._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 5">"$T6",s</Item>
+			<Item Name="value" Condition="_M_index == 5">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 6">"$T7",s</Item>
+			<Item Name="value" Condition="_M_index == 6">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 7">"$T8",s</Item>
+			<Item Name="value" Condition="_M_index == 7">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 8">"$T9",s</Item>
+			<Item Name="value" Condition="_M_index == 8">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 9">"$T10",s</Item>
+			<Item Name="value" Condition="_M_index == 9">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 10">"$T11",s</Item>
+			<Item Name="value" Condition="_M_index == 10">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 11">"$T12",s</Item>
+			<Item Name="value" Condition="_M_index == 11">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 12">"$T13",s</Item>
+			<Item Name="value" Condition="_M_index == 12">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 13">"$T14",s</Item>
+			<Item Name="value" Condition="_M_index == 13">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 14">"$T15",s</Item>
+			<Item Name="value" Condition="_M_index == 14">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+			<Item Name="type" Condition="_M_index == 15">"$T16",s</Item>
+			<Item Name="value" Condition="_M_index == 15">_M_u._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_rest._M_first._M_storage</Item>
+		</Expand>
+	</Type>
+ <Type Name="boost::json::storage_ptr">
+    <DisplayString Condition="i_==0">default</DisplayString>
+    <DisplayString Condition="(i_&amp;3)==1"> shared</DisplayString>
+    <DisplayString Condition="(i_&amp;3)==2"> trivial</DisplayString>
+    <DisplayString Condition="(i_&amp;3)==3"> shared, trivial</DisplayString>
+    <DisplayString>non-owning</DisplayString>
+    <Expand>
+      <Item Name="[ refs ]" Condition="(i_&amp;1)==1">((shared_resource*)(i_&amp;~3))->refs</Item>
+      <Item Name="[ resource ]" Condition="(i_&amp;2)==1">(shared_resource*)(i_&amp;~3)</Item>
+      <Item Name="[ resource ]" Condition="(i_&amp;2)!=1">(memory_resource*)(i_&amp;~3)</Item>
+    </Expand>
+  </Type>
 
+  <Type Name="boost::json::detail::shared_resource_impl&lt;*&gt;">
+    <DisplayString>$T1*</DisplayString>
+    <Expand>
+      <Item Name="[ refs ]">refs</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::json::monotonic_resource">
+    <DisplayString>monotonic_resource</DisplayString>
+    <Expand>
+      <Item Name="[ free ]">head_->n</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::json::static_resource">
+    <DisplayString>static_resource</DisplayString>
+    <Expand>
+      <Item Name="[ free ]">n_</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::json::value">
+    <DisplayString Condition="sca_.k==kind::null">null</DisplayString>
+    <DisplayString Condition="sca_.k==kind::bool_">{sca_.b}</DisplayString>
+    <DisplayString Condition="sca_.k==kind::int64">{sca_.i}</DisplayString>
+    <DisplayString Condition="sca_.k==kind::uint64">{sca_.u}u</DisplayString>
+    <DisplayString Condition="sca_.k==kind::double_">{sca_.d}</DisplayString>
+    <DisplayString Condition="sca_.k==kind::string">{((char*)(str_.impl_.p_.t+1)),[str_.impl_.p_.t->size]s}</DisplayString>
+    <DisplayString Condition="sca_.k==kind::string+64">{((char*)(str_.impl_.k_.s)),[str_.impl_.k_.n]s}:</DisplayString>
+    <DisplayString Condition="sca_.k==kind::string+128">{str_.impl_.s_.buf,[detail::string_impl::sbo_chars_-str_.impl_.s_.buf[detail::string_impl::sbo_chars_]]s}</DisplayString>
+    <DisplayString Condition="sca_.k==kind::array">array [{arr_.t_->size}]</DisplayString>
+    <DisplayString Condition="sca_.k==kind::object">object [{obj_.t_->size}]</DisplayString>
+    <Expand>
+      <ExpandedItem Condition="sca_.k==kind::string">str_</ExpandedItem>
+      <ExpandedItem Condition="sca_.k==kind::string+64">str_</ExpandedItem>
+      <ExpandedItem Condition="sca_.k==kind::string+128">str_</ExpandedItem>
+      <ExpandedItem Condition="sca_.k==kind::array">arr_</ExpandedItem>
+      <ExpandedItem Condition="sca_.k==kind::object">obj_</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::json::string">
+    <DisplayString Condition="impl_.s_.k==kind::string">{((char*)(impl_.p_.t+1)),[impl_.p_.t->size]s}</DisplayString>
+    <DisplayString Condition="impl_.s_.k==kind::string+64">{((char*)(impl_.k_.s)),[impl_.k_.n]s}:</DisplayString>
+    <DisplayString Condition="impl_.s_.k==kind::string+128">{impl_.s_.buf,[detail::string_impl::sbo_chars_-impl_.s_.buf[detail::string_impl::sbo_chars_]]s}</DisplayString>
+    <Expand>
+      <!-- VFALCO Need to handle key string here -->
+      <Item Name="[size]">impl_.s_.k==kind::string?impl_.p_.t->size:detail::string_impl::sbo_chars_-impl_.s_.buf[detail::string_impl::sbo_chars_]</Item>
+      <Item Name="[capacity]">impl_.s_.k==kind::string?impl_.p_.t->capacity:detail::string_impl::sbo_chars_</Item>
+      <Item Name="[storage]">sp_</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::json::array">
+    <DisplayString>array [{t_->size}]</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>t_->size</Size>
+        <ValuePointer>((value*)(t_+1))</ValuePointer>
+      </ArrayItems>
+      <Item Name="[capacity]">t_->capacity</Item>
+      <Item Name="[storage]">sp_</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::json::object">
+    <DisplayString>object [{t_->size}]</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>t_->size</Size>
+        <ValuePointer>(boost::json::key_value_pair*)(t_+1)</ValuePointer>
+      </ArrayItems>
+      <Item Name="[capacity]">t_->capacity</Item>
+      <Item Name="[storage]">sp_</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="boost::json::key_value_pair">
+    <DisplayString Condition="value_.sca_.k==kind::null">{{ {key_,[len_]s}, null }}</DisplayString>
+    <DisplayString Condition="value_.sca_.k==kind::bool_">{{ {key_,[len_]s}, {value_.sca_.b} }}</DisplayString>
+    <DisplayString Condition="value_.sca_.k==kind::int64">{{ {key_,[len_]s}, {value_.sca_.i} }}</DisplayString>
+    <DisplayString Condition="value_.sca_.k==kind::uint64">{{ {key_,[len_]s}, {value_.sca_.u} }}</DisplayString>
+    <DisplayString Condition="value_.sca_.k==kind::double_">{{ {key_,[len_]s}, {value_.sca_.d} }}</DisplayString>
+    <DisplayString Condition="value_.sca_.k==kind::string">{{ {key_,[len_]s}, {((char*)(value_.str_.impl_.p_.t+1)),[value_.str_.impl_.p_.t->size]s} }}</DisplayString>
+    <DisplayString Condition="value_.sca_.k==kind::string+128">{{ {key_,[len_]s}, {value_.str_.impl_.s_.buf,[detail::string_impl::sbo_chars_-value_.str_.impl_.s_.buf[detail::string_impl::sbo_chars_]]s} }}</DisplayString>
+    <DisplayString Condition="value_.sca_.k==kind::array">{{ {key_,[len_]s}, array [{value_.arr_.t_->size}] }}</DisplayString>
+    <DisplayString Condition="value_.sca_.k==kind::object">{{ {key_,[len_]s}, object [{value_.obj_.t_->size}] }}</DisplayString>
+    <Expand>
+      <ExpandedItem>&amp;this->value_</ExpandedItem>
+    </Expand>
+  </Type>
 </AutoVisualizer>

@@ -66,3 +66,4 @@ libs/app/shared/proto/Web.FromServer.proto
 **/.*.sql
 **/my-workspace*/**
 *.7z
+**/.*

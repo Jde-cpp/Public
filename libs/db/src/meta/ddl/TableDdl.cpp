@@ -33,13 +33,12 @@ namespace Jde::DB{
 		string procName = InsertProcName();
 		if( let index = procName.find_first_of('.'); index<procName.size()-1 )
 			procName = procName.substr( index+1 );
-		osCreate << "create procedure " << this->Schema->DBSchema->Name << ".[" << procName << "](";
+		osCreate << "create procedure " << this->Schema->DBSchema->Name << "." << syntax.EscapeDdl( procName ) << "(";
 		osInsert << "\tinsert into " << DBName << "(";
 		osValues << "\t\tvalues(";
 		let prefix = syntax.ProcParameterPrefix().empty() ? "_" : syntax.ProcParameterPrefix();
 		char delimiter = ' ';
 		for( let& c : config.Columns ){
-			//let& c = dynamic_cast<const ColumnDdl&>( *column );
 			auto value{ Ƒ("{}{}"sv, prefix, c->Name) };
 			if( c->Insertable )
 				osCreate << delimiter << prefix << c->Name << " " << ColumnDdl::DataTypeString( *c );
@@ -55,9 +54,21 @@ namespace Jde::DB{
 		}
 		osInsert << " )" << endl;
 		osValues << " );" << endl;
+		let seqCol = /*syntax.DriverReturnsLastInsertId() ? nullptr :*/ SequenceColumn();
+		if( seqCol ){
+			osCreate << delimiter;
+			if( syntax.PrefixOut() )
+				osCreate << " out";
+			osCreate << " " << prefix << SequenceColumn()->Name << " " << ColumnDdl::DataTypeString( *seqCol );
+			if( !syntax.PrefixOut() )
+				osCreate << " output";
+		}
+
 		osCreate << " )" << endl << syntax.ProcStart() << endl;
 		osCreate << osInsert.str() << osValues.str();
-		osCreate << "\tselect " << syntax.IdentitySelect() <<";" << endl << syntax.ProcEnd() << endl;// into _id
+		if( seqCol )
+			osCreate << "\tset " << prefix << seqCol->Name << " = " << syntax.IdentitySelect() << ";" << endl;
+		osCreate << syntax.ProcEnd();
 		return osCreate.str();
 	}
 }

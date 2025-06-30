@@ -4,7 +4,6 @@
 #include <span>
 namespace Jde{
 	#define Φ Γ auto
-	//struct LogTag{ string Id; ELogLevel Level{ELogLevel::NoLog}; };//loadLibrary dlls may disappear, so need string vs. sv
 	enum class ELogTags : uint{
 		None 					= 0x0,
 		Access				= 1ul << 0,
@@ -54,10 +53,13 @@ namespace Jde{
 	α Min( ELogTags tags, const concurrent_flat_map<ELogTags,ELogLevel>& tagSettings )ι->optional<ELogLevel>;
 	α ToString( ELogTags tags )ι->string;
 	Φ ToLogTags( sv name )ι->ELogTags;
-	Φ TagFromString( function<optional<ELogTags>(sv)> tagFromString )ι->void;
-	Φ TagToString( function<string(ELogTags)> tagToString )ι->void;
-
 namespace Logging{
+	struct ITagParser{
+		β ToTag( str tagName )Ι->ELogTags=0;
+		β ToString( ELogTags tags )Ι->string=0;
+	};
+	Φ AddTagParser( up<ITagParser>&& tagParser )ι->void;
+
 	α TagSettings( string name, str path )ι->concurrent_flat_map<ELogTags,ELogLevel>;
 	α AddFileTags()ι->void;
 	Φ SetTag( sv tag, ELogLevel l=ELogLevel::Debug, bool file=true )ι->void;

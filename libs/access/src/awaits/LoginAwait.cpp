@@ -3,6 +3,7 @@
 #include <jde/framework/str.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/Value.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/db/meta/AppSchema.h>
@@ -16,7 +17,7 @@ namespace Jde::Access{
 			base{sl}, _modulus{ move(modulus) }, _exponent{ move(exponent) }, _name{ move(name) }, _target{ move(target) }, _description{ move(description) }
 	{}
 
-	α LoginAwait::LoginTask()ι->Jde::Task{
+	α LoginAwait::LoginTask()ι->DB::ScalerAwait<optional<UserPK::Type>>::Task{
 		auto modulusHex = Str::ToHex( (byte*)_modulus.data(), _modulus.size() );
 		try{
 			THROW_IF( modulusHex.size() > 1024, "modulus {} is too long. max length: {}", modulusHex.size(), 1024 );
@@ -37,25 +38,23 @@ namespace Jde::Access{
 			};
 			auto sql = statement.Move();
 			auto ds = GetSchema()->DS();
-			auto task = ds->ScalerCo<UserPK::Type>( sql.Text, sql.Params );
-			auto p = ( co_await task ).UP<UserPK::Type>(); //gcc compile issue
-			auto userPK = p ? UserPK{*p} : UserPK{};
+			let userPK = co_await ds->ScalerOpt<UserPK::Type>( move(sql) );
 			if( !userPK )
 				InsertUser( move(modulusHex), exponent, *ds );
 			else
-				ResumeScaler( userPK );
+				ResumeScaler( {*userPK} );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α LoginAwait::InsertUser( string&& modulusHex, uint32_t exponent, DB::IDataSource& ds )ι->DB::ScalerAwait<UserPK>::Task{
+	α LoginAwait::InsertUser( string&& modulusHex, uint32_t exponent, DB::IDataSource& ds )ι->DB::ScalerAwait<UserPK::Type>::Task{
 		DB::InsertClause insert{ GetSchema()->Prefix+"user_insert_key",
 			{ DB::Value{move(modulusHex)}, DB::Value{exponent}, DB::Value{underlying(EProviderType::Key)},
 				DB::Value{move(_name)}, DB::Value{move(_target)}, DB::Value{move(_description)}} };
 		try{
-			auto userPK = co_await ds.ExecuteScaler<UserPK>( insert.Move() );
-			ResumeScaler( userPK );
+			let userPK = co_await ds.InsertSeq<UserPK::Type>( move(insert) );
+			ResumeScaler( {userPK} );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );

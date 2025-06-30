@@ -9,7 +9,7 @@
 		dateTime: {type: "DateTime", length:: 64},
 		decimal: {type: "Decimal"},
 		float: {type:"Float", length:: 64},
-		guid: {type: "Guid", length:: 128},
+		guid: {type: "Guid" },
 		image: {type: "Image"},
 		int: {type:"Int", length:: 32},
 		int8: {type: "Int8", length:: 8},
@@ -36,13 +36,11 @@
 		now: { name: "$now" }
 	},
 
-	//local smallSequenced: {type: "UInt16", length:: 16, sequence: true, sk:0, i:0 };
 	smallSequenced:: types.uint16+{ sequence: true, sk:0, i:0 },
 	pkSequenced: types.uint+{ sequence: true, sk:0, i:0 },
 	longSequenced: types.ulong+{ sequence: true, sk:0, i:0 },
 	local valuesColumns = self.valuesColumns,
 	valuesColumns: { name: types.varchar+{ length: 256, i:10 } },
-
 	valuesNK: ["name"],
 
 	targetColumns: valuesColumns+{
@@ -54,4 +52,15 @@
 		description: types.varchar+{ length: 2048, nullable: true, i:70 }
 	},
 	targetNKs: [self.valuesNK, ["target"]],
+
+	filter(obj, ignore)::
+    std.foldl(
+			function(filtered, field)(
+				if std.member(ignore, field) then
+					filtered
+				else
+					filtered + { [field]: obj[field] }
+			),
+     	std.objectFields(obj), {}
+		)
 }

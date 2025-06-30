@@ -1,6 +1,7 @@
 #include <jde/access/awaits/AuthenticateAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/Value.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/meta/AppSchema.h>
 #include "../accessInternal.h"
@@ -9,7 +10,7 @@
 namespace Jde::Access{
 	α AuthenticateAwait::InsertUser( str prefix, vector<DB::Value>&& params )->TAwait<UserPK::Type>::Task{
 		try{
-			let userPK = co_await DS()->ExecuteScaler<UserPK::Type>( DB::InsertClause{Ƒ("{}user_insert_login", prefix), move(params)}.Move() );
+			let userPK = co_await DS()->InsertSeq<UserPK::Type>( DB::InsertClause{Ƒ("{}user_insert_login", prefix), move(params)} );
 			ResumeScaler( {userPK} );
 		}
 		catch( IException& e ){
@@ -17,7 +18,7 @@ namespace Jde::Access{
 		}
 	}
 
-	α AuthenticateAwait::Execute()ι->Jde::Task{
+	α AuthenticateAwait::Execute()ι->DB::ScalerAwaitOpt<UserPK::Type>::Task{
 		let identities = GetTable( "identities" );
 		let identityPK = identities->GetColumnPtr( "identity_id" );
 		let providerFK = identities->GetColumnPtr( "provider_id" );
@@ -37,13 +38,12 @@ namespace Jde::Access{
 			where.Add( targetColumn, nullptr );
 		auto sql = DB::Statement{ move(select), move(from), move(where) }.Move();
 		try{
-			auto task = DS()->ScalerCo<UserPK::Type>( sql.Text, move(sql.Params) );
-			auto userPK = ( co_await task ).UP<UserPK::Type>(); //gcc compile issue
-			//auto userPK = p ? *p : UserPK{};
-			if( !userPK || !*userPK ){
+			auto params = sql.Params;
+			let userPK = co_await DS()->ScalerOpt<UserPK::Type>( move(sql) );
+			if( !userPK ){
 				if( _opcServer.empty() )
-					sql.Params.emplace_back( nullptr );
-				InsertUser( usersTable->Schema->Prefix, move(sql.Params) );
+					params.emplace_back( nullptr );
+				InsertUser( usersTable->Schema->Prefix, move(params) );
 				co_return;
 			}
 			ResumeScaler( {*userPK} );

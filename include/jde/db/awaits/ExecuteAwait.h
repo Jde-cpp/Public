@@ -1,20 +1,16 @@
 #pragma once
 #include <jde/framework/coroutine/Await.h>
+#include <jde/db/awaits/QueryAwait.h>
 #include <jde/db/generators/Statement.h>
-#include "../../../../../Framework/source/coroutine/Coroutine.h"
 
 namespace Jde::DB{
 	struct IDataSource;
-	struct ExecuteAwait : TAwait<uint>{
-		using base=TAwait<uint>;
-		ExecuteAwait( sp<IDataSource> ds, Sql&& s, bool isStoredProc, SL sl )ι:
-			base{ sl }, _ds{ move(ds) }, _isStoredProc{isStoredProc}, _sql{ move(s) }
-		{}
-		α Suspend()ι->void override{ Coroutine::CoroutinePool::Resume( _h ); }
-		α await_resume()ε->uint override;
+	struct ExecuteAwait : TAwaitEx<uint32,QueryAwait::Task>{
+		using base=TAwaitEx<uint32,QueryAwait::Task>;
+		ExecuteAwait( sp<IDataSource> ds, Sql&& s, SL sl )ι: base{ sl }, _ds{ds}, _sql{ move(s) }{}
+		α Execute()ι->QueryAwait::Task override;
 	private:
-		sp<IDataSource> _ds;
-		bool _isStoredProc;
+ 		sp<IDataSource> _ds;
 		Sql _sql;
 	};
 }

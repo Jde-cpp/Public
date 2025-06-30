@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../exports.h"
+#include <open62541/server.h>
 
 namespace Jde::Opc{
 	enum class EOpcLogTags : uint{
@@ -26,10 +26,11 @@ namespace Jde::Opc{
 	constexpr ELogTags BrowseTagPedantic{ (ELogTags)EOpcLogTags::Browse | ELogTags::Pedantic };
 	constexpr ELogTags ProcessingLoopTag{ (ELogTags)EOpcLogTags::ProcessingLoop };
 
-	α TagFromString( sv name )ι->optional<ELogTags>;
-	α TagToString( ELogTags tags )ι->string;
+	struct UALogParser final : Logging::ITagParser{
+		α ToTag( str tagName )Ι->ELogTags override;
+		α ToString( ELogTags tags )Ι->string override;
+	};
 	struct Logger : UA_Logger{
 		Logger( Handle context=0 )ι;
-
 	};
 }

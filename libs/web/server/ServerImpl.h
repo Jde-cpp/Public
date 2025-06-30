@@ -30,7 +30,7 @@ namespace Internal{
 }
 
 namespace Jde::Web{
-	Ŧ Server::RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> cancel )ι->net::awaitable<void, executor_type>{
+	Ŧ Server::RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> /*cancel*/ )ι->net::awaitable<void, executor_type>{
 		optional<http::request_parser<http::string_body>> parser;// a new parser must be used for every message so we use an optional to reconstruct it every time.
 		parser.emplace();
 		parser->body_limit(10000); // Apply a reasonable limit to the allowed size  of the body in bytes to prevent abuse.

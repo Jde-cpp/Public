@@ -18,7 +18,7 @@ ENABLE_WARNINGS
 
 namespace Jde::Str{
 	Φ ToString( sv format, vector<string> args )ι->string;
-	str Empty()ι;
+	Φ Empty()ι->str;
 	template<class T> using bsv = std::basic_string_view<char,T>;
 	struct ci_traits : public std::char_traits<char>{
 		Ω eq(char c1, char c2)ι{ return toupper(c1) == toupper(c2); }

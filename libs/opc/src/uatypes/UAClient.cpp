@@ -4,7 +4,6 @@
 #include <jde/opc/async/CreateSubscriptions.h>
 #include <jde/opc/uatypes/Node.h>
 #include <jde/opc/uatypes/Value.h>
-#include "Variant.h"
 #include "../async/Attributes.h"
 #include <jde/opc/async/DataChanges.h>
 #include <jde/opc/async/SetMonitoringMode.h>
@@ -14,15 +13,16 @@
 #define let const auto
 
 namespace Jde::Opc{
+	using Client::UAClientException;
 	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::Opc };
 	flat_map<tuple<string,string>,sp<UAClient>> _clients; shared_mutex _clientsMutex;
 	concurrent_flat_set<sp<UAClient>> _awaitingActivation;
 
 	UAClient::UAClient( str address, str userId, str password )ε:
-		UAClient{ OpcServer{address}, userId, password }
+		UAClient{ OpcClient{address}, userId, password }
 	{}
 
-	UAClient::UAClient( OpcServer&& opcServer, str userId, str password )ε:
+	UAClient::UAClient( OpcClient&& opcServer, str userId, str password )ε:
 		UserId{ userId },
 		_opcServer{ move(opcServer) },
 		_logger{ 0 },
@@ -64,13 +64,13 @@ namespace Jde::Opc{
 		using SecurityPolicyPtr = up<UA_SecurityPolicy, decltype(&UA_free)>;
 		const uint size = addSecurity ? 2 : 1; ASSERT( !config->securityPoliciesSize );
 		SecurityPolicyPtr securityPolicies{ (UA_SecurityPolicy*)UA_malloc( sizeof(UA_SecurityPolicy)*size), &UA_free };
-		auto sc = UA_SecurityPolicy_None(&securityPolicies.get()[0], UA_BYTESTRING_NULL, &_logger); THROW_IFX( sc, UAException(sc, _ptr, 0, ELogLevel::Debug) );
+		auto sc = UA_SecurityPolicy_None(&securityPolicies.get()[0], UA_BYTESTRING_NULL, &_logger); THROW_IFX( sc, UAClientException(sc, _ptr, 0, ELogLevel::Debug) );
 		if( addSecurity ){
 			config->applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			config->clientDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
 			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
-			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAException(sc, _ptr, 0, ELogLevel::Debug) );
+			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAClientException(sc, _ptr, 0, ELogLevel::Debug) );
 
 			config->authSecurityPolicies = (UA_SecurityPolicy *)UA_realloc( config->authSecurityPolicies, sizeof(UA_SecurityPolicy) *(config->authSecurityPoliciesSize + 1) );
 			UA_SecurityPolicy_Basic256Sha256( &config->authSecurityPolicies[config->authSecurityPoliciesSize], *certificate.get(), *privateKey.get(), config->logging );

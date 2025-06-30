@@ -7,7 +7,7 @@
 #define let const auto
 
 namespace Jde::Opc{
-	boost::concurrent_flat_map<SessionPK,flat_map<OpcNK,tuple<string,string>>> _sessions; //loginName,password
+	boost::concurrent_flat_map<SessionPK,flat_map<OpcClientNK,tuple<string,string>>> _sessions; //loginName,password
 
 	AuthenticateAwait::AuthenticateAwait( str loginName, str password, str opcNK, str endpoint, bool isSocket, SL sl )ι:
 		base{ sl }, _loginName{ loginName }, _password{ password }, _opcNK{ opcNK }, _endpoint{ endpoint }, _isSocket{ isSocket }{}
@@ -42,8 +42,8 @@ namespace Jde::Opc{
 	α AuthenticateAwait::AddSession( Access::ProviderPK providerPK )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>::Task{
 		try{
 			auto sessionInfo = co_await App::Client::AddSession( _opcNK, _loginName, providerPK, _endpoint, false );
-			flat_map<OpcNK,tuple<string,string>> init{ {_opcNK,{_loginName,_password}} };
-			std::pair<SessionPK, flat_map<OpcNK,tuple<string,string>>> init2 = make_pair(sessionInfo.session_id(), init);
+			flat_map<OpcClientNK,tuple<string,string>> init{ {_opcNK,{_loginName,_password}} };
+			std::pair<SessionPK, flat_map<OpcClientNK,tuple<string,string>>> init2 = make_pair(sessionInfo.session_id(), init);
 			_sessions.emplace_or_visit( init2,
 				[this]( auto& sessionMap )ι{
 					sessionMap.second.try_emplace( _opcNK, make_tuple(_loginName,_password) );
@@ -67,9 +67,9 @@ namespace Jde::Opc{
 		}
 	}
 
-	α ProviderCreatePurgeAwait::Execute( OpcPK opcPK )ι->OpcServerAwait::Task{
+	α ProviderCreatePurgeAwait::Execute( OpcClientPK opcPK )ι->OpcClientAwait::Task{
 		try{
-			auto server = co_await OpcServerAwait{ opcPK, true };
+			auto server = co_await OpcClientAwait{ opcPK, true };
 			THROW_IF( server.empty(), "[{}]Could not find OpcServer", opcPK );
 			if( _insert )
 				Insert( move(server.front().Target) );

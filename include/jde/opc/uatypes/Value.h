@@ -2,6 +2,7 @@
 #include "../exports.h"
 #include "Logger.h"
 #include "../../../../../Framework/source/coroutine/Awaitable.h"
+#include "../../../../libs/opc/src/types/proto/Opc.FromServer.pb.h"
 
 namespace Jde::Opc{
 	namespace Browse{ struct Response; }
@@ -18,7 +19,7 @@ namespace Jde::Opc{
 
 		α operator=( Value&& x )ι->Value&{ UA_DataValue_copy( &x, this ); return *this; }
 		α IsScaler()Ι->bool{ return UA_Variant_isScalar( &value ); }
-		α ToProto( const OpcNK& opcId, const NodeId& nodeId )Ι->FromServer::Message;
+		α ToProto( const OpcClientNK& opcId, const NodeId& nodeId )Ι->FromServer::Message;
 		α ToJson()Ι->jvalue;
 		α Set( const jvalue& j )ε->void;
 		Ŧ Get( uint index )Ι->const T&{ return ((T*)value.data)[index]; };

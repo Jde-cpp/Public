@@ -56,10 +56,10 @@ namespace Jde::Access{
 
 	α Resources::Sync( const vector<sp<DB::AppSchema>> schemas, sp<QL::IQL> qlServer, UserPK executor )ε->void{
 		using DB::Value;
-		for( let schema : schemas ){
+		for( let& schema : schemas ){
 			auto existing = loadExisting( schema->Name, qlServer, executor );
 
-			for( let [_,table] : schema->Tables ){
+			for( let& [_,table] : schema->Tables ){
 				auto jsonName = DB::Names::ToJson( table->Name );
 				if( empty(table->Operations) || existing.contains(jsonName) )
 					continue;

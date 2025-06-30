@@ -1,7 +1,8 @@
 #include "AddRemoveAwait.h"
-#include <jde/db/Database.h>
+#include <jde/db/IDataSource.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/names.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLHook.h>
@@ -42,7 +43,7 @@ namespace Jde::QL{
 		return params;
 	};
 
-	α AddRemoveAwait::Add()ι->Coroutine::Task{
+	α AddRemoveAwait::Add()ι->DB::ExecuteAwait::Task{
 		let& map = *_table->Map;
 		let& parentId = map.Parent->Name; let& childId =map.Child->Name;
 		let prefix = Ƒ( "insert into {}({},{})values(?,?", _table->DBName, parentId, childId );
@@ -63,8 +64,7 @@ namespace Jde::QL{
 			for( let& p : _params.ChildParams ){
 				vector<DB::Value> params{ _params.ParentParam, p };
 				params.insert( end(params), begin(extraParams), end(extraParams) );
-				auto a = _table->Schema->DS()->ExecuteCo( sql, params, _sl );
-				result += *( co_await *a ).UP<uint>();
+				result += co_await _table->Schema->DS()->Execute( {sql, params}, _sl );
 			}
 			AddAfter( result );
 		}
@@ -82,15 +82,14 @@ namespace Jde::QL{
 		}
 	}
 
-	α AddRemoveAwait::Remove()->Coroutine::Task{
+	α AddRemoveAwait::Remove()->DB::ExecuteAwait::Task{
 		let& map = *_table->Map;
 		let sql = Ƒ( "delete from {} where {}=? and {}=?", _table->DBName, map.Parent->Name, map.Child->Name );
 		uint result{};
 		try{
 			for( let& p : _params.ChildParams ){
 				vector<DB::Value> params{ _params.ParentParam, p };
-				auto a = _table->Schema->DS()->ExecuteCo( sql, params, _sl );
-				result += *( co_await *a ).UP<uint>();
+				result += co_await _table->Schema->DS()->Execute( {sql, params}, _sl );
 			}
 			RemoveAfter( result );
 		}

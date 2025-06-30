@@ -1,4 +1,5 @@
 #include "Parser.h"
+#include <jde/db/generators/Functions.h>
 #include <jde/ql/ql.h>
 
 #define let const auto
@@ -58,7 +59,16 @@ namespace Jde::QL{
 		for( auto ch = _text[i]; i<_text.size() && isspace(ch); ch = _text[++i] );
 		if( i<_text.size() ){
 			uint start = i;
-			for( auto ch = _text[i]; i<_text.size()-1 && ch!=end; ch = _text[++i] );
+			for( auto ch = _text[i]; i<_text.size()-1 && ch!=end; ch = _text[++i] ){
+				if( ch=='"' ){//string
+					++i;
+					for( ch = _text[i]; i<_text.size() && ch!='"'; ch = _text[++i] ){
+						if( ch=='\\' && i<_text.size()-1 && _text[i+1]=='"' )
+							++i;
+					}
+					THROW_IF( i>=_text.size(), "Expected ending quote '{}' @ '{}'.", _text, i );
+				}
+			}
 			++i;
 			result = _text.substr( start, i-start );
 		}
@@ -142,7 +152,7 @@ namespace Jde::QL{
 			i += 4;
 		}
 		else if( isdigit(ch) || ch=='-' || ch=='.' ){
-			for( ; i<json.size() && isdigit(ch); ch = json[++i] ){
+			for( ; i<json.size() && (isdigit(ch) || ch=='-' || ch=='.'); ch = json[++i] ){
 				y += ch;
 				if( i+1==json.size() )
 					break;
@@ -178,7 +188,7 @@ namespace Jde::QL{
 			y += ":";
 			i += parseValue( json.substr(i), y );
 			i+=parseWhitespace( json.substr(i), y );
-			THROW_IF( i>=json.size(), "Expected '}}' vs '{}' in '{}' @ '{}'.", json[i], json, i );
+			THROW_IF( i>=json.size(), "Expected '}}' in '{}' @ '{}'.", json, i );
 			if( json[i]==',' ){
 				y += json[i++];
 				memberValueParse();

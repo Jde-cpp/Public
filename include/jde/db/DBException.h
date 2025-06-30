@@ -4,12 +4,12 @@
 
 #define Φ ΓDB auto
 namespace Jde::DB{
-	struct Value;
+	struct Sql; struct Value;
 
 	struct ΓDB DBException final: IException{
-		DBException( int32 errorCode, string sql, const vector<Value>* pValues, string what, SRCE )ι;
-		DBException( string sql, const vector<Value>* pValues, string what, SRCE )ι:DBException{ 0, move(sql), pValues, move(what), sl }{}
-		DBException( DBException&& from )ι:IException{move(from)}, Sql{move(from.Sql)}, Parameters{move(from.Parameters)}{}
+		DBException( int32 errorCode, Sql&& sql, string what, SRCE )ι;
+		DBException( Sql&& sql, string what, SRCE )ι:DBException{ 0, move(sql), move(what), sl }{}
+		DBException( DBException&& from )ι:IException{move(from)}, Sql{move(from.Sql)}{}
 		DBException( const DBException& from )ι=default;
 		~DBException(){ Log(); SetLevel( ELogLevel::NoLog ); };
 
@@ -20,8 +20,7 @@ namespace Jde::DB{
 		α Ptr()ι->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }
 		[[noreturn]] α Throw()ε->void override{ throw move(*this); }
 
-		const string Sql;
-		const vector<Value> Parameters;
+		DB::Sql&& Sql;
 	};
 }
 #undef Φ

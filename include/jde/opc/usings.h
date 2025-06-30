@@ -1,13 +1,16 @@
 ﻿#pragma once
+#ifndef JDE_OPC_USINGS
+#define JDE_OPC_USINGS
 #include <jde/db/usings.h>
 
 namespace Jde::Opc{
 	using boost::concurrent_flat_map;
 	using boost::concurrent_flat_set;
+	using boost::uuids::uuid;
 
-	using NamespaceId = uint16;
-	using OpcNK = string;
-	using OpcPK = uint32;
+	using NsIndex = UA_UInt16;
+	using OpcClientNK = string;
+	using OpcClientPK = uint32;
 	using MonitorId = UA_UInt32;
 	using SubscriptionId = UA_UInt32;
 	using StatusCode = UA_StatusCode;
@@ -20,3 +23,4 @@ namespace Jde::Opc{
 
 	template <typename T, auto F> using UAUP = std::unique_ptr<T, DeleterFromFunction<F>>;
 }
+#endif

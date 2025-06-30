@@ -3,6 +3,7 @@
 #include <jde/ql/types/TableQL.h>
 #include <jde/db/names.h>
 #include <jde/db/IDataSource.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
@@ -66,7 +67,7 @@ namespace Jde::QL{
 
 	Object::Object( sv name, const jobject& j )ε:
 		Name{ name }{
-		for( let field : AsArray(j, "fields") ){
+		for( let& field : AsArray(j, "fields") ){
 			Fields.emplace_back( AsObject(field) );
 		}
 	}
@@ -162,7 +163,7 @@ namespace Jde::QL{
 							rootType = EFieldKind::List;
 						}
 						else{
-							fieldName = ToJson<sv>( qlTypeName );
+							fieldName = ToJson( qlTypeName );
 							rootType = column.PKTable->IsEnum() ? EFieldKind::Enum : EFieldKind::Object;
 						}
 					}
@@ -190,7 +191,7 @@ namespace Jde::QL{
 					if( pColumn1->PKTable->Name==mainTable.Name ){
 						let pTable2 = pColumn2->PKTable;
 						let jsonType = pTable->Columns.size()==2 ? pTable2->JsonName() : pTable->JsonName();
-						addField( ToPlural<string>(ToJson<sv>(jsonType)), {}, EFieldKind::List, jsonType, EFieldKind::Object );
+						addField( ToPlural<string>(ToJson(jsonType)), {}, EFieldKind::List, jsonType, EFieldKind::Object );
 					}
 				}
 			};
@@ -210,18 +211,23 @@ namespace Jde::QL{
 		DB::SelectClause select;
 		for_each( fieldTable.Columns, [&select, &dbTable](let& x){
 			if( let c = x.JsonName=="id" ? dbTable->GetPK() : dbTable->FindColumn( x.JsonName ); c )
-				select.TryAdd( c );
+				select.TryAdd( {c} );
 		});//sb only id/name.
-		const string sql{ Ƒ("{} from {} order by {}", select.ToString(), dbTable->DBName, dbTable->GetPK()->Name) };
+		DB::Statement statement{
+			select,
+			{ {dbTable} },
+			{},
+			dbTable->GetPK()->Name
+		};
 		jarray fields;
-		dbTable->Schema->DS()->Select( sql, [&]( DB::IRow& row ){
+		dbTable->Schema->DS()->Select( statement.Move(), [&]( DB::Row&& row ){
 			jobject j;
 			for( uint i=0; i<select.Columns.size(); ++i ){
-				auto& c = *select.Columns[i];
+				auto& c = *get<DB::AliasCol>(select.Columns[i]).Column;
 				if( c.IsPK() )
 					j["id"] = row.GetUInt( i );
 				else
-					j[c.Name] = row.MoveString( i );
+					j[c.Name] = move( row.GetString(i) );
 			}
 			fields.push_back( j );
 		} );

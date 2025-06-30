@@ -157,7 +157,7 @@ namespace Jde::Web{
 		Wait();
 		let sessionId = _clientSession->Id();
 		_clientSession = nullptr;
-		std::this_thread::sleep_for( 100s );
+		std::this_thread::sleep_for( 1s );
 		auto logs = FindMemoryLog( [=](const Logging::ExternalMessage& m){
 			return m.Args.size()==3 && m.Args[0]=="1" && m.Args[1]=="The WebSocket stream was gracefully closed at both endpoints" && m.Args[2]==Ƒ("[{:x}]Server::DoRead", sessionId);
 		});

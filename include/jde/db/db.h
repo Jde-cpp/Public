@@ -9,7 +9,7 @@ namespace Jde::Access{ struct IAcl; }
 namespace Jde::DB{
 	struct Cluster; struct IDataSource; struct AppSchema;
 
-	α DataSource( const fs::path& libraryName, sv connectionString )ε->sp<IDataSource>;
+	α DataSource( const jobject& config )ε->sp<IDataSource>;
 	Φ GetAppSchema( str name, sp<Access::IAcl> )ε->sp<AppSchema>;
 	Φ SyncSchema( const AppSchema& schema, sp<QL::IQL> ql )ε->void;
 #ifndef PROD

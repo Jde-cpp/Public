@@ -55,6 +55,7 @@ namespace Jde::DB{
 			case UInt64: y = to_string( get_uint() ); break;
 			case Double: y = to_string( get_double() ); break;
 			case Time: y = ToIsoString( get_time() ); break;
+			case Bytes: y = Str::Encode64( get_bytes() );	break;
 		}
 		return y;
 	}

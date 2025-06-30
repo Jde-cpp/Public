@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "../exports.h"
 #include <jde/framework/coroutine/Await.h>
-#include "../types/OpcServer.h"
+#include "../types/OpcClient.h"
 
 namespace Jde::Opc{
 	struct UAClient; struct UAException;
@@ -15,7 +15,7 @@ namespace Jde::Opc{
 		Ω Resume( sp<UAClient> pClient, str target, str loginName, const UAException&& e )ι->void;
 	private:
 		Ω Resume( sp<UAClient> pClient, str target, str loginName, function<void(ConnectAwait::Handle)> resume )ι->void;
-		α Create()ι->OpcServerAwait::Task;
+		α Create()ι->OpcClientAwait::Task;
 		string _opcTarget;
 		string _loginName;
 		string _password;

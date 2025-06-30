@@ -6,7 +6,7 @@
 
 namespace Jde{
 #ifndef _MSC_VER
-	α OSApp::ProductName()ι->sv{ return "Tests.Crypto"; }
+	α Process::ProductName()ι->sv{ return "Tests.Crypto"; }
 #endif
  	α Startup( int argc, char **argv )ι->void{
 #ifdef _MSC_VER

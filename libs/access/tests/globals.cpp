@@ -204,9 +204,9 @@ namespace Tests{
 		let y = QL::QueryObject( ql, executer );
 		return y;
 	}
-	α Tests::PurgeUser( UserPK userId, UserPK executer )ε->void{
+	α Tests::PurgeUser( UserPK userId, UserPK executer, SL sl )ε->void{
 		let purge = Ƒ( "mutation purgeUser(\"id\":{})", userId.Value );
-		let purgeJson = QL::Query( purge, executer );
+		let purgeJson = QL::Query( purge, executer, sl );
 	}
 	α Tests::PurgeGroup( GroupPK id, UserPK executer )ε->void{
 		let purge = Ƒ( "mutation purgeGrouping(\"id\":{})", id.Value );

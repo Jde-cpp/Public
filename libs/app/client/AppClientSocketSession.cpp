@@ -221,6 +221,7 @@ namespace Client{
 			case kExecuteResponse://wait for use case.
 			case kStringPks://strings already saved in db, no need to send.  not being requested by client yet.
 				Critical( _tags, "[{:x}]No use case has been implemented on client app '{}'.", Id(), underlying(m->Value_case()) );
+				break;
 			case kTraces:
 			case kStatus:
 				Critical( _tags, "[{:x}]Web only call not implemented on client app '{}'.", Id(), (uint)m->Value_case() );

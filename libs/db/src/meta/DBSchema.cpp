@@ -1,10 +1,11 @@
 #include <jde/db/meta/DBSchema.h>
+#include <jde/db/generators/Functions.h>
+#include <jde/db/generators/Syntax.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Catalog.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/IDataSource.h>
-#include <jde/db/generators/Syntax.h>
 
 #define let const auto
 namespace Jde::DB{
@@ -43,7 +44,7 @@ namespace Jde::DB{
 					throw;
 				if( ds->SchemaNameConfig()==Name ){
 					ds = ds->AtSchema( MySqlSyntax::Instance().SysSchema() );//no connection, can't figure out syntax.
-					ds->Execute( Ƒ("create schema {}", Name) );
+					ds->ExecuteSync( {Ƒ("create schema {}", Name)} );
 				}
 			}
 			_dataSource = name==Name || !canSetSchema

@@ -3,9 +3,12 @@
 
 namespace Jde::DB{
 
-	α ExecuteAwait::await_resume()ε->uint{
-		return _isStoredProc
-			? _ds->ExecuteProc( move(_sql.Text), _sql.Params, _sl )
-			: _ds->Execute( move(_sql.Text), _sql.Params, _sl );
+	α ExecuteAwait::Execute()ι->QueryAwait::Task{
+		try{
+			ResumeScaler( (co_await _ds->Query(move(_sql), false, base::_sl)).RowsAffected );
+		}
+		catch( IException& e ){
+			ResumeExp( move(e) );
+		}
 	}
 }

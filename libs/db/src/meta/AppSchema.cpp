@@ -2,6 +2,7 @@
 #include <jde/framework/io/json.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/DBSchema.h>
 #include <jde/db/meta/Catalog.h>
 #include <jde/db/meta/Cluster.h>
@@ -22,7 +23,7 @@ namespace Jde::DB{
 	α GetViews( const jobject& jviews )ε->flat_map<string,sp<View>>{
 		flat_map<string,sp<View>> views;
 		for( let& [jname,view] : jviews ){
-			let name = Names::FromJson(jname);
+			let name = Names::FromJson( jname );
 			views.emplace( name, ms<Table>(name, Json::AsObject(view)) );
 		}
 		return views;
@@ -42,7 +43,7 @@ namespace Jde::DB{
 
 	α AppSchema::Initialize( sp<DB::DBSchema> db, sp<AppSchema> self )ε->void{
 		self->DBSchema = db;
-		if( !self->Syntax().CanSetDefaultSchema() && db->DS()->SchemaName() != db->Name )
+		if( !db->IsQLOnly() && !self->Syntax().CanSetDefaultSchema() && db->DS()->SchemaName() != db->Name )
 			self->Prefix = Ƒ( "{}.{}", db->Name, self->Prefix );
 		for_each( self->Tables, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
 		for_each( self->Views, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
@@ -52,22 +53,16 @@ namespace Jde::DB{
 		let cluster = catalog->Cluster;
 		return Ƒ( "/dbServers/{}/catalogs/{}/schemas/{}/{}", cluster->ConfigName, catalog->Name, DBSchema->Name, Name );
 	}
+
+	α AppSchema::DBName( str objectName )Ι->string{
+		return Prefix+objectName;
+	}
+
 	α AppSchema::DS()Ε->sp<IDataSource>{
 		return DBSchema->DS();
 	}
 	α AppSchema::ResetDS()Ι->void{ DBSchema->ResetDS(); }
-	α AppSchema::Syntax()Ι->const DB::Syntax&{
-//		let isPhysical = DBSchema->IsPhysical();
-		const DB::Syntax* syntax = &DB::Syntax::Instance();
-/*		try{
-			syntax = isPhysical ? &DS()->Syntax() : &DB::Syntax::Instance();
-		}
-		catch( IException& e ){
-			e.SetLevel( ELogLevel::Error );
-			syntax = &DB::Syntax::Instance();
-		}*/
-		return *syntax;
-	}
+	α AppSchema::Syntax()Ι->const DB::Syntax&{ return DBSchema->DS()->Syntax(); }
 
 	α AppSchema::FindTable( str name )Ι->sp<Table>{
 		let y = Tables.find( name );

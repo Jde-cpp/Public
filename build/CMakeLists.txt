@@ -4,7 +4,7 @@ include( ExternalProject )
 include( ${CMAKE_CURRENT_SOURCE_DIR}/functions.cmake )
 project( libs VERSION ${JDE_VERSION} LANGUAGES CXX )
 if( CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT )
-	message( CMAKE_INSTALL_PREFIXA: ${CMAKE_INSTALL_PREFIX} )
+	message( CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX} )
   set( CMAKE_INSTALL_PREFIX ${LIB_DIR} CACHE PATH <comment> FORCE )
 endif()
 message( CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX} )
@@ -23,10 +23,8 @@ if ( WIN32 )
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od /MDd /D_DEBUG /TP /fsanitize=address")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
 else()
-	set( stdArgs ${stdArgs}
-	-DCMAKE_POSITION_INDEPENDENT_CODE=ON
-	-DCMAKE_SHARED_LINKER_FLAGS="-Wl,-rpath=$ORIGIN"
-	)
+	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath=$ORIGIN" )
+	set( stdArgs ${stdArgs} -DCMAKE_POSITION_INDEPENDENT_CODE=ON )
 endif()
 
 ExternalProject_Add(gtest
@@ -34,12 +32,12 @@ ExternalProject_Add(gtest
 	GIT_TAG v1.17.0
 	PREFIX gtest
 	INSTALL_DIR ${LIB_DIR}/gtest/${CMAKE_BUILD_TYPE}
-#	CMAKE_INSTALL_LIBDIR ${LIB_DIR}/gtest/${CMAKE_BUILD_TYPE}
-#	CMAKE_INSTALL_BINDIR ${LIB_DIR}/gtest/${CMAKE_BUILD_TYPE}
 	LOG_CONFIGURE ON
   LOG_BUILD ON
+	CMAKE_C_COMPILER_WORKS ON
 	CMAKE_ARGS ${stdArgs}
-		-Dgtest_force_shared_crt=ON
+#		-Dgtest_force_shared_crt=ON
+		-DCMAKE_C_COMPILER_WORKS=ON
 		-DBUILD_GMOCK=OFF
 )
 
@@ -108,13 +106,13 @@ IF( WIN32 )
 	)
 	else()
 		#need to add set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG" ) to mysql-concpp/src/mysql-connector-cpp/CMakeLists.txt
-		ExternalProject_Add(mysql-connector-cpp
-			GIT_REPOSITORY https://github.com/mysql/mysql-connector-cpp.git
-			GIT_TAG 9.2.0
-			PREFIX mysql-concpp
-			INSTALL_DIR ${LIB_DIR}/mysql-concpp
-			CMAKE_ARGS ${stdArgs}
-		)
+		#ExternalProject_Add(mysql-connector-cpp
+		#	GIT_REPOSITORY https://github.com/mysql/mysql-connector-cpp.git
+		#	GIT_TAG 9.2.0
+		#	PREFIX mysql-concpp
+		#	INSTALL_DIR ${LIB_DIR}/mysql-concpp
+		#	CMAKE_ARGS ${stdArgs}
+		#)
 		ExternalProject_Add(jsonnet
 			GIT_REPOSITORY https://github.com/google/jsonnet.git
 			GIT_TAG v0.21.0

@@ -2,6 +2,8 @@
 #include "usings.h"
 #include <jde/framework/coroutine/Await.h>
 #include <jde/app/shared/usings.h>
+#include <jde/web/client/exports.h>
+#include <jde/app/shared/proto/Web.FromServer.pb.h>
 
 namespace Jde::Web::Server{
 	struct IApplicationServer{

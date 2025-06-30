@@ -1,5 +1,6 @@
 #include "CatalogDdl.h"
 #include <jde/db/IDataSource.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/meta/Catalog.h>
 #include <jde/db/meta/AppSchema.h>
@@ -9,7 +10,7 @@
 
 namespace Jde::DB{
 	α CatalogDdl::Create( IDataSource& ds, sv catalog )ε->void{
-		ds.Execute( Ƒ("create database {}", catalog) );
+		ds.ExecuteSync( {Ƒ("create database {}", catalog)} );
 	}
 
 #ifndef PROD
@@ -20,7 +21,7 @@ namespace CatalogDdl{
 			: ds;
 	}
 	α DropCatalog( IDataSource& ds, sv catalog )ε->void{
-		ds.Execute( Ƒ("DROP DATABASE IF EXISTS {}", catalog) );
+		ds.ExecuteSync( {Ƒ("DROP DATABASE IF EXISTS {}", catalog)} );
 	}
 
 	α NonProd::Drop( const AppSchema& schema )ε->void{

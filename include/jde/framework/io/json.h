@@ -30,22 +30,26 @@ namespace Jde{
 		Ξ AsBool( const jobject& o, sv path, SRCE )ε->bool{ return AsBool( AsValue(o,path,sl), sl ); }
 		Ŧ AsNumber( const jvalue& v, SRCE )ε->T;
 		Ŧ AsNumber( const jobject& o, sv path, SRCE )ε->T{ return AsNumber<T>( AsValue(o,path,sl), sl ); }
+		Ŧ AsPath( const jobject& o, sv path, SRCE )ε->T;
 		Ξ AsSV( const jvalue& v, sv /*path*/, SRCE )ε->sv{ return $(string); }
 		Ξ AsSV( const jvalue& v, SRCE )ε->sv{ return $(string); }
 		Φ AsSV( const jobject& o, sv key, SRCE )ε->sv;
 		Φ AsSVPath( const jobject& o, sv path, SRCE )ε->sv;
 		Ξ AsString( const jvalue& v, SRCE )ε->string{ return string{ $(string) }; }
 		Ξ AsString( const jobject& o, sv key, SRCE )ε->string{ return string{AsSV(o,key,sl)}; }
-		Φ AsObject( const jvalue& v, SRCE )ε->const jobject&;
+		Φ AsObject( jvalue& v, SRCE )ε->jobject&;
+		Ξ AsObject( const jvalue& v, SRCE )ε->const jobject&{ return AsObject(const_cast<jvalue&>(v), sl); }
 		Φ AsObject( const jvalue& v, sv path, SRCE )ε->const jobject&;
-		Φ AsObject( const jobject& o, sv key, SRCE )ε->const jobject&;
+		Φ AsObject( jobject& o, sv key, SRCE )ε->jobject&;
+		Ξ AsObject( const jobject& o, sv key, SRCE )ε->const jobject&{ return AsObject(const_cast<jobject&>(o), key, sl); }
 		α AsObjectPath( const jobject& o, sv path, SRCE )ε->const jobject&;
 		Φ AsTimePointOpt( const jobject& o, sv key )ι->optional<TimePoint>;
 
 #undef $
 		Ξ FindValue( const jvalue& v, sv path )ι->optional<jvalue>{ auto y = v.try_at_pointer(path); return y.has_value() ? *y : optional<jvalue>{}; }
 		Ξ FindValuePtr( const jvalue& v, sv path )ι->const jvalue*{ auto y = v.try_at_pointer(path); return y.has_value() ? &*y : nullptr; }
-		Φ FindValue( const jobject& o, sv path )ι->const jvalue*;
+		Φ FindValue( jobject& o, sv path )ι->jvalue*;
+		Ξ FindValue( const jobject& o, sv path )ι->const jvalue*{ jvalue* v = FindValue(const_cast<jobject&>(o), path); return v; }
 		α FindArray( const jvalue& v, sv path )ι->const jarray*;
 		Φ FindArray( const jobject& o, sv key )ι->const jarray*;
 		Ξ FindBool( const jvalue& v, sv path )ι->optional<bool>{ auto p = FindValue(v,path); return p && p->is_bool() ? p->get_bool() : optional<bool>{}; }
@@ -75,6 +79,7 @@ namespace Jde{
 		Ŧ FindNumber( const jobject& o, sv key )ι->optional<T>;
 		Ŧ FindKey( const jobject& o, sv key="id" )ι->optional<T>;
 		Ξ FindObject( const jobject& o, sv key )ι->const jobject*{ auto p = o.if_contains(key); return p ? p->if_object() : nullptr; }
+		Ξ FindObject( jobject& o, sv key )ι->jobject*{ auto p = o.if_contains(key); return p ? p->if_object() : nullptr; }
 		Φ FindString( const jobject& o, sv key )ι->optional<string>;
 		Φ FindTimePoint( const jobject& o, sv key )ι->optional<TimePoint>;
 
@@ -86,12 +91,15 @@ namespace Jde{
 		Φ ParseValue( string&& json, SRCE )ε->jvalue;
 		Ŧ FromArray( const jarray& a, SRCE )ε->vector<T>;
 		Ŧ ToVector( const jvalue& a, SRCE )ε->vector<T>;
-
 	}
 
 	Ŧ Json::AsNumber( const jvalue& v, SL sl )ε->T{
 		boost::system::result<T> y = v.try_to_number<T>();
 		return Eval( y, Ƒ("'{}', Could not convert to number.", serialize(v)), sl );
+	}
+
+	Ŧ Json::AsPath( const jobject& o, sv path, SL sl )ε->T{
+		return AsNumber<T>( o, path, sl );
 	}
 
 	Ŧ Json::FindNumber( const jvalue& v, sv path )ι->optional<T>{

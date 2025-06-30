@@ -3,6 +3,7 @@
 #include <jde/db/meta/Cluster.h>
 #include <jde/db/meta/DBSchema.h>
 #include <jde/db/IDataSource.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/Syntax.h>
 
 #define let const auto

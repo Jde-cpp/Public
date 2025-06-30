@@ -1,30 +1,64 @@
 #pragma once
-#include "RowAwait.h"
-#include "../IRow.h"
+#include "../Row.h"
+#include "SelectAwait.h"
+#include <jde/db/generators/InsertClause.h>
 #include <jde/db/generators/Statement.h>
 
 #define let const auto
 
 namespace Jde::DB{
-	template<class T>
-	struct ScalerAwait : TAwaitEx<T,RowAwait::Task>{
-		using base=TAwaitEx<T,RowAwait::Task>;
-		ScalerAwait( sp<const IDataSource> ds, Sql&& s, SL sl )ι:ScalerAwait{ move(ds), move(s), false, sl }{}
-		ScalerAwait( sp<const IDataSource> ds, Sql&& s, bool storedProc, SL sl )ι: base{ sl }, _ds{ move(ds) }, _sql{ move(s) }, _storedProc{storedProc}{}
-		α Execute()ι->RowAwait::Task override;
+	ΓDB α ScalerAwaitExecute( IDataSource& _ds, variant<Sql,InsertClause>&& _sql, function<void(optional<Row>)> onRow, function<void(IException&&)> onError, SL sl )ι->QueryAwait::Task;
+
+	Τ struct ScalerAwaitOpt : TAwaitEx<optional<T>,void>{
+		using base=TAwaitEx<optional<T>,void>;
+		ScalerAwaitOpt( sp<IDataSource> ds, variant<Sql,InsertClause>&& s, SL sl )ι: base{ sl }, _ds{ move(ds) }, _sql{ move(s) }{}
+//		ScalerAwaitOpt( sp<IDataSource> ds, InsertClause&& s, SL sl )ι: base{ sl }, _ds{ move(ds) }, _sql{ move(s) }{}
+		α Execute()ι->void override;
+		α OnRow( optional<Row> result )ι->void;
+		α OnError( IException&& e )ι->void;
 	private:
-		sp<const IDataSource> _ds;
-		Sql _sql;
-		bool _storedProc;
+		sp<IDataSource> _ds;
+		variant<Sql,InsertClause> _sql;
 	};
-	Ŧ ScalerAwait<T>::Execute()ι->RowAwait::Task{
+
+	Τ struct ScalerAwait : TAwait<T>{
+		using base = TAwait<T>;
+		ScalerAwait( sp<IDataSource> ds, Sql&& s, SL sl )ι:base{sl}, _ds{ds}, _sql{move(s)}{}
+		ScalerAwait( sp<IDataSource> ds, InsertClause&& s, SL sl )ι:base{sl}, _ds{ds}, _sql{move(s)}{}
+		α Suspend()ι->void override{ Execute(); }
+		α Execute()ι->ScalerAwaitOpt<T>::Task{
+			try{
+				auto opt = co_await ScalerAwaitOpt<T>{ move(_ds), move(_sql), base::_sl };
+				if( opt )
+					base::Resume( move(*opt) );
+				else
+					base::ResumeExp( Exception{"No value returned", ELogLevel::Error, base::_sl} );
+			}
+			catch( IException& e ){
+				base::ResumeExp( move(e) );
+			}
+		}
+	private:
+		sp<IDataSource> _ds;
+		variant<Sql,InsertClause> _sql;
+	};
+
+
+	Ŧ ScalerAwaitOpt<T>::Execute()ι->void{
+		ScalerAwaitExecute( *_ds, move(_sql),
+		[this](optional<Row> r){OnRow(move(r));},
+		[this](IException&& e){OnError(move(e));},
+		base::_sl );
+	}
+	Ŧ ScalerAwaitOpt<T>::OnRow( optional<Row> r )ι->void{
 		try{
-			let rows = co_await RowAwait{ _ds, move(_sql), _storedProc, base::_sl };
-			THROW_IF( rows.empty(), "no results." );
-			base::ResumeScaler( rows[0]->template Get<T>(0) );
+			base::ResumeScaler( r ? r->template Get<T>(0) : optional<T>{} );
 		}
 		catch( IException& e ){
 			base::ResumeExp( move(e) );
 		}
+	}
+	Ŧ ScalerAwaitOpt<T>::OnError( IException&& e )ι->void{
+		base::ResumeExp( move(e) );
 	}
 }

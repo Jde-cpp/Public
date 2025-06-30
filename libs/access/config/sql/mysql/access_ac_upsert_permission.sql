@@ -1,10 +1,8 @@
 drop procedure if exists access_ac_upsert_permission;
 go
 
-#DELIMITER $$
-create procedure access_ac_upsert_permission( _identityId int unsigned, _allowed tinyint unsigned, _denied tinyint unsigned, _resourceId int unsigned )
+create procedure access_ac_upsert_permission( _identityId int unsigned, _allowed tinyint unsigned, _denied tinyint unsigned, _resourceId int unsigned, out _permission_id int unsigned )
 begin
-	declare _permission_id int unsigned;
 	set _permission_id = (
 		select max(permission_id)
 		from access_acl
@@ -22,7 +20,4 @@ begin
 	else
 		update access_permission_rights set allowed=_allowed, denied=_denied where permission_id=_permission_id;
 	end if;
-	select _permission_id;
 end
-#$$
-#DELIMITER ;

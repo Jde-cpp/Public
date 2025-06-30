@@ -1,15 +1,13 @@
 ﻿#include <jde/db/DBQueue.h>
 #include <jde/db/IDataSource.h>
-#include <jde/db/Database.h>
+#include <jde/db/generators/Functions.h>
 #include "../../../../Framework/source/threading/InterruptibleThread.h"
 
 #define let const auto
 namespace Jde::DB{
-	QStatement::QStatement( string sql, sp<vector<Value>> parameters, bool isStoredProc, SL sl ):
-		Sql{ move(sql) },
-		Parameters{ parameters },
-		IsStoredProc{isStoredProc},
-		SourceLocation{ sl }
+	QStatement::QStatement( Sql&& sql, SL sl ):
+		_sql{ move(sql) },
+		_sl{ sl }
 	{}
 
 	DBQueue::DBQueue( sp<IDataSource> spDataSource )ι:
@@ -25,41 +23,26 @@ namespace Jde::DB{
 		//_queue.Push( sp<QStatement>{} );
 	}
 
-	void DBQueue::Push( string sql, sp<vector<Value>> parameters, bool isStoredProc, SL sl )ι{
+	void DBQueue::Push( Sql&& sql, SL sl )ι{
 		if( _stopped )
 			return;
-		// if( !_stopped )
-		// 	_queue.Push( ms<QStatement>(sql, parameters, isStoredProc) );
-		// else
-		// 	TRACE("pushing '{}' when stopped", sql);
-		auto pStatement = ms<QStatement>( move(sql), parameters, isStoredProc, sl );
-		try
-		{
-			if( pStatement->IsStoredProc )
-				_spDataSource->ExecuteProcNoLog( move(pStatement->Sql), *pStatement->Parameters, sl );
-			else
-				_spDataSource->ExecuteNoLog( move(pStatement->Sql), pStatement->Parameters.get(), nullptr, false, sl );
+		try{
+			_spDataSource->ExecuteNoLog( move(sql), sl );
 		}
-		catch( const IException& )
-		{
-			//DB::LogNoServer( move(pStatement->Sql), parameters.get(), ELogLevel::Error, e.what(), sl );
+		catch( const IException& e ){
+			e.SetLevel( ELogLevel::NoLog );
 		}
 	}
 
 	void DBQueue::Run()ι
 	{
 	//	Threading::SetThreadDescription( "DBQueue" );
-		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.Empty() )
-		{
-			let pStatement = _queue.WaitAndPop( 1s );
-			if( !pStatement )
+		while( !Threading::GetThreadInterruptFlag().IsSet() || !_queue.Empty() ){
+			let statement = _queue.WaitAndPop( 1s );
+			if( !statement )
 				continue;
-			try
-			{
-				if( pStatement->IsStoredProc )
-					_spDataSource->ExecuteProcNoLog( pStatement->Sql, *pStatement->Parameters );
-				else
-					_spDataSource->ExecuteNoLog( pStatement->Sql, pStatement->Parameters.get() );
+			try{
+				_spDataSource->ExecuteNoLog( move(statement->_sql), statement->_sl );
 			}
 			catch( const IException& ){
 				//DB::LogNoServer( pStatement->Sql, pStatement->Parameters.get(), ELogLevel::Error, e.what(), pStatement->SourceLocation );

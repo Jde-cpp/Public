@@ -4,7 +4,7 @@
 #include "Logger.h"
 #include "../async/AsyncRequest.h"
 #include "../async/ConnectAwait.h"
-#include "../types/OpcServer.h"
+#include "../types/OpcClient.h"
 #include "../types/MonitoringNodes.h"
 
 namespace Jde::Opc{
@@ -16,7 +16,7 @@ namespace Jde::Opc{
 	struct Value;
 
 	struct ΓOPC UAClient final : std::enable_shared_from_this<UAClient>{
-		UAClient( OpcServer&& opcServer, str userId, str password )ε;
+		UAClient( OpcClient&& opcServer, str userId, str password )ε;
 		UAClient( str address, str userId, str password )ε;
 		~UAClient();
 
@@ -60,7 +60,7 @@ namespace Jde::Opc{
 		α Configuration()ε->UA_ClientConfig*;
 		α Create()ι->UA_Client*;
 		α Connect()ε->void;
-		OpcServer _opcServer;
+		OpcClient _opcServer;
 
 		concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
 		concurrent_flat_map<Jde::Handle, UARequestMulti<UA_WriteResponse>> _writeRequests;
