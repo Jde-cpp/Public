@@ -1,5 +1,5 @@
 ﻿#include <jde/ql/ql.h>
-#include "../../../Framework/source/DateTime.h"
+#include <jde/framework/chrono.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/FromClause.h>

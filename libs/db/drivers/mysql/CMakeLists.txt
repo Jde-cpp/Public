@@ -38,6 +38,6 @@ target_precompile_headers( ${targetName}
 	<jde/framework.h>
 	<jde/framework/str.h>
 	<jde/framework/io/json.h>
-	../../../../../Framework/source/DateTime.h
+	<jde/framework/chrono.h>
 	usings.h
 )

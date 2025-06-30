@@ -19,7 +19,7 @@ namespace Jde::Opc::Server{
 		UA_ObjectAttributes{}
 	{}
 	Object::Object( NodePK pk, UA_NodeId&& n )ι:
-		Node{ move(n) },
+		Node{ move(n), pk },
 		UA_ObjectAttributes{}
 	{}
 

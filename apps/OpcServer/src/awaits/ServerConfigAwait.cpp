@@ -17,7 +17,7 @@ namespace Jde::Opc::Server{
 		constexpr std::array<UA_UInt16,2> _objectTypePKs{ UA_NS0ID_BASEOBJECTTYPE, UA_NS0ID_FOLDERTYPE };
 		constexpr std::array<UA_UInt16,2> _variableTypePKs{ UA_NS0ID_BASEDATAVARIABLETYPE, UA_NS0ID_BASEVARIABLETYPE };
 
-	α ServerConfigAwait::ServerWhereClause( const DB::View& snTable, string alias, bool includeDeleted, SL sl )ε->DB::WhereClause{
+	α ServerConfigAwait::ServerWhereClause( const DB::View& snTable, string alias, SL sl )ε->DB::WhereClause{
 		DB::Value serverId{ServerId()};
 		DB::WhereClause where{ DB::Coalesce{DB::AliasCol{alias, snTable.GetColumnPtr("server_id", sl)}, serverId}, DB::EOperator::Equal, serverId };
 		// if( !includeDeleted )
@@ -111,12 +111,12 @@ namespace Jde::Opc::Server{
 	}
 
 	α ServerConfigAwait::SaveSystem()ι->TAwait<NodePK>::Task{
-		let& table = GetView( "node_ids" );
-		auto insertNodeIdClause = [&table]( const NodeId& nodeId )->DB::InsertClause {
+		let table = GetViewPtr( "node_ids" );
+		auto insertNodeIdClause = [table]( const NodeId& nodeId )->DB::InsertClause {
 			auto params = nodeId.InsertParams( true );
 			params.emplace_back( DB::Value{} );//isGlobal
 			return DB::InsertClause{
-				table.InsertProcName(),
+				table->InsertProcName(),
 				move(params)
 			};
 		};
@@ -148,7 +148,7 @@ namespace Jde::Opc::Server{
 					continue;
 				NodeId node{pk};
 				let nodePK = co_await DS().InsertSeq<NodePK>( insertNodeIdClause(node) );
-				ua._variables.try_emplace( pk, node.nodeId );
+				ua._variables.try_emplace( nodePK, node.nodeId );
 			}
 			Set();
 		}
