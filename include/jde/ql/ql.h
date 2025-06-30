@@ -1,5 +1,6 @@
 #pragma once
 #include <jde/framework/coroutine/Await.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/Statement.h>
 #include "types/MutationQL.h"
 #include "types/RequestQL.h"

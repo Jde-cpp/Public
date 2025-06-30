@@ -1,27 +1,28 @@
 #include <jde/db/meta/View.h>
+#include <jde/db/IDataSource.h>
+#include <jde/db/names.h>
+#include <jde/db/generators/Functions.h>
+#include <jde/db/generators/Syntax.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/DBSchema.h>
 #include <jde/db/meta/Table.h>
-#include <jde/db/IDataSource.h>
-#include <jde/db/generators/Syntax.h>
-#include <jde/db/names.h>
 #include <jde/access/IAcl.h>
 
 #define let const auto
 
 namespace Jde::DB{
 	α toColumns( const jobject& j )ε->vector<sp<Column>>{
-		flat_map<uint8,sp<Column>> ordered;
+		flat_map<uint16,sp<Column>> ordered;
 		if( auto kv = j.find("columns"); kv!=j.end() ){
-			uint8 defaultIndex = 128;
+			uint16 defaultIndex = 128;
 			for( let& nameCol : Json::AsObject(kv->value()) ){
 				let name{ nameCol.key() };
 				let& column{ Json::AsObject(nameCol.value()) };
-				auto i = Json::FindNumber<uint8>( column, "i" ).value_or( defaultIndex++ );
-				if( ordered.find(i)!=ordered.end() )
+				auto i = Json::FindNumber<uint16>( column, "i" ).value_or( defaultIndex++ );
+				while( ordered.find(i)!=ordered.end() )
 					i = defaultIndex++;
-				ordered.emplace( Json::FindNumber<uint8>(column, "i").value_or(defaultIndex++), ms<Column>(Names::FromJson(name), column) );
+				ordered.emplace( i, ms<Column>(Names::FromJson(name), column) );
 			}
 		}
 		vector<sp<Column>> columns;

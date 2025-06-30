@@ -34,6 +34,8 @@ namespace Jde::DB{
 				defaultClause = Ƒ( " default {}", dflt->get_bool() ? 1 : 0 );
 			else if( string s = dflt->is_string() ? dflt->get_string() : string{}; s.size() )
 				defaultClause = Ƒ( " default {}", s=="$now" ? ToStr(syntax.NowDefault()) : Ƒ("'{}'", s) );
+			else if( dflt->is_number() )
+				defaultClause = Ƒ( " default {}", dflt->get_number<int>() );
 			else if( config.Type!=EType::VarBinary )
 				THROW( "({})Default type not implemented.", dflt->TypeName() );
 		}

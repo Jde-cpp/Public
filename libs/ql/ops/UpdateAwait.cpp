@@ -1,14 +1,15 @@
 #include "UpdateAwait.h"
 #include <jde/ql/QLHook.h>
 #include <jde/db/IDataSource.h>
-#include <jde/db/meta/AppSchema.h>
 #include <jde/db/names.h>
+#include <jde/db/generators/Functions.h>
+#include <jde/db/generators/UpdateClause.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/access/IAcl.h>
 #include <jde/ql/LocalSubscriptions.h>
 #include "../types/QLColumn.h"
-#include <jde/db/generators/UpdateClause.h>
 
 #define let const auto
 
@@ -118,7 +119,7 @@ namespace Jde::QL{
 		try{
 			uint rowCount{};
 			for( auto& update : _updates )
-				rowCount += co_await _table->Schema->DS()->ExecuteAsync( update.Move() );
+				rowCount += co_await _table->Schema->DS()->Execute( update.Move() );
 			UpdateAfter( rowCount );
 		}
 		catch( IException& e ){

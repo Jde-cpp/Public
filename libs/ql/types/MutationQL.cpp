@@ -1,12 +1,12 @@
 #include <jde/ql/types/MutationQL.h>
 #include <jde/db/names.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/DBSchema.h>
 #include "Parser.h"
 
 #define let const auto
 
 namespace Jde::QL{
-
 	Ω parseCommandName( sv commandName )ε->tuple<string,EMutationQL>{
 		uint iType=0;
 		for( ;iType<MutationQLStrings.size() && !commandName.starts_with(MutationQLStrings[iType]); ++iType );
@@ -36,12 +36,12 @@ namespace Jde::QL{
 		return Ƒ( "{}({}){}", CommandName, serialize(Args), ResultRequest ? ResultRequest->ToString() : "" );
 	}
 
-	α MutationQL::FindParam( sv name )Ι->const jvalue*{
+	α MutationQL::FindParam( sv name )ι->jvalue*{
 		return Json::FindValue( Args, name );
 	}
-	α MutationQL::GetParam( sv name, SL sl )Ε->const jvalue&{
+	α MutationQL::GetParam( sv name, SL sl )ε->jvalue&{
 		auto p = FindParam( name );
-		THROW_IFSL( !p, "Could not find param '{}'", name );
+		THROW_IFSL( !p, "Could not find param '{}' in '{}'", name, serialize(Args) );
 		return *p;
 	}
 

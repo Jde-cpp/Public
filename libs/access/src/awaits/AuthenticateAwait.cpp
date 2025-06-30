@@ -1,6 +1,7 @@
 #include <jde/access/awaits/AuthenticateAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/Value.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/meta/AppSchema.h>
 #include "../accessInternal.h"
@@ -9,7 +10,7 @@
 namespace Jde::Access{
 	α AuthenticateAwait::InsertUser( str prefix, vector<DB::Value>&& params )->TAwait<UserPK::Type>::Task{
 		try{
-			let userPK = co_await DS()->ScalerAsync<UserPK::Type>( DB::InsertClause{Ƒ("{}user_insert_login", prefix), move(params)}.Move() );
+			let userPK = co_await DS()->InsertSeq<UserPK::Type>( DB::InsertClause{Ƒ("{}user_insert_login", prefix), move(params)} );
 			ResumeScaler( {userPK} );
 		}
 		catch( IException& e ){
@@ -38,7 +39,7 @@ namespace Jde::Access{
 		auto sql = DB::Statement{ move(select), move(from), move(where) }.Move();
 		try{
 			auto params = sql.Params;
-			let userPK = co_await DS()->ScalerAsyncOpt<UserPK::Type>( move(sql) );
+			let userPK = co_await DS()->ScalerOpt<UserPK::Type>( move(sql) );
 			if( !userPK ){
 				if( _opcServer.empty() )
 					params.emplace_back( nullptr );

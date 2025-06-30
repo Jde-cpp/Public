@@ -5,18 +5,17 @@
 #include "awaits/MapAwait.h"
 #include "awaits/DBAwait.h"
 #include "awaits/ExecuteAwait.h"
+#include "awaits/OutAwait.h"
 #include "awaits/QueryAwait.h"
 #include "awaits/ScalerAwait.h"
 #include "awaits/SelectAwait.h"
 #include "meta/Column.h"
 #include "meta/View.h"
-#include "IRow.h"
-#include "generators/Sql.h"
-
+#include "Row.h"
+#include "generators/InsertClause.h"
 
 namespace Jde::DB{
 	struct IServerMeta; struct Sql; struct Syntax;
-	namespace Types{ struct IRow; }
 
 	struct ΓDB IDataSource : std::enable_shared_from_this<IDataSource>{
 		virtual ~IDataSource(){}//warning
@@ -29,10 +28,10 @@ namespace Jde::DB{
 		β AtSchema( sv schema, SRCE )ε->sp<IDataSource> = 0; //create new pointing to other schema.  If can specify schema in connection.
 		β ServerMeta()ι->IServerMeta& =0;
 
-		Ŧ Scaler( Sql&& sql, SRCE )ε->optional<T>;
-		Ŧ ScalerAsync( Sql&& sql, SRCE )ι{ return ScalerAwait<T>{ shared_from_this(), move(sql), sl }; }
-		Ŧ ScalerAsyncOpt( Sql&& sql, SRCE )ι{ return ScalerAwaitOpt<T>{ shared_from_this(), move(sql), sl }; }
-		Ŧ TryScaler( Sql&& sql, SRCE )ι->optional<T>;
+		Ŧ ScalerSync( Sql&& sql, SRCE )ε->T;
+		Ŧ ScalerSyncOpt( Sql&& sql, SRCE )ε->optional<T>;
+		Ŧ Scaler( Sql&& sql, SRCE )ι{ return ScalerAwait<T>{ shared_from_this(), move(sql), sl }; }
+		Ŧ ScalerOpt( Sql&& sql, SRCE )ι{ return ScalerAwaitOpt<T>{ shared_from_this(), move(sql), sl }; }
 
 		β Select( Sql&& s, SRCE )ε->vector<Row> =0;
 		β Select( Sql&& s, RowΛ f, SRCE )ε->uint =0;
@@ -42,6 +41,7 @@ namespace Jde::DB{
 		ẗ SelectEnumSync( const View& table, SRCE )ε->flat_map<K,V>{
 			return BlockAwait<CacheAwait<flat_map<K,V>>,flat_map<K,V>>( SelectEnum<K,V>( table, sl) );
 		}
+		α TrySelect( Sql&& s, RowΛ f, SRCE )ι->bool;
 
 		ẗ SelectMap( Sql&& sql, string cacheName, SRCE )ι->CacheAwait<flat_map<K,V>>;
 		ẗ SelectMap( Sql&& sql, SRCE )ι->MapAwait<K,V>{ return MapAwait<K,V>{shared_from_this(), move(sql), sl}; }
@@ -49,42 +49,40 @@ namespace Jde::DB{
 		Ŧ SelectSet( Sql&& sql, SRCE )ι->TSelectAwait<flat_set<T>>{ return SelectSet<T>( move(sql.Text), move(sql.Params), sl ); }
 		Ŧ SelectSet( Sql&& sql, string cacheName, SRCE )ι->CacheAwait<flat_set<T>>;
 
-		α TryExecute( Sql&& sql, SRCE )ι->optional<uint>;
+		α TryExecuteSync( Sql&& sql, SRCE )ι->optional<uint>;
 
-		β Execute( Sql&& sql, bool prepare=false, SRCE )ε->uint=0;
+		[[nodiscard]] α Execute( Sql&& sql, SRCE )ε->ExecuteAwait{ return ExecuteAwait{shared_from_this(), move(sql), sl}; }
+		Ŧ ExecuteScaler( Sql&& sql, EValue outValue, SRCE )ε->OutAwait<T>{ return OutAwait<T>{shared_from_this(), move(sql), outValue, sl}; }
+		β ExecuteSync( Sql&& sql, SRCE )ε->uint=0;
+		β ExecuteScalerSync( Sql&& sql, EValue outValue, SRCE )ε->DB::Value=0;
+		Ŧ InsertSeq( DB::InsertClause&& sql, SRCE )ι{ return ScalerAwait<T>{ shared_from_this(), move(sql), sl }; }
+		Ŧ InsertSeqSync( DB::InsertClause&& insert, SRCE )ε->T{ return static_cast<T>( InsertSeqSyncUInt(move(insert), sl) ); }
 		β ExecuteNoLog( Sql&& sql, SRCE )ε->uint=0;
-		α ExecuteAsync( Sql&& sql, SRCE )ε->ExecuteAwait{ return ExecuteAwait{shared_from_this(), move(sql), sl}; }
-		β Query( Sql&& sql, SRCE )ε->QueryAwait =0;
-
-		α TrySelect( Sql&& s, RowΛ f, SRCE )ι->bool;
-
-		//β SetConnectionString( string x )ι->void{ _connectionString = move(x); _schema.clear(); _catalog.reset(); }
+		β Query( Sql&& sql, bool outParams=false, SRCE )ε->QueryAwait=0;
 		β Syntax()ι->const Syntax& = 0;
 
 	protected:
+		β InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint=0;
 		optional<string> _catalog; //db catalog name ie jde
 		string _schema;  //db schema name ie dbo
 	private:
 		friend struct ISelect;
 	};
 #define let const auto
-	Ŧ IDataSource::TryScaler( Sql&& sql, SL sl )ι->optional<T>{
-		try{
-			return Scaler<T>( move(sql), sl );
-		}
-		catch( IException& ){
-			return nullopt;
-		}
+	Ŧ IDataSource::ScalerSyncOpt( Sql&& sql, SL sl )ε->optional<T>{
+		optional<T> y;
+		Select( move(sql), [&y](Row&& row){ y = row.GetOpt<T>(0); }, sl );
+		return y;
 	}
-	Ŧ IDataSource::Scaler( Sql&& sql, SL sl )ε->optional<T>{
-		optional<T> result;
-		Select( move(sql), [&result](const IRow& row){ result = row.Get<T>(0); }, sl );
-		return result;
+	Ŧ IDataSource::ScalerSync( Sql&& sql, SL sl )ε->T{
+		auto y = ScalerSyncOpt<T>( move(sql), sl );
+		THROW_IFSL( !y, "No value returned from scaler query." );
+		return *y;
 	}
 
 	namespace zInternal{
 		ẗ ProcessMapRow( flat_map<K,V>& y, Row&& row )ε{ y.emplace( row.Get<K>(0), row.Get<V>(1) ); }
-		Ŧ ProcessSetRow( flat_set<T>& y, const IRow& row )ε{ y.emplace( row.Get<T>(0) ); }
+		Ŧ ProcessSetRow( flat_set<T>& y, Row&& row )ε{ y.emplace( row.Get<T>(0) ); }
 	}
 
 	ẗ IDataSource::SelectMap( Sql&& sql, string cacheName, SL sl )ι->CacheAwait<flat_map<K,V>>{

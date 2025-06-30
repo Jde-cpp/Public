@@ -4,7 +4,7 @@
 #include <jde/ql/usings.h>
 
 #define Φ ΓAS α
-namespace Jde::DB{ struct IRow; }
+namespace Jde::DB{ struct Row; }
 namespace Jde::QL{ struct ColumnQL; }
 namespace Jde::App::FromServer{
 	Φ Ack( uint32 serverSocketId )ι->Proto::FromServer::Transmission;
@@ -19,7 +19,7 @@ namespace Jde::App::FromServer{
 	Φ SubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->Proto::FromServer::Transmission;
 	Φ Subscription( string&& s, RequestId requestId )ι->Proto::FromServer::Transmission;
 	Φ ToStatus( AppPK appId, AppInstancePK instanceId, str hostName, Proto::FromClient::Status&& input )ι->Proto::FromServer::Status;
-	Φ ToTrace( const DB::IRow& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace;
+	Φ ToTrace( DB::Row&& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace;
 	Φ TraceBroadcast( LogPK id, AppPK appId, AppInstancePK instanceId, const Logging::ExternalMessage& m, const vector<string>& args )ι->Proto::FromServer::Transmission;
 }
 #undef Φ

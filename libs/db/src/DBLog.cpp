@@ -5,26 +5,14 @@
 #define let const auto
 namespace Jde{
 	α DB::LogDisplay( const Sql& sql, string error )ι->string{
-		std::ostringstream os;
-		if( error.size() )
-			os << move(error) << std::endl;
-		uint prevIndex=0;
-		auto& params = sql.Params;
-		for( uint sqlIndex=0, paramIndex=0; (sqlIndex=sql.Text.find_first_of('?', prevIndex))!=string::npos && paramIndex<params.size(); ++paramIndex, prevIndex=sqlIndex+1 ){
-			os << sql.Text.substr( prevIndex, sqlIndex-prevIndex );
-			let& o = params[paramIndex];
-			if( o.is_string() )
-				os << "'";
-			os << o.ToString();
-			if( o.is_string() )
-				os << "'";
-		}
-		if( prevIndex<sql.Text.size() )
-			os << sql.Text.substr( prevIndex );
-		return os.str();
+		string result = move( error );
+		if( result.size() )
+			result += "\n";
+		result += sql.EmbedParams();
+		return result;
 	}
 	α DB::Log( const Sql& sql, SL sl )ι->void{
-		Trace{ sl, ELogTags::Sql, "{}", LogDisplay(sql, {}) };
+		Trace{ sl, ELogTags::Sql, "{}", sql.EmbedParams() };
 	}
 	α DB::Log( const Sql& sql, ELogLevel level, string error, SL sl )ι->void{
 		Log( level, ELogTags::Sql, sl, "{}", LogDisplay(sql, move(error)) );

@@ -1,5 +1,6 @@
 #include "InsertAwait.h"
 #include <jde/db/IDataSource.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/Table.h>
@@ -82,6 +83,8 @@ namespace Jde::QL{
 			statement.Add( c, value.Variant );
 		}
 		if( (cNonDefaultArgs || missingColumns.size()) && cNonDefaultArgs!=missingColumns.size() ){//don't want to insert just identity_id in users table.
+			if( /*table.SequenceColumn() &&*/ !_identityInsert ) //role does not have a seq column, but has a return param.
+				statement.Add( table.SequenceColumn(), (uint)0ul );
 			_statements.emplace_back( cNonDefaultArgs>0 ? move(statement) : DB::InsertClause{} );
 			_missingColumns.emplace_back( move(missingColumns) );
 		}
@@ -120,14 +123,16 @@ namespace Jde::QL{
 					statement.IsStoredProc = false;
 				auto sql = statement.Move();
 				if( statement.IsStoredProc ){
-					let result = co_await ds.Query( move(sql), _sl );
-					for( let& row : result.Rows )
-						id = row.GetInt32( 0 );
+					let result = co_await ds.Query( move(sql), true, _sl );
+					for( let& row : result.Rows ){
+						ASSERT( row.Size() );
+						id = row.Size() ? row.GetInt32( 0 ) : 0;
+					}
 					y.push_back( jobject{ {"id", id}, {"rowCount",result.RowsAffected} } );
 				}else{
 					if( _identityInsert && ds.Syntax().NeedsIdentityInsert() )
 						sql.Text = Ƒ("SET IDENTITY_INSERT {0} ON;{1};SET IDENTITY_INSERT {0} OFF;", _table->DBName, sql.Text );
-					let rowCount = ( co_await ds.Query( move(sql)) ).RowsAffected;
+					let rowCount = ( co_await ds.Query(move(sql), false, _sl) ).RowsAffected;
 					y.push_back( jobject{ {"rowCount",rowCount} } );
 				}
 

@@ -1,5 +1,4 @@
 ﻿#include "OdbcRow.h"
-//#include <jde/framework/Assert.h>
 
 namespace Jde::DB::Odbc{
 	OdbcRow::OdbcRow( const vector<up<Binding>>& bindings )ι:

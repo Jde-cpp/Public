@@ -15,12 +15,13 @@ namespace Jde::DB{
 		Column( sv name )ι;  //placeholder
 		Column( sv name, const jobject& j )ε;
 		virtual ~Column()=default;
+		α Initialize( sp<DB::View> view )ε->void;
+		α operator==( const Column& b )Ι->bool;
 
 		Ω Count()ι->sp<Column>;
 		α FQName()Ι->string;
 		α IsEnum()Ι->bool; //cache=true
 		α IsFlags()Ι->bool;
-		α Initialize( sp<DB::View> view )ε->void;
 		α IsPK()Ι->bool;  //surrogate keys==1 && SKIndex==0
 
 		string Name;
@@ -31,7 +32,6 @@ namespace Jde::DB{
 		optional<uint> NumericPrecision; //currently for db schema columns
 		optional<uint> NumericScale; //currently for db schema columns
 		sp<DB::View> PKTable; //pk table if any.
-		//tuple<ECardinality,ECardinality> PKCardinality;
 
 		bool IsSequence; //uses db sequence.  TODO look to move to ddl.
 		bool Insertable;

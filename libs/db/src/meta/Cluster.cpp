@@ -1,10 +1,11 @@
 #include <jde/db/meta/Cluster.h>
 #include <jde/framework/io/json.h>
-#include <jde/db/meta/Catalog.h>
 #include <jde/framework/io/file.h>
-#include <jde/db/generators/Syntax.h>
 #include <jde/db/db.h>
 #include <jde/db/IDataSource.h>
+#include <jde/db/generators/Functions.h>
+#include <jde/db/generators/Syntax.h>
+#include <jde/db/meta/Catalog.h>
 
 #define let const auto
 
@@ -37,5 +38,4 @@ namespace Jde::DB{
 	}
 
 	α Cluster::Syntax()Ι->const DB::Syntax&{ return DataSource->Syntax(); };
-
 }

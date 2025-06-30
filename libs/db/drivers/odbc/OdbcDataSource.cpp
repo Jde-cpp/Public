@@ -40,25 +40,21 @@ namespace Jde::DB::Odbc{
 		return shared_from_this();
 	}
 
-	α OdbcDataSource::ExecDirect( Sql&& sql, const RowΛ* f, bool /*prepare*/, SL sl, bool log )Ε->uint{
+	α OdbcDataSource::ExecDirect( Sql&& sql, SL sl, Params&& params )Ε->uint{
 		HandleStatement statement{ _connectionString };
 		vector<SQLUSMALLINT> paramStatusArray;
-		vector<up<Binding>> parameters; //keepalive
-		void* pData = nullptr;
-		if( sql.Params.size() ){
-			parameters.reserve( sql.Params.size() );
-			SQLUSMALLINT iParameter = 0;
-			for( let& param : sql.Params ){
-				auto binding = Binding::Create( param );
-				pData = binding->Data();
-				let size = std::max<SQLLEN>(binding->Size(),0); let bufferLength = binding->BufferLength();
-				if( binding->DBType()==SQL_DATETIME )
-					Trace{ _tags, "fractions={}", dynamic_cast<const BindingDateTime*>(binding.get())->_data.fraction };
-				let decimals = binding->DecimalDigits();
-				let result = ::SQLBindParameter( statement, ++iParameter, SQL_PARAM_INPUT, binding->CodeType, binding->DBType(), size, decimals, pData, bufferLength, &binding->Output );
-				THROW_IFX(result < 0, DBException(result, move(sql), HandleDiagnosticRecord("SQLBindParameter", statement, SQL_HANDLE_STMT, result, sl), sl) );
-				parameters.push_back( move(binding) );
-			}
+		vector<up<Binding>> parameters; parameters.reserve( sql.Params.size() ); //keepalive
+		for( let& param : sql.Params ){
+			auto binding = Binding::Create( param );
+			void* pData = binding->Data();
+			let size = std::max<SQLLEN>(binding->Size(),0); let bufferLength = binding->BufferLength();
+			if( binding->DBType()==SQL_DATETIME )
+				Trace{ _tags, "fractions={}", dynamic_cast<const BindingDateTime*>(binding.get())->_data.fraction };
+			let decimals = binding->DecimalDigits();
+			let paramType = params.HasOut() && parameters.size()+1==sql.Params.size() ? SQL_PARAM_OUTPUT : SQL_PARAM_INPUT;
+			let result = ::SQLBindParameter( statement, parameters.size()+1, paramType, binding->CodeType, binding->DBType(), size, decimals, pData, bufferLength, &binding->Output );
+			THROW_IFX( result < 0, DBException(result, move(sql), HandleDiagnosticRecord("SQLBindParameter", statement, SQL_HANDLE_STMT, result, sl), sl) );
+			parameters.push_back( move(binding) );
 		}
 
 		/*if( prepare ){
@@ -68,8 +64,8 @@ namespace Jde::DB::Odbc{
 		}*/
 		if( sql.IsProc )
 			sql.Text = Ƒ( "{{ call {} }}", move(sql.Text) );
-		uint resultCount = 0;
-		if( log )
+		uint resultCount{};
+		if( params.Log )
 			DB::Log( sql, sl );
 		let retCode = ::SQLExecDirect( statement, (SQLCHAR*)sql.Text.data(), static_cast<SQLINTEGER>(sql.Text.size()) );
 		switch( retCode ){
@@ -83,15 +79,19 @@ namespace Jde::DB::Odbc{
 				throw DBException{ retCode, move(sql), e.what(), sl };
 			}
 		case SQL_SUCCESS:{
+			if( params.HasOut() && params.Function )
+				( *params.Function )( Row{{(*parameters.rbegin())->GetValue()}} );
+
 			SQLSMALLINT columnCount{};
-			if( f )
+			if( params.Function )
 				CALL( statement, SQL_HANDLE_STMT, SQLNumResultCols(statement,&columnCount), "SQLNumResultCols" );
 			if( columnCount>0 ){
 				let bindings = AllocateBindings( statement, columnCount );
 				OdbcRow row{ bindings };
 				while( ::SQLFetch(statement)!=SQL_NO_DATA_FOUND ){
 					row.Reset();
-					(*f)( row.ToRow() );
+					(*params.Function)( row.ToRow() );
+					++resultCount;
 				}
 			}
 			else{
@@ -139,11 +139,11 @@ namespace Jde::DB::Odbc{
 		return bindings;
 	}
 
-	α OdbcDataSource::Execute( Sql&& sql, bool prepare, SL sl )ε->uint{
-		return ExecDirect( move(sql), nullptr, prepare, sl, true );
+	α OdbcDataSource::ExecuteSync( Sql&& sql, SL sl )ε->uint{
+		return ExecDirect( move(sql), sl, {} );
 	}
-	α OdbcDataSource::ExecuteNoLog( Sql&& sql, SL sl )ε->uint{ 
-		return ExecDirect( move(sql), nullptr, true, sl, false );
+	α OdbcDataSource::ExecuteNoLog( Sql&& sql, SL sl )ε->uint{
+		return ExecDirect( move(sql), sl, Params{.Log=false} );
 	}
 
 	α OdbcDataSource::ServerMeta()ι->IServerMeta&{
@@ -152,8 +152,11 @@ namespace Jde::DB::Odbc{
 		return *_schemaProc;
 	}
 
-	α OdbcDataSource::Select( Sql&& sql, RowΛ f, SL sl )ε->uint{ 
-		return ExecDirect( move(sql), &f, false, sl ); 
+	α OdbcDataSource::Select( Sql&& sql, RowΛ f, SL sl )ε->uint{
+		return ExecDirect( move(sql), sl, {.Function=&f} );
+	}
+	α OdbcDataSource::Select( Sql&& s, RowΛ f, bool outParams, SL sl )ε->uint{
+		return ExecDirect( move(s), sl, {.Function=&f, .OutValue=outParams ? EValue::UInt64 : EValue::Null} );
 	}
 
 	α OdbcDataSource::Select( Sql&& s, SL sl )ε->vector<Row>{
@@ -161,30 +164,29 @@ namespace Jde::DB::Odbc{
 		function<void( Row&& )> f = [&rows]( Row&& r )ι{
 			rows.push_back( move(r) );
 		};
-		ExecDirect( move(s), &f, false, sl, true );
+		ExecDirect( move(s), sl, {.Function=&f} );
 		return rows;
+	}
+
+	α OdbcDataSource::ExecuteScalerSync( Sql&& sql, EValue outValue, SL sl )ε->Value{
+		Value y;
+		RowΛ f = [&]( Row&& r )->void {
+			THROW_IFSL( r.Size()==0, "Query did not return any {}.", empty(outValue) ? "rows" : "out params" );
+			y = move(r[0]);
+		};
+		ExecDirect( move(sql), sl, {.Function=&f} );
+		return y;
 	}
 
 	α OdbcDataSource::SetConfig( const jobject& config )ε->void{
 		SetConnectionString( Json::AsString( config, "connectionString") );
 	}
-	
-	α OdbcDataSource::Query( Sql&& sql, SL sl )ε->QueryAwait {
-		return QueryAwait{ mu<OdbcQueryAwait>( dynamic_pointer_cast<OdbcDataSource>(shared_from_this()), move(sql), sl) };
+
+	α OdbcDataSource::Query( Sql&& sql, bool outParams, SL sl )ε->QueryAwait {
+		return QueryAwait{ mu<OdbcQueryAwait>( dynamic_pointer_cast<OdbcDataSource>(shared_from_this()), move(sql), outParams, sl) };
 	}
-	/*
-	α OdbcDataSource::SelectCo( ISelect* pAwait, string sql_, vector<Value>&& params_, SL sl_ )ι->up<IAwait>{
-		return mu<TPoolAwait<uint>>( [this,cs=CS(),pAwait,sql=move(sql_),params=move(params_), sl=sl_]()->up<uint>{
-			uint y;
-			if( pAwait ){
-				function<void( IRow& )ε> f = [this,pAwait](let& r){pAwait->OnRow(r);};
-				y = ExecDirect( sql, &f, &params, sl );
-			}
-			else
-				y = ExecDirect( sql, nullptr, &params, sl );
-			return mu<uint>( y );
-			//return y;
-		});
+
+	α OdbcDataSource::InsertSeqSyncUInt( InsertClause&& insert, SL sl )ε->uint{
+		return ExecDirect( insert.Move(), sl, {} );
 	}
-*/
 }

@@ -1,6 +1,5 @@
 ﻿#include <jde/opc/UM.h>
 #include <jde/framework/io/json.h>
-#include <jde/opc/types/OpcServer.h>
 #include <jde/opc/uatypes/UAClient.h>
 #include <jde/crypto/OpenSsl.h>
 #include <open62541/plugin/create_certificate.h>
@@ -28,14 +27,14 @@ namespace Jde::Opc{
 	jobject UAClientTests::OpcServer{};
 
 	α UAClientTests::SetUpTestCase()ι->void{
-		OpcServer = Opc::SelectOpcServer( OpcServerTarget );
+		OpcServer = Opc::SelectOpcClient( OpcServerTarget );
 		if( OpcServer.empty() ){
 			atomic_flag done;
 			[](atomic_flag& done)->ProviderCreatePurgeAwait::Task {
 				co_await ProviderCreatePurgeAwait{ OpcServerTarget, false };//remove dangling.
-				[](atomic_flag& done)->CreateOpcServerAwait::Task {
-					auto id = co_await CreateOpcServerAwait();
-					UAClientTests::OpcServer = Opc::SelectOpcServer( id );
+				[](atomic_flag& done)->CreateOpcClientAwait::Task {
+					auto id = co_await CreateOpcClientAwait();
+					UAClientTests::OpcServer = Opc::SelectOpcClient( id );
 					done.test_and_set();
 					done.notify_one();
 				}(done);
@@ -45,7 +44,7 @@ namespace Jde::Opc{
 	}
 
 	α UAClientTests::TearDownTestSuite(){
-		Opc::PurgeOpcServer();
+		Opc::PurgeOpcClient();
 	}
 
 	std::condition_variable_any cv;
@@ -56,7 +55,7 @@ namespace Jde::Opc{
 	const string _password = "0123456789ABCD";
 	α AuthenticateTest( bool badPassword=false )ι->Opc::AuthenticateAwait::Task{
 		try{
-			OpcNK opcId = Json::AsString( UAClientTests::OpcServer, "target" );
+			OpcClientNK opcId = Json::AsString( UAClientTests::OpcServer, "target" );
 			auto sessionInfo = co_await Opc::AuthenticateAwait{ "user1", badPassword ? "xyz" : _password, Json::AsString(UAClientTests::OpcServer,"target"), "localhost", true };
 			_sessionIds.push_back( sessionInfo.session_id() );
 		}

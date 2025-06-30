@@ -2,6 +2,7 @@
 #include <jde/framework/io/json.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/DBSchema.h>
 #include <jde/db/meta/Catalog.h>
 #include <jde/db/meta/Cluster.h>
@@ -22,7 +23,7 @@ namespace Jde::DB{
 	α GetViews( const jobject& jviews )ε->flat_map<string,sp<View>>{
 		flat_map<string,sp<View>> views;
 		for( let& [jname,view] : jviews ){
-			let name = Names::FromJson(jname);
+			let name = Names::FromJson( jname );
 			views.emplace( name, ms<Table>(name, Json::AsObject(view)) );
 		}
 		return views;
@@ -52,6 +53,11 @@ namespace Jde::DB{
 		let cluster = catalog->Cluster;
 		return Ƒ( "/dbServers/{}/catalogs/{}/schemas/{}/{}", cluster->ConfigName, catalog->Name, DBSchema->Name, Name );
 	}
+
+	α AppSchema::DBName( str objectName )Ι->string{
+		return Prefix+objectName;
+	}
+
 	α AppSchema::DS()Ε->sp<IDataSource>{
 		return DBSchema->DS();
 	}

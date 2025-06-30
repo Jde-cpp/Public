@@ -8,6 +8,9 @@ namespace Jde::Threading{ struct InterruptibleThread; struct IWorker; }
 namespace Jde{ struct IShutdown; }
 namespace Jde::Process{
 	Φ ApplicationName()ι->const string&;
+	Φ CompanyName()ι->string;
+
+	Φ Pause()ι->int;
 
 	Φ IsConsole()ι->bool;
 	Φ SetConsole( bool isConsole )ι->void;
@@ -27,6 +30,8 @@ namespace Jde::Process{
 	Φ ShuttingDown()ι->bool;
 	Φ Finalizing()ι->bool;
 	Ŧ AddPollster( /*bool appThread*/ )ι->sp<T>;
+
+	α ProductName()ι->sv;
 
 	Φ Args()ι->const flat_multimap<string,string>&;
 	Φ FindArg( string key )ι->optional<string>;
@@ -64,9 +69,7 @@ namespace Jde{
 
 		Ω Kill( uint processId )ι->bool;
 		Ω StartTime()ι->TimePoint;
-		Ω Pause()ι->int;
 
-//		Ω GetBackgroundThreads()ι{ return  *_pBackgroundThreads; }
 		Ω ProgramDataFolder()ι->fs::path;
 		Ω ApplicationDataFolder()ι->fs::path;
 		Ω AddActiveWorker( Threading::IPollWorker* pWorker )ι->void;
@@ -82,15 +85,11 @@ namespace Jde{
 
 	private:
 		β SetConsoleTitle( sv title )ι->void=0;
-
-		static vector<Threading::IPollWorker*> _activeWorkers; static std::atomic_flag _activeWorkersMutex;
 	};
 
 	struct OSApp final: IApplication{
 		ω Startup( int argc, char** argv, sv appName, string serviceDescription, optional<bool> console=nullopt )ε->flat_set<string>;
 
-		Ω CompanyName()ι->string;
-		Ω ProductName()ι->sv;
 		ω SetProductName( sv productName )ι->void;
 		Ω CompanyRootDir()ι->fs::path;
 		ω FreeLibrary( void* p )ι->void;

@@ -1,9 +1,7 @@
 #pragma once
 #include <jde/access/usings.h>
 #include <jde/ql/QLHook.h>
-//#include "Permission.h"
 
-namespace Jde::DB{ struct AppSchema; }
 namespace Jde::QL{ struct MutationQL; struct TableQL; }
 namespace Jde::Access{
 	struct AclHook final : QL::IQLHook{

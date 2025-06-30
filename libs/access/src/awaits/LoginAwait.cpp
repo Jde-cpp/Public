@@ -3,6 +3,7 @@
 #include <jde/framework/str.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/Value.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/db/meta/AppSchema.h>
@@ -37,7 +38,7 @@ namespace Jde::Access{
 			};
 			auto sql = statement.Move();
 			auto ds = GetSchema()->DS();
-			let userPK = co_await ds->ScalerAsyncOpt<UserPK::Type>( move(sql) );
+			let userPK = co_await ds->ScalerOpt<UserPK::Type>( move(sql) );
 			if( !userPK )
 				InsertUser( move(modulusHex), exponent, *ds );
 			else
@@ -52,7 +53,7 @@ namespace Jde::Access{
 			{ DB::Value{move(modulusHex)}, DB::Value{exponent}, DB::Value{underlying(EProviderType::Key)},
 				DB::Value{move(_name)}, DB::Value{move(_target)}, DB::Value{move(_description)}} };
 		try{
-			let userPK = co_await ds.ScalerAsync<UserPK::Type>( insert.Move() );
+			let userPK = co_await ds.InsertSeq<UserPK::Type>( move(insert) );
 			ResumeScaler( {userPK} );
 		}
 		catch( IException& e ){

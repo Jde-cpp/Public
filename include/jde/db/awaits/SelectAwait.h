@@ -1,7 +1,7 @@
 #pragma once
 #include <jde/framework/coroutine/Await.h>
 #include <jde/db/generators/Sql.h>
-#include <jde/db/IRow.h>
+#include <jde/db/Row.h>
 #include "QueryAwait.h"
 
 namespace Jde::DB{

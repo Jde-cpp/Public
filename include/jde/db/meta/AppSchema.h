@@ -24,6 +24,7 @@ namespace Jde::DB{
 
 		α FindDefTable( const Table& t1, const Table& t2 )Ι->sp<Table>;
 		α ObjectPrefix()Ι->string;
+		α DBName( str objectName )Ι->string;
 
 		string Name;
 		sp<DB::DBSchema> DBSchema;

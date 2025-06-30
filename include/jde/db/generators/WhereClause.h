@@ -4,17 +4,19 @@
 #include "../exports.h"
 #include "../Value.h"
 #include "Syntax.h"
-
+#include "AliasColumn.h"
+#include "Object.h"
 
 namespace Jde::DB{
 	struct Column;
 	struct Criteria;
 	struct ΓDB WhereClause final{
 		WhereClause()ι=default;
-		//WhereClause( string init )ι{ Add(move(init)); }
 		WhereClause( sp<Column> c, Value::Underlying param, SRCE )ε{ Add(c, move(param), sl); }
+		WhereClause( AliasCol&& c, Value::Underlying param, SRCE )ε;
 		WhereClause( sp<Column> c, vector<Value> inParams, SRCE )ε{ Add(c, move(inParams), sl); }
-		//friend α operator<<( WhereClause &self, string clause )ι->WhereClause&{ self.Add(move(clause)); return self; }
+		WhereClause( const Object& a, EOperator op, const Object& b, SRCE )ε;
+		WhereClause( vector<WhereClause>&& clauses )ε;
 		α operator+=( const WhereClause& subTable )ι->WhereClause&;
 
 		α Add( sp<Column> col, EOperator op, Value param, SRCE )ε->void;

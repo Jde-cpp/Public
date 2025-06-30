@@ -1,5 +1,8 @@
 #pragma once
+#include <boost/asio.hpp>
+#include <boost/beast.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -9,7 +12,6 @@
 #include <open62541/client_highlevel_async.h>
 #include <open62541/client_subscriptions.h>
 #include <open62541/plugin/log_stdout.h>
-#include <jde/opc/usings.h>
 #include <jde/framework.h>
 #include <jde/framework/str.h>
 #include <jde/framework/coroutine/Task.h>
@@ -19,12 +21,13 @@
 #include <jde/crypto/OpenSsl.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/View.h>
-
+#include <jde/opc/usings.h>
 #include <jde/opc/exports.h>
+#include <jde/app/shared/exports.h>
 DISABLE_WARNINGS
-//#include <jde/opc/types/proto/Opc.Common.pb.h>
-//#include <jde/opc/types/proto/Opc.FromServer.pb.h>
-//#include <jde/opc/types/proto/Opc.FromClient.pb.h>
+#include "types/proto/Opc.Common.pb.h"
+#include "types/proto/Opc.FromServer.pb.h"
+#include "types/proto/Opc.FromClient.pb.h"
 ENABLE_WARNINGS
 #include <jde/opc/uatypes/helpers.h>
-#include <jde/opc/uatypes/UAException.h>
+#include <jde/opc/uatypes/UAClientException.h>

@@ -1,11 +1,8 @@
 drop procedure if exists access_role_add;
 go
 
-#DELIMITER $$
-create procedure access_role_add( _role_id int unsigned, _allowed tinyint unsigned, _denied tinyint unsigned, _resourceTarget varchar(256) )
+create procedure access_role_add( _role_id int unsigned, _allowed tinyint unsigned, _denied tinyint unsigned, _resourceTarget varchar(256), out _permission_id int unsigned )
 begin
-	declare _permission_id int unsigned;
-
 	select permission_id
 	into _permission_id
 	from access_role_members members
@@ -26,7 +23,4 @@ begin
 
 		insert into access_role_members( role_id, member_id ) values( _role_id, _permission_id );
 	end if;
-	select _permission_id;
 end
-#$$
-#DELIMITER ;

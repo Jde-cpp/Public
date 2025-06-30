@@ -3,6 +3,7 @@
 #include "TableDdl.h"
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Catalog.h>
@@ -27,7 +28,7 @@ namespace Jde::DB{
 
 	α abbrevName( sv schemaName )ι->string;
 	α GetData( const Table& table, const jobject& j )ε->vector<flat_map<string,Value>>;
-	α Exists( const DBSchema& config )ε->bool;
+	α Exists( const DBSchema& config )ι->bool;
 	α GetFlagsData( const jobject& j )ε->flat_map<uint,Value>;
 	α UniqueIndexName( const Index& index, bool uniqueName, const vector<Index>& indexes )ε->string;
 
@@ -41,7 +42,7 @@ namespace Jde::DB{
 //todo doc relativeScriptPath
 //todo add db version table.
 	α SchemaDdl::Sync( const AppSchema& config, sp<QL::IQL> ql )ε->void{
-		if( !Exists( *config.DBSchema ) ){
+		if( !Exists(*config.DBSchema) ){
 			Create( *config.DBSchema );
 			config.ResetDS();
 		}
@@ -81,7 +82,7 @@ namespace Jde::DB{
 				for( ; FKs.find(name)!=FKs.end(); name = getName(i++) );
 
 				auto createStatement = ForeignKey::Create( name, column->Name, *pkTable, *table );
-				config.DS()->Execute( {move(createStatement)} );
+				config.DS()->ExecuteSync( {move(createStatement)} );
 				FKs.emplace( name, ForeignKey{name, table->Name, {column->Name}, pkTable->Name} );
 				Information{ _tags, "Created fk '{}'.", name };
 			}
@@ -145,7 +146,7 @@ namespace Jde::DB{
 					if( i<query.size() )
 						os.put( query[i] );
 				}
-				config.DS()->Execute( {os.str()} );
+				config.DS()->ExecuteSync( {os.str()} );
 			}
 			Information{ _tags, "Finished '{}'", scriptFile.string() };
 		});
@@ -157,23 +158,21 @@ namespace Jde::DB{
 		let& schemaName = config.DBSchema->Name;
 		for( let& [tableName, table] : config.Tables ){
 			sp<TableDdl> dbTable;
-			auto& tables = Tables();
-			Trace{ _tags, "Syncing table '{}'.", tables.size() };
 			if( let kv=Tables().find(config.ObjectPrefix()+tableName); kv!=Tables().end() ){
 				dbTable = std::dynamic_pointer_cast<TableDdl>( kv->second );
 				for( auto& column : table->Columns ){
 					auto pDBColumn = dbTable->FindColumn( column->Name ); if( !pDBColumn ){ Critical{_tags,"Could not find db column {}.{}", tableName, column->Name}; continue; }
 					pDBColumn->Insertable = column->Insertable;
 					if( pDBColumn->Default && pDBColumn->Default->is_string() && pDBColumn->Default->get_string()!="$now" )
-						ds.TryExecute( {syntax.AddDefault(table->DBName, column->Name, *pDBColumn->Default)} );
+						ds.TryExecuteSync( {syntax.AddDefault(table->DBName, column->Name, *pDBColumn->Default)} );
 				}
 			}
 			else{
 				dbTable = ms<TableDdl>( *table );
-				ds.Execute( {dbTable->CreateStatement()} );
+				ds.ExecuteSync( {dbTable->CreateStatement()} );
 				Information{ _tags, "Created table '{}'.", table->DBName };
 				dbTable = ds.ServerMeta().LoadTable( schemaName, config.ObjectPrefix()+table->Name );
-				dbTable->Schema = FindAppSchema( "" );
+				dbTable->Initialize( FindAppSchema( "" ), dbTable );
 				Tables().emplace( dbTable->Name, dbTable );
 			}
 
@@ -182,7 +181,7 @@ namespace Jde::DB{
 				if( find_if(dbIndexes, [&](let& db){ return db.TableName==config.ObjectPrefix()+tableName && db.Columns==index.Columns;} )!=dbIndexes.end() )
 					continue;
 				let name = UniqueIndexName( index, syntax.UniqueIndexNames(), dbIndexes );
-				ds.Execute( {index.Create(name, schemaName+'.'+dbTable->DBName, syntax)} );
+				ds.ExecuteSync( {index.Create(name, schemaName+'.'+dbTable->DBName, syntax)} );
 				dbIndexes.push_back( Index{name, tableName, index} );
 				Information{ _tags, "Created index '{}.{}'.", table->DBName, name };
 			}
@@ -192,7 +191,7 @@ namespace Jde::DB{
 				if( Procs.find(procName)!=Procs.end() )
 						continue;
 
-				ds.Execute( {dbTable->InsertProcCreateStatement(*table)} );
+				ds.ExecuteSync( {dbTable->InsertProcCreateStatement(*table)} );
 				Procs.emplace( procName, Procedure{procName} );
 				Information{ _tags, "Created proc '{}'.", table->InsertProcName() };
 			}
@@ -211,7 +210,7 @@ namespace Jde::DB{
 		auto ds = config.DS()->Syntax().CanSetDefaultSchema()
 			? config.DS()->AtSchema( config.DS()->Syntax().SysSchema() )
 			: config.DS();
-		ds->Execute( {Ƒ("CREATE SCHEMA {}", config.Name)} );
+		ds->ExecuteSync( {Ƒ("CREATE SCHEMA {}", config.Name)} );
 	}
 #ifndef PROD
 	α DropObjects( const AppSchema& config )ε->void{
@@ -219,21 +218,21 @@ namespace Jde::DB{
 
 		for( auto& [name, fk] : config.DS()->ServerMeta().LoadForeignKeys(config.Name) ){
 			if( find_if(config.Tables, [&fk](let& t){return t.second->DBName==fk.Table;})!=config.Tables.end() )
-				ds.Execute( {Ƒ("ALTER TABLE {} DROP CONSTRAINT {}", fk.Table, name)} );
+				ds.ExecuteSync( {Ƒ("ALTER TABLE {} DROP CONSTRAINT {}", fk.Table, name)} );
 		}
 
 		for( let& [tableName, table] : config.Tables ){
 			if( table->InsertProcName().size() )
-				ds.Execute( {Ƒ("DROP PROCEDURE IF EXISTS {}", table->InsertProcName())} );
+				ds.ExecuteSync( {Ƒ("DROP PROCEDURE IF EXISTS {}", table->InsertProcName())} );
 			if( table->PurgeProcName.size() )
-				ds.Execute( {Ƒ("DROP PROCEDURE IF EXISTS {}", table->PurgeProcName)} );
-			ds.Execute( {Ƒ("DROP TABLE IF EXISTS {}", table->DBName)} );
+				ds.ExecuteSync( {Ƒ("DROP PROCEDURE IF EXISTS {}", table->PurgeProcName)} );
+			ds.ExecuteSync( {Ƒ("DROP TABLE IF EXISTS {}", table->DBName)} );
 		}
 		let& initConfig = ConfigurationJson( config );
 		if( auto script = Json::FindString(initConfig, "meta"); script ){
 			auto name = fs::path{ *script }.stem().string();
 			let type = name.ends_with("_ql") ? "VIEW" : "PROCEDURE";
-			ds.Execute( {Ƒ("DROP {} IF EXISTS {}", type, name)} );
+			ds.ExecuteSync( {Ƒ("DROP {} IF EXISTS {}", type, name)} );
 		}
 	}
 
@@ -243,7 +242,7 @@ namespace Jde::DB{
 			//if( !config.DS()->Syntax().SchemaDropsObjects() )
 			//	DropObjects( config );
 			let catalogName = config.DS()->CatalogName();
-			config.DS()->Execute( {Ƒ("DROP SCHEMA {}", config.DBSchema->Name)} );
+			config.DS()->ExecuteSync( {Ƒ("DROP SCHEMA {}", config.DBSchema->Name)} );
 		}
 	}
 #endif
@@ -268,9 +267,9 @@ namespace Jde::DB{
 		return name.str();
 	}
 
-	α Exists( const DBSchema& config )ε->bool{
+	α Exists( const DBSchema& config )ι->bool{
 		try{
-			return config.DS()->Scaler<string>( {"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", {Value{config.Name}}} ).has_value();
+			return config.DS()->ScalerSyncOpt<string>( {"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", {Value{config.Name}}} ).has_value();
 		}
 		catch( IException& e ){
 			e.SetLevel( ELogLevel::Debug );

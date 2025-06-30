@@ -7,16 +7,17 @@
 
 namespace Jde::DB{
 	struct Value;
+
 	struct ΓDB Statement final{
-//		Statement( string&& sql, vector<DB::Value>&& params )ι:Sql{move(sql)}, Parameters{params} {}
 		Statement()ι=default;
-		Statement( SelectClause&& select, FromClause&& from, WhereClause&& where )ι:Select{move(select)}, From{move(from)}, Where{move(where)} {}
-		α Empty()ι->bool{ return Select.Columns.empty(); }
+		Statement( SelectClause select, FromClause&& from, WhereClause&& where, string orderBy={} )ι;
+		α Empty()ι->bool;
 		α Limit( uint limit )ι->void{ _limit=limit; }
 		α Move()ε->Sql;
 		SelectClause Select;
 		FromClause From;
 		WhereClause Where;
+		string OrderBy;
 	private:
 		uint _limit{};
 	};

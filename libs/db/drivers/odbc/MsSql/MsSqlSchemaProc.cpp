@@ -1,6 +1,6 @@
 ﻿#include "MsSqlSchemaProc.h"
 #include <jde/framework/Str.h>
-#include <jde/db/IRow.h>
+#include <jde/db/Row.h>
 #include <jde/db/meta/Table.h>
 #include "../../../src/meta/ddl/ForeignKey.h"
 #include "../../../src/meta/ddl/Index.h"
@@ -11,7 +11,7 @@
 #define let const auto
 
 namespace Jde::DB::MsSql{
-		α processRow( flat_map<string,sp<Table>>& tables, sv tableName, sv name, _int /*ordinalPosition*/, sv dflt, bool isNullable, sv type, optional<_int> maxLength, _int isIdentity, _int /*isId*/, optional<_int> numericPrecision, optional<_int> numericScale )->void{
+		α processRow( flat_map<string,sp<Table>>& tables, str tableName, sv name, _int /*ordinalPosition*/, sv dflt, bool isNullable, sv type, optional<_int> maxLength, _int isIdentity, _int /*isId*/, optional<_int> numericPrecision, optional<_int> numericScale )->void{
 			auto& table = tables.emplace( tableName, ms<TableDdl>(Table{tableName}) ).first->second;
 			let dataType = ToType(type);
 			optional<Value> defaultValue;
@@ -45,7 +45,7 @@ namespace Jde::DB::MsSql{
 		auto rows = _pDataSource->Select( move(sql) );
 		flat_map<string,sp<Table>> tables;
 		for( auto&& row : rows ){
-			processRow( tables, row.MoveString(0), row.MoveString(1), row.GetInt(2), row.MoveString(3), row.GetBit(4), row.MoveString(5), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
+			processRow( tables, move(row.GetString(0)), move(row.GetString(1)), row.GetInt(2), move(row.GetString(3)), row.GetBit(4), move(row.GetString(5)), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
 		}
 		return tables;
 	}
@@ -79,7 +79,7 @@ namespace Jde::DB::MsSql{
 		vector<Index> indexes;
 		auto result = [&]( Row&& row ){
 			uint i=0;
-			let tableName = row.MoveString(i++); let indexName = row.MoveString(i++); let columnName = row.MoveString(i++); let unique = row.GetBit(i++)==0;
+			let tableName = move(row.GetString(i++)); let indexName = move(row.GetString(i++)); let columnName = move(row.GetString(i++)); let unique = row.GetBit(i++)==0;
 
 			vector<string>* pColumns;
 			auto pExisting = std::find_if( indexes.begin(), indexes.end(), [&](auto index){ return index.Name==indexName && index.TableName==tableName; } );
@@ -105,7 +105,7 @@ namespace Jde::DB::MsSql{
 	α MsSqlSchemaProc::LoadProcs( str schemaName )Ε->flat_map<string,Procedure>{
 		flat_map<string,Procedure> values;
 		auto fnctn = [&]( Row&& row ){
-			let name = row.MoveString( 0 );
+			let name = move(row.GetString( 0 ));
 			values.try_emplace( name, Procedure{name, schemaName} );
 		};
 		_pDataSource->Select( {Sql::ProcSql(true), {Value{schemaName}}}, fnctn );
@@ -170,7 +170,7 @@ namespace Jde::DB::MsSql{
 		flat_map<string,ForeignKey> fks;
 		auto result = [&]( Row&& row ){
 			uint i=0;
-			let name = row.MoveString(i++); let fkTable = row.MoveString(i++); let column = row.MoveString(i++); let pkTable = row.MoveString(i++); //let pkColumn = row.MoveString(i++); let ordinal = row.GetUInt(i);
+			let name = move(row.GetString(i++)); let fkTable = move(row.GetString(i++)); let column = move(row.GetString(i++)); let pkTable = move(row.GetString(i++)); //let pkColumn = row.GetString(i++); let ordinal = row.GetUInt(i);
 			auto pExisting = fks.find( name );
 			if( pExisting==fks.end() )
 				fks.emplace( name, ForeignKey{name, fkTable, {column}, pkTable} );

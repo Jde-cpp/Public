@@ -1,9 +1,10 @@
 #include <jde/ql/types/FilterQL.h>
-#include <jde/ql/types/TableQL.h>
-#include <jde/db/meta/Column.h>
-#include <jde/db/names.h>
-#include <jde/db/meta/Table.h>
 #include <regex>
+#include <jde/db/names.h>
+#include <jde/db/generators/Functions.h>
+#include <jde/db/meta/Column.h>
+#include <jde/db/meta/Table.h>
+#include <jde/ql/types/TableQL.h>
 
 #define let const auto
 

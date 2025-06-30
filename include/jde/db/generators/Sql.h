@@ -10,6 +10,7 @@ namespace Jde::DB{
 		string Text;
 		vector<Value> Params;
 		bool IsProc{ false };
+		α EmbedParams()Ι->string;
 	};
 
 	α SelectSql( vec<sp<Column>> columns, FromClause from, WhereClause where, SRCE )ε->Sql;

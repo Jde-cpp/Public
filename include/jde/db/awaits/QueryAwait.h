@@ -1,8 +1,7 @@
 #pragma once
 #include <jde/framework/coroutine/Await.h>
-#include <jde/db/IRow.h>
+#include <jde/db/Row.h>
 #include <jde/db/generators/Sql.h>
-
 
 namespace Jde::DB{
 	struct IDataSource; struct IRow;
@@ -11,19 +10,12 @@ namespace Jde::DB{
 		vector<Row> Rows;
 	};
 
-	struct QueryAwait : TAwait<Result>{
+	struct ΓDB QueryAwait : TAwait<Result>{
 		using base=TAwait<Result>;
 		QueryAwait( up<TAwait<Result>>&& awaitable, SRCE )ι:base{sl},_awaitable{move(awaitable)}{}
 	private:
 		α Suspend()ι->void override{ Execute(); }
-		α Execute()ι->QueryAwait::Task{
-			try{
-				Resume( co_await *_awaitable );
-			}
-			catch( IException& e ){
-				ResumeExp( move(e) );
-			}
-		}
+		α Execute()ι->QueryAwait::Task;
 		up<TAwait<Result>> _awaitable;
 	};
 }

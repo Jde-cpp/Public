@@ -23,7 +23,9 @@ namespace Jde::DB{
 		string params;
 		for( uint i=0; i<size; ++i )
 			params += "?,";
-		params.pop_back();
+		ASSERT( params.size() );
+		if( params.size() )
+			params.pop_back();
 		return Ƒ( "{} {}({})", col.FQName(), OperatorStrings[(uint)op], params );
 	}
 
@@ -67,6 +69,10 @@ namespace Jde::DB{
 		y.pop_back();
 		return y;
 	}
+	α Syntax::HasLength( EType type )Ι->bool{
+		using enum EType;
+		return type == VarChar || type == Binary || type == Char || type == VarBinary;
+	}
 
 	α Syntax::Limit( str sql, uint limit )Ε->string{
 		THROW_IF( sql.size()<7, "expecting sql length>7 - {}", sql );
@@ -97,7 +103,7 @@ namespace Jde::DB{
 	α Syntax::ToString( EType type )Ι->string{
 		using enum EType;
 		string typeName;
-		if( HasUnsigned() && type == EType::UInt ) typeName = "int unsigned";
+		if( HasUnsigned() && type == UInt ) typeName = "int unsigned";
 		else if( type == Int || type == UInt ) typeName = "int";
 		else if( HasUnsigned() && type == ULong ) typeName = "bigint(20) unsigned";
 		else if( type == Long || type == ULong ) typeName="bigint";
@@ -111,7 +117,7 @@ namespace Jde::DB{
 		else if( type == Int16 || type == UInt16 ) typeName="smallint";
 		else if( HasUnsigned() && type == UInt8 ) typeName =  "tinyint unsigned";
 		else if( type == Int8 || type == UInt8 ) typeName = "tinyint";
-		else if( type == Guid ) typeName = "uniqueidentifier";
+		else if( type == Guid ) typeName = GuidType();
 		else if( type == VarBinary ) typeName = "varbinary";
 		else if( type == VarChar ) typeName = "varchar";
 		else if( type == NText ) typeName = "ntext";

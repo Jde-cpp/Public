@@ -1,6 +1,5 @@
 #include <jde/app/shared/proto/App.FromServer.h>
-//#include <jde/web/server/Sessions.h>
-#include <jde/db/IRow.h>
+#include <jde/db/Row.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/Column.h>
@@ -114,7 +113,7 @@ namespace Jde::App{
 		toServer->set_graph_ql( move(queryResults) );
 		return t;
 	}
-	α FromServer::ToTrace( const DB::IRow& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace{
+	α FromServer::ToTrace( DB::Row&& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace{
 		Proto::FromServer::Trace t;
 		uint i=0;
 		for( auto&& c : columns ){

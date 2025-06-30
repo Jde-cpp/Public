@@ -51,7 +51,6 @@
 			"name": "win-msvc-jde",
 			"inherits": "win-msvc",
 			"cacheVariables":{
-				"xLIB_ROOT": "$env{REPO_DIR}/install/msvc",
 				"JSONNET_LIB_DIR": "$env{REPO_DIR}/jsonnet/vs2017/x64/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:RelWithDebInfo>:Release>"
 			}
 		},
@@ -81,7 +80,7 @@
 				"LIB_ROOT": "$env{REPO_DIR}/install/$env{CXX}"
 			},
 			"cacheVariables":{
-				"CMAKE_CXX_FLAGS": "-Wno-unknown-pragmas -Wno-missing-field-initializers",
+				"CMAKE_CXX_FLAGS": "-Wno-unknown-pragmas -Wno-missing-field-initializers -Wno-changes-meaning",
 				"CMAKE_CXX_COMPILER": "g++-14",
 				"CMAKE_C_COMPILER": "gcc-14"
 			}

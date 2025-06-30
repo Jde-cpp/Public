@@ -1,4 +1,5 @@
 ﻿#include <jde/db/meta/Table.h>
+#include <jde/framework/str.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/Cluster.h>
 #include <jde/db/meta/Catalog.h>
@@ -6,8 +7,8 @@
 #include <jde/db/meta/DBSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/IDataSource.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/Syntax.h>
-#include <jde/framework/str.h>
 
 #define let const auto
 

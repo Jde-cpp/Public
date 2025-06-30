@@ -12,10 +12,17 @@ namespace Jde::QL{
 		//α Input(SRCE)Ε->const jobject&;
 		template<class T=uint> α Id()Ι->T;
 		template<class T=uint> α FindId()Ι->optional<T>;
-		α GetKey(SRCE)ε->DB::Key;
 		α FindKey()ι->optional<DB::Key>;
-		α FindParam( sv name )Ι->const jvalue*;
-		α GetParam( sv name, SRCE )Ε->const jvalue&;
+		α FindParam( sv name )Ι->const jvalue*{ return const_cast<MutationQL*>(this)->FindParam(name); }
+		α FindParam( sv name )ι->jvalue*;
+		Ŧ Find( sv name )Ι->optional<T>;
+
+		α GetKey(SRCE)ε->DB::Key;
+		Ŧ GetPath( sv path, SRCE )Ε->T;
+		Ŧ GetRef( sv name, SRCE )ε->T&;
+		Ŧ GetRef( sv name, SRCE )Ε->const T&{ return const_cast<MutationQL*>(this)->GetRef<T>(name, sl); }
+		α GetParam( sv name, SRCE )ε->jvalue&;
+		α GetParam( sv name, SRCE )Ε->const jvalue&{ return const_cast<MutationQL*>(this)->GetParam(name, sl); }
 		α ParentPK()Ε->uint;
 		α ChildPK()Ε->uint;
 		α ToString()Ι->string;
@@ -33,6 +40,16 @@ namespace Jde::QL{
 	Ŧ MutationQL::FindId()Ι->optional<T>{
 		return Json::FindNumber<T>( Args, "id" );
 	}
+
+	template<> Ξ MutationQL::Find( sv key )Ι->optional<bool>{
+		auto p = FindParam( key );
+		return p && p->is_bool() ? p->get_bool() : optional<bool>{};
+	}
+
+	Ŧ MutationQL::GetPath( sv path, SL sl )Ε->T{ return Json::AsPath<T>( Args, path, sl ); }
+	template<> Ξ MutationQL::GetRef( sv key, SL sl )ε->jarray&{ return GetParam( key, sl ).as_array(); }
+	template<> Ξ MutationQL::GetRef( sv key, SL sl )ε->jvalue&{ return GetParam( key, sl ); }
+	template<> Ξ MutationQL::GetRef( sv key, SL sl )ε->jobject&{ return GetRef<jvalue>( key, sl ).as_object(); }
 
 	Ŧ MutationQL::Id()Ι->T{
 		const optional<T> y = FindId<T>();

@@ -21,8 +21,10 @@ namespace Jde::DB{
 		β CatalogSelect()Ι->sv{ return "select db_name();"; }
 		β CreatePrimaryKey( str tableName, str columnName )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
 		β DateTimeSelect( sv columnName )Ι->string{ return string{ columnName }; }
+		β DriverReturnsLastInsertId()Ι->bool{ return true; }
 		β EscapeDdl( sv sql )Ι->string;
-		β HasLength( EType type )Ι->bool{ return type == EType::VarChar || type == EType::Binary || type == EType::Char || type == EType::VarBinary; }
+		β GuidType()Ι->sv{ return "uniqueidentifier"; }
+		β HasLength( EType type )Ι->bool;
 		β HasCatalogs()Ι->bool{ return true; }
 		β HasUnsigned()Ι->bool{ return false; }
 		β IdentityColumnSyntax()Ι->sv{ return "identity(1001,1)"; }
@@ -30,6 +32,7 @@ namespace Jde::DB{
 		β Limit( str syntax, uint limit )Ε->string;
 		β NeedsIdentityInsert()Ι->bool{ return true; }
 		β NowDefault()Ι->iv{ return UtcNow(); }
+		β PrefixOut()Ι->bool{ return false; }
 		β ProcParameterPrefix()Ι->sv{ return "@"; }
 		β ProcStart()Ι->sv{ return "as\n\tset nocount on;\n"; }
 		β ProcEnd()Ι->sv{ return {}; }
@@ -53,7 +56,9 @@ namespace Jde::DB{
 		α CatalogSelect()Ι->sv override{ return {}; }
 		α CreatePrimaryKey( str tableName, str columnName )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
 		α DateTimeSelect( sv columnName )Ι->string override{ return Ƒ( "UNIX_TIMESTAMP({})", columnName ); }
+		α DriverReturnsLastInsertId()Ι->bool override{ return true; }
 		α EscapeDdl( sv sql )Ι->string;
+		α GuidType()Ι->sv{ return "binary"; }
 		α HasLength( EType /*type*/ )Ι->bool { return true; }
 		α HasCatalogs()Ι->bool{ return false; }
 		α HasUnsigned()Ι->bool override{ return true; }
@@ -62,6 +67,7 @@ namespace Jde::DB{
 		α Limit( str sql, uint limit )Ι->string override{ return Ƒ("{} limit {}", sql, limit); }
 		α NeedsIdentityInsert()Ι->bool override{ return false; }
 		α NowDefault()Ι->iv override{ return "CURRENT_TIMESTAMP"; }
+		α PrefixOut()Ι->bool{ return true; }
 		α ProcParameterPrefix()Ι->sv override{ return {}; }
 		α ProcStart()Ι->sv override{ return "begin"; }
 		α ProcEnd()Ι->sv override{ return "end"; }

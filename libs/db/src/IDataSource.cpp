@@ -7,10 +7,10 @@ namespace Jde::DB{
 		return Try( [&]{Select(move(sql), f, sl);} );
 	}
 
-	α IDataSource::TryExecute( Sql&& sql, SL sl )ι->optional<uint>{
+	α IDataSource::TryExecuteSync( Sql&& sql, SL sl )ι->optional<uint>{
 		optional<uint> result;
 		try{
-			result = Execute( move(sql), false, sl );
+			result = ExecuteSync( move(sql), sl );
 		}
 		catch( const IException& )
 		{}
@@ -21,7 +21,7 @@ namespace Jde::DB{
 		if( !_catalog ){
 			let sql = Syntax().CatalogSelect();
 			_catalog = sql.size()
-				? Scaler<string>( {string{sql}}, sl )
+				? ScalerSync<string>( {string{sql}}, sl )
 				: string{};
 		}
 		return *_catalog;
@@ -29,7 +29,7 @@ namespace Jde::DB{
 
 	α IDataSource::SchemaName( SL sl )ε->string{
 		if( _schema.empty() ){
-			let schema = Scaler<string>( {string{Syntax().SchemaSelect()}}, sl ); THROW_IF( !schema, "Schema name is empty." );
+			let schema = ScalerSyncOpt<string>( {string{Syntax().SchemaSelect()}}, sl ); THROW_IF( !schema, "Schema name is empty." );
 			_schema = *schema;
 		}
 		return _schema;

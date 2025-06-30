@@ -1,5 +1,6 @@
 #include <jde/ql/ql.h>
 #include <jde/framework/settings.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLAwait.h>

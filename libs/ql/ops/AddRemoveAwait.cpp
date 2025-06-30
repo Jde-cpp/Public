@@ -2,6 +2,7 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/names.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLHook.h>
@@ -63,7 +64,7 @@ namespace Jde::QL{
 			for( let& p : _params.ChildParams ){
 				vector<DB::Value> params{ _params.ParentParam, p };
 				params.insert( end(params), begin(extraParams), end(extraParams) );
-				result += co_await _table->Schema->DS()->ExecuteAsync( {sql, params}, _sl );
+				result += co_await _table->Schema->DS()->Execute( {sql, params}, _sl );
 			}
 			AddAfter( result );
 		}
@@ -88,7 +89,7 @@ namespace Jde::QL{
 		try{
 			for( let& p : _params.ChildParams ){
 				vector<DB::Value> params{ _params.ParentParam, p };
-				result += co_await _table->Schema->DS()->ExecuteAsync( {sql, params}, _sl );
+				result += co_await _table->Schema->DS()->Execute( {sql, params}, _sl );
 			}
 			RemoveAfter( result );
 		}

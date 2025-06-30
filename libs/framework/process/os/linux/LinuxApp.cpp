@@ -53,7 +53,7 @@ namespace Jde{
 		syslog( osLevel, "%s",  value.c_str() );
 	}
 	const string _companyName{ "Jde-Cpp" }; string _productName{ "productName" };
-	α OSApp::CompanyName()ι->string{ return _companyName; }
+	α Process::CompanyName()ι->string{ return _companyName; }
 	//α OSApp::ProductName()ι->sv{ return _productName; }  //use in main.cpp
 	α IApplication::MemorySize()ι->size_t{//https://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-runtime-using-c
 		uint size = 0;
@@ -167,7 +167,7 @@ namespace Jde{
 		return *_args;
 	}
 
-	α OSApp::CompanyRootDir()ι->fs::path{ return fs::path{ "."+OSApp::CompanyName() }; };
+	α OSApp::CompanyRootDir()ι->fs::path{ return fs::path{ "."+Process::CompanyName() }; };
 
 	α OSApp::AddSignals()ε->void{/*ε for windows*/
 /* 		struct sigaction sigIntHandler;//_XOPEN_SOURCE

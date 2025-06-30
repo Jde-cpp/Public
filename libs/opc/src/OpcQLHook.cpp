@@ -1,5 +1,5 @@
 #include <jde/opc/OpcQLHook.h>
-#include <jde/opc/types/OpcServer.h>
+#include <jde/opc/types/OpcClient.h>
 #include <jde/opc/UM.h>
 #include <jde/opc/uatypes/Logger.h>
 
@@ -13,21 +13,21 @@ namespace Jde::Opc{
 		HookAwait( const QL::MutationQL& m, UserPK executer, Operation op, SL sl )ι: TAwait<jvalue>{sl}, _mutation{m}, _executer{executer}, _op{op}{}
 		α Suspend()ι->void override{ Execute(); }
 	private:
-		α Execute()ι->OpcServerAwait::Task;
+		α Execute()ι->OpcClientAwait::Task;
 		α Fix( DB::Key id )ι->ProviderCreatePurgeAwait::Task;
 		const QL::MutationQL& _mutation;
 		UserPK _executer;
 		Operation _op;
 	};
 
-	α HookAwait::Execute()ι->OpcServerAwait::Task{
+	α HookAwait::Execute()ι->OpcClientAwait::Task{
 		try{
 			DB::Key id = (_op & Operation::Purge)==Operation::Purge
-				? DB::Key{ _mutation.Id<OpcPK>() }
+				? DB::Key{ _mutation.Id<OpcClientPK>() }
 				: DB::Key{ Json::AsString(_mutation.Args, "target") };
 			optional<uint> rowCount;
 			if( _op==(Operation::Insert | Operation::Failure) ){
-				auto opcServers = co_await OpcServerAwait{ id };
+				auto opcServers = co_await OpcClientAwait{ id };
 				if( opcServers.size() ) //assume failed because already exists.
 					rowCount = 0;
 			}
@@ -52,15 +52,15 @@ namespace Jde::Opc{
 	}
 
 	α OpcQLHook::InsertBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.JsonTableName=="opcServer" || m.JsonTableName=="server" ? mu<HookAwait>( m, userPK, Operation::Insert | Operation::Before, sl ) : nullptr;
+		return m.TableName()=="clients" || m.TableName()=="opc_clients" ? mu<HookAwait>( m, userPK, Operation::Insert | Operation::Before, sl ) : nullptr;
 	}
 	α OpcQLHook::InsertFailure( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.JsonTableName=="opcServer" || m.JsonTableName=="server" ? mu<HookAwait>( m, userPK, Operation::Insert | Operation::Failure, sl ) : nullptr;
+		return m.TableName()=="clients" || m.TableName()=="opc_clients" ? mu<HookAwait>( m, userPK, Operation::Insert | Operation::Failure, sl ) : nullptr;
 	}
 	α OpcQLHook::PurgeBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.JsonTableName=="opcServer" || m.JsonTableName=="server" ? mu<HookAwait>( m, userPK, Operation::Purge | Operation::Before, sl ) : nullptr;
+		return m.TableName()=="clients"  || m.TableName()=="opc_clients" ? mu<HookAwait>( m, userPK, Operation::Purge | Operation::Before, sl ) : nullptr;
 	}
 	α OpcQLHook::PurgeFailure( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.JsonTableName=="opcServer" || m.JsonTableName=="server" ? mu<HookAwait>( m, userPK, Operation::Purge | Operation::Failure, sl ) : nullptr;
+		return m.TableName()=="clients" || m.TableName()=="opc_clients" ? mu<HookAwait>( m, userPK, Operation::Purge | Operation::Failure, sl ) : nullptr;
 	}
 }

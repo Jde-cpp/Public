@@ -5,6 +5,7 @@
 #include "exports.h"
 
 #define Φ auto ΓWS
+namespace Jde::Web::FromServer{ struct SessionInfo; }
 //Holds web session information.
 namespace Jde::Web::Server{
 	struct SessionInfo;

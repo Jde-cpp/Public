@@ -4,7 +4,7 @@
 
 #include "../usings.h"
 #include "../exports.h"
-#include <jde/db/IRow.h>
+#include <jde/db/Row.h>
 #include <jde/db/awaits/SelectAwait.h>
 
 #include "../../../../../Framework/source/Cache.h"
@@ -47,15 +47,8 @@ namespace Jde::DB{
 				_h.resume();
 			},
 			[&](IException&& e){ _exception = e.Move(); _h.resume(); },
-			_sl );
-		// try{
-		// 	auto rows = ( co_await *_ds->SelectAsync(move(_sql), _sl) ).Rows;
-		// 	for( let& r : rows )
-		// 		OnRow( *r );
-		// }
-		// catch( IException& e ){
-		// 	_exception = e.Move();
-		// }
+			_sl
+		);
 	}
 
 

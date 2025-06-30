@@ -1,5 +1,6 @@
 #include "PurgeAwait.h"
 #include <jde/db/IDataSource.h>
+#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/ql/LocalSubscriptions.h>
@@ -55,7 +56,7 @@ namespace Jde::QL{
 			uint y{};
 			DB::IDataSource& ds = *_table->Schema->DS();
 			for( auto& statement : statements )
-				y += co_await ds.ExecuteAsync(move(statement), _sl);
+				y += co_await ds.Execute(move(statement), _sl);
 			After( y );
 		}
 		catch( IException& e ){
