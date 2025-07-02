@@ -3,18 +3,30 @@
 #include <jde/ql/ql.h>
 #include <jde/ql/types/RequestQL.h>
 #include <jde/db/generators/Statement.h>
-#include "../../../../Framework/source/coroutine/Awaitable.h"
-
+#include "ops/MutationAwait.h"
+#include "ops/TablesAwait.h"
 
 //namespace Jde::DB{ struct Statement; }
 namespace Jde::QL{
 	struct TableQL;
-	α Query( const TableQL& ql, DB::Statement&& statement, UserPK executer, SRCE )ε->jvalue;
-	α Query( RequestQL&& ql, UserPK executer, SL sl )ε->jvalue;
+	template<class T=jobject>
+	α QuerySync( string query, UserPK executer, bool returnRaw=true, SRCE )ε->T;
+
+	struct VQLAwait : TAwait<jvalue>{
+		using base = TAwait<jvalue>;
+		VQLAwait( RequestQL&& request, optional<DB::Statement>&& statement, UserPK executer, SRCE )ι:base{sl}, _request{move(request)}, _statement{move(statement)}, _executer{executer}{}
+	private:
+		α Suspend()ι->void override;
+		α Select( vector<TableQL>&& tables )ι->TablesAwait::Task;
+		α Mutate( vector<MutationQL> mutations )ι->MutationAwait::Task;
+		RequestQL _request;
+		optional<DB::Statement>	_statement;
+		UserPK _executer;
+	};
 
 	template<class T=jvalue>
-	struct QLAwait : TAwait<T>{
-		using base = TAwait<T>;
+	struct QLAwait : TAwaitEx<T, VQLAwait::Task>{
+		using base = TAwaitEx<T, VQLAwait::Task>;
 		QLAwait( TableQL&& ql, UserPK executer, SRCE )ι:base{sl},_request{move(ql)}, _executer{executer}{}
 		QLAwait( TableQL&& ql, DB::Statement&& statement, UserPK executer, SRCE )ι:
 			base{sl}, _request{ move(ql) }, _statement{ move(statement) }, _executer{ executer }{}
@@ -22,28 +34,44 @@ namespace Jde::QL{
 			base{sl}, _request{{move(m)}}, _executer{executer}{}
 		QLAwait( string query, UserPK executer, bool returnRaw=true, SRCE )ε:
 			base{sl}, _request{ Parse(move(query), returnRaw) }, _executer{ executer }{}
-
-		α Suspend()ι->void override{ CoroutinePool::Resume( base::_h ); }
-		α Run()ε->jvalue;
-		α await_resume()ε->T override;
 	private:
+		α Execute()ι->VQLAwait::Task override;
 		RequestQL _request;
 		optional<DB::Statement> _statement;
 		UserPK _executer;
 	};
 
-	Ŧ QLAwait<T>::Run()ε->jvalue{
-		jvalue y;
-		if( _statement )
-			y = Query( _request.TableQLs().front(), move(*_statement), _executer, base::_sl );
-		else
-			y = Query( move(_request), _executer, base::_sl );
-		return y;
+	template<> Ξ QLAwait<jvalue>::Execute()ι->VQLAwait::Task{
+		try{
+			Resume( co_await VQLAwait{move(_request), move(_statement), _executer, base::_sl} );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
 	}
-	template<> Ξ QLAwait<jvalue>::await_resume()ε->jvalue{ return Run(); }
-	template<> Ξ QLAwait<jobject>::await_resume()ε->jobject{
-		auto y = Run();
-		return y.is_null() ? jobject{} : Json::AsObject(y, _sl);
+	template<> Ξ QLAwait<jobject>::Execute()ι->VQLAwait::Task{
+		try{
+			jvalue v = co_await VQLAwait{move(_request), move(_statement), _executer, base::_sl};
+			Resume( v.is_null() ? jobject{} : move(Json::AsObject(v)) );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
 	}
-	template<> Ξ QLAwait<jarray>::await_resume()ε->jarray{ return Json::AsArray(Run(), _sl); }
+	template<> Ξ QLAwait<jarray>::Execute()ι->VQLAwait::Task{
+		try{
+			jvalue v = co_await VQLAwait{move(_request), move(_statement), _executer, base::_sl};
+			Resume( move(Json::AsArray(v)) );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+}
+namespace Jde{
+		Ŧ QL::QuerySync( string query, UserPK executer, bool returnRaw, SL sl )ε->T{
+		using Await=QL::QLAwait<T>;
+		Await await{ move(query), executer, returnRaw, sl };
+		return BlockAwait<Await,T>( await );
+	}
 }

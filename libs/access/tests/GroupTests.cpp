@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include <jde/ql/ql.h>
 #include <jde/ql/types/Introspection.h>
-#include <jde/ql/ql.h>
+#include <jde/ql/QLAwait.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/ql/types/MutationQL.h>
 #include <jde/framework/str.h>
@@ -30,7 +30,7 @@ namespace Jde::Access::Tests{
 	TEST_F( GroupTests, Fields ){
 		//const QL::TableQL ql{ "" };
 		let query = "{ __type(name: \"Grouping\") { fields { name type { name kind ofType{name kind ofType{name kind ofType{name kind}}} } } } }";
-		let actual = QL::Query( query, GetRoot() );
+		let actual = QL::QuerySync( query, GetRoot() );
 		auto obj = Json::ReadJsonNet( Ƒ("{}/Public/libs/access/config/access-ql.jsonnet", OSApp::EnvironmentVariable("JDE_DIR").value_or("./")) );
 		QL::Introspection intro{ move(obj) };
 		QL::RequestQL request = QL::Parse( query );
@@ -43,11 +43,11 @@ namespace Jde::Access::Tests{
 		let id = GetId( group );
 
  		let update = Ƒ( "mutation updateGrouping( \"id\":{}, \"name\":\"{}\" )", id, "newName" );
- 		let updateJson = QL::Query( update, GetRoot() );
+ 		let updateJson = QL::QuerySync<jvalue>( update, GetRoot() );
 		ASSERT_TRUE( AsSV(SelectGroup("groupTest", GetRoot()), "name")=="newName" );
 
  		let del = Ƒ( "{{mutation deleteGrouping(\"id\":{}) }}", id );
- 		let deleteJson = QL::Query( del, GetRoot() );
+ 		let deleteJson = QL::QuerySync<jvalue>( del, GetRoot() );
 		ASSERT_TRUE( SelectGroup("groupTest", GetRoot()).empty() );
 		ASSERT_TRUE( !SelectGroup("groupTest", GetRoot(), true).empty() );
 
@@ -61,18 +61,18 @@ namespace Jde::Access::Tests{
 		RemoveFromGroup( hrManagers, {manager}, root );
 		AddToGroup( hrManagers, {manager}, root );
 		constexpr sv ql = "grouping(id:{}){{ members{{id name}} }}";
-		ASSERT_EQ( Json::AsArray(QL::QueryObject( Ƒ(ql, hrManagers.Value), root), "members").size(), 1 );
+		ASSERT_EQ( Json::AsArray(QL::QuerySync( Ƒ(ql, hrManagers.Value), root), "members").size(), 1 );
 
 		const GroupPK hr{ GetId( GetGroup("HR", root) ) };
 		const UserPK associate{ GetId( GetUser("associate", root) ) };
 		RemoveFromGroup( hr, {hrManagers, associate}, root );
 		AddToGroup( {hr}, {hrManagers, associate}, root );
-		let members = QL::QueryObject( Ƒ(ql, hr.Value), root );
+		let members = QL::QuerySync( Ƒ(ql, hr.Value), root );
 		let array = Json::AsArrayPath( members, "members" );
 		ASSERT_EQ( array.size(), 2 );
 
 		constexpr sv userQL = "user(id:{}){{ groupings{{id name}} }}";
-		ASSERT_EQ( Json::AsArrayPath(QL::QueryObject(Ƒ(userQL, manager.Value), root), "groupings" ).size(), 1 );
+		ASSERT_EQ( Json::AsArrayPath(QL::QuerySync(Ƒ(userQL, manager.Value), root), "groupings" ).size(), 1 );
 
 		RemoveFromGroup( hr, {hrManagers, associate}, root );
 		RemoveFromGroup( hrManagers, {manager}, root );

@@ -23,7 +23,8 @@ namespace Jde{
 		constexpr sv errorFromat = "'{}' could not convert to {}.";
 #define $(type) Eval( v.try_as_##type(), Ƒ(errorFromat, serialize(v), #type), sl )
 		Φ AsValue( const jobject& o, sv path, SRCE )ε->const jvalue&;
-		Φ AsArray( const jvalue& v, SRCE )ε->const jarray&;
+		Φ AsArray( jvalue& o, SRCE )ε->jarray&;
+		Ξ AsArray( const jvalue& v, SRCE )ε->const jarray&{ return AsArray(const_cast<jvalue&>(v), sl); }
 		Φ AsArray( const jobject& o, sv key, SRCE )ε->const jarray&;
 		Φ AsArrayPath( const jobject& o, sv path, SRCE )ε->const jarray&;
 		Ξ AsBool( const jvalue& v, SRCE )ε->bool{ return $(bool); }

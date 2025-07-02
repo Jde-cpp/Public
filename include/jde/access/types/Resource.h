@@ -6,9 +6,9 @@ namespace Jde::DB{ struct Row; }
 namespace Jde::Access{
 	struct Resource{
 		Resource()ι=default;
-		Resource( ResourcePK pk, const jobject& j )ι;
+		Resource( ResourcePK pk, jobject j )ι;
 		Resource( DB::Row&& row )ι;
-		Resource( const jobject& j )ι;
+		Resource( jobject j )ι;
 		Access::ResourcePK PK;
 		string Schema;
 		string Target;

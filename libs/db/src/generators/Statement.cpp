@@ -25,4 +25,15 @@ namespace Jde::DB{
 		sql.Params = move( Where.Params() );
 		return sql;
 	}
+	α Statement::ToString()Ι->string{
+		string y;
+		y += Select.ToString( From.HasJoin() );
+		y += '\n'+From.ToString();
+		y += '\n'+Where.ToString();
+		if( !OrderBy.empty() )
+			y += "\norder by "+OrderBy;
+		if( _limit )
+			y = From.GetFirstTable()->Syntax().Limit( y, _limit );
+		return y;
+	}
 }

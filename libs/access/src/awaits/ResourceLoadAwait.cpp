@@ -23,15 +23,15 @@ namespace Jde::Access{
 				schemaInput += ')';
 			}
 			let resources = co_await *_qlServer->QueryArray( Ƒ("resources{}{{ id schemaName target criteria deleted }}", schemaInput), _executer );
-			for( let& value : resources ){
-				auto resource = Resource{ Json::AsObject(value) };
+			for( auto&& value : resources ){
+				auto resource = Resource{ Json::AsObject(move(value)) };
 				y.Resources.emplace( resource.PK, move(resource) );
 			}
 
 			let qlPermissions = Ƒ( "permissionRights{{ id allowed denied resource{}{{id}} }}", move(schemaInput) );
 			let permissions = co_await *_qlServer->QueryArray( qlPermissions, _executer );
-			for( let& value : permissions ){
-				let permission = Permission{ Json::AsObject(value) };
+			for( auto&& value : permissions ){
+				let permission = Permission{ Json::AsObject(move(value)) };
 				ASSERT(permission.ResourcePK);
 				y.Permissions.emplace( permission.PK, move(permission) );
 			}

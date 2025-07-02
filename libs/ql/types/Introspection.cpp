@@ -12,6 +12,7 @@
 
 namespace Jde::QL{
 	using namespace Json;
+	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
 	α GetTable( str tableName, SRCE )ε->sp<DB::View>;
 	Introspection _introspection;
 	α SetIntrospection( Introspection&& x )ι->void{ _introspection = move(x); }
@@ -253,5 +254,54 @@ namespace Jde::QL{
 				THROW( "__type data for '{}' not supported", qlTable.JsonName );
 		}
 		return y;
+	}
+	α QuerySchema( const TableQL& schemaTable )ε->jobject{
+		THROW_IF( schemaTable.Tables.size()!=1, "Only Expected 1 table type for __schema {}", schemaTable.Tables.size() );
+		let& mutationTable = schemaTable.Tables[0]; THROW_IF( mutationTable.JsonName!="mutationType", "Only mutationType implemented for __schema - {}", mutationTable.JsonName );
+		jarray fields;
+		for( let& schema : Schemas() ){
+			for( let& nameTablePtr : schema->Tables ){
+				let pDBTable = nameTablePtr.second;
+				let childColumn = pDBTable->Map ? pDBTable->Map->Child : nullptr;
+				let jsonType = pDBTable->JsonName();
+
+				jobject field;
+				field["name"] = Ƒ( "create{}"sv, jsonType );
+				let addField = [&jsonType, pDBTable, &fields]( sv name, bool allColumns=false, bool idColumn=true ){
+					jobject field;
+					jarray args;
+					for( let& column : pDBTable->Columns ){
+						if( (column->IsPK() && !idColumn) || (!column->IsPK() && !allColumns) )
+							continue;
+						jobject arg;
+						arg["name"] = ToJson( column->Name );
+						arg["defaultValue"] = nullptr;
+						jobject type; type["name"] = ColumnQL::QLType( *column );
+						arg["type"]=type;
+						args.push_back( arg );
+					}
+					field["args"] = args;
+					field["name"] = Ƒ( "{}{}", name, jsonType );
+					fields.push_back( field );
+				};
+				if( !childColumn ){
+					addField( "insert", true, false );
+					addField( "update", true );
+
+					addField( "delete" );
+					addField( "restore" );
+					addField( "purge" );
+				}
+				else{
+					addField( "add", true, false );
+					addField( "remove", true, false );
+				}
+			}
+		}
+		jobject jmutationType;
+		jmutationType["fields"] = fields;
+		jmutationType["name"] = "Mutation";
+		jobject jSchema; jSchema["mutationType"] = jmutationType;
+		return jmutationType;
 	}
 }
