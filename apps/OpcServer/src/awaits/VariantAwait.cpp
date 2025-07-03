@@ -60,6 +60,8 @@ namespace Jde::Opc::Server {
 
 	α VariantInsertAwait::Execute()ι->DB::ScalerAwait<VariantPK>::Task{
 		try{
+			auto& ua = GetUAServer();
+
 			let variantPK = co_await DS().InsertSeq<VariantPK>(DB::InsertClause{
 				GetView("variants").InsertProcName(),
 				{DB::Value{_variant.type->typeId.identifier.numeric}, {_variant.ArrayDimString()}}

@@ -1,15 +1,16 @@
-#include <jde/ql/ops/MutationAwait.h>
+#include "MutationAwait.h"
 #include <jde/framework/coroutine/TaskOld.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
-#include "AddRemoveAwait.h"
-#include "InsertAwait.h"
-#include "PurgeAwait.h"
-#include "UpdateAwait.h"
-#include "../types/QLColumn.h"
+//#include <jde/db/generators/UpdateStatement.h>
+#include "ops/AddRemoveAwait.h"
+#include "ops/InsertAwait.h"
+#include "ops/PurgeAwait.h"
+#include "ops/UpdateAwait.h"
+#include "types/QLColumn.h"
 
 #define let const auto
 namespace Jde::QL{

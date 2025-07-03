@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include <jde/framework/io/json.h>
 #include <jde/framework/str.h>
-#include <jde/ql/QLAwait.h>
+#include <jde/ql/ql.h>
 #include <jde/access/types/Resource.h>
 #include "globals.h"
 
@@ -27,25 +27,25 @@ namespace Jde::Access::Tests{
 
 	α SelectAcl( IdentityPK identityPK, string resourceTarget )ε->jobject{
 		let ql = Ƒ( "acl( identityId:{} )< identityId permissionRight< id allowed denied resource(target:\"{}\")<deleted>> >", identityPK.Underlying(), resourceTarget );
-		let acl = QL::QuerySync<jarray>( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
+		let acl = QL::QueryArray( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
 		return acl.empty() ? jobject{} : Json::AsObject(acl[0], "/permissionRight");
 	}
 	α SelectAcl( IdentityPK identityPK, RolePK rolePK )ε->jobject{
 		let ql = Ƒ( "acl(identityId:{})<identityId role(id:{})<id target deleted>>", identityPK.Underlying(), rolePK );
-		let acl = QL::QuerySync<jarray>( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
+		let acl = QL::QueryArray( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
 		return acl.empty() ? jobject{} : Json::AsObject(acl[0], "/role");
 	}
 	α CreateAcl( IdentityPK identityPK, ERights allowed, ERights denied, string resource, UserPK executer )ε->PermissionRightsPK{
 		let resourcePK = AsNumber<ResourcePK>( SelectResource(resource, {UserPK::System}, true), "id" );
 		let create = Ƒ( "createAcl( identity:{{ id:{} }}, permissionRight:{{ allowed:{}, denied:{}, resource:{{id:{}}}}} ){{permissionRight{{id}}}}", identityPK.Underlying(), underlying(allowed), underlying(denied), resourcePK );
-		let createJson = QL::QuerySync( create, executer );
+		let createJson = QL::QueryObject( create, executer );
 		return Json::AsNumber<PermissionRightsPK>( createJson, "permissionRight/id" );
 	}
 	α CreateAcl( IdentityPK identityPK, RolePK rolePK, UserPK executer )ε->void{
 		let existing = SelectAcl( identityPK, rolePK );
 		if( existing.empty() ){
 			let create = Ƒ( "mutation createAcl( identity:{{ id:{} }}, role:{{id:{}}} )", identityPK.Underlying(), rolePK );
-			QL::QuerySync<jvalue>( create, executer );
+			QL::Query( create, executer );
 		}
 	}
 
@@ -60,7 +60,7 @@ namespace Jde::Access::Tests{
 			let existingDenied = (ERights)Json::AsNumber<uint8>( entry, "denied" ); //ToRights( Json::AsArray(entry, "denied") );
 			if( allowed!=existingAllowed || existingDenied!=denied ){
 				let update = Ƒ( "mutation updatePermissionRight( id:{}, allowed:{}, denied:{} )", Json::AsNumber<PermissionPK>(entry, "id"), underlying(allowed), underlying(denied) );
-				let updateJson = QL::QuerySync( update, GetRoot() );
+				let updateJson = QL::Query( update, GetRoot() );
 				entry = SelectAcl( identityPK, resource );
 			}
 		}

@@ -170,26 +170,32 @@ namespace Jde::IO::Drive
 			AccessedTime = accessed;
 		}
 	};
-	α NativeDrive::Get( const fs::path& path )ε->up<IDirEntry>{
-		return mu<DirEntry>( path );
+	α NativeDrive::Get( const fs::path& path )ε->IDirEntryPtr
+	{
+		sp<const IDirEntry> pEntry = make_shared<const DirEntry>( path );
+		return pEntry;
 	}
-	α NativeDrive::Recursive( const fs::path& dir, SL sl )ε->flat_map<string,up<IDirEntry>>{
+	α NativeDrive::Recursive( const fs::path& dir, SL sl )ε->flat_map<string,IDirEntryPtr>
+	{
 		CHECK_PATH( dir, sl );
 		let dirString = dir.string();
-		flat_map<string,up<IDirEntry>> entries;
+		flat_map<string,IDirEntryPtr> entries;
 
 		std::function<void(const fs::directory_entry&)> fnctn;
-		fnctn = [&dirString, &entries, &fnctn]( const fs::directory_entry& entry ){
+		fnctn = [&dirString, &entries, &fnctn]( const fs::directory_entry& entry )
+		{
 			let status = entry.status();
 			let relativeDir = entry.path().string().substr( dirString.size()+1 );
 
-			if( fs::is_directory(status) || fs::is_regular_file(status) ){
-				entries.emplace( relativeDir, mu<DirEntry>(entry.path()) );
+			sp<DirEntry> pEntry;
+			if( fs::is_directory(status) || fs::is_regular_file(status) )
+			{
+				entries.emplace( relativeDir, make_shared<DirEntry>(entry.path()) );
 				if( fs::is_directory(status) )
-					for_each( fs::directory_iterator(entry.path()), fnctn );
+					FileUtilities::ForEachItem( entry.path(), fnctn );
 			}
 		};
-		for_each( fs::directory_iterator(dir), fnctn );
+		FileUtilities::ForEachItem( dir, fnctn );
 
 		return entries;
 	}
@@ -200,9 +206,11 @@ namespace Jde::IO::Drive
 
 		return { Clock::to_time_t(time), total };
 	}
-	α NativeDrive::CreateFolder( const fs::path& dir, const IDirEntry& dirEntry )ε->up<IDirEntry>{
+	α NativeDrive::CreateFolder( const fs::path& dir, const IDirEntry& dirEntry )ε->IDirEntryPtr
+	{
 		fs::create_directory( dir );
-		if( dirEntry.ModifiedTime.time_since_epoch()!=Duration::zero() ){
+		if( dirEntry.ModifiedTime.time_since_epoch()!=Duration::zero() )
+		{
 			//let [createTime, modifiedTime, size] = GetTimes( dirEntry );
 			let modifiedTime = to_timespec( dirEntry.ModifiedTime );
 			let accessedTime = dirEntry.AccessedTime.time_since_epoch()==Duration::zero() ? modifiedTime : to_timespec( dirEntry.AccessedTime );
@@ -210,10 +218,11 @@ namespace Jde::IO::Drive
 			if( !utimensat(AT_FDCWD, dir.string().c_str(), values, 0) )
 				Warning( _tags, "utimensat returned {} on {}"sv, errno, dir.string() );
 		}
-		return mu<DirEntry>( dir );
+		return make_shared<DirEntry>( dir );
 	}
-	α NativeDrive::Save( const fs::path& path, const vector<char>& bytes, const IDirEntry& dirEntry )ε->up<IDirEntry>{
-		IO::SaveBinary( path, bytes );
+	α NativeDrive::Save( const fs::path& path, const vector<char>& bytes, const IDirEntry& dirEntry )ε->IDirEntryPtr
+	{
+		IO::FileUtilities::SaveBinary( path, bytes );
 		if( dirEntry.ModifiedTime.time_since_epoch()!=Duration::zero() )
 		{
 			let modifiedTime = to_timespec( dirEntry.ModifiedTime );
@@ -222,12 +231,12 @@ namespace Jde::IO::Drive
 			if( utimensat(AT_FDCWD, path.string().c_str(), values, 0) )
 				Warning( _tags, "utimensat returned {} on {}"sv, errno, path.string() );
 		}
-		return mu<DirEntry>( path );
+		return make_shared<DirEntry>( path );
 	}
 
 	//VectorPtr<char> NativeDrive::Load( path path )ε
-	α NativeDrive::Load( const IDirEntry& dirEntry )ε->vector<char>{//fs::filesystem_error, IOException
-		return IO::LoadBinary( dirEntry.Path );
+	α NativeDrive::Load( const IDirEntry& dirEntry )ε->sp<vector<char>>{//fs::filesystem_error, IOException
+		return IO::FileUtilities::LoadBinary( dirEntry.Path );
 	}
 
 	α NativeDrive::Remove( const fs::path& path )ε->void

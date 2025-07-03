@@ -24,13 +24,13 @@ namespace Jde::DB{
 			if( value.is_null() )
 				valueText = "null";
 			else if( value.is_string() && value.get_string()=="$now" )
-				valueText = column->Table->Syntax().UtcNow();
+				valueText = ToSV( column->Table->Syntax().UtcNow() );
 			else
 				sql.Params.push_back( value );
 			sql.Text += column->Name + " = "+valueText;
 		}
 		if( auto updated = table.FindColumn("updated"); updated && Values.find(updated)==Values.end() )
-			sql.Text += ", "+updated->Name + " = " + string{ table.Schema->Syntax().UtcNow() };
+			sql.Text += ", "+updated->Name + " = " + ToStr( table.Schema->Syntax().UtcNow() );
 		sql.Params.insert( sql.Params.end(), Where.Params().begin(), Where.Params().end() );
 		sql.Text += '\n' + Where.Move();
 		return sql;

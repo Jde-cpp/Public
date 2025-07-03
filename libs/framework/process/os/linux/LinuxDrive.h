@@ -1,15 +1,15 @@
 #pragma once
 #include <signal.h>
 #include <aio.h>
-#include "../../Framework/source/io/FileCo.h"
-#include "../../Framework/source/io/IDrive.h"
+#include "../../Framework/source/io/DiskWatcher.h"
 #include "../../Framework/source/coroutine/Awaitable.h"
 #include <jde/framework/io/file.h>
 
 using namespace Jde::Coroutine;
 namespace Jde::IO
 {
-	struct LinuxChunk final : IFileChunkArg{
+	struct LinuxChunk final : IFileChunkArg
+	{
 		LinuxChunk( FileIOArg& pIOArg, uint index )ι;
 		//uint StartIndex()const ι override;
 		//void SetStartIndex( uint i )ι override;
@@ -29,17 +29,18 @@ namespace Jde::IO
 	//	static void AioSigHandler( int sig, siginfo_t* pInfo, void* pContext )ι;
 	};*/
 }
-
-namespace Jde::IO::Drive{
-	struct NativeDrive final: public IDrive{
+namespace Jde::IO::Drive
+{
+	struct NativeDrive final: public IDrive
+	{
 		//void Recursive2( path dir )ε;
-		α Recursive( const fs::path& dir, SRCE )ε->flat_map<string,up<IDirEntry>> override;
-		α Get( const fs::path& path )ε->up<IDirEntry> override;
-		α Save( const fs::path& path, const vector<char>& bytes, const IDirEntry& dirEntry )ε->up<IDirEntry> override;
-		α CreateFolder( const fs::path& path, const IDirEntry& dirEntry )ε->up<IDirEntry> override;
+		flat_map<string,IDirEntryPtr> Recursive( const fs::path& dir, SRCE )ε override;
+		IDirEntryPtr Get( const fs::path& path )ε override;
+		IDirEntryPtr Save( const fs::path& path, const vector<char>& bytes, const IDirEntry& dirEntry )ε override;
+		IDirEntryPtr CreateFolder( const fs::path& path, const IDirEntry& dirEntry )ε override;
 
 		α Trash( const fs::path& path )ι->void override;
-		α Load( const IDirEntry& dirEntry )ε->vector<char> override;
+		α Load( const IDirEntry& dirEntry )ε->sp<vector<char>> override;
 		α Remove( const fs::path& )ε->void override;
 		α TrashDisposal( TimePoint /*latestDate*/ )ε->void override{ THROW("Not Implemented"); };
 		α Restore( sv /*name*/ )ε->void override{ THROW("Not Implemented"); };

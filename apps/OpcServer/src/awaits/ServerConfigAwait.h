@@ -17,7 +17,7 @@ namespace Jde::Opc::Server {
 		ServerConfigAwait( SRCE )ι:	VoidAwait<>(sl){
 			GetUAServer()._dataTypes.reserve(1024);
 		};
-		Ω ServerWhereClause( const DB::View& snTable, string alias="n", SRCE )ε->DB::WhereClause;
+		Ω ServerWhereClause( const DB::View& snTable, string alias="n", bool includeDeleted=false, SRCE )ε->DB::WhereClause;
 	private:
 		α Suspend()ι->void override { LoadBrowseNames(); }
 		α LoadBrowseNames()ι->BrowseNameAwait::Task;

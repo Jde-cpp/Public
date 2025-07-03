@@ -7,7 +7,7 @@
 #include <boost/lexical_cast.hpp>
 #include <google/protobuf/duration.pb.h>
 #include <google/protobuf/timestamp.pb.h>
-#include <jde/framework/chrono.h>
+#include "../../../../../Framework/source/DateTime.h"
 #include "../usings.h"
 
 #define let const auto
@@ -77,11 +77,9 @@ namespace Jde::Opc{
 
 	private:
 		α ToParts()Ι->tuple<_int,int>{
-			using namespace std::chrono;
 			let dts = UA_DateTime_toStruct( _dateTime );
 			_int seconds = Clock::to_time_t( Chrono::ToTimePoint((int16)dts.year, (int8)dts.month, (int8)dts.day, (int8)dts.hour, (int8)dts.min, (int8)dts.sec) );
-			auto duration = milliseconds{dts.milliSec} + microseconds{dts.microSec} + nanoseconds{dts.nanoSec};
-			int nanos = duration_cast<nanoseconds>(duration).count();
+			int nanos = dts.milliSec*TimeSpan::MicrosPerMilli*TimeSpan::NanosPerMicro+dts.microSec*TimeSpan::NanosPerMicro+dts.nanoSec;
 			return make_tuple( seconds, nanos );
 		}
 		UA_DateTime _dateTime;

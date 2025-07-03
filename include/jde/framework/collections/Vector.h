@@ -46,7 +46,6 @@ namespace Jde{
 		for_each( Base(), f );
 	}
 }
-
 //https://stackoverflow.com/questions/21806561/concatenating-strings-and-numbers-in-variadic-template-function
 namespace Jde::ToVec{
 

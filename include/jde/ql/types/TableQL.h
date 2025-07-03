@@ -39,7 +39,7 @@ namespace Jde::QL{
 		vector<ColumnQL> Columns;
 		vector<TableQL> Tables;
 		mutable vector<QL::JsonMembers> JsonMembers;
-		bool ReturnRaw{true};
+		bool ReturnRaw{};
 	};
 }
 #undef let

@@ -1,6 +1,6 @@
 #include "globals.h"
 #include <jde/access/access.h>
-#include <jde/ql/QLAwait.h>
+#include <jde/ql/ql.h>
 
 #define let const auto
 namespace Jde::Access::Tests{
@@ -18,11 +18,11 @@ namespace Jde::Access::Tests{
 	ProviderPK AuthTests::OpcProviderId{};
 
 	α AuthTests::SetUpTestCase()ε->void{
-	if( auto o = QL::QuerySync(Ƒ("provider(target:\"{}\"){{id}}", OpcServer), GetRoot()); !o.empty() )
+	if( auto o = QL::QueryObject(Ƒ("provider(target:\"{}\"){{id}}", OpcServer), GetRoot()); !o.empty() )
 			OpcProviderId = GetId( o );
 		else{
 			let createQL = Ƒ( "createProvider( target:\"{}\", providerType:{} ){{id}}", OpcServer, underlying(EProviderType::OpcServer) );
-			OpcProviderId = GetId( QL::QuerySync(createQL, GetRoot()) );
+			OpcProviderId = GetId( QL::QueryObject(createQL, GetRoot()) );
 		}
 	}
 

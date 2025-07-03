@@ -8,6 +8,7 @@
 #include <jde/ql/types/MutationQL.h>
 #include <jde/ql/types/Introspection.h>
 #include "LocalQL.h"
+#include "MutationAwait.h"
 
 #define let const auto
 
@@ -25,6 +26,19 @@ namespace Jde{
 				SetIntrospection( {Json::ReadJsonNet(*path)} );
 			}
 		}
+	}
+	α QL::Query( string ql, UserPK executer, SL sl )ε->jvalue{
+		Trace{ sl, _tags | ELogTags::Pedantic, "QL: {}", ql };
+		return Query( Parse(move(ql)), executer, sl );
+	}
+	α QL::QueryArray( string query, UserPK executer, SL sl )ε->jarray{
+		let y = Query( move(query), executer, sl );
+		ASSERT( y.is_array() );
+		return y.is_array() ? move( y.get_array() ) : jarray{};
+	}
+	α QL::QueryObject( string ql, UserPK executer, SL sl )ε->jobject{
+		let y = Query( ql, executer, sl );
+		return y.is_object() ? move( y.get_object() ) : jobject{};
 	}
 }
 
