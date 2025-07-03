@@ -3,7 +3,6 @@
 
 namespace Jde::Opc::Server{
 	α ConstructorAwait::Execute()ι->DB::SelectAwait::Task{
-		auto& ua = GetUAServer();
 		try{
 			let table = GetViewPtr( "constructors" );
 			let nodeIdTable = GetViewPtr("server_node_ids");

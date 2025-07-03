@@ -24,7 +24,7 @@ namespace Jde::Access::Tests{
 	α GetRoot()ε->UserPK;
 	α GetUser( str target, UserPK userPK, bool includeDeleted=false, ProviderPK providerId=(ProviderPK)Access::EProviderType::Google )ε->jobject;
 
-	α Purge( str table, uint id, UserPK userPK )ε->jobject;
+	α Purge( str table, uint id, UserPK userPK )ε->jvalue;
 	α PurgeGroup( GroupPK id, UserPK userPK )ε->void;
 	α PurgeUser( UserPK userId, UserPK userPK, SRCE )ε->void;
 

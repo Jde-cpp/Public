@@ -102,7 +102,7 @@ namespace	Sessions{
 				info = existing;
 			}
 			else
-				Trace{ ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, DateTime{existingExpiration}.ToIsoString() };
+				Trace{ ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, ToIsoString(existingExpiration) };
 		} );
 		if( _lastTrim<steady_clock::now()-Sessions::RestSessionTimeout() ){
 			_sessions.erase_if( []( auto& kv ){ return kv.second->Expiration<steady_clock::now(); } );

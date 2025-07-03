@@ -139,11 +139,11 @@ namespace Server{
 			Crypto::CreateKeyCertificate( settings );
 		}
 		_ctx->set_options( ssl::context::default_workarounds | ssl::context::no_sslv2 | ssl::context::single_dh_use );
-		let cert = IO::FileUtilities::Load( settings.CertPath );
+		let cert = IO::Load( settings.CertPath );
 		_ctx->use_certificate_chain( net::buffer(cert.data(), cert.size()) );
 
 		_ctx->set_password_callback( [=](uint, ssl::context_base::password_purpose){ return settings.Passcode; } );
-		let key = IO::FileUtilities::Load( settings.PrivateKeyPath );
+		let key = IO::Load( settings.PrivateKeyPath );
 		_ctx->use_private_key( net::buffer(key.data(), key.size()), ssl::context::file_format::pem );
 		static const string dhStatic =
 			"-----BEGIN DH PARAMETERS-----\n"
@@ -154,7 +154,7 @@ namespace Server{
 			"oEEZdnZWANkkpR/m/pfgdmGPU66S2sXMHgsliViQWpDCYeehrvFRHEdR9NV+XJfC\n"
 			"QMUk26jPTIVTLfXmmwU0u8vUkpR7LQKkwwIBAg==\n"
 			"-----END DH PARAMETERS-----\n";
-		string dh = fs::exists( settings.DhPath ) ? IO::FileUtilities::Load( settings.DhPath ) : dhStatic;
+		string dh = fs::exists( settings.DhPath ) ? IO::Load( settings.DhPath ) : dhStatic;
 		_ctx->use_tmp_dh( net::buffer(dh.data(), dh.size()) );
 	}
 

@@ -8,10 +8,10 @@ namespace Jde::Web{
 	constexpr ELogTags _readTag{ ELogTags::SocketClientRead };
 
 	static optional<uint16> _maxLogLength;
-	α Client::MaxLogLength()ι->uint16{ 
+	α Client::MaxLogLength()ι->uint16{
 		if( !_maxLogLength )
 			_maxLogLength = Settings::FindNumber<uint16>( "http/maxLogLength" ).value_or( 255 );
-		return *_maxLogLength; 
+		return *_maxLogLength;
 	}
 }
 #define CHECK_EC(tag) if( ec ){ \
@@ -62,7 +62,6 @@ namespace Jde::Web::Client{
 	IClientSocketSession::IClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι:
 		_resolver{ *ioc },
 		_stream{ ms<ClientSocketStream>(*ioc, ctx) },
-		_readTimer{ "", ELogTags::SocketClientRead },
 		_ioContext{ ioc }
 	{}
 
@@ -123,9 +122,7 @@ namespace Jde::Web::Client{
 				_stream->Close( shared_from_this() );
 			return;
 		}
-		_readTimer.Restart();//Set on Client.
 		OnReadData( _stream->ReadBuffer() );
-		//_readTimer.Finish();  TODO no description & it is rounded up to nearest second.
 		_stream->AsyncRead( shared_from_this() );
 	}
 	α CloseClientSocketSessionAwait::Suspend()ι->void{

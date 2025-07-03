@@ -5,7 +5,7 @@
 
 namespace Jde::DB{
 	WhereClause::WhereClause( const Object& a, EOperator op, const Object& b, SL /*sl*/ )ε{
-		auto clause = ToString( a );
+		auto clause = DB::ToString( a );
 		if( b.index()==underlying(EObject::Value) && get<Value>(b).is_null() ){
 			if( op==EOperator::Equal )
 				clause = Ƒ( "{} is null", move(clause) );
@@ -13,7 +13,7 @@ namespace Jde::DB{
 				clause = Ƒ( "{} is not null", move(clause) );
 		}
 		else{
-			clause = Ƒ( "{} {} {}", move(clause), ToString(op), ToString(b) );
+			clause = Ƒ( "{} {} {}", move(clause), DB::ToString(op), DB::ToString(b) );
 			auto aParams = GetParams( a );
 			auto bParams = GetParams( b );
 			move(aParams.begin(), aParams.end(), back_inserter(_params));
@@ -44,7 +44,7 @@ namespace Jde::DB{
 			if( op==EOperator::NotEqual )
 				prefix = "not ";
 			else if( op!=EOperator::Equal )
-				throw Exception{ sl, Jde::ELogLevel::Debug, "Null value not allowed for operator '{}'.", ToString(op) };
+				throw Exception{ sl, Jde::ELogLevel::Debug, "Null value not allowed for operator '{}'.", DB::ToString(op) };
 			_clauses.push_back( Ƒ("{} is {}null", col->FQName(), prefix) );
 		}else{
 			_clauses.push_back( col->Table->Syntax().FormatOperator(*col, op, 1, sl) );
@@ -65,6 +65,10 @@ namespace Jde::DB{
 	α WhereClause::Move()ι->string{
 		string prefix{ _clauses.size() ? "where " : "" };
 		return prefix + Str::Join( move(_clauses), " and " );
+	}
+	α WhereClause::ToString()Ι->string{
+		string prefix{ _clauses.size() ? "where " : "" };
+		return prefix + Str::Join( _clauses, " and " );
 	}
 	α WhereClause::Remove( sv clause )ι->void{
 		for( auto it=_clauses.begin(); it!=_clauses.end(); ++it ){

@@ -2,9 +2,9 @@
 #include "ObjectType.h"
 
 namespace Jde::Opc::Server{
-	Node::Node( UA_NodeId nodeId )ι:
+	Node::Node( UA_NodeId nodeId, NodePK pk )ι:
 		NodeId{ move(nodeId) },
-		PK{ IsSystem(nodeId) ? (NodePK)nodeId.identifier.numeric : 0 }
+		PK{ pk ? pk : IsSystem(nodeId) ? (NodePK)nodeId.identifier.numeric : 0 }
 	{}
 
 	Node::Node( UA_NodeId nodeId, NodePK parentPK, NodePK refPK, sp<ObjectType> typeDef, Server::BrowseName browse )ι:
@@ -12,26 +12,25 @@ namespace Jde::Opc::Server{
 		PK{},
 		ParentNodePK{ parentPK },
 		ReferenceTypePK{ refPK },
-		TypeDef{ typeDef },
-		Browse{ browse.PK }
+		Browse{ browse.PK },
+		TypeDef{ typeDef }
 	{}
-	Ω getNodeId( const jobject& j )->NodeId{
+/*	Ω getNodeId( const jobject& j )->NodeId{
 		auto id = j.if_contains("id");
 		return id ? NodeId{ *id } : UA_NodeId{};
-	}
+	}*/
 	Node::Node( const jobject& j, NodePK parentPK, Server::BrowseName browse )ε:
 		NodeId{ j.contains("id") ? NodeId{ j.at("id") } : UA_NodeId{} },
 		PK{ Json::FindNumber<Server::NodePK>(j, "id").value_or(0) },
 		IsGlobal{ Json::FindBool(j, "isGlobal").value_or(false) },
-		Browse{ move(browse) },
 		ParentNodePK{ parentPK },
 		ReferenceTypePK{ Json::FindNumberPath<Server::NodePK>(j, "ref/id").value_or(0) },
+		Browse{ move(browse) },
 		TypeDef{ j.contains("type") ? ms<ObjectType>(NodeId{j.at("type").as_object()}.nodeId) : nullptr }
 	{}
 
 	Node::Node( NodePK pk ):
-		NodeId{ pk<=32750 ? UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, (UA_UInt32)pk} : UA_NodeId{} },
-		PK{ pk }
+		Node{ pk<=32750 ? UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, (UA_UInt32)pk} : UA_NodeId{}, pk }
 	{}
 
 	Node::Node( DB::Row&& r, sp<ObjectType> typeDef )ι:

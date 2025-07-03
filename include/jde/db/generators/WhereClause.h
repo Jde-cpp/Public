@@ -30,6 +30,7 @@ namespace Jde::DB{
 		α Add( const DB::Criteria& criteria )ε->void;
 		α Empty()Ι->bool{ return _clauses.empty(); }
 		α Move()ι->string;
+		α ToString()Ι->string;
 
 		α Params()ι->vector<Value>&{ return _params; }
 		α Params()Ι->const vector<Value>&{ return _params; }
