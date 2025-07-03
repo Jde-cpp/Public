@@ -160,7 +160,7 @@ namespace Jde::QL{
 							rootType = EFieldKind::List;
 						}
 						else if( childColumn ){
-							fieldName = ToPlural<sv>( ToJson(Str::Replace(column.Name, "_id", "")) );
+							fieldName = ToPlural( ToJson(Str::Replace(column.Name, "_id", "")) );
 							rootType = EFieldKind::List;
 						}
 						else{
@@ -192,7 +192,7 @@ namespace Jde::QL{
 					if( pColumn1->PKTable->Name==mainTable.Name ){
 						let pTable2 = pColumn2->PKTable;
 						let jsonType = pTable->Columns.size()==2 ? pTable2->JsonName() : pTable->JsonName();
-						addField( ToPlural<string>(ToJson(jsonType)), {}, EFieldKind::List, jsonType, EFieldKind::Object );
+						addField( ToPlural( ToJson(jsonType) ), {}, EFieldKind::List, jsonType, EFieldKind::Object );
 					}
 				}
 			};

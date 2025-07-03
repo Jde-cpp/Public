@@ -133,10 +133,11 @@ namespace Jde::DB{
 				return;
 			let text = IO::FileUtilities::Load( scriptFile );
 			Trace{ _tags, "Executing '{}'", scriptFile.string() };
-			let queries = Str::Split<sv,iv>( text, "\ngo"_iv );
+			let queries = Str::Split<sv,Str::iv>( text, "\ngo"_iv );
 			for( let& text : queries ){
+				string newName = Ƒ("[{}]", config.DBSchema->Name);
 				let query = Str::Replace(
-					Str::Replace(text, "[dbo]", Ƒ("[{}]", config.DBSchema->Name) ),
+					Str::Replace(text, "[dbo]"sv, Ƒ("[{}]", config.DBSchema->Name) ),
 					stdPrefix, prefix );
 
 				std::ostringstream os;

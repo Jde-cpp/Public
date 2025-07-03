@@ -100,7 +100,7 @@ namespace Jde::DB{
 }
 namespace Jde{
 	α DB::ToType( sv csTypeName )ι->DB::EType{
-		iv typeName{ ToIV(csTypeName) };
+		Str::iv typeName{ ToIV(csTypeName) };
 		//String typeName{ t };
 		EType type{ EType::None };
 		if( typeName=="dateTime" )

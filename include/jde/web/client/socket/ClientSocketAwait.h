@@ -13,7 +13,7 @@ namespace Jde::Web::Client{
 		}
 		α Log( SessionPK sessionId, steady_clock::time_point start, SL sl)ι->void{
 			if( ShouldTrace(ELogTags::SocketClientRead) && ResponseMessage.size() ){
-				const auto msg = sv{Str::ToString(ResponseMessage, MessageArgs)}.substr( 0, MaxLogLength() );
+				const auto msg = sv{Str::Format(ResponseMessage, MessageArgs)}.substr( 0, MaxLogLength() );
 				Trace{ sl, ELogTags::SocketClientRead, "[{:x}]SocketReceive - {} - {}", sessionId, msg, Chrono::ToString( steady_clock::now() - start ) };
 			}
 		}

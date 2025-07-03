@@ -25,7 +25,7 @@ namespace Jde::QL{
 
 	α MutationQL::TableName()Ι->string{
 		if( _tableName.empty() )
-			_tableName = DB::Names::ToPlural<string>( DB::Names::FromJson<string,string>(JsonTableName) );
+			_tableName = DB::Names::ToPlural( DB::Names::FromJson(JsonTableName) );
 		return _tableName;
 	}
 
