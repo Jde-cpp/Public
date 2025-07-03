@@ -1,0 +1,8 @@
+mutation{
+	createGrouping( target: "OpcGateway" )
+	createRole( target: "OpcGateway", description: "Permissions for OpcGateways", permissionRights:[
+		{resource: {target: "users"}, allowed: ["Create", "Read", "Update", "Delete", "Purge"]},
+		{resource: {target: "groups"}, allowed: ["Read"]},
+		{resource: {target: "roles"}, allowed: ["Read"]}]
+	)
+}
