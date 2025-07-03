@@ -25,7 +25,7 @@ namespace Jde::Opc::Server{
 			jarray y;
 			for( let& file : _files ){
 				Information{ ELogTags::App, "Mutation: '{}'", file.string() };
-				let text = IO::FileUtilities::Load( file );
+				let text = IO::Load( file );
 				auto requests = QL::Parse( move(text) ); THROW_IF( !requests.IsMutation(), "Query is not a mutation" );
 				for( auto&& m : requests.Mutations() ){
 					m.Args["$silent"] = true;
