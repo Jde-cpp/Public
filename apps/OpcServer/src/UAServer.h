@@ -20,10 +20,10 @@ namespace Jde::Opc::Server {
 
 		α Find( NodePK parentPK, BrowseNamePK browsePK )Ι->const Node*;
 		α Find( const Node& parent, const BrowseName& browse )Ι->const Node*;
-		α FindBrowse( BrowseName& browse )Ι->bool;
+		α FindBrowse( BrowseName& browse, SRCE )Ε->bool;
 		α GetBrowse( BrowseName& browse, SRCE )Ε->void;
 		α GetBrowse( BrowseNamePK pk, SRCE )Ε->const BrowseName&;
-		α FindDataType( NodePK nodePK )Ι->const UA_DataType*;
+		α FindDataType( NodePK nodePK, SRCE )ε->const UA_DataType*;
 		α GetDataType( NodePK nodePK, SRCE )ε->const UA_DataType&;
 		α GetParent( NodePK pk, SRCE )ε->Node&;
 		α FindObjectishNode( NodePK pk )Ε->const Node*;
@@ -49,7 +49,7 @@ namespace Jde::Opc::Server {
 
 		flat_map<BrowseNamePK, BrowseName> _browseNames;
 		flat_map<NodeId, flat_map<BrowseNamePK, Variant>> _constructors;
-		mutable flat_map<NodePK, UA_DataType*> _dataTypes;
+		flat_map<NodePK, UA_DataType*> _dataTypes;
 		flat_map<NodePK, Object> _objects;
 		flat_map<NodePK, sp<ObjectType>> _typeDefs; //ObjectTypes and VariableTypes
 		flat_map<NodePK, Reference> _refs;

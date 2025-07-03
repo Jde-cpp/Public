@@ -31,7 +31,7 @@ namespace Jde::DB{
 		else
 			os << "create " << (Clustered && syntax.SpecifyIndexCluster() ? "clustered " : " ") << unique << " index "<< name << " on " << std::endl << tableName << "(";
 
-		os << Str::Join( Columns ) << ")";
+		os << Str::AddCommas( Columns ) << ")";
 
 		return os.str();
 	}

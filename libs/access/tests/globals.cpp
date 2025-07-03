@@ -4,7 +4,7 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
-#include <jde/ql/QLAwait.h>
+#include <jde/ql/ql.h>
 #include "../src/awaits/ResourceLoadAwait.h"
 
 #define let const auto
@@ -37,7 +37,7 @@ namespace Tests{
 		return Str::Replace( Ƒ("mutation update{}( id:{}, name:'{}' )", Capitalize(table), id, updatedName), '\'', '"' );
 	}
 	Ω testUpdateName( str table, uint id, UserPK executer, sv updatedName )ε->void{
- 		let updateJson = QL::QuerySync<jvalue>( updateNameQL(table, id, updatedName), executer );
+ 		let updateJson = QL::Query( updateNameQL(table, id, updatedName), executer );
 		ASSERT_TRUE( Json::AsSV(Select(table,id, GetRoot(), {}, true), "name")==updatedName );
 	}
 
@@ -45,11 +45,11 @@ namespace Tests{
 	Ω restoreQL( str table, uint id )ι->string{ return Ƒ( "mutation restore{}( id:{} )", Capitalize(table), id ); }
 	Ω testDeleteRestore( str table, uint id, UserPK executer )ε->void{
 		let del = Ƒ( "mutation delete{}(\"id\":{})", Capitalize(table), id );
-		let deleteJson = QL::QuerySync<jvalue>( deleteQL(table, id), executer );
+		let deleteJson = QL::Query( deleteQL(table, id), executer );
 		ASSERT_TRUE( Select(table, id, executer).empty() );
 		ASSERT_FALSE( Select(table, id, executer, {}, true).empty() );
 
- 		let restoreJson = QL::QuerySync<jvalue>( restoreQL(table, id), executer );
+ 		let restoreJson = QL::Query( restoreQL(table, id), executer );
 		ASSERT_FALSE( Select(table, id, executer).empty() );
 	}
 	Ω addRemoveQL( sv op, const DB::Table& table, uint pk, vector<uint> members )ε->string{
@@ -59,16 +59,16 @@ namespace Tests{
 		let memberString = members.size()==1 ? Ƒ( "{}", members[0] ) : '['+Str::Join( members )+']';
 		return Ƒ( "mutation {}{}( id:{}, {}:{} )", op, parentTableName, pk, ToJson(map.Child->Name), memberString );
 	}
-	Ω addRemove( sv op, const DB::Table& table, uint pk, vector<uint> members, UserPK executer )ε->jvalue{
-		return QL::QuerySync<jvalue>( addRemoveQL(op, table, pk, members), executer );
+	Ω addRemove( sv op, const DB::Table& table, uint pk, vector<uint> members, UserPK executer )ε->jobject{
+		return QL::QueryObject( addRemoveQL(op, table, pk, members), executer );
 	}
 }
 	α Tests::TestUnauthUpdateName( str table, uint id, UserPK executer, sv updatedName )ε->void{
- 		EXPECT_THROW( QL::QuerySync<jvalue>( updateNameQL(table, id, updatedName), executer), IException );
+ 		EXPECT_THROW( QL::Query(updateNameQL(table, id, updatedName), executer), IException );
 	}
 	α Tests::TestUnauthDeleteRestore( str table, uint id, UserPK executer )ε->void{
-		EXPECT_THROW( QL::QuerySync<jvalue>( deleteQL(table,id), executer), IException );
-		EXPECT_THROW( QL::QuerySync<jvalue>( restoreQL(table,id), executer), IException );
+		EXPECT_THROW( QL::Query(deleteQL(table,id), executer), IException );
+		EXPECT_THROW( QL::Query(restoreQL(table,id), executer), IException );
 	}
 
 	α Tests::SetSchema( sp<DB::AppSchema> schema )ι->void{_schema = schema;}
@@ -91,7 +91,7 @@ namespace Tests{
 	}
 	α Tests::AddToGroup( GroupPK id, vector<IdentityPK> members, UserPK executer )ε->void{
 		let ql =	Ƒ( "mutation addGrouping( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
-		let addJson = QL::QuerySync<jvalue>( ql, executer );
+		let addJson = QL::Query( ql, executer );
 	}
 
 	α Tests::Remove( const DB::Table& table, uint groupPK, vector<uint> members, UserPK executer )ε->void{
@@ -99,24 +99,24 @@ namespace Tests{
 	}
 	α Tests::RemoveFromGroup( GroupPK id, vector<IdentityPK> members, UserPK executer )ε->void{
 		let ql = Ƒ( "mutation removeGrouping( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
-		let removeJson = QL::QuerySync<jvalue>( ql, executer );
+		let removeJson = QL::Query( ql, executer );
 	}
 
 
 	α Tests::Create( str table, sv target, UserPK executer, str input, SL sl )ε->uint{
 		let create = Ƒ( "create{0}(  target:'{1}', name:'{1} - name', description:'{1} - description' {2} ){{id}}", Capitalize(table), target, input.size() ? ","s+input : "" );
-		let createJson = QL::QuerySync( Str::Replace(create, '\'', '"'), executer, true, sl );
+		let createJson = QL::QueryObject( Str::Replace(create, '\'', '"'), executer, sl );
 		return GetId( createJson );//{"user":{"id":7}}
 	}
 
 	Ω createUser( str target, ProviderPK providerId, UserPK executer )ε->UserPK{
 		let create = Ƒ( "createUser(  loginName:'{0}', target:'{0}', provider:{1}, name:'{0} - name', description:'{0} - description' ){{id}}", target, (uint)providerId );
-		let createJson = QL::QuerySync( Str::Replace(create, '\'', '"'), executer );
+		let createJson = QL::QueryObject( Str::Replace(create, '\'', '"'), executer );
 		return { Tests::GetId(createJson) };//{"user":{"id":7}}}
 	}
 	α createGroup( str target, UserPK executer )ε->GroupPK{
 		let create = Ƒ( "mutation createGrouping(  target:'{0}', name:'{0} - name', description:'{0} - description' ){{id}}", target );
-		let createJson = QL::QuerySync( Str::Replace(create, '\'', '"'), executer );
+		let createJson = QL::QueryObject( Str::Replace(create, '\'', '"'), executer );
 		return {AsNumber<GroupPK::Type>( createJson, "id")};
 	}
 	α columns( sv cols, bool includeDeleted )ε->string{
@@ -124,7 +124,7 @@ namespace Tests{
 	}
 	α select( sv table, str filter, str cols, UserPK executer )ε->jobject{
 		let ql = Ƒ( "{}({}){{ {} }}", table, filter, cols );
-		return QL::QuerySync( ql, executer );
+		return QL::QueryObject( ql, executer );
 	}
 
 	α Tests::Select( sv table, uint id, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
@@ -137,20 +137,20 @@ namespace Tests{
 
 	α Tests::SelectGroup( str target, UserPK executer, bool includeDeleted )ε->jobject{
 		let ql = Ƒ( "grouping(target:\"{}\"){{ id name attributes created updated target description {} members{{id name}} }}", target, includeDeleted ? "deleted" : "" );
-		return QL::QuerySync( ql, executer );
+		return QL::QueryObject( ql, executer );
 	}
 	α Tests::SelectPermission( ResourcePK resourcePK, UserPK executer )ε->jobject{
 		let ql = Ƒ( "permission( resourceId:{} ){{ id resourceId allowed denied }}", resourcePK );
-		return QL::QuerySync( ql, executer );
+		return QL::QueryObject( ql, executer );
 	}
 
 	α Tests::SelectResource( str target, UserPK executer, bool includeDeleted, SL sl )ε->jobject{
 		let ql = Ƒ( "resource( schemaName:\"access\", target:\"{}\", criteria:null ){{ id schemaName allowed denied name attributes created {} updated target description }}", target, includeDeleted ? "deleted" : "" );
-		return QL::QuerySync( ql, executer, true, sl );
+		return QL::QueryObject( ql, executer, sl );
 	}
 	α Tests::SelectUser( str target, UserPK executer, bool includeDeleted )->jobject{
 		let selectAll = Ƒ( "user(target:\"{}\"){{ id name attributes created updated target description provider {} }}", target, includeDeleted ? "deleted" : "" );
-		return QL::QuerySync( selectAll, executer );
+		return QL::QueryObject( selectAll, executer );
 	}
 
 	α Tests::Get( str table, str target, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
@@ -199,26 +199,26 @@ namespace Tests{
 		return y;
 	}
 
-	α Tests::Purge( str table, uint id, UserPK executer )ε->jvalue{
+	α Tests::Purge( str table, uint id, UserPK executer )ε->jobject{
 		let ql = Ƒ( "mutation purge{}(\"id\":{})", Capitalize(table), id );
-		let y = QL::QuerySync<jvalue>( ql, executer );
+		let y = QL::QueryObject( ql, executer );
 		return y;
 	}
 	α Tests::PurgeUser( UserPK userId, UserPK executer, SL sl )ε->void{
 		let purge = Ƒ( "mutation purgeUser(\"id\":{})", userId.Value );
-		let purgeJson = QL::QuerySync<jvalue>( purge, executer, true, sl );
+		let purgeJson = QL::Query( purge, executer, sl );
 	}
 	α Tests::PurgeGroup( GroupPK id, UserPK executer )ε->void{
 		let purge = Ƒ( "mutation purgeGrouping(\"id\":{})", id.Value );
-		let purgeJson = QL::QuerySync<jvalue>( purge, executer );
+		let purgeJson = QL::Query( purge, executer );
 	}
 	α Tests::Delete( str table, uint id, UserPK executer )ε->jvalue{
 		let del = Ƒ( "mutation delete{}( id:{} )", Capitalize(table), id );
-		return QL::QuerySync<jvalue>( del, executer );
+		return QL::Query( del, executer );
 	}
 	α Tests::Restore( str table, uint id, UserPK executer )ε->jvalue{
 		let ql = Ƒ( "mutation restore{}( id:{} )", Capitalize(table), id );
-		return QL::QuerySync<jvalue>( ql, executer );
+		return QL::Query( ql, executer );
 	}
 	α Tests::TestAdd( str tableName, uint groupPK, vector<uint> members, UserPK executer )->void{
 		auto getMemberIds = [&]()->flat_set<uint>{

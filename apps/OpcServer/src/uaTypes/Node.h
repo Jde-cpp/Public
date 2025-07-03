@@ -5,7 +5,7 @@
 namespace Jde::Opc::Server{
 	struct ObjectType;
 	struct Node : NodeId{
-		Node( UA_NodeId nodeId, NodePK pk=0 )ι;
+		Node( UA_NodeId nodeId )ι;
 		Node( const jobject& j, NodePK parentPK, BrowseName browse )ε;
 		Node( UA_NodeId nodeId, NodePK parentPK, NodePK refPK, sp<ObjectType> typeDef, BrowseName browseName )ι;
 		Node( NodePK pk );

@@ -57,9 +57,9 @@ namespace Jde{
 		return make_tuple( move(pData), size );
 	}
 	Ξ Proto::Save( const google::protobuf::MessageLite& msg, fs::path path, SRCE )ε->void{
-		string content;
-		msg.SerializeToString( &content );
-		IO::Save( move(path), content, sl );
+		let p = ms<string>();
+		msg.SerializeToString( p.get() );
+		IO::FileUtilities::Save( move(path), p, sl );
 	}
 
 	Ŧ Proto::Deserialize( const vector<char>& data )ε->up<T>{
@@ -80,18 +80,18 @@ namespace Jde{
 	}
 
 	Ŧ Proto::Load( const fs::path& path, T& proto, SL sl )ε->void{
-		vector<char> bytes;
+		up<vector<char>> pBytes;
 		try{
-			bytes = IO::LoadBinary( path, sl );
+			pBytes = IO::FileUtilities::LoadBinary( path, sl );
 		}
 		catch( fs::filesystem_error& e ){
 			throw IOException( move(e) );
 		}
-		if( !bytes.size() ){
+		if( !pBytes || !pBytes->size() ){
 			fs::remove( path );
 			throw IOException{ path, "has 0 bytes. Removed", sl };
 		}
-		Internal::Deserialize( (google::protobuf::uint8*)bytes.data(), (uint32)bytes.size(), proto );
+		Internal::Deserialize( (google::protobuf::uint8*)pBytes->data(), (uint32)pBytes->size(), proto );
 	}
 
 	Ŧ Proto::Load( const fs::path& path, SL sl )ε->up<T>{

@@ -3,7 +3,7 @@
 
 namespace Jde::Opc {
 	α Server::DT( NodePK nodePK, SL sl )ε->const UA_DataType&{
-		return GetUAServer().GetDataType( nodePK, sl );
+		return GetUAServer().GetDataType( nodePK );
 	}
 	α Server::DT( const jvalue& j, SL sl )ε->const UA_DataType&{
 		if( j.is_number() )

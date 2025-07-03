@@ -164,10 +164,10 @@ namespace Jde::Opc{
 		return successFailures;
 	}
 
-	α UAMonitoringNodes::DeleteMonitoring( UA_Client* ua, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->DurationTimer::Task{
+	α UAMonitoringNodes::DeleteMonitoring( UA_Client* ua, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->Task{
 		auto wait = 5s;
 		Trace( _tag, "[{:x}]DeleteMonitoring count={}, wait={}", (uint)ua, requested.size(), Chrono::ToString(wait) ); //duration_cast<std::chrono::seconds>(wait).count()
-		co_await DurationTimer{ wait };
+		co_await Threading::Alarm::Wait( wait );
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) co_return;
 
 		flat_map<UA_UInt32,flat_set<MonitorId>> toDelete;

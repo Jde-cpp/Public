@@ -3,7 +3,7 @@
 #include <jde/app/client/usings.h>
 #include <jde/access/Authorize.h>
 #include <jde/web/client/socket/ClientQL.h>
-#include <jde/framework/coroutine/Timer.h>
+#include "../../../../Framework/source/coroutine/Alarm.h"
 
 #define let const auto
 
@@ -75,9 +75,9 @@ namespace Jde::App{
 	α Client::Connect( bool wait )ι->void{
 		if( Process::ShuttingDown() )
 			return;
-		[wait]()->DurationTimer::Task{
+		[wait]()->Task{
 			if( wait )
-				co_await DurationTimer{ _reconnectWait };
+				co_await Threading::Alarm::Wait( _reconnectWait );
 			[]()->LoginAwait::Task {
 				SessionPK sessionId;
 				try{

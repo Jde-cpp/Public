@@ -112,7 +112,7 @@ namespace Jde::DB{
 			move( additional.begin(), additional.end(), std::back_inserter(prefixes) );
 		}
 		forEachDir( "/dbServers/dataPaths", ".mutation", prefixes, [this](const fs::path& file){
-			let text = IO::Load( file );
+			let text = IO::FileUtilities::Load( file );
 			Information{ _tags, "Mutation: '{}'", file.string() };
 			_ql->Upsert( text, {UserPK::System} );
 		});
@@ -131,13 +131,12 @@ namespace Jde::DB{
 			let dbName = prefix+procViewName;
 			if( Procs.find(dbName)!=Procs.end() || Tables().find(procViewName)!=Tables().end() )
 				return;
-			let text = IO::Load( scriptFile );
+			let text = IO::FileUtilities::Load( scriptFile );
 			Trace{ _tags, "Executing '{}'", scriptFile.string() };
-			let queries = Str::Split<sv,Str::iv>( text, "\ngo"_iv );
+			let queries = Str::Split<sv,iv>( text, "\ngo"_iv );
 			for( let& text : queries ){
-				string newName = Ƒ("[{}]", config.DBSchema->Name);
 				let query = Str::Replace(
-					Str::Replace(text, "[dbo]"sv, Ƒ("[{}]", config.DBSchema->Name) ),
+					Str::Replace(text, "[dbo]", Ƒ("[{}]", config.DBSchema->Name) ),
 					stdPrefix, prefix );
 
 				std::ostringstream os;

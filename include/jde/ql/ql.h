@@ -2,7 +2,6 @@
 #include <jde/framework/coroutine/Await.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/generators/Statement.h>
-//#include "QLAwait.h"
 #include "types/MutationQL.h"
 #include "types/RequestQL.h"
 #include "types/TableQL.h"
@@ -11,13 +10,19 @@
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::QL{
 	struct IQL;
-	Ŧ AsId( const jobject& j, SRCE )ε->T;
-	Ŧ AsId( const jvalue& j, SRCE )ε->T;
-	α Configure( vector<sp<DB::AppSchema>>&& schemas )ε->void;
 	α Local()ι->sp<IQL>;
+
+	α Configure( vector<sp<DB::AppSchema>>&& schemas )ε->void;
 	α Parse( string query, bool returnRaw=true, SRCE )ε->RequestQL;
 	α ParseSubscriptions( string query, SRCE )ε->vector<Subscription>;
+	α Query( const TableQL& table, UserPK executer, SRCE )ε->jvalue;
+	α Query( string query, UserPK executer, SRCE )ε->jvalue;
+	α QueryArray( string query, UserPK executer, SRCE )ε->jarray;
+	α QueryObject( string query, UserPK executer, SRCE )ε->jobject;
 	α SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted=nullopt )ε->optional<DB::Statement>;
+
+	Ŧ AsId( const jobject& j, SRCE )ε->T;
+	Ŧ AsId( const jvalue& j, SRCE )ε->T;
 }
 namespace Jde{
 	Ŧ QL::AsId( const jobject& o, SL sl )ε->T{

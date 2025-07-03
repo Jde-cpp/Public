@@ -77,14 +77,15 @@ namespace Jde::Web::Server{
 			}, _ws );
 	}
 
-	α SocketStream::Write( string&& output )ι->LockAwait::Task{
+	α SocketStream::Write( string&& output )ι->Task{
 		auto outputPtr = mu<string>( move(output) );
 		let buffer = net::buffer( (const void*)outputPtr->data(), outputPtr->size() );
-		auto lock = co_await _writeLock.Lock();
+		LockAwait await = _writeLock.Lock(); //gcc doesn't like co_await _writeLock.Lock();
+		auto lock = ( co_await await ).UP<CoGuard>();
 		std::visit(
 			[&]( auto&& ws ){
 				ws.async_write( buffer, [this, &ws, pKeepAlive=shared_from_this(), buffer, l=move(lock), out=move(outputPtr) ]( beast::error_code ec, uint bytes_transferred )mutable{
-					l.unlock();
+					l = nullptr;
 					let tags = ELogTags::SocketClientWrite | ELogTags::ExternalLogger;
 					if( ec || out->size()!=bytes_transferred ){
 						Debug{ tags, "Error writing to Session:  '{}'", boost::diagnostic_information(ec) };

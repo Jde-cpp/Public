@@ -35,10 +35,10 @@ namespace Jde::Opc::Server {
 		// }
 	}
 
-	α UAServer::Constructor(UA_Server* /*server*/,
-	                    const UA_NodeId* /*sessionId*/, void* /*sessionContext*/,
-	                    const UA_NodeId *typeId, void* /*typeContext*/,
-	                    const UA_NodeId *nodeId, void** /*nodeContext*/)->UA_StatusCode{
+	α UAServer::Constructor(UA_Server *server,
+	                    const UA_NodeId *sessionId, void *sessionContext,
+	                    const UA_NodeId *typeId, void *typeContext,
+	                    const UA_NodeId *nodeId, void **nodeContext)->UA_StatusCode{
 		auto& ua = GetUAServer();
 		try{
 			for( let& [pk, variant] : ua.ConstructorValues(*typeId) ){
@@ -175,7 +175,7 @@ namespace Jde::Opc::Server {
 		return y;
 	}
 
-	α UAServer::FindBrowse( BrowseName& browse )Ι->bool{
+	α UAServer::FindBrowse( BrowseName& browse, SL sl )Ε->bool{
 		let p = browse.PK
 			? _browseNames.find( browse.PK )
 			: find_if(_browseNames, [&browse](const auto& kv){ return kv.second.Ns==browse.Ns && kv.second.Name==browse.Name; });
@@ -193,7 +193,7 @@ namespace Jde::Opc::Server {
 		THROW_IFSL( !FindBrowse(browse), "BrowseName not found: {}", browse.ToString() );
 	}
 
-	α UAServer::FindDataType( NodePK nodePK )Ι->const UA_DataType*{
+	α UAServer::FindDataType( NodePK nodePK, SL sl )ε->const UA_DataType*{
 		auto p = _dataTypes.find( nodePK );
 		if( p==_dataTypes.end() && nodePK<=32750 ){
 			for( uint i=0; i<UA_TYPES_COUNT; ++i ){
@@ -206,7 +206,7 @@ namespace Jde::Opc::Server {
 		return p==_dataTypes.end() ? nullptr : p->second;
 	}
 	α UAServer::GetDataType( NodePK nodePK, SL sl )ε->const UA_DataType&{
-		auto p = FindDataType( nodePK );
+		auto p = FindDataType( nodePK, sl );
 		THROW_IFSL( p==nullptr, "({:x})Data type not found", nodePK );
 		return *p;
 	}
@@ -229,7 +229,7 @@ namespace Jde::Opc::Server {
 	}
 	α UAServer::GetObject( const NodeId& id, SL sl )ε->const Object&{
 		let p = find_if( _objects, [&]( let& kv ){return kv.second.nodeId==id;} );
-		THROW_IFSL( p==_objects.end(), "Object not found: {}", id.to_string() );
+		THROW_IF( p==_objects.end(), "Object not found: {}", id.to_string() );
 		return p->second;
 	}
 	α UAServer::GetRefType( NodePK pk, SL sl )ε->NodeId&{
@@ -241,7 +241,7 @@ namespace Jde::Opc::Server {
 	}
 	α UAServer::GetTypeDef( const NodeId& id, SL sl )ε->sp<ObjectType>{
 		let p = find_if( _typeDefs, [&]( let& kv ){return kv.second->nodeId==id;} );
-		THROW_IFSL( p==_typeDefs.end(), "Object type not found: {}", id.to_string() );
+		THROW_IF( p==_typeDefs.end(), "Object type not found: {}", id.to_string() );
 		return p->second;
 	}
 	α UAServer::GetTypeDef( NodePK pk, SL sl )ε->sp<ObjectType>{

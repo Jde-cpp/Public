@@ -1,6 +1,5 @@
 #include <jde/app/shared/proto/App.FromClient.h>
 #include <jde/framework/io/proto.h>
-#include <jde/framework/settings.h>
 
 namespace Jde::App::FromClient{
 	Ω setMessage( RequestId requestId, function<void(PFromClient::Message&)> f ){

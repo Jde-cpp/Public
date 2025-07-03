@@ -6,6 +6,7 @@
 #include "ClientSocketAwait.h"
 #include <jde/framework/coroutine/Await.h>
 #include <jde/framework/io/proto.h>
+#include "../../../../../../Framework/source/Stopwatch.h"
 
 namespace Jde::Web::Client{
 	struct IClientSocketSession;
@@ -59,6 +60,7 @@ namespace Jde::Web::Client{
 
 		tcp::resolver _resolver;
 		sp<ClientSocketStream> _stream;
+		Stopwatch _readTimer;
 		string _host;
 		sp<net::io_context> _ioContext;
 		SessionPK _sessionId{};

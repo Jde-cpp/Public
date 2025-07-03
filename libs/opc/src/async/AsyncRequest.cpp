@@ -7,7 +7,7 @@ namespace Jde::Opc{
 //	α AsyncRequest::LogTag()ι->sp<Jde::LogTag>{ return _logTag; }
 
 	// 1 per UAClient
-	α AsyncRequest::ProcessingLoop()ι->DurationTimer::Task{
+	α AsyncRequest::ProcessingLoop()ι->Task{
 		auto logPrefix = format( "[{:x}]", _pClient->Handle() );
 		Debug( _tag, "{}ProcessingLoop started", logPrefix );
 		while( _running.test() ){
@@ -27,7 +27,7 @@ namespace Jde::Opc{
 				}
 			}
 			if( preMax==max() ){
-				co_await DurationTimer{ 500ms }; //UA_CreateSubscriptionRequest_default
+				co_await Threading::Alarm::Wait( 500ms ); //UA_CreateSubscriptionRequest_default
 				Threading::SetThreadDscrptn( "ProcessingLoop" );
 			}
 		}

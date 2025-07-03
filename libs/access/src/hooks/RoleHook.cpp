@@ -161,7 +161,7 @@ namespace Jde::Access{
 			// QL: role( id:16 ){permissionRight{id allowed denied resource(target:"users",criteria:null)} }
 			if( auto permissionQL = Query.FindTable("permissionRights"); permissionQL ){
 				if( auto statement = PermissionsStatement( *permissionQL ); statement ){
-					auto rights = co_await QL::QLAwait<jvalue>{ move(*permissionQL), move(*statement), UserPK };
+					auto rights = co_await QL::QLAwait( move(*permissionQL), move(*statement), UserPK );
 					if( rights.is_array() )
 						permissions = move( rights.get_array() );
 					else if( rights.is_object() ){
