@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "../uatypes/MonitoredItemCreateResult.h"
 #include <jde/opc/uatypes/Node.h>
+#include <jde/framework/coroutine/Timer.h>
 #include <jde/framework/math/HiLow.h>
 #include "../../../../../Framework/source/coroutine/Awaitable.h"
 
@@ -39,7 +40,7 @@ namespace Jde::Opc{
 		};
 		α GetClient()ι->sp<UAClient>;
 		α FindNode( const NodeId& node )ι->tuple<MonitorHandle,Subscription*>;
-		α DeleteMonitoring( UA_Client* ua, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->Task;
+		α DeleteMonitoring( UA_Client* ua, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->DurationTimer::Task;
 
 		atomic<RequestId> _requestId{};
 		flat_map<MonitorHandle,flat_set<NodeId>> _requests;

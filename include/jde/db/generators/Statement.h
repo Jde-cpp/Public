@@ -14,6 +14,7 @@ namespace Jde::DB{
 		α Empty()ι->bool;
 		α Limit( uint limit )ι->void{ _limit=limit; }
 		α Move()ε->Sql;
+		α ToString()Ι->string;
 		SelectClause Select;
 		FromClause From;
 		WhereClause Where;

@@ -50,7 +50,6 @@ namespace Jde::Opc::Server{
 			Object object{ m.Args, parentPK, move(browse) };
 			if( object.TypeDef )
 				object.TypeDef = ua.GetTypeDef( object.TypeDef->nodeId );
-			UA_NodeId id;
 			object = ua.AddObject( move(object), _sl );
 			object.PK = co_await DS().InsertSeq<NodePK>( DB::InsertClause{
 				schema.DBName( "object_insert" ),

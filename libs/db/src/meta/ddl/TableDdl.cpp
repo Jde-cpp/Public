@@ -46,7 +46,7 @@ namespace Jde::DB{
 				if( c->IsNullable || !c->Default )
 				 	continue;
 				if( c->Default->is_string() && c->Default->get_string()=="$now" )
-					value = ToSV( syntax.UtcNow() );
+					value = syntax.UtcNow();
 			}
 			osInsert << delimiter << c->Name;
 			osValues << delimiter  << value;

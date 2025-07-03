@@ -31,7 +31,7 @@ namespace Jde::DB{
 		β IdentitySelect()Ι->sv{ return "@@identity"; }
 		β Limit( str syntax, uint limit )Ε->string;
 		β NeedsIdentityInsert()Ι->bool{ return true; }
-		β NowDefault()Ι->iv{ return UtcNow(); }
+		β NowDefault()Ι->sv{ return UtcNow(); }
 		β PrefixOut()Ι->bool{ return false; }
 		β ProcParameterPrefix()Ι->sv{ return "@"; }
 		β ProcStart()Ι->sv{ return "as\n\tset nocount on;\n"; }
@@ -44,7 +44,7 @@ namespace Jde::DB{
 
 		β UniqueIndexNames()Ι->bool{ return false; }
 		β UsingClause( const Join& join )Ι->string;
-		β UtcNow()Ι->iv{ return "getutcdate()"; }
+		β UtcNow()Ι->sv{ return "getutcdate()"; }
 		β ZeroSequenceMode()Ι->sv{ return {}; }
 	};
 
@@ -66,7 +66,7 @@ namespace Jde::DB{
 		α IdentitySelect()Ι->sv override{ return "LAST_INSERT_ID()"; }
 		α Limit( str sql, uint limit )Ι->string override{ return Ƒ("{} limit {}", sql, limit); }
 		α NeedsIdentityInsert()Ι->bool override{ return false; }
-		α NowDefault()Ι->iv override{ return "CURRENT_TIMESTAMP"; }
+		α NowDefault()Ι->sv override{ return "CURRENT_TIMESTAMP"; }
 		α PrefixOut()Ι->bool{ return true; }
 		α ProcParameterPrefix()Ι->sv override{ return {}; }
 		α ProcStart()Ι->sv override{ return "begin"; }
@@ -76,7 +76,7 @@ namespace Jde::DB{
 		α SpecifyIndexCluster()Ι->bool override{ return false; }
 		α SysSchema()Ι->sv override{ return "sys"; }
 		α UsingClause( const Join& join )Ι->string override;
-		α UtcNow()Ι->iv override{ return "CURRENT_TIMESTAMP()"; }
+		α UtcNow()Ι->sv override{ return "CURRENT_TIMESTAMP()"; }
 		α ZeroSequenceMode()Ι->sv override{ return "SET @@session.sql_mode = CASE WHEN @@session.sql_mode NOT LIKE '%NO_AUTO_VALUE_ON_ZERO%' THEN CASE WHEN LENGTH(@@session.sql_mode)>0 THEN CONCAT_WS(',',@@session.sql_mode,'NO_AUTO_VALUE_ON_ZERO') ELSE 'NO_AUTO_VALUE_ON_ZERO' END ELSE @@session.sql_mode END"; }
 	};
 }

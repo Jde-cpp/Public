@@ -62,9 +62,8 @@ namespace Jde::Web::Client{
 		}, _ws );
 	}
 
-	α ClientSocketStream::AsyncWrite( string&& buffer, sp<IClientSocketSession> /*session*/ )ι->Task{
-		LockAwait await = _writeLock.Lock(); //gcc doesn't like co_await _writeLock.Lock();
-		_writeGuard = (co_await await).UP<CoGuard>();
+	α ClientSocketStream::AsyncWrite( string&& buffer, sp<IClientSocketSession> /*session*/ )ι->LockAwait::Task{
+		_writeGuard = co_await _writeLock.Lock();
 		_writeBuffer = move(buffer);
 		std::visit( [this](auto&& ws)->void {
 			net::post( _ioc, [this, &ws](){
@@ -74,7 +73,7 @@ namespace Jde::Web::Client{
 	}
 	α ClientSocketStream::OnWrite( beast::error_code ec, uint bytes_transferred )ι->void{
 		_writeBuffer.clear();
-		_writeGuard = nullptr;
+		_writeGuard.unlock();
 		boost::ignore_unused( bytes_transferred );
 		if( ec )
 			CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientWrite };//TODO look at returning an error to caller.

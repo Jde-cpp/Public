@@ -61,9 +61,9 @@ namespace Jde::Web::Server{
 				if( Query.FindColumn("endpoint") )
 					j["endpoint"] = session->UserEndpoint;
 				if( Query.FindColumn("endpoint") )
-					j["lastUpdate"] = DateTime{ session->Expiration }.ToIsoString();
+					j["lastUpdate"] = ToIsoString( session->Expiration );
 				if( Query.FindColumn("expiration") )
-					j["expiration"] = DateTime{ session->Expiration }.ToIsoString();
+					j["expiration"] = ToIsoString( session->Expiration );
 				if( array )
 					array->emplace_back( move(j) );
 				else{

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <jde/opc/uatypes/Node.h>
+#include <jde/framework/coroutine/Timer.h>
 #include "../uatypes/Logger.h"
 
 namespace Jde::Opc{
@@ -27,7 +28,7 @@ namespace Jde::Opc{
 		α Stop()ι->void;
 	private:
 		α UAHandle()ι->Handle;
-		α ProcessingLoop()ι->Task;
+		α ProcessingLoop()ι->DurationTimer::Task;
 		flat_map<RequestId, up<UARequest>> _requests; mutex _requestMutex;
 		sp<UAClient> _pClient;
 		atomic_flag _running;
