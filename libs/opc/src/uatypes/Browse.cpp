@@ -40,26 +40,25 @@ namespace Jde::Opc::Browse{
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
-		if( retry ){
-			try{
-				co_await AwaitSessionActivation( _ua );
-				[]( ObjectsFolderAwait& self )->Task {
-					try{
-						auto j = co_await ObjectsFolderAwait{ self._node, self._snapshot, self._ua, self._sl };
-						self.Resume( move(j) );
-					}
-					catch( IException& e ){
-						self.ResumeExp( move(e) );
-					}
-				}( *this );
-			}
-			catch(IException& e){
-				ResumeExp( move(e) );
-			}
-		}
+		if( retry )
+			Retry();
 	}
-	α ObjectsFolderAwait::Suspend()ι->void{
-		Execute();
+	α ObjectsFolderAwait::Retry()ι->VoidAwait<>::Task{
+		try{
+			co_await AwaitSessionActivation( _ua );
+			[]( ObjectsFolderAwait& self )->Task {
+				try{
+					auto j = co_await ObjectsFolderAwait{ self._node, self._snapshot, self._ua, self._sl };
+					self.Resume( move(j) );
+				}
+				catch( IException& e ){
+					self.ResumeExp( move(e) );
+				}
+			}( *this );
+		}
+		catch(IException& e){
+			ResumeExp( move(e) );
+		}
 	}
 
 	α OnResponse( UA_Client *ua, void* /*userdata*/, RequestId requestId, UA_BrowseResponse* response )ι->void{
@@ -125,7 +124,7 @@ namespace Jde::Opc::Browse{
 			}
 		}
 		jobject j;
-		j["references"] = references;
+		j["refs"] = references;
 		return j;
 	}
 }

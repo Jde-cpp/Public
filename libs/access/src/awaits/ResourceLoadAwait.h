@@ -11,7 +11,7 @@ namespace Jde::Access{
 	}
 
 	struct ResourcePermissions{ flat_map<ResourcePK,Resource> Resources; flat_map<PermissionPK,Permission> Permissions; };
-	struct ResourceLoadAwait final : TAwait<ResourcePermissions>{
+	struct ResourceLoadAwait final : TAwait<ResourcePermissions>, boost::noncopyable{
 		ResourceLoadAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, UserPK executer )ι:
 			_executer{executer}, _qlServer{qlServer}, _schemas{schemas}{};
 	private:

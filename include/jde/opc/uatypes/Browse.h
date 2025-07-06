@@ -34,12 +34,12 @@ namespace Browse{
 	};
 	//ΓOPC α ObjectsFolder( sp<UAClient> ua, NodeId node, bool snapshot )ι->Task;
 
-	struct ΓOPC ObjectsFolderAwait final : TAwait<jobject>{
-		using base = TAwait<jobject>;
+	struct ΓOPC ObjectsFolderAwait final : TAwaitEx<jobject, Coroutine::Task>{
+		using base = TAwaitEx<jobject,Coroutine::Task>;
 		ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SRCE )ι;
-		α Suspend()ι->void override;
 	private:
 		α Execute()ι->Coroutine::Task;
+		α Retry()ι->VoidAwait<>::Task;
 		sp<UAClient> _ua; NodeId _node; bool _snapshot;
 	};
 }}

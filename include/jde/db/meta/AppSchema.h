@@ -9,6 +9,8 @@ namespace Jde::DB{
 		AppSchema( sv name, flat_map<string,sp<Table>> tables, sv prefix )ι:Name{name},Prefix{prefix},Tables{tables}{}
 
 		Ω Initialize( sp<DB::DBSchema> db, sp<AppSchema> self )ε->void;
+		Ω GetTablePtr( const vector<sp<AppSchema>>& schemas, str tableName, SRCE )ε->sp<Table>;
+		Ω GetViewPtr( const vector<sp<AppSchema>>& schemas, str tableName, SRCE )ε->sp<View>;
 		α ConfigPath()Ι->string;
 		α DS()Ε->sp<IDataSource>;
 		α ResetDS()Ι->void; //testing schema doesn't exist at startup.

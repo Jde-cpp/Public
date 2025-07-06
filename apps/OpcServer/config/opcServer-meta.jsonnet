@@ -149,7 +149,7 @@ local common = import 'common-meta.libsonnet';
 				isAbstract: types.bit+{ i:213, nullable: true },
 			}
 		},
-		references:{
+		refs:{
 			columns:{
 				sourceNodeId: nodeId+{ pkTable:"node_ids", sk:0, i:0 },
 				targetNodeId: nodeId+{ pkTable:"node_ids", sk:1, i:1 },

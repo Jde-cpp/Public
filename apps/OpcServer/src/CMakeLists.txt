@@ -2,7 +2,7 @@ cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( $ENV{JDE_DIR}/Public/build/functions.cmake )
 project( Jde.Opc.Server VERSION ${JDE_VERSION} LANGUAGES CXX )
 
-include( $ENV{JDE_DIR}/Public/build/dependencies.cmake )
+include( ../../../build/dependencies.cmake )
 
 set( targetName Jde.Opc.ServerLib )
 add_library( ${targetName} )

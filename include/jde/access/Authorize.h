@@ -9,7 +9,6 @@ namespace Jde::Access{
 	struct Listener; struct Loader; struct Permission;// struct User; struct Group;
 
 	struct Authorize : IAcl{
-		Authorize()ε{}
 		α Test( str schemaName, str resourceName, ERights rights, UserPK userPK, SRCE )ε->void override;
 		α TestAdmin( str resource, UserPK userPK, SRCE )ε->void;
 		α TestAdmin( ResourcePK resourcePK, UserPK userPK, SRCE )ε->void;

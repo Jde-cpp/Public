@@ -20,12 +20,12 @@ namespace Jde::Access{
 				else
 					identities.Users.emplace( UserPK{pk}, User{UserPK{pk}, deleted} );
 			}
-			let jgroups = co_await *_ql->QueryArray( "groupings{ id deleted members{id} }", _executer, true, _sl );
+			let jgroups = co_await *_ql->QueryArray( "groupings{ id deleted groupMembers{id} }", _executer, true, _sl );
 			for( let& value : jgroups ){
 				let& group = Json::AsObject(value);
 				const GroupPK groupPK{ Json::AsNumber<GroupPK::Type>(group, "id") };
 				auto p = identities.Groups.find(groupPK); THROW_IF( p==identities.Groups.end(), "[{}]Group not found", groupPK.Value );
-				for( let& member : Json::AsArray(group, "members") ){
+				for( let& member : Json::AsArray(group, "groupMembers") ){
 					let memberPK{ Json::AsNumber<IdentityPK::Type>(Json::AsObject(member), "id") };
 					p->second.Members.emplace( identities.Users.contains(UserPK{memberPK}) ? IdentityPK{UserPK{memberPK}} : IdentityPK{GroupPK{memberPK}} );
 				}

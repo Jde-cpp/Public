@@ -1,7 +1,11 @@
+#pragma once
 #include "UnsubscribeAwait.h"
 
+namespace Jde::Access{ struct Authorize; }
 namespace Jde::QL{
 	struct IQL : std::enable_shared_from_this<IQL>{
+		β Authorizer()ε->Access::Authorize& =0;
+		β AuthorizerPtr()ε->sp<Access::Authorize> =0;
 		[[nodiscard]] β Query( string query, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jvalue>> =0;
 		[[nodiscard]] β QueryObject( string query, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jobject>> =0;
 		[[nodiscard]] β QueryArray( string query, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jarray>> =0;

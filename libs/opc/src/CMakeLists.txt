@@ -21,10 +21,11 @@ file( GLOB_RECURSE headers  *.h )
 file( GLOB protos types/proto/*.proto )
 
 include_directories( ${open62541Dir}include )
-target_link_libraries( ${targetName} open62541 )
 if( NOT WIN32 )
 	target_link_libraries( ${targetName} stdc++exp )#for stacktrace
 endif()
+target_link_libraries( ${targetName} protobuf::libprotobuf )
+target_link_libraries( ${targetName} open62541 )
 
 target_sources( ${targetName}
     PRIVATE

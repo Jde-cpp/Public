@@ -1,6 +1,6 @@
 #include "globals.h"
-#include <jde/access/access.h>
 #include <jde/ql/QLAwait.h>
+#include <jde/access/server/awaits/AuthenticateAwait.h>
 
 #define let const auto
 namespace Jde::Access::Tests{
@@ -13,23 +13,21 @@ namespace Jde::Access::Tests{
 		constexpr static sv OpcServer{"AuthTests::OpcServer1"};
 		static ProviderPK OpcProviderId;
 	};
-	std::condition_variable_any _cv;
-	std::shared_mutex _mtx;
 	ProviderPK AuthTests::OpcProviderId{};
 
 	α AuthTests::SetUpTestCase()ε->void{
-	if( auto o = QL::QuerySync(Ƒ("provider(target:\"{}\"){{id}}", OpcServer), GetRoot()); !o.empty() )
+	if( auto o = QL().QuerySync(Ƒ("provider(target:\"{}\"){{id}}", OpcServer), GetRoot()); !o.empty() )
 			OpcProviderId = GetId( o );
 		else{
 			let createQL = Ƒ( "createProvider( target:\"{}\", providerType:{} ){{id}}", OpcServer, underlying(EProviderType::OpcServer) );
-			OpcProviderId = GetId( QL::QuerySync(createQL, GetRoot()) );
+			OpcProviderId = GetId( QL().QuerySync(createQL, GetRoot()) );
 		}
 	}
 
-	α login( str loginName, ProviderPK providerId, string opcServer )ε->AuthenticateAwait::Task{
-		_userId = co_await Authenticate( loginName, providerId, opcServer );
-		std::shared_lock l{ _mtx };
-		_cv.notify_one();
+	α login( str loginName, ProviderPK providerId, string opcServer )ε->UserPK{
+		using Await = Server::AuthenticateAwait;
+		_userId = BlockAwait<Await,UserPK>( Await{loginName, providerId, opcServer} );
+		return _userId;
 	}
 
 	TEST_F( AuthTests, Login_Existing ){
@@ -37,35 +35,27 @@ namespace Jde::Access::Tests{
 		let provider = Access::EProviderType::Google;
 		const UserPK userId{ GetId( GetUser(user, GetRoot(), true, (ProviderPK)provider) ) };
 		login( user, underlying(provider), {} );
-		std::shared_lock l{ _mtx };
-		_cv.wait( l );
 		ASSERT_EQ( userId, _userId );
 		PurgeUser( userId, GetRoot() );
 	}
 
 	TEST_F( AuthTests, Login_New ){
 		const string user{ "Login_New" };
-		login( user, underlying(Access::EProviderType::Google), {} );
-		std::shared_lock l{ _mtx };
-		_cv.wait( l );
-		PurgeUser( {_userId}, GetRoot() );
+		let userId = login( user, underlying(Access::EProviderType::Google), {} );
+		PurgeUser( {userId}, GetRoot() );
 	}
 
 	TEST_F( AuthTests, Login_Existing_Opc ){
 		const string user{ "Login_Existing_Opc" };
 		let userId = GetId( GetUser(user, GetRoot(), true, OpcProviderId) );
 		login( user, OpcProviderId, string{OpcServer} );
-		std::shared_lock l{ _mtx };
-		_cv.wait( l );
 		ASSERT_EQ( UserPK{userId}, _userId );
 		PurgeUser( {userId}, GetRoot() );
 	}
 
 	TEST_F( AuthTests, Login_New_Opc ){
 		const string user{ "Login_New_Opc" };
-		login( user, OpcProviderId, string{OpcServer} );
-		std::shared_lock l{ _mtx };
-		_cv.wait( l );
-		PurgeUser( {_userId}, GetRoot() );
+		let userId = login( user, OpcProviderId, string{OpcServer} );
+		PurgeUser( {userId}, GetRoot() );
 	}
 }

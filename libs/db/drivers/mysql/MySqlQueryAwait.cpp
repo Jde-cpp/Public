@@ -43,11 +43,12 @@ namespace Jde::DB::MySql{
  		co_await conn.async_close_statement( stmt );
     co_await conn.async_close();
 		if( mySqlResult.has_value() )
-			Trace{ ELogTags::Test, "MySqlQueryAwait::Main: RowsAffected: {} rows: {}.", result.RowsAffected, result.Rows.size() };
+			Trace{ ELogTags::Sql, "MySqlQueryAwait::Main: RowsAffected: {} rows: {}.", result.RowsAffected, result.Rows.size() };
 		else
-			Trace{ ELogTags::Test, "MySqlQueryAwait::Main: No rows affected." };
+			Trace{ ELogTags::Sql, "MySqlQueryAwait::Main: No rows affected." };
 		Resume( move(result) );
 	}
+
 	α MySqlQueryAwait::Suspend()ι->void{
 		asio::co_spawn(
 			*_ctx,

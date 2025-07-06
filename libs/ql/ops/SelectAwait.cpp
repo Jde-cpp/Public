@@ -10,7 +10,6 @@
 
 namespace Jde::QL{
 	using namespace DB::Names;
-	α GetTable( str tableName, SRCE )ε->sp<DB::View>;
 	α QueryType( const TableQL& typeTable )ε->jobject;
 	α QuerySchema( const TableQL& schemaTable )ε->jobject;
 
@@ -130,7 +129,7 @@ namespace Jde::QL{
 
 		statement.Where += QL::ToWhereClause( qlTable, dbTable, includeDeleted.value_or(statement.Select.FindColumn("deleted")!=nullptr) );
 		for( let& qlChild : qlTable.Tables ){
-			auto pFK = findFK( dbTable, qlChild.DBName() ); //members.
+			auto pFK = findFK( dbTable, qlChild.DBTable->Name ); //members.
 			if( pFK ){
 				auto pkTable = pFK->PKTable;
 				if( sp<DB::Table> table = AsTable( pkTable ); table && table->QLView )
@@ -172,14 +171,14 @@ namespace Jde::QL{
 	α SelectAwait::SelectSubTables( optional<DB::Statement> parentSql, vector<TableQL> tables, sp<DB::Table> parentTable, DB::WhereClause where )->DB::SelectAwait::Task{
 		SubTables subTables;
 		for( auto& qlTable : tables ){//members
-			auto fk = findFK( *parentTable, qlTable.DBName() );
+			auto fk = findFK( *parentTable, qlTable.DBTable->Name );
 			DB::Statement statement;
 			if( auto map = fk ? fk->Table->Map : nullopt; map ){ //members.member_id  if not a map, get it in main table.
 				statement.Select.TryAdd( fk->Table->SurrogateKeys[0] );//add identity_id of members for result.
 				columnSql( qlTable, *fk->PKTable, false, statement );
 				statement.From.TryAdd( {fk->PKTable->GetPK(), fk, true} ); //identities join members
 			}
-			else if( auto map = findMap(*parentTable, qlTable.DBName()); map ){ //role_members
+			else if( auto map = findMap(*parentTable, qlTable.DBTable->Name); map ){ //role_members
 				auto parent = map->Parent; //role_id
 				auto child = map->Child; //permission_id
 				statement.Select.TryAdd( parent );
@@ -188,7 +187,7 @@ namespace Jde::QL{
 				statement.From.TryAdd( {child, child->PKTable->GetPK(), true} ); //join permissions
 			}
 			else
-				continue; //THROW_IF( !fk, "Could not find fk for {}->{}", parentTable.Name, qlTable.DBName() );
+				continue; //THROW_IF( !fk, "Could not find fk for {}->{}", parentTable.Name, qlTable.DBTable->Name );
 
 			statement.Where = where;
 			auto& jrow = subTables.emplace( qlTable.JsonName, flat_multimap<uint,jobject>{} ).first->second;
@@ -214,8 +213,7 @@ namespace Jde::QL{
 				};
 				rowToJson2( qlTable.Columns, jSubRow );
 				for( let& childTable : qlTable.Tables ){
-					let childDbName = childTable.DBName();
-					let pkTable = GetTable( childDbName );
+					let pkTable = childTable.DBTable;
 					if( fk ){
 						jobject jChildTable;
 						rowToJson2( childTable.Columns, jChildTable );
@@ -236,7 +234,7 @@ namespace Jde::QL{
 
 	α SelectAwait::Query()ι->void{
 		try{
-			let dbTable = GetTable( _qlTable.DBName() );
+			let dbTable = _qlTable.DBTable;
 			_ds = dbTable->Schema->DS();
 			dbTable->Authorize( Access::ERights::Read, _executer, _sl );
 			auto statement = _statement ? move(*_statement) : SelectStatement( _qlTable );
@@ -280,7 +278,7 @@ namespace Jde::QL{
 }
 namespace Jde{
 	α QL::SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted )ε->optional<DB::Statement>{
-		let dbView = GetTable( qlTable.DBName() );
+		let dbView = qlTable.DBTable;
 		DB::Statement statement;
 		columnSql( qlTable, *dbView, false, statement, includeDeleted );
 		// if( statement.Empty() ) could be a join with only where clause.

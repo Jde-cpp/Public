@@ -1,10 +1,12 @@
 #include "Parser.h"
 #include <jde/db/generators/Functions.h>
+#include <jde/db/meta/AppSchema.h>
+#include <jde/db/meta/Table.h>
 #include <jde/ql/ql.h>
 
 #define let const auto
 namespace Jde{
-	α QL::Parse( string query, bool returnRaw, SL /*sl*/ )ε->RequestQL{
+	α QL::Parse( string query, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL /*sl*/ )ε->RequestQL{
 		sv trimmed = Str::Trim( query );//TODO move(query).
 		Parser parser{ string{trimmed.starts_with("{") ? trimmed.substr(1) : trimmed}, "{}()," };
 		auto name = parser.Next();
@@ -14,19 +16,19 @@ namespace Jde{
 			name = parser.Next();
 		}
 		if( name=="subscription" )
-			return RequestQL{ parser.LoadSubscriptions() };
+			return RequestQL{ parser.LoadSubscriptions(schemas) };
 		else if( name=="unsubscribe" )
 			return RequestQL{ parser.LoadUnsubscriptions() };
 		else if( MutationQL::IsMutation(name) ){
 			//returnRaw = name!="mutation"; should be what parameter is
 			if( parser.Peek()=="{" )
 				parser.Next();
-			return RequestQL{ {parser.LoadMutations(name=="mutation" ? parser.Next() : name, returnRaw)} };
+			return RequestQL{ {parser.LoadMutations(name=="mutation" ? parser.Next() : name, returnRaw, schemas)} };
 		}else
-			return RequestQL{ parser.LoadTables(name, returnRaw) };
+			return RequestQL{ parser.LoadTables(move(name), schemas, returnRaw) };
 	}
-	α QL::ParseSubscriptions( string query, SL sl )ε->vector<Subscription>{
-		auto request = Parse( move(query), true, sl ); THROW_IFSL( !request.IsSubscription(), "Expected subscription query." );
+	α QL::ParseSubscriptions( string query, const vector<sp<DB::AppSchema>>& schemas, SL sl )ε->vector<Subscription>{
+		auto request = Parse( move(query), schemas, true, sl ); THROW_IFSL( !request.IsSubscription(), "Expected subscription query." );
 		return request.Subscriptions();
 	}
 }
@@ -199,68 +201,7 @@ namespace Jde::QL{
 		y+=json[i++];
 		return i;
 	}
-/*
-	Ω stringifyKeys( sv json )ε->string{
-		string y{}; y.reserve( json.size()*2 );
-		bool inValue{};
-		for( uint i=0; i<json.size(); ++i ){
-			char ch = json[i];
-			if( std::isspace(ch) || ch==',' )
-				y += ch;
-			else if( ch=='{' || ch=='}' ){
-				y += ch;
-				inValue = false;
-			}
-			else if( inValue ){
-				if( ch=='{' ){//object
-					for( uint i2=i+1, openCount=1; i2<json.size(); ++i2 ){
-						if( json[i2]=='{' )
-							++openCount;
-						else if( json[i2]=='}' && --openCount==0 ){
-							y += stringifyKeys( json.substr(i,i2-i) );
-							i = i2+1;
-							break;
-						}
-					}
-				}
-				else if( ch=='[' ){//array
-					for( ; i<json.size() && ch!=']'; ch = json[++i] ){
-						if( ch=='{' )
-							y += parseObject( json.substr(i), y );
-						y += ch;
-					}
-					y += ']';
-				}
-				else if( ch=='"' ){//string
-					y += ch;
-					for( ch=json[++i]; i<json.size() && ch!='"'; ch = json[++i] )
-						y += ch;
-					y += ch;
-				}
-				else{//number
-					for( ; i<json.size() && ch!=',' && ch!='}'; ch = json[++i] )
-						y += ch;
-					if( i<json.size() )
-						y += ch;
-				}
-				inValue = false;
-			}
-			else{//string key
-				let quoted = ch=='"';
-				if( !quoted ) --i;
-				for( ch = '"'; i<json.size() && ch!=':'; ch=json[++i] ){
-					y += ch;
-					THROW_IF( i+1==json.size(), "Could not find ':' in '{}' @ {}", json, i );
-				}
-				if( !quoted )
-					y += '"';
-				y += ch;
-				inValue = true;
-			}
-		}
-		return y;
-	}
-*/
+
 	α Parser::ParseArgs()ε->jobject{
 		string params{ Next(')') };
 		THROW_IF( params.empty(), "params.empty()" );
@@ -271,28 +212,27 @@ namespace Jde::QL{
 		return Json::Parse( stringified );
 	}
 
-	α Parser::LoadMutations( string&& command, bool returnRaw )ε->vector<MutationQL>{
+	α Parser::LoadMutations( string&& command, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε->vector<MutationQL>{
 		vector<MutationQL> y;
 		do{
 			auto args = ParseArgs();
 			let wantsResult = Peek()=="{";
-			optional<TableQL> result = wantsResult ? LoadTable("") : optional<TableQL>{};
-			//MutationQL ql{ move(command), move(args), move(result), returnRaw };
-			y.push_back( { move(command), move(args), move(result), returnRaw } );
+			optional<TableQL> result = wantsResult ? LoadTable(get<0>(MutationQL::ParseCommand(command)), schemas) : optional<TableQL>{};
+			y.push_back( {move(command), move(args), move(result), returnRaw, schemas} );
 			command = Next();
 		}while( MutationQL::IsMutation(command) );
 		return y;
 	}
 
-	α Parser::LoadTable( sv jsonName )ε->TableQL{//__type(name: "Account") { fields { name type { name kind ofType{name kind} } } }
+	α Parser::LoadTable( string jsonName, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε->TableQL{//__type(name: "Account") { fields { name type { name kind ofType{name kind} } } }
 		let j = Peek()=="(" ? ParseArgs() : jobject{};
 
-		TableQL table{ string{jsonName}, j };
+		TableQL table{ move(jsonName), j, schemas, system, sl };
 		if( Peek()=="{" ){//has columns
 			Next();
 			for( auto token = Next(); token!="}" && token.size(); token = Next() ){
 				if( Peek()=="{" || Peek()=="(" )
-					table.Tables.push_back( LoadTable(token) );
+					table.Tables.push_back( LoadTable(token, schemas, system, sl) );
 				else{
 					THROW_IF( token==",", "Unexpected column ',' '{}' @ '{}'.", _text, Index()-1 );
 					table.Columns.emplace_back( ColumnQL{string{token}} );
@@ -302,13 +242,23 @@ namespace Jde::QL{
 		return table;
 	}
 
-	α Parser::LoadTables( sv jsonName, bool returnRaw )ε->vector<TableQL>{
+	α Parser::LoadTables( string jsonName, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL sl )ε->vector<TableQL>{
 		vector<TableQL> results;
 		do{
-			auto table = LoadTable(jsonName);
+			let system = jsonName.starts_with("__") ? jsonName : string{};
+			auto table = LoadTable( move(jsonName), schemas, system.size(), sl );
+			if( system.size() ){
+				if( system=="__type" ){
+					auto typeName =Json::AsSV( table.Args, "name" );
+					table.DBTable = DB::AppSchema::GetViewPtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(typeName)), sl );
+				}
+				else if( system=="__schema" ){
+					THROW_IF( schemas.empty() || schemas[0]->Tables.empty(), "No schemas found." );
+					table.DBTable = schemas[0]->Tables.begin()->second;
+				}
+			}
 			table.ReturnRaw = returnRaw;
 			results.push_back( move(table) );
-			jsonName = {};
 			if( Peek()=="," ){
 				Next();
 				jsonName = Next();
@@ -316,7 +266,7 @@ namespace Jde::QL{
 		}while( jsonName.size() );
 		return results;
 	}
-	α Parser::LoadSubscription()ε->Subscription{
+	α Parser::LoadSubscription( const vector<sp<DB::AppSchema>>& schemas )ε->Subscription{
 		let name = Next();
 		//Sync with MutationQL::EMutationQL
 		constexpr array<sv,9> SubscriptionSuffexes{ "Created", "Updated", "Deleted", "Restored", "Purged", "Added", "Removed", "Started", "Stopped" };
@@ -329,13 +279,15 @@ namespace Jde::QL{
 		}
 		THROW_IF( !type, "Could not find subscription type for '{}'", name );
 		Next();	//{
-		return Subscription( tableName, *type, LoadTable(Next()) );
+		Next(); //[userCreated]
+		auto table = LoadTable( tableName, schemas );
+		return Subscription{ move(tableName), *type, move(table) };
 
 	}
-	α Parser::LoadSubscriptions()ε->vector<Subscription>{
+	α Parser::LoadSubscriptions( const vector<sp<DB::AppSchema>>& schemas )ε->vector<Subscription>{
 		vector<Subscription> y;
 		do{
-			y.push_back( LoadSubscription() );
+			y.push_back( LoadSubscription(schemas) );
 		}while( Next()=="subscription" );
 
 		return y;

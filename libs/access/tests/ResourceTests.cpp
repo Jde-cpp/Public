@@ -16,12 +16,12 @@ namespace Jde::Access::Tests{
 		if( filter.size() )
 			filter = Ƒ( ", criteria:\"{}\"", filter );
 		let ql = Ƒ( "resources( schemaName:\"access\"{}{} ){{ id schemaName allowed denied name attributes created {} updated target description }}", targetFilter, filter, includeDeleted ? "deleted" : "" );
-		return QL::QuerySync<jarray>( ql, GetRoot() );
+		return QL().QuerySync<jarray>( ql, GetRoot() );
 	}
 
 	TEST_F( ResourceTests, CheckDefaults ){
 		let ql = "resources( schemaName:\"access\", criteria:null ){ id allowed denied name attributes created deleted updated target description }";
-		let& resources = QL::QuerySync<jarray>( ql, GetRoot() );
+		let& resources = QL().QuerySync<jarray>( ql, GetRoot() );
 		ASSERT_EQ( resources.size(), 5 ); //"users", "members", "roles", "resources", "provider_types"
 		constexpr ERights base = ERights::Create | ERights::Read | ERights::Update | ERights::Delete | ERights::Purge | ERights::Administer;
 		Trace{ ELogTags::Test, "base={:x}"sv, underlying(base) };
@@ -47,25 +47,25 @@ namespace Jde::Access::Tests{
 		if( !resources.size() ){
 			let& userTable = *GetTable( "users" );
 			let create = Ƒ( "mutation createResource( schemaName:\"access\", name:\"creator\", target:\"{}\", criteria:\"{}\", rights:{} )", target, filter, underlying(userTable.Operations) );
-			let createJson = QL::QuerySync<jvalue>( create, GetRoot() );
+			let createJson = QL().QuerySync<jvalue>( create, GetRoot() );
 			resources = selectResources( target, filter );
 			ASSERT_EQ( resources.size(), 1 );
 		}
 		let id = GetId( Json::AsObject(resources[0]) );
 
 		let update = Ƒ( "mutation updateResource( \"id\":{}, \"allowed\": [\"Read\"] )", id );
-		let updateJson = QL::QuerySync<jvalue>( update, GetRoot() );
+		let updateJson = QL().QuerySync<jvalue>( update, GetRoot() );
 		let rights = selectResources(target, filter)[0].at("allowed").as_array();
 		ASSERT_TRUE( rights.size()==1 );
 		ASSERT_EQ( Json::AsSV(rights[0]), "Read" );
 
  		let del = Ƒ( "mutation deleteResource(\"id\":{})", id );
- 		let deleteJson = QL::QuerySync<jvalue>( del, GetRoot() );
+ 		let deleteJson = QL().QuerySync<jvalue>( del, GetRoot() );
 		ASSERT_TRUE( selectResources(target, filter).empty() );
 		ASSERT_TRUE( !selectResources(target, filter, true).empty() );
 
  		let restore = Ƒ( "mutation restoreResource(\"id\":{})", id );
- 		let restoreJson = QL::QuerySync<jvalue>( restore, GetRoot() );
+ 		let restoreJson = QL().QuerySync<jvalue>( restore, GetRoot() );
 		ASSERT_TRUE( !selectResources(target, filter).empty() );
 
  		let purge = Ƒ( "{{mutation purgeResource(\"id\":{}) }}", id );

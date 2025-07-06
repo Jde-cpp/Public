@@ -44,7 +44,7 @@ namespace Jde::Opc{
 		α Process( RequestId requestId, up<UARequest>&& userData )ι->void;
 		α ProcessDataSubscriptions()ι->void;
 		α StopProcessDataSubscriptions()ι->void;
-		α AddSessionAwait( HCoroutine h )ι->void;
+		α AddSessionAwait( VoidAwait<>::Handle h )ι->void;
 		α TriggerSessionAwaitables()ι->void;
 
 		α Target()ι->str{ return _opcServer.Target; }
@@ -65,7 +65,7 @@ namespace Jde::Opc{
 		concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
 		concurrent_flat_map<Jde::Handle, UARequestMulti<UA_WriteResponse>> _writeRequests;
 		concurrent_flat_map<Jde::Handle, UARequestMulti<NodeId>> _dataAttributeRequests;
-		vector<HCoroutine> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
+		vector<VoidAwait<>::Handle> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
 
 		AsyncRequest _asyncRequest;
 		Logger _logger;

@@ -5,7 +5,7 @@
 #include <jde/crypto/OpenSsl.h>
 #include <jde/opc/uatypes/helpers.h>
 #include <jde/opc/uatypes/UAException.h>
-
+#include "UAAccess.h"
 
 #define let const auto
 namespace Jde::Opc::Server {
@@ -283,17 +283,18 @@ namespace Jde::Opc::Server {
 	α getConfiguration( UA_Logger& logger )->UA_ServerConfig{
 		UA_ServerConfig config{};
 		config.logging = &logger;
+		config.accessControl = UAAccess{};
 		if( auto certificateFile = Settings::FindPath("/tcp/certificate").value_or(fs::path{}); !certificateFile.empty() )
 			setupSecurityPolicies( config, move(certificateFile) );
 		else
 			UA_ServerConfig_setDefault(&config);
 
-		for( uint i=0; i<config.securityPoliciesSize; ++i ){
+/*		for( uint i=0; i<config.securityPoliciesSize; ++i ){
 			let& sp = config.securityPolicies[i];
 			Information{ ELogTags::App, "[{}]PolicyUri={}", i, ToSV(sp.policyUri) };
 			if( ToSV(sp.policyUri)=="http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256" )
-				UA_AccessControl_default( &config, false/*allowAnonymous*/, &sp.policyUri, usernamePasswordsSize, usernamePasswords );
-		}
+				UA_AccessControl_default( &config, false/ *allowAnonymous* /, &sp.policyUri, usernamePasswordsSize, usernamePasswords );
+		}*/
 		return config;
 	}
 }

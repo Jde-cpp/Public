@@ -10,7 +10,7 @@
 namespace Jde::App{
 	using Web::Client::ClientHttpAwait;
 
-	sp<Access::IAcl> _authorizer = ms<Access::Authorize>();
+	static sp<Access::IAcl> _authorizer = ms<Access::Authorize>();
 	const Duration _reconnectWait{ Settings::FindDuration("server/reconnectWait").value_or(5s) };
 	α Client::IsSsl()ι->bool{ return Settings::FindBool("server/isSsl").value_or( false ); }
 	α Client::Host()ι->string{ return Settings::FindString("server/host").value_or("localhost"); }
@@ -61,6 +61,7 @@ namespace Jde::App::Client{
 	α LoginAwait::Execute()ι->ClientHttpAwait::Task{
 		try{
 			jobject j{ {"jwt", _jwt.Payload()} };
+			Trace{ ELogTags::App, "Logging in {}:{}", Host(), Port()};
 			auto res = co_await ClientHttpAwait{ Host(), "/loginCertificate", serialize(j), Port() };
 			auto sessionPK = Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 			THROW_IF( !sessionPK, "Invalid authorization: {}.", res[http::field::authorization] );
@@ -70,35 +71,40 @@ namespace Jde::App::Client{
 			ResumeExp( move(e) );
 		}
 	}
-}
-namespace Jde::App{
-	α Client::Connect( bool wait )ι->void{
-		if( Process::ShuttingDown() )
-			return;
-		[wait]()->DurationTimer::Task{
-			if( wait )
-				co_await DurationTimer{ _reconnectWait };
-			[]()->LoginAwait::Task {
-				SessionPK sessionId;
-				try{
-					sessionId = co_await LoginAwait{};//http call
-				}
-				catch( IException& e ){
-					Trace( ELogTags::App, "Could not login to App Server:  {}", e.what() );
-					if( e.Code!=2406168687 )//port=0
-						Connect( true );
-				}
-				if( sessionId ){
-					[sessionId]()->StartSocketAwait::Task {
-						try{
-							co_await StartSocketAwait{ sessionId };//create socket, doesn't return until closed.
-						}
-						catch( IException& ){
-							Connect( true );
-						}
-					}();
-				}
-			}();
-		}();
+
+	ConnectAwait::ConnectAwait( vector<sp<DB::AppSchema>>&& subscriptionSchemas, bool retry, SL sl )ι:
+		VoidAwait<>{sl},
+		_retry{retry},
+		_subscriptionSchemas{move(subscriptionSchemas)}
+	{}
+
+	α ConnectAwait::Retry()->DurationTimer::Task{
+		co_await DurationTimer{ _reconnectWait };
+		HttpLogin();
+	}
+	α ConnectAwait::RunSocket( SessionPK sessionId )ι->StartSocketAwait::Task{
+		try{
+			Trace( ELogTags::App, "Creating socket session for sessionId: {:x}", sessionId );
+			co_await StartSocketAwait{ sessionId, move(_subscriptionSchemas) };
+			Resume();
+		}
+		catch( IException& e ){
+			if( _retry )
+				Retry();
+			else
+				ResumeExp( move(e) );
+		}
+	}
+	α ConnectAwait::HttpLogin()ι->LoginAwait::Task{
+		try{
+			let sessionId = co_await LoginAwait{};//http call
+			RunSocket( sessionId );
+		}
+		catch( IException& e ){
+			if( _retry )
+				Retry();
+			else
+				ResumeExp( move(e) );
+		}
 	}
 }

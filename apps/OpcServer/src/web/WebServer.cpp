@@ -2,12 +2,13 @@
 #include "../AppServer.h"
 //#include "ServerSocketSession.h"
 #include <jde/web/server/Server.h>
+#include "../StartupAwait.h"
 
 namespace Jde::Opc{
 	//concurrent_flat_map<uint,sp<Opc::ServerSocketSession>> _sessions; // Consider using server
 
-	α Server::StartWebServer()ε->void{
-		Web::Server::Start( mu<RequestHandler>(), mu<AppServer>() );
+	α Server::StartWebServer( jobject&& settings )ε->void{
+		Web::Server::Start( mu<RequestHandler>(), mu<AppServer>(), move(settings) );
 		Process::AddShutdownFunction( [](bool /*terminate*/ ){StopWebServer();} );//TODO move to Web::Server
 	}
 	α Server::StopWebServer()ι->void{
@@ -19,6 +20,9 @@ namespace Jde::Opc{
 			// auto session = ms<ServerSocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
 			// _sessions.emplace( session->Id(), session );
 			return nullptr;
+		}
+		α RequestHandler::Schemas()ι->const vector<sp<DB::AppSchema>>&{
+			return Opc::Server::Schemas();
 		}
 	}
 }

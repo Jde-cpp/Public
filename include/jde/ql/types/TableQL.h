@@ -15,7 +15,7 @@ namespace Jde::QL{
 	};
 	struct JsonMembers{ string ParentTable; string ColumnName; };
 	struct TableQL final{
-		α DBName()Ι->string;
+		TableQL( string jName, jobject args, const vector<sp<DB::AppSchema>>& schemas, bool system=false, SRCE )ε;
 
 		α AddFilter( const string& column, const jvalue& value )ι->void;
 		α DefaultResult()Ι->jvalue{ return IsPlural() ? jvalue{jarray{}} : jvalue{jobject{}}; }
@@ -26,6 +26,7 @@ namespace Jde::QL{
 		α FindDBColumn( sp<DB::Column> dbColumn )Ι->const ColumnQL*;
 		α FindTable( sv jsonPluralName )Ι->const TableQL*;
 		α FindTable( sv jsonPluralName )ι->TableQL*;
+		α ExtractTable( sv jsonPluralName )ι->optional<TableQL>;
 		α FindTablePrefix( sv jsonPluralName )Ι->const TableQL*;
 		α GetTable( sv jsonPluralName, SRCE )ε->TableQL&;
 		α IsPlural()Ι->bool{ return DB::Names::IsPlural(JsonName); }
@@ -34,11 +35,12 @@ namespace Jde::QL{
 		α ToString()Ι->string;
 		α TrimColumns( const jobject& fullOutput )Ι->jobject;
 
-		string JsonName;
 		jobject Args;
 		vector<ColumnQL> Columns;
-		vector<TableQL> Tables;
+		sp<DB::View> DBTable;
 		mutable vector<QL::JsonMembers> JsonMembers;
+		string JsonName;
+		vector<TableQL> Tables;
 		bool ReturnRaw{true};
 	};
 }

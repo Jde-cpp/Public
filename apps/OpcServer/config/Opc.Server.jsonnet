@@ -43,7 +43,7 @@ local args = import 'args.libsonnet';
 		privateKey: {path:"/tmp/private.pem", passcode: ""}
 	},
 	workers:{
-		executor: 1,
+		executor: 2,
 		drive:{ threads:  1 },
 		alarm:{ threads:  1 }
 	}

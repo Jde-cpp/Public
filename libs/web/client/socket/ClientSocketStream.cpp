@@ -73,7 +73,7 @@ namespace Jde::Web::Client{
 	}
 	α ClientSocketStream::OnWrite( beast::error_code ec, uint bytes_transferred )ι->void{
 		_writeBuffer.clear();
-		_writeGuard.unlock();
+		_writeGuard.reset();
 		boost::ignore_unused( bytes_transferred );
 		if( ec )
 			CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientWrite };//TODO look at returning an error to caller.

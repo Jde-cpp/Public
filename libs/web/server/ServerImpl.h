@@ -7,30 +7,40 @@
 #include <jde/web/server/IRequestHandler.h>
 
 #define let const auto
-
+namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Web::Server{
-
 namespace Internal{
-	α Start( up<IRequestHandler>&& handler, up<Server::IApplicationServer>&& server )ε->void;
+	struct Settings{
+		Settings( jobject settings )ι:_settings(settings){}
+		α Address()ι->string{ return Json::FindString(_settings, "address" ).value_or( "0.0.0.0" ); }
+		α Port()ι->PortType{ return Json::FindNumber<PortType>(_settings, "port" ).value_or( 6809 ); }
+		α DhPath()ι->string{ return Json::FindString( _settings,  "dh" ).value_or( "/etc/ssl/certs/server.crt" ); }
+		α CertPath()ι->string{ return Json::FindString( _settings, "cert" ).value_or( "/etc/ssl/private/server.key" ); }
+		α PrivateKeyPath()ι->string{ return Json::FindString( _settings, "privateKey" ).value_or( "/etc/ssl/private/server.key" ); }
+	private:
+		jobject _settings;
+	};
+	α Start( up<IRequestHandler>&& handler, up<Server::IApplicationServer>&& server, Settings&& settings )ε->void;
 	α Stop( bool terminate=false )ι->void;
 	α RunSocketSession( sp<IWebsocketSession>&& session )ι->void;
 	α RemoveSocketSession( SocketId id )ι->void;
 }
+
 	α AppServerLocal()ι->bool;
 	α AppGraphQLAwait( string&& q, UserPK userPK, SRCE )ι->up<TAwait<jvalue>>;
 	Τ [[nodiscard]] α DoEof( T& stream )ι->net::awaitable<void, executor_type>{ beast::error_code ec; stream.socket().shutdown( tcp::socket::shutdown_send, ec ); co_return; }
 	Τ [[nodiscard]] α DoEof( beast::ssl_stream<T>& stream )ι->net::awaitable<void, executor_type>{ co_await stream.async_shutdown(); }
-	α HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task;
+	α HandleRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task;
 	α ReadSeverity( beast::error_code ec )ι->ELogLevel;
-	α GetRequestHandler()ι->IRequestHandler&;
-	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> cancel )ι->net::awaitable<void, executor_type>;
+	//α GetRequestHandler()ι->IRequestHandler&;
+	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> cancel, IRequestHandler* reqHandler )ι->net::awaitable<void, executor_type>;
 	α SendOptions( const HttpRequest&& req )ι->http::message_generator;
-	α SendServerSettings( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task;
+	α SendServerSettings( HttpRequest req, sp<RestStream> stream )ι->TAwait<sp<SessionInfo>>::Task;
 	α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<Web::FromServer::SessionInfo>>;
 }
 
 namespace Jde::Web{
-	Ŧ Server::RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> /*cancel*/ )ι->net::awaitable<void, executor_type>{
+	Ŧ Server::RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> /*cancel*/, IRequestHandler* reqHandler )ι->net::awaitable<void, executor_type>{
 		optional<http::request_parser<http::string_body>> parser;// a new parser must be used for every message so we use an optional to reconstruct it every time.
 		parser.emplace();
 		parser->body_limit(10000); // Apply a reasonable limit to the allowed size  of the body in bytes to prevent abuse.
@@ -46,7 +56,7 @@ namespace Jde::Web{
 		for( auto cs = co_await net::this_coro::cancellation_state; cs.cancelled() == net::cancellation_type::none; cs = co_await net::this_coro::cancellation_state ){
 			if( websocket::is_upgrade(parser->get()) ){
 				beast::get_lowest_layer(stream).expires_never();// Disable the timeout. The websocket::stream uses its own timeout settings.
-				Internal::RunSocketSession( GetRequestHandler().GetWebsocketSession( ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint, connectionIndex) );
+				Internal::RunSocketSession( reqHandler->GetWebsocketSession(ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint, connectionIndex) );
 				co_return;
 			}
 			HttpRequest req{ parser->release(), move(userEndpoint), isSsl, connectionIndex };
@@ -64,7 +74,7 @@ namespace Jde::Web{
 				co_return;
 			}
 			if( !res ){
-				HandleRequest( move(req), ms<RestStream>(mu<T>(move(stream))) );
+				HandleRequest( move(req), ms<RestStream>(mu<T>(move(stream))), reqHandler );
 				co_return;//TODO handle keepalive
 			}
 			if( res && !res->keep_alive() ){

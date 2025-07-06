@@ -14,12 +14,13 @@ namespace Jde::QL{ struct IListener; }
 namespace Jde::App::Client{
 	struct StartSocketAwait : TAwait<Proto::FromServer::ConnectionInfo>{
 		using base = TAwait<Proto::FromServer::ConnectionInfo>;
-		StartSocketAwait( SessionPK sessionId, SRCE )ι;
+		StartSocketAwait( SessionPK sessionId, vector<sp<DB::AppSchema>>&& subscriptionSchemas, SRCE )ι;
 	private:
 		α Suspend()ι->void override;
 		α RunSession()ι->VoidTask;
 		α SendSessionId()ι->Web::Client::ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task;
 		SessionPK _sessionId;
+		vector<sp<DB::AppSchema>> _subscriptionSchemas;
 	};
 	Φ AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>;
 	α CloseSocketSession( SRCE )ι->VoidTask;
@@ -31,7 +32,7 @@ namespace Jde::App::Client{
 		Τ using await = Web::Client::ClientSocketAwait<T>;
 		using base = Web::Client::TClientSocketSession<Proto::FromClient::Transmission,Proto::FromServer::Transmission>;
 		ΓAC Ω Instance()ι->sp<AppClientSocketSession>;
-		AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx )ι;
+		AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx, vector<sp<DB::AppSchema>> subscriptionSchemas )ι;
 		α Connect( SessionPK sessionId, SRCE )ι->await<Proto::FromServer::ConnectionInfo>;
 		α SessionInfo( SessionPK sessionId, SRCE )ι->await<Web::FromServer::SessionInfo>;
 		α Query( string&& q, bool returnRaw, SRCE )ι->await<jvalue> override;
@@ -49,6 +50,7 @@ namespace Jde::App::Client{
 		α OnClose( beast::error_code ec )ι->void override;
 		Jde::UserPK _userPK{};
 		sp<QL::IQL> _qlServer;
+		vector<sp<DB::AppSchema>> _subscriptionSchemas;
 	};
 }
 #undef Φ

@@ -33,10 +33,14 @@ namespace Jde::App{
 	}
 
 namespace Client{
-	StartSocketAwait::StartSocketAwait( SessionPK sessionId, SL sl )ι:base{sl}, _sessionId{ sessionId }{}
+	StartSocketAwait::StartSocketAwait( SessionPK sessionId, vector<sp<DB::AppSchema>>&& subscriptionSchemas, SL sl )ι:
+		base{sl},
+		_sessionId{ sessionId },
+		_subscriptionSchemas{ move(subscriptionSchemas) }
+	{}
 
 	α StartSocketAwait::Suspend()ι->void{
-		_session = ms<Client::AppClientSocketSession>( Executor(), IsSsl() ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{} );
+		_session = ms<Client::AppClientSocketSession>( Executor(), IsSsl() ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{}, move(_subscriptionSchemas) );
 		RunSession();
 	}
 	α StartSocketAwait::RunSession()ι->VoidTask{
@@ -50,7 +54,7 @@ namespace Client{
 	}
 	α StartSocketAwait::SendSessionId()ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task{
 		try{
-			auto connectionInfo =  co_await _session->Connect( _sessionId );//handshake
+			auto connectionInfo = co_await _session->Connect( _sessionId );//handshake
 			Web::Server::IApplicationServer::SetInstancePK( connectionInfo.instance_pk() );
 			Resume( move(connectionInfo) );
 		}
@@ -60,8 +64,9 @@ namespace Client{
 	}
 
 	α AppClientSocketSession::Instance()ι->sp<AppClientSocketSession>{ return _session; }
-	AppClientSocketSession::AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx )ι:
-		base( ioc, ctx )
+	AppClientSocketSession::AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx, vector<sp<DB::AppSchema>> subscriptionSchemas )ι:
+		base( ioc, ctx ),
+		_subscriptionSchemas{move(subscriptionSchemas)}
 	{}
 	α AppClientSocketSession::Connect( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>{
 		let requestId = NextRequestId();
@@ -80,7 +85,7 @@ namespace Client{
 		base::OnClose( ec );
 		_session = nullptr;
 		if( !Process::ShuttingDown() )
-			App::Client::Connect();
+			App::Client::Connect( move(_subscriptionSchemas) );
 	}
 	α AppClientSocketSession::SessionInfo( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Web::FromServer::SessionInfo>{
 		let requestId = NextRequestId();
@@ -96,7 +101,7 @@ namespace Client{
 	α AppClientSocketSession::Subscribe( string&& q, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
 		let requestId = NextRequestId();
 		Trace( sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
-		auto subscriptions = QL::ParseSubscriptions(q);
+		auto subscriptions = QL::ParseSubscriptions( q, _subscriptionSchemas, sl );
 		_subscriptionRequests.emplace( requestId, make_pair(listener, move(subscriptions)) );
 		return ClientSocketAwait<jarray>{ ToString(FromClient::Subscription(move(q), requestId)), requestId, shared_from_this(), sl };
 	}

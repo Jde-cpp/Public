@@ -65,8 +65,9 @@ namespace Jde::Opc{
 			let [nodes, jNodes] = ParseNodes();
 			auto results = ( co_await Read::SendRequest(nodes, _client) ).UP<flat_map<NodeId, Value>>();
 			if( find_if( *results, []( let& pair )->bool{ return pair.second.hasStatus && pair.second.status==UA_STATUSCODE_BADSESSIONIDINVALID; } )!=results->end() ) {
-				co_await AwaitSessionActivation( _client );
-				results = ( co_await Read::SendRequest(nodes, _client) ).UP<flat_map<NodeId, Value>>();
+				throw RestException<http::status::failed_dependency>{ SRCE_CUR, move(_request), "Opc Server session invalid" };
+				//co_await AwaitSessionActivation( _client );
+				//results = ( co_await Read::SendRequest(nodes, _client) ).UP<flat_map<NodeId, Value>>();
 			}
 			if( _request.Target()=="/snapshot" )
 				ResumeSnapshots( move(*results), jarray{} );
@@ -113,8 +114,9 @@ namespace Jde::Opc{
 							e.Throw();
 					}
 					if( !updatedResults ){
-						co_await AwaitSessionActivation( _client );
-						updatedResults = ( co_await Read::SendRequest(move(successNodes), move(_client)) ).UP<flat_map<NodeId, Value>>();
+						throw RestException<http::status::failed_dependency>{ SRCE_CUR, move(_request), "Opc Server session invalid" };
+						//co_await AwaitSessionActivation( _client );
+						//updatedResults = ( co_await Read::SendRequest(move(successNodes), move(_client)) ).UP<flat_map<NodeId, Value>>();
 					}
 					ResumeSnapshots( move(*updatedResults), move(array) );
 				}

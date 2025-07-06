@@ -21,14 +21,11 @@ namespace Jde::Web{
 	sp<net::cancellation_signal> _cancelSignal;
 	optional<ssl::context> _ctx;
 
-	up<Server::IRequestHandler> _requestHandler;
-	α Server::GetRequestHandler()ι->IRequestHandler&{ return *_requestHandler; }
-
 	atomic_flag _started{};
 
 namespace Server{
 	atomic<uint32> _sequence;
-	α DetectSession( StreamType stream, tcp::endpoint userEndpoint, sp<net::cancellation_signal> cancel )ι->net::awaitable<void, executor_type>{
+	Ω detectSession( StreamType stream, tcp::endpoint userEndpoint, sp<net::cancellation_signal> cancel, Server::IRequestHandler* handler )ι->net::awaitable<void, executor_type>{
 		beast::flat_buffer buffer;
 		stream.expires_after( std::chrono::seconds(30) );// Set the timeout.
 		auto [ec, result] = co_await beast::async_detect_ssl( stream, buffer );// on_run
@@ -46,10 +43,10 @@ namespace Server{
 			}
 
 			buffer.consume(bytes_used);
-			co_await RunSession( ssl_stream, buffer, move(userEndpoint), true, index, cancel );
+			co_await RunSession( ssl_stream, buffer, move(userEndpoint), true, index, cancel, handler );
 		}
 		else
-			co_await RunSession( stream, buffer, move(userEndpoint), false, index, cancel );
+			co_await RunSession( stream, buffer, move(userEndpoint), false, index, cancel, handler );
 	}
 
 	Ω send( HttpRequest&& req, sp<RestStream> stream, jvalue j, sv contentType={}, SRCE )ι->void{
@@ -66,13 +63,13 @@ namespace Server{
 		stream->AsyncWrite( move(res) );
 	}
 
-	α GraphQL( HttpRequest req, sp<RestStream> stream )->QL::QLAwait<>::Task{
+	Ω graphQL( HttpRequest req, sp<RestStream> stream, const vector<sp<DB::AppSchema>>& schemas )->QL::QLAwait<>::Task{
 		constexpr sv contentType = "application/graphql-response+json";
 		try{
 			let returnRaw = req.Params().contains("raw");
 			auto& query = req["query"]; THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
 			req.LogRead( query );
-			auto result = co_await QL::QLAwait{ move(query), req.UserPK(), returnRaw };
+			auto result = co_await QL::QLAwait{ move(query), req.UserPK(), schemas, returnRaw };
 			jobject y{ {"data", result} };
 			send( move(req), move(stream), move(y), contentType );
 		}
@@ -89,9 +86,9 @@ namespace Server{
 		}
 	}
 
-	α HandleCustomRequest( HttpRequest req, sp<RestStream> stream )ι->IHttpRequestAwait::Task{
+	Ω handleCustomRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->IHttpRequestAwait::Task{
 		try{
-			HttpTaskResult result = co_await *( GetRequestHandler().HandleRequest(move(req)) );
+			HttpTaskResult result = co_await *( reqHandler->HandleRequest(move(req)) );
 			THROW_IF( !result.Request, "Request not set." );
 			send( move(*result.Request), move(stream), move(result.Json), {}, result.Source.value_or(SRCE_CUR) );
 		}
@@ -104,10 +101,11 @@ namespace Server{
 		}
 	}
 
-	α InitListener( typename tcp::acceptor::rebind_executor<executor_with_default>::other& acceptor, const tcp::endpoint& endpoint )ι->bool{
+	Ω initListener( typename tcp::acceptor::rebind_executor<executor_with_default>::other& acceptor, const tcp::endpoint& endpoint )ι->bool{
 		beast::error_code ec;
 		acceptor.open( endpoint.protocol(), ec );
 		if( ec ){
+			Debug{ ELogTags::App, "!initListener {}:{}", endpoint.address().to_string(), endpoint.port() };
 			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Critical };
 			return false;
 		}
@@ -120,6 +118,7 @@ namespace Server{
 
 		acceptor.bind( endpoint, ec );// Bind to the server address
 		if( ec ){
+			Debug{ ELogTags::App, "!initListener {}:{}", endpoint.address().to_string(), endpoint.port() };
 			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Critical };
 			return false;
 		}
@@ -158,10 +157,10 @@ namespace Server{
 		_ctx->use_tmp_dh( net::buffer(dh.data(), dh.size()) );
 	}
 
-	α Listen( tcp::endpoint endpoint )ι->net::awaitable<void, executor_type>{
+	Ω listen( tcp::endpoint endpoint, up<IRequestHandler> handler )ι->net::awaitable<void, executor_type>{
 		typename tcp::acceptor::rebind_executor<executor_with_default>::other acceptor{ co_await net::this_coro::executor };
-		if( !InitListener(acceptor, endpoint) ){
-			Debug{ ELogTags::App, "!InitListener" };
+		if( !initListener(acceptor, endpoint) ){
+			Debug{ ELogTags::App, "!initListener" };
 			co_return;
 		}
 
@@ -170,27 +169,35 @@ namespace Server{
 		_started.notify_all();
 		while( (co_await net::this_coro::cancellation_state).cancelled() == net::cancellation_type::none ){
 			auto [ec, sock] = co_await acceptor.async_accept();
-			const auto exec = sock.get_executor();
+			let exec = sock.get_executor();
 			let userEndpoint = sock.remote_endpoint();
 			if( !ec ){
 				auto cancelSignal = ms<net::cancellation_signal>();
-				net::co_spawn( exec, DetectSession(StreamType(move(sock)), move(userEndpoint), cancelSignal), net::bind_cancellation_slot(cancelSignal->slot(), net::detached) );// We dont't need a strand, since the awaitable is an implicit strand.
+				net::co_spawn(
+					exec,
+					detectSession( StreamType(move(sock)), move(userEndpoint), cancelSignal, handler.get() ),
+					net::bind_cancellation_slot(cancelSignal->slot(),
+					net::detached)
+				);// We dont't need a strand, since the awaitable is an implicit strand.
 				Execution::AddCancelSignal( cancelSignal );
 			}
 		}
 	}
 
-	α Internal::Start( up<IRequestHandler>&& handler, up<IApplicationServer>&& server )ε->void{
-		_requestHandler = move( handler );
+	α Internal::Start( up<IRequestHandler>&& handler, up<IApplicationServer>&& server, Settings&& settings )ε->void{
 		_appServer = move( server );
 		if( !_ctx )
 			LoadServerCertificate();
 
-		let port = Settings::FindNumber<PortType>( "/http/port" ).value_or( 6809 );
+		let port = settings.Port();
 		_cancelSignal = ms<net::cancellation_signal>();
-		let addressString = Settings::FindSV("http/address").value_or("0.0.0.0");
+		let addressString = settings.Address();
 		let address = tcp::endpoint{ net::ip::make_address(addressString), port };
-		net::co_spawn( *Executor(), Listen(address), net::bind_cancellation_slot(_cancelSignal->slot(), net::detached) );
+		net::co_spawn(
+			*Executor(),
+			listen( address, move(handler) ),
+			net::bind_cancellation_slot(_cancelSignal->slot(), net::detached)
+		);
 		Execution::AddCancelSignal( _cancelSignal );
 		Execution::Run();
 		_started.wait( false ); // wait for boost to end.
@@ -218,7 +225,7 @@ namespace Server{
 		Trace{ ELogTags::SocketServerRead, "erased socket: {:x}", _socketSessions.erase( id ) };
 	}
 }
-	α Server::HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task{
+	α Server::HandleRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task{
 		try{
 			req.SessionInfo = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false );
 		}
@@ -229,10 +236,10 @@ namespace Server{
 			co_return;
 		}
 		if( req.IsGet("/graphql") ){
-			GraphQL( move(req), stream );
+			graphQL( move(req), stream, reqHandler->Schemas() );
 		}
 		else
-			HandleCustomRequest( move(req), move(stream) );
+			handleCustomRequest( move(req), move(stream), reqHandler );
 	}
 
 #ifdef UNZIP

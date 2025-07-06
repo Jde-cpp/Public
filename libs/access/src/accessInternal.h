@@ -9,10 +9,7 @@ namespace Jde::Access{
 		User=0x80, Group=0x100, Permission=0x200, Role=0x400, Resources=0x800, Acl=0x1000
 	};
 
-	α GetTable( str name )ε->sp<DB::View>;
-	α GetSchema()ι->sp<DB::AppSchema>;
+	α GetSchema()ι->DB::AppSchema&;
+	α GetSchemaPtr()ι->sp<DB::AppSchema>;
 	α SetSchema( sp<DB::AppSchema> schema )ι->void;
-	α DS()ι->sp<DB::IDataSource>;
-	α Authorizer()ι->Authorize&;
-	α AuthorizerPtr()ι->sp<Authorize>;
 }

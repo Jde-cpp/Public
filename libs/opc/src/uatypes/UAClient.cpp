@@ -82,7 +82,7 @@ namespace Jde::Opc{
 
 		return config;
 	}
-	α UAClient::AddSessionAwait( HCoroutine h )ι->void{
+	α UAClient::AddSessionAwait( VoidAwait<>::Handle h )ι->void{
 		{
 			lg _{_sessionAwaitableMutex};
 			_sessionAwaitables.emplace_back( move(h) );
@@ -90,10 +90,10 @@ namespace Jde::Opc{
 		Process( std::numeric_limits<RequestId>::max(), nullptr );
 	}
 	α UAClient::TriggerSessionAwaitables()ι->void{
-		vector<HCoroutine> handles;
+		vector<VoidAwait<>::Handle> handles;
 		{
 			lg _{_sessionAwaitableMutex};
-			for_each(_sessionAwaitables, [&handles](auto&& h){handles.emplace_back(move(h));} );
+			for_each(_sessionAwaitables, [&handles](auto&& h){handles.emplace_back(h);} );
 			_sessionAwaitables.clear();
 		}
 		for_each( handles, [](auto&& h){h.resume();} );

@@ -5,6 +5,8 @@ namespace Jde::Web::Client{
 	struct IClientSocketSession;
 	struct ClientQL final : QL::IQL{
 		ClientQL( sp<IClientSocketSession> session )ι:_session{session}{}
+		α Authorizer()ε->Access::Authorize&{ throw Exception("noimpl"); }// isn't needed for client
+		α AuthorizerPtr()ε->sp<Access::Authorize>{ throw Exception("noimpl"); }
 		α Query( string query, UserPK executer, bool returnRaw=true, SRCE )ι->up<TAwait<jvalue>> override;
 		α QueryObject( string query, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jobject>> override;
 		α QueryArray( string query, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jarray>> override;

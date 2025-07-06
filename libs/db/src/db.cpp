@@ -79,8 +79,11 @@ namespace Jde{
 
 #ifndef PROD
 namespace Jde::DB{
+	bool recreated{};
 	α NonProd::Recreate( const AppSchema& schema, sp<QL::IQL> ql )ε->void{
-		CatalogDdl::NonProd::Drop( schema );
+		if( !recreated )
+			CatalogDdl::NonProd::Drop( schema );
+		recreated = true;
 		return SchemaDdl::Sync( schema, ql );
 	}
 #endif

@@ -5,7 +5,7 @@
 namespace Jde::Web::Server{
 	struct IRequestHandler; struct IApplicationServer;
 	α MaxLogLength()ι->uint16;
-	Φ Start( up<IRequestHandler>&& handler, up<Server::IApplicationServer>&& server )ε->void;
+	Φ Start( up<IRequestHandler>&& handler, up<Server::IApplicationServer>&& server, jobject&& settings )ε->void;
 	Φ Stop( bool terminate=false )ι->void;
 }
 #undef Φ
