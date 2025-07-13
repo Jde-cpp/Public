@@ -1,10 +1,11 @@
 #pragma once
 #include "ObjectAttr.h"
 #include "BrowseName.h"
+#include <jde/opc/uatypes/Node.h>
 
 namespace Jde::Opc::Server{
 	struct ObjectType;
-	struct Node : NodeId{
+	struct Node : ExNodeId{
 		Node( UA_NodeId nodeId, NodePK pk=0 )ι;
 		Node( const jobject& j, NodePK parentPK, BrowseName browse )ε;
 		Node( UA_NodeId nodeId, NodePK parentPK, NodePK refPK, sp<ObjectType> typeDef, BrowseName browseName )ι;

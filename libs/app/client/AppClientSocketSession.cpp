@@ -33,14 +33,15 @@ namespace Jde::App{
 	}
 
 namespace Client{
-	StartSocketAwait::StartSocketAwait( SessionPK sessionId, vector<sp<DB::AppSchema>>&& subscriptionSchemas, SL sl )ι:
+	StartSocketAwait::StartSocketAwait( SessionPK sessionId, vector<sp<DB::AppSchema>>&& subscriptionSchemas, sp<Access::Authorize> authorize, SL sl )ι:
 		base{sl},
+		_authorize{ authorize },
 		_sessionId{ sessionId },
 		_subscriptionSchemas{ move(subscriptionSchemas) }
 	{}
 
 	α StartSocketAwait::Suspend()ι->void{
-		_session = ms<Client::AppClientSocketSession>( Executor(), IsSsl() ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{}, move(_subscriptionSchemas) );
+		_session = ms<Client::AppClientSocketSession>( Executor(), IsSsl() ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{}, move(_subscriptionSchemas), move(_authorize) );
 		RunSession();
 	}
 	α StartSocketAwait::RunSession()ι->VoidTask{
@@ -64,10 +65,12 @@ namespace Client{
 	}
 
 	α AppClientSocketSession::Instance()ι->sp<AppClientSocketSession>{ return _session; }
-	AppClientSocketSession::AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx, vector<sp<DB::AppSchema>> subscriptionSchemas )ι:
+	AppClientSocketSession::AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx, vector<sp<DB::AppSchema>> subscriptionSchemas, sp<Access::Authorize> authorize )ι:
 		base( ioc, ctx ),
+		_authorize{authorize},
 		_subscriptionSchemas{move(subscriptionSchemas)}
 	{}
+
 	α AppClientSocketSession::Connect( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>{
 		let requestId = NextRequestId();
 		auto instanceName = Settings::FindString("instanceName").value_or( "" );
@@ -167,7 +170,7 @@ namespace Client{
 				let serverSocketId = m->ack();
 				SetId( serverSocketId );
 				if( !_qlServer )
-					_qlServer = ms<Web::Client::ClientQL>( shared_from_this() );
+					_qlServer = ms<Web::Client::ClientQL>( shared_from_this(), move(_authorize) );
 				Information( _tags, "[{:x}]AppClientSocketSession created: {}://{}.", Id(), IsSsl() ? "https" : "http", Host() );
 //				resumeVoid( move(hAny), "Ack: '{}'.", serverSocketId );
 				}break;

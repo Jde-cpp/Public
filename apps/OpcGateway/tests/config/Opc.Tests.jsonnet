@@ -1,8 +1,10 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "UAClientTests.Authenticate",
-		recreateDB:: true
+		tests: "PasswordTests.Authenticate",
+		recreateDB:: true,
+		embeddedAppServer: false,
+		embeddedOpcServer: false
 	},
 	opc: args.opc,
 	dbServers: {
@@ -32,8 +34,8 @@ local args = import 'args.libsonnet';
 		opcServer:{ port: 1970 }
 	},
 	credentials:{
-		name: "IotTests",
-		target: "IotTests"
+		name: "IotTests2",
+		target: "IotTests2"
 	},
 	logging:{
 		defaultLevel:: "Information",
@@ -41,7 +43,7 @@ local args = import 'args.libsonnet';
 			trace:["test","sql", "app",
 				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
 				"ql"],
-			debug:["settings", "scheduler", "uaEvent", "iot.users",
+			debug:["settings", "scheduler", "uaEvent",
 				"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
 				"monitoring", "browse", "processingLoop", "monitoring.pedantic"],
 			information:["threads", "uaSecure"],
@@ -56,7 +58,7 @@ local args = import 'args.libsonnet';
 		memory: true
 	},
 	workers:{
-		executor: 4,
+		executor: 2,
 		drive: {threads: 1}
 	}
 }

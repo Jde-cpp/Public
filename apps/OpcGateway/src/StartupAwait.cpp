@@ -9,7 +9,8 @@
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/opc/opc.h>
 #include <jde/opc/OpcQLHook.h>
-#include <jde/opc/uatypes/UAClient.h>
+#include "opcInternal.h"
+#include "UAClient.h"
 #include "WebServer.h"
 
 #define let const auto
@@ -21,14 +22,15 @@ namespace Jde::Opc{
 }
 
 namespace Jde::Opc::Gateway{
-	sp<Access::Authorize> _authorizer = ms<Access::Authorize>();
+	//sp<Access::Authorize> _authorizer = ms<Access::Authorize>();
 
 	α StartupAwait::Execute()ι->VoidAwait<>::Task{
 		try{
-			auto remoteAcl = App::Client::RemoteAcl();
-			auto schema = DB::GetAppSchema( "gateway", remoteAcl );
-			_localQL = QL::Configure( {schema}, _authorizer );
-			Opc::Configure( schema );
+			auto authorize = App::Client::RemoteAcl( "gateway" );
+			auto schema = DB::GetAppSchema( "gateway", authorize );
+			_localQL = QL::Configure( {schema}, authorize );
+			SetSchema( schema );
+			//Opc::Configure( schema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 				DB::NonProd::Recreate( *schema, _localQL );
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
@@ -39,8 +41,8 @@ namespace Jde::Opc::Gateway{
 				settings.CreateDirectories();
 				Crypto::CreateKeyCertificate( settings );
 			}
-			Opc::StartWebServer( move(_webServerSettings) );
-			auto accessSchema = DB::GetAppSchema( "access", remoteAcl );
+			StartWebServer( move(_webServerSettings) );
+			auto accessSchema = DB::GetAppSchema( "access", authorize );
 			co_await App::Client::ConnectAwait{ {accessSchema} };
 
 			_listener = ms<Access::AccessListener>( App::Client::QLServer() );
@@ -48,10 +50,10 @@ namespace Jde::Opc::Gateway{
 				_listener->Shutdown( terminate );
 				_listener = nullptr;
 			});
-			co_await Access::Client::Configure( accessSchema, {schema}, App::Client::QLServer(), UserPK{UserPK::System}, _authorizer, _listener );
-			Process::AddShutdownFunction( [](bool terminate){Opc::UAClient::Shutdown(terminate);} );
-			QL::Hook::Add( mu<Opc::OpcQLHook>() );
-			Information( ELogTags::App, "---Started {}---", Process::ProductName() );
+			co_await Access::Client::Configure( accessSchema, {schema}, App::Client::QLServer(), UserPK{UserPK::System}, authorize, _listener );
+			Process::AddShutdownFunction( [](bool terminate){UAClient::Shutdown(terminate);} );
+			QL::Hook::Add( mu<OpcQLHook>() );
+			Information( ELogTags::App, "---Started {}---", "OPC Gateway" );
 			Resume();
 		}
 		catch( IException& e ){

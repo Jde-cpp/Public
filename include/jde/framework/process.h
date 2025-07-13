@@ -25,6 +25,7 @@ namespace Jde::Process{
 	Φ RemoveShutdown( IShutdown* pShutdown )ι->void;
 
 	Φ ExitReason()ι->optional<int>;
+	Φ ExitException( exception&& e )ι->int;
 	Φ SetExitReason( int reason, bool terminate )ι->void;
 	Φ Shutdown( int exitReason )ι->void;
 	Φ ShuttingDown()ι->bool;

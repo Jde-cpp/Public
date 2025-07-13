@@ -3,7 +3,7 @@ local args = import 'args.libsonnet';
 	dbServers:{
 		dataPaths: args.dbServers.dataPaths,
 		scriptPaths: args.dbServers.scriptPaths,
-		sync: true,
+		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,
@@ -16,10 +16,10 @@ local args = import 'args.libsonnet';
 	logging:{
 		flushOn: "Trace",
 		tags: {
-			trace:["test", "sql", "ql"],
-			debug:["settings", "app"],
-			information:["app", "appServer", "net",
+			trace:["test", "sql", "ql",
 				"UASession", "UAServer", "UAUser", "UASecurity", "UAEvent", "sql", "threads", "UAClient", "UANet", "UASecure"],
+			debug:["settings", "app"],
+			information:["app", "appServer", "net"],
 			warning:["alarm", "ql", "io", "locks", "settings"],
 			"error":[],
 			critical:[]
@@ -32,6 +32,7 @@ local args = import 'args.libsonnet';
 		name: "OpcServer.Test.$(JDE_BUILD_TYPE)",
 		target:: "OpcServer"
 	},
+	http:{port: 1970},
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",

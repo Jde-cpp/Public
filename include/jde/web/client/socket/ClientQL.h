@@ -4,9 +4,9 @@
 namespace Jde::Web::Client{
 	struct IClientSocketSession;
 	struct ClientQL final : QL::IQL{
-		ClientQL( sp<IClientSocketSession> session )ι:_session{session}{}
-		α Authorizer()ε->Access::Authorize&{ throw Exception("noimpl"); }// isn't needed for client
-		α AuthorizerPtr()ε->sp<Access::Authorize>{ throw Exception("noimpl"); }
+		ClientQL( sp<IClientSocketSession> session, sp<Access::Authorize> authorize )ι:_session{session}, _authorize{authorize}{}
+		α Authorizer()ε->Access::Authorize&{ return *_authorize; }
+		α AuthorizerPtr()ε->sp<Access::Authorize>{ return _authorize; }
 		α Query( string query, UserPK executer, bool returnRaw=true, SRCE )ι->up<TAwait<jvalue>> override;
 		α QueryObject( string query, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jobject>> override;
 		α QueryArray( string query, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jarray>> override;
@@ -15,5 +15,6 @@ namespace Jde::Web::Client{
 		β Upsert( string /*query*/, UserPK /*executer*/ )ε->jarray{ throw Exception{"Not implemented."}; }
 	private:
 		sp<IClientSocketSession> _session;
+		sp<Access::Authorize> _authorize;
 	};
 }

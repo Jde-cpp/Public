@@ -3,7 +3,7 @@
 #include <jde/web/server/IApplicationServer.h>
 
 namespace Jde::Web::Server{ struct HttpRequest; struct IHttpRequestAwait; struct IWebsocketSession;struct RestStream; }
-namespace Jde::Opc{
+namespace Jde::Opc::Gateway{
 	α StartWebServer( jobject&& settings )ε->void;
 	α StopWebServer()ι->void;
 	namespace Server{

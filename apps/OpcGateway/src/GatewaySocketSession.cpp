@@ -1,12 +1,14 @@
 #include "GatewaySocketSession.h"
-#include <jde/opc/UM.h>
-#include <jde/opc/async/CreateSubscriptions.h>
-#include <jde/opc/async/DataChanges.h>
-#include <jde/opc/async/SessionAwait.h>
-#include <jde/opc/uatypes/UAClientException.h>
 #include "StartupAwait.h"
+#include "UAClient.h"
 #include "WebServer.h"
+#include "async/CreateSubscriptions.h"
+#include "async/DataChanges.h"
+#include "async/SessionAwait.h"
+#include "auth/UM.h"
+#include "types/proto/Opc.FromClient.h"
 #include "types/proto/Opc.FromServer.h"
+#include "uatypes/UAClientException.h"
 
 #define let const auto
 
@@ -29,8 +31,8 @@ namespace Jde::Opc::Gateway{
 		Write( FromServer::AckTrans(id) );
 	}
 
-	α GatewaySocketSession::SendDataChange( const Jde::Opc::OpcClientNK& opcNK, const Jde::Opc::NodeId& node, const Jde::Opc::Value& value )ι->void{
-		return Write( MessageTrans(value.ToProto(opcNK,node), 0) );
+	α GatewaySocketSession::SendDataChange( const OpcClientNK& opcNK, const ExNodeId& node, const Value& value )ι->void{
+		return Write( MessageTrans(FromServer::ToProto(opcNK,node, value), 0) );
 	}
 
 	α GatewaySocketSession::SetSessionId( str strSessionId, RequestId requestId )->Sessions::UpsertAwait::Task{
@@ -45,12 +47,12 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α GatewaySocketSession::Subscribe( OpcClientNK&& opcId, flat_set<Opc::NodeId> nodes, uint32 requestId )ι->void{
+	α GatewaySocketSession::Subscribe( OpcClientNK&& opcId, flat_set<ExNodeId> nodes, uint32 requestId )ι->void{
 		try{
 			auto self = SharedFromThis(); //keep alive
-			auto [loginName,password] = Credentials( base::SessionId(), opcId );
-			LogRead( Ƒ("({:x})Subscribe: opcId: '{}', user: '{}', nodeCount: {}", base::SessionId(), opcId, loginName, nodes.size()), requestId );
-			if( auto client = UAClient::Find( move(opcId), loginName, password); client )
+			auto cred = GetCredential( base::SessionId(), opcId );
+			LogRead( Ƒ("({:x})Subscribe: opcId: '{}', cred: '{}', nodeCount: {}", base::SessionId(), opcId, cred ? cred->ToString() : "null", nodes.size()), requestId );
+			if( auto client = UAClient::Find(move(opcId), cred); client )
 				CreateSubscription( client, move(nodes), requestId );
 			else
 				WriteException( Ƒ("Client not found: opcId: '{}'", opcId), requestId );
@@ -59,37 +61,35 @@ namespace Jde::Opc::Gateway{
 			WriteException( move(e), requestId );
 		}
 	}
-	α GatewaySocketSession::CreateSubscription( sp<UAClient> client, flat_set<Opc::NodeId> nodes, uint32 requestId )ι->Task{
+	α GatewaySocketSession::CreateSubscription( sp<UAClient> client, flat_set<ExNodeId> nodes, uint32 requestId )ι->TAwait<sp<UA_CreateSubscriptionResponse>>::Task{
 		try{
 			auto self = SharedFromThis(); //keep alive
-			( co_await Opc::CreateSubscription(client) ).CheckError();
-			up<FromServer::SubscriptionAck> ack;
-			try{
-				ack = ( co_await DataChangesSubscribe(nodes, self, client) ).UP<FromServer::SubscriptionAck>();
-			}
-			catch( Client::UAClientException& e ){
-				if( !e.IsBadSession() )
-					e.Throw();
-			}
-			if( !ack ){
-				throw Exception{ "Opc Server session invalid" };
+			co_await CreateSubscriptionAwait{ client };
+			[]( sp<UAClient> client, flat_set<ExNodeId> nodes, uint32 requestId, sp<GatewaySocketSession> self )->TAwait<FromServer::SubscriptionAck>::Task{
+				try{
+					auto ack = co_await DataChangeAwait{ move(nodes), move(self), move(client) };
+					self->Write( FromServer::SubscribeAckTrans(move(ack), requestId) );
+				}
+				catch( exception& e ){
+					//if( !e.IsBadSession() )
+						self->WriteException( move(e), requestId );
 				//co_await AwaitSessionActivation( client );
 				//ack = ( co_await DataChangesSubscribe(move(nodes), self, move(client)) ).UP<FromServer::SubscriptionAck>();
-			}
-			Write( FromServer::SubscribeAckTrans(move(ack), requestId) );
+				}
+			}( client, move(nodes), requestId, move(self) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			WriteException( move(e), requestId );
 		}
 	}
 
-	α GatewaySocketSession::Unsubscribe( OpcClientNK&& opcId, flat_set<Opc::NodeId> nodes, uint32 requestId )ι->void{
+	α GatewaySocketSession::Unsubscribe( OpcClientNK&& opcId, flat_set<ExNodeId> nodes, uint32 requestId )ι->void {
 		try{
 			auto self = SharedFromThis();//keep alive
-			auto [loginName,password] = Opc::Credentials( SessionId(), opcId );
-			LogRead( Ƒ("Unsubscribe: opcId: '{}', user: '{}', nodeCount: {}", opcId, loginName, nodes.size()), requestId );
-			if( auto pClient = UAClient::Find( move(opcId), loginName, password); pClient ){
-				auto [successes,failures] = pClient->MonitoredNodes.Unsubscribe( move(nodes), self );
+			auto cred = GetCredential( SessionId(), opcId );
+			LogRead( Ƒ("Unsubscribe: opcId: '{}', user: '{}', nodeCount: {}", opcId, cred ? cred->ToString() : "null", nodes.size()), requestId );
+			if( auto client = UAClient::Find(move(opcId), cred); client ){
+				auto [successes,failures] = client->MonitoredNodes.Unsubscribe( move(nodes), self );
 				Write( FromServer::UnsubscribeTrans(requestId, move(successes), move(failures)) );
 			}
 			else
@@ -137,11 +137,11 @@ namespace Jde::Opc::Gateway{
 				break;
 			case kSubscribe:{
 				auto& s = *m.mutable_subscribe();
-				Subscribe( move(*s.mutable_opc_id()), Opc::NodeId::ToNodes(move(*s.mutable_nodes())), requestId );
+				Subscribe( move(*s.mutable_opc_id()), FromClientUtils::ToNodes(move(*s.mutable_nodes())), requestId );
 				break;}
 			case kUnsubscribe:{
 				auto& u = *m.mutable_unsubscribe();
-				Unsubscribe( move(*u.mutable_opc_id()), Opc::NodeId::ToNodes(move(*u.mutable_nodes())), requestId );
+				Unsubscribe( move(*u.mutable_opc_id()), FromClientUtils::ToNodes(move(*u.mutable_nodes())), requestId );
 				break;}
 			default:
 				LogRead( Ƒ("Unknown message type '{}'", underlying(m.Value_case())), requestId, ELogLevel::Critical );

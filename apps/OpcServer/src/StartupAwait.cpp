@@ -26,15 +26,13 @@ namespace Jde::Opc{
 	α Server::Schemas()ι->const vector<sp<DB::AppSchema>>&{ return _localQL->Schemas(); }
 }
 namespace Jde::Opc::Server{
-	sp<Access::Authorize> _authorizer = ms<Access::Authorize>();
 
 	α StartupAwait::Execute()ι->VoidAwait<>::Task{
 		try{
-			auto remoteAcl = App::Client::RemoteAcl();
+			auto remoteAcl = App::Client::RemoteAcl( "opc" );
 			auto uaSchema = DB::GetAppSchema( "opc", remoteAcl );
-			SetSchema( uaSchema );
-			_localQL = QL::Configure( {uaSchema}, _authorizer );
-			Opc::Configure( uaSchema );
+			_localQL = QL::Configure( {uaSchema}, remoteAcl );
+			//Opc::Configure( uaSchema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 				DB::NonProd::Recreate( *uaSchema, _localQL );
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
@@ -46,8 +44,8 @@ namespace Jde::Opc::Server{
 				Crypto::CreateKeyCertificate( settings );
 			}
 			let serverName = Settings::FindString("/opcServer/target").value_or( "default" );
-			let& serverTable = GetViewPtr( "servers" );
-			auto serverId = DS().ScalerSyncOpt<uint32>( DB::Statement{
+			let& serverTable = uaSchema->GetViewPtr( "servers" );
+			auto serverId = uaSchema->DS()->ScalerSyncOpt<uint32>( DB::Statement{
 				{serverTable->GetColumnPtr("server_id")},
 				{serverTable},
 				{serverTable->GetColumnPtr("target"), serverName }
@@ -58,8 +56,6 @@ namespace Jde::Opc::Server{
 					{ {serverName}, {serverName}, {0}, {} }
 				} );
 			}
-			SetServerId( *serverId );
-
 			StartWebServer( move(_webServerSettings) );
 			auto accessSchema = DB::GetAppSchema( "access", remoteAcl );
 			co_await App::Client::ConnectAwait{ {accessSchema} };
@@ -68,12 +64,13 @@ namespace Jde::Opc::Server{
 				_listener->Shutdown( terminate );
 				_listener = nullptr;
 			});
-			co_await Access::Client::Configure( accessSchema, {uaSchema}, App::Client::QLServer(), UserPK{UserPK::System}, _authorizer, _listener );
-			GetUAServer().Run();
-			co_await ServerConfigAwait{};
+			co_await Access::Client::Configure( accessSchema, {uaSchema}, App::Client::QLServer(), UserPK{UserPK::System}, remoteAcl, _listener );
 			QL::Hook::Add( mu<ConstructorHook>() );
 			QL::Hook::Add( mu<ObjectHook>() );
 			QL::Hook::Add( mu<ObjectTypeHook>() );
+			Initialize( *serverId, uaSchema );
+			GetUAServer().Run();
+			co_await ServerConfigAwait{};
 			co_await UpsertAwait{};
 			Information( ELogTags::App, "---Started OPC Server---" );
 			Resume();

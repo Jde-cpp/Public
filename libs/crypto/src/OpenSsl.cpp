@@ -8,16 +8,25 @@ namespace Jde{
 	namespace Crypto{
 		constexpr ELogTags _logTag{ ELogTags::Crypto };
 		α OpenSslException::CurrentError()ι->string{ char b[120]; ERR_error_string( ERR_get_error(), b ); return {b}; }
+
+		//https://stackoverflow.com/questions/1986888/how-to-compute-a-32-bit-fingerprint-of-a-certificate
+		α Certificate::hash32()Ι->uint32_t{
+			auto md5 = CalcMd5( Modulus );
+			uint32_t hash = 0;
+			for( auto b : md5 )
+				hash = (hash << 8) | (uint32_t)b;
+			return hash;
+		}
 	}
 	using namespace Jde::Crypto::Internal;
 
-	α Crypto::CalcMd5( sv content )ε->MD5{
+	α Crypto::CalcMd5( byte* data, uint size )ε->MD5{
 		auto ctx = NewMDCtx();
 		CALL( EVP_DigestInit_ex(ctx.get(), EVP_md5(), nullptr) );
-		CALL(	EVP_DigestUpdate(ctx.get(), content.data(), content.size()) );
-		array<byte,EVP_MAX_MD_SIZE> buffer; unsigned int size;
-		CALL(	EVP_DigestFinal_ex(ctx.get(), (unsigned char*)buffer.data(), &size) );
-		ASSERT( size==16 );
+		CALL(	EVP_DigestUpdate(ctx.get(), data, size) );
+		array<byte,EVP_MAX_MD_SIZE> buffer; unsigned int outputSize;
+		CALL(	EVP_DigestFinal_ex(ctx.get(), (unsigned char*)buffer.data(), &outputSize) );
+		ASSERT( outputSize==16 );
 		MD5 md5;
 		std::copy( buffer.begin(), buffer.begin()+16, md5.begin() );
 		return md5;

@@ -12,9 +12,7 @@
 #include <open62541/client_subscriptions.h>
 #include <open62541/plugin/log_stdout.h>
 
-#include <jde/framework.h>
-#include <jde/web/server/exports.h>
-#include <jde/opc/usings.h>
-#include <jde/opc/exports.h>
-#include <jde/app/shared/exports.h>
 #include "externals.h"
+#include "../src/usings.h"
+#include "../src/types/OpcClient.h"
+#include "../src/types/proto/Opc.FromServer.pb.h"

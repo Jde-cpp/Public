@@ -18,7 +18,9 @@
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/client_subscriptions.h>
 #include <jde/framework.h>
-#include <jde/opc/usings.h>
+#include <jde/framework/coroutine/Await.h>
+#include <jde/crypto/OpenSsl.h>
+#include <jde/access/usings.h>
 #include <jde/web/client/exports.h>
 #include <jde/web/client/proto/Web.FromServer.pb.h>
 #include <jde/app/shared/exports.h>
@@ -28,6 +30,12 @@
 #include <jde/app/shared/exports.h>
 #include <jde/app/shared/proto/Common.pb.h>
 #include <jde/opc/exports.h>
-#include <jde/opc/types/proto/Opc.Common.pb.h>
-#include <jde/opc/types/proto/Opc.FromServer.pb.h>
-#include <jde/opc/types/proto/Opc.FromClient.pb.h>
+#include <jde/opc/usings.h>
+#include <jde/opc/uatypes/Node.h>
+#include <jde/opc/uatypes/Logger.h>
+#include "uatypes/UAClientException.h"
+DISABLE_WARNINGS
+#include "types/proto/Opc.Common.pb.h"
+#include "types/proto/Opc.FromServer.pb.h"
+#include "types/proto/Opc.FromClient.pb.h"
+ENABLE_WARNINGS

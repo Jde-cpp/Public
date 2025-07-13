@@ -7,7 +7,7 @@
 #include <jde/web/client/Jwt.h>
 
 namespace Jde::QL{ struct IQL; }
-namespace Jde::Access{ struct IAcl; }
+namespace Jde::Access{ struct IAcl; struct Authorize;}
 namespace Jde::DB{ struct IDataSource; struct AppSchema; }
 namespace Jde::App::Client{
 	α UpdateStatus()ι->void;
@@ -17,7 +17,7 @@ namespace Jde::App::Client{
 	α IsSsl()ι->bool;
 	α Host()ι->string;
 	α Port()ι->PortType;
-	α RemoteAcl()ι->sp<Access::IAcl>;
+	α RemoteAcl( string libName )ι->sp<Access::Authorize>;
 	α QLServer()ε->sp<QL::IQL>;
 
 	struct ΓAC ConnectAwait final : VoidAwait<>{

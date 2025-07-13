@@ -11,14 +11,12 @@ std::optional<int> _exitCode;
 	int exitCode;
 	try{
 		OSApp::Startup( argc, argv, "Jde.OpcServer", "OpcServer" );
-		let webServerSettings = Settings::FindObject("/http");
+		let webServerSettings = Settings::FindObject( "/http" );
 		BlockVoidAwait( Opc::Server::StartupAwait{webServerSettings ? *webServerSettings : jobject{}} );
 		exitCode = Process::Pause();
 	}
-	catch( IException& e ){
-		e.Log();
-		BREAK;
-		exitCode = e.Code ? (int)e.Code : EXIT_FAILURE;
+	catch( exception& e ){
+		exitCode = Process::ExitException( move(e) );
 	}
 	Process::Shutdown( exitCode );
 	return exitCode;

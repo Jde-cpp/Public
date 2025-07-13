@@ -1,4 +1,5 @@
-﻿#include <jde/opc/uatypes/Logger.h>
+﻿#include <jde/framework/process.h>
+#include <jde/opc/uatypes/Logger.h>
 #include "StartupAwait.h"
 
 #define let const auto
@@ -15,11 +16,7 @@
 		exitCode = Process::Pause();
 	}
 	catch( exception& e ){
-		if( auto p = dynamic_cast<IException*>(&e); p ){
-			p->Log();
-			exitCode = p->Code ? (int)p->Code : EXIT_FAILURE;
-		}
-		std::cerr << e.what() << std::endl;
+		Jde::Process::ExitException( move(e) );
 	}
 
 	Process::Shutdown( exitCode );

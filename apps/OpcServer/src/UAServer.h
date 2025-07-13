@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/opc/uatypes/Logger.h>
+#include "UAConfig.h"
 #include "uaTypes/BrowseName.h"
 #include "uaTypes/Node.h"
 #include "uaTypes/ObjectAttr.h"
@@ -16,7 +16,7 @@ namespace Jde::Opc::Server {
 
 		Ω Constructor( UA_Server *server, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *typeId, void *typeContext, const UA_NodeId *nodeId, void **nodeContext )->UA_StatusCode;
 		α Run()ι->void;
-		α ConstructorValues( const NodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&;
+		α ConstructorValues( const ExNodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&;
 
 		α Find( NodePK parentPK, BrowseNamePK browsePK )Ι->const Node*;
 		α Find( const Node& parent, const BrowseName& browse )Ι->const Node*;
@@ -28,9 +28,9 @@ namespace Jde::Opc::Server {
 		α GetParent( NodePK pk, SRCE )ε->Node&;
 		α FindObjectishNode( NodePK pk )Ε->const Node*;
 		α GetObjectish( NodePK pk, SRCE )Ε->const Node&;
-		α GetObject( const NodeId& id, SRCE )ε->const Object&;
-		α GetRefType( NodePK pk, SRCE )ε->NodeId&;
-		α GetTypeDef( const NodeId& id, SRCE )ε->sp<ObjectType>;
+		α GetObject( const ExNodeId& id, SRCE )ε->const Object&;
+		α GetRefType( NodePK pk, SRCE )ε->ExNodeId&;
+		α GetTypeDef( const ExNodeId& id, SRCE )ε->sp<ObjectType>;
 		α GetTypeDef( NodePK pk, SRCE )ε->sp<ObjectType>;
 		α GetVariable( NodePK pk, SRCE )ε->const Variable&;
 
@@ -42,18 +42,17 @@ namespace Jde::Opc::Server {
 		α AddVariable( Variable variable, SRCE )->Variable;
 		string ServerName;
 	private:
-		UA_ServerConfig _config;
+		UAConfig _config;
 		UA_Server* _ua{};
 		optional<std::jthread> _thread;
-		Logger _logger;
 
 		flat_map<BrowseNamePK, BrowseName> _browseNames;
-		flat_map<NodeId, flat_map<BrowseNamePK, Variant>> _constructors;
+		flat_map<ExNodeId, flat_map<BrowseNamePK, Variant>> _constructors;
 		mutable flat_map<NodePK, UA_DataType*> _dataTypes;
 		flat_map<NodePK, Object> _objects;
 		flat_map<NodePK, sp<ObjectType>> _typeDefs; //ObjectTypes and VariableTypes
 		flat_map<NodePK, Reference> _refs;
-		flat_map<NodePK, NodeId> _refTypes;
+		flat_map<NodePK, ExNodeId> _refTypes;
 		flat_map<VariablePK, Variable> _variables;
 
 		friend struct ServerConfigAwait; friend struct OpcServerQL; friend struct BrowseNameAwait; friend struct ObjectQLAwait; friend struct ObjectTypeQLAwait; friend struct NodeAwait; friend struct VariableInsertAwait;

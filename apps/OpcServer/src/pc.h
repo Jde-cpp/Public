@@ -19,10 +19,8 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/app/shared/exports.h>
 #include <jde/opc/exports.h>
-#include <jde/opc/types/proto/Opc.Common.pb.h>
 #include <jde/opc/uatypes/helpers.h>
 #include <jde/opc/uatypes/Node.h>
 #include <jde/opc/uatypes/UAException.h>
 #include "usings.h"
 #include "globals.h"
-#include "../../../libs/opc/src/types/proto/Opc.Common.pb.h"

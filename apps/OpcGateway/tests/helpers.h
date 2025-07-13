@@ -5,11 +5,9 @@
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLAwait.h>
 
-namespace Jde::Opc{
-	struct OpcQLHook;
-
+namespace Jde::Opc::Gateway::Tests{
 	const static string OpcServerTarget{ "OpcServerTests" };
-	struct CreateOpcClientAwait : TAwaitEx<OpcClientPK,QL::QLAwait<jobject>::Task>{
+	struct CreateOpcClientAwait : TAwaitEx<Jde::Opc::Gateway::OpcClientPK,QL::QLAwait<jobject>::Task>{
 		using base = TAwaitEx<OpcClientPK,QL::QLAwait<jobject>::Task>;
 		CreateOpcClientAwait( SRCE )ι:base{ sl }{}
 		α Execute()ι->QL::QLAwait<jobject>::Task override;
@@ -25,6 +23,6 @@ namespace Jde::Opc{
 	α PurgeOpcClient( optional<OpcClientPK> id=nullopt )ι->uint;
 
 	α SelectOpcClient( DB::Key id )ι->jobject;
-	α AddHook()ι->void;
-	α GetHook()ι->OpcQLHook*;
+
+	α HasUserToken( sv url, UA_UserTokenType type )ε->bool;
 }

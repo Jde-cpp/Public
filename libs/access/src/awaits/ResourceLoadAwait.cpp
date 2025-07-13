@@ -42,33 +42,30 @@ namespace Jde::Access{
 		}
 	}
 
-	α loadExisting( const string& schemaName, sp<QL::IQL> qlServer, UserPK executor )ε->flat_set<string>{
-		auto q = Ƒ("resources( schemaName:[\"{}\"] ){{target deleted}}", schemaName);
-		auto existing = BlockAwait<TAwait<jarray>, jarray>( *qlServer->QueryArray( move(q), executor ) );
-		flat_set<string> targets;
-		for( auto& resource : existing )
-			targets.emplace( Json::AsString(Json::AsObject(resource), "target") );
-		return targets;
-	}
-	α createExisting( string&& query, sp<QL::IQL> qlServer, UserPK executor )ε->jvalue{
-		return BlockAwait<TAwait<jvalue>, jvalue>( *qlServer->Query(move(query), executor) );
-	}
+	α ResourceSyncAwait::Sync()ι->TAwait<jvalue>::Task{
+		try{
+			for( let& schema : _schemas ){
+				auto q = Ƒ( "resources( schemaName:[\"{}\"] ){{target deleted}}", schema->Name );
+				auto existing = Json::AsArray( co_await *_qlServer->Query(move(q), _executer) );
+				flat_set<string> targets;
+				for( auto& resource : existing )
+					targets.emplace( Json::AsString(Json::AsObject(resource), "target") );
 
-	α Resources::Sync( const vector<sp<DB::AppSchema>> schemas, sp<QL::IQL> qlServer, UserPK executor )ε->void{
-		using DB::Value;
-		for( let& schema : schemas ){
-			auto existing = loadExisting( schema->Name, qlServer, executor );
+				for( let& [_,table] : schema->Tables ){
+					auto jsonName = DB::Names::ToJson( table->Name );
+					if( empty(table->Operations) || targets.contains(jsonName) )
+						continue;
 
-			for( let& [_,table] : schema->Tables ){
-				auto jsonName = DB::Names::ToJson( table->Name );
-				if( empty(table->Operations) || existing.contains(jsonName) )
-					continue;
-
-				auto q = Ƒ( "createResource( schemaName:\"{}\", name:\"{}\", target:\"{}\", allowed:{}, description:\"From installation\" ){{id}}",
-					schema->Name, table->Name, move(jsonName), underlying(table->Operations) );
-				let result = createExisting( move(q), qlServer, executor );
-				BlockAwait<TAwait<jvalue>, jvalue>( *(qlServer->Query(Ƒ("deleteResource( id:{} )", QL::AsId<UserPK::Type>(result)), executor)) );
+					auto create = Ƒ( "createResource( schemaName:\"{}\", name:\"{}\", target:\"{}\", allowed:{}, description:\"From installation\" ){{id}}",
+						schema->Name, table->Name, move(jsonName), underlying(table->Operations) );
+					let resourceId = QL::AsId<UserPK::Type>( co_await *_qlServer->Query(move(create), _executer) );
+					co_await *_qlServer->Query( Ƒ("deleteResource( id:{} )", resourceId), _executer );
+				}
 			}
+			Resume();
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
 		}
 	}
 }

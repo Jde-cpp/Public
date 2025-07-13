@@ -13,7 +13,7 @@ namespace Jde::Opc::Server {
 				ServerConfigAwait::ServerWhereClause(*nodeTable, {})
 			};
 			auto rows = co_await DS().SelectAsync( stmt.Move() );
-			flat_map<NodePK,NodeId> nodes; nodes.reserve( rows.size() );
+			flat_map<NodePK,ExNodeId> nodes; nodes.reserve( rows.size() );
 			for( auto&& row : rows ){
 				nodes.try_emplace( row.GetUInt(0), row, 1 );
 			}

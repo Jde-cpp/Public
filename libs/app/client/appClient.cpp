@@ -7,10 +7,10 @@
 
 #define let const auto
 
+
+namespace Jde::App::Client{ static sp<Access::Authorize> _authorize; }
 namespace Jde::App{
 	using Web::Client::ClientHttpAwait;
-
-	static sp<Access::IAcl> _authorizer = ms<Access::Authorize>();
 	const Duration _reconnectWait{ Settings::FindDuration("server/reconnectWait").value_or(5s) };
 	α Client::IsSsl()ι->bool{ return Settings::FindBool("server/isSsl").value_or( false ); }
 	α Client::Host()ι->string{ return Settings::FindString("server/host").value_or("localhost"); }
@@ -19,7 +19,11 @@ namespace Jde::App{
 	function<vector<string>()> _statusDetails = []()->vector<string>{ return {}; };
   α Client::SetStatusDetailsFunction( function<vector<string>()>&& f )ι->void{ _statusDetails = f; }
 
-	α Client::RemoteAcl()ι->sp<Access::IAcl>{ return _authorizer; }
+	α Client::RemoteAcl( string libName )ι->sp<Access::Authorize>{
+		if( !_authorize )
+			_authorize = ms<Access::Authorize>( move(libName) );
+		return _authorize;
+	}
 	#define IF_OK if( auto pSession = Process::ShuttingDown() ? nullptr : AppClientSocketSession::Instance(); pSession )
 	α Client::UpdateStatus()ι->void{// update immediately
 		IF_OK
@@ -85,7 +89,7 @@ namespace Jde::App::Client{
 	α ConnectAwait::RunSocket( SessionPK sessionId )ι->StartSocketAwait::Task{
 		try{
 			Trace( ELogTags::App, "Creating socket session for sessionId: {:x}", sessionId );
-			co_await StartSocketAwait{ sessionId, move(_subscriptionSchemas) };
+			co_await StartSocketAwait{ sessionId, move(_subscriptionSchemas), _authorize };
 			Resume();
 		}
 		catch( IException& e ){

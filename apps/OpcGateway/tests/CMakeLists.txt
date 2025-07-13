@@ -58,24 +58,5 @@ if( WIN32 )
 	copyCommonDlls()
 endif()
 target_precompile_headers( ${targetName} PRIVATE
-	<gtest/gtest.h>
-	<boost/asio.hpp>
-	<boost/beast.hpp>
-	<boost/beast/ssl/ssl_stream.hpp>
-	<boost/lexical_cast.hpp>
-	<boost/unordered/concurrent_flat_map.hpp>
-	<boost/unordered/concurrent_flat_set.hpp>
-	<boost/uuid/uuid.hpp>
-	<boost/uuid/uuid_io.hpp>
-	<open62541/client_config_default.h>
-	<open62541/client_highlevel.h>
-	<open62541/client_highlevel_async.h>
-	<open62541/client_subscriptions.h>
-	<open62541/plugin/log_stdout.h>
-	<jde/framework.h>
-	<jde/web/server/exports.h>
-	<jde/opc/usings.h>
-	<jde/opc/exports.h>
-	<jde/app/shared/exports.h>
-	externals.h
+	pc.h
 )

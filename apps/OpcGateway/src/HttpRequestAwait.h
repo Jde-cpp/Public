@@ -1,12 +1,13 @@
 #pragma once
 #include <jde/web/server/IHttpRequestAwait.h>
-#include <jde/web/server/Sessions.h>
-#include <jde/opc/UM.h>
-#include <jde/opc/uatypes/Browse.h>
-#include <jde/opc/async/ConnectAwait.h>
+// #include <jde/web/server/Sessions.h>
+// #include <jde/opc/UM.h>
+// #include <jde/opc/uatypes/Browse.h>
+// #include <jde/opc/async/ConnectAwait.h>
 
-namespace Jde::Opc{
-	struct NodeId; struct Value;
+namespace Jde::Opc{ struct ExNodeId; struct Value; }
+namespace Jde::Opc::Gateway{
+	struct UAClient;
 	using namespace Jde::Web::Server;
 	struct HttpRequestAwait final: IHttpRequestAwait{
 		using base = IHttpRequestAwait;
@@ -15,13 +16,14 @@ namespace Jde::Opc{
 		α Suspend()ι->void override;
 		α await_resume()ε->HttpTaskResult override;
 	private:
-		α Login( str endpoint )ι->AuthenticateAwait::Task;
+		α Login( str endpoint )ι->TAwait<Web::FromServer::SessionInfo>::Task;
 		α Logout()ι->TAwait<jvalue>::Task;
-		α CoHandleRequest()ι->ConnectAwait::Task;
-		α Browse()ι->Browse::ObjectsFolderAwait::Task;
-		α ParseNodes()ε->tuple<flat_set<NodeId>,jarray>;
-		α ResumeSnapshots( flat_map<NodeId, Value>&& results, jarray&& j )ι->void;
-		α SnapshotWrite()ι->Jde::Task;
+		α CoHandleRequest()ι->TAwait<sp<UAClient>>::Task;
+		α Browse()ι->TAwait<jobject>::Task;
+		α ParseNodes()ε->tuple<flat_set<ExNodeId>,jarray>;
+		α ResumeSnapshots( flat_map<ExNodeId, Value>&& results, jarray&& j )ι->void;
+		α SnapshotWrite( flat_set<ExNodeId>&& nodes, flat_map<ExNodeId, Value>&& values, jarray&& jNodes )ι->TAwait<flat_map<ExNodeId,UA_WriteResponse>>::Task;
+		α SnapshotRead( bool write={} )ι->TAwait<flat_map<ExNodeId, Value>>::Task;
 		sp<UAClient> _client;
 	};
 }

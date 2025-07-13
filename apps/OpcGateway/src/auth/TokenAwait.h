@@ -1,0 +1,11 @@
+#pragma once
+#include "AuthAwait.h"
+
+namespace Jde::Opc::Gateway{
+	struct TokenAwait : AuthAwait<bool>{
+		TokenAwait( string token, OpcClientNK opcNK, string endpoint, bool isSocket, SRCE )ι:
+			AuthAwait{ move(token), move(opcNK), move(endpoint), isSocket, sl }{}
+		α Suspend()ι->void override{ Execute(); }
+		α OnSuccess()ι->void override{ ResumeScaler( true ); }
+	};
+}

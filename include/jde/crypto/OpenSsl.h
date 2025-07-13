@@ -9,9 +9,18 @@
 namespace Jde::Crypto{
 	using Modulus = vector<unsigned char>;
 	using Exponent = vector<unsigned char>;
+	struct Certificate{
+		α operator==( const Certificate& other )Ι->bool{ return Modulus == other.Modulus && Exponent == other.Exponent; }
+		α operator<( const Certificate& other )Ι->bool{ return Exponent == other.Exponent ? Modulus < other.Modulus : Exponent < other.Exponent; }
+		α hash32()Ι->uint32_t;
+		Crypto::Modulus Modulus;
+		Crypto::Exponent Exponent;
+	};
+
 	using Signature = vector<unsigned char>;
 	using MD5 = array<byte,16>;
-	Φ CalcMd5( sv content )ε->MD5;
+	α CalcMd5( byte* data, uint size )ε->MD5;
+	Ŧ CalcMd5( T content )ε->MD5{ return CalcMd5( (byte*)content.data(), content.size() ); }
 	Φ CreateKey( const fs::path& publicKeyPath, const fs::path& privateKeyPath, str passcode )ε->void;
 	Φ CreateCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain )ε->void;
 	Φ CreateKeyCertificate( const CryptoSettings& settings )ε->void;
