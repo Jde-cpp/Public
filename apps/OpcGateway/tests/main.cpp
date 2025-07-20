@@ -1,6 +1,5 @@
 ﻿#include "gtest/gtest.h"
 #include <jde/framework/settings.h>
-#include "../../../../Framework/source/Cache.h"
 #include "../../../../AppServer/source/AppStartupAwait.h"
 #include <jde/framework/thread/execution.h>
 #include <jde/framework/coroutine/Timer.h>
@@ -8,7 +7,6 @@
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/opc/uatypes/Logger.h>
-#include <jde/opc/opc.h>
 #include "../src/StartupAwait.h"
 #include "../../OpcServer/src/StartupAwait.h"
 #include "helpers.h"
@@ -30,10 +28,10 @@ namespace Jde{
 		keepExecuterAlive();
 		try{
 			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )
-				co_await App::AppStartupAwait{ Settings::AsObject("/http/app") };
+				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };
 			if( Settings::FindBool("/testing/embeddedOpcServer").value_or(true) )
-				co_await Opc::Server::StartupAwait{ Settings::AsObject("/http/opcServer") };
-			co_await Opc::Gateway::StartupAwait{ Settings::AsObject("/http/gateway") };
+				co_await Opc::Server::StartupAwait{ Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") };
+			co_await Opc::Gateway::StartupAwait{ Settings::AsObject("/http/gateway"), Settings::AsObject("/credentials/gateway") };
 			done.test_and_set();
 			done.notify_one();
 		}

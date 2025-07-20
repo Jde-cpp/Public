@@ -13,12 +13,17 @@ namespace Jde::QL{
 	struct IQL; struct LocalQL;
 	Ŧ AsId( const jobject& j, SRCE )ε->T;
 	Ŧ AsId( const jvalue& j, SRCE )ε->T;
+	template<class T=uint32> α FindId( const jobject& j )ι->T;
 	α Configure( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ε->sp<LocalQL>;
 	α Parse( string query, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->RequestQL;
 	α ParseSubscriptions( string query, const vector<sp<DB::AppSchema>>& schemas, SRCE )ε->vector<Subscription>;
 	α SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted=nullopt )ε->optional<DB::Statement>;
 }
 namespace Jde{
+	Ŧ QL::FindId( const jobject& o )ι->T{
+		const auto value = o.try_at( "id" );
+		return value ? value->to_number<T>() : T{};
+	}
 	Ŧ QL::AsId( const jobject& o, SL sl )ε->T{
 		return Json::AsNumber<T>( o, "id", sl );
 	}

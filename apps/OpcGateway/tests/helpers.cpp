@@ -7,6 +7,7 @@
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalQL.h>
 #include "../src/StartupAwait.h"
+#include "../src/auth/OpcServerSession.h"
 
 #define let const auto
 
@@ -30,7 +31,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	α PurgeOpcClientAwait::Execute()ι->QL::QLAwait<>::Task{
 		if( !_pk.has_value() )
-			_pk = Json::AsNumber<OpcClientPK>( SelectOpcClient(OpcServerTarget), "id" );
+			_pk = SelectOpcClient( OpcServerTarget )->Id;
 		let q = Ƒ( "{{ mutation purgeClient('id':{}) }}", *_pk );
 		let result = co_await *QL().Query( Str::Replace(q, '\'', '"'), {UserPK::System}, true, _sl );
 		ResumeScaler( 1 );
@@ -54,17 +55,18 @@ namespace Jde::Opc::Gateway{
 		return BlockAwait<PurgeOpcClientAwait,uint>( PurgeOpcClientAwait{pk} );
 	}
 
-	α Tests::SelectOpcClient( DB::Key id )ι->jobject{
+	α Tests::SelectOpcClient( DB::Key id )ι->optional<OpcClient>{
 		let subQuery = id.IsPrimary() ? Ƒ( "client_id:{{eq:{}}}", id.PK() ) : Ƒ( "target: {{eq:\"{}\"}}", id.NK() );
 		let select = Ƒ( "client(filter:{{ {} }}){{ client_id name attributes created updated deleted target description certificateUri isDefault url }}", subQuery );
-		return QL().QuerySync<>( select, {UserPK::System} );
+		auto o = QL().QuerySync<>( select, {UserPK::System} );
+		return o.empty() ? optional<OpcClient>{} : OpcClient( move(o) );
 	}
 
-	flat_map<string,flat_set<UA_UserTokenType>> _userTokens;
-	α Tests::HasUserToken( sv url_, UA_UserTokenType type )ε->bool{
+	flat_map<string,ETokenType> _userTokens;
+	α Tests::AvailableUserTokens( sv url_ )ε->ETokenType{
 		const string url{url_};
 		if( _userTokens.contains(url) )
-			return _userTokens[url].contains(type);
+			return _userTokens[url];
     UA_Client *client = UA_Client_new();
     UA_ClientConfig *config = UA_Client_getConfig(client);
 		auto UA_DateTime_now_fake = []( UA_EventLoop* )->UA_DateTime{ return 0x5C8F735D; };
@@ -73,14 +75,14 @@ namespace Jde::Opc::Gateway{
     config->tcpReuseAddr = true;
     UA_ClientConfig_setDefault(config);
     UA_EndpointDescription* endpointArray{}; uint endpointArraySize{};
-		auto tokens = _userTokens.emplace( url, flat_set<UA_UserTokenType>{} ).first;
+		auto tokens = _userTokens.try_emplace( url ).first;
     UAε( UA_Client_getEndpoints(client, url.c_str(), &endpointArraySize, &endpointArray) ) ;
 		for( auto ep : Iterable<UA_EndpointDescription>(endpointArray, endpointArraySize) ){
 			for( auto token : Iterable<UA_UserTokenPolicy>(ep.userIdentityTokens, ep.userIdentityTokensSize) )
-				tokens->second.insert( token.tokenType );
+				tokens->second |= ToTokenType( token.tokenType );
 		}
     UA_Array_delete( endpointArray, endpointArraySize, &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION] );
     UA_Client_delete( client );
-		return tokens->second.contains( type );
+		return tokens->second;
 	}
 }

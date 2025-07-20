@@ -2,7 +2,7 @@
 #include "AuthAwait.h"
 
 namespace Jde::Opc::Gateway{
-	struct TokenAwait : AuthAwait<bool>{
+	struct TokenAwait : AuthAwait<bool>, boost::noncopyable{
 		TokenAwait( string token, OpcClientNK opcNK, string endpoint, bool isSocket, SRCE )ι:
 			AuthAwait{ move(token), move(opcNK), move(endpoint), isSocket, sl }{}
 		α Suspend()ι->void override{ Execute(); }

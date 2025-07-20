@@ -4,18 +4,27 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{
+	optional<OpcClient> Auth::Client={};
+	ETokenType Auth::Tokens{};
 	α Auth::SetUp()ε->void{
-		if( OpcServer.empty() ){
-			OpcServer = SelectOpcClient( OpcServerTarget );
-			if( OpcServer.empty() ){
+		if( !Client ){
+			Client = SelectOpcClient( OpcServerTarget );
+			if( !Client ){
 				BlockAwait<ProviderCreatePurgeAwait, Access::ProviderPK>( ProviderCreatePurgeAwait{OpcServerTarget, false} );
 				let id = BlockAwait<CreateOpcClientAwait, OpcClientPK>( CreateOpcClientAwait{} );
-				Auth::OpcServer = SelectOpcClient( id );
+				Client = SelectOpcClient( id );
 			}
-			Auth::_authAllowed = HasUserToken( Auth::OpcServer.at("url").as_string(), _tokenType );
 		}
-		if( !Auth::_authAllowed ){
+		if( empty(Tokens) )
+			Tokens = AvailableUserTokens( Client->Url );
+		if( empty(Tokens & ETokenType(TokenType)) ){
 			GTEST_SKIP() << "Authentication type is not allowed on this server.";
+		}
+	}
+	α Auth::TearDownTestSuite()->void{
+		if( auto client = SelectOpcClient(OpcServerTarget); client ){
+			PurgeOpcClient( client->Id );
+			Client = nullopt;
 		}
 	}
 }

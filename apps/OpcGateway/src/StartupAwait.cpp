@@ -6,8 +6,8 @@
 #include <jde/access/AccessListener.h>
 #include <jde/access/client/accessClient.h>
 #include <jde/app/client/appClient.h>
+#include <jde/app/client/IAppClient.h>
 #include <jde/app/client/AppClientSocketSession.h>
-#include <jde/opc/opc.h>
 #include <jde/opc/OpcQLHook.h>
 #include "opcInternal.h"
 #include "UAClient.h"
@@ -22,8 +22,6 @@ namespace Jde::Opc{
 }
 
 namespace Jde::Opc::Gateway{
-	//sp<Access::Authorize> _authorizer = ms<Access::Authorize>();
-
 	α StartupAwait::Execute()ι->VoidAwait<>::Task{
 		try{
 			auto authorize = App::Client::RemoteAcl( "gateway" );
@@ -36,21 +34,24 @@ namespace Jde::Opc::Gateway{
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
 				DB::SyncSchema( *schema, _localQL );
 
-			Crypto::CryptoSettings settings{ "http/ssl" };
+			Crypto::CryptoSettings settings{ Json::FindDefaultObject(_webServerSettings, "ssl") };
 			if( !fs::exists(settings.PrivateKeyPath) ){
 				settings.CreateDirectories();
 				Crypto::CreateKeyCertificate( settings );
 			}
 			StartWebServer( move(_webServerSettings) );
 			auto accessSchema = DB::GetAppSchema( "access", authorize );
-			co_await App::Client::ConnectAwait{ {accessSchema} };
+			auto appClient = AppClient();
+			appClient->SubscriptionSchemas.push_back( accessSchema );
+			appClient->ClientCryptoSettings = move(settings);
+			co_await App::Client::ConnectAwait{ appClient, _userName };
 
-			_listener = ms<Access::AccessListener>( App::Client::QLServer() );
+			_listener = ms<Access::AccessListener>( appClient->QLServer() );
 			Process::AddShutdownFunction( []( bool terminate ){
 				_listener->Shutdown( terminate );
 				_listener = nullptr;
 			});
-			co_await Access::Client::Configure( accessSchema, {schema}, App::Client::QLServer(), UserPK{UserPK::System}, authorize, _listener );
+			co_await Access::Client::Configure( accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, _listener );
 			Process::AddShutdownFunction( [](bool terminate){UAClient::Shutdown(terminate);} );
 			QL::Hook::Add( mu<OpcQLHook>() );
 			Information( ELogTags::App, "---Started {}---", "OPC Gateway" );

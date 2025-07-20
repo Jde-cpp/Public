@@ -1,4 +1,6 @@
 #include "PasswordAwait.h"
+#include <jde/app/client/IAppClient.h>
+#include "../StartupAwait.h"
 #include "../UAClient.h"
 #include "UM.h"
 
@@ -20,7 +22,7 @@ namespace Jde::Opc::Gateway{
 	}
 	α PasswordAwait::AddSession( Access::ProviderPK providerPK )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>::Task{
 		try{
-			auto sessionInfo = co_await App::Client::AddSession( _opcNK, _cred.LoginName(), providerPK, _endpoint, false );
+			auto sessionInfo = co_await AppClient()->AddSession( _opcNK, _cred.LoginName(), providerPK, _endpoint, false );
 			Gateway::AddSession( sessionInfo.session_id(), _opcNK, move(_cred) );
 			Resume( move(sessionInfo) );
 		}

@@ -3,6 +3,7 @@
 #include "Auth.h"
 #include "../../src/auth/TokenAwait.h"
 #include "../../src/auth/OpcServerSession.h"
+#include "../../src/GatewayAppClient.h"
 
 #define let const auto
 
@@ -11,61 +12,62 @@ namespace Jde::Opc::Gateway::Tests{
 
 	class TokenTests : public Auth{
 	protected:
-		TokenTests()ι:Auth{UA_USERTOKENTYPE_ISSUEDTOKEN}{}
+		TokenTests()ι:Auth{ETokenType::IssuedToken}{}
 		~TokenTests()override{}
+		Ω SetUpTestCase()ε->void;
 		α TearDown()ι->void override{}
 		Ω TearDownTestSuite();
+		static optional<Web::Jwt> _jwt;
 	};
+	optional<Web::Jwt> TokenTests::_jwt;
+
+	α TokenTests::SetUpTestCase()ε->void{
+		_jwt = BlockAwait<Web::Client::ClientSocketAwait<Jde::Web::Jwt>,Web::Jwt>( AppClient()->Jwt() );
+	}
 
 	α TokenTests::TearDownTestSuite(){
-		PurgeOpcClient();
+		Auth::TearDownTestSuite();
 	}
-	std::condition_variable_any cv;
-	std::shared_mutex mtx;
-	//sp<UAClient> _client;
-	//vector<SessionPK> _sessionIds;
+
 	up<IException> _exception;
-	Ω authenticateTest( OpcClientNK opcId, bool bad=false )ι->TokenAwait::Task{
+	Ω authenticateTest( const Web::Jwt& jwt, OpcClientNK opcId, atomic_flag& flag, bool bad=false )ι->TokenAwait::Task{
 		try{
-			co_await TokenAwait{ bad ? "xyz" : "abc", move(opcId), "localhost", true };
+			auto text = jwt.Payload();
+			if( bad )
+				text[42] = text[42]-1;
+			co_await TokenAwait{ text, move(opcId), "localhost", true };
 			//_sessionIds.push_back( sessionInfo.session_id() );
 		}
 		catch( IException& e ){
 			_exception = e.Move();
 		}
-		std::shared_lock l{ mtx };
-		cv.notify_one();
+		flag.test_and_set();
+		flag.notify_all();
+		Trace{ _tags, "notify_all" };
 	}
 
 	TEST_F( TokenTests, Authenticate ){
-		string opcId{ Json::AsString(OpcServer,"target") };
-		authenticateTest( opcId );
-		{
-			std::shared_lock l{ mtx };
-			cv.wait( l );
-		}
-		authenticateTest( opcId );
-		authenticateTest( opcId );
-		std::shared_lock l{ mtx };
-		cv.wait( l );
-		cv.wait( l );
-//		THROW_IF( _sessionIds.size()!=3, "Expected 3 sessions, found {}.", _sessionIds.size() );
-//		let creds = GetCredential( _sessionIds[2], opcId );
-//		EXPECT_EQ( "user1", get<0>(creds) );
-//		EXPECT_EQ( _password, get<1>(creds) );
-//		EXPECT_NE( _sessionIds[0], _sessionIds[1] );
-//		EXPECT_NE( _sessionIds[0], _sessionIds[2] );
-//		EXPECT_NE( _sessionIds[1], _sessionIds[2] );
-//		EXPECT_TRUE( find(_sessionIds, 0)==_sessionIds.end() );
+		let opcId{ Client->Target };
+		atomic_flag a,b,c;
+		authenticateTest( *_jwt, opcId, a );
+		a.wait( false );
+		Trace{ _tags, "Call b" };
+		authenticateTest( *_jwt, opcId, b );
+		Trace{ _tags, "Call c" };
+		authenticateTest( *_jwt, opcId, c );
+		b.wait( false );
+		Trace{ _tags, "b returned" };
+		c.wait( false );
+		Trace{ _tags, "c returned" };
+		EXPECT_FALSE( _exception );
 	}
 
-	TEST_F( TokenTests, Authenticate_BadPassword ){
-		authenticateTest( Json::AsString(OpcServer,"target"), true );
-		std::shared_lock l{ mtx };
-		cv.wait( l );
-		//EXPECT_FALSE( _client );
+	TEST_F( TokenTests, Authenticate_Bad ){
+		atomic_flag flag;
+		authenticateTest( *_jwt, Client->Target, flag, true );
+		flag.wait( false );
 		EXPECT_TRUE( _exception );
-		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadUserAccessDenied") );
+		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadIdentityTokenInvalid") );
 		Debug( _tags, "{}", _exception ? _exception->what() : "Error no exception." );
 	}
 }

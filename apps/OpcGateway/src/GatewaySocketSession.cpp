@@ -1,4 +1,5 @@
 #include "GatewaySocketSession.h"
+#include <jde/app/client/IAppClient.h>
 #include "StartupAwait.h"
 #include "UAClient.h"
 #include "WebServer.h"
@@ -38,7 +39,7 @@ namespace Jde::Opc::Gateway{
 	α GatewaySocketSession::SetSessionId( str strSessionId, RequestId requestId )->Sessions::UpsertAwait::Task{
 		LogRead( Ƒ("sessionId: '{}'", strSessionId), requestId );
 		try{
-			let sessionInfo = co_await Sessions::UpsertAwait( strSessionId, _userEndpoint.address().to_string(), true );
+			let sessionInfo = co_await Sessions::UpsertAwait( strSessionId, _userEndpoint.address().to_string(), true, AppClient() );
 			base::SetSessionId( sessionInfo->SessionId );
 			Write( FromServer::CompleteTrans(requestId) );
 		}

@@ -15,7 +15,7 @@ namespace Jde::Web{
 
 	struct WebTests : ::testing::Test{
 	protected:
-		WebTests():_pRequestHandler(ms<Mock::RequestHandler>()) {}
+		WebTests():_requestHandler(ms<Mock::RequestHandler>(jobject{})) {}
 		~WebTests() override{}
 
 		Ω SetUpTestCase()->void;
@@ -23,14 +23,14 @@ namespace Jde::Web{
 		α TearDown()->void override{}
 		Ω TearDownTestCase()->void;
 
-		sp<Server::IRequestHandler> _pRequestHandler;
+		sp<Server::IRequestHandler> _requestHandler;
 	};
 	constexpr sv ContentType{ "application/x-www-form-urlencoded" };
 	up<IException> _pException;
 
 	α WebTests::SetUpTestCase()->void{
 		Stopwatch _{ "WebTests::SetUpTestCase", _tags };
-		Mock::Start();
+		Mock::Start( Settings::AsObject("/http") );
 	}
 
 	α WebTests::TearDownTestCase()->void{

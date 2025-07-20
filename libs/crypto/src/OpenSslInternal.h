@@ -23,6 +23,5 @@ namespace Jde::Crypto::Internal{
 	α NewCtx( const KeyPtr& key, SRCE )ε->CtxPtr;
 	Ξ NewMDCtx()ι->MDCtxPtr{ return MDCtxPtr{ EVP_MD_CTX_create(), ::EVP_MD_CTX_free}; }
 	α ToBigNum( const vector<unsigned char>& x )ε->BNPtr;
-	//α ToBigNum( uint32 x )ε->BNPtr;
-	α ToBio( const vector<byte>&& bytes )ε->BioPtr;
+	α ToBio( std::span<byte> bytes )ε->BioPtr;
 }

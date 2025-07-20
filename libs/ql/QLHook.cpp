@@ -4,7 +4,7 @@
 #pragma GCC diagnostic ignored "-Wswitch"
 
 namespace Jde::QL{
-	Vector<up<IQLHook>> _hooks;
+	vector<up<IQLHook>> _hooks;
 	α Hook::Add( up<IQLHook>&& hook )ι->void{
 		_hooks.push_back( move(hook) );
 	}
@@ -17,9 +17,9 @@ namespace Jde::QL{
 	{}
 
 	α QueryHookAwaits::await_ready()ι->bool{
-		sl l{ _hooks.Mutex };
-		_awaitables.reserve( _hooks.size(l) );
-		for( auto ppHook = _hooks.begin(l); ppHook!=_hooks.end(l); ++ppHook ){
+		//sl l{ _hooks.Mutex };
+		_awaitables.reserve( _hooks.size() );
+		for( auto ppHook = _hooks.begin(); ppHook!=_hooks.end(); ++ppHook ){
 			auto& hook = **ppHook;
 			if( auto p = hook.Select( _ql, _userPK, _sl ); p )
 				_awaitables.emplace_back( move(p) );
@@ -59,9 +59,9 @@ namespace Jde::QL{
 	{}
 #pragma warning(disable: 4063)
 	α MutationAwaits::await_ready()ι->bool{
-		sl l{ _hooks.Mutex };
-		_awaitables.reserve( _hooks.size(l) );
-		for( auto ppHook = _hooks.begin(l); ppHook!=_hooks.end(l); ++ppHook ){
+		//sl l{ _hooks.Mutex };
+		_awaitables.reserve( _hooks.size() );
+		for( auto ppHook = _hooks.begin(); ppHook!=_hooks.end(); ++ppHook ){
 			auto& hook = **ppHook;
 			up<TAwait<jvalue>> p;
 			switch( _op ){

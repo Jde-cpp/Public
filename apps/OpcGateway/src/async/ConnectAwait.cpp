@@ -24,7 +24,6 @@ namespace Jde::Opc::Gateway{
 		if( auto pClient = UAClient::Find(_opcTarget, _cred); pClient )
 			base::Resume( move(pClient) );
 		else{
-			auto key = make_tuple( _opcTarget, _cred );
 			_requestMutex.lock();
 			auto opcHandles = _requests.try_emplace( _opcTarget ).first;
 			auto credHandles = opcHandles->second.try_emplace( _cred ).first;
@@ -37,8 +36,8 @@ namespace Jde::Opc::Gateway{
 		try{
 			auto servers = co_await OpcClientAwait{ _opcTarget };
 			THROW_IF( servers.empty(), "Could not find opc server:  '{}'", _opcTarget );
-			auto pClient = ms<UAClient>( move(servers.front()), _cred );
-			pClient->Connect();
+			auto client = ms<UAClient>( move(servers.front()), _cred );
+			client->Connect();
 		}
 		catch( const IException& e ){
 			let ua = dynamic_cast<const UAException*>( &e );

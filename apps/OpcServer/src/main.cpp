@@ -12,7 +12,7 @@ std::optional<int> _exitCode;
 	try{
 		OSApp::Startup( argc, argv, "Jde.OpcServer", "OpcServer" );
 		let webServerSettings = Settings::FindObject( "/http" );
-		BlockVoidAwait( Opc::Server::StartupAwait{webServerSettings ? *webServerSettings : jobject{}} );
+		BlockVoidAwait( Opc::Server::StartupAwait{webServerSettings ? *webServerSettings : jobject{}, Settings::AsObject("/credentials")} );
 		exitCode = Process::Pause();
 	}
 	catch( exception& e ){

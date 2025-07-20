@@ -26,7 +26,7 @@ set( includeDir $ENV{JDE_DIR}/Public/include/jde/web/client )
 file( GLOB headers *.h ${includeDir}/*.h ${includeDir}/http/*.h ${includeDir}/socket/*.h  )
 file( GLOB protos proto/*.proto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
-
+target_link_libraries( ${targetName} Jde.Crypto )
 target_precompile_headers(${targetName}
   PUBLIC
 	"pc.h"
@@ -43,4 +43,3 @@ file( MAKE_DIRECTORY ${protoIncludeDir} )
 
 add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.pb.h" "${protoIncludeDir}/Web.FromServer.pb.h" COMMENT "mklink web/client/proto/Web.FromServer.pb.h" )
 add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.pb.h" "$ENV{JDE_DIR}/Public/include/jde/app/shared/proto/Web.FromServer.pb.h" COMMENT "mklink jde/app/shared/proto/Web.FromServer.pb.h" )
-#add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.proto" "$ENV{JDE_DIR}/Public/libs/app/shared/proto/Web.FromServer.proto" COMMENT "mklink libs/app/shared/Web.FromServer.proto" )

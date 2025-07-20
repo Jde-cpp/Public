@@ -16,9 +16,9 @@ local args = import 'args.libsonnet';
 	logging:{
 		flushOn: "Trace",
 		tags: {
-			trace:["test", "sql", "ql",
-				"UASession", "UAServer", "UAUser", "UASecurity", "UAEvent", "sql", "threads", "UAClient", "UANet", "UASecure"],
-			debug:["settings", "app"],
+			trace:["test",
+				"UASession", "UAServer", "UAUser", "UASecurity", "UAEvent", "threads", "UAClient", "UANet", "UASecure"],
+			debug:["sql", "ql","settings", "app"],
 			information:["app", "appServer", "net"],
 			warning:["alarm", "ql", "io", "locks", "settings"],
 			"error":[],
@@ -36,12 +36,12 @@ local args = import 'args.libsonnet';
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",
-		configDir: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps"
-	},
-	tcp:{
-		port:  4840,
-		certificate: "/tmp/cert.pem",
-		privateKey: {path:"/tmp/private.pem", passcode: ""}
+		configDir: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		port: 4840,
+		ssl:{
+			certificate: "/tmp/cert.pem",
+			privateKey: {path:"/tmp/private.pem", passcode: ""}
+		}
 	},
 	workers:{
 		executor: 2,

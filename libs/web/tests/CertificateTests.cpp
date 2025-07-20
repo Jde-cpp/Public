@@ -16,16 +16,22 @@ namespace Jde::Web{
 		~CertificateTests() override{}
 
 		Ω SetUpTestCase()->void{};
-		α SetUp()->void override{ Mock::Start(); }
+		α SetUp()->void override{}
 		α TearDown()->void override;
 	};
 
-	α ResetSettings( const fs::path& baseDir = {} )ι->void{
+	α SslSettings( const fs::path& baseDir = {}, string passcode = {} )ι->jobject{
 		//sv what, const Container::Variant& v, bool save=true, SRCE )ε->void;
 		let prefix = "/http/ssl"s;
-		Settings::Set( prefix+"/certificate", jvalue{(baseDir/"certs/server.pem").string()} );
-		Settings::Set( prefix+"/privateKey", jvalue{(baseDir/"private/server.pem").string()} );
-		Settings::Set( prefix+"/publicKey", jvalue{(baseDir/"public/server.pem").string()} );
+		return jobject{
+			{"port", Port},
+			{"ssl", jobject{
+				{"certificate", (baseDir/"certs/server.pem").string()},
+				{"privateKey", (baseDir/"private/server.pem").string()},
+				{"publicKey", (baseDir/"public/server.pem").string()},
+				{"passcode", passcode}
+			}}
+		};
 	}
 
 	α CertificateTests::TearDown()->void{
@@ -35,16 +41,15 @@ namespace Jde::Web{
 	using Web::Client::ClientHttpAwait;
 	using Web::Client::ClientHttpRes;
 	TEST_F( CertificateTests, DefaultSettings ){
-		ResetSettings( IApplication::ApplicationDataFolder()/"ssl" );
+		Mock::Start( SslSettings(IApplication::ApplicationDataFolder()/"ssl") );
 		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} };
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 		ASSERT_TRUE( res[http::field::server].contains("SSL") );
 	}
 
 	TEST_F( CertificateTests, NewDirectory ){
-		ResetSettings( "/tmp/WebTests/ssl" );
 		fs::remove_all( "/tmp/WebTests/ssl" );
-		Settings::Set( "http/ssl/passcode", jvalue{"PaSsCoDe"} );
+		Mock::Start( SslSettings("/tmp/WebTests/ssl", "PaSsCoDe") );
 		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} };
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 		ASSERT_TRUE( res[http::field::server].contains("SSL") );

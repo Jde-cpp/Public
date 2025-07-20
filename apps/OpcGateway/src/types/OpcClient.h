@@ -11,11 +11,15 @@ namespace Jde::Opc::Gateway{
 	struct OpcClient{
 		OpcClient( str address )ι:Url{address}{}
 		OpcClient( DB::Row&& r )ε;
+		OpcClient( jobject&& o )ε;
+		α ToJson()Ι->jobject;
 		OpcClientPK Id;
 		string Url;
 		string CertificateUri;
+		string Description;
 		bool IsDefault;
 		string Name;
+		optional<TimePoint> Deleted;
 		OpcClientNK Target;
 	};
 

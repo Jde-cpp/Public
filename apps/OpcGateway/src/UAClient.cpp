@@ -1,8 +1,10 @@
 ﻿#include "UAClient.h"
 
 #include <open62541/plugin/securitypolicy_default.h>
+#include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/Node.h>
 #include <jde/opc/uatypes/Value.h>
+#include "StartupAwait.h"
 #include "async/Attributes.h"
 #include "async/CreateSubscriptions.h"
 #include "async/DataChanges.h"
@@ -65,19 +67,18 @@ namespace Jde::Opc::Gateway{
 		_clients.clear();
 	}
 	α UAClient::Configuration()ε->UA_ClientConfig*{
-		const fs::path root = IApplication::ApplicationDataFolder()/"ssl";
-		const fs::path certificateFile = root/Ƒ("certs/{}.pem", Target());
-		const fs::path privateKeyFile = root/Ƒ("private/{}.pem", Target());
-		const string passcode = OSApp::EnvironmentVariable("JDE_PASSCODE").value_or( "" );
+		const fs::path root = RootSslDir();
+		const fs::path privateKeyFile = PrivateKeyFile();
+		const string passcode = Passcode();
 		let uri = Str::Replace( _opcServer.CertificateUri, " ", "%20" );
 		bool addSecurity = !uri.empty();//urn:JDE-CPP:Kepware.KEPServerEX.V6:UA%20Server
 		//TODO - test no security also
-		if( addSecurity && !fs::exists(certificateFile) ){
+		if( addSecurity && !fs::exists(CertificateFile()) ){
 			if( !fs::exists(root) )
 				fs::create_directories( root );
 			if( !fs::exists(privateKeyFile) )
 				Crypto::CreateKey( root/Ƒ("public/{}.pem", Target()), privateKeyFile, passcode );
-			Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Jde::format("URI:{}", uri), "jde-cpp", "US", "localhost" );
+			Crypto::CreateCertificate( CertificateFile(), privateKeyFile, passcode, Jde::format("URI:{}", uri), "jde-cpp", "US", "localhost" );
 		}
 		auto config = UA_Client_getConfig( _ptr );
 		using SecurityPolicyPtr = up<UA_SecurityPolicy, decltype(&UA_free)>;
@@ -87,7 +88,7 @@ namespace Jde::Opc::Gateway{
 		if( addSecurity ){
 			config->applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			config->clientDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
-			auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
+			auto certificate = ToUAByteString( Crypto::ReadCertificate(CertificateFile()) );
 			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
 			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAClientException(sc, _ptr, 0, ELogLevel::Debug) );
 
@@ -133,14 +134,9 @@ namespace Jde::Opc::Gateway{
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
 					{
 						ul _{ _clientsMutex };
-						if( auto opcCreds = _clients.find(client->Target()); opcCreds!=_clients.end() ){
-							if( auto cred = opcCreds->second.find(client->Credential); cred!=opcCreds->second.end() )
-								cred->second = client;
-							else
-								ASSERT( false );
-						}
-						else
-							ASSERT( false );
+						auto opcCreds = _clients.try_emplace( client->Target() ).first->second;
+						let inserted = opcCreds.try_emplace( client->Credential, client ).second;
+						ASSERT( inserted );//not sure why we would already have a record.
 					}
 					ConnectAwait::Resume( move(client), client->Target(), client->Credential );
 				}
@@ -167,7 +163,22 @@ namespace Jde::Opc::Gateway{
 		_config.subscriptionInactivityCallback = subscriptionInactivityCallback;
 		if( Credential.Type()==ETokenType::Username )
 			UA_ClientConfig_setAuthenticationUsername( &_config, Credential.LoginName().c_str(), Credential.Password().c_str() );
-		//else if( Credential.Type()==ETokenType::Certificate ){
+		else if( Credential.Type()==ETokenType::Certificate ){
+			UA_ClientConfig_setAuthenticationCert( &_config,
+				*ToUAByteString( Crypto::ReadCertificate(AppClient()->ClientCryptoSettings->CertPath) ),
+				*ToUAByteString( Crypto::ReadPrivateKey(AppClient()->ClientCryptoSettings->PrivateKeyPath, AppClient()->ClientCryptoSettings->Passcode) )
+				//*ToUAByteString( Crypto::ReadCertificate(CertificateFile()) ),
+				//*ToUAByteString( Crypto::ReadPrivateKey(PrivateKeyFile(), Passcode()) )
+			);
+		}else if( Credential.Type()==ETokenType::IssuedToken ){
+			UA_IssuedIdentityToken* identityToken = UA_IssuedIdentityToken_new();
+			identityToken->policyId = "open62541-anonymous-policy"_uv;
+			UA_ByteString_allocBuffer( &identityToken->tokenData, Credential.Token().size() );
+			identityToken->tokenData.length = Credential.Token().size();
+			memcpy( identityToken->tokenData.data, Credential.Token().data(), Credential.Token().size() );
+			UA_ExtensionObject_setValue( &_config.userIdentityToken, identityToken, &UA_TYPES[UA_TYPES_ISSUEDIDENTITYTOKEN] );
+		}
+
 		//	UA_ClientConfig_setAuthenticationCert( &_config, Credential.Certificate().c_str(), Credential.PrivateKey().c_str() );
 		UA_ConnectionManager *udpCM = UA_ConnectionManager_new_POSIX_UDP( "udp connection manager"_uv );
 		_config.eventLoop->registerEventSource( _config.eventLoop, (UA_EventSource*)udpCM );

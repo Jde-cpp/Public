@@ -1,16 +1,18 @@
 #include "HttpRequestAwait.h"
-#include <jde/app/client/appClient.h>
 #include <jde/ql/IQL.h>
+#include <jde/app/client/appClient.h>
+#include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/Node.h>
 #include <jde/opc/uatypes/Value.h>
+#include "StartupAwait.h"
 #include "UAClient.h"
 #include "async/ReadAwait.h"
 #include "async/Write.h"
 #include "async/SessionAwait.h"
 #include "auth/PasswordAwait.h"
 #include "auth/UM.h"
-#include "uatypes/UAClientException.h"
 #include "uatypes/Browse.h"
+#include "uatypes/UAClientException.h"
 
 #define let const auto
 
@@ -123,8 +125,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α HttpRequestAwait::CoHandleRequest()ι->ConnectAwait::Task{
-		auto opcId = move( _request["opc"] );
+	α HttpRequestAwait::CoHandleRequest( OpcClientNK&& opcId )ι->ConnectAwait::Task{
 		let& target = _request.Target();
 		optional<Credential> cred;
 		if( _request.SessionId() )
@@ -179,7 +180,8 @@ namespace Jde::Opc::Gateway{
 		Gateway::Logout( _request.SessionId() );
 		Sessions::Remove( _request.SessionId() );
 		try{
-			co_await *(App::Client::QLServer()->Query(Ƒ( "purgeSession(id:\"{:x}\")", _request.SessionId() ), App::Client::AppServiceUserPK()) );
+			auto appClient = AppClient();
+			co_await *(appClient->QLServer()->Query(Ƒ( "purgeSession(id:\"{:x}\")", _request.SessionId() ), appClient->UserPK()) );
 			Resume( move(_request) );
 		}
 		catch( IException& e )
@@ -188,13 +190,13 @@ namespace Jde::Opc::Gateway{
 
 	α HttpRequestAwait::Suspend()ι->void{
 		up<IException> pException;
- 		if( _request.IsPost("/login") )
+ 		if( _request.IsPost("/login") ) //used with user/password on Opc Server.
 			Login( _request.UserEndpoint.address().to_string() );
 		else if( _request.IsPost("/logout") )
 			Logout();
 		else{
-			if( _request.Contains("opc") )
-				CoHandleRequest();
+			if( auto opc = _request["opc"]; opc.size() )
+				CoHandleRequest( move(opc) );
 			else if( _request.Target().size() ){
 				_request.LogRead();
 				RestException<http::status::not_found> e{ SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() };

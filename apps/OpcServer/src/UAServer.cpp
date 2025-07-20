@@ -11,9 +11,10 @@ namespace Jde::Opc::Server {
 	{}
 	UAServer::~UAServer(){
 		Information{ ELogTags::App, "Stopping OPC UA server..." };
-		if( _thread.has_value() )
+		if( _thread.has_value() ){
+			_running = false;
 			_thread->request_stop();
-		if( _ua ){
+		}if( _ua ){
 			UA_Server_delete( _ua );
 			_ua = nullptr;
 		}
@@ -22,7 +23,8 @@ namespace Jde::Opc::Server {
 		if( !_thread ){
 			_thread = std::jthread{[this](std::stop_token /*st*/){
 				Threading::SetThreadDscrptn( "UAServer" );
-				UA_Server_runUntilInterrupt( _ua );
+				_running = true;
+				UA_Server_run( _ua, &_running );
 				UA_Server_delete( _ua );
 				_ua = nullptr;
 				Information{ ELogTags::App, "OPC UA server stopped." };

@@ -54,6 +54,7 @@ namespace Jde::Opc::Server {
 		flat_map<NodePK, Reference> _refs;
 		flat_map<NodePK, ExNodeId> _refTypes;
 		flat_map<VariablePK, Variable> _variables;
+		volatile UA_Boolean _running{};
 
 		friend struct ServerConfigAwait; friend struct OpcServerQL; friend struct BrowseNameAwait; friend struct ObjectQLAwait; friend struct ObjectTypeQLAwait; friend struct NodeAwait; friend struct VariableInsertAwait;
 	};

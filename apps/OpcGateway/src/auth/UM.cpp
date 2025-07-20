@@ -1,8 +1,10 @@
 #include "UM.h"
-#include "../UAClient.h"
 #include <jde/ql/IQL.h>
 #include <jde/app/client/AppClientSocketSession.h>
-#include <jde/app/client/appClient.h>
+//#include <jde/app/client/appClient.h>
+#include <jde/app/client/IAppClient.h>
+#include "../StartupAwait.h"
+#include "../UAClient.h"
 
 #define let const auto
 
@@ -10,7 +12,8 @@ namespace Jde::Opc::Gateway{
 	α ProviderSelectAwait::Select()ι->TAwait<jobject>::Task{
 		try{
 			let query = Ƒ( "provider(target:\"{}\", providerTypeId:{}){{ id }}", _opcId, (uint8)Access::EProviderType::OpcServer );
-			let j = co_await *App::Client::QLServer()->QueryObject( query, App::Client::AppServiceUserPK() );
+			auto appClient = AppClient();
+			let j = co_await *appClient->QLServer()->QueryObject( query, appClient->UserPK() );
 			let providerId = Json::FindNumber<Access::ProviderPK>( j, "id" ).value_or(0);
 			ResumeScaler( providerId );
 		}
@@ -35,7 +38,8 @@ namespace Jde::Opc::Gateway{
 	α ProviderCreatePurgeAwait::Insert( str target )ι->TAwait<jobject>::Task{
 		let q = Jde::format( "createProvider( target:\"{}\", providerType:\"OpcServer\" ){{id}}", target );
 		try{
-			let j = co_await *App::Client::QLServer()->QueryObject( q, App::Client::AppServiceUserPK() );
+			auto appClient = AppClient();
+			let j = co_await *appClient->QLServer()->QueryObject( q, appClient->UserPK() );
 			let newPK = QL::AsId<Access::ProviderPK>( j );
 			ResumeScaler( newPK );
 		}
@@ -56,7 +60,8 @@ namespace Jde::Opc::Gateway{
 	α ProviderCreatePurgeAwait::Purge( Access::ProviderPK providerPK )ι->TAwait<jvalue>::Task{
 		let q = Ƒ( "purgeProvider( id:{} )", providerPK );
 		try{
-			co_await *App::Client::QLServer()->Query( q, App::Client::AppServiceUserPK() );
+			auto appClient = AppClient();
+			co_await *appClient->QLServer()->Query( q, appClient->UserPK() );
 			ResumeScaler( providerPK );
 		}
 		catch( IException& e ){

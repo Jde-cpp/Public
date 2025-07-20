@@ -13,7 +13,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	class PasswordTests : public Auth{
 	protected:
-		PasswordTests()ι:Auth{UA_USERTOKENTYPE_USERNAME}{}
+		PasswordTests()ι:Auth{ETokenType::Username}{}
 		~PasswordTests()override{}
 
 		//Ω SetUpTestCase()ε->void;
@@ -24,11 +24,10 @@ namespace Jde::Opc::Gateway::Tests{
 	};
 
 	α PasswordTests::TearDownTestSuite(){
-		PurgeOpcClient();
+		Auth::TearDownTestSuite();
 	}
 	static std::condition_variable_any cv;
 	static std::shared_mutex mtx;
-	//sp<UAClient> _client;
 	static vector<SessionPK> _sessionIds;
 	static up<IException> _exception;
 	const string _password = "0123456789ABCD";
@@ -46,7 +45,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( PasswordTests, Authenticate ){
 		Information( _tags, "PasswordTests.Authenticate" );
-		string opcId{ Json::AsString(OpcServer,"target") };
+		string opcId{ Client->Target };
 		AuthenticateTest( opcId );
 		{
 			std::shared_lock l{ mtx };
@@ -71,7 +70,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( PasswordTests, Authenticate_BadPassword ){
 		Information( _tags, "PasswordTests.Authenticate_BadPassword" );
-		AuthenticateTest( Json::AsString(OpcServer,"target"), true );
+		AuthenticateTest( Client->Target, true );
 		std::shared_lock l{ mtx };
 		cv.wait( l );
 		//EXPECT_FALSE( _client );

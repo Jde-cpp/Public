@@ -51,14 +51,18 @@ namespace Jde::DB{
 		if( uint index = prefix.find('.'); index!=string::npos )
 			prefix = index<prefix.size()-2 ? string{} : prefix.substr( index+1 );
 
-		auto db = ms<SchemaDdl>( config.DBSchema->Name, prefix, config.DS()->ServerMeta(), ql );
 		auto catalog = ms<DB::Catalog>( config.DS() );
+		auto db = ms<SchemaDdl>( config.DBSchema->Name, prefix, config.DS()->ServerMeta(), ql ); //dbSchema
 		db->Initialize( catalog, db );
+		catalog = nullptr;
 
 		db->SyncTables( config );
 		db->SyncScripts( config, initConfig );
 		db->SyncData( config, Json::AsObject(initConfig, "tables") );
 		db->SyncFKs( config );
+		wp<AppSchema> appSchema = db->AppSchemas.begin()->second;
+		wp<SchemaDdl> db2 = db;
+		db = nullptr;
 	}
 
 	α SchemaDdl::SyncFKs( const AppSchema& config )ε->void{

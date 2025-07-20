@@ -10,6 +10,8 @@ namespace Jde::QL{
 	struct IMutationAwait; struct MutationQL; struct TableQL;
 	struct IQLHook{
 		using HookResult=up<TAwait<jvalue>>;
+	  virtual ~IQLHook() = default;
+
 		β Select( const TableQL&, UserPK, SRCE )ι->HookResult{ return {}; }
 		β InsertBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
 		β InsertAfter( const MutationQL&, UserPK, uint, SRCE )ι->HookResult{ return {}; }

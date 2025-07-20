@@ -14,22 +14,17 @@
 namespace Jde::Access::Server{
 //	α GetSchema()ι->sp<DB::AppSchema>;
 
-	LoginAwait::LoginAwait( vector<unsigned char> modulus, vector<unsigned char> exponent, string&& name, string&& target, string&& description, SL sl )ι:
-			base{sl}, _modulus{ move(modulus) }, _exponent{ move(exponent) }, _name{ move(name) }, _target{ move(target) }, _description{ move(description) }
+	LoginAwait::LoginAwait( Crypto::PublicKey publicKey, string&& name, string&& target, string&& description, SL sl )ι:
+			base{sl}, _publicKey{ move(publicKey) }, _name{ move(name) }, _target{ move(target) }, _description{ move(description) }
 	{}
 
 	α LoginAwait::LoginTask()ι->TAwait<optional<UserPK::Type>>::Task{
-		auto modulusHex = Str::ToHex( (byte*)_modulus.data(), _modulus.size() );
 		try{
-			THROW_IF( modulusHex.size() > 1024, "modulus {} is too long. max length: {}", modulusHex.size(), 1024 );
-			uint32_t exponent{};
-			for( let i : _exponent )
-				exponent = ( exponent<<8 ) | i;
 			let userTable = GetTablePtr( "users" );
 			let identityTable = GetTablePtr( "identities" );
 			DB::WhereClause where;
-			where.Add( userTable->GetColumnPtr("modulus"), DB::Value{modulusHex} );
-			where.Add( userTable->GetColumnPtr("exponent"), DB::Value{exponent} );
+			where.Add( userTable->GetColumnPtr("modulus"), DB::Value{_publicKey.ModulusHex()} );
+			where.Add( userTable->GetColumnPtr("exponent"), DB::Value{_publicKey.ExponentInt()} );
 			where.Add( userTable->GetColumnPtr("provider_id"), DB::Value{underlying(EProviderType::Key)} );
 			DB::Statement statement{
 				{userTable->GetPK()},
@@ -39,7 +34,7 @@ namespace Jde::Access::Server{
 			auto sql = statement.Move();
 			let userPK = co_await DS().ScalerOpt<UserPK::Type>( move(sql) );
 			if( !userPK )
-				InsertUser( move(modulusHex), exponent );
+				InsertUser( move(_publicKey.ModulusHex()), _publicKey.ExponentInt() );
 			else
 				ResumeScaler( {*userPK} );
 		}

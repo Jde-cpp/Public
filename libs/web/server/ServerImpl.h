@@ -3,31 +3,21 @@
 #include "Streams.h"
 #include <jde/web/server/HttpRequest.h>
 #include <jde/web/server/usings.h>
-#include <jde/web/server/IApplicationServer.h>
+#include <jde/app/IApp.h>
 #include <jde/web/server/IRequestHandler.h>
 
 #define let const auto
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Web::Server{
 namespace Internal{
-	struct Settings{
-		Settings( jobject settings )ι:_settings(settings){}
-		α Address()ι->string{ return Json::FindString(_settings, "address" ).value_or( "0.0.0.0" ); }
-		α Port()ι->PortType{ return Json::FindNumber<PortType>(_settings, "port" ).value_or( 6809 ); }
-		α DhPath()ι->string{ return Json::FindString( _settings,  "dh" ).value_or( "/etc/ssl/certs/server.crt" ); }
-		α CertPath()ι->string{ return Json::FindString( _settings, "cert" ).value_or( "/etc/ssl/private/server.key" ); }
-		α PrivateKeyPath()ι->string{ return Json::FindString( _settings, "privateKey" ).value_or( "/etc/ssl/private/server.key" ); }
-	private:
-		jobject _settings;
-	};
-	α Start( up<IRequestHandler>&& handler, up<Server::IApplicationServer>&& server, Settings&& settings )ε->void;
-	α Stop( bool terminate=false )ι->void;
+	α Start( sp<IRequestHandler> handler )ε->void;
+	α Stop( sp<IRequestHandler>&& handler, bool terminate )ι->void;
 	α RunSocketSession( sp<IWebsocketSession>&& session )ι->void;
 	α RemoveSocketSession( SocketId id )ι->void;
 }
 
 	α AppServerLocal()ι->bool;
-	α AppGraphQLAwait( string&& q, UserPK userPK, SRCE )ι->up<TAwait<jvalue>>;
+	//α AppGraphQLAwait( string&& q, UserPK userPK, SRCE )ι->up<TAwait<jvalue>>;
 	Τ [[nodiscard]] α DoEof( T& stream )ι->net::awaitable<void, executor_type>{ beast::error_code ec; stream.socket().shutdown( tcp::socket::shutdown_send, ec ); co_return; }
 	Τ [[nodiscard]] α DoEof( beast::ssl_stream<T>& stream )ι->net::awaitable<void, executor_type>{ co_await stream.async_shutdown(); }
 	α HandleRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task;
@@ -35,8 +25,7 @@ namespace Internal{
 	//α GetRequestHandler()ι->IRequestHandler&;
 	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> cancel, IRequestHandler* reqHandler )ι->net::awaitable<void, executor_type>;
 	α SendOptions( const HttpRequest&& req )ι->http::message_generator;
-	α SendServerSettings( HttpRequest req, sp<RestStream> stream )ι->TAwait<sp<SessionInfo>>::Task;
-	α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<Web::FromServer::SessionInfo>>;
+	α SendServerSettings( HttpRequest req, sp<RestStream> stream, sp<App::IApp> appServer )ι->TAwait<sp<SessionInfo>>::Task;
 }
 
 namespace Jde::Web{
@@ -70,7 +59,7 @@ namespace Jde::Web{
 				res = move(pingRes);
 			}
 			else if( req.IsGet("/serverSettings") ){
-				SendServerSettings( move(req), ms<RestStream>(mu<T>(move(stream))) );
+				SendServerSettings( move(req), ms<RestStream>(mu<T>(move(stream))), reqHandler->AppServer() );
 				co_return;
 			}
 			if( !res ){

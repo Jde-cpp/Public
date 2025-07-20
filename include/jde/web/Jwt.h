@@ -1,11 +1,13 @@
 #pragma once
 #include <jde/crypto/OpenSsl.h>
-#include "exports.h"
+#include "client/exports.h"
 
 namespace Jde::Web{
 	struct ΓWC Jwt{
+		Jwt()ι{ ASSERT(false); }
 		Jwt( sv jwt )ε;
-		Jwt( Crypto::Modulus mod, Crypto::Exponent exp, str userName, str userTarget, str myEndpoint, str description, const fs::path& privateKeyPath )ι;
+		Jwt( Crypto::PublicKey publicKey, str userName, str userTarget, SessionPK sessionId, str endpoint, TimePoint expires, str description, const fs::path& privateKeyPath )ι;
+		Jwt( Crypto::PublicKey publicKey, str userName, str userTarget )ι: PublicKey{move(publicKey)}, UserName{userName}, UserTarget{userTarget}{}
 		α Payload()Ι->string;
 		α Aud()ι->string{ return Json::AsString( Body, "aud" ); }
 		α Iss()ι->string{ return Json::AsString( Body, "iss" ); }
@@ -13,10 +15,10 @@ namespace Jde::Web{
 		jobject Body;
 		string HeaderBodyEncoded;
 		Crypto::Signature Signature;
-		Crypto::Modulus Modulus;
-		Crypto::Exponent Exponent;
+		Crypto::PublicKey PublicKey;
 		string Host;
 		time_t Iat;
+		string SessionId;
 		string UserName;
 		string UserTarget;
 		string Description;

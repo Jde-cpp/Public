@@ -5,25 +5,27 @@ namespace Jde::Opc::Gateway{
 	concurrent_flat_map<SessionPK,flat_map<OpcClientNK,Credential>> _sessions;
 
 	α Credential::operator==( const Credential& other )Ι->bool{
-		bool equal{};
-		if( _value.index() == other._value.index() ){
-			switch( _value.index() ){
-				case 0: equal = true; break;
-				case 1: equal = get<User>(_value) == get<User>(other._value); break;
-				case 2: equal = get<Token>(_value) == get<Token>(other._value); break;
-				case 3: equal = get<Crypto::Certificate>(_value) == get<Crypto::Certificate>(other._value); break;
+		bool equal{ Type() == other.Type() };
+		if( equal ){
+			switch( Type() ){
+				using enum ETokenType;
+				case None: case Anonymous: equal = true; break;
+				case IssuedToken: equal = get<Gateway::Token>(_value) == get<Gateway::Token>(other._value); break;
+				case Username: equal = get<User>(_value) == get<User>(other._value); break;
+				case Certificate: equal = get<Crypto::PublicKey>(_value) == get<Crypto::PublicKey>(other._value); break;
 			}
 		}
 		return equal;
 	}
 	α Credential::operator<( const Credential& other )Ι->bool{
-		optional<bool> less = _value.index() == other._value.index() ? optional<bool>{} : _value.index() < other._value.index();
+		optional<bool> less{ Type() == other.Type() ? optional<bool>{} : Type() < other.Type() };
 		if( !less ){
-			switch( _value.index() ){
-				case 0: less = false; break;
-				case 1: less = get<User>(_value) < get<User>(other._value); break;
-				case 2: less = get<Token>(_value) < get<Token>(other._value); break;
-				case 3: less = get<Crypto::Certificate>(_value) < get<Crypto::Certificate>(other._value); break;
+			switch( Type() ){
+				using enum ETokenType;
+				case None: case Anonymous: less = false; break;
+				case IssuedToken: less = get<Gateway::Token>(_value) < get<Gateway::Token>(other._value); break;
+				case Username: less = get<User>(_value) < get<User>(other._value); break;
+				case Certificate: less = get<Crypto::PublicKey>(_value) < get<Crypto::PublicKey>(other._value); break;
 			}
 		}
 		return *less;
@@ -34,8 +36,8 @@ namespace Jde::Opc::Gateway{
 		switch( _value.index() ){
 			using enum ETokenType;
 			case 0: type = Anonymous; break;
-			case 1: type = Username; break;
-			case 2: type = IssuedToken; break;
+			case 1: type = IssuedToken; break;
+			case 2: type = Username; break;
 			case 3: type = Certificate; break;
 		}
 		return type;
@@ -46,10 +48,11 @@ namespace Jde::Opc::Gateway{
 		if( !_display.empty() )
 			return _display;
 		switch( Type() ){
-			case ETokenType::None: case ETokenType::Anonymous: _display = "anonymous"; break;
-			case ETokenType::Username: _display = Ƒ("user: {}", LoginName()); break;
-			case ETokenType::IssuedToken: _display = Ƒ("token: {:x}", (uint32)std::hash<string>{}(get<Token>(_value))); break;
-			case ETokenType::Certificate: _display = Ƒ("cert: {:x}", get<Crypto::Certificate>(_value).hash32()); break;
+			using enum ETokenType;
+			case None: case Anonymous: _display = "anonymous"; break;
+			case Username: _display = Ƒ("user: {}", LoginName()); break;
+			case IssuedToken: _display = Ƒ("token: {:x}", (uint32)std::hash<string>{}(get<Gateway::Token>(_value))); break;
+			case Certificate: _display = Ƒ("cert: {:x}", get<Crypto::PublicKey>(_value).hash32()); break;
 		}
 		return _display;
 	}
@@ -95,5 +98,17 @@ namespace Jde::Opc{
 			}
 		});
 		return cred;
+	}
+}
+namespace Jde::Opc{
+	α Gateway::ToTokenType( UA_UserTokenType ua )ι->ETokenType{
+		switch( ua ){
+			using enum ETokenType;
+			case UA_USERTOKENTYPE_ANONYMOUS: return Anonymous;
+			case UA_USERTOKENTYPE_USERNAME: return Username;
+			case UA_USERTOKENTYPE_CERTIFICATE: return Certificate;
+			case UA_USERTOKENTYPE_ISSUEDTOKEN: return IssuedToken;
+			default: return None;
+		}
 	}
 }

@@ -5,6 +5,7 @@
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLAwait.h>
 
+namespace Jde::Opc::Gateway{ enum class ETokenType : uint8; }
 namespace Jde::Opc::Gateway::Tests{
 	const static string OpcServerTarget{ "OpcServerTests" };
 	struct CreateOpcClientAwait : TAwaitEx<Jde::Opc::Gateway::OpcClientPK,QL::QLAwait<jobject>::Task>{
@@ -22,7 +23,7 @@ namespace Jde::Opc::Gateway::Tests{
 	};
 	α PurgeOpcClient( optional<OpcClientPK> id=nullopt )ι->uint;
 
-	α SelectOpcClient( DB::Key id )ι->jobject;
+	α SelectOpcClient( DB::Key id )ι->optional<OpcClient>;
 
-	α HasUserToken( sv url, UA_UserTokenType type )ε->bool;
+	α AvailableUserTokens( sv url )ε->ETokenType;
 }

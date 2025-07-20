@@ -20,7 +20,7 @@ file(GLOB headers   *.h ../../../jde/web/server/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 target_link_libraries( ${targetName} protobuf::libprotobuf )
-target_link_libraries( ${targetName} Jde.QL Jde.Crypto Jde.Web.Client )
+target_link_libraries( ${targetName} Jde.QL Jde.Web.Client )
 
 target_precompile_headers( ${targetName}
   PRIVATE

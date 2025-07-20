@@ -1,6 +1,7 @@
 ﻿#include <jde/crypto/OpenSsl.h>
 #include "OpenSslInternal.h"
 #include <jde/framework/str.h>
+#include <jde/crypto/CryptoSettings.h>
 
 #define let const auto
 
@@ -10,13 +11,29 @@ namespace Jde{
 		α OpenSslException::CurrentError()ι->string{ char b[120]; ERR_error_string( ERR_get_error(), b ); return {b}; }
 
 		//https://stackoverflow.com/questions/1986888/how-to-compute-a-32-bit-fingerprint-of-a-certificate
-		α Certificate::hash32()Ι->uint32_t{
+		α PublicKey::hash32()Ι->uint32_t{
 			auto md5 = CalcMd5( Modulus );
 			uint32_t hash = 0;
 			for( auto b : md5 )
 				hash = (hash << 8) | (uint32_t)b;
 			return hash;
 		}
+		α PublicKey::ToBytes()ε->vector<byte>{
+			return Crypto::ToBytes( *this );
+		}
+
+		α PublicKey::ExponentInt()Ι->uint32_t{
+			uint32_t exponent{};
+			for( let i : Exponent )
+				exponent = ( exponent<<8 ) | i;
+			return exponent;
+		}
+		α PublicKey::ModulusHex()Ε->string{
+			auto modHex = Str::ToHex( (byte*)Modulus.data(), Modulus.size() );
+			THROW_IF( modHex.size() > 1024, "modulus {} is too long. max length: {}", modHex.size(), 1024 );
+			return modHex;
+		}
+
 	}
 	using namespace Jde::Crypto::Internal;
 
@@ -36,6 +53,7 @@ namespace Jde{
 		CreateKey( settings.PublicKeyPath, settings.PrivateKeyPath, settings.Passcode );
 		CreateCertificate( settings.CertPath, settings.PrivateKeyPath, settings.Passcode, settings.AltName, settings.Company, settings.Country, settings.Domain );
 	}
+
 	//https://stackoverflow.com/questions/5927164/how-to-generate-rsa-private-key-using-openssl
 	α Crypto::CreateKey( const fs::path& publicKeyPath, const fs::path& privateKeyPath, str& passcode )ε->void{
 		auto pctx = NewRsaCtx();
@@ -84,30 +102,45 @@ namespace Jde{
 		BioPtr file{ BIO_new_file(outputFile.string().c_str(), "w"), ::BIO_free };
 		CALL( PEM_write_bio_X509(file.get(), pCert) );
 	}
-	α RsaPemFromModExp( Crypto::Modulus modulus, const Crypto::Exponent& exponent )ε->KeyPtr;
 
-	α Crypto::Fingerprint( const Modulus& modulus, const Exponent& exponent )ι->MD5{
+	Ω toPublicKey( KeyPtr&& key )ε->Crypto::PublicKey{
+		BIGNUM* n{}, *e{};
+		CALL( EVP_PKEY_get_bn_param(key.get(), "n", &n) );
+		CALL( EVP_PKEY_get_bn_param(key.get(), "e", &e) );
+		BNPtr pN( n, ::BN_free );
+		BNPtr pE( e, ::BN_free );
+		Crypto::Modulus modulus( BN_num_bytes(n) );
+		BN_bn2bin( pN.get(), modulus.data() );
+		Crypto::Exponent exponent( BN_num_bytes(e) );
+		BN_bn2bin( pE.get(), exponent.data() );
+		return { modulus, exponent };
+	}
+	α Crypto::ExtractPublicKey( std::span<byte> certificate )ε->PublicKey{
+		X509Ptr cert{ ::d2i_X509_bio(ToBio(certificate).get(), nullptr), ::X509_free }; CHECK_NULL( cert.get() );
+		KeyPtr key{ X509_get_pubkey(cert.get()), ::EVP_PKEY_free }; CHECK_NULL( key.get() );
+		return toPublicKey( move(key) );
+	}
+	Ω rsaPemFromModExp( Crypto::Modulus modulus, const Crypto::Exponent& exponent )ε->KeyPtr;
+
+	α Crypto::Fingerprint( const PublicKey& pubKey )ι->MD5{
 		//openssl pkey -pubin -in server.pem -outform DER | openssl dgst -md5 -c
-		auto key = RsaPemFromModExp( modulus, exponent );
+		auto key = rsaPemFromModExp( pubKey.Modulus, pubKey.Exponent );
 		array<byte,1040> buffer; uint len;
 		EVP_PKEY_get_raw_public_key( key.get(), (unsigned char*)buffer.data(), &len );
 		MD5 md5;
 		std::copy( buffer.begin(), buffer.begin()+16, md5.begin() );
 		return md5;
 	}
-
-	α Crypto::ModulusExponent( const fs::path& publicKey )ε->tuple<Modulus,vector<unsigned char>>{
-		KeyPtr pKey{ Internal::ReadPublicKey(publicKey) };
-		BIGNUM* n{}, *e{};
-		CALL( EVP_PKEY_get_bn_param(pKey.get(), "e", &e) );
-		CALL( EVP_PKEY_get_bn_param(pKey.get(), "n", &n) );
-		BNPtr pN( n, ::BN_free );
-		BNPtr pE( e, ::BN_free );
-		Modulus modulus( BN_num_bytes(n) );
-		BN_bn2bin( pN.get(), modulus.data() );
-		vector<unsigned char> exponent( BN_num_bytes(e) );
-		BN_bn2bin( pE.get(), exponent.data() );
-		return { modulus, exponent };
+	α Crypto::ReadPublicKey( const fs::path& publicKey )ε->PublicKey{
+		return toPublicKey( Internal::ReadPublicKey(publicKey) );
+	}
+	α Crypto::ToBytes( const PublicKey& modExp )ε->vector<byte>{
+		let key = rsaPemFromModExp( modExp.Modulus, modExp.Exponent );
+		auto len = i2d_PUBKEY( key.get(), nullptr );
+		vector<byte> y( len );
+		unsigned char* p = (unsigned char*)y.data();
+		len = i2d_PUBKEY( key.get(), &p ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_PUBKEY - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
+		return y;
 	}
 
 	α Crypto::RsaSign( str content, const fs::path& privateKeyFile )ε->Signature{
@@ -126,7 +159,7 @@ namespace Jde{
 	}
 
 	//https://stackoverflow.com/questions/28770426/rsa-public-key-conversion-with-just-modulus
-	α RsaPemFromModExp( Crypto::Modulus modulus, const Crypto::Exponent& exponent )ε->KeyPtr{//this changes the modulus.
+	α rsaPemFromModExp( Crypto::Modulus modulus, const Crypto::Exponent& exponent )ε->KeyPtr{//this changes the modulus.
 		OSSL_PARAM params[]{
 			OSSL_PARAM_construct_BN( "n", (unsigned char*)modulus.data(), modulus.size() ),
 			OSSL_PARAM_construct_BN( "e", (unsigned char*)exponent.data(), exponent.size() ),
@@ -145,14 +178,14 @@ namespace Jde{
 		return { key, ::EVP_PKEY_free };
 	}
 
-	α Crypto::Verify( const Modulus& modulus, const Exponent& exponent, str decrypted, const Signature& signature )ε->void{
+	α Crypto::Verify( const PublicKey& certificate, str decrypted, const Signature& signature )ε->void{
 		using ContextPtr = std::unique_ptr<EVP_MD_CTX, decltype(&::EVP_MD_CTX_free)>;
 		ContextPtr pCtx{ EVP_MD_CTX_create(), ::EVP_MD_CTX_free };
 
 		let pMd = EVP_get_digestbyname( "SHA256" ); CHECK_NULL( pMd ); // do not need to be freed with EVP_MD_free
 		CALL( EVP_VerifyInit_ex( pCtx.get(), pMd, nullptr) );
 		CALL( EVP_VerifyUpdate( pCtx.get(), decrypted.c_str(), decrypted.size()) );
-		let pKey = RsaPemFromModExp( modulus, exponent );
+		let pKey = rsaPemFromModExp( certificate.Modulus, certificate.Exponent );
 		CALL( EVP_VerifyFinal(pCtx.get(), (const unsigned char*)signature.data(), (int)signature.size(), pKey.get()) );
 	}
 
@@ -175,14 +208,14 @@ namespace Jde{
 	}
 
 	α Crypto::WritePrivateKey( const fs::path& path, vector<byte>&& privateKey, str passcode )ε->void{
-		auto bio = Internal::ToBio( move(privateKey) );
+		auto bio = Internal::ToBio( privateKey );
 		KeyPtr pkey{ ::d2i_PrivateKey_bio(bio.get(), nullptr), ::EVP_PKEY_free }; CHECK_NULL( pkey );
 		Internal::WritePrivateKey( path, move(pkey), passcode );
 	}
 
 	α Crypto::WriteCertificate( const fs::path& path, vector<byte>&& certificate )ε->void{
-		BioPtr mem{ Internal::ToBio(move(certificate)) };
-		X509Ptr cert{ d2i_X509_bio(mem.get(), nullptr), ::X509_free };  CHECK_NULL( cert );
+		BioPtr mem{ Internal::ToBio(certificate) };
+		X509Ptr cert{ ::d2i_X509_bio(mem.get(), nullptr), ::X509_free };  CHECK_NULL( cert );
 		BioPtr file{ File(path, true) };
 		CALL( ::PEM_write_bio_X509(file.get(), cert.get()) );
 	}

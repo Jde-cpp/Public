@@ -1,4 +1,5 @@
 #pragma once
+#include <jde/crypto/OpenSsl.h>
 
 namespace Jde::Opc::Gateway{
 	struct User{
@@ -15,19 +16,23 @@ namespace Jde::Opc::Gateway{
 		Certificate=4,
 		IssuedToken=8
 	};
+	α ToTokenType( UA_UserTokenType ua )ι->ETokenType;
 	struct Credential{
 		Credential()ι{}
 		Credential( User user )ι:_value{move(user)}{}
 		Credential( Token token )ι:_value{move(token)}{}
+		Credential( Crypto::PublicKey key )ι:_value{move(key)}{}
 		α operator==( const Credential& other )Ι->bool;
+
+		α Token()Ι->const Gateway::Token&{ return get<Gateway::Token>( _value ); }
 		α Type()Ι->ETokenType;
-		α IsUser()Ι{ return _value.index()==0; }
+		α IsUser()Ι{ return Type()==ETokenType::Username; }
 		α LoginName()Ι->str;
 		α Password()Ι->str;
 		α ToString()Ι->string; //TODO - implement
 		α operator<( const Credential& other )Ι->bool;
 	private:
-		variant<nullptr_t,User,Token,Crypto::Certificate> _value;
+		variant<nullptr_t, Gateway::Token, User, Crypto::PublicKey> _value;
 		mutable string _display;
 	};
 	α AddSession( SessionPK sessionId, OpcClientNK opcNK, Credential credential )ι->void;

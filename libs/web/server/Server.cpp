@@ -1,5 +1,5 @@
 #include <jde/web/server/Server.h>
-#include <jde/web/server/IApplicationServer.h>
+#include <jde/app/IApp.h>
 #include <jde/framework/thread/execution.h>
 #include "CancellationSignals.h"
 #include <jde/web/usings.h>
@@ -13,6 +13,10 @@ namespace Jde::Web{
 			_maxLogLength = Settings::FindNumber<uint16>( "http/maxLogLength" ).value_or( 1024 );
 		return *_maxLogLength;
 	}
-	α Server::Start( up<IRequestHandler>&& handler, up<IApplicationServer>&& server, jobject&& settings )ε->void{ Internal::Start( move(handler), move(server), Internal::Settings{settings} ); }
-	α Server::Stop( bool terminate )ι->void{ Internal::Stop(terminate); }
+	α Server::Start( sp<IRequestHandler> handler )ε->void{
+		Internal::Start( move(handler) );
+	}
+	α Server::Stop( sp<IRequestHandler>&& handler, bool terminate )ι->void{
+		Internal::Stop( move(handler), terminate );
+	}
 }

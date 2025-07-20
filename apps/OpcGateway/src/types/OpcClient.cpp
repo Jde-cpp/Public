@@ -17,6 +17,29 @@ namespace Jde::Opc::Gateway{
 		Name{ move(r.GetString(4)) },
 		Target{ move(r.GetString(5)) }
 	{}
+	OpcClient::OpcClient( jobject&& o )ε:
+		Id{ Json::FindNumber<uint32>(o, "id").value_or(0) },
+		Url{ Json::FindDefaultSV(o, "url") },
+		CertificateUri{ Json::FindDefaultSV(o, "certificate_uri") },
+		Description{ Json::FindDefaultSV(o, "description") },
+		IsDefault{ Json::FindBool(o, "is_default") },
+		Name{ Json::FindDefaultSV(o, "name") },
+		Deleted{ Json::FindTimePoint(o, "deleted") },
+		Target{ Json::FindDefaultSV(o, "target") }
+	{}
+	α OpcClient::ToJson()Ι->jobject{
+		jobject o;
+		o.emplace( "id", Id );
+		o.emplace("client_id", Id);
+		o.emplace("url", Url);
+		o.emplace("certificate_uri", CertificateUri);
+		o.emplace("is_default", IsDefault);
+		o.emplace("name", Name);
+		o.emplace("target", Target);
+		o.emplace( "description", Description );
+		o.emplace( "deleted", Deleted ? jvalue{ToIsoString(*Deleted)} : jvalue{} );
+		return o;
+	}
 
 	α OpcClientAwait::Select()ι->DB::SelectAwait::Task{
 		let view = GetViewPtr( "clients" );

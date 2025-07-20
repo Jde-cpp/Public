@@ -3,6 +3,7 @@
 #include <jde/web/server/HttpRequest.h>
 #include <jde/framework/str.h>
 #include "../../../../Framework/source/math/MathUtilities.h"
+#include <jde/app/IApp.h>
 #include "ServerImpl.h"
 
 #define let const auto
@@ -122,7 +123,7 @@ namespace Sessions{
 				if( auto pInfo = UpdateExpiration(*sessionId, _endpoint); pInfo )
 					info = pInfo;
 				else{
-					up<TAwait<Web::FromServer::SessionInfo>> pAwait = Server::SessionInfoAwait( *sessionId ); //3rd party, eg AppServer
+					up<TAwait<Web::FromServer::SessionInfo>> pAwait = !_appClient || _appClient->IsLocal() ? nullptr : _appClient->SessionInfoAwait( *sessionId, _sl );//3rd party, eg AppServer
 					if( !pAwait ){  //no 3rd party
 						if( _throw )
 							throw Exception( SRCE_CUR, ELogLevel::Debug, "[{}]Session not found.", Ƒ("{:x}", *sessionId) );

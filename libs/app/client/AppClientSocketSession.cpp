@@ -1,13 +1,13 @@
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/framework/thread/execution.h>
-#include <jde/web/server/IApplicationServer.h>
-#include <jde/app/shared/proto/App.FromClient.h>
-#include <jde/app/shared/proto/Common.h>
 #include <jde/web/client/socket/ClientQL.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/client/socket/clientSubscriptions.h>
-#include <jde/app/client/appClient.h>
 #include <jde/app/shared/StringCache.h>
+#include <jde/app/shared/proto/App.FromClient.h>
+#include <jde/app/shared/proto/Common.h>
+#include <jde/app/client/appClient.h>
+#include <jde/app/client/IAppClient.h>
 
 #define let const auto
 
@@ -15,33 +15,16 @@ namespace Jde::App{
 	using Web::Client::ClientSocketAwait; using Jde::Proto::ToString;
 	constexpr ELogTags _tags{ ELogTags::SocketClientRead };
 
-	sp<Client::AppClientSocketSession> _session;
-	α Client::CloseSocketSession( SL sl )ι->VoidTask{
-		if( _session ){
-			let tags = ELogTags::Client | ELogTags::Socket;
-			Trace( sl, tags, "ClosingSocketSession" );
-			co_await _session->Close();
-			_session = nullptr;
-			Information( sl, tags, "ClosedSocketSession" );
-		}
-	}
-	α Client::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>{
-		auto p = _session; THROW_IF( !p, "Not connected." );
-		auto requestId = p->NextRequestId();
-		Trace( sl, ELogTags::SocketClientWrite, "AddSession domain: '{}', loginName: '{}', providerPK: {}, userEndPoint: '{}', isSocket: {}.", domain, loginName, providerPK, userEndPoint, isSocket );
-		return ClientSocketAwait<Web::FromServer::SessionInfo>{ ToString(FromClient::AddSession(domain, loginName, providerPK, userEndPoint, isSocket, requestId)), requestId, p, sl };
-	}
-
 namespace Client{
-	StartSocketAwait::StartSocketAwait( SessionPK sessionId, vector<sp<DB::AppSchema>>&& subscriptionSchemas, sp<Access::Authorize> authorize, SL sl )ι:
+	StartSocketAwait::StartSocketAwait( SessionPK sessionId, sp<Access::Authorize> authorize, sp<IAppClient> appClient, SL sl )ι:
 		base{sl},
+		_appClient{ appClient },
 		_authorize{ authorize },
 		_sessionId{ sessionId },
-		_subscriptionSchemas{ move(subscriptionSchemas) }
+		_session{ ms<Client::AppClientSocketSession>(Executor(), IsSsl() ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{}, move(_authorize), move(appClient)) }
 	{}
 
 	α StartSocketAwait::Suspend()ι->void{
-		_session = ms<Client::AppClientSocketSession>( Executor(), IsSsl() ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{}, move(_subscriptionSchemas), move(_authorize) );
 		RunSession();
 	}
 	α StartSocketAwait::RunSession()ι->VoidTask{
@@ -55,20 +38,25 @@ namespace Client{
 	}
 	α StartSocketAwait::SendSessionId()ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task{
 		try{
-			auto connectionInfo = co_await _session->Connect( _sessionId );//handshake
-			Web::Server::IApplicationServer::SetInstancePK( connectionInfo.instance_pk() );
-			Resume( move(connectionInfo) );
+			auto info = co_await _session->Connect( _sessionId );//handshake
+			_appClient->SetInstancePK( info.instance_pk() );
+			_appClient->SetSession( move(_session) );
+			_appClient->ServerPublicKey = {
+				{ info.certificate_modulus().begin(), info.certificate_modulus().end() },
+				{ info.certificate_exponent().begin(), info.certificate_exponent().end() }
+			};
+			Resume( move(info) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
 
-	α AppClientSocketSession::Instance()ι->sp<AppClientSocketSession>{ return _session; }
-	AppClientSocketSession::AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx, vector<sp<DB::AppSchema>> subscriptionSchemas, sp<Access::Authorize> authorize )ι:
+	//α AppClientSocketSession::Instance()ι->sp<AppClientSocketSession>{ return _session; }
+	AppClientSocketSession::AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx, sp<Access::Authorize> authorize, sp<IAppClient> appClient )ι:
 		base( ioc, ctx ),
-		_authorize{authorize},
-		_subscriptionSchemas{move(subscriptionSchemas)}
+		_appClient{appClient},
+		_authorize{authorize}
 	{}
 
 	α AppClientSocketSession::Connect( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>{
@@ -86,14 +74,18 @@ namespace Client{
 		};
 		CloseTasks( f );
 		base::OnClose( ec );
-		_session = nullptr;
+		_appClient->SetSession( nullptr );
 		if( !Process::ShuttingDown() )
-			App::Client::Connect( move(_subscriptionSchemas) );
+			App::Client::Connect( move(_appClient) );
 	}
 	α AppClientSocketSession::SessionInfo( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Web::FromServer::SessionInfo>{
 		let requestId = NextRequestId();
-		return ClientSocketAwait<Web::FromServer::SessionInfo>{ ToString(FromClient::Session(sessionId, requestId)), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<Web::FromServer::SessionInfo>{ FromClient::Session(sessionId, requestId), requestId, shared_from_this(), sl };
 	}
+	// α AppClientSocketSession::SessionInfo( Web::Jwt&& jwt, SL sl )ι->ClientSocketAwait<Web::FromServer::SessionInfo>{
+	// 	let requestId = NextRequestId();
+	// 	return ClientSocketAwait<Web::FromServer::SessionInfo>{ ToString(FromClient::Session(move(jwt), requestId)), requestId, shared_from_this(), sl };
+	// }
 	α AppClientSocketSession::Query( string&& q, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
 		let requestId = NextRequestId();
 		Trace( sl, ELogTags::SocketClientWrite, "[{:x}]GraphQL: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
@@ -104,7 +96,7 @@ namespace Client{
 	α AppClientSocketSession::Subscribe( string&& q, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
 		let requestId = NextRequestId();
 		Trace( sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
-		auto subscriptions = QL::ParseSubscriptions( q, _subscriptionSchemas, sl );
+		auto subscriptions = QL::ParseSubscriptions( q, _appClient->SubscriptionSchemas, sl );
 		_subscriptionRequests.emplace( requestId, make_pair(listener, move(subscriptions)) );
 		return ClientSocketAwait<jarray>{ ToString(FromClient::Subscription(move(q), requestId)), requestId, shared_from_this(), sl };
 	}
@@ -184,6 +176,9 @@ namespace Client{
 				auto& res = *m->mutable_strings();
 				resume( move(hAny), move(*m->mutable_strings()), "Strings count='{}'.", res.messages().size()+res.files().size()+res.functions().size()+res.threads().size() );
 				}break;
+			case kJwt:
+				resume( move(hAny), Web::Jwt{move(*m->mutable_jwt())}, "Jwt.size: '{}'.", m->jwt().size() );
+				break;
 			case kLogLevels:{//TODO implement when have tags.
 				auto& res = *m->mutable_log_levels();
 				resume( move(hAny), move(res), "LogLevel server='{}', client='{}'.", ToString((ELogLevel)res.server()), ToString((ELogLevel)res.client()) );
@@ -255,7 +250,9 @@ namespace Client{
 		else if( auto await = std::any_cast<ClientSocketAwait<Web::FromServer::SessionInfo>::Handle>(&h) )
 			handle( "Exception<SessionInfo>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<jvalue>::Handle>(&h) )
-			handle( "Exception<SessionInfo>: '{}'.", await );
+			handle( "Exception<jvalue>: '{}'.", await );
+		else if( auto await = std::any_cast<ClientSocketAwait<Web::Jwt>::Handle>(&h) )
+			handle( "Exception<Jwt>: '{}'.", await );
 		else{
 			let severity{ requestId ? ELogLevel::Critical : ELogLevel::Debug };
 			ASSERT_DESC( !requestId, Ƒ("Type Not Expected={}", h.type().name()) );

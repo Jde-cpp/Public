@@ -18,6 +18,8 @@ message ConnectionInfo{
 	uint32 instance_pk = 2;
 	LogLevels log_levels = 3;
 	Jde.Web.FromServer.SessionInfo session_info = 4;
+	bytes certificate_modulus = 5;
+	bytes certificate_exponent = 6;
 }
 
 
@@ -94,6 +96,7 @@ message Message{
 		SubscriptionAck subscription_ack = 16;
 		string subscription= 17;
 		ConnectionInfo connection_info = 18;
+		string jwt = 19;
 
 		bytes execute_anonymous = 33;//appServer->2ndServer, no user context.
 		Jde.App.Proto.Execute execute = 34;//execute with user context.

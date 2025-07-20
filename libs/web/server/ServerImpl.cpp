@@ -1,6 +1,6 @@
 ﻿#include "ServerImpl.h"
 #include <jde/crypto/OpenSsl.h>
-#include <jde/web/server/IApplicationServer.h>
+#include <jde/app/IApp.h>
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/server/IRequestHandler.h>
 #include <jde/web/server/IWebsocketSession.h>
@@ -11,31 +11,18 @@
 #define let const auto
 
 namespace Jde::Web{
-	up<Server::IApplicationServer> _appServer;
-	α Server::AppServerLocal()ι->bool{ return _appServer->IsLocal(); }
-	α Server::AppGraphQLAwait( string&& q, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
-		return _appServer->GraphQL( move(q), userPK, true, sl );
-	}
-	α Server::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
-
-	sp<net::cancellation_signal> _cancelSignal;
-	optional<ssl::context> _ctx;
-
-	atomic_flag _started{};
-
 namespace Server{
-	atomic<uint32> _sequence;
 	Ω detectSession( StreamType stream, tcp::endpoint userEndpoint, sp<net::cancellation_signal> cancel, Server::IRequestHandler* handler )ι->net::awaitable<void, executor_type>{
 		beast::flat_buffer buffer;
 		stream.expires_after( std::chrono::seconds(30) );// Set the timeout.
-		auto [ec, result] = co_await beast::async_detect_ssl( stream, buffer );// on_run
+		auto [ec, isSsl] = co_await beast::async_detect_ssl( stream, buffer );// on_run
 		if( ec ){
 			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Warning };
 			co_return;
 		}
-		uint32 index = ++_sequence;
-		if( result ){
-			beast::ssl_stream<StreamType> ssl_stream{ move(stream), *_ctx };
+		let index = handler->NextRequestId();
+		if( isSsl ){
+			beast::ssl_stream<StreamType> ssl_stream{ move(stream), handler->Context() };
 			auto [ec, bytes_used] = co_await ssl_stream.async_handshake( ssl::stream_base::server, buffer.data() );
 			if(ec){
 				CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Warning };
@@ -130,20 +117,18 @@ namespace Server{
 		return true;
 	}
 
-	α LoadServerCertificate()ε->void{
-		_ctx = ssl::context{ ssl::context::tlsv12 };
-		Crypto::CryptoSettings settings{ "http/ssl" };//Linux - /etc/ssl/certs/server.crt and /etc/ssl/private/server.key
+	Ω loadServerCertificate( ssl::context& ctx, const Crypto::CryptoSettings& settings )ε->void{
 		if( !fs::exists(settings.PrivateKeyPath) ){
 			settings.CreateDirectories();
 			Crypto::CreateKeyCertificate( settings );
 		}
-		_ctx->set_options( ssl::context::default_workarounds | ssl::context::no_sslv2 | ssl::context::single_dh_use );
+		ctx.set_options( ssl::context::default_workarounds | ssl::context::no_sslv2 | ssl::context::single_dh_use );
 		let cert = IO::Load( settings.CertPath );
-		_ctx->use_certificate_chain( net::buffer(cert.data(), cert.size()) );
+		ctx.use_certificate_chain( net::buffer(cert.data(), cert.size()) );
 
-		_ctx->set_password_callback( [=](uint, ssl::context_base::password_purpose){ return settings.Passcode; } );
+		ctx.set_password_callback( [=](uint, ssl::context_base::password_purpose){ return settings.Passcode; } );
 		let key = IO::Load( settings.PrivateKeyPath );
-		_ctx->use_private_key( net::buffer(key.data(), key.size()), ssl::context::file_format::pem );
+		ctx.use_private_key( net::buffer(key.data(), key.size()), ssl::context::file_format::pem );
 		static const string dhStatic =
 			"-----BEGIN DH PARAMETERS-----\n"
 			"MIIBCAKCAQEArzQc5mpm0Fs8yahDeySj31JZlwEphUdZ9StM2D8+Fo7TMduGtSi+\n"
@@ -154,10 +139,10 @@ namespace Server{
 			"QMUk26jPTIVTLfXmmwU0u8vUkpR7LQKkwwIBAg==\n"
 			"-----END DH PARAMETERS-----\n";
 		string dh = fs::exists( settings.DhPath ) ? IO::Load( settings.DhPath ) : dhStatic;
-		_ctx->use_tmp_dh( net::buffer(dh.data(), dh.size()) );
+		ctx.use_tmp_dh( net::buffer(dh.data(), dh.size()) );
 	}
 
-	Ω listen( tcp::endpoint endpoint, up<IRequestHandler> handler )ι->net::awaitable<void, executor_type>{
+	Ω listen( tcp::endpoint endpoint, sp<IRequestHandler> handler )ι->net::awaitable<void, executor_type>{
 		typename tcp::acceptor::rebind_executor<executor_with_default>::other acceptor{ co_await net::this_coro::executor };
 		if( !initListener(acceptor, endpoint) ){
 			Debug{ ELogTags::App, "!initListener" };
@@ -165,8 +150,7 @@ namespace Server{
 		}
 
 		Trace( ELogTags::App, "Web Server accepting." );
-		_started.test_and_set();
-		_started.notify_all();
+		handler->Start();
 		while( (co_await net::this_coro::cancellation_state).cancelled() == net::cancellation_type::none ){
 			auto [ec, sock] = co_await acceptor.async_accept();
 			let exec = sock.get_executor();
@@ -184,34 +168,25 @@ namespace Server{
 		}
 	}
 
-	α Internal::Start( up<IRequestHandler>&& handler, up<IApplicationServer>&& server, Settings&& settings )ε->void{
-		_appServer = move( server );
-		if( !_ctx )
-			LoadServerCertificate();
+	α Internal::Start( sp<IRequestHandler> handler )ε->void{
+		loadServerCertificate( handler->Context(), handler->Settings().Crypto() );
 
-		let port = settings.Port();
-		_cancelSignal = ms<net::cancellation_signal>();
-		let addressString = settings.Address();
+		let port = handler->Settings().Port();
+		let addressString = handler->Settings().Address();
 		let address = tcp::endpoint{ net::ip::make_address(addressString), port };
 		net::co_spawn(
 			*Executor(),
-			listen( address, move(handler) ),
-			net::bind_cancellation_slot(_cancelSignal->slot(), net::detached)
+			listen( address, handler ),
+			net::bind_cancellation_slot(handler->CancelSignal()->slot(), net::detached)
 		);
-		Execution::AddCancelSignal( _cancelSignal );
+		Execution::AddCancelSignal( handler->CancelSignal() );
 		Execution::Run();
-		_started.wait( false ); // wait for boost to end.
+		handler->BlockTillStarted(); // wait for boost to end.
 		Information( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
-	α Internal::Stop( bool /*terminate*/ )ι->void{
-		ASSERT( _cancelSignal );
-		_started.clear();
-		_started.notify_all();
-		if( _cancelSignal )
-			_cancelSignal->emit( net::cancellation_type::all );
-//		_cancelSignal = nullptr; heap use after free.
-		_ctx.reset();
+	α Internal::Stop( sp<IRequestHandler>&& handler, bool /*terminate*/ )ι->void{
+		handler->Stop();
 	}
 
 	concurrent_flat_map<SessionPK, sp<IWebsocketSession>> _socketSessions;
@@ -227,7 +202,7 @@ namespace Server{
 }
 	α Server::HandleRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task{
 		try{
-			req.SessionInfo = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false );
+			req.SessionInfo = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false, reqHandler->AppServer() );
 		}
 		catch( IException& e ){
 			//Add error code.
@@ -381,12 +356,12 @@ namespace Server{
 		res.set( http::field::access_control_max_age, "7200" ); //2 hours chrome max
 		return res;
 	}
-	α Server::SendServerSettings( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task{
+	α Server::SendServerSettings( HttpRequest req, sp<RestStream> stream, sp<App::IApp> appClient )ι->Sessions::UpsertAwait::Task{
 		jobject j;
 		j["restSessionTimeout"] = Chrono::ToString( Sessions::RestSessionTimeout() );
-		j["serverInstance"] = IApplicationServer::InstancePK();
+		j["serverInstance"] = appClient->InstancePK();
 		try{
-			let session = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false, false );
+			let session = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false, appClient, false );
 			j["active"] = (bool)session;
 		}
 		catch( IException& e ){

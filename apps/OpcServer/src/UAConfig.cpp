@@ -65,8 +65,8 @@ namespace Jde::Opc::Server {
     UAε( UA_ServerConfig_addAllEndpoints(this) );
 	}
 	α UAConfig::SetupSecurityPolicies( fs::path&& certificateFile )ε->void{
-		let passcode = Settings::FindString("/tcp/privateKey/passcode").value_or("");
-		auto privateKeyFile = Settings::FindPath( "/tcp/privateKey/path" ).value_or( fs::path{} );
+		let passcode = Settings::FindString("/opcServer/ssl/privateKey/passcode").value_or("");
+		auto privateKeyFile = Settings::FindPath( "/opcServer/ssl/privateKey/path" ).value_or( fs::path{} );
 		if( !fs::exists(certificateFile) ){
 			let parentPath = certificateFile.parent_path();
 			Crypto::CreateKey( certificateFile.parent_path()/"public.pem", privateKeyFile, passcode );
@@ -75,7 +75,7 @@ namespace Jde::Opc::Server {
 		}
 		auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
 		auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
-		SetConfig( Settings::FindNumber<PortType>("/tcp/port").value_or(4840), move(certificate), move(privateKey) );
+		SetConfig( Settings::FindNumber<PortType>("/opcServer/port").value_or(4840), move(certificate), move(privateKey) );
 //		UA_ServerConfig_setDefaultWithSecurityPolicies( &config, Settings::FindNumber<PortType>("/tcp/port").value_or(4840), certificate.get(), privateKey.get(), &trustList, 0, &issuerList, 0, &revocationList, 0 );
 		UA_String_clear( &applicationDescription.applicationUri );
 		applicationDescription.applicationUri = UA_STRING_ALLOC("urn:open62541.server.application");
@@ -104,7 +104,7 @@ namespace Jde::Opc::Server {
 		UA_ServerConfig{
 			.logging{ &_logger },
 		}{
-		if( auto certificateFile = Settings::FindPath("/tcp/certificate").value_or(fs::path{}); !certificateFile.empty() ){
+		if( auto certificateFile = Settings::FindPath("/opcServer/ssl/certificate").value_or(fs::path{}); !certificateFile.empty() ){
 			try{
 				SetupSecurityPolicies( move(certificateFile) );
 			}

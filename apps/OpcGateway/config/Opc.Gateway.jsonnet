@@ -49,7 +49,7 @@ local args = import 'args.libsonnet';
 		},
 		ssl: {
 			certificate:: "{ApplicationDataFolder}/ssl/certs/cert.pem",
-			certificateAltName: "DNS:localhost,IP:127.0.0.1",
+			certificateAltName:: "DNS:localhost,IP:127.0.0.1",
 			certficateCompany:: "Jde-Cpp",
 			certficateCountry:: "US",
 			certficateDomain:: "localhost",

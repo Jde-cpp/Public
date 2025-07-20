@@ -1,9 +1,10 @@
 #include <jde/app/client/appClient.h>
-#include <jde/app/client/AppClientSocketSession.h>
-#include <jde/app/client/usings.h>
+#include <jde/framework/coroutine/Timer.h>
 #include <jde/access/Authorize.h>
 #include <jde/web/client/socket/ClientQL.h>
-#include <jde/framework/coroutine/Timer.h>
+#include <jde/app/client/usings.h>
+#include <jde/app/client/AppClientSocketSession.h>
+#include <jde/app/client/IAppClient.h>
 
 #define let const auto
 
@@ -16,50 +17,31 @@ namespace Jde::App{
 	α Client::Host()ι->string{ return Settings::FindString("server/host").value_or("localhost"); }
 	α Client::Port()ι->PortType{ return Settings::FindNumber<PortType>("server/port").value_or(1967); }
 
-	function<vector<string>()> _statusDetails = []()->vector<string>{ return {}; };
-  α Client::SetStatusDetailsFunction( function<vector<string>()>&& f )ι->void{ _statusDetails = f; }
-
 	α Client::RemoteAcl( string libName )ι->sp<Access::Authorize>{
 		if( !_authorize )
 			_authorize = ms<Access::Authorize>( move(libName) );
 		return _authorize;
 	}
-	#define IF_OK if( auto pSession = Process::ShuttingDown() ? nullptr : AppClientSocketSession::Instance(); pSession )
-	α Client::UpdateStatus()ι->void{// update immediately
-		IF_OK
-			pSession->Write( FromClient::Status(_statusDetails()) );
-	}
-	α Client::AppServiceUserPK()ι->UserPK{
-		//AppClientSocketSession a{ nullptr, nullopt };
-		let session = AppClientSocketSession::Instance();
-		return session ? session->UserPK() : UserPK{};
-	}
-	α Client::QLServer()ε->sp<QL::IQL>{
-		auto session = Process::ShuttingDown() ? nullptr : AppClientSocketSession::Instance();
-		THROW_IF( !session, "Not connected." );
-		return session->QLServer();
-	};
 }
 namespace Jde::App::Client{
 	struct LoginAwait final : TAwait<SessionPK>{
 		using base = TAwait<SessionPK>;
-		LoginAwait( SRCE )ε;
+		LoginAwait( const Crypto::CryptoSettings& cryptoSettings, const jobject& userName, SRCE )ε;
 		α Suspend()ι->void{ Execute(); };
 	private:
 		α Execute()ι->Web::Client::ClientHttpAwait::Task;
 		Web::Jwt _jwt;
 	};
 
-	Ω getJwt()ε->Web::Jwt{
-		Crypto::CryptoSettings settings{ "http/ssl" };
-		auto [mod,exp] = Crypto::ModulusExponent( settings.PublicKeyPath );
-		auto name = Settings::FindString("/credentials/name"); THROW_IF( !name, "credentials/name not found in settings." );
-		auto target = Settings::FindString("/credentials/target").value_or( *name );
-		return Web::Jwt{ move(mod), exp, move(*name), move(target), {}, {}, settings.PrivateKeyPath };
+	Ω getJwt( const Crypto::CryptoSettings& cryptoSettings, const jobject& userName )ε->Web::Jwt{
+		auto pubKey = Crypto::ReadPublicKey( cryptoSettings.PublicKeyPath );
+		auto name = Json::FindString( userName, "name" ); THROW_IF( !name, "credentials/name not found in settings." );
+		auto target = Json::FindString( userName, "target" ).value_or( *name );
+		return Web::Jwt{ pubKey, move(*name), move(target), 0, {}, TimePoint::min(), {}, cryptoSettings.PrivateKeyPath };
 	}
-	LoginAwait::LoginAwait( SL sl )ε:
+	LoginAwait::LoginAwait( const Crypto::CryptoSettings& cryptoSettings, const jobject& userName, SL sl )ε:
 		base{sl},
-		_jwt{ getJwt() }
+		_jwt{ getJwt(cryptoSettings, userName) }
 	{}
 
 	α LoginAwait::Execute()ι->ClientHttpAwait::Task{
@@ -76,20 +58,22 @@ namespace Jde::App::Client{
 		}
 	}
 
-	ConnectAwait::ConnectAwait( vector<sp<DB::AppSchema>>&& subscriptionSchemas, bool retry, SL sl )ι:
+	ConnectAwait::ConnectAwait( sp<IAppClient> appClient, jobject userName, bool retry, SL sl )ι:
 		VoidAwait<>{sl},
+		_appClient{ appClient },
 		_retry{retry},
-		_subscriptionSchemas{move(subscriptionSchemas)}
+		_userName{ userName }
 	{}
 
 	α ConnectAwait::Retry()->DurationTimer::Task{
 		co_await DurationTimer{ _reconnectWait };
 		HttpLogin();
 	}
-	α ConnectAwait::RunSocket( SessionPK sessionId )ι->StartSocketAwait::Task{
+	α ConnectAwait::RunSocket( SessionPK sessionId )ι->TAwait<Proto::FromServer::ConnectionInfo>::Task{
 		try{
 			Trace( ELogTags::App, "Creating socket session for sessionId: {:x}", sessionId );
-			co_await StartSocketAwait{ sessionId, move(_subscriptionSchemas), _authorize };
+			co_await StartSocketAwait{ sessionId, _authorize, move(_appClient), _sl };
+
 			Resume();
 		}
 		catch( IException& e ){
@@ -101,7 +85,7 @@ namespace Jde::App::Client{
 	}
 	α ConnectAwait::HttpLogin()ι->LoginAwait::Task{
 		try{
-			let sessionId = co_await LoginAwait{};//http call
+			let sessionId = co_await LoginAwait{ *_appClient->ClientCryptoSettings, _userName };//http call
 			RunSocket( sessionId );
 		}
 		catch( IException& e ){

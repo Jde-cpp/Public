@@ -12,7 +12,8 @@
 	try{
 		OSApp::Startup( argc, argv, "Jde.OpcGateway", "IOT Connection" );
 		let webServerSettings = Settings::FindObject("/http");
-		BlockVoidAwait( Opc::Gateway::StartupAwait{webServerSettings ? *webServerSettings : jobject{}} );
+		let userName = Settings::FindObject("/credentials");
+		BlockVoidAwait( Opc::Gateway::StartupAwait{webServerSettings ? *webServerSettings : jobject{}, userName ? *userName : jobject{}} );
 		exitCode = Process::Pause();
 	}
 	catch( exception& e ){

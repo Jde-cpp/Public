@@ -10,21 +10,22 @@ namespace Jde::App::FromClient{
 		f( m );
 		return t;
 	}
+	Ω transString( RequestId requestId, function<void(PFromClient::Message&)> f ){
+		auto t = setMessage( requestId, f );
+		return Jde::Proto::ToString( t );
+	}
 }
 namespace Jde::App{
-	α FromClient::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, RequestId requestId )ι->PFromClient::Transmission{
-		PFromClient::Transmission t;
-		auto& m = *t.add_messages();
-		m.set_request_id( requestId );
-		auto& s = *m.mutable_add_session();
-		s.set_domain( domain );
-		s.set_login_name( loginName );
-		s.set_provider_pk( providerPK );
-		s.set_user_endpoint( userEndPoint );
-		s.set_is_socket( isSocket );
-		return t;
+	α FromClient::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, RequestId requestId )ι->StringTrans{
+		return transString( requestId, [&](auto& m){
+			auto& s = *m.mutable_add_session();
+			s.set_domain( domain );
+			s.set_login_name( loginName );
+			s.set_provider_pk( providerPK );
+			s.set_user_endpoint( userEndPoint );
+			s.set_is_socket( isSocket );
+		} );
 	}
-
 	α FromClient::AddStringField( PFromClient::Transmission& t, PFromClient::EFields field, uint32 id, str value )ι->void{
 		auto& m = *t.add_messages()->mutable_string_value();
 		m.set_field( field );
@@ -70,6 +71,9 @@ namespace Jde::App{
 			request.set_return_raw( returnRaw );
 		} );
 	}
+	α FromClient::Jwt( RequestId requestId )ι->StringTrans{
+		return transString( requestId, [&](auto& m){ m.set_request_type( Proto::FromClient::ERequestType::Jwt );} );
+	}
 
 	α FromClient::ToStatus( vector<string>&& details )ι->PFromClient::Status{
 		PFromClient::Status y;
@@ -92,12 +96,10 @@ namespace Jde::App{
 		return t;
 	}
 
-	α FromClient::Session( SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission{
-		PFromClient::Transmission t;
-		auto req = t.add_messages();
-		req->set_session_info( sessionId );
-		req->set_request_id( requestId );
-		return t;
+	α FromClient::Session( SessionPK sessionId, RequestId requestId )ι->StringTrans{
+		return transString( requestId, [&](auto& m){
+			m.set_session_info( sessionId );
+		});
 	}
 
 	α FromClient::Subscription( string&& query, RequestId requestId )ι->PFromClient::Transmission{

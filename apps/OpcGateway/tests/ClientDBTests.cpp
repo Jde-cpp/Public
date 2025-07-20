@@ -25,9 +25,9 @@ namespace Jde::Opc::Gateway::Tests{
 		static uint OpcProviderId;
 		α InsertFailedImpl()ε->Access::ProviderPK;
 		α PurgeFailedImpl()ε->Access::ProviderPK;
-		α CrudImpl()ε->CreateOpcClientAwait::Task;
-		α CrudImpl2( OpcClientPK id )ε->ProviderSelectAwait::Task;
-		α CrudPurge( OpcClientPK id )ε->PurgeOpcClientAwait::Task;
+		α CrudImpl()ε->Access::ProviderPK;
+		α CrudImpl2( OpcClientPK id )ε->Access::ProviderPK;
+		α CrudPurge( OpcClientPK id )ε->Access::ProviderPK;
 	};
 	uint ClientDBTests::OpcProviderId{};
 
@@ -46,7 +46,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 		let existingProviderPK = GetProviderPK( target );
 		let existingServer = SelectOpcClient( target );
-		let existingOpcPK = Json::FindNumber<OpcClientPK>( existingServer, "id" ).value_or(0);
+		let existingOpcPK = existingServer ? existingServer->Id : 0;
 		let& table = GetViewPtr( "clients" );
 		if( !existingOpcPK && !existingProviderPK ){
 			auto pk = BlockAwait<CreateOpcClientAwait,OpcClientPK>( CreateOpcClientAwait{} );
@@ -62,7 +62,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( ClientDBTests, PurgeFailed ){
 		let existingServer = SelectOpcClient( OpcServerTarget );
-		auto opcPK = Json::FindNumber<OpcClientPK>( existingServer, "id" ).value_or(0);
+		auto opcPK = existingServer ? existingServer->Id : 0;
 		if( !opcPK )
 			opcPK = BlockAwait<CreateOpcClientAwait,OpcClientPK>( CreateOpcClientAwait{} );
 		Id = opcPK;
@@ -75,58 +75,55 @@ namespace Jde::Opc::Gateway::Tests{
 		PurgeOpcClient();
 	}
 
-	α ClientDBTests::CrudImpl()ε->CreateOpcClientAwait::Task{
+	α ClientDBTests::CrudImpl()ε->Access::ProviderPK{
 		let existingServer = SelectOpcClient( OpcServerTarget );
-		let existingOpcPK = Json::FindNumber<OpcClientPK>( existingServer, "id" ).value_or(0);
+		let existingOpcPK = existingServer ? existingServer->Id : 0;
 		if( existingOpcPK )
 			PurgeOpcClient( existingOpcPK );
-		let createdId = co_await CreateOpcClientAwait();
+		let createdId = BlockAwait<CreateOpcClientAwait,OpcClientPK>( CreateOpcClientAwait{} );
 		let selectAll = "clients{ id name attributes created updated deleted target description certificateUri isDefault url }";
 		let selectAllJson = QL().QuerySync<jarray>( selectAll, {UserPK::System} );
 		Trace( _tags, "selectAllJson={}", serialize(selectAllJson) );
 		let id = Json::AsNumber<OpcClientPK>( Json::AsObject(selectAllJson[0]), "id" );
 		THROW_IF( createdId!=id, "createdId={} id={}", createdId, id );
-		CrudImpl2( id );
+		return CrudImpl2( id );
 	}
 
-	α ClientDBTests::CrudImpl2( OpcClientPK id )ε->ProviderSelectAwait::Task{
-		auto readJson = SelectOpcClient( OpcServerTarget );
-		THROW_IF( Json::AsNumber<OpcClientPK>(readJson, "id")!=id, "id={} readJson={}", id, serialize(readJson) );
-		let target = Json::AsString( readJson, "target" );
+	α ClientDBTests::CrudImpl2( OpcClientPK id )ε->Access::ProviderPK{
+		auto client = SelectOpcClient( OpcServerTarget );
+		THROW_IF( client->Id!=id, "id={} readJson={}", id, serialize(client->ToJson()) );
+		let target = client->Target;
 
-		let providerId = co_await ProviderSelectAwait{target};
-		THROW_IF( providerId==0, "providerId==0" );;
+		let providerId = BlockAwait<ProviderSelectAwait,Access::ProviderPK>( ProviderSelectAwait{target} );
+		THROW_IF( providerId==0, "providerId==0" );
 
 		let description = "new description";
 		let update = Ƒ( "mutation updateClient( id:{}, description:\"{}\" ) }}", id, description );
 		let updateJson = QL().QuerySync<jvalue>( update, {UserPK::System} );
 		Trace( _tags, "updateJson={}", serialize(updateJson) );
 		let updated = SelectOpcClient( id );
-		THROW_IF( Json::AsString( updated, "description" )!=description, "description={} updated={}", description, serialize(updated) );
+		THROW_IF( updated->Description!=description, "description={} updated={}", description, serialize(updated->ToJson()) );
 
-		let del = Ƒ( "{{mutation deleteClient('id':{}) }}", id );
-		let deleteJson = QL().QuerySync<jvalue>( Str::Replace(del, '\'', '"'), {UserPK::System} );
+		let del = Ƒ( "deleteClient(\"id\":{})", id );
+		let deleteJson = QL().QuerySync<jvalue>( del, {UserPK::System} );
 		Trace( _tags, "deleted={}", serialize(deleteJson) );
-	 	auto readJson2 = SelectOpcClient( id );
-		THROW_IF( readJson2["deleted"].is_null(), "deleted failed" );
+	 	client = SelectOpcClient( id );
+		THROW_IF( !client->Deleted, "deleted failed" );
 
-		CrudPurge( id );
+		return CrudPurge( id );
 	}
 
-	α ClientDBTests::CrudPurge( OpcClientPK id )ε->PurgeOpcClientAwait::Task{
-		co_await PurgeOpcClientAwait{ id };
+	α ClientDBTests::CrudPurge( OpcClientPK id )ε->Access::ProviderPK{
+		BlockAwait<PurgeOpcClientAwait,uint>( PurgeOpcClientAwait{ id } );
 		let opcServers = GetOpcServers( id, true );
 		THROW_IF( opcServers.size(), "Purge Failed" );
-		Result = GetProviderPK( OpcServerTarget );
-		Wait.test_and_set();
-		Wait.notify_one();
+		return GetProviderPK( OpcServerTarget );
 	}
 
 	TEST_F( ClientDBTests, Crud ){
 		try{
-			CrudImpl();
-			Wait.wait( false );
-			ASSERT_EQ( 0, std::any_cast<Access::ProviderPK>(Result) );
+			auto providerPK = CrudImpl();
+			ASSERT_EQ( 0, providerPK );
 		}
 		catch( const IException& e ){
 			ASSERT_DESC( false, e.what() );
