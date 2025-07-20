@@ -6,12 +6,19 @@
 namespace Jde::DB{ struct IRow; struct AppSchema; }
 namespace Jde::QL{ struct IQL; }
 namespace Jde::Access{
-	namespace Resources{
-		α Sync( vector<sp<DB::AppSchema>> schemaNames, sp<QL::IQL> qlServer, UserPK executor )ε->void;
-	}
+	struct ResourceSyncAwait final : VoidAwait<>, boost::noncopyable{
+		ResourceSyncAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, UserPK executer )ι:
+			_executer{executer}, _qlServer{qlServer}, _schemas{schemas}{};
+	private:
+		α Suspend()ι->void{ Sync(); }
+		α Sync()ι->TAwait<jvalue>::Task;
+		UserPK _executer;
+		sp<QL::IQL> _qlServer;
+		vector<sp<DB::AppSchema>> _schemas;
+	};
 
 	struct ResourcePermissions{ flat_map<ResourcePK,Resource> Resources; flat_map<PermissionPK,Permission> Permissions; };
-	struct ResourceLoadAwait final : TAwait<ResourcePermissions>{
+	struct ResourceLoadAwait final : TAwait<ResourcePermissions>, boost::noncopyable{
 		ResourceLoadAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, UserPK executer )ι:
 			_executer{executer}, _qlServer{qlServer}, _schemas{schemas}{};
 	private:

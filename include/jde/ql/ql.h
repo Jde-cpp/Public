@@ -2,24 +2,28 @@
 #include <jde/framework/coroutine/Await.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/generators/Statement.h>
-//#include "QLAwait.h"
 #include "types/MutationQL.h"
 #include "types/RequestQL.h"
 #include "types/TableQL.h"
 #include "types/Subscription.h"
 
+namespace Jde::Access{ struct Authorize; }
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::QL{
-	struct IQL;
+	struct IQL; struct LocalQL;
 	Ŧ AsId( const jobject& j, SRCE )ε->T;
 	Ŧ AsId( const jvalue& j, SRCE )ε->T;
-	α Configure( vector<sp<DB::AppSchema>>&& schemas )ε->void;
-	α Local()ι->sp<IQL>;
-	α Parse( string query, bool returnRaw=true, SRCE )ε->RequestQL;
-	α ParseSubscriptions( string query, SRCE )ε->vector<Subscription>;
+	template<class T=uint32> α FindId( const jobject& j )ι->T;
+	α Configure( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ε->sp<LocalQL>;
+	α Parse( string query, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->RequestQL;
+	α ParseSubscriptions( string query, const vector<sp<DB::AppSchema>>& schemas, SRCE )ε->vector<Subscription>;
 	α SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted=nullopt )ε->optional<DB::Statement>;
 }
 namespace Jde{
+	Ŧ QL::FindId( const jobject& o )ι->T{
+		const auto value = o.try_at( "id" );
+		return value ? value->to_number<T>() : T{};
+	}
 	Ŧ QL::AsId( const jobject& o, SL sl )ε->T{
 		return Json::AsNumber<T>( o, "id", sl );
 	}

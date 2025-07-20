@@ -17,7 +17,6 @@ namespace Jde::QL{
 	using namespace DB::Names;
 
 	constexpr ELogTags _tags{ ELogTags::QL };
-	α GetTable( str tableName, SRCE )ε->sp<DB::View>;
 
 	MutationAwait::MutationAwait( MutationQL mutation, UserPK userPK, SL sl )ι:
 		TAwait<jvalue>{ sl },
@@ -26,9 +25,9 @@ namespace Jde::QL{
 	{}
 
 	α MutationAwait::Execute()ι->TAwait<jvalue>::Task{
-		let& table = DB::AsTable( GetTable(_mutation.TableName()) );
 		jvalue y;
 		try{
+			let& table = _mutation.DBTable;
 			switch( _mutation.Type ){
 			using enum EMutationQL;
 			case Update:

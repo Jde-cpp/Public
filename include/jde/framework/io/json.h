@@ -44,7 +44,7 @@ namespace Jde{
 		Φ AsObject( jobject& o, sv key, SRCE )ε->jobject&;
 		Ξ AsObject( const jobject& o, sv key, SRCE )ε->const jobject&{ return AsObject(const_cast<jobject&>(o), key, sl); }
 		α AsObjectPath( const jobject& o, sv path, SRCE )ε->const jobject&;
-		Φ AsTimePointOpt( const jobject& o, sv key )ι->optional<TimePoint>;
+		Φ AsTimePoint( const jobject& o, sv key, SRCE )ε->TimePoint;
 
 #undef $
 		Ξ FindValue( const jvalue& v, sv path )ι->optional<jvalue>{ auto y = v.try_at_pointer(path); return y.has_value() ? *y : optional<jvalue>{}; }

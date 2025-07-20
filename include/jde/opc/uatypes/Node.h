@@ -6,23 +6,22 @@
 
 namespace Jde::DB{ struct Row; struct Value; }
 namespace Jde::Opc{
-	struct ΓOPC NodeId : UA_ExpandedNodeId{
-		NodeId()ι:UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{}
-		NodeId( UA_NodeId&& x )ι:UA_ExpandedNodeId{move(x), UA_EXPANDEDNODEID_NULL.namespaceUri, UA_EXPANDEDNODEID_NULL.serverIndex}{}
-		NodeId( const UA_NodeId& x )ι:NodeId{}{ UA_NodeId_copy( &x, &nodeId ); }
-		NodeId( const UA_ExpandedNodeId& x )ι:NodeId{}{ UA_ExpandedNodeId_copy( &x, this ); }
-		NodeId( const flat_map<string,string>& x )ε;//rest params
-		explicit NodeId( const jvalue& j )ε;
-		NodeId( UA_UInt32 numeric )ι:NodeId{UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, {numeric}}}{}
-		NodeId( const NodeId& x )ι;
-		NodeId( Proto::ExpandedNodeId&& x )ι;
-		NodeId( NodeId&& x )ι;
-		NodeId( DB::Row& r, uint8 nsIndex, bool extended=false )ε;
-		Ω ToNodes( google::protobuf::RepeatedPtrField<Proto::ExpandedNodeId>&& proto )ι->flat_set<NodeId>;
-		α operator=( NodeId&& x )ι->NodeId&;
-		~NodeId(){ Clear(); }
-		α operator<( const NodeId& x )Ι->bool;
-		α operator=( const NodeId& x )ι->NodeId&;
+	struct ΓOPC ExNodeId : UA_ExpandedNodeId{
+		ExNodeId()ι:UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{}
+		ExNodeId( UA_NodeId&& x )ι:UA_ExpandedNodeId{move(x), UA_EXPANDEDNODEID_NULL.namespaceUri, UA_EXPANDEDNODEID_NULL.serverIndex}{}
+		ExNodeId( const UA_NodeId& x )ι:ExNodeId{}{ UA_NodeId_copy( &x, &nodeId ); }
+		ExNodeId( const UA_ExpandedNodeId& x )ι:ExNodeId{}{ UA_ExpandedNodeId_copy( &x, this ); }
+		ExNodeId( const flat_map<string,string>& x )ε;//rest params
+		explicit ExNodeId( const jvalue& j )ε;
+		ExNodeId( UA_UInt32 numeric )ι:ExNodeId{UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, {numeric}}}{}
+		ExNodeId( const ExNodeId& x )ι;
+		//NodeId( Proto::ExpandedNodeId&& x )ι;
+		ExNodeId( ExNodeId&& x )ι;
+		ExNodeId( DB::Row& r, uint8 nsIndex, bool extended=false )ε;
+		α operator=( ExNodeId&& x )ι->ExNodeId&;
+		~ExNodeId(){ Clear(); }
+		α operator<( const ExNodeId& x )Ι->bool;
+		α operator=( const ExNodeId& x )ι->ExNodeId&;
 		α SetNodeId( UA_NodeId&& x )ι->void;
 		β InsertParams( bool extended )Ι->vector<DB::Value>;
 
@@ -43,17 +42,15 @@ namespace Jde::Opc{
 		α Copy()Ι->UA_NodeId;
 		α Move()ι->UA_NodeId;
 		α ToJson()Ι->jobject;
-		Ω ToJson( flat_set<NodeId> nodes )ι->jarray{ jarray j; for_each(nodes, [&j](const auto& n){ j.push_back( n.ToJson() ); }); return j; }
-		α ToProto()Ι->Proto::ExpandedNodeId;
-		α ToNodeProto()Ι->Proto::NodeId;
+		Ω ToJson( flat_set<ExNodeId> nodes )ι->jarray{ jarray j; for_each(nodes, [&j](const auto& n){ j.push_back( n.ToJson() ); }); return j; }
 		α to_string()Ι->string;
 	};
-	Ξ operator==( const NodeId& x, const NodeId& y )ι->bool{ return !(x<y) && !(y<x); }
+	Ξ operator==( const ExNodeId& x, const ExNodeId& y )ι->bool{ return !(x<y) && !(y<x); }
 	α ToJson( const UA_NodeId& nodeId )ι->jobject;
 	α ToJson( const UA_ExpandedNodeId& nodeId )ι->jobject;
 
 	struct NodeIdHash{
-		uint operator()(const NodeId& n)Ι;
+		uint operator()(const ExNodeId& n)Ι;
 	};
 }
 #endif

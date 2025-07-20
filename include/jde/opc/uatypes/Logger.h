@@ -1,4 +1,6 @@
 ﻿#pragma once
+#ifndef LOGGER_H
+#define LOGGER_H
 #include <open62541/server.h>
 
 namespace Jde::Opc{
@@ -34,3 +36,4 @@ namespace Jde::Opc{
 		Logger( Handle context=0 )ι;
 	};
 }
+#endif

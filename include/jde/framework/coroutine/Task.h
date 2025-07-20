@@ -57,7 +57,6 @@ namespace Jde{
 
 	template<class TResult>
 	struct TTask final{
-		using Expected=variant<up<IException>,TResult>;
 		struct promise_type : IExpectedPromise<TTask<TResult>, TResult, up<IException>>
 		{};
 	};

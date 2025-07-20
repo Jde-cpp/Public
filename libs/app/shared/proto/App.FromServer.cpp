@@ -1,9 +1,10 @@
 #include <jde/app/shared/proto/App.FromServer.h>
+#include <jde/framework/io/proto.h>
 #include <jde/db/Row.h>
-#include <jde/ql/types/TableQL.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/Column.h>
-#include <jde/framework/io/proto.h>
+#include <jde/ql/types/TableQL.h>
+#include <jde/web/Jwt.h>
 
 #define let const auto
 
@@ -28,11 +29,13 @@ namespace Jde::App{
 		t.add_messages()->set_request_id( requestId );
 		return t;
 	}
-	α FromServer::ConnectionInfo( AppPK appPK, AppInstancePK instancePK, RequestId clientRequestId )ι->Proto::FromServer::Transmission{
+	α FromServer::ConnectionInfo( AppPK appPK, AppInstancePK instancePK, RequestId clientRequestId, const Crypto::PublicKey& appServerPubKey )ι->Proto::FromServer::Transmission{
 		return setMessage( clientRequestId, [&](auto& m){
 			auto& connectionInfo = *m.mutable_connection_info();
 			connectionInfo.set_app_pk( appPK );
 			connectionInfo.set_instance_pk( instancePK );
+			connectionInfo.set_certificate_modulus( {appServerPubKey.Modulus.begin(), appServerPubKey.Modulus.end()} );
+			connectionInfo.set_certificate_exponent( {appServerPubKey.Exponent.begin(), appServerPubKey.Exponent.end()} );
 		});
 	}
 
@@ -53,7 +56,11 @@ namespace Jde::App{
 			proto.set_what( move(e) );
 		});
 	}
-
+	α FromServer::Jwt( Web::Jwt&& jwt, RequestId requestId )ι->Proto::FromServer::Transmission{
+		return setMessage( requestId, [&](auto& m){
+			m.set_jwt( jwt.Payload() );
+		});
+	}
 	α FromServer::ToStatus( AppPK appId, AppInstancePK instanceId, str hostName, Proto::FromClient::Status&& input )ι->Proto::FromServer::Status{
 		Proto::FromServer::Status output;
 		output.set_application_id( (google::protobuf::uint32)appId );

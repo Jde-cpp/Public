@@ -13,16 +13,24 @@ namespace Jde{
 		β await_ready()ι->bool{ return false; }
 		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }  //msvc internal compiler error if virtual.
 		β await_resume()ε->TResult{ AwaitResume(); return TResult{}; }
-		α ResumeExp( IException&& e )ι{ ASSERT(Promise()); Promise()->ResumeExp( move(e), _h ); }
-		α ResumeExp( exception&& e )ι{ ASSERT(Promise()); Promise()->ResumeExp( move(e), _h ); }
-		α Resume()ι{ ASSERT(_h); _h.resume(); }
+		α ResumeExp( IException&& e )ι{
+			ASSERT(Promise());
+			Promise()->ResumeExp( move(e), _h );
+		}
+		α ResumeExp( exception&& e )ι{
+			ASSERT( Promise() );
+			Promise()->ResumeExp( move(e), _h );
+		}
+		α Resume()ι{ ASSERT(_h); auto h=_h; _h=nullptr; h.resume(); }
 		α Source()ι->SL{ return _sl; }
 	protected:
 		α SetError( IException&& e )ι{ ASSERT(Promise()); Promise()->SetExp( move(e) ); }
 		β Suspend()ι->void{};
 		α AwaitResume()ε->void{
-			if( up<IException> e = Promise() ? Promise()->MoveExp() : nullptr; e )
+			if( up<IException> e = Promise() ? Promise()->MoveExp() : nullptr; e ){
+				_h = nullptr;
 				e->Throw();
+			}
 		}
 		Handle _h{};
 		TPromise* Promise(){ return _h ? &_h.promise() : nullptr; }
@@ -52,7 +60,9 @@ namespace Jde{
 			throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Critical, "promise is null" };
 		if( !base::Promise()->Value() )
 			throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Critical, "Value is null" };
-		return std::move( *base::Promise()->Value() );
+		Result result = std::move( *base::Promise()->Value() );
+		base::_h = nullptr;
+		return result;
 	}
 
 	template<class Result,class TExecuteResult=void, class TTask=Jde::TTask<Result>>

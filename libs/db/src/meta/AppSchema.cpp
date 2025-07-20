@@ -48,6 +48,20 @@ namespace Jde::DB{
 		for_each( self->Tables, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
 		for_each( self->Views, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
 	}
+	α AppSchema::GetTablePtr( const vector<sp<AppSchema>>& schemas, str tableName, SL sl )ε->sp<Table>{
+		for( let& schema : schemas ){
+			if( let table = schema->FindTable(tableName) )
+				return table;
+		}
+		throw Exception{ sl, "Could not find table '{}'", tableName };
+	}
+	α AppSchema::GetViewPtr( const vector<sp<AppSchema>>& schemas, str viewName, SL sl )ε->sp<View>{
+		for( let& schema : schemas ){
+			if( let view = schema->FindView(viewName) )
+				return view;
+		}
+		throw Exception{ sl, "Could not find view '{}'", viewName };
+	}
 	α AppSchema::ConfigPath()Ι->string{
 		let catalog = DBSchema->Catalog;
 		let cluster = catalog->Cluster;

@@ -1,7 +1,7 @@
 //#include <boost/beast/ssl.hpp>
 #include "mocks/ServerMock.h"
 #include <jde/web/client/http/ClientHttpAwait.h>
-#include <jde/web/client/Jwt.h>
+#include <jde/web/Jwt.h>
 #include "../../../../Framework/source/math/MathUtilities.h"
 #include <jde/framework/Stopwatch.h>
 #include <jde/framework/thread/execution.h>
@@ -22,7 +22,7 @@ namespace Jde::Web{
 
 	struct SocketTests : ::testing::Test{
 	protected:
-		SocketTests():_pRequestHandler(ms<Mock::RequestHandler>()) {}
+		SocketTests():_pRequestHandler(ms<Mock::RequestHandler>(jobject{})) {}
 		~SocketTests() override{}
 
 		Ω SetUpTestCase()->void;
@@ -37,7 +37,7 @@ namespace Jde::Web{
 	SessionPK _sessionId;
 	α SocketTests::SetUpTestCase()->void{
 		Stopwatch _{ "SocketTests::SetUpTestCase", ELogTags::Test };
-		Mock::Start();
+		Mock::Start( Settings::AsObject("/http") );
 	}
 	α SocketTests::TearDownTestCase()->void{
 		Stopwatch _{ "SocketTests::TearDownTestCase", ELogTags::Test };
@@ -89,8 +89,8 @@ namespace Jde::Web{
 	α CreateSession( optional<ssl::context> ctx=nullopt )->VoidTask{
 		if( _sessionId==0 ){
 			Crypto::CryptoSettings settings{ "http/ssl" };
-			auto [mod,exp] = Crypto::ModulusExponent( settings.PublicKeyPath );
-			Web::Jwt jwt{ move(mod), move(exp), "testUser", "testUserCallSign", "127.0.0.1", {}/*description*/, settings.PrivateKeyPath };
+			auto publicKey = Crypto::ReadPublicKey( settings.PublicKeyPath );
+			Web::Jwt jwt{ move(publicKey), "testUser", "testUserCallSign", 0, "127.0.0.1", Clock::now()+1h, {}/*description*/, settings.PrivateKeyPath };
 			auto await = ClientHttpAwait{ Host, "/loginCertificate", serialize(jobject{{"jwt", jwt.Payload()}}), Port };
 			let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 			_sessionId = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );

@@ -51,14 +51,18 @@ namespace Jde::DB{
 		if( uint index = prefix.find('.'); index!=string::npos )
 			prefix = index<prefix.size()-2 ? string{} : prefix.substr( index+1 );
 
-		auto db = ms<SchemaDdl>( config.DBSchema->Name, prefix, config.DS()->ServerMeta(), ql );
 		auto catalog = ms<DB::Catalog>( config.DS() );
+		auto db = ms<SchemaDdl>( config.DBSchema->Name, prefix, config.DS()->ServerMeta(), ql ); //dbSchema
 		db->Initialize( catalog, db );
+		catalog = nullptr;
 
 		db->SyncTables( config );
 		db->SyncScripts( config, initConfig );
 		db->SyncData( config, Json::AsObject(initConfig, "tables") );
 		db->SyncFKs( config );
+		wp<AppSchema> appSchema = db->AppSchemas.begin()->second;
+		wp<SchemaDdl> db2 = db;
+		db = nullptr;
 	}
 
 	α SchemaDdl::SyncFKs( const AppSchema& config )ε->void{
@@ -94,14 +98,17 @@ namespace Jde::DB{
 			const fs::path scriptRoot{ scriptDir };
 			Debug{ ELogTags::App, "Processing '{}'.  Prefixes: [{}], extension: {}", scriptRoot.string(), Str::Join(prefixes, ", "), extension };
 			THROW_IF( !fs::exists(scriptRoot) || !fs::is_directory(scriptRoot), "Script path '{}' does not exist.", scriptRoot.string() );
+			flat_map<string,fs::path> files;  //abc order
 			for( let& entry : fs::directory_iterator(scriptRoot) ){
 				if( let& path = entry.path();
 					!entry.is_directory()
 						&& path.extension().string().starts_with(extension)
 						&& (prefixes.empty() || find_if( prefixes, [&](let& x){ return path.filename().string().starts_with(x);})!=prefixes.end()) ){
-					process( entry.path() );
+					files.emplace( path.filename().string(), path );
 				}
 			}
+			for( let& [fileName, file] : files )
+				process( file );
 		}
 	}
 

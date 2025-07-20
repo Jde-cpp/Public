@@ -1,13 +1,13 @@
 #include <jde/web/server/SettingQL.h>
 #include <jde/framework/coroutine/Await.h>
-#include <jde/web/server/IApplicationServer.h>
+#include <jde/app/IApp.h>
 #include <jde/web/server/Sessions.h>
 #define let const auto
 
 namespace Jde::Web::Server{
 
 	struct SettingQLAwait final : TAwait<jvalue>{
-		SettingQLAwait( const QL::TableQL& query, SL sl )ι: TAwait<jvalue>{ sl }, _query{ query }{}
+		SettingQLAwait( const QL::TableQL& query, sp<App::IApp> appClient, SL sl )ι: TAwait<jvalue>{ sl }, _appClient{move(appClient)}, _query{ query }{}
 
 		α await_ready()ι->bool override{
 			_result = _query.DefaultResult();
@@ -19,7 +19,7 @@ namespace Jde::Web::Server{
 					if( target=="restSessionTimeout" )
 						jv = Chrono::ToString<steady_clock::duration>( Sessions::RestSessionTimeout() );
 					else if( target=="serverInstance" ){
-						jv = IApplicationServer::InstancePK();
+						jv = _appClient->InstancePK();
 					}else{
 						let value = Settings::FindString( Ƒ("/http/clientSettings/{}", target) );
 						jv = value ? jvalue{ *value } : jvalue{ nullptr };
@@ -43,12 +43,14 @@ namespace Jde::Web::Server{
 				throw *move( _exception );
 			return _result;
 		}
-		QL::TableQL _query;
+	private:
+		sp<App::IApp> _appClient;
 		up<exception> _exception;
+		QL::TableQL _query;
 		jvalue _result;
 	};
 
 	α SettingQL::Select( const QL::TableQL& query, UserPK /*executer*/, SL sl )ι->up<TAwait<jvalue>>{
-		return query.JsonName.starts_with( "setting" ) ? mu<SettingQLAwait>( query, sl ) : nullptr;
+		return query.JsonName.starts_with( "setting" ) ? mu<SettingQLAwait>( query, _appClient, sl ) : nullptr;
 	}
 }

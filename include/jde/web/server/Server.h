@@ -3,9 +3,9 @@
 
 #define Φ ΓWS auto
 namespace Jde::Web::Server{
-	struct IRequestHandler; struct IApplicationServer;
+	struct IRequestHandler;
 	α MaxLogLength()ι->uint16;
-	Φ Start( up<IRequestHandler>&& handler, up<Server::IApplicationServer>&& server )ε->void;
-	Φ Stop( bool terminate=false )ι->void;
+	Φ Start( sp<IRequestHandler> handler )ε->void;
+	Φ Stop( sp<IRequestHandler>&& handler, bool terminate=false )ι->void;
 }
 #undef Φ

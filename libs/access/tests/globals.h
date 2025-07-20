@@ -2,13 +2,19 @@
 #include <jde/framework/io/json.h>
 
 namespace Jde::DB{ struct AppSchema; struct IDataSource; struct Table; }
+namespace Jde::QL{ struct LocalQL; }
+namespace Jde::Access{ struct Authorize; }
 namespace Jde::Access::Tests{
 	constexpr ELogTags _tags{ ELogTags::Test };
 	using ResourcePK=uint16;
 
-	α SetSchema( sp<DB::AppSchema> schema )ι->void;
+	α Authorizer()ι->sp<Access::Authorize>;
+	α QL()ι->QL::LocalQL&;
+	α QLPtr()ι->sp<QL::LocalQL>;
+	α SetQL( sp<QL::LocalQL> ql )ι->void;
 	α GetTable( str name )ι->sp<DB::Table>;
 	α DS()ι->DB::IDataSource&;
+	α Schemas()ι->vector<sp<DB::AppSchema>>;
 
 	α Add( const DB::Table& table, uint pk, vector<uint> members, UserPK userPK )ε->void;
 	α AddToGroup( GroupPK id, vector<IdentityPK> members, UserPK userPK )ε->void;

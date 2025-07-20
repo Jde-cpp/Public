@@ -26,7 +26,7 @@ namespace Jde::Web::Client{
 		beast::flat_buffer _buffer;
 		CoLock _writeLock;
 		net::io_context& _ioc;
-		CoGuard _writeGuard;
+		optional<CoGuard> _writeGuard;
 		string _writeBuffer;
 		Stream _ws;
 	};

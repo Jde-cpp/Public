@@ -3,13 +3,18 @@
 #include <jde/ql/ql.h>
 
 namespace Jde::Access{
+	struct AccessListener; struct Identities;
 	struct ConfigureAwait : VoidAwait<>{
-		ConfigureAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, UserPK executer )ι:
-			Executer{executer},QlServer{qlServer}, Schemas{schemas}{};
-		α Suspend()ι->void override;
+		ConfigureAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, sp<Authorize> authorizer, UserPK executer, sp<AccessListener> listener, SRCE )ι:
+			VoidAwait<>{sl}, Authorizer{authorizer}, Executer{executer}, QlServer{qlServer}, Schemas{schemas}, Listener{listener}{};
+		α Suspend()ι->void override{ SyncResources(); }
+		α SyncResources()ι->VoidAwait<>::Task;
+		α LoadUsers()ι->TAwait<Identities>::Task;
 
+		sp<Authorize> Authorizer;
 		UserPK Executer;
 		sp<QL::IQL> QlServer;
 		vector<sp<DB::AppSchema>> Schemas;
+		sp<AccessListener> Listener;
 	};
 }

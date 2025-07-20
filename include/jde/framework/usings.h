@@ -31,6 +31,7 @@ namespace Jde{
 	using std::make_shared;//refactor remove
 	using std::mutex;
 	Τ using sp = std::shared_ptr<T>;
+	Τ using wp = std::weak_ptr<T>;
 	using std::string;
 	using std::tuple;
 	template <typename T, typename D = std::default_delete<T>> using up = std::unique_ptr<T,D>;

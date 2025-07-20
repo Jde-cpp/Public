@@ -29,7 +29,7 @@ namespace Jde::Opc{
 	Ξ ToGuid( UA_Guid ua )ι->uuid{ uuid uuid; ::memcpy( &uuid, &ua, sizeof(UA_Guid) ); return uuid; }
 	Ξ ToBinaryString( const UA_Guid& ua )ι->string{ return {(const char*)&ua, sizeof(UA_Guid)}; }
 	using ByteStringPtr = up<UA_ByteString,decltype(&UA_ByteString_delete)>;
-	Ξ ToUAByteString( const vector<byte>&& bytes )->ByteStringPtr{
+	Ŧ ToUAByteString( const T&& bytes )->ByteStringPtr{
 		ByteStringPtr y = up<UA_ByteString,decltype(&UA_ByteString_delete)>{ UA_ByteString_new(), UA_ByteString_delete };
 		UA_ByteString_allocBuffer( y.get(), bytes.size() );
 		memcpy( y->data, bytes.data(), bytes.size() );

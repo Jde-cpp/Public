@@ -4,7 +4,7 @@
 
 #define let const auto
 namespace Jde::Opc{
-	NodeId::NodeId ( const NodeId& x )ι:
+	ExNodeId::ExNodeId ( const ExNodeId& x )ι:
 		UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{
 		nodeId = x.Copy();
 		if( x.namespaceUri.length )
@@ -12,7 +12,7 @@ namespace Jde::Opc{
 		serverIndex = x.serverIndex;
 	}
 
-	NodeId::NodeId( const flat_map<string,string>& x )ε:
+	ExNodeId::ExNodeId( const flat_map<string,string>& x )ε:
 		UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{
 		if( auto p = x.find("nsu"); p!=x.end() )
 			namespaceUri = UA_String_fromChars( p->second.c_str() );
@@ -89,7 +89,7 @@ namespace Jde::Opc{
 			THROW( "Could not parse nodeId: {}", serialize(v) );
 		return nodeId;
 	}
-	NodeId::NodeId( const jvalue& j )ε:
+	ExNodeId::ExNodeId( const jvalue& j )ε:
 		UA_ExpandedNodeId{
 			getNodeId(j),
 			UA_String_fromChars(string{Json::FindDefaultSV(j, "nsu")}.c_str()),
@@ -97,37 +97,15 @@ namespace Jde::Opc{
 		}
 	{}
 
-	NodeId::NodeId( NodeId&& x )ι:
+	ExNodeId::ExNodeId( ExNodeId&& x )ι:
 		UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{
 		nodeId = x.Move();
 		namespaceUri = x.namespaceUri;
 		serverIndex = x.serverIndex;
 		UA_ExpandedNodeId_init( &x );
 	}
-	NodeId::NodeId( Proto::ExpandedNodeId&& x )ι{
-		const auto& proto = x.node();
-		nodeId.namespaceIndex = (int16)proto.namespace_index();
-		if( proto.has_numeric() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
-			nodeId.identifier.numeric = proto.numeric();
-		}
-		else if( proto.has_string() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
-			nodeId.identifier.string = UA_String_fromChars( proto.string().c_str() );
-		}
-		else if( proto.has_byte_string() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
-			UA_ByteString_allocBuffer( &nodeId.identifier.byteString, proto.byte_string().size() );
-			memcpy( nodeId.identifier.byteString.data, proto.byte_string().data(), proto.byte_string().size() );
-		}
-		else if( proto.has_guid() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
-			memcpy( &nodeId.identifier.guid, proto.guid().data(), std::min(sizeof(UA_Guid),proto.guid().size()) );
-		}
-		namespaceUri = UA_String_fromChars( x.namespace_uri().c_str() );
-		serverIndex = x.server_index();
-	}
-	NodeId::NodeId( DB::Row& r, uint8 index, bool extended )ε{
+
+	ExNodeId::ExNodeId( DB::Row& r, uint8 index, bool extended )ε{
 		nodeId.namespaceIndex = r.Get<uint16>( index );
 		if( !r.IsNull(index+1) ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
@@ -151,9 +129,9 @@ namespace Jde::Opc{
 		namespaceUri = extended ? UA_String_fromChars( r.GetString(index+5).c_str() ) : UA_STRING_NULL;
 		serverIndex = extended ? r.GetUInt32Opt( index+6 ).value_or( 0 ) : 0;
 	}
-	α NodeId::IsSystem( const UA_NodeId& id )ι->bool{ return !id.namespaceIndex && id.identifierType==UA_NODEIDTYPE_NUMERIC && id.identifier.numeric<=32750; }
+	α ExNodeId::IsSystem( const UA_NodeId& id )ι->bool{ return !id.namespaceIndex && id.identifierType==UA_NODEIDTYPE_NUMERIC && id.identifier.numeric<=32750; }
 
-	α NodeId::InsertParams( bool extended )Ι->vector<DB::Value>{
+	α ExNodeId::InsertParams( bool extended )Ι->vector<DB::Value>{
 		vector<DB::Value> params; params.reserve( 64 );
 		using enum UA_NodeIdType;
 		params.emplace_back( nodeId.namespaceIndex );
@@ -168,7 +146,7 @@ namespace Jde::Opc{
 		return params;
 	}
 
-	α NodeId::SetNodeId( UA_NodeId&& x )ι->void{
+	α ExNodeId::SetNodeId( UA_NodeId&& x )ι->void{
 		nodeId.namespaceIndex = x.namespaceIndex;
 		nodeId.identifierType = x.identifierType;
 		nodeId.identifier = x.identifier;
@@ -177,7 +155,7 @@ namespace Jde::Opc{
 		UA_NodeId_clear(&x);
 	}
 
-	α NodeId::operator=( NodeId&& x )ι->NodeId&{
+	α ExNodeId::operator=( ExNodeId&& x )ι->ExNodeId&{
 		nodeId = x.Move();
 		namespaceUri=x.namespaceUri;
 		serverIndex=x.serverIndex;
@@ -185,13 +163,7 @@ namespace Jde::Opc{
 		return *this;
 	}
 
-	α NodeId::ToNodes( google::protobuf::RepeatedPtrField<Proto::ExpandedNodeId>&& proto )ι->flat_set<NodeId>{
-		flat_set<NodeId> nodes;
-		for( auto& node : proto )
-			nodes.emplace( move(node) );
-		return nodes;
-	}
-	α NodeId::Clear()ι->void{
+	α ExNodeId::Clear()ι->void{
 		if( namespaceUri.length )
 			UA_String_clear( &namespaceUri );
 		if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_STRING && nodeId.identifier.string.length )
@@ -200,7 +172,7 @@ namespace Jde::Opc{
 			UA_ByteString_clear( &nodeId.identifier.byteString );
 	}
 
-	α NodeId::operator=( const NodeId& x )ι->NodeId&{
+	α ExNodeId::operator=( const ExNodeId& x )ι->ExNodeId&{
 		Clear();
 		nodeId = x.Copy();
 		if( x.namespaceUri.length )
@@ -208,7 +180,7 @@ namespace Jde::Opc{
 		serverIndex = x.serverIndex;
 		return *this;
 	}
-	α NodeId::operator<( const NodeId& x )Ι->bool{
+	α ExNodeId::operator<( const ExNodeId& x )Ι->bool{
 		return
 			ToSV(namespaceUri)==ToSV(x.namespaceUri) ?
 				serverIndex==x.serverIndex ?
@@ -224,7 +196,7 @@ namespace Jde::Opc{
 			: ToSV(namespaceUri)<ToSV(x.namespaceUri);
 	}
 
-	α NodeId::Copy()Ι->UA_NodeId{
+	α ExNodeId::Copy()Ι->UA_NodeId{
 		UA_NodeId y{};
     y.namespaceIndex = nodeId.namespaceIndex;
     y.identifierType = nodeId.identifierType;
@@ -239,7 +211,7 @@ namespace Jde::Opc{
 		return y;
 	}
 
-	α NodeId::Move()ι->UA_NodeId{
+	α ExNodeId::Move()ι->UA_NodeId{
 		UA_NodeId y{};
     y.namespaceIndex = nodeId.namespaceIndex;
     y.identifierType = nodeId.identifierType;
@@ -255,36 +227,14 @@ namespace Jde::Opc{
 		return y;
 	}
 
-	α NodeId::ToJson()Ι->jobject{
+	α ExNodeId::ToJson()Ι->jobject{
 		return Opc::ToJson( *this );
 	}
 
-	α NodeId::to_string()Ι->string{
+	α ExNodeId::to_string()Ι->string{
 		return serialize( ToJson() );
 	}
-	α NodeId::ToProto()Ι->Proto::ExpandedNodeId{
-		Proto::ExpandedNodeId y;
-		if( namespaceUri.length )
-			y.set_allocated_namespace_uri( new string{ToSV(namespaceUri)} );
-		y.set_server_index( serverIndex );
-		y.set_allocated_node( new Proto::NodeId{ToNodeProto()} );
-		return y;
-	}
-	α NodeId::ToNodeProto()Ι->Proto::NodeId{
-		Proto::NodeId y;
-		y.set_namespace_index( nodeId.namespaceIndex );
-		if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_NUMERIC )
-			y.set_numeric( nodeId.identifier.numeric );
-		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_STRING )
-			y.set_allocated_string( new string{ToSV(nodeId.identifier.string)} );
-		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
-			y.set_allocated_byte_string( new string{ToSV(nodeId.identifier.byteString)} );
-		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_GUID )
-			y.set_guid( ToBinaryString(nodeId.identifier.guid) );
-		return y;
-	}
-
-	std::size_t NodeIdHash::operator()(const NodeId& n)Ι{
+	std::size_t NodeIdHash::operator()(const ExNodeId& n)Ι{
 		std::size_t seed = 0;
 		boost::hash_combine( seed, ToSV(n.namespaceUri) );
 		boost::hash_combine( seed, n.serverIndex );

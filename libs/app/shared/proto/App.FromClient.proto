@@ -32,9 +32,10 @@ enum EFields{
 	SessionId=0x4000;
 }
 
-enum ERequestIdType{
+enum ERequestType{
 	ERequestIdTypeNone = 0;
 	UnsubscribeLogs = 1;
+	Jwt = 2;
 }
 
 message Instance{
@@ -94,21 +95,21 @@ message Unsubscription{
 message Message{
 	uint32 request_id=1;
 	oneof Value{
-		AddSession add_session=2;//called from authenticators like iotWebsocket
+		AddSession add_session=2;//called from authenticators like OpcGateway
 		Query query=3;
 		Instance instance = 4;
 		LogEntry log_entry = 5;
-		uint32 session_id=6;  //Attach session id for the socket.
-		uint32 session_info=7;//called from other apps/web page to request information about session TODO graphql
+		uint32 session_id = 6;  //Attach session id for the socket.
+		uint32 session_info = 7;//called from other apps/web page to request information about session TODO graphql
 		Status status = 8; //send current app status.
 		StringValue string_value = 9; //send a string.
-		Jde.App.Proto.StringPKs request_strings=10;
+		Jde.App.Proto.StringPKs request_strings = 10;
 		bool subscribe_status = 11;//subscribe to application statuses.
 		string subscribe_logs = 12;//subscribe to application logs.  TODO graphql
 		Jde.Proto.Exception exception = 13;
-		ERequestIdType request_id_type = 14;//Just the request id is needed.
-		string subscription=15;
-		Unsubscription unsubscription=16;
+		ERequestType request_type = 14;//Just the request id is needed.
+		string subscription = 15;
+		Unsubscription unsubscription = 16;
 
 		ForwardExecution forward_execution = 31;//webPage->appServer to call execute with creds.
 		ForwardExecution forward_execution_anonymous = 32;//call execute with no creds.

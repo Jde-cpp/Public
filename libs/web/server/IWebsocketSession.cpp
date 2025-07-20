@@ -81,8 +81,8 @@ namespace Jde::Web::Server{
 		_listener = nullptr;
 	}
 
-	α IWebsocketSession::AddSubscription( string&& query, RequestId /*requestId*/, SL /*sl*/ )ε->vector<QL::SubscriptionId>{
-		auto subs = QL::ParseSubscriptions( move(query) );
+	α IWebsocketSession::AddSubscription( string&& query, RequestId /*requestId*/, SL sl )ε->vector<QL::SubscriptionId>{
+		auto subs = QL::ParseSubscriptions( move(query), Schemas(), sl );
 		vector<QL::SubscriptionId> subscriptionIds;
 		for( auto& sub : subs )
 			subscriptionIds.emplace_back( sub.Id );

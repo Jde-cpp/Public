@@ -99,7 +99,7 @@ namespace Jde::Opc::Server {
 			ref->SourcePK = _node.PK;
 			try{
 				co_await DS().Execute( DB::Sql{
-					Ƒ("INSERT INTO {}(source_node_id, target_node_id, ref_type_id, is_forward) VALUES (?,?,?,?)", GetSchema().DBName("references")),
+					Ƒ("INSERT INTO {}(source_node_id, target_node_id, ref_type_id, is_forward) VALUES (?,?,?,?)", GetSchema().DBName("refs")),
 					{ {ref->SourcePK}, {ref->TargetPK}, {ref->RefTypePK}, {ref->IsForward} }
 				});
 				GetUAServer().AddReference( *ref );

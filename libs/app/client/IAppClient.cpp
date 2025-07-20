@@ -1,0 +1,54 @@
+#include <jde/app/client/IAppClient.h>
+#include <jde/framework/io/proto.h>
+#include <jde/ql/IQL.h>
+#include <jde/app/client/appClient.h>
+#include <jde/app/client/awaits/SocketAwait.h>
+
+#define let const auto
+namespace Jde::App::Client{
+	α IAppClient::QueryArray( string&& q, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
+		return QLServer()->QueryArray( move(q), UserPK(), returnRaw, sl );
+	}
+	α IAppClient::QueryObject( string&& q, bool returnRaw, SL sl )ε->up<TAwait<jobject>>{
+		return QLServer()->QueryObject( move(q), UserPK(), returnRaw, sl );
+	}
+	α IAppClient::QueryValue( string&& q, bool returnRaw, SL sl )ε->up<TAwait<jvalue>>{
+		return QLServer()->Query( move(q), UserPK(), returnRaw, sl );
+	}
+	α IAppClient::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Web::FromServer::SessionInfo>>{
+	 	return mu<Client::SessionInfoAwait>( sessionPK, _session, sl );
+	}
+	// α IAppClient::SessionInfoAwait( Web::Jwt&& jwt, SL sl )ι->Client::SessionInfoAwait{
+	// 	return Client::SessionInfoAwait{ move(jwt), sl };
+	// }
+	constexpr ELogTags _tags{ ELogTags::SocketClientWrite };
+	using Web::Client::ClientSocketAwait;
+	α IAppClient::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ε->ClientSocketAwait<Web::FromServer::SessionInfo>{
+		auto p = Session();
+		auto requestId = p->NextRequestId();
+		TRACESL( "AddSession domain: '{}', loginName: '{}', providerPK: {}, userEndPoint: '{}', isSocket: {}.", domain, loginName, providerPK, userEndPoint, isSocket );
+		return ClientSocketAwait<Web::FromServer::SessionInfo>{ FromClient::AddSession(domain, loginName, providerPK, userEndPoint, isSocket, requestId), requestId, p, sl };
+	}
+	α IAppClient::Jwt( SL sl )ε->ClientSocketAwait<Web::Jwt>{
+		auto p = Session();
+		auto requestId = p->NextRequestId();
+		TRACESL( "Jwt requestId: {}", requestId );
+		return ClientSocketAwait<Web::Jwt>{ FromClient::Jwt(requestId), requestId, p, sl };
+	}
+
+	α IAppClient::UpdateStatus()ι->void{
+		if( auto session = Process::ShuttingDown() ? nullptr : _session; session )
+			session->Write( FromClient::Status(StatusDetails()) );
+	}
+
+	α IAppClient::CloseSocketSession( SL sl )ι->VoidTask{
+		auto session = _session;
+		if( !session )
+			co_return;
+		let tags = ELogTags::Client | ELogTags::Socket;
+		Trace{ sl, tags, "ClosingSocketSession" };
+		co_await session->Close();
+		session = nullptr;
+		Information{ sl, tags, "ClosedSocketSession" };
+	}
+}

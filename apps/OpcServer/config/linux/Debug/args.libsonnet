@@ -21,7 +21,7 @@
 							},
 						},
 						debug:{
-							opcServer:{
+							opc:{
 								meta: "$(JDE_DIR)/Public/apps/OpcServer/config/opcServer-meta.jsonnet",
 								prefix: "opc_"  //test with null prefix, debug with prefix
 							},
