@@ -205,8 +205,6 @@ namespace Server{
 			req.SessionInfo = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false, reqHandler->AppServer() );
 		}
 		catch( IException& e ){
-			//Add error code.
-			//capture error code on client.
 			send( RestException<http::status::unauthorized>{move(e), move(req), "Could not get sessionInfo."}, move(stream) );
 			co_return;
 		}

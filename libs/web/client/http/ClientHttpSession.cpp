@@ -176,6 +176,7 @@ namespace Jde::Web::Client{
 		if( _log )
 			Trace{ _sl, _tags, "{}:{}{} - {}", Host, Port, target, body.substr(0, Client::MaxLogLength()) };
 		http::request<http::string_body> req{ *args.Verb, target, version };
+		req.set( http::field::host, Host );
 		req.set( http::field::user_agent, _userAgent );
 		if( args.ContentType.size() )
 			req.set( http::field::content_type, args.ContentType );

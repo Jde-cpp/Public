@@ -10,7 +10,7 @@ namespace Jde::Web{
 		Jwt( Crypto::PublicKey publicKey, str userName, str userTarget )ι: PublicKey{move(publicKey)}, UserName{userName}, UserTarget{userTarget}{}
 		α Payload()Ι->string;
 		α Aud()ι->string{ return Json::AsString( Body, "aud" ); }
-		α Iss()ι->string{ return Json::AsString( Body, "iss" ); }
+		α Iss()ι->sv{ return Json::FindDefaultSV( Body, "iss" ); }
 		string Kid;
 		jobject Body;
 		string HeaderBodyEncoded;

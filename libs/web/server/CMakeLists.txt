@@ -15,12 +15,12 @@ if( WIN32 )
 	target_compile_options( ${targetName} PRIVATE /bigobj )
 endif()
 
-file(GLOB sources *.cpp )
-file(GLOB headers   *.h ../../../jde/web/server/*.h )
+file( GLOB sources *.cpp auth/*.cpp )
+file( GLOB headers   *.h ../../../jde/web/server/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 target_link_libraries( ${targetName} protobuf::libprotobuf )
-target_link_libraries( ${targetName} Jde.QL Jde.Web.Client )
+target_link_libraries( ${targetName} Jde.QL Jde.Web.Client Jde.Access )
 
 target_precompile_headers( ${targetName}
   PRIVATE

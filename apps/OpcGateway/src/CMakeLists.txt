@@ -17,7 +17,6 @@ file( GLOB headers **/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${resources} ${headers} ${protos} )
 
 target_link_libraries( ${targetName} Jde.Web.Server Jde.App.Client Jde.Opc )
-#target_link_libraries( ${targetName} protobuf::libprotobuf )
 
 target_precompile_headers(${targetName}
 	PRIVATE
@@ -31,8 +30,3 @@ protobuf_generate(
 	TARGET ${targetName}
 	IMPORT_DIRS types/proto
 	PROTOC_OUT_DIR ${protoOutDir})
-
-#file( MAKE_DIRECTORY $ENV{JDE_DIR}/Public/include/jde/opc/types/proto )
-#add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/Opc.Common.pb.h" "$ENV{JDE_DIR}/Public/include/jde/opc/types/proto/Opc.Common.pb.h" COMMENT "mklink Opc.Common" )
-#add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/Opc.FromClient.pb.h" "$ENV{JDE_DIR}/Public/include/jde/opc/types/proto/Opc.FromClient.pb.h" COMMENT "mklink Opc.FromClient" )
-#add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/Opc.FromServer.pb.h" "$ENV{JDE_DIR}/Public/include/jde/opc/types/proto/Opc.FromServer.pb.h" COMMENT "mklink Opc.FromServer" )

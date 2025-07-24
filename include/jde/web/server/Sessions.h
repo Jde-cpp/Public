@@ -6,6 +6,7 @@
 
 #define Φ auto ΓWS
 namespace Jde::App{ struct IApp; }
+namespace Jde::Web{ struct Jwt; }
 namespace Jde::Web::FromServer{ struct SessionInfo; }
 //Holds web session information.
 namespace Jde::Web::Server{
@@ -44,6 +45,9 @@ namespace Jde::Web::Server{
 			α await_resume()ε->sp<SessionInfo>;
 		private:
 			α Execute()ι->TTask<Web::FromServer::SessionInfo>;
+			α FromSessionId()ι->TTask<Web::FromServer::SessionInfo>;
+			α FromJwt( Web::Jwt&& jwt )ι->TTask<UserPK>;
+			α CreateSession( UserPK userPK={} )ι->void;
 			sp<App::IApp> _appClient; string _authorization; string _endpoint; bool _socket; bool _throw;
 		};
 	}

@@ -293,7 +293,7 @@ namespace Jde::Access::Server{
 	}
 
 	α AclHook::Select( const QL::TableQL& ql, UserPK executer, SL sl )ι->HookResult{
-		return ql.DBTable->Name=="acl"
+		return ql.DBTableName()=="acl"
 			? mu<AclQLSelectAwait>( ql, executer, sl )
 			: nullptr;
 	}

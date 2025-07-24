@@ -88,8 +88,11 @@ namespace Jde::Web::Client{
 	}
 	α ClientHttpAwait::await_resume()ε->ClientHttpRes{
 		ClientHttpRes res = base::await_resume();
-		if( res.IsError() )
+		if( res.IsError() ){
+			for( auto& h : res.Headers() )
+				Trace{ ELogTags::Test, "{}: {}", h.name_string(), h.value() };
 			throw ClientHttpResException( move(res) );
+		}
 		return res;
 	}
 

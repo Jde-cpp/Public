@@ -48,7 +48,7 @@ namespace Jde::App::Client{
 		try{
 			jobject j{ {"jwt", _jwt.Payload()} };
 			Trace{ ELogTags::App, "Logging in {}:{}", Host(), Port()};
-			auto res = co_await ClientHttpAwait{ Host(), "/loginCertificate", serialize(j), Port() };
+			auto res = co_await ClientHttpAwait{ Host(), "/login", serialize(j), Port() };
 			auto sessionPK = Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 			THROW_IF( !sessionPK, "Invalid authorization: {}.", res[http::field::authorization] );
 			Resume( move(*sessionPK) );

@@ -1,8 +1,8 @@
 import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
-import { Role, RoleNK } from '../model/Role';
 import { inject, Inject, Injectable } from '@angular/core';
 import { IErrorService, IProfile, Settings, TableSchema } from 'jde-framework';
-import { AccessService } from 'jde-access';
+import { Role, RoleNK } from '../model/Role';
+import { AccessService } from '../services/access.service';
 
 export class IRoleData{
 	profile:Settings<UserSettings>;

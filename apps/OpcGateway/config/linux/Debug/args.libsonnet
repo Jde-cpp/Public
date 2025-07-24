@@ -23,7 +23,7 @@
 							}
 						},
 						debug:{
-							opc:{
+							gateway:{
 								meta: "$(JDE_DIR)/IotWebsocket/config/opcGateway-meta.jsonnet",
 								prefix: "opc_"  //test with null prefix, debug with prefix
 							}

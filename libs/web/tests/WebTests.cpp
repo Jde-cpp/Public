@@ -48,6 +48,21 @@ namespace Jde::Web{
 		ASSERT_TRUE( res[http::field::server].contains("SSL") );
 	}
 
+	TEST_F( WebTests, GoogleCerts ){
+		auto await = ClientHttpAwait{ "www.googleapis.com", "/oauth2/v3/certs", 443, {.ContentType="", .Verb=http::verb::get} };
+		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
+		let certs = res.Json();
+		ASSERT_TRUE( certs.contains("keys") );
+		let keys = certs.at("keys").as_array();
+		ASSERT_GT( keys.size(), 0 );
+		ASSERT_TRUE( keys[0].is_object() );
+	}
+	TEST_F( WebTests, GZip ){
+		auto await = ClientHttpAwait{ "en.wikipedia.org", string{"/wiki/Madden_NFL_26"}, 443, {.ContentType="", .Verb=http::verb::get} };
+		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
+		ASSERT_TRUE( res[http::field::content_encoding].contains("gzip") );
+	}
+
 	TEST_F( WebTests, IsPlain ){
 		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post, .IsSsl=false} };
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );

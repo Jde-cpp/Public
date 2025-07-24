@@ -12,7 +12,7 @@ import { arraysEqual, cloneClassArray, DetailResolverData, Properties, IErrorSer
 import { RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
 import { Permission } from '../../model/Permission';
-import { AccessService } from 'jde-access';
+import { AccessService } from '../../services/access.service';
 import { Group, GroupPK } from '../../model/Group';
 import { User, UserPK } from '../../model/User';
 

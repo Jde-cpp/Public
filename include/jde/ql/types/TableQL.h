@@ -18,6 +18,7 @@ namespace Jde::QL{
 		TableQL( string jName, jobject args, const vector<sp<DB::AppSchema>>& schemas, bool system=false, SRCE )ε;
 
 		α AddFilter( const string& column, const jvalue& value )ι->void;
+		α DBTableName()Ι->str{ return DBTable ? DBTable->Name : Str::Empty(); }
 		α DefaultResult()Ι->jvalue{ return IsPlural() ? jvalue{jarray{}} : jvalue{jobject{}}; }
 		α EraseColumn( sv jsonName )ι->void{ Columns.erase( remove_if( Columns.begin(), Columns.end(), [&](let& c){return c.JsonName==jsonName;}), Columns.end() ); }
 		α Filter()Ε->FilterQL;
