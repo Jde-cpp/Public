@@ -48,8 +48,9 @@ namespace Jde::Web{
 	}
 
 	TEST_F( CertificateTests, NewDirectory ){
-		fs::remove_all( "/tmp/WebTests/ssl" );
-		Mock::Start( SslSettings("/tmp/WebTests/ssl", "PaSsCoDe") );
+		let path = Settings::FindPath( "testing/certDir" ).value_or( fs::temp_directory_path()/"webTests/ssl" );
+		fs::remove_all( path );
+		Mock::Start( SslSettings(path, "PaSsCoDe") );
 		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} };
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 		ASSERT_TRUE( res[http::field::server].contains("SSL") );

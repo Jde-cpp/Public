@@ -10,7 +10,7 @@ namespace Jde::Access::Tests{
 	α GetRolePermission( RolePK rolePK, sv resourceName, UserPK executer )ε->jobject;
 	α AddRolePermission( RolePK rolePK, sv resourceName, ERights allowed, ERights denied, UserPK executer )ε->jobject;
 	α AddRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK executer )ε->jobject;
-	α RemoveRolePermission( RolePK rolePK, PermissionPK permissionPK, UserPK executer )ε->jobject;
+	α RemoveRolePermission( RolePK rolePK, PermissionPK permissionPK, UserPK executer )ε->jvalue;
 	using namespace Json;
 	class AclTests : public ::testing::Test{
 	protected:
@@ -129,7 +129,7 @@ namespace Jde::Access::Tests{
 		auto juser = GetUser( "deletedRoot", GetRoot(), true );
 		UserPK executer{ GetId( juser ) };
 		GetAcl( executer, "groupings", ERights::All, ERights::None );
-		if( !Json::AsTimePointOpt(juser, "deleted") )
+		if( !Json::FindTimePoint(juser, "deleted") )
 			Delete( "users", GetId(juser), GetRoot() );
 		TestEnabeledPermissions( resourceName, "AclTests-DeletedUser-Member", executer );
 	}

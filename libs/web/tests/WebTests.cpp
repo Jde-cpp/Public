@@ -133,6 +133,9 @@ namespace Jde::Web{
 		catch( ClientHttpResException& e){
 			ASSERT_EQ( http::status::unauthorized, e.Status() );
 		}
+		catch( exception& e){
+			ASSERT_FALSE( true );
+		}
 	}
 	TEST_F( WebTests, CloseMidRequest ){
 		namespace beast = boost::beast;

@@ -6,7 +6,7 @@ namespace Jde::Crypto{
 	struct ΓC CryptoSettings final{
 		CryptoSettings( str settingsPrefix )ι;
 		CryptoSettings( jobject settings )ι;
-		α CreateDirectories()Ι->void;
+		α CreateDirectories()Ε->void;
 
 		 α PublicKey()Ι->const Crypto::PublicKey&{
 			if( !_publicKey )

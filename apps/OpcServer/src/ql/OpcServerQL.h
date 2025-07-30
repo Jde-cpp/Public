@@ -1,7 +1,7 @@
 #pragma once
 
 namespace Jde::Opc::Server{
-	struct UpsertAwait final : VoidAwait<>{
+	struct UpsertAwait final : VoidAwait{
 		α await_ready()ι->bool override;
 	private:
 		α Suspend()ι->void override{ Execute(); }

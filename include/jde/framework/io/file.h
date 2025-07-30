@@ -1,19 +1,6 @@
 ﻿#pragma once
 #ifndef FILE_H
 #define FILE_H
-/*
-#include <string>
-#include <functional>
-#include <fstream>
-#include <limits>
-#include <memory>
-#include <set>
-#include <vector>
-#include <boost/container/flat_map.hpp>
-#include "../exports.h"
-#include "../../../../../Framework/source/threading/Worker.h"
-#include "../../../../../Framework/source/io/FileCo.h"
-*/
 #define Φ Γ auto
 namespace Jde::IO{
 	Φ Load( const fs::path& path, SRCE )ε->string;

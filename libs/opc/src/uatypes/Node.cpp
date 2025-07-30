@@ -138,7 +138,7 @@ namespace Jde::Opc{
 		params.emplace_back( IsNumeric() ? DB::Value{*Numeric()} : DB::Value{} );
 		params.emplace_back( IsString() ? DB::Value{*String()} : DB::Value{} );
 		params.emplace_back( IsGuid() ? DB::Value{*Guid()} : DB::Value{} );
-		params.emplace_back( IsBytes() ? DB::Value{FromByteString(*Bytes())} : DB::Value{} );
+		params.emplace_back( IsBytes() ? DB::Value{FromByteString(*Bytes())} : DB::Value{vector<uint8_t>{}} );
 		if( extended ){
 			params.emplace_back( namespaceUri.length ? DB::Value{ToString(namespaceUri)} : DB::Value{} );
 			params.emplace_back( serverIndex );

@@ -31,9 +31,9 @@ namespace Jde::Str{
 	Φ Replace( sv source, char find, char replace )ι->string;
 	Φ Split( sv s, char delim=',' )ι->vector<sv>;
 	Ξ StartsWith( sv value, sv starting )ι{ return starting.size() > value.size() ? false : std::equal( starting.begin(), starting.end(), value.begin() ); }
-	α StartsWithInsensitive( sv value, sv starting )ι->bool;
-	α LTrim( sv s )->sv;
-	α RTrim( sv s )->sv;
+	Φ StartsWithInsensitive( sv value, sv starting )ι->bool;
+	Φ LTrim( sv s )->sv;
+	Φ RTrim( sv s )->sv;
 	Φ ToHex( byte* p, uint size )ι->string;
 	Φ ToLower( sv source )ι->string;
 	Φ ToUpper( sv source )ι->string;

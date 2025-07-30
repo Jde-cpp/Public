@@ -10,6 +10,4 @@ namespace Jde::Access::Server{
 	α GetTablePtr( str name, SRCE )ε->sp<DB::View>;
 	α GetTable( str name, SRCE )ε->const DB::View&;
 	α AccessSchema()ι->DB::AppSchema&;
-//	α GetSchemaPtr()ι->sp<DB::AppSchema>; accessInternal.h
-//	α SetSchema( sp<DB::AppSchema> schema )ι->void{ /*ASSERT(!_schema);*/ _schema = schema; } accessInternal.h
 }

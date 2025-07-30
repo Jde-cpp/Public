@@ -13,8 +13,8 @@
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Opc::Server {
 	struct UAServer;
-	struct ServerConfigAwait final : VoidAwait<>{
-		ServerConfigAwait( SRCE )ι:	VoidAwait<>(sl){
+	struct ServerConfigAwait final : VoidAwait{
+		ServerConfigAwait( SRCE )ι:	VoidAwait(sl){
 			GetUAServer()._dataTypes.reserve(1024);
 		};
 		Ω ServerWhereClause( const DB::View& snTable, string alias="n", SRCE )ε->DB::WhereClause;

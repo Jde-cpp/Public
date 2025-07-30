@@ -71,8 +71,8 @@ namespace Jde{
 
 		α FindDefaultArray( const jvalue& v, sv path )ι->const jarray&;
 		α FindDefaultArray( const jobject& o, sv key )ι->const jarray&;
-		α FindDefaultObject( const jvalue& v, sv path )ι->const jobject&;
-		α FindDefaultObject( const jobject& o, sv key )ι->const jobject&;
+		Φ FindDefaultObject( const jvalue& v, sv path )ι->const jobject&;
+		Φ FindDefaultObject( const jobject& o, sv key )ι->const jobject&;
 		Φ FindDefaultObjectPath( const jobject& o, sv path )ι->const jobject&;
 
 		Φ Kind( boost::json::kind value )ι->string;

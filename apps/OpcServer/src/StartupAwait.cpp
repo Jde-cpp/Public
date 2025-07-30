@@ -27,7 +27,7 @@ namespace Jde::Opc{
 }
 namespace Jde::Opc::Server{
 
-	α StartupAwait::Execute()ι->VoidAwait<>::Task{
+	α StartupAwait::Execute()ι->VoidAwait::Task{
 		try{
 			auto remoteAcl = App::Client::RemoteAcl( "opc" );
 			auto uaSchema = DB::GetAppSchema( "opc", remoteAcl );

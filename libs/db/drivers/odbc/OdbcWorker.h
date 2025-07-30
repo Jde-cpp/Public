@@ -1,7 +1,8 @@
 ﻿#pragma once
-#include "../../Framework/source/threading/Mutex.h"
+#include <jde/framework/settings.h>
+#include "../../framework/source/threading/Mutex.h"
 
-#define var const auto
+#define let const auto
 namespace Jde::DB::Odbc
 {
 	struct IWorker /*abstract*/
@@ -45,10 +46,10 @@ namespace Jde::DB::Odbc
 			l.unlock();
 			AtomicGuard l2{ _objectLock };
 			//TODO:  load settings, if thread count==0 then work with it here, else create worker.
-			var pSettings = Settings::FindObject( "workers", workerName );
-			var threads = pSettings ? pSettings->FindNumber<uint8>( "threads" ).value_or(0) : 0;
+			let pSettings = Settings::FindObject( "workers", workerName );
+			let threads = pSettings ? pSettings->FindNumber<uint8>( "threads" ).value_or(0) : 0;
 		}
 		return p;
 	}
 }
-#undef var
+#undef let

@@ -6,7 +6,7 @@
 namespace Jde::DB{ struct IRow; struct AppSchema; }
 namespace Jde::QL{ struct IQL; }
 namespace Jde::Access{
-	struct ResourceSyncAwait final : VoidAwait<>, boost::noncopyable{
+	struct ResourceSyncAwait final : VoidAwait, boost::noncopyable{
 		ResourceSyncAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, UserPK executer )ι:
 			_executer{executer}, _qlServer{qlServer}, _schemas{schemas}{};
 	private:

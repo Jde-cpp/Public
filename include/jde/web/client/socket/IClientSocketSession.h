@@ -9,16 +9,16 @@
 
 namespace Jde::Web::Client{
 	struct IClientSocketSession;
-	struct CreateClientSocketSessionAwait final : VoidAwait<>{
-		using base = VoidAwait<>;
+	struct CreateClientSocketSessionAwait final : VoidAwait{
+		using base = VoidAwait;
 		CreateClientSocketSessionAwait( sp<IClientSocketSession> session, string host, PortType port, SRCE )ι;
 		α Suspend()ι->void override;
 	private:
 		sp<IClientSocketSession> _session; string _host; PortType _port;
 	};
 
-	struct CloseClientSocketSessionAwait final : VoidAwait<>{
-		using base = VoidAwait<>;
+	struct CloseClientSocketSessionAwait final : VoidAwait{
+		using base = VoidAwait;
 		CloseClientSocketSessionAwait( sp<IClientSocketSession> session, SRCE )ι:base{sl}, _session{session}{};
 		α Suspend()ι->void override;
 	private:

@@ -15,16 +15,26 @@
 			catalogs: {
 				test_opc_debug: {
 					schemas:{
-						_access:{
+						access:{
 							access:{
 								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet"
 							}
 						},
+						log:{
+							log:{
+								meta: "$(JDE_DIR)/AppServer/config/log-meta.jsonnet",
+							}
+						},
+						gateway:{
+							gateway:{
+								meta: "$(JDE_DIR)/IotWebsocket/config/opcGateway-meta.jsonnet",
+							}
+						},
 						opc:{
 							opc:{
-								meta: "$(JDE_DIR)/IotWebsocket/config/opcGateway-meta.jsonnet",
-								prefix: ""  //test with null prefix, debug with prefix
-							}
+								meta: "$(JDE_DIR)/Public/apps/OpcServer/config/opcServer-meta.jsonnet",
+								prefix: ""
+							},
 						}
 					}
 				}

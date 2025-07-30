@@ -16,13 +16,13 @@ namespace Jde::App::Client{
 	α Port()ι->PortType;
 	α RemoteAcl( string libName )ι->sp<Access::Authorize>;
 
-	struct ConnectAwait final : VoidAwait<>{
+	struct ConnectAwait final : VoidAwait{
 		ConnectAwait( sp<IAppClient> appClient, jobject userName, bool retry=false, SRCE )ι;
 	private:
 		α Suspend()ι->void{ HttpLogin(); }
 		α HttpLogin()ι->TAwait<SessionPK>::Task;
 		α RunSocket( SessionPK sessionId )ι->TAwait<Proto::FromServer::ConnectionInfo>::Task;
-		α Retry()->VoidAwait<>::Task;
+		α Retry()->VoidTask;
 
 		sp<IAppClient> _appClient;
 		bool _retry;
@@ -34,8 +34,8 @@ namespace Jde::App::Client{
 
 /*
 	//TODO change to functions, not returning anything.
-	struct LogAwait : VoidAwait<>{
-		using base = VoidAwait<>;
+	struct LogAwait : VoidAwait{
+		using base = VoidAwait;
 		LogAwait( Logging::ExternalMessage&& m, SRCE )ι:base{sl}, _message{move(m)}{}
 		LogAwait( const Logging::ExternalMessage& m, const vector<string>* args, SRCE )ι:base{sl}, _message{ m }, _args{ args }{}
 		const Logging::ExternalMessage _message;

@@ -1,9 +1,9 @@
 ﻿using namespace std::chrono;
 #include <codecvt>
 #include "WindowsUtilities.h"
-#include "../../Framework/source/DateTime.h"
+#include <jde/framework/chrono.h>
 
-#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+#define let const auto
 #pragma warning( disable : 4996 )
 namespace Jde{
 	α Windows::ToWString( const string& value)ι->std::wstring{
@@ -16,21 +16,31 @@ namespace Jde{
 		return converter.to_bytes( value );
 	}
 
-	α Windows::ToSystemTime( TimePoint time )ι->SYSTEMTIME{
-		DateTime date{time};
+	α Windows::ToSystemTime( TimePoint tp )ι->SYSTEMTIME{
+		let date{ floor<days>(tp) };
+		const year_month_day ymd{ date };
+		const hh_mm_ss time{ floor<milliseconds>(tp-date) };
+
 		SYSTEMTIME systemTime;
-		systemTime.wYear = static_cast<WORD>( date.Year() );
-		systemTime.wMonth = date.Month(); 
-		systemTime.wDay = date.Day(); 
-		systemTime.wHour = date.Hour();
-		systemTime.wMinute = date.Minute();
-		systemTime.wSecond = date.Second();
-		systemTime.wMilliseconds = (WORD)( duration_cast<milliseconds>(time.time_since_epoch()).count()-duration_cast<seconds>(time.time_since_epoch()).count()*1000 );
+		systemTime.wYear = (WORD)(int)ymd.year();
+		systemTime.wMonth = (WORD)(unsigned)ymd.month(); 
+		systemTime.wDay = (WORD)(unsigned)ymd.day(); 
+		systemTime.wHour = (WORD)(unsigned)time.hours().count();
+		systemTime.wMinute = (WORD)time.minutes().count();
+		systemTime.wSecond = (WORD)time.seconds().count();
+		systemTime.wMilliseconds = (WORD)time.subseconds().count();
 		return systemTime;
 	}
 
-	α Windows::ToTimePoint( SYSTEMTIME systemTime )ι->TimePoint
-	{
-		return DateTime{ systemTime.wYear, static_cast<uint8>(systemTime.wMonth), static_cast<uint8>(systemTime.wDay), static_cast<uint8>(systemTime.wHour), static_cast<uint8>(systemTime.wMinute), static_cast<uint8>(systemTime.wSecond), milliseconds(systemTime.wMilliseconds) }.GetTimePoint();
+	α Windows::ToTimePoint( SYSTEMTIME systemTime )ι->TimePoint{
+		return Chrono::ToTimePoint(
+			systemTime.wYear,
+			static_cast<uint8>(systemTime.wMonth),
+			static_cast<uint8>(systemTime.wDay),
+			static_cast<uint8>(systemTime.wHour),
+			static_cast<uint8>(systemTime.wMinute),
+			static_cast<uint8>(systemTime.wSecond),
+			milliseconds( systemTime.wMilliseconds )
+		);
 	}
 }

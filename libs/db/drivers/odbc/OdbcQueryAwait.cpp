@@ -11,7 +11,7 @@ namespace Jde::DB::Odbc{
 				result.RowsAffected = _ds->Select( move(_sql), f, _outParams, _sl );
 				Resume( move(result) );
 			}
-			catch( IException& e ){
+			catch( exception& e ){
 				ResumeExp( move(e) );
 			}
 		} }.detach();

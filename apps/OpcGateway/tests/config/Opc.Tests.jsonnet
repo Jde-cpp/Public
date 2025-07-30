@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "TokenTests.Authenticate",
+		tests:: "TokenTests.Authenticate",
 		recreateDB:: true,
 		embeddedAppServer: true,
 		embeddedOpcServer: true
@@ -39,8 +39,8 @@ local args = import 'args.libsonnet';
 		configDir: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
 		port: 4840,
 		ssl:{
-			certificate: "/tmp/cert.pem",
-			privateKey: {path:"/tmp/private.pem", passcode: ""}
+			certificate: "$(JDE_BUILD_DIR)/OpcServer/ssl/certs/cert.pem",
+			privateKey: {path:"$(JDE_BUILD_DIR)/OpcServer/ssl/private/private.pem", passcode: ""}
 		}
 	},
 	credentials:{

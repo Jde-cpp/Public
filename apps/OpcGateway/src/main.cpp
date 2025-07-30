@@ -3,7 +3,9 @@
 #include "StartupAwait.h"
 
 #define let const auto
-α Jde::Process::ProductName()ι->sv{ return "OpcGateway"; }
+#ifndef _MSC_VER
+	α Jde::Process::ProductName()ι->sv{ return "OpcGateway"; }
+#endif
 
 α main( int argc, char **argv )->int{
 	using namespace Jde;

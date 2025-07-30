@@ -1,11 +1,10 @@
 #pragma once
-//#include <jde/ql/ql.h>
 #include <jde/framework/coroutine/Await.h>
 #include "usings.h"
 
 namespace Jde::QL{
 	struct IQL;
-	struct UnsubscribeAwait final: VoidAwait<>{
+	struct UnsubscribeAwait final: VoidAwait{
 		UnsubscribeAwait( flat_set<SubscriptionId>&& ids, sp<IQL> qlServer, SL sl )ι:
 			VoidAwait{sl}, _ids{move(ids)}, _qlServer{qlServer}{}
 		α await_ready()ι->bool override{ return _ids.empty(); }

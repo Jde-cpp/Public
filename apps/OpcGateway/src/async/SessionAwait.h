@@ -5,7 +5,7 @@
 
 namespace Jde::Opc::Gateway{
 	struct UAClient;
-	struct SessionAwait final : VoidAwait<>{
+	struct SessionAwait final : VoidAwait{
 		SessionAwait( sp<UAClient> client, SRCE )ι:VoidAwait{sl}, _client{move(client)}{}
 		α Suspend()ι->void override;
 		Ω Trigger( sp<UAClient>&& pClient )ι->void;

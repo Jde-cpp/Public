@@ -38,10 +38,9 @@ namespace Jde::Web::Client{
 		steady_clock::time_point _start;
 	};
 
-	struct ClientSocketVoidAwait final : VoidAwait<void,TimedVoidTask>, IClientSocketVoidAwait{
-		using base = VoidAwait<void,TimedVoidTask>;
+	struct ClientSocketVoidAwait final : VoidAwait, IClientSocketVoidAwait{
 		ClientSocketVoidAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι:
-			base{ sl }, IClientSocketVoidAwait{ move(request), requestId, session }{}
+			VoidAwait{ sl }, IClientSocketVoidAwait{ move(request), requestId, session }{}
 		α Suspend()ι->void{ IClientSocketVoidAwait::Suspend( _h ); }
 		α await_resume()ε->void override;
 	};

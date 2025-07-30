@@ -22,7 +22,7 @@ namespace Jde::Opc{
 }
 
 namespace Jde::Opc::Gateway{
-	α StartupAwait::Execute()ι->VoidAwait<>::Task{
+	α StartupAwait::Execute()ι->VoidAwait::Task{
 		try{
 			auto authorize = App::Client::RemoteAcl( "gateway" );
 			auto schema = DB::GetAppSchema( "gateway", authorize );

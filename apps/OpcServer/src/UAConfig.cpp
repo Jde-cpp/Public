@@ -69,9 +69,11 @@ namespace Jde::Opc::Server {
 		auto privateKeyFile = Settings::FindPath( "/opcServer/ssl/privateKey/path" ).value_or( fs::path{} );
 		if( !fs::exists(certificateFile) ){
 			let parentPath = certificateFile.parent_path();
-			Crypto::CreateKey( certificateFile.parent_path()/"public.pem", privateKeyFile, passcode );
+			fs::create_directories( parentPath );
+			fs::create_directories( privateKeyFile.parent_path() );
+			Crypto::CreateKey( parentPath/"public.pem", privateKeyFile, passcode );
 			const string uri{ "urn:open62541.server.application" };
-			Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Jde::format("URI:{}", uri), "jde-cpp", "US", "localhost" );
+			Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Ƒ("URI:{}", uri), "jde-cpp", "US", "localhost" );
 		}
 		auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
 		auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );

@@ -1,5 +1,6 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( ../../../build/functions.cmake )
+message( "Jde.Crypto" )
 project( Jde.Crypto.lib VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 

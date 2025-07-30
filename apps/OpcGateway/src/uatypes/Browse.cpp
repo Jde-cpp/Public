@@ -61,7 +61,7 @@ namespace Browse{
 			ResumeExp( move(e) );
 		}
 	}
-	α ObjectsFolderAwait::Retry()ι->VoidAwait<>::Task{
+	α ObjectsFolderAwait::Retry()ι->VoidAwait::Task{
 		try{
 			co_await AwaitSessionActivation( _ua );
 			[]( ObjectsFolderAwait&& self )->Task{

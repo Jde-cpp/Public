@@ -4,14 +4,47 @@
 #include "Task.h"
 
 namespace Jde{
-	template<class TResult=void,class TTask=VoidTask>
 	struct VoidAwait{
-		using TPromise = TTask::promise_type;
-		using Task=TTask;
+		using TPromise = VoidTask::promise_type;
+		using Task=VoidTask;
 		using Handle=coroutine_handle<TPromise>;
 		VoidAwait( SRCE )ι:_sl{sl}{}
 		β await_ready()ι->bool{ return false; }
-		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }  //msvc internal compiler error if virtual.
+		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
+		β await_resume()ε->void{ AwaitResume(); }
+		α ResumeExp( IException&& e )ι{
+			ASSERT(Promise());
+			Promise()->ResumeExp( move(e), _h );
+		}
+		α ResumeExp( exception&& e )ι{
+			ASSERT( Promise() );
+			Promise()->ResumeExp( move(e), _h );
+		}
+		α Resume()ι{ ASSERT(_h); auto h=_h; _h=nullptr; h.resume(); }
+		α Source()ι->SL{ return _sl; }
+	protected:
+		α SetError( IException&& e )ι{ ASSERT(Promise()); Promise()->SetExp( move(e) ); }
+		β Suspend()ι->void=0;
+		α AwaitResume()ε->void{
+			if( up<IException> e = Promise() ? Promise()->MoveExp() : nullptr; e ){
+				_h = nullptr;
+				e->Throw();
+			}
+		}
+		Handle _h{};
+		α Promise()->TPromise*{ return _h ? &_h.promise() : nullptr; }
+		SL _sl;
+	};
+
+
+	template<class TResult,class TTask>
+	struct IAwait{
+		using TPromise = TTask::promise_type;
+		using Task=TTask;
+		using Handle=coroutine_handle<TPromise>;
+		IAwait( SRCE )ι:_sl{sl}{}
+		β await_ready()ι->bool{ return false; }
+		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
 		β await_resume()ε->TResult{ AwaitResume(); return TResult{}; }
 		α ResumeExp( IException&& e )ι{
 			ASSERT(Promise());
@@ -33,13 +66,13 @@ namespace Jde{
 			}
 		}
 		Handle _h{};
-		TPromise* Promise(){ return _h ? &_h.promise() : nullptr; }
+		α Promise()->TPromise*{ return _h ? &_h.promise() : nullptr; }
 		SL _sl;
 	};
 
 	template<class Result,class TTask=Jde::TTask<Result>>
-	struct TAwait : VoidAwait<Result,TTask>{
-		using base = VoidAwait<Result,TTask>;
+	struct TAwait : IAwait<Result,TTask>{
+		using base = IAwait<Result,TTask>;
 		TAwait( SRCE )ι:base{sl}{}
 		virtual ~TAwait()=0;
 		α await_resume()ε->Result;

@@ -56,7 +56,7 @@ namespace Jde::Opc::Gateway{
 		α Process( RequestId requestId )ι->void;
 		α ProcessDataSubscriptions()ι->void;
 		α StopProcessDataSubscriptions()ι->void;
-		α AddSessionAwait( VoidAwait<>::Handle h )ι->void;
+		α AddSessionAwait( VoidAwait::Handle h )ι->void;
 		α TriggerSessionAwaitables()ι->void;
 
 		α Target()ι->const OpcClientNK&{ return _opcServer.Target; }
@@ -83,7 +83,7 @@ namespace Jde::Opc::Gateway{
 		concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
 		concurrent_flat_map<Jde::Handle, UARequestMulti<UA_WriteResponse>> _writeRequests;
 		concurrent_flat_map<Jde::Handle, UARequestMulti<ExNodeId>> _dataAttributeRequests;
-		vector<VoidAwait<>::Handle> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
+		vector<VoidAwait::Handle> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
 
 		AsyncRequest _asyncRequest;
 		Logger _logger;

@@ -1,25 +1,22 @@
 ﻿#include "gtest/gtest.h"
 #include <jde/framework/settings.h>
 #include "../../../../AppServer/source/AppStartupAwait.h"
-#include <jde/framework/thread/execution.h>
 #include <jde/framework/coroutine/Timer.h>
-#include <jde/db/db.h>
-#include <jde/app/client/appClient.h>
-#include <jde/app/client/AppClientSocketSession.h>
 #include <jde/opc/uatypes/Logger.h>
 #include "../src/StartupAwait.h"
 #include "../../OpcServer/src/StartupAwait.h"
-#include "helpers.h"
 #define let const auto
 
 namespace Jde{
+#ifndef _MSC_VER
 	α Process::ProductName()ι->sv{ return "Tests.Opc"; }
-	up<exception> _exception;
-	Ω keepExecuterAlive()ι->VoidAwait<>::Task{
+#endif
+	up<exception> _error;
+	Ω keepExecuterAlive()ι->VoidAwait::Task{
 		co_await DurationTimer{ 360s };
 	}
 
- 	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait<>::Task{
+ 	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
 #ifdef _MSC_VER
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
 #endif
@@ -36,7 +33,7 @@ namespace Jde{
 			done.notify_one();
 		}
 		catch( exception& e ){
-			_exception = ToUP( move(e) );
+			_error = ToUP( move(e) );
 			done.test_and_set();
 			done.notify_one();
 		}
@@ -51,8 +48,8 @@ namespace Jde{
 	done.wait( false );
 	int result{ EXIT_FAILURE };
 	try{
-		if( _exception )
-			throw *_exception;
+		if( _error )
+			throw *_error;
 		::testing::GTEST_FLAG( filter ) = Settings::FindString( "/testing/tests" ).value_or( "*" );
 		result = RUN_ALL_TESTS();
 	}

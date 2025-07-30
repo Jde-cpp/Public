@@ -15,7 +15,7 @@ namespace Jde::Access{
 	using namespace DB::Names;
 	constexpr ELogTags _tags{ ELogTags::Test | ELogTags::Pedantic };
 	sp<QL::LocalQL> _localQL;
-	sp<Authorize> _authorizer = ms<Authorize>();
+	sp<Authorize> _authorizer = ms<Authorize>( "Tests" );
 
 	α Tests::Authorizer()ι->sp<Access::Authorize>{ return _authorizer; }
 	α Tests::QL()ι->QL::LocalQL&{ return *_localQL; }

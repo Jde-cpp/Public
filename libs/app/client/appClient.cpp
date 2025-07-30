@@ -59,7 +59,7 @@ namespace Jde::App::Client{
 	}
 
 	ConnectAwait::ConnectAwait( sp<IAppClient> appClient, jobject userName, bool retry, SL sl )ι:
-		VoidAwait<>{sl},
+		VoidAwait{sl},
 		_appClient{ appClient },
 		_retry{retry},
 		_userName{ userName }

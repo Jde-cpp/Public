@@ -161,7 +161,7 @@ namespace Sessions{
 			Resume( move(info) );
 		}
 		catch( exception& e ){
-			Promise()->SetExp( move(e) );
+			ResumeExp( move(e) );
 		}
 	}
 	α UpsertAwait::await_resume()ε->sp<SessionInfo>{

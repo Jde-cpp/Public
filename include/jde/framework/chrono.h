@@ -13,8 +13,8 @@ namespace Jde::Chrono{
 	α LocalTimeMilli( TimePoint time, SRCE )ε->string;
 	Φ ToDuration( string&& iso )ε->Duration;
 	Ξ ToDuration( sv iso )ε->Duration{ return ToDuration(string{iso}); }
-	α ToTimePoint( string iso, SRCE )ε->TimePoint;
-	α ToTimePoint( uint16_t year, uint8 month, uint8 day, uint8 hour=0, uint8 minute=0, uint8 second=0, SRCE )ε->TimePoint;
+	Φ ToTimePoint( string iso, SRCE )ε->TimePoint;
+	Φ ToTimePoint( uint16_t year, uint8 month, uint8 day, uint8 hour=0, uint8 minute=0, uint8 second=0, Duration subseconds=Duration::zero(), SRCE )ε->TimePoint;
 	template<class T=Duration>
 	α ToString( T duration )ι->string;
 	template<class To,class From>

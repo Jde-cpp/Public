@@ -24,6 +24,7 @@ file( GLOB protos **/*.proto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
 add_subdirectory( $ENV{JDE_DIR}/Framework/source ../../framework )
+add_subdirectory( ../../access/src ../../access/src )
 add_subdirectory( ../../app/shared ../../app/shared )
 add_subdirectory( ../../crypto/src ../../crypto/lib )
 add_subdirectory( ../../db/src ../../db/lib )
@@ -35,7 +36,7 @@ target_link_libraries( ${targetName} Boost::json )
 find_package( GTest REQUIRED )
 target_link_libraries( ${targetName} GTest::gtest_main )
 target_link_libraries( ${targetName} ZLIB::ZLIB )
-target_link_libraries( ${targetName} Jde Jde.App.Shared Jde.Crypto Jde.DB Jde.QL Jde.Web.Client Jde.Web.Server )
+target_link_libraries( ${targetName} Jde.App.Shared Jde.Web.Server )
 target_link_libraries( ${targetName} absl::cord absl::log_internal_check_op absl::log_internal_conditions absl::log_internal_message absl::raw_hash_set absl::status absl::statusor ) #absl::strings
 target_link_libraries( ${targetName} fmt::fmt )
 target_link_libraries( ${targetName} protobuf::libprotobuf ) #libutf8_range.a libutf8_validity.a

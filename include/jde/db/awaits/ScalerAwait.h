@@ -12,7 +12,6 @@ namespace Jde::DB{
 	Τ struct ScalerAwaitOpt : TAwaitEx<optional<T>,void>{
 		using base=TAwaitEx<optional<T>,void>;
 		ScalerAwaitOpt( sp<IDataSource> ds, variant<Sql,InsertClause>&& s, SL sl )ι: base{ sl }, _ds{ move(ds) }, _sql{ move(s) }{}
-//		ScalerAwaitOpt( sp<IDataSource> ds, InsertClause&& s, SL sl )ι: base{ sl }, _ds{ move(ds) }, _sql{ move(s) }{}
 		α Execute()ι->void override;
 		α OnRow( optional<Row> result )ι->void;
 		α OnError( IException&& e )ι->void;

@@ -3,7 +3,6 @@ include( ../../../build/functions.cmake )
 project( Jde.Opc.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
-
 find_package( open62541 REQUIRED )
 set( open62541Dir ${open62541_DIR}/../../.. )
 cmake_path( ABSOLUTE_PATH open62541Dir NORMALIZE OUTPUT_VARIABLE open62541Dir )
@@ -31,12 +30,6 @@ file( GLOB headers *.h **/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 add_subdirectory( ../../OpcServer/src ../../../apps/OpcServer/lib )
-# add_subdirectory( ../../ql ../../ql )
-# add_subdirectory( ../../access/src ../../access/lib )
-# add_subdirectory( ../../app/shared ../../app/shared )
-# add_subdirectory( ../../app/client ../../app/client )
-# add_subdirectory( ../../web/client ../../web/client )
-# add_subdirectory( ../../web/server ../../web/server )
 add_subdirectory( ../../../../AppServer/source ../../../apps/AppServer/lib )
 
 find_package( GTest REQUIRED )
@@ -53,6 +46,7 @@ else()
 	target_link_libraries( ${targetName} stdc++exp )#for stacktrace
 endif()
 
+add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_BASH}/Public/libs/db/config/common-meta.libsonnet" "$ENV{JDE_BASH}/Public/apps/OpcServer/config/common-meta.libsonnet" COMMENT "mklink common-meta.libsonnet" )
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Tests.jsonnet" )
 	copyCommonDlls()

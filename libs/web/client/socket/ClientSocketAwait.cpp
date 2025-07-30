@@ -10,10 +10,10 @@ namespace Jde::Web::Client{
 	}
 
 	α ClientSocketVoidAwait::await_resume()ε->void{
-		base::AwaitResume();
-		typename base::TPromise* p = base::Promise(); THROW_IF( !p, "Not Connected" );
+		AwaitResume();
+		auto p = Promise(); THROW_IF( !p, "Not Connected" );
 		if( auto e = p->MoveExp(); e )
 			e->Throw();
-		p->Log( _session->Id(), _start, _sl );
+//		p->Log( _session->Id(), _start, _sl );
 	}
 }

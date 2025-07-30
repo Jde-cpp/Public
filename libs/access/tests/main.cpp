@@ -6,6 +6,7 @@
 #include <jde/ql/QLHook.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/server/accessServer.h>
+#include <jde/access/AccessListener.h>
 #include <jde/access/awaits/ConfigureAwait.h>
 #include <jde/db/db.h>
 #include "globals.h"
@@ -13,8 +14,9 @@
 #define let const auto
 
 namespace Jde{
+	sp<Access::AccessListener> _listener;
 	α Process::ProductName()ι->sv{ return "Tests.Access"; }
-	Ω keepExecuterAlive()ι->VoidAwait<>::Task{
+	Ω keepExecuterAlive()ι->VoidTask{
 		co_await DurationTimer{ 360s };
 	}
  	α Startup( int argc, char **argv )ε->void{
@@ -27,12 +29,13 @@ namespace Jde{
 		auto authorizer = Access::Tests::Authorizer();
 		auto schema = DB::GetAppSchema( metaDataName, authorizer );
 		auto ql = QL::Configure( {schema}, authorizer );
+		_listener = ms<Access::AccessListener>( ql );
 		keepExecuterAlive();
 		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 			DB::NonProd::Recreate( *schema, ql );
 		else if( Settings::FindBool("/dbServers/sync").value_or(false) )
 			DB::SyncSchema( *schema, ql );
-		auto await = Access::Server::Configure( {schema}, ql, UserPK{UserPK::System}, authorizer );
+		auto await = Access::Server::Configure( {schema}, ql, UserPK{UserPK::System}, authorizer, _listener );
 		BlockVoidAwait<Access::ConfigureAwait>( move(await) );
 		Access::Tests::SetQL( ql );
 	}
@@ -41,7 +44,7 @@ namespace Jde{
 α main( int argc, char **argv )->int{
 	using namespace Jde;
 	::testing::InitGoogleTest( &argc, argv );
-	int exitCode;
+	int exitCode{ EXIT_FAILURE };
 	try{
 		Startup( argc, argv );
 		::testing::GTEST_FLAG( filter ) = Settings::FindSV( "/testing/tests" ).value_or( "*" );

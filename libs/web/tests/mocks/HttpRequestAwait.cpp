@@ -58,7 +58,7 @@ namespace Jde::Web::Mock{
 			j["value"] = ToIsoString( expiration );
 			result = j;
 		}
-		else if( _request.IsPost("/loginCertificate") ){
+		else if( _request.IsPost("/login") ){
 			result = CertificateLogin( _request );
 		}
 		if( result ){

@@ -32,7 +32,7 @@ namespace Jde::Process{
 	Φ Finalizing()ι->bool;
 	Ŧ AddPollster( /*bool appThread*/ )ι->sp<T>;
 
-	α ProductName()ι->sv;
+	Φ ProductName()ι->sv;
 
 	Φ Args()ι->const flat_multimap<string,string>&;
 	Φ FindArg( string key )ι->optional<string>;
@@ -92,7 +92,7 @@ namespace Jde{
 		ω Startup( int argc, char** argv, sv appName, string serviceDescription, optional<bool> console=nullopt )ε->flat_set<string>;
 
 		ω SetProductName( sv productName )ι->void;
-		Ω CompanyRootDir()ι->fs::path;
+		ω CompanyRootDir()ι->fs::path;
 		ω FreeLibrary( void* p )ι->void;
 		ω LoadLibrary( const fs::path& path )ε->void*;
 		ω GetProcAddress( void* pModule, str procName )ε->void*;

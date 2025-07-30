@@ -102,7 +102,7 @@ namespace Jde::Opc::Gateway{
 
 		return config;
 	}
-	α UAClient::AddSessionAwait( VoidAwait<>::Handle h )ι->void{
+	α UAClient::AddSessionAwait( VoidAwait::Handle h )ι->void{
 		{
 			lg _{_sessionAwaitableMutex};
 			_sessionAwaitables.emplace_back( move(h) );
@@ -110,7 +110,7 @@ namespace Jde::Opc::Gateway{
 		Process( std::numeric_limits<RequestId>::max() );
 	}
 	α UAClient::TriggerSessionAwaitables()ι->void{
-		vector<VoidAwait<>::Handle> handles;
+		vector<VoidAwait::Handle> handles;
 		{
 			lg _{_sessionAwaitableMutex};
 			for_each(_sessionAwaitables, [&handles](auto&& h){handles.emplace_back(h);} );

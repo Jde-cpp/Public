@@ -67,3 +67,5 @@ libs/app/shared/proto/Web.FromServer.proto
 **/my-workspace*/**
 *.7z
 **/.*
+apps/OpcGateway/config/common-meta.libsonnet
+apps/OpcServer/config/common-meta.libsonnet

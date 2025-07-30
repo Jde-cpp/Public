@@ -1,11 +1,8 @@
 #pragma once
 #include <jde/web/server/IHttpRequestAwait.h>
-// #include <jde/web/server/Sessions.h>
-// #include <jde/opc/UM.h>
-// #include <jde/opc/uatypes/Browse.h>
-// #include <jde/opc/async/ConnectAwait.h>
+#include <jde/opc/uatypes/Value.h>
 
-namespace Jde::Opc{ struct ExNodeId; struct Value; }
+namespace Jde::Opc{ struct ExNodeId; }
 namespace Jde::Opc::Gateway{
 	struct UAClient;
 	using namespace Jde::Web::Server;

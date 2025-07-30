@@ -6,7 +6,7 @@ namespace Jde::Web::Mock{
 	using namespace Jde::Web::Server;
 	const string Host{ "localhost" };
 	constexpr PortType Port{ 5005 };
-	α Start( jobject settings )ι->void;
+	α Start( jobject settings )ε->void;
 	α Stop()ι->void;
 	α AppClient()ι->sp<App::IApp>;
 

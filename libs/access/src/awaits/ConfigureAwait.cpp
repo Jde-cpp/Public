@@ -1,7 +1,6 @@
 #include <jde/access/awaits/ConfigureAwait.h>
 
 #include <jde/access/Authorize.h>
-#include "../accessInternal.h"
 #include "IdentityLoadAwait.h"
 #include "AclLoadAwait.h"
 #include "ResourceLoadAwait.h"
@@ -76,7 +75,7 @@ namespace Jde::Access{
 		}
 	}
 
-	α ConfigureAwait::SyncResources()ι->VoidAwait<>::Task{
+	α ConfigureAwait::SyncResources()ι->VoidTask{
 		co_await ResourceSyncAwait{ QlServer, Schemas, Executer };
 		LoadUsers();
 	};

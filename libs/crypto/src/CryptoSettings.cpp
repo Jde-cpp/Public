@@ -2,15 +2,13 @@
 #include <jde/framework/settings.h>
 
 namespace Jde::Crypto{
-	//using namespace Jde::Settings;
-
 	Ω getPath( const jobject& settings, str jpath, fs::path dflt )ι->fs::path{
 		auto filePath = Json::FindString( settings, jpath );
-		if( !filePath ){
-			auto productName = Json::FindString( settings, "productName" ).value_or( string{Process::ProductName()} );
-			filePath = IApplication::ProgramDataFolder()/OSApp::CompanyRootDir()/productName/"ssl"/dflt;
-		}
-		return fs::path{ *filePath };
+		if( filePath )
+			return fs::path{ *filePath };
+
+		auto productName = Json::FindString( settings, "productName" ).value_or( string{Process::ProductName()} );
+		return IApplication::ProgramDataFolder()/OSApp::CompanyRootDir()/productName/"ssl"/dflt;
 	}
 
 	CryptoSettings::CryptoSettings( str prefix )ι:
@@ -29,7 +27,7 @@ namespace Jde::Crypto{
 		Domain{ Json::FindString(settings, "certificateDomain").value_or("localhost") }
 	{}
 
-	α CryptoSettings::CreateDirectories()Ι->void{
+	α CryptoSettings::CreateDirectories()Ε->void{
 		fs::create_directories( CertPath.parent_path() );
 		fs::create_directories( PrivateKeyPath.parent_path() );
 		fs::create_directories( PublicKeyPath.parent_path() );

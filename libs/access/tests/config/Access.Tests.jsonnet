@@ -1,13 +1,13 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "GroupTests.Recursion",
+		tests:: "ResourceTests.Crud",
 		recreateDB:: true
 	},
 	dbServers:{
 		scriptPaths: ["$(JDE_DIR)/Public/libs/access/config/sql/"+args.sqlType],
 		dataPaths: ["$(JDE_DIR)/Public/libs/access/config"],
-		sync:: true,
+		sync: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,

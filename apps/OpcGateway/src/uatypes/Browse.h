@@ -42,7 +42,7 @@ namespace Browse{
 		α Execute()ι->TAwait<Browse::Response>::Task;
 		α Snapshot( Browse::Response response )ι->TAwait<flat_map<ExNodeId, Value>>::Task;
 		α Attributes( Browse::Response response, flat_map<ExNodeId, Value> values={} )ι->TAwait<flat_map<ExNodeId, ExNodeId>>::Task;
-		α Retry()ι->VoidAwait<>::Task;
+		α Retry()ι->VoidAwait::Task;
 		sp<UAClient> _ua; ExNodeId _node; bool _snapshot;
 	};
 }

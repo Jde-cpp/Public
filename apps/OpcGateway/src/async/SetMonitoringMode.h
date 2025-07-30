@@ -2,8 +2,8 @@
 #include "../UAClient.h"
 
 namespace Jde::Opc::Gateway{
-	struct SetMonitoringModeAwait final : IAwait{
-		SetMonitoringModeAwait( sp<UAClient>&& c, uint32 subscriptionId, SRCE )ι:IAwait{sl}, _client{move(c)}, _subscriptionId{subscriptionId}{}
+	struct SetMonitoringModeAwait final : IAwaitOld{
+		SetMonitoringModeAwait( sp<UAClient>&& c, uint32 subscriptionId, SRCE )ι:IAwaitOld{sl}, _client{move(c)}, _subscriptionId{subscriptionId}{}
 		α await_ready()ι->bool override;
 		α Suspend()ι->void override;
 		α await_resume()ι->AwaitResult override;//{ return _pPromise->get_return_object().Result(); }
