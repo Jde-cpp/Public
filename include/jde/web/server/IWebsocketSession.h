@@ -6,6 +6,7 @@
 #include <jde/ql/usings.h>
 #include "../../../../../Framework/source/threading/Mutex.h"
 
+namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Web::Server{
 	struct RestStream; struct SocketStream;
 	struct ΓWS IWebsocketSession : std::enable_shared_from_this<IWebsocketSession>{
@@ -43,6 +44,8 @@ namespace Jde::Web::Server{
 		α OnRun()ι->void;
 		α DoRead()ι->void;
 		α OnWrite( beast::error_code ec, std::size_t bytes_transferred )ι->void;
+		β Schemas()Ι->const vector<sp<DB::AppSchema>>& = 0;
+
 		TRequestType _initialRequest;
 		const SocketId _id{};
 		SessionPK _sessionId{};

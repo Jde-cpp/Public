@@ -1,6 +1,5 @@
 import { Permission } from "./Permission";
-import { TargetRow } from "../../../../jde-framework/src/lib/model/ql/TargetRow";
-import { cloneClassArray, Mutation, MutationType } from "jde-framework";
+import { cloneClassArray, Mutation, MutationType, TargetRow } from "jde-framework";
 import { User, UserPK } from "./User";
 import { Group, GroupPK } from "./Group";
 import { Acl } from "./Acl";

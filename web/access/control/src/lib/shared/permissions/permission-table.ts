@@ -1,12 +1,12 @@
 import { CommonModule } from "@angular/common";
-import { AfterViewInit, Component, Inject, input, Input, model, OnDestroy, OnInit, signal, ViewChild } from "@angular/core";
+import { AfterViewInit, Component, Inject, model, OnDestroy, OnInit, signal, ViewChild } from "@angular/core";
+import { MatCheckbox, MatCheckboxChange } from "@angular/material/checkbox";
+import { MatSortModule, Sort } from "@angular/material/sort";
 import { MatTable, MatTableModule } from "@angular/material/table";
-import { assert, EnumKeysPipe, IErrorService, IGraphQL, IProfile, Settings } from "jde-framework";
+import { assert, EnumKeysPipe, IErrorService, IProfile, Settings } from "jde-framework";
 import { Permission, Rights } from "../../model/Permission";
 import { AccessService } from "../../services/access.service";
 import { Resource } from "../../model/Resource";
-import { MatSortModule, Sort } from "@angular/material/sort";
-import { MatCheckbox, MatCheckboxChange } from "@angular/material/checkbox";
 
 @Component({
 		selector: 'permission-table',

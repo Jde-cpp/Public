@@ -12,16 +12,19 @@
 #define Φ ΓAC auto
 namespace Jde::QL{ struct IListener; }
 namespace Jde::App::Client{
+	struct IAppClient;
 	struct StartSocketAwait : TAwait<Proto::FromServer::ConnectionInfo>{
 		using base = TAwait<Proto::FromServer::ConnectionInfo>;
-		StartSocketAwait( SessionPK sessionId, SRCE )ι;
+		StartSocketAwait( SessionPK sessionId, sp<Access::Authorize> authorize, sp<IAppClient> appClient, SL sl )ι;
 	private:
 		α Suspend()ι->void override;
 		α RunSession()ι->VoidTask;
 		α SendSessionId()ι->Web::Client::ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task;
+		sp<IAppClient> _appClient;
+		sp<Access::Authorize> _authorize;
 		SessionPK _sessionId;
+		sp<Client::AppClientSocketSession> _session;
 	};
-	Φ AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>;
 	α CloseSocketSession( SRCE )ι->VoidTask;
 	//Φ Query( str query, SRCE )ε->Web::Client::ClientSocketAwait<string>;
 	//Φ Subscribe( string&& query, sp<QL::IListener> listener, QL::SubscriptionClientId clientId, SRCE )ε->ClientSubscriptionAwait;
@@ -30,10 +33,9 @@ namespace Jde::App::Client{
 	struct AppClientSocketSession final : Web::Client::TClientSocketSession<Jde::App::Proto::FromClient::Transmission,Jde::App::Proto::FromServer::Transmission>{
 		Τ using await = Web::Client::ClientSocketAwait<T>;
 		using base = Web::Client::TClientSocketSession<Proto::FromClient::Transmission,Proto::FromServer::Transmission>;
-		ΓAC Ω Instance()ι->sp<AppClientSocketSession>;
-		AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx )ι;
+		AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx, sp<Access::Authorize> authorize, sp<IAppClient> appClient )ι;
 		α Connect( SessionPK sessionId, SRCE )ι->await<Proto::FromServer::ConnectionInfo>;
-		α SessionInfo( SessionPK sessionId, SRCE )ι->await<Web::FromServer::SessionInfo>;
+		α SessionInfo( SessionPK creds, SRCE )ι->await<Web::FromServer::SessionInfo>;
 		α Query( string&& q, bool returnRaw, SRCE )ι->await<jvalue> override;
 		α Subscribe( string&& query, sp<QL::IListener> listener, SRCE )ε->await<jarray> override;
 		α Unsubscribe( string&& query, SRCE )ε->await<vector<QL::SubscriptionId>>;
@@ -47,8 +49,11 @@ namespace Jde::App::Client{
 		α HandleException( std::any&& h, IException&& what, RequestId requestId )ι->void;
 		α OnRead( Proto::FromServer::Transmission&& transmission )ι->void override;
 		α OnClose( beast::error_code ec )ι->void override;
-		Jde::UserPK _userPK{};
+
+		sp<IAppClient> _appClient;
+		sp<Access::Authorize> _authorize;
 		sp<QL::IQL> _qlServer;
+		Jde::UserPK _userPK{};
 	};
 }
 #undef Φ

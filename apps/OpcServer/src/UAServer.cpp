@@ -1,44 +1,41 @@
 #include "UAServer.h"
-#include <open62541/server_config_default.h>
-#include <open62541/plugin/accesscontrol_default.h>
-
-#include <jde/crypto/OpenSsl.h>
 #include <jde/opc/uatypes/helpers.h>
 #include <jde/opc/uatypes/UAException.h>
-
+#include "UAAccess.h"
 
 #define let const auto
 namespace Jde::Opc::Server {
-	Ω getConfiguration( UA_Logger& logger )->UA_ServerConfig;
 	UAServer::UAServer()ε:
 		ServerName{ Settings::FindString("/opcServer/name").value_or("OpcServer") },
-		_config{ getConfiguration(_logger) },
 		_ua{ UA_Server_newWithConfig(&_config) }
 	{}
 	UAServer::~UAServer(){
 		Information{ ELogTags::App, "Stopping OPC UA server..." };
-		if( _thread.has_value() )
+		if( _thread.has_value() ){
+			_running = false;
 			_thread->request_stop();
-		if( _ua ){
+		}if( _ua ){
 			UA_Server_delete( _ua );
 			_ua = nullptr;
 		}
 	}
 	α UAServer::Run()ι->void{
-		// if( !_thread ){
-		// 	_thread = std::jthread{[this](std::stop_token st){
-		// 		UA_Server_runUntilInterrupt( _ua );
-		// 		UA_Server_delete( _ua );
-		// 		_ua = nullptr;
-		// 		Information{ ELogTags::App, "OPC UA server stopped." };
-		// 	}};
-		// }
+		if( !_thread ){
+			_thread = std::jthread{[this](std::stop_token /*st*/){
+				Threading::SetThreadDscrptn( "UAServer" );
+				_running = true;
+				UA_Server_run( _ua, &_running );
+				UA_Server_delete( _ua );
+				_ua = nullptr;
+				Information{ ELogTags::App, "OPC UA server stopped." };
+			}};
+		}
 	}
 
-	α UAServer::Constructor(UA_Server *server,
-	                    const UA_NodeId *sessionId, void *sessionContext,
-	                    const UA_NodeId *typeId, void *typeContext,
-	                    const UA_NodeId *nodeId, void **nodeContext)->UA_StatusCode{
+	α UAServer::Constructor(UA_Server* /*server*/,
+	                    const UA_NodeId* /*sessionId*/, void* /*sessionContext*/,
+	                    const UA_NodeId *typeId, void* /*typeContext*/,
+	                    const UA_NodeId *nodeId, void** /*nodeContext*/)->UA_StatusCode{
 		auto& ua = GetUAServer();
 		try{
 			for( let& [pk, variant] : ua.ConstructorValues(*typeId) ){
@@ -57,7 +54,7 @@ namespace Jde::Opc::Server {
 
 				auto bpr = UA_Server_translateBrowsePathToNodeIds( ua._ua, &bp );
 				UAε( bpr.statusCode );
-				THROW_IF( !bpr.targetsSize, "No targets found for node: {}, path: ({}){}", NodeId{*nodeId}.to_string(), rpe.targetName.namespaceIndex, ToString(rpe.targetName.name) );
+				THROW_IF( !bpr.targetsSize, "No targets found for node: {}, path: ({}){}", ExNodeId{*nodeId}.to_string(), rpe.targetName.namespaceIndex, ToString(rpe.targetName.name) );
 				UA_Server_writeValue( ua._ua, bpr.targets[0].targetId.nodeId, variant );
 				UA_BrowsePathResult_clear(&bpr);
 			}
@@ -74,7 +71,7 @@ namespace Jde::Opc::Server {
 		_constructors.try_emplace( nodeId, move(values) );
 		AddConstructor( move(nodeId) );
 	}
-	α UAServer::ConstructorValues( const NodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&{
+	α UAServer::ConstructorValues( const ExNodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&{
 		let p = _constructors.find( nodeId );
 		THROW_IF( p==_constructors.end(), "Constructor values not found for node: '{}'", nodeId.to_string() );
 		return p->second;
@@ -175,7 +172,7 @@ namespace Jde::Opc::Server {
 		return y;
 	}
 
-	α UAServer::FindBrowse( BrowseName& browse, SL sl )Ε->bool{
+	α UAServer::FindBrowse( BrowseName& browse )Ι->bool{
 		let p = browse.PK
 			? _browseNames.find( browse.PK )
 			: find_if(_browseNames, [&browse](const auto& kv){ return kv.second.Ns==browse.Ns && kv.second.Name==browse.Name; });
@@ -193,7 +190,7 @@ namespace Jde::Opc::Server {
 		THROW_IFSL( !FindBrowse(browse), "BrowseName not found: {}", browse.ToString() );
 	}
 
-	α UAServer::FindDataType( NodePK nodePK, SL sl )ε->const UA_DataType*{
+	α UAServer::FindDataType( NodePK nodePK )Ι->const UA_DataType*{
 		auto p = _dataTypes.find( nodePK );
 		if( p==_dataTypes.end() && nodePK<=32750 ){
 			for( uint i=0; i<UA_TYPES_COUNT; ++i ){
@@ -206,7 +203,7 @@ namespace Jde::Opc::Server {
 		return p==_dataTypes.end() ? nullptr : p->second;
 	}
 	α UAServer::GetDataType( NodePK nodePK, SL sl )ε->const UA_DataType&{
-		auto p = FindDataType( nodePK, sl );
+		auto p = FindDataType( nodePK );
 		THROW_IFSL( p==nullptr, "({:x})Data type not found", nodePK );
 		return *p;
 	}
@@ -227,21 +224,21 @@ namespace Jde::Opc::Server {
 			return *p->second;
 		throw Exception{ sl, "[{:x}]Object[Type] node not found", pk };
 	}
-	α UAServer::GetObject( const NodeId& id, SL sl )ε->const Object&{
+	α UAServer::GetObject( const ExNodeId& id, SL sl )ε->const Object&{
 		let p = find_if( _objects, [&]( let& kv ){return kv.second.nodeId==id;} );
-		THROW_IF( p==_objects.end(), "Object not found: {}", id.to_string() );
+		THROW_IFSL( p==_objects.end(), "Object not found: {}", id.to_string() );
 		return p->second;
 	}
-	α UAServer::GetRefType( NodePK pk, SL sl )ε->NodeId&{
+	α UAServer::GetRefType( NodePK pk, SL sl )ε->ExNodeId&{
 		auto p = _refTypes.find(pk);
 		if( p==_refTypes.end() && pk<=32750 )
 			p = _refTypes.try_emplace( pk, pk ).first;
 		THROW_IFSL( p==_refTypes.end(), "({:x})Reference type not found", pk );
 		return p->second;
 	}
-	α UAServer::GetTypeDef( const NodeId& id, SL sl )ε->sp<ObjectType>{
+	α UAServer::GetTypeDef( const ExNodeId& id, SL sl )ε->sp<ObjectType>{
 		let p = find_if( _typeDefs, [&]( let& kv ){return kv.second->nodeId==id;} );
-		THROW_IF( p==_typeDefs.end(), "Object type not found: {}", id.to_string() );
+		THROW_IFSL( p==_typeDefs.end(), "Object type not found: {}", id.to_string() );
 		return p->second;
 	}
 	α UAServer::GetTypeDef( NodePK pk, SL sl )ε->sp<ObjectType>{
@@ -255,45 +252,5 @@ namespace Jde::Opc::Server {
 		auto p = _variables.find(pk);
 		THROW_IFSL( p==_variables.end(), "({})Variable not found", Ƒ("{:x}", pk) );
 		return p->second;
-	}
-	α setupSecurityPolicies( UA_ServerConfig& config, fs::path&& certificateFile )ε->void{
-		let passcode = Settings::FindString("/tcp/privateKey/passcode").value_or("");
-		auto privateKeyFile = Settings::FindPath( "/tcp/privateKey/path" ).value_or( fs::path{} );
-		if( !fs::exists(certificateFile) ){
-			let parentPath = certificateFile.parent_path();
-			Crypto::CreateKey( certificateFile.parent_path()/"public.pem", privateKeyFile, passcode );
-			const string uri{ "urn:open62541.server.application" };
-			Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Jde::format("URI:{}", uri), "jde-cpp", "US", "localhost" );
-		}
-		auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
-		auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
-		UA_ByteString trustList;
-		UA_ByteString issuerList;
-		UA_ByteString revocationList;
-		UA_ServerConfig_setDefaultWithSecurityPolicies( &config, Settings::FindNumber<UA_UInt16>("/tcp/port").value_or(4840), certificate.get(), privateKey.get(), &trustList, 0, &issuerList, 0, &revocationList, 0 );
-		UA_String_clear(&config.applicationDescription.applicationUri);
-		config.applicationDescription.applicationUri = UA_STRING_ALLOC("urn:open62541.server.application");
-	}
-
-	constexpr uint usernamePasswordsSize = 2;
-	UA_UsernamePasswordLogin usernamePasswords[usernamePasswordsSize] = {
-    {UA_STRING_STATIC("user1"), UA_STRING_STATIC("0123456789ABCD")},
-    {UA_STRING_STATIC("user2"), UA_STRING_STATIC("0123456789ABCD")}};
-
-	α getConfiguration( UA_Logger& logger )->UA_ServerConfig{
-		UA_ServerConfig config{};
-		config.logging = &logger;
-		if( auto certificateFile = Settings::FindPath("/tcp/certificate").value_or(fs::path{}); !certificateFile.empty() )
-			setupSecurityPolicies( config, move(certificateFile) );
-		else
-			UA_ServerConfig_setDefault(&config);
-
-		for( uint i=0; i<config.securityPoliciesSize; ++i ){
-			let& sp = config.securityPolicies[i];
-			Information{ ELogTags::App, "[{}]PolicyUri={}", i, ToSV(sp.policyUri) };
-			if( ToSV(sp.policyUri)=="http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256" )
-				UA_AccessControl_default( &config, false/*allowAnonymous*/, &sp.policyUri, usernamePasswordsSize, usernamePasswords );
-		}
-		return config;
 	}
 }

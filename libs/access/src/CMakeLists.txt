@@ -6,9 +6,11 @@ include( ../../../build/dependencies.cmake )
 set( targetName Jde.Access )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
-#add_definitions( -DJde_UM_EXPORTS )
 
-file( GLOB sources *.cpp awaits/*.cpp events/*.cpp config/*.cpp hooks/*.cpp types/*.cpp )
+file( GLOB sources
+	*.cpp awaits/*.cpp config/*.cpp events/*.cpp types/*.cpp
+	server/*.cpp server/awaits/*.cpp server/hooks/*.cpp
+	client/*.cpp )
 file( GLOB headers *.h $ENV{JDE_DIR}/Public/include/jde/access/*.h $ENV{JDE_DIR}/Public/include/jde/access/types/*.h )
 target_sources(${targetName} PRIVATE ${sources} ${headers} )
 target_link_libraries( ${targetName} Jde Jde.DB Jde.QL )

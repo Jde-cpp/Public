@@ -1,9 +1,10 @@
 #include <jde/web/server/SessionGraphQL.h>
-#include <jde/ql/ql.h>
-#include <jde/ql/types/TableQL.h>
 #include <jde/framework/io/proto.h>
 #include <jde/framework/io/json.h>
+#include <jde/ql/ql.h>
+#include <jde/ql/types/TableQL.h>
 #include <jde/web/server/Sessions.h>
+#include <jde/app/IApp.h>
 #include "ServerImpl.h"
 
 #define let const auto
@@ -11,9 +12,11 @@
 namespace Jde::Web::Server{
 	constexpr ELogTags _tags{ ELogTags::Sessions };
 	struct SessionGraphQLAwait final: TAwait<jvalue>{
-		SessionGraphQLAwait( const QL::TableQL& query, UserPK userPK, SRCE )ι: TAwait<jvalue>{ sl }, Query{ query }, UserPK{ userPK }{}
+		SessionGraphQLAwait( const QL::TableQL& query, UserPK userPK, sp<App::IApp> appClient, SRCE )ι:
+			TAwait<jvalue>{ sl }, _appClient{ move(appClient) }, Query{ query }, UserPK{ userPK }{}
 		α Suspend()ι->void override{ Select(); }
 		α Select()ι->TAwait<jvalue>::Task;
+		sp<App::IApp> _appClient;
 		QL::TableQL Query;
 		Jde::UserPK UserPK;
 	};
@@ -38,7 +41,7 @@ namespace Jde::Web::Server{
 				for( let& session : sessions )
 					inClause += std::to_string( session->UserPK.Value ) + ",";
 				auto q = "query{ users(id:["+inClause.substr(0, inClause.size()-1)+"]){id loginName provider{id name}} }";
-				users = Json::AsObject(co_await (*AppGraphQLAwait(move(q), UserPK)) );
+				users = Json::AsObject( co_await (*_appClient->Query<jvalue>(move(q), UserPK)) );
 				Trace( _tags | ELogTags::Pedantic, "users={}"sv, serialize(users) );
 				for( let& vuser : Json::AsArrayPath(users, "data/users") ){
 					let& user = Json::AsObject(vuser);
@@ -61,9 +64,9 @@ namespace Jde::Web::Server{
 				if( Query.FindColumn("endpoint") )
 					j["endpoint"] = session->UserEndpoint;
 				if( Query.FindColumn("endpoint") )
-					j["lastUpdate"] = DateTime{ session->Expiration }.ToIsoString();
+					j["lastUpdate"] = ToIsoString( session->Expiration );
 				if( Query.FindColumn("expiration") )
-					j["expiration"] = DateTime{ session->Expiration }.ToIsoString();
+					j["expiration"] = ToIsoString( session->Expiration );
 				if( array )
 					array->emplace_back( move(j) );
 				else{
@@ -109,7 +112,7 @@ namespace Jde::Web::Server{
 	}
 
 	α SessionGraphQL::Select( const QL::TableQL& query, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
-		return query.JsonName.starts_with( "session" ) ? mu<SessionGraphQLAwait>( query, userPK, sl ) : nullptr;
+		return query.JsonName.starts_with( "session" ) ? mu<SessionGraphQLAwait>( query, userPK, _appClient, sl ) : nullptr;
 	}
 
 	α SessionGraphQL::PurgeBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{

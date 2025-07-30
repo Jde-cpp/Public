@@ -3,11 +3,14 @@
 #include "TableQL.h"
 #include "../usings.h"
 
+namespace Jde::DB{ struct AppSchema; }
 namespace Jde::QL{
 	struct TableQL;
 	struct MutationQL final{
-		MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw )ε;
+		MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε;
+		MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw, const sp<DB::AppSchema>& schema )ε;
 		Ω IsMutation( sv name )ι->bool;
+		Ω ParseCommand( sv name )ε->tuple<string,EMutationQL>;
 		α TableName()Ι->string; //json name=user returns users
 		//α Input(SRCE)Ε->const jobject&;
 		template<class T=uint> α Id()Ι->T;
@@ -27,14 +30,13 @@ namespace Jde::QL{
 		α ChildPK()Ε->uint;
 		α ToString()Ι->string;
 
-		string CommandName;
-		string JsonTableName;
-		EMutationQL Type;
 		jobject Args;
+		string CommandName;
+		sp<DB::Table> DBTable;
+		string JsonTableName;
 		optional<TableQL> ResultRequest;
 		bool ReturnRaw;
-	private:
-		mutable string _tableName;
+		EMutationQL Type;
 	};
 
 	Ŧ MutationQL::FindId()Ι->optional<T>{

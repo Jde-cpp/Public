@@ -2,26 +2,32 @@
 #include <jde/framework/settings.h>
 
 namespace Jde::Crypto{
-	using namespace Jde::Settings;
+	Ω getPath( const jobject& settings, str jpath, fs::path dflt )ι->fs::path{
+		auto filePath = Json::FindString( settings, jpath );
+		if( filePath )
+			return fs::path{ *filePath };
 
-	α GetPath( str x, fs::path dflt )ι{
-		const fs::path defaultPrefix = IApplication::ApplicationDataFolder()/"ssl";
-		return FindPath( x ).value_or( defaultPrefix/dflt );
+		auto productName = Json::FindString( settings, "productName" ).value_or( string{Process::ProductName()} );
+		return IApplication::ProgramDataFolder()/OSApp::CompanyRootDir()/productName/"ssl"/dflt;
 	}
 
 	CryptoSettings::CryptoSettings( str prefix )ι:
-		CertPath{ GetPath(prefix+"/certificate", "certs/cert.pem") },
-		PrivateKeyPath{ GetPath(prefix+"/privateKey", "private/private.pem") },
-		PublicKeyPath{ GetPath(prefix+"/publicKey", "public/public.pem") },
-		DhPath{ GetPath(prefix+"/dh", "dh.pem") },
-		Passcode{ FindSV(prefix+"/passcode").value_or("") },
-		AltName{ FindSV(prefix+"/certificateAltName").value_or("DNS:localhost,IP:127.0.0.1") },
-		Company{ FindSV(prefix+"/certficateCompany").value_or("Jde-Cpp") },
-		Country{ FindSV(prefix+"/certficateCountry").value_or("US") },
-		Domain{ FindSV(prefix+"/certficateDomain").value_or("localhost") }
+		CryptoSettings{ Settings::FindDefaultObject(prefix) }
 	{}
 
-	α CryptoSettings::CreateDirectories()ι->void{
+	CryptoSettings::CryptoSettings( jobject settings )ι:
+		CertPath{ getPath(settings, "certificate", "certs/cert.pem") },
+		PrivateKeyPath{ getPath(settings, "privateKey", "private/private.pem") },
+		PublicKeyPath{ getPath(settings, "publicKey", "public/public.pem") },
+		DhPath{ getPath(settings, "dh", "dh.pem") },
+		Passcode{ Json::FindString(settings, "passcode").value_or("") },
+		AltName{ Json::FindString(settings, "certificateAltName").value_or("DNS:localhost,IP:127.0.0.1") },
+		Company{ Json::FindString(settings, "certificateCompany").value_or("Jde-Cpp") },
+		Country{ Json::FindString(settings, "certificateCountry").value_or("US") },
+		Domain{ Json::FindString(settings, "certificateDomain").value_or("localhost") }
+	{}
+
+	α CryptoSettings::CreateDirectories()Ε->void{
 		fs::create_directories( CertPath.parent_path() );
 		fs::create_directories( PrivateKeyPath.parent_path() );
 		fs::create_directories( PublicKeyPath.parent_path() );

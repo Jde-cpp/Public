@@ -3,6 +3,8 @@
 #include <jde/web/server/HttpRequest.h>
 #include <jde/framework/str.h>
 #include "../../../../Framework/source/math/MathUtilities.h"
+#include <jde/web/server/auth/JwtLoginAwait.h>
+#include <jde/app/IApp.h>
 #include "ServerImpl.h"
 
 #define let const auto
@@ -102,7 +104,7 @@ namespace	Sessions{
 				info = existing;
 			}
 			else
-				Trace{ ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, DateTime{existingExpiration}.ToIsoString() };
+				Trace{ ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, ToIsoString(existingExpiration) };
 		} );
 		if( _lastTrim<steady_clock::now()-Sessions::RestSessionTimeout() ){
 			_sessions.erase_if( []( auto& kv ){ return kv.second->Expiration<steady_clock::now(); } );
@@ -112,54 +114,54 @@ namespace	Sessions{
 	}
 
 namespace Sessions{
-	α UpsertAwait::Execute()ι->TTask<Web::FromServer::SessionInfo>{
-		sp<SessionInfo> info;
-		if( !_authorization.empty() ){
-			optional<SessionPK> sessionId;
-			try{
-				if( sessionId = Str::TryTo<SessionPK>(string{_authorization}, nullptr, 16);  !sessionId )
-					THROW( "Invalid sessionId:  '{}'.", _authorization );
-				if( auto pInfo = UpdateExpiration(*sessionId, _endpoint); pInfo )
-					info = pInfo;
-				else{
-					up<TAwait<Web::FromServer::SessionInfo>> pAwait = Server::SessionInfoAwait( *sessionId ); //3rd party, eg AppServer
-					if( !pAwait ){  //no 3rd party
-						if( _throw )
-							throw Exception( SRCE_CUR, ELogLevel::Debug, "[{}]Session not found.", Ƒ("{:x}", *sessionId) );
-						else{
-							_h.resume();
-							co_return;
-						}
-					}
-					Web::FromServer::SessionInfo proto = co_await *pAwait;
-					steady_clock::time_point expiration = Chrono::ToClock<steady_clock,Clock>( Proto::ToTimePoint(proto.expiration()) );
-					info = ms<SessionInfo>( *sessionId, expiration, UserPK{proto.user_pk()}, proto.user_endpoint(), proto.has_socket() );
-					pAwait.reset();
-					info->UserEndpoint = _endpoint;
-					info->HasSocket = _socket;
-					Upsert( info );
-				}
-			}
-			catch( IException& e ){
-				Promise()->SetExp( move(e) );
-			}
-		}
-		else{
-			auto newSession = Sessions::Internal::CreateSession( {}, _endpoint, _socket, false );
-			Upsert( newSession );
-			info = newSession;
-		}
-		if( info )
-			Promise()->SetValue( move(info) );
-		_h.resume();
-	}
-
 	α UpsertAwait::Suspend()ι->void{
+		if(	_authorization.starts_with("Bearer ") )
+			FromJwt( Web::Jwt{_authorization.substr(7)} );
+		else if( _authorization.size() )
+			FromSessionId();
+		else
+			CreateSession();
+	}
+	α UpsertAwait::FromJwt( Web::Jwt&& jwt )ι->TTask<UserPK>{
 		try{
-			Execute();
+			auto userPK = co_await JwtLoginAwait( move(jwt), _endpoint );
+			CreateSession( userPK );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			Promise()->SetExp( move(e) );
+		}
+	}
+	α UpsertAwait::CreateSession( UserPK userPK )ι->void{
+		auto info = Sessions::Internal::CreateSession( userPK, _endpoint, _socket, false );
+		Upsert( info );
+		Resume( move(info) );
+	}
+	α UpsertAwait::FromSessionId()ι->TTask<Web::FromServer::SessionInfo>{
+		try{
+			optional<SessionPK> sessionId = Str::TryTo<SessionPK>(string{_authorization}, nullptr, 16);
+			THROW_IF( !sessionId, "Invalid sessionId:  '{}'.", _authorization );
+			auto info = UpdateExpiration( *sessionId, _endpoint );
+			if( !info ){
+				up<TAwait<Web::FromServer::SessionInfo>> await{ !_appClient || _appClient->IsLocal() ? nullptr : _appClient->SessionInfoAwait(*sessionId, _sl) };//3rd party, eg AppServer
+				if( !await ){  //no 3rd party
+					if( _throw )
+						throw Exception( SRCE_CUR, ELogLevel::Debug, "[{}]Session not found.", Ƒ("{:x}", *sessionId) );
+					else{
+						_h.resume();
+						co_return;
+					}
+				}
+				Web::FromServer::SessionInfo proto{ co_await *await };
+				steady_clock::time_point expiration = Chrono::ToClock<steady_clock,Clock>( Proto::ToTimePoint(proto.expiration()) );
+				info = ms<SessionInfo>( *sessionId, expiration, UserPK{proto.user_pk()}, proto.user_endpoint(), proto.has_socket() );
+				info->UserEndpoint = _endpoint;
+				info->HasSocket = _socket;
+				Upsert( info );
+			}
+			Resume( move(info) );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
 		}
 	}
 	α UpsertAwait::await_resume()ε->sp<SessionInfo>{

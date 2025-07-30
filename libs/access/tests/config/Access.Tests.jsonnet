@@ -1,10 +1,10 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "AuthTests.Login_New",
+		tests:: "ResourceTests.Crud",
 		recreateDB:: true
 	},
-	dbServers: {
+	dbServers:{
 		scriptPaths: ["$(JDE_DIR)/Public/libs/access/config/sql/"+args.sqlType],
 		dataPaths: ["$(JDE_DIR)/Public/libs/access/config"],
 		sync: true,
@@ -19,9 +19,9 @@ local args = import 'args.libsonnet';
 	},
 	logging:{
 		tags: {
-			trace:["test", "app", "access", "ql", "sql"],
-			debug:["settings"],
-			information:[],
+			trace:["test", "access", "ql"],
+			debug:["settings", "sql"],
+			information:["app"],
 			warning:[],
 			"error":[],
 			critical:[]

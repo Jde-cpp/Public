@@ -7,15 +7,17 @@
 #define Φ ΓAS auto
 namespace Jde::App::FromClient{
 	namespace PFromClient = Jde::App::Proto::FromClient;
-	Φ AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, RequestId requestId )ι->PFromClient::Transmission;
+	using StringTrans = string;
+	Φ AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, RequestId requestId )ι->StringTrans;
 	Φ Exception( exception&& e, RequestId requestId=0 )ι->PFromClient::Transmission;
 	Φ Exception( string&& e, RequestId requestId )ι->PFromClient::Transmission;
+	Φ Jwt( RequestId requestId )ι->StringTrans;
 	Φ Query( string query, RequestId requestId, bool returnRaw=true )ι->PFromClient::Transmission;
 	Φ Instance( str application, str instanceName, SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission;
 	Φ ToStatus( vector<string>&& details )ι->PFromClient::Status;
 	Φ ToStatus( AppPK appId, AppInstancePK instanceId, str hostName, App::Proto::FromClient::Status&& input )ι->PFromClient::Status;
 	Φ Status( vector<string>&& details )ι->PFromClient::Transmission;
-	Φ Session( SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission;
+	Φ Session( SessionPK sessionId, RequestId requestId )ι->StringTrans;
 	Φ Subscription( string&& query, RequestId requestId )ι->PFromClient::Transmission;
 	Φ ToLogEntry( Logging::ExternalMessage m )ι->PFromClient::LogEntry;
 	Φ AddStringField( PFromClient::Transmission& t, PFromClient::EFields field, uint32 id, str value )ι->void;

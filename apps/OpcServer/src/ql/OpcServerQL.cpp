@@ -1,12 +1,12 @@
 #include "OpcServerQL.h"
-#include "../awaits/ServerConfigAwait.h"
 #include <jde/framework/io/file.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/IQL.h>
 #include <jde/ql/QLAwait.h>
-
+#include "../awaits/ServerConfigAwait.h"
+#include "../StartupAwait.h"
 #define let const auto
 
 namespace Jde::Opc::Server{
@@ -25,8 +25,8 @@ namespace Jde::Opc::Server{
 			jarray y;
 			for( let& file : _files ){
 				Information{ ELogTags::App, "Mutation: '{}'", file.string() };
-				let text = IO::FileUtilities::Load( file );
-				auto requests = QL::Parse( move(text) ); THROW_IF( !requests.IsMutation(), "Query is not a mutation" );
+				let text = IO::Load( file );
+				auto requests = QL::Parse( move(text), Schemas() ); THROW_IF( !requests.IsMutation(), "Query is not a mutation" );
 				for( auto&& m : requests.Mutations() ){
 					m.Args["$silent"] = true;
 					try{

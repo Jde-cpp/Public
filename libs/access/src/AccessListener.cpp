@@ -1,20 +1,13 @@
-#include "AccessListener.h"
+#include <jde/access/AccessListener.h>
 #include <jde/ql/ql.h>
-#include <jde/ql/IQL.h>
+//#include <jde/ql/IQL.h>
 //#include <jde/ql/SubscriptionAwait.h>
 #include <jde/access/Authorize.h>
+#include "accessInternal.h"
 
 #define let const auto
 
 namespace Jde::Access{
-	sp<AccessListener> _listener;
-	α AccessListener::Instance()ι->sp<AccessListener>{ return _listener; }
-	α AccessListener::SetInstance( sp<QL::IQL> qlServer )ι->void{
-		ASSERT( !AccessListener::Instance() );
-		_listener = ms<AccessListener>( qlServer );
-		Process::AddShutdown(  _listener );
-	}
-
 	α AccessListener::Shutdown( bool terminate )ι->void{
 		if( terminate )
 			return;
@@ -23,7 +16,6 @@ namespace Jde::Access{
 		}
 		catch( IException& )
 		{}
-		_listener = nullptr;
 	}
 	α AccessListener::OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void{
 		let& root = Json::AsObject(j);

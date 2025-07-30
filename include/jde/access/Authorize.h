@@ -9,7 +9,7 @@ namespace Jde::Access{
 	struct Listener; struct Loader; struct Permission;// struct User; struct Group;
 
 	struct Authorize : IAcl{
-		Authorize()ε{}
+		Authorize( string app )ι:_app{move(app)}{}
 		α Test( str schemaName, str resourceName, ERights rights, UserPK userPK, SRCE )ε->void override;
 		α TestAdmin( str resource, UserPK userPK, SRCE )ε->void;
 		α TestAdmin( ResourcePK resourcePK, UserPK userPK, SRCE )ε->void;
@@ -64,6 +64,8 @@ namespace Jde::Access{
 		flat_map<RolePK,Role> Roles;
 		flat_multimap<IdentityPK,PermissionRole> Acl;
 
-		friend struct AccessListener; friend struct Loader;
+	private:
+		string _app;
+		friend struct AccessListener; friend struct Loader; friend struct ConfigureAwait;
 	};
 }

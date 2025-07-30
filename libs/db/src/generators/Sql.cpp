@@ -20,12 +20,19 @@ namespace Jde::DB{
 		for( uint i=Text.find('?'), iParam=0; iParam<Params.size() && i<Text.size(); iStart=i+1, i=Text.find('?', i+1) ){
 			fullSql.append( Text, iStart, i-iStart );
 			auto& param = Params[iParam++];
-			if( param.Type()==EValue::String )
-				fullSql.append( '\''+Str::Replace(param.get_string(), "\'", "''")+'\'' );
-			else if( param.Type()==EValue::Null )
-				fullSql.append( "null" );
-			else
+			switch( param.Type() ){
+				using enum EValue;
+			case String: fullSql.append( '\''+Str::Replace(param.get_string(), "\'", "''")+'\'' ); break;
+			case Null: fullSql.append( "null" ); break;
+			case Bytes:
+				if( param.get_bytes().size()==0 )
+					fullSql.append( "Null" );
+				else
+					fullSql.append( '\''+Str::Encode64( param.get_bytes() )+'\'' );
+				break;
+			default: 
 				fullSql.append( param.ToString() );
+			}
 		}
 		if( iStart<Text.size() )
 			fullSql.append( Text, iStart, Text.size()-iStart );

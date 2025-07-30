@@ -3,7 +3,7 @@
 #include "../usings.h"
 #include <jde/framework/str.h>
 #include "../client.h"
-#include "../../../../../../Framework/source/DateTime.h"
+#include <jde/framework/chrono.h>
 
 namespace Jde::Web::Client{
 	struct IClientSocketSession;
@@ -13,7 +13,7 @@ namespace Jde::Web::Client{
 		}
 		α Log( SessionPK sessionId, steady_clock::time_point start, SL sl)ι->void{
 			if( ShouldTrace(ELogTags::SocketClientRead) && ResponseMessage.size() ){
-				const auto msg = sv{Str::ToString(ResponseMessage, MessageArgs)}.substr( 0, MaxLogLength() );
+				const auto msg = sv{Str::Format(ResponseMessage, MessageArgs)}.substr( 0, MaxLogLength() );
 				Trace{ sl, ELogTags::SocketClientRead, "[{:x}]SocketReceive - {} - {}", sessionId, msg, Chrono::ToString( steady_clock::now() - start ) };
 			}
 		}
@@ -38,10 +38,9 @@ namespace Jde::Web::Client{
 		steady_clock::time_point _start;
 	};
 
-	struct ClientSocketVoidAwait final : VoidAwait<void,TimedVoidTask>, IClientSocketVoidAwait{
-		using base = VoidAwait<void,TimedVoidTask>;
+	struct ClientSocketVoidAwait final : VoidAwait, IClientSocketVoidAwait{
 		ClientSocketVoidAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι:
-			base{ sl }, IClientSocketVoidAwait{ move(request), requestId, session }{}
+			VoidAwait{ sl }, IClientSocketVoidAwait{ move(request), requestId, session }{}
 		α Suspend()ι->void{ IClientSocketVoidAwait::Suspend( _h ); }
 		α await_resume()ε->void override;
 	};

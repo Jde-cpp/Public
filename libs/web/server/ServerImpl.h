@@ -3,34 +3,33 @@
 #include "Streams.h"
 #include <jde/web/server/HttpRequest.h>
 #include <jde/web/server/usings.h>
-#include <jde/web/server/IApplicationServer.h>
+#include <jde/app/IApp.h>
 #include <jde/web/server/IRequestHandler.h>
 
 #define let const auto
-
+namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Web::Server{
-
 namespace Internal{
-	α Start( up<IRequestHandler>&& handler, up<Server::IApplicationServer>&& server )ε->void;
-	α Stop( bool terminate=false )ι->void;
+	α Start( sp<IRequestHandler> handler )ε->void;
+	α Stop( sp<IRequestHandler>&& handler, bool terminate )ι->void;
 	α RunSocketSession( sp<IWebsocketSession>&& session )ι->void;
 	α RemoveSocketSession( SocketId id )ι->void;
 }
+
 	α AppServerLocal()ι->bool;
-	α AppGraphQLAwait( string&& q, UserPK userPK, SRCE )ι->up<TAwait<jvalue>>;
+	//α AppGraphQLAwait( string&& q, UserPK userPK, SRCE )ι->up<TAwait<jvalue>>;
 	Τ [[nodiscard]] α DoEof( T& stream )ι->net::awaitable<void, executor_type>{ beast::error_code ec; stream.socket().shutdown( tcp::socket::shutdown_send, ec ); co_return; }
 	Τ [[nodiscard]] α DoEof( beast::ssl_stream<T>& stream )ι->net::awaitable<void, executor_type>{ co_await stream.async_shutdown(); }
-	α HandleRequest( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task;
+	α HandleRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task;
 	α ReadSeverity( beast::error_code ec )ι->ELogLevel;
-	α GetRequestHandler()ι->IRequestHandler&;
-	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> cancel )ι->net::awaitable<void, executor_type>;
+	//α GetRequestHandler()ι->IRequestHandler&;
+	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> cancel, IRequestHandler* reqHandler )ι->net::awaitable<void, executor_type>;
 	α SendOptions( const HttpRequest&& req )ι->http::message_generator;
-	α SendServerSettings( HttpRequest req, sp<RestStream> stream )ι->Sessions::UpsertAwait::Task;
-	α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<Web::FromServer::SessionInfo>>;
+	α SendServerSettings( HttpRequest req, sp<RestStream> stream, sp<App::IApp> appServer )ι->TAwait<sp<SessionInfo>>::Task;
 }
 
 namespace Jde::Web{
-	Ŧ Server::RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> /*cancel*/ )ι->net::awaitable<void, executor_type>{
+	Ŧ Server::RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> /*cancel*/, IRequestHandler* reqHandler )ι->net::awaitable<void, executor_type>{
 		optional<http::request_parser<http::string_body>> parser;// a new parser must be used for every message so we use an optional to reconstruct it every time.
 		parser.emplace();
 		parser->body_limit(10000); // Apply a reasonable limit to the allowed size  of the body in bytes to prevent abuse.
@@ -46,7 +45,7 @@ namespace Jde::Web{
 		for( auto cs = co_await net::this_coro::cancellation_state; cs.cancelled() == net::cancellation_type::none; cs = co_await net::this_coro::cancellation_state ){
 			if( websocket::is_upgrade(parser->get()) ){
 				beast::get_lowest_layer(stream).expires_never();// Disable the timeout. The websocket::stream uses its own timeout settings.
-				Internal::RunSocketSession( GetRequestHandler().GetWebsocketSession( ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint, connectionIndex) );
+				Internal::RunSocketSession( reqHandler->GetWebsocketSession(ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint, connectionIndex) );
 				co_return;
 			}
 			HttpRequest req{ parser->release(), move(userEndpoint), isSsl, connectionIndex };
@@ -60,11 +59,11 @@ namespace Jde::Web{
 				res = move(pingRes);
 			}
 			else if( req.IsGet("/serverSettings") ){
-				SendServerSettings( move(req), ms<RestStream>(mu<T>(move(stream))) );
+				SendServerSettings( move(req), ms<RestStream>(mu<T>(move(stream))), reqHandler->AppServer() );
 				co_return;
 			}
 			if( !res ){
-				HandleRequest( move(req), ms<RestStream>(mu<T>(move(stream))) );
+				HandleRequest( move(req), ms<RestStream>(mu<T>(move(stream))), reqHandler );
 				co_return;//TODO handle keepalive
 			}
 			if( res && !res->keep_alive() ){

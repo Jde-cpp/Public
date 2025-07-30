@@ -3,7 +3,7 @@ local args = import 'args.libsonnet';
 	dbServers:{
 		dataPaths: args.dbServers.dataPaths,
 		scriptPaths: args.dbServers.scriptPaths,
-		sync: true,
+		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,
@@ -16,10 +16,10 @@ local args = import 'args.libsonnet';
 	logging:{
 		flushOn: "Trace",
 		tags: {
-			trace:["test", "sql", "ql"],
-			debug:["settings", "app"],
-			information:["app", "appServer", "net",
-				"UASession", "UAServer", "UAUser", "UASecurity", "UAEvent", "sql", "threads", "UAClient", "UANet", "UASecure"],
+			trace:["test",
+				"UASession", "UAServer", "UAUser", "UASecurity", "UAEvent", "threads", "UAClient", "UANet", "UASecure"],
+			debug:["sql", "ql","settings", "app"],
+			information:["app", "appServer", "net"],
 			warning:["alarm", "ql", "io", "locks", "settings"],
 			"error":[],
 			critical:[]
@@ -32,18 +32,19 @@ local args = import 'args.libsonnet';
 		name: "OpcServer.Test.$(JDE_BUILD_TYPE)",
 		target:: "OpcServer"
 	},
+	http:{port: 1970},
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",
-		configDir: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps"
-	},
-	tcp:{
-		port:  4840,
-		certificate: "/tmp/cert.pem",
-		privateKey: {path:"/tmp/private.pem", passcode: ""}
+		configDir: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		port: 4840,
+		ssl:{
+			certificate: "/tmp/cert.pem",
+			privateKey: {path:"/tmp/private.pem", passcode: ""}
+		}
 	},
 	workers:{
-		executor: 1,
+		executor: 2,
 		drive:{ threads:  1 },
 		alarm:{ threads:  1 }
 	}

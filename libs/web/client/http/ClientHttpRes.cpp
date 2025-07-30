@@ -10,11 +10,13 @@ namespace Jde::Web::Client{
       z_stream zs{ (Bytef*)body.data(), (uInt)body.size() }; //zs.zalloc = Z_NULL; zs.zfree = Z_NULL; zs.opaque = Z_NULL;
       string unziped;
       auto hr = inflateInit2( &zs, MAX_WBITS | 16 ); CHECK(hr==Z_OK);
-      hr=Z_BUF_ERROR;
-      for( auto outputSize = body.size(); hr==Z_BUF_ERROR; outputSize*=2 ){
-				unziped.resize( outputSize );
-         zs.avail_out = (uInt)unziped.size(); zs.next_out = (Bytef*)unziped.data()+zs.total_out;
-         hr = inflate( &zs, Z_FINISH );
+      hr = Z_BUF_ERROR;
+      for( auto nextOutSize = body.size(); hr==Z_BUF_ERROR; nextOutSize*=2 ){
+				let start = unziped.size();
+				unziped.resize( start+nextOutSize );
+				zs.next_out = (Bytef*)unziped.data()+start;
+        zs.avail_out = nextOutSize;
+        hr = inflate( &zs, Z_FINISH );
       }
       CHECK( hr==Z_STREAM_END );
       hr = inflateEnd( &zs );

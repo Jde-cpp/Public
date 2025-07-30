@@ -5,6 +5,8 @@
 #include "exports.h"
 
 #define Φ auto ΓWS
+namespace Jde::App{ struct IApp; }
+namespace Jde::Web{ struct Jwt; }
 namespace Jde::Web::FromServer{ struct SessionInfo; }
 //Holds web session information.
 namespace Jde::Web::Server{
@@ -38,12 +40,15 @@ namespace Jde::Web::Server{
 
 		struct ΓWS UpsertAwait : TAwait<sp<SessionInfo>>{
 			using base = TAwait<sp<SessionInfo>>;
-			UpsertAwait( str authorization, str endpoint, bool socket, bool throw_=true, SRCE )ι:base{sl},_authorization{authorization}, _endpoint{endpoint}, _socket{socket}, _throw{throw_}{}
+			UpsertAwait( str authorization, str endpoint, bool socket, sp<App::IApp> appClient, bool throw_=true, SRCE )ι:base{sl}, _appClient{move(appClient)}, _authorization{authorization}, _endpoint{endpoint}, _socket{socket}, _throw{throw_}{}
 			α Suspend()ι->void;
 			α await_resume()ε->sp<SessionInfo>;
 		private:
 			α Execute()ι->TTask<Web::FromServer::SessionInfo>;
-			string _authorization; string _endpoint; bool _socket; bool _throw;
+			α FromSessionId()ι->TTask<Web::FromServer::SessionInfo>;
+			α FromJwt( Web::Jwt&& jwt )ι->TTask<UserPK>;
+			α CreateSession( UserPK userPK={} )ι->void;
+			sp<App::IApp> _appClient; string _authorization; string _endpoint; bool _socket; bool _throw;
 		};
 	}
 }

@@ -20,7 +20,6 @@ namespace Jde::App::Client{
 		//[&]->LogAwait::Task { co_await LogAwait{ m, args, sl }; }();
 	}
 	α AppLog::SetMinLevel(ELogLevel level)ι->void{
-		UpdateStatus();
 		_minLevel = level;
 	}
 }

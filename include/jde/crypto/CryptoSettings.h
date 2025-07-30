@@ -1,19 +1,29 @@
 #pragma once
 #include "exports.h"
-namespace Jde::Crypto{
+#include "OpenSsl.h"
 
+namespace Jde::Crypto{
 	struct ΓC CryptoSettings final{
 		CryptoSettings( str settingsPrefix )ι;
-		α CreateDirectories()ι->void;
+		CryptoSettings( jobject settings )ι;
+		α CreateDirectories()Ε->void;
 
-		const fs::path CertPath;
-		const fs::path PrivateKeyPath;
-		const fs::path PublicKeyPath;
-		const fs::path DhPath;
-		const string Passcode;
-		const string AltName;
-		const string Company;
-		const string Country;
-		const string Domain;
+		 α PublicKey()Ι->const Crypto::PublicKey&{
+			if( !_publicKey )
+				_publicKey = Crypto::ReadPublicKey( PublicKeyPath );
+			return *_publicKey;
+		}
+
+		fs::path CertPath;
+		fs::path PrivateKeyPath;
+		fs::path PublicKeyPath;
+		fs::path DhPath;
+		string Passcode;
+		string AltName;
+		string Company;
+		string Country;
+		string Domain;
+	private:
+		mutable optional<Crypto::PublicKey> _publicKey;
 	};
 }

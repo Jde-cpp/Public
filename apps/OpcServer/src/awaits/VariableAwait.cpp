@@ -40,7 +40,7 @@ namespace Jde::Opc::Server {
 					Variant::ToArrayDims( row.GetString(24) )
 				};
 				node.Browse = GetUAServer().GetBrowse( node.Browse.PK, _sl );
-				auto p = nodes.try_emplace( nodes.end(), node.PK, move(node) );
+				nodes.try_emplace( nodes.end(), node.PK, move(node) );
 			}
 			Resume( move(nodes) );
 		}
@@ -58,7 +58,6 @@ namespace Jde::Opc::Server {
 		try{
 			auto& ua = GetUAServer();
 			BrowseNameAwait::GetOrInsert( _node.Browse );
-			UA_NodeId vAttrId;
 			_node = ua.AddVariable( move(_node) );
 			DB::Value variantPK;
 			if( _node.value.type ){
@@ -100,7 +99,7 @@ namespace Jde::Opc::Server {
 			ref->SourcePK = _node.PK;
 			try{
 				co_await DS().Execute( DB::Sql{
-					Ƒ("INSERT INTO {}(source_node_id, target_node_id, ref_type_id, is_forward) VALUES (?,?,?,?)", GetSchema().DBName("references")),
+					Ƒ("INSERT INTO {}(source_node_id, target_node_id, ref_type_id, is_forward) VALUES (?,?,?,?)", GetSchema().DBName("refs")),
 					{ {ref->SourcePK}, {ref->TargetPK}, {ref->RefTypePK}, {ref->IsForward} }
 				});
 				GetUAServer().AddReference( *ref );

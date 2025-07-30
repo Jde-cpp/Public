@@ -1,10 +1,11 @@
 ﻿#include <execution>
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/client/http/ClientHttpResException.h>
+#include <jde/framework/chrono.h>
+#include <jde/framework/Stopwatch.h>
 #include <jde/framework/str.h>
 #include <jde/framework/thread/execution.h>
 #include "mocks/ServerMock.h"
-#include "../../Framework/source/DateTime.h"
 
 #define let const auto
 
@@ -14,7 +15,7 @@ namespace Jde::Web{
 
 	struct WebTests : ::testing::Test{
 	protected:
-		WebTests():_pRequestHandler(ms<Mock::RequestHandler>()) {}
+		WebTests():_requestHandler(ms<Mock::RequestHandler>(jobject{})) {}
 		~WebTests() override{}
 
 		Ω SetUpTestCase()->void;
@@ -22,14 +23,14 @@ namespace Jde::Web{
 		α TearDown()->void override{}
 		Ω TearDownTestCase()->void;
 
-		sp<Server::IRequestHandler> _pRequestHandler;
+		sp<Server::IRequestHandler> _requestHandler;
 	};
 	constexpr sv ContentType{ "application/x-www-form-urlencoded" };
 	up<IException> _pException;
 
 	α WebTests::SetUpTestCase()->void{
 		Stopwatch _{ "WebTests::SetUpTestCase", _tags };
-		Mock::Start();
+		Mock::Start( Settings::AsObject("/http") );
 	}
 
 	α WebTests::TearDownTestCase()->void{
@@ -47,6 +48,21 @@ namespace Jde::Web{
 		ASSERT_TRUE( res[http::field::server].contains("SSL") );
 	}
 
+	TEST_F( WebTests, GoogleCerts ){
+		auto await = ClientHttpAwait{ "www.googleapis.com", "/oauth2/v3/certs", 443, {.ContentType="", .Verb=http::verb::get} };
+		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
+		let certs = res.Json();
+		ASSERT_TRUE( certs.contains("keys") );
+		let keys = certs.at("keys").as_array();
+		ASSERT_GT( keys.size(), 0 );
+		ASSERT_TRUE( keys[0].is_object() );
+	}
+	TEST_F( WebTests, GZip ){
+		auto await = ClientHttpAwait{ "en.wikipedia.org", string{"/wiki/Madden_NFL_26"}, 443, {.ContentType="", .Verb=http::verb::get} };
+		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
+		ASSERT_TRUE( res[http::field::content_encoding].contains("gzip") );
+	}
+
 	TEST_F( WebTests, IsPlain ){
 		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post, .IsSsl=false} };
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
@@ -59,7 +75,6 @@ namespace Jde::Web{
 		for( uint i=0; i<count; ++i )
 			indexes[i] = i;
 		array<SessionPK,count> sessionIds{};
-		Stopwatch _{ "WebTests::EchoAttack", _tags };
 		try{
 			atomic<uint> connections = 0;
 			std::for_each( indexes.begin(), indexes.end(), [&sessionIds,&connections]( uint index )mutable{
@@ -110,7 +125,6 @@ namespace Jde::Web{
 			std::this_thread::yield();
 	}
 	TEST_F( WebTests, BadSessionId ){
-		Stopwatch _{ "WebTests::BadSessionId", _tags };
 		try{
 			auto await = ClientHttpAwait{ Host, "/echo?InvalidSessionId", Port, {.Authorization="xxxxxx"} };
 			let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
@@ -119,10 +133,11 @@ namespace Jde::Web{
 		catch( ClientHttpResException& e){
 			ASSERT_EQ( http::status::unauthorized, e.Status() );
 		}
+		catch( exception& e){
+			ASSERT_FALSE( true );
+		}
 	}
 	TEST_F( WebTests, CloseMidRequest ){
-		Stopwatch _{ "WebTests::CloseMidRequest", _tags };
-
 		namespace beast = boost::beast;
 		net::any_io_executor strand = net::make_strand( *Executor() );
 		tcp::resolver resolver{ strand };
@@ -184,22 +199,21 @@ namespace Jde::Web{
 		}
 	}
 	TEST_F( WebTests, TestTimeout ){
-		Stopwatch sw{ "WebTests::TestTimeout", _tags };
-		let testStartTime = Chrono::ToClock<Clock,steady_clock>( sw.StartTime() );
+		let testStartTime = Chrono::ToClock<Clock,steady_clock>( steady_clock::now() );
 		let timeoutString = Settings::FindSV("/http/timeout").value_or( "PT30S" );
 		let timeout = Chrono::ToDuration( timeoutString );
 		ASSERT( timeout<=30s );//too long to wait.
 
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/timeout", Port} );//fetch timeout
 		let currentTimeoutString = Json::AsString( res.Json(), "value" );//
-		let currentTimeout = Chrono::to_timepoint( currentTimeoutString );
+		let currentTimeout = Chrono::ToTimePoint( currentTimeoutString );
 		DBG( "Expected: ({}+{}) '{}'  Actual:  '{}'", ToIsoString(testStartTime), timeoutString, ToIsoString(testStartTime+timeout), ToIsoString(currentTimeout) );
 		ASSERT_LE( testStartTime+timeout-1s, currentTimeout );
 		let authorization = res[http::field::authorization];
 
 		auto await2 = ClientHttpAwait{ Host, "/timeout", Port, {.Authorization=authorization} };
 		let res2 = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await2) );
-		let nextSystemEndTime = Chrono::to_timepoint( Json::AsSV(Json::Parse(res2.Body()), "value") );
+		let nextSystemEndTime = Chrono::ToTimePoint( Json::AsString(Json::Parse(res2.Body()), "value") );
 		ASSERT_GT( nextSystemEndTime, testStartTime );
 		DBG( "newTimeout:  '{}'", ToIsoString(nextSystemEndTime) );
 

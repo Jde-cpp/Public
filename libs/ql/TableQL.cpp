@@ -12,9 +12,13 @@
 #define let const auto
 namespace Jde::QL{
 	using DB::EOperator;
-	α TableQL::DBName()Ι->string{
-		return DB::Names::ToPlural( DB::Names::FromJson(JsonName) );
-	}
+
+	TableQL::TableQL( string jName, jobject args, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε:
+		Args{move(args)},
+		DBTable{ system ? sp<DB::View>{} : DB::AppSchema::GetViewPtr(schemas, DB::Names::ToPlural(DB::Names::FromJson(jName)), sl) },
+		JsonName{move(jName)}
+	{}
+
 	α TableQL::Filter()Ε->FilterQL{
 		FilterQL filters;
 		let filterArgs = Json::FindObject( Args, "filter" );
@@ -40,6 +44,17 @@ namespace Jde::QL{
 		if( auto filter = Args.find( "filter" ); filter!=Args.end() )
 			destination = &filter->value().as_object();
 		(*destination)[column] = value;
+	}
+
+	α TableQL::ExtractTable( sv jsonPluralName )ι->optional<TableQL>{
+		auto p = find_if( Tables, [&](let& t){return t.JsonName==jsonPluralName;});
+		if( p==Tables.end() )
+			p = find_if( Tables.begin(), Tables.end(), [&](let& t){return t.JsonName==DB::Names::ToSingular(jsonPluralName);});
+		if( p==Tables.end() )
+			return {};
+		auto y = move(*p);
+		Tables.erase( p );
+		return y;
 	}
 
 	α TableQL::FindTable( sv jsonPluralName )ι->TableQL*{

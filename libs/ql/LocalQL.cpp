@@ -1,6 +1,7 @@
-#include "LocalQL.h"
+#include <jde/ql/LocalQL.h>
 #include <jde/db/Row.h>
 #include <jde/db/generators/Functions.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/View.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalSubscriptions.h>
@@ -9,7 +10,17 @@
 #define let const auto
 
 namespace Jde::QL{
-	α GetTable( str tableName, SRCE )ε->sp<DB::View>;
+	α LocalQL::DS()ι->DB::IDataSource&{ ASSERT(!_schemas.empty() && _schemas.front()->DS()); return *_schemas.front()->DS(); }
+	α LocalQL::GetTablePtr( str tableName, SL sl )ε->sp<DB::View>{
+		for( const auto& schema : _schemas ){
+			if( auto t = schema->FindView(tableName); t )
+				return t;
+		}
+		throw Exception{ sl, "Table not found:  {}", tableName };
+	}
+	α LocalQL::GetTable( str tableName, SL sl )ε->DB::View&{
+		return *GetTablePtr( tableName, sl );
+	}
 
 	constexpr ELogTags _tags{ ELogTags::QL };
 
@@ -32,10 +43,11 @@ namespace Jde::QL{
 		vector<SubscriptionId> _result;
 	};
 	α LocalQL::Subscribe( string&& query, sp<IListener> listener, UserPK executer, SL sl )ε->up<TAwait<vector<SubscriptionId>>>{
-		return mu<SubscribeQueryAwait>( ParseSubscriptions(move(query)), listener, executer, sl );
+		Trace{ ELogTags::Test, "{}", query };
+		return mu<SubscribeQueryAwait>( ParseSubscriptions(move(query), _schemas, sl), listener, executer, sl );
 	}
 	α LocalQL::Upsert( string query, UserPK executer )ε->jarray{
-		auto result = QL::Parse( move(query) ); THROW_IF( !result.IsMutation(), "Query is not a mutation" );
+		auto result = QL::Parse( move(query), _schemas ); THROW_IF( !result.IsMutation(), "Query is not a mutation" );
 		jarray y;
 		for( auto&& m : result.Mutations() ){
 			auto key = m.FindKey();
@@ -54,7 +66,7 @@ namespace Jde::QL{
 					string name2 = Json::AsString(*name);
 					m.Args["name"] = name2;
 				}
-				if( auto t = key->IsPrimary() ? GetTable(m.TableName()) : nullptr; t && t->SequenceColumn() )
+				if( auto t = key->IsPrimary() ? GetTablePtr(m.TableName()) : nullptr; t && t->SequenceColumn() )
 					y.push_back( BlockAwait<InsertAwait,jvalue>({DB::AsTable(t), move(m), true, executer}) );
 				else
 					y.push_back( BlockAwait<QLAwait<jvalue>,jvalue>(QLAwait<jvalue>{move(m), executer}) );

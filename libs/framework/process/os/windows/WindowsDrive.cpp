@@ -2,13 +2,12 @@
 #include "WindowsUtilities.h"
 #include <jde/framework/io/File.h>
 #include "../../Framework/source/Cache.h"
-#include "../../Framework/source/io/drive/DriveApi.h"
-#include "../../Framework/source/DateTime.h"
-#define var const auto
+#include <jde/framework/chrono.h>
+#define let const auto
 
 namespace Jde{
 	IO::Drive::WindowsDrive _native;
-	α IO::Native()ι->IDrive&{ return _native; }
+	//α IO::Native()ι->IDrive&{ return _native; }
 }
 namespace Jde::IO{
 	constexpr ELogTags _tags{ ELogTags::IO };
@@ -40,7 +39,7 @@ namespace Jde::IO{
 		}
 		else{
 			TRACE( "({})Writing {} - {}"sv, arg.Path.string(), chunk.StartIndex(), std::min(chunk.StartIndex()+DriveWorker::ChunkSize(), endByteIndex) );
-			var h = arg.Handle.get();
+			let h = arg.Handle.get();
 			if( !::WriteFileEx(h, chunk.Buffer(), (DWORD)(chunk.Bytes), &chunk.Overlap, OverlappedCompletionRoutine) )
 				DBG( "WriteFileEx({}) returned false - {}", arg.Path.string(), GetLastError() );
 		}
@@ -55,7 +54,7 @@ namespace Jde::IO{
 			FileChunkArg& chunk = *(FileChunkArg*)pOverlapped->hEvent;
 			FileIOArg& arg = chunk.FileArg();
 			auto& promise = arg.CoHandle.promise();
-			if( auto pp = find_if( arg.Chunks.begin(), arg.Chunks.end(), [](var& x){ return !x->Sent;} ); pp!=arg.Chunks.end() )
+			if( auto pp = find_if( arg.Chunks.begin(), arg.Chunks.end(), [](let& x){ return !x->Sent;} ); pp!=arg.Chunks.end() )
 				Send( dynamic_cast<FileChunkArg&>(**pp) );
 			else if( arg.Chunks.size()==1 )
 			{
@@ -70,7 +69,7 @@ namespace Jde::IO{
 				WinDriveWorker::Remove( &arg );
 				Coroutine::CoroutinePool::Resume( move(arg.CoHandle) );
 			}
-			else if( auto p = find_if( arg.Chunks.begin(), arg.Chunks.end(), [pChunk=&chunk](var& x){ return x.get()==pChunk;} ); p!=arg.Chunks.end() )
+			else if( auto p = find_if( arg.Chunks.begin(), arg.Chunks.end(), [pChunk=&chunk](let& x){ return x.get()==pChunk;} ); p!=arg.Chunks.end() )
 				arg.Chunks.erase( p );
 		}
 		catch( IException&  )
@@ -108,22 +107,22 @@ namespace Jde::IO{
 	}
 */
 	optional<Duration> _keepAlive;
-	Ω keepAlive()->Duration{ 
+	Ω keepAlive()->Duration{
 		if( !_keepAlive )
 			_keepAlive = Settings::FindDuration( "workers/drive/keepalive" ).value_or( 5s );
 		return *_keepAlive;
 	}
 	α WinDriveWorker::Poll()ι->optional<bool>{
-		var newQueueItem = base::Poll().value();
+		let newQueueItem = base::Poll().value();
 		AtomicGuard l{ _argMutex };
 		bool ioItem = _args.size();
 		if( ioItem )
 		{
 			l.unlock();
-			var sleepResult = ::SleepEx( 0, true );
+			let sleepResult = ::SleepEx( 0, true );
 			ioItem = ioItem && sleepResult;
 		}
-		var result = newQueueItem || ioItem;
+		let result = newQueueItem || ioItem;
 		if( result )
 			_lastRequest = Clock::now();
 		return result ? result : _lastRequest.load()+keepAlive()<Clock::now() ? optional<bool>{ false } : std::nullopt;//(nullopt || true)==continue
@@ -176,51 +175,52 @@ namespace Jde::IO::Drive{
 		{
 			SYSTEMTIME systemTime;
 			FileTimeToSystemTime( &fInfo.ftCreationTime, &systemTime );
-			CreatedTime = DateTime( systemTime.wYear, (uint8)systemTime.wMonth, (uint8)systemTime.wDay, (uint8)systemTime.wHour, (uint8)systemTime.wMinute, (uint8)systemTime.wSecond, std::chrono::milliseconds(systemTime.wMilliseconds) ).GetTimePoint();
+			CreatedTime = Chrono::ToTimePoint( systemTime.wYear, (uint8)systemTime.wMonth, (uint8)systemTime.wDay, (uint8)systemTime.wHour, (uint8)systemTime.wMinute, (uint8)systemTime.wSecond, std::chrono::milliseconds(systemTime.wMilliseconds) );
 
 			FileTimeToSystemTime( &fInfo.ftLastWriteTime, &systemTime );
-			ModifiedTime = DateTime( systemTime.wYear, (uint8)systemTime.wMonth, (uint8)systemTime.wDay, (uint8)systemTime.wHour, (uint8)systemTime.wMinute, (uint8)systemTime.wSecond, std::chrono::milliseconds(systemTime.wMilliseconds) ).GetTimePoint();
+			ModifiedTime = Chrono::ToTimePoint( systemTime.wYear, (uint8)systemTime.wMonth, (uint8)systemTime.wDay, (uint8)systemTime.wHour, (uint8)systemTime.wMinute, (uint8)systemTime.wSecond, std::chrono::milliseconds(systemTime.wMilliseconds) );
 		}
 	};
 
-	flat_map<string,IDirEntryPtr> WindowsDrive::Recursive( const fs::path& dir, SL )ε{
+	α WindowsDrive::Recursive( const fs::path& dir, SL )ε->flat_map<string,up<IDirEntry>>{
 		CHECK_PATH( dir, SRCE_CUR );
-		var dirString = dir.string();
-		flat_map<string,IDirEntryPtr> entries;
+		let dirString = dir.string();
+		flat_map<string,up<IDirEntry>> entries;
 
 		std::function<void(const fs::directory_entry&)> fnctn;
 		fnctn = [&dirString, &entries, &fnctn]( const fs::directory_entry& entry )
 		{
-			var status = entry.status();
-			var relativeDir = entry.path().string().substr( dirString.size()+1 );
+			let status = entry.status();
+			let relativeDir = entry.path().string().substr( dirString.size()+1 );
 
 			sp<DirEntry> pEntry;
-			if( fs::is_directory(status) || fs::is_regular_file(status) )
-			{
-				var fInfo = GetInfo( entry.path() );
-				entries.emplace( relativeDir, make_shared<DirEntry>(entry.path(), fInfo) );
-				if( fs::is_directory(status) )
-					FileUtilities::ForEachItem( entry.path(), fnctn );
+			if( fs::is_directory(status) || fs::is_regular_file(status) ){
+				let fInfo = GetInfo( entry.path() );
+				entries.emplace( relativeDir, mu<DirEntry>(entry.path(), fInfo) );
+				if( fs::is_directory(status) ){
+					for( let& dirEntry : fs::directory_iterator(entry.path()) )
+						fnctn( dirEntry );
+				}
 			}
 		};
-		FileUtilities::ForEachItem( dir, fnctn );
+		for( let& dirEntry : fs::directory_iterator(dir) )
+			fnctn( dirEntry );
 
 		return entries;
 	}
 
-	IDirEntryPtr WindowsDrive::Get( const fs::path& path )ε
-	{
-		return make_shared<const DirEntry>( path );
+	α WindowsDrive::Get( const fs::path& path )ε->up<IDirEntry>{
+		return mu<DirEntry>( path );
 	}
 
 	tuple<FILETIME,FILETIME,FILETIME> GetTimes( const IDirEntry& dirEntry )
 	{
 		FILETIME createTime, modifiedTime;
-		var entryCreateTime = Windows::ToSystemTime( dirEntry.CreatedTime );
+		let entryCreateTime = Windows::ToSystemTime( dirEntry.CreatedTime );
 		SystemTimeToFileTime( &entryCreateTime, &createTime );
 		if( dirEntry.ModifiedTime.time_since_epoch()!=Duration::zero() )
 		{
-			var entryModifiedTime = Windows::ToSystemTime( dirEntry.ModifiedTime );
+			let entryModifiedTime = Windows::ToSystemTime( dirEntry.ModifiedTime );
 			SystemTimeToFileTime( &entryModifiedTime, &modifiedTime );
 		}
 		else
@@ -228,39 +228,37 @@ namespace Jde::IO::Drive{
 		return std::make_tuple( createTime, modifiedTime, modifiedTime );
 	}
 
-	IDirEntryPtr WindowsDrive::CreateFolder( const fs::path& dir, const IDirEntry& dirEntry )ε
-	{
+	α WindowsDrive::CreateFolder( const fs::path& dir, const IDirEntry& dirEntry )ε->up<IDirEntry>{
 		THROW_IFX( !CreateDirectory(dir.string().c_str(), nullptr), IOException(dir, GetLastError(), "Could not create.") );
 		if( dirEntry.CreatedTime.time_since_epoch()!=Duration::zero() )
 		{
-			var [createTime, modifiedTime, lastAccessedTime] = GetTimes( dirEntry );
+			let [createTime, modifiedTime, lastAccessedTime] = GetTimes( dirEntry );
 			auto hFile = CreateFileW( WindowsPath(dir).c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS, nullptr );  THROW_IFX( hFile==INVALID_HANDLE_VALUE, IOException(dir, GetLastError(), "Could not create.") );
 			LOG_IF( !SetFileTime(hFile, &createTime, &lastAccessedTime, &modifiedTime), ELogLevel::Warning, "Could not update dir times '{}' - {}.", dir.string(), GetLastError() );
 			CloseHandle( hFile );
 		}
-		return make_shared<DirEntry>( dir );
+		return mu<DirEntry>( dir );
 	}
-	IDirEntryPtr WindowsDrive::Save( const fs::path& path, const vector<char>& bytes, const IDirEntry& dirEntry )ε
-	{
-		IO::FileUtilities::SaveBinary( path, bytes );
+	α WindowsDrive::Save( const fs::path& path, const vector<char>& bytes, const IDirEntry& dirEntry )ε->up<IDirEntry>{
+		IO::SaveBinary( path, bytes );
 		if( dirEntry.CreatedTime.time_since_epoch()!=Duration::zero() )
 		{
-			var [createTime, modifiedTime, lastAccessedTime] = GetTimes( dirEntry );
+			let [createTime, modifiedTime, lastAccessedTime] = GetTimes( dirEntry );
 			auto hFile = CreateFileW( WindowsPath(path).c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS, nullptr );
 			THROW_IFX( hFile==INVALID_HANDLE_VALUE, IOException(path, GetLastError(), "Could not create.") );
 			if( !SetFileTime(hFile, &createTime, &lastAccessedTime, &modifiedTime) )
 				WARN( "Could not update file times '{}' - {}."sv, path.string(), GetLastError() );
 			CloseHandle( hFile );
 		}
-		return make_shared<DirEntry>( path );
+		return mu<DirEntry>( path );
 	}
 
-	sp<vector<char>> WindowsDrive::Load( const IDirEntry& dirEntry )ε{
-		return IO::FileUtilities::LoadBinary( dirEntry.Path );
+	α WindowsDrive::Load( const IDirEntry& dirEntry )ε->vector<char>{
+		return IO::LoadBinary( dirEntry.Path );
 	}
 
 	void WindowsDrive::SoftLink( const fs::path& from, const fs::path& to )ε{
-		var hr = CreateSymbolicLinkW( ((const std::wstring&)to).c_str(), ((const std::wstring&)from).c_str(), 0 );
+		let hr = CreateSymbolicLinkW( ((const std::wstring&)to).c_str(), ((const std::wstring&)from).c_str(), 0 );
 		THROW_IFX( !hr, IOException( from, GetLastError(), format("Creating symbolic link from to '{}'", to.string().c_str())) );
 	}
 
@@ -301,11 +299,11 @@ namespace Jde::IO::Drive{
 	}
 	α DriveWorker::Poll()ι->optional<bool>
 	{
-		var newQueueItem = base::Poll();
+		let newQueueItem = base::Poll();
 		bool ioItem = Args.size();
 		if( ioItem )
 		{
-			var sleepResult = ::SleepEx( 0, true );
+			let sleepResult = ::SleepEx( 0, true );
 			ioItem = ioItem && sleepResult;
 		}
 		return newQueueItem || ioItem;
@@ -324,7 +322,7 @@ namespace Jde::IO::Drive{
 	void DriveWorker::HandleRequest( DriveArg&& arg )ι
 	{
 		auto pArg = &Args.emplace_back( move(arg) );
-		var size = std::visit( [](auto&& x){return x->size();}, pArg->Buffer );
+		let size = std::visit( [](auto&& x){return x->size();}, pArg->Buffer );
 		for( uint i=0; i<size; i+=ChunkSize() )
 		{
 			auto pOverlap = make_unique<OVERLAPPED>(); pOverlap->Pointer = (PVOID)i; pOverlap->hEvent = (HANDLE)std::min( i+DriveWorker::ChunkSize(), size );

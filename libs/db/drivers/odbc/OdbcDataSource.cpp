@@ -47,12 +47,13 @@ namespace Jde::DB::Odbc{
 		for( let& param : sql.Params ){
 			auto binding = Binding::Create( param );
 			void* pData = binding->Data();
-			let size = std::max<SQLLEN>(binding->Size(),0); let bufferLength = binding->BufferLength();
-			if( binding->DBType()==SQL_DATETIME )
-				Trace{ _tags, "fractions={}", dynamic_cast<const BindingDateTime*>(binding.get())->_data.fraction };
+			let size = std::max<SQLLEN>(binding->Size(),0);
+			let bufferLength = binding->BufferLength();
 			let decimals = binding->DecimalDigits();
 			let paramType = params.HasOut() && parameters.size()+1==sql.Params.size() ? SQL_PARAM_OUTPUT : SQL_PARAM_INPUT;
-			let result = ::SQLBindParameter( statement, parameters.size()+1, paramType, binding->CodeType, binding->DBType(), size, decimals, pData, bufferLength, &binding->Output );
+			let dbType = binding->DBType();
+			BREAK_IF( param.Type()==EValue::Bytes );
+			let result = ::SQLBindParameter( statement, parameters.size()+1, paramType, binding->CodeType, dbType, size, decimals, pData, bufferLength, &binding->Output );
 			THROW_IFX( result < 0, DBException(result, move(sql), HandleDiagnosticRecord("SQLBindParameter", statement, SQL_HANDLE_STMT, result, sl), sl) );
 			parameters.push_back( move(binding) );
 		}
@@ -125,11 +126,14 @@ namespace Jde::DB::Odbc{
 
 			SQLLEN bufferSize = 0;
 			up<Binding> binding;
-			if( ssType == SQL_CHAR || ssType == SQL_VARCHAR || ssType == SQL_LONGVARCHAR || ssType == -9/*varchar(max)?*/ || ssType == -10/*nvarchar(max)?*/ ){
+			if( ssType == SQL_CHAR || ssType == SQL_VARCHAR || ssType == SQL_LONGVARCHAR || ssType==SQL_VARBINARY || ssType == -9/*varchar(max)?*/ || ssType == -10/*nvarchar(max)?*/ ){
 				CALL( statement, SQL_HANDLE_STMT, ::SQLColAttribute(statement, iCol, SQL_DESC_DISPLAY_SIZE, NULL, 0, NULL, &bufferSize), "SQLColAttribute::Display" );
 				if( (ssType==-9 || ssType==-10) && bufferSize==0 )
 					bufferSize = (1 << 14) - 1;//TODO handle varchar(max).
-				binding = mu<BindingString>( (SQLSMALLINT)ssType, ++bufferSize );
+				if( ssType==SQL_VARBINARY )
+					binding = mu<BindingBinary>( ++bufferSize );
+				else
+					binding = mu<BindingString>( (SQLSMALLINT)ssType, ++bufferSize );
 			}
 			else
 				binding = Binding::GetBinding( (SQLSMALLINT)ssType );
@@ -187,6 +191,10 @@ namespace Jde::DB::Odbc{
 	}
 
 	α OdbcDataSource::InsertSeqSyncUInt( InsertClause&& insert, SL sl )ε->uint{
-		return ExecDirect( insert.Move(), sl, {} );
+		insert.Add( (uint)0 );
+		uint newId;
+		RowΛ f = [&newId]( Row&& r ){ newId=r[0].get_number<uint>(); };
+		ExecDirect( insert.Move(), sl, {&f,EValue::UInt64} );
+		return newId;
 	}
 }

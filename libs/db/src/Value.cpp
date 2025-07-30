@@ -1,7 +1,8 @@
 ﻿#include <jde/db/Value.h>
+#include <jde/framework/chrono.h>
 #include <jde/db/usings.h>
 #include <jde/db/generators/Syntax.h>
-#include "../../../../Framework/source/DateTime.h"
+
 
 #define let const auto
 
@@ -99,7 +100,7 @@ namespace Jde::DB{
 }
 namespace Jde{
 	α DB::ToType( sv csTypeName )ι->DB::EType{
-		iv typeName{ ToIV(csTypeName) };
+		Str::iv typeName{ ToIV(csTypeName) };
 		//String typeName{ t };
 		EType type{ EType::None };
 		if( typeName=="dateTime" )

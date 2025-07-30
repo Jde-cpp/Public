@@ -62,13 +62,13 @@ namespace Jde::DB::Odbc{
 
 	struct BindingString final: Binding{
 		BindingString( SQLSMALLINT type, SQLLEN size )ι:
-			Binding{ type, SQL_C_CHAR, size }, 
+			Binding{ type, SQL_C_CHAR, size },
 			_buffer{std::make_unique_for_overwrite<char[]>( size )}{
 		}
 		BindingString( sv value )ι:
-			Binding{ SQL_VARCHAR, SQL_C_CHAR, (SQLLEN)value.size() }, 
+			Binding{ SQL_VARCHAR, SQL_C_CHAR, (SQLLEN)value.size() },
 			_buffer{ std::make_unique_for_overwrite<char[]>(value.size()) }{
-			std::copy(value.begin(), value.end(), _buffer.get()); 
+			std::copy(value.begin(), value.end(), _buffer.get());
 		}
 		α Data()ι->void* override{ return _buffer.get(); }
 		α GetValue()Ι->DB::Value override{ return IsNull() ? Value{} : Value{to_string()}; }
@@ -78,25 +78,34 @@ namespace Jde::DB::Odbc{
 	private:
 		up<char[]> _buffer;
 	};
-	
+
 	struct BindingBinary final :Binding{
 		BindingBinary():Binding{ SQL_VARBINARY, SQL_C_BINARY }{}
+		BindingBinary( SQLLEN size ):Binding{ SQL_VARBINARY, SQL_C_BINARY, size==0 ? SQL_NULL_DATA : size },_value{ vector<uint8_t>(size) }{}
 		BindingBinary( Value v ):
-			Binding{ SQL_VARBINARY, SQL_C_BINARY, (SQLLEN)v.get_bytes().size() },
+			Binding{ SQL_VARBINARY, SQL_C_BINARY, v.get_bytes().size()==0 ? SQL_NULL_DATA : (SQLLEN)v.get_bytes().size()  },
 			_value{ move(v) }
 		{}
-		α Data()ι->void* override{ return GetValue().get_bytes().data(); }
+		α Data()ι->void* override{ return IsNull() ? nullptr : GetValue().get_bytes().data(); }
 		α GetValue()Ι->Value override{ return _value; }
-		//α DBType()->SQLSMALLINT override{ return Size()==-1 ? NULL; }
 		α GetOutput()Ι->SQLLEN override{ return Size()==0 ? SQL_NULL_DATA : Binding::GetOutput(); }
 
-		α Size()Ι->SQLULEN override { 
-			let size = _value.get_bytes().size();
-			return size ? (SQLULEN)size : -1; //query wants -1
-		}
+		α Size()Ι->SQLULEN override { return _value.get_bytes().size(); }
 		Value _value;
 	};
+	struct BindingGuid final : Binding{
+		BindingGuid():Binding{ SQL_GUID, SQL_C_GUID }{}
+		BindingGuid( const uuid& v ):
+			Binding{ SQL_GUID, SQL_C_GUID, 16 }{
+			memcpy( &_guid, v.data(), sizeof(SQLGUID) );
+		}
+		α Data()ι->void* override{ return &_guid; }
+		α GetValue()Ι->Value override { uuid id; memcpy( id.data(), &_guid, sizeof(SQLGUID) ); return Value{ id }; }
+		α GetOutput()Ι->SQLLEN override{ return sizeof(SQLGUID); }
+		α Size()Ι->SQLULEN override { return sizeof(SQLGUID); }
 
+		SQLGUID _guid;
+	};
 	struct BindingBit final : Binding{
 		BindingBit()ι:BindingBit{ (SQLSMALLINT)SQL_BIT }{}//-7
 		BindingBit( SQLSMALLINT type )ι:Binding{ type, SQL_C_BIT }{}
@@ -160,7 +169,7 @@ namespace Jde::DB::Odbc{
 		BindingTimeStamp( SQL_TIMESTAMP_STRUCT value )ι: Binding{ SQL_TYPE_TIMESTAMP, SQL_C_TYPE_TIMESTAMP },_data{value}{}
 		α Data()ι->void* override{ return &_data; }
 		α GetValue()Ι->Value override{ return IsNull() ? Value{} : Value{GetDateTime()}; }
-		DBTimePoint GetDateTime()Ι{ return IsNull() ? DBTimePoint{} : Jde::DateTime( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, Duration(_data.fraction) ).GetTimePoint(); }
+		DBTimePoint GetDateTime()Ι{ return IsNull() ? DBTimePoint{} : Chrono::ToTimePoint( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, Duration(_data.fraction) ); }
 		std::optional<DBTimePoint> GetDateTimeOpt()Ι override{ return IsNull() ? std::nullopt : std::make_optional(GetDateTime()); }
 	private:
 		SQL_TIMESTAMP_STRUCT _data;
@@ -188,7 +197,7 @@ namespace Jde::DB::Odbc{
 		//https://wezfurlong.org/blog/2005/Nov/calling-sqlbindparameter-to-bind-sql-timestamp-struct-as-sql-c-type-timestamp-avoiding-a-datetime-overflow/
 		SQLULEN Size()Ι override{ return 23; }//23 works with 0
 		SQLSMALLINT DecimalDigits()Ι{ return 3; }//https://stackoverflow.com/questions/40918607/cannot-bind-a-sql-type-timestamp-value-using-odbc-with-ms-sql-server-hy104-inv
-		DBTimePoint GetDateTime()Ι override{ return IsNull() ? DBTimePoint() : Jde::DateTime( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, Duration(_data.fraction) ).GetTimePoint();}
+		DBTimePoint GetDateTime()Ι override{ return IsNull() ? DBTimePoint() : Chrono::ToTimePoint( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, Duration(_data.fraction) );}
 		std::optional<DBTimePoint> GetDateTimeOpt()Ι override{
 			std::optional<DBTimePoint> value;
 			if( !IsNull() )
@@ -201,10 +210,10 @@ namespace Jde::DB::Odbc{
 	struct BindingDouble final : Binding{
 		BindingDouble( SQLSMALLINT type=SQL_DOUBLE )ι:	Binding{ type, SQL_C_DOUBLE }{}
 		BindingDouble( double value )ι: Binding{ SQL_DOUBLE, SQL_C_DOUBLE },_data{value}{}
-		BindingDouble( const optional<double>& value )ι: 
-			Binding{ SQL_DOUBLE, SQL_C_DOUBLE },_data{value.has_value() ? value.value() : 0.0}{ 
-			if( !value.has_value() ) 
-				Output = SQL_NULL_DATA; 
+		BindingDouble( const optional<double>& value )ι:
+			Binding{ SQL_DOUBLE, SQL_C_DOUBLE },_data{value.has_value() ? value.value() : 0.0}{
+			if( !value.has_value() )
+				Output = SQL_NULL_DATA;
 		}
 
 		α Data()ι->void* override{ return &_data; }
@@ -298,6 +307,7 @@ namespace Jde::DB::Odbc{
 			case SQL_TYPE_TIMESTAMP: pBinding = mu<BindingTimeStamp>( type ); break;
 			case SQL_NUMERIC:	pBinding = mu<BindingNumeric>(); break;
 			case SQL_VARBINARY:{ pBinding = mu<BindingBinary>(); break;}
+			case SQL_GUID: { pBinding = mu<BindingGuid>(); break; }
 			default: THROW( "Binding type '{}' is not implemented.", type );
 		}
 		return pBinding;
@@ -335,19 +345,23 @@ namespace Jde::DB::Odbc{
 		}
 		return pBinding;
 	}
-	inline BindingDateTime::BindingDateTime( const optional<DBTimePoint>& value )ι:
+	inline BindingDateTime::BindingDateTime( const optional<DBTimePoint>& tp )ι:
 		BindingDateTime{}{
-		if( !value.has_value() )
+		if( !tp.has_value() )
 			Output = SQL_NULL_DATA;
 		else{
-			Jde::DateTime date( value.value() );
-			_data.year = (SQLSMALLINT)date.Year();
-			_data.month = date.Month();
-			_data.day = date.Day();
-			_data.hour = date.Hour();
-			_data.minute = date.Minute();
-			_data.second = date.Second();
-			_data.fraction = Chrono::MillisecondsSinceEpoch( date )%1000*1'000'000;
+			using namespace std::chrono;
+			let date{ floor<days>(*tp) };
+			const year_month_day ymd{ date };
+			const hh_mm_ss time{ *tp-date };
+
+			_data.year = (SQLSMALLINT)(int)ymd.year();
+			_data.month = (SQLUSMALLINT)(unsigned)ymd.month();
+			_data.day = (SQLUSMALLINT)(unsigned)ymd.day();
+			_data.hour = (SQLUSMALLINT)(unsigned)time.hours().count();
+			_data.minute = (SQLUSMALLINT)time.minutes().count();
+			_data.second = (SQLUSMALLINT)time.seconds().count();
+			_data.fraction = time.subseconds().count();
 		}
 	}
 }

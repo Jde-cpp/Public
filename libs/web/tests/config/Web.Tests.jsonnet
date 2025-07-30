@@ -1,7 +1,8 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "WebTests.*"
+		tests:: "SocketTests.*",
+		certDir: args.logDir+'web-tests/ssl'
 	},
 	logging:{
 		defaultLevel:: "Information",

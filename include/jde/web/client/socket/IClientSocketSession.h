@@ -6,20 +6,19 @@
 #include "ClientSocketAwait.h"
 #include <jde/framework/coroutine/Await.h>
 #include <jde/framework/io/proto.h>
-#include "../../../../../../Framework/source/Stopwatch.h"
 
 namespace Jde::Web::Client{
 	struct IClientSocketSession;
-	struct CreateClientSocketSessionAwait final : VoidAwait<>{
-		using base = VoidAwait<>;
+	struct CreateClientSocketSessionAwait final : VoidAwait{
+		using base = VoidAwait;
 		CreateClientSocketSessionAwait( sp<IClientSocketSession> session, string host, PortType port, SRCE )ι;
 		α Suspend()ι->void override;
 	private:
 		sp<IClientSocketSession> _session; string _host; PortType _port;
 	};
 
-	struct CloseClientSocketSessionAwait final : VoidAwait<>{
-		using base = VoidAwait<>;
+	struct CloseClientSocketSessionAwait final : VoidAwait{
+		using base = VoidAwait;
 		CloseClientSocketSessionAwait( sp<IClientSocketSession> session, SRCE )ι:base{sl}, _session{session}{};
 		α Suspend()ι->void override;
 	private:
@@ -60,7 +59,6 @@ namespace Jde::Web::Client{
 
 		tcp::resolver _resolver;
 		sp<ClientSocketStream> _stream;
-		Stopwatch _readTimer;
 		string _host;
 		sp<net::io_context> _ioContext;
 		SessionPK _sessionId{};

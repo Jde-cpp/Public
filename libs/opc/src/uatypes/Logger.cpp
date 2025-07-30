@@ -51,8 +51,8 @@ namespace Jde::Opc{
 		}
 		if( y.size() )
 			y.pop_back();
-		else
-			y = "NotFound";
+//		else
+//			y = "NotFound";
 		return y;
 	}
 	α UALogParser::ToTag( str name )Ι->ELogTags{

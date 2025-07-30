@@ -13,7 +13,7 @@ namespace Jde::Opc::Server{
 	struct ObjectTypeQLAwait final : TAwait<jvalue>{
 		using base = TAwait<jvalue>;
 		ObjectTypeQLAwait( QL::MutationQL m, UserPK executer, SL sl )ι:base{ sl }, _input{ move(m) }, _executer{ executer } {}
-		ObjectTypeQLAwait( jobject o, sp<ObjectType> oType, UserPK executer, SL sl )ι:base{ sl }, _input{ move(o) }, _root{oType}, _executer{ executer } {}
+		ObjectTypeQLAwait( jobject o, sp<ObjectType> oType, UserPK executer, SL sl )ι:base{ sl }, _root{oType}, _input{ move(o) }, _executer{ executer } {}
 
 		α Suspend()ι->void override;
 		α await_resume()ε->jvalue;
@@ -33,7 +33,7 @@ namespace Jde::Opc::Server{
 	α ObjectTypeQLAwait::Suspend()ι->void{
 		try{
 			if( !_root )
-				_root = GetUAServer().GetTypeDef( NodeId{Args().at("parent").as_object()} );
+				_root = GetUAServer().GetTypeDef( ExNodeId{Args().at("parent").as_object()} );
 			GetBrowseName( move(Args()), _root );
 		}
 		catch( exception& e ){

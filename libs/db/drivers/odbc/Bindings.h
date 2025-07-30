@@ -116,7 +116,7 @@ namespace Jde::DB::Odbc{
 		{
 			if( base::IsNull(i) ) return DBTimePoint{};
 			SQL_TIMESTAMP_STRUCT data = base::_pBuffer[i];
-			return Jde::DateTime( data.year, (uint8)data.month, (uint8)data.day, (uint8)data.hour, (uint8)data.minute, (uint8)data.second, Duration(data.fraction) ).GetTimePoint(); 
+			return Chrono::ToTimePoint( data.year, (uint8)data.month, (uint8)data.day, (uint8)data.hour, (uint8)data.minute, (uint8)data.second, Duration(data.fraction) );
 		}
 		α DateTimeOpt( uint i )Ι->optional<DBTimePoint> override{ return base::IsNull(i) ? nullopt : std::make_optional(DateTime(i)); }
 	};

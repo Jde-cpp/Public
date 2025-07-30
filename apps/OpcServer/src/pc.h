@@ -11,7 +11,7 @@
 #include <jde/framework/str.h>
 #include <jde/framework/settings.h>
 #include <jde/framework/coroutine/Await.h>
-#include "../../Framework/source/DateTime.h"
+#include <jde/framework/chrono.h>
 #include <jde/db/Row.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/awaits/SelectAwait.h>
@@ -19,10 +19,8 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/app/shared/exports.h>
 #include <jde/opc/exports.h>
-#include <jde/opc/types/proto/Opc.Common.pb.h>
 #include <jde/opc/uatypes/helpers.h>
 #include <jde/opc/uatypes/Node.h>
 #include <jde/opc/uatypes/UAException.h>
 #include "usings.h"
 #include "globals.h"
-#include "../../../libs/opc/src/types/proto/Opc.Common.pb.h"

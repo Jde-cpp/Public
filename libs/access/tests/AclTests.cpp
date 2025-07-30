@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 #include <jde/framework/io/json.h>
 #include <jde/framework/str.h>
-#include <jde/ql/ql.h>
+#include <jde/ql/QLAwait.h>
 #include <jde/access/types/Resource.h>
 #include "globals.h"
 
@@ -10,7 +10,7 @@ namespace Jde::Access::Tests{
 	α GetRolePermission( RolePK rolePK, sv resourceName, UserPK executer )ε->jobject;
 	α AddRolePermission( RolePK rolePK, sv resourceName, ERights allowed, ERights denied, UserPK executer )ε->jobject;
 	α AddRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK executer )ε->jobject;
-	α RemoveRolePermission( RolePK rolePK, PermissionPK permissionPK, UserPK executer )ε->jobject;
+	α RemoveRolePermission( RolePK rolePK, PermissionPK permissionPK, UserPK executer )ε->jvalue;
 	using namespace Json;
 	class AclTests : public ::testing::Test{
 	protected:
@@ -27,25 +27,25 @@ namespace Jde::Access::Tests{
 
 	α SelectAcl( IdentityPK identityPK, string resourceTarget )ε->jobject{
 		let ql = Ƒ( "acl( identityId:{} )< identityId permissionRight< id allowed denied resource(target:\"{}\")<deleted>> >", identityPK.Underlying(), resourceTarget );
-		let acl = QL::QueryArray( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
+		let acl = QL().QuerySync<jarray>( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
 		return acl.empty() ? jobject{} : Json::AsObject(acl[0], "/permissionRight");
 	}
 	α SelectAcl( IdentityPK identityPK, RolePK rolePK )ε->jobject{
 		let ql = Ƒ( "acl(identityId:{})<identityId role(id:{})<id target deleted>>", identityPK.Underlying(), rolePK );
-		let acl = QL::QueryArray( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
+		let acl = QL().QuerySync<jarray>( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), GetRoot() );
 		return acl.empty() ? jobject{} : Json::AsObject(acl[0], "/role");
 	}
 	α CreateAcl( IdentityPK identityPK, ERights allowed, ERights denied, string resource, UserPK executer )ε->PermissionRightsPK{
 		let resourcePK = AsNumber<ResourcePK>( SelectResource(resource, {UserPK::System}, true), "id" );
 		let create = Ƒ( "createAcl( identity:{{ id:{} }}, permissionRight:{{ allowed:{}, denied:{}, resource:{{id:{}}}}} ){{permissionRight{{id}}}}", identityPK.Underlying(), underlying(allowed), underlying(denied), resourcePK );
-		let createJson = QL::QueryObject( create, executer );
+		let createJson = QL().QuerySync( create, executer );
 		return Json::AsNumber<PermissionRightsPK>( createJson, "permissionRight/id" );
 	}
 	α CreateAcl( IdentityPK identityPK, RolePK rolePK, UserPK executer )ε->void{
 		let existing = SelectAcl( identityPK, rolePK );
 		if( existing.empty() ){
 			let create = Ƒ( "mutation createAcl( identity:{{ id:{} }}, role:{{id:{}}} )", identityPK.Underlying(), rolePK );
-			QL::Query( create, executer );
+			QL().QuerySync<jvalue>( create, executer );
 		}
 	}
 
@@ -60,7 +60,7 @@ namespace Jde::Access::Tests{
 			let existingDenied = (ERights)Json::AsNumber<uint8>( entry, "denied" ); //ToRights( Json::AsArray(entry, "denied") );
 			if( allowed!=existingAllowed || existingDenied!=denied ){
 				let update = Ƒ( "mutation updatePermissionRight( id:{}, allowed:{}, denied:{} )", Json::AsNumber<PermissionPK>(entry, "id"), underlying(allowed), underlying(denied) );
-				let updateJson = QL::Query( update, GetRoot() );
+				let updateJson = QL().QuerySync( update, GetRoot() );
 				entry = SelectAcl( identityPK, resource );
 			}
 		}
@@ -129,7 +129,7 @@ namespace Jde::Access::Tests{
 		auto juser = GetUser( "deletedRoot", GetRoot(), true );
 		UserPK executer{ GetId( juser ) };
 		GetAcl( executer, "groupings", ERights::All, ERights::None );
-		if( !Json::AsTimePointOpt(juser, "deleted") )
+		if( !Json::FindTimePoint(juser, "deleted") )
 			Delete( "users", GetId(juser), GetRoot() );
 		TestEnabeledPermissions( resourceName, "AclTests-DeletedUser-Member", executer );
 	}
@@ -141,13 +141,13 @@ namespace Jde::Access::Tests{
 		GroupPK adminGroupPK{ GetId( adminGroup ) };
 
 		let userGroup = Tests::GetGroup( "HierarchyGroupUsers", GetRoot() );
-		let userGroupMembers = AsArray( userGroup, "members" );
+		let userGroupMembers = AsArray( userGroup, "groupMembers" );
 		GroupPK userGroupPK{ GetId( userGroup ) };
 		UserPK hierarchyUser{ GetId( GetUser("hierarchyUser", GetRoot()) ) };
 		if( find_if(userGroupMembers, [=](const jvalue& member){ return GetId(Json::AsObject(member))==hierarchyUser.Value; })==userGroupMembers.end() )
 			AddToGroup( userGroupPK, {hierarchyUser,adminGroupPK}, GetRoot() );
 		const UserPK adminPK{ GetId( GetUser("hierarchyAdmin", GetRoot()) ) };
-		let adminGroupMembers = AsArray( adminGroup, "members" );
+		let adminGroupMembers = AsArray( adminGroup, "groupMembers" );
 		if( find_if(adminGroupMembers, [adminPK](const jvalue& member){ return GetId(Json::AsObject(member))==adminPK.Value; })==adminGroupMembers.end() )
 			AddToGroup( adminGroupPK, {adminPK}, GetRoot() );
 
@@ -192,12 +192,12 @@ namespace Jde::Access::Tests{
 		let deniedGroup = Tests::GetGroup( "DeniedGroup", GetRoot() );
 		let deniedGroupPK = GetId( deniedGroup );
 		let allowedGroup = Tests::GetGroup( "allowedGroup", GetRoot() );
-		let allowedGroupMembers = AsArray( allowedGroup, "members" );
+		let allowedGroupMembers = AsArray( allowedGroup, "groupMembers" );
 		let allowedGroupPK = GetId( allowedGroup );
 		UserPK executer{ GetId(GetUser("deniedUser", GetRoot())) };
 		if( find_if(allowedGroupMembers, [executer](const jvalue& member){ return GetId(Json::AsObject(member))==executer.Value; })==allowedGroupMembers.end() )
 			AddToGroup( {allowedGroupPK}, {executer}, GetRoot() );
-		let deniedGroupMembers = AsArray( deniedGroup, "members" );
+		let deniedGroupMembers = AsArray( deniedGroup, "groupMembers" );
 		if( find_if(deniedGroupMembers, [executer](const jvalue& member){ return GetId(Json::AsObject(member))==executer.Value; })==deniedGroupMembers.end() )
 			AddToGroup( {deniedGroupPK}, {executer}, GetRoot() );
 

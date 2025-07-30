@@ -1,10 +1,9 @@
 #include "HttpRequestAwait.h"
-#include <jde/web/client/Jwt.h>
+#include <jde/web/Jwt.h>
 #include <jde/crypto/OpenSsl.h>
+#include <jde/framework/chrono.h>
 #include <jde/framework/str.h>
 #include <jde/framework/thread/execution.h>
-#include "../../Framework/source/DateTime.h"
-#include "../../Framework/source/threading/Thread.h"
 
 #define let const auto
 
@@ -19,7 +18,7 @@ namespace Jde::Web::Mock{
 			if( std::abs(time(nullptr)-jwt.Iat)>60*10 )
 				THROW( "Invalid iat.  Expected ~'{}', found '{}'.", time(nullptr), jwt.Iat );
 
-			Crypto::Verify( jwt.Modulus, jwt.Exponent, jwt.HeaderBodyEncoded, jwt.Signature );
+			Crypto::Verify( jwt.PublicKey, jwt.HeaderBodyEncoded, jwt.Signature );
 			req.SessionInfo->UserPK = {42};
 			jobject j{ {"expiration", ToIsoString(req.SessionInfo->Expiration)} };
 			req.SessionInfo->IsInitialRequest = true;  //expecting sessionId to be set.
@@ -59,7 +58,7 @@ namespace Jde::Web::Mock{
 			j["value"] = ToIsoString( expiration );
 			result = j;
 		}
-		else if( _request.IsPost("/loginCertificate") ){
+		else if( _request.IsPost("/login") ){
 			result = CertificateLogin( _request );
 		}
 		if( result ){

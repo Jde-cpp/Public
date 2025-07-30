@@ -1,21 +1,27 @@
-#include <jde/web/client/Jwt.h>
+#include <jde/web/Jwt.h>
 #include <jde/framework/io/json.h>
 #include <jde/framework/str.h>
 
 #define let const auto
 
 namespace Jde::Web{
-	Jwt::Jwt( Crypto::Modulus mod, Crypto::Exponent exp, str userName, str userTarget, str myEndpoint, str description, const fs::path& privateKeyPath )ι:
-		Modulus{move(mod)},Exponent{move(exp)}, Host{myEndpoint}, Iat{time(nullptr)},UserName{userName},UserTarget{userTarget},Description{description}{
+	Jwt::Jwt( Crypto::PublicKey key, str userName, str userTarget, SessionPK sessionId, str endpoint, TimePoint expires, str description, const fs::path& privateKeyPath )ι:
+		PublicKey{move(key)}, Host{endpoint}, Iat{time(nullptr)}, UserName{userName}, UserTarget{userTarget}, Description{description}{
 		Body = jobject{
-			{ "n", Str::Encode64(Modulus, true) },
-			{ "e", Str::Encode64(Exponent, true) },
-			{ "iat",Iat },
-			{ "host",Host },
-			{ "name",userName },
-			{ "target",userTarget },
-			{ "description",description }
+			{ "n", Str::Encode64(PublicKey.Modulus, true) },
+			{ "e", Str::Encode64(PublicKey.Exponent, true) },
+			{ "iat", Iat },
+			{ "host", Host },
+			{ "name", userName },
+			{ "target", userTarget },
 		};
+		if( sessionId )
+			Body["sid"] = std::to_string( sessionId );
+		if( description.size() )
+			Body["description"] = Description;
+		if( expires!=TimePoint::min() )
+			Body["exp"] = Clock::to_time_t( expires );
+
 		//auto bodyMod = Json::AsSV(Body, "n");
 		let head = jobject{ {"alg","RS256"}, {"typ","JWT"} };
 		HeaderBodyEncoded = Str::Encode64( serialize(head), true )+ "." + Str::Encode64( serialize(Body), true );
@@ -43,11 +49,12 @@ namespace Jde::Web{
 			SetModulus( move(*modulus) );
 			SetExponent( Json::AsString(Body, "e") );
 		}
-		auto fpKey = Crypto::Fingerprint( Modulus, Exponent );
+		auto fpKey = Crypto::Fingerprint( PublicKey );// Use PublicKey instead of Certificate
 		UserName = Json::FindString(Body, "name").value_or( Str::ToHex(fpKey.data(), fpKey.size()) );
 		UserTarget = Json::FindString( Body, "target" ).value_or( UserName );
 		Host = Json::FindString( Body, "host" ).value_or("");
 		Iat = Json::AsNumber<time_t>( Body, "iat" );
+		SessionId = Json::FindDefaultSV( Body, "sid" );
 
 		auto fpText = []( const Crypto::MD5& fp ) {
 			return std::accumulate(fp.begin(), fp.end(), Ƒ("{:x}", fp[0]), [&](string s, byte /*b*/){return move(s)+Ƒ("{:x}", fp[0]);} );
@@ -60,9 +67,9 @@ namespace Jde::Web{
 		return payload;
 	}
 	α Jwt::SetModulus( str encoded )ι->void{
-		Modulus = Str::Decode64<Crypto::Modulus>( encoded, true );
+		PublicKey.Modulus = Str::Decode64<Crypto::Modulus>( encoded, true );
 	}
 	α Jwt::SetExponent( str encoded )ι->void{
-		Exponent = Str::Decode64<Crypto::Exponent>( encoded, true );
+		PublicKey.Exponent = Str::Decode64<Crypto::Exponent>( encoded, true );
 	}
 }

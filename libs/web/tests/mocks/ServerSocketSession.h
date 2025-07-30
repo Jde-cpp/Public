@@ -12,6 +12,7 @@ namespace Jde::Web::Mock{
 		ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α OnRead( Proto::FromClientTransmission&& transmission )ι->void override;
 		α SendAck( uint32 serverSocketId )ι->void override;
+		α Schemas()Ι->const vector<sp<DB::AppSchema>>& override{ return _schemas; }
 	private:
 		α WriteException( exception&& e, RequestId requestId )ι->void override;
 		α WriteException( std::string&&, Jde::RequestId )ι->void override{ ASSERT(false); }
@@ -20,5 +21,7 @@ namespace Jde::Web::Mock{
 		α WriteSubscriptionAck( vector<QL::SubscriptionId>&&, RequestId )ι->void override{ ASSERT(false); }
 		α WriteComplete( RequestId )ι->void override{ ASSERT(false); }
 		α OnConnect( SessionPK sessionId, RequestId requestId )ι->Server::Sessions::UpsertAwait::Task;
+
+		vector<sp<DB::AppSchema>> _schemas;
 	};
 }

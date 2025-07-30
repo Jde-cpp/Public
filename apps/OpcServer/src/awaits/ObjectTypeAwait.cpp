@@ -32,7 +32,6 @@ namespace Jde::Opc::Server {
 		try{
 			auto& ua = GetUAServer();
 			BrowseNameAwait::GetOrInsert( _node->Browse );
-			UA_NodeId attrId;
 			if( !_node->IsSystem() )
 				ua.AddObjectType( _node, _sl );
 			_node->PK = co_await DS().InsertSeq<NodePK>( DB::InsertClause{

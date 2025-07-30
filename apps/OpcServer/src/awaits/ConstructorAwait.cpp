@@ -3,7 +3,6 @@
 
 namespace Jde::Opc::Server{
 	α ConstructorAwait::Execute()ι->DB::SelectAwait::Task{
-		auto& ua = GetUAServer();
 		try{
 			let table = GetViewPtr( "constructors" );
 			let nodeIdTable = GetViewPtr("server_node_ids");
@@ -30,9 +29,9 @@ namespace Jde::Opc::Server{
 	α ConstructorAwait::LoadVariants( vector<DB::Row> rows, vector<DB::Value>&& variantPKs )ι->VariantAwait::Task{
 		try{
 			auto variants = co_await VariantAwait{ move(variantPKs), _sl };
-			flat_map<NodeId, flat_map<BrowseNamePK, Variant>> y;
+			flat_map<ExNodeId, flat_map<BrowseNamePK, Variant>> y;
 			for( auto&& row : rows ){
-				y.try_emplace( y.end(), NodeId{row, 0} )->second.try_emplace(
+				y.try_emplace( y.end(), ExNodeId{row, 0} )->second.try_emplace(
 					row.GetUInt32(5),
 					move(variants.at(row.GetUInt32(6))) );
 			}

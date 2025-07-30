@@ -1,13 +1,14 @@
 #include <jde/ql/types/MutationQL.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/Functions.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/DBSchema.h>
 #include "Parser.h"
 
 #define let const auto
 
 namespace Jde::QL{
-	Ω parseCommandName( sv commandName )ε->tuple<string,EMutationQL>{
+	α MutationQL::ParseCommand( sv commandName )ε->tuple<string,EMutationQL>{
 		uint iType=0;
 		for( ;iType<MutationQLStrings.size() && !commandName.starts_with(MutationQLStrings[iType]); ++iType );
 		THROW_IF( iType==MutationQLStrings.size(), "Could not find mutation {}", commandName );
@@ -18,17 +19,18 @@ namespace Jde::QL{
 		return { move(tableJsonName), (EMutationQL)iType };
 	}
 
-	MutationQL::MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw )ε:
-		CommandName{move(commandName)}, Args(move(args)), ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{
-		std::tie(JsonTableName,Type) = parseCommandName( CommandName );
+	MutationQL::MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε:
+		Args(move(args)), CommandName{move(commandName)}, ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{
+		std::tie(JsonTableName,Type) = ParseCommand( CommandName );
+		DBTable = DB::AppSchema::GetTablePtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(JsonTableName)) );
+	}
+	MutationQL::MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw, const sp<DB::AppSchema>& schema )ε:
+		Args(move(args)), CommandName{move(commandName)}, ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{
+		std::tie(JsonTableName,Type) = ParseCommand( CommandName );
+		DBTable = schema->GetTablePtr( DB::Names::ToPlural(DB::Names::FromJson(JsonTableName)) );
 	}
 
-	α MutationQL::TableName()Ι->string{
-		if( _tableName.empty() )
-			_tableName = DB::Names::ToPlural<string>( DB::Names::FromJson<string,string>(JsonTableName) );
-		return _tableName;
-	}
-
+	α MutationQL::TableName()Ι->string{ ASSERT(DBTable); return DBTable->Name; }
 	α MutationQL::ToString()Ι->string{
 		auto args = serialize(Args);
 		if( args.size()>3 && args[0]=='{' )

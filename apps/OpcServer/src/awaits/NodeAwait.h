@@ -2,7 +2,7 @@
 #include "../uaTypes/Node.h"
 
 namespace Jde::Opc::Server {
-	struct NodeAwait final : TAwaitEx<flat_map<NodePK,NodeId>,DB::SelectAwait::Task>{
+	struct NodeAwait final : TAwaitEx<flat_map<NodePK,ExNodeId>,DB::SelectAwait::Task>{
 		α Execute()ι->DB::SelectAwait::Task override;
 	};
 }

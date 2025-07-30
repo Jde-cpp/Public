@@ -30,6 +30,7 @@ namespace Jde::QL{
 		Introspection()=default;
 		Introspection( const jobject&& j )ε;
 		α Find( sv name )Ι->const Object*;
+		α operator+=( Introspection&& x )ι->void;
 
 		vector<Object> Objects;
 	};

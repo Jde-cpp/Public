@@ -38,10 +38,9 @@ namespace Jde::Web::Client{
 		_isRunning.test_and_set();
 	}
 
-	struct ConnectAwait final : VoidAwait<>{
-		using base=VoidAwait<>;
+	struct ConnectAwait final : VoidAwait{
 		ConnectAwait( tcp::resolver::results_type&& resolvedResults, sp<ClientHttpSession> session, SRCE )ι:
-			base{ sl },
+			VoidAwait{ sl },
 			_resolvedResults{move(resolvedResults)},
 			_session{session}
 		{}
@@ -59,9 +58,8 @@ namespace Jde::Web::Client{
 		sp<ClientHttpSession> _session;
 	};
 
-	struct HandshakeAwait final : VoidAwait<>{
-		using base=VoidAwait<>;
-		HandshakeAwait( sp<ClientHttpSession> session, SRCE )ι:base{ sl }, _session{session}{}
+	struct HandshakeAwait final : VoidAwait{
+		HandshakeAwait( sp<ClientHttpSession> session, SRCE )ι:VoidAwait{ sl }, _session{session}{}
 		α Suspend()ι->void override{
 			_session->Stream().expires_after( handshakeTimeout() );
 			_session->Stream().async_handshake( beast::bind_front_handler(&HandshakeAwait::OnHandshake, this) );
@@ -75,9 +73,8 @@ namespace Jde::Web::Client{
 		sp<ClientHttpSession> _session;
 	};
 
-	struct MakeConnectionAwait final : VoidAwait<>{
-		using base=VoidAwait<>;
-		MakeConnectionAwait( sp<ClientHttpSession> session, SRCE )ι:base{ sl }, _session{session}{}
+	struct MakeConnectionAwait final : VoidAwait{
+		MakeConnectionAwait( sp<ClientHttpSession> session, SRCE )ι:VoidAwait{ sl }, _session{session}{}
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->ConnectAwait::Task{
 			try{
@@ -139,9 +136,8 @@ namespace Jde::Web::Client{
 		http::response<http::string_body> _res;
 	};
 
-	struct ShutdownAwait final : VoidAwait<>{
-		using base=VoidAwait<>;
-		ShutdownAwait( sp<ClientHttpSession> session, SRCE )ι:base{ sl }, _session{session}{}
+	struct ShutdownAwait final : VoidAwait{
+		ShutdownAwait( sp<ClientHttpSession> session, SRCE )ι:VoidAwait{ sl }, _session{session}{}
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->void{
 			_session->Stream().expires_after( handshakeTimeout() );
@@ -176,6 +172,7 @@ namespace Jde::Web::Client{
 		if( _log )
 			Trace{ _sl, _tags, "{}:{}{} - {}", Host, Port, target, body.substr(0, Client::MaxLogLength()) };
 		http::request<http::string_body> req{ *args.Verb, target, version };
+		req.set( http::field::host, Host );
 		req.set( http::field::user_agent, _userAgent );
 		if( args.ContentType.size() )
 			req.set( http::field::content_type, args.ContentType );
@@ -191,7 +188,7 @@ namespace Jde::Web::Client{
 				Trace{ _sl, ELogTags::HttpClientRead, "{}:{}{} - {}", Host, Port, target, res.Body().substr(0/*, Client::MaxLogLength()*/) };
 			h.promise().SetValue( move(res) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			h.promise().SetExp( move(e) );
 		}
 		Close();

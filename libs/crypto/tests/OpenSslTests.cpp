@@ -50,13 +50,14 @@ namespace Jde::Crypto{
 
 	TEST_F( OpenSslTests, Main ){
 		let signature = Crypto::RsaSign( HeaderPayload, PrivateKeyFile );
-		auto [modulus2, exponent2] = Crypto::ModulusExponent( PublicKeyFile );
+		auto publicKey = Crypto::ReadPublicKey( PublicKeyFile );
 
-		Crypto::Verify( modulus2, exponent2, HeaderPayload, signature );
+		Crypto::Verify( publicKey, HeaderPayload, signature );
 	}
 
 	TEST_F( OpenSslTests, Certificate ){
-		ReadCertificate( CertificateFile );
+		auto bytes = ReadCertificate( CertificateFile );
+		ExtractPublicKey( bytes );
 	}
 	TEST_F( OpenSslTests, PrivateKey ){
 		Crypto::ReadPrivateKey( PrivateKeyFile, {} );

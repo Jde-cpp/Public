@@ -5,6 +5,7 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/meta/AppSchema.h>
+#include <jde/db/meta/DBSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 
@@ -12,9 +13,14 @@
 
 namespace Jde::QL{
 	using namespace Json;
-	α GetTable( str tableName, SRCE )ε->sp<DB::View>;
+	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
 	Introspection _introspection;
-	α SetIntrospection( Introspection&& x )ι->void{ _introspection = move(x); }
+	α AddIntrospection( Introspection&& x )ι->void{ _introspection += move(x); }
+
+	α Introspection::operator+=( Introspection&& x )ι->void{
+		for( auto&& o : x.Objects )
+			Objects.emplace_back( move(o) );
+	}
 
 	constexpr array<sv,8> FieldKindStrings = { "SCALAR", "OBJECT", "INTERFACE", "UNION", "ENUM", "INPUT_OBJECT", "LIST", "NON_NULL" };
 	α ToFieldKind( sv x ){ return ToEnum<EFieldKind>( FieldKindStrings, x ); }
@@ -159,7 +165,7 @@ namespace Jde::QL{
 							rootType = EFieldKind::List;
 						}
 						else if( childColumn ){
-							fieldName = ToPlural<sv>( ToJson(Str::Replace(column.Name, "_id", "")) );
+							fieldName = ToPlural( ToJson(Str::Replace(column.Name, "_id", "")) );
 							rootType = EFieldKind::List;
 						}
 						else{
@@ -191,7 +197,7 @@ namespace Jde::QL{
 					if( pColumn1->PKTable->Name==mainTable.Name ){
 						let pTable2 = pColumn2->PKTable;
 						let jsonType = pTable->Columns.size()==2 ? pTable2->JsonName() : pTable->JsonName();
-						addField( ToPlural<string>(ToJson(jsonType)), {}, EFieldKind::List, jsonType, EFieldKind::Object );
+						addField( ToPlural( ToJson(jsonType) ), {}, EFieldKind::List, jsonType, EFieldKind::Object );
 					}
 				}
 			};
@@ -238,7 +244,7 @@ namespace Jde::QL{
 
 	α QueryType( const TableQL& typeTable )ε->jobject{
 		let typeName = Json::AsString( typeTable.Args, "name" );
-		auto dbTable = DB::AsTable( GetTable(ToPlural(FromJson(typeName))) );
+		auto dbTable = DB::AsTable( typeTable.DBTable );
 		jobject y;
 		for( let& qlTable : typeTable.Tables ){
 			if( qlTable.JsonName=="fields" ){
@@ -253,5 +259,54 @@ namespace Jde::QL{
 				THROW( "__type data for '{}' not supported", qlTable.JsonName );
 		}
 		return y;
+	}
+	α QuerySchema( const TableQL& schemaTable )ε->jobject{
+		THROW_IF( schemaTable.Tables.size()!=1, "Only Expected 1 table type for __schema {}", schemaTable.Tables.size() );
+		let& mutationTable = schemaTable.Tables[0]; THROW_IF( mutationTable.JsonName!="mutationType", "Only mutationType implemented for __schema - {}", mutationTable.JsonName );
+		jarray fields;
+		for( let& schema : schemaTable.DBTable->Schema->DBSchema->AppSchemas ){
+			for( let& nameTablePtr : schema.second->Tables ){
+				let pDBTable = nameTablePtr.second;
+				let childColumn = pDBTable->Map ? pDBTable->Map->Child : nullptr;
+				let jsonType = pDBTable->JsonName();
+
+				jobject field;
+				field["name"] = Ƒ( "create{}"sv, jsonType );
+				let addField = [&jsonType, pDBTable, &fields]( sv name, bool allColumns=false, bool idColumn=true ){
+					jobject field;
+					jarray args;
+					for( let& column : pDBTable->Columns ){
+						if( (column->IsPK() && !idColumn) || (!column->IsPK() && !allColumns) )
+							continue;
+						jobject arg;
+						arg["name"] = ToJson( column->Name );
+						arg["defaultValue"] = nullptr;
+						jobject type; type["name"] = ColumnQL::QLType( *column );
+						arg["type"]=type;
+						args.push_back( arg );
+					}
+					field["args"] = args;
+					field["name"] = Ƒ( "{}{}", name, jsonType );
+					fields.push_back( field );
+				};
+				if( !childColumn ){
+					addField( "insert", true, false );
+					addField( "update", true );
+
+					addField( "delete" );
+					addField( "restore" );
+					addField( "purge" );
+				}
+				else{
+					addField( "add", true, false );
+					addField( "remove", true, false );
+				}
+			}
+		}
+		jobject jmutationType;
+		jmutationType["fields"] = fields;
+		jmutationType["name"] = "Mutation";
+		jobject jSchema; jSchema["mutationType"] = jmutationType;
+		return jmutationType;
 	}
 }
