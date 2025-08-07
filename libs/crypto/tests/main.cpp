@@ -1,6 +1,5 @@
 ﻿#include "gtest/gtest.h"
 #include <jde/framework/settings.h>
-//#include "../../../Framework/source/Cache.h"
 #include "../../../../Framework/source/threading/Thread.h"
 #define let const auto
 
@@ -19,7 +18,7 @@ namespace Jde{
 
 α main( int argc, char **argv )->int{
 	using namespace Jde;
-	let filterSet = Process::Args().find("--gtest_filter")!= Process::Args().end();
+	let filterSet = Process::Args().find("--gtest_filter") != Process::Args().end();
 	::testing::InitGoogleTest( &argc, argv );
 	Startup( argc, argv );
 	auto result = EXIT_FAILURE;
