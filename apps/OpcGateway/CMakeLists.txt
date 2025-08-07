@@ -18,7 +18,7 @@ if( WIN32 )
 endif()
 find_package( ZLIB REQUIRED )
 
-add_subdirectory( $ENV{JDE_BASH}/Framework/source ../../libs/framework )
+add_subdirectory( $ENV{JDE_BASH}/Framework/source ../../libs/framework/lib )
 set( libDir $ENV{JDE_BASH}/Public/libs )
 add_subdirectory( ${libDir}/crypto/src ../../libs/crypto/lib )
 add_subdirectory( ${libDir}/db/src ../../libs/db/lib )

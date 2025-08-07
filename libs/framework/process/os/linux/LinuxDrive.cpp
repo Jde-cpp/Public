@@ -10,50 +10,49 @@ namespace Jde::IO{
 	Drive::NativeDrive _native;
 	α Native()ι->IDrive&{ return _native; }
 
-	α FileIOArg::Open()ε->void
-	{
-		Handle = ::open( Path.string().c_str(), O_NONBLOCK | (IsRead ? O_RDONLY : O_WRONLY|O_CREAT|O_TRUNC), 0666 );
-		if( Handle==-1 )
-		{
+	α FileIOArg::Open( bool create )ε->void{
+		auto flags = O_NONBLOCK | (IsRead ? O_RDONLY : O_WRONLY  | O_TRUNC);
+		if( create && !IsRead )
+			flags |= O_CREAT;
+		Handle = ::open( Path.string().c_str(), flags, 0666 );
+		if( Handle==-1 ){
 			Handle = 0;
-			if( !IsRead && errno==ENOENT )
-			{
+			if( !IsRead && errno==ENOENT ){
 				fs::create_directories( Path.parent_path() );
 				Information{ _tags, "Created dir {}", Path.parent_path().string() };
-				return Open();
+				return Open( create );
 			}
 			THROW_IFX( IsRead /*|| errno!=EACCES*/, IOException(move(Path), errno, "open", _sl) );
 		}
-		if( IsRead )
-		{
+		if( IsRead ){
 			struct stat st;
 			THROW_IFX( ::fstat( Handle, &st )==-1, IOException(move(Path), errno, "fstat", _sl) );
-			std::visit( [size=st.st_size](auto&& b){b->resize(size);}, Buffer );
+			std::visit( [size=st.st_size](auto&& b){b.resize(size);}, Buffer );
 		}
 	}
 
-	α FileIOArg::Send( coroutine_handle<Task::promise_type> h )ι->void{
+	α FileIOArg::Send( HCo h )ι->void{
 		CoHandle = h;
-		CoroutinePool::Resume( move(CoHandle) );
+		if( CoHandle.index()==0 )
+			CoroutinePool::Resume( get<0>(CoHandle) );
+		else
+			CoroutinePool::Resume( get<1>(CoHandle) );
 	}
-
+/*
 	α DriveAwaitable::await_resume()ι->AwaitResult{
 		if( ExceptionPtr )
 			return AwaitResult{ move(ExceptionPtr) };
-		if( _cache && Cache::Has(_arg.Path) )
-		{
+		if( _cache && Cache::Has(_arg.Path) ){
 			sp<void> pVoid = std::visit( [](auto&& x){return (sp<void>)x;}, _arg.Buffer );
 			return AwaitResult{ move(pVoid) };
 		}
-		try
-		{
+		try{
 			let size = _arg.Size();
 			auto pData = std::visit( [](auto&& x){return x->data();}, _arg.Buffer );
 			auto pEnd = pData+size;
 			let chunkSize = DriveWorker::ChunkSize();
 			let count = size/chunkSize+1;
-			for( uint32 i=0; i<count; ++i )
-			{
+			for( uint32 i=0; i<count; ++i ){
 				auto pStart = pData+i*chunkSize;
 				auto chunkCount = std::min<ptrdiff_t>( chunkSize, pEnd-pStart );
 				if( _arg.IsRead )
@@ -74,7 +73,7 @@ namespace Jde::IO{
 			return AwaitResult{ e.Move() };
 		}
 	}
-
+*/
 
 /*
 	α DriveAwaitable::await_suspend( typename base::THandle h )ι->void
@@ -138,10 +137,8 @@ namespace Jde::IO{
 	}
 */
 }
-namespace Jde::IO::Drive
-{
-	α GetAttributes( fs::path path )->tuple<TimePoint,TimePoint,uint>
-	{
+namespace Jde::IO::Drive{
+	α GetAttributes( fs::path path )->tuple<TimePoint,TimePoint,uint>{
 		struct stat attrib;
 		stat( path.string().c_str(), &attrib );
 		let size = attrib.st_size;
@@ -150,15 +147,12 @@ namespace Jde::IO::Drive
 		const TimePoint accessedTime = Clock::from_time_t( attrib.st_atim.tv_sec );//+std::chrono::nanoseconds( attrib.st_atim.tv_nsec );
 		return make_tuple( modifiedTime,accessedTime, size );
 	}
-	struct DirEntry : IDirEntry
-	{
+	struct DirEntry : IDirEntry{
 		DirEntry( const fs::path& path ):
 			DirEntry( fs::directory_entry(path) )
-		{
-			//LoadNativeDrive();//TODO Remove
-		}
-		DirEntry( const fs::directory_entry& entry )
-		{
+		{}
+
+		DirEntry( const fs::directory_entry& entry ){
 			let path = Path = entry.path();
 			let status = entry.status();
 			if( fs::is_directory(status) )
@@ -193,8 +187,7 @@ namespace Jde::IO::Drive
 
 		return entries;
 	}
-	α to_timespec( const TimePoint& time )->timespec
-	{
+	α to_timespec( const TimePoint& time )->timespec{
 		let sinceEpoch = time.time_since_epoch();
 		let total = duration_cast<std::chrono::nanoseconds>( duration_cast<std::chrono::nanoseconds>( sinceEpoch )-duration_cast<std::chrono::seconds>( sinceEpoch ) ).count();
 
@@ -203,7 +196,6 @@ namespace Jde::IO::Drive
 	α NativeDrive::CreateFolder( const fs::path& dir, const IDirEntry& dirEntry )ε->up<IDirEntry>{
 		fs::create_directory( dir );
 		if( dirEntry.ModifiedTime.time_since_epoch()!=Duration::zero() ){
-			//let [createTime, modifiedTime, size] = GetTimes( dirEntry );
 			let modifiedTime = to_timespec( dirEntry.ModifiedTime );
 			let accessedTime = dirEntry.AccessedTime.time_since_epoch()==Duration::zero() ? modifiedTime : to_timespec( dirEntry.AccessedTime );
 			timespec values[] = {accessedTime, modifiedTime};
@@ -214,8 +206,7 @@ namespace Jde::IO::Drive
 	}
 	α NativeDrive::Save( const fs::path& path, const vector<char>& bytes, const IDirEntry& dirEntry )ε->up<IDirEntry>{
 		IO::SaveBinary( path, bytes );
-		if( dirEntry.ModifiedTime.time_since_epoch()!=Duration::zero() )
-		{
+		if( dirEntry.ModifiedTime.time_since_epoch()!=Duration::zero() ){
 			let modifiedTime = to_timespec( dirEntry.ModifiedTime );
 			let accessedTime = dirEntry.AccessedTime.time_since_epoch()==Duration::zero() ? modifiedTime : to_timespec( dirEntry.AccessedTime );
 			timespec values[] = {accessedTime, modifiedTime};
@@ -230,20 +221,17 @@ namespace Jde::IO::Drive
 		return IO::LoadBinary( dirEntry.Path );
 	}
 
-	α NativeDrive::Remove( const fs::path& path )ε->void
-	{
+	α NativeDrive::Remove( const fs::path& path )ε->void{
 		Debug( _tags, "Removing '{}'."sv, path.string() );
 		fs::remove( path );
 	}
-	α NativeDrive::Trash( const fs::path& path )ι->void
-	{
+	α NativeDrive::Trash( const fs::path& path )ι->void{
 		Debug( _tags, "Trashing '{}'."sv, path.string() );
 
 		let result = system( Jde::format("gio trash {}", path.string()).c_str() );
 		Debug( _tags, "Trashing '{}' returned '{}'."sv, path.string(), result );
 	}
-	α NativeDrive::SoftLink( const fs::path& existingFile, const fs::path& newSymLink )ε->void
-	{
+	α NativeDrive::SoftLink( const fs::path& existingFile, const fs::path& newSymLink )ε->void{
 		let result = ::symlink( existingFile.string().c_str(), newSymLink.string().c_str() );
 		THROW_IF( result!=0, "symlink creating '{}' referencing '{}' failed ({}){}.", newSymLink.string(), existingFile.string(), result, errno );
 		Debug( _tags, "Created symlink '{}' referencing '{}'."sv, newSymLink.string(), existingFile.string() );

@@ -45,7 +45,8 @@ namespace Jde{
 		IAwait( SRCE )ι:_sl{sl}{}
 		β await_ready()ι->bool{ return false; }
 		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
-		β await_resume()ε->TResult{ AwaitResume(); return TResult{}; }
+		//β await_resume()ε->TResult{ AwaitResume(); return TResult{}; }
+		β await_resume()ε->TResult = 0;
 		α ResumeExp( IException&& e )ι{
 			ASSERT(Promise());
 			Promise()->ResumeExp( move(e), _h );

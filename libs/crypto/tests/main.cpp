@@ -1,7 +1,6 @@
 ﻿#include "gtest/gtest.h"
 #include <jde/framework/settings.h>
-//#include "../../../Framework/source/Cache.h"
-#include "../../../../Framework/source/threading/Thread.h"
+#include <jde/framework/thread/thread.h>
 #define let const auto
 
 namespace Jde{
@@ -12,14 +11,14 @@ namespace Jde{
 #ifdef _MSC_VER
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
 #endif
-		Threading::SetThreadDscrptn( "Main" );
+		SetThreadDscrptn( "Main" );
 		OSApp::Startup( argc, argv, "Tests.Crypto", "Crypto tests", true );
 	}
 }
 
 α main( int argc, char **argv )->int{
 	using namespace Jde;
-	let filterSet = Process::Args().find("--gtest_filter")!= Process::Args().end();
+	let filterSet = Process::Args().find("--gtest_filter") != Process::Args().end();
 	::testing::InitGoogleTest( &argc, argv );
 	Startup( argc, argv );
 	auto result = EXIT_FAILURE;

@@ -9,7 +9,7 @@ namespace Jde{
     WinHandle( HANDLE value, function<IOException()> e )ε:
       _value( value ){
       if( _value==INVALID_HANDLE_VALUE )
-          throw e();
+				throw e();
     }
 
     explicit operator bool()Ι{ return _value != nullptr && _value != INVALID_HANDLE_VALUE; }
