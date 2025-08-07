@@ -1,6 +1,7 @@
 ﻿#pragma once
 #ifndef FILECO_H
 #define FILECO_H
+#include <queue>
 #include <jde/framework/coroutine/Task.h>
 #ifdef _MSC_VER
 	#include <jde/framework/process/os/windows/WindowsHandle.h>
@@ -22,20 +23,13 @@ namespace Jde::IO{
 			_fileIOArg{arg}
 		{}
 		virtual ~IFileChunkArg()=default;
-		//virtual uint StartIndex()Ι=0; virtual void SetStartIndex( uint i )ι=0;
-		//virtual uint EndIndex()Ι=0; virtual void SetEndIndex( uint i )ι=0;
-		//β Bytes()Ι->uint=0; virtual void SetBytes( uint i )ι=0;
-		//virtual void SetFileIOArg( FileIOArg* p )ι=0;
 		β Handle()ι->HFile&;
 		β Process()ι->void{};
 		β FileArg()ι->FileIOArg&{ return _fileIOArg;}
 		β FileArg()Ι->const FileIOArg&{ return _fileIOArg;}
-		//β SetFileArg( const FileIOArg* )Ι->void=0;
 
 		std::atomic<bool> Sent;
 		uint Index;
-		//static uint Index;
-//	private:
 		FileIOArg& _fileIOArg;
 	};
 
@@ -44,9 +38,7 @@ namespace Jde::IO{
 		FileIOArg( fs::path path, bool vec, SRCE )ι;
 		FileIOArg( fs::path path, variant<string,vector<char>> data, SRCE )ι;
 		α Open( bool create )ε->void;
-		//α HandleChunkComplete( IFileChunkArg* pChunkArg )ι->bool;
 		α Send( HCo h )ι->void;
-//		α SetWorker( sp<Threading::IWorker> p ){ _pWorkerKeepAlive=p; }
 		α Data()ι{ return visit( [](auto&& x){return x.data();}, Buffer ); }
 		α Size()Ι{ return visit( [](auto&& x){return x.size();}, Buffer ); }
 		α ResumeExp( exception&& e )ι->void;
@@ -54,10 +46,9 @@ namespace Jde::IO{
 
 		variant<string,vector<char>> Buffer;
 		std::queue<up<IFileChunkArg>> Chunks; std::mutex ChunkMutex;
-		HCo CoHandle{};
-		//atomic<uint> Completed{};
 		atomic<uint> ChunksCompleted;
 		uint ChunksToSend;
+		HCo CoHandle{};
 		HFile Handle{};
 		bool IsRead;
 		fs::path Path;
@@ -87,14 +78,5 @@ namespace Jde::IO{
 	private:
 		bool _create;
 	};
-
-/*	struct DriveWorker : Threading::IPollWorker{
-		using base=Threading::IPollWorker;
-		DriveWorker():base{"drive"}{}
-		α Initialize()ι->void override;
-		Γ Ω ChunkSize()ι->uint32;
-		Γ Ω ThreadSize()ι->uint8;
-		Γ Ω Signal()ι->uint;
-	};*/
 }
 #endif

@@ -69,7 +69,7 @@ namespace Jde::Web::Mock{
 	α HttpRequestAwait::Suspend()ι->void{
 		if( _request.Target()=="/delay" ){
 			 _thread = std::jthread( [this,h=_h]()mutable->void {
-				Threading::SetThreadDscrptn( "DelayHandler" );
+				SetThreadDscrptn( "DelayHandler" );
 				uint seconds = To<uint>( _request["seconds"] );
 				Debug( ELogTags::HttpServerWrite, "server sleeping for {}", seconds );
 				std::this_thread::sleep_for( std::chrono::seconds{seconds} );
@@ -80,7 +80,7 @@ namespace Jde::Web::Mock{
 		}
 		else if( _request.Target()=="/BadAwaitable" ){
 			_thread = std::jthread( [this,h=_h]()mutable->void {
-				Threading::SetThreadDscrptn( "BadAwaitable" );
+				SetThreadDscrptn( "BadAwaitable" );
 				h.promise().SetExp( RestException{SRCE_CUR, move(_request), "BadAwaitable"} );
 				net::post( *Executor(), [h](){ h.resume(); } );
 				Debug( ELogTags::HttpServerWrite, "~/BadAwaitable handler" );

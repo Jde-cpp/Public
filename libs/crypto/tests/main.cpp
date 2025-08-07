@@ -1,6 +1,6 @@
 ﻿#include "gtest/gtest.h"
 #include <jde/framework/settings.h>
-#include "../../../../Framework/source/threading/Thread.h"
+#include <jde/framework/thread/thread.h>
 #define let const auto
 
 namespace Jde{
@@ -11,7 +11,7 @@ namespace Jde{
 #ifdef _MSC_VER
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
 #endif
-		Threading::SetThreadDscrptn( "Main" );
+		SetThreadDscrptn( "Main" );
 		OSApp::Startup( argc, argv, "Tests.Crypto", "Crypto tests", true );
 	}
 }

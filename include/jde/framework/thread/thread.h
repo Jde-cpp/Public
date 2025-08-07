@@ -1,4 +1,6 @@
 ﻿#pragma once
+#ifndef THREAD_H
+#define THREAD_H
 #include <string_view>
 #include <shared_mutex>
 
@@ -8,13 +10,13 @@ namespace Jde{
 	Φ SetThreadDscrptn( std::thread& thread, sv description )ι->void;
 	Φ SetThreadDscrptn( sv description )ι->void;
 	Φ ThreadDscrptn()ι->const char*;
+	Φ ThreadId()ι->uint;
 }
 namespace Jde::Threading{
 	using namespace std::literals;
 	typedef uint HThread;
 	struct ThreadParam{ string Name; HThread AppHandle; };
-	enum class EThread : int
-	{
+	enum class EThread : int{
 		Application = 0,
 		Startup = 1,
 		LogServer = 2,
@@ -27,11 +29,9 @@ namespace Jde::Threading{
 	Φ SetThreadInfo( const ThreadParam& param )ι->void;
 	α BumpThreadHandle()ι->HThread;
 	Φ SetThreadHandle( HThread handle )ι->void;
-	//α Run( const uint maxWorkerCount, uint runCount, std::function<void(size_t)> func )ι->void;
 
 	//taken from https://livebook.manning.com/#!/book/c-plus-plus-concurrency-in-action-second-edition/chapter-8/v-7/1
-	class ThreadCollection //TODO refactor [re]move this
-	{
+	class ThreadCollection{ //TODO refactor [re]move this
 	public:
 		explicit ThreadCollection( std::vector<std::thread>& threads ):
 			_threads( threads)
@@ -49,3 +49,4 @@ namespace Jde::Threading{
 	};
 }
 #undef Φ
+#endif
