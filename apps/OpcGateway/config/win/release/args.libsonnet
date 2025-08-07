@@ -13,7 +13,7 @@
 				},
 				opc:{
 					opc:{
-						meta: "$(JDE_DIR)/IotWebsocket/config/opcGateway-meta.jsonnet",
+						meta: "$(JDE_DIR)/Public/apps/OpcGateway/config/opcGateway-meta.jsonnet",
 						prefix: ""  //test with null prefix, debug with prefix
 					}
 				}

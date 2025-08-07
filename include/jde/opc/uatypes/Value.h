@@ -1,9 +1,9 @@
 ﻿#pragma once
+#include <jde/framework/io/json.h>
 #include "../exports.h"
 #include "Logger.h"
 
 namespace Jde::Opc{
-
 	struct ΓOPC Value : UA_DataValue{
 		Value( StatusCode sc )ι:UA_DataValue{ .status{sc}, .hasStatus{true} }{}
 		Value( const UA_DataValue& x )ι{ UA_DataValue_copy( &x, this ); }

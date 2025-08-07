@@ -101,19 +101,18 @@ namespace Client{
 		return ClientSocketAwait<jarray>{ ToString(FromClient::Subscription(move(q), requestId)), requestId, shared_from_this(), sl };
 	}
 
-	template<class T,class... Args> Ω resume( std::any&& hAny, T&& v, fmt::format_string<Args const&...>&& m="", const Args&... args )ι->void{
+	template<class T,class... Args> Ω resume( std::any&& hAny, T&& v/*, fmt::format_string<Args const&...>&& m="", const Args&... args*/ )ι->void{
 		auto h = std::any_cast<typename ClientSocketAwait<T>::Handle>( &hAny );
 		ASSERT_DESC( h, Ƒ("typeT={}, typeV={}", typeid(typename ClientSocketAwait<T>::Handle).name(), hAny.type().name()) );
 		if( h ){
-			h->promise().Log( FWD(m), FWD(args)... );
 			h->promise().SetValue( move(v) );
 			h->resume();
 		}
 	}
 
-	template<class... Args> Ω resumeJValue( std::any&& hAny, string&& v, fmt::format_string<Args const&...>&& m="", const Args&... args )ι->void{
+	template<class... Args> Ω resumeJValue( std::any&& hAny, string&& v )ι->void{
 		try{
-			resume<jvalue>( move(hAny), Json::ParseValue(move(v)), FWD(m), FWD(args)... );
+			resume<jvalue>( move(hAny), Json::ParseValue(move(v)) );
 		}
 		catch( IException& e ){
 			if( auto h = std::any_cast<typename ClientSocketAwait<jvalue>::Handle>(&hAny); h ){
@@ -128,13 +127,13 @@ namespace Client{
 	ψ resumeVoid( std::any&& hAny, const fmt::format_string<Args...> m="", Args&&... args )ι->void{
 		auto h = std::any_cast<Web::Client::ClientSocketVoidAwait::Handle>( &hAny );
 		ASSERT_DESC( h, Ƒ("typeT={}, typeV={}", typeid(Web::Client::ClientSocketVoidAwait::Handle).name(), hAny.type().name()) );
-		h->promise().Log( FWD(m), FWD(args)... );
+		//h->promise().Log( FWD(m), FWD(args)... );
 		h->resume();
 	}
 
 	template<class T,class... Args>
-	α ResumeScaler( std::any&& h, T v, fmt::format_string<Args const&...>&& m="", const Args&... args )ι->void{
-		resume( move(h), move(v), FWD(m), FWD(args)... );
+	α resumeScaler( std::any&& h, T v )ι->void{
+		resume( move(h), move(v) );
 	}
 
 	α AppClientSocketSession::Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void{
@@ -167,31 +166,39 @@ namespace Client{
 //				resumeVoid( move(hAny), "Ack: '{}'.", serverSocketId );
 				}break;
 			case kConnectionInfo:
-				resume( move(hAny), move(*m->mutable_connection_info()), "ConnectionInfo: {{applicationInstance: '{}'}}", m->connection_info().instance_pk() );
+				TRACE( "[{:x}]ConnectionInfo: applicationInstance: '{}'.", Id(), m->connection_info().instance_pk() );
+				resume( move(hAny), move(*m->mutable_connection_info()) );
 				break;
 			case kGeneric:
-				resume( move(hAny), move(*m->mutable_generic()), "Generic - '{}'.", m->generic() );
+				TRACE( "[{:x}]Generic: '{}'.", Id(), m->generic() );
+				resume( move(hAny), move(*m->mutable_generic()) );
 				break;
 			[[likely]] case kStrings:{
 				auto& res = *m->mutable_strings();
-				resume( move(hAny), move(*m->mutable_strings()), "Strings count='{}'.", res.messages().size()+res.files().size()+res.functions().size()+res.threads().size() );
+				TRACE( "[{:x}]Strings: count='{}'.", Id(), res.messages().size()+res.files().size()+res.functions().size()+res.threads().size() );
+				resume( move(hAny), move(*m->mutable_strings()) );
 				}break;
 			case kJwt:
-				resume( move(hAny), Web::Jwt{move(*m->mutable_jwt())}, "Jwt.size: '{}'.", m->jwt().size() );
+				TRACE( "[{:x}]Jwt: size='{}'.", Id(), m->jwt().size() );
+				resume( move(hAny), Web::Jwt{move(*m->mutable_jwt())} );
 				break;
 			case kLogLevels:{//TODO implement when have tags.
 				auto& res = *m->mutable_log_levels();
-				resume( move(hAny), move(res), "LogLevel server='{}', client='{}'.", ToString((ELogLevel)res.server()), ToString((ELogLevel)res.client()) );
+				TRACE( "[{:x}]LogLevels: server='{}', client='{}'.", Id(), ToString((ELogLevel)res.server()), ToString((ELogLevel)res.client()) );
+				resume( move(hAny), move(res) );
 				}break;
 			case kProgress://TODO not awaitable
-				ResumeScaler( move(hAny), m->progress(), "Progress: '{}'.", m->progress() );
+				TRACE( "[{:x}]Progress: '{}'.", Id(), m->progress() );
+				resumeScaler( move(hAny), m->progress() );
 				break;
 			case kSessionInfo:{
 				auto& res = *m->mutable_session_info();
-				resume( move(hAny), move(res), "SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", ToIsoString(Jde::Proto::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
+				TRACE( "[{:x}]SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", Id(), ToIsoString(Jde::Proto::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
+				resume( move(hAny), move(res) );
 				}break;
 			case kGraphQl:
-				resumeJValue( move(hAny), move(*m->mutable_graph_ql()), "GraphQl: '{}'.", m->graph_ql().substr(0, Web::Client::MaxLogLength()) );
+				TRACE( "[{:x}]GraphQl: '{}'.", Id(), m->graph_ql().substr(0, Web::Client::MaxLogLength()) );
+				resumeJValue( move(hAny), move(*m->mutable_graph_ql()) );
 				break;
 			case kSubscriptionAck:
 				if( !_subscriptionRequests.erase_if( requestId, [&](auto&& kv){
@@ -204,7 +211,8 @@ namespace Client{
 				else{
 					jarray y;
 					for_each( m->subscription_ack().server_ids(), [&]( auto id ){ y.emplace_back(id); } );
-					resume( move(hAny), move(y), "SubscriptionAck: '{}'.", serialize(y) );
+					TRACE( "[{:x}]SubscriptionAck: '{}'.", Id(), serialize(y) );
+					resume( move(hAny), move(y) );
 				}
 				break;
 			[[likely]]case kSubscription:

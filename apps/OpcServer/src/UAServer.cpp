@@ -22,7 +22,7 @@ namespace Jde::Opc::Server {
 	α UAServer::Run()ι->void{
 		if( !_thread ){
 			_thread = std::jthread{[this](std::stop_token /*st*/){
-				Threading::SetThreadDscrptn( "UAServer" );
+				SetThreadDscrptn( "UAServer" );
 				_running = true;
 				UA_Server_run( _ua, &_running );
 				UA_Server_delete( _ua );
