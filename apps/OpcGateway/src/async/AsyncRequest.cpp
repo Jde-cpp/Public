@@ -28,7 +28,7 @@ namespace Jde::Opc::Gateway{
 			}
 			if( preMax==max() ){
 				co_await DurationTimer{ 500ms }; //UA_CreateSubscriptionRequest_default
-				Threading::SetThreadDscrptn( "ProcessingLoop" );
+				SetThreadDscrptn( "ProcessingLoop" );
 			}
 		}
 

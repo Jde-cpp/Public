@@ -22,12 +22,12 @@
 						},
 						log:{
 							log:{
-								meta: "$(JDE_DIR)/AppServer/config/log-meta.jsonnet",
+								meta: "$(JDE_DIR)/Public/apps/AppServer/config/log-meta.jsonnet",
 							}
 						},
 						gateway:{
 							gateway:{
-								meta: "$(JDE_DIR)/IotWebsocket/config/opcGateway-meta.jsonnet",
+								meta: "$(JDE_DIR)/Public/apps/OpcGateway/config/opcGateway-meta.jsonnet",
 							}
 						},
 						opc:{

@@ -1,0 +1,31 @@
+{
+	"testing":{
+		"tests":"UserTests.Crud"
+	},
+	"cryptoTests":{
+		"clear": true
+	},
+	"db":{
+		"driver": "$(JDE_DB_DRIVER)",
+		"connectionString": "DSN=Jde_Log_Connection",
+		"createSchema":  true,
+		"meta": "$(JDE_DIR)/AppServer/config/meta.json",
+		"scriptDir": "$(JDE_DIR)/AppServer/sql",
+		"qlSchema": "$(JDE_DIR)/AppServer/config/ql.json"
+	},
+	"logging":{
+		"breakLevel": "Warning",
+		"tags": {
+			"Trace":["test", "sql", "graphQL", "app"],
+			"Debug":["settings"],
+			"Information":[],
+			"Warning":[],
+			"Error":[],
+			"Critical":[]
+		},
+		"console":{}
+	},
+	"workers":{
+		"drive": {"threads": 1}
+	}
+}

@@ -6,7 +6,7 @@
 		url: "opc.tcp://127.0.0.1:49320"
 	},
 	dbServers: {
-		scriptPaths: ["$(JDE_DIR)/IotWebsocket/config/sql/sqlServer"],
+		scriptPaths: ["$(JDE_DIR)/Public/apps/OpcGateway/config/sql/sqlServer"],
 		localhost:{
 			driver: "$(JDE_BUILD_DIR)/msvc/jde/libs/db/drivers/odbc/Debug/Jde.DB.Odbc.dll",
 			connectionString: "DSN=debug",
@@ -23,7 +23,7 @@
 						},
 						dbo:{
 							opc:{
-								meta: "$(JDE_DIR)/IotWebsocket/config/opcGateway-meta.jsonnet",
+								meta: "$(JDE_DIR)/Public/apps/OpcGateway/config/opcGateway-meta.jsonnet",
 								prefix: "opc"  //test with null prefix, debug with prefix
 							}
 						}

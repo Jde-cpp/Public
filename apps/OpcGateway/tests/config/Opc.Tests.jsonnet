@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "TokenTests.Authenticate",
+		tests: "CertTests.Authenticate_Bad",
 		recreateDB:: true,
 		embeddedAppServer: true,
 		embeddedOpcServer: true
@@ -9,12 +9,12 @@ local args = import 'args.libsonnet';
 	opc: args.opc,
 	dbServers: {
 		scriptPaths: [
-			"$(JDE_DIR)/AppServer/config/sql/"+args.sqlType,
+			"$(JDE_DIR)/Public/apps/AppServer/config/sql/"+args.sqlType,
 			"$(JDE_DIR)/Public/libs/access/config/sql/"+args.sqlType,
 			"$(JDE_DIR)/Public/apps/OpcGateway/config/sql/"+args.sqlType,
 			"$(JDE_DIR)/Public/apps/OpcServer/config/sql/"+args.sqlType
 		],
-		dataPaths: ["$(JDE_DIR)/AppServer/config", "$(JDE_DIR)/Public/libs/access/config"],
+		dataPaths: ["$(JDE_DIR)/Public/apps/AppServer/config", "$(JDE_DIR)/Public/libs/access/config"],
 		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,

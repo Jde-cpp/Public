@@ -20,7 +20,7 @@
 								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet"
 							},
 							log:{
-								meta: "$(JDE_DIR)/AppServer/config/log-meta.jsonnet",
+								meta: "$(JDE_DIR)/Public/apps/AppServer/config/log-meta.jsonnet",
 								prefix: ""   //test with null prefix, debug with prefix
 							},
 							gateway:{
