@@ -14,5 +14,5 @@
 
 #include "externals.h"
 #include "../src/usings.h"
-#include "../src/types/OpcClient.h"
+#include "../src/types/ServerCnnctn.h"
 #include "../src/types/proto/Opc.FromServer.pb.h"

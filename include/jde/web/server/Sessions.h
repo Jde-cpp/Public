@@ -46,7 +46,7 @@ namespace Jde::Web::Server{
 		private:
 			α Execute()ι->TTask<Web::FromServer::SessionInfo>;
 			α FromSessionId()ι->TTask<Web::FromServer::SessionInfo>;
-			α FromJwt( Web::Jwt&& jwt )ι->TTask<UserPK>;
+			α FromJwt( str jwt )ι->TTask<UserPK>;
 			α CreateSession( UserPK userPK={} )ι->void;
 			sp<App::IApp> _appClient; string _authorization; string _endpoint; bool _socket; bool _throw;
 		};

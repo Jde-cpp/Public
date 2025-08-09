@@ -4,7 +4,7 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	flat_map<OpcClientNK,flat_map<Credential,vector<ConnectAwait::Handle>>> _requests; mutex _requestMutex;
+	flat_map<ServerCnnctnNK,flat_map<Credential,vector<ConnectAwait::Handle>>> _requests; mutex _requestMutex;
 
 	α ConnectAwait::EraseRequests( str opcNK, Credential cred )ι->vector<ConnectAwait::Handle>{
 		lg _{ _requestMutex };
@@ -32,9 +32,9 @@ namespace Jde::Opc::Gateway{
 			Create();
 		}
 	}
-	α ConnectAwait::Create()ι->TAwait<vector<OpcClient>>::Task{
+	α ConnectAwait::Create()ι->TAwait<vector<ServerCnnctn>>::Task{
 		try{
-			auto servers = co_await OpcClientAwait{ _opcTarget };
+			auto servers = co_await ServerCnnctnAwait{ _opcTarget };
 			THROW_IF( servers.empty(), "Could not find opc server:  '{}'", _opcTarget );
 			auto client = ms<UAClient>( move(servers.front()), _cred );
 			client->Connect();

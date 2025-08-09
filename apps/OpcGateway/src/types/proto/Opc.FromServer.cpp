@@ -59,7 +59,7 @@ namespace Jde::Opc::Gateway{
 		return y;
 	}
 #define IS(ua) type==&UA_TYPES[ua]
-	α FromServer::ToProto( const OpcClientNK& opcId, const ExNodeId& node, const Opc::Value& v )ι->FromServer::Message{
+	α FromServer::ToProto( const ServerCnnctnNK& opcId, const ExNodeId& node, const Opc::Value& v )ι->FromServer::Message{
 		let scaler = v.IsScaler();
 		let type = v.value.type;
 		auto nv = mu<FromServer::NodeValues>(); nv->set_allocated_node( new Proto::ExpandedNodeId{ToProto(node)} ); nv->set_opc_id( opcId );

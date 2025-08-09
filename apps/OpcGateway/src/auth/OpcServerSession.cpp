@@ -2,7 +2,7 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	concurrent_flat_map<SessionPK,flat_map<OpcClientNK,Credential>> _sessions;
+	concurrent_flat_map<SessionPK,flat_map<ServerCnnctnNK,Credential>> _sessions;
 
 	α Credential::operator==( const Credential& other )Ι->bool{
 		bool equal{ Type() == other.Type() };
@@ -58,12 +58,12 @@ namespace Jde::Opc::Gateway{
 	}
 }
 namespace Jde::Opc{
-	α Gateway::AddSession( SessionPK sessionId, OpcClientNK opcNK, Credential credential )ι->void{
+	α Gateway::AddSession( SessionPK sessionId, ServerCnnctnNK opcNK, Credential credential )ι->void{
 		auto addCred = [&]( auto& sessionMap )ι{ sessionMap.second.try_emplace( move(opcNK), move(credential) ); };
 		_sessions.try_emplace_and_visit( sessionId, addCred, addCred );
 	}
 
-	α Gateway::AuthCache( const Credential& cred, const OpcClientNK& opcNK )ι->optional<bool>{
+	α Gateway::AuthCache( const Credential& cred, const ServerCnnctnNK& opcNK )ι->optional<bool>{
 		optional<bool> authenticated;
 		_sessions.cvisit_while( [&]( let& sessionClients )ι{
 			let& clients = sessionClients.second;

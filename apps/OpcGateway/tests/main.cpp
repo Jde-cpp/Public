@@ -3,7 +3,7 @@
 #include <jde/framework/coroutine/Timer.h>
 #include <jde/opc/uatypes/Logger.h>
 #include "../src/StartupAwait.h"
-#include "../../AppServer/source/AppStartupAwait.h"
+#include "../../AppServer/src/AppStartupAwait.h"
 #include "../../OpcServer/src/StartupAwait.h"
 #define let const auto
 

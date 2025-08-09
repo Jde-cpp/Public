@@ -30,7 +30,7 @@ file( GLOB headers *.h **/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 add_subdirectory( ../../OpcServer/src ../../../apps/OpcServer/lib )
-add_subdirectory( ../../AppServer/source ../../../apps/AppServer/lib )
+add_subdirectory( ../../AppServer/src ../../../apps/AppServer/lib )
 
 find_package( GTest REQUIRED )
 include_directories( ${open62541Dir}include )

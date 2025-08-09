@@ -9,7 +9,7 @@ namespace Jde::Opc::Gateway::FromServer{
 	α MessageTrans( FromServer::Message&& m, RequestId requestId )ι->FromServer::Transmission;
 	α ExceptionTrans( const exception& e, optional<RequestId> requestId )ι->FromServer::Transmission;
 
-	α ToProto( const OpcClientNK& opcId, const ExNodeId& node, const Opc::Value& v )ι->FromServer::Message;
+	α ToProto( const ServerCnnctnNK& opcId, const ExNodeId& node, const Opc::Value& v )ι->FromServer::Message;
 	α ToProto( const ExNodeId& id )ι->Proto::ExpandedNodeId;
 	α ToNodeProto( const ExNodeId& id )ι->Proto::NodeId;
 }

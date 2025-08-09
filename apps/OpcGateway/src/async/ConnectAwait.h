@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <jde/framework/coroutine/Await.h>
-#include "../types/OpcClient.h"
+#include "../types/ServerCnnctn.h"
 #include "../auth/OpcServerSession.h"
 
 namespace Jde::Opc::Gateway{
@@ -15,7 +15,7 @@ namespace Jde::Opc::Gateway{
 		Ω Resume( sp<UAClient> pClient, str target, Credential cred, const UAClientException&& e )ι->void;
 	private:
 		Ω Resume( sp<UAClient> pClient, str target, Credential cred, function<void(ConnectAwait::Handle)> resume )ι->void;
-		α Create()ι->TAwait<vector<OpcClient>>::Task;
+		α Create()ι->TAwait<vector<ServerCnnctn>>::Task;
 		Ω EraseRequests( str opcNK, Credential cred )ι->vector<ConnectAwait::Handle>;
 		string _opcTarget;
 		Credential _cred;

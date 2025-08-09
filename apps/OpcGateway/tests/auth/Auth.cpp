@@ -1,18 +1,19 @@
 #include "Auth.h"
 #include "../../src/auth/UM.h"
+#include "../../src/usings.h"
 
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{
-	optional<OpcClient> Auth::Client={};
+	optional<ServerCnnctn> Auth::Client={};
 	ETokenType Auth::Tokens{};
 	α Auth::SetUp()ε->void{
 		if( !Client ){
-			Client = SelectOpcClient( OpcServerTarget );
+			Client = SelectServerCnnctn( OpcServerTarget );
 			if( !Client ){
 				BlockAwait<ProviderCreatePurgeAwait, Access::ProviderPK>( ProviderCreatePurgeAwait{OpcServerTarget, false} );
-				let id = BlockAwait<CreateOpcClientAwait, OpcClientPK>( CreateOpcClientAwait{} );
-				Client = SelectOpcClient( id );
+				let id = BlockAwait<CreateServerCnnctnAwait, ServerCnnctnPK>( CreateServerCnnctnAwait{} );
+				Client = SelectServerCnnctn( id );
 			}
 		}
 		if( empty(Tokens) )
@@ -22,8 +23,8 @@ namespace Jde::Opc::Gateway::Tests{
 		}
 	}
 	α Auth::TearDownTestSuite()->void{
-		if( auto client = SelectOpcClient(OpcServerTarget); client ){
-			PurgeOpcClient( client->Id );
+		if( auto client = SelectServerCnnctn(OpcServerTarget); client ){
+			PurgeServerCnnctn( client->Id );
 			Client = nullopt;
 		}
 	}

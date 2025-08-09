@@ -31,7 +31,7 @@ namespace Jde::Opc::Gateway::Tests{
 	static vector<SessionPK> _sessionIds;
 	static up<IException> _exception;
 	const string _password = "0123456789ABCD";
-	α AuthenticateTest( OpcClientNK opcId, bool badPassword=false )ι->TAwait<Web::FromServer::SessionInfo>::Task{
+	α AuthenticateTest( ServerCnnctnNK opcId, bool badPassword=false )ι->TAwait<Web::FromServer::SessionInfo>::Task{
 		try{
 			auto sessionInfo = co_await PasswordAwait{ "user1", badPassword ? "xyz" : _password, move(opcId), "localhost", true };
 			_sessionIds.push_back( sessionInfo.session_id() );

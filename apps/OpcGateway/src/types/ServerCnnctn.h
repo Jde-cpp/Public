@@ -8,24 +8,24 @@
 #include <jde/opc/usings.h>
 
 namespace Jde::Opc::Gateway{
-	struct OpcClient{
-		OpcClient( str address )ι:Url{address}{}
-		OpcClient( DB::Row&& r )ε;
-		OpcClient( jobject&& o )ε;
+	struct ServerCnnctn final{
+		ServerCnnctn( str address )ι:Url{address}{}
+		ServerCnnctn( DB::Row&& r )ε;
+		ServerCnnctn( jobject&& o )ε;
 		α ToJson()Ι->jobject;
-		OpcClientPK Id;
+		ServerCnnctnPK Id;
 		string Url;
 		string CertificateUri;
 		string Description;
 		bool IsDefault;
 		string Name;
 		optional<TimePoint> Deleted;
-		OpcClientNK Target;
+		ServerCnnctnNK Target;
 	};
 
-	struct OpcClientAwait final: TAwait<vector<OpcClient>>{
-		using base=TAwait<vector<OpcClient>>;
-		OpcClientAwait( optional<DB::Key> key=nullopt, bool includeDeleted=false):_key{key}, _includeDeleted{includeDeleted}{};
+	struct ServerCnnctnAwait final: TAwait<vector<ServerCnnctn>>{
+		using base=TAwait<vector<ServerCnnctn>>;
+		ServerCnnctnAwait( optional<DB::Key> key=nullopt, bool includeDeleted=false):_key{key}, _includeDeleted{includeDeleted}{};
 		α Suspend()ι->void override{ Select(); }
 		α Select()ι->DB::SelectAwait::Task;
 	private:

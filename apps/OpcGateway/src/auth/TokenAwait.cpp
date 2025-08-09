@@ -5,7 +5,7 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	// TokenAwait::TokenAwait( string token, OpcClientNK opcNK, string endpoint, bool isSocket, SL sl )ι:
+	// TokenAwait::TokenAwait( string token, ServerCnnctnNK opcNK, string endpoint, bool isSocket, SL sl )ι:
 	// 	AuthAwait{ Credential{ move(token) }, move(opcNK), move(endpoint), isSocket, sl }
 	// {}
 }

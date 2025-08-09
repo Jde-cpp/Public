@@ -17,7 +17,7 @@ add_subdirectory( $ENV{JDE_DIR}/Public/libs/web/server ../../libs/web/server )
 add_subdirectory( $ENV{JDE_DIR}/Public/libs/web/client ../../libs/web/client )
 add_subdirectory( $ENV{JDE_DIR}/Public/libs/app/shared ../../libs/app/shared )
 
-add_subdirectory( source lib )
+add_subdirectory( src lib )
 
 if( WIN32 )
 	add_definitions( -DZLIB_USE_STATIC_LIBS -D )
@@ -32,11 +32,11 @@ project( ${targetName} )
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
 
-set( sources source/main.cpp )
+set( sources src/main.cpp )
 if( WIN32 )
-	list( APPEND sources source/AppServer.rc )
+	list( APPEND sources src/AppServer.rc )
 endif()
-file( GLOB headers source/**/*.h )
+file( GLOB headers src/**/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 include_directories( $ENV{JDE_DIR}/Public/include/jde/web/client/proto )

@@ -15,7 +15,7 @@
 				},
 				log:{
 					log:{
-						meta: "$(JDE_DIR)/AppServer/config/log-meta.jsonnet",
+						meta: "$(JDE_DIR)/Public/apps/AppServer/config/log-meta.jsonnet",
 						prefix: ""  //test with null prefix, debug with prefix
 					},
 				}

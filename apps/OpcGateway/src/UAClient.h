@@ -8,7 +8,7 @@
 #include "async/ReadAwait.h"
 #include "async/Write.h"
 #include "auth/OpcServerSession.h"
-#include "types/OpcClient.h"
+#include "types/ServerCnnctn.h"
 #include "types/MonitoringNodes.h"
 #include "uatypes/Browse.h"
 
@@ -23,7 +23,7 @@ namespace Jde::Opc::Gateway{
 	struct CreateMonitoredItemsRequest;
 
 	struct UAClient final : std::enable_shared_from_this<UAClient>{
-		UAClient( OpcClient&& opcServer, Credential cred )ε;
+		UAClient( ServerCnnctn&& opcServer, Credential cred )ε;
 		UAClient( str address, Credential cred )ε;
 		~UAClient();
 
@@ -59,7 +59,7 @@ namespace Jde::Opc::Gateway{
 		α AddSessionAwait( VoidAwait::Handle h )ι->void;
 		α TriggerSessionAwaitables()ι->void;
 
-		α Target()ι->const OpcClientNK&{ return _opcServer.Target; }
+		α Target()ι->const ServerCnnctnNK&{ return _opcServer.Target; }
 		α Url()ι->str{ return _opcServer.Url; }
 		α IsDefault()ι->bool{ return _opcServer.IsDefault; }
 		α Handle()ι->uint{ return (uint)_ptr;}
@@ -78,7 +78,7 @@ namespace Jde::Opc::Gateway{
 		α CertificateFile()ι->fs::path{ return RootSslDir()/Ƒ("certs/{}.pem", Target()); }
 		Ω RemoveClient( sp<UAClient>& client )ι->bool;
 
-		OpcClient _opcServer;
+		ServerCnnctn _opcServer;
 
 		concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
 		concurrent_flat_map<Jde::Handle, UARequestMulti<UA_WriteResponse>> _writeRequests;

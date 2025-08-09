@@ -30,7 +30,7 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	up<IException> _exception;
-	Ω authenticateTest( const Web::Jwt& jwt, OpcClientNK opcId, atomic_flag& flag, bool bad=false )ι->TokenAwait::Task{
+	Ω authenticateTest( const Web::Jwt& jwt, ServerCnnctnNK opcId, atomic_flag& flag, bool bad=false )ι->TokenAwait::Task{
 		try{
 			auto text = jwt.Payload();
 			if( bad )

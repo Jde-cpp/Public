@@ -35,8 +35,8 @@ namespace Jde::Opc::Gateway{
 		variant<nullptr_t, Gateway::Token, User, Crypto::PublicKey> _value;
 		mutable string _display;
 	};
-	α AddSession( SessionPK sessionId, OpcClientNK opcNK, Credential credential )ι->void;
-	α AuthCache( const Credential& credential, const OpcClientNK& opcNK )ι->optional<bool>;
+	α AddSession( SessionPK sessionId, ServerCnnctnNK opcNK, Credential credential )ι->void;
+	α AuthCache( const Credential& credential, const ServerCnnctnNK& opcNK )ι->optional<bool>;
 	α Logout( SessionPK sessionId )ι->void;
 	α GetCredential( SessionPK sessionId, str opcId )ι->optional<Credential>;
 }

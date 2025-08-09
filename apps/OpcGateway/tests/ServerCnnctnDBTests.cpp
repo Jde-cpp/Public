@@ -15,7 +15,7 @@ namespace Jde::Opc::Gateway::Tests{
 	constexpr ELogTags _tags{ ELogTags::Test };
 	using Gateway::QL;
 
-	struct ClientDBTests : ::testing::Test{
+	struct ServerCnnctnDBTests : ::testing::Test{
 		atomic_flag Wait;
 		std::any Result;
 		std::any Id;
@@ -26,101 +26,101 @@ namespace Jde::Opc::Gateway::Tests{
 		α InsertFailedImpl()ε->Access::ProviderPK;
 		α PurgeFailedImpl()ε->Access::ProviderPK;
 		α CrudImpl()ε->Access::ProviderPK;
-		α CrudImpl2( OpcClientPK id )ε->Access::ProviderPK;
-		α CrudPurge( OpcClientPK id )ε->Access::ProviderPK;
+		α CrudImpl2( ServerCnnctnPK id )ε->Access::ProviderPK;
+		α CrudPurge( ServerCnnctnPK id )ε->Access::ProviderPK;
 	};
-	uint ClientDBTests::OpcProviderId{};
+	uint ServerCnnctnDBTests::OpcProviderId{};
 
 	α GetProviderPK( string target )ε->Access::ProviderPK{
 		return BlockAwait<ProviderSelectAwait,Access::ProviderPK>( ProviderSelectAwait{target} );
 	}
-	α GetOpcServers( optional<DB::Key> key=nullopt, bool includeDeleted=false )->vector<OpcClient>{
-		return BlockAwait<OpcClientAwait,vector<OpcClient>>( OpcClientAwait{key, includeDeleted} );
+	α GetOpcServers( optional<DB::Key> key=nullopt, bool includeDeleted=false )->vector<ServerCnnctn>{
+		return BlockAwait<ServerCnnctnAwait,vector<ServerCnnctn>>( ServerCnnctnAwait{key, includeDeleted} );
 	}
 
-	TEST_F( ClientDBTests, InsertFailed ){
+	TEST_F( ServerCnnctnDBTests, InsertFailed ){
 		Trace{ _tags, "InsertFailed::Started" };
 		let target = OpcServerTarget;
 		auto jInsert = Json::Parse( Ƒ("{{\"target\":\"{}\"}}", target) );
-		QL::MutationQL insert{ "createClient", move(jInsert), nullopt, true, QL().Schemas() };
+		QL::MutationQL insert{ "createServerConnection", move(jInsert), nullopt, true, QL().Schemas() };
 
 		let existingProviderPK = GetProviderPK( target );
-		let existingServer = SelectOpcClient( target );
+		let existingServer = SelectServerCnnctn( target );
 		let existingOpcPK = existingServer ? existingServer->Id : 0;
-		let& table = GetViewPtr( "clients" );
+		let& table = GetViewPtr( "server_connections" );
 		if( !existingOpcPK && !existingProviderPK ){
-			auto pk = BlockAwait<CreateOpcClientAwait,OpcClientPK>( CreateOpcClientAwait{} );
-			DS()->ExecuteSync( {Ƒ("delete from {} where client_id='{}'", table->DBName, pk)} ); //InsertFailed checks if failure occurs because exists.
+			auto pk = BlockAwait<CreateServerCnnctnAwait,ServerCnnctnPK>( CreateServerCnnctnAwait{} );
+			DS()->ExecuteSync( {Ƒ("delete from {} where server_connection_id='{}'", table->DBName, pk)} ); //InsertFailed checks if failure occurs because exists.
 		}
 		else{
 			if( existingOpcPK )
-				DS()->ExecuteSync( {Ƒ("delete from {} where client_id='{}'", table->DBName, existingOpcPK)} ); //InsertFailed checks if failure occurs because exists.
+				DS()->ExecuteSync( {Ƒ("delete from {} where server_connection_id='{}'", table->DBName, existingOpcPK)} ); //InsertFailed checks if failure occurs because exists.
 		}
 		BlockAwait<TAwait<jvalue>,jvalue>( *OpcQLHook{}.InsertFailure(insert, {UserPK::System}) );
 		ASSERT_EQ( 0, GetProviderPK(target) );
 	}
 
-	TEST_F( ClientDBTests, PurgeFailed ){
-		let existingServer = SelectOpcClient( OpcServerTarget );
+	TEST_F( ServerCnnctnDBTests, PurgeFailed ){
+		let existingServer = SelectServerCnnctn( OpcServerTarget );
 		auto opcPK = existingServer ? existingServer->Id : 0;
 		if( !opcPK )
-			opcPK = BlockAwait<CreateOpcClientAwait,OpcClientPK>( CreateOpcClientAwait{} );
+			opcPK = BlockAwait<CreateServerCnnctnAwait,ServerCnnctnPK>( CreateServerCnnctnAwait{} );
 		Id = opcPK;
 		BlockAwait<ProviderCreatePurgeAwait,Access::ProviderPK>( ProviderCreatePurgeAwait{OpcServerTarget, false} );//BeforePurge mock.
 
-		QL::MutationQL purge{ "purgeClient", { {"id", opcPK} }, nullopt, true, QL().Schemas() };
+		QL::MutationQL purge{ "purgeServerConnection", { {"id", opcPK} }, nullopt, true, QL().Schemas() };
 		BlockAwait<TAwait<jvalue>,jvalue>( *OpcQLHook{}.PurgeFailure(purge, {UserPK::System}) );
 		let providerPK = GetProviderPK( OpcServerTarget );
 		ASSERT_NE( 0, providerPK );
-		PurgeOpcClient();
+		PurgeServerCnnctn();
 	}
 
-	α ClientDBTests::CrudImpl()ε->Access::ProviderPK{
-		let existingServer = SelectOpcClient( OpcServerTarget );
+	α ServerCnnctnDBTests::CrudImpl()ε->Access::ProviderPK{
+		let existingServer = SelectServerCnnctn( OpcServerTarget );
 		let existingOpcPK = existingServer ? existingServer->Id : 0;
 		if( existingOpcPK )
-			PurgeOpcClient( existingOpcPK );
-		let createdId = BlockAwait<CreateOpcClientAwait,OpcClientPK>( CreateOpcClientAwait{} );
-		let selectAll = "clients{ id name attributes created updated deleted target description certificateUri isDefault url }";
+			PurgeServerCnnctn( existingOpcPK );
+		let createdId = BlockAwait<CreateServerCnnctnAwait,ServerCnnctnPK>( CreateServerCnnctnAwait{} );
+		let selectAll = "serverConnections{ id name attributes created updated deleted target description certificateUri isDefault url }";
 		let selectAllJson = QL().QuerySync<jarray>( selectAll, {UserPK::System} );
 		Trace( _tags, "selectAllJson={}", serialize(selectAllJson) );
-		let id = Json::AsNumber<OpcClientPK>( Json::AsObject(selectAllJson[0]), "id" );
+		let id = Json::AsNumber<ServerCnnctnPK>( Json::AsObject(selectAllJson[0]), "id" );
 		THROW_IF( createdId!=id, "createdId={} id={}", createdId, id );
 		return CrudImpl2( id );
 	}
 
-	α ClientDBTests::CrudImpl2( OpcClientPK id )ε->Access::ProviderPK{
-		auto client = SelectOpcClient( OpcServerTarget );
-		THROW_IF( client->Id!=id, "id={} readJson={}", id, serialize(client->ToJson()) );
-		let target = client->Target;
+	α ServerCnnctnDBTests::CrudImpl2( ServerCnnctnPK id )ε->Access::ProviderPK{
+		auto conn = SelectServerCnnctn( OpcServerTarget );
+		THROW_IF( conn->Id!=id, "id={} readJson={}", id, serialize(conn->ToJson()) );
+		let target = conn->Target;
 
 		let providerId = BlockAwait<ProviderSelectAwait,Access::ProviderPK>( ProviderSelectAwait{target} );
 		THROW_IF( providerId==0, "providerId==0" );
 
 		let description = "new description";
-		let update = Ƒ( "mutation updateClient( id:{}, description:\"{}\" ) }}", id, description );
+		let update = Ƒ( "mutation updateServerConnection( id:{}, description:\"{}\" ) }}", id, description );
 		let updateJson = QL().QuerySync<jvalue>( update, {UserPK::System} );
 		Trace( _tags, "updateJson={}", serialize(updateJson) );
-		let updated = SelectOpcClient( id );
+		let updated = SelectServerCnnctn( id );
 		THROW_IF( updated->Description!=description, "description={} updated={}", description, serialize(updated->ToJson()) );
 
-		let del = Ƒ( "deleteClient(\"id\":{})", id );
+		let del = Ƒ( "deleteServerConnection(\"id\":{})", id );
 		let deleteJson = QL().QuerySync<jvalue>( del, {UserPK::System} );
 		Trace( _tags, "deleted={}", serialize(deleteJson) );
-	 	client = SelectOpcClient( id );
-		THROW_IF( !client->Deleted, "deleted failed" );
+	 	conn = SelectServerCnnctn( id );
+		THROW_IF( !conn->Deleted, "deleted failed" );
 
 		return CrudPurge( id );
 	}
 
-	α ClientDBTests::CrudPurge( OpcClientPK id )ε->Access::ProviderPK{
-		BlockAwait<PurgeOpcClientAwait,uint>( PurgeOpcClientAwait{ id } );
+	α ServerCnnctnDBTests::CrudPurge( ServerCnnctnPK id )ε->Access::ProviderPK{
+		BlockAwait<PurgeServerCnnctnAwait,uint>( PurgeServerCnnctnAwait{ id } );
 		let opcServers = GetOpcServers( id, true );
 		THROW_IF( opcServers.size(), "Purge Failed" );
 		return GetProviderPK( OpcServerTarget );
 	}
 
-	TEST_F( ClientDBTests, Crud ){
+	TEST_F( ServerCnnctnDBTests, Crud ){
 		try{
 			auto providerPK = CrudImpl();
 			ASSERT_EQ( 0, providerPK );

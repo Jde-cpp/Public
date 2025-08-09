@@ -32,7 +32,7 @@ namespace Jde::Opc::Gateway{
 		Write( FromServer::AckTrans(id) );
 	}
 
-	α GatewaySocketSession::SendDataChange( const OpcClientNK& opcNK, const ExNodeId& node, const Value& value )ι->void{
+	α GatewaySocketSession::SendDataChange( const ServerCnnctnNK& opcNK, const ExNodeId& node, const Value& value )ι->void{
 		return Write( MessageTrans(FromServer::ToProto(opcNK,node, value), 0) );
 	}
 
@@ -48,7 +48,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α GatewaySocketSession::Subscribe( OpcClientNK&& opcId, flat_set<ExNodeId> nodes, uint32 requestId )ι->void{
+	α GatewaySocketSession::Subscribe( ServerCnnctnNK&& opcId, flat_set<ExNodeId> nodes, uint32 requestId )ι->void{
 		try{
 			auto self = SharedFromThis(); //keep alive
 			auto cred = GetCredential( base::SessionId(), opcId );
@@ -84,7 +84,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α GatewaySocketSession::Unsubscribe( OpcClientNK&& opcId, flat_set<ExNodeId> nodes, uint32 requestId )ι->void {
+	α GatewaySocketSession::Unsubscribe( ServerCnnctnNK&& opcId, flat_set<ExNodeId> nodes, uint32 requestId )ι->void {
 		try{
 			auto self = SharedFromThis();//keep alive
 			auto cred = GetCredential( SessionId(), opcId );

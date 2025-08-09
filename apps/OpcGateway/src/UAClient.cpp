@@ -18,7 +18,7 @@
 namespace Jde::Opc::Gateway{
 //	using Client::UAClientException;
 	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::Opc };
-	flat_map<OpcClientNK,flat_map<Credential,sp<UAClient>>> _clients; shared_mutex _clientsMutex;
+	flat_map<ServerCnnctnNK,flat_map<Credential,sp<UAClient>>> _clients; shared_mutex _clientsMutex;
 	α UAClient::RemoveClient( sp<UAClient>& client )ι->bool{
 		bool erased{};
 		ul _{ _clientsMutex };
@@ -39,10 +39,10 @@ namespace Jde::Opc::Gateway{
 	concurrent_flat_set<sp<UAClient>> _awaitingActivation;
 
 	UAClient::UAClient( str address, Gateway::Credential cred )ε:
-		UAClient{ OpcClient{address}, move(cred) }
+		UAClient{ ServerCnnctn{address}, move(cred) }
 	{}
 
-	UAClient::UAClient( OpcClient&& opcServer, Gateway::Credential cred )ε:
+	UAClient::UAClient( ServerCnnctn&& opcServer, Gateway::Credential cred )ε:
 		Credential{ move(cred) },
 		_opcServer{ move(opcServer) },
 		_logger{ 0 },

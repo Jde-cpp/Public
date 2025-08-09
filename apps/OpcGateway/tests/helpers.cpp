@@ -16,34 +16,34 @@ namespace Jde::Opc::Gateway::Tests{
 	constexpr ELogTags _tags{ ELogTags::Test };
 	//static Opc::OpcQLHook* _pHook;
 
-	α CreateOpcClientAwait::Execute()ι->QL::QLAwait<jobject>::Task{
+	α CreateServerCnnctnAwait::Execute()ι->QL::QLAwait<jobject>::Task{
 		try{
 			let certificateUri{ Settings::FindSV("/opc/urn").value_or("urn:open62541.server.application") };
 			let url{ Settings::FindSV("/opc/url").value_or( "opc.tcp://127.0.0.1:4840") };
-			let create = Ƒ( "mutation createClient( target:'{}', name:'My Test Server', certificateUri:'{}', description:'Test basic functionality', url:'{}', isDefault:false ){{id}}", OpcServerTarget, certificateUri, url );
+			let create = Ƒ( "mutation createServerConnection( target:'{}', name:'My Test Server', certificateUri:'{}', description:'Test basic functionality', url:'{}', isDefault:false ){{id}}", OpcServerTarget, certificateUri, url );
 			let createJson = co_await *QL().QueryObject( Str::Replace(create, '\'', '"'), {UserPK::System}, true, _sl );
-			ResumeScaler( Json::AsNumber<OpcClientPK>(createJson, "id") );
+			ResumeScaler( Json::AsNumber<ServerCnnctnPK>(createJson, "id") );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
 
-	α PurgeOpcClientAwait::Execute()ι->QL::QLAwait<>::Task{
+	α PurgeServerCnnctnAwait::Execute()ι->QL::QLAwait<>::Task{
 		if( !_pk.has_value() )
-			_pk = SelectOpcClient( OpcServerTarget )->Id;
-		let q = Ƒ( "{{ mutation purgeClient('id':{}) }}", *_pk );
+			_pk = SelectServerCnnctn( OpcServerTarget )->Id;
+		let q = Ƒ( "{{ mutation purgeServerConnection('id':{}) }}", *_pk );
 		let result = co_await *QL().Query( Str::Replace(q, '\'', '"'), {UserPK::System}, true, _sl );
 		ResumeScaler( 1 );
 	}
 }
 
 namespace Jde::Opc::Gateway{
-	α Tests::CreateOpcClient()ι->OpcClientPK{
+	α Tests::CreateServerCnnctn()ι->ServerCnnctnPK{
 		atomic_flag done;
-		OpcClientPK y;
-		[&]()->CreateOpcClientAwait::Task {
-			y = co_await CreateOpcClientAwait();
+		ServerCnnctnPK y;
+		[&]()->CreateServerCnnctnAwait::Task {
+			y = co_await CreateServerCnnctnAwait();
 			done.test_and_set();
 			done.notify_one();
 		}();
@@ -51,15 +51,15 @@ namespace Jde::Opc::Gateway{
 		return y;
 	}
 
-	α Tests::PurgeOpcClient( optional<OpcClientPK> pk )ι->uint{
-		return BlockAwait<PurgeOpcClientAwait,uint>( PurgeOpcClientAwait{pk} );
+	α Tests::PurgeServerCnnctn( optional<ServerCnnctnPK> pk )ι->uint{
+		return BlockAwait<PurgeServerCnnctnAwait,uint>( PurgeServerCnnctnAwait{pk} );
 	}
 
-	α Tests::SelectOpcClient( DB::Key id )ι->optional<OpcClient>{
-		let subQuery = id.IsPrimary() ? Ƒ( "client_id:{{eq:{}}}", id.PK() ) : Ƒ( "target: {{eq:\"{}\"}}", id.NK() );
-		let select = Ƒ( "client(filter:{{ {} }}){{ client_id name attributes created updated deleted target description certificateUri isDefault url }}", subQuery );
+	α Tests::SelectServerCnnctn( DB::Key id )ι->optional<ServerCnnctn>{
+		let subQuery = id.IsPrimary() ? Ƒ( "id:{{eq:{}}}", id.PK() ) : Ƒ( "target: {{eq:\"{}\"}}", id.NK() );
+		let select = Ƒ( "serverConnection(filter:{{ {} }}){{ id name attributes created updated deleted target description certificateUri isDefault url }}", subQuery );
 		auto o = QL().QuerySync<>( select, {UserPK::System} );
-		return o.empty() ? optional<OpcClient>{} : OpcClient( move(o) );
+		return o.empty() ? optional<ServerCnnctn>{} : ServerCnnctn( move(o) );
 	}
 
 	flat_map<string,ETokenType> _userTokens;

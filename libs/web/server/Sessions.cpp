@@ -25,7 +25,7 @@ namespace Jde::Web::Server{
 	steady_clock::time_point _lastTrim{ steady_clock::now() };
 
 	concurrent_flat_map<SessionPK,sp<SessionInfo>> _sessions;
-	α Upsert( sp<SessionInfo>& info )ι->void{
+	Ω upsert( sp<SessionInfo>& info )ι->void{
 		if( _sessions.emplace_or_visit(info->SessionId, info, [&info]( auto& existing ){ existing.second->Expiration=existing.second->NewExpiration();}) )
 			Trace{ _tags, "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK.Value, info->UserEndpoint };
 	}
@@ -48,7 +48,7 @@ namespace	Sessions{
 }
 	α Sessions::Add( UserPK userPK, string&& endpoint, bool isSocket )ι->sp<SessionInfo>{
 		auto newSession = Internal::CreateSession( userPK, move(endpoint), isSocket, false );
-		Upsert( newSession );
+		upsert( newSession );
 		return newSession;
 	}
 
@@ -115,25 +115,31 @@ namespace	Sessions{
 
 namespace Sessions{
 	α UpsertAwait::Suspend()ι->void{
-		if(	_authorization.starts_with("Bearer ") )
-			FromJwt( Web::Jwt{_authorization.substr(7)} );
+		if(	_authorization.starts_with("Bearer ") ){
+			try{
+				FromJwt( _authorization.substr(7) );
+			}
+			catch( exception& e ){
+				ResumeExp( move(e) );
+			}
+		}
 		else if( _authorization.size() )
 			FromSessionId();
 		else
 			CreateSession();
 	}
-	α UpsertAwait::FromJwt( Web::Jwt&& jwt )ι->TTask<UserPK>{
+	α UpsertAwait::FromJwt( str jwt )ι->TTask<UserPK>{
 		try{
-			auto userPK = co_await JwtLoginAwait( move(jwt), _endpoint );
+			auto userPK = co_await JwtLoginAwait{ Web::Jwt{jwt}, _endpoint };
 			CreateSession( userPK );
 		}
 		catch( exception& e ){
-			Promise()->SetExp( move(e) );
+			ResumeExp( move(e) );
 		}
 	}
 	α UpsertAwait::CreateSession( UserPK userPK )ι->void{
 		auto info = Sessions::Internal::CreateSession( userPK, _endpoint, _socket, false );
-		Upsert( info );
+		upsert( info );
 		Resume( move(info) );
 	}
 	α UpsertAwait::FromSessionId()ι->TTask<Web::FromServer::SessionInfo>{
@@ -156,7 +162,7 @@ namespace Sessions{
 				info = ms<SessionInfo>( *sessionId, expiration, UserPK{proto.user_pk()}, proto.user_endpoint(), proto.has_socket() );
 				info->UserEndpoint = _endpoint;
 				info->HasSocket = _socket;
-				Upsert( info );
+				upsert( info );
 			}
 			Resume( move(info) );
 		}

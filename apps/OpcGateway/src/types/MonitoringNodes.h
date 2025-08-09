@@ -11,7 +11,7 @@ namespace Jde::Opc::Gateway{
 	/*struct SocketSession;*/ struct UAClient;
 
 	struct IDataChange{
-		β SendDataChange( const OpcClientNK& opcId, const ExNodeId& node, const Value& value )ι->void=0;
+		β SendDataChange( const ServerCnnctnNK& opcId, const ExNodeId& node, const Value& value )ι->void=0;
 		β to_string()Ι->string=0;
 	};
 
@@ -35,7 +35,7 @@ namespace Jde::Opc::Gateway{
 		α GetResult( Handle requestId, StatusCode status )ι->FromServer::SubscriptionAck;
 	private:
 		struct Subscription{
-			Subscription( /*OpcClientNK opcId,*/ ExNodeId node, MonitoredItemCreateResult result, sp<IDataChange> clientCall )ι: /*OpcClientNK{move(opcId)},*/ Node{ move(node) }, Result{ move(result) }, ClientCalls{ move(clientCall) }{}
+			Subscription( /*ServerCnnctnNK opcId,*/ ExNodeId node, MonitoredItemCreateResult result, sp<IDataChange> clientCall )ι: /*ServerCnnctnNK{move(opcId)},*/ Node{ move(node) }, Result{ move(result) }, ClientCalls{ move(clientCall) }{}
 			ExNodeId Node;
 			MonitoredItemCreateResult Result;
 			flat_set<sp<IDataChange>> ClientCalls;

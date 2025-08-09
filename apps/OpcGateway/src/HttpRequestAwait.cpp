@@ -125,7 +125,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α HttpRequestAwait::CoHandleRequest( OpcClientNK&& opcId )ι->ConnectAwait::Task{
+	α HttpRequestAwait::CoHandleRequest( ServerCnnctnNK&& opcId )ι->ConnectAwait::Task{
 		let& target = _request.Target();
 		optional<Credential> cred;
 		if( _request.SessionId() )

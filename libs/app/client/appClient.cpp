@@ -47,13 +47,13 @@ namespace Jde::App::Client{
 	α LoginAwait::Execute()ι->ClientHttpAwait::Task{
 		try{
 			jobject j{ {"jwt", _jwt.Payload()} };
-			Trace{ ELogTags::App, "Logging in {}:{}", Host(), Port()};
-			auto res = co_await ClientHttpAwait{ Host(), "/login", serialize(j), Port() };
+			Trace{ ELogTags::App, "Logging in {}:{}", Host(), Port() };
+			auto res = co_await ClientHttpAwait{ Host(), "/login", {}, Port(), {.Authorization= Ƒ("Bearer {}", _jwt.Payload())} };
 			auto sessionPK = Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 			THROW_IF( !sessionPK, "Invalid authorization: {}.", res[http::field::authorization] );
 			Resume( move(*sessionPK) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

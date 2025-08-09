@@ -2,8 +2,8 @@
 	sqlType: "sqlServer",
 	logDir: "$(JDE_BUILD_DIR)",
 	dbServers: {
-		dataPaths: ["$(JDE_DIR)/AppServer/config", "$(JDE_DIR)/Public/libs/access/config"],
-		scriptPaths:  ["$(JDE_DIR)/AppServer/config/sql/sqlServer", "$(JDE_DIR)/Public/libs/access/config/sql/sqlServer"],
+		dataPaths: ["$(JDE_DIR)/Public/apps/AppServer/config", "$(JDE_DIR)/Public/libs/access/config"],
+		scriptPaths:  ["$(JDE_DIR)/Public/apps/AppServer/config/sql/sqlServer", "$(JDE_DIR)/Public/libs/access/config/sql/sqlServer"],
 		localhost:{
 			driver: "$(JDE_BUILD_DIR)/msvc/jde/libs/db/drivers/odbc/Debug/Jde.DB.Odbc.dll",
 			connectionString: "DSN=debug",
@@ -20,7 +20,7 @@
 								prefix: "access_"  //test with null prefix, debug with prefix
 							},
 							log:{
-								meta: "$(JDE_DIR)/AppServer/config/log-meta.jsonnet",
+								meta: "$(JDE_DIR)/Public/apps/AppServer/config/log-meta.jsonnet",
 								prefix: "log_"  //test with null prefix, debug with prefix
 							},
 						}

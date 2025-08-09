@@ -15,12 +15,15 @@ namespace Jde::App{
 	Ω login( HttpRequest req, HttpRequestAwait::Handle h )ι->TAwait<UserPK>::Task{
 		try{
 			req.LogRead();
-			req.SessionInfo->UserPK = co_await JwtLoginAwait( Web::Jwt{Json::AsString(req.Body(), "jwt")}, req.UserEndpoint.address().to_string() );
+			let authorization = req.Header("Authorization");
+			THROW_IFX( authorization.empty() || !authorization.starts_with("Bearer "), RestException<http::status::unauthorized>(SRCE_CUR, move(req), "Missing or invalid Authorization header") );
+
+			req.SessionInfo->UserPK = co_await JwtLoginAwait( Web::Jwt{authorization.substr(7)}, req.UserEndpoint.address().to_string() );
 			jobject j{ {"expiration", ToIsoString(req.SessionInfo->Expiration)} };
 			req.SessionInfo->IsInitialRequest = true;  //expecting sessionId to be set.
 			h.promise().Resume( {move(j), move(req)}, h );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			h.promise().ResumeExp( move(e), h );
 		}
 	}

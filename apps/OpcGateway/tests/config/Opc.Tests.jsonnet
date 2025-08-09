@@ -1,8 +1,8 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "CertTests.Authenticate_Bad",
-		recreateDB:: true,
+		tests:: "ClientDBTests.PurgeFailed",
+		recreateDB: true,
 		embeddedAppServer: true,
 		embeddedOpcServer: true
 	},
