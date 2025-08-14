@@ -11,6 +11,7 @@
 #include <open62541/client_highlevel_async.h>
 #include <open62541/client_subscriptions.h>
 #include <open62541/plugin/log_stdout.h>
+//#include <open62541/types.h>
 
 #include "externals.h"
 #include "../src/usings.h"

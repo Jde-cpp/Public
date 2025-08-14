@@ -23,6 +23,7 @@ namespace Jde::Opc::Server{
 		α GetBrowseName( jobject o, sp<ObjectType> parent )ι->BrowseNameAwait::Task;
 		α Create( jobject o, BrowseName&& browse, sp<ObjectType> parent )ι->DB::ScalerAwait<NodePK>::Task;
 		α CreateVariables( jobject o, sp<ObjectType> objectType )ι->VariableInsertAwait::Task;
+		α CreateRefs( flat_set<VariablePK,jarray>&& refs )ι->VoidAwait::Task;
 		α CreateChildren( jobject o, sp<ObjectType> parent )ι->ObjectTypeQLAwait::Task;
 		sp<ObjectType> _root;
 		variant<QL::MutationQL,jobject> _input;
@@ -33,7 +34,7 @@ namespace Jde::Opc::Server{
 	α ObjectTypeQLAwait::Suspend()ι->void{
 		try{
 			if( !_root )
-				_root = GetUAServer().GetTypeDef( ExNodeId{Args().at("parent").as_object()} );
+				_root = GetUAServer().GetTypeDef( NodeId{Args().at("parent").as_object()} );
 			GetBrowseName( move(Args()), _root );
 		}
 		catch( exception& e ){
@@ -74,20 +75,33 @@ namespace Jde::Opc::Server{
 		}
 	}
 	α ObjectTypeQLAwait::CreateVariables( jobject o, sp<ObjectType> oType )ι->VariableInsertAwait::Task{
-		if( auto variables = o.try_at("variables"); variables && variables->is_array() ){
-			try{
+		try{
+			flat_set<VariablePK,jarray> variableRefs;
+			if( auto variables = o.try_at("variables"); variables && variables->is_array() ){
 				for( auto&& value : variables->get_array() ){
 					auto& variable = value.as_object();
 					BrowseName browse{ BrowseNameAwait::GetOrInsert(variable.at("browseName").as_object()) };
 					Trace{ ELogTags::Test, "v={}", serialize(variable) };
-					co_await VariableInsertAwait{ Variable{move(variable), oType->PK, move(browse)}, _sl };
+					auto pk = co_await VariableInsertAwait{ Variable{move(variable), oType->PK, move(browse)}, _sl };
+					if( auto& refs = Json::FindArray(variable,"refs"); refs )
+						variableRefs.emplace( pk, move(*refs) );
 				}
 			}
-			catch( exception& e ){
-				ResumeExp( move(e) );
-			}
+			if( variableRefs.size() )
+				CreateRefs( move(variableRefs) );
+			else
+				CreateChildren( move(o), oType );
 		}
-		CreateChildren( move(o), oType );
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+
+	α ObjectTypeQLAwait::CreateRefs( flat_set<VariablePK,jarray>&& refs )ι->VoidAwait::Task{
+		for( auto&& ref : *refs ){
+			let r = ref.as_object();
+			co_await ReferenceInsertAwait{ Reference{ref.as_object(), pk}, _executer, _sl };
+		}
 	}
 	α ObjectTypeQLAwait::CreateChildren( jobject o, sp<ObjectType> oType )ι->ObjectTypeQLAwait::Task{
 		if( auto children = o.try_at("children"); children && children->is_array() ){

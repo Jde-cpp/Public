@@ -57,6 +57,9 @@ local args = import 'args.libsonnet';
 			publicKey:: "{ApplicationDataFolder}/ssl/public/public.pem",
 			dh:: "{ApplicationDataFolder}/certs/dh.pem",
 			passcode:: "$(JDE_PASSCODE)"
+		},
+		clientSettings:{
+			googleAuthClientId: "445012155442-1v8ntaa22konm0boge6hj5mfs15o9lvd.apps.googleusercontent.com"
 		}
 	},
 	workers:{

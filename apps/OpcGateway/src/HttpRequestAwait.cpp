@@ -2,7 +2,7 @@
 #include <jde/ql/IQL.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/IAppClient.h>
-#include <jde/opc/uatypes/Node.h>
+#include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
 #include "StartupAwait.h"
 #include "UAClient.h"
@@ -36,10 +36,10 @@ namespace Jde::Opc::Gateway{
 		}
 		return _readyResult!=nullptr;
 	}
-	α HttpRequestAwait::ParseNodes()ε->tuple<flat_set<ExNodeId>,jarray>{
+	α HttpRequestAwait::ParseNodes()ε->tuple<flat_set<NodeId>,jarray>{
 		auto& nodeJson = _request["nodes"];
 		auto jNodes = Json::AsArray( Json::ParseValue(move(nodeJson)) );
-		flat_set<ExNodeId> nodes;
+		flat_set<NodeId> nodes;
 		for( let& node : jNodes )
 			nodes.emplace( Json::AsObject(node) );
 		if( nodes.empty() )
@@ -47,7 +47,7 @@ namespace Jde::Opc::Gateway{
 		return make_tuple( nodes, move(jNodes) );
 	}
 
-	α HttpRequestAwait::ResumeSnapshots( flat_map<ExNodeId, Value>&& results, jarray&& j )ι->void{
+	α HttpRequestAwait::ResumeSnapshots( flat_map<NodeId, Value>&& results, jarray&& j )ι->void{
 		for( let& [nodeId, value] : results )
 			j.push_back( jobject{{"node", nodeId.ToJson()}, {"value", value.ToJson()}} );
 		Resume( {jobject{{"snapshots", j}}, move(_request)} );
@@ -57,7 +57,7 @@ namespace Jde::Opc::Gateway{
 		try{
 			let snapshot = ToIV( _request["snapshot"] )=="true";
 			_request.LogRead( Ƒ("BrowseObjectsFolder snapshot: {}", snapshot) );
-			auto j = co_await ObjectsFolderAwait{ ExNodeId{_request.Params()}, snapshot, move(_client) };
+			auto j = co_await ObjectsFolderAwait{ NodeId{_request.Params()}, snapshot, move(_client) };
 			Resume( {move(j), move(_request)} );
 		}
 		catch( exception& e ){
@@ -65,14 +65,14 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α HttpRequestAwait::SnapshotRead( bool write )ι->TAwait<flat_map<ExNodeId, Value>>::Task{
+	α HttpRequestAwait::SnapshotRead( bool write )ι->TAwait<flat_map<NodeId, Value>>::Task{
 		try{
 			auto [nodes, jNodes] = ParseNodes();
 			auto results = co_await ReadAwait{ nodes, _client };
 			if( find_if( results, []( let& pair )->bool{ return pair.second.hasStatus && pair.second.status==UA_STATUSCODE_BADSESSIONIDINVALID; } )!=results.end() ) {
 				throw RestException<http::status::failed_dependency>{ SRCE_CUR, move(_request), "Opc Server session invalid" };
 				//co_await AwaitSessionActivation( _client );
-				//results = ( co_await Read::SendRequest(nodes, _client) ).UP<flat_map<ExNodeId, Value>>();
+				//results = ( co_await Read::SendRequest(nodes, _client) ).UP<flat_map<NodeId, Value>>();
 			}
 			if( !write )
 				ResumeSnapshots( move(results), jarray{} );
@@ -83,14 +83,14 @@ namespace Jde::Opc::Gateway{
 			ResumeExp( RestException<http::status::internal_server_error>{SRCE_CUR, move(_request), "SnapshotRead error: {}", e.what()} );
 		}
 	}
-	α HttpRequestAwait::SnapshotWrite( flat_set<ExNodeId>&& nodes, flat_map<ExNodeId, Value>&& values, jarray&& jNodes )ι->TAwait<flat_map<ExNodeId,UA_WriteResponse>>::Task{
+	α HttpRequestAwait::SnapshotWrite( flat_set<NodeId>&& nodes, flat_map<NodeId, Value>&& values, jarray&& jNodes )ι->TAwait<flat_map<NodeId,UA_WriteResponse>>::Task{
 		try{
 			jarray jValues = Json::AsArray( Json::ParseValue(move(_request["values"])) );
 			if( jNodes.size()!=jValues.size() )
 				throw RestException<http::status::bad_request>{ SRCE_CUR, move(_request), "Invalid json: nodes.size={} values.size={}", nodes.size(), jValues.size() };
-			//flat_map<ExNodeId, Value> values;
+			//flat_map<NodeId, Value> values;
 			for( uint i=0; i<jNodes.size(); ++i ){
-				ExNodeId node{  Json::AsObject(jNodes[i]) };
+				NodeId node{  Json::AsObject(jNodes[i]) };
 				if( auto existingValue = values.find(node); existingValue!=values.end() ){
 					THROW_IF( existingValue->second.status, "Node {} has an error: {}.", serialize(node.ToJson()), UAException{existingValue->second.status}.ClientMessage() );
 					existingValue->second.Set( jValues.at(i) );
@@ -100,7 +100,7 @@ namespace Jde::Opc::Gateway{
 					throw RestException<http::status::bad_request>( SRCE_CUR, move(_request), "Node {} not found.", serialize(node.ToJson()) );
 			}
 			auto writeResults = co_await WriteAwait{ move(values), _client };
-			flat_set<ExNodeId> successNodes;
+			flat_set<NodeId> successNodes;
 			jarray array;
 			for( auto& [nodeId, response] : writeResults ){
 				jarray j;
@@ -128,8 +128,11 @@ namespace Jde::Opc::Gateway{
 	α HttpRequestAwait::CoHandleRequest( ServerCnnctnNK&& opcId )ι->ConnectAwait::Task{
 		let& target = _request.Target();
 		optional<Credential> cred;
-		if( _request.SessionId() )
+		if( _request.SessionId() ){
 			cred = GetCredential( _request.SessionId(), opcId );
+			if( !cred && _request.UserPK() ) //if user/pwd would have cred, otherwise use jwt
+				cred = Credential{ Ƒ("{:x}", _request.SessionId()) };
+		}
 		try{
 			_client = co_await UAClient::GetClient( move(opcId), cred.value_or(Gateway::Credential{}) );
 			if( _request.IsGet() ){

@@ -6,8 +6,7 @@
 namespace Jde::Opc::Gateway{
 	flat_map<ServerCnnctnNK,flat_map<Credential,vector<ConnectAwait::Handle>>> _requests; mutex _requestMutex;
 
-	α ConnectAwait::EraseRequests( str opcNK, Credential cred )ι->vector<ConnectAwait::Handle>{
-		lg _{ _requestMutex };
+	α ConnectAwait::EraseRequests( str opcNK, Credential cred, lg& )ι->vector<ConnectAwait::Handle>{
 		vector<ConnectAwait::Handle> handles;
 		if( auto p = _requests.find(opcNK); p != _requests.end() ){
 			if( auto q = p->second.find(cred); q != p->second.end() ){
@@ -41,8 +40,8 @@ namespace Jde::Opc::Gateway{
 		}
 		catch( const IException& e ){
 			let ua = dynamic_cast<const UAException*>( &e );
-			lg lock{ _requestMutex };
-			auto handles = EraseRequests( _opcTarget, _cred );
+			lg l{ _requestMutex };
+			auto handles = EraseRequests( _opcTarget, _cred, l );
 			for( auto& h : handles ){
 				if( ua )
 					h.promise().ResumeExp( UAException{*ua}, h );
@@ -53,7 +52,11 @@ namespace Jde::Opc::Gateway{
 	}
 	α ConnectAwait::Resume( sp<UAClient> pClient, str opcNK, Credential cred, function<void(ConnectAwait::Handle)> resume )ι->void{
 		ASSERT( pClient );
-		auto handles = EraseRequests( opcNK, cred );
+		vector<ConnectAwait::Handle> handles;
+		{
+			lg l{ _requestMutex };
+			handles = EraseRequests( opcNK, cred, l );
+		}
 		for( auto h : handles )
 			resume( h );
 	}

@@ -22,6 +22,14 @@ namespace Jde::Opc{
 }
 
 namespace Jde::Opc::Gateway{
+	StartupAwait::StartupAwait( jobject webServerSettings, jobject userName, SL sl )ι:
+		VoidAwait{sl},
+		_webServerSettings{move(webServerSettings)},
+		_userName{move(userName)}{
+		if( userName.empty() )
+			_userName = jobject{ {"name", Ƒ("OpcGateway-{}", IApplication::HostName())} };
+	}
+
 	α StartupAwait::Execute()ι->VoidAwait::Task{
 		try{
 			auto authorize = App::Client::RemoteAcl( "gateway" );
@@ -44,7 +52,8 @@ namespace Jde::Opc::Gateway{
 			auto appClient = AppClient();
 			appClient->SubscriptionSchemas.push_back( accessSchema );
 			appClient->ClientCryptoSettings = move(settings);
-			co_await App::Client::ConnectAwait{ appClient, _userName };
+			appClient->SetUserName( move(_userName) );
+			co_await App::Client::ConnectAwait{ appClient, false };
 
 			_listener = ms<Access::AccessListener>( appClient->QLServer() );
 			Process::AddShutdownFunction( []( bool terminate ){

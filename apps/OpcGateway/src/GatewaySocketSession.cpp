@@ -32,7 +32,7 @@ namespace Jde::Opc::Gateway{
 		Write( FromServer::AckTrans(id) );
 	}
 
-	α GatewaySocketSession::SendDataChange( const ServerCnnctnNK& opcNK, const ExNodeId& node, const Value& value )ι->void{
+	α GatewaySocketSession::SendDataChange( const ServerCnnctnNK& opcNK, const NodeId& node, const Value& value )ι->void{
 		return Write( MessageTrans(FromServer::ToProto(opcNK,node, value), 0) );
 	}
 
@@ -48,7 +48,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α GatewaySocketSession::Subscribe( ServerCnnctnNK&& opcId, flat_set<ExNodeId> nodes, uint32 requestId )ι->void{
+	α GatewaySocketSession::Subscribe( ServerCnnctnNK&& opcId, flat_set<NodeId> nodes, uint32 requestId )ι->void{
 		try{
 			auto self = SharedFromThis(); //keep alive
 			auto cred = GetCredential( base::SessionId(), opcId );
@@ -62,11 +62,11 @@ namespace Jde::Opc::Gateway{
 			WriteException( move(e), requestId );
 		}
 	}
-	α GatewaySocketSession::CreateSubscription( sp<UAClient> client, flat_set<ExNodeId> nodes, uint32 requestId )ι->TAwait<sp<UA_CreateSubscriptionResponse>>::Task{
+	α GatewaySocketSession::CreateSubscription( sp<UAClient> client, flat_set<NodeId> nodes, uint32 requestId )ι->TAwait<sp<UA_CreateSubscriptionResponse>>::Task{
 		try{
 			auto self = SharedFromThis(); //keep alive
 			co_await CreateSubscriptionAwait{ client };
-			[]( sp<UAClient> client, flat_set<ExNodeId> nodes, uint32 requestId, sp<GatewaySocketSession> self )->TAwait<FromServer::SubscriptionAck>::Task{
+			[]( sp<UAClient> client, flat_set<NodeId> nodes, uint32 requestId, sp<GatewaySocketSession> self )->TAwait<FromServer::SubscriptionAck>::Task{
 				try{
 					auto ack = co_await DataChangeAwait{ move(nodes), move(self), move(client) };
 					self->Write( FromServer::SubscribeAckTrans(move(ack), requestId) );
@@ -84,7 +84,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α GatewaySocketSession::Unsubscribe( ServerCnnctnNK&& opcId, flat_set<ExNodeId> nodes, uint32 requestId )ι->void {
+	α GatewaySocketSession::Unsubscribe( ServerCnnctnNK&& opcId, flat_set<NodeId> nodes, uint32 requestId )ι->void {
 		try{
 			auto self = SharedFromThis();//keep alive
 			auto cred = GetCredential( SessionId(), opcId );

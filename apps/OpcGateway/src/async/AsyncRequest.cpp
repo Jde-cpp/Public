@@ -35,18 +35,6 @@ namespace Jde::Opc::Gateway{
 		Debug( _tag, "{}ProcessingLoop stopped", logPrefix );
 	}
 
-	α AsyncRequest::Process( RequestId requestId, coroutine_handle<>&& h )ι->void{
-		if( _stopped.test() )
-			return;
-		{
-			lg _{_requestMutex};
-			_requests.emplace( requestId, h );
-		}
-		if( !_running.test_and_set() )
-			ProcessingLoop();
-		h = nullptr;
-	}
-
 	α AsyncRequest::Stop()ι->void{
 		lg _{_requestMutex};
 		_stopped.test_and_set();

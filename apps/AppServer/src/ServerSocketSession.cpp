@@ -138,7 +138,7 @@ namespace Jde::App::Server{
 			let user = co_await QL::QLAwait<jobject>( Ƒ("user(id:{}){{name target}}", _userPK->Value), {UserPK::System}, Server::Schemas() );
 			let info = Web::Server::Sessions::Find( SessionId() );
 			let expiration = Chrono::ToClock<Clock,steady_clock>( info->Expiration );
-			Write( FromServer::Jwt(Server::GetJwt(string{user.at("name").as_string()}, string{user.at("target").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );
+			Write( FromServer::Jwt(Server::GetJwt(*_userPK, string{user.at("name").as_string()}, string{user.at("target").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );
 		}
 		catch( exception& e ){
 			WriteException( move(e), requestId );

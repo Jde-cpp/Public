@@ -18,7 +18,7 @@ namespace Jde::App::Server{
 	α QL()ι->QL::LocalQL&;
 	α SetLocalQL( sp<QL::LocalQL> ql )ι->void;
 	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
-	α GetJwt( string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ι->Web::Jwt;
+	α GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ι->Web::Jwt;
 
 
 	α StartWebServer( jobject&& settings )ε->void;
@@ -43,7 +43,7 @@ namespace Jde::App::Server{
 		α HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> override{ return mu<HttpRequestAwait>( move(req), sl ); }
 		α GetWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> override;
 		α Schemas()ι->const vector<sp<DB::AppSchema>>& override{ return Server::Schemas(); }
-		α GetJwt( string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt;
+		α GetJwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt;
 	};
 	struct LocalClient final : IApp{
 		α IsLocal()Ι->bool override{ return true; }

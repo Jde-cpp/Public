@@ -31,7 +31,7 @@ namespace Jde::Opc::Server{
 		BrowseName browseName{ Mutation.GetParam("browseName").as_object() };
 		try{
 			co_await BrowseNameAwait{ &browseName };
-			let& parent = GetUAServer().GetObject( ExNodeId{Mutation.GetParam("parent").as_object()} );
+			let& parent = GetUAServer().GetObject( NodeId{Mutation.GetParam("parent").as_object()} );
 			if( GetUAServer().Find(parent.PK, browseName.PK) ){
 				ResumeExp( Exception{_sl, "Object exists parent: {}, browseName: '{}'", Ƒ("{:x}", parent.PK), browseName.ToString()} );
 				co_return;
@@ -49,7 +49,7 @@ namespace Jde::Opc::Server{
 		try{
 			Object object{ m.Args, parentPK, move(browse) };
 			if( object.TypeDef )
-				object.TypeDef = ua.GetTypeDef( object.TypeDef->nodeId );
+				object.TypeDef = ua.GetTypeDef( *object.TypeDef );
 			object = ua.AddObject( move(object), _sl );
 			object.PK = co_await DS().InsertSeq<NodePK>( DB::InsertClause{
 				schema.DBName( "object_insert" ),

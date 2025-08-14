@@ -1,6 +1,6 @@
 #pragma once
 #include "../uaTypes/Variable.h"
-#include <jde/opc/uatypes/Node.h>
+#include <jde/opc/uatypes/NodeId.h>
 #include "VariantAwait.h"
 
 namespace Jde::Opc::Server {

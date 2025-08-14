@@ -34,11 +34,11 @@ namespace Jde::Opc::Server {
 
 	α UAServer::Constructor(UA_Server* /*server*/,
 	                    const UA_NodeId* /*sessionId*/, void* /*sessionContext*/,
-	                    const UA_NodeId *typeId, void* /*typeContext*/,
-	                    const UA_NodeId *nodeId, void** /*nodeContext*/)->UA_StatusCode{
+	                    const UA_NodeId* typeId, void* /*typeContext*/,
+	                    const UA_NodeId* nodeId, void** /*nodeContext*/)->UA_StatusCode{
 		auto& ua = GetUAServer();
 		try{
-			for( let& [pk, variant] : ua.ConstructorValues(*typeId) ){
+			for( let& [pk, variant] : ua.ConstructorValues(NodeId{*typeId}) ){
 				UA_RelativePathElement rpe;
 				UA_RelativePathElement_init(&rpe);
 				rpe.referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
@@ -54,7 +54,7 @@ namespace Jde::Opc::Server {
 
 				auto bpr = UA_Server_translateBrowsePathToNodeIds( ua._ua, &bp );
 				UAε( bpr.statusCode );
-				THROW_IF( !bpr.targetsSize, "No targets found for node: {}, path: ({}){}", ExNodeId{*nodeId}.to_string(), rpe.targetName.namespaceIndex, ToString(rpe.targetName.name) );
+				THROW_IF( !bpr.targetsSize, "No targets found for node: {}, path: ({}){}", NodeId{*nodeId}.ToString(), rpe.targetName.namespaceIndex, ToString(rpe.targetName.name) );
 				UA_Server_writeValue( ua._ua, bpr.targets[0].targetId.nodeId, variant );
 				UA_BrowsePathResult_clear(&bpr);
 			}
@@ -67,33 +67,33 @@ namespace Jde::Opc::Server {
 	α UAServer::AddConstructor( UA_NodeId nodeId )ε->void{
 		UAε( UA_Server_setNodeTypeLifecycle(_ua, move(nodeId), UA_NodeTypeLifecycle{UAServer::Constructor, nullptr}) );
 	}
-	α UAServer::AddConstructor( UA_NodeId nodeId, flat_map<BrowseNamePK, Variant>&& values )ε->void{
+	α UAServer::AddConstructor( NodeId nodeId, flat_map<BrowseNamePK, Variant>&& values )ε->void{
 		_constructors.try_emplace( nodeId, move(values) );
 		AddConstructor( move(nodeId) );
 	}
-	α UAServer::ConstructorValues( const ExNodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&{
+	α UAServer::ConstructorValues( const NodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&{
 		let p = _constructors.find( nodeId );
-		THROW_IF( p==_constructors.end(), "Constructor values not found for node: '{}'", nodeId.to_string() );
+		THROW_IF( p==_constructors.end(), "Constructor values not found for node: '{}'", nodeId.ToString() );
 		return p->second;
 	}
 
 	α UAServer::AddObject( Object object, SL sl )ε->Object{
-		let& requestedNodeId = object.nodeId==UA_NODEID_NULL ? UA_NODEID_NULL : object.nodeId;
+		let& requestedNodeId = object;
 		auto& parent = GetParent( object.ParentNodePK, sl );
 		UA_NodeId id;
 		let status = UA_Server_addObjectNode(
 			_ua,
 			requestedNodeId,
-			parent.nodeId,
-			GetRefType( object.ReferenceTypePK, sl ).nodeId,
+			parent,
+			GetRefType( object.ReferenceTypePK, sl ),
 			object.Browse,
-			object.TypeDef ? object.TypeDef->nodeId : UA_NODEID_NULL,
+			object.TypeDef ? *object.TypeDef : UA_NODEID_NULL,
 			object,
 			(void*)object.PK,
 			&id
 		);
-		THROW_IFSL( status, "({})Failed to add object node: error:'{}', node:'{}'", Ƒ("{:x}", status), UA_StatusCode_name(status), object.to_string() );
-		object.nodeId = id;
+		THROW_IFSL( status, "({})Failed to add object node: error:'{}', node:'{}'", Ƒ("{:x}", status), UA_StatusCode_name(status), object.ToString() );
+		dynamic_cast<NodeId&>(object) = id;
 		Debug{ ELogTags::App, "Added Object: {}", object.ToString(parent) };
 		return object.PK ? _objects.try_emplace( object.PK, move(object) ).first->second : object;
 	}
@@ -103,14 +103,14 @@ namespace Jde::Opc::Server {
 		auto& parent = GetParent( oType->ParentNodePK, sl );
 		UAε( UA_Server_addObjectTypeNode(
 			_ua,
-			oType->nodeId,
-			parent.nodeId,
-			GetRefType( oType->ReferenceTypePK, sl ).nodeId,
+			*oType,
+			parent,
+			GetRefType( oType->ReferenceTypePK, sl ),
 			oType->Browse,
 			*oType,
 			(void*)oType->PK, &id
 		) );
-		oType->nodeId = id;
+		dynamic_cast<NodeId&>(*oType) = id;
 		Debug{ ELogTags::App, "Added ObjectType: {}", oType->ToString(parent) };
 		if( oType->PK )
 			_typeDefs.try_emplace( oType->PK, oType ).first->second;
@@ -119,9 +119,9 @@ namespace Jde::Opc::Server {
 		auto& source = GetVariable( ref.SourcePK );
 		UAε( UA_Server_addReference(
 			_ua,
-			ref.SourcePK ? source.nodeId : UA_NODEID_NULL,
-			GetRefType( ref.RefTypePK, sl ).nodeId,
-			ref.TargetPK ? GetObject( ref.TargetPK, sl ) : UA_NODEID_NULL,
+			ref.SourcePK ? source : UA_NODEID_NULL,
+			GetRefType( ref.RefTypePK, sl ),
+			ref.TargetPK ? (UA_ExpandedNodeId)ExNodeId{ (NodeId&)GetObject(NodeId{(uint32_t)ref.TargetPK}, sl) } : UA_EXPANDEDNODEID_NULL,
 			ref.IsForward
 		) );
 		auto& sourceParent = GetParent( source.ParentNodePK, sl );
@@ -133,16 +133,16 @@ namespace Jde::Opc::Server {
 		auto& parent = GetParent( variable.ParentNodePK, sl );
 		let status = UA_Server_addVariableNode(
 			_ua,
-			UA_NODEID_NULL,
-			parent.nodeId,
-			GetRefType( variable.ReferenceTypePK, sl ).nodeId,
+			variable,
+			parent,
+			GetRefType( variable.ReferenceTypePK, sl ),
 			variable.Browse,
-			variable.TypeDef->nodeId,
+			*variable.TypeDef,
 			variable,
 			(void*)variable.PK,
 			&id);
-		THROW_IFX( status, UAException(variable.to_string(), ELogLevel::Error, status, sl) );
-		variable.nodeId = id;
+		THROW_IFX( status, UAException(variable.ToString(), ELogLevel::Error, status, sl) );
+		dynamic_cast<NodeId&>(variable) = id;
 		Debug{ ELogTags::App, "Added Variable: {}", variable.ToString(parent) };
 		return variable.PK ? _variables.try_emplace( variable.PK, move(variable) ).first->second : variable;
 	}
@@ -224,21 +224,21 @@ namespace Jde::Opc::Server {
 			return *p->second;
 		throw Exception{ sl, "[{:x}]Object[Type] node not found", pk };
 	}
-	α UAServer::GetObject( const ExNodeId& id, SL sl )ε->const Object&{
-		let p = find_if( _objects, [&]( let& kv ){return kv.second.nodeId==id;} );
-		THROW_IFSL( p==_objects.end(), "Object not found: {}", id.to_string() );
+	α UAServer::GetObject( const NodeId& id, SL sl )ε->const Object&{
+		let p = find_if( _objects, [&]( let& kv ){return kv.second==id;} );
+		THROW_IFSL( p==_objects.end(), "Object not found: {}", id.ToString() );
 		return p->second;
 	}
-	α UAServer::GetRefType( NodePK pk, SL sl )ε->ExNodeId&{
+	α UAServer::GetRefType( NodePK pk, SL sl )ε->NodeId&{
 		auto p = _refTypes.find(pk);
 		if( p==_refTypes.end() && pk<=32750 )
 			p = _refTypes.try_emplace( pk, pk ).first;
 		THROW_IFSL( p==_refTypes.end(), "({:x})Reference type not found", pk );
 		return p->second;
 	}
-	α UAServer::GetTypeDef( const ExNodeId& id, SL sl )ε->sp<ObjectType>{
-		let p = find_if( _typeDefs, [&]( let& kv ){return kv.second->nodeId==id;} );
-		THROW_IFSL( p==_typeDefs.end(), "Object type not found: {}", id.to_string() );
+	α UAServer::GetTypeDef( const NodeId& id, SL sl )ε->sp<ObjectType>{
+		let p = find_if( _typeDefs, [&]( let& kv ){return *kv.second==id;} );
+		THROW_IFSL( p==_typeDefs.end(), "Object type not found: {}", id.ToString() );
 		return p->second;
 	}
 	α UAServer::GetTypeDef( NodePK pk, SL sl )ε->sp<ObjectType>{

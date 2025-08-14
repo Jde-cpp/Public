@@ -60,7 +60,8 @@ namespace Jde::Opc::Server{
 			StartWebServer( move(_webServerSettings) );
 			auto accessSchema = DB::GetAppSchema( "access", remoteAcl );
 			AppClient()->SubscriptionSchemas.push_back( accessSchema );
-			co_await App::Client::ConnectAwait{ AppClient(), _userName };
+			AppClient()->SetUserName( move(_userName) );
+			co_await App::Client::ConnectAwait{ AppClient(), false };
 			_listener = ms<Access::AccessListener>( AppClient()->QLServer() );
 			Process::AddShutdownFunction( []( bool terminate ){
 				_listener->Shutdown( terminate );

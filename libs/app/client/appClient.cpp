@@ -37,7 +37,7 @@ namespace Jde::App::Client{
 		auto pubKey = Crypto::ReadPublicKey( cryptoSettings.PublicKeyPath );
 		auto name = Json::FindString( userName, "name" ); THROW_IF( !name, "credentials/name not found in settings." );
 		auto target = Json::FindString( userName, "target" ).value_or( *name );
-		return Web::Jwt{ pubKey, move(*name), move(target), 0, {}, TimePoint::min(), {}, cryptoSettings.PrivateKeyPath };
+		return Web::Jwt{ pubKey, {0}, move(*name), move(target), 0, {}, TimePoint::min(), {}, cryptoSettings.PrivateKeyPath };
 	}
 	LoginAwait::LoginAwait( const Crypto::CryptoSettings& cryptoSettings, const jobject& userName, SL sl )ε:
 		base{sl},
@@ -58,11 +58,10 @@ namespace Jde::App::Client{
 		}
 	}
 
-	ConnectAwait::ConnectAwait( sp<IAppClient> appClient, jobject userName, bool retry, SL sl )ι:
+	ConnectAwait::ConnectAwait( sp<IAppClient> appClient, bool retry, SL sl )ι:
 		VoidAwait{sl},
 		_appClient{ appClient },
-		_retry{retry},
-		_userName{ userName }
+		_retry{ retry }
 	{}
 
 	α ConnectAwait::Retry()->DurationTimer::Task{
@@ -85,7 +84,7 @@ namespace Jde::App::Client{
 	}
 	α ConnectAwait::HttpLogin()ι->LoginAwait::Task{
 		try{
-			let sessionId = co_await LoginAwait{ *_appClient->ClientCryptoSettings, _userName };//http call
+			let sessionId = co_await LoginAwait{ *_appClient->ClientCryptoSettings, _appClient->UserName() };//http call
 			RunSocket( sessionId );
 		}
 		catch( IException& e ){

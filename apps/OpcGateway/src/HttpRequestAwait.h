@@ -2,7 +2,7 @@
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/opc/uatypes/Value.h>
 
-namespace Jde::Opc{ struct ExNodeId; }
+namespace Jde::Opc{ struct NodeId; }
 namespace Jde::Opc::Gateway{
 	struct UAClient;
 	using namespace Jde::Web::Server;
@@ -17,10 +17,10 @@ namespace Jde::Opc::Gateway{
 		α Logout()ι->TAwait<jvalue>::Task;
 		α CoHandleRequest( ServerCnnctnNK&& opcId )ι->TAwait<sp<UAClient>>::Task;
 		α Browse()ι->TAwait<jobject>::Task;
-		α ParseNodes()ε->tuple<flat_set<ExNodeId>,jarray>;
-		α ResumeSnapshots( flat_map<ExNodeId, Value>&& results, jarray&& j )ι->void;
-		α SnapshotWrite( flat_set<ExNodeId>&& nodes, flat_map<ExNodeId, Value>&& values, jarray&& jNodes )ι->TAwait<flat_map<ExNodeId,UA_WriteResponse>>::Task;
-		α SnapshotRead( bool write={} )ι->TAwait<flat_map<ExNodeId, Value>>::Task;
+		α ParseNodes()ε->tuple<flat_set<NodeId>,jarray>;
+		α ResumeSnapshots( flat_map<NodeId, Value>&& results, jarray&& j )ι->void;
+		α SnapshotWrite( flat_set<NodeId>&& nodes, flat_map<NodeId, Value>&& values, jarray&& jNodes )ι->TAwait<flat_map<NodeId,UA_WriteResponse>>::Task;
+		α SnapshotRead( bool write={} )ι->TAwait<flat_map<NodeId, Value>>::Task;
 		sp<UAClient> _client;
 	};
 }

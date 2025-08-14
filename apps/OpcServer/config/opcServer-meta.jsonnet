@@ -175,7 +175,7 @@ local common = import 'common-meta.libsonnet';
 				dataTypeId: nodeId+{ pkTable: "node_ids", i:224 },
 				valueRank: types.int+{ i:225, nullable: true },
 				arrayDims: types.varchar+{ i:226, length: 256, nullable: true },
-				accessLevel: types.uint8+{ i:227, nullable: true },
+				accessLevel: types.uint8+{ i:227, nullable: true, default: 97 },
 				userAccessLevel: types.uint8+{ i:228, nullable: true },
 				minimumSamplingInterval: types.float+{ i:229, nullable: true },
 				historizing: types.bit+{ i:230, nullable: true }

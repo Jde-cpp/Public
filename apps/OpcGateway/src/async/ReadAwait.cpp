@@ -5,8 +5,8 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-		ReadAwait::ReadAwait( flat_set<ExNodeId> x, sp<UAClient> c, SL sl )ι:
-			TAwait<flat_map<ExNodeId, Value>>{sl},
+		ReadAwait::ReadAwait( flat_set<NodeId> x, sp<UAClient> c, SL sl )ι:
+			TAwait<flat_map<NodeId, Value>>{sl},
 			_nodes{move(x)},
 			_client{move(c)}
 		{}
@@ -21,14 +21,14 @@ namespace Read{
 		if( sc )
 			Trace( IotReadTag, "{}Value::OnResponse ({})-{} Value={}", logPrefix, sc, UAException::Message(sc), val ? serialize(Value{*val}.ToJson()) : "null" );
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
-		up<flat_map<ExNodeId, Value>> results;
+		up<flat_map<NodeId, Value>> results;
 		bool visited = pClient->_readRequests.visit( handle, [requestId, sc, val, &results, &logPrefix]( auto& pair ){
 			auto& x = pair.second;
 			if( auto pRequest=x.Requests.find(requestId); pRequest!=x.Requests.end() ){
 				auto p = x.Results.try_emplace( pRequest->second, sc ? Value{ sc } : Value{ *val } ).first;
 				Trace( IotReadTag, "{} Value={}", logPrefix, sc ? format("[{:x}]{}", sc, UAException::Message(sc)) : serialize(p->second.ToJson()) );
 				if( x.Results.size()==x.Requests.size() )
-					results = mu<flat_map<ExNodeId, Value>>( move(x.Results) );
+					results = mu<flat_map<NodeId, Value>>( move(x.Results) );
 			}
 		});
 		if( !visited )

@@ -45,13 +45,13 @@ message Value{
 
 message NodeValues{
 	string opc_id=1;
-	Jde.Opc.Proto.ExpandedNodeId node=2;
+	Jde.Opc.Proto.NodeId node=2;
 	repeated Value values=3;
 }
 
 message UnsubscribeAck{
-	repeated Jde.Opc.Proto.ExpandedNodeId successes=1;
-	repeated Jde.Opc.Proto.ExpandedNodeId failures=2;
+	repeated Jde.Opc.Proto.NodeId successes=1;
+	repeated Jde.Opc.Proto.NodeId failures=2;
 }
 
 message Message{

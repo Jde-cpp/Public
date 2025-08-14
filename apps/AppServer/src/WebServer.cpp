@@ -44,10 +44,10 @@ namespace Jde::App{
 		UpdateStatuses();
 	}
 
-	α Server::GetJwt( string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ι->Web::Jwt{
+	α Server::GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ι->Web::Jwt{
 		auto requestHandler = _requestHandler;
 		THROW_IF( !requestHandler, "No request Handler." );
-		return requestHandler->GetJwt( move(name), move(target), move(endpoint), sessionId, expires, move(description) );
+		return requestHandler->GetJwt( userPK, move(name), move(target), move(endpoint), sessionId, expires, move(description) );
 	}
 
 
@@ -200,8 +200,8 @@ namespace Jde::App::Server{
 		return session;
 	}
 
-	α RequestHandler::GetJwt( string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt{
+	α RequestHandler::GetJwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt{
 		auto publicKey = Crypto::ReadPublicKey( Settings().Crypto().PublicKeyPath );
-		return Web::Jwt{ move(publicKey), move(name), move(target), sessionId, move(endpoint), expires, move(description), Settings().Crypto().PrivateKeyPath };
+		return Web::Jwt{ move(publicKey), userPK, move(name), move(target), sessionId, move(endpoint), expires, move(description), Settings().Crypto().PrivateKeyPath };
 	}
 }

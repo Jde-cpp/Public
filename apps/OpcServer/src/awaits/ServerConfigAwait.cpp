@@ -4,7 +4,7 @@
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/IDataSource.h>
-#include <jde/opc/uatypes/Node.h>
+#include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/UAException.h>
 #include "../UAServer.h"
 #include "../uaTypes/ObjectAttr.h"
@@ -125,30 +125,30 @@ namespace Jde::Opc::Server{
 			for( auto pk : _objectPKs ){
 				if( ua._objects.contains(pk) )
 					continue;
-				ExNodeId id{pk};
+				NodeId id{pk};
 				let nodePK = co_await DS().InsertSeq<NodePK>( insertNodeIdClause(id) );
-				ua._objects.try_emplace( nodePK, id.nodeId );
+				ua._objects.try_emplace( nodePK, id );
 			}
 			for( auto pk : _refPKs ){
 				if( ua._refTypes.contains(pk) )
 					continue;
-				ExNodeId node{pk};
+				NodeId node{pk};
 				let nodePK = co_await DS().InsertSeq<NodePK>( insertNodeIdClause(node) );
 				ua._refTypes.try_emplace( nodePK, move(node) );
 			}
 			for( auto pk : _objectTypePKs ){
 				if( ua._typeDefs.contains(pk) )
 					continue;
-				ExNodeId node{pk};
+				NodeId node{pk};
 				let nodePK = co_await DS().InsertSeq<NodePK>( insertNodeIdClause(node) );
-				ua._typeDefs.try_emplace( nodePK, ms<ObjectType>(node.nodeId) );
+				ua._typeDefs.try_emplace( nodePK, ms<ObjectType>(node) );
 			}
 			for( auto pk : _variableTypePKs ){
 				if( ua._typeDefs.contains(pk) )
 					continue;
-				ExNodeId node{pk};
+				NodeId node{pk};
 				let nodePK = co_await DS().InsertSeq<NodePK>( insertNodeIdClause(node) );
-				ua._variables.try_emplace( nodePK, node.nodeId );
+				ua._variables.try_emplace( nodePK, move(node) );
 			}
 			Set();
 		}
@@ -160,14 +160,14 @@ namespace Jde::Opc::Server{
 	α ServerConfigAwait::Set()ι->void{
 		auto& ua = GetUAServer();
 		flat_set<NodePK> done;
-		for( auto&&	[pk,node] : GetUAServer()._typeDefs ){
+		for( let&	[pk,node] : GetUAServer()._typeDefs ){
 			if( done.contains(pk) || node->IsSystem() )
 				continue;
 			ua.AddObjectType( node );
 			done.insert( pk );
-			if( auto p = ua._constructors.find(pk); p!=ua._constructors.end() )
-				ua.AddConstructor( node->nodeId );
-			for( auto&& [pk,variable] : ua._variables ){
+			if( auto p = ua._constructors.find(*node); p!=ua._constructors.end() )
+				ua.AddConstructor( *node );
+			for( auto&& [_,variable] : ua._variables ){
 				if( variable.ParentNodePK==pk )
 					ua.AddVariable( variable );
 			}
@@ -176,19 +176,20 @@ namespace Jde::Opc::Server{
 			if( done.contains(pk) || node.IsSystem() )
 				continue;
 			ua.AddObject( node );
-			for( auto&& [pk,variable] : ua._variables ){
+			for( auto&& [_,variable] : ua._variables ){
 				if( variable.ParentNodePK==pk )
 					ua.AddVariable( variable );
 			}
 		}
 		for( auto&&	[pk,ref] : ua._refs ){
-			UA_Server_addReference(
-				ua._ua,
-				ua.GetVariable(ref.SourcePK).nodeId,
-				ua.GetRefType(ref.RefTypePK).nodeId,
-				ua.GetObjectish(ref.TargetPK),
-				ref.IsForward
-			);
+			ua.AddReference( ref );
+			// UA_Server_addReference(
+			// 	ua._ua,
+			// 	ua.GetVariable(ref.SourcePK),
+			// 	ua.GetRefType(ref.RefTypePK),
+			// 	ExNodeId{ua.GetObjectish(ref.TargetPK)},
+			// 	ref.IsForward
+			// );
 		}
 		Resume();
 	}

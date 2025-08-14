@@ -25,14 +25,14 @@ namespace Jde::Opc::Gateway{
 			_pClient->DataSubscriptionDelete( subscriptionId, move(monitorIds) );
 	}
 
-	α UAMonitoringNodes::FindNode( const ExNodeId& node )ι->tuple<MonitorHandle,Subscription*>{
+	α UAMonitoringNodes::FindNode( const NodeId& node )ι->tuple<MonitorHandle,Subscription*>{
 		auto p = find_if( _subscriptions, [&node](let& x){ return x.second.Node==node;} );
 		return p!=_subscriptions.end() ? make_tuple( p->first, &p->second ) : make_tuple( MonitorHandle{0,0}, nullptr );
 	}
 
-	α UAMonitoringNodes::Subscribe( sp<IDataChange>&& dataChange, flat_set<ExNodeId>&& nodes, DataChangeAwait::Handle h, Handle& requestId )ι->void{
+	α UAMonitoringNodes::Subscribe( sp<IDataChange>&& dataChange, flat_set<NodeId>&& nodes, DataChangeAwait::Handle h, Handle& requestId )ι->void{
 		requestId = MonitorHandle{ _pClient->SubscriptionId(), ++_requestId };
-		flat_set<ExNodeId> newNodes;
+		flat_set<NodeId> newNodes;
 		//todo:  check for existing node subscriptions in progress.
 		ul lock{ _mutex };
 		for( auto n : nodes ){
@@ -50,7 +50,7 @@ namespace Jde::Opc::Gateway{
 			_calls.emplace( requestId, make_tuple(newNodes,move(dataChange)) );
 			lock.unlock();
 			string nodeString;
-			nodeString = accumulate( newNodes.begin(), newNodes.end(), nodeString, []( string&& s, const ExNodeId& n ){return s+=n.to_string()+",";} );
+			nodeString = accumulate( newNodes.begin(), newNodes.end(), nodeString, []( string&& s, const NodeId& n ){return s+=n.ToString()+",";} );
 //			Debug( _tag, "DataSubscriptions: [{}]", nodeString.substr(0, nodeString.size()-1) );
 			_pClient->DataSubscriptions( CreateMonitoredItemsRequest{move(newNodes)}, requestId, h );
 		}
@@ -66,12 +66,12 @@ namespace Jde::Opc::Gateway{
 			for( auto pNode = nodes.begin(); i<response->resultsSize && pNode!=nodes.end(); ++pNode, ++i ){
 		  	MonitoredItemCreateResult result{ move(response->results[i]) };
 				if( result.statusCode ){
-					Debug( _tag, "[{:x}]Could not create monitored item for node '{}':  {}.", requestId, pNode->to_string(), UAException::Message(result.statusCode) );
+					Debug( _tag, "[{:x}]Could not create monitored item for node '{}':  {}.", requestId, pNode->ToString(), UAException::Message(result.statusCode) );
 					_errors.try_emplace( {requestId} ).first->second.try_emplace( move(*pNode), result.statusCode );
 				}
 				else{
 					let h = MonitorHandle{ requestHandle.SubId(), result.monitoredItemId };
-					Trace( _tag, "[{:x}.{:x}]Monitoring '{}'", _pClient->Handle(), (Handle)h, pNode->to_string() );
+					Trace( _tag, "[{:x}.{:x}]Monitoring '{}'", _pClient->Handle(), (Handle)h, pNode->ToString() );
 					_subscriptions.emplace( h, Subscription{move(*pNode), move(result), dataChange} );
 					if( _subscriptions.size()==1 )
 						_pClient->ProcessDataSubscriptions();
@@ -85,7 +85,7 @@ namespace Jde::Opc::Gateway{
 	α UAMonitoringNodes::GetResult( Handle requestId, StatusCode sc )ι->FromServer::SubscriptionAck{
 		FromServer::SubscriptionAck y;
 		ul _{ _mutex };
-		flat_map<ExNodeId,StatusCode>* errors = _errors.find(requestId)!=_errors.end() ? &_errors[requestId] : nullptr;
+		flat_map<NodeId,StatusCode>* errors = _errors.find(requestId)!=_errors.end() ? &_errors[requestId] : nullptr;
 		if( auto pRequest = _requests.find(requestId); pRequest!=_requests.end() ){
 			for( auto& n : pRequest->second ){
 				auto nodeResult = y.add_results();
@@ -99,7 +99,7 @@ namespace Jde::Opc::Gateway{
 				else{
 					nodeResult->set_status_code( sc ? sc : UA_STATUSCODE_BADCONFIGURATIONERROR );
 					if( !sc )
-						Critical( _tag, "[{:x}]Could not find subscription for node '{}'.", requestId, n.to_string() );
+						Critical( _tag, "[{:x}]Could not find subscription for node '{}'.", requestId, n.ToString() );
 				}
 			}
 			_requests.erase( pRequest );
@@ -144,9 +144,9 @@ namespace Jde::Opc::Gateway{
 			DeleteMonitoring( _pClient->UAPointer(), toDelete );
 	}
 
-	α UAMonitoringNodes::Unsubscribe( flat_set<ExNodeId>&& nodes, sp<IDataChange> dataChange )ι->tuple<flat_set<ExNodeId>,flat_set<ExNodeId>>{
+	α UAMonitoringNodes::Unsubscribe( flat_set<NodeId>&& nodes, sp<IDataChange> dataChange )ι->tuple<flat_set<NodeId>,flat_set<NodeId>>{
 		flat_map<SubscriptionId,flat_set<MonitorId>> toDelete;
-		tuple<flat_set<ExNodeId>,flat_set<ExNodeId>> successFailures;
+		tuple<flat_set<NodeId>,flat_set<NodeId>> successFailures;
 		ul _{ _mutex };
 		for( auto& node : nodes ){
 			if( auto [id,pSubscription] = FindNode(node); pSubscription && pSubscription->ClientCalls.erase(dataChange) ){
@@ -155,7 +155,7 @@ namespace Jde::Opc::Gateway{
 					toDelete.try_emplace( id.SubId() ).first->second.emplace( id.MonitorId() );
 			}
 			else{
-				Trace( _tag, "Could not find node '{}' for unsubscription.", node.to_string() );
+				Trace( _tag, "Could not find node '{}' for unsubscription.", node.ToString() );
 				get<1>(successFailures).emplace( move(node) );
 			}
 		}
@@ -176,7 +176,7 @@ namespace Jde::Opc::Gateway{
 			for( auto& monitoredId : monitoredIds ){
 				const MonitorHandle h{subscriptionId,monitoredId};
 				if( auto p = _subscriptions.find(h); p!=_subscriptions.end() && p->second.ClientCalls.empty() ){
-					Trace( _tag, "[{:x}.{:x}]DeleteMonitoring for:  {}", _pClient->Handle(), (Handle)h, p->second.Node.to_string() );
+					Trace( _tag, "[{:x}.{:x}]DeleteMonitoring for:  {}", _pClient->Handle(), (Handle)h, p->second.Node.ToString() );
 					_subscriptions.erase( h );
 					toDelete.try_emplace( subscriptionId ).first->second.emplace( monitoredId );
 				}

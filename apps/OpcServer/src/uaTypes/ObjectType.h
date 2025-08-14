@@ -5,7 +5,7 @@
 
 namespace Jde::Opc::Server{
 	struct ObjectType final: Node, UA_ObjectTypeAttributes{
-		ObjectType(): Node{UA_NODEID_NULL}, UA_ObjectTypeAttributes{} {}
+		ObjectType(): Node{}, UA_ObjectTypeAttributes{} {}
 		ObjectType( const jobject& j, Server::NodePK parentPK, Server::BrowseName browse )ε;
 		ObjectType( UA_NodeId n )ι;
 		//ObjectType( Node&& n )ι;

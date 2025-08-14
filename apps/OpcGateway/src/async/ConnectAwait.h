@@ -16,7 +16,7 @@ namespace Jde::Opc::Gateway{
 	private:
 		Ω Resume( sp<UAClient> pClient, str target, Credential cred, function<void(ConnectAwait::Handle)> resume )ι->void;
 		α Create()ι->TAwait<vector<ServerCnnctn>>::Task;
-		Ω EraseRequests( str opcNK, Credential cred )ι->vector<ConnectAwait::Handle>;
+		Ω EraseRequests( str opcNK, Credential cred, lg& _ )ι->vector<ConnectAwait::Handle>;
 		string _opcTarget;
 		Credential _cred;
 		sp<UAClient> _result;

@@ -39,10 +39,10 @@ namespace Jde::Opc::Gateway{
 		α DataSubscriptionDelete( Gateway::SubscriptionId subscriptionId, flat_set<MonitorId>&& monitoredItemIds )ι->void;
 
 		α SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void;
-		α SendReadRequest( const flat_set<ExNodeId>&& nodes, ReadAwait::Handle h )ι->void;
-		α SendWriteRequest( flat_map<ExNodeId,Value>&& values, WriteAwait::Handle h )ι->void;
+		α SendReadRequest( const flat_set<NodeId>&& nodes, ReadAwait::Handle h )ι->void;
+		α SendWriteRequest( flat_map<NodeId,Value>&& values, WriteAwait::Handle h )ι->void;
 		α SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void;
-		α RequestDataTypeAttributes( const flat_set<ExNodeId>&& x, AttribAwait::Handle h )ι->void;
+		α RequestDataTypeAttributes( const flat_set<NodeId>&& x, AttribAwait::Handle h )ι->void;
 		Ω ClearRequest( UA_Client* ua, RequestId requestId )ι->void;
 		Ṫ ClearRequestH( UA_Client* ua , RequestId requestId )ι->T;/*{
 			auto r = ClearRequest<T>( ua, requestId );
@@ -52,7 +52,7 @@ namespace Jde::Opc::Gateway{
 		Ŧ ClearRequestH( RequestId requestId )ι->T;//{ return ClearRequest<UARequest<T>>( requestId )->CoHandle; }
 		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
 		α RetryVoid( function<void(sp<UAClient>&&) > f, UAException e, sp<UAClient> pClient )ι->ConnectAwait::Task;
-		α Process( RequestId requestId, coroutine_handle<>&& h )ι->void;
+		Ŧ Process( RequestId requestId, T&& h )ι->void;
 		α Process( RequestId requestId )ι->void;
 		α ProcessDataSubscriptions()ι->void;
 		α StopProcessDataSubscriptions()ι->void;
@@ -68,6 +68,7 @@ namespace Jde::Opc::Gateway{
 		sp<UA_CreateSubscriptionResponse> CreatedSubscriptionResponse;
 		UA_ClientConfig _config{};//TODO move private.
 		Gateway::Credential Credential;
+		bool Connected{};
 	private:
 		α Configuration()ε->UA_ClientConfig*;
 		α Create()ι->UA_Client*;
@@ -82,7 +83,7 @@ namespace Jde::Opc::Gateway{
 
 		concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
 		concurrent_flat_map<Jde::Handle, UARequestMulti<UA_WriteResponse>> _writeRequests;
-		concurrent_flat_map<Jde::Handle, UARequestMulti<ExNodeId>> _dataAttributeRequests;
+		concurrent_flat_map<Jde::Handle, UARequestMulti<NodeId>> _dataAttributeRequests;
 		vector<VoidAwait::Handle> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
 
 		AsyncRequest _asyncRequest;
@@ -97,6 +98,10 @@ namespace Jde::Opc::Gateway{
 		Ω StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void;
 		UAMonitoringNodes MonitoredNodes;//destroy first
 	};
+
+	Ŧ UAClient::Process( RequestId requestId, T&& h )ι->void{
+		_asyncRequest.Process<T>( requestId, move(h) );
+	}
 
 	Ŧ UAClient::ClearRequestH( UA_Client* ua, RequestId requestId )ι->T{
 		auto p = TryFind( ua );

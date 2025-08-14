@@ -1,15 +1,16 @@
 ﻿#pragma once
-#ifndef NODE_H
-#define NODE_H
+#ifndef EXNODE_H
+#define EXNODE_H
 #include "../exports.h"
 #include "helpers.h"
 
 namespace Jde::DB{ struct Row; struct Value; }
 namespace Jde::Opc{
+	struct NodeId;
 	struct ΓOPC ExNodeId : UA_ExpandedNodeId{
 		ExNodeId()ι:UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{}
 		ExNodeId( UA_NodeId&& x )ι:UA_ExpandedNodeId{move(x), UA_EXPANDEDNODEID_NULL.namespaceUri, UA_EXPANDEDNODEID_NULL.serverIndex}{}
-		ExNodeId( const UA_NodeId& x )ι:ExNodeId{}{ UA_NodeId_copy( &x, &nodeId ); }
+		ExNodeId( const NodeId& x )ι:ExNodeId{}{ UA_NodeId_copy( (UA_NodeId*)&x, &nodeId ); }
 		ExNodeId( const UA_ExpandedNodeId& x )ι:ExNodeId{}{ UA_ExpandedNodeId_copy( &x, this ); }
 		ExNodeId( const flat_map<string,string>& x )ε;//rest params
 		explicit ExNodeId( const jvalue& j )ε;
@@ -35,8 +36,6 @@ namespace Jde::Opc{
 		α IsString()Ι{ return nodeId.identifierType==UA_NODEIDTYPE_STRING; }
 		α IsGuid()Ι{ return nodeId.identifierType==UA_NODEIDTYPE_GUID; }
 		α IsBytes()Ι{ return nodeId.identifierType==UA_NODEIDTYPE_BYTESTRING; }
-		Ω IsSystem( const UA_NodeId& id )ι->bool;
-		α IsSystem()Ι->bool{ return IsNumeric() && IsSystem(nodeId); }
 
 		α Clear()ι->void;
 		α Copy()Ι->UA_NodeId;
@@ -46,7 +45,6 @@ namespace Jde::Opc{
 		α to_string()Ι->string;
 	};
 	Ξ operator==( const ExNodeId& x, const ExNodeId& y )ι->bool{ return !(x<y) && !(y<x); }
-	α ToJson( const UA_NodeId& nodeId )ι->jobject;
 	α ToJson( const UA_ExpandedNodeId& nodeId )ι->jobject;
 
 	struct NodeIdHash{

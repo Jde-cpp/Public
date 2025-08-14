@@ -24,10 +24,11 @@ namespace Jde::Opc::Server{
 		try{
 			jarray y;
 			for( let& file : _files ){
-				Information{ ELogTags::App, "Mutation: '{}'", file.string() };
+				Information{ ELogTags::Startup, "Mutation: '{}'", file.string() };
 				let text = IO::Load( file );
 				auto requests = QL::Parse( move(text), Schemas() ); THROW_IF( !requests.IsMutation(), "Query is not a mutation" );
 				for( auto&& m : requests.Mutations() ){
+					Trace{ ELogTags::Test, "mutation: {}", m.ToString() };
 					m.Args["$silent"] = true;
 					try{
 						y.push_back( co_await QL::QLAwait<jvalue>{move(m), {UserPK::System}} );

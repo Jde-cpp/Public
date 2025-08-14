@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <jde/framework/coroutine/Timer.h>
-#include <jde/opc/uatypes/Node.h>
+#include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Logger.h>
 
 namespace Jde::Opc::Gateway{
@@ -13,13 +13,13 @@ namespace Jde::Opc::Gateway{
 	//Τ struct TUARequest : UARequest{TUARequest( T&& args, HCoroutine&& h )ι:UARequest{move(h)}, Args{move(args)}{}T Args;};
 
 	Τ struct UARequestMulti{
-		flat_map<UA_UInt32, ExNodeId> Requests;
+		flat_map<UA_UInt32, NodeId> Requests;
 		sp<UAClient> ClientPtr;
-		flat_map<ExNodeId, T> Results;
+		flat_map<NodeId, T> Results;
 	};
 
 	struct AsyncRequest final{
-		α Process( RequestId requestId, coroutine_handle<>&& h )ι->void;
+		Ŧ Process( RequestId requestId, T&& h )ι->void;
 		α Process( RequestId requestId )ι->void{ Process(requestId, coroutine_handle<>{}); }
 		Ŧ ClearHandle( RequestId requestId )ι->T;
 		α Clear( RequestId requestId )ι->void;
@@ -28,8 +28,7 @@ namespace Jde::Opc::Gateway{
 	private:
 		α UAHandle()ι->Handle;
 		α ProcessingLoop()ι->DurationTimer::Task;
-		//flat_map<RequestId, up<UARequest<T>>> _requests; mutex _requestMutex;
-		flat_map<RequestId, coroutine_handle<>> _requests; mutex _requestMutex;
+		flat_map<RequestId, std::any> _requests; mutex _requestMutex;
 		sp<UAClient> _pClient;
 		atomic_flag _running;
 		atomic_flag _stopped;
@@ -45,11 +44,28 @@ namespace Jde::Opc::Gateway{
 		T userData;
 		lg _{_requestMutex};
 		if( auto p = _requests.find(requestId); p!=_requests.end() ){
-			userData = std::any_cast<T>( move(p->second) );
-			_requests.erase( p );
+			try{
+				userData = std::any_cast<T>( move(p->second) );
+				_requests.erase( p );
+			}
+			catch( const std::bad_any_cast& e ){
+				Critical{ ProcessingLoopTag, "[{:x}.{:x}]Bad any cast: {}", UAHandle(), requestId, e.what() };
+			}
 		}
 		else
 			Critical( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
 		return userData;
 	}
+	Ŧ AsyncRequest::Process( RequestId requestId, T&& h )ι->void{
+		if( _stopped.test() )
+			return;
+		{
+			lg _{_requestMutex};
+			_requests.emplace( requestId, std::forward<T>(h) );
+		}
+		if( !_running.test_and_set() )
+			ProcessingLoop();
+		h = nullptr;
+	}
+
 }

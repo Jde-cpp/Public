@@ -11,7 +11,7 @@ namespace Jde::Opc::Gateway{
 		string logPrefix = format( "[{:x}.{}.{}]", (uint)ua, handle, requestId );
 		DBG( "[{}]Write::OnResponse()", logPrefix );
 		auto ppClient = Try<sp<UAClient>>( [ua](){return UAClient::Find(ua);} ); if( !ppClient ) return;
-		optional<flat_map<ExNodeId, UA_WriteResponse>> results;
+		optional<flat_map<NodeId, UA_WriteResponse>> results;
 		let visited = (*ppClient)->_writeRequests.visit( handle, [requestId, response, &results]( auto& pair ){
 			auto& x = pair.second;
 			if( auto pRequest=x.Requests.find(requestId); pRequest!=x.Requests.end() ){
@@ -24,7 +24,7 @@ namespace Jde::Opc::Gateway{
 			CRITICAL( "{}Could not find handle.", logPrefix );
 		else if( results ){
 			(*ppClient)->_readRequests.erase( handle );
-			auto h = (*ppClient)->ClearRequestH<TAwait<flat_map<ExNodeId,UA_WriteResponse>>::Handle>( handle ); RETURN_IF( !h, ELogLevel::Critical, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId );
+			auto h = (*ppClient)->ClearRequestH<TAwait<flat_map<NodeId,UA_WriteResponse>>::Handle>( handle ); RETURN_IF( !h, ELogLevel::Critical, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId );
 			h.promise().Resume( move(*results), h );
 		}
 		DBG( "[{}]Value::~OnResponse()", logPrefix );

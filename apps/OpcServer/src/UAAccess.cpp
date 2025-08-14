@@ -1,6 +1,8 @@
 #include "UAAccess.h"
 #include <open62541/plugin/accesscontrol_default.h>
 #include <jde/app/client/IAppClient.h>
+#include <jde/access/IAcl.h>
+#include "globals.h"
 #include "UAConfig.h"
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -8,35 +10,40 @@
 #define let const auto
 
 typedef struct {
-    UA_Boolean allowAnonymous;
-    size_t usernamePasswordLoginSize;
-    UA_UsernamePasswordLogin *usernamePasswordLogin;
-    UA_UsernamePasswordLoginCallback loginCallback;
-    void *loginContext;
-    UA_CertificateGroup verifyX509;
+	UA_Boolean allowAnonymous;
+	size_t usernamePasswordLoginSize;
+	UA_UsernamePasswordLogin *usernamePasswordLogin;
+	UA_UsernamePasswordLoginCallback loginCallback;
+	void *loginContext;
+	UA_CertificateGroup verifyX509;
 
-		bool AllowCertificate;
-		bool AllowIssued;
-		UA_String UserTokenPolicyUri;
+	bool AllowCertificate;
+	bool AllowIssued;
+	UA_String UserTokenPolicyUri;
 } AccessControlContext;
 
 namespace Jde::Opc::Server{
 	struct SessionContext final{
-		SessionContext( jobject&& o )ε:
-			SessionId{ Json::AsNumber<SessionPK>(o, "sessionId") },
-			UserPK{ Json::AsNumber<UserPK::Type>(o, "userPK") },
-			Expiration{ Json::AsTimePoint(o, "expiration") },
-			Endpoint{ Json::AsString(o, "endpoint") }
-		{}
-
+		string Endpoint;
+		TimePoint Expiration;
 		SessionPK SessionId;
 		UserPK UserPK;
-		TimePoint Expiration;
-		string Endpoint;
 	};
 }
 
 namespace Jde::Opc::Server::UAAccess{
+	ELogTags _tags = (ELogTags)( (EOpcLogTags)ELogTags::Access | EOpcLogTags::Opc );
+	Ω authorize( sv resource, Access::ERights rights, UserPK userPK )ι->bool{
+		bool allow{ true };
+		try{
+			GetSchema().Authorizer->Test( "opc", string{resource}, rights, userPK );
+		}
+		catch( exception& e ){
+			TRACE( "Access denied to resource '{}' for user {}: {}", resource, userPK.Value, e.what() );
+			allow = false;
+		}
+		return allow;
+	}
 	Ω setContext( UA_AccessControl& ac )ι->AccessControlContext&{
     auto cntxt = (AccessControlContext*)UA_malloc( sizeof(AccessControlContext) );
     memset( cntxt, 0, sizeof(AccessControlContext) );
@@ -221,10 +228,9 @@ namespace Jde::Opc::Server{
 				UAε( config->sessionPKI.verifyCertificate(&config->sessionPKI, &userToken->certificateData) );
 				auto publicKey = Crypto::ExtractPublicKey( std::span<byte>{(byte*)userToken->certificateData.data, userToken->certificateData.length} );
 				let exp = publicKey.ExponentInt();
-				auto user = AppClient()->QuerySync( Ƒ("user( modulus: \"{}\", exponent: {} ){{target name}}", publicKey.ModulusHex(), exp) );
+				let user = AppClient()->QuerySync( Ƒ("user( modulus: \"{}\", exponent: {} ){{id target name}}", publicKey.ModulusHex(), exp) );
 				THROW_IF( user.empty(), "Certificate user not found: modulus: {}, exponent: {}", publicKey.ModulusHex(), exp );
-				auto jwt = mu<Web::Jwt>( move(publicKey), Json::AsString(user, "name"), Json::AsString(user, "target") );
-				*sessionContext = jwt.release();
+				*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, QL::AsId<UserPK::Type>(user) };
 			}
 			catch( const UAException& e ){
 				return e.Code;
@@ -236,9 +242,16 @@ namespace Jde::Opc::Server{
 		else if(tokenType == &UA_TYPES[UA_TYPES_ISSUEDIDENTITYTOKEN]) {
       const UA_IssuedIdentityToken* userToken = (UA_IssuedIdentityToken*)userIdentityToken->content.decoded.data;
 			try{
-				Web::Jwt jwt{ ToSV(userToken->tokenData) };
-				AppClient()->Verify( jwt );
-				*sessionContext = new Web::Jwt{ move(jwt) };
+				if( userToken->tokenData.length<9 ){
+					let sessionId = std::stoul( string{ToSV(userToken->tokenData)}, 0, 16 );
+					let sessionInfo = BlockAwait<TAwait<Web::FromServer::SessionInfo>, Web::FromServer::SessionInfo>(	*AppClient()->SessionInfoAwait(sessionId) );
+					*sessionContext = new SessionContext{ sessionInfo.user_endpoint(), Jde::Proto::ToTimePoint(sessionInfo.expiration()), sessionInfo.session_id(), sessionInfo.user_pk() };
+				}
+				else{
+					Web::Jwt jwt{ ToSV(userToken->tokenData) };
+					AppClient()->Verify( jwt );
+					*sessionContext = new SessionContext{ {}, jwt.Expires(), std::stoul(jwt.SessionId), jwt.UserPK };
+				}
 				//auto info = AppClient()->QuerySyncSecure( Ƒ("session(jwt: {}){{expiration sessionId userPK endpoint}}", ToString(userToken->tokenData)) );
 			}
 			catch( exception& e ){
@@ -253,10 +266,18 @@ namespace Jde::Opc::Server{
     return UA_STATUSCODE_GOOD;
 	}
 	α UAAccess::CloseSession(UA_Server* server, UA_AccessControl* ac,const UA_NodeId* sessionId, void* sessionContext)ι->void{
-		Web::Jwt* jwt = static_cast<Web::Jwt*>( sessionContext );
-		delete jwt;
+		SessionContext* ctx = static_cast<SessionContext*>( sessionContext );
+		delete ctx;
 	}
-	α UAAccess::GetUserRightsMask(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, void *nodeContext)ι->UA_UInt32{ ASSERT(false); return false; }
+	α UAAccess::GetUserRightsMask( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, void *nodeContext )ι->UA_UInt32{
+		let rights = GetSchema().Authorizer->Rights( "opc", "node", static_cast<SessionContext*>( sessionContext )->UserPK );
+		UA_UInt32 mask = 0;
+		if( !empty(rights & Access::ERights::Update) )
+			mask = UA_WRITEMASK_ARRRAYDIMENSIONS | UA_WRITEMASK_BROWSENAME | UA_WRITEMASK_CONTAINSNOLOOPS | UA_WRITEMASK_DATATYPE | UA_WRITEMASK_DESCRIPTION | UA_WRITEMASK_DISPLAYNAME | UA_WRITEMASK_EVENTNOTIFIER | UA_WRITEMASK_EXECUTABLE | UA_WRITEMASK_HISTORIZING | UA_WRITEMASK_INVERSENAME | UA_WRITEMASK_ISABSTRACT  | UA_WRITEMASK_MINIMUMSAMPLINGINTERVAL | UA_WRITEMASK_NODECLASS | UA_WRITEMASK_NODEID | UA_WRITEMASK_SYMMETRIC | UA_WRITEMASK_USEREXECUTABLE | UA_WRITEMASK_VALUERANK | UA_WRITEMASK_VALUEFORVARIABLETYPE | UA_WRITEMASK_DATATYPEDEFINITION;
+		if( !empty(rights & Access::ERights::Administer) )
+			mask |= UA_WRITEMASK_ROLEPERMISSIONS | UA_WRITEMASK_ACCESSRESTRICTIONS | UA_WRITEMASK_ACCESSLEVELEX | UA_WRITEMASK_USERWRITEMASK | UA_WRITEMASK_ACCESSLEVEL | UA_WRITEMASK_USERACCESSLEVEL | UA_WRITEMASK_WRITEMASK;
+		return mask;
+	}
 	α UAAccess::GetUserAccessLevel( UA_Server* server, UA_AccessControl* ac, const UA_NodeId* sessionId, void* sessionContext, const UA_NodeId* nodeId, void* nodeContext )ι->UA_Byte{
 		ASSERT( nodeId );
 		if( !nodeId )
@@ -266,10 +287,25 @@ namespace Jde::Opc::Server{
 		if( id == UA_NS0ID_SERVER_NAMESPACEARRAY ){
 			return UA_ACCESSLEVELMASK_READ;
 		}
-		Warning{ (ELogTags)EOpcLogTags::Server, "GetUserAccessLevel: nodeId {} not enforced", id };
-		BREAK;
-		return std::numeric_limits<UA_Byte>::max();
+		let rights = GetSchema().Authorizer->Rights( "opc", "node", static_cast<SessionContext*>( sessionContext )->UserPK );
+		UA_Byte accessLevel = 0;
+		if( !empty(rights & Access::ERights::Read) ){
+			accessLevel |= UA_ACCESSLEVELMASK_READ;
+			accessLevel |= UA_ACCESSLEVELMASK_CURRENTREAD;
+			accessLevel |= UA_ACCESSLEVELMASK_HISTORYREAD;
+		}
+		if( !empty(rights & Access::ERights::Update) ){
+			accessLevel |= UA_ACCESSLEVELMASK_WRITE;
+			accessLevel |= UA_ACCESSLEVELMASK_CURRENTWRITE;
+			accessLevel |= UA_ACCESSLEVELMASK_HISTORYWRITE;
+			accessLevel |= UA_ACCESSLEVELMASK_STATUSWRITE;
+			accessLevel |= UA_ACCESSLEVELMASK_TIMESTAMPWRITE;
+		}
+		if( !empty(rights & Access::ERights::Administer) )
+			accessLevel |= UA_ACCESSLEVELMASK_SEMANTICCHANGE;
+		return accessLevel;
 	}
+
 	α UAAccess::GetUserExecutable(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *methodId, void *methodContext)ι->UA_Boolean{
 		ASSERT( methodId );
 		if( !methodId )
@@ -288,7 +324,10 @@ namespace Jde::Opc::Server{
 	α UAAccess::AllowAddReference(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_AddReferencesItem *item)ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowDeleteNode(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_DeleteNodesItem *item)ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowDeleteReference(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_DeleteReferencesItem *item)ι->UA_Boolean{ ASSERT(false); return false; }
-	α UAAccess::AllowBrowseNode(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, void *nodeContext)ι->UA_Boolean{ ASSERT(false); return false; }
+	α UAAccess::AllowBrowseNode(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, void *nodeContext)ι->UA_Boolean{
+		let ctx = static_cast<SessionContext*>( sessionContext ); ASSERT( ctx );
+		return authorize( "browse", Access::ERights::Read, ctx->UserPK );
+	}
 	α UAAccess::AllowTransferSubscription(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *oldSessionId, void *oldSessionContext, const UA_NodeId *newSessionId, void *newSessionContext)ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowHistoryUpdateUpdateData(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, UA_PerformUpdateType performInsertReplace, const UA_DataValue *value)ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowHistoryUpdateDeleteRawModified(UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, UA_DateTime startTimestamp, UA_DateTime endTimestamp, bool isDeleteModified)ι->UA_Boolean{ ASSERT(false); return false; }

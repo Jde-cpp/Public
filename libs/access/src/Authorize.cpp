@@ -60,6 +60,22 @@ namespace Jde::Access{
 			THROW( "[{}]Permission not found.", permissionPK );
 	}
 
+	α Authorize::Rights( str schemaName, str resourceName, UserPK executer )ι->ERights{
+		optional<ResourcePK> resourcePK;
+		Jde::sl _{Mutex};
+		if( auto schemaResources = SchemaResources.find(schemaName); schemaResources!=SchemaResources.end() )
+			resourcePK = Find( schemaResources->second, resourceName );
+		if( !resourcePK )//not enabled
+			return ERights::All;
+
+		auto user = Users.find(executer);
+		if( user==Users.end() || user->second.IsDeleted )
+			return ERights::None;
+
+		auto rights = user->second.ResourceRights( *resourcePK );
+		return rights.Allowed & ~rights.Denied;
+	}
+
 	α Authorize::RecursiveUsers( GroupPK groupPK, const ul& l, bool clear )ι->flat_set<UserPK>{
 		flat_set<UserPK> users;
 		auto group = Groups.find( groupPK );

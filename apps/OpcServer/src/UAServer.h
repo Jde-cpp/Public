@@ -16,7 +16,7 @@ namespace Jde::Opc::Server {
 
 		Ω Constructor( UA_Server *server, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *typeId, void *typeContext, const UA_NodeId *nodeId, void **nodeContext )->UA_StatusCode;
 		α Run()ι->void;
-		α ConstructorValues( const ExNodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&;
+		α ConstructorValues( const NodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&;
 
 		α Find( NodePK parentPK, BrowseNamePK browsePK )Ι->const Node*;
 		α Find( const Node& parent, const BrowseName& browse )Ι->const Node*;
@@ -28,14 +28,14 @@ namespace Jde::Opc::Server {
 		α GetParent( NodePK pk, SRCE )ε->Node&;
 		α FindObjectishNode( NodePK pk )Ε->const Node*;
 		α GetObjectish( NodePK pk, SRCE )Ε->const Node&;
-		α GetObject( const ExNodeId& id, SRCE )ε->const Object&;
-		α GetRefType( NodePK pk, SRCE )ε->ExNodeId&;
-		α GetTypeDef( const ExNodeId& id, SRCE )ε->sp<ObjectType>;
+		α GetObject( const NodeId& id, SRCE )ε->const Object&;
+		α GetRefType( NodePK pk, SRCE )ε->NodeId&;
+		α GetTypeDef( const NodeId& id, SRCE )ε->sp<ObjectType>;
 		α GetTypeDef( NodePK pk, SRCE )ε->sp<ObjectType>;
 		α GetVariable( NodePK pk, SRCE )ε->const Variable&;
 
 		α AddConstructor( UA_NodeId nodeId )ε->void;
-		α AddConstructor( UA_NodeId nodeId, flat_map<BrowseNamePK, Variant>&& values )ε->void;
+		α AddConstructor( NodeId nodeId, flat_map<BrowseNamePK, Variant>&& values )ε->void;
 		α AddObject( Object object, SRCE )ε->Object;
 		α AddObjectType( sp<ObjectType> node, SRCE )ε->void;
 		α AddReference( Reference reference, SRCE )ε->void;
@@ -47,12 +47,12 @@ namespace Jde::Opc::Server {
 		optional<std::jthread> _thread;
 
 		flat_map<BrowseNamePK, BrowseName> _browseNames;
-		flat_map<ExNodeId, flat_map<BrowseNamePK, Variant>> _constructors;
+		flat_map<NodeId, flat_map<BrowseNamePK, Variant>> _constructors;
 		mutable flat_map<NodePK, UA_DataType*> _dataTypes;
 		flat_map<NodePK, Object> _objects;
 		flat_map<NodePK, sp<ObjectType>> _typeDefs; //ObjectTypes and VariableTypes
 		flat_map<NodePK, Reference> _refs;
-		flat_map<NodePK, ExNodeId> _refTypes;
+		flat_map<NodePK, NodeId> _refTypes;
 		flat_map<VariablePK, Variable> _variables;
 		volatile UA_Boolean _running{};
 

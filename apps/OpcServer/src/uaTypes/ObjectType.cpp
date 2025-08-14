@@ -7,13 +7,13 @@ namespace Jde::Opc::Server{
 	{}
 
 	ObjectType::ObjectType( UA_NodeId n )ι:
-		Node{ n },
+		Node{ move(n) },
 		UA_ObjectTypeAttributes{}
 	{}
 
 	ObjectType::ObjectType( Node&& n, ObjectTypeAttr&& a )ι:
 		Node{ move(n) },
-		UA_ObjectTypeAttributes{ a }
+		UA_ObjectTypeAttributes{ move(a) }
 	{}
 	ObjectType::ObjectType( DB::Row& r )ι:
 		Node{ move(r), {} },
@@ -27,7 +27,7 @@ namespace Jde::Opc::Server{
 		}
 	{}
 	α ObjectType::InsertParams()ι->vector<DB::Value>{
-		vector<DB::Value> params = Node::InsertParams( false );
+		vector<DB::Value> params = Node::InsertParams();
 		params.emplace_back( isAbstract, 0 );
 		return params;
 	}
