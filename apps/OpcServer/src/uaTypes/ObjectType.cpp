@@ -31,6 +31,10 @@ namespace Jde::Opc::Server{
 		params.emplace_back( isAbstract, 0 );
 		return params;
 	}
+
+	α ObjectType::ToString()Ι->string{
+		return Ƒ( "[{}]{}", NodeId::ToString(), BrowseName() );
+	}
 	α ObjectType::ToString( const Node& parent )Ι->string{
 		return Node::ToString(parent);
 	}

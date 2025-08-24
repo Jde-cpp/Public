@@ -63,7 +63,7 @@ namespace Jde::Opc{
 		_sessions.try_emplace_and_visit( sessionId, addCred, addCred );
 	}
 
-	α Gateway::AuthCache( const Credential& cred, const ServerCnnctnNK& opcNK )ι->optional<bool>{
+	α Gateway::AuthCache( const Credential& cred, const ServerCnnctnNK& opcNK, SessionPK sessionId )ι->optional<bool>{
 		optional<bool> authenticated;
 		_sessions.cvisit_while( [&]( let& sessionClients )ι{
 			let& clients = sessionClients.second;
@@ -80,6 +80,9 @@ namespace Jde::Opc{
 			}
 			return !authenticated.has_value();
 		});
+		if( authenticated && *authenticated )
+			AddSession( sessionId, opcNK, cred );
+
 		return authenticated;
 	}
 

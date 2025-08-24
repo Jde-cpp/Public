@@ -36,7 +36,7 @@ namespace Jde::Opc::Gateway{
 		mutable string _display;
 	};
 	α AddSession( SessionPK sessionId, ServerCnnctnNK opcNK, Credential credential )ι->void;
-	α AuthCache( const Credential& credential, const ServerCnnctnNK& opcNK )ι->optional<bool>;
+	α AuthCache( const Credential& credential, const ServerCnnctnNK& opcNK, SessionPK sessionId )ι->optional<bool>;
 	α Logout( SessionPK sessionId )ι->void;
 	α GetCredential( SessionPK sessionId, str opcId )ι->optional<Credential>;
 }

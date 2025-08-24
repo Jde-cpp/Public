@@ -5,6 +5,7 @@
 #include "../async/ReadAwait.h"
 #include "../async/SessionAwait.h"
 
+#define let const auto
 namespace Jde::Opc::Gateway{
 namespace Browse{
 	α FoldersAwait::Suspend()ι->void{
@@ -27,7 +28,7 @@ namespace Browse{
 			if( _snapshot )
 				Snapshot( move(response) );
 			else
-				Attributes( move(response) );
+				Attributes( response.Variables(), move(response) );
 		}
 		catch( UAClientException& e ){
 			if( retry=e.IsBadSession(); retry )
@@ -49,16 +50,17 @@ namespace Browse{
 				_ua = UAClient::Find( _ua->Target(), _ua->Credential );
 				THROW_IF( !_ua, "Could not find UAClient for: {}", _ua->Target() );
 			}
-			auto values = co_await ReadAwait{ response.Nodes(), _ua };
-			Attributes( move(response), move(values) );
+			auto vars = response.Variables();
+			auto values = vars.size() ? co_await ReadAwait{ vars, _ua } : flat_map<NodeId, Value>{};
+			Attributes( move(vars), move(response), move(values) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α ObjectsFolderAwait::Attributes( Browse::Response response, flat_map<NodeId, Value> values )ι->TAwait<flat_map<NodeId, NodeId>>::Task{
+	α ObjectsFolderAwait::Attributes( flat_set<NodeId>&& variables, Browse::Response response, flat_map<NodeId, Value> values )ι->TAwait<flat_map<NodeId, NodeId>>::Task{
 		try{
-			auto dataTypes = co_await AttribAwait{ move(response.Nodes()), move(_ua) };
+			auto dataTypes = variables.size() ? co_await AttribAwait{ move(variables), move(_ua) } : flat_map<NodeId, NodeId>{};
 			Resume( response.ToJson(move(values), move(dataTypes)) );
 		}
 		catch( exception& e ){
@@ -117,6 +119,18 @@ namespace Browse{
 		}
 		return y;
 	}
+
+	α Response::Variables()ι->flat_set<NodeId>{
+		flat_set<NodeId> y;
+		for( let& result : Iterable<UA_BrowseResult>(results, resultsSize) ){
+			for( let& ref : Iterable<UA_ReferenceDescription>(result.references, result.referencesSize) ){
+				if( ref.nodeClass == UA_NODECLASS_VARIABLE )
+					y.emplace( move(ref.nodeId.nodeId) );
+			}
+		}
+		return y;
+	}
+
 	α Response::ToJson( flat_map<NodeId, Value>&& snapshot, flat_map<NodeId, NodeId>&& dataTypes )ε->jobject{
 		jarray references;
 		for(size_t i = 0; i < resultsSize; ++i) {
@@ -128,8 +142,8 @@ namespace Browse{
 					reference["value"] = p->second.ToJson();
 				if( auto p = dataTypes.find(nodeId); p!=dataTypes.end() )
 					reference["dataType"] = p->second.ToJson();
-				else
-					Warning( BrowseTag, "Could not find data type for node={}.", serialize(nodeId.ToJson()) );
+				// else
+				// 	Warning( BrowseTag, "Could not find data type for node={}.", serialize(nodeId.ToJson()) );
 				reference["referenceType"] = Opc::ToJson( ref.referenceTypeId );
 				reference["isForward"] = ref.isForward;
 				reference["node"] = nodeId.ToJson();

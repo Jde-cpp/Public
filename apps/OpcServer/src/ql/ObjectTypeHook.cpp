@@ -2,6 +2,7 @@
 #include <jde/db/meta/AppSchema.h>
 #include "../UAServer.h"
 #include "../awaits/BrowseNameAwait.h"
+#include "../awaits/ReferenceAwait.h"
 #include "../awaits/VariableAwait.h"
 #include "../uaTypes/Object.h"
 #include "../uaTypes/VariableAttr.h"
@@ -12,7 +13,9 @@
 namespace Jde::Opc::Server{
 	struct ObjectTypeQLAwait final : TAwait<jvalue>{
 		using base = TAwait<jvalue>;
-		ObjectTypeQLAwait( QL::MutationQL m, UserPK executer, SL sl )ι:base{ sl }, _input{ move(m) }, _executer{ executer } {}
+		ObjectTypeQLAwait( QL::MutationQL m, UserPK executer, SL sl )ι:base{ sl }, _input{ move(m) }, _executer{ executer },
+			_startup{ Json::FindBool(Args(),"$silent").value_or(false) }
+		{}
 		ObjectTypeQLAwait( jobject o, sp<ObjectType> oType, UserPK executer, SL sl )ι:base{ sl }, _root{oType}, _input{ move(o) }, _executer{ executer } {}
 
 		α Suspend()ι->void override;
@@ -23,12 +26,12 @@ namespace Jde::Opc::Server{
 		α GetBrowseName( jobject o, sp<ObjectType> parent )ι->BrowseNameAwait::Task;
 		α Create( jobject o, BrowseName&& browse, sp<ObjectType> parent )ι->DB::ScalerAwait<NodePK>::Task;
 		α CreateVariables( jobject o, sp<ObjectType> objectType )ι->VariableInsertAwait::Task;
-		α CreateRefs( flat_set<VariablePK,jarray>&& refs )ι->VoidAwait::Task;
+		α CreateRefs( jobject o, sp<ObjectType> oType, flat_map<VariablePK,jarray>&& refs )ι->VoidAwait::Task;
 		α CreateChildren( jobject o, sp<ObjectType> parent )ι->ObjectTypeQLAwait::Task;
 		sp<ObjectType> _root;
 		variant<QL::MutationQL,jobject> _input;
 		Jde::UserPK _executer;
-
+		bool _startup{};
 	};
 
 	α ObjectTypeQLAwait::Suspend()ι->void{
@@ -47,7 +50,10 @@ namespace Jde::Opc::Server{
 			BrowseName browseName{ o.at("browseName").as_object() };
 			co_await BrowseNameAwait{ &browseName };
 			if( GetUAServer().Find(parent->PK, browseName.PK) ){
-				ResumeExp( Exception{_sl, "Object Type exists parent: {}, browseName: '{}'", Ƒ("{:x}", parent->PK), browseName.ToString()} );
+				if( _startup )
+					Resume( jobject{{"complete", true}} );
+				else
+					ResumeExp( Exception{_sl, "Object Type exists parent: {}, browseName: '{}'", Ƒ("{:x}", parent->PK), browseName.ToString()} );
 				co_return;
 			}
 			Create( move(o), move(browseName), parent );
@@ -58,17 +64,34 @@ namespace Jde::Opc::Server{
 	}
 	α ObjectTypeQLAwait::Create( jobject o, BrowseName&& browse, sp<ObjectType> parent )ι->DB::ScalerAwait<NodePK>::Task{
 		auto& ua = GetUAServer();
-		let& schema = GetSchema();
+		auto& schema = GetSchema();
 		try{
 			auto oType = ms<ObjectType>( o, parent->PK, move(browse) );
+			optional<NodePK> pk;
+			if( _startup ){
+				let table = schema.GetViewPtr( "object_types" );
+				pk = DS().ScalerSyncOpt<uint>( DB::Statement{
+					DB::SelectClause{ table->GetColumnPtr("node_id") },
+					DB::FromClause{ table },
+					DB::WhereClause{ {
+						{ table->GetColumnPtr("browse_id"), oType->Browse.PK },
+						{ table->GetColumnPtr("parent_node_id"), parent->PK }
+					} }
+				}.Move() );
+				oType->PK = pk.value_or(0);
+			}
 			ua.AddObjectType( oType );
-			oType->PK = co_await DS().InsertSeq<NodePK>( DB::InsertClause{
-				schema.DBName( "object_type_insert" ),
-				oType->InsertParams()
-			});
-			ua._typeDefs.try_emplace( oType->PK, oType );
-
-			CreateVariables( move(o), oType );
+			if( !pk ){
+				oType->PK = co_await DS().InsertSeq<NodePK>( DB::InsertClause{
+					schema.DBName( "object_type_insert" ),
+					oType->InsertParams()
+				});
+				ua._typeDefs.try_emplace( oType->PK, oType );
+			}
+			if( !pk )
+				CreateVariables( move(o), oType );
+			else
+				Resume( jobject{{"complete", true}} );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
@@ -76,31 +99,37 @@ namespace Jde::Opc::Server{
 	}
 	α ObjectTypeQLAwait::CreateVariables( jobject o, sp<ObjectType> oType )ι->VariableInsertAwait::Task{
 		try{
-			flat_set<VariablePK,jarray> variableRefs;
+			//flat_map<VariablePK,jarray> variableRefs;
 			if( auto variables = o.try_at("variables"); variables && variables->is_array() ){
 				for( auto&& value : variables->get_array() ){
-					auto& variable = value.as_object();
-					BrowseName browse{ BrowseNameAwait::GetOrInsert(variable.at("browseName").as_object()) };
-					Trace{ ELogTags::Test, "v={}", serialize(variable) };
-					auto pk = co_await VariableInsertAwait{ Variable{move(variable), oType->PK, move(browse)}, _sl };
-					if( auto& refs = Json::FindArray(variable,"refs"); refs )
-						variableRefs.emplace( pk, move(*refs) );
+					auto& jvariable = value.as_object();
+					BrowseName browse{ BrowseNameAwait::GetOrInsert(jvariable.at("browseName").as_object()) };
+					Trace{ ELogTags::Test, "v={}", serialize(jvariable) };
+					auto variable = co_await VariableInsertAwait{ Variable{move(jvariable), oType->PK, move(browse)}, _sl };
+					// if( auto refs = Json::FindArray(jvariable,"refs"); refs )
+					// 	variableRefs.emplace( variable.PK, move(*refs) );
 				}
 			}
-			if( variableRefs.size() )
-				CreateRefs( move(variableRefs) );
-			else
-				CreateChildren( move(o), oType );
+			// if( variableRefs.size() )
+			// 	CreateRefs( move(o), move(oType), move(variableRefs) );
+			// else
+			CreateChildren( move(o), move(oType) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
 
-	α ObjectTypeQLAwait::CreateRefs( flat_set<VariablePK,jarray>&& refs )ι->VoidAwait::Task{
-		for( auto&& ref : *refs ){
-			let r = ref.as_object();
-			co_await ReferenceInsertAwait{ Reference{ref.as_object(), pk}, _executer, _sl };
+	α ObjectTypeQLAwait::CreateRefs( jobject o, sp<ObjectType> oType, flat_map<VariablePK,jarray>&& refs )ι->VoidAwait::Task{
+		try{
+			for( auto& [pk, varRefs] : refs ){
+				for( auto& jRef : varRefs )
+					co_await ReferenceInsertAwait{ Reference{move(jRef.as_object()), pk}, _sl };
+			}
+			CreateChildren( move(o), move(oType) );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
 		}
 	}
 	α ObjectTypeQLAwait::CreateChildren( jobject o, sp<ObjectType> oType )ι->ObjectTypeQLAwait::Task{

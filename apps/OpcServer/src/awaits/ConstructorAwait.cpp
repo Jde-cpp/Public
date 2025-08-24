@@ -10,7 +10,7 @@ namespace Jde::Opc::Server{
 			cols += DB::SelectClause{ *table, "c", {"browse_id", "variant_id"} };
 			auto rows = co_await DS().SelectAsync( DB::Statement{
 				cols,
-				{ DB::Join{nodeIdTable->GetColumnPtr("node_id"), "n", table->GetSK0(), "c", true} },
+				{ DB::Join{nodeIdTable->GetColumnPtr("node_id"), "n", table->GetColumnPtr("node_id"), "c", true} },
 				ServerConfigAwait::ServerWhereClause( *nodeIdTable, "n" )
 			}.Move(), _sl );
 			if( rows.empty() ){

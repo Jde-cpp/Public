@@ -209,15 +209,16 @@ namespace Jde::Access{
 		ul _{Mutex};
 		Resources[resource.PK] = move(resource);
 	}
-	α Authorize::UpdateResourceDeleted( sv schemaName, const jobject& args, bool restored )ε->void{
+	α Authorize::UpdateResourceDeleted( ResourcePK pk, sv schemaName, const jobject& args, bool restored )ε->void{
 		ul _{Mutex};
-		let pk = Json::FindNumber<ResourcePK>( args, "id" );
+		if( !pk )
+			pk = Json::FindNumber<ResourcePK>( args, "id" ).value_or(0);
 		let target = Json::FindSV( args, "target" );
 		auto pkResource = find_if( Resources, [&](auto&& pkResource){
 			let& r = pkResource.second;
-			return (pk && *pk==r.PK) || ( r.Schema==schemaName && target && *target==r.Target );
+			return (pk && pk==r.PK) || ( r.Schema==schemaName && target && *target==r.Target );
 		} );
-		THROW_IF( pkResource==Resources.end(), "Resource not found schema:'{}', args:'{}'", schemaName, serialize(args) );
+		THROW_IFX( pkResource==Resources.end(), Exception(SRCE_CUR, ELogLevel::Debug, "Resource not found pk: {}, schema:'{}', args:'{}'", pk, schemaName, serialize(args)) );
 		auto& resource = pkResource->second;
 
 		resource.IsDeleted = restored ? optional<DB::DBTimePoint>{} : DB::DBClock::now();

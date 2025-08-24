@@ -12,6 +12,7 @@ namespace Jde::Opc::Server{
 		ObjectType( Node&& n, ObjectTypeAttr&& a )ι;
 		ObjectType( DB::Row& r )ι;
 
+		α ToString()Ι->string;
 		α ToString( const Node& parent )Ι->string override;
 		α InsertParams()ι->vector<DB::Value>;
 		α IsObjectType()Ι->bool override{ return true; }

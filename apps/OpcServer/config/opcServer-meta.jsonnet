@@ -88,7 +88,7 @@ local common = import 'common-meta.libsonnet';
 		},
 		constructors:{
 			columns:{
-				nodeId: nodeId+{ pkTable:"node_ids", sk:0, i:1, comment:"parent" },
+				nodeId: nodeId+{ pkTable:"node_ids", sk:0, i:0, comment:"parent" },
 				browseId: tables.browseNames.columns.browseId+{ sk:1, pkTable:"browse_names", i:1 },
 				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:2 },
 			},
@@ -172,7 +172,7 @@ local common = import 'common-meta.libsonnet';
 		variables:nodeTableProps+{
 			columns: nodeColumns+{
 				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:223, nullable: true },
-				dataTypeId: nodeId+{ pkTable: "node_ids", i:224 },
+				dataTypeId: nodeId+{ pkTable: "node_ids", nullable: true, i:224 },
 				valueRank: types.int+{ i:225, nullable: true },
 				arrayDims: types.varchar+{ i:226, length: 256, nullable: true },
 				accessLevel: types.uint8+{ i:227, nullable: true, default: 97 },

@@ -43,28 +43,29 @@ namespace Jde::Opc::Gateway::Tests{
 		}
 		flag.test_and_set();
 		flag.notify_all();
-		Trace{ _tags, "notify_all" };
+		TRACE( "notify_all" );
 	}
 
 	TEST_F( TokenTests, Authenticate ){
-		let opcId{ Client->Target };
+		let opcId{ Connection->Target };
 		atomic_flag a,b,c;
 		authenticateTest( *_jwt, opcId, a );
 		a.wait( false );
-		Trace{ _tags, "Call b" };
+		TRACE( "Call b" );
 		authenticateTest( *_jwt, opcId, b );
-		Trace{ _tags, "Call c" };
+		TRACE( "Call c" );
 		authenticateTest( *_jwt, opcId, c );
 		b.wait( false );
-		Trace{ _tags, "b returned" };
+		TRACE( "b returned" );
 		c.wait( false );
-		Trace{ _tags, "c returned" };
+		TRACE( "c returned" );
 		EXPECT_FALSE( _exception );
+		std::this_thread::sleep_for( 100ms );
 	}
 
 	TEST_F( TokenTests, Authenticate_Bad ){
 		atomic_flag flag;
-		authenticateTest( *_jwt, Client->Target, flag, true );
+		authenticateTest( *_jwt, Connection->Target, flag, true );
 		flag.wait( false );
 		EXPECT_TRUE( _exception );
 		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadIdentityTokenInvalid") );

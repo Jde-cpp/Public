@@ -29,7 +29,9 @@ namespace Jde{
 		α Emplaced()ι->bool{ return base::Expected.index()==1 || (base::Expected.index()==0 && Exp()!=nullptr); }
 		α Value()ι->TResult*{ return base::Expected.index()==1 ? &std::get<1>(base::Expected) : nullptr; }
 		α SetValue( TResult&& x )ι->void{ base::Expected = std::move(x); }
+		α SetScaler( TResult x )ι->void{ base::Expected = x; }
 		α Resume( TResult&& x, coroutine_handle<> h )ι->void{ SetValue(std::move(x)); h.resume(); };
+		α ResumeScaler( TResult x, coroutine_handle<> h )ι->void{ SetScaler(x); h.resume(); };
 		α SetExp( IException&& e )ι->void override{ base::Expected = e.Move(); }
 		α SetExp( exception&& x )ι->void override{
 			if( auto p = dynamic_cast<IException*>(&x); p )

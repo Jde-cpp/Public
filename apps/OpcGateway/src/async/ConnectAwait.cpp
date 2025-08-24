@@ -20,15 +20,17 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α ConnectAwait::Suspend()ι->void{
-		if( auto pClient = UAClient::Find(_opcTarget, _cred); pClient )
-			base::Resume( move(pClient) );
+		if( auto client = UAClient::Find(_opcTarget, _cred); client )
+			base::Resume( move(client) );
 		else{
 			_requestMutex.lock();
 			auto opcHandles = _requests.try_emplace( _opcTarget ).first;
 			auto credHandles = opcHandles->second.try_emplace( _cred ).first;
 			credHandles->second.push_back( _h );
+			let size = credHandles->second.size();
 			_requestMutex.unlock();
-			Create();
+			if( size == 1 )
+				Create();
 		}
 	}
 	α ConnectAwait::Create()ι->TAwait<vector<ServerCnnctn>>::Task{
@@ -50,8 +52,7 @@ namespace Jde::Opc::Gateway{
 			}
 		}
 	}
-	α ConnectAwait::Resume( sp<UAClient> pClient, str opcNK, Credential cred, function<void(ConnectAwait::Handle)> resume )ι->void{
-		ASSERT( pClient );
+	α ConnectAwait::Resume( str opcNK, Credential cred, function<void(ConnectAwait::Handle)> resume )ι->void{
 		vector<ConnectAwait::Handle> handles;
 		{
 			lg l{ _requestMutex };
@@ -62,9 +63,9 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α ConnectAwait::Resume( sp<UAClient> client, str opcNK, Credential cred )ι->void{
-		Resume( client, opcNK, cred, [=](ConnectAwait::Handle h)mutable{ h.promise().Resume(move(client), h); } );
+		Resume( opcNK, cred, [=](ConnectAwait::Handle h)mutable{ h.promise().ResumeScaler(client, h); } );
 	}
-	α ConnectAwait::Resume( sp<UAClient> client, str opcNK, Credential cred, const UAClientException&& e )ι->void{
-		Resume( move(client), opcNK, cred, [sc=e.Code](ConnectAwait::Handle h){ h.promise().ResumeExp(UAClientException{(StatusCode)sc}, h); } );
+	α ConnectAwait::Resume( str opcNK, Credential cred, const UAClientException&& e )ι->void{
+		Resume( opcNK, cred, [sc=e.Code](ConnectAwait::Handle h){ h.promise().ResumeExp(UAClientException{(StatusCode)sc}, h); } );
 	}
 }

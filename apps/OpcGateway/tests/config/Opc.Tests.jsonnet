@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "ClientDBTests.PurgeFailed",
+		tests:: "CertTests.*",
 		recreateDB: true,
 		embeddedAppServer: true,
 		embeddedOpcServer: true
@@ -50,8 +50,8 @@ local args = import 'args.libsonnet';
 	logging:{
 		defaultLevel:: "Information",
 		tags: {
-			trace:["test", "app","sql", "ql"],
-			debug:["settings", "scheduler", "uaEvent",
+			trace:["test", "app"],
+			debug:["settings", "scheduler", "uaEvent","sql", "ql",
 				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
 				"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
 				"monitoring", "browse", "processingLoop", "monitoring.pedantic"],

@@ -7,8 +7,8 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	PasswordAwait::PasswordAwait( string loginName, string password, string opcNK, string endpoint, bool isSocket, SL sl )ι:
-		AuthAwait{ { {move(loginName), move(password)} }, move(opcNK), move(endpoint), isSocket, sl }{}
+	PasswordAwait::PasswordAwait( string loginName, string password, string opcNK, string endpoint, bool isSocket, SessionPK sessionId, SL sl )ι:
+		AuthAwait{ { {move(loginName), move(password)} }, move(opcNK), move(endpoint), isSocket, sessionId, sl }{}
 
 	α PasswordAwait::CheckProvider()ι->TAwait<Access::ProviderPK>::Task{
 		try{
@@ -29,5 +29,8 @@ namespace Jde::Opc::Gateway{
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
+	}
+	α PasswordAwait::await_resume()ι->optional<Web::FromServer::SessionInfo>{
+		return Promise() ? base::await_resume() : nullopt;
 	}
 }

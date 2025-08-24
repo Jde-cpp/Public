@@ -6,12 +6,11 @@ namespace Jde::Opc::Server {
 		α Execute()ι->DB::SelectAwait::Task override;
 	};
 
-	struct ReferenceInsertAwait final : TAwaitEx<PK,DB::ScalerAwait<uint>::Task>{
-		using base = TAwaitEx<Variable,DB::ScalerAwait<uint>::Task>;
-		ReferenceInsertAwait( Variable&& node, UserPK executer, SL sl )ι:base{ sl }, _node{ move(node) }, _executer{ executer } {}
+	struct ReferenceInsertAwait final : VoidAwait{
+		ReferenceInsertAwait( Reference&& reference, SL sl )ι:VoidAwait{ sl }, _ref{ move(reference) }{}
 	private:
-		α Execute()ι->DB::ScalerAwait<uint>::Task override;
-		α InsertMembers( DB::Value variantPK )ι->DB::ExecuteAwait::Task;
-		Variable _node;
+		α Suspend()ι->void override{ Execute(); }
+		α Execute()ι->TAwait<uint>::Task;
+		Reference _ref;
 	};
 }

@@ -36,11 +36,11 @@ add_subdirectory( ${libDir}/app/client ../../libs/app/client )
 add_subdirectory( ${libDir}/opc/src ../../libs/opc )
 add_subdirectory( src lib )
 
-#if( buildTests )
+if( buildTests )
 	add_subdirectory( tests )
 	set( CMAKE_CTEST_ARGUMENTS -tests -settings=$ENV{JDE_DIR}/Public/apps/OpcGateway/config/Opc.Gateway.jsonnet )
 	add_test( NAME AppTests COMMAND $<TARGET_FILE:Jde.Opc.Gateway.Tests> )
-#endif()
+endif()
 
 
 set( targetName Jde.Opc.Gateway )

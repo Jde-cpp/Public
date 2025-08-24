@@ -13,7 +13,7 @@ namespace Jde::Opc::Gateway{
 		α Suspend()ι->void override;
 		α await_resume()ε->HttpTaskResult override;
 	private:
-		α Login( str endpoint )ι->TAwait<Web::FromServer::SessionInfo>::Task;
+		α Login( str endpoint )ι->TAwait<optional<Web::FromServer::SessionInfo>>::Task;
 		α Logout()ι->TAwait<jvalue>::Task;
 		α CoHandleRequest( ServerCnnctnNK&& opcId )ι->TAwait<sp<UAClient>>::Task;
 		α Browse()ι->TAwait<jobject>::Task;

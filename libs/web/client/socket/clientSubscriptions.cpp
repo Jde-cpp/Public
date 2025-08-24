@@ -21,8 +21,13 @@ namespace Jde::Web::Client{
 	α Subscriptions::OnWebsocketReceive( const jobject& m, QL::SubscriptionId clientId )ι->void{
 		sl l{ _mutex };
 		if( auto kv = _subs.find( clientId ); kv!=_subs.end() ){
-			for( let& listener : kv->second )
-				listener->OnChange( m, clientId );
+			for( let& listener : kv->second ){
+				try{
+					listener->OnChange( m, clientId );
+				}
+				catch( exception& )
+				{}
+			}
 		}
 		else
 			Warning{ ELogTags::QL, "[{}]Could not find subscription.", clientId };

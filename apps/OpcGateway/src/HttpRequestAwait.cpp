@@ -156,7 +156,7 @@ namespace Jde::Opc::Gateway{
 	}
 
 
-	α HttpRequestAwait::Login( str endpoint )ι->TAwait<Web::FromServer::SessionInfo>::Task{
+	α HttpRequestAwait::Login( str endpoint )ι->TAwait<optional<Web::FromServer::SessionInfo>>::Task{
 		try{
 			let body = _request.Body();
 			auto domain = Json::FindString( body, "opc" );
@@ -166,10 +166,12 @@ namespace Jde::Opc::Gateway{
 			if( !user )
 				throw RestException<http::status::bad_request>{ SRCE_CUR, move(_request), "user not specified" };
 			auto password = Json::AsString( body, "password" );
-			_request.LogRead( Ƒ("Login - opc: {}, user: {}", *domain, *user) );
-			let sessionInfo = co_await PasswordAwait{ move(*user), move(password), move(*domain), endpoint, false };
-			_request.SessionInfo->SessionId = sessionInfo.session_id();
-			_request.SessionInfo->IsInitialRequest = true;
+			_request.LogRead( Ƒ("(opc: {}, user: {})", *domain, *user) );
+			let sessionInfo = co_await PasswordAwait{ move(*user), move(password), move(*domain), endpoint, false, _request.SessionInfo->SessionId };
+			if( sessionInfo ){
+				_request.SessionInfo->SessionId = sessionInfo->session_id();
+				_request.SessionInfo->IsInitialRequest = true;
+			}
 			Resume( move(_request) );
 		}
 		catch( RestException<http::status::bad_request>& e ){
@@ -210,11 +212,16 @@ namespace Jde::Opc::Gateway{
 
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		if( auto e = Promise() ? Promise()->MoveExp() : nullptr; e ){
-			auto pRest = dynamic_cast<IRestException*>( e.get() );
-			if( pRest )
-				pRest->Throw();
-			else
-				throw RestException<>{ move(*e), move(_request) };
+			auto rest = dynamic_cast<IRestException*>( e.get() );
+			if( rest )
+				rest->Throw();
+			else{
+				auto ua = dynamic_cast<UAClientException*>( e.get() );
+				if( ua )
+					ua->ThrowRest( move(*ua), move(_request) );
+				else
+					throw RestException<>{ move(*e), move(_request) };
+			}
 		}
 		return _readyResult
 			? HttpTaskResult{ move(*_readyResult), move(_request) }

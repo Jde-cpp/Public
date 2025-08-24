@@ -29,5 +29,7 @@ namespace Jde::Opc::Server {
 		α AllocateNodes()ι->NodeAwait::Task;
 		α SaveSystem()ι->TAwait<NodePK>::Task;
 		α Set()ι->void;
+		α AddReferences( NodePK pk )ι->void;
+		flat_map<NodePK, Reference> _refs;
 	};
 }

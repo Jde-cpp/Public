@@ -23,4 +23,20 @@ namespace Jde::Opc::Server {
 			ResumeExp( move(e) );
 		}
 	}
+
+	α ReferenceInsertAwait::Execute()ι->TAwait<uint>::Task{
+		try{
+			auto& schema = GetSchema();
+			DB::InsertClause sql{
+				schema.DBName( "refs" ),
+				{ {"source_node_id", _ref.SourcePK}, {"target_node_id", _ref.TargetPK}, {"ref_type_id", _ref.RefTypePK}, {"is_forward", _ref.IsForward} }
+			};
+			sql.IsStoredProc = false;
+			co_await schema.DS()->Execute( sql.Move(), _sl );
+			GetUAServer().AddReference( _ref.SourcePK, _ref );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
 }

@@ -66,7 +66,7 @@ namespace Jde::Opc::Server{
 
 	α ServerConfigAwait::LoadReferences()ι->ReferenceAwait::Task{
 		try{
-			GetUAServer()._refs = co_await ReferenceAwait{};
+			_refs = co_await ReferenceAwait{};
 			LoadVariables();
 		}
 		catch( exception& e ){
@@ -157,40 +157,61 @@ namespace Jde::Opc::Server{
 		}
 	}
 
+	α ServerConfigAwait::AddReferences( NodePK pk )ι->void{
+		auto& ua = GetUAServer();
+		for( auto p = _refs.begin(); p != _refs.end(); ){
+			const auto& ref = p->second;
+			if( ref.SourcePK==pk || ref.TargetPK==pk ){
+				ua.AddReference( p->first, ref );
+				p = _refs.erase(p);
+			}
+			else
+				++p;
+		}
+	}
+
 	α ServerConfigAwait::Set()ι->void{
 		auto& ua = GetUAServer();
 		flat_set<NodePK> done;
-		for( let&	[pk,node] : GetUAServer()._typeDefs ){
-			if( done.contains(pk) || node->IsSystem() )
-				continue;
-			ua.AddObjectType( node );
-			done.insert( pk );
-			if( auto p = ua._constructors.find(*node); p!=ua._constructors.end() )
-				ua.AddConstructor( *node );
-			for( auto&& [_,variable] : ua._variables ){
-				if( variable.ParentNodePK==pk )
-					ua.AddVariable( variable );
+		try{
+			for( let&	[pk,node] : GetUAServer()._typeDefs ){
+				if( done.contains(pk) || node->IsSystem() )
+					continue;
+				ua.AddObjectType( node );
+				done.insert( pk );
+				if( auto p = ua._constructors.find(*node); p!=ua._constructors.end() )
+					ua.AddConstructor( *node );
+				for( auto&& [varPK,variable] : ua._variables ){
+					if( variable.ParentNodePK==pk ){
+						ua.AddVariable( variable );
+						AddReferences( varPK );
+					}
+				}
+				AddReferences( pk );
 			}
-		}
-		for( auto&&	[pk,node] : GetUAServer()._objects ){
-			if( done.contains(pk) || node.IsSystem() )
-				continue;
-			ua.AddObject( node );
-			for( auto&& [_,variable] : ua._variables ){
-				if( variable.ParentNodePK==pk )
-					ua.AddVariable( variable );
+			for( auto&&	[pk,node] : GetUAServer()._objects ){
+				if( done.contains(pk) || node.IsSystem() )
+					continue;
+				ua.AddObject( node );
+				for( auto&& [_,variable] : ua._variables ){
+					if( variable.ParentNodePK==pk )
+						ua.AddVariable( variable );
+				}
 			}
+			for( auto&&	[pk,ref] : _refs ){
+				ua.AddReference( pk, ref );
+				// UA_Server_addReference(
+				// 	ua._ua,
+				// 	ua.GetVariable(ref.SourcePK),
+				// 	ua.GetRefType(ref.RefTypePK),
+				// 	ExNodeId{ua.GetObjectish(ref.TargetPK)},
+				// 	ref.IsForward
+				// );
+			}
+			Resume();
 		}
-		for( auto&&	[pk,ref] : ua._refs ){
-			ua.AddReference( ref );
-			// UA_Server_addReference(
-			// 	ua._ua,
-			// 	ua.GetVariable(ref.SourcePK),
-			// 	ua.GetRefType(ref.RefTypePK),
-			// 	ExNodeId{ua.GetObjectish(ref.TargetPK)},
-			// 	ref.IsForward
-			// );
+		catch( exception& e ){
+			ResumeExp( move(e) );
 		}
-		Resume();
 	}
 }

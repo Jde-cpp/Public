@@ -1,7 +1,4 @@
-﻿//#include "../"
-//#include <jde/opc/uatypes/UAClient.h>
-//#include <jde/opc/uatypes/UAException.h>
-#include <jde/crypto/OpenSsl.h>
+﻿#include <jde/crypto/OpenSsl.h>
 #include "../../src/auth/PasswordAwait.h"
 #include "Auth.h"
 
@@ -45,7 +42,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( PasswordTests, Authenticate ){
 		Information( _tags, "PasswordTests.Authenticate" );
-		string opcId{ Client->Target };
+		string opcId{ Connection->Target };
 		AuthenticateTest( opcId );
 		{
 			std::shared_lock l{ mtx };
@@ -70,10 +67,9 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( PasswordTests, Authenticate_BadPassword ){
 		Information( _tags, "PasswordTests.Authenticate_BadPassword" );
-		AuthenticateTest( Client->Target, true );
+		AuthenticateTest( Connection->Target, true );
 		std::shared_lock l{ mtx };
 		cv.wait( l );
-		//EXPECT_FALSE( _client );
 		EXPECT_TRUE( _exception );
 		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadUserAccessDenied") );
 		Debug( _tags, "{}", _exception ? _exception->what() : "Error no exception." );

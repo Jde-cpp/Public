@@ -38,7 +38,7 @@ namespace Jde::Opc::Server {
 		α AddConstructor( NodeId nodeId, flat_map<BrowseNamePK, Variant>&& values )ε->void;
 		α AddObject( Object object, SRCE )ε->Object;
 		α AddObjectType( sp<ObjectType> node, SRCE )ε->void;
-		α AddReference( Reference reference, SRCE )ε->void;
+		α AddReference( NodePK nodePK, const Reference& ref, SRCE )ε->void;
 		α AddVariable( Variable variable, SRCE )->Variable;
 		string ServerName;
 	private:

@@ -39,7 +39,7 @@ namespace Jde::Access{
 		α UpdatePermission( PermissionPK permissionPK, optional<ERights> allowed, optional<ERights> denied )ε->void;
 
 		α CreateResource( Resource&& resource )ε->void;
-		α UpdateResourceDeleted( sv schemaName, const jobject& args, bool restored )ε->void;
+		α UpdateResourceDeleted( ResourcePK pk, sv schemaName, const jobject& args, bool restored )ε->void;
 
 		α DeleteRestoreRole( RolePK rolePK, bool deleted )ι->void;
 		α PurgeRole( RolePK rolePK )ι->void;

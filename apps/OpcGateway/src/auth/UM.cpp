@@ -36,7 +36,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 	α ProviderCreatePurgeAwait::Insert( str target )ι->TAwait<jobject>::Task{
-		let q = Jde::format( "createProvider( target:\"{}\", providerType:\"OpcServer\" ){{id}}", target );
+		let q = Ƒ( "createProvider( target:\"{}\", providerType:\"OpcServer\" ){{id}}", target );
 		try{
 			auto appClient = AppClient();
 			let j = co_await *appClient->QLServer()->QueryObject( q, appClient->UserPK() );

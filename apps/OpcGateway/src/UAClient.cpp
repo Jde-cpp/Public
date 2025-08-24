@@ -19,7 +19,7 @@ namespace Jde::Opc::Gateway{
 //	using Client::UAClientException;
 	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::Opc };
 	flat_map<ServerCnnctnNK,flat_map<Credential,sp<UAClient>>> _clients; shared_mutex _clientsMutex;
-	α UAClient::RemoveClient( sp<UAClient>& client )ι->bool{
+	α UAClient::RemoveClient( sp<UAClient>&& client )ι->bool{
 		client->Connected = false;
 		bool erased{};
 		ul _{ _clientsMutex };
@@ -33,6 +33,7 @@ namespace Jde::Opc::Gateway{
 
 			}
 		}
+		client = nullptr;
 		if( !erased )
 			Debug{ _tags, "[{:x}] - could not find client='{}'.", client->Handle(), client->Target() };
 		return erased;
@@ -143,7 +144,7 @@ namespace Jde::Opc::Gateway{
 					ConnectAwait::Resume( move(client), client->Target(), client->Credential );
 				}
 				else
-					ConnectAwait::Resume( move(client), client->Target(), client->Credential, UAClientException{connectStatus} );
+					ConnectAwait::Resume( client->Target(), client->Credential, UAClientException{connectStatus} );
 				return true;
 			});
 		}
@@ -174,7 +175,7 @@ namespace Jde::Opc::Gateway{
 			);
 		}else if( Credential.Type()==ETokenType::IssuedToken ){
 			UA_IssuedIdentityToken* identityToken = UA_IssuedIdentityToken_new();
-			identityToken->policyId = "open62541-anonymous-policy"_uv;
+			identityToken->policyId = AllocUAString( "open62541-anonymous-policy"sv );
 			UA_ByteString_allocBuffer( &identityToken->tokenData, Credential.Token().size() );
 			identityToken->tokenData.length = Credential.Token().size();
 			memcpy( identityToken->tokenData.data, Credential.Token().data(), Credential.Token().size() );
@@ -216,11 +217,13 @@ namespace Jde::Opc::Gateway{
 			p->ClearRequest( requestId );
 	}
 
-	α UAClient::RetryVoid( function<void(sp<UAClient>&&) > f, UAException e, sp<UAClient> client )ι->ConnectAwait::Task{
-		RemoveClient( client );
+	α UAClient::RetryVoid( function<void(sp<UAClient>&&) > f, UAException&& e, sp<UAClient>&& client )ι->ConnectAwait::Task{
+		let target = client->Target();
+		let credential = client->Credential;
+		RemoveClient( move(client) );
 		if( e.Code==UA_STATUSCODE_BADCONNECTIONCLOSED || e.Code==UA_STATUSCODE_BADSERVERNOTCONNECTED ){
 			try{
-				client = co_await GetClient( client->Target(), client->Credential );
+				client = co_await GetClient( move(target), move(credential) );
 				f( move(client) );
 			}
 			catch( exception& e ){
@@ -416,9 +419,15 @@ namespace Jde::Opc::Gateway{
 	}
 
 	UAClient::~UAClient() {
-#undef free
-		_config.eventLoop->free(_config.eventLoop);
-#define free _free_dbg
+// 		_config.eventLoop->stop( _config.eventLoop );
+// #undef free
+// 		while( _config.eventLoop->free(_config.eventLoop) ){
+// 			if( auto sc = UA_Client_run_iterate(_ptr, 0); sc /*&& (sc!=UA_STATUSCODE_BADINTERNALERROR || i!=0)*/ )
+// 				DBG( "UA_Client_run_iterate returned ({:x}){}", sc, UAException::Message(sc) );
+// //			std::this_thread::sleep_for( 1s );
+// 		}
+// 		_config.eventLoop = nullptr;
+// #define free _free_dbg
 		UA_Client_delete(_ptr);
 		DBG("[{:x}]~UAClient( '{}', '{}' )", Handle(), Target(), Url());
 	}

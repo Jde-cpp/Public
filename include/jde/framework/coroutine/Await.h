@@ -82,7 +82,7 @@ namespace Jde{
 		α SetValue( Result&& r )ι{ ASSERT(base::Promise()); base::Promise()->SetValue( move(r) ); }
 		α Resume()ι{ ASSERT(base::Promise()); base::_h.resume(); }
 		α Resume( Result&& r )ι{ ASSERT(base::Promise()); base::Promise()->Resume( std::move(r), base::_h ); }
-		α ResumeScaler( Result r )ι{ ASSERT(base::Promise()); base::Promise()->Resume( move(r), base::_h ); }
+		α ResumeScaler( Result r )ι{ ASSERT(base::Promise()); base::Promise()->ResumeScaler( r, base::_h ); }
 	};
 	template<class Result,class TTask>
 	TAwait<Result,TTask>::~TAwait(){};

@@ -27,9 +27,7 @@ namespace Jde::App::Client{
 		sp<IAppClient> _appClient;
 		bool _retry;
 	};
-	Ξ Connect( sp<IAppClient>&& appClient )ι->ConnectAwait::Task{
-		co_await ConnectAwait{ move(appClient), true };
-	}
+	α Connect( sp<IAppClient>&& appClient )ι->ConnectAwait::Task;
 
 /*
 	//TODO change to functions, not returning anything.

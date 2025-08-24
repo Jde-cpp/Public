@@ -34,7 +34,7 @@ namespace Jde::App::Client{
 		α QueryObject( string&& q, bool returnRaw, SRCE )ε->up<TAwait<jobject>> override;
 		α QueryValue( string&& q, bool returnRaw, SRCE )ε->up<TAwait<jvalue>> override;
 		α SetSession( sp<AppClientSocketSession> session )ι->void{ _session = session; }
-		α Session()Ι->sp<AppClientSocketSession>{ auto p = _session; THROW_IF( !p, "Not connected." ); THROW_IF( Process::ShuttingDown(), "Shutting down." ); return p; }
+		α Session()Ε->sp<AppClientSocketSession>{ auto p = _session; THROW_IF( !p, "Not connected." ); THROW_IF( Process::ShuttingDown(), "Shutting down." ); return p; }
 
 		jobject _userName;
 		sp<AppClientSocketSession> _session;

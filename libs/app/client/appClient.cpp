@@ -22,6 +22,9 @@ namespace Jde::App{
 			_authorize = ms<Access::Authorize>( move(libName) );
 		return _authorize;
 	}
+	α Client::Connect( sp<IAppClient>&& appClient )ι->ConnectAwait::Task{
+		co_await ConnectAwait{ move(appClient), true };
+	}
 }
 namespace Jde::App::Client{
 	struct LoginAwait final : TAwait<SessionPK>{
@@ -72,7 +75,6 @@ namespace Jde::App::Client{
 		try{
 			Trace( ELogTags::App, "Creating socket session for sessionId: {:x}", sessionId );
 			co_await StartSocketAwait{ sessionId, _authorize, move(_appClient), _sl };
-
 			Resume();
 		}
 		catch( IException& e ){

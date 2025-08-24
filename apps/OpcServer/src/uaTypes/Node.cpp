@@ -42,8 +42,8 @@ namespace Jde::Opc::Server{
 		NodeId{ r, 1 },
 		PK{ r.GetUInt(0) },
 		IsGlobal{ r.GetBitOpt(8).value_or(false) },
-		ParentNodePK{ r.GetUInt32Opt(9).value_or(0) },
-		ReferenceTypePK{ r.GetUInt32Opt(10).value_or(0) },
+		ParentNodePK{ r.GetUIntOpt(9).value_or(0) },
+		ReferenceTypePK{ r.GetUIntOpt(10).value_or(0) },
 		Browse{ r.GetUInt32Opt(11).value_or(0) },
 		TypeDef{ typeDef }
 	{}

@@ -5,6 +5,7 @@
 
 #define let const auto
 namespace Jde::Opc::Server {
+	constexpr ELogTags _tags{ ELogTags::App };
 	UAServer::UAServer()ε:
 		ServerName{ Settings::FindString("/opcServer/name").value_or("OpcServer") },
 		_ua{ UA_Server_newWithConfig(&_config) }
@@ -44,7 +45,8 @@ namespace Jde::Opc::Server {
 				rpe.referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
 				rpe.isInverse = false;
 				rpe.includeSubtypes = false;
-				rpe.targetName = ua.GetBrowse( pk );
+				//rpe.targetName = ua.GetBrowse( pk );
+				rpe.targetName = UA_QualifiedName{1, "status"_uv};
 
 				UA_BrowsePath bp{};
 		    UA_BrowsePath_init(&bp);
@@ -55,7 +57,7 @@ namespace Jde::Opc::Server {
 				auto bpr = UA_Server_translateBrowsePathToNodeIds( ua._ua, &bp );
 				UAε( bpr.statusCode );
 				THROW_IF( !bpr.targetsSize, "No targets found for node: {}, path: ({}){}", NodeId{*nodeId}.ToString(), rpe.targetName.namespaceIndex, ToString(rpe.targetName.name) );
-				UA_Server_writeValue( ua._ua, bpr.targets[0].targetId.nodeId, variant );
+				UAε( UA_Server_writeValue(ua._ua, bpr.targets[0].targetId.nodeId, variant) );
 				UA_BrowsePathResult_clear(&bpr);
 			}
 			return UA_STATUSCODE_GOOD;
@@ -65,9 +67,12 @@ namespace Jde::Opc::Server {
 		return UA_STATUSCODE_BAD;
 	}
 	α UAServer::AddConstructor( UA_NodeId nodeId )ε->void{
+		DBG( "Adding constructor for node: '{}'", NodeId{nodeId}.ToString() );
 		UAε( UA_Server_setNodeTypeLifecycle(_ua, move(nodeId), UA_NodeTypeLifecycle{UAServer::Constructor, nullptr}) );
 	}
 	α UAServer::AddConstructor( NodeId nodeId, flat_map<BrowseNamePK, Variant>&& values )ε->void{
+		let type = GetTypeDef( nodeId );
+		DBG( "Adding constructor for type: '{}'", type->ToString() );
 		_constructors.try_emplace( nodeId, move(values) );
 		AddConstructor( move(nodeId) );
 	}
@@ -80,7 +85,7 @@ namespace Jde::Opc::Server {
 	α UAServer::AddObject( Object object, SL sl )ε->Object{
 		let& requestedNodeId = object;
 		auto& parent = GetParent( object.ParentNodePK, sl );
-		UA_NodeId id;
+		UA_NodeId id{};
 		let status = UA_Server_addObjectNode(
 			_ua,
 			requestedNodeId,
@@ -94,7 +99,7 @@ namespace Jde::Opc::Server {
 		);
 		THROW_IFSL( status, "({})Failed to add object node: error:'{}', node:'{}'", Ƒ("{:x}", status), UA_StatusCode_name(status), object.ToString() );
 		dynamic_cast<NodeId&>(object) = id;
-		Debug{ ELogTags::App, "Added Object: {}", object.ToString(parent) };
+		DBGSL( "Added Object: {}", object.ToString(parent) );
 		return object.PK ? _objects.try_emplace( object.PK, move(object) ).first->second : object;
 	}
 
@@ -111,11 +116,11 @@ namespace Jde::Opc::Server {
 			(void*)oType->PK, &id
 		) );
 		dynamic_cast<NodeId&>(*oType) = id;
-		Debug{ ELogTags::App, "Added ObjectType: {}", oType->ToString(parent) };
+		DBGSL( "Added ObjectType: {}", oType->ToString(parent) );
 		if( oType->PK )
 			_typeDefs.try_emplace( oType->PK, oType ).first->second;
 	}
-	α UAServer::AddReference( Reference ref, SL sl )ε->void{
+	α UAServer::AddReference( NodePK nodePK, const Reference& ref, SL sl )ε->void{
 		auto& source = GetVariable( ref.SourcePK );
 		UAε( UA_Server_addReference(
 			_ua,
@@ -124,8 +129,9 @@ namespace Jde::Opc::Server {
 			ref.TargetPK ? (UA_ExpandedNodeId)ExNodeId{ (NodeId&)GetObject(NodeId{(uint32_t)ref.TargetPK}, sl) } : UA_EXPANDEDNODEID_NULL,
 			ref.IsForward
 		) );
+		_refs.try_emplace( nodePK, ref );
 		auto& sourceParent = GetParent( source.ParentNodePK, sl );
-		Debug{ ELogTags::App, "Added Reference: {} -> {} ({})", source.ToString(sourceParent), ref.TargetPK, ref.RefTypePK };
+		DBGSL( "Added Reference: {} -> {} ({})", source.ToString(sourceParent), ref.TargetPK, ref.RefTypePK );
 	}
 	α UAServer::AddVariable( Variable variable, SL sl )->Variable{
 		ASSERT( variable.TypeDef );
@@ -143,7 +149,7 @@ namespace Jde::Opc::Server {
 			&id);
 		THROW_IFX( status, UAException(variable.ToString(), ELogLevel::Error, status, sl) );
 		dynamic_cast<NodeId&>(variable) = id;
-		Debug{ ELogTags::App, "Added Variable: {}", variable.ToString(parent) };
+		DBGSL( "Added Variable: {}", variable.ToString(parent) );
 		return variable.PK ? _variables.try_emplace( variable.PK, move(variable) ).first->second : variable;
 	}
 

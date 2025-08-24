@@ -16,6 +16,7 @@ namespace Browse{
 		α operator=( Response&& x )ι->Response&;
 
 		α Nodes()ι->flat_set<NodeId>;
+		α Variables()ι->flat_set<NodeId>;
 		α ToJson( flat_map<NodeId, Value>&& snapshot, flat_map<NodeId, NodeId>&& dataTypes )ε->jobject;
 	};
 
@@ -41,7 +42,7 @@ namespace Browse{
 	private:
 		α Execute()ι->TAwait<Browse::Response>::Task;
 		α Snapshot( Browse::Response response )ι->TAwait<flat_map<NodeId, Value>>::Task;
-		α Attributes( Browse::Response response, flat_map<NodeId, Value> values={} )ι->TAwait<flat_map<NodeId, NodeId>>::Task;
+		α Attributes( flat_set<NodeId>&& variables, Browse::Response response, flat_map<NodeId, Value> values={} )ι->TAwait<flat_map<NodeId, NodeId>>::Task;
 		α Retry()ι->VoidAwait::Task;
 		sp<UAClient> _ua; NodeId _node; bool _snapshot;
 	};

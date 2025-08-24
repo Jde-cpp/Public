@@ -6,8 +6,8 @@
 namespace Jde::Opc::Server {
 	α getAccessLevelMask( const jarray* accessLevels )ι->UA_Byte{
 		UA_Byte mask = 0;
-		if( !accessLevels || accessLevels->empty() )
-			return mask;
+		if( !accessLevels )
+			return UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_STATUSWRITE | UA_ACCESSLEVELMASK_TIMESTAMPWRITE;
 		for( auto&& m : *accessLevels ){
 			let value = m.as_string();
 			if( value=="read" )

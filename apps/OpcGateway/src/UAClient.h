@@ -33,6 +33,8 @@ namespace Jde::Opc::Gateway{
 		Ω Find( str id, optional<Credential> cred )ι->sp<UAClient>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
+		Ω RemoveClient( sp<UAClient>&& client )ι->bool;
+
 		α SubscriptionId()Ι->SubscriptionId{ return CreatedSubscriptionResponse ? CreatedSubscriptionResponse->subscriptionId : 0;}
 		α CreateSubscriptions()ι->void;
 		α DataSubscriptions( CreateMonitoredItemsRequest&& r, Handle requestHandle, DataChangeAwait::Handle h )ι->void;
@@ -50,8 +52,8 @@ namespace Jde::Opc::Gateway{
 		}*/
 		α ClearRequest( RequestId requestId )ι->void{ _asyncRequest.Clear( requestId ); }
 		Ŧ ClearRequestH( RequestId requestId )ι->T;//{ return ClearRequest<UARequest<T>>( requestId )->CoHandle; }
-		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
-		α RetryVoid( function<void(sp<UAClient>&&) > f, UAException e, sp<UAClient> pClient )ι->ConnectAwait::Task;
+		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
+		α RetryVoid( function<void(sp<UAClient>&&) > f, UAException&& e, sp<UAClient>&& pClient )ι->ConnectAwait::Task;
 		Ŧ Process( RequestId requestId, T&& h )ι->void;
 		α Process( RequestId requestId )ι->void;
 		α ProcessDataSubscriptions()ι->void;
@@ -77,7 +79,6 @@ namespace Jde::Opc::Gateway{
 		α Passcode()ι->const string{ return OSApp::EnvironmentVariable("JDE_PASSCODE").value_or( "" ); }
 		α PrivateKeyFile()ι->fs::path{ return RootSslDir()/Ƒ("private/{}.pem", Target()); }
 		α CertificateFile()ι->fs::path{ return RootSslDir()/Ƒ("certs/{}.pem", Target()); }
-		Ω RemoveClient( sp<UAClient>& client )ι->bool;
 
 		ServerCnnctn _opcServer;
 
@@ -113,12 +114,14 @@ namespace Jde::Opc::Gateway{
 	}
 
 #define let const auto
-	Ŧ UAClient::Retry( function<void(sp<UAClient>&&, T)> f, UAException e, sp<UAClient> client, T h )ι->ConnectAwait::Task{
+	Ŧ UAClient::Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> client, T h )ι->ConnectAwait::Task{
 		//TODO limit retry attempts.
-		RemoveClient( client );
+		let target = client->Target();
+		let credential = client->Credential;
+		RemoveClient( move(client) );
 		if( e.Code==UA_STATUSCODE_BADCONNECTIONCLOSED || e.Code==UA_STATUSCODE_BADSERVERNOTCONNECTED ){
 			try{
-				client = co_await GetClient( client->Target(), client->Credential );
+				client = co_await GetClient( move(target), move(credential) );
 				f( move(client), h );
 			}
 			catch( exception& e ){
