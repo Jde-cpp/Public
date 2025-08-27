@@ -23,7 +23,7 @@ file( GLOB headers *.h **/*.h )
 file( GLOB protos **/*.proto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
-add_subdirectory( $ENV{JDE_DIR}/Framework/source ../../framework )
+add_subdirectory( $ENV{JDE_DIR}/Framework/source ../../framework/lib )
 add_subdirectory( ../../access/src ../../access/src )
 add_subdirectory( ../../app/shared ../../app/shared )
 add_subdirectory( ../../crypto/src ../../crypto/lib )
@@ -55,7 +55,8 @@ add_test( NAME WebTests COMMAND $<TARGET_FILE:Jde.Web.Tests> )
 set( CMAKE_CTEST_ARGUMENTS "-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet" )
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet" )
-	copyCommonDlls()
+	copyLibDlls()
+  set_property( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${targetName} )
 endif()
 
 target_precompile_headers( ${targetName} PRIVATE

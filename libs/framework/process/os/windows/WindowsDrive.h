@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <jde/framework/io/FileAwait.h>
 #include "../../Framework/source/io/IDrive.h"
-namespace Jde::IO::Drive{
+namespace Jde::IO{
 
 	struct WindowsDrive final : IDrive{
 		α Get( const fs::path& path )ε->up<IDirEntry> override;

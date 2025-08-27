@@ -13,7 +13,7 @@ TSetThreadDescription pSetThreadDescription = nullptr;
 
 Ω initialize()ι->void{
 	using namespace Jde;
-	HMODULE hKernelBase = GetModuleHandleA("KernelBase.dll"); 
+	HMODULE hKernelBase = GetModuleHandleA("KernelBase.dll");
 	if( !hKernelBase ){
 		Critical{ _tags, "FATAL: failed to get kernel32.dll module handle, error:  {}", ::GetLastError() };
 		return;
@@ -45,7 +45,7 @@ TSetThreadDescription pSetThreadDescription = nullptr;
 α Jde::ThreadDscrptn()ι->const char*{
 	if( std::strlen(ThreadName)>0 )
 		return ThreadName;
-	
+
 	PWSTR pszThreadDescription;
 	let threadId = ::GetCurrentThread();
 	if( !pGetThreadDescription )
@@ -64,10 +64,8 @@ TSetThreadDescription pSetThreadDescription = nullptr;
 	return ThreadName;
 }
 
-namespace Jde{
-#pragma warning( disable: 4305 )
-
-	uint Threading::GetThreadId()ι{
-		return ThreadId ? ThreadId : ThreadId = ::GetCurrentThreadId();
-	}
+α Jde::ThreadId()ι->uint{
+	if( !_threadId )
+		_threadId = ::GetCurrentThreadId();
+	return _threadId;
 }

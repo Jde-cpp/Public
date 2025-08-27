@@ -6,16 +6,13 @@
 #define let const auto
 
 namespace Jde{
-	IO::Drive::WindowsDrive _native;
-	//α IO::Native()ι->IDrive&{ return _native; }
-}
-namespace Jde::IO{
+	IO::WindowsDrive _native;
 	constexpr ELogTags _tags{ ELogTags::IO };
 
-	Ω Drive()ι->IDrive&{ return _native; }
+	//Ω IO::Drive()ι->IDrive&{ return _native; }
 }
 
-namespace Jde::IO::Drive{
+namespace Jde::IO{
 	α WindowsPath( const fs::path& path )->std::wstring{
 		return std::wstring(L"\\\\?\\")+path.wstring();
 	}
