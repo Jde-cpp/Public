@@ -22,8 +22,7 @@ namespace Jde::DB{
 
 	Τ struct ScalerAwait : TAwait<T>{
 		using base = TAwait<T>;
-		ScalerAwait( sp<IDataSource> ds, Sql&& s, SL sl )ι:base{sl}, _ds{ds}, _sql{move(s)}{}
-		ScalerAwait( sp<IDataSource> ds, InsertClause&& s, SL sl )ι:base{sl}, _ds{ds}, _sql{move(s)}{}
+		ScalerAwait( sp<IDataSource> ds, variant<Sql,InsertClause>&& s, SL sl )ι:base{sl}, _ds{ds}, _sql{move(s)}{}
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->ScalerAwaitOpt<T>::Task{
 			try{
@@ -44,6 +43,8 @@ namespace Jde::DB{
 
 
 	Ŧ ScalerAwaitOpt<T>::Execute()ι->void{
+		if( std::holds_alternative<InsertClause>(_sql) )
+			get<InsertClause>(_sql).Add( T{} );
 		ScalerAwaitExecute( *_ds, move(_sql),
 		[this](optional<Row> r){OnRow(move(r));},
 		[this](IException&& e){OnError(move(e));},

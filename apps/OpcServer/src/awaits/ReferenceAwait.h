@@ -10,7 +10,7 @@ namespace Jde::Opc::Server {
 		ReferenceInsertAwait( Reference&& reference, SL sl )ι:VoidAwait{ sl }, _ref{ move(reference) }{}
 	private:
 		α Suspend()ι->void override{ Execute(); }
-		α Execute()ι->TAwait<uint>::Task;
+		α Execute()ι->TAwait<uint32>::Task;
 		Reference _ref;
 	};
 }

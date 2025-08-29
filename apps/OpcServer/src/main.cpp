@@ -3,7 +3,9 @@
 
 #define let const auto
 std::optional<int> _exitCode;
-α Jde::Process::ProductName()ι->sv{ return "OpcServer"; }
+#ifndef _MSC_VER
+	α Jde::Process::ProductName()ι->sv{ return "OpcServer"; }
+#endif
 
 α main( int argc, char **argv )->int{
 	using namespace Jde;

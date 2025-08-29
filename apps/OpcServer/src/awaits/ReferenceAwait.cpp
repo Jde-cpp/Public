@@ -24,7 +24,7 @@ namespace Jde::Opc::Server {
 		}
 	}
 
-	α ReferenceInsertAwait::Execute()ι->TAwait<uint>::Task{
+	α ReferenceInsertAwait::Execute()ι->TAwait<uint32>::Task{
 		try{
 			auto& schema = GetSchema();
 			DB::InsertClause sql{

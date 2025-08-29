@@ -135,8 +135,7 @@ local common = import 'common-meta.libsonnet';
 			},
 			customInsertProc: true,
 			naturalKeys: [
-				["ns", "number", "string", "guid", "bytes"],
-				["server_index", "namespace_uri"]
+				["ns", "number", "string", "guid", "bytes"]
 			]
 		},
 		objects:nodeTableProps+{

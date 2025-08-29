@@ -6,8 +6,8 @@ namespace Jde::Opc::Gateway{
 
 	struct CertAwait : AuthAwait<bool>, boost::noncopyable{
 		using base = AuthAwait<bool>;
-		CertAwait( ServerCnnctnNK opcNK, string endpoint, bool isSocket, SRCE )ι:
-			AuthAwait{ Credential{Crypto::PublicKey{}}, move(opcNK), move(endpoint), isSocket, sl }{}
+		CertAwait( ServerCnnctnNK opcNK, string endpoint, bool isSocket, SessionPK sessionId, SRCE )ι:
+			AuthAwait{ Credential{Crypto::PublicKey{}}, move(opcNK), move(endpoint), isSocket, sessionId, sl }{}
 
 		α Suspend()ι->void override{ Execute(); }
 	private:

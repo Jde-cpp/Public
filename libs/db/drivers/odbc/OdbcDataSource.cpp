@@ -79,7 +79,7 @@ namespace Jde::DB::Odbc{
 				throw DBException{ retCode, move(sql), e.what(), sl };
 			}
 		case SQL_SUCCESS:{
-			if( params.HasOut() && params.Function )
+			if( params.HasOut() && params.Function ) //if not getting value, make sure nocount on
 				( *params.Function )( Row{{(*parameters.rbegin())->GetValue()}} );
 
 			SQLSMALLINT columnCount{};

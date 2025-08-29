@@ -151,7 +151,7 @@ namespace Jde::Opc{
 		params.emplace_back( namespaceIndex );
 		params.emplace_back( IsNumeric() ? DB::Value{*Numeric()} : DB::Value{} );
 		params.emplace_back( IsString() ? DB::Value{*String()} : DB::Value{} );
-		params.emplace_back( IsGuid() ? DB::Value{*Guid()} : DB::Value{} );
+		params.emplace_back( IsGuid() ? DB::Value{*Guid()} : DB::Value{vector<uint8_t>{}} );
 		params.emplace_back( IsBytes() ? DB::Value{FromByteString(*Bytes())} : DB::Value{vector<uint8_t>{}} );
 		return params;
 	}
