@@ -52,7 +52,6 @@ namespace Jde::DB::Odbc{
 			let decimals = binding->DecimalDigits();
 			let paramType = params.HasOut() && parameters.size()+1==sql.Params.size() ? SQL_PARAM_OUTPUT : SQL_PARAM_INPUT;
 			let dbType = binding->DBType();
-			BREAK_IF( param.Type()==EValue::Bytes );
 			let result = ::SQLBindParameter( statement, parameters.size()+1, paramType, binding->CodeType, dbType, size, decimals, pData, bufferLength, &binding->Output );
 			THROW_IFX( result < 0, DBException(result, move(sql), HandleDiagnosticRecord("SQLBindParameter", statement, SQL_HANDLE_STMT, result, sl), sl) );
 			parameters.push_back( move(binding) );
@@ -80,7 +79,7 @@ namespace Jde::DB::Odbc{
 				throw DBException{ retCode, move(sql), e.what(), sl };
 			}
 		case SQL_SUCCESS:{
-			if( params.HasOut() && params.Function )
+			if( params.HasOut() && params.Function ) //if not getting value, make sure nocount on
 				( *params.Function )( Row{{(*parameters.rbegin())->GetValue()}} );
 
 			SQLSMALLINT columnCount{};

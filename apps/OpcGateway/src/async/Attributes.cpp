@@ -12,11 +12,11 @@ namespace Attributes{
 		let handle = userdata ? (RequestId)(uint)userdata : requestId;
 		string logPrefix = format( "[{:x}.{}.{}]", (uint)ua, handle, requestId );
 		auto ppClient = Try<sp<UAClient>>( [ua](){return UAClient::Find(ua);} ); if( !ppClient ) return;
-		optional<flat_map<ExNodeId, ExNodeId>> results;
+		optional<flat_map<NodeId, NodeId>> results;
 		bool visited = (*ppClient)->_dataAttributeRequests.visit( handle, [requestId, dataType, &results]( auto& pair ){
 			auto& request = pair.second;
 			if( auto pRequest=request.Requests.find(requestId); pRequest!=request.Requests.end() ){
-				request.Results.try_emplace( pRequest->second, dataType ? move(*dataType) : ExNodeId{} );
+				request.Results.try_emplace( pRequest->second, dataType ? move(*dataType) : NodeId{} );
 				if( request.Results.size()==request.Requests.size() )
 					results = move( request.Results );
 			}

@@ -12,7 +12,7 @@ namespace Jde::DB{
 		SelectClause( const View& t, str alias, const vector<string>& cols )ι;
 		SelectClause( AliasCol aliasCol )ι;
 		SelectClause( const vector<sp<Column>>& cols, const string& alias={} )ι;
-		SelectClause( const DB::Object& obj )ι;
+		SelectClause( const Object& obj )ι:Columns{obj}{};
 		α operator+=( SelectClause&& x )ι->SelectClause&;
 		α TryAdd( Object c )ι->void;
 		α TryAdd( const AliasCol& c )ι->void;
@@ -22,6 +22,6 @@ namespace Jde::DB{
 		α FindColumn( const Object& c )Ι->const Object*;
 		vector<Object> Columns;
 	private:
-		α FindColumn( const DB::Column& c )Ι->sp<Column>;
+		α FindColumn( const Column& c )Ι->sp<Column>;
 	};
 }

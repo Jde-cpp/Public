@@ -2,7 +2,7 @@
 
 #include <open62541/plugin/securitypolicy_default.h>
 #include <jde/app/client/IAppClient.h>
-#include <jde/opc/uatypes/Node.h>
+#include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
 #include "StartupAwait.h"
 #include "async/Attributes.h"
@@ -18,8 +18,9 @@
 namespace Jde::Opc::Gateway{
 //	using Client::UAClientException;
 	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::Opc };
-	flat_map<OpcClientNK,flat_map<Credential,sp<UAClient>>> _clients; shared_mutex _clientsMutex;
-	α UAClient::RemoveClient( sp<UAClient>& client )ι->bool{
+	flat_map<ServerCnnctnNK,flat_map<Credential,sp<UAClient>>> _clients; shared_mutex _clientsMutex;
+	α UAClient::RemoveClient( sp<UAClient>&& client )ι->bool{
+		client->Connected = false;
 		bool erased{};
 		ul _{ _clientsMutex };
 		if( auto serverCreds = _clients.find(client->Target()); serverCreds!=_clients.end() ){
@@ -32,6 +33,7 @@ namespace Jde::Opc::Gateway{
 
 			}
 		}
+		client = nullptr;
 		if( !erased )
 			Debug{ _tags, "[{:x}] - could not find client='{}'.", client->Handle(), client->Target() };
 		return erased;
@@ -39,10 +41,10 @@ namespace Jde::Opc::Gateway{
 	concurrent_flat_set<sp<UAClient>> _awaitingActivation;
 
 	UAClient::UAClient( str address, Gateway::Credential cred )ε:
-		UAClient{ OpcClient{address}, move(cred) }
+		UAClient{ ServerCnnctn{address}, move(cred) }
 	{}
 
-	UAClient::UAClient( OpcClient&& opcServer, Gateway::Credential cred )ε:
+	UAClient::UAClient( ServerCnnctn&& opcServer, Gateway::Credential cred )ε:
 		Credential{ move(cred) },
 		_opcServer{ move(opcServer) },
 		_logger{ 0 },
@@ -134,14 +136,15 @@ namespace Jde::Opc::Gateway{
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
 					{
 						ul _{ _clientsMutex };
-						auto opcCreds = _clients.try_emplace( client->Target() ).first->second;
+						client->Connected = true;
+						auto& opcCreds = _clients.try_emplace( client->Target() ).first->second;
 						let inserted = opcCreds.try_emplace( client->Credential, client ).second;
 						ASSERT( inserted );//not sure why we would already have a record.
 					}
 					ConnectAwait::Resume( move(client), client->Target(), client->Credential );
 				}
 				else
-					ConnectAwait::Resume( move(client), client->Target(), client->Credential, UAClientException{connectStatus} );
+					ConnectAwait::Resume( client->Target(), client->Credential, UAClientException{connectStatus} );
 				return true;
 			});
 		}
@@ -172,7 +175,7 @@ namespace Jde::Opc::Gateway{
 			);
 		}else if( Credential.Type()==ETokenType::IssuedToken ){
 			UA_IssuedIdentityToken* identityToken = UA_IssuedIdentityToken_new();
-			identityToken->policyId = "open62541-anonymous-policy"_uv;
+			identityToken->policyId = AllocUAString( "open62541-anonymous-policy"sv );
 			UA_ByteString_allocBuffer( &identityToken->tokenData, Credential.Token().size() );
 			identityToken->tokenData.length = Credential.Token().size();
 			memcpy( identityToken->tokenData.data, Credential.Token().data(), Credential.Token().size() );
@@ -196,9 +199,7 @@ namespace Jde::Opc::Gateway{
 		_asyncRequest.SetParent( p );
 		Process( std::numeric_limits<RequestId>::max(), nullptr );
 	}
-	α UAClient::Process( RequestId requestId, coroutine_handle<>&& h )ι->void{
-		_asyncRequest.Process( requestId, move(h) );
-	}
+
 	α UAClient::Process( RequestId requestId )ι->void{
 		_asyncRequest.Process( requestId );
 	}
@@ -216,11 +217,13 @@ namespace Jde::Opc::Gateway{
 			p->ClearRequest( requestId );
 	}
 
-	α UAClient::RetryVoid( function<void(sp<UAClient>&&) > f, UAException e, sp<UAClient> client )ι->ConnectAwait::Task{
-		RemoveClient( client );
+	α UAClient::RetryVoid( function<void(sp<UAClient>&&) > f, UAException&& e, sp<UAClient>&& client )ι->ConnectAwait::Task{
+		let target = client->Target();
+		let credential = client->Credential;
+		RemoveClient( move(client) );
 		if( e.Code==UA_STATUSCODE_BADCONNECTIONCLOSED || e.Code==UA_STATUSCODE_BADSERVERNOTCONNECTED ){
 			try{
-				client = co_await GetClient( client->Target(), client->Credential );
+				client = co_await GetClient( move(target), move(credential) );
 				f( move(client) );
 			}
 			catch( exception& e ){
@@ -246,47 +249,47 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α UAClient::SendReadRequest( const flat_set<ExNodeId>&& nodeIds, ReadAwait::Handle h )ι->void{
+	α UAClient::SendReadRequest( const flat_set<NodeId>&& nodeIds, ReadAwait::Handle h )ι->void{
 		if( nodeIds.empty() ){
 			h.promise().SetExp( Exception{"no nodes sent"} );
 			return h.resume();
 		}
-		flat_map<UA_UInt32, ExNodeId> ids;
+		flat_map<UA_UInt32, NodeId> ids;
 		RequestId firstRequestId{};
 		try{
 			//assume 1st will fail if any, request all again if latter node failed.
 			for( auto&& nodeId : nodeIds ){
 				RequestId requestId{};
-				UAε( UA_Client_readValueAttribute_async(_ptr, nodeId.nodeId, Read::OnResponse, (void*)(uint)firstRequestId, &requestId) );
+				UAε( UA_Client_readValueAttribute_async(_ptr, nodeId, Read::OnResponse, (void*)(uint)firstRequestId, &requestId) );
 				if( !firstRequestId )
 					firstRequestId = requestId;
 				ids.emplace( requestId, nodeId );
 	 		}
 			Trace( IotReadTag, "[{:x}.{}]SendReadRequest - count={}", Handle(), firstRequestId, ids.size() );
 			_readRequests.try_emplace( firstRequestId, UARequestMulti<Value>{move(ids)} );
-			Process( firstRequestId, h );
+			Process( firstRequestId, move(h) );
 		}
 		catch( UAException& e ){
 			Retry<ReadAwait::Handle>( [n=move(nodeIds)]( sp<UAClient>&& p, ReadAwait::Handle h )mutable{p->SendReadRequest( move(n), move(h) );}, move(e), shared_from_this(), move(h) );
 		}
 	}
-	α UAClient::SendWriteRequest( flat_map<ExNodeId,Value>&& values, WriteAwait::Handle h )ι->void{
+	α UAClient::SendWriteRequest( flat_map<NodeId,Value>&& values, WriteAwait::Handle h )ι->void{
 		if( values.empty() ){
 			h.promise().ResumeExp( Exception{"no nodes sent"}, move(h) );
 			return;
 		}
-		flat_map<UA_UInt32, ExNodeId> ids;
+		flat_map<UA_UInt32, NodeId> ids;
 		Gateway::RequestId firstRequestId{};
 		try{
 			for( auto&& [nodeId, value] : values ){
 				RequestId requestId{};
-				UAε( UA_Client_writeValueAttribute_async(_ptr, nodeId.nodeId, &value.value, Write::OnResponse, (void*)(uint)firstRequestId, &requestId) );
+				UAε( UA_Client_writeValueAttribute_async(_ptr, nodeId, &value.value, Write::OnResponse, (void*)(uint)firstRequestId, &requestId) );
 				if( !firstRequestId )
 					firstRequestId = requestId;
 				ids.emplace( requestId, nodeId );
 	 		}
 			_writeRequests.try_emplace( firstRequestId, UARequestMulti<UA_WriteResponse>{move(ids), shared_from_this()} );
-			Process( firstRequestId, h );
+			Process( firstRequestId, move(h) );
 		}
 		catch( UAException& e ){
 			Retry<WriteAwait::Handle>( [n=move(values)]( sp<UAClient>&& p, auto h )mutable{p->SendWriteRequest( move(n), move(h) );}, move(e), shared_from_this(), h );
@@ -330,7 +333,7 @@ namespace Jde::Opc::Gateway{
 			RequestId requestId{};
 			UAε( UA_Client_MonitoredItems_createDataChanges_async(UAPointer(), request, contexts, dataChangeCallbacks.data(), deleteCallbacks.data(), CreateDataChangesCallback, (void*)requestHandle, &requestId) );
 			Trace( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, serialize(request.ToJson()) );
-			Process( requestId, h );//TODO handle BadSubscriptionIdInvalid
+			Process( requestId, move(h) );//TODO handle BadSubscriptionIdInvalid
 		}
 		catch( UAException& e ){
 			h.promise().ResumeExp( move(e), move(h) );//retry will leave CreatedSubscriptionResponse null...
@@ -356,19 +359,19 @@ namespace Jde::Opc::Gateway{
 		{}
 	}
 
-	α UAClient::RequestDataTypeAttributes( const flat_set<ExNodeId>&& x, AttribAwait::Handle h )ι->void{
-		flat_map<UA_UInt32, ExNodeId> ids;
+	α UAClient::RequestDataTypeAttributes( const flat_set<NodeId>&& x, AttribAwait::Handle h )ι->void{
+		flat_map<UA_UInt32, NodeId> ids;
 		Gateway::RequestId firstRequestId{};
 		try{
 			for( let& node : x ){
 				RequestId requestId{};
-				UAε( UA_Client_readDataTypeAttribute_async(_ptr, node.nodeId, Attributes::OnResponse, (void*)(uint)firstRequestId, &requestId) );
+				UAε( UA_Client_readDataTypeAttribute_async(_ptr, node, Attributes::OnResponse, (void*)(uint)firstRequestId, &requestId) );
 				if( !firstRequestId )
 					firstRequestId = requestId;
 				ids.emplace( requestId, node );
 	 		}
-			_dataAttributeRequests.try_emplace( firstRequestId, UARequestMulti<ExNodeId>{move(ids), shared_from_this()} );
-			Process( firstRequestId, h );
+			_dataAttributeRequests.try_emplace( firstRequestId, UARequestMulti<NodeId>{move(ids), shared_from_this()} );
+			Process( firstRequestId, move(h) );
 		}
 		catch( UAException& e ){
 			Retry<AttribAwait::Handle>( [n=move(x)]( sp<UAClient>&& p, auto h )mutable{p->RequestDataTypeAttributes( move(n), move(h) );}, move(e), shared_from_this(), h );
@@ -416,9 +419,15 @@ namespace Jde::Opc::Gateway{
 	}
 
 	UAClient::~UAClient() {
-#undef free
-		_config.eventLoop->free(_config.eventLoop);
-#define free _free_dbg
+// 		_config.eventLoop->stop( _config.eventLoop );
+// #undef free
+// 		while( _config.eventLoop->free(_config.eventLoop) ){
+// 			if( auto sc = UA_Client_run_iterate(_ptr, 0); sc /*&& (sc!=UA_STATUSCODE_BADINTERNALERROR || i!=0)*/ )
+// 				DBG( "UA_Client_run_iterate returned ({:x}){}", sc, UAException::Message(sc) );
+// //			std::this_thread::sleep_for( 1s );
+// 		}
+// 		_config.eventLoop = nullptr;
+// #define free _free_dbg
 		UA_Client_delete(_ptr);
 		DBG("[{:x}]~UAClient( '{}', '{}' )", Handle(), Target(), Url());
 	}

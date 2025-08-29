@@ -15,7 +15,7 @@ namespace Jde::Opc::Server{
 		}
 	{}
 	Object::Object( UA_NodeId n )ι:
-		Node{ n },
+		Node{ NodeId{move(n)} },
 		UA_ObjectAttributes{}
 	{}
 	Object::Object( NodePK pk, UA_NodeId&& n )ι:
@@ -36,7 +36,7 @@ namespace Jde::Opc::Server{
 	{}
 
 	α Object::InsertParams()ι->vector<DB::Value>{
-		vector<DB::Value> params = Node::InsertParams( false );
+		vector<DB::Value> params = Node::InsertParams();
 		params.emplace_back( eventNotifier, 0 );
 		return params;
 	}

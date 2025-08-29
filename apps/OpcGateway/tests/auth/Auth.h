@@ -10,7 +10,7 @@ namespace Jde::Opc::Gateway::Tests{
 		α TearDown()ι->void override{}
 		Ω TearDownTestSuite()->void;
 	public:
-		static optional<OpcClient> Client;
+		static optional<ServerCnnctn> Connection;
 		static ETokenType Tokens;
 		ETokenType TokenType;
 	};

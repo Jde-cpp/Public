@@ -27,24 +27,13 @@ namespace Jde::Opc::Gateway{
 				}
 			}
 			if( preMax==max() ){
-				co_await DurationTimer{ 500ms }; //UA_CreateSubscriptionRequest_default
-				Threading::SetThreadDscrptn( "ProcessingLoop" );
+				co_await DurationTimer{ 1ms }; //UA_CreateSubscriptionRequest_default
+				//std::this_thread::sleep_for( 1ms );
+				SetThreadDscrptn( "ProcessingLoop" );
 			}
 		}
 
 		Debug( _tag, "{}ProcessingLoop stopped", logPrefix );
-	}
-
-	α AsyncRequest::Process( RequestId requestId, coroutine_handle<>&& h )ι->void{
-		if( _stopped.test() )
-			return;
-		{
-			lg _{_requestMutex};
-			_requests.emplace( requestId, h );
-		}
-		if( !_running.test_and_set() )
-			ProcessingLoop();
-		h = nullptr;
 	}
 
 	α AsyncRequest::Stop()ι->void{

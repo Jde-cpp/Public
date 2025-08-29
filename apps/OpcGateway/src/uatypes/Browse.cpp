@@ -5,13 +5,14 @@
 #include "../async/ReadAwait.h"
 #include "../async/SessionAwait.h"
 
+#define let const auto
 namespace Jde::Opc::Gateway{
 namespace Browse{
 	α FoldersAwait::Suspend()ι->void{
 		_client->SendBrowseRequest( Request{move(_node)}, _h );
 	}
 }
-	ObjectsFolderAwait::ObjectsFolderAwait( ExNodeId node, bool snapshot, sp<UAClient> ua, SL sl )ι:
+	ObjectsFolderAwait::ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SL sl )ι:
 		base{ sl },
 		_ua{ua},
 		_node{node},
@@ -23,11 +24,11 @@ namespace Browse{
 		bool retry{};
 		try{
 			auto response = co_await Browse::FoldersAwait{ _node, _ua };
-			THROW_IF( response.Nodes().size()==0, "No items found for: {}", _node.to_string() );
+			THROW_IF( response.Nodes().size()==0, "No items found for: {}", _node.ToString() );
 			if( _snapshot )
 				Snapshot( move(response) );
 			else
-				Attributes( move(response) );
+				Attributes( response.Variables(), move(response) );
 		}
 		catch( UAClientException& e ){
 			if( retry=e.IsBadSession(); retry )
@@ -43,18 +44,23 @@ namespace Browse{
 	}
 
 
-	α ObjectsFolderAwait::Snapshot( Browse::Response response )ι->TAwait<flat_map<ExNodeId, Value>>::Task{
+	α ObjectsFolderAwait::Snapshot( Browse::Response response )ι->TAwait<flat_map<NodeId, Value>>::Task{
 		try{
-			auto values = co_await ReadAwait{ response.Nodes(), _ua };
-			Attributes( move(response), move(values) );
+			if( !_ua->Connected ){
+				_ua = UAClient::Find( _ua->Target(), _ua->Credential );
+				THROW_IF( !_ua, "Could not find UAClient for: {}", _ua->Target() );
+			}
+			auto vars = response.Variables();
+			auto values = vars.size() ? co_await ReadAwait{ vars, _ua } : flat_map<NodeId, Value>{};
+			Attributes( move(vars), move(response), move(values) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α ObjectsFolderAwait::Attributes( Browse::Response response, flat_map<ExNodeId, Value> values )ι->TAwait<flat_map<ExNodeId, ExNodeId>>::Task{
+	α ObjectsFolderAwait::Attributes( flat_set<NodeId>&& variables, Browse::Response response, flat_map<NodeId, Value> values )ι->TAwait<flat_map<NodeId, NodeId>>::Task{
 		try{
-			auto dataTypes = co_await AttribAwait{ move(response.Nodes()), move(_ua) };
+			auto dataTypes = variables.size() ? co_await AttribAwait{ move(variables), move(_ua) } : flat_map<NodeId, NodeId>{};
 			Resume( response.ToJson(move(values), move(dataTypes)) );
 		}
 		catch( exception& e ){
@@ -79,8 +85,12 @@ namespace Browse{
 		}
 	}
 namespace Browse{
-	α OnResponse( UA_Client *ua, void* /*userdata*/, RequestId requestId, UA_BrowseResponse* response )ι->void{
-		auto h = UAClient::ClearRequestH<Browse::FoldersAwait::Handle>( ua, requestId ); if( !h ){ Critical( BrowseTag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId ); return; }
+	α OnResponse( UA_Client *ua, void* /*userdata*/, RequestId requestId, UA_BrowseResponse* response )ι->void {
+		auto h = UAClient::ClearRequestH<Browse::FoldersAwait::Handle>( ua, requestId );
+		if( !h ){
+			Critical{ BrowseTag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId };
+			return;
+		}
 		Trace( BrowseTag, "[{:x}.{}]OnResponse", (uint)ua, requestId );
 		if( !response->responseHeader.serviceResult )
 			h.promise().Resume( move(*response), h );
@@ -88,12 +98,9 @@ namespace Browse{
 			h.promise().ResumeExp( UAClientException{response->responseHeader.serviceResult, ua, requestId}, move(h) );
 	}
 
-	Request::Request( ExNodeId&& node )ι{
-		UA_BrowseRequest_init( this );
-    requestedMaxReferencesPerNode = 0;
-    nodesToBrowse = UA_BrowseDescription_new();
-    nodesToBrowseSize = 1;
-    nodesToBrowse[0].nodeId = node.Move();
+	Request::Request( NodeId&& node )ι:
+		UA_BrowseRequest{.requestedMaxReferencesPerNode=0, .nodesToBrowseSize=1, .nodesToBrowse=UA_BrowseDescription_new()}{
+    nodesToBrowse[0].nodeId = move( node );
     nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;
 	}
 
@@ -104,27 +111,39 @@ namespace Browse{
 		return *this;
 	}
 
-	α Response::Nodes()ι->flat_set<ExNodeId>{
-		flat_set<ExNodeId> y;
+	α Response::Nodes()ι->flat_set<NodeId>{
+		flat_set<NodeId> y;
 		for( uint i = 0; i < resultsSize; ++i) {
       for( size_t j = 0; j < results[i].referencesSize; ++j )
-				y.emplace( results[i].references[j].nodeId );
+				y.emplace( results[i].references[j].nodeId.nodeId );
 		}
 		return y;
 	}
-	α Response::ToJson( flat_map<ExNodeId, Value>&& snapshot, flat_map<ExNodeId, ExNodeId>&& dataTypes )ε->jobject{
+
+	α Response::Variables()ι->flat_set<NodeId>{
+		flat_set<NodeId> y;
+		for( let& result : Iterable<UA_BrowseResult>(results, resultsSize) ){
+			for( let& ref : Iterable<UA_ReferenceDescription>(result.references, result.referencesSize) ){
+				if( ref.nodeClass == UA_NODECLASS_VARIABLE )
+					y.emplace( move(ref.nodeId.nodeId) );
+			}
+		}
+		return y;
+	}
+
+	α Response::ToJson( flat_map<NodeId, Value>&& snapshot, flat_map<NodeId, NodeId>&& dataTypes )ε->jobject{
 		jarray references;
 		for(size_t i = 0; i < resultsSize; ++i) {
 			for(size_t j = 0; j < results[i].referencesSize; ++j) {
 				UA_ReferenceDescription& ref = results[i].references[j];
-				const ExNodeId nodeId{ move(ref.nodeId) };
+				const NodeId nodeId{ move(ref.nodeId.nodeId) };
 				jobject reference;
 				if( auto p = snapshot.find(nodeId); p!=snapshot.end() )
 					reference["value"] = p->second.ToJson();
 				if( auto p = dataTypes.find(nodeId); p!=dataTypes.end() )
 					reference["dataType"] = p->second.ToJson();
-				else
-					Warning( BrowseTag, "Could not find data type for node={}.", serialize(nodeId.ToJson()) );
+				// else
+				// 	Warning( BrowseTag, "Could not find data type for node={}.", serialize(nodeId.ToJson()) );
 				reference["referenceType"] = Opc::ToJson( ref.referenceTypeId );
 				reference["isForward"] = ref.isForward;
 				reference["node"] = nodeId.ToJson();

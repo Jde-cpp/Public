@@ -13,8 +13,8 @@ namespace Jde::DB{
 		vector<Object> Objects;
 	};
 	struct Count final{
-		Count()ι;
+		Count()ι{};
 		α ToString()Ι->string{ return "count(*)"; }
-		α Params()ι->vector<Value>{return {};}
+		α Params()ι->vector<Value>{ return {}; }
 	};
 }

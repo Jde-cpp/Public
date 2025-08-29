@@ -7,7 +7,7 @@ namespace Jde::Opc::Server {
 	α ObjectTypeAwait::Execute()ι->DB::SelectAwait::Task {
 		try {
 			let table = GetViewPtr("object_type_nodes");
-			auto rows = co_await DS().SelectAsync(DB::Statement{
+			auto rows = co_await DS().SelectAsync( DB::Statement{
 				vector<sp<DB::Column>>{ table->Columns.begin()+1, table->Columns.end() },
 				{ table },
 				ServerConfigAwait::ServerWhereClause( *table, {} )

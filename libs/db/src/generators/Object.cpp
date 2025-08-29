@@ -47,6 +47,7 @@ namespace Jde {
 			case AliasColumn: return get<AliasCol>(o).ToString();
 			case Value: return "?";
 			case Coalesce: return get<DB::Coalesce>(o).ToString();
+			case Count: return get<DB::Count>(o).ToString();
 			case Values:{
 				const auto& values = get<vector<DB::Value>>(o);
 				string s( "[" ); s.reserve( values.size() * 10 );

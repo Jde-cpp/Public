@@ -6,7 +6,7 @@
 namespace Jde::Opc::Server{
 	struct Reference;
 	struct Variable final: Node, UA_VariableAttributes{
-		Variable():Node{UA_NODEID_NULL}, UA_VariableAttributes{}{}
+		Variable():UA_VariableAttributes{}{}
 		Variable( const Variable& v )ι;
 		Variable( Variable&& v )ι;
 		Variable( UA_NodeId n )ι;

@@ -2,14 +2,22 @@
 #include "ObjectType.h"
 
 namespace Jde::Opc::Server{
-	Node::Node( UA_NodeId nodeId, NodePK pk )ι:
-		ExNodeId{ move(nodeId) },
-		PK{ pk ? pk : IsSystem(nodeId) ? (NodePK)nodeId.identifier.numeric : 0 }
+	Node::Node()ι:
+		NodeId{}
+	{}
+
+	Node::Node( NodeId&& nodeId )ι:
+		NodeId{ move(nodeId) },
+		PK{ IsSystem() ? (NodePK)identifier.numeric : 0 }
+	{}
+
+	Node::Node( NodeId nodeId, NodePK pk )ι:
+		NodeId{ move(nodeId) },
+		PK{ pk ? pk : IsSystem(nodeId) ? (NodePK)identifier.numeric : 0 }
 	{}
 
 	Node::Node( UA_NodeId nodeId, NodePK parentPK, NodePK refPK, sp<ObjectType> typeDef, Server::BrowseName browse )ι:
-		ExNodeId{ nodeId },
-		PK{},
+		NodeId{ move(nodeId) },
 		ParentNodePK{ parentPK },
 		ReferenceTypePK{ refPK },
 		Browse{ browse.PK },
@@ -17,7 +25,7 @@ namespace Jde::Opc::Server{
 	{}
 
 	Node::Node( const jobject& j, NodePK parentPK, Server::BrowseName browse )ε:
-		ExNodeId{ j.contains("id") ? ExNodeId{ j.at("id") } : UA_NodeId{} },
+		NodeId{ j.contains("id") ? NodeId{ j.at("id") } : UA_NodeId{} },
 		PK{ Json::FindNumber<Server::NodePK>(j, "id").value_or(0) },
 		IsGlobal{ Json::FindBool(j, "isGlobal").value_or(false) },
 		ParentNodePK{ parentPK },
@@ -31,17 +39,17 @@ namespace Jde::Opc::Server{
 	{}
 
 	Node::Node( DB::Row&& r, sp<ObjectType> typeDef )ι:
-		ExNodeId{ r, 1, true },
+		NodeId{ r, 1 },
 		PK{ r.GetUInt(0) },
 		IsGlobal{ r.GetBitOpt(8).value_or(false) },
-		ParentNodePK{ r.GetUInt32Opt(9).value_or(0) },
-		ReferenceTypePK{ r.GetUInt32Opt(10).value_or(0) },
-		Browse{ r.GetUInt32Opt(11).value_or(0) },
+		ParentNodePK{ r.GetOpt<uint>(9).value_or(0) },
+		ReferenceTypePK{ r.GetOpt<uint>(10).value_or(0) },
+		Browse{ r.GetOpt<uint32>(11).value_or(0) },
 		TypeDef{ typeDef }
 	{}
 
-	α Node::InsertParams( bool extended )ι->vector<DB::Value>{
-		auto params = ExNodeId::InsertParams( extended );
+	α Node::InsertParams()ι->vector<DB::Value>{
+		auto params = NodeId::InsertParams();
 		params.emplace_back( ParentNodePK );
 		params.emplace_back( ReferenceTypePK );
 		if( !IsObjectType() )
@@ -55,6 +63,6 @@ namespace Jde::Opc::Server{
 		return params;
 	}
 	α Node::ToString( const Node& parent )Ι->string{
-		return Ƒ( "[{}]{}.{}", ExNodeId::to_string(), parent.BrowseName(), BrowseName() );
+		return Ƒ( "[{}]{}.{}", NodeId::ToString(), parent.BrowseName(), BrowseName() );
 	}
 }

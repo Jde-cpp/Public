@@ -60,6 +60,22 @@ namespace Jde::Access{
 			THROW( "[{}]Permission not found.", permissionPK );
 	}
 
+	α Authorize::Rights( str schemaName, str resourceName, UserPK executer )ι->ERights{
+		optional<ResourcePK> resourcePK;
+		Jde::sl _{Mutex};
+		if( auto schemaResources = SchemaResources.find(schemaName); schemaResources!=SchemaResources.end() )
+			resourcePK = Find( schemaResources->second, resourceName );
+		if( !resourcePK )//not enabled
+			return ERights::All;
+
+		auto user = Users.find(executer);
+		if( user==Users.end() || user->second.IsDeleted )
+			return ERights::None;
+
+		auto rights = user->second.ResourceRights( *resourcePK );
+		return rights.Allowed & ~rights.Denied;
+	}
+
 	α Authorize::RecursiveUsers( GroupPK groupPK, const ul& l, bool clear )ι->flat_set<UserPK>{
 		flat_set<UserPK> users;
 		auto group = Groups.find( groupPK );
@@ -193,15 +209,16 @@ namespace Jde::Access{
 		ul _{Mutex};
 		Resources[resource.PK] = move(resource);
 	}
-	α Authorize::UpdateResourceDeleted( sv schemaName, const jobject& args, bool restored )ε->void{
+	α Authorize::UpdateResourceDeleted( ResourcePK pk, sv schemaName, const jobject& args, bool restored )ε->void{
 		ul _{Mutex};
-		let pk = Json::FindNumber<ResourcePK>( args, "id" );
+		if( !pk )
+			pk = Json::FindNumber<ResourcePK>( args, "id" ).value_or(0);
 		let target = Json::FindSV( args, "target" );
 		auto pkResource = find_if( Resources, [&](auto&& pkResource){
 			let& r = pkResource.second;
-			return (pk && *pk==r.PK) || ( r.Schema==schemaName && target && *target==r.Target );
+			return (pk && pk==r.PK) || ( r.Schema==schemaName && target && *target==r.Target );
 		} );
-		THROW_IF( pkResource==Resources.end(), "Resource not found schema:'{}', args:'{}'", schemaName, serialize(args) );
+		THROW_IFX( pkResource==Resources.end(), Exception(SRCE_CUR, ELogLevel::Debug, "Resource not found pk: {}, schema:'{}', args:'{}'", pk, schemaName, serialize(args)) );
 		auto& resource = pkResource->second;
 
 		resource.IsDeleted = restored ? optional<DB::DBTimePoint>{} : DB::DBClock::now();

@@ -90,7 +90,7 @@ namespace Jde::Web{
 		if( _sessionId==0 ){
 			Crypto::CryptoSettings settings{ "http/ssl" };
 			auto publicKey = Crypto::ReadPublicKey( settings.PublicKeyPath );
-			Web::Jwt jwt{ move(publicKey), "testUser", "testUserCallSign", 0, "127.0.0.1", Clock::now()+1h, {}/*description*/, settings.PrivateKeyPath };
+			Web::Jwt jwt{ move(publicKey), {0}, "testUser", "testUserCallSign", 0, "127.0.0.1", Clock::now()+1h, {}/*description*/, settings.PrivateKeyPath };
 			auto await = ClientHttpAwait{ Host, "/login", serialize(jobject{{"jwt", jwt.Payload()}}), Port };
 			let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 			_sessionId = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
@@ -129,13 +129,18 @@ namespace Jde::Web{
 		Stopwatch sw{ "WebTests::EchoAttack", ELogTags::Test };
 		CreateSession();
 		Wait();
-		string text( 32000, 'a' );
-		for( uint i=1; i<=1000; ++i )
-			EchoText( i, text.substr(0,i*32) );
+		constexpr uint payloadBase = 32;
+		constexpr uint size = 1000;
+		string text( payloadBase*size, 'a' );
+		std::this_thread::sleep_for( 1ms );
+		TRACE( "----------------------------------------------------------------" );
+		for( uint i=1; i<=size; ++i ){
+			EchoText( i, text.substr(0,i*payloadBase) );
+		}
 		for( ;; ){
 			{
 				lg _{ _echoMutex };
-				if( _requests.size()==1000 )
+				if( _requests.size()==size )
 					break;
 			}
 			std::this_thread::sleep_for( 10ms );

@@ -28,7 +28,7 @@ namespace Jde::Opc::Server{
 		_refs{ j.contains("refs") ? getRefs(move(j.at("refs").as_array())) : vector<sp<Reference>>{} }
 	{}
 	Variable::Variable( UA_NodeId n )ι:
-		Node{ n },
+		Node{ {move(n)} },
 		UA_VariableAttributes{}
 	{}
 	Variable::Variable( DB::Row& r, sp<ObjectType> typeDef, UA_Variant&& variant, const UA_DataType& dataType, tuple<UA_UInt32*, uint> dims )ε:
@@ -71,7 +71,7 @@ namespace Jde::Opc::Server{
 	}
 
 	α Variable::InsertParams( DB::Value variantPK )ι->vector<DB::Value>{
-		auto params = Node::InsertParams( false );
+		auto params = Node::InsertParams();
 		params.emplace_back( variantPK );
 		ASSERT( dataType.identifier.numeric );
 		params.emplace_back( dataType.identifier.numeric );

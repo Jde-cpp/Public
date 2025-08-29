@@ -1,7 +1,7 @@
 #pragma once
 #include <signal.h>
 #include <aio.h>
-#include "../../Framework/source/io/FileCo.h"
+#include <jde/framework/io/FileAwait.h>
 #include "../../Framework/source/io/IDrive.h"
 #include "../../Framework/source/coroutine/Awaitable.h"
 #include <jde/framework/io/file.h>

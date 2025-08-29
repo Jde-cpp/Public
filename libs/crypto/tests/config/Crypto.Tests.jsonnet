@@ -7,7 +7,7 @@
 	},
 	logging:{
 		tags: {
-			trace:["test"],
+			trace:["test", "exception"],
 			debug:["settings"],
 			information:[],
 			warning:[],

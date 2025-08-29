@@ -1,5 +1,5 @@
 #include "Opc.FromServer.h"
-#include <jde/opc/uatypes/Node.h>
+#include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
 
 #define let const auto
@@ -40,13 +40,13 @@ namespace Jde::Opc::Gateway{
 		m.set_allocated_subscription_ack( new FromServer::SubscriptionAck{move(ack)} );
 		return t;
 	}
-	α FromServer::UnsubscribeTrans( uint32 id, flat_set<ExNodeId>&& successes, flat_set<ExNodeId>&& failures )ι->FromServer::Transmission{
+	α FromServer::UnsubscribeTrans( uint32 id, flat_set<NodeId>&& successes, flat_set<NodeId>&& failures )ι->FromServer::Transmission{
 		FromServer::Transmission t;
 		auto& m = *t.add_messages();
 		m.set_request_id( id );
 		auto ack = m.mutable_unsubscribe_ack();
-		for_each( move(successes), [&ack](let& n){*ack->add_successes() = ToProto(n); } );
-		for_each( move(failures), [&ack](let& n){*ack->add_failures() = ToProto(n); } );
+		for_each( move(successes), [&ack](let& n){*ack->add_successes() = ToNodeProto(n); } );
+		for_each( move(failures), [&ack](let& n){*ack->add_failures() = ToNodeProto(n); } );
 		return t;
 	}
 
@@ -55,14 +55,14 @@ namespace Jde::Opc::Gateway{
 		if( id.namespaceUri.length )
 			y.set_allocated_namespace_uri( new string{ToSV(id.namespaceUri)} );
 		y.set_server_index( id.serverIndex );
-		y.set_allocated_node( new Proto::NodeId{ToNodeProto(id)} );
+		y.set_allocated_node( new Proto::NodeId{ToNodeProto(id.nodeId)} );
 		return y;
 	}
 #define IS(ua) type==&UA_TYPES[ua]
-	α FromServer::ToProto( const OpcClientNK& opcId, const ExNodeId& node, const Opc::Value& v )ι->FromServer::Message{
+	α FromServer::ToProto( const ServerCnnctnNK& opcId, const NodeId& node, const Opc::Value& v )ι->FromServer::Message{
 		let scaler = v.IsScaler();
 		let type = v.value.type;
-		auto nv = mu<FromServer::NodeValues>(); nv->set_allocated_node( new Proto::ExpandedNodeId{ToProto(node)} ); nv->set_opc_id( opcId );
+		auto nv = mu<FromServer::NodeValues>(); nv->set_allocated_node( new Proto::NodeId{ToNodeProto(node)} ); nv->set_opc_id( opcId );
 		//auto p = m.mutable_data_change();
 		for( uint i=0; i<(scaler ? 1 : v.value.arrayLength); ++i ){
 			auto& proto = *nv->add_values();
@@ -79,7 +79,7 @@ namespace Jde::Opc::Gateway{
 			else if( IS(UA_TYPES_DURATION) ) [[unlikely]]
 				proto.set_allocated_duration( new google::protobuf::Duration{v.Get<UADateTime>(i).ToDuration()} );
 			else if( IS(UA_TYPES_EXPANDEDNODEID) ) [[unlikely]]
-				proto.set_allocated_expanded_node( new Proto::ExpandedNodeId{ToProto(ExNodeId{v.Get<UA_ExpandedNodeId>(i)})} );
+				proto.set_allocated_expanded_node( new Proto::ExpandedNodeId{ToProto(v.Get<UA_ExpandedNodeId>(i))} );
 			else if( IS(UA_TYPES_FLOAT) )
 				proto.set_float_value( v.Get<UA_Float>(i) );
 			else if( IS(UA_TYPES_GUID) ) [[unlikely]]
@@ -115,17 +115,17 @@ namespace Jde::Opc::Gateway{
 		m.set_allocated_node_values( nv.release() );
 		return m;
 	}
-	α FromServer::ToNodeProto( const ExNodeId& id )ι->Proto::NodeId{
+	α FromServer::ToNodeProto( const NodeId& id )ι->Proto::NodeId{
 		Proto::NodeId y;
-		y.set_namespace_index( id.nodeId.namespaceIndex );
-		if( id.nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_NUMERIC )
-			y.set_numeric( id.nodeId.identifier.numeric );
-		else if( id.nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_STRING )
-			y.set_allocated_string( new string{ToSV(id.nodeId.identifier.string)} );
-		else if( id.nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
-			y.set_allocated_byte_string( new string{ToSV(id.nodeId.identifier.byteString)} );
-		else if( id.nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_GUID )
-			y.set_guid( ToBinaryString(id.nodeId.identifier.guid) );
+		y.set_namespace_index( id.namespaceIndex );
+		if( id.identifierType==UA_NodeIdType::UA_NODEIDTYPE_NUMERIC )
+			y.set_numeric( id.identifier.numeric );
+		else if( id.identifierType==UA_NodeIdType::UA_NODEIDTYPE_STRING )
+			y.set_allocated_string( new string{ToSV(id.identifier.string)} );
+		else if( id.identifierType==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
+			y.set_allocated_byte_string( new string{ToSV(id.identifier.byteString)} );
+		else if( id.identifierType==UA_NodeIdType::UA_NODEIDTYPE_GUID )
+			y.set_guid( ToBinaryString(id.identifier.guid) );
 		return y;
 	}
 }

@@ -45,7 +45,8 @@ namespace Jde{
 		IAwait( SRCE )ι:_sl{sl}{}
 		β await_ready()ι->bool{ return false; }
 		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
-		β await_resume()ε->TResult{ AwaitResume(); return TResult{}; }
+		//β await_resume()ε->TResult{ AwaitResume(); return TResult{}; }
+		β await_resume()ε->TResult = 0;
 		α ResumeExp( IException&& e )ι{
 			ASSERT(Promise());
 			Promise()->ResumeExp( move(e), _h );
@@ -81,7 +82,7 @@ namespace Jde{
 		α SetValue( Result&& r )ι{ ASSERT(base::Promise()); base::Promise()->SetValue( move(r) ); }
 		α Resume()ι{ ASSERT(base::Promise()); base::_h.resume(); }
 		α Resume( Result&& r )ι{ ASSERT(base::Promise()); base::Promise()->Resume( std::move(r), base::_h ); }
-		α ResumeScaler( Result r )ι{ ASSERT(base::Promise()); base::Promise()->Resume( move(r), base::_h ); }
+		α ResumeScaler( Result r )ι{ ASSERT(base::Promise()); base::Promise()->Resume( std::move(r), base::_h ); } //win CoGuard doesn't have a copy constructor.
 	};
 	template<class Result,class TTask>
 	TAwait<Result,TTask>::~TAwait(){};

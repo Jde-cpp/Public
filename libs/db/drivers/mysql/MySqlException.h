@@ -6,10 +6,14 @@ namespace Jde::DB::MySql{
 			_clientMessage{ e.get_diagnostics().client_message() },
 			_serverMessage{ e.get_diagnostics().server_message() },
 			_sql{ move(sql) }
-		{}
+		{
+			BREAK;
+		}
 		MySqlException( string&& sql, mysql::error_with_diagnostics&& e, SL sl ):
 			MySqlException{ ELogTags::Sql, sl, ELogLevel::Error, move(e), move(sql) }
-		{}
+		{
+			BREAK;
+		}
 
 		α Move()ι->up<IException> override{ return mu<MySqlException>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }

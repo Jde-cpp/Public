@@ -73,7 +73,7 @@ export class UserDetail implements OnDestroy, OnInit{
 			await this.ql.mutation( mutation );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 		}catch(e){
-			this.snackbar.error( "Save failed.", e );
+			this.snackbar.exceptionInfo( e, "Save failed.", (m)=>console.log(m) );
 		}
 	}
 	public onCancelClick(){

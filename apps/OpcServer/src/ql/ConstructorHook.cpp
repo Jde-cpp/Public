@@ -18,7 +18,7 @@ namespace Jde::Opc::Server{
 		auto& ua = GetUAServer();
 		try{
 			auto& m = _mutation;
-			auto node = ua.GetTypeDef( ExNodeId{m.GetRef<jobject>("node", _sl)} );
+			auto node = ua.GetTypeDef( NodeId{m.GetRef<jobject>("node", _sl)} );
 			jarray y;
 			flat_map<BrowseNamePK, Variant> values;
 			for( auto&& v : m.GetRef<jarray>("values", _sl) ){
@@ -37,7 +37,7 @@ namespace Jde::Opc::Server{
 					{{node->PK}, {browse.PK}, {variantPK}}
 				}.Move(), _sl );
 			}
-			ua.AddConstructor( node->nodeId, move(values) );
+			ua.AddConstructor( *node, move(values) );
 			Resume( y );
 		}
 		catch( exception& e ){

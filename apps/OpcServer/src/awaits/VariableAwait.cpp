@@ -32,11 +32,12 @@ namespace Jde::Opc::Server {
 			for( auto&& row : rows ){
 				let variantPK = row.GetUInt32Opt(21);
 				let dtPK = row.GetUInt32Opt(29);
+				let variableDTPK = row.GetUInt32Opt(22);
 				Variable node{
 					row,
 					GetUAServer().GetTypeDef( row.GetUInt32(12), _sl ),
 					variantPK && dtPK ? Variant{ *variantPK, Variant::ToUAValues(DT(*dtPK), move(values.at(*variantPK))), Variant::ToArrayDims(row.GetString(30)), DT(*dtPK) } : UA_Variant{},
-					DT( row.GetUInt32(22) ),
+					DT( variableDTPK.value_or(UA_NS0ID_BASEDATATYPE) ),
 					Variant::ToArrayDims( row.GetString(24) )
 				};
 				node.Browse = GetUAServer().GetBrowse( node.Browse.PK, _sl );
@@ -85,7 +86,7 @@ namespace Jde::Opc::Server {
 			try{
 				for( auto&& [index, j] : v.ToJson() ){
 					co_await DS().Execute( DB::Sql{
-						Ƒ("INSERT INTO {}(variant_id, idx, value) VALUES (?,?,?)", GetSchema().DBName("variant_members")),
+						Ƒ("insert into {}(variant_id, idx, value) values (?,?,?)", GetSchema().DBName("variant_members")),
 						{ variantPK,{index},{j} }
 					} );
 				}
@@ -99,10 +100,10 @@ namespace Jde::Opc::Server {
 			ref->SourcePK = _node.PK;
 			try{
 				co_await DS().Execute( DB::Sql{
-					Ƒ("INSERT INTO {}(source_node_id, target_node_id, ref_type_id, is_forward) VALUES (?,?,?,?)", GetSchema().DBName("refs")),
+					Ƒ("insert into {}(source_node_id, target_node_id, ref_type_id, is_forward) values (?,?,?,?)", GetSchema().DBName("refs")),
 					{ {ref->SourcePK}, {ref->TargetPK}, {ref->RefTypePK}, {ref->IsForward} }
 				});
-				GetUAServer().AddReference( *ref );
+				GetUAServer().AddReference( _node.PK, *ref );
 			}
 			catch( exception& e ){
 				ResumeExp( move(e) );

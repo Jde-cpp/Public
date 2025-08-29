@@ -5,13 +5,14 @@
 
 namespace Jde::Opc::Server{
 	struct ObjectType final: Node, UA_ObjectTypeAttributes{
-		ObjectType(): Node{UA_NODEID_NULL}, UA_ObjectTypeAttributes{} {}
+		ObjectType(): Node{}, UA_ObjectTypeAttributes{} {}
 		ObjectType( const jobject& j, Server::NodePK parentPK, Server::BrowseName browse )ε;
 		ObjectType( UA_NodeId n )ι;
 		//ObjectType( Node&& n )ι;
 		ObjectType( Node&& n, ObjectTypeAttr&& a )ι;
 		ObjectType( DB::Row& r )ι;
 
+		α ToString()Ι->string;
 		α ToString( const Node& parent )Ι->string override;
 		α InsertParams()ι->vector<DB::Value>;
 		α IsObjectType()Ι->bool override{ return true; }

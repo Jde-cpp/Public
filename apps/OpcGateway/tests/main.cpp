@@ -1,9 +1,9 @@
 ﻿#include "gtest/gtest.h"
 #include <jde/framework/settings.h>
-#include "../../../../AppServer/source/AppStartupAwait.h"
 #include <jde/framework/coroutine/Timer.h>
 #include <jde/opc/uatypes/Logger.h>
 #include "../src/StartupAwait.h"
+#include "../../AppServer/src/AppStartupAwait.h"
 #include "../../OpcServer/src/StartupAwait.h"
 #define let const auto
 

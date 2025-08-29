@@ -15,7 +15,7 @@ namespace Jde::DB::Odbc{
 			SQLHENV hEnv;
 			CALL( nullptr, SQL_HANDLE_ENV, ::SQLSetEnvAttr(nullptr, SQL_ATTR_CONNECTION_POOLING, (SQLPOINTER)SQL_CP_ONE_PER_HENV, 0), "SQLSetEnvAttr(SQL_ATTR_CONNECTION_POOLING)" );
 			let rc=::SQLAllocHandle( SQL_HANDLE_ENV, SQL_NULL_HANDLE, &hEnv); THROW_IF( rc==SQL_ERROR, "({}) - Unable to allocate an environment handle", rc );
-			CALL(hEnv, SQL_HANDLE_ENV, ::SQLSetEnvAttr(hEnv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)SQL_OV_ODBC3, 0), "SQLSetEnvAttr(SQL_ATTR_ODBC_VERSION)" );
+			CALL(hEnv, SQL_HANDLE_ENV, ::SQLSetEnvAttr(hEnv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)SQL_OV_ODBC3_80, 0), "SQLSetEnvAttr(SQL_ATTR_ODBC_VERSION)" );
 			return hEnv;
 		}
 		TRACE( "_hEnv={:x}", (uint)_hEnv );
@@ -27,7 +27,7 @@ namespace Jde::DB::Odbc{
 	}
 	HandleSession::HandleSession( sv connectionString )ε{
 		let hEnv = getEnvHandle();
-		CALL(hEnv, SQL_HANDLE_ENV, SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &_hStatement), "SQLAllocHandle");
+		CALL(hEnv, SQL_HANDLE_ENV, ::SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &_hStatement), "SQLAllocHandle");
 		Connect( connectionString );
 	}
 

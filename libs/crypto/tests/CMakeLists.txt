@@ -1,4 +1,3 @@
-#./Jde.Crypto.Tests.exe -c -settings=/C/Users/duffyj/source/repos/jde/Public/libs/crypto/tests/config/Crypto.Tests.jsonnet
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( ../../../build/functions.cmake )
 project( Jde.Crypto.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
@@ -17,10 +16,9 @@ if( WIN32)
 	set_target_properties( ${targetName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>" )
 endif()
 
-
 file( GLOB sources *.cpp )
 file( GLOB_RECURSE headers  *.h )
-target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
+target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 target_link_libraries( ${targetName} Boost::json )
 target_link_libraries( ${targetName} GTest::gtest GTest::gtest_main )
@@ -37,13 +35,7 @@ set( CMAKE_CTEST_ARGUMENTS "-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Crypto.
 add_dependencies( ${targetName} Jde)
 
 target_precompile_headers( ${targetName} PRIVATE
-	<openssl/engine.h>
-	<openssl/hmac.h>
-	<openssl/err.h>
-	<openssl/evp.h>
-	<openssl/rsa.h>
-	<gtest/gtest.h>
-	<jde/framework.h>
+	pc.h
 )
 if( WIN32 )
 	set( buildLibDir ${CMAKE_BINARY_DIR}/../../libs )

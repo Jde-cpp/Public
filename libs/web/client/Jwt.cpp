@@ -5,13 +5,14 @@
 #define let const auto
 
 namespace Jde::Web{
-	Jwt::Jwt( Crypto::PublicKey key, str userName, str userTarget, SessionPK sessionId, str endpoint, TimePoint expires, str description, const fs::path& privateKeyPath )ι:
-		PublicKey{move(key)}, Host{endpoint}, Iat{time(nullptr)}, UserName{userName}, UserTarget{userTarget}, Description{description}{
+	Jwt::Jwt( Crypto::PublicKey key, Jde::UserPK userPK, str userName, str userTarget, SessionPK sessionId, str endpoint, TimePoint expires, str description, const fs::path& privateKeyPath )ι:
+		PublicKey{move(key)}, Host{endpoint}, Iat{time(nullptr)}, UserPK{userPK}, UserName{userName}, UserTarget{userTarget}, Description{description}{
 		Body = jobject{
 			{ "n", Str::Encode64(PublicKey.Modulus, true) },
 			{ "e", Str::Encode64(PublicKey.Exponent, true) },
 			{ "iat", Iat },
 			{ "host", Host },
+			{ "sub", UserPK.Value },
 			{ "name", userName },
 			{ "target", userTarget },
 		};
@@ -50,6 +51,7 @@ namespace Jde::Web{
 			SetExponent( Json::AsString(Body, "e") );
 		}
 		auto fpKey = Crypto::Fingerprint( PublicKey );// Use PublicKey instead of Certificate
+		UserPK = {Json::FindNumber<UserPK::Type>(Body, "sub").value_or( 0 )};
 		UserName = Json::FindString(Body, "name").value_or( Str::ToHex(fpKey.data(), fpKey.size()) );
 		UserTarget = Json::FindString( Body, "target" ).value_or( UserName );
 		Host = Json::FindString( Body, "host" ).value_or("");

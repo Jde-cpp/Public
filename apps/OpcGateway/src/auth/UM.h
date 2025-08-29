@@ -5,10 +5,9 @@
 #include <jde/app/shared/proto/App.FromServer.pb.h>
 #include <jde/db/Key.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
-#include "../types/OpcClient.h"
+#include "../types/ServerCnnctn.h"
 
 namespace Jde::Opc::Gateway{
-
 	//CRD - Insert/Purge/Select from um_providers table
 	struct ProviderSelectAwait final : TAwait<Access::ProviderPK>{
 		ProviderSelectAwait( string opcId, SRCE )ι:TAwait<Access::ProviderPK>{sl},_opcId{move(opcId)}{};//select
@@ -21,7 +20,7 @@ namespace Jde::Opc::Gateway{
 		ProviderCreatePurgeAwait( DB::Key opcKey, bool insert, SRCE )ι:TAwait<Access::ProviderPK>{sl},_insert{insert},_opcKey{move(opcKey)}{}
 		α Suspend()ι->void override;
 	private:
-		α Execute( OpcClientPK opcPK )ι->TAwait<vector<OpcClient>>::Task;
+		α Execute( ServerCnnctnPK opcPK )ι->TAwait<vector<ServerCnnctn>>::Task;
 		α Insert( str target )ι->TAwait<jobject>::Task;
 		α Purge( str target )ι->ProviderSelectAwait::Task;
 		α Purge( Access::ProviderPK pk )ι->TAwait<jvalue>::Task;

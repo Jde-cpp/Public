@@ -2,9 +2,9 @@ mutation{
 	createObject( parent:{id: 85}, ref:{id: 35}, browseName:{ns:1, name:"pumpManual"}, type:{id: 58},
 		name: "Pump (Manual)", description:"Test Explicit Object",
 		variables:[
-			{ value: "Pump King Ltd.", name: "Manufacturer Name", accessLevel: ["read", "write"], ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"manufacturerName"} },
+			{ value: "Pump King Ltd.", dataType:"string", name: "Manufacturer Name", accessLevel: ["read", "write"], ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"manufacturerName"} },
 			{ value: "Mega Pump 3000", name: "Model Name", ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"modelName"} },
-			{ value: true, name: "Status", accessLevel: ["read", "write"], ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"status"} },
+			{ value: true, dataType:"bool", name: "Status", accessLevel: ["read", "write"], ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"status"} },
 			{ value: 50.0, dataType:"double", name: "Motor RPM", accessLevel: ["read", "write"], ref:{id:47}, type:{id:63}, browseName:{ns:1, name:"motorRpm"} }
 		]
 	)

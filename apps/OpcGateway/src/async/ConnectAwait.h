@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <jde/framework/coroutine/Await.h>
-#include "../types/OpcClient.h"
+#include "../types/ServerCnnctn.h"
 #include "../auth/OpcServerSession.h"
 
 namespace Jde::Opc::Gateway{
@@ -11,12 +11,12 @@ namespace Jde::Opc::Gateway{
 		ConnectAwait( string&& opcTarget, Credential cred, SRCE )ι:base{sl},_opcTarget{move(opcTarget)}, _cred{move(cred)}{}
 		α Suspend()ι->void override;
 		α await_resume()ε->sp<UAClient> override{ return Promise() ? base::await_resume() : _result; }
-		Ω Resume( sp<UAClient> pClient, str target, Credential cred )ι->void;
-		Ω Resume( sp<UAClient> pClient, str target, Credential cred, const UAClientException&& e )ι->void;
+		Ω Resume( sp<UAClient> client, str target, Credential cred )ι->void;
+		Ω Resume( str target, Credential cred, const UAClientException&& e )ι->void;
 	private:
-		Ω Resume( sp<UAClient> pClient, str target, Credential cred, function<void(ConnectAwait::Handle)> resume )ι->void;
-		α Create()ι->TAwait<vector<OpcClient>>::Task;
-		Ω EraseRequests( str opcNK, Credential cred )ι->vector<ConnectAwait::Handle>;
+		Ω Resume( str target, Credential cred, function<void(ConnectAwait::Handle)> resume )ι->void;
+		α Create()ι->TAwait<vector<ServerCnnctn>>::Task;
+		Ω EraseRequests( str opcNK, Credential cred, lg& _ )ι->vector<ConnectAwait::Handle>;
 		string _opcTarget;
 		Credential _cred;
 		sp<UAClient> _result;

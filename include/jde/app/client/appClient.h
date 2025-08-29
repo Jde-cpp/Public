@@ -17,7 +17,7 @@ namespace Jde::App::Client{
 	α RemoteAcl( string libName )ι->sp<Access::Authorize>;
 
 	struct ConnectAwait final : VoidAwait{
-		ConnectAwait( sp<IAppClient> appClient, jobject userName, bool retry=false, SRCE )ι;
+		ConnectAwait( sp<IAppClient> appClient, bool retry, SRCE )ι;
 	private:
 		α Suspend()ι->void{ HttpLogin(); }
 		α HttpLogin()ι->TAwait<SessionPK>::Task;
@@ -26,11 +26,8 @@ namespace Jde::App::Client{
 
 		sp<IAppClient> _appClient;
 		bool _retry;
-		jobject _userName;
 	};
-	Ξ Connect( sp<IAppClient>&& appClient )ι->ConnectAwait::Task{
-		co_await ConnectAwait{ move(appClient), true};
-	}
+	α Connect( sp<IAppClient>&& appClient )ι->ConnectAwait::Task;
 
 /*
 	//TODO change to functions, not returning anything.

@@ -31,7 +31,8 @@
 #include <jde/app/shared/proto/Common.pb.h>
 #include <jde/opc/exports.h>
 #include <jde/opc/usings.h>
-#include <jde/opc/uatypes/Node.h>
+#include <jde/opc/uatypes/NodeId.h>
+#include <jde/opc/uatypes/ExNodeId.h>
 #include <jde/opc/uatypes/Logger.h>
 #include "uatypes/UAClientException.h"
 DISABLE_WARNINGS

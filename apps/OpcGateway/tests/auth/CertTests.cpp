@@ -18,9 +18,10 @@ namespace Jde::Opc::Gateway::Tests{
 		α TearDown()ι->void override{}
 		Ω TearDownTestSuite();
 
-		α Connect( atomic_flag& flag )ι->CertAwait::Task;
+		α Connect( atomic_flag& flag, char id )ι->ConnectAwait::Task;
 		optional<Credential> _cred;
 		up<IException> _exception;
+		sp<UAClient> _client;
 	};
 
 	α CertTests::SetUpTestCase()ε->void{
@@ -30,32 +31,35 @@ namespace Jde::Opc::Gateway::Tests{
 		Auth::TearDownTestSuite();
 	}
 
-	α CertTests::Connect( atomic_flag& flag )ι->CertAwait::Task{
+	α CertTests::Connect( atomic_flag& flag, char id )ι->ConnectAwait::Task{
 		try{
-			co_await CertAwait{ Client->Target, "localhost", true };
+			TRACE( "Call {}", id );
+			_client = co_await UAClient::GetClient( Connection->Target, Credential{Crypto::PublicKey{}} );
+			ASSERT( _client );
+			//co_await CertAwait{ Client->Target, "localhost", true };
+			TRACE( "{} returned", id );
 		}
 		catch( IException& e ){
+			TRACE( "{} failed", id );
 			_exception = e.Move();
 		}
 		flag.test_and_set();
 		flag.notify_all();
-		Trace{ _tags, "notify_all" };
 	}
 
 	TEST_F( CertTests, Authenticate ){
-		string opcId{ Client->Target };
-		atomic_flag a,b,c;
-		Connect( a );
+		string opcId{ Connection->Target };
+		atomic_flag a,b,c,d;
+		Connect( a, 'a' );//test Connection.
+		Connect( b, 'b' );//test waiting for a.
 		a.wait( false );
-		Trace{ _tags, "Call b" };
-		Connect( b );
-		Trace{ _tags, "Call c" };
-		Connect( c );
 		b.wait( false );
-		Trace{ _tags, "b returned" };
+		Connect( c, 'c' );//test already have connection.
+		Connect( d, 'd' );
 		c.wait( false );
-		Trace{ _tags, "c returned" };
+		d.wait( false );
 		EXPECT_FALSE( _exception );
+		UAClient::RemoveClient( move(_client) );
 	}
 
 	TEST_F( CertTests, Authenticate_Bad ){
@@ -71,13 +75,14 @@ namespace Jde::Opc::Gateway::Tests{
 			Crypto::CreateKeyCertificate( settings );
 		}
 		atomic_flag flag;
-		Connect( flag );
+		Connect( flag, 'a' );
 		flag.wait( false );
-		fs::rename( working, root/"ssl_badTest" );
-		fs::rename( root/"ssl_backup", working );
 
 		EXPECT_TRUE( _exception );
 		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadIdentityTokenInvalid") );
+		EXPECT_FALSE( _client );
 		Debug( _tags, "{}", _exception ? _exception->what() : "Error no exception." );
+		fs::rename( working, root/"ssl_badTest" );
+		fs::rename( root/"ssl_backup", working );
 	}
 }

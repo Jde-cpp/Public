@@ -16,9 +16,9 @@ local args = import 'args.libsonnet';
 	logging:{
 		flushOn: "Trace",
 		tags: {
-			trace:["test",
+			trace:["test","sql",
 				"UASession", "UAServer", "UAUser", "UASecurity", "UAEvent", "threads", "UAClient", "UANet", "UASecure"],
-			debug:["sql", "ql","settings", "app"],
+			debug:["ql","settings", "app"],
 			information:["app", "appServer", "net"],
 			warning:["alarm", "ql", "io", "locks", "settings"],
 			"error":[],

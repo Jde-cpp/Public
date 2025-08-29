@@ -13,14 +13,6 @@ namespace Jde::Web::Server{
 	α GoogleLoginAwait::Execute()ι->ClientHttpAwait::Task{
 		try{
 			if( !jwks ){
-				/*let openidConfiguration = ( co_await ClientHttpAwait{
-					"accounts.google.com",
-					"/.well-known/openid-configuration",
-					443,
-					{ContentType:"", Verb:http::verb::get}} ).Json();
-				let uri = Json::AsString( openidConfiguration, "jwks_uri" ); THROW_IF( !uri.starts_with("https://www.googleapis.com"), "Wrong target:  '{}'", uri ); //https://www.googleapis.com/oauth2/v3/certs */
-				//constexpr sv uri = "https://www.googleapis.com/oauth2/v3/certs";
-				//let target = uri.substr(sizeof("https://www.googleapis.com")-1);
 				jwks = mu<jobject>( (co_await ClientHttpAwait{
 					"www.googleapis.com",
 					string{"/oauth2/v3/certs"},

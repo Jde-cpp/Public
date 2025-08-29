@@ -22,9 +22,9 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α ProviderCreatePurgeAwait::Execute( OpcClientPK opcPK )ι->TAwait<vector<OpcClient>>::Task{
+	α ProviderCreatePurgeAwait::Execute( ServerCnnctnPK opcPK )ι->TAwait<vector<ServerCnnctn>>::Task{
 		try{
-			auto server = co_await OpcClientAwait{ opcPK, true };
+			auto server = co_await ServerCnnctnAwait{ opcPK, true };
 			THROW_IF( server.empty(), "[{}]Could not find OpcServer", opcPK );
 			if( _insert )
 				Insert( move(server.front().Target) );
@@ -36,7 +36,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 	α ProviderCreatePurgeAwait::Insert( str target )ι->TAwait<jobject>::Task{
-		let q = Jde::format( "createProvider( target:\"{}\", providerType:\"OpcServer\" ){{id}}", target );
+		let q = Ƒ( "createProvider( target:\"{}\", providerType:\"OpcServer\" ){{id}}", target );
 		try{
 			auto appClient = AppClient();
 			let j = co_await *appClient->QLServer()->QueryObject( q, appClient->UserPK() );

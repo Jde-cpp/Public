@@ -3,21 +3,21 @@
 namespace Jde::Opc::Gateway{
 
 	struct CreateMonitoredItemsRequest : UA_CreateMonitoredItemsRequest{
-		CreateMonitoredItemsRequest( flat_set<ExNodeId>&& nodes )ι;
+		CreateMonitoredItemsRequest( flat_set<NodeId>&& nodes )ι;
 		CreateMonitoredItemsRequest( CreateMonitoredItemsRequest&& x )ι;
 		~CreateMonitoredItemsRequest(){ UA_CreateMonitoredItemsRequest_clear( this ); }
 		α operator=( CreateMonitoredItemsRequest&& )ι->UA_CreateMonitoredItemsRequest;
 		α ToJson()ι->jarray;
 	};
 
-	inline CreateMonitoredItemsRequest::CreateMonitoredItemsRequest( flat_set<ExNodeId>&& nodes )ι{
+	inline CreateMonitoredItemsRequest::CreateMonitoredItemsRequest( flat_set<NodeId>&& nodes )ι{
 		UA_CreateMonitoredItemsRequest_init( this );
 		itemsToCreateSize = nodes.size();
 		itemsToCreate = (UA_MonitoredItemCreateRequest*)UA_Array_new( itemsToCreateSize, &UA_TYPES[UA_TYPES_MONITOREDITEMCREATEREQUEST] );
 		uint i=0;
 		for( auto& n : nodes ){
 			auto& item = itemsToCreate[i++];
-			item.itemToMonitor.nodeId = n.Move();
+			item.itemToMonitor.nodeId = n;
 			item.itemToMonitor.attributeId = UA_ATTRIBUTEID_VALUE;
 			item.monitoringMode = UA_MONITORINGMODE_REPORTING;
 			item.requestedParameters.samplingInterval = 500.0;

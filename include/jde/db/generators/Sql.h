@@ -5,7 +5,6 @@
 namespace Jde::DB{
 	struct Column; struct FromClause; struct JoinClause; struct Table; struct WhereClause;
 	struct Sql final{
-
 		α operator+=( WhereClause&& sql )ι->Sql&;
 		string Text;
 		vector<Value> Params;

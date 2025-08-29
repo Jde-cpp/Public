@@ -15,10 +15,10 @@ function buildRelativePath() {
 				relativePath=${relativePath/src/lib};
 		#	fi;
 		#fi;
-	elif [[ $absoluteFile == *"IotWebsocket/source"* ]]; then
-		relativePath="/apps/OpcClient";
-	elif [[ $fileWorkspaceFolder == *"AppServer/source" ]]; then
-		relativePath="/apps/AppServer/lib";
+	#elif [[ $absoluteFile == *"IotWebsocket/source"* ]]; then
+	#	relativePath="/apps/OpcClient";
+	#elif [[ $fileWorkspaceFolder == *"AppServer/source" ]]; then
+	#	relativePath="/apps/AppServer/lib";
 	# elif [[ $fileWorkspaceFolder == *"web/client" ]]; then
 	# 	relativePath="/web/client";
 	# elif [[ $fileWorkspaceFolder == *"web/server" ]]; then

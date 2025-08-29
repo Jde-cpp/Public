@@ -130,7 +130,7 @@ namespace Jde::Opc::Server{
 				UA_Array_delete( data, size, &type );
 			return {0, nullptr};
 		}
-		return { size, data };
+		return { size==1 ? 0 : size, data };//size==1 would be an array
 	}
 
 	α Variant::ToArrayDims( str csv )ι->tuple<UA_UInt32*, uint>{

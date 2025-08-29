@@ -10,7 +10,7 @@ namespace Jde::Opc::Server{
 			cols += DB::SelectClause{ *table, "c", {"browse_id", "variant_id"} };
 			auto rows = co_await DS().SelectAsync( DB::Statement{
 				cols,
-				{ DB::Join{nodeIdTable->GetColumnPtr("node_id"), "n", table->GetSK0(), "c", true} },
+				{ DB::Join{nodeIdTable->GetColumnPtr("node_id"), "n", table->GetColumnPtr("node_id"), "c", true} },
 				ServerConfigAwait::ServerWhereClause( *nodeIdTable, "n" )
 			}.Move(), _sl );
 			if( rows.empty() ){
@@ -29,9 +29,9 @@ namespace Jde::Opc::Server{
 	α ConstructorAwait::LoadVariants( vector<DB::Row> rows, vector<DB::Value>&& variantPKs )ι->VariantAwait::Task{
 		try{
 			auto variants = co_await VariantAwait{ move(variantPKs), _sl };
-			flat_map<ExNodeId, flat_map<BrowseNamePK, Variant>> y;
+			flat_map<NodeId, flat_map<BrowseNamePK, Variant>> y;
 			for( auto&& row : rows ){
-				y.try_emplace( y.end(), ExNodeId{row, 0} )->second.try_emplace(
+				y.try_emplace( y.end(), NodeId{row, 0} )->second.try_emplace(
 					row.GetUInt32(5),
 					move(variants.at(row.GetUInt32(6))) );
 			}

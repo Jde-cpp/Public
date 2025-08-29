@@ -1,7 +1,4 @@
-﻿//#include "../"
-//#include <jde/opc/uatypes/UAClient.h>
-//#include <jde/opc/uatypes/UAException.h>
-#include <jde/crypto/OpenSsl.h>
+﻿#include <jde/crypto/OpenSsl.h>
 #include "../../src/auth/PasswordAwait.h"
 #include "Auth.h"
 
@@ -31,10 +28,11 @@ namespace Jde::Opc::Gateway::Tests{
 	static vector<SessionPK> _sessionIds;
 	static up<IException> _exception;
 	const string _password = "0123456789ABCD";
-	α AuthenticateTest( OpcClientNK opcId, bool badPassword=false )ι->TAwait<Web::FromServer::SessionInfo>::Task{
+	α AuthenticateTest( ServerCnnctnNK opcId, bool badPassword=false )ι->TAwait<optional<Web::FromServer::SessionInfo>>::Task{
 		try{
-			auto sessionInfo = co_await PasswordAwait{ "user1", badPassword ? "xyz" : _password, move(opcId), "localhost", true };
-			_sessionIds.push_back( sessionInfo.session_id() );
+			auto sessionInfo = co_await PasswordAwait{ "user1", badPassword ? "xyz" : _password, move(opcId), "localhost", 0, true };
+			if( sessionInfo )
+				_sessionIds.push_back( sessionInfo->session_id() );
 		}
 		catch( IException& e ){
 			_exception = e.Move();
@@ -45,7 +43,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( PasswordTests, Authenticate ){
 		Information( _tags, "PasswordTests.Authenticate" );
-		string opcId{ Client->Target };
+		string opcId{ Connection->Target };
 		AuthenticateTest( opcId );
 		{
 			std::shared_lock l{ mtx };
@@ -70,10 +68,9 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( PasswordTests, Authenticate_BadPassword ){
 		Information( _tags, "PasswordTests.Authenticate_BadPassword" );
-		AuthenticateTest( Client->Target, true );
+		AuthenticateTest( Connection->Target, true );
 		std::shared_lock l{ mtx };
 		cv.wait( l );
-		//EXPECT_FALSE( _client );
 		EXPECT_TRUE( _exception );
 		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadUserAccessDenied") );
 		Debug( _tags, "{}", _exception ? _exception->what() : "Error no exception." );

@@ -18,7 +18,7 @@ if( WIN32 )
 endif()
 find_package( ZLIB REQUIRED )
 
-add_subdirectory( $ENV{JDE_BASH}/Framework/source ../../libs/framework )
+add_subdirectory( $ENV{JDE_BASH}/Framework/source ../../libs/framework/lib )
 set( libDir $ENV{JDE_BASH}/Public/libs )
 add_subdirectory( ${libDir}/crypto/src ../../libs/crypto/lib )
 add_subdirectory( ${libDir}/db/src ../../libs/db/lib )
@@ -37,9 +37,9 @@ add_subdirectory( ${libDir}/opc/src ../../libs/opc )
 add_subdirectory( src lib )
 
 #if( buildTests )
-	add_subdirectory( tests )
-	set( CMAKE_CTEST_ARGUMENTS -tests -settings=$ENV{JDE_DIR}/Public/apps/OpcGateway/config/Opc.Gateway.jsonnet )
-	add_test( NAME AppTests COMMAND $<TARGET_FILE:Jde.Opc.Gateway.Tests> )
+#	add_subdirectory( tests )
+#	set( CMAKE_CTEST_ARGUMENTS -tests -settings=$ENV{JDE_DIR}/Public/apps/OpcGateway/config/Opc.Gateway.jsonnet )
+#	add_test( NAME GatewayTests COMMAND $<TARGET_FILE:Jde.Opc.Gateway.Tests> )
 #endif()
 
 

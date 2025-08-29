@@ -1,5 +1,6 @@
 ﻿#include <jde/opc/uatypes/Value.h>
-#include <jde/opc/uatypes/Node.h>
+#include <jde/opc/uatypes/NodeId.h>
+#include <jde/opc/uatypes/ExNodeId.h>
 //#include <jde/opc/uatypes/UAClient.h>
 
 #define let const auto

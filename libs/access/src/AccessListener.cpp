@@ -112,7 +112,7 @@ namespace Jde::Access{
 			case Created: Authorizer().CreateResource( {resourcePK, o} ); break;
 			case Deleted:
 			case Restored:
-				Authorizer().UpdateResourceDeleted( Json::FindDefaultSV(o, "schema"), o, event==Restored );
+				Authorizer().UpdateResourceDeleted( resourcePK, Json::FindDefaultSV(o, "schema"), o, event==Restored );
 				break;
 		}
 	}

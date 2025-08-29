@@ -1,6 +1,7 @@
-﻿#include <jde/opc/uatypes/Node.h>
+﻿#include <jde/opc/uatypes/ExNodeId.h>
 #include <jde/db/Row.h>
 #include <jde/db/Value.h>
+#include <jde/opc/uatypes/NodeId.h>
 
 #define let const auto
 namespace Jde::Opc{
@@ -41,57 +42,9 @@ namespace Jde::Opc{
 			Debug( ELogTags::App, "No identifier in nodeId" );
 	}
 
-	α getNodeId( const jvalue& v, UA_UInt16 ns=0 )ε->UA_NodeId;
-	α getNodeId( const jobject& j, UA_UInt16 ns=0 )ε->UA_NodeId{
-		UA_NodeId nodeId{ ns };
-//		Trace{ ELogTags::Test, "getNodeId({})", serialize(j) };
-		if( auto p = j.find("ns"); p!=j.end() && p->value().is_number() )
-			nodeId.namespaceIndex = Json::AsNumber<UA_UInt16>( p->value() );
-
-		if( auto p = j.find("id"); p!=j.end() )
-			return getNodeId( p->value(), nodeId.namespaceIndex );
-		else if( auto p = j.find("s"); p!=j.end() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
-			nodeId.identifier.string = UA_String_fromChars( Json::AsString(p->value()).c_str() );
-		}
-		else if( auto p = j.find("i"); p!=j.end() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
-			nodeId.identifier.numeric = Json::AsNumber<UA_UInt32>( p->value() );
-		}
-		else if( auto p = j.find("number"); p!=j.end() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
-			nodeId.identifier.numeric = Json::AsNumber<UA_UInt32>( p->value() );
-		}
-		else if( auto p = j.find("b"); p!=j.end() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
-			let v = ToUV( Json::AsSV(p->value()) );
-			UA_ByteString_fromBase64( &nodeId.identifier.byteString, &v );
-		}
-		else if( auto p = j.find("g"); p!=j.end() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
-			ToGuid( Json::AsString(p->value()), nodeId.identifier.guid );
-		}
-		return nodeId;
-	};
-	α getNodeId( const jvalue& v, UA_UInt16 ns )ε->UA_NodeId{
-		UA_NodeId nodeId{ ns };
-		if( v.is_object() )
-			nodeId = getNodeId( v.get_object(), ns );
-		else if( v.is_number() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
-			nodeId.identifier.numeric = Json::AsNumber<UA_UInt32>( v );
-		}
-		else if( v.is_string() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
-			nodeId.identifier.string = UA_String_fromChars( string{v.get_string()}.c_str() );
-		}
-		else
-			THROW( "Could not parse nodeId: {}", serialize(v) );
-		return nodeId;
-	}
 	ExNodeId::ExNodeId( const jvalue& j )ε:
 		UA_ExpandedNodeId{
-			getNodeId(j),
+			NodeId::FromJson(j),
 			UA_String_fromChars(string{Json::FindDefaultSV(j, "nsu")}.c_str()),
 			Json::FindNumber<UA_UInt32>(j, "serverindex").value_or(0)
 		}
@@ -129,7 +82,6 @@ namespace Jde::Opc{
 		namespaceUri = extended ? UA_String_fromChars( r.GetString(index+5).c_str() ) : UA_STRING_NULL;
 		serverIndex = extended ? r.GetUInt32Opt( index+6 ).value_or( 0 ) : 0;
 	}
-	α ExNodeId::IsSystem( const UA_NodeId& id )ι->bool{ return !id.namespaceIndex && id.identifierType==UA_NODEIDTYPE_NUMERIC && id.identifier.numeric<=32750; }
 
 	α ExNodeId::InsertParams( bool extended )Ι->vector<DB::Value>{
 		vector<DB::Value> params; params.reserve( 64 );
@@ -137,7 +89,7 @@ namespace Jde::Opc{
 		params.emplace_back( nodeId.namespaceIndex );
 		params.emplace_back( IsNumeric() ? DB::Value{*Numeric()} : DB::Value{} );
 		params.emplace_back( IsString() ? DB::Value{*String()} : DB::Value{} );
-		params.emplace_back( IsGuid() ? DB::Value{*Guid()} : DB::Value{} );
+		params.emplace_back( IsGuid() ? DB::Value{*Guid()} : DB::Value{vector<uint8_t>{}} );
 		params.emplace_back( IsBytes() ? DB::Value{FromByteString(*Bytes())} : DB::Value{vector<uint8_t>{}} );
 		if( extended ){
 			params.emplace_back( namespaceUri.length ? DB::Value{ToString(namespaceUri)} : DB::Value{} );
@@ -250,7 +202,7 @@ namespace Jde::Opc{
 		return seed;//4452845294327023648
 	}
 
-	α toJson( jobject& j, const UA_NodeId& nodeId )ι->jobject{
+	Ω toJson( jobject& j, const UA_NodeId& nodeId )ι->jobject{
 		j["ns"] = nodeId.namespaceIndex;
 		const UA_NodeIdType type = nodeId.identifierType;
 		if( type==UA_NodeIdType::UA_NODEIDTYPE_NUMERIC )
@@ -265,12 +217,6 @@ namespace Jde::Opc{
 	}
 }
 namespace Jde{
-	α Opc::ToJson( const UA_NodeId& nodeId )ι->jobject{
-		jobject j;
-		toJson( j, nodeId );
-		return j;
-	}
-
 	α Opc::ToJson( const UA_ExpandedNodeId& x )ι->jobject{
 		jobject j;
 		if( x.namespaceUri.length )

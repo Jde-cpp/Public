@@ -8,12 +8,12 @@ import "Opc.Common.proto";
 
 message Subscribe{
 	string opc_id=1;
-	repeated Jde.Opc.Proto.ExpandedNodeId nodes=2;
+	repeated Jde.Opc.Proto.NodeId nodes=2;
 }
 
 message Unsubscribe{
 	string opc_id=1;
-	repeated Jde.Opc.Proto.ExpandedNodeId nodes=2;
+	repeated Jde.Opc.Proto.NodeId nodes=2;
 }
 
 

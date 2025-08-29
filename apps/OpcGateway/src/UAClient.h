@@ -8,7 +8,7 @@
 #include "async/ReadAwait.h"
 #include "async/Write.h"
 #include "auth/OpcServerSession.h"
-#include "types/OpcClient.h"
+#include "types/ServerCnnctn.h"
 #include "types/MonitoringNodes.h"
 #include "uatypes/Browse.h"
 
@@ -23,7 +23,7 @@ namespace Jde::Opc::Gateway{
 	struct CreateMonitoredItemsRequest;
 
 	struct UAClient final : std::enable_shared_from_this<UAClient>{
-		UAClient( OpcClient&& opcServer, Credential cred )ε;
+		UAClient( ServerCnnctn&& opcServer, Credential cred )ε;
 		UAClient( str address, Credential cred )ε;
 		~UAClient();
 
@@ -33,16 +33,18 @@ namespace Jde::Opc::Gateway{
 		Ω Find( str id, optional<Credential> cred )ι->sp<UAClient>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
+		Ω RemoveClient( sp<UAClient>&& client )ι->bool;
+
 		α SubscriptionId()Ι->SubscriptionId{ return CreatedSubscriptionResponse ? CreatedSubscriptionResponse->subscriptionId : 0;}
 		α CreateSubscriptions()ι->void;
 		α DataSubscriptions( CreateMonitoredItemsRequest&& r, Handle requestHandle, DataChangeAwait::Handle h )ι->void;
 		α DataSubscriptionDelete( Gateway::SubscriptionId subscriptionId, flat_set<MonitorId>&& monitoredItemIds )ι->void;
 
 		α SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void;
-		α SendReadRequest( const flat_set<ExNodeId>&& nodes, ReadAwait::Handle h )ι->void;
-		α SendWriteRequest( flat_map<ExNodeId,Value>&& values, WriteAwait::Handle h )ι->void;
+		α SendReadRequest( const flat_set<NodeId>&& nodes, ReadAwait::Handle h )ι->void;
+		α SendWriteRequest( flat_map<NodeId,Value>&& values, WriteAwait::Handle h )ι->void;
 		α SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void;
-		α RequestDataTypeAttributes( const flat_set<ExNodeId>&& x, AttribAwait::Handle h )ι->void;
+		α RequestDataTypeAttributes( const flat_set<NodeId>&& x, AttribAwait::Handle h )ι->void;
 		Ω ClearRequest( UA_Client* ua, RequestId requestId )ι->void;
 		Ṫ ClearRequestH( UA_Client* ua , RequestId requestId )ι->T;/*{
 			auto r = ClearRequest<T>( ua, requestId );
@@ -50,16 +52,16 @@ namespace Jde::Opc::Gateway{
 		}*/
 		α ClearRequest( RequestId requestId )ι->void{ _asyncRequest.Clear( requestId ); }
 		Ŧ ClearRequestH( RequestId requestId )ι->T;//{ return ClearRequest<UARequest<T>>( requestId )->CoHandle; }
-		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
-		α RetryVoid( function<void(sp<UAClient>&&) > f, UAException e, sp<UAClient> pClient )ι->ConnectAwait::Task;
-		α Process( RequestId requestId, coroutine_handle<>&& h )ι->void;
+		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
+		α RetryVoid( function<void(sp<UAClient>&&) > f, UAException&& e, sp<UAClient>&& pClient )ι->ConnectAwait::Task;
+		Ŧ Process( RequestId requestId, T&& h )ι->void;
 		α Process( RequestId requestId )ι->void;
 		α ProcessDataSubscriptions()ι->void;
 		α StopProcessDataSubscriptions()ι->void;
 		α AddSessionAwait( VoidAwait::Handle h )ι->void;
 		α TriggerSessionAwaitables()ι->void;
 
-		α Target()ι->const OpcClientNK&{ return _opcServer.Target; }
+		α Target()ι->const ServerCnnctnNK&{ return _opcServer.Target; }
 		α Url()ι->str{ return _opcServer.Url; }
 		α IsDefault()ι->bool{ return _opcServer.IsDefault; }
 		α Handle()ι->uint{ return (uint)_ptr;}
@@ -68,6 +70,7 @@ namespace Jde::Opc::Gateway{
 		sp<UA_CreateSubscriptionResponse> CreatedSubscriptionResponse;
 		UA_ClientConfig _config{};//TODO move private.
 		Gateway::Credential Credential;
+		bool Connected{};
 	private:
 		α Configuration()ε->UA_ClientConfig*;
 		α Create()ι->UA_Client*;
@@ -76,13 +79,12 @@ namespace Jde::Opc::Gateway{
 		α Passcode()ι->const string{ return OSApp::EnvironmentVariable("JDE_PASSCODE").value_or( "" ); }
 		α PrivateKeyFile()ι->fs::path{ return RootSslDir()/Ƒ("private/{}.pem", Target()); }
 		α CertificateFile()ι->fs::path{ return RootSslDir()/Ƒ("certs/{}.pem", Target()); }
-		Ω RemoveClient( sp<UAClient>& client )ι->bool;
 
-		OpcClient _opcServer;
+		ServerCnnctn _opcServer;
 
 		concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
 		concurrent_flat_map<Jde::Handle, UARequestMulti<UA_WriteResponse>> _writeRequests;
-		concurrent_flat_map<Jde::Handle, UARequestMulti<ExNodeId>> _dataAttributeRequests;
+		concurrent_flat_map<Jde::Handle, UARequestMulti<NodeId>> _dataAttributeRequests;
 		vector<VoidAwait::Handle> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
 
 		AsyncRequest _asyncRequest;
@@ -98,6 +100,10 @@ namespace Jde::Opc::Gateway{
 		UAMonitoringNodes MonitoredNodes;//destroy first
 	};
 
+	Ŧ UAClient::Process( RequestId requestId, T&& h )ι->void{
+		_asyncRequest.Process<T>( requestId, move(h) );
+	}
+
 	Ŧ UAClient::ClearRequestH( UA_Client* ua, RequestId requestId )ι->T{
 		auto p = TryFind( ua );
 		return p ? p->ClearRequestH<T>( requestId ) : T{};
@@ -108,12 +114,14 @@ namespace Jde::Opc::Gateway{
 	}
 
 #define let const auto
-	Ŧ UAClient::Retry( function<void(sp<UAClient>&&, T)> f, UAException e, sp<UAClient> client, T h )ι->ConnectAwait::Task{
+	Ŧ UAClient::Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> client, T h )ι->ConnectAwait::Task{
 		//TODO limit retry attempts.
-		RemoveClient( client );
+		let target = client->Target();
+		let credential = client->Credential;
+		RemoveClient( move(client) );
 		if( e.Code==UA_STATUSCODE_BADCONNECTIONCLOSED || e.Code==UA_STATUSCODE_BADSERVERNOTCONNECTED ){
 			try{
-				client = co_await GetClient( client->Target(), client->Credential );
+				client = co_await GetClient( move(target), move(credential) );
 				f( move(client), h );
 			}
 			catch( exception& e ){
