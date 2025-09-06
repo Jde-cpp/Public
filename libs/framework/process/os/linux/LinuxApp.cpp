@@ -6,6 +6,7 @@
 
 #include <jde/framework/process.h>
 #include "../../Framework/source/threading/InterruptibleThread.h"
+#include "LinuxDrive.h"
 
 #define let const auto
 namespace Jde{
@@ -181,16 +182,16 @@ namespace Jde{
 		::signal( SIGTERM, OSApp::ExitHandler );
 		::signal( SIGALRM, OSApp::ExitHandler );
 		::signal( SIGUSR1, OSApp::ExitHandler );
-
-/*		struct sigaction sa;
-	   sa.sa_flags = SA_RESTART | SA_SIGINFO;
-		sigemptyset( &sa.sa_mask );
-		sa.sa_sigaction = IO::LinuxDriveWorker::AioSigHandler;
-		THROW_IF( ::sigaction(SIGUSR1, &sa, nullptr)==-1,  "sigaction(SIGUSR1) returned {}", errno );
-*/
 		//sigaction( SIGSTOP, &sigIntHandler, nullptr );
 		//sigaction( SIGKILL, &sigIntHandler, nullptr );
 		//sigaction( SIGTERM, &sigIntHandler, nullptr );
+
+		struct sigaction sa;
+		memset( &sa, 0, sizeof(sa) );
+	  sa.sa_flags = SA_RESTART | SA_SIGINFO;
+		sa.sa_sigaction = IO::AioCompletionHandler;
+		sigemptyset( &sa.sa_mask );
+		THROW_IF( ::sigaction(IO::CompletionSignal, &sa, nullptr)==-1,  "init AsyncIO sigaction({}) returned {}", IO::CompletionSignal, errno );
 	}
 
 	α OSApp::SetConsoleTitle( sv title )ι->void{

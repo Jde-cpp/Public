@@ -28,6 +28,7 @@ namespace Jde::Process{
 	Φ ExitException( exception&& e )ι->int;
 	Φ SetExitReason( int reason, bool terminate )ι->void;
 	Φ Shutdown( int exitReason )ι->void;
+	Φ StartTime()ι->TimePoint;
 	Φ ShuttingDown()ι->bool;
 	Φ Finalizing()ι->bool;
 	Ŧ AddPollster( /*bool appThread*/ )ι->sp<T>;

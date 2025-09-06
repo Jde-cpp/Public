@@ -66,5 +66,6 @@ ENABLE_WARNINGS
 #include "framework/usings.h"
 #include "framework/enum.h"
 #include "framework/exceptions/assert.h"
-#include "framework/log/log.h"
+#include "framework/exports.h"
+#include "framework/log/Logger.h"
 #include "framework/exceptions/Exception.h"

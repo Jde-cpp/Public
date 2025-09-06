@@ -62,8 +62,8 @@ namespace Jde::Opc::Gateway{
 			resume( h );
 	}
 
-	α ConnectAwait::Resume( sp<UAClient> client, str opcNK, Credential cred )ι->void{
-		Resume( opcNK, cred, [=](ConnectAwait::Handle h)mutable{ h.promise().Resume(move(client), h); } );
+	α ConnectAwait::Resume( sp<UAClient> client )ι->void{
+		Resume( client->Target(), client->Credential, [client](ConnectAwait::Handle h){ h.promise().Resume(sp<UAClient>(client), h); } );
 	}
 	α ConnectAwait::Resume( str opcNK, Credential cred, const UAClientException&& e )ι->void{
 		Resume( opcNK, cred, [sc=e.Code](ConnectAwait::Handle h){ h.promise().ResumeExp(UAClientException{(StatusCode)sc}, h); } );

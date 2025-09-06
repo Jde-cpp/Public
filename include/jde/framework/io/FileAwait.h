@@ -18,22 +18,23 @@ namespace Jde::IO{
 	Γ α ThreadSize()ι->uint8;
 
 	struct IFileChunkArg{
-		IFileChunkArg( FileIOArg& arg, uint index ):
+		IFileChunkArg( sp<FileIOArg>& arg, uint index ):
 			Index{index},
 			_fileIOArg{arg}
 		{}
 		virtual ~IFileChunkArg()=default;
-		β Handle()ι->HFile&;
+		β Handle()Ι->HFile&;
 		β Process()ι->void{};
-		β FileArg()ι->FileIOArg&{ return _fileIOArg;}
-		β FileArg()Ι->const FileIOArg&{ return _fileIOArg;}
+		β FileArg()Ι->sp<FileIOArg>{ return _fileIOArg; }
+		α IsRead()Ι->bool;
 
 		std::atomic<bool> Sent;
 		uint Index;
-		FileIOArg& _fileIOArg;
+	private:
+		sp<FileIOArg> _fileIOArg;
 	};
 
-	struct FileIOArg final{
+	struct FileIOArg final : std::enable_shared_from_this<FileIOArg>, boost::noncopyable{
 		using HCo=variant<TAwait<string>::Handle,VoidAwait::Handle>;
 		FileIOArg( fs::path path, bool vec, SRCE )ι;
 		FileIOArg( fs::path path, variant<string,vector<char>> data, SRCE )ι;
@@ -41,25 +42,32 @@ namespace Jde::IO{
 		α Send( HCo h )ι->void;
 		α Data()ι{ return visit( [](auto&& x){return x.data();}, Buffer ); }
 		α Size()Ι{ return visit( [](auto&& x){return x.size();}, Buffer ); }
-		α ResumeExp( exception&& e )ι->void;
-		α ResumeExp( exception&& e, lg& chunkLock )ι->void;
+		α PostExp( up<IFileChunkArg>&& chunk, uint32 code, string&& msg )ι->void;
+		α ResumeExp( uint32 code, string&& msg )ι->void;
+		α ResumeExp( uint32 code, string&& m, lg& chunkLock )ι->void;
+		//α ResumeExp( exception&& e )ι->void;
+		//α ResumeExp( exception&& e, lg& chunkLock )ι->void;
+
+		α CoHandle()ι->HCo{ lg _{_coHandleMutex}; auto h = _coHandle; if( IsRead ) _coHandle = TAwait<string>::Handle{}; else _coHandle = VoidAwait::Handle{}; return h; }
+		α ReadCoHandle()ι->TAwait<string>::Handle{ return get<TAwait<string>::Handle>(CoHandle()); }
+		α WriteCoHandle()ι->VoidAwait::Handle{ return get<VoidAwait::Handle>(CoHandle()); }
 
 		variant<string,vector<char>> Buffer;
 		std::queue<up<IFileChunkArg>> Chunks; std::mutex ChunkMutex;
 		atomic<uint> ChunksCompleted;
 		uint ChunksToSend;
-		HCo CoHandle{};
 		HFile Handle{};
 		bool IsRead;
 		fs::path Path;
 		SL _sl;
+		HCo _coHandle; mutex _coHandleMutex;
 	};
 
 	struct Γ IFileAwait{
-		IFileAwait( fs::path&& path, bool vec, SL sl )ι:_arg{ move(path), vec, sl }{}
-		IFileAwait( fs::path&& path, variant<string,vector<char>>&& data, SL sl )ι:_arg{ move(path), move(data), sl }{}
+		IFileAwait( fs::path&& path, bool vec, SL sl )ι:_arg{ ms<FileIOArg>(move(path), vec, sl) }{}
+		IFileAwait( fs::path&& path, variant<string,vector<char>>&& data, SL sl )ι:_arg{ ms<FileIOArg>(move(path), move(data), sl) }{}
 		up<IException> ExceptionPtr;
-		FileIOArg _arg;
+		sp<FileIOArg> _arg;
 	};
 	struct Γ ReadAwait final : IFileAwait, TAwait<string>{
 		ReadAwait( fs::path path, bool cache, SRCE )ι:IFileAwait{ move(path), false, sl }, TAwait<string>{ sl },_cache{cache}{}

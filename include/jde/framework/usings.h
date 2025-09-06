@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <boost/uuid/uuid.hpp>
 namespace Jde{
 	using namespace std::literals::string_view_literals;
 
@@ -27,6 +28,7 @@ namespace Jde{
 	using std::byte;
 	using std::exception;
 	using std::function;
+	using namespace std::literals;
 	using lg = std::lock_guard<std::mutex>;
 	using std::make_shared;//refactor remove
 	using std::mutex;
@@ -84,6 +86,7 @@ namespace Jde{
 	using jstring=boost::json::string;
 	using boost::json::parse;
 	using boost::json::serialize;
+	using boost::uuids::uuid;
 	using str = const std::string&;
 
 	template<class T> using vec = const vector<T>&;
@@ -93,6 +96,7 @@ namespace Jde{
 	using std::source_location;
 	using SL = std::source_location;
 	using LogEntryPK=uint;
+	using StringMd5=uuid;
 	Τ struct PK{
 		using Type=T;
 		Type Value;

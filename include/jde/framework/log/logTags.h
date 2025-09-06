@@ -1,7 +1,7 @@
 ﻿#pragma once
 #ifndef LOG_TAGS_H
 #define LOG_TAGS_H
-#include <span>
+
 namespace Jde{
 	#define Φ Γ auto
 	enum class ELogTags : uint{
@@ -45,12 +45,28 @@ namespace Jde{
 		SocketServerRead  = Socket | Server | Read,
 		SocketServerWrite	= Socket | Server | Write
 	};
+
+	namespace Logging{
+		struct ILogger;
+		α UpdateCumulative( const vector<up<Logging::ILogger>>& loggers )ι->void;
+	}
+	struct LogTags{
+		LogTags( jobject o )ι;
+		LogTags( ELogLevel defaultLevel=ELogLevel::Information ):_minLevel{defaultLevel},_defaultLevel{defaultLevel}{}
+		β MinLevel()Ι->ELogLevel{ return _minLevel; }
+		β MinLevel( ELogTags tags )Ι->ELogLevel;
+		β SetMinLevel( ELogLevel level )ι->void{ _minLevel = level; }
+		β ShouldLog( ELogLevel level, ELogTags tags )Ι->bool;
+		β ToString()ι->string;
+	protected:
+		mutable concurrent_flat_map<ELogTags,ELogLevel> Tags;
+		ELogLevel	_minLevel;
+		ELogLevel _defaultLevel;
+		friend α Logging::UpdateCumulative( const vector<up<Logging::ILogger>>& loggers )ι->void;
+	};
+
 	constexpr ELogTags DefaultTag=ELogTags::App;
 	Φ ShouldTrace( ELogTags tags )ι->bool;
-	Φ FileMinLevel( ELogTags tags )ι->ELogLevel;
-	α MinLevel( ELogTags tags )ι->ELogLevel;
-	α Min( ELogLevel a, ELogLevel b )ι->ELogLevel;
-	α Min( ELogTags tags, const concurrent_flat_map<ELogTags,ELogLevel>& tagSettings )ι->optional<ELogLevel>;
 	α ToString( ELogTags tags )ι->string;
 	Φ ToLogTags( sv name )ι->ELogTags;
 namespace Logging{
@@ -60,13 +76,7 @@ namespace Logging{
 	};
 	Φ AddTagParser( up<ITagParser>&& tagParser )ι->void;
 
-	α TagSettings( string name, str path )ι->concurrent_flat_map<ELogTags,ELogLevel>;
-	α AddFileTags()ι->void;
-	Φ SetTag( sv tag, ELogLevel l=ELogLevel::Debug, bool file=true )ι->void;
-	//α SetTag(sv tag, vector<ELogTags>& existing, ELogLevel configLevel)ι->string;
-	α AddTags( concurrent_flat_map<ELogTags, ELogLevel>& sinkTags, sv path)ι->void;
-	struct ExternalMessage;
-	α ShouldLog( const ExternalMessage& m )ι->bool;
+	α ShouldLog( ELogLevel level, ELogTags tags )ι->bool;
 }}
 #undef Φ
 #endif

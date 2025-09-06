@@ -62,26 +62,24 @@ namespace Jde::App{
 		}
 	}
 
-	α TestLogPub( const FilterQL& subscriptionFilter, AppPK /*appId*/, AppInstancePK /*instancePK*/, const Logging::ExternalMessage& m )ι->bool{
+	α TestLogPub( const FilterQL& subscriptionFilter, AppPK /*appId*/, AppInstancePK /*instancePK*/, const Logging::Entry& m )ι->bool{
 		bool passesFilter{ true };
 		let logTags = ELogTags::Socket | ELogTags::Server | ELogTags::Subscription;
 		for( let& [jsonColName, columnFilters] : subscriptionFilter.ColumnFilters ){
 			if( jsonColName=="level" )
 				passesFilter = FilterQL::Test( underlying(m.Level), columnFilters, logTags );
 			else if( jsonColName=="time" )
-				passesFilter = FilterQL::Test( m.TimePoint, columnFilters, logTags );
+				passesFilter = FilterQL::Test( m.Time, columnFilters, logTags );
 			else if( jsonColName=="message" )
-				passesFilter = FilterQL::Test( string{m.MessageView}, columnFilters, logTags );
+				passesFilter = FilterQL::Test( string{m.Text}, columnFilters, logTags );
 			else if( jsonColName=="file" )
-				passesFilter = FilterQL::Test( string{m.File}, columnFilters, logTags );
+				passesFilter = FilterQL::Test( string{m.File()}, columnFilters, logTags );
 			else if( jsonColName=="function" )
-				passesFilter = FilterQL::Test( string{m.Function}, columnFilters, logTags );
+				passesFilter = FilterQL::Test( string{m.Function()}, columnFilters, logTags );
 			else if( jsonColName=="line" )
-				passesFilter = FilterQL::Test( m.LineNumber, columnFilters, logTags );
+				passesFilter = FilterQL::Test( m.Line, columnFilters, logTags );
 			else if( jsonColName=="user_pk" )
 				passesFilter = FilterQL::Test( m.UserPK, columnFilters, logTags );
-			else if( jsonColName=="thread_Id" )
-				passesFilter = FilterQL::Test( m.ThreadId, columnFilters, logTags );
 			// else if( jsonColName=="tags" ) TODO
 			// 	passesFilter = FilterQL::Test( m.Tags(), columnFilters, logTags );
 			// else if( jsonColName=="args" ) TODO
@@ -92,7 +90,7 @@ namespace Jde::App{
 		return passesFilter;
 	}
 
-	α Server::BroadcastLogEntry( LogPK id, AppPK logAppPK, AppInstancePK logInstancePK, const Logging::ExternalMessage& m, const vector<string>& args )ι->void{
+	α Server::BroadcastLogEntry( LogPK id, AppPK logAppPK, AppInstancePK logInstancePK, const Logging::Entry& m, const vector<string>& args )ι->void{
 		_logSubscriptions.cvisit_all( [&]( let& kv ){
 			if( TestLogPub(kv.second, id, logAppPK, m) ){
 				_sessions.visit( kv.first, [&](auto&& kv){

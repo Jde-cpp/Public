@@ -14,18 +14,21 @@ local args = import 'args.libsonnet';
 		}
 	},
 	logging:{
-		flushOn: "Trace",
-		tags: {
-			trace:["test","sql",
-				"UASession", "UAServer", "UAUser", "UASecurity", "UAEvent", "threads", "UAClient", "UANet", "UASecure"],
-			debug:["ql","settings", "app"],
-			information:["app", "appServer", "net"],
-			warning:["alarm", "ql", "io", "locks", "settings"],
-			"error":[],
-			critical:[]
-		},
-		sinks:{
-			console:{}
+		spd:{
+			flushOn: "Trace",
+			tags: {
+				trace:["test","sql",
+					"uaSession", "uaServer", "uaUser", "uaSecurity", "uaEvent", "threads", "uaClient", "uaNet", "uaSecure"],
+				debug:["ql","settings", "app"],
+				information:[],
+				warning:["io"],
+				"error":[],
+				critical:[]
+			},
+			sinks:{
+				console:{},
+				file:{ path: args.logDir, md: false }
+			}
 		}
 	},
 	credentials:{

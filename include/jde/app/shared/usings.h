@@ -7,6 +7,5 @@ namespace Jde::App{
 	using LogPK=uint32;
 
 	using RequestId=uint32;
-	using StringPK=Hash;
 	using ThreadPK=uint;
 }

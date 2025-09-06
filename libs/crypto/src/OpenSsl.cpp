@@ -41,11 +41,9 @@ namespace Jde{
 		auto ctx = NewMDCtx();
 		CALL( EVP_DigestInit_ex(ctx.get(), EVP_md5(), nullptr) );
 		CALL(	EVP_DigestUpdate(ctx.get(), data, size) );
-		array<byte,EVP_MAX_MD_SIZE> buffer; unsigned int outputSize;
-		CALL(	EVP_DigestFinal_ex(ctx.get(), (unsigned char*)buffer.data(), &outputSize) );
-		ASSERT( outputSize==16 );
 		MD5 md5;
-		std::copy( buffer.begin(), buffer.begin()+16, md5.begin() );
+		unsigned int outputSize;
+		CALL(	EVP_DigestFinal_ex(ctx.get(), md5.data(), &outputSize) );
 		return md5;
 	}
 
@@ -120,22 +118,17 @@ namespace Jde{
 		KeyPtr key{ X509_get_pubkey(cert.get()), ::EVP_PKEY_free }; CHECK_NULL( key.get() );
 		return toPublicKey( move(key) );
 	}
-	Ω rsaPemFromModExp( Crypto::Modulus modulus, const Crypto::Exponent& exponent )ε->KeyPtr;
+	Ω rsaPemFromModExp( Crypto::Modulus modulus, const Crypto::Exponent& exponent, SRCE )ε->KeyPtr;
 
-	α Crypto::Fingerprint( const PublicKey& pubKey )ι->MD5{
-		//openssl pkey -pubin -in server.pem -outform DER | openssl dgst -md5 -c
-		auto key = rsaPemFromModExp( pubKey.Modulus, pubKey.Exponent );
-		array<byte,1040> buffer; uint len;
-		EVP_PKEY_get_raw_public_key( key.get(), (unsigned char*)buffer.data(), &len );
-		MD5 md5;
-		std::copy( buffer.begin(), buffer.begin()+16, md5.begin() );
-		return md5;
+	α Crypto::Fingerprint( const PublicKey& pubKey, SL sl )ε->MD5{
+		let bytes = ToBytes( pubKey, sl );
+		return CalcMd5( bytes );
 	}
 	α Crypto::ReadPublicKey( const fs::path& publicKey )ε->PublicKey{
 		return toPublicKey( Internal::ReadPublicKey(publicKey) );
 	}
-	α Crypto::ToBytes( const PublicKey& modExp )ε->vector<byte>{
-		let key = rsaPemFromModExp( modExp.Modulus, modExp.Exponent );
+	α Crypto::ToBytes( const PublicKey& modExp, SL sl )ε->vector<byte>{
+		let key = rsaPemFromModExp( modExp.Modulus, modExp.Exponent, sl );
 		auto len = i2d_PUBKEY( key.get(), nullptr );
 		vector<byte> y( len );
 		unsigned char* p = (unsigned char*)y.data();
@@ -159,7 +152,7 @@ namespace Jde{
 	}
 
 	//https://stackoverflow.com/questions/28770426/rsa-public-key-conversion-with-just-modulus
-	α rsaPemFromModExp( Crypto::Modulus modulus, const Crypto::Exponent& exponent )ε->KeyPtr{//this changes the modulus.
+	α rsaPemFromModExp( Crypto::Modulus modulus, const Crypto::Exponent& exponent, SL sl )ε->KeyPtr{//this changes the modulus.
 		OSSL_PARAM params[]{
 			OSSL_PARAM_construct_BN( "n", (unsigned char*)modulus.data(), modulus.size() ),
 			OSSL_PARAM_construct_BN( "e", (unsigned char*)exponent.data(), exponent.size() ),
@@ -173,8 +166,8 @@ namespace Jde{
 
     EVP_PKEY* key{};
 		auto pctx = NewRsaCtx();
-		CALL( EVP_PKEY_fromdata_init(pctx.get()) );
-		CALL( EVP_PKEY_fromdata(pctx.get(), &key, EVP_PKEY_PUBLIC_KEY, params) );
+		CALLSL( EVP_PKEY_fromdata_init(pctx.get()) );
+		CALLSL( EVP_PKEY_fromdata(pctx.get(), &key, EVP_PKEY_PUBLIC_KEY, params) );
 		return { key, ::EVP_PKEY_free };
 	}
 

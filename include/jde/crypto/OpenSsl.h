@@ -1,6 +1,7 @@
 ﻿#pragma once
 #ifndef OPEN_SSL_H
 #define OPEN_SSL_H
+#include <boost/uuid/uuid.hpp>
 #include "exports.h"
 
 #define Φ ΓC auto
@@ -22,16 +23,16 @@ namespace Jde::Crypto{
 	};
 
 	using Signature = vector<unsigned char>;
-	using MD5 = array<byte,16>;
+	using MD5 = boost::uuids::uuid;
 	α CalcMd5( byte* data, uint size )ε->MD5;
 	Ŧ CalcMd5( T content )ε->MD5{ return CalcMd5( (byte*)content.data(), content.size() ); }
 	Φ CreateKey( const fs::path& publicKeyPath, const fs::path& privateKeyPath, str passcode )ε->void;
 	Φ CreateCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain )ε->void;
 	Φ CreateKeyCertificate( const CryptoSettings& settings )ε->void;
 	Φ ExtractPublicKey( std::span<byte> certificate )ε->PublicKey;
-	Φ Fingerprint( const PublicKey& key )ι->MD5;
+	Φ Fingerprint( const PublicKey& key, SRCE )ε->MD5;
 	Φ ReadPublicKey( const fs::path& publicKey )ε->PublicKey;
-	Φ ToBytes( const PublicKey& key )ε->vector<byte>;
+	Φ ToBytes( const PublicKey& key, SRCE )ε->vector<byte>;
 	Φ ReadCertificate( const fs::path& certificate )ε->vector<byte>;
 	Φ ReadPrivateKey( const fs::path& privateKeyPath, str passcode )ε->vector<byte>;
 	Φ RsaSign( str content, const fs::path& privateKeyFile )ε->Signature;
@@ -41,7 +42,7 @@ namespace Jde::Crypto{
 
 	struct OpenSslException final : IException{
 		template<class... Args>
-		OpenSslException( fmt::format_string<Args...> fmt, uint32 rc, SL sl, Args&&... args )ι:
+		OpenSslException( fmt::format_string<Args...> fmt, uint32 rc, SRCE, Args&&... args )ι:
 			IException{ sl, ELogLevel::Warning, rc, fmt, std::forward<Args>(args)... }
 		{}
 		static Φ CurrentError()ι->string;

@@ -40,21 +40,23 @@ local args = import 'args.libsonnet';
 		}
 	},
 	logging:{
-		flushOn: "Trace",
-		defaultLevel: "Information",
-		tags:{
-			trace:["parsing", "test",
-				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
-			],
-			debug:["ql","sql", "sessions", "settings"],
-			information:[],
-			warning:[],
-			"error":[],
-			critical:[]
-		},
-		sinks:{
-			console:{},
-			file:{ path: args.logDir, md: false }
+		spd:{
+			flushOn: "Trace",
+			defaultLevel: "Information",
+			tags:{
+				trace:["parsing", "test",
+					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
+				],
+				debug:["ql","sql", "sessions", "settings"],
+				information:[],
+				warning:[],
+				"error":[],
+				critical:[]
+			},
+			sinks:{
+				console:{},
+				file:{ path: args.logDir, md: false }
+			}
 		},
 		breakLevel: "Warning"
 	},

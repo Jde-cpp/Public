@@ -19,8 +19,8 @@ namespace Jde::App::FromClient{
 	Φ Status( vector<string>&& details )ι->PFromClient::Transmission;
 	Φ Session( SessionPK sessionId, RequestId requestId )ι->StringTrans;
 	Φ Subscription( string&& query, RequestId requestId )ι->PFromClient::Transmission;
-	Φ ToLogEntry( Logging::ExternalMessage m )ι->PFromClient::LogEntry;
-	Φ AddStringField( PFromClient::Transmission& t, PFromClient::EFields field, uint32 id, str value )ι->void;
-	Φ ToExternalMessage( const PFromClient::LogEntry& m )ι->Logging::ExternalMessage;
+	Φ ToLogEntry( Logging::Entry m )ι->PFromClient::LogEntry;
+	Φ FromLogEntry( PFromClient::LogEntry&& m )ι->Logging::Entry;
+	Φ AddStringField( PFromClient::Transmission& t, PFromClient::EFields field, uuid id, str value )ι->void;
 }
 #undef Φ

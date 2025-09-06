@@ -2,12 +2,12 @@ local args = import 'args.libsonnet';
 {
 	testing:{
 		tests:: "ResourceTests.Crud",
-		recreateDB: true
+		recreateDB:: true
 	},
 	dbServers:{
 		scriptPaths: ["$(JDE_DIR)/Public/libs/access/config/sql/"+args.sqlType],
 		dataPaths: ["$(JDE_DIR)/Public/libs/access/config"],
-		sync: true,
+		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,
@@ -18,21 +18,22 @@ local args = import 'args.libsonnet';
 		}
 	},
 	logging:{
-		tags: {
-			trace:["test", "access", "ql"],
-			debug:["settings", "sql"],
-			information:["app"],
-			warning:[],
-			"error":[],
-			critical:[]
-		},
-		sinks:{
-			console:{},
-			file:{ path: args.logDir, md: false }
+		spd:{
+			tags: {
+				trace:["test", "access", "ql"],
+				debug:["settings", "sql"],
+				information:["app"],
+				warning:[],
+				"error":[],
+				critical:[]
+			},
+			sinks:{
+				console:{},
+				file:{ path: args.logDir, md: false }
+			}
 		}
 	},
 	workers:{
-		executor: 2,
-		drive: {threads: 1}
+		executor: 2
 	}
 }

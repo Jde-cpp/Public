@@ -33,9 +33,9 @@ namespace Jde::App::Client{
 	//TODO change to functions, not returning anything.
 	struct LogAwait : VoidAwait{
 		using base = VoidAwait;
-		LogAwait( Logging::ExternalMessage&& m, SRCE )ι:base{sl}, _message{move(m)}{}
-		LogAwait( const Logging::ExternalMessage& m, const vector<string>* args, SRCE )ι:base{sl}, _message{ m }, _args{ args }{}
-		const Logging::ExternalMessage _message;
+		LogAwait( Logging::Entry&& m, SRCE )ι:base{sl}, _message{move(m)}{}
+		LogAwait( const Logging::Entry& m, const vector<string>* args, SRCE )ι:base{sl}, _message{ m }, _args{ args }{}
+		const Logging::Entry _message;
 		const vector<string>* _args;
 	};
 */
