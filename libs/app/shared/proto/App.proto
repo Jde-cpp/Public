@@ -6,7 +6,7 @@ message Execute{
 	bytes transmission = 2;
 }
 
-message StringPKs{
+message StringMD5s{
 	repeated uint32 messages = 1;
 	repeated uint32 files = 2;
 	repeated uint32 functions = 3;

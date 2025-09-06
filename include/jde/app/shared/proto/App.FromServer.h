@@ -23,6 +23,6 @@ namespace Jde::App::FromServer{
 	Φ Subscription( string&& s, RequestId requestId )ι->Proto::FromServer::Transmission;
 	Φ ToStatus( AppPK appId, AppInstancePK instanceId, str hostName, Proto::FromClient::Status&& input )ι->Proto::FromServer::Status;
 	Φ ToTrace( DB::Row&& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace;
-	Φ TraceBroadcast( LogPK id, AppPK appId, AppInstancePK instanceId, const Logging::ExternalMessage& m, const vector<string>& args )ι->Proto::FromServer::Transmission;
+	Φ TraceBroadcast( LogPK id, AppPK appId, AppInstancePK instanceId, const Logging::Entry& m, const vector<string>& args )ι->Proto::FromServer::Transmission;
 }
 #undef Φ

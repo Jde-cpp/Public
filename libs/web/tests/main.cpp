@@ -1,5 +1,6 @@
 ﻿#include "gtest/gtest.h"
 #include <jde/framework/thread/thread.h>
+#include <jde/crypto/OpenSsl.h>
 #define let const auto
 
 namespace Jde{
@@ -8,6 +9,7 @@ namespace Jde{
 #endif
 
  	α Startup( int argc, char **argv )ι->void{
+		Logging::Entry::SetGenerator( [](sv text)->LogEntryPK{ return Crypto::CalcMd5(text); } );
 #ifdef _MSC_VER
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
 #endif

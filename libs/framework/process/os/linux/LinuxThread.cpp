@@ -4,9 +4,8 @@
 α Jde::ThreadDscrptn()ι->const char*{
 	if( std::strlen(ThreadName)==0 ){
 		_threadId = pthread_self();
-		let rc = pthread_getname_np( _threadId, ThreadName, NameLength );
-		if (rc != 0)
-				Error( ELogTags::Threads, "pthread_getname_np returned {}"sv, rc );
+		if( let rc = pthread_getname_np( _threadId, ThreadName, NameLength ); rc != 0 )
+			Error( ELogTags::Threads, "pthread_getname_np returned {}"sv, rc );
 	}
 	return ThreadName;
 }

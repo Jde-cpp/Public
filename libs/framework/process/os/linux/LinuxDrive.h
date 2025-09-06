@@ -7,27 +7,9 @@
 #include <jde/framework/io/file.h>
 
 using namespace Jde::Coroutine;
-namespace Jde::IO
-{
-	struct LinuxChunk final : IFileChunkArg{
-		LinuxChunk( FileIOArg& pIOArg, uint index )ι;
-		//uint StartIndex()const ι override;
-		//void SetStartIndex( uint i )ι override;
-		//uint Bytes()const ι override{ return _linuxArg.aio_nbytes; } virtual void SetBytes( uint x )ι override{ _linuxArg.aio_nbytes=x; }
-		//void SetEndIndex( uint i )ι override;
-		//void SetFileIOArg( FileIOArg* p )ι override{ _fileIOArgPtr=p; }
-		//HFile Handle()ι override{ return _linuxArg.aio_fildes; };
-		//void Process( int handle )ι override;
-		//optional<bool> Complete()ι;
-	private:
-		//aiocb _linuxArg;
-	};
-
-/*	struct LinuxDriveWorker final : DriveWorker
-	{
-		//static void IOHandler( int s )ι;
-	//	static void AioSigHandler( int sig, siginfo_t* pInfo, void* pContext )ι;
-	};*/
+namespace Jde::IO{
+	constexpr int CompletionSignal{ SIGUSR2 };
+	α AioCompletionHandler( int signo, siginfo_t *info, void *context )ι->void;
 }
 
 namespace Jde::IO::Drive{

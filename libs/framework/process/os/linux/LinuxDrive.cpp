@@ -1,43 +1,14 @@
 #include "LinuxDrive.h"
-#include <unistd.h>
+//#include <unistd.h>
 #include <jde/framework/io/file.h>
 #include "../../Framework/source/Cache.h"
 
 #define let const auto
-namespace Jde::IO{
+namespace Jde::IO::Drive{
 	constexpr ELogTags _tags{ ELogTags::IO };
 
 	Drive::NativeDrive _native;
 	α Native()ι->IDrive&{ return _native; }
-
-	α FileIOArg::Open( bool create )ε->void{
-		auto flags = O_NONBLOCK | (IsRead ? O_RDONLY : O_WRONLY  | O_TRUNC);
-		if( create && !IsRead )
-			flags |= O_CREAT;
-		Handle = ::open( Path.string().c_str(), flags, 0666 );
-		if( Handle==-1 ){
-			Handle = 0;
-			if( !IsRead && errno==ENOENT ){
-				fs::create_directories( Path.parent_path() );
-				Information{ _tags, "Created dir {}", Path.parent_path().string() };
-				return Open( create );
-			}
-			THROW_IFX( IsRead /*|| errno!=EACCES*/, IOException(move(Path), errno, "open", _sl) );
-		}
-		if( IsRead ){
-			struct stat st;
-			THROW_IFX( ::fstat( Handle, &st )==-1, IOException(move(Path), errno, "fstat", _sl) );
-			std::visit( [size=st.st_size](auto&& b){b.resize(size);}, Buffer );
-		}
-	}
-
-	α FileIOArg::Send( HCo h )ι->void{
-		CoHandle = h;
-		if( CoHandle.index()==0 )
-			CoroutinePool::Resume( get<0>(CoHandle) );
-		else
-			CoroutinePool::Resume( get<1>(CoHandle) );
-	}
 /*
 	α DriveAwaitable::await_resume()ι->AwaitResult{
 		if( ExceptionPtr )
@@ -136,8 +107,6 @@ namespace Jde::IO{
 		//return result!=-1;
 	}
 */
-}
-namespace Jde::IO::Drive{
 	α GetAttributes( fs::path path )->tuple<TimePoint,TimePoint,uint>{
 		struct stat attrib;
 		stat( path.string().c_str(), &attrib );

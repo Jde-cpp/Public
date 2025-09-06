@@ -61,7 +61,8 @@ namespace Jde::Opc::Gateway{
 				for( auto& [_,client] : creds ){
 					client->MonitoredNodes.Shutdown();
 					client->_asyncRequest.Stop();
-					WARN_IF( client.use_count()>1, "[{:x}]use_count={}", client->Handle(), client.use_count() );
+					if( client.use_count()>1 )
+					  Warning{ _tags, "[{:x}]use_count={}", client->Handle(), client.use_count() };
 				}
 			}
 		}
@@ -141,7 +142,7 @@ namespace Jde::Opc::Gateway{
 						let inserted = opcCreds.try_emplace( client->Credential, client ).second;
 						ASSERT( inserted );//not sure why we would already have a record.
 					}
-					ConnectAwait::Resume( move(client), client->Target(), client->Credential );
+					ConnectAwait::Resume( move(client) );
 				}
 				else
 					ConnectAwait::Resume( client->Target(), client->Credential, UAClientException{connectStatus} );

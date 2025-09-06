@@ -24,7 +24,7 @@ namespace Jde::App::Server{
 	α StartWebServer( jobject&& settings )ε->void;
 	α StopWebServer( bool terminate )ι->void;
 
-	α BroadcastLogEntry( LogPK id, AppPK logAppPK, AppInstancePK logInstancePK, const Logging::ExternalMessage& m, const vector<string>& args )ι->void;
+	α BroadcastLogEntry( LogPK id, AppPK logAppPK, AppInstancePK logInstancePK, const Logging::Entry& m, const vector<string>& args )ι->void;
 	α BroadcastStatus( AppPK appId, AppInstancePK statusInstancePK, str hostName, Proto::FromClient::Status&& status )ι->void;
 	α BroadcastAppStatus()ι->void;
 	α FindApplications( str name )ι->vector<Proto::FromClient::Instance>;

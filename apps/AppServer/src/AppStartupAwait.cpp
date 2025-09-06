@@ -10,6 +10,7 @@
 namespace Jde::App::Server{
 	α AppStartupAwait::Execute()ι->VoidAwait::Task{
 		try{
+			Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
 			co_await ConfigureDSAwait{};
 			SetAppPKs( AddInstance("Main", IApplication::HostName(), OSApp::ProcessId()) );
 
@@ -20,7 +21,7 @@ namespace Jde::App::Server{
 			QL::Hook::Add( mu<AppInstanceHook>(appClient) );
 			QL::Hook::Add( mu<Web::Server::SettingQL>(appClient) );
 			QL::Hook::Add( mu<Web::Server::SessionGraphQL>(appClient) );
-			Logging::External::Add( mu<ExternalLogger>(appClient) );
+			Logging::AddLogger( mu<ExternalLogger>(appClient) );
 
 			Information( ELogTags::App, "--AppServer Started.--" );
 			Resume();

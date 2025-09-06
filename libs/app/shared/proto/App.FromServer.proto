@@ -29,9 +29,9 @@ message Trace{
 	uint64 instance_id=2;
 	google.protobuf.Timestamp time=3;
 	Jde.Proto.ELogLevel level=4;
-	uint32 message_id=5;
-	uint32 file_id=6;
-	uint32 function_id=7;
+	bytes message_id=5;
+	bytes file_id=6;
+	bytes function_id=7;
 	uint32 line=8;
 	uint32 user_pk=9;
 	uint64 thread_id=10;
@@ -62,9 +62,7 @@ message Status{
 	uint64 memory=5;
 	uint32 log_count=6;
 	double cpu=7;
-	Jde.Proto.ELogLevel db_log_level=8;
-	Jde.Proto.ELogLevel file_log_level=9;
-	repeated string values=10;
+	repeated string values=8;
 }
 
 message Strings{
@@ -83,7 +81,7 @@ message Message{
 	oneof Value{
 		uint32 ack = 2;//sends on handshake
 		string generic = 3;
-		Jde.App.Proto.StringPKs string_pks = 4;//pks stored in db.
+		Jde.App.Proto.StringMD5s string_pks = 4;//pks stored in db.
 		LogLevels log_levels = 5;
 		double progress = 7;
 		Jde.Web.FromServer.SessionInfo session_info = 8;
