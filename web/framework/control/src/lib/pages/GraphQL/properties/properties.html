@@ -1,0 +1,56 @@
+@if( !this.isLoading() ){
+	<ng-container>
+		<div>
+			@for( field of fields(); track field.name; let tab = $index ){
+				<mat-form-field style="width: 100%;" appearance="fill">
+					<mat-label>{{field.displayName}}</mat-label>
+					@if( field.type==InputTypes.None ){
+						<input #stringField matInput
+							[type]="field.name=='url' ? 'url' : 'text'"
+							[attr.cdkFocusInitial]="field.name=='target' ? '' : null"
+							[value]="record()[field.name] ?? ''"
+							[tabIndex]=tab+1
+							(keyup)="onChange( field.name, $event.target['value'] )" >
+					}
+					@else if( field.type==InputTypes.Text ){
+						<textarea matInput
+							[value]="record()[field.name] ?? ''"
+							[tabIndex]="tab+1"
+							(keyup)="onChange( field.name, $event.target['value'] )">
+						</textarea>
+					}
+					@else if( field.type==InputTypes.Select ){
+						<mat-select
+							[tabIndex]="tab+1"
+							(selectionChange)="onChange( field.name, $event.value )"
+							[value]="getEnumId( field )">
+							@for( option of field.options; track option.id ){
+								<mat-option [value]="option.id">{{option.name}}</mat-option>
+							}
+						</mat-select>
+					}
+				</mat-form-field>
+			}
+			@if( boolFields().length ){
+				<mat-form-field style="width: 100%;" appearance=fill>
+					<mat-chip-grid #chipGrid aria-label="Attributes" [multiple]=true [selectable]=true>
+						@for( field of boolFields(); track field.name ){
+							<mat-chip-row [selected]="record()[field.name]"
+							[highlighted]="record()[field.name]!=0" [selected]="record()[field.name]"
+							(click)="record().set( field.name, !record()[field.name] );">{{field.displayName}}</mat-chip-row>
+						}
+					</mat-chip-grid>
+					<input hidden=true [matChipInputFor]="chipGrid">
+				</mat-form-field>
+			}
+		</div>
+		<!--<div>
+			@if( record().size ){
+				<span style="margin-left: auto;" >
+					<button tabindex="100" mat-fab extended (click)="saving=true;onSubmitClick()" [disabled]="!enableSubmit"><mat-icon>done</mat-icon>Save</button>
+					<button tabindex="101" mat-fab extended (click)="onCancelClick()" style="margin-left:50px;margin-right:20px"><mat-icon>cancel</mat-icon>Cancel</button>
+				</span>
+			}
+		</div>-->
+	</ng-container>
+}

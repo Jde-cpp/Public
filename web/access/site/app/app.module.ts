@@ -9,7 +9,7 @@ import {MatSnackBarModule} from '@angular/material/snack-bar';
 import { RouterModule } from '@angular/router';
 import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import {MatSelectModule} from '@angular/material/select';
-import {NavBar} from 'jde-material';
+import {NavBar} from 'jde-spa';
 
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app_routing_module';

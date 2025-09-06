@@ -7,9 +7,8 @@ message Execute{
 }
 
 message StringMD5s{
-	repeated uint32 messages = 1;
-	repeated uint32 files = 2;
-	repeated uint32 functions = 3;
-	repeated uint32 threads = 4;
+	repeated bytes messages = 1;
+	repeated bytes files = 2;
+	repeated bytes functions = 3;
 	repeated uint32 userPKs = 5; //targets for web.
 }

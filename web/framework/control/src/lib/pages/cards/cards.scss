@@ -1,0 +1,9 @@
+.cards {
+	display: flex;
+	flex-direction: column;
+	overflow: auto;
+	flex: 1;
+	margin-top: 56px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}

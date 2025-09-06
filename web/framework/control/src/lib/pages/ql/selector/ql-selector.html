@@ -1,0 +1,7 @@
+@if( !isLoading() ) {
+	<ng-container>
+		<div>
+			<ql-table [dataSource]=data [displayedFields]=displayedFields [sort]=sort [showDeleted]=false [(selections)]=selections></ql-table>
+		</div>
+	</ng-container>
+}
