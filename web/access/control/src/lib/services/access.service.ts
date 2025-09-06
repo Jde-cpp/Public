@@ -1,6 +1,6 @@
 import { Injectable, Inject, signal, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { IEnvironment } from 'jde-material';
+import { IEnvironment } from 'jde-spa';
 import { AppService, AuthStore, IGraphQL, TableSchema } from 'jde-framework';
 import { Resource } from '../model/Resource';
 

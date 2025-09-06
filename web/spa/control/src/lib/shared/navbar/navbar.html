@@ -1,0 +1,25 @@
+<!-- TODO: figure out if the <nav> should go inside of a <header> element. -->
+  <nav class="docs-navbar-header" aria-label="Top Toolbar">
+    @if (skipLinkHidden) {
+      <div class="skip-link-wrapper" [class.cdk-visually-hidden]="skipLinkHidden">
+        <a mat-raised-button [href]="skipLinkHref" (focus)="skipLinkHidden = false" (blur)="skipLinkHidden = true" color="accent">
+          Skip to main content
+        </a>
+      </div>
+    }
+    @for( route of routes; track route) {
+      <a mat-button class="docs-navbar-hide-small docs-button"
+        [routerLink]="route.path"
+        [routerLinkActiveOptions]="{exact:!route.path.length}"
+        routerLinkActive="docs-navbar-header-item-selected">{{name(route)}}</a>
+    }
+    <div class="flex-spacer"></div>
+    <authorization></authorization>
+    <theme-picker></theme-picker>
+  </nav>
+  <nav class="docs-navbar docs-navbar-show-small" aria-label="Section Nav Bar">
+    @for (key of sectionKeys; track key) {
+      <a mat-button class="docs-navbar-link"
+        [routerLink]="key">{{sections[key].name}}</a>
+    }
+  </nav>

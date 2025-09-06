@@ -1,0 +1,16 @@
+.hidden
+{
+	display: none;
+}
+
+mat-toolbar
+{
+	display: flex;
+	height:80px;
+	flex: 0 0 100%;
+}
+
+my-content
+{
+	width: 100%;
+}

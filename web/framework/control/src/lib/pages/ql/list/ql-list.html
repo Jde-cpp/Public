@@ -1,0 +1,22 @@
+@if( !isLoading() ) {
+	<ng-container>
+		<mat-toolbar>
+			<span></span>
+			@if( showAdd ){
+				<button mat-icon-button color="primary" style="margin-left :20px; margin-right:10px" (click)="insert()"><mat-icon>add</mat-icon></button>
+			}
+			<button mat-icon-button (click)="edit()" [disabled]="selection()==null" [title]='selection()?.deleted ? "Restore" : "Properties"'  color="primary" style="margin-left :20px; margin-right:10px">
+				<mat-icon>{{selection()?.deleted ? "restore" : "edit_attributes"}}</mat-icon>
+			</button>
+			<button mat-icon-button color="primary"  style="margin-left :20px; margin-right:10px"
+				[disabled]="selection()==null || (selection().deleted && !canPurge)"
+				(click)="delete()">
+				<mat-icon>{{selection()?.deleted ? "delete_forever" : "remove"}}</mat-icon></button>
+			<span></span>
+			<mat-checkbox [checked]="showDeleted" color="primary" (change)="toggleShowDeleted()">Show Deleted</mat-checkbox>
+		</mat-toolbar>
+		<div style="align-content: center; margin: auto;  text-align: center">
+			<ql-table [dataSource]=data [displayedFields]=displayedFields  [sort]=sort [showDeleted]=showDeleted [(selections)]=selections></ql-table>
+		</div>
+	</ng-container>
+}

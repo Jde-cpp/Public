@@ -1,0 +1,69 @@
+@if( viewPromise | async ){
+	<ng-container>
+		<mat-toolbar style="padding-top: 20px; width: 100%;">
+			<!-- <i class="material-icons" [innerHTML]="connected ? 'power' : 'power_off'"></i> -->
+			<!-- <button class="mdc-icon-button material-icons" (click)="settings()" >settings</button>  -->
+			<!--  [value]="application.Name" -->
+			<mat-form-field>
+				<!-- <mat-label>Applications</mat-label>
+				<mat-select placeholder="Applications" [(value)]="applicationId">
+					<ng-container *ngFor="let application of applications">
+						<mat-option (onSelectionChange)="onChangeApplication($event)" [value]="application.id">{{application.name}}</mat-option>
+					</ng-container>
+				</mat-select> -->
+				<mat-select name="applications" ngDefaultControl (selectionChange)="onChangeApplication($event.value)">
+					<mat-option *ngFor="let application of applications" [value]="application.id">{{application.name}}</mat-option>
+				</mat-select>
+			</mat-form-field>
+
+			<button mat-icon-button><mat-icon class="iconButton" (click)="paused=!paused">{{paused ? 'play_arrow' : 'pause'}}</mat-icon></button> <!-- -->
+			<div>|</div>
+			<!-- <severity-picker style="margin-left:15px;" (levelChange)="onLevelChange($event)" [level]="level"></severity-picker> -->
+			<div>|</div>
+			<!-- <mat-form-field>
+				<input matInput [matDatepicker]="dateId" placeholder="Date" [(formControl)]="start" (dateChange)="startChange($event)">
+				<mat-datepicker-toggle matSuffix [for]="dateId"></mat-datepicker-toggle>
+				<mat-datepicker #dateId></mat-datepicker>
+			</mat-form-field> -->
+			<!-- <mat-paginator (page)="pageChangeEvent($event)" [pageIndex]="pageIndex" [length]="data.length" [pageSize]="pageSize" [pageSizeOptions]="[14, 100, 500, 1000]" showFirstLastButtons></mat-paginator> -->
+			<paginator (page)="pageChangeEvent($event)" [pageLength]="pageSize" [lengthChange]="lengthChange.asObservable()" [startIndexChange]="startIndexChange.asObservable()"></paginator><!-- [startIndex]="pageInfo.startIndex" -->
+			<mat-form-field>
+				<input matInput (keyup)="applyFilter($event.target['value'])" placeholder="Filter">
+			</mat-form-field>
+			<button mat-icon-button [disabled]="settings.hiddenMessages.length==0"><mat-icon class="iconButton" (click)="clearHiddenMessages()">layers_clear</mat-icon></button>
+			<button mat-icon-button [disabled]="selectedIndex==null"><mat-icon class="iconButton" (click)="hideSelectedMessage()">clear</mat-icon></button>
+			<button mat-icon-button [disabled]="selectedIndex==null"><mat-icon class="iconButton" (click)="navigateNext()">navigate_next</mat-icon></button>
+		</mat-toolbar>
+		<mat-table #mainTable [dataSource]="data" class="mat-elevation-z8"  matSort (matSortChange)="sortData($event)" [matSortActive]="sort.active" [matSortDirection]="sort.direction">
+			<ng-container matColumnDef="time">
+				<mat-header-cell mat-sort-header [style.flex]="'0 0 65px'" *matHeaderCellDef> Time </mat-header-cell>
+				<mat-cell style="text-align: left" [style.flex]="'0 0 65px'" title="{{element.time | date }}" mat-cell *matCellDef="let element"> {{element.time | date: "HH:mm:ss"}} </mat-cell>
+			</ng-container>
+			<ng-container matColumnDef="level">
+				<mat-header-cell mat-sort-header class="level" *matHeaderCellDef> Level </mat-header-cell>
+				<mat-cell mat-cell class="level" *matCellDef="let entry">{{toLevel(entry.level)}}</mat-cell>
+			</ng-container>
+			<ng-container matColumnDef="message">
+				<mat-header-cell mat-sort-header *matHeaderCellDef> Message </mat-header-cell>
+				<mat-cell style="white-space: nowrap;overflow: hidden; text-overflow: ellipsis;" mat-cell *matCellDef="let entry">{{entry.message}}</mat-cell>
+			</ng-container>
+			<ng-container matColumnDef="file">
+				<mat-header-cell mat-sort-header *matHeaderCellDef [style.flex]="'0 0 200px'"> File </mat-header-cell>
+				<mat-cell mat-cell *matCellDef="let element" [style.flex]="'0 0 200px'"> {{element.fileName}} </mat-cell>
+			</ng-container>
+			<ng-container matColumnDef="function">
+				<mat-header-cell mat-sort-header *matHeaderCellDef class="function"> Function </mat-header-cell>
+				<mat-cell mat-cell *matCellDef="let element" class="function"> {{element.functionName}} </mat-cell>
+			</ng-container>
+			<ng-container matColumnDef="line">
+				<mat-header-cell *matHeaderCellDef class="number"> Line </mat-header-cell>
+				<mat-cell mat-cell *matCellDef="let element" class="number"> {{element.lineNumber}} </mat-cell>
+			</ng-container>
+			<ng-container matColumnDef="index">
+				<mat-cell mat-cell *matCellDef="let element" class="number"> {{element.index}} </mat-cell>
+			</ng-container>
+			<mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></mat-header-row>
+			<mat-row mat-row class="table-row" [class.highlight]="selectedIndex==row.index" *matRowDef="let row; columns: displayedColumns" [attr.indx]="row.index" (click)="cellClick($event)"></mat-row>
+		</mat-table>
+	</ng-container>
+}

@@ -1,0 +1,70 @@
+@if( !isLoading() ){
+	<mat-toolbar>
+		<button mat-raised-button [color]="retrievingSnapshot() ? 'primary' : null" (click)="retrieveSnapshot()" ><span class="material-symbols-outlined">preview</span><span style="text-align: center;vertical-align: baseline;height: 100%;">Snapshot</span></button>
+	</mat-toolbar>
+	<div style="align-content: center; margin: auto;  text-align: center; width: 750px">
+		<mat-table [dataSource]=nodes class="mat-elevation-z8" style="width: 100%;">
+			<!-- matSort (matSortChange)="sortData($event)" [matSortActive]="sort.active" [matSortDirection]="sort.direction" -->
+			<ng-container matColumnDef="select">
+				<mat-header-cell *matHeaderCellDef>
+					<mat-checkbox (change)="$event ? toggleAllRows() : null"
+												[checked]=isAllSelected()
+												[disabled]=!variables.length
+												[indeterminate]="selections.selected.length>0 && !isAllSelected()"
+												[aria-label]=checkboxLabel()>
+					</mat-checkbox>
+				</mat-header-cell>
+				<mat-cell *matCellDef="let node">
+					<mat-checkbox (click)=$event.stopPropagation()
+												(change)=selections.toggle(node)
+												[checked]=selections.isSelected(node)
+												[disabled]=!node.isVariable
+												[aria-label]=checkboxLabel(node)>
+					</mat-checkbox>
+				</mat-cell>
+			</ng-container>
+			<ng-container matColumnDef="id">
+				<mat-header-cell mat-sort-header *matHeaderCellDef> ID </mat-header-cell>
+				<mat-cell mat-cell (click)="test(r)" *matCellDef="let r">{{r.nodeId.id}}</mat-cell>
+			</ng-container>
+			<ng-container matColumnDef="name">
+				<mat-header-cell mat-sort-header *matHeaderCellDef> Name </mat-header-cell>
+				<mat-cell mat-cell *matCellDef="let r">
+					<a [routerLink]="routerLink(r)" routerLinkActive="router-link-active" >{{r.name}}</a>
+				</mat-cell>
+			</ng-container>
+			<!-- <ng-container matColumnDef="class">
+				<mat-header-cell mat-sort-header *matHeaderCellDef> Class </mat-header-cell>
+				<mat-cell mat-cell *matCellDef="let r">{{toObject[r.nodeClass]}}</mat-cell>
+			</ng-container> -->
+			<ng-container matColumnDef="snapshot">
+				<mat-header-cell mat-sort-header *matHeaderCellDef> Snapshot </mat-header-cell>
+				<mat-cell mat-cell *matCellDef="let r">
+					@if( r.dataType==ETypes.Boolean && !r.isArray ){
+						<mat-checkbox [checked]="r.value" (change)="toggleValue($event,r);"></mat-checkbox>
+					}
+					@else if( r.isInteger && !r.isArray ){
+						<input type=number [value]="r.value?.toString()" (change)="changeDouble($event,r);">
+					}
+					@else if( r.isUnsigned && !r.isArray ){
+						<input type=number [value]="r.value?.toString()" (change)="changeDouble($event,r);">
+					}
+					@else if( r.isFloating && !r.isArray ){
+						<input type=number [value]=r.value (change)="changeDouble($event,r);">
+					}
+					@else if( r.dataType==ETypes.String && !r.isArray ){
+						<input type="text" [value]=r.value (change)="changeString($event,r);">
+					}
+					@else if( r.dataType==ETypes.BaseDataType && !r.isArray ){
+						<span>{{toString(r.value)}}</span>
+					}
+					<!-- <span *ngIf="r.dataType==ETypes.None">{{toString(r.value)}}</span> -->
+					<!-- <span *ngIf="valueType(r.value)!='boolean'" [title]="toString(r.value)">{{valueType(r.value)}}</span> -->
+					<!--  -->
+				</mat-cell>
+			</ng-container>
+			<mat-header-row *matHeaderRowDef=visibleColumns></mat-header-row>
+			<mat-row *matRowDef="let row; columns: visibleColumns"></mat-row>
+		</mat-table>
+	</div>
+}

@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import {Routes, ROUTES, RouterModule} from '@angular/router';
 
-import { ComponentCategoryList, ComponentSidenav } from 'jde-material';
+import { ComponentCategoryList, ComponentSidenav } from 'jde-spa';
 import{ Applications, DetailResolver, Home, LoginPageComponent, QLList, QLListResolver } from 'jde-framework';
 import{ AccessService, Group, Role, RoleDetail, UserDetail, GroupDetail, User } from 'jde-access';
 
