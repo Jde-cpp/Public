@@ -1,6 +1,7 @@
 ﻿#pragma once
 //#include "../exports.h"
 #include <jde/opc/uatypes/Logger.h>
+#include <jde/opc/uatypes/ExNodeId.h>
 #include "async/AsyncRequest.h"
 #include "async/Attributes.h"
 #include "async/ConnectAwait.h"
@@ -46,10 +47,7 @@ namespace Jde::Opc::Gateway{
 		α SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void;
 		α RequestDataTypeAttributes( const flat_set<NodeId>&& x, AttribAwait::Handle h )ι->void;
 		Ω ClearRequest( UA_Client* ua, RequestId requestId )ι->void;
-		Ṫ ClearRequestH( UA_Client* ua , RequestId requestId )ι->T;/*{
-			auto r = ClearRequest<T>( ua, requestId );
-			return r ? r->CoHandle : nullptr;
-		}*/
+		Ṫ ClearRequestH( UA_Client* ua , RequestId requestId )ι->T;
 		α ClearRequest( RequestId requestId )ι->void{ _asyncRequest.Clear( requestId ); }
 		Ŧ ClearRequestH( RequestId requestId )ι->T;//{ return ClearRequest<UARequest<T>>( requestId )->CoHandle; }
 		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
@@ -64,8 +62,9 @@ namespace Jde::Opc::Gateway{
 		α Target()ι->const ServerCnnctnNK&{ return _opcServer.Target; }
 		α Url()ι->str{ return _opcServer.Url; }
 		α IsDefault()ι->bool{ return _opcServer.IsDefault; }
-		α Handle()ι->uint{ return (uint)_ptr;}
+		α Handle()Ι->Jde::Handle{ return (uint)_ptr;}
 		α UAPointer()ι->UA_Client*{return _ptr;}
+		α ToNodeId( sv path )Ε->ExNodeId;
 		sp<UA_SetMonitoringModeResponse> MonitoringModeResponse;
 		sp<UA_CreateSubscriptionResponse> CreatedSubscriptionResponse;
 		UA_ClientConfig _config{};//TODO move private.

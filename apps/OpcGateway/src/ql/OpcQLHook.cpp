@@ -1,7 +1,8 @@
-#include <jde/opc/OpcQLHook.h>
-#include "types/ServerCnnctn.h"
-#include "auth/UM.h"
+#include "OpcQLHook.h"
 #include <jde/opc/uatypes/Logger.h>
+#include "../auth/UM.h"
+#include "../types/ServerCnnctn.h"
+
 
 #define let const auto
 

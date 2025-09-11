@@ -20,6 +20,16 @@ export class NodeId implements INodeId{
 	constructor( json:any /*NodeIdJson|INodeId*/ ){
 		if( json["node"] )
 			json = json["node"];
+		if( typeof json === "number" )
+			this.id = json;
+		else if( typeof json === "string" )
+			this.id = json;
+		else if( json instanceof Guid )
+			this.id = json;
+		else if( json instanceof Uint8Array )
+			this.id = json;
+		if( this.id )
+			return;
 		let j = <NodeIdJson>json;
 		this.ns = j.ns ?? 0;
 		if( j["id"] )

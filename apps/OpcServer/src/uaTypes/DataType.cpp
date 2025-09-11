@@ -1,6 +1,7 @@
 #include "DataType.h"
 #include "../UAServer.h"
 
+#define let const auto
 namespace Jde::Opc {
 	α Server::DT( NodePK nodePK, SL sl )ε->const UA_DataType&{
 		return GetUAServer().GetDataType( nodePK, sl );

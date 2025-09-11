@@ -22,6 +22,6 @@
 #include <jde/opc/uatypes/helpers.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/ExNodeId.h>
-#include <jde/opc/uatypes/UAException.h>
+#include <jde/opc/UAException.h>
 #include "usings.h"
 #include "globals.h"

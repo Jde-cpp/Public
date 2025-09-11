@@ -9,14 +9,10 @@
 #include <google/protobuf/timestamp.pb.h>
 #include <jde/framework/chrono.h>
 #include "../usings.h"
+#include "UAString.h"
 
 #define let const auto
 namespace Jde::Opc{
-	Ξ ToSV( const UA_String& s )ι->sv{ return sv{ (const char*)s.data, s.length }; }
-	Ξ ToString( const UA_String& s )ι->string{ return string{ (const char*)s.data, s.length }; }
-	Ξ ToUV( sv s )ι->UA_String{ return { s.size(), (UA_Byte*)s.data() }; }
-	Ξ AllocUAString( str s )ι->UA_String{ return UA_String_fromChars( s.c_str() ); }
-	Ξ AllocUAString( sv s )ι->UA_String{ return AllocUAString( string{s} ); }
 	//Ξ mum( sv s )ι->UA_String{ return { s.size(), (UA_Byte*)s.data() }; }
 	Ŧ Zero( T& x )ι->void{ ::memset( &x, 0, sizeof(T) ); }
 	constexpr α operator "" _uv( const char* x, uint len )ι->UA_String{ return UA_String{ len, static_cast<UA_Byte*>((void*)x) }; } //(UA_Byte*) gcc error

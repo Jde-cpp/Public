@@ -1,5 +1,5 @@
 #include "VariableAttr.h"
-#include "Variant.h"
+#include <jde/opc/uatypes/Variant.h>
 #include "DataType.h"
 
 #define let const auto

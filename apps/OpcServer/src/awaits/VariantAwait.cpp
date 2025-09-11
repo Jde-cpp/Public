@@ -3,8 +3,8 @@
 #include "ServerConfigAwait.h"
 #include "../uaTypes/DataType.h"
 
+#define let const auto
 namespace Jde::Opc::Server {
-
 	α VariantMembersAwait::Execute()ι->DB::SelectAwait::Task{
 		let table = GetViewPtr( "variant_members" );
 		try{
@@ -65,15 +65,15 @@ namespace Jde::Opc::Server {
 				{DB::Value{_variant.type->typeId.identifier.numeric}, {_variant.ArrayDimString()}}
 			});
 
-			for( auto&& [index, j] : _variant.ToJson() ){
+			let array = _variant.ToUAJson();
+			for( uint i=0; i<array.size(); ++i ){
 				co_await DS().Execute( DB::Sql{
-						Ƒ("INSERT INTO {}(variant_id, idx, value) VALUES (?,?,?)", GetSchema().DBName("variant_members")),
-						{ {variantPK},
-							{index},
-							{j}
-						}} );
+					Ƒ("INSERT INTO {}(variant_id, idx, value) VALUES (?,?,?)", GetSchema().DBName("variant_members")),
+					{ {variantPK},
+						{i},
+						{serialize(array[i])}
+					}} );
 			}
-
 			ResumeScaler( variantPK );
 		}
 		catch( exception& e ){

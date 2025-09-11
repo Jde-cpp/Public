@@ -6,9 +6,10 @@
 namespace Jde::Opc::Gateway{
 	struct UAClient; struct UAClientException;
 
-	struct ConnectAwait final : TAwait<sp<UAClient>>{
+	struct ConnectAwait final : TAwait<sp<UAClient>>, boost::noncopyable{
 		using base = TAwait<sp<UAClient>>;
 		ConnectAwait( string&& opcTarget, Credential cred, SRCE )ι:base{sl},_opcTarget{move(opcTarget)}, _cred{move(cred)}{}
+		ConnectAwait( string&& opc, SessionPK sessionId, UserPK user, SRCE )ι;
 		α Suspend()ι->void override;
 		α await_resume()ε->sp<UAClient> override{ return Promise() ? base::await_resume() : _result; }
 		Ω Resume( sp<UAClient> client )ι->void;

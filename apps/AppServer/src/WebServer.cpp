@@ -155,7 +155,7 @@ namespace Jde::App{
 
 	α Server::SubscribeLogs( string&& qlText, sp<ServerSocketSession> session )ε->void{
 		auto ql = QL::Parse( qlText, Schemas() );
-		auto tables = ql.IsTableQL() ? move(ql.TableQLs()) : vector<QL::TableQL>{};
+		auto tables = ql.IsQueries() ? move(ql.Queries()) : vector<QL::TableQL>{};
 		THROW_IF( tables.size()!=1, "Invalid query, expecting single table" );
 		auto table = move( tables.front() );
 		THROW_IF( table.JsonName!="logs", "Invalid query, expecting logs query" );

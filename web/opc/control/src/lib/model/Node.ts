@@ -1,5 +1,5 @@
 import { NodeId, NodeIdJson } from "./NodeId";
-import { ETypes, IBrowseName, ILocalizedText } from "./types";
+import { ETypes, IBrowseName, ILocalizedText, toLocalizedText } from "./types";
 import { toValue, Value } from "./Value";
 
 export enum ENodeClass{
@@ -15,14 +15,13 @@ export enum ENodeClass{
 }
 
 export abstract class UaNode extends NodeId{
-	constructor( json:any ){
+	constructor( json:any, parent?:UaNode ){
 		super( json );
 		this.#browse = json.browseName;
-		this.#name = json.displayName;
-//		this.nodeClass = <ENodeClass>json.nodeClass;
+		this.#name = toLocalizedText( json.displayName ?? json.name ); //TODO switch to just name?
 		this.refType = json.referenceType ? new NodeId( json.referenceType ) : null;
 		this.typeDef = json.typeDefinition ? new ObjectType( json.typeDefinition ) : null;
-//		this.value = toValue( json.value );
+		this.parent = parent;
 	}
 	//equals(rhs:NodeId):boolean{ return  }
 	get displayed(){ return false; }
@@ -34,8 +33,7 @@ export abstract class UaNode extends NodeId{
 	parent?:UaNode;
 	refType?:NodeId;
 	typeDef?:ObjectType;
-	get browse():string{ return this.#browse?.name?.toString(); } #browse?:IBrowseName;
-
+	get browse():string{ return this.#browse?.name?.toString(); } set browse( x:IBrowseName ){ this.#browse = x; } #browse?:IBrowseName;
 	get name(){ return this.#name?.text; } #name:ILocalizedText;
 	description:ILocalizedText;
 	specified:number;
@@ -58,8 +56,8 @@ export class OpcObject extends UaNode{
 }
 
 export class Variable extends UaNode{
-	constructor( json:{browseName?:IBrowseName, dataType?:NodeIdJson, displayName:ILocalizedText, node?:NodeIdJson, nodeClass?:number, referenceType?:NodeIdJson, typeDefinition?:NodeIdJson, value?:any } ){
-		super(json);
+	constructor( json:{browseName?:IBrowseName, dataType?:NodeIdJson, displayName:ILocalizedText, node?:NodeIdJson, nodeClass?:number, referenceType?:NodeIdJson, typeDefinition?:NodeIdJson, value?:any}, parent?:UaNode	){
+		super( json, parent );
 		this.dataType = <ETypes>json.dataType?.i;
 		this.value = toValue( json.value );
 	}

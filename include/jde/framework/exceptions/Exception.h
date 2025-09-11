@@ -67,6 +67,7 @@ namespace Jde{
 		α Tags()Ι->ELogTags{ return _tags; }
 		α SetTags( ELogTags tags )ι{ _tags = tags | ELogTags::Exception; }
 		Ω EmptyPtr()ι->const up<IException>&;
+		static constexpr ELogLevel DefaultLogLevel{ ELogLevel::Debug };
 	protected:
 		IException( SRCE )ι:IException{ {}, ELogLevel::Debug, 0, {}, sl }{}
 		α BreakLog()Ι->void;
@@ -77,7 +78,6 @@ namespace Jde{
 		sv _format;
 		ELogTags _tags{ELogTags::None};
 		vector<string> _args;//TODO change to array
-		static constexpr ELogLevel DefaultLogLevel{ ELogLevel::Debug };
 	public:
 		const uint32 Code; //after _format
 	private:

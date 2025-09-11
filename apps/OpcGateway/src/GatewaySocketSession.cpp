@@ -9,7 +9,6 @@
 #include "auth/UM.h"
 #include "types/proto/Opc.FromClient.h"
 #include "types/proto/Opc.FromServer.h"
-#include "uatypes/UAClientException.h"
 
 #define let const auto
 

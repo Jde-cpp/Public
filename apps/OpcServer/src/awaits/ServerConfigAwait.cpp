@@ -5,7 +5,6 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/IDataSource.h>
 #include <jde/opc/uatypes/NodeId.h>
-#include <jde/opc/uatypes/UAException.h>
 #include "../UAServer.h"
 #include "../uaTypes/ObjectAttr.h"
 

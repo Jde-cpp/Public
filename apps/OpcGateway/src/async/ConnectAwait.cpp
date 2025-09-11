@@ -5,6 +5,20 @@
 
 namespace Jde::Opc::Gateway{
 	flat_map<ServerCnnctnNK,flat_map<Credential,vector<ConnectAwait::Handle>>> _requests; mutex _requestMutex;
+	α credential( SessionPK sessionId, UserPK user, str opc )ι->optional<Credential>{
+		optional<Credential> cred;
+		if( sessionId ){
+			cred = GetCredential( sessionId, opc );
+			if( !cred && user ) //if user/pwd would have cred, otherwise use jwt
+				cred = Credential{ Ƒ("{:x}", sessionId) };
+		}
+		return cred;
+	}
+	ConnectAwait::ConnectAwait( string&& opc, SessionPK sessionId, UserPK user, SL sl )ι:
+		base{sl},
+		_opcTarget{ move(opc) },
+		_cred{ credential(sessionId, user, _opcTarget).value_or(Credential{}) }
+	{}
 
 	α ConnectAwait::EraseRequests( str opcNK, Credential cred, lg& )ι->vector<ConnectAwait::Handle>{
 		vector<ConnectAwait::Handle> handles;

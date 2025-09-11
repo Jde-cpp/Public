@@ -13,14 +13,16 @@ namespace Jde::Opc::Gateway{
 		Id{ r.Get<uint32>(0) },
 		Url{ move(r.GetString(1)) },
 		CertificateUri{ move(r.GetString(2)) },
+		DefaultBrowseNs{ r.GetUInt16(4) },
 		IsDefault{ r.GetBit(3) },
-		Name{ move(r.GetString(4)) },
-		Target{ move(r.GetString(5)) }
+		Name{ move(r.GetString(5)) },
+		Target{ move(r.GetString(6)) }
 	{}
 	ServerCnnctn::ServerCnnctn( jobject&& o )ε:
 		Id{ Json::FindNumber<uint32>(o, "id").value_or(0) },
 		Url{ Json::FindDefaultSV(o, "url") },
 		CertificateUri{ Json::FindDefaultSV(o, "certificate_uri") },
+		DefaultBrowseNs{ Json::FindNumber<NsIndex>(o, "defaultBrowseNs").value_or(1) },
 		Description{ Json::FindDefaultSV(o, "description") },
 		IsDefault{ Json::FindBool(o, "is_default") },
 		Name{ Json::FindDefaultSV(o, "name") },
@@ -34,6 +36,7 @@ namespace Jde::Opc::Gateway{
 		o.emplace("url", Url);
 		o.emplace("certificate_uri", CertificateUri);
 		o.emplace("is_default", IsDefault);
+		o.emplace("defaultBrowseNs", DefaultBrowseNs);
 		o.emplace("name", Name);
 		o.emplace("target", Target);
 		o.emplace( "description", Description );
@@ -56,7 +59,7 @@ namespace Jde::Opc::Gateway{
 					where.Add( view->GetColumnPtr("is_default"), true );
 			}
 		}
-		auto statement = DB::Statement{ {view->GetColumns({"server_connection_id", "url", "certificate_uri", "is_default", "name", "target"})}, {view}, move(where) };
+		auto statement = DB::Statement{ {view->GetColumns({"server_connection_id", "url", "certificate_uri", "is_default", "default_browse_ns", "name", "target"})}, {view}, move(where) };
 		try{
 			vector<ServerCnnctn> y;
 			auto rows = co_await DS()->SelectAsync( statement.Move() );

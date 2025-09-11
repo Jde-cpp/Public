@@ -16,6 +16,7 @@ namespace Jde::Opc::Gateway{
 		ServerCnnctnPK Id;
 		string Url;
 		string CertificateUri;
+		NsIndex DefaultBrowseNs{1};
 		string Description;
 		bool IsDefault;
 		string Name;

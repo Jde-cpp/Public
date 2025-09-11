@@ -12,9 +12,9 @@ namespace Jde::Opc{
 		NodeId( UA_NodeId&& x )ι;
 		NodeId( UA_UInt32 numeric )ι:NodeId{UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, {numeric}}}{}
 		NodeId( const flat_map<string,string>& x )ε;//rest params
-
 		explicit NodeId( const jvalue& j )ε;
 		NodeId( DB::Row& r, uint8 index )ε;
+
 		α operator=( const NodeId& x )ι->NodeId&;
 		α operator=( NodeId&& x )ι->NodeId&;
 		α operator<( const NodeId& x )Ι->bool;

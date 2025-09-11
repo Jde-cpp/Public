@@ -1,9 +1,10 @@
 #include "ConstructorHook.h"
+#include <jde/opc/uatypes/Variant.h>
 #include "../UAServer.h"
 #include "../awaits/VariantAwait.h"
 #include "../uaTypes/BrowseName.h"
-#include "../uaTypes/Variant.h"
 
+#define let const auto
 namespace Jde::Opc::Server{
 	struct ConstructorQLAwait final : TAwait<jvalue>{
 		ConstructorQLAwait( const QL::MutationQL& m, UserPK executer, SL sl )ι: TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer } {}

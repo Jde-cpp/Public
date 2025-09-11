@@ -27,7 +27,7 @@ namespace Jde::DB{
 		α GetString( uint i )ι->string&{ if( IsNull(i) ) _values[i] = Value{string{}}; return _values[i].get_string(); }
 		α GetTimePoint( uint i )Ι->DBTimePoint{ return _values[i].get_time(); }
 		α GetTimePointOpt( uint i )Ι->optional<DBTimePoint>{ return IsNull(i) ? optional<DBTimePoint>{} : _values[i].get_time(); }
-		α GetUInt( uint i )Ι->uint{ return _values[i].get_number<uint>(); }
+		α GetUInt( uint i )Ε->uint{ return _values[i].get_number<uint>(); }
 		α GetUIntOpt( uint i )Ι->optional<uint>{ return IsNull(i) ? optional<uint>{} : _values[i].get_uint(); }
 		α GetUInt8Opt( uint i )Ι->optional<uint8>{ return IsNull(i) ? optional<uint8>{} : _values[i].get_number<uint8>(); }
 		α GetUInt16( uint i )Ε->uint16_t{ return static_cast<uint16_t>(GetUInt(i)); }

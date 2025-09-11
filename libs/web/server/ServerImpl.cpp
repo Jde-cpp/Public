@@ -208,9 +208,8 @@ namespace Server{
 			send( RestException<http::status::unauthorized>{move(e), move(req), "Could not get sessionInfo."}, move(stream) );
 			co_return;
 		}
-		if( req.IsGet("/graphql") ){
+		if( req.IsGet("/graphql") && !reqHandler->PassQL() )
 			graphQL( move(req), stream, reqHandler->Schemas() );
-		}
 		else
 			handleCustomRequest( move(req), move(stream), reqHandler );
 	}

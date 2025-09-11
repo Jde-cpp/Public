@@ -7,6 +7,8 @@ export class ServerCnnctn extends TargetRow<ServerCnnctn>{
 		super(ServerCnnctn.typeName, obj);
 		this.url = obj.url;
 		this.certificateUri = obj.certificateUri;
+		if( obj.defaultBrowseNs )
+			this.defaultBrowseNs = obj.defaultBrowseNs;
 	}
 
 	override equals( row:ITargetRow ):boolean{
@@ -24,9 +26,28 @@ export class ServerCnnctn extends TargetRow<ServerCnnctn>{
 		return Object.keys( args ).length ? [new Mutation(this.type, this.id, args, original?.id ? MutationType.Update : MutationType.Create)] : [];
 	}
 
+	getNs( segment:string ):number{
+		const index = segment.indexOf( "~" );
+		if( index>0 ){
+			const nsStr = segment.substring( 0, index );
+			if( /^-?\d+$/.test(nsStr) )
+				return +nsStr;
+		}
+		return this.defaultBrowseNs;
+	}
+	removeNs( segment:string ):string{
+		const index = segment.indexOf( "~" );
+		if( index>0 ){
+			const nsStr = segment.substring( 0, index );
+			if( /^-?\d+$/.test(nsStr) )
+				return segment.substring( index + 1 );
+		}
+		return segment;
+	}
 
 	get properties():ServerCnnctn{ let properties = new ServerCnnctn(this); return properties; }
 	url:string;
 	certificateUri:string;
+	defaultBrowseNs:number=1;
 	static typeName = "ServerConnection";
 }

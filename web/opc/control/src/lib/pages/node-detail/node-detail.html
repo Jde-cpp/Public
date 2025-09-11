@@ -55,7 +55,7 @@
 					@else if( r.dataType==ETypes.String && !r.isArray ){
 						<input type="text" [value]=r.value (change)="changeString($event,r);">
 					}
-					@else if( r.dataType==ETypes.BaseDataType && !r.isArray ){
+					@else if( r.dataType==ETypes.BaseData && !r.isArray ){
 						<span>{{toString(r.value)}}</span>
 					}
 					<!-- <span *ngIf="r.dataType==ETypes.None">{{toString(r.value)}}</span> -->

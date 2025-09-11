@@ -1,6 +1,5 @@
 #include "UAServer.h"
 #include <jde/opc/uatypes/helpers.h>
-#include <jde/opc/uatypes/UAException.h>
 #include "UAAccess.h"
 
 #define let const auto
@@ -147,7 +146,7 @@ namespace Jde::Opc::Server {
 			variable,
 			(void*)variable.PK,
 			&id);
-		THROW_IFX( status, UAException(variable.ToString(), ELogLevel::Error, status, sl) );
+		THROW_IFX( status, UAException(status, variable.ToString(), sl, {ELogLevel::Error, EOpcLogTags::Opc}) );
 		dynamic_cast<NodeId&>(variable) = id;
 		DBGSL( "Added Variable: {}", variable.ToString(parent) );
 		return variable.PK ? _variables.try_emplace( variable.PK, move(variable) ).first->second : variable;

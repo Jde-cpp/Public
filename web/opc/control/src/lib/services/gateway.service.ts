@@ -205,18 +205,21 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 			OpcError.setMessages( json["errorCodes"] );
 		}
 	}
-	public async browseObjectsFolder( cnnctn:CnnctnTarget, node:UaNode, snapshot:boolean, log:Log ):Promise<UaNode[]>{
-		const json = await super.get( `browseObjectsFolder?opc=${cnnctn}&${Gateway.toParams(node.nodeId.toJson())}&snapshot=${snapshot}`, log );
+	public async browseObjectsFolder( cnnctn:CnnctnTarget, parent:UaNode, snapshot:boolean, log:Log ):Promise<UaNode[]>{
+		const json = await super.get( `browseObjectsFolder?opc=${cnnctn}&${Gateway.toParams(parent.nodeId.toJson())}&snapshot=${snapshot}`, log );
 		var y = new Array<UaNode>();
 		for( const ref of json["refs"] ){
+			let child:UaNode;
 			switch( <ENodeClass>ref.nodeClass ){
-				case ENodeClass.Object: y.push( new OpcObject(ref) ); break;
-				case ENodeClass.ObjectType: node.typeDef = new ObjectType(ref); break; //y.push( new ObjectType(ref) ); break;
-				case ENodeClass.Variable: y.push( new Variable(ref) ); break;
+				case ENodeClass.Object: child = new OpcObject(ref, parent); break;
+				case ENodeClass.ObjectType: parent.typeDef = new ObjectType(ref); break; //y.push( new ObjectType(ref) ); break;
+				case ENodeClass.Variable: child = new Variable(ref, parent); break;
 				default: debugger;
 			}
+			if( child )
+				y.push( child );
 		}
-		this.store.setNodes( this.target, cnnctn, node, y );
+		this.store.setNodes( this.target, cnnctn, parent, y );
 		this.updateErrorCodes();
 		return y;
 	}

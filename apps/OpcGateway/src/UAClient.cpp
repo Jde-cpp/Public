@@ -1,6 +1,7 @@
 ﻿#include "UAClient.h"
 
 #include <open62541/plugin/securitypolicy_default.h>
+#include <jde/framework/thread/execution.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
@@ -12,6 +13,7 @@
 #include "async/Write.h"
 #include "uatypes/Browse.h"
 #include "uatypes/CreateMonitoredItemsRequest.h"
+#include "uatypes/uaTypes.h"
 
 #define let const auto
 
@@ -142,10 +144,11 @@ namespace Jde::Opc::Gateway{
 						let inserted = opcCreds.try_emplace( client->Credential, client ).second;
 						ASSERT( inserted );//not sure why we would already have a record.
 					}
-					ConnectAwait::Resume( move(client) );
+					Post( [client]()ι->void{ConnectAwait::Resume(move(client));} );
 				}
 				else
-					ConnectAwait::Resume( client->Target(), client->Credential, UAClientException{connectStatus} );
+					Post( [client,connectStatus]()ι->void{ConnectAwait::Resume( client->Target(), client->Credential, UAClientException{connectStatus} );} );
+
 				return true;
 			});
 		}
@@ -387,6 +390,11 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
+	α UAClient::ToNodeId( sv path )Ε->ExNodeId{
+		let segments = Str::Split(path, '/');
+    UABrowsePath browsePath{ segments, _opcServer.DefaultBrowseNs };
+    return GetNodeIdResponse{ UA_Client_Service_translateBrowsePathsToNodeIds(_ptr, {{}, 1, &browsePath}), segments, Handle() };
+	}
 	α UAClient::Find( UA_Client* ua, SL srce )ε->sp<UAClient>{
 		sp<UAClient> y = TryFind( ua, srce );
 		if( !y )

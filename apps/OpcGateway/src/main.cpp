@@ -1,5 +1,6 @@
 ﻿#include <jde/framework/process.h>
 #include <jde/opc/uatypes/Logger.h>
+#include <jde/crypto/OpenSsl.h>
 #include "StartupAwait.h"
 
 #define let const auto
@@ -10,6 +11,7 @@
 α main( int argc, char **argv )->int{
 	using namespace Jde;
 	Logging::AddTagParser( mu<Opc::UALogParser>() );
+	Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5( text ); } );
 	int exitCode{ EXIT_FAILURE };
 	try{
 		OSApp::Startup( argc, argv, "Jde.OpcGateway", "IOT Connection" );
