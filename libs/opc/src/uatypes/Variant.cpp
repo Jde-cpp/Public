@@ -1,6 +1,9 @@
-#include "Variant.h"
+#include <jde/opc/uatypes/Variant.h>
+#include <jde/opc/UAException.h>
+#include <jde/opc/uatypes/UAString.h>
 
-namespace Jde::Opc::Server{
+#define let const auto
+namespace Jde::Opc{
 	α getDataType( const jvalue& v )ι->const UA_DataType*{
 		if( v.is_bool() )
 			return &UA_TYPES[UA_TYPES_BOOLEAN];
@@ -57,6 +60,14 @@ namespace Jde::Opc::Server{
 	Variant::Variant( const UA_Variant& v )ι{
 		UA_Variant_copy( &v, this );
 	}
+	Variant::Variant( UA_Variant&& v )ι:
+		UA_Variant{ v }{
+		UA_Variant_init( &v );
+	}
+	Variant::Variant( StatusCode sc )ι:
+		UA_Variant{ &UA_TYPES[UA_TYPES_STATUSCODE], UA_VARIANT_DATA_NODELETE, 0, (void*)(uintptr_t)sc }
+		//UA_Variant_setScalar( this, &sc, &UA_TYPES[UA_TYPES_STATUSCODE] );
+	{}
 
 	α Variant::operator=( const Variant& v )ι->Variant&{
 		if( this==&v )
@@ -91,25 +102,53 @@ namespace Jde::Opc::Server{
 		return csv;
 	}
 
-	α Variant::ToJson()ε->flat_map<uint32, string>{
-		flat_map<uint32, string> values;
-		if( UA_Variant_isEmpty(this) )
-			return values;
-		auto add = [&]( int i, void* value ){
-			UA_String j;
-			UA_ByteString_allocBuffer( &j, 2096 );
-			UA_EncodeJsonOptions options{};
-			UA_encodeJson( value, type, &j, &options );
-			values.emplace( i, ToString(j) );
-			UA_String_clear( &j );
-		};
-		if( UA_Variant_isScalar(this) )
-			add( 0, data );
-		else{
+	Ω uaJsonString( void* v, const UA_DataType& type )ε->string{
+		UAString j{ 2096 };
+		UA_EncodeJsonOptions options{};
+		if( let sc=UA_encodeJson(v, &type, &j, &options); sc )
+			throw UAException{ sc };
+		return j.ToString();
+	}
+	α Variant::ToUAJson()ε->vector<string>{
+		vector<string> y;
+		if( IsNull() )
+			return y;
+		if( IsScalar() ){
+			y.emplace_back( uaJsonString(data, *this->type) );
+		}else{
 			for( uint i=0; i<arrayLength; ++i )
-				add( i, ((void**)data)[i] );
+				y.emplace_back( uaJsonString(((void**)data)[i], *type) );
 		}
-		return values;
+		return y;
+	}
+	α Variant::ToJson( bool trimNames )ε->jvalue{
+		jvalue y;
+		if( IsNull() )
+			return y;
+		auto toJson = [trimNames]( void* v, const UA_DataType& type )ε->jvalue{
+			if( &type==&UA_TYPES[UA_TYPES_LOCALIZEDTEXT] && trimNames )
+				return jstring{ ToString( ((UA_LocalizedText*)v)->text ) };
+			else{
+				let uaJson = uaJsonString( v, type );
+				try{
+					return parse( uaJson );
+				}
+				catch( exception& e ){
+					Error { ELogTags::Parsing, "Error parsing {} - {}", uaJson, e.what() };
+					return {uaJson};
+				}
+			}
+		};
+		if( IsScalar() ){
+			y = toJson( data, *type );
+		}
+		else{
+			jarray arr;
+			for( uint i=0; i<arrayLength; ++i )
+				arr.emplace_back( toJson(((void**)data)[i], *type) );
+			y = move(arr);
+		}
+		return y;
 	}
 	α Variant::ToUAValues( const UA_DataType& type, flat_map<uint, string>&& values )ι->tuple<uint,void*>{
 		void* data = nullptr;

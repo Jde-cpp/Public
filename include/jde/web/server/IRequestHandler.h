@@ -12,6 +12,7 @@ namespace Jde::Web::Server{
 		β HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> =0; //abstract, can't return a copy.
 		β GetWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> =0;
 		β Schemas()ι->const vector<sp<DB::AppSchema>>& =0;
+		β PassQL()ι->bool{ return false; }
 
 		α AppServer()ι->sp<App::IApp>{ return _appServer; }
 		α AppServerLocal()ι->bool{ return _appServer->IsLocal(); }
@@ -23,17 +24,18 @@ namespace Jde::Web::Server{
 		α Start()ι->void;
 		α Stop()ι->void;
 		α BlockTillStarted()ι->void;
-	struct WebServerSettings{
-		WebServerSettings( jobject settings )ι:_crypto{Json::FindDefaultObject(settings, "ssl")}, _settings(move(settings)){}
-		α Address()Ι->string{ return Json::FindString(_settings, "address" ).value_or( "0.0.0.0" ); }
-		α Port()Ι->PortType{ return Json::FindNumber<PortType>(_settings, "port" ).value_or( 6809 ); }
-		α DhPath()Ι->string{ return Json::FindString( _settings,  "dh" ).value_or( "/etc/ssl/certs/server.crt" ); }
-		α CertPath()Ι->string{ return Json::FindString( _settings, "cert" ).value_or( "/etc/ssl/private/server.key" ); }
-		α Crypto()Ι->const Crypto::CryptoSettings&{ return _crypto; }
-	private:
-		Crypto::CryptoSettings _crypto;
-		jobject _settings;
-	};
+
+		struct WebServerSettings{
+			WebServerSettings( jobject settings )ι:_crypto{Json::FindDefaultObject(settings, "ssl")}, _settings(move(settings)){}
+			α Address()Ι->string{ return Json::FindString(_settings, "address" ).value_or( "0.0.0.0" ); }
+			α Port()Ι->PortType{ return Json::FindNumber<PortType>(_settings, "port" ).value_or( 6809 ); }
+			α DhPath()Ι->string{ return Json::FindString( _settings,  "dh" ).value_or( "/etc/ssl/certs/server.crt" ); }
+			α CertPath()Ι->string{ return Json::FindString( _settings, "cert" ).value_or( "/etc/ssl/private/server.key" ); }
+			α Crypto()Ι->const Crypto::CryptoSettings&{ return _crypto; }
+		private:
+			Crypto::CryptoSettings _crypto;
+			jobject _settings;
+		};
 	α Settings()Ι->const WebServerSettings&{ return _settings; }
 	private:
 		sp<App::IApp> _appServer;

@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "CertTests.Authenticate",
+		tests: "BrowseTests.NodeId",
 		recreateDB:: true,
 		embeddedAppServer: true,
 		embeddedOpcServer: true
@@ -51,9 +51,9 @@ local args = import 'args.libsonnet';
 		spd:{
 			defaultLevel:: "Information",
 			tags: {
-				trace:["test", "app"],
+				trace:["test", "app", "http.client.write", "http.client.read"],
 				debug:["settings", "scheduler", "uaEvent","sql", "ql",
-					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
+					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
 					"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
 					"monitoring", "browse", "processingLoop", "monitoring.pedantic"],
 				information:["threads", "uaSecure"],

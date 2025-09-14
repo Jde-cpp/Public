@@ -60,7 +60,7 @@ namespace Jde::DB::MySql{
 					std::rethrow_exception( e );
 				}
 				catch( mysql::error_with_diagnostics& e ){
-					ResumeExp( MySqlException{_tags, _sl, ELogLevel::Error, move(e), _sql.EmbedParams()} );
+					ResumeExp( MySqlException{_sql.EmbedParams(), move(e), _sl} );
 				}
 				catch( IException& e ){
 					ResumeExp( move(e) );

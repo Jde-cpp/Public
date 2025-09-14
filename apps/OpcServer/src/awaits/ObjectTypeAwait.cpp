@@ -3,6 +3,7 @@
 #include "ServerConfigAwait.h"
 #include "../uaTypes/ObjectAttr.h"
 
+#define let const auto
 namespace Jde::Opc::Server {
 	α ObjectTypeAwait::Execute()ι->DB::SelectAwait::Task {
 		try {

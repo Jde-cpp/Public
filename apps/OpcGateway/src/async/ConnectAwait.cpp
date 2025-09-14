@@ -5,6 +5,20 @@
 
 namespace Jde::Opc::Gateway{
 	flat_map<ServerCnnctnNK,flat_map<Credential,vector<ConnectAwait::Handle>>> _requests; mutex _requestMutex;
+	α credential( SessionPK sessionId, UserPK user, str opc )ι->optional<Credential>{
+		optional<Credential> cred;
+		if( sessionId ){
+			cred = GetCredential( sessionId, opc );
+			if( !cred && user ) //if user/pwd would have cred, otherwise use jwt
+				cred = Credential{ Ƒ("{:x}", sessionId) };
+		}
+		return cred;
+	}
+	ConnectAwait::ConnectAwait( string&& opc, SessionPK sessionId, UserPK user, SL sl )ι:
+		base{sl},
+		_opcTarget{ move(opc) },
+		_cred{ credential(sessionId, user, _opcTarget).value_or(Credential{}) }
+	{}
 
 	α ConnectAwait::EraseRequests( str opcNK, Credential cred, lg& )ι->vector<ConnectAwait::Handle>{
 		vector<ConnectAwait::Handle> handles;
@@ -66,6 +80,6 @@ namespace Jde::Opc::Gateway{
 		Resume( client->Target(), client->Credential, [client](ConnectAwait::Handle h){ h.promise().Resume(sp<UAClient>(client), h); } );
 	}
 	α ConnectAwait::Resume( str opcNK, Credential cred, const UAClientException&& e )ι->void{
-		Resume( opcNK, cred, [sc=e.Code](ConnectAwait::Handle h){ h.promise().ResumeExp(UAClientException{(StatusCode)sc}, h); } );
+		Resume( opcNK, cred, [e2=move(e)](ConnectAwait::Handle h)mutable{ h.promise().ResumeExp(move(e2), h); } );
 	}
 }

@@ -2,6 +2,7 @@
 #include <jde/db/Row.h>
 #include <jde/db/Value.h>
 #include <jde/opc/uatypes/NodeId.h>
+#include <jde/opc/UAException.h>
 
 #define let const auto
 namespace Jde::Opc{
@@ -186,8 +187,8 @@ namespace Jde::Opc{
 	α ExNodeId::to_string()Ι->string{
 		return serialize( ToJson() );
 	}
-	std::size_t NodeIdHash::operator()(const ExNodeId& n)Ι{
-		std::size_t seed = 0;
+	α NodeIdHash::operator()(const ExNodeId& n)Ι->uint{
+		uint seed = 0;
 		boost::hash_combine( seed, ToSV(n.namespaceUri) );
 		boost::hash_combine( seed, n.serverIndex );
 		let& nodeId = n.nodeId;
@@ -201,9 +202,9 @@ namespace Jde::Opc{
 			boost::hash_combine( seed, ToSV(nodeId.identifier.byteString) );
 		return seed;//4452845294327023648
 	}
-
 	Ω toJson( jobject& j, const UA_NodeId& nodeId )ι->jobject{
-		j["ns"] = nodeId.namespaceIndex;
+		if( nodeId.namespaceIndex )
+			j["ns"] = nodeId.namespaceIndex;
 		const UA_NodeIdType type = nodeId.identifierType;
 		if( type==UA_NodeIdType::UA_NODEIDTYPE_NUMERIC )
 			j["i"] = nodeId.identifier.numeric;
@@ -217,7 +218,7 @@ namespace Jde::Opc{
 	}
 }
 namespace Jde{
-	α Opc::ToJson( const UA_ExpandedNodeId& x )ι->jobject{
+	α Opc::ToJson( const UA_ExpandedNodeId& x )ε->jobject{
 		jobject j;
 		if( x.namespaceUri.length )
 			j["nsu"] = ToSV(x.namespaceUri);

@@ -22,6 +22,7 @@ namespace Jde::App::Client{
 		α Jwt( SRCE )ε->Web::Client::ClientSocketAwait<Web::Jwt>;
 		α CloseSocketSession( SL sl )ι->VoidTask;
 		α UpdateStatus()ι->void;
+		α SessionId()Ι->SessionPK{ return Session()->SessionId(); }
 
 		β StatusDetails()ι->vector<string> = 0;
 		optional<Crypto::CryptoSettings> ClientCryptoSettings;

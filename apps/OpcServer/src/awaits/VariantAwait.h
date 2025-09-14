@@ -1,7 +1,7 @@
 #pragma once
 #include <jde/db/awaits/ScalerAwait.h>
 #include "../uaTypes/Node.h"
-#include "../uaTypes/Variant.h"
+#include <jde/opc/uatypes/Variant.h>
 
 namespace Jde::Opc::Server{
 	using VariantMembers = flat_map<VariantPK, flat_map<uint,string>>;

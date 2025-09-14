@@ -53,6 +53,10 @@ export class DefaultErrorService implements IErrorService
 			else
 				this.error( `(${e.status})${e.error}`, null );
 		}
+		else if( e instanceof Error ){
+			this.showUser( `${e.cause}:  ${e.message}`, 'red-snackbar' );
+			log( `info: '${info}', cause: '${e.cause}' ${e.stack}` );
+		}
 	}
 	show( e: any, message?:string ){
 		this.error( message, e );

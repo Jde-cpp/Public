@@ -17,12 +17,10 @@ namespace Internal{
 }
 
 	α AppServerLocal()ι->bool;
-	//α AppGraphQLAwait( string&& q, UserPK userPK, SRCE )ι->up<TAwait<jvalue>>;
 	Τ [[nodiscard]] α DoEof( T& stream )ι->net::awaitable<void, executor_type>{ beast::error_code ec; stream.socket().shutdown( tcp::socket::shutdown_send, ec ); co_return; }
 	Τ [[nodiscard]] α DoEof( beast::ssl_stream<T>& stream )ι->net::awaitable<void, executor_type>{ co_await stream.async_shutdown(); }
 	α HandleRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task;
 	α ReadSeverity( beast::error_code ec )ι->ELogLevel;
-	//α GetRequestHandler()ι->IRequestHandler&;
 	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> cancel, IRequestHandler* reqHandler )ι->net::awaitable<void, executor_type>;
 	α SendOptions( const HttpRequest&& req )ι->http::message_generator;
 	α SendServerSettings( HttpRequest req, sp<RestStream> stream, sp<App::IApp> appServer )ι->TAwait<sp<SessionInfo>>::Task;

@@ -77,7 +77,7 @@ namespace Jde{
 		Ω AddActiveWorker( Threading::IPollWorker* pWorker )ι->void;
 		Ω RemoveActiveWorker( Threading::IPollWorker* p )ι->void;
 
-		constexpr static sv ProductVersion="2024.08.01";
+		constexpr static sv ProductVersion="2025.09.01";
 	protected:
 
 		Ω OnTerminate()ι->void;

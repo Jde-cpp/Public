@@ -33,8 +33,8 @@ namespace Jde::QL{
 		}
 	}
 	α VQLAwait::Suspend()ι->void{
-		if( _request.IsTableQL() )
-			Select( move(_request.TableQLs()) );
+		if( _request.IsQueries() )
+			Select( move(_request.Queries()) );
 		else if( _request.IsMutation() )
 			Mutate( move(_request.Mutations()) );
 		else if( _request.IsSubscription() )

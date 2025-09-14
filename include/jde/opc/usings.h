@@ -8,6 +8,7 @@ namespace Jde::Opc{
 
 	using NsIndex = UA_UInt16;
 	using StatusCode = UA_StatusCode;
+	using VariantPK = uint32;
 
 	template <auto F> //https://stackoverflow.com/questions/19053351/how-do-i-use-a-custom-deleter-with-a-stdunique-ptr-member
 	struct DeleterFromFunction {

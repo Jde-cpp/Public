@@ -8,14 +8,8 @@ namespace Jde::Opc::Gateway::Tests{
 	optional<ServerCnnctn> Auth::Connection={};
 	ETokenType Auth::Tokens{};
 	α Auth::SetUp()ε->void{
-		if( !Connection ){
-			Connection = SelectServerCnnctn( OpcServerTarget );
-			if( !Connection ){
-				BlockAwait<ProviderCreatePurgeAwait, Access::ProviderPK>( ProviderCreatePurgeAwait{OpcServerTarget, false} );
-				let id = BlockAwait<CreateServerCnnctnAwait, ServerCnnctnPK>( CreateServerCnnctnAwait{} );
-				Connection = SelectServerCnnctn( id );
-			}
-		}
+		if( !Connection )
+			Connection = GetConnection( OpcServerTarget );
 		if( empty(Tokens) )
 			Tokens = AvailableUserTokens( Connection->Url );
 		if( empty(Tokens & ETokenType(TokenType)) ){

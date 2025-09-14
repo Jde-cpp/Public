@@ -7,12 +7,13 @@ import { IProfile, Settings } from "jde-framework";
 import { OpcStore } from "../services/opc-store";
 import { OpcObject, UaNode } from "./Node";
 import { Inject } from "@angular/core";
+import { Gateway, GatewayTarget } from "../services/gateway.service";
 
 export class NodeRoute extends DocItem{
 	constructor( activatedRoute:ActivatedRouteSnapshot, profileService: IProfile, @Inject("OpcStore") opcStore:OpcStore ){
 		super();
-		let paramsRoute = activatedRoute.pathFromRoot.find( (r)=>r.paramMap.get("host") );
-		this.gatewayTarget = paramsRoute?.paramMap.get("host");
+		let paramsRoute = activatedRoute.pathFromRoot.find( (r)=>r.paramMap.get("gateway") );
+		this.gatewayTarget = paramsRoute?.paramMap.get("gateway");
 		this.cnnctnTarget = paramsRoute?.paramMap.get("connection");
 		this.route = activatedRoute.pathFromRoot[activatedRoute.pathFromRoot.length-1];
 		this.node = this.browsePath.length ? opcStore.findNodeId( this.gatewayTarget, this.cnnctnTarget, this.browsePath ) : OpcObject.rootNode;
@@ -36,7 +37,7 @@ export class NodeRoute extends DocItem{
 	settings:Settings<UserProfile>;
 	children: DocItem[];
 	cnnctnTarget:string;
-	gatewayTarget:string;
+	gatewayTarget:GatewayTarget;
 }
 export class UserProfile{
 	assign( value:UserProfile ){ this.sort = value.sort; this.columns = value.columns; this.visibleColumns=value.visibleColumns; }

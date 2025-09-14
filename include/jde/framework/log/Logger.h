@@ -47,6 +47,13 @@ namespace Jde::Logging{
 		else
 			Logger<TLevel,Args...>{ tags, FWD(m), FWD(args)..., source_location::current() };
 	}
+
+	Φ MarkLogged( StringMd5 id )ι->bool;
+	template<typename... Args>
+	α LogOnce( SL sl, ELogTags tags, FormatString&& m, ARGS... args )ι->void{
+		if( MarkLogged(Entry::GenerateId(sv{m.get().data(), m.get().size()})) )
+			Logger<ELogLevel::Information,Args...>{ tags, FWD(m), FWD(args)..., sl };
+	}
 }
 
 namespace Jde{

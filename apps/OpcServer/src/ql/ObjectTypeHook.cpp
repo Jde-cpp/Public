@@ -1,13 +1,13 @@
 #include "ObjectTypeHook.h"
+#include <jde/db/awaits/ScalerAwait.h>
 #include <jde/db/meta/AppSchema.h>
+#include <jde/opc/uatypes/Variant.h>
 #include "../UAServer.h"
 #include "../awaits/BrowseNameAwait.h"
 #include "../awaits/ReferenceAwait.h"
 #include "../awaits/VariableAwait.h"
 #include "../uaTypes/Object.h"
 #include "../uaTypes/VariableAttr.h"
-#include "../uaTypes/Variant.h"
- #include <jde/db/awaits/ScalerAwait.h>
 
 #define let const auto
 namespace Jde::Opc::Server{

@@ -68,10 +68,13 @@ export class QLListRouteService extends RouteService implements IRouteService{
 		imports: [CommonModule, MatCheckbox, MatIcon, MatIconButton, MatToolbar, GraphQLTable]
 })
 export class QLList implements OnInit, OnDestroy{
-	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle,
-		@Inject('IGraphQL') private ql: IGraphQL, @Inject('IProfile') private profileService: IProfile,
-		@Inject('IErrorService') private snackbar: IErrorService ){
-	}
+	constructor(
+		private route: ActivatedRoute,
+		private router:Router,
+		private componentPageTitle:ComponentPageTitle,
+		@Inject('IGraphQL') private ql: IGraphQL,
+		@Inject('IErrorService') private snackbar: IErrorService )
+	{}
 	ngOnDestroy(){ this.profile.save(); }
 
 	async ngOnInit(){

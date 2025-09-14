@@ -112,10 +112,10 @@ namespace Jde::Opc{
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
 			nodeId.identifier.numeric = Json::AsNumber<UA_UInt32>( p->value() );
 		}
-		else if( auto p = j.find("number"); p!=j.end() ){
+/*		else if( auto p = j.find("number"); p!=j.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
 			nodeId.identifier.numeric = Json::AsNumber<UA_UInt32>( p->value() );
-		}
+		}*/
 		else if( auto p = j.find("b"); p!=j.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
 			let v = ToUV( Json::AsSV(p->value()) );

@@ -1,4 +1,5 @@
 #pragma once
+#include <jde/opc/uatypes/Variant.h>
 #include "UAConfig.h"
 #include "uaTypes/BrowseName.h"
 #include "uaTypes/Node.h"
@@ -7,7 +8,6 @@
 #include "uaTypes/ObjectType.h"
 #include "uaTypes/Reference.h"
 #include "uaTypes/Variable.h"
-#include "uaTypes/Variant.h"
 
 namespace Jde::Opc::Server {
 	struct UAServer{

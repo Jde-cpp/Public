@@ -13,7 +13,7 @@ import { Sort } from '@angular/material/sort';
 import { DocItem } from 'jde-spa';
 import { RouteStore } from './route.store';
 
-type CollectionItem = string | { path:string, title?:string, data?:{summary:string, collectionName:string, canPurge?:boolean,showAdd?:boolean} };
+export type CollectionItem = string | { path:string, title?:string, data?:{summary:string, collectionName:string, canPurge?:boolean,showAdd?:boolean} };
 export class ListRoute extends DocItem{
 	constructor( collection:string|CollectionItem ){
 		super();

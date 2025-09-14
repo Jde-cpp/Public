@@ -25,7 +25,9 @@ namespace Jde::Opc::Gateway::Tests{
 	};
 	α PurgeServerCnnctn( optional<ServerCnnctnPK> id=nullopt )ι->uint;
 
+	α GetConnection( str target )ι->ServerCnnctn;
 	α SelectServerCnnctn( DB::Key id )ι->optional<ServerCnnctn>;
 
 	α AvailableUserTokens( sv url )ε->ETokenType;
+	α Query( sv ql, bool raw=true )ε->jobject;
 }

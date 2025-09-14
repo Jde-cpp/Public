@@ -18,8 +18,8 @@ local args = import 'args.libsonnet';
 			flushOn: "Trace",
 			tags: {
 				trace:["test","sql",
-					"uaSession", "uaServer", "uaUser", "uaSecurity", "threads", "uaClient", "uaNet", "uaSecure"],
-				debug:["ql","settings", "app", "uaEvent"],
+					"uaSession", "uaServer", "uaUser", "uaSecurity", "threads", "uaClient", "uaSecure"],
+				debug:["ql","settings", "app", "uaEvent", "uaNet"],
 				information:[],
 				warning:["io"],
 				"error":[],

@@ -17,9 +17,9 @@ namespace Jde::QL{
 		α IsSubscription()Ι->bool{ return _value.index()==2; }
 		α Subscriptions()ι->vector<Subscription>&{ ASSERT(_value.index()==2); return get<2>(_value); }
 		α UnSubscribes()ι->vector<SubscriptionId>&{ ASSERT(_value.index()==3); return get<3>(_value); }
-		α IsTableQL()Ι->bool{ return _value.index()==0; }
-		α TableQLs()Ι->const vector<TableQL>&{ return const_cast<RequestQL*>(this)->TableQLs(); }
-		α TableQLs()ι->vector<TableQL>&{ ASSERT(_value.index()==0); return get<0>(_value); }
+		α IsQueries()Ι->bool{ return _value.index()==0; }
+		α Queries()Ι->const vector<TableQL>&{ return const_cast<RequestQL*>(this)->Queries(); }
+		α Queries()ι->vector<TableQL>&{ ASSERT(_value.index()==0); return get<0>(_value); }
 	private:
 		std::variant<vector<TableQL>,vector<MutationQL>, vector<Subscription>,vector<SubscriptionId>> _value;
 	};

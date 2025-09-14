@@ -153,7 +153,7 @@ local common = import 'common-meta.libsonnet';
 				sourceNodeId: nodeId+{ pkTable:"node_ids", sk:0, i:0 },
 				targetNodeId: nodeId+{ pkTable:"node_ids", sk:1, i:1 },
 				refTypeId: nodeId+{ pkTable:"node_ids", sk:2, i:2 },
-				isForward: types.bit+{ i:3, comment: "null=true" },
+				isForward: types.bit+{ i:3, comment: "null=true", nullable: true },
 			}
 		},
 		servers:{

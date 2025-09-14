@@ -4,7 +4,7 @@
 #include <jde/web/server/exports.h>
 #include <jde/opc/usings.h>
 //#include <jde/opc/exports.h>
-#include <jde/opc/uatypes/UAException.h>
+#include <jde/opc/UAException.h>
 #include <jde/app/shared/exports.h>
 
 #include <jde/web/client/exports.h>

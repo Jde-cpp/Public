@@ -10,7 +10,7 @@ export class CnnctnDetailResolver implements Resolve<DetailResolverData<ServerCn
 	constructor( private route: ActivatedRoute, private router:Router,
 		@Inject('IProfile') private profileService: IProfile,
 		@Inject('IErrorService') private snackbar: IErrorService,
-		@Inject('GatewayService') private gatewayService: GatewayService
+		@Inject('IGraphQL') private gatewayService: GatewayService
 	){}
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<DetailResolverData<ServerCnnctn>>{
@@ -20,13 +20,13 @@ export class CnnctnDetailResolver implements Resolve<DetailResolverData<ServerCn
 	}
 
 	private async loadProfile( route: ActivatedRouteSnapshot, collectionDisplay:string, target:string, url:string ):Promise<DetailResolverData<ServerCnnctn>>{
-		let gatewayName = route.parent.url[route.parent.url.length-1].path;
-		this.ql = await this.gatewayService.instance( gatewayName );
+		let gatewayTarget = route.parent.url[route.parent.url.length-1].path;
+		this.ql = await this.gatewayService.gateway( gatewayTarget );
 		const profile = new Settings<UserSettings>( UserSettings, `serverConnections-detail`, this.profileService );
 		await profile.loadedPromise;
 
-		let siblings = this.routeStore.getSiblings( route.parent.url ).map( s=>new DocItem({path:`${gatewayName}/${s.path}`, title:s.title}) );
-		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings, new ListRoute(gatewayName) );
+		let siblings = this.routeStore.getSiblings( route.parent.url ).map( s=>new DocItem({path:`${gatewayTarget}/${s.path}`, title:s.title}) );
+		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings, new ListRoute(gatewayTarget) );
 		try{
 			return CnnctnDetailResolver.load( this.ql, "serverConnections", target, profile, routing );
 		}

@@ -1,4 +1,7 @@
 #pragma once
+
+#include <jde/opc/usings.h>
+
 namespace Jde::Opc::Server{
 	using boost::uuids::uuid;
 
@@ -9,5 +12,4 @@ namespace Jde::Opc::Server{
 	using VariablePK = uint32;
 	using ServerPK = uint32;
 	using NamespaceId = uint16;
-	using VariantPK = uint32;
 }

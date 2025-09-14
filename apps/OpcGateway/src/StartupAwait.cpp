@@ -8,10 +8,10 @@
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/app/client/AppClientSocketSession.h>
-#include <jde/opc/OpcQLHook.h>
 #include "opcInternal.h"
 #include "UAClient.h"
 #include "WebServer.h"
+#include "ql/OpcQLHook.h"
 
 #define let const auto
 namespace Jde::Opc{
@@ -26,7 +26,7 @@ namespace Jde::Opc::Gateway{
 		VoidAwait{sl},
 		_webServerSettings{move(webServerSettings)},
 		_userName{move(userName)}{
-		if( userName.empty() )
+		if( _userName.empty() )
 			_userName = jobject{ {"name", Ƒ("OpcGateway-{}", IApplication::HostName())} };
 	}
 
@@ -63,6 +63,7 @@ namespace Jde::Opc::Gateway{
 			co_await Access::Client::Configure( accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, _listener );
 			Process::AddShutdownFunction( [](bool terminate){UAClient::Shutdown(terminate);} );
 			QL::Hook::Add( mu<OpcQLHook>() );
+
 			Information( ELogTags::App, "---Started {}---", "OPC Gateway" );
 			Resume();
 		}

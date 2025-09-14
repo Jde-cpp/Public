@@ -6,16 +6,16 @@ import { GatewayService } from '../gateway.service';
 
 @Injectable( {providedIn: 'root'} )
 export class GatewayRouteService implements IRouteService{
-	constructor( @Inject('GatewayService') private _gateway:GatewayService ){}
+	constructor( @Inject('GatewayService') private _gatewayService:GatewayService ){}
 	async children():Promise<Routes>{
 		throw new Error("Not implemented");
 	}
 
 	async docItems( urlSegments:UrlSegment[] ):Promise<DocItem[]>{
 		let y = [];
-		let instances = await this._gateway.instances();
-		for( const s of instances )
-			y.push( new DocItem({path: s.host, title: s.host}) );
+		let gateways = await this._gatewayService.gateways();
+		for( const gateway of gateways )
+			y.push( new DocItem({path: gateway.target, title: gateway.name}) );
 
 		this.routeStore.setSiblings( urlSegments, y );
 		return y;
@@ -26,7 +26,7 @@ export class GatewayRouteService implements IRouteService{
 
 @Injectable( {providedIn: 'root'} )
 export class GatewayCnnctnRouteService implements IRouteService{
-	constructor( @Inject('GatewayService') private _gateway:GatewayService, private _route: ActivatedRoute ){
+	constructor( @Inject('GatewayService') private _gatewayService:GatewayService, private _route: ActivatedRoute ){
 	}
 	async children():Promise<Routes>{
 		throw new Error("Not implemented");
@@ -35,8 +35,8 @@ export class GatewayCnnctnRouteService implements IRouteService{
 	async docItems( urlSegments:UrlSegment[] ):Promise<DocItem[]>{
 		let y = [];
 		let route = this._route.snapshot.children[0];
-		let host = route.paramMap.get("host");
-		let gateway = await this._gateway.instance( host );
+		let gatewayTarget = route.paramMap.get("gateway");
+		let gateway = await this._gatewayService.gateway( gatewayTarget );
 		let connections = await gateway.queryArray<any>( `serverConnections{ name target }`,  );
 		for( const c of connections )
 			y.push( new DocItem({path: c.target, title: c.name}) );

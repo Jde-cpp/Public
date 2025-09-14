@@ -7,9 +7,30 @@
 
 #define let const auto
 namespace Jde::Opc::Gateway{
+	UABrowsePath::UABrowsePath( const vector<sv>& segments, NsIndex defaultNS )ι:
+		UA_BrowsePath{
+			UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
+			{ segments.size(), (UA_RelativePathElement*)UA_Array_new(segments.size(), &UA_TYPES[UA_TYPES_RELATIVEPATHELEMENT]) }
+		}{
+		for( size_t i=0; i<segments.size(); ++i ){
+			auto elem = &relativePath.elements[i];
+			elem->referenceTypeId = UA_NODEID_NUMERIC( 0, UA_NS0ID_ORGANIZES );
+			auto ns = defaultNS;
+			string path{ segments[i] };
+			if( let nsPath = Str::Split( segments[i], '~' ); nsPath.size()>1 ){
+				auto specifiedNs = Str::TryTo<NsIndex>( string{nsPath[0]} );
+				if( specifiedNs ){
+					ns = *specifiedNs;
+					path = Str::Join( std::span{nsPath}.subspan(1), "~" );
+				}
+			}
+			elem->includeSubtypes = elem->isInverse = false;
+			elem->targetName = {ns, AllocUAString(path)};
+		}
+	}
 namespace Browse{
 	α FoldersAwait::Suspend()ι->void{
-		_client->SendBrowseRequest( Request{move(_node)}, _h );
+		_client->SendBrowseRequest( Request{move(_nodeId)}, _h );
 	}
 }
 	ObjectsFolderAwait::ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SL sl )ι:
@@ -85,22 +106,23 @@ namespace Browse{
 		}
 	}
 namespace Browse{
-	α OnResponse( UA_Client *ua, void* /*userdata*/, RequestId requestId, UA_BrowseResponse* response )ι->void {
+	α OnResponse( UA_Client *ua, void* userdata, RequestId requestId, UA_BrowseResponse* response )ι->void {
 		auto h = UAClient::ClearRequestH<Browse::FoldersAwait::Handle>( ua, requestId );
+		let uaHandle = (Handle)(userdata ? userdata : ua);
 		if( !h ){
-			Critical{ BrowseTag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId };
+			Critical{ BrowseTag, "[{:x}.{:x}]Could not find handle.", uaHandle, requestId };
 			return;
 		}
-		Trace( BrowseTag, "[{:x}.{}]OnResponse", (uint)ua, requestId );
+		Trace( BrowseTag, "[{:x}.{}]OnResponse", uaHandle, requestId );
 		if( !response->responseHeader.serviceResult )
 			h.promise().Resume( move(*response), h );
 		else
-			h.promise().ResumeExp( UAClientException{response->responseHeader.serviceResult, ua, requestId}, move(h) );
+			h.promise().ResumeExp( UAClientException{response->responseHeader.serviceResult, uaHandle, requestId}, move(h) );
 	}
 
-	Request::Request( NodeId&& node )ι:
+	Request::Request( NodeId&& id )ι:
 		UA_BrowseRequest{.requestedMaxReferencesPerNode=0, .nodesToBrowseSize=1, .nodesToBrowse=UA_BrowseDescription_new()}{
-    nodesToBrowse[0].nodeId = move( node );
+    nodesToBrowse[0].nodeId = move( id );
     nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;
 	}
 

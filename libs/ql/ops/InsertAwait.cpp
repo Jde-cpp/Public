@@ -72,7 +72,7 @@ namespace Jde::QL{
 			else if( let id = c->IsPK() ? input.if_contains("id") : nullptr; id )
 				value = Value{ c->Type, *id };
 			else if( !c->Default && c->Insertable ){ //insertable=not populated by stored proc, may [not] be an extension record.
-				THROW_IF( !c->PKTable, "No default for {} in {}. mutation={}", c->Name, table.Name, _mutation.ToString() );
+				THROW_IF( !c->PKTable, "No default for '{}' in '{}'. mutation='{}'", c->Name, table.Name, _mutation.ToString() );
 				++cNonDefaultArgs;
 				missingColumns.emplace_back( c );//also needs to be inserted, insert null for now.
 			}

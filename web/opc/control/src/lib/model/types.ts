@@ -5,6 +5,10 @@ export interface ILocalizedText{
 	text: string;
 }
 
+export const toLocalizedText = ( value:any ):ILocalizedText=>{
+	return typeof(value)=="string" ? { locale: undefined, text: value } : value;
+}
+
 export interface IBrowseName{
 	ns:number;
 	name:String;
@@ -30,6 +34,6 @@ export enum ETypes{
 	Float = 10,
 	Double = 11,
 	String = 12,
-	BaseDataType = 24,
-	FolderType = 61
+	BaseData = 24,
+	Folder = 61
 }
