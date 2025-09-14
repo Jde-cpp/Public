@@ -43,13 +43,19 @@ namespace Jde::App{
 		Process::AddShutdownFunction( []( bool terminate ){Server::StopWebServer(terminate);} );//TODO move to Web::Server
 		UpdateStatuses();
 	}
+	α Server::RemoveExisting( str host, PortType port )ι->void{
+		_sessions.erase_if( [&host=host,port=port]( auto&& kv ){
+			auto& existing = kv.second->Instance();
+			Trace( ELogTags::Test, "Existing: {}@{}, New: {}@{}", existing.host(), existing.web_port(), host, port );
+			return existing.host()==host && existing.web_port()==port;
+		});
+	}
 
 	α Server::GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ι->Web::Jwt{
 		auto requestHandler = _requestHandler;
 		THROW_IF( !requestHandler, "No request Handler." );
 		return requestHandler->GetJwt( userPK, move(name), move(target), move(endpoint), sessionId, expires, move(description) );
 	}
-
 
 	α Server::StopWebServer( bool terminate )ι->void{
 		Web::Server::Stop( move(_requestHandler), terminate );
@@ -116,8 +122,8 @@ namespace Jde::App{
 		vector<Proto::FromClient::Instance> y;
 		_sessions.visit_all( [&]( auto&& kv ){
 			auto& session = kv.second;
-			if( session->Instance().application()==name )
-				y.push_back( session->Instance() );
+			if( let instance = session->Instance(); instance.application()==name )
+				y.push_back( instance );
 		} );
 		return y;
 	}

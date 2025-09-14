@@ -19,7 +19,7 @@ namespace Jde::App::Server{
 	α SetLocalQL( sp<QL::LocalQL> ql )ι->void;
 	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
 	α GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ι->Web::Jwt;
-
+	α RemoveExisting( str host, PortType port )ι->void;
 
 	α StartWebServer( jobject&& settings )ε->void;
 	α StopWebServer( bool terminate )ι->void;

@@ -1,10 +1,7 @@
 import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot} from '@angular/router';
 import {inject, Inject, Injectable} from '@angular/core';
-//import { MetaObject } from '../model/ql/schema/MetaObject';
-import { Sort } from '@angular/material/sort';
-import { DocItem } from 'jde-spa';
-import { IErrorService, Field, ListRoute, PageSettings, IProfile, QLListData, QLListResolver, RouteStore, Settings, UserSettings } from 'jde-framework';
-import { Gateway, GatewayService } from '../gateway.service';
+import { IErrorService, Field, ListRoute, PageSettings, IProfile, QLListData, RouteStore, Settings, UserSettings } from 'jde-framework';
+import { Gateway, GatewayService, GatewayTarget } from '../gateway.service';
 
 @Injectable()
 export class ConnectionResolver implements Resolve<QLListData> {
@@ -17,13 +14,13 @@ export class ConnectionResolver implements Resolve<QLListData> {
 		const data = config.data;
 		const routing = new ListRoute( {path:route.parent.url.join('/'), title: host as string, data:{summary: "", collectionName: "serverConnections"}} );
 		routing.siblings = this.routeStore.getSiblings( route.parent.url.slice(0, -1) );
-		return this.load( routing );
+		return this.load( route.params["gateway"], routing );
 	}
 
-	private async load( routing:ListRoute ):Promise<QLListData>{
+	private async load( gatewayTarget:GatewayTarget, routing:ListRoute ):Promise<QLListData>{
 		const profile = new Settings<UserSettings>( UserSettings, `${routing.collectionName}`, this.profileService );
 		await profile.loadedPromise;
-		const gateway = await this.gatewayService.instance( routing.title );
+		const gateway = await this.gatewayService.gateway( gatewayTarget );
 		routing.excludedColumns = gateway.excludedColumns( routing.collectionName );
 		return ConnectionResolver.load( gateway, profile, new PageSettings(routing), routing, this.routeStore );
 	}

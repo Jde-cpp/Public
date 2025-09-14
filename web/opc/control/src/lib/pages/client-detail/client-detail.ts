@@ -41,7 +41,7 @@ export class GatewayDetail implements OnDestroy, OnInit{
 	}
 	async ngOnInit(){
 		const segments = this.router.url.split( "/" );
-		this.gateway = await this.gatewayService.instance( segments[segments.length-2] );
+		this.gateway = await this.gatewayService.gateway( segments[segments.length-2] );
 		this.sideNav.set( this.pageData.routing );
 	}
 	tabIndexChanged( index:number ){ this.profile.value.tabIndex = index;}

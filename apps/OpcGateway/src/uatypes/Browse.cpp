@@ -106,17 +106,18 @@ namespace Browse{
 		}
 	}
 namespace Browse{
-	α OnResponse( UA_Client *ua, void* /*userdata*/, RequestId requestId, UA_BrowseResponse* response )ι->void {
+	α OnResponse( UA_Client *ua, void* userdata, RequestId requestId, UA_BrowseResponse* response )ι->void {
 		auto h = UAClient::ClearRequestH<Browse::FoldersAwait::Handle>( ua, requestId );
+		let uaHandle = (Handle)(userdata ? userdata : ua);
 		if( !h ){
-			Critical{ BrowseTag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId };
+			Critical{ BrowseTag, "[{:x}.{:x}]Could not find handle.", uaHandle, requestId };
 			return;
 		}
-		Trace( BrowseTag, "[{:x}.{}]OnResponse", (uint)ua, requestId );
+		Trace( BrowseTag, "[{:x}.{}]OnResponse", uaHandle, requestId );
 		if( !response->responseHeader.serviceResult )
 			h.promise().Resume( move(*response), h );
 		else
-			h.promise().ResumeExp( UAClientException{response->responseHeader.serviceResult, ua, requestId}, move(h) );
+			h.promise().ResumeExp( UAClientException{response->responseHeader.serviceResult, uaHandle, requestId}, move(h) );
 	}
 
 	Request::Request( NodeId&& id )ι:

@@ -1,9 +1,9 @@
-import { Injectable, Inject, inject } from '@angular/core';
-import { Log, Instance, ProtoService, AppService, AuthStore, ETransport } from 'jde-framework'; //Mutation, DateUtilities, IQueryResult
+import { Injectable, Inject } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
-import { Guid } from 'jde-framework';
-import { EProvider, IAuth, User } from 'jde-spa';
+import { AppService, AuthStore, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema } from 'jde-framework';
+import { EProvider, User } from 'jde-spa';
 
 
 import { OpcError } from '../model/OpcError';
@@ -25,58 +25,83 @@ type Owner = any;
 
 export type GatewayTarget = string;
 @Injectable( {providedIn: 'root'} )
-export class GatewayService {
-	constructor( appService:AppService, protected http: HttpClient, @Inject("AuthStore") protected authStore:AuthStore, @Inject("OpcStore") protected store:OpcStore ){
+export class GatewayService implements IGraphQL{
+	constructor(
+		appService:AppService,
+		http: HttpClient,
+		@Inject("AuthStore") authStore:AuthStore,
+		private route: ActivatedRoute,
+		private router: Router,
+		@Inject("OpcStore") opcStore:OpcStore ){
 		appService.gatewayInstances().then(
-		 	(instances)=>{
-				if( instances.length==0 )
-					console.error("No IotServies running");
-				this.#instances = instances.map( x=>new Gateway(x, appService.transport, http, authStore, this.store) );
-				this.#instanceCallbacks.forEach( callback=>{
-					let instance = this.#instances.find( y=>y.instances.some( z=>z.host==callback.host ) );
-					if( !instance )
-						callback.reject( `No instance found for '${callback.host}'` );
-					else
-						callback.resolve( instance );
-				});
-				this.#instancesCallbacks.forEach( x=>x.resolve(this.#instances.map( x=>x.instances ).flat()) );
-				this.#instanceCallbacks = this.#instancesCallbacks = [];
-			},
-		 	(e:HttpErrorResponse)=>{
-				debugger;
-				console.error( `Could not get IotServices.  (${e.status})${e.message}` );
-				this.#instanceCallbacks.forEach( x=>x.reject(e) );
-				this.#instancesCallbacks.forEach( x=>x.reject(e) );
-				this.#instanceCallbacks = this.#instancesCallbacks = [];
-			}
+			(instances)=>this.onGatewaySuccess( instances, appService.transport, http, authStore, opcStore ),
+			this.onInstancesError
 		);
+		route.paramMap.subscribe( async params=>{
+			const gatewayTarget = params.get('gateway');
+			this.#defaultGateway = this.#gateways?.find( gateway=>gateway.target==gatewayTarget );
+		});
+		route.url.subscribe( async urlSegments=>{
+			const url = urlSegments.map(segment=>segment.path).join("/");
+			console.debug( `GatewayService:  url changed to '${url}'` );
+		});
 	}
-	get defaultGateway():Gateway{ return this.#instances?.length ? this.#instances[0] : null; }
-
-	async instance( host:string ):Promise<Gateway>{
-		if( !this.#instances )
-			return new Promise<Gateway>( (resolve,reject)=>this.#instanceCallbacks.push({host:host, resolve, reject}) );
-		const instance = this.#instances.find( x=>x.instances.some( y=>y.host==host ) );
-		if( !instance )
-			throw `No instance found for '${host}'`;
+	onGatewaySuccess(gateways, transport:ETransport, http: HttpClient, authStore:AuthStore, opcStore:OpcStore){
+		if( gateways.length==0 )
+			console.error("No IotServies running");
+		this.#gateways = gateways.map( instance=>new Gateway(instance, transport, http, authStore, opcStore) );
+		this.#gatewaysCallbacks.forEach( cb=>{cb.resolve(this.#gateways)} );
+		this.#gatewayCallbacks.forEach( cb=>cb.resolve(this.#gateways.find(gateway=>gateway.target==cb.gateway)) );
+		this.#gatewayCallbacks = [];
+	}
+	onInstancesError(e:HttpErrorResponse){
+		debugger;
+		console.error( `Could not get IotServices.  (${e.status})${e.message}` );
+		this.#gatewayCallbacks.forEach( x=>x.reject(e) );
+	}
+	async gateway( target:GatewayTarget ):Promise<Gateway>{
+		if( !this.#gateways )
+			return new Promise<Gateway>( (resolve,reject)=>this.#gatewayCallbacks.push({gateway:target,resolve, reject}) );
+		const instance = this.#gateways.find( gateway=>gateway.target==target );
 		return instance;
 	}
-
-	async instances():Promise<Instance[]>{
-		if( !this.#instances )
-			return new Promise<Instance[]>( (resolve,reject)=>this.#instancesCallbacks.push({resolve:resolve,reject:reject}) );
-		return Promise.resolve( this.#instances.map( x=>x.instances ).flat() );
+	async gateways():Promise<Gateway[]>{
+		if( !this.#gateways )
+			return new Promise<Gateway[]>( (resolve,reject)=>this.#gatewaysCallbacks.push({resolve:resolve,reject:reject}) );
+		return Promise.resolve( this.#gateways );
 	}
-	#instances:Gateway[];
-	#instancesCallbacks:{resolve: (value:Instance[])=>void, reject:(e?:any)=>void}[]= [];
-	#instanceCallbacks:{ host:string, resolve: (value:Gateway)=>void, reject:(e?:any)=>void}[]= [];
+	async query<T>( ql: string ):Promise<T>{ return this.defaultGateway.query<T>( ql ); }
+	async querySingle<T>( ql: string ):Promise<T>{ return this.defaultGateway.querySingle<T>( ql ); }
+	async schema( names:string[] ):Promise<TableSchema[]>{ return this.defaultGateway.schema( names ); }
+	async schemaWithEnums( type:string, log?:Log ):Promise<TableSchema>{ return this.defaultGateway.schemaWithEnums( type, log ); }
+	async mutation<T>( ql: string|Mutation|Mutation[], log?:Log ):Promise<T>{
+		return this.defaultGateway.mutation<T>( ql, log );
+	}
+	async mutations():Promise<MutationSchema[]>{ return this.defaultGateway.mutations(); }
+
+	targetQuery( schema:TableSchema, target: string, showDeleted:boolean ):string{ return null; }
+	subQueries( typeName: string, id: number ):string[]{ return []; }
+	excludedColumns( tableName:string ):string[]{ return []; }
+	toCollectionName( collectionDisplay:string ):string{ return collectionDisplay; }
+
+	get defaultGateway():Gateway{
+		if( !this.#defaultGateway ){
+			let target = this.router.url.split('/').slice(-1)[0];
+			this.#defaultGateway = this.#gateways?.find( gateway=>gateway.target==target );
+		}
+		return this.#defaultGateway;
+	} #defaultGateway:Gateway;
+	#gateways:Gateway[];
+
+	#gatewaysCallbacks:{resolve: (value:Gateway[])=>void, reject:(e?:any)=>void}[]= [];
+	#gatewayCallbacks:{ gateway:GatewayTarget, resolve: (value:Gateway)=>void, reject:(e?:any)=>void}[]= [];
 }
 
 
 export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IMessage>{
-	constructor( instance:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore ){
+	constructor( gateway:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore ){
 		super( FromClient.Transmission, http, transport, authStore );
-		super.instances = [instance];
+		super.instances = [gateway];
 	}
 	async login( domain:string, username:string, password:string, log:Log ):Promise<void>{
 		let self = this;
@@ -428,6 +453,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		else
 			return Promise.resolve();
 	}
-	get target():GatewayTarget{ return this.instances[0].host; }
+	get name():string{ return this.instances[0].instanceName; }
+	get target():GatewayTarget{ return this.instances[0].instanceName; }
 }
 export type SubscriptionResult = {opcId:string, node:NodeId,value:Value};

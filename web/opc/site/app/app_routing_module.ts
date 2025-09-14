@@ -17,17 +17,16 @@ export const routes: Routes = [
 		canActivate: [AuthGuard],
 		providers: [  {provide: 'IRouteService', useClass: HomeRouteService} ]},
 	{ path: 'login', component: LoginPageComponent, data: {name: "Login", summary: "Login to Site"} },
-
 	{ path: 'gateways', title: "Gateways", canActivate: [AuthGuard], component: Cards,
 		providers: [{provide: 'IRouteService', useClass: GatewayRouteService}],
 		data: {summary: "Available Gateways",}
 	},
-	{ path: 'gateways/:host', title: "Gateways", canActivate: [AuthGuard], component: Cards,
+	{ path: 'gateways/:gateway', title: ":gateway", canActivate: [AuthGuard], component: Cards,
 		providers: [{provide: 'IRouteService', useClass: GatewayCnnctnRouteService}],
 		data: {summary: "Available Connections",}
 	},
 	{
-		path: 'gateways/:host/:connection', title: ":host", component: ComponentSidenav, canActivate: [AuthGuard],
+		path: 'gateways/:gateway/:connection', component: ComponentSidenav, canActivate: [AuthGuard],
 		children :[
 			{
 				path: '**',
@@ -97,7 +96,7 @@ export const routes: Routes = [
 		data: { summary: "Gateways Connected" },
 	},
 	{
-		path: 'settings/gateways/:host', title: ":host", component: ComponentSidenav, canActivate: [AuthGuard],
+		path: 'settings/gateways/:gateway', title: ":gateway", component: ComponentSidenav, canActivate: [AuthGuard],
 		children :[
 			{
 				path: '',
@@ -110,7 +109,7 @@ export const routes: Routes = [
 				]}
 			},
 			{
-				path: ':target',
+				path: ':connection',
 				component: GatewayDetail,
 				providers: [ CnnctnDetailResolver, gatewayProvider ],
 				canActivate: [AuthGuard],

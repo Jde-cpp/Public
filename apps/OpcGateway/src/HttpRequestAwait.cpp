@@ -187,8 +187,8 @@ namespace Jde::Opc::Gateway{
 		{}
 	}
 	α HttpRequestAwait::Query()ι->TAwait<HttpTaskResult>::Task{
-		_request.LogRead();
 		auto& query = _request["query"];
+		_request.LogRead( query );
 		try{
 			if( query.empty() )
 				throw RestException<http::status::bad_request>{ SRCE_CUR, move(_request), "empty query" };

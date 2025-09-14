@@ -1,4 +1,4 @@
-import { Component, computed, effect, OnInit, OnDestroy, signal, inject, Inject, model } from '@angular/core';
+import { Component, effect, OnInit, OnDestroy, signal, inject, Inject, model } from '@angular/core';
 import { SelectionModel } from '@angular/cdk/collections';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';

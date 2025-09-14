@@ -22,9 +22,9 @@ namespace Jde::Opc::Gateway{
 			jarray results;
 			for( auto& q : _queries.Queries() ){
 				q.ReturnRaw = _raw;
-				if( q.JsonName.starts_with("serverConnection") )
+				if( q.JsonName.starts_with("serverConnection") || q.JsonName=="__type" )
 					results.push_back( co_await QL::QLAwait<>(move(q), _request.SessionInfo->UserPK, _sl) );
-				if( q.JsonName.starts_with("node") )
+				else if( q.JsonName.starts_with("node") )
 					results.push_back( co_await NodeQLAwait{move(q), _request.SessionInfo->SessionId, _request.SessionInfo->UserPK, _sl} );
 			}
 			jvalue y{ results.size()==1 ? move(results[0]) : jvalue{results} };

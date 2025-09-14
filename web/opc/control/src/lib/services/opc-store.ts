@@ -30,7 +30,7 @@ export class OpcStore{
 			this.#connections.set( gateway, gatewayConnections = new Map<CnnctnTarget, ServerCnnctn>() );
 		if( gatewayConnections.has(cnnctn) )
 			return gatewayConnections.get(cnnctn);
-		let connection = new ServerCnnctn( await gatewayService.query<any>(`serverConnection( target: "${cnnctn}"){ id name url certificateUri defaultBrowseNs }`, (m)=>console.log(m)) );
+		let connection = new ServerCnnctn( (await gatewayService.query<any>(`serverConnection( target: "${cnnctn}"){ id name url certificateUri defaultBrowseNs }`, (m)=>console.log(m)))["serverConnection"] );
 		gatewayConnections.set( cnnctn, connection );
 		return connection;
 	}

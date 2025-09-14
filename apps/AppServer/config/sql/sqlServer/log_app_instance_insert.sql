@@ -14,6 +14,7 @@ as
 		insert into log_hosts( name ) values( @host_name );
 		set @host_id = @@identity;
 	end
+	update log_app_instances set end_time=NOW() where app_id=@app_id and host_id=@host_id and end_time is null;
 	insert into log_app_instances(app_id,end_time,host_id,pid,start_time) values( @app_id,null,@host_id,@pid,getutcdate() );
 	set @instance_id = @@IDENTITY;
    select @app_id, @instance_id;

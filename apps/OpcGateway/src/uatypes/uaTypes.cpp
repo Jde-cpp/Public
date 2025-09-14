@@ -6,7 +6,7 @@ namespace Jde::Opc::Gateway{
 		UA_TranslateBrowsePathsToNodeIdsResponse{ move(rhs) },
 		_segments{ segments },
 		_sl{ sl }{
-		THROW_IFX( results->statusCode, UAClientException(results->statusCode, Ƒ("UA_Client_Service_translateBrowsePathsToNodeIds('{}').", Path()), uaHandle, sl) );
+		THROW_IFX( results->statusCode, UAClientException(results->statusCode, uaHandle, Ƒ("UA_Client_Service_translateBrowsePathsToNodeIds('{}').", Path()), sl) );
 	}
 
 	GetNodeIdResponse::operator Jde::Opc::ExNodeId()Ε{
@@ -17,6 +17,6 @@ namespace Jde::Opc::Gateway{
 
 	ReadResponse::ReadResponse( UA_ReadResponse&& rhs, Handle uaHandle, NodeId id, SL sl )ε:
 		UA_ReadResponse{ move(rhs) }{
-		THROW_IFX( rhs.responseHeader.serviceResult, UAClientException(rhs.responseHeader.serviceResult, Ƒ("UA_Client_Service_read('{}').", id.ToString()), uaHandle, sl) );
+		THROW_IFX( rhs.responseHeader.serviceResult, UAClientException(rhs.responseHeader.serviceResult, uaHandle, Ƒ("UA_Client_Service_read('{}').", id.ToString()), sl) );
 	}
 }

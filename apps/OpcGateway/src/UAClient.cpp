@@ -89,13 +89,13 @@ namespace Jde::Opc::Gateway{
 		using SecurityPolicyPtr = up<UA_SecurityPolicy, decltype(&UA_free)>;
 		const uint size = addSecurity ? 2 : 1; ASSERT( !config->securityPoliciesSize );
 		SecurityPolicyPtr securityPolicies{ (UA_SecurityPolicy*)UA_malloc( sizeof(UA_SecurityPolicy)*size), &UA_free };
-		auto sc = UA_SecurityPolicy_None(&securityPolicies.get()[0], UA_BYTESTRING_NULL, &_logger); THROW_IFX( sc, UAClientException(sc, _ptr, 0, ELogLevel::Debug) );
+		auto sc = UA_SecurityPolicy_None(&securityPolicies.get()[0], UA_BYTESTRING_NULL, &_logger); THROW_IFX( sc, UAClientException(sc, Handle()) );
 		if( addSecurity ){
 			config->applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			config->clientDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			auto certificate = ToUAByteString( Crypto::ReadCertificate(CertificateFile()) );
 			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
-			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAClientException(sc, _ptr, 0, ELogLevel::Debug) );
+			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAClientException(sc, Handle()) );
 
 			config->authSecurityPolicies = (UA_SecurityPolicy *)UA_realloc( config->authSecurityPolicies, sizeof(UA_SecurityPolicy) *(config->authSecurityPoliciesSize + 1) );
 			UA_SecurityPolicy_Basic256Sha256( &config->authSecurityPolicies[config->authSecurityPoliciesSize], *certificate.get(), *privateKey.get(), config->logging );
@@ -147,7 +147,7 @@ namespace Jde::Opc::Gateway{
 					Post( [client]()ι->void{ConnectAwait::Resume(move(client));} );
 				}
 				else
-					Post( [client,connectStatus]()ι->void{ConnectAwait::Resume( client->Target(), client->Credential, UAClientException{connectStatus} );} );
+					Post( [client,connectStatus]()ι->void{ConnectAwait::Resume( client->Target(), client->Credential, UAClientException{connectStatus, client->Handle(), "Connection Failed"} );} );
 
 				return true;
 			});

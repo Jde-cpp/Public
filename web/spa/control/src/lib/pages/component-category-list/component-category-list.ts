@@ -33,9 +33,16 @@ export class ComponentCategoryList implements OnInit/*, OnDestroy*/ {
 		});
   }
 
-  ngOnInit() {
+  ngOnInit(){
+		this.route.title.subscribe( t=>{
+			if( !t.startsWith(":") )
+				this._componentPageTitle.title = t as string;
+		} );
+		this.route.paramMap.subscribe( p=>{
+			if( this.route.snapshot.title.startsWith(":") )
+				this._componentPageTitle.title = p.get( this.route.snapshot.title.substring(1) );
+		} );
 		const section = { name: this.route.data["value"].name, summary: this.route.data["value"].summary }; //
-		this._componentPageTitle.title = section.name; ////
 		this._categoryListSummary = section.summary; //
   }
 	canActivate( component:DocItem ):boolean {

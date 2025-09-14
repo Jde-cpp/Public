@@ -23,6 +23,7 @@ namespace Jde::App::Server{
 			base::SetSessionId( instance.session_id() );
 			let [appPK,instancePK] = App::AddInstance( instance.application(), instance.host(), instance.pid() );//TODO Don't block
 			Information{ ELogTags::SocketServerRead, "[{:x}.{:x}]Adding application app:{}@{}:{} pid:{}, instancePK:{:x}, sessionId: {:x}, endpoint: '{}'", Id(), requestId, instance.application(), instance.host(), instance.web_port(), instance.pid(), instancePK, instance.session_id(), _userEndpoint.address().to_string() };
+			Server::RemoveExisting( instance.host(), instance.web_port() );
 			_instancePK = instancePK; _appPK = appPK;
 			_instance = move( instance );
 			Write( FromServer::ConnectionInfo(appPK, instancePK, requestId, AppClient()->PublicKey()) );

@@ -3,18 +3,19 @@ import {Component, computed, inject, Inject, model, OnDestroy, OnInit, signal} f
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
-import { GatewayService, SubscriptionResult } from '../../services/gateway.service';
+import { Gateway, GatewayService, SubscriptionResult } from '../../services/gateway.service';
 import { IErrorService, IProfile, subscribe} from 'jde-framework'
 import { ETypes } from '../../model/types';
 import {  MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
-import { IEnvironment } from 'jde-spa';
+import { ComponentPageTitle } from 'jde-spa';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { NodePageData } from '../../services/resolvers/node.resolver';
 import { NodeRoute } from '../../model/NodeRoute';
 import { OpcNodeRouteService } from '../../services/routes/opc-node-route.service';
 import { Value, toString } from '../../model/Value';
 import { ENodeClass, Variable, UaNode }  from '../../model/Node';
+import { ServerCnnctn } from '../../model/ServerCnnctn';
 
 @Component({
   selector: 'node-detail',
@@ -24,17 +25,20 @@ import { ENodeClass, Variable, UaNode }  from '../../model/Node';
 		imports: [RouterModule,MatButtonModule,MatCheckboxModule,MatTableModule,MatToolbarModule]
 })
 export class NodeDetail implements OnInit, OnDestroy {
-	constructor( @Inject('GatewayService') private gatewayService:GatewayService, @Inject('IProfile') private profileService: IProfile, private route: ActivatedRoute, private router:Router, @Inject('IEnvironment') private environment: IEnvironment, @Inject('IErrorService') private snackbar: IErrorService )
+	constructor(
+		@Inject('GatewayService') private gatewayService:GatewayService,
+		private route: ActivatedRoute,
+		@Inject('IErrorService') private snackbar: IErrorService,
+		private componentPageTitle:ComponentPageTitle )
 	{}
 
 	async ngOnInit() {
-		//subscribe( this.route, "NodeDetail" );
 		this.route.data.subscribe( (data)=>{
 			this.pageData = data["pageData"];
 			this.sideNav.set( this.pageData.route );
-			this.nodes?.filter((n:UaNode)=>this.profile.subscriptions.find((s)=>s.equals(n))).forEach((n)=>this.selections.select(n));
+			this.nodes?.filter( (n:UaNode)=>this.profile.subscriptions.find((s)=>s.equals(n)) ).forEach( (n)=>this.selections.select(n) );
 			this.isLoading.set( false );
-
+			this.componentPageTitle.title = this.connection.name + (this.node.id==85 ? '' : `/${this.node.name}`);
 		});
 		this.selections.changed.subscribe( this.onSubscriptionChange.bind(this) );
 	}
@@ -142,14 +146,14 @@ export class NodeDetail implements OnInit, OnDestroy {
 	test(r:UaNode){ debugger;}
 	get columns():string[]{ return this.profile.columns; }
 	ETypes = ETypes;
-	get _iot(){ return this.gatewayService.defaultGateway; }
+	get _iot():Gateway{ return this.pageData.gateway; }
 	isAllSelected = computed<boolean>( ()=>{ return this.selections.selected.length==this.nodes.length; } );
 	isLoading = signal<boolean>( true );
 	get Key():string{ return this.pageData.route.profileKey; }
 	get node(){ return this.sideNav().node; }
 	get nodeId(){ return this.node.nodeId; }
-	get ns():number{ return this.nodeId.ns ? +this.nodeId.ns : this.environment["defaultNS"]; }
-	get cnnctnTarget():string{ return this.sideNav().cnnctnTarget; }
+	get connection():ServerCnnctn{ return this.pageData.connection; }
+	get cnnctnTarget():string{ return this.connection.target; }
 	pageData:NodePageData;
 	//get parent():types.ExpandedNode{ return this.pageData.parent; }
 	get profile(){ return this.pageData.route.profile; }

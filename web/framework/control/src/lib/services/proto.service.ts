@@ -329,6 +329,8 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		for( let type of queries ){
 			const ql = `__type(name: "${type}") { fields { name type { name kind ofType{name kind} } } }`;
 			const data = await this.query( ql, log );
+			if( data["__type"].length==0 )
+				throw `no such type: '${type}'`;
 			const schema = new TableSchema( data["__type"] );
 			this.#tables.set( type, schema );
 			results.push( schema );
