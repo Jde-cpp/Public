@@ -39,7 +39,10 @@ local args = import 'args.libsonnet';
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",
-		configDir: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		mutationsDir:: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		db: false,
+		configFile: "$(UA_NODE_SETS)/CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml",
+		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840,
 		ssl:{
 			certificate: "/tmp/cert.pem",

@@ -54,15 +54,15 @@ namespace Jde::Opc::Gateway{
 			auto client = ms<UAClient>( move(servers.front()), _cred );
 			client->Connect();
 		}
-		catch( const IException& e ){
-			let ua = dynamic_cast<const UAException*>( &e );
+		catch( const exception& e ){
+			let ua = dynamic_cast<const UAClientException*>( &e );
 			lg l{ _requestMutex };
 			auto handles = EraseRequests( _opcTarget, _cred, l );
 			for( auto& h : handles ){
 				if( ua )
-					h.promise().ResumeExp( UAException{*ua}, h );
+					h.promise().ResumeExp( UAClientException(*ua), h );
 				else
-					h.promise().ResumeExp( Exception{e.what(), e.Code, e.Level(), e.Stack().front()}, h );
+					h.promise().ResumeExp( Exception{e.what(), 0, ELogLevel::Error, SRCE_CUR}, h );
 			}
 		}
 	}

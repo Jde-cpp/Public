@@ -11,7 +11,7 @@
 
 namespace Jde::Opc::Server{
 	α UpsertAwait::await_ready()ι->bool{
-		if( let configRoot = Settings::FindPath("/opcServer/configDir"); configRoot && fs::exists(*configRoot) ){
+		if( let configRoot = Settings::FindPath("/opcServer/mutationsDir"); configRoot && fs::exists(*configRoot) ){
 			for( let& entry : fs::directory_iterator(*configRoot) ){
 				let& path = entry.path();
 				if( !entry.is_directory() && path.extension().string().starts_with(".mutation") )

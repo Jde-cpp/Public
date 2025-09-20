@@ -1,6 +1,7 @@
 #include "UAServer.h"
 #include <jde/opc/uatypes/helpers.h>
 #include "UAAccess.h"
+#include <NodesetLoader/backendOpen62541.h>
 
 #define let const auto
 namespace Jde::Opc::Server {
@@ -30,6 +31,12 @@ namespace Jde::Opc::Server {
 				Information{ ELogTags::App, "OPC UA server stopped." };
 			}};
 		}
+	}
+	α UAServer::Load( fs::path configFile, SL sl )ε->void{
+		Information{ ELogTags::App, "Loading configuration from: '{}'", configFile.string() };
+		CHECK_PATH( configFile, sl );
+		if( !NodesetLoader_loadFile(_ua, configFile.string().c_str(), nullptr) )
+			throw Exception( sl, "Failed to load nodeset file: '{}'", configFile.string() );
 	}
 
 	α UAServer::Constructor(UA_Server* /*server*/,

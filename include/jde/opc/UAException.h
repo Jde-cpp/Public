@@ -15,6 +15,8 @@ namespace Jde::Opc{
 	struct UAException : ExternalException{
 		//UAException( StatusCode sc, ELogLevel level=IException::DefaultLogLevel, SRCE )ι:ExternalException{ Message(sc), {}, sc, sl, level, sl, {} }{}
 		UAException( StatusCode sc, string what={}, SRCE, UAExParams params={} ):ExternalException{ Message(sc), what, sc, sl, (ELogTags)params.Tags, params.Level }{}
+		UAException( UAException&& from )ι:ExternalException{ move(from) }{}
+		UAException( const UAException& from )ι:ExternalException{ from }{}
 		Ω Message( StatusCode x )ι->const char*{ return UA_StatusCode_name(x); }
 
 		α Move()ι->up<IException> override{ return mu<UAException>(move(*this)); }

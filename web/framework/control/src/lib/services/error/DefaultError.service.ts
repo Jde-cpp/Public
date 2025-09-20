@@ -47,11 +47,11 @@ export class DefaultErrorService implements IErrorService
 	exceptionInfo( e:any, info:string, log:Log ):void{
 		if( e instanceof HttpErrorResponse ){
 			if( e.error instanceof ProgressEvent )
-				this.error( `(${e.status})${e.message}`, null );
+				this.error( `(${e.status})${e.message}`, log );
 			else if( e.error && e.error.message )
-				this.error( e.error.message, null );
+				this.error( e.error.message, log );
 			else
-				this.error( `(${e.status})${e.error}`, null );
+				this.error( `(${e.status})${e.error}`, log );
 		}
 		else if( e instanceof Error ){
 			this.showUser( `${e.cause}:  ${e.message}`, 'red-snackbar' );
