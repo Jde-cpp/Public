@@ -44,10 +44,10 @@ local args = import 'args.libsonnet';
 			flushOn: "Trace",
 			defaultLevel: "Information",
 			tags:{
-				trace:["exception","parsing", "test",
+				trace:["exception","parsing", "test", "sessions",
 					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
 				],
-				debug:["ql","sql", "sessions", "settings"],
+				debug:["ql","sql", "settings"],
 				information:[],
 				warning:[],
 				"error":[],

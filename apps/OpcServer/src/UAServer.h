@@ -18,6 +18,7 @@ namespace Jde::Opc::Server {
 		α Run()ι->void;
 		α ConstructorValues( const NodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&;
 
+		α Load( fs::path configFile, SRCE )ε->void;
 		α Find( NodePK parentPK, BrowseNamePK browsePK )Ι->const Node*;
 		α Find( const Node& parent, const BrowseName& browse )Ι->const Node*;
 		α FindBrowse( BrowseName& browse )Ι->bool;

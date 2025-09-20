@@ -47,9 +47,9 @@ namespace Jde::Opc::Server{
 			let serverName = Settings::FindString("/opcServer/target").value_or( "default" );
 			let& serverTable = uaSchema->GetViewPtr( "servers" );
 			auto serverId = uaSchema->DS()->ScalerSyncOpt<uint32>( DB::Statement{
-				{serverTable->GetColumnPtr("server_id")},
-				{serverTable},
-				{serverTable->GetColumnPtr("target"), serverName }
+				{ serverTable->GetColumnPtr("server_id") },
+				{ serverTable },
+				{ serverTable->GetColumnPtr("target"), serverName }
 			}.Move() );
 			if( !serverId ){
 				serverId = uaSchema->DS()->InsertSeqSync<uint32>( DB::InsertClause{
@@ -73,8 +73,12 @@ namespace Jde::Opc::Server{
 			QL::Hook::Add( mu<ObjectTypeHook>() );
 			Initialize( *serverId, uaSchema );
 			GetUAServer().Run();
-			co_await ServerConfigAwait{};
-			co_await UpsertAwait{};
+			if( Settings::FindBool("/opcServer/db").value_or(false) )
+				co_await ServerConfigAwait{}; //database
+			if( Settings::FindPath("/opcServer/mutationsDir") )
+				co_await UpsertAwait{}; //mutations
+			if( auto configFile = Settings::FindPath("/opcServer/configFile"); configFile )
+				GetUAServer().Load( *configFile );
 			Information( ELogTags::App, "---Started OPC Server---" );
 			Resume();
 		}

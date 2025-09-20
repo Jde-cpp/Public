@@ -29,11 +29,12 @@ include_directories( ${open62541Dir}/include )
 
 add_subdirectory( src lib )
 
-# if( buildTests )
-# 	add_subdirectory( tests )
-# 	set( CMAKE_CTEST_ARGUMENTS -c -settings=$ENV{JDE_DIR}/AppServer/config/App.Server.jsonnet )
-# 	add_test( NAME AppTests COMMAND $<TARGET_FILE:Jde.App.Tests> )
-# endif()
+#if( buildTests )
+	add_subdirectory( tests )
+	set( CMAKE_CTEST_ARGUMENTS -c -settings=$ENV{JDE_DIR}/Public/apps/OpcServer/tests/config/OpcServer.jsonnet )
+	add_test( NAME AppTests COMMAND $<TARGET_FILE:Jde.OpcServer.Tests> )
+#endif()
+
 if( WIN32 )
 	add_definitions( -DZLIB_USE_STATIC_LIBS -D )
 	set( ZLIB_ROOT ${LIB_ROOT}/zlib )

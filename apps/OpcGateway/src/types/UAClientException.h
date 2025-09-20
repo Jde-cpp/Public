@@ -13,6 +13,8 @@ namespace Jde::Opc::Gateway{
 			UAException{ sc, Ƒ("[{:x}.{:x}]{}", uaHandle, requestId, UAException::Message(sc)), sl, {level} }{}
 		UAClientException( StatusCode sc, Handle uaHandle, string description, SRCE )ι:
 			UAException{ sc, Ƒ("[{:x}]{}", uaHandle, UAException::Message(sc)), sl }{}
+		UAClientException( UAClientException&& from )ι:UAException{ move(from) }{}
+		UAClientException( const UAClientException& from )ι:UAException{ from }{}
 
 		α Move()ι->up<IException> override{ return mu<UAClientException>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }

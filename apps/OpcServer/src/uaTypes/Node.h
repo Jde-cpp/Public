@@ -15,7 +15,7 @@ namespace Jde::Opc::Server{
 		Node( DB::Row&& r, sp<ObjectType> typeDef )ι;
 
 		β IsObjectType()Ι->bool{ return false; }
-		α InsertParams()ι->vector<DB::Value>;
+		α InsertParams()Ι->vector<DB::Value> override;
 
 		NodePK PK{};
 		bool IsGlobal{};

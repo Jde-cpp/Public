@@ -12,5 +12,6 @@ namespace Jde::Opc::Server {
 	α GetViewPtr( str name )ε->sp<DB::View>;
 	α ServerId()->uint32;
 	α GetSchema()ι->DB::AppSchema&;
+	α GetSchemaPtr()ι->sp<DB::AppSchema>;
 	α GetUAServer()ι->UAServer&;
 }

@@ -13,7 +13,11 @@ namespace Jde{
 			IException{ Ƒ("({:x}){} - {{}}", code, externalMessage), ELogLevel::NoLog, 0, tags, sl }{
 			Initialize( move(description), l );
 		}
-
+		ExternalException( ExternalException&& from )ι:IException{ move(from) }{}
+		ExternalException( const ExternalException& from )ι:
+			IException{ get<string>(from._format), ELogLevel::NoLog, 0, from._tags, from._stack.stack.front() }{
+			_args = from._args;
+		}
 	private:
 		α Initialize( string&& description, ELogLevel level )->void{
 			_what = Str::Format( Format(), {description} );
