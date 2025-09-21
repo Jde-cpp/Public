@@ -2,7 +2,7 @@ local args = import 'args.libsonnet';
 {
 	testing:{
 		tests:: "BrowseTests.NodeId",
-		recreateDB: true,
+		recreateDB:: true,
 		embeddedAppServer: true,
 		UANodeSets: "$(UA_NODE_SETS)",
 	},
@@ -48,9 +48,9 @@ local args = import 'args.libsonnet';
 				trace:["test", "app", "http.client.write", "http.client.read"],
 				debug:["settings", "scheduler", "uaEvent","sql", "ql",
 					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
-					"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
 					"monitoring", "browse", "processingLoop", "monitoring.pedantic"],
-				information:["threads", "uaSecure"],
+				information:["threads", "uaSecure",
+				"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery"],
 				warning:[],
 				"error":[],
 				critical:[]

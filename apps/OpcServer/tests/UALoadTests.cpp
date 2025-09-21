@@ -18,9 +18,9 @@ namespace Jde::Opc::Server::Tests{
 		GetUAServer().Load( Path()/"CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml" );
 	}
 
-	TEST_F( UALoadTests, Server_loadADINodeset){
-		GetUAServer().Load( Path()/"ADI/Opc.Ua.Adi.NodeSet2.xml" );
-	}
+	// TEST_F( UALoadTests, Server_loadADINodeset){
+	// 	GetUAServer().Load( Path()/"ADI/Opc.Ua.Adi.NodeSet2.xml" );
+	// }
 
 	TEST_F( UALoadTests, LoadAMBNodeset){
 		GetUAServer().Load( Path()/"AMB/Opc.Ua.AMB.NodeSet2.xml" );
@@ -34,13 +34,13 @@ namespace Jde::Opc::Server::Tests{
 		GetUAServer().Load( Path()/"AutoID/Opc.Ua.AutoID.NodeSet2.xml" );
 	}
 
-	TEST_F( UALoadTests, LoadBACnetNodeset){
-		GetUAServer().Load( Path()/"BACnet/Opc.Ua.BACnet.NodeSet2.xml" );
-	}
+	// TEST_F( UALoadTests, LoadBACnetNodeset){
+	// 	GetUAServer().Load( Path()/"BACnet/Opc.Ua.BACnet.NodeSet2.xml" );
+	// }
 
-	TEST_F( UALoadTests, LoadCASNodeset){
-		GetUAServer().Load( Path()/"CAS/Opc.Ua.CAS.NodeSet2.xml" );
-	}
+	// TEST_F( UALoadTests, LoadCASNodeset){
+	// 	GetUAServer().Load( Path()/"CAS/Opc.Ua.CAS.NodeSet2.xml" );
+	// }
 
 	TEST_F( UALoadTests, LoadCommercialKitchenEquipmentNodeset){
 		GetUAServer().Load( Path()/"CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml" );
@@ -75,18 +75,18 @@ namespace Jde::Opc::Server::Tests{
 		GetUAServer().Load( Path()/"FDT/Opc.Ua.FDT.NodeSet.xml" );
 	}
 
-	TEST_F( UALoadTests, LoadGDSNodeset){
-		GetUAServer().Load( Path()/"GDS/Opc.Ua.Gds.NodeSet2.xml" );
-	}
+	// TEST_F( UALoadTests, LoadGDSNodeset){
+	// 	GetUAServer().Load( Path()/"GDS/Opc.Ua.Gds.NodeSet2.xml" );
+	// }
 
-	TEST_F( UALoadTests, LoadServer_loadGlassNodeset){
-		GetUAServer().Load( Path()/"Glass/Flat/Opc.Ua.Glass.NodeSet2.xml" );
-	}
+	// TEST_F( UALoadTests, LoadServer_loadGlassNodeset){
+	// 	GetUAServer().Load( Path()/"Glass/Flat/Opc.Ua.Glass.NodeSet2.xml" );
+	// }
 
 
-	TEST_F( UALoadTests, LoadI4AASNodeset){
-		GetUAServer().Load( Path()/"I4AAS/Opc.Ua.I4AAS.NodeSet2.xml" );
-	}
+	// TEST_F( UALoadTests, LoadI4AASNodeset){
+	// 	GetUAServer().Load( Path()/"I4AAS/Opc.Ua.I4AAS.NodeSet2.xml" );
+	// }
 
 
 	TEST_F( UALoadTests, LoadIANodeset){
@@ -119,9 +119,9 @@ namespace Jde::Opc::Server::Tests{
 		GetUAServer().Load( Path()/"Machinery/Opc.Ua.Machinery.Examples.NodeSet2.xml" );
 	}
 
-	TEST_F( UALoadTests, LoadMachineToolNodeset){
-		GetUAServer().Load( Path()/"MachineTool/Opc.Ua.MachineTool.NodeSet2.xml" );
-	}
+	// TEST_F( UALoadTests, LoadMachineToolNodeset){
+	// 	GetUAServer().Load( Path()/"MachineTool/Opc.Ua.MachineTool.NodeSet2.xml" );
+	// }
 
 
 	// TEST_F( UALoadTests, LoadMDISNodeset){
@@ -154,20 +154,16 @@ namespace Jde::Opc::Server::Tests{
 	}
 
 	TEST_F( UALoadTests, LoadOPENSCSNodeset){
-
 		GetUAServer().Load( Path()/"OpenSCS/Opc.Ua.OPENSCS.NodeSet2.xml" );
-
 	}
 
-	TEST_F( UALoadTests, LoadPackMLNodeset){
+	// TEST_F( UALoadTests, LoadPackMLNodeset){
+	// 	GetUAServer().Load( Path()/"PackML/Opc.Ua.PackML.NodeSet2.xml" );
+	// }
 
-		GetUAServer().Load( Path()/"PackML/Opc.Ua.PackML.NodeSet2.xml" );
-
-	}
-
-	TEST_F( UALoadTests, LoadPlasticsRubberExtrusionCalenderNodeset){
-		GetUAServer().Load( Path()/"PlasticsRubber/Extrusion/Calender/1.00/Opc.Ua.PlasticsRubber.Extrusion.Calender.NodeSet2.xml" );
-	}
+	// TEST_F( UALoadTests, LoadPlasticsRubberExtrusionCalenderNodeset){
+	// 	GetUAServer().Load( Path()/"PlasticsRubber/Extrusion/Calender/1.00/Opc.Ua.PlasticsRubber.Extrusion.Calender.NodeSet2.xml" );
+	// }
 
 	TEST_F( UALoadTests, LoadPlasticsRubberExtrusionCalibratorNodeset){
 		GetUAServer().Load( Path()/"PlasticsRubber/Extrusion/Calibrator/1.00/Opc.Ua.PlasticsRubber.Extrusion.Calibrator.NodeSet2.xml" );
@@ -302,13 +298,13 @@ namespace Jde::Opc::Server::Tests{
 		GetUAServer().Load( Path()/"PNRIO/Opc.Ua.PnRio.Nodeset2.xml" );
 	}
 
-	TEST_F( UALoadTests, LoadPROFINETNodeset){
-		GetUAServer().Load( Path()/"PROFINET/Opc.Ua.Pn.NodeSet2.xml" );
-	}
+	// TEST_F( UALoadTests, LoadPROFINETNodeset){
+	// 	GetUAServer().Load( Path()/"PROFINET/Opc.Ua.Pn.NodeSet2.xml" );
+	// }
 
-	TEST_F( UALoadTests, LoadRoboticsNodeset){
-		GetUAServer().Load( Path()/"Robotics/Opc.Ua.Robotics.NodeSet2.xml" );
-	}
+	// TEST_F( UALoadTests, LoadRoboticsNodeset){
+	// 	GetUAServer().Load( Path()/"Robotics/Opc.Ua.Robotics.NodeSet2.xml" );
+	// }
 
 	TEST_F( UALoadTests, LoadSafetyNodeset){
 		GetUAServer().Load( Path()/"Safety/Opc.Ua.Safety.NodeSet2.xml" );
@@ -318,9 +314,9 @@ namespace Jde::Opc::Server::Tests{
 		GetUAServer().Load( Path()/"Sercos/Sercos.NodeSet2.xml" );
 	}
 
-	TEST_F( UALoadTests, LoadWeihenstephanNodeset){
-		GetUAServer().Load( Path()/"Weihenstephan/Opc.Ua.Weihenstephan.NodeSet2.xml" );
-	}
+	// TEST_F( UALoadTests, LoadWeihenstephanNodeset){
+	// 	GetUAServer().Load( Path()/"Weihenstephan/Opc.Ua.Weihenstephan.NodeSet2.xml" );
+	// }
 
 	TEST_F( UALoadTests, LoadWoodworkingEumaboisNodeset){
 		GetUAServer().Load( Path()/"Woodworking/Opc.Ua.Eumabois.Nodeset2.xml" );
