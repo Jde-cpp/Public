@@ -17,11 +17,8 @@ namespace Jde{
 	}
 
  	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
-#ifdef _MSC_VER
-		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
-#endif
-		Logging::AddTagParser( mu<Opc::UALogParser>() );
 		Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
+		Logging::AddTagParser( mu<Opc::UALogParser>() );
 		OSApp::Startup( argc, argv, "Tests.OpcServer", "OpcServer tests", true );
 		keepExecuterAlive();
 		try{

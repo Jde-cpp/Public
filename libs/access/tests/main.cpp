@@ -2,8 +2,8 @@
 #include <jde/framework/process.h>
 #include <jde/framework/settings.h>
 #include <jde/framework/coroutine/Timer.h>
+#include <jde/crypto/OpenSsl.h>
 #include <jde/ql/ql.h>
-#include <jde/ql/QLHook.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/server/accessServer.h>
 #include <jde/access/AccessListener.h>
@@ -23,6 +23,7 @@ namespace Jde{
 #ifdef _MSC_VER
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threadSize").value_or(5)>0 )
 #endif
+		Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
 		OSApp::Startup( argc, argv, Process::ProductName(), "Access tests", true );
 
 		let metaDataName{ "access" };

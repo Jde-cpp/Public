@@ -31,6 +31,7 @@ namespace Jde::DB{
 		α GetUIntOpt( uint i )Ι->optional<uint>{ return IsNull(i) ? optional<uint>{} : _values[i].get_uint(); }
 		α GetUInt8Opt( uint i )Ι->optional<uint8>{ return IsNull(i) ? optional<uint8>{} : _values[i].get_number<uint8>(); }
 		α GetUInt16( uint i )Ε->uint16_t{ return static_cast<uint16_t>(GetUInt(i)); }
+		α GetUInt16Opt( uint i )Ι->optional<uint16_t>{ return IsNull(i) ? optional<uint32_t>{} : _values[i].get_number<uint16_t>(); }
 		α GetUInt32( uint i )Ε->uint32_t{ return static_cast<uint32_t>(GetUInt(i)); }
 		α GetUInt32Opt( uint i )Ι->optional<uint32_t>{ return IsNull(i) ? optional<uint32_t>{} : _values[i].get_number<uint32_t>(); }
 		Φ IsNull( uint i )Ι->bool;

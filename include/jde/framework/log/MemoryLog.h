@@ -10,7 +10,7 @@ namespace Jde::Logging{
 	Φ Find( function<bool(const Logging::Entry&)> f )ι->vector<Logging::Entry>;
 
 	struct MemoryLog final : ILogger{
-		MemoryLog()ι:ILogger{ {{"default", "trace"}} }{}
+		MemoryLog()ι:ILogger{ {{"default", "Trace"}} }{}
 		α Write( const Entry& m )ι->void override;
 		α Write( ILogger& logger )ι->void;
 		α Name()ι->string override{ return "MemoryLog"; }

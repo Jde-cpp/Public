@@ -9,7 +9,7 @@
 #define ARGS const Args&
 namespace Jde::Logging{
 	struct Γ ILogger : LogTags{
-		ILogger( jobject o ): LogTags( o ){}
+		ILogger( jobject o ): LogTags( move(o) ){}
 		virtual ~ILogger(){} //important
 		β Name()ι->string=0;
 		β Write( const Entry& m )ι->void=0;

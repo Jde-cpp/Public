@@ -12,7 +12,7 @@
 namespace Jde::App::Client{ static sp<Access::Authorize> _authorize; }
 namespace Jde::App{
 	using Web::Client::ClientHttpAwait;
-	const Duration _reconnectWait{ Settings::FindDuration("server/reconnectWait").value_or(5s) };
+	α reconnectWait()ι->Duration{ return Settings::FindDuration("server/reconnectWait").value_or(5s); }
 	α Client::IsSsl()ι->bool{ return Settings::FindBool("server/isSsl").value_or( false ); }
 	α Client::Host()ι->string{ return Settings::FindString("server/host").value_or("localhost"); }
 	α Client::Port()ι->PortType{ return Settings::FindNumber<PortType>("server/port").value_or(1967); }
@@ -68,7 +68,7 @@ namespace Jde::App::Client{
 	{}
 
 	α ConnectAwait::Retry()->DurationTimer::Task{
-		co_await DurationTimer{ _reconnectWait };
+		co_await DurationTimer{ reconnectWait() };
 		HttpLogin();
 	}
 	α ConnectAwait::RunSocket( SessionPK sessionId )ι->TAwait<Proto::FromServer::ConnectionInfo>::Task{

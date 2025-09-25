@@ -19,8 +19,8 @@ set( stdArgs
 	-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
 	-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
 )
-if ( WIN32 )
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od /MDd /D_DEBUG /TP /fsanitize=address /ignore:4099")
+if( WIN32 )
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od /MDd /D_DEBUG /TP /fsanitize=address /W1 /ignore:4099")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
 else()
 	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath=$ORIGIN" )
@@ -104,10 +104,32 @@ IF( WIN32 )
 			-DZLIB_BUILD_SHARED=OFF
 			-DZLIB_BUILD_TESTING=OFF
 	)
+	ExternalProject_Add(
+			LibXml2
+			GIT_REPOSITORY https://github.com/GNOME/libxml2.git
+			GIT_TAG v2.15.0
+			PREFIX libxml2
+			INSTALL_DIR ${LIB_DIR}/libxml2
+			CMAKE_ARGS ${stdArgs}
+				-DCMAKE_PREFIX_PATH=${LIB_DIR}
+				-DLIBXML2_WITH_ZLIB=OFF
+				-DLIBXML2_WITH_PYTHON=OFF
+				-DLIBXML2_WITH_TESTS=OFF
+				-DLIBXML2_WITH_ICONV=OFF
+				-DLIBXML2_WITH_LZMA=OFF
+				-DLIBXML2_WITH_THREADS=ON
+				-DLIBXML2_BUILD_SHARED_LIBS=OFF
+	)
+	set( PC_LIBXML_INCLUDEDIR ${LIB_DIR}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
+	# set( LIBXML_INCLUDE_DIR ${LIB_DIR}/LibXml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
+	# set( LIBXML2_LIBRARY ${LIB_DIR}/LibXml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
+	set( PC_LIBXML_LIBDIR ${LIB_DIR}/libxml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
+	message( PC_LIBXML_INCLUDEDIR: ${PC_LIBXML_INCLUDEDIR} )
+	message( PC_LIBXML_LIBDIR: ${PC_LIBXML_LIBDIR} )
 else()
 	ExternalProject_Add(jsonnet
 		GIT_REPOSITORY https://github.com/google/jsonnet.git
-		GIT_TAG v0.21.0
+		GIT_TAG "v0.21.0"
 		PREFIX jsonnet
 		INSTALL_DIR ${LIB_DIR}/jsonnet
 		CMAKE_ARGS ${stdArgs}
@@ -136,10 +158,19 @@ ExternalProject_Add(open62541-nodeset-loader
 	PREFIX nodeset-loader
 	INSTALL_DIR ${LIB_DIR}/NodesetLoader
 		CMAKE_ARGS ${stdArgs}
-		-DENABLE_BACKEND_OPEN62541=ON
+		-DENABLE_BACKEND_OPEN62541=OFF
+		-DENABLE_EXAMPLES=OFF
+		-DCMAKE_PREFIX_PATH=${LIB_DIR}
+		-DPC_LIBXML_INCLUDEDIR=${LIB_DIR}/libxml2/include/libxml2
+		-DPC_LIBXML_LIBDIR=${LIB_DIR}/libxml2/lib
+		-DCMAKE_BUILD_TYPE=Debug
 )
+
 ExternalProject_Add_StepDependencies( spdlog configure fmt )
 ExternalProject_Add_StepDependencies( absl configure gtest )
 ExternalProject_Add_StepDependencies( protobuf configure absl )
 ExternalProject_Add_StepDependencies( protobuf configure gtest )
 ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure open62541 )
+if( WIN32 )
+	ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure LibXml2 )
+endif()

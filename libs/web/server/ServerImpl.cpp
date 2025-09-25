@@ -17,7 +17,7 @@ namespace Server{
 		stream.expires_after( std::chrono::seconds(30) );// Set the timeout.
 		auto [ec, isSsl] = co_await beast::async_detect_ssl( stream, buffer );// on_run
 		if( ec ){
-			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Warning };
+			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Debug };
 			co_return;
 		}
 		let index = handler->NextRequestId();

@@ -28,7 +28,7 @@ namespace Jde::Logging{
 	Φ BreakLevel()ι->ELogLevel;
 	Φ CanBreak()ι->bool;
 	α LogException( const IException& e )ι->void;
-	α Log( const Entry& entry )ι->void;
+	Φ Log( const Entry& entry )ι->void;
 
 	template<ELogLevel TLevel, typename... Args>
 	struct Logger{

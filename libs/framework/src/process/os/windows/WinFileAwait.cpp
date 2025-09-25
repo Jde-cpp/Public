@@ -6,6 +6,8 @@
 #include <jde/framework/io/FileAwait.h>
 #include <jde/framework/thread/thread.h>
 
+#define let const auto
+
 namespace Jde::IO{
 	namespace asio = boost::asio;
 	constexpr ELogTags _tags{ ELogTags::IO };
@@ -53,44 +55,48 @@ namespace Jde::IO{
 			Win::FileChunkArg& chunk = dynamic_cast<Win::FileChunkArg&>( *keepAlive.get() );
 			if( op.IsRead ){
 				if( !::ReadFileEx(op.Handle.get(), chunk.Buffer(), (DWORD)(chunk.Bytes), &chunk.Overlap, overlappedCompletionRoutine) )
-					op.ResumeExp( IOException{move(op.Path), GetLastError(), "ReadFileEx"}, l );
+					op.ResumeExp( GetLastError(), "Read failed", l );
 			}
 			else{
 				TRACE( "({})Writing {} - {}", op.Path.string(), chunk.StartIndex, std::min(chunk.StartIndex+ChunkByteSize(), chunk.EndIndex) );
 				if( !::WriteFileEx(op.Handle.get(), chunk.Buffer(), (DWORD)(chunk.Bytes), &chunk.Overlap, overlappedCompletionRoutine) )
-					op.ResumeExp( IOException{move(op.Path), GetLastError(), "ReadFileEx"}, l );
+					op.ResumeExp( GetLastError(), "Write Failed", l );
 			}
 		}
 		for( int result = WAIT_TIMEOUT; result != WAIT_IO_COMPLETION; ){
 			result = ::SleepEx( keepAliveMillisecs().count(), true );
-			WARN_IF( result==0, "FileOp timed out." );
+			if( result==0 )
+				WARN( "FileOp timed out." );
 		}
 	}
 
 	α overlappedCompletionRoutine( DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED pOverlapped )->void{
 		Win::FileChunkArg& chunk = *(Win::FileChunkArg*)pOverlapped->hEvent;
-		FileIOArg& arg = chunk.FileArg();
+		auto arg = chunk.FileArg();
 		if( dwErrorCode!=ERROR_SUCCESS )
-			arg.ResumeExp( OSException{dwErrorCode, Ƒ("overlappedCompletionRoutine xfered='{}'", dwNumberOfBytesTransfered)} );//no pOverlapped
-		else if( arg.ChunksToSend==++arg.ChunksCompleted ){
+			arg->ResumeExp( dwErrorCode, Ƒ("overlappedCompletionRoutine xfered='{}'", dwNumberOfBytesTransfered) );//no pOverlapped
+		else if( arg->ChunksToSend==++arg->ChunksCompleted ){
 			if( --_callCount==0 )
 				_finishFileIO = steady_clock::now();
-			if( arg.IsRead ){
-				auto h = get<TAwait<string>::Handle>( arg.CoHandle );
-				h.promise().Resume( get<string>(move(arg.Buffer)), h );
+			if( arg->IsRead ){
+				auto h = get<TAwait<string>::Handle>( arg->CoHandle() );
+				h.promise().Resume( get<string>(move(arg->Buffer)), h );
 			}
 			else
-				get<VoidAwait::Handle>(arg.CoHandle).resume();
+				get<VoidAwait::Handle>(arg->CoHandle()).resume();
 		}
 		else{
-			lg _{arg.ChunkMutex};
-			if( arg.Chunks.size() )
-				asio::post( *_ctx, [p=&arg](){send( *p );} );
+			lg _{arg->ChunkMutex};
+			if( arg->Chunks.size() )
+				asio::post( *_ctx, [p=arg](){send( *p );} );
 		}
 	}
 
 	α FileIOArg::Send( HCo h )ι->void{
-		CoHandle = h;
+		{
+			lg l{ _coHandleMutex };
+			_coHandle = h;
+		}
 		++_callCount;
 		let threadSize = ThreadSize();
 		{
@@ -103,7 +109,7 @@ namespace Jde::IO{
 		lg l{ ChunkMutex };
 		ChunksToSend = totalBytes/chunkByteSize+1;
 		for( uint i=0; i*chunkByteSize<totalBytes; ++i )
-			Chunks.emplace( mu<Win::FileChunkArg>(*this, i) );
+			Chunks.emplace( mu<Win::FileChunkArg>(shared_from_this(), i) );
 		TRACE( "[{}] chunks = {}", Path.string(), ChunksToSend );
 
 		let initialSendTotal = std::min<uint8>( (uint8)ChunksToSend, threadSize );

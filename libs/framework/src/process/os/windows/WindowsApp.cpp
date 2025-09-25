@@ -198,8 +198,8 @@ namespace Jde{
 	α IApplication::EnvironmentVariable( str variable, SL sl )ι->optional<string>{
 		char buffer[32767];
 		optional<string> result;
-		if( !::GetEnvironmentVariable(string(variable).c_str(), buffer, sizeof(buffer)) )
-			Logging::LogOnce( Logging::Message{ELogLevel::Debug, "GetEnvironmentVariable('{}') failed:  {:x}", sl}, ELogTags::Settings, variable, ::GetLastError() );
+		if( !::GetEnvironmentVariable(variable.c_str(), buffer, sizeof(buffer)) )
+			Logging::LogOnce( sl, ELogTags::Settings, "GetEnvironmentVariable('{}') failed:  {}", variable,  Ƒ("{:x}", ::GetLastError()) );
 		else
 			result = buffer;
 
@@ -255,7 +255,7 @@ namespace Jde{
 		}
 		THROW_IF( !::DeleteService(service.get()), "DeleteService failed:  {:x}", GetLastError() );
 
-		Information{ ELogTags::App, "Service '{}' deleted successfully"sv, Process::ApplicationName() };
+		Information{ ELogTags::App, "Service '{}' deleted successfully", Process::ApplicationName() };
 	}
 
 	α OSApp::LoadLibrary( const fs::path& path )ε->void*{

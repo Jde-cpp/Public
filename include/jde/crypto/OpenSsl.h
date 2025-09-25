@@ -1,6 +1,7 @@
 ﻿#pragma once
 #ifndef OPEN_SSL_H
 #define OPEN_SSL_H
+#include <span>
 #include <boost/uuid/uuid.hpp>
 #include "exports.h"
 

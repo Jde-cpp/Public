@@ -14,7 +14,7 @@ namespace Jde{
 	struct IException;
 }
 namespace Jde::Logging{
-	struct Entry final{
+	struct Γ Entry final{
 		template<class... Args>
 		Entry( spdlog::source_loc sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι;
 		template<class... Args>

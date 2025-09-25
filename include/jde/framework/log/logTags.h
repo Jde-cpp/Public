@@ -50,7 +50,7 @@ namespace Jde{
 		struct ILogger;
 		α UpdateCumulative( const vector<up<Logging::ILogger>>& loggers )ι->void;
 	}
-	struct LogTags{
+	struct Γ LogTags{
 		LogTags( jobject o )ι;
 		LogTags( ELogLevel defaultLevel=ELogLevel::Information ):_minLevel{defaultLevel},_defaultLevel{defaultLevel}{}
 		β MinLevel()Ι->ELogLevel{ return _minLevel; }
@@ -76,7 +76,7 @@ namespace Logging{
 	};
 	Φ AddTagParser( up<ITagParser>&& tagParser )ι->void;
 
-	α ShouldLog( ELogLevel level, ELogTags tags )ι->bool;
+	Φ ShouldLog( ELogLevel level, ELogTags tags )ι->bool;
 }}
 #undef Φ
 #endif

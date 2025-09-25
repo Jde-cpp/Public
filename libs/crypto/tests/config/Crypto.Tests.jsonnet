@@ -18,7 +18,7 @@
 			},
 			sinks:{
 				console:{},
-				file:{ path: "/tmp", md: false }
+				file:{ path: "$(JDE_TEST_LOG_DIR)", md: false }
 			}
 		}
 	}

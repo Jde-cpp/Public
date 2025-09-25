@@ -199,6 +199,7 @@ namespace Jde::Opc::Gateway{
 		auto p = shared_from_this();
 		ASSERT( !_awaitingActivation.contains(p) );
 		_awaitingActivation.emplace( shared_from_this() );
+		Debug{ _tags | ELogTags::Access, "[{:x}]Connecting to '{}', using '{}'", Handle(), Url(), Credential.ToString() };
 		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
 		_asyncRequest.SetParent( p );
 		Process( std::numeric_limits<RequestId>::max(), nullptr );

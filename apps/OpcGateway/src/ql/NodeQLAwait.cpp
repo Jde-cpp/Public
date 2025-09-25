@@ -47,7 +47,7 @@ namespace Jde::Opc::Gateway{
 			auto readIds = Reserve<UA_ReadValueId>( size );
 			for( let& c : _query.Columns ){
 				if( auto p = _attributes.find(c.JsonName); p != _attributes.end() ){
-					readIds.push_back( UA_ReadValueId{nodeId, p->second, UA_STRING_NULL, { 0, UA_STRING_NULL }} );
+					readIds.push_back( UA_ReadValueId{nodeId, (UA_UInt32)p->second, UA_STRING_NULL, { 0, UA_STRING_NULL }} );
 					ids.push_back(p->second);
 					readMembers.push_back( p->first );
 				}

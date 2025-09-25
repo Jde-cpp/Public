@@ -130,20 +130,6 @@ namespace Jde{
 		COMMON
 	};
 
-	struct Γ CodeException /*final*/ : IException{
-		CodeException( std::error_code code, ELogTags tags, ELogLevel level=ELogLevel::Debug, SRCE )ι;
-		CodeException( std::error_code code, ELogTags tags, string value, ELogLevel level=ELogLevel::Debug, SRCE )ι;
-
-		using T=CodeException;
-		COMMON
-
-		Ω ToString( const std::error_code& pErrorCode )ι->string;
-		Ω ToString( const std::error_category& errorCategory )ι->string;
-		Ω ToString( const std::error_condition& errorCondition )ι->string;
-	protected:
-		std::error_code _errorCode;
-	};
-
 	//https://stackoverflow.com/questions/10176471/is-it-possible-to-convert-a-boostsystemerror-code-to-a-stderror-code
 	struct Γ BoostCodeException final : IException{
 		BoostCodeException( const boost::system::error_code& ec, sv msg={}, SRCE )ι;
