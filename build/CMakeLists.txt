@@ -1,4 +1,4 @@
-#cls;rm CMakeCache.txt;cmake $JDE_DIR/Public/build -DCMAKE_BUILD_TYPE=Debug|Release|RelWithDebInfo|MinSizeRel
+#cls;rm -f CMakeCache.txt;cmake $JDE_DIR/Public/build --preset linux-debug
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( ExternalProject )
 include( ${CMAKE_CURRENT_SOURCE_DIR}/functions.cmake )
@@ -19,8 +19,8 @@ set( stdArgs
 	-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
 	-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
 )
-if ( WIN32 )
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od /MDd /D_DEBUG /TP /fsanitize=address /ignore:4099")
+if( WIN32 )
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od /MDd /D_DEBUG /TP /fsanitize=address /W1 /ignore:4099")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
 else()
 	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath=$ORIGIN" )
@@ -104,39 +104,73 @@ IF( WIN32 )
 			-DZLIB_BUILD_SHARED=OFF
 			-DZLIB_BUILD_TESTING=OFF
 	)
-	else()
-		#need to add set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG" ) to mysql-concpp/src/mysql-connector-cpp/CMakeLists.txt
-		#ExternalProject_Add(mysql-connector-cpp
-		#	GIT_REPOSITORY https://github.com/mysql/mysql-connector-cpp.git
-		#	GIT_TAG 9.2.0
-		#	PREFIX mysql-concpp
-		#	INSTALL_DIR ${LIB_DIR}/mysql-concpp
-		#	CMAKE_ARGS ${stdArgs}
-		#)
-		ExternalProject_Add(jsonnet
-			GIT_REPOSITORY https://github.com/google/jsonnet.git
-			GIT_TAG v0.21.0
-			PREFIX jsonnet
-			INSTALL_DIR ${LIB_DIR}/jsonnet
+	ExternalProject_Add(
+			LibXml2
+			GIT_REPOSITORY https://github.com/GNOME/libxml2.git
+			GIT_TAG v2.15.0
+			PREFIX libxml2
+			INSTALL_DIR ${LIB_DIR}/libxml2
 			CMAKE_ARGS ${stdArgs}
 				-DCMAKE_PREFIX_PATH=${LIB_DIR}
-				-DUSE_SYSTEM_GTEST=ON
-				-DBUILD_TESTS=OFF
-		)
-		ExternalProject_Add_StepDependencies( jsonnet configure gtest )
+				-DLIBXML2_WITH_ZLIB=OFF
+				-DLIBXML2_WITH_PYTHON=OFF
+				-DLIBXML2_WITH_TESTS=OFF
+				-DLIBXML2_WITH_ICONV=OFF
+				-DLIBXML2_WITH_LZMA=OFF
+				-DLIBXML2_WITH_THREADS=ON
+				-DLIBXML2_BUILD_SHARED_LIBS=OFF
+	)
+	set( PC_LIBXML_INCLUDEDIR ${LIB_DIR}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
+	# set( LIBXML_INCLUDE_DIR ${LIB_DIR}/LibXml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
+	# set( LIBXML2_LIBRARY ${LIB_DIR}/LibXml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
+	set( PC_LIBXML_LIBDIR ${LIB_DIR}/libxml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
+	message( PC_LIBXML_INCLUDEDIR: ${PC_LIBXML_INCLUDEDIR} )
+	message( PC_LIBXML_LIBDIR: ${PC_LIBXML_LIBDIR} )
+else()
+	ExternalProject_Add(jsonnet
+		GIT_REPOSITORY https://github.com/google/jsonnet.git
+		GIT_TAG "v0.21.0"
+		PREFIX jsonnet
+		INSTALL_DIR ${LIB_DIR}/jsonnet
+		CMAKE_ARGS ${stdArgs}
+			-DCMAKE_PREFIX_PATH=${LIB_DIR}
+			-DUSE_SYSTEM_GTEST=ON
+			-DBUILD_TESTS=OFF
+	)
+	ExternalProject_Add_StepDependencies( jsonnet configure gtest )
 endif()
 ExternalProject_Add(open62541
-	GIT_REPOSITORY https://github.com/Jde-cpp/open62541.git
+	GIT_REPOSITORY https://github.com/open62541/open62541.git
+#	GIT_TAG v1.4.13
 	PREFIX open62541
 	INSTALL_DIR ${LIB_DIR}/open62541
-	CMAKE_ARGS ${stdArgs}
+		CMAKE_ARGS ${stdArgs}
 		-DUA_ENABLE_ENCRYPTION=ON
 		-DUA_ENABLE_ENCRYPTION_OPENSSL=ON
 		-DOPENSSL_USE_STATIC_LIBS=ON
 		-DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}"
+		-DBUILD_NODESET_LOADER=ON
+		-DUA_ENABLE_XML_ENCODING=ON
+)
+ExternalProject_Add(open62541-nodeset-loader
+	GIT_REPOSITORY https://github.com/open62541/open62541-nodeset-loader.git
+#	GIT_TAG v0.5.0
+	PREFIX nodeset-loader
+	INSTALL_DIR ${LIB_DIR}/NodesetLoader
+		CMAKE_ARGS ${stdArgs}
+		-DENABLE_BACKEND_OPEN62541=OFF
+		-DENABLE_EXAMPLES=OFF
+		-DCMAKE_PREFIX_PATH=${LIB_DIR}
+		-DPC_LIBXML_INCLUDEDIR=${LIB_DIR}/libxml2/include/libxml2
+		-DPC_LIBXML_LIBDIR=${LIB_DIR}/libxml2/lib
+		-DCMAKE_BUILD_TYPE=Debug
 )
 
 ExternalProject_Add_StepDependencies( spdlog configure fmt )
 ExternalProject_Add_StepDependencies( absl configure gtest )
 ExternalProject_Add_StepDependencies( protobuf configure absl )
 ExternalProject_Add_StepDependencies( protobuf configure gtest )
+ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure open62541 )
+if( WIN32 )
+	ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure LibXml2 )
+endif()

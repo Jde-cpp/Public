@@ -1,6 +1,7 @@
 #include "ServerSocketSession.h"
 #include <jde/app/shared/proto/App.FromServer.h>
 #include <jde/app/shared/StringCache.h>
+#include <jde/app/shared/proto/App.FromClient.h>
 #include <jde/framework/chrono.h>
 #include <jde/access/server/accessServer.h>
 #include "LogData.h"
@@ -22,6 +23,7 @@ namespace Jde::App::Server{
 			base::SetSessionId( instance.session_id() );
 			let [appPK,instancePK] = App::AddInstance( instance.application(), instance.host(), instance.pid() );//TODO Don't block
 			Information{ ELogTags::SocketServerRead, "[{:x}.{:x}]Adding application app:{}@{}:{} pid:{}, instancePK:{:x}, sessionId: {:x}, endpoint: '{}'", Id(), requestId, instance.application(), instance.host(), instance.web_port(), instance.pid(), instancePK, instance.session_id(), _userEndpoint.address().to_string() };
+			Server::RemoveExisting( instance.host(), instance.web_port() );
 			_instancePK = instancePK; _appPK = appPK;
 			_instance = move( instance );
 			Write( FromServer::ConnectionInfo(appPK, instancePK, requestId, AppClient()->PublicKey()) );
@@ -82,24 +84,20 @@ namespace Jde::App::Server{
 	α ServerSocketSession::Schemas()Ι->const vector<sp<DB::AppSchema>>&{
 		return Server::Schemas();
 	}
-	α ServerSocketSession::SaveLogEntry( Proto::FromClient::LogEntry l, RequestId requestId )->void{
+	α ServerSocketSession::SaveLogEntry( Proto::FromClient::LogEntry entry, RequestId requestId )->void{
 		if( !_appPK || !_instancePK ){
 			WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 			return;
 		}
-		let level = (ELogLevel)l.level();
-		vector<string> args = Jde::Proto::ToVector( move(*l.mutable_args()) );
+		let level = (ELogLevel)entry.level();
+		vector<string> args = Jde::Proto::ToVector( move(*entry.mutable_args()) );
 		if( _dbLevel!=ELogLevel::NoLog && _dbLevel<=level )
-			SaveMessage( _appPK, _instancePK, l, &args );//TODO don't block
+			SaveMessage( _appPK, _instancePK, entry );//TODO don't block
 		if( _webLevel!=ELogLevel::NoLog && _webLevel<=level ){
-			Logging::ExternalMessage y{ Logging::MessageBase{ (ELogLevel)l.level(), l.message_id(), l.file_id(), l.function_id(), l.line(), {l.user_pk()}, l.thread_id()}, Jde::Proto::ToVector(move(*l.mutable_args())), Jde::Proto::ToTimePoint(l.time()) };
-			using enum Logging::EFields;
-			y._pMessage = mu<string>( StringCache::GetMessage(l.message_id()) );
-			y.MessageView = *y._pMessage;
-			y._fileName = StringCache::GetFile( l.file_id() );
-			y.File = y._fileName.c_str();
-			//y.Function = Cache::AppStrings().Get( Function, l.function_id() ); TODO function is char* and no string to hold it.
-
+			Logging::Entry y{ App::FromClient::FromLogEntry(move(entry)) };
+			y.Text = StringCache::GetMessage( y.Id() );
+			y.SetFile( StringCache::GetFile(y.FileId()) );
+			y.SetFunction( StringCache::GetFunction(y.FunctionId()) );
 			Server::BroadcastLogEntry( 0, _appPK, _instancePK, y, move(args) );
 		}
 	}
@@ -238,8 +236,9 @@ namespace Jde::App::Server{
 				}
 				++cString;
 				auto& s = *m.mutable_string_value();
-				if( StringCache::Add( s.field(), s.id(), s.value(), ELogTags::SocketServerRead) )
-					Server::SaveString( (Proto::FromClient::EFields)s.field(), s.id(), move(*s.mutable_value()) );
+				uuid id{ Jde::Proto::ToGuid(s.id()) };
+				if( StringCache::Add( s.field(), id, s.value(), ELogTags::SocketServerRead) )
+					Server::SaveString( (Proto::FromClient::EFields)s.field(), id, move(*s.mutable_value()) );
 				break;}
 			case kSubscribeLogs:{
 				if( m.subscribe_logs().empty() ){

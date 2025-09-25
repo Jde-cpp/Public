@@ -1,6 +1,7 @@
 ﻿#include "gtest/gtest.h"
 #include <jde/framework/settings.h>
 #include <jde/framework/coroutine/Timer.h>
+#include <jde/crypto/OpenSsl.h>
 #include <jde/opc/uatypes/Logger.h>
 #include "../src/StartupAwait.h"
 #include "../../AppServer/src/AppStartupAwait.h"
@@ -21,6 +22,7 @@ namespace Jde{
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
 #endif
 		Logging::AddTagParser( mu<Opc::UALogParser>() );
+		Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
 		OSApp::Startup( argc, argv, "Tests.Opc", "Opc tests", true );
 		keepExecuterAlive();
 		try{
@@ -28,6 +30,7 @@ namespace Jde{
 				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };
 			if( Settings::FindBool("/testing/embeddedOpcServer").value_or(true) )
 				co_await Opc::Server::StartupAwait{ Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") };
+
 			co_await Opc::Gateway::StartupAwait{ Settings::AsObject("/http/gateway"), Settings::AsObject("/credentials/gateway") };
 			done.test_and_set();
 			done.notify_one();

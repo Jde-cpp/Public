@@ -6,20 +6,20 @@
 		clear: false
 	},
 	logging:{
-		tags: {
-			trace:["test", "exception"],
-			debug:["settings"],
-			information:[],
-			warning:[],
-			"error":[],
-			critical:[]
-		},
-		sinks:{
-			console:{},
-			file:{ path: "/tmp", md: false }
-		},
-	},
-	workers:{
-		drive: {threads: 1}
+		spd:{
+			tags: {
+				default:"information",
+				trace:["test", "exception"],
+				debug:["settings"],
+				information:[],
+				warning:[],
+				"error":[],
+				critical:[]
+			},
+			sinks:{
+				console:{},
+				file:{ path: "$(JDE_TEST_LOG_DIR)", md: false }
+			}
+		}
 	}
 }

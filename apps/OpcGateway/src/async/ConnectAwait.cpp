@@ -5,6 +5,20 @@
 
 namespace Jde::Opc::Gateway{
 	flat_map<ServerCnnctnNK,flat_map<Credential,vector<ConnectAwait::Handle>>> _requests; mutex _requestMutex;
+	α credential( SessionPK sessionId, UserPK user, str opc )ι->optional<Credential>{
+		optional<Credential> cred;
+		if( sessionId ){
+			cred = GetCredential( sessionId, opc );
+			if( !cred && user ) //if user/pwd would have cred, otherwise use jwt
+				cred = Credential{ Ƒ("{:x}", sessionId) };
+		}
+		return cred;
+	}
+	ConnectAwait::ConnectAwait( string&& opc, SessionPK sessionId, UserPK user, SL sl )ι:
+		base{sl},
+		_opcTarget{ move(opc) },
+		_cred{ credential(sessionId, user, _opcTarget).value_or(Credential{}) }
+	{}
 
 	α ConnectAwait::EraseRequests( str opcNK, Credential cred, lg& )ι->vector<ConnectAwait::Handle>{
 		vector<ConnectAwait::Handle> handles;
@@ -20,8 +34,10 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α ConnectAwait::Suspend()ι->void{
-		if( auto client = UAClient::Find(_opcTarget, _cred); client )
+		if( auto client = UAClient::Find(_opcTarget, _cred); client ){
+			Trace{ ((ELogTags)EOpcLogTags::Opc) | ELogTags::Access, "[{:x}]Found client for cred: {}", client->Handle(), _cred.ToString() };
 			base::Resume( move(client) );
+		}
 		else{
 			_requestMutex.lock();
 			auto opcHandles = _requests.try_emplace( _opcTarget ).first;
@@ -40,15 +56,15 @@ namespace Jde::Opc::Gateway{
 			auto client = ms<UAClient>( move(servers.front()), _cred );
 			client->Connect();
 		}
-		catch( const IException& e ){
-			let ua = dynamic_cast<const UAException*>( &e );
+		catch( const exception& e ){
+			let ua = dynamic_cast<const UAClientException*>( &e );
 			lg l{ _requestMutex };
 			auto handles = EraseRequests( _opcTarget, _cred, l );
 			for( auto& h : handles ){
 				if( ua )
-					h.promise().ResumeExp( UAException{*ua}, h );
+					h.promise().ResumeExp( UAClientException(*ua), h );
 				else
-					h.promise().ResumeExp( Exception{e.what(), e.Code, e.Level(), e.Stack().front()}, h );
+					h.promise().ResumeExp( Exception{e.what(), 0, ELogLevel::Error, SRCE_CUR}, h );
 			}
 		}
 	}
@@ -62,10 +78,10 @@ namespace Jde::Opc::Gateway{
 			resume( h );
 	}
 
-	α ConnectAwait::Resume( sp<UAClient> client, str opcNK, Credential cred )ι->void{
-		Resume( opcNK, cred, [=](ConnectAwait::Handle h)mutable{ h.promise().Resume(move(client), h); } );
+	α ConnectAwait::Resume( sp<UAClient> client )ι->void{
+		Resume( client->Target(), client->Credential, [client](ConnectAwait::Handle h){ h.promise().Resume(sp<UAClient>(client), h); } );
 	}
 	α ConnectAwait::Resume( str opcNK, Credential cred, const UAClientException&& e )ι->void{
-		Resume( opcNK, cred, [sc=e.Code](ConnectAwait::Handle h){ h.promise().ResumeExp(UAClientException{(StatusCode)sc}, h); } );
+		Resume( opcNK, cred, [e2=move(e)](ConnectAwait::Handle h)mutable{ h.promise().ResumeExp(move(e2), h); } );
 	}
 }

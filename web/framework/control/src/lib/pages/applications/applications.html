@@ -1,0 +1,27 @@
+<!-- <component-page-header>Applications</component-page-header> -->
+<div class="docs-component-category-list">
+	@for( application of applications; track application.id ){
+		<span class="docs-component-list-item">
+			<mat-card class="docs-component-category-list-card">
+				<mat-card-title-group><mat-card-title><mat-icon aria-hidden="false" style="padding-right:10px" aria-label="App Icon">{{application.icon}}</mat-icon>{{application.name}}</mat-card-title></mat-card-title-group>
+				<mat-card-content style="height:144px">
+					@if( application.on ) {
+						<div>Start:  {{application.startTimeString}}</div>
+						<div>Memory:  {{application.memoryString}}</div>
+						<ng-container>
+							@for( desc of application.description; track desc ){
+								<div>{{desc}}</div>
+							}
+						</ng-container>
+					}
+				</mat-card-content>
+				<!-- <mat-card-content class="docs-component-category-list-card-summary">{{application.summary}}</mat-card-content> -->
+				<mat-card-actions>
+					<button><mat-icon class="iconButton" (click)="togglePower(application)" >{{application.on ? 'toggle_off' : 'toggle_on' }}</mat-icon></button>
+					<!--[disabled]="!mainOn || application.Name=='Main'" -->
+					<button mat-icon-button><mat-icon class="iconButton">edit</mat-icon></button>
+				</mat-card-actions>
+			</mat-card>
+		</span>
+	}
+</div>

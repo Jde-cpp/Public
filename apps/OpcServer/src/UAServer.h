@@ -1,4 +1,5 @@
 #pragma once
+#include <jde/opc/uatypes/Variant.h>
 #include "UAConfig.h"
 #include "uaTypes/BrowseName.h"
 #include "uaTypes/Node.h"
@@ -7,7 +8,6 @@
 #include "uaTypes/ObjectType.h"
 #include "uaTypes/Reference.h"
 #include "uaTypes/Variable.h"
-#include "uaTypes/Variant.h"
 
 namespace Jde::Opc::Server {
 	struct UAServer{
@@ -18,6 +18,7 @@ namespace Jde::Opc::Server {
 		α Run()ι->void;
 		α ConstructorValues( const NodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&;
 
+		α Load( fs::path configFile, SRCE )ε->void;
 		α Find( NodePK parentPK, BrowseNamePK browsePK )Ι->const Node*;
 		α Find( const Node& parent, const BrowseName& browse )Ι->const Node*;
 		α FindBrowse( BrowseName& browse )Ι->bool;

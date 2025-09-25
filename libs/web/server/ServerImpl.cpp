@@ -17,7 +17,7 @@ namespace Server{
 		stream.expires_after( std::chrono::seconds(30) );// Set the timeout.
 		auto [ec, isSsl] = co_await beast::async_detect_ssl( stream, buffer );// on_run
 		if( ec ){
-			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Warning };
+			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Debug };
 			co_return;
 		}
 		let index = handler->NextRequestId();
@@ -208,9 +208,8 @@ namespace Server{
 			send( RestException<http::status::unauthorized>{move(e), move(req), "Could not get sessionInfo."}, move(stream) );
 			co_return;
 		}
-		if( req.IsGet("/graphql") ){
+		if( req.IsGet("/graphql") && !reqHandler->PassQL() )
 			graphQL( move(req), stream, reqHandler->Schemas() );
-		}
 		else
 			handleCustomRequest( move(req), move(stream), reqHandler );
 	}

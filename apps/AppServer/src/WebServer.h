@@ -19,12 +19,12 @@ namespace Jde::App::Server{
 	α SetLocalQL( sp<QL::LocalQL> ql )ι->void;
 	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
 	α GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ι->Web::Jwt;
-
+	α RemoveExisting( str host, PortType port )ι->void;
 
 	α StartWebServer( jobject&& settings )ε->void;
 	α StopWebServer( bool terminate )ι->void;
 
-	α BroadcastLogEntry( LogPK id, AppPK logAppPK, AppInstancePK logInstancePK, const Logging::ExternalMessage& m, const vector<string>& args )ι->void;
+	α BroadcastLogEntry( LogPK id, AppPK logAppPK, AppInstancePK logInstancePK, const Logging::Entry& m, const vector<string>& args )ι->void;
 	α BroadcastStatus( AppPK appId, AppInstancePK statusInstancePK, str hostName, Proto::FromClient::Status&& status )ι->void;
 	α BroadcastAppStatus()ι->void;
 	α FindApplications( str name )ι->vector<Proto::FromClient::Instance>;

@@ -1,6 +1,11 @@
 {
 	sqlType: "mysql",
 	logDir: "$(JDE_BUILD_DIR)",
+	opcServer: {
+		trustedCertDirs: [
+			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs"
+		]
+	},
 	dbServers: {
 		dataPaths: [],
 		scriptPaths:  ["$(JDE_DIR)/Public/apps/OpcServer/config/sql/mysql"],

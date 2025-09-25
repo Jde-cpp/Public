@@ -11,8 +11,8 @@
 #include "async/SessionAwait.h"
 #include "auth/PasswordAwait.h"
 #include "auth/UM.h"
+#include "ql/GatewayQLAwait.h"
 #include "uatypes/Browse.h"
-#include "uatypes/UAClientException.h"
 
 #define let const auto
 
@@ -32,7 +32,7 @@ namespace Jde::Opc::Gateway{
 				let sc = To<StatusCode>( s );
 				j.push_back( {{"sc", sc},{"message", UAException::Message(sc)}} );
 			}
-			_readyResult = mu<jobject>( jobject{{"errorCodes", j}} );
+			_readyResult = mu<jvalue>( jobject{{"errorCodes", j}} );
 		}
 		return _readyResult!=nullptr;
 	}
@@ -127,14 +127,8 @@ namespace Jde::Opc::Gateway{
 
 	α HttpRequestAwait::CoHandleRequest( ServerCnnctnNK&& opcId )ι->ConnectAwait::Task{
 		let& target = _request.Target();
-		optional<Credential> cred;
-		if( _request.SessionId() ){
-			cred = GetCredential( _request.SessionId(), opcId );
-			if( !cred && _request.UserPK() ) //if user/pwd would have cred, otherwise use jwt
-				cred = Credential{ Ƒ("{:x}", _request.SessionId()) };
-		}
 		try{
-			_client = co_await UAClient::GetClient( move(opcId), cred.value_or(Gateway::Credential{}) );
+			_client = co_await ConnectAwait( move(opcId), _request.SessionId(), _request.UserPK(), SRCE_CUR );
 			if( _request.IsGet() ){
 				if( target=="/browseObjectsFolder" )
 					Browse();
@@ -192,15 +186,31 @@ namespace Jde::Opc::Gateway{
 		catch( IException& e )
 		{}
 	}
-
+	α HttpRequestAwait::Query()ι->TAwait<HttpTaskResult>::Task{
+		auto& query = _request["query"];
+		_request.LogRead( query );
+		try{
+			if( query.empty() )
+				throw RestException<http::status::bad_request>{ SRCE_CUR, move(_request), "empty query" };
+			auto ql = QL::Parse( move(query), Schemas(), _request.Params().contains("raw") );
+			// if( ql.IsMutation() && !_request.IsPost() )
+			// 	throw RestException<http::status::bad_request>{ SRCE_CUR, move(_request), "Mutations must use post." };
+			Resume( co_await GatewayQLAwait{move(_request), move(ql)} );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
 	α HttpRequestAwait::Suspend()ι->void{
-		up<IException> pException;
  		if( _request.IsPost("/login") ) //used with user/password on Opc Server.
 			Login( _request.UserEndpoint.address().to_string() );
 		else if( _request.IsPost("/logout") )
 			Logout();
+		else if( _request.IsGet("/graphql") || _request.IsPost("/graphql") )
+			Query();
 		else{
-			if( auto opc = _request["opc"]; opc.size() )
+			auto opc = _request["opc"];
+			if( opc.size() )
 				CoHandleRequest( move(opc) );
 			else if( _request.Target().size() ){
 				_request.LogRead();

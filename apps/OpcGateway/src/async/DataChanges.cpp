@@ -7,13 +7,13 @@
 namespace Jde::Opc::Gateway{
 	static ELogTags _tag{ (ELogTags)(EOpcLogTags::Opc | EOpcLogTags::Monitoring) };
 	α CreateDataChangesCallback( UA_Client* ua, void *userdata, RequestId requestId, UA_CreateMonitoredItemsResponse* response )ι->void{
-		auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
-		auto h = pClient->ClearRequestH<DataChangeAwait::Handle>( requestId );  if( !h ){ Critical(_tag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId ); return; }
+		auto client = UAClient::TryFind(ua); if( !client ) return;
+		auto h = client->ClearRequestH<DataChangeAwait::Handle>( requestId );  if( !h ){ Critical(_tag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId ); return; }
 		Trace( _tag, "[{:x}.{:x}]CreateDataChangesCallback - {:x}", (uint)ua, requestId, (Handle)userdata );
 		if( let sc = response->responseHeader.serviceResult; sc )
-			h.promise().ResumeExp( UAClientException{sc}, h );
+			h.promise().ResumeExp( UAClientException{sc, client->Handle(), requestId}, h );
 		else{
-			pClient->MonitoredNodes.OnCreateResponse( response, (Handle)userdata );
+			client->MonitoredNodes.OnCreateResponse( response, (Handle)userdata );
 			h.resume();
 		}
 	}

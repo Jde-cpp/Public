@@ -67,17 +67,18 @@ namespace Jde{
 		α Tags()Ι->ELogTags{ return _tags; }
 		α SetTags( ELogTags tags )ι{ _tags = tags | ELogTags::Exception; }
 		Ω EmptyPtr()ι->const up<IException>&;
+		static constexpr ELogLevel DefaultLogLevel{ ELogLevel::Debug };
 	protected:
 		IException( SRCE )ι:IException{ {}, ELogLevel::Debug, 0, {}, sl }{}
+		α Format()Ι->sv{ return visit( []( auto&& arg )->sv{return {arg.data(),arg.size()};}, _format ); }
 		α BreakLog()Ι->void;
 		StackTrace _stack;
 
 		mutable string _what;
 		sp<std::exception> _pInner;//sp to save custom copy constructor
-		sv _format;
+		variant<sv,string> _format;
 		ELogTags _tags{ELogTags::None};
 		vector<string> _args;//TODO change to array
-		static constexpr ELogLevel DefaultLogLevel{ ELogLevel::Debug };
 	public:
 		const uint32 Code; //after _format
 	private:
@@ -129,20 +130,6 @@ namespace Jde{
 		COMMON
 	};
 
-	struct Γ CodeException /*final*/ : IException{
-		CodeException( std::error_code code, ELogTags tags, ELogLevel level=ELogLevel::Debug, SRCE )ι;
-		CodeException( std::error_code code, ELogTags tags, string value, ELogLevel level=ELogLevel::Debug, SRCE )ι;
-
-		using T=CodeException;
-		COMMON
-
-		Ω ToString( const std::error_code& pErrorCode )ι->string;
-		Ω ToString( const std::error_category& errorCategory )ι->string;
-		Ω ToString( const std::error_condition& errorCondition )ι->string;
-	protected:
-		std::error_code _errorCode;
-	};
-
 	//https://stackoverflow.com/questions/10176471/is-it-possible-to-convert-a-boostsystemerror-code-to-a-stderror-code
 	struct Γ BoostCodeException final : IException{
 		BoostCodeException( const boost::system::error_code& ec, sv msg={}, SRCE )ι;
@@ -179,7 +166,7 @@ namespace Jde{
 	$ IException::IException( IException&& e, fmt::format_string<Args...> m, Args&& ...args )ι:
 		_stack{ e._stack },
 		_format{ sv{m.get().data(), m.get().size()} },
-		Code{ Calc32RunTime(_format) },
+		Code{ Calc32RunTime(Format()) },
 		_level{ ELogLevel::Debug }{
 		_args.reserve( sizeof...(args) );
 		ToVec::Append( _args, args... );
@@ -189,7 +176,7 @@ namespace Jde{
 	$ IException::IException( SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&&... args )ι:
 		_stack{ sl },
 		_format{ sv{m.get().data(), m.get().size()} },
-		Code{ Calc32RunTime(_format) },
+		Code{ Calc32RunTime(Format()) },
 		_level{ l }{
 		_args.reserve( sizeof...(args) );
 		ToVec::Append( _args, args... );
@@ -199,7 +186,7 @@ namespace Jde{
 		_stack{ sl },
 		_format{ sv{m.get().data(), m.get().size()} },
 		_tags{ tags | ELogTags::Exception },
-		Code{ Calc32RunTime(_format) },
+		Code{ Calc32RunTime(Format()) },
 		_level{ l }{
 		_args.reserve( sizeof...(args) );
 		ToVec::Append( _args, args... );
@@ -210,7 +197,7 @@ namespace Jde{
 		_stack{ sl },
 		_pInner{ make_shared<std::exception>(move(inner)) },
 		_format{ sv{m.get().data(), m.get().size()} },
-		Code{ Calc32RunTime(_format) },
+		Code{ Calc32RunTime(Format()) },
 		_level{ l }{
 		_args.reserve( sizeof...(args) );
 		ToVec::Append( _args, args... );

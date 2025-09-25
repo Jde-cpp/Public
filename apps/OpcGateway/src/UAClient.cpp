@@ -1,6 +1,7 @@
 ﻿#include "UAClient.h"
 
 #include <open62541/plugin/securitypolicy_default.h>
+#include <jde/framework/thread/execution.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
@@ -12,6 +13,7 @@
 #include "async/Write.h"
 #include "uatypes/Browse.h"
 #include "uatypes/CreateMonitoredItemsRequest.h"
+#include "uatypes/uaTypes.h"
 
 #define let const auto
 
@@ -61,7 +63,8 @@ namespace Jde::Opc::Gateway{
 				for( auto& [_,client] : creds ){
 					client->MonitoredNodes.Shutdown();
 					client->_asyncRequest.Stop();
-					WARN_IF( client.use_count()>1, "[{:x}]use_count={}", client->Handle(), client.use_count() );
+					if( client.use_count()>1 )
+					  Warning{ _tags, "[{:x}]use_count={}", client->Handle(), client.use_count() };
 				}
 			}
 		}
@@ -86,13 +89,13 @@ namespace Jde::Opc::Gateway{
 		using SecurityPolicyPtr = up<UA_SecurityPolicy, decltype(&UA_free)>;
 		const uint size = addSecurity ? 2 : 1; ASSERT( !config->securityPoliciesSize );
 		SecurityPolicyPtr securityPolicies{ (UA_SecurityPolicy*)UA_malloc( sizeof(UA_SecurityPolicy)*size), &UA_free };
-		auto sc = UA_SecurityPolicy_None(&securityPolicies.get()[0], UA_BYTESTRING_NULL, &_logger); THROW_IFX( sc, UAClientException(sc, _ptr, 0, ELogLevel::Debug) );
+		auto sc = UA_SecurityPolicy_None(&securityPolicies.get()[0], UA_BYTESTRING_NULL, &_logger); THROW_IFX( sc, UAClientException(sc, Handle()) );
 		if( addSecurity ){
 			config->applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			config->clientDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			auto certificate = ToUAByteString( Crypto::ReadCertificate(CertificateFile()) );
 			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
-			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAClientException(sc, _ptr, 0, ELogLevel::Debug) );
+			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAClientException(sc, Handle()) );
 
 			config->authSecurityPolicies = (UA_SecurityPolicy *)UA_realloc( config->authSecurityPolicies, sizeof(UA_SecurityPolicy) *(config->authSecurityPoliciesSize + 1) );
 			UA_SecurityPolicy_Basic256Sha256( &config->authSecurityPolicies[config->authSecurityPoliciesSize], *certificate.get(), *privateKey.get(), config->logging );
@@ -141,10 +144,11 @@ namespace Jde::Opc::Gateway{
 						let inserted = opcCreds.try_emplace( client->Credential, client ).second;
 						ASSERT( inserted );//not sure why we would already have a record.
 					}
-					ConnectAwait::Resume( move(client), client->Target(), client->Credential );
+					Post( [client]()ι->void{ConnectAwait::Resume(move(client));} );
 				}
 				else
-					ConnectAwait::Resume( client->Target(), client->Credential, UAClientException{connectStatus} );
+					Post( [client,connectStatus]()ι->void{ConnectAwait::Resume( client->Target(), client->Credential, UAClientException{connectStatus, client->Handle(), "Connection Failed"} );} );
+
 				return true;
 			});
 		}
@@ -195,6 +199,7 @@ namespace Jde::Opc::Gateway{
 		auto p = shared_from_this();
 		ASSERT( !_awaitingActivation.contains(p) );
 		_awaitingActivation.emplace( shared_from_this() );
+		Debug{ _tags | ELogTags::Access, "[{:x}]Connecting to '{}', using '{}'", Handle(), Url(), Credential.ToString() };
 		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
 		_asyncRequest.SetParent( p );
 		Process( std::numeric_limits<RequestId>::max(), nullptr );
@@ -386,6 +391,11 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
+	α UAClient::ToNodeId( sv path )Ε->ExNodeId{
+		let segments = Str::Split(path, '/');
+    UABrowsePath browsePath{ segments, _opcServer.DefaultBrowseNs };
+    return GetNodeIdResponse{ UA_Client_Service_translateBrowsePathsToNodeIds(_ptr, {{}, 1, &browsePath}), segments, Handle() };
+	}
 	α UAClient::Find( UA_Client* ua, SL srce )ε->sp<UAClient>{
 		sp<UAClient> y = TryFind( ua, srce );
 		if( !y )

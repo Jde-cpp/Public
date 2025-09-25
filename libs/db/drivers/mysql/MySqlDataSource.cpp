@@ -24,16 +24,28 @@ namespace Jde::DB::MySql{
 //	constexpr ELogTags _tags{ ELogTags::Sql };
 //	using mysqlx::SessionOption;
 	α MySqlDataSource::Params::HasOut()Ι->bool{ return OutValue!=EValue::Null; }
-
 	namespace mysql = boost::mysql;
+	α toString( const mysql::connect_params& cs )ι->string{
+		return Ƒ( "'{}@{}:{}/{}' pwd:'{}' collation:{}, ssl:{}, multi:{}",
+			cs.username,
+			cs.server_address.hostname(),
+			cs.server_address.port(),
+			cs.database,
+			cs.password.empty() ? "<empty>" : "<set>",
+			cs.connection_collation,
+			underlying(cs.ssl),
+			cs.multi_queries
+		);
+	}
 	struct Session final{
 		Session( const mysql::connect_params& cs, SL sl )ε:
 			Conn{ _ctx }{
+			Logging::LogOnce( SRCE_CUR, ELogTags::DBDriver, "mysql::connect_params: {}", toString(cs) );
 			try{
 				Conn.connect( cs );
 			}
 			catch( mysql::error_with_diagnostics& e ){
-				throw MySqlException{ ELogTags::DBDriver, sl, ELogLevel::Critical, move(e), {} };
+				throw MySqlException{ toString(cs), move(e), sl, ELogTags::DBDriver, ELogLevel::Critical };
 			}
 		}
 	private:
@@ -82,7 +94,7 @@ namespace Jde::DB::MySql{
 				session.Conn.execute( sql.EmbedParams(), result );
 		}
 		catch( mysql::error_with_diagnostics& e ){
-			throw MySqlException{ ELogTags::DBDriver, sl, ELogLevel::Error, move(e), move(sql.Text) };
+			throw MySqlException{ move(sql.Text), move(e), sl, ELogTags::DBDriver };
 		}
 		if( exeParams.Function && result.has_value() ){
 			for( auto&& row : result.rows() )

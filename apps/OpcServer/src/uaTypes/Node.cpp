@@ -48,7 +48,7 @@ namespace Jde::Opc::Server{
 		TypeDef{ typeDef }
 	{}
 
-	α Node::InsertParams()ι->vector<DB::Value>{
+	α Node::InsertParams()Ι->vector<DB::Value>{
 		auto params = NodeId::InsertParams();
 		params.emplace_back( ParentNodePK );
 		params.emplace_back( ReferenceTypePK );

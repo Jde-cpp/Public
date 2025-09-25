@@ -7,7 +7,7 @@ namespace Jde::Opc::Gateway{
 
 	struct PasswordAwait : AuthAwait<optional<Web::FromServer::SessionInfo>>{// nullopt=use current session.
 		PasswordAwait( string loginName, string password, string opcNK, string endpoint, bool isSocket, SessionPK sessionId, SRCE )ι;
-		α await_resume()ι->optional<Web::FromServer::SessionInfo>;
+		α await_resume()ε->optional<Web::FromServer::SessionInfo>;
 	private:
 		α OnSuccess()ι->void{ CheckProvider(); }
 		α CheckProvider()ι->TAwait<Access::ProviderPK>::Task;

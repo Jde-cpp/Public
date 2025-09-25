@@ -1,4 +1,4 @@
-import { Component, computed, effect, OnInit, OnDestroy, signal, inject, Inject, model } from '@angular/core';
+import { Component, effect, OnInit, OnDestroy, signal, inject, Inject, model } from '@angular/core';
 import { SelectionModel } from '@angular/cdk/collections';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle, DocItem } from 'jde-material';
+import { ComponentPageTitle, DocItem } from 'jde-spa';
 import { arraysEqual, cloneClassArray, DetailResolverData, Properties, IErrorService, IGraphQL, QLSelector, toIdArray, TargetRow, IProfile} from 'jde-framework';
 
 import { RolePK } from '../../model/Role';

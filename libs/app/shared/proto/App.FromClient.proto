@@ -42,8 +42,6 @@ message Instance{
 	string application=1;
 	string host=2;
 	uint32 pid=3;
-	Jde.Proto.ELogLevel server_log_level=4;
-	Jde.Proto.ELogLevel client_log_level=5;
 	google.protobuf.Timestamp start_time=6;
 	uint32 web_port=7;
 	string instance_name=8;
@@ -53,12 +51,11 @@ message Instance{
 message LogEntry{
 	google.protobuf.Timestamp time=1;
 	Jde.Proto.ELogLevel level=2;
-	uint32 message_id=3;
-	uint32 file_id=4;
-	uint32 function_id=5;
+	bytes message_id=3;
+	bytes file_id=4;
+	bytes function_id=5;
 	uint32 line=6;
 	uint32 user_pk=7;
-	uint64 thread_id=8;
 	uint64 tags=9;
 	repeated string args=10;
 }
@@ -70,15 +67,13 @@ message Query{
 
 message StringValue{
 	EFields field=1;
-	uint32 id=2;
+	bytes id=2;
 	string value=3;
 }
 
 message Status{
 	google.protobuf.Timestamp start_time=1;
 	uint64 memory=2;
-	Jde.Proto.ELogLevel server_min_log_level=3;
-	Jde.Proto.ELogLevel client_min_log_level=4;
 	repeated string details=5;
 }
 
@@ -103,7 +98,7 @@ message Message{
 		uint32 session_info = 7;//called from other apps/web page to request information about session TODO graphql
 		Status status = 8; //send current app status.
 		StringValue string_value = 9; //send a string.
-		Jde.App.Proto.StringPKs request_strings = 10;
+		Jde.App.Proto.StringMD5s request_strings = 10;
 		bool subscribe_status = 11;//subscribe to application statuses.
 		string subscribe_logs = 12;//subscribe to application logs.  TODO graphql
 		Jde.Proto.Exception exception = 13;

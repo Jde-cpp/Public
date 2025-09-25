@@ -43,7 +43,6 @@ namespace Jde::QL{
 		vector<SubscriptionId> _result;
 	};
 	α LocalQL::Subscribe( string&& query, sp<IListener> listener, UserPK executer, SL sl )ε->up<TAwait<vector<SubscriptionId>>>{
-		Trace{ ELogTags::Test, "{}", query };
 		return mu<SubscribeQueryAwait>( ParseSubscriptions(move(query), _schemas, sl), listener, executer, sl );
 	}
 	α LocalQL::Upsert( string query, UserPK executer )ε->jarray{

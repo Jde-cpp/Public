@@ -1,6 +1,7 @@
 #include "ConstructorAwait.h"
 #include "ServerConfigAwait.h"
 
+#define let const auto
 namespace Jde::Opc::Server{
 	α ConstructorAwait::Execute()ι->DB::SelectAwait::Task{
 		try{

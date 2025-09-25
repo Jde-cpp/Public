@@ -4,6 +4,13 @@ project( Jde.Opc.Server VERSION ${JDE_VERSION} LANGUAGES CXX )
 
 include( ../../../build/dependencies.cmake )
 
+message( CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH} )
+find_package( NodesetLoader REQUIRED )
+set( open62541Dir ${open62541_DIR}/../../.. )
+#cmake_path( ABSOLUTE_PATH open62541Dir NORMALIZE OUTPUT_VARIABLE open62541Dir )
+#NodesetLoader_DIR=/home/duffyj/code/libs/install/g++-14/Debug/NodesetLoader/lib/cmake/NodesetLoader
+#dumpVariables()
+
 set( targetName Jde.Opc.ServerLib )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
@@ -16,8 +23,10 @@ target_sources( "${targetName}" PRIVATE "${sources}" "${headers}" )
 include_directories( ${open62541Dir}/include )
 
 target_link_libraries( ${targetName} Jde.App.Client Jde.Web.Server Jde.Opc )
+target_link_libraries( ${targetName} NodesetLoader )
 #######################################################
 target_precompile_headers( ${targetName}
 	PRIVATE
 		pc.h
 )
+add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_DIR}/Public/libs/db/config/common-meta.libsonnet" "$ENV{JDE_DIR}/Public/apps/OpcServer/config/common-meta.libsonnet" COMMENT "mklink common-meta.libsonnet" )

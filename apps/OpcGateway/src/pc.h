@@ -34,7 +34,7 @@
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/ExNodeId.h>
 #include <jde/opc/uatypes/Logger.h>
-#include "uatypes/UAClientException.h"
+#include "types/UAClientException.h"
 DISABLE_WARNINGS
 #include "types/proto/Opc.Common.pb.h"
 #include "types/proto/Opc.FromServer.pb.h"

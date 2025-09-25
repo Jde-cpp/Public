@@ -23,15 +23,14 @@ namespace Jde::DB::Odbc{
 				y += '\n';
 			y += msg;
 			if( state=="01000" && iError!=3621 )//3621=The statement has been terminated.
-				LOG_ONCE( ELogLevel::Information, _tags, "{}", msg );
+				Logging::LogOnce( SRCE_CUR, _tags, "{}", msg );
 			else{
 				if( functionName=="SQLDriverConnect" && level==ELogLevel::Error )
 					throw Exception{ sl, ELogLevel::Critical, "[{:<5}] {} {}", state, (char*)szMessage, iError };
 				else if( retCode==1 && state=="23000" )//23000=Integrity constraint violation.  multiple statements why retCode==1.
 					throw DBException{ Sql{}, msg, sl };
 				else if( iError )
-					TRACEX( "({}){} - {}", iError, functionName, msg );
-
+					Trace{ _tags | ELogTags::ExternalLogger, "({}){} - {}", iError, functionName, msg };
 			}
 		}
 		return y;

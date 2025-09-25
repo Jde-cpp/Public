@@ -1,5 +1,5 @@
 ﻿#include "OdbcWorker.h"
-#include "../../../../libs/framework/process/os/windows/WindowsWorker.h"
+#include "../../../../libs/framework/src/process/os/windows/WindowsWorker.h"
 
 namespace Jde::DB::Odbc{
 	uint8 OdbcWorker::_threadCount{ std::numeric_limits<uint8>::max() };

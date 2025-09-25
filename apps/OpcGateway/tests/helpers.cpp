@@ -1,13 +1,17 @@
 #include "helpers.h"
 #include <jde/framework/settings.h>
-#include <jde/opc/OpcQLHook.h>
 #include <jde/opc/uatypes/helpers.h>
-#include <jde/opc/uatypes/UAException.h>
+#include <jde/opc/UAException.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalQL.h>
+#include <jde/web/Jwt.h>
+#include <jde/web/client/http/ClientHttpAwait.h>
+#include <jde/app/client/IAppClient.h>
 #include "../src/StartupAwait.h"
 #include "../src/auth/OpcServerSession.h"
+#include "../src/auth/UM.h"
+#include "../src/ql/OpcQLHook.h"
 
 #define let const auto
 
@@ -62,6 +66,33 @@ namespace Jde::Opc::Gateway{
 		return o.empty() ? optional<ServerCnnctn>{} : ServerCnnctn( move(o) );
 	}
 
+	α Tests::GetConnection( str target )ι->ServerCnnctn{
+		auto con = SelectServerCnnctn( {target} );
+		if( !con ){
+			BlockAwait<ProviderCreatePurgeAwait, Access::ProviderPK>( ProviderCreatePurgeAwait{target, false} );
+			let id = BlockAwait<CreateServerCnnctnAwait, ServerCnnctnPK>( CreateServerCnnctnAwait{} );
+			con = SelectServerCnnctn( id );
+		}
+		return *con;
+	}
+
+	using Web::Client::ClientHttpAwait;
+	using Web::Client::ClientHttpRes;
+	α Tests::Query( sv ql, bool raw )ε->jobject{
+		try{
+			auto res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{
+				"localhost",
+				Ƒ("/graphql?query={}&{}", ql, raw ? "raw" : "" ),
+				Settings::FindNumber<PortType>("http/gateway/port").value_or(1968),
+				{ .Authorization=Ƒ("{:x}", AppClient()->SessionId()), .Verb=http::verb::get, .IsSsl=false }
+			});
+			return res.Json();
+		}
+		catch( exception& e ){
+		}
+		return {};
+	}
+
 	flat_map<string,ETokenType> _userTokens;
 	α Tests::AvailableUserTokens( sv url_ )ε->ETokenType{
 		const string url{url_};
@@ -69,7 +100,7 @@ namespace Jde::Opc::Gateway{
 			return _userTokens[url];
     UA_Client *client = UA_Client_new();
     UA_ClientConfig *config = UA_Client_getConfig(client);
-		auto UA_DateTime_now_fake = []( UA_EventLoop* )->UA_DateTime{ return 0x5C8F735D; };
+		auto UA_DateTime_now_fake = []( UA_EventLoop* ) -> UA_DateTime{ return 0x5C8F735D; };
     config->eventLoop->dateTime_now = UA_DateTime_now_fake;
     config->eventLoop->dateTime_nowMonotonic = UA_DateTime_now_fake;
     config->tcpReuseAddr = true;

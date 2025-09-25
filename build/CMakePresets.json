@@ -11,7 +11,7 @@
 			"hidden": true,
 			"cacheVariables":{
 				"CMAKE_CXX_STANDARD": "23",
-				"JDE_VERSION": "2025.08.01",
+				"JDE_VERSION": "2025.09.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3"
 			}
 		},

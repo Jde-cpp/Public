@@ -1,7 +1,8 @@
 ﻿#include "MonitoringNodes.h"
+#include <jde/framework/collections/collections.h>
 #include "../UAClient.h"
 #include "../uatypes/CreateMonitoredItemsRequest.h"
-#include "../../../../../Framework/source/collections/Collections.h"
+
 
 #define let const auto
 

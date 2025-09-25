@@ -23,6 +23,7 @@ namespace Jde::QL{
 		α EraseColumn( sv jsonName )ι->void{ Columns.erase( remove_if( Columns.begin(), Columns.end(), [&](let& c){return c.JsonName==jsonName;}), Columns.end() ); }
 		α Filter()Ε->FilterQL;
 		α FindArgKey()Ι->optional<DB::Key>;
+		Ŧ GetArg( sv key )Ι->T;
 		α FindColumn( sv jsonName )Ι->const ColumnQL*{ auto p = find_if( Columns, [&](let& c){return c.JsonName==jsonName;}); return p==Columns.end() ? nullptr : &*p; }
 		α FindDBColumn( sp<DB::Column> dbColumn )Ι->const ColumnQL*;
 		α FindTable( sv jsonPluralName )Ι->const TableQL*;
@@ -39,10 +40,14 @@ namespace Jde::QL{
 		jobject Args;
 		vector<ColumnQL> Columns;
 		sp<DB::View> DBTable;
-		mutable vector<QL::JsonMembers> JsonMembers;
+		mutable vector<QL::JsonMembers> JsonMembers; //used to map db columns to json names for results.
 		string JsonName;
 		vector<TableQL> Tables;
 		bool ReturnRaw{true};
 	};
+	template<>
+	Ξ TableQL::GetArg( sv key )Ι->string{
+		return Json::AsString( Args, key );
+	}
 }
 #undef let

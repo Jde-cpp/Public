@@ -4,6 +4,7 @@
 #include <jde/web/Jwt.h>
 #include "../../../../Framework/source/math/MathUtilities.h"
 #include <jde/framework/Stopwatch.h>
+#include <jde/framework/log/MemoryLog.h>
 #include <jde/framework/thread/execution.h>
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include "mocks/ClientSocketSession.h"
@@ -45,7 +46,7 @@ namespace Jde::Web{
 	}
 
 	α SocketTests::SetUp()->void{
-		ClearMemoryLog();
+		Logging::ClearMemory();
 	}
 	#define NOTIFY sl l{ _mutex }; cv.notify_one()
 	std::shared_mutex _mutex;
@@ -94,7 +95,7 @@ namespace Jde::Web{
 			auto await = ClientHttpAwait{ Host, "/login", serialize(jobject{{"jwt", jwt.Payload()}}), Port };
 			let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 			_sessionId = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
-			Information( ELogTags::Test, "({:x})Loggin Complete.", _sessionId );//TODOBuild change to test
+			INFO( "({:x})Loggin Complete.", _sessionId );
 		}
 		_clientSession = ms<Mock::ClientSocketSession>( Executor(), ctx );
 		co_await _clientSession->RunSession( Host, Port );
@@ -164,8 +165,9 @@ namespace Jde::Web{
 		let sessionId = _clientSession->Id();
 		_clientSession = nullptr;
 		std::this_thread::sleep_for( 1s );
-		auto logs = FindMemoryLog( [=](const Logging::ExternalMessage& m){
-			return m.Args.size()==3 && m.Args[0]=="1" && m.Args[1]=="The WebSocket stream was gracefully closed at both endpoints" && m.Args[2]==Ƒ("[{:x}]Server::DoRead", sessionId);
+		auto logs = Logging::Find( [=](const Logging::Entry& m){
+			return m.Text.contains("The WebSocket stream was gracefully closed at both endpoints")
+				&& m.Arguments.size()==1 && m.Arguments[0]==Ƒ( "[{:x}]Server::DoRead", sessionId );
 		});
 		ASSERT_TRUE( logs.size()>0 );
 		std::this_thread::sleep_for( 100ms );
@@ -202,10 +204,10 @@ namespace Jde::Web{
 		Wait();
 		BadTransmissionClientCall();
 		let expiration = steady_clock::now() + 20s;
-		vector<Logging::ExternalMessage> logs;
+		vector<Logging::Entry> logs;
 		while( logs.size()==0 && steady_clock::now()<expiration ){
 			std::this_thread::sleep_for( 100ms );
-			logs = FindMemoryLog( Calc32RunTime("Failed to process incomming exception '{}'.") );
+			logs = Logging::Find( Crypto::CalcMd5("Failed to process incomming exception '{}'."sv) );
 		}
 		Trace{ ELogTags::Test, "logs.size(): {}", logs.size() };
 		ASSERT_TRUE( logs.size()>0 );
@@ -225,10 +227,10 @@ namespace Jde::Web{
 		Wait();
 		BadTransmissionServerCall();
 		let expiration = steady_clock::now() + 20s;
-		vector<Logging::ExternalMessage> logs;
+		vector<Logging::Entry> logs;
 		while( logs.size()==0 && steady_clock::now()<expiration ){
 			std::this_thread::sleep_for( 100ms );
-			logs = FindMemoryLog( Calc32RunTime("MergePartialFromCodedStream returned false.") );//TODO send a exception to server.
+			logs = Logging::Find( Crypto::CalcMd5("MergePartialFromCodedStream returned false."sv) );//TODO send a exception to server.
 		}
 		ASSERT_TRUE( logs.size()>0 );
 	}

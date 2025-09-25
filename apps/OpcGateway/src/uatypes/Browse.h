@@ -5,6 +5,12 @@
 
 namespace Jde::Opc::Gateway{
 	struct UAClient;
+	struct UABrowsePath : UA_BrowsePath, boost::noncopyable{
+		UABrowsePath( const vector<sv>& segments, NsIndex defaultNS )ι;
+		UABrowsePath( UABrowsePath&& x )ι:UA_BrowsePath{ x }{ UA_BrowsePath_init( &x ); }
+		//UABrowsePath( const UABrowsePath& x )ι{ UA_BrowsePath_copy( &x, this ); }
+		~UABrowsePath(){ UA_BrowsePath_clear(this); }
+	};
 namespace Browse{
 	α OnResponse( UA_Client *ua, void* userdata, RequestId requestId, UA_BrowseResponse* response )ι->void;
 
@@ -21,16 +27,16 @@ namespace Browse{
 	};
 
 	struct FoldersAwait final : TAwait<Response>{
-		FoldersAwait( NodeId node, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl}, _node{move(node)},_client{c}{}
+		FoldersAwait( NodeId id, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl}, _nodeId{move(id)},_client{c}{}
 		α Suspend()ι->void override;
 //		α await_resume()ι->AwaitResult override{ return _pPromise->MoveResult(); }
 	private:
-		NodeId _node;
+		NodeId _nodeId;
 		sp<UAClient> _client;
 	};
 
 	struct Request :UA_BrowseRequest{
-		Request( NodeId&& node )ι;
+		Request( NodeId&& id )ι;
 		Request( Request&& x )ι:UA_BrowseRequest{ x }{ UA_BrowseRequest_init( &x );}
 		Request( const Request& x )ι{ UA_BrowseRequest_copy( &x, this ); }
 		~Request(){ UA_BrowseRequest_clear(this); }

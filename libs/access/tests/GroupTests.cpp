@@ -34,7 +34,7 @@ namespace Jde::Access::Tests{
 		auto obj = Json::ReadJsonNet( Ƒ("{}/Public/libs/access/config/access-ql.jsonnet", OSApp::EnvironmentVariable("JDE_DIR").value_or("./")) );
 		QL::Introspection intro{ move(obj) };
 		QL::RequestQL request = QL::Parse( query, Schemas() );
-		jobject expected = intro.Find("Grouping")->ToJson( request.TableQLs()[0].Tables[0] );
+		jobject expected = intro.Find("Grouping")->ToJson( request.Queries()[0].Tables[0] );
 		ASSERT_EQ( serialize(actual), serialize(expected) );
 	}
 

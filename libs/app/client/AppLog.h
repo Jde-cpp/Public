@@ -1,13 +1,10 @@
 #pragma once
-//#include <jde/framework/log/Log.h>
+#include <jde/framework/settings.h>
 
 namespace Jde::App::Client{
-	struct AppLog final : Logging::IExternalLogger{
-		AppLog()ι{};
-		α Destroy(SRCE)ι->void override;
-		α Name()ι->string override{ return "db"; }
-		α Log( Logging::ExternalMessage&& m, SRCE )ι->void override{ Log( m, nullptr, sl ); }
-		α Log( const Logging::ExternalMessage& m, const vector<string>* args=nullptr, SRCE )ι->void override;
-		α SetMinLevel(ELogLevel level)ι->void override;
+	struct AppLog final : Logging::ILogger{
+		AppLog()ι:ILogger{ Settings::FindDefaultObject("/logging/app") }{};
+		α Name()ι->string override{ return "proto"; }
+		α Write( const Logging::Entry& m )ι->void override;
 	};
 }

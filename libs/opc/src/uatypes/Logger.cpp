@@ -1,19 +1,20 @@
 ﻿#include <jde/opc/uatypes/Logger.h>
 #include <stacktrace>
+#include <open62541/types.h>
 
 #define let const auto
 int mp_vsnprintf(char* s, size_t count, const char* format, va_list arg); //open62541/deps/mp_printf.h
 namespace Jde::Opc{
-	constexpr array<sv,14> EOpcLogTagstrings{ "iot",
+	constexpr array<sv,14> EOpcLogTagstrings{ "opc",
 		"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
 		"monitoring", "browse", "processingLoop" };
 
 	α Format( const char* format, va_list args )->string{
 		UA_Byte buffer[512];
 		UA_String str{ 512, buffer };
-		let result = UA_String_vprintf( &str, format, args );
+		let result = UA_String_vformat( &str, format, args );
 		if( result!=UA_STATUSCODE_GOOD ){
-			return Ƒ( "({:x})UA_String_vprintf failed for: '{}'.", result, format );
+			return Ƒ( "({:x})UA_String_vformat failed for: '{}'.", result, format );
 		}
 		const string y{ (char*)str.data, str.length };
 		return y;

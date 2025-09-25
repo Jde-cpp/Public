@@ -1,7 +1,7 @@
 #include "UAServer.h"
 #include <jde/opc/uatypes/helpers.h>
-#include <jde/opc/uatypes/UAException.h>
 #include "UAAccess.h"
+#include <NodesetLoader/backendOpen62541.h>
 
 #define let const auto
 namespace Jde::Opc::Server {
@@ -15,22 +15,33 @@ namespace Jde::Opc::Server {
 		if( _thread.has_value() ){
 			_running = false;
 			_thread->request_stop();
-		}if( _ua ){
+			_thread->join();
+			_thread.reset();
+		}
+		if( _ua ){
 			UA_Server_delete( _ua );
 			_ua = nullptr;
 		}
 	}
+	//
 	α UAServer::Run()ι->void{
 		if( !_thread ){
 			_thread = std::jthread{[this](std::stop_token /*st*/){
 				SetThreadDscrptn( "UAServer" );
 				_running = true;
 				UA_Server_run( _ua, &_running );
+				UA_Server_run_shutdown( _ua );
 				UA_Server_delete( _ua );
 				_ua = nullptr;
 				Information{ ELogTags::App, "OPC UA server stopped." };
 			}};
 		}
+	}
+	α UAServer::Load( fs::path configFile, SL sl )ε->void{
+		Information{ ELogTags::App, "Loading configuration from: '{}'", configFile.string() };
+		CHECK_PATH( configFile, sl );
+		if( !NodesetLoader_loadFile(_ua, configFile.string().c_str(), nullptr) )
+			throw Exception( sl, "Failed to load nodeset file: '{}'", configFile.string() );
 	}
 
 	α UAServer::Constructor(UA_Server* /*server*/,
@@ -147,7 +158,7 @@ namespace Jde::Opc::Server {
 			variable,
 			(void*)variable.PK,
 			&id);
-		THROW_IFX( status, UAException(variable.ToString(), ELogLevel::Error, status, sl) );
+		THROW_IFX( status, UAException(status, variable.ToString(), sl, {ELogLevel::Error, EOpcLogTags::Opc}) );
 		dynamic_cast<NodeId&>(variable) = id;
 		DBGSL( "Added Variable: {}", variable.ToString(parent) );
 		return variable.PK ? _variables.try_emplace( variable.PK, move(variable) ).first->second : variable;

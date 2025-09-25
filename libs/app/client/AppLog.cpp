@@ -6,20 +6,14 @@
 
 namespace Jde::App::Client{
 	using namespace Jde::Logging;
-	α AppLog::Destroy( SL )ι->void{
-		CloseSocketSession();
-	}
-	α AppLog::Log( const ExternalMessage& m, const vector<string>* /*args*/, SL /*sl*/ )ι->void{
+	α AppLog::Write( const Logging::Entry& m )ι->void{
 		Proto::FromClient::Transmission t;
-		if( StringCache::AddFile(m.FileId, m.File) )
-			FromClient::AddStringField( t, Proto::FromClient::EFields::File, m.FileId, m.File );
-		if( StringCache::AddFunction(m.FileId, m.Function) )
-			FromClient::AddStringField( t, Proto::FromClient::EFields::Function, m.FileId, m.Function );
-		if( StringCache::AddMessage(m.FileId, string{m.MessageView}) )
-			FromClient::AddStringField( t, Proto::FromClient::EFields::MessageField, m.MessageId, string{m.MessageView} );
+		if( StringCache::AddFile(m.FileId(), string{m.File()}) )
+			FromClient::AddStringField( t, Proto::FromClient::EFields::File, m.FileId(), string{m.File()} );
+		if( StringCache::AddFunction(m.FileId(), string{m.Function()}) )
+			FromClient::AddStringField( t, Proto::FromClient::EFields::Function, m.FileId(), string{m.Function()} );
+		if( StringCache::AddMessage(m.FileId(), m.Text) )
+			FromClient::AddStringField( t, Proto::FromClient::EFields::MessageField, m.Id(), m.Text );
 		//[&]->LogAwait::Task { co_await LogAwait{ m, args, sl }; }();
-	}
-	α AppLog::SetMinLevel(ELogLevel level)ι->void{
-		_minLevel = level;
 	}
 }

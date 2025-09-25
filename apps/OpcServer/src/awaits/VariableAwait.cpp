@@ -4,6 +4,7 @@
 #include "../uaTypes/DataType.h"
 #include "../uaTypes/VariableAttr.h"
 
+#define let const auto
 namespace Jde::Opc::Server {
 	α VariableAwait::Execute()ι->DB::SelectAwait::Task {
 		try {
@@ -84,10 +85,11 @@ namespace Jde::Opc::Server {
 		if( !variantPK.is_null() ){
 			Variant v{ _node.value };
 			try{
-				for( auto&& [index, j] : v.ToJson() ){
+				let array = v.ToUAJson();
+				for( uint i=0; i<array.size(); ++i ){
 					co_await DS().Execute( DB::Sql{
 						Ƒ("insert into {}(variant_id, idx, value) values (?,?,?)", GetSchema().DBName("variant_members")),
-						{ variantPK,{index},{j} }
+						{ variantPK,{i},{serialize(array[i])} }
 					} );
 				}
 			}

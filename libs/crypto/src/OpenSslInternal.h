@@ -1,7 +1,9 @@
 ﻿#pragma once
+#include <span>
 
 #ifndef CALL
 	#define CALL( call ) if( int rc=call; rc!=1 ) throw Crypto::OpenSslException( "##call - {}", rc, SRCE_CUR, Crypto::OpenSslException::CurrentError() )
+	#define CALLSL( call ) if( int rc=call; rc!=1 ) throw Crypto::OpenSslException( "##call - {}", rc, sl, Crypto::OpenSslException::CurrentError() )
 	#define CHECK_NULL( p ) THROW_IFX( !p, Crypto::OpenSslException("{}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) )
 #endif
 

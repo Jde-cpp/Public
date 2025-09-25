@@ -23,5 +23,6 @@ namespace Jde::Opc {
 	α Server::AppClient()ι->sp<App::Client::IAppClient>{ return _appClient; }
 
 	α Server::GetSchema()ι->DB::AppSchema&{ return *_appSchema; }
+	α Server::GetSchemaPtr()ι->sp<DB::AppSchema>{ return _appSchema; }
 	α Server::GetUAServer()ι->UAServer&{ return *_ua; }
 }

@@ -44,7 +44,7 @@ namespace Jde::App{
 		if( _request.Method() == http::verb::get ){
 			if( _request.Target()=="/GoogleAuthClientId" ){
 				_request.LogRead();
-				_readyResult = mu<jobject>( ValueJson(Settings::FindString("GoogleAuthClientId").value_or("GoogleAuthClientId Not Configured.")) );
+				_readyResult = mu<jvalue>( ValueJson(Settings::FindString("GoogleAuthClientId").value_or("GoogleAuthClientId Not Configured.")) );
 			}
 			else if( _request.Target()=="/opcGateways" ){
 				_request.LogRead();
@@ -52,8 +52,7 @@ namespace Jde::App{
 				jarray japps;
 				for( auto& app : apps )
 					japps.push_back( ToJson(app) );
-				jobject y{ {"servers", japps} };
-				_readyResult = mu<jobject>( move(y) );
+				_readyResult = mu<jvalue>( jobject{{"servers", japps}} );
 			}
 		}
 		return _readyResult!=nullptr;

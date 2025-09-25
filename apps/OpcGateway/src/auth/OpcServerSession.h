@@ -26,14 +26,17 @@ namespace Jde::Opc::Gateway{
 
 		α Token()Ι->const Gateway::Token&{ return get<Gateway::Token>( _value ); }
 		α Type()Ι->ETokenType;
+		α UserPK()Ι->Jde::UserPK{ return _userPK; }
+		α SetUserPK( Jde::UserPK userPK )ι->void{ _userPK = userPK; }
 		α IsUser()Ι{ return Type()==ETokenType::Username; }
 		α LoginName()Ι->str;
 		α Password()Ι->str;
-		α ToString()Ι->string; //TODO - implement
+		α ToString()Ι->string;
 		α operator<( const Credential& other )Ι->bool;
 	private:
 		variant<nullptr_t, Gateway::Token, User, Crypto::PublicKey> _value;
 		mutable string _display;
+		Jde::UserPK _userPK;
 	};
 	α AddSession( SessionPK sessionId, ServerCnnctnNK opcNK, Credential credential )ι->void;
 	α AuthCache( const Credential& credential, const ServerCnnctnNK& opcNK, SessionPK sessionId )ι->optional<bool>;

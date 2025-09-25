@@ -1,19 +1,14 @@
 #include "usings.h"
+#include <jde/framework/exceptions/ExternalException.h>
+
 namespace Jde::DB::MySql{
-	struct MySqlException final : public IException {
-		MySqlException( ELogTags tags, SL sl, ELogLevel level, mysql::error_with_diagnostics&& e, string&& sql ):
-			IException{ e.what(), level, 0, tags, sl },
+	struct MySqlException final : ExternalException {
+		MySqlException( string&& sql, const mysql::error_with_diagnostics& e, SRCE, ELogTags tags=ELogTags::Sql, ELogLevel l=ELogLevel::Error ):
+			ExternalException{ string{e.what()}, Ƒ("{} - {}", e.get_diagnostics().server_message(), sql), sl, tags, l },
 			_clientMessage{ e.get_diagnostics().client_message() },
 			_serverMessage{ e.get_diagnostics().server_message() },
 			_sql{ move(sql) }
-		{
-			BREAK;
-		}
-		MySqlException( string&& sql, mysql::error_with_diagnostics&& e, SL sl ):
-			MySqlException{ ELogTags::Sql, sl, ELogLevel::Error, move(e), move(sql) }
-		{
-			BREAK;
-		}
+		{}
 
 		α Move()ι->up<IException> override{ return mu<MySqlException>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }

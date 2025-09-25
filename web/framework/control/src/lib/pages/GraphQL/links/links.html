@@ -1,0 +1,35 @@
+@if( viewPromise | async ){
+	<ng-container>
+		<mat-toolbar style="height:80px">
+			<span></span>
+			<button mat-icon-button color="primary" style="margin-left :20px; margin-right:10px" (click)="addLink()"><mat-icon>add_link</mat-icon></button>
+			<button mat-icon-button color="primary" [disabled]="!haveSelection" style="margin-left :20px; margin-right:10px" (click)="removeLink()"><mat-icon>link_off</mat-icon></button>
+		</mat-toolbar>
+		<div style="align-content: center; margin: auto;  text-align: center">
+			<mat-table #table matSort [dataSource]="items" class="mat-elevation-z8" (matSortChange)="sortData($event)" [matSortActive]="sort.active" [matSortDirection]="sort.direction">
+				<ng-container [matColumnDef]="column" *ngFor="let column of stringColumnNames">
+					<mat-header-cell mat-header-cell *matHeaderCellDef> {{column}} </mat-header-cell>
+					<mat-cell *matCellDef="let element"> {{element[column]}} </mat-cell>
+				</ng-container>
+				<ng-container [matColumnDef]="column" *ngFor="let column of objectColumnNames">
+					<mat-header-cell mat-header-cell *matHeaderCellDef> {{column}} </mat-header-cell>
+					<mat-cell *matCellDef="let element"> {{element[column].name}} </mat-cell>
+				</ng-container>
+				<ng-container [matColumnDef]="column" *ngFor="let column of listColumnNames">
+					<mat-header-cell mat-header-cell *matHeaderCellDef> {{column}} </mat-header-cell>
+					<mat-cell *matCellDef="let element"> {{element[column].join()}}
+						<button mat-icon-button color="primary" (click)="edit(column,element)" aria-label="Edit">
+							<mat-icon>edit</mat-icon>
+						</button>
+					</mat-cell>
+				</ng-container>
+				<ng-container [matColumnDef]="column" *ngFor="let column of dateColumnNames">
+					<mat-header-cell mat-header-cell *matHeaderCellDef> {{column}} </mat-header-cell>
+					<mat-cell *matCellDef="let element"> {{element[column] | date:'mediumDate'}} </mat-cell>
+				</ng-container>
+				<mat-header-row *matHeaderRowDef="displayedColumnNames; sticky: true"></mat-header-row>
+				<mat-row mat-row *matRowDef="let row; columns: displayedColumnNames;" (click)="cellClick(row)" [class.hidden]="!showDeleted && row.deleted" [class.highlight]="selection?.name==row.name"></mat-row>
+			</mat-table>
+		</div>
+	</ng-container>
+}

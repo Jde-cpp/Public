@@ -1,0 +1,33 @@
+.hidden
+{
+	display: none;
+}
+
+.mat-header-cell
+{
+	min-width: 100px;
+}
+.highlight
+{
+	/* background-color: aqua;
+	color: black; */
+	font-weight: bolder;
+	border-color: orange;
+	border-width: 1px;
+	border-style: solid;
+}
+.dateColumn{
+	flex: 0 0 160px;
+}
+.mat-column-name{
+	flex: 0 0 230px;
+}
+.mat-column-target{
+	flex: 0 0 150px;
+}
+.mat-column-select{
+	flex: 0 0 60px;
+}
+.mat-column-description{
+	flex: 1 1 500px;
+}

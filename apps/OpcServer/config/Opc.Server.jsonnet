@@ -14,18 +14,21 @@ local args = import 'args.libsonnet';
 		}
 	},
 	logging:{
-		flushOn: "Trace",
-		tags: {
-			trace:["test","sql",
-				"UASession", "UAServer", "UAUser", "UASecurity", "UAEvent", "threads", "UAClient", "UANet", "UASecure"],
-			debug:["ql","settings", "app"],
-			information:["app", "appServer", "net"],
-			warning:["alarm", "ql", "io", "locks", "settings"],
-			"error":[],
-			critical:[]
-		},
-		sinks:{
-			console:{}
+		spd:{
+			flushOn: "Trace",
+			tags: {
+				trace:["test","sql",
+					"uaSession", "uaServer", "uaUser", "uaSecurity", "threads", "uaClient", "uaSecure"],
+				debug:["ql","settings", "app", "uaEvent", "uaNet"],
+				information:[],
+				warning:["io"],
+				"error":[],
+				critical:[]
+			},
+			sinks:{
+				console:{},
+				file:{ path: args.logDir, md: false }
+			}
 		}
 	},
 	credentials:{
@@ -36,7 +39,10 @@ local args = import 'args.libsonnet';
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",
-		configDir: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		mutationsDir:: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		db: false,
+		configFile: "$(UA_NODE_SETS)/CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml",
+		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840,
 		ssl:{
 			certificate: "/tmp/cert.pem",

@@ -1,4 +1,5 @@
 #include <jde/web/Jwt.h>
+#include <boost/uuid/uuid_io.hpp>
 #include <jde/framework/io/json.h>
 #include <jde/framework/str.h>
 
@@ -23,7 +24,6 @@ namespace Jde::Web{
 		if( expires!=TimePoint::min() )
 			Body["exp"] = Clock::to_time_t( expires );
 
-		//auto bodyMod = Json::AsSV(Body, "n");
 		let head = jobject{ {"alg","RS256"}, {"typ","JWT"} };
 		HeaderBodyEncoded = Str::Encode64( serialize(head), true )+ "." + Str::Encode64( serialize(Body), true );
 		Signature = Crypto::RsaSign( HeaderBodyEncoded, privateKeyPath );
@@ -46,22 +46,20 @@ namespace Jde::Web{
 
 		auto body = Str::Decode64( HeaderBodyEncoded.substr(bodyIndex+1 ), true );
 		Body = Json::Parse( body );
+		optional<Crypto::MD5> fpKey;
 		if( auto modulus = Json::FindString(Body, "n"); modulus ){
 			SetModulus( move(*modulus) );
 			SetExponent( Json::AsString(Body, "e") );
+			fpKey = Crypto::Fingerprint( PublicKey );// Use PublicKey instead of Certificate
 		}
-		auto fpKey = Crypto::Fingerprint( PublicKey );// Use PublicKey instead of Certificate
 		UserPK = {Json::FindNumber<UserPK::Type>(Body, "sub").value_or( 0 )};
-		UserName = Json::FindString(Body, "name").value_or( Str::ToHex(fpKey.data(), fpKey.size()) );
+		UserName = Json::FindString(Body, "name").value_or( fpKey ? Str::ToHex((byte*)fpKey->data(), fpKey->size()) : "" );
 		UserTarget = Json::FindString( Body, "target" ).value_or( UserName );
 		Host = Json::FindString( Body, "host" ).value_or("");
 		Iat = Json::AsNumber<time_t>( Body, "iat" );
 		SessionId = Json::FindDefaultSV( Body, "sid" );
 
-		auto fpText = []( const Crypto::MD5& fp ) {
-			return std::accumulate(fp.begin(), fp.end(), Ƒ("{:x}", fp[0]), [&](string s, byte /*b*/){return move(s)+Ƒ("{:x}", fp[0]);} );
-		};
-		Description = Json::FindSV(Body, "description").value_or( Ƒ("Public key md5: {}", fpText(fpKey)) );
+		Description = Json::FindSV(Body, "description").value_or( fpKey ? Ƒ("Public key md5: {}", boost::uuids::to_string(*fpKey)) : "" );
 	}
 	α Jwt::Payload()Ι->string{
 		auto signature = Str::Encode64( Signature, true );

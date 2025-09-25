@@ -37,9 +37,9 @@ add_subdirectory( ${libDir}/opc/src ../../libs/opc )
 add_subdirectory( src lib )
 
 #if( buildTests )
-#	add_subdirectory( tests )
-#	set( CMAKE_CTEST_ARGUMENTS -tests -settings=$ENV{JDE_DIR}/Public/apps/OpcGateway/config/Opc.Gateway.jsonnet )
-#	add_test( NAME GatewayTests COMMAND $<TARGET_FILE:Jde.Opc.Gateway.Tests> )
+	# add_subdirectory( tests )
+	# set( CMAKE_CTEST_ARGUMENTS -tests -settings=$ENV{JDE_DIR}/Public/apps/OpcGateway/config/Opc.Gateway.jsonnet )
+	# add_test( NAME GatewayTests COMMAND $<TARGET_FILE:Jde.Opc.Gateway.Tests> )
 #endif()
 
 
@@ -76,6 +76,6 @@ target_link_libraries( ${targetName} Boost::json )
 
 add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_BASH}/Public/libs/db/config/common-meta.libsonnet" "${CMAKE_CURRENT_SOURCE_DIR}/config/common-meta.libsonnet" COMMENT "mklink common-meta.libsonnet" )
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-c -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/../config/Opc.Gateway.jsonnet" )
+	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-c -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Gateway.jsonnet" )
 	copyCommonDlls()
 endif()

@@ -1,28 +1,31 @@
 local args = import 'args.libsonnet';
 {
 	logging:{
-		defaultLevel: "Information",
-		tags: {
-			trace:[ "app", "browse", "ql",
-				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
-				"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery"
-			],
-			debug:["settings"],
-			information:[
-				"iot.read", "iot.monitoring", "iot.browse", "app.processingLoop", "iot.monitoring.pedantic"
-			],
-			warning:[],
-			"error":[],
-			critical:[]
-		},
-		sinks:{
-			console:{},
-			file:{ path: args.logDir, md: false }
+		spd:{
+			defaultLevel:: "Information",
+			tags: {
+				trace:[ "app", "browse", "ql", "access", "opc.access",
+					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
+					"uaSecure","uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery"
+				],
+				debug:["settings"],
+				information:[
+					"uaNet",
+					"opc.read", "opc.monitoring", "opc.browse", "app.processingLoop", "opc.monitoring.pedantic"
+				],
+				warning:[],
+				"error":[],
+				critical:[]
+			},
+			sinks:{
+				console:{},
+				file:{ path: args.logDir, md: false }
+			}
 		}
 	},
 	dbServers: {
 		scriptPaths: args.dbServers.scriptPaths,
-		sync: true,
+		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,

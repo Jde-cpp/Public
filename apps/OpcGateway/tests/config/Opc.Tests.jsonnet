@@ -1,8 +1,8 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "CertTests.*",
-		recreateDB: true,
+		tests: "BrowseTests.NodeId",
+		recreateDB:: true,
 		embeddedAppServer: true,
 		embeddedOpcServer: true
 	},
@@ -37,6 +37,7 @@ local args = import 'args.libsonnet';
 		target: "TestServer",
 		description: "Test OPC",
 		configDir: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840,
 		ssl:{
 			certificate: "$(JDE_BUILD_DIR)/OpcServer/ssl/certs/cert.pem",
@@ -48,23 +49,27 @@ local args = import 'args.libsonnet';
 		opcServer:{ name: "OpcTests" }
 	},
 	logging:{
-		defaultLevel:: "Information",
-		tags: {
-			trace:["test", "app"],
-			debug:["settings", "scheduler", "uaEvent","sql", "ql",
-				"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
-				"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
-				"monitoring", "browse", "processingLoop", "monitoring.pedantic"],
-			information:["threads", "uaSecure"],
-			warning:[],
-			"error":[],
-			critical:[]
+		spd:{
+			defaultLevel:: "Information",
+			tags: {
+				trace:["test", "app", "http.client.write", "http.client.read"],
+				debug:["settings", "scheduler", "uaEvent","sql", "ql",
+					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
+					"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
+					"monitoring", "browse", "processingLoop", "monitoring.pedantic"],
+				information:["threads", "uaSecure"],
+				warning:[],
+				"error":[],
+				critical:[]
+			},
+			sinks:{
+				console:{},
+				file:{ path: args.logDir, md: false }
+			}
 		},
-		sinks:{
-			console:{},
-			file:{ path: args.logDir, md: false }
-		},
-		memory: true
+		memory:{
+			default: "trace"
+		}
 	},
 	workers:{
 		executor: 2,

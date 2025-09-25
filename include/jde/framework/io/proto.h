@@ -26,6 +26,8 @@ namespace Jde::Proto{
 	α ToString( const google::protobuf::MessageLite& msg )ι->string;
 	α SizePrefixed( const google::protobuf::MessageLite&& m )ι->tuple<up<google::protobuf::uint8[]>,uint>;
 	α ToTimestamp( TimePoint t )ι->google::protobuf::Timestamp;
+	Ξ ToBytes( const uuid& g )ι->sv{ return sv{ (char*)g.data(), 16 }; }
+	Ξ ToGuid( string g )ι->uuid{ uuid y; memcpy( &y, g.data(), std::min(sizeof(uuid), g.size())); return y; }
 	α ToTimePoint( google::protobuf::Timestamp t )ι->TimePoint;
 
 	namespace Internal{
@@ -134,13 +136,10 @@ namespace Jde{
 #ifdef _MSC_VER
 		Clock::duration duration = duration_cast<Clock::duration>( std::chrono::nanoseconds( t.seconds() ) );
 		return Clock::from_time_t( t.seconds() ) + duration;
-		//	std::chrono::nanoseconds( t.nanos() );
 #else
 		return Clock::from_time_t( t.seconds() )+std::chrono::nanoseconds( t.nanos() );
 #endif
 	}
-//	std::chrono::time_point<std::chrono::system_clock,std::chrono::duration<__int64,std::nano>>
-//	std::chrono::time_point<std::chrono::system_clock,std::chrono::duration<std::chrono::system_clock::rep,std::chrono::system_clock::period>>
 }
 #undef let
 #endif

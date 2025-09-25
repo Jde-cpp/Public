@@ -1,0 +1,20 @@
+
+<!-- <div class="g-signin2" id="google-button"></div> -->
+
+@if( !providers.isLoading() ) {
+	@if( user()?.picture ){
+		<a mat-list-item (click)="onLogout()">
+			<img class="profile-picture" [src]="user().picture">
+		</a>
+	}
+	@else if( user()?.name ){
+		<a mat-list-item (click)="onLogout()">
+			{{`${user().domain}/${user().name}`}}
+		</a>
+	}
+	@else {
+		<a mat-list-item routerLink="login" routerLinkActive="docs-navbar-header-item-selected">
+			<mat-icon routerLinkActive="selected">account_circle</mat-icon>
+		</a>
+	}
+}

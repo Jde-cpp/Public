@@ -43,13 +43,19 @@ namespace Jde::App{
 		Process::AddShutdownFunction( []( bool terminate ){Server::StopWebServer(terminate);} );//TODO move to Web::Server
 		UpdateStatuses();
 	}
+	α Server::RemoveExisting( str host, PortType port )ι->void{
+		_sessions.erase_if( [&host=host,port=port]( auto&& kv ){
+			auto& existing = kv.second->Instance();
+			Trace( ELogTags::Test, "Existing: {}@{}, New: {}@{}", existing.host(), existing.web_port(), host, port );
+			return existing.host()==host && existing.web_port()==port;
+		});
+	}
 
 	α Server::GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ι->Web::Jwt{
 		auto requestHandler = _requestHandler;
 		THROW_IF( !requestHandler, "No request Handler." );
 		return requestHandler->GetJwt( userPK, move(name), move(target), move(endpoint), sessionId, expires, move(description) );
 	}
-
 
 	α Server::StopWebServer( bool terminate )ι->void{
 		Web::Server::Stop( move(_requestHandler), terminate );
@@ -62,26 +68,24 @@ namespace Jde::App{
 		}
 	}
 
-	α TestLogPub( const FilterQL& subscriptionFilter, AppPK /*appId*/, AppInstancePK /*instancePK*/, const Logging::ExternalMessage& m )ι->bool{
+	α TestLogPub( const FilterQL& subscriptionFilter, AppPK /*appId*/, AppInstancePK /*instancePK*/, const Logging::Entry& m )ι->bool{
 		bool passesFilter{ true };
 		let logTags = ELogTags::Socket | ELogTags::Server | ELogTags::Subscription;
 		for( let& [jsonColName, columnFilters] : subscriptionFilter.ColumnFilters ){
 			if( jsonColName=="level" )
 				passesFilter = FilterQL::Test( underlying(m.Level), columnFilters, logTags );
 			else if( jsonColName=="time" )
-				passesFilter = FilterQL::Test( m.TimePoint, columnFilters, logTags );
+				passesFilter = FilterQL::Test( m.Time, columnFilters, logTags );
 			else if( jsonColName=="message" )
-				passesFilter = FilterQL::Test( string{m.MessageView}, columnFilters, logTags );
+				passesFilter = FilterQL::Test( string{m.Text}, columnFilters, logTags );
 			else if( jsonColName=="file" )
-				passesFilter = FilterQL::Test( string{m.File}, columnFilters, logTags );
+				passesFilter = FilterQL::Test( string{m.File()}, columnFilters, logTags );
 			else if( jsonColName=="function" )
-				passesFilter = FilterQL::Test( string{m.Function}, columnFilters, logTags );
+				passesFilter = FilterQL::Test( string{m.Function()}, columnFilters, logTags );
 			else if( jsonColName=="line" )
-				passesFilter = FilterQL::Test( m.LineNumber, columnFilters, logTags );
+				passesFilter = FilterQL::Test( m.Line, columnFilters, logTags );
 			else if( jsonColName=="user_pk" )
 				passesFilter = FilterQL::Test( m.UserPK, columnFilters, logTags );
-			else if( jsonColName=="thread_Id" )
-				passesFilter = FilterQL::Test( m.ThreadId, columnFilters, logTags );
 			// else if( jsonColName=="tags" ) TODO
 			// 	passesFilter = FilterQL::Test( m.Tags(), columnFilters, logTags );
 			// else if( jsonColName=="args" ) TODO
@@ -92,7 +96,7 @@ namespace Jde::App{
 		return passesFilter;
 	}
 
-	α Server::BroadcastLogEntry( LogPK id, AppPK logAppPK, AppInstancePK logInstancePK, const Logging::ExternalMessage& m, const vector<string>& args )ι->void{
+	α Server::BroadcastLogEntry( LogPK id, AppPK logAppPK, AppInstancePK logInstancePK, const Logging::Entry& m, const vector<string>& args )ι->void{
 		_logSubscriptions.cvisit_all( [&]( let& kv ){
 			if( TestLogPub(kv.second, id, logAppPK, m) ){
 				_sessions.visit( kv.first, [&](auto&& kv){
@@ -118,8 +122,8 @@ namespace Jde::App{
 		vector<Proto::FromClient::Instance> y;
 		_sessions.visit_all( [&]( auto&& kv ){
 			auto& session = kv.second;
-			if( session->Instance().application()==name )
-				y.push_back( session->Instance() );
+			if( let instance = session->Instance(); instance.application()==name )
+				y.push_back( instance );
 		} );
 		return y;
 	}
@@ -157,7 +161,7 @@ namespace Jde::App{
 
 	α Server::SubscribeLogs( string&& qlText, sp<ServerSocketSession> session )ε->void{
 		auto ql = QL::Parse( qlText, Schemas() );
-		auto tables = ql.IsTableQL() ? move(ql.TableQLs()) : vector<QL::TableQL>{};
+		auto tables = ql.IsQueries() ? move(ql.Queries()) : vector<QL::TableQL>{};
 		THROW_IF( tables.size()!=1, "Invalid query, expecting single table" );
 		auto table = move( tables.front() );
 		THROW_IF( table.JsonName!="logs", "Invalid query, expecting logs query" );

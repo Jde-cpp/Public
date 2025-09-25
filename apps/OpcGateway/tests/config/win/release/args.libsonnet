@@ -4,7 +4,7 @@
 	dbDriver: "$(JDE_BUILD_DIR)/msvc/jde/libs/opc/bin/RelWithDebInfo/Jde.DB.Odbc.dll",
 	dbConnectionString: "DSN=OpcTestsRelease",
 	opc:{
-		urn: "urn:JDE-CPP:Kepware.KEPServerEX.V6:UA%20Server",
+		urn: "urn:open62541.server.application",
 		url: "opc.tcp://127.0.0.1:49320"
 	},
 	catalogs: {

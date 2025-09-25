@@ -28,6 +28,7 @@ namespace Jde::Process{
 	Φ ExitException( exception&& e )ι->int;
 	Φ SetExitReason( int reason, bool terminate )ι->void;
 	Φ Shutdown( int exitReason )ι->void;
+	Φ StartTime()ι->TimePoint;
 	Φ ShuttingDown()ι->bool;
 	Φ Finalizing()ι->bool;
 	Ŧ AddPollster( /*bool appThread*/ )ι->sp<T>;
@@ -76,7 +77,7 @@ namespace Jde{
 		Ω AddActiveWorker( Threading::IPollWorker* pWorker )ι->void;
 		Ω RemoveActiveWorker( Threading::IPollWorker* p )ι->void;
 
-		constexpr static sv ProductVersion="2024.08.01";
+		constexpr static sv ProductVersion="2025.09.01";
 	protected:
 
 		Ω OnTerminate()ι->void;

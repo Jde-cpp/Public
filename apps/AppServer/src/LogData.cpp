@@ -69,20 +69,20 @@ namespace Server{
 
 }
 	#define _pQueue if( auto p = _pDbQueue; p )p
-	α Server::SaveString( Proto::FromClient::EFields field, StringPK id, string value, SL sl )ι->void{
+	α Server::SaveString( Proto::FromClient::EFields field, StringMd5 id, string value, SL sl )ι->void{
 		sv table = "log_messages";
 		if( field==Proto::FromClient::EFields::FileId )
 			table = "log_files";
 		else if( field==Proto::FromClient::EFields::FunctionId )
 			table = "log_functions";
 		else if( field!=Proto::FromClient::EFields::MessageId ){
-			ERRX( "unknown field '{}'.", (int)field );
+			//ERRX( "unknown field '{}'.", (int)field );
 			return;
 		}
 		DB::Sql sql{ Ƒ( "insert into {}(id,value)values(?,?)", table ) };
 		//ASSERT( Calc32RunTime(*pValue)==id );
-		if( Calc32RunTime(value)!=id )
-			return ERRX( "id '{}' does not match crc of '{}'", id, value );//locks itself on server log.
+		//if( Calc32RunTime(value)!=id )
+			//return ERRX( "id '{}' does not match crc of '{}'", id, value );//locks itself on server log.
 		sql.Params.push_back( {id} );
 		sql.Params.push_back( {move(value)} );
 		_pQueue->Push( move(sql), sl );
@@ -136,8 +136,8 @@ namespace Jde{
 		return pApplications;
 	}
 */
-	α App::SaveMessage( AppPK applicationId, AppInstancePK instanceId, const Proto::FromClient::LogEntry& m, const vector<string>* variables, SL sl )ι->void{
-		let variableCount = std::min( (uint)5, variables ? variables->size() : 0 );
+	α App::SaveMessage( AppPK applicationId, AppInstancePK instanceId, const Proto::FromClient::LogEntry& m, SL sl )ι->void{
+		let variableCount = std::min( 5, m.args().size() );
 		vector<DB::Value> params{
 			{applicationId},
 			{instanceId},
@@ -146,7 +146,7 @@ namespace Jde{
 			{m.line()},
 			{m.message_id()},
 			{(uint8)m.level()},
-			{m.thread_id()},
+//			{m.thread_id()},
 			{Jde::Proto::ToTimePoint(m.time())},
 			{m.user_pk()} };
 		constexpr sv procedure = "log_message_insert"sv;
@@ -156,9 +156,9 @@ namespace Jde{
 		if( variableCount>0 )
 			os << variableCount;
 		os << args;
-		for( uint i=0; i<variableCount; ++i ){
+		for( int i=0; i<variableCount; ++i ){
 			os << ",?";
-			params.push_back( {(*variables)[i]} );
+			params.push_back( {m.args()[i]} );
 		}
 		os << ")";
 		_pQueue->Push( {os.str(), params, true}, sl );
@@ -197,22 +197,22 @@ namespace Jde{
 			return traces;
 		}
 
-		Ω loadStrings( str tableName, SRCE )ε->concurrent_flat_map<uint32,string>{
+		Ω loadStrings( str tableName, SRCE )ε->concurrent_flat_map<uuid,string>{
 			let& table = _logSchema->GetTablePtr( tableName );
 			DB::Statement statement{ table->Columns, DB::FromClause{DB::Join{table->GetPK(), _logSchema->GetTablePtr("entries")->GetPK(), true}}, {} };
 			auto rows = ds().Select( {statement.Move()}, sl );
-			concurrent_flat_map<uint32,string> map;
+			concurrent_flat_map<uuid,string> map;
 			for( auto&& row : rows )
-				map.emplace( row.GetUInt(0), move(row.GetString(1)) );
+				map.emplace( row.GetGuid(0), move(row.GetString(1)) );
 			return map;
 		}
-		Ω loadFiles( SL sl )ε->concurrent_flat_map<uint32,string>{
+		Ω loadFiles( SL sl )ε->concurrent_flat_map<uuid,string>{
 			return loadStrings( "source_files", sl );
 		}
-		Ω loadFunctions( SL sl )ε->concurrent_flat_map<uint32,string>{
+		Ω loadFunctions( SL sl )ε->concurrent_flat_map<uuid,string>{
 			return loadStrings( "source_functions", sl );
 		}
-		Ω loadMessages( SL sl )ε->concurrent_flat_map<uint32,string>{
+		Ω loadMessages( SL sl )ε->concurrent_flat_map<uuid,string>{
 			return loadStrings( "messages", sl );
 		}
 

@@ -1,0 +1,17 @@
+@if( viewPromise | async ) {
+	<ng-container>
+		<mat-toolbar>
+			<span></span>
+			@if( showAdd ){
+				<button mat-icon-button color="primary" style="margin-left :20px; margin-right:10px" (click)="insert()"><mat-icon>add</mat-icon></button>
+			}
+			<button mat-icon-button color="primary" [disabled]="!haveSelection" [title]='selection?.deleted ? "Restore" : "Properties"' style="margin-left :20px; margin-right:10px" (click)="edit()" ><mat-icon>{{selection?.deleted ? "restore" : "edit_attributes"}}</mat-icon></button>
+			<button mat-icon-button color="primary" [disabled]="!haveSelection" style="margin-left :20px; margin-right:10px" (click)="delete()"><mat-icon>{{selection?.deleted ? "delete_forever" : "remove"}}</mat-icon></button>
+			<span></span>
+			<mat-checkbox [checked]="showDeleted" color="primary" (change)="toggleShowDeleted()">Show Deleted</mat-checkbox>
+		</mat-toolbar>
+		<div style="align-content: center; margin: auto;  text-align: center">
+			<ql-table [dataSource]="data" [displayedColumns]="displayedColumns" [sort]="sort" [showDeleted]="showDeleted" [showDeletedEvents]="showDeletedSubject.asObservable()" [(selection)]="selection" (selectionChange)="selectionChange($event)"></ql-table>
+		</div>
+	</ng-container>
+}
