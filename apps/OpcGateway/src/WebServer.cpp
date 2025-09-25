@@ -29,7 +29,6 @@ namespace Gateway{
 	}
 
 	α RequestHandler::GetWebsocketSession( sp<Web::Server::RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<Web::Server::IWebsocketSession>{
-		Gateway::GatewaySocketSession x( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
 		auto session = ms<Gateway::GatewaySocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
 		_sessions.emplace( session->Id(), session );
 		return session;

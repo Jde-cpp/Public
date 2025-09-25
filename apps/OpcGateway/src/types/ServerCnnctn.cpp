@@ -13,7 +13,7 @@ namespace Jde::Opc::Gateway{
 		Id{ r.Get<uint32>(0) },
 		Url{ move(r.GetString(1)) },
 		CertificateUri{ move(r.GetString(2)) },
-		DefaultBrowseNs{ r.GetUInt16(4) },
+		DefaultBrowseNs{ r.GetUInt16Opt(4).value_or(0) },
 		IsDefault{ r.GetBit(3) },
 		Name{ move(r.GetString(5)) },
 		Target{ move(r.GetString(6)) }

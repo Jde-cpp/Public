@@ -60,7 +60,7 @@ namespace Jde::Opc::Server {
 
 		vector<UA_ByteString> trustedCerts;
 		for( let& sdir : Settings::FindStringArray("/opcServer/trustedCertDirs") ){
-			let dir = fs::path{ sdir };
+			const fs::path dir{ sdir };
 			if( !fs::exists(dir) || !fs::is_directory(dir) )
 				continue;
 			for( let& entry : fs::directory_iterator(dir) ){

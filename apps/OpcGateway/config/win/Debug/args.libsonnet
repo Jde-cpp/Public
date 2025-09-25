@@ -22,7 +22,7 @@
 							}
 						},
 						dbo:{
-							opc:{
+							gateway:{
 								meta: "$(JDE_DIR)/Public/apps/OpcGateway/config/opcGateway-meta.jsonnet",
 								prefix: "opc"  //test with null prefix, debug with prefix
 							}

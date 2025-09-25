@@ -89,7 +89,8 @@ namespace Jde::IO{
 		{
 			let [createTime, modifiedTime, lastAccessedTime] = GetTimes( dirEntry );
 			auto hFile = CreateFileW( WindowsPath(dir).c_str(), GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS, nullptr );  THROW_IFX( hFile==INVALID_HANDLE_VALUE, IOException(dir, GetLastError(), "Could not create.") );
-			LOG_IF( !SetFileTime(hFile, &createTime, &lastAccessedTime, &modifiedTime), ELogLevel::Warning, "Could not update dir times '{}' - {}.", dir.string(), GetLastError() );
+			if( !SetFileTime(hFile, &createTime, &lastAccessedTime, &modifiedTime) )
+				WARN( "Could not update dir times '{}' - {}.", dir.string(), GetLastError() );
 			CloseHandle( hFile );
 		}
 		return mu<DirEntry>( dir );

@@ -5,7 +5,7 @@
 #define let const auto
 int mp_vsnprintf(char* s, size_t count, const char* format, va_list arg); //open62541/deps/mp_printf.h
 namespace Jde::Opc{
-	constexpr array<sv,14> EOpcLogTagstrings{ "iot",
+	constexpr array<sv,14> EOpcLogTagstrings{ "opc",
 		"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
 		"monitoring", "browse", "processingLoop" };
 

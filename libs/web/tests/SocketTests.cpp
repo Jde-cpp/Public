@@ -166,7 +166,8 @@ namespace Jde::Web{
 		_clientSession = nullptr;
 		std::this_thread::sleep_for( 1s );
 		auto logs = Logging::Find( [=](const Logging::Entry& m){
-			return m.Arguments.size()==3 && m.Arguments[0]=="1" && m.Arguments[1]=="The WebSocket stream was gracefully closed at both endpoints" && m.Arguments[2]==Ƒ("[{:x}]Server::DoRead", sessionId);
+			return m.Text.contains("The WebSocket stream was gracefully closed at both endpoints")
+				&& m.Arguments.size()==1 && m.Arguments[0]==Ƒ( "[{:x}]Server::DoRead", sessionId );
 		});
 		ASSERT_TRUE( logs.size()>0 );
 		std::this_thread::sleep_for( 100ms );

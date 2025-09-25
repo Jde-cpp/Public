@@ -2,6 +2,8 @@
 #ifndef JSON_H
 #define JSON_H
 #include <expected>
+#include <jde/framework/exceptions/CodeException.h>
+
 #define Φ Γ α
 namespace Jde{
 	Φ operator<( const jvalue& a, const jvalue& b )ι->bool;

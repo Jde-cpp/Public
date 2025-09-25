@@ -19,9 +19,11 @@ TSetThreadDescription pSetThreadDescription = nullptr;
 		return;
 	}
 	pSetThreadDescription = reinterpret_cast<TSetThreadDescription>( ::GetProcAddress(hKernelBase, "SetThreadDescription") );
-	LOG_IF( !pSetThreadDescription, ELogLevel::Error, "FATAL: failed to get SetThreadDescription() address, error:  {:x}", ::GetLastError() );
+	if( !pSetThreadDescription )
+		CRITICAL( "FATAL: failed to get SetThreadDescription() address, error:  {:x}", ::GetLastError() );
 	pGetThreadDescription = reinterpret_cast<TGetThreadDescription>( ::GetProcAddress(hKernelBase, "GetThreadDescription") );
-	LOG_IF( !pGetThreadDescription, ELogLevel::Error, "FATAL: failed to get GetThreadDescription() address, error:  {:x}", ::GetLastError() );
+	if (!pGetThreadDescription)
+		CRITICAL( "FATAL: failed to get GetThreadDescription() address, error:  {:x}", ::GetLastError() );
 }
 
 Ω winSetThreadDscrptn( HANDLE h, Jde::sv ansiDescription )ι->void{

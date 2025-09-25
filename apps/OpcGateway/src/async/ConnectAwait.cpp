@@ -34,8 +34,10 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α ConnectAwait::Suspend()ι->void{
-		if( auto client = UAClient::Find(_opcTarget, _cred); client )
+		if( auto client = UAClient::Find(_opcTarget, _cred); client ){
+			Trace{ ((ELogTags)EOpcLogTags::Opc) | ELogTags::Access, "[{:x}]Found client for cred: {}", client->Handle(), _cred.ToString() };
 			base::Resume( move(client) );
+		}
 		else{
 			_requestMutex.lock();
 			auto opcHandles = _requests.try_emplace( _opcTarget ).first;

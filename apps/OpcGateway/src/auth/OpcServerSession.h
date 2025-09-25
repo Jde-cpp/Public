@@ -31,7 +31,7 @@ namespace Jde::Opc::Gateway{
 		α IsUser()Ι{ return Type()==ETokenType::Username; }
 		α LoginName()Ι->str;
 		α Password()Ι->str;
-		α ToString()Ι->string; //TODO - implement
+		α ToString()Ι->string;
 		α operator<( const Credential& other )Ι->bool;
 	private:
 		variant<nullptr_t, Gateway::Token, User, Crypto::PublicKey> _value;

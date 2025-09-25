@@ -33,7 +33,8 @@ namespace Jde::Windows{
 		if( _pInstance )
 		{
 			_pInstance->_queue.Push( {{move(h), close}, hEvent} );
-			LOG_IF( !::SetEvent(_pInstance->_eventQueue), ELogLevel::Error, "SetEvent returned false" );
+			if( !::SetEvent(_pInstance->_eventQueue) )
+				ERR( "SetEvent returned false" );
 		}
 	}
 
@@ -44,7 +45,8 @@ namespace Jde::Windows{
 		if( set )
 		{
 			_queue.Push( move(e) );
-			LOG_IF( !::SetEvent(_eventQueue), ELogLevel::Error, "SetEvent returned false" );
+			if( !::SetEvent(_eventQueue) )
+				ERR( "SetEvent returned false" );
 		}
 		return set;
 	}
@@ -92,7 +94,8 @@ namespace Jde::Windows{
 			waitResult = ::WaitForMultipleObjects( (DWORD)_objects.size(), _objects.data(), FALSE, INFINITE );
 			TRACE( "WaitForMultipleObjects - returned {}", waitResult );
 			if( waitResult==1 ){//_eventStop
-				LOG_IF( !::ResetEvent(_objects[waitResult]), ELogLevel::Error, "ResetEvent failed for event object" );
+				if( !::ResetEvent(_objects[waitResult]) )
+					ERR( "ResetEvent failed for event object" );
 				break;
 			}
 			ASSERT( false );//not sure of use case here.
@@ -117,9 +120,9 @@ namespace Jde::Windows{
 					}
 				}
 			}
-			else if( waitResult==_coroutines.size() )
-			{
-				LOG_IF( !::ResetEvent(_objects[waitResult]), ELogLevel::Error, "ResetEvent failed for event object" );
+			else if( waitResult==_coroutines.size() ){
+				if( !::ResetEvent(_objects[waitResult]) )
+					ERR( "ResetEvent failed for event object" );
 				vector<Event> events = _queue.PopAll();
 				for( auto& e : events )
 					HandleEvent( move(e) );
@@ -137,11 +140,11 @@ namespace Jde::Windows{
 					else
 						handled = false;
 				}
-				else
-					LOG_IF( stop, ELogLevel::Critical, "Exiting with {} coroutines waiting.", _coroutines.size() );
-				if( !handled )
-				{
-					LOG_IF(  waitResult==WAIT_FAILED, ELogLevel::Critical, "WaitForMultipleObjects returned {}", ::GetLastError() );
+				else if( stop )
+					CRITICAL( "Exiting with {} coroutines waiting.", _coroutines.size() );
+				if( !handled ){
+					if( waitResult==WAIT_FAILED )
+						CRITICAL( "WaitForMultipleObjects returned {}", ::GetLastError() );
 					ASSERT_DESC( false, format("Unknown result:  {}, count={}", waitResult, _objects.size()) );
 				}
 			}
@@ -174,7 +177,8 @@ namespace Jde::Windows{
 			Debug{ tags, "({})Stopping", exitCode };
 			Process::Shutdown( exitCode );
 			Debug{ tags, "({})Shutdown Complete", exitCode };
-			LOG_IF( !::SetEvent(_pInstance->_eventStop), ELogLevel::Error, "SetEvent returned false" );
+			if( !::SetEvent(_pInstance->_eventStop) )
+				ERR( "SetEvent returned false" );
 		}
 		else
 			WARN( "Stopping but no instance" );
