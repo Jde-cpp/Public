@@ -12,7 +12,7 @@
 #define let const auto
 namespace Jde::DB{
 	struct IDataSource;
-	using namespace Coroutine;
+//	using namespace Coroutine;
 	using RowΛ=function<void( Row&& )ε>;
 	Τ using CoRowΛ=function<void( T& pResult, Row&& r )ε>;
 

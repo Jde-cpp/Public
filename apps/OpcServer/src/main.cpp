@@ -14,7 +14,7 @@ std::optional<int> _exitCode;
 	Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
 	int exitCode;
 	try{
-		OSApp::Startup( argc, argv, "Jde.OpcServer", "OpcServer" );
+		Process::Startup( argc, argv, "Jde.OpcServer", "OpcServer" );
 		let webServerSettings = Settings::FindObject( "/http" );
 		BlockVoidAwait( Opc::Server::StartupAwait{webServerSettings ? *webServerSettings : jobject{}, Settings::AsObject("/credentials")} );
 		exitCode = Process::Pause();

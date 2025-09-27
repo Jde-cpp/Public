@@ -35,10 +35,11 @@ namespace Jde{
 #define ARGS const Args&
 
 namespace Jde::Logging{
-	struct ILogger;
+	struct ILogger; struct MemoryLog;
 	Φ LogException( const IException& e )ι->void;
 	Φ DestroyLoggers()->void;
 	Φ Loggers()->const vector<up<ILogger>>&;
+	Φ MemoryLogger()ε->MemoryLog&;
 	Φ AddLogger( up<ILogger>&& logger )->void;
 	Φ Initialize()ι->void;
 	Φ ClientMinLevel()ι->ELogLevel;

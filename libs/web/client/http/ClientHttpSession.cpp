@@ -20,7 +20,7 @@ namespace Jde::Web::Client{
 	}
 	ssl::context _ctx{ ssl::context::tlsv12_client };// The SSL context is required, and should hold certificates
 	ELogTags _tags{ ELogTags::HttpClientWrite };
-	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
+	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 
 	ClientHttpSession::ClientHttpSession( str host, PortType port, net::any_io_executor strand, bool isPlain, bool log, SL sl )ε:
 		Host{ host }, Port{ port }, IsSsl{ false }, _log{log}, _resolver{ strand },

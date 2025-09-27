@@ -7,39 +7,40 @@
 #include <jde/framework/process.h>
 #include "../../Framework/source/threading/InterruptibleThread.h"
 #include "LinuxDrive.h"
+#include <jde/framework/io/FileAwait.h>
 
 #define let const auto
 namespace Jde{
 	auto _tag{ ELogTags::App };
-	α OSApp::FreeLibrary( void* p )ι->void{
+	α Process::FreeLibrary( void* p )ι->void{
 		::dlclose( p );
 	}
 
-	α OSApp::LoadLibrary( const fs::path& path )ε->void*{
+	α Process::LoadLibrary( const fs::path& path )ε->void*{
 		auto p = ::dlopen( path.c_str(), RTLD_LAZY );
 		THROW_IFX( !p, IO_EX(path, ELogLevel::Error, "Can not load library - '{}'", dlerror()) );
 		Information( _tag, "[{}] Opened"sv, path.string() );
 		return p;
 	}
-	α OSApp::GetProcAddress( void* pModule, str procName )ε->void*{
+	α Process::GetProcAddress( void* pModule, str procName )ε->void*{
 		auto p = ::dlsym( pModule, procName.c_str() ); CHECK( p );
 		return p;
 	}
-	α OSApp::Install( str /*serviceDescription*/ )ε->void{
+	α Process::Install( str /*serviceDescription*/ )ε->void{
 		THROW( "Not Implemeented" );
 	}
-	α OSApp::UnPause()ι->void{
+	α Process::UnPause()ι->void{
 		::raise( SIGKILL );
 	}
-	α OSApp::Uninstall()ε->void{
+	α Process::Uninstall()ε->void{
 		THROW( "Not Implemeented");
 	}
 
-	α OSApp::Executable()ι->fs::path{
+	α Process::Executable()ι->fs::path{
 		return fs::path{ program_invocation_name };
 	}
 
-	α IApplication::AddApplicationLog( ELogLevel level, str value )ι->void{ //called onterminate, needs to be static.
+	α Process::AddApplicationLog( ELogLevel level, str value )ι->void{ //called onterminate, needs to be static.
 		auto osLevel = LOG_DEBUG;
 		if( level==ELogLevel::Debug )
 			osLevel = LOG_INFO;
@@ -55,8 +56,7 @@ namespace Jde{
 	}
 	const string _companyName{ "Jde-Cpp" }; string _productName{ "productName" };
 	α Process::CompanyName()ι->string{ return _companyName; }
-	//α OSApp::ProductName()ι->sv{ return _productName; }  //use in main.cpp
-	α IApplication::MemorySize()ι->size_t{//https://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-runtime-using-c
+	α Process::MemorySize()ι->size_t{//https://stackoverflow.com/questions/669438/how-to-get-memory-usage-at-runtime-using-c
 		uint size = 0;
 		FILE* fp = fopen( "/proc/self/statm", "r" );
 		if( fp!=nullptr ){
@@ -68,35 +68,41 @@ namespace Jde{
 		return size;
 	}
 
-	α IApplication::ExePath()ι->fs::path{ return fs::canonical( "/proc/self/exe" ); }
+	α Process::ExePath()ι->fs::path{ return fs::canonical( "/proc/self/exe" ); }
 
-	string IApplication::HostName()ι{
+	α Process::HostName()ι->string{
 		constexpr uint maxHostName = HOST_NAME_MAX;
 		char hostname[maxHostName];
 		::gethostname( hostname, maxHostName );
 		return hostname;
 	}
 
-	uint OSApp::ProcessId()ι{ return getpid(); }
+	uint Process::ProcessId()ι{ return getpid(); }
 
-	α OSApp::Startup( int argc, char** argv, sv appName, string serviceDescription, optional<bool> console )ε->flat_set<string>{
-		auto pInstance = ms<OSApp>();
-		IApplication::SetInstance( pInstance );
+/*	α Process::Startup( int argc, char** argv, sv appName, string serviceDescription, optional<bool> console )ε->flat_set<string>{
+
+//		auto pInstance = ms<OSApp>();
+//		IApplication::SetInstance( pInstance );
 		return pInstance->BaseStartup( argc, argv, appName, serviceDescription, console );
 	}
-	atomic<bool> _workerMutex{false};
-	vector<sp<Threading::IWorker>> _workers;
+*/
+//	atomic<bool> _workerMutex{false};
+//	vector<sp<Threading::IWorker>> _workers;
 
-	α OSApp::Pause()ι->void{
-		::pause();
+	α Process::Pause()ι->int{
+		Information{ ELogTags::App, "Pausing main thread." };
+		let exitReason = ::pause();
+		Information{ ELogTags::App, "Pause returned = {}.", exitReason };
+		Shutdown( exitReason );
 		std::cout << "pause returned" << std::endl;
+		return exitReason;
 	}
 
-	bool OSApp::AsService()ι{
+	bool Process::AsService()ι{
 		return ::daemon( 1, 0 )==0;
 	}
 
-	α IApplication::OnTerminate()ι->void{
+	α Process::OnTerminate()ι->void{
 		void *trace_elems[20];
 		auto trace_elem_count( backtrace(trace_elems, 20) );
 		char **stack_syms( backtrace_symbols(trace_elems, trace_elem_count) );
@@ -104,21 +110,21 @@ namespace Jde{
 		for( auto i = 0; i < trace_elem_count ; ++i )
 			os << stack_syms[i] << std::endl;
 
-		IApplication::AddApplicationLog( ELogLevel::Critical, os.str() );
+		Process::AddApplicationLog( ELogLevel::Critical, os.str() );
 		free( stack_syms );
 		exit( EXIT_FAILURE );
 	}
 
-	α IApplication::EnvironmentVariable( str variable, SL /*sl*/ )ι->optional<string>{
+	α Process::EnvironmentVariable( str variable, SL /*sl*/ )ι->optional<string>{
 		char* pEnv = std::getenv( string{variable}.c_str() );
 		return pEnv ? string{pEnv} : optional<string>{};
 	}
 
-	α IApplication::ProgramDataFolder()ι->fs::path{
+	α Process::ProgramDataFolder()ι->fs::path{
 		return fs::path{ EnvironmentVariable("HOME").value_or("/") };
 	}
 
-	α OSApp::ExitHandler( int s )->void{
+	α Process::ExitHandler( int s )->void{
 		std::cout << "Caught signal " << s << std::endl;
 		if( !Process::ExitReason() )
 			Process::SetExitReason( s, s==SIGTERM );
@@ -132,7 +138,7 @@ namespace Jde{
 		//exit( 1 );
 	}
 
-	α OSApp::KillInstance( uint processId )ι->bool{
+	α Process::Kill( uint processId )ι->bool{
 		let result = ::kill( processId, 14 ); //SIGALRM
 		if( result )
 			Error{ _tag, "kill failed with '{}'.", result };
@@ -168,33 +174,34 @@ namespace Jde{
 		return *_args;
 	}
 
-	α OSApp::CompanyRootDir()ι->fs::path{ return fs::path{ "."+Process::CompanyName() }; };
+	α Process::CompanyRootDir()ι->fs::path{ return fs::path{ "."+Process::CompanyName() }; };
 
-	α OSApp::AddSignals()ε->void{/*ε for windows*/
+	α Process::AddSignals()ε->void{/*ε for windows*/
 /* 		struct sigaction sigIntHandler;//_XOPEN_SOURCE
 		memset( &sigIntHandler, 0, sizeof(sigIntHandler) );
 		sigIntHandler.sa_handler = ExitHandler;
 		sigemptyset( &sigIntHandler.sa_mask );
 		sigIntHandler.sa_flags = 0;*/
-		::signal( SIGINT, OSApp::ExitHandler );
-		::signal( SIGSTOP, OSApp::ExitHandler );
-		::signal( SIGKILL, OSApp::ExitHandler );
-		::signal( SIGTERM, OSApp::ExitHandler );
-		::signal( SIGALRM, OSApp::ExitHandler );
-		::signal( SIGUSR1, OSApp::ExitHandler );
+		::signal( SIGINT, Process::ExitHandler );
+		::signal( SIGSTOP, Process::ExitHandler );
+		::signal( SIGKILL, Process::ExitHandler );
+		::signal( SIGTERM, Process::ExitHandler );
+		::signal( SIGALRM, Process::ExitHandler );
+		::signal( SIGUSR1, Process::ExitHandler );
 		//sigaction( SIGSTOP, &sigIntHandler, nullptr );
 		//sigaction( SIGKILL, &sigIntHandler, nullptr );
 		//sigaction( SIGTERM, &sigIntHandler, nullptr );
 
-		struct sigaction sa;
+/*		struct sigaction sa;
 		memset( &sa, 0, sizeof(sa) );
 	  sa.sa_flags = SA_RESTART | SA_SIGINFO;
 		sa.sa_sigaction = IO::AioCompletionHandler;
 		sigemptyset( &sa.sa_mask );
 		THROW_IF( ::sigaction(IO::CompletionSignal, &sa, nullptr)==-1,  "init AsyncIO sigaction({}) returned {}", IO::CompletionSignal, errno );
+*/
 	}
 
-	α OSApp::SetConsoleTitle( sv title )ι->void{
+	α Process::SetConsoleTitle( sv title )ι->void{
 		std::cout << "\033]0;" << title << "\007";
 	}
 

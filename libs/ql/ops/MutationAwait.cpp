@@ -13,7 +13,7 @@
 
 #define let const auto
 namespace Jde::QL{
-	using namespace Coroutine;
+//	using namespace Coroutine;
 	using namespace DB::Names;
 
 	constexpr ELogTags _tags{ ELogTags::QL };

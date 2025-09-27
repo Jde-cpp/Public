@@ -116,7 +116,7 @@ namespace Jde::App{
 	}
 	α Server::BroadcastAppStatus()ι->void{
 		FromClient::Status( {} );
-		BroadcastStatus( GetAppPK(), _instancePK, IApplication::HostName(), FromClient::ToStatus({}) );
+		BroadcastStatus( GetAppPK(), _instancePK, Process::HostName(), FromClient::ToStatus({}) );
 	}
 	α Server::FindApplications( str name )ι->vector<Proto::FromClient::Instance>{
 		vector<Proto::FromClient::Instance> y;

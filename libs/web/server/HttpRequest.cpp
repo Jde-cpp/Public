@@ -13,8 +13,8 @@ namespace Jde::Web{
 		return _accessControlAllowOrigin;
 	}
 
-	string _plainVersion{ Ƒ("({})Jde.Web.Server - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
-	string _sslVersion{ Ƒ("({})Jde.Web.Server SSL - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
+	string _plainVersion{ Ƒ("({})Jde.Web.Server - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
+	string _sslVersion{ Ƒ("({})Jde.Web.Server SSL - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 	α Server::ServerVersion( bool isSsl )ι->string{ return isSsl ? _sslVersion : _plainVersion; }//TODO cache
 }
 

@@ -2,6 +2,7 @@
 #ifndef TASK_OLD_H
 #define TASK_OLD_H
 
+#ifdef Unused
 #define Φ Γ auto
 namespace Jde::Coroutine{
 	typedef uint Handle;
@@ -152,4 +153,5 @@ namespace Jde::Coroutine{
 	}
 }
 #undef Φ
+#endif
 #endif

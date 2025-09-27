@@ -57,8 +57,8 @@ namespace Jde::App{
 		i.set_application( application );
 		i.set_instance_name( instanceName );
 		i.set_session_id( sessionId );
-		i.set_host( IApplication::HostName() );
-		i.set_pid( OSApp::ProcessId() );
+		i.set_host( Process::HostName() );
+		i.set_pid( Process::ProcessId() );
 		*i.mutable_start_time() = Jde::Proto::ToTimestamp( Process::StartTime() );
 		i.set_web_port( Settings::FindNumber<PortType>("/http/port").value_or(0) );
 
@@ -78,7 +78,7 @@ namespace Jde::App{
 	α FromClient::ToStatus( vector<string>&& details )ι->PFromClient::Status{
 		PFromClient::Status y;
 		*y.mutable_start_time() = Jde::Proto::ToTimestamp( Process::StartTime() );
-		y.set_memory( IApplication::MemorySize() );
+		y.set_memory( Process::MemorySize() );
 		for_each( details, [&y](auto&& detail){ y.add_details(move(detail)); } );
 		return y;
 	}
@@ -87,7 +87,7 @@ namespace Jde::App{
 		PFromClient::Transmission t;
 		auto& status = *t.add_messages()->mutable_status() = ToStatus( move(details) );
 		*status.mutable_start_time() = Jde::Proto::ToTimestamp( Process::StartTime() );
-		status.set_memory( IApplication::MemorySize() );
+		status.set_memory( Process::MemorySize() );
 		for_each( details, [&status](auto&& detail){ status.add_details(move(detail)); } );
 		return t;
 	}

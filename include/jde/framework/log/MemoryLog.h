@@ -13,10 +13,11 @@ namespace Jde::Logging{
 		MemoryLog()ι:ILogger{ {{"default", "Trace"}} }{}
 		α Write( const Entry& m )ι->void override;
 		α Write( ILogger& logger )ι->void;
-		α Name()ι->string override{ return "MemoryLog"; }
+		α Name()Ι->string override{ return "MemoryLog"; }
 		α SetMinLevel( ELogLevel /*level*/ )ι->void override{}
 		α Clear()ι->void{ _entries.clear(); }
 		α Find( StringMd5 id )ι->vector<Logging::Entry>;
+		α Find( string text )ι->vector<Logging::Entry>;
 		α Find( function<bool(const Logging::Entry&)> f )ι->vector<Logging::Entry>;
 	private:
 		Vector<Logging::Entry> _entries;
