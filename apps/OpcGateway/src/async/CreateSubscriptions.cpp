@@ -1,4 +1,5 @@
 ﻿#include "CreateSubscriptions.h"
+#include <jde/framework/thread/execution.h>
 #include "../UAClient.h"
 #define let const auto
 
@@ -53,7 +54,7 @@ namespace Jde::Opc::Gateway{
 		Resume( pClient, [pClient](CreateSubscriptionAwait::Handle h)
 		{
 			h.promise().SetValue( sp<UA_CreateSubscriptionResponse>{pClient->CreatedSubscriptionResponse} );
-			Coroutine::CoroutinePool::Resume( move(h) ); //Cannot run EventLoop from the run method itself
+			Post( h ); //Cannot run EventLoop from the run method itself
 		});
 	}
 	α CreateSubscriptionAwait::Resume( UAException&& e, sp<UAClient>&& pClient )ι->void{

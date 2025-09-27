@@ -1,4 +1,6 @@
 #pragma once
+#ifndef LOGGER
+#define LOGGER
 #include <stacktrace>
 #ifndef _MSC_VER
 	#include <signal.h>
@@ -70,7 +72,19 @@ namespace Jde{
 	template<class... Args> \
 	Level( ELogTags tags, FormatString&&, ARGS... )->Level<Args...>
 
-	LoggerLevel( Trace );
+	template<typename... Args>
+	struct Trace : Logging::Logger<ELogLevel::Trace,Args...>{
+    explicit Trace(ELogTags tags, FormatString&& m, ARGS... args, SRCE):
+			Logging::Logger<ELogLevel::Trace,Args...>{ tags, FWD(m), FWD(args)..., sl }
+		{}
+    explicit Trace( SL sl, ELogTags tags, FormatString&& m, ARGS... args ):
+			Logging::Logger<ELogLevel::Trace,Args...>{ tags, FWD(m), FWD(args)..., sl }
+		{}
+	};
+	template<class... Args>
+	Trace( ELogTags tags, FormatString&&, ARGS... )->Trace<Args...>;
+
+//	LoggerLevel( Trace );
 	LoggerLevel( Debug );
 	LoggerLevel( Information );
 	LoggerLevel( Warning );
@@ -135,3 +149,4 @@ namespace Jde::Logging{
 #undef ARGS
 #undef let
 #undef Φ
+#endif

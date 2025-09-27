@@ -53,13 +53,16 @@ namespace Jde{
 	struct Γ LogTags{
 		LogTags( jobject o )ι;
 		LogTags( ELogLevel defaultLevel=ELogLevel::Information ):_minLevel{defaultLevel},_defaultLevel{defaultLevel}{}
+		β Name()Ι->string{ return "Cumulative"; }
 		β MinLevel()Ι->ELogLevel{ return _minLevel; }
 		β MinLevel( ELogTags tags )Ι->ELogLevel;
 		β SetMinLevel( ELogLevel level )ι->void{ _minLevel = level; }
+		α SetLevel( ELogTags tags, ELogLevel level )ι->void;
 		β ShouldLog( ELogLevel level, ELogTags tags )Ι->bool;
 		β ToString()ι->string;
 	protected:
-		mutable concurrent_flat_map<ELogTags,ELogLevel> Tags;
+		concurrent_flat_map<ELogTags,ELogLevel> ConfiguredTags;
+		mutable concurrent_flat_map<ELogTags,ELogLevel> ExtrapolatedTags;
 		ELogLevel	_minLevel;
 		ELogLevel _defaultLevel;
 		friend α Logging::UpdateCumulative( const vector<up<Logging::ILogger>>& loggers )ι->void;

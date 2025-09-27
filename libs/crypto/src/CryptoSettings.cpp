@@ -8,7 +8,7 @@ namespace Jde::Crypto{
 			return fs::path{ *filePath };
 
 		auto productName = Json::FindString( settings, "productName" ).value_or( string{Process::ProductName()} );
-		return IApplication::ProgramDataFolder()/OSApp::CompanyRootDir()/productName/"ssl"/dflt;
+		return Process::ProgramDataFolder()/Process::CompanyRootDir()/productName/"ssl"/dflt;
 	}
 
 	CryptoSettings::CryptoSettings( str prefix )ι:

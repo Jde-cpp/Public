@@ -11,12 +11,18 @@
 #endif
 #include <jde/framework/coroutine/Await.h>
 
+#define Φ Γ auto
+
 namespace Jde::IO{
+	Φ Init()ι->void;
+#ifndef _MSC_VER
+	α LinuxInit()ι->void;
+#endif
+
+	Φ ChunkByteSize()ι->uint32;
+	Φ ThreadSize()ι->uint8;
+
 	struct FileIOArg;
-
-	Γ α ChunkByteSize()ι->uint32;
-	Γ α ThreadSize()ι->uint8;
-
 	struct IFileChunkArg{
 		IFileChunkArg( sp<FileIOArg>& arg, uint index ):
 			Index{index},
@@ -45,6 +51,8 @@ namespace Jde::IO{
 		α PostExp( up<IFileChunkArg>&& chunk, uint32 code, string&& msg )ι->void;
 		α ResumeExp( uint32 code, string&& msg )ι->void;
 		α ResumeExp( uint32 code, string&& m, lg& chunkLock )ι->void;
+		//α Key()Ι->uint8{ return std::hash<fs::path>{}( Path ); }
+
 		//α ResumeExp( exception&& e )ι->void;
 		//α ResumeExp( exception&& e, lg& chunkLock )ι->void;
 
@@ -87,4 +95,5 @@ namespace Jde::IO{
 		bool _create;
 	};
 }
+#undef Φ
 #endif

@@ -33,7 +33,7 @@ namespace Jde::Opc::Gateway{
 		α WriteException( exception&& e, Jde::RequestId requestId )ι->void override;
 		α WriteException( IException&& e )ι->void{ WriteException( move(e), 0 ); }
 
-		α GraphQL( string&& query, uint requestId )ι->Task;
+		α GraphQL( string&& query, uint requestId )ι->TAwait<jvalue>::Task;
 		α SendAck( uint32 id )ι->void override;
 	};
 }

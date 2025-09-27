@@ -14,7 +14,7 @@
 	Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5( text ); } );
 	int exitCode{ EXIT_FAILURE };
 	try{
-		OSApp::Startup( argc, argv, "Jde.OpcGateway", "IOT Connection" );
+		Process::Startup( argc, argv, "Jde.OpcGateway", "IOT Connection" );
 		let webServerSettings = Settings::FindObject("/http");
 		let userName = Settings::FindObject("/credentials");
 		BlockVoidAwait( Opc::Gateway::StartupAwait{webServerSettings ? *webServerSettings : jobject{}, userName ? *userName : jobject{}} );

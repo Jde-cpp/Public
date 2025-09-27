@@ -23,15 +23,15 @@ namespace Jde{
 	struct DllHelper{
 		DllHelper( const fs::path& path )ε:
 			_path{path},
-			_module{ (HMODULE)OSApp::LoadLibrary(path) }
+			_module{ (HMODULE)Process::LoadLibrary(path) }
 		{}
 
 		~DllHelper(){
-			OSApp::FreeLibrary( _module );
+			Process::FreeLibrary( _module );
 		}
 
 		α operator[](str procName)Ε->ProcPtr{
-			return ProcPtr( (FARPROC)OSApp::GetProcAddress(_module, procName) );
+			return ProcPtr( (FARPROC)Process::GetProcAddress(_module, procName) );
 		}
 	private:
 		fs::path _path;

@@ -3,6 +3,7 @@
 #include <jde/db/generators/Functions.h>
 #include "../../../../Framework/source/threading/InterruptibleThread.h"
 
+#ifdef Unused
 #define let const auto
 namespace Jde::DB{
 	QStatement::QStatement( Sql&& sql, SL sl ):
@@ -53,3 +54,4 @@ namespace Jde::DB{
 		Trace{ ELogTags::App, "DBQueue::Run - Stopped" };
 	}
 }
+#endif

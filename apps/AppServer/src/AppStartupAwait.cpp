@@ -12,7 +12,7 @@ namespace Jde::App::Server{
 		try{
 			Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
 			co_await ConfigureDSAwait{};
-			SetAppPKs( AddInstance("Main", IApplication::HostName(), OSApp::ProcessId()) );
+			SetAppPKs( AddInstance("Main", Process::HostName(), Process::ProcessId()) );
 
 			Data::LoadStrings();
 			auto appClient = AppClient();

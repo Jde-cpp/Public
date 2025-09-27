@@ -27,7 +27,7 @@ namespace Jde::Opc::Gateway{
 		_webServerSettings{move(webServerSettings)},
 		_userName{move(userName)}{
 		if( _userName.empty() )
-			_userName = jobject{ {"name", Ƒ("OpcGateway-{}", IApplication::HostName())} };
+			_userName = jobject{ {"name", Ƒ("OpcGateway-{}", Process::HostName())} };
 	}
 
 	α StartupAwait::Execute()ι->VoidAwait::Task{

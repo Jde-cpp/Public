@@ -6,10 +6,10 @@
 #include "../../Framework/source/coroutine/Awaitable.h"
 #include <jde/framework/io/file.h>
 
-using namespace Jde::Coroutine;
+//using namespace Jde::Coroutine;
 namespace Jde::IO{
-	constexpr int CompletionSignal{ SIGUSR2 };
-	α AioCompletionHandler( int signo, siginfo_t *info, void *context )ι->void;
+	//constexpr int CompletionSignal{ SIGUSR2 };
+	//α AioCompletionHandler( int signo, siginfo_t *info, void *context )ι->void;
 }
 
 namespace Jde::IO::Drive{

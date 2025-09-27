@@ -6,7 +6,7 @@
 #include <jde/db/generators/Sql.h>
 #include "../../../../Framework/source/collections/Queue.h"
 
-
+#ifdef Unused
 namespace Jde::Threading{struct InterruptibleThread;}
 namespace Jde::DB{
 
@@ -31,3 +31,4 @@ namespace Jde::DB{
 		std::atomic<bool> _stopped{false};
 	};
 }
+#endif
