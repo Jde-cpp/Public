@@ -69,7 +69,7 @@ namespace Jde::Web::Client{
 		_connectHandle = h;
 		_host = host;
 		net::post( *_ioContext, [=, self=shared_from_this()]{
-			Trace{ _connectPedanticTag, "[{}:{}]resolve socket.", self->_host, port };
+			TRACET( _connectPedanticTag, "[{}:{}]resolve socket.", self->_host, port );
 			beast::error_code ec;
 			auto results = self->_resolver.resolve( self->_host, std::to_string(port), ec );//async_resolve starts another thread.
 			//_resolver.async_resolve( _host, std::to_string(port_), beast::bind_front_handler(&IClientSocketSession::OnResolve, shared_from_this()) );// Look up the domain name
@@ -79,17 +79,17 @@ namespace Jde::Web::Client{
 
 	α IClientSocketSession::OnResolve( beast::error_code ec, tcp::resolver::results_type results )ι->void{
 		CHECK_EC( _writeTag )
-		Trace{ _connectPedanticTag, "[{}]resolve succeeded.", _host };
+		TRACET( _connectPedanticTag, "[{}]resolve succeeded.", _host );
 		_stream->OnResolve( results, shared_from_this() );
 	}
 
 	α IClientSocketSession::OnConnect( beast::error_code ec, tcp::resolver::results_type::endpoint_type ep )ι->void{
 		CHECK_EC( _readTag )
-		Trace{ _connectPedanticTag, "[{}]connect succeeded.", _host };
+		TRACET( _connectPedanticTag, "[{}]connect succeeded.", _host );
 		_stream->OnConnect( ep, _host, shared_from_this() );
 	}
 	α IClientSocketSession::OnMessage( string&& j, RequestId requestId )ι->void{
-		Trace{ _readTag | ELogTags::Pedantic, "[{:x}]OnMessage", requestId, j.substr(0, MaxLogLength()) };
+		TRACET( _readTag | ELogTags::Pedantic, "[{:x}]OnMessage", requestId, j.substr(0, MaxLogLength()) );
 		try{
 			Subscriptions::OnWebsocketReceive( Json::Parse(j), requestId );
 		}
@@ -99,13 +99,13 @@ namespace Jde::Web::Client{
 	}
 	α IClientSocketSession::OnSslHandshake( beast::error_code ec )ι->void{
 		CHECK_EC( _readTag )
-		Trace{ _connectPedanticTag, "[{}]SslHandshake succeeded.", _host };
+		TRACET( _connectPedanticTag, "[{}]SslHandshake succeeded.", _host );
 		_stream->AfterHandshake( _host, shared_from_this() );
 	}
 
 	α IClientSocketSession::OnHandshake( beast::error_code ec )ι->void{
 		CHECK_EC( _readTag )
-		Debug{ _connectTag, "[{}]OnHandshake succeeded. Calling read.", _host };
+		DBGT( _connectTag, "[{}]OnHandshake succeeded. Calling read.", _host );
 		if( _connectHandle )
 			_connectHandle.resume();
 		_stream->AsyncRead( shared_from_this() );
@@ -133,7 +133,7 @@ namespace Jde::Web::Client{
 		if( ec )
 			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{:x}]Client::OnClose", Id()), GetLogLevel(ec) };
 		else
-			Trace( _writeTag, "[{:x}]Client::OnClose", Id() );
+			TRACET( _writeTag, "[{:x}]Client::OnClose", Id() );
 		CloseTasks( [](std::any&&){} );
 		if( _closeHandle )
 			_closeHandle.resume();

@@ -43,7 +43,7 @@ ExternalProject_Add(gtest
 
 ExternalProject_Add(fmt
 	GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-	GIT_TAG 11.1.4
+	GIT_TAG 12.0.0
 	PREFIX fmt
 #	UPDATE_COMMAND git pull https://github.com/fmtlib/fmt.git
 	INSTALL_DIR ${LIB_DIR}/fmt
@@ -55,16 +55,19 @@ ExternalProject_Add(fmt
 )
 ExternalProject_Add(spdlog
 	GIT_REPOSITORY https://github.com/gabime/spdlog.git
-	GIT_TAG v1.15.1
+	GIT_TAG v1.15.3
 	PREFIX spdlog
 	INSTALL_DIR ${LIB_DIR}/spdlog
 	CMAKE_ARGS ${stdArgs}
 		-DCMAKE_PREFIX_PATH=${LIB_DIR}
-		-DSPDLOG_BUILD_EXAMPLES:BOOL=OFF
+		-DSPDLOG_BUILD_EXAMPLE:BOOL=OFF
 		-DSPDLOG_BUILD_BENCH:BOOL=OFF
 		-DSPDLOG_BUILD_TESTS:BOOL=OFF
 		-DSPDLOG_FMT_EXTERNAL=ON
 		-DSPDLOG_NO_THREAD_ID=ON
+		-DSPDLOG_BUILD_SHARED=ON
+		-DSPDLOG_NO_ATOMIC_LEVELS=ON
+		-DSPDLOG_BUILD_PIC=ON
 )
 
 ExternalProject_Add(absl

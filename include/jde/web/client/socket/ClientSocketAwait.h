@@ -9,12 +9,12 @@ namespace Jde::Web::Client{
 	struct IClientSocketSession;
 	struct TimedPromiseType{
 		ψ Log( const fmt::format_string<Args const&...>&& m2, const Args&... args )ι->void{
-			Trace{ ELogTags::SocketClientRead, FWD(m2), FWD(args)... };
+			TRACET( ELogTags::SocketClientRead, FWD(m2), FWD(args)... );
 		}
 		α Log( SessionPK sessionId, steady_clock::time_point start, SL sl)ι->void{
 			if( ShouldTrace(ELogTags::SocketClientRead) && ResponseMessage.size() ){
 				const auto msg = sv{Str::Format(ResponseMessage, MessageArgs)}.substr( 0, MaxLogLength() );
-				Trace{ sl, ELogTags::SocketClientRead, "[{:x}]SocketReceive - {} - {}", sessionId, msg, Chrono::ToString( steady_clock::now() - start ) };
+				LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientRead, "[{:x}]SocketReceive - {} - {}", sessionId, msg, Chrono::ToString( steady_clock::now() - start ) );
 			}
 		}
 

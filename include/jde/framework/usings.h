@@ -1,5 +1,7 @@
 ﻿#pragma once
 #include <boost/uuid/uuid.hpp>
+#include <fmt/format.h>
+
 namespace Jde{
 	using namespace std::literals::string_view_literals;
 
@@ -71,8 +73,8 @@ namespace Jde{
 
 	using std::vector;
 	using PortType=unsigned short;
-	using DayIndex=uint_fast16_t;//TODO Refactor remove
-	using Day=uint_fast16_t;
+	//using DayIndex=uint_fast16_t;//TODO Refactor remove
+	//using Day=uint_fast16_t;
 
 	namespace fs=std::filesystem;
 	using boost::container::flat_map;

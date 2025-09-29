@@ -43,7 +43,7 @@ namespace Jde::IO{
 			Handle = 0;
 			if( !IsRead && errno==ENOENT ){
 				fs::create_directories( Path.parent_path() );
-				Information{ _tags, "Created dir {}", Path.parent_path().string() };
+				INFO( "Created dir {}", Path.parent_path().string() );
 				return Open( create );
 			}
 			THROW_IFX( IsRead /*|| errno!=EACCES*/, IOException(move(Path), errno, "open", _sl) );
@@ -59,14 +59,14 @@ namespace Jde::IO{
 	uint _checkIndex;
 	Ω processFinishedChunks( uint size, struct io_uring_cqe* cqe )ι->sp<FileIOArg>{
 		sp<FileIOArg> submitOp;
-		//Trace{ ELogTags::Test, "[{:x}]processFinishedChunks size: {}", _checkIndex, size };
+		//TRACE( ELogTags::Test, "[{:x}]processFinishedChunks size: {}", _checkIndex, size };
 		for( uint i=0; i<size; ++i ){
 			struct io_uring_cqe& cq = cqe[i];
 			if( cq.flags & IORING_CQE_F_MORE ){
 				//bool buffered = cq.flags & IORING_CQE_F_BUFFER;
 				//bool nonEmpty = cq.flags & IORING_CQE_F_SOCK_NONEMPTY;
 				//let bufferId = (uint)io_uring_cqe_get_data(&cq) >> 32;
-				//Trace{ ELogTags::Test, "waitForMore data: {:x}, flags: {}, buffer: {}, nonEmpty: {}", bufferId, (uint)cq.flags, buffered, nonEmpty };
+				//TRACE( ELogTags::Test, "waitForMore data: {:x}, flags: {}, buffer: {}, nonEmpty: {}", bufferId, (uint)cq.flags, buffered, nonEmpty };
 				continue;
 			}
 			io_uring_cqe_seen( &_ring, &cq );
@@ -78,7 +78,7 @@ namespace Jde::IO{
 			}
 			ASSERT( (uint)cq.res == chunk->Bytes );
 			auto op = chunk->FileArg();
-			//Trace{ ELogTags::Test, "[{:x}.{:x}.{}]processChunk {}/{}", ThreadId(), op->Key(), chunk->Index, op->ChunksCompleted+1, op->ChunksToSend };
+			//TRACE( ELogTags::Test, "[{:x}.{:x}.{}]processChunk {}/{}", ThreadId(), op->Key(), chunk->Index, op->ChunksCompleted+1, op->ChunksToSend };
 			if( op->ChunksToSend==++op->ChunksCompleted ){
 				--_requestCount;
 				if( op->IsRead ){
@@ -89,12 +89,12 @@ namespace Jde::IO{
 				}
 				else{
 					if( auto h = op->WriteCoHandle(); h ){
-						//Trace{ ELogTags::Test, "[{:x}]complete ", op->Key() };
+						//TRACE( ELogTags::Test, "[{:x}]complete ", op->Key() };
 						op->_coHandle = (VoidAwait::Handle)nullptr;
 						Post( move(h) );//2
 					}
 					else
-						Critical{ ELogTags::IO, "[{}]no handle. ", op->Path.string() };
+						CRITICALT( ELogTags::IO, "[{}]no handle.", op->Path.string() );
 				}
 			}
 			else{
@@ -111,18 +111,18 @@ namespace Jde::IO{
 	Ω submit( sp<FileIOArg> op )ι->void{
 		int result;
 		{
-			//Trace{ ELogTags::Test, "io_uring_submit" };
+			//TRACE( ELogTags::Test, "io_uring_submit" };
 			result = io_uring_submit( &_ring );
 		}
 		if( result>=0 ){
 			ASSERT( _requestCount );
 			if( _requestCount ){
-				//Trace{ ELogTags::Test, "submit::checkProcessed" };
+				//TRACE( ELogTags::Test, "submit::checkProcessed" };
 				PostIO( [](){ checkProcessed(); } );//1
 			}
 		}
 		else{
-			Critical{ _tags, "io_uring_submit failed: {}", strerror(-result) };
+			CRITICAL( "io_uring_submit failed: {}", strerror(-result) );
 			op->ResumeExp( -result, "io_uring_submit failed" );
 		}
 	}
@@ -137,7 +137,7 @@ namespace Jde::IO{
 		else if( !size ){
 			//ASSERT( _requestCount );
 			if( _requestCount ){
-				//Trace{ ELogTags::Test, "checkProcessed::checkProcessed" };
+				//TRACE( ELogTags::Test, "checkProcessed::checkProcessed" };
 				PostIO( [](){ checkProcessed(); } );
 			}
 		}
@@ -163,11 +163,11 @@ namespace Jde::IO{
 		}
 
 		if( isRead ){
-			//Trace{ ELogTags::Test, "[{:x}.{}]reading", op->Key(), lchunk.Index };
+			//TRACE( ELogTags::Test, "[{:x}.{}]reading", op->Key(), lchunk.Index };
 			io_uring_prep_read( sqe, op->Handle, op->Data()+lchunk.StartIndex, lchunk.Bytes, lchunk.StartIndex );
 		}
 		else{
-			//Trace{ ELogTags::Test, "[{:x}.{:x}.{}]writing - {}", ThreadId(), op->Key(), lchunk.Index, Str::Replace(string{op->Data()+lchunk.StartIndex, lchunk.Bytes}, "\n", "\\n") };
+			//TRACE( ELogTags::Test, "[{:x}.{:x}.{}]writing - {}", ThreadId(), op->Key(), lchunk.Index, Str::Replace(string{op->Data()+lchunk.StartIndex, lchunk.Bytes}, "\n", "\\n") };
 			io_uring_prep_write( sqe, op->Handle, op->Data()+lchunk.StartIndex, lchunk.Bytes, -1 );
 		}
 		auto pChunk = chunk.release();

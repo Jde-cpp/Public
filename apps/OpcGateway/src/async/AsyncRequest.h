@@ -38,7 +38,7 @@ namespace Jde::Opc::Gateway{
 	Ξ AsyncRequest::Clear( RequestId requestId )ι->void{
 		lg _{_requestMutex};
 		if( !_requests.erase(requestId) )
-			Critical{ ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId };
+			CRITICALT( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
 	}
 	Ŧ AsyncRequest::ClearHandle( RequestId requestId )ι->T{
 		T userData;
@@ -49,11 +49,11 @@ namespace Jde::Opc::Gateway{
 				_requests.erase( p );
 			}
 			catch( const std::bad_any_cast& e ){
-				Critical{ ProcessingLoopTag, "[{:x}.{:x}]Bad any cast: {}", UAHandle(), requestId, e.what() };
+				CRITICALT( ProcessingLoopTag, "[{:x}.{:x}]Bad any cast: {}", UAHandle(), requestId, e.what() );
 			}
 		}
 		else
-			Critical( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
+			CRITICALT( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
 		return userData;
 	}
 	Ŧ AsyncRequest::Process( RequestId requestId, T&& h )ι->void{

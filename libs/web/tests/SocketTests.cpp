@@ -110,7 +110,7 @@ namespace Jde::Web{
 
 	TEST_F( SocketTests, CreateSsl ){
 		std::this_thread::sleep_for( 1s );
-		Trace( ELogTags::Test, "WebTests::CreateSsl" );
+		TRACET( ELogTags::Test, "WebTests::CreateSsl" );
 		Stopwatch sw{ "WebTests::CreateSsl", ELogTags::Test };
 		CreateSession( ssl::context(ssl::context::tlsv12_client) );
 		Wait();
@@ -209,7 +209,7 @@ namespace Jde::Web{
 			std::this_thread::sleep_for( 100ms );
 			logs = Logging::Find( Crypto::CalcMd5("Failed to process incomming exception '{}'."sv) );
 		}
-		Trace{ ELogTags::Test, "logs.size(): {}", logs.size() };
+		TRACET( ELogTags::Test, "logs.size(): {}", logs.size() );
 		ASSERT_TRUE( logs.size()>0 );
 	}
 

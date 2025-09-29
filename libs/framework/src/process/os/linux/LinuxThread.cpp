@@ -5,7 +5,7 @@
 	if( std::strlen(ThreadName)==0 ){
 		_threadId = pthread_self();
 		if( let rc = pthread_getname_np( _threadId, ThreadName, NameLength ); rc != 0 )
-			Error( ELogTags::Threads, "pthread_getname_np returned {}"sv, rc );
+			ERRT( ELogTags::Threads, "pthread_getname_np returned {}"sv, rc );
 	}
 	return ThreadName;
 }

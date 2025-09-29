@@ -18,13 +18,13 @@ namespace Jde::Proto{
 	Ŧ Deserialize( const vector<char>& data )ε->up<T>;
 	Ŧ Deserialize( const google::protobuf::uint8* p, int size )ε->T;
 	Ŧ Deserialize( string&& x )ε->T;
-	Ŧ FromVector( vector<T>& x )ι->google::protobuf::RepeatedField<T>;
+	Ŧ FromVector( vector<T>&& x )ι->google::protobuf::RepeatedPtrField<T>;
 	Ŧ ToVector( google::protobuf::RepeatedPtrField<T>&& x )ι->vector<T>;
 	Ŧ ToVector( const google::protobuf::RepeatedField<T>& x )ι->vector<T>;
 
 	α Save( const google::protobuf::MessageLite& msg, fs::path path, SL )ε->void;
 	α ToString( const google::protobuf::MessageLite& msg )ι->string;
-	α SizePrefixed( const google::protobuf::MessageLite&& m )ι->tuple<up<google::protobuf::uint8[]>,uint>;
+	α SizePrefixed( const google::protobuf::MessageLite& m )ι->vector<byte>;
 	α ToTimestamp( TimePoint t )ι->google::protobuf::Timestamp;
 	Ξ ToBytes( const uuid& g )ι->sv{ return sv{ (char*)g.data(), 16 }; }
 	Ξ ToGuid( string g )ι->uuid{ uuid y; memcpy( &y, g.data(), std::min(sizeof(uuid), g.size())); return y; }
@@ -46,17 +46,17 @@ namespace Jde{
 		return output;
 	}
 
-	Ξ Proto::SizePrefixed( const google::protobuf::MessageLite&& m )ι->tuple<up<google::protobuf::uint8[]>,uint>{
+	Ξ Proto::SizePrefixed( const google::protobuf::MessageLite& m )ι->vector<byte>{
 		const uint32_t length = (uint32_t)m.ByteSizeLong();
 		let size = length+4;
-		up<google::protobuf::uint8[]> pData{ new google::protobuf::uint8[size] };
-		auto pDestination = pData.get();
+		vector<byte> data( size ); data.reserve( size );
+		auto dest = data.data();
 		const char* pLength = reinterpret_cast<const char*>( &length )+3;
 		for( auto i=0; i<4; ++i )
-			*pDestination++ = *pLength--;
-		if( let success = m.SerializeToArray( pDestination, (int)length ); !success )
-			Jde::Critical( ELogTags::IO, "Could not serialize to an array:{:x}", success );
-		return make_tuple( move(pData), size );
+			*dest++ = (byte)*pLength--;
+		if( let success = m.SerializeToArray( dest, (int)length ); !success )
+			CRITICALT( Jde::ELogTags::IO, "Could not serialize to an array:{:x}", success );
+		return data;
 	}
 	Ξ Proto::Save( const google::protobuf::MessageLite& msg, fs::path path, SRCE )ε->void{
 		string content;
@@ -114,6 +114,13 @@ namespace Jde{
 		return pValue;
 	}
 
+	Ŧ Proto::FromVector( vector<T>&& x )ι->google::protobuf::RepeatedPtrField<T>{
+		google::protobuf::RepeatedPtrField<T> y;
+		for( auto& item : x )
+			*y.Add() = std::move(item);
+		x.clear();
+		return y;
+	}
 	Ŧ Proto::ToVector( google::protobuf::RepeatedPtrField<T>&& x )ι->vector<T>{
 		vector<T> y; y.reserve( x.size() );
 		for_each( x, [&y]( auto& item ){ y.push_back(move(item)); } );

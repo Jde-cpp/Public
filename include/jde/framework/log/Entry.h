@@ -2,6 +2,7 @@
 #ifndef ENTRY_H
 #define ENTRY_H
 #include <fmt/args.h>
+#include <spdlog/common.h>
 #include <jde/framework/log/logTags.h>
 #include <jde/framework/collections/Vector.h>
 
@@ -15,22 +16,23 @@ namespace Jde{
 }
 namespace Jde::Logging{
 	struct Γ Entry final{
-		template<class... Args>
-		Entry( spdlog::source_loc sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι;
-		template<class... Args>
-		Entry( const std::stacktrace_entry& sl, ELogLevel l, ELogTags tags, FormatString&& m, ARGS... args )ι;
-		Entry( spdlog::source_loc sl, ELogLevel l, ELogTags tags, string&& m )ι;
-		Entry( spdlog::source_loc sl, ELogLevel l, ELogTags tags, string&& m, vector<string> args )ι;
+		template<class... Args> Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι;
+		template<class... Args> Entry( const std::stacktrace_entry& sl, ELogLevel l, ELogTags tags, FormatString&& m, ARGS... args )ι;
+		Entry( SL sl, ELogLevel l, ELogTags tags, string&& m )ι;
+		Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, vector<string> args )ι;
 		Entry( ELogLevel l, ELogTags tags, uint32_t line, TimePoint time, Jde::UserPK userId, uuid messageId, uuid fileId, uuid functionId, vector<string>&& args )ι;
+		Entry( ELogLevel l, ELogTags tags, uint32_t line, TimePoint time, Jde::UserPK userId, string&& text, string&& file, string&& function, vector<string>&& args )ι;
 
 		Ω SetGenerator( function<StringMd5(sv)> f )ι->void;
 		Ω GenerateId( sv text )ι->StringMd5;
 
 		α Id()Ι->StringMd5{ if( !_id )_id = GenerateId(Text); return *_id; }
 		α File()Ι->sv{ return _fileName.index()==0 ? std::get<sv>(_fileName) : std::get<string>(_fileName); }
+		α FileString()ι->string&;
 		α SetFile( sv file ){ _fileName = file; }
 		α FileId()Ι->StringMd5{ return _fileId ? *_fileId : (_fileId = GenerateId(File())).value(); }
 		α Function()Ι->sv{ return _functionName.index()==0 ? std::get<sv>(_functionName) : std::get<string>(_functionName); }
+		α FunctionString()ι->string&;
 		α SetFunction( sv function ){ _functionName = function; }
 		α FunctionId()Ι->StringMd5{ return _functionId ? *_functionId : (_functionId = GenerateId(Function())).value(); }
 		α Message()Ι->string;
@@ -52,7 +54,7 @@ namespace Jde::Logging{
 	};
 
 	template<class... Args>
-	Entry::Entry( spdlog::source_loc sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι:
+	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι:
 		Entry{ sl, l, tags, move(m), vector<string>{} }{
 		ToVec::Append( Arguments, args... );
 	}

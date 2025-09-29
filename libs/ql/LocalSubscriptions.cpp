@@ -74,7 +74,7 @@ namespace Jde::QL{
 	α Subscriptions::Listen( sp<IListener> listener, vector<Subscription>&& subs )ι->void{
 		ul _{ _serverMutex };
 		for( auto&& s : subs ){
-			Trace{ ELogTags::QL, "[{}]Listen:  '{}'.'{}'", listener->Name, s.TableName, ToString(s.Type) };
+			TRACET( ELogTags::QL, "[{}]Listen:  '{}'.'{}'", listener->Name, s.TableName, ToString(s.Type) );
 			_serverSubs.try_emplace( {move(s.TableName), s.Type} ).first->second.emplace_back( ListenerSubs{s.Id,move(s.Fields), listener} );
 		}
 	}

@@ -61,7 +61,7 @@ namespace Jde::QL{
 
 	α SelectAwait::await_ready()ι->bool{
 		if( _log )
-			Trace{ _sl, ELogTags::QL, "{}.", _qlTable.ToString() };
+			LOGSL( ELogLevel::Trace, _sl, ELogTags::QL, "{}.", _qlTable.ToString() );
 		try{
 			if( _qlTable.JsonName=="__type" )
 				_result = QueryType( _qlTable );
@@ -272,7 +272,7 @@ namespace Jde::QL{
 			throw *get<up<exception>>( move(_result) );
 		auto y = _result.index()==0 ? base::await_resume() : get<jvalue>( move(_result) );
 		if( _log )
-			Trace{ _sl, ELogTags::QL, "{}", serialize(y) };
+			LOGSL( ELogLevel::Trace, _sl, ELogTags::QL, "{}", serialize(y) );
 		return y;
 	}
 }

@@ -86,7 +86,7 @@ namespace Jde::DB{
 			return *_cache;
 		let y = TSelectAwait<T>::await_resume();
 		Cache::Set<T>( _cacheName, ms<T>(y) );
-		Trace{ ELogTags::Test, "Cache.sizeof: {}", sizeof(T) };
+		TRACET( ELogTags::Test, "Cache.sizeof: {}", sizeof(T) );
 		return y;
 	}
 }

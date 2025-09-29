@@ -24,7 +24,7 @@ namespace Jde{
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threadSize").value_or(5)>0 )
 #endif
 		Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
-		OSApp::Startup( argc, argv, Process::ProductName(), "Access tests", true );
+		Process::Startup( argc, argv, Process::ProductName(), "Access tests", true );
 
 		let metaDataName{ "access" };
 		auto authorizer = Access::Tests::Authorizer();

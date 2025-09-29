@@ -9,7 +9,7 @@ namespace Jde{
 #endif
  	α Startup( int argc, char **argv )ι->void{
 		SetThreadDscrptn( "Main" );
-		OSApp::Startup( argc, argv, "Tests.Crypto", "Crypto tests", true );
+		Process::Startup( argc, argv, "Tests.Crypto", "Crypto tests", true );
 	}
 }
 
@@ -23,7 +23,7 @@ namespace Jde{
 		let p=Settings::FindSV( "testing/tests" );
 		let filter = p ? *p : "*";
 		if( !filterSet ){
-			Information{ ELogTags::App, "Test Filter:'{}'", filter };
+			INFOT( ELogTags::App, "Test Filter:'{}'", filter );
 			::testing::GTEST_FLAG( filter ) = filter;
 		}
 		result = RUN_ALL_TESTS();

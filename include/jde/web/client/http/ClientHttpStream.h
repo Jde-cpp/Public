@@ -3,7 +3,7 @@
 
 namespace Jde::Web::Client{
 	struct ClientHttpStream final{
-		ClientHttpStream( beast::tcp_stream&& stream )ι:_stream{std::move(stream)}{ Trace( ELogTags::HttpClientRead, "ClientHttpStream::ClientHttpStream" ); }
+		ClientHttpStream( beast::tcp_stream&& stream )ι:_stream{std::move(stream)}{ TRACET( ELogTags::HttpClientRead, "ClientHttpStream::ClientHttpStream" ); }
 		ClientHttpStream( beast::ssl_stream<beast::tcp_stream>&& stream )ι:_stream{std::move(stream)}{}
 		~ClientHttpStream(){}
 

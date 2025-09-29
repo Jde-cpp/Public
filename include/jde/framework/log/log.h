@@ -20,24 +20,32 @@ namespace Jde{
 	α LogLevelStrings()ι->const std::array<sv,7>;
 }
 
-#define MY_FILE __FILE__
 
-#define CRITICAL(message,...) Critical{ _tags, message __VA_OPT__(,) __VA_ARGS__ }
-#define ERR( message, ... ) Error{ _tags, message __VA_OPT__(,) __VA_ARGS__ }
-#define WARN(message,...) Warning{ _tags, message __VA_OPT__(,) __VA_ARGS__ }
-#define INFO(message,...) Information{ _tags, message __VA_OPT__(,) __VA_ARGS__ }
-#define DBG(message,...) Debug{ _tags, message __VA_OPT__(,) __VA_ARGS__ }
-#define DBGSL(message,...) Debug{ sl, _tags, message __VA_OPT__(,) __VA_ARGS__ }
-#define RETURN_IF( predicate, severity, message, ... ) if( predicate ){ Log(severity, _tags, SRCE_CUR, message __VA_OPT__(,) __VA_ARGS__); return; }
-#define TRACE(message,...) Trace{ _tags, message __VA_OPT__(,) __VA_ARGS__ }
-#define TRACESL(message,...) Trace{ sl, _tags, message __VA_OPT__(,) __VA_ARGS__ }
-#define FormatString const fmt::format_string<Args const&...>
-#define ARGS const Args&
+#define LOGSL(level, sl, tags, message,...) \
+	if( Logging::ShouldLog(level, tags) && !Process::Finalizing() ){\
+ 		Logging::Log( level, tags, sl, message __VA_OPT__(,) __VA_ARGS__ );\
+	}
+#define LOG(level, tags, message,...) LOGSL( level, SRCE_CUR, tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define CRITICAL(message,...) CRITICALT( _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define CRITICALT(tags, message,...) LOG( Jde::ELogLevel::Critical, tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define ERR( message, ... ) ERRT( _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define ERRT(tags, message,...) LOG( ELogLevel::Error, tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define WARN(message,...) WARNT( _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define WARNT(tags, message,...) LOG( ELogLevel::Warning, tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define INFO(message,...) INFOT( _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define INFOT(tags, message,...) LOG( ELogLevel::Information, tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define DBG(message,...) DBGT( _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define DBGT(tags, message,...) LOG( ELogLevel::Debug, tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define DBGSL(message,...) LOGSL( ELogLevel::Debug, sl, _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define RETURN_IF( predicate, level, message, ... ) if( predicate ){ LOG(level, _tags, message __VA_OPT__(,) __VA_ARGS__); return; }
+#define TRACE(message,...) TRACET( _tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define TRACET(tags, message,...) LOG( ELogLevel::Trace, tags, message __VA_OPT__(,) __VA_ARGS__ )
+#define TRACESL(message,...) LOGSL( ELogLevel::Trace, sl, _tags, message __VA_OPT__(,) __VA_ARGS__ )
 
 namespace Jde::Logging{
 	struct ILogger; struct MemoryLog;
 	Φ LogException( const IException& e )ι->void;
-	Φ DestroyLoggers()->void;
+	Φ DestroyLoggers( bool terminate )->void;
 	Φ Loggers()->const vector<up<ILogger>>&;
 	Φ MemoryLogger()ε->MemoryLog&;
 	Φ AddLogger( up<ILogger>&& logger )->void;
@@ -48,9 +56,5 @@ namespace Jde::Logging{
 	α SetLogLevel( ELogLevel client, ELogLevel server )ι->void;
 	α GetStatus()ι->up<Proto::Status>;
 }
-#undef SOURCE
-#undef let
-#undef FormatString
-#undef ARGS
 #undef Φ
 #endif

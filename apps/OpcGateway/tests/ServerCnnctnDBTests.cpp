@@ -39,7 +39,7 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	TEST_F( ServerCnnctnDBTests, InsertFailed ){
-		Trace{ _tags, "InsertFailed::Started" };
+		TRACE( "InsertFailed::Started" );
 		let target = OpcServerTarget;
 		auto jInsert = Json::Parse( Ƒ("{{\"target\":\"{}\"}}", target) );
 		QL::MutationQL insert{ "createServerConnection", move(jInsert), nullopt, true, QL().Schemas() };
@@ -56,7 +56,7 @@ namespace Jde::Opc::Gateway::Tests{
 			if( existingOpcPK )
 				DS()->ExecuteSync( {Ƒ("delete from {} where server_connection_id='{}'", table->DBName, existingOpcPK)} ); //InsertFailed checks if failure occurs because exists.
 		}
-		BlockAwait<TAwait<jvalue>,jvalue>( *OpcQLHook{}.InsertFailure(insert, {UserPK::System}) );
+		BlockAwait<TAwait<jvalue>,jvalue>( move(*OpcQLHook{}.InsertFailure(insert, {UserPK::System})) );
 		ASSERT_EQ( 0, GetProviderPK(target) );
 	}
 
@@ -69,7 +69,7 @@ namespace Jde::Opc::Gateway::Tests{
 		BlockAwait<ProviderCreatePurgeAwait,Access::ProviderPK>( ProviderCreatePurgeAwait{OpcServerTarget, false} );//BeforePurge mock.
 
 		QL::MutationQL purge{ "purgeServerConnection", { {"id", opcPK} }, nullopt, true, QL().Schemas() };
-		BlockAwait<TAwait<jvalue>,jvalue>( *OpcQLHook{}.PurgeFailure(purge, {UserPK::System}) );
+		BlockAwait<TAwait<jvalue>,jvalue>( move(*OpcQLHook{}.PurgeFailure(purge, {UserPK::System})) );
 		let providerPK = GetProviderPK( OpcServerTarget );
 		ASSERT_NE( 0, providerPK );
 		PurgeServerCnnctn();
@@ -83,7 +83,7 @@ namespace Jde::Opc::Gateway::Tests{
 		let createdId = BlockAwait<CreateServerCnnctnAwait,ServerCnnctnPK>( CreateServerCnnctnAwait{} );
 		let selectAll = "serverConnections{ id name attributes created updated deleted target description certificateUri isDefault url }";
 		let selectAllJson = QL().QuerySync<jarray>( selectAll, {UserPK::System} );
-		Trace( _tags, "selectAllJson={}", serialize(selectAllJson) );
+		TRACET( _tags, "selectAllJson={}", serialize(selectAllJson) );
 		let id = Json::AsNumber<ServerCnnctnPK>( Json::AsObject(selectAllJson[0]), "id" );
 		THROW_IF( createdId!=id, "createdId={} id={}", createdId, id );
 		return CrudImpl2( id );
@@ -100,13 +100,13 @@ namespace Jde::Opc::Gateway::Tests{
 		let description = "new description";
 		let update = Ƒ( "mutation updateServerConnection( id:{}, description:\"{}\" ) }}", id, description );
 		let updateJson = QL().QuerySync<jvalue>( update, {UserPK::System} );
-		Trace( _tags, "updateJson={}", serialize(updateJson) );
+		TRACET( _tags, "updateJson={}", serialize(updateJson) );
 		let updated = SelectServerCnnctn( id );
 		THROW_IF( updated->Description!=description, "description={} updated={}", description, serialize(updated->ToJson()) );
 
 		let del = Ƒ( "deleteServerConnection(\"id\":{})", id );
 		let deleteJson = QL().QuerySync<jvalue>( del, {UserPK::System} );
-		Trace( _tags, "deleted={}", serialize(deleteJson) );
+		TRACET( _tags, "deleted={}", serialize(deleteJson) );
 	 	conn = SelectServerCnnctn( id );
 		THROW_IF( !conn->Deleted, "deleted failed" );
 

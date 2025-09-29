@@ -46,9 +46,9 @@ namespace Jde::App::Client{
 		if( !session )
 			co_return;
 		let tags = ELogTags::Client | ELogTags::Socket;
-		Trace{ sl, tags, "ClosingSocketSession" };
+		LOGSL( ELogLevel::Trace, sl, tags, "ClosingSocketSession" );
 		co_await session->Close();
 		session = nullptr;
-		Information{ sl, tags, "ClosedSocketSession" };
+		LOGSL( ELogLevel::Information, sl, tags, "ClosedSocketSession" );
 	}
 }

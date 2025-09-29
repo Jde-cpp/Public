@@ -64,7 +64,7 @@ namespace Jde::Opc::Gateway{
 			Process::AddShutdownFunction( [](bool terminate){UAClient::Shutdown(terminate);} );
 			QL::Hook::Add( mu<OpcQLHook>() );
 
-			Information( ELogTags::App, "---Started {}---", "OPC Gateway" );
+			INFOT( ELogTags::App, "---Started {}---", "OPC Gateway" );
 			Resume();
 		}
 		catch( IException& e ){

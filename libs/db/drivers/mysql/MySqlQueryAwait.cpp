@@ -42,10 +42,10 @@ namespace Jde::DB::MySql{
 		}
  		co_await conn.async_close_statement( stmt );
     co_await conn.async_close();
-		if( mySqlResult.has_value() )
-			Trace{ ELogTags::Sql, "MySqlQueryAwait::Main: RowsAffected: {} rows: {}.", result.RowsAffected, result.Rows.size() };
-		else
-			Trace{ ELogTags::Sql, "MySqlQueryAwait::Main: No rows affected." };
+		if( mySqlResult.has_value() ){
+			TRACET( ELogTags::Sql, "MySqlQueryAwait::Main: RowsAffected: {} rows: {}.", result.RowsAffected, result.Rows.size() );
+		}else
+			TRACET( ELogTags::Sql, "MySqlQueryAwait::Main: No rows affected." );
 		Resume( move(result) );
 	}
 

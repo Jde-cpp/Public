@@ -88,10 +88,10 @@ namespace Jde::Opc{
 
 	α Gateway::Logout( SessionPK sessionId )ι->void{
 		let erased = _sessions.erase( sessionId );
-		if( erased )
-			Trace( ELogTags::App, "Session {:x} erased.", sessionId );
-		else
-			Trace( ELogTags::App, "Session {:x} not found.", sessionId );
+		if( erased ){
+			TRACET( ELogTags::App, "Session {:x} erased.", sessionId );
+		}else
+			TRACET( ELogTags::App, "Session {:x} not found.", sessionId );
 	}
 	α Gateway::GetCredential( SessionPK sessionId, str opcId )ι->optional<Credential>{
 		optional<Credential> cred;

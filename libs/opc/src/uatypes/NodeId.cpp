@@ -64,7 +64,7 @@ namespace Jde::Opc{
 			ToGuid( p->second, identifier.guid );
 		}
 		else
-			Debug( ELogTags::App, "No identifier in nodeId" );
+			DBGT( ELogTags::App, "No identifier in nodeId" );
 	}
 
 	α NodeId::operator=( const NodeId& x )ι->NodeId&{
@@ -98,7 +98,6 @@ namespace Jde::Opc{
 
 	α NodeId::FromJson( const jobject& j, UA_UInt16 ns )ε->UA_NodeId{
 		UA_NodeId nodeId{ ns };
-//		Trace{ ELogTags::Test, "getNodeId({})", serialize(j) };
 		if( auto p = j.find("ns"); p!=j.end() && p->value().is_number() )
 			nodeId.namespaceIndex = Json::AsNumber<UA_UInt16>( p->value() );
 

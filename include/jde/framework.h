@@ -30,9 +30,9 @@
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
 
-#define SPDLOG_FMT_EXTERNAL
-	#include <spdlog/spdlog.h>
-	#include <spdlog/sinks/basic_file_sink.h>
+// #define SPDLOG_FMT_EXTERNAL
+// 	#include <spdlog/spdlog.h>
+// 	#include <spdlog/sinks/basic_file_sink.h>
 #ifndef NDEBUG
 	#define BOOST_USE_ASAN
 #endif

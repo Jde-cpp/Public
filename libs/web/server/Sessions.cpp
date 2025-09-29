@@ -27,7 +27,7 @@ namespace Jde::Web::Server{
 	concurrent_flat_map<SessionPK,sp<SessionInfo>> _sessions;
 	Ω upsert( sp<SessionInfo>& info )ι->void{
 		if( _sessions.emplace_or_visit(info->SessionId, info, [&info]( auto& existing ){ existing.second->Expiration=existing.second->NewExpiration();}) )
-			Trace{ _tags, "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK.Value, info->UserEndpoint };
+			TRACE( "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK.Value, info->UserEndpoint );
 	}
 
 	α GetNewSessionId()ι->SessionPK{
@@ -104,7 +104,7 @@ namespace	Sessions{
 				info = existing;
 			}
 			else
-				Trace{ ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, ToIsoString(existingExpiration) };
+				TRACET( ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, ToIsoString(existingExpiration) );
 		} );
 		if( _lastTrim<steady_clock::now()-Sessions::RestSessionTimeout() ){
 			_sessions.erase_if( []( auto& kv ){ return kv.second->Expiration<steady_clock::now(); } );

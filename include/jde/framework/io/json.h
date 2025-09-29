@@ -84,7 +84,9 @@ namespace Jde{
 		Ξ FindObject( const jobject& o, sv key )ι->const jobject*{ auto p = o.if_contains(key); return p ? p->if_object() : nullptr; }
 		Ξ FindObject( jobject& o, sv key )ι->jobject*{ auto p = o.if_contains(key); return p ? p->if_object() : nullptr; }
 		Φ FindString( const jobject& o, sv key )ι->optional<string>;
+		Φ FindDuration( const jobject& o, sv key, ELogLevel level=ELogLevel::Debug, SRCE )ι->optional<Duration>;
 		Φ FindTimePoint( const jobject& o, sv key )ι->optional<TimePoint>;
+		Φ FindTimeZone( const jobject& o, sv key, const std::chrono::time_zone& dflt, ELogLevel level=ELogLevel::Debug, SRCE )ι->const std::chrono::time_zone&;
 
 		Ξ FindDefaultBool( const jobject& o, sv key )ι->bool{ auto p = o.if_contains(key); return p && p->is_bool() ? p->get_bool() : false; }
 		Ξ FindDefaultSV( const jobject& o, sv key )ι->sv{ auto p = o.if_contains(key); return p && p->is_string() ? p->get_string() : sv{}; }

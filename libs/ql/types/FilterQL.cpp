@@ -40,10 +40,10 @@ namespace Jde::QL{
 			}
 		}
 		catch( const std::exception& e ){
-			Debug( logTags | ELogTags::Exception, "FilterValueQL::Test exception={}", e.what() );
+			DBGT( logTags | ELogTags::Exception, "FilterValueQL::Test exception={}", e.what() );
 		}
 		catch( ... ){
-			Critical( logTags | ELogTags::Exception, "FilterValueQL::unknown exception" );
+			CRITICALT( logTags | ELogTags::Exception, "FilterValueQL::unknown exception" );
 		}
 		return passesFilters;
 	}

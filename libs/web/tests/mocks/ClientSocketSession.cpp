@@ -11,7 +11,7 @@ namespace Jde::Web::Mock{
 
 	α ClientSocketSession::OnAck( uint32 serverSocketId )ι->void{
 		SetId( serverSocketId );
-		Information( ELogTags::SocketClientRead, "[{}] {} AppClientSocketSession created: {}.", Id(), IsSsl() ? "Ssl" : "Plain", Host() );
+		INFOT( ELogTags::SocketClientRead, "[{}] {} AppClientSocketSession created: {}.", Id(), IsSsl() ? "Ssl" : "Plain", Host() );
 		//ResumeScaler<SessionPK>( move(hAny), SessionId() );
 	}
 
@@ -26,7 +26,7 @@ namespace Jde::Web::Mock{
 			pAck->resume();
 		}
 		else{
-			Warning( ELogTags::SocketClientRead, "Failed to process incomming exception '{}'.", what );
+			WARNT( ELogTags::SocketClientRead, "Failed to process incomming exception '{}'.", what );
 		}
 	}
 

@@ -17,18 +17,18 @@ namespace Jde::App{
 			id = Logging::Entry::GenerateId( value );
 		return map.try_emplace( id, value );
 	}
-	α StringCache::Add( Proto::FromClient::EFields field, StringMd5 id, str value, ELogTags logTags )ι->bool{
+	α StringCache::Add( Log::Proto::EFields field, StringMd5 id, str value, ELogTags _tags )ι->bool{
 		bool save = false;
-		if( value.empty() )
-			Critical( logTags, "empty string field: {}, id: {}.", underlying(field), boost::uuids::to_string(id) );
-		else if( field==Proto::FromClient::EFields::MessageId )
+		if( value.empty() ){
+			CRITICAL( "empty string field: {}, id: {}.", underlying(field), boost::uuids::to_string(id) );
+		}else if( field==Log::Proto::EFields::Template )
 			save = AddMessage( id, value );
-		else if( field==Proto::FromClient::EFields::FileId )
+		else if( field==Log::Proto::EFields::File )
 			save = AddFile( id, value );
-		else if( field==Proto::FromClient::EFields::FunctionId )
+		else if( field==Log::Proto::EFields::Function )
 			save = AddFunction( id, value );
 		else
-			Critical( logTags, "unknown field {}.", underlying(field) );
+			CRITICAL( "unknown field {}.", underlying(field) );
 		return save;
 	}
 

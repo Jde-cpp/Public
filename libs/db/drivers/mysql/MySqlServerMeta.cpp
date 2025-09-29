@@ -157,7 +157,7 @@ namespace Jde::DB::MySql{
 		else if(typeName=="money")
 			type = Money;
 		else
-			Warning{ _tags, "Unknown datatype({}).  need to implement, ok if not our table.", typeName };
+			WARN( "Unknown datatype({}).  need to implement, ok if not our table.", typeName );
 		return type;
 	}
 }

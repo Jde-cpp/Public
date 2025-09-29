@@ -122,7 +122,7 @@ namespace Jde::QL{
 			if( col )
 				SetResult( y, col->Column, move(row[i]) );
 			else
-				Critical{ ELogTags::QL, "Column {} is not an AliasCol.", i };
+				CRITICALT( ELogTags::QL, "Column {} is not an AliasCol.", i );
 		}
 		return y;
 	}

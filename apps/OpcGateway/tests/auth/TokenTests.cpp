@@ -70,6 +70,6 @@ namespace Jde::Opc::Gateway::Tests{
 		flag.wait( false );
 		EXPECT_TRUE( _exception );
 		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadIdentityTokenInvalid") );
-		Debug( _tags, "{}", _exception ? _exception->what() : "Error no exception." );
+		DBG( "{}", _exception ? _exception->what() : "Error no exception." );
 	}
 }

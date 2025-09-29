@@ -30,6 +30,6 @@ namespace Jde::Web::Client{
 			}
 		}
 		else
-			Warning{ ELogTags::QL, "[{}]Could not find subscription.", clientId };
+			WARNT( ELogTags::QL, "[{}]Could not find subscription.", clientId );
 	}
 }

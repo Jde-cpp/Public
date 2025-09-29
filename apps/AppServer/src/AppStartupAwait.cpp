@@ -23,7 +23,7 @@ namespace Jde::App::Server{
 			QL::Hook::Add( mu<Web::Server::SessionGraphQL>(appClient) );
 			Logging::AddLogger( mu<ExternalLogger>(appClient) );
 
-			Information( ELogTags::App, "--AppServer Started.--" );
+			INFOT( ELogTags::App, "--AppServer Started.--" );
 			Resume();
 		}
 		catch( exception& e ){

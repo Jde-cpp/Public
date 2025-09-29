@@ -1,17 +1,6 @@
 syntax = "proto3";
 package Jde.Proto;
 
-enum ELogLevel{
-	Trace = 0;
-	Debug = 1;
-	Information = 2;
-	Warning = 3;
-	Error = 4;
-	Critical = 5;
-	LogLevelNone = 6;
-	NoLog = -1;
-}
-
 message Exception{
 	uint32 code = 1;
 	string what = 2;

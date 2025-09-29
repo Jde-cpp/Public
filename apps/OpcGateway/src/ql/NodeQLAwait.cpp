@@ -12,7 +12,7 @@ namespace Jde::Opc::Gateway{
 	α NodeQLAwait::Execute()ι->TAwait<sp<UAClient>>::Task{
 		auto opcId = Json::FindString(_query.Args,"opc").value_or("");
 		try{
-			Trace( ELogTags::Test, "opc: {}, UserPK: {:x}, SessionId: {:x}", opcId, _executer.Value, _sessionPK );
+			TRACET( ELogTags::Test, "opc: {}, UserPK: {:x}, SessionId: {:x}", opcId, _executer.Value, _sessionPK );
 			_client = co_await ConnectAwait{ move(opcId), _sessionPK, _executer, _sl };
 			optional<NodeId> nodeId;
 			jobject jnode;

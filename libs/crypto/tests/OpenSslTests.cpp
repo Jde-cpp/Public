@@ -27,24 +27,24 @@ namespace Jde::Crypto{
 	};
 	string OpenSslTests::HeaderPayload{ "secret stuff" };
 	string OpenSslTests::passcode{ "123456789" };
-	string OpenSslTests::PublicKeyFile{ _msvc ? (OSApp::ApplicationDataFolder() / "public.pem").string() : "/tmp/public.pem" };
-	string OpenSslTests::PrivateKeyFile{ _msvc ? (OSApp::ApplicationDataFolder() / "private.pem").string() : "/tmp/private.pem" };
-	string OpenSslTests::CertificateFile{ _msvc ? (OSApp::ApplicationDataFolder() / "cert.pem").string() : "/tmp/cert.pem" };
+	string OpenSslTests::PublicKeyFile{ _msvc ? (Process::ApplicationDataFolder() / "public.pem").string() : "/tmp/public.pem" };
+	string OpenSslTests::PrivateKeyFile{ _msvc ? (Process::ApplicationDataFolder() / "private.pem").string() : "/tmp/private.pem" };
+	string OpenSslTests::CertificateFile{ _msvc ? (Process::ApplicationDataFolder() / "cert.pem").string() : "/tmp/cert.pem" };
 
 
 	α OpenSslTests::SetUpTestCase()->void{
 		let clear = Settings::FindBool( "cryptoTests/clear" ).value_or( true );
-		Information( _tags, "clear={}", clear );
-		Information( _tags, "clear={}", HeaderPayload );
+		INFO( "clear={}", clear );
+		INFO( "HeaderPayload={}", HeaderPayload );
 		if( clear || (!fs::exists(PublicKeyFile) || !fs::exists(PrivateKeyFile)) ){
 			if( !fs::exists(fs::path{PublicKeyFile}.parent_path()) )
 				fs::create_directories( fs::path{PublicKeyFile}.parent_path() );
 			Crypto::CreateKey( PublicKeyFile, PrivateKeyFile, passcode );
-			Information( _tags, "Created keys {} {}", PublicKeyFile, PrivateKeyFile );
+			INFO( "Created keys {} {}", PublicKeyFile, PrivateKeyFile );
 		}
 		if( clear || !fs::exists(CertificateFile) ){
 			Crypto::CreateCertificate( CertificateFile, PrivateKeyFile, passcode, "URI:urn:my.server.application", "jde-cpp", "US", "localhost" );
-			Information( _tags, "Created certificate {}", CertificateFile );
+			INFO( "Created certificate {}", CertificateFile );
 		}
 	}
 
