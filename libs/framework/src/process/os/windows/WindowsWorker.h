@@ -1,8 +1,6 @@
 ﻿#pragma once
 #include <jde/framework/process/os/windows/WindowsHandle.h>
-#include <jde/framework/coroutine/Task.h>
-#include "../../Framework/source/coroutine/Awaitable.h"
-#include "../../Framework/source/threading/Worker.h"
+#include <jde/framework/co/Task.h>
 
 namespace Jde::Windows
 {

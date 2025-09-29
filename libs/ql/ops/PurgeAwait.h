@@ -1,10 +1,9 @@
 #pragma once
 #include <jde/ql/QLHook.h>
 #include <jde/ql/types/MutationQL.h>
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 #include <jde/db/awaits/ExecuteAwait.h>
 #include <jde/db/meta/Table.h>
-#include "../../../../Framework/source/coroutine/Awaitable.h"
 
 namespace Jde::DB{ struct Sql; }
 namespace Jde::QL{

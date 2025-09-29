@@ -1,6 +1,6 @@
 ﻿#include "gtest/gtest.h"
 #include <jde/framework/settings.h>
-#include <jde/framework/coroutine/Timer.h>
+#include <jde/framework/co/Timer.h>
 #include <jde/crypto/OpenSsl.h>
 #include <jde/app/log/ProtoLog.h>
 #include <jde/opc/uatypes/Logger.h>

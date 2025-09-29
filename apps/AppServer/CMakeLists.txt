@@ -3,7 +3,7 @@ cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( $ENV{JDE_DIR}/Public/build/functions.cmake )
 project( Jde.App.Server VERSION ${JDE_VERSION} LANGUAGES CXX )
 
-add_subdirectory( $ENV{JDE_DIR}/Framework/source ../../libs/framework )
+add_subdirectory( $ENV{JDE_DIR}/Public/libs/framework/src ../../libs/framework/lib )
 add_subdirectory( $ENV{JDE_DIR}/Public/libs/crypto/src ../../libs/crypto )
 add_subdirectory( $ENV{JDE_DIR}/Public/libs/db/src ../../libs/db/lib )
 if( WIN32 )

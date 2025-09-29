@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <jde/framework/exceptions/Exception.h>
-#include <jde/framework/process.h>
+#include <jde/framework/process/process.h>
 
 namespace Jde{
   struct WinHandle final{

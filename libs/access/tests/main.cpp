@@ -1,7 +1,7 @@
 ﻿#include "gtest/gtest.h"
-#include <jde/framework/process.h>
+#include <jde/framework/process/process.h>
 #include <jde/framework/settings.h>
-#include <jde/framework/coroutine/Timer.h>
+#include <jde/framework/co/Timer.h>
 #include <jde/crypto/OpenSsl.h>
 #include <jde/ql/ql.h>
 #include <jde/access/Authorize.h>

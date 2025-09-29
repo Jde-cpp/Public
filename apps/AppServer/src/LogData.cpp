@@ -1,7 +1,6 @@
 ﻿#include "LogData.h"
 #include <jde/app/shared/StringCache.h>
 #include <jde/app/shared/proto/App.FromServer.h>
-#include <jde/db/DBQueue.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/db.h>
 #include <jde/db/IDataSource.h>

@@ -4,9 +4,8 @@
 
 #include <iostream>
 #include "../exports.h"
-#include "../collections/Vector.h"
 #include "../io/crc.h"
-#include "../process.h"
+#include "../process/process.h"
 #include "logTags.h"
 #include "Entry.h"
 #ifndef _MSC_VER
@@ -15,6 +14,7 @@
 
 #define Φ Γ auto
 namespace Jde{
+//	struct Vector;
 	Φ ToString( ELogLevel l )ι->string;
 	α ToLogLevel( sv op )ι->ELogLevel;
 	α LogLevelStrings()ι->const std::array<sv,7>;

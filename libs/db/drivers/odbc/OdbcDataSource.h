@@ -1,10 +1,7 @@
 ﻿#pragma once
 #include "Exports.h"
-#include "../../Framework/source/coroutine/Awaitable.h"
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Syntax.h>
-#include "OdbcAwaitables.h"
-//#include "Binding.h"
 
 extern "C" ΓODBC Jde::DB::IDataSource* GetDataSource();
 namespace Jde::DB {

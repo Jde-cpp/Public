@@ -1,7 +1,6 @@
 #pragma once
+#include <jde/framework/utils/Vector.h>
 #include "ILogger.h"
-//#include "log.h"
-//#include "SpdLog.h"
 #define Φ Γ auto
 
 namespace Jde::Logging{

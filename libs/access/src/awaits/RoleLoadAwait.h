@@ -1,6 +1,6 @@
 #pragma once
 #include <jde/access/usings.h>
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 #include <jde/ql/QLAwait.h>
 #include <jde/access/types/Role.h>
 

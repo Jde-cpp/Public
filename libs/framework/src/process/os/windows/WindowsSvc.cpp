@@ -1,5 +1,5 @@
 ﻿#include "WindowsSvc.h"
-#include <jde/framework/process.h>
+#include <jde/framework/process/process.h>
 #include "WindowsWorker.h"
 
 #define var const auto

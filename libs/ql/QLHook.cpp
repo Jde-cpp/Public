@@ -1,5 +1,5 @@
 #include <jde/ql/QLHook.h>
-#include <jde/framework/collections/Vector.h>
+//#include <jde/framework/collections/Vector.h>
 
 #pragma GCC diagnostic ignored "-Wswitch"
 
