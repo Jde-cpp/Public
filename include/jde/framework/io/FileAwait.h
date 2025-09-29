@@ -2,14 +2,14 @@
 #ifndef FILECO_H
 #define FILECO_H
 #include <queue>
-#include <jde/framework/coroutine/Task.h>
+#include <jde/framework/co/Task.h>
 #ifdef _MSC_VER
 	#include <jde/framework/process/os/windows/WindowsHandle.h>
 	using HFile=Jde::HandlePtr;
 #else
 	using HFile=int;
 #endif
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 
 #define Φ Γ auto
 

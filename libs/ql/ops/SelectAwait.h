@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 #include <jde/db/awaits/SelectAwait.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/ql/types/TableQL.h>

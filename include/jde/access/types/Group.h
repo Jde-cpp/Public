@@ -1,7 +1,6 @@
 #pragma once
 #include <jde/access/usings.h>
-#include <jde/framework/coroutine/Await.h>
-#include <jde/framework/coroutine/TaskOld.h>
+#include <jde/framework/co/Await.h>
 
 namespace Jde::DB{ struct AppSchema; }
 

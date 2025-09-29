@@ -5,7 +5,7 @@
 #ifndef _MSC_VER
 	#include <signal.h>
 #endif
-#include "../process.h"
+#include "../process/process.h"
 #include "log.h"
 #include "SpdLog.h"
 

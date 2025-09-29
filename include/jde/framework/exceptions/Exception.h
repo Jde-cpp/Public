@@ -3,7 +3,7 @@
 #define JDE_EXCEPTION_H
 #include <boost/system/error_code.hpp>
 #include "../io/crc.h"
-#include "../collections/Vector.h"
+//#include "../collections/Vector.h"
 
 namespace boost::system{ class error_code; }
 #undef THROW //mysql
@@ -169,7 +169,7 @@ namespace Jde{
 		Code{ Calc32RunTime(Format()) },
 		_level{ ELogLevel::Debug }{
 		_args.reserve( sizeof...(args) );
-		ToVec::Append( _args, args... );
+		ParamPack::Append( _args, args... );
 		BreakLog();
 	}
 
@@ -179,7 +179,7 @@ namespace Jde{
 		Code{ Calc32RunTime(Format()) },
 		_level{ l }{
 		_args.reserve( sizeof...(args) );
-		ToVec::Append( _args, args... );
+		ParamPack::Append( _args, args... );
 		BreakLog();
 	}
 	$ IException::IException( ELogTags tags, SL sl, ELogLevel l, fmt::format_string<Args...> m, Args&& ...args )ι:
@@ -189,7 +189,7 @@ namespace Jde{
 		Code{ Calc32RunTime(Format()) },
 		_level{ l }{
 		_args.reserve( sizeof...(args) );
-		ToVec::Append( _args, args... );
+		ParamPack::Append( _args, args... );
 		BreakLog();
 	}
 
@@ -200,7 +200,7 @@ namespace Jde{
 		Code{ Calc32RunTime(Format()) },
 		_level{ l }{
 		_args.reserve( sizeof...(args) );
-		ToVec::Append( _args, args... );
+		ParamPack::Append( _args, args... );
 		BreakLog();
 	}
 	$ IException::IException( SL sl, ELogLevel l, uint32 code, fmt::format_string<Args...> m, Args&&... args )ι:
@@ -210,7 +210,7 @@ namespace Jde{
 		Code{ code },
 		_level{ l }{
 		_args.reserve( sizeof...(args) );
-		ToVec::Append( _args, args... );
+		ParamPack::Append( _args, args... );
 		BreakLog();
 	}
 

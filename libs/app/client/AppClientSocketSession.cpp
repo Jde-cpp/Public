@@ -1,5 +1,5 @@
 #include <jde/app/client/AppClientSocketSession.h>
-#include <jde/framework/thread/execution.h>
+#include <jde/framework/process/execution.h>
 #include <jde/web/client/socket/ClientQL.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/client/socket/clientSubscriptions.h>

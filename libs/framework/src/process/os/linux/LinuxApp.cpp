@@ -4,8 +4,7 @@
 #include <signal.h>
 #include <dlfcn.h>
 
-#include <jde/framework/process.h>
-#include "../../Framework/source/threading/InterruptibleThread.h"
+#include <jde/framework/process/process.h>
 #include "LinuxDrive.h"
 #include <jde/framework/io/FileAwait.h>
 

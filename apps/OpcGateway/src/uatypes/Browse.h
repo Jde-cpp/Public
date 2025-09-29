@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
-//#include <jde/framework/coroutine/Await.h>
 
 namespace Jde::Opc::Gateway{
 	struct UAClient;

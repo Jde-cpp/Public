@@ -1,7 +1,7 @@
 ﻿#pragma once
 #ifndef CONTEXT_THREAD_H
 #define CONTEXT_THREAD_H
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 
 namespace boost::asio{ class io_context; class cancellation_signal; }
 #define Φ Γ α

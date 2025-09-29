@@ -3,7 +3,7 @@ cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( ../../build/functions.cmake )
 project( Jde.Opc.Server VERSION ${JDE_VERSION} LANGUAGES CXX )
 
-add_subdirectory( $ENV{JDE_DIR}/Framework/source ../../libs/framework/lib )
+add_subdirectory( $ENV{JDE_DIR}/Public/libs/framework/src ../../libs/framework/lib )
 add_subdirectory( $ENV{JDE_DIR}/Public/libs/crypto/src ../../libs/crypto )
 set( opcCommonDir ../../libs/opc  )
 add_subdirectory( ${opcCommonDir}/src ../../libs/opc/lib )

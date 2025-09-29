@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 #include <jde/access/usings.h>
 #include <jde/web/client/exports.h>
 #include <jde/app/shared/proto/App.FromServer.pb.h>

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <jde/framework/process.h>
+#include <jde/process/process.h>
 #include <jde/markets/Exports.h>
 #include <jde/markets/types/proto/edgar.pb.h>
 #include "../../../../Framework/source/Settings.h"

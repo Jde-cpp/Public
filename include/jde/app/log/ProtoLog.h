@@ -1,7 +1,7 @@
 #pragma once
 #include <chrono>
 #include <jde/framework/log/ILogger.h>
-#include <jde/framework/coroutine/Timer.h>
+#include <jde/framework/co/Timer.h>
 #include <jde/framework/settings.h>
 
 namespace Jde::App{

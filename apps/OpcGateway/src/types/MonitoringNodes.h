@@ -1,14 +1,13 @@
 ﻿#pragma once
 #include <jde/opc/uatypes/NodeId.h>
-#include <jde/framework/coroutine/Timer.h>
-#include <jde/framework/math/HiLow.h>
+#include <jde/framework/co/Timer.h>
+#include <jde/framework/utils/HiLow.h>
 #include "../uatypes/MonitoredItemCreateResult.h"
 #include "../async/DataChanges.h"
-//#include "../../../../../Framework/source/coroutine/Awaitable.h"
 
 namespace Jde::Opc{ struct Value; }
 namespace Jde::Opc::Gateway{
-	/*struct SocketSession;*/ struct UAClient;
+	struct UAClient;
 
 	struct IDataChange{
 		β SendDataChange( const ServerCnnctnNK& opcId, const NodeId& node, const Value& value )ι->void=0;

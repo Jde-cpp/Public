@@ -1,6 +1,6 @@
 ﻿#include <jde/framework.h>
 #include "AppStartupAwait.h"
-#include <jde/framework/process.h>
+#include <jde/framework/process/process.h>
 #include <jde/crypto/OpenSsl.h>
 
 namespace Jde{
@@ -14,7 +14,7 @@ namespace Jde{
 		Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
 		Process::Startup( argc, argv, "Jde.AppServer", "jde-cpp App Server." );
 		auto settings = Settings::FindObject( "/http" );
-		BlockVoidAwait<AppStartupAwait>( AppStartupAwait{settings ? move(*settings) : jobject{}} );
+		BlockVoidAwait( AppStartupAwait{settings ? move(*settings) : jobject{}} );
 	}
 }
 

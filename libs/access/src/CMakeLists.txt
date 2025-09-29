@@ -19,5 +19,5 @@ target_precompile_headers(${targetName}
   PUBLIC
   <jde/framework.h>
 	<jde/framework/io/json.h>
-	<jde/framework/coroutine/Await.h>
+	<jde/framework/co/Await.h>
 )

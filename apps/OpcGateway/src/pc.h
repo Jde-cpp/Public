@@ -18,7 +18,7 @@
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/client_subscriptions.h>
 #include <jde/framework.h>
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 #include <jde/crypto/OpenSsl.h>
 #include <jde/access/usings.h>
 #include <jde/web/client/exports.h>

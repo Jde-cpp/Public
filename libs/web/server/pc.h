@@ -3,10 +3,7 @@
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 #include <jde/framework.h>
-#include <jde/framework/coroutine/Task.h>
-#include "../../../../Framework/source/coroutine/Awaitable.h"
 #include <jde/framework/io/proto.h>
-#include "../../../../Framework/source/threading/InterruptibleThread.h"
 #include <jde/framework/chrono.h>
 #include <jde/web/usings.h>
 #include <jde/web/client/exports.h>

@@ -2,8 +2,7 @@
 #include <signal.h>
 #include <aio.h>
 #include <jde/framework/io/FileAwait.h>
-#include "../../Framework/source/io/IDrive.h"
-#include "../../Framework/source/coroutine/Awaitable.h"
+#include "../../../io/IDrive.h"
 #include <jde/framework/io/file.h>
 
 //using namespace Jde::Coroutine;

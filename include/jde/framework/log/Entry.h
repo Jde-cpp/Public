@@ -4,7 +4,7 @@
 #include <fmt/args.h>
 #include <spdlog/common.h>
 #include <jde/framework/log/logTags.h>
-#include <jde/framework/collections/Vector.h>
+#include <jde/framework/utils/paramPack.h>
 
 #define Φ Γ auto
 #define let const auto
@@ -56,7 +56,7 @@ namespace Jde::Logging{
 	template<class... Args>
 	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι:
 		Entry{ sl, l, tags, move(m), vector<string>{} }{
-		ToVec::Append( Arguments, args... );
+		ParamPack::Append( Arguments, args... );
 	}
 
 		template<class... Args>
@@ -69,7 +69,7 @@ namespace Jde::Logging{
 		_message{ fmt::vformat(m, fmt::make_format_args(FWD(args)...)) },
 		_fileName{ e.source_file() },
 		_functionName{ e.description() }{
-		ToVec::Append( Arguments, FWD(args)... );
+		ParamPack::Append( Arguments, FWD(args)... );
 	}
 }
 #undef ARGS

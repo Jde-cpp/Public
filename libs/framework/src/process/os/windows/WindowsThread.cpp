@@ -1,6 +1,6 @@
 ﻿#include <processthreadsapi.h>
 #include <codecvt>
-#include <jde/framework/thread/thread.h>
+#include <jde/framework/process/thread.h>
 #include "../../Framework/source/threading/Thread.cpp"
 
 constexpr Jde::ELogTags _tags{ Jde::ELogTags::Threads };

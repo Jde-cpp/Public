@@ -4,7 +4,7 @@
 #include <jde/framework/Settings.h>
 #include <jde/framework/str.h>
 #include <jde/framework/io/FileAwait.h>
-#include <jde/framework/thread/thread.h>
+#include <jde/framework/process/thread.h>
 
 #define let const auto
 

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 #include "../types/ServerCnnctn.h"
 #include "../auth/OpcServerSession.h"
 

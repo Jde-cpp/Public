@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 #include <jde/crypto/OpenSsl.h>
 #include <jde/db/awaits/ScalerAwait.h>
 

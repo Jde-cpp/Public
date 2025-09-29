@@ -1,4 +1,5 @@
 #include "UAServer.h"
+#include <jde/framework/process/thread.h>
 #include <jde/opc/uatypes/helpers.h>
 #include "UAAccess.h"
 #include <NodesetLoader/backendOpen62541.h>

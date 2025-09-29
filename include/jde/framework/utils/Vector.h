@@ -24,9 +24,9 @@ namespace Jde{
 		α	erase_first( function<bool(const T& p)> test, ul& l )ι->bool;
 
 		α push_back( const T& val )ι{ ul l( Mutex ); push_back( val, l ); }
-		α push_back( const T& val, ul& _ )ι{ base::push_back( val ); }
+		α push_back( const T& val, ul& )ι{ base::push_back( val ); }
 		α push_back( T&& val )ι{ ul l( Mutex ); push_back( move(val), l ); }
-		α push_back( T&& val, ul& l )ι{ base::push_back( move(val) ); }
+		α push_back( T&& val, ul& )ι{ base::push_back( move(val) ); }
 		ψ emplace_back( Args&&... args )ι->T&{ ul l( Mutex ); return emplace_back( l, std::forward<Args>(args)... ); }
 		ψ emplace_back( ul&, Args&&... args )ι->T&{ return base::emplace_back( std::forward<Args>(args)... ); }
 		α reserve( uint size )ι->void{ ul l( Mutex ); reserve( size, l ); }
@@ -61,50 +61,6 @@ namespace Jde{
 	Ŧ	Vector<T>::visit( function<void(const T& p)> f )ι->void{
 		ul _( Mutex );
 		for_each( Base(), f );
-	}
-}
-
-//https://stackoverflow.com/questions/21806561/concatenating-strings-and-numbers-in-variadic-template-function
-namespace Jde::ToVec{
-
-	inline void Append( vector<string>& /*values*/ ){}
-
-	template<typename Head, typename... Tail>
-	void Append( vector<string>& values, Head&& h, Tail&&... t )ι;
-
-	template<typename... Tail>
-	void Append( vector<string>& values, string&& h, Tail&&... t )ι{
-		values.push_back( h );
-		return Apend( values, std::forward<Tail>(t)... );
-	}
-
-	template<class T> inline α ToStringT( const T& x )ι->string{
-		constexpr bool StringConcept = requires(const T& t) { t.data(); t.size(); };
-		if constexpr( StringConcept ){
-			return string{ x.data(), x.size() };
-		}
-		else{
-			std::ostringstream os;
-			os << x;
-			return os.str();
-		}
-	}
-
-	Ξ FormatVectorArgs( sv fmt, const vector<string>& args )ε{
-		return std::accumulate(
-			std::begin( args ),
-			std::end( args ),
-			string{ fmt },
-			[](sv toFmt, str arg){
-				return fmt::vformat( toFmt, fmt::make_format_args(arg) );
-			}
-		);
-	}
-
-	template<typename Head, typename... Tail>
-	void Append( vector<string>& values, Head&& h, Tail&&... t )ι{
-		values.push_back( ToStringT(std::forward<Head>(h)) );
-		return Append( values, std::forward<Tail>(t)... );
 	}
 }
 #endif

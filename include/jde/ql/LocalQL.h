@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/IQL.h>
 #include <jde/ql/QLAwait.h>

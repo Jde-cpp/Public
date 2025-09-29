@@ -8,7 +8,7 @@
 #include "meta/ddl/CatalogDdl.h"
 #include "meta/ddl/SchemaDdl.h"
 #include "meta/IServerMeta.h"
-#include <jde/framework/Dll.h>
+#include <jde/framework/process/dll.h>
 #include "c_api.h"
 
 #define let const auto

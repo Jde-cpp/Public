@@ -4,7 +4,7 @@
 #include "../exports.h"
 #include "ClientSocketStream.h"
 #include "ClientSocketAwait.h"
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 #include <jde/framework/io/proto.h>
 
 namespace Jde::Web::Client{

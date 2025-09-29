@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 
 namespace Jde::App::Server{
 	struct AppStartupAwait final : VoidAwait{

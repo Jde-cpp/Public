@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 #include <jde/db/db.h>
 #include <jde/db/Key.h>
 #include <jde/db/meta/Table.h>

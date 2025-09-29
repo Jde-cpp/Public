@@ -1,7 +1,7 @@
 ﻿#pragma once
 #ifndef SESSION_AWAIT_H_
 #define SESSION_AWAIT_H_
-#include <jde/framework/coroutine/Await.h>
+#include <jde/framework/co/Await.h>
 
 namespace Jde::Opc::Gateway{
 	struct UAClient;
