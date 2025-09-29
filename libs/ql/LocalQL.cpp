@@ -60,7 +60,7 @@ namespace Jde::QL{
 				? "id:"+std::to_string(key->PK())
 				: "target:\""+move(key->NK())+'"';
 			auto ql = Ƒ( "{}({}){{ id }}", DB::Names::ToSingular(m.JsonTableName), move(input) );
-			if( auto existing = BlockAwait<TAwait<jobject>,jobject>(*QueryObject(move(ql), executer)); existing.empty() ){
+			if( auto existing = BlockAwait<TAwait<jobject>,jobject>(move(*QueryObject(move(ql), executer))); existing.empty() ){
 				if( auto name = m.Args.contains("name") ? nullptr : m.Args.if_contains("target"); name ){
 					string name2 = Json::AsString(*name);
 					m.Args["name"] = name2;

@@ -32,66 +32,29 @@ namespace Jde::Logging{
 	α LogException( const IException& e )ι->void;
 	Φ Log( const Entry& entry )ι->void;
 
-	template<ELogLevel TLevel, typename... Args>
-	struct Logger{
-		using enum ELogLevel;
-		explicit Logger( ELogTags tags, FormatString&& m, ARGS... args, const spdlog::source_loc& sl )ι;
-		explicit Logger( ELogTags tags, FormatString&& m, ARGS... args, SL sl )ι: Logger( tags, FWD(m), FWD(args)..., {sl.file_name(), (int)sl.line(), sl.function_name()} ){}
-	};
+	ψ Log( ELogLevel level, ELogTags tags, SL sl, FormatString&& m, ARGS... args )ι->void;
+//	ψ Log( ELogTags tags, SL sl, FormatString&& m, ARGS... args )ι->void;
 
-	template<ELogLevel TLevel, typename... Args>
-	α LogStack( ELogTags tags, std::stacktrace::size_type stackTraceIndex, FormatString&& m, ARGS... args )ι->void{
-		if( !ShouldLog(TLevel, tags) )//auto fileMinLevel = FileMinLevel(tags); fileMinLevel==ELogLevel::NoLog || fileMinLevel>TLevel
+	ψ LogStack( ELogLevel level, ELogTags tags, std::stacktrace::size_type stackTraceIndex, FormatString&& m, ARGS... args )ι->void{
+		if( !ShouldLog(level, tags) )
 			return;
 
 		if( let stacktrace = std::stacktrace::current(); stacktrace.size() )
-			Log( Entry{stacktrace[ std::min(stacktrace.size()-1,stackTraceIndex+1) ], TLevel, tags, FWD(m), FWD(args)...} );
+			Log( Entry{stacktrace[ std::min(stacktrace.size()-1,stackTraceIndex+1) ], level, tags, FWD(m), FWD(args)...} );
 		else
-			Logger<TLevel,Args...>{ tags, FWD(m), FWD(args)..., source_location::current() };
+			Log( level, tags, SRCE_CUR, FWD(m), FWD(args)... );
 	}
 
 	Φ MarkLogged( StringMd5 id )ι->bool;
 	template<typename... Args>
 	α LogOnce( SL sl, ELogTags tags, FormatString&& m, ARGS... args )ι->void{
 		if( MarkLogged(Entry::GenerateId(sv{m.get().data(), m.get().size()})) )
-			Logger<ELogLevel::Information,Args...>{ tags, FWD(m), FWD(args)..., sl };
+			Log( ELogLevel::Information, tags, sl, FWD(m), FWD(args)... );
 	}
 }
 
 namespace Jde{
-#define LoggerLevel( Level )	\
-	template<typename... Args> \
-	struct Level : Logging::Logger<ELogLevel::Level,Args...>{ \
-    explicit Level(ELogTags tags, FormatString&& m, ARGS... args, SRCE): \
-			Logging::Logger<ELogLevel::Level,Args...>{ tags, FWD(m), FWD(args)..., sl } \
-		{} \
-    explicit Level( SL sl, ELogTags tags, FormatString&& m, ARGS... args ): \
-			Logging::Logger<ELogLevel::Level,Args...>{ tags, FWD(m), FWD(args)..., sl } \
-		{} \
-	}; \
-	template<class... Args> \
-	Level( ELogTags tags, FormatString&&, ARGS... )->Level<Args...>
-
-	template<typename... Args>
-	struct Trace : Logging::Logger<ELogLevel::Trace,Args...>{
-    explicit Trace(ELogTags tags, FormatString&& m, ARGS... args, SRCE):
-			Logging::Logger<ELogLevel::Trace,Args...>{ tags, FWD(m), FWD(args)..., sl }
-		{}
-    explicit Trace( SL sl, ELogTags tags, FormatString&& m, ARGS... args ):
-			Logging::Logger<ELogLevel::Trace,Args...>{ tags, FWD(m), FWD(args)..., sl }
-		{}
-	};
-	template<class... Args>
-	Trace( ELogTags tags, FormatString&&, ARGS... )->Trace<Args...>;
-
-//	LoggerLevel( Trace );
-	LoggerLevel( Debug );
-	LoggerLevel( Information );
-	LoggerLevel( Warning );
-	LoggerLevel( Error );
-	LoggerLevel( Critical );
-#undef LoggerLevel
-
+/*
 #define CMD(Level)	Logging::Logger<ELogLevel::Level,Args...>{ tags, FWD(m), std::forward<const Args>(args)..., sl };
 	ψ Log( ELogLevel level, ELogTags tags, const spdlog::source_loc& sl, FormatString&& m, ARGS... args )ι->void{
 		switch( level ){
@@ -120,28 +83,28 @@ namespace Jde{
 		}
 	}
 #undef CMD
+*/
 }
 
 namespace Jde::Logging{
-	template<ELogLevel TLevel, typename... Args>
-	Logger<TLevel,Args...>::Logger( ELogTags tags, FormatString&& m, ARGS... args, const spdlog::source_loc& sl )ι{
+	ψ Logging::Log( ELogLevel level, ELogTags tags, SL sl, FormatString&& m, ARGS... args )ι->void{
 		BREAK_IF( m.get().size()==0 );
-		if( Process::Finalizing() || !ShouldLog(TLevel, tags) )
+		if( Process::Finalizing() || !ShouldLog(level, tags) )
 			return;
 		for( auto& logger : Loggers() ){
-			if( !logger->ShouldLog(TLevel, tags) )
+			if( !logger->ShouldLog(level, tags) )
 				continue;
 			try{
 				if( auto p = dynamic_cast<SpdLog*>(logger.get()); p )
-					p->Write( TLevel, sl, FWD(m), FWD(args)... );
+					p->Write( level, sl, FWD(m), FWD(args)... );
 				else
-					logger->Write( Entry{sl, TLevel, tags, string{m.get().data(), m.get().size()}, FWD(args)...} );
+					logger->Write( Entry{sl, level, tags, string{m.get().data(), m.get().size()}, FWD(args)...} );
 			}
 			catch( const fmt::format_error& e ){
-				Jde::Critical{ ELogTags::App, "could not format '{}' cargs: {} error: '{}'", string{m.get().data(), m.get().size()}, sizeof...(args), string{e.what()} };
+				Log( ELogLevel::Critical, ELogTags::App, SRCE_CUR, "could not format '{}' cargs: {} error: '{}'", string{m.get().data(), m.get().size()}, sizeof...(args), string{e.what()} );
 			}
 		}
-		BREAK_IF( tags<=ELogTags::Write && TLevel>=BreakLevel() );//don't want to break for opc server.
+		BREAK_IF( tags<=ELogTags::Write && level>=BreakLevel() );//don't want to break for opc server.
 	}
 }
 

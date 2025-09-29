@@ -50,7 +50,7 @@ namespace Jde::DB{
 			_dataSource = name==Name || !canSetSchema
 				? ds
 				: ds->AtSchema( Name );
-			Information{ ELogTags::Sql, "At Schema: {}", _dataSource->SchemaName() };
+			INFOT( ELogTags::Sql, "At Schema: {}", _dataSource->SchemaName() );
 		}
 		return _dataSource;
 	}

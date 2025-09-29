@@ -50,7 +50,7 @@ namespace Jde::App::Client{
 	α LoginAwait::Execute()ι->ClientHttpAwait::Task{
 		try{
 			jobject j{ {"jwt", _jwt.Payload()} };
-			Trace{ ELogTags::App, "Logging in {}:{}", Host(), Port() };
+			TRACET( ELogTags::App, "Logging in {}:{}", Host(), Port() );
 			auto res = co_await ClientHttpAwait{ Host(), "/login", {}, Port(), {.Authorization= Ƒ("Bearer {}", _jwt.Payload())} };
 			auto sessionPK = Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 			THROW_IF( !sessionPK, "Invalid authorization: {}.", res[http::field::authorization] );
@@ -73,7 +73,7 @@ namespace Jde::App::Client{
 	}
 	α ConnectAwait::RunSocket( SessionPK sessionId )ι->TAwait<Proto::FromServer::ConnectionInfo>::Task{
 		try{
-			Trace( ELogTags::App, "Creating socket session for sessionId: {:x}", sessionId );
+			TRACET( ELogTags::App, "Creating socket session for sessionId: {:x}", sessionId );
 			co_await StartSocketAwait{ sessionId, _authorize, move(_appClient), _sl };
 			Resume();
 		}

@@ -20,9 +20,9 @@ namespace Jde::Opc::Gateway{
 					results = move( x.Results );
 			}
 		});
-		if( !visited )
+		if( !visited ){
 			CRITICAL( "{}Could not find handle.", logPrefix );
-		else if( results ){
+		}else if( results ){
 			(*ppClient)->_readRequests.erase( handle );
 			auto h = (*ppClient)->ClearRequestH<TAwait<flat_map<NodeId,UA_WriteResponse>>::Handle>( handle ); RETURN_IF( !h, ELogLevel::Critical, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId );
 			h.promise().Resume( move(*results), h );

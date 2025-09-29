@@ -40,7 +40,7 @@ namespace Jde::App{
 	}
 	Ŧ IApp::QuerySync( string&& q, bool returnRaw, SL sl )ε->T{
 		up<TAwait<T>> await = Query<T>( move(q), returnRaw, sl );
-		return BlockAwait<TAwait<T>,T>( *await );
+		return BlockAwait<TAwait<T>,T>( move(*await) );
 	}
 	Ξ IApp::Verify( const Web::Jwt& jwt )Ε->void{
 		THROW_IF( PublicKey()!=jwt.PublicKey, "Signor not trusted" );

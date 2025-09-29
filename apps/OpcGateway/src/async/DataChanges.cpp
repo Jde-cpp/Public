@@ -5,11 +5,11 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	static ELogTags _tag{ (ELogTags)(EOpcLogTags::Opc | EOpcLogTags::Monitoring) };
+	static ELogTags _tags{ (ELogTags)(EOpcLogTags::Opc | EOpcLogTags::Monitoring) };
 	α CreateDataChangesCallback( UA_Client* ua, void *userdata, RequestId requestId, UA_CreateMonitoredItemsResponse* response )ι->void{
 		auto client = UAClient::TryFind(ua); if( !client ) return;
-		auto h = client->ClearRequestH<DataChangeAwait::Handle>( requestId );  if( !h ){ Critical(_tag, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId ); return; }
-		Trace( _tag, "[{:x}.{:x}]CreateDataChangesCallback - {:x}", (uint)ua, requestId, (Handle)userdata );
+		auto h = client->ClearRequestH<DataChangeAwait::Handle>( requestId );  if( !h ){ CRITICAL("[{:x}.{:x}]Could not find handle.", (uint)ua, requestId ); return; }
+		TRACE( "[{:x}.{:x}]CreateDataChangesCallback - {:x}", (uint)ua, requestId, (Handle)userdata );
 		if( let sc = response->responseHeader.serviceResult; sc )
 			h.promise().ResumeExp( UAClientException{sc, client->Handle(), requestId}, h );
 		else{
@@ -20,12 +20,12 @@ namespace Jde::Opc::Gateway{
 	α MonitoredItemsDeleteCallback( UA_Client* ua, void* /*_userdata_*/, RequestId requestId, UA_DeleteMonitoredItemsResponse* response )ι->void{
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
 		pClient->ClearRequest( requestId );
-		Trace( _tag, "[{:x}.{:x}]MonitoredItemsDeleteCallback", (uint)ua, requestId );
+		TRACE( "[{:x}.{:x}]MonitoredItemsDeleteCallback", (uint)ua, requestId );
 		if( let sc = response->responseHeader.serviceResult; sc )
-			Warning( _tag, "[{:x}.{:x}]Could not delete monitored items:  {}.", (uint)ua, requestId, UAException::Message(sc) );
+			WARN( "[{:x}.{:x}]Could not delete monitored items:  {}.", (uint)ua, requestId, UAException::Message(sc) );
     for( auto sc : Iterable<UA_StatusCode>(response->results, response->resultsSize) ){
 			if( sc )
-				Warning( _tag, "[{:x}.{:x}]Could not delete monitored item:  {}.", (uint)ua, requestId, UAException::Message(sc) );
+				WARN( "[{:x}.{:x}]Could not delete monitored item:  {}.", (uint)ua, requestId, UAException::Message(sc) );
 		}
 	}
 
@@ -33,13 +33,13 @@ namespace Jde::Opc::Gateway{
 		auto pClient = UAClient::TryFind(ua); if(!pClient) return;
 		Value value{ move(*uaValue) };
 		let h = MonitorHandle{ subId, monId };
-		Trace( DataChangesTag, "[{:x}.{:x}] DataChangesCallback - {}", (uint)ua, (Handle)h, serialize(value.ToJson()) );
+		TRACET( DataChangesTag, "[{:x}.{:x}] DataChangesCallback - {}", (uint)ua, (Handle)h, serialize(value.ToJson()) );
 		if( !pClient->MonitoredNodes.SendDataChange(h, move(value)) )
-			Debug( DataChangesTag, "[{:x}.{:x}]Could not find node monitored item.", (uint)ua, (Handle)MonitorHandle{subId, monId} );
+			DBGT( DataChangesTag, "[{:x}.{:x}]Could not find node monitored item.", (uint)ua, (Handle)MonitorHandle{subId, monId} );
 	}
 
 	α DataChangesDeleteCallback( UA_Client* ua, SubscriptionId subId, void* /*_subContext_*/, MonitorId monId, void* /*_monContext_*/ )->void{
-		Trace( _tag, "[{:x}.{:x}]DataChangesDeleteCallback", (uint)ua, (Handle)MonitorHandle{subId, monId} );
+		TRACE( "[{:x}.{:x}]DataChangesDeleteCallback", (uint)ua, (Handle)MonitorHandle{subId, monId} );
 	}
 
 	α DataChangeAwait::Suspend()ι->void{

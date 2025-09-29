@@ -25,7 +25,7 @@ namespace Jde::Access{
 					y.emplace( role.PK, role );
 			}
 			for( let& [pk, role] : y )
-				Trace{ _tags | ELogTags::Pedantic, "[{}]AddedRole membersSize={}", role.PK, role.Members.size() };
+				TRACET( _tags | ELogTags::Pedantic, "[{}]AddedRole membersSize={}", role.PK, role.Members.size() );
 			Resume( move(y) );
 		}
 		catch( IException& e ){

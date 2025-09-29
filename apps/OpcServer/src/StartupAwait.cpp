@@ -79,7 +79,7 @@ namespace Jde::Opc::Server{
 				co_await UpsertAwait{}; //mutations
 			if( auto configFile = Settings::FindPath("/opcServer/configFile"); configFile )
 				GetUAServer().Load( *configFile );
-			Information( ELogTags::App, "---Started OPC Server---" );
+			INFOT( ELogTags::App, "---Started OPC Server---" );
 			Resume();
 		}
 		catch( IException& e ){

@@ -63,7 +63,7 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	TEST_F( CertTests, Authenticate_Bad ){
-		let root = IApplication::ApplicationDataFolder();
+		let root = Process::ApplicationDataFolder();
 		let working = root/"ssl";
 		if( fs::exists(working) && !fs::exists(root/"ssl_backup") )
 			fs::rename( working, root/"ssl_backup" );
@@ -81,7 +81,7 @@ namespace Jde::Opc::Gateway::Tests{
 		EXPECT_TRUE( _exception );
 		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadIdentityTokenInvalid") );
 		EXPECT_FALSE( _client );
-		Debug( _tags, "{}", _exception ? _exception->what() : "Error no exception." );
+		DBG( "{}", _exception ? _exception->what() : "Error no exception." );
 		fs::rename( working, root/"ssl_badTest" );
 		fs::rename( root/"ssl_backup", working );
 	}

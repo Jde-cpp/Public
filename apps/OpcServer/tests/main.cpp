@@ -12,15 +12,11 @@ namespace Jde{
 	α Process::ProductName()ι->sv{ return "Tests.OpcServer"; }
 #endif
 	up<exception> _error;
-	Ω keepExecuterAlive()ι->VoidAwait::Task{
-		co_await DurationTimer{ 360s };
-	}
 
  	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
 		Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
 		Logging::AddTagParser( mu<Opc::UALogParser>() );
-		OSApp::Startup( argc, argv, "Tests.OpcServer", "OpcServer tests", true );
-		keepExecuterAlive();
+		Process::Startup( argc, argv, "Tests.OpcServer", "OpcServer tests", true );
 		try{
 			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )
 				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };

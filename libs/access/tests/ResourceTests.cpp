@@ -24,7 +24,7 @@ namespace Jde::Access::Tests{
 		let& resources = QL().QuerySync<jarray>( ql, GetRoot() );
 		ASSERT_EQ( resources.size(), 5 ); //"users", "members", "roles", "resources", "provider_types"
 		constexpr ERights base = ERights::Create | ERights::Read | ERights::Update | ERights::Delete | ERights::Purge | ERights::Administer;
-		Trace{ ELogTags::Test, "base={:x}"sv, underlying(base) };
+		TRACET( ELogTags::Test, "base={:x}"sv, underlying(base) );
 		for( let& v : resources ){
 			let& o = Json::AsObject( v );
 			let target = Json::AsSV( o, "target" );

@@ -5,18 +5,13 @@ import "google/protobuf/timestamp.proto";
 import "Common.proto";
 import "Web.FromServer.proto";
 import "App.proto";
+import "Log.proto";
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-message LogLevels{
-	Jde.Proto.ELogLevel server=1;
-	Jde.Proto.ELogLevel client=2;
-}
-
-message ConnectionInfo{
+	message ConnectionInfo{
 	uint32 app_pk = 1;
 	uint32 instance_pk = 2;
-	LogLevels log_levels = 3;
 	Jde.Web.FromServer.SessionInfo session_info = 4;
 	bytes certificate_modulus = 5;
 	bytes certificate_exponent = 6;
@@ -28,7 +23,7 @@ message Trace{
 	uint64 id=1;
 	uint64 instance_id=2;
 	google.protobuf.Timestamp time=3;
-	Jde.Proto.ELogLevel level=4;
+	Jde.App.Log.Proto.ELogLevel level=4;
 	bytes message_id=5;
 	bytes file_id=6;
 	bytes function_id=7;
@@ -82,7 +77,7 @@ message Message{
 		uint32 ack = 2;//sends on handshake
 		string generic = 3;
 		Jde.App.Proto.StringMD5s string_pks = 4;//pks stored in db.
-		LogLevels log_levels = 5;
+		//Jde.App.Log.Proto.LogLevels log_levels = 5;
 		double progress = 7;
 		Jde.Web.FromServer.SessionInfo session_info = 8;
 		string graph_ql = 10;

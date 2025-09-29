@@ -22,7 +22,7 @@ namespace Jde::App::Server{
 			_userPK = info->UserPK;
 			base::SetSessionId( instance.session_id() );
 			let [appPK,instancePK] = App::AddInstance( instance.application(), instance.host(), instance.pid() );//TODO Don't block
-			Information{ ELogTags::SocketServerRead, "[{:x}.{:x}]Adding application app:{}@{}:{} pid:{}, instancePK:{:x}, sessionId: {:x}, endpoint: '{}'", Id(), requestId, instance.application(), instance.host(), instance.web_port(), instance.pid(), instancePK, instance.session_id(), _userEndpoint.address().to_string() };
+			INFOT( ELogTags::SocketServerRead, "[{:x}.{:x}]Adding application app:{}@{}:{} pid:{}, instancePK:{:x}, sessionId: {:x}, endpoint: '{}'", Id(), requestId, instance.application(), instance.host(), instance.web_port(), instance.pid(), instancePK, instance.session_id(), _userEndpoint.address().to_string() );
 			Server::RemoveExisting( instance.host(), instance.web_port() );
 			_instancePK = instancePK; _appPK = appPK;
 			_instance = move( instance );
@@ -84,15 +84,16 @@ namespace Jde::App::Server{
 	α ServerSocketSession::Schemas()Ι->const vector<sp<DB::AppSchema>>&{
 		return Server::Schemas();
 	}
-	α ServerSocketSession::SaveLogEntry( Proto::FromClient::LogEntry entry, RequestId requestId )->void{
+
+	α ServerSocketSession::SaveLogEntry( Log::Proto::LogEntryClient entry, RequestId requestId )->void{
 		if( !_appPK || !_instancePK ){
 			WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 			return;
 		}
 		let level = (ELogLevel)entry.level();
 		vector<string> args = Jde::Proto::ToVector( move(*entry.mutable_args()) );
-		if( _dbLevel!=ELogLevel::NoLog && _dbLevel<=level )
-			SaveMessage( _appPK, _instancePK, entry );//TODO don't block
+		// if( _dbLevel!=ELogLevel::NoLog && _dbLevel<=level )
+		// 	SaveMessage( _appPK, _instancePK, entry );//TODO don't block
 		if( _webLevel!=ELogLevel::NoLog && _webLevel<=level ){
 			Logging::Entry y{ App::FromClient::FromLogEntry(move(entry)) };
 			y.Text = StringCache::GetMessage( y.Id() );
@@ -160,9 +161,9 @@ namespace Jde::App::Server{
 				AddSession( move(*m.mutable_add_session()), requestId, SRCE_CUR );
 				break;}
 			case kException:
-				if( !requestId )
-					Debug( ELogTags::SocketServerRead | ELogTags::Exception, "[{:x}.{:x}]Exception - {}", Id(), 0, m.exception().what() );
-				else if( !ForwardExecutionAwait::Resume( move(*m.mutable_execute_response()), requestId) )
+				if( !requestId ){
+					DBGT( ELogTags::SocketServerRead | ELogTags::Exception, "[{:x}.{:x}]Exception - {}", Id(), 0, m.exception().what() );
+				}else if( !ForwardExecutionAwait::Resume( move(*m.mutable_execute_response()), requestId) )
 					LogRead( Ƒ("Exception not handled - {}", m.exception().what()), requestId, ELogLevel::Critical );
 				break;
 			case kExecute:
@@ -229,8 +230,8 @@ namespace Jde::App::Server{
 				for_each( v.request_ids(), [&]( auto id ){ subIds.emplace_back(id); } );
 				RemoveSubscription( move(subIds), requestId );
 				break;}
-			[[likely]]case kStringValue:{
-				if( !_appPK || !_instancePK ){
+			[[likely]]case kStringField:{
+/*				if( !_appPK || !_instancePK ){
 					WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 					continue;
 				}
@@ -238,7 +239,7 @@ namespace Jde::App::Server{
 				auto& s = *m.mutable_string_value();
 				uuid id{ Jde::Proto::ToGuid(s.id()) };
 				if( StringCache::Add( s.field(), id, s.value(), ELogTags::SocketServerRead) )
-					Server::SaveString( (Proto::FromClient::EFields)s.field(), id, move(*s.mutable_value()) );
+					Server::SaveString( (Proto::FromClient::EFields)s.field(), id, move(*s.mutable_value()) );*/
 				break;}
 			case kSubscribeLogs:{
 				if( m.subscribe_logs().empty() ){
@@ -267,7 +268,7 @@ namespace Jde::App::Server{
 			}
 		}
 		if( cLog || cString )
-			Trace{ ELogTags::SocketServerRead, "[{:x}] log entries recieved: {} strings received: {}.", Id(), cLog, cString };
+			TRACET( ELogTags::SocketServerRead, "[{:x}] log entries recieved: {} strings received: {}.", Id(), cLog, cString );
 	}
 
 	α ServerSocketSession::OnClose()ι->void{

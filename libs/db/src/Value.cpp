@@ -94,7 +94,7 @@ namespace Jde::DB{
 		case Int32: j = get_int32(); break;
 		case Double: j = get_double(); break;
 		case Time: j = ToIsoString( get_time() ); break;
-		default: Error{ _tags, "Unknown type({}).", TypeName() };
+		default: ERR( "Unknown type({}).", TypeName() );
 		}
 	}
 }
@@ -162,7 +162,7 @@ namespace Jde{
 		else if( typeName=="Uri" )
 			type = EType::Uri;
 		else
-			Trace{ _tags, "Unknown datatype({}).", typeName };
+			TRACE( "Unknown datatype({}).", typeName );
 		return type;
 	}
 }

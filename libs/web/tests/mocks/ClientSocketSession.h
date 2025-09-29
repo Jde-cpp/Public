@@ -8,7 +8,7 @@ namespace Jde::Web::Mock{
 	struct ClientSocketSession final : TClientSocketSession<Proto::FromClientTransmission,Proto::FromServerTransmission>{
 		using base = TClientSocketSession<Proto::FromClientTransmission,Proto::FromServerTransmission>;
 		ClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι;
-		~ClientSocketSession(){ Trace{ ELogTags::Test, "ClientSocketSession::~ClientSocketSession" }; }
+		~ClientSocketSession(){ TRACET(ELogTags::Test, "ClientSocketSession::~ClientSocketSession"); }
 
 		α Connect( SessionPK sessionId, SRCE )ι->ClientSocketAwait<SessionPK>;
 		α Echo( str x, SRCE )ι->ClientSocketAwait<string>;

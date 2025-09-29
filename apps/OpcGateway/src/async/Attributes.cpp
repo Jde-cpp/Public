@@ -21,9 +21,9 @@ namespace Attributes{
 					results = move( request.Results );
 			}
 		});
-		if( !visited )
+		if( !visited ){
 			CRITICAL( "{}Could not find handle.", logPrefix );
-		else if( results ){
+		}else if( results ){
 			(*ppClient)->_dataAttributeRequests.erase( handle );
 			auto h = (*ppClient)->ClearRequestH<AttribAwait::Handle>( handle ); RETURN_IF( !h, ELogLevel::Critical, "[{:x}.{:x}]Could not find handle.", (uint)ua, requestId );
 			h.promise().Resume( move(*results), h );

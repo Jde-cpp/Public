@@ -18,7 +18,7 @@ namespace Jde{
 	}
 
 	bool OSApp::KillInstance( uint processId )ι{
-		Information{ ELogTags::App | ELogTags::Shutdown, "Kill received - stopping instance" };
+		INFOT( ELogTags::App | ELogTags::Shutdown, "Kill received - stopping instance" );
 		var proc = ::OpenProcess( PROCESS_TERMINATE, false, (DWORD)processId );
 		if( proc ){
 			::TerminateProcess( proc, 1 );
@@ -135,7 +135,7 @@ namespace Jde{
 	}
 
 	α OSApp::Pause()ι->void{
-		Information{ ELogTags::App | ELogTags::Startup, "Starting main thread loop...{}", _getpid() };
+		INFOT( ELogTags::App | ELogTags::Startup, "Starting main thread loop...{}", _getpid() );
 		if( _isService ){
 			SERVICE_TABLE_ENTRY DispatchTable[] = {  { (char*)Process::ApplicationName().data(), (LPSERVICE_MAIN_FUNCTION)Windows::Service::Main },  { nullptr, nullptr }  };
 			var success = StartServiceCtrlDispatcher( DispatchTable );//blocks?
@@ -242,7 +242,7 @@ namespace Jde{
 			if( !::ChangeServiceConfig2A(service.get(), SERVICE_CONFIG_DESCRIPTION, &d) )
 				std::cerr << "ChangeServiceConfig2A failed" << std::endl;
 		}
-		Information{ ELogTags::App, "service '{}' installed successfully", serviceName };
+		INFOT( ELogTags::App, "service '{}' installed successfully", serviceName );
 	}
 	α OSApp::Uninstall()ε->void{
 		auto manager = MyOpenSCManager();
@@ -255,12 +255,12 @@ namespace Jde{
 		}
 		THROW_IF( !::DeleteService(service.get()), "DeleteService failed:  {:x}", GetLastError() );
 
-		Information{ ELogTags::App, "Service '{}' deleted successfully", Process::ApplicationName() };
+		INFOT( ELogTags::App, "Service '{}' deleted successfully", Process::ApplicationName() );
 	}
 
 	α OSApp::LoadLibrary( const fs::path& path )ε->void*{
 		auto p = ::LoadLibrary( path.string().c_str() ); THROW_IFX( !p, IOException(path, GetLastError(), "Can not load library") );
-		Information{ ELogTags::App, "({})Opened"sv, path.string() };
+		INFOT( ELogTags::App, "({})Opened"sv, path.string() );
 		return p;
 	}
 

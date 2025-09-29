@@ -42,7 +42,7 @@ namespace Jde::Web::Server{
 					inClause += std::to_string( session->UserPK.Value ) + ",";
 				auto q = "query{ users(id:["+inClause.substr(0, inClause.size()-1)+"]){id loginName provider{id name}} }";
 				users = Json::AsObject( co_await (*_appClient->Query<jvalue>(move(q), UserPK)) );
-				Trace( _tags | ELogTags::Pedantic, "users={}"sv, serialize(users) );
+				TRACET( _tags | ELogTags::Pedantic, "users={}"sv, serialize(users) );
 				for( let& vuser : Json::AsArrayPath(users, "data/users") ){
 					let& user = Json::AsObject(vuser);
 					userDomainLoginNames[{Json::AsNumber<Jde::UserPK::Type>(user,"id")}] = make_tuple( Json::AsSVPath(user, "provider/name"), Json::AsString(user, "loginName") );

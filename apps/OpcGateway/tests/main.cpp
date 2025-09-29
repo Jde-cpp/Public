@@ -2,6 +2,7 @@
 #include <jde/framework/settings.h>
 #include <jde/framework/coroutine/Timer.h>
 #include <jde/crypto/OpenSsl.h>
+#include <jde/app/log/ProtoLog.h>
 #include <jde/opc/uatypes/Logger.h>
 #include "../src/StartupAwait.h"
 #include "../../AppServer/src/AppStartupAwait.h"
@@ -13,18 +14,21 @@ namespace Jde{
 	α Process::ProductName()ι->sv{ return "Tests.Opc"; }
 #endif
 	up<exception> _error;
-	Ω keepExecuterAlive()ι->VoidAwait::Task{
-		co_await DurationTimer{ 360s };
-	}
+	// Ω keepExecuterAlive()ι->VoidAwait::Task{
+	// 	co_await DurationTimer{ 360s };
+	// }
 
  	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
 #ifdef _MSC_VER
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
 #endif
 		Logging::AddTagParser( mu<Opc::UALogParser>() );
+		auto protoLogSettings = Settings::FindObject( "/logging/proto" );
+		if( protoLogSettings )
+			Logging::AddLogger( mu<App::ProtoLog>(*protoLogSettings) );
 		Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
-		OSApp::Startup( argc, argv, "Tests.Opc", "Opc tests", true );
-		keepExecuterAlive();
+		Process::Startup( argc, argv, "Tests.Opc", "Opc tests", true );
+		//keepExecuterAlive();
 		try{
 			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )
 				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };

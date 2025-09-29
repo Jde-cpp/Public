@@ -19,24 +19,24 @@ namespace Read{
 		let handle = userdata ? (RequestId)(uint)userdata : requestId;
 		string logPrefix = format( "[{:x}.{}.{}]", (uint)ua, handle, requestId );
 		if( sc )
-			Trace( IotReadTag, "{}Value::OnResponse ({})-{} Value={}", logPrefix, sc, UAException::Message(sc), val ? serialize(Value{*val}.ToJson()) : "null" );
+			TRACET( IotReadTag, "{}Value::OnResponse ({})-{} Value={}", logPrefix, sc, UAException::Message(sc), val ? serialize(Value{*val}.ToJson()) : "null" );
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
 		up<flat_map<NodeId, Value>> results;
 		bool visited = pClient->_readRequests.visit( handle, [requestId, sc, val, &results, &logPrefix]( auto& pair ){
 			auto& x = pair.second;
 			if( auto pRequest=x.Requests.find(requestId); pRequest!=x.Requests.end() ){
 				auto p = x.Results.try_emplace( pRequest->second, sc ? Value{ sc } : Value{ *val } ).first;
-				Trace( IotReadTag, "{} Value={}", logPrefix, sc ? format("[{:x}]{}", sc, UAException::Message(sc)) : serialize(p->second.ToJson()) );
+				TRACET( IotReadTag, "{} Value={}", logPrefix, sc ? format("[{:x}]{}", sc, UAException::Message(sc)) : serialize(p->second.ToJson()) );
 				if( x.Results.size()==x.Requests.size() )
 					results = mu<flat_map<NodeId, Value>>( move(x.Results) );
 			}
 		});
-		if( !visited )
-			Critical( IotReadTag,  "{}Could not find handle.", logPrefix );
-		else if( results ){
+		if( !visited ){
+			CRITICALT( IotReadTag,  "{}Could not find handle.", logPrefix );
+		}else if( results ){
 			pClient->_readRequests.erase( handle );
-			auto h = pClient->ClearRequestH<ReadAwait::Handle>( handle ); if( !h ){ Critical{ IotReadTag, "[{}]Could not find handle.", logPrefix}; return; };
-			Trace( IotReadTag, "{}Resume", logPrefix );
+			auto h = pClient->ClearRequestH<ReadAwait::Handle>( handle ); if( !h ){ CRITICALT(IotReadTag, "[{}]Could not find handle.", logPrefix); return; };
+			TRACET( IotReadTag, "{}Resume", logPrefix );
 			h.promise().Resume( move(*results), h );
 		}
 	}

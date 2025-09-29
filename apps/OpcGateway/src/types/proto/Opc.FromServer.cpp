@@ -107,7 +107,7 @@ namespace Jde::Opc::Gateway{
 			else if( IS(UA_TYPES_XMLELEMENT) ) [[unlikely]]
 				proto.set_allocated_xml_element( new string{ToSV(v.Get<UA_XmlElement>(i))} );
 			else{
-				Warning( IotReadTag, "Unsupported type {}.", type->typeName );
+				WARNT( IotReadTag, "Unsupported type {}.", type->typeName );
 				proto.set_status_code( UA_STATUSCODE_BADNOTIMPLEMENTED );
 			}
 		}

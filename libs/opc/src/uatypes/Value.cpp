@@ -63,7 +63,7 @@ namespace Jde::Opc{
 			else if( IS(UA_TYPES_XMLELEMENT) ) [[unlikely]]
 				addExplicit( jstring{ToSV(((UA_XmlElement*)value.data)[i])} );
 			else{
-				Warning( IotReadTag, "Unsupported type {}.", type->typeName );
+				WARNT( IotReadTag, "Unsupported type {}.", type->typeName );
 				addExplicit( jstring{Ƒ("Unsupported type {}.", type->typeName)} );
 			}
 		}

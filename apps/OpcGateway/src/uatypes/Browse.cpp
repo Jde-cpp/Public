@@ -110,10 +110,10 @@ namespace Browse{
 		auto h = UAClient::ClearRequestH<Browse::FoldersAwait::Handle>( ua, requestId );
 		let uaHandle = (Handle)(userdata ? userdata : ua);
 		if( !h ){
-			Critical{ BrowseTag, "[{:x}.{:x}]Could not find handle.", uaHandle, requestId };
+			CRITICALT( BrowseTag, "[{:x}.{:x}]Could not find handle.", uaHandle, requestId );
 			return;
 		}
-		Trace( BrowseTag, "[{:x}.{}]OnResponse", uaHandle, requestId );
+		TRACET( BrowseTag, "[{:x}.{}]OnResponse", uaHandle, requestId );
 		if( !response->responseHeader.serviceResult )
 			h.promise().Resume( move(*response), h );
 		else
@@ -165,7 +165,7 @@ namespace Browse{
 				if( auto p = dataTypes.find(nodeId); p!=dataTypes.end() )
 					reference["dataType"] = p->second.ToJson();
 				// else
-				// 	Warning( BrowseTag, "Could not find data type for node={}.", serialize(nodeId.ToJson()) );
+				// 	WARN( BrowseTag, "Could not find data type for node={}.", serialize(nodeId.ToJson()) );
 				reference["referenceType"] = Opc::ToJson( ref.referenceTypeId );
 				reference["isForward"] = ref.isForward;
 				reference["node"] = nodeId.ToJson();

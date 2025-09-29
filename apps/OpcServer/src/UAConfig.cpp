@@ -25,7 +25,7 @@ namespace Jde::Opc::Server {
 
 /*		for( uint i=0; i<config.securityPoliciesSize; ++i ){
 			let& sp = config.securityPolicies[i];
-			Information{ ELogTags::App, "[{}]PolicyUri={}", i, ToSV(sp.policyUri) };
+			INFOT( ELogTags::App, "[{}]PolicyUri={}", i, ToSV(sp.policyUri) );
 			if( ToSV(sp.policyUri)=="http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256" )
 				UA_AccessControl_default( &config, false/ *allowAnonymous* /, &sp.policyUri, usernamePasswordsSize, usernamePasswords );
 		}*/

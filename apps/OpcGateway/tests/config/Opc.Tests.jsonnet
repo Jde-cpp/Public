@@ -1,10 +1,10 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "BrowseTests.NodeId",
+		tests: "LogTests.Exists",
 		recreateDB:: true,
-		embeddedAppServer: true,
-		embeddedOpcServer: true
+		embeddedAppServer: false,
+		embeddedOpcServer: false
 	},
 	opc: args.opc,
 	dbServers: {
@@ -69,10 +69,15 @@ local args = import 'args.libsonnet';
 		},
 		memory:{
 			default: "trace"
+		},
+		proto:{
+			path: args.logDir + "/proto",
+			timeZone: "America/New_York",
+			delay: "PT1M"
 		}
 	},
 	workers:{
-		executor: 2,
+		executor: {threads: 2},
 		drive: {threads: 1}
 	}
 }

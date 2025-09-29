@@ -14,7 +14,7 @@ namespace Jde{
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
 #endif
 		SetThreadDscrptn( "Main" );
-		OSApp::Startup( argc, argv, "Tests.Web", "Web tests", true );
+		Process::Startup( argc, argv, "Tests.Web", "Web tests", true );
 	}
 }
 

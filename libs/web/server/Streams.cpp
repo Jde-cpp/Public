@@ -87,12 +87,12 @@ namespace Jde::Web::Server{
 					l.unlock();
 					let tags = ELogTags::SocketClientWrite | ELogTags::ExternalLogger;
 					if( ec || out->size()!=bytes_transferred ){
-						Debug{ tags, "Error writing to Session:  '{}'", boost::diagnostic_information(ec) };
+						DBGT( tags, "Error writing to Session:  '{}'", boost::diagnostic_information(ec) );
 						try{
 							ws.close( websocket::close_code::none );
 						}
 						catch( const boost::exception& ){
-							Debug{ tags, "Error closing:  '{}')", boost::diagnostic_information(ec) };
+							DBGT( tags, "Error closing:  '{}')", boost::diagnostic_information(ec) );
 						}
 						CodeException{ ec, ELogTags::SocketClientRead };
 					}

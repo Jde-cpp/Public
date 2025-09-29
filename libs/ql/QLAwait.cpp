@@ -14,7 +14,7 @@ namespace Jde::QL{
 		jarray mutationResults;
 		try{
 			for( auto& m : mutations ){
-				Trace{ _sl, ELogTags::QL, "QL: {}", m.ToString() };
+				LOGSL( ELogLevel::Trace, _sl, ELogTags::QL, "QL: {}", m.ToString() );
 				auto mutationResult = co_await MutationAwait( m, _executer, _sl );
 				if( !m.ResultRequest )
 					continue;

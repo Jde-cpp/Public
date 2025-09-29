@@ -40,7 +40,7 @@ namespace Jde::Opc{
 			ToGuid( p->second, nodeId.identifier.guid );
 		}
 		else
-			Debug( ELogTags::App, "No identifier in nodeId" );
+			DBGT( ELogTags::App, "No identifier in nodeId" );
 	}
 
 	ExNodeId::ExNodeId( const jvalue& j )ε:

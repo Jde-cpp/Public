@@ -65,6 +65,7 @@ namespace Server{
 	}
 
 }
+/*
 	#define _pQueue if( auto p = _pDbQueue; p )p
 	α Server::SaveString( Proto::FromClient::EFields field, StringMd5 id, string value, SL )ι->void{
 		sv table = "log_messages";
@@ -83,7 +84,9 @@ namespace Server{
 		sql.Params.push_back( {id} );
 		sql.Params.push_back( {move(value)} );
 	}
+*/
 }
+
 namespace Jde{
 	α App::AddInstance( str applicationName, str hostName, uint processId )ε->std::tuple<AppPK, AppInstancePK>{
 		AppPK applicationId;
@@ -131,8 +134,8 @@ namespace Jde{
 		} );
 		return pApplications;
 	}
-*/
-	α App::SaveMessage( AppPK applicationId, AppInstancePK instanceId, const Proto::FromClient::LogEntry& m, SL )ι->void{
+
+	α App::SaveMessage( AppPK applicationId, AppInstancePK instanceId, const Log::Proto::LogEntryClient& m, SL )ι->void{
 		let variableCount = std::min( 5, m.args().size() );
 		vector<DB::Value> params{
 			{applicationId},
@@ -158,6 +161,7 @@ namespace Jde{
 		}
 		os << ")";
 	}
+*/
 	namespace App{
 		α Data::LoadEntries( QL::TableQL table )ε->Proto::FromServer::Traces{
 			auto statement = QL::SelectStatement( table, true );

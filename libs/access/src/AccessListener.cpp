@@ -12,7 +12,7 @@ namespace Jde::Access{
 		if( terminate )
 			return;
 		try{
-			BlockVoidAwait<QL::UnsubscribeAwait>( _qlServer->Unsubscribe(move(Ids)) );
+			BlockVoidAwait( _qlServer->Unsubscribe(move(Ids)) );
 		}
 		catch( IException& )
 		{}

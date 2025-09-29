@@ -92,7 +92,7 @@ namespace Server{
 		beast::error_code ec;
 		acceptor.open( endpoint.protocol(), ec );
 		if( ec ){
-			Debug{ ELogTags::App, "!initListener {}:{}", endpoint.address().to_string(), endpoint.port() };
+			DBGT( ELogTags::App, "!initListener {}:{}", endpoint.address().to_string(), endpoint.port() );
 			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Critical };
 			return false;
 		}
@@ -105,7 +105,7 @@ namespace Server{
 
 		acceptor.bind( endpoint, ec );// Bind to the server address
 		if( ec ){
-			Debug{ ELogTags::App, "!initListener {}:{}", endpoint.address().to_string(), endpoint.port() };
+			DBGT( ELogTags::App, "!initListener {}:{}", endpoint.address().to_string(), endpoint.port() );
 			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Critical };
 			return false;
 		}
@@ -145,11 +145,11 @@ namespace Server{
 	Ω listen( tcp::endpoint endpoint, sp<IRequestHandler> handler )ι->net::awaitable<void, executor_type>{
 		typename tcp::acceptor::rebind_executor<executor_with_default>::other acceptor{ co_await net::this_coro::executor };
 		if( !initListener(acceptor, endpoint) ){
-			Debug{ ELogTags::App, "!initListener" };
+			DBGT( ELogTags::App, "!initListener" );
 			co_return;
 		}
 
-		Trace( ELogTags::App, "Web Server accepting." );
+		TRACET( ELogTags::App, "Web Server accepting." );
 		handler->Start();
 		while( (co_await net::this_coro::cancellation_state).cancelled() == net::cancellation_type::none ){
 			auto [ec, sock] = co_await acceptor.async_accept();
@@ -182,7 +182,7 @@ namespace Server{
 		Execution::AddCancelSignal( handler->CancelSignal() );
 		Execution::Run();
 		handler->BlockTillStarted(); // wait for boost to end.
-		Information( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
+		INFOT( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
 	α Internal::Stop( sp<IRequestHandler>&& handler, bool /*terminate*/ )ι->void{
@@ -197,7 +197,7 @@ namespace Server{
 	}
 
 	α Internal::RemoveSocketSession( SocketId id )ι->void{
-		Trace{ ELogTags::SocketServerRead, "erased socket: {:x}", _socketSessions.erase( id ) };
+		TRACET( ELogTags::SocketServerRead, "erased socket: {:x}", _socketSessions.erase( id ) );
 	}
 }
 	α Server::HandleRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task{

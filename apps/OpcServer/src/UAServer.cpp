@@ -11,7 +11,7 @@ namespace Jde::Opc::Server {
 		_ua{ UA_Server_newWithConfig(&_config) }
 	{}
 	UAServer::~UAServer(){
-		Information{ ELogTags::App, "Stopping OPC UA server..." };
+		INFOT( ELogTags::App, "Stopping OPC UA server..." );
 		if( _thread.has_value() ){
 			_running = false;
 			_thread->request_stop();
@@ -33,12 +33,12 @@ namespace Jde::Opc::Server {
 				UA_Server_run_shutdown( _ua );
 				UA_Server_delete( _ua );
 				_ua = nullptr;
-				Information{ ELogTags::App, "OPC UA server stopped." };
+				INFOT( ELogTags::App, "OPC UA server stopped." );
 			}};
 		}
 	}
 	α UAServer::Load( fs::path configFile, SL sl )ε->void{
-		Information{ ELogTags::App, "Loading configuration from: '{}'", configFile.string() };
+		INFOT( ELogTags::App, "Loading configuration from: '{}'", configFile.string() );
 		CHECK_PATH( configFile, sl );
 		if( !NodesetLoader_loadFile(_ua, configFile.string().c_str(), nullptr) )
 			throw Exception( sl, "Failed to load nodeset file: '{}'", configFile.string() );

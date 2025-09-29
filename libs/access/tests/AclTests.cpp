@@ -120,7 +120,7 @@ namespace Jde::Access::Tests{
 		let resourceName = "groupings";
 		restoreResource( resourceName, GetRoot() );
 		TestEnabeledPermissions( resourceName, "EnabledPermissions-Group3", _usersPKs["intruder"] );
-		Trace{ ELogTags::Test, "EnabledPermissions" };
+		TRACET( ELogTags::Test, "EnabledPermissions" );
 	}
 
 	TEST_F( AclTests, DeletedUser ){

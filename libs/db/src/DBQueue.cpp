@@ -51,7 +51,7 @@ namespace Jde::DB{
 		}
 		_stopped = true;
 		_spDataSource = nullptr;
-		Trace{ ELogTags::App, "DBQueue::Run - Stopped" };
+		TRACET( ELogTags::App, "DBQueue::Run - Stopped" );
 	}
 }
 #endif

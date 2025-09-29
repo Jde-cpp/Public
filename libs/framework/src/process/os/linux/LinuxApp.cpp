@@ -11,7 +11,7 @@
 
 #define let const auto
 namespace Jde{
-	auto _tag{ ELogTags::App };
+	constexpr auto _tags{ ELogTags::App };
 	α Process::FreeLibrary( void* p )ι->void{
 		::dlclose( p );
 	}
@@ -19,7 +19,7 @@ namespace Jde{
 	α Process::LoadLibrary( const fs::path& path )ε->void*{
 		auto p = ::dlopen( path.c_str(), RTLD_LAZY );
 		THROW_IFX( !p, IO_EX(path, ELogLevel::Error, "Can not load library - '{}'", dlerror()) );
-		Information( _tag, "[{}] Opened"sv, path.string() );
+		INFO( "[{}] Opened", path.string() );
 		return p;
 	}
 	α Process::GetProcAddress( void* pModule, str procName )ε->void*{
@@ -90,9 +90,9 @@ namespace Jde{
 //	vector<sp<Threading::IWorker>> _workers;
 
 	α Process::Pause()ι->int{
-		Information{ ELogTags::App, "Pausing main thread." };
+		INFOT( ELogTags::App, "Pausing main thread." );
 		let exitReason = ::pause();
-		Information{ ELogTags::App, "Pause returned = {}.", exitReason };
+		INFOT( ELogTags::App, "Pause returned = {}.", exitReason );
 		Shutdown( exitReason );
 		std::cout << "pause returned" << std::endl;
 		return exitReason;
@@ -140,10 +140,11 @@ namespace Jde{
 
 	α Process::Kill( uint processId )ι->bool{
 		let result = ::kill( processId, 14 ); //SIGALRM
-		if( result )
-			Error{ _tag, "kill failed with '{}'.", result };
-		else
-			Information{ _tag, "kill sent to:  '{}'.", processId };
+		if( result ){
+			ERR( "kill failed with '{}'.", result );
+		}else{
+			INFO( "kill sent to:  '{}'.", processId );
+		}
 		return result==0;
 	}
 

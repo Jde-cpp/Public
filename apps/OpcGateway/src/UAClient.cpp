@@ -27,7 +27,7 @@ namespace Jde::Opc::Gateway{
 		ul _{ _clientsMutex };
 		if( auto serverCreds = _clients.find(client->Target()); serverCreds!=_clients.end() ){
 			if( auto cred = serverCreds->second.find(client->Credential); cred!=serverCreds->second.end() ){
-				Debug{ _tags, "[{:x}]Removing client: '{}'.", client->Handle(), client->Target() };
+				DBG( "[{:x}]Removing client: '{}'.", client->Handle(), client->Target() );
 				serverCreds->second.erase( cred );
 				erased = true;
 				if( serverCreds->second.empty() )
@@ -37,7 +37,7 @@ namespace Jde::Opc::Gateway{
 		}
 		client = nullptr;
 		if( !erased )
-			Debug{ _tags, "[{:x}] - could not find client='{}'.", client->Handle(), client->Target() };
+			DBG( "[{:x}] - could not find client='{}'.", client->Handle(), client->Target() );
 		return erased;
 	}
 	concurrent_flat_set<sp<UAClient>> _awaitingActivation;
@@ -64,7 +64,7 @@ namespace Jde::Opc::Gateway{
 					client->MonitoredNodes.Shutdown();
 					client->_asyncRequest.Stop();
 					if( client.use_count()>1 )
-					  Warning{ _tags, "[{:x}]use_count={}", client->Handle(), client.use_count() };
+					  WARN( "[{:x}]use_count={}", client->Handle(), client.use_count() );
 				}
 			}
 		}
@@ -199,7 +199,7 @@ namespace Jde::Opc::Gateway{
 		auto p = shared_from_this();
 		ASSERT( !_awaitingActivation.contains(p) );
 		_awaitingActivation.emplace( shared_from_this() );
-		Debug{ _tags | ELogTags::Access, "[{:x}]Connecting to '{}', using '{}'", Handle(), Url(), Credential.ToString() };
+		DBG( "[{:x}]Connecting to '{}', using '{}'", Handle(), Url(), Credential.ToString() );
 		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
 		_asyncRequest.SetParent( p );
 		Process( std::numeric_limits<RequestId>::max(), nullptr );
@@ -239,9 +239,9 @@ namespace Jde::Opc::Gateway{
 	α UAClient::SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void{
 		try{
 			RequestId requestId{};
-			Trace( BrowseTag, "[{:x}]SendBrowseRequest", Handle() );
+			TRACET( BrowseTag, "[{:x}]SendBrowseRequest", Handle() );
 			UAε( UA_Client_sendAsyncBrowseRequest(_ptr, &request, Browse::OnResponse, nullptr, &requestId) );
-			Trace( BrowseTagPedantic, "[{:x}.{}]SendBrowseRequest", Handle(), requestId );
+			TRACET( BrowseTagPedantic, "[{:x}.{}]SendBrowseRequest", Handle(), requestId );
 			Process( requestId, move(h) );
 		}
 		catch( UAException& e ){
@@ -270,7 +270,7 @@ namespace Jde::Opc::Gateway{
 					firstRequestId = requestId;
 				ids.emplace( requestId, nodeId );
 	 		}
-			Trace( IotReadTag, "[{:x}.{}]SendReadRequest - count={}", Handle(), firstRequestId, ids.size() );
+			TRACET( IotReadTag, "[{:x}.{}]SendReadRequest - count={}", Handle(), firstRequestId, ids.size() );
 			_readRequests.try_emplace( firstRequestId, UARequestMulti<Value>{move(ids)} );
 			Process( firstRequestId, move(h) );
 		}
@@ -317,7 +317,7 @@ namespace Jde::Opc::Gateway{
 		try{
 			RequestId requestId{};
 			UAε( UA_Client_Subscriptions_create_async(UAPointer(), UA_CreateSubscriptionRequest_default(), nullptr, StatusChangeNotificationCallback, DeleteSubscriptionCallback, CreateSubscriptionCallback, nullptr, &requestId) );
-			Trace( MonitoringTag, "[{:x}.{:x}]CreateSubscription", Handle(), requestId );
+			TRACET( MonitoringTag, "[{:x}.{:x}]CreateSubscription", Handle(), requestId );
 			Process( requestId, nullptr );
 		}
 		catch( UAException& e ){
@@ -337,7 +337,7 @@ namespace Jde::Opc::Gateway{
 
 			RequestId requestId{};
 			UAε( UA_Client_MonitoredItems_createDataChanges_async(UAPointer(), request, contexts, dataChangeCallbacks.data(), deleteCallbacks.data(), CreateDataChangesCallback, (void*)requestHandle, &requestId) );
-			Trace( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, serialize(request.ToJson()) );
+			TRACET( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, serialize(request.ToJson()) );
 			Process( requestId, move(h) );//TODO handle BadSubscriptionIdInvalid
 		}
 		catch( UAException& e ){
@@ -405,9 +405,9 @@ namespace Jde::Opc::Gateway{
 
 	α UAClient::TryFind( UA_Client* ua, SL srce )ι->sp<UAClient>{
 		sl _{ _clientsMutex };
-		if( Process::ShuttingDown() )
-			Warning{ srce, _tags, "Application is shutting down." };
-		else{
+		if( Process::ShuttingDown() ){
+			LOGSL( ELogLevel::Warning, srce, _tags, "Application is shutting down." );
+		}else{
 			for( auto& [_, credClients] : _clients ){
 				for( auto& [_, client] : credClients ){
 					if( client->_ptr == ua )

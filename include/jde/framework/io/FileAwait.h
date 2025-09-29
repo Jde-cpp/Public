@@ -43,10 +43,10 @@ namespace Jde::IO{
 	struct FileIOArg final : std::enable_shared_from_this<FileIOArg>, boost::noncopyable{
 		using HCo=variant<TAwait<string>::Handle,VoidAwait::Handle>;
 		FileIOArg( fs::path path, bool vec, SRCE )ι;
-		FileIOArg( fs::path path, variant<string,vector<char>> data, SRCE )ι;
+		FileIOArg( fs::path path, variant<string,vector<byte>> data, ELogTags tags, SRCE )ι;
 		α Open( bool create )ε->void;
 		α Send( HCo h )ι->void;
-		α Data()ι{ return visit( [](auto&& x){return x.data();}, Buffer ); }
+		α Data()ι->char*{ return visit( [](auto&& x){return (char*)x.data();}, Buffer ); }
 		α Size()Ι{ return visit( [](auto&& x){return x.size();}, Buffer ); }
 		α PostExp( up<IFileChunkArg>&& chunk, uint32 code, string&& msg )ι->void;
 		α ResumeExp( uint32 code, string&& msg )ι->void;
@@ -60,7 +60,7 @@ namespace Jde::IO{
 		α ReadCoHandle()ι->TAwait<string>::Handle{ return get<TAwait<string>::Handle>(CoHandle()); }
 		α WriteCoHandle()ι->VoidAwait::Handle{ return get<VoidAwait::Handle>(CoHandle()); }
 
-		variant<string,vector<char>> Buffer;
+		variant<string,vector<byte>> Buffer;
 		std::queue<up<IFileChunkArg>> Chunks; std::mutex ChunkMutex;
 		atomic<uint> ChunksCompleted;
 		uint ChunksToSend;
@@ -68,17 +68,18 @@ namespace Jde::IO{
 		bool IsRead;
 		fs::path Path;
 		SL _sl;
+		ELogTags _tags;
 		HCo _coHandle; mutex _coHandleMutex;
 	};
 
 	struct Γ IFileAwait{
 		IFileAwait( fs::path&& path, bool vec, SL sl )ι:_arg{ ms<FileIOArg>(move(path), vec, sl) }{}
-		IFileAwait( fs::path&& path, variant<string,vector<char>>&& data, SL sl )ι:_arg{ ms<FileIOArg>(move(path), move(data), sl) }{}
+		IFileAwait( fs::path&& path, variant<string,vector<byte>>&& data, ELogTags tags, SL sl )ι:_arg{ ms<FileIOArg>(move(path), move(data), tags, sl) }{}
 		up<IException> ExceptionPtr;
 		sp<FileIOArg> _arg;
 	};
 	struct Γ ReadAwait final : IFileAwait, TAwait<string>{
-		ReadAwait( fs::path path, bool cache, SRCE )ι:IFileAwait{ move(path), false, sl }, TAwait<string>{ sl },_cache{cache}{}
+		ReadAwait( fs::path path, bool cache=false, SRCE )ι:IFileAwait{ move(path), false, sl }, TAwait<string>{ sl },_cache{cache}{}
 		α Suspend()ι->void override;
 		α await_ready()ι->bool override;
 		α await_resume()ε->string override;
@@ -86,8 +87,9 @@ namespace Jde::IO{
 		bool _cache;
 	};
 	struct Γ WriteAwait final : IFileAwait, VoidAwait, boost::noncopyable{
-		WriteAwait( fs::path path, variant<string,vector<char>> data, SRCE )ι:WriteAwait{ move(path), move(data), false, sl }{}
-		WriteAwait( fs::path path, variant<string,vector<char>> data, bool create, SRCE )ι:IFileAwait{ move(path), move(data), sl }, VoidAwait{ sl }, _create{create}{}
+//		WriteAwait( fs::path path, variant<string,vector<char>> data, SRCE )ι:WriteAwait{ move(path), move(data), false, sl }{}
+		WriteAwait( fs::path path, variant<string,vector<byte>> data, bool create=false, ELogTags tags=ELogTags::IO, SRCE )ι:
+			IFileAwait{ move(path), move(data), tags, sl }, VoidAwait{ sl }, _create{create}{}
 		α Suspend()ι->void override;
 		α await_ready()ι->bool override;
 		α await_resume()ε->void override;

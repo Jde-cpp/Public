@@ -16,9 +16,9 @@ namespace Jde{
     operator HANDLE()Ι{ return _value; }
 		struct Deleter final {
 			using pointer=WinHandle;
-			void operator()( WinHandle handle )Ι{ 
+			void operator()( WinHandle handle )Ι{
 				if( handle && !::CloseHandle(handle) )
-					Warning( ELogTags::App, "CloseHandle returned {}", ::GetLastError() ); 
+					WARNT( ELogTags::App, "CloseHandle returned {}", ::GetLastError() );
 			}
 		};
 	private:

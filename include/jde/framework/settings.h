@@ -16,7 +16,7 @@ namespace Jde::Settings{
 
 	Ξ FindArray( sv path )ι->const jarray*{ return Json::FindArray(Value(), path); }
 	Ξ FindBool( sv path )ι->optional<bool>{ return Json::FindBool(Value(), path); }
-	Φ FindDuration( sv path )ι->optional<Duration>;
+	Φ FindDuration( sv path, SRCE )ι->optional<Duration>;
 	Ξ FindObject( sv path )ι->const jobject*{ return Json::FindObject(Value(), path); }
 	Ξ FindSV( sv path )ι->optional<sv>{ return Json::FindSV(Value(), path); }
 	Φ FindString( sv path )ι->optional<string>;

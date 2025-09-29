@@ -13,7 +13,7 @@ namespace Jde{
 		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
 		β await_resume()ε->void{ AwaitResume(); }
 		α ResumeExp( IException&& e )ι{
-			ASSERT(Promise());
+			ASSERT( Promise() );
 			Promise()->ResumeExp( move(e), _h );
 		}
 		α ResumeExp( exception&& e )ι{
@@ -107,8 +107,7 @@ namespace Jde{
 		β Execute()ι->TExecuteResult=0;
 	};
 
-	template<class TAwait>
-	α BlockVoidAwaitExecute( TAwait&& a, up<IException>& e, atomic_flag& done )ι->TAwait::Task{
+	Ξ BlockVoidAwaitExecute( VoidAwait&& a, up<IException>& e, atomic_flag& done )ι->VoidAwait::Task{
 		try{
 			co_await a;
 		}
@@ -119,8 +118,7 @@ namespace Jde{
 		done.notify_all();
 	}
 
-	template<class TAwait>
-	α BlockVoidAwait( TAwait&& a )ε->void{
+	Ξ BlockVoidAwait( VoidAwait&& a )ε->void{
 		atomic_flag done;
 		up<IException> e;
 		BlockVoidAwaitExecute( move(a), e, done );
@@ -139,17 +137,6 @@ namespace Jde{
 		}
 		done.test_and_set();
 		done.notify_all();
-	}
-
-	template<class TAwait, class TResult>
-	α BlockAwait( TAwait& a )ε->TResult{
-		atomic_flag done;
-		optional<TResult> y; up<IException> e;
-		BlockAwaitExecute( a, y, e, done );
-		done.wait( false );
-		if( e )
-			e->Throw();
-		return *y;
 	}
 
 	template<class TAwait, class TResult>

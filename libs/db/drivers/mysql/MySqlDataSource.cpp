@@ -112,7 +112,7 @@ namespace Jde::DB::MySql{
 	}
 
 	α MySqlDataSource::AtCatalog( sv catalog, SL sl )ε->sp<IDataSource>{
-		Critical{ _tags, "MySql doesn't have catalogs." };
+		CRITICAL( "MySql doesn't have catalogs." );
 		return shared_from_this();
 	}
 

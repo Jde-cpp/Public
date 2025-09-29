@@ -61,7 +61,7 @@ namespace Jde::IO::Drive{
 		else
 		{
 			h = ::open( Path.string().c_str(), O_ASYNC | O_NONBLOCK | (IsRead ? O_RDONLY : O_WRONLY|O_CREAT|O_TRUNC) );
-			Debug( _tags, "[{}]{}"sv, h, Path.string().c_str() );
+			DBG( "[{}]{}"sv, h, Path.string().c_str() );
 		}
 		return h;
 	}
@@ -75,7 +75,7 @@ namespace Jde::IO::Drive{
 	{
 		auto pChunkArg = (IFileChunkArg*)pInfo->si_value.sival_ptr;
 		auto& fileArg = pChunkArg->FileArg();
-		Debug( _tags, "Processing {}"sv, pChunkArg->index );
+		DBG( "Processing {}"sv, pChunkArg->index );
 		if( fileArg.HandleChunkComplete(pChunkArg) )
 		{
 		//	if( ::close(pChunkArg->Handle())==-1 )
@@ -99,7 +99,7 @@ namespace Jde::IO::Drive{
 	}
 	α LinuxFileChunkArg::Process()ι->void
 	{
-		Debug( _tags, "Sending chunk '{}' - handle='{}'"sv, index, handle );
+		DBG( "Sending chunk '{}' - handle='{}'"sv, index, handle );
 		_linuxArg.aio_fildes = handle;
 		let result = FileArg().IsRead ? ::aio_read( &_linuxArg ) : ::aio_write( &_linuxArg ); ERR_IF( result == -1, "aio({}) read={} returned false - {}", FileArg().Path.string(), FileArg().IsRead, errno );
 		//let result = ::aio_write( &_linuxArg );
@@ -169,18 +169,18 @@ namespace Jde::IO::Drive{
 			let accessedTime = dirEntry.AccessedTime.time_since_epoch()==Duration::zero() ? modifiedTime : to_timespec( dirEntry.AccessedTime );
 			timespec values[] = {accessedTime, modifiedTime};
 			if( !utimensat(AT_FDCWD, dir.string().c_str(), values, 0) )
-				Warning( _tags, "utimensat returned {} on {}"sv, errno, dir.string() );
+				WARN( "utimensat returned {} on {}", errno, dir.string() );
 		}
 		return mu<DirEntry>( dir );
 	}
 	α NativeDrive::Save( const fs::path& path, const vector<char>& bytes, const IDirEntry& dirEntry )ε->up<IDirEntry>{
-		IO::SaveBinary( path, bytes );
+		IO::SaveBinary<char>( path, std::span<char>((char*)bytes.data(), bytes.size()) );
 		if( dirEntry.ModifiedTime.time_since_epoch()!=Duration::zero() ){
 			let modifiedTime = to_timespec( dirEntry.ModifiedTime );
 			let accessedTime = dirEntry.AccessedTime.time_since_epoch()==Duration::zero() ? modifiedTime : to_timespec( dirEntry.AccessedTime );
 			timespec values[] = {accessedTime, modifiedTime};
 			if( utimensat(AT_FDCWD, path.string().c_str(), values, 0) )
-				Warning( _tags, "utimensat returned {} on {}"sv, errno, path.string() );
+				WARN( "utimensat returned {} on {}", errno, path.string() );
 		}
 		return mu<DirEntry>( path );
 	}
@@ -191,19 +191,19 @@ namespace Jde::IO::Drive{
 	}
 
 	α NativeDrive::Remove( const fs::path& path )ε->void{
-		Debug( _tags, "Removing '{}'."sv, path.string() );
+		DBG( "Removing '{}'."sv, path.string() );
 		fs::remove( path );
 	}
 	α NativeDrive::Trash( const fs::path& path )ι->void{
-		Debug( _tags, "Trashing '{}'."sv, path.string() );
+		DBG( "Trashing '{}'."sv, path.string() );
 
 		let result = system( Jde::format("gio trash {}", path.string()).c_str() );
-		Debug( _tags, "Trashing '{}' returned '{}'."sv, path.string(), result );
+		DBG( "Trashing '{}' returned '{}'."sv, path.string(), result );
 	}
 	α NativeDrive::SoftLink( const fs::path& existingFile, const fs::path& newSymLink )ε->void{
 		let result = ::symlink( existingFile.string().c_str(), newSymLink.string().c_str() );
 		THROW_IF( result!=0, "symlink creating '{}' referencing '{}' failed ({}){}.", newSymLink.string(), existingFile.string(), result, errno );
-		Debug( _tags, "Created symlink '{}' referencing '{}'."sv, newSymLink.string(), existingFile.string() );
+		DBG( "Created symlink '{}' referencing '{}'."sv, newSymLink.string(), existingFile.string() );
 	}
 
 /*	bool DriveWorker::Poll()ι

@@ -15,7 +15,7 @@ TSetThreadDescription pSetThreadDescription = nullptr;
 	using namespace Jde;
 	HMODULE hKernelBase = GetModuleHandleA("KernelBase.dll");
 	if( !hKernelBase ){
-		Critical{ _tags, "FATAL: failed to get kernel32.dll module handle, error:  {}", ::GetLastError() };
+		CRITICAL( _tags, "FATAL: failed to get kernel32.dll module handle, error:  {}", ::GetLastError() };
 		return;
 	}
 	pSetThreadDescription = reinterpret_cast<TSetThreadDescription>( ::GetProcAddress(hKernelBase, "SetThreadDescription") );

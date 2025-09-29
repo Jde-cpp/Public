@@ -14,7 +14,7 @@ namespace Jde::Opc{
 			if( type=="double" )
 				return &UA_TYPES[UA_TYPES_DOUBLE];
 		}
-		Warning{ ELogTags::App, "Unsupported data type in Variant: ", serialize(v) };
+		WARNT( ELogTags::App, "Unsupported data type in Variant: ", serialize(v) );
 		return &UA_TYPES[UA_TYPES_STRING];
 	}
 	Variant::Variant( const jvalue& v, sv dataType )ι:
@@ -32,12 +32,12 @@ namespace Jde::Opc{
 				UA_Variant_setScalarCopy( this, &doubleValue, &UA_TYPES[UA_TYPES_DOUBLE] );
 			}
 			else{
-				Warning{ ELogTags::App, "Unsupported data type in Variant: ", serialize(v) };
+				WARNT( ELogTags::App, "Unsupported data type in Variant: ", serialize(v) );
 				UA_Variant_setScalar( this, nullptr, &UA_TYPES[UA_TYPES_STRING] );
 			}
 		}
 		else{
-			Warning{ ELogTags::App, "Unsupported data type in Variant: ", serialize(v) };
+			WARNT( ELogTags::App, "Unsupported data type in Variant: ", serialize(v) );
 			UA_Variant_setScalar( this, nullptr, &UA_TYPES[UA_TYPES_STRING] );
 		}
 	}
@@ -134,7 +134,7 @@ namespace Jde::Opc{
 					return parse( uaJson );
 				}
 				catch( exception& e ){
-					Error { ELogTags::Parsing, "Error parsing {} - {}", uaJson, e.what() };
+					ERRT( ELogTags::Parsing, "Error parsing {} - {}", uaJson, e.what() );
 					return {uaJson};
 				}
 			}

@@ -100,7 +100,7 @@ namespace Jde::Opc::Server{
 				else
 					found = ua.FindDataType( pk );
 				if( !found )
-					Error{ ELogTags::App, "Unknown node type: {}", serialize(node.ToJson()) };
+					ERRT( ELogTags::App, "Unknown node type: {}", serialize(node.ToJson()) );
 			}
 			SaveSystem();
 		}

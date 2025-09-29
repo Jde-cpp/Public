@@ -36,17 +36,16 @@ namespace Jde::App{
 
 	α Server::GetAppPK()ι->AppPK{ return _appId; }
 	α Server::SetAppPKs( std::tuple<AppPK, AppInstancePK> x )ι->void{ _appId=get<0>(x); _appClient->SetInstancePK(get<1>(x)); }
-	α UpdateStatuses()ι->DurationTimer::Task;
+	//α UpdateStatuses()ι->DurationTimer::Task;
 	α Server::StartWebServer( jobject&& settings )ε->void{
 		_requestHandler = ms<RequestHandler>( move(settings) );
 		Web::Server::Start( _requestHandler );
 		Process::AddShutdownFunction( []( bool terminate ){Server::StopWebServer(terminate);} );//TODO move to Web::Server
-		UpdateStatuses();
+		//UpdateStatuses();
 	}
 	α Server::RemoveExisting( str host, PortType port )ι->void{
 		_sessions.erase_if( [&host=host,port=port]( auto&& kv ){
 			auto& existing = kv.second->Instance();
-			Trace( ELogTags::Test, "Existing: {}@{}, New: {}@{}", existing.host(), existing.web_port(), host, port );
 			return existing.host()==host && existing.web_port()==port;
 		});
 	}
@@ -61,12 +60,12 @@ namespace Jde::App{
 		Web::Server::Stop( move(_requestHandler), terminate );
 	}
 
-	α UpdateStatuses()ι->DurationTimer::Task{
-		while( !Process::ShuttingDown() ){
-			Server::BroadcastAppStatus();
-			co_await DurationTimer{ 1min };
-		}
-	}
+	//α UpdateStatuses()ι->DurationTimer::Task{
+		// while( !Process::ShuttingDown() ){
+		// 	Server::BroadcastAppStatus();
+		// 	co_await DurationTimer{ 1s };
+		// }
+	//}
 
 	α TestLogPub( const FilterQL& subscriptionFilter, AppPK /*appId*/, AppInstancePK /*instancePK*/, const Logging::Entry& m )ι->bool{
 		bool passesFilter{ true };
@@ -156,7 +155,7 @@ namespace Jde::App{
 			return true;
 		});
 		ForwardExecutionAwait::OnCloseConnection( instancePK );
-		Trace( ELogTags::App, "[{:x}]RemoveSession erased: {}", instancePK, erased );
+		TRACET( ELogTags::App, "[{:x}]RemoveSession erased: {}", instancePK, erased );
 	}
 
 	α Server::SubscribeLogs( string&& qlText, sp<ServerSocketSession> session )ε->void{
