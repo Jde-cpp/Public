@@ -1,9 +1,9 @@
 #pragma once
 //#include <jde/web/client/socket/IClientSocketSession.h>
 #include "../usings.h"
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include "../client.h"
-#include <jde/framework/chrono.h>
+#include <jde/fwk/chrono.h>
 
 namespace Jde::Web::Client{
 	struct IClientSocketSession;

@@ -1,5 +1,5 @@
 ﻿#include "ServerImpl.h"
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/app/IApp.h>
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/server/IRequestHandler.h>
@@ -7,7 +7,7 @@
 #include <jde/web/server/RestException.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/QLAwait.h>
-#include <jde/framework/process/execution.h>
+#include <jde/fwk/process/execution.h>
 #define let const auto
 
 namespace Jde::Web{

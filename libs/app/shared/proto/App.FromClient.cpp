@@ -1,7 +1,7 @@
 #include <jde/app/shared/proto/App.FromClient.h>
 #include <boost/uuid/uuid_io.hpp>
-#include <jde/framework/io/proto.h>
-#include <jde/framework/settings.h>
+#include <jde/fwk/io/proto.h>
+#include <jde/fwk/settings.h>
 #include "Log.pb.h"
 
 using Jde::Proto::ToBytes;

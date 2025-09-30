@@ -1,10 +1,10 @@
 #pragma once
-#include <jde/framework/process/process.h>
+#include <jde/fwk/process/process.h>
 #include <jde/web/server/exports.h>
 #include <jde/web/server/usings.h>
-#include <jde/framework/io/proto.h>
+#include <jde/fwk/io/proto.h>
 #include <jde/ql/usings.h>
-#include <jde/framework/co/CoLock.h>
+#include <jde/fwk/co/CoLock.h>
 
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Web::Server{

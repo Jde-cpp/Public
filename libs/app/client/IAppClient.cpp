@@ -1,5 +1,5 @@
 #include <jde/app/client/IAppClient.h>
-#include <jde/framework/io/proto.h>
+#include <jde/fwk/io/proto.h>
 #include <jde/ql/IQL.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/awaits/SocketAwait.h>

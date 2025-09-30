@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
-#include <jde/framework/io/json.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/io/json.h>
+#include <jde/fwk/str.h>
 #include <jde/ql/QLAwait.h>
 #include <jde/access/types/Resource.h>
 #include "globals.h"

@@ -1,6 +1,6 @@
 ﻿#include "AsyncRequest.h"
 #include "../UAClient.h"
-#include <jde/framework/process/thread.h>
+#include <jde/fwk/process/thread.h>
 #define let const auto
 
 namespace Jde::Opc::Gateway{

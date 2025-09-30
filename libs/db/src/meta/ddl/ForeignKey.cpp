@@ -1,7 +1,7 @@
 #include "ForeignKey.h"
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/View.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 
 namespace Jde::DB{
 	α ForeignKey::Create( sv name, sv columnName, const DB::View& pk, const DB::View& foreignTable )ε->string{

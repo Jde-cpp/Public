@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <jde/framework/settings.h>
+#include <jde/fwk/settings.h>
 #include "../../framework/source/threading/Mutex.h"
 
 #define let const auto

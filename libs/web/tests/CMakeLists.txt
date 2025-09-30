@@ -26,7 +26,7 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 add_subdirectory( $ENV{JDE_DIR}/Framework/source ../../framework/lib )
 add_subdirectory( ../../access/src ../../access/src )
 add_subdirectory( ../../app/shared ../../app/shared )
-add_subdirectory( ../../crypto/src ../../crypto/lib )
+#add_subdirectory( ../../crypto/src ../../crypto/lib )
 add_subdirectory( ../../db/src ../../db/lib )
 add_subdirectory( ../../ql ../../ql )
 

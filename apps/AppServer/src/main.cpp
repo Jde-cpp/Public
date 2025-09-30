@@ -1,7 +1,7 @@
-﻿#include <jde/framework.h>
+﻿#include <jde/fwk.h>
 #include "AppStartupAwait.h"
-#include <jde/framework/process/process.h>
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/process/process.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 
 namespace Jde{
 #ifndef _MSC_VER
@@ -11,7 +11,6 @@ namespace Jde{
 
 	α startup( int argc, char** argv )ε->void{
 		using namespace Jde::App::Server;
-		Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
 		Process::Startup( argc, argv, "Jde.AppServer", "jde-cpp App Server." );
 		auto settings = Settings::FindObject( "/http" );
 		BlockVoidAwait( AppStartupAwait{settings ? move(*settings) : jobject{}} );

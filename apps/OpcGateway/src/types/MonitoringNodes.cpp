@@ -1,5 +1,5 @@
 ﻿#include "MonitoringNodes.h"
-#include <jde/framework/utils/collections.h>
+#include <jde/fwk/utils/collections.h>
 #include "../UAClient.h"
 #include "../uatypes/CreateMonitoredItemsRequest.h"
 

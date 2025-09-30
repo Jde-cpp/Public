@@ -35,9 +35,9 @@ target_link_libraries( ${targetName} PRIVATE Jde.DB )
 target_precompile_headers( ${targetName}
   PRIVATE
 	<boost/mysql.hpp>
-	<jde/framework.h>
-	<jde/framework/str.h>
-	<jde/framework/io/json.h>
-	<jde/framework/chrono.h>
+	<jde/fwk.h>
+	<jde/fwk/str.h>
+	<jde/fwk/io/json.h>
+	<jde/fwk/chrono.h>
 	usings.h
 )

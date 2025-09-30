@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <boost/noncopyable.hpp>
 #include "Bindings.h"
-#include <jde/framework/settings.h>
+#include <jde/fwk/settings.h>
 
 namespace Jde::DB{ struct IRow; }
 namespace Jde::DB::Odbc

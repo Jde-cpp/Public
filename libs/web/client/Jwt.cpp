@@ -1,7 +1,7 @@
 #include <jde/web/Jwt.h>
 #include <boost/uuid/uuid_io.hpp>
-#include <jde/framework/io/json.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/io/json.h>
+#include <jde/fwk/str.h>
 
 #define let const auto
 

@@ -1,10 +1,10 @@
 ﻿#include <execution>
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/client/http/ClientHttpResException.h>
-#include <jde/framework/chrono.h>
-#include <jde/framework/Stopwatch.h>
-#include <jde/framework/str.h>
-#include <jde/framework/process/execution.h>
+#include <jde/fwk/chrono.h>
+#include <jde/fwk/Stopwatch.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/process/execution.h>
 #include "mocks/ServerMock.h"
 
 #define let const auto

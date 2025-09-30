@@ -7,7 +7,7 @@
 #include <boost/lexical_cast.hpp>
 #include <google/protobuf/duration.pb.h>
 #include <google/protobuf/timestamp.pb.h>
-#include <jde/framework/chrono.h>
+#include <jde/fwk/chrono.h>
 #include "../usings.h"
 #include "UAString.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 //#include "usings.h"
-#include <jde/framework/co/Await.h>
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/co/Await.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/web/Jwt.h>
 #include <jde/app/shared/usings.h>
 #include <jde/app/shared/proto/Web.FromServer.pb.h>

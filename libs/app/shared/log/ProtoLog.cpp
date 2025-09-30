@@ -1,8 +1,8 @@
 #include <jde/app/log/ProtoLog.h>
-#include <jde/framework/process/execution.h>
-#include <jde/framework/co/Timer.h>
-#include <jde/framework/io/proto.h>
-#include <jde/framework/io/FileAwait.h>
+#include <jde/fwk/process/execution.h>
+#include <jde/fwk/co/Timer.h>
+#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/FileAwait.h>
 #include <jde/app/shared/proto/App.FromClient.h>
 
 namespace Jde::App{

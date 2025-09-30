@@ -4,8 +4,8 @@
 #include "../exports.h"
 #include "ClientSocketStream.h"
 #include "ClientSocketAwait.h"
-#include <jde/framework/co/Await.h>
-#include <jde/framework/io/proto.h>
+#include <jde/fwk/co/Await.h>
+#include <jde/fwk/io/proto.h>
 
 namespace Jde::Web::Client{
 	struct IClientSocketSession;

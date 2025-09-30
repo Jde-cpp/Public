@@ -1,5 +1,5 @@
-#include <jde/framework/io/json.h>
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/io/json.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include "Auth.h"
 #include "../../src/auth/TokenAwait.h"
 #include "../../src/auth/OpcServerSession.h"

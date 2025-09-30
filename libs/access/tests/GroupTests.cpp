@@ -4,7 +4,7 @@
 #include <jde/ql/QLAwait.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/ql/types/MutationQL.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include "globals.h"
 
 #define let const auto

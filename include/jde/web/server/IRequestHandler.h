@@ -1,6 +1,6 @@
 #pragma once
 #include "usings.h"
-#include <jde/crypto/CryptoSettings.h>
+#include <jde/fwk/crypto/CryptoSettings.h>
 #include <jde/app/IApp.h>
 
 namespace Jde::DB{ struct AppSchema; }

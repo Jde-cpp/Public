@@ -1,5 +1,5 @@
 #include <jde/db/generators/Object.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include <jde/db/generators/Functions.h>
 
 #pragma GCC diagnostic ignored "-Wswitch"

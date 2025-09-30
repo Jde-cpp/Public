@@ -1,8 +1,8 @@
 #pragma once
 #include <chrono>
-#include <jde/framework/log/ILogger.h>
-#include <jde/framework/co/Timer.h>
-#include <jde/framework/settings.h>
+#include <jde/fwk/log/ILogger.h>
+#include <jde/fwk/co/Timer.h>
+#include <jde/fwk/settings.h>
 
 namespace Jde::App{
 	struct ProtoLog final : Logging::ILogger, boost::noncopyable{

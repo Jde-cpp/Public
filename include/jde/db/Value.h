@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <boost/uuid/uuid.hpp>
-#include <jde/framework/io/json.h>
+#include <jde/fwk/io/json.h>
 #include <jde/db/exports.h>
 #include <jde/db/usings.h>
 #include <jde/db/Key.h>

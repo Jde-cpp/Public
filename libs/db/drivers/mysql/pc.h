@@ -1,6 +1,6 @@
 #include <boost/mysql.hpp>
-#include <jde/framework.h>
-#include <jde/framework/str.h>
-#include <jde/framework/io/json.h>
-#include <jde/framework/chrono.h>
+#include <jde/fwk.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/io/json.h>
+#include <jde/fwk/chrono.h>
 #include "usings.h"

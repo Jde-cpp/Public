@@ -1,6 +1,6 @@
 #pragma once
 #include "../IApp.h"
-#include <jde/crypto/CryptoSettings.h>
+#include <jde/fwk/crypto/CryptoSettings.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/Jwt.h>
 #include <jde/app/client/awaits/SocketAwait.h>

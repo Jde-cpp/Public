@@ -1,4 +1,4 @@
-#include <jde/framework/settings.h>
+#include <jde/fwk/settings.h>
 #include "../src/globals.h"
 #include "../src/UAServer.h"
 

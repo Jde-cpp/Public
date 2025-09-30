@@ -1,5 +1,5 @@
 #include <jde/app/shared/proto/App.FromServer.h>
-#include <jde/framework/io/proto.h>
+#include <jde/fwk/io/proto.h>
 #include <jde/db/Row.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/Column.h>

@@ -1,7 +1,7 @@
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/AppSchema.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 
 #define let const auto
 

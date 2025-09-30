@@ -1,6 +1,6 @@
 #pragma once
 #include "../usings.h"
-#include <jde/framework/co/CoLock.h>
+#include <jde/fwk/co/CoLock.h>
 
 namespace Jde::Web::Client{
 	struct IWebsocketSession;

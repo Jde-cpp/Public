@@ -1,6 +1,6 @@
 #include <jde/ql/UnsubscribeAwait.h>
 #include <jde/ql/IQL.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 
 #define let const auto
 namespace Jde::QL{

@@ -1,7 +1,7 @@
 #include <jde/web/client/http/ClientHttpSession.h>
 #include <jde/web/client/http/ClientHttpRes.h>
 #include <jde/web/client/socket/IClientSocketSession.h>
-#include <jde/framework/process/execution.h>
+#include <jde/fwk/process/execution.h>
 
 #define let const auto
 

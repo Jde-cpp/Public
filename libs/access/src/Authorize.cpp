@@ -1,9 +1,9 @@
 #include <jde/access/Authorize.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include <jde/db/usings.h>
 #include <jde/access/types/Group.h>
 #include <jde/access/types/User.h>
-#include <jde/framework/utils/collections.h>
+#include <jde/fwk/utils/collections.h>
 
 #define let const auto
 namespace Jde::Access{

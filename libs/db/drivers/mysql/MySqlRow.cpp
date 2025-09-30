@@ -1,5 +1,5 @@
 #include "MySqlRow.h"
-#include <jde/framework/utils/mathUtils.h>
+#include <jde/fwk/utils/mathUtils.h>
 #include <jde/db/Value.h>
 #include <jde/db/DBException.h>
 #include <jde/db/generators/Functions.h>

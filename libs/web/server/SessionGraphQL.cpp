@@ -1,6 +1,6 @@
 #include <jde/web/server/SessionGraphQL.h>
-#include <jde/framework/io/proto.h>
-#include <jde/framework/io/json.h>
+#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/json.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/web/server/Sessions.h>
