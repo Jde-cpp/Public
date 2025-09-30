@@ -17,7 +17,7 @@ target_link_libraries( ${targetName} Jde Jde.DB Jde.QL )
 
 target_precompile_headers(${targetName}
   PUBLIC
-  <jde/framework.h>
-	<jde/framework/io/json.h>
-	<jde/framework/co/Await.h>
+  <jde/fwk.h>
+	<jde/fwk/io/json.h>
+	<jde/fwk/co/Await.h>
 )

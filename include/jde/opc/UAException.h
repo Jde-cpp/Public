@@ -2,7 +2,7 @@
 #ifndef OPC_UAEXCEPTION_H
 #define OPC_UAEXCEPTION_H
 #include "usings.h"
-#include <jde/framework/exceptions/ExternalException.h>
+#include <jde/fwk/exceptions/ExternalException.h>
 #include "uatypes/Logger.h"
 
 #define UAε(x) if( let sc = x; sc ) throw UAException{ sc };

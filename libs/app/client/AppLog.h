@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/framework/settings.h>
+#include <jde/fwk/settings.h>
 
 namespace Jde::App::Client{
 	struct AppLog final : Logging::ILogger{

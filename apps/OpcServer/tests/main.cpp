@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
-#include <jde/framework/settings.h>
-#include <jde/framework/co/Timer.h>
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/settings.h>
+#include <jde/fwk/co/Timer.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/opc/uatypes/Logger.h>
 #include "../src/StartupAwait.h"
 #include "../../AppServer/src/AppStartupAwait.h"
@@ -14,7 +14,6 @@ namespace Jde{
 	up<exception> _error;
 
  	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
-		Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
 		Logging::AddTagParser( mu<Opc::UALogParser>() );
 		Process::Startup( argc, argv, "Tests.OpcServer", "OpcServer tests", true );
 		try{

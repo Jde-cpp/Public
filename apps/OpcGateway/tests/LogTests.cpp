@@ -1,4 +1,4 @@
-#include <jde/framework/log/MemoryLog.h>
+#include <jde/fwk/log/MemoryLog.h>
 #include <jde/app/log/ProtoLog.h>
 #define let const auto
 

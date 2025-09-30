@@ -1,5 +1,5 @@
 #include "SchemaDdl.h"
-#include <jde/framework/io/file.h>
+#include <jde/fwk/io/file.h>
 #include "TableDdl.h"
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>

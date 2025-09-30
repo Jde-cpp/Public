@@ -10,7 +10,6 @@
 namespace Jde::App::Server{
 	α AppStartupAwait::Execute()ι->VoidAwait::Task{
 		try{
-			Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
 			co_await ConfigureDSAwait{};
 			SetAppPKs( AddInstance("Main", Process::HostName(), Process::ProcessId()) );
 

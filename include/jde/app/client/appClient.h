@@ -4,7 +4,7 @@
 #include <jde/app/shared/proto/App.FromServer.pb.h>
 #include <jde/app/client/usings.h>
 #include <jde/app/client/exports.h>
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 
 namespace Jde::QL{ struct IQL; }
 namespace Jde::Access{ struct IAcl; struct Authorize;}

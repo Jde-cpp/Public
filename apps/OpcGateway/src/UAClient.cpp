@@ -1,7 +1,7 @@
 ﻿#include "UAClient.h"
 
 #include <open62541/plugin/securitypolicy_default.h>
-#include <jde/framework/process/execution.h>
+#include <jde/fwk/process/execution.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>

@@ -12,6 +12,6 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 find_package( GTest REQUIRED )
 
 target_precompile_headers( ${targetName} PRIVATE
-	<jde/framework.h>
+	<jde/fwk.h>
 	"externals.h"
 )

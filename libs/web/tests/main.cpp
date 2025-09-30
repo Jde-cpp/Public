@@ -1,6 +1,6 @@
 ﻿#include "gtest/gtest.h"
-#include <jde/framework/process/thread.h>
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/process/thread.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #define let const auto
 
 namespace Jde{

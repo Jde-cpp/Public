@@ -1,6 +1,6 @@
 #include <jde/access/server/awaits/LoginAwait.h>
 #include <jde/access/usings.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/Value.h>
 #include <jde/db/generators/Functions.h>

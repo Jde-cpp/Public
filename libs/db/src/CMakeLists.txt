@@ -27,5 +27,5 @@ endif()
 
 target_precompile_headers(${targetName}
   PUBLIC
-  <jde/framework.h>
+  <jde/fwk.h>
 )

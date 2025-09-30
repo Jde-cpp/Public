@@ -1,5 +1,5 @@
 #include <jde/ql/types/Introspection.h>
-#include <jde/framework/io/json.h>
+#include <jde/fwk/io/json.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/db/names.h>
 #include <jde/db/IDataSource.h>

@@ -1,5 +1,5 @@
 #include "helpers.h"
-#include <jde/framework/settings.h>
+#include <jde/fwk/settings.h>
 #include <jde/opc/uatypes/helpers.h>
 #include <jde/opc/UAException.h>
 #include <jde/db/meta/AppSchema.h>

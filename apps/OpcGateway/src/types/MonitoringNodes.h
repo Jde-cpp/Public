@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <jde/opc/uatypes/NodeId.h>
-#include <jde/framework/co/Timer.h>
-#include <jde/framework/utils/HiLow.h>
+#include <jde/fwk/co/Timer.h>
+#include <jde/fwk/utils/HiLow.h>
 #include "../uatypes/MonitoredItemCreateResult.h"
 #include "../async/DataChanges.h"
 

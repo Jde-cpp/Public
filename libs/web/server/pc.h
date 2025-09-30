@@ -2,9 +2,9 @@
 #include <boost/beast.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/exception/diagnostic_information.hpp>
-#include <jde/framework.h>
-#include <jde/framework/io/proto.h>
-#include <jde/framework/chrono.h>
+#include <jde/fwk.h>
+#include <jde/fwk/io/proto.h>
+#include <jde/fwk/chrono.h>
 #include <jde/web/usings.h>
 #include <jde/web/client/exports.h>
 #include <jde/web/client/proto/Web.FromServer.pb.h>

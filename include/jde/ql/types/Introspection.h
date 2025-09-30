@@ -1,5 +1,5 @@
 #pragma once
-//#include <jde/framework/io/jobject.h>
+//#include <jde/fwk/io/jobject.h>
 
 namespace Jde::QL{
 	struct TableQL;

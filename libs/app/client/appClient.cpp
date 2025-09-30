@@ -1,5 +1,5 @@
 #include <jde/app/client/appClient.h>
-#include <jde/framework/co/Timer.h>
+#include <jde/fwk/co/Timer.h>
 #include <jde/access/Authorize.h>
 #include <jde/web/client/socket/ClientQL.h>
 #include <jde/app/client/usings.h>

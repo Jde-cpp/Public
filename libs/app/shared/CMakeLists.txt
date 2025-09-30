@@ -19,7 +19,7 @@ target_precompile_headers(${targetName}
 	<jde/web/client/exports.h>
 	<jde/app/shared/exports.h>
 	<jde/web/client/proto/Web.FromServer.pb.h>
-	<jde/framework.h>
+	<jde/fwk.h>
 	PRIVATE
 	pc.h
 )

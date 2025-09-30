@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 
 namespace Jde::Opc::Gateway{
 	struct GetNodeIdResponse final : UA_TranslateBrowsePathsToNodeIdsResponse{

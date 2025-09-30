@@ -2,7 +2,7 @@
 #ifndef ROW_H
 #define ROW_H
 #include "Value.h"
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include "exports.h"
 
 #define Φ ΓDB auto

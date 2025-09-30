@@ -1,7 +1,7 @@
 #include <jde/web/server/HttpRequest.h>
 #include <jde/web/server/Server.h>
-#include <jde/framework/str.h>
-#include <jde/framework/chrono.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/chrono.h>
 
 #define let const auto
 

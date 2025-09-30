@@ -1,9 +1,9 @@
 #include "HttpRequestAwait.h"
 #include <jde/web/Jwt.h>
-#include <jde/crypto/OpenSsl.h>
-#include <jde/framework/chrono.h>
-#include <jde/framework/str.h>
-#include <jde/framework/process/execution.h>
+#include <jde/fwk/crypto/OpenSsl.h>
+#include <jde/fwk/chrono.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/process/execution.h>
 
 #define let const auto
 

@@ -1,6 +1,6 @@
 #pragma once
 #include "FilterQL.h"
-#include <jde/framework/io/json.h>
+#include <jde/fwk/io/json.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/SelectClause.h>
 #define let const auto

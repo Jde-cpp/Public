@@ -1,5 +1,5 @@
 //#include "gtest/gtest.h"
-#include <jde/framework/io/json.h>
+#include <jde/fwk/io/json.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/ql.h>

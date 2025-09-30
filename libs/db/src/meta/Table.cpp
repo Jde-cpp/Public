@@ -1,5 +1,5 @@
 ﻿#include <jde/db/meta/Table.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/Cluster.h>
 #include <jde/db/meta/Catalog.h>

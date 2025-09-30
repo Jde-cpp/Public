@@ -1,7 +1,7 @@
 ﻿#pragma once
 #ifndef SYNTAX_H
 #define SYNTAX_H
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include <jde/db/Value.h>
 #include "../exports.h"
 

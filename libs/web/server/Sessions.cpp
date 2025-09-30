@@ -1,8 +1,8 @@
 #include <jde/web/server/Sessions.h>
 
 #include <jde/web/server/HttpRequest.h>
-#include <jde/framework/str.h>
-#include <jde/framework/utils/mathUtils.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/utils/mathUtils.h>
 #include <jde/web/server/auth/JwtLoginAwait.h>
 #include <jde/app/IApp.h>
 #include "ServerImpl.h"

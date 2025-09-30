@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include "exports.h"
 
 #define Φ ΓDB auto

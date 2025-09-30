@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "Table.h"
-#include <jde/framework/str.h>
-#include <jde/framework/io/json.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/io/json.h>
 
 namespace Jde::Access{ struct IAcl; }
 namespace Jde::DB{

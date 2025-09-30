@@ -1,5 +1,5 @@
 #include "usings.h"
-#include <jde/framework/exceptions/ExternalException.h>
+#include <jde/fwk/exceptions/ExternalException.h>
 
 namespace Jde::DB::MySql{
 	struct MySqlException final : ExternalException {
