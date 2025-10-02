@@ -74,6 +74,9 @@ local args = import 'args.libsonnet';
 			path: args.logDir + "/proto",
 			timeZone: "America/New_York",
 			delay: "PT1M"
+		},
+		remote:{
+			delay: "PT2S"
 		}
 	},
 	workers:{

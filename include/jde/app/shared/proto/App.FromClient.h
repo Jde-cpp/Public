@@ -23,6 +23,6 @@ namespace Jde::App::FromClient{
 	Φ LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile;
 	Φ FromLogEntry( Log::Proto::LogEntryClient&& m )ι->Logging::Entry;
 	Φ ToString( uuid id, string&& value )ι->Log::Proto::String;
-	Φ AddStringField( PFromClient::Transmission& t, Log::Proto::EFields field, uuid id, string&& value )ι->void;
+	//Φ AddStringField( PFromClient::Transmission& t, Log::Proto::EFields field, uuid id, string&& value )ι->void;
 }
 #undef Φ

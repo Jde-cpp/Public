@@ -145,7 +145,7 @@ namespace Jde::App{
 		Executor();//locks up if starts in StartTimer.
 		Execution::Run();
 		Process::AddShutdownFunction( [this]( bool /*terminate*/ ){	//member Shutdown gets called after timer thread shutdown.
-			_delay = 0s;
+			_delay = Duration::min();
 			ResetTimer();
 		});
 		for( auto yearDir : fs::directory_iterator(_path) ){
@@ -206,10 +206,7 @@ namespace Jde::App{
 		auto toSave = move( _toSave );
 		ResetTimer();
 		_toSave.reserve( toSave.size() );
-		if( _strings.size()>1024 )
-			_strings.resize( 1024 );
-		if( _args.size()>1024 )
-			_args.resize( 1024 );
+		_cache.Trim();
 		_mutex.unlock();
 		Save( move(toSave), co_await LockKeyAwait{DailyFile().string()} );
 	}
@@ -234,7 +231,7 @@ namespace Jde::App{
 	}
 
 	α ProtoLog::AddString( uuid id, sv str )ι->void{
-		AddString( id, str, _strings );
+		AddString( id, str, _cache.Strings );
 	}
 	α ProtoLog::AddString( uuid id, sv str, std::deque<uuid>& cache )ι->void{
 		if( let i = find( cache, id ); i!=cache.end() )
@@ -248,10 +245,10 @@ namespace Jde::App{
 	α ProtoLog::AddArguments( const vector<string>& args, ::google::protobuf::RepeatedPtrField<std::string> ids )ι->void{
 		ASSERT( args.size()==(uint)ids.size() );
 		for( uint i=0; i<args.size(); ++i )
-			AddString( ToGuid(ids.Get(i)), args[i], _args );
+			AddString( ToGuid(ids.Get(i)), args[i], _cache.Args );
 	}
 	α ProtoLog::StartTimer()ι->VoidAwait::Task{
-		if( _delay==0s )
+		if( _delay==Duration::min() )
 			co_return;
 		_timer = mu<DurationTimer>( _delay, _tags, SRCE_CUR );
 		try{
@@ -272,5 +269,11 @@ namespace Jde::App{
 	α ProtoLog::ResetTimer()ι->void{
 		if( _timer )
 			_timer->Cancel();
+	}
+	α ProtoLogCache::Trim()ι->void{
+		while( Args.size()>1000 )
+			Args.pop_back();
+		while( Strings.size()>1000 )
+			Strings.pop_back();
 	}
 }
