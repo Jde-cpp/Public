@@ -6,6 +6,11 @@
 #include <jde/fwk/log/ILogger.h>
 
 namespace Jde::App{
+	struct ProtoLogCache{
+		α Trim()ι->void;
+		std::deque<uuid> Args;
+		std::deque<uuid> Strings;
+	};
 	struct ProtoLog final : Logging::ILogger, boost::noncopyable{
 		struct LoadDailyAwait : TAwaitEx<vector<App::Log::Proto::FileEntry>,TAwait<string>::Task>{
 			using base=TAwaitEx<vector<App::Log::Proto::FileEntry>,TAwait<string>::Task>;
@@ -45,14 +50,12 @@ namespace Jde::App{
 		α ResetTimer()ι->void;
 		α DailyFile()ι->fs::path{ return _path/"log.binpb"; }
 
-		std::deque<uuid> _args;
+		ProtoLogCache _cache;
 		Duration _delay;
 		const uint16 _delaySize{8096};
-		//Vector<Logging::Entry> _entries;
 		mutex _mutex;
 		bool _needsArchive{false};
 		fs::path _path;
-		std::deque<uuid> _strings;
 		static constexpr ELogTags _tags{ ELogTags::ExternalLogger | ELogTags::IO };
 		up<DurationTimer> _timer;
 		const std::chrono::time_zone& _tz;

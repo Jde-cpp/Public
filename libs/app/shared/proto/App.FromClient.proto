@@ -61,7 +61,8 @@ message Message{
 		uint32 session_id = 6;  //Attach session id for the socket.
 		uint32 session_info = 7;//called from other apps/web page to request information about session TODO graphql
 		Status status = 8; //send current app status.
-		Jde.App.Log.Proto.StringField string_field = 9; //send a string.
+		//Jde.App.Log.Proto.StringField string_field = 9; //send a string.
+		Jde.App.Log.Proto.String stringKey = 9; //send a string.
 		Jde.App.Proto.StringMD5s request_strings = 10;
 		bool subscribe_status = 11;//subscribe to application statuses.
 		string subscribe_logs = 12;//subscribe to application logs.  TODO graphql

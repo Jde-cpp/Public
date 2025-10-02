@@ -230,7 +230,7 @@ namespace Jde::App::Server{
 				for_each( v.request_ids(), [&]( auto id ){ subIds.emplace_back(id); } );
 				RemoveSubscription( move(subIds), requestId );
 				break;}
-			[[likely]]case kStringField:{
+			[[likely]]case kStringKey:
 /*				if( !_appPK || !_instancePK ){
 					WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 					continue;
@@ -240,7 +240,7 @@ namespace Jde::App::Server{
 				uuid id{ Jde::Proto::ToGuid(s.id()) };
 				if( StringCache::Add( s.field(), id, s.value(), ELogTags::SocketServerRead) )
 					Server::SaveString( (Proto::FromClient::EFields)s.field(), id, move(*s.mutable_value()) );*/
-				break;}
+				break;
 			case kSubscribeLogs:{
 				if( m.subscribe_logs().empty() ){
 					LogRead( Ƒ("SubscribeLogs unsubscribe"), requestId );
