@@ -35,15 +35,23 @@ message LogEntryClient{
 }
 
 message LogEntryFile{
-	bytes template_id=1;
-	repeated bytes args=2;
-	ELogLevel level=3;
-	uint64 tags=4;
-	uint32 line=5;
-	google.protobuf.Timestamp time=6;
+	google.protobuf.Timestamp time=1;
+	bytes template_id=2;
+	repeated bytes args=3;
+	ELogLevel level=4;
+	uint64 tags=5;
+	uint32 line=6;
 	uint32 user_pk=7;
 	bytes file_id=8;
 	bytes function_id=9;
+}
+
+message ArchiveFile{
+	repeated LogEntryFile entries=1;
+	repeated String templates=2;
+	repeated String files=3;
+	repeated String functions=4;
+	repeated String args=5;
 }
 
 message String{

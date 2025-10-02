@@ -108,7 +108,7 @@ namespace Jde{
 			_ioc->stop(); // Stop the `io_context`. This will cause `run()` to return immediately, eventually destroying the `io_context` and all of the sockets in it.
 		else{
 			_cancelSignals.Emit( asio::cancellation_type::all );
-			_stopped.wait( false );
+//			_stopped.wait( false );  TODO uncomment, don't want threads kept alive in finalization.  ordering of shutdowns.
 		}
 		//Process::RemoveShutdown( this ); deadlock
 	}

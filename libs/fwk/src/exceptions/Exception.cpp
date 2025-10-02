@@ -78,7 +78,7 @@ namespace Jde{
 #endif
 	}
 	α IException::Log()Ι->void{
-		if( Level()==ELogLevel::NoLog )
+		if( Level()==ELogLevel::NoLog || Process::Finalizing() )
 			return;
 		if( auto sv = Format(); sv.size() )
 			Logging::Log( Logging::Entry{_stack.size() ? _stack.front() : SRCE_CUR, Level(), _tags, string{sv}, _args} );
