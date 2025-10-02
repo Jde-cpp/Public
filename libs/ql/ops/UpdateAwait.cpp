@@ -75,16 +75,13 @@ namespace Jde::QL{
 			else{
 				uint value = 0;
 				if( let flags = jvalue->if_array(); flags && flags->size() ){
-					optional<flat_map<string,uint>> values;
-					[] (auto& values, auto& t)ι->DB::MapAwait<string,uint>::Task {
-						values = co_await t.Schema->DS()-> template SelectMap<string,uint>( {Ƒ("select name, {} from {}", t.GetPK()->Name, t.DBName)} );
-					}( values, qlColumn.Table() );
-					while( !values )
-						std::this_thread::yield();
-
+					let enumTable = qlColumn.Table();
+					let values = BlockAwait<TAwait<flat_map<string,uint>>,flat_map<string,uint>>(
+						enumTable.Schema->DS()->SelectMap<string,uint>( {Ƒ("select name, {} from {}", enumTable.GetPK()->Name, enumTable.DBName)} )
+					);
 					for( let& flagName : *flags ){
-						if( let pFlag = values->find(Json::AsString(flagName)); pFlag != values->end() )
-							value |= pFlag->second;
+						if( let flag = values.find(Json::AsString(flagName)); flag != values.end() )
+							value |= flag->second;
 					}
 				}
 				else if( jvalue->is_number() )

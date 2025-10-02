@@ -35,7 +35,7 @@ namespace Jde::IO::Tests{
 
 	Ω write( const fs::path& file, uuid guid1, uuid guid2, Vector<uuid>& written, bool createFile, SRCE )->LockKeyAwait::Task{
 		auto l = co_await LockKeyAwait{ file.string() };
-		[sl]( const fs::path& file, uuid guid1, uuid guid2, Vector<uuid>& written, [[maybe_unused]]CoLockGuard l, bool createFile )->VoidAwait::Task {
+		[sl]( const fs::path& file, uuid guid1, uuid guid2, Vector<uuid>& written, CoLockGuard, bool createFile )->VoidAwait::Task {
 			try{
 				co_await IO::WriteAwait{ file, Ƒ("{}\n{}\n", to_string(guid1), to_string(guid2)), createFile, Jde::ELogTags::Test, sl };
 			}

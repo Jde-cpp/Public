@@ -171,8 +171,8 @@ namespace Jde{
 		DBGT( ELogTags::App | ELogTags::Shutdown, "{} Shutdown functions removed", _shutdownFunctions.size() );
 		_rawShutdowns.erase( [=](auto& p){ p->Shutdown( terminate );} );
 		DBGT( ELogTags::App | ELogTags::Shutdown, "Raw functions removed" );
-		cleanup( terminate );
 		_finalizing = true;
+		cleanup( terminate );
 	}
 
 	Ω cleanup( bool terminate )ι->void{
