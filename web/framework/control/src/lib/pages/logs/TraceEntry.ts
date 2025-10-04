@@ -3,8 +3,7 @@ import {ApplicationStrings} from './Application';
 import { Guid } from '../../model/Guid';
 
 import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
-import * as CommonProto from '../../proto/Common'; import ELogLevel = CommonProto.Jde.Proto.ELogLevel;
-
+import * as LogProto from '../../proto/Log'; import Log = LogProto.Jde.App.Log.Proto;
 
 export class TraceEntry{
 	constructor( trace:FromServer.ITrace, private applicationStrings:ApplicationStrings ){
@@ -48,7 +47,7 @@ export class TraceEntry{
 
 	id:number;
 	instanceId:number;
-	level:ELogLevel;
+	level:Log.ELogLevel;
 	messageId:string;
 	fileId:string;
 	functionId:string;

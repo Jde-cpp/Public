@@ -14,9 +14,15 @@ namespace Jde::Opc::Server::Tests{
 		Ω Path()ι->fs::path{ return *Settings::FindPath( "/testing/UANodeSets"); }
 	};
 
-	TEST_F( UALoadTests, CommercialKitchenEquipment ){
+	TEST_F( UALoadTests, LoadMyKitchen){
 		GetUAServer().Load( Path()/"CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml" );
+		GetUAServer().Load( fs::path{*Process::EnvironmentVariable("JDE_DIR")}/"Public/apps/OpcServer/config/nodesets/kitchen.xml" );
 	}
+
+	// never ending loop
+	// TEST_F( UALoadTests, AdditiveManufacturing ){
+	// 	GetUAServer().Load( Path()/"AdditiveManufacturing/Opc.Ua.AdditiveManufacturing.Nodeset2.xml" );
+	// }
 
 	// TEST_F( UALoadTests, Server_loadADINodeset){
 	// 	GetUAServer().Load( Path()/"ADI/Opc.Ua.Adi.NodeSet2.xml" );

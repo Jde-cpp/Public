@@ -2,7 +2,7 @@
 clean=${1:-0};
 baseDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
 webDir=$(dirname $(readlink -e $baseDir));
-source $JDE_BASH/Framework/scripts/common.sh;
+source $JDE_BASH/Public/build/common.sh;
 frameworkDir=$baseDir;
 source $frameworkDir/scripts/common-proto.sh;
 
@@ -30,6 +30,7 @@ echo 'Creating web proto files';
 create $JDE_BASH/Public/libs/web/client/proto webFiles;
 echo 'Created web proto files';
 declare -A appFiles;
+if [ ! -f Log.d.ts ] || [ $clean == 1 ]; then appFiles[Log]=log; fi;
 if [ ! -f App.FromClient.d.ts ] || [ $clean == 1 ]; then appFiles[App.FromClient]=app_from_client; fi;
 if [ ! -f App.FromServer.d.ts ] || [ $clean == 1 ]; then appFiles[App.FromServer]=app_from_server; fi;
 if [ ! -f App.d.ts ] || [ $clean == 1 ]; then appFiles[App]=app; fi;

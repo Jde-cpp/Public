@@ -70,7 +70,12 @@ namespace Jde::Opc::Server{
 		return *this;
 	}
 
-	α Variable::InsertParams( DB::Value variantPK )ι->vector<DB::Value>{
+	α Variable::InsertParams()Ι->vector<DB::Value>{
+		ASSERT( false );
+		return InsertParams( DB::Value{} );
+	}
+
+	α Variable::InsertParams( DB::Value variantPK )Ι->vector<DB::Value>{
 		auto params = Node::InsertParams();
 		params.emplace_back( variantPK );
 		ASSERT( dataType.identifier.numeric );

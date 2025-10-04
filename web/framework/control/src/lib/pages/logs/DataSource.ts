@@ -6,7 +6,7 @@ import { TraceEntry } from './TraceEntry';
 import { Subject } from 'rxjs';
 
 import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
-import * as CommonProto from '../../proto/Common'; import Common = CommonProto.Jde.Proto;
+import * as LogProto from '../../proto/Log'; import Log = LogProto.Jde.App.Log.Proto;
 export class PageStats{ constructor( public length?:number, public startIndex?:number ){} };
 
 export class DataSource
@@ -160,7 +160,7 @@ export class DataSource
 		if( this.observable )
 			this.observable.next( values );
 	}
-	filterData( messageIds:string[], filter2:string, index:number, level:Common.ELogLevel ):PageStats{
+	filterData( messageIds:string[], filter2:string, index:number, level:Log.ELogLevel ):PageStats{
 		const filter = filter2 ? filter2.trim().toLowerCase() : null;
 		//let visibleData:TraceEntry[] = [];
 		this.data.length = 0;

@@ -35,7 +35,7 @@ namespace Jde::Opc::Server{
 		}
 	{}
 
-	α Object::InsertParams()ι->vector<DB::Value>{
+	α Object::InsertParams()Ι->vector<DB::Value>{
 		vector<DB::Value> params = Node::InsertParams();
 		params.emplace_back( eventNotifier, 0 );
 		return params;

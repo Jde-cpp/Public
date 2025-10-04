@@ -77,8 +77,8 @@ namespace Jde::Opc::Server{
 				co_await ServerConfigAwait{}; //database
 			if( Settings::FindPath("/opcServer/mutationsDir") )
 				co_await UpsertAwait{}; //mutations
-			if( auto configFile = Settings::FindPath("/opcServer/configFile"); configFile )
-				GetUAServer().Load( *configFile );
+			for( let& config : Settings::FindPathArray("/opcServer/configFiles") )
+				GetUAServer().Load( config );
 			INFOT( ELogTags::App, "---Started OPC Server---" );
 			Resume();
 		}
