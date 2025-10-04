@@ -22,6 +22,7 @@ namespace Jde::Settings{
 	Φ FindString( sv path )ι->optional<string>;
 	Φ FindStringArray( sv path )ι->vector<string>;
 	Ξ FindPath( sv path )ι->optional<fs::path>{ auto s = FindString(path); return s ? fs::path{*s} : optional<fs::path>{}; }
+	Φ FindPathArray( sv path )ι->vector<fs::path>;
 	Ŧ FindNumber( sv path )ι->optional<T>{ return Json::FindNumber<T>(Value(), path); }
 
 	Ξ FindDefaultArray( sv path )ι->const jarray&{ return Json::FindDefaultArray(Value(),path); };

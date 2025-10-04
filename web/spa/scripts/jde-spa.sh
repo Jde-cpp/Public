@@ -1,6 +1,6 @@
 #!/bin/bash
 mainDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
-source $JDE_BASH/Framework/scripts/common.sh
+source $JDE_BASH/Public/build/common.sh
 controlDir=$mainDir/control;
 pushd `pwd` > /dev/null;
 

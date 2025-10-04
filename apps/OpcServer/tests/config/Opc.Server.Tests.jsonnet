@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "BrowseTests.NodeId",
+		tests:: "UALoadTests.LoadMyKitchen",
 		recreateDB:: true,
 		embeddedAppServer: true,
 		UANodeSets: "$(UA_NODE_SETS)",
@@ -65,6 +65,6 @@ local args = import 'args.libsonnet';
 		}
 	},
 	workers:{
-		executor: 2,
+		executor: {threads: 2},
 	}
 }

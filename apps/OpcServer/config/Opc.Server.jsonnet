@@ -41,7 +41,10 @@ local args = import 'args.libsonnet';
 		description: "Test OPC",
 		mutationsDir:: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
 		db: false,
-		configFile: "$(UA_NODE_SETS)/CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml",
+		configFiles: [
+			"$(UA_NODE_SETS)/CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml",
+			"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/kitchen.xml"
+		],
 		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840,
 		ssl:{
@@ -50,8 +53,7 @@ local args = import 'args.libsonnet';
 		}
 	},
 	workers:{
-		executor: 2,
-		drive:{ threads:  1 },
-		alarm:{ threads:  1 }
+		executor:{ threads:  2 },
+		drive:{ threads:  2 }
 	}
 }

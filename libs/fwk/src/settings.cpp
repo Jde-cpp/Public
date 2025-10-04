@@ -57,6 +57,17 @@ namespace Jde{
 		return y;
 	}
 
+	α Settings::FindPathArray( sv path )ι->vector<fs::path>{
+		vector<fs::path> y;
+		if( let jarray = Json::FindArray(Value(), path); jarray ){
+			for( let& s : *jarray ){
+				if( s.is_string() )
+					y.push_back( expandEnvVariable(string{s.get_string()}) );
+			}
+		}
+		return y;
+	}
+
 	consteval α buildTypeSubDir()->sv{
 		if constexpr( _debug )
 			return "Debug";
