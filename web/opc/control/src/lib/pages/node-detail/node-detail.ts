@@ -141,7 +141,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 		}
 	}
 	routerLink(n:UaNode):string[]{
-		return [`./${n.browse}`];
+		return [ `./${n.browseFQ(this.connection.defaultBrowseNs)}` ];
 	}
 	test(r:UaNode){ debugger;}
 	get columns():string[]{ return this.profile.columns; }

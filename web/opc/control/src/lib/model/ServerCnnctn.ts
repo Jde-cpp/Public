@@ -1,4 +1,5 @@
-import { cloneClassArray, ITargetRow, Mutation, MutationType, TargetRow } from "jde-framework";
+import { ITargetRow, Mutation, MutationType, TargetRow } from "jde-framework";
+import { toBrowse } from "./types";
 
 export type CnnctnPK = number;
 export type CnnctnTarget = string;
@@ -27,23 +28,10 @@ export class ServerCnnctn extends TargetRow<ServerCnnctn>{
 	}
 
 	getNs( segment:string ):number{
-		const index = segment.indexOf( "~" );
-		if( index>0 ){
-			const nsStr = segment.substring( 0, index );
-			if( /^-?\d+$/.test(nsStr) )
-				return +nsStr;
-		}
-		return this.defaultBrowseNs;
+		let browse = toBrowse( segment, this.defaultBrowseNs );
+		return browse.ns;
 	}
-	removeNs( segment:string ):string{
-		const index = segment.indexOf( "~" );
-		if( index>0 ){
-			const nsStr = segment.substring( 0, index );
-			if( /^-?\d+$/.test(nsStr) )
-				return segment.substring( index + 1 );
-		}
-		return segment;
-	}
+	removeNs( segment:string ):string{ return toBrowse( segment, this.defaultBrowseNs ).name.toString(); }
 
 	get properties():ServerCnnctn{ let properties = new ServerCnnctn(this); return properties; }
 	url:string;

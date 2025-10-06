@@ -66,8 +66,7 @@ local args = import 'args.libsonnet';
 		}
 	},
 	workers:{
-		drive:{ "threads":  1 },
-		alarm:{ "threads":  1 },
-		executor: 2
+		drive:{ threads:  2 },
+		executor:{ threads:  2 }
 	}
 }

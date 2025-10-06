@@ -34,6 +34,7 @@ namespace Jde::Opc{
 		α Bytes()Ι->optional<UA_ByteString>{ return identifierType==UA_NODEIDTYPE_BYTESTRING ? identifier.byteString : optional<UA_ByteString>{}; }
 
 		α IsSystem()Ι->bool{ return IsNumeric() && IsSystem(*this); }
+		α Add( jobject& j )Ι->void;
 		α ToJson()Ι->jobject;
 		α ToString()Ι->string;
 	};

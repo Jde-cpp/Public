@@ -5,7 +5,7 @@
 namespace Jde::Opc::Gateway{
 	struct UAClient;
 	struct UABrowsePath : UA_BrowsePath, boost::noncopyable{
-		UABrowsePath( const vector<sv>& segments, NsIndex defaultNS )ι;
+		UABrowsePath( std::span<const sv> segments, NsIndex defaultNS )ι;
 		UABrowsePath( UABrowsePath&& x )ι:UA_BrowsePath{ x }{ UA_BrowsePath_init( &x ); }
 		//UABrowsePath( const UABrowsePath& x )ι{ UA_BrowsePath_copy( &x, this ); }
 		~UABrowsePath(){ UA_BrowsePath_clear(this); }

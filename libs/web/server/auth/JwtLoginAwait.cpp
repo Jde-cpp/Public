@@ -9,7 +9,9 @@ namespace Jde::Web::Server{
 			//THROW_IF( std::abs(time(nullptr)-_jwt.Iat)>60*10, "Invalid iat.  Expected ~'{}', found '{}'.", time(nullptr), _jwt.Iat );
 			UserPK userPK{};
 			if( _jwt.Iss()=="https://accounts.google.com" ){
-				THROW_IF( !_isAppServer, "Google login only implemented on Application Server." );
+				//THROW_IF( !_isAppServer, "Google login only implemented on Application Server." );
+				if( !_isAppServer )
+					BREAK;// test
 				userPK = co_await GoogleLoginAwait( move(_jwt) );
 			}
 			else{

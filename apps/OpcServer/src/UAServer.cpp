@@ -41,8 +41,15 @@ namespace Jde::Opc::Server {
 	α UAServer::Load( fs::path configFile, SL sl )ε->void{
 		INFOT( ELogTags::App, "Loading configuration from: '{}'", configFile.string() );
 		CHECK_PATH( configFile, sl );
-		if( !NodesetLoader_loadFile(_ua, configFile.string().c_str(), nullptr) )
-			throw Exception( sl, "Failed to load nodeset file: '{}'", configFile.string() );
+		auto coutBuf = std::cout.rdbuf();
+#ifdef _MSC_VER
+			freopen("NUL", "w", stdout);
+#else
+			freopen("/dev/null", "w", stdout);
+#endif
+		auto success = NodesetLoader_loadFile( _ua, configFile.string().c_str(), nullptr );
+		std::cout.rdbuf( coutBuf );
+		THROW_IFSL( !success, "Failed to load nodeset file: '{}'", configFile.string() );
 	}
 
 	α UAServer::Constructor(UA_Server* /*server*/,

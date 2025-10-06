@@ -160,7 +160,6 @@ namespace Jde::Opc{
 	α NodeId::ToJson()Ι->jobject{
 		return Opc::ToJson( *this );
 	}
-
 	α NodeId::ToString()Ι->string{
 		return serialize( ToJson() );
 	}
@@ -176,6 +175,9 @@ namespace Jde::Opc{
 		else if( type==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
 			j["b"] = ByteStringToJson( nodeId.identifier.byteString );
 		return j;
+	}
+	α NodeId::Add( jobject& j )Ι->void{
+		toJson( j, *this );
 	}
 }
 namespace Jde{

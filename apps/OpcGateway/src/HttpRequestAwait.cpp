@@ -30,7 +30,7 @@ namespace Jde::Opc::Gateway{
 			jarray j;
 			for( let s : strings ){
 				let sc = To<StatusCode>( s );
-				j.push_back( {{"sc", sc},{"message", UAException::Message(sc)}} );
+				j.push_back( UAException::ToJson(sc, true) );
 			}
 			_readyResult = mu<jvalue>( jobject{{"errorCodes", j}} );
 		}

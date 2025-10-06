@@ -11,7 +11,8 @@ namespace Jde::Opc::Gateway{
 			base{ sl }, _executer{executer}, _query{move(query)}, _sessionPK{move(sessionPK)}
 		{}
 		α Execute()ι->TAwait<sp<UAClient>>::Task override;
-		α AddAttributes( NodeId&& nodeId, jobject&& jnode )ι->void;
+	private:
+		α AddAttributes( flat_map<string, std::expected<ExNodeId,StatusCode>>&& pathNodes, QL::TableQL* parents, string reqPath )ι->void;
 
 		sp<UAClient> _client;
 		UserPK _executer;

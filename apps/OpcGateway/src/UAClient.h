@@ -64,7 +64,7 @@ namespace Jde::Opc::Gateway{
 		α IsDefault()ι->bool{ return _opcServer.IsDefault; }
 		α Handle()Ι->Jde::Handle{ return (uint)_ptr;}
 		α UAPointer()ι->UA_Client*{return _ptr;}
-		α ToNodeId( sv path )Ε->ExNodeId;
+		α BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,std::expected<ExNodeId,StatusCode>>;
 		sp<UA_SetMonitoringModeResponse> MonitoringModeResponse;
 		sp<UA_CreateSubscriptionResponse> CreatedSubscriptionResponse;
 		UA_ClientConfig _config{};//TODO move private.

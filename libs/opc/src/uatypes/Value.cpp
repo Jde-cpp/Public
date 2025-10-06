@@ -1,7 +1,9 @@
 ﻿#include <jde/opc/uatypes/Value.h>
+#include <jde/opc/UAException.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/ExNodeId.h>
-//#include <jde/opc/uatypes/UAClient.h>
+#include <jde/opc/uatypes/Variant.h>
+
 
 #define let const auto
 
@@ -10,7 +12,7 @@ namespace Jde::Opc{
 #define IS(ua) type==&UA_TYPES[ua]
 	α Value::ToJson()Ι->jvalue{
 		if( status )
-			return jobject{ {"sc", status} };
+			return UAException::ToJson(status);
 		let scaler = IsScaler();
 		let type = value.type;
 		jvalue j{ scaler ? jvalue{} : jarray{} };
@@ -63,8 +65,7 @@ namespace Jde::Opc{
 			else if( IS(UA_TYPES_XMLELEMENT) ) [[unlikely]]
 				addExplicit( jstring{ToSV(((UA_XmlElement*)value.data)[i])} );
 			else{
-				WARNT( IotReadTag, "Unsupported type {}.", type->typeName );
-				addExplicit( jstring{Ƒ("Unsupported type {}.", type->typeName)} );
+				addExplicit( Variant{value}.ToJson(true) );
 			}
 		}
 		return j;

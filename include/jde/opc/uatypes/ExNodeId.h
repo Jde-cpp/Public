@@ -41,6 +41,7 @@ namespace Jde::Opc{
 		α Copy()Ι->UA_NodeId;
 		α Move()ι->UA_NodeId;
 		α ToJson()Ι->jobject;
+		α Add( jobject& j )Ι->void;
 		Ω ToJson( flat_set<ExNodeId> nodes )ι->jarray{ jarray j; for_each(nodes, [&j](const auto& n){ j.push_back( n.ToJson() ); }); return j; }
 		α to_string()Ι->string;
 	};
