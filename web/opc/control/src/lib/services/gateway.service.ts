@@ -13,10 +13,10 @@ import * as IotRequests from '../proto/Opc.FromClient'; import FromClient = IotR
 import * as IotResults from '../proto/Opc.FromServer'; import FromServer = IotResults.Jde.Opc.Gateway.FromServer;
 import { OpcStore } from './opc-store';
 import { NodeRoute } from '../model/NodeRoute';
-import { CnnctnTarget } from "../model/ServerCnnctn";
+import { CnnctnTarget, ServerCnnctn } from "../model/ServerCnnctn";
 import { NodeKey, NodeId } from '../model/NodeId';
 import { ENodeClass, ObjectType, OpcObject, UaNode, Variable } from '../model/Node';
-import { OpcId } from '../model/types';
+import { OpcId, StatusCode } from '../model/types';
 import { ExNodeId } from '../model/ExNodeId';
 import { Duration, Timestamp, toValue, Value } from '../model/Value';
 
@@ -102,6 +102,9 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	constructor( gateway:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore ){
 		super( FromClient.Transmission, http, transport, authStore );
 		super.instances = [gateway];
+		super.queryArray<ServerCnnctn>( `serverConnections{id target name url certificateUri defaultBrowseNs}` ).then( connections=>{
+			connections.forEach( c=>this.#connections.set(c.target, new ServerCnnctn(c)) );
+		});
 	}
 	async login( domain:string, username:string, password:string, log:Log ):Promise<void>{
 		let self = this;
@@ -230,7 +233,18 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 			OpcError.setMessages( json["errorCodes"] );
 		}
 	}
+	async errorCodeText( sc:StatusCode ):Promise<string>{
+		let text = OpcError.statusCodeText( sc );
+		if( !text ){
+			await this.updateErrorCodes();
+			text = OpcError.statusCodeText( sc );
+		}
+		return `(${sc.toString(16)})${text}`;
+	}
+
 	public async browseObjectsFolder( cnnctn:CnnctnTarget, parent:UaNode, snapshot:boolean, log:Log ):Promise<UaNode[]>{
+		if( parent.isVariable )
+			throw new EvalError( `Cannot browse children of variable node.`, {cause:"Invalid Operation"} );
 		const json = await super.get( `browseObjectsFolder?opc=${cnnctn}&${Gateway.toParams(parent.nodeId.toJson())}&snapshot=${snapshot}`, log );
 		var y = new Array<UaNode>();
 		for( const ref of json["refs"] ){
@@ -269,8 +283,8 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		return toValue( json["snapshots"][0].value );
 	}
 
-	setRoute(route: NodeRoute) {
-		this.store.setRoute(route);
+	setRoute(route: NodeRoute){
+		this.store.setRoute( route, this.#connections.get(route.cnnctnTarget)?.defaultBrowseNs );
 	}
 
 	private onUnsubscriptionResult( requestId, result:FromServer.IUnsubscribeAck ){
@@ -455,5 +469,6 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	}
 	get name():string{ return this.instances[0].instanceName; }
 	get target():GatewayTarget{ return this.instances[0].instanceName; }
+	#connections = new Map<CnnctnTarget, ServerCnnctn>();
 }
 export type SubscriptionResult = {opcId:string, node:NodeId,value:Value};

@@ -62,7 +62,8 @@ namespace Jde::Web::Server{
 			[&]( auto&& ws ){
 				ws.async_read( _buffer, [this,session]( beast::error_code ec, uint /*c*/ )mutable{
 					if( ec ){
-						ELogLevel level = ec==boost::beast::error::timeout || ec==websocket::error::closed || ec==net::error::connection_aborted || ec==net::error::not_connected || ec==net::error::connection_reset ? ELogLevel::Trace : ELogLevel::Error;
+						//ELogLevel level = ec==boost::beast::error::timeout || ec==websocket::error::closed || ec==net::error::connection_aborted || ec==net::error::not_connected || ec==net::error::connection_reset ? ELogLevel::Trace : ELogLevel::Error;
+						constexpr ELogLevel level = ELogLevel::Debug;
 						if( ec == websocket::error::closed ){
 							CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientRead, Ƒ("[{:x}]Server::DoRead", session->Id()), level };
 							session->OnClose();

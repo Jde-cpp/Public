@@ -216,6 +216,13 @@ namespace Jde::Opc{
 			j["b"] = ByteStringToJson( nodeId.identifier.byteString );
 		return j;
 	}
+	α ExNodeId::Add( jobject& j )Ι->void{
+		if( namespaceUri.length )
+			j["nsu"] = ToSV(namespaceUri);
+		if( serverIndex )
+			j["serverindex"] = serverIndex;
+		toJson( j, nodeId );
+	}
 }
 namespace Jde{
 	α Opc::ToJson( const UA_ExpandedNodeId& x )ε->jobject{

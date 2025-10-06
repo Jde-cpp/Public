@@ -30,19 +30,15 @@ export class NodeResolver implements Resolve<NodePageData> {
 			let gateway = await this.gatewayService.gateway( route.gatewayTarget );
 			const cnnctn = await this.opcStore.getConnection( gateway, route.cnnctnTarget );
 			if( !route.node ){
-				let segment = route.browsePath.substring( route.browsePath.lastIndexOf("/")+1 );
-				route.node = new OpcObject( {
-					...(await gateway.query<any>( `node( opc: "${route.cnnctnTarget}", path:"${route.browsePath}"){id name}`))["node"],
-					browseName: { ns: cnnctn.getNs(segment), name: cnnctn.removeNs(segment) }
-				} );
-				if( route.browsePath.split("/").length==1 ){
-					route.node.parent = OpcObject.rootNode;
-					this.opcStore.insertNode( route.gatewayTarget, route.cnnctnTarget, route.node );
-				}
+				const node = (await gateway.query<any>(`node( opc: "${route.cnnctnTarget}", path:"${route.browsePath}"){id name parents{id name path}}`, (m)=>console.log(m)) )["node"];
+				if( node.sc )
+					throw new EvalError( (await gateway.errorCodeText(node.sc)), {cause:"Opc Interface"} );
+				route.node = new OpcObject( {...node, browse: route.browse(cnnctn.defaultBrowseNs)} );
+				this.opcStore.insertNode( route, node.parents, cnnctn.defaultBrowseNs );
 			}
 			let references = await gateway.browseObjectsFolder( route.cnnctnTarget, route.node, true, (m)=>console.log(m) );
 			let displayed = references.filter( (r)=>r.displayed );
-			this.opcStore.setRoute( route );
+			this.opcStore.setRoute( route, cnnctn.defaultBrowseNs );
 			return { route: route, nodes: displayed, gateway: gateway, connection: cnnctn };
 		}catch( e ){
 			this.snackbar.exceptionInfo( e, `Not found:  '${route.cnnctnTarget}'`, (m)=>console.log(m) );

@@ -8,6 +8,7 @@ import { OpcStore } from "../services/opc-store";
 import { OpcObject, UaNode } from "./Node";
 import { Inject } from "@angular/core";
 import { Gateway, GatewayTarget } from "../services/gateway.service";
+import { Browse, Ns } from "./types";
 
 export class NodeRoute extends DocItem{
 	constructor( activatedRoute:ActivatedRouteSnapshot, profileService: IProfile, @Inject("OpcStore") opcStore:OpcStore ){
@@ -18,6 +19,9 @@ export class NodeRoute extends DocItem{
 		this.route = activatedRoute.pathFromRoot[activatedRoute.pathFromRoot.length-1];
 		this.node = this.browsePath.length ? opcStore.findNodeId( this.gatewayTarget, this.cnnctnTarget, this.browsePath ) : OpcObject.rootNode;
 		this.settings = new Settings<UserProfile>( UserProfile, this.profileKey, profileService );
+	}
+	browse(defaultNs:Ns):Browse{
+		return types.toBrowse( this.route.url[this.route.url.length-1].path, defaultNs );
 	}
 
 	route: ActivatedRouteSnapshot;

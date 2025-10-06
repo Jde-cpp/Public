@@ -1,5 +1,5 @@
 import { NodeId, NodeIdJson } from "./NodeId";
-import { ETypes, IBrowseName, ILocalizedText, toLocalizedText } from "./types";
+import { ETypes, Browse, ILocalizedText, Ns, toLocalizedText } from "./types";
 import { toValue, Value } from "./Value";
 
 export enum ENodeClass{
@@ -17,13 +17,14 @@ export enum ENodeClass{
 export abstract class UaNode extends NodeId{
 	constructor( json:any, parent?:UaNode ){
 		super( json );
-		this.#browse = json.browseName;
+		this.browse = json.browseName ?? json.browse;
 		this.#name = toLocalizedText( json.displayName ?? json.name ); //TODO switch to just name?
 		this.refType = json.referenceType ? new NodeId( json.referenceType ) : null;
 		this.typeDef = json.typeDefinition ? new ObjectType( json.typeDefinition ) : null;
 		this.parent = parent;
 	}
 	//equals(rhs:NodeId):boolean{ return  }
+	browseFQ( defaultNS:Ns ):string{ return this.browse.ns===defaultNS ? this.browse.name.toString() : `${this.browse.ns}~${this.browse.name}`; }
 	get displayed(){ return false; }
 	get isSystem(){ return this.ns==0 && this.isNumericId && this.numericId<32750; }
 	get isObject(){ return this.nodeClass == ENodeClass.Object; }
@@ -33,7 +34,7 @@ export abstract class UaNode extends NodeId{
 	parent?:UaNode;
 	refType?:NodeId;
 	typeDef?:ObjectType;
-	get browse():string{ return this.#browse?.name?.toString(); } set browse( x:IBrowseName ){ this.#browse = x; } #browse?:IBrowseName;
+	browse?:Browse;
 	get name(){ return this.#name?.text; } #name:ILocalizedText;
 	description:ILocalizedText;
 	specified:number;
@@ -56,7 +57,7 @@ export class OpcObject extends UaNode{
 }
 
 export class Variable extends UaNode{
-	constructor( json:{browseName?:IBrowseName, dataType?:NodeIdJson, displayName:ILocalizedText, node?:NodeIdJson, nodeClass?:number, referenceType?:NodeIdJson, typeDefinition?:NodeIdJson, value?:any}, parent?:UaNode	){
+	constructor( json:{browseName?:Browse, dataType?:NodeIdJson, displayName:ILocalizedText, node?:NodeIdJson, nodeClass?:number, referenceType?:NodeIdJson, typeDefinition?:NodeIdJson, value?:any}, parent?:UaNode	){
 		super( json, parent );
 		this.dataType = <ETypes>json.dataType?.i;
 		this.value = toValue( json.value );

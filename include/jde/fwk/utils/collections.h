@@ -23,10 +23,14 @@ namespace Jde{
 	}
 	Ŧ Reserve( uint size )ι->vector<T>{
 		vector<T> v;
-		v.reserve(size);
+		v.reserve( size );
 		return v;
 	}
-
+	ẗ ReserveMap( uint size )ι->flat_map<K,V>{
+		flat_map<K,V> v;
+		v.reserve( size );
+		return v;
+	}
 }
 #undef let
 #endif

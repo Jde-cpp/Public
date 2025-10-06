@@ -283,8 +283,8 @@ namespace Jde::Opc::Server{
 		if( !nodeId )
 			return false;
 		let id = nodeId->identifier.numeric;
-		ASSERT( nodeId->identifierType == UA_NODEIDTYPE_NUMERIC && nodeId->namespaceIndex == 0 );
-		if( id == UA_NS0ID_SERVER_NAMESPACEARRAY ){
+		ASSERT( nodeId->identifierType == UA_NODEIDTYPE_NUMERIC );
+		if( nodeId->namespaceIndex==0 && id == UA_NS0ID_SERVER_NAMESPACEARRAY ){
 			return UA_ACCESSLEVELMASK_READ;
 		}
 		let rights = GetSchema().Authorizer->Rights( "opc", "node", static_cast<SessionContext*>( sessionContext )->UserPK );

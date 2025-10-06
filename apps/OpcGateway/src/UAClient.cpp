@@ -391,10 +391,16 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α UAClient::ToNodeId( sv path )Ε->ExNodeId{
-		let segments = Str::Split(path, '/');
-    UABrowsePath browsePath{ segments, _opcServer.DefaultBrowseNs };
-    return GetNodeIdResponse{ UA_Client_Service_translateBrowsePathsToNodeIds(_ptr, {{}, 1, &browsePath}), segments, Handle() };
+	α UAClient::BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,std::expected<ExNodeId,StatusCode>>{
+		let segments = Str::Split( path, '/' );
+		vector<UABrowsePath> args; args.reserve( parents ? segments.size()-1 : 1 );
+		vector<string> paths;
+		for( uint i=0; i<(parents ? segments.size() : 1); ++i ){
+			std::span<const sv> nodePath{ segments.begin(), segments.end()-i };
+			paths.emplace_back( Str::Join(nodePath, "/") );
+			args.emplace_back( UABrowsePath{nodePath, _opcServer.DefaultBrowseNs} );
+		}
+		return BrowsePathsToNodeIdResponse{ UA_Client_Service_translateBrowsePathsToNodeIds(_ptr, {{}, args.size(), args.data()}), paths, Handle() };
 	}
 	α UAClient::Find( UA_Client* ua, SL srce )ε->sp<UAClient>{
 		sp<UAClient> y = TryFind( ua, srce );

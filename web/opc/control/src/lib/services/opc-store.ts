@@ -1,6 +1,6 @@
 import { Injectable } from "@angular/core";
 import { CnnctnTarget, ServerCnnctn } from "../model/ServerCnnctn";
-import { ETypes } from '../model/types';
+import { browseEq, ETypes, Ns, toBrowse } from '../model/types';
 import { NodeRoute } from "../model/NodeRoute";
 import { OpcObject, UaNode, ENodeClass } from "../model/Node";
 import { NodeId, NodeKey } from "../model/NodeId";
@@ -30,7 +30,7 @@ export class OpcStore{
 			this.#connections.set( gateway, gatewayConnections = new Map<CnnctnTarget, ServerCnnctn>() );
 		if( gatewayConnections.has(cnnctn) )
 			return gatewayConnections.get(cnnctn);
-		let connection = new ServerCnnctn( (await gatewayService.query<any>(`serverConnection( target: "${cnnctn}"){ id name url certificateUri defaultBrowseNs }`, (m)=>console.log(m)))["serverConnection"] );
+		let connection = new ServerCnnctn( (await gatewayService.query<any>(`serverConnection( target: "${cnnctn}"){ id name target url certificateUri defaultBrowseNs }`, (m)=>console.log(m)))["serverConnection"] );
 		gatewayConnections.set( cnnctn, connection );
 		return connection;
 	}
@@ -68,13 +68,39 @@ export class OpcStore{
 		for( let route of this.#serverCnnctnRoutes )
 			route.path = route.path.substring( route.path.lastIndexOf("/")+1 );
 	}
+	getParent( opcNodes:Map<NodeKey,StoreNode>, path:string, defaultNs:Ns ):UaNode{
+		let segments = path.split("/");
+		if( segments.length==1 )
+			return OpcObject.rootNode;
 
-	insertNode( gateway:GatewayTarget, cnnctn:CnnctnTarget, node:UaNode ):void{
-		let opcNodes = this.getNodes( gateway, cnnctn );
-		if( !node.parent && !node.equals(OpcObject.rootNode) )
-			throw new EvalError( `Parent not set for ${node.browse}`, {cause:"Internal Error"} );
-		if( !opcNodes.has(node.key) )
-			this.addChildren( opcNodes, node.parent, [node] );
+		let parent = opcNodes.get( OpcObject.rootNode.key );
+		for( let segment of segments.slice(0, -1) ){
+			if( !parent )
+				return null;
+			let child = parent.children.find( (c)=>browseEq(c.browse, toBrowse(segment, defaultNs)) );
+			if( !child )
+				return null;
+			parent = opcNodes.get( child.key );
+		}
+		if( !parent )
+			throw new EvalError( `Parent not set for '${path}'`, {cause:"Internal Error"} );
+		return parent?.node;
+	}
+	insertNode( route:NodeRoute, parents:any, defaultNs:Ns ):void{
+		let opcNodes = this.getNodes( route.gatewayTarget, route.cnnctnTarget );
+		for( let parent of parents ){
+			parent.browse = toBrowse( parent.path, defaultNs );
+			let obj = new OpcObject( parent );
+			if( !obj.parent )
+				obj.parent = this.getParent( opcNodes, parent.path, defaultNs );
+			if( !opcNodes.has(obj.key) )
+				this.addChildren( opcNodes, obj.parent, [obj] );
+		}
+
+		if( !route.node.parent )
+			route.node.parent = this.getParent( opcNodes, route.path, defaultNs );
+		if( !opcNodes.has(route.node.key) )
+			this.addChildren( opcNodes, route.node.parent, [route.node] );
 	}
 
 	setNodes( gateway:GatewayTarget, cnnctn:CnnctnTarget, parent:UaNode, children:UaNode[] ){
@@ -91,7 +117,7 @@ export class OpcStore{
 			childStore.node = child;
 		}
 	}
-	setRoute(route: NodeRoute) {
+	setRoute(route: NodeRoute, defaultBrowseNs:Ns|null ):void{
 		if( route.node.equals(OpcObject.rootNode) ){
 			route.siblings = [new DocItem({title: route.cnnctnTarget, path: route.cnnctnTarget})]; //TODO add all connections.
 			return;
@@ -103,7 +129,7 @@ export class OpcStore{
 		let parentPaths = [];
 		let parent = findStore( store?.parentId );
 		for( let current = parent; current && !current.node.equals(OpcObject.rootNode); current=findStore(current.parentId) ){
-			parentPaths.push( current.node.browse );
+			parentPaths.push( current.node.browseFQ(defaultBrowseNs) );
 		}
 		if( !parent )
 			throw new EvalError( `Parent not found for ${store?.node.browse}`, {cause:"Internal Error"} );
@@ -114,17 +140,18 @@ export class OpcStore{
 			const siblingStore = sibling.key == route.nodeId.key ? store : findStore( sibling.nodeId );
 			const siblingRef = siblingStore?.node;
 			if( siblingRef?.isObject && siblingRef?.displayed )
-				route.siblings.push( new DocItem( {path: `${route.cnnctnTarget}/${siblingRef.browse}`, title: siblingRef.name} ) );
+				route.siblings.push( new DocItem({path: `${route.parent.path}/${siblingRef.browseFQ(defaultBrowseNs)}`, title: siblingRef.name}) );
 		}
 	}
 	findNodeId( gateway:string, cnnctnTarget:string, browsePath:string ): UaNode {
-		let uaNode: UaNode;
 		let nodes = this.getNodes(gateway, cnnctnTarget);
 		let storeNode: StoreNode = nodes.get( OpcObject.rootNode.key );
 		if( !storeNode )
-			return uaNode;
+			return null;
+		let uaNode: UaNode;
+		let cnnctn = this.#connections.get( gateway )?.get( cnnctnTarget );
 		browsePath.split("/").forEach( (segment, i)=>{
-			uaNode = storeNode.children.find( (c)=>c.browse == segment );
+			uaNode = storeNode.children.find( (c)=>browseEq(c.browse, toBrowse(segment, cnnctn?.defaultBrowseNs)) );
 			if( uaNode )
 				storeNode = this.findStore( gateway, cnnctnTarget, uaNode.nodeId );
 		} );

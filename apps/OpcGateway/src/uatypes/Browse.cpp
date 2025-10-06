@@ -7,7 +7,7 @@
 
 #define let const auto
 namespace Jde::Opc::Gateway{
-	UABrowsePath::UABrowsePath( const vector<sv>& segments, NsIndex defaultNS )ι:
+	UABrowsePath::UABrowsePath( std::span<const sv> segments, NsIndex defaultNS )ι:
 		UA_BrowsePath{
 			UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
 			{ segments.size(), (UA_RelativePathElement*)UA_Array_new(segments.size(), &UA_TYPES[UA_TYPES_RELATIVEPATHELEMENT]) }

@@ -19,8 +19,8 @@ local args = import 'args.libsonnet';
 			tags: {
 				trace:["test","sql",
 					"uaSession", "uaServer", "uaUser", "uaSecurity", "threads", "uaClient", "uaSecure"],
-				debug:["ql","settings", "app", "uaEvent", "uaNet"],
-				information:[],
+				debug:["ql","settings", "app", "uaNet"],
+				information:["uaEvent"],
 				warning:["io"],
 				"error":[],
 				critical:[]
@@ -42,8 +42,9 @@ local args = import 'args.libsonnet';
 		mutationsDir:: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
 		db: false,
 		configFiles: [
-			"$(UA_NODE_SETS)/CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml",
-			"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/kitchen.xml"
+			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
+			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
+			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"
 		],
 		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840,
