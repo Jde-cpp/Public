@@ -1,6 +1,6 @@
 #pragma once
+#include <jde/opc/uatypes/BrowseName.h>
 #include "ObjectAttr.h"
-#include "BrowseName.h"
 #include "Node.h"
 
 namespace Jde::Opc::Server{
@@ -10,7 +10,7 @@ namespace Jde::Opc::Server{
 		Variable( const Variable& v )ι;
 		Variable( Variable&& v )ι;
 		Variable( UA_NodeId n )ι;
-		Variable( jobject&& j, NodePK parentPK, Server::BrowseName browse )ι;
+		Variable( jobject&& j, NodePK parentPK, Opc::BrowseName browse )ι;
 		Variable( DB::Row& r, sp<ObjectType> typeDef, UA_Variant&& variant, const UA_DataType& dataType, tuple<UA_UInt32*, uint> dims )ε;
 
 		α operator=( const Variable& v )ι->Variable&;

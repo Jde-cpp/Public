@@ -1,7 +1,7 @@
 #pragma once
+#include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/Variant.h>
 #include "UAConfig.h"
-#include "uaTypes/BrowseName.h"
 #include "uaTypes/Node.h"
 #include "uaTypes/ObjectAttr.h"
 #include "uaTypes/Object.h"

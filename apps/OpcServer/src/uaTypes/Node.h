@@ -1,7 +1,7 @@
 #pragma once
-#include "ObjectAttr.h"
-#include "BrowseName.h"
+#include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/NodeId.h>
+#include "ObjectAttr.h"
 
 namespace Jde::Opc::Server{
 	struct ObjectType;

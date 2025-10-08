@@ -25,7 +25,7 @@ namespace Browse{
 		α ToJson( flat_map<NodeId, Value>&& snapshot, flat_map<NodeId, NodeId>&& dataTypes )ε->jobject;
 	};
 
-	struct FoldersAwait final : TAwait<Response>{
+	struct FoldersAwait final : TAwait<Response>, boost::noncopyable{
 		FoldersAwait( NodeId id, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl}, _nodeId{move(id)},_client{c}{}
 		α Suspend()ι->void override;
 //		α await_resume()ι->AwaitResult override{ return _pPromise->MoveResult(); }

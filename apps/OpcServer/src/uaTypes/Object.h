@@ -1,12 +1,12 @@
 #pragma once
+#include <jde/opc/uatypes/BrowseName.h>
 #include "ObjectAttr.h"
-#include "BrowseName.h"
 #include "Node.h"
 
 namespace Jde::Opc::Server{
 	struct Object final: Node, UA_ObjectAttributes{
 		Object()ι:UA_ObjectAttributes{}{}
-		Object( const jobject& j, Server::NodePK parentPK, Server::BrowseName browse )ε;
+		Object( const jobject& j, Server::NodePK parentPK, Opc::BrowseName browse )ε;
 		Object( UA_NodeId n )ι;
 		Object( NodePK pk, UA_NodeId&& n )ι;
 		//Object( Node&& n, ObjectAttr&& attr )ι;

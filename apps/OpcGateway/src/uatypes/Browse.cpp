@@ -1,4 +1,5 @@
 ﻿#include "Browse.h"
+#include <jde/fwk/process/execution.h>
 #include "../UAClient.h"
 #include <jde/opc/uatypes/Value.h>
 #include "../async/Attributes.h"
@@ -115,9 +116,9 @@ namespace Browse{
 		}
 		TRACET( BrowseTag, "[{:x}.{}]OnResponse", uaHandle, requestId );
 		if( !response->responseHeader.serviceResult )
-			h.promise().Resume( move(*response), h );
+			Post<Response>( move(*response), move(h) ); // Cannot run EventLoop from the run method itself
 		else
-			h.promise().ResumeExp( UAClientException{response->responseHeader.serviceResult, uaHandle, requestId}, move(h) );
+			h.promise().ResumeExp( UAClientException{response->responseHeader.serviceResult, uaHandle, requestId}, h );
 	}
 
 	Request::Request( NodeId&& id )ι:

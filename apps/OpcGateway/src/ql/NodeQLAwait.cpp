@@ -1,5 +1,6 @@
 #include "NodeQLAwait.h"
 #include <jde/fwk/utils/collections.h>
+#include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/Variant.h>
 #include "../UAClient.h"
 #include "../async/ConnectAwait.h"
@@ -17,18 +18,37 @@ namespace Jde::Opc::Gateway{
 			flat_map<string, std::expected<ExNodeId,StatusCode>> pathNodes;
 
 			auto parents = _query.FindTable("parents");
-			let reqPath = Json::FindSV(_query.Args,"path").value_or(sv{});
-			if( reqPath.size() )
+			auto reqPath = Json::FindString(_query.Args,"path").value_or( string{} );
+			if( reqPath.size() ){
 				pathNodes = _client->BrowsePathsToNodeIds( reqPath, parents );
-			else{
-				//std::expected<ExNodeId,StatusCode> x{ExNodeId{_query.Args}};
-				pathNodes.emplace( string{}, ExNodeId{_query.Args} );
+				if( auto request = pathNodes.rbegin(); pathNodes.size()>1 && !request->second ){//request path failed.
+					if( auto parent = std::next(request); parent->second.has_value() ){ //for some reason request path fails.
+						Browse( parent->second.value().nodeId, move(pathNodes), parents, move(reqPath) );
+						co_return;
+					}
+				}
 			}
-			AddAttributes( move(pathNodes), parents, string{reqPath} );
+			else
+				pathNodes.emplace( string{}, ExNodeId{_query.Args} );
+			AddAttributes( move(pathNodes), parents, move(reqPath) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
+	}
+
+	α NodeQLAwait::Browse( NodeId parentNodeId, flat_map<string, std::expected<ExNodeId,StatusCode>> pathNodes, QL::TableQL* parents, string reqPath )ι->TAwait<Browse::Response>::Task{
+		auto response = co_await Browse::FoldersAwait{ parentNodeId, _client, _sl };
+		const BrowseName browseName{ Str::Split(reqPath, '/').back(), _client->DefaultBrowseNs() };
+		if( response.resultsSize ){
+			for( auto ref : Iterable<UA_ReferenceDescription>(response.results[0].references, response.results[0].referencesSize) ){
+				if( browseName==ref.browseName ){
+					pathNodes.rbegin()->second = ExNodeId{ ref.nodeId };
+					break;
+				}
+			}
+		}
+	 	AddAttributes( move(pathNodes), parents, move(reqPath) );
 	}
 
 	α NodeQLAwait::AddAttributes( flat_map<string, std::expected<ExNodeId,StatusCode>>&& pathNodes, QL::TableQL* parentQL, string reqPath )ι->void{
