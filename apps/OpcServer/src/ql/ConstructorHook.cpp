@@ -1,8 +1,8 @@
 #include "ConstructorHook.h"
+#include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/Variant.h>
 #include "../UAServer.h"
 #include "../awaits/VariantAwait.h"
-#include "../uaTypes/BrowseName.h"
 
 #define let const auto
 namespace Jde::Opc::Server{

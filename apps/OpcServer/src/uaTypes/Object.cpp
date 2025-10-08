@@ -3,7 +3,7 @@
 #define let const auto
 
 namespace Jde::Opc::Server{
-	Object::Object( const jobject& j, Server::NodePK parentPK, Server::BrowseName browse )ε:
+	Object::Object( const jobject& j, Server::NodePK parentPK, Opc::BrowseName browse )ε:
 		Node{ j, parentPK, move(browse) },
 		UA_ObjectAttributes{
 			Json::FindNumber<UA_UInt32>(j, "specified").value_or(0),

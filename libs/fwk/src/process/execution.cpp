@@ -152,6 +152,10 @@ namespace Jde{
 	asio::post( *ctx, f );
 	Execution::Run();
 }
+α Jde::PostM( std::move_only_function<void()> f )ι->void{
+	auto ctx = Executor();
+	asio::post( *ctx, std::move(f) );
+}
 α Jde::PostIO( function<void()> f )ι->void{
 	Executor();
 	asio::post( *_ioStrand, f );

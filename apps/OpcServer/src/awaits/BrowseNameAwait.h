@@ -1,6 +1,6 @@
 #pragma once
 #include <jde/db/awaits/ScalerAwait.h>
-#include "../uaTypes/BrowseName.h"
+#include <jde/opc/uatypes/BrowseName.h>
 
 namespace Jde::Opc::Server{
 	struct BrowseNameAwait final : TAwaitEx<flat_map<BrowseNamePK,BrowseName>,DB::SelectAwait::Task>{

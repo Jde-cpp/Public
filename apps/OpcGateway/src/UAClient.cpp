@@ -2,6 +2,7 @@
 
 #include <open62541/plugin/securitypolicy_default.h>
 #include <jde/fwk/process/execution.h>
+#include <jde/fwk/utils/collections.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
@@ -337,7 +338,7 @@ namespace Jde::Opc::Gateway{
 
 			RequestId requestId{};
 			UAε( UA_Client_MonitoredItems_createDataChanges_async(UAPointer(), request, contexts, dataChangeCallbacks.data(), deleteCallbacks.data(), CreateDataChangesCallback, (void*)requestHandle, &requestId) );
-			TRACET( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, serialize(request.ToJson()) );
+			//TRACET( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, serialize(request.ToJson()) );
 			Process( requestId, move(h) );//TODO handle BadSubscriptionIdInvalid
 		}
 		catch( UAException& e ){
@@ -393,7 +394,7 @@ namespace Jde::Opc::Gateway{
 
 	α UAClient::BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,std::expected<ExNodeId,StatusCode>>{
 		let segments = Str::Split( path, '/' );
-		vector<UABrowsePath> args; args.reserve( parents ? segments.size()-1 : 1 );
+		auto args = Reserve<UABrowsePath>( parents ? segments.size()-1 : 1 );
 		vector<string> paths;
 		for( uint i=0; i<(parents ? segments.size() : 1); ++i ){
 			std::span<const sv> nodePath{ segments.begin(), segments.end()-i };

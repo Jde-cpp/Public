@@ -8,6 +8,7 @@ namespace boost::asio{ class io_context; class cancellation_signal; }
 namespace Jde{
 	Φ Executor()ι->sp<boost::asio::io_context>;
 	Φ Post( function<void()> f )ι->void;
+	Φ PostM( std::move_only_function<void()> f )ι->void;
 	α PostIO( function<void()> f )ι->void;
 	Φ Post( VoidAwait::Handle&& h )ι->void;
 	Ŧ Post( T&& value, typename TAwait<T>::Handle&& h )ι->void;
@@ -18,8 +19,8 @@ namespace Jde{
 		Φ Run()->void;
 	}
 	Ŧ Jde::Post( T&& value, typename TAwait<T>::Handle&& h )ι->void{
-		Post( [ value = move(value), h = move(h) ]() mutable {
-			h.promise().Resume( move(value), h );
+		PostM( [ v = move(value), h ]() mutable {
+			h.promise().Resume( move(v), h );
 		} );
 		h = nullptr;
 	}

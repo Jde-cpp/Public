@@ -59,9 +59,10 @@ namespace Jde::Opc::Gateway{
 		α AddSessionAwait( VoidAwait::Handle h )ι->void;
 		α TriggerSessionAwaitables()ι->void;
 
-		α Target()ι->const ServerCnnctnNK&{ return _opcServer.Target; }
-		α Url()ι->str{ return _opcServer.Url; }
-		α IsDefault()ι->bool{ return _opcServer.IsDefault; }
+		α Target()Ι->const ServerCnnctnNK&{ return _opcServer.Target; }
+		α Url()Ι->str{ return _opcServer.Url; }
+		α IsDefault()Ι->bool{ return _opcServer.IsDefault; }
+		α DefaultBrowseNs()Ι->NsIndex{ return _opcServer.DefaultBrowseNs; }
 		α Handle()Ι->Jde::Handle{ return (uint)_ptr;}
 		α UAPointer()ι->UA_Client*{return _ptr;}
 		α BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,std::expected<ExNodeId,StatusCode>>;
