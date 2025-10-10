@@ -47,6 +47,8 @@ export enum ETypes{
 	Float = 10,
 	Double = 11,
 	String = 12,
+	DateTime = 13,
 	BaseData = 24,
-	Folder = 61
+	Folder = 61,
+	UtcDateTime = 294
 }

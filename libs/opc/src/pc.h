@@ -23,4 +23,4 @@
 #include <jde/opc/usings.h>
 #include <jde/opc/exports.h>
 #include <jde/app/shared/exports.h>
-#include <jde/opc/uatypes/helpers.h>
+#include <jde/opc/uatypes/opcHelpers.h>

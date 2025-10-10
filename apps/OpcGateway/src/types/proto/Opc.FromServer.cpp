@@ -1,4 +1,5 @@
 #include "Opc.FromServer.h"
+#include <jde/opc/uatypes/DateTime.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
 

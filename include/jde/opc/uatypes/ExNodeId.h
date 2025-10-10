@@ -2,7 +2,7 @@
 #ifndef EXNODE_H
 #define EXNODE_H
 #include "../exports.h"
-#include "helpers.h"
+#include "opcHelpers.h"
 
 namespace Jde::DB{ struct Row; struct Value; }
 namespace Jde::Opc{

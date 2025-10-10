@@ -1,7 +1,8 @@
 ﻿#include <jde/opc/uatypes/Value.h>
 #include <jde/opc/UAException.h>
-#include <jde/opc/uatypes/NodeId.h>
+#include <jde/opc/uatypes/DateTime.h>
 #include <jde/opc/uatypes/ExNodeId.h>
+#include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Variant.h>
 
 
@@ -108,7 +109,10 @@ namespace Jde::Opc{
 			SetNumber<UA_UInt32>( j );
 		else if( IS(UA_TYPES_UINT64) )
 			SetNumber<UA_UInt64>( j );
+		else if( IS(UA_TYPES_DATETIME) ){
+			SetNumber<UA_DateTime>( UADateTime{j}.UA() );
+		}
 		else
-			THROW( "Setting type '{}' has not been implemented.", type->typeName );
+			THROW( "Setting type '{}' has not been implemented - {}", type->typeName, serialize(j) );
 	}
 }

@@ -10,6 +10,7 @@ namespace Jde{
 }
 namespace Jde::Chrono{
 	using namespace std::chrono;
+	Ξ Epoch()ι->TimePoint{ return Clock::from_time_t(0); }
 	α LocalTimeMilli( TimePoint time, SRCE )ε->string;
 	Ξ LocalYMD( TimePoint time, const time_zone& tz )ι->year_month_day{ return year_month_day{floor<days>(tz.to_local(time))}; };
 	Φ ToDuration( string&& iso, SRCE )ε->Duration;

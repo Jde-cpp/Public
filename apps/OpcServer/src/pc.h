@@ -19,7 +19,7 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/app/shared/exports.h>
 #include <jde/opc/exports.h>
-#include <jde/opc/uatypes/helpers.h>
+#include <jde/opc/uatypes/opcHelpers.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/ExNodeId.h>
 #include <jde/opc/UAException.h>

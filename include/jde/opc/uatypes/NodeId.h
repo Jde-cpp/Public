@@ -1,5 +1,5 @@
 #pragma once
-#include "helpers.h"
+#include "opcHelpers.h"
 #include "../exports.h"
 
 namespace Jde::DB{ struct Row; struct Value; }
