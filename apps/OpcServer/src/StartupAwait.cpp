@@ -8,7 +8,7 @@
 #include <jde/access/client/accessClient.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/AppClientSocketSession.h>
-#include <jde/opc/uatypes/helpers.h>
+#include <jde/opc/uatypes/opcHelpers.h>
 #include "OpcServerAppClient.h"
 #include "UAServer.h"
 #include "awaits/ServerConfigAwait.h"

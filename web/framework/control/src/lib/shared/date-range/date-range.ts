@@ -4,7 +4,7 @@ import {MatChipListbox, MatChipOption, MatChipsModule} from '@angular/material/c
 import {MatDatepickerInputEvent, MatDatepickerModule, MatDatepickerToggle, MatDateRangeInput, MatDateRangePicker} from '@angular/material/datepicker';
 import {MatFormField, MatFormFieldModule, MatLabel} from '@angular/material/form-field';
 
-import { DateUtilities, Day } from '../../utilities/dateUtilities';
+import { DateUtils, Day } from '../../utilities/dateUtilities';
 import { IAssignable } from '../../utilities/settings';
 
 export enum TimeFrame{None=0, Week=7, Month=30, Quarter=90, Year=360, All=1000}
@@ -68,18 +68,18 @@ export class DateRange implements OnInit
 	}
 	static toDate( day:Day ):Date
 	{
-		const time=DateUtilities.fromDays(day);
+		const time=DateUtils.fromDays(day);
 		return new Date( time.getTime()+time.getTimezoneOffset()*60000 );
 	}
 	static fromDate( time:Date ):Day
 	{
-		return DateUtilities.toDays( new Date(time.getTime()-time.getTimezoneOffset()*60000) );
+		return DateUtils.toDays( new Date(time.getTime()-time.getTimezoneOffset()*60000) );
 	}
 	startChange( e:MatDatepickerInputEvent<Date>|any )
 	{
 		console.log( `startChange = ${e.value}  - start=${this.settings.start} - end=${this.settings.end ?? this.settings.max}, days=${this.settings.dayCount}` );
 		this.settings.timeFrame = null;
-		const days = DateUtilities.toDays( e.value );//18,962=12/1 18,983=12/22, 18,990=12/29
+		const days = DateUtils.toDays( e.value );//18,962=12/1 18,983=12/22, 18,990=12/29
 		this.settings.start = days;
 		console.log( `start=${this.settings.start} - end=${ this.settings.end ?? this.settings.max }, days=${this.settings.dayCount}` );
 		let d = DateRange.toDate( this.settings.start );
@@ -89,7 +89,7 @@ export class DateRange implements OnInit
 	}
 	endChange( e:MatDatepickerInputEvent<Date>|any ){
 		console.log( `endChange = ${e.value}  - start=${this.settings.start} - end=${this.settings.end ?? this.settings.max}, days=${this.settings.dayCount}` );
-		this.settings.end = e.value ? DateUtilities.toDays( e.value ) : null;
+		this.settings.end = e.value ? DateUtils.toDays( e.value ) : null;
 		//console.log( 'start='+this.range.controls['start'].value );
 		//console.log( 'end='+this.range.controls['end'].value );
 		if( this.settings.end )
@@ -124,7 +124,7 @@ export class DateRange implements OnInit
 }
 export class DateRangeSettings implements IAssignable<DateRangeSettings>
 {
-	constructor( public timeFrame:TimeFrame=undefined, private _max:Day = DateUtilities.toDays(new Date()), private isValidDay:(_:Day)=>boolean=()=>{return true;} )
+	constructor( public timeFrame:TimeFrame=undefined, private _max:Day = DateUtils.toDays(new Date()), private isValidDay:(_:Day)=>boolean=()=>{return true;} )
 	{}
 	assign(other: DateRangeSettings)
 	{
@@ -144,10 +144,10 @@ export class DateRangeSettings implements IAssignable<DateRangeSettings>
 			dayCount = 7;
 		else if( this.timeFrame && this.timeFrame!=TimeFrame.All )
 		{
-			const max:Date = DateUtilities.fromDays( this.max );
+			const max:Date = DateUtils.fromDays( this.max );
 			const delta = this.timeFrame==TimeFrame.Month ? 1 : this.timeFrame==TimeFrame.Quarter ? 3 : 12;
 			const start = new Date( max.getUTCFullYear(), max.getUTCMonth()-delta, max.getUTCDate() );
-			dayCount = this.max - DateUtilities.toDays( start );
+			dayCount = this.max - DateUtils.toDays( start );
 		}
 		return dayCount;
 	} set dayCount( x:number|undefined ){ this.#dayCount = x; } #dayCount:number | undefined;

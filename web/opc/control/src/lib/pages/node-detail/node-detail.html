@@ -41,22 +41,29 @@
 				<mat-header-cell mat-sort-header *matHeaderCellDef> Snapshot </mat-header-cell>
 				<mat-cell mat-cell *matCellDef="let r">
 					@if( r.dataType==ETypes.Boolean && !r.isArray ){
-						<mat-checkbox [checked]="r.value" (change)="toggleValue($event,r);"></mat-checkbox>
+						<mat-checkbox [checked]="r.value" (change)="toggleValue(r, $event);"></mat-checkbox>
 					}
 					@else if( r.isInteger && !r.isArray ){
-						<input type=number [value]="r.value?.toString()" (change)="changeDouble($event,r);">
+						<input type=number [value]="r.value?.toString()" (change)="changeDouble(r,$event);">
 					}
 					@else if( r.isUnsigned && !r.isArray ){
-						<input type=number [value]="r.value?.toString()" (change)="changeDouble($event,r);">
+						<input type=number [value]="r.value?.toString()" (change)="changeDouble(r,$event);">
 					}
 					@else if( r.isFloating && !r.isArray ){
-						<input type=number [value]=r.value (change)="changeDouble($event,r);">
+						<input type=number [value]=r.value (change)="changeDouble(r,$event);">
 					}
 					@else if( r.dataType==ETypes.String && !r.isArray ){
-						<input type="text" [value]=r.value (change)="changeString($event,r);">
+						<input type="text" [value]=r.value (change)="changeString(r,$event);">
 					}
 					@else if( r.dataType==ETypes.BaseData && !r.isArray ){
 						<span>{{toString(r.value)}}</span>
+					}
+					@else if( r.dataType==ETypes.UtcDateTime && !r.isArray ){
+						<!-- <mat-form-field> -->
+							<input matInput [matDatepicker]="picker" [value]="toDate(r.value)" (dateInput)="dateInput(r, $event);" (change)="changeDate(r, $event);">
+							<mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          		<mat-datepicker #picker></mat-datepicker>
+						<!-- </mat-form-field> -->
 					}
 					<!-- <span *ngIf="r.dataType==ETypes.None">{{toString(r.value)}}</span> -->
 					<!-- <span *ngIf="valueType(r.value)!='boolean'" [title]="toString(r.value)">{{valueType(r.value)}}</span> -->

@@ -13,7 +13,6 @@
 
 #define let const auto
 namespace Jde::Opc{
-	//Ξ mum( sv s )ι->UA_String{ return { s.size(), (UA_Byte*)s.data() }; }
 	Ŧ Zero( T& x )ι->void{ ::memset( &x, 0, sizeof(T) ); }
 	constexpr α operator "" _uv( const char* x, uint len )ι->UA_String{ return UA_String{ len, static_cast<UA_Byte*>((void*)x) }; } //(UA_Byte*) gcc error
 	Ξ ToJson( UA_UInt64 v )ι->jobject{ return jobject{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",true} }; };
@@ -50,37 +49,6 @@ namespace Jde::Opc{
 	private:
 		T* _begin;
 		const uint _size;
-	};
-
-	struct UADateTime{
-		UADateTime( const UA_DateTime& dt )ι:_dateTime{dt}{}
-		α ToJson()Ι->jobject{
-			let [seconds,nanos] = ToParts();
-			return jobject{ {"seconds", seconds}, {"nanos", nanos} };
-		}
-		α ToProto()Ι->google::protobuf::Timestamp{
-			let [seconds,nanos] = ToParts();
-			google::protobuf::Timestamp t;
-			t.set_seconds( seconds );
-			t.set_nanos( nanos );
-			return t;
-		}
-		α ToDuration()Ι->google::protobuf::Duration{
-			let ts = ToProto();
-			google::protobuf::Duration d; d.set_seconds( ts.seconds() ); d.set_nanos( ts.nanos() );
-			return d;
-		}
-
-	private:
-		α ToParts()Ι->tuple<_int,int>{
-			using namespace std::chrono;
-			let dts = UA_DateTime_toStruct( _dateTime );
-			_int seconds = Clock::to_time_t( Chrono::ToTimePoint((int16)dts.year, (int8)dts.month, (int8)dts.day, (int8)dts.hour, (int8)dts.min, (int8)dts.sec) );
-			auto duration = milliseconds{dts.milliSec} + microseconds{dts.microSec} + nanoseconds{dts.nanoSec};
-			int nanos = duration_cast<nanoseconds>(duration).count();
-			return make_tuple( seconds, nanos );
-		}
-		UA_DateTime _dateTime;
 	};
 }
 #undef let

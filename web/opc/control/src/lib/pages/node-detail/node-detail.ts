@@ -4,7 +4,7 @@ import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
 import { Gateway, GatewayService, SubscriptionResult } from '../../services/gateway.service';
-import { IErrorService, IProfile, subscribe} from 'jde-framework'
+import { DateUtils, IErrorService, ProtoUtilities} from 'jde-framework'
 import { ETypes } from '../../model/types';
 import {  MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
@@ -13,16 +13,21 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { NodePageData } from '../../services/resolvers/node.resolver';
 import { NodeRoute } from '../../model/NodeRoute';
 import { OpcNodeRouteService } from '../../services/routes/opc-node-route.service';
-import { Value, toString } from '../../model/Value';
+import { Timestamp, Value, toString } from '../../model/Value';
 import { ENodeClass, Variable, UaNode }  from '../../model/Node';
 import { ServerCnnctn } from '../../model/ServerCnnctn';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
+import { MatInputModule } from '@angular/material/input';
+import {provideNativeDateAdapter} from '@angular/material/core';
 
 @Component({
   selector: 'node-detail',
   templateUrl: './node-detail.html',
   styleUrls: ['./node-detail.scss'],
+  providers: [provideNativeDateAdapter()],
   standalone: true,
-		imports: [RouterModule,MatButtonModule,MatCheckboxModule,MatTableModule,MatToolbarModule]
+		imports: [RouterModule,MatButtonModule,MatCheckboxModule,MatDatepickerModule,MatFormFieldModule, MatInputModule,MatTableModule,MatToolbarModule]
 })
 export class NodeDetail implements OnInit, OnDestroy {
 	constructor(
@@ -60,6 +65,10 @@ export class NodeDetail implements OnInit, OnDestroy {
 				variable.value = value;
 		}
 		this.retrievingSnapshot.set( false );
+	}
+
+	toDate( value:Timestamp ):Date{
+		return DateUtils.asUtc( ProtoUtilities.toDate(value) );
 	}
 
 	toObject( x:ENodeClass ):string{ return ENodeClass[x]; }
@@ -114,7 +123,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 			this.selections.select(...this.nodes);
   }
 
-	async toggleValue( e:MatCheckboxChange, x:Variable ){
+	async toggleValue( x:Variable, e:MatCheckboxChange ){
 		e.source.checked = !e.source.checked;
 		try {
 			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, !x.value );
@@ -123,7 +132,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 			this.snackbar.exception( e, (m)=>console.log(m) );
 		}
 	}
-	async changeDouble( e:Event, x:Variable ){
+	async changeDouble( x:Variable, e:Event ){
 		try {
 			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +e.target["value"] );
 		}
@@ -131,7 +140,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 			this.snackbar.exception( e, (m)=>console.log(m) );
 		}
 	}
-	async changeString( e:Event, n:Variable ){
+	async changeString( n:Variable, e:Event ){
 		try {
 			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.target["value"] );
 		}
@@ -140,6 +149,28 @@ export class NodeDetail implements OnInit, OnDestroy {
 			this.snackbar.exception( err, (m)=>console.error(m) );
 		}
 	}
+	async dateInput( n:Variable, e:MatDatepickerInputEvent<Date, any> ){
+		try {
+			let date = DateUtils.beginningOfDay( e.value );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtilities.fromDate(date) );
+			debugger;
+		}
+		catch (err) {
+			e.target["value"] = n.value;
+			this.snackbar.exception( err, (m)=>console.error(m) );
+		}
+	}
+	async changeDate( n:Variable, e:Event ){
+		try {
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtilities.fromDate(<Date>e.target["value"]) );
+			debugger;
+		}
+		catch (err) {
+			e.target["value"] = n.value;
+			this.snackbar.exception( err, (m)=>console.error(m) );
+		}
+	}
+
 	routerLink(n:UaNode):string[]{
 		return [ `./${n.browseFQ(this.connection.defaultBrowseNs)}` ];
 	}

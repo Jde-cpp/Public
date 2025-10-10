@@ -8,6 +8,7 @@
 #include <google/protobuf/timestamp.pb.h>
 #pragma warning(pop)
 #include <jde/fwk/io/file.h>
+#include <jde/fwk/io/json.h>
 
 #define let const auto
 namespace Jde::Proto{
@@ -29,6 +30,8 @@ namespace Jde::Proto{
 	Ξ ToBytes( const uuid& g )ι->sv{ return sv{ (char*)g.data(), 16 }; }
 	Ξ ToGuid( string g )ι->uuid{ uuid y; memcpy( &y, g.data(), std::min(sizeof(uuid), g.size())); return y; }
 	α ToTimePoint( google::protobuf::Timestamp t )ι->TimePoint;
+	α ToTimePoint( const jobject& j )ε->TimePoint;
+	α ToTimestamp( const jobject& j, SRCE )ε->google::protobuf::Timestamp;
 
 	namespace Internal{
 		Ŧ Deserialize( const google::protobuf::uint8* p, int size, T& proto )ε->void{
@@ -146,6 +149,20 @@ namespace Jde{
 #else
 		return Clock::from_time_t( t.seconds() )+std::chrono::nanoseconds( t.nanos() );
 #endif
+	}
+	Ξ Proto::ToTimestamp( const jobject& j, SL sl )ε->google::protobuf::Timestamp{
+		google::protobuf::Timestamp proto;
+		proto.set_nanos( Json::AsNumber<int32_t>(j, "nanos", sl) );
+		auto jseconds = j.at("seconds");
+		if( jseconds.is_number() )
+			proto.set_seconds( jseconds.to_number<_int>() );
+		else if( jseconds.is_object() ){
+			auto o = jseconds.as_object();
+			proto.set_seconds( Json::AsNumber<_int>(o, "high", sl) | Json::AsNumber<uint32>(o, "low", sl) );
+		}
+		else
+			throw Jde::Exception{ sl, ELogLevel::Debug, "Timestamp seconds is not a number or object: {}", serialize(j) };
+		return proto;
 	}
 }
 #undef let
