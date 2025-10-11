@@ -1,5 +1,6 @@
 #include <jde/opc/uatypes/Variant.h>
 #include <jde/opc/UAException.h>
+#include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/UAString.h>
 
 #define let const auto
@@ -129,7 +130,7 @@ namespace Jde::Opc{
 			if( &type==&UA_TYPES[UA_TYPES_LOCALIZEDTEXT] && trimNames )
 				return jstring{ ToString( ((UA_LocalizedText*)v)->text ) };
 			else{
-				let uaJson = uaJsonString( v, type );
+				auto uaJson = uaJsonString( v, type );
 				try{
 					return parse( uaJson );
 				}
@@ -140,7 +141,12 @@ namespace Jde::Opc{
 			}
 		};
 		if( IsScalar() ){
-			y = toJson( data, *type );
+			if( type==&UA_TYPES[UA_TYPES_STATUSCODE] )
+				y = toJson( &data, *type );
+			else if( type==&UA_TYPES[UA_TYPES_NODEID] )
+			  y = Opc::ToJson( *(UA_NodeId*)data );
+			else
+				y = toJson( data, *type );
 		}
 		else{
 			jarray arr;

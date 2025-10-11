@@ -1,19 +1,18 @@
 #pragma once
 
 namespace Jde::Opc{
-	struct BrowseName final{
+	struct BrowseName final : UA_QualifiedName{
 		BrowseName()ι = default;
 		BrowseName( const jobject& j )ι;
-		BrowseName( BrowseNamePK pk, NsIndex ns=0, string name={} )ι;
+		BrowseName( BrowseNamePK pk, NsIndex ns=0, sv name={} )ι;
 		BrowseName( sv fqBrowseName, NsIndex defaultNs )ε;
-		α operator==( const UA_QualifiedName& x )Ι->bool{ return Ns==x.namespaceIndex && Name==ToSV(x.name); }
+		BrowseName( UA_QualifiedName&& qn )ι;
+		α operator==( const UA_QualifiedName& x )Ι->bool{ return namespaceIndex==x.namespaceIndex && ToSV(name)==ToSV(x.name); }
 
-		operator UA_QualifiedName()Ι{ return UA_QualifiedName{ Ns, ToUV(Name) }; }
+		Ω ToJson( UA_QualifiedName ua )ι->jobject;
 		α ToJson()Ι->jobject;
 		α ToString()Ι->string{ return serialize( ToJson() ); }
 
 		BrowseNamePK PK{};
-		NsIndex Ns{};
-		string Name;
 	};
 }

@@ -33,7 +33,7 @@ namespace Jde::Opc::Server{
 	}
 
 	α ObjectType::ToString()Ι->string{
-		return Ƒ( "[{}]{}", NodeId::ToString(), BrowseName() );
+		return Ƒ( "[{}]{}", NodeId::ToString(), ToSV(BrowseName()) );
 	}
 	α ObjectType::ToString( const Node& parent )Ι->string{
 		return Node::ToString(parent);

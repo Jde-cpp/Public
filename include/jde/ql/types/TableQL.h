@@ -43,6 +43,7 @@ namespace Jde::QL{
 		mutable vector<QL::JsonMembers> JsonMembers; //used to map db columns to json names for results.
 		string JsonName;
 		vector<TableQL> Tables;
+		vector<TableQL> InlineFragments; //... on Type { }
 		bool ReturnRaw{true};
 	};
 	template<>

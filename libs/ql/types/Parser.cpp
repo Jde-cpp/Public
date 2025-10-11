@@ -234,7 +234,12 @@ namespace Jde::QL{
 				if( Peek()=="{" || Peek()=="(" )
 					table.Tables.push_back( LoadTable(token, schemas, system, sl) );
 				else{
-					THROW_IF( token==",", "Unexpected column ',' '{}' @ '{}'.", _text, Index()-1 );
+					THROW_IF( token==",", "don't separate columns with: ',' '{}' @ '{}'.", _text, Index()-1 );
+					if( token=="..." ){
+						THROW_IF( "on"!=Next(), "Expected 'on' after '...' in '{}' @ '{}'.", _text, Index()-1 );
+						table.InlineFragments.push_back( LoadTable(Next(), schemas, system, sl) );
+						continue;
+					}
 					table.Columns.emplace_back( ColumnQL{string{token}} );
 				}
 			}

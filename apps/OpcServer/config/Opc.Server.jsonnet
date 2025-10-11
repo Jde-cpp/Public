@@ -41,7 +41,12 @@ local args = import 'args.libsonnet';
 		description: "Test OPC",
 		mutationsDir:: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
 		db: false,
+		opcNodeSet:{
+			path: "$(UA_NODE_SETS)/Opc.Ua.PredefinedNodes.xml",
+			nodeIds: [23513]
+		},
 		configFiles: [
+			"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"

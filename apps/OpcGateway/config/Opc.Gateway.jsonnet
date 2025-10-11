@@ -4,7 +4,7 @@ local args = import 'args.libsonnet';
 		spd:{
 			defaultLevel:: "Information",
 			tags: {
-				trace:[ "app", "browse", "ql", "access", "opc.access",
+				trace:[ "app", "browse", "ql", "access", "opc.access", "test",
 					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
 					"uaSecure","uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery"
 				],

@@ -60,21 +60,10 @@ export class NodeId implements INodeId{
 
 		return json;
 	}
-/*	toQueryParams():string{
-		let json = this.toJson();
-		let params = [];
-		if( json.ns )
-			params.push( `ns=${json.ns}` );
-		if( json.i )
-			params.push( `i=${json.i}` );
-		else if( json.s )
-			params.push( `s=${json.s}` );
-		else if( json.g )
-			params.push( `g=${json.g}` );
-		else if( json.b )
-			params.push( `b=${json.b}` );
-		return params.join( "&" );
-	}*/
+	queryCriteria():string{
+		return JSON.stringify(this.toJson()).replace( /^{|}$/g, "" );
+	}
+
 	ns:number;
 	get isNumericId(){ return typeof this.id === "number"; }
 	get numericId(){ return <number>this.id; }

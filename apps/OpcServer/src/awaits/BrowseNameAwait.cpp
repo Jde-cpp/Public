@@ -18,8 +18,8 @@ namespace Jde::Opc::Server{
 			};
 			if( _browseName ){
 				stmt.Where += {
-					{ {nameTable->GetColumnPtr("ns"), _browseName->Ns},
-					  {nameTable->GetColumnPtr("name"), _browseName->Name} }
+					{ {nameTable->GetColumnPtr("ns"), _browseName->namespaceIndex},
+					  {nameTable->GetColumnPtr("name"), Opc::ToString(_browseName->name)} }
 				};
 			}
 			auto rows = co_await DS().SelectAsync( stmt.Move(), _sl );
@@ -43,7 +43,7 @@ namespace Jde::Opc::Server{
 	α BrowseNameAwait::Create()ι->DB::ScalerAwait<BrowseNamePK>::Task{
 		_browseName->PK = co_await DS().InsertSeq<BrowseNamePK>( DB::InsertClause{
 			GetView("browse_names").InsertProcName(),
-			{ {_browseName->Ns}, {_browseName->Name} }
+			{ {_browseName->namespaceIndex}, {Opc::ToString(_browseName->name)} }
 		}, _sl );
 		Resume( {} );
 	}
@@ -51,7 +51,7 @@ namespace Jde::Opc::Server{
 	α BrowseNameAwait::GetOrInsert( BrowseName& browseName, SL sl )ε->bool{
 		auto& browseNames = GetUAServer()._browseNames;
 		for( auto& [pk, name] : browseNames ){
-			if( name.Ns == browseName.Ns && name.Name == browseName.Name ){
+			if( name.namespaceIndex == browseName.namespaceIndex && ToSV(name.name) == ToSV(browseName.name) ){
 				browseName.PK = pk;
 				return false;
 			}
@@ -60,15 +60,15 @@ namespace Jde::Opc::Server{
 		browseName.PK = DS().ScalerSyncOpt<BrowseNamePK>( DB::Statement{  //could be from another server.
 			{ browseTable->GetColumnPtr("browse_id") },
 			{ browseTable },
-			{{ { browseTable->GetColumnPtr("ns"), browseName.Ns },
-				{ browseTable->GetColumnPtr("name"), browseName.Name }
+			{{ { browseTable->GetColumnPtr("ns"), browseName.namespaceIndex },
+				{ browseTable->GetColumnPtr("name"), Opc::ToString(browseName.name) }
 			}}
 		}.Move() ).value_or( 0 );
 		if( browseName.PK )
 			return false;
 
 		browseName.PK = DS().InsertSeqSync<BrowseNamePK>(
-			DB::InsertClause{ GetView("browse_names").InsertProcName(), {{browseName.Ns}, {browseName.Name}} }, sl
+			DB::InsertClause{ GetView("browse_names").InsertProcName(), {{browseName.namespaceIndex}, {Opc::ToString(browseName.name)}} }, sl
 		);
 		browseNames.try_emplace( browseName.PK, browseName );
 		return true;

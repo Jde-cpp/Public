@@ -58,7 +58,7 @@ namespace Jde::Logging{
 					continue;
 				}
 				if( !pattern )
-					pattern = markdown ? "%^%3!l%$-%H:%M:%S.%e [%v](%g#L%#)\\" : "%^%3!l%$-%H:%M:%S.%e %-64@ %v";
+					pattern = markdown ? "%^%3!l%$-%H:%M:%S.%e [%v](%g#L%#)\\" : "%^%3!l%$-%H:%M:%S.%e %v %-64@";
 			}
 			else
 				continue;
