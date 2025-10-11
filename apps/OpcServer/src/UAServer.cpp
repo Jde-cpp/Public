@@ -1,4 +1,7 @@
 #include "UAServer.h"
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+#include <libxml/xmlerror.h>
 #include <jde/fwk/process/thread.h>
 #include <jde/opc/uatypes/opcHelpers.h>
 #include "UAAccess.h"
@@ -6,6 +9,17 @@
 
 #define let const auto
 namespace Jde::Opc::Server {
+	Ω myXmlError( void* ctx, const char* msg, ... )->void{
+		va_list args;
+		va_start( args, msg );
+		if( ctx )
+			vfprintf( stderr, msg, args );
+		else
+			vfprintf( stderr, msg, args ); // Fallback to stderr if no log file
+		va_end( args );
+		BREAK;
+	}
+
 	constexpr ELogTags _tags{ ELogTags::App };
 	UAServer::UAServer()ε:
 		ServerName{ Settings::FindString("/opcServer/name").value_or("OpcServer") },
@@ -41,14 +55,8 @@ namespace Jde::Opc::Server {
 	α UAServer::Load( fs::path configFile, SL sl )ε->void{
 		INFOT( ELogTags::App, "Loading configuration from: '{}'", configFile.string() );
 		CHECK_PATH( configFile, sl );
-		auto coutBuf = std::cout.rdbuf();
-#ifdef _MSC_VER
-			freopen("NUL", "w", stdout);
-#else
-			freopen("/dev/null", "w", stdout);
-#endif
+		xmlSetGenericErrorFunc( nullptr, myXmlError );
 		auto success = NodesetLoader_loadFile( _ua, configFile.string().c_str(), nullptr );
-		std::cout.rdbuf( coutBuf );
 		THROW_IFSL( !success, "Failed to load nodeset file: '{}'", configFile.string() );
 	}
 
@@ -188,7 +196,7 @@ namespace Jde::Opc::Server {
 			if( node.ParentNodePK != parent.PK )
 				continue;
 			if( let nodeBrowse = _browseNames.find( node.Browse.PK );
-				nodeBrowse==_browseNames.end() || nodeBrowse->second.Ns!=browse.Ns || nodeBrowse->second.Name!=browse.Name ){
+				nodeBrowse==_browseNames.end() || nodeBrowse->second.namespaceIndex!=browse.namespaceIndex || ToSV(nodeBrowse->second.name)!=ToSV(browse.name) ){
 				continue;
 			}
 			y = &node;
@@ -200,7 +208,7 @@ namespace Jde::Opc::Server {
 	α UAServer::FindBrowse( BrowseName& browse )Ι->bool{
 		let p = browse.PK
 			? _browseNames.find( browse.PK )
-			: find_if(_browseNames, [&browse](const auto& kv){ return kv.second.Ns==browse.Ns && kv.second.Name==browse.Name; });
+			: find_if(_browseNames, [&browse](const auto& kv){ return kv.second.namespaceIndex==browse.namespaceIndex && ToSV(kv.second.name)==ToSV(browse.name); });
 		if( p!=_browseNames.end() )
 			browse = p->second;
 		return p!=_browseNames.end();

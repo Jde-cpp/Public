@@ -13,8 +13,11 @@ namespace Jde::Opc::Gateway{
 		{}
 		α Execute()ι->TAwait<sp<UAClient>>::Task override;
 	private:
-		α AddAttributes( flat_map<string, std::expected<ExNodeId,StatusCode>>&& pathNodes, QL::TableQL* parents, string reqPath )ι->void;
-		α Browse( NodeId parentNodeId, flat_map<string, std::expected<ExNodeId,StatusCode>> pathNodes, QL::TableQL* parents, string reqPath )ι->TAwait<Browse::Response>::Task;
+		using ExpectedNodeId = std::expected<ExNodeId,StatusCode>;
+		using BrowsePathResponse = flat_map<string,ExpectedNodeId>;
+		α AddAttributes( ExpectedNodeId&& nodeId, QL::TableQL* parentsQL, flat_map<NodeId, jobject>&& parents )ι->void;
+		α Browse( BrowsePathResponse pathNodes, str lastGoodParent, QL::TableQL* parents, flat_map<NodeId, jobject> jParents )ι->TAwait<Browse::Response>::Task;
+		α Browse( NodeId parentId, QL::TableQL children )ι->TAwait<Browse::Response>::Task;
 
 		sp<UAClient> _client;
 		UserPK _executer;

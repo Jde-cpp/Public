@@ -63,6 +63,6 @@ namespace Jde::Opc::Server{
 		return params;
 	}
 	α Node::ToString( const Node& parent )Ι->string{
-		return Ƒ( "[{}]{}.{}", NodeId::ToString(), parent.BrowseName(), BrowseName() );
+		return Ƒ( "[{}]{}.{}", NodeId::ToString(), ToSV(parent.BrowseName()), ToSV(BrowseName()) );
 	}
 }

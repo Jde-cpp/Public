@@ -20,6 +20,11 @@ list( REMOVE_ITEM sources ${main_cpp} )
 file(GLOB headers "**/*.h")
 target_sources( "${targetName}" PRIVATE "${sources}" "${headers}" )
 
+IF( WIN32 )
+else()
+  target_include_directories( ${targetName} PRIVATE /usr/include/libxml2 )
+endif()
+
 include_directories( ${open62541Dir}/include )
 
 target_link_libraries( ${targetName} Jde.App.Client Jde.Web.Server Jde.Opc )

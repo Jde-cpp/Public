@@ -1,0 +1,41 @@
+<UANodeSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://opcfoundation.org/UA/2011/03/UANodeSet.xsd" LastModified="2022-11-01T00:00:00Z">
+	<Models>
+		<Model ModelUri="http://opcfoundation.org/UA/" XmlSchemaUri="http://opcfoundation.org/UA/2008/02/Types.xsd" Version="1.05.02" PublicationDate="2022-11-01T00:00:00Z"/>
+	</Models>
+	<Aliases>
+    <Alias Alias="HasModellingRule">i=37</Alias>
+		<Alias Alias="HasTypeDefinition">i=40</Alias>
+		<Alias Alias="HasSubtype">i=45</Alias>
+		<Alias Alias="HasProperty">i=46</Alias>
+		<Alias Alias="HasInterface">i=17603</Alias>
+	</Aliases>
+	<UAObjectType NodeId="i=23518" BrowseName="OrderedListType">
+		<DisplayName>OrderedListType</DisplayName>
+		<Category>Base Info OrderedList</Category>
+		<Documentation>https://reference.opcfoundation.org/v105/Core/docs/Part5/6.10</Documentation>
+		<References>
+			<Reference ReferenceType="i=49">i=23519</Reference>
+			<Reference ReferenceType="HasProperty">i=23525</Reference>
+			<Reference ReferenceType="i=41">i=2133</Reference>
+			<Reference ReferenceType="HasSubtype" IsForward="false">i=58</Reference>
+		</References>
+	</UAObjectType>
+	<UAObject NodeId="i=23519" BrowseName="&lt;OrderedObject&gt;" SymbolicName="OrderedObject_Placeholder" ParentNodeId="i=23518">
+		<DisplayName>&lt;OrderedObject&gt;</DisplayName>
+		<References>
+			<Reference ReferenceType="HasProperty">i=23521</Reference>
+			<Reference ReferenceType="HasInterface">i=23513</Reference>
+			<Reference ReferenceType="HasTypeDefinition">i=58</Reference>
+			<Reference ReferenceType="HasModellingRule">i=11508</Reference>
+			<Reference ReferenceType="i=49" IsForward="false">i=23518</Reference>
+		</References>
+	</UAObject>
+	<UAVariable NodeId="i=23525" BrowseName="NodeVersion" ParentNodeId="i=23518" DataType="String">
+		<DisplayName>NodeVersion</DisplayName>
+		<References>
+			<Reference ReferenceType="HasTypeDefinition">i=68</Reference>
+			<Reference ReferenceType="HasModellingRule">i=80</Reference>
+			<Reference ReferenceType="HasProperty" IsForward="false">i=23518</Reference>
+		</References>
+	</UAVariable>
+</UANodeSet>

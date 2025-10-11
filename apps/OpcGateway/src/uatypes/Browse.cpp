@@ -1,7 +1,10 @@
 ﻿#include "Browse.h"
 #include <jde/fwk/process/execution.h>
-#include "../UAClient.h"
+#include <jde/ql/types/TableQL.h>
+#include <jde/opc/uatypes/BrowseName.h>
+#include <jde/opc/uatypes/LocalizedText.h>
 #include <jde/opc/uatypes/Value.h>
+#include "../UAClient.h"
 #include "../async/Attributes.h"
 #include "../async/ReadAwait.h"
 #include "../async/SessionAwait.h"
@@ -31,7 +34,7 @@ namespace Jde::Opc::Gateway{
 	}
 namespace Browse{
 	α FoldersAwait::Suspend()ι->void{
-		_client->SendBrowseRequest( Request{move(_nodeId)}, _h );
+		_client->SendBrowseRequest( move(_request), _h );
 	}
 }
 	ObjectsFolderAwait::ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SL sl )ι:
@@ -45,7 +48,7 @@ namespace Browse{
 	α ObjectsFolderAwait::Execute()ι->TAwait<Browse::Response>::Task{
 		bool retry{};
 		try{
-			auto response = co_await Browse::FoldersAwait{ _node, _ua };
+			auto response = co_await Browse::FoldersAwait{ _node, UA_BROWSERESULTMASK_ALL, _ua };
 			THROW_IF( response.Nodes().size()==0, "No items found for: {}", _node.ToString() );
 			if( _snapshot )
 				Snapshot( move(response) );
@@ -121,20 +124,42 @@ namespace Browse{
 			h.promise().ResumeExp( UAClientException{response->responseHeader.serviceResult, uaHandle, requestId}, h );
 	}
 
-	Request::Request( NodeId&& id )ι:
+	flat_map<string, UA_BrowseResultMask> _attributes = {
+		{"none", UA_BROWSERESULTMASK_NONE},
+		{"browse", UA_BROWSERESULTMASK_BROWSENAME},
+		{"isForward", UA_BROWSERESULTMASK_ISFORWARD},
+		{"name", UA_BROWSERESULTMASK_DISPLAYNAME},
+		{"nodeClass", UA_BROWSERESULTMASK_NODECLASS},
+		{"refType", UA_BROWSERESULTMASK_REFERENCETYPEID},
+		{"typeDef", UA_BROWSERESULTMASK_TYPEDEFINITION},
+	};
+
+	Request::Request( NodeId&& id, UA_BrowseResultMask mask )ι:
 		UA_BrowseRequest{.requestedMaxReferencesPerNode=0, .nodesToBrowseSize=1, .nodesToBrowse=UA_BrowseDescription_new()}{
-    nodesToBrowse[0].nodeId = move( id );
-    nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;
+		nodesToBrowse[0].nodeId = move( id );
+	 	nodesToBrowse[0].resultMask = mask;
 	}
 
+	α calcMask( const QL::TableQL& ql )ι->UA_BrowseResultMask{
+		UA_BrowseResultMask mask = UA_BROWSERESULTMASK_NONE;
+		for( let& c : ql.Columns ){
+			if( auto attrib = _attributes.find(c.JsonName); attrib!=_attributes.end() )
+				mask |= attrib->second;
+		}
+		return mask;
+	}
+	Request::Request( NodeId&& id, const QL::TableQL& ql )ι:
+		Request( move(id), calcMask(ql) )
+	{}
+
 	α Response::operator=( Response&& x )ι->Response&{
-		UA_BrowseResponse_delete( this );
+		UA_BrowseResponse_clear( this );
 		UA_BrowseResponse_copy( &x, this );
-		UA_BrowseResponse_clear( &x );
+		UA_BrowseResponse_init( &x );
 		return *this;
 	}
 
-	α Response::Nodes()ι->flat_set<NodeId>{
+	α Response::Nodes()Ι->flat_set<NodeId>{
 		flat_set<NodeId> y;
 		for( uint i = 0; i < resultsSize; ++i) {
       for( size_t j = 0; j < results[i].referencesSize; ++j )
@@ -143,7 +168,7 @@ namespace Browse{
 		return y;
 	}
 
-	α Response::Variables()ι->flat_set<NodeId>{
+	α Response::Variables()Ι->flat_set<NodeId>{
 		flat_set<NodeId> y;
 		for( let& result : Iterable<UA_BrowseResult>(results, resultsSize) ){
 			for( let& ref : Iterable<UA_ReferenceDescription>(result.references, result.referencesSize) ){
@@ -153,7 +178,38 @@ namespace Browse{
 		}
 		return y;
 	}
-
+	α Response::VisitWhile( uint resultsIndex, function<bool(const UA_ReferenceDescription& ref)> f )Ι->bool{
+		THROW_IF( resultsIndex>=resultsSize, "resultsIndex {} out of range {}.", resultsIndex, resultsSize );
+		bool returnedFalse{};
+		for( size_t j = 0; j < results[resultsIndex].referencesSize; ++j ){
+			returnedFalse = !f(results[resultsIndex].references[j]);
+			if( returnedFalse )
+				break;
+		}
+		return !returnedFalse; //Returns false if f ever returns false.
+	}
+	α Response::SetJson( flat_map<NodeId, jobject>& children, bool addId )Ι->void{
+		VisitWhile( 0, [&, addId=addId]( const UA_ReferenceDescription& ref ){
+			jobject o;
+			if( Attribs & UA_BROWSERESULTMASK_BROWSENAME )
+				o["browse"] = BrowseName::ToJson( ref.browseName );
+			if( Attribs & UA_BROWSERESULTMASK_ISFORWARD )
+				o["isForward"] = ref.isForward;
+			if( Attribs & UA_BROWSERESULTMASK_DISPLAYNAME )
+				o["displayName"] = LocalizedText::ToJson( move(ref.displayName) );
+			if( Attribs & UA_BROWSERESULTMASK_NODECLASS )
+				o["nodeClass"] = ref.nodeClass;
+			if( Attribs & UA_BROWSERESULTMASK_REFERENCETYPEID )
+				o["refType"] = Opc::ToJson( ref.referenceTypeId );
+			if( Attribs & UA_BROWSERESULTMASK_TYPEDEFINITION )
+				o["typeDef"] = Opc::ToJson( ref.typeDefinition );
+			NodeId nodeId{ move(ref.nodeId.nodeId) };
+			if( addId )
+				nodeId.Add( o );
+			children.emplace( move(nodeId), o );
+			return true;
+		} );
+	}
 	α Response::ToJson( flat_map<NodeId, Value>&& snapshot, flat_map<NodeId, NodeId>&& dataTypes )ε->jobject{
 		jarray references;
 		for(size_t i = 0; i < resultsSize; ++i) {
@@ -165,9 +221,7 @@ namespace Browse{
 					reference["value"] = p->second.ToJson();
 				if( auto p = dataTypes.find(nodeId); p!=dataTypes.end() )
 					reference["dataType"] = p->second.ToJson();
-				// else
-				// 	WARN( BrowseTag, "Could not find data type for node={}.", serialize(nodeId.ToJson()) );
-				reference["referenceType"] = Opc::ToJson( ref.referenceTypeId );
+				reference["refType"] = Opc::ToJson( ref.referenceTypeId );
 				reference["isForward"] = ref.isForward;
 				reference["node"] = nodeId.ToJson();
 
@@ -175,7 +229,7 @@ namespace Browse{
 				const UA_QualifiedName& browseName = ref.browseName;
 				bn["ns"] = browseName.namespaceIndex;
 				bn["name"] = ToSV( browseName.name );
-				reference["browseName"] = bn;
+				reference["browse"] = bn;
 
 				jobject dn;
 				const UA_LocalizedText& displayName = ref.displayName;
@@ -184,7 +238,7 @@ namespace Browse{
 				reference["displayName"] = dn;
 
 				reference["nodeClass"] = ref.nodeClass;
-				reference["typeDefinition"] = Opc::ToJson( ref.typeDefinition );
+				reference["typeDef"] = Opc::ToJson( ref.typeDefinition );
 
 				references.push_back( reference );
 			}

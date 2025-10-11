@@ -96,7 +96,7 @@ namespace Jde::Opc{
 			SetNumber<UA_Int32>( j );
 		else if( IS(UA_TYPES_INT64) )
 			SetNumber<UA_Int64>( j );
-		else if( IS(UA_TYPES_STRING) ){
+		else if( IS(UA_TYPES_STRING) || IS(UA_TYPES_LOCALIZEDTEXT) ){
 			if( scaler ){
 				THROW_IF( !j.is_string(), "Expected string '{}'.", serialize(j) );
 				UA_String v = UA_String_fromChars( j.get_string().c_str() );

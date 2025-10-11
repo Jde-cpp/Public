@@ -52,7 +52,7 @@
 					@else if( r.isFloating && !r.isArray ){
 						<input type=number [value]=r.value (change)="changeDouble(r,$event);">
 					}
-					@else if( r.dataType==ETypes.String && !r.isArray ){
+					@else if( [ETypes.String, ETypes.LocalizedText].includes(r.dataType) && !r.isArray ){
 						<input type="text" [value]=r.value (change)="changeString(r,$event);">
 					}
 					@else if( r.dataType==ETypes.BaseData && !r.isArray ){

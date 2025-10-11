@@ -17,7 +17,7 @@ export enum ENodeClass{
 export abstract class UaNode extends NodeId{
 	constructor( json:any, parent?:UaNode ){
 		super( json );
-		this.browse = json.browseName ?? json.browse;
+		this.browse = json.browse;
 		this.#name = toLocalizedText( json.displayName ?? json.name ); //TODO switch to just name?
 		this.refType = json.referenceType ? new NodeId( json.referenceType ) : null;
 		this.typeDef = json.typeDefinition ? new ObjectType( json.typeDefinition ) : null;
@@ -57,16 +57,17 @@ export class OpcObject extends UaNode{
 }
 
 export class Variable extends UaNode{
-	constructor( json:{browseName?:Browse, dataType?:NodeIdJson, displayName:ILocalizedText, node?:NodeIdJson, nodeClass?:number, referenceType?:NodeIdJson, typeDefinition?:NodeIdJson, value?:any}, parent?:UaNode	){
+	constructor( json:{browseName?:Browse, dataType?:NodeIdJson, displayName:ILocalizedText, node?:NodeIdJson, nodeClass?:number, referenceType?:NodeIdJson, typeDefinition?:NodeIdJson, value?:any, valueRank?:number}, parent?:UaNode	){
 		super( json, parent );
 		this.dataType = <ETypes>json.dataType?.i;
 		this.value = toValue( json.value );
+		this.valueRank = json.valueRank ?? -1;
 	}
 	override get nodeClass():ENodeClass{ return ENodeClass.Variable; }
 
 	dataType?:ETypes;
 	override get displayed(){ return true; }
-	get isArray():boolean{ return Array.isArray(this.value); }
+	get isArray():boolean{ return this.valueRank!=-1 && Array.isArray(this.value); }
 	override get isVariable(){ return true; }
 //	get isFolderType(){ return this.dataType==ETypes.FolderType; }
 	get isInteger():boolean{ return [ETypes.SByte, ETypes.Int16, ETypes.Int32, ETypes.Int64].includes(this.dataType); }
@@ -74,6 +75,7 @@ export class Variable extends UaNode{
 	get isUnsigned():boolean{ return [ETypes.Byte, ETypes.UInt16, ETypes.UInt32, ETypes.UInt64].includes(this.dataType); }
 //	nodeId?:NodeId;
 	value?:Value;
+	valueRank?:number; // -1 scalar, 1 one-dimensional array, etc.
 //
 //	referenceType?:INodeId;
 //	typeDefinition?:INodeId;
