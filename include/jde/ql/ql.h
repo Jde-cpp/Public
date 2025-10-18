@@ -10,9 +10,12 @@
 namespace Jde::Access{ struct Authorize; }
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::QL{
-	struct IQL; struct LocalQL;
+	struct Introspection; struct IQL; struct LocalQL;
+	α AddIntrospection( Introspection&& x )ι->void;
 	Ŧ AsId( const jobject& j, SRCE )ε->T;
 	Ŧ AsId( const jvalue& j, SRCE )ε->T;
+	α SetSystemTables( flat_set<string>&& x )ι->void;
+
 	template<class T=uint32> α FindId( const jobject& j )ι->T;
 	α Configure( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ε->sp<LocalQL>;
 	α Parse( string query, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->RequestQL;

@@ -1,6 +1,3 @@
-//import { toBinary } from "./types";
-//import { EObjects } from "./Node"
-
 import { Guid } from "jde-framework";
 
 export type NodeKey = Symbol;
@@ -60,7 +57,7 @@ export class NodeId implements INodeId{
 
 		return json;
 	}
-	queryCriteria():string{
+	qlArgs():string{
 		return JSON.stringify(this.toJson()).replace( /^{|}$/g, "" );
 	}
 

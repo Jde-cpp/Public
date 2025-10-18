@@ -6,7 +6,7 @@
 #include "async/Attributes.h"
 #include "async/ConnectAwait.h"
 #include "async/DataChanges.h"
-#include "async/ReadAwait.h"
+#include "async/ReadValueAwait.h"
 #include "async/Write.h"
 #include "auth/OpcServerSession.h"
 #include "types/ServerCnnctn.h"
@@ -42,7 +42,7 @@ namespace Jde::Opc::Gateway{
 		α DataSubscriptionDelete( Gateway::SubscriptionId subscriptionId, flat_set<MonitorId>&& monitoredItemIds )ι->void;
 
 		α SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void;
-		α SendReadRequest( const flat_set<NodeId>&& nodes, ReadAwait::Handle h )ι->void;
+		α SendReadRequest( const flat_set<NodeId>&& nodes, ReadValueAwait::Handle h )ι->void;
 		α SendWriteRequest( flat_map<NodeId,Value>&& values, WriteAwait::Handle h )ι->void;
 		α SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void;
 		α RequestDataTypeAttributes( const flat_set<NodeId>&& x, AttribAwait::Handle h )ι->void;
@@ -64,7 +64,7 @@ namespace Jde::Opc::Gateway{
 		α IsDefault()Ι->bool{ return _opcServer.IsDefault; }
 		α DefaultBrowseNs()Ι->NsIndex{ return _opcServer.DefaultBrowseNs; }
 		α Handle()Ι->Jde::Handle{ return (uint)_ptr;}
-		α UAPointer()ι->UA_Client*{return _ptr;}
+		α UAPointer()Ι->UA_Client*{return _ptr;}
 		α BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,std::expected<ExNodeId,StatusCode>>;
 		sp<UA_SetMonitoringModeResponse> MonitoringModeResponse;
 		sp<UA_CreateSubscriptionResponse> CreatedSubscriptionResponse;
@@ -76,7 +76,7 @@ namespace Jde::Opc::Gateway{
 		α Create()ι->UA_Client*;
 		α Connect()ε->void;
 		α RootSslDir()ι->fs::path{ return Process::ApplicationDataFolder()/"ssl"; }
-		α Passcode()ι->const string{ return Process::EnvironmentVariable("JDE_PASSCODE").value_or( "" ); }
+		α Passcode()ι->const string{ return Process::GetEnv("JDE_PASSCODE").value_or( "" ); }
 		α PrivateKeyFile()ι->fs::path{ return RootSslDir()/Ƒ("private/{}.pem", Target()); }
 		α CertificateFile()ι->fs::path{ return RootSslDir()/Ƒ("certs/{}.pem", Target()); }
 

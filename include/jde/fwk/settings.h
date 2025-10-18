@@ -11,7 +11,7 @@ namespace Jde::Settings{
 	α FileStem()ι->string; //used as base path for logs.
 	Φ Set( sv path, jvalue v, SRCE )ε->jvalue*;
 	Φ Load()ι->void;
-
+	Φ Directory()ι->fs::path;
 	Ξ AsObject( sv path, SRCE )ι->const jobject&{ return Json::AsObject(Value(), path, sl); }
 
 	Ξ FindArray( sv path )ι->const jarray*{ return Json::FindArray(Value(), path); }

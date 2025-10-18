@@ -14,10 +14,13 @@ namespace Jde::Opc::Gateway{
 		}
 		return cred;
 	}
-	ConnectAwait::ConnectAwait( string&& opc, SessionPK sessionId, UserPK user, SL sl )ι:
+	ConnectAwait::ConnectAwait( ServerCnnctnNK&& opc, SessionPK sessionId, UserPK user, SL sl )ι:
 		base{sl},
 		_opcTarget{ move(opc) },
 		_cred{ credential(sessionId, user, _opcTarget).value_or(Credential{}) }
+	{}
+	ConnectAwait::ConnectAwait( ServerCnnctnNK&& opc, sp<Web::Server::SessionInfo> session, SL sl )ι:
+		ConnectAwait{ move(opc), move(session->SessionId), move(session->UserPK), sl }
 	{}
 
 	α ConnectAwait::EraseRequests( str opcNK, Credential cred, lg& )ι->vector<ConnectAwait::Handle>{

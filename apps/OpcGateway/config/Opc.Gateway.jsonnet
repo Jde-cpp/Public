@@ -35,6 +35,12 @@ local args = import 'args.libsonnet';
 			catalogs: args.dbServers.localhost.catalogs
 		}
 	},
+	ql:{
+		introspection: [
+			"introspection/di.jsonnet",
+			"introspection/ia.jsonnet"
+		]
+	},
 	credentials:{
 		name: "OpcGateway",
 		target:: "OpcGateway"

@@ -34,7 +34,7 @@ namespace Jde{
 			std::smatch b = *begin;
 			let match = begin->str();
 			let group = match.substr( 2, match.size()-3 );
-			let env = Process::EnvironmentVariable( group ).value_or( "" );
+			let env = Process::GetEnv( group ).value_or( "" );
 			setting = Str::Replace( setting, match, env );
 		}
 		return setting;
@@ -85,7 +85,7 @@ namespace Jde{
 	#endif
 		}
 
-	α Path()ι->fs::path{
+	Ω path()ι->fs::path{
 		static fs::path _path;
 		let fileName = fs::path{ Ƒ("{}.jsonnet", Settings::FileStem()) };
 
@@ -107,6 +107,10 @@ namespace Jde{
 		std::cout << "settings path=" << _path.string() << std::endl;
 		return _path;
 	}
+	α Settings::Directory()ι->fs::path{
+		return path().parent_path();
+	}
+
 	α SetEnv( jobject& j )->void{
 		for( auto& [key,value] : j ){
 			if( value.is_string() ){
@@ -119,7 +123,7 @@ namespace Jde{
 					std::smatch b = *begin;
 					let match = begin->str();
 					let group = match.substr( 2, match.size()-3 );
-					auto env = Process::EnvironmentVariable( group ).value_or( "" );
+					auto env = Process::GetEnv( group ).value_or( "" );
 					if( env.empty() && group=="JDE_BUILD_TYPE" )
 						env = buildTypeSubDir();
 					if( env.empty() )
@@ -135,7 +139,7 @@ namespace Jde{
 	}
 
 	α Settings::Load()ι->void{
-		let settingsPath = Path();
+		let settingsPath = path();
 		try{
 			if( !fs::exists(settingsPath) )
 				throw std::runtime_error{ Ƒ("file does not exist: '{}'", settingsPath.string()) };

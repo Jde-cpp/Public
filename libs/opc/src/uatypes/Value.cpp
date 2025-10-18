@@ -14,6 +14,8 @@ namespace Jde::Opc{
 	α Value::ToJson()Ι->jvalue{
 		if( status )
 			return UAException::ToJson(status);
+		if( IsEmpty() )
+			return {};
 		let scaler = IsScaler();
 		let type = value.type;
 		jvalue j{ scaler ? jvalue{} : jarray{} };
@@ -72,17 +74,20 @@ namespace Jde::Opc{
 		return j;
 	}
 
-	α Value::Set( const jvalue& j )ε->void{
+	α Value::Set( const jvalue& j, SL sl )ε->void{
 		let scaler = UA_Variant_isScalar( &value );
 		let type = value.type;
+		if( !type )
+			throw Exception{ sl, ELogLevel::Error, "Value has no type." };
+
 		if( IS(UA_TYPES_BOOLEAN) ){
-			if( scaler ){
+			//if( scaler ){
 				THROW_IF( !j.is_bool(), "Expected bool '{}'.", serialize(j) );
 				UA_Boolean v = j.get_bool();
 				UA_Variant_setScalarCopy( &value, &v, type );
-			}
-			else
-				throw Exception( "Not implemented." );
+			// }
+			// else
+			// 	throw Exception( "Not implemented." );
 		}
 		else if( IS(UA_TYPES_BYTE) )
 			SetNumber<UA_Byte>( j );

@@ -2,6 +2,7 @@
 #include <jde/db/db.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalQL.h>
+#include <jde/ql/types/Introspection.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/AccessListener.h>
 #include <jde/access/client/accessClient.h>
@@ -35,6 +36,9 @@ namespace Jde::Opc::Gateway{
 			auto authorize = App::Client::RemoteAcl( "gateway" );
 			auto schema = DB::GetAppSchema( "gateway", authorize );
 			_localQL = QL::Configure( {schema}, authorize );
+			for( let& path : Settings::FindPathArray("/ql/introspection") )
+				QL::AddIntrospection( QL::Introspection{Json::ReadJsonNet(Settings::Directory()/path)} );
+			QL::SetSystemTables( {"node","nodes", "dataType", "dataTypes"} );
 			SetSchema( schema );
 			//Opc::Configure( schema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )

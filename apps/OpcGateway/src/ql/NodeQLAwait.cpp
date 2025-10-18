@@ -4,7 +4,7 @@
 #include <jde/opc/uatypes/Variant.h>
 #include "../UAClient.h"
 #include "../async/ConnectAwait.h"
-#include "../uatypes/Read.h"
+#include "../async/ReadValueAwait.h"
 
 #define let const auto
 namespace Jde::Opc::Gateway{
@@ -57,11 +57,18 @@ namespace Jde::Opc::Gateway{
 	α NodeQLAwait::Browse( NodeId parentId, QL::TableQL childrenQL )ι->TAwait<Browse::Response>::Task{
 		try{
 			flat_map<NodeId, jobject> jChildren;
-			let browseResp = co_await Browse::FoldersAwait{ parentId, childrenQL, _client, _sl };
+			auto browseResp = co_await Browse::FoldersAwait{ parentId, childrenQL, _client, _sl };
 			browseResp.SetJson( jChildren, childrenQL.FindColumn("id") );
-			ReadRequest request{ browseResp, childrenQL };
-			if( request.nodesToReadSize )
-				ReadResponse{ UA_Client_Service_read(*_client, request), move(request), _client->Handle(), _sl }.SetJson( jChildren );
+			AddAttributes( move(browseResp), move(childrenQL), move(jChildren) );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α NodeQLAwait::AddAttributes( Browse::Response&& browseResp, QL::TableQL&& childrenQL, flat_map<NodeId, jobject> jChildren )ι->TAwait<ReadResponse>::Task{
+		try{
+			auto resp = co_await ReadAwait{ move(browseResp), move(childrenQL), _client };
+			resp.SetJson( jChildren );
 			jarray a;
 			for( auto& [id, j] : jChildren )
 				a.emplace_back( move(j) );
@@ -101,13 +108,23 @@ namespace Jde::Opc::Gateway{
 	 	AddAttributes( move(nodeId), parentsQL, move(jParents) );
 	}
 
-	α NodeQLAwait::AddAttributes( ExpectedNodeId&& nodeId, QL::TableQL* parentQL, flat_map<NodeId, jobject>&& parents )ι->void{
+	α NodeQLAwait::AddAttributes( ExpectedNodeId nodeId, QL::TableQL* parentQL, flat_map<NodeId, jobject> parents )ι->TAwait<ReadResponse>::Task{
 		try{
 			jobject jReqNode;
 			if( nodeId ){
+				if( auto p = parents.find( nodeId->nodeId ); p!=parents.end() )
+					parents.erase( p );
 				ReadRequest request{ nodeId->nodeId, _query };
-				if( request.nodesToReadSize )
-					jReqNode = ReadResponse{ UA_Client_Service_read(*_client, request), move(request), _client->Handle(), _sl }.GetJson()[nodeId->nodeId];
+				if( parentQL )
+					request.Add( *parentQL, parents );
+				auto resp = co_await ReadAwait{ move(request), _client };
+			 	auto json = resp.GetJson();
+				if( auto p = json.find( nodeId->nodeId ); p!=json.end() )
+					jReqNode = move(p->second);
+				for( auto& [id, jparent] : parents ){
+				 	if( auto p = json.find(id); p!=json.end() )
+						jparent.insert( p->second.begin(), p->second.end() );
+				}
 				if( _query.FindColumn("id") )
 					nodeId->Add( jReqNode );
 				TRACET( ELogTags::Test, "jReqNode: {}", serialize(jReqNode) );

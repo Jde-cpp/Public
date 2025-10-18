@@ -11,6 +11,7 @@ namespace Jde::Opc::Gateway{
 	private:
 		α Query()ι->TAwait<jvalue>::Task;
 		α Mutate()ι->TAwait<jvalue>::Task;
+		α Introspect( QL::TableQL&& q )ι->jvalue;
 		bool _raw;
 		Web::Server::HttpRequest _request;
 		QL::RequestQL _queries;

@@ -161,7 +161,12 @@ namespace Jde::Opc{
 		return Opc::ToJson( *this );
 	}
 	α NodeId::ToString()Ι->string{
-		return serialize( ToJson() );
+		UAString j{ 1024 };
+		UA_EncodeJsonOptions options{};
+		if( let sc=UA_encodeJson( dynamic_cast<const UA_NodeId*>(this), &UA_TYPES[UA_TYPES_NODEID], &j, &options); sc )
+			return serialize( ToJson() );
+		let y = Opc::ToString( j );
+		return y.size()>1 ? y.substr( 1, y.size()-2 ) : y; //remove quotes
 	}
 	α toJson( jobject& j, const UA_NodeId& nodeId )ι->jobject{
 		j["ns"] = nodeId.namespaceIndex;

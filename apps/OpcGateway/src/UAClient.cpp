@@ -255,7 +255,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α UAClient::SendReadRequest( const flat_set<NodeId>&& nodeIds, ReadAwait::Handle h )ι->void{
+	α UAClient::SendReadRequest( const flat_set<NodeId>&& nodeIds, ReadValueAwait::Handle h )ι->void{
 		if( nodeIds.empty() ){
 			h.promise().SetExp( Exception{"no nodes sent"} );
 			return h.resume();
@@ -276,7 +276,7 @@ namespace Jde::Opc::Gateway{
 			Process( firstRequestId, move(h) );
 		}
 		catch( UAException& e ){
-			Retry<ReadAwait::Handle>( [n=move(nodeIds)]( sp<UAClient>&& p, ReadAwait::Handle h )mutable{p->SendReadRequest( move(n), move(h) );}, move(e), shared_from_this(), move(h) );
+			Retry<ReadValueAwait::Handle>( [n=move(nodeIds)]( sp<UAClient>&& p, ReadValueAwait::Handle h )mutable{p->SendReadRequest( move(n), move(h) );}, move(e), shared_from_this(), move(h) );
 		}
 	}
 	α UAClient::SendWriteRequest( flat_map<NodeId,Value>&& values, WriteAwait::Handle h )ι->void{

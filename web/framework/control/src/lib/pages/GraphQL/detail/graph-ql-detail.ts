@@ -1,5 +1,4 @@
 import { Subject } from 'rxjs';
-import { filter } from 'rxjs/operators';
 import { Component, ViewEncapsulation, OnInit, OnDestroy, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {ActivatedRoute, NavigationEnd, Params, Router, RouterModule, Routes} from '@angular/router';
@@ -8,14 +7,12 @@ import { MatDialog } from '@angular/material/dialog';
 import { ComponentPageTitle } from 'jde-spa';
 
 import {IErrorService} from '../../../services/error/IErrorService';
-import {IEnum, IGraphQL}  from '../../../services/IGraphQL';
+import {IGraphQL}  from '../../../services/IGraphQL';
 import {TableSchema} from '../../../model/ql/schema/TableSchema'
 import { MetaObject } from '../../../model/ql/schema/MetaObject';
 import {IProfile} from '../../../services/profile/IProfile';
 import {Settings} from '../../../utilities/settings';
-import { HttpErrorResponse } from '@angular/common/http';
 import { MatTabsModule } from '@angular/material/tabs';
-import{ Properties } from '../properties/properties';
 import{ PageSettings } from '../model/PageSettings';
 import { clone } from '../../../utilities/utils';
 

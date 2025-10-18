@@ -12,10 +12,6 @@
 #define let const auto
 
 namespace Jde::Access{ struct Authorize; }
-namespace Jde::QL{
-	constexpr ELogTags _tags{ ELogTags::QL };
-	α AddIntrospection( Introspection&& x )ι->void;
-}
 namespace Jde{
 	α QL::Configure( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ε->sp<LocalQL>{
 		for( let& schema : schemas ){

@@ -4,7 +4,7 @@ import { HttpClient, HttpEvent, HttpResponse, HttpSentEvent } from '@angular/com
 import { FieldKind } from '../model/ql/schema/Field';
 import { fromIsoDuration } from '../utilities/utils';
 import { TableSchema } from '../model/ql/schema/TableSchema';
-import { IEnum, Log, IQueryResult } from '../services/IGraphQL';
+import { EnumValue, Log, IQueryResult } from '../services/IGraphQL';
 import { MutationSchema } from '../model/ql/schema/MutationSchema';
 import { Instance } from './app/app.service.types';
 import * as LogProto from '../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
@@ -263,7 +263,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	async providers( log:Log ):Promise<EProvider[]>{
 		const ql = `__type(name: "Provider") { enumValues { id name } }`;
 		const data = await this.query( ql, log );
-		return data["__type"]["enumValues"].map( (x:IEnum)=>x.id );
+		return data["__type"]["enumValues"].map( (x:EnumValue)=>x.id );
 	}
 	async query<Y>( ql: string, log?:Log ):Promise<Y>{
 		return await this.graphQL( ql, log );
@@ -309,10 +309,10 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	async schemaWithEnums( type:string, log:Log ):Promise<TableSchema>{
 		let schema = ( await this.schema([type], log) )[0];
 		if( !schema.enums ){
-			schema.enums = new Map<string, IEnum[]>();
+			schema.enums = new Map<string, EnumValue[]>();
 			for( const field of schema.fields.filter((x)=>x.type.underlyingKind==FieldKind.ENUM && !schema.enums.has(x.name)) ){
-				let values:Array<IEnum>;
-				values = ( await this.query<IQueryResult<IEnum>>(` __type(name: "${field.type.name}") { enumValues { id name } }`) ).__type["enumValues"];
+				let values:Array<EnumValue>;
+				values = ( await this.query<IQueryResult<EnumValue>>(` __type(name: "${field.type.name}") { enumValues { id name } }`) ).__type["enumValues"];
 				schema.enums.set( field.type.name, values );
 			}
 		}

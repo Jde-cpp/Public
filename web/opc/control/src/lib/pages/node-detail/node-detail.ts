@@ -2,10 +2,11 @@ import { SelectionModel, SelectionChange } from '@angular/cdk/collections';
 import {Component, computed, inject, Inject, model, OnDestroy, OnInit, signal} from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
+import {MatSelectModule} from '@angular/material/select';
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
 import { Gateway, GatewayService, SubscriptionResult } from '../../services/gateway.service';
 import { DateUtils, IErrorService, ProtoUtilities} from 'jde-framework'
-import { ETypes } from '../../model/types';
+import { EAccessLevel, ETypes } from '../../model/types';
 import {  MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
 import { ComponentPageTitle } from 'jde-spa';
@@ -27,7 +28,7 @@ import {provideNativeDateAdapter} from '@angular/material/core';
   styleUrls: ['./node-detail.scss'],
   providers: [provideNativeDateAdapter()],
   standalone: true,
-		imports: [RouterModule,MatButtonModule,MatCheckboxModule,MatDatepickerModule,MatFormFieldModule, MatInputModule,MatTableModule,MatToolbarModule]
+  imports: [RouterModule,MatButtonModule,MatCheckboxModule,MatDatepickerModule,MatFormFieldModule, MatInputModule,MatTableModule,MatToolbarModule, MatSelectModule]
 })
 export class NodeDetail implements OnInit, OnDestroy {
 	constructor(
@@ -138,6 +139,8 @@ export class NodeDetail implements OnInit, OnDestroy {
 		}
 		catch (e) {
 			this.snackbar.exception( e, (m)=>console.log(m) );
+			x.value = await this._iot.read( this.cnnctnTarget, x.nodeId );
+			console.log(x.value);
 		}
 	}
 	async changeString( n:Variable, e:Event ){
@@ -146,6 +149,14 @@ export class NodeDetail implements OnInit, OnDestroy {
 		}
 		catch (err) {
 			e.target["value"] = n.value;
+			this.snackbar.exception( err, (m)=>console.error(m) );
+		}
+	}
+	async changeEnum( n:Variable, e:any ){
+		try {
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.value );
+		}
+		catch (err) {
 			this.snackbar.exception( err, (m)=>console.error(m) );
 		}
 	}
@@ -176,6 +187,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 	}
 	test(r:UaNode){ debugger;}
 	get columns():string[]{ return this.profile.columns; }
+	EAccessLevel = EAccessLevel;
 	ETypes = ETypes;
 	get _iot():Gateway{ return this.pageData.gateway; }
 	isAllSelected = computed<boolean>( ()=>{ return this.selections.selected.length==this.nodes.length; } );
@@ -186,7 +198,6 @@ export class NodeDetail implements OnInit, OnDestroy {
 	get connection():ServerCnnctn{ return this.pageData.connection; }
 	get cnnctnTarget():string{ return this.connection.target; }
 	pageData:NodePageData;
-	//get parent():types.ExpandedNode{ return this.pageData.parent; }
 	get profile(){ return this.pageData.route.profile; }
 	get nodes(){ if(!this.pageData) debugger; return this.pageData?.nodes; }
 	get variables():Variable[]{ return <Variable[]>this.nodes.filter((x)=>x.nodeClass==ENodeClass.Variable); }
@@ -194,12 +205,10 @@ export class NodeDetail implements OnInit, OnDestroy {
 	routerSubscription:Subscription;
 	selections = new SelectionModel<UaNode>(true, []);
 	get showSnapshot():boolean{ return this.visibleColumns.includes("snapshot");}
-	//#sideNav = signal<NodeRoute>( null );
 	sideNav = model.required<NodeRoute>();
 	get sort(){ return this.profile.sort; };
 	get subscription(){return this.#subscription;} #subscription:Subscription;
 	set subscription(x){ if(!x && this.subscription) this.subscription.unsubscribe(); this.#subscription=x; }
-	viewPromise:Promise<boolean>;
 	get visibleColumns(){ return this.profile.visibleColumns; }
 
 	#routeService = inject( OpcNodeRouteService );

@@ -1,4 +1,5 @@
 import { Mutation } from '../model/ql/Mutation';
+import { Field, FieldKind } from '../model/ql/schema/Field';
 import { MutationSchema } from '../model/ql/schema/MutationSchema';
 import { TableSchema } from '../model/ql/schema/TableSchema';
 
@@ -19,9 +20,19 @@ export interface IGraphQL{
 	toCollectionName( collectionDisplay:string ):string;
 }
 
-export interface IEnum{
-	id:number;
+export type EnumValue = {
+	id?:number;
 	name:string;
+	description?:string;
+	isDeprecated?:boolean;
+	deprecationReason?:string;
+}
+export type Type = {
+	name:string;
+	kind:FieldKind;
+	description?:string;
+	fields?:Field[];
+	enumValues?:EnumValue[];
 }
 
 export interface IQueryResult<T>{
