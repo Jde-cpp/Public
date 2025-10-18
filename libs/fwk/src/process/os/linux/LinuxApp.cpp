@@ -114,13 +114,8 @@ namespace Jde{
 		exit( EXIT_FAILURE );
 	}
 
-	α Process::EnvironmentVariable( str variable, SL /*sl*/ )ι->optional<string>{
-		char* pEnv = std::getenv( string{variable}.c_str() );
-		return pEnv ? string{pEnv} : optional<string>{};
-	}
-
 	α Process::ProgramDataFolder()ι->fs::path{
-		return fs::path{ EnvironmentVariable("HOME").value_or("/") };
+		return fs::path{ GetEnv("HOME").value_or("/") };
 	}
 
 	α Process::ExitHandler( int s )->void{

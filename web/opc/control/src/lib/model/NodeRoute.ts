@@ -7,7 +7,7 @@ import { IProfile, Settings } from "jde-framework";
 import { OpcStore } from "../services/opc-store";
 import { OpcObject, UaNode } from "./Node";
 import { Inject } from "@angular/core";
-import { Gateway, GatewayTarget } from "../services/gateway.service";
+import { GatewayTarget } from "../services/gateway.service";
 import { Browse, Ns } from "./types";
 
 export class NodeRoute extends DocItem{
@@ -46,7 +46,7 @@ export class NodeRoute extends DocItem{
 export class UserProfile{
 	assign( value:UserProfile ){ this.sort = value.sort; this.columns = value.columns; this.visibleColumns=value.visibleColumns; }
 	sort:Sort = {active: "name", direction: "asc"};
-	visibleColumns:string[] = ['select', 'id', 'name', 'snapshot'];
-	columns:string[] = ['select', 'id', 'name', 'snapshot'];
+	visibleColumns:string[] = ['select', 'id', 'name', 'snapshot', "description"];
+	columns:string[] = ['select', 'id', 'name', 'snapshot', "description"];
 	subscriptions:NodeId[] = [];
 }

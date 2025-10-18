@@ -6,6 +6,16 @@ export interface ILocalizedText{
 	locale: string;
 	text: string;
 }
+export enum EAccessLevel{
+	None = 0,
+	Read = 1,
+	Write = 2,
+	HistoryRead = 4,
+	HistoryWrite = 8,
+	SemanticChange = 0x10,
+	StatusWrite = 0x20,
+	TimestampWrite = 0x40
+}
 
 export const toLocalizedText = ( value:any ):ILocalizedText=>{
 	return typeof(value)=="string" ? { locale: undefined, text: value } : value;

@@ -6,6 +6,9 @@
 
 #define let const auto
 namespace Jde{
+	flat_set<string> _systemTables{};
+	α QL::SetSystemTables( flat_set<string>&& x )ι->void{ _systemTables = move(x); }
+
 	α QL::Parse( string query, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL /*sl*/ )ε->RequestQL{
 		sv trimmed = Str::Trim( query );//TODO move(query).
 		Parser parser{ string{trimmed.starts_with("{") ? trimmed.substr(1) : trimmed}, "{}()," };
@@ -250,12 +253,13 @@ namespace Jde::QL{
 	α Parser::LoadTables( string jsonName, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL sl )ε->vector<TableQL>{
 		vector<TableQL> results;
 		do{
-			let system = jsonName.starts_with("__") || jsonName.starts_with("setting") || jsonName==("node") || jsonName==("nodes") ? jsonName : string{};
+			let system = jsonName.starts_with("__") || jsonName.starts_with("setting") || _systemTables.contains(jsonName) ? jsonName : string{};
 			auto table = LoadTable( move(jsonName), schemas, system.size(), sl );
 			if( system.size() ){
 				if( system=="__type" ){
-					auto typeName =Json::AsSV( table.Args, "name" );
-					table.DBTable = DB::AppSchema::GetViewPtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(typeName)), sl );
+					auto typeName =Json::FindDefaultSV( table.Args, "name" );
+					if( typeName.size() )
+						table.DBTable = DB::AppSchema::GetViewPtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(typeName)), sl );
 				}
 				else if( system=="__schema" ){
 					THROW_IF( schemas.empty() || schemas[0]->Tables.empty(), "No schemas found." );

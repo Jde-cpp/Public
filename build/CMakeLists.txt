@@ -51,11 +51,12 @@ ExternalProject_Add(fmt
 		-DBUILD_SHARED_LIBS=ON
 		-DFMT_MASTER_PROJECT=OFF
 		-DFMT_DOC=OFF
+		-DFMT_INSTALL=ON
 #-DCMAKE_POSITION_INDEPENDENT_CODE
 )
 ExternalProject_Add(spdlog
 	GIT_REPOSITORY https://github.com/gabime/spdlog.git
-	GIT_TAG v1.15.3
+	GIT_TAG v1.16.0
 	PREFIX spdlog
 	INSTALL_DIR ${LIB_DIR}/spdlog
 	CMAKE_ARGS ${stdArgs}
@@ -72,7 +73,7 @@ ExternalProject_Add(spdlog
 
 ExternalProject_Add(absl
 	GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
-	GIT_TAG 20250127.0
+	GIT_TAG 20250814.1
 	PREFIX absl
 	INSTALL_DIR ${LIB_DIR}/absl
 	CMAKE_ARGS ${stdArgs}
@@ -85,7 +86,7 @@ ExternalProject_Add(absl
 
 ExternalProject_Add(protobuf
 	GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-	GIT_TAG v30.2
+	GIT_TAG v32.1
 	PREFIX protobuf
 	INSTALL_DIR ${LIB_DIR}/protobuf
 	CMAKE_ARGS ${stdArgs}
@@ -130,6 +131,7 @@ IF( WIN32 )
 	message( PC_LIBXML_INCLUDEDIR: ${PC_LIBXML_INCLUDEDIR} )
 	message( PC_LIBXML_LIBDIR: ${PC_LIBXML_LIBDIR} )
 else()
+#need to add '#define _C4_STD_VECTOR_FWD_HPP_' to ryml_all.hpp to avoid redefinition errors
 	ExternalProject_Add(jsonnet
 		GIT_REPOSITORY https://github.com/google/jsonnet.git
 		GIT_TAG "v0.21.0"

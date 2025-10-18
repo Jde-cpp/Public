@@ -1,5 +1,6 @@
 #include "GatewayQLAwait.h"
 #include <jde/ql/QLAwait.h>
+#include "DataTypeQLAwait.h"
 #include "NodeQLAwait.h"
 #define let const auto
 
@@ -22,10 +23,18 @@ namespace Jde::Opc::Gateway{
 			jarray results;
 			for( auto& q : _queries.Queries() ){
 				q.ReturnRaw = _raw;
-				if( q.JsonName.starts_with("serverConnection") || q.JsonName=="__type" )
+				if( q.JsonName.starts_with("serverConnection") || q.JsonName=="__type" ){
+					if( q.JsonName=="__type" && !q.Args.contains("name") ){
+						NodeId nodeId{ q.Args };
+						q.Args["name"] = nodeId.ToString();
+					}
 					results.push_back( co_await QL::QLAwait<>(move(q), _request.SessionInfo->UserPK, _sl) );
-				else if( q.JsonName.starts_with("node") )
+				}else if( q.JsonName.starts_with("node") )
 					results.push_back( co_await NodeQLAwait{move(q), _request.SessionInfo->SessionId, _request.SessionInfo->UserPK, _sl} );
+				else if( q.JsonName.starts_with("dataType") )
+					results.push_back( co_await DataTypeQLAwait{move(q), _request.SessionInfo, _sl} );
+				else
+					throw Web::Server::RestException<http::status::bad_request>{ SRCE_CUR, move(_request), "Unknown query type: {}", q.JsonName };
 			}
 			jvalue y{ results.size()==1 ? move(results[0]) : jvalue{results} };
 			Resume( Web::Server::HttpTaskResult{_raw ? y : jobject{{"data", y}}, move(_request)} );

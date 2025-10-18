@@ -6,7 +6,7 @@
 #include <jde/opc/uatypes/Value.h>
 #include "../UAClient.h"
 #include "../async/Attributes.h"
-#include "../async/ReadAwait.h"
+#include "../async/ReadValueAwait.h"
 #include "../async/SessionAwait.h"
 
 #define let const auto
@@ -76,7 +76,7 @@ namespace Browse{
 				THROW_IF( !_ua, "Could not find UAClient for: {}", _ua->Target() );
 			}
 			auto vars = response.Variables();
-			auto values = vars.size() ? co_await ReadAwait{ vars, _ua } : flat_map<NodeId, Value>{};
+			auto values = vars.size() ? co_await ReadValueAwait{ vars, _ua } : flat_map<NodeId, Value>{};
 			Attributes( move(vars), move(response), move(values) );
 		}
 		catch( exception& e ){

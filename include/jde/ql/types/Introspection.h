@@ -19,11 +19,24 @@ namespace Jde::QL{
 		Type FieldType;
 	};
 
+	struct EnumValue final{
+		EnumValue( const jobject& j )ε;
+		α ToJson( const TableQL& query )Ε->jobject;
+
+		optional<_int> Id;
+		string Name;
+		string Description;
+		bool IsDeprecated{};
+		string DeprecationReason;
+	};
+
 	struct Object final{
 		Object( sv name, const jobject& j )ε;
 		α ToJson( const TableQL& query )Ε->jobject;
-		string Name; //User
+
+		string Name;
 		vector<Field> Fields;
+		vector<EnumValue> EnumValues;
 	};
 
 	struct Introspection final{

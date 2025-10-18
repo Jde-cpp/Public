@@ -1,5 +1,6 @@
 #include <jde/opc/uatypes/Variant.h>
 #include <jde/opc/UAException.h>
+#include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/UAString.h>
 
@@ -145,6 +146,8 @@ namespace Jde::Opc{
 				y = toJson( &data, *type );
 			else if( type==&UA_TYPES[UA_TYPES_NODEID] )
 			  y = Opc::ToJson( *(UA_NodeId*)data );
+			else if( type==&UA_TYPES[UA_TYPES_QUALIFIEDNAME] )
+			  y = BrowseName::ToJson( *(UA_QualifiedName*)data );
 			else
 				y = toJson( data, *type );
 		}

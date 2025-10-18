@@ -1,6 +1,5 @@
 #include <jde/ql/types/Introspection.h>
 #include <jde/fwk/io/json.h>
-#include <jde/ql/types/TableQL.h>
 #include <jde/db/names.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Functions.h>
@@ -8,19 +7,17 @@
 #include <jde/db/meta/DBSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
+#include <jde/ql/ql.h>
 
 #define let const auto
 
-namespace Jde::QL{
+namespace Jde{
 	using namespace Json;
-	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
-	Introspection _introspection;
-	α AddIntrospection( Introspection&& x )ι->void{ _introspection += move(x); }
+	QL::Introspection _introspection;
+	α QL::AddIntrospection( Introspection&& x )ι->void{ _introspection += move(x); }
 
-	α Introspection::operator+=( Introspection&& x )ι->void{
-		for( auto&& o : x.Objects )
-			Objects.emplace_back( move(o) );
-	}
+namespace QL{
+	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
 
 	constexpr array<sv,8> FieldKindStrings = { "SCALAR", "OBJECT", "INTERFACE", "UNION", "ENUM", "INPUT_OBJECT", "LIST", "NON_NULL" };
 	α ToFieldKind( sv x ){ return ToEnum<EFieldKind>( FieldKindStrings, x ); }
@@ -33,7 +30,7 @@ namespace Jde::QL{
 		if( !IsNullable ){
 			const jobject& type = AsObject( j, "ofType" );
 			Name = AsString( type, "name" );
-			Kind = FindEnum<EFieldKind>( type,"kind", ToFieldKind ).value_or( EFieldKind::Scalar );
+			Kind = FindEnum<EFieldKind>( type, "kind", ToFieldKind ).value_or( EFieldKind::Scalar );
 			if( type.contains("ofType") )
 				OfTypePtr = mu<Type>( AsObject(type, "ofType") );
 		}
@@ -71,21 +68,51 @@ namespace Jde::QL{
 		return jField;
 	}
 
+	EnumValue::EnumValue( const jobject& j )ε:
+		Id{ FindNumber<_int>(j, "id") },
+		Name{ AsSV(j, "name") },
+		Description{ FindDefaultSV(j, "description") },
+		IsDeprecated{ FindBool(j, "isDeprecated").value_or(false) },
+		DeprecationReason{ FindDefaultSV(j, "deprecationReason") }
+	{}
+
+	α EnumValue::ToJson( const TableQL& query )Ε->jobject{
+		jobject y;
+		if( query.FindColumn("id") )
+			y["id"] = Id ? jvalue{*Id} : jvalue{};
+		if( query.FindColumn("name") )
+			y["name"] = Name;
+		if( query.FindColumn("description") )
+			y["description"] = Description.size() ? jvalue{Description} : jvalue{};
+		if( query.FindColumn("isDeprecated") )
+			y["isDeprecated"] = IsDeprecated;
+		if( query.FindColumn("deprecationReason") )
+			y["deprecationReason"] = DeprecationReason.size() ? jvalue{DeprecationReason} : jvalue{};
+		return y;
+	}
+
+
 	Object::Object( sv name, const jobject& j )ε:
 		Name{ name }{
-		for( let& field : AsArray(j, "fields") ){
+		for( let& field : FindDefaultArray(j, "fields") )
 			Fields.emplace_back( AsObject(field) );
-		}
+		for( let& enumValue : FindDefaultArray(j, "enumValues") )
+			EnumValues.emplace_back( AsObject(enumValue) );
 	}
 
 	α Object::ToJson( const TableQL& query )Ε->jobject{
-		ASSERT( query.JsonName=="fields" );
 		jobject jTable;
 		jTable["name"] = Name;
-		jarray fields;
-		for( let& field : Fields )
-			fields.push_back( field.ToJson(query) );
-		jTable["fields"] = fields;
+		auto add = [&]( sv key, let& vec ){
+			jarray array;
+			for( let& item : vec )
+				array.push_back( item.ToJson(query) );
+			jTable[key] = array;
+		};
+		if( query.JsonName=="fields" )
+			add( query.JsonName, Fields );
+		else if( query.JsonName=="enumValues" )
+			add( query.JsonName, EnumValues );
 		return jTable;
 	}
 
@@ -98,9 +125,14 @@ namespace Jde::QL{
 		auto y = find_if( Objects, [name](let& Value){ return Value.Name==name; } );
 		return y==Objects.end() ? nullptr : &*y;
 	}
+	α Introspection::operator+=( Introspection&& x )ι->void{
+		for( auto&& o : x.Objects )
+			Objects.emplace_back( move(o) );
+	}
+
 
 	using namespace DB::Names;
-	α IntrospectFields( sv /*typeName*/, const DB::Table& mainTable, const TableQL& fieldTable )ε->jobject{
+	Ω introspectFields( sv /*typeName*/, const DB::Table& mainTable, const TableQL& fieldTable )ε->jobject{
 		jarray fields;
 		let pTypeTable = fieldTable.FindTable( "type" );
 		let haveName = fieldTable.FindColumn( "name" )!=nullptr;
@@ -212,7 +244,8 @@ namespace Jde::QL{
 		return jTable;
 	}
 
-α introspectEnum( const sp<DB::Table> baseTable, const TableQL& fieldTable)ε->jobject{
+	α introspectEnum( const sp<DB::Table> baseTable, const TableQL& fieldTable)ε->jobject{
+		THROW_IF( !baseTable, "Base table is null" );
 		auto dbTable = baseTable->QLView ? baseTable->QLView : AsView(baseTable);
 		DB::SelectClause select;
 		for_each( fieldTable.Columns, [&select, &dbTable](let& x){
@@ -247,12 +280,10 @@ namespace Jde::QL{
 		auto dbTable = DB::AsTable( typeTable.DBTable );
 		jobject y;
 		for( let& qlTable : typeTable.Tables ){
-			if( qlTable.JsonName=="fields" ){
-				if( let pObject = _introspection.Find(typeName); pObject )
-					y = pObject->ToJson( qlTable );
-				else
-					y = IntrospectFields( typeName, *dbTable, qlTable );
-			}
+			if( let preDefined = _introspection.Find(typeName); preDefined )
+				y = preDefined->ToJson( qlTable );
+			else if( qlTable.JsonName=="fields" )
+				y = introspectFields( typeName, *dbTable, qlTable );
 			else if( qlTable.JsonName=="enumValues" )
 				y = introspectEnum( dbTable, qlTable );
 			else
@@ -309,4 +340,4 @@ namespace Jde::QL{
 		jobject jSchema; jSchema["mutationType"] = jmutationType;
 		return jmutationType;
 	}
-}
+}}

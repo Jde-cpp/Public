@@ -6,7 +6,7 @@
 #include <jde/opc/uatypes/Value.h>
 #include "StartupAwait.h"
 #include "UAClient.h"
-#include "async/ReadAwait.h"
+#include "async/ReadValueAwait.h"
 #include "async/Write.h"
 #include "async/SessionAwait.h"
 #include "auth/PasswordAwait.h"
@@ -48,8 +48,11 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α HttpRequestAwait::ResumeSnapshots( flat_map<NodeId, Value>&& results, jarray&& j )ι->void{
-		for( let& [nodeId, value] : results )
-			j.push_back( jobject{{"node", nodeId.ToJson()}, {"value", value.ToJson()}} );
+		for( let& [nodeId, value] : results ){
+			jobject node = nodeId.ToJson();
+			node["value"] = value.ToJson();
+			j.push_back( node );
+		}
 		Resume( {jobject{{"snapshots", j}}, move(_request)} );
 	}
 
@@ -68,7 +71,7 @@ namespace Jde::Opc::Gateway{
 	α HttpRequestAwait::SnapshotRead( bool write )ι->TAwait<flat_map<NodeId, Value>>::Task{
 		try{
 			auto [nodes, jNodes] = ParseNodes();
-			auto results = co_await ReadAwait{ nodes, _client };
+			auto results = co_await ReadValueAwait{ nodes, _client };
 			if( find_if( results, []( let& pair )->bool{ return pair.second.hasStatus && pair.second.status==UA_STATUSCODE_BADSESSIONIDINVALID; } )!=results.end() ) {
 				throw RestException<http::status::failed_dependency>{ SRCE_CUR, move(_request), "Opc Server session invalid" };
 				//co_await AwaitSessionActivation( _client );
@@ -83,22 +86,32 @@ namespace Jde::Opc::Gateway{
 			ResumeExp( RestException<http::status::internal_server_error>{SRCE_CUR, move(_request), "SnapshotRead error: {}", e.what()} );
 		}
 	}
-	α HttpRequestAwait::SnapshotWrite( flat_set<NodeId>&& nodes, flat_map<NodeId, Value>&& values, jarray&& jNodes )ι->TAwait<flat_map<NodeId,UA_WriteResponse>>::Task{
+	α HttpRequestAwait::SnapshotWrite( flat_set<NodeId>&& nodes, flat_map<NodeId, Value> values, jarray jNodes )ι->TAwait<ReadResponse>::Task{
 		try{
 			jarray jValues = Json::AsArray( Json::ParseValue(move(_request["values"])) );
 			if( jNodes.size()!=jValues.size() )
 				throw RestException<http::status::bad_request>{ SRCE_CUR, move(_request), "Invalid json: nodes.size={} values.size={}", nodes.size(), jValues.size() };
-			//flat_map<NodeId, Value> values;
 			for( uint i=0; i<jNodes.size(); ++i ){
-				NodeId node{  Json::AsObject(jNodes[i]) };
-				if( auto existingValue = values.find(node); existingValue!=values.end() ){
-					THROW_IF( existingValue->second.status, "Node {} has an error: {}.", serialize(node.ToJson()), UAException{existingValue->second.status}.ClientMessage() );
-					existingValue->second.Set( jValues.at(i) );
-					values.emplace( move(node), existingValue->second );
+				NodeId nodeId{  Json::AsObject(jNodes[i]) };
+				if( auto existingValue = values.find(nodeId); existingValue!=values.end() ){
+					THROW_IFX( existingValue->second.status, UAClientException(existingValue->second.status, _client->Handle(), nodeId.ToString(), _sl) );
+					auto& dataValue = existingValue->second;
+					if( !dataValue.value.type )
+						dataValue.value.type = ( co_await ReadAwait{nodeId, UA_ATTRIBUTEID_DATATYPE, _client} ).ScalerDataType();
+					dataValue.Set( jValues.at(i) );
+					values.emplace( move(nodeId), dataValue );
 				}
 				else
-					throw RestException<http::status::bad_request>( SRCE_CUR, move(_request), "Node {} not found.", serialize(node.ToJson()) );
+					throw RestException<http::status::bad_request>( SRCE_CUR, move(_request), "Node {} not found.", serialize(nodeId.ToString()) );
 			}
+			SnapshotWrite( move(values) );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α HttpRequestAwait::SnapshotWrite( flat_map<NodeId, Value>&& values )ι->TAwait<flat_map<NodeId,UA_WriteResponse>>::Task{
+		try{
 			auto writeResults = co_await WriteAwait{ move(values), _client };
 			flat_set<NodeId> successNodes;
 			jarray array;

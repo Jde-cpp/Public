@@ -182,4 +182,8 @@ namespace Jde{
 	α Process::ApplicationDataFolder()ι->fs::path{
 		return ProgramDataFolder()/CompanyRootDir()/Process::ProductName();
 	}
+	α Process::GetEnv( str variable )ι->optional<string>{
+		char* env = std::getenv( variable.c_str() );
+		return env ? string{env} : optional<string>{};
+	}
 }
