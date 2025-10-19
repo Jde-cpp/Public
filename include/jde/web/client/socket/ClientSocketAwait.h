@@ -70,7 +70,7 @@ namespace Jde::Web::Client{
 	//}
 
 	Ŧ ClientSocketAwait<T>::await_resume()ε->T{
-		base::AwaitResume();
+		base::CheckException();
 		typename base::TPromise* p = base::Promise();
 		THROW_IF( !p, "Not Connected" );
 		if( auto e = p->MoveExp(); e )

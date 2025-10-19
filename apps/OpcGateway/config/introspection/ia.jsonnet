@@ -20,5 +20,14 @@
 			{ id:6, name:"Cyan", description:"Cyan color."},
 			{ id:7, name:"White", description:"White color."}
 		]
+	},
+	"ns=3;i=3005":{
+		description: "Contains the values used to indicate in what way a lamp behaves when switched on.",
+		enumValues: [
+			{ id:0, name:"Continuous", description:"This value indicates a continuous light."},
+			{ id:1, name:"Blinking", description:"This value indicates a blinking light (blinking in regular intervals with equally long on and off times)."},
+			{ id:2, name:"Flashing", description:"This value indicates a flashing light (blinking in intervals with longer off times than on times, per interval multiple on times are possible)."},
+			{ id:3, name:"Other", description:"The light is handled in a way not defined in this version of the specification."}
+		]
 	}
 }

@@ -27,7 +27,7 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α SetMonitoringModeAwait::await_resume()ι->sp<UA_SetMonitoringModeResponse>{
-		AwaitResume();
+		CheckException();
 		ASSERT( _client->MonitoringModeResponse );
 		return _client->MonitoringModeResponse;
 	}

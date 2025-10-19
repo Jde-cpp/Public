@@ -171,7 +171,7 @@ namespace Sessions{
 		}
 	}
 	α UpsertAwait::await_resume()ε->sp<SessionInfo>{
-		base::AwaitResume();
+		base::CheckException();
 		return Promise()->Value() ? *Promise()->Value() : sp<SessionInfo>{};
 	}
 }}

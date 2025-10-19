@@ -10,7 +10,7 @@ namespace Jde::QL{
 		MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε;
 		MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw, const sp<DB::AppSchema>& schema )ε;
 		Ω IsMutation( sv name )ι->bool;
-		Ω ParseCommand( sv name )ε->tuple<string,EMutationQL>;
+		Ω ParseCommand( sv name, SRCE )ε->tuple<string,EMutationQL>;
 		α TableName()Ι->string; //json name=user returns users
 		//α Input(SRCE)Ε->const jobject&;
 		template<class T=uint> α Id()Ι->T;

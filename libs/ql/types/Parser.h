@@ -6,7 +6,7 @@
 
 namespace Jde::QL{
 	struct Subscription;
-	constexpr array<sv,9> MutationQLStrings = { "create", "update", "delete", "restore", "purge", "add", "remove", "start", "stop" };
+	constexpr array<sv,10> MutationQLStrings = { "create", "update", "delete", "restore", "purge", "add", "remove", "start", "stop", "execute" };
 	Ξ ToString( EMutationQL type )ι->string{ return FromEnum(MutationQLStrings, type); }
 	struct Parser{
 		Parser( string text, sv delimiters )ι: _text{move(text)}, Delimiters{delimiters}{}

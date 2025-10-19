@@ -50,6 +50,8 @@ namespace Jde::QL{
 			case Stop:
 				MutationAwait::Stop();
 				co_return;
+			case Execute:
+				throw Exception{ ELogTags::QL, _sl, "Execute mutation not implemented." };
 			}
 			Resume( move(y) );
 		}

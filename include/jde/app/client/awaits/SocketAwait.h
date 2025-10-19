@@ -27,7 +27,7 @@ namespace Jde::App::Client{
 
 	template<class TProto,class TResult>
 	α SocketAwait<TProto,TResult>::await_resume()ε->TResult{
-		base::AwaitResume();
+		base::CheckException();
 		auto p = base::Promise();
 		THROW_IF( !p && !_session, "Shutting Down" );
 		THROW_IF( !_session || !p->Value(), "No Connection to AppServer." );

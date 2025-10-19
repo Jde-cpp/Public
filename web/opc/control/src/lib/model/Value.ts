@@ -1,11 +1,9 @@
 import Long from "long";
-import { Guid } from "jde-framework";
+import { Duration, Guid, ProtoUtilities, Timestamp  } from "jde-framework";
 import { NodeId } from "./NodeId";
 import { ExNodeId } from "./ExNodeId";
 import {OpcError} from "../model/OpcError";
 
-export class Timestamp{seconds:number; nanos:number;}
-export class Duration{seconds:number; nanos:number;}
 export type Value = boolean | Duration | Error | ExNodeId | Guid | Long | NodeId | number | string | Timestamp | Uint8Array | Value[];
 
 export function toString( value: Value ){
@@ -21,8 +19,8 @@ export function toString( value: Value ){
 		return value.toString();
 	else if( value instanceof Uint8Array )
 		return btoa( value.reduce((acc, current) => acc + String.fromCharCode(current), "") );
-	else if( value instanceof Timestamp )
-		return `${value.seconds}.${value.nanos}`;
+	else if( Object.hasOwn(value, "seconds") && Object.hasOwn(value, "nanos") )
+		return ProtoUtilities.toDate( <Timestamp>value ).toISOString();
 	else if( value instanceof ExNodeId )
 		return value.toJson();
 	else if( value instanceof NodeId )

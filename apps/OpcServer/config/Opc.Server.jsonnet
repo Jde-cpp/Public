@@ -49,6 +49,18 @@ local args = import 'args.libsonnet';
 			"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
+			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.NodeSet2.xml",
+			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.Examples.NodeSet2.xml",
+		],
+		amExamples: [
+			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
+			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.NodeSet2.xml",
+			"$(UA_NODE_SETS)/AdditiveManufacturing/AdditiveManufacturing-Example.xml",
+		],
+		iaExamples: [
+			"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
+			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
+			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"
 		],
 		trustedCertDirs: args.opcServer.trustedCertDirs,

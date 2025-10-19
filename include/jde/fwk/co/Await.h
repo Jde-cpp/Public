@@ -60,7 +60,7 @@ namespace Jde{
 	protected:
 		α SetError( IException&& e )ι{ ASSERT(Promise()); Promise()->SetExp( move(e) ); }
 		β Suspend()ι->void{};
-		α AwaitResume()ε->void{
+		α CheckException()ε->void{
 			if( up<IException> e = Promise() ? Promise()->MoveExp() : nullptr; e ){
 				_h = nullptr;
 				e->Throw();
@@ -89,7 +89,7 @@ namespace Jde{
 
 	template<class Result,class TTask>
 	α TAwait<Result,TTask>::await_resume()ε->Result{
-		base::AwaitResume();
+		base::CheckException();
 		if( !base::Promise() )
 			throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Critical, "promise is null" };
 		if( !base::Promise()->Value() )

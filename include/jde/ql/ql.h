@@ -14,6 +14,7 @@ namespace Jde::QL{
 	α AddIntrospection( Introspection&& x )ι->void;
 	Ŧ AsId( const jobject& j, SRCE )ε->T;
 	Ŧ AsId( const jvalue& j, SRCE )ε->T;
+	α SetSystemMutations( flat_set<string>&& x )ι->void;
 	α SetSystemTables( flat_set<string>&& x )ι->void;
 
 	template<class T=uint32> α FindId( const jobject& j )ι->T;

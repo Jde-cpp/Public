@@ -12,8 +12,8 @@ export class OpcAuthService implements IAuth{
 		return this.app.googleAuthClientId( (m)=>console.log(m) );
 	}
 
-	async login( user:User ):Promise<void>{
-		let promise = await this.app.login( user );
+	async login( user:User, log:Log ):Promise<void>{
+		let promise = await this.app.login( user, log );
 		this.isOpc.set( false );
 		return promise;
 	}

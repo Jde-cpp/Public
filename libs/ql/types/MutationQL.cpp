@@ -3,16 +3,24 @@
 #include <jde/db/generators/Functions.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/DBSchema.h>
+#include <jde/ql/ql.h>
 #include "Parser.h"
 
 #define let const auto
 
+namespace Jde{
+	flat_set<string> _systemMutations{};
+	α QL::SetSystemMutations( flat_set<string>&& x )ι->void{ _systemMutations = move(x); }
+}
 namespace Jde::QL{
-	α MutationQL::ParseCommand( sv commandName )ε->tuple<string,EMutationQL>{
+	α MutationQL::ParseCommand( sv commandName, SL _sl )ε->tuple<string,EMutationQL>{
 		uint iType=0;
 		for( ;iType<MutationQLStrings.size() && !commandName.starts_with(MutationQLStrings[iType]); ++iType );
-		THROW_IF( iType==MutationQLStrings.size(), "Could not find mutation {}", commandName );
-
+		if( iType==MutationQLStrings.size() ){
+			// if( _systemMutations.find( string{commandName} )!=_systemMutations.end() )
+			// 	return { "", EMutationQL::Execute };
+			throw Exception{ ELogTags::QL, _sl, "Could not find mutation {}", commandName };
+		}
 		auto tableJsonName = string{ commandName.substr(MutationQLStrings[iType].size()) };
 		tableJsonName[0] = (char)tolower( tableJsonName[0] );
 
@@ -22,7 +30,7 @@ namespace Jde::QL{
 	MutationQL::MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε:
 		Args(move(args)), CommandName{move(commandName)}, ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{
 		std::tie(JsonTableName,Type) = ParseCommand( CommandName );
-		DBTable = DB::AppSchema::GetTablePtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(JsonTableName)) );
+		DBTable = JsonTableName.empty() ? nullptr : DB::AppSchema::GetTablePtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(JsonTableName)) );
 	}
 	MutationQL::MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw, const sp<DB::AppSchema>& schema )ε:
 		Args(move(args)), CommandName{move(commandName)}, ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{

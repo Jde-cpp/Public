@@ -95,11 +95,11 @@ namespace Jde::Opc::Gateway{
 				NodeId nodeId{  Json::AsObject(jNodes[i]) };
 				if( auto existingValue = values.find(nodeId); existingValue!=values.end() ){
 					THROW_IFX( existingValue->second.status, UAClientException(existingValue->second.status, _client->Handle(), nodeId.ToString(), _sl) );
-					auto& dataValue = existingValue->second;
+					auto dataValue = existingValue->second;
 					if( !dataValue.value.type )
 						dataValue.value.type = ( co_await ReadAwait{nodeId, UA_ATTRIBUTEID_DATATYPE, _client} ).ScalerDataType();
 					dataValue.Set( jValues.at(i) );
-					values.emplace( move(nodeId), dataValue );
+					values.emplace( move(nodeId), move(dataValue) );
 				}
 				else
 					throw RestException<http::status::bad_request>( SRCE_CUR, move(_request), "Node {} not found.", serialize(nodeId.ToString()) );
@@ -200,7 +200,7 @@ namespace Jde::Opc::Gateway{
 		{}
 	}
 	α HttpRequestAwait::Query()ι->TAwait<HttpTaskResult>::Task{
-		auto& query = _request["query"];
+		string query = _request.IsGet() ? _request["query"] : Json::AsString(_request.Body(), "query" );
 		_request.LogRead( query );
 		try{
 			if( query.empty() )

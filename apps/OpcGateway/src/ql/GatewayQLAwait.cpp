@@ -1,5 +1,6 @@
 #include "GatewayQLAwait.h"
 #include <jde/ql/QLAwait.h>
+#include "../async/CallAwait.h"
 #include "DataTypeQLAwait.h"
 #include "NodeQLAwait.h"
 #define let const auto
@@ -48,7 +49,9 @@ namespace Jde::Opc::Gateway{
 			jarray results;
 			for( auto& m : _queries.Mutations() ){
 				m.ReturnRaw = _raw;
-				if( m.TableName()=="server_connections" )
+				if( m.Type==QL::EMutationQL::Execute )
+					results.push_back( co_await JCallAwait(move(m), _request.SessionInfo, _sl) );
+				else if( m.TableName()=="server_connections" )
 					results.push_back( co_await QL::QLAwait<>(move(m), _request.SessionInfo->UserPK, _sl) );
 			}
 			jvalue y{ results.size()==1 ? move(results[0]) : jvalue{results} };
