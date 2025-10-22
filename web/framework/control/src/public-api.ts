@@ -35,10 +35,10 @@ export * from './lib/shared/paginator/paginator'
 export * from './lib/shared/pipes/enum-keys-pipe';
 export * from './lib/shared/severity-picker/severity-picker'
 export * from './lib/utilities/collections';
-export * from './lib/utilities/dateUtilities';
-export * from './lib/utilities/mathUtilities';
+export * from './lib/utilities/dateUtils';
+export * from './lib/utilities/mathUtilis';
 export * from './lib/utilities/ProgressObservable';
-export * from './lib/utilities/protoUtilities';
+export * from './lib/utilities/protoUtils';
 export * from './lib/utilities/settings';
 export * from './lib/utilities/stl';
 export * from './lib/utilities/StringUtils';

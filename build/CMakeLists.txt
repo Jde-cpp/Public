@@ -156,6 +156,8 @@ ExternalProject_Add(open62541
 		-DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}"
 		-DBUILD_NODESET_LOADER=ON
 		-DUA_ENABLE_XML_ENCODING=ON
+		-DUA_NAMESPACE_ZERO=FULL
+		-DUA_BUILD_EXAMPLES=OFF
 )
 ExternalProject_Add(open62541-nodeset-loader
 	GIT_REPOSITORY https://github.com/open62541/open62541-nodeset-loader.git

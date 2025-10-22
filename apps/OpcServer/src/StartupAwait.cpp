@@ -72,13 +72,17 @@ namespace Jde::Opc::Server{
 			QL::Hook::Add( mu<ObjectHook>() );
 			QL::Hook::Add( mu<ObjectTypeHook>() );
 			Initialize( *serverId, uaSchema );
-			GetUAServer().Run();
+			auto& ua = GetUAServer();
+			ua.Run();
 			if( Settings::FindBool("/opcServer/db").value_or(false) )
 				co_await ServerConfigAwait{}; //database
 			if( Settings::FindPath("/opcServer/mutationsDir") )
 				co_await UpsertAwait{}; //mutations
 			for( let& config : Settings::FindPathArray("/opcServer/configFiles") )
-				GetUAServer().Load( config );
+				ua.Load( config );
+			for( let& [idx, ns] : ua.Namespaces() )
+				INFOT( ELogTags::App, "ns: {}, uri: {}", idx, ns );
+
 			INFOT( ELogTags::App, "---Started OPC Server---" );
 			Resume();
 		}

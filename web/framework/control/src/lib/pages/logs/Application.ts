@@ -1,7 +1,6 @@
 //import { LogEntry } from "./LogEntry";
 import { TraceEntry } from "./TraceEntry";
 import { Guid } from "jde-framework";
-import { ProtoUtilities } from '../../utilities/protoUtilities';
 import * as AppFromClient from '../../proto/App.FromServer'; import FromServer = AppFromClient.Jde.App.Proto.FromServer;
 import * as AppCommon from '../../proto/App'; import App = AppCommon.Jde.App.Proto;
 

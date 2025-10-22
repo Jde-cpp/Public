@@ -6,11 +6,11 @@ local args = import 'args.libsonnet';
 			tags: {
 				trace:[ "app", "browse", "ql", "access", "opc.access", "test",
 					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
-					"uaSecure","uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery"
+					"uaSecure","uaSession", "uaServer", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery"
 				],
 				debug:["settings"],
 				information:[
-					"uaNet",
+					"uaNet","uaClient",
 					"opc.read", "opc.monitoring", "opc.browse", "app.processingLoop", "opc.monitoring.pedantic"
 				],
 				warning:[],
@@ -38,7 +38,9 @@ local args = import 'args.libsonnet';
 	ql:{
 		introspection: [
 			"introspection/di.jsonnet",
-			"introspection/ia.jsonnet"
+			"introspection/ia.jsonnet",
+			"introspection/machineTool.jsonnet",
+			"introspection/additive.jsonnet"
 		]
 	},
 	credentials:{

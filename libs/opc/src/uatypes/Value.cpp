@@ -75,10 +75,17 @@ namespace Jde::Opc{
 	}
 
 	α Value::Set( const jvalue& j, SL sl )ε->void{
-		let scaler = UA_Variant_isScalar( &value );
+		//let scaler = UA_Variant_isScalar( &value ); null values==not scaler.
 		let type = value.type;
 		if( !type )
 			throw Exception{ sl, ELogLevel::Error, "Value has no type." };
+		auto setDuration = [&]()ε->void {
+			let& o = j.as_object();
+			THROW_IF( !o.contains("seconds") || !o.contains("nanos"), "Expected duration object with 'seconds' and 'nanos' - '{}'.", serialize(j) );
+			const std::chrono::seconds seconds{ o.at("seconds").to_number<int64_t>() };
+			const std::chrono::nanoseconds nanos{ o.at("nanos").to_number<int32_t>() };
+			SetNumber<UA_Duration>( std::chrono::duration<double, std::milli>(seconds + nanos).count() );
+		};
 
 		if( IS(UA_TYPES_BOOLEAN) ){
 			//if( scaler ){
@@ -91,8 +98,12 @@ namespace Jde::Opc{
 		}
 		else if( IS(UA_TYPES_BYTE) )
 			SetNumber<UA_Byte>( j );
-		else if( IS(UA_TYPES_DOUBLE) )
-			SetNumber<UA_Double>( j );
+		else if( IS(UA_TYPES_DOUBLE) ){
+			if( j.is_object() )
+				setDuration();
+			else
+				SetNumber<UA_Double>( j );
+		}
 		else if( IS(UA_TYPES_FLOAT) )
 			SetNumber<UA_Float>( j );
 		else if( IS(UA_TYPES_INT16) )
@@ -102,11 +113,18 @@ namespace Jde::Opc{
 		else if( IS(UA_TYPES_INT64) )
 			SetNumber<UA_Int64>( j );
 		else if( IS(UA_TYPES_STRING) || IS(UA_TYPES_LOCALIZEDTEXT) ){
-			if( scaler ){
+			//if( scaler ){
 				THROW_IF( !j.is_string(), "Expected string '{}'.", serialize(j) );
-				UA_String v = UA_String_fromChars( j.get_string().c_str() );
-				UA_Variant_setScalarCopy( &value, &v, type );
-			}
+				let str = ToUV( j.get_string() );
+				if( IS(UA_TYPES_STRING) )
+					UA_Variant_setScalarCopy( &value, &str, type );
+				else{
+					UA_LocalizedText lt;
+					lt.locale = UA_STRING_NULL;
+					lt.text = str;
+					UA_Variant_setScalarCopy( &value, &lt, type );
+				}
+			//}
 		}
 		else if( IS(UA_TYPES_UINT16) )
 			SetNumber<UA_UInt16>( j );
@@ -114,9 +132,10 @@ namespace Jde::Opc{
 			SetNumber<UA_UInt32>( j );
 		else if( IS(UA_TYPES_UINT64) )
 			SetNumber<UA_UInt64>( j );
-		else if( IS(UA_TYPES_DATETIME) ){
+		else if( IS(UA_TYPES_DATETIME) )
 			SetNumber<UA_DateTime>( UADateTime{j}.UA() );
-		}
+		else if( IS(UA_TYPES_DURATION) )//milliseconds double
+			setDuration();
 		else
 			THROW( "Setting type '{}' has not been implemented - {}", type->typeName, serialize(j) );
 	}

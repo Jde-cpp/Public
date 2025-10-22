@@ -45,16 +45,26 @@ local args = import 'args.libsonnet';
 			path: "$(UA_NODE_SETS)/Opc.Ua.PredefinedNodes.xml",
 			nodeIds: [23513]
 		},
-		configFiles: [
-			"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
+		machinery: [
+			//"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
+			//"/home/duffyj/Downloads/Opc.Ua.NodeSet2.xml",
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
 			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.NodeSet2.xml",
 			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.Examples.NodeSet2.xml",
 		],
-		amExamples: [
+		configFiles: [
+//			"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.NodeSet2.xml",
+			"$(UA_NODE_SETS)/ISA95-JOBCONTROL/opc.ua.isa95-jobcontrol.nodeset2.xml",
+			//"$(UA_NODE_SETS)/Machinery/ProcessValues/Opc.Ua.Machinery.ProcessValues.NodeSet2.xml",
+			"$(UA_NODE_SETS)/PADIM/Opc.Ua.IRDI.NodeSet2.xml",
+			"$(UA_NODE_SETS)/PADIM/Opc.Ua.PADIM.NodeSet2.xml",
+			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
+			"$(UA_NODE_SETS)/Machinery/Jobs/Opc.Ua.Machinery.Jobs.Nodeset2.xml",
+			"$(UA_NODE_SETS)/MachineTool/Opc.Ua.MachineTool.NodeSet2.xml",
+			"$(UA_NODE_SETS)/AdditiveManufacturing/Opc.Ua.AdditiveManufacturing.Nodeset2.xml",
 			"$(UA_NODE_SETS)/AdditiveManufacturing/AdditiveManufacturing-Example.xml",
 		],
 		iaExamples: [

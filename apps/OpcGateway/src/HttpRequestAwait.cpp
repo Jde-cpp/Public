@@ -95,11 +95,13 @@ namespace Jde::Opc::Gateway{
 				NodeId nodeId{  Json::AsObject(jNodes[i]) };
 				if( auto existingValue = values.find(nodeId); existingValue!=values.end() ){
 					THROW_IFX( existingValue->second.status, UAClientException(existingValue->second.status, _client->Handle(), nodeId.ToString(), _sl) );
-					auto dataValue = existingValue->second;
-					if( !dataValue.value.type )
-						dataValue.value.type = ( co_await ReadAwait{nodeId, UA_ATTRIBUTEID_DATATYPE, _client} ).ScalerDataType();
+					auto dataValue = move(existingValue->second);
+					if( !dataValue.value.type ){
+						auto type = ( co_await ReadAwait{nodeId, UA_ATTRIBUTEID_DATATYPE, _client} ).ScalerDataType();
+						dataValue.value.type = move(type);
+					}
 					dataValue.Set( jValues.at(i) );
-					values.emplace( move(nodeId), move(dataValue) );
+					existingValue->second = move(dataValue);
 				}
 				else
 					throw RestException<http::status::bad_request>( SRCE_CUR, move(_request), "Node {} not found.", serialize(nodeId.ToString()) );

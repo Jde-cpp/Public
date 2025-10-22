@@ -34,7 +34,7 @@ namespace Jde::Opc::Server {
 		α GetTypeDef( const NodeId& id, SRCE )ε->sp<ObjectType>;
 		α GetTypeDef( NodePK pk, SRCE )ε->sp<ObjectType>;
 		α GetVariable( NodePK pk, SRCE )ε->const Variable&;
-
+		α Namespaces()ι->flat_map<uint,string>;
 		α AddConstructor( UA_NodeId nodeId )ε->void;
 		α AddConstructor( NodeId nodeId, flat_map<BrowseNamePK, Variant>&& values )ε->void;
 		α AddObject( Object object, SRCE )ε->Object;

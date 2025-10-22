@@ -286,4 +286,13 @@ namespace Jde::Opc::Server {
 		THROW_IFSL( p==_variables.end(), "({})Variable not found", Ƒ("{:x}", pk) );
 		return p->second;
 	}
+	α UAServer::Namespaces()ι->flat_map<uint,string>{
+		flat_map<uint,string> y;
+		UA_String ns;
+		for( uint i=0; !UA_Server_getNamespaceByIndex(_ua, i, &ns); ++i ){
+			y.emplace( i, Opc::ToString(ns) );
+			UA_String_clear( &ns );
+		}
+		return y;
+	}
 }
