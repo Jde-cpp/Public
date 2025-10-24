@@ -4,7 +4,6 @@
 
 namespace Jde::Opc::Gateway{
 	struct CallResponse final : UA_CallResponse{
-//		CallResponse():UA_CallResponse{}{}
 		CallResponse( CallResponse&& x )ι;
 		CallResponse( UA_CallResponse&& x )ι;
 		~CallResponse(){ UA_CallResponse_clear(this); }
@@ -15,24 +14,25 @@ namespace Jde::Opc::Gateway{
 
 	struct ΓOPC CallAwait : TAwaitEx<CallResponse,TAwait<sp<UAClient>>::Task>, boost::noncopyable{
 		using base = TAwaitEx<CallResponse,TAwait<sp<UAClient>>::Task>;
-		CallAwait( QL::MutationQL&& req, sp<Web::Server::SessionInfo> session, SRCE )ι:base{sl}, _ql{move(req)}, _session{move(session)}{}
+		CallAwait( QL::MutationQL&& req, jobject variables, sp<Web::Server::SessionInfo> session, SRCE )ι:base{sl}, _ql{move(req)}, _session{move(session)}, _variables{variables}{}
 
 		α Execute()ι->TAwait<sp<UAClient>>::Task override;
-//		Ω OnResponse( UA_Client* client, void* userdata, UA_UInt32 requestId, UA_ReadResponse* rr )ι->void;
 		α await_resume()ι->CallResponse;
 	private:
 		sp<UAClient> _client;
 		QL::MutationQL _ql;
 		RequestId 	_requestId{};
 		sp<Web::Server::SessionInfo> _session;
+		jobject _variables;
 	};
 	struct JCallAwait : TAwaitEx<jvalue,TAwait<CallResponse>::Task>, boost::noncopyable{
 		using base = TAwaitEx<jvalue,TAwait<CallResponse>::Task>;
-		JCallAwait( QL::MutationQL&& req, sp<Web::Server::SessionInfo> session, SRCE )ι:base{sl}, _ql{move(req)}, _session{move(session)}{}
+		JCallAwait( QL::MutationQL&& req, jobject variables, sp<Web::Server::SessionInfo> session, SRCE )ι:base{sl}, _ql{move(req)}, _session{move(session)}, _variables{variables}{}
 
 		α Execute()ι->TAwait<CallResponse>::Task override;
 	private:
 		QL::MutationQL _ql;
 		sp<Web::Server::SessionInfo> _session;
+		jobject _variables;
 	};
 }

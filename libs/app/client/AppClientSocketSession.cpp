@@ -86,19 +86,19 @@ namespace Client{
 	// 	let requestId = NextRequestId();
 	// 	return ClientSocketAwait<Web::FromServer::SessionInfo>{ ToString(FromClient::Session(move(jwt), requestId)), requestId, shared_from_this(), sl };
 	// }
-	α AppClientSocketSession::Query( string&& q, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
+	α AppClientSocketSession::Query( string&& q, jobject variables, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]GraphQL: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
 
-		return ClientSocketAwait<jvalue>{ ToString(FromClient::Query(move(q), requestId, returnRaw)), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<jvalue>{ FromClient::Query(move(q), move(variables), requestId, returnRaw), requestId, shared_from_this(), sl };
 	}
 	concurrent_flat_map<RequestId, std::pair<sp<QL::IListener>,vector<QL::Subscription>>> _subscriptionRequests;
-	α AppClientSocketSession::Subscribe( string&& q, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
+	α AppClientSocketSession::Subscribe( string&& q, jobject variables, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
-		auto subscriptions = QL::ParseSubscriptions( q, _appClient->SubscriptionSchemas, sl );
+		auto subscriptions = QL::ParseSubscriptions( q, variables, _appClient->SubscriptionSchemas, sl );
 		_subscriptionRequests.emplace( requestId, make_pair(listener, move(subscriptions)) );
-		return ClientSocketAwait<jarray>{ ToString(FromClient::Subscription(move(q), requestId)), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<jarray>{ FromClient::Subscription(move(q), move(variables), requestId), requestId, shared_from_this(), sl };
 	}
 
 	template<class T,class... Args> Ω resume( std::any&& hAny, T&& v/*, fmt::format_string<Args const&...>&& m="", const Args&... args*/ )ι->void{

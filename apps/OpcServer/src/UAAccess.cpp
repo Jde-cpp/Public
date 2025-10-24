@@ -228,7 +228,7 @@ namespace Jde::Opc::Server{
 				UAε( config->sessionPKI.verifyCertificate(&config->sessionPKI, &userToken->certificateData) );
 				auto publicKey = Crypto::ExtractPublicKey( std::span<byte>{(byte*)userToken->certificateData.data, userToken->certificateData.length} );
 				let exp = publicKey.ExponentInt();
-				let user = AppClient()->QuerySync( Ƒ("user( modulus: \"{}\", exponent: {} ){{id target name}}", publicKey.ModulusHex(), exp) );
+				let user = AppClient()->QuerySync( Ƒ("user( modulus: \"{}\", exponent: {} ){{id target name}}", publicKey.ModulusHex(), exp), {} );
 				THROW_IF( user.empty(), "Certificate user not found: modulus: {}, exponent: {}", publicKey.ModulusHex(), exp );
 				*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, QL::AsId<UserPK::Type>(user) };
 			}

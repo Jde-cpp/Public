@@ -5,7 +5,7 @@ import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
 import {MatSelectModule} from '@angular/material/select';
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
 import { Gateway, GatewayService, SubscriptionResult } from '../../services/gateway.service';
-import { DateUtils, IErrorService, ProtoUtilities} from 'jde-framework'
+import { DateUtils, IErrorService, ProtoUtils, Timestamp} from 'jde-framework'
 import { EAccessLevel, ETypes } from '../../model/types';
 import {  MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
@@ -14,7 +14,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { NodePageData } from '../../services/resolvers/node.resolver';
 import { NodeRoute } from '../../model/NodeRoute';
 import { OpcNodeRouteService } from '../../services/routes/opc-node-route.service';
-import { Timestamp, Value, toString } from '../../model/Value';
+import { Value, toString } from '../../model/Value';
 import { ENodeClass, Variable, UaNode }  from '../../model/Node';
 import { ServerCnnctn } from '../../model/ServerCnnctn';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -69,7 +69,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 	}
 
 	toDate( value:Timestamp ):Date{
-		return DateUtils.asUtc( ProtoUtilities.toDate(value) );
+		return DateUtils.asUtc( ProtoUtils.toDate(value) );
 	}
 
 	toObject( x:ENodeClass ):string{ return ENodeClass[x]; }
@@ -163,7 +163,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 	async dateInput( n:Variable, e:MatDatepickerInputEvent<Date, any> ){
 		try {
 			let date = DateUtils.beginningOfDay( e.value );
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtilities.fromDate(date) );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(date) );
 			debugger;
 		}
 		catch (err) {
@@ -173,7 +173,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 	}
 	async changeDate( n:Variable, e:Event ){
 		try {
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtilities.fromDate(<Date>e.target["value"]) );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(<Date>e.target["value"]) );
 			debugger;
 		}
 		catch (err) {

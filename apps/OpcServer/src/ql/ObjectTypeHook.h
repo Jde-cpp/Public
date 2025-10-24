@@ -4,6 +4,6 @@
 namespace Jde::QL{ struct MutationQL; struct TableQL; }
 namespace Jde::Opc::Server{
 	struct ObjectTypeHook final : QL::IQLHook{
-		α InsertBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult override;
+		α InsertBefore( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι->HookResult override;
 	};
 }

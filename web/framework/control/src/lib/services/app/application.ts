@@ -1,4 +1,4 @@
-import {ProtoUtilities} from '../../utilities/protoUtilities'
+import {ProtoUtils, Timestamp} from '../../utils/protoUtils'
 import { DatePipe } from '@angular/common';
 
 import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
@@ -23,8 +23,8 @@ export class AppStatus{
 	logLevelDefaultFile:ELogLevel;
 	name:string;
 	status:FromServer.IStatus
-	get instanceId():number{ return ProtoUtilities.toNumber(this.status ? this.status.instanceId : 0); }
-	get startTime():Date|null{ return ProtoUtilities.toDate(this.status?.startTime); }
+	get instanceId():number{ return ProtoUtils.toNumber(this.status ? this.status.instanceId : 0); }
+	get startTime():Date|null{ return ProtoUtils.toDate(<Timestamp>this.status?.startTime); }
 	get startTimeString():string{
 		if( !this.startTime )
 			return "Stopped";
@@ -38,7 +38,7 @@ export class AppStatus{
 			result = pipe.transform( startTime, 'shortDate' );
 		return result;
 	}
-	get memory():number{ return this.status.memory ? ProtoUtilities.toNumber(this.status.memory) : 0; }
+	get memory():number{ return this.status.memory ? ProtoUtils.toNumber(this.status.memory) : 0; }
 	get memoryString():string{
 		var value = this.memory;
 		var suffix = "";

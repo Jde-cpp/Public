@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
-import { AppService, AuthStore, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Type } from 'jde-framework';
+import { AppService, AuthStore, Duration, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Timestamp, Type } from 'jde-framework';
 import { EProvider, User } from 'jde-spa';
 
 
@@ -18,7 +18,7 @@ import { NodeKey, NodeId } from '../model/NodeId';
 import { ENodeClass, ObjectType, OpcObject, UaNode, Variable } from '../model/Node';
 import { OpcId, StatusCode } from '../model/types';
 import { ExNodeId } from '../model/ExNodeId';
-import { Duration, Timestamp, toValue, Value } from '../model/Value';
+import { toValue, Value } from '../model/Value';
 import { Enum } from '../model/Enum';
 
 interface IError{ requestId:number; message: string; }

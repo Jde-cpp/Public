@@ -121,7 +121,7 @@ namespace Jde::DB{
 		forEachDir( "/dbServers/dataPaths", ".mutation", prefixes, [this](const fs::path& file){
 			let text = IO::Load( file );
 			INFO( "Mutation: '{}'", file.string() );
-			_ql->Upsert( text, {UserPK::System} );
+			_ql->Upsert( text, {}, {UserPK::System} );
 		});
 	}
 

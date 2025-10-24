@@ -19,8 +19,8 @@ namespace Jde::QL{
 
 	template<class T=uint32> α FindId( const jobject& j )ι->T;
 	α Configure( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ε->sp<LocalQL>;
-	α Parse( string query, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->RequestQL;
-	α ParseSubscriptions( string query, const vector<sp<DB::AppSchema>>& schemas, SRCE )ε->vector<Subscription>;
+	α Parse( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->RequestQL;
+	α ParseSubscriptions( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, SRCE )ε->vector<Subscription>;
 	α SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted=nullopt )ε->optional<DB::Statement>;
 }
 namespace Jde{

@@ -23,6 +23,7 @@ namespace Jde::Opc::Gateway{
 		α Validate( Handle uahandle, SL sl )ε->void;
 		α GetJson()ι{ flat_map<NodeId, jobject> nodes; SetJson(nodes); return nodes; }
 		α SetJson( flat_map<NodeId, jobject>& nodes )ι->void;
+		α ScalerJson()ι->jobject;
 		optional<ReadRequest> Request;
 	};
 

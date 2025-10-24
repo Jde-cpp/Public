@@ -6,14 +6,14 @@
 
 using Jde::Proto::ToBytes;
 namespace Jde::App::FromClient{
-	Ω setMessage( RequestId requestId, function<void(PFromClient::Message&)> f ){
+	Ω setMessage( RequestId requestId, function<void(PFromClient::Message&)> f )ι->PFromClient::Transmission{
 		PFromClient::Transmission t;
 		auto& m = *t.add_messages();
 		m.set_request_id( requestId );
 		f( m );
 		return t;
 	}
-	Ω transString( RequestId requestId, function<void(PFromClient::Message&)> f ){
+	Ω transString( RequestId requestId, function<void(PFromClient::Message&)> f )ι->string{
 		auto t = setMessage( requestId, f );
 		return Jde::Proto::ToString( t );
 	}
@@ -71,13 +71,15 @@ namespace Jde::App{
 
 		return t;
 	}
-	α FromClient::Query( string query, RequestId requestId, bool returnRaw )ι->PFromClient::Transmission{
-		return setMessage( requestId, [&](auto& m){
+	α FromClient::Query( string query, jobject variables, RequestId requestId, bool returnRaw )ι->string{
+		return transString( requestId, [&](auto& m){
 			auto& request = *m.mutable_query();
 			request.set_text( query );
 			request.set_return_raw( returnRaw );
+			*request.mutable_variables() = serialize( move(variables) );
 		} );
 	}
+
 	α FromClient::Jwt( RequestId requestId )ι->StringTrans{
 		return transString( requestId, [&](auto& m){ m.set_request_type( Proto::FromClient::ERequestType::Jwt );} );
 	}
@@ -105,9 +107,11 @@ namespace Jde::App{
 		});
 	}
 
-	α FromClient::Subscription( string&& query, RequestId requestId )ι->PFromClient::Transmission{
-		return setMessage( requestId, [&](auto& m){
-			*m.mutable_subscription() = move( query );
+	α FromClient::Subscription( string&& query, jobject variables, RequestId requestId )ι->string{
+		return transString( requestId, [&](auto& m){
+			auto& sub = *m.mutable_subscription();
+			sub.set_text( move(query) );
+			*sub.mutable_variables() = serialize(move(variables));
 		});
 	}
 

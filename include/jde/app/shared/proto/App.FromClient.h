@@ -12,13 +12,13 @@ namespace Jde::App::FromClient{
 	Φ Exception( exception&& e, RequestId requestId=0 )ι->PFromClient::Transmission;
 	Φ Exception( string&& e, RequestId requestId )ι->PFromClient::Transmission;
 	Φ Jwt( RequestId requestId )ι->StringTrans;
-	Φ Query( string query, RequestId requestId, bool returnRaw=true )ι->PFromClient::Transmission;
+	Φ Query( string query, jobject variables, RequestId requestId, bool returnRaw=true )ι->string;
 	Φ Instance( str application, str instanceName, SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission;
 	Φ ToStatus( vector<string>&& details )ι->PFromClient::Status;
 	Φ ToStatus( AppPK appId, AppInstancePK instanceId, str hostName, App::Proto::FromClient::Status&& input )ι->PFromClient::Status;
 	Φ Status( vector<string>&& details )ι->PFromClient::Transmission;
 	Φ Session( SessionPK sessionId, RequestId requestId )ι->StringTrans;
-	Φ Subscription( string&& query, RequestId requestId )ι->PFromClient::Transmission;
+	Φ Subscription( string&& query, jobject variables, RequestId requestId )ι->string;
 	Φ LogEntryClient( Logging::Entry&& m )ι->Log::Proto::LogEntryClient;
 	Φ LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile;
 	Φ FromLogEntry( Log::Proto::LogEntryClient&& m )ι->Logging::Entry;

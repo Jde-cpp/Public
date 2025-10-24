@@ -7,7 +7,7 @@ import { ComponentPageTitle } from 'jde-spa';
 import { EnumValue, IGraphQL } from '../../../services/IGraphQL';
 import { TableSchema } from '../../../model/ql/schema/TableSchema';
 import { Field, FieldKind } from '../../../model/ql/schema/Field';
-import { StringUtils } from '../../../utilities/StringUtils';
+import { StringUtils } from '../../../utils/StringUtils';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipGrid, MatChipsModule } from '@angular/material/chips';

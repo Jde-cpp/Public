@@ -1,4 +1,4 @@
-import { ProtoUtilities } from '../../utilities/protoUtilities';
+import { ProtoUtils, Timestamp } from '../../utils/protoUtils';
 import {ApplicationStrings} from './Application';
 import { Guid } from '../../model/Guid';
 
@@ -7,16 +7,16 @@ import * as LogProto from '../../proto/Log'; import Log = LogProto.Jde.App.Log.P
 
 export class TraceEntry{
 	constructor( trace:FromServer.ITrace, private applicationStrings:ApplicationStrings ){
-		this.id = ProtoUtilities.toNumber( trace.id );
-		this.instanceId = ProtoUtilities.toNumber( trace.instanceId );
-		this.time = new Date( ProtoUtilities.toDate(trace.time) );
+		this.id = ProtoUtils.toNumber( trace.id );
+		this.instanceId = ProtoUtils.toNumber( trace.instanceId );
+		this.time = new Date( ProtoUtils.toDate(<Timestamp>trace.time) );
 		this.level = trace.level;
 		this.messageId = new Guid(trace.messageId).toString();
 		this.fileId = new Guid(trace.fileId).toString();
 		this.functionId = new Guid(trace.functionId).toString();
 		this.lineNumber = trace.line;
 		this.userId = trace.userPk;
-		this.threadId = ProtoUtilities.toNumber(trace.threadId);
+		this.threadId = ProtoUtils.toNumber(trace.threadId);
 		for( let variable of trace.args )
 			this.variables.push( variable );
 	}

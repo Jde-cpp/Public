@@ -26,11 +26,11 @@ namespace Jde::Opc::Server{
 			for( let& file : _files ){
 				INFOT( ELogTags::Startup, "Mutation: '{}'", file.string() );
 				let text = IO::Load( file );
-				auto requests = QL::Parse( move(text), Schemas() ); THROW_IF( !requests.IsMutation(), "Query is not a mutation" );
+				auto requests = QL::Parse( move(text), {}, Schemas() ); THROW_IF( !requests.IsMutation(), "Query is not a mutation" );
 				for( auto&& m : requests.Mutations() ){
 					m.Args["$silent"] = true;
 					try{
-						y.push_back( co_await QL::QLAwait<jvalue>{move(m), {UserPK::System}} );
+						y.push_back( co_await QL::QLAwait<jvalue>{move(m), {}, {UserPK::System}} );
 					}
 					catch( IException& )//assume already exists
 					{}

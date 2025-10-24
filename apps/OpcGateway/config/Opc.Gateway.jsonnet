@@ -1,14 +1,18 @@
 local args = import 'args.libsonnet';
 {
+	gateway:{
+		pingInterval: "PT30S",
+		ttl: "PT2M"
+	},
 	logging:{
 		spd:{
 			defaultLevel:: "Information",
 			tags: {
 				trace:[ "app", "browse", "ql", "access", "opc.access", "test",
 					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
-					"uaSecure","uaSession", "uaServer", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery"
+					"uaSecure","uaSession", "uaServer", "uaUser", "uaSecurity", "uaPubSub", "uaDiscovery"
 				],
-				debug:["settings"],
+				debug:["settings", "uaEvent"],
 				information:[
 					"uaNet","uaClient",
 					"opc.read", "opc.monitoring", "opc.browse", "app.processingLoop", "opc.monitoring.pedantic"

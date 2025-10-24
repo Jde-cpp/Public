@@ -158,8 +158,8 @@ namespace Jde::App{
 		TRACET( ELogTags::App, "[{:x}]RemoveSession erased: {}", instancePK, erased );
 	}
 
-	α Server::SubscribeLogs( string&& qlText, sp<ServerSocketSession> session )ε->void{
-		auto ql = QL::Parse( qlText, Schemas() );
+	α Server::SubscribeLogs( string&& qlText, jobject variables, sp<ServerSocketSession> session )ε->void{
+		auto ql = QL::Parse( qlText, variables, Schemas() );
 		auto tables = ql.IsQueries() ? move(ql.Queries()) : vector<QL::TableQL>{};
 		THROW_IF( tables.size()!=1, "Invalid query, expecting single table" );
 		auto table = move( tables.front() );

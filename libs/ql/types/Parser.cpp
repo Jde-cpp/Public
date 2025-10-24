@@ -9,7 +9,7 @@ namespace Jde{
 	flat_set<string> _systemTables{};
 	α QL::SetSystemTables( flat_set<string>&& x )ι->void{ _systemTables = move(x); }
 
-	α QL::Parse( string query, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL /*sl*/ )ε->RequestQL{
+	α QL::Parse( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL /*sl*/ )ε->RequestQL{
 		sv trimmed = Str::Trim( query );//TODO move(query).
 		Parser parser{ string{trimmed.starts_with("{") ? trimmed.substr(1) : trimmed}, "{}()," };
 		auto name = parser.Next();
@@ -19,19 +19,19 @@ namespace Jde{
 			name = parser.Next();
 		}
 		if( name=="subscription" )
-			return RequestQL{ parser.LoadSubscriptions(schemas) };
+			return RequestQL{ parser.LoadSubscriptions(schemas), variables };
 		else if( name=="unsubscribe" )
-			return RequestQL{ parser.LoadUnsubscriptions() };
+			return RequestQL{ parser.LoadUnsubscriptions(), variables };
 		else if( MutationQL::IsMutation(name) ){
 			//returnRaw = name!="mutation"; should be what parameter is
 			if( parser.Peek()=="{" )
 				parser.Next();
-			return RequestQL{ {parser.LoadMutations(name=="mutation" ? parser.Next() : name, returnRaw, schemas)} };
+			return RequestQL{ {parser.LoadMutations(name=="mutation" ? parser.Next() : name, returnRaw, schemas)}, variables };
 		}else
-			return RequestQL{ parser.LoadTables(move(name), schemas, returnRaw) };
+			return RequestQL{ parser.LoadTables(move(name), schemas, returnRaw), variables };
 	}
-	α QL::ParseSubscriptions( string query, const vector<sp<DB::AppSchema>>& schemas, SL sl )ε->vector<Subscription>{
-		auto request = Parse( move(query), schemas, true, sl ); THROW_IFSL( !request.IsSubscription(), "Expected subscription query." );
+	α QL::ParseSubscriptions( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, SL sl )ε->vector<Subscription>{
+		auto request = Parse( move(query), variables, schemas, true, sl ); THROW_IFSL( !request.IsSubscription(), "Expected subscription query." );
 		return request.Subscriptions();
 	}
 }
@@ -119,6 +119,17 @@ namespace Jde::QL{
 		y += ch;
 		return i;
 	}
+	Ω parseVariable( sv json, string& y )ε->uint{
+		uint i=0;
+		char ch = json[i++];
+		ASSERT( ch=='$' );
+		y += "\"§";
+		y += ch;
+		for( ch=json[i]; (isalnum(ch) || ch=='_') && i<json.size(); ch = json[++i] )
+			y += ch;
+		y += "\"";
+		return i;
+	}
 	Ω parseObject( sv json, string& y )ε->uint;
 	Ω parseValue( sv json, string& y )ε->uint{
 		uint i=0;
@@ -130,6 +141,8 @@ namespace Jde::QL{
 			i += parseArray( json.substr(i), y );
 		else if( ch=='"' )
 			i += parseString( json.substr(i), y );
+		else if ( ch=='$' )
+			i += parseVariable( json.substr(i), y );
 		else if( ch=='f' ){
 			THROW_IF( json.size()-i<6, "Unexpected end vs '{}' @ '{}'.", json, i );
 			let false_ = json.substr( i, 5 );

@@ -11,7 +11,7 @@ namespace Jde::Opc::Gateway{
 	using Jde::QL::Hook::Operation;
 
 	struct HookAwait final: TAwait<jvalue>{
-		HookAwait( const QL::MutationQL& m, UserPK executer, Operation op, SL sl )ι: TAwait<jvalue>{sl}, _mutation{m}, _executer{executer}, _op{op}{}
+		HookAwait( const QL::MutationQL& m, jobject variables, UserPK executer, Operation op, SL sl )ι: TAwait<jvalue>{sl}, _mutation{m}, _executer{executer}, _op{op}, _variables{variables}{}
 		α Suspend()ι->void override{ Execute(); }
 	private:
 		α Execute()ι->TAwait<vector<ServerCnnctn>>::Task;
@@ -19,6 +19,7 @@ namespace Jde::Opc::Gateway{
 		const QL::MutationQL& _mutation;
 		UserPK _executer;
 		Operation _op;
+		jobject _variables;
 	};
 
 	α HookAwait::Execute()ι->ServerCnnctnAwait::Task{
@@ -52,16 +53,16 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α OpcQLHook::InsertBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.TableName()=="server_connections" /*|| m.TableName()=="opc_clients"*/ ? mu<HookAwait>( m, userPK, Operation::Insert | Operation::Before, sl ) : nullptr;
+	α OpcQLHook::InsertBefore( const QL::MutationQL& m, jobject variables, UserPK userPK, SL sl )ι->HookResult{
+		return m.TableName()=="server_connections" /*|| m.TableName()=="opc_clients"*/ ? mu<HookAwait>( m, variables, userPK, Operation::Insert | Operation::Before, sl ) : nullptr;
 	}
-	α OpcQLHook::InsertFailure( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.TableName()=="server_connections" /*|| m.TableName()=="opc_clients"*/ ? mu<HookAwait>( m, userPK, Operation::Insert | Operation::Failure, sl ) : nullptr;
+	α OpcQLHook::InsertFailure( const QL::MutationQL& m, jobject variables, UserPK userPK, SL sl )ι->HookResult{
+		return m.TableName()=="server_connections" /*|| m.TableName()=="opc_clients"*/ ? mu<HookAwait>( m, variables, userPK, Operation::Insert | Operation::Failure, sl ) : nullptr;
 	}
-	α OpcQLHook::PurgeBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.TableName()=="server_connections" /*|| m.TableName()=="opc_clients"*/ ? mu<HookAwait>( m, userPK, Operation::Purge | Operation::Before, sl ) : nullptr;
+	α OpcQLHook::PurgeBefore( const QL::MutationQL& m, jobject variables, UserPK userPK, SL sl )ι->HookResult{
+		return m.TableName()=="server_connections" /*|| m.TableName()=="opc_clients"*/ ? mu<HookAwait>( m, variables, userPK, Operation::Purge | Operation::Before, sl ) : nullptr;
 	}
-	α OpcQLHook::PurgeFailure( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.TableName()=="server_connections" /*|| m.TableName()=="opc_clients"*/ ? mu<HookAwait>( m, userPK, Operation::Purge | Operation::Failure, sl ) : nullptr;
+	α OpcQLHook::PurgeFailure( const QL::MutationQL& m, jobject variables, UserPK userPK, SL sl )ι->HookResult{
+		return m.TableName()=="server_connections" /*|| m.TableName()=="opc_clients"*/ ? mu<HookAwait>( m, variables, userPK, Operation::Purge | Operation::Failure, sl ) : nullptr;
 	}
 }

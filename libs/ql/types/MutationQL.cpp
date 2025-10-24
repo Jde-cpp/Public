@@ -46,14 +46,11 @@ namespace Jde::QL{
 		return Ƒ( "{}({}){}", CommandName, serialize(Args), ResultRequest ? ResultRequest->ToString() : "" );
 	}
 
-	α MutationQL::FindParam( sv name )ι->jvalue*{
-		return Json::FindValue( Args, name );
-	}
-	α MutationQL::GetParam( sv name, SL sl )ε->jvalue&{
-		auto p = FindParam( name );
-		THROW_IFSL( !p, "Could not find param '{}' in '{}'", name, serialize(Args) );
-		return *p;
-	}
+	// α MutationQL::GetParam( sv name, const jobject& variables, SL sl )Ε->const jvalue&{
+	// 	auto p = FindParam( name, variables );
+	// 	THROW_IFSL( !p, "Could not find param '{}' in '{}'", name, serialize(Args) );
+	// 	return *p;
+	// }
 
 	α MutationQL::GetKey(SL sl)ε->DB::Key{
 		let y = FindKey();
@@ -64,7 +61,7 @@ namespace Jde::QL{
 		optional<DB::Key> y;
 		if( let id = FindId<uint>(); id )
 			y = DB::Key{ *id };
-		else if( let target = FindParam("target"); target )
+		else if( let target = FindPtr("target"); target )
 			y = DB::Key{ Json::AsString(move(*target)) };
 		return y;
 	}

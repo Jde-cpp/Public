@@ -1,5 +1,5 @@
 import {Sort} from '@angular/material/sort';
-import { IAssignable } from '../../utilities/settings';
+import { IAssignable } from '../../utils/settings';
 
 import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
 import * as LogProto from '../../proto/Log'; import Log = LogProto.Jde.App.Log.Proto;

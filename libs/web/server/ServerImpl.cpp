@@ -55,8 +55,9 @@ namespace Server{
 		try{
 			let returnRaw = req.Params().contains("raw");
 			auto& query = req["query"]; THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
+			auto variables = Json::AsObject( parse(req["variables"]) );
 			req.LogRead( query );
-			auto result = co_await QL::QLAwait{ move(query), req.UserPK(), schemas, returnRaw };
+			auto result = co_await QL::QLAwait{ move(query), move(variables), req.UserPK(), schemas, returnRaw };
 			jobject y{ {"data", result} };
 			send( move(req), move(stream), move(y), contentType );
 		}
@@ -69,6 +70,10 @@ namespace Server{
 				send( RestException<http::status::bad_request>{move(e), move(req), "Query parsing failed."}, move(stream), contentType );
 			else
 				send( RestException{move(e), move(req), "Query failed."}, move(stream), contentType );
+			co_return;
+		}
+		catch( exception& e ){
+			send( RestException{ SRCE_CUR, move(req), "Query failed: {}", e.what() }, move(stream), contentType );
 			co_return;
 		}
 	}

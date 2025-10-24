@@ -16,7 +16,7 @@ namespace Jde::Web::Server{
 
 		α AppServer()ι->sp<App::IApp>{ return _appServer; }
 		α AppServerLocal()ι->bool{ return _appServer->IsLocal(); }
-		α AppQueryAwait( string&& q, SL sl )ι->up<TAwait<jvalue>>{ return _appServer->Query<jvalue>( move(q), true, sl ); }
+		α AppQueryAwait( string&& q, jobject variables, SL sl )ι->up<TAwait<jvalue>>{ return _appServer->Query<jvalue>( move(q), move(variables), true, sl ); }
 		α CancelSignal()ι->sp<net::cancellation_signal>{ return _cancelSignal; }
 		α Context()ι->ssl::context&{ return _ctx; }
 		α NextRequestId()ι->uint32{ return _requestId.fetch_add(1, std::memory_order_relaxed); }

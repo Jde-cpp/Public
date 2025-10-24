@@ -24,13 +24,13 @@ namespace Jde::QL{
 	template<class T=jvalue>
 	struct QLAwait : TAwaitEx<T, TAwait<jvalue>::Task>{
 		using base = TAwaitEx<T, TAwait<jvalue>::Task>;
-		QLAwait( TableQL&& ql, UserPK executer, SRCE )ι:base{sl},_request{move(ql)}, _executer{executer}{}
-		QLAwait( TableQL&& ql, DB::Statement&& statement, UserPK executer, SRCE )ι:
-			base{sl}, _request{ move(ql) }, _statement{ move(statement) }, _executer{ executer }{}
-		QLAwait( MutationQL&& m, UserPK executer, SRCE )ι:
-			base{sl}, _request{{move(m)}}, _executer{executer}{}
-		QLAwait( string query, UserPK executer, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε:
-			base{sl}, _request{ Parse(move(query), schemas, returnRaw) }, _executer{ executer }{}
+		QLAwait( TableQL&& ql, jobject variables, UserPK executer, SRCE )ι:base{sl},_request{move(ql), move(variables)}, _executer{executer}{}
+		QLAwait( TableQL&& ql, jobject variables, DB::Statement&& statement, UserPK executer, SRCE )ι:
+			base{sl}, _request{ move(ql), move(variables) }, _statement{ move(statement) }, _executer{ executer }{}
+		QLAwait( MutationQL&& m, jobject variables, UserPK executer, SRCE )ι:
+			base{sl}, _request{{move(m)}, move(variables)}, _executer{executer}{}
+		QLAwait( string query, jobject variables, UserPK executer, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε:
+			base{sl}, _request{ Parse(move(query), variables, schemas, returnRaw) }, _executer{ executer }{}
 	private:
 		α Execute()ι->TAwait<jvalue>::Task override;
 		RequestQL _request;

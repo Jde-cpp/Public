@@ -50,7 +50,7 @@ namespace Jde::Access::Server{
 			Query.AddFilter( "is_group", true );
 			Query.ReturnRaw = true;
 			let onlyHaveId = Query.Columns.size()==1 && Query.Columns[0].JsonName=="id";
-			auto groups = !onlyHaveId && Query.Columns.size() ? co_await QL::QLAwait( move(Query), Executer, _sl ) : jobject{};
+			auto groups = !onlyHaveId && Query.Columns.size() ? co_await QL::QLAwait( move(Query), {}, Executer, _sl ) : jobject{};
 			if( membersQL ){
 				let& groupTable = GetTable( "group_members" );
 				haveId = membersQL->FindColumn( "id" );
@@ -77,7 +77,7 @@ namespace Jde::Access::Server{
 					statement->Where = QL::ToWhereClause( *membersQL, groupTable, membersQL->FindColumn("deleted")!=nullptr );
 					//statement->Where.Remove( "is_group" );
 					//statement->Where.Replace( "identities.", "members." );
-					auto membersResult = co_await QL::QLAwait( move(*membersQL), move(*statement), Executer, _sl );
+					auto membersResult = co_await QL::QLAwait( move(*membersQL), {}, move(*statement), Executer, _sl );
 					if( membersResult.is_array() )
 						members = move( membersResult.get_array() );
 					else if( membersResult.is_object() )
@@ -136,7 +136,7 @@ namespace Jde::Access::Server{
 		return {groupPK, memberPKs};
 	}
 
-	α GroupHook::AddBefore( const QL::MutationQL& m, UserPK /*executer*/, SL sl )ι->HookResult{
+	α GroupHook::AddBefore( const QL::MutationQL& m, jobject /*variables*/, UserPK /*executer*/, SL sl )ι->HookResult{
 		if( m.TableName()=="groupings" ){
 			auto [groupPK, memberPKs] = AddRemoveArgs( m );
 			try{

@@ -8,7 +8,7 @@ import {IGraphQL, EnumValue } from '../../../services/IGraphQL';
 import {Field} from '../../../model/ql/schema/Field';
 import {TableSchema}  from '../../../model/ql/schema/TableSchema';
 import {MetaObject}  from '../../../model/ql/schema/MetaObject';
-import {Settings} from '../../../utilities/settings'
+import {Settings} from '../../../utils/settings'
 
 import { ComponentPageTitle, DocItem, IRouteService, RouteService } from 'jde-spa';
 import { Subject } from 'rxjs';

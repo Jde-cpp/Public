@@ -10,7 +10,7 @@ import {App,AppStatus} from '../../services/app/application';
 import {AppService} from '../../services/app/app.service';
 import {ApplicationStrings} from './Application';
 import {LogSettings} from './Settings';
-import {Settings} from '../../utilities/settings';
+import {Settings} from '../../utils/settings';
 import { ComponentPageTitle } from 'jde-spa';
 import {IProfile} from '../../services/profile/IProfile';
 import {IErrorService} from '../../services/error/IErrorService';

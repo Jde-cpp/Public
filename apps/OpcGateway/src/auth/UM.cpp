@@ -13,7 +13,7 @@ namespace Jde::Opc::Gateway{
 		try{
 			let query = Ƒ( "provider(target:\"{}\", providerTypeId:{}){{ id }}", _opcId, (uint8)Access::EProviderType::OpcServer );
 			auto appClient = AppClient();
-			let j = co_await *appClient->QLServer()->QueryObject( query, appClient->UserPK() );
+			let j = co_await *appClient->QLServer()->QueryObject( query, {}, appClient->UserPK() );
 			let providerId = Json::FindNumber<Access::ProviderPK>( j, "id" ).value_or(0);
 			ResumeScaler( providerId );
 		}
@@ -39,7 +39,7 @@ namespace Jde::Opc::Gateway{
 		let q = Ƒ( "createProvider( target:\"{}\", providerType:\"OpcServer\" ){{id}}", target );
 		try{
 			auto appClient = AppClient();
-			let j = co_await *appClient->QLServer()->QueryObject( q, appClient->UserPK() );
+			let j = co_await *appClient->QLServer()->QueryObject( q, {}, appClient->UserPK() );
 			let newPK = QL::AsId<Access::ProviderPK>( j );
 			ResumeScaler( newPK );
 		}
@@ -61,7 +61,7 @@ namespace Jde::Opc::Gateway{
 		let q = Ƒ( "purgeProvider( id:{} )", providerPK );
 		try{
 			auto appClient = AppClient();
-			co_await *appClient->QLServer()->Query( q, appClient->UserPK() );
+			co_await *appClient->QLServer()->Query( q, {}, appClient->UserPK() );
 			ResumeScaler( providerPK );
 		}
 		catch( IException& e ){

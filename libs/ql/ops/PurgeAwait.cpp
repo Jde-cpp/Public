@@ -9,16 +9,17 @@
 #define let const auto
 
 namespace Jde::QL{
-	PurgeAwait::PurgeAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
+	PurgeAwait::PurgeAwait( sp<DB::Table> table, MutationQL mutation, jobject variables, UserPK userPK, SL sl )ι:
 		base{ sl },
 		_mutation{ move(mutation) },
 		_table{ table },
-		_userPK{ userPK }
+		_userPK{ userPK },
+		_variables{ variables }
 	{}
 
 	α PurgeAwait::Before()ι->MutationAwaits::Task{
 		try{
-			optional<jarray> result = co_await Hook::PurgeBefore( _mutation, _userPK );
+			optional<jarray> result = co_await Hook::PurgeBefore( _mutation, _variables, _userPK );
 			auto result0 = result ? result->if_contains(0) : nullptr;
 			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){
 				result0->get_object().erase( "complete" );
@@ -65,7 +66,7 @@ namespace Jde::QL{
 	}
 	α PurgeAwait::After( uint y )ι->MutationAwaits::Task{
 		try{
-			co_await Hook::PurgeAfter( _mutation, _userPK );
+			co_await Hook::PurgeAfter( _mutation, _variables, _userPK );
 			Resume( jvalue{y} );
 		}
 		catch( IException& e ){
@@ -74,7 +75,7 @@ namespace Jde::QL{
 	}
 	α PurgeAwait::After( up<IException>&& e )ι->MutationAwaits::Task{
 		try{
-			co_await Hook::PurgeFailure( _mutation, _userPK );
+			co_await Hook::PurgeFailure( _mutation, _variables, _userPK );
 			ResumeExp( move(*e) );
 		}
 		catch( IException& inner ){

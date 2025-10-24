@@ -32,7 +32,8 @@ message Instance{
 
 message Query{
 	string text=1;
-	bool return_raw=2;
+	string variables=2;
+	bool return_raw=3;
 }
 
 message Status{
@@ -68,7 +69,7 @@ message Message{
 		string subscribe_logs = 12;//subscribe to application logs.  TODO graphql
 		Jde.Proto.Exception exception = 13;
 		ERequestType request_type = 14;//Just the request id is needed.
-		string subscription = 15;
+		Query subscription = 15;
 		Unsubscription unsubscription = 16;
 
 		ForwardExecution forward_execution = 31;//webPage->appServer to call execute with creds.

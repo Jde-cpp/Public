@@ -14,11 +14,12 @@
 namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL };
 
-	AddRemoveAwait::AddRemoveAwait( sp<DB::Table> table, const MutationQL& mutation, UserPK userPK, SL sl )ι:
+	AddRemoveAwait::AddRemoveAwait( sp<DB::Table> table, const MutationQL& mutation, jobject variables, UserPK userPK, SL sl )ι:
 		base{ sl },
 		_mutation{ mutation },
 		_table{ table },
-		_userPK{ userPK }
+		_userPK{ userPK },
+		_variables{ variables }
 	{}
 
 	Ω getChildParentParams( sp<DB::Column> parentCol, sp<DB::Column> childCol, const jobject& input )ε->ChildParentParams{
@@ -74,7 +75,7 @@ namespace Jde::QL{
 	}
 	α AddRemoveAwait::AddAfter( jvalue v )ι->MutationAwaits::Task{
 		try{
-			co_await Hook::AddAfter( _mutation, _userPK );
+			co_await Hook::AddAfter( _mutation, _variables, _userPK );
 			Resume( move(v) );
 		}
 		catch( IException& e ){
@@ -99,7 +100,7 @@ namespace Jde::QL{
 	}
 	α AddRemoveAwait::RemoveAfter( jvalue v )ι->MutationAwaits::Task{
 		try{
-			co_await Hook::AddAfter( _mutation, _userPK );
+			co_await Hook::AddAfter( _mutation, _variables, _userPK );
 			Resume( move(v) );
 		}
 		catch( IException& e ){
@@ -108,7 +109,7 @@ namespace Jde::QL{
 	}
 	α AddRemoveAwait::AddBefore()ι->MutationAwaits::Task{
 		try{
-			co_await Hook::AddBefore( _mutation, _userPK );
+			co_await Hook::AddBefore( _mutation, _variables, _userPK );
 			Add();
 		}
 		catch( IException& e ){
@@ -117,7 +118,7 @@ namespace Jde::QL{
 	}
 	α AddRemoveAwait::AddHook()ι->MutationAwaits::Task{
 		try{
-			auto y = co_await Hook::Add(_mutation, _userPK);
+			auto y = co_await Hook::Add(_mutation, _variables, _userPK);
 			THROW_IF( !y, "Hook::Add returned null." );
 			TRACE( "AddHook::Add returned '{}'", serialize(*y) );
 			Resume( move(*y) );
@@ -128,7 +129,7 @@ namespace Jde::QL{
 	}
 	α AddRemoveAwait::RemoveHook()ι->MutationAwaits::Task{
 		try{
-			auto y = co_await Hook::Remove( _mutation, _userPK );
+			auto y = co_await Hook::Remove( _mutation, _variables, _userPK );
 			THROW_IF( !y, "Hook::Add returned null." );
 			Resume( move(*y) );
 		}

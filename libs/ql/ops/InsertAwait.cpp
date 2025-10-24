@@ -15,15 +15,16 @@ namespace Jde::QL{
 	Ω getEnumValue( const DB::Column& c, const QLColumn& qlCol, const jvalue& v )->Value;
 	α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>;
 
-	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL m, UserPK executer, SL sl )ι:
-		InsertAwait( table, move(m), false, executer, sl )
+	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL m, jobject variables, UserPK executer, SL sl )ι:
+		InsertAwait( table, move(m), variables, false, executer, sl )
 	{}
-	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL&& m, bool identityInsert, UserPK executer, SL sl )ι:
+	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL&& m, jobject variables, bool identityInsert, UserPK executer, SL sl )ι:
 		base{sl},
 		_executer{ executer },
 		_identityInsert{ identityInsert },
 		_mutation{ move(m) },
-		_table{ table }
+		_table{ table },
+		_variables{ variables }
 	{}
 
 	α InsertAwait::await_ready()ι->bool{
@@ -92,7 +93,7 @@ namespace Jde::QL{
 
 	α InsertAwait::InsertBefore()ι->MutationAwaits::Task{
 		try{
-			optional<jarray> result = co_await Hook::InsertBefore( _mutation, _executer );
+			optional<jarray> result = co_await Hook::InsertBefore( _mutation, _variables, _executer );
 			auto result0 = result ? result->if_contains(0) : nullptr;
 			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){
 				result0->get_object().erase( "complete" );
@@ -150,7 +151,7 @@ namespace Jde::QL{
 	α InsertAwait::InsertAfter( jarray&& result )ι->MutationAwaits::Task{
 		try{
 			let id = result.size() ? Json::FindNumber<uint>(result[0], "id").value_or(0) : 0;
-			co_await Hook::InsertAfter( id, _mutation, _executer );
+			co_await Hook::InsertAfter( id, _mutation, _variables, _executer );
 			Resume( move(result) );
 		}
 		catch( IException& e ){
@@ -159,7 +160,7 @@ namespace Jde::QL{
 	}
 	α InsertAwait::InsertFailure( exception e )ι->MutationAwaits::Task{
 		try{
-			co_await Hook::InsertFailure( _mutation, _executer );
+			co_await Hook::InsertFailure( _mutation, _variables, _executer );
 			ResumeExp( move(e) );
 		}
 		catch( IException& e2 ){

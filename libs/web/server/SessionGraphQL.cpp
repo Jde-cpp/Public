@@ -41,7 +41,7 @@ namespace Jde::Web::Server{
 				for( let& session : sessions )
 					inClause += std::to_string( session->UserPK.Value ) + ",";
 				auto q = "query{ users(id:["+inClause.substr(0, inClause.size()-1)+"]){id loginName provider{id name}} }";
-				users = Json::AsObject( co_await (*_appClient->Query<jvalue>(move(q), UserPK)) );
+				users = Json::AsObject( co_await (*_appClient->Query<jvalue>(move(q), {}, UserPK)) );
 				TRACET( _tags | ELogTags::Pedantic, "users={}"sv, serialize(users) );
 				for( let& vuser : Json::AsArrayPath(users, "data/users") ){
 					let& user = Json::AsObject(vuser);
@@ -83,7 +83,7 @@ namespace Jde::Web::Server{
 	}
 
 	struct PurgeSessionAwait final: TAwait<jvalue>{
-		PurgeSessionAwait( const QL::MutationQL& m, UserPK executer, SRCE )ι: TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer }{}
+		PurgeSessionAwait( const QL::MutationQL& m, jobject variables, UserPK executer, SRCE )ι: TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer }, _variables{ variables }{}
 		α await_resume()ε->jvalue;
 		α await_ready()ι->bool override;
 	private:
@@ -91,12 +91,13 @@ namespace Jde::Web::Server{
 		Jde::UserPK _executer;
 		jobject _result{ {"complete", true} };
 		up<IException> _exception;
+		jobject _variables;
 	};
 	α PurgeSessionAwait::await_ready()ι->bool{
 		//TODO check permissions
 		uint rows = 0;
 		try{
-			if( auto sessionId = _mutation.FindParam("id"); sessionId )
+			if( auto sessionId = _mutation.FindPtr("id"); sessionId )
 				rows = Sessions::Remove( Str::TryTo<SessionPK>(Json::AsString(*sessionId), nullptr, 16).value_or(0) ) ? 1 : 0;
 			_result["rowCount"] =	rows;
 		}
@@ -115,7 +116,7 @@ namespace Jde::Web::Server{
 		return query.JsonName.starts_with( "session" ) ? mu<SessionGraphQLAwait>( query, userPK, _appClient, sl ) : nullptr;
 	}
 
-	α SessionGraphQL::PurgeBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
-		return m.TableName()=="sessions" ? mu<PurgeSessionAwait>( m, executer, sl ) : nullptr;
+	α SessionGraphQL::PurgeBefore( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="sessions" ? mu<PurgeSessionAwait>( m, variables, executer, sl ) : nullptr;
 	}
 }

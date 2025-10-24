@@ -23,6 +23,9 @@ namespace Jde::Opc{
 }
 
 namespace Jde::Opc::Gateway{
+	extern Duration _pingInterval;
+	extern Duration _ttl;
+
 	StartupAwait::StartupAwait( jobject webServerSettings, jobject userName, SL sl )ι:
 		VoidAwait{sl},
 		_webServerSettings{move(webServerSettings)},
@@ -69,6 +72,8 @@ namespace Jde::Opc::Gateway{
 			Process::AddShutdownFunction( [](bool terminate){UAClient::Shutdown(terminate);} );
 			QL::Hook::Add( mu<OpcQLHook>() );
 
+			_pingInterval = Settings::FindDuration("/gateway/pingInterval").value_or( 1s );
+			_ttl = Settings::FindDuration("/gateway/ttl").value_or( 5min );
 			INFOT( ELogTags::App, "---Started {}---", "OPC Gateway" );
 			Resume();
 		}

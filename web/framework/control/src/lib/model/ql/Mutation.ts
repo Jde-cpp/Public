@@ -1,6 +1,6 @@
-import { assert, getEnumName } from '../../utilities/utils';
+import { assert, getEnumName } from '../../utils/utils';
 import { TypeName } from '../../services/IGraphQL';
-import { StringUtils } from '../../utilities/StringUtils';
+import { StringUtils } from '../../utils/StringUtils';
 
 export enum MutationType{
 		Create,

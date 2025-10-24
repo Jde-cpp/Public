@@ -55,7 +55,7 @@ namespace Jde::Opc::Gateway{
 			UA_Client_call_async(
 				*_client,
 				NodeId{ _ql.Args },
-				NodeId{ _ql.GetParam("method").as_object() },
+				NodeId{ _ql.Get<jobject>("method", _variables) },
 				jargs.size(),
 				args.data(),
 				callback,
@@ -78,7 +78,7 @@ namespace Jde::Opc::Gateway{
 
 	α JCallAwait::Execute()ι->TAwait<CallResponse>::Task{
 		try{
-			auto response = co_await CallAwait{ move(_ql), move(_session), _sl };
+			auto response = co_await CallAwait{ move(_ql), move(_variables), move(_session), _sl };
 			Resume( response.ToJson() );
 		}
 		catch( exception& e ){

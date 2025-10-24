@@ -7,7 +7,6 @@
 #include "async/ConnectAwait.h"
 #include "async/DataChanges.h"
 #include "async/ReadValueAwait.h"
-#include "async/Write.h"
 #include "auth/OpcServerSession.h"
 #include "types/ServerCnnctn.h"
 #include "types/MonitoringNodes.h"
@@ -31,7 +30,7 @@ namespace Jde::Opc::Gateway{
 		operator UA_Client* ()ι{ return _ptr; }
 		Ω Shutdown( bool terminate )ι->void;
 		Ω GetClient( string id, Credential cred, SRCE )ι{ return ConnectAwait{move(id), move(cred), sl}; }
-		Ω Find( str id, optional<Credential> cred )ι->sp<UAClient>;
+		Ω Find( str id, const Gateway::Credential& cred )ι->sp<UAClient>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
 		Ω RemoveClient( sp<UAClient>&& client )ι->bool;
@@ -43,7 +42,6 @@ namespace Jde::Opc::Gateway{
 
 		α SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void;
 		α SendReadRequest( const flat_set<NodeId>&& nodes, ReadValueAwait::Handle h )ι->void;
-		α SendWriteRequest( flat_map<NodeId,Value>&& values, WriteAwait::Handle h )ι->void;
 		α SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void;
 		α RequestDataTypeAttributes( const flat_set<NodeId>&& x, AttribAwait::Handle h )ι->void;
 		Ω ClearRequest( UA_Client* ua, RequestId requestId )ι->void;
@@ -83,7 +81,6 @@ namespace Jde::Opc::Gateway{
 		ServerCnnctn _opcServer;
 
 		concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
-		concurrent_flat_map<Jde::Handle, UARequestMulti<UA_WriteResponse>> _writeRequests;
 		concurrent_flat_map<Jde::Handle, UARequestMulti<NodeId>> _dataAttributeRequests;
 		vector<VoidAwait::Handle> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
 

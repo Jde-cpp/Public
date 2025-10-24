@@ -11,10 +11,10 @@ import {IGraphQL}  from '../../../services/IGraphQL';
 import {TableSchema} from '../../../model/ql/schema/TableSchema'
 import { MetaObject } from '../../../model/ql/schema/MetaObject';
 import {IProfile} from '../../../services/profile/IProfile';
-import {Settings} from '../../../utilities/settings';
+import {Settings} from '../../../utils/settings';
 import { MatTabsModule } from '@angular/material/tabs';
 import{ PageSettings } from '../model/PageSettings';
-import { clone } from '../../../utilities/utils';
+import { clone } from '../../../utils/utils';
 
 @Component( {
     selector: 'graph-ql-detail',

@@ -11,7 +11,6 @@
 #include "async/CreateSubscriptions.h"
 #include "async/DataChanges.h"
 #include "async/SetMonitoringMode.h"
-#include "async/Write.h"
 #include "uatypes/Browse.h"
 #include "uatypes/CreateMonitoredItemsRequest.h"
 #include "uatypes/uaTypes.h"
@@ -113,7 +112,7 @@ namespace Jde::Opc::Gateway{
 			lg _{_sessionAwaitableMutex};
 			_sessionAwaitables.emplace_back( move(h) );
 		}
-		Process( std::numeric_limits<RequestId>::max() );
+		Process( ConnectRequestId );
 	}
 	α UAClient::TriggerSessionAwaitables()ι->void{
 		vector<VoidAwait::Handle> handles;
@@ -131,12 +130,12 @@ namespace Jde::Opc::Gateway{
 		BREAK_IF( connectStatus );
 		if( auto client = sessionState == UA_SESSIONSTATE_ACTIVATED ? UAClient::TryFind(ua) : sp<UAClient>{}; client ){
 			client->TriggerSessionAwaitables();
-			client->ClearRequest( std::numeric_limits<RequestId>::max() );
+			client->ClearRequest( ConnectRequestId );
 		}
 		if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED || connectStatus==UA_STATUSCODE_BADSECURITYCHECKSFAILED || connectStatus == UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
 			_awaitingActivation.erase_if( [ua, sessionState,connectStatus]( sp<UAClient> client ){
 				if( client->UAPointer()!=ua )return false;
-				client->ClearRequest( std::numeric_limits<RequestId>::max() );//previous clear didn't have client
+				client->ClearRequest( ConnectRequestId );//previous clear didn't have client
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
 					{
 						ul _{ _clientsMutex };
@@ -203,7 +202,7 @@ namespace Jde::Opc::Gateway{
 		DBG( "[{:x}]Connecting to '{}', using '{}'", Handle(), Url(), Credential.ToString() );
 		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
 		_asyncRequest.SetParent( p );
-		Process( std::numeric_limits<RequestId>::max(), nullptr );
+		Process( ConnectRequestId, nullptr );
 	}
 
 	α UAClient::Process( RequestId requestId )ι->void{
@@ -277,28 +276,6 @@ namespace Jde::Opc::Gateway{
 		}
 		catch( UAException& e ){
 			Retry<ReadValueAwait::Handle>( [n=move(nodeIds)]( sp<UAClient>&& p, ReadValueAwait::Handle h )mutable{p->SendReadRequest( move(n), move(h) );}, move(e), shared_from_this(), move(h) );
-		}
-	}
-	α UAClient::SendWriteRequest( flat_map<NodeId,Value>&& values, WriteAwait::Handle h )ι->void{
-		if( values.empty() ){
-			h.promise().ResumeExp( Exception{"no nodes sent"}, move(h) );
-			return;
-		}
-		flat_map<UA_UInt32, NodeId> ids;
-		Gateway::RequestId firstRequestId{};
-		try{
-			for( auto&& [nodeId, value] : values ){
-				RequestId requestId{};
-				UAε( UA_Client_writeValueAttribute_async(_ptr, nodeId, &value.value, Write::OnResponse, (void*)(uint)firstRequestId, &requestId) );
-				if( !firstRequestId )
-					firstRequestId = requestId;
-				ids.emplace( requestId, nodeId );
-	 		}
-			_writeRequests.try_emplace( firstRequestId, UARequestMulti<UA_WriteResponse>{move(ids), shared_from_this()} );
-			Process( firstRequestId, move(h) );
-		}
-		catch( UAException& e ){
-			Retry<WriteAwait::Handle>( [n=move(values)]( sp<UAClient>&& p, auto h )mutable{p->SendWriteRequest( move(n), move(h) );}, move(e), shared_from_this(), h );
 		}
 	}
 	α UAClient::SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void{
@@ -425,11 +402,11 @@ namespace Jde::Opc::Gateway{
 		return {};
 	}
 
-	α UAClient::Find( str opcNK, optional<Gateway::Credential> cred )ι->sp<UAClient>{
+	α UAClient::Find( str opcNK, const Gateway::Credential& cred )ι->sp<UAClient>{
 		sl _{ _clientsMutex };
 		sp<UAClient> y;
 		if( auto creds = _clients.find(opcNK); creds!=_clients.end() ){
-			if( auto client = creds->second.find(*cred); client!=creds->second.end() )
+			if( auto client = creds->second.find(cred); client!=creds->second.end() )
 				y = client->second;
 		}
 		return y;

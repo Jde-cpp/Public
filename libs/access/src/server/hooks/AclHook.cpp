@@ -19,11 +19,12 @@ namespace Jde::Access::Server{
 //	α GetTable( str name )ε->sp<DB::View>;
 
 	struct AclQLAwait final : TAwait<jvalue>{
-		AclQLAwait( const QL::MutationQL& m, UserPK executer, uint pk, SL sl )ι:
+		AclQLAwait( const QL::MutationQL& m, jobject variables, UserPK executer, uint pk, SL sl )ι:
 			TAwait<jvalue>{ sl },
 			Mutation{ m },
 			PK{ pk },
-			Executer{ executer }
+			Executer{ executer },
+			Variables{ variables }
 		{}
 		α Suspend()ι->void override;
 		α InsertAcl()ι->void;
@@ -31,6 +32,7 @@ namespace Jde::Access::Server{
 		QL::MutationQL Mutation;
 		uint PK;
 		Jde::UserPK Executer;
+		jobject Variables;
 	private:
 		α Table()ε->const DB::View&{ return GetTable( "acl" ); }
 		α InsertPermission( const jobject& permission )ι->DB::ScalerAwait<PermissionPK>::Task;
@@ -53,7 +55,7 @@ namespace Jde::Access::Server{
 				Authorizer().TestAdmin( "roles", Executer, _sl );
 			}
 			else{
-				let resourcePK = co_await QL::QLAwait<jobject>( Ƒ("permissionRight(id:{}){{resource{{id deleted}}}}", *permissionPK), {UserPK::System}, {GetSchemaPtr()} );
+				let resourcePK = co_await QL::QLAwait<jobject>( Ƒ("permissionRight(id:{}){{resource{{id deleted}}}}", *permissionPK), {}, {UserPK::System}, {GetSchemaPtr()} );
 				Authorizer().TestAdmin( Json::AsNumber<ResourcePK>(resourcePK, "resource/id"), Executer, _sl );
 			}
 			THROW_IF( !permissionPK, "Could not find permissionRight or role id in '{}'", serialize(Mutation.Args) );
@@ -298,10 +300,10 @@ namespace Jde::Access::Server{
 			: nullptr;
 	}
 
-	α AclHook::PurgeBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
-		return m.TableName()=="acl" ? mu<AclQLAwait>( m, executer, 0, sl ) : nullptr;
+	α AclHook::PurgeBefore( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="acl" ? mu<AclQLAwait>( m, variables, executer, 0, sl ) : nullptr;
 	}
-	α AclHook::InsertBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
-		return m.TableName()=="acl" ? mu<AclQLAwait>( m, executer, 0, sl ) : nullptr;
+	α AclHook::InsertBefore( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="acl" ? mu<AclQLAwait>( m, variables, executer, 0, sl ) : nullptr;
 	}
 }

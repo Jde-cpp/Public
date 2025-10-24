@@ -9,7 +9,7 @@ import {IErrorService} from '../../services/error/IErrorService'
 import {IGraphQL, IQueryResult}  from '../../services/IGraphQL';
 import {TableSchema}  from '../../model/ql/schema/TableSchema';
 import {Field, FieldKind} from '../../model/ql/schema/Field';
-import {Settings} from '../../utilities/settings'
+import {Settings} from '../../utils/settings'
 import {PageSettings} from './model/PageSettings';
 
 import { ComponentPageTitle } from 'jde-spa';
@@ -19,7 +19,7 @@ import { MatIconButton } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { MatToolbar } from '@angular/material/toolbar';
 import { GraphQLTable } from './table/table';
-import { StringUtils } from '../../utilities/StringUtils';
+import { StringUtils } from '../../utils/StringUtils';
 
 @Component( {
 		selector: 'graph-ql-component',
@@ -55,7 +55,7 @@ export class GraphQLComponent implements AfterViewInit, OnInit, OnDestroy{
 		}
 		catch( e ){
 			console.log( e );
-			this.cnsl.show( e );
+			this.cnsl.error( e.toString(), (x)=>console.log(x) );
 		}
 	}
 	async load(){
@@ -70,7 +70,7 @@ export class GraphQLComponent implements AfterViewInit, OnInit, OnDestroy{
 			this.viewPromise = Promise.resolve(true);
 		}
 		catch( e ){
-			this.cnsl.show( e );
+			this.cnsl.error( e.toString(), (x)=>console.log(x) );
 			debugger;
 		}
 	}
@@ -97,7 +97,7 @@ export class GraphQLComponent implements AfterViewInit, OnInit, OnDestroy{
 			try{
 				this.router.navigate( routes );
 			}catch( e ){
-				this.cnsl.error( "Could not navigate to properties", e );
+				this.cnsl.error( "Could not navigate to properties", (x)=>console.log(x) );
 			}
 		}
 	}
@@ -116,7 +116,7 @@ export class GraphQLComponent implements AfterViewInit, OnInit, OnDestroy{
 				this.selection = null;
 		}
 
-		this.graphQL.mutation(`${type}${StringUtils.capitalize(this.type())}(\"id\":${this.selection.id})`).then( next ).catch( (e)=>{  this.cnsl.error(e.message); console.error( JSON.stringify(e) ); } );
+		this.graphQL.mutation(`${type}${StringUtils.capitalize(this.type())}(\"id\":${this.selection.id})`).then( next ).catch( (e)=>{  this.cnsl.error(e.message, (x)=>console.log(x)); console.error( JSON.stringify(e) ); } );
 	}
 
 	get haveSelection(){ return !!this.selection; }

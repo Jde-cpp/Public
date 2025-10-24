@@ -17,29 +17,29 @@ namespace Jde::App{
 		β SessionInfoAwait( SessionPK sessionPK, SRCE )ε->up<TAwait<Web::FromServer::SessionInfo>> = 0;
 		α Verify( const Web::Jwt& jwt )Ε->void;
 
-		template<class T=jobject> α Query( string&& q, bool returnRaw=true, SRCE )ε->up<TAwait<T>>;
-		template<class T=jobject> α QuerySync( string&& q, bool returnRaw=true, SRCE )ε->T;
-		template<class T=jobject> α QuerySyncSecure( string&& q, SRCE )ε->T{ return QuerySync<T>(move(q), true, sl); } //TODO
+		template<class T=jobject> α Query( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->up<TAwait<T>>;
+		template<class T=jobject> α QuerySync( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->T;
+		template<class T=jobject> α QuerySyncSecure( string&& q, jobject variables, SRCE )ε->T{ return QuerySync<T>(move(q), true, sl); } //TODO
 	protected:
-		β QueryArray( string&& q, bool returnRaw, SRCE )ε->up<TAwait<jarray>> = 0;
-		β QueryObject( string&& q, bool returnRaw, SRCE )ε->up<TAwait<jobject>> = 0;
-		β QueryValue( string&& q, bool returnRaw, SRCE )ε->up<TAwait<jvalue>> = 0;
+		β QueryArray( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jarray>> = 0;
+		β QueryObject( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jobject>> = 0;
+		β QueryValue( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jvalue>> = 0;
 	private:
 		AppInstancePK _instancePK{};
 	};
 
-	Ŧ IApp::Query( string&& q, bool returnRaw, SL sl )ε->up<TAwait<T>>{
+	Ŧ IApp::Query( string&& q, jobject variables, bool returnRaw, SL sl )ε->up<TAwait<T>>{
 		if constexpr ( std::is_same_v<T, jarray> )
-			return QueryArray( move(q), returnRaw, sl );
+			return QueryArray( move(q), move(variables), returnRaw, sl );
 		else if constexpr ( std::is_same_v<T, jobject> )
-			return QueryObject( move(q), returnRaw, sl );
+			return QueryObject( move(q), move(variables), returnRaw, sl );
 		else if constexpr ( std::is_same_v<T, jvalue> )
-			return QueryValue( move(q), returnRaw, sl );
+			return QueryValue( move(q), move(variables), returnRaw, sl );
 		else
 			static_assert( false, "Unsupported type for IApp::Query" );
 	}
-	Ŧ IApp::QuerySync( string&& q, bool returnRaw, SL sl )ε->T{
-		up<TAwait<T>> await = Query<T>( move(q), returnRaw, sl );
+	Ŧ IApp::QuerySync( string&& q, jobject variables, bool returnRaw, SL sl )ε->T{
+		up<TAwait<T>> await = Query<T>( move(q), move(variables), returnRaw, sl );
 		return BlockAwait<TAwait<T>,T>( move(*await) );
 	}
 	Ξ IApp::Verify( const Web::Jwt& jwt )Ε->void{

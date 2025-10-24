@@ -4,6 +4,8 @@
 #include <jde/opc/uatypes/Logger.h>
 
 namespace Jde::Opc::Gateway{
+	constexpr RequestId ConnectRequestId = std::numeric_limits<RequestId>::max();
+	constexpr RequestId PingRequestId = 0;
 	struct UAClient;
 
 	struct UARequest{
@@ -23,13 +25,13 @@ namespace Jde::Opc::Gateway{
 		α Process( RequestId requestId )ι->void{ Process(requestId, coroutine_handle<>{}); }
 		Ŧ ClearHandle( RequestId requestId )ι->T;
 		α Clear( RequestId requestId )ι->void;
-		α SetParent( sp<UAClient> pClient )ι{_pClient=pClient;}
+		α SetParent( sp<UAClient> client )ι{_client=client;}
 		α Stop()ι->void;
 	private:
 		α UAHandle()ι->Handle;
 		α ProcessingLoop()ι->DurationTimer::Task;
 		flat_map<RequestId, std::any> _requests; mutex _requestMutex;
-		sp<UAClient> _pClient;
+		sp<UAClient> _client;
 		atomic_flag _running;
 		atomic_flag _stopped;
 	};
@@ -37,7 +39,7 @@ namespace Jde::Opc::Gateway{
 
 	Ξ AsyncRequest::Clear( RequestId requestId )ι->void{
 		lg _{_requestMutex};
-		if( !_requests.erase(requestId) )
+		if( !_requests.erase(requestId) && requestId!=ConnectRequestId )
 			CRITICALT( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
 	}
 	Ŧ AsyncRequest::ClearHandle( RequestId requestId )ι->T{
@@ -67,5 +69,4 @@ namespace Jde::Opc::Gateway{
 			ProcessingLoop();
 		h = nullptr;
 	}
-
 }

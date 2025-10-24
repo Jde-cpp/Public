@@ -5,8 +5,8 @@ namespace Jde::App{ struct IApp; }
 namespace Jde::App::Server{
 	struct AppInstanceHook final : QL::IQLHook{
 		AppInstanceHook( sp<IApp> appClient )ι: _appClient{move(appClient)}{}
-		α Start( const QL::MutationQL& mu, UserPK userPK, SRCE )ι->HookResult;
-		α Stop( const QL::MutationQL& mu, UserPK userPK, SRCE )ι->HookResult;
+		α Start( const QL::MutationQL& m, jobject variables, UserPK userPK, SRCE )ι->HookResult;
+		α Stop( const QL::MutationQL& m, jobject variables, UserPK userPK, SRCE )ι->HookResult;
 	private:
 		sp<IApp> _appClient;
 	};

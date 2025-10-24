@@ -155,19 +155,25 @@ namespace Jde::Opc::Gateway{
 	}
 		// Request{ move(request) }{
 		// THROW_IFX( rhs.responseHeader.serviceResult, UAClientException(rhs.responseHeader.serviceResult, uaHandle, "UA_Client_Service_read().", sl) );
-
+	α ReadResponse::ScalerJson()ι->jobject{
+		jobject j;
+			for( uint i=0; i<std::min(Request->nodesToReadSize, (uint)resultsSize); ++i ){
+			let result = results[0];
+			UA_ReadValueId& attribReq = Request->nodesToRead[i];
+			Variant value = result.status ? Variant{ result.status } : Variant{ move(result.value) };
+			j[ReadRequest::AtribString((UA_AttributeId)attribReq.attributeId)] = move(value).ToJson( true );
+		}
+		return j;
+	}
 	α ReadResponse::SetJson( flat_map<NodeId, jobject>& nodes )ι->void{
 		for( uint i=0; i<std::min(Request->nodesToReadSize, (uint)resultsSize); ++i ){
 			UA_ReadValueId& attribReq = Request->nodesToRead[i];
 			auto result = results[i];
 			const NodeId nodeId{ attribReq.nodeId };
-			auto nodeIt = nodes.try_emplace( nodeId, jobject{} );
+			auto nodeIt = nodes.try_emplace( nodeId );
 			jobject& j = nodeIt.first->second;
 			Variant value = result.status ? Variant{ result.status } : Variant{ move(result.value) };
 			let attrib = (UA_AttributeId)attribReq.attributeId;
-			if( attrib==UA_ATTRIBUTEID_BROWSENAME ){
-				j[ReadRequest::AtribString(attrib)] = move(value).ToJson( true );
-			}
 			j[ReadRequest::AtribString(attrib)] = move(value).ToJson( true );
 		}
 	}

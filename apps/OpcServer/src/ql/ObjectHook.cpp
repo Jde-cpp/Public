@@ -11,27 +11,29 @@
 #define let const auto
 namespace Jde::Opc::Server{
 	struct ObjectQLAwait final : TAwait<jvalue>{
-		ObjectQLAwait( const QL::MutationQL& m, UserPK executer, SL sl )ι:
+		ObjectQLAwait( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι:
 			TAwait<jvalue>{ sl },
 			Mutation{ m },
-			Executer{ executer }
+			Executer{ executer },
+			Variables{ variables }
 		{}
 		α Suspend()ι->void override{ GetBrowseName(); }
 		α await_resume()ε->jvalue;
 
 		QL::MutationQL Mutation;
 		Jde::UserPK Executer;
+		jobject Variables;
 	private:
 		α Table()ε->sp<DB::View>{ return GetViewPtr( "nodes" ); }
 		α GetBrowseName()ι->BrowseNameAwait::Task;
 		α Create( BrowseName&& browse, NodePK parent )ι->DB::ScalerAwait<NodePK>::Task;
-		α CreateVariables( jarray& variables, NodePK parent )ι->VariableInsertAwait::Task;
+		α CreateVariables( const jarray& variables, NodePK parent )ι->VariableInsertAwait::Task;
 	};
 	α ObjectQLAwait::GetBrowseName()ι->BrowseNameAwait::Task{
-		BrowseName browseName{ Mutation.GetParam("browseName").as_object() };
+		BrowseName browseName{ Mutation.Get<jobject>("browseName", Variables, _sl) };
 		try{
 			co_await BrowseNameAwait{ &browseName };
-			let& parent = GetUAServer().GetObject( NodeId{Mutation.GetParam("parent").as_object()} );
+			let& parent = GetUAServer().GetObject( NodeId{Mutation.Get<jobject>("parent", Variables, _sl)} );
 			if( GetUAServer().Find(parent.PK, browseName.PK) ){
 				ResumeExp( Exception{_sl, "Object exists parent: {}, browseName: '{}'", Ƒ("{:x}", parent.PK), browseName.ToString()} );
 				co_return;
@@ -56,7 +58,7 @@ namespace Jde::Opc::Server{
 				object.InsertParams()
 			});
 			ua._objects.try_emplace( object.PK, object );
-			auto variables = m.FindParam( "variables" );
+			auto variables = m.FindPtr( "variables", Variables );
 			if( variables && variables->is_array() )
 				CreateVariables( variables->get_array(), object.PK );
 			else
@@ -66,12 +68,12 @@ namespace Jde::Opc::Server{
 			ResumeExp( move(e) );
 		}
 	}
-	α ObjectQLAwait::CreateVariables( jarray& variables, NodePK parentPK )ι->VariableInsertAwait::Task{
+	α ObjectQLAwait::CreateVariables( const jarray& variables, NodePK parentPK )ι->VariableInsertAwait::Task{
 		try{
 			for( auto&& vAttrValue : variables ){
 				auto& o = vAttrValue.as_object();
 				auto browse = BrowseNameAwait::GetOrInsert( Json::AsObject(o,"browseName") );
-				co_await VariableInsertAwait{ Variable{move(o), parentPK, move(browse)}, _sl };
+				co_await VariableInsertAwait{ Variable{o, parentPK, move(browse)}, _sl };
 			}
 			Resume( jobject{{"complete", true}} );
 		}
@@ -81,7 +83,7 @@ namespace Jde::Opc::Server{
 	}
 	α ObjectQLAwait::await_resume()ε->jvalue{
 		jvalue y;
-		if( auto e = Mutation.Find<bool>("$silent").value_or(false) && Promise() ? Promise()->MoveExp() : nullptr; e ){
+		if( auto e = Mutation.Find<bool>("$silent", Variables).value_or(false) && Promise() ? Promise()->MoveExp() : nullptr; e ){
 			e->SetLevel( ELogLevel::Trace );
 			y = jobject{ {"complete", true} };
 		}else
@@ -89,7 +91,7 @@ namespace Jde::Opc::Server{
 		return y;
 	}
 
-	α ObjectHook::InsertBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
-		return m.TableName()=="objects" ? mu<ObjectQLAwait>( m, executer, sl ) : nullptr;
+	α ObjectHook::InsertBefore( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="objects" ? mu<ObjectQLAwait>( m, variables, executer, sl ) : nullptr;
 	}
 }

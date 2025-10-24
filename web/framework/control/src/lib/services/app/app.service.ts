@@ -115,13 +115,13 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		return p;
 	}
 */
-	async login( user:User ):Promise<void>{
+	async login( user:User, log:Log ):Promise<void>{
 		let self = this;
-		//if( this.log.restRequests )	console.log( `googleLogin( ${user.credential} )` );
+		//if( this.log.restRequests )	log( `googleLogin( ${user.credential} )` );
 		console.assert( !user.sessionId );
 		user.sessionId = await super.loginJwt( user.authorization );
 		self.authStore.append( user );
-		//if( this.log.restResults )	console.log( `authorization='${self.authorization}'` );
+		//if( this.log.restResults )	log( `authorization='${self.authorization}'` );
 	}
 	loginPassword( username:string, password:string, authenticator:string ):Promise<void>{
 		throw "noImpl";
