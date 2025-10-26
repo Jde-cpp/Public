@@ -2,11 +2,10 @@
 #include "mocks/ServerMock.h"
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/Jwt.h>
-#include <jde/fwk/utils/MathUtilities.h>
-#include <jde/fwk/Stopwatch.h>
+#include <jde/fwk/utils/MathUtils.h>
+#include <jde/fwk/utils/Stopwatch.h>
 #include <jde/fwk/log/MemoryLog.h>
 #include <jde/fwk/process/execution.h>
-#include <jde/web/client/http/ClientHttpAwait.h>
 #include "mocks/ClientSocketSession.h"
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>

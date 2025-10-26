@@ -30,6 +30,6 @@ namespace Jde::QL{
 
 	Ŧ LocalQL::QuerySync( string query, UserPK executer, bool returnRaw, SL sl )ε->T{
 		using Await=QL::QLAwait<T>;
-		return BlockAwait<Await,T>( Await{move(query), executer, _schemas, returnRaw, sl} );
+		return BlockAwait<Await,T>( Await{move(query), {}, executer, _schemas, returnRaw, sl} );
 	}
 }

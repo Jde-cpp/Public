@@ -19,12 +19,11 @@ namespace Jde::Access::Server{
 //	α GetTable( str name )ε->sp<DB::View>;
 
 	struct AclQLAwait final : TAwait<jvalue>{
-		AclQLAwait( const QL::MutationQL& m, jobject variables, UserPK executer, uint pk, SL sl )ι:
+		AclQLAwait( const QL::MutationQL& m, UserPK executer, uint pk, SL sl )ι:
 			TAwait<jvalue>{ sl },
 			Mutation{ m },
 			PK{ pk },
-			Executer{ executer },
-			Variables{ variables }
+			Executer{ executer }
 		{}
 		α Suspend()ι->void override;
 		α InsertAcl()ι->void;
@@ -300,10 +299,10 @@ namespace Jde::Access::Server{
 			: nullptr;
 	}
 
-	α AclHook::PurgeBefore( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι->HookResult{
-		return m.TableName()=="acl" ? mu<AclQLAwait>( m, variables, executer, 0, sl ) : nullptr;
+	α AclHook::PurgeBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="acl" ? mu<AclQLAwait>( m, executer, 0, sl ) : nullptr;
 	}
-	α AclHook::InsertBefore( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι->HookResult{
-		return m.TableName()=="acl" ? mu<AclQLAwait>( m, variables, executer, 0, sl ) : nullptr;
+	α AclHook::InsertBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="acl" ? mu<AclQLAwait>( m, executer, 0, sl ) : nullptr;
 	}
 }

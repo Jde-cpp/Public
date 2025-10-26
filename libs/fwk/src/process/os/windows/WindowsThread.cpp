@@ -1,7 +1,7 @@
 ﻿#include <processthreadsapi.h>
 #include <codecvt>
 #include <jde/fwk/process/thread.h>
-#include "../../Framework/source/threading/Thread.cpp"
+#include "../../../process/thread.cpp"
 
 constexpr Jde::ELogTags _tags{ Jde::ELogTags::Threads };
 
@@ -15,7 +15,7 @@ TSetThreadDescription pSetThreadDescription = nullptr;
 	using namespace Jde;
 	HMODULE hKernelBase = GetModuleHandleA("KernelBase.dll");
 	if( !hKernelBase ){
-		CRITICAL( _tags, "FATAL: failed to get kernel32.dll module handle, error:  {}", ::GetLastError() };
+		CRITICALT( _tags, "FATAL: failed to get kernel32.dll module handle, error:  {}", ::GetLastError() );
 		return;
 	}
 	pSetThreadDescription = reinterpret_cast<TSetThreadDescription>( ::GetProcAddress(hKernelBase, "SetThreadDescription") );

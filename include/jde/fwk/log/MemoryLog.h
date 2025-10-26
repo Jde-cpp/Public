@@ -17,7 +17,7 @@ namespace Jde::Logging{
 		α SetMinLevel( ELogLevel /*level*/ )ι->void override{}
 		α Clear()ι->void{ _entries.clear(); }
 		α Find( StringMd5 id )ι->vector<Entry>;
-		α Find( string text )ι->vector<Entry>;
+		Φ Find( string text )ι->vector<Entry>;
 		α Find( function<bool(const Entry&)> f )ι->vector<Entry>;
 	private:
 		Vector<Entry> _entries;

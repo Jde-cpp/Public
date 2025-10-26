@@ -9,6 +9,7 @@ namespace Jde::QL{
 			for( let& table : _tables ){
 				if( table.Columns.empty() && table.Tables.empty() )
 					throw Jde::Exception{ _sl, "Table '{}' has no columns", table.ToString() };
+				ASSERT( !_statement || _statement->From.Joins.size() );
 				auto result = _statement
 					? co_await SelectAwait{ table, *_statement, _executer, true, _sl }
 					: co_await SelectAwait{ table, _executer, true, _sl };

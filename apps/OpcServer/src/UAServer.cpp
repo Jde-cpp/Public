@@ -1,10 +1,10 @@
 #include "UAServer.h"
-#include <libxml/parser.h>
-#include <libxml/tree.h>
-#include <libxml/xmlerror.h>
+//#include <libxml/parser.h>
+//#include <libxml/tree.h>
+//#include <libxml/xmlerror.h>
 #include <jde/fwk/process/thread.h>
 #include <jde/opc/uatypes/opcHelpers.h>
-#include "UAAccess.h"
+//#include "UAAccess.h"
 #include <NodesetLoader/backendOpen62541.h>
 
 #define let const auto
@@ -29,6 +29,9 @@ namespace Jde::Opc::Server {
 		INFOT( ELogTags::App, "Stopping OPC UA server..." );
 		if( _thread.has_value() ){
 			_running = false;
+#ifdef _MSC_VER
+			std::this_thread::sleep_for( 1s );
+#endif
 			_thread->request_stop();
 			_thread->join();
 			_thread.reset();
@@ -55,7 +58,7 @@ namespace Jde::Opc::Server {
 	α UAServer::Load( fs::path configFile, SL sl )ε->void{
 		INFOT( ELogTags::App, "Loading configuration from: '{}'", configFile.string() );
 		CHECK_PATH( configFile, sl );
-		xmlSetGenericErrorFunc( nullptr, myXmlError );
+		//xmlSetGenericErrorFunc( nullptr, myXmlError );
 		auto success = NodesetLoader_loadFile( _ua, configFile.string().c_str(), nullptr );
 		THROW_IFSL( !success, "Failed to load nodeset file: '{}'", configFile.string() );
 	}

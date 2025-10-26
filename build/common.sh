@@ -84,3 +84,11 @@ function toBashDir {
  	_bashDir=${windowsDir/:/}; _bashDir=${_bashDir//\\//}; _bashDir=${_bashDir/C/c};
 	if [[ ${_bashDir:0:1} != "/" ]]; then _bashDir=/$_bashDir; fi;
 }
+
+function toWinDir {
+	bashDir=$1;
+	local -n _winDir=$2
+	_winDir=${bashDir////\\};
+	if [[ $_winDir == \\c\\* ]]; then _winDir=c:${_winDir:2};
+	elif [[ $_winDir == \"\\c\\* ]]; then _winDir=\"c:${_winDir:3}; fi;
+}

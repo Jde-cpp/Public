@@ -20,7 +20,7 @@ namespace Jde{
 	}
 	vector<up<Logging::ILogger>> _loggers = initLoggers();
 	α Logging::Loggers()->const vector<up<ILogger>>&{ return _loggers; }
-	α Logging::AddLogger( up<ILogger>&& logger )->void{ _loggers.push_back( move(logger) ); }
+	α Logging::AddLogger( up<ILogger>&& logger )->void{ ASSERT(logger); _loggers.push_back( move(logger) ); }
 	α Logging::MemoryLogger()ε->MemoryLog&{
 		for( let& logger : _loggers )
 			if( auto log = dynamic_cast<MemoryLog*>( logger.get() ) )

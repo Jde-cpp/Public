@@ -1,0 +1,75 @@
+{
+	"folders": [
+		{
+			"path": "my-workspace"
+		},
+		// {
+		// 	"path": "../spa"
+		// },
+		// {
+		// 	"path": "../framework"
+		// },
+		// {
+		// 	"path": "../access"
+		// },
+		// {
+		// 	"path": "../opc"
+		// }
+	],
+	"settings": {
+		"window.title": "Web"
+	},
+	"extensions": {
+		"recommendations": [
+			"angular.ng-template"
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+    {
+      "name": "ng serve",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:4200/"
+    },
+    {
+      "name": "ng test",
+      "type": "chrome",
+      "request": "launch",
+      "preLaunchTask": "npm: test",
+      "url": "http://localhost:9876/debug.html"
+    }
+	]},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"type": "npm",
+				"script": "start",
+				"problemMatcher": [],
+				"label": "npm: start",
+				"detail": "ng serve"
+			},
+			{
+				"label": "build",
+				"type": "shell",
+				"command": "tput reset;ng build;",
+				"problemMatcher": {
+					"owner": "typescript",
+					"pattern": "$tsc",
+					"background": {
+						"activeOnStart": true,
+						"beginsPattern": {
+							"regexp": "(.*?)"
+						},
+						"endsPattern": {
+							"regexp": "bundle generation complete"
+						}
+					}
+				},
+				"group": { "kind": "build", "isDefault": true }
+			}
+		]
+	}
+}

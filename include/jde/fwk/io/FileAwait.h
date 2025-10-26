@@ -41,7 +41,7 @@ namespace Jde::IO{
 	};
 
 	struct FileIOArg final : std::enable_shared_from_this<FileIOArg>, boost::noncopyable{
-		using HCo=variant<TAwait<string>::Handle,VoidAwait::Handle>;
+		using HCo=variant<StringAwait::Handle,VoidAwait::Handle>;
 		FileIOArg( fs::path path, bool vec, SRCE )ι;
 		FileIOArg( fs::path path, variant<string,vector<byte>> data, ELogTags tags, SRCE )ι;
 		α Open( bool create )ε->void;
@@ -56,8 +56,8 @@ namespace Jde::IO{
 		//α ResumeExp( exception&& e )ι->void;
 		//α ResumeExp( exception&& e, lg& chunkLock )ι->void;
 
-		α CoHandle()ι->HCo{ lg _{_coHandleMutex}; auto h = _coHandle; if( IsRead ) _coHandle = TAwait<string>::Handle{}; else _coHandle = VoidAwait::Handle{}; return h; }
-		α ReadCoHandle()ι->TAwait<string>::Handle{ return get<TAwait<string>::Handle>(CoHandle()); }
+		α CoHandle()ι->HCo{ lg _{_coHandleMutex}; auto h = _coHandle; if( IsRead ) _coHandle = StringAwait::Handle{}; else _coHandle = VoidAwait::Handle{}; return h; }
+		α ReadCoHandle()ι->StringAwait::Handle{ return get<StringAwait::Handle>(CoHandle()); }
 		α WriteCoHandle()ι->VoidAwait::Handle{ return get<VoidAwait::Handle>(CoHandle()); }
 
 		variant<string,vector<byte>> Buffer;
@@ -78,8 +78,8 @@ namespace Jde::IO{
 		up<IException> ExceptionPtr;
 		sp<FileIOArg> _arg;
 	};
-	struct Γ ReadAwait final : IFileAwait, TAwait<string>{
-		ReadAwait( fs::path path, bool cache=false, SRCE )ι:IFileAwait{ move(path), false, sl }, TAwait<string>{ sl },_cache{cache}{}
+	struct Γ ReadAwait final : IFileAwait, StringAwait, boost::noncopyable{
+		ReadAwait( fs::path path, bool cache=false, SRCE )ι:IFileAwait{ move(path), false, sl }, StringAwait{ sl },_cache{cache}{}
 		α Suspend()ι->void override;
 		α await_ready()ι->bool override;
 		α await_resume()ε->string override;

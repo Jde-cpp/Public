@@ -96,7 +96,7 @@ namespace Jde::IO{
 		return mu<DirEntry>( dir );
 	}
 	α WindowsDrive::Save( const fs::path& path, const vector<char>& bytes, const IDirEntry& dirEntry )ε->up<IDirEntry>{
-		IO::SaveBinary( path, bytes );
+		IO::SaveBinary<const char>( path, bytes );
 		if( dirEntry.CreatedTime.time_since_epoch()!=Duration::zero() ){
 			let [createTime, modifiedTime, lastAccessedTime] = GetTimes( dirEntry );
 			auto hFile = ::CreateFileW( WindowsPath(path).c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS, nullptr );

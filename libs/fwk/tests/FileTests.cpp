@@ -1,5 +1,5 @@
 ﻿#include <jde/fwk/io/FileAwait.h>
-#include "../src/co/LockKey.h"
+#include <jde/fwk/co/LockKey.h>
 #include <boost/uuid.hpp>
 #include <boost/endian/conversion.hpp>
 #include <jde/fwk/process/execution.h>
@@ -11,7 +11,7 @@
 using boost::uuids::uuid;
 namespace Jde::IO::Tests{
 	constexpr ELogTags _tags{ ELogTags::Test };
-	Ω File( uint index )->fs::path{
+	Ω file( uint index )->fs::path{
 		let path = Settings::FindPath("/testing/file");
 		return path
 			? path->parent_path()/Ƒ( "{}{}{}", path->stem().string(), index, path->extension().string() )
@@ -27,8 +27,8 @@ namespace Jde::IO::Tests{
 			Execution::Run();//io strand threading issue.
 		}
 		α SetUp()->void override{
-			INFO( "{}", File(0).string() );
-			fs::create_directories( File(0).parent_path() );
+			INFO( "{}", file(0).string() );
+			fs::create_directories( file(0).parent_path() );
 		}
 		α TearDown()->void override {}
 	};
@@ -71,7 +71,7 @@ namespace Jde::IO::Tests{
 		}
 
 		Vector<uuid> written;
-		let file = File(fileIndex);
+		let file = Tests::file(fileIndex);
 		let exists = fs::exists(file);
 		if( exists ){
 			INFO( "Removing existing file: {}", file.string() );

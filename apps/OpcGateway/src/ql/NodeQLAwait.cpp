@@ -10,9 +10,9 @@
 namespace Jde::Opc::Gateway{
 
 	α NodeQLAwait::Execute()ι->TAwait<sp<UAClient>>::Task{
-		auto opcId{ Json::FindString(_query.Args,"opc").value_or("") };
+		auto opcId{ _query.FindPtr<jstring>("opc") };
 		try{
-			_client = co_await ConnectAwait{ move(opcId), _sessionPK, _executer, _sl };
+			_client = co_await ConnectAwait{ opcId ? string{move(*opcId)} : string{}, _sessionPK, _executer, _sl };
 			BrowsePathResponse pathNodes;
 			NodeId nodeId;
 			flat_map<NodeId, jobject> jParents;

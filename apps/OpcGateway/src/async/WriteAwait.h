@@ -5,6 +5,8 @@ namespace Jde::Opc::Gateway{
 	struct UAClient;
 	struct WriteResponse : UA_WriteResponse{
 		WriteResponse( UA_WriteResponse&& x )ι:UA_WriteResponse{x}{ UA_WriteResponse_init(&x); }
+		WriteResponse( WriteResponse&& x )ι:UA_WriteResponse{x}{ UA_WriteResponse_init(&x); }
+		α operator=( WriteResponse&& x )ι->WriteResponse&;
 		~WriteResponse(){ UA_WriteResponse_clear(this); }
 	};
 	struct WriteAwait final : TAwait<WriteResponse>{

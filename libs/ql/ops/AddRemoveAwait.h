@@ -9,7 +9,7 @@ namespace Jde::QL{
 	struct ChildParentParams final{ sp<DB::Column> ParentCol; sp<DB::Column> ChildColumn; DB::Value ParentParam; vector<DB::Value> ChildParams; };
 	struct AddRemoveAwait final: TAwait<jvalue>{
 		using base=TAwait<jvalue>;
-		AddRemoveAwait( sp<DB::Table> table, const MutationQL& mutation, jobject variables, UserPK userPK, SRCE )ι;
+		AddRemoveAwait( sp<DB::Table> table, const MutationQL& mutation, UserPK userPK, SRCE )ι;
 		α Suspend()ι->void override;
 	private:
 		α AddBefore()ι->MutationAwaits::Task;

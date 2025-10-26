@@ -162,7 +162,7 @@ namespace Jde::DB::MsSql{
 		else if(typeName=="money")
 			type=Money;
 		else
-			Warning( ELogTags::App, "Unknown datatype({}).  need to implement, no big deal if not our table.", typeName );
+			WARNT( ELogTags::App, "Unknown datatype({}).  need to implement, no big deal if not our table.", typeName );
 		return type;
 	}
 

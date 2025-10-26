@@ -34,6 +34,7 @@ namespace Jde{
 	}
 }
 namespace Jde{
+#undef SetConsoleTitle
 	α Process::Startup( int argc, char** argv, sv appName, string serviceDescription, optional<bool> console )ε->flat_set<string>{
 		auto isConsole = console ? *console : Process::FindArg( "-c" ).has_value();
 		Process::SetConsole( isConsole );
@@ -69,7 +70,7 @@ namespace Jde{
 		if( terminate )
 			std::set_terminate( OnTerminate );
 		if( isConsole )
-			SetConsoleTitle( appName );
+			Process::SetConsoleTitle( appName );
 		else
 			AsService();
 		Logging::Initialize();

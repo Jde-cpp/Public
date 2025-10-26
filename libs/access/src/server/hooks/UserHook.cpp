@@ -59,7 +59,7 @@ namespace Jde::Access::Server{
 	α UserGraphQLAwait::QueryGroups()ι->QL::QLAwait<jarray>::Task{
 		try{
 			auto groupStatement = GroupStatement();
-			auto groupInfo = co_await QL::QLAwait<jarray>{ move(Query.GetTable("groupings")), {}, move(groupStatement), Executer, _sl };
+			auto groupInfo = co_await QL::QLAwait<jarray>{ move(Query.GetTable("groupings")), move(groupStatement), Executer, _sl };
 			QueryTables( move(groupInfo) );
 		}
 		catch( exception& e ){

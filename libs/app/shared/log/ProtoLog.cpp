@@ -139,7 +139,7 @@ namespace Jde::App{
 	ProtoLog::ProtoLog( const jobject& settings )ι:
 		Logging::ILogger{ settings },
 		_delay{ Json::FindDuration(settings, "delay", ELogLevel::Error).value_or(1min) },
-		_path{ Json::FindString(settings, "path").value_or(Process::ApplicationDataFolder()/"logs") },
+		_path{ Json::FindString(settings, "path").value_or((Process::ApplicationDataFolder()/"logs").string()) },
 		_tz{ Json::FindTimeZone(settings, "timeZone", *std::chrono::current_zone()) },
 		_today{ Chrono::LocalYMD(Clock::now(), _tz) }{
 		Executor();//locks up if starts in StartTimer.
@@ -172,7 +172,7 @@ namespace Jde::App{
 				lg _{_mutex};
 				IO::SaveBinary<byte>( DailyFile(), _toSave );
 			}
-			catch( exception& e )
+			catch( exception& )
 			{}
 		}
 	}
@@ -214,7 +214,7 @@ namespace Jde::App{
 		try{
 			co_await IO::WriteAwait( DailyFile(), move(toSave), true, _tags );
 		}
-		catch( exception& e )	{
+		catch( exception& )	{
 			lg _{_mutex };
 			std::copy( toSave.begin(), toSave.end(), std::back_inserter(_toSave) );
 			_mutex.unlock();
@@ -225,7 +225,7 @@ namespace Jde::App{
 				co_await ArchiveAwait{ DailyFile(), _path, _tz };
 				_needsArchive = false;
 			}
-			catch( const exception& e )
+			catch( const exception& )
 			{}
 		}
 	}
@@ -245,7 +245,7 @@ namespace Jde::App{
 	α ProtoLog::AddArguments( const vector<string>& args, ::google::protobuf::RepeatedPtrField<std::string> ids )ι->void{
 		ASSERT( args.size()==(uint)ids.size() );
 		for( uint i=0; i<args.size(); ++i )
-			AddString( ToGuid(ids.Get(i)), args[i], _cache.Args );
+			AddString( ToGuid(ids.Get((int)i)), args[i], _cache.Args );
 	}
 	α ProtoLog::StartTimer()ι->VoidAwait::Task{
 		if( _delay==Duration::min() )

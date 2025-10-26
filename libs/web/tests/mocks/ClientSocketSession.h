@@ -16,8 +16,8 @@ namespace Jde::Web::Mock{
 		α BadTransmissionClient( SRCE )ι->ClientSocketAwait<string>;
 		α BadTransmissionServer( SRCE )ι->ClientSocketAwait<string>;
 	private:
-		α Query( string&&, bool, SL )ι->ClientSocketAwait<jvalue> override{ ASSERT(false); return { {}, {}, {} }; }
-		α Subscribe( string&&, sp<QL::IListener>, SL )ε->ClientSocketAwait<jarray> override{ ASSERT(false); return { {}, {}, {} }; }
+		α Query( string&&, jobject, bool, SL )ι->ClientSocketAwait<jvalue> override{ ASSERT(false); return { {}, {}, {} }; }
+		α Subscribe( string&&, jobject, sp<QL::IListener>, SL )ε->ClientSocketAwait<jarray> override{ ASSERT(false); return { {}, {}, {} }; }
 
 		α HandleException( std::any&& h, string&& what )ι;
 		α OnRead( Proto::FromServerTransmission&& transmission )ι->void override;

@@ -13,8 +13,8 @@
 namespace Jde::Opc::Server{
 	struct ObjectTypeQLAwait final : TAwait<jvalue>{
 		using base = TAwait<jvalue>;
-		ObjectTypeQLAwait( QL::MutationQL m, jobject variables, UserPK executer, SL sl )ι:base{ sl }, _input{ move(m) }, _executer{ executer },
-			_startup{ Json::FindBool(Args(),"$silent").value_or(false) }, _variables{ variables }
+		ObjectTypeQLAwait( QL::MutationQL m, UserPK executer, SL sl )ι:base{ sl }, _input{ move(m) }, _executer{ executer },
+			_startup{ Json::FindBool(Args(),"$silent").value_or(false) }
 		{}
 		ObjectTypeQLAwait( jobject o, sp<ObjectType> oType, UserPK executer, SL sl )ι:base{ sl }, _root{oType}, _input{ move(o) }, _executer{ executer } {}
 
@@ -32,7 +32,6 @@ namespace Jde::Opc::Server{
 		variant<QL::MutationQL,jobject> _input;
 		Jde::UserPK _executer;
 		bool _startup{};
-		jobject _variables;
 	};
 
 	α ObjectTypeQLAwait::Suspend()ι->void{
@@ -156,7 +155,7 @@ namespace Jde::Opc::Server{
 		return y;
 	}
 
-	α ObjectTypeHook::InsertBefore( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι->HookResult{
-		return m.TableName()=="object_types" ? mu<ObjectTypeQLAwait>( m, variables, executer, sl ) : nullptr;
+	α ObjectTypeHook::InsertBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="object_types" ? mu<ObjectTypeQLAwait>( m, executer, sl ) : nullptr;
 	}
 }

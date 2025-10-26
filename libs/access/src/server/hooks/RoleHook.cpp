@@ -19,7 +19,7 @@ namespace Jde::Access::Server{
 	//α GetTable( str name )ε->sp<DB::View>;
 
 	struct RoleMutationAwait final : TAwait<jvalue>{
-		RoleMutationAwait( const QL::MutationQL& m, jobject variables, UserPK userPK, SL sl )ι:TAwait<jvalue>{ sl }, Mutation{m}, _userPK{userPK}, _variables{variables}{}
+		RoleMutationAwait( const QL::MutationQL& m, UserPK userPK, SL sl )ι:TAwait<jvalue>{ sl }, Mutation{m}, _userPK{userPK}{}
 		α Suspend()ι->void override{ if(Mutation.Type==QL::EMutationQL::Remove) Remove(); else Add(); }
 	private:
 		α Add()ι->void;
@@ -29,7 +29,6 @@ namespace Jde::Access::Server{
 
 		QL::MutationQL Mutation;
 		UserPK _userPK;
-		jobject _variables;
 	};
 
 	//{ mutation addRole( id:42, allowed:255, denied:0, resource:{target:"users"} ) }
@@ -165,7 +164,7 @@ namespace Jde::Access::Server{
 			// QL: role( id:16 ){permissionRight{id allowed denied resource(target:"users",criteria:null)} }
 			if( auto permissionQL = Query.ExtractTable("permissionRights"); permissionQL ){
 				if( auto statement = PermissionsStatement( *permissionQL ); statement ){
-					auto rights = co_await QL::QLAwait<jvalue>{ move(*permissionQL), {}, move(*statement), UserPK };
+					auto rights = co_await QL::QLAwait<jvalue>{ move(*permissionQL), move(*statement), UserPK };
 					if( rights.is_array() )
 						permissions = move( rights.get_array() );
 					else if( rights.is_object() ){
@@ -176,7 +175,7 @@ namespace Jde::Access::Server{
 			}
 			if( auto roleQL = Query.ExtractTable("roles"); roleQL ){
 				if( auto statement = RoleStatement(*roleQL); statement ){
-					auto dbMembers = co_await QL::QLAwait( move(*roleQL), {}, move(*statement), UserPK );
+					auto dbMembers = co_await QL::QLAwait( move(*roleQL), move(*statement), UserPK );
 					if( dbMembers.is_array() )
 						roleMembers = dbMembers.get_array().empty() ? jarray{} : move( dbMembers.get_array() );
 					else if( dbMembers.is_object() ){
@@ -215,7 +214,7 @@ namespace Jde::Access::Server{
 			let returnArray = Query.IsPlural();
 			if( auto roleStatement = QL::SelectStatement( Query ); roleStatement ){
 				Query.ReturnRaw = true;
-				auto qlRoles = co_await QL::QLAwait( move(Query), {}, UserPK );
+				auto qlRoles = co_await QL::QLAwait( move(Query), UserPK );
 				auto addRole = [&]( jobject&& roleProperties ){
 					let rolePK = Json::AsNumber<RolePK>( roleProperties, "id" );
 					auto existing = roles.find( rolePK );
@@ -257,11 +256,11 @@ namespace Jde::Access::Server{
 			: nullptr;
 	}
 
-	α RoleHook::Add( const QL::MutationQL& m, jobject variables, UserPK userPK, SL sl )ι->HookResult{
-		return m.TableName()=="roles" ? mu<RoleMutationAwait>( m, variables, userPK, sl ) : nullptr;
+	α RoleHook::Add( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
+		return m.TableName()=="roles" ? mu<RoleMutationAwait>( m, userPK, sl ) : nullptr;
 	}
 
-	α RoleHook::Remove( const QL::MutationQL& m, jobject variables, UserPK userPK, SL sl )ι->HookResult{
-		return m.TableName()=="roles" ? mu<RoleMutationAwait>( m, variables, userPK, sl ) : nullptr;
+	α RoleHook::Remove( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
+		return m.TableName()=="roles" ? mu<RoleMutationAwait>( m, userPK, sl ) : nullptr;
 	}
 }

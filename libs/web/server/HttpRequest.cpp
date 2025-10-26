@@ -30,7 +30,21 @@ namespace Jde::Web::Server{
 		_start{ steady_clock::now() }{
 		ParseUri();
 	}
+	
+	α HttpRequest::operator[]( str x )Ι->const string&{
+		auto p = _params.find( x );
+		return p!=_params.end() ? p->second : Str::Empty();
+	}
 
+	α HttpRequest::Body()ε->jobject&{
+		if( !_body ){
+			if( auto& s = _request.body(); s.size() )
+				_body = Json::Parse( move(s) );
+			else
+				_body = {};
+		}
+		return *_body;
+	}
 	α HttpRequest::ParseUri()->void{
 		let& uri = Str::DecodeUri( _request.target() );
 	  _target = uri.substr( 0, uri.find('?') );

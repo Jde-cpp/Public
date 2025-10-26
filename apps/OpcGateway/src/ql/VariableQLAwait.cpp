@@ -5,12 +5,12 @@
 
 namespace Jde::Opc::Gateway{
 	α VariableQLAwait::Execute()ι->TAwait<sp<UAClient>>::Task{
-		auto opcId = _mutation.FindPtr<jstring>( "opc", _variables );
+		auto opcId = _mutation.FindPtr<jstring>( "opc" );
 		try{
 			_client = co_await ConnectAwait{ string{opcId ? *opcId : sv{}}, _session->SessionId, _session->UserPK, _sl };
-			_nodeId = NodeId{ _mutation.Get<jvalue>("id", _variables) };
+			_nodeId = NodeId{ _mutation.As<>("id") };
 			if( _mutation.Type==QL::EMutationQL::Update )
-				ReadDataType( _mutation.Get<jvalue>("value", _variables) );
+				ReadDataType( _mutation.As<>("value") );
 			else
 				ResumeExp( Argε("Only update is supported") );
 

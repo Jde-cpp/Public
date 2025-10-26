@@ -15,7 +15,7 @@ namespace Jde{
 		α OpenSslException::CurrentError()ι->string{ char b[120]; ERR_error_string( ERR_get_error(), b ); return {b}; }
 
 		//https://stackoverflow.com/questions/1986888/how-to-compute-a-32-bit-fingerprint-of-a-certificate
-		α PublicKey::hash32()Ι->uint32_t{
+		α PublicKey::Hash32()Ι->uint32_t{
 			auto md5 = CalcMd5( Modulus );
 			uint32_t hash = 0;
 			for( auto b : md5 )

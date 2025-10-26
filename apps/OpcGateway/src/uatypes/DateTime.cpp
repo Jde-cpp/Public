@@ -12,7 +12,11 @@ namespace Jde::Opc{
 	}
 
 	UADateTime::UADateTime( const UA_DateTime& dt )ι:
+#ifdef _MSC_VER
+		_time{ Chrono::Epoch()+microseconds{(dt-_ua1970)/10} }
+#else
 		_time{ Chrono::Epoch()+nanoseconds{(dt-_ua1970)*100} }
+#endif
 	{}
 	UADateTime::UADateTime( const jvalue& v, SL sl )ε{
 		if( v.is_object() ){

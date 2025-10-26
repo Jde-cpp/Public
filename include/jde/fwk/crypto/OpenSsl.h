@@ -3,9 +3,8 @@
 #define OPEN_SSL_H
 #include <span>
 #include <boost/uuid/uuid.hpp>
-#include "exports.h"
 
-#define Φ ΓC auto
+#define Φ Γ auto
 
 namespace Jde::Crypto{
 	struct CryptoSettings;
@@ -15,9 +14,9 @@ namespace Jde::Crypto{
 	struct PublicKey{
 		α operator==( const PublicKey& other )Ι->bool{ return Modulus == other.Modulus && Exponent == other.Exponent; }
 		α operator<( const PublicKey& other )Ι->bool{ return Exponent == other.Exponent ? Modulus < other.Modulus : Exponent < other.Exponent; }
-		α hash32()Ι->uint32_t;
-		α ExponentInt()Ι->uint32_t;
-		α ModulusHex()Ε->string;
+		Φ Hash32()Ι->uint32_t;
+		Φ ExponentInt()Ι->uint32_t;
+		Φ ModulusHex()Ε->string;
 		α ToBytes()ε->vector<byte>;
 		Crypto::Modulus Modulus;
 		Crypto::Exponent Exponent;
@@ -25,7 +24,7 @@ namespace Jde::Crypto{
 
 	using Signature = vector<unsigned char>;
 	using MD5 = boost::uuids::uuid;
-	α CalcMd5( byte* data, uint size )ε->MD5;
+	Φ CalcMd5( byte* data, uint size )ε->MD5;
 	Ŧ CalcMd5( T content )ε->MD5{ return CalcMd5( (byte*)content.data(), content.size() ); }
 	Φ CreateKey( const fs::path& publicKeyPath, const fs::path& privateKeyPath, str passcode )ε->void;
 	Φ CreateCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain )ε->void;

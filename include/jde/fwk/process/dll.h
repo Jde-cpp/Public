@@ -20,6 +20,7 @@ namespace Jde{
 	private:
 		FARPROC _ptr;
 	};
+#undef LoadLibrary
 	struct DllHelper{
 		DllHelper( const fs::path& path )ε:
 			_path{path},

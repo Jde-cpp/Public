@@ -4,6 +4,7 @@
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/str.h>
 #include <jde/fwk/process/execution.h>
+#include <jde/fwk/process/thread.h>
 
 #define let const auto
 
@@ -91,7 +92,7 @@ namespace Jde::Web::Mock{
 	}
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		ASSERT( Promise() || _result );
-		base::AwaitResume();
+		base::CheckException();
 		return Promise() ? move(*Promise()->Value()) : move(*_result);
 	}
 }

@@ -1,7 +1,7 @@
 #pragma once
 #ifndef SPDLOG
 #define SPDLOG
-#include "ILogger.h"
+#include <jde/fwk/log/ILogger.h>
 #include <spdlog/common.h>
 #include <spdlog/logger.h>
 

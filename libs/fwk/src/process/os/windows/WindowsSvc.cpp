@@ -49,7 +49,7 @@ namespace Jde::Windows{
 		string buffer = Jde::format( "{} failed with {}", function, GetLastError() );
 		HANDLE hEventSource = ::RegisterEventSource( nullptr, string{Process::ApplicationName()}.c_str() );
 		if( !hEventSource ){
-			CRITICAL( _tags, "RegisterEventSource returned null" };
+			CRITICALT( _tags, "RegisterEventSource returned null" );
 			return;
 		}
 		const char* lpszStrings[2] = { Process::ApplicationName().data(), buffer.data() };

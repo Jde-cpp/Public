@@ -32,9 +32,9 @@ namespace Jde::Opc::Gateway::Tests{
 	sp<UAClient> BrowseTests::_client;
 
 	TEST_F( BrowseTests, NodeId ){
-		auto query = Ƒ("node(opc: \"{}\", path:\"pumpManual\"){{id name description dataType}}", OpcServerTarget);
-		//ExNodeId nodeId{ Query(Ƒ("node(opc: \"{}\", path:\"pumpManual\"){{id}}", OpcServerTarget)) }; //bad_version
-		auto ql = QL::Parse( query, Schemas(), true );
+		auto query = Ƒ("node(opc: $opc, path:$path){{id name description dataType}}");
+		jobject variables{ {"opc", OpcServerTarget}, {"path", "4~Examples/4~Stacklights/4~ExampleStacklight"} };
+		auto ql = QL::Parse( query, move(variables), Schemas(), true );
 		auto value = BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(ql.Queries().front()), *Str::TryTo<SessionPK>(_jwt->SessionId, nullptr, 16), _jwt->UserPK} );
 		TRACE( "value: {}", serialize(value) );
 		auto result = ExNodeId{ value };

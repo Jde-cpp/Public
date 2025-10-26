@@ -36,7 +36,7 @@ namespace Jde::DB::Odbc{
 		return ds;
 	}
 	α OdbcDataSource::AtSchema( sv /*schema*/, SL sl )ε->sp<IDataSource>{
-		Critical{ sl, _tags, "Odbc doesn't support AtSchema." };
+		LOGSL( ELogLevel::Critical, sl, _tags, "Odbc doesn't support AtSchema." );
 		return shared_from_this();
 	}
 
@@ -70,7 +70,7 @@ namespace Jde::DB::Odbc{
 		let retCode = ::SQLExecDirect( statement, (SQLCHAR*)sql.Text.data(), static_cast<SQLINTEGER>(sql.Text.size()) );
 		switch( retCode ){
 		case SQL_NO_DATA://update with no records effected...
-			Debug{ _tags, "noData={}", sql.Text };
+			DBG( "noData={}", sql.Text );
 		case SQL_SUCCESS_WITH_INFO:
 			try{
 				HandleDiagnosticRecord( "SQLExecDirect", statement, SQL_HANDLE_STMT, retCode );
@@ -114,7 +114,7 @@ namespace Jde::DB::Odbc{
 
 	void OdbcDataSource::SetConnectionString( string x )ι{
 		_connectionString = Ƒ( "{};APP={}", move(x), Process::ApplicationName() );
-		Debug( _tags, "connectionString={}", _connectionString );
+		DBG( "connectionString={}", _connectionString );
 	}
 
 	vector<up<Binding>> AllocateBindings( const HandleStatement& statement,  SQLSMALLINT columnCount )ε{

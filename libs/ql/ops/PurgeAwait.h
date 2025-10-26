@@ -9,7 +9,7 @@ namespace Jde::DB{ struct Sql; }
 namespace Jde::QL{
 	struct PurgeAwait final: TAwait<jvalue>{
 		using base=TAwait<jvalue>;
-		PurgeAwait( sp<DB::Table> table, MutationQL mutation, jobject variables, UserPK userPK, SRCE )ι;
+		PurgeAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SRCE )ι;
 		α Suspend()ι->void override{ Before(); }
 	private:
 		α Before()ι->MutationAwaits::Task;

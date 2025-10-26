@@ -4,10 +4,6 @@
 #include <jde/fwk/process/thread.h>
 #include <jde/fwk/utils/Vector.h>
 
-namespace Jde::IO{
-	constexpr int CompletionSignal{ SIGUSR2 };
-}
-
 #define let const auto
 namespace Jde{
 	namespace asio = boost::asio;
@@ -53,10 +49,6 @@ namespace Jde{
 		ExecutorContext()ι:
 			_thread{ [&](){
 				TRACET( ELogTags::Test, "Ex[0]" );
-				sigset_t set;
-				sigemptyset( &set );
-				sigaddset( &set, IO::CompletionSignal );
-				pthread_sigmask( SIG_BLOCK, &set, nullptr );
 				Execute();
 			}}{
 			_started.wait( false );
@@ -118,10 +110,6 @@ namespace Jde{
 		auto ioc = _ioc; //keep alive
 		for( auto i = ThreadCount() - 1; i > 0; --i ){
 			v.emplace_back( [=]{
-				sigset_t set;
-				sigemptyset( &set );
-				sigaddset( &set, IO::CompletionSignal );
-				pthread_sigmask( SIG_BLOCK, &set, nullptr );
 				TRACET( ELogTags::Test, "Ex[{}]", i );
 				SetThreadDscrptn( Ƒ("Ex[{}]", i) );
 				ioc->run();

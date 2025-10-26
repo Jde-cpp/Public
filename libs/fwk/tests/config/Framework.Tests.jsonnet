@@ -1,6 +1,6 @@
 {
 	testing:{
-		tests: "LogGeneralTests.ArgsNotCalled",
+		tests:: "LogGeneralTests.ArgsNotCalled",
 		file: "$(JDE_BUILD_DIR)/tests/test.txt"
 	},
 	cryptoTests:{
@@ -9,8 +9,8 @@
 	logging:{
 		spd:{
 			tags: {
-				trace:["test", "io", "exception", "app"],
-				debug:["settings"],
+				trace:["test", "exception", "app"],
+				debug:["settings", "io"],
 				information:[],
 				warning:[],
 				"error":[],

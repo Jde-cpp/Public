@@ -37,7 +37,7 @@ namespace Jde::Opc::Gateway{
 	}
 	α HttpRequestAwait::ParseNodes()ε->tuple<flat_set<NodeId>,jarray>{
 		auto& nodeJson = _request["nodes"];
-		auto jNodes = Json::AsArray( Json::ParseValue(move(nodeJson)) );
+		auto jNodes = Json::AsArray( Json::ParseValue(string{nodeJson}) );
 		flat_set<NodeId> nodes;
 		for( let& node : jNodes )
 			nodes.emplace( Json::AsObject(node) );
@@ -61,7 +61,7 @@ namespace Jde::Opc::Gateway{
 		try{
 			_client = co_await ConnectAwait( move(opcId), _request.SessionId(), _request.UserPK(), SRCE_CUR );
 			if( _request.IsGet() ){
-				throw RestException<http::status::not_found>{ SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() };
+				throw RestException<http::status::not_found>{ SRCE_CUR, move(_request), "Unknown get target '{}'", target };
 			}
 			else if( _request.IsPost() )
 				throw RestException<http::status::not_found>{ SRCE_CUR, move(_request), "Post not supported for target '{}'", target };
@@ -114,10 +114,13 @@ namespace Jde::Opc::Gateway{
 		try{
 			string query = _request.IsGet() ? _request["query"] : Json::AsString(_request.Body(), "query" );
 			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(_request), "no query") );
-			string variableString = _request.IsGet() ? _request["variables"] : Json::FindString(_request.Body(), "variables" ).value_or( "" );
-			jobject variables = variableString.size() ? Json::AsObject( parse(move(variableString)) ) : jobject{};
+			jobject vars;
+			if( auto variableString = _request.IsGet() ? _request["variables"] : string{}; variableString.size() )
+				vars = Json::Parse( variableString );
+			else if( auto p = _request.IsPost() ? _request.Body().if_contains("variables") : nullptr; p && p->is_object() )
+				vars = move( p->get_object() );
 			_request.LogRead( query );
-			auto ql = QL::Parse( move(query), move(variables), Schemas(), _request.Params().contains("raw") );
+			auto ql = QL::Parse( move(query), move(vars), Schemas(), _request.Params().contains("raw") );
 			THROW_IFX( ql.IsMutation() && !_request.IsPost(), RestException<http::status::bad_request>(SRCE_CUR, move(_request), "Mutations must use post.") );
 			Resume( co_await GatewayQLAwait{move(_request), move(ql)} );
 		}

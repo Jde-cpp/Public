@@ -16,12 +16,11 @@
 namespace Jde::QL{
 	using DB::Value;
 	constexpr ELogTags _tags{ ELogTags::QL };
-	UpdateAwait::UpdateAwait( sp<DB::Table> table, MutationQL mutation, jobject variables, UserPK userPK, SL sl )ι:
+	UpdateAwait::UpdateAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
 		base{ sl },
 		_mutation{ move(mutation) },
 		_table{ table },
-		_userPK{ userPK },
-		_variables{ variables }
+		_userPK{ userPK }
 	{}
 
 	α UpdateAwait::await_ready()ι->bool{
@@ -106,7 +105,7 @@ namespace Jde::QL{
 
 	α UpdateAwait::UpdateBefore()ι->MutationAwaits::Task{
 		try{
-			co_await Hook::UpdateBefore( _mutation, _variables, _userPK );
+			co_await Hook::UpdateBefore( _mutation, _userPK );
 			Execute();
 		}
 		catch( exception& e ){
@@ -126,7 +125,7 @@ namespace Jde::QL{
 	}
 	α UpdateAwait::UpdateAfter( uint rowCount )ι->MutationAwaits::Task{
 		try{
-			co_await Hook::UpdateAfter( _mutation, _variables, _userPK );
+			co_await Hook::UpdateAfter( _mutation, _userPK );
 			Resume( jvalue{rowCount} );
 		}
 		catch( IException& e ){

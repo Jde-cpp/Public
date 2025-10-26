@@ -17,11 +17,10 @@ namespace Jde::QL{
 
 	constexpr ELogTags _tags{ ELogTags::QL };
 
-	MutationAwait::MutationAwait( MutationQL mutation, jobject variables, UserPK userPK, SL sl )ι:
+	MutationAwait::MutationAwait( MutationQL mutation, UserPK userPK, SL sl )ι:
 		TAwait<jvalue>{ sl },
 		_mutation{ move(mutation) },
-		_userPK{ userPK },
-		_variables{ move(variables) }
+		_userPK{ userPK }
 	{}
 
 	α MutationAwait::Execute()ι->TAwait<jvalue>::Task{
@@ -33,17 +32,17 @@ namespace Jde::QL{
 			case Update:
 			case Delete:
 			case Restore:
-				y = co_await UpdateAwait{ table, move(_mutation), _variables, _userPK, _sl };
+				y = co_await UpdateAwait{ table, move(_mutation), _userPK, _sl };
 				break;
 			case Add:
 			case Remove:
-				y = co_await AddRemoveAwait{ table, move(_mutation), _variables, _userPK, _sl };
+				y = co_await AddRemoveAwait{ table, move(_mutation), _userPK, _sl };
 				break;
 			case Create:
-				y = co_await InsertAwait( table, move(_mutation), _variables, _userPK, _sl );
+				y = co_await InsertAwait( table, move(_mutation), _userPK, _sl );
 				break;
 			case Purge:
-				y = co_await PurgeAwait{ table, move(_mutation), _variables, _userPK, _sl };
+				y = co_await PurgeAwait{ table, move(_mutation), _userPK, _sl };
 				break;
 			case Start:
 				MutationAwait::Start();
@@ -63,7 +62,7 @@ namespace Jde::QL{
 
 	α MutationAwait::Start()ι->MutationAwaits::Task{
 		try{
-			optional<jvalue> y = co_await Hook::Start( move(_mutation), _variables, _userPK );
+			optional<jvalue> y = co_await Hook::Start( move(_mutation), _userPK );
 			Resume( y ? move(*y) : jvalue{} );
 		}
 		catch( IException& e ){
@@ -73,7 +72,7 @@ namespace Jde::QL{
 
 	α MutationAwait::Stop()ι->MutationAwaits::Task{
 		try{
-			optional<jvalue> y = co_await Hook::Stop( move(_mutation), _variables, _userPK );
+			optional<jvalue> y = co_await Hook::Stop( move(_mutation), _userPK );
 			Resume( y ? move(*y) : jvalue{} );
 		}
 		catch( IException& e ){

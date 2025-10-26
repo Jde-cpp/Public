@@ -14,10 +14,10 @@ namespace Jde::Web::Server{
 		HttpRequest( const HttpRequest& ) = delete;
 		HttpRequest( HttpRequest&& ) = default;
 		α operator=( const HttpRequest& ) = delete;
-		α operator[]( str x )ι->string&{ return _params[x]; }
+		α operator[]( str x )Ι->const string&;
 
 		α StringBody()Ι->const string&{ return _request.body(); }
-		α Body()Ε->jobject{ return Json::Parse( _request.body() ); }
+		α Body()ε->jobject&;
 		α Contains( str param )Ι->bool{ return _params.contains( param ); }
 		α Header( sv header )Ι->string{ return _request.base()[header]; }
 		α IsGet()Ι->bool{ return _request.method() == http::verb::get; }
@@ -44,6 +44,7 @@ namespace Jde::Web::Server{
 	private:
 		α ParseUri()->void;
 
+		mutable optional<jobject> _body;
 		uint32 _connectionId;
 		uint32 _index;
 		bool _isSsl;

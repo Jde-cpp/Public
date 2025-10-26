@@ -18,8 +18,8 @@ local args = import 'args.libsonnet';
 			flushOn: "Trace",
 			tags: {
 				trace:["test","sql",
-					"uaSession", "uaServer", "uaUser", "uaSecurity", "threads", "uaClient", "uaSecure"],
-				debug:["ql","settings", "app", "uaNet"],
+					"uaServer", "uaUser", "uaSecurity", "threads", "uaClient", "uaSecure"],
+				debug:["ql","settings", "app", "uaNet", "uaSession"],
 				information:["uaEvent"],
 				warning:["io"],
 				"error":[],
@@ -53,7 +53,7 @@ local args = import 'args.libsonnet';
 			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.NodeSet2.xml",
 			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.Examples.NodeSet2.xml",
 		],
-		configFiles: [
+		additive: [
 //			"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.NodeSet2.xml",
@@ -67,8 +67,8 @@ local args = import 'args.libsonnet';
 			"$(UA_NODE_SETS)/AdditiveManufacturing/Opc.Ua.AdditiveManufacturing.Nodeset2.xml",
 			"$(UA_NODE_SETS)/AdditiveManufacturing/AdditiveManufacturing-Example.xml",
 		],
-		iaExamples: [
-			"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
+		configFiles: [
+			//"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"
@@ -76,8 +76,8 @@ local args = import 'args.libsonnet';
 		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840,
 		ssl:{
-			certificate: "/tmp/cert.pem",
-			privateKey: {path:"/tmp/private.pem", passcode: ""}
+			certificate: args.opcServer.ssl.certificate,
+			privateKey: {path: args.opcServer.ssl.privateKey.path, passcode: args.opcServer.ssl.privateKey.passcode}
 		}
 	},
 	workers:{

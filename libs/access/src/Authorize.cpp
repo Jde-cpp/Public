@@ -19,10 +19,10 @@ namespace Jde::Access{
 			return;
 
 		if( auto user = Users.find(executer); user!=Users.end() ){
-			THROW_IFSL( user->second.IsDeleted, "[{}]User is deleted.", executer.Value );
+			THROW_IFX( user->second.IsDeleted, Exception(sl, ELogLevel::Debug, "[{}]User is deleted.", executer.Value) );
 			let configured = user->second.ResourceRights( *resourcePK );
-			THROW_IFSL( !empty(configured.Denied & rights), "[{}]User denied '{}' access to '{}'.", executer.Value, ToString(rights), resourceName );
-			THROW_IFSL( empty(configured.Allowed & rights), "[{}]User does not have '{}' access to '{}'.", executer.Value, ToString(rights), resourceName );
+			THROW_IFX( !empty(configured.Denied & rights), Exception(sl, ELogLevel::Debug, "[{}]User denied '{}' access to '{}'.", executer.Value, ToString(rights), resourceName) );
+			THROW_IFX( empty(configured.Allowed & rights), Exception(sl, ELogLevel::Debug, "[{}]User does not have '{}' access to '{}'.", executer.Value, ToString(rights), resourceName) );
 		}
 		else if( executer.Value!=UserPK::System )
 			throw Exception{ sl, ELogLevel::Debug, "[{}]User not found.", executer.Value };
@@ -44,11 +44,11 @@ namespace Jde::Access{
 			return;
 		auto user = Users.find( executer );
 		if( user==Users.end() )
-			THROW_IFSL( user==Users.end(), "[{}]User not found.", executer.Value );
-		THROW_IFSL( user->second.IsDeleted, "[{}]User is deleted.", executer .Value);
+			THROW_IFX( user==Users.end(), Exception(sl, ELogLevel::Debug, "[{}]User not found.", executer.Value) );
+		THROW_IFX( user->second.IsDeleted, "[{}]User is deleted.", executer .Value);
 		let configured = user->second.ResourceRights( resource.PK );
-		THROW_IFSL( !empty(configured.Denied & ERights::Administer), "[{}]User denied admin access to '{}'.", executer.Value, resource.Target );
-		THROW_IFSL( empty(configured.Allowed & ERights::Administer), "[{}]User does not have admin access to '{}'.", executer.Value, resource.Target );
+		THROW_IFX( !empty(configured.Denied & ERights::Administer), Exception(sl, ELogLevel::Debug, "[{}]User denied admin access to '{}'.", executer.Value, resource.Target) );
+		THROW_IFX( empty(configured.Allowed & ERights::Administer), Exception(sl, ELogLevel::Debug, "[{}]User does not have admin access to '{}'.", executer.Value, resource.Target) );
 	}
 	α Authorize::TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SL sl )ε->void{
 		Jde::sl l{Mutex};

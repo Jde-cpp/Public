@@ -1,7 +1,8 @@
 ﻿#include "WindowsWorker.h"
 #include "WindowsSvc.h"
-#include "../../Framework/source/coroutine/Coroutine.h"
-#include "../../Framework/source/threading/Mutex.h"
+#include <jde/fwk/process/execution.h>
+//#include "../../Framework/source/coroutine/Coroutine.h"
+//#include "../../Framework/source/threading/Mutex.h"
 
 #define var const auto
 
@@ -20,7 +21,7 @@ namespace Jde::Windows{
 	WindowsWorker::WindowsWorker( Event&& initial )ι:
 		_eventQueue{ CREATE_EVENT },
 		_eventStop{ CREATE_EVENT },
-		_queue{ move(initial) },
+		_queue{ {initial} },
 		_pThread{ mu<std::jthread>( [&](){Loop();}) }
 	{}
 
@@ -32,7 +33,7 @@ namespace Jde::Windows{
 		ASSERT( _pInstance );
 		if( _pInstance )
 		{
-			_pInstance->_queue.Push( {{move(h), close}, hEvent} );
+			_pInstance->_queue.push( {{move(h), close}, hEvent} );
 			if( !::SetEvent(_pInstance->_eventQueue) )
 				ERR( "SetEvent returned false" );
 		}
@@ -40,11 +41,11 @@ namespace Jde::Windows{
 
 	α WindowsWorker::SubPush( Event& e )ι->bool
 	{
-		AtomicGuard l{ _lock };
+		lg _{ _lock };
 		var set = !Stopped() && _queue.size()+_coroutines.size()<MaxEvents();
 		if( set )
 		{
-			_queue.Push( move(e) );
+			_queue.push( move(e) );
 			if( !::SetEvent(_eventQueue) )
 				ERR( "SetEvent returned false" );
 		}
@@ -102,7 +103,7 @@ namespace Jde::Windows{
 			if( waitResult<_coroutines.size() ){
 				auto pCoroutine = _coroutines.begin() + waitResult;
 				if( pCoroutine->CoEvent )
-					Coroutine::CoroutinePool::Resume( move(pCoroutine->CoEvent) );
+					Post( move(pCoroutine->CoEvent) );
 				else
 					ERR( "cohandle is empty!"sv );
 				auto p = _objects.begin() + waitResult;
@@ -112,9 +113,8 @@ namespace Jde::Windows{
 				_coroutines.erase( pCoroutine );
 				if( !IsMainThread() )
 				{
-					AtomicGuard l{ _lock };
-					if( _queue.size()+_coroutines.size()==0 )
-					{
+					lg _{ _lock };
+					if( _queue.size()+_coroutines.size()==0 ){
 						_stop = Clock::now();
 						break;
 					}
@@ -123,9 +123,11 @@ namespace Jde::Windows{
 			else if( waitResult==_coroutines.size() ){
 				if( !::ResetEvent(_objects[waitResult]) )
 					ERR( "ResetEvent failed for event object" );
-				vector<Event> events = _queue.PopAll();
-				for( auto& e : events )
+				while( _queue.size() ){
+					auto e = move( _queue.front() );
+					_queue.pop();
 					HandleEvent( move(e) );
+				}
 			}
 			else
 			{
@@ -174,9 +176,9 @@ namespace Jde::Windows{
 	α WindowsWorkerMain::Stop( int exitCode )ι->void{
 		if( _pInstance ){
 			var tags = ELogTags::App | ELogTags::Shutdown;
-			Debug{ tags, "({})Stopping", exitCode };
+			DBGT( tags, "({})Stopping", exitCode );
 			Process::Shutdown( exitCode );
-			Debug{ tags, "({})Shutdown Complete", exitCode };
+			DBGT( tags, "({})Shutdown Complete", exitCode );
 			if( !::SetEvent(_pInstance->_eventStop) )
 				ERR( "SetEvent returned false" );
 		}

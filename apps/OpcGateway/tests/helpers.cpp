@@ -1,6 +1,6 @@
 #include "helpers.h"
 #include <jde/fwk/settings.h>
-#include <jde/opc/uatypes/helpers.h>
+#include <jde/opc/uatypes/opcHelpers.h>
 #include <jde/opc/UAException.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/ql/ql.h>
@@ -25,7 +25,7 @@ namespace Jde::Opc::Gateway::Tests{
 			let certificateUri{ Settings::FindSV("/opc/urn").value_or("urn:open62541.server.application") };
 			let url{ Settings::FindSV("/opc/url").value_or( "opc.tcp://127.0.0.1:4840") };
 			let create = Ƒ( "mutation createServerConnection( target:'{}', name:'My Test Server', certificateUri:'{}', description:'Test basic functionality', url:'{}', isDefault:false ){{id}}", OpcServerTarget, certificateUri, url );
-			let createJson = co_await *QL().QueryObject( Str::Replace(create, '\'', '"'), {UserPK::System}, true, _sl );
+			let createJson = co_await *QL().QueryObject( Str::Replace(create, '\'', '"'), {}, {UserPK::System}, true, _sl );
 			ResumeScaler( Json::AsNumber<ServerCnnctnPK>(createJson, "id") );
 		}
 		catch( exception& e ){
@@ -37,7 +37,7 @@ namespace Jde::Opc::Gateway::Tests{
 		if( !_pk.has_value() )
 			_pk = SelectServerCnnctn( OpcServerTarget )->Id;
 		let q = Ƒ( "{{ mutation purgeServerConnection('id':{}) }}", *_pk );
-		let result = co_await *QL().Query( Str::Replace(q, '\'', '"'), {UserPK::System}, true, _sl );
+		let result = co_await *QL().Query( Str::Replace(q, '\'', '"'), {}, {UserPK::System}, true, _sl );
 		ResumeScaler( 1 );
 	}
 }

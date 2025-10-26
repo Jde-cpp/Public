@@ -154,7 +154,8 @@ namespace Jde::DB{
 					if( i<query.size() )
 						os.put( query[i] );
 				}
-				config.DS()->ExecuteSync( {os.str()} );
+				string sql{ os.str() };
+				config.DS()->ExecuteSync( {move(sql)} );
 			}
 			INFO( "Finished '{}'", scriptFile.string() );
 		});

@@ -9,7 +9,7 @@ namespace Jde::DB{ struct Table; struct IDataSource; }
 namespace Jde::QL{
 	struct UpdateAwait final: TAwait<jvalue>{
 		using base=TAwait<jvalue>;
-		UpdateAwait( sp<DB::Table> table, MutationQL mutation, jobject variables, UserPK userPK, SRCE )ι;
+		UpdateAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SRCE )ι;
 		α await_ready()ι->bool override;
 		α Suspend()ι->void override{ UpdateBefore(); }
 		α await_resume()ε->jvalue override;
@@ -27,6 +27,5 @@ namespace Jde::QL{
 		UserPK _userPK;
 		up<IException> _exception;
 		vector<DB::UpdateClause> _updates;
-		jobject _variables;
 	};
 }

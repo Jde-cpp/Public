@@ -33,7 +33,7 @@ namespace Jde::Windows
 		atomic<TimePoint> _stop;
 		vector<CoEvent> _coroutines;
 		vector<HANDLE> _objects;
-		QueueMove<Event> _queue;
+		std::queue<Event> _queue;
 	private:
 		α AddInternalEvents()ι->void{ _objects.push_back( _eventQueue );  _objects.push_back( _eventStop ); if( _eventWorker ) _objects.push_back( _eventWorker ); }
 		constexpr virtual uint MaxEvents()ι{return MAXIMUM_WAIT_OBJECTS-2; }
@@ -42,8 +42,7 @@ namespace Jde::Windows
 		Duration _shutdownWait{5s};
 		HANDLE _eventWorker{ nullptr };
 		up<std::jthread> _pThread;//3rd class...
-		std::atomic_flag _lock;
-
+		mutex _lock;
 	};
 
 	struct WindowsWorkerMain final: WindowsWorker

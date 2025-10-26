@@ -12,24 +12,24 @@ namespace Jde::QL{
 	  virtual ~IQLHook() = default;
 
 		β Select( const TableQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-		β InsertBefore( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
-		β InsertAfter( const MutationQL&, jobject, UserPK, uint, SRCE )ι->HookResult{ return {}; }
-		β InsertFailure( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
-		β UpdateBefore( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
-		β UpdateAfter( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }//includes delete/restore.
-		β PurgeBefore( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
-		β PurgeAfter( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
-		β PurgeFailure( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
+		β InsertBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β InsertAfter( const MutationQL&, UserPK, uint, SRCE )ι->HookResult{ return {}; }
+		β InsertFailure( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β UpdateBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β UpdateAfter( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }//includes delete/restore.
+		β PurgeBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β PurgeAfter( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β PurgeFailure( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
 
-		β AddBefore( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
-		β Add( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
-		β AddAfter( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
+		β AddBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β Add( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β AddAfter( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
 //		β RemoveBefore( const MutationQL& mutation, UserPK executer, SRCE )ι->HookResult{ return {}; }
-		β Remove( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
-		β RemoveAfter( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
+		β Remove( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β RemoveAfter( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
 
-		β Start( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
-		β Stop( const MutationQL&, jobject, UserPK, SRCE )ι->HookResult{ return {}; }
+		β Start( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β Stop( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
 	};
 #pragma warning(pop)
 
@@ -67,8 +67,8 @@ namespace Jde::QL{
 
 	struct MutationAwaits : TAwait<optional<jarray>>{
 		using base=TAwait<optional<jarray>>;
-		MutationAwaits( MutationQL mutation, jobject variables, UserPK executer, Hook::Operation op, SRCE )ι;
-		MutationAwaits( MutationQL mutation, jobject variables, UserPK executer, Hook::Operation op, uint pk=0, SRCE )ι;
+		MutationAwaits( MutationQL mutation, UserPK executer, Hook::Operation op, SRCE )ι;
+		MutationAwaits( MutationQL mutation, UserPK executer, Hook::Operation op, uint pk=0, SRCE )ι;
 		α await_ready()ι->bool override;
 		α Suspend()ι->void override;
 		α Execute()ι->IMutationAwait::Task;
@@ -84,25 +84,25 @@ namespace Jde::QL{
 
 	namespace Hook{
 		α Select( const TableQL& ql, UserPK executer, SRCE )ι->QueryHookAwaits;
-		α InsertBefore( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
-		α InsertAfter( uint pk, const MutationQL&, jobject, UserPK, SRCE )ι->MutationAwaits;
-		α InsertFailure( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
-		α UpdateBefore( const MutationQL&, jobject, UserPK, SRCE )ι->MutationAwaits;
-		α UpdateAfter( const MutationQL&, jobject, UserPK executer, SRCE )ι->MutationAwaits;//includes delete/restore.
-		α PurgeBefore( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
-		α PurgeAfter( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
-		α PurgeFailure( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
+		α InsertBefore( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
+		α InsertAfter( uint pk, const MutationQL&, UserPK, SRCE )ι->MutationAwaits;
+		α InsertFailure( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
+		α UpdateBefore( const MutationQL&, UserPK, SRCE )ι->MutationAwaits;
+		α UpdateAfter( const MutationQL&, UserPK executer, SRCE )ι->MutationAwaits;//includes delete/restore.
+		α PurgeBefore( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
+		α PurgeAfter( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
+		α PurgeFailure( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 
 
-		α AddBefore( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
-		α Add( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
-		α AddAfter( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
+		α AddBefore( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
+		α Add( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
+		α AddAfter( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 		//α RemoveBefore( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
-		α Remove( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
-		α RemoveAfter( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
+		α Remove( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
+		α RemoveAfter( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 
-		α Start( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
-		α Stop( const MutationQL& m, jobject, UserPK executer, SRCE )ι->MutationAwaits;
+		α Start( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
+		α Stop( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 	};
 
 	//need awaitable to throw an exception

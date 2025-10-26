@@ -51,8 +51,8 @@ namespace Jde::QL{
 		for( auto&& m : result.Mutations() ){
 			auto key = m.FindKey();
 			if( !key ){
-				let shift = m.TryNumber<uint8>( "shift", variables ).value_or(0);
-				key = { shift ? 1ul << shift : 0 };
+				auto shift = m.TryNumber<uint8>( "shift" );
+				key = { shift ? 1ul << *shift : 0 };
 				m.Args["id"] = key->PK();
 				m.Args.erase( "shift" );
 			}
@@ -68,7 +68,7 @@ namespace Jde::QL{
 				if( auto t = key->IsPrimary() ? GetTablePtr(m.TableName()) : nullptr; t && t->SequenceColumn() )
 					y.push_back( BlockAwait<InsertAwait,jvalue>({DB::AsTable(t), move(m), true, executer}) );
 				else
-					y.push_back( BlockAwait<QLAwait<jvalue>,jvalue>(QLAwait<jvalue>{move(m), variables, executer}) );
+					y.push_back( BlockAwait<QLAwait<jvalue>,jvalue>(QLAwait<jvalue>{move(m), executer}) );
 			}else
 				y.push_back( {} );
 		}

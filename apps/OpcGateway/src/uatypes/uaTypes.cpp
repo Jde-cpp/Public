@@ -12,7 +12,7 @@ namespace Jde::Opc::Gateway{
 		THROW_IFX( resultsSize!=paths.size(), UAClientException(responseHeader.serviceResult, uaHandle, Ƒ("UA_Client_Service_translateBrowsePathsToNodeIds resultSize: {}, pathSize: {}", resultsSize, paths.size()), sl) );
 	}
 
-	BrowsePathsToNodeIdResponse::operator flat_map<string,Expected>()Ε{
+	BrowsePathsToNodeIdResponse::operator flat_map<string,BrowsePathsToNodeIdResponse::Expected>()Ε{
 		auto y = ReserveMap<string,Expected>( resultsSize );
 		for( uint i=0; i<resultsSize; ++i ){
 			optional<Expected> expected;

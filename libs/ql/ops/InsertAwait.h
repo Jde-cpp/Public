@@ -10,8 +10,8 @@ namespace Jde::DB{ struct Criteria; struct IDataSource; struct InsertClause; str
 namespace Jde::QL{
 	struct InsertAwait final: TAwait<jvalue>{
 		using base=TAwait<jvalue>;
-		InsertAwait( sp<DB::Table> table, MutationQL m, jobject variables, UserPK executer, SRCE )ι;
-		InsertAwait( sp<DB::Table> table, MutationQL&& m, jobject variables, bool identityInsert, UserPK executer, SRCE )ι;
+		InsertAwait( sp<DB::Table> table, MutationQL m, UserPK executer, SRCE )ι;
+		InsertAwait( sp<DB::Table> table, MutationQL&& m, bool identityInsert, UserPK executer, SRCE )ι;
 		α await_ready()ι->bool override;
 		α Suspend()ι->void override{ InsertBefore(); }
 		α await_resume()ε->jvalue override;

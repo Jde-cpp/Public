@@ -15,7 +15,7 @@ namespace Jde::QL{
 		try{
 			for( auto& m : mutations ){
 				LOGSL( ELogLevel::Trace, _sl, ELogTags::QL, "QL: {}", m.ToString() );
-				auto mutationResult = co_await MutationAwait( m, _request.Variables(), _executer, _sl );
+				auto mutationResult = co_await MutationAwait( m, _executer, _sl );
 				if( !m.ResultRequest )
 					continue;
 				if( auto array = mutationResult.is_array() ? &mutationResult.get_array() : nullptr; array && array->size() )

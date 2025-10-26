@@ -17,14 +17,14 @@ namespace Jde::QL{
 		α Text()ι->string{ return i<_text.size() ? _text.substr(i) : string{}; }
 		α AllText()ι->string{ return _text; }
 
-		α LoadMutations( string&& command, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε->vector<MutationQL>;
-		α LoadTables( string jsonName, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SRCE )ε->vector<TableQL>;
-		α LoadSubscriptions( const vector<sp<DB::AppSchema>>& schemas )ε->vector<Subscription>;
+		α LoadMutations( string&& command, sp<jobject> variables, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε->vector<MutationQL>;
+		α LoadTables( string jsonName, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SRCE )ε->vector<TableQL>;
+		α LoadSubscriptions( sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas )ε->vector<Subscription>;
 		α LoadUnsubscriptions()ε->vector<SubscriptionId>;
 	private:
-		α LoadTable( string jsonName, const vector<sp<DB::AppSchema>>& schemas, bool system=false, SRCE )ε->TableQL;
+		α LoadTable( string jsonName, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool system=false, SRCE )ε->TableQL;
 
-		α LoadSubscription( const vector<sp<DB::AppSchema>>& schemas )ε->Subscription;
+		α LoadSubscription( sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas )ε->Subscription;
 		α ParseArgs()ε->jobject;
 		uint i{0};
 		string _text;

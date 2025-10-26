@@ -1,10 +1,10 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "LogTests.Exists",
+		tests: "BrowseTests.NodeId",
 		recreateDB:: true,
-		embeddedAppServer: false,
-		embeddedOpcServer: false
+		embeddedAppServer: true,
+		embeddedOpcServer: true
 	},
 	opc: args.opc,
 	dbServers: {
@@ -36,7 +36,12 @@ local args = import 'args.libsonnet';
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",
-		configDir: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		mutationsDir:: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		configFiles: [
+			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
+			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
+			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"
+		],
 		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840,
 		ssl:{
@@ -52,8 +57,8 @@ local args = import 'args.libsonnet';
 		spd:{
 			defaultLevel:: "Information",
 			tags: {
-				trace:["test", "app", "http.client.write", "http.client.read"],
-				debug:["settings", "scheduler", "uaEvent","sql", "ql",
+				trace:["test", "app", "http.client.write", "http.client.read", "ql", "sql"],
+				debug:["settings", "scheduler", "uaEvent",
 					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
 					"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
 					"monitoring", "browse", "processingLoop", "monitoring.pedantic"],
@@ -70,14 +75,14 @@ local args = import 'args.libsonnet';
 		memory:{
 			default: "trace"
 		},
-		proto:{
-			path: args.logDir + "/proto",
-			timeZone: "America/New_York",
-			delay: "PT1M"
-		},
-		remote:{
-			delay: "PT2S"
-		}
+		// proto:{
+		// 	path: args.logDir + "/proto",
+		// 	timeZone: "America/New_York",
+		// 	delay: "PT1M"
+		// },
+		// remote:{
+		// 	delay: "PT2S"
+		// }
 	},
 	workers:{
 		executor: {threads: 2},

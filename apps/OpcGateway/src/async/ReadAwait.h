@@ -35,7 +35,7 @@ namespace Jde::Opc::Gateway{
 		α await_ready()ι->bool{ return !_request.nodesToReadSize; }
 		α Suspend()ι->void override;
 		Ω OnResponse( UA_Client* client, void* userdata, UA_UInt32 requestId, UA_ReadResponse* rr )ι->void;
-		α await_resume()ι->ReadResponse;
+		α await_resume()ε->ReadResponse;
 	private:
 		ReadRequest _request;
 		RequestId 	_requestId{};

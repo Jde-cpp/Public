@@ -44,8 +44,7 @@ namespace Jde{
 		using Handle=coroutine_handle<TPromise>;
 		IAwait( SRCE )ι:_sl{sl}{}
 		β await_ready()ι->bool{ return false; }
-		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
-		//β await_resume()ε->TResult{ AwaitResume(); return TResult{}; }
+		Ξ await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
 		β await_resume()ε->TResult = 0;
 		α ResumeExp( IException&& e )ι{
 			ASSERT(Promise());
@@ -94,7 +93,7 @@ namespace Jde{
 			throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Critical, "promise is null" };
 		if( !base::Promise()->Value() )
 			throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Critical, "Value is null" };
-		Result result = std::move( *base::Promise()->Value() );
+		Result result{ std::move(*base::Promise()->Value()) };
 		base::_h = nullptr;
 		return result;
 	}
@@ -106,6 +105,12 @@ namespace Jde{
 		α Suspend()ι->void override{ Execute(); }
 		β Execute()ι->TExecuteResult=0;
 	};
+
+	//msvc multiple defined symbols without
+	struct Γ StringAwait : TAwait<string>{
+		StringAwait( SRCE )ι:TAwait<string>{ sl }{}
+	};
+
 
 	Ξ BlockVoidAwaitExecute( VoidAwait&& a, up<IException>& e, atomic_flag& done )ι->VoidAwait::Task{
 		try{

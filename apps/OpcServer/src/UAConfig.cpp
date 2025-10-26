@@ -6,7 +6,8 @@
 #include <jde/app/client/IAppClient.h>
 
 #define let const auto
-namespace Jde::Opc::Server {
+namespace Jde::Opc::Server{
+	constexpr ELogTags _tags = (ELogTags)EOpcLogTags::Opc;
 	UAConfig::UAConfig()ε:
 		UA_ServerConfig{
 			.logging{ &_logger },
@@ -64,8 +65,10 @@ namespace Jde::Opc::Server {
 			if( !fs::exists(dir) || !fs::is_directory(dir) )
 				continue;
 			for( let& entry : fs::directory_iterator(dir) ){
-				if( entry.path().extension()==".pem" || entry.path().extension()==".crt" )
+				if( entry.path().extension()==".pem" || entry.path().extension()==".crt" ){
 					trustedCerts.push_back( *ToUAByteString(Crypto::ReadCertificate({entry.path()})).release() );
+					INFO( "Added certificate:  {}", entry.path().string() );
+				}
 			}
 		}
 		UA_ByteString issuerList; uint issuerListSize = 0;

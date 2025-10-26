@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <jde/fwk/co/Await.h>
+#include <jde/web/server/Sessions.h>
 #include "../types/ServerCnnctn.h"
 #include "../auth/OpcServerSession.h"
 

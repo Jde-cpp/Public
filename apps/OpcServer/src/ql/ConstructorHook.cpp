@@ -7,7 +7,7 @@
 #define let const auto
 namespace Jde::Opc::Server{
 	struct ConstructorQLAwait final : TAwait<jvalue>{
-		ConstructorQLAwait( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι: TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer }, _variables{ variables } {}
+		ConstructorQLAwait( const QL::MutationQL& m, UserPK executer, SL sl )ι: TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer } {}
 	private:
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->TAwait<VariantPK>::Task;
@@ -20,10 +20,10 @@ namespace Jde::Opc::Server{
 		auto& ua = GetUAServer();
 		try{
 			auto& m = _mutation;
-			auto node = ua.GetTypeDef( NodeId{m.Get<jobject>("node", _variables, _sl)} );
+			auto node = ua.GetTypeDef( NodeId{m.As<jobject>("node", _sl)} );
 			jarray y;
 			flat_map<BrowseNamePK, Variant> values;
-			for( auto&& v : m.Get<jarray>("values", _variables, _sl) ){
+			for( auto&& v : m.As<jarray>("values", _sl) ){
 				auto& o = v.as_object();
 				BrowseName browse{ o.at("browseName").as_object() };
 				ua.GetBrowse( browse );
@@ -47,7 +47,7 @@ namespace Jde::Opc::Server{
 		}
 	}
 
-	α ConstructorHook::InsertBefore( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι->HookResult{
-		return m.TableName()=="constructors" ? mu<ConstructorQLAwait>( m, variables, executer, sl ) : nullptr;
+	α ConstructorHook::InsertBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="constructors" ? mu<ConstructorQLAwait>( m, executer, sl ) : nullptr;
 	}
 }

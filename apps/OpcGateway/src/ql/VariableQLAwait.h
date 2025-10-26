@@ -10,8 +10,8 @@ namespace Jde::Opc::Gateway{
 	struct UAClient;
 	struct VariableQLAwait final: TAwaitEx<jvalue,TAwait<sp<UAClient>>::Task>{
 		using base = TAwaitEx<jvalue,TAwait<sp<UAClient>>::Task>;
-		VariableQLAwait( QL::MutationQL&& mutation, jobject variables, sp<Web::Server::SessionInfo> session, SRCE )ι:
-			base{ sl }, _mutation{move(mutation)}, _session{move(session)}, _variables{variables}
+		VariableQLAwait( QL::MutationQL&& mutation, sp<Web::Server::SessionInfo> session, SRCE )ι:
+			base{ sl }, _mutation{move(mutation)}, _session{move(session)}
 		{}
 		α Execute()ι->TAwait<sp<UAClient>>::Task override;
 	private:
@@ -23,6 +23,5 @@ namespace Jde::Opc::Gateway{
 		QL::MutationQL _mutation;
 		NodeId _nodeId;
 		sp<Web::Server::SessionInfo> _session;
-		jobject _variables;
 	};
 }

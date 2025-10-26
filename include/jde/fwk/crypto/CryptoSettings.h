@@ -1,9 +1,8 @@
 #pragma once
-#include "exports.h"
 #include "OpenSsl.h"
 
 namespace Jde::Crypto{
-	struct ΓC CryptoSettings final{
+	struct Γ CryptoSettings final{
 		CryptoSettings( str settingsPrefix )ι;
 		CryptoSettings( jobject settings )ι;
 		α CreateDirectories()Ε->void;

@@ -13,8 +13,8 @@
 namespace Jde::QL{
 	using DB::EOperator;
 
-	TableQL::TableQL( string jName, jobject args, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε:
-		Args{move(args)},
+	TableQL::TableQL( string jName, jobject args, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε:
+		Input{ move(args), move(variables) },
 		DBTable{ system ? sp<DB::View>{} : DB::AppSchema::GetViewPtr(schemas, DB::Names::ToPlural(DB::Names::FromJson(jName)), sl) },
 		JsonName{move(jName)}
 	{}

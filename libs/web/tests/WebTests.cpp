@@ -2,7 +2,7 @@
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/client/http/ClientHttpResException.h>
 #include <jde/fwk/chrono.h>
-#include <jde/fwk/Stopwatch.h>
+#include <jde/fwk/utils/Stopwatch.h>
 #include <jde/fwk/str.h>
 #include <jde/fwk/process/execution.h>
 #include "mocks/ServerMock.h"

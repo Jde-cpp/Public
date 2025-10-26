@@ -27,13 +27,13 @@ namespace Jde::QL{
 		return { move(tableJsonName), (EMutationQL)iType };
 	}
 
-	MutationQL::MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε:
-		Args(move(args)), CommandName{move(commandName)}, ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{
+	MutationQL::MutationQL( string commandName, jobject&& args, sp<jobject> variables, optional<TableQL>&& resultRequest, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas, bool system )ε:
+		Input{ move(args), move(variables) }, CommandName{move(commandName)}, ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{
 		std::tie(JsonTableName,Type) = ParseCommand( CommandName );
-		DBTable = JsonTableName.empty() ? nullptr : DB::AppSchema::GetTablePtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(JsonTableName)) );
+		DBTable = system || JsonTableName.empty() ? nullptr : DB::AppSchema::GetTablePtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(JsonTableName)) );
 	}
-	MutationQL::MutationQL( string commandName, jobject&& args, optional<TableQL>&& resultRequest, bool returnRaw, const sp<DB::AppSchema>& schema )ε:
-		Args(move(args)), CommandName{move(commandName)}, ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{
+	MutationQL::MutationQL( string commandName, jobject&& args, sp<jobject> variables, optional<TableQL>&& resultRequest, bool returnRaw, const sp<DB::AppSchema>& schema )ε:
+		Input{ move(args), move(variables) }, CommandName{move(commandName)}, ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{
 		std::tie(JsonTableName,Type) = ParseCommand( CommandName );
 		DBTable = schema->GetTablePtr( DB::Names::ToPlural(DB::Names::FromJson(JsonTableName)) );
 	}
@@ -51,20 +51,6 @@ namespace Jde::QL{
 	// 	THROW_IFSL( !p, "Could not find param '{}' in '{}'", name, serialize(Args) );
 	// 	return *p;
 	// }
-
-	α MutationQL::GetKey(SL sl)ε->DB::Key{
-		let y = FindKey();
-		THROW_IFSL( !y, "Could not find id or target in mutation '{}'", ToString() );
-		return *y;
-	}
-	α MutationQL::FindKey()ι->optional<DB::Key>{
-		optional<DB::Key> y;
-		if( let id = FindId<uint>(); id )
-			y = DB::Key{ *id };
-		else if( let target = FindPtr("target"); target )
-			y = DB::Key{ Json::AsString(move(*target)) };
-		return y;
-	}
 
 	α MutationQL::IsMutation( sv name )ι->bool{
 		bool isMutation{ name=="mutation" };

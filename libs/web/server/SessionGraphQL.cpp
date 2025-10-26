@@ -83,7 +83,7 @@ namespace Jde::Web::Server{
 	}
 
 	struct PurgeSessionAwait final: TAwait<jvalue>{
-		PurgeSessionAwait( const QL::MutationQL& m, jobject variables, UserPK executer, SRCE )ι: TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer }, _variables{ variables }{}
+		PurgeSessionAwait( const QL::MutationQL& m, UserPK executer, SRCE )ι: TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer }{}
 		α await_resume()ε->jvalue;
 		α await_ready()ι->bool override;
 	private:
@@ -91,7 +91,6 @@ namespace Jde::Web::Server{
 		Jde::UserPK _executer;
 		jobject _result{ {"complete", true} };
 		up<IException> _exception;
-		jobject _variables;
 	};
 	α PurgeSessionAwait::await_ready()ι->bool{
 		//TODO check permissions
@@ -116,7 +115,7 @@ namespace Jde::Web::Server{
 		return query.JsonName.starts_with( "session" ) ? mu<SessionGraphQLAwait>( query, userPK, _appClient, sl ) : nullptr;
 	}
 
-	α SessionGraphQL::PurgeBefore( const QL::MutationQL& m, jobject variables, UserPK executer, SL sl )ι->HookResult{
-		return m.TableName()=="sessions" ? mu<PurgeSessionAwait>( m, variables, executer, sl ) : nullptr;
+	α SessionGraphQL::PurgeBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
+		return m.TableName()=="sessions" ? mu<PurgeSessionAwait>( m, executer, sl ) : nullptr;
 	}
 }

@@ -5,11 +5,11 @@
 namespace Jde::QL{
 	struct TableQL; struct Subscription;
 	struct RequestQL{
-		RequestQL( TableQL&& table, jobject variables )ι:_value{vector<TableQL>{move(table)}}, _variables{move(variables)}{}
-		RequestQL( vector<TableQL>&& tables, jobject variables )ι:_value{move(tables)}, _variables{move(variables)}{}
-		RequestQL( vector<MutationQL>&& mutation, jobject variables )ι:_value{move(mutation)}, _variables{move(variables)}{}
-		RequestQL( vector<Subscription>&& subscriptions, jobject variables )ι:_value{move(subscriptions)}, _variables{move(variables)}{}
-		RequestQL( vector<SubscriptionId>&& unsubscriptions, jobject variables )ι:_value{move(unsubscriptions)}, _variables{move(variables)}{}
+		RequestQL( TableQL&& table )ι:_value{vector<TableQL>{move(table)}}{}
+		RequestQL( vector<TableQL>&& tables )ι:_value{move(tables)}{}
+		RequestQL( vector<MutationQL>&& mutation )ι:_value{move(mutation)}{}
+		RequestQL( vector<Subscription>&& subscriptions )ι:_value{move(subscriptions)}{}
+		RequestQL( vector<SubscriptionId>&& unsubscriptions )ι:_value{move(unsubscriptions)}{}
 
 		α IsMutation()Ι->bool{ return _value.index()==1; }
 		α Mutations()Ι->const vector<MutationQL>&{ return const_cast<RequestQL*>(this)->Mutations(); }
@@ -20,9 +20,8 @@ namespace Jde::QL{
 		α IsQueries()Ι->bool{ return _value.index()==0; }
 		α Queries()Ι->const vector<TableQL>&{ return const_cast<RequestQL*>(this)->Queries(); }
 		α Queries()ι->vector<TableQL>&{ ASSERT(_value.index()==0); return get<0>(_value); }
-		α Variables()Ι->const jobject&{ return _variables; }
+//		α Variables()ι->sp<jobject>&{ return _variables; }
 	private:
 		variant<vector<TableQL>,vector<MutationQL>, vector<Subscription>,vector<SubscriptionId>> _value;
-		jobject _variables;
 	};
 }
