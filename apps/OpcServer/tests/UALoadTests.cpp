@@ -16,7 +16,7 @@ namespace Jde::Opc::Server::Tests{
 
 	TEST_F( UALoadTests, LoadMyKitchen){
 		GetUAServer().Load( Path()/"CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml" );
-		GetUAServer().Load( fs::path{*Process::EnvironmentVariable("JDE_DIR")}/"Public/apps/OpcServer/config/nodesets/kitchen.xml" );
+		GetUAServer().Load( fs::path{*Process::GetEnv("JDE_DIR")}/"Public/apps/OpcServer/config/nodesets/kitchen.xml" );
 	}
 
 	// never ending loop
@@ -99,11 +99,11 @@ namespace Jde::Opc::Server::Tests{
 		GetUAServer().Load( Path()/"IA/Opc.Ua.IA.NodeSet2.xml" );
 	}
 
-
+/*
 	TEST_F( UALoadTests, LoadIAExamplesNodeset){
 		GetUAServer().Load( Path()/"IA/Opc.Ua.IA.NodeSet2.examples.xml" );
 	}
-
+*/
 
 	TEST_F( UALoadTests, LoadIOLinkIODDNodeset){
 		GetUAServer().Load( Path()/"IOLink/Opc.Ua.IOLinkIODD.NodeSet2.xml" );

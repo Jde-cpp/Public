@@ -6,7 +6,10 @@
 	sqlType: "mysql",
 	logDir: "$(JDE_BUILD_DIR)",
 	opcServer: {
-		trustedCertDirs: [ programDataCompany+"/OpcGateway/ssl/certs" ],
+		trustedCertDirs: [
+			programDataCompany+"/OpcGateway/ssl/certs",
+			programDataCompany+"/OpcTests/ssl/certs"
+		],
 		ssl:{
 			certificate: programDataApp+"/ssl/certs/opcServer.pem",
 			privateKey: {path: programDataApp+"/ssl/private/opcServer.pem", passcode: ""}

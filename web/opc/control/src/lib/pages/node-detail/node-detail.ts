@@ -2,7 +2,7 @@ import { SelectionModel, SelectionChange } from '@angular/cdk/collections';
 import {Component, computed, inject, Inject, model, OnDestroy, OnInit, signal} from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
-import {MatSelectModule} from '@angular/material/select';
+import {MatSelectChange, MatSelectModule} from '@angular/material/select';
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
 import { Gateway, GatewayService, SubscriptionResult } from '../../services/gateway.service';
 import { DateUtils, IErrorService, ProtoUtils, Timestamp} from 'jde-framework'
@@ -14,7 +14,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { NodePageData } from '../../services/resolvers/node.resolver';
 import { NodeRoute } from '../../model/NodeRoute';
 import { OpcNodeRouteService } from '../../services/routes/opc-node-route.service';
-import { Value, toString } from '../../model/Value';
+import { Value, valueString } from '../../model/Value';
 import { ENodeClass, Variable, UaNode }  from '../../model/Node';
 import { ServerCnnctn } from '../../model/ServerCnnctn';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -73,7 +73,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 	}
 
 	toObject( x:ENodeClass ):string{ return ENodeClass[x]; }
-	toString( value:Value ){ return toString(value); }
+	toString( value:Value ){ return valueString(value); }
   checkboxLabel(row?: UaNode): string {
 		return row
 			? `${this.selections.isSelected(row) ? 'deselect' : 'select'} ${row.name}`
@@ -127,7 +127,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 	async toggleValue( x:Variable, e:MatCheckboxChange ){
 		e.source.checked = !e.source.checked;
 		try {
-			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, !x.value );
+			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, !x.value, (x)=>console.log(x) );
 		}
 		catch (e) {
 			this.snackbar.exception( e, (m)=>console.log(m) );
@@ -135,7 +135,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 	}
 	async changeDouble( x:Variable, e:Event ){
 		try {
-			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +e.target["value"] );
+			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +e.target["value"], (x)=>console.log(x) );
 		}
 		catch (e) {
 			this.snackbar.exception( e, (m)=>console.log(m) );
@@ -145,25 +145,26 @@ export class NodeDetail implements OnInit, OnDestroy {
 	}
 	async changeString( n:Variable, e:Event ){
 		try {
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.target["value"] );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.target["value"], (x)=>console.log(x) );
 		}
 		catch (err) {
 			e.target["value"] = n.value;
 			this.snackbar.exception( err, (m)=>console.error(m) );
 		}
 	}
-	async changeEnum( n:Variable, e:any ){
+	async changeEnum( n:Variable, e:MatSelectChange<number> ){
 		try {
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.value );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.value, (x)=>console.log(x) );
 		}
 		catch (err) {
+			e.source.value = <number>n.value;
 			this.snackbar.exception( err, (m)=>console.error(m) );
 		}
 	}
 	async dateInput( n:Variable, e:MatDatepickerInputEvent<Date, any> ){
 		try {
 			let date = DateUtils.beginningOfDay( e.value );
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(date) );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(date), (x)=>console.log(x) );
 			debugger;
 		}
 		catch (err) {
@@ -173,7 +174,7 @@ export class NodeDetail implements OnInit, OnDestroy {
 	}
 	async changeDate( n:Variable, e:Event ){
 		try {
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(<Date>e.target["value"]) );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(<Date>e.target["value"]), (x)=>console.log(x) );
 			debugger;
 		}
 		catch (err) {

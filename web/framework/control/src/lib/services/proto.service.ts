@@ -137,8 +137,8 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				for( let callback of this.#loginCallbacks ){
 					let y = await this.authGet<any>(
 						callback.target,
-						this.user().authorization
-						, log
+						this.user().authorization,
+						log
 					);
 					callback.resolve( y );
 				}
@@ -179,7 +179,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				if( e["status"]==401 ){
 					log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
 					this.authStore.logout();
-					y = await this.authGet<Y>( target );
+					y = await this.authGet<Y>( target, null, log );
 				}
 				else
 					throw e;
@@ -193,7 +193,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				if( e["status"]==401 ){
 					log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
 					this.authStore.logout();
-					y = await this.authGet<Y>( target );
+					y = await this.authGet<Y>( target, null, log );
 				}
 				else
 					throw e;
@@ -223,7 +223,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	}
 
 	async post<Y>( target:string, body:any, preferSecure:boolean=false, log:Log ):Promise<Y>{
-		return (await this.postRaw<Y>( target, body, preferSecure ))[ "value" ];
+		return await this.postRaw<Y>( target, body, preferSecure );
 	}
 
 	async postRaw<Y>( target:string, body:any, preferSecure:boolean=false, options?:any ):Promise<Y>{
@@ -242,18 +242,28 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 			}
 		}
 
-		let event:HttpEvent<Y> = await firstValueFrom( this.http.post<Y>(url, body, options) );
-		let response:HttpResponse<Y> = <HttpResponse<Y>>( event instanceof HttpResponse ? event : null );
-		console.assert( response!=null, "response==null" );
-		if( options?.transferCache?.includeHeaders.includes("Authorization") ){
-			let authorization = response.headers.get( "Authorization" );
-			console.assert( authorization!=null, "no authorization" );
-			if( authorization )
-				this.authStore.append( {sessionId:authorization} );
+		let event:HttpEvent<Y>|any = await firstValueFrom( this.http.post<Y>(url, body, options) );
+		let y:Y;
+		if( options.observe=="response" ){
+			let response:HttpResponse<Y> = <HttpResponse<Y>>( event instanceof HttpResponse ? event : null );
+			console.assert( response!=null, "response==null" );
+			if( options?.transferCache?.includeHeaders.includes("Authorization") ){
+				let authorization = response.headers.get( "Authorization" );
+				console.assert( authorization!=null, "no authorization" );
+				if( authorization )
+					this.authStore.append( {sessionId:authorization} );
+			}
+			y = <Y>response?.body;
 		}
-		return response?.body;
+		else
+			y = <Y>event;
+		return y;
 	}
 
+	async postQL<Y>( q:string, vars?:any, log?:Log ):Promise<Y>{
+		const y = await this.post<any>( `graphql`, {query: q, variables: vars}, false, log );
+		return y ? y["data"] : null;
+	}
 	private async graphQL<Y>( query: string, log?:Log ):Promise<Y>{
 		var target = `graphql?query={${query}}`;
 		const y = await this.get( target, log );
@@ -302,8 +312,9 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 			return <Y>y;
 		}
 		let query = ql instanceof Mutation ? ql.toString() : ql;
+		let vars = ql instanceof Mutation ? ql.variables : undefined;
 		assert( query );
-		return await this.graphQL<Y>( `mutation ${query}`, log );
+		return await this.postQL<Y>( `mutation ${query}`, vars, log );
 	}
 
 	async schemaWithEnums( type:string, log:Log ):Promise<TableSchema>{

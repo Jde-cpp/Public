@@ -31,8 +31,8 @@ namespace Jde::App{
 			const std::chrono::time_zone& _tz;
 		};
 
-		ProtoLog()ι:ProtoLog( jobject{Settings::FindDefaultObject("/logging/proto")} ){}
-		ProtoLog( const jobject& settings )ι;
+		ProtoLog()ε:ProtoLog( jobject{Settings::FindDefaultObject("/logging/proto")} ){}
+		ProtoLog( const jobject& settings )ε;
 		α Shutdown( bool terminate )ι->void override;
 		α Write( const Logging::Entry& m )ι->void override;
 		α Name()Ι->string override{ return "ProtoLog"; }

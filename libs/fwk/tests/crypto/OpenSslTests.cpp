@@ -1,6 +1,5 @@
 ﻿#include <jde/fwk/crypto/OpenSsl.h>
-#include "../src/OpenSslInternal.h"
-//#include "../../src/crypto/OpenSslInternal.h"
+#include "../../src/crypto/OpenSslInternal.h"
 #include <jde/fwk/settings.h>
 
 #define let const auto

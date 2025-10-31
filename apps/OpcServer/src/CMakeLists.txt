@@ -21,6 +21,7 @@ file(GLOB headers "**/*.h")
 target_sources( "${targetName}" PRIVATE "${sources}" "${headers}" )
 
 IF( WIN32 )
+	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
 else()
   target_include_directories( ${targetName} PRIVATE /usr/include/libxml2 )
 endif()

@@ -1,5 +1,6 @@
 #include <jde/fwk/log/MemoryLog.h>
 #define let const auto
+#pragma warning( disable: 4702 )
 
 namespace Jde::Tests{
 	struct LogGeneralTests : public ::testing::Test{
@@ -29,7 +30,7 @@ namespace Jde::Tests{
 		auto& logger = Logging::MemoryLogger();
 		let unConfiguredTags = ELogTags::Scheduler;
 		logger.SetLevel( unConfiguredTags, ELogLevel::Error );
-		auto arg = []()->string{
+		auto arg = []()->string {
 			throw std::runtime_error("should not be called");
 			return "";
 		};

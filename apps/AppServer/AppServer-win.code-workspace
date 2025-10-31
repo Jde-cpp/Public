@@ -4,8 +4,11 @@
 		"name": "AppServer",
 		"sourceDir": "${env:JDE_BASH}/Public/apps/AppServer",
 		"compiler": "msvc",
+		"exe": "Jde.App.Server.exe",
+		"buildTarget": "Debug",
 		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/jde",
 		"buildDir": "${config:buildRoot}/apps/${config:name}",
+		"winBuildDir": "${env:JDE_BUILD_DIR}/${config:compiler}/jde/apps/${config:name}",
 		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions.sh",
 	},
 	"folders": [
@@ -34,8 +37,8 @@
 			"name": "headers"
 		},
 		{
-			"path": "../Framework/source",
-			"name": "Framework"
+			"path": "../../libs/fwk/src",
+			"name": "fwk"
 		},
 		{
 			"path": "../../libs/db/drivers/odbc",
@@ -115,19 +118,18 @@
 		"version": "0.2.0",
 		"configurations": [{
 			"name": "Debug",
-			"type": "cppdbg",
+			"type": "cppvsdbg",
 			"request": "launch",
-			"program": "${config:buildDir}/Jde.App.Server",
-			"args": ["-c", "-tests", "-settings=$JDE_DIR/AppServer/config/App.Server.jsonnet"],
+			"program": "${config:winBuildDir}\\${config:buildTarget}\\${config:exe}",
+			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/Public/apps/AppServer/config/App.Server.jsonnet"],
 			"stopAtEntry": false,
-			"cwd": "${config:buildDir}",
-			"externalConsole": false,
-			"preLaunchTask": "build",
-			"showDisplayString": true
+			"cwd": "${config:winBuildDir}",
+			"console": "integratedTerminal",
+			"preLaunchTask": "build"
 		},
 		{
 			"name": "Release",
-			"type": "cppdbg",
+			"type": "cppvsdbg",
 			"request": "launch",
 			"program": "${workspaceFolder:AppServer}/../../bin/release/Jde.AppServer",
 			"args": ["-c"],

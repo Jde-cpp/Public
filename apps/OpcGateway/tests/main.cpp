@@ -18,8 +18,13 @@ namespace Jde{
  	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
 		Logging::AddTagParser( mu<Opc::UALogParser>() );
 		auto protoLogSettings = Settings::FindObject( "/logging/proto" );
-		if( protoLogSettings )
-			Logging::AddLogger( mu<App::ProtoLog>(*protoLogSettings) );
+		if( protoLogSettings ){
+			try{
+				Logging::AddLogger( mu<App::ProtoLog>(*protoLogSettings) );
+			}
+			catch( exception& )
+			{}
+		}
 		Process::Startup( argc, argv, "Tests.Opc", "Opc tests", true );
 		try{
 			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )

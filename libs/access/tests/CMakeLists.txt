@@ -15,8 +15,9 @@ add_subdirectory( ../../ql ../../ql )
 
 add_executable( ${targetName} )
 if( WIN32)
-	set( CMAKE_EXE_LINKER_FLAGS_DEBUG "/debug /INCREMENTAL:NO" )
-	set_target_properties( ${targetName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>" )
+#	set( CMAKE_EXE_LINKER_FLAGS_DEBUG "/debug /INCREMENTAL:NO" )
+#	set_target_properties( ${targetName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>" )
+	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
 endif()
 
 compileOptions( ${targetName} )
@@ -30,8 +31,8 @@ target_link_libraries( ${targetName} GTest::gtest )
 target_link_libraries( ${targetName} Jde.Access Jde.DB Jde.QL Jde )
 target_compile_definitions( ${targetName} PRIVATE TESTS )
 
-set( CMAKE_CTEST_ARGUMENTS -c -settings=$ENV{JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet )
-add_test( NAME AccessTests COMMAND $<TARGET_FILE:Jde.Access.Tests> )
+#set( CMAKE_CTEST_ARGUMENTS -tests -settings=$ENV{JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet )
+add_test( NAME AccessTests COMMAND $<TARGET_FILE:Jde.Access.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet )
 
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet" )

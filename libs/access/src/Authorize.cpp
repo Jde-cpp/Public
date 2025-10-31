@@ -45,7 +45,7 @@ namespace Jde::Access{
 		auto user = Users.find( executer );
 		if( user==Users.end() )
 			THROW_IFX( user==Users.end(), Exception(sl, ELogLevel::Debug, "[{}]User not found.", executer.Value) );
-		THROW_IFX( user->second.IsDeleted, "[{}]User is deleted.", executer .Value);
+		THROW_IFX( user->second.IsDeleted, Exception(sl, ELogLevel::Debug, "[{}]User is deleted.", executer.Value) );
 		let configured = user->second.ResourceRights( resource.PK );
 		THROW_IFX( !empty(configured.Denied & ERights::Administer), Exception(sl, ELogLevel::Debug, "[{}]User denied admin access to '{}'.", executer.Value, resource.Target) );
 		THROW_IFX( empty(configured.Allowed & ERights::Administer), Exception(sl, ELogLevel::Debug, "[{}]User does not have admin access to '{}'.", executer.Value, resource.Target) );
@@ -264,7 +264,7 @@ namespace Jde::Access{
 			if( Users.contains({memberPK}) )
 				continue;
 			GroupPK childGroup{ memberPK };/*GroupA*/
-			THROW_IFSL( childGroup==parentGroupPK, "Group cannot be a member of itself." );
+			THROW_IFX( childGroup==parentGroupPK, Exception(sl, ELogLevel::Debug, "Group cannot be a member of itself.") );
 			if( IsChild(Groups, childGroup, parentGroupPK) )
 				throw Exception{ sl, ELogLevel::Debug, "Group '{}' cannot be a member of '{}' because it is a ancester.", childGroup.Value, parentGroupPK.Value };
 		}
@@ -281,7 +281,7 @@ namespace Jde::Access{
 	}
 
 	α Authorize::TestAddRoleMember( RolePK parent, RolePK child, SL sl )ε->void{
-		THROW_IFSL( parent==child, "Role cannot be a member of itself." );
+		THROW_IFX( parent==child, Exception(sl, ELogLevel::Debug, "Role cannot be a member of itself.") );
 		function<bool(RolePK,RolePK)> isChild = [&](RolePK parent, RolePK child)->bool {
 			auto children = Roles.find( parent );
 			if( children==Roles.end() )

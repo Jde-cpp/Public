@@ -126,7 +126,7 @@ namespace Jde::Access::Server{
 			//Authorizer().AddAcl( identityPK, permissionPK, allowed, denied, resourcePK );
 			Resume( y );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

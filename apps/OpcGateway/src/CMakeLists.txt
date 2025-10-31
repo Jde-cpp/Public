@@ -16,6 +16,10 @@ list( REMOVE_ITEM sources ${main_cpp} )
 file( GLOB headers **/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
+IF( WIN32 )
+	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
+endif()
+
 target_link_libraries( ${targetName} Jde.Web.Server Jde.App.Client Jde.Opc )
 
 target_precompile_headers(${targetName}

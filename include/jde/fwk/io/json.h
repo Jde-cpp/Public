@@ -20,8 +20,8 @@ namespace Jde{
 		Φ Visit( const jvalue& v, function<void(sv s)> op )ε->void;
 		Φ Visit( jvalue& v, function<void(jobject& o)> op )ε->void;
 		Φ AddImportPath( fs::path path )ι->void;
-		Φ TryReadJsonNet( fs::path path, SRCE )ι->std::expected<jobject,string>;
-		Φ ReadJsonNet( fs::path path, SRCE )ε->jobject;
+		Φ TryReadJsonNet( fs::path path, const optional<vector<fs::path>>& importPaths=nullopt, SRCE )ι->std::expected<jobject,string>;
+		Φ ReadJsonNet( fs::path path, const optional<vector<fs::path>>& importPaths=nullopt, SRCE )ε->jobject;
 		constexpr sv errorFromat = "'{}' could not convert to {}.";
 #define $(type) Eval( v.try_as_##type(), Ƒ(errorFromat, serialize(v), #type), sl )
 		Φ AsValue( const jobject& o, sv path, SRCE )ε->const jvalue&;

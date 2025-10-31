@@ -16,7 +16,7 @@ namespace Jde{
 	α QL::Configure( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ε->sp<LocalQL>{
 		for( let& schema : schemas ){
 			if( let path = Settings::FindSV(schema->ConfigPath()+"/ql"); path )
-				AddIntrospection( {Json::ReadJsonNet(*path)} );
+				AddIntrospection( {Json::ReadJsonNet(*path, {})} );
 		}
 		return ms<LocalQL>( move(schemas), authorizer );
 	}

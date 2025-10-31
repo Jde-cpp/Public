@@ -40,7 +40,7 @@ namespace Jde::IO{
 			THROW_IFX( !::GetFileSizeEx(Handle.get(), &fileSize), IOException(move(Path), GetLastError(), "GetFileSizeEx") );
 			std::visit( [fileSize](auto&& b){b.resize(fileSize.QuadPart);}, Buffer );
 		}
-		TRACE( "[{}]{} size={}", Path.string().c_str(), IsRead ? "Read" : "Write", Size() );
+		TRACET( ELogTags::IO, "[{}]{} size={}", Path.string().c_str(), IsRead ? "Read" : "Write", Size() );
 	}
 
 	Ω overlappedCompletionRoutine( DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED pOverlapped )->void;
@@ -110,7 +110,7 @@ namespace Jde::IO{
 		ChunksToSend = totalBytes/chunkByteSize+1;
 		for( uint i=0; i*chunkByteSize<totalBytes; ++i )
 			Chunks.emplace( mu<Win::FileChunkArg>(shared_from_this(), i) );
-		TRACE( "[{}] chunks = {}", Path.string(), ChunksToSend );
+		TRACET( ELogTags::IO, "[{}] chunks = {}", Path.string(), ChunksToSend );
 
 		let initialSendTotal = std::min<uint8>( (uint8)ChunksToSend, threadSize );
 		for( uint i=0; i<initialSendTotal; ++i ){

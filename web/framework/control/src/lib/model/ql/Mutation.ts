@@ -93,4 +93,5 @@ export class Mutation{
 	#children:Map<TypeName,Mutation[]> = new Map<TypeName,Mutation[]>();
 	get isEmpty():boolean{ return this.type!=MutationType.Remove && !this.args && !this.#children.size; }
 	get typeName(){ return this._typeName; }
+	get variables():any{ return {}; }
 }

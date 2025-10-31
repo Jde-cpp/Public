@@ -85,19 +85,22 @@ namespace Jde{
 	#endif
 		}
 
+	optional<vector<fs::path>> _importPaths;
 	Ω path()ι->fs::path{
 		static fs::path _path;
 		let fileName = fs::path{ Ƒ("{}.jsonnet", Settings::FileStem()) };
 
 		vector<fs::path> paths{ fileName, fs::path{"../config"}/fileName, fs::path{"config"}/fileName };
-		if( let cli = Process::FindArg("-settings"); cli ){
-			if( Process::FindArg( "-tests" ) ){
-				#ifdef _MSC_VER
+		if( auto cli = Process::FindArg("-settings"); cli ){
+			if( Process::FindArg("-tests") && !_importPaths ){
+				_importPaths = vector<fs::path>{};
+				#ifdef _WIN32
 					string osPath = "win";
+					cli = IO::BashToWindows( *cli ).string().substr(4); //remove //?/
 				#else
 					string osPath = "linux";
 				#endif
-				Json::AddImportPath( fs::path{*cli}.parent_path()/osPath/buildTypeSubDir() );
+				_importPaths->push_back( fs::path{*cli}.parent_path()/osPath/buildTypeSubDir() );
 			}
 			paths = { fs::path{*cli} };
 		}
@@ -143,7 +146,7 @@ namespace Jde{
 		try{
 			if( !fs::exists(settingsPath) )
 				throw std::runtime_error{ Ƒ("file does not exist: '{}'", settingsPath.string()) };
-			let settings = Json::TryReadJsonNet( settingsPath );
+			let settings = Json::TryReadJsonNet( settingsPath, _importPaths );
 			if( !settings )
 				throw std::runtime_error{ settings.error() };
 			_settings = mu<jvalue>( *settings );

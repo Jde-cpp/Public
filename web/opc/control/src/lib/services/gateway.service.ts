@@ -18,7 +18,7 @@ import { NodeKey, NodeId } from '../model/NodeId';
 import { ENodeClass, ObjectType, OpcObject, UaNode, Variable } from '../model/Node';
 import { OpcId, StatusCode } from '../model/types';
 import { ExNodeId } from '../model/ExNodeId';
-import { toValue, Value } from '../model/Value';
+import { toValue, Value, valueJson } from '../model/Value';
 import { Enum } from '../model/Enum';
 
 interface IError{ requestId:number; message: string; }
@@ -103,7 +103,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	constructor( gateway:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore ){
 		super( FromClient.Transmission, http, transport, authStore );
 		super.instances = [gateway];
-		super.queryArray<ServerCnnctn>( `serverConnections{id target name url certificateUri defaultBrowseNs}` ).then( connections=>{
+		super.queryArray<ServerCnnctn>( `serverConnections{id target name url certificateUri defaultBrowseNs}`, (x)=>console.log(x) ).then( connections=>{
 			connections.forEach( c=>this.#connections.set(c.target, new ServerCnnctn(c)) );
 		});
 	}
@@ -292,16 +292,11 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		const v = super.querySingle<Value>( `node( opc: "${opcId}", ${n.qlArgs()}){value}` );
 		return v;
 	}
-	async write( opcId:CnnctnTarget, n:NodeId, v:Value ):Promise<Value>{
-		const nodeArgs = encodeURIComponent( JSON.stringify([n.toJson()]) );
-		const valueArgs = encodeURIComponent( JSON.stringify([v]) );
-		const json = await super.get( `write?opc=${opcId}&nodes=${nodeArgs}&values=${valueArgs}` );
-		if( json["snapshots"][0].sc ){
-			const e = new OpcError( json["snapshots"][0].sc[0], "Write", new Error().stack, null );
-			this.updateErrorCodes();
-			throw e;
-		}
-		return toValue( json["snapshots"][0].value );
+	async write( opcId:CnnctnTarget, n:NodeId, v:Value, log:Log ):Promise<Value>{
+		const q = `updateVariable( opc: $opc, id: $id, value: $value ){ value }`;
+		const vars = { opc: opcId, id: n.toJson(), value: valueJson(v) };
+		const newValue = toValue( await super.postQL<Value>(q, vars, log) );
+		return newValue;
 	}
 
 	setRoute(route: NodeRoute){

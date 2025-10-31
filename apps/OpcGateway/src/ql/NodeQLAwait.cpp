@@ -19,8 +19,8 @@ namespace Jde::Opc::Gateway{
 			flat_map<NodeId, jobject> jChildren;
 			auto parentsQL{ _query.FindTable("parents") };
 			//auto childrenQL{ _query.FindTable("children") };
-			if( auto nodePath{Json::FindString(_query.Args,"path").value_or(string{})}; nodePath.size() ){
-				pathNodes = _client->BrowsePathsToNodeIds( nodePath, parentsQL!=nullptr );
+			if( auto nodePath = _query.FindPtr<jstring>("path"); nodePath ){
+				pathNodes = _client->BrowsePathsToNodeIds( *nodePath, parentsQL!=nullptr );
 				const bool savePath{ parentsQL && parentsQL->FindColumn("path") };
 				for( auto node = pathNodes.begin(); node != pathNodes.end(); ++node ){
 					if( node->second.has_value() ){

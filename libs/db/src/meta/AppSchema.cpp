@@ -38,7 +38,7 @@ namespace Jde::DB{
 	{}
 
 	AppSchema::AppSchema( sv name, const jobject& appSchema, sp<Access::IAcl> authorizer )ε:
-		AppSchema{ name, Json::FindDefaultSV(appSchema,"prefix"), Json::ReadJsonNet(Json::AsString(appSchema,"meta")), authorizer }
+		AppSchema{ name, Json::FindDefaultSV(appSchema,"prefix"), Json::ReadJsonNet(Json::AsString(appSchema,"meta"), {}), authorizer }
 	{}
 
 	α AppSchema::Initialize( sp<DB::DBSchema> db, sp<AppSchema> self )ε->void{

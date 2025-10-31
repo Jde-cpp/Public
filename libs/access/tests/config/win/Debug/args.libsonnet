@@ -16,7 +16,7 @@
 								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet",
 								ql: "$(JDE_DIR)/Public/libs/access/config/access-ql.jsonnet",
 								prefix: null  //test with null prefix, debug with prefix
-							},
+							}
 						}
 					}
 				}

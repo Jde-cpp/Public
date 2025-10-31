@@ -34,6 +34,6 @@ local args = import 'args.libsonnet';
 		}
 	},
 	workers:{
-		executor: 2
+		executor: {threads: 2}
 	}
 }

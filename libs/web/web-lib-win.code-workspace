@@ -43,17 +43,11 @@
 			"command": "tput reset; cd ${config:buildDir}; cd ..; rm -rf Debug; mkdir Debug;",
 		},
 		{
-			"label": "run",
+			"label": "test",
 			"type": "shell",
-			"dependsOn": ["build", "clearTerminal"],
-			"command": "./${config:exe}",
-			"args": ["-c", "-settings=${env:JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet"],
-			"options": {
-				"cwd": "${config:buildDir}/${config:name}/${config:buildTarget}",
-				"env": {
-					"JDE_MYSQL_CREDS": "root:dfs12975adsf"
-				}
-			}
+			"command": "cd ${config:buildDir}; tput reset; ctest -C Debug -VV;", // --output-on-failure
+			"dependsOn": "build",
+			"group": { "kind": "test", "isDefault": true }
 		}
 	]
 	},

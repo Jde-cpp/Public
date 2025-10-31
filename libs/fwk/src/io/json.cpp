@@ -59,16 +59,13 @@ namespace Jde{
 		}
 	}
 
-	vector<fs::path> _importPaths;
-	α Json::AddImportPath( fs::path path )ι->void{
-		if( fs::exists(path) && fs::is_directory(path) )
-			_importPaths.push_back( path );
-	}
-	α Json::TryReadJsonNet( fs::path path, SL sl )ι->std::expected<jobject, string>{
+	α Json::TryReadJsonNet( fs::path path, const optional<vector<fs::path>>& importPaths, SL sl )ι->std::expected<jobject, string>{
 		jsonnet::Jsonnet vm;
 		vm.init();
-		for( let& importPath : _importPaths )
-			vm.addImportPath( importPath.string() );
+		if( importPaths ){
+			for( let& importPath : *importPaths )
+				vm.addImportPath( importPath.string() );
+		}
 		string j;
 		let success = vm.evaluateFile( path.string(), &j );
 		if( !success )
@@ -80,8 +77,8 @@ namespace Jde{
 			return std::unexpected{ Ƒ("Failed to parse '{}'.  {}", path.string(), e.what()) };
 		}
 	}
-	α Json::ReadJsonNet( fs::path path, SL sl )ε->jobject{
-		let json = TryReadJsonNet( path, sl );
+	α Json::ReadJsonNet( fs::path path, const optional<vector<fs::path>>& importPaths, SL sl )ε->jobject{
+		let json = TryReadJsonNet( path, importPaths, sl );
 		THROW_IFSL( !json, "Failed to evaluate '{}'.  {}", path.string(), json.error() );
 		return *json;
 	}

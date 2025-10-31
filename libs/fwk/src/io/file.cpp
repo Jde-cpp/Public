@@ -1,4 +1,6 @@
 ﻿#include <jde/fwk/io/file.h>
+#include <jde/fwk/str.h>
+#include <fstream>
 
 #define let const auto
 namespace Jde{
@@ -31,4 +33,14 @@ namespace Jde{
 
 		return vector<char>{ (std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>() };  //vexing parse
 	}
+#ifdef _WIN32
+	α IO::BashToWindows( const fs::path& path )ι->fs::path{
+		auto str = path.string();
+		if( str.length()>3 && str[0]=='/' && str[1]!='/' && str[2]=='/' ){ //if /c/
+			str[0] = str[1];
+			str[1] = ':';
+		}
+		return fs::path{ "\\\\?\\"s+Str::Replace(str, '/', '\\') };
+	}
+#endif
 }

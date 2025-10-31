@@ -136,7 +136,7 @@ namespace Jde::App{
 		}
 	}
 
-	ProtoLog::ProtoLog( const jobject& settings )ι:
+	ProtoLog::ProtoLog( const jobject& settings )ε:
 		Logging::ILogger{ settings },
 		_delay{ Json::FindDuration(settings, "delay", ELogLevel::Error).value_or(1min) },
 		_path{ Json::FindString(settings, "path").value_or((Process::ApplicationDataFolder()/"logs").string()) },
@@ -148,6 +148,12 @@ namespace Jde::App{
 			_delay = Duration::min();
 			ResetTimer();
 		});
+		try{
+			fs::create_directories( _path );
+		}
+		catch( std::filesystem::filesystem_error& e ){
+			throw IOException( move(e) );
+		}
 		for( auto yearDir : fs::directory_iterator(_path) ){
 			auto iyear = fs::is_directory(yearDir) ? Str::TryTo<int>(yearDir.path().filename().string()) : std::nullopt;
 			if( !iyear || *iyear<2025 )

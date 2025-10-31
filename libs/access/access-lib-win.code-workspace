@@ -3,8 +3,10 @@
 		"window.title": "Access",
 		"name": "access",
 		"sourceDir": "${env:JDE_BASH}/Public/libs/${config:name}",
+		"buildTarget": "Debug",
 		"buildDir": "/z/build/msvc/jde/libs/${config:name}",
-		"exe": "tests/Jde.Access.Tests",
+		"winBuildDir": "Z:/build/msvc/jde/libs/${config:name}",
+		"exe": "tests/${config:buildTarget}/Jde.Access.Tests",
 	},
 	"tasks": {
 		"version": "2.0.0",
@@ -43,38 +45,28 @@
 			"command": "tput reset; cd ${config:buildDir}; cd ..; rm -rf Debug; mkdir Debug;",
 		},
 		{
-			"label": "run",
+			"label": "test",
 			"type": "shell",
-			"dependsOn": ["build", "clearTerminal"],
-			"command": "./${config:exe}",
-			"args": ["-c", "-settings=${env:JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet"],
-			"options": {
-				"cwd": "${config:buildDir}/${config:name}/${config:buildTarget}",
-				"env": {
-					"JDE_MYSQL_CREDS": "root:dfs12975adsf"
-				}
-			}
-		}
+			"command": "cd ${config:buildDir}; tput reset; ctest -C Debug -VV;", // --output-on-failure
+			"dependsOn": "build",
+			"group": { "kind": "test", "isDefault": true }
+		},
 	]
 	},
 	"launch": {
 		"version": "0.2.0",
 		"configurations": [{
 				"name": "Debug",
-				"type": "cppdbg",
+				"type": "cppvsdbg",
 				"request": "launch",
-				"program": "${config:buildDir}/${config:buildTarget}/libs/${config:name}/${config:exe}",
+				"program": "${config:winBuildDir}\\${config:exe}",
 				"args": [
-					"-settings=${env:JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet"
+					"-tests",
+					"-settings=${config:sourceDir}/tests/config/Access.Tests.jsonnet"
 				],
 				"stopAtEntry": false,
-				"cwd": "${config:buildDir}/${config:buildTarget}/libs/${config:name}",
-				"externalConsole": false,
-				"MIMode": "gdb",
-				"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
-				"showDisplayString": true,
-				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
-				"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.27":"${env:REPO_DIR}/glibc-2.27" },
+				"cwd": "${config:winBuildDir}",
+				"console": "integratedTerminal",
 				"preLaunchTask": "build"
 			}]
 		},
@@ -102,8 +94,8 @@
 			"name": "headers"
 		},
 		{
-			"path": "../../../Framework/source",
-			"name": "Framework"
+			"path": "../fwk/src",
+			"name": "fwk"
 		},
 		{
 			"path": "../db/drivers/odbc",

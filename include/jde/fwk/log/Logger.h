@@ -19,7 +19,7 @@
 	#define BREAK_IF(x)
 #else
 	#ifdef _MSC_VER
-		#define BREAK DebugBreak();
+		#define BREAK if( Logging::CanBreak() ){ DebugBreak(); }
 	#else
 		#define BREAK if( Logging::CanBreak() ){ ::raise( 5/*SIGTRAP*/ ); }
 	#endif

@@ -34,7 +34,7 @@ namespace Jde::DB{
 
 	α ConfigurationJson( const AppSchema& config )ε->const jobject{
 		let appSchema = Settings::AsObject( config.ConfigPath() );
-		auto appMeta = Json::ReadJsonNet( Json::AsSV(appSchema, "meta") );
+		auto appMeta = Json::ReadJsonNet( Json::AsSV(appSchema, "meta"), {} );
 		if( let prefix = Json::FindString(appSchema, "prefix"); prefix )
 			appMeta["prefix"] = *prefix;
 		return appMeta;

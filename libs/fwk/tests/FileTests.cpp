@@ -20,8 +20,8 @@ namespace Jde::IO::Tests{
 
 	struct FileTests : public ::testing::Test{
 	protected:
-		FileTests() {}
-		~FileTests() override{}
+		FileTests(){}
+		~FileTests()override{}
 
 		Ω SetUpTestCase()ι->void{
 			Execution::Run();//io strand threading issue.
@@ -30,7 +30,7 @@ namespace Jde::IO::Tests{
 			INFO( "{}", file(0).string() );
 			fs::create_directories( file(0).parent_path() );
 		}
-		α TearDown()->void override {}
+		α TearDown()->void override{}
 	};
 
 	Ω write( const fs::path& file, uuid guid1, uuid guid2, Vector<uuid>& written, bool createFile, SRCE )->LockKeyAwait::Task{
@@ -96,7 +96,7 @@ namespace Jde::IO::Tests{
 	}
 
 	constexpr uint _fileSize{ 5 };
-	TEST_F(FileTests, WriteRead){
+	TEST_F( FileTests, WriteRead ){
 		ASSERT_TRUE( IO::ChunkByteSize()<74 ); //guid+\n*2
 		ASSERT_TRUE( IO::ThreadSize()>1 ); //guid+\n
 		vector<std::jthread> threads;

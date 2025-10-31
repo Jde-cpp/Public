@@ -18,6 +18,7 @@ namespace Jde::Web::Server{
 
 		α StringBody()Ι->const string&{ return _request.body(); }
 		α Body()ε->jobject&;
+		α Body()Ε->const jobject&{ return const_cast<HttpRequest*>(this)->Body(); }
 		α Contains( str param )Ι->bool{ return _params.contains( param ); }
 		α Header( sv header )Ι->string{ return _request.base()[header]; }
 		α IsGet()Ι->bool{ return _request.method() == http::verb::get; }

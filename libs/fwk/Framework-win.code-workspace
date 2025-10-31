@@ -1,10 +1,15 @@
 {
 	"settings": {
 		"window.title": "Framework",
-		"name": "framework",
-		"sourceDir": "${env:JDE_BASH}/Framework",
-		"buildDir": "/z/build/msvc/jde/libs/${config:name}",
-		"exe": "tests/Jde.Framework.Tests",
+		"name": "fwk",
+		"sourceDir": "${env:JDE_BASH}/Public/libs/fwk",
+		"compiler": "msvc",
+		"buildTarget": "Debug",
+		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/jde",
+		"buildDir": "${config:buildRoot}/libs/${config:name}",
+		"winBuildDir": "${env:JDE_BUILD_DIR}/${config:compiler}/jde/libs/${config:name}",
+		"exe": "tests/${config:buildTarget}/Jde.Framework.Tests.exe",
+		"sourceBash": "source ${env:JDE_BASH}/Public/build/buildFunctions-win.sh",
 	},
 	"folders": [
 		{
@@ -22,6 +27,13 @@
 		"version": "2.0.0",
 		"tasks": [
 			{
+				"label": "compile",
+				"type": "shell",
+				"command": "tput reset;${config:sourceBash};compile '${workspaceFolder}' '${fileWorkspaceFolder}' '${relativeFile}' ${config:buildRoot};",
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"group": "build"
+			},
+			{
 				"label": "build",
 				"type": "shell",
 				"command": "cd ${config:buildDir}; tput reset; cmake --build .;",
@@ -29,11 +41,18 @@
 				"group": { "kind": "build", "isDefault": true }
 			},
 			{
+				"label": "test",
+				"type": "shell",
+				"command": "cd ${config:buildDir}; tput reset; ctest -C Debug -VV;", // --output-on-failure
+				"dependsOn": "build",
+				"group": { "kind": "test", "isDefault": true }
+			},
+			{
 				"label": "cmake",
 				"type": "shell",
 				"command": "mkdir -p ${config:buildDir};cd ${config:buildDir};tput reset; rm -f CMakeCache.txt;cmake ${config:sourceDir} --preset win-msvc-jde",
 				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
+				"group": "build"
 			}
 		]
 	},
@@ -41,19 +60,16 @@
 		"version": "0.2.0",
 		"configurations": [{
 				"name": "Debug",
-				"type": "cppdbg",
+				"type": "cppvsdbg",
 				"request": "launch",
-				"program": "${config:buildDir}/${config:exe}",
+				"program": "${config:winBuildDir}\\${config:exe}",
 				"args": [
-					"-settings=${config:sourceDir}/tests/config/Crypto.Tests.jsonnet"
+					"-tests",
+					"-settings=${config:sourceDir}/tests/config/Framework.Tests.jsonnet"
 				],
 				"stopAtEntry": false,
-				"cwd": "${config:buildDir}",
-				"externalConsole": false,
-				"MIMode": "gdb",
-				"showDisplayString": true,
-				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
-				"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.27":"${env:REPO_DIR}/glibc-2.27" },
+				"cwd": "${config:winBuildDir}",
+				"console": "integratedTerminal",
 				"preLaunchTask": "build"
 			}]
 	},

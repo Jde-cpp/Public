@@ -37,6 +37,10 @@ function projectName() {
 	fileWorkspaceFolder=$1;
 	if [[ $fileWorkspaceFolder == *"opc/src"* ]]; then
 		project="Jde.Opc.vcxproj";
+	elif [[ $fileWorkspaceFolder == *"fwk/src"* ]]; then
+		project="Jde.vcxproj";
+	elif [[ $fileWorkspaceFolder == *"fwk/tests"* ]]; then
+		project="Jde.Framework.Tests.vcxproj";
 	fi;
 	echo $project;
 }
@@ -67,6 +71,6 @@ function compile() {
 	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile, project=$project";
 	cd $buildRoot/$buildRelativePath;
 	buildFile=${absoluteFile#"$fileWorkspaceFolder/"}
-	echo $buildRoot/$buildRelativePath/make $buildFile.o;
-	msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=socket\\ClientSocketStream.cpp
+	echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile
+	msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile //v:m
 }

@@ -14,6 +14,7 @@
 namespace Jde{
 	α initLoggers()ι->vector<up<Logging::ILogger>>{
 		vector<up<Logging::ILogger>> y;
+		y.reserve( 8 );
 		y.push_back(mu<Logging::MemoryLog>() );
 		Logging::UpdateCumulative(y);
 		return y;
