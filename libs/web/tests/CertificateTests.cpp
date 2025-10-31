@@ -1,6 +1,6 @@
 #include <jde/web/client/http/ClientHttpAwait.h>
 //#include <jde/web/server/Flex.h>
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include "mocks/ServerMock.h"
 
 
@@ -41,7 +41,7 @@ namespace Jde::Web{
 	using Web::Client::ClientHttpAwait;
 	using Web::Client::ClientHttpRes;
 	TEST_F( CertificateTests, DefaultSettings ){
-		Mock::Start( SslSettings(IApplication::ApplicationDataFolder()/"ssl") );
+		Mock::Start( SslSettings(Process::ApplicationDataFolder()/"ssl") );
 		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} };
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 		ASSERT_TRUE( res[http::field::server].contains("SSL") );

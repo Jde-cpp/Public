@@ -18,9 +18,9 @@ local args = import 'args.libsonnet';
 			flushOn: "Trace",
 			tags: {
 				trace:["test","sql",
-					"uaSession", "uaServer", "uaUser", "uaSecurity", "threads", "uaClient", "uaSecure"],
-				debug:["ql","settings", "app", "uaEvent", "uaNet"],
-				information:[],
+					"uaServer", "uaUser", "uaSecurity", "threads", "uaClient", "uaSecure"],
+				debug:["ql","settings", "app", "uaNet", "uaSession"],
+				information:["uaEvent"],
 				warning:["io"],
 				"error":[],
 				critical:[]
@@ -41,17 +41,47 @@ local args = import 'args.libsonnet';
 		description: "Test OPC",
 		mutationsDir:: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
 		db: false,
-		configFile: "$(UA_NODE_SETS)/CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml",
+		opcNodeSet:{
+			path: "$(UA_NODE_SETS)/Opc.Ua.PredefinedNodes.xml",
+			nodeIds: [23513]
+		},
+		machinery: [
+			//"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
+			//"/home/duffyj/Downloads/Opc.Ua.NodeSet2.xml",
+			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
+			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
+			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.NodeSet2.xml",
+			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.Examples.NodeSet2.xml",
+		],
+		additive: [
+//			"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
+			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
+			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.NodeSet2.xml",
+			"$(UA_NODE_SETS)/ISA95-JOBCONTROL/opc.ua.isa95-jobcontrol.nodeset2.xml",
+			//"$(UA_NODE_SETS)/Machinery/ProcessValues/Opc.Ua.Machinery.ProcessValues.NodeSet2.xml",
+			"$(UA_NODE_SETS)/PADIM/Opc.Ua.IRDI.NodeSet2.xml",
+			"$(UA_NODE_SETS)/PADIM/Opc.Ua.PADIM.NodeSet2.xml",
+			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
+			"$(UA_NODE_SETS)/Machinery/Jobs/Opc.Ua.Machinery.Jobs.Nodeset2.xml",
+			"$(UA_NODE_SETS)/MachineTool/Opc.Ua.MachineTool.NodeSet2.xml",
+			"$(UA_NODE_SETS)/AdditiveManufacturing/Opc.Ua.AdditiveManufacturing.Nodeset2.xml",
+			"$(UA_NODE_SETS)/AdditiveManufacturing/AdditiveManufacturing-Example.xml",
+		],
+		configFiles: [
+			//"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
+			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
+			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
+			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"
+		],
 		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840,
 		ssl:{
-			certificate: "/tmp/cert.pem",
-			privateKey: {path:"/tmp/private.pem", passcode: ""}
+			certificate: args.opcServer.ssl.certificate,
+			privateKey: {path: args.opcServer.ssl.privateKey.path, passcode: args.opcServer.ssl.privateKey.passcode}
 		}
 	},
 	workers:{
-		executor: 2,
-		drive:{ threads:  1 },
-		alarm:{ threads:  1 }
+		executor:{ threads:  2 },
+		drive:{ threads:  2 }
 	}
 }

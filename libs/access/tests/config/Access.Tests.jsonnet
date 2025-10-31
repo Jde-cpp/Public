@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "ResourceTests.Crud",
+		tests:: "ResourceTests.CheckDefaults",
 		recreateDB:: true
 	},
 	dbServers:{
@@ -34,6 +34,6 @@ local args = import 'args.libsonnet';
 		}
 	},
 	workers:{
-		executor: 2
+		executor: {threads: 2}
 	}
 }

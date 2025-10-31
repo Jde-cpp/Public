@@ -8,7 +8,7 @@ add_library( ${targetName} )
 compileOptions( ${targetName} )
 target_include_directories( ${targetName} PRIVATE $ENV{JDE_DIR}/Public/include/jde/web/client/proto )
 
-file(GLOB sources *.cpp proto/*.cpp )
+file(GLOB sources *.cpp proto/*.cpp log/*.cpp )
 file(GLOB headers  **/*.h $ENV{JDE_DIR}/Public/include/jde/app/shared/*.h )
 file(GLOB protos proto/*.proto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
@@ -19,12 +19,9 @@ target_precompile_headers(${targetName}
 	<jde/web/client/exports.h>
 	<jde/app/shared/exports.h>
 	<jde/web/client/proto/Web.FromServer.pb.h>
-	<jde/framework.h>
+	<jde/fwk.h>
 	PRIVATE
-	proto/Common.pb.h
-	proto/App.pb.h
-	proto/App.FromServer.pb.h
-	proto/App.FromClient.pb.h
+	pc.h
 )
 
 set( protoOutDir ${PROJECT_SOURCE_DIR}/proto )
@@ -40,4 +37,5 @@ add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E 
 add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/Common.pb.h" "$ENV{JDE_DIR}/Public/include/jde/app/shared/proto/Common.pb.h" COMMENT "mklink Common" )
 #add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/Common.pb.h" "$ENV{JDE_DIR}/Public/include/jde/opc/types/proto/Common.pb.h" COMMENT "mklink Common" )
 add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/App.pb.h" "$ENV{JDE_DIR}/Public/include/jde/app/shared/proto/App.pb.h" COMMENT "mklink App" )
+add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/Log.pb.h" "$ENV{JDE_DIR}/Public/include/jde/app/shared/proto/Log.pb.h" COMMENT "mklink Log" )
 #add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/Common.proto" "$ENV{JDE_DIR}/Public/libs/opc/src/types/proto/Common.proto" COMMENT "mklink Common->iot" )

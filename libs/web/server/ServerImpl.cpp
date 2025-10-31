@@ -1,5 +1,5 @@
 ﻿#include "ServerImpl.h"
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/app/IApp.h>
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/server/IRequestHandler.h>
@@ -7,7 +7,7 @@
 #include <jde/web/server/RestException.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/QLAwait.h>
-#include <jde/framework/thread/execution.h>
+#include <jde/fwk/process/execution.h>
 #define let const auto
 
 namespace Jde::Web{
@@ -55,8 +55,10 @@ namespace Server{
 		try{
 			let returnRaw = req.Params().contains("raw");
 			auto& query = req["query"]; THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
+			auto& varContent = req["variables"];
+			auto vars = varContent.size() ? Json::Parse( move(varContent) ) : jobject{};
 			req.LogRead( query );
-			auto result = co_await QL::QLAwait{ move(query), req.UserPK(), schemas, returnRaw };
+			auto result = co_await QL::QLAwait{ move(query), move(vars), req.UserPK(), schemas, returnRaw };
 			jobject y{ {"data", result} };
 			send( move(req), move(stream), move(y), contentType );
 		}
@@ -69,6 +71,10 @@ namespace Server{
 				send( RestException<http::status::bad_request>{move(e), move(req), "Query parsing failed."}, move(stream), contentType );
 			else
 				send( RestException{move(e), move(req), "Query failed."}, move(stream), contentType );
+			co_return;
+		}
+		catch( exception& e ){
+			send( RestException{ SRCE_CUR, move(req), "Query failed: {}", e.what() }, move(stream), contentType );
 			co_return;
 		}
 	}
@@ -92,7 +98,7 @@ namespace Server{
 		beast::error_code ec;
 		acceptor.open( endpoint.protocol(), ec );
 		if( ec ){
-			Debug{ ELogTags::App, "!initListener {}:{}", endpoint.address().to_string(), endpoint.port() };
+			DBGT( ELogTags::App, "!initListener {}:{}", endpoint.address().to_string(), endpoint.port() );
 			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Critical };
 			return false;
 		}
@@ -105,7 +111,7 @@ namespace Server{
 
 		acceptor.bind( endpoint, ec );// Bind to the server address
 		if( ec ){
-			Debug{ ELogTags::App, "!initListener {}:{}", endpoint.address().to_string(), endpoint.port() };
+			DBGT( ELogTags::App, "!initListener {}:{}", endpoint.address().to_string(), endpoint.port() );
 			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Critical };
 			return false;
 		}
@@ -145,11 +151,11 @@ namespace Server{
 	Ω listen( tcp::endpoint endpoint, sp<IRequestHandler> handler )ι->net::awaitable<void, executor_type>{
 		typename tcp::acceptor::rebind_executor<executor_with_default>::other acceptor{ co_await net::this_coro::executor };
 		if( !initListener(acceptor, endpoint) ){
-			Debug{ ELogTags::App, "!initListener" };
+			DBGT( ELogTags::App, "!initListener" );
 			co_return;
 		}
 
-		Trace( ELogTags::App, "Web Server accepting." );
+		TRACET( ELogTags::App, "Web Server accepting." );
 		handler->Start();
 		while( (co_await net::this_coro::cancellation_state).cancelled() == net::cancellation_type::none ){
 			auto [ec, sock] = co_await acceptor.async_accept();
@@ -182,7 +188,7 @@ namespace Server{
 		Execution::AddCancelSignal( handler->CancelSignal() );
 		Execution::Run();
 		handler->BlockTillStarted(); // wait for boost to end.
-		Information( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
+		INFOT( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
 	α Internal::Stop( sp<IRequestHandler>&& handler, bool /*terminate*/ )ι->void{
@@ -197,7 +203,7 @@ namespace Server{
 	}
 
 	α Internal::RemoveSocketSession( SocketId id )ι->void{
-		Trace{ ELogTags::SocketServerRead, "erased socket: {:x}", _socketSessions.erase( id ) };
+		TRACET( ELogTags::SocketServerRead, "erased socket: {:x}", _socketSessions.erase( id ) );
 	}
 }
 	α Server::HandleRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task{

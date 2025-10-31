@@ -1,7 +1,7 @@
 #include <jde/web/server/HttpRequest.h>
 #include <jde/web/server/Server.h>
-#include <jde/framework/str.h>
-#include <jde/framework/chrono.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/chrono.h>
 
 #define let const auto
 
@@ -13,8 +13,8 @@ namespace Jde::Web{
 		return _accessControlAllowOrigin;
 	}
 
-	string _plainVersion{ Ƒ("({})Jde.Web.Server - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
-	string _sslVersion{ Ƒ("({})Jde.Web.Server SSL - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
+	string _plainVersion{ Ƒ("({})Jde.Web.Server - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
+	string _sslVersion{ Ƒ("({})Jde.Web.Server SSL - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 	α Server::ServerVersion( bool isSsl )ι->string{ return isSsl ? _sslVersion : _plainVersion; }//TODO cache
 }
 
@@ -30,7 +30,21 @@ namespace Jde::Web::Server{
 		_start{ steady_clock::now() }{
 		ParseUri();
 	}
+	
+	α HttpRequest::operator[]( str x )Ι->const string&{
+		auto p = _params.find( x );
+		return p!=_params.end() ? p->second : Str::Empty();
+	}
 
+	α HttpRequest::Body()ε->jobject&{
+		if( !_body ){
+			if( auto& s = _request.body(); s.size() )
+				_body = Json::Parse( move(s) );
+			else
+				_body = {};
+		}
+		return *_body;
+	}
 	α HttpRequest::ParseUri()->void{
 		let& uri = Str::DecodeUri( _request.target() );
 	  _target = uri.substr( 0, uri.find('?') );
@@ -50,7 +64,7 @@ namespace Jde::Web::Server{
 		//if( !j.empty() )
 		y.body() = serialize( move(j) );
 		y.prepare_payload();
-		Trace{ sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo ? SessionInfo->SessionId : 0, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) };
+		LOGSL( ELogLevel::Trace, sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo ? SessionInfo->SessionId : 0, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
 		return y;
 	}
 
@@ -63,6 +77,6 @@ namespace Jde::Web::Server{
 	}
 
 	α HttpRequest::LogRead( str text, SL sl )Ι->void{
-		Trace{ sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {}{} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) };
+		LOGSL( ELogLevel::Trace, sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {}{} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
 	}
 }

@@ -1,5 +1,6 @@
 ﻿#pragma once
-#include <jde/framework/coroutine/Await.h>
+#include <jde/fwk/co/Await.h>
+#include <jde/web/server/Sessions.h>
 #include "../types/ServerCnnctn.h"
 #include "../auth/OpcServerSession.h"
 
@@ -8,8 +9,9 @@ namespace Jde::Opc::Gateway{
 
 	struct ConnectAwait final : TAwait<sp<UAClient>>, boost::noncopyable{
 		using base = TAwait<sp<UAClient>>;
-		ConnectAwait( string&& opcTarget, Credential cred, SRCE )ι:base{sl},_opcTarget{move(opcTarget)}, _cred{move(cred)}{}
-		ConnectAwait( string&& opc, SessionPK sessionId, UserPK user, SRCE )ι;
+		ConnectAwait( ServerCnnctnNK&& opcTarget, Credential cred, SRCE )ι:base{sl},_opcTarget{move(opcTarget)}, _cred{move(cred)}{}
+		ConnectAwait( ServerCnnctnNK opc, SessionPK sessionId, UserPK user, SRCE )ι;
+		ConnectAwait( ServerCnnctnNK&& opc, sp<Web::Server::SessionInfo> session, SRCE )ι;
 		α Suspend()ι->void override;
 		α await_resume()ε->sp<UAClient> override{ return Promise() ? base::await_resume() : _result; }
 		Ω Resume( sp<UAClient> client )ι->void;

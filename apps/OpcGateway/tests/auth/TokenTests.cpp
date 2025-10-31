@@ -1,5 +1,5 @@
-#include <jde/framework/io/json.h>
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/io/json.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include "Auth.h"
 #include "../../src/auth/TokenAwait.h"
 #include "../../src/auth/OpcServerSession.h"
@@ -70,6 +70,6 @@ namespace Jde::Opc::Gateway::Tests{
 		flag.wait( false );
 		EXPECT_TRUE( _exception );
 		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadIdentityTokenInvalid") );
-		Debug( _tags, "{}", _exception ? _exception->what() : "Error no exception." );
+		DBG( "{}", _exception ? _exception->what() : "Error no exception." );
 	}
 }

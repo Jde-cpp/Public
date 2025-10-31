@@ -1,7 +1,7 @@
 #include <jde/web/client/http/ClientHttpSession.h>
 #include <jde/web/client/http/ClientHttpRes.h>
 #include <jde/web/client/socket/IClientSocketSession.h>
-#include <jde/framework/thread/execution.h>
+#include <jde/fwk/process/execution.h>
 
 #define let const auto
 
@@ -20,7 +20,7 @@ namespace Jde::Web::Client{
 	}
 	ssl::context _ctx{ ssl::context::tlsv12_client };// The SSL context is required, and should hold certificates
 	ELogTags _tags{ ELogTags::HttpClientWrite };
-	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
+	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 
 	ClientHttpSession::ClientHttpSession( str host, PortType port, net::any_io_executor strand, bool isPlain, bool log, SL sl )ε:
 		Host{ host }, Port{ port }, IsSsl{ false }, _log{log}, _resolver{ strand },
@@ -117,7 +117,7 @@ namespace Jde::Web::Client{
 				ClientHttpRes res{ move(_res) };
 				if( res.IsRedirect() && _session->AllowRedirects ){
 					auto [host,target,port] = res.RedirectVariables();
-					Debug( _tags, "redirecting from {}{} to {}", _session->Host, _req.target(), res[http::field::location] );
+					DBG( "redirecting from {}{} to {}", _session->Host, _req.target(), res[http::field::location] );
 					try{
 						res = co_await ClientHttpAwait{ host, target, _req.body(), port, _args, _sl };
 					}
@@ -145,7 +145,7 @@ namespace Jde::Web::Client{
 		}
 		α OnShutdown( beast::error_code ec )->void{
 			if( ec && (!_session->IsSsl || ( _session->IsSsl && ec !=net::error::eof)) )
-				Trace( ELogTags::Shutdown | ELogTags::Http | ELogTags::Client, "shutdown: {}", ec.message() );
+				TRACET( ELogTags::Shutdown | ELogTags::Http | ELogTags::Client, "shutdown: {}", ec.message() );
 			Resume();
 		}
 	private:
@@ -170,7 +170,7 @@ namespace Jde::Web::Client{
 		ASSERT( args.Verb.has_value() );
 		constexpr int version{ 11 };
 		if( _log )
-			Trace{ _sl, _tags, "{}:{}{} - {}", Host, Port, target, body.substr(0, Client::MaxLogLength()) };
+			LOGSL( ELogLevel::Trace, _sl, _tags, "{}:{}{} - {}", Host, Port, target, body.substr(0, Client::MaxLogLength()) );
 		http::request<http::string_body> req{ *args.Verb, target, version };
 		req.set( http::field::host, Host );
 		req.set( http::field::user_agent, _userAgent );
@@ -185,7 +185,7 @@ namespace Jde::Web::Client{
 		try{
 			auto res = co_await AsyncWriteAwait{ move(req), args, shared_from_this() };
 			if( _log )
-				Trace{ _sl, ELogTags::HttpClientRead, "{}:{}{} - {}", Host, Port, target, res.Body().substr(0/*, Client::MaxLogLength()*/) };
+				LOGSL( ELogLevel::Trace, _sl, ELogTags::HttpClientRead, "{}:{}{} - {}", Host, Port, target, res.Body().substr(0/*, Client::MaxLogLength()*/) );
 			h.promise().SetValue( move(res) );
 		}
 		catch( exception& e ){

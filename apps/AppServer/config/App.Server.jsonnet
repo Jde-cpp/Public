@@ -29,7 +29,7 @@ local args = import 'args.libsonnet';
 	dbServers:{
 		dataPaths: args.dbServers.dataPaths,
 		scriptPaths: args.dbServers.scriptPaths,
-		sync: true,
+		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,
@@ -62,6 +62,6 @@ local args = import 'args.libsonnet';
 	},
 	workers:{
 		drive:{threads: 1},
-		executor: 2
+		executor: {threads: 2},
 	}
 }

@@ -1,19 +1,37 @@
 #include "UAServer.h"
-#include <jde/opc/uatypes/helpers.h>
-#include "UAAccess.h"
+//#include <libxml/parser.h>
+//#include <libxml/tree.h>
+//#include <libxml/xmlerror.h>
+#include <jde/fwk/process/thread.h>
+#include <jde/opc/uatypes/opcHelpers.h>
+//#include "UAAccess.h"
 #include <NodesetLoader/backendOpen62541.h>
 
 #define let const auto
 namespace Jde::Opc::Server {
+	Ω myXmlError( void* ctx, const char* msg, ... )->void{
+		va_list args;
+		va_start( args, msg );
+		if( ctx )
+			vfprintf( stderr, msg, args );
+		else
+			vfprintf( stderr, msg, args ); // Fallback to stderr if no log file
+		va_end( args );
+		BREAK;
+	}
+
 	constexpr ELogTags _tags{ ELogTags::App };
 	UAServer::UAServer()ε:
 		ServerName{ Settings::FindString("/opcServer/name").value_or("OpcServer") },
 		_ua{ UA_Server_newWithConfig(&_config) }
 	{}
 	UAServer::~UAServer(){
-		Information{ ELogTags::App, "Stopping OPC UA server..." };
+		INFOT( ELogTags::App, "Stopping OPC UA server..." );
 		if( _thread.has_value() ){
 			_running = false;
+#ifdef _MSC_VER
+			std::this_thread::sleep_for( 1s );
+#endif
 			_thread->request_stop();
 			_thread->join();
 			_thread.reset();
@@ -33,15 +51,16 @@ namespace Jde::Opc::Server {
 				UA_Server_run_shutdown( _ua );
 				UA_Server_delete( _ua );
 				_ua = nullptr;
-				Information{ ELogTags::App, "OPC UA server stopped." };
+				INFOT( ELogTags::App, "OPC UA server stopped." );
 			}};
 		}
 	}
 	α UAServer::Load( fs::path configFile, SL sl )ε->void{
-		Information{ ELogTags::App, "Loading configuration from: '{}'", configFile.string() };
+		INFOT( ELogTags::App, "Loading configuration from: '{}'", configFile.string() );
 		CHECK_PATH( configFile, sl );
-		if( !NodesetLoader_loadFile(_ua, configFile.string().c_str(), nullptr) )
-			throw Exception( sl, "Failed to load nodeset file: '{}'", configFile.string() );
+		//xmlSetGenericErrorFunc( nullptr, myXmlError );
+		auto success = NodesetLoader_loadFile( _ua, configFile.string().c_str(), nullptr );
+		THROW_IFSL( !success, "Failed to load nodeset file: '{}'", configFile.string() );
 	}
 
 	α UAServer::Constructor(UA_Server* /*server*/,
@@ -180,7 +199,7 @@ namespace Jde::Opc::Server {
 			if( node.ParentNodePK != parent.PK )
 				continue;
 			if( let nodeBrowse = _browseNames.find( node.Browse.PK );
-				nodeBrowse==_browseNames.end() || nodeBrowse->second.Ns!=browse.Ns || nodeBrowse->second.Name!=browse.Name ){
+				nodeBrowse==_browseNames.end() || nodeBrowse->second.namespaceIndex!=browse.namespaceIndex || ToSV(nodeBrowse->second.name)!=ToSV(browse.name) ){
 				continue;
 			}
 			y = &node;
@@ -192,7 +211,7 @@ namespace Jde::Opc::Server {
 	α UAServer::FindBrowse( BrowseName& browse )Ι->bool{
 		let p = browse.PK
 			? _browseNames.find( browse.PK )
-			: find_if(_browseNames, [&browse](const auto& kv){ return kv.second.Ns==browse.Ns && kv.second.Name==browse.Name; });
+			: find_if(_browseNames, [&browse](const auto& kv){ return kv.second.namespaceIndex==browse.namespaceIndex && ToSV(kv.second.name)==ToSV(browse.name); });
 		if( p!=_browseNames.end() )
 			browse = p->second;
 		return p!=_browseNames.end();
@@ -269,5 +288,14 @@ namespace Jde::Opc::Server {
 		auto p = _variables.find(pk);
 		THROW_IFSL( p==_variables.end(), "({})Variable not found", Ƒ("{:x}", pk) );
 		return p->second;
+	}
+	α UAServer::Namespaces()ι->flat_map<uint,string>{
+		flat_map<uint,string> y;
+		UA_String ns;
+		for( uint i=0; !UA_Server_getNamespaceByIndex(_ua, i, &ns); ++i ){
+			y.emplace( i, Opc::ToString(ns) );
+			UA_String_clear( &ns );
+		}
+		return y;
 	}
 }

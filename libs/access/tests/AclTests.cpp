@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
-#include <jde/framework/io/json.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/io/json.h>
+#include <jde/fwk/str.h>
 #include <jde/ql/QLAwait.h>
 #include <jde/access/types/Resource.h>
 #include "globals.h"
@@ -120,7 +120,7 @@ namespace Jde::Access::Tests{
 		let resourceName = "groupings";
 		restoreResource( resourceName, GetRoot() );
 		TestEnabeledPermissions( resourceName, "EnabledPermissions-Group3", _usersPKs["intruder"] );
-		Trace{ ELogTags::Test, "EnabledPermissions" };
+		TRACET( ELogTags::Test, "EnabledPermissions" );
 	}
 
 	TEST_F( AclTests, DeletedUser ){

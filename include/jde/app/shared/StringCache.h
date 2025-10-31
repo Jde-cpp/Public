@@ -4,7 +4,7 @@
 
 #define Φ ΓAS α
 namespace Jde::App::StringCache{
-	using App::Proto::FromClient::EFields;
+	using Log::Proto::EFields;
 
 	Φ Add( EFields field, StringMd5 id, str value, ELogTags logTags )ι->bool;
 	Φ AddFile( StringMd5 id, str path )ι->bool;

@@ -1,7 +1,8 @@
 ﻿#include "UAClient.h"
 
 #include <open62541/plugin/securitypolicy_default.h>
-#include <jde/framework/thread/execution.h>
+#include <jde/fwk/process/execution.h>
+#include <jde/fwk/utils/collections.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
@@ -10,7 +11,6 @@
 #include "async/CreateSubscriptions.h"
 #include "async/DataChanges.h"
 #include "async/SetMonitoringMode.h"
-#include "async/Write.h"
 #include "uatypes/Browse.h"
 #include "uatypes/CreateMonitoredItemsRequest.h"
 #include "uatypes/uaTypes.h"
@@ -27,7 +27,7 @@ namespace Jde::Opc::Gateway{
 		ul _{ _clientsMutex };
 		if( auto serverCreds = _clients.find(client->Target()); serverCreds!=_clients.end() ){
 			if( auto cred = serverCreds->second.find(client->Credential); cred!=serverCreds->second.end() ){
-				Debug{ _tags, "[{:x}]Removing client: '{}'.", client->Handle(), client->Target() };
+				DBG( "[{:x}]Removing client: '{}'.", client->Handle(), client->Target() );
 				serverCreds->second.erase( cred );
 				erased = true;
 				if( serverCreds->second.empty() )
@@ -37,7 +37,7 @@ namespace Jde::Opc::Gateway{
 		}
 		client = nullptr;
 		if( !erased )
-			Debug{ _tags, "[{:x}] - could not find client='{}'.", client->Handle(), client->Target() };
+			DBG( "[{:x}] - could not find client='{}'.", client->Handle(), client->Target() );
 		return erased;
 	}
 	concurrent_flat_set<sp<UAClient>> _awaitingActivation;
@@ -64,7 +64,7 @@ namespace Jde::Opc::Gateway{
 					client->MonitoredNodes.Shutdown();
 					client->_asyncRequest.Stop();
 					if( client.use_count()>1 )
-					  Warning{ _tags, "[{:x}]use_count={}", client->Handle(), client.use_count() };
+					  WARN( "[{:x}]use_count={}", client->Handle(), client.use_count() );
 				}
 			}
 		}
@@ -112,7 +112,7 @@ namespace Jde::Opc::Gateway{
 			lg _{_sessionAwaitableMutex};
 			_sessionAwaitables.emplace_back( move(h) );
 		}
-		Process( std::numeric_limits<RequestId>::max() );
+		Process( ConnectRequestId );
 	}
 	α UAClient::TriggerSessionAwaitables()ι->void{
 		vector<VoidAwait::Handle> handles;
@@ -130,12 +130,12 @@ namespace Jde::Opc::Gateway{
 		BREAK_IF( connectStatus );
 		if( auto client = sessionState == UA_SESSIONSTATE_ACTIVATED ? UAClient::TryFind(ua) : sp<UAClient>{}; client ){
 			client->TriggerSessionAwaitables();
-			client->ClearRequest( std::numeric_limits<RequestId>::max() );
+			client->ClearRequest( ConnectRequestId );
 		}
 		if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED || connectStatus==UA_STATUSCODE_BADSECURITYCHECKSFAILED || connectStatus == UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
 			_awaitingActivation.erase_if( [ua, sessionState,connectStatus]( sp<UAClient> client ){
 				if( client->UAPointer()!=ua )return false;
-				client->ClearRequest( std::numeric_limits<RequestId>::max() );//previous clear didn't have client
+				client->ClearRequest( ConnectRequestId );//previous clear didn't have client
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
 					{
 						ul _{ _clientsMutex };
@@ -199,10 +199,10 @@ namespace Jde::Opc::Gateway{
 		auto p = shared_from_this();
 		ASSERT( !_awaitingActivation.contains(p) );
 		_awaitingActivation.emplace( shared_from_this() );
-		Debug{ _tags | ELogTags::Access, "[{:x}]Connecting to '{}', using '{}'", Handle(), Url(), Credential.ToString() };
+		DBG( "[{:x}]Connecting to '{}', using '{}'", Handle(), Url(), Credential.ToString() );
 		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
 		_asyncRequest.SetParent( p );
-		Process( std::numeric_limits<RequestId>::max(), nullptr );
+		Process( ConnectRequestId, nullptr );
 	}
 
 	α UAClient::Process( RequestId requestId )ι->void{
@@ -239,9 +239,9 @@ namespace Jde::Opc::Gateway{
 	α UAClient::SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void{
 		try{
 			RequestId requestId{};
-			Trace( BrowseTag, "[{:x}]SendBrowseRequest", Handle() );
+			TRACET( BrowseTag, "[{:x}]SendBrowseRequest", Handle() );
 			UAε( UA_Client_sendAsyncBrowseRequest(_ptr, &request, Browse::OnResponse, nullptr, &requestId) );
-			Trace( BrowseTagPedantic, "[{:x}.{}]SendBrowseRequest", Handle(), requestId );
+			TRACET( BrowseTagPedantic, "[{:x}.{}]SendBrowseRequest", Handle(), requestId );
 			Process( requestId, move(h) );
 		}
 		catch( UAException& e ){
@@ -254,7 +254,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α UAClient::SendReadRequest( const flat_set<NodeId>&& nodeIds, ReadAwait::Handle h )ι->void{
+	α UAClient::SendReadRequest( const flat_set<NodeId>&& nodeIds, ReadValueAwait::Handle h )ι->void{
 		if( nodeIds.empty() ){
 			h.promise().SetExp( Exception{"no nodes sent"} );
 			return h.resume();
@@ -270,34 +270,12 @@ namespace Jde::Opc::Gateway{
 					firstRequestId = requestId;
 				ids.emplace( requestId, nodeId );
 	 		}
-			Trace( IotReadTag, "[{:x}.{}]SendReadRequest - count={}", Handle(), firstRequestId, ids.size() );
+			TRACET( IotReadTag, "[{:x}.{}]SendReadRequest - count={}", Handle(), firstRequestId, ids.size() );
 			_readRequests.try_emplace( firstRequestId, UARequestMulti<Value>{move(ids)} );
 			Process( firstRequestId, move(h) );
 		}
 		catch( UAException& e ){
-			Retry<ReadAwait::Handle>( [n=move(nodeIds)]( sp<UAClient>&& p, ReadAwait::Handle h )mutable{p->SendReadRequest( move(n), move(h) );}, move(e), shared_from_this(), move(h) );
-		}
-	}
-	α UAClient::SendWriteRequest( flat_map<NodeId,Value>&& values, WriteAwait::Handle h )ι->void{
-		if( values.empty() ){
-			h.promise().ResumeExp( Exception{"no nodes sent"}, move(h) );
-			return;
-		}
-		flat_map<UA_UInt32, NodeId> ids;
-		Gateway::RequestId firstRequestId{};
-		try{
-			for( auto&& [nodeId, value] : values ){
-				RequestId requestId{};
-				UAε( UA_Client_writeValueAttribute_async(_ptr, nodeId, &value.value, Write::OnResponse, (void*)(uint)firstRequestId, &requestId) );
-				if( !firstRequestId )
-					firstRequestId = requestId;
-				ids.emplace( requestId, nodeId );
-	 		}
-			_writeRequests.try_emplace( firstRequestId, UARequestMulti<UA_WriteResponse>{move(ids), shared_from_this()} );
-			Process( firstRequestId, move(h) );
-		}
-		catch( UAException& e ){
-			Retry<WriteAwait::Handle>( [n=move(values)]( sp<UAClient>&& p, auto h )mutable{p->SendWriteRequest( move(n), move(h) );}, move(e), shared_from_this(), h );
+			Retry<ReadValueAwait::Handle>( [n=move(nodeIds)]( sp<UAClient>&& p, ReadValueAwait::Handle h )mutable{p->SendReadRequest( move(n), move(h) );}, move(e), shared_from_this(), move(h) );
 		}
 	}
 	α UAClient::SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void{
@@ -317,7 +295,7 @@ namespace Jde::Opc::Gateway{
 		try{
 			RequestId requestId{};
 			UAε( UA_Client_Subscriptions_create_async(UAPointer(), UA_CreateSubscriptionRequest_default(), nullptr, StatusChangeNotificationCallback, DeleteSubscriptionCallback, CreateSubscriptionCallback, nullptr, &requestId) );
-			Trace( MonitoringTag, "[{:x}.{:x}]CreateSubscription", Handle(), requestId );
+			TRACET( MonitoringTag, "[{:x}.{:x}]CreateSubscription", Handle(), requestId );
 			Process( requestId, nullptr );
 		}
 		catch( UAException& e ){
@@ -337,7 +315,7 @@ namespace Jde::Opc::Gateway{
 
 			RequestId requestId{};
 			UAε( UA_Client_MonitoredItems_createDataChanges_async(UAPointer(), request, contexts, dataChangeCallbacks.data(), deleteCallbacks.data(), CreateDataChangesCallback, (void*)requestHandle, &requestId) );
-			Trace( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, serialize(request.ToJson()) );
+			//TRACET( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, serialize(request.ToJson()) );
 			Process( requestId, move(h) );//TODO handle BadSubscriptionIdInvalid
 		}
 		catch( UAException& e ){
@@ -391,10 +369,16 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α UAClient::ToNodeId( sv path )Ε->ExNodeId{
-		let segments = Str::Split(path, '/');
-    UABrowsePath browsePath{ segments, _opcServer.DefaultBrowseNs };
-    return GetNodeIdResponse{ UA_Client_Service_translateBrowsePathsToNodeIds(_ptr, {{}, 1, &browsePath}), segments, Handle() };
+	α UAClient::BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,std::expected<ExNodeId,StatusCode>>{
+		let segments = Str::Split( path, '/' );
+		auto args = Reserve<UABrowsePath>( parents ? segments.size()-1 : 1 );
+		vector<string> paths;
+		for( uint i=0; i<(parents ? segments.size() : 1); ++i ){
+			std::span<const sv> nodePath{ segments.begin(), segments.end()-i };
+			paths.emplace_back( Str::Join(nodePath, "/") );
+			args.emplace_back( UABrowsePath{nodePath, _opcServer.DefaultBrowseNs} );
+		}
+		return BrowsePathsToNodeIdResponse{ UA_Client_Service_translateBrowsePathsToNodeIds(_ptr, {{}, args.size(), args.data()}), paths, Handle() };
 	}
 	α UAClient::Find( UA_Client* ua, SL srce )ε->sp<UAClient>{
 		sp<UAClient> y = TryFind( ua, srce );
@@ -405,9 +389,9 @@ namespace Jde::Opc::Gateway{
 
 	α UAClient::TryFind( UA_Client* ua, SL srce )ι->sp<UAClient>{
 		sl _{ _clientsMutex };
-		if( Process::ShuttingDown() )
-			Warning{ srce, _tags, "Application is shutting down." };
-		else{
+		if( Process::ShuttingDown() ){
+			LOGSL( ELogLevel::Warning, srce, _tags, "Application is shutting down." );
+		}else{
 			for( auto& [_, credClients] : _clients ){
 				for( auto& [_, client] : credClients ){
 					if( client->_ptr == ua )
@@ -418,11 +402,11 @@ namespace Jde::Opc::Gateway{
 		return {};
 	}
 
-	α UAClient::Find( str opcNK, optional<Gateway::Credential> cred )ι->sp<UAClient>{
+	α UAClient::Find( str opcNK, const Gateway::Credential& cred )ι->sp<UAClient>{
 		sl _{ _clientsMutex };
 		sp<UAClient> y;
 		if( auto creds = _clients.find(opcNK); creds!=_clients.end() ){
-			if( auto client = creds->second.find(*cred); client!=creds->second.end() )
+			if( auto client = creds->second.find(cred); client!=creds->second.end() )
 				y = client->second;
 		}
 		return y;

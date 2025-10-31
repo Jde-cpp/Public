@@ -36,8 +36,8 @@ namespace Jde::App::Client{
 		AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx, sp<Access::Authorize> authorize, sp<IAppClient> appClient )ι;
 		α Connect( SessionPK sessionId, SRCE )ι->await<Proto::FromServer::ConnectionInfo>;
 		α SessionInfo( SessionPK creds, SRCE )ι->await<Web::FromServer::SessionInfo>;
-		α Query( string&& q, bool returnRaw, SRCE )ι->await<jvalue> override;
-		α Subscribe( string&& query, sp<QL::IListener> listener, SRCE )ε->await<jarray> override;
+		α Query( string&& q, jobject variables, bool returnRaw, SRCE )ι->await<jvalue> override;
+		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray> override;
 		α Unsubscribe( string&& query, SRCE )ε->await<vector<QL::SubscriptionId>>;
 		α UserPK()Ι{ return _userPK; }
 		α QLServer()ι{ return _qlServer; }

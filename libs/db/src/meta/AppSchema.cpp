@@ -1,5 +1,5 @@
 #include <jde/db/meta/AppSchema.h>
-#include <jde/framework/io/json.h>
+#include <jde/fwk/io/json.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/Functions.h>
@@ -38,7 +38,7 @@ namespace Jde::DB{
 	{}
 
 	AppSchema::AppSchema( sv name, const jobject& appSchema, sp<Access::IAcl> authorizer )ε:
-		AppSchema{ name, Json::FindDefaultSV(appSchema,"prefix"), Json::ReadJsonNet(Json::AsString(appSchema,"meta")), authorizer }
+		AppSchema{ name, Json::FindDefaultSV(appSchema,"prefix"), Json::ReadJsonNet(Json::AsString(appSchema,"meta"), {}), authorizer }
 	{}
 
 	α AppSchema::Initialize( sp<DB::DBSchema> db, sp<AppSchema> self )ε->void{

@@ -31,7 +31,7 @@ namespace Jde::App::Server{
 	α FindInstance( AppInstancePK instancePK )ι->sp<ServerSocketSession>;
 	α NextRequestId()->RequestId;
 	α RemoveSession( AppInstancePK sessionPK )ι->void;
-	α SubscribeLogs( string&& qlText, sp<ServerSocketSession> session )ε->void;
+	α SubscribeLogs( string&& qlText, jobject variables, sp<ServerSocketSession> session )ε->void;
 	α SubscribeStatus( ServerSocketSession& session )ι->void;
 
 	α UnsubscribeLogs( AppInstancePK instancePK )ι->bool;
@@ -48,9 +48,9 @@ namespace Jde::App::Server{
 	struct LocalClient final : IApp{
 		α IsLocal()Ι->bool override{ return true; }
 
-		α QueryArray( string&& q, bool raw, SRCE )ι->up<TAwait<jarray>> override{ return mu<QL::QLAwait<jarray>>( move(q), UserPK{UserPK::System}, Server::Schemas(), raw, sl ); }
-		α QueryObject( string&& q, bool returnRaw, SRCE )ι->up<TAwait<jobject>> override{ return mu<QL::QLAwait<jobject>>( move(q), UserPK{UserPK::System}, Server::Schemas(), returnRaw, sl ); }
-		α QueryValue( string&& q, bool returnRaw, SRCE )ι->up<TAwait<jvalue>> override{ return mu<QL::QLAwait<jvalue>>( move(q), UserPK{UserPK::System}, Server::Schemas(), returnRaw, sl ); }
+		α QueryArray( string&& q, jobject variables, bool raw, SRCE )ι->up<TAwait<jarray>> override{ return mu<QL::QLAwait<jarray>>( move(q), variables, UserPK{UserPK::System}, Server::Schemas(), raw, sl ); }
+		α QueryObject( string&& q, jobject variables, bool returnRaw, SRCE )ι->up<TAwait<jobject>> override{ return mu<QL::QLAwait<jobject>>( move(q), variables, UserPK{UserPK::System}, Server::Schemas(), returnRaw, sl ); }
+		α QueryValue( string&& q, jobject variables, bool returnRaw, SRCE )ι->up<TAwait<jvalue>> override{ return mu<QL::QLAwait<jvalue>>( move(q), variables, UserPK{UserPK::System}, Server::Schemas(), returnRaw, sl ); }
 		α SessionInfoAwait( SessionPK, SL )ι->up<TAwait<Web::FromServer::SessionInfo>> override{ return {}; }
 		α PublicKey()Ι->const Crypto::PublicKey& override{ return _publicKey; }
 		α SetPublicKey( Crypto::PublicKey publicKey )ι->void{ _publicKey = move(publicKey); }

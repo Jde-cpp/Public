@@ -5,7 +5,7 @@
 		dataPaths: ["$(JDE_DIR)/Public/apps/AppServer/config", "$(JDE_DIR)/Public/libs/access/config"],
 		scriptPaths:  ["$(JDE_DIR)/Public/apps/AppServer/config/sql/sqlServer", "$(JDE_DIR)/Public/libs/access/config/sql/sqlServer"],
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/msvc/jde/libs/db/drivers/odbc/Debug/Jde.DB.Odbc.dll",
+			driver: "$(JDE_BUILD_DIR)/msvc/jde/apps/AppServer/Debug/Jde.DB.Odbc.dll",
 			connectionString: "DSN=debug",
 			username: null,
 			password: null,

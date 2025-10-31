@@ -11,9 +11,9 @@ namespace Jde::Web{
 		α SessionInfoAwait( SessionPK, SL )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return {}; }
 		α PublicKey()Ι->const Crypto::PublicKey& override{ return _publicKey; }
 
-		α QueryArray( string&& , bool , SRCE )ε->up<TAwait<jarray>>{ return {}; }
-		α QueryObject( string&& , bool , SRCE )ε->up<TAwait<jobject>>{ return {}; }
-		α QueryValue( string&& , bool , SRCE )ε->up<TAwait<jvalue>>{ return {}; }
+		α QueryArray( string&&, jobject, bool, SRCE )ε->up<TAwait<jarray>>{ return {}; }
+		α QueryObject( string&&, jobject, bool, SRCE )ε->up<TAwait<jobject>>{ return {}; }
+		α QueryValue( string&&, jobject, bool, SRCE )ε->up<TAwait<jvalue>>{ return {}; }
 	private:
 		Crypto::PublicKey _publicKey;
 	};

@@ -1,7 +1,6 @@
 ﻿import { Log } from "../IGraphQL";
 
-export abstract class IErrorService
-{
+export abstract class IErrorService{
 	//abstract show( e:any ):void;
 	abstract error( e:string, log:Log ):void;
 	abstract exception( e:any, log:Log ):void;

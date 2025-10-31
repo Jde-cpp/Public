@@ -5,6 +5,11 @@
 		urn: "urn:open62541.server.application",
 		url: "opc.tcp://127.0.0.1:4840"
 	},
+	opcServer: {
+		trustedCertDirs: [
+			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs"
+		]
+	},
 	dbServers: {
 		localhost:{
 			driver: "$(JDE_BUILD_DIR)/jde/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",

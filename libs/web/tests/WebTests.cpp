@@ -1,10 +1,10 @@
 ﻿#include <execution>
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/client/http/ClientHttpResException.h>
-#include <jde/framework/chrono.h>
-#include <jde/framework/Stopwatch.h>
-#include <jde/framework/str.h>
-#include <jde/framework/thread/execution.h>
+#include <jde/fwk/chrono.h>
+#include <jde/fwk/utils/Stopwatch.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/process/execution.h>
 #include "mocks/ServerMock.h"
 
 #define let const auto
@@ -94,7 +94,7 @@ namespace Jde::Web{
 						(*pSessionIds)[idx] = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 					}
 					catch( IException& e ){
-						Debug( _tags, "connections={}", connections.load() );
+						DBG( "connections={}", connections.load() );
 						_pException = e.Move();
 					}
 				}( index, sessionIds, connections );
@@ -151,7 +151,7 @@ namespace Jde::Web{
 		std::shared_mutex mtx;
 		auto onWrite = []( beast::error_code ec, uint /*bytes_transferred*/ )ι{
 			ASSERT( !ec );
-			Debug( _tags, "onWrite" );
+			DBG( "onWrite" );
 		};
 		net::post( strand, [&]{
     	http::async_write( *stream, req, onWrite );
@@ -172,7 +172,7 @@ namespace Jde::Web{
 			stream->socket().close( ec );
 			ASSERT( !ec );
 			stream = nullptr;
-			Debug( _tags, "client stream shutdown" );
+			DBG( "client stream shutdown" );
 		});
 		sl l{ mtx };
 		cv.wait( l );

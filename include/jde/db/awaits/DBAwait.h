@@ -4,15 +4,13 @@
 
 #include "../usings.h"
 #include "../exports.h"
+#include <jde/fwk/io/Cache.h>
 #include <jde/db/Row.h>
 #include <jde/db/awaits/SelectAwait.h>
-
-#include "../../../../../Framework/source/Cache.h"
-#include "../../../../../Framework/source/coroutine/Awaitable.h"
 #define let const auto
 namespace Jde::DB{
 	struct IDataSource;
-	using namespace Coroutine;
+//	using namespace Coroutine;
 	using RowΛ=function<void( Row&& )ε>;
 	Τ using CoRowΛ=function<void( T& pResult, Row&& r )ε>;
 
@@ -86,7 +84,7 @@ namespace Jde::DB{
 			return *_cache;
 		let y = TSelectAwait<T>::await_resume();
 		Cache::Set<T>( _cacheName, ms<T>(y) );
-		Trace{ ELogTags::Test, "Cache.sizeof: {}", sizeof(T) };
+		TRACET( ELogTags::Test, "Cache.sizeof: {}", sizeof(T) );
 		return y;
 	}
 }

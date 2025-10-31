@@ -1,0 +1,29 @@
+﻿#pragma once
+#ifndef CONTEXT_THREAD_H
+#define CONTEXT_THREAD_H
+#include <jde/fwk/co/Await.h>
+
+namespace boost::asio{ class io_context; class cancellation_signal; }
+#define Φ Γ α
+namespace Jde{
+	Φ Executor()ι->sp<boost::asio::io_context>;
+	Φ Post( function<void()> f )ι->void;
+	Φ PostM( std::move_only_function<void()> f )ι->void;
+	α PostIO( function<void()> f )ι->void;
+	Φ Post( VoidAwait::Handle&& h )ι->void;
+	Ŧ Post( T&& value, typename TAwait<T>::Handle&& h )ι->void;
+
+	namespace Execution{
+		Φ AddShutdown( IShutdown* pShutdown )ι->void;
+		Φ AddCancelSignal( sp<boost::asio::cancellation_signal> s )ι->void;
+		Φ Run()->void;
+	}
+	Ŧ Jde::Post( T&& value, typename TAwait<T>::Handle&& h )ι->void{
+		PostM( [ v = move(value), h ]() mutable {
+			h.promise().Resume( move(v), h );
+		} );
+		h = nullptr;
+	}
+}
+#endif
+#undef Φ

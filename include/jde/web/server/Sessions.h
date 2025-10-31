@@ -1,7 +1,7 @@
 #pragma once
 #include <jde/db/usings.h>
-#include <jde/framework/coroutine/Await.h>
-#include <jde/framework/coroutine/Task.h>
+#include <jde/fwk/co/Await.h>
+#include <jde/fwk/co/Task.h>
 #include "exports.h"
 
 #define Φ auto ΓWS

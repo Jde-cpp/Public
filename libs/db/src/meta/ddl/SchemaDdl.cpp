@@ -1,5 +1,5 @@
 #include "SchemaDdl.h"
-#include <jde/framework/io/file.h>
+#include <jde/fwk/io/file.h>
 #include "TableDdl.h"
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
@@ -34,7 +34,7 @@ namespace Jde::DB{
 
 	α ConfigurationJson( const AppSchema& config )ε->const jobject{
 		let appSchema = Settings::AsObject( config.ConfigPath() );
-		auto appMeta = Json::ReadJsonNet( Json::AsSV(appSchema, "meta") );
+		auto appMeta = Json::ReadJsonNet( Json::AsSV(appSchema, "meta"), {} );
 		if( let prefix = Json::FindString(appSchema, "prefix"); prefix )
 			appMeta["prefix"] = *prefix;
 		return appMeta;
@@ -88,7 +88,7 @@ namespace Jde::DB{
 				auto createStatement = ForeignKey::Create( name, column->Name, *pkTable, *table );
 				config.DS()->ExecuteSync( {move(createStatement)} );
 				FKs.emplace( name, ForeignKey{name, table->Name, {column->Name}, pkTable->Name} );
-				Information{ _tags, "Created fk '{}'.", name };
+				INFO( "Created fk '{}'.", name );
 			}
 		}
 	}
@@ -96,7 +96,7 @@ namespace Jde::DB{
 		let dirs = Settings::FindStringArray( jpath );
 		for( let& scriptDir : dirs ){
 			const fs::path scriptRoot{ scriptDir };
-			Debug{ ELogTags::App, "Processing '{}'.  Prefixes: [{}], extension: {}", scriptRoot.string(), Str::Join(prefixes, ", "), extension };
+			DBGT( ELogTags::App, "Processing '{}'.  Prefixes: [{}], extension: {}", scriptRoot.string(), Str::Join(prefixes, ", "), extension );
 			THROW_IF( !fs::exists(scriptRoot) || !fs::is_directory(scriptRoot), "Script path '{}' does not exist.", scriptRoot.string() );
 			flat_map<string,fs::path> files;  //abc order
 			for( let& entry : fs::directory_iterator(scriptRoot) ){
@@ -120,8 +120,8 @@ namespace Jde::DB{
 		}
 		forEachDir( "/dbServers/dataPaths", ".mutation", prefixes, [this](const fs::path& file){
 			let text = IO::Load( file );
-			Information{ _tags, "Mutation: '{}'", file.string() };
-			_ql->Upsert( text, {UserPK::System} );
+			INFO( "Mutation: '{}'", file.string() );
+			_ql->Upsert( text, {}, {UserPK::System} );
 		});
 	}
 
@@ -139,7 +139,7 @@ namespace Jde::DB{
 			if( Procs.find(dbName)!=Procs.end() || Tables().find(procViewName)!=Tables().end() )
 				return;
 			let text = IO::Load( scriptFile );
-			Trace{ _tags, "Executing '{}'", scriptFile.string() };
+			TRACE( "Executing '{}'", scriptFile.string() );
 			let queries = Str::Split<sv,Str::iv>( text, "\ngo"_iv );
 			for( let& text : queries ){
 				string newName = Ƒ("[{}]", config.DBSchema->Name);
@@ -154,9 +154,10 @@ namespace Jde::DB{
 					if( i<query.size() )
 						os.put( query[i] );
 				}
-				config.DS()->ExecuteSync( {os.str()} );
+				string sql{ os.str() };
+				config.DS()->ExecuteSync( {move(sql)} );
 			}
-			Information{ _tags, "Finished '{}'", scriptFile.string() };
+			INFO( "Finished '{}'", scriptFile.string() );
 		});
 	}
 
@@ -169,7 +170,7 @@ namespace Jde::DB{
 			if( let kv=Tables().find(config.ObjectPrefix()+tableName); kv!=Tables().end() ){
 				dbTable = std::dynamic_pointer_cast<TableDdl>( kv->second );
 				for( auto& column : table->Columns ){
-					auto pDBColumn = dbTable->FindColumn( column->Name ); if( !pDBColumn ){ Critical{_tags,"Could not find db column {}.{}", tableName, column->Name}; continue; }
+					auto pDBColumn = dbTable->FindColumn( column->Name ); if( !pDBColumn ){ CRITICAL("Could not find db column {}.{}", tableName, column->Name); continue; }
 					pDBColumn->Insertable = column->Insertable;
 					if( pDBColumn->Default && pDBColumn->Default->is_string() && pDBColumn->Default->get_string()!="$now" )
 						ds.TryExecuteSync( {syntax.AddDefault(table->DBName, column->Name, *pDBColumn->Default)} );
@@ -178,7 +179,7 @@ namespace Jde::DB{
 			else{
 				dbTable = ms<TableDdl>( *table );
 				ds.ExecuteSync( {dbTable->CreateStatement()} );
-				Information{ _tags, "Created table '{}'.", table->DBName };
+				INFO( "Created table '{}'.", table->DBName );
 				dbTable = ds.ServerMeta().LoadTable( schemaName, config.ObjectPrefix()+table->Name );
 				dbTable->Initialize( FindAppSchema( "" ), dbTable );
 				Tables().emplace( dbTable->Name, dbTable );
@@ -191,7 +192,7 @@ namespace Jde::DB{
 				let name = UniqueIndexName( index, syntax.UniqueIndexNames(), dbIndexes );
 				ds.ExecuteSync( {index.Create(name, schemaName+'.'+dbTable->DBName, syntax)} );
 				dbIndexes.push_back( Index{name, tableName, index} );
-				Information{ _tags, "Created index '{}.{}'.", table->DBName, name };
+				INFO( "Created index '{}.{}'.", table->DBName, name );
 			}
 			if( auto procName = table->HasCustomInsertProc ? "" : table->InsertProcName(); procName.size() ){
 				if( let index = procName.find_first_of('.'); index<procName.size()-1 )
@@ -201,7 +202,7 @@ namespace Jde::DB{
 
 				ds.ExecuteSync( {dbTable->InsertProcCreateStatement(*table)} );
 				Procs.emplace( procName, Procedure{procName} );
-				Information{ _tags, "Created proc '{}'.", table->InsertProcName() };
+				INFO( "Created proc '{}'.", table->InsertProcName() );
 			}
 		}
 		for( let& [name, view] : config.Views ){

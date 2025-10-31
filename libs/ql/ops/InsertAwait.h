@@ -1,6 +1,6 @@
 #pragma once
 #include <jde/ql/types/MutationQL.h>
-#include <jde/framework/coroutine/Await.h>
+#include <jde/fwk/co/Await.h>
 #include <jde/db/awaits/ExecuteAwait.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/generators/InsertClause.h>
@@ -10,7 +10,7 @@ namespace Jde::DB{ struct Criteria; struct IDataSource; struct InsertClause; str
 namespace Jde::QL{
 	struct InsertAwait final: TAwait<jvalue>{
 		using base=TAwait<jvalue>;
-		InsertAwait( sp<DB::Table> table, MutationQL mutation, UserPK executer, SRCE )ι;
+		InsertAwait( sp<DB::Table> table, MutationQL m, UserPK executer, SRCE )ι;
 		InsertAwait( sp<DB::Table> table, MutationQL&& m, bool identityInsert, UserPK executer, SRCE )ι;
 		α await_ready()ι->bool override;
 		α Suspend()ι->void override{ InsertBefore(); }
@@ -33,5 +33,6 @@ namespace Jde::QL{
 		vector<vector<sp<DB::Column>>> _missingColumns;
 		flat_map<string,DB::Value> _nestedIds;
 		vector<DB::InsertClause> _statements;
+		jobject _variables;
 	};
 }

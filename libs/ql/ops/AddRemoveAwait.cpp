@@ -119,7 +119,7 @@ namespace Jde::QL{
 		try{
 			auto y = co_await Hook::Add(_mutation, _userPK);
 			THROW_IF( !y, "Hook::Add returned null." );
-			Trace{ _tags, "AddHook::Add returned '{}'", serialize(*y) };
+			TRACE( "AddHook::Add returned '{}'", serialize(*y) );
 			Resume( move(*y) );
 		}
 		catch( IException& e ){
@@ -129,7 +129,7 @@ namespace Jde::QL{
 	α AddRemoveAwait::RemoveHook()ι->MutationAwaits::Task{
 		try{
 			auto y = co_await Hook::Remove( _mutation, _userPK );
-			THROW_IF( !y, "Hook::Add returned null." );
+			THROW_IF( !y, "Hook::RemoveHook returned null." );
 			Resume( move(*y) );
 		}
 		catch( IException& e ){

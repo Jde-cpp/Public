@@ -1,9 +1,9 @@
 #include <jde/access/Authorize.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include <jde/db/usings.h>
 #include <jde/access/types/Group.h>
 #include <jde/access/types/User.h>
-#include <jde/framework/collections/collections.h>
+#include <jde/fwk/utils/collections.h>
 
 #define let const auto
 namespace Jde::Access{
@@ -19,10 +19,10 @@ namespace Jde::Access{
 			return;
 
 		if( auto user = Users.find(executer); user!=Users.end() ){
-			THROW_IFSL( user->second.IsDeleted, "[{}]User is deleted.", executer.Value );
+			THROW_IFX( user->second.IsDeleted, Exception(sl, ELogLevel::Debug, "[{}]User is deleted.", executer.Value) );
 			let configured = user->second.ResourceRights( *resourcePK );
-			THROW_IFSL( !empty(configured.Denied & rights), "[{}]User denied '{}' access to '{}'.", executer.Value, ToString(rights), resourceName );
-			THROW_IFSL( empty(configured.Allowed & rights), "[{}]User does not have '{}' access to '{}'.", executer.Value, ToString(rights), resourceName );
+			THROW_IFX( !empty(configured.Denied & rights), Exception(sl, ELogLevel::Debug, "[{}]User denied '{}' access to '{}'.", executer.Value, ToString(rights), resourceName) );
+			THROW_IFX( empty(configured.Allowed & rights), Exception(sl, ELogLevel::Debug, "[{}]User does not have '{}' access to '{}'.", executer.Value, ToString(rights), resourceName) );
 		}
 		else if( executer.Value!=UserPK::System )
 			throw Exception{ sl, ELogLevel::Debug, "[{}]User not found.", executer.Value };
@@ -44,11 +44,11 @@ namespace Jde::Access{
 			return;
 		auto user = Users.find( executer );
 		if( user==Users.end() )
-			THROW_IFSL( user==Users.end(), "[{}]User not found.", executer.Value );
-		THROW_IFSL( user->second.IsDeleted, "[{}]User is deleted.", executer .Value);
+			THROW_IFX( user==Users.end(), Exception(sl, ELogLevel::Debug, "[{}]User not found.", executer.Value) );
+		THROW_IFX( user->second.IsDeleted, Exception(sl, ELogLevel::Debug, "[{}]User is deleted.", executer.Value) );
 		let configured = user->second.ResourceRights( resource.PK );
-		THROW_IFSL( !empty(configured.Denied & ERights::Administer), "[{}]User denied admin access to '{}'.", executer.Value, resource.Target );
-		THROW_IFSL( empty(configured.Allowed & ERights::Administer), "[{}]User does not have admin access to '{}'.", executer.Value, resource.Target );
+		THROW_IFX( !empty(configured.Denied & ERights::Administer), Exception(sl, ELogLevel::Debug, "[{}]User denied admin access to '{}'.", executer.Value, resource.Target) );
+		THROW_IFX( empty(configured.Allowed & ERights::Administer), Exception(sl, ELogLevel::Debug, "[{}]User does not have admin access to '{}'.", executer.Value, resource.Target) );
 	}
 	α Authorize::TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SL sl )ε->void{
 		Jde::sl l{Mutex};
@@ -110,7 +110,7 @@ namespace Jde::Access{
 			else{
 				GroupPK childGroup{ member };
 				existing.Members.emplace( childGroup );
-				Trace{ _ptags, "[{}+{}]AddToGroup", groupPK.Value, childGroup.Value };
+				TRACET( _ptags, "[{}+{}]AddToGroup", groupPK.Value, childGroup.Value );
 				let groupUsers = RecursiveUsers( childGroup, l, true );
 				for( let user : groupUsers )
 					users.emplace( user );
@@ -225,11 +225,11 @@ namespace Jde::Access{
 		if( resource.Filter.empty() ){
 			if( auto resources = resource.IsDeleted ? SchemaResources.find( resource.Schema ) : SchemaResources.end(); resources!=SchemaResources.end() ){
 				resources->second.erase( resource.Target );
-				Debug{ _ptags, "[{}.{}.{}]Deleted from schema resource.", resource.Schema, resource.Target, resource.PK };
+				DBGT( _ptags, "[{}.{}.{}]Deleted from schema resource.", resource.Schema, resource.Target, resource.PK );
 			}
 			else if( !resource.IsDeleted ){
 				SchemaResources.try_emplace( string{resource.Schema} ).first->second.emplace( resource.Target, resource.PK );
-				Debug{ _ptags, "[{}.{}.{}]Restored from schema resource.", resource.Schema, resource.Target, resource.PK };
+				DBGT( _ptags, "[{}.{}.{}]Restored from schema resource.", resource.Schema, resource.Target, resource.PK );
 			}
 		}
 	}
@@ -264,7 +264,7 @@ namespace Jde::Access{
 			if( Users.contains({memberPK}) )
 				continue;
 			GroupPK childGroup{ memberPK };/*GroupA*/
-			THROW_IFSL( childGroup==parentGroupPK, "Group cannot be a member of itself." );
+			THROW_IFX( childGroup==parentGroupPK, Exception(sl, ELogLevel::Debug, "Group cannot be a member of itself.") );
 			if( IsChild(Groups, childGroup, parentGroupPK) )
 				throw Exception{ sl, ELogLevel::Debug, "Group '{}' cannot be a member of '{}' because it is a ancester.", childGroup.Value, parentGroupPK.Value };
 		}
@@ -281,7 +281,7 @@ namespace Jde::Access{
 	}
 
 	α Authorize::TestAddRoleMember( RolePK parent, RolePK child, SL sl )ε->void{
-		THROW_IFSL( parent==child, "Role cannot be a member of itself." );
+		THROW_IFX( parent==child, Exception(sl, ELogLevel::Debug, "Role cannot be a member of itself.") );
 		function<bool(RolePK,RolePK)> isChild = [&](RolePK parent, RolePK child)->bool {
 			auto children = Roles.find( parent );
 			if( children==Roles.end() )
@@ -307,7 +307,7 @@ namespace Jde::Access{
 		auto role = Roles.try_emplace( rolePK, rolePK, false );
 		role.first->second.Members.emplace( PermissionRole{std::in_place_index<0>, member} );
 		Recalc( l );
-		Trace{ _ptags, "[{}+{}]Added role permission.", rolePK, member };
+		TRACET( _ptags, "[{}+{}]Added role permission.", rolePK, member );
 	}
 	α Authorize::AddRoleChild( RolePK parentRolePK, vector<RolePK>&& childRolePKs )ι->void{
 		ul l{ Mutex };
@@ -316,7 +316,7 @@ namespace Jde::Access{
 			role.first->second.Members.emplace( PermissionRole{std::in_place_index<1>,childRolePK} );
 
 		Recalc( l );
-		Trace{ _ptags, "[{}+{}]Added role child.", parentRolePK, Str::Join(childRolePKs) };
+		TRACET( _ptags, "[{}+{}]Added role child.", parentRolePK, Str::Join(childRolePKs) );
 	}
 
 	α Authorize::RemoveRoleChildren(	RolePK rolePK, flat_set<PermissionPK> toRemove )ι->void{

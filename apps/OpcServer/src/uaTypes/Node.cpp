@@ -16,7 +16,7 @@ namespace Jde::Opc::Server{
 		PK{ pk ? pk : IsSystem(nodeId) ? (NodePK)identifier.numeric : 0 }
 	{}
 
-	Node::Node( UA_NodeId nodeId, NodePK parentPK, NodePK refPK, sp<ObjectType> typeDef, Server::BrowseName browse )ι:
+	Node::Node( UA_NodeId nodeId, NodePK parentPK, NodePK refPK, sp<ObjectType> typeDef, Opc::BrowseName browse )ι:
 		NodeId{ move(nodeId) },
 		ParentNodePK{ parentPK },
 		ReferenceTypePK{ refPK },
@@ -24,7 +24,7 @@ namespace Jde::Opc::Server{
 		TypeDef{ typeDef }
 	{}
 
-	Node::Node( const jobject& j, NodePK parentPK, Server::BrowseName browse )ε:
+	Node::Node( const jobject& j, NodePK parentPK, Opc::BrowseName browse )ε:
 		NodeId{ j.contains("id") ? NodeId{ j.at("id") } : UA_NodeId{} },
 		PK{ Json::FindNumber<Server::NodePK>(j, "id").value_or(0) },
 		IsGlobal{ Json::FindBool(j, "isGlobal").value_or(false) },
@@ -63,6 +63,6 @@ namespace Jde::Opc::Server{
 		return params;
 	}
 	α Node::ToString( const Node& parent )Ι->string{
-		return Ƒ( "[{}]{}.{}", NodeId::ToString(), parent.BrowseName(), BrowseName() );
+		return Ƒ( "[{}]{}.{}", NodeId::ToString(), ToSV(parent.BrowseName()), ToSV(BrowseName()) );
 	}
 }

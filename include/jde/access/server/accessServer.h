@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/framework/coroutine/Await.h>
+#include <jde/fwk/co/Await.h>
 #include "awaits/AuthenticateAwait.h"
 #include "../awaits/ConfigureAwait.h"
 

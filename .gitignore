@@ -41,7 +41,6 @@ jde/blockly/types/proto/ib.proto
 tests/ml/.vscode/launch.json
 tests/ml/.vscode/tasks.json
 
-*.code-workspace
 *.i
 src/web/build/*
 src/crypto/.vscode/c_cpp_properties.json

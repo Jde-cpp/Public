@@ -10,10 +10,10 @@ import { ComponentPageTitle } from 'jde-spa';
 import {IErrorService} from '../../../services/error/IErrorService';
 import {IGraphQL, TableSchema, Field, FieldKind}  from '../../../services/IGraphQL';
 import {IProfile} from '../../../services/profile/IProfile';
-import {Settings} from '../../../utilities/settings';
-import {StringUtils} from '../../../utilities/StringUtils'
+import {Settings} from '../../../utils/settings';
+import {StringUtils} from '../../../utils/StringUtils'
 //import { SelectDialog } from '../select-dialog/select-dialog';
-import { MetaObject } from '../../../utilities/JsonUtils';
+import { MetaObject } from '../../../utils/JsonUtils';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatIcon } from '@angular/material/icon';
 

@@ -25,20 +25,20 @@ namespace Jde::Web::Client{
 		Await _await;
 	};
 
-	α ClientQL::Subscribe( string&& query, sp<QL::IListener> listener, UserPK /*executer*/, SL sl )ε->up<TAwait<vector<QL::SubscriptionId>>>{
-		auto await = _session->Subscribe( move(query), listener, sl );
+	α ClientQL::Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, UserPK /*executer*/, SL sl )ε->up<TAwait<vector<QL::SubscriptionId>>>{
+		auto await = _session->Subscribe( move(query), move(variables), listener, sl );
 		return mu<SubscribeQueryAwait>( move(await), sl );
 	}
 
 	Τ struct QueryAwait final : TAwaitEx<T,ClientSocketAwait<jvalue>::Task>{
 		using Await = ClientSocketAwait<jvalue>;
 		using base=TAwaitEx<T,Await::Task>;
-		QueryAwait( string query, sp<IClientSocketSession> session, bool returnRaw, SRCE )ε:
-			base{sl},_query{move(query)},_returnRaw{returnRaw},_session{session}{}
+		QueryAwait( string query, jobject variables, sp<IClientSocketSession> session, bool returnRaw, SRCE )ε:
+			base{sl},_query{move(query)},_returnRaw{returnRaw},_session{session},_variables{move(variables)}{}
 	private:
 		α Execute()ι->Await::Task{
 			try{
-				Resume( co_await _session->Query(move(_query), _returnRaw, base::_sl) );
+				Resume( co_await _session->Query(move(_query), move(_variables), _returnRaw, base::_sl) );
 			}
 			catch( IException& e ){
 				base::ResumeExp( move(e) );
@@ -48,6 +48,7 @@ namespace Jde::Web::Client{
 		string _query;
 		bool _returnRaw;
 		sp<IClientSocketSession> _session;
+		jobject _variables;
 	};
 
 	template<> Ξ QueryAwait<jvalue>::Resume( jvalue&& result )ι->void{ base::Resume( move(result) ); }
@@ -67,13 +68,13 @@ namespace Jde::Web::Client{
 	}
 
 
-	α ClientQL::Query( string query, UserPK, bool returnRaw, SL sl )ι->up<TAwait<jvalue>>{
-		return mu<QueryAwait<jvalue>>( move(query), _session, returnRaw, sl );
+	α ClientQL::Query( string query, jobject variables, UserPK, bool returnRaw, SL sl )ι->up<TAwait<jvalue>>{
+		return mu<QueryAwait<jvalue>>( move(query), move(variables), _session, returnRaw, sl );
 	}
-	α ClientQL::QueryObject( string query, UserPK /*executer*/, bool returnRaw, SL sl )ε->up<TAwait<jobject>>{
-		return mu<QueryAwait<jobject>>( move(query), _session, returnRaw, sl );
+	α ClientQL::QueryObject( string query, jobject variables, UserPK /*executer*/, bool returnRaw, SL sl )ε->up<TAwait<jobject>>{
+		return mu<QueryAwait<jobject>>( move(query), move(variables), _session, returnRaw, sl );
 	}
-	α ClientQL::QueryArray( string query, UserPK /*executer*/, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
-		return mu<QueryAwait<jarray>>( move(query), _session, returnRaw, sl );
+	α ClientQL::QueryArray( string query, jobject variables, UserPK /*executer*/, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
+		return mu<QueryAwait<jarray>>( move(query), move(variables), _session, returnRaw, sl );
 	}
 }

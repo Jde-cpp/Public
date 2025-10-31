@@ -2,7 +2,7 @@
 #include <boost/asio.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 
-#include <jde/framework.h>
+#include <jde/fwk.h>
 #include <jde/web/client/exports.h>
 #include <jde/app/shared/exports.h>
 #include <jde/web/client/proto/Web.FromServer.pb.h>

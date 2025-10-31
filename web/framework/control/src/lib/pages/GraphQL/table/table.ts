@@ -7,7 +7,7 @@ import { IErrorService } from '../../../services/error/IErrorService';
 import {Field, FieldKind} from '../../../model/ql/schema/Field';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { MatIcon } from '@angular/material/icon';
-import { StringUtils } from '../../../utilities/StringUtils';
+import { StringUtils } from '../../../utils/StringUtils';
 
 @Component({
     selector: 'ql-table',

@@ -4,8 +4,8 @@
 #include "../exports.h"
 #include "ClientSocketStream.h"
 #include "ClientSocketAwait.h"
-#include <jde/framework/coroutine/Await.h>
-#include <jde/framework/io/proto.h>
+#include <jde/fwk/co/Await.h>
+#include <jde/fwk/io/proto.h>
 
 namespace Jde::Web::Client{
 	struct IClientSocketSession;
@@ -33,8 +33,8 @@ namespace Jde::Web::Client{
 
 		α Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void;// Start the asynchronous operation
 		α RunSession( string host, PortType port )ι{ return CreateClientSocketSessionAwait{shared_from_this(), host, port}; }
-		β Query( string&& query, bool returnRaw, SRCE )ι->ClientSocketAwait<jvalue> = 0;
-		β Subscribe( string&& query, sp<QL::IListener> listener, SRCE )ε->ClientSocketAwait<jarray> = 0;
+		β Query( string&& query, jobject variables, bool returnRaw, SRCE )ι->ClientSocketAwait<jvalue> = 0;
+		β Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->ClientSocketAwait<jarray> = 0;
 		α OnMessage( string&& j, RequestId requestId )ι->void;
 		α Write( string&& m )ι->void;
 		α NextRequestId()ι->uint32;
@@ -94,7 +94,7 @@ namespace Jde::Web::Client{
 	}
 
 	ψ IClientSocketSession::LogRead( const fmt::format_string<Args const&...> m, Args&&... args )ι->void{
-		Trace( ELogTags::SocketClientRead, std::forward<const fmt::format_string<Args const&...>>(m), std::forward<Args>(args)... );
+		TRACET( ELogTags::SocketClientRead, std::forward<const fmt::format_string<Args const&...>>(m), std::forward<Args>(args)... );
 	}
 }
 #undef $

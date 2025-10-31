@@ -22,7 +22,7 @@ namespace Jde::Opc::Server{
 			result.emplace_back( ms<Reference>(r.as_object()) );
 		return result;
 	}
-	Variable::Variable( jobject&& j, NodePK parentPK, Server::BrowseName browse )ι:
+	Variable::Variable( jobject j, NodePK parentPK, Opc::BrowseName browse )ι:
 		Node{ j, parentPK, move(browse) },
 		UA_VariableAttributes{ VariableAttr{j} },
 		_refs{ j.contains("refs") ? getRefs(move(j.at("refs").as_array())) : vector<sp<Reference>>{} }
@@ -70,7 +70,12 @@ namespace Jde::Opc::Server{
 		return *this;
 	}
 
-	α Variable::InsertParams( DB::Value variantPK )ι->vector<DB::Value>{
+	α Variable::InsertParams()Ι->vector<DB::Value>{
+		ASSERT( false );
+		return InsertParams( DB::Value{} );
+	}
+
+	α Variable::InsertParams( DB::Value variantPK )Ι->vector<DB::Value>{
 		auto params = Node::InsertParams();
 		params.emplace_back( variantPK );
 		ASSERT( dataType.identifier.numeric );

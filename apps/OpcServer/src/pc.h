@@ -7,11 +7,11 @@
 #include <open62541/common.h>
 #include <open62541/types.h>
 #include <open62541/server.h>
-#include <jde/framework.h>
-#include <jde/framework/str.h>
-#include <jde/framework/settings.h>
-#include <jde/framework/coroutine/Await.h>
-#include <jde/framework/chrono.h>
+#include <jde/fwk.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/settings.h>
+#include <jde/fwk/co/Await.h>
+#include <jde/fwk/chrono.h>
 #include <jde/db/Row.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/awaits/SelectAwait.h>
@@ -19,7 +19,7 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/app/shared/exports.h>
 #include <jde/opc/exports.h>
-#include <jde/opc/uatypes/helpers.h>
+#include <jde/opc/uatypes/opcHelpers.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/ExNodeId.h>
 #include <jde/opc/UAException.h>

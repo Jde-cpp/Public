@@ -1,9 +1,10 @@
 ﻿#include "CreateSubscriptions.h"
+#include <jde/fwk/process/execution.h>
 #include "../UAClient.h"
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	static ELogTags _tag{ (ELogTags)(EOpcLogTags::Opc | EOpcLogTags::Monitoring) };
+	static ELogTags _tags{ (ELogTags)(EOpcLogTags::Opc | EOpcLogTags::Monitoring) };
 	boost::concurrent_flat_map<sp<UAClient>,vector<CreateSubscriptionAwait::Handle>> _subscriptionRequests;
 	α CreateSubscriptionCallback(UA_Client* ua, void* /*userdata*/, RequestId requestId, UA_CreateSubscriptionResponse* response)ι->void{
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
@@ -11,7 +12,7 @@ namespace Jde::Opc::Gateway{
 		if( let sc = response->responseHeader.serviceResult; sc )
 			CreateSubscriptionAwait::Resume( UAException{sc}, move(pClient) );
 		else{
-			Trace( _tag, "[{:x}.{}]CreateSubscriptionCallback - subscriptionId={}", (uint)ua, requestId, response->subscriptionId );
+			TRACE( "[{:x}.{}]CreateSubscriptionCallback - subscriptionId={}", (uint)ua, requestId, response->subscriptionId );
 			pClient->CreatedSubscriptionResponse = ms<UA_CreateSubscriptionResponse>(move(*response));
 			CreateSubscriptionAwait::Resume( move(pClient) );
 		}
@@ -19,11 +20,11 @@ namespace Jde::Opc::Gateway{
 
 	α StatusChangeNotificationCallback(UA_Client* ua, UA_UInt32 subId, void* /*subContext*/, UA_StatusChangeNotification* /*notification*/)ι->void{
 		BREAK;
-		Trace( _tag, "[{:x}.{}]StatusChangeNotificationCallback", (uint)ua, subId );
+		TRACE( "[{:x}.{}]StatusChangeNotificationCallback", (uint)ua, subId );
 	}
 
 	α DeleteSubscriptionCallback( UA_Client* ua, UA_UInt32 subId, void* /*subContext*/ )ι->void{
-		Trace( _tag, "[{:x}.{}]DeleteSubscriptionCallback", (uint)ua, subId );
+		TRACE( "[{:x}.{}]DeleteSubscriptionCallback", (uint)ua, subId );
 		auto pClient = UAClient::TryFind(ua);
 		if( pClient )
 			pClient->CreatedSubscriptionResponse = nullptr;
@@ -44,7 +45,7 @@ namespace Jde::Opc::Gateway{
 	α CreateSubscriptionAwait::Resume( sp<UAClient> pClient, function<void(CreateSubscriptionAwait::Handle)> resume )ι->void{
 		ASSERT( pClient );
 		if( !_subscriptionRequests.cvisit(pClient, [resume](let& x){for( auto h : x.second ) resume( move(h) );}) )
-			Critical( _tag, "Could not find client ({:x}) for CreateSubscriptionAwait", (uint)pClient->UAPointer() );
+			CRITICAL( "Could not find client ({:x}) for CreateSubscriptionAwait", (uint)pClient->UAPointer() );
 
 		_subscriptionRequests.erase( pClient );
 	}
@@ -53,7 +54,7 @@ namespace Jde::Opc::Gateway{
 		Resume( pClient, [pClient](CreateSubscriptionAwait::Handle h)
 		{
 			h.promise().SetValue( sp<UA_CreateSubscriptionResponse>{pClient->CreatedSubscriptionResponse} );
-			Coroutine::CoroutinePool::Resume( move(h) ); //Cannot run EventLoop from the run method itself
+			Post( h ); //Cannot run EventLoop from the run method itself
 		});
 	}
 	α CreateSubscriptionAwait::Resume( UAException&& e, sp<UAClient>&& pClient )ι->void{

@@ -2,7 +2,7 @@
 #ifndef EXNODE_H
 #define EXNODE_H
 #include "../exports.h"
-#include "helpers.h"
+#include "opcHelpers.h"
 
 namespace Jde::DB{ struct Row; struct Value; }
 namespace Jde::Opc{
@@ -41,6 +41,7 @@ namespace Jde::Opc{
 		α Copy()Ι->UA_NodeId;
 		α Move()ι->UA_NodeId;
 		α ToJson()Ι->jobject;
+		α Add( jobject& j )Ι->void;
 		Ω ToJson( flat_set<ExNodeId> nodes )ι->jarray{ jarray j; for_each(nodes, [&j](const auto& n){ j.push_back( n.ToJson() ); }); return j; }
 		α to_string()Ι->string;
 	};

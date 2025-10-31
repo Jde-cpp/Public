@@ -1,7 +1,7 @@
 #pragma once
-#include "ObjectAttr.h"
-#include "BrowseName.h"
+#include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/NodeId.h>
+#include "ObjectAttr.h"
 
 namespace Jde::Opc::Server{
 	struct ObjectType;
@@ -26,7 +26,7 @@ namespace Jde::Opc::Server{
 		β ToString( const Node& parent )Ι->string;
 		α ToString()Ι->string{ return NodeId::ToString(); }
 		β Specified()Ι->UA_UInt32=0;
-		α BrowseName()Ι->str{ return Browse.Name; }
+		α BrowseName()Ι->UA_String{ return Browse.name; }
 		β Name()Ι->UA_LocalizedText=0;
 		β Description()Ι->UA_LocalizedText=0;
 		β WriteMask()Ι->UA_UInt32=0;

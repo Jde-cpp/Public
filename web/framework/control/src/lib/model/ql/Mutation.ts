@@ -1,6 +1,6 @@
-import { assert, getEnumName } from '../../utilities/utils';
+import { assert, getEnumName } from '../../utils/utils';
 import { TypeName } from '../../services/IGraphQL';
-import { StringUtils } from '../../utilities/StringUtils';
+import { StringUtils } from '../../utils/StringUtils';
 
 export enum MutationType{
 		Create,
@@ -93,4 +93,5 @@ export class Mutation{
 	#children:Map<TypeName,Mutation[]> = new Map<TypeName,Mutation[]>();
 	get isEmpty():boolean{ return this.type!=MutationType.Remove && !this.args && !this.#children.size; }
 	get typeName(){ return this._typeName; }
+	get variables():any{ return {}; }
 }

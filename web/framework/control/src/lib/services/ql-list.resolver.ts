@@ -2,11 +2,11 @@ import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnap
 import {inject, Inject, Injectable} from '@angular/core';
 import {IErrorService} from './error/IErrorService';
 import { IProfile } from './profile/IProfile';
-import { Settings } from '../utilities/settings';
+import { Settings } from '../utils/settings';
 import { TableSchema} from '../model/ql/schema/TableSchema';
 import { IGraphQL } from '../services/IGraphQL';
 import { PageSettings } from '../pages/GraphQL/model/PageSettings';
-import { StringUtils } from '../utilities/StringUtils';
+import { StringUtils } from '../utils/StringUtils';
 import { MetaObject } from '../model/ql/schema/MetaObject';
 import { Field } from '../model/ql/schema/Field';
 import { Sort } from '@angular/material/sort';

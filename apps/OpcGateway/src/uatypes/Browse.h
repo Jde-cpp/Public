@@ -1,12 +1,12 @@
 ﻿#pragma once
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
-//#include <jde/framework/coroutine/Await.h>
 
+namespace Jde::QL{ struct TableQL; }
 namespace Jde::Opc::Gateway{
 	struct UAClient;
 	struct UABrowsePath : UA_BrowsePath, boost::noncopyable{
-		UABrowsePath( const vector<sv>& segments, NsIndex defaultNS )ι;
+		UABrowsePath( std::span<const sv> segments, NsIndex defaultNS )ι;
 		UABrowsePath( UABrowsePath&& x )ι:UA_BrowsePath{ x }{ UA_BrowsePath_init( &x ); }
 		//UABrowsePath( const UABrowsePath& x )ι{ UA_BrowsePath_copy( &x, this ); }
 		~UABrowsePath(){ UA_BrowsePath_clear(this); }
@@ -17,29 +17,37 @@ namespace Browse{
 	struct Response : UA_BrowseResponse{
 		Response()ι{ ASSERT( false ); }
 		Response( UA_BrowseResponse&& x )ι:UA_BrowseResponse{ x }{ UA_BrowseResponse_init( &x ); }
-		Response( Response&& x )ι:UA_BrowseResponse{ x }{ UA_BrowseResponse_init( &x ); }
+		Response( Response&& x )ι:UA_BrowseResponse{ x },Attribs{x.Attribs}{ UA_BrowseResponse_init( &x ); x.Attribs=UA_BROWSERESULTMASK_NONE; }
 		~Response(){ UA_BrowseResponse_clear(this); }
 		α operator=( Response&& x )ι->Response&;
 
-		α Nodes()ι->flat_set<NodeId>;
-		α Variables()ι->flat_set<NodeId>;
+		α VisitWhile( uint resultsIndex, function<bool(const UA_ReferenceDescription& ref)> f )Ι->bool;
+		α Nodes()Ι->flat_set<NodeId>;
+		α Variables()Ι->flat_set<NodeId>;
+		α SetJson( flat_map<NodeId, jobject>& children, bool addId )Ι->void;
 		α ToJson( flat_map<NodeId, Value>&& snapshot, flat_map<NodeId, NodeId>&& dataTypes )ε->jobject;
-	};
 
-	struct FoldersAwait final : TAwait<Response>{
-		FoldersAwait( NodeId id, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl}, _nodeId{move(id)},_client{c}{}
-		α Suspend()ι->void override;
-//		α await_resume()ι->AwaitResult override{ return _pPromise->MoveResult(); }
-	private:
-		NodeId _nodeId;
-		sp<UAClient> _client;
+		UA_BrowseResultMask Attribs{ UA_BROWSERESULTMASK_ALL };
 	};
 
 	struct Request :UA_BrowseRequest{
-		Request( NodeId&& id )ι;
+		Request( NodeId&& id, UA_BrowseResultMask mask )ι;
+		Request( NodeId&& id, const QL::TableQL& ql )ι;
 		Request( Request&& x )ι:UA_BrowseRequest{ x }{ UA_BrowseRequest_init( &x );}
 		Request( const Request& x )ι{ UA_BrowseRequest_copy( &x, this ); }
 		~Request(){ UA_BrowseRequest_clear(this); }
+		private:
+		UA_BrowseResultMask _attribs{ UA_BROWSERESULTMASK_NONE };
+	};
+
+	struct FoldersAwait final : TAwait<Response>, boost::noncopyable{
+		FoldersAwait( NodeId id, UA_BrowseResultMask mask, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl},_client{c}, _request{move(id), mask}{}
+		FoldersAwait( NodeId id, const QL::TableQL& ql, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl},_client{c}, _request{move(id), ql}{}
+
+		α Suspend()ι->void override;
+	private:
+		sp<UAClient> _client;
+		Request _request;
 	};
 }
 	struct ΓOPC ObjectsFolderAwait final : TAwaitEx<jobject, TAwait<Browse::Response>::Task>{

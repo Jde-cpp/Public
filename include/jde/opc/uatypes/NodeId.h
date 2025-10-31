@@ -1,5 +1,5 @@
 #pragma once
-#include "helpers.h"
+#include "opcHelpers.h"
 #include "../exports.h"
 
 namespace Jde::DB{ struct Row; struct Value; }
@@ -34,6 +34,7 @@ namespace Jde::Opc{
 		α Bytes()Ι->optional<UA_ByteString>{ return identifierType==UA_NODEIDTYPE_BYTESTRING ? identifier.byteString : optional<UA_ByteString>{}; }
 
 		α IsSystem()Ι->bool{ return IsNumeric() && IsSystem(*this); }
+		α Add( jobject& j )Ι->void;
 		α ToJson()Ι->jobject;
 		α ToString()Ι->string;
 	};

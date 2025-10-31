@@ -15,7 +15,7 @@ export class CnnctnDetailResolver implements Resolve<DetailResolverData<ServerCn
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<DetailResolverData<ServerCnnctn>>{
 		let collectionDisplay = "Server Connections";
-		let target = route.paramMap.get( "target" );
+		let target = route.paramMap.get( "connection" );
 		return this.loadProfile( route, collectionDisplay, target, state.url );
 	}
 
@@ -40,7 +40,7 @@ export class CnnctnDetailResolver implements Resolve<DetailResolverData<ServerCn
 	static async load( ql:Gateway, collectionName:string, target:string, profile:Settings<UserSettings>, routing:DetailRoute ):Promise<DetailResolverData<ServerCnnctn>>{
 		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection("serverConnections"), (m)=>console.log(m) );
 		let obj = {};
-		if( target!="$new" ){
+		if( target && target!="$new" ){
 			obj = await ql.querySingle( ql.targetQuery(schema, target, profile.value.showDeleted), (m)=>console.log(m) );
 			for( let query of ql.subQueries(schema.type, obj["id"]) ){
 				const subRows = await ql.query<any>( query, (m)=>console.log(m) );

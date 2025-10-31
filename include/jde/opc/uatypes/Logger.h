@@ -1,6 +1,6 @@
 ﻿#pragma once
-#ifndef LOGGER_H
-#define LOGGER_H
+#ifndef OPC_LOGGER_H
+#define OPC_LOGGER_H
 #include <open62541/server.h>
 
 namespace Jde::Opc{

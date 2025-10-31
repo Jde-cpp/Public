@@ -30,7 +30,7 @@ namespace Jde::DB::Odbc{
 				else if( retCode==1 && state=="23000" )//23000=Integrity constraint violation.  multiple statements why retCode==1.
 					throw DBException{ Sql{}, msg, sl };
 				else if( iError )
-					Trace{ _tags | ELogTags::ExternalLogger, "({}){} - {}", iError, functionName, msg };
+					TRACET( _tags | ELogTags::ExternalLogger, "({}){} - {}", iError, functionName, msg );
 			}
 		}
 		return y;

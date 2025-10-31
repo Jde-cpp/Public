@@ -1,5 +1,5 @@
 #include <jde/app/client/AppClientSocketSession.h>
-#include <jde/framework/thread/execution.h>
+#include <jde/fwk/process/execution.h>
 #include <jde/web/client/socket/ClientQL.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/client/socket/clientSubscriptions.h>
@@ -64,7 +64,7 @@ namespace Client{
 		auto instanceName = Settings::FindString("instanceName").value_or( "" );
 		if( instanceName.empty() )
 			instanceName = _debug ? "Debug" : "Release";
-		Trace( sl, ELogTags::SocketClientWrite, "[{:x}]Connect: '{}'.", requestId, instanceName );
+		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Connect: '{}'.", requestId, instanceName );
 		return ClientSocketAwait<Proto::FromServer::ConnectionInfo>{ ToString(FromClient::Instance(Process::ApplicationName(), instanceName, sessionId, requestId)), requestId, shared_from_this(), sl };
 	}
 
@@ -86,19 +86,19 @@ namespace Client{
 	// 	let requestId = NextRequestId();
 	// 	return ClientSocketAwait<Web::FromServer::SessionInfo>{ ToString(FromClient::Session(move(jwt), requestId)), requestId, shared_from_this(), sl };
 	// }
-	α AppClientSocketSession::Query( string&& q, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
+	α AppClientSocketSession::Query( string&& q, jobject variables, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
 		let requestId = NextRequestId();
-		Trace( sl, ELogTags::SocketClientWrite, "[{:x}]GraphQL: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
+		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]GraphQL: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
 
-		return ClientSocketAwait<jvalue>{ ToString(FromClient::Query(move(q), requestId, returnRaw)), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<jvalue>{ FromClient::Query(move(q), move(variables), requestId, returnRaw), requestId, shared_from_this(), sl };
 	}
 	concurrent_flat_map<RequestId, std::pair<sp<QL::IListener>,vector<QL::Subscription>>> _subscriptionRequests;
-	α AppClientSocketSession::Subscribe( string&& q, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
+	α AppClientSocketSession::Subscribe( string&& q, jobject variables, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
 		let requestId = NextRequestId();
-		Trace( sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
-		auto subscriptions = QL::ParseSubscriptions( q, _appClient->SubscriptionSchemas, sl );
+		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
+		auto subscriptions = QL::ParseSubscriptions( q, variables, _appClient->SubscriptionSchemas, sl );
 		_subscriptionRequests.emplace( requestId, make_pair(listener, move(subscriptions)) );
-		return ClientSocketAwait<jarray>{ ToString(FromClient::Subscription(move(q), requestId)), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<jarray>{ FromClient::Subscription(move(q), move(variables), requestId), requestId, shared_from_this(), sl };
 	}
 
 	template<class T,class... Args> Ω resume( std::any&& hAny, T&& v/*, fmt::format_string<Args const&...>&& m="", const Args&... args*/ )ι->void{
@@ -162,7 +162,7 @@ namespace Client{
 				SetId( serverSocketId );
 				if( !_qlServer )
 					_qlServer = ms<Web::Client::ClientQL>( shared_from_this(), move(_authorize) );
-				Information( _tags, "[{:x}]AppClientSocketSession created: {}://{}.", Id(), IsSsl() ? "https" : "http", Host() );
+				INFO( "[{:x}]AppClientSocketSession created: {}://{}.", Id(), IsSsl() ? "https" : "http", Host() );
 //				resumeVoid( move(hAny), "Ack: '{}'.", serverSocketId );
 				}break;
 			case kConnectionInfo:
@@ -182,11 +182,11 @@ namespace Client{
 				TRACE( "[{:x}]Jwt: size='{}'.", Id(), m->jwt().size() );
 				resume( move(hAny), Web::Jwt{move(*m->mutable_jwt())} );
 				break;
-			case kLogLevels:{//TODO implement when have tags.
+/*			case kLogLevels:{//TODO implement when have tags.
 				auto& res = *m->mutable_log_levels();
 				TRACE( "[{:x}]LogLevels: server='{}', client='{}'.", Id(), ToString((ELogLevel)res.server()), ToString((ELogLevel)res.client()) );
 				resume( move(hAny), move(res) );
-				}break;
+				}break;*/
 			case kProgress://TODO not awaitable
 				TRACE( "[{:x}]Progress: '{}'.", Id(), m->progress() );
 				resumeScaler( move(hAny), m->progress() );
@@ -231,11 +231,11 @@ namespace Client{
 				break;}
 			case kExecuteResponse://wait for use case.
 			case kStringPks://strings already saved in db, no need to send.  not being requested by client yet.
-				Critical( _tags, "[{:x}]No use case has been implemented on client app '{}'.", Id(), underlying(m->Value_case()) );
+				CRITICAL( "[{:x}]No use case has been implemented on client app '{}'.", Id(), underlying(m->Value_case()) );
 				break;
 			case kTraces:
 			case kStatus:
-				Critical( _tags, "[{:x}]Web only call not implemented on client app '{}'.", Id(), (uint)m->Value_case() );
+				CRITICAL( "[{:x}]Web only call not implemented on client app '{}'.", Id(), (uint)m->Value_case() );
 			break;
 			case VALUE_NOT_SET:
 				break;
@@ -264,7 +264,7 @@ namespace Client{
 		else{
 			let severity{ requestId ? ELogLevel::Critical : ELogLevel::Debug };
 			ASSERT_DESC( !requestId, Ƒ("Type Not Expected={}", h.type().name()) );
-			Log( severity, _tags, SRCE_CUR, "[{:x}]Failed to process incoming exception '{}'.", requestId, e.what() );
+			LOG( severity, _tags, "[{:x}]Failed to process incoming exception '{}'.", requestId, e.what() );
 		}
 	}
 	α AppClientSocketSession::WriteException( exception&& e, RequestId requestId )ι->void{

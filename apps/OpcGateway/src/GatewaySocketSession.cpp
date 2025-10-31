@@ -52,7 +52,7 @@ namespace Jde::Opc::Gateway{
 			auto self = SharedFromThis(); //keep alive
 			auto cred = GetCredential( base::SessionId(), opcId );
 			LogRead( Ƒ("({:x})Subscribe: opcId: '{}', cred: '{}', nodeCount: {}", base::SessionId(), opcId, cred ? cred->ToString() : "null", nodes.size()), requestId );
-			if( auto client = UAClient::Find(move(opcId), cred); client )
+			if( auto client = cred ? UAClient::Find(move(opcId), *cred) : nullptr; client )
 				CreateSubscription( client, move(nodes), requestId );
 			else
 				WriteException( Ƒ("Client not found: opcId: '{}'", opcId), requestId );
@@ -88,7 +88,7 @@ namespace Jde::Opc::Gateway{
 			auto self = SharedFromThis();//keep alive
 			auto cred = GetCredential( SessionId(), opcId );
 			LogRead( Ƒ("Unsubscribe: opcId: '{}', user: '{}', nodeCount: {}", opcId, cred ? cred->ToString() : "null", nodes.size()), requestId );
-			if( auto client = UAClient::Find(move(opcId), cred); client ){
+			if( auto client = cred ? UAClient::Find(move(opcId), *cred) : nullptr; client ){
 				auto [successes,failures] = client->MonitoredNodes.Unsubscribe( move(nodes), self );
 				Write( FromServer::UnsubscribeTrans(requestId, move(successes), move(failures)) );
 			}

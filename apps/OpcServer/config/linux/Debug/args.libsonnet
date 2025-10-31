@@ -5,6 +5,10 @@
 		trustedCertDirs: [
 			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs"
 		]
+		ssl:{
+			certificate: "/tmp/cert.pem",
+			privateKey: {path:"/tmp/private.pem", passcode: ""}
+		}
 	},
 	dbServers: {
 		dataPaths: [],

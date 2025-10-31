@@ -9,14 +9,14 @@ namespace Jde::Access{
 		try{
 			flat_map<RolePK,Role> y;
 			let permissionQL = "roles{ id deleted permissionRights{id} }";
-			let permissions = co_await *_qlServer->QueryArray( permissionQL, _executer );
+			let permissions = co_await *_qlServer->QueryArray( permissionQL, {}, _executer );
 			for( let& value : permissions ){
 				const Role role{ Json::AsObject(value) };
 				y.emplace( role.PK, role );
 			}
 
 			let roleQL = "roles{ id deleted roles{id} }";
-			let roles = co_await *_qlServer->QueryArray( roleQL, _executer );
+			let roles = co_await *_qlServer->QueryArray( roleQL, {}, _executer );
 			for( let& value : roles ){
 				const Role role{ Json::AsObject(value) };
 				if( auto p = y.find(role.PK); p!=y.end() )
@@ -25,7 +25,7 @@ namespace Jde::Access{
 					y.emplace( role.PK, role );
 			}
 			for( let& [pk, role] : y )
-				Trace{ _tags | ELogTags::Pedantic, "[{}]AddedRole membersSize={}", role.PK, role.Members.size() };
+				TRACET( _tags | ELogTags::Pedantic, "[{}]AddedRole membersSize={}", role.PK, role.Members.size() );
 			Resume( move(y) );
 		}
 		catch( IException& e ){

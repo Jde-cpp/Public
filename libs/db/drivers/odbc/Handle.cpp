@@ -47,7 +47,7 @@ namespace Jde::DB::Odbc{
 		if( connectionStringLength>0 )
 			Logging::LogOnce( SRCE_CUR, _tags, "connectionString={}", (char*)connectionStringResult );
 		else
-			Critical( _tags, "connectionString Length={}", connectionStringLength );
+			CRITICAL( "connectionString Length={}", connectionStringLength );
 	}
 
 	HandleStatement::HandleStatement( string cs )ε:
@@ -57,7 +57,7 @@ namespace Jde::DB::Odbc{
 	HandleStatement::~HandleStatement(){
 		if( _hStatement )	{
 			if( let rc=SQLFreeHandle( SQL_HANDLE_STMT, _hStatement )!=SQL_SUCCESS )
-				Warning( ELogTags::App, "SQLFreeHandle( SQL_HANDLE_STMT, {} ) returned {}", _hStatement, rc );
+				WARNT( ELogTags::App, "SQLFreeHandle( SQL_HANDLE_STMT, {} ) returned {}", _hStatement, rc );
 		}
 	}
 /*

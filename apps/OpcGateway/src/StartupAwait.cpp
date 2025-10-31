@@ -2,6 +2,7 @@
 #include <jde/db/db.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalQL.h>
+#include <jde/ql/types/Introspection.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/AccessListener.h>
 #include <jde/access/client/accessClient.h>
@@ -22,12 +23,15 @@ namespace Jde::Opc{
 }
 
 namespace Jde::Opc::Gateway{
+	extern Duration _pingInterval;
+	extern Duration _ttl;
+
 	StartupAwait::StartupAwait( jobject webServerSettings, jobject userName, SL sl )ι:
 		VoidAwait{sl},
 		_webServerSettings{move(webServerSettings)},
 		_userName{move(userName)}{
 		if( _userName.empty() )
-			_userName = jobject{ {"name", Ƒ("OpcGateway-{}", IApplication::HostName())} };
+			_userName = jobject{ {"name", Ƒ("OpcGateway-{}", Process::HostName())} };
 	}
 
 	α StartupAwait::Execute()ι->VoidAwait::Task{
@@ -35,6 +39,10 @@ namespace Jde::Opc::Gateway{
 			auto authorize = App::Client::RemoteAcl( "gateway" );
 			auto schema = DB::GetAppSchema( "gateway", authorize );
 			_localQL = QL::Configure( {schema}, authorize );
+			for( let& path : Settings::FindPathArray("/ql/introspection") )
+				QL::AddIntrospection( QL::Introspection{Json::ReadJsonNet(Settings::Directory()/path)} );
+			QL::SetSystemTables( {"node","nodes", "dataType", "dataTypes", "variable", "variables"} );
+			QL::SetSystemMutations( {"execute"} );
 			SetSchema( schema );
 			//Opc::Configure( schema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
@@ -64,7 +72,9 @@ namespace Jde::Opc::Gateway{
 			Process::AddShutdownFunction( [](bool terminate){UAClient::Shutdown(terminate);} );
 			QL::Hook::Add( mu<OpcQLHook>() );
 
-			Information( ELogTags::App, "---Started {}---", "OPC Gateway" );
+			_pingInterval = Settings::FindDuration("/gateway/pingInterval").value_or( 1s );
+			_ttl = Settings::FindDuration("/gateway/ttl").value_or( 5min );
+			INFOT( ELogTags::App, "---Started {}---", "OPC Gateway" );
 			Resume();
 		}
 		catch( IException& e ){

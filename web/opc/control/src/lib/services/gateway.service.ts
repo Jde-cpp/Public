@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
-import { AppService, AuthStore, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema } from 'jde-framework';
+import { AppService, AuthStore, Duration, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Timestamp, Type } from 'jde-framework';
 import { EProvider, User } from 'jde-spa';
 
 
@@ -13,12 +13,13 @@ import * as IotRequests from '../proto/Opc.FromClient'; import FromClient = IotR
 import * as IotResults from '../proto/Opc.FromServer'; import FromServer = IotResults.Jde.Opc.Gateway.FromServer;
 import { OpcStore } from './opc-store';
 import { NodeRoute } from '../model/NodeRoute';
-import { CnnctnTarget } from "../model/ServerCnnctn";
+import { CnnctnTarget, ServerCnnctn } from "../model/ServerCnnctn";
 import { NodeKey, NodeId } from '../model/NodeId';
 import { ENodeClass, ObjectType, OpcObject, UaNode, Variable } from '../model/Node';
-import { OpcId } from '../model/types';
+import { OpcId, StatusCode } from '../model/types';
 import { ExNodeId } from '../model/ExNodeId';
-import { Duration, Timestamp, toValue, Value } from '../model/Value';
+import { toValue, Value, valueJson } from '../model/Value';
+import { Enum } from '../model/Enum';
 
 interface IError{ requestId:number; message: string; }
 type Owner = any;
@@ -102,6 +103,9 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	constructor( gateway:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore ){
 		super( FromClient.Transmission, http, transport, authStore );
 		super.instances = [gateway];
+		super.queryArray<ServerCnnctn>( `serverConnections{id target name url certificateUri defaultBrowseNs}`, (x)=>console.log(x) ).then( connections=>{
+			connections.forEach( c=>this.#connections.set(c.target, new ServerCnnctn(c)) );
+		});
 	}
 	async login( domain:string, username:string, password:string, log:Log ):Promise<void>{
 		let self = this;
@@ -230,15 +234,42 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 			OpcError.setMessages( json["errorCodes"] );
 		}
 	}
+	async errorCodeText( sc:StatusCode ):Promise<string>{
+		let text = OpcError.statusCodeText( sc );
+		if( !text ){
+			await this.updateErrorCodes();
+			text = OpcError.statusCodeText( sc );
+		}
+		return `(${sc.toString(16)})${text}`;
+	}
+
 	public async browseObjectsFolder( cnnctn:CnnctnTarget, parent:UaNode, snapshot:boolean, log:Log ):Promise<UaNode[]>{
-		const json = await super.get( `browseObjectsFolder?opc=${cnnctn}&${Gateway.toParams(parent.nodeId.toJson())}&snapshot=${snapshot}`, log );
+		if( parent.isVariable )
+			throw new EvalError( `Cannot browse children of variable node.`, {cause:"Invalid Operation"} );
+		const args = `opc: "${cnnctn}", ${parent.nodeId.qlArgs()}`;
+		const commonColumns = "id name browse nodeClass refType typeDef description";
+		const variableColumns = "dataType value valueRank accessLevel userAccessLevel";
+		const ql = `node(${args}){children{${commonColumns} ... on Variable{${variableColumns}} }}`;
+		const children = (await this.query<any>( ql, (m)=>console.log(m) ))["node"]["children"];
 		var y = new Array<UaNode>();
-		for( const ref of json["refs"] ){
+		for( const ref of children ){
 			let child:UaNode;
 			switch( <ENodeClass>ref.nodeClass ){
 				case ENodeClass.Object: child = new OpcObject(ref, parent); break;
 				case ENodeClass.ObjectType: parent.typeDef = new ObjectType(ref); break; //y.push( new ObjectType(ref) ); break;
-				case ENodeClass.Variable: child = new Variable(ref, parent); break;
+				case ENodeClass.Variable:
+					let variable = new Variable(ref, parent);
+					child = variable;
+					if( variable.customDataType )
+						try{
+							const nodeId = <NodeId>variable.customDataType
+							let x = await super.querySingle<Type>( `__type( opc: "${cnnctn}", ${nodeId.qlArgs()}){ enumValues{id name description}}`, log );
+							variable.customDataType = new Enum(nodeId, x);
+						}
+						catch( e ){
+							log( e["message"] );
+						}
+					break;
 				default: debugger;
 			}
 			if( child )
@@ -253,24 +284,23 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		const json = await super.get( `snapshot?opc=${opcId}&nodes=${args}` );
 		var y = new Map<NodeId,Value>();
 		for( const snapshot of json["snapshots"] )
-			y.set( new NodeId(snapshot.node), toValue(snapshot.value) );
+			y.set( new NodeId(snapshot), toValue(snapshot.value) );
 		this.updateErrorCodes();
 		return y;
 	}
-	async write( opcId:string, n:NodeId, v:Value ):Promise<Value>{
-		const nodeArgs = encodeURIComponent( JSON.stringify([n.toJson()]) );
-		const valueArgs = encodeURIComponent( JSON.stringify([v]) );
-		const json = await super.get( `write?opc=${opcId}&nodes=${nodeArgs}&values=${valueArgs}` );
-		if( json["snapshots"][0].sc ){
-			const e = new OpcError( json["snapshots"][0].sc[0], "Write", new Error().stack, null );
-			this.updateErrorCodes();
-			throw e;
-		}
-		return toValue( json["snapshots"][0].value );
+	async read( opcId:CnnctnTarget, n:NodeId ):Promise<Value>{
+		const v = super.querySingle<Value>( `node( opc: "${opcId}", ${n.qlArgs()}){value}` );
+		return v;
+	}
+	async write( opcId:CnnctnTarget, n:NodeId, v:Value, log:Log ):Promise<Value>{
+		const q = `updateVariable( opc: $opc, id: $id, value: $value ){ value }`;
+		const vars = { opc: opcId, id: n.toJson(), value: valueJson(v) };
+		const newValue = toValue( await super.postQL<Value>(q, vars, log) );
+		return newValue;
 	}
 
-	setRoute(route: NodeRoute) {
-		this.store.setRoute(route);
+	setRoute(route: NodeRoute){
+		this.store.setRoute( route, this.#connections.get(route.cnnctnTarget)?.defaultBrowseNs );
 	}
 
 	private onUnsubscriptionResult( requestId, result:FromServer.IUnsubscribeAck ){
@@ -455,5 +485,6 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	}
 	get name():string{ return this.instances[0].instanceName; }
 	get target():GatewayTarget{ return this.instances[0].instanceName; }
+	#connections = new Map<CnnctnTarget, ServerCnnctn>();
 }
 export type SubscriptionResult = {opcId:string, node:NodeId,value:Value};

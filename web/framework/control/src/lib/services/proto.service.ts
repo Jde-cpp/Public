@@ -2,14 +2,15 @@ import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { firstValueFrom } from 'rxjs';
 import { HttpClient, HttpEvent, HttpResponse, HttpSentEvent } from '@angular/common/http';
 import { FieldKind } from '../model/ql/schema/Field';
-import { fromIsoDuration } from '../utilities/utils';
+import { fromIsoDuration } from '../utils/utils';
 import { TableSchema } from '../model/ql/schema/TableSchema';
-import { IEnum, Log, IQueryResult } from '../services/IGraphQL';
+import { EnumValue, Log, IQueryResult } from '../services/IGraphQL';
 import { MutationSchema } from '../model/ql/schema/MutationSchema';
 import { Instance } from './app/app.service.types';
-import * as CommonProto from '../proto/Common'; import ELogLevel = CommonProto.Jde.Proto.ELogLevel; import IException = CommonProto.Jde.Proto.IException;
+import * as LogProto from '../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
+import * as CommonProto from '../proto/Common'; import IException = CommonProto.Jde.Proto.IException;
 import { AuthStore } from './auth.store';
-import { assert } from '../utilities/utils';
+import { assert } from '../utils/utils';
 import { Mutation } from '../model/ql/Mutation';
 import { computed, Signal } from '@angular/core';
 import { EProvider, User } from 'jde-spa';
@@ -136,8 +137,8 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				for( let callback of this.#loginCallbacks ){
 					let y = await this.authGet<any>(
 						callback.target,
-						this.user().authorization
-						, log
+						this.user().authorization,
+						log
 					);
 					callback.resolve( y );
 				}
@@ -178,7 +179,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				if( e["status"]==401 ){
 					log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
 					this.authStore.logout();
-					y = await this.authGet<Y>( target );
+					y = await this.authGet<Y>( target, null, log );
 				}
 				else
 					throw e;
@@ -192,7 +193,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				if( e["status"]==401 ){
 					log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
 					this.authStore.logout();
-					y = await this.authGet<Y>( target );
+					y = await this.authGet<Y>( target, null, log );
 				}
 				else
 					throw e;
@@ -222,7 +223,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	}
 
 	async post<Y>( target:string, body:any, preferSecure:boolean=false, log:Log ):Promise<Y>{
-		return (await this.postRaw<Y>( target, body, preferSecure ))[ "value" ];
+		return await this.postRaw<Y>( target, body, preferSecure );
 	}
 
 	async postRaw<Y>( target:string, body:any, preferSecure:boolean=false, options?:any ):Promise<Y>{
@@ -241,18 +242,28 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 			}
 		}
 
-		let event:HttpEvent<Y> = await firstValueFrom( this.http.post<Y>(url, body, options) );
-		let response:HttpResponse<Y> = <HttpResponse<Y>>( event instanceof HttpResponse ? event : null );
-		console.assert( response!=null, "response==null" );
-		if( options?.transferCache?.includeHeaders.includes("Authorization") ){
-			let authorization = response.headers.get( "Authorization" );
-			console.assert( authorization!=null, "no authorization" );
-			if( authorization )
-				this.authStore.append( {sessionId:authorization} );
+		let event:HttpEvent<Y>|any = await firstValueFrom( this.http.post<Y>(url, body, options) );
+		let y:Y;
+		if( options.observe=="response" ){
+			let response:HttpResponse<Y> = <HttpResponse<Y>>( event instanceof HttpResponse ? event : null );
+			console.assert( response!=null, "response==null" );
+			if( options?.transferCache?.includeHeaders.includes("Authorization") ){
+				let authorization = response.headers.get( "Authorization" );
+				console.assert( authorization!=null, "no authorization" );
+				if( authorization )
+					this.authStore.append( {sessionId:authorization} );
+			}
+			y = <Y>response?.body;
 		}
-		return response?.body;
+		else
+			y = <Y>event;
+		return y;
 	}
 
+	async postQL<Y>( q:string, vars?:any, log?:Log ):Promise<Y>{
+		const y = await this.post<any>( `graphql`, {query: q, variables: vars}, false, log );
+		return y ? y["data"] : null;
+	}
 	private async graphQL<Y>( query: string, log?:Log ):Promise<Y>{
 		var target = `graphql?query={${query}}`;
 		const y = await this.get( target, log );
@@ -262,7 +273,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	async providers( log:Log ):Promise<EProvider[]>{
 		const ql = `__type(name: "Provider") { enumValues { id name } }`;
 		const data = await this.query( ql, log );
-		return data["__type"]["enumValues"].map( (x:IEnum)=>x.id );
+		return data["__type"]["enumValues"].map( (x:EnumValue)=>x.id );
 	}
 	async query<Y>( ql: string, log?:Log ):Promise<Y>{
 		return await this.graphQL( ql, log );
@@ -301,17 +312,18 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 			return <Y>y;
 		}
 		let query = ql instanceof Mutation ? ql.toString() : ql;
+		let vars = ql instanceof Mutation ? ql.variables : undefined;
 		assert( query );
-		return await this.graphQL<Y>( `mutation ${query}`, log );
+		return await this.postQL<Y>( `mutation ${query}`, vars, log );
 	}
 
 	async schemaWithEnums( type:string, log:Log ):Promise<TableSchema>{
 		let schema = ( await this.schema([type], log) )[0];
 		if( !schema.enums ){
-			schema.enums = new Map<string, IEnum[]>();
+			schema.enums = new Map<string, EnumValue[]>();
 			for( const field of schema.fields.filter((x)=>x.type.underlyingKind==FieldKind.ENUM && !schema.enums.has(x.name)) ){
-				let values:Array<IEnum>;
-				values = ( await this.query<IQueryResult<IEnum>>(` __type(name: "${field.type.name}") { enumValues { id name } }`) ).__type["enumValues"];
+				let values:Array<EnumValue>;
+				values = ( await this.query<IQueryResult<EnumValue>>(` __type(name: "${field.type.name}") { enumValues { id name } }`) ).__type["enumValues"];
 				schema.enums.set( field.type.name, values );
 			}
 		}

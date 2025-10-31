@@ -1,4 +1,4 @@
-﻿#include <jde/crypto/OpenSsl.h>
+﻿#include <jde/fwk/crypto/OpenSsl.h>
 #include "../../src/auth/PasswordAwait.h"
 #include "Auth.h"
 
@@ -42,7 +42,7 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	TEST_F( PasswordTests, Authenticate ){
-		Information( _tags, "PasswordTests.Authenticate" );
+		INFO( "PasswordTests.Authenticate" );
 		string opcId{ Connection->Target };
 		AuthenticateTest( opcId );
 		{
@@ -63,17 +63,17 @@ namespace Jde::Opc::Gateway::Tests{
 		EXPECT_NE( _sessionIds[0], _sessionIds[2] );
 		EXPECT_NE( _sessionIds[1], _sessionIds[2] );
 		EXPECT_TRUE( find(_sessionIds, 0)==_sessionIds.end() );
-		Information( _tags, "~PasswordTests.Authenticate" );
+		INFO( "~PasswordTests.Authenticate" );
 	}
 
 	TEST_F( PasswordTests, Authenticate_BadPassword ){
-		Information( _tags, "PasswordTests.Authenticate_BadPassword" );
+		INFO( "PasswordTests.Authenticate_BadPassword" );
 		AuthenticateTest( Connection->Target, true );
 		std::shared_lock l{ mtx };
 		cv.wait( l );
 		EXPECT_TRUE( _exception );
 		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadUserAccessDenied") );
-		Debug( _tags, "{}", _exception ? _exception->what() : "Error no exception." );
-		Information( _tags, "~PasswordTests.Authenticate_BadPassword" );
+		DBG( "{}", _exception ? _exception->what() : "Error no exception." );
+		INFO( "~PasswordTests.Authenticate_BadPassword" );
 	}
 }

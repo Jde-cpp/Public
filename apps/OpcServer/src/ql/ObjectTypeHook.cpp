@@ -104,7 +104,6 @@ namespace Jde::Opc::Server{
 				for( auto&& value : variables->get_array() ){
 					auto& jvariable = value.as_object();
 					BrowseName browse{ BrowseNameAwait::GetOrInsert(jvariable.at("browseName").as_object()) };
-					Trace{ ELogTags::Test, "v={}", serialize(jvariable) };
 					auto variable = co_await VariableInsertAwait{ Variable{move(jvariable), oType->PK, move(browse)}, _sl };
 					// if( auto refs = Json::FindArray(jvariable,"refs"); refs )
 					// 	variableRefs.emplace( variable.PK, move(*refs) );

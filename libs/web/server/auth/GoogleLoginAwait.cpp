@@ -1,7 +1,7 @@
 ﻿#include "GoogleLoginAwait.h"
-#include <jde/crypto/OpenSsl.h>
-#include <jde/framework/io/json.h>
-#include <jde/framework/str.h>
+#include <jde/fwk/crypto/OpenSsl.h>
+#include <jde/fwk/io/json.h>
+#include <jde/fwk/str.h>
 #include <jde/access/server/accessServer.h>
 #include <jde/access/types/GoogleTokenInfo.h>
 

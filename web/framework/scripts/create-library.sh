@@ -4,7 +4,7 @@ dir=${2}; #/home/user/.../WebBlockly
 overwrite=${3:-0}; #true
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )";
 echo starting Library $library;
-source $JDE_BASH/Framework/scripts/common.sh;
+source $JDE_BASH/Public/build/common.sh;
 controlDir=$dir/control;
 echo controlDir=$controlDir;
 echo pwd=`pwd`;

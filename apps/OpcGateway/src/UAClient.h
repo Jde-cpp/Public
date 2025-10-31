@@ -6,8 +6,7 @@
 #include "async/Attributes.h"
 #include "async/ConnectAwait.h"
 #include "async/DataChanges.h"
-#include "async/ReadAwait.h"
-#include "async/Write.h"
+#include "async/ReadValueAwait.h"
 #include "auth/OpcServerSession.h"
 #include "types/ServerCnnctn.h"
 #include "types/MonitoringNodes.h"
@@ -31,7 +30,7 @@ namespace Jde::Opc::Gateway{
 		operator UA_Client* ()ι{ return _ptr; }
 		Ω Shutdown( bool terminate )ι->void;
 		Ω GetClient( string id, Credential cred, SRCE )ι{ return ConnectAwait{move(id), move(cred), sl}; }
-		Ω Find( str id, optional<Credential> cred )ι->sp<UAClient>;
+		Ω Find( str id, const Gateway::Credential& cred )ι->sp<UAClient>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
 		Ω RemoveClient( sp<UAClient>&& client )ι->bool;
@@ -42,8 +41,7 @@ namespace Jde::Opc::Gateway{
 		α DataSubscriptionDelete( Gateway::SubscriptionId subscriptionId, flat_set<MonitorId>&& monitoredItemIds )ι->void;
 
 		α SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void;
-		α SendReadRequest( const flat_set<NodeId>&& nodes, ReadAwait::Handle h )ι->void;
-		α SendWriteRequest( flat_map<NodeId,Value>&& values, WriteAwait::Handle h )ι->void;
+		α SendReadRequest( const flat_set<NodeId>&& nodes, ReadValueAwait::Handle h )ι->void;
 		α SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void;
 		α RequestDataTypeAttributes( const flat_set<NodeId>&& x, AttribAwait::Handle h )ι->void;
 		Ω ClearRequest( UA_Client* ua, RequestId requestId )ι->void;
@@ -59,12 +57,13 @@ namespace Jde::Opc::Gateway{
 		α AddSessionAwait( VoidAwait::Handle h )ι->void;
 		α TriggerSessionAwaitables()ι->void;
 
-		α Target()ι->const ServerCnnctnNK&{ return _opcServer.Target; }
-		α Url()ι->str{ return _opcServer.Url; }
-		α IsDefault()ι->bool{ return _opcServer.IsDefault; }
+		α Target()Ι->const ServerCnnctnNK&{ return _opcServer.Target; }
+		α Url()Ι->str{ return _opcServer.Url; }
+		α IsDefault()Ι->bool{ return _opcServer.IsDefault; }
+		α DefaultBrowseNs()Ι->NsIndex{ return _opcServer.DefaultBrowseNs; }
 		α Handle()Ι->Jde::Handle{ return (uint)_ptr;}
-		α UAPointer()ι->UA_Client*{return _ptr;}
-		α ToNodeId( sv path )Ε->ExNodeId;
+		α UAPointer()Ι->UA_Client*{return _ptr;}
+		α BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,std::expected<ExNodeId,StatusCode>>;
 		sp<UA_SetMonitoringModeResponse> MonitoringModeResponse;
 		sp<UA_CreateSubscriptionResponse> CreatedSubscriptionResponse;
 		UA_ClientConfig _config{};//TODO move private.
@@ -74,15 +73,14 @@ namespace Jde::Opc::Gateway{
 		α Configuration()ε->UA_ClientConfig*;
 		α Create()ι->UA_Client*;
 		α Connect()ε->void;
-		α RootSslDir()ι->fs::path{ return IApplication::ApplicationDataFolder()/"ssl"; }
-		α Passcode()ι->const string{ return OSApp::EnvironmentVariable("JDE_PASSCODE").value_or( "" ); }
+		α RootSslDir()ι->fs::path{ return Process::ApplicationDataFolder()/"ssl"; }
+		α Passcode()ι->const string{ return Process::GetEnv("JDE_PASSCODE").value_or( "" ); }
 		α PrivateKeyFile()ι->fs::path{ return RootSslDir()/Ƒ("private/{}.pem", Target()); }
 		α CertificateFile()ι->fs::path{ return RootSslDir()/Ƒ("certs/{}.pem", Target()); }
 
 		ServerCnnctn _opcServer;
 
 		concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
-		concurrent_flat_map<Jde::Handle, UARequestMulti<UA_WriteResponse>> _writeRequests;
 		concurrent_flat_map<Jde::Handle, UARequestMulti<NodeId>> _dataAttributeRequests;
 		vector<VoidAwait::Handle> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
 

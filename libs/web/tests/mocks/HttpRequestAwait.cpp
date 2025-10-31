@@ -1,9 +1,10 @@
 #include "HttpRequestAwait.h"
 #include <jde/web/Jwt.h>
-#include <jde/crypto/OpenSsl.h>
-#include <jde/framework/chrono.h>
-#include <jde/framework/str.h>
-#include <jde/framework/thread/execution.h>
+#include <jde/fwk/crypto/OpenSsl.h>
+#include <jde/fwk/chrono.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/process/execution.h>
+#include <jde/fwk/process/thread.h>
 
 #define let const auto
 
@@ -71,11 +72,11 @@ namespace Jde::Web::Mock{
 			 _thread = std::jthread( [this,h=_h]()mutable->void {
 				SetThreadDscrptn( "DelayHandler" );
 				uint seconds = To<uint>( _request["seconds"] );
-				Debug( ELogTags::HttpServerWrite, "server sleeping for {}", seconds );
+				DBGT( ELogTags::HttpServerWrite, "server sleeping for {}", seconds );
 				std::this_thread::sleep_for( std::chrono::seconds{seconds} );
 				Promise()->SetValue( {jobject{}, move(_request)} );
 				net::post( *Executor(), [h](){ h.resume(); } );
-				Debug( ELogTags::HttpServerWrite, "~/delay handler" );
+				DBGT( ELogTags::HttpServerWrite, "~/delay handler" );
 			});
 		}
 		else if( _request.Target()=="/BadAwaitable" ){
@@ -83,7 +84,7 @@ namespace Jde::Web::Mock{
 				SetThreadDscrptn( "BadAwaitable" );
 				h.promise().SetExp( RestException{SRCE_CUR, move(_request), "BadAwaitable"} );
 				net::post( *Executor(), [h](){ h.resume(); } );
-				Debug( ELogTags::HttpServerWrite, "~/BadAwaitable handler" );
+				DBGT( ELogTags::HttpServerWrite, "~/BadAwaitable handler" );
 			 });
 		}
 		else
@@ -91,7 +92,7 @@ namespace Jde::Web::Mock{
 	}
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		ASSERT( Promise() || _result );
-		base::AwaitResume();
+		base::CheckException();
 		return Promise() ? move(*Promise()->Value()) : move(*_result);
 	}
 }

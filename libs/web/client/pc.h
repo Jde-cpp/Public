@@ -4,9 +4,8 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
-#include <jde/framework.h>
-#include <jde/framework/settings.h>
-#include <jde/framework/io/json.h>
-#include "../../../../Framework/source/coroutine/Awaitable.h"
+#include <jde/fwk.h>
+#include <jde/fwk/settings.h>
+#include <jde/fwk/io/json.h>
 #include <jde/web/client/exports.h>
 #include "proto/Web.FromServer.pb.h"

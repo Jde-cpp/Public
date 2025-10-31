@@ -7,7 +7,8 @@ import { ETransport, ProtoService, RequestId } from '../proto.service';
 import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
 import * as AppFromClient from '../../proto/App.FromClient'; import FromClient = AppFromClient.Jde.App.Proto.FromClient;
 import * as AppCommon from '../../proto/App'; import App = AppCommon.Jde.App.Proto;
-import * as CommonProto from '../../proto/Common'; import ELogLevel = CommonProto.Jde.Proto.ELogLevel; import IException = CommonProto.Jde.Proto.IException;
+import * as LogProto from '../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
+import * as CommonProto from '../../proto/Common'; import IException = CommonProto.Jde.Proto.IException;
 import { IAuth, IEnvironment, User } from 'jde-spa';
 import { IGraphQL, Log } from '../IGraphQL';
 import { AuthStore } from '../auth.store';
@@ -114,13 +115,13 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		return p;
 	}
 */
-	async login( user:User ):Promise<void>{
+	async login( user:User, log:Log ):Promise<void>{
 		let self = this;
-		//if( this.log.restRequests )	console.log( `googleLogin( ${user.credential} )` );
+		//if( this.log.restRequests )	log( `googleLogin( ${user.credential} )` );
 		console.assert( !user.sessionId );
 		user.sessionId = await super.loginJwt( user.authorization );
 		self.authStore.append( user );
-		//if( this.log.restResults )	console.log( `authorization='${self.authorization}'` );
+		//if( this.log.restResults )	log( `authorization='${self.authorization}'` );
 	}
 	loginPassword( username:string, password:string, authenticator:string ):Promise<void>{
 		throw "noImpl";

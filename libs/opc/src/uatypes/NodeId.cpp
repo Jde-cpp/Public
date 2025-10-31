@@ -64,7 +64,7 @@ namespace Jde::Opc{
 			ToGuid( p->second, identifier.guid );
 		}
 		else
-			Debug( ELogTags::App, "No identifier in nodeId" );
+			DBGT( ELogTags::App, "No identifier in nodeId" );
 	}
 
 	α NodeId::operator=( const NodeId& x )ι->NodeId&{
@@ -98,7 +98,6 @@ namespace Jde::Opc{
 
 	α NodeId::FromJson( const jobject& j, UA_UInt16 ns )ε->UA_NodeId{
 		UA_NodeId nodeId{ ns };
-//		Trace{ ELogTags::Test, "getNodeId({})", serialize(j) };
 		if( auto p = j.find("ns"); p!=j.end() && p->value().is_number() )
 			nodeId.namespaceIndex = Json::AsNumber<UA_UInt16>( p->value() );
 
@@ -161,9 +160,13 @@ namespace Jde::Opc{
 	α NodeId::ToJson()Ι->jobject{
 		return Opc::ToJson( *this );
 	}
-
 	α NodeId::ToString()Ι->string{
-		return serialize( ToJson() );
+		UAString j{ 1024 };
+		UA_EncodeJsonOptions options{};
+		if( let sc=UA_encodeJson( dynamic_cast<const UA_NodeId*>(this), &UA_TYPES[UA_TYPES_NODEID], &j, &options); sc )
+			return serialize( ToJson() );
+		let y = Opc::ToString( j );
+		return y.size()>1 ? y.substr( 1, y.size()-2 ) : y; //remove quotes
 	}
 	α toJson( jobject& j, const UA_NodeId& nodeId )ι->jobject{
 		j["ns"] = nodeId.namespaceIndex;
@@ -177,6 +180,9 @@ namespace Jde::Opc{
 		else if( type==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
 			j["b"] = ByteStringToJson( nodeId.identifier.byteString );
 		return j;
+	}
+	α NodeId::Add( jobject& j )Ι->void{
+		toJson( j, *this );
 	}
 }
 namespace Jde{

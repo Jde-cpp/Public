@@ -97,7 +97,7 @@ namespace Jde::Opc::Server{
 		}
 		THROW_IF( !policies, "No allowed policies set." );
 		log.pop_back();
-		Information{ (ELogTags)EOpcLogTags::Server, "UserToken Uris:  [{}]", move(log) };
+		INFOT( (ELogTags)EOpcLogTags::Server, "UserToken Uris:  [{}]", move(log) );
 		log.clear();
 
 		ac.userTokenPoliciesSize = policies * numOfPolicies;
@@ -116,7 +116,7 @@ namespace Jde::Opc::Server{
         ac.userTokenPolicies[policies].tokenType = UA_USERTOKENTYPE_CERTIFICATE;
         ac.userTokenPolicies[policies].policyId = ToUV( "open62541-certificate-policy" );
         if( UA_String_equal(&utpUri, &UA_SECURITY_POLICY_NONE_URI) )
-					Debug{ (ELogTags)EOpcLogTags::Server, "x509 Certificate Authentication configured, but no encrypting SecurityPolicy. This can leak credentials on the network." };
+					DBGT( (ELogTags)EOpcLogTags::Server, "x509 Certificate Authentication configured, but no encrypting SecurityPolicy. This can leak credentials on the network." );
         UA_String_copy( &utpUri, &ac.userTokenPolicies[policies].securityPolicyUri );
 				++policies;
 			}
@@ -124,13 +124,13 @@ namespace Jde::Opc::Server{
         ac.userTokenPolicies[policies].tokenType = UA_USERTOKENTYPE_ISSUEDTOKEN;
         ac.userTokenPolicies[policies].policyId = UA_STRING_ALLOC("open62541-issuedtoken-policy");
         if( UA_String_equal(&utpUri, &UA_SECURITY_POLICY_NONE_URI) )
-					Debug{ (ELogTags)EOpcLogTags::Server, "IssuedToken Authentication configured, but no encrypting SecurityPolicy. This can leak credentials on the network." };
+					DBGT( (ELogTags)EOpcLogTags::Server, "IssuedToken Authentication configured, but no encrypting SecurityPolicy. This can leak credentials on the network." );
 				UA_String_copy( &utpUri, &ac.userTokenPolicies[policies].securityPolicyUri );
 				++policies;
       }
     }
 		log.pop_back();
-		Information{ (ELogTags)EOpcLogTags::Server, "UserToken Uris:  [{}]", move(log) };
+		INFOT( (ELogTags)EOpcLogTags::Server, "UserToken Uris:  [{}]", move(log) );
 	}
 	α UAAccess::ActivateSession( UA_Server *server, UA_AccessControl *ac, const UA_EndpointDescription *endpointDescription, const UA_ByteString *secureChannelRemoteCertificate, const UA_NodeId *sessionId, const UA_ExtensionObject *userIdentityToken, void **sessionContext )ι->UA_StatusCode{
 		const UA_String anonymous_policy = "open62541-anonymous-policy"_uv;
@@ -228,7 +228,7 @@ namespace Jde::Opc::Server{
 				UAε( config->sessionPKI.verifyCertificate(&config->sessionPKI, &userToken->certificateData) );
 				auto publicKey = Crypto::ExtractPublicKey( std::span<byte>{(byte*)userToken->certificateData.data, userToken->certificateData.length} );
 				let exp = publicKey.ExponentInt();
-				let user = AppClient()->QuerySync( Ƒ("user( modulus: \"{}\", exponent: {} ){{id target name}}", publicKey.ModulusHex(), exp) );
+				let user = AppClient()->QuerySync( Ƒ("user( modulus: \"{}\", exponent: {} ){{id target name}}", publicKey.ModulusHex(), exp), {} );
 				THROW_IF( user.empty(), "Certificate user not found: modulus: {}, exponent: {}", publicKey.ModulusHex(), exp );
 				*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, QL::AsId<UserPK::Type>(user) };
 			}
@@ -244,7 +244,7 @@ namespace Jde::Opc::Server{
 			try{
 				if( userToken->tokenData.length<9 ){
 					let sessionId = std::stoul( string{ToSV(userToken->tokenData)}, 0, 16 );
-					let sessionInfo = BlockAwait<TAwait<Web::FromServer::SessionInfo>, Web::FromServer::SessionInfo>(	*AppClient()->SessionInfoAwait(sessionId) );
+					let sessionInfo = BlockAwait<TAwait<Web::FromServer::SessionInfo>, Web::FromServer::SessionInfo>(	move(*AppClient()->SessionInfoAwait(sessionId)) );
 					*sessionContext = new SessionContext{ sessionInfo.user_endpoint(), Jde::Proto::ToTimePoint(sessionInfo.expiration()), sessionInfo.session_id(), sessionInfo.user_pk() };
 				}
 				else{
@@ -283,8 +283,8 @@ namespace Jde::Opc::Server{
 		if( !nodeId )
 			return false;
 		let id = nodeId->identifier.numeric;
-		ASSERT( nodeId->identifierType == UA_NODEIDTYPE_NUMERIC && nodeId->namespaceIndex == 0 );
-		if( id == UA_NS0ID_SERVER_NAMESPACEARRAY ){
+		ASSERT( nodeId->identifierType == UA_NODEIDTYPE_NUMERIC );
+		if( nodeId->namespaceIndex==0 && id == UA_NS0ID_SERVER_NAMESPACEARRAY ){
 			return UA_ACCESSLEVELMASK_READ;
 		}
 		let rights = GetSchema().Authorizer->Rights( "opc", "node", static_cast<SessionContext*>( sessionContext )->UserPK );
@@ -315,7 +315,7 @@ namespace Jde::Opc::Server{
 		if( id == UA_NS0ID_SERVER_NAMESPACEARRAY ){
 			return true;
 		}
-		Warning{ (ELogTags)EOpcLogTags::Server, "GetUserExecutable: MethodId {} not enforced", id };
+		WARNT( (ELogTags)EOpcLogTags::Server, "GetUserExecutable: MethodId {} not enforced", id );
 		BREAK;
 		return true;
 	}

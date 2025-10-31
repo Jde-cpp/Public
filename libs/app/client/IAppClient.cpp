@@ -1,19 +1,19 @@
 #include <jde/app/client/IAppClient.h>
-#include <jde/framework/io/proto.h>
+#include <jde/fwk/io/proto.h>
 #include <jde/ql/IQL.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/awaits/SocketAwait.h>
 
 #define let const auto
 namespace Jde::App::Client{
-	α IAppClient::QueryArray( string&& q, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
-		return QLServer()->QueryArray( move(q), UserPK(), returnRaw, sl );
+	α IAppClient::QueryArray( string&& q, jobject variables, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
+		return QLServer()->QueryArray( move(q), move(variables), UserPK(), returnRaw, sl );
 	}
-	α IAppClient::QueryObject( string&& q, bool returnRaw, SL sl )ε->up<TAwait<jobject>>{
-		return QLServer()->QueryObject( move(q), UserPK(), returnRaw, sl );
+	α IAppClient::QueryObject( string&& q, jobject variables, bool returnRaw, SL sl )ε->up<TAwait<jobject>>{
+		return QLServer()->QueryObject( move(q), move(variables), UserPK(), returnRaw, sl );
 	}
-	α IAppClient::QueryValue( string&& q, bool returnRaw, SL sl )ε->up<TAwait<jvalue>>{
-		return QLServer()->Query( move(q), UserPK(), returnRaw, sl );
+	α IAppClient::QueryValue( string&& q, jobject variables, bool returnRaw, SL sl )ε->up<TAwait<jvalue>>{
+		return QLServer()->Query( move(q), move(variables), UserPK(), returnRaw, sl );
 	}
 	α IAppClient::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Web::FromServer::SessionInfo>>{
 	 	return mu<Client::SessionInfoAwait>( sessionPK, _session, sl );
@@ -46,9 +46,9 @@ namespace Jde::App::Client{
 		if( !session )
 			co_return;
 		let tags = ELogTags::Client | ELogTags::Socket;
-		Trace{ sl, tags, "ClosingSocketSession" };
+		LOGSL( ELogLevel::Trace, sl, tags, "ClosingSocketSession" );
 		co_await session->Close();
 		session = nullptr;
-		Information{ sl, tags, "ClosedSocketSession" };
+		LOGSL( ELogLevel::Information, sl, tags, "ClosedSocketSession" );
 	}
 }

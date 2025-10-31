@@ -1,9 +1,8 @@
 ﻿//#include <jde/access/access.h>
 #include <boost/container/flat_set.hpp>
-#include <jde/framework/str.h>
-#include <jde/framework/io/file.h>
-#include "../../../../Framework/source/coroutine/Awaitable.h"
-#include <jde/framework/chrono.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/io/file.h>
+#include <jde/fwk/chrono.h>
 #include <jde/ql/IQL.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/IAcl.h>

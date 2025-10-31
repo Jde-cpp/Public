@@ -1,7 +1,7 @@
 #include "ObjectType.h"
 
 namespace Jde::Opc::Server{
-	ObjectType::ObjectType( const jobject& j, Server::NodePK parentPK, Server::BrowseName browse )ε:
+	ObjectType::ObjectType( const jobject& j, Server::NodePK parentPK, Opc::BrowseName browse )ε:
 		Node{ j, parentPK, move(browse) },
 		UA_ObjectTypeAttributes{ ObjectTypeAttr{j} }
 	{}
@@ -33,7 +33,7 @@ namespace Jde::Opc::Server{
 	}
 
 	α ObjectType::ToString()Ι->string{
-		return Ƒ( "[{}]{}", NodeId::ToString(), BrowseName() );
+		return Ƒ( "[{}]{}", NodeId::ToString(), ToSV(BrowseName()) );
 	}
 	α ObjectType::ToString( const Node& parent )Ι->string{
 		return Node::ToString(parent);

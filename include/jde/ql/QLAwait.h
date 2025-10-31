@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/framework/coroutine/Await.h>
+#include <jde/fwk/co/Await.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/types/RequestQL.h>
 #include <jde/db/generators/Statement.h>
@@ -26,11 +26,13 @@ namespace Jde::QL{
 		using base = TAwaitEx<T, TAwait<jvalue>::Task>;
 		QLAwait( TableQL&& ql, UserPK executer, SRCE )ι:base{sl},_request{move(ql)}, _executer{executer}{}
 		QLAwait( TableQL&& ql, DB::Statement&& statement, UserPK executer, SRCE )ι:
-			base{sl}, _request{ move(ql) }, _statement{ move(statement) }, _executer{ executer }{}
+			base{sl}, _request{ move(ql) }, _statement{ move(statement) }, _executer{ executer }{
+			ASSERT( !_statement || _statement->From.Joins.size() );
+		}
 		QLAwait( MutationQL&& m, UserPK executer, SRCE )ι:
 			base{sl}, _request{{move(m)}}, _executer{executer}{}
-		QLAwait( string query, UserPK executer, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε:
-			base{sl}, _request{ Parse(move(query), schemas, returnRaw) }, _executer{ executer }{}
+		QLAwait( string query, jobject variables, UserPK executer, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε:
+			base{sl}, _request{ Parse(move(query), move(variables), schemas, returnRaw) }, _executer{ executer }{}
 	private:
 		α Execute()ι->TAwait<jvalue>::Task override;
 		RequestQL _request;

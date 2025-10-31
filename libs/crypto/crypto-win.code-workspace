@@ -1,0 +1,69 @@
+{
+	"settings": {
+		"window.title": "Crypto",
+		"name": "crypto",
+		"sourceDir": "${env:JDE_BASH}/Public/libs/${config:name}",
+		"buildDir": "/z/build/msvc/jde/libs/${config:name}",
+		"exe": "tests/Jde.Crypto.Tests",
+	},
+	"folders": [
+		{
+			"path": "Z:/build/msvc/jde/libs/crypto",
+			"name": "build"
+		},
+		{
+			"path": "src",
+			"name": "crypto"
+		},
+		{
+			"path": "tests"
+		},
+		{
+			"path": "../../../Framework/source",
+			"name": "framework"
+		},
+		{
+			"path": "../../include/jde",
+			"name": "headers"
+		},
+	],
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "build",
+				"type": "shell",
+				"command": "cd ${config:buildDir}; tput reset; cmake --build .;",
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"group": { "kind": "build", "isDefault": true }
+			},
+			{
+				"label": "cmake",
+				"type": "shell",
+				"command": "tput reset;mkdir -p ${config:buildDir};cd ${config:buildDir};tput reset; rm -f CMakeCache.txt;cmake ${config:sourceDir} --preset win-msvc-jde",
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"group": { "kind": "build", "isDefault": false }
+			}
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [{
+				"name": "Debug",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${config:buildDir}/${config:exe}",
+				"args": [
+					"-settings=${config:sourceDir}/tests/config/Crypto.Tests.jsonnet"
+				],
+				"stopAtEntry": false,
+				"cwd": "${config:buildDir}",
+				"externalConsole": false,
+				"MIMode": "gdb",
+				"showDisplayString": true,
+				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
+				"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.27":"${env:REPO_DIR}/glibc-2.27" },
+				"preLaunchTask": "build"
+			}]
+	},
+}

@@ -1,6 +1,6 @@
 #pragma once
 #include "../IApp.h"
-#include <jde/crypto/CryptoSettings.h>
+#include <jde/fwk/crypto/CryptoSettings.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/Jwt.h>
 #include <jde/app/client/awaits/SocketAwait.h>
@@ -31,9 +31,9 @@ namespace Jde::App::Client{
 	protected:
 		α CommonDetails()ι->vector<string>{ return { "TODO" }; }
 	private:
-		α QueryArray( string&& q, bool returnRaw, SRCE )ε->up<TAwait<jarray>> override;
-		α QueryObject( string&& q, bool returnRaw, SRCE )ε->up<TAwait<jobject>> override;
-		α QueryValue( string&& q, bool returnRaw, SRCE )ε->up<TAwait<jvalue>> override;
+		α QueryArray( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jarray>> override;
+		α QueryObject( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jobject>> override;
+		α QueryValue( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jvalue>> override;
 		α SetSession( sp<AppClientSocketSession> session )ι->void{ _session = session; }
 		α Session()Ε->sp<AppClientSocketSession>{ auto p = _session; THROW_IF( !p, "Not connected." ); THROW_IF( Process::ShuttingDown(), "Shutting down." ); return p; }
 

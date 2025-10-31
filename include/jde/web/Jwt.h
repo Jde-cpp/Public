@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include "client/exports.h"
 
 namespace Jde::Web{

@@ -36,7 +36,7 @@ namespace Jde::DB{
 		else if( dflt.is_string() )
 			v = dflt.get_string();
 		else
-			Critical{ ELogTags::Sql, "Default for '{}' not implemented.", dflt.TypeName() };
+			CRITICALT( ELogTags::Sql, "Default for '{}' not implemented.", dflt.TypeName() );
 
 		return Ƒ("alter table {} add default {} for {}", tableName, v, columnName);
 	}
@@ -48,7 +48,7 @@ namespace Jde::DB{
 		else if( dflt.is_string() )
 			v = dflt.get_string();
 		else
-			Critical{ ELogTags::Sql, "Default for index={} not implemented.", dflt.TypeName() };
+			CRITICALT( ELogTags::Sql, "Default for index={} not implemented.", dflt.TypeName() );
 
 		return Ƒ( "ALTER TABLE {} ALTER COLUMN {} SET DEFAULT {}", tableName, columnName, v );
 	}
@@ -129,7 +129,7 @@ namespace Jde::DB{
 		else if( type == Decimal ) typeName = "decimal";
 		else if( type == Numeric ) typeName = "numeric";
 		else if( type == Money ) typeName = "money";
-		else Error{ _tags, "Unknown datatype({}).", (uint)type };
+		else ERR( "Unknown datatype({}).", (uint)type );
 		return typeName;
 	}
 }

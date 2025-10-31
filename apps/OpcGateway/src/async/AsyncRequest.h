@@ -1,9 +1,11 @@
 ﻿#pragma once
-#include <jde/framework/coroutine/Timer.h>
+#include <jde/fwk/co/Timer.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Logger.h>
 
 namespace Jde::Opc::Gateway{
+	constexpr RequestId ConnectRequestId = std::numeric_limits<RequestId>::max();
+	constexpr RequestId PingRequestId = 0;
 	struct UAClient;
 
 	struct UARequest{
@@ -23,13 +25,13 @@ namespace Jde::Opc::Gateway{
 		α Process( RequestId requestId )ι->void{ Process(requestId, coroutine_handle<>{}); }
 		Ŧ ClearHandle( RequestId requestId )ι->T;
 		α Clear( RequestId requestId )ι->void;
-		α SetParent( sp<UAClient> pClient )ι{_pClient=pClient;}
+		α SetParent( sp<UAClient> client )ι{_client=client;}
 		α Stop()ι->void;
 	private:
 		α UAHandle()ι->Handle;
 		α ProcessingLoop()ι->DurationTimer::Task;
 		flat_map<RequestId, std::any> _requests; mutex _requestMutex;
-		sp<UAClient> _pClient;
+		sp<UAClient> _client;
 		atomic_flag _running;
 		atomic_flag _stopped;
 	};
@@ -37,8 +39,8 @@ namespace Jde::Opc::Gateway{
 
 	Ξ AsyncRequest::Clear( RequestId requestId )ι->void{
 		lg _{_requestMutex};
-		if( !_requests.erase(requestId) )
-			Critical{ ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId };
+		if( !_requests.erase(requestId) && requestId!=ConnectRequestId )
+			CRITICALT( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
 	}
 	Ŧ AsyncRequest::ClearHandle( RequestId requestId )ι->T{
 		T userData;
@@ -49,11 +51,11 @@ namespace Jde::Opc::Gateway{
 				_requests.erase( p );
 			}
 			catch( const std::bad_any_cast& e ){
-				Critical{ ProcessingLoopTag, "[{:x}.{:x}]Bad any cast: {}", UAHandle(), requestId, e.what() };
+				CRITICALT( ProcessingLoopTag, "[{:x}.{:x}]Bad any cast: {}", UAHandle(), requestId, e.what() );
 			}
 		}
 		else
-			Critical( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
+			CRITICALT( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
 		return userData;
 	}
 	Ŧ AsyncRequest::Process( RequestId requestId, T&& h )ι->void{
@@ -67,5 +69,4 @@ namespace Jde::Opc::Gateway{
 			ProcessingLoop();
 		h = nullptr;
 	}
-
 }

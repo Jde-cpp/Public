@@ -3,8 +3,8 @@
 
 #define let const auto
 namespace Jde::Web::Client{
-	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
-	string _sslUserAgent{ Ƒ("({})Jde.Web.Client SSL - {}", IApplication::ProductVersion, BOOST_BEAST_VERSION) };
+	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
+	string _sslUserAgent{ Ƒ("({})Jde.Web.Client SSL - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 
 
 	ClientSocketStream::ClientSocketStream( net::io_context& ioc, optional<ssl::context>& ctx )ι:

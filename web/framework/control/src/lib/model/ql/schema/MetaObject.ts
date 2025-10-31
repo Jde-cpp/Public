@@ -1,4 +1,4 @@
-import { StringUtils } from '../../../utilities/StringUtils';
+import { StringUtils } from '../../../utils/StringUtils';
 
 export class MetaObject{
 	constructor( public type:string ){} //User

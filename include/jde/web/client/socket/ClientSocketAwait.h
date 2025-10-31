@@ -1,20 +1,20 @@
 #pragma once
 //#include <jde/web/client/socket/IClientSocketSession.h>
 #include "../usings.h"
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include "../client.h"
-#include <jde/framework/chrono.h>
+#include <jde/fwk/chrono.h>
 
 namespace Jde::Web::Client{
 	struct IClientSocketSession;
 	struct TimedPromiseType{
 		ψ Log( const fmt::format_string<Args const&...>&& m2, const Args&... args )ι->void{
-			Trace{ ELogTags::SocketClientRead, FWD(m2), FWD(args)... };
+			TRACET( ELogTags::SocketClientRead, FWD(m2), FWD(args)... );
 		}
 		α Log( SessionPK sessionId, steady_clock::time_point start, SL sl)ι->void{
 			if( ShouldTrace(ELogTags::SocketClientRead) && ResponseMessage.size() ){
 				const auto msg = sv{Str::Format(ResponseMessage, MessageArgs)}.substr( 0, MaxLogLength() );
-				Trace{ sl, ELogTags::SocketClientRead, "[{:x}]SocketReceive - {} - {}", sessionId, msg, Chrono::ToString( steady_clock::now() - start ) };
+				LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientRead, "[{:x}]SocketReceive - {} - {}", sessionId, msg, Chrono::ToString( steady_clock::now() - start ) );
 			}
 		}
 
@@ -70,7 +70,7 @@ namespace Jde::Web::Client{
 	//}
 
 	Ŧ ClientSocketAwait<T>::await_resume()ε->T{
-		base::AwaitResume();
+		base::CheckException();
 		typename base::TPromise* p = base::Promise();
 		THROW_IF( !p, "Not Connected" );
 		if( auto e = p->MoveExp(); e )

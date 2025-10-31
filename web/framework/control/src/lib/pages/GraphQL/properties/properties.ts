@@ -4,10 +4,10 @@ import { MatFormFieldModule, MatLabel } from '@angular/material/form-field';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IErrorService } from '../../../services/error/IErrorService';
 import { ComponentPageTitle } from 'jde-spa';
-import { IEnum, IGraphQL } from '../../../services/IGraphQL';
+import { EnumValue, IGraphQL } from '../../../services/IGraphQL';
 import { TableSchema } from '../../../model/ql/schema/TableSchema';
 import { Field, FieldKind } from '../../../model/ql/schema/Field';
-import { StringUtils } from '../../../utilities/StringUtils';
+import { StringUtils } from '../../../utils/StringUtils';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipGrid, MatChipsModule } from '@angular/material/chips';
@@ -92,7 +92,7 @@ enum InputTypes{
 	Bool=2
 }
 class PropertyField{
-	constructor( private field:Field, public options?:Array<IEnum> )
+	constructor( private field:Field, public options?:Array<EnumValue> )
 	{}
 	get name(){ return this.field.name; }
 	get displayName(){ return this.field.name=="target" ? "Id" : StringUtils.idToDisplay( this.field.name ); }

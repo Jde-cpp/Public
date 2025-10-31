@@ -6,7 +6,7 @@ namespace Jde::Access{
 	α AclLoadAwait::Load()ι->QL::QLAwait<jarray>::Task{
 		try{
 			flat_multimap<IdentityPK,PermissionRole> y;
-			let values = co_await *_qlServer->QueryArray( "acl{ identity{id isGroup} permission{id isRole} }", _executer );
+			let values = co_await *_qlServer->QueryArray( "acl{ identity{id isGroup} permission{id isRole} }", {}, _executer );
 			for( let& value : values ){
 				let acl = Json::AsObject(value);
 				let groupUserPK = Json::AsNumber<IdentityPK::Type>( acl, "identity/id" );

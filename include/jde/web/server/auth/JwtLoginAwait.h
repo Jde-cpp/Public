@@ -1,7 +1,7 @@
 #pragma once
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/web/Jwt.h>
-#include <jde/framework/coroutine/Await.h>
+#include <jde/fwk/co/Await.h>
 
 namespace Jde::Web::Server{
 	struct JwtLoginAwait : TAwaitEx<UserPK,TAwait<UserPK>::Task>{

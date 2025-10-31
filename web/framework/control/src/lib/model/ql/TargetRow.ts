@@ -1,6 +1,6 @@
 import { Row } from './Row';
 import { Mutation, MutationType } from './Mutation';
-import { assert, clone } from '../../utilities/utils';
+import { assert, clone } from '../../utils/utils';
 
 export type Target = string;
 export abstract class ITargetRow extends Row{

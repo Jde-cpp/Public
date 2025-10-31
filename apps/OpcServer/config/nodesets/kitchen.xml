@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UANodeSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://opcfoundation.org/UA/2011/03/UANodeSet.xsd">
+	<Aliases>
+		<Alias Alias="Organizes">i=35</Alias>
+		<Alias Alias="HasTypeDefinition">i=40</Alias>
+		<Alias Alias="CoffeeMachineDevice">ns=2;i=1024</Alias>
+	</Aliases>
+	<UAObject ParentNodeId="i=85" ReferenceType="Organizes" BrowseName="1:coffeeMachine1">
+		<DisplayName>Coffee Machine 1</DisplayName>
+		<Description>Original Coffee Machine</Description>
+		<References>
+			<Reference ReferenceType="HasTypeDefinition">CoffeeMachineDevice</Reference>
+		</References>
+	</UAObject>
+</UANodeSet>

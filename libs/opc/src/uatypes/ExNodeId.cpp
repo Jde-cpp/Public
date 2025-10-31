@@ -40,7 +40,7 @@ namespace Jde::Opc{
 			ToGuid( p->second, nodeId.identifier.guid );
 		}
 		else
-			Debug( ELogTags::App, "No identifier in nodeId" );
+			DBGT( ELogTags::App, "No identifier in nodeId" );
 	}
 
 	ExNodeId::ExNodeId( const jvalue& j )ε:
@@ -215,6 +215,13 @@ namespace Jde::Opc{
 		else if( type==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
 			j["b"] = ByteStringToJson( nodeId.identifier.byteString );
 		return j;
+	}
+	α ExNodeId::Add( jobject& j )Ι->void{
+		if( namespaceUri.length )
+			j["nsu"] = ToSV(namespaceUri);
+		if( serverIndex )
+			j["serverindex"] = serverIndex;
+		toJson( j, nodeId );
 	}
 }
 namespace Jde{

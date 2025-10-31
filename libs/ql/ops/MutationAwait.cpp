@@ -1,5 +1,4 @@
 #include <jde/ql/ops/MutationAwait.h>
-#include <jde/framework/coroutine/TaskOld.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/AppSchema.h>
@@ -13,7 +12,7 @@
 
 #define let const auto
 namespace Jde::QL{
-	using namespace Coroutine;
+//	using namespace Coroutine;
 	using namespace DB::Names;
 
 	constexpr ELogTags _tags{ ELogTags::QL };
@@ -51,6 +50,8 @@ namespace Jde::QL{
 			case Stop:
 				MutationAwait::Stop();
 				co_return;
+			case Execute:
+				throw Exception{ ELogTags::QL, _sl, "Execute mutation not implemented." };
 			}
 			Resume( move(y) );
 		}

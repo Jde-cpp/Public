@@ -140,7 +140,7 @@ namespace Jde::QL{
 				if( auto sequence = statement.Values.size() && table->SurrogateKeys.size() ? table->SurrogateKeys[0] : nullptr; sequence )
 					_nestedIds.emplace( sequence->Name, id );
 			}
-			Trace{ _tags, "InsertAwait::Execute: {}", serialize(y) };
+			TRACE( "InsertAwait::Execute: {}", serialize(y) );
 			InsertAfter( move(y) );
 		}
 		catch( exception& e ){

@@ -1,13 +1,11 @@
 ﻿#include "gtest/gtest.h"
-#include <jde/framework/process.h>
-#include <jde/framework/settings.h>
-#include <jde/framework/coroutine/Timer.h>
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/process/process.h>
+#include <jde/fwk/settings.h>
+#include <jde/fwk/co/Timer.h>
 #include <jde/ql/ql.h>
-#include <jde/access/Authorize.h>
+#include <jde/access/Authorize.h> //!
 #include <jde/access/server/accessServer.h>
 #include <jde/access/AccessListener.h>
-#include <jde/access/awaits/ConfigureAwait.h>
 #include <jde/db/db.h>
 #include "globals.h"
 
@@ -23,8 +21,7 @@ namespace Jde{
 #ifdef _MSC_VER
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threadSize").value_or(5)>0 )
 #endif
-		Logging::Entry::SetGenerator( []( sv text ){ return Crypto::CalcMd5(text); } );
-		OSApp::Startup( argc, argv, Process::ProductName(), "Access tests", true );
+		Process::Startup( argc, argv, Process::ProductName(), "Access tests", true );
 
 		let metaDataName{ "access" };
 		auto authorizer = Access::Tests::Authorizer();
@@ -37,7 +34,7 @@ namespace Jde{
 		else if( Settings::FindBool("/dbServers/sync").value_or(false) )
 			DB::SyncSchema( *schema, ql );
 		auto await = Access::Server::Configure( {schema}, ql, UserPK{UserPK::System}, authorizer, _listener );
-		BlockVoidAwait<Access::ConfigureAwait>( move(await) );
+		BlockVoidAwait( move(await) );
 		Access::Tests::SetQL( ql );
 	}
 }

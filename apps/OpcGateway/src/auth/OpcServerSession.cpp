@@ -52,7 +52,7 @@ namespace Jde::Opc::Gateway{
 			case None: case Anonymous: _display = "anonymous"; break;
 			case Username: _display = Ƒ("user: {}", LoginName()); break;
 			case IssuedToken: _display = Ƒ("token: {:x}", (uint32)std::hash<string>{}(get<Gateway::Token>(_value))); break;
-			case Certificate: _display = Ƒ("cert: {:x}", get<Crypto::PublicKey>(_value).hash32()); break;
+			case Certificate: _display = Ƒ("cert: {:x}", get<Crypto::PublicKey>(_value).Hash32()); break;
 		}
 		return _display;
 	}
@@ -88,10 +88,10 @@ namespace Jde::Opc{
 
 	α Gateway::Logout( SessionPK sessionId )ι->void{
 		let erased = _sessions.erase( sessionId );
-		if( erased )
-			Trace( ELogTags::App, "Session {:x} erased.", sessionId );
-		else
-			Trace( ELogTags::App, "Session {:x} not found.", sessionId );
+		if( erased ){
+			TRACET( ELogTags::App, "Session {:x} erased.", sessionId );
+		}else
+			TRACET( ELogTags::App, "Session {:x} not found.", sessionId );
 	}
 	α Gateway::GetCredential( SessionPK sessionId, str opcId )ι->optional<Credential>{
 		optional<Credential> cred;

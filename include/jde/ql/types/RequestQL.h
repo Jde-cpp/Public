@@ -20,7 +20,8 @@ namespace Jde::QL{
 		α IsQueries()Ι->bool{ return _value.index()==0; }
 		α Queries()Ι->const vector<TableQL>&{ return const_cast<RequestQL*>(this)->Queries(); }
 		α Queries()ι->vector<TableQL>&{ ASSERT(_value.index()==0); return get<0>(_value); }
+//		α Variables()ι->sp<jobject>&{ return _variables; }
 	private:
-		std::variant<vector<TableQL>,vector<MutationQL>, vector<Subscription>,vector<SubscriptionId>> _value;
+		variant<vector<TableQL>,vector<MutationQL>, vector<Subscription>,vector<SubscriptionId>> _value;
 	};
 }

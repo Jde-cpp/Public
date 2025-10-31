@@ -17,5 +17,5 @@ target_link_libraries( ${targetName} Jde Jde.DB )
 
 target_precompile_headers(${targetName}
   PUBLIC
-  <jde/framework.h>
+  <jde/fwk.h>
 )

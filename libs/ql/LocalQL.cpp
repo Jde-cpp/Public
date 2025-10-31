@@ -42,17 +42,17 @@ namespace Jde::QL{
 		vector<Subscription> _subscriptions;
 		vector<SubscriptionId> _result;
 	};
-	α LocalQL::Subscribe( string&& query, sp<IListener> listener, UserPK executer, SL sl )ε->up<TAwait<vector<SubscriptionId>>>{
-		return mu<SubscribeQueryAwait>( ParseSubscriptions(move(query), _schemas, sl), listener, executer, sl );
+	α LocalQL::Subscribe( string&& query, jobject variables, sp<IListener> listener, UserPK executer, SL sl )ε->up<TAwait<vector<SubscriptionId>>>{
+		return mu<SubscribeQueryAwait>( ParseSubscriptions(move(query), variables, _schemas, sl), listener, executer, sl );
 	}
-	α LocalQL::Upsert( string query, UserPK executer )ε->jarray{
-		auto result = QL::Parse( move(query), _schemas ); THROW_IF( !result.IsMutation(), "Query is not a mutation" );
+	α LocalQL::Upsert( string query, jobject variables, UserPK executer )ε->jarray{
+		auto result = QL::Parse( move(query), variables, _schemas ); THROW_IF( !result.IsMutation(), "Query is not a mutation" );
 		jarray y;
 		for( auto&& m : result.Mutations() ){
 			auto key = m.FindKey();
 			if( !key ){
-				let shift = m.GetParam( "shift" );
-				key = { shift.is_null() ? 0 : 1ul << (Json::AsNumber<uint8>(shift)) };
+				auto shift = m.TryNumber<uint8>( "shift" );
+				key = { shift ? 1ul << *shift : 0 };
 				m.Args["id"] = key->PK();
 				m.Args.erase( "shift" );
 			}
@@ -60,7 +60,7 @@ namespace Jde::QL{
 				? "id:"+std::to_string(key->PK())
 				: "target:\""+move(key->NK())+'"';
 			auto ql = Ƒ( "{}({}){{ id }}", DB::Names::ToSingular(m.JsonTableName), move(input) );
-			if( auto existing = BlockAwait<TAwait<jobject>,jobject>(*QueryObject(move(ql), executer)); existing.empty() ){
+			if( auto existing = BlockAwait<TAwait<jobject>,jobject>(move(*QueryObject(move(ql), variables, executer))); existing.empty() ){
 				if( auto name = m.Args.contains("name") ? nullptr : m.Args.if_contains("target"); name ){
 					string name2 = Json::AsString(*name);
 					m.Args["name"] = name2;

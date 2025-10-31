@@ -1,8 +1,8 @@
 #include "ConstructorHook.h"
+#include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/Variant.h>
 #include "../UAServer.h"
 #include "../awaits/VariantAwait.h"
-#include "../uaTypes/BrowseName.h"
 
 #define let const auto
 namespace Jde::Opc::Server{
@@ -13,16 +13,17 @@ namespace Jde::Opc::Server{
 		α Execute()ι->TAwait<VariantPK>::Task;
 		QL::MutationQL _mutation;
 		Jde::UserPK _executer;
+		jobject _variables;
 	};
 
 	α ConstructorQLAwait::Execute()ι->TAwait<VariantPK>::Task{
 		auto& ua = GetUAServer();
 		try{
 			auto& m = _mutation;
-			auto node = ua.GetTypeDef( NodeId{m.GetRef<jobject>("node", _sl)} );
+			auto node = ua.GetTypeDef( NodeId{m.As<jobject>("node", _sl)} );
 			jarray y;
 			flat_map<BrowseNamePK, Variant> values;
-			for( auto&& v : m.GetRef<jarray>("values", _sl) ){
+			for( auto&& v : m.As<jarray>("values", _sl) ){
 				auto& o = v.as_object();
 				BrowseName browse{ o.at("browseName").as_object() };
 				ua.GetBrowse( browse );

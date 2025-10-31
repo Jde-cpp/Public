@@ -1,7 +1,3 @@
-//FILE=IotCommon
-//source $JDE_DIR/Framework/scripts/common.sh;toBashDir $JDE_DIR JDE_BASH;include=$JDE_BASH/Public/jde/iot/types/proto;source=$JDE_BASH/Public/src/iot/types/proto;
-//cd $include;protoc --cpp_out . $FILE.proto; mkdir -p $source;cd $source;mv $include/$FILE.pb.cc .;mklink $FILE.pb.h $include;
-
 syntax = "proto3";
 package Jde.Opc.Proto;
 

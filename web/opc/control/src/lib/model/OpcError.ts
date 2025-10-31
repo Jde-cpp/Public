@@ -1,6 +1,7 @@
+import { StatusCode } from "./types";
 
 export class OpcError implements Error{
-	constructor( public sc:number, public name:string, public stack:string, public cause:string ){
+	constructor( public sc:StatusCode, public name:string, public stack:string, public cause:string ){
 		if( !OpcError.messages.has(sc) )
 			OpcError.messages.set( sc, null );
 	}
@@ -14,9 +15,15 @@ export class OpcError implements Error{
 		};
 		return empty;
 	}
+	static statusCodeText( sc:StatusCode ):string{
+		const y = OpcError.messages.get(sc);
+		if( !y )
+			OpcError.messages.set( sc, null );
+		return y;
+	}
 	static setMessages( x:OpcError[] ){ x.forEach( e=>
 		OpcError.messages.set(e.sc, e.message) );
 	}
 
-	private static messages:Map<number,string> = new Map<number,string>();
+	private static messages:Map<StatusCode,string> = new Map<StatusCode,string>();
 }

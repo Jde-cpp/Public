@@ -8,7 +8,7 @@
 #include <jde/access/client/accessClient.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/AppClientSocketSession.h>
-#include <jde/opc/uatypes/helpers.h>
+#include <jde/opc/uatypes/opcHelpers.h>
 #include "OpcServerAppClient.h"
 #include "UAServer.h"
 #include "awaits/ServerConfigAwait.h"
@@ -72,14 +72,18 @@ namespace Jde::Opc::Server{
 			QL::Hook::Add( mu<ObjectHook>() );
 			QL::Hook::Add( mu<ObjectTypeHook>() );
 			Initialize( *serverId, uaSchema );
-			GetUAServer().Run();
+			auto& ua = GetUAServer();
+			ua.Run();
 			if( Settings::FindBool("/opcServer/db").value_or(false) )
 				co_await ServerConfigAwait{}; //database
 			if( Settings::FindPath("/opcServer/mutationsDir") )
 				co_await UpsertAwait{}; //mutations
-			if( auto configFile = Settings::FindPath("/opcServer/configFile"); configFile )
-				GetUAServer().Load( *configFile );
-			Information( ELogTags::App, "---Started OPC Server---" );
+			for( let& config : Settings::FindPathArray("/opcServer/configFiles") )
+				ua.Load( config );
+			for( let& [idx, ns] : ua.Namespaces() )
+				INFOT( ELogTags::App, "ns: {}, uri: {}", idx, ns );
+
+			INFOT( ELogTags::App, "---Started OPC Server---" );
 			Resume();
 		}
 		catch( IException& e ){

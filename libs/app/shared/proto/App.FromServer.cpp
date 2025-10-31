@@ -1,5 +1,5 @@
 #include <jde/app/shared/proto/App.FromServer.h>
-#include <jde/framework/io/proto.h>
+#include <jde/fwk/io/proto.h>
 #include <jde/db/Row.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/Column.h>
@@ -139,7 +139,7 @@ namespace Jde::App{
 			else if( name=="message_id" )
 				t.set_message_id( Jde::Proto::ToBytes(row.GetGuid(i)) );
 			else if( name=="level" )
-				t.set_level( (Jde::Proto::ELogLevel)row.GetUInt16(i) );
+				t.set_level( (Log::Proto::ELogLevel)row.GetUInt16(i) );
 			else if( name=="thread_id" )
 				t.set_thread_id( row.GetUInt32(i) );
 			else if( name=="time" )
@@ -160,7 +160,7 @@ namespace Jde::App{
 		proto->set_id( id );
 		proto->set_instance_id( instanceId );
 		*proto->mutable_time() = Jde::Proto::ToTimestamp( m.Time );
-		proto->set_level( (Jde::Proto::ELogLevel)m.Level );
+		proto->set_level( (Log::Proto::ELogLevel)m.Level );
 		proto->set_message_id( Jde::Proto::ToBytes(m.Id()) );
 		proto->set_file_id( Jde::Proto::ToBytes(m.FileId()) );
 		proto->set_function_id( Jde::Proto::ToBytes(m.FunctionId()) );

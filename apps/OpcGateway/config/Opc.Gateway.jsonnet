@@ -1,16 +1,20 @@
 local args = import 'args.libsonnet';
 {
+	gateway:{
+		pingInterval: "PT30S",
+		ttl: "PT2M"
+	},
 	logging:{
 		spd:{
 			defaultLevel:: "Information",
 			tags: {
-				trace:[ "app", "browse", "ql", "access", "opc.access",
+				trace:[ "app", "browse", "ql", "access", "opc.access", "test",
 					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
-					"uaSecure","uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery"
+					"uaSecure","uaSession", "uaServer", "uaUser", "uaSecurity", "uaPubSub", "uaDiscovery"
 				],
-				debug:["settings"],
+				debug:["settings", "uaEvent"],
 				information:[
-					"uaNet",
+					"uaNet","uaClient",
 					"opc.read", "opc.monitoring", "opc.browse", "app.processingLoop", "opc.monitoring.pedantic"
 				],
 				warning:[],
@@ -34,6 +38,14 @@ local args = import 'args.libsonnet';
 			schema: "debug",
 			catalogs: args.dbServers.localhost.catalogs
 		}
+	},
+	ql:{
+		introspection: [
+			"introspection/di.jsonnet",
+			"introspection/ia.jsonnet",
+			"introspection/machineTool.jsonnet",
+			"introspection/additive.jsonnet"
+		]
 	},
 	credentials:{
 		name: "OpcGateway",
@@ -66,8 +78,7 @@ local args = import 'args.libsonnet';
 		}
 	},
 	workers:{
-		drive:{ "threads":  1 },
-		alarm:{ "threads":  1 },
-		executor: 2
+		drive:{ threads:  2 },
+		executor:{ threads:  2 }
 	}
 }

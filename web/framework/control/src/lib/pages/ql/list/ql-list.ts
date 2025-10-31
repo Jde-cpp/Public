@@ -3,13 +3,12 @@ import { CommonModule } from '@angular/common';
 import {ActivatedRoute, Route, Router, Routes, UrlSegment} from '@angular/router';
 import {Sort} from '@angular/material/sort';
 import { MatTable } from '@angular/material/table';
-import {IProfile} from '../../../services/profile/IProfile'
 import {IErrorService} from '../../../services/error/IErrorService'
-import {IGraphQL, IEnum } from '../../../services/IGraphQL';
+import {IGraphQL, EnumValue } from '../../../services/IGraphQL';
 import {Field} from '../../../model/ql/schema/Field';
 import {TableSchema}  from '../../../model/ql/schema/TableSchema';
 import {MetaObject}  from '../../../model/ql/schema/MetaObject';
-import {Settings} from '../../../utilities/settings'
+import {Settings} from '../../../utils/settings'
 
 import { ComponentPageTitle, DocItem, IRouteService, RouteService } from 'jde-spa';
 import { Subject } from 'rxjs';
@@ -170,7 +169,7 @@ export class QLList implements OnInit, OnDestroy{
 	data = signal<any[]>([]);
 	private get excludedColumns(){ return this.resolvedData.pageSettings.excludedColumns; }
 	get name():string{ return <string>this.routeConfig.title; }
-	get enums():Map<string, IEnum[]>{ return this.schema.enums; }
+	get enums():Map<string, EnumValue[]>{ return this.schema.enums; }
 	private get profile():Settings<UserSettings>{ return this.resolvedData.profile; }
 	resolvedData:QLListData;
 	get routeConfig(){ return this.route.routeConfig; }

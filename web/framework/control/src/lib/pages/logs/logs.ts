@@ -10,15 +10,14 @@ import {App,AppStatus} from '../../services/app/application';
 import {AppService} from '../../services/app/app.service';
 import {ApplicationStrings} from './Application';
 import {LogSettings} from './Settings';
-import {Settings} from '../../utilities/settings';
+import {Settings} from '../../utils/settings';
 import { ComponentPageTitle } from 'jde-spa';
 import {IProfile} from '../../services/profile/IProfile';
 import {IErrorService} from '../../services/error/IErrorService';
 
 
 import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
-import * as AppFromClient from '../../proto/App.FromClient'; import FromClient = AppFromClient.Jde.App.Proto.FromClient;
-import * as CommonProto from '../../proto/Common'; import ELogLevel = CommonProto.Jde.Proto.ELogLevel;
+import * as LogProto from '../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
 import { FormControl } from '@angular/forms';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatFormFieldModule } from '@angular/material/form-field';

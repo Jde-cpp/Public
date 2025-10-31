@@ -2,7 +2,7 @@
 #ifndef OPC_UAEXCEPTION_H
 #define OPC_UAEXCEPTION_H
 #include "usings.h"
-#include <jde/framework/exceptions/ExternalException.h>
+#include <jde/fwk/exceptions/ExternalException.h>
 #include "uatypes/Logger.h"
 
 #define UAε(x) if( let sc = x; sc ) throw UAException{ sc };
@@ -17,7 +17,8 @@ namespace Jde::Opc{
 		UAException( StatusCode sc, string what={}, SRCE, UAExParams params={} ):ExternalException{ Message(sc), what, sc, sl, (ELogTags)params.Tags, params.Level }{}
 		UAException( UAException&& from )ι:ExternalException{ move(from) }{}
 		UAException( const UAException& from )ι:ExternalException{ from }{}
-		Ω Message( StatusCode x )ι->const char*{ return UA_StatusCode_name(x); }
+		Ω Message( StatusCode sc )ι->const char*{ return UA_StatusCode_name(sc); }
+		Ω ToJson( StatusCode sc, bool includeMsg=false )ι->jobject{ return includeMsg ? jobject{{"sc", sc},{"message", UAException::Message(sc)}} :  jobject{{"sc", sc}}; }
 
 		α Move()ι->up<IException> override{ return mu<UAException>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }

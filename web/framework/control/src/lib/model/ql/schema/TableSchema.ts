@@ -1,6 +1,6 @@
 import { MetaObject } from "./MetaObject";
 import { Field, FieldKind } from "./Field";
-import { IEnum } from '../../../services/IGraphQL';
+import { EnumValue } from '../../../services/IGraphQL';
 
 export class TableSchema extends MetaObject{
 	constructor( j ){
@@ -19,5 +19,5 @@ export class TableSchema extends MetaObject{
 	get listFields():Array<Field>{ return this.fields.filter((x)=>x.type.kind==FieldKind.LIST); }
 	get display(){ return this.subType?.collectionDisplay ?? this.type+'s'; }
 	subType:MetaObject;
-	enums: Map<string, IEnum[]>;
+	enums: Map<string, EnumValue[]>;
 }

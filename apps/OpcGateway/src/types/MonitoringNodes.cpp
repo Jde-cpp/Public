@@ -1,5 +1,5 @@
 ﻿#include "MonitoringNodes.h"
-#include <jde/framework/collections/collections.h>
+#include <jde/fwk/utils/collections.h>
 #include "../UAClient.h"
 #include "../uatypes/CreateMonitoredItemsRequest.h"
 
@@ -7,7 +7,7 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	static ELogTags _tag{ MonitoringTag };
+	constexpr ELogTags _tags{ MonitoringTag };
 	//α UAMonitoringNodes::LogTag()ι->sp<Jde::LogTag>{ return _logTag; }
 
 	//until orphaned UAClient's go away.
@@ -52,7 +52,7 @@ namespace Jde::Opc::Gateway{
 			lock.unlock();
 			string nodeString;
 			nodeString = accumulate( newNodes.begin(), newNodes.end(), nodeString, []( string&& s, const NodeId& n ){return s+=n.ToString()+",";} );
-//			Debug( _tag, "DataSubscriptions: [{}]", nodeString.substr(0, nodeString.size()-1) );
+//			DBG( "DataSubscriptions: [{}]", nodeString.substr(0, nodeString.size()-1) );
 			_pClient->DataSubscriptions( CreateMonitoredItemsRequest{move(newNodes)}, requestId, h );
 		}
 	}
@@ -67,12 +67,12 @@ namespace Jde::Opc::Gateway{
 			for( auto pNode = nodes.begin(); i<response->resultsSize && pNode!=nodes.end(); ++pNode, ++i ){
 		  	MonitoredItemCreateResult result{ move(response->results[i]) };
 				if( result.statusCode ){
-					Debug( _tag, "[{:x}]Could not create monitored item for node '{}':  {}.", requestId, pNode->ToString(), UAException::Message(result.statusCode) );
+					DBG( "[{:x}]Could not create monitored item for node '{}':  {}.", requestId, pNode->ToString(), UAException::Message(result.statusCode) );
 					_errors.try_emplace( {requestId} ).first->second.try_emplace( move(*pNode), result.statusCode );
 				}
 				else{
 					let h = MonitorHandle{ requestHandle.SubId(), result.monitoredItemId };
-					Trace( _tag, "[{:x}.{:x}]Monitoring '{}'", _pClient->Handle(), (Handle)h, pNode->ToString() );
+					TRACE( "[{:x}.{:x}]Monitoring '{}'", _pClient->Handle(), (Handle)h, pNode->ToString() );
 					_subscriptions.emplace( h, Subscription{move(*pNode), move(result), dataChange} );
 					if( _subscriptions.size()==1 )
 						_pClient->ProcessDataSubscriptions();
@@ -81,7 +81,7 @@ namespace Jde::Opc::Gateway{
 			_calls.erase( requestId );
 		}
 		else
-			Critical( _tag, "Could not find call for subscription='{:x}' index='{:x}'.", requestHandle.SubId(), requestHandle.MonitorId() );
+			CRITICAL( "Could not find call for subscription='{:x}' index='{:x}'.", requestHandle.SubId(), requestHandle.MonitorId() );
 	}
 	α UAMonitoringNodes::GetResult( Handle requestId, StatusCode sc )ι->FromServer::SubscriptionAck{
 		FromServer::SubscriptionAck y;
@@ -100,7 +100,7 @@ namespace Jde::Opc::Gateway{
 				else{
 					nodeResult->set_status_code( sc ? sc : UA_STATUSCODE_BADCONFIGURATIONERROR );
 					if( !sc )
-						Critical( _tag, "[{:x}]Could not find subscription for node '{}'.", requestId, n.ToString() );
+						CRITICAL( "[{:x}]Could not find subscription for node '{}'.", requestId, n.ToString() );
 				}
 			}
 			_requests.erase( pRequest );
@@ -120,11 +120,11 @@ namespace Jde::Opc::Gateway{
 			for_each( args.ClientCalls, [&opcId=_pClient->Target(),value,&args](let& x){x->SendDataChange(opcId, args.Node, value);} );
 		}
 		else
-			Trace( _tag, "Could not find subscription:  {:x}.", h );
+			TRACE( "Could not find subscription:  {:x}.", h );
 		return calls;
 	}
 	α UAMonitoringNodes::Unsubscribe( sp<IDataChange> dataChange )ι->void{
-		Debug( _tag, "[{}]UAMonitoringNodes::Unsubscribe()", dataChange->to_string() );
+		DBG( "[{}]UAMonitoringNodes::Unsubscribe()", dataChange->to_string() );
 		flat_set<MonitorHandle> handles;
 		auto f = [&dataChange]( let& hNodeDataChange ){return get<1>(hNodeDataChange.second)==dataChange;};
 		ul _{ _mutex };
@@ -156,7 +156,7 @@ namespace Jde::Opc::Gateway{
 					toDelete.try_emplace( id.SubId() ).first->second.emplace( id.MonitorId() );
 			}
 			else{
-				Trace( _tag, "Could not find node '{}' for unsubscription.", node.ToString() );
+				TRACE( "Could not find node '{}' for unsubscription.", node.ToString() );
 				get<1>(successFailures).emplace( move(node) );
 			}
 		}
@@ -167,7 +167,7 @@ namespace Jde::Opc::Gateway{
 
 	α UAMonitoringNodes::DeleteMonitoring( UA_Client* ua, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->DurationTimer::Task{
 		auto wait = 5s;
-		Trace( _tag, "[{:x}]DeleteMonitoring count={}, wait={}", (uint)ua, requested.size(), Chrono::ToString(wait) ); //duration_cast<std::chrono::seconds>(wait).count()
+		TRACE( "[{:x}]DeleteMonitoring count={}, wait={}", (uint)ua, requested.size(), Chrono::ToString(wait) ); //duration_cast<std::chrono::seconds>(wait).count()
 		co_await DurationTimer{ wait };
 		auto pClient = UAClient::TryFind(ua); if( !pClient ) co_return;
 
@@ -177,7 +177,7 @@ namespace Jde::Opc::Gateway{
 			for( auto& monitoredId : monitoredIds ){
 				const MonitorHandle h{subscriptionId,monitoredId};
 				if( auto p = _subscriptions.find(h); p!=_subscriptions.end() && p->second.ClientCalls.empty() ){
-					Trace( _tag, "[{:x}.{:x}]DeleteMonitoring for:  {}", _pClient->Handle(), (Handle)h, p->second.Node.ToString() );
+					TRACE( "[{:x}.{:x}]DeleteMonitoring for:  {}", _pClient->Handle(), (Handle)h, p->second.Node.ToString() );
 					_subscriptions.erase( h );
 					toDelete.try_emplace( subscriptionId ).first->second.emplace( monitoredId );
 				}

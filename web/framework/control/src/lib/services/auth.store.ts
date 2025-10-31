@@ -1,6 +1,6 @@
 import { Injectable, Signal, signal } from '@angular/core';
 import { User, UserJson } from 'jde-spa';
-import { clone } from '../utilities/utils'
+import { clone } from '../utils/utils'
 
 const userStorageKey = 'user';
 

@@ -1,7 +1,7 @@
 ﻿#pragma once
 #ifndef OPC_CLIENT
 #define OPC_CLIENT
-#include <jde/framework/coroutine/Await.h>
+#include <jde/fwk/co/Await.h>
 #include <jde/db/Row.h>
 #include <jde/db/Key.h>
 #include <jde/db/awaits/SelectAwait.h>

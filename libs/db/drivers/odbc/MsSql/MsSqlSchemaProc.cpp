@@ -1,5 +1,5 @@
 ﻿#include "MsSqlSchemaProc.h"
-#include <jde/framework/Str.h>
+#include <jde/fwk/Str.h>
 #include <jde/db/Row.h>
 #include <jde/db/meta/Table.h>
 #include "../../../src/meta/ddl/ForeignKey.h"
@@ -54,7 +54,7 @@ namespace Jde::DB::MsSql{
 		DB::Sql sql{ Sql::ColumnSql(tablePrefix.size()), {Value{string{schemaName}}} };
 		if (tablePrefix.size())
 			sql.Params.push_back( Value{string{tablePrefix}+'%'} );
-		
+
 		auto tables = LoadColumns( move(sql) );
 		let indexes = LoadIndexes( schemaName, {} );
 		for( auto& index : indexes ){
@@ -162,7 +162,7 @@ namespace Jde::DB::MsSql{
 		else if(typeName=="money")
 			type=Money;
 		else
-			Warning( ELogTags::App, "Unknown datatype({}).  need to implement, no big deal if not our table.", typeName );
+			WARNT( ELogTags::App, "Unknown datatype({}).  need to implement, no big deal if not our table.", typeName );
 		return type;
 	}
 

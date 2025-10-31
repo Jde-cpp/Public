@@ -3,7 +3,7 @@
 #define let const auto
 
 namespace Jde::Opc::Server{
-	Object::Object( const jobject& j, Server::NodePK parentPK, Server::BrowseName browse )ε:
+	Object::Object( const jobject& j, Server::NodePK parentPK, Opc::BrowseName browse )ε:
 		Node{ j, parentPK, move(browse) },
 		UA_ObjectAttributes{
 			Json::FindNumber<UA_UInt32>(j, "specified").value_or(0),
@@ -35,7 +35,7 @@ namespace Jde::Opc::Server{
 		}
 	{}
 
-	α Object::InsertParams()ι->vector<DB::Value>{
+	α Object::InsertParams()Ι->vector<DB::Value>{
 		vector<DB::Value> params = Node::InsertParams();
 		params.emplace_back( eventNotifier, 0 );
 		return params;

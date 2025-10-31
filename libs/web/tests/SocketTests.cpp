@@ -2,11 +2,10 @@
 #include "mocks/ServerMock.h"
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/Jwt.h>
-#include "../../../../Framework/source/math/MathUtilities.h"
-#include <jde/framework/Stopwatch.h>
-#include <jde/framework/log/MemoryLog.h>
-#include <jde/framework/thread/execution.h>
-#include <jde/web/client/http/ClientHttpAwait.h>
+#include <jde/fwk/utils/MathUtils.h>
+#include <jde/fwk/utils/Stopwatch.h>
+#include <jde/fwk/log/MemoryLog.h>
+#include <jde/fwk/process/execution.h>
 #include "mocks/ClientSocketSession.h"
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
@@ -110,7 +109,7 @@ namespace Jde::Web{
 
 	TEST_F( SocketTests, CreateSsl ){
 		std::this_thread::sleep_for( 1s );
-		Trace( ELogTags::Test, "WebTests::CreateSsl" );
+		TRACET( ELogTags::Test, "WebTests::CreateSsl" );
 		Stopwatch sw{ "WebTests::CreateSsl", ELogTags::Test };
 		CreateSession( ssl::context(ssl::context::tlsv12_client) );
 		Wait();
@@ -209,7 +208,7 @@ namespace Jde::Web{
 			std::this_thread::sleep_for( 100ms );
 			logs = Logging::Find( Crypto::CalcMd5("Failed to process incomming exception '{}'."sv) );
 		}
-		Trace{ ELogTags::Test, "logs.size(): {}", logs.size() };
+		TRACET( ELogTags::Test, "logs.size(): {}", logs.size() );
 		ASSERT_TRUE( logs.size()>0 );
 	}
 

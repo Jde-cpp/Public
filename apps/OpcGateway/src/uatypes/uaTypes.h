@@ -1,20 +1,16 @@
 #pragma once
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 
 namespace Jde::Opc::Gateway{
-	struct GetNodeIdResponse final : UA_TranslateBrowsePathsToNodeIdsResponse{
-		GetNodeIdResponse( UA_TranslateBrowsePathsToNodeIdsResponse&& rhs, const vector<sv>& segments, Handle uaHandle, SRCE )ε;
-		~GetNodeIdResponse(){ UA_TranslateBrowsePathsToNodeIdsResponse_clear(this); }
+	struct BrowsePathsToNodeIdResponse final : UA_TranslateBrowsePathsToNodeIdsResponse{
+		BrowsePathsToNodeIdResponse( UA_TranslateBrowsePathsToNodeIdsResponse&& rhs, const vector<string>& paths, Handle uaHandle, SRCE )ε;
+		~BrowsePathsToNodeIdResponse(){ UA_TranslateBrowsePathsToNodeIdsResponse_clear(this); }
 
-		operator ExNodeId()Ε;
+		using Expected = std::expected<ExNodeId,StatusCode>;
+		operator flat_map<string,Expected>()Ε;
 	private:
-		α Path()Ι->string{ return Str::Join(_segments, "/"); }
-		const vector<sv>& _segments;
+		α Path()Ι->string{ return _paths.empty() ? "" : _paths[0]; }
+		const vector<string>& _paths;
 		SL _sl;
 	};
-	struct ReadResponse final : UA_ReadResponse{
-		ReadResponse( UA_ReadResponse&& rhs, Handle uaHandle, NodeId id, SRCE )ε;
-		~ReadResponse(){ UA_ReadResponse_clear(this); }
-	};
-
 }

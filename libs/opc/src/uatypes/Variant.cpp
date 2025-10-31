@@ -1,5 +1,7 @@
 #include <jde/opc/uatypes/Variant.h>
 #include <jde/opc/UAException.h>
+#include <jde/opc/uatypes/BrowseName.h>
+#include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/UAString.h>
 
 #define let const auto
@@ -14,7 +16,7 @@ namespace Jde::Opc{
 			if( type=="double" )
 				return &UA_TYPES[UA_TYPES_DOUBLE];
 		}
-		Warning{ ELogTags::App, "Unsupported data type in Variant: ", serialize(v) };
+		WARNT( ELogTags::App, "Unsupported data type in Variant: ", serialize(v) );
 		return &UA_TYPES[UA_TYPES_STRING];
 	}
 	Variant::Variant( const jvalue& v, sv dataType )ι:
@@ -32,12 +34,12 @@ namespace Jde::Opc{
 				UA_Variant_setScalarCopy( this, &doubleValue, &UA_TYPES[UA_TYPES_DOUBLE] );
 			}
 			else{
-				Warning{ ELogTags::App, "Unsupported data type in Variant: ", serialize(v) };
+				WARNT( ELogTags::App, "Unsupported data type in Variant: ", serialize(v) );
 				UA_Variant_setScalar( this, nullptr, &UA_TYPES[UA_TYPES_STRING] );
 			}
 		}
 		else{
-			Warning{ ELogTags::App, "Unsupported data type in Variant: ", serialize(v) };
+			WARNT( ELogTags::App, "Unsupported data type in Variant: ", serialize(v) );
 			UA_Variant_setScalar( this, nullptr, &UA_TYPES[UA_TYPES_STRING] );
 		}
 	}
@@ -129,18 +131,25 @@ namespace Jde::Opc{
 			if( &type==&UA_TYPES[UA_TYPES_LOCALIZEDTEXT] && trimNames )
 				return jstring{ ToString( ((UA_LocalizedText*)v)->text ) };
 			else{
-				let uaJson = uaJsonString( v, type );
+				auto uaJson = uaJsonString( v, type );
 				try{
 					return parse( uaJson );
 				}
 				catch( exception& e ){
-					Error { ELogTags::Parsing, "Error parsing {} - {}", uaJson, e.what() };
+					ERRT( ELogTags::Parsing, "Error parsing {} - {}", uaJson, e.what() );
 					return {uaJson};
 				}
 			}
 		};
 		if( IsScalar() ){
-			y = toJson( data, *type );
+			if( type==&UA_TYPES[UA_TYPES_STATUSCODE] )
+				y = toJson( &data, *type );
+			else if( type==&UA_TYPES[UA_TYPES_NODEID] )
+			  y = Opc::ToJson( *(UA_NodeId*)data );
+			else if( type==&UA_TYPES[UA_TYPES_QUALIFIEDNAME] )
+			  y = BrowseName::ToJson( *(UA_QualifiedName*)data );
+			else
+				y = toJson( data, *type );
 		}
 		else{
 			jarray arr;

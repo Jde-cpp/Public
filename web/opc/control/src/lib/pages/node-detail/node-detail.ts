@@ -2,10 +2,11 @@ import { SelectionModel, SelectionChange } from '@angular/cdk/collections';
 import {Component, computed, inject, Inject, model, OnDestroy, OnInit, signal} from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
+import {MatSelectChange, MatSelectModule} from '@angular/material/select';
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
 import { Gateway, GatewayService, SubscriptionResult } from '../../services/gateway.service';
-import { IErrorService, IProfile, subscribe} from 'jde-framework'
-import { ETypes } from '../../model/types';
+import { DateUtils, IErrorService, ProtoUtils, Timestamp} from 'jde-framework'
+import { EAccessLevel, ETypes } from '../../model/types';
 import {  MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
 import { ComponentPageTitle } from 'jde-spa';
@@ -13,16 +14,21 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { NodePageData } from '../../services/resolvers/node.resolver';
 import { NodeRoute } from '../../model/NodeRoute';
 import { OpcNodeRouteService } from '../../services/routes/opc-node-route.service';
-import { Value, toString } from '../../model/Value';
+import { Value, valueString } from '../../model/Value';
 import { ENodeClass, Variable, UaNode }  from '../../model/Node';
 import { ServerCnnctn } from '../../model/ServerCnnctn';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
+import { MatInputModule } from '@angular/material/input';
+import {provideNativeDateAdapter} from '@angular/material/core';
 
 @Component({
   selector: 'node-detail',
   templateUrl: './node-detail.html',
   styleUrls: ['./node-detail.scss'],
+  providers: [provideNativeDateAdapter()],
   standalone: true,
-		imports: [RouterModule,MatButtonModule,MatCheckboxModule,MatTableModule,MatToolbarModule]
+  imports: [RouterModule,MatButtonModule,MatCheckboxModule,MatDatepickerModule,MatFormFieldModule, MatInputModule,MatTableModule,MatToolbarModule, MatSelectModule]
 })
 export class NodeDetail implements OnInit, OnDestroy {
 	constructor(
@@ -62,8 +68,12 @@ export class NodeDetail implements OnInit, OnDestroy {
 		this.retrievingSnapshot.set( false );
 	}
 
+	toDate( value:Timestamp ):Date{
+		return DateUtils.asUtc( ProtoUtils.toDate(value) );
+	}
+
 	toObject( x:ENodeClass ):string{ return ENodeClass[x]; }
-	toString( value:Value ){ return toString(value); }
+	toString( value:Value ){ return valueString(value); }
   checkboxLabel(row?: UaNode): string {
 		return row
 			? `${this.selections.isSelected(row) ? 'deselect' : 'select'} ${row.name}`
@@ -114,37 +124,71 @@ export class NodeDetail implements OnInit, OnDestroy {
 			this.selections.select(...this.nodes);
   }
 
-	async toggleValue( e:MatCheckboxChange, x:Variable ){
+	async toggleValue( x:Variable, e:MatCheckboxChange ){
 		e.source.checked = !e.source.checked;
 		try {
-			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, !x.value );
+			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, !x.value, (x)=>console.log(x) );
 		}
 		catch (e) {
 			this.snackbar.exception( e, (m)=>console.log(m) );
 		}
 	}
-	async changeDouble( e:Event, x:Variable ){
+	async changeDouble( x:Variable, e:Event ){
 		try {
-			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +e.target["value"] );
+			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +e.target["value"], (x)=>console.log(x) );
 		}
 		catch (e) {
 			this.snackbar.exception( e, (m)=>console.log(m) );
+			x.value = await this._iot.read( this.cnnctnTarget, x.nodeId );
+			console.log(x.value);
 		}
 	}
-	async changeString( e:Event, n:Variable ){
+	async changeString( n:Variable, e:Event ){
 		try {
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.target["value"] );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.target["value"], (x)=>console.log(x) );
 		}
 		catch (err) {
 			e.target["value"] = n.value;
 			this.snackbar.exception( err, (m)=>console.error(m) );
 		}
 	}
+	async changeEnum( n:Variable, e:MatSelectChange<number> ){
+		try {
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.value, (x)=>console.log(x) );
+		}
+		catch (err) {
+			e.source.value = <number>n.value;
+			this.snackbar.exception( err, (m)=>console.error(m) );
+		}
+	}
+	async dateInput( n:Variable, e:MatDatepickerInputEvent<Date, any> ){
+		try {
+			let date = DateUtils.beginningOfDay( e.value );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(date), (x)=>console.log(x) );
+			debugger;
+		}
+		catch (err) {
+			e.target["value"] = n.value;
+			this.snackbar.exception( err, (m)=>console.error(m) );
+		}
+	}
+	async changeDate( n:Variable, e:Event ){
+		try {
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(<Date>e.target["value"]), (x)=>console.log(x) );
+			debugger;
+		}
+		catch (err) {
+			e.target["value"] = n.value;
+			this.snackbar.exception( err, (m)=>console.error(m) );
+		}
+	}
+
 	routerLink(n:UaNode):string[]{
-		return [`./${n.browse}`];
+		return [ `./${n.browseFQ(this.connection.defaultBrowseNs)}` ];
 	}
 	test(r:UaNode){ debugger;}
 	get columns():string[]{ return this.profile.columns; }
+	EAccessLevel = EAccessLevel;
 	ETypes = ETypes;
 	get _iot():Gateway{ return this.pageData.gateway; }
 	isAllSelected = computed<boolean>( ()=>{ return this.selections.selected.length==this.nodes.length; } );
@@ -155,7 +199,6 @@ export class NodeDetail implements OnInit, OnDestroy {
 	get connection():ServerCnnctn{ return this.pageData.connection; }
 	get cnnctnTarget():string{ return this.connection.target; }
 	pageData:NodePageData;
-	//get parent():types.ExpandedNode{ return this.pageData.parent; }
 	get profile(){ return this.pageData.route.profile; }
 	get nodes(){ if(!this.pageData) debugger; return this.pageData?.nodes; }
 	get variables():Variable[]{ return <Variable[]>this.nodes.filter((x)=>x.nodeClass==ENodeClass.Variable); }
@@ -163,12 +206,10 @@ export class NodeDetail implements OnInit, OnDestroy {
 	routerSubscription:Subscription;
 	selections = new SelectionModel<UaNode>(true, []);
 	get showSnapshot():boolean{ return this.visibleColumns.includes("snapshot");}
-	//#sideNav = signal<NodeRoute>( null );
 	sideNav = model.required<NodeRoute>();
 	get sort(){ return this.profile.sort; };
 	get subscription(){return this.#subscription;} #subscription:Subscription;
 	set subscription(x){ if(!x && this.subscription) this.subscription.unsubscribe(); this.#subscription=x; }
-	viewPromise:Promise<boolean>;
 	get visibleColumns(){ return this.profile.visibleColumns; }
 
 	#routeService = inject( OpcNodeRouteService );

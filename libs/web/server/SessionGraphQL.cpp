@@ -1,6 +1,6 @@
 #include <jde/web/server/SessionGraphQL.h>
-#include <jde/framework/io/proto.h>
-#include <jde/framework/io/json.h>
+#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/json.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/web/server/Sessions.h>
@@ -41,8 +41,8 @@ namespace Jde::Web::Server{
 				for( let& session : sessions )
 					inClause += std::to_string( session->UserPK.Value ) + ",";
 				auto q = "query{ users(id:["+inClause.substr(0, inClause.size()-1)+"]){id loginName provider{id name}} }";
-				users = Json::AsObject( co_await (*_appClient->Query<jvalue>(move(q), UserPK)) );
-				Trace( _tags | ELogTags::Pedantic, "users={}"sv, serialize(users) );
+				users = Json::AsObject( co_await (*_appClient->Query<jvalue>(move(q), {}, UserPK)) );
+				TRACET( _tags | ELogTags::Pedantic, "users={}"sv, serialize(users) );
 				for( let& vuser : Json::AsArrayPath(users, "data/users") ){
 					let& user = Json::AsObject(vuser);
 					userDomainLoginNames[{Json::AsNumber<Jde::UserPK::Type>(user,"id")}] = make_tuple( Json::AsSVPath(user, "provider/name"), Json::AsString(user, "loginName") );
@@ -96,7 +96,7 @@ namespace Jde::Web::Server{
 		//TODO check permissions
 		uint rows = 0;
 		try{
-			if( auto sessionId = _mutation.FindParam("id"); sessionId )
+			if( auto sessionId = _mutation.FindPtr("id"); sessionId )
 				rows = Sessions::Remove( Str::TryTo<SessionPK>(Json::AsString(*sessionId), nullptr, 16).value_or(0) ) ? 1 : 0;
 			_result["rowCount"] =	rows;
 		}

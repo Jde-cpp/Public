@@ -1,5 +1,5 @@
 #include "globals.h"
-#include <jde/framework/str.h>
+#include <jde/fwk/str.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
@@ -197,7 +197,7 @@ namespace Tests{
 	}
 	α Tests::GetGroup( str target, UserPK executer )ε->jobject{
 		auto y = SelectGroup( target, executer, true );
-		Trace{ _tags, "{}", serialize(y) };
+		TRACE( "{}", serialize(y) );
 		if( y.empty() ){
 			createGroup( target, executer );
 			y = SelectGroup( target, executer, false );

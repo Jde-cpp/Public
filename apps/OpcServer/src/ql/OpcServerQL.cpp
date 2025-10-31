@@ -1,5 +1,5 @@
 #include "OpcServerQL.h"
-#include <jde/framework/io/file.h>
+#include <jde/fwk/io/file.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/ql/ql.h>
@@ -24,11 +24,10 @@ namespace Jde::Opc::Server{
 		try{
 			jarray y;
 			for( let& file : _files ){
-				Information{ ELogTags::Startup, "Mutation: '{}'", file.string() };
+				INFOT( ELogTags::Startup, "Mutation: '{}'", file.string() );
 				let text = IO::Load( file );
-				auto requests = QL::Parse( move(text), Schemas() ); THROW_IF( !requests.IsMutation(), "Query is not a mutation" );
+				auto requests = QL::Parse( move(text), {}, Schemas() ); THROW_IF( !requests.IsMutation(), "Query is not a mutation" );
 				for( auto&& m : requests.Mutations() ){
-					Trace{ ELogTags::Test, "mutation: {}", m.ToString() };
 					m.Args["$silent"] = true;
 					try{
 						y.push_back( co_await QL::QLAwait<jvalue>{move(m), {UserPK::System}} );
@@ -37,7 +36,7 @@ namespace Jde::Opc::Server{
 					{}
 				}
 			}
-			Debug{ ELogTags::App, "Upsert: {}", serialize(y) };
+			DBGT( ELogTags::App, "Upsert: {}", serialize(y) );
 			Resume();
 		}
 		catch( IException& e ){

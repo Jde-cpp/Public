@@ -1,8 +1,9 @@
 #pragma once
-#include "FilterQL.h"
-#include <jde/framework/io/json.h>
+#include <jde/fwk/io/json.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/SelectClause.h>
+#include "FilterQL.h"
+#include "Input.h"
 #define let const auto
 
 namespace Jde::DB{ struct Column; struct Row; struct Key; };
@@ -14,8 +15,8 @@ namespace Jde::QL{
 		mutable sp<DB::Column> DBColumn;
 	};
 	struct JsonMembers{ string ParentTable; string ColumnName; };
-	struct TableQL final{
-		TableQL( string jName, jobject args, const vector<sp<DB::AppSchema>>& schemas, bool system=false, SRCE )ε;
+	struct TableQL final : Input{
+		TableQL( string jName, jobject args, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool system=false, SRCE )ε;
 
 		α AddFilter( const string& column, const jvalue& value )ι->void;
 		α DBTableName()Ι->str{ return DBTable ? DBTable->Name : Str::Empty(); }
@@ -37,12 +38,12 @@ namespace Jde::QL{
 		α ToString()Ι->string;
 		α TrimColumns( const jobject& fullOutput )Ι->jobject;
 
-		jobject Args;
 		vector<ColumnQL> Columns;
 		sp<DB::View> DBTable;
 		mutable vector<QL::JsonMembers> JsonMembers; //used to map db columns to json names for results.
 		string JsonName;
 		vector<TableQL> Tables;
+		vector<TableQL> InlineFragments; //... on Type { }
 		bool ReturnRaw{true};
 	};
 	template<>

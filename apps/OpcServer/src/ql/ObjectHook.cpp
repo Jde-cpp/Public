@@ -25,13 +25,13 @@ namespace Jde::Opc::Server{
 		α Table()ε->sp<DB::View>{ return GetViewPtr( "nodes" ); }
 		α GetBrowseName()ι->BrowseNameAwait::Task;
 		α Create( BrowseName&& browse, NodePK parent )ι->DB::ScalerAwait<NodePK>::Task;
-		α CreateVariables( jarray& variables, NodePK parent )ι->VariableInsertAwait::Task;
+		α CreateVariables( const jarray& variables, NodePK parent )ι->VariableInsertAwait::Task;
 	};
 	α ObjectQLAwait::GetBrowseName()ι->BrowseNameAwait::Task{
-		BrowseName browseName{ Mutation.GetParam("browseName").as_object() };
+		BrowseName browseName{ Mutation.As<jobject>("browseName", _sl) };
 		try{
 			co_await BrowseNameAwait{ &browseName };
-			let& parent = GetUAServer().GetObject( NodeId{Mutation.GetParam("parent").as_object()} );
+			let& parent = GetUAServer().GetObject( NodeId{Mutation.As<jobject>("parent", _sl)} );
 			if( GetUAServer().Find(parent.PK, browseName.PK) ){
 				ResumeExp( Exception{_sl, "Object exists parent: {}, browseName: '{}'", Ƒ("{:x}", parent.PK), browseName.ToString()} );
 				co_return;
@@ -56,7 +56,7 @@ namespace Jde::Opc::Server{
 				object.InsertParams()
 			});
 			ua._objects.try_emplace( object.PK, object );
-			auto variables = m.FindParam( "variables" );
+			auto variables = m.FindPtr( "variables" );
 			if( variables && variables->is_array() )
 				CreateVariables( variables->get_array(), object.PK );
 			else
@@ -66,12 +66,12 @@ namespace Jde::Opc::Server{
 			ResumeExp( move(e) );
 		}
 	}
-	α ObjectQLAwait::CreateVariables( jarray& variables, NodePK parentPK )ι->VariableInsertAwait::Task{
+	α ObjectQLAwait::CreateVariables( const jarray& variables, NodePK parentPK )ι->VariableInsertAwait::Task{
 		try{
 			for( auto&& vAttrValue : variables ){
 				auto& o = vAttrValue.as_object();
 				auto browse = BrowseNameAwait::GetOrInsert( Json::AsObject(o,"browseName") );
-				co_await VariableInsertAwait{ Variable{move(o), parentPK, move(browse)}, _sl };
+				co_await VariableInsertAwait{ Variable{o, parentPK, move(browse)}, _sl };
 			}
 			Resume( jobject{{"complete", true}} );
 		}

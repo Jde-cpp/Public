@@ -1,71 +1,145 @@
 #include "NodeQLAwait.h"
-#include <jde/framework/collections/collections.h>
+#include <jde/fwk/utils/collections.h>
+#include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/Variant.h>
 #include "../UAClient.h"
 #include "../async/ConnectAwait.h"
-#include "../uatypes/uaTypes.h"
-
+#include "../async/ReadValueAwait.h"
 
 #define let const auto
 namespace Jde::Opc::Gateway{
 
 	α NodeQLAwait::Execute()ι->TAwait<sp<UAClient>>::Task{
-		auto opcId = Json::FindString(_query.Args,"opc").value_or("");
+		auto opcId{ _query.FindPtr<jstring>("opc") };
 		try{
-			Trace( ELogTags::Test, "opc: {}, UserPK: {:x}, SessionId: {:x}", opcId, _executer.Value, _sessionPK );
-			_client = co_await ConnectAwait{ move(opcId), _sessionPK, _executer, _sl };
-			optional<NodeId> nodeId;
-			jobject jnode;
-			if( auto p = Json::FindSV(_query.Args,"path"); p ){
-				auto ex = _client->ToNodeId( *p );
-				nodeId = ex.nodeId;
-				if( _query.FindColumn("eid") )
-					jnode = ex.ToJson();
-				else if( _query.FindColumn("id") )
-					jnode = nodeId->ToJson();
+			_client = co_await ConnectAwait{ opcId ? string{move(*opcId)} : string{}, _sessionPK, _executer, _sl };
+			BrowsePathResponse pathNodes;
+			NodeId nodeId;
+			flat_map<NodeId, jobject> jParents;
+			flat_map<NodeId, jobject> jChildren;
+			auto parentsQL{ _query.FindTable("parents") };
+			//auto childrenQL{ _query.FindTable("children") };
+			if( auto nodePath = _query.FindPtr<jstring>("path"); nodePath ){
+				pathNodes = _client->BrowsePathsToNodeIds( *nodePath, parentsQL!=nullptr );
+				const bool savePath{ parentsQL && parentsQL->FindColumn("path") };
+				for( auto node = pathNodes.begin(); node != pathNodes.end(); ++node ){
+					if( node->second.has_value() ){
+						nodeId = node->second->nodeId;
+						if( savePath )
+							jParents.try_emplace( node->second->nodeId, jobject{{"path", node->first}});
+						continue;
+					}
+					else if( node==pathNodes.begin() )
+						ResumeExp( UAClientException{node->second.error(), _client->Handle(), {}, _sl} );
+					else
+						Browse( move(pathNodes), std::prev(node)->first, parentsQL, move(jParents) );
+					co_return;
+				}
+				auto lastNode = std::prev(jParents.end());
+				nodeId = lastNode->first;
+				jParents.erase( lastNode );
 			}
-			else
-				nodeId = NodeId::FromJson( _query.Args );
-			AddAttributes( move(*nodeId), move(jnode) );
+			else if( auto children = _query.FindTable("children"); children ){
+				Browse( NodeId{_query.Args}, move(*children) );
+				co_return;
+			}
+			else{
+				nodeId = NodeId{ _query.Args };
+				pathNodes.emplace( string{}, ExNodeId{_query.Args} );
+			}
+			AddAttributes( move(nodeId), parentsQL, move(jParents) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	flat_map<string,UA_AttributeId> _attributes{
-		{"description", UA_ATTRIBUTEID_DESCRIPTION},
-		{"value", UA_ATTRIBUTEID_VALUE},
-		{"browseName", UA_ATTRIBUTEID_BROWSENAME},
-		{"name", UA_ATTRIBUTEID_DISPLAYNAME},
-		{"dataType", UA_ATTRIBUTEID_DATATYPE}
-	};
-	α NodeQLAwait::AddAttributes( NodeId&& nodeId, jobject&& jnode )ι->void{
+	α NodeQLAwait::Browse( NodeId parentId, QL::TableQL childrenQL )ι->TAwait<Browse::Response>::Task{
 		try{
-			let size = _query.Columns.size();
-			auto ids = Reserve<UA_AttributeId>( size );
-			auto readMembers = Reserve<string>( size );
-			auto readIds = Reserve<UA_ReadValueId>( size );
-			for( let& c : _query.Columns ){
-				if( auto p = _attributes.find(c.JsonName); p != _attributes.end() ){
-					readIds.push_back( UA_ReadValueId{nodeId, (UA_UInt32)p->second, UA_STRING_NULL, { 0, UA_STRING_NULL }} );
-					ids.push_back(p->second);
-					readMembers.push_back( p->first );
-				}
+			flat_map<NodeId, jobject> jChildren;
+			auto browseResp = co_await Browse::FoldersAwait{ parentId, childrenQL, _client, _sl };
+			browseResp.SetJson( jChildren, childrenQL.FindColumn("id") );
+			AddAttributes( move(browseResp), move(childrenQL), move(jChildren) );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α NodeQLAwait::AddAttributes( Browse::Response&& browseResp, QL::TableQL&& childrenQL, flat_map<NodeId, jobject> jChildren )ι->TAwait<ReadResponse>::Task{
+		try{
+			auto resp = co_await ReadAwait{ move(browseResp), move(childrenQL), _client };
+			resp.SetJson( jChildren );
+			jarray a;
+			for( auto& [id, j] : jChildren )
+				a.emplace_back( move(j) );
+			jobject jReqNode{{"children", move(a)}};
+			Resume( _query.ReturnRaw ? jReqNode : jobject{{"node", jReqNode}} );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α NodeQLAwait::Browse( BrowsePathResponse pathNodes, str lastGoodParent, QL::TableQL* parentsQL, flat_map<NodeId, jobject> jParents )ι->TAwait<Browse::Response>::Task{
+		auto parent  = pathNodes.find( lastGoodParent );
+		std::expected<ExNodeId,StatusCode> nodeId{ parent->second };
+		for( auto pathNode = std::next(parent); nodeId.has_value() && pathNode!=pathNodes.end(); parent = pathNode, ++pathNode ){
+			try{
+				let response = co_await Browse::FoldersAwait{ parent->second.value().nodeId, UA_BROWSERESULTMASK_BROWSENAME, _client, _sl };
+				const BrowseName reqBrowse{ Str::Split(pathNode->first,'/').back(), _client->DefaultBrowseNs() };
+				const bool savePath{ parentsQL && parentsQL->FindColumn("path") };
+				let found = !response.VisitWhile( 0, [&]( const UA_ReferenceDescription& ref ){
+					let shouldContinue = reqBrowse!=ref.browseName;
+					if( !shouldContinue ){
+						nodeId = ExNodeId{ ref.nodeId };
+						if( savePath )
+							jParents.try_emplace( nodeId->nodeId, jobject{{"path", pathNode->first}} );
+						pathNode->second = nodeId;
+					}
+					return shouldContinue;
+				} );
+				if( !found )
+					nodeId = pathNode->second;
 			}
-			if( readIds.empty() )
-				return Resume( move(jnode) );
+			catch( exception& e ){
+				ResumeExp( move(e) );
+				co_return;
+			}
+		}
+	 	AddAttributes( move(nodeId), parentsQL, move(jParents) );
+	}
 
-			UA_ReadRequest request{
-				.nodesToReadSize = readIds.size(),
-				.nodesToRead = readIds.data()
-			};
-			ReadResponse response{ UA_Client_Service_read(*_client, request), _client->Handle(), nodeId, _sl };
-			for( uint i=0; i<std::min(readMembers.size(), (uint)response.resultsSize); ++i ){
-				Variant value = response.results[i].status ? Variant{ response.results[i].status } : Variant{ response.results[i].value };
-				BREAK_IF( i==2 );
-				jnode[readMembers[i]] = value.ToJson( true );
+	α NodeQLAwait::AddAttributes( ExpectedNodeId nodeId, QL::TableQL* parentQL, flat_map<NodeId, jobject> parents )ι->TAwait<ReadResponse>::Task{
+		try{
+			jobject jReqNode;
+			if( nodeId ){
+				if( auto p = parents.find( nodeId->nodeId ); p!=parents.end() )
+					parents.erase( p );
+				ReadRequest request{ nodeId->nodeId, _query };
+				if( parentQL )
+					request.Add( *parentQL, parents );
+				auto resp = co_await ReadAwait{ move(request), _client };
+			 	auto json = resp.GetJson();
+				if( auto p = json.find( nodeId->nodeId ); p!=json.end() )
+					jReqNode = move(p->second);
+				for( auto& [id, jparent] : parents ){
+				 	if( auto p = json.find(id); p!=json.end() )
+						jparent.insert( p->second.begin(), p->second.end() );
+				}
+				if( _query.FindColumn("id") )
+					nodeId->Add( jReqNode );
+				TRACET( ELogTags::Test, "jReqNode: {}", serialize(jReqNode) );
 			}
-			Resume( _query.ReturnRaw ? jnode : jobject{{"node", jnode}} );
+			else
+				jReqNode = UAException::ToJson( nodeId.error() );
+			if( parentQL ){
+				jarray jparents;
+				for( auto& [id, jparent] : parents ){
+					if( parentQL->FindColumn("id") )
+						id.Add( jparent );
+					jparents.emplace_back( move(jparent) );
+				}
+				jReqNode["parents"] = move(jparents);
+			}
+			Resume( _query.ReturnRaw ? jReqNode : jobject{{"node", jReqNode}} );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

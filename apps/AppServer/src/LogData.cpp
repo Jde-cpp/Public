@@ -1,7 +1,6 @@
 ﻿#include "LogData.h"
 #include <jde/app/shared/StringCache.h>
 #include <jde/app/shared/proto/App.FromServer.h>
-#include <jde/db/DBQueue.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/db.h>
 #include <jde/db/IDataSource.h>
@@ -18,7 +17,6 @@
 #define let const auto
 
 namespace Jde::App{
-	sp<DB::DBQueue> _pDbQueue;
 	sp<DB::AppSchema> _logSchema;
 	sp<Access::Authorize> _authorizer = ms<Access::Authorize>( "App" );
 	sp<Access::AccessListener> _listener;
@@ -49,8 +47,6 @@ namespace Server{
 				DB::SyncSchema( *_logSchema, QLPtr() );
 			}
 			co_await Access::Server::Configure( {accessSchema, _logSchema}, QLPtr(), UserPK{UserPK::System}, _authorizer, _listener );
-			_pDbQueue = ms<DB::DBQueue>( _logSchema->DS() );
-			Process::AddShutdown( _pDbQueue );
 			EndAppInstances();
 		}
 		catch( IException& e ){
@@ -68,8 +64,9 @@ namespace Server{
 	}
 
 }
+/*
 	#define _pQueue if( auto p = _pDbQueue; p )p
-	α Server::SaveString( Proto::FromClient::EFields field, StringMd5 id, string value, SL sl )ι->void{
+	α Server::SaveString( Proto::FromClient::EFields field, StringMd5 id, string value, SL )ι->void{
 		sv table = "log_messages";
 		if( field==Proto::FromClient::EFields::FileId )
 			table = "log_files";
@@ -85,9 +82,10 @@ namespace Server{
 			//return ERRX( "id '{}' does not match crc of '{}'", id, value );//locks itself on server log.
 		sql.Params.push_back( {id} );
 		sql.Params.push_back( {move(value)} );
-		_pQueue->Push( move(sql), sl );
 	}
+*/
 }
+
 namespace Jde{
 	α App::AddInstance( str applicationName, str hostName, uint processId )ε->std::tuple<AppPK, AppInstancePK>{
 		AppPK applicationId;
@@ -135,8 +133,8 @@ namespace Jde{
 		} );
 		return pApplications;
 	}
-*/
-	α App::SaveMessage( AppPK applicationId, AppInstancePK instanceId, const Proto::FromClient::LogEntry& m, SL sl )ι->void{
+
+	α App::SaveMessage( AppPK applicationId, AppInstancePK instanceId, const Log::Proto::LogEntryClient& m, SL )ι->void{
 		let variableCount = std::min( 5, m.args().size() );
 		vector<DB::Value> params{
 			{applicationId},
@@ -161,8 +159,8 @@ namespace Jde{
 			params.push_back( {m.args()[i]} );
 		}
 		os << ")";
-		_pQueue->Push( {os.str(), params, true}, sl );
 	}
+*/
 	namespace App{
 		α Data::LoadEntries( QL::TableQL table )ε->Proto::FromServer::Traces{
 			auto statement = QL::SelectStatement( table, true );

@@ -1,10 +1,10 @@
 #pragma once
-#include <jde/framework/process.h>
+#include <jde/fwk/process/process.h>
 #include <jde/web/server/exports.h>
 #include <jde/web/server/usings.h>
-#include <jde/framework/io/proto.h>
+#include <jde/fwk/io/proto.h>
 #include <jde/ql/usings.h>
-#include "../../../../../Framework/source/threading/Mutex.h"
+#include <jde/fwk/co/CoLock.h>
 
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Web::Server{
@@ -14,7 +14,7 @@ namespace Jde::Web::Server{
 		α Run()ι->void;
 		α Id()Ι->SocketId{ return _id; }
 		α LogWrite( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;
-		α AddSubscription( string&& query, RequestId requestId, SRCE )ε->vector<QL::SubscriptionId>;
+		α AddSubscription( string&& query, jobject variables, RequestId requestId, SRCE )ε->vector<QL::SubscriptionId>;
 		α RemoveSubscription( vector<QL::SubscriptionId>&& ids, RequestId requestId, SRCE )ι->void;
 		β WriteSubscription( const jvalue& j, RequestId requestId )ι->void=0;
 		β WriteSubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void=0;

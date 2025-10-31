@@ -2,11 +2,12 @@
 #include <open62541/server_config_default.h>
 #include <open62541/plugin/accesscontrol_default.h>
 #include <open62541/plugin/certificategroup_default.h>
-#include <jde/crypto/OpenSsl.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/app/client/IAppClient.h>
 
 #define let const auto
-namespace Jde::Opc::Server {
+namespace Jde::Opc::Server{
+	constexpr ELogTags _tags = (ELogTags)EOpcLogTags::Opc;
 	UAConfig::UAConfig()ε:
 		UA_ServerConfig{
 			.logging{ &_logger },
@@ -25,7 +26,7 @@ namespace Jde::Opc::Server {
 
 /*		for( uint i=0; i<config.securityPoliciesSize; ++i ){
 			let& sp = config.securityPolicies[i];
-			Information{ ELogTags::App, "[{}]PolicyUri={}", i, ToSV(sp.policyUri) };
+			INFOT( ELogTags::App, "[{}]PolicyUri={}", i, ToSV(sp.policyUri) );
 			if( ToSV(sp.policyUri)=="http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256" )
 				UA_AccessControl_default( &config, false/ *allowAnonymous* /, &sp.policyUri, usernamePasswordsSize, usernamePasswords );
 		}*/
@@ -64,8 +65,10 @@ namespace Jde::Opc::Server {
 			if( !fs::exists(dir) || !fs::is_directory(dir) )
 				continue;
 			for( let& entry : fs::directory_iterator(dir) ){
-				if( entry.path().extension()==".pem" || entry.path().extension()==".crt" )
+				if( entry.path().extension()==".pem" || entry.path().extension()==".crt" ){
 					trustedCerts.push_back( *ToUAByteString(Crypto::ReadCertificate({entry.path()})).release() );
+					INFO( "Added certificate:  {}", entry.path().string() );
+				}
 			}
 		}
 		UA_ByteString issuerList; uint issuerListSize = 0;
