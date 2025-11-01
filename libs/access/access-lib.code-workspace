@@ -1,0 +1,128 @@
+{
+	"folders": [
+		{
+			"path": "config"
+		},
+		{
+			"path": "tests"
+		},
+		{
+			"path": "src",
+			"name": "access"
+		},
+		{
+			"path": "../ql",
+			"name": "ql"
+		},
+		{
+			"path": "../db/src",
+			"name": "db"
+		},
+		{
+			"path": "../../include/jde",
+			"name": "headers"
+		},
+		{
+			"path": "../../build",
+			"name": "pbuild"
+		},
+		{
+			"path": "../../../Framework/source",
+			"name": "Framework"
+		},
+		{
+			"path": "../db/drivers/mysql",
+			"name": "MySql"
+		},
+		{
+			"path": "../db/drivers/mysql",
+			"name": "MySqlOld"
+		}
+	],
+	"settings": {
+		"window.title": "Access",
+		"name": "access",
+		"sourceDir": "${env:JDE_DIR}/jde/libs/access",
+		"buildRoot": "/mnt/ram/linux/g++-14/jde",
+		"buildDir": "${config:buildRoot}/${config:buildTarget}/libs/${config:name}",
+		"buildTarget": "Debug",
+		"exe": "tests/Jde.Access.Tests",
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [{
+			"label": "build",
+			"type": "shell",
+			"command": "cd ${config:buildDir}; tput reset; make -j;",
+			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+			"group": { "kind": "build", "isDefault": true }
+		},
+		{
+			"label": "buildProject",
+			"type": "shell",
+			"command": "tput reset;source $JDE_DIR/Public/build/buildFunctions.sh;buildProject ${fileWorkspaceFolder} ${config:buildRoot}/${config:buildTarget};",
+			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+			"group": { "kind": "build", "isDefault": false }
+		},
+		{
+			"label": "compile",
+			"type": "shell",
+			"dependsOn": ["clearTerminal"],
+			"command": "tput reset; source $JDE_DIR/Public/build/buildFunctions.sh;compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot}/${config:buildTarget};",
+			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+			"group": { "kind": "build", "isDefault": false }
+		},
+		{
+			"label": "cmake",
+			"type": "shell",
+			"command": "mkdir -p ${config:buildDir}; cd ${config:buildDir}; tput reset; rm -f CMakeCache.txt; cmake $JDE_DIR/Public/libs/access --preset linux-jde-debug",
+			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+			"group": { "kind": "build", "isDefault": false }
+		},
+		{
+			"label": "clean",
+			"type": "shell",
+			"command": "tput reset; cd ${config:buildDir}; cd ..; rm -rf Debug; mkdir Debug;",
+		},
+		{
+			"label": "run",
+			"type": "shell",
+			"dependsOn": ["build", "clearTerminal"],
+			"command": "./${config:exe}",
+			"args": ["-c", "-settings=${env:JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet"],
+			"options": {
+				"cwd": "${config:buildDir}",
+				"env": {
+					"JDE_MYSQL_CREDS": "root:dfs12975adsf"
+				}
+			}
+		}
+	]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [{
+				"name": "Debug",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${config:buildDir}/${config:exe}",
+				"args": [
+					"-settings=${env:JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet",
+					"-tests"
+				],
+				"stopAtEntry": false,
+				"cwd": "${config:buildDir}",
+				"environment": [
+					{ "name": "JDE_MYSQL_USER", "value": "root" },
+					{ "name": "JDE_MYSQL_PWD", "value": "dfs12975adsf" }
+				],
+				"externalConsole": false,
+				"MIMode": "gdb",
+				"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
+				"showDisplayString": true,
+				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
+				"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.27":"${env:REPO_DIR}/glibc-2.27" },
+				"preLaunchTask": "build"
+			}]
+		}
+}

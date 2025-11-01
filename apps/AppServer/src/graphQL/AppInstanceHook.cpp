@@ -7,7 +7,7 @@
 
 namespace Jde::App::Server{
 	struct StartAwait : TAwait<jvalue>{
-		StartAwait( QL::MutationQL /*mutation*/, jobject /*variables*/, UserPK, SL sl )ι:
+		StartAwait( QL::MutationQL /*mutation*/, UserPK, SL sl )ι:
 			TAwait<jvalue>{ sl }
 		{}
 		α Suspend()ι->void override{}
@@ -16,18 +16,17 @@ namespace Jde::App::Server{
 		}
 	};
 
-	α AppInstanceHook::Start( const QL::MutationQL& m, jobject variables, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
+	α AppInstanceHook::Start( const QL::MutationQL& m, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
 		//StartAwait( m, userPK, sl );
-		return m.JsonTableName=="applicationInstance" ? mu<StartAwait>( m, variables, userPK, sl ) : nullptr;
+		return m.JsonTableName=="applicationInstance" ? mu<StartAwait>( m, userPK, sl ) : nullptr;
 	}
 
 	struct StopAwait : TAwait<jvalue>{
-		StopAwait( QL::MutationQL mutation, jobject variables, UserPK userPK, sp<IApp> appClient, SL sl )ι:
+		StopAwait( QL::MutationQL mutation, UserPK userPK, sp<IApp> appClient, SL sl )ι:
 			TAwait<jvalue>{ sl },
 			_mutation{mutation},
 			_userPK{userPK},
-			_appClient{move(appClient)},
-			_variables{variables}
+			_appClient{move(appClient)}
 		{}
 		α Suspend()ι->void override{
 			let id = _mutation.Id<AppInstancePK>();
@@ -49,7 +48,7 @@ namespace Jde::App::Server{
 		jobject _variables;
 	};
 
-	α AppInstanceHook::Stop( const QL::MutationQL& m, jobject variables, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
-		return m.JsonTableName=="applicationInstance" ? mu<StopAwait>( m, variables, userPK, _appClient, sl ) : nullptr;
+	α AppInstanceHook::Stop( const QL::MutationQL& m, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{
+		return m.JsonTableName=="applicationInstance" ? mu<StopAwait>( m, userPK, _appClient, sl ) : nullptr;
 	}
 }
