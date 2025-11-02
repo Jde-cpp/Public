@@ -60,7 +60,8 @@ namespace Jde::QL{
 	template<> Ξ QLAwait<jarray>::Execute()ι->TAwait<jvalue>::Task{
 		try{
 			jvalue v = co_await VQLAwait{move(_request), move(_statement), _executer, base::_sl};
-			Resume( move(Json::AsArray(v)) );
+			auto a = Json::AsArray(v);
+			Resume( move(a) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

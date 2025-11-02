@@ -1,9 +1,9 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "LogTests.Archive",
+		tests: "LogTests.Remote",
 		recreateDB:: true,
-		embeddedAppServer: false,
+		embeddedAppServer: true,
 		embeddedOpcServer: false
 	},
 	opc: args.opc,
@@ -80,9 +80,9 @@ local args = import 'args.libsonnet';
 			timeZone: "America/New_York",
 			delay: "PT1M"
 		},
-		remote:{
-			delay: "PT2S"
-		}
+		// remote:{
+		// 	delay: "PT2S"
+		// }
 	},
 	workers:{
 		executor: {threads: 2},

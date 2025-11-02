@@ -139,7 +139,7 @@ namespace Jde::App{
 	ProtoLog::ProtoLog( const jobject& settings )ε:
 		Logging::ILogger{ settings },
 		_delay{ Json::FindDuration(settings, "delay", ELogLevel::Error).value_or(1min) },
-		_path{ Json::FindString(settings, "path").value_or((Process::ApplicationDataFolder()/"logs").string()) },
+		_path{ Json::FindString(settings, "path").value_or((Process::AppDataFolder()/"logs").string()) },
 		_tz{ Json::FindTimeZone(settings, "timeZone", *std::chrono::current_zone()) },
 		_today{ Chrono::LocalYMD(Clock::now(), _tz) }{
 		Executor();//locks up if starts in StartTimer.
@@ -170,6 +170,9 @@ namespace Jde::App{
 				}
 			}
 		}
+	}
+	α ProtoLog::Init()ι->void{
+		Logging::Add<ProtoLog>( "proto" );
 	}
 
 	α ProtoLog::Shutdown( bool terminate )ι->void{

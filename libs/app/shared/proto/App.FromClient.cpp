@@ -114,6 +114,13 @@ namespace Jde::App{
 			*sub.mutable_variables() = serialize(move(variables));
 		});
 	}
+	α FromClient::LogEntries( vector<Logging::Entry>&& entries )ι->PFromClient::Transmission{
+		PFromClient::Transmission t;
+		for( auto&& entry : entries ){
+			*t.add_messages()->mutable_log_entry() = LogEntryClient( move(entry) );
+		}
+		return t;
+	}
 
 	α FromClient::LogEntryClient( Logging::Entry&& e )ι->Log::Proto::LogEntryClient{
 		Log::Proto::LogEntryClient proto;

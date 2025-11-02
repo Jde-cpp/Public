@@ -1,6 +1,8 @@
 #include <jde/fwk/log/MemoryLog.h>
 #include <jde/fwk/chrono.h>
 #include <jde/app/log/ProtoLog.h>
+#include <jde/app/client/RemoteLog.h>
+#include "../src/GatewayAppClient.h"
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{
@@ -38,5 +40,12 @@ namespace Jde::Opc::Gateway::Tests{
 		std::this_thread::sleep_for( 100s );
 		DBG( "archiveFile: {}", archiveFile.string() );
 		ASSERT_TRUE( fs::exists(archiveFile) );
+	}
+
+	TEST_F( LogTests, Remote ){
+		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "Test message" };
+		App::Client::RemoteLog remote{ {{"delay", "PT0.001S"}}, AppClient() };
+		remote.Write( e );
+		std::this_thread::sleep_for( 10s );
 	}
 }

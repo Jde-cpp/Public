@@ -63,14 +63,14 @@ local args = import 'args.libsonnet';
 			allowHeaders: "Content-Type, Authorization"
 		},
 		ssl: {
-			certificate:: "{ApplicationDataFolder}/ssl/certs/cert.pem",
+			certificate:: "{AppDataFolder}/ssl/certs/cert.pem",
 			certificateAltName:: "DNS:localhost,IP:127.0.0.1",
 			certficateCompany:: "Jde-Cpp",
 			certficateCountry:: "US",
 			certficateDomain:: "localhost",
-			privateKey:: "{ApplicationDataFolder}/ssl/private/private.pem",
-			publicKey:: "{ApplicationDataFolder}/ssl/public/public.pem",
-			dh:: "{ApplicationDataFolder}/certs/dh.pem",
+			privateKey:: "{AppDataFolder}/ssl/private/private.pem",
+			publicKey:: "{AppDataFolder}/ssl/public/public.pem",
+			dh:: "{AppDataFolder}/certs/dh.pem",
 			passcode:: "$(JDE_PASSCODE)"
 		},
 		clientSettings:{

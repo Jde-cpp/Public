@@ -93,7 +93,7 @@ namespace Jde{
 			throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Critical, "promise is null" };
 		if( !base::Promise()->Value() )
 			throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Critical, "Value is null" };
-		Result result{ std::move(*base::Promise()->Value()) };
+		Result result( std::move(*base::Promise()->Value()) );  //don't use initializer list.
 		base::_h = nullptr;
 		return result;
 	}

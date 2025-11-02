@@ -1,11 +1,18 @@
 #include <jde/app/client/IAppClient.h>
 #include <jde/fwk/io/proto.h>
 #include <jde/ql/IQL.h>
+#include <jde/app/log/ProtoLog.h>
 #include <jde/app/client/appClient.h>
+#include <jde/app/client/RemoteLog.h>
 #include <jde/app/client/awaits/SocketAwait.h>
 
 #define let const auto
 namespace Jde::App::Client{
+	α IAppClient::InitLogging( sp<App::Client::IAppClient> client )ι->void{
+		App::ProtoLog::Init();
+		App::Client::RemoteLog::Init( move(client) );
+		Logging::Init();
+	}
 	α IAppClient::QueryArray( string&& q, jobject variables, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
 		return QLServer()->QueryArray( move(q), move(variables), UserPK(), returnRaw, sl );
 	}
@@ -18,9 +25,7 @@ namespace Jde::App::Client{
 	α IAppClient::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Web::FromServer::SessionInfo>>{
 	 	return mu<Client::SessionInfoAwait>( sessionPK, _session, sl );
 	}
-	// α IAppClient::SessionInfoAwait( Web::Jwt&& jwt, SL sl )ι->Client::SessionInfoAwait{
-	// 	return Client::SessionInfoAwait{ move(jwt), sl };
-	// }
+
 	constexpr ELogTags _tags{ ELogTags::SocketClientWrite };
 	using Web::Client::ClientSocketAwait;
 	α IAppClient::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ε->ClientSocketAwait<Web::FromServer::SessionInfo>{
@@ -50,5 +55,11 @@ namespace Jde::App::Client{
 		co_await session->Close();
 		session = nullptr;
 		LOGSL( ELogLevel::Information, sl, tags, "ClosedSocketSession" );
+	}
+	α IAppClient::Write( vector<Logging::Entry>&& entries )ι->void{
+		auto session = _session;
+		if( !session )
+			return;
+		session->Write( FromClient::LogEntries( move(entries) ) );
 	}
 }

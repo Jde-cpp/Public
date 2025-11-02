@@ -19,10 +19,10 @@ namespace Jde::App::FromClient{
 	Φ Status( vector<string>&& details )ι->PFromClient::Transmission;
 	Φ Session( SessionPK sessionId, RequestId requestId )ι->StringTrans;
 	Φ Subscription( string&& query, jobject variables, RequestId requestId )ι->string;
+	Φ LogEntries( vector<Logging::Entry>&& entries )ι->PFromClient::Transmission;
 	Φ LogEntryClient( Logging::Entry&& m )ι->Log::Proto::LogEntryClient;
 	Φ LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile;
 	Φ FromLogEntry( Log::Proto::LogEntryClient&& m )ι->Logging::Entry;
 	Φ ToString( uuid id, string&& value )ι->Log::Proto::String;
-	//Φ AddStringField( PFromClient::Transmission& t, Log::Proto::EFields field, uuid id, string&& value )ι->void;
 }
 #undef Φ

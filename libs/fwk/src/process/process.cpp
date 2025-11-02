@@ -15,7 +15,7 @@
 namespace Jde{
 	constexpr ELogTags _tags = ELogTags::App;
 	string _applicationName;
-	α Process::ApplicationName()ι->const string&{ return _applicationName; }
+	α Process::AppName()ι->const string&{ return _applicationName; }
 
 	bool _isConsole{};
 	α Process::SetConsole( bool value )ι->void{ _isConsole=value;}
@@ -73,7 +73,6 @@ namespace Jde{
 			Process::SetConsoleTitle( appName );
 		else
 			AsService();
-		Logging::Initialize();
 		SetThreadDscrptn( appName );
 		Process::AddSignals();
 		return values;
@@ -116,57 +115,11 @@ namespace Jde{
 	 	_rawShutdowns.erase( pShutdown );
 	 }
 
-	// α Process::Pause()ι->int{
-	// 	INFOT( ELogTags::App, "Pausing main thread." );
-	// 	while( !_exitReason ){
-			// AtomicGuard l{ _activeWorkersMutex };
-			// uint size = _activeWorkers.size();
-			// if( size ){
-				// l.unlock();
-				// bool processed = false;
-				// for( uint i=0; i<size; ++i ){
-				// 	AtomicGuard l2{ _activeWorkersMutex };
-				// 	auto p = i<_activeWorkers.size() ? _activeWorkers[i] : nullptr; if( !p ) break;
-				// 	l2.unlock();
-				// 	if( let pWorkerProcessed = p->Poll();  pWorkerProcessed )
-				// 		processed = *pWorkerProcessed || processed;
-				// 	else
-				// 		IApplication::RemoveActiveWorker( p );
-				// }
-				// if( !processed )
-				// 	std::this_thread::yield();
-//			}
-//			else{
-//				l.unlock();
-//				Process::Pause();
-//			}
-//		}
-	// 	INFOT( "Pause returned = {}.", _exitReason ? std::to_string(_exitReason.value()) : "null" );
-	// 	//_backgroundThreads.visit( [](auto&& p){ p->Interrupt(); } );
-	// 	Shutdown( _exitReason.value_or(-1) );
-	// 	return _exitReason.value_or( -1 );
-	// }
 
 	Ω cleanup( bool terminate )ι->void;
 	α Process::Shutdown( int exitReason )ι->void{
 		bool terminate{ false }; //use case might be if non-terminate took too long
 		SetExitReason( exitReason, terminate );//Sets ShuttingDown should be called in OnExit handler
-		//_shutdowns.erase( [terminate](auto& p){
-		//	p->Shutdown( terminate );
-		//});
-		INFOT( ELogTags::App | ELogTags::Shutdown, "[{}]Waiting for process to complete. exitReason: {}, terminate: {}", ProcessId(), _exitReason.value(), terminate );
-		// while( _backgroundThreads.size() ){
-		// 	_backgroundThreads.erase_if( [](let& p)->bool {
-		// 		auto done = p->IsDone();
-		// 		if( done )
-		// 			p->Join();
-		// 		else if( done = p->Id()==std::this_thread::get_id(); done )
-		// 			p->Detach();
-		// 		return done;
-		// 	});
-		// 	std::this_thread::yield(); //std::this_thread::sleep_for( 2s );
-		// }
-		DBGT( ELogTags::App | ELogTags::Shutdown, "Background threads removed" );
 
 		for_each( _shutdownFunctions, [=](let& shutdown){ shutdown( terminate ); } );
 		DBGT( ELogTags::App | ELogTags::Shutdown, "{} Shutdown functions removed", _shutdownFunctions.size() );
@@ -180,7 +133,7 @@ namespace Jde{
 		INFOT( ELogTags::App, "Clearing Logger" );
 		Logging::DestroyLoggers( terminate );
 	}
-	α Process::ApplicationDataFolder()ι->fs::path{
+	α Process::AppDataFolder()ι->fs::path{
 		return ProgramDataFolder()/CompanyRootDir()/Process::ProductName();
 	}
 	α Process::GetEnv( str variable )ι->optional<string>{

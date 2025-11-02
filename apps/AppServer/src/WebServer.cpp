@@ -6,6 +6,7 @@
 #include <jde/web/server/Sessions.h>
 #include <jde/app/shared/proto/App.FromServer.h>
 #include <jde/app/shared/proto/App.FromClient.h>
+#include "LocalClient.h"
 #include "LogData.h"
 #include "ServerSocketSession.h"
 
@@ -31,11 +32,8 @@ namespace Jde::App{
 	α Server::SetLocalQL( sp<QL::LocalQL> ql )ι->void{ _ql=move(ql); }
 	α Server::Schemas()ι->const vector<sp<DB::AppSchema>>&{ return QL().Schemas(); }
 
-	sp<Server::LocalClient> _appClient = ms<Server::LocalClient>();
-	α Server::AppClient()ι->sp<LocalClient>{ return _appClient; }
-
 	α Server::GetAppPK()ι->AppPK{ return _appId; }
-	α Server::SetAppPKs( std::tuple<AppPK, AppInstancePK> x )ι->void{ _appId=get<0>(x); _appClient->SetInstancePK(get<1>(x)); }
+	α Server::SetAppPKs( std::tuple<AppPK, AppInstancePK> x )ι->void{ _appId=get<0>(x); AppClient()->SetInstancePK(get<1>(x)); }
 	//α UpdateStatuses()ι->DurationTimer::Task;
 	α Server::StartWebServer( jobject&& settings )ε->void{
 		_requestHandler = ms<RequestHandler>( move(settings) );

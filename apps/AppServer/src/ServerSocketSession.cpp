@@ -1,9 +1,11 @@
 #include "ServerSocketSession.h"
+#include <jde/app/log/ProtoLog.h>
 #include <jde/app/shared/proto/App.FromServer.h>
 #include <jde/app/shared/StringCache.h>
 #include <jde/app/shared/proto/App.FromClient.h>
 #include <jde/fwk/chrono.h>
 #include <jde/access/server/accessServer.h>
+#include "LocalClient.h"
 #include "LogData.h"
 #include "WebServer.h"
 #include "ServerSocketSession.h"
@@ -90,17 +92,13 @@ namespace Jde::App::Server{
 			WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 			return;
 		}
-		let level = (ELogLevel)entry.level();
 		vector<string> args = Jde::Proto::ToVector( move(*entry.mutable_args()) );
-		// if( _dbLevel!=ELogLevel::NoLog && _dbLevel<=level )
-		// 	SaveMessage( _appPK, _instancePK, entry );//TODO don't block
-		if( _webLevel!=ELogLevel::NoLog && _webLevel<=level ){
-			Logging::Entry y{ App::FromClient::FromLogEntry(move(entry)) };
-			y.Text = StringCache::GetMessage( y.Id() );
-			y.SetFile( StringCache::GetFile(y.FileId()) );
-			y.SetFunction( StringCache::GetFunction(y.FunctionId()) );
-			Server::BroadcastLogEntry( 0, _appPK, _instancePK, y, move(args) );
-		}
+		Logging::Entry y{ App::FromClient::FromLogEntry(move(entry)) };
+		y.Text = StringCache::GetMessage( y.Id() );
+		y.SetFile( StringCache::GetFile(y.FileId()) );
+		y.SetFunction( StringCache::GetFunction(y.FunctionId()) );
+		if( auto p = Logging::GetLogger<ProtoLog>(); p )
+			p->Write( move(y) );
 	}
 	α ServerSocketSession::SendAck( uint32 id )ι->void{
 		Write( FromServer::Ack(id) );

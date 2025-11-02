@@ -20,6 +20,13 @@
 				"group": { "kind": "build", "isDefault": true }
 			},
 			{
+				"label": "buildTests",
+				"type": "shell",
+				"command": "cd ${config:buildDir}; tput reset;make -j Jde.Opc.Tests;",
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"group": "build"
+			},
+			{
 				"label": "buildProject",
 				"type": "shell",
 				"command": "cd ${config:buildDir}; tput reset;make -j;",
@@ -64,7 +71,7 @@
 				"MIMode": "gdb",
 				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
 				"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
-				"preLaunchTask": "build",
+				"preLaunchTask": "buildTests",
 				"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
 				"showDisplayString": true
 			},

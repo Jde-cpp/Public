@@ -73,7 +73,7 @@ namespace Jde::Opc::Gateway{
 		α Configuration()ε->UA_ClientConfig*;
 		α Create()ι->UA_Client*;
 		α Connect()ε->void;
-		α RootSslDir()ι->fs::path{ return Process::ApplicationDataFolder()/"ssl"; }
+		α RootSslDir()ι->fs::path{ return Process::AppDataFolder()/"ssl"; }
 		α Passcode()ι->const string{ return Process::GetEnv("JDE_PASSCODE").value_or( "" ); }
 		α PrivateKeyFile()ι->fs::path{ return RootSslDir()/Ƒ("private/{}.pem", Target()); }
 		α CertificateFile()ι->fs::path{ return RootSslDir()/Ƒ("certs/{}.pem", Target()); }

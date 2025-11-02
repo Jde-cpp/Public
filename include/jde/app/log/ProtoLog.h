@@ -33,6 +33,8 @@ namespace Jde::App{
 
 		ProtoLog()ε:ProtoLog( jobject{Settings::FindDefaultObject("/logging/proto")} ){}
 		ProtoLog( const jobject& settings )ε;
+		Ω Init()ι->void;
+
 		α Shutdown( bool terminate )ι->void override;
 		α Write( const Logging::Entry& m )ι->void override;
 		α Name()Ι->string override{ return "ProtoLog"; }

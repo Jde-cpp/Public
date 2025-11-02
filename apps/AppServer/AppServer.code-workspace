@@ -34,8 +34,8 @@
 			"name": "headers"
 		},
 		{
-			"path": "../../../Framework/source",
-			"name": "Framework"
+			"path": "../../libs/fwk/src",
+			"name": "fwk"
 		},
 		{
 			"path": "../../libs/db/drivers/mysql",

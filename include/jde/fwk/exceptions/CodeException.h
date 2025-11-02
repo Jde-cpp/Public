@@ -1,3 +1,4 @@
+#pragma once
 #include "Exception.h"
 #include "ExternalException.h"
 

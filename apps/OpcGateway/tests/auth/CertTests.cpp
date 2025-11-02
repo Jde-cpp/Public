@@ -63,7 +63,7 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	TEST_F( CertTests, Authenticate_Bad ){
-		let root = Process::ApplicationDataFolder();
+		let root = Process::AppDataFolder();
 		let working = root/"ssl";
 		if( fs::exists(working) && !fs::exists(root/"ssl_backup") )
 			fs::rename( working, root/"ssl_backup" );

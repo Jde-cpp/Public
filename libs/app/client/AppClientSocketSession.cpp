@@ -52,7 +52,6 @@ namespace Client{
 		}
 	}
 
-	//α AppClientSocketSession::Instance()ι->sp<AppClientSocketSession>{ return _session; }
 	AppClientSocketSession::AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx, sp<Access::Authorize> authorize, sp<IAppClient> appClient )ι:
 		base( ioc, ctx ),
 		_appClient{appClient},
@@ -65,7 +64,7 @@ namespace Client{
 		if( instanceName.empty() )
 			instanceName = _debug ? "Debug" : "Release";
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Connect: '{}'.", requestId, instanceName );
-		return ClientSocketAwait<Proto::FromServer::ConnectionInfo>{ ToString(FromClient::Instance(Process::ApplicationName(), instanceName, sessionId, requestId)), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<Proto::FromServer::ConnectionInfo>{ ToString(FromClient::Instance(Process::AppName(), instanceName, sessionId, requestId)), requestId, shared_from_this(), sl };
 	}
 
 	α AppClientSocketSession::OnClose( beast::error_code ec )ι->void{
@@ -82,10 +81,7 @@ namespace Client{
 		let requestId = NextRequestId();
 		return ClientSocketAwait<Web::FromServer::SessionInfo>{ FromClient::Session(sessionId, requestId), requestId, shared_from_this(), sl };
 	}
-	// α AppClientSocketSession::SessionInfo( Web::Jwt&& jwt, SL sl )ι->ClientSocketAwait<Web::FromServer::SessionInfo>{
-	// 	let requestId = NextRequestId();
-	// 	return ClientSocketAwait<Web::FromServer::SessionInfo>{ ToString(FromClient::Session(move(jwt), requestId)), requestId, shared_from_this(), sl };
-	// }
+
 	α AppClientSocketSession::Query( string&& q, jobject variables, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]GraphQL: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
@@ -163,7 +159,6 @@ namespace Client{
 				if( !_qlServer )
 					_qlServer = ms<Web::Client::ClientQL>( shared_from_this(), move(_authorize) );
 				INFO( "[{:x}]AppClientSocketSession created: {}://{}.", Id(), IsSsl() ? "https" : "http", Host() );
-//				resumeVoid( move(hAny), "Ack: '{}'.", serverSocketId );
 				}break;
 			case kConnectionInfo:
 				TRACE( "[{:x}]ConnectionInfo: applicationInstance: '{}'.", Id(), m->connection_info().instance_pk() );
