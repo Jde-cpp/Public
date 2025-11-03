@@ -125,13 +125,14 @@ namespace Jde{
 		DBGT( ELogTags::App | ELogTags::Shutdown, "{} Shutdown functions removed", _shutdownFunctions.size() );
 		_rawShutdowns.erase( [=](auto& p){ p->Shutdown( terminate );} );
 		DBGT( ELogTags::App | ELogTags::Shutdown, "Raw functions removed" );
-		_finalizing = true;
 		cleanup( terminate );
 	}
 
 	Ω cleanup( bool terminate )ι->void{
 		INFOT( ELogTags::App, "Clearing Logger" );
+		_finalizing = true;
 		Logging::DestroyLoggers( terminate );
+		std::cout << "Shutdown complete." << std::endl;
 	}
 	α Process::AppDataFolder()ι->fs::path{
 		return ProgramDataFolder()/CompanyRootDir()/Process::ProductName();

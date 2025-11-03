@@ -55,18 +55,24 @@
 			}
 		},
 		{
-			"name": "debug",
+			"name": "jde",
 			"inherits": "common",
 			"hidden": true,
 			"cacheVariables":{
+				"JDE_DEFINES": "-DSPDLOG_FMT_EXTERNAL=ON"
+			}
+		},
+		{
+			"name": "debug",
+			"hidden": true,
+			"environment":{
 				"BUILD_TYPE": "Debug"
 			}
 		},
 		{
 			"name": "relWithDebInfo",
-			"inherits": "common",
 			"hidden": true,
-			"cacheVariables":{
+			"environment":{
 				"BUILD_TYPE": "RelWithDebInfo"
 			}
 		},
@@ -80,59 +86,48 @@
 				"LIB_ROOT": "$env{REPO_DIR}/install/$env{CXX}"
 			},
 			"cacheVariables":{
-				"CMAKE_CXX_FLAGS": "-Wno-unknown-pragmas -Wno-missing-field-initializers -Wno-changes-meaning",
+				"CMAKE_BINARY_DIR": "$env(JDE_DIR)/bin/$env{BUILD_TYPE}",
+				"CMAKE_BUILD_TYPE": "$env{BUILD_TYPE}",
 				"CMAKE_CXX_COMPILER": "g++-14",
-				"CMAKE_C_COMPILER": "gcc-14"
+				"CMAKE_C_COMPILER": "gcc-14",
+				"LIB_DIR": "$env{LIB_ROOT}/$env{BUILD_TYPE}"
 			}
 		},
     {
       "name": "linux-relWithDebInfo",
-			"inherits": "linux",
-			"environment":{
-				"BUILD_TYPE": "RelWithDebInfo"
-			},
-      "cacheVariables": {
-				"CMAKE_BUILD_TYPE": "$env{BUILD_TYPE}",
-				"CMAKE_BINARY_DIR": "$env(JDE_DIR)/bin/$env{BUILD_TYPE}",
-				"LIB_DIR": "$env{LIB_ROOT}/$env{BUILD_TYPE}"
-			}
+			"inherits": ["linux", "relWithDebInfo"]
     },
     {
       "name": "linux-debug",
-			"inherits": "linux",
-			"environment":{
-				"BUILD_TYPE": "Debug"
-			},
+			"inherits": "debug",
       "cacheVariables": {
-				"CMAKE_BUILD_TYPE": "$env{BUILD_TYPE}",
-				"CMAKE_BINARY_DIR": "$env(JDE_DIR)/bin/$env{BUILD_TYPE}",
-				"CMAKE_CXX_FLAGS_DEBUG": "-ggdb -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -D_GLIBCXX_DEBUG=ON -static-libstdc++ -static-libasan -lrt",
-				"LIB_DIR": "$env{LIB_ROOT}/$env{BUILD_TYPE}"
+				"CMAKE_CXX_FLAGS_DEBUG": "-ggdb -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -D_GLIBCXX_DEBUG=ON -static-libstdc++ -static-libasan -lrt"
 			}
     },
 		{
 			"name": "linux-jde",
 			"hidden": true,
-			"inherits": "linux",
+			"inherits": ["linux", "jde"],
 			"cacheVariables": {
 				"CMAKE_C_COMPILER": null,
 				"CMAKE_PREFIX_PATH": "$env{LIB_ROOT}/$env{BUILD_TYPE}",
 				"Boost_USE_STATIC_LIBS": false,
-				"BOOST_VERSION": "1.88.0"
+				"BOOST_VERSION": "1.88.0",
+				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-changes-meaning"
 			}
 		},
 		{
 			"name": "linux-jde-debug",
-			"inherits": ["linux-jde","linux-debug"],
-			"cacheVariables": {
-				"CMAKE_PREFIX_PATH": "$env{LIB_ROOT}/$env{BUILD_TYPE}"
-			}
+			"inherits": ["linux-jde","linux-debug"]
 		},
 		{
 			"name": "linux-jde-relWithDebInfo",
-			"inherits": ["linux-jde","linux-relWithDebInfo"],
+			"inherits": ["linux-jde","relWithDebInfo"],
+			"environment": {
+				"OPTIMIZATION_LEVEL": "O3"
+			},
 			"cacheVariables": {
-				"CMAKE_PREFIX_PATH": "$env{LIB_ROOT}/$env{BUILD_TYPE}"
+				"CMAKE_INSTALL_PREFIX": "$env{LIB_ROOT}/$env{BUILD_TYPE}"
 			}
 		}
   ]

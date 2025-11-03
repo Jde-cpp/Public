@@ -2,14 +2,13 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( ExternalProject )
 include( ${CMAKE_CURRENT_SOURCE_DIR}/functions.cmake )
-project( libs VERSION ${JDE_VERSION} LANGUAGES CXX )
+project( repos VERSION ${JDE_VERSION} LANGUAGES CXX )
 if( CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT )
 	message( CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX} )
   set( CMAKE_INSTALL_PREFIX ${LIB_DIR} CACHE PATH <comment> FORCE )
 endif()
 message( CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX} )
 message( CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH} )
-
 
 set( stdArgs
 	-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
@@ -110,25 +109,23 @@ IF( WIN32 )
 			-DZLIB_BUILD_TESTING=OFF
 	)
 	ExternalProject_Add(
-			LibXml2
-			GIT_REPOSITORY https://github.com/GNOME/libxml2.git
-			GIT_TAG v2.15.0
-			PREFIX libxml2
-			INSTALL_DIR ${LIB_DIR}/libxml2
-			CMAKE_ARGS ${stdArgs}
-				-DCMAKE_PREFIX_PATH=${LIB_DIR}
-				-DLIBXML2_WITH_ZLIB=OFF
-				-DLIBXML2_WITH_PYTHON=OFF
-				-DLIBXML2_WITH_TESTS=OFF
-				-DLIBXML2_WITH_ICONV=OFF
-				-DLIBXML2_WITH_LZMA=OFF
-				-DLIBXML2_WITH_THREADS=ON
-				-DLIBXML2_BUILD_SHARED_LIBS=OFF
+		LibXml2
+		GIT_REPOSITORY https://github.com/GNOME/libxml2.git
+		GIT_TAG v2.15.0
+		PREFIX libxml2
+		INSTALL_DIR ${LIB_DIR}/libxml2
+		CMAKE_ARGS ${stdArgs}
+			-DCMAKE_PREFIX_PATH=${LIB_DIR}
+			-DLIBXML2_WITH_ZLIB=OFF
+			-DLIBXML2_WITH_PYTHON=OFF
+			-DLIBXML2_WITH_TESTS=OFF
+			-DLIBXML2_WITH_ICONV=OFF
+			-DLIBXML2_WITH_LZMA=OFF
+			-DLIBXML2_WITH_THREADS=ON
+			-DLIBXML2_BUILD_SHARED_LIBS=OFF
 	)
 	set( PC_LIBXML_INCLUDEDIR ${LIB_DIR}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
 	set( PC_LIBXML_LIBDIR ${LIB_DIR}/libxml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
-	message( PC_LIBXML_INCLUDEDIR: ${PC_LIBXML_INCLUDEDIR} )
-	message( PC_LIBXML_LIBDIR: ${PC_LIBXML_LIBDIR} )
 else()
 #need to add '#define _C4_STD_VECTOR_FWD_HPP_' to ryml_all.hpp to avoid redefinition errors
 	ExternalProject_Add(jsonnet

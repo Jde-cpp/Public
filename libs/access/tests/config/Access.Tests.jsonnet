@@ -20,8 +20,8 @@ local args = import 'args.libsonnet';
 	logging:{
 		spd:{
 			tags: {
-				trace:["test", "access", "ql"],
-				debug:["settings", "sql"],
+				trace:["test", "access", "app"],
+				debug:["settings", "sql", "ql"],
 				information:["app"],
 				warning:[],
 				"error":[],

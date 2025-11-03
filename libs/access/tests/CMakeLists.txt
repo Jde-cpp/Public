@@ -1,10 +1,20 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( ../../../build/functions.cmake )
+include( ../../../build/linkSo.cmake )
+
+if( NOT WIN32 )
+	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )
+		set( JSONNET_DIR ${LIB_DIR}/jsonnet CACHE PATH "Jsonnet directory" )
+		link_directories( ${JSONNET_DIR}/lib )
+	endif()
+endif()
+
 set( targetName Jde.Access.Tests )
 project( ${targetName} VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
-add_subdirectory( ../../db/src ../../db/lib )
+add_subdirectory( ../../fwk/src ../../fwk/lib )
+#add_subdirectory( ../../db/src ../../db/lib ) should be with the driver
 if( WIN32 )
 	add_subdirectory( ../../db/drivers/odbc ../../db/drivers/odbc )
 else()
@@ -31,13 +41,17 @@ target_link_libraries( ${targetName} GTest::gtest )
 target_link_libraries( ${targetName} Jde.Access Jde.DB Jde.QL Jde )
 target_compile_definitions( ${targetName} PRIVATE TESTS )
 
-#set( CMAKE_CTEST_ARGUMENTS -tests -settings=$ENV{JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet )
-add_test( NAME AccessTests COMMAND $<TARGET_FILE:Jde.Access.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet )
-
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet" )
 	copyCommonDlls()
+else()
+	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )
+		target_link_libraries( ${targetName} jsonnet++ jsonnet )
+		linkRepo( ${CMAKE_BINARY_DIR}/.. ${CMAKE_BINARY_DIR}/tests )
+	endif()
 endif()
+
+add_test( NAME AccessTests COMMAND $<TARGET_FILE:Jde.Access.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet )
 
 target_precompile_headers(${targetName}
   PRIVATE

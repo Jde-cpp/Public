@@ -44,6 +44,7 @@ namespace Jde::IO{
 		using HCo=variant<StringAwait::Handle,VoidAwait::Handle>;
 		FileIOArg( fs::path path, bool vec, SRCE )ι;
 		FileIOArg( fs::path path, variant<string,vector<byte>> data, ELogTags tags, SRCE )ι;
+		~FileIOArg();
 		α Open( bool create )ε->void;
 		α Send( HCo h )ι->void;
 		α Data()ι->char*{ return visit( [](auto&& x){return (char*)x.data();}, Buffer ); }
@@ -51,7 +52,7 @@ namespace Jde::IO{
 		α PostExp( up<IFileChunkArg>&& chunk, uint32 code, string&& msg )ι->void;
 		α ResumeExp( uint32 code, string&& msg )ι->void;
 		α ResumeExp( uint32 code, string&& m, lg& chunkLock )ι->void;
-		//α Key()Ι->uint8{ return std::hash<fs::path>{}( Path ); }
+		α Key()Ι->uint8{ return std::hash<fs::path>{}( Path ); }
 
 		//α ResumeExp( exception&& e )ι->void;
 		//α ResumeExp( exception&& e, lg& chunkLock )ι->void;

@@ -6,6 +6,7 @@
 #include <jde/fwk/io/file.h>
 #include <jde/fwk/io/FileAwait.h>
 #include <jde/fwk/process/execution.h>
+#include <jde/fwk/process/thread.h>
 
 #define let const auto
 namespace Jde{
@@ -53,19 +54,24 @@ namespace Jde::IO{
 			std::visit( [size=st.st_size](auto&& b){b.resize(size);}, Buffer );
 		}
 	}
+	FileIOArg::~FileIOArg(){
+		if( Handle ){
+			::close( Handle );
+			Handle = 0;
+		}
+	}
 
 	Ω addNextChunkToQueue( sp<FileIOArg> op )ι->bool;
 	uint _checkIndex;
 	Ω processFinishedChunks( uint size, struct io_uring_cqe* cqe )ι->sp<FileIOArg>{
 		sp<FileIOArg> submitOp;
-		//TRACE( ELogTags::Test, "[{:x}]processFinishedChunks size: {}", _checkIndex, size };
 		for( uint i=0; i<size; ++i ){
 			struct io_uring_cqe& cq = cqe[i];
 			if( cq.flags & IORING_CQE_F_MORE ){
-				//bool buffered = cq.flags & IORING_CQE_F_BUFFER;
-				//bool nonEmpty = cq.flags & IORING_CQE_F_SOCK_NONEMPTY;
-				//let bufferId = (uint)io_uring_cqe_get_data(&cq) >> 32;
-				//TRACE( ELogTags::Test, "waitForMore data: {:x}, flags: {}, buffer: {}, nonEmpty: {}", bufferId, (uint)cq.flags, buffered, nonEmpty };
+				// bool buffered = cq.flags & IORING_CQE_F_BUFFER;
+				// bool nonEmpty = cq.flags & IORING_CQE_F_SOCK_NONEMPTY;
+				// let bufferId = (uint)io_uring_cqe_get_data(&cq) >> 32;
+				// TRACET( ELogTags::Test, "waitForMore data: {:x}, flags: {}, buffer: {}, nonEmpty: {}", bufferId, (uint)cq.flags, buffered, nonEmpty );
 				continue;
 			}
 			io_uring_cqe_seen( &_ring, &cq );
@@ -77,7 +83,6 @@ namespace Jde::IO{
 			}
 			ASSERT( (uint)cq.res == chunk->Bytes );
 			auto op = chunk->FileArg();
-			//TRACE( ELogTags::Test, "[{:x}.{:x}.{}]processChunk {}/{}", ThreadId(), op->Key(), chunk->Index, op->ChunksCompleted+1, op->ChunksToSend };
 			if( op->ChunksToSend==++op->ChunksCompleted ){
 				--_requestCount;
 				if( op->IsRead ){
@@ -88,7 +93,6 @@ namespace Jde::IO{
 				}
 				else{
 					if( auto h = op->WriteCoHandle(); h ){
-						//TRACE( ELogTags::Test, "[{:x}]complete ", op->Key() };
 						op->_coHandle = (VoidAwait::Handle)nullptr;
 						Post( move(h) );//2
 					}
@@ -106,17 +110,11 @@ namespace Jde::IO{
 	}
 
 	Ω checkProcessed()ι->void;
-//	mutex _queueMutex;
 	Ω submit( sp<FileIOArg> op )ι->void{
-		int result;
-		{
-			//TRACE( ELogTags::Test, "io_uring_submit" };
-			result = io_uring_submit( &_ring );
-		}
+		int result = io_uring_submit( &_ring );
 		if( result>=0 ){
 			ASSERT( _requestCount );
 			if( _requestCount ){
-				//TRACE( ELogTags::Test, "submit::checkProcessed" };
 				PostIO( [](){ checkProcessed(); } );//1
 			}
 		}
@@ -136,7 +134,6 @@ namespace Jde::IO{
 		else if( !size ){
 			//ASSERT( _requestCount );
 			if( _requestCount ){
-				//TRACE( ELogTags::Test, "checkProcessed::checkProcessed" };
 				PostIO( [](){ checkProcessed(); } );
 			}
 		}
@@ -162,11 +159,9 @@ namespace Jde::IO{
 		}
 
 		if( isRead ){
-			//TRACE( ELogTags::Test, "[{:x}.{}]reading", op->Key(), lchunk.Index };
 			io_uring_prep_read( sqe, op->Handle, op->Data()+lchunk.StartIndex, lchunk.Bytes, lchunk.StartIndex );
 		}
 		else{
-			//TRACE( ELogTags::Test, "[{:x}.{:x}.{}]writing - {}", ThreadId(), op->Key(), lchunk.Index, Str::Replace(string{op->Data()+lchunk.StartIndex, lchunk.Bytes}, "\n", "\\n") };
 			io_uring_prep_write( sqe, op->Handle, op->Data()+lchunk.StartIndex, lchunk.Bytes, -1 );
 		}
 		auto pChunk = chunk.release();
@@ -186,7 +181,6 @@ namespace Jde::IO{
 			for( uint i=0; i*chunkByteSize<totalBytes; ++i )
 				Chunks.emplace( mu<LinuxChunk>(self, i) );
 			let content = IsRead ? "" : Str::Replace(string{ Data(), Size() }, "\n", "\\n" );
-			//TRACE( "[{:x}]{} chunks: {}, fileIndex: {}, content: {}", Key(), Path.string(), ChunksToSend, fileIndex++, content );
 		}
 		++_requestCount;
 		PostIO( [self, initialSendTotal = std::min<uint8>((uint8)ChunksToSend, threadSize) ](){

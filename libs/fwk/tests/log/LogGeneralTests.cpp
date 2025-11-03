@@ -14,22 +14,22 @@ namespace Jde::Tests{
 	};
 
 	TEST_F( LogGeneralTests, CachedTags ){
-		auto& logger = Logging::MemoryLogger();
+		auto logger = Logging::GetLogger<Logging::MemoryLog>();
 		let checkTags{ ELogTags::App | ELogTags::Pedantic };
-		logger.SetLevel( checkTags, ELogLevel::Trace );
+		logger->SetLevel( checkTags, ELogLevel::Trace );
 		let unConfiguredTags = ELogTags::Scheduler;
 		TRACET( unConfiguredTags, "Need to search" );
 		let logMessage = Ƒ( "[{}]tag: {}, minLevel: {}", "MemoryLog", Jde::ToString(unConfiguredTags), "{default}" );
-		ASSERT_TRUE( logger.Find(logMessage).size() );
+		ASSERT_TRUE( logger->Find(logMessage).size() );
 		Logging::ClearMemory();
 		TRACET( unConfiguredTags, "no need to search" );
-		ASSERT_TRUE( logger.Find(logMessage).empty() );
+		ASSERT_TRUE( logger->Find(logMessage).empty() );
 	}
 
 	TEST_F( LogGeneralTests, ArgsNotCalled ){
-		auto& logger = Logging::MemoryLogger();
+		auto logger = Logging::GetLogger<Logging::MemoryLog>();
 		let unConfiguredTags = ELogTags::Scheduler;
-		logger.SetLevel( unConfiguredTags, ELogLevel::Error );
+		logger->SetLevel( unConfiguredTags, ELogLevel::Error );
 		auto arg = []()->string {
 			throw std::runtime_error("should not be called");
 			return "";

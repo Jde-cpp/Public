@@ -41,7 +41,6 @@ namespace Jde::Logging{
 
 namespace Jde{
 	α Logging::DestroyLoggers( bool terminate )->void{
-		TRACET( ELogTags::App, "Destroying Loggers" );
 		Logging::_pOnceMessages = nullptr;
 		for( auto p=_loggers.begin(); p!=_loggers.end(); ){
 			auto logger = move(*p);

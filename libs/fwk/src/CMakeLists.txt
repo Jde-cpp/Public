@@ -16,6 +16,7 @@ set( targetName Jde )
 add_library( ${targetName} SHARED )
 compileOptions( ${targetName} )
 set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
+add_compile_definitions( ${JDE_DEFINES} )
 
 file(GLOB sources *.cpp **/*.cpp **/**/*.cpp )
 file(GLOB headers "**/*.h")
@@ -35,7 +36,6 @@ get_filename_component(thread_cpp ${CMAKE_CURRENT_SOURCE_DIR}/process/thread.cpp
 list(REMOVE_ITEM sources "${thread_cpp}")
 
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
-#target_compile_definitions( ${targetName} PUBLIC SPDLOG_FMT_EXTERNAL )
 
 target_link_libraries( ${targetName} PUBLIC fmt::fmt )
 if( WIN32 )
@@ -46,6 +46,7 @@ if( WIN32 )
 else()
 	target_link_libraries( ${targetName} PRIVATE jsonnet++ jsonnet )
 	target_link_libraries( ${targetName} PRIVATE PkgConfig::uring )
+	target_link_libraries( ${targetName} PRIVATE libssl.a libcrypto.a )
 endif()
 
 target_precompile_headers( ${targetName}

@@ -22,7 +22,7 @@ namespace Jde{
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threadSize").value_or(5)>0 )
 #endif
 		Process::Startup( argc, argv, Process::ProductName(), "Access tests", true );
-
+		Logging::Init();
 		let metaDataName{ "access" };
 		auto authorizer = Access::Tests::Authorizer();
 		auto schema = DB::GetAppSchema( metaDataName, authorizer );
@@ -55,6 +55,8 @@ namespace Jde{
 		}
 		std::cerr << e.what() << std::endl;
 	}
+	INFOT( ELogTags::App, "Shutting down with exit code {}.", exitCode );
 	Process::Shutdown( exitCode );
+	std::cout << "Exited with code: " << exitCode << std::endl;
 	return exitCode;
 }

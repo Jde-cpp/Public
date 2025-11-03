@@ -146,8 +146,9 @@ namespace Jde::App{
 				*t.mutable_time() = Jde::Proto::ToTimestamp( row.GetTimePoint(i) );
 			else if( name=="user_pk" )
 				t.set_user_pk( row.GetUInt32(i) );
-			else
+			else{
 				BREAK;
+			}
 			++i;
 		}
 		return t;

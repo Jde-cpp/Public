@@ -27,8 +27,8 @@
 			"name": "pbuild"
 		},
 		{
-			"path": "../../../Framework/source",
-			"name": "Framework"
+			"path": "../fwk/src",
+			"name": "fwk"
 		},
 		{
 			"path": "../db/drivers/mysql",
@@ -112,10 +112,6 @@
 				],
 				"stopAtEntry": false,
 				"cwd": "${config:buildDir}",
-				"environment": [
-					{ "name": "JDE_MYSQL_USER", "value": "root" },
-					{ "name": "JDE_MYSQL_PWD", "value": "dfs12975adsf" }
-				],
 				"externalConsole": false,
 				"MIMode": "gdb",
 				"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
@@ -123,6 +119,26 @@
 				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
 				"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.27":"${env:REPO_DIR}/glibc-2.27" },
 				"preLaunchTask": "build"
+			},
+			{
+				"name": "Release",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${env:JDE_DIR}/Release/g++-14/libs/access/tests/Jde.Access.Tests",
+				"args": [
+					"-settings=${env:JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet",
+					"-tests"
+				],
+				"environment": [
+					{ "name": "LD_LIBRARY_PATH", "value": "${env:JDE_DIR}/Release/g++-14/libs/access/tests" }
+				],
+				"stopAtEntry": false,
+				"cwd": "${env:JDE_DIR}/Release/g++-14/libs/access/tests",
+				"externalConsole": false,
+				"MIMode": "gdb",
+				"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
+				"showDisplayString": true,
+				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
 			}]
 		}
 }

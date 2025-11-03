@@ -8,6 +8,7 @@ namespace Jde{
 #endif
  	Ω startup( int argc, char **argv )ι->void{
 		Process::Startup( argc, argv, "Tests.Framework", "Unit Tests description", true );
+		Logging::Init();
 	}
 }
 

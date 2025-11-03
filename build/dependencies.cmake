@@ -6,12 +6,12 @@ else()
 	find_package( OpenSSL REQUIRED )
 endif()
 
+add_compile_definitions( ${JDE_DEFINES} )
 find_package( fmt REQUIRED )
 include_directories( ${fmt_DIR}/../../../include )
 
 find_package( spdlog REQUIRED )
 include_directories( ${spdlog_DIR}/../../../include )
-set( LIB_DIR $ENV{LIB_DIR} CACHE PATH "Path to libraries" )
 list( APPEND CMAKE_PREFIX_PATH "${LIB_DIR}/protobuf/lib/cmake/utf8_range" )
 
 find_package( protobuf CONFIG "32.1.0" EXACT REQUIRED )
