@@ -5,6 +5,7 @@
 
 #define Φ Γ auto
 namespace Jde{
+	using namespace std::chrono;
 	template<class T=TimePoint>
 	α ToIsoString( T timePoint )ι->string;
 }

@@ -4,8 +4,6 @@ project( Jde.DB.MySql VERSION ${JDE_VERSION} LANGUAGES CXX )
 message( ${PROJECT_NAME} )
 include( ../../../../build/dependencies.cmake )
 
-add_subdirectory( ../../src ../../lib )
-
 find_package( Boost REQUIRED COMPONENTS charconv )
 find_package( Threads REQUIRED )
 

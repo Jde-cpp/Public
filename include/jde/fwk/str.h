@@ -18,6 +18,8 @@ ENABLE_WARNINGS
 namespace Jde{
 	Ŧ To( sv value )ι->T{ T v{}; std::from_chars( value.data(), value.data()+value.size(), v ); return v; }
 	template<> Ξ To( sv x )ι->double{ return stod( string{x} ); }
+
+	α ToUuid( sv s, SRCE )ε->uuid;
 }
 namespace Jde::Str{
 	Φ Empty()ι->str;
@@ -25,7 +27,8 @@ namespace Jde::Str{
 	Φ DecodeUri( sv str )ι->string;
 	template<class T, class I=T::const_iterator> α Encode64( const T& val, bool convertFromFileSafe=false )ι->string;
 
-	Φ Format( sv format, vector<string> args )ι->string;
+	Φ Format( sv format, vector<string> args )ε->string;
+	Φ TryFormat( sv format, vector<string> args )ι->string;
 	Ŧ Join( T collection, sv separator=",", bool quote=false )ι->string;
 	Φ Replace( sv source, sv find, sv replace )ι->string;
 	Φ Replace( sv source, char find, char replace )ι->string;

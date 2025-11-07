@@ -65,26 +65,28 @@ namespace Jde::Web::Client{
 
 	α ClientHttpAwait::Execute()ι->ClientHttpAwaitSingle::Task{
 		auto firstAttempt = ClientHttpAwaitSingle{ move(*this), _sl };
+		bool retry{};
 		try{
 			auto res = co_await firstAttempt;
-			SetValue( move(res) );
+			Resume( move(res) );
 		}
 		catch( ClientHttpException& e ){
 			if( !e.SslStreamTruncated() )
-				SetError( move(e) );
+				ResumeExp( move(e) );
+			else
+				retry = true;
 		}
 		catch( IException& e ){
-			SetError( move(e) );
+			ResumeExp( move(e) );
 		}
-		if( !Emplaced() ){
+		if( retry ){
 			try{
-				SetValue( co_await ClientHttpAwaitSingle{ move(firstAttempt) } );
+				Resume( co_await ClientHttpAwaitSingle{ move(firstAttempt) } );
 			}
 			catch( IException& e ){
-				SetError( move(e) );
+				ResumeExp( move(e) );
 			}
 		}
-		Resume();
 	}
 	α ClientHttpAwait::await_resume()ε->ClientHttpRes{
 		ClientHttpRes res = base::await_resume();

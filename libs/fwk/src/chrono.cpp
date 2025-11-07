@@ -56,9 +56,9 @@ namespace Jde{
 	}
 	α Chrono::ToTimePoint( string iso, SL sl )ε->TimePoint{
 		TimePoint tp;
-		std::istringstream is{ move(iso) };
+		std::istringstream is{ iso };
 		is >> std::chrono::parse( "%FT%T", tp );
-		THROW_IFSL( is.fail(), "Could not parse ISO time" );
+		THROW_IFSL( is.fail(), "Could not parse ISO time:  {}", iso );
 		return tp;
 	}
 	α Chrono::ToTimePoint( uint16_t y, uint8_t mnth, uint8_t dayOfMonth, uint8 h, uint8 mnt, uint8 scnd, Duration subseconds, SL sl )ε->TimePoint{

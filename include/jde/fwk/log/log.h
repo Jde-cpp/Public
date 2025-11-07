@@ -46,7 +46,7 @@ namespace Jde::Logging{
 	Φ LogException( const IException& e )ι->void;
 	Φ DestroyLoggers( bool terminate )->void;
 	Φ Loggers()->const vector<up<ILogger>>&;
-	Ŧ GetLogger()->T*;
+	Ŧ GetLogger()ι->T*;
 	Φ AddLogger( up<ILogger>&& logger )ι->ILogger*;
 	Φ Init()ι->void;
 	Φ ClientMinLevel()ι->ELogLevel;
@@ -56,7 +56,7 @@ namespace Jde::Logging{
 	α GetStatus()ι->up<Proto::Status>;
 }
 namespace Jde{
-	Ŧ Logging::GetLogger()->T*{
+	Ŧ Logging::GetLogger()ι->T*{
 		for( auto& logger : Loggers() ){
 			if( auto log = dynamic_cast<T*>( logger.get() ) )
 				return log;

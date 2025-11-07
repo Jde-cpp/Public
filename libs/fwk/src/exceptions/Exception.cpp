@@ -1,13 +1,10 @@
 ﻿#include <jde/fwk/exceptions/Exception.h>
 #include <iostream>
-//#include <spdlog/spdlog.h>
-//#include <spdlog/fmt/ostr.h>
 #include <boost/system/error_code.hpp>
 
 #include <jde/fwk/str.h>
 #include <jde/fwk/exceptions/CodeException.h>
 #include <jde/fwk/log/Entry.h>
-//#include <jde/fwk/log/SpdLog.h>
 #define let const auto
 
 namespace Jde{
@@ -33,7 +30,6 @@ namespace Jde{
 		Code{ from.Code },
 		_level{ from.Level() }{
 		BREAK;//should only be called by rethrow_exception
-//		from._level = ELogLevel::NoLog;
 	};
 	IException::IException( IException&& from )ι:
 		_stack{ move(from._stack) },

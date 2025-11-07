@@ -19,25 +19,42 @@ namespace Jde::QL{
 		JsonName{move(jName)}
 	{}
 
-	α TableQL::Filter()Ε->FilterQL{
-		FilterQL filters;
-		let filterArgs = Json::FindObject( Args, "filter" );
-		let& j = filterArgs ? Args : *filterArgs;
-		for( let& [jsonColumnName,value] : j ){
-			vector<FilterValueQL> columnFilters;
+	α addFilters( const jvalue& value, const sp<jobject>& variables )ε->vector<FilterValue>{
+			vector<FilterValue> columnFilters;
 			if( value.is_string() || value.is_number() || value.is_null() ) //(id: 42) or (name: "charlie") or (deleted: null)
 				columnFilters.emplace_back( DB::EOperator::Equal, value );
 			else if( value.is_object() ){ //filter: {age: {gt: 18, lt: 60}}
-				for( let& [op,opValue] : value.as_object() )
-					columnFilters.emplace_back( ToQLOperator(op) );
+				for( let& [op,opValue] : value.as_object() ){
+					if( opValue.is_string() && opValue.get_string().starts_with("\b$") ){
+						if( auto p = variables->if_contains(sv{opValue.get_string()}.substr(2)); p ){
+							columnFilters.emplace_back( ToQLOperator(op), *p );
+							continue;
+						}
+					}
+					columnFilters.emplace_back( ToQLOperator(op), opValue );
+				}
 			}
 			else if( value.is_array() ) //(id: [1,2,3]) or (name: ["charlie","bob"])
 				columnFilters.emplace_back( EOperator::In, value );
 			else
 				THROW("Invalid filter value type '{}'.", Json::Kind(value.kind()) );
-			filters.ColumnFilters.emplace( jsonColumnName, columnFilters );
+			return columnFilters;
+	}
+	α TableQL::Filter()Ε->const QL::Filter&{
+		if( _filter )
+			return *_filter;
+		//let filterArgs = Json::FindObject( Args, "filter" );
+		//let& j = filterArgs ? Args : *filterArgs;
+		_filter = QL::Filter{};
+		for( let& [jsonColumnName,value] : Args ){
+			jvalue* variable = nullptr;
+			if( value.is_string() && value.get_string().starts_with("\b$") ){
+				if( auto p = Variables->if_contains(sv{value.get_string()}.substr(2)); p )
+					variable = p;
+			}
+			_filter->ColumnFilters.emplace( jsonColumnName, addFilters(variable ? *variable : value, Variables) );
 		}
-		return filters;
+		return *_filter;
 	}
 	α TableQL::AddFilter( const string& column, const jvalue& value )ι->void{
 		auto destination = &Args;

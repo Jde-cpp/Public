@@ -15,9 +15,9 @@ namespace Jde::App::Server{
 	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
 }
 namespace Jde::App{
-	using QL::FilterQL;
+	using QL::Filter;
 	concurrent_flat_map<AppInstancePK,sp<Server::ServerSocketSession>> _sessions; //Consider using main class+ql subscriptions
-	concurrent_flat_map<AppInstancePK,FilterQL> _logSubscriptions;
+	concurrent_flat_map<AppInstancePK,Filter> _logSubscriptions;
 	concurrent_flat_map<AppInstancePK,Proto::FromServer::Status> _statuses;
 	concurrent_flat_set<AppInstancePK> _statusSubscriptions;
 
@@ -65,28 +65,28 @@ namespace Jde::App{
 		// }
 	//}
 
-	α TestLogPub( const FilterQL& subscriptionFilter, AppPK /*appId*/, AppInstancePK /*instancePK*/, const Logging::Entry& m )ι->bool{
+	α TestLogPub( const Filter& subscriptionFilter, AppPK /*appId*/, AppInstancePK /*instancePK*/, const Logging::Entry& m )ι->bool{
 		bool passesFilter{ true };
 		let logTags = ELogTags::Socket | ELogTags::Server | ELogTags::Subscription;
 		for( let& [jsonColName, columnFilters] : subscriptionFilter.ColumnFilters ){
 			if( jsonColName=="level" )
-				passesFilter = FilterQL::Test( underlying(m.Level), columnFilters, logTags );
+				passesFilter = Filter::Test( underlying(m.Level), columnFilters, logTags );
 			else if( jsonColName=="time" )
-				passesFilter = FilterQL::Test( m.Time, columnFilters, logTags );
+				passesFilter = Filter::Test( m.Time, columnFilters, logTags );
 			else if( jsonColName=="message" )
-				passesFilter = FilterQL::Test( string{m.Text}, columnFilters, logTags );
+				passesFilter = Filter::Test( string{m.Text}, columnFilters, logTags );
 			else if( jsonColName=="file" )
-				passesFilter = FilterQL::Test( string{m.File()}, columnFilters, logTags );
+				passesFilter = Filter::Test( string{m.File()}, columnFilters, logTags );
 			else if( jsonColName=="function" )
-				passesFilter = FilterQL::Test( string{m.Function()}, columnFilters, logTags );
+				passesFilter = Filter::Test( string{m.Function()}, columnFilters, logTags );
 			else if( jsonColName=="line" )
-				passesFilter = FilterQL::Test( m.Line, columnFilters, logTags );
+				passesFilter = Filter::Test( m.Line, columnFilters, logTags );
 			else if( jsonColName=="user_pk" )
-				passesFilter = FilterQL::Test( m.UserPK, columnFilters, logTags );
+				passesFilter = Filter::Test( m.UserPK, columnFilters, logTags );
 			// else if( jsonColName=="tags" ) TODO
-			// 	passesFilter = FilterQL::Test( m.Tags(), columnFilters, logTags );
+			// 	passesFilter = Filter::Test( m.Tags(), columnFilters, logTags );
 			// else if( jsonColName=="args" ) TODO
-			// 	passesFilter = FilterQL::Test( m.Args, columnFilters, logTags );
+			// 	passesFilter = Filter::Test( m.Args, columnFilters, logTags );
 			if( !passesFilter )
 				break;
 		}

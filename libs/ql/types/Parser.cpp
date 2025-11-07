@@ -269,7 +269,7 @@ namespace Jde::QL{
 	α Parser::LoadTables( string jsonName, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL sl )ε->vector<TableQL>{
 		vector<TableQL> results;
 		do{
-			let system = jsonName.starts_with("__") || jsonName.starts_with("setting") || _systemTables.contains(jsonName) ? jsonName : string{};
+			let system = jsonName.starts_with("__") || jsonName.starts_with("setting") || jsonName=="logs" || _systemTables.contains(jsonName) ? jsonName : string{};
 			auto table = LoadTable( move(jsonName), variables, schemas, system.size(), sl );
 			if( system.size() ){
 				if( system=="__type" ){

@@ -19,6 +19,7 @@ namespace Jde::Proto{
 	Ŧ Deserialize( const vector<char>& data )ε->up<T>;
 	Ŧ Deserialize( const google::protobuf::uint8* p, int size )ε->T;
 	Ŧ Deserialize( string&& x )ε->T;
+	Ŧ DeserializeVector( sv x )ε->vector<T>;
 	Ŧ FromVector( vector<T>&& x )ι->google::protobuf::RepeatedPtrField<T>;
 	Ŧ ToVector( google::protobuf::RepeatedPtrField<T>&& x )ι->vector<T>;
 	Ŧ ToVector( const google::protobuf::RepeatedField<T>& x )ι->vector<T>;
@@ -81,6 +82,20 @@ namespace Jde{
 		T y;
 		Internal::Deserialize<T>( (google::protobuf::uint8*)x.data(), (int)x.size(), y );
 		x.clear();
+		return y;
+	}
+	Ŧ Proto::DeserializeVector( sv content )ε->vector<T>{
+		vector<T> y;
+		for( auto p = content.data(), end = content.data() + content.size(); p+4<end; ){
+			uint32 length{};
+			for( auto i=3; i>=0; --i ){
+				const byte b = (byte)*p++;
+				length = (length<<8) | (uint32)b;
+			}
+			if( p+length<=content.data()+content.size() )
+				y.push_back( Deserialize<T>((google::protobuf::uint8*)p, (int)length) );
+			p += length;
+		}
 		return y;
 	}
 

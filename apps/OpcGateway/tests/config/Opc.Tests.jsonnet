@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "LogTests.Remote",
+		tests: "LogTests.GraphQL",
 		recreateDB:: true,
 		embeddedAppServer: true,
 		embeddedOpcServer: false
