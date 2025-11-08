@@ -26,6 +26,9 @@ set( includeDir $ENV{JDE_DIR}/Public/include/jde/web/client )
 file( GLOB headers *.h ${includeDir}/*.h ${includeDir}/http/*.h ${includeDir}/socket/*.h  )
 file( GLOB protos proto/*.proto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
+
+target_link_libraries( ${targetName} PUBLIC ZLIB::ZLIB )
+
 target_precompile_headers(${targetName}
   PUBLIC
 	"pc.h"

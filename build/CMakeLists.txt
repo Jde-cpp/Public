@@ -136,6 +136,7 @@ else()
 		CMAKE_ARGS ${stdArgs}
 			-DCMAKE_PREFIX_PATH=${LIB_DIR}
 			-DUSE_SYSTEM_GTEST=ON
+			-DBUILD_JSONNETFMT=OFF
 			-DBUILD_TESTS=OFF
 	)
 	ExternalProject_Add_StepDependencies( jsonnet configure gtest )

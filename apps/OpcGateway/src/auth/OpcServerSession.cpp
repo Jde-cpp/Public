@@ -22,17 +22,17 @@ namespace Jde::Opc::Gateway{
 		if( !less ){
 			switch( Type() ){
 				using enum ETokenType;
-				case None: case Anonymous: less = false; break;
 				case IssuedToken: less = get<Gateway::Token>(_value) < get<Gateway::Token>(other._value); break;
 				case Username: less = get<User>(_value) < get<User>(other._value); break;
 				case Certificate: less = get<Crypto::PublicKey>(_value) < get<Crypto::PublicKey>(other._value); break;
+				default: less = false; break; //case None: case Anonymous: less = false; break;
 			}
 		}
 		return *less;
 	}
 
 	α Credential::Type()Ι->ETokenType{
-		ETokenType type;
+		ETokenType type{};
 		switch( _value.index() ){
 			using enum ETokenType;
 			case 0: type = Anonymous; break;

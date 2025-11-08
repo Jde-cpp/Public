@@ -15,7 +15,7 @@ namespace Jde::Opc::Server{
 
 		α ToString()Ι->string;
 		α ToString( const Node& parent )Ι->string override;
-		α InsertParams()ι->vector<DB::Value>;
+		α InsertParams()Ι->vector<DB::Value>;
 		α IsObjectType()Ι->bool override{ return true; }
 		α Specified()Ι->UA_UInt32 override{ return specifiedAttributes; }
 		α Name()Ι->UA_LocalizedText override{ return displayName; }

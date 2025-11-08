@@ -88,8 +88,8 @@ namespace Server{
 
 namespace Jde{
 	α App::AddInstance( str applicationName, str hostName, uint processId )ε->std::tuple<AppPK, AppInstancePK>{
-		AppPK applicationId;
-		AppInstancePK applicationInstanceId;
+		AppPK applicationId{};
+		AppInstancePK applicationInstanceId{};
 		let rows = ds().Select( {
 			Ƒ("{}(?,?,?)", _logSchema->GetTable("app_instances").InsertProcName()),
 			{DB::Value{applicationName}, DB::Value{hostName}, DB::Value{processId}},

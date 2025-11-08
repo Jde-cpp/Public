@@ -42,12 +42,12 @@ if( WIN32 )
 	target_link_libraries( ${targetName} PRIVATE version )
 	target_link_libraries( ${targetName} PUBLIC Boost::json )
 	target_link_libraries( ${targetName} PRIVATE jsonnet )
-	target_link_libraries( ${targetName} PUBLIC OpenSSL::SSL )
 else()
-	target_link_libraries( ${targetName} PRIVATE jsonnet++ jsonnet )
+	target_link_libraries( ${targetName} PRIVATE libjsonnet++.so libjsonnet.so )
 	target_link_libraries( ${targetName} PRIVATE PkgConfig::uring )
-	target_link_libraries( ${targetName} PRIVATE libssl.a libcrypto.a )
+#	target_link_libraries( ${targetName} PRIVATE libssl.a libcrypto.a )
 endif()
+target_link_libraries( ${targetName} PUBLIC OpenSSL::SSL )
 
 target_precompile_headers( ${targetName}
   PUBLIC

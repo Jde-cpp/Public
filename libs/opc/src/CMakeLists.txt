@@ -19,12 +19,12 @@ compileOptions( ${targetName} )
 file( GLOB_RECURSE sources *.cpp )
 file( GLOB_RECURSE headers  *.h )
 
-include_directories( ${open62541Dir}include )
+target_include_directories( ${targetName} PUBLIC ${open62541Dir}include )
 if( NOT WIN32 )
-	target_link_libraries( ${targetName} stdc++exp )#for stacktrace
+	target_link_libraries( ${targetName} stdc++exp )
 endif()
 target_link_libraries( ${targetName} protobuf::libprotobuf )
-target_link_libraries( ${targetName} open62541 )
+target_link_libraries( ${targetName} open62541::open62541 )
 
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 

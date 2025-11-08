@@ -1,6 +1,7 @@
 ﻿#pragma once
 #ifndef OPC_LOGGER_H
 #define OPC_LOGGER_H
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <open62541/server.h>
 
 namespace Jde::Opc{

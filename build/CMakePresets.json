@@ -90,6 +90,7 @@
 				"CMAKE_BUILD_TYPE": "$env{BUILD_TYPE}",
 				"CMAKE_CXX_COMPILER": "g++-14",
 				"CMAKE_C_COMPILER": "gcc-14",
+				"CMAKE_PREFIX_PATH": "$env{LIB_ROOT}/$env{BUILD_TYPE}",
 				"LIB_DIR": "$env{LIB_ROOT}/$env{BUILD_TYPE}"
 			}
 		},
@@ -109,8 +110,6 @@
 			"hidden": true,
 			"inherits": ["linux", "jde"],
 			"cacheVariables": {
-				"CMAKE_C_COMPILER": null,
-				"CMAKE_PREFIX_PATH": "$env{LIB_ROOT}/$env{BUILD_TYPE}",
 				"Boost_USE_STATIC_LIBS": false,
 				"BOOST_VERSION": "1.88.0",
 				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-changes-meaning"
