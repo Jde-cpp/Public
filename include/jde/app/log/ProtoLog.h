@@ -4,7 +4,7 @@
 #include <jde/fwk/co/LockKey.h>
 #include <jde/fwk/co/Timer.h>
 #include <jde/fwk/log/ILogger.h>
-#include <jde/app/shared/proto/Log.pb.h>
+#include <jde/app/proto/Log.pb.h>
 
 namespace Jde::App{
 	struct ProtoLogCache{
@@ -34,7 +34,7 @@ namespace Jde::App{
 		α Save()ι->TAwait<CoLockGuard>::Task;
 		α Save( vector<byte> toSave, CoLockGuard l )ι->VoidAwait::Task;
 
-		α StartTimer()ι->VoidAwait::Task;
+		α StartTimer()ι->TimerAwait::Task;
 		α ResetTimer()ι->void;
 
 		ProtoLogCache _cache;

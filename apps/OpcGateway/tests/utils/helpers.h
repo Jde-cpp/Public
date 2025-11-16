@@ -4,8 +4,8 @@
 #include <jde/db/Key.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLAwait.h>
-#include "../src/usings.h"
-#include "../src/types/ServerCnnctn.h"
+#include "../../src/usings.h"
+#include "../../src/types/ServerCnnctn.h"
 
 namespace Jde::Opc::Gateway{ enum class ETokenType : uint8; }
 namespace Jde::Opc::Gateway::Tests{
@@ -30,4 +30,5 @@ namespace Jde::Opc::Gateway::Tests{
 
 	α AvailableUserTokens( sv url )ε->ETokenType;
 	α Query( sv ql, bool raw=true )ε->jobject;
+	Ξ GatewayPort()ι{ return Settings::FindNumber<PortType>("http/gateway/port").value_or(1968); }
 }

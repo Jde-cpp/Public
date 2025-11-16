@@ -2,7 +2,7 @@
 #include <jde/fwk/co/Await.h>
 #include <jde/access/usings.h>
 #include <jde/web/client/exports.h>
-#include <jde/app/shared/proto/App.FromServer.pb.h>
+#include <jde/app/proto/App.FromServer.pb.h>
 #include <jde/db/Key.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include "../types/ServerCnnctn.h"

@@ -2,9 +2,9 @@
 #include "usings.h"
 #include <jde/fwk/co/Await.h>
 #include <jde/db/awaits/ExecuteAwait.h>
-#include <jde/app/shared/proto/App.FromClient.pb.h>
-#include <jde/app/shared/proto/App.FromServer.pb.h>
-#include <jde/app/shared/proto/Log.pb.h>
+#include <jde/app/proto/App.FromClient.pb.h>
+#include <jde/app/proto/App.FromServer.pb.h>
+#include <jde/app/proto/Log.pb.h>
 
 namespace Jde::DB{ struct IDataSource; }
 namespace Jde::QL{ struct TableQL; }

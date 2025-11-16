@@ -1,10 +1,9 @@
 #pragma once
-//#include "usings.h"
 #include <jde/fwk/co/Await.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/web/Jwt.h>
-#include <jde/app/shared/usings.h>
-#include <jde/app/shared/proto/Web.FromServer.pb.h>
+#include <jde/app/usings.h>
+#include <jde/app/proto/Web.FromServer.pb.h>
 
 namespace Jde::App{
 	struct IApp{

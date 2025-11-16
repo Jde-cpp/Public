@@ -1,15 +1,20 @@
-#include "Opc.FromServer.h"
+#include "opc.FromServer.h"
 #include <jde/opc/uatypes/DateTime.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
-
+#include "opc.Common.h"
 #define let const auto
 
 namespace Jde::Opc::Gateway{
+	Ω set( RequestId requestId, function<void(FromServer::Message&)> f )ι->FromServer::Transmission{
+		FromServer::Transmission t;
+		auto& m = *t.add_messages();
+		m.set_request_id( requestId );
+		f( m );
+		return t;
+	}
 	α FromServer::AckTrans( uint32 socketSessionId )ι->FromServer::Transmission{
-		FromServer::Message m;
-		m.set_ack( socketSessionId );
-		return MessageTrans( move(m), 0 );
+		return set( 0, [socketSessionId](FromServer::Message& m){m.set_ack(socketSessionId);} );
 	}
 
 	α FromServer::CompleteTrans( RequestId requestId )ι->FromServer::Transmission{
@@ -31,9 +36,22 @@ namespace Jde::Opc::Gateway{
 	α FromServer::MessageTrans( FromServer::Message&& m, RequestId requestId )ι->FromServer::Transmission{
 		FromServer::Transmission t;
 		m.set_request_id( requestId );
-		*t.add_messages() = move(m);
+		*t.add_messages() = move( m );
 		return t;
 	}
+	α FromServer::QueryTrans( string&& result, RequestId requestId )ι->FromServer::Transmission{
+		return set( requestId, [&](FromServer::Message& m){
+			*m.mutable_query() = move( result );
+		} );
+	}
+
+	α FromServer::ReadValuesTrans( string opcId, flat_map<NodeId, Opc::Value>&& values, RequestId requestId )ι->FromServer::Transmission{
+		FromServer::Transmission t;
+		for( auto& [nodeId, v] : values )
+			*t.add_messages() = ToProto( opcId, nodeId, v, requestId );
+		return t;
+	}
+
 	α FromServer::SubscribeAckTrans( FromServer::SubscriptionAck&& ack, RequestId requestId )ι->FromServer::Transmission{
 		FromServer::Transmission t;
 		auto& m = *t.add_messages();
@@ -46,8 +64,8 @@ namespace Jde::Opc::Gateway{
 		auto& m = *t.add_messages();
 		m.set_request_id( id );
 		auto ack = m.mutable_unsubscribe_ack();
-		for_each( move(successes), [&ack](let& n){*ack->add_successes() = ToNodeProto(n); } );
-		for_each( move(failures), [&ack](let& n){*ack->add_failures() = ToNodeProto(n); } );
+		for_each( move(successes), [&ack](let& n){*ack->add_successes() = ToNodeProto(n);} );
+		for_each( move(failures), [&ack](let& n){*ack->add_failures() = ToNodeProto(n);} );
 		return t;
 	}
 
@@ -59,8 +77,8 @@ namespace Jde::Opc::Gateway{
 		y.set_allocated_node( new Proto::NodeId{ToNodeProto(id.nodeId)} );
 		return y;
 	}
-#define IS(ua) type==&UA_TYPES[ua]
-	α FromServer::ToProto( const ServerCnnctnNK& opcId, const NodeId& node, const Opc::Value& v )ι->FromServer::Message{
+#define IS( ua ) type==&UA_TYPES[ua]
+	α FromServer::ToProto( const ServerCnnctnNK& opcId, const NodeId& node, const Opc::Value& v, RequestId requestId )ι->FromServer::Message{
 		let scaler = v.IsScaler();
 		let type = v.value.type;
 		auto nv = mu<FromServer::NodeValues>(); nv->set_allocated_node( new Proto::NodeId{ToNodeProto(node)} ); nv->set_opc_id( opcId );
@@ -92,7 +110,7 @@ namespace Jde::Opc::Gateway{
 			else if( IS(UA_TYPES_INT64) )
 				proto.set_int64( v.Get<UA_Int64>(i) );
 			else if( IS(UA_TYPES_NODEID) )
-				proto.set_allocated_node( new Proto::NodeId{ ToNodeProto(v.Get<UA_NodeId>(i))} );
+				proto.set_allocated_node( new Proto::NodeId{ToNodeProto(v.Get<UA_NodeId>(i))} );
 			else if( IS(UA_TYPES_SBYTE) )
 				proto.set_sbyte( (int8_t)v.Get<UA_SByte>(i) );
 			else if( IS(UA_TYPES_STATUSCODE) )
@@ -113,9 +131,104 @@ namespace Jde::Opc::Gateway{
 			}
 		}
 		FromServer::Message m;
+		m.set_request_id( requestId );
 		m.set_allocated_node_values( nv.release() );
 		return m;
 	}
+
+	α FromServer::ToValue( const FromServer::Value& proto )ι->Opc::Value{
+		UA_Variant y{};
+		switch( proto.of_case() ){
+		case FromServer::Value::OfCase::kBoolean:{
+			let v = UA_Boolean{ proto.boolean() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_BOOLEAN] );
+			break;}
+		case FromServer::Value::OfCase::kByte:{
+			let v = UA_Byte{ (UA_Byte)proto.byte() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_BYTE] );
+			break;}
+		case FromServer::Value::OfCase::kByteString:{
+			let v = ToUV( proto.byte_string() );
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_BYTESTRING] );
+			break;}
+		case FromServer::Value::OfCase::kDate:{
+			let v = UADateTime{ proto.date() }.UA();
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_DATETIME] );
+			break;}
+		case FromServer::Value::OfCase::kDoubleValue:{
+			let v = UA_Double{ proto.double_value() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_DOUBLE] );
+			break;}
+		case FromServer::Value::OfCase::kDuration:{
+			UA_Duration v = UADateTime{ proto.duration() }.UA();
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_DURATION] );
+			break;}
+		case FromServer::Value::OfCase::kExpandedNode:{
+			let v = ProtoUtils::ToExNodeId( proto.expanded_node() );
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_EXPANDEDNODEID] );
+			break;}
+		case FromServer::Value::OfCase::kFloatValue:{
+			let v = UA_Float{ proto.float_value() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_FLOAT] );
+			break;}
+		case FromServer::Value::OfCase::kGuid:{
+			UA_Guid v;
+			memcpy( &v, proto.guid().data(), std::min(sizeof(UA_Guid),proto.guid().size()) );
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_GUID] );
+			break;}
+		case FromServer::Value::OfCase::kInt16:{
+			let v = UA_Int16{ (int16_t)proto.int16() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_INT16] );
+			break;}
+		case FromServer::Value::OfCase::kInt32:{
+			let v = UA_Int32{ proto.int32() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_INT32] );
+			break;}
+		case FromServer::Value::OfCase::kInt64:{
+			let v = UA_Int64{ proto.int64() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_INT64] );
+			break;}
+		case FromServer::Value::OfCase::kNode:{
+			let v = ProtoUtils::ToNodeId( proto.node() );
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_NODEID] );
+			break;}
+		case FromServer::Value::OfCase::kSbyte:{
+			let v = UA_SByte{ (UA_SByte)proto.sbyte() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_SBYTE] );
+			break;}
+		case FromServer::Value::OfCase::kStatusCode:{
+			let v = StatusCode{ proto.status_code() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_STATUSCODE] );
+			break;}
+		case FromServer::Value::OfCase::kStringValue:{
+			let v = ToUV( proto.string_value() );
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_STRING] );
+			break;}
+		case FromServer::Value::OfCase::kUint16:{
+			let v = UA_UInt16{ (UA_UInt16)proto.uint16() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_UINT16] );
+			break;}
+		case FromServer::Value::OfCase::kUint32:{
+			let v = UA_UInt32{ proto.uint32() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_UINT32] );
+			break;}
+		case FromServer::Value::OfCase::kUint64:{
+			let v = UA_UInt64{ proto.uint64() };
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_UINT64] );
+			break;}
+		case FromServer::Value::OfCase::kXmlElement:{
+			let v = ToUV( proto.xml_element() );
+			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_XMLELEMENT] );
+			break;}
+		default:
+			THROW( "Unsupported FromServer::Value type {}.", (uint)proto.of_case() );
+		}
+		UA_DataValue dv{};
+		dv.value = y;
+		dv.hasValue = true;
+		return Opc::Value{ move(dv) };
+	}
+
 	α FromServer::ToNodeProto( const NodeId& id )ι->Proto::NodeId{
 		Proto::NodeId y;
 		y.set_namespace_index( id.namespaceIndex );

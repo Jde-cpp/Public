@@ -1,6 +1,5 @@
 #include "ClientSocketSession.h"
-#include <boost/unordered/concurrent_flat_map.hpp>
-#include <jde/web/client/usings.h>
+#include <jde/web/usings.h>
 
 #define let const auto
 
@@ -12,16 +11,14 @@ namespace Jde::Web::Mock{
 	α ClientSocketSession::OnAck( uint32 serverSocketId )ι->void{
 		SetId( serverSocketId );
 		INFOT( ELogTags::SocketClientRead, "[{}] {} AppClientSocketSession created: {}.", Id(), IsSsl() ? "Ssl" : "Plain", Host() );
-		//ResumeScaler<SessionPK>( move(hAny), SessionId() );
 	}
 
-
 	α ClientSocketSession::HandleException( std::any&& h, string&& what )ι{
-		if( auto pEcho = std::any_cast<ClientSocketAwait<string>::Handle>( &h ) ){
+		if( auto pEcho = std::any_cast<ClientSocketAwait<string>::Handle>(&h) ){
 			pEcho->promise().SetExp( Exception{what} );
 			pEcho->resume();
 		}
-		else if( auto pAck = std::any_cast<ClientSocketAwait<SessionPK>::Handle>( &h ) ){
+		else if( auto pAck = std::any_cast<ClientSocketAwait<SessionPK>::Handle>(&h) ){
 			pAck->promise().SetExp( Exception{what} );
 			pAck->resume();
 		}
@@ -33,7 +30,6 @@ namespace Jde::Web::Mock{
 	α ClientSocketSession::OnRead( Proto::FromServerTransmission&& transmission )ι->void{
 		auto size = transmission.messages_size();
 		for( auto i=0; i<size; ++i ){
-		//for( auto&& m : transmission.mutable_messages() ){
 			auto m = transmission.mutable_messages( i );
 			using enum Proto::FromServerMessage::ValueCase;
 			let requestId = m->request_id();
@@ -98,7 +94,7 @@ namespace Jde::Web::Mock{
 	}
 
 	α ClientSocketSession::OnClose( beast::error_code ec )ι->void{
-		auto f = [this, ec](std::any&& h)->void { HandleException(move(h), CodeException{ec, ELogTags::SocketClientWrite, ELogLevel::NoLog}.what()); };
+		auto f = [this, ec]( std::any&& h )->void { HandleException(move(h), CodeException{ec, ELogTags::SocketClientWrite, ELogLevel::NoLog}.what()); };
 		CloseTasks( f );
 		base::OnClose( ec );
 	}

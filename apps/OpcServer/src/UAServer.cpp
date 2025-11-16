@@ -1,10 +1,6 @@
 #include "UAServer.h"
-//#include <libxml/parser.h>
-//#include <libxml/tree.h>
-//#include <libxml/xmlerror.h>
 #include <jde/fwk/process/thread.h>
 #include <jde/opc/uatypes/opcHelpers.h>
-//#include "UAAccess.h"
 #include <NodesetLoader/backendOpen62541.h>
 
 #define let const auto

@@ -5,3 +5,9 @@ message Exception{
 	uint32 code = 1;
 	string what = 2;
 }
+
+message Query{
+	string text=1;
+	string variables=2;
+	bool return_raw=3;
+}

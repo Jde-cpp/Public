@@ -1,12 +1,12 @@
 #pragma once
 #include <jde/app/client/usings.h>
 #include <jde/app/client/AppClientSubscriptions.h>
-#include <jde/app/shared/proto/App.FromClient.h>
+#include <jde/app/proto/app.FromClient.h>
 #include <jde/access/usings.h>
 #include <jde/ql/types/Subscription.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/client/socket/IClientSocketSession.h>
-#include "../shared/proto/App.FromServer.pb.h"
+#include "../proto/App.FromServer.pb.h"
 #include "exports.h"
 
 #define Φ ΓAC auto
@@ -26,9 +26,6 @@ namespace Jde::App::Client{
 		sp<Client::AppClientSocketSession> _session;
 	};
 	α CloseSocketSession( SRCE )ι->VoidTask;
-	//Φ Query( str query, SRCE )ε->Web::Client::ClientSocketAwait<string>;
-	//Φ Subscribe( string&& query, sp<QL::IListener> listener, QL::SubscriptionClientId clientId, SRCE )ε->ClientSubscriptionAwait;
-	//Φ Unsubscribe( str query, SRCE )ε->UnsubscribeAwait;
 
 	struct AppClientSocketSession final : Web::Client::TClientSocketSession<Jde::App::Proto::FromClient::Transmission,Jde::App::Proto::FromServer::Transmission>{
 		Τ using await = Web::Client::ClientSocketAwait<T>;
@@ -53,6 +50,7 @@ namespace Jde::App::Client{
 		sp<IAppClient> _appClient;
 		sp<Access::Authorize> _authorize;
 		sp<QL::IQL> _qlServer;
+		optional<Proto::FromServer::ConnectionInfo> _sessionInfo;
 		Jde::UserPK _userPK{};
 	};
 }

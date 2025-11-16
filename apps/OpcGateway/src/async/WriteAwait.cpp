@@ -21,7 +21,7 @@ namespace Jde::Opc::Gateway{
 	}
 	α WriteAwait::Suspend()ι->void{
 		UAε( UA_Client_writeValueAttribute_async(*_client, _nodeId, &_value.value, onResponse, this, &_requestId) );
-		_client->Process( _requestId );
+		_client->Process( _requestId, "writeValueAttribute" );
 	}
 	α WriteAwait::AddResponse( RequestId requestId, UA_WriteResponse&& response )ι->void{
 		_client->ClearRequest( requestId );

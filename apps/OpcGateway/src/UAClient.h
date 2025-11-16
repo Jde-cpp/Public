@@ -36,7 +36,7 @@ namespace Jde::Opc::Gateway{
 		Ω RemoveClient( sp<UAClient>&& client )ι->bool;
 
 		α SubscriptionId()Ι->SubscriptionId{ return CreatedSubscriptionResponse ? CreatedSubscriptionResponse->subscriptionId : 0;}
-		α CreateSubscriptions()ι->void;
+//		α CreateSubscriptions()ι->void;
 		α DataSubscriptions( CreateMonitoredItemsRequest&& r, Handle requestHandle, DataChangeAwait::Handle h )ι->void;
 		α DataSubscriptionDelete( Gateway::SubscriptionId subscriptionId, flat_set<MonitorId>&& monitoredItemIds )ι->void;
 
@@ -50,8 +50,8 @@ namespace Jde::Opc::Gateway{
 		Ŧ ClearRequestH( RequestId requestId )ι->T;//{ return ClearRequest<UARequest<T>>( requestId )->CoHandle; }
 		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
 		α RetryVoid( function<void(sp<UAClient>&&) > f, UAException&& e, sp<UAClient>&& pClient )ι->ConnectAwait::Task;
-		Ŧ Process( RequestId requestId, T&& h )ι->void;
-		α Process( RequestId requestId )ι->void;
+		Ŧ Process( RequestId requestId, T&& h, sv what )ι->void;
+		α Process( RequestId requestId, sv what )ι->void;
 		α ProcessDataSubscriptions()ι->void;
 		α StopProcessDataSubscriptions()ι->void;
 		α AddSessionAwait( VoidAwait::Handle h )ι->void;
@@ -73,6 +73,8 @@ namespace Jde::Opc::Gateway{
 		α Configuration()ε->UA_ClientConfig*;
 		α Create()ι->UA_Client*;
 		α Connect()ε->void;
+		Ω LogServerEndpoints( str url, Jde::Handle h )ι->void;
+		α LogClientEndpoints()ι->void;
 		α RootSslDir()ι->fs::path{ return Process::AppDataFolder()/"ssl"; }
 		α Passcode()ι->const string{ return Process::GetEnv("JDE_PASSCODE").value_or( "" ); }
 		α PrivateKeyFile()ι->fs::path{ return RootSslDir()/Ƒ("private/{}.pem", Target()); }
@@ -97,8 +99,8 @@ namespace Jde::Opc::Gateway{
 		UAMonitoringNodes MonitoredNodes;//destroy first
 	};
 
-	Ŧ UAClient::Process( RequestId requestId, T&& h )ι->void{
-		_asyncRequest.Process<T>( requestId, move(h) );
+	Ŧ UAClient::Process( RequestId requestId, T&& h, sv what )ι->void{
+		_asyncRequest.Process<T>( requestId, move(h), what );
 	}
 
 	Ŧ UAClient::ClearRequestH( UA_Client* ua, RequestId requestId )ι->T{

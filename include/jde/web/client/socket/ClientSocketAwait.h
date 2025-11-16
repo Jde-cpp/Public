@@ -11,10 +11,10 @@ namespace Jde::Web::Client{
 		ψ Log( const fmt::format_string<Args const&...>&& m2, const Args&... args )ι->void{
 			TRACET( ELogTags::SocketClientRead, FWD(m2), FWD(args)... );
 		}
-		α Log( SessionPK sessionId, steady_clock::time_point start, SL sl)ι->void{
+		α Log( SessionPK sessionId, steady_clock::time_point start, SL sl )ι->void{
 			if( ShouldTrace(ELogTags::SocketClientRead) && ResponseMessage.size() ){
-				const auto msg = sv{Str::Format(ResponseMessage, MessageArgs)}.substr( 0, MaxLogLength() );
-				LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientRead, "[{:x}]SocketReceive - {} - {}", sessionId, msg, Chrono::ToString( steady_clock::now() - start ) );
+				const auto msg = Str::Format(ResponseMessage, MessageArgs).substr( 0, MaxLogLength() );
+				LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientRead, "[{:x}]SocketReceive - {} - {}", sessionId, msg, Chrono::ToString(steady_clock::now() - start) );
 			}
 		}
 
@@ -41,7 +41,7 @@ namespace Jde::Web::Client{
 	struct ClientSocketVoidAwait final : VoidAwait, IClientSocketVoidAwait{
 		ClientSocketVoidAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι:
 			VoidAwait{ sl }, IClientSocketVoidAwait{ move(request), requestId, session }{}
-		α Suspend()ι->void{ IClientSocketVoidAwait::Suspend( _h ); }
+		α Suspend()ι->void{ IClientSocketVoidAwait::Suspend(_h); }
 		α await_resume()ε->void override;
 	};
 
@@ -54,20 +54,14 @@ namespace Jde::Web::Client{
 	struct ClientSocketAwait final : IClientSocketVoidAwait, TAwait<T,TTimedTask<T>>{
 		using base = TAwait<T,TTimedTask<T>>;
 		ClientSocketAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι;
-		α Suspend()ι->void{
-			IClientSocketVoidAwait::Suspend( base::_h );
-		}
+		ClientSocketAwait( ClientSocketAwait&& )=default;
+		α Suspend()ι->void{ IClientSocketVoidAwait::Suspend(base::_h); }
 		α await_resume()ε->T override;
 	};
 
 	Τ ClientSocketAwait<T>::ClientSocketAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SL sl )ι:
 		IClientSocketVoidAwait{ move(request), requestId, session }, base{ sl }
 	{}
-
-	//Ŧ ClientSocketAwait<T>::Suspend()ι->void{
-	//	_session->AddTask( _requestId, base::_h );
-	//	_session->Write( move(_request) );
-	//}
 
 	Ŧ ClientSocketAwait<T>::await_resume()ε->T{
 		base::CheckException();

@@ -1,13 +1,13 @@
 #include <jde/app/log/ArchiveFile.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <jde/fwk/chrono.h>
-#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/protobuf.h>
 
 #define let const auto
 
 namespace Jde::App{
 	using App::Log::Proto::LogEntryFile;
-	using Jde::Proto::ToGuid;
+	using Protobuf::ToGuid;
 	Ω find( const auto& map, string uuid )ι->str{
 		let it = map.find( ToGuid(uuid) );
 		return it==map.end() ? Str::Empty() : it->second;
@@ -78,7 +78,7 @@ namespace Jde::App{
 		addStrings( move(*af.mutable_args()), Args );
 		for( int i=0; i<af.entries_size(); ++i ){
 			auto entry = af.mutable_entries(i);
-			let time = Jde::Proto::ToTimePoint( entry->time() );
+			let time = Protobuf::ToTimePoint( entry->time() );
 			if( Test(q, time, *entry) )
 				Entries[time].emplace_back( move(*entry) );
 		}
@@ -97,7 +97,7 @@ namespace Jde::App{
 			map.emplace( ToGuid(id), move(strings[ToGuid(id)]) );
 		};
 		for( let& entry : logEntries ){
-			let time = Jde::Proto::ToTimePoint( entry.time() );
+			let time = Protobuf::ToTimePoint( entry.time() );
 			if( !Test(filter, time, entry) )
 				continue;
 			addString( Templates, entry.template_id() );
@@ -130,7 +130,7 @@ namespace Jde::App{
 					else if( name=="line" )
 						o[name] = entry.line();
 					else if( name=="time" )
-						o[name] = ToIsoString( Jde::Proto::ToTimePoint(entry.time()) );
+						o[name] = ToIsoString( Protobuf::ToTimePoint(entry.time()) );
 					else if( name=="message" )
 						o[name] = Message( entry );
 					else if( name=="id" )

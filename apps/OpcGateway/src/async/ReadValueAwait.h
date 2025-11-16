@@ -3,7 +3,7 @@
 namespace Jde::Opc{ struct Value; }
 namespace Jde::Opc::Gateway {
 	struct UAClient;
-	struct ΓOPC ReadValueAwait final : TAwait<flat_map<NodeId, Value>>{
+	struct ReadValueAwait final : TAwait<flat_map<NodeId, Value>>{
 		ReadValueAwait( flat_set<NodeId> x, sp<UAClient> c, SRCE )ι;
 		α Suspend()ι->void override;
 	private:

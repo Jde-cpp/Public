@@ -15,7 +15,7 @@ message MonitoredItemCreateResult{
 }
 
 message SubscriptionAck{
-	repeated MonitoredItemCreateResult results=2;
+	repeated MonitoredItemCreateResult results=1;
 }
 
 message Value{
@@ -34,7 +34,7 @@ message Value{
 		int64 int64=12;
 		Jde.Opc.Proto.NodeId node=13;
 		int32 sbyte=14;
-		int32 status_code=15;
+		uint32 status_code=15;
 		string string_value=16;
 		uint32 uint16=17;
 		uint32 uint32=18;
@@ -58,9 +58,10 @@ message Message{
 	uint32 request_id = 1;
 	oneof Value{
 		uint32 ack = 2;	//SocketSessionId
-		NodeValues node_values = 3; //Subscription Broadcast
-		Jde.Proto.Exception exception = 4;
-		SubscriptionAck subscription_ack = 5; //Subscription acknowledgement
+		string query = 3; //GraphQL Query Response
+		NodeValues node_values = 4; //Subscription Broadcast
+		Jde.Proto.Exception exception = 5;
+		SubscriptionAck subscription_ack = 6; //Subscription acknowledgement
 		UnsubscribeAck unsubscribe_ack = 7; //Unsubscribe acknowledgement
 	}
 }

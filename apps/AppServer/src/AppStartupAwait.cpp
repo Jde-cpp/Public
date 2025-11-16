@@ -10,7 +10,6 @@
 namespace Jde::App{
 	α Server::InitLogging()ι->void{
 		AppClient()->InitLogging();
-		Logging::Init();
 	}
 namespace Server{
 	α AppStartupAwait::Execute()ι->VoidAwait::Task{

@@ -11,6 +11,7 @@ namespace Jde{
 	Φ PostM( std::move_only_function<void()> f )ι->void;
 	α PostIO( function<void()> f )ι->void;
 	Φ Post( VoidAwait::Handle&& h )ι->void;
+	Φ Post( VoidAwait::Handle&& h, Exception&& e )ι->void;
 	Ŧ Post( T&& value, typename TAwait<T>::Handle&& h )ι->void;
 
 	namespace Execution{

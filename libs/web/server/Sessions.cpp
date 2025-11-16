@@ -26,7 +26,7 @@ namespace Jde::Web::Server{
 
 	concurrent_flat_map<SessionPK,sp<SessionInfo>> _sessions;
 	Ω upsert( sp<SessionInfo>& info )ι->void{
-		if( _sessions.emplace_or_visit(info->SessionId, info, [&info]( auto& existing ){ existing.second->Expiration=existing.second->NewExpiration();}) )
+		if( _sessions.emplace_or_visit(info->SessionId, info, [&info](auto& existing){existing.second->Expiration=existing.second->NewExpiration();}) )
 			TRACE( "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK.Value, info->UserEndpoint );
 	}
 
@@ -58,13 +58,13 @@ namespace	Sessions{
 
 	α Sessions::Find( SessionPK sessionId )ι->sp<SessionInfo>{
 		sp<SessionInfo> y;
-		_sessions.cvisit( sessionId, [&y](auto& kv){ y = kv.second; } );
+		_sessions.cvisit( sessionId, [&y](auto& kv){y = kv.second;} );
 		return y;
 	}
 
 	α Sessions::Get()ι->vector<sp<SessionInfo>>{
 		vector<sp<SessionInfo>> y;
-		_sessions.cvisit_all( [&y]( auto& kv ){ y.emplace_back(kv.second); } );
+		_sessions.cvisit_all( [&y](auto& kv){y.emplace_back(kv.second);} );
 		return y;
 	}
 	α Sessions::Size()ι->uint{ return _sessions.size(); }
@@ -94,7 +94,7 @@ namespace	Sessions{
 
 	α UpdateExpiration( SessionPK sessionId, str userEndpoint )ε->sp<SessionInfo>{
 		sp<SessionInfo> info;
-		_sessions.visit( sessionId, [&info, &userEndpoint, sessionId]( auto& kv ){
+		_sessions.visit( sessionId, [&info, &userEndpoint, sessionId](auto& kv){
 			sp<SessionInfo> existing = kv.second;
 			//let& existingAddress = existing->UserEndpoint;
 			//THROW_IF( existingAddress!=userEndpoint, "[{}]existingAddress='{}' does not match userEndpoint='{}'", sessionId, existingAddress, userEndpoint );
@@ -107,7 +107,7 @@ namespace	Sessions{
 				TRACET( ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, ToIsoString(existingExpiration) );
 		} );
 		if( _lastTrim<steady_clock::now()-Sessions::RestSessionTimeout() ){
-			_sessions.erase_if( []( auto& kv ){ return kv.second->Expiration<steady_clock::now(); } );
+			_sessions.erase_if( [](auto& kv){return kv.second->Expiration<steady_clock::now();} );
 			_lastTrim = steady_clock::now();
 		}
 		return info;
@@ -115,7 +115,7 @@ namespace	Sessions{
 
 namespace Sessions{
 	α UpsertAwait::Suspend()ι->void{
-		if(	_authorization.starts_with("Bearer ") ){
+		if( 	_authorization.starts_with("Bearer ") ){
 			try{
 				FromJwt( _authorization.substr(7) );
 			}
@@ -144,7 +144,7 @@ namespace Sessions{
 	}
 	α UpsertAwait::FromSessionId()ι->TTask<Web::FromServer::SessionInfo>{
 		try{
-			optional<SessionPK> sessionId = Str::TryTo<SessionPK>(string{_authorization}, nullptr, 16);
+			optional<SessionPK> sessionId = Str::TryTo<SessionPK>( string{_authorization}, nullptr, 16 );
 			THROW_IF( !sessionId, "Invalid sessionId:  '{}'.", _authorization );
 			auto info = UpdateExpiration( *sessionId, _endpoint );
 			if( !info ){
@@ -158,7 +158,7 @@ namespace Sessions{
 					}
 				}
 				Web::FromServer::SessionInfo proto{ co_await *await };
-				steady_clock::time_point expiration = Chrono::ToClock<steady_clock,Clock>( Proto::ToTimePoint(proto.expiration()) );
+				let expiration = Chrono::ToClock<steady_clock,Clock>( Protobuf::ToTimePoint(proto.expiration()) );
 				info = ms<SessionInfo>( *sessionId, expiration, UserPK{proto.user_pk()}, proto.user_endpoint(), proto.has_socket() );
 				info->UserEndpoint = _endpoint;
 				info->HasSocket = _socket;

@@ -11,7 +11,7 @@
 #include <jde/fwk/io/json.h>
 
 #define let const auto
-namespace Jde::Proto{
+namespace Jde::Protobuf{
 	Ŧ Load( const fs::path& path, SRCE )ε->up<T>;
 	Ŧ TryLoad( const fs::path& path, SRCE )ι->up<T>;
 	Ŧ Load( const fs::path& path, T& p, SRCE )ε->void;
@@ -44,13 +44,13 @@ namespace Jde::Proto{
 
 
 namespace Jde{
-	Ξ Proto::ToString( const google::protobuf::MessageLite& msg )ι->string{
+	Ξ Protobuf::ToString( const google::protobuf::MessageLite& msg )ι->string{
 		string output;
 		msg.SerializeToString( &output );
 		return output;
 	}
 
-	Ξ Proto::SizePrefixed( const google::protobuf::MessageLite& m )ι->vector<byte>{
+	Ξ Protobuf::SizePrefixed( const google::protobuf::MessageLite& m )ι->vector<byte>{
 		const uint32_t length = (uint32_t)m.ByteSizeLong();
 		let size = length+4;
 		vector<byte> data( size ); data.reserve( size );
@@ -62,29 +62,29 @@ namespace Jde{
 			CRITICALT( Jde::ELogTags::IO, "Could not serialize to an array:{:x}", success );
 		return data;
 	}
-	Ξ Proto::Save( const google::protobuf::MessageLite& msg, fs::path path, SRCE )ε->void{
+	Ξ Protobuf::Save( const google::protobuf::MessageLite& msg, fs::path path, SRCE )ε->void{
 		string content;
 		msg.SerializeToString( &content );
 		IO::Save( move(path), content, sl );
 	}
 
-	Ŧ Proto::Deserialize( const vector<char>& data )ε->up<T>{
+	Ŧ Protobuf::Deserialize( const vector<char>& data )ε->up<T>{
 		auto p = mu<T>();
 		Internal::Deserialize<T>( (google::protobuf::uint8*)data.data(), (uint32)data.size(), *p );
 		return p;
 	}
-	Ŧ Proto::Deserialize( const google::protobuf::uint8* p, int size )ε->T{
+	Ŧ Protobuf::Deserialize( const google::protobuf::uint8* p, int size )ε->T{
 		T y;
 		Internal::Deserialize<T>( p, size, y );
 		return y;
 	}
-	Ŧ Proto::Deserialize( string&& x )ε->T{
+	Ŧ Protobuf::Deserialize( string&& x )ε->T{
 		T y;
 		Internal::Deserialize<T>( (google::protobuf::uint8*)x.data(), (int)x.size(), y );
 		x.clear();
 		return y;
 	}
-	Ŧ Proto::DeserializeVector( sv content )ε->vector<T>{
+	Ŧ Protobuf::DeserializeVector( sv content )ε->vector<T>{
 		vector<T> y;
 		for( auto p = content.data(), end = content.data() + content.size(); p+4<end; ){
 			uint32 length{};
@@ -99,7 +99,7 @@ namespace Jde{
 		return y;
 	}
 
-	Ŧ Proto::Load( const fs::path& path, T& proto, SL sl )ε->void{
+	Ŧ Protobuf::Load( const fs::path& path, T& proto, SL sl )ε->void{
 		vector<char> bytes;
 		try{
 			bytes = IO::LoadBinary( path, sl );
@@ -114,13 +114,13 @@ namespace Jde{
 		Internal::Deserialize( (google::protobuf::uint8*)bytes.data(), (uint32)bytes.size(), proto );
 	}
 
-	Ŧ Proto::Load( const fs::path& path, SL sl )ε->up<T>{
+	Ŧ Protobuf::Load( const fs::path& path, SL sl )ε->up<T>{
 		auto p = mu<T>();
 		Load( path, *p, sl );
 		return p;
 	}
 
-	Ŧ Proto::TryLoad( const fs::path& path, SL sl )ι->up<T>{
+	Ŧ Protobuf::TryLoad( const fs::path& path, SL sl )ι->up<T>{
 		up<T> pValue{};
 		if( fs::exists(path) ){
 			try{
@@ -132,23 +132,23 @@ namespace Jde{
 		return pValue;
 	}
 
-	Ŧ Proto::FromVector( vector<T>&& x )ι->google::protobuf::RepeatedPtrField<T>{
+	Ŧ Protobuf::FromVector( vector<T>&& x )ι->google::protobuf::RepeatedPtrField<T>{
 		google::protobuf::RepeatedPtrField<T> y;
 		for( auto& item : x )
 			*y.Add() = std::move(item);
 		x.clear();
 		return y;
 	}
-	Ŧ Proto::ToVector( google::protobuf::RepeatedPtrField<T>&& x )ι->vector<T>{
+	Ŧ Protobuf::ToVector( google::protobuf::RepeatedPtrField<T>&& x )ι->vector<T>{
 		vector<T> y; y.reserve( x.size() );
 		for_each( x, [&y]( auto& item ){ y.push_back(move(item)); } );
 		return y;
 	}
-	Ŧ Proto::ToVector( const google::protobuf::RepeatedField<T>& field )ι->vector<T>{
+	Ŧ Protobuf::ToVector( const google::protobuf::RepeatedField<T>& field )ι->vector<T>{
 		return vector<T>{ std::begin(field), std::end(field) };
 	}
 
-	Ξ Proto::ToTimestamp( TimePoint t )ι->google::protobuf::Timestamp{
+	Ξ Protobuf::ToTimestamp( TimePoint t )ι->google::protobuf::Timestamp{
 		google::protobuf::Timestamp proto;
 		let seconds = Clock::to_time_t( t );
 		let nanos = std::chrono::duration_cast<std::chrono::nanoseconds>( t-TimePoint{} )-std::chrono::duration_cast<std::chrono::nanoseconds>( std::chrono::seconds(seconds) );
@@ -156,7 +156,7 @@ namespace Jde{
 		proto.set_nanos( (int)nanos.count() );
 		return proto;
 	}
-	Ξ Proto::ToTimePoint( google::protobuf::Timestamp t )ι->TimePoint{
+	Ξ Protobuf::ToTimePoint( google::protobuf::Timestamp t )ι->TimePoint{
 		google::protobuf::Timestamp proto;
 #ifdef _MSC_VER
 		Clock::duration duration = duration_cast<Clock::duration>( std::chrono::nanoseconds( t.seconds() ) );
@@ -165,7 +165,7 @@ namespace Jde{
 		return Clock::from_time_t( t.seconds() )+std::chrono::nanoseconds( t.nanos() );
 #endif
 	}
-	Ξ Proto::ToTimestamp( const jobject& j, SL sl )ε->google::protobuf::Timestamp{
+	Ξ Protobuf::ToTimestamp( const jobject& j, SL sl )ε->google::protobuf::Timestamp{
 		google::protobuf::Timestamp proto;
 		proto.set_nanos( Json::AsNumber<int32_t>(j, "nanos", sl) );
 		auto jseconds = j.at("seconds");

@@ -8,7 +8,7 @@
 #include "../src/opcInternal.h"
 #include "../src/auth/UM.h"
 #include "../src/ql/OpcQLHook.h"
-#include "helpers.h"
+#include "utils/helpers.h"
 
 #define let const auto
 namespace Jde::Opc::Gateway::Tests{

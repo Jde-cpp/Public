@@ -1,6 +1,6 @@
 #pragma once
 #include <jde/fwk/co/LockKey.h>
-#include <jde/app/shared/proto/Log.pb.h>
+#include <jde/app/proto/Log.pb.h>
 
 namespace Jde::App{
 	struct DailyLoadAwait : TAwaitEx<vector<App::Log::Proto::FileEntry>,TAwait<CoLockGuard>::Task>{

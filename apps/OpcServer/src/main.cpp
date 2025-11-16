@@ -1,5 +1,7 @@
 ﻿#include <jde/opc/uatypes/Logger.h>
 #include <jde/fwk/crypto/OpenSsl.h>
+#include <jde/app/client/IAppClient.h>
+#include "globals.h"
 #include "StartupAwait.h"
 
 #define let const auto
@@ -14,6 +16,7 @@ std::optional<int> _exitCode;
 	int exitCode;
 	try{
 		Process::Startup( argc, argv, "Jde.OpcServer", "OpcServer" );
+		Opc::Server::AppClient()->InitLogging( Opc::Server::AppClient() );
 		let webServerSettings = Settings::FindObject( "/http" );
 		BlockVoidAwait( Opc::Server::StartupAwait{webServerSettings ? *webServerSettings : jobject{}, Settings::AsObject("/credentials")} );
 		exitCode = Process::Pause();

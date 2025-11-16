@@ -53,7 +53,8 @@ namespace Jde::Opc::Gateway{
 		_ptr{ Create() },
 		MonitoredNodes{ this }{
 		UA_ClientConfig_setDefault( Configuration() );
-		DBG( "[{:x}]Creating UAClient target: '{}' url: '{}' credential: '{}' )", Handle(), Target(), Url(), Credential.ToString() );
+		INFO( "[{:x}]Creating UAClient target: '{}' url: '{}' credential: '{}' )", Handle(), Target(), Url(), Credential.ToString() );
+		LogClientEndpoints();
 	}
 
 	α UAClient::Shutdown( bool /*terminate*/ )ι->void{
@@ -86,10 +87,10 @@ namespace Jde::Opc::Gateway{
 			Crypto::CreateCertificate( CertificateFile(), privateKeyFile, passcode, Jde::format("URI:{}", uri), "jde-cpp", "US", "localhost" );
 		}
 		auto config = UA_Client_getConfig( _ptr );
-		using SecurityPolicyPtr = up<UA_SecurityPolicy, decltype(&UA_free)>;
+		using SecurityPolicyPtr = up<UA_SecurityPolicy, decltype( &UA_free )>;
 		const uint size = addSecurity ? 2 : 1; ASSERT( !config->securityPoliciesSize );
-		SecurityPolicyPtr securityPolicies{ (UA_SecurityPolicy*)UA_malloc( sizeof(UA_SecurityPolicy)*size), &UA_free };
-		auto sc = UA_SecurityPolicy_None(&securityPolicies.get()[0], UA_BYTESTRING_NULL, &_logger); THROW_IFX( sc, UAClientException(sc, Handle()) );
+		SecurityPolicyPtr securityPolicies{ (UA_SecurityPolicy*)UA_malloc(sizeof(UA_SecurityPolicy)*size), &UA_free };
+		auto sc = UA_SecurityPolicy_None( &securityPolicies.get()[0], UA_BYTESTRING_NULL, &_logger ); THROW_IFX( sc, UAClientException(sc, Handle()) );
 		if( addSecurity ){
 			config->applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			config->clientDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
@@ -97,7 +98,7 @@ namespace Jde::Opc::Gateway{
 			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
 			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAClientException(sc, Handle()) );
 
-			config->authSecurityPolicies = (UA_SecurityPolicy *)UA_realloc( config->authSecurityPolicies, sizeof(UA_SecurityPolicy) *(config->authSecurityPoliciesSize + 1) );
+			config->authSecurityPolicies = ( UA_SecurityPolicy * )UA_realloc( config->authSecurityPolicies, sizeof(UA_SecurityPolicy) *(config->authSecurityPoliciesSize + 1) );
 			UA_SecurityPolicy_Basic256Sha256( &config->authSecurityPolicies[config->authSecurityPoliciesSize], *certificate.get(), *privateKey.get(), config->logging );
 			config->authSecurityPoliciesSize++;
 		}
@@ -109,23 +110,53 @@ namespace Jde::Opc::Gateway{
 	}
 	α UAClient::AddSessionAwait( VoidAwait::Handle h )ι->void{
 		{
-			lg _{_sessionAwaitableMutex};
+			lg _{ _sessionAwaitableMutex };
 			_sessionAwaitables.emplace_back( move(h) );
 		}
-		Process( ConnectRequestId );
+		Process( ConnectRequestId, "Connect" );
 	}
 	α UAClient::TriggerSessionAwaitables()ι->void{
 		vector<VoidAwait::Handle> handles;
 		{
-			lg _{_sessionAwaitableMutex};
-			for_each(_sessionAwaitables, [&handles](auto&& h){handles.emplace_back(h);} );
+			lg _{ _sessionAwaitableMutex };
+			for_each( _sessionAwaitables, [&handles](auto&& h){handles.emplace_back(h);} );
 			_sessionAwaitables.clear();
 		}
 		for_each( handles, [](auto&& h){h.resume();} );
 	}
 
+	α UAClient::LogClientEndpoints()ι->void{
+		vector<string> policyUris;
+		auto config = UA_Client_getConfig( _ptr );
+		for( let& sp : Iterable<UA_SecurityPolicy>( config->securityPolicies, config->securityPoliciesSize) )
+			policyUris.emplace_back( ToString(sp.policyUri) );
+		INFO( "[{:x}]Client Security Policies: {}", Handle(), Str::Join(policyUris) );
+	}
+	α UAClient::LogServerEndpoints( str url, Jde::Handle h )ι->void{
+    UA_Client *client = UA_Client_new();
+    UA_ClientConfig *config = UA_Client_getConfig(client);
+    UA_ClientConfig_setDefault(config);
+		UA_EndpointDescription* endpointArray{}; uint endpointArraySize{};
+
+		if( UA_Client_getEndpoints(client, url.c_str(), &endpointArraySize, &endpointArray) ){
+			WARN( "[{}]Could not get endpoints for url='{}'", hex(h), url );
+		}
+		else{
+			for( auto&& ep : Iterable<UA_EndpointDescription>(endpointArray, endpointArraySize) ){
+				constexpr array<sv,4> securityModeNames = { "Invalid", "None", "Sign", "SignAndEncrypt" };
+				let securityMode = FromEnum( securityModeNames, ep.securityMode );
+				vector<string> tokenTypes;
+				for( uint j=0; j<ep.userIdentityTokensSize; ++j )
+					tokenTypes.emplace_back( FromEnum(TokenTypeNames, ToTokenType(ep.userIdentityTokens[j].tokenType)) );
+				INFO( "[{}]ServerEndpoint {}=[{}]", hex(h), securityMode, Str::Join(tokenTypes) );
+			}
+			UA_Array_delete( endpointArray, endpointArraySize, &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION] );
+		}
+		UA_Client_delete( client );
+	}
+
 	α UAClient::StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void{
-		constexpr std::array<sv,6> sessionStates = {"Closed", "CreateRequested", "Created", "ActivateRequested", "Activated", "Closing"};
+		constexpr std::array<sv,6> sessionStates = { "Closed", "CreateRequested", "Created", "ActivateRequested", "Activated", "Closing" };
 		DBG( "[{:x}]channelState='{}', sessionState='{}', connectStatus='({:x}){}'", (uint)ua, UAException::Message(channelState), FromEnum(sessionStates, sessionState), connectStatus, UAException::Message(connectStatus) );
 		BREAK_IF( connectStatus );
 		if( auto client = sessionState == UA_SESSIONSTATE_ACTIVATED ? UAClient::TryFind(ua) : sp<UAClient>{}; client ){
@@ -133,8 +164,15 @@ namespace Jde::Opc::Gateway{
 			client->ClearRequest( ConnectRequestId );
 		}
 		if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED || connectStatus==UA_STATUSCODE_BADSECURITYCHECKSFAILED || connectStatus == UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
-			_awaitingActivation.erase_if( [ua, sessionState,connectStatus]( sp<UAClient> client ){
+			_awaitingActivation.erase_if( [ua, sessionState,connectStatus](sp<UAClient> client){
 				if( client->UAPointer()!=ua )return false;
+//				if( UA_Client_getNamespaceIndex
+//					!ua->haveNamespaces ) return false;
+
+				if( connectStatus == UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
+					LogServerEndpoints( client->Url(), client->Handle() );
+					client->LogClientEndpoints();
+				}
 				client->ClearRequest( ConnectRequestId );//previous clear didn't have client
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
 					{
@@ -147,7 +185,7 @@ namespace Jde::Opc::Gateway{
 					Post( [client]()ι->void{ConnectAwait::Resume(move(client));} );
 				}
 				else
-					Post( [client,connectStatus]()ι->void{ConnectAwait::Resume( client->Target(), client->Credential, UAClientException{connectStatus, client->Handle(), "Connection Failed"} );} );
+					Post( [client,connectStatus]()ι->void{ConnectAwait::Resume(client->Target(), client->Credential, UAClientException{connectStatus, client->Handle(), "Connection Failed"});} );
 
 				return true;
 			});
@@ -163,14 +201,16 @@ namespace Jde::Opc::Gateway{
 		_config.logging = &_logger;
 		_config.eventLoop = UA_EventLoop_new_POSIX( _config.logging );
 		UA_ConnectionManager *tcpCM = UA_ConnectionManager_new_POSIX_TCP( "tcp connection manager"_uv );
-		_config.eventLoop->registerEventSource(_config.eventLoop, (UA_EventSource*)tcpCM);
+		_config.eventLoop->registerEventSource( _config.eventLoop, (UA_EventSource*)tcpCM );
 		_config.timeout = 10000; /*ms*/
 		_config.stateCallback = StateCallback;
 		_config.inactivityCallback = inactivityCallback;
 		_config.subscriptionInactivityCallback = subscriptionInactivityCallback;
-		if( Credential.Type()==ETokenType::Username )
+		if( Credential.Type()==ETokenType::Username ){
 			UA_ClientConfig_setAuthenticationUsername( &_config, Credential.LoginName().c_str(), Credential.Password().c_str() );
-		else if( Credential.Type()==ETokenType::Certificate ){
+			INFO( "[{}]Using username/password authentication: '{}'", hex(Handle()), Credential.LoginName() );
+		}else if( Credential.Type()==ETokenType::Certificate ){
+			INFO( "[{}]Using certificate authentication: '{}'", hex(Handle()), AppClient()->ClientCryptoSettings->CertPath.string() );
 			UA_ClientConfig_setAuthenticationCert( &_config,
 				*ToUAByteString( Crypto::ReadCertificate(AppClient()->ClientCryptoSettings->CertPath) ),
 				*ToUAByteString( Crypto::ReadPrivateKey(AppClient()->ClientCryptoSettings->PrivateKeyPath, AppClient()->ClientCryptoSettings->Passcode) )
@@ -178,6 +218,8 @@ namespace Jde::Opc::Gateway{
 				//*ToUAByteString( Crypto::ReadPrivateKey(PrivateKeyFile(), Passcode()) )
 			);
 		}else if( Credential.Type()==ETokenType::IssuedToken ){
+			ASSERT( Credential.Token().size() );
+			INFO( "[{}]Using issued token authentication: '{}'", hex(Handle()), Credential.Token() );
 			UA_IssuedIdentityToken* identityToken = UA_IssuedIdentityToken_new();
 			identityToken->policyId = AllocUAString( "open62541-anonymous-policy"sv );
 			UA_ByteString_allocBuffer( &identityToken->tokenData, Credential.Token().size() );
@@ -185,13 +227,17 @@ namespace Jde::Opc::Gateway{
 			memcpy( identityToken->tokenData.data, Credential.Token().data(), Credential.Token().size() );
 			UA_ExtensionObject_setValue( &_config.userIdentityToken, identityToken, &UA_TYPES[UA_TYPES_ISSUEDIDENTITYTOKEN] );
 		}
+		else{
+			BREAK;
+			INFO( "[{}]Using anonymous authentication.", hex(Handle()) );
+		}
 
 		//	UA_ClientConfig_setAuthenticationCert( &_config, Credential.Certificate().c_str(), Credential.PrivateKey().c_str() );
 		UA_ConnectionManager *udpCM = UA_ConnectionManager_new_POSIX_UDP( "udp connection manager"_uv );
 		_config.eventLoop->registerEventSource( _config.eventLoop, (UA_EventSource*)udpCM );
 		auto ua = UA_Client_newWithConfig( &_config );
 		_logger.context = ua;
-		UA_Client_getConfig(ua)->eventLoop->logger = _config.logging;
+		UA_Client_getConfig( ua )->eventLoop->logger = _config.logging;
 
 		return ua;
 	}
@@ -202,23 +248,23 @@ namespace Jde::Opc::Gateway{
 		DBG( "[{:x}]Connecting to '{}', using '{}'", Handle(), Url(), Credential.ToString() );
 		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
 		_asyncRequest.SetParent( p );
-		Process( ConnectRequestId, nullptr );
+		Process( ConnectRequestId, "Connect" );
 	}
 
-	α UAClient::Process( RequestId requestId )ι->void{
-		_asyncRequest.Process( requestId );
+	α UAClient::Process( RequestId requestId, sv what )ι->void{
+		_asyncRequest.Process( requestId, what );
 	}
 
 	α UAClient::ProcessDataSubscriptions()ι->void{
-		Process( 0 );
+		Process( SubscriptionRequestId, "DataSubscriptions" );
 	}
 
 	α UAClient::StopProcessDataSubscriptions()ι->void{
-		ClearRequest( 0 );
+		ClearRequest( SubscriptionRequestId );
 	}
 
 	α UAClient::ClearRequest( UA_Client* ua, RequestId requestId )ι->void{
-		if( auto p = TryFind( ua ); p )
+		if( auto p = TryFind(ua); p )
 			p->ClearRequest( requestId );
 	}
 
@@ -242,14 +288,14 @@ namespace Jde::Opc::Gateway{
 			TRACET( BrowseTag, "[{:x}]SendBrowseRequest", Handle() );
 			UAε( UA_Client_sendAsyncBrowseRequest(_ptr, &request, Browse::OnResponse, nullptr, &requestId) );
 			TRACET( BrowseTagPedantic, "[{:x}.{}]SendBrowseRequest", Handle(), requestId );
-			Process( requestId, move(h) );
+			Process( requestId, move(h), "BrowseRequest" );
 		}
 		catch( UAException& e ){
 			Retry<Browse::FoldersAwait::Handle>(
-				[r{move(request)}]( sp<UAClient>&& p, Browse::FoldersAwait::Handle h )mutable{
+				[r{ move(request) }]( sp<UAClient>&& p, Browse::FoldersAwait::Handle h )mutable{
 					p->SendBrowseRequest( move(r), h );
 				},
-				move(e), shared_from_this(), h
+				move( e ), shared_from_this(), h
 			);
 		}
 	}
@@ -272,10 +318,10 @@ namespace Jde::Opc::Gateway{
 	 		}
 			TRACET( IotReadTag, "[{:x}.{}]SendReadRequest - count={}", Handle(), firstRequestId, ids.size() );
 			_readRequests.try_emplace( firstRequestId, UARequestMulti<Value>{move(ids)} );
-			Process( firstRequestId, move(h) );
+			Process( firstRequestId, move(h), "readValueAttribute" );
 		}
 		catch( UAException& e ){
-			Retry<ReadValueAwait::Handle>( [n=move(nodeIds)]( sp<UAClient>&& p, ReadValueAwait::Handle h )mutable{p->SendReadRequest( move(n), move(h) );}, move(e), shared_from_this(), move(h) );
+			Retry<ReadValueAwait::Handle>( [n=move(nodeIds)](sp<UAClient>&& p, ReadValueAwait::Handle h)mutable{p->SendReadRequest(move(n), move(h));}, move(e), shared_from_this(), move(h) );
 		}
 	}
 	α UAClient::SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void{
@@ -284,58 +330,58 @@ namespace Jde::Opc::Gateway{
 		try{
 			RequestId requestId{};
 			UAε( UA_Client_MonitoredItems_setMonitoringMode_async(UAPointer(), move(request), SetMonitoringModeCallback, nullptr, &requestId) );
-			Process( requestId, nullptr );//if retry fails, don't want to process.
+			Process( requestId, nullptr, "setMonitoringMode" );//if retry fails, don't want to process.
 		}
 		catch( UAException& e ){
-			RetryVoid( [subscriptionId]( sp<UAClient>&& p )mutable{p->SetMonitoringMode( subscriptionId );}, move(e), shared_from_this() );
+			RetryVoid( [subscriptionId](sp<UAClient>&& p)mutable{p->SetMonitoringMode(subscriptionId);}, move(e), shared_from_this() );
 		}
 	}
 
-	α UAClient::CreateSubscriptions()ι->void{
-		try{
-			RequestId requestId{};
-			UAε( UA_Client_Subscriptions_create_async(UAPointer(), UA_CreateSubscriptionRequest_default(), nullptr, StatusChangeNotificationCallback, DeleteSubscriptionCallback, CreateSubscriptionCallback, nullptr, &requestId) );
-			TRACET( MonitoringTag, "[{:x}.{:x}]CreateSubscription", Handle(), requestId );
-			Process( requestId, nullptr );
-		}
-		catch( UAException& e ){
-			RetryVoid( []( sp<UAClient>&& p )mutable{p->CreateSubscriptions();}, move(e), shared_from_this() );
-		}
-	}
+	// α UAClient::CreateSubscriptions()ι->void{
+	// 	try{
+	// 		RequestId requestId{};
+	// 		UAε( UA_Client_Subscriptions_create_async(UAPointer(), UA_CreateSubscriptionRequest_default(), nullptr, StatusChangeNotificationCallback, DeleteSubscriptionCallback, CreateSubscriptionCallback, nullptr, &requestId) );
+	// 		TRACET( MonitoringTag, "[{:x}.{:x}]CreateSubscription", Handle(), requestId );
+	// 		Process( requestId, nullptr );
+	// 	}
+	// 	catch( UAException& e ){
+	// 		RetryVoid( [](sp<UAClient>&& p)mutable{p->CreateSubscriptions();}, move(e), shared_from_this() );
+	// 	}
+	// }
 
 	α UAClient::DataSubscriptions( CreateMonitoredItemsRequest&& request, Jde::Handle requestHandle, DataChangeAwait::Handle h )ι->void{
-		ASSERT(CreatedSubscriptionResponse);
+		ASSERT( CreatedSubscriptionResponse );
 		if( !CreatedSubscriptionResponse )
 			return h.promise().ResumeExp( Exception{"CreatedSubscriptionResponse==null"}, h );
 		try{
-			vector<UA_Client_DeleteMonitoredItemCallback> deleteCallbacks{request.itemsToCreateSize, DataChangesDeleteCallback};
-			vector<UA_Client_DataChangeNotificationCallback> dataChangeCallbacks{request.itemsToCreateSize, DataChangesCallback};
+			vector<UA_Client_DeleteMonitoredItemCallback> deleteCallbacks{ request.itemsToCreateSize, DataChangesDeleteCallback };
+			vector<UA_Client_DataChangeNotificationCallback> dataChangeCallbacks{ request.itemsToCreateSize, DataChangesCallback };
 			void** contexts = nullptr;
 			request.subscriptionId = CreatedSubscriptionResponse->subscriptionId;
 
 			RequestId requestId{};
 			UAε( UA_Client_MonitoredItems_createDataChanges_async(UAPointer(), request, contexts, dataChangeCallbacks.data(), deleteCallbacks.data(), CreateDataChangesCallback, (void*)requestHandle, &requestId) );
 			//TRACET( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, serialize(request.ToJson()) );
-			Process( requestId, move(h) );//TODO handle BadSubscriptionIdInvalid
+			Process( requestId, move(h), "createDataChanges" );//TODO handle BadSubscriptionIdInvalid
 		}
 		catch( UAException& e ){
 			h.promise().ResumeExp( move(e), move(h) );//retry will leave CreatedSubscriptionResponse null...
-			//Retry( [&x=request,requestHandle]( sp<UAClient>&& p, HCoroutine&& h )mutable{p->DataSubscriptions(move(x), requestHandle, move(h));}, move(e), shared_from_this(), move(h) );
+			//Retry( [&x=request,requestHandle](sp<UAClient>&& p, HCoroutine&& h)mutable{p->DataSubscriptions(move(x), requestHandle, move(h));}, move(e), shared_from_this(), move(h) );
 		}
 	}
 
 	α UAClient::DataSubscriptionDelete( Gateway::SubscriptionId subscriptionId, flat_set<MonitorId>&& monitoredItemIds )ι->void{
-		UA_DeleteMonitoredItemsRequest request; UA_DeleteMonitoredItemsRequest_init(&request);
+		UA_DeleteMonitoredItemsRequest request; UA_DeleteMonitoredItemsRequest_init( &request );
 		request.subscriptionId = subscriptionId;
 		request.monitoredItemIdsSize = monitoredItemIds.size();
-		request.monitoredItemIds = (UA_UInt32*)UA_Array_new( monitoredItemIds.size(), &UA_TYPES[UA_TYPES_UINT32] );
+		request.monitoredItemIds = ( UA_UInt32* )UA_Array_new( monitoredItemIds.size(), &UA_TYPES[UA_TYPES_UINT32] );
 		uint i=0;
 		for( auto& id : monitoredItemIds )
 			request.monitoredItemIds[i++] = id;
 		try{
 			RequestId requestId{};
 			UAε( UA_Client_MonitoredItems_delete_async(UAPointer(), move(request), MonitoredItemsDeleteCallback, nullptr, &requestId) );
-			Process( requestId, nullptr );
+			Process( requestId, nullptr, "MonitoredItems_delete" );
 			UA_DeleteMonitoredItemsRequest_clear( &request );
 		}
 		catch( const IException& )
@@ -354,10 +400,10 @@ namespace Jde::Opc::Gateway{
 				ids.emplace( requestId, node );
 	 		}
 			_dataAttributeRequests.try_emplace( firstRequestId, UARequestMulti<NodeId>{move(ids), shared_from_this()} );
-			Process( firstRequestId, move(h) );
+			Process( firstRequestId, move(h), "readDataTypeAttribute" );
 		}
 		catch( UAException& e ){
-			Retry<AttribAwait::Handle>( [n=move(x)]( sp<UAClient>&& p, auto h )mutable{p->RequestDataTypeAttributes( move(n), move(h) );}, move(e), shared_from_this(), h );
+			Retry<AttribAwait::Handle>( [n=move(x)](sp<UAClient>&& p, auto h)mutable{p->RequestDataTypeAttributes(move(n), move(h));}, move(e), shared_from_this(), h );
 		}
 	}
 
@@ -422,7 +468,7 @@ namespace Jde::Opc::Gateway{
 // 		}
 // 		_config.eventLoop = nullptr;
 // #define free _free_dbg
-		UA_Client_delete(_ptr);
-		DBG("[{:x}]~UAClient( '{}', '{}' )", Handle(), Target(), Url());
+		UA_Client_delete( _ptr );
+		DBG( "[{:x}]~UAClient( '{}', '{}' )", Handle(), Target(), Url() );
 	}
 }

@@ -30,7 +30,7 @@ endif()
 file( GLOB headers *.h **/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
-#set( cmake_ctest_arguments -tests -settings=$ENV{jde_dir}/public/apps/opcgateway/config/opc.gateway.jsonnet )
+target_include_directories( ${targetName} PRIVATE $ENV{JDE_DIR}/Public/include/jde/app/proto )
 add_test( NAME gatewaytests COMMAND $<TARGET_FILE:Jde.Opc.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Tests.jsonnet )
 
 if( NOT jde_Superbuild )

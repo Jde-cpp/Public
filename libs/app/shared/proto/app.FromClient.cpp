@@ -1,10 +1,10 @@
-#include <jde/app/shared/proto/App.FromClient.h>
+#include <jde/app/proto/app.FromClient.h>
 #include <boost/uuid/uuid_io.hpp>
-#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/protobuf.h>
 #include <jde/fwk/settings.h>
 #include "Log.pb.h"
 
-using Jde::Proto::ToBytes;
+using Jde::Protobuf::ToBytes;
 namespace Jde::App::FromClient{
 	Ω setMessage( RequestId requestId, function<void(PFromClient::Message&)> f )ι->PFromClient::Transmission{
 		PFromClient::Transmission t;
@@ -15,7 +15,7 @@ namespace Jde::App::FromClient{
 	}
 	Ω transString( RequestId requestId, function<void(PFromClient::Message&)> f )ι->string{
 		auto t = setMessage( requestId, f );
-		return Jde::Proto::ToString( t );
+		return Protobuf::ToString( t );
 	}
 }
 namespace Jde::App{
@@ -66,7 +66,7 @@ namespace Jde::App{
 		i.set_session_id( sessionId );
 		i.set_host( Process::HostName() );
 		i.set_pid( Process::ProcessId() );
-		*i.mutable_start_time() = Jde::Proto::ToTimestamp( Process::StartTime() );
+		*i.mutable_start_time() = Jde::Protobuf::ToTimestamp( Process::StartTime() );
 		i.set_web_port( Settings::FindNumber<PortType>("/http/port").value_or(0) );
 
 		return t;
@@ -81,23 +81,23 @@ namespace Jde::App{
 	}
 
 	α FromClient::Jwt( RequestId requestId )ι->StringTrans{
-		return transString( requestId, [&](auto& m){ m.set_request_type( Proto::FromClient::ERequestType::Jwt );} );
+		return transString( requestId, [&](auto& m){m.set_request_type(Proto::FromClient::ERequestType::Jwt);} );
 	}
 
 	α FromClient::ToStatus( vector<string>&& details )ι->PFromClient::Status{
 		PFromClient::Status y;
-		*y.mutable_start_time() = Jde::Proto::ToTimestamp( Process::StartTime() );
+		*y.mutable_start_time() = Jde::Protobuf::ToTimestamp( Process::StartTime() );
 		y.set_memory( Process::MemorySize() );
-		for_each( details, [&y](auto&& detail){ y.add_details(move(detail)); } );
+		for_each( details, [&y](auto&& detail){y.add_details(move(detail));} );
 		return y;
 	}
 
 	α FromClient::Status( vector<string>&& details )ι->PFromClient::Transmission{
 		PFromClient::Transmission t;
 		auto& status = *t.add_messages()->mutable_status() = ToStatus( move(details) );
-		*status.mutable_start_time() = Jde::Proto::ToTimestamp( Process::StartTime() );
+		*status.mutable_start_time() = Jde::Protobuf::ToTimestamp( Process::StartTime() );
 		status.set_memory( Process::MemorySize() );
-		for_each( details, [&status](auto&& detail){ status.add_details(move(detail)); } );
+		for_each( details, [&status](auto&& detail){status.add_details(move(detail));} );
 		return t;
 	}
 
@@ -111,7 +111,7 @@ namespace Jde::App{
 		return transString( requestId, [&](auto& m){
 			auto& sub = *m.mutable_subscription();
 			sub.set_text( move(query) );
-			*sub.mutable_variables() = serialize(move(variables));
+			*sub.mutable_variables() = serialize( move(variables) );
 		});
 	}
 	α FromClient::LogEntries( vector<Logging::Entry>&& entries )ι->PFromClient::Transmission{
@@ -125,11 +125,11 @@ namespace Jde::App{
 	α FromClient::LogEntryClient( Logging::Entry&& e )ι->Log::Proto::LogEntryClient{
 		Log::Proto::LogEntryClient proto;
 		proto.set_text( move(e.Text) );
-		*proto.mutable_args() = Jde::Proto::FromVector( move(e.Arguments) );
+		*proto.mutable_args() = Protobuf::FromVector( move(e.Arguments) );
 		proto.set_level( (Log::Proto::ELogLevel)e.Level );
 		proto.set_tags( (uint)e.Tags );
 		proto.set_line( e.Line );
-		*proto.mutable_time() = Jde::Proto::ToTimestamp( e.Time );
+		*proto.mutable_time() = Protobuf::ToTimestamp( e.Time );
 		proto.set_user_pk( e.UserPK.Value );
 		proto.set_file( move(e.FileString()) );
 		proto.set_function( move(e.FunctionString()) );
@@ -144,7 +144,7 @@ namespace Jde::App{
 		proto.set_level( (Log::Proto::ELogLevel)m.Level );
 		proto.set_tags( (uint)m.Tags );
 		proto.set_line( m.Line );
-		*proto.mutable_time() = Jde::Proto::ToTimestamp( m.Time );
+		*proto.mutable_time() = Protobuf::ToTimestamp( m.Time );
 		proto.set_user_pk( m.UserPK.Value );
 		proto.set_file_id( ToBytes(m.FileId()) );
 		proto.set_function_id( ToBytes(m.FunctionId()) );
@@ -153,15 +153,15 @@ namespace Jde::App{
 
 	α FromClient::FromLogEntry( Log::Proto::LogEntryClient&& m )ι->Logging::Entry{
 		return Logging::Entry{
-			(ELogLevel)m.level(),
-			(ELogTags)m.tags(),
+			( ELogLevel )m.level(),
+			( ELogTags )m.tags(),
 			m.line(),
-			Jde::Proto::ToTimePoint( m.time() ),
-			{m.user_pk()},
-			move(*m.mutable_text()),
-			move(*m.mutable_file()),
-			move(*m.mutable_function()),
-			Jde::Proto::ToVector( move(*m.mutable_args()) )
+			Protobuf::ToTimePoint( m.time() ),
+			{ m.user_pk() },
+			move( *m.mutable_text() ),
+			move( *m.mutable_file() ),
+			move( *m.mutable_function() ),
+			Protobuf::ToVector( move(*m.mutable_args()) )
 		};
 	}
 }

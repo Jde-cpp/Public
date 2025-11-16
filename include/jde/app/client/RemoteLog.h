@@ -15,7 +15,7 @@ namespace Jde::App::Client{
 	private:
 		α ResetTimer()ι->void;
 		α Send()ι->void;
-		α StartTimer( std::mutex& mtx )ι->VoidAwait::Task;
+		α StartTimer( std::mutex& mtx )ι->TimerAwait::Task;
 		ProtoLogCache _cache;
 		sp<IAppClient> _client;
 		Duration _delay;

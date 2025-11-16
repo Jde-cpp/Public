@@ -4,8 +4,8 @@
 		"name": "AppServer",
 		"sourceDir": "${env:JDE_DIR}/Public/apps/AppServer",
 		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_DIR}/jde",
-		"buildDir": "${config:buildRoot}/${config:buildTarget}/apps/${config:name}",
+		"buildRoot": "${env:JDE_BUILD_DIR}/${config:buildTarget}",
+		"exeDir": "${config:buildRoot}/apps/${config:name}/exe",
 		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions.sh",
 	},
 	"folders": [
@@ -56,15 +56,6 @@
 		{
 			"path": "config",
 			"name": "config"
-		},
-
-		{
-			"path": "xtests",
-			"name": "tests"
-		},
-		{
-			"path": "xx../Public/libs/app/client",
-			"name": "client"
 		}
 	],
 	"tasks": {
@@ -73,40 +64,28 @@
 			{
 				"label": "build",
 				"type": "shell",
-				"command": "cd ${config:buildDir}; tput reset;make -j;",
+				"command": "cd ${config:buildRoot}; tput reset; cmake --build . -j --target Jde.App.Server;",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": true }
 			},
 			{
 				"label": "compile",
 				"type": "shell",
-				"command": "tput reset;${config:sourceBash};compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot}/${config:buildTarget};",
+				"command": "tput reset;${config:sourceBash};compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot};",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},
 			{
 				"label": "buildProject",
 				"type": "shell",
-				"command": "tput reset; source $JDE_DIR/Public/build/buildFunctions.sh;buildProject ${fileWorkspaceFolder} ${config:buildRoot}/${config:buildTarget};",
+				"command": "tput reset; source $JDE_DIR/Public/build/buildFunctions.sh;buildProject ${fileWorkspaceFolder} ${config:buildRoot};",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "buildTests",
-				"type": "shell",
-				"command": "cd ../../Public/tests/appServer; tput reset;./build.sh;",
-				"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder:AppServer}"],
-					"pattern": {
-						"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
-						"file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
-					}
-				},
 				"group": { "kind": "build", "isDefault": false }
 			},
 			{
 				"label": "cmake",
 				"type": "shell",
-				"command": "mkdir -p ${config:buildDir};cd ${config:buildDir}; tput reset; rm -f CMakeCache.txt; cmake ${config:sourceDir} --preset linux-jde-debug",
+				"command": "mkdir -p ${config:buildRoot};cd ${config:buildRoot}; tput reset; rm -f CMakeCache.txt;cmake ${env:JDE_DIR}/Public --preset linux-jde-debug",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			}
@@ -118,11 +97,11 @@
 			"name": "Debug",
 			"type": "cppdbg",
 			"request": "launch",
-			"program": "${config:buildDir}/Jde.App.Server",
+			"program": "${config:exeDir}/Jde.App.Server",
 			"args": ["-c", "-tests", "-settings=$JDE_DIR/Public/apps/AppServer/config/App.Server.jsonnet"],
 			"stopAtEntry": false,
 			"additionalSOLibSearchPath": "/lib/x86_64-linux-gnu",
-			"cwd": "${config:buildDir}",
+			"cwd": "${config:exeDir}",
 			"externalConsole": false,
 			"MIMode": "gdb",
 			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
@@ -130,21 +109,6 @@
 			"preLaunchTask": "build",
 			"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
 			"showDisplayString": true
-		},
-		{
-			"name": "Release",
-			"type": "cppdbg",
-			"request": "launch",
-			"program": "${workspaceFolder:AppServer}/../../bin/release/Jde.AppServer",
-			"args": ["-c"],
-			"stopAtEntry": false,
-			"cwd": "${workspaceFolder:AppServer}/../../bin/release",
-			"environment": [{ "name": "JDE_DB_DRIVER", "value": "libJde.MySql.so" }, { "name": "JDE_LOG_META", "value": "${workspaceFolder:AppServer}/../meta.json" }],
-			"externalConsole": false,
-			"MIMode": "gdb",
-			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing","ignoreFailures": true}],
-			"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
-			"preLaunchTask": "release"
 		},
 		{
 			"name": "RelWithDebInfo",
@@ -160,27 +124,6 @@
 			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing","ignoreFailures": true}],
 			"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
 			"preLaunchTask": "relWithDebInfo"
-		},
-		{
-			"name": "Tests Asan",
-			"type": "cppdbg",
-			"request": "launch",
-			"program": "${workspaceFolder:tests}/../../bin/asan/Tests.AppServer",
-			"args": ["-c"],
-			"stopAtEntry": false,
-			"cwd": "${workspaceFolder:tests}/../../bin/asan",
-			"externalConsole": false,
-			"MIMode": "gdb",
-			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
-			"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
-			"preLaunchTask": "buildTests",
-			"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
-			"showDisplayString": true,
-			"logging": {
-				"natvisDiagnostics": "error",
-				"engineLogging":"none",
-			}
-		}],
-		"compounds": []
+		}]
 	}
 }

@@ -154,3 +154,10 @@ namespace Jde{
 	asio::post( *ctx, [h](){h.resume();} );
 	h = nullptr;
 }
+α Jde::Post( VoidAwait::Handle&& h, Exception&& e )ι->void{
+	auto ctx = Executor();
+	asio::post( *ctx, [h, e = move(e)]() mutable {
+		h.promise().ResumeExp( move(e), h );
+	} );
+	h = nullptr;
+}

@@ -8,7 +8,7 @@ find_package( Boost REQUIRED COMPONENTS charconv )
 find_package( Threads REQUIRED )
 
 set( targetName Jde.DB.MySql )
-add_library( ${targetName} SHARED )
+add_library( ${targetName} MODULE )
 
 set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
 file( GLOB sources *.cpp )

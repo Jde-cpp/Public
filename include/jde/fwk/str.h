@@ -16,9 +16,9 @@ ENABLE_WARNINGS
 #define Φ Γ auto
 #define let const auto
 namespace Jde{
-	Ŧ To( sv value )ι->T{ T v{}; std::from_chars( value.data(), value.data()+value.size(), v ); return v; }
-	template<> Ξ To( sv x )ι->double{ return stod( string{x} ); }
-
+	Ŧ To( sv value )ι->T{ T v{}; std::from_chars(value.data(), value.data()+value.size(), v); return v; }
+	template<> Ξ To( sv x )ι->double{ return stod(string{x}); }
+	Ŧ hex( T number )ι->string{ return Ƒ("{:x}", number); }
 	α ToUuid( sv s, SRCE )ε->uuid;
 }
 namespace Jde::Str{
@@ -33,25 +33,25 @@ namespace Jde::Str{
 	Φ Replace( sv source, sv find, sv replace )ι->string;
 	Φ Replace( sv source, char find, char replace )ι->string;
 	Φ Split( sv s, char delim=',' )ι->vector<sv>;
-	Ξ StartsWith( sv value, sv starting )ι{ return starting.size() > value.size() ? false : std::equal( starting.begin(), starting.end(), value.begin() ); }
+	Ξ StartsWith( sv value, sv starting )ι{ return starting.size() > value.size() ? false : std::equal(starting.begin(), starting.end(), value.begin()); }
 	Φ StartsWithInsensitive( sv value, sv starting )ι->bool;
 	Φ LTrim( sv s )->sv;
 	Φ RTrim( sv s )->sv;
-	Φ ToHex( byte* p, uint size )ι->string;
+	Φ ToHex( byte* p, uint size )ι->string; //binary to hex string, TODO span<byte>
 	Φ ToLower( sv source )ι->string;
 	Φ ToUpper( sv source )ι->string;
 	template<class T=uint> α TryTo( str s, uint* pos = nullptr, int base = 10 )ι->optional<T>;
 
-	Ξ Trim( sv s )->sv{ return RTrim( LTrim(s) ); }
+	Ξ Trim( sv s )->sv{ return RTrim(LTrim(s)); }
 
 	template<class Y=sv, class X> α ToView( const X& x )ι->Y{ return Y{x.data(),x.size()}; }
 	template<class T> using bsv = std::basic_string_view<char,T>;
 	template<class T=sv, class D=sv> α Split( bsv<typename T::traits_type> s, bsv<typename D::traits_type> delim )ι->vector<bsv<typename T::traits_type>>;
 
 	struct ci_traits : public std::char_traits<char>{
-		Ω eq(char c1, char c2)ι{ return toupper(c1) == toupper(c2); }
-		Ω ne(char c1, char c2)ι{ return toupper(c1) != toupper(c2); }
-		Ω lt(char c1, char c2)ι{ return toupper(c1) <  toupper(c2); }
+		Ω eq( char c1, char c2 )ι{ return toupper(c1) == toupper(c2); }
+		Ω ne( char c1, char c2 )ι{ return toupper(c1) != toupper(c2); }
+		Ω lt( char c1, char c2 )ι{ return toupper(c1) <  toupper(c2); }
 		Ω compare( const char* s1, const char* s2, uint n )ι->int{
 			int y{};
 			for( ; !y && n-- != 0; ++s1, ++s2 ){
@@ -71,8 +71,8 @@ namespace Jde::Str{
 namespace Jde{
 	constexpr Str::iv operator "" _iv( const char* x, uint len )ι{ return Str::iv(x, len); }
 
-	Ξ ToSV( Str::iv x )ι->sv{ return Str::ToView<sv,Str::iv>( x ); }
-	Ξ ToIV( sv x )ι->Str::iv{ return Str::ToView<Str::iv,sv>( x ); }
+	Ξ ToSV( Str::iv x )ι->sv{ return Str::ToView<sv,Str::iv>(x); }
+	Ξ ToIV( sv x )ι->Str::iv{ return Str::ToView<Str::iv,sv>(x); }
 
 	Ŧ Str::Decode64( sv s, bool convertFromFileSafe )ε->T{ //https://stackoverflow.com/questions/10521581/base64-encode-using-boost-throw-exception
 		string encoded{ s };
@@ -87,13 +87,13 @@ namespace Jde{
 		return y;
 	}
 
-	template<class T, class I> α Str::Encode64( const T& val, bool convertFromFileSafe )ι->string{//https://stackoverflow.com/questions/7053538/how-do-i-encode-a-string-to-base64-using-only-boost
+	template<class T, class I> α Str::Encode64( const T& val, bool convertFromFileSafe )ι->string{ //https://stackoverflow.com/questions/7053538/how-do-i-encode-a-string-to-base64-using-only-boost
 		using namespace boost::archive::iterators;
 		using It = base64_from_binary<transform_width<I, 6, 8>>;
 		auto t = string{ It(std::begin(val)), It(std::end(val)) };
 		auto encoded = t.append( (3 - val.size() % 3) % 3, '=' );
 		if( convertFromFileSafe )
-			encoded = Replace( Replace( encoded, '/', '_' ), '+', '-' );
+			encoded = Replace( Replace(encoded, '/', '_'), '+', '-' );
 		return encoded;
 	}
 

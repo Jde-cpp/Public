@@ -16,6 +16,7 @@ namespace Jde::Opc::Gateway{
 		Certificate=4,
 		IssuedToken=8
 	};
+	constexpr static const array<sv,5> TokenTypeNames = { "None", "Anonymous", "Username", "Certificate", "IssuedToken" };
 	α ToTokenType( UA_UserTokenType ua )ι->ETokenType;
 	struct Credential{
 		Credential()ι{}

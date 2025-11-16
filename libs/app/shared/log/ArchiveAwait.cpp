@@ -1,14 +1,14 @@
 #include "ArchiveAwait.h"
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/io/FileAwait.h>
-#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/protobuf.h>
 #include <jde/app/log/DailyLoadAwait.h>
 
 #define let const auto
 
 namespace Jde::App{
 	static constexpr ELogTags _tags{ ELogTags::ExternalLogger | ELogTags::IO };
-	using Jde::Proto::ToGuid;
+	using Protobuf::ToGuid;
 	α ArchiveAwait::Execute()ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task{
 		vector<App::Log::Proto::FileEntry> entries;
 		try{
@@ -25,7 +25,7 @@ namespace Jde::App{
 			if( entry.has_str() )
 				strings[ToGuid(entry.str().id())] = move( *entry.mutable_str() );
 			else{
-				let day = Chrono::LocalYMD( Jde::Proto::ToTimePoint(entry.entry().time()), _tz );
+				let day = Chrono::LocalYMD( Protobuf::ToTimePoint(entry.entry().time()), _tz );
 				*archives[day].add_entries() = move( *entry.mutable_entry() );
 			}
 		}
@@ -66,11 +66,11 @@ namespace Jde::App{
 		}
 		std::map<uuid,App::Log::Proto::String> args, templates, files, functions;
 		std::map<TimePoint,App::Log::Proto::LogEntryFile> entries;
-		auto existing = Jde::Proto::Deserialize<App::Log::Proto::ArchiveFile>( move(content) );
+		auto existing = Protobuf::Deserialize<App::Log::Proto::ArchiveFile>( move(content) );
 		auto addEntries = [&entries]( App::Log::Proto::ArchiveFile& af ){
 			for( int i=0; i<af.entries_size(); ++i ){
 				auto& entry = *af.mutable_entries(i);
-				entries.emplace_hint( entries.end(), Jde::Proto::ToTimePoint(entry.time()), move(entry) );
+				entries.emplace_hint( entries.end(), Protobuf::ToTimePoint(entry.time()), move(entry) );
 			}
 		};
 		addEntries( existing );
@@ -105,7 +105,7 @@ namespace Jde::App{
 	}
 	α ArchiveAwait::Save( fs::path file, App::Log::Proto::ArchiveFile values )ι->VoidAwait::Task{
 		try{
-			co_await IO::WriteAwait( move(file), Jde::Proto::ToString(values), true, _tags );
+			co_await IO::WriteAwait( move(file), Protobuf::ToString(values), true, _tags );
 			fs::remove( _dailyFile );
 			Resume();
 		}
@@ -116,8 +116,6 @@ namespace Jde::App{
 
 	α ArchiveLoadAwait::Execute()ι->StringAwait::Task{
 		ArchiveFile archive{};
-//		ArchiveFile a2{ move(archive) };
-//		ArchiveFile a3 = move(a2);
 		try{
 			auto iterate = []( fs::path path, function<int(int)> valid )->vector<int> {
 				vector<int> result;
@@ -161,7 +159,7 @@ namespace Jde::App{
 						if( !fs::exists(file) )
 							continue;
 						auto content = co_await IO::ReadAwait( file );
-						archive.Append( _query, Jde::Proto::Deserialize<App::Log::Proto::ArchiveFile>(move(content)) );
+						archive.Append( _query, Protobuf::Deserialize<App::Log::Proto::ArchiveFile>(move(content)) );
 					}
 				}
 			}

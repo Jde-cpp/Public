@@ -5,7 +5,8 @@
 
 namespace Jde::Opc::Gateway{
 	constexpr RequestId ConnectRequestId = std::numeric_limits<RequestId>::max();
-	constexpr RequestId PingRequestId = 0;
+	constexpr RequestId PingRequestId = ConnectRequestId - 1;
+	constexpr RequestId SubscriptionRequestId = ConnectRequestId - 2;
 	struct UAClient;
 
 	struct UARequest{
@@ -21,28 +22,32 @@ namespace Jde::Opc::Gateway{
 	};
 
 	struct AsyncRequest final{
-		Ŧ Process( RequestId requestId, T&& h )ι->void;
-		α Process( RequestId requestId )ι->void{ Process(requestId, coroutine_handle<>{}); }
+		Ŧ Process( RequestId requestId, T&& h, sv what )ι->void;
+		α Process( RequestId requestId, sv what )ι->void{ Process(requestId, coroutine_handle<>{}, what); }
 		Ŧ ClearHandle( RequestId requestId )ι->T;
 		α Clear( RequestId requestId )ι->void;
 		α SetParent( sp<UAClient> client )ι{_client=client;}
 		α Stop()ι->void;
+		α IsRunning()Ι->bool{ return _running.test(); }
 	private:
 		α UAHandle()ι->Handle;
 		α ProcessingLoop()ι->DurationTimer::Task;
 		flat_map<RequestId, std::any> _requests; mutex _requestMutex;
 		sp<UAClient> _client;
 		atomic_flag _running;
-		atomic_flag _stopped;
+		atomic_flag _stopped; //set at shutdown
+		constexpr static ELogTags _tags{ (ELogTags)EOpcLogTags::ProcessingLoop };
 	};
 
 
 	Ξ AsyncRequest::Clear( RequestId requestId )ι->void{
+		TRACE( "[{}.{}]Clearing", hex(UAHandle()), hex(requestId) );
 		lg _{_requestMutex};
 		if( !_requests.erase(requestId) && requestId!=ConnectRequestId )
-			CRITICALT( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
+			CRITICALT( ProcessingLoopTag, "[{}.{}]Could not find request handle.", hex(UAHandle()), hex(requestId) );
 	}
 	Ŧ AsyncRequest::ClearHandle( RequestId requestId )ι->T{
+		TRACE( "[{}.{}]Clearing", hex(UAHandle()), hex(requestId) );
 		T userData;
 		lg _{_requestMutex};
 		if( auto p = _requests.find(requestId); p!=_requests.end() ){
@@ -58,7 +63,8 @@ namespace Jde::Opc::Gateway{
 			CRITICALT( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
 		return userData;
 	}
-	Ŧ AsyncRequest::Process( RequestId requestId, T&& h )ι->void{
+	Ŧ AsyncRequest::Process( RequestId requestId, T&& h, sv what )ι->void{
+		TRACE( "[{}.{}]Processing: {}", hex(UAHandle()), hex(requestId), what );
 		if( _stopped.test() )
 			return;
 		{

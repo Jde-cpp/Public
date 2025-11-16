@@ -5,7 +5,7 @@ namespace Jde::Opc::Gateway{
 	struct IDataChange; struct UAClient; struct MonitoredItemCreateResult;
 	struct ΓOPC DataChangeAwait final : TAwait<FromServer::SubscriptionAck>{
 		using base = TAwait<FromServer::SubscriptionAck>;
-		DataChangeAwait( flat_set<NodeId>&& nodes, sp<IDataChange>&& dataChange, sp<UAClient>&& c, SRCE )ι:base{sl}, _nodes{move(nodes)}, _dataChange{move(dataChange)}, _client{move(c)}{}
+		DataChangeAwait( flat_set<NodeId> nodes, sp<IDataChange> dataChange, sp<UAClient> c, SRCE )ι:base{sl}, _nodes{move(nodes)}, _dataChange{move(dataChange)}, _client{move(c)}{}
 		α Suspend()ι->void override;
 		α await_resume()ι->FromServer::SubscriptionAck override;
 	private:

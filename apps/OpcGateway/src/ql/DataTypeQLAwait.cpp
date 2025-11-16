@@ -7,7 +7,7 @@ namespace Jde::Opc::Gateway{
 	α DataTypeQLAwait::Execute()ι->TAwait<sp<UAClient>>::Task{
 		const NodeId nodeId{ _ql.Args };
 		auto opcId{ Json::FindString(_ql.Args,"opc").value_or("") };
-		auto client = co_await ConnectAwait{ move(opcId), move(_sessionInfo), _sl };
+		auto client = co_await ConnectAwait{ move(opcId), *_sessionInfo, _sl };
 
 		UA_DataTypeArray *customTypes;
 		if( auto sc = UA_Client_getRemoteDataTypes(*client, 1, &nodeId, &customTypes); sc )

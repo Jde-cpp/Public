@@ -10,7 +10,8 @@ namespace Jde::Opc{
 		NodeId( const UA_NodeId& x )ι;
 		NodeId( NodeId&& x )ι;
 		NodeId( UA_NodeId&& x )ι;
-		NodeId( UA_UInt32 numeric )ι:NodeId{UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, {numeric}}}{}
+		NodeId( UA_UInt16 namespaceIndex, UA_UInt32 numeric )ι:NodeId{UA_NodeId{namespaceIndex, UA_NODEIDTYPE_NUMERIC, {numeric}}}{}
+		NodeId( UA_UInt32 numeric )ι:NodeId{0, numeric}{}
 		NodeId( const flat_map<string,string>& x )ε;//rest params
 		explicit NodeId( const jvalue& j )ε;
 		NodeId( DB::Row& r, uint8 index )ε;

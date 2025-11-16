@@ -35,16 +35,15 @@ namespace Jde::App::Client{
 		if( !_timer )
 			StartTimer( _mutex );
 	}
-	α RemoteLog::StartTimer( std::mutex& mtx )ι->VoidAwait::Task{
+	α RemoteLog::StartTimer( std::mutex& mtx )ι->TimerAwait::Task{
 		if( _delay<=Duration::zero() )
 			co_return;
 		_timer = mu<DurationTimer>( _delay, _tags, SRCE_CUR );
-		try{
-			mtx.unlock();
-			co_await *_timer;
+		mtx.unlock();
+		let timedOut = co_await *_timer;
+		if( timedOut )
 			Send();
-		}
-		catch( const IException& ){
+		else{
 			_mutex.lock();
 			if( _entries.size() )
 				StartTimer( _mutex );

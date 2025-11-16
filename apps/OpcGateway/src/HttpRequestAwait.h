@@ -17,7 +17,7 @@ namespace Jde::Opc::Gateway{
 		α Login( str endpoint )ι->TAwait<optional<Web::FromServer::SessionInfo>>::Task;
 		α Logout()ι->TAwait<jvalue>::Task;
 		α CoHandleRequest( ServerCnnctnNK&& opcId )ι->TAwait<sp<UAClient>>::Task;
-		α Query()ι->TAwait<HttpTaskResult>::Task;
+		α Query()ι->TAwait<jvalue>::Task;
 		α ParseNodes()ε->tuple<flat_set<NodeId>,jarray>;
 		α ResumeSnapshots( flat_map<NodeId, Value>&& results, jarray&& j )ι->void;
 		α SnapshotWrite( flat_set<NodeId>&& nodes, flat_map<NodeId, Value> values, jarray jNodes )ι->TAwait<ReadResponse>::Task;

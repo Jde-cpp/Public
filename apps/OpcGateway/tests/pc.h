@@ -11,9 +11,21 @@
 #include <open62541/client_highlevel_async.h>
 #include <open62541/client_subscriptions.h>
 #include <open62541/plugin/log_stdout.h>
-//#include <open62541/types.h>
 
-#include "externals.h"
+#include <jde/fwk.h>
+#include <jde/fwk/io/json.h>
+#include <jde/web/server/exports.h>
+#include <jde/opc/usings.h>
+#include <jde/opc/UAException.h>
+
+#include <jde/web/client/exports.h>
+DISABLE_WARNINGS
+#include <jde/web/client/proto/Web.FromServer.pb.h>
+#include <jde/app/proto/App.FromClient.pb.h>
+#include <jde/app/proto/App.FromServer.pb.h>
+ENABLE_WARNINGS
+
 #include "../src/usings.h"
 #include "../src/types/ServerCnnctn.h"
 #include "../src/types/proto/Opc.FromServer.pb.h"
+#include "utils/helpers.h"

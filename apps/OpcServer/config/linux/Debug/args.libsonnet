@@ -3,8 +3,9 @@
 	logDir: "$(JDE_BUILD_DIR)",
 	opcServer: {
 		trustedCertDirs: [
-			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs"
-		]
+			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs",
+			"$(HOME)/.Jde-Cpp/Tests.Opc/ssl/certs"
+		],
 		ssl:{
 			certificate: "/tmp/cert.pem",
 			privateKey: {path:"/tmp/private.pem", passcode: ""}
@@ -14,7 +15,7 @@
 		dataPaths: [],
 		scriptPaths:  ["$(JDE_DIR)/Public/apps/OpcServer/config/sql/mysql"],
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/jde/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",
+			driver: "$(JDE_BUILD_DIR)/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",
 			connectionString: null,
 			username: "$(JDE_MYSQL_USER)",
 			password: "$(JDE_MYSQL_PWD)",

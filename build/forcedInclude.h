@@ -7,4 +7,4 @@
 #include <jde/fwk/settings.h>
 #include <jde/fwk/co/Await.h>
 #include <jde/fwk/io/json.h>
-#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/protobuf.h>

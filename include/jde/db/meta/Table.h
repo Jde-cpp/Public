@@ -1,4 +1,6 @@
 ﻿#pragma once
+#ifndef META_TABLE_H
+#define META_TABLE_H
 #include <jde/db/exports.h>
 #include "View.h"
 
@@ -24,3 +26,4 @@ namespace Jde::DB{
 	};
 	Ξ AsView(sp<Table> t)ι->sp<View>{ return dynamic_pointer_cast<View>(t); }
 }
+#endif

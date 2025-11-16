@@ -1,12 +1,14 @@
 #pragma once
 #include <jde/fwk/process/process.h>
-#include <jde/web/server/exports.h>
 #include <jde/web/server/usings.h>
-#include <jde/fwk/io/proto.h>
+#include <jde/web/server/Sessions.h>
+#include <jde/fwk/io/protobuf.h>
 #include <jde/ql/usings.h>
+#include <jde/ql/QLAwait.h>
 #include <jde/fwk/co/CoLock.h>
 
 namespace Jde::DB{ struct AppSchema; }
+namespace Jde::Proto{ struct Query; }
 namespace Jde::Web::Server{
 	struct RestStream; struct SocketStream;
 	struct ΓWS IWebsocketSession : std::enable_shared_from_this<IWebsocketSession>{
@@ -29,11 +31,14 @@ namespace Jde::Web::Server{
 		β OnClose()ι->void;
 		β OnRead( const char* p, uint size )ι->void=0;
 		β SendAck( uint32 id )ι->void=0;
+		β Query( Proto::Query&& query, RequestId requestId, function<string(string&&, RequestId)>&& toProtoString )ι->QL::QLAwait<jvalue>::Task;
 
 		α LogRead( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;
 		α LogWriteException( const exception& e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α LogWriteException( str e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
-		α SessionId()ι{ return _sessionId; } α SetSessionId( SessionPK sessionId )ι{ _sessionId = sessionId; }
+		α Session()Ι->const sp<SessionInfo>&{ return _sessionInfo; }
+		α SessionId()ι{ return _sessionInfo ? _sessionInfo->SessionId : SessionPK{}; }
+		α SetSessionId( SessionPK sessionId )ι->void;
 		α Write( string&& m )ι->void;
 
 	private:
@@ -48,7 +53,7 @@ namespace Jde::Web::Server{
 
 		TRequestType _initialRequest;
 		const SocketId _id{};
-		SessionPK _sessionId{};
+		sp<SessionInfo> _sessionInfo;
 		sp<QL::IListener> _listener;
 		Jde::UserPK _userPK{};
 		friend struct SocketStream;
@@ -67,7 +72,7 @@ namespace Jde::Web::Server{
 #define $ template<class TFromServer, class TFromClient> auto TWebsocketSession<TFromServer,TFromClient>
 	$::OnRead( const char* p, uint size )ι->void{
 		try{
-			auto t = Proto::Deserialize<TFromClient>( (const google::protobuf::uint8*)p, (int)size );
+			auto t = Protobuf::Deserialize<TFromClient>( (const google::protobuf::uint8*)p, (int)size );
 			OnRead( move(t) );
 		}
 		catch( IException& e ){

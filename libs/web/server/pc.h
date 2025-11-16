@@ -3,7 +3,7 @@
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/exception/diagnostic_information.hpp>
 #include <jde/fwk.h>
-#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/protobuf.h>
 #include <jde/fwk/chrono.h>
 #include <jde/web/usings.h>
 #include <jde/web/client/exports.h>

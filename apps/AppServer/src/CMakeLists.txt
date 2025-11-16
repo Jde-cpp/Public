@@ -21,7 +21,7 @@ include_directories( $ENV{JDE_DIR}/Public/include/jde/web/client/proto )
 target_link_libraries( ${targetName} Jde.Access Jde.Web.Server Jde.App.Shared )
 target_precompile_headers( ${targetName} PRIVATE
 	<jde/fwk.h>
-	<jde/fwk/io/proto.h>
+	<jde/fwk/io/protobuf.h>
 	externals.h
 	usings.h
 )

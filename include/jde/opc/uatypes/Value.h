@@ -4,7 +4,7 @@
 #include "Logger.h"
 
 namespace Jde::Opc{
-	struct ΓOPC Value : UA_DataValue{
+	struct Value : UA_DataValue{
 		Value( StatusCode sc )ι:UA_DataValue{ .status{sc}, .hasStatus{true} }{}
 		Value( const UA_DataValue& x )ι{ UA_DataValue_copy( &x, this ); }
 		Value( UA_DataValue&& x )ι:UA_DataValue{x}{ UA_DataValue_init(&x); }
@@ -17,11 +17,19 @@ namespace Jde::Opc{
 		α IsEmpty()Ι->bool{ return UA_Variant_isEmpty(&value); }
 		α IsScaler()Ι->bool{ return UA_Variant_isScalar( &value ); }
 		α ToJson()Ι->jvalue;
+		Ŧ AsNumber( SRCE )ε->T;
 		α Set( const jvalue& j, SRCE )ε->void;
 		Ŧ Get( uint index )Ι->const T&{ return ((T*)value.data)[index]; };
 	private:
 		Ŧ SetNumber( const jvalue& j )ε->void;
 	};
+
+	Ŧ Value::AsNumber( SL sl )ε->T{
+		if( UA_Variant_isScalar(&value) )
+			return Json::AsNumber<T>( ToJson(), sl );
+		else
+			throw Exception( "Arrays Not implemented." );
+	}
 
 	Ŧ Value::SetNumber( const jvalue& j )ε->void{
 //		if( UA_Variant_isScalar(&value) ){

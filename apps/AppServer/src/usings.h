@@ -1,3 +1,3 @@
 #pragma once
-#include <jde/app/shared/usings.h>
+#include <jde/app/usings.h>
 

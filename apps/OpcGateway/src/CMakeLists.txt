@@ -19,7 +19,7 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 IF( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
 endif()
-
+target_include_directories( ${targetName} PRIVATE $ENV{JDE_DIR}/Public/include/jde/app/proto )
 target_link_libraries( ${targetName} Jde.Web.Server Jde.App.Client Jde.Opc )
 
 target_precompile_headers(${targetName}
@@ -36,4 +36,4 @@ protobuf_generate(
 		"types/proto"
 		"${protoIncludeDir}"
 	PROTOC_OUT_DIR ${protoOutDir})
-add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_BASH}/Public/include/jde/app/shared/proto/Common.pb.h" "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" COMMENT "mklink Common.pb.h" )
+#add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_BASH}/Public/include/jde/app/proto/Common.pb.h" "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" COMMENT "mklink Common.pb.h" )

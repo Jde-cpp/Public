@@ -1,7 +1,8 @@
 #pragma once
+#include <jde/fwk/co/Timer.h>
 #include <jde/web/Jwt.h>
 #include <jde/web/client/http/ClientHttpAwait.h>
-#include <jde/app/shared/proto/App.FromServer.pb.h>
+#include <jde/app/proto/App.FromServer.pb.h>
 #include <jde/app/client/usings.h>
 #include <jde/app/client/exports.h>
 #include <jde/fwk/crypto/OpenSsl.h>
@@ -22,21 +23,10 @@ namespace Jde::App::Client{
 		α Suspend()ι->void{ HttpLogin(); }
 		α HttpLogin()ι->TAwait<SessionPK>::Task;
 		α RunSocket( SessionPK sessionId )ι->TAwait<Proto::FromServer::ConnectionInfo>::Task;
-		α Retry()->VoidTask;
+		α Retry()->DurationTimer::Task;
 
 		sp<IAppClient> _appClient;
 		bool _retry;
 	};
 	α Connect( sp<IAppClient>&& appClient )ι->ConnectAwait::Task;
-
-/*
-	//TODO change to functions, not returning anything.
-	struct LogAwait : VoidAwait{
-		using base = VoidAwait;
-		LogAwait( Logging::Entry&& m, SRCE )ι:base{sl}, _message{move(m)}{}
-		LogAwait( const Logging::Entry& m, const vector<string>* args, SRCE )ι:base{sl}, _message{ m }, _args{ args }{}
-		const Logging::Entry _message;
-		const vector<string>* _args;
-	};
-*/
 }

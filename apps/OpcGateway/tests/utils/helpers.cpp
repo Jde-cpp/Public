@@ -8,10 +8,10 @@
 #include <jde/web/Jwt.h>
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/app/client/IAppClient.h>
-#include "../src/StartupAwait.h"
-#include "../src/auth/OpcServerSession.h"
-#include "../src/auth/UM.h"
-#include "../src/ql/OpcQLHook.h"
+#include "../../src/StartupAwait.h"
+#include "../../src/auth/OpcServerSession.h"
+#include "../../src/auth/UM.h"
+#include "../../src/ql/OpcQLHook.h"
 
 #define let const auto
 
@@ -83,7 +83,7 @@ namespace Jde::Opc::Gateway{
 			auto res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{
 				"localhost",
 				Ƒ("/graphql?query={}&{}", ql, raw ? "raw" : "" ),
-				Settings::FindNumber<PortType>("http/gateway/port").value_or(1968),
+				GatewayPort(),
 				{ .Authorization=Ƒ("{:x}", AppClient()->SessionId()), .Verb=http::verb::get, .IsSsl=false }
 			});
 			return res.Json();

@@ -1,7 +1,7 @@
 #include <jde/app/log/DailyLoadAwait.h>
 #include <jde/fwk/co/LockKey.h>
 #include <jde/fwk/io/FileAwait.h>
-#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/protobuf.h>
 #include <jde/app/log/ProtoLog.h>
 
 namespace Jde::App{

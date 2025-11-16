@@ -3,21 +3,21 @@
 #include <jde/web/client/socket/ClientQL.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/client/socket/clientSubscriptions.h>
-#include <jde/app/shared/StringCache.h>
-#include <jde/app/shared/proto/App.FromClient.h>
-#include <jde/app/shared/proto/Common.h>
+#include <jde/app/StringCache.h>
+#include <jde/app/proto/app.FromClient.h>
+#include <jde/app/proto/common.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/IAppClient.h>
 
 #define let const auto
 
 namespace Jde::App{
-	using Web::Client::ClientSocketAwait; using Jde::Proto::ToString;
+	using Web::Client::ClientSocketAwait; using Protobuf::ToString;
 	constexpr ELogTags _tags{ ELogTags::SocketClientRead };
 
 namespace Client{
 	StartSocketAwait::StartSocketAwait( SessionPK sessionId, sp<Access::Authorize> authorize, sp<IAppClient> appClient, SL sl )ι:
-		base{sl},
+		base{ sl },
 		_appClient{ appClient },
 		_authorize{ authorize },
 		_sessionId{ sessionId },
@@ -39,7 +39,7 @@ namespace Client{
 	α StartSocketAwait::SendSessionId()ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task{
 		try{
 			auto info = co_await _session->Connect( _sessionId );//handshake
-			_appClient->SetInstancePK( info.instance_pk() );
+			_session->SetInfo( move(*info.mutable_session_info()) );
 			_appClient->SetSession( move(_session) );
 			_appClient->ServerPublicKey = {
 				{ info.certificate_modulus().begin(), info.certificate_modulus().end() },
@@ -54,13 +54,13 @@ namespace Client{
 
 	AppClientSocketSession::AppClientSocketSession( sp<net::io_context> ioc, optional<ssl::context> ctx, sp<Access::Authorize> authorize, sp<IAppClient> appClient )ι:
 		base( ioc, ctx ),
-		_appClient{appClient},
-		_authorize{authorize}
+		_appClient{ appClient },
+		_authorize{ authorize }
 	{}
 
 	α AppClientSocketSession::Connect( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>{
 		let requestId = NextRequestId();
-		auto instanceName = Settings::FindString("instanceName").value_or( "" );
+		auto instanceName = Settings::FindString( "instanceName" ).value_or( "" );
 		if( instanceName.empty() )
 			instanceName = _debug ? "Debug" : "Release";
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Connect: '{}'.", requestId, instanceName );
@@ -68,8 +68,8 @@ namespace Client{
 	}
 
 	α AppClientSocketSession::OnClose( beast::error_code ec )ι->void{
-		auto f = [this, ec](std::any&& h)->void {
-			HandleException(move(h), CodeException{ec, _tags, ELogLevel::NoLog}, false );
+		auto f = [this, ec]( std::any&& h )->void {
+			HandleException( move(h), CodeException{ec, _tags, ELogLevel::NoLog}, false );
 		};
 		CloseTasks( f );
 		base::OnClose( ec );
@@ -89,12 +89,12 @@ namespace Client{
 		return ClientSocketAwait<jvalue>{ FromClient::Query(move(q), move(variables), requestId, returnRaw), requestId, shared_from_this(), sl };
 	}
 	concurrent_flat_map<RequestId, std::pair<sp<QL::IListener>,vector<QL::Subscription>>> _subscriptionRequests;
-	α AppClientSocketSession::Subscribe( string&& q, jobject variables, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
+	α AppClientSocketSession::Subscribe( string&& q, jobject vars, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
-		auto subscriptions = QL::ParseSubscriptions( q, variables, _appClient->SubscriptionSchemas, sl );
+		auto subscriptions = QL::ParseSubscriptions( q, vars, _appClient->SubscriptionSchemas, sl );
 		_subscriptionRequests.emplace( requestId, make_pair(listener, move(subscriptions)) );
-		return ClientSocketAwait<jarray>{ FromClient::Subscription(move(q), move(variables), requestId), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<jarray>{ FromClient::Subscription(move(q), move(vars), requestId), requestId, shared_from_this(), sl };
 	}
 
 	template<class T,class... Args> Ω resume( std::any&& hAny, T&& v/*, fmt::format_string<Args const&...>&& m="", const Args&... args*/ )ι->void{
@@ -134,7 +134,7 @@ namespace Client{
 
 	α AppClientSocketSession::Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void{
 		try{
-			auto t = Jde::Proto::Deserialize<Proto::FromServer::Transmission>( move(bytes) );
+			auto t = Protobuf::Deserialize<Proto::FromServer::Transmission>( move(bytes) );
 			ProcessTransmission( move(t), userPK, clientRequestId );
 		}
 		catch( IException& e ){
@@ -158,26 +158,26 @@ namespace Client{
 				SetId( serverSocketId );
 				if( !_qlServer )
 					_qlServer = ms<Web::Client::ClientQL>( shared_from_this(), move(_authorize) );
-				INFO( "[{:x}]AppClientSocketSession created: {}://{}.", Id(), IsSsl() ? "https" : "http", Host() );
+				INFO( "[{}]AppClientSocketSession created: {}://{}.", hex(Id()), IsSsl() ? "https" : "http", Host() );
 				}break;
 			case kConnectionInfo:
-				TRACE( "[{:x}]ConnectionInfo: applicationInstance: '{}'.", Id(), m->connection_info().instance_pk() );
+				TRACE( "[{}]ConnectionInfo: applicationInstance: '{}'.", hex(Id()), m->connection_info().instance_pk() );
 				resume( move(hAny), move(*m->mutable_connection_info()) );
 				break;
 			case kGeneric:
-				TRACE( "[{:x}]Generic: '{}'.", Id(), m->generic() );
+				TRACE( "[{}]Generic: '{}'.", hex(Id()), m->generic() );
 				resume( move(hAny), move(*m->mutable_generic()) );
 				break;
 			[[likely]] case kStrings:{
 				auto& res = *m->mutable_strings();
-				TRACE( "[{:x}]Strings: count='{}'.", Id(), res.messages().size()+res.files().size()+res.functions().size()+res.threads().size() );
+				TRACE( "[{}]Strings: count='{}'.", hex(Id()), res.messages().size()+res.files().size()+res.functions().size()+res.threads().size() );
 				resume( move(hAny), move(*m->mutable_strings()) );
 				}break;
 			case kJwt:
 				TRACE( "[{:x}]Jwt: size='{}'.", Id(), m->jwt().size() );
 				resume( move(hAny), Web::Jwt{move(*m->mutable_jwt())} );
 				break;
-/*			case kLogLevels:{//TODO implement when have tags.
+/*			case kLogLevels:{ //TODO implement when have tags.
 				auto& res = *m->mutable_log_levels();
 				TRACE( "[{:x}]LogLevels: server='{}', client='{}'.", Id(), ToString((ELogLevel)res.server()), ToString((ELogLevel)res.client()) );
 				resume( move(hAny), move(res) );
@@ -188,7 +188,7 @@ namespace Client{
 				break;
 			case kSessionInfo:{
 				auto& res = *m->mutable_session_info();
-				TRACE( "[{:x}]SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", Id(), ToIsoString(Jde::Proto::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
+				TRACE( "[{:x}]SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", Id(), ToIsoString(Protobuf::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
 				resume( move(hAny), move(res) );
 				}break;
 			case kGraphQl:
@@ -196,16 +196,16 @@ namespace Client{
 				resumeJValue( move(hAny), move(*m->mutable_graph_ql()) );
 				break;
 			case kSubscriptionAck:
-				if( !_subscriptionRequests.erase_if( requestId, [&](auto&& kv){
+				if( !_subscriptionRequests.erase_if(requestId, [&](auto&& kv){
 					auto& listenerSubs = kv.second;
 					Web::Client::Subscriptions::ListenRemote( listenerSubs.first, move(listenerSubs.second) );
 					return true;
 				}) ){
-					HandleException( move(hAny), Exception{ "SubscriptionAck: '{}' not found.", requestId }, requestId );
+					HandleException( move(hAny), Exception{"SubscriptionAck: '{}' not found.", requestId}, requestId );
 				}
 				else{
 					jarray y;
-					for_each( m->subscription_ack().server_ids(), [&]( auto id ){ y.emplace_back(id); } );
+					for_each( m->subscription_ack().server_ids(), [&](auto id){y.emplace_back(id);} );
 					TRACE( "[{:x}]SubscriptionAck: '{}'.", Id(), serialize(y) );
 					resume( move(hAny), move(y) );
 				}
@@ -214,7 +214,7 @@ namespace Client{
 				OnMessage( move(*m->mutable_subscription()), requestId );
 			break;
 			case kException:
-				HandleException( move(hAny), Jde::Proto::ToException(move(*m->mutable_exception())), requestId );
+				HandleException( move(hAny), App::ProtoUtils::ToException(move(*m->mutable_exception())), requestId );
 				break;
 			case kExecute:
 			case kExecuteAnonymous:{
@@ -250,8 +250,8 @@ namespace Client{
 			handle( "Exception<string>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<Proto::FromServer::Strings>::Handle>(&h) )
 			handle( "Exception<Strings>: '{}'.", await );
-		else if( auto await = std::any_cast<ClientSocketAwait<Web::FromServer::SessionInfo>::Handle>(&h) )
-			handle( "Exception<SessionInfo>: '{}'.", await );
+//		else if( auto await = std::any_cast<ClientSocketAwait<Web::FromServer::SessionInfo>::Handle>(&h) )
+//			handle( "Exception<SessionInfo>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<jvalue>::Handle>(&h) )
 			handle( "Exception<jvalue>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<Web::Jwt>::Handle>(&h) )

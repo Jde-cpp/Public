@@ -15,13 +15,13 @@ namespace Jde{
 	α initLoggers()ι->vector<up<Logging::ILogger>>{
 		vector<up<Logging::ILogger>> y;
 		y.reserve( 8 );
-		y.push_back(mu<Logging::MemoryLog>() );
-		Logging::UpdateCumulative(y);
+		y.push_back( mu<Logging::MemoryLog>() );
+		Logging::UpdateCumulative( y );
 		return y;
 	}
 	vector<up<Logging::ILogger>> _loggers = initLoggers();
 	α Logging::Loggers()->const vector<up<ILogger>>&{ return _loggers; }
-	α Logging::AddLogger( up<ILogger>&& logger )ι->ILogger*{ ASSERT(logger); _loggers.push_back( move(logger) ); return _loggers.back().get(); }
+	α Logging::AddLogger( up<ILogger>&& logger )ι->ILogger*{ ASSERT(logger); _loggers.push_back(move(logger)); return _loggers.back().get(); }
 	inline constexpr std::array<sv,7> ELogLevelStrings = { "Trace", "Debug", "Information", "Warning", "Error", "Critical", "None" };
 }
 
@@ -43,8 +43,8 @@ namespace Jde{
 	α Logging::DestroyLoggers( bool terminate )->void{
 		Logging::_pOnceMessages = nullptr;
 		for( auto p=_loggers.begin(); p!=_loggers.end(); ){
-			auto logger = move(*p);
-			p = _loggers.erase(p);
+			auto logger = move( *p );
+			p = _loggers.erase( p );
 			logger->Shutdown( terminate );
 		}
 	};
@@ -58,7 +58,7 @@ namespace Jde{
 				continue;
 			memoryLogger->Write( *logger.get() );
 		}
-		auto memory = Settings::FindObject("/logging/memory");
+		auto memory = Settings::FindObject( "/logging/memory" );
 		if( !memory || Json::FindEnum<ELogLevel>(*memory, "default", ToLogLevel).value_or(ELogLevel::NoLog)==ELogLevel::NoLog )
 			_loggers.erase( _loggers.begin() );
 		UpdateCumulative( _loggers );
@@ -66,13 +66,13 @@ namespace Jde{
 
 /*	α SendStatus()ι->void
 	{
-		lg _{_statusMutex};
+		lg _{ _statusMutex };
 		vector<string> variables; variables.reserve( _status.details_size()+1 );
 		_status.set_memory( IApplication::MemorySize() );
 		ostringstream os;
 		os << "Memory=" << _status.memory();
 		for( int i=0; i<_status.details_size(); ++i )
-			os << ";  " << _status.details(i);
+			os << ";  " << _status.details( i );
 
 		TRACET( Logging::_statusTag, "{}", os.str() );
 		if( Logging::Server::Enabled() )
@@ -82,7 +82,7 @@ namespace Jde{
 
 	α Logging::SetStatus( const vector<string>& values )ι->void{
 		{
-			lg _{_statusMutex};
+			lg _{ _statusMutex };
 			_status.clear_details();
 			for( let& value : values )
 				_status.add_details( value );
@@ -93,7 +93,7 @@ namespace Jde{
 	}
 	α Logging::GetStatus()ι->up<Logging::Proto::Status>
 	{
-		lg _{_statusMutex};
+		lg _{ _statusMutex };
 		return mu<Proto::Status>( _status );
 	}
 */

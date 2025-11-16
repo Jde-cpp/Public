@@ -21,8 +21,8 @@ namespace Jde{
 
 
 #define LOGSL(level, sl, tags, message,...) \
-	if( Logging::ShouldLog(level, tags) && !Process::Finalizing() ){\
- 		Logging::Log( level, tags, sl, message __VA_OPT__(,) __VA_ARGS__ );\
+	if( Logging::ShouldLog(level, (ELogTags)tags) && !Process::Finalizing() ){\
+ 		Logging::Log( level, (ELogTags)tags, sl, message __VA_OPT__(,) __VA_ARGS__ );\
 	}
 #define LOG(level, tags, message,...) LOGSL( level, SRCE_CUR, tags, message __VA_OPT__(,) __VA_ARGS__ )
 #define CRITICAL(message,...) CRITICALT( _tags, message __VA_OPT__(,) __VA_ARGS__ )

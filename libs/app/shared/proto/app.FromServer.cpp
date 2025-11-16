@@ -1,10 +1,11 @@
-#include <jde/app/shared/proto/App.FromServer.h>
-#include <jde/fwk/io/proto.h>
+#include <jde/app/proto/app.FromServer.h>
+#include <jde/fwk/io/protobuf.h>
 #include <jde/db/Row.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/Column.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/web/Jwt.h>
+#include <jde/web/server/Web.FromServer.h>
 
 #define let const auto
 
@@ -29,13 +30,14 @@ namespace Jde::App{
 		t.add_messages()->set_request_id( requestId );
 		return t;
 	}
-	α FromServer::ConnectionInfo( AppPK appPK, AppInstancePK instancePK, RequestId clientRequestId, const Crypto::PublicKey& appServerPubKey )ι->Proto::FromServer::Transmission{
+	α FromServer::ConnectionInfo( AppPK appPK, AppInstancePK instancePK, RequestId clientRequestId, const Crypto::PublicKey& appServerPubKey, Web::Server::SessionInfo&& session )ι->Proto::FromServer::Transmission{
 		return setMessage( clientRequestId, [&](auto& m){
-			auto& connectionInfo = *m.mutable_connection_info();
-			connectionInfo.set_app_pk( appPK );
-			connectionInfo.set_instance_pk( instancePK );
-			connectionInfo.set_certificate_modulus( {appServerPubKey.Modulus.begin(), appServerPubKey.Modulus.end()} );
-			connectionInfo.set_certificate_exponent( {appServerPubKey.Exponent.begin(), appServerPubKey.Exponent.end()} );
+			auto& info = *m.mutable_connection_info();
+			info.set_app_pk( appPK );
+			info.set_instance_pk( instancePK );
+			info.set_certificate_modulus( {appServerPubKey.Modulus.begin(), appServerPubKey.Modulus.end()} );
+			info.set_certificate_exponent( {appServerPubKey.Exponent.begin(), appServerPubKey.Exponent.end()} );
+			*info.mutable_session_info() = move( Web::Server::ToProto(move(session)) );
 		});
 	}
 
@@ -80,12 +82,12 @@ namespace Jde::App{
 	α FromServer::SubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->Proto::FromServer::Transmission{
 		return setMessage( requestId, [&](auto& m){
 			auto& ack = *m.mutable_subscription_ack();
-			for_each( subscriptionIds, [&](auto id){ ack.add_server_ids(id); } );
+			for_each( subscriptionIds, [&](auto id){ack.add_server_ids(id);} );
 		});
 	}
 	α FromServer::Subscription( string&& s, RequestId requestId )ι->Proto::FromServer::Transmission{
 		return setMessage( requestId, [&](auto& m){
-			*m.mutable_subscription() = move(s);
+			*m.mutable_subscription() = move( s );
 		});
 	}
 
@@ -118,6 +120,11 @@ namespace Jde::App{
 		toServer->set_graph_ql( move(queryResults) );
 		return t;
 	}
+	α FromServer::Session( Web::Server::SessionInfo&& session, RequestId requestId )->Proto::FromServer::Transmission{
+		return setMessage( requestId, [&](auto& m){
+			*m.mutable_session_info() = Web::Server::ToProto( move(session) );
+		});
+	}
 	α FromServer::ToTrace( DB::Row&& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace{
 		Proto::FromServer::Trace t;
 		uint i=0;
@@ -131,19 +138,19 @@ namespace Jde::App{
 			else if( name=="instance_id" )
 				t.set_instance_id( row.GetUInt32(i) );
 			else if( name=="file_id" )
-				t.set_file_id( Jde::Proto::ToBytes(row.GetGuid(i)) );
+				t.set_file_id( Protobuf::ToBytes(row.GetGuid(i)) );
 			else if( name=="function_id" )
-				t.set_function_id( Jde::Proto::ToBytes(row.GetGuid(i)) );
+				t.set_function_id( Protobuf::ToBytes(row.GetGuid(i)) );
 			else if( name=="line_number" )
 				t.set_line( row.GetUInt32(i) );
 			else if( name=="message_id" )
-				t.set_message_id( Jde::Proto::ToBytes(row.GetGuid(i)) );
+				t.set_message_id( Protobuf::ToBytes(row.GetGuid(i)) );
 			else if( name=="level" )
 				t.set_level( (Log::Proto::ELogLevel)row.GetUInt16(i) );
 			else if( name=="thread_id" )
 				t.set_thread_id( row.GetUInt32(i) );
 			else if( name=="time" )
-				*t.mutable_time() = Jde::Proto::ToTimestamp( row.GetTimePoint(i) );
+				*t.mutable_time() = Protobuf::ToTimestamp( row.GetTimePoint(i) );
 			else if( name=="user_pk" )
 				t.set_user_pk( row.GetUInt32(i) );
 			else{
@@ -160,11 +167,11 @@ namespace Jde::App{
 		auto proto = traces->add_values();
 		proto->set_id( id );
 		proto->set_instance_id( instanceId );
-		*proto->mutable_time() = Jde::Proto::ToTimestamp( m.Time );
+		*proto->mutable_time() = Protobuf::ToTimestamp( m.Time );
 		proto->set_level( (Log::Proto::ELogLevel)m.Level );
-		proto->set_message_id( Jde::Proto::ToBytes(m.Id()) );
-		proto->set_file_id( Jde::Proto::ToBytes(m.FileId()) );
-		proto->set_function_id( Jde::Proto::ToBytes(m.FunctionId()) );
+		proto->set_message_id( Protobuf::ToBytes(m.Id()) );
+		proto->set_file_id( Protobuf::ToBytes(m.FileId()) );
+		proto->set_function_id( Protobuf::ToBytes(m.FunctionId()) );
 		proto->set_line( m.Line );
 		proto->set_user_pk( m.UserPK.Value );
 		for( let& arg : args )

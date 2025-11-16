@@ -1,9 +1,9 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "LogTests.GraphQL",
+		tests: "SubscribeTests.Basic",
 		recreateDB:: true,
-		embeddedAppServer: true,
+		embeddedAppServer: false,
 		embeddedOpcServer: false
 	},
 	opc: args.opc,
@@ -57,12 +57,13 @@ local args = import 'args.libsonnet';
 		spd:{
 			defaultLevel:: "Information",
 			tags: {
-				trace:["test", "app", "http.client.write", "http.client.read", "ql", "sql"],
-				debug:["settings", "scheduler", "uaEvent",
+				trace:["test", "app", "http.client.write", "http.client.read", "ql", "processingLoop"],
+				debug:["settings", "sql", "scheduler", "uaEvent",
 					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
-					"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
-					"monitoring", "browse", "processingLoop", "monitoring.pedantic"],
-				information:["threads", "uaSecure"],
+					"uaSession", "uaServer", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
+					"monitoring", "browse", "monitoring.pedantic"],
+				information:["threads",
+					"uaSecure", "uaClient", "uaNet"],
 				warning:[],
 				"error":[],
 				critical:[]

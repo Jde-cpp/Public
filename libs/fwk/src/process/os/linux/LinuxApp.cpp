@@ -76,7 +76,7 @@ namespace Jde{
 		return hostname;
 	}
 
-	uint Process::ProcessId()ι{ return getpid(); }
+	α Process::ProcessId()ι->uint{ return getpid(); }
 
 	α Process::Pause()ι->int{
 		INFOT( ELogTags::App, "Pausing main thread." );
@@ -87,7 +87,7 @@ namespace Jde{
 		return exitReason;
 	}
 
-	bool Process::AsService()ι{
+	α Process::AsService()ι->bool{
 		return ::daemon( 1, 0 )==0;
 	}
 

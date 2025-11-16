@@ -1,5 +1,5 @@
 #include <jde/opc/uatypes/DateTime.h>
-#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/protobuf.h>
 
 #define let const auto
 
@@ -22,7 +22,7 @@ namespace Jde::Opc{
 		if( v.is_object() ){
 			let& o = v.get_object();
 			if( let* seconds = o.if_contains("seconds"); seconds && seconds->is_object() )
-				_time = Jde::Proto::ToTimePoint( Jde::Proto::ToTimestamp(o) );
+				_time = Jde::Protobuf::ToTimePoint( Protobuf::ToTimestamp(o) );
 			else
 				throw Exception{ (ELogTags)EOpcLogTags::Opc, sl, "Invalid DateTime object: {}", serialize(v) };
 		}
@@ -33,6 +33,14 @@ namespace Jde::Opc{
 		else
 			throw Exception{ (ELogTags)EOpcLogTags::Opc, sl, "Invalid DateTime object: {}", serialize(v) };
 	}
+	UADateTime::UADateTime( const google::protobuf::Timestamp& timestamp )ι:
+		_time{ Jde::Protobuf::ToTimePoint( timestamp ) }
+	{}
+
+	UADateTime::UADateTime( const google::protobuf::Duration& duration )ι:
+		_time{ Chrono::Epoch() + milliseconds{ duration.seconds() * 1000 + duration.nanos() / 1000000 } }
+	{}
+
 	α UADateTime::ToJson()Ι->jobject{
 		let [seconds,nanos] = ToParts();
 		return jobject{ {"seconds", seconds}, {"nanos", nanos} };

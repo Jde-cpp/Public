@@ -7,11 +7,11 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	GatewayQLAwait::GatewayQLAwait( Web::Server::HttpRequest&& request, QL::RequestQL&& q, SL sl )ι:
+	GatewayQLAwait::GatewayQLAwait( QL::RequestQL&& q, sp<Web::Server::SessionInfo> session, bool returnRaw, SL sl )ι:
 		base{sl},
-		_raw{ request.Params().contains("raw") },
-		_request{ move(request) },
-		_queries{ move(q) }
+		_raw{ returnRaw },
+		_queries{ move(q) },
+		_session{ move(session) }
 	{}
 
 	α GatewayQLAwait::Suspend()ι->void{
@@ -31,16 +31,16 @@ namespace Jde::Opc::Gateway{
 							NodeId nodeId{ q.Args };
 							q.Args["name"] = nodeId.ToString();
 						}
-						results.push_back( co_await QL::QLAwait<>(move(q), _request.SessionInfo->UserPK, _sl) );
+						results.push_back( co_await QL::QLAwait<>(move(q), _session->UserPK, _sl) );
 					}else if( q.JsonName.starts_with("node") )
-						results.push_back( co_await NodeQLAwait{move(q), _request.SessionInfo->SessionId, _request.SessionInfo->UserPK, _sl} );
+						results.push_back( co_await NodeQLAwait{move(q), _session->SessionId, _session->UserPK, _sl} );
 					else if( q.JsonName.starts_with("dataType") )
-						results.push_back( co_await DataTypeQLAwait{move(q), _request.SessionInfo, _sl} );
+						results.push_back( co_await DataTypeQLAwait{move(q), _session, _sl} );
 					else
-						throw Web::Server::RestException<http::status::bad_request>{ SRCE_CUR, move(_request), "Unknown query type: {}", q.JsonName };
+						throw Exception{ _sl, "Unknown query type: {}", q.JsonName };
 				}
 				jvalue y{ results.size()==1 ? move(results[0]) : jvalue{results} };
-				Resume( Web::Server::HttpTaskResult{_raw ? y : jobject{{"data", y}}, move(_request)} );
+				Resume( _raw ? move(y) : jobject{{"data", y}} );
 			}
 			else if( _queries.IsMutation() ){
 				jarray results;
@@ -49,12 +49,12 @@ namespace Jde::Opc::Gateway{
 					// if( m.Type==QL::EMutationQL::Execute )
 					// 	results.push_back( co_await JCallAwait(move(m), _request.SessionInfo, _sl) );
 					if( m.DBTable && m.TableName()=="server_connections" )
-						results.push_back( co_await QL::QLAwait<>(move(m), _request.SessionInfo->UserPK, _sl) );
+						results.push_back( co_await QL::QLAwait<>(move(m), _session->UserPK, _sl) );
 					else if( m.JsonTableName=="variable" )
-						results.push_back( co_await VariableQLAwait{move(m), _request.SessionInfo, _sl} );
+						results.push_back( co_await VariableQLAwait{move(m), _session, _sl} );
 				}
 				jvalue y{ results.size()==1 ? move(results[0]) : jvalue{results} };
-				Resume( Web::Server::HttpTaskResult{_raw ? y : jobject{{"data", y}}, move(_request)} );
+				Resume( _raw ? move(y) : jobject{{"data", move(y)}} );
 			}
 		}
 		catch( exception& e ){
@@ -67,12 +67,12 @@ namespace Jde::Opc::Gateway{
 			for( auto& m : _queries.Mutations() ){
 				m.ReturnRaw = _raw;
 				if( m.Type==QL::EMutationQL::Execute )
-					results.push_back( co_await JCallAwait(move(m), _request.SessionInfo, _sl) );
+					results.push_back( co_await JCallAwait(move(m), _session, _sl) );
 				else if( m.TableName()=="server_connections" )
-					results.push_back( co_await QL::QLAwait<>(move(m), _request.SessionInfo->UserPK, _sl) );
+					results.push_back( co_await QL::QLAwait<>(move(m), _session->UserPK, _sl) );
 			}
 			jvalue y{ results.size()==1 ? move(results[0]) : jvalue{results} };
-			Resume( Web::Server::HttpTaskResult{_raw ? y : jobject{{"data", y}}, move(_request)} );
+			Resume( _raw ? move(y) : jobject{{"data", move(y)}} );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

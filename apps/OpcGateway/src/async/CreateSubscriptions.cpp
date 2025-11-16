@@ -4,62 +4,59 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	static ELogTags _tags{ (ELogTags)(EOpcLogTags::Opc | EOpcLogTags::Monitoring) };
-	boost::concurrent_flat_map<sp<UAClient>,vector<CreateSubscriptionAwait::Handle>> _subscriptionRequests;
-	α CreateSubscriptionCallback(UA_Client* ua, void* /*userdata*/, RequestId requestId, UA_CreateSubscriptionResponse* response)ι->void{
-		auto pClient = UAClient::TryFind(ua); if( !pClient ) return;
-		pClient->ClearRequest( requestId );
-		if( let sc = response->responseHeader.serviceResult; sc )
-			CreateSubscriptionAwait::Resume( UAException{sc}, move(pClient) );
-		else{
-			TRACE( "[{:x}.{}]CreateSubscriptionCallback - subscriptionId={}", (uint)ua, requestId, response->subscriptionId );
-			pClient->CreatedSubscriptionResponse = ms<UA_CreateSubscriptionResponse>(move(*response));
-			CreateSubscriptionAwait::Resume( move(pClient) );
+	static ELogTags _tags{ (ELogTags)(EOpcLogTags::Monitoring) };
+	flat_map<sp<UAClient>,vector<CreateSubscriptionAwait::Handle>> _requests; mutex _requestsMutex;
+	Ω createSubscriptionCallback( UA_Client* ua, void* /*userdata*/, RequestId requestId, UA_CreateSubscriptionResponse* response )ι->void{
+		auto client = UAClient::TryFind( ua );
+		if( !client ){
+			 CRITICAL( "[{}]Could not find client.", hex((uint)ua) );
+			 return;
+		}
+		client->ClearRequest( requestId );
+		let sc = response->responseHeader.serviceResult;
+		TRACE( "[{}.{}]CreateSubscriptionCallback - subscriptionId={}, sc={}", client->Handle(), requestId, response->subscriptionId, sc );
+		lg _{ _requestsMutex };
+		if( !sc )
+			client->CreatedSubscriptionResponse = ms<UA_CreateSubscriptionResponse>( move(*response) );
+		if( auto clientRequests = _requests.find(client); clientRequests != _requests.end() ){
+			for( auto&& h : clientRequests->second ){
+				if( sc )
+					Post( move(h), UAClientException{sc, client->Handle()} );
+				else
+					Post( move(h) );
+			}
+			_requests.erase( clientRequests );
 		}
 	}
 
-	α StatusChangeNotificationCallback(UA_Client* ua, UA_UInt32 subId, void* /*subContext*/, UA_StatusChangeNotification* /*notification*/)ι->void{
+	Ω statusChangeNotificationCallback( UA_Client* ua, UA_UInt32 subId, void* /*subContext*/, UA_StatusChangeNotification* /*notification*/ )ι->void{
 		BREAK;
 		TRACE( "[{:x}.{}]StatusChangeNotificationCallback", (uint)ua, subId );
 	}
 
-	α DeleteSubscriptionCallback( UA_Client* ua, UA_UInt32 subId, void* /*subContext*/ )ι->void{
-		TRACE( "[{:x}.{}]DeleteSubscriptionCallback", (uint)ua, subId );
-		auto pClient = UAClient::TryFind(ua);
-		if( pClient )
-			pClient->CreatedSubscriptionResponse = nullptr;
+	Ω deleteSubscriptionCallback( UA_Client* ua, UA_UInt32 subId, void* /*subContext*/ )ι->void{
+		if( auto client = UAClient::TryFind(ua); client ){
+			INFO( "[{}.{}]DeleteSubscriptionCallback", hex(client->Handle()), subId );
+			client->CreatedSubscriptionResponse = nullptr;
+		}
 	}
 
 	α CreateSubscriptionAwait::await_ready()ι->bool{ return _client->CreatedSubscriptionResponse!=nullptr; }
 	α CreateSubscriptionAwait::Suspend()ι->void{
-		if( _subscriptionRequests.try_emplace_or_visit(_client, vector<CreateSubscriptionAwait::Handle>{_h}, [h=_h](auto x){x.second.push_back(h);}) )
-			_client->CreateSubscriptions();
-	}
-
-	α CreateSubscriptionAwait::await_resume()ε->sp<UA_CreateSubscriptionResponse>{
-		ASSERT( _client->CreatedSubscriptionResponse || (Promise() && Promise()->Exp()) );
-		return Promise()
-			? base::await_resume()
-			: _client->CreatedSubscriptionResponse;
-	}
-	α CreateSubscriptionAwait::Resume( sp<UAClient> pClient, function<void(CreateSubscriptionAwait::Handle)> resume )ι->void{
-		ASSERT( pClient );
-		if( !_subscriptionRequests.cvisit(pClient, [resume](let& x){for( auto h : x.second ) resume( move(h) );}) )
-			CRITICAL( "Could not find client ({:x}) for CreateSubscriptionAwait", (uint)pClient->UAPointer() );
-
-		_subscriptionRequests.erase( pClient );
-	}
-
-	α CreateSubscriptionAwait::Resume( sp<UAClient> pClient )ι->void{
-		Resume( pClient, [pClient](CreateSubscriptionAwait::Handle h)
-		{
-			h.promise().SetValue( sp<UA_CreateSubscriptionResponse>{pClient->CreatedSubscriptionResponse} );
-			Post( h ); //Cannot run EventLoop from the run method itself
-		});
-	}
-	α CreateSubscriptionAwait::Resume( UAException&& e, sp<UAClient>&& pClient )ι->void{
-		Resume( move(pClient), [e2=move(e)](CreateSubscriptionAwait::Handle h)mutable{
-			h.promise().ResumeExp( move(e2), h );
-		});
+		try{
+			lg _{ _requestsMutex };
+			auto& clientRequests = _requests[_client];
+			clientRequests.push_back( _h );
+			if( clientRequests.size()==1 ){
+				UAε( UA_Client_Subscriptions_create_async(_client->UAPointer(), UA_CreateSubscriptionRequest_default(), nullptr, statusChangeNotificationCallback, deleteSubscriptionCallback, createSubscriptionCallback, this, &_requestId) );
+				TRACE( "[{}.{}]CreateSubscription", hex(_client->Handle()), hex(_requestId) );
+				_client->Process( _requestId, nullptr, "Subscriptions_create" );
+			}
+			else
+				TRACE( "[{}.{}]CreateSubscription - queued", hex(_client->Handle()), hex(_requestId) );
+		}
+		catch( UAException& e ){
+			ResumeExp( move(e) );
+		}
 	}
 }

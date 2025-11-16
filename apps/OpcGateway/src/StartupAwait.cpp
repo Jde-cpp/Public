@@ -44,7 +44,6 @@ namespace Jde::Opc::Gateway{
 			QL::SetSystemTables( {"node","nodes", "dataType", "dataTypes", "variable", "variables"} );
 			QL::SetSystemMutations( {"execute"} );
 			SetSchema( schema );
-			//Opc::Configure( schema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 				DB::NonProd::Recreate( *schema, _localQL );
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
@@ -72,7 +71,7 @@ namespace Jde::Opc::Gateway{
 			Process::AddShutdownFunction( [](bool terminate){UAClient::Shutdown(terminate);} );
 			QL::Hook::Add( mu<OpcQLHook>() );
 
-			_pingInterval = Settings::FindDuration("/gateway/pingInterval").value_or( 1s );
+			_pingInterval = Settings::FindDuration("/gateway/pingInterval").value_or( 60s );
 			_ttl = Settings::FindDuration("/gateway/ttl").value_or( 5min );
 			INFOT( ELogTags::App, "---Started {}---", "OPC Gateway" );
 			Resume();

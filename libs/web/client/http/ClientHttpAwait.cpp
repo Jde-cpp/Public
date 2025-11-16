@@ -8,11 +8,11 @@
 namespace Jde::Web{
 	concurrent_flat_map<string,vector<sp<Client::ClientHttpSession>>> _sessions;
 	α Client::RemoveHttpSession( sp<ClientHttpSession> session )ι->void{
-		TRACET( ELogTags::HttpClientSessions, "[{:x}]Remove session: {}:{} {}.", (uint)session.get(), session->Host,session->Port, session->IsSsl ? "SSL" : "HTTP" );
+		TRACET( ELogTags::HttpClientSessions, "[{}]Remove session: {}:{} {}.", hex((uint)session.get()), session->Host,session->Port, session->IsSsl ? "SSL" : "HTTP" );
 		_sessions.erase_if( ClientHttpSession::Key(session->Host,session->Port, session->IsSsl), [session]( auto& kv ){
 			auto& sessions = kv.second;
 			if( auto p = find( sessions, session ); p!=sessions.end() ){
-				TRACET( ELogTags::HttpClientSessions, "[{:x}]Remove session: {}:{} {}.", (uint)session.get(), session->Host,session->Port, session->IsSsl ? "SSL" : "HTTP" );
+				TRACET( ELogTags::HttpClientSessions, "[{}]Remove session: {}:{} {}.", hex((uint)session.get()), session->Host,session->Port, session->IsSsl ? "SSL" : "HTTP" );
 				sessions.erase( p );
 			}
 			return sessions.empty();
@@ -111,7 +111,7 @@ namespace Jde::Web::Client{
 		if( !session ){
       net::any_io_executor strand = net::make_strand( *_ioContext );
 			session = IsSsl ?  ms<ClientHttpSession>( _host, _port, strand, _sl ) : ms<ClientHttpSession>( _host, _port, strand, true, true, _sl );
-			TRACET( ELogTags::HttpClientSessions, "[{:x}]New session: {}:{} {}.", (uint)session.get(), _host, _port, IsSsl ? "SSL" : "HTTP" );
+			TRACET( ELogTags::HttpClientSessions, "[{}]New session: {}:{} {}.", hex((uint)session.get()), _host, _port, IsSsl ? "SSL" : "HTTP" );
 			_sessions.emplace_or_visit( ClientHttpSession::Key(_host,_port, IsSsl), vector<sp<ClientHttpSession>>{session}, [session]( auto&& kv ){ kv.second.push_back(session);} );
 		}
 		session->Send( _target, _body, *this, _h );

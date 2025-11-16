@@ -4,7 +4,6 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::ProcessingLoop };
 	Duration _pingInterval;
 	Duration _ttl;
 	TimePoint _lastRequest;
@@ -13,43 +12,43 @@ namespace Jde::Opc::Gateway{
 	Ω ping( sp<UAClient> client )ι->DurationTimer::Task{
 		ASSERT( !_pingTimer )
 		_pingTimer.emplace( _pingInterval, SRCE_CUR );
-		TRACE( "Pinging '{}' in '{}'", client->Target(), Chrono::ToString(_pingInterval) );
-		try{
-			co_await *_pingTimer;
-			client->Process( PingRequestId );
-		}
-		catch( const exception& e )
-		{}
+		DBGT( EOpcLogTags::ProcessingLoop, "Pinging '{}' in '{}'", client->Target(), Chrono::ToString(_pingInterval) );
+		co_await *_pingTimer;
+		client->Process( PingRequestId, "ping" );
 	}
 	// 1 per UAClient
 	α AsyncRequest::ProcessingLoop()ι->DurationTimer::Task{
-		function<string()> logPrefix = [this](){ return Ƒ( "[{:x}]", _client->Handle() ); };
+		function<string()> logPrefix = [this](){ return Ƒ("[{:x}]", _client ? _client->Handle() : 0); };
 		DBG( "{}ProcessingLoop started", logPrefix() );
 		_pingTimer.reset();
 		StatusCode sc{};
 		while( _running.test() ){
 			auto client = _client;
-			optional<RequestId> preMax, postMax;
+			//optional<RequestId> preMax, postMax;
+			uint size;
 			{
-				lg _{_requestMutex};
-				if( _requests.size() ){
-					preMax = _requests.rbegin()->first;
-					if( *preMax==PingRequestId )
+				lg _{ _requestMutex };
+				if( size = _requests.size(); size ){
+					//preMax = _requests.rbegin()->first;
+					if( size==1 && _requests.begin()->first==PingRequestId )
 						_requests.erase( PingRequestId );
 					else
 						_lastRequest = Clock::now();
 				}
 			}
+			TRACE( "{}run_iterate: requestCount: {}", logPrefix(), size );
 			if( sc = UA_Client_run_iterate(*client, 0); sc ){
 				ERR( "{}UA_Client_run_iterate returned ({:x}){}", logPrefix(), sc, UAException::Message(sc) );
 				_running.clear();
-				lg _{_requestMutex};
+				lg _{ _requestMutex };
 				_requests.clear();
 				break;
 			}
+			uint newSize;
 			{
 				_requestMutex.lock();
-				if( _requests.empty() ){
+				if( newSize=_requests.size(); !newSize ){
+					TRACE( "{}requestCount: {}", logPrefix(), size );
 					_running.clear();
 					_requestMutex.unlock();
 					if( let now = Clock::now(); _lastRequest + _ttl < now ){
@@ -58,11 +57,14 @@ namespace Jde::Opc::Gateway{
 					}
 					break;
 				}
-				postMax = _requests.rbegin()->first;
+				TRACE( "{}requestCount: {}", logPrefix(), newSize );
+//				postMax = _requests.rbegin()->first;
 				_requestMutex.unlock();
 			}
-			if( preMax==postMax )
-				co_await DurationTimer{ 1ms }; //UA_CreateSubscriptionRequest_default
+			if( size==newSize ){
+				let sleep = size==1 && _requests.begin()->first==SubscriptionRequestId ? 500ms : 1ms; //UA_CreateSubscriptionRequest_default
+				co_await DurationTimer{ sleep };
+			}
 		}
 		if( !sc && !_stopped.test() && _pingInterval.count()>0 )
 			ping( _client );
@@ -71,7 +73,8 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α AsyncRequest::Stop()ι->void{
-		lg _{_requestMutex};
+		DBG( "[{}]Stopping ProcessingLoop", UAHandle() );
+		lg _{ _requestMutex };
 		_pingTimer.reset();
 		_stopped.test_and_set();
 		_requests.clear();
