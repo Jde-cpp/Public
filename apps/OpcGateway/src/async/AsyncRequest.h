@@ -4,17 +4,14 @@
 #include <jde/opc/uatypes/Logger.h>
 
 namespace Jde::Opc::Gateway{
+	constexpr RequestId PingRequestId = 0;
 	constexpr RequestId ConnectRequestId = std::numeric_limits<RequestId>::max();
-	constexpr RequestId PingRequestId = ConnectRequestId - 1;
-	constexpr RequestId SubscriptionRequestId = ConnectRequestId - 2;
+	constexpr RequestId SubscriptionRequestId = ConnectRequestId - 1;
 	struct UAClient;
-
 	struct UARequest{
 		UARequest( std::any&& h )ι:CoHandle{ move(h) }{ h=nullptr; }
 		std::any CoHandle;
 	};
-	//Τ struct TUARequest : UARequest{TUARequest( T&& args, HCoroutine&& h )ι:UARequest{move(h)}, Args{move(args)}{}T Args;};
-
 	Τ struct UARequestMulti{
 		flat_map<UA_UInt32, NodeId> Requests;
 		sp<UAClient> ClientPtr;

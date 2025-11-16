@@ -4,7 +4,7 @@
 #include "StartupAwait.h"
 #include "UAClient.h"
 #include "WebServer.h"
-#include "async/CreateSubscriptions.h"
+#include "async/Subscriptions.h"
 #include "async/DataChanges.h"
 #include "async/SessionAwait.h"
 #include "auth/UM.h"
@@ -86,7 +86,7 @@ namespace Jde::Opc::Gateway{
 	α GatewaySocketSession::CreateSubscription( sp<UAClient> client, flat_set<NodeId> nodes, RequestId requestId )ι->VoidAwait::Task{
 		try{
 			auto self = SharedFromThis(); //keep alive
-			co_await CreateSubscriptionAwait{ client };
+			co_await SubscribeAwait{ client };
 			subscribe( move(client), move(nodes), requestId, move(self) );
 		}
 		catch( exception& e ){
@@ -114,7 +114,7 @@ namespace Jde::Opc::Gateway{
 			auto cred = GetCredential( SessionId(), opcId );
 			LogRead( Ƒ("Unsubscribe: opcId: '{}', user: '{}', nodeCount: {}", opcId, cred ? cred->ToString() : "null", nodes.size()), requestId );
 			if( auto client = cred ? UAClient::Find(move(opcId), *cred) : nullptr; client ){
-				auto [successes,failures] = client->MonitoredNodes.Unsubscribe( move(nodes), self );
+				auto [successes,failures] = client->MonitoredNodes().Unsubscribe( move(nodes), self );
 				Write( FromServer::UnsubscribeTrans(requestId, move(successes), move(failures)) );
 			}
 			else

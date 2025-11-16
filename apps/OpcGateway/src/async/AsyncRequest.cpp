@@ -24,13 +24,11 @@ namespace Jde::Opc::Gateway{
 		StatusCode sc{};
 		while( _running.test() ){
 			auto client = _client;
-			//optional<RequestId> preMax, postMax;
 			uint size;
 			{
 				lg _{ _requestMutex };
 				if( size = _requests.size(); size ){
-					//preMax = _requests.rbegin()->first;
-					if( size==1 && _requests.begin()->first==PingRequestId )
+					if( _requests.begin()->first==PingRequestId )
 						_requests.erase( PingRequestId );
 					else
 						_lastRequest = Clock::now();
@@ -48,7 +46,7 @@ namespace Jde::Opc::Gateway{
 			{
 				_requestMutex.lock();
 				if( newSize=_requests.size(); !newSize ){
-					TRACE( "{}requestCount: {}", logPrefix(), size );
+					TRACE( "{}requestCount: {}", logPrefix(), newSize );
 					_running.clear();
 					_requestMutex.unlock();
 					if( let now = Clock::now(); _lastRequest + _ttl < now ){
@@ -57,8 +55,7 @@ namespace Jde::Opc::Gateway{
 					}
 					break;
 				}
-				TRACE( "{}requestCount: {}", logPrefix(), newSize );
-//				postMax = _requests.rbegin()->first;
+				TRACE( "{}requestCount: {}, [0]={}", logPrefix(), newSize, hex(_requests.begin()->first) );
 				_requestMutex.unlock();
 			}
 			if( size==newSize ){

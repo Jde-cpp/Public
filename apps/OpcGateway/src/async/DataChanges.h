@@ -3,7 +3,7 @@
 
 namespace Jde::Opc::Gateway{
 	struct IDataChange; struct UAClient; struct MonitoredItemCreateResult;
-	struct ΓOPC DataChangeAwait final : TAwait<FromServer::SubscriptionAck>{
+	struct DataChangeAwait final : TAwait<FromServer::SubscriptionAck>{
 		using base = TAwait<FromServer::SubscriptionAck>;
 		DataChangeAwait( flat_set<NodeId> nodes, sp<IDataChange> dataChange, sp<UAClient> c, SRCE )ι:base{sl}, _nodes{move(nodes)}, _dataChange{move(dataChange)}, _client{move(c)}{}
 		α Suspend()ι->void override;
@@ -20,7 +20,6 @@ namespace Jde::Opc::Gateway{
 	α DataChangesDeleteCallback( UA_Client* ua, UA_UInt32 subId, void* subContext, UA_UInt32 monId, void* monContext )->void;
 	α DataChangesCallback( UA_Client *client, UA_UInt32 subId, void* subContext, UA_UInt32 monId, void* monContext, UA_DataValue *value )->void;
 	α CreateDataChangesCallback(UA_Client* ua, void *userdata, RequestId requestId, UA_CreateMonitoredItemsResponse* response)ι->void;
-	α MonitoredItemsDeleteCallback(UA_Client* ua, void *userdata, RequestId requestId, UA_DeleteMonitoredItemsResponse* response)ι->void;
 
 	using CreateMonitoredItemsResponsePtr = UAUP<UA_CreateMonitoredItemsResponse, UA_CreateMonitoredItemsResponse_delete>;
 }

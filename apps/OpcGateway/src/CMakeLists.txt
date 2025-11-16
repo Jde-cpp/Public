@@ -36,4 +36,6 @@ protobuf_generate(
 		"types/proto"
 		"${protoIncludeDir}"
 	PROTOC_OUT_DIR ${protoOutDir})
-#add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_BASH}/Public/include/jde/app/proto/Common.pb.h" "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" COMMENT "mklink Common.pb.h" )
+
+#for intellisense
+add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_BASH}/Public/include/jde/app/proto/Common.pb.h" "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" COMMENT "mklink Common.pb.h" )

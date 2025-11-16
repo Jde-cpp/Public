@@ -2,7 +2,8 @@
 #include <jde/fwk/utils/collections.h>
 #include "../UAClient.h"
 #include "../uatypes/CreateMonitoredItemsRequest.h"
-
+#include "../async/DataChanges.h"
+#include "../async/MonitoredItems.h"
 
 #define let const auto
 
@@ -11,8 +12,8 @@ namespace Jde::Opc::Gateway{
 	//α UAMonitoringNodes::LogTag()ι->sp<Jde::LogTag>{ return _logTag; }
 
 	//until orphaned UAClient's go away.
-	α UAMonitoringNodes::Shutdown()ι->void{
-		ul lock{ _mutex };
+	α UAMonitoringNodes::Shutdown( SL sl )ι->UnsubscribeAwait{
+		ul _{ _mutex };
 		_requests.clear();
 		_calls.clear();
 		_errors.clear();
@@ -21,9 +22,7 @@ namespace Jde::Opc::Gateway{
 		for( let& [h,_] : _subscriptions )
 			monitoredItems.try_emplace( h.SubId() ).first->second.emplace( h.MonitorId() );
 		_subscriptions.clear();
-		lock.unlock();
-		for( auto& [subscriptionId, monitorIds] : monitoredItems )
-			_pClient->DataSubscriptionDelete( subscriptionId, move(monitorIds) );
+		return UnsubscribeAwait{ move(monitoredItems), _client.lock(), sl };
 	}
 
 	α UAMonitoringNodes::FindNode( const NodeId& node )ι->tuple<MonitorHandle,Subscription*>{
@@ -32,7 +31,8 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α UAMonitoringNodes::Subscribe( sp<IDataChange>&& dataChange, flat_set<NodeId>&& nodes, DataChangeAwait::Handle h, Handle& requestId )ι->void{
-		requestId = MonitorHandle{ _pClient->SubscriptionId(), ++_requestId };
+		auto client = _client.lock();
+		requestId = MonitorHandle{ client->SubscriptionId(), ++_requestId };
 		flat_set<NodeId> newNodes;
 		//todo:  check for existing node subscriptions in progress.
 		ul lock{ _mutex };
@@ -53,7 +53,7 @@ namespace Jde::Opc::Gateway{
 			string nodeString;
 			nodeString = accumulate( newNodes.begin(), newNodes.end(), nodeString, []( string&& s, const NodeId& n ){return s+=n.ToString()+",";} );
 //			DBG( "DataSubscriptions: [{}]", nodeString.substr(0, nodeString.size()-1) );
-			_pClient->DataSubscriptions( CreateMonitoredItemsRequest{move(newNodes)}, requestId, h );
+			client->DataSubscriptions( CreateMonitoredItemsRequest{move(newNodes)}, requestId, h );
 		}
 	}
 	α UAMonitoringNodes::OnCreateResponse( UA_CreateMonitoredItemsResponse* response, Handle requestId )ι->void{
@@ -70,13 +70,15 @@ namespace Jde::Opc::Gateway{
 					DBG( "[{:x}]Could not create monitored item for node '{}':  {}.", requestId, pNode->ToString(), UAException::Message(result.statusCode) );
 					_errors.try_emplace( {requestId} ).first->second.try_emplace( move(*pNode), result.statusCode );
 				}
-				else{
+				else if( auto client = _client.lock(); client ){
 					let h = MonitorHandle{ requestHandle.SubId(), result.monitoredItemId };
-					TRACE( "[{:x}.{:x}]Monitoring '{}'", _pClient->Handle(), (Handle)h, pNode->ToString() );
+					TRACE( "[{:x}.{:x}]Monitoring '{}'", client->Handle(), (Handle)h, pNode->ToString() );
 					_subscriptions.emplace( h, Subscription{move(*pNode), move(result), dataChange} );
 					if( _subscriptions.size()==1 )
-						_pClient->ProcessDataSubscriptions();
+						client->ProcessDataSubscriptions();
 				}
+				else
+					CRITICAL( "Could not lock UAClient for subscription processing." );
   		}
 			_calls.erase( requestId );
 		}
@@ -113,11 +115,12 @@ namespace Jde::Opc::Gateway{
 
 	α UAMonitoringNodes::SendDataChange( Handle h, const Value&& value )ι->uint{
 		sl _{ _mutex };
-		uint calls = 0;
-		if( auto pSubscription = _subscriptions.find(h); pSubscription!=_subscriptions.end() ){
+		uint calls{};
+		auto client = _client.lock();
+		if( auto pSubscription = _subscriptions.find(h); client && pSubscription!=_subscriptions.end() ){
 			auto& args = pSubscription->second;
 			calls = args.ClientCalls.size();
-			for_each( args.ClientCalls, [&opcId=_pClient->Target(),value,&args](let& x){x->SendDataChange(opcId, args.Node, value);} );
+			for_each( args.ClientCalls, [&opcId=client->Target(),value,&args](let& x){x->SendDataChange(opcId, args.Node, value);} );
 		}
 		else
 			TRACE( "Could not find subscription:  {:x}.", h );
@@ -141,8 +144,8 @@ namespace Jde::Opc::Gateway{
 			if( subscription.ClientCalls.erase(dataChange) && subscription.ClientCalls.empty() )
 				toDelete.try_emplace( h.SubId() ).first->second.emplace( h.MonitorId() );
 		}
-		if( toDelete.size() )
-			DeleteMonitoring( _pClient->UAPointer(), toDelete );
+		if( auto client = _client.lock(); client && toDelete.size() )
+			DeleteMonitoring( client, client->Handle(), toDelete );
 	}
 
 	α UAMonitoringNodes::Unsubscribe( flat_set<NodeId>&& nodes, sp<IDataChange> dataChange )ι->tuple<flat_set<NodeId>,flat_set<NodeId>>{
@@ -160,33 +163,32 @@ namespace Jde::Opc::Gateway{
 				get<1>(successFailures).emplace( move(node) );
 			}
 		}
-		if( toDelete.size() )
-			DeleteMonitoring( _pClient->UAPointer(), toDelete );
+		if( auto client = _client.lock(); client && toDelete.size() )
+			DeleteMonitoring( client, client->Handle(), move(toDelete) );
 		return successFailures;
 	}
 
-	α UAMonitoringNodes::DeleteMonitoring( UA_Client* ua, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->DurationTimer::Task{
-		auto wait = 5s;
-		TRACE( "[{:x}]DeleteMonitoring count={}, wait={}", (uint)ua, requested.size(), Chrono::ToString(wait) ); //duration_cast<std::chrono::seconds>(wait).count()
+	α UAMonitoringNodes::DeleteMonitoring( wp<UAClient> ua, Handle uaHandle, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->DurationTimer::Task{
+		auto wait = 1s;
+		TRACE( "[{:x}]DeleteMonitoring count={}, wait={}", uaHandle, requested.size(), Chrono::ToString(wait) ); //duration_cast<std::chrono::seconds>(wait).count()
 		co_await DurationTimer{ wait };
-		auto pClient = UAClient::TryFind(ua); if( !pClient ) co_return;
-
 		flat_map<UA_UInt32,flat_set<MonitorId>> toDelete;
-		ul lock{ _mutex };
+		ul _{ _mutex };
 		for( auto& [subscriptionId, monitoredIds] : requested ){
 			for( auto& monitoredId : monitoredIds ){
 				const MonitorHandle h{subscriptionId,monitoredId};
 				if( auto p = _subscriptions.find(h); p!=_subscriptions.end() && p->second.ClientCalls.empty() ){
-					TRACE( "[{:x}.{:x}]DeleteMonitoring for:  {}", _pClient->Handle(), (Handle)h, p->second.Node.ToString() );
+					TRACE( "[{:x}.{:x}]DeleteMonitoring for:  {}", uaHandle, (Handle)h, p->second.Node.ToString() );
 					_subscriptions.erase( h );
 					toDelete.try_emplace( subscriptionId ).first->second.emplace( monitoredId );
 				}
 			}
 		}
-		if( _subscriptions.size()==0 )
-			_pClient->StopProcessDataSubscriptions();
-		lock.unlock();
-		for( auto& [subscriptionId, monitorIds] : toDelete )
-			pClient->DataSubscriptionDelete( subscriptionId, move(monitorIds) );
+		if( auto client = ua.lock(); client ){
+			if( _subscriptions.size()==0 )
+				[&]()->UnsubscribeAwait::Task { co_await UnsubscribeAwait( move(toDelete), move(client) ); }();
+			else
+				[&]()->DeleteMonitoredItemsAwait::Task { co_await DeleteMonitoredItemsAwait{ move(toDelete), move(client) }; }();
+		}
 	}
 }

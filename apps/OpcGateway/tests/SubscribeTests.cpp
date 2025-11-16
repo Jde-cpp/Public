@@ -71,7 +71,8 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_EQ( newValue, json.as_object().at("value").to_number<uint>() );
 		auto result = BlockAwait<ClientSocketAwait<FromServer::UnsubscribeAck>,FromServer::UnsubscribeAck>( _session->Unsubscribe(OpcServerTarget, {nodeId}) );
 		ASSERT_TRUE( result.successes_size()==1 );
-
-		// todo check polling is off.
+		TRACE( "-------------------------------------------------------------" );
+		std::this_thread::sleep_for( 2s );// Gateway waits for 1 seconds before destroying the subscription.
+		ASSERT_FALSE( _client->Processing() );
 	}
 }

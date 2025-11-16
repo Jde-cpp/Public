@@ -5,7 +5,7 @@
 #include <jde/opc/UAException.h>
 #include "../usings.h"
 
-#define UACε(x) if( let sc = x; sc ) throw UAClientException{ sc, _ptr, requestId, ELogLevel::Debug };
+#define UACε(f) if( let sc = f; sc ) throw UAClientException{ sc, _client->Handle(), _requestId, _sl, ELogLevel::Debug };
 namespace Jde::Web::Server{ struct HttpRequest; }
 namespace Jde::Opc::Gateway{
 	struct UAClientException : UAException{

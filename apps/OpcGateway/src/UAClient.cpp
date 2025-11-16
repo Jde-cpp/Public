@@ -8,7 +8,6 @@
 #include <jde/opc/uatypes/Value.h>
 #include "StartupAwait.h"
 #include "async/Attributes.h"
-#include "async/CreateSubscriptions.h"
 #include "async/DataChanges.h"
 #include "async/SetMonitoringMode.h"
 #include "uatypes/Browse.h"
@@ -50,19 +49,19 @@ namespace Jde::Opc::Gateway{
 		Credential{ move(cred) },
 		_opcServer{ move(opcServer) },
 		_logger{ 0 },
-		_ptr{ Create() },
-		MonitoredNodes{ this }{
+		_ptr{ Create() }{
 		UA_ClientConfig_setDefault( Configuration() );
 		INFO( "[{:x}]Creating UAClient target: '{}' url: '{}' credential: '{}' )", Handle(), Target(), Url(), Credential.ToString() );
 		LogClientEndpoints();
 	}
 
-	α UAClient::Shutdown( bool /*terminate*/ )ι->void{
+	α UAClient::Shutdown( bool /*terminate*/ )ι->VoidAwait::Task{
 		{
 			sl _1{ _clientsMutex };
 			for( auto& [_,creds] : _clients ){
 				for( auto& [_,client] : creds ){
-					client->MonitoredNodes.Shutdown();
+					if( auto p = move(client->_monitoredNodes); p )
+						co_await p->Shutdown();
 					client->_asyncRequest.Stop();
 					if( client.use_count()>1 )
 					  WARN( "[{:x}]use_count={}", client->Handle(), client.use_count() );
@@ -166,8 +165,6 @@ namespace Jde::Opc::Gateway{
 		if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED || connectStatus==UA_STATUSCODE_BADSECURITYCHECKSFAILED || connectStatus == UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
 			_awaitingActivation.erase_if( [ua, sessionState,connectStatus](sp<UAClient> client){
 				if( client->UAPointer()!=ua )return false;
-//				if( UA_Client_getNamespaceIndex
-//					!ua->haveNamespaces ) return false;
 
 				if( connectStatus == UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
 					LogServerEndpoints( client->Url(), client->Handle() );
@@ -370,24 +367,6 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α UAClient::DataSubscriptionDelete( Gateway::SubscriptionId subscriptionId, flat_set<MonitorId>&& monitoredItemIds )ι->void{
-		UA_DeleteMonitoredItemsRequest request; UA_DeleteMonitoredItemsRequest_init( &request );
-		request.subscriptionId = subscriptionId;
-		request.monitoredItemIdsSize = monitoredItemIds.size();
-		request.monitoredItemIds = ( UA_UInt32* )UA_Array_new( monitoredItemIds.size(), &UA_TYPES[UA_TYPES_UINT32] );
-		uint i=0;
-		for( auto& id : monitoredItemIds )
-			request.monitoredItemIds[i++] = id;
-		try{
-			RequestId requestId{};
-			UAε( UA_Client_MonitoredItems_delete_async(UAPointer(), move(request), MonitoredItemsDeleteCallback, nullptr, &requestId) );
-			Process( requestId, nullptr, "MonitoredItems_delete" );
-			UA_DeleteMonitoredItemsRequest_clear( &request );
-		}
-		catch( const IException& )
-		{}
-	}
-
 	α UAClient::RequestDataTypeAttributes( const flat_set<NodeId>&& x, AttribAwait::Handle h )ι->void{
 		flat_map<UA_UInt32, NodeId> ids;
 		Gateway::RequestId firstRequestId{};
@@ -411,7 +390,7 @@ namespace Jde::Opc::Gateway{
 		sl _{ _clientsMutex };
 		for( auto& [_, credClients] : _clients ){
 			for( auto& [_, client] : credClients )
-				client->MonitoredNodes.Unsubscribe( dataChange );
+				client->MonitoredNodes().Unsubscribe( dataChange );
 		}
 	}
 
@@ -459,15 +438,6 @@ namespace Jde::Opc::Gateway{
 	}
 
 	UAClient::~UAClient() {
-// 		_config.eventLoop->stop( _config.eventLoop );
-// #undef free
-// 		while( _config.eventLoop->free(_config.eventLoop) ){
-// 			if( auto sc = UA_Client_run_iterate(_ptr, 0); sc /*&& (sc!=UA_STATUSCODE_BADINTERNALERROR || i!=0)*/ )
-// 				DBG( "UA_Client_run_iterate returned ({:x}){}", sc, UAException::Message(sc) );
-// //			std::this_thread::sleep_for( 1s );
-// 		}
-// 		_config.eventLoop = nullptr;
-// #define free _free_dbg
 		UA_Client_delete( _ptr );
 		DBG( "[{:x}]~UAClient( '{}', '{}' )", Handle(), Target(), Url() );
 	}
