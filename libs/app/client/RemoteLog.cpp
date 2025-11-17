@@ -10,6 +10,14 @@ namespace Jde::App::Client{
 		_client{ move(client) },
 		_delay{ Json::FindDuration(settings, "delay", ELogLevel::Error).value_or(1min) }{
 	}
+	RemoteLog::~RemoteLog(){
+		ASSERT( !_timer );
+		if( _timer ){
+			ResetTimer();
+			while( _timer )
+				std::this_thread::sleep_for(1ms);
+		}
+	}
 	α RemoteLog::Start( sp<IAppClient> client )ι->void{
 		_client = move(client);
 		Executor();//locks up if starts in StartTimer.

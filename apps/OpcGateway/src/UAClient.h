@@ -3,7 +3,6 @@
 #include <jde/opc/uatypes/Logger.h>
 #include <jde/opc/uatypes/ExNodeId.h>
 #include "async/AsyncRequest.h"
-#include "async/Attributes.h"
 #include "async/ConnectAwait.h"
 #include "async/DataChanges.h"
 #include "async/ReadValueAwait.h"
@@ -36,13 +35,10 @@ namespace Jde::Opc::Gateway{
 		Ω RemoveClient( sp<UAClient>&& client )ι->bool;
 
 		α SubscriptionId()Ι->SubscriptionId{ return CreatedSubscriptionResponse ? CreatedSubscriptionResponse->subscriptionId : 0;}
-//		α CreateSubscriptions()ι->void;
-		α DataSubscriptions( CreateMonitoredItemsRequest&& r, Handle requestHandle, DataChangeAwait::Handle h )ι->void;
 
 		α SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void;
 		α SendReadRequest( const flat_set<NodeId>&& nodes, ReadValueAwait::Handle h )ι->void;
 		α SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void;
-		α RequestDataTypeAttributes( const flat_set<NodeId>&& x, AttribAwait::Handle h )ι->void;
 		Ω ClearRequest( UA_Client* ua, RequestId requestId )ι->void;
 		Ṫ ClearRequestH( UA_Client* ua , RequestId requestId )ι->T;
 		α ClearRequest( RequestId requestId )ι->void{ _asyncRequest.Clear( requestId ); }
@@ -62,7 +58,7 @@ namespace Jde::Opc::Gateway{
 		α Url()Ι->str{ return _opcServer.Url; }
 		α IsDefault()Ι->bool{ return _opcServer.IsDefault; }
 		α DefaultBrowseNs()Ι->NsIndex{ return _opcServer.DefaultBrowseNs; }
-		α Handle()Ι->Jde::Handle{ return (uint)_ptr;}
+		α Handle()Ι->Jde::Handle{ return _handle;}
 		α UAPointer()Ι->UA_Client*{return _ptr;}
 		α BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,std::expected<ExNodeId,StatusCode>>;
 		sp<UA_SetMonitoringModeResponse> MonitoringModeResponse;
@@ -86,11 +82,11 @@ namespace Jde::Opc::Gateway{
 		ServerCnnctn _opcServer;
 
 		concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
-		concurrent_flat_map<Jde::Handle, UARequestMulti<NodeId>> _dataAttributeRequests;
 		vector<VoidAwait::Handle> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
 
 		AsyncRequest _asyncRequest;
-		Logger _logger;
+		Jde::Handle _handle;
+		Logger _logger; //after handle
 		UA_Client* _ptr{};//needs to be after _logger, _config, Password.
 		friend ConnectAwait;
 		friend α Read::OnResponse( UA_Client *client, void *userdata, RequestId requestId, StatusCode status, UA_DataValue *value )ι->void;

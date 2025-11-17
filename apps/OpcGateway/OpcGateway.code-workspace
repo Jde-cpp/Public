@@ -8,7 +8,11 @@
 		"buildRoot": "${env:JDE_BUILD_DIR}/${config:buildTarget}",
 		"exeDir": "${config:buildRoot}/apps/${config:name}/exe",
 		"testBuildDir": "${config:buildRoot}/apps/${config:name}/tests",
-		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions.sh"
+		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions.sh",
+		"C_Cpp.default.forcedInclude": [
+			"${env:JDE_DIR}/Public/build/forcedInclude.h",
+			"${env:JDE_DIR}/Public/apps/OpcGateway/src/pc.h"
+		]
 	},
 	"tasks": {
 		"version": "2.0.0",

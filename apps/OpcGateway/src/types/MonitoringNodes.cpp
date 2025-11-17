@@ -30,7 +30,7 @@ namespace Jde::Opc::Gateway{
 		return p!=_subscriptions.end() ? make_tuple( p->first, &p->second ) : make_tuple( MonitorHandle{0,0}, nullptr );
 	}
 
-	α UAMonitoringNodes::Subscribe( sp<IDataChange>&& dataChange, flat_set<NodeId>&& nodes, DataChangeAwait::Handle h, Handle& requestId )ι->void{
+	α UAMonitoringNodes::MonitoredItemsRequest( sp<IDataChange>&& dataChange, flat_set<NodeId>&& nodes, Handle& requestId )ι->optional<CreateMonitoredItemsRequest>{
 		auto client = _client.lock();
 		requestId = MonitorHandle{ client->SubscriptionId(), ++_requestId };
 		flat_set<NodeId> newNodes;
@@ -45,15 +45,14 @@ namespace Jde::Opc::Gateway{
 		_requests.emplace( requestId, move(nodes) );
 		if( newNodes.empty() ){
 			lock.unlock();
-			h.resume();
+			return nullopt;
 		}
 		else{
 			_calls.emplace( requestId, make_tuple(newNodes,move(dataChange)) );
 			lock.unlock();
 			string nodeString;
 			nodeString = accumulate( newNodes.begin(), newNodes.end(), nodeString, []( string&& s, const NodeId& n ){return s+=n.ToString()+",";} );
-//			DBG( "DataSubscriptions: [{}]", nodeString.substr(0, nodeString.size()-1) );
-			client->DataSubscriptions( CreateMonitoredItemsRequest{move(newNodes)}, requestId, h );
+			return CreateMonitoredItemsRequest{ move(newNodes) };
 		}
 	}
 	α UAMonitoringNodes::OnCreateResponse( UA_CreateMonitoredItemsResponse* response, Handle requestId )ι->void{

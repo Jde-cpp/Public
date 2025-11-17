@@ -5,7 +5,7 @@
 #include <jde/opc/uatypes/LocalizedText.h>
 #include <jde/opc/uatypes/Value.h>
 #include "../UAClient.h"
-#include "../async/Attributes.h"
+#include "../async/DataTypeAttribAwait.h"
 #include "../async/ReadValueAwait.h"
 #include "../async/SessionAwait.h"
 
@@ -39,7 +39,7 @@ namespace Browse{
 }
 	ObjectsFolderAwait::ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SL sl )ι:
 		base{ sl },
-		_ua{ua},
+		_client{ua},
 		_node{node},
 		_snapshot{snapshot}
 	{}
@@ -48,7 +48,7 @@ namespace Browse{
 	α ObjectsFolderAwait::Execute()ι->TAwait<Browse::Response>::Task{
 		bool retry{};
 		try{
-			auto response = co_await Browse::FoldersAwait{ _node, UA_BROWSERESULTMASK_ALL, _ua };
+			auto response = co_await Browse::FoldersAwait{ _node, UA_BROWSERESULTMASK_ALL, _client };
 			THROW_IF( response.Nodes().size()==0, "No items found for: {}", _node.ToString() );
 			if( _snapshot )
 				Snapshot( move(response) );
@@ -71,21 +71,21 @@ namespace Browse{
 
 	α ObjectsFolderAwait::Snapshot( Browse::Response response )ι->TAwait<flat_map<NodeId, Value>>::Task{
 		try{
-			if( !_ua->Connected ){
-				_ua = UAClient::Find( _ua->Target(), _ua->Credential );
-				THROW_IF( !_ua, "Could not find UAClient for: {}", _ua->Target() );
+			if( !_client->Connected ){
+				_client = UAClient::Find( _client->Target(), _client->Credential );
+				THROW_IF( !_client, "Could not find UAClient for: {}", _client->Target() );
 			}
 			auto vars = response.Variables();
-			auto values = vars.size() ? co_await ReadValueAwait{ vars, _ua } : flat_map<NodeId, Value>{};
+			auto values = vars.size() ? co_await ReadValueAwait{ vars, _client } : flat_map<NodeId, Value>{};
 			Attributes( move(vars), move(response), move(values) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α ObjectsFolderAwait::Attributes( flat_set<NodeId>&& variables, Browse::Response response, flat_map<NodeId, Value> values )ι->TAwait<flat_map<NodeId, NodeId>>::Task{
+	α ObjectsFolderAwait::Attributes( flat_set<NodeId>&& variables, Browse::Response response, flat_map<NodeId, Value> values )ι->TAwait<flat_map<NodeId, variant<NodeId, StatusCode>>>::Task{
 		try{
-			auto dataTypes = variables.size() ? co_await AttribAwait{ move(variables), move(_ua) } : flat_map<NodeId, NodeId>{};
+			auto dataTypes = variables.size() ? co_await DataTypeAttribAwait{ move(variables), move(_client) } : flat_map<NodeId, variant<NodeId, StatusCode>>{};
 			Resume( response.ToJson(move(values), move(dataTypes)) );
 		}
 		catch( exception& e ){
@@ -94,10 +94,10 @@ namespace Browse{
 	}
 	α ObjectsFolderAwait::Retry()ι->VoidAwait::Task{
 		try{
-			co_await AwaitSessionActivation( _ua );
+			co_await AwaitSessionActivation( _client );
 			[]( ObjectsFolderAwait&& self )->Task{
 				try{
-					auto j = co_await ObjectsFolderAwait{ self._node, self._snapshot, self._ua, self._sl };
+					auto j = co_await ObjectsFolderAwait{ self._node, self._snapshot, self._client, self._sl };
 					self.Resume( move(j) );
 				}
 				catch( exception& e ){
@@ -210,7 +210,7 @@ namespace Browse{
 			return true;
 		} );
 	}
-	α Response::ToJson( flat_map<NodeId, Value>&& snapshot, flat_map<NodeId, NodeId>&& dataTypes )ε->jobject{
+	α Response::ToJson( flat_map<NodeId, Value>&& snapshot, flat_map<NodeId, variant<NodeId, StatusCode>>&& dataTypes )ε->jobject{
 		jarray references;
 		for(size_t i = 0; i < resultsSize; ++i) {
 			for(size_t j = 0; j < results[i].referencesSize; ++j) {
@@ -219,8 +219,12 @@ namespace Browse{
 				jobject reference;
 				if( auto p = snapshot.find(nodeId); p!=snapshot.end() )
 					reference["value"] = p->second.ToJson();
-				if( auto p = dataTypes.find(nodeId); p!=dataTypes.end() )
-					reference["dataType"] = p->second.ToJson();
+				if( auto p = dataTypes.find(nodeId); p!=dataTypes.end() ){
+					if( std::holds_alternative<StatusCode>(p->second) )
+						reference["dataType"] = jobject{ {"sc", std::get<StatusCode>(p->second)} };
+					else
+						reference["dataType"] = std::get<NodeId>(p->second).ToJson();
+				}
 				reference["refType"] = Opc::ToJson( ref.referenceTypeId );
 				reference["isForward"] = ref.isForward;
 				reference["node"] = nodeId.ToJson();

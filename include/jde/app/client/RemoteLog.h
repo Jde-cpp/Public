@@ -7,6 +7,7 @@ namespace Jde::App::Client{
 	struct IAppClient;
 	struct RemoteLog final : Logging::ILogger, boost::noncopyable{
 		RemoteLog( const jobject& settings, sp<IAppClient> client )ι;
+		~RemoteLog();
 		Ω Init( sp<IAppClient> client )ι->void;
 		α Start( sp<IAppClient> client )ι->void;
 		α Shutdown( bool terminate )ι->void override;

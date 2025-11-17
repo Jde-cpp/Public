@@ -45,11 +45,11 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	TEST_F( LogTests, Remote ){
-		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "Test message" };
 		App::Client::RemoteLog remote{ {{"delay", "PT0.001S"}}, AppClient() };
+		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "Test message" };
 		remote.Write( e );
 		remote.Shutdown( false );
-		//std::this_thread::sleep_for( 1s );
+		std::this_thread::sleep_for( 1s );
 	}
 
 	TEST_F( LogTests, GraphQL ){

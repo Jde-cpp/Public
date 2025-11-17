@@ -7,7 +7,6 @@
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
 #include "StartupAwait.h"
-#include "async/Attributes.h"
 #include "async/DataChanges.h"
 #include "async/SetMonitoringMode.h"
 #include "uatypes/Browse.h"
@@ -17,7 +16,6 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-//	using Client::UAClientException;
 	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::Opc };
 	flat_map<ServerCnnctnNK,flat_map<Credential,sp<UAClient>>> _clients; shared_mutex _clientsMutex;
 	α UAClient::RemoveClient( sp<UAClient>&& client )ι->bool{
@@ -39,6 +37,15 @@ namespace Jde::Opc::Gateway{
 			DBG( "[{:x}] - could not find client='{}'.", client->Handle(), client->Target() );
 		return erased;
 	}
+	concurrent_flat_map<uint32_t, uint32_t> _handles;
+	α createHandle( const ServerCnnctn& target )ι->Jde::Handle{
+		uint32_t serverHash = target.Id ? target.Id : std::hash<string>{}( target.Url );
+		uint32_t connectionIndex{};
+		auto increment = [&connectionIndex]( auto& last ){ connectionIndex = ++last.second; };
+		_handles.try_emplace_and_visit( serverHash, 0, increment, increment );
+		return ( (Jde::Handle)serverHash << 32 ) | connectionIndex;
+	}
+
 	concurrent_flat_set<sp<UAClient>> _awaitingActivation;
 
 	UAClient::UAClient( str address, Gateway::Credential cred )ε:
@@ -48,7 +55,8 @@ namespace Jde::Opc::Gateway{
 	UAClient::UAClient( ServerCnnctn&& opcServer, Gateway::Credential cred )ε:
 		Credential{ move(cred) },
 		_opcServer{ move(opcServer) },
-		_logger{ 0 },
+		_handle{ createHandle(_opcServer) },
+		_logger{ _handle },
 		_ptr{ Create() }{
 		UA_ClientConfig_setDefault( Configuration() );
 		INFO( "[{:x}]Creating UAClient target: '{}' url: '{}' credential: '{}' )", Handle(), Target(), Url(), Credential.ToString() );
@@ -233,7 +241,6 @@ namespace Jde::Opc::Gateway{
 		UA_ConnectionManager *udpCM = UA_ConnectionManager_new_POSIX_UDP( "udp connection manager"_uv );
 		_config.eventLoop->registerEventSource( _config.eventLoop, (UA_EventSource*)udpCM );
 		auto ua = UA_Client_newWithConfig( &_config );
-		_logger.context = ua;
 		UA_Client_getConfig( ua )->eventLoop->logger = _config.logging;
 
 		return ua;
@@ -331,58 +338,6 @@ namespace Jde::Opc::Gateway{
 		}
 		catch( UAException& e ){
 			RetryVoid( [subscriptionId](sp<UAClient>&& p)mutable{p->SetMonitoringMode(subscriptionId);}, move(e), shared_from_this() );
-		}
-	}
-
-	// α UAClient::CreateSubscriptions()ι->void{
-	// 	try{
-	// 		RequestId requestId{};
-	// 		UAε( UA_Client_Subscriptions_create_async(UAPointer(), UA_CreateSubscriptionRequest_default(), nullptr, StatusChangeNotificationCallback, DeleteSubscriptionCallback, CreateSubscriptionCallback, nullptr, &requestId) );
-	// 		TRACET( MonitoringTag, "[{:x}.{:x}]CreateSubscription", Handle(), requestId );
-	// 		Process( requestId, nullptr );
-	// 	}
-	// 	catch( UAException& e ){
-	// 		RetryVoid( [](sp<UAClient>&& p)mutable{p->CreateSubscriptions();}, move(e), shared_from_this() );
-	// 	}
-	// }
-
-	α UAClient::DataSubscriptions( CreateMonitoredItemsRequest&& request, Jde::Handle requestHandle, DataChangeAwait::Handle h )ι->void{
-		ASSERT( CreatedSubscriptionResponse );
-		if( !CreatedSubscriptionResponse )
-			return h.promise().ResumeExp( Exception{"CreatedSubscriptionResponse==null"}, h );
-		try{
-			vector<UA_Client_DeleteMonitoredItemCallback> deleteCallbacks{ request.itemsToCreateSize, DataChangesDeleteCallback };
-			vector<UA_Client_DataChangeNotificationCallback> dataChangeCallbacks{ request.itemsToCreateSize, DataChangesCallback };
-			void** contexts = nullptr;
-			request.subscriptionId = CreatedSubscriptionResponse->subscriptionId;
-
-			RequestId requestId{};
-			UAε( UA_Client_MonitoredItems_createDataChanges_async(UAPointer(), request, contexts, dataChangeCallbacks.data(), deleteCallbacks.data(), CreateDataChangesCallback, (void*)requestHandle, &requestId) );
-			//TRACET( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, serialize(request.ToJson()) );
-			Process( requestId, move(h), "createDataChanges" );//TODO handle BadSubscriptionIdInvalid
-		}
-		catch( UAException& e ){
-			h.promise().ResumeExp( move(e), move(h) );//retry will leave CreatedSubscriptionResponse null...
-			//Retry( [&x=request,requestHandle](sp<UAClient>&& p, HCoroutine&& h)mutable{p->DataSubscriptions(move(x), requestHandle, move(h));}, move(e), shared_from_this(), move(h) );
-		}
-	}
-
-	α UAClient::RequestDataTypeAttributes( const flat_set<NodeId>&& x, AttribAwait::Handle h )ι->void{
-		flat_map<UA_UInt32, NodeId> ids;
-		Gateway::RequestId firstRequestId{};
-		try{
-			for( let& node : x ){
-				RequestId requestId{};
-				UAε( UA_Client_readDataTypeAttribute_async(_ptr, node, Attributes::OnResponse, (void*)(uint)firstRequestId, &requestId) );
-				if( !firstRequestId )
-					firstRequestId = requestId;
-				ids.emplace( requestId, node );
-	 		}
-			_dataAttributeRequests.try_emplace( firstRequestId, UARequestMulti<NodeId>{move(ids), shared_from_this()} );
-			Process( firstRequestId, move(h), "readDataTypeAttribute" );
-		}
-		catch( UAException& e ){
-			Retry<AttribAwait::Handle>( [n=move(x)](sp<UAClient>&& p, auto h)mutable{p->RequestDataTypeAttributes(move(n), move(h));}, move(e), shared_from_this(), h );
 		}
 	}
 

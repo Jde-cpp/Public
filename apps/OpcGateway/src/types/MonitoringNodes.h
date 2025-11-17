@@ -10,6 +10,7 @@
 namespace Jde::Opc{ struct Value; }
 namespace Jde::Opc::Gateway{
 	struct UAClient;
+	struct CreateMonitoredItemsRequest;
 
 	struct IDataChange{
 		β SendDataChange( const ServerCnnctnNK& opcId, const NodeId& node, const Value& value )ι->void=0;
@@ -28,7 +29,7 @@ namespace Jde::Opc::Gateway{
 		UAMonitoringNodes(sp<UAClient> p)ι:_client{p}{}
 		~UAMonitoringNodes(){_client.reset();}
 		[[nodiscard]] α Shutdown( SRCE )ι->UnsubscribeAwait;
-		α Subscribe( sp<IDataChange>&& dataChange, flat_set<NodeId>&& nodes, DataChangeAwait::Handle h, Handle& requestId )ι->void;
+		α MonitoredItemsRequest( sp<IDataChange>&& dataChange, flat_set<NodeId>&& nodes, Handle& requestId )ι->optional<CreateMonitoredItemsRequest>;
 		α Unsubscribe( flat_set<NodeId>&& nodes, sp<IDataChange> dataChange )ι->tuple<flat_set<NodeId>,flat_set<NodeId>>;
 		α Unsubscribe( sp<IDataChange> )ι->void;
 		α SendDataChange( Handle h, const Value&& value )ι->uint;
