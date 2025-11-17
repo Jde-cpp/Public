@@ -7,26 +7,41 @@ namespace Jde::Opc::Gateway{
 	Duration _pingInterval;
 	Duration _ttl;
 	TimePoint _lastRequest;
-	optional<DurationTimer> _pingTimer;
+	optional<DurationTimer> _pingTimer; mutex _pingMutex;
 
+	Ω cancelPing()ι->void{
+		lg _{ _pingMutex };
+		if( _pingTimer )
+			_pingTimer->Cancel();
+	}
 	Ω ping( sp<UAClient> client )ι->DurationTimer::Task{
-		ASSERT( !_pingTimer )
-		_pingTimer.emplace( _pingInterval, SRCE_CUR );
-		DBGT( EOpcLogTags::ProcessingLoop, "Pinging '{}' in '{}'", client->Target(), Chrono::ToString(_pingInterval) );
-		co_await *_pingTimer;
-		client->Process( PingRequestId, "ping" );
+		{
+			lg _{ _pingMutex };
+			ASSERT( !_pingTimer );
+			_pingTimer.emplace( _pingInterval, SRCE_CUR );
+			DBGT( EOpcLogTags::ProcessingLoop, "Pinging '{}' in '{}'", client->Target(), Chrono::ToString(_pingInterval) );
+		}
+		auto result = co_await *_pingTimer;
+		{
+			lg _{ _pingMutex };
+			_pingTimer.reset();
+		}
+		if( result )
+			client->Process( PingRequestId, "ping" );
+		else
+			CodeException resultEx{ result.error(), (ELogTags)EOpcLogTags::ProcessingLoop };
 	}
 	// 1 per UAClient
 	α AsyncRequest::ProcessingLoop()ι->DurationTimer::Task{
 		function<string()> logPrefix = [this](){ return Ƒ("[{:x}]", _client ? _client->Handle() : 0); };
 		DBG( "{}ProcessingLoop started", logPrefix() );
-		_pingTimer.reset();
+		cancelPing();
 		StatusCode sc{};
 		while( _running.test() ){
 			auto client = _client;
 			uint size;
 			{
-				lg _{ _requestMutex };
+				sl _{ _requestMutex };
 				if( size = _requests.size(); size ){
 					if( _requests.begin()->first==PingRequestId )
 						_requests.erase( PingRequestId );
@@ -38,7 +53,7 @@ namespace Jde::Opc::Gateway{
 			if( sc = UA_Client_run_iterate(*client, 0); sc ){
 				ERR( "{}UA_Client_run_iterate returned ({:x}){}", logPrefix(), sc, UAException::Message(sc) );
 				_running.clear();
-				lg _{ _requestMutex };
+				ul _{ _requestMutex };
 				_requests.clear();
 				break;
 			}
@@ -71,8 +86,8 @@ namespace Jde::Opc::Gateway{
 
 	α AsyncRequest::Stop()ι->void{
 		DBG( "[{}]Stopping ProcessingLoop", UAHandle() );
-		lg _{ _requestMutex };
-		_pingTimer.reset();
+		ul _{ _requestMutex };
+		cancelPing();
 		_stopped.test_and_set();
 		_requests.clear();
 		_running.clear();

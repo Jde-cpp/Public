@@ -1,5 +1,6 @@
 #include <jde/fwk/log/MemoryLog.h>
 #include <jde/fwk/chrono.h>
+#include <jde/fwk/io/FileAwait.h>
 #include <jde/app/log/DailyLoadAwait.h>
 #include <jde/app/log/LogQLAwait.h>
 #include <jde/app/log/ProtoLog.h>
@@ -26,8 +27,8 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 	TEST_F( LogTests, Archive ){
 		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "Test message" };
-		let archiveFile = (*Settings::FindPath( "/logging/proto/path" ))/"2025/1/1/archive.binpb";
-		if( fs::exists( archiveFile ) )
+		let archiveFile = ( *Settings::FindPath("/logging/proto/path") )/"2025/1/1/archive.binpb";
+		if( fs::exists(archiveFile) )
 			fs::remove( archiveFile );
 		e.Time = Chrono::ToTimePoint( 2025, 1, 1, 12 );
 		ProtoLog().Write( e );
@@ -36,15 +37,18 @@ namespace Jde::Opc::Gateway::Tests{
 			if( fs::exists(archiveFile) )
 				break;
 		}
-		std::this_thread::sleep_for( 100s );
+		std::this_thread::sleep_for( 1s );
 		DBG( "archiveFile: {}", archiveFile.string() );
 		ASSERT_TRUE( fs::exists(archiveFile) );
+		auto content = BlockTAwait<string>( IO::ReadAwait(archiveFile) );
+		ASSERT_NO_THROW( Protobuf::Deserialize<App::Log::Proto::ArchiveFile>(move(content)) );
 	}
 
 	TEST_F( LogTests, Remote ){
 		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "Test message" };
 		App::Client::RemoteLog remote{ {{"delay", "PT0.001S"}}, AppClient() };
 		remote.Write( e );
+		remote.Shutdown( false );
 		//std::this_thread::sleep_for( 1s );
 	}
 

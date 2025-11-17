@@ -41,14 +41,16 @@ namespace Jde::App::Client{
 		_timer = mu<DurationTimer>( _delay, _tags, SRCE_CUR );
 		mtx.unlock();
 		let timedOut = co_await *_timer;
+		{
+			lg _{ mtx };
+			_timer.reset();
+		}
 		if( timedOut )
 			Send();
 		else{
-			_mutex.lock();
+			lg _{ _mutex };
 			if( _entries.size() )
 				StartTimer( _mutex );
-			else
-				_timer = nullptr;
 		}
 	}
 

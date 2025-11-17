@@ -17,6 +17,7 @@ namespace Jde::App{
 		ProtoLog( const jobject& settings )ε;
 		Ω Init()ι->void;
 
+		α Archive()ι->VoidAwait::Task;
 		α Shutdown( bool terminate )ι->void override;
 		α DailyFile()ι->fs::path{ return _root/"log.binpb"; }
 		α DailyFileStart()ι->TimePoint{ return _dailyFileStart; }//max if not started

@@ -17,21 +17,21 @@
 				"label": "build",
 				"type": "shell",
 				"command": "cd ${config:buildRoot}; tput reset; cmake --build . -j --target Jde.Opc.Gateway;",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": true }
 			},
 			{
 				"label": "buildProject",
 				"type": "shell",
 				"command": "tput reset; ${config:sourceBash};buildProject ${fileDirname} ${config:buildRoot};",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},
 			{
 				"label": "compile",
 				"type": "shell",
 				"command": "tput reset;${config:sourceBash};compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot};",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},
 		]

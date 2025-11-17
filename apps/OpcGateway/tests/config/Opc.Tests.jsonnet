@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "SubscribeTests.Basic",
+		tests: "CertTests.Authenticate_Bad",
 		recreateDB:: true,
 		embeddedAppServer: false,
 		embeddedOpcServer: false

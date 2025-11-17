@@ -29,7 +29,7 @@ namespace Jde::Opc::Gateway{
 	private:
 		α UAHandle()ι->Handle;
 		α ProcessingLoop()ι->DurationTimer::Task;
-		flat_map<RequestId, std::any> _requests; mutex _requestMutex;
+		flat_map<RequestId, std::any> _requests; shared_mutex _requestMutex;
 		sp<UAClient> _client;
 		atomic_flag _running;
 		atomic_flag _stopped; //set at shutdown
@@ -39,14 +39,14 @@ namespace Jde::Opc::Gateway{
 
 	Ξ AsyncRequest::Clear( RequestId requestId )ι->void{
 		TRACE( "[{}.{}]Clearing", hex(UAHandle()), hex(requestId) );
-		lg _{_requestMutex};
+		ul _{_requestMutex};
 		if( !_requests.erase(requestId) && requestId!=ConnectRequestId )
 			CRITICALT( ProcessingLoopTag, "[{}.{}]Could not find request handle.", hex(UAHandle()), hex(requestId) );
 	}
 	Ŧ AsyncRequest::ClearHandle( RequestId requestId )ι->T{
 		TRACE( "[{}.{}]Clearing", hex(UAHandle()), hex(requestId) );
 		T userData;
-		lg _{_requestMutex};
+		ul _{_requestMutex};
 		if( auto p = _requests.find(requestId); p!=_requests.end() ){
 			try{
 				userData = std::any_cast<T>( move(p->second) );
@@ -65,7 +65,7 @@ namespace Jde::Opc::Gateway{
 		if( _stopped.test() )
 			return;
 		{
-			lg _{_requestMutex};
+			ul _{_requestMutex};
 			_requests.emplace( requestId, std::forward<T>(h) );
 		}
 		if( !_running.test_and_set() )

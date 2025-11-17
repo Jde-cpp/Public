@@ -11,7 +11,9 @@ namespace Jde::App{
 			α Execute()ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task;
 		private:
 			α Append( fs::path file, App::Log::Proto::ArchiveFile values )ι->TAwait<string>::Task;
+			α Save( flat_map<std::chrono::year_month_day, App::Log::Proto::ArchiveFile> archives )ι->VoidAwait::Task;
 			α Save( fs::path file, const App::Log::Proto::ArchiveFile values )ι->VoidAwait::Task;
+
 			fs::path _dailyFile;
 			fs::path _path;
 			const std::chrono::time_zone& _tz;

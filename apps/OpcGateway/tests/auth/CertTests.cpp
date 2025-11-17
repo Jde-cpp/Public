@@ -79,7 +79,7 @@ namespace Jde::Opc::Gateway::Tests{
 		flag.wait( false );
 
 		EXPECT_TRUE( _exception );
-		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadIdentityTokenInvalid") );
+		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadSecurityChecksFailed") );
 		EXPECT_FALSE( _client );
 		DBG( "{}", _exception ? _exception->what() : "Error no exception." );
 		fs::rename( working, root/"ssl_badTest" );

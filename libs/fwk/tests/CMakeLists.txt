@@ -19,7 +19,7 @@ if( NOT WIN32 )
 	endif()
 endif()
 
-set( targetName Jde.Framework.Tests )
+set( targetName Jde.Fwk.Tests )
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
 
@@ -41,7 +41,7 @@ else()
 	target_link_libraries( ${targetName} libssl.a libcrypto.a )
 endif()
 
-add_test( NAME FwkTests COMMAND $<TARGET_FILE:Jde.Framework.Tests> -tests -settings=$ENV{JDE_DIR}/Public/libs/fwk/tests/config/Framework.Tests.jsonnet )
+add_test( NAME FwkTests COMMAND $<TARGET_FILE:Jde.Fwk.Tests> -tests -settings=$ENV{JDE_DIR}/Public/libs/fwk/tests/config/Framework.Tests.jsonnet )
 #
 set( CMAKE_CTEST_ARGUMENTS "-tests;-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet" )
 

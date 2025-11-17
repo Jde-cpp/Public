@@ -110,14 +110,16 @@ namespace Jde::App{
 			std::copy( toSave.begin(), toSave.end(), std::back_inserter(_toSave) );
 			co_return;
 		}
-		if( _needsArchive ){
-			try{
-				co_await ArchiveAwait{ DailyFile(), _root, _tz };
-				_needsArchive = false;
-			}
-			catch( const exception& )
-			{}
+		if( _needsArchive )
+			Archive();
+	}
+	α ProtoLog::Archive()ι->VoidAwait::Task{
+		try{
+			_needsArchive = false;
+			co_await ArchiveAwait{ DailyFile(), _root, _tz };
 		}
+		catch( const exception& )
+		{}
 	}
 
 	α ProtoLog::AddString( uuid id, sv str )ι->void{

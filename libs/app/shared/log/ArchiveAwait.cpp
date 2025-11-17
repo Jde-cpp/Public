@@ -12,7 +12,7 @@ namespace Jde::App{
 	α ArchiveAwait::Execute()ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task{
 		vector<App::Log::Proto::FileEntry> entries;
 		try{
-			entries = co_await DailyLoadAwait{ _dailyFile };
+			entries = co_await DailyLoadAwait{ _dailyFile }; //TODO lock until done
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
@@ -44,21 +44,52 @@ namespace Jde::App{
 				}
 			}
 		}
-		for( auto& [ymd,archive] : archives ){
-			let dir = _path/std::to_string((int)ymd.year())/std::to_string((unsigned)ymd.month())/std::to_string((unsigned)ymd.day());
-			if( !fs::exists(dir) )
-				fs::create_directories( dir );
-			let file = dir/"archive.binpb";
-			if( fs::exists(file) )
-				Append( move(file), move(archive) );
-			else
-				Save( move(file), move(archive) );
-		}
+		Save( move(archives) );
 	}
-	α ArchiveAwait::Append( const fs::path archiveFile, App::Log::Proto::ArchiveFile append )ι->TAwait<string>::Task{
+	struct ArchiveFileAwait final : VoidAwait{
+		ArchiveFileAwait( year_month_day ymd, const fs::path& root, App::Log::Proto::ArchiveFile&& archive, SL sl )ε;
+		α Suspend()ι->void override;
+	private:
+		α Append()ι->TAwait<string>::Task;
+		α Save( App::Log::Proto::ArchiveFile&& values )ι->VoidAwait::Task;
+		App::Log::Proto::ArchiveFile _archive;
+		fs::path _file;
+	};
+	α ArchiveAwait::Save( flat_map<year_month_day, App::Log::Proto::ArchiveFile> archives )ι->VoidAwait::Task{
+		for( auto& [ymd,archive] : archives ){
+			try{
+				co_await ArchiveFileAwait{ ymd, _path, move(archive), _sl };
+			}
+			catch( exception& e ){
+				ResumeExp( move(e) );
+				co_return;
+			}
+		}
+		fs::remove( _dailyFile );
+		Resume();
+	}
+	Ω getFile( year_month_day ymd, const fs::path& root )ι->fs::path{
+		let dir = root/std::to_string((int)ymd.year())/std::to_string((unsigned)ymd.month())/std::to_string((unsigned)ymd.day());
+		if( !fs::exists(dir) )
+			fs::create_directories( dir );
+		return dir/"archive.binpb";
+	}
+	ArchiveFileAwait::ArchiveFileAwait( year_month_day ymd, const fs::path& root, App::Log::Proto::ArchiveFile&& archive, SL sl )ε:
+		VoidAwait{ sl },
+		_archive{ move(archive) },
+		_file{ getFile(ymd, root) }
+	{}
+
+	α ArchiveFileAwait::Suspend()ι->void{
+		if( fs::exists(_file) )
+			Append();
+		else
+			Save( move(_archive) );
+	}
+	α ArchiveFileAwait::Append()ι->TAwait<string>::Task{
 		string content;
 		try{
-			content = co_await IO::ReadAwait( archiveFile );
+			content = co_await IO::ReadAwait( _file );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
@@ -74,20 +105,20 @@ namespace Jde::App{
 			}
 		};
 		addEntries( existing );
-		addEntries( append );
+		addEntries( _archive );
 #define ADD_STRINGS( collection, af ) \
 		for( int i=0; i<af.collection##_size(); ++i ){ \
 			auto& s = *af.mutable_##collection(i); \
 			collection[ToGuid(s.id())] = move(s); \
 		}
 		ADD_STRINGS( args, existing );
-		ADD_STRINGS( args, append );
+		ADD_STRINGS( args, _archive );
 		ADD_STRINGS( templates, existing );
-		ADD_STRINGS( templates, append );
+		ADD_STRINGS( templates, _archive );
 		ADD_STRINGS( files, existing );
-		ADD_STRINGS( files, append );
+		ADD_STRINGS( files, _archive );
 		ADD_STRINGS( functions, existing );
-		ADD_STRINGS( functions, append );
+		ADD_STRINGS( functions, _archive );
 
 		App::Log::Proto::ArchiveFile cumulative;
 		for( auto& [_,entry] : entries )
@@ -101,12 +132,11 @@ namespace Jde::App{
 		for( auto& [_,s] : functions )
 			*cumulative.add_functions() = move(s);
 
-		Save( archiveFile, cumulative );
+		Save( move(cumulative) );
 	}
-	α ArchiveAwait::Save( fs::path file, App::Log::Proto::ArchiveFile values )ι->VoidAwait::Task{
+	α ArchiveFileAwait::Save( App::Log::Proto::ArchiveFile&& values )ι->VoidAwait::Task{
 		try{
-			co_await IO::WriteAwait( move(file), Protobuf::ToString(values), true, _tags );
-			fs::remove( _dailyFile );
+			co_await IO::WriteAwait( move(_file), Protobuf::ToString(values), true, _tags );
 			Resume();
 		}
 		catch( exception& e ){
