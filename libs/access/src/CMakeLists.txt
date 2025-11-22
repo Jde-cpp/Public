@@ -11,7 +11,7 @@ file( GLOB sources
 	*.cpp awaits/*.cpp config/*.cpp events/*.cpp types/*.cpp
 	server/*.cpp server/awaits/*.cpp server/hooks/*.cpp
 	client/*.cpp )
-file( GLOB headers *.h $ENV{JDE_DIR}/Public/include/jde/access/*.h $ENV{JDE_DIR}/Public/include/jde/access/types/*.h )
+file( GLOB headers *.h $ENV{JDE_DIR}/include/jde/access/*.h $ENV{JDE_DIR}/include/jde/access/types/*.h )
 target_sources(${targetName} PRIVATE ${sources} ${headers} )
 target_link_libraries( ${targetName} Jde Jde.DB Jde.QL )
 

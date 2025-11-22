@@ -9,11 +9,11 @@ local args = import 'args.libsonnet';
 	opc: args.opc,
 	dbServers: {
 		scriptPaths: [
-			"$(JDE_DIR)/Public/apps/AppServer/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/Public/libs/access/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/Public/apps/OpcServer/config/sql/"+args.sqlType
+			"$(JDE_DIR)/apps/AppServer/config/sql/"+args.sqlType,
+			"$(JDE_DIR)/libs/access/config/sql/"+args.sqlType,
+			"$(JDE_DIR)/apps/OpcServer/config/sql/"+args.sqlType
 		],
-		dataPaths: ["$(JDE_DIR)/Public/apps/AppServer/config", "$(JDE_DIR)/Public/libs/access/config"],
+		dataPaths: ["$(JDE_DIR)/apps/AppServer/config", "$(JDE_D$(JDE_DIR)ccess/config"],
 		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
@@ -31,7 +31,7 @@ local args = import 'args.libsonnet';
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",
-		configDir: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		configDir: "$(JDE_DIR)/apps/OpcServer/config/mutations/pumps",
 		port: 4840,
 		ssl:{
 			certificate: "$(JDE_BUILD_DIR)/OpcServer/ssl/certs/cert.pem",

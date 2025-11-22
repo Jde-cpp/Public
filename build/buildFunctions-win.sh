@@ -41,6 +41,8 @@ function projectName() {
 		project="Jde.vcxproj";
 	elif [[ $fileWorkspaceFolder == *"fwk/tests"* ]]; then
 		project="Jde.Framework.Tests.vcxproj";
+	elif [[ $fileWorkspaceFolder == *"web/tests" ]]; then
+		project="Jde.Web.Tests.vcxproj";
 	fi;
 	echo $project;
 }
@@ -51,16 +53,18 @@ function absoluteFile() {
 	echo $absoluteFile;
 }
 function buildProject() {
-	fileWorkspaceFolder=$1;
+	source $JDE_BASH/build/common.sh;
+	toBashDir $1 fileWorkspaceFolder;
 	buildRoot=$2;
 	buildRelativePath=`buildRelativePath $fileWorkspaceFolder`;
 	echo "fileWorkspaceFolder:$fileWorkspaceFolder, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath";
 	cd $buildRoot/$buildRelativePath;
-	make -j;
+	project=`projectName $fileWorkspaceFolder`;
+	echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug
+	msbuild.exe $project -p:Configuration=Debug //v:m
 }
 function compile() {
-	source $JDE_BASH/Public/build/common.sh;
-	echo $1;
+	source $JDE_BASH/build/common.sh;
 	toBashDir $1 workspaceFolder; #/home/duffyj/code/jde/IotWebsocket/config
 	toBashDir $2 fileWorkspaceFolder; #/home/duffyj/code/jde/Public/libs/web/server
 	toBashDir $3 relativeFile; #../../Public/libs/web/server/IHttpRequestAwait.cpp

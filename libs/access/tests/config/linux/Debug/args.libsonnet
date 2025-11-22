@@ -13,8 +13,8 @@
 					schemas:{
 						test_access:{//test debug with schema, debug with default schema ie dbo.
 							access:{
-								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet",
-								ql: "$(JDE_DIR)/Public/libs/access/config/access-ql.jsonnet",
+								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet",
+								ql: "$(JDE_DIR)/libs/access/config/access-ql.jsonnet",
 								prefix: null  //test with null prefix, debug with prefix
 							},
 						}

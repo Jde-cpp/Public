@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( $ENV{JDE_BASH}/Public/build/functions.cmake )
+include( $ENV{JDE_BASH}/build/functions.cmake )
 message( "Jde.Opc.GatewayLib" )
 project( Jde.Opc.GatewayLib VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
@@ -19,7 +19,7 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 IF( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
 endif()
-target_include_directories( ${targetName} PRIVATE $ENV{JDE_DIR}/Public/include/jde/app/proto )
+target_include_directories( ${targetName} PRIVATE $ENV{JDE_DIR}/include/jde/app/proto )
 target_link_libraries( ${targetName} Jde.Web.Server Jde.App.Client Jde.Opc )
 
 target_precompile_headers(${targetName}
@@ -29,7 +29,7 @@ target_precompile_headers(${targetName}
 
 set( PROTO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 set( protoOutDir ${PROJECT_SOURCE_DIR}/types/proto )
-set( protoIncludeDir "$ENV{JDE_DIR}/Public/libs/app/shared/proto" )
+set( protoIncludeDir "$ENV{JDE_DIR}/libs/app/shared/proto" )
 protobuf_generate(
 	TARGET ${targetName}
 	IMPORT_DIRS
@@ -38,4 +38,4 @@ protobuf_generate(
 	PROTOC_OUT_DIR ${protoOutDir})
 
 #for intellisense
-add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_BASH}/Public/include/jde/app/proto/Common.pb.h" "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" COMMENT "mklink Common.pb.h" )
+add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_BASH}/include/jde/app/proto/Common.pb.h" "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" COMMENT "mklink Common.pb.h" )

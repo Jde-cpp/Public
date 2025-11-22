@@ -1,4 +1,4 @@
-target=${1:debug}
+target=${1:Debug}
 compiler=${2:-msvc}
 source common-error.sh;
 source common.sh;
@@ -15,14 +15,14 @@ echo repoBashDir=$repoBashDir;
 pushd `pwd` >> /dev/null;
 cd $boostBashDir;
 
-destDir=$repoBashDir/install/$compiler/boost;
+destDir=$repoBashDir/install/$compiler/$target/boost;
 echo destDir=$destDir;
 
 if windows; then
-	if [[ $target == "debug" ]]; then
+	if [[ $target == "Debug" ]]; then
 		if [[ ! -f $destDir/lib/libboost_json-vc143-mt-gd-x64-1_88.lib ]]; then
-			./bootstrap.bat --prefix=${destDir};
-			./b2.exe address-sanitizer=on --prefix=$destDir --with-json -q install;
+			./bootstrap.bat --prefix=${destDir} --with-toolset=$compiler;
+			./b2.exe toolset=$compiler address-sanitizer=on cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" --prefix=$destDir --with-json --with-headers -q install;
 		else
 			echo "Already built";
 		fi;

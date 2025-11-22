@@ -4,8 +4,8 @@ clean=${2:-0}
 all=${3:-1}
 compiler=${4:-g++-13}
 export CXX=$compiler
-cd $JDE_DIR/Public/
-BUILD=$JDE_DIR/Public/build/so.sh
+cd $JDE_DIR/
+BUILD=$JDE_DIR/build/so.sh
 if [ $all -eq 1 ]; then
 	$BUILD $JDE_DIR/Framework/source $type $clean $compiler || exit 1;
 	$BUILD libs/db/src $type $clean $compiler || exit 1;

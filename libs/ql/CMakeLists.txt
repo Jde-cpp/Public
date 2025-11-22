@@ -6,7 +6,7 @@ include( ../../build/dependencies.cmake )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
 file( GLOB sources *.cpp **/*.cpp **/**/*.cpp )
-file( GLOB headers **/*.h $ENV{JDE_DIR}/Public/include/jde/ql )
+file( GLOB headers **/*.h $ENV{JDE_DIR}/include/jde/ql )
 target_sources(${targetName}
     PRIVATE
         ${sources}

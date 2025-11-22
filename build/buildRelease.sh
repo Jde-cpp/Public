@@ -68,5 +68,5 @@ if [[ $clearCache -eq 1 ]]; then
 	rm -f CMakeCache.txt;
 	cmake $sourceDir --preset linux-jde-relWithDebInfo;
 fi;
-sourceDir=$JDE_DIR/Public/apps/$app;
+sourceDir=$JDE_DIR/apps/$app;
 make -j;

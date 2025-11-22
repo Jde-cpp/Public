@@ -31,7 +31,7 @@ namespace Jde::Access::Tests{
 		//const QL::TableQL ql{ "" };
 		let query = "{ __type(name: \"Grouping\") { fields { name type { name kind ofType{name kind ofType{name kind ofType{name kind}}} } } } }";
 		let actual = QL().QuerySync( query, GetRoot() );
-		auto obj = Json::ReadJsonNet( Ƒ("{}/Public/libs/access/config/access-ql.jsonnet", Process::GetEnv("JDE_DIR").value_or("./")) );
+		auto obj = Json::ReadJsonNet( Ƒ("{}/libs/access/config/access-ql.jsonnet", Process::GetEnv("JDE_DIR").value_or("./")) );
 		QL::Introspection intro{ move(obj) };
 		QL::RequestQL request = QL::Parse( query, {}, Schemas() );
 		jobject expected = intro.Find("Grouping")->ToJson( request.Queries()[0].Tables[0] );

@@ -37,7 +37,7 @@
 		"window.title": "Web",
 		"name": "web",
 		"buildTarget": "Debug",
-		"sourceDir": "${env:JDE_DIR}/Public/libs/web",
+		"sourceDir": "${env:JDE_DIR}/libs/web",
 		"buildRoot": "/mnt/ram/linux/g++-14/jde",
 		"buildDir": "${config:buildRoot}/${config:buildTarget}/libs/${config:name}",
 		"exe": "tests/Jde.Web.Tests",
@@ -58,14 +58,14 @@
 			{
 				"label": "compile",
 				"type": "shell",
-				"command": "tput reset; source $JDE_DIR/Public/build/buildFunctions.sh;compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot}/${config:buildTarget};",
+				"command": "tput reset; source $JDE_DIR/build/buildFunctions.sh;compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot}/${config:buildTarget};",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},
 			{
 				"label": "buildProject",
 				"type": "shell",
-				"command": "tput reset;source $JDE_DIR/Public/build/buildFunctions.sh; buildProject ${fileWorkspaceFolder} ${config:buildRoot}/${config:buildTarget};",
+				"command": "tput reset;source $JDE_DIR/build/buildFunctions.sh; buildProject ${fileWorkspaceFolder} ${config:buildRoot}/${config:buildTarget};",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},
@@ -105,7 +105,7 @@
 				],
 				"externalConsole": false,
 				"MIMode": "gdb",
-				"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
+				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
 				"showDisplayString": true,
 				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
 				"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.27":"${env:REPO_DIR}/glibc-2.27" },

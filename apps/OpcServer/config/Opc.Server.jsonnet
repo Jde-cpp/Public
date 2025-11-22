@@ -39,14 +39,14 @@ local args = import 'args.libsonnet';
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",
-		mutationsDir:: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		mutationsDir:: "$(JDE_DIR)/apps/OpcServer/config/mutations/pumps",
 		db: false,
 		opcNodeSet:{
 			path: "$(UA_NODE_SETS)/Opc.Ua.PredefinedNodes.xml",
 			nodeIds: [23513]
 		},
 		machinery: [
-			//"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
+			//"$(JDE_DIR)/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
 			//"/home/duffyj/Downloads/Opc.Ua.NodeSet2.xml",
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
@@ -54,7 +54,7 @@ local args = import 'args.libsonnet';
 			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.Examples.NodeSet2.xml",
 		],
 		additive: [
-//			"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
+//			"$(JDE_DIR)/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.NodeSet2.xml",
 			"$(UA_NODE_SETS)/ISA95-JOBCONTROL/opc.ua.isa95-jobcontrol.nodeset2.xml",
@@ -68,7 +68,7 @@ local args = import 'args.libsonnet';
 			"$(UA_NODE_SETS)/AdditiveManufacturing/AdditiveManufacturing-Example.xml",
 		],
 		configFiles: [
-			//"$(JDE_DIR)/Public/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
+			//"$(JDE_DIR)/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"

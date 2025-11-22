@@ -8,14 +8,14 @@
 			schemas:{
 				acc:{
 					access:{  //test debug with schema, debug with default schema ie dbo.
-						meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet",
-						ql: "$(JDE_DIR)/Public/libs/access/config/access-ql.jsonnet",
+						meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet",
+						ql: "$(JDE_DIR)/libs/access/config/access-ql.jsonnet",
 						prefix: ""  //test with null prefix, debug with prefix
 					}
 				},
 				log:{
 					log:{
-						meta: "$(JDE_DIR)/Public/apps/AppServer/config/log-meta.jsonnet",
+						meta: "$(JDE_DIR)/apps/AppServer/config/log-meta.jsonnet",
 						prefix: ""  //test with null prefix, debug with prefix
 					},
 				}

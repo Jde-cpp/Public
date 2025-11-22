@@ -3,7 +3,7 @@ include( ../../../../build/functions.cmake )
 set( targetName Jde.DB.Odbc )
 project( ${targetName} VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../../build/dependencies.cmake )
-add_library( ${targetName} SHARED )
+add_library( ${targetName} MODULE )
 compileOptions( ${targetName} )
 
 file(GLOB sources *.cpp MsSql/*.cpp )

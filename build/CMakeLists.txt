@@ -1,4 +1,4 @@
-#cls;rm -f CMakeCache.txt;cmake $JDE_DIR/Public/build --preset linux-debug
+#cls;rm -f CMakeCache.txt;cmake $JDE_DIR/build --preset linux-debug
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( ExternalProject )
 include( ${CMAKE_CURRENT_SOURCE_DIR}/functions.cmake )
@@ -19,9 +19,9 @@ set( stdArgs
 	-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
 )
 if( WIN32 )
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od /MDd /D_DEBUG /TP /fsanitize=address /W1 /WX- /ignore:4099")
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
-	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /Zi" )
+#	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od /MDd /D_DEBUG /TP /fsanitize=address /W1 /WX- /ignore:4099")
+#	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
+#	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /Zi" )
 else()
 	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath=$ORIGIN" )
 	set( stdArgs ${stdArgs} -DCMAKE_POSITION_INDEPENDENT_CODE=ON )
@@ -126,6 +126,7 @@ IF( WIN32 )
 	)
 	set( PC_LIBXML_INCLUDEDIR ${LIB_DIR}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
 	set( PC_LIBXML_LIBDIR ${LIB_DIR}/libxml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
+	set( LIBXML2_LIBRARY ${LIB_DIR}/libxml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
 else()
 #need to add '#define _C4_STD_VECTOR_FWD_HPP_' to ryml_all.hpp to avoid redefinition errors
 	ExternalProject_Add(jsonnet

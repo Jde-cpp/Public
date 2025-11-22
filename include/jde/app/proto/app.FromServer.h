@@ -3,10 +3,12 @@
 #include "../usings.h"
 #include <jde/ql/usings.h>
 
+
 namespace Jde::Crypto{ struct PublicKey; }
 namespace Jde::DB{ struct Row; }
 namespace Jde::QL{ struct ColumnQL; }
 namespace Jde::Web{ struct Jwt; namespace Server{struct SessionInfo;} }
+namespace Jde::App::Proto::FromClient { class Status; }
 namespace Jde::App::FromServer{
 	α Ack( uint32 serverSocketId )ι->Proto::FromServer::Transmission;
 	α Complete( RequestId requestId )ι->Proto::FromServer::Transmission;

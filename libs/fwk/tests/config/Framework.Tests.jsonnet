@@ -1,6 +1,6 @@
 {
 	testing:{
-		tests: "TimerTests.General",
+		tests:: "TimerTests.General",
 		file: "$(JDE_BUILD_DIR)/tests/test.txt"
 	},
 	cryptoTests:{

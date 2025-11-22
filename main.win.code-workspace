@@ -1,0 +1,34 @@
+{
+	"settings": {
+		"window.title": "Main",
+		"name": "main",
+		"compiler": "msvc",
+		"sourceDir": "${env:JDE_BASH}",
+		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/Debug",
+		"debugPreset": "win-msvc"
+	},
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "build",
+				"type": "shell",
+				"command": "cd ${config:debugDir}; tput reset; cmake --build . -j --target=Jde.Opc.Gateway;",
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"group": { "kind": "build", "isDefault": true }
+			},
+			{
+				"label": "cmakeReposDebug",
+				"type": "shell",
+				"command": "mkdir -p ${config:debugDir};cd ${config:debugDir}; tput reset;cmake ${config:sourceDir} --preset ${config:debugPreset} -Djde_REPOS=ON -Djde_TESTS=OFF -Djde_APPS=OFF",
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"group": "build"
+			}
+		]
+	}
+}

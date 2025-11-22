@@ -24,6 +24,12 @@ namespace Jde::IO{
 		return milliSeconds;
 	}
 
+	FileIOArg::~FileIOArg(){
+		// if( Handle ){
+		// 	::close( Handle );
+		// 	Handle = 0;
+		// }
+	}
 
 	α FileIOArg::Open( bool create )ε->void{
 		const DWORD access = IsRead ? GENERIC_READ : GENERIC_WRITE;

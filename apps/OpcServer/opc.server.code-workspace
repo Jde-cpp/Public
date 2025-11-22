@@ -59,7 +59,7 @@
 	"settings": {
 		"window.title": "OpcServer",
 		"name": "OpcServer",
-		"sourceDir": "${env:JDE_DIR}/Public/apps/OpcServer",
+		"sourceDir": "${env:JDE_DIR}/apps/OpcServer",
 		"buildTarget": "Debug",
 		"buildRoot": "${env:JDE_BUILD_DIR}/${config:buildTarget}",
 		"exeDir": "${config:buildRoot}/apps/${config:name}/exe",
@@ -117,7 +117,7 @@
 				"MIMode": "gdb",
 				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
 				"preLaunchTask": "build",
-				"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
+				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
 				"logging": {"natvisDiagnostics": "verbose" },
 				"showDisplayString": true
 			},
@@ -134,7 +134,7 @@
 				"MIMode": "gdb",
 				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
 				"preLaunchTask": "build",
-				"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
+				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
 				"logging": {"natvisDiagnostics": "verbose" },
 				"showDisplayString": true
 			}

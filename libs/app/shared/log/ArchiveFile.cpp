@@ -98,6 +98,7 @@ namespace Jde::App{
 		};
 		for( let& entry : logEntries ){
 			let time = Protobuf::ToTimePoint( entry.time() );
+			TRACET( ELogTags::Test, "entry time: {}", ToIsoString(time) );
 			if( !Test(filter, time, entry) )
 				continue;
 			addString( Templates, entry.template_id() );

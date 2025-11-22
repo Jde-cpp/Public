@@ -1,3 +1,6 @@
+#ifdef BOOST_ALL_NO_LIB
+	#include <boost/json/src.hpp>
+#endif
 #include <jde/fwk/io/json.h>
 #pragma warning( disable : 4996 )
 #include <libjsonnet++.h>

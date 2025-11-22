@@ -2,14 +2,15 @@
 	"settings": {
 		"window.title": "Framework",
 		"name": "fwk",
-		"sourceDir": "${env:JDE_BASH}/Public/libs/fwk",
+		"sourceDir": "${env:JDE_BASH}/libs/fwk",
 		"compiler": "msvc",
 		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/jde",
+		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/Debug",
+		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
 		"buildDir": "${config:buildRoot}/libs/${config:name}",
-		"winBuildDir": "${env:JDE_BUILD_DIR}/${config:compiler}/jde/libs/${config:name}",
-		"exe": "tests/${config:buildTarget}/Jde.Framework.Tests.exe",
-		"sourceBash": "source ${env:JDE_BASH}/Public/build/buildFunctions-win.sh",
+		"winBuildDir": "${env:JDE_BUILD_DIR}/msvc/Debug/libs/${config:name}",
+		"exe": "tests/${config:buildTarget}/Jde.Fwk.Tests.exe",
+		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
 	},
 	"folders": [
 		{
@@ -36,14 +37,14 @@
 			{
 				"label": "build",
 				"type": "shell",
-				"command": "cd ${config:buildDir}; tput reset; cmake --build .;",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"command": "cd ${config:debugDir}; tput reset; cmake --build . -j --target=Jde.Fwk.Tests;",
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": true }
 			},
 			{
 				"label": "test",
 				"type": "shell",
-				"command": "cd ${config:buildDir}; tput reset; ctest -C Debug -VV;", // --output-on-failure
+				"command": "cd ${config:debugDir}; tput reset; ctest -C Debug -VV;", // --output-on-failure
 				"dependsOn": "build",
 				"group": { "kind": "test", "isDefault": true }
 			},

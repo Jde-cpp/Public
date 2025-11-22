@@ -3,7 +3,7 @@
 		"window.title": "Main",
 		"name": "main",
 		"releaseRoot": "${env:JDE_BASH}/Release",
-		"sourceDir": "${env:JDE_BASH}/Public",
+		"sourceDir": "${env:JDE_BASH}",
 	},
 	"tasks": {
 		"version": "2.0.0",

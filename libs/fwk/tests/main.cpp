@@ -1,4 +1,7 @@
-﻿#include "gtest/gtest.h"
+﻿#ifdef BOOST_ALL_NO_LIB
+	#include <boost/json/src.hpp>
+#endif
+#include "gtest/gtest.h"
 #include <jde/fwk/settings.h>
 #define let const auto
 

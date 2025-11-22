@@ -41,7 +41,9 @@ endif()
 
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 
-target_link_libraries( ${targetName} Boost::json )
+if( Boost_USE_STATIC_LIBS )
+	target_link_libraries( ${targetName} PUBLIC Boost::json )
+endif()
 find_package( GTest REQUIRED )
 target_link_libraries( ${targetName} GTest::gtest_main )
 #target_link_libraries( ${targetName} ZLIB::ZLIB )
@@ -58,8 +60,8 @@ else()
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet" )
 endif()
 
-include_directories( ${targetName} $ENV{JDE_DIR}/Public/include/jde/web/client/proto )
-include_directories( ${targetName} $ENV{JDE_DIR}/Public/include/app/shared/proto )
+include_directories( ${targetName} $ENV{JDE_DIR}/include/jde/web/client/proto )
+include_directories( ${targetName} $ENV{JDE_DIR}/include/app/shared/proto )
 
 add_test( NAME WebTests COMMAND $<TARGET_FILE:Jde.Web.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet )
 set( CMAKE_CTEST_ARGUMENTS "-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet" )

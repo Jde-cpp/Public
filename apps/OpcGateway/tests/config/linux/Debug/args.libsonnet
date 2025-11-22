@@ -23,18 +23,18 @@
 					schemas:{
 						test_opc:{
 							access:{
-								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet"
+								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet"
 							},
 							log:{
-								meta: "$(JDE_DIR)/Public/apps/AppServer/config/log-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/AppServer/config/log-meta.jsonnet",
 								prefix: ""   //test with null prefix, debug with prefix
 							},
 							gateway:{
-								meta: "$(JDE_DIR)/Public/apps/OpcGateway/config/opcGateway-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/OpcGateway/config/opcGateway-meta.jsonnet",
 								prefix: ""
 							},
 							opc:{
-								meta: "$(JDE_DIR)/Public/apps/OpcServer/config/opcServer-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/OpcServer/config/opcServer-meta.jsonnet",
 								prefix: ""
 							},
 						}

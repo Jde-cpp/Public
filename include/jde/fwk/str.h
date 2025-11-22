@@ -19,7 +19,7 @@ namespace Jde{
 	Ŧ To( sv value )ι->T{ T v{}; std::from_chars(value.data(), value.data()+value.size(), v); return v; }
 	template<> Ξ To( sv x )ι->double{ return stod(string{x}); }
 	Ŧ hex( T number )ι->string{ return Ƒ("{:x}", number); }
-	α ToUuid( sv s, SRCE )ε->uuid;
+	Φ ToUuid( sv s, SRCE )ε->uuid;
 }
 namespace Jde::Str{
 	Φ Empty()ι->str;

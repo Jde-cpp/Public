@@ -1,7 +1,7 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( $ENV{JDE_DIR}/Public/build/functions.cmake )
-project( Jde.App.Server.Tests ${JDE_VERSION} LANGUAGES CXX )
-include( $ENV{JDE_DIR}/Public/build/dependencies.cmake )
+include( $ENV{JDE_DIR}/build/functions.cmake )
+project( Jde.App.Server.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
+include( $ENV{JDE_DIR}/build/dependencies.cmake )
 
 set( targetName Jde.App.Server.Tests )
 add_executable( ${targetName} )

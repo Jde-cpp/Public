@@ -1,4 +1,5 @@
 #pragma once
+#include <jde/web/server/Sessions.h>
 #include <jde/web/client/socket/IClientSocketSession.h>
 #include "../proto/test.pb.h"
 #include <jde/web/client/socket/ClientSocketAwait.h>
@@ -15,6 +16,7 @@ namespace Jde::Web::Mock{
 		α CloseServerSide( SRCE )ι->ClientSocketAwait<string>;
 		α BadTransmissionClient( SRCE )ι->ClientSocketAwait<string>;
 		α BadTransmissionServer( SRCE )ι->ClientSocketAwait<string>;
+		α SetSessionId( str strSessionId, RequestId requestId )->Server::Sessions::UpsertAwait::Task;
 	private:
 		α Query( string&&, jobject, bool, SL )ι->ClientSocketAwait<jvalue> override{ ASSERT(false); return { {}, {}, {} }; }
 		α Subscribe( string&&, jobject, sp<QL::IListener>, SL )ε->ClientSocketAwait<jarray> override{ ASSERT(false); return { {}, {}, {} }; }

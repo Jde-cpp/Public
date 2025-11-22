@@ -58,9 +58,12 @@ namespace Jde::Opc::Gateway::Tests{
 		Logging::Entry eHour{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, ToIsoString(eNow.Time - 1h) };
 		eHour.Time = eNow.Time - 1h;
 		ProtoLog().Write( eHour );
+		TRACE("eHour.Time: {}", ToIsoString(eHour.Time));
 		ProtoLog().Write( eNow );
+		const string start{ ToIsoString(eHour.Time+1s) };
+		TRACE("start: {}", start);
 		auto ql = "logs( time: {gt: $start} ){ text arguments level tags line time user{id} fileName functionName message id fileId functionId }";
-		jobject vars{ {"start", ToIsoString(eHour.Time+1s)} };
+		jobject vars{ {"start", start} };
 
 		let entries = BlockTAwait<jarray>( App::LogQLAwait{move(QL::Parse(ql, vars, {}).Queries()[0])} );
 		optional<jobject> jNow;

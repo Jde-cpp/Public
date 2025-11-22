@@ -17,7 +17,7 @@ namespace Jde{
 		SL _sl;
 	};
 
-	α Stopwatch::CheckTimeout( Duration timeout, Duration sleep )ε->void{
+	Ξ Stopwatch::CheckTimeout( Duration timeout, Duration sleep )ε->void{
 		auto now = steady_clock::now();
 		if( now - _startTime > timeout )
 			THROW( "Timeout after {}", Chrono::ToString(timeout) );

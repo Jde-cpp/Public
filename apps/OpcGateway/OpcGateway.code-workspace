@@ -3,15 +3,15 @@
 		"window.title": "Gateway",
 		"name": "OpcGateway",
 		"testTargetName": "Jde.Opc.Tests",
-		"sourceDir": "${env:JDE_BASH}/Public/apps/${config:name}",
+		"sourceDir": "${env:JDE_BASH}/apps/${config:name}",
 		"buildTarget": "Debug",
 		"buildRoot": "${env:JDE_BUILD_DIR}/${config:buildTarget}",
 		"exeDir": "${config:buildRoot}/apps/${config:name}/exe",
 		"testBuildDir": "${config:buildRoot}/apps/${config:name}/tests",
 		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions.sh",
 		"C_Cpp.default.forcedInclude": [
-			"${env:JDE_DIR}/Public/build/forcedInclude.h",
-			"${env:JDE_DIR}/Public/apps/OpcGateway/src/pc.h"
+			"${env:JDE_DIR}/build/forcedInclude.h",
+			"${env:JDE_DIR}/apps/OpcGateway/src/pc.h"
 		]
 	},
 	"tasks": {
@@ -72,7 +72,7 @@
 				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing","ignoreFailures": true}],
 				"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
 				"preLaunchTask": "release",
-				"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
+				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
 				"showDisplayString": true
 			},
 			{
@@ -91,7 +91,7 @@
 				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing","ignoreFailures": true}],
 				"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
 				"preLaunchTask": "buildTests",
-				"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
+				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
 				"showDisplayString": true
 			}
 		],

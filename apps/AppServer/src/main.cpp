@@ -1,4 +1,6 @@
-﻿#include <jde/fwk.h>
+﻿#ifdef BOOST_ALL_NO_LIB
+	#include <boost/json/src.hpp>
+#endif
 #include "AppStartupAwait.h"
 #include <jde/fwk/process/process.h>
 #include <jde/fwk/crypto/OpenSsl.h>

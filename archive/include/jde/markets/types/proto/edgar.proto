@@ -1,6 +1,6 @@
 ﻿//source $JDE_DIR/Framework/common.sh
-//cd $JDE_DIR/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. edgar.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' edgar.pb.h;sed -i '1s/^/\xef\xbb\xbf/' edgar.pb.h;
-//cd $JDE_DIR/MarketLibrary/source/types/proto;mv $JDE_DIR/Public/jde/markets/types/proto/edgar.pb.cc .;mklink edgar.pb.h $JDE_DIR/Public/jde/markets/types/proto
+//cd $JDE_DIR/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. edgar.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' edgar.pb.h;sed -i '1s/^/\xef\xbb\xbf/' edgar.pb.h;
+//cd $JDE_DIR/MarketLibrary/source/types/proto;mv $JDE_DIR/jde/markets/types/proto/edgar.pb.cc .;mklink edgar.pb.h $JDE_DI$JDE_DIRrkets/types/proto
 syntax = "proto3";
 package Jde.Markets.Edgar.Proto;
 

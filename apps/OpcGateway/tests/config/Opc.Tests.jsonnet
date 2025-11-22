@@ -1,20 +1,20 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "CertTests.Authenticate_Bad",
+		tests: "LogTests.GraphQL",
 		recreateDB:: true,
-		embeddedAppServer: false,
-		embeddedOpcServer: false
+		embeddedAppServer: true,
+		embeddedOpcServer: true
 	},
 	opc: args.opc,
 	dbServers: {
 		scriptPaths: [
-			"$(JDE_DIR)/Public/apps/AppServer/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/Public/libs/access/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/Public/apps/OpcGateway/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/Public/apps/OpcServer/config/sql/"+args.sqlType
+			"$(JDE_DIR)/apps/AppServer/config/sql/"+args.sqlType,
+			"$(JDE_DIR)/libs/access/config/sql/"+args.sqlType,
+			"$(JDE_DIR)/apps/OpcGateway/config/sql/"+args.sqlType,
+			"$(JDE_DIR)/apps/OpcServer/config/sql/"+args.sqlType
 		],
-		dataPaths: ["$(JDE_DIR)/Public/apps/AppServer/config", "$(JDE_DIR)/Public/libs/access/config"],
+		dataPaths: ["$(JDE_DIR)/apps/AppServer/config", "$(JDE_DIR)/libs/access/config"],
 		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
@@ -36,7 +36,7 @@ local args = import 'args.libsonnet';
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",
-		mutationsDir:: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		mutationsDir:: "$(JDE_DIR)/apps/OpcServer/config/mutations/pumps",
 		configFiles: [
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",

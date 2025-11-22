@@ -6,7 +6,7 @@ else()
 	find_package( OpenSSL REQUIRED )
 endif()
 
-include_directories( $ENV{JDE_DIR}/Public/include )
+include_directories( $ENV{JDE_DIR}/include )
 
 find_package( fmt REQUIRED )
 

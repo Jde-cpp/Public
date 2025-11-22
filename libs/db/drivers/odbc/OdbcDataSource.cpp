@@ -113,7 +113,7 @@ namespace Jde::DB::Odbc{
 	}
 
 	void OdbcDataSource::SetConnectionString( string x )ι{
-		_connectionString = Ƒ( "{};APP={}", move(x), Process::ApplicationName() );
+		_connectionString = Ƒ( "{};APP={}", move(x), Process::AppName() );
 		DBG( "connectionString={}", _connectionString );
 	}
 
