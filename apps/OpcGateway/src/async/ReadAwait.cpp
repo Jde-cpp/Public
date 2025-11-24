@@ -192,7 +192,7 @@ namespace Jde::Opc::Gateway{
 
 	α ReadAwait::Suspend()ι->void{
 		UA_Client_sendAsyncReadRequest( *_client, &_request, ReadAwait::OnResponse, &_h, &_requestId );
-		_client->Process( _requestId );
+		_client->Process( _requestId, "read" );
 	}
 	α ReadAwait::await_resume()ε->ReadResponse{
 		if( !Promise() )

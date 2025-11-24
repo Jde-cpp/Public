@@ -4,10 +4,13 @@
 #include <jde/fwk/utils/HiLow.h>
 #include "../uatypes/MonitoredItemCreateResult.h"
 #include "../async/DataChanges.h"
+#include "../async/Subscriptions.h"
+#include "../usings.h"
 
 namespace Jde::Opc{ struct Value; }
 namespace Jde::Opc::Gateway{
 	struct UAClient;
+	struct CreateMonitoredItemsRequest;
 
 	struct IDataChange{
 		β SendDataChange( const ServerCnnctnNK& opcId, const NodeId& node, const Value& value )ι->void=0;
@@ -23,10 +26,10 @@ namespace Jde::Opc::Gateway{
 
 
 	struct UAMonitoringNodes final{
-		UAMonitoringNodes(UAClient* p)ι:_pClient{p}{}
-		~UAMonitoringNodes(){_pClient = nullptr;}
-		α Shutdown()ι->void;
-		α Subscribe( sp<IDataChange>&& dataChange, flat_set<NodeId>&& nodes, DataChangeAwait::Handle h, Handle& requestId )ι->void;
+		UAMonitoringNodes(sp<UAClient> p)ι:_client{p}{}
+		~UAMonitoringNodes(){_client.reset();}
+		[[nodiscard]] α Shutdown( SRCE )ι->UnsubscribeAwait;
+		α MonitoredItemsRequest( sp<IDataChange>&& dataChange, flat_set<NodeId>&& nodes, Handle& requestId )ι->optional<CreateMonitoredItemsRequest>;
 		α Unsubscribe( flat_set<NodeId>&& nodes, sp<IDataChange> dataChange )ι->tuple<flat_set<NodeId>,flat_set<NodeId>>;
 		α Unsubscribe( sp<IDataChange> )ι->void;
 		α SendDataChange( Handle h, const Value&& value )ι->uint;
@@ -41,7 +44,7 @@ namespace Jde::Opc::Gateway{
 		};
 		α GetClient()ι->sp<UAClient>;
 		α FindNode( const NodeId& node )ι->tuple<MonitorHandle,Subscription*>;
-		α DeleteMonitoring( UA_Client* ua, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->DurationTimer::Task;
+		α DeleteMonitoring( wp<UAClient> ua, Handle uaHandle, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->DurationTimer::Task;
 
 		atomic<RequestId> _requestId{};
 		flat_map<MonitorHandle,flat_set<NodeId>> _requests;
@@ -49,6 +52,6 @@ namespace Jde::Opc::Gateway{
 		flat_map<MonitorHandle,flat_map<NodeId,StatusCode>> _errors;
 		shared_mutex _mutex;
 		flat_map<MonitorHandle,Subscription> _subscriptions;
-		UAClient* _pClient;
+		wp<UAClient> _client;
 	};
 }

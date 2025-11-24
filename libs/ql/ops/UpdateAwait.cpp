@@ -25,6 +25,7 @@ namespace Jde::QL{
 
 	α UpdateAwait::await_ready()ι->bool{
 		try{
+			THROW_IF( !_table, "Table not found for mutation '{}'.", _mutation.ToString() );
 			if( _mutation.Type==EMutationQL::Update ){
 				_table->Authorize( Access::ERights::Update, _userPK, _sl );
 				CreateUpdate( *_table );

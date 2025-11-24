@@ -18,7 +18,7 @@ namespace Jde::Web{
 			{ "target", userTarget },
 		};
 		if( sessionId )
-			Body["sid"] = std::to_string( sessionId );
+			Body["sid"] = hex( sessionId );
 		if( description.size() )
 			Body["description"] = Description;
 		if( expires!=TimePoint::min() )

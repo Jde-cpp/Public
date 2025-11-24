@@ -1,3 +1,6 @@
+#ifdef BOOST_ALL_NO_LIB
+	#include <boost/json/src.hpp>
+#endif
 #include <jde/db/db.h>
 #include <jde/fwk/settings.h>
 #include <jde/db/IDataSource.h>

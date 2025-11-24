@@ -6,38 +6,40 @@
 namespace Jde{
 
 	constexpr ELogTags _tags = ELogTags::Locks;
-	flat_map<string,std::deque<std::variant<LockKeyAwait*,coroutine_handle<>>>> _coLocks; mutex _coLocksLock;
+	flat_map<string,std::deque<std::variant<uint,coroutine_handle<>>>> _coLocks; mutex _coLocksMutex;
+	atomic<uint> _lockIndex;
 
 	α LockKeyAwait::await_ready()ι->bool{
-		lg _( _coLocksLock );
+		lg _( _coLocksMutex );
 		auto& locks = _coLocks.try_emplace( Key ).first->second;
-		locks.push_back( this );
+		_index = ++_lockIndex;
+		locks.push_back( _index );
 		let ready = locks.size()==1;
-		TRACE( "({})LockKeyAwait::await_ready={} size={}", Key, ready, locks.size() );
+		TRACE( "({})LockKeyAwait::await_ready={} size={} 0={}", Key, ready, locks.size(), locks[0].index() ? "await" : "ready" );
 		return locks.size()==1;
 	}
 	α LockKeyAwait::Suspend()ι->void{
-		_coLocksLock.lock(); ASSERT( _coLocks.find(Key)!=_coLocks.end() );
+		_coLocksMutex.lock(); ASSERT( _coLocks.find(Key)!=_coLocks.end() );
 		auto& locks = _coLocks.find( Key )->second;
 		if( locks.size()==1 ){//if other locks freed after await_ready
-			_coLocksLock.unlock();
+			_coLocksMutex.unlock();
 			_h.resume();
+			return;
 		}
-		else{
-			for( uint i=0; !Handle && i<locks.size(); ++i ){
-				if( locks[i].index()==0 && get<LockKeyAwait*>(locks[i])==this )
-					locks[i] = Handle = _h;
-			}
-			_coLocksLock.unlock();
-			ASSERT( Handle );
-			TRACE( "({})LockKeyAwait::await_suspend size={}", Key, locks.size() );
+		ASSERT( locks.size() );
+		for( int i=(int)locks.size()-1; !_waitHandle && i>=0; --i ){
+			if( locks[i].index()==0 && get<uint>(locks[i])==_index )
+				locks[i] = _waitHandle = _h;
 		}
+		_coLocksMutex.unlock();
+		ASSERT( _waitHandle );
+		TRACE( "({})LockKeyAwait::await_suspend size={}", Key, locks.size() );
 	}
 	α LockKeyAwait::await_resume()ι->CoLockGuard{
-		return Handle ? CoLockGuard{ Key, Handle } : CoLockGuard{ Key, this };
+		return _waitHandle ? CoLockGuard{ Key, _waitHandle } : CoLockGuard{ Key, _index };
 	}
 
-	CoLockGuard::CoLockGuard( string key, std::variant<LockKeyAwait*,coroutine_handle<>> h )ι:
+	CoLockGuard::CoLockGuard( string key, std::variant<uint,coroutine_handle<>> h )ι:
 		Handle{h},
 		Key{ move(key) }{
 			TRACE( "({})CoLockGuard() index={}", Key, h.index() );
@@ -46,11 +48,11 @@ namespace Jde{
 		rhs.Handle = nullptr;
 	}
 
-	α CoLockGuard::operator=( CoLockGuard&& rhs )ι->CoLockGuard&{
-		Handle = move( rhs.Handle );
-		rhs.Handle = (LockKeyAwait*)nullptr;
-		Key = move( rhs.Key );
-		rhs.Key.clear();
+	α CoLockGuard::operator=( CoLockGuard&& x )ι->CoLockGuard&{
+		Handle = x.Handle;
+		x.Handle = {};
+		Key = move( x.Key );
+		x.Key.clear();
 		return *this;
 	}
 
@@ -58,16 +60,18 @@ namespace Jde{
 		if( Key.empty() )
 			return;
 
-		lg _( _coLocksLock );
+		lg _( _coLocksMutex );
 		ASSERT( _coLocks.find(Key)!=_coLocks.end() && _coLocks.find(Key)->second.size() );
-		auto& locks = _coLocks.find( Key )->second; ASSERT( locks[0]==Handle );
+		auto& locks = _coLocks.find( Key )->second; //ASSERT( locks[0]==Handle );
+		if( locks[0]!=Handle )
+			TRACE( "({})~CoLockGuard - unexpected handle at front of queue. locks={} vs handle={} ", Key, locks[0].index() ? "await" : "ready", Handle.index()  ? "await" : "ready" );
+		TRACE( "({})~CoLockGuard - pop front.", Key, locks.size() );
 		locks.pop_front();
 		if( locks.size() ){
 			if( locks.front().index()==1 )
 				Post( move(get<1>(locks.front())) );
-				//CoroutinePool::Resume( move(get<1>(locks.front())) );
 			else
-				TRACE( "({})CoLockGuard - size={}, next is awaitable, should continue.", Key, locks.size() );
+				TRACE( "({})~CoLockGuard - size={}, next is await_ready, should continue.", Key, locks.size() );
 		}
 		TRACE( "~CoLockGuard( {} )", Key );
 	}

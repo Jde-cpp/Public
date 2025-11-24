@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/beast.hpp>
 
 namespace Jde{
 	using RequestId = uint32;

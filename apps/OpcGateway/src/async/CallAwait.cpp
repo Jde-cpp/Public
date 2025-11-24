@@ -46,7 +46,7 @@ namespace Jde::Opc::Gateway{
 	}
 	α CallAwait::Execute()ι->TAwait<sp<UAClient>>::Task{
 		try{
-			_client = co_await ConnectAwait{ Json::FindString(_ql.Args,"opc").value_or(""), move(_session), _sl };
+			_client = co_await ConnectAwait{ Json::FindString(_ql.Args,"opc").value_or(""), *_session, _sl };
 
 			jarray jargs = Json::FindDefaultArray( _ql.Args, "args" );
 			auto args = Reserve<Variant>( jargs.size() );
@@ -62,7 +62,7 @@ namespace Jde::Opc::Gateway{
 				&_h,
 				&_requestId
 			);
-			_client->Process( _requestId );
+			_client->Process( _requestId, "call" );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

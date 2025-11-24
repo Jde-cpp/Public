@@ -1,0 +1,164 @@
+{
+	"settings": {
+		"window.title": "Gateway",
+		"name": "OpcGateway",
+		"testTargetName": "Jde.Opc.Tests",
+		"sourceDir": "${env:JDE_BASH}/apps/${config:name}",
+		"buildTarget": "Debug",
+		"buildRoot": "${env:JDE_BUILD_DIR}/${config:buildTarget}",
+		"exeDir": "${config:buildRoot}/apps/${config:name}/exe",
+		"testBuildDir": "${config:buildRoot}/apps/${config:name}/tests",
+		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions.sh",
+		"C_Cpp.default.forcedInclude": [
+			"${env:JDE_DIR}/build/forcedInclude.h",
+			"${env:JDE_DIR}/apps/OpcGateway/src/pc.h"
+		]
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "build",
+				"type": "shell",
+				"command": "cd ${config:buildRoot}; tput reset; cmake --build . -j --target Jde.Opc.Gateway;",
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"group": { "kind": "build", "isDefault": true }
+			},
+			{
+				"label": "buildProject",
+				"type": "shell",
+				"command": "tput reset; ${config:sourceBash};buildProject ${fileDirname} ${config:buildRoot};",
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"group": { "kind": "build", "isDefault": false }
+			},
+			{
+				"label": "compile",
+				"type": "shell",
+				"command": "tput reset;${config:sourceBash};compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot};",
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"group": { "kind": "build", "isDefault": false }
+			},
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Debug",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${config:exeDir}/Jde.Opc.Gateway",
+				"args": ["-c", "-tests", "-settings=${config:sourceDir}/config/Opc.Gateway.jsonnet"],
+				"stopAtEntry": false,
+				"cwd": "${config:exeDir}",
+				"externalConsole": false,
+				"MIMode": "gdb",
+				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
+				"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
+				"preLaunchTask": "build",
+				"showDisplayString": true
+			},
+			{
+				"name": "Release",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${workspaceFolder:IotWebsocket}/../../bin/release/Jde.IotWebsocket",
+				"args": ["-c"],
+				"stopAtEntry": false,
+				"cwd": "${workspaceFolder:IotWebsocket}/../../bin/release",
+				"environment": [],
+				"externalConsole": false,
+				"MIMode": "gdb",
+				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing","ignoreFailures": true}],
+				"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
+				"preLaunchTask": "release",
+				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
+				"showDisplayString": true
+			},
+			{
+				"name": "Debug Tests",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${config:testBuildDir}/Jde.Opc.Tests",
+				"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/Public/apps/OpcGateway/tests/config/Opc.Tests.jsonnet"],
+				"stopAtEntry": false,
+				"cwd": "${config:testBuildDir}",
+				"additionalSOLibSearchPath": "/lib64",
+				"environment": [
+				],
+				"externalConsole": false,
+				"MIMode": "gdb",
+				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing","ignoreFailures": true}],
+				"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
+				"preLaunchTask": "buildTests",
+				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
+				"showDisplayString": true
+			}
+		],
+		"compounds": []
+	},
+	"folders": [
+		{
+			"path": "config",
+			"name": "config"
+		},
+		{
+			"path": "src",
+			"name": "OpcGateway"
+		},
+		{
+			"path": "../../libs/opc/src",
+			"name": "shared"
+		},
+		{
+			"path": "tests",
+			"name": "tests"
+		},
+		{
+			"path": "../../libs/app/client",
+			"name": "appClient"
+		},
+		{
+			"path": "../../libs/app/shared",
+			"name": "appShared"
+		},
+		{
+			"path": "../../libs/web/client",
+			"name": "webClient"
+		},
+		{
+			"path": "../../libs/ql",
+			"name": "ql"
+		},
+		{
+			"path": "../../libs/access/src",
+			"name": "access"
+		},
+		{
+			"path": "../../include/jde",
+			"name": "headers"
+		},
+		{
+			"path": "../../libs/web/server",
+			"name": "webServer"
+		},
+		{
+			"path": "../../libs/fwk/src",
+			"name": "fwk"
+		},
+		{
+			"path": "../../libs/crypto"
+		},
+		{
+			"path": "../../libs/db/src",
+			"name": "db"
+		},
+		{
+			"path": "../../libs/db/drivers/mysql",
+			"name": "mysql"
+		},
+		{
+			"path": "../../../open62541"
+		}
+	]
+}

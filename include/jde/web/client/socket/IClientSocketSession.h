@@ -5,7 +5,7 @@
 #include "ClientSocketStream.h"
 #include "ClientSocketAwait.h"
 #include <jde/fwk/co/Await.h>
-#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/protobuf.h>
 
 namespace Jde::Web::Client{
 	struct IClientSocketSession;
@@ -38,13 +38,13 @@ namespace Jde::Web::Client{
 		α OnMessage( string&& j, RequestId requestId )ι->void;
 		α Write( string&& m )ι->void;
 		α NextRequestId()ι->uint32;
-		α SessionId()ι->SessionPK{ return _sessionId; }
+		α SessionId()ι->SessionPK{ return _sessionInfo ? _sessionInfo->session_id() : SessionPK{}; }
+		α SetInfo( Web::FromServer::SessionInfo info )ι->void{ _sessionInfo = move(info); }
 		[[nodiscard]] α Close()ι{ return CloseClientSocketSessionAwait(shared_from_this()); }
 		α Host()Ι->str{ return _host; }
 		α Id()ι->uint32{ return _id; }
 	protected:
 		α CloseTasks( function<void(std::any&&)> f )ι->void;
-		α SetSessionId( SessionPK sessionId )ι{ _sessionId = sessionId; }
 		β OnClose( beast::error_code ec )ι->void;
 		α IsSsl()Ι->bool{ return _stream->IsSsl(); }
 		α SetId( uint32 id )ι{ _id=id; }
@@ -61,7 +61,7 @@ namespace Jde::Web::Client{
 		sp<ClientSocketStream> _stream;
 		string _host;
 		sp<net::io_context> _ioContext;
-		SessionPK _sessionId{};
+		optional<Web::FromServer::SessionInfo> _sessionInfo;
 		CreateClientSocketSessionAwait::Handle _connectHandle;
 		CloseClientSocketSessionAwait::Handle _closeHandle;
 		boost::concurrent_flat_map<RequestId,std::any> _tasks;
@@ -81,11 +81,11 @@ namespace Jde::Web::Client{
 	};
 
 	#define $ template<class TFromClientMsgs, class TFromServerMsgs> α TClientSocketSession<TFromClientMsgs,TFromServerMsgs>
-	$::Write( TFromClientMsgs&& m )ι->void{ base::Write( Proto::ToString(m) ); }
+	$::Write( TFromClientMsgs&& m )ι->void{ base::Write( Protobuf::ToString(m) ); }
 	$::OnReadData( std::basic_string_view<uint8_t> transmission )ι->void{
 		try{
 			sv x{ (char*)transmission.data(), transmission.size() };
-			auto proto = Proto::Deserialize<TFromServerMsgs>( transmission.data(), (int)transmission.size() );
+			auto proto = Protobuf::Deserialize<TFromServerMsgs>( transmission.data(), (int)transmission.size() );
 			OnRead( move(proto) );
 		}
 		catch( IException& e ){

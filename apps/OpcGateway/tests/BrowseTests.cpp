@@ -4,7 +4,7 @@
 #include "../src/UAClient.h"
 #include "../src/StartupAwait.h"
 #include "../src/ql/NodeQLAwait.h"
-#include "helpers.h"
+#include "utils/helpers.h"
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{

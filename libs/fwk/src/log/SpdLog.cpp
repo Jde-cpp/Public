@@ -14,9 +14,9 @@
 namespace Jde::Logging{
 	using spdlog::level::level_enum;
 
-	Ω loadSinks()ι->vector<spdlog::sink_ptr>{
+	Ω loadSinks( const jobject& settings )ι->vector<spdlog::sink_ptr>{
 		vector<spdlog::sink_ptr> sinks;
-		let& sinkSettings = Settings::FindDefaultObject( "/logging/spd/sinks" );
+		let& sinkSettings = Json::FindDefaultObject( settings, "sinks" );
 		for( let& [name,sink] : sinkSettings ){
 			spdlog::sink_ptr pSink;
 			string additional;
@@ -46,7 +46,7 @@ namespace Jde::Logging{
 					pPath = fs::path{ "~/."+pPath->string().substr(1) };
 				let markdown = Json::FindBool(sink, "/md" ).value_or( false );
 				let fileNameWithExt = Settings::FileStem()+( markdown ? ".md" : ".log" );
-				let path = pPath && !pPath->empty() ? *pPath/fileNameWithExt : Process::ApplicationDataFolder()/"logs"/fileNameWithExt;
+				let path = pPath && !pPath->empty() ? *pPath/fileNameWithExt : Process::AppDataFolder()/"logs"/fileNameWithExt;
 				let truncate = Json::FindBool( sink, "/truncate" ).value_or( true );
 				additional = Ƒ( " truncate='{}' path='{}'", truncate, path.string() );
 				try{
@@ -71,11 +71,11 @@ namespace Jde::Logging{
 		}
 		return sinks;
 	}
-	Ω logger()ι->spdlog::logger{
-		auto sinks = loadSinks();
+	Ω logger( const jobject& settings )ι->spdlog::logger{
+		auto sinks = loadSinks( settings );
 		spdlog::logger logger{ "my_logger", sinks.begin(), sinks.end() };
 
-		let flushOn = Settings::FindEnum<ELogLevel>( "/logging/spd/flushOn", ToLogLevel ).value_or( _debug ? ELogLevel::Debug : ELogLevel::Information );
+		let flushOn = Json::FindEnum<ELogLevel>( settings, "/logging/spd/flushOn", ToLogLevel ).value_or( _debug ? ELogLevel::Debug : ELogLevel::Information );
 		logger.flush_on( (level_enum)flushOn );
 
 		let minSinkLevel = std::accumulate( sinks.begin(), sinks.end(), ELogLevel::Critical, [](ELogLevel min, auto& p){ return std::min((ELogLevel)p->level(), min);} );
@@ -84,9 +84,9 @@ namespace Jde::Logging{
 		return logger;
 	}
 
-	SpdLog::SpdLog()ι:
-		ILogger{ Settings::FindDefaultObject("/logging/spd") },
-		_logger{ move(logger()) }{
+	SpdLog::SpdLog( const jobject& settings )ι:
+		ILogger{ settings },
+		_logger{ move(logger(settings)) }{
 		INFOT( ELogTags::Settings, "{} minLevel='{}' flushOn='{}' {}", Name(), Jde::ToString((ELogLevel)_logger.level()), Jde::ToString((ELogLevel)_logger.flush_level()), ToString() );
 	}
 }

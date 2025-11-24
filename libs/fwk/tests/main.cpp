@@ -1,4 +1,7 @@
-﻿#include "gtest/gtest.h"
+﻿#ifdef BOOST_ALL_NO_LIB
+	#include <boost/json/src.hpp>
+#endif
+#include "gtest/gtest.h"
 #include <jde/fwk/settings.h>
 #define let const auto
 
@@ -8,6 +11,7 @@ namespace Jde{
 #endif
  	Ω startup( int argc, char **argv )ι->void{
 		Process::Startup( argc, argv, "Tests.Framework", "Unit Tests description", true );
+		Logging::Init();
 	}
 }
 

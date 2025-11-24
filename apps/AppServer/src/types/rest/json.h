@@ -7,7 +7,7 @@ namespace Jde::App{
 			{"application", x.application()},
 			{"host", x.host()},
 			{"pid", x.pid()},
-			{ "startTime", ToIsoString(Jde::Proto::ToTimePoint(x.start_time())) },
+			{ "startTime", ToIsoString(Protobuf::ToTimePoint(x.start_time())) },
 			{"port", x.web_port()},
 			{"instanceName", x.instance_name()}
 		};

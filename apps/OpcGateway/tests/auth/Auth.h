@@ -1,4 +1,4 @@
-#include "../helpers.h"
+#include "../utils/helpers.h"
 
 namespace Jde::Opc::Gateway::Tests{
 	class Auth : public ::testing::Test{

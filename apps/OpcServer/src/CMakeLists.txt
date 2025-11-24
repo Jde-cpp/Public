@@ -1,10 +1,10 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( $ENV{JDE_DIR}/Public/build/functions.cmake )
+include( $ENV{JDE_DIR}/build/functions.cmake )
 project( Jde.Opc.Server VERSION ${JDE_VERSION} LANGUAGES CXX )
 
 include( ../../../build/dependencies.cmake )
 
-message( CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH} )
+find_package( open62541 REQUIRED )
 find_package( NodesetLoader REQUIRED )
 set( open62541Dir ${open62541_DIR}/../../.. )
 #cmake_path( ABSOLUTE_PATH open62541Dir NORMALIZE OUTPUT_VARIABLE open62541Dir )
@@ -35,4 +35,4 @@ target_precompile_headers( ${targetName}
 	PRIVATE
 		pc.h
 )
-add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_DIR}/Public/libs/db/config/common-meta.libsonnet" "$ENV{JDE_DIR}/Public/apps/OpcServer/config/common-meta.libsonnet" COMMENT "mklink common-meta.libsonnet" )
+add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_DIR}/libs/db/config/common-meta.libsonnet" "$ENV{JDE_DIR}/apps/OpcServer/config/common-meta.libsonnet" COMMENT "mklink common-meta.libsonnet" )

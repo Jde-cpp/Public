@@ -1,5 +1,4 @@
 #include <jde/app/client/appClient.h>
-#include <jde/fwk/co/Timer.h>
 #include <jde/access/Authorize.h>
 #include <jde/web/client/socket/ClientQL.h>
 #include <jde/app/client/usings.h>
@@ -73,7 +72,7 @@ namespace Jde::App::Client{
 	}
 	α ConnectAwait::RunSocket( SessionPK sessionId )ι->TAwait<Proto::FromServer::ConnectionInfo>::Task{
 		try{
-			TRACET( ELogTags::App, "Creating socket session for sessionId: {:x}", sessionId );
+			TRACET( ELogTags::App, "[{}]Creating socket session", hex(sessionId) );
 			co_await StartSocketAwait{ sessionId, _authorize, move(_appClient), _sl };
 			Resume();
 		}

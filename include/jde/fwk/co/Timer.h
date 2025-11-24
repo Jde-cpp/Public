@@ -3,7 +3,8 @@
 #include "Await.h"
 
 namespace Jde{
-	struct Γ DurationTimer final : VoidAwait{
+	using TimerAwait = TAwait<std::expected<void, boost::system::error_code>>;
+	struct Γ DurationTimer final : TimerAwait{
 		DurationTimer( steady_clock::duration duration, SRCE )ι;
 		DurationTimer( steady_clock::duration duration, ELogTags tags, SRCE )ι;
 		~DurationTimer();

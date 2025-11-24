@@ -16,6 +16,7 @@ namespace Jde::Opc::Gateway{
 		Certificate=4,
 		IssuedToken=8
 	};
+	constexpr static const array<sv,5> TokenTypeNames = { "None", "Anonymous", "Username", "Certificate", "IssuedToken" };
 	α ToTokenType( UA_UserTokenType ua )ι->ETokenType;
 	struct Credential{
 		Credential()ι{}
@@ -36,7 +37,7 @@ namespace Jde::Opc::Gateway{
 	private:
 		variant<nullptr_t, Gateway::Token, User, Crypto::PublicKey> _value;
 		mutable string _display;
-		Jde::UserPK _userPK;
+		Jde::UserPK _userPK{};
 	};
 	α AddSession( SessionPK sessionId, ServerCnnctnNK opcNK, Credential credential )ι->void;
 	α AuthCache( const Credential& credential, const ServerCnnctnNK& opcNK, SessionPK sessionId )ι->optional<bool>;

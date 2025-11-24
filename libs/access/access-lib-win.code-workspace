@@ -2,10 +2,12 @@
 	"settings": {
 		"window.title": "Access",
 		"name": "access",
-		"sourceDir": "${env:JDE_BASH}/Public/libs/${config:name}",
+		"compiler": "msvc",
+		"sourceDir": "${env:JDE_BASH}/libs/${config:name}",
 		"buildTarget": "Debug",
-		"buildDir": "/z/build/msvc/jde/libs/${config:name}",
-		"winBuildDir": "Z:/build/msvc/jde/libs/${config:name}",
+		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/Debug",
+		"buildDir": "${config:buildRoot}/libs/${config:name}",
+		"winBuildDir": "${env:JDE_BUILD_DIR}/msvc/Debug/libs/${config:name}",
 		"exe": "tests/${config:buildTarget}/Jde.Access.Tests",
 	},
 	"tasks": {
@@ -13,14 +15,14 @@
 		"tasks": [{
 			"label": "build",
 			"type": "shell",
-			"command": "cd ${config:buildDir}; tput reset; cmake --build .;",
+			"command": "cd ${config:buildRoot}; tput reset; cmake --build . -j --target=Jde.Access.Tests;",
 			"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 			"group": { "kind": "build", "isDefault": true }
 		},
 		{
 			"label": "buildProject",
 			"type": "shell",
-			"command": "tput reset;source $JDE_DIR/Public/build/buildFunctions.sh;workspaceFolder=${fileWorkspaceFolder};buildRoot=${config:buildDir};buildDir=`buildDir $workspaceFolder $buildRoot`;cd $buildDir;make -j;",
+			"command": "tput reset;source $JDE_DIR/build/buildFunctions.sh;workspaceFolder=${fileWorkspaceFolder};buildRoot=${config:buildDir};buildDir=`buildDir $workspaceFolder $buildRoot`;cd $buildDir;make -j;",
 			"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 			"group": { "kind": "build", "isDefault": false }
 		},
@@ -28,7 +30,7 @@
 			"label": "compile",
 			"type": "shell",
 			"dependsOn": ["clearTerminal"],
-			"command": "tput reset; source $JDE_DIR/Public/build/buildFunctions-win.sh;compile \"${workspaceFolder}\" \"${fileWorkspaceFolder}\" \"${relativeFile}\" ${config:buildDir}/${config:name};",
+			"command": "tput reset; source $JDE_DIR/build/buildFunctions-win.sh;compile \"${workspaceFolder}\" \"${fileWorkspaceFolder}\" \"${relativeFile}\" ${config:buildDir}/${config:name};",
 			"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 			"group": { "kind": "build", "isDefault": false }
 		},

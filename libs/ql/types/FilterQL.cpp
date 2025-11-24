@@ -11,14 +11,14 @@
 namespace Jde::QL{
 	inline constexpr std::array<sv,11> QLOperatorStrings = { "eq", "ne", "regex", "glob", "in", "nin", "gt", "gte", "lt", "lte", "elemMatch" };//matches GraphQL
 
-	α FilterQL::Test( const DB::Value::Underlying& value, const vector<FilterValueQL>& filters, ELogTags logTags )ι->bool{
+	α Filter::Test( const DB::Value::Underlying& value, const vector<FilterValue>& filters, ELogTags logTags )ι->bool{
 		bool passesFilters{true};
 		for( auto p=filters.begin(); passesFilters && p!=filters.end(); ++p )
 			passesFilters = p->Test( value, logTags );
 		return passesFilters;
 	}
 
-	α FilterValueQL::Test( const DB::Value& db, ELogTags logTags )Ι->bool{
+	α FilterValue::Test( const DB::Value& db, ELogTags logTags )Ι->bool{
 		using namespace Json;
 		bool passesFilters{};
 		try{
@@ -32,18 +32,18 @@ namespace Jde::QL{
 				break;
 			case In: passesFilters = Json::Find( Value, db.ToJson() ); break;
 			case NotIn: passesFilters = !Json::Find( Value, db.ToJson() ); break;
-			case Greater: passesFilters = Value > db.ToJson(); break;
-			case GreaterOrEqual: passesFilters = Value >= db.ToJson(); break;
-			case Less: passesFilters = Value < db.ToJson(); break;
-			case LessOrEqual: passesFilters = Value <= db.ToJson(); break;
+			case Greater: passesFilters = db.ToJson() > Value; break;
+			case GreaterOrEqual: passesFilters = db.ToJson() >= Value; break;
+			case Less: passesFilters = db.ToJson() < Value; break;
+			case LessOrEqual: passesFilters = db.ToJson() <= Value; break;
 			case ElementMatch: BREAK; break;
 			}
 		}
-		catch( const std::exception& e ){
-			DBGT( logTags | ELogTags::Exception, "FilterValueQL::Test exception={}", e.what() );
+		catch( const exception& e ){
+			DBGT( logTags | ELogTags::Exception, "FilterValue::Test exception={}", e.what() );
 		}
 		catch( ... ){
-			CRITICALT( logTags | ELogTags::Exception, "FilterValueQL::unknown exception" );
+			CRITICALT( logTags | ELogTags::Exception, "FilterValue::unknown exception" );
 		}
 		return passesFilters;
 	}

@@ -1,0 +1,25 @@
+{
+	"settings": {
+		"window.title": "Main",
+		"name": "main",
+		"releaseRoot": "${env:JDE_BASH}/Release",
+		"sourceDir": "${env:JDE_BASH}",
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Release",
+				"type": "shell",
+				"command": "tput reset;build/buildRelease.sh",
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"group": { "kind": "build", "isDefault": true }
+			}
+		]
+	},
+	"folders": [
+		{
+			"path": "."
+		}
+	]
+}

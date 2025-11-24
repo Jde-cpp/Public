@@ -47,17 +47,22 @@ namespace Jde::IO::Tests{
 			written.push_back( guid2 );
 		}( file, guid1, guid2, written, move(l), createFile );
 	}
-	Ω read( const fs::path& file, Vector<uuid>& readValues, SRCE )->TAwait<string>::Task{
-		let content = co_await IO::ReadAwait{ file, false, sl };
-		let guidStrings = Str::Split( content, '\n' );
-		ul l{ readValues.Mutex };
-		for( auto&& guid : guidStrings ){
-			try{
-				readValues.push_back( boost::uuids::string_generator{}(string{guid}), l );
+	Ω read( const fs::path& file, Vector<uuid>& readValues, SRCE )ι->TAwait<string>::Task{
+		try{
+			let content = co_await IO::ReadAwait{ file, false, sl };
+			let guidStrings = Str::Split( content, '\n' );
+			ul l{ readValues.Mutex };
+			for( auto&& guid : guidStrings ){
+				try{
+					readValues.push_back( boost::uuids::string_generator{}(string{guid}), l );
+				}
+				catch( const std::exception& e ){
+					THROW( "[{}] Failed to parse GUID from string '{}': {}", file.string(), guid, e.what() );
+				}
 			}
-			catch( const std::exception& e ){
-				ERR( "[{}] Failed to parse GUID from string '{}': {}", file.string(), guid, e.what() );
-			}
+		}
+		catch( const std::exception& e ){
+			throw e;
 		}
 	}
 

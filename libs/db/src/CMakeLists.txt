@@ -19,10 +19,13 @@ target_sources(${targetName}
         ${sources}
         ${headers}
 )
+
+if( Boost_USE_STATIC_LIBS )
+	target_link_libraries( ${targetName} PRIVATE Boost::json )
+endif()
 if( WIN32 )
-	target_link_libraries( ${targetName} Boost::json )
-	target_link_libraries( ${targetName} fmt::fmt )
-	target_link_libraries( ${targetName} Jde )
+	target_link_libraries( ${targetName} PRIVATE fmt::fmt )
+	target_link_libraries( ${targetName} PRIVATE Jde )
 endif()
 
 target_precompile_headers(${targetName}

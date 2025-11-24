@@ -27,18 +27,10 @@ namespace Jde::Opc{
 		const EOpcLogTags tag = (EOpcLogTags)( tag_ );
 		if( Logging::ShouldLog(level, (ELogTags)tag) ){
 			let message = Opc::Format(m,args);
-			Logging::LogStack( level, (ELogTags)tag, 2, "[{:x}]{}", (uint)context, message );
+			Logging::LogStack( level, (ELogTags)tag, 2, "[{}]{}", hex((uint)context), message );
 		}
 	}
-	/*
-	α UA_Log_Stdout_log_file( void *context, UA_LogLevel uaLevel, UA_LogCategory category, const char* file, const char* function, uint32_t line, const char *m, va_list args )ι->void{
-		let level = (ELogLevel)( (int)uaLevel/100-1 ); //level==UA_LOGLEVEL_DEBUG=200
-		uint tag_ = 1ull << (uint)(33ull+category);
-		const EOpcLogTags tag = (EOpcLogTags)( tag_ );
 
-		Logging::Log( level, (ELogTags)tag, spdlog::source_loc{file, (int)line, function}, "[{:x}]{}", (uint)context, Opc::Format(m,args) );
-	}
-*/
 	Logger::Logger( Handle uaHandle )ι:
 		UA_Logger{ UA_Log_Stdout_log, (void*)uaHandle, Clear }
 	{}

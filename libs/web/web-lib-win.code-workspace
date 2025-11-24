@@ -2,23 +2,26 @@
 	"settings": {
 		"window.title": "Web",
 		"name": "web",
-		"sourceDir": "${env:JDE_BASH}/Public/libs/${config:name}",
-		"buildDir": "/z/build/msvc/jde/libs/${config:name}",
+		"compiler": "msvc",
+		"sourceDir": "${env:JDE_BASH}/libs/${config:name}",
+		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/Debug",
+		"buildDir": "${config:buildRoot}/libs/${config:name}",
 		"exe": "tests/Jde.Web.Tests",
+		"source": "source $JDE_DIR/build/buildFunctions-win.sh"
 	},
 	"tasks": {
 		"version": "2.0.0",
 		"tasks": [{
 			"label": "build",
 			"type": "shell",
-			"command": "cd ${config:buildDir}; tput reset; cmake --build .;",
+			"command": "cd ${config:buildRoot}; tput reset; cmake --build . -j --target=Jde.Web.Tests;",
 			"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 			"group": { "kind": "build", "isDefault": true }
 		},
 		{
 			"label": "buildProject",
 			"type": "shell",
-			"command": "tput reset;source $JDE_DIR/Public/build/buildFunctions.sh;workspaceFolder=${fileWorkspaceFolder};buildRoot=${config:buildDir};buildDir=`buildDir $workspaceFolder $buildRoot`;cd $buildDir;make -j;",
+			"command": "tput reset;${config:source};buildProject \"${fileWorkspaceFolder}\" ${config:buildRoot};",
 			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 			"group": { "kind": "build", "isDefault": false }
 		},
@@ -26,7 +29,7 @@
 			"label": "compile",
 			"type": "shell",
 			"dependsOn": ["clearTerminal"],
-			"command": "tput reset; source $JDE_DIR/Public/build/buildFunctions-win.sh;compile \"${workspaceFolder}\" \"${fileWorkspaceFolder}\" \"${relativeFile}\" ${config:buildDir}",
+			"command": "tput reset;${config:source};compile \"${workspaceFolder}\" \"${fileWorkspaceFolder}\" \"${relativeFile}\" ${config:buildRoot}",
 			"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 			"group": { "kind": "build", "isDefault": false }
 		},
@@ -68,7 +71,7 @@
 				],
 				"externalConsole": false,
 				"MIMode": "gdb",
-				"visualizerFile": "${env:JDE_DIR}/Public/build/gcc.natvis",
+				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
 				"showDisplayString": true,
 				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
 				"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.27":"${env:REPO_DIR}/glibc-2.27" },

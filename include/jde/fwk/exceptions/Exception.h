@@ -119,7 +119,7 @@ namespace Jde{
 
 	struct Γ OSException final : IException{
 #ifdef _MSC_VER
-		using TErrorCode=DWORD;
+		using TErrorCode=unsigned long; /*DWORD*/
 #else
 		using TErrorCode=_int;
 #endif

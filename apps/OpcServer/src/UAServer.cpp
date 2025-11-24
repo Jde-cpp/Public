@@ -1,25 +1,10 @@
 #include "UAServer.h"
-//#include <libxml/parser.h>
-//#include <libxml/tree.h>
-//#include <libxml/xmlerror.h>
 #include <jde/fwk/process/thread.h>
 #include <jde/opc/uatypes/opcHelpers.h>
-//#include "UAAccess.h"
 #include <NodesetLoader/backendOpen62541.h>
 
 #define let const auto
 namespace Jde::Opc::Server {
-	Ω myXmlError( void* ctx, const char* msg, ... )->void{
-		va_list args;
-		va_start( args, msg );
-		if( ctx )
-			vfprintf( stderr, msg, args );
-		else
-			vfprintf( stderr, msg, args ); // Fallback to stderr if no log file
-		va_end( args );
-		BREAK;
-	}
-
 	constexpr ELogTags _tags{ ELogTags::App };
 	UAServer::UAServer()ε:
 		ServerName{ Settings::FindString("/opcServer/name").value_or("OpcServer") },

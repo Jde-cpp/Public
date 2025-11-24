@@ -1,0 +1,8 @@
+function( linkRepo )
+  set( jdeLibDir ${ARGV0} )
+	set( destDir ${ARGV1} )
+	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${JSONNET_DIR}/lib/libjsonnet.so.0" ${destDir}/libjsonnet.so.0 COMMENT "mklink libjsonnet" )
+	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_INSTALL_PREFIX}/boost/lib/libboost_json.so.1.88.0" ${destDir}/libboost_json.so.1.88.0 COMMENT "mklink libboost_json" )
+	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_INSTALL_PREFIX}/fmt/lib/libfmt.so.12" ${destDir}/libfmt.so.12 COMMENT "mklink libfmt" )
+	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${jdeLibDir}/lib/libJde.so" ${destDir}/libJde.so COMMENT "mklink jde" )
+endfunction()

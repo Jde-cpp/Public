@@ -1,6 +1,10 @@
-﻿#include <jde/fwk/process/process.h>
+﻿#ifdef BOOST_ALL_NO_LIB
+	#include <boost/json/src.hpp>
+#endif
+#include <jde/fwk.h>
+#include <jde/fwk/process/process.h>
+#include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/Logger.h>
-#include <jde/fwk/crypto/OpenSsl.h>
 #include "StartupAwait.h"
 
 #define let const auto
@@ -14,8 +18,9 @@
 	int exitCode{ EXIT_FAILURE };
 	try{
 		Process::Startup( argc, argv, "Jde.OpcGateway", "IOT Connection" );
-		let webServerSettings = Settings::FindObject("/http");
-		let userName = Settings::FindObject("/credentials");
+		Opc::Gateway::AppClient()->InitLogging( Opc::Gateway::AppClient() );
+		let webServerSettings = Settings::FindObject( "/http" );
+		let userName = Settings::FindObject( "/credentials" );
 		BlockVoidAwait( Opc::Gateway::StartupAwait{webServerSettings ? *webServerSettings : jobject{}, userName ? *userName : jobject{}} );
 		exitCode = Process::Pause();
 	}

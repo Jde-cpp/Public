@@ -79,7 +79,6 @@ namespace Jde{
 
 		α Emplaced()ι{ return base::Promise() && base::Promise()->Emplaced(); }
 		α SetValue( Result&& r )ι{ ASSERT(base::Promise()); base::Promise()->SetValue( move(r) ); }
-		α Resume()ι{ ASSERT(base::Promise()); base::_h.resume(); }
 		α Resume( Result&& r )ι{ ASSERT(base::Promise()); base::Promise()->Resume( std::move(r), base::_h ); }
 		α ResumeScaler( Result r )ι{ ASSERT(base::Promise()); base::Promise()->Resume( std::move(r), base::_h ); } //win CoGuard doesn't have a copy constructor.
 	};
@@ -93,7 +92,7 @@ namespace Jde{
 			throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Critical, "promise is null" };
 		if( !base::Promise()->Value() )
 			throw Jde::Exception{ SRCE_CUR, Jde::ELogLevel::Critical, "Value is null" };
-		Result result{ std::move(*base::Promise()->Value()) };
+		Result result( std::move(*base::Promise()->Value()) );  //don't use initializer list.
 		base::_h = nullptr;
 		return result;
 	}
@@ -153,6 +152,10 @@ namespace Jde{
 		if( e )
 			e->Throw();
 		return *y;
+	}
+
+	Ŧ BlockTAwait( TAwait<T>&& a )ε->T{
+		return BlockAwait<TAwait<T>,T>( move(a) );
 	}
 }
 #endif

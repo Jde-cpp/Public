@@ -11,7 +11,7 @@
 namespace Jde::Logging{
 	Ξ ToSpdSL( SL sl )ι->spdlog::source_loc{ return {sl.file_name(), (int)sl.line(), sl.function_name()}; }
 	struct SpdLog final : ILogger{
-		SpdLog()ι;
+		SpdLog( const jobject& settings )ι;
 		ψ Write( ELogLevel level, SL sl, FormatString&& m, ARGS... args )ε{
 			_logger.log( ToSpdSL(sl), (spdlog::level::level_enum)level, FWD(m), FWD(args)... );
 		}

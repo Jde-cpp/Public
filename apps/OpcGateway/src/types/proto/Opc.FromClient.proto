@@ -1,10 +1,7 @@
-//FILE=IotFromClient #see ./IotCommon.proto
-
-
 syntax = "proto3";
 package Jde.Opc.FromClient;
-//import "google/protobuf/timestamp.proto";
 import "Opc.Common.proto";
+import "Common.proto";
 
 message Subscribe{
 	string opc_id=1;
@@ -21,8 +18,9 @@ message Message{
 	uint32 request_id = 1;
 	oneof Value{
 		string session_id = 2;
-		Subscribe subscribe = 3;
-		Unsubscribe unsubscribe = 4;
+		Jde.Proto.Query query=3;
+		Subscribe subscribe = 4;
+		Unsubscribe unsubscribe = 5;
 	}
 }
 

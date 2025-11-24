@@ -1,0 +1,43 @@
+{
+	"settings": {
+		"window.title": "Main",
+		"name": "main",
+		"compiler": "msvc",
+		"sourceDir": "${env:JDE_BASH}",
+		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/Debug",
+		"releaseDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/RelWithDebInfo",
+		"debugPreset": "win-msvc-debug",
+		"releasePreset": "win-msvc-relWithDebInfo"
+	},
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "build",
+				"type": "shell",
+				"command": "cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug",
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"group": { "kind": "build", "isDefault": true }
+			},
+			{
+				"label": "buildRelease",
+				"type": "shell",
+				"command": "cd ${config:releaseDir}; tput reset; cmake --build . -j --config RelWithDebInfo -t=open62541-nodeset-loader;",
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"group": { "kind": "build", "isDefault": false }
+			},
+			{
+				"label": "cmakeRepos",
+				"type": "shell",
+				"command": "mkdir -p ${config:releaseDir};cd ${config:releaseDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} --preset ${config:releasePreset} -Djde_REPOS=ON -Djde_TESTS=OFF -Djde_APPS=OFF",
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"group": "build"
+			}
+		]
+	}
+}

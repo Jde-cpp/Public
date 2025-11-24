@@ -1,8 +1,11 @@
-﻿#include "gtest/gtest.h"
+﻿#ifdef BOOST_ALL_NO_LIB
+	#include <boost/json/src.hpp>
+#endif
+#include "gtest/gtest.h"
 #include <jde/fwk/settings.h>
 #include <jde/fwk/co/Timer.h>
 #include <jde/fwk/crypto/OpenSsl.h>
-#include <jde/app/log/ProtoLog.h>
+#include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/Logger.h>
 #include "../src/StartupAwait.h"
 #include "../../AppServer/src/AppStartupAwait.h"
@@ -17,15 +20,8 @@ namespace Jde{
 
  	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
 		Logging::AddTagParser( mu<Opc::UALogParser>() );
-		auto protoLogSettings = Settings::FindObject( "/logging/proto" );
-		if( protoLogSettings ){
-			try{
-				Logging::AddLogger( mu<App::ProtoLog>(*protoLogSettings) );
-			}
-			catch( exception& )
-			{}
-		}
 		Process::Startup( argc, argv, "Tests.Opc", "Opc tests", true );
+		Opc::Gateway::AppClient()->InitLogging( Opc::Gateway::AppClient() );
 		try{
 			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )
 				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };
@@ -38,6 +34,8 @@ namespace Jde{
 		}
 		catch( exception& e ){
 			_error = ToUP( move(e) );
+			if( auto p = dynamic_cast<IException*>( _error.get() ); p )
+				p->Log();
 			done.test_and_set();
 			done.notify_one();
 		}
@@ -58,6 +56,8 @@ namespace Jde{
 		result = RUN_ALL_TESTS();
 	}
 	catch( exception& e ){
+		if( auto p = dynamic_cast<IException*>( &e ); p )
+			p->Log();
 		Process::ExitException( move(e) );
 	}
 	Process::Shutdown( result );

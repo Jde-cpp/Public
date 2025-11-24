@@ -26,9 +26,9 @@ namespace Jde::Crypto{
 	};
 	string OpenSslTests::HeaderPayload{ "secret stuff" };
 	string OpenSslTests::passcode{ "123456789" };
-	string OpenSslTests::PublicKeyFile{ _msvc ? (Process::ApplicationDataFolder() / "public.pem").string() : "/tmp/public.pem" };
-	string OpenSslTests::PrivateKeyFile{ _msvc ? (Process::ApplicationDataFolder() / "private.pem").string() : "/tmp/private.pem" };
-	string OpenSslTests::CertificateFile{ _msvc ? (Process::ApplicationDataFolder() / "cert.pem").string() : "/tmp/cert.pem" };
+	string OpenSslTests::PublicKeyFile{ _msvc ? (Process::AppDataFolder() / "public.pem").string() : "/tmp/public.pem" };
+	string OpenSslTests::PrivateKeyFile{ _msvc ? (Process::AppDataFolder() / "private.pem").string() : "/tmp/private.pem" };
+	string OpenSslTests::CertificateFile{ _msvc ? (Process::AppDataFolder() / "cert.pem").string() : "/tmp/cert.pem" };
 
 
 	α OpenSslTests::SetUpTestCase()->void{

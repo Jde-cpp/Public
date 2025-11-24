@@ -1,6 +1,5 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-enable_testing()
-include( $ENV{JDE_DIR}/Public/build/functions.cmake )
+include( $ENV{JDE_DIR}/build/functions.cmake )
 
 project( Jde.Framework VERSION ${JDE_VERSION} LANGUAGES CXX )
 

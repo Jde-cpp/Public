@@ -1,4 +1,4 @@
-#include <jde/app/shared/StringCache.h>
+#include <jde/app/StringCache.h>
 #include <boost/uuid/uuid_io.hpp>
 
 namespace Jde::App{

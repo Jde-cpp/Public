@@ -17,7 +17,7 @@
 	},
 	dbServers: {
 		dataPaths: [],
-		scriptPaths:  ["$(JDE_DIR)/Public/apps/OpcServer/config/sql/sqlServer"],
+		scriptPaths:  ["$(JDE_DIR)/apps/OpcServer/config/sql/sqlServer"],
 		localhost:{
 			driver: "$(JDE_BUILD_DIR)/msvc/jde/apps/OpcServer/bin/Debug/Jde.DB.Odbc.dll",
 			connectionString: "DSN=debug",
@@ -29,13 +29,13 @@
 					schemas:{
 						_appServer:{
 							access:{
-								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet",
-								ql: "$(JDE_DIR)/Public/libs/access/config/access-ql.jsonnet",
+								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet",
+								ql: "$(JDE_DIR)/libs/access/config/access-ql.jsonnet",
 							},
 						},
 						dbo:{
 							opc:{
-								meta: "$(JDE_DIR)/Public/apps/OpcServer/config/opcServer-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/OpcServer/config/opcServer-meta.jsonnet",
 								prefix: "opc_"  //test with null prefix, debug with prefix
 							},
 						}

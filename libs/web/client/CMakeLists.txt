@@ -6,10 +6,7 @@ include( ../../../build/dependencies.cmake )
 
 if( WIN32 )
 	add_definitions( -DZLIB_USE_STATIC_LIBS -D )
-	if( ${LIB_DIR} STREQUAL "" )
-		message( FATAL_ERROR "Set LIB_ROOT cmake variable" )
-	endif()
-	set( ZLIB_ROOT ${LIB_DIR}/zlib )
+	set( ZLIB_ROOT ${MULTI_INSTALL_PREFIX}/zlib )
 endif()
 find_package( ZLIB REQUIRED )
 include_directories( ${ZLIB_INCLUDE_DIRS} )
@@ -22,10 +19,13 @@ if( WIN32 )
 endif()
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 file( GLOB sources *.cpp http/*.cpp socket/*.cpp )
-set( includeDir $ENV{JDE_DIR}/Public/include/jde/web/client )
+set( includeDir $ENV{JDE_DIR}/include/jde/web/client )
 file( GLOB headers *.h ${includeDir}/*.h ${includeDir}/http/*.h ${includeDir}/socket/*.h  )
 file( GLOB protos proto/*.proto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
+
+target_link_libraries( ${targetName} PUBLIC ZLIB::ZLIB )
+
 target_precompile_headers(${targetName}
   PUBLIC
 	"pc.h"
@@ -41,4 +41,4 @@ set( protoIncludeDir ${includeDir}/proto )
 file( MAKE_DIRECTORY ${protoIncludeDir} )
 
 add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.pb.h" "${protoIncludeDir}/Web.FromServer.pb.h" COMMENT "mklink web/client/proto/Web.FromServer.pb.h" )
-add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.pb.h" "$ENV{JDE_DIR}/Public/include/jde/app/shared/proto/Web.FromServer.pb.h" COMMENT "mklink jde/app/shared/proto/Web.FromServer.pb.h" )
+add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/Web.FromServer.pb.h" COMMENT "mklink jde/app/proto/Web.FromServer.pb.h" )

@@ -41,7 +41,7 @@ namespace Jde::Web{
 	using Web::Client::ClientHttpAwait;
 	using Web::Client::ClientHttpRes;
 	TEST_F( CertificateTests, DefaultSettings ){
-		Mock::Start( SslSettings(Process::ApplicationDataFolder()/"ssl") );
+		Mock::Start( SslSettings(Process::AppDataFolder()/"ssl") );
 		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} };
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 		ASSERT_TRUE( res[http::field::server].contains("SSL") );

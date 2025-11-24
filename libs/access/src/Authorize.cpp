@@ -293,7 +293,7 @@ namespace Jde::Access{
 			return false;
 		};
 		std::shared_lock _{ Mutex };
-		THROW_IFSL( isChild(child, parent), "Role '{}' cannot be a member of '{}' because it is a ancester.", child, parent );
+		THROW_IFX( isChild(child, parent), Exception(sl, ELogLevel::Debug, "Role '{}' cannot be a member of '{}' because it is a ancester.", child, parent) );
 	}
 	α Authorize::AddRolePermission( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, sv resourceName )ι->void{
 		ul l{ Mutex };

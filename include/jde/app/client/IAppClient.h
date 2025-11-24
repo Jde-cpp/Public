@@ -9,6 +9,7 @@
 namespace Jde::App::Client{
 	struct AppClientSocketSession;
 	struct IAppClient : IApp{
+		α InitLogging( sp<App::Client::IAppClient> client )ι->void;
 		α IsLocal()Ι->bool override{ return false; }
 		α UserName()Ι->const jobject&{ return _userName; }
 		α SetUserName( jobject&& userName )ι->void{ _userName = move(userName); }
@@ -28,6 +29,7 @@ namespace Jde::App::Client{
 		optional<Crypto::CryptoSettings> ClientCryptoSettings;
 		Crypto::PublicKey ServerPublicKey;
 		vector<sp<DB::AppSchema>> SubscriptionSchemas;
+		α Write( vector<Logging::Entry>&& entries )ι->void;
 	protected:
 		α CommonDetails()ι->vector<string>{ return { "TODO" }; }
 	private:

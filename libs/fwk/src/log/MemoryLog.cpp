@@ -18,10 +18,11 @@ namespace Jde::Logging{
 		_entries.emplace_back( move(m) );
 	}
 	α MemoryLog::Write( ILogger& logger )ι->void{
-		_entries.visit( [&](let& entry){
+		auto entries = _entries.copy(); //Write may log additional _entries.
+		for( let& entry : entries ){
 			if( logger.ShouldLog(entry.Level, entry.Tags) )
-				logger.Write( Entry{entry} );
-		});
+				logger.Write( entry );
+		}
 	}
 	α MemoryLog::Find( StringMd5 id )ι->vector<Logging::Entry>{
 		vector<Logging::Entry> y;

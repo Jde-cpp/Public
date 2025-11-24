@@ -23,16 +23,13 @@
 	#define DISABLE_WARNINGS
 	#define ENABLE_WARNINGS
 #endif
-
+#define BOOST_ALL_NO_LIB
 #include <boost/json.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/container/flat_set.hpp>
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
 
-// #define SPDLOG_FMT_EXTERNAL
-// 	#include <spdlog/spdlog.h>
-// 	#include <spdlog/sinks/basic_file_sink.h>
 #ifndef NDEBUG
 	#define BOOST_USE_ASAN
 #endif

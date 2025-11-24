@@ -1,6 +1,6 @@
 {
 	testing:{
-		tests:: "LogGeneralTests.ArgsNotCalled",
+		tests:: "TimerTests.General",
 		file: "$(JDE_BUILD_DIR)/tests/test.txt"
 	},
 	cryptoTests:{
@@ -9,8 +9,8 @@
 	logging:{
 		spd:{
 			tags: {
-				trace:["test", "exception", "app"],
-				debug:["settings", "io"],
+				trace:["exception", "app", "io", "test"],
+				debug:["test", "settings"],
 				information:[],
 				warning:[],
 				"error":[],
@@ -18,7 +18,7 @@
 			},
 			sinks:{
 				console:{},
-				file:{ path: "$(JDE_BUILD_DIR)", md: false, pattern: "%^%3!l%$-%H:%M:%S.%e %v" }
+				file:{ path: "$(JDE_BUILD_DIR)", md: false, pattern: "%^%3!l%$-%H:%M:%S.%e \\033]8;;file://%g#%#\\a%v\\033]8;;\\a" }
 			}
 		},
 		memory:{ default: "trace" }

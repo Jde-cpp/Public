@@ -1,4 +1,7 @@
-﻿#include "gtest/gtest.h"
+﻿#ifdef BOOST_ALL_NO_LIB
+	#include <boost/json/src.hpp>
+#endif
+#include "gtest/gtest.h"
 #include <jde/fwk/process/process.h>
 #include <jde/fwk/settings.h>
 #include <jde/fwk/co/Timer.h>
@@ -14,21 +17,17 @@
 namespace Jde{
 	sp<Access::AccessListener> _listener;
 	α Process::ProductName()ι->sv{ return "Tests.Access"; }
-	Ω keepExecuterAlive()ι->VoidTask{
-		co_await DurationTimer{ 360s };
-	}
  	α Startup( int argc, char **argv )ε->void{
 #ifdef _MSC_VER
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threadSize").value_or(5)>0 )
 #endif
 		Process::Startup( argc, argv, Process::ProductName(), "Access tests", true );
-
+		Logging::Init();
 		let metaDataName{ "access" };
 		auto authorizer = Access::Tests::Authorizer();
 		auto schema = DB::GetAppSchema( metaDataName, authorizer );
 		auto ql = QL::Configure( {schema}, authorizer );
 		_listener = ms<Access::AccessListener>( ql );
-		keepExecuterAlive();
 		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 			DB::NonProd::Recreate( *schema, ql );
 		else if( Settings::FindBool("/dbServers/sync").value_or(false) )
@@ -55,6 +54,8 @@ namespace Jde{
 		}
 		std::cerr << e.what() << std::endl;
 	}
+	INFOT( ELogTags::App, "Shutting down with exit code {}.", exitCode );
 	Process::Shutdown( exitCode );
+	std::cout << "Exited with code: " << exitCode << std::endl;
 	return exitCode;
 }

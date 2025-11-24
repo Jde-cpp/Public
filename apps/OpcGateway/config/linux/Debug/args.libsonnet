@@ -6,10 +6,10 @@
 		url: "opc.tcp://127.0.0.1:4840"
 	},
 	dbServers: {
-		scriptPaths: ["$(JDE_DIR)/Public/apps/OpcGateway/config/sql/mysql"],
+		scriptPaths: ["$(JDE_DIR)/apps/OpcGateway/config/sql/mysql"],
 		sync: true,
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/jde/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",
+			driver: "$(JDE_BUILD_DIR)/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",
 			connectionString: null,
 			username: "$(JDE_MYSQL_USER)",
 			password: "$(JDE_MYSQL_PWD)",
@@ -19,12 +19,12 @@
 					schemas:{
 						_access:{
 							access:{
-								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet"
+								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet"
 							}
 						},
 						debug:{
 							gateway:{
-								meta: "$(JDE_DIR)/Public/apps/OpcGateway/config/opcGateway-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/OpcGateway/config/opcGateway-meta.jsonnet",
 								prefix: "opc_"  //test with null prefix, debug with prefix
 							}
 						}

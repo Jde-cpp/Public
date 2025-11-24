@@ -2,6 +2,7 @@
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalSubscriptions.h>
 #include "ServerImpl.h"
+#include <jde/app/proto/Common.pb.h>
 
 #define let const auto
 
@@ -97,5 +98,23 @@ namespace Jde::Web::Server{
 		catch( std::exception& e ){
 			WriteException( move(e), requestId );
 		}
+	}
+	α IWebsocketSession::Query( Proto::Query&& query, RequestId requestId, function<string(string&&, RequestId)>&& toProtoQuery )ι->QL::QLAwait<jvalue>::Task{
+		let _ = shared_from_this();
+		try{
+			LogRead( Ƒ("GraphQL{}: {}", query.return_raw() ? "*" : "", query.text()), requestId );
+			auto j = co_await QL::QLAwait<jvalue>( move(*query.mutable_text()), parse(move(*query.mutable_variables())).as_object(), _userPK, Schemas(), query.return_raw() );
+			auto y = serialize( move(j) );
+			LogWrite( Ƒ("GraphQL: {}", y.substr(0,100)), requestId );
+			Write( toProtoQuery(move(y), requestId) );
+		}
+		catch( exception& e ){
+			WriteException( move(e), requestId );
+		}
+	}
+	α IWebsocketSession::SetSessionId( SessionPK sessionId )ι->void{
+		if( !_sessionInfo )
+			_sessionInfo = ms<SessionInfo>();
+		_sessionInfo->SessionId = sessionId;
 	}
 }

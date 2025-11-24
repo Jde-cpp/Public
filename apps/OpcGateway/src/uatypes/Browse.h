@@ -25,7 +25,7 @@ namespace Browse{
 		α Nodes()Ι->flat_set<NodeId>;
 		α Variables()Ι->flat_set<NodeId>;
 		α SetJson( flat_map<NodeId, jobject>& children, bool addId )Ι->void;
-		α ToJson( flat_map<NodeId, Value>&& snapshot, flat_map<NodeId, NodeId>&& dataTypes )ε->jobject;
+		α ToJson( flat_map<NodeId, Value>&& snapshot, flat_map<NodeId, variant<NodeId, StatusCode>>&& dataTypes )ε->jobject;
 
 		UA_BrowseResultMask Attribs{ UA_BROWSERESULTMASK_ALL };
 	};
@@ -56,8 +56,8 @@ namespace Browse{
 	private:
 		α Execute()ι->TAwait<Browse::Response>::Task;
 		α Snapshot( Browse::Response response )ι->TAwait<flat_map<NodeId, Value>>::Task;
-		α Attributes( flat_set<NodeId>&& variables, Browse::Response response, flat_map<NodeId, Value> values={} )ι->TAwait<flat_map<NodeId, NodeId>>::Task;
+		α Attributes( flat_set<NodeId>&& variables, Browse::Response response, flat_map<NodeId, Value> values={} )ι->TAwait<flat_map<NodeId, variant<NodeId, StatusCode>>>::Task;
 		α Retry()ι->VoidAwait::Task;
-		sp<UAClient> _ua; NodeId _node; bool _snapshot;
+		sp<UAClient> _client; NodeId _node; bool _snapshot;
 	};
 }

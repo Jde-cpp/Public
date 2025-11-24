@@ -3,7 +3,7 @@ buildTarget=${1:-Debug};#relWithDebInfo
 clean=${2:-0};
 buildDir=${3:-$JDE_BUILD_DIR};
 
-sourceDir=$JDE_DIR/Public;
+sourceDir=$JDE_DIR;
 
 windows() { [[ -n "$WINDIR" ]]; }
 

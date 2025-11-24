@@ -104,15 +104,15 @@ namespace Jde::Opc::Gateway{
 		Sessions::Remove( _request.SessionId() );
 		try{
 			auto appClient = AppClient();
-			co_await *(appClient->QLServer()->Query(Ƒ( "purgeSession(id:\"{:x}\")", _request.SessionId() ), {}, appClient->UserPK()) );
+			co_await *( appClient->QLServer()->Query(Ƒ("purgeSession(id:\"{:x}\")", _request.SessionId()), {}, appClient->UserPK()) );
 			Resume( move(_request) );
 		}
 		catch( IException& e )
 		{}
 	}
-	α HttpRequestAwait::Query()ι->TAwait<HttpTaskResult>::Task{
+	α HttpRequestAwait::Query()ι->TAwait<jvalue>::Task{
 		try{
-			string query = _request.IsGet() ? _request["query"] : Json::AsString(_request.Body(), "query" );
+			string query = _request.IsGet() ? _request["query"] : Json::AsString( _request.Body(), "query" );
 			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(_request), "no query") );
 			jobject vars;
 			if( auto variableString = _request.IsGet() ? _request["variables"] : string{}; variableString.size() )
@@ -122,7 +122,8 @@ namespace Jde::Opc::Gateway{
 			_request.LogRead( query );
 			auto ql = QL::Parse( move(query), move(vars), Schemas(), _request.Params().contains("raw") );
 			THROW_IFX( ql.IsMutation() && !_request.IsPost(), RestException<http::status::bad_request>(SRCE_CUR, move(_request), "Mutations must use post.") );
-			Resume( co_await GatewayQLAwait{move(_request), move(ql)} );
+			jvalue y = co_await GatewayQLAwait{ move(ql), _request.SessionInfo, _request.Params().contains("raw") };
+			Resume( HttpTaskResult{move(y), move(_request)} );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

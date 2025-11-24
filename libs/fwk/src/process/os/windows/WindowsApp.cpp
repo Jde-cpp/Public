@@ -124,7 +124,7 @@ namespace Jde{
 	α Process::Pause()ι->int{
 		INFOT( ELogTags::App | ELogTags::Startup, "Starting main thread loop...{}", _getpid() );
 		if( _isService ){
-			SERVICE_TABLE_ENTRY DispatchTable[] = {  { (char*)Process::ApplicationName().data(), (LPSERVICE_MAIN_FUNCTION)Windows::Service::Main },  { nullptr, nullptr }  };
+			SERVICE_TABLE_ENTRY DispatchTable[] = {  { (char*)Process::AppName().data(), (LPSERVICE_MAIN_FUNCTION)Windows::Service::Main },  { nullptr, nullptr }  };
 			var success = StartServiceCtrlDispatcher( DispatchTable );//blocks?
 			if( !success )
 				Windows::Service::ReportEvent( "StartServiceCtrlDispatcher" );
@@ -216,7 +216,7 @@ namespace Jde{
 
 	α Process::Install( str serviceDescription )ε->void{
 		auto schSCManager = MyOpenSCManager();
-		const string serviceName{ Process::ApplicationName() };
+		const string serviceName{ Process::AppName() };
 		auto service = ServiceHandle{ ::CreateService(schSCManager.get(), serviceName.c_str(), (serviceName).c_str(), SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, ExePath().string().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr) };
 		if( !service.get() ){
 			if( ::GetLastError()==ERROR_SERVICE_EXISTS )
@@ -233,16 +233,16 @@ namespace Jde{
 	}
 	α Process::Uninstall()ε->void{
 		auto manager = MyOpenSCManager();
-		auto service = ServiceHandle{ ::OpenService(manager.get(), Process::ApplicationName().c_str(), DELETE) };
+		auto service = ServiceHandle{ ::OpenService(manager.get(), Process::AppName().c_str(), DELETE) };
 		if( !service.get() ){
 			if( ::GetLastError()==ERROR_SERVICE_DOES_NOT_EXIST )
-				THROW( "Service '{}' not found.", Process::ApplicationName() );
+				THROW( "Service '{}' not found.", Process::AppName() );
 			else
 				THROW( "DeleteService failed - {}", ::GetLastError() );
 		}
 		THROW_IF( !::DeleteService(service.get()), "DeleteService failed:  {:x}", GetLastError() );
 
-		INFOT( ELogTags::App, "Service '{}' deleted successfully", Process::ApplicationName() );
+		INFOT( ELogTags::App, "Service '{}' deleted successfully", Process::AppName() );
 	}
 #undef LoadLibrary
 	α Process::LoadLibrary( const fs::path& path )ε->void*{

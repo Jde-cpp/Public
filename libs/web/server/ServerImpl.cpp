@@ -58,7 +58,7 @@ namespace Server{
 			auto& varContent = req["variables"];
 			auto vars = varContent.size() ? Json::Parse( move(varContent) ) : jobject{};
 			req.LogRead( query );
-			auto result = co_await QL::QLAwait{ move(query), move(vars), req.UserPK(), schemas, returnRaw };
+			auto result = co_await QL::QLAwait{ query, move(vars), req.UserPK(), schemas, returnRaw };
 			jobject y{ {"data", result} };
 			send( move(req), move(stream), move(y), contentType );
 		}

@@ -12,12 +12,12 @@
 			schemas:{
 				_access:{
 					access:{
-						meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet"
+						meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet"
 					}
 				},
 				opc:{
 					opc:{
-						meta: "$(JDE_DIR)/Public/apps/OpcGateway/config/opcGateway-meta.jsonnet",
+						meta: "$(JDE_DIR)/apps/OpcGateway/config/opcGateway-meta.jsonnet",
 						prefix: ""  //test with null prefix, debug with prefix
 					}
 				}

@@ -1,20 +1,20 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "LogTests.Archive",
+		tests: "LogTests.GraphQL",
 		recreateDB:: true,
-		embeddedAppServer: false,
-		embeddedOpcServer: false
+		embeddedAppServer: true,
+		embeddedOpcServer: true
 	},
 	opc: args.opc,
 	dbServers: {
 		scriptPaths: [
-			"$(JDE_DIR)/Public/apps/AppServer/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/Public/libs/access/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/Public/apps/OpcGateway/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/Public/apps/OpcServer/config/sql/"+args.sqlType
+			"$(JDE_DIR)/apps/AppServer/config/sql/"+args.sqlType,
+			"$(JDE_DIR)/libs/access/config/sql/"+args.sqlType,
+			"$(JDE_DIR)/apps/OpcGateway/config/sql/"+args.sqlType,
+			"$(JDE_DIR)/apps/OpcServer/config/sql/"+args.sqlType
 		],
-		dataPaths: ["$(JDE_DIR)/Public/apps/AppServer/config", "$(JDE_DIR)/Public/libs/access/config"],
+		dataPaths: ["$(JDE_DIR)/apps/AppServer/config", "$(JDE_DIR)/libs/access/config"],
 		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
@@ -36,7 +36,7 @@ local args = import 'args.libsonnet';
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",
-		mutationsDir:: "$(JDE_DIR)/Public/apps/OpcServer/config/mutations/pumps",
+		mutationsDir:: "$(JDE_DIR)/apps/OpcServer/config/mutations/pumps",
 		configFiles: [
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
@@ -57,12 +57,13 @@ local args = import 'args.libsonnet';
 		spd:{
 			defaultLevel:: "Information",
 			tags: {
-				trace:["test", "app", "http.client.write", "http.client.read", "ql", "sql"],
-				debug:["settings", "scheduler", "uaEvent",
+				trace:["test", "app", "http.client.write", "http.client.read", "ql", "processingLoop"],
+				debug:["settings", "sql", "scheduler", "uaEvent",
 					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
-					"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
-					"monitoring", "browse", "processingLoop", "monitoring.pedantic"],
-				information:["threads", "uaSecure"],
+					"uaSession", "uaServer", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
+					"monitoring", "browse", "monitoring.pedantic"],
+				information:["threads",
+					"uaSecure", "uaClient", "uaNet"],
 				warning:[],
 				"error":[],
 				critical:[]
@@ -80,9 +81,9 @@ local args = import 'args.libsonnet';
 			timeZone: "America/New_York",
 			delay: "PT1M"
 		},
-		remote:{
-			delay: "PT2S"
-		}
+		// remote:{
+		// 	delay: "PT2S"
+		// }
 	},
 	workers:{
 		executor: {threads: 2},

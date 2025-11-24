@@ -3,7 +3,7 @@ include( ../../../build/functions.cmake )
 project( Jde.App.Client VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
-include_directories( $ENV{JDE_DIR}/Public/include/jde/web/client/proto )
+include_directories( $ENV{JDE_DIR}/include/jde/web/client/proto )
 
 set( targetName Jde.App.Client )
 add_library( ${targetName} )

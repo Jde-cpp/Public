@@ -1,5 +1,5 @@
 #include <jde/web/server/SessionGraphQL.h>
-#include <jde/fwk/io/proto.h>
+#include <jde/fwk/io/protobuf.h>
 #include <jde/fwk/io/json.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/types/TableQL.h>

@@ -8,10 +8,11 @@
 namespace Jde::Access{
 	α IdentityLoadAwait::Load()ι->QL::QLAwait<jarray>::Task{
 		try{
-			let values = co_await *_ql->QueryArray( "identities{ id deleted is_group }", {}, _executer, true, _sl );
+			auto await = _ql->QueryArray( "identities{ id deleted is_group }", {}, _executer, true, _sl );
+			let values = co_await *await;
 			Identities identities;
 			for( let& value : values ){
-				let& identity = Json::AsObject(value);
+				let& identity = Json::AsObject( value );
 				let isGroup = Json::AsBool(identity, "is_group");
 				let pk{ Json::AsNumber<IdentityPK::Type>(identity, "id") };
 				let deleted = Json::FindTimePoint( identity, "deleted" ).has_value();

@@ -2,7 +2,7 @@
 	"settings": {
 		"window.title": "Gateway",
 		"name": "OpcGateway",
-		"sourceDir": "${env:JDE_BASH}/Public/apps/OpcGateway",
+		"sourceDir": "${env:JDE_BASH}/apps/OpcGateway",
 		"compiler": "msvc",
 		"buildTarget": "Debug",
 		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/jde",
@@ -10,7 +10,7 @@
 		"winBuildDir": "${env:JDE_BUILD_DIR}\\${config:compiler}\\jde\\apps\\${config:name}",
 		"exe": "${config:buildTarget}/Jde.Opc.Gateway.exe",
 		"testExe": "tests/${config:buildTarget}/Jde.Opc.Tests.exe",
-		"sourceBash": "source ${env:JDE_BASH}/Public/build/buildFunctions-win.sh"
+		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh"
 	},
 	"tasks": {
 		"version": "2.0.0",

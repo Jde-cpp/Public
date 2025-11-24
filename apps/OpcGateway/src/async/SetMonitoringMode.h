@@ -16,6 +16,5 @@ namespace Jde::Opc::Gateway{
 		sp<UAClient> _client;
 		uint32 _subscriptionId;
 	};
-	Ξ SetMonitoringMode( sp<UAClient>&& c, uint32 subscriptionId )ι->SetMonitoringModeAwait{ return SetMonitoringModeAwait{ move(c), subscriptionId }; }
 	α SetMonitoringModeCallback( UA_Client *client, void *userdata, RequestId requestId, UA_SetMonitoringModeResponse* response )ι->void;
 }

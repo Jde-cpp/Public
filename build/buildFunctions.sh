@@ -6,7 +6,12 @@ function buildRelativePath() {
 		relativePath="libs/framework/lib";
 	elif [[ ${fileWorkspaceFolder##*Public/} != $fileWorkspaceFolder ]]; then
 		relativePath=${fileWorkspaceFolder##*Public/};
-		relativePath=${relativePath/src/lib};
+		filename=$(basename "$absoluteFile");
+		if [[ $filename == "main.cpp" ]]; then
+			relativePath=${relativePath/src/exe};
+		else
+			relativePath=${relativePath/src/lib};
+		fi;
 	else
 		relativePath="";
 	fi;
@@ -19,12 +24,30 @@ function absoluteFile() {
 	echo $absoluteFile;
 }
 function buildProject() {
-	fileWorkspaceFolder=$1;
+	fileDirname=$1;
 	buildRoot=$2;
-	buildRelativePath=`buildRelativePath $fileWorkspaceFolder`;
-	echo "fileWorkspaceFolder:$fileWorkspaceFolder, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath";
-	cd $buildRoot/$buildRelativePath;
-	make -j;
+
+	buildRelativePath=`buildRelativePath $fileDirname`;
+	if [[ $buildRelativePath == "apps/OpcGateway/tests" ]]; then
+		target=Jde.Opc.Tests;
+	elif [[ $buildRelativePath == *"web/server" ]]; then
+		target=Jde.Web.Server;
+	elif [[ $buildRelativePath == *"app/client" ]]; then
+		target=Jde.App.Client;
+	elif [[ $buildRelativePath == *"app/shared"* ]]; then
+		target=Jde.App.Shared;
+	elif [[ $buildRelativePath == *"OpcGateway/lib"* ]]; then
+		target=Jde.Opc.GatewayLib;
+	elif [[ $buildRelativePath == "apps/AppServer"* ]]; then
+		target=Jde.App.Server;
+	elif [[ $buildRelativePath == "apps/OpcGateway/tests"* ]]; then
+		target=Jde.Opc.Tests;
+	else
+		target=foo;
+	fi;
+	echo "fileWorkspaceFolder:$fileWorkspaceFolder, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, target=$target";
+	cd $buildRoot;
+	cmake --build . -j --target $target;
 }
 function compile() {
 	workspaceFolder=$1; #/home/duffyj/code/jde/IotWebsocket/config
@@ -36,7 +59,11 @@ function compile() {
 
 	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile";
 	cd $buildRoot/$buildRelativePath;
-	buildFile=${absoluteFile#"$fileWorkspaceFolder/"}
+	buildFile=${absoluteFile#"$fileWorkspaceFolder/"} #shortest-match prefix removal
+	filename=$(basename "$absoluteFile");
+	if [[ $filename == "main.cpp" ]]; then
+		buildFile=src/main.cpp;
+	fi;
 	echo $buildRoot/$buildRelativePath/make $buildFile.o;
 	make ${buildFile}.o;
 }

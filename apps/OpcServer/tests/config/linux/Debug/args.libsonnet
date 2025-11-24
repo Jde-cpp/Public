@@ -17,14 +17,14 @@
 					schemas:{
 						test_opc_server:{
 							access:{
-								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet"
+								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet"
 							},
 							log:{
-								meta: "$(JDE_DIR)/Public/apps/AppServer/config/log-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/AppServer/config/log-meta.jsonnet",
 								prefix: ""   //test with null prefix, debug with prefix
 							},
 							opc:{
-								meta: "$(JDE_DIR)/Public/apps/OpcServer/config/opcServer-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/OpcServer/config/opcServer-meta.jsonnet",
 								prefix: ""
 							},
 						}

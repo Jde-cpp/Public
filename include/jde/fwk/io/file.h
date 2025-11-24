@@ -11,6 +11,7 @@ namespace Jde::IO{
 	Φ Save( const fs::path& path, string value, std::ios_base::openmode openMode, SRCE )ε->void;
 	Ξ Save( const fs::path& path, string value, SRCE )ε->void{ Save( move(path), value, std::ios_base::out, sl ); }
 	Ŧ SaveBinary( const fs::path& path, std::span<T> values, SRCE )ε->void;
+
 #ifdef _WIN32
 	α BashToWindows( const fs::path& path )ι->fs::path;
 #endif

@@ -14,7 +14,6 @@
 
 #define Φ Γ auto
 namespace Jde{
-//	struct Vector;
 	Φ ToString( ELogLevel l )ι->string;
 	α ToLogLevel( sv op )ι->ELogLevel;
 	α LogLevelStrings()ι->const std::array<sv,7>;
@@ -22,8 +21,8 @@ namespace Jde{
 
 
 #define LOGSL(level, sl, tags, message,...) \
-	if( Logging::ShouldLog(level, tags) && !Process::Finalizing() ){\
- 		Logging::Log( level, tags, sl, message __VA_OPT__(,) __VA_ARGS__ );\
+	if( Logging::ShouldLog(level, (ELogTags)tags) && !Process::Finalizing() ){\
+ 		Logging::Log( level, (ELogTags)tags, sl, message __VA_OPT__(,) __VA_ARGS__ );\
 	}
 #define LOG(level, tags, message,...) LOGSL( level, SRCE_CUR, tags, message __VA_OPT__(,) __VA_ARGS__ )
 #define CRITICAL(message,...) CRITICALT( _tags, message __VA_OPT__(,) __VA_ARGS__ )
@@ -47,14 +46,23 @@ namespace Jde::Logging{
 	Φ LogException( const IException& e )ι->void;
 	Φ DestroyLoggers( bool terminate )->void;
 	Φ Loggers()->const vector<up<ILogger>>&;
-	Φ MemoryLogger()ε->MemoryLog&;
-	Φ AddLogger( up<ILogger>&& logger )->void;
-	Φ Initialize()ι->void;
+	Ŧ GetLogger()ι->T*;
+	Φ AddLogger( up<ILogger>&& logger )ι->ILogger*;
+	Φ Init()ι->void;
 	Φ ClientMinLevel()ι->ELogLevel;
 	namespace Proto{class Status;}
 	Φ SetStatus( const vector<string>& values )ι->void;
 	α SetLogLevel( ELogLevel client, ELogLevel server )ι->void;
 	α GetStatus()ι->up<Proto::Status>;
+}
+namespace Jde{
+	Ŧ Logging::GetLogger()ι->T*{
+		for( auto& logger : Loggers() ){
+			if( auto log = dynamic_cast<T*>( logger.get() ) )
+				return log;
+		}
+		return nullptr;
+	}
 }
 #undef Φ
 #endif

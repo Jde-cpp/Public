@@ -26,7 +26,7 @@ namespace Jde::Opc::Server{
 			r.GetBitOpt(20).value_or(false)
 		}
 	{}
-	α ObjectType::InsertParams()ι->vector<DB::Value>{
+	α ObjectType::InsertParams()Ι->vector<DB::Value>{
 		vector<DB::Value> params = Node::InsertParams();
 		params.emplace_back( isAbstract, 0 );
 		return params;

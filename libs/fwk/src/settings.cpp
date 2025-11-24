@@ -106,7 +106,7 @@ namespace Jde{
 		}
 
 		auto p = find_if( paths, []( let& path ){return fs::exists(path);} );
-		_path = p!=paths.end() ? *p : Process::ApplicationDataFolder()/fileName;
+		_path = p!=paths.end() ? *p : Process::AppDataFolder()/fileName;
 		std::cout << "settings path=" << _path.string() << std::endl;
 		return _path;
 	}

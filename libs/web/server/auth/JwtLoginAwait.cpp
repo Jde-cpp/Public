@@ -10,8 +10,9 @@ namespace Jde::Web::Server{
 			UserPK userPK{};
 			if( _jwt.Iss()=="https://accounts.google.com" ){
 				//THROW_IF( !_isAppServer, "Google login only implemented on Application Server." );
-				if( !_isAppServer )
+				if( !_isAppServer ){
 					BREAK;// test
+				}
 				userPK = co_await GoogleLoginAwait( move(_jwt) );
 			}
 			else{

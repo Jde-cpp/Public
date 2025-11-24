@@ -45,20 +45,23 @@ namespace Jde{
 }
 
 #pragma warning(disable:4334)
-α Jde::ToString( ELogTags tags )ι->string{
+α Jde::ToArray( ELogTags tags )ι->jarray{
 	if( tags==ELogTags::None )
-		return string{ELogTagStrings[0]};
-	vector<string> tagStrings;
+		return { string{ELogTagStrings[0]} };
+	jarray tagStrings;
 	for( uint i=1; i<ELogTagStrings.size(); ++i ){
 		if( (uint)tags & (uint)(1ul<<(i-1ul)) )
-			tagStrings.push_back( string{ELogTagStrings[i]} );
+			tagStrings.push_back( jstring{ELogTagStrings[i]} );
 	}
 	for( let& parser : _tagParsers ){
 		auto additional = parser->ToString(tags);
 		if( additional.size() )
-			tagStrings.push_back( additional );
+			tagStrings.push_back( jstring{additional} );
 	}
-	return tagStrings.empty() ? string{ELogTagStrings[0]} : Str::Join( tagStrings, "." );
+	return tagStrings.empty() ? jarray{ jstring{ELogTagStrings[0]} } : tagStrings;
+}
+α Jde::ToString( ELogTags tags )ι->string{
+	return serialize( ToArray(tags) );
 }
 
 α Jde::ToLogTags( sv name )ι->ELogTags{

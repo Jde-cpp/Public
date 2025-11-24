@@ -71,6 +71,7 @@ namespace Jde{
 	constexpr ELogTags DefaultTag=ELogTags::App;
 	Φ ShouldTrace( ELogTags tags )ι->bool;
 	Φ ToString( ELogTags tags )ι->string;
+	Φ ToArray( ELogTags tags )ι->jarray;
 	Φ ToLogTags( sv name )ι->ELogTags;
 namespace Logging{
 	struct ITagParser{

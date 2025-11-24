@@ -1,12 +1,12 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "ResourceTests.CheckDefaults",
+		tests: "GroupTests.Fields",
 		recreateDB:: true
 	},
 	dbServers:{
-		scriptPaths: ["$(JDE_DIR)/Public/libs/access/config/sql/"+args.sqlType],
-		dataPaths: ["$(JDE_DIR)/Public/libs/access/config"],
+		scriptPaths: ["$(JDE_DIR)/libs/access/config/sql/"+args.sqlType],
+		dataPaths: ["$(JDE_DIR)/libs/access/config"],
 		sync: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
@@ -20,8 +20,8 @@ local args = import 'args.libsonnet';
 	logging:{
 		spd:{
 			tags: {
-				trace:["test", "access", "ql"],
-				debug:["settings", "sql"],
+				trace:["test", "access", "app"],
+				debug:["settings", "sql", "ql"],
 				information:["app"],
 				warning:[],
 				"error":[],

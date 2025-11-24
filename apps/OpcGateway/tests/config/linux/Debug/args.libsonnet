@@ -7,12 +7,13 @@
 	},
 	opcServer: {
 		trustedCertDirs: [
-			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs"
+			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs",
+			"$(HOME)/.Jde-Cpp/Tests.Opc/ssl/certs"
 		]
 	},
 	dbServers: {
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/jde/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",
+			driver: "$(JDE_BUILD_DIR)/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",
 			connectionString: null,
 			username: "$(JDE_MYSQL_USER)",
 			password: "$(JDE_MYSQL_PWD)",
@@ -22,18 +23,18 @@
 					schemas:{
 						test_opc:{
 							access:{
-								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet"
+								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet"
 							},
 							log:{
-								meta: "$(JDE_DIR)/Public/apps/AppServer/config/log-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/AppServer/config/log-meta.jsonnet",
 								prefix: ""   //test with null prefix, debug with prefix
 							},
 							gateway:{
-								meta: "$(JDE_DIR)/Public/apps/OpcGateway/config/opcGateway-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/OpcGateway/config/opcGateway-meta.jsonnet",
 								prefix: ""
 							},
 							opc:{
-								meta: "$(JDE_DIR)/Public/apps/OpcServer/config/opcServer-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/OpcServer/config/opcServer-meta.jsonnet",
 								prefix: ""
 							},
 						}

@@ -2,7 +2,7 @@
 	"settings": {
 		"window.title": "Crypto",
 		"name": "crypto",
-		"sourceDir": "${env:JDE_BASH}/Public/libs/${config:name}",
+		"sourceDir": "${env:JDE_BASH}/libs/${config:name}",
 		"buildDir": "/z/build/msvc/jde/libs/${config:name}",
 		"exe": "tests/Jde.Crypto.Tests",
 	},

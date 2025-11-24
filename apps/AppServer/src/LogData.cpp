@@ -1,6 +1,6 @@
 ﻿#include "LogData.h"
-#include <jde/app/shared/StringCache.h>
-#include <jde/app/shared/proto/App.FromServer.h>
+#include <jde/app/StringCache.h>
+#include <jde/app/proto/app.FromServer.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/db.h>
 #include <jde/db/IDataSource.h>
@@ -88,8 +88,8 @@ namespace Server{
 
 namespace Jde{
 	α App::AddInstance( str applicationName, str hostName, uint processId )ε->std::tuple<AppPK, AppInstancePK>{
-		AppPK applicationId;
-		AppInstancePK applicationInstanceId;
+		AppPK applicationId{};
+		AppInstancePK applicationInstanceId{};
 		let rows = ds().Select( {
 			Ƒ("{}(?,?,?)", _logSchema->GetTable("app_instances").InsertProcName()),
 			{DB::Value{applicationName}, DB::Value{hostName}, DB::Value{processId}},

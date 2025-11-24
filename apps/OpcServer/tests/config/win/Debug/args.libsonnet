@@ -17,17 +17,17 @@
 					schemas:{
 						access:{
 							access:{
-								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet"
+								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet"
 							}
 						},
 						log:{
 							log:{
-								meta: "$(JDE_DIR)/Public/apps/AppServer/config/log-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/AppServer/config/log-meta.jsonnet",
 							}
 						},
 						opc:{
 							opc:{
-								meta: "$(JDE_DIR)/Public/apps/OpcServer/config/opcServer-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/OpcServer/config/opcServer-meta.jsonnet",
 								prefix: ""
 							},
 						}

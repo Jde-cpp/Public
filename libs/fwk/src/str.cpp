@@ -2,11 +2,22 @@
 #include <algorithm>
 #include <functional>
 #include <boost/algorithm/hex.hpp>
+#include <boost/uuid/string_generator.hpp>
 #include <fmt/args.h>
 
 #ifdef _MSC_VER
 	#include <jde/fwk/process/os/windows/WindowsUtilities.h>
 #endif
+
+boost::uuids::string_generator _gen;
+α Jde::ToUuid( sv s, SL sl )ε->uuid{
+	try{
+		return _gen( s.data(), s.data()+s.size() );
+	}
+	catch( const std::runtime_error& e ){
+		throw Exception( ELogTags::Parsing, sl, "Invalid UUID string '{}': {}", s, e.what() );
+	}
+}
 
 namespace Jde{
 	const string _empty;
@@ -29,11 +40,21 @@ namespace Jde{
 		}
 		return y;
 	}
-	α Str::Format( sv format, vector<string> args )ι->string{
+	α Str::Format( sv format, vector<string> args )ε->string{
     fmt::dynamic_format_arg_store<fmt::format_context> store;
 		for( auto&& arg : args )
 			store.push_back( move(arg) );
     return fmt::vformat(format, store);
+	}
+	α Str::TryFormat( sv format, vector<string> args )ι->string{
+		try{
+			return Str::Format( format, move(args) );
+		}
+		catch( const std::exception& e ){
+			string msg = Ƒ("{}[{}]", format, Join(args, ", "));
+			DBGT( ELogTags::Parsing, "Format error: {}, error: {}", msg, e.what() );
+			return string{ msg };
+		}
 	}
 	α Str::Replace( sv source, char find_, char replace )ι->string{
 		string result{ source };
@@ -71,13 +92,13 @@ namespace Jde{
 	}
 
 #pragma warning( disable: 4244 )
-	α Transform( sv source, function<int(int)> fnctn )ι->string{
+	Ω transform( sv source, function<int(int)> fnctn )ι->string{
 		string result{ source };
 		std::transform( result.begin(), result.end(), result.begin(), fnctn );
 		return result;
 	}
-	α Str::ToLower( sv source )ι->string{ return Transform( source, ::tolower ); }
-	α Str::ToUpper( sv source )ι->string{ return Transform( source, ::toupper ); }
+	α Str::ToLower( sv source )ι->string{ return transform( source, ::tolower ); }
+	α Str::ToUpper( sv source )ι->string{ return transform( source, ::toupper ); }
 
 
 	α GetChar( sv x, uint& i )ι->wchar_t{
@@ -99,7 +120,6 @@ namespace Jde{
 		if( ch>0xff && i>1 )
 			i-=2;
 		return i ? sv{ s.data()+i, s.size()-i } : s;
-		//return s;
 	}
 
 

@@ -12,7 +12,7 @@
 	},
 	dbServers: {
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/msvc/jde/libs/db/drivers/odbc/Debug/Jde.DB.Odbc.dll",
+			driver: "$(JDE_BUILD_DIR)/msvc/Debug/libs/db/drivers/odbc/Debug/Jde.DB.Odbc.dll",
 			connectionString: "DSN=OpcTestsDebug",
 			username: null,
 			password: null,
@@ -22,22 +22,22 @@
 					schemas:{
 						access:{
 							access:{
-								meta: "$(JDE_DIR)/Public/libs/access/config/access-meta.jsonnet"
+								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet"
 							}
 						},
 						log:{
 							log:{
-								meta: "$(JDE_DIR)/Public/apps/AppServer/config/log-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/AppServer/config/log-meta.jsonnet",
 							}
 						},
 						gateway:{
 							gateway:{
-								meta: "$(JDE_DIR)/Public/apps/OpcGateway/config/opcGateway-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/OpcGateway/config/opcGateway-meta.jsonnet",
 							}
 						},
 						opc:{
 							opc:{
-								meta: "$(JDE_DIR)/Public/apps/OpcServer/config/opcServer-meta.jsonnet",
+								meta: "$(JDE_DIR)/apps/OpcServer/config/opcServer-meta.jsonnet",
 								prefix: ""
 							},
 						}
