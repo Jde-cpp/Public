@@ -1,10 +1,10 @@
 #include "gtest/gtest.h"
-#include "../../Framework/source/Settings.h"
-#include <jde/App.h>
+#include <jde/fwk/settings.h>
+#include <jde/fwk/process/process.h>
 #include <jde/app/shared/proto/App.FromClient.pb.h>
 #include <jde/app/shared/proto/App.FromServer.pb.h>
-#include "../../AppServer/source/LogData.h"
-#include "../../Framework/source/db/Database.h"
+//#include "../../AppServer/source/LogData.h"
+//#include "../../Framework/source/db/Database.h"
 
 #define let const auto
 namespace Jde{

@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
-#include "../../Framework/source/DateTime.h"
-#include "../../Framework/source/threading/Thread.h"
+#include <jde/fwk/chrono.h>
+#include <jde/fwk/process/thread.h>
 //#include "../../../Framework/source/log/server/ServerSink.h"
 
 #define let const auto

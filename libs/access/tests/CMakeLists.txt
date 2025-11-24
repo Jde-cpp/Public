@@ -38,7 +38,7 @@ target_sources(${targetName} PRIVATE ${sources} ${headers} )
 
 find_package( GTest REQUIRED )
 if( Boost_USE_STATIC_LIBS )
-	target_link_libraries( ${targetName} PUBLIC Boost::json )
+	target_link_libraries( ${targetName} Boost::json )
 endif()
 target_link_libraries( ${targetName} GTest::gtest )
 target_link_libraries( ${targetName} Jde.Access Jde.DB Jde.QL Jde )

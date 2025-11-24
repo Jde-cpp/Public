@@ -4,7 +4,6 @@ project( Jde.Opc.Server VERSION ${JDE_VERSION} LANGUAGES CXX )
 
 include( ../../../build/dependencies.cmake )
 
-message( CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH} )
 find_package( open62541 REQUIRED )
 find_package( NodesetLoader REQUIRED )
 set( open62541Dir ${open62541_DIR}/../../.. )

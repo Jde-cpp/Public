@@ -12,7 +12,7 @@ include_directories( ${fmt_DIR}/../../../include )
 
 find_package( spdlog REQUIRED )
 include_directories( ${spdlog_DIR}/../../../include )
-list( APPEND CMAKE_PREFIX_PATH "${LIB_DIR}/protobuf/lib/cmake/utf8_range" )
+list( APPEND CMAKE_PREFIX_PATH "${MULTI_INSTALL_PREFIX}/protobuf/lib/cmake/utf8_range" )
 
 find_package( protobuf CONFIG "32.1.0" EXACT REQUIRED )
 get_filename_component( protobuf_INCLUDE_DIRS ${protobuf_DIR}/../../../include ABSOLUTE )

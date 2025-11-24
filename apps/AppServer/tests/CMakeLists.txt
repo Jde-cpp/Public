@@ -11,6 +11,8 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 find_package( GTest REQUIRED )
 
+target_link_libraries( ${targetName} GTest::gtest GTest::gtest_main )
+
 target_precompile_headers( ${targetName} PRIVATE
 	<jde/fwk.h>
 	"externals.h"

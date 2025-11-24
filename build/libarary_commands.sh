@@ -12,7 +12,7 @@ bootstrap.bat --prefix=C:\Users\duffyj\source\repos\libs\install\clang\boost --w
 b2.exe toolset=clang --prefix=C:\Users\duffyj\source\repos\libs\install\clang\boost --with-json -q install
 
 bootstrap.bat --prefix=C:\Users\duffyj\source\repos\libs\install\msvc\boost --with-toolset=msvc
-b2.exe toolset=clang --prefix=C:\Users\duffyj\source\repos\libs\install\clang\boost --with-json -q install
+b2.exe toolset=msvc address-model=64 address-sanitizer=on --prefix=C:\Users\duffyj\source\repos\libs\install\msvc\multi\boost --with-json --with-headers -q install
 
 
 DST_DIR=$REPO_DIR/install/g++-14/RelWithDebInfo/boost

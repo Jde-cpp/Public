@@ -42,7 +42,7 @@ endif()
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 
 if( Boost_USE_STATIC_LIBS )
-	target_link_libraries( ${targetName} PUBLIC Boost::json )
+	target_link_libraries( ${targetName} Boost::json )
 endif()
 find_package( GTest REQUIRED )
 target_link_libraries( ${targetName} GTest::gtest_main )
