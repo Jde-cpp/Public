@@ -13,7 +13,7 @@ namespace Jde::Opc{
 		Value( const jvalue& j, UA_DataType* dt, SRCE )ε:UA_DataValue{ .value{.type{dt}} }{ Set(j, sl); }
 		~Value(){ UA_DataValue_clear(this); }
 
-		α operator=( Value&& x )ι->Value&{ UA_DataValue_copy( &x, this ); return *this; }
+		α operator=( Value&& x )ι->Value&;
 		α IsEmpty()Ι->bool{ return UA_Variant_isEmpty(&value); }
 		α IsScaler()Ι->bool{ return UA_Variant_isScalar( &value ); }
 		α ToJson()Ι->jvalue;

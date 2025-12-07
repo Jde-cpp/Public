@@ -37,7 +37,6 @@ namespace Jde::Opc::Gateway{
 		α SubscriptionId()Ι->SubscriptionId{ return CreatedSubscriptionResponse ? CreatedSubscriptionResponse->subscriptionId : 0;}
 
 		α SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void;
-		α SendReadRequest( const flat_set<NodeId>&& nodes, ReadValueAwait::Handle h )ι->void;
 		α SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void;
 		Ω ClearRequest( UA_Client* ua, RequestId requestId )ι->void;
 		Ṫ ClearRequestH( UA_Client* ua , RequestId requestId )ι->T;
@@ -81,7 +80,7 @@ namespace Jde::Opc::Gateway{
 
 		ServerCnnctn _opcServer;
 
-		concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
+		//concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
 		vector<VoidAwait::Handle> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
 
 		AsyncRequest _asyncRequest;

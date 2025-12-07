@@ -259,8 +259,8 @@ namespace Client{
 			handle( "Exception<string>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<Proto::FromServer::Strings>::Handle>(&h) )
 			handle( "Exception<Strings>: '{}'.", await );
-//		else if( auto await = std::any_cast<ClientSocketAwait<Web::FromServer::SessionInfo>::Handle>(&h) )
-//			handle( "Exception<SessionInfo>: '{}'.", await );
+		else if( auto await = std::any_cast<ClientSocketAwait<Web::FromServer::SessionInfo>::Handle>(&h) )
+			handle( "Exception<SessionInfo>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<jvalue>::Handle>(&h) )
 			handle( "Exception<jvalue>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<jarray>::Handle>(&h) )

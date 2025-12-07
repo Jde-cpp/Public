@@ -26,7 +26,7 @@
 		"tasks": [
 			{
 				"label": "build",
-				"command": "cd ${config:buildRoot}; tput reset; cmake --build . -j --target Jde.Fwk.Tests;",
+				"command": "cd ${config:buildRoot}; tput reset; cmake --build . -j --target ${config:testTargetName};",
 				"type": "shell",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": true }

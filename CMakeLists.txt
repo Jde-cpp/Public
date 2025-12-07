@@ -39,7 +39,7 @@ if( jde_APPS )
 	add_subdirectory( ${libDir}/web/server libs/web/server )
 	add_subdirectory( ${libDir}/app/shared libs/app/shared )
 	add_subdirectory( ${libDir}/app/client libs/app/client )
-	add_subdirectory( ${libDir}/opc/src libs/opc )
+	add_subdirectory( ${libDir}/opc/src libs/opc/lib )
 
 	add_subdirectory( apps/AppServer/src apps/AppServer/lib )
 	add_subdirectory( apps/OpcServer/src apps/OpcServer/lib )

@@ -18,7 +18,8 @@ namespace Jde::Web::Mock{
 		α WriteException( std::string&&, Jde::RequestId )ι->void override{ ASSERT(false); }
 		α WriteException( IException&& e )ι->void{ WriteException( move(e), 0 ); }
 		α WriteSubscription( const jvalue&, RequestId )ι->void override{ ASSERT(false); }
-		α WriteSubscriptionAck( vector<QL::SubscriptionId>&&, RequestId )ι->void override{ ASSERT(false); }
+		β WriteSubscription( uint32 /*appPK*/, uint32 /*appInstancePK*/, const Logging::Entry&, const QL::Subscription& )ι->void override{ ASSERT(false); }
+		α WriteSubscriptionAck( flat_set<QL::SubscriptionId>&&, RequestId )ι->void override{ ASSERT(false); }
 		α WriteComplete( RequestId )ι->void override{ ASSERT(false); }
 		α OnConnect( SessionPK sessionId, RequestId requestId )ι->Server::Sessions::UpsertAwait::Task;
 

@@ -80,7 +80,7 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 	α GatewayClientSocket::Connect( SessionPK sessionId, SL sl )ι->await<uint32>{
 		let requestId = NextRequestId();
-		return await<uint32>{ FromClientUtils::Connection(requestId, sessionId), requestId, shared_from_this(), sl };
+		return await<uint32>{ FromClientUtils::Connection(sessionId, requestId), requestId, shared_from_this(), sl };
 	}
 
 	flat_map<RequestId, tuple<ServerCnnctnNK, vector<NodeId>, sp<IListener>>> _subscriptionRequests; shared_mutex _subscriptionRequestMutex;

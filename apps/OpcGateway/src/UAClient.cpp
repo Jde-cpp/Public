@@ -304,30 +304,6 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α UAClient::SendReadRequest( const flat_set<NodeId>&& nodeIds, ReadValueAwait::Handle h )ι->void{
-		if( nodeIds.empty() ){
-			h.promise().SetExp( Exception{"no nodes sent"} );
-			return h.resume();
-		}
-		flat_map<UA_UInt32, NodeId> ids;
-		RequestId firstRequestId{};
-		try{
-			//assume 1st will fail if any, request all again if latter node failed.
-			for( auto&& nodeId : nodeIds ){
-				RequestId requestId{};
-				UAε( UA_Client_readValueAttribute_async(_ptr, nodeId, Read::OnResponse, (void*)(uint)firstRequestId, &requestId) );
-				if( !firstRequestId )
-					firstRequestId = requestId;
-				ids.emplace( requestId, nodeId );
-	 		}
-			TRACET( IotReadTag, "[{:x}.{}]SendReadRequest - count={}", Handle(), firstRequestId, ids.size() );
-			_readRequests.try_emplace( firstRequestId, UARequestMulti<Value>{move(ids)} );
-			Process( firstRequestId, move(h), "readValueAttribute" );
-		}
-		catch( UAException& e ){
-			Retry<ReadValueAwait::Handle>( [n=move(nodeIds)](sp<UAClient>&& p, ReadValueAwait::Handle h)mutable{p->SendReadRequest(move(n), move(h));}, move(e), shared_from_this(), move(h) );
-		}
-	}
 	α UAClient::SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void{
 		UA_SetMonitoringModeRequest request{};
 		request.subscriptionId = subscriptionId;

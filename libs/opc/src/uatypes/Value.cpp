@@ -9,7 +9,13 @@
 #define let const auto
 
 namespace Jde::Opc{
-//#define ADD add.operator()
+	α Value::operator=( Value&& x )ι->Value&{
+		UA_DataValue_clear(this);
+		memccpy( this, &x, 1, sizeof(UA_DataValue) );
+		UA_DataValue_init(&x); 
+		return *this;
+	}
+
 #define IS(ua) type==&UA_TYPES[ua]
 	α Value::ToJson()Ι->jvalue{
 		if( status )
