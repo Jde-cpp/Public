@@ -17,6 +17,17 @@ namespace Jde::QL{
 			passesFilters = p->Test( value, logTags );
 		return passesFilters;
 	}
+	α Filter::TestAnd( str columnName, uint value )Ι->bool{
+		bool valid{ true };
+		if( let filters = ColumnFilters.find(columnName); filters!=ColumnFilters.end() ){
+			for( let& filterValue : filters->second ){
+				if( valid = filterValue.TestAnd(value); valid )
+					break;
+			}
+		}
+		return valid;
+	}
+
 
 	α FilterValue::Test( const DB::Value& db, ELogTags logTags )Ι->bool{
 		using namespace Json;
@@ -47,6 +58,11 @@ namespace Jde::QL{
 		}
 		return passesFilters;
 	}
+	α FilterValue::TestAnd( uint value )Ι->bool{
+		auto filter = Value.try_to_number<uint>();
+		return filter && (*filter & value);
+	}
+
 }
 namespace Jde{
 	α QL::ToString( DB::EOperator op )ι->string{

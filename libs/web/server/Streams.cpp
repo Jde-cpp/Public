@@ -88,7 +88,7 @@ namespace Jde::Web::Server{
 					l.unlock();
 					let tags = ELogTags::SocketClientWrite | ELogTags::ExternalLogger;
 					if( ec || out->size()!=bytes_transferred ){
-						DBGT( tags, "Error writing to Session:  '{}'", boost::diagnostic_information(ec) );
+						DBGT( tags, "({})Error writing to Session:  '{}'", ec.value(), boost::diagnostic_information(ec) );
 						try{
 							ws.close( websocket::close_code::none );
 						}

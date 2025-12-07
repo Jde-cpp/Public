@@ -89,7 +89,7 @@
 			"type": "shell",
 			"dependsOn": ["build", "clearTerminal"],
 			"command": "./${config:exe}",
-			"args": ["-c", "-settings=${env:JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet"],
+			"args": ["-c", "-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet"],
 			"options": {
 				"cwd": "${config:buildDir}",
 				"env": {
@@ -107,7 +107,7 @@
 				"request": "launch",
 				"program": "${config:buildDir}/${config:exe}",
 				"args": [
-					"-settings=${env:JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet",
+					"-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet",
 					"-tests"
 				],
 				"stopAtEntry": false,
@@ -126,7 +126,7 @@
 				"request": "launch",
 				"program": "${env:JDE_DIR}/Release/g++-14/libs/access/tests/Jde.Access.Tests",
 				"args": [
-					"-settings=${env:JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet",
+					"-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet",
 					"-tests"
 				],
 				"environment": [

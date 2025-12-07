@@ -1,9 +1,10 @@
 #include "ServerSocketSession.h"
+#include <jde/fwk/chrono.h>
+#include <jde/fwk/log/Logger.h>
 #include <jde/app/log/ProtoLog.h>
 #include <jde/app/proto/app.FromServer.h>
 #include <jde/app/StringCache.h>
 #include <jde/app/proto/app.FromClient.h>
-#include <jde/fwk/chrono.h>
 #include <jde/access/server/accessServer.h>
 #include "LocalClient.h"
 #include "LogData.h"
@@ -92,11 +93,12 @@ namespace Jde::App::Server{
 		}
 		vector<string> args = Protobuf::ToVector( move(*entry.mutable_args()) );
 		Logging::Entry y{ App::FromClient::FromLogEntry(move(entry)) };
-		y.Text = StringCache::GetMessage( y.Id() );
-		y.SetFile( StringCache::GetFile(y.FileId()) );
-		y.SetFunction( StringCache::GetFunction(y.FunctionId()) );
-		if( auto p = Logging::GetLogger<ProtoLog>(); p )
-			p->Write( move(y) );
+		//y.Text = StringCache::GetMessage( y.Id() );
+		//y.SetFile( StringCache::GetFile(y.FileId()) );
+		//y.SetFunction( StringCache::GetFunction(y.FunctionId()) );
+		Logging::Log( move(y), _appPK, _instancePK );
+		// if( auto p = Logging::FindLogger<ProtoLog>(); p )
+		// 	p->Write( move(y), _appPK, _instancePK );
 	}
 	α ServerSocketSession::SendAck( uint32 id )ι->void{
 		Write( FromServer::Ack(id) );
@@ -290,12 +292,16 @@ namespace Jde::App::Server{
 		LogWriteException( e, requestId );
 		Write( FromServer::Exception(move(e), requestId) );
 	}
-	α ServerSocketSession::WriteSubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void{
+	α ServerSocketSession::WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void{
 		Write( FromServer::SubscriptionAck(move(subscriptionIds), requestId) );
 	}
 	α ServerSocketSession::WriteSubscription( const jvalue& j, RequestId requestId )ι->void{
 		auto serialized = serialize( j );
 		LogWrite( Ƒ("Subscription: {}", serialized.substr(0,100)), requestId );
 		Write( FromServer::Subscription(move(serialized), requestId) );
+	}
+	α ServerSocketSession::WriteSubscription( App::AppPK appPK, App::AppInstancePK instancePK, const Logging::Entry& e, const QL::Subscription& sub )ι->void{
+		LogWrite( Ƒ("Subscription: {}", e.Text), 0 );
+		Write( FromServer::LogSubscription(appPK, instancePK, e, sub) );
 	}
 }

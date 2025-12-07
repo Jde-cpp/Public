@@ -6,7 +6,7 @@
 		"compiler": "msvc",
 		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/jde",
 		"buildDir": "${config:buildRoot}/libs/${config:name}",
-		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions-win.sh",
+		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions-win.sh",
 	},
 	"tasks": {
 		"version": "2.0.0",

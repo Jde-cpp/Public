@@ -198,12 +198,16 @@ namespace Client{
 			case kSubscriptionAck:
 				if( !_subscriptionRequests.erase_if(requestId, [&](auto&& kv){
 					auto& listenerSubs = kv.second;
-					Web::Client::Subscriptions::ListenRemote( listenerSubs.first, move(listenerSubs.second) );
+					for( auto& sub : listenerSubs.second ){
+						if( sub.Id == 0 )
+							sub.Id = requestId;
+						Web::Client::Subscriptions::ListenRemote( listenerSubs.first, move(sub) );
+					}
 					return true;
-				}) ){
+				}) ){ //request not found.
 					HandleException( move(hAny), Exception{"SubscriptionAck: '{}' not found.", requestId}, requestId );
 				}
-				else{
+				else{ //found the request.
 					jarray y;
 					for_each( m->subscription_ack().server_ids(), [&](auto id){y.emplace_back(id);} );
 					TRACE( "[{:x}]SubscriptionAck: '{}'.", Id(), serialize(y) );
@@ -228,7 +232,12 @@ namespace Client{
 			case kStringPks://strings already saved in db, no need to send.  not being requested by client yet.
 				CRITICAL( "[{:x}]No use case has been implemented on client app '{}'.", Id(), underlying(m->Value_case()) );
 				break;
-			case kTraces:
+			[[likely]]case kTraces:{
+				auto& traces = *m->mutable_traces();
+				TRACE( "[{:x}]Traces: count='{}'.", Id(), traces.values_size() );
+				Web::Client::Subscriptions::OnTraces( move(traces), requestId );
+				break;}
+			[[unlikely]]
 			case kStatus:
 				CRITICAL( "[{:x}]Web only call not implemented on client app '{}'.", Id(), (uint)m->Value_case() );
 			break;
@@ -254,6 +263,8 @@ namespace Client{
 //			handle( "Exception<SessionInfo>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<jvalue>::Handle>(&h) )
 			handle( "Exception<jvalue>: '{}'.", await );
+		else if( auto await = std::any_cast<ClientSocketAwait<jarray>::Handle>(&h) )
+			handle( "Exception<jarray>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<Web::Jwt>::Handle>(&h) )
 			handle( "Exception<Jwt>: '{}'.", await );
 		else{

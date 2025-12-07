@@ -13,7 +13,7 @@ namespace Jde::Opc::Gateway::Tests{
 		TRACE( "UserPK: {:x}, SessionId: {:x}", _jwt->UserPK.Value, sessionId );
 		auto con = GetConnection( OpcServerTarget );
 		Credential cred{ _jwt->Payload() };
-		_client = BlockAwait<TAwait<sp<UAClient>>,sp<UAClient>>( ConnectAwait{move(con.Target), cred} );
+		_client = BlockTAwait<sp<UAClient>>( ConnectAwait{move(con.Target), cred} );
 		AddSession( sessionId, OpcServerTarget, move(cred) );
 	}
 	α ITest::TearDownTestCase()ι->void{

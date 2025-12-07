@@ -88,19 +88,30 @@ namespace Jde::Opc::Gateway::Tests{
 	α GatewayClientSocket::Query( string&& query, jobject variables, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]'{}', variables: {}.", requestId, query, serialize(variables) );
-		return ClientSocketAwait<jvalue>{ FromClientUtils::Query(requestId, move(query), move(variables), returnRaw), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<jvalue>{ FromClientUtils::Query(move(query), move(variables), returnRaw, requestId), requestId, shared_from_this(), sl };
 	}
 	α GatewayClientSocket::Subscribe( ServerCnnctnNK target, const vector<NodeId>& nodes, sp<IListener> listener, SL sl )ε->await<FromServer::SubscriptionAck>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, target );
 		ul _{ _subscriptionRequestMutex };
 		_subscriptionRequests.emplace( requestId, make_tuple(target, nodes, move(listener)) );
-		return await<FromServer::SubscriptionAck>{ FromClientUtils::Subscription(requestId, move(target), nodes), requestId, shared_from_this(), sl };
+		return await<FromServer::SubscriptionAck>{ FromClientUtils::Subscription(move(target), nodes, requestId), requestId, shared_from_this(), sl };
+	}
+
+	flat_map<SubscriptionId, sp<IListener>> _logSubscriptions; shared_mutex _logSubscriptionsMutex;
+	α GatewayClientSocket::LogSubscribe( jobject&& ql, jobject vars, sp<IListener> listener, SL sl )ε->ClientSocketAwait<jarray>{
+		let requestId = NextRequestId();
+		ql["id"] = requestId;
+		ul _{ _logSubscriptionsMutex };
+		_logSubscriptions.emplace( (uint32)requestId, move(listener) );
+		auto query = serialize(ql);
+		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, query.substr(0, Web::Client::MaxLogLength()) );
+		return ClientSocketAwait<jarray>{ FromClientUtils::Query(move(query), move(vars), true, requestId), requestId, shared_from_this(), sl };
 	}
 	α GatewayClientSocket::Unsubscribe( ServerCnnctnNK target, const vector<NodeId>& nodeIds, SL sl )ε->ClientSocketAwait<FromServer::UnsubscribeAck>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Unsubscribe: '{}'.", requestId, target );
-		return ClientSocketAwait<FromServer::UnsubscribeAck>{ FromClientUtils::Unsubscription(requestId, move(target), nodeIds), requestId, shared_from_this(), sl };
+		return ClientSocketAwait<FromServer::UnsubscribeAck>{ FromClientUtils::Unsubscription(move(target), nodeIds, requestId), requestId, shared_from_this(), sl };
 	}
 
 	α onSubscriptionAck( RequestId requestId, const FromServer::SubscriptionAck& result )ι->StatusCode{

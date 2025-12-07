@@ -1,4 +1,16 @@
 {
+	"settings": {
+		"window.title": "OpcServer",
+		"name": "OpcServer",
+		"sourceDir": "${env:JDE_DIR}/apps/OpcServer",
+		"buildTarget": "Debug",
+		"buildRoot": "${env:JDE_BUILD_DIR}",
+		"exeDir": "${config:buildRoot}/apps/${config:name}/exe",
+		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
+		"C_Cpp.default.defines": [
+			"UA_ENABLE_ENCRYPTION","UA_ENABLE_ENCRYPTION_OPENSSL"
+		]
+	},
 	"folders": [
 		{
 			"path": "src"
@@ -56,19 +68,7 @@
 		},
 
 	],
-	"settings": {
-		"window.title": "OpcServer",
-		"name": "OpcServer",
-		"sourceDir": "${env:JDE_DIR}/apps/OpcServer",
-		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_DIR}/${config:buildTarget}",
-		"exeDir": "${config:buildRoot}/apps/${config:name}/exe",
-		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions.sh",
-		"C_Cpp.default.defines": [
-			"UA_ENABLE_ENCRYPTION","UA_ENABLE_ENCRYPTION_OPENSSL"
-		]
-	},
-		"tasks": {
+	"tasks": {
 		"version": "2.0.0",
 		"tasks": [
 			{
@@ -95,7 +95,7 @@
 			{
 				"label": "cmake",
 				"type": "shell",
-				"command": "mkdir -p ${config:buildRoot};cd ${config:buildRoot}; tput reset; rm -f CMakeCache.txt;cmake ${env:JDE_DIR}/Public --preset linux-jde-debug",
+				"command": "mkdir -p ${config:buildRoot};cd ${config:buildRoot}; tput reset; rm -f CMakeCache.txt;cmake ${env:JDE_DIR} --preset linux-jde-debug",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			}

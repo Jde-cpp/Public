@@ -56,6 +56,10 @@ namespace Jde::App::Client{
 		session = nullptr;
 		LOGSL( ELogLevel::Information, sl, tags, "ClosedSocketSession" );
 	}
+	α IAppClient::Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SL sl )ε->Web::Client::ClientSocketAwait<jarray>{
+		return Session()->Subscribe( move(query), move(variables), listener, sl );
+	}
+
 	α IAppClient::Write( vector<Logging::Entry>&& entries )ι->void{
 		auto session = _session;
 		if( !session )

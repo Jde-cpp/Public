@@ -23,7 +23,6 @@
 	#define DISABLE_WARNINGS
 	#define ENABLE_WARNINGS
 #endif
-#define BOOST_ALL_NO_LIB
 #include <boost/json.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/container/flat_set.hpp>

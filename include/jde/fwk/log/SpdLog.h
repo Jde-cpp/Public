@@ -21,6 +21,7 @@ namespace Jde::Logging{
 		α Write( const Entry& m )ι->void override{
 			_logger.log( m.SourceLocation(), (spdlog::level::level_enum)m.Level, m.Message() );
 		}
+		α Write( const Entry& m, uint32 /*appPK*/, uint32 /*instancePK*/ )ι->void override{ Write(m); }
 	private:
 		spdlog::logger _logger;
 	};

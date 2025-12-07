@@ -28,18 +28,20 @@ function buildProject() {
 	buildRoot=$2;
 
 	buildRelativePath=`buildRelativePath $fileDirname`;
-	if [[ $buildRelativePath == "apps/OpcGateway/tests" ]]; then
-		target=Jde.Opc.Tests;
+	if [[ $buildRelativePath == *"libs/fwk/lib"* ]]; then
+		target=Jde;
+	elif [[ $buildRelativePath == *"web/client"* ]]; then
+		target=Jde.Web.Client;
 	elif [[ $buildRelativePath == *"web/server" ]]; then
 		target=Jde.Web.Server;
 	elif [[ $buildRelativePath == *"app/client" ]]; then
 		target=Jde.App.Client;
 	elif [[ $buildRelativePath == *"app/shared"* ]]; then
 		target=Jde.App.Shared;
-	elif [[ $buildRelativePath == *"OpcGateway/lib"* ]]; then
-		target=Jde.Opc.GatewayLib;
 	elif [[ $buildRelativePath == "apps/AppServer"* ]]; then
 		target=Jde.App.Server;
+	elif [[ $buildRelativePath == *"OpcGateway/lib"* ]]; then
+		target=Jde.Opc.GatewayLib;
 	elif [[ $buildRelativePath == "apps/OpcGateway/tests"* ]]; then
 		target=Jde.Opc.Tests;
 	else

@@ -305,7 +305,7 @@ namespace Jde::QL{
 		THROW_IF( !type, "Could not find subscription type for '{}'", name );
 		Next();	//{
 		Next(); //[userCreated]
-		auto table = LoadTable( tableName, variables, schemas );
+		auto table = LoadTable( tableName, variables, schemas, tableName=="logs" );
 		return Subscription{ move(tableName), *type, move(table) };
 
 	}

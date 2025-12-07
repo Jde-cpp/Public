@@ -12,6 +12,7 @@ namespace Jde::Logging{
 		MemoryLog()ι:ILogger{ {{"default", "Trace"}} }{}
 		α Shutdown( bool /*terminate*/ )ι->void override{ _entries.clear(); }
 		α Write( const Entry& m )ι->void override;
+		α Write( const Entry& m, uint32 /*appPK*/, uint32 /*instancePK*/ )ι->void override{ Write(m); }
 		α Write( ILogger& logger )ι->void;
 		α Name()Ι->string override{ return "MemoryLog"; }
 		α SetMinLevel( ELogLevel /*level*/ )ι->void override{}

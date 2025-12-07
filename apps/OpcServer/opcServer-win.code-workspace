@@ -65,7 +65,7 @@
 			"type": "cppvsdbg",
 			"request": "launch",
 			"program": "${config:winBuildDir}\\${config:buildTarget}\\${config:exe}",
-			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/Public/apps/OpcServer/config/Opc.Server.jsonnet"],
+			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/apps/OpcServer/config/Opc.Server.jsonnet"],
 			"stopAtEntry": false,
 			"cwd": "${config:winBuildDir}",
 			"console": "integratedTerminal",

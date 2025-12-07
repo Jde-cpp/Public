@@ -1,10 +1,10 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "LogTests.GraphQL",
+		tests: "LogTests.Subscribe",
 		recreateDB:: true,
-		embeddedAppServer: true,
-		embeddedOpcServer: true
+		embeddedAppServer: false,
+		embeddedOpcServer: false
 	},
 	opc: args.opc,
 	dbServers: {
@@ -81,6 +81,7 @@ local args = import 'args.libsonnet';
 			timeZone: "America/New_York",
 			delay: "PT1M"
 		},
+		subscribe:{}
 		// remote:{
 		// 	delay: "PT2S"
 		// }

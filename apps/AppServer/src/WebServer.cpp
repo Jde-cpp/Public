@@ -64,8 +64,8 @@ namespace Jde::App{
 		// 	co_await DurationTimer{ 1s };
 		// }
 	//}
-
-	α TestLogPub( const Filter& subscriptionFilter, AppPK /*appId*/, AppInstancePK /*instancePK*/, const Logging::Entry& m )ι->bool{
+/*
+	α TestLogPub( const Filter& subscriptionFilter, AppPK / *appId* /, AppInstancePK / *instancePK* /, const Logging::Entry& m )ι->bool{
 		bool passesFilter{ true };
 		let logTags = ELogTags::Socket | ELogTags::Server | ELogTags::Subscription;
 		for( let& [jsonColName, columnFilters] : subscriptionFilter.ColumnFilters ){
@@ -102,6 +102,7 @@ namespace Jde::App{
 			}
 		});
 	}
+*/
 	α Server::BroadcastStatus( AppPK appPK, AppInstancePK statusInstancePK, str hostName, Proto::FromClient::Status&& status )ι->void{
 		auto value{ FromServer::ToStatus(appPK, statusInstancePK, hostName, move(status)) };
 		_statuses.emplace_or_visit( statusInstancePK, value, [&](auto& kv){kv.second = value;} );
@@ -156,7 +157,7 @@ namespace Jde::App{
 		TRACET( ELogTags::App, "[{:x}]RemoveSession erased: {}", instancePK, erased );
 	}
 
-	α Server::SubscribeLogs( string&& qlText, jobject variables, sp<ServerSocketSession> session )ε->void{
+/*	α Server::SubscribeLogs( string&& qlText, jobject variables, sp<ServerSocketSession> session )ε->void{
 		auto ql = QL::Parse( qlText, variables, Schemas() );
 		auto tables = ql.IsQueries() ? move( ql.Queries() ) : vector<QL::TableQL>{};
 		THROW_IF( tables.size()!=1, "Invalid query, expecting single table" );
@@ -172,7 +173,7 @@ namespace Jde::App{
 		*t.add_messages()->mutable_traces() = move( traces );
 		session->Write( move(t) );
 	}
-
+*/
 	α Server::SubscribeStatus( ServerSocketSession& session )ι->void{
 		_statusSubscriptions.emplace( session.InstancePK() );
 		Proto::FromServer::Transmission t;

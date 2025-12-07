@@ -136,8 +136,8 @@ namespace Jde::App{
 
 		return proto;
 	}
-	α FromClient::LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile{
-		Log::Proto::LogEntryFile proto;
+
+	Ŧ logEntry( const Logging::Entry& m, T& proto )ι->void{
 		proto.set_template_id( ToBytes(m.Id()) );
 		for( auto& arg : m.Arguments )
 			*proto.add_args() = ToBytes( Logging::Entry::GenerateId(arg) );
@@ -148,6 +148,17 @@ namespace Jde::App{
 		proto.set_user_pk( m.UserPK.Value );
 		proto.set_file_id( ToBytes(m.FileId()) );
 		proto.set_function_id( ToBytes(m.FunctionId()) );
+	}
+	α FromClient::LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile{
+		Log::Proto::LogEntryFile proto;
+		logEntry( m, proto );
+		return proto;
+	}
+	α FromClient::LogEntryFile( const Logging::Entry& m, App::AppPK appPK, App::AppInstancePK instancePK )ι->Log::Proto::LogEntryFileExternal{
+		Log::Proto::LogEntryFileExternal proto;
+		logEntry( m, proto );
+		proto.set_app_pk( appPK );
+		proto.set_app_instance_pk( instancePK );
 		return proto;
 	}
 

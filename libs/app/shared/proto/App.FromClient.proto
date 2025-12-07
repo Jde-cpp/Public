@@ -60,7 +60,7 @@ message Message{
 		Jde.App.Log.Proto.String stringKey = 9; //send a string.
 		Jde.App.Proto.StringMD5s request_strings = 10;
 		bool subscribe_status = 11;//subscribe to application statuses.
-		string subscribe_logs = 12;//subscribe to application logs.  TODO graphql
+		string subscribe_logs = 12;//subscribe to application logs.
 		Jde.Proto.Exception exception = 13;
 		ERequestType request_type = 14;//Just the request id is needed.
 		Jde.Proto.Query subscription = 15;

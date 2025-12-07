@@ -9,7 +9,7 @@
 		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/jde",
 		"buildDir": "${config:buildRoot}/apps/${config:name}",
 		"winBuildDir": "${env:JDE_BUILD_DIR}/${config:compiler}/jde/apps/${config:name}",
-		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions.sh",
+		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
 	},
 	"folders": [
 		{
@@ -121,7 +121,7 @@
 			"type": "cppvsdbg",
 			"request": "launch",
 			"program": "${config:winBuildDir}\\${config:buildTarget}\\${config:exe}",
-			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/Public/apps/AppServer/config/App.Server.jsonnet"],
+			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/apps/AppServer/config/App.Server.jsonnet"],
 			"stopAtEntry": false,
 			"cwd": "${config:winBuildDir}",
 			"console": "integratedTerminal",

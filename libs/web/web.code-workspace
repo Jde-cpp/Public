@@ -97,7 +97,7 @@
 				"program": "${config:buildDir}/${config:exe}",
 				"args": [
 					"-tests",
-					"-settings=${env:JDE_DIR}/Public/libs/web/tests/config/Web.Tests.jsonnet"
+					"-settings=${env:JDE_DIR}/libs/web/tests/config/Web.Tests.jsonnet"
 				],
 				"stopAtEntry": false,
 				"cwd": "${config:buildDir}",

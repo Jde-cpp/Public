@@ -11,6 +11,7 @@ namespace Jde::Access{
 	struct AccessListener : QL::IListener, IShutdown{
 		AccessListener( sp<QL::IQL> qlServer )ι:QL::IListener{"Access"},_qlServer{qlServer}{}
 		α OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void override;
+		α OnTraces( App::Proto::FromServer::Traces&& /*traces*/ )ι->void override{ASSERT(false);}
 		α Shutdown( bool /*terminate*/ )ι->void;
 		sp<QL::IQL> _qlServer;
 	private:

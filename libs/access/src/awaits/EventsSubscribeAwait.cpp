@@ -7,7 +7,7 @@
 
 #define let const auto
 namespace Jde::Access{
-	constexpr sv format{ "subscription {0}{2}{{ {1}{2}(subscriptionId:{3}){{{4}}} }}" };
+	constexpr sv format{ "subscription {0}{2}{{ {1}{2}(subscriptionId:{3}){{{4}}} }}" }; //subscription UserCreated{ userCreated(subscriptionId:129){id} }
 	α EventTypeSubscribeAwait::Subscribe()ι->TAwait<vector<QL::SubscriptionId>>::Task{
 		using enum ESubscription;
 		let capitalized = DB::Names::Capitalize( _name );

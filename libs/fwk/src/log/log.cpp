@@ -51,12 +51,11 @@ namespace Jde{
 
 	α Logging::Init()ι->void{
 		Logging::Add<SpdLog>( "spd" );
-		auto memoryLogger = Logging::GetLogger<MemoryLog>();
-		ASSERT( memoryLogger );
+		auto& memoryLogger = Logging::GetLogger<MemoryLog>();
 		for( let& logger : _loggers ){
 			if( dynamic_cast<MemoryLog*>(logger.get()) )
 				continue;
-			memoryLogger->Write( *logger.get() );
+			memoryLogger.Write( *logger.get() );
 		}
 		auto memory = Settings::FindObject( "/logging/memory" );
 		if( !memory || Json::FindEnum<ELogLevel>(*memory, "default", ToLogLevel).value_or(ELogLevel::NoLog)==ELogLevel::NoLog )

@@ -1,9 +1,9 @@
 {
   "version": 8,
 	"cmakeMinimumRequired": {
-    "major": 4,
-    "minor": 2,
-    "patch": 0
+    "major": 3,
+    "minor": 28,
+    "patch": 3
   },
   "configurePresets": [
 		{
@@ -11,7 +11,7 @@
 			"hidden": true,
 			"cacheVariables":{
 				"CMAKE_CXX_STANDARD": "23",
-				"JDE_VERSION": "2025.11.01",
+				"JDE_VERSION": "2025.12.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3"
 			}
 		},
@@ -24,11 +24,11 @@
 				"LIB_ROOT": "$env{REPO_DIR}/install/clang"
 			},
 			"cacheVariables":{
-				"CMAKE_BINARY_DIR": "$env(JDE_DIR)/bin/$env{BUILD_TYPE}",
-				"CMAKE_BUILD_TYPE": "$env{BUILD_TYPE}",
+				"CMAKE_BINARY_DIR": "$env(JDE_DIR)/bin/$env{buildType}",
+				"CMAKE_BUILD_TYPE": "$env{buildType}",
 				"CMAKE_CXX_COMPILER": "clang++.exe",
 				"CMAKE_C_COMPILER": "clang-cl.exe",
-				"CMAKE_PREFIX_PATH": "$env{LIB_ROOT}/$env{BUILD_TYPE}",
+				"CMAKE_PREFIX_PATH": "$env{LIB_ROOT}/$env{buildType}",
 				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
 				"CMAKE_CXX_FLAGS_DEBUG": "-gcodeview -O0 -fsanitize=address",
 				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++",
@@ -42,7 +42,7 @@
 				"OPTIMIZATION_LEVEL": "O3"
 			},
 			"cacheVariables": {
-				"CMAKE_INSTALL_PREFIX": "$env{LIB_ROOT}/$env{BUILD_TYPE}"
+				"CMAKE_INSTALL_PREFIX": "$env{LIB_ROOT}/$env{buildType}"
 			}
 		},
 		{
@@ -99,27 +99,44 @@
 			}
 		},
 		{
+			"name": "debug",
+			"hidden": true,
+			"environment":{
+				"buildType": "Debug"
+			}
+		},
+		{
 			"name": "relWithDebInfo",
 			"hidden": true,
 			"environment":{
-				"BUILD_TYPE": "RelWithDebInfo"
+				"buildType": "RelWithDebInfo"
 			}
 		},
 		{
 			"name": "linux",
-			"hidden": true,
 			"inherits": "common",
 			"environment": {
 				"CC": "gcc-14",
 				"CXX": "g++-14",
-				"LIB_ROOT": "$env{REPO_DIR}/install/$env{CXX}"
+				"installRoot": "$env{REPO_DIR}/install/$env{CXX}",
+				"multiInstallPrefix": "$env{installRoot}/multi"
 			},
 			"cacheVariables":{
-				"CMAKE_BINARY_DIR": "$env(JDE_DIR)/bin/$env{BUILD_TYPE}",
-				"CMAKE_BUILD_TYPE": "$env{BUILD_TYPE}",
+				"CMAKE_BINARY_DIR": "$env(JDE_DIR)/bin/$env{buildType}",
+				"CMAKE_BUILD_TYPE": "$env{buildType}",
 				"CMAKE_CXX_COMPILER": "g++-14",
 				"CMAKE_C_COMPILER": "gcc-14",
-				"CMAKE_PREFIX_PATH": "$env{LIB_ROOT}/$env{BUILD_TYPE}",
+				"CMAKE_PREFIX_PATH": "$env{installRoot}/$env{buildType};$env{multiInstallPrefix}",
+				"CMAKE_CXX_FLAGS": "-Wno-unknown-pragmas -Wno-missing-field-initializers -Wno-changes-meaning",
+				"MULTI_INSTALL_PREFIX": "$env{multiInstallPrefix}",
+				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
+				"LIBXML2_INCLUDE_DIR": "/usr/include/libxml2"
+			}
+		},
+		{
+			"name": "linux-debug",
+			"inherits": ["linux", "debug"],
+			"cacheVariables":{
 				"CMAKE_CXX_FLAGS_DEBUG": "-ggdb -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -D_GLIBCXX_DEBUG=ON -static-libstdc++ -static-libasan -lrt"
 			}
 		},
@@ -144,7 +161,7 @@
 				"OPTIMIZATION_LEVEL": "O3"
 			},
 			"cacheVariables": {
-				"CMAKE_INSTALL_PREFIX": "$env{LIB_ROOT}/$env{BUILD_TYPE}"
+				"CMAKE_INSTALL_PREFIX": "$env{LIB_ROOT}/$env{buildType}"
 			}
 		}
   ]

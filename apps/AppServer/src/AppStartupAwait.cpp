@@ -5,6 +5,7 @@
 #include "LocalClient.h"
 #include "LogData.h"
 #include <jde/web/server/SessionGraphQL.h>
+#include <jde/web/server/SubscribeLog.h>
 
 #define let const auto
 namespace Jde::App{
@@ -15,7 +16,9 @@ namespace Server{
 	α AppStartupAwait::Execute()ι->VoidAwait::Task{
 		try{
 			co_await ConfigureDSAwait{};
-			SetAppPKs( AddInstance("Main", Process::HostName(), Process::ProcessId()) );
+			let pks = AddInstance( "Main", Process::HostName(), Process::ProcessId() );
+			Logging::Add<Web::Server::SubscribeLog>( "subscribe", get<0>(pks), get<1>(pks) );
+			SetAppPKs( pks );
 
 			Data::LoadStrings();
 			auto appClient = AppClient();

@@ -2,11 +2,13 @@
 	"settings": {
 		"window.title": "App",
 		"name": "AppServer",
-		"sourceDir": "${env:JDE_DIR}/apps/AppServer",
+		"sourceDir": "${env:JDE_DIR}",
 		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_DIR}/${config:buildTarget}",
+		"buildRoot": "${env:JDE_BUILD_DIR}",
+		"debugDir": "${config:buildRoot}",
+		"debugPreset": "linux-debug",
 		"exeDir": "${config:buildRoot}/apps/${config:name}/exe",
-		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions.sh",
+		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
 	},
 	"folders": [
 		{
@@ -79,13 +81,6 @@
 				"label": "buildProject",
 				"type": "shell",
 				"command": "tput reset; source $JDE_DIR/build/buildFunctions.sh;buildProject ${fileWorkspaceFolder} ${config:buildRoot};",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "cmake",
-				"type": "shell",
-				"command": "mkdir -p ${config:buildRoot};cd ${config:buildRoot}; tput reset; rm -f CMakeCache.txt;cmake ${env:JDE_DIR}/Public --preset linux-jde-debug",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			}

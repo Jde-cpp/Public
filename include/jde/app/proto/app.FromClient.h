@@ -20,6 +20,7 @@ namespace Jde::App::FromClient{
 	α LogEntries( vector<Logging::Entry>&& entries )ι->PFromClient::Transmission;
 	α LogEntryClient( Logging::Entry&& m )ι->Log::Proto::LogEntryClient;
 	α LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile;
+	α LogEntryFile( const Logging::Entry& m, App::AppPK appPK, App::AppInstancePK instancePK )ι->Log::Proto::LogEntryFileExternal;
 	α FromLogEntry( Log::Proto::LogEntryClient&& m )ι->Logging::Entry;
 	α ToString( uuid id, string&& value )ι->Log::Proto::String;
 }

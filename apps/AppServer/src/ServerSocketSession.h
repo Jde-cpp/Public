@@ -4,6 +4,7 @@
 #include <jde/web/client/usings.h>
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/Sessions.h>
+#include "../usings.h"
 #include "awaits/ForwardExecutionAwait.h"
 
 namespace Jde::App::Server{
@@ -24,8 +25,9 @@ namespace Jde::App::Server{
 		//α WriteException( IException&& e, Request )ι->void override{ WriteException( move(e), 0 ); }
 		α WriteException( exception&& e, RequestId requestId )ι->void override;
 		α WriteException(std::string&&, Jde::RequestId)ι->void override;
-		α WriteSubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void override;
+		α WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void override;
 		α WriteSubscription( const jvalue& j, RequestId requestId )ι->void override;
+		α WriteSubscription( App::AppPK appPK, App::AppInstancePK instancePK, const Logging::Entry& e, const QL::Subscription& sub )ι->void override;
 		α WriteComplete( RequestId requestId )ι->void override;
 
 		α AddSession( Proto::FromClient::AddSession addSession, RequestId clientRequestId, SL sl )ι->TAwait<Jde::UserPK>::Task;

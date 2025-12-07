@@ -81,6 +81,25 @@ namespace Jde{
 	}
 	return y;
 }
+α Jde::ToLogTags( jvalue v )ι->ELogTags{
+	if( let s = v.try_as_string(); s )
+		return ToLogTags( (sv)*s );
+	else if( let arr = v.try_as_array(); arr ){
+		ELogTags y{};
+		for( let& item : *arr ){
+			if( let s = item.try_as_string(); s ){
+				y |= ToLogTags( (sv)*s );
+			}
+			else
+				WARNT( ELogTags::Settings, "Expected string in tags array but got {}", Json::Kind(item.kind()) );
+		}
+		return y;
+	}
+	else{
+		WARNT( ELogTags::Settings, "Expected string or array for tags but got {}", Json::Kind(v.kind()) );
+		return ELogTags::None;
+	}
+}
 
 namespace Jde{
 	Ω parseTags( const jobject& o )ι->concurrent_flat_map<ELogTags,ELogLevel>{
@@ -93,7 +112,7 @@ namespace Jde{
 				continue;
 			for( let& jtag : *tags ){
 				if( let tagName = jtag.try_as_string(); tagName ){
-					let tag = ToLogTags( *tagName );
+					let tag = ToLogTags( (sv)*tagName );
 					if( !empty(tag) )
 						y.emplace( tag, (ELogLevel)i );
 				}

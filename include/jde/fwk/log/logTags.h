@@ -33,7 +33,7 @@ namespace Jde{
 		Test					= 1ul << 24,
 		Threads				= 1ul << 25,
 		Write		 			= 1ul << 26,
-		EndOfList			= 1ul << 27,
+		All						= ~0ul,
 
 		HttpClientRead	  = Http | Client | Read,
 		HttpClientWrite		= Http | Client | Write,
@@ -73,6 +73,7 @@ namespace Jde{
 	Φ ToString( ELogTags tags )ι->string;
 	Φ ToArray( ELogTags tags )ι->jarray;
 	Φ ToLogTags( sv name )ι->ELogTags;
+	Φ ToLogTags( jvalue v )ι->ELogTags;
 namespace Logging{
 	struct ITagParser{
 		β ToTag( str tagName )Ι->ELogTags=0;

@@ -20,7 +20,7 @@ namespace Jde::QL{
 	};
 	flat_map<TableOp,vector<ListenerSubs>> _serverSubs; std::shared_mutex _serverMutex;
 
-	//comes from a mutation query.
+	//comes from a mutation.
 	α Subscriptions::OnMutation( const MutationQL& m, jvalue result )ι->void{
 		sl l{ _serverMutex };
 		auto subs = _serverSubs.find( {m.TableName(), m.Type} );

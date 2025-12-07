@@ -58,6 +58,7 @@ local args = import 'args.libsonnet';
 				file:{ path: args.logDir, md: false }
 			}
 		},
+		subscribe:{},
 		breakLevel: "Warning"
 	},
 	workers:{

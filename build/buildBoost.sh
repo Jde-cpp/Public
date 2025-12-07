@@ -36,9 +36,10 @@ if windows; then
 		fi;
 	fi;
 else
-	./bootstrap.sh --prefix=${debugDir} --includedir=headers --libdir=dist --with-libraries=json;
+	installDir=$REPO_DIR/install/$compiler/$target/boost;
+	./bootstrap.sh --prefix=${installDir} --includedir=headers --libdir=dist --with-libraries=json;
   echo "using gcc : : /usr/bin/g++-14 ; " >> tools/build/src/user-config.jam
-	./b2 --prefix=${debugDir} install
+	./b2 --prefix=${installDir} install
 fi;
 echo --------------------Boost complete---------------------
 popd >> /dev/null;

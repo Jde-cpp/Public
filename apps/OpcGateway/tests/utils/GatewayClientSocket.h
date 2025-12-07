@@ -21,8 +21,10 @@ namespace Jde::Opc::Gateway::Tests{
 
 		α Connect( SessionPK sessionId, SRCE )ι->ClientSocketAwait<uint32>;
 		α Query( string&& query, jobject variables, bool returnRaw, SRCE )ι->ClientSocketAwait<jvalue> override;
-		α Subscribe( string&&, jobject, sp<QL::IListener>, SL )ε->ClientSocketAwait<jarray>{ throw Exception{"Noimpl"}; }
 		α Subscribe( ServerCnnctnNK target, const vector<NodeId>& nodes, sp<IListener> listener, SRCE )ε->await<FromServer::SubscriptionAck>;
+		α Subscribe( string&& /*query*/, jobject /*variables*/, sp<QL::IListener> /*listener*/, SL )ε->await<jarray>{ ASSERT(false); throw "noimpl"; }
+		α LogSubscribe( jobject&& ql, jobject vars, sp<IListener> listener, SRCE )ε->ClientSocketAwait<jarray>;
+
 		α Unsubscribe( ServerCnnctnNK target, const vector<NodeId>& nodeIds, SRCE )ε->ClientSocketAwait<FromServer::UnsubscribeAck>;
 	private:
 		α HandleException( std::any&& h, Jde::Proto::Exception&& what )ι;

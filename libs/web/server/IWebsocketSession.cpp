@@ -1,15 +1,20 @@
 #include <jde/web/server/IWebsocketSession.h>
+#include <jde/fwk/log/log.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalSubscriptions.h>
 #include "ServerImpl.h"
+#include <jde/web/server/SubscribeLog.h>
 #include <jde/app/proto/Common.pb.h>
 
 #define let const auto
 
+namespace Jde::App::Proto::FromServer{ struct Traces; }
 namespace Jde::Web::Server{
+	//TODO comment
 	struct SocketServerListener : QL::IListener{
-		SocketServerListener( sp<IWebsocketSession> session )ι: QL::IListener{Ƒ("[{}]Socket", session->Id())}, _session{ session }{}
-		α OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void{ _session->WriteSubscription( j, clientId ); }
+		SocketServerListener( sp<IWebsocketSession> session )ι: QL::IListener{ Ƒ("[{}]Socket", session->Id()) }, _session{ session }{}
+		α OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void{ _session->WriteSubscription(j, clientId); }
+		α OnTraces( App::Proto::FromServer::Traces&& /*traces*/ )ι->void{ ASSERT(false); }
 		sp<IWebsocketSession> _session;
 	};
 
@@ -27,7 +32,7 @@ namespace Jde::Web::Server{
 		Stream->DoAccept( move(_initialRequest), shared_from_this() );
 	}
 
-#define CHECK_EC(ec,tag,  ...) if( ec ){ CodeException(static_cast<std::error_code>(ec), tag __VA_OPT__(,) __VA_ARGS__); return; }
+#define CHECK_EC( ec,tag,  ... ) if( ec ){ CodeException(static_cast<std::error_code>(ec), tag __VA_OPT__(,) __VA_ARGS__); return; }
 	α IWebsocketSession::OnAccept( beast::error_code ec )ι->void{
 		LogRead( "OnAccept", 0 );
 		CHECK_EC( ec, ELogTags::SocketServerRead );
@@ -52,7 +57,7 @@ namespace Jde::Web::Server{
 		{}
 	}
 
-	α IWebsocketSession::LogRead( string&& what, RequestId requestId, ELogLevel level, SL sl )ι->void{//TODO forward args.
+	α IWebsocketSession::LogRead( string&& what, RequestId requestId, ELogLevel level, SL sl )ι->void{ //TODO forward args.
 		Logging::Log( level, ELogTags::SocketServerRead, sl, "[{:x}.{:x}]{}", Id(), requestId, move(what) );
 	}
 
@@ -82,11 +87,21 @@ namespace Jde::Web::Server{
 		_listener = nullptr;
 	}
 
-	α IWebsocketSession::AddSubscription( string&& query, jobject variables, RequestId /*requestId*/, SL sl )ε->vector<QL::SubscriptionId>{
+	α IWebsocketSession::AddSubscription( string&& query, jobject variables, RequestId requestId, SL sl )ε->flat_set<QL::SubscriptionId>{
 		auto subs = QL::ParseSubscriptions( move(query), variables, Schemas(), sl );
-		vector<QL::SubscriptionId> subscriptionIds;
-		for( auto& sub : subs )
-			subscriptionIds.emplace_back( sub.Id );
+		flat_set<QL::SubscriptionId> subscriptionIds;//client ids.
+		vector<QL::Subscription> logSubs;
+		for( auto sub=subs.begin(); sub!=subs.end();  ){
+			if( !sub->Id )
+				sub->Id = requestId;
+			subscriptionIds.emplace( sub->Id );
+			let isLog = sub->TableName=="logs";
+			if( isLog )
+				logSubs.emplace_back( move(*sub) );
+			sub = isLog ? subs.erase( sub ) : next( sub );
+		}
+		if( !logSubs.empty() )
+			Logging::GetLogger<SubscribeLog>().Add( shared_from_this(), move(logSubs) );
 		if( _listener )
 			QL::Subscriptions::Listen( _listener, move(subs) );
 		return subscriptionIds;

@@ -29,7 +29,7 @@ namespace Jde::App::Server{
 	α FindInstance( AppInstancePK instancePK )ι->sp<ServerSocketSession>;
 	α NextRequestId()->RequestId;
 	α RemoveSession( AppInstancePK sessionPK )ι->void;
-	α SubscribeLogs( string&& qlText, jobject variables, sp<ServerSocketSession> session )ε->void;
+	//α SubscribeLogs( string&& qlText, jobject variables, sp<ServerSocketSession> session )ε->void;
 	α SubscribeStatus( ServerSocketSession& session )ι->void;
 
 	α UnsubscribeLogs( AppInstancePK instancePK )ι->bool;

@@ -9,11 +9,11 @@ namespace Jde::App{
 		Read( co_await LockKeyAwait{_file.string()} );
 	}
 	α DailyLoadAwait::Read( CoLockGuard )ι->TAwait<string>::Task{
-		auto log = Logging::GetLogger<App::ProtoLog>();
+		auto log = Logging::FindLogger<App::ProtoLog>();
 		try{
 			auto y = log ? log->Entries() : vector<App::Log::Proto::FileEntry>{};
 			string content = co_await IO::ReadAwait( _file );
-			auto fileContent = App::ProtoLog().Deserialize( move(content) );
+			auto fileContent = App::ProtoLog::Deserialize( move(content) );
 			y.insert( y.end(), make_move_iterator(fileContent.begin()), make_move_iterator(fileContent.end()) );
 			Resume( move(y) );
 		}

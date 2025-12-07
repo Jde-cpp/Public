@@ -9,6 +9,8 @@
 
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Proto{ struct Query; }
+namespace Jde::QL{ struct Subscription; }
+
 namespace Jde::Web::Server{
 	struct RestStream; struct SocketStream;
 	struct ΓWS IWebsocketSession : std::enable_shared_from_this<IWebsocketSession>{
@@ -16,10 +18,11 @@ namespace Jde::Web::Server{
 		α Run()ι->void;
 		α Id()Ι->SocketId{ return _id; }
 		α LogWrite( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;
-		α AddSubscription( string&& query, jobject variables, RequestId requestId, SRCE )ε->vector<QL::SubscriptionId>;
+		α AddSubscription( string&& query, jobject variables, RequestId requestId, SRCE )ε->flat_set<QL::SubscriptionId>;
 		α RemoveSubscription( vector<QL::SubscriptionId>&& ids, RequestId requestId, SRCE )ι->void;
 		β WriteSubscription( const jvalue& j, RequestId requestId )ι->void=0;
-		β WriteSubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void=0;
+		β WriteSubscription( uint32 appPK, uint32 appInstancePK, const Logging::Entry& e, const QL::Subscription& sub )ι->void=0;
+		β WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void=0;
 		β WriteComplete( RequestId requestId )ι->void=0;
 		β WriteException( exception&& e, RequestId requestId )ι->void=0;
 		β WriteException( string&& e, RequestId requestId )ι->void=0;

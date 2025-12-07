@@ -24,6 +24,7 @@ namespace Jde::App::Client{
 		α CloseSocketSession( SL sl )ι->VoidTask;
 		α UpdateStatus()ι->void;
 		α SessionId()Ι->SessionPK{ return Session()->SessionId(); }
+		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->Web::Client::ClientSocketAwait<jarray>;
 
 		β StatusDetails()ι->vector<string> = 0;
 		optional<Crypto::CryptoSettings> ClientCryptoSettings;

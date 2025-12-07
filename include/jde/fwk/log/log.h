@@ -46,7 +46,8 @@ namespace Jde::Logging{
 	Φ LogException( const IException& e )ι->void;
 	Φ DestroyLoggers( bool terminate )->void;
 	Φ Loggers()->const vector<up<ILogger>>&;
-	Ŧ GetLogger()ι->T*;
+	Ŧ GetLogger()ε->T&;
+	Ŧ FindLogger()ι->T*;
 	Φ AddLogger( up<ILogger>&& logger )ι->ILogger*;
 	Φ Init()ι->void;
 	Φ ClientMinLevel()ι->ELogLevel;
@@ -56,12 +57,18 @@ namespace Jde::Logging{
 	α GetStatus()ι->up<Proto::Status>;
 }
 namespace Jde{
-	Ŧ Logging::GetLogger()ι->T*{
+	Ŧ Logging::FindLogger()ι->T*{
 		for( auto& logger : Loggers() ){
 			if( auto log = dynamic_cast<T*>( logger.get() ) )
 				return log;
 		}
 		return nullptr;
+	}
+	Ŧ Logging::GetLogger()ε->T&{
+		auto p = FindLogger<T>();
+		if( !p )
+			throw std::runtime_error( Ƒ("Logger of type {} not found.", typeid(T).name()) );
+		return *p;
 	}
 }
 #undef Φ

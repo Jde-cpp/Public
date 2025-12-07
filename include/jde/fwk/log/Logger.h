@@ -31,6 +31,7 @@ namespace Jde::Logging{
 	Φ CanBreak()ι->bool;
 	α LogException( const IException& e )ι->void;
 	Φ Log( const Entry& entry )ι->void;
+	Φ Log( const Entry& entry, uint32 appPK, uint32 instancePK )ι->void;
 
 	ψ Log( ELogLevel level, ELogTags tags, SL sl, FormatString&& m, ARGS... args )ι->void;
 //	ψ Log( ELogTags tags, SL sl, FormatString&& m, ARGS... args )ι->void;
@@ -51,39 +52,6 @@ namespace Jde::Logging{
 		if( MarkLogged(Entry::GenerateId(sv{m.get().data(), m.get().size()})) )
 			Log( ELogLevel::Information, tags, sl, FWD(m), FWD(args)... );
 	}
-}
-
-namespace Jde{
-/*
-#define CMD(Level)	Logging::Logger<ELogLevel::Level,Args...>{ tags, FWD(m), std::forward<const Args>(args)..., sl };
-	ψ Log( ELogLevel level, ELogTags tags, const spdlog::source_loc& sl, FormatString&& m, ARGS... args )ι->void{
-		switch( level ){
-			case ELogLevel::Trace: CMD( Trace ); break;
-			case ELogLevel::Debug: CMD( Debug ); break;
-			case ELogLevel::Information: CMD( Information ); break;
-			case ELogLevel::Warning: CMD( Warning ); break;
-			case ELogLevel::Error: CMD( Error ); break;
-			case ELogLevel::Critical: CMD( Critical ); break;
-		}
-	}
-#undef CMD
-	ψ Log( ELogLevel level, ELogTags tags, const std::source_location& sl, FormatString&& m, ARGS... args )ι->void{
-		Log( level, tags, { sl.file_name(), (int)sl.line(), sl.function_name() }, FWD( m ), FWD( args )... );
-	}
-
-#define CMD(Level) Logging::LogStack<ELogLevel::Level,Args...>( tags, stackTraceIndex+1, FWD(m), FWD(args)... )
-	ψ Log( ELogLevel level, ELogTags tags, std::stacktrace::size_type stackTraceIndex, FormatString&& m, ARGS... args )ι->void{
-		switch( level ){
-			case ELogLevel::Trace: CMD( Trace ); break;
-			case ELogLevel::Debug: CMD( Debug ); break;
-			case ELogLevel::Information: CMD( Information ); break;
-			case ELogLevel::Warning: CMD( Warning ); break;
-			case ELogLevel::Error: CMD( Error ); break;
-			case ELogLevel::Critical: CMD( Critical ); break;
-		}
-	}
-#undef CMD
-*/
 }
 
 namespace Jde::Logging{
