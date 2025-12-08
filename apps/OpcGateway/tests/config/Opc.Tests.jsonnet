@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "LogTests.Subscribe",
+		tests: "BrowseTests.NodeId",
 		recreateDB:: true,
 		embeddedAppServer: false,
 		embeddedOpcServer: false

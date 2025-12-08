@@ -36,8 +36,6 @@ namespace Jde::Opc::Gateway{
 
 		α SubscriptionId()Ι->SubscriptionId{ return CreatedSubscriptionResponse ? CreatedSubscriptionResponse->subscriptionId : 0;}
 
-		α SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void;
-		α SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void;
 		Ω ClearRequest( UA_Client* ua, RequestId requestId )ι->void;
 		Ṫ ClearRequestH( UA_Client* ua , RequestId requestId )ι->T;
 		α ClearRequest( RequestId requestId )ι->void{ _asyncRequest.Clear( requestId ); }

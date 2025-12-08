@@ -12,8 +12,6 @@ namespace Jde::Opc::Gateway{
 		~UABrowsePath(){ UA_BrowsePath_clear(this); }
 	};
 namespace Browse{
-	α OnResponse( UA_Client *ua, void* userdata, RequestId requestId, UA_BrowseResponse* response )ι->void;
-
 	struct Response : UA_BrowseResponse{
 		Response()ι{ ASSERT( false ); }
 		Response( UA_BrowseResponse&& x )ι:UA_BrowseResponse{ x }{ UA_BrowseResponse_init( &x ); }
@@ -45,9 +43,12 @@ namespace Browse{
 		FoldersAwait( NodeId id, const QL::TableQL& ql, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl},_client{c}, _request{move(id), ql}{}
 
 		α Suspend()ι->void override;
+		α OnComplete( UA_BrowseResponse* response )ι->void;
+		α await_resume()ι->Response;
 	private:
 		sp<UAClient> _client;
 		Request _request;
+		RequestId _requestId{};
 	};
 }
 	struct ΓOPC ObjectsFolderAwait final : TAwaitEx<jobject, TAwait<Browse::Response>::Task>{

@@ -286,37 +286,6 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α UAClient::SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void{
-		try{
-			RequestId requestId{};
-			TRACET( BrowseTag, "[{:x}]SendBrowseRequest", Handle() );
-			UAε( UA_Client_sendAsyncBrowseRequest(_ptr, &request, Browse::OnResponse, nullptr, &requestId) );
-			TRACET( BrowseTagPedantic, "[{:x}.{}]SendBrowseRequest", Handle(), requestId );
-			Process( requestId, move(h), "BrowseRequest" );
-		}
-		catch( UAException& e ){
-			Retry<Browse::FoldersAwait::Handle>(
-				[r{ move(request) }]( sp<UAClient>&& p, Browse::FoldersAwait::Handle h )mutable{
-					p->SendBrowseRequest( move(r), h );
-				},
-				move( e ), shared_from_this(), h
-			);
-		}
-	}
-
-	α UAClient::SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void{
-		UA_SetMonitoringModeRequest request{};
-		request.subscriptionId = subscriptionId;
-		try{
-			RequestId requestId{};
-			UAε( UA_Client_MonitoredItems_setMonitoringMode_async(UAPointer(), move(request), SetMonitoringModeCallback, nullptr, &requestId) );
-			Process( requestId, nullptr, "setMonitoringMode" );//if retry fails, don't want to process.
-		}
-		catch( UAException& e ){
-			RetryVoid( [subscriptionId](sp<UAClient>&& p)mutable{p->SetMonitoringMode(subscriptionId);}, move(e), shared_from_this() );
-		}
-	}
-
 	α UAClient::Unsubscribe( const sp<IDataChange>&& dataChange )ι->void{
 		sl _{ _clientsMutex };
 		for( auto& [_, credClients] : _clients ){
