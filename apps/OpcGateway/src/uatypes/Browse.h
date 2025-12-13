@@ -44,7 +44,6 @@ namespace Browse{
 
 		α Suspend()ι->void override;
 		α OnComplete( UA_BrowseResponse* response )ι->void;
-		α await_resume()ι->Response;
 	private:
 		sp<UAClient> _client;
 		Request _request;

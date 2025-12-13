@@ -19,7 +19,7 @@ cd jde;
 if [ ! -d Public ]; then git clone -b $branch --single-branch https://github.com/Jde-cpp/Public.git; fi;
 source Public/build/common.sh;
 toBashDir $REPO_DIR REPO_BASH;
-cd $JDE_BASH/Public/build;
+cd $JDE_BASH/build;
 
 ./buildBoost.sh $target $compiler; if [ $? -ne 0 ]; then echo "cmake Failed"; echo `pwd`; exit 1; fi;
 
@@ -36,7 +36,7 @@ mkdir -p $compiler; cd $compiler;
 # 	rm -f CMakeCache.txt;
 # 	cd libs;
 # 	echo cmake /c/Users/duffyj/source/repos/jde/Public/build --preset win-msvc;
-# 	cmake $JDE_BASH/Public/build --preset win-msvc; if [ $? -ne 0 ]; then echo "cmake Failed"; echo `pwd`; exit 1; fi;
+# 	cmake $JDE_BASH/build --preset win-msvc; if [ $? -ne 0 ]; then echo "cmake Failed"; echo `pwd`; exit 1; fi;
 # 	cmake --build . --config $cmakeTarget; if [ $? -ne 0 ]; then echo "Build Failed"; echo `pwd`; exit 1; fi;
 # fi
 
@@ -49,7 +49,7 @@ if [ $tests -eq 1 ]; then
 		moveToDir crypto;
 		echo ---------------------Build Crypto----------------------
 		#rm -f CMakeCache.txt;
-		#cmake $JDE_BASH/Public/libs/crypto --preset win-msvc-jde; if [ $? -ne 0 ]; then echo "cmake Failed"; echo `pwd`; exit 1; fi;
+		#cmake $JDE_BASH/libs/crypto --preset win-msvc-jde; if [ $? -ne 0 ]; then echo "cmake Failed"; echo `pwd`; exit 1; fi;
 		#cmake --build . --config $cmakeTarget; if [ $? -ne 0 ]; then echo "Build Failed"; echo `pwd`; exit 1; fi;
 	fi
 	cd $jdeLibsDir;
@@ -57,7 +57,7 @@ if [ $tests -eq 1 ]; then
 		moveToDir access;
 		echo ---------------------Build Access----------------------
 		#rm -f CMakeCache.txt;
-		#cmake $JDE_BASH/Public/libs/access --preset win-msvc-jde; if [ $? -ne 0 ]; then echo "cmake Failed"; echo `pwd`; exit 1; fi;
+		#cmake $JDE_BASH/libs/access --preset win-msvc-jde; if [ $? -ne 0 ]; then echo "cmake Failed"; echo `pwd`; exit 1; fi;
 		#cmake --build . --config $cmakeTarget; if [ $? -ne 0 ]; then echo "Build Failed"; echo `pwd`; exit 1; fi;
 	fi
 	cd $jdeLibsDir;
@@ -65,7 +65,7 @@ if [ $tests -eq 1 ]; then
 		moveToDir web;
 		echo -------------------------Build Web--------------------------
 		#rm -f CMakeCache.txt;
-		#cmake $JDE_BASH/Public/libs/web --preset win-msvc-jde; if [ $? -ne 0 ]; then echo "cmake Failed"; echo `pwd`; exit 1; fi;
+		#cmake $JDE_BASH/libs/web --preset win-msvc-jde; if [ $? -ne 0 ]; then echo "cmake Failed"; echo `pwd`; exit 1; fi;
 		#cmake --build . --config $cmakeTarget; if [ $? -ne 0 ]; then echo "Build Failed"; echo `pwd`; exit 1; fi;
 	fi
 	cd $jdeLibsDir;
@@ -73,7 +73,7 @@ if [ $tests -eq 1 ]; then
 		moveToDir opc;
 		echo -------------------------Build Opc--------------------------
 		#rm -f CMakeCache.txt;
-		#cmake $JDE_BASH/Public/libs/opc --preset win-msvc-jde; if [ $? -ne 0 ]; then echo "cmake Failed"; echo `pwd`; exit 1; fi;
+		#cmake $JDE_BASH/libs/opc --preset win-msvc-jde; if [ $? -ne 0 ]; then echo "cmake Failed"; echo `pwd`; exit 1; fi;
 		#cmake --build . --config $cmakeTarget; if [ $? -ne 0 ]; then echo "Build Failed"; echo `pwd`; exit 1; fi;
 	fi
 fi
@@ -131,30 +131,30 @@ if [ ! windows -a ! -z "$install" ]; then #https://www.open62541.org/doc/open625
 fi;
 
 echo -------------Crypto------------
-cd $JDE_BASH/Public/src/crypto;
+cd $JDE_BASH/src/crypto;
 buildCMake Jde.Crypto;
 if [ $tests -eq 1 ]; then
-	cd $JDE_BASH/Public/tests/crypto;
+	cd $JDE_BASH/tests/crypto;
 	buildCMake Jde.Crypto.Tests;
 fi;
 
 echo -------------Web.Client------------
-cd $JDE_BASH/Public/src/web/client;
+cd $JDE_BASH/src/web/client;
 buildCMake Jde.Web.Client;
 
 echo -------------App.Shared------------
-cd $JDE_BASH/Public/src/app/shared;
+cd $JDE_BASH/src/app/shared;
 buildCMake Jde.App.Shared;
 
 echo -------------App.Client------------
-cd $JDE_BASH/Public/src/app/client;
+cd $JDE_BASH/src/app/client;
 buildCMake Jde.App.Client;
 
 echo -------------Web.Server------------
-cd $JDE_BASH/Public/src/web/server;
+cd $JDE_BASH/src/web/server;
 buildCMake Jde.Web.Server;
 if [ $tests -eq 1 ]; then
-	cd $JDE_BASH/Public/tests/web;
+	cd $JDE_BASH/tests/web;
 	buildCMake Jde.Web.Tests;
 fi;
 
@@ -180,10 +180,10 @@ fi;
 cmake.exe -DBUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$CMAKE_INSTALL_PREFIX/RelWithDebInfo -P cmake_install.cmake;
 
 echo ----------------iot----------------
-cd $JDE_BASH/Public/src/iot;
+cd $JDE_BASH/src/iot;
 buildCMake Jde.Iot;
 if [ $tests -eq 1 ]; then
-	cd $JDE_BASH/Public/tests/iot;
+	cd $JDE_BASH/tests/iot;
 	buildCMake Jde.Iot.Tests;
 fi;
 

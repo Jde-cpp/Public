@@ -52,7 +52,7 @@ namespace Jde::Web{
 				res = SendOptions( move(req) );
 			else if( req.IsPost("/ping") ){
 				auto pingRes{ req.Response<http::empty_body>() };
-				pingRes.set( http::field::summary, Jde::format("SSL={}", isSsl) );
+				pingRes.set( "summary", Jde::format("SSL={}", isSsl) );
 				pingRes.prepare_payload();
 				res = move(pingRes);
 			}

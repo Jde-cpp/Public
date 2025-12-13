@@ -13,17 +13,13 @@ echo 'jde-framework-proto done';
 cd projects/jde-opc/src/lib;
 moveToDir proto;
 
-#declare -A commonFiles;
-#if [ ! -f Common.d.ts ] || [ $clean == 1 ]; then commonFiles[Common]=common_root; fi;
-#create $JDE_BASH/Public/libs/app/shared/proto commonFiles;
-
 declare -A appFiles;
 if [ ! -f Common.d.ts ] || [ $clean == 1 ]; then appFiles[Common]=common_root; fi;
-create $JDE_BASH/Public/libs/app/shared/proto appFiles;
+create $JDE_BASH/libs/app/shared/proto appFiles;
 declare -A opcFiles;
 if [ ! -f Opc.Common.d.ts ] || [ $clean == 1 ]; then opcFiles[Opc.Common]=opc_common_root; fi;
 if [ ! -f Opc.FromServer.d.ts ] || [ $clean == 1 ]; then opcFiles[Opc.FromServer]=opc_from_server_root; fi;
 if [ ! -f Opc.FromClient.d.ts ] || [ $clean == 1 ]; then opcFiles[Opc.FromClient]=opc_from_client_root; fi;
-create $JDE_BASH/Public/apps/OpcGateway/src/types/proto opcFiles;
+create $JDE_BASH/apps/OpcGateway/src/types/proto opcFiles;
 
 popd > /dev/null;

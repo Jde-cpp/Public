@@ -112,7 +112,7 @@
 				"args": [ "-c", "-tests", "-settings=${config:sourceDir}/config/Opc.Server.jsonnet"],
 				"stopAtEntry": false,
 				"cwd": "${config:exeDir}",
-				"environment": [],
+				"environment": [{ "name": "LD_LIBRARY_PATH", "value": "$LD_LIBRARY_PATH:${env:REPO_DIR}/install/g++-14/Debug/boost/lib" } ],
 				"externalConsole": false,
 				"MIMode": "gdb",
 				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],

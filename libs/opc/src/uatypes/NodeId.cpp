@@ -66,7 +66,16 @@ namespace Jde::Opc{
 		else
 			DBGT( ELogTags::App, "No identifier in nodeId" );
 	}
-
+	α NodeId::ParseQL( const jobject& v )ε->vector<NodeId>{
+		vector<NodeId> y;
+		if( auto p = v.find("id"); p!=v.end() && p->value().is_array() ){
+			for( auto& item : p->value().get_array() )
+				y.emplace_back( item );
+		}
+		else
+			y.emplace_back( v );
+		return y;
+	}
 	α NodeId::operator=( const NodeId& x )ι->NodeId&{
 		if( this!=&x ){
 			UA_NodeId_clear( this );

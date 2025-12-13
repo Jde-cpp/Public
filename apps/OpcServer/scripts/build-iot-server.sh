@@ -37,7 +37,7 @@ if [ ! -f open62541.sln ]; then
 	moveToDir build;
 	cmake -DUA_THREADSAFE=100 -DUA_LOGLEVEL=100 ..;
 fi;
-stage=$JDE_BASH/Public/stage;
+stage=$JDE_BASH/stage;
 if [[ ! -f $stage/debug/open62541.lib || ! -f $stage/release/open62541.lib ]]; then
 	build open62541 0;
 	cd $stage/debug; mklink open62541.lib $REPO_BASH/open62541/build/bin/Debug;

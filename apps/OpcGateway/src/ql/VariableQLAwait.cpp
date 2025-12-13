@@ -2,6 +2,7 @@
 #include <jde/fwk/exceptions/ArgException.h>
 #include "../async/ConnectAwait.h"
 
+#define let const auto
 
 namespace Jde::Opc::Gateway{
 	α VariableQLAwait::Execute()ι->TAwait<sp<UAClient>>::Task{
@@ -43,7 +44,8 @@ namespace Jde::Opc::Gateway{
 	}
 	α VariableQLAwait::Read( QL::TableQL&& ql )ι->TAwait<ReadResponse>::Task{
 		try{
-			Resume( (co_await ReadAwait{{_nodeId, move(ql)}, _client}).ScalerJson() );
+			auto response = co_await ReadAwait{ {{_nodeId}, move(ql)}, _client };
+			Resume( response.ToJson(ql) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

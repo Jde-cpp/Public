@@ -23,7 +23,6 @@ const SECTIONS_KEYS = Object.keys(SECTIONS);
 })
 export class NavBar implements OnDestroy {
   private subscriptions = new Subscription();
-  //isNextVersion = location.hostname === 'next.material.angular.io';
   skipLinkHref: string | null | undefined;
   skipLinkHidden = true;
   routes:Route[] = [];

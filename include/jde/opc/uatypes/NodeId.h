@@ -15,6 +15,7 @@ namespace Jde::Opc{
 		NodeId( const flat_map<string,string>& x )ε;//rest params
 		explicit NodeId( const jvalue& j )ε;
 		NodeId( DB::Row& r, uint8 index )ε;
+		Ω ParseQL( const jobject& v )ε->vector<NodeId>;
 
 		α operator=( const NodeId& x )ι->NodeId&;
 		α operator=( NodeId&& x )ι->NodeId&;

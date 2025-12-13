@@ -287,9 +287,17 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		return new cnstrctr( result[Object.keys(result)[0]] );
 	}
 	async queryArray<Y>( ql: string, log?:Log ):Promise<Y[]>{
-		const member = ql.substring( 0, ql.indexOf('{') ).trim();
-		const y = await this.graphQL( ql, log );
-		return y[member];
+		const inputIndex = ql.indexOf('(');
+		const fieldIndex = ql.indexOf('{');
+		const index = inputIndex<0 ? fieldIndex : fieldIndex<0 ? inputIndex : Math.min( inputIndex, fieldIndex );
+		const member = ql.substring( 0, index ).trim();
+		const result = await this.graphQL( ql, log );
+		if( !result.hasOwnProperty(member) )
+			throw `'${member}' not found in ${JSON.stringify(result)}.`;
+		const y = result[member];
+		if( !Array.isArray(y) )
+			throw `'${member}' is not an array in ${JSON.stringify(y)}.`;
+		return y;
 	}
 
 	async querySetting( target:string, log:Log ):Promise<string>{

@@ -16,7 +16,7 @@ mat-header-cell{
 }
 
 .mat-column-select{
-	flex: 0 0 60px;
+	flex: 0 0 40px;
 	justify-content: center;
 	padding-left: 5px;
 	padding-right: 5px;
@@ -35,10 +35,10 @@ mat-cell.mat-column-id{
 	padding-right: 5px;
 }
 .mat-column-snapshot{
-	flex: 0 0 200px;
+	flex: 0 0 235px;
 	padding-left: 5px;
 	padding-right: 5px;
-	justify-content: center;
+//	justify-content: center;
 }
 .mat-column-description{
 	flex: 1 1 auto;

@@ -4,7 +4,7 @@ shouldFetch=${2:0};
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd $scriptDir;
 source env.sh;
-baseWebDir=$JDE_BASH/Public/web;
+baseWebDir=$JDE_BASH/web;
 cd ..;
 cmd="../framework/scripts/create-workspace.sh my-workspace $baseWebDir/spa $baseWebDir/framework $baseWebDir/access $baseWebDir/opc";
 echo $cmd

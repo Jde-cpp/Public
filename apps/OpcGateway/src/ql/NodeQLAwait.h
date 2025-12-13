@@ -18,6 +18,7 @@ namespace Jde::Opc::Gateway{
 		using BrowsePathResponse = flat_map<string,ExpectedNodeId>;
 		α AddAttributes( ExpectedNodeId nodeId, QL::TableQL* parentsQL, flat_map<NodeId, jobject> parents )ι->TAwait<ReadResponse>::Task;
 		α AddAttributes( Browse::Response&& br, QL::TableQL&& childrenQL, flat_map<NodeId, jobject> jChildren )ι->TAwait<ReadResponse>::Task;
+		α AddAttributes( vector<NodeId> nodeIds )ι->TAwait<ReadResponse>::Task;
 		α Browse( BrowsePathResponse pathNodes, str lastGoodParent, QL::TableQL* parents, flat_map<NodeId, jobject> jParents )ι->TAwait<Browse::Response>::Task;
 		α Browse( NodeId parentId, QL::TableQL children )ι->TAwait<Browse::Response>::Task;
 

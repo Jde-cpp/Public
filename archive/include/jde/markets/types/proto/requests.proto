@@ -1,7 +1,3 @@
-//source $JDE_BASH/Framework/common.sh;source $JDE_BASH/Framework/source-build.sh;findProtoc
-//cd $JDE_BASH/Public/jde/markets/types/proto;protoc --cpp_out dllexport_decl=JDE_MARKETS_EXPORT:. requests.proto;sed -i -e 's/JDE_MARKETS_EXPORT/ΓM/g' requests.pb.h;sed -i '1s/^/\xef\xbb\xbf/' requests.pb.h;
-//cd $JDE_BASH/MarketLibrary/source/types/proto;mv $JDE_BASH/Public/jde/markets/types/proto/requests.pb.cc .;mklink requests.pb.h $JDE_BASH/Public/jde/markets/types/proto
-
 syntax = "proto3";
 package Jde.Markets.Proto.Requests;
 import "ib.proto";

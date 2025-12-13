@@ -2,7 +2,7 @@
 clean=${1:-0};
 baseDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
 webDir=$(dirname $(readlink -e $baseDir));
-source $JDE_BASH/Public/build/common.sh;
+source $JDE_BASH/build/common.sh;
 frameworkDir=$baseDir;
 source $frameworkDir/scripts/common-proto.sh;
 
@@ -19,15 +19,11 @@ if [ $? -ne 0 ]; then npm install protobufjs-cli; fi;
 
 cd projects/jde-framework/src/lib;
 moveToDir proto;
-# declare -A commonFiles;
-# if [ ! -f FromServer.d.ts ] || [ $clean == 1 ]; then commonFiles[FromServer]=from_server_root; fi;
-# create $JDE_BASH/Public/src/web/proto commonFiles;
-# echo 'Created common proto files';
 
 declare -A webFiles;
 if [ ! -f Web.FromServer.d.ts ] || [ $clean == 1 ]; then webFiles[Web.FromServer]=web_from_server; fi;
 echo 'Creating web proto files';
-create $JDE_BASH/Public/libs/web/client/proto webFiles;
+create $JDE_BASH/libs/web/client/proto webFiles;
 echo 'Created web proto files';
 declare -A appFiles;
 if [ ! -f Log.d.ts ] || [ $clean == 1 ]; then appFiles[Log]=log; fi;
@@ -36,7 +32,7 @@ if [ ! -f App.FromServer.d.ts ] || [ $clean == 1 ]; then appFiles[App.FromServer
 if [ ! -f App.d.ts ] || [ $clean == 1 ]; then appFiles[App]=app; fi;
 if [ ! -f Common.d.ts ] || [ $clean == 1 ]; then appFiles[Common]=common; fi;
 echo 'Creating application proto files';
-create $JDE_BASH/Public/libs/app/shared/proto appFiles;
+create $JDE_BASH/libs/app/shared/proto appFiles;
 echo 'Created application proto files';
 
 echo jde-framework-proto.sh complete.

@@ -12,7 +12,8 @@
 			"cacheVariables":{
 				"CMAKE_CXX_STANDARD": "23",
 				"JDE_VERSION": "2025.12.01",
-				"MIN_REQ_CMAKE_VERSION": "3.28.3"
+				"MIN_REQ_CMAKE_VERSION": "3.28.3",
+				"SPDLOG_FMT_EXTERNAL": "ON"
 			}
 		},
 		{

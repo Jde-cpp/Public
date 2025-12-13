@@ -6,16 +6,16 @@ else()
 	find_package( OpenSSL REQUIRED )
 endif()
 
-add_compile_definitions( ${JDE_DEFINES} )
 find_package( fmt REQUIRED )
 include_directories( ${fmt_DIR}/../../../include )
 
 find_package( spdlog REQUIRED )
+add_compile_definitions( SPDLOG_FMT_EXTERNAL )
 include_directories( ${spdlog_DIR}/../../../include )
 if( WIN32 )
 	list( APPEND CMAKE_PREFIX_PATH "${MULTI_INSTALL_PREFIX}/protobuf/lib/cmake/utf8_range" )
 else()
-	list( APPEND CMAKE_PREFIX_PATH "${TYPE_INSTALL_PREFIX}/protobuf/lib/cmake/utf8_range" )
+	list( APPEND CMAKE_PREFIX_PATH "${MULTI_INSTALL_PREFIX}/protobuf/lib/cmake/utf8_range" )
 endif()
 
 find_package( protobuf CONFIG "32.1.0" EXACT REQUIRED )

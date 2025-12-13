@@ -62,9 +62,6 @@ namespace Browse{
 			ResumeExp( UAClientException{sc, _client->Handle(), _requestId} );
 		ASSERT( Promise() );
 	}
-	α FoldersAwait::await_resume()ι->Response{
-		return TAwait<Response>::await_resume();
-	}
 }
 
 	ObjectsFolderAwait::ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SL sl )ι:

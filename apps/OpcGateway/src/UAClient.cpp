@@ -165,7 +165,6 @@ namespace Jde::Opc::Gateway{
 	α UAClient::StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void{
 		constexpr std::array<sv,6> sessionStates = { "Closed", "CreateRequested", "Created", "ActivateRequested", "Activated", "Closing" };
 		DBG( "[{:x}]channelState='{}', sessionState='{}', connectStatus='({:x}){}'", (uint)ua, UAException::Message(channelState), FromEnum(sessionStates, sessionState), connectStatus, UAException::Message(connectStatus) );
-		BREAK_IF( connectStatus );
 		if( auto client = sessionState == UA_SESSIONSTATE_ACTIVATED ? UAClient::TryFind(ua) : sp<UAClient>{}; client ){
 			client->TriggerSessionAwaitables();
 			client->ClearRequest( ConnectRequestId );
@@ -251,7 +250,7 @@ namespace Jde::Opc::Gateway{
 		_awaitingActivation.emplace( shared_from_this() );
 		DBG( "[{:x}]Connecting to '{}', using '{}'", Handle(), Url(), Credential.ToString() );
 		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
-		_asyncRequest.SetParent( p );
+		_asyncRequest.SetClient( p );
 		Process( ConnectRequestId, "Connect" );
 	}
 

@@ -98,11 +98,14 @@ namespace Jde::Opc::Gateway{
 		nodesToReadSize=_readIds.size();
 		nodesToRead=_readIds.data();
 	}
-	ReadRequest::ReadRequest( const NodeId& nodeId, const QL::TableQL& ql )ι:
+
+	ReadRequest::ReadRequest( const vector<NodeId>& ids, const QL::TableQL& ql )ι:
 		UA_ReadRequest{}{
 		let attribs = allAttributes( ql );
-		for( let& attrib : attribs )
-			_readIds.push_back( UA_ReadValueId{nodeId, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
+		for( let& nodeId : ids ){
+			for( let& attrib : attribs )
+				_readIds.push_back( UA_ReadValueId{nodeId, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
+		}
 		nodesToReadSize=_readIds.size();
 		nodesToRead=_readIds.data();
 	}
@@ -153,18 +156,18 @@ namespace Jde::Opc::Gateway{
 	α ReadResponse::Validate( Handle uahandle, SL sl )ε->void{
 		THROW_IFX( responseHeader.serviceResult, UAClientException(responseHeader.serviceResult, uahandle, "UA_Client_Service_read().", sl) );
 	}
-		// Request{ move(request) }{
-		// THROW_IFX( rhs.responseHeader.serviceResult, UAClientException(rhs.responseHeader.serviceResult, uaHandle, "UA_Client_Service_read().", sl) );
-	α ReadResponse::ScalerJson()ι->jobject{
-		jobject j;
-			for( uint i=0; i<std::min(Request->nodesToReadSize, (uint)resultsSize); ++i ){
-			let result = results[0];
-			UA_ReadValueId& attribReq = Request->nodesToRead[i];
-			Variant value = result.status ? Variant{ result.status } : Variant{ move(result.value) };
-			j[ReadRequest::AtribString((UA_AttributeId)attribReq.attributeId)] = move(value).ToJson( true );
+
+	α ReadResponse::ToJson( const QL::TableQL& ql )ι->jvalue{
+		auto nodeJson = GetJson();
+		jarray y;
+		for( auto& [nodeId, j] : nodeJson ){
+			if( ql.FindColumn("id") )
+				j["id"] = nodeId.ToJson();
+			y.push_back( move(j) );
 		}
-		return j;
+		return ql.IsPlural() ? jvalue{move(y)} : (y.size() ? jvalue{move(y[0])} : jobject{});
 	}
+
 	α ReadResponse::SetJson( flat_map<NodeId, jobject>& nodes )ι->void{
 		for( uint i=0; i<std::min(Request->nodesToReadSize, (uint)resultsSize); ++i ){
 			UA_ReadValueId& attribReq = Request->nodesToRead[i];
@@ -174,7 +177,7 @@ namespace Jde::Opc::Gateway{
 			jobject& j = nodeIt.first->second;
 			Variant value = result.status ? Variant{ result.status } : Variant{ move(result.value) };
 			let attrib = (UA_AttributeId)attribReq.attributeId;
-			j[ReadRequest::AtribString(attrib)] = move(value).ToJson( true );
+			j[ReadRequest::AtribString(attrib)] = value.ToJson( true );
 		}
 	}
 

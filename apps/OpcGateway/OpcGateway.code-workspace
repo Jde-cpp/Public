@@ -42,6 +42,7 @@
 				"request": "launch",
 				"program": "${config:exeDir}/Jde.Opc.Gateway",
 				"args": ["-c", "-tests", "-settings=${config:sourceDir}/config/Opc.Gateway.jsonnet"],
+				"environment": [{ "name": "LD_LIBRARY_PATH", "value": "$LD_LIBRARY_PATH:${env:REPO_DIR}/install/g++-14/Debug/boost/lib" } ],
 				"stopAtEntry": false,
 				"cwd": "${config:exeDir}",
 				"externalConsole": false,

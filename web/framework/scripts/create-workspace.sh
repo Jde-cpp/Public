@@ -13,7 +13,7 @@ echo create-workspace.sh workspace=$workspace librares=\"${libraryLog:1}\";
 
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )";
 echo $scriptDir;
-source $JDE_BASH/Public/build/common.sh;
+source $JDE_BASH/build/common.sh;
 baseDir=`pwd`;
 echo $baseDir;
 #REPO_WEB=`readlink -f $scriptDir/../..`;

@@ -23,7 +23,7 @@ namespace Jde::Opc::Gateway{
 		α Process( RequestId requestId, sv what )ι->void{ Process(requestId, coroutine_handle<>{}, what); }
 		Ŧ ClearHandle( RequestId requestId )ι->T;
 		α Clear( RequestId requestId )ι->void;
-		α SetParent( sp<UAClient> client )ι{_client=client;}
+		α SetClient( sp<UAClient> client )ι{_client=client;}
 		α Stop()ι->void;
 		α IsRunning()Ι->bool{ return _running.test(); }
 	private:

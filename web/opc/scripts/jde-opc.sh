@@ -4,7 +4,7 @@ angularDir=`pwd`;
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )";
 cd $scriptDir/..;
 baseDir=`pwd`;
-source $JDE_BASH/Public/build/common.sh;
+source $JDE_BASH/build/common.sh;
 
 cd $angularDir/src;
 addHard styles.scss $baseDir/site;

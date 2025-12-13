@@ -279,12 +279,11 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		this.updateErrorCodes();
 		return y;
 	}
-	async snapshot( opcId:string, nodes:NodeId[] ):Promise<Map<NodeId,Value>>{
-		const args = encodeURIComponent( JSON.stringify(nodes.map(n=>n.toJson())) );
-		const json = await super.get( `snapshot?opc=${opcId}&nodes=${args}` );
+	async snapshot( opcId:CnnctnTarget, nodes:NodeId[] ):Promise<Map<NodeId,Value>>{
+		const results = await super.queryArray<{id:NodeId,value:Value}>( `nodes( opc: "${opcId}", id:[${NodeId.qlArgsArray(nodes)}]){id value}` );
 		var y = new Map<NodeId,Value>();
-		for( const snapshot of json["snapshots"] )
-			y.set( new NodeId(snapshot), toValue(snapshot.value) );
+		for( const snapshot of results )
+			y.set( new NodeId(snapshot.id), toValue(snapshot.value) );
 		this.updateErrorCodes();
 		return y;
 	}
@@ -296,6 +295,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		const q = `updateVariable( opc: $opc, id: $id, value: $value ){ value }`;
 		const vars = { opc: opcId, id: n.toJson(), value: valueJson(v) };
 		const newValue = toValue( await super.postQL<Value>(q, vars, log) );
+		this.updateErrorCodes();
 		return newValue;
 	}
 
