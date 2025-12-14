@@ -45,7 +45,7 @@ namespace Jde::Opc::Gateway{
 				co_return;
 			}
 			else
-				AddAttributes( NodeId::ParseQL(_query.Args) );
+				AddAttributes( NodeId::ParseQL(_query) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

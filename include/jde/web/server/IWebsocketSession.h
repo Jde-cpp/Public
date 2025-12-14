@@ -42,6 +42,7 @@ namespace Jde::Web::Server{
 		α Session()Ι->const sp<SessionInfo>&{ return _sessionInfo; }
 		α SessionId()ι{ return _sessionInfo ? _sessionInfo->SessionId : SessionPK{}; }
 		α SetSessionId( SessionPK sessionId )ι->void;
+		α SetSessionInfo( sp<SessionInfo> sessionInfo )ι->void{ _sessionInfo = move(sessionInfo); }
 		α Write( string&& m )ι->void;
 
 	private:

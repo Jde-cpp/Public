@@ -181,16 +181,14 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α ReadResponse::ScalerDataType()ι->UA_DataType*{
-		UA_DataType* dataType{};
-		if( auto value = resultsSize && results[0].hasValue ? &results[0].value : nullptr; value && value->type && value->type==&UA_TYPES[UA_TYPES_NODEID] ){
-			NodeId nodeId{ *(UA_NodeId*)results[0].value.data };
-			for( uint i=0; !dataType && i<UA_TYPES_COUNT; ++i ){
-				if( NodeId{UA_TYPES[i].typeId}==nodeId )
-					dataType = &UA_TYPES[i];
-			}
-		}
-		return dataType;
+	α ReadResponse::ScalerNodeId()ε->NodeId{
+		THROW_IF( resultsSize!=1, "Cannot get scalar NodeId for read response with no results." );
+		THROW_IF( !results[0].hasValue, "({})Cannot get scalar NodeId for read response with no value.", hex(results[0].status) );
+		THROW_IF( results[0].value.type!=&UA_TYPES[UA_TYPES_NODEID], "Cannot get scalar NodeId for type='{}'.", results[0].value.type->typeName );
+		return NodeId{ *(UA_NodeId*)results[0].value.data };
+	}
+	α ReadResponse::ScalerValue()ε->optional<Variant>{
+		return resultsSize==1 && results[0].hasValue  ? Variant{ move(results[0].value) } : optional<Variant>{};
 	}
 
 	α ReadAwait::Suspend()ι->void{

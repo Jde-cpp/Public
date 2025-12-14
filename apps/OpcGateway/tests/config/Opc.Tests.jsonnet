@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "BrowseTests.NodeId",
+		tests: "WriteTests.Enum",
 		recreateDB:: true,
 		embeddedAppServer: false,
 		embeddedOpcServer: false
@@ -57,13 +57,13 @@ local args = import 'args.libsonnet';
 		spd:{
 			defaultLevel:: "Information",
 			tags: {
-				trace:["test", "app", "http.client.write", "http.client.read", "ql", "processingLoop"],
+				trace:["test", "app", "http.client.write", "http.client.read", "ql"],
 				debug:["settings", "sql", "scheduler", "uaEvent",
-					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
+					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"],
+				information:["threads", "processingLoop",
+					"uaSecure", "uaClient", "uaNet",
 					"uaSession", "uaServer", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
 					"monitoring", "browse", "monitoring.pedantic"],
-				information:["threads",
-					"uaSecure", "uaClient", "uaNet"],
 				warning:[],
 				"error":[],
 				critical:[]

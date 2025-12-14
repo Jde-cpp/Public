@@ -1,12 +1,26 @@
 #include "GatewayClientSocket.h"
+#include <jde/fwk/process/execution.h>
+#include <jde/app/proto/common.h>
+#include "../../src/GatewayAppClient.h"
 #include "../../src/types/proto/opc.Common.h"
 #include "../../src/types/proto/opc.FromClient.h"
 #include "../../src/types/UAClientException.h"
-#include <jde/app/proto/common.h>
+#include "helpers.h"
 
 #define let const auto
 
-namespace Jde::Opc::Gateway::Tests{
+namespace Jde::Opc::Gateway{
+	sp<Tests::GatewayClientSocket> _session;
+	α Tests::Socket()ι->Tests::GatewayClientSocket&{
+		if( !_session ){
+			optional<ssl::context> ctx;
+			_session = ms<Tests::GatewayClientSocket>( Executor(), ctx );
+			BlockVoidAwait( _session->RunSession("localhost", GatewayPort()) );
+			BlockAwait<Web::Client::ClientSocketAwait<uint32>,uint>( _session->Connect(AppClient()->SessionId()) );
+		}
+		return *_session;
+	}
+namespace Tests{
 	GatewayClientSocket::GatewayClientSocket( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι:
 		base{ ioc, ctx }
 	{}
@@ -17,11 +31,11 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	α GatewayClientSocket::HandleException( std::any&& h, Jde::Proto::Exception&& e )ι{
-		if( auto pEcho = std::any_cast<ClientSocketAwait<string>::Handle>(&h) ){
+		if( auto pEcho = std::any_cast<await<string>::Handle>(&h) ){
 			pEcho->promise().SetExp( Exception{e.what(), e.code()} );
 			pEcho->resume();
 		}
-		else if( auto pAck = std::any_cast<ClientSocketAwait<SessionPK>::Handle>(&h) ){
+		else if( auto pAck = std::any_cast<await<SessionPK>::Handle>(&h) ){
 			pAck->promise().SetExp( Exception{e.what(), e.code()} );
 			pAck->resume();
 		}
@@ -49,7 +63,7 @@ namespace Jde::Opc::Gateway::Tests{
 				HandleException( move(h), move(*m->mutable_exception()) );
 				break;}
 			case kQuery:{
-				auto h = std::any_cast<ClientSocketAwait<jvalue>::Handle>( IClientSocketSession::PopTask(requestId) );
+				auto h = std::any_cast<await<jvalue>::Handle>( IClientSocketSession::PopTask(requestId) );
 				try{
 					h.promise().Resume( parse(move(*m->mutable_query())), h );
 				}
@@ -59,18 +73,18 @@ namespace Jde::Opc::Gateway::Tests{
 				break;}
 			case kSubscriptionAck:{
 				auto& result = *m->mutable_subscription_ack();
-				auto h = std::any_cast<ClientSocketAwait<FromServer::SubscriptionAck>::Handle>( IClientSocketSession::PopTask(requestId) );
+				auto h = std::any_cast<await<FromServer::SubscriptionAck>::Handle>( IClientSocketSession::PopTask(requestId) );
 				if( let sc = onSubscriptionAck(requestId, result); sc )
 					h.promise().ResumeExp( UAException{sc}, h );
 				else
 					h.promise().Resume( move(result), h );
 				break;}
 			case kUnsubscribeAck:{
-				auto h = std::any_cast<ClientSocketAwait<FromServer::UnsubscribeAck>::Handle>( IClientSocketSession::PopTask(requestId) );
+				auto h = std::any_cast<await<FromServer::UnsubscribeAck>::Handle>( IClientSocketSession::PopTask(requestId) );
 				h.promise().Resume( move(*m->mutable_unsubscribe_ack()), h );
 				break;}
 			case VALUE_NOT_SET:{
-				auto h = std::any_cast<ClientSocketAwait<uint32>::Handle>( IClientSocketSession::PopTask(requestId) ); //connect
+				auto h = std::any_cast<await<uint32>::Handle>( IClientSocketSession::PopTask(requestId) ); //connect
 				h.promise().Resume( Id(), h );
 			break;}
 			default:
@@ -85,10 +99,10 @@ namespace Jde::Opc::Gateway::Tests{
 
 	flat_map<RequestId, tuple<ServerCnnctnNK, vector<NodeId>, sp<IListener>>> _subscriptionRequests; shared_mutex _subscriptionRequestMutex;
 	flat_map<ServerCnnctnNK, flat_map<NodeId, flat_set<sp<IListener>>>> _subscriptions; shared_mutex _subscriptionsMutex;
-	α GatewayClientSocket::Query( string&& query, jobject variables, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
+	α GatewayClientSocket::Query( string&& query, jobject variables, bool returnRaw, SL sl )ι->await<jvalue>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]'{}', variables: {}.", requestId, query, serialize(variables) );
-		return ClientSocketAwait<jvalue>{ FromClientUtils::Query(move(query), move(variables), returnRaw, requestId), requestId, shared_from_this(), sl };
+		return await<jvalue>{ FromClientUtils::Query(move(query), move(variables), returnRaw, requestId), requestId, shared_from_this(), sl };
 	}
 	α GatewayClientSocket::Subscribe( ServerCnnctnNK target, const vector<NodeId>& nodes, sp<IListener> listener, SL sl )ε->await<FromServer::SubscriptionAck>{
 		let requestId = NextRequestId();
@@ -99,19 +113,19 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	flat_map<SubscriptionId, sp<IListener>> _logSubscriptions; shared_mutex _logSubscriptionsMutex;
-	α GatewayClientSocket::LogSubscribe( jobject&& ql, jobject vars, sp<IListener> listener, SL sl )ε->ClientSocketAwait<jarray>{
+	α GatewayClientSocket::LogSubscribe( jobject&& ql, jobject vars, sp<IListener> listener, SL sl )ε->await<jarray>{
 		let requestId = NextRequestId();
 		ql["id"] = requestId;
 		ul _{ _logSubscriptionsMutex };
 		_logSubscriptions.emplace( (uint32)requestId, move(listener) );
 		auto query = serialize(ql);
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, query.substr(0, Web::Client::MaxLogLength()) );
-		return ClientSocketAwait<jarray>{ FromClientUtils::Query(move(query), move(vars), true, requestId), requestId, shared_from_this(), sl };
+		return await<jarray>{ FromClientUtils::Query(move(query), move(vars), true, requestId), requestId, shared_from_this(), sl };
 	}
-	α GatewayClientSocket::Unsubscribe( ServerCnnctnNK target, const vector<NodeId>& nodeIds, SL sl )ε->ClientSocketAwait<FromServer::UnsubscribeAck>{
+	α GatewayClientSocket::Unsubscribe( ServerCnnctnNK target, const vector<NodeId>& nodeIds, SL sl )ε->await<FromServer::UnsubscribeAck>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Unsubscribe: '{}'.", requestId, target );
-		return ClientSocketAwait<FromServer::UnsubscribeAck>{ FromClientUtils::Unsubscription(move(target), nodeIds, requestId), requestId, shared_from_this(), sl };
+		return await<FromServer::UnsubscribeAck>{ FromClientUtils::Unsubscription(move(target), nodeIds, requestId), requestId, shared_from_this(), sl };
 	}
 
 	α onSubscriptionAck( RequestId requestId, const FromServer::SubscriptionAck& result )ι->StatusCode{
@@ -171,4 +185,4 @@ namespace Jde::Opc::Gateway::Tests{
 		CloseTasks( f );
 		base::OnClose( ec );
 	}
-}
+}}

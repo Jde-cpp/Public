@@ -41,7 +41,7 @@ namespace Jde::Opc::Gateway{
 		LogRead( Ƒ("sessionId: '{}'", strSessionId), requestId );
 		try{
 			let sessionInfo = co_await Sessions::UpsertAwait( strSessionId, _userEndpoint.address().to_string(), true, AppClient() );
-			base::SetSessionId( sessionInfo->SessionId );
+			base::SetSessionInfo( move(sessionInfo) );
 			Write( FromServer::CompleteTrans(requestId) );
 		}
 		catch( IException& e ){

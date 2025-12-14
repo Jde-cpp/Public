@@ -40,6 +40,8 @@ function buildProject() {
 		target=Jde.App.Shared;
 	elif [[ $buildRelativePath == "apps/AppServer"* ]]; then
 		target=Jde.App.Server;
+	elif [[ $buildRelativePath == *"libs/opc/lib"* ]]; then
+		target=Jde.Opc;
 	elif [[ $buildRelativePath == *"OpcGateway/lib"* ]]; then
 		target=Jde.Opc.GatewayLib;
 	elif [[ $buildRelativePath == "apps/OpcGateway/tests"* ]]; then

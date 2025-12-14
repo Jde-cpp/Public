@@ -18,9 +18,9 @@ namespace Jde::Opc{
 		PubSub        = 1ull << (33+(uint)UA_LOGCATEGORY_PUBSUB),
 		Discovery     = 1ull << (33+(uint)UA_LOGCATEGORY_DISCOVERY),
 
-		Monitoring    = 1ull << (32+11),
-		Browse        = 1ull << (32+12),
-		ProcessingLoop= 1ull << (32+13)
+		Monitoring    = 1ull << (33+10),
+		Browse        = 1ull << (33+11),
+		ProcessingLoop= 1ull << (33+12)
 	};
 	constexpr ELogTags IotReadTag{ ELogTags::Read | (ELogTags)EOpcLogTags::Opc };
 	constexpr ELogTags MonitoringTag{ (ELogTags)EOpcLogTags::Monitoring };

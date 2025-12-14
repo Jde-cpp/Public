@@ -37,8 +37,8 @@ namespace Jde::Opc::Gateway{
 		DBG( "{}ProcessingLoop started", logPrefix() );
 		cancelPing();
 		StatusCode sc{};
+		auto client = _client;
 		while( _running.test() ){
-			auto client = _client;
 			uint size;
 			{
 				sl _{ _requestMutex };
@@ -79,7 +79,7 @@ namespace Jde::Opc::Gateway{
 			}
 		}
 		if( !sc && !_stopped.test() && _pingInterval.count()>0 )
-			ping( _client );
+			ping( client );
 		else
 			DBG( "{}ProcessingLoop stopped", logPrefix() );
 	}

@@ -32,7 +32,12 @@
 			<ng-container matColumnDef="name">
 				<mat-header-cell mat-sort-header *matHeaderCellDef> Name </mat-header-cell>
 				<mat-cell mat-cell *matCellDef="let r">
-					<a [routerLink]="routerLink(r)" routerLinkActive="router-link-active" >{{r.name}}</a>
+					@if( r.isVariable ){
+						<span>{{r.name}}</span>
+					}
+					@else{
+						<a [routerLink]="routerLink(r)" routerLinkActive="router-link-active" >{{r.name}}</a>
+					}
 				</mat-cell>
 			</ng-container>
 			<!-- <ng-container matColumnDef="class">

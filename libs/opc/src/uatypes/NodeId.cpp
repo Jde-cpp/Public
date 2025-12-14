@@ -1,5 +1,6 @@
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/db/Row.h>
+#include <jde/ql/types/TableQL.h>
 
 #define let const auto
 namespace Jde::Opc{
@@ -66,14 +67,14 @@ namespace Jde::Opc{
 		else
 			DBGT( ELogTags::App, "No identifier in nodeId" );
 	}
-	α NodeId::ParseQL( const jobject& v )ε->vector<NodeId>{
+	α NodeId::ParseQL( const QL::TableQL& q )ε->vector<NodeId>{
 		vector<NodeId> y;
-		if( auto p = v.find("id"); p!=v.end() && p->value().is_array() ){
-			for( auto& item : p->value().get_array() )
-				y.emplace_back( item );
+		if( auto v = q.FindPtr<jvalue>( "id" ); v!=nullptr && v->is_array() ){
+			for( auto& item : v->get_array() )
+				y.emplace_back( item.as_object() );
 		}
-		else
-			y.emplace_back( v );
+		else if( v && v->is_object() )
+			y.emplace_back( v->get_object() );
 		return y;
 	}
 	α NodeId::operator=( const NodeId& x )ι->NodeId&{

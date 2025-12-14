@@ -296,7 +296,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		const vars = { opc: opcId, id: n.toJson(), value: valueJson(v) };
 		const newValue = toValue( await super.postQL<Value>(q, vars, log) );
 		this.updateErrorCodes();
-		return newValue;
+		return newValue["value"];
 	}
 
 	setRoute(route: NodeRoute){

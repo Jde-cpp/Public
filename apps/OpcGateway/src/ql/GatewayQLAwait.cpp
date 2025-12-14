@@ -11,8 +11,10 @@ namespace Jde::Opc::Gateway{
 		base{sl},
 		_raw{ returnRaw },
 		_queries{ move(q) },
-		_session{ move(session) }
-	{}
+		_session{ move(session) }{
+		if( _session->UserPK==0 )
+			WARNT( EOpcLogTags::User, "Session has no user." );
+	}
 
 	α GatewayQLAwait::Suspend()ι->void{
 //		if( _queries.IsQueries() )
@@ -32,7 +34,7 @@ namespace Jde::Opc::Gateway{
 							q.Args["name"] = nodeId.ToString();
 						}
 						results.push_back( co_await QL::QLAwait<>(move(q), _session->UserPK, _sl) );
-					}else if( q.JsonName.starts_with("node") )
+					}else if( q.JsonName.starts_with("node") || q.JsonName.starts_with("variable") )
 						results.push_back( co_await NodeQLAwait{move(q), _session->SessionId, _session->UserPK, _sl} );
 					else if( q.JsonName.starts_with("dataType") )
 						results.push_back( co_await DataTypeQLAwait{move(q), _session, _sl} );

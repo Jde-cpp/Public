@@ -10,7 +10,7 @@ namespace Jde::Opc{
 		Value( UA_DataValue&& x )ι:UA_DataValue{x}{ UA_DataValue_init(&x); }
 		Value( const Value& x )ι{ UA_DataValue_copy( &x, this ); }
 		Value( Value&& x )ι:UA_DataValue{x}{ UA_DataValue_init(&x); }
-		Value( const jvalue& j, UA_DataType* dt, SRCE )ε:UA_DataValue{ .value{.type{dt}} }{ Set(j, sl); }
+		Value( const jvalue& j, const UA_DataType* dt, SRCE )ε:UA_DataValue{ .value{.type{dt}} }{ Set(j, sl); }
 		~Value(){ UA_DataValue_clear(this); }
 
 		α operator=( Value&& x )ι->Value&;

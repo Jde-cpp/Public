@@ -13,7 +13,7 @@ local args = import 'args.libsonnet';
 				],
 				debug:["settings", "uaEvent"],
 				information:[
-					"opc.read", "opc.monitoring", "opc.browse", "app.processingLoop", "opc.monitoring.pedantic"
+					"monitoring", "browse", "processingLoop"
 				],
 				warning:[ "uaNet","uaClient","uaSecure","uaSession", "uaServer", "uaUser", "uaSecurity", "uaPubSub", "uaDiscovery"],
 				"error":[],

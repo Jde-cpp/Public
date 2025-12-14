@@ -13,6 +13,8 @@
 
 #define let const auto
 namespace Jde::Opc{
+	struct NodeId;
+	α FindDataType( const NodeId& nodeId )ι->UA_DataType*;
 	Ŧ Zero( T& x )ι->void{ ::memset( &x, 0, sizeof(T) ); }
 	constexpr α operator "" _uv( const char* x, uint len )ι->UA_String{ return UA_String{ len, static_cast<UA_Byte*>((void*)x) }; } //(UA_Byte*) gcc error
 	Ξ ToJson( UA_UInt64 v )ι->jobject{ return jobject{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",true} }; };
@@ -30,6 +32,7 @@ namespace Jde::Opc{
 		memcpy( y->data, bytes.data(), bytes.size() );
 		return y;
 	};
+
 	Ξ FromByteString( const UA_ByteString& bytes )ι->vector<uint8_t>{
 		vector<uint8_t> y;
 		if( bytes.length ){
