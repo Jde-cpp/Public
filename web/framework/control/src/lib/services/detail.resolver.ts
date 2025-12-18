@@ -38,7 +38,7 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 	){}
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<DetailResolverData<T>>{
-		let collectionDisplay = route.url.length>2 ? route.url[route.url.length-2].path : route.data["collectionName"]; //users
+		let collectionDisplay = route.url.length>1 ? route.url[route.url.length-2].path : route.data["collectionName"]; //users
 		let target = route.paramMap.get( "target" );
 		return this.loadProfile( route, collectionDisplay, target, state.url );
 	}

@@ -27,9 +27,9 @@ namespace Jde::App::Server{
 		}
 	}
 
-	α ForwardExecutionAwait::OnCloseConnection( AppInstancePK instancePK )ι->void{
+	α ForwardExecutionAwait::OnCloseConnection( AppConnectionPK connectionPK )ι->void{
 		_forwardExecutionMessages.erase_if( [=](auto&& kv){
-			if( kv.second.RequestSocketSession->InstancePK() != instancePK )
+			if( kv.second.RequestSocketSession->ConnectionPK() != connectionPK )
 				return false;
 			auto h = kv.second.Handle;
 			h.promise().ResumeExp( Exception{"Connection closed."}, h );

@@ -16,11 +16,12 @@ namespace Server{
 	α AppStartupAwait::Execute()ι->VoidAwait::Task{
 		try{
 			co_await ConfigureDSAwait{};
-			let pks = AddInstance( "Main", Process::HostName(), Process::ProcessId() );
+			str instanceName{ Settings::FindString("instanceName").value_or(_debug ? "Debug" : "Release") };
+			let pks = AddConnection( Process::Executable().filename(), instanceName, Process::HostName(), Process::ProcessId() );
 			Logging::Add<Web::Server::SubscribeLog>( "subscribe", get<0>(pks), get<1>(pks) );
 			SetAppPKs( pks );
 
-			Data::LoadStrings();
+			//Data::LoadStrings();
 			auto appClient = AppClient();
 			appClient->SetPublicKey( Crypto::CryptoSettings{Json::FindDefaultObject(_webServerSettings, "ssl")}.PublicKey() );
 			Server::StartWebServer( move(_webServerSettings) );

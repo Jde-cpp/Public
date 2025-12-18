@@ -1,5 +1,6 @@
 local args = import 'args.libsonnet';
 {
+	instanceName: args.instanceName,
 	dbServers:{
 		dataPaths: args.dbServers.dataPaths,
 		scriptPaths: args.dbServers.scriptPaths,

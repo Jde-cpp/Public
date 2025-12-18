@@ -1,6 +1,7 @@
 {
 	sqlType: "mysql",
-	logDir: "$(JDE_BUILD_DIR)",
+	logDir: "/tmp/jde/logs",
+	instanceName: "Debug",
 	opcServer: {
 		trustedCertDirs: [
 			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs",

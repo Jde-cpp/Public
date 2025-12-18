@@ -46,9 +46,9 @@ namespace Jde::App{
 				_request.LogRead();
 				_readyResult = mu<jvalue>( ValueJson(Settings::FindString("GoogleAuthClientId").value_or("GoogleAuthClientId Not Configured.")) );
 			}
-			else if( _request.Target()=="/opcGateways" ){
+			else if( _request.Target()=="/opcGateways" || _request.Target()=="/opcServers" ){
 				_request.LogRead();
-				let apps = Server::FindApplications( "Jde.OpcGateway" );
+				let apps = Server::FindApplications( _request.Target()=="/opcServers" ? "Jde.OpcServer" : "Jde.OpcGateway" );
 				jarray japps;
 				for( auto& app : apps )
 					japps.push_back( ToJson(app) );
@@ -77,9 +77,8 @@ namespace Jde::App{
 
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		if( auto e = Promise() ? Promise()->MoveExp() : nullptr; e ){
-			auto pRest = dynamic_cast<IRestException*>( e.get() );
-			if( pRest )
-				pRest->Throw();
+			if( auto rest = dynamic_cast<IRestException*>( e.get() ); rest )
+				rest->Throw();
 			else
 				throw RestException<http::status::internal_server_error>{ move(*e), move(_request) };
 		}

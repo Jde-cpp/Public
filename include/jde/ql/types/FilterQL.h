@@ -23,7 +23,7 @@ namespace Jde::QL{
 		Ω Test( const DB::Value::Underlying& value, const vector<FilterValue>& filters, ELogTags logTags )ι->bool;
 		flat_map<string,vector<FilterValue>> ColumnFilters;
 	};
-	α ToWhereClause( const TableQL& table, const DB::View& schemaTable, bool includeDeleted=false )->DB::WhereClause;
+	α ToWhereClause( const TableQL& table, const DB::View& schemaTable, bool includeDeleted=false )ε->DB::WhereClause;
 
 	template<> Ξ FilterValue::Test( string value )Ι->bool{
 		return Test( DB::Value{move(value)}, ELogTags::QL );

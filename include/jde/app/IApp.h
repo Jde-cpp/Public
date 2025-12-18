@@ -10,9 +10,9 @@ namespace Jde::App{
 		virtual ~IApp()=default;//msvc warning
 
 		β IsLocal()Ι->bool{ return false; }
-		α InstancePK()Ι->AppInstancePK{ return _instancePK; }
+		α ConnectionPK()Ι->AppConnectionPK{ return _connectionPK; }
 		β PublicKey()Ι->const Crypto::PublicKey& = 0;
-		α SetInstancePK( AppInstancePK pk )ι->void{ _instancePK = pk; }
+		α SetAppPKs( AppInstancePK instPK, AppConnectionPK pk )ι->void{ _instancePK = instPK; _connectionPK = pk; }
 		β SessionInfoAwait( SessionPK sessionPK, SRCE )ε->up<TAwait<Web::FromServer::SessionInfo>> = 0;
 		α Verify( const Web::Jwt& jwt )Ε->void;
 
@@ -25,6 +25,7 @@ namespace Jde::App{
 		β QueryValue( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jvalue>> = 0;
 	private:
 		AppInstancePK _instancePK{};
+		AppConnectionPK _connectionPK{};
 	};
 
 	Ŧ IApp::Query( string&& q, jobject variables, bool returnRaw, SL sl )ε->up<TAwait<T>>{

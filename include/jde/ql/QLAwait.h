@@ -25,7 +25,7 @@ namespace Jde::QL{
 	struct QLAwait : TAwaitEx<T, TAwait<jvalue>::Task>{
 		using base = TAwaitEx<T, TAwait<jvalue>::Task>;
 		QLAwait( TableQL&& ql, UserPK executer, SRCE )ι:base{sl},_request{move(ql)}, _executer{executer}{}
-		QLAwait( TableQL&& ql, DB::Statement&& statement, UserPK executer, SRCE )ι:
+		QLAwait( TableQL&& ql, optional<DB::Statement> statement, UserPK executer, SRCE )ι:
 			base{sl}, _request{ move(ql) }, _statement{ move(statement) }, _executer{ executer }{
 			ASSERT( !_statement || _statement->From.Joins.size() );
 		}

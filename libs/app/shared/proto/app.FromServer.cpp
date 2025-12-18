@@ -31,11 +31,12 @@ namespace Jde::App{
 		t.add_messages()->set_request_id( requestId );
 		return t;
 	}
-	α FromServer::ConnectionInfo( AppPK appPK, AppInstancePK instancePK, RequestId clientRequestId, const Crypto::PublicKey& appServerPubKey, Web::Server::SessionInfo&& session )ι->Proto::FromServer::Transmission{
+	α FromServer::ConnectionInfo( AppPK appPK, AppInstancePK instancePK, AppConnectionPK connectionPK, RequestId clientRequestId, const Crypto::PublicKey& appServerPubKey, Web::Server::SessionInfo&& session )ι->Proto::FromServer::Transmission{
 		return setMessage( clientRequestId, [&](auto& m){
 			auto& info = *m.mutable_connection_info();
 			info.set_app_pk( appPK );
 			info.set_instance_pk( instancePK );
+			info.set_connection_pk( connectionPK );
 			info.set_certificate_modulus( {appServerPubKey.Modulus.begin(), appServerPubKey.Modulus.end()} );
 			info.set_certificate_exponent( {appServerPubKey.Exponent.begin(), appServerPubKey.Exponent.end()} );
 			*info.mutable_session_info() = move( Web::Server::ToProto(move(session)) );

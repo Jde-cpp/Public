@@ -15,7 +15,7 @@ namespace Jde::App::Server{
 		ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α AppPK()Ι->AppPK{ return _appPK; }
 		α Instance()Ι->const Proto::FromClient::Instance&{ return _instance; }
-		α InstancePK()Ι->AppInstancePK{ return _instancePK; }
+		α ConnectionPK()Ι->AppConnectionPK{ return _connectionPK; }
 		α OnRead( Proto::FromClient::Transmission&& transmission )ι->void override;
 	private:
 		α OnClose()ι->void;
@@ -44,6 +44,7 @@ namespace Jde::App::Server{
 		Proto::FromClient::Instance _instance;
 		App::AppPK _appPK{};
 		AppInstancePK _instancePK{};
+		AppConnectionPK _connectionPK{};
 		optional<Jde::UserPK> _userPK{};
 		ELogLevel _webLevel{ ELogLevel::NoLog };
 		ELogLevel _dbLevel{ ELogLevel::NoLog };

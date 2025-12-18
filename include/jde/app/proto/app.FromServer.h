@@ -11,7 +11,7 @@ namespace Jde::App::Proto::FromClient { class Status; }
 namespace Jde::App::FromServer{
 	α Ack( uint32 serverSocketId )ι->Proto::FromServer::Transmission;
 	α Complete( RequestId requestId )ι->Proto::FromServer::Transmission;
-	α ConnectionInfo( AppPK appPK, AppInstancePK instancePK, RequestId clientRequestId, const Crypto::PublicKey& appServerPublicKey, Web::Server::SessionInfo&& session )ι->Proto::FromServer::Transmission;
+	α ConnectionInfo( AppPK appPK, AppInstancePK instancePK, AppConnectionPK connectionPK, RequestId clientRequestId, const Crypto::PublicKey& appServerPublicKey, Web::Server::SessionInfo&& session )ι->Proto::FromServer::Transmission;
 	α Exception( const exception& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission;
 	α Exception( string&& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission;
 	α Execute( string&& executionResult, RequestId clientRequestId )ι->Proto::FromServer::Transmission;

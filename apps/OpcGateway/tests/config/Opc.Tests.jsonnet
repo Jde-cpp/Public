@@ -1,7 +1,8 @@
 local args = import 'args.libsonnet';
 {
+	instanceName: args.instanceName,
 	testing:{
-		tests: "WriteTests.Enum",
+		tests:: "AppClientTests.ConnectionRow",
 		recreateDB:: true,
 		embeddedAppServer: false,
 		embeddedOpcServer: false

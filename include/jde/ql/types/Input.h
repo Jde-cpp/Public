@@ -1,4 +1,5 @@
 #pragma once
+#include <jde/db/Key.h>
 
 #define let const auto
 namespace Jde::QL{
@@ -13,6 +14,7 @@ namespace Jde::QL{
 		α FindKey()ι->optional<DB::Key>;
 		α GetKey(SRCE)ε->DB::Key;
 		Ŧ GetPath( sv path, SRCE )Ε->T;
+		α ExtrapolateVariables()Ι->jobject;
 
 		jobject Args;
 		sp<jobject> Variables;
@@ -50,7 +52,7 @@ namespace Jde::QL{
 
 	Ŧ Input::As( sv key, SL sl )Ε->const T&{
 		auto p = FindPtr<T>( key );
-		THROW_IFSL( !p, "Could not find key '{}' in mutation query: {}, variables: {}", key, serialize(Args), serialize(*Variables) );
+		THROW_IFSL( !p, "Could not find key '{}' in query: {}, variables: {}", key, serialize(Args), serialize(*Variables) );
 		return *p;
 	}
 

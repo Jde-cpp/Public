@@ -275,11 +275,11 @@ namespace Jde::QL{
 				if( system=="__type" ){
 					auto typeName =Json::FindDefaultSV( table.Args, "name" );
 					if( typeName.size() )
-						table.DBTable = DB::AppSchema::GetViewPtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(typeName)), sl );
+						table.SetDBTable( DB::AppSchema::GetViewPtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(typeName)), sl ) );
 				}
 				else if( system=="__schema" ){
 					THROW_IF( schemas.empty() || schemas[0]->Tables.empty(), "No schemas found." );
-					table.DBTable = schemas[0]->Tables.begin()->second;
+					table.SetDBTable( schemas[0]->Tables.begin()->second );
 				}
 			}
 			table.ReturnRaw = returnRaw;

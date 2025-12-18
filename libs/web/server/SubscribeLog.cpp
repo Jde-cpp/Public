@@ -20,11 +20,20 @@ namespace Jde::Web::Server{
 			if( let kv = filter.ColumnFilters.find("tags"); kv != filter.ColumnFilters.end()  && kv->second.size()==1 )
 				Tags = ToLogTags( kv->second.front().Value );
 		}
+		α operator=( LogSubscription&& sub )ι->LogSubscription& = default; /*{
+			QL::Subscription::operator=( move(sub) );
+			MinLevel = sub.MinLevel;
+			Tags = sub.Tags;
+			return *this;
+		}*/
 		ELogLevel MinLevel{ ELogLevel::Trace };
 		ELogTags Tags{ ELogTags::All };
 	};
 	struct SessionSubscription{
 		SessionSubscription( sp<IWebsocketSession> session, QL::Subscription&& sub )ι:Session{ move(session) },Sub{ move(sub) }{}
+		//SessionSubscription( const SessionSubscription& )ι=default;
+		//SessionSubscription( SessionSubscription&& )ι=default;
+		//α operator=( const SessionSubscription& x )ι->SessionSubscription&{ Session=x.Session; Sub=x.Sub; return *this; }
 		sp<IWebsocketSession> Session;
 		LogSubscription Sub;
 	};
@@ -33,6 +42,13 @@ namespace Jde::Web::Server{
 	α SubscribeLog::Shutdown( bool /*terminate*/ )ι->void{
 		ul _{ _mutex };
 		_subs.clear();
+	}
+
+	α SubscribeLog::Unsubscribe( SocketId socketId )ι->void{
+		ul _{ _mutex };
+		auto p = find_if( _subs, [=](auto&& s){ return s.Session->Id() == socketId; } );
+		if( p != _subs.end() )
+			_subs.erase( p );
 	}
 
 	α SubscribeLog::Add( sp<Web::Server::IWebsocketSession> session, vector<QL::Subscription>&& subs )ι->void{
@@ -45,9 +61,9 @@ namespace Jde::Web::Server{
 		}
 	}
 	α SubscribeLog::Write( const Logging::Entry& m )ι->void{
-		Write( m, _appPK, _instancePK );
+		Write( m, _appPK, _connectionPK );
 	}
-	α SubscribeLog::Write( const Logging::Entry& m, uint32 appPK, uint32 instancePK )ι->void{
+	α SubscribeLog::Write( const Logging::Entry& m, uint32 appPK, App::AppConnectionPK connectionPK )ι->void{
 		sl _{ _mutex };
 		for( let& s : _subs ){
 			bool valid{ m.Level>=s.Sub.MinLevel };
@@ -61,7 +77,7 @@ namespace Jde::Web::Server{
 			valid = valid && filter.Test( "templateId", m.Id() );
 			valid = valid && filter.Test( "message", m.Message() );
 			valid = valid && filter.Test( "appPK", appPK );
-			valid = valid && filter.Test( "appInstancePK", instancePK );
+			valid = valid && filter.Test( "appConnectionPK", connectionPK );
 			if( valid && filter.ColumnFilters.contains("args") ){
 				for( let& arg : m.Arguments ){
 					if( valid = filter.Test("args", arg); !valid )
@@ -69,7 +85,7 @@ namespace Jde::Web::Server{
 				}
 			}
 			if( valid )
-				s.Session->WriteSubscription( _appPK, _instancePK, m, s.Sub );
+				s.Session->WriteSubscription( appPK, connectionPK, m, s.Sub );
 		}
 	}
 }

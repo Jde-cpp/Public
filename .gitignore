@@ -73,3 +73,5 @@ apps/AppServer/config/common-meta.libsonnet
 **/out/**
 apps/AppServer/src/build/CMakeFiles/3.28.3/CMakeDetermineCompilerABI_C.bin
 libs/fwk/src/build/**
+libs/fwk/tests/build/**
+apps/AppServer/src/build/**

@@ -9,7 +9,7 @@
 #define let const auto
 
 namespace Jde::DB{
-	α GetSchemas( const jobject& config, sp<Access::IAcl> authorizer )ε->vector<sp<DBSchema>>{
+	Ω getSchemas( const jobject& config, sp<Access::IAcl> authorizer )ε->vector<sp<DBSchema>>{
 		vector<sp<DBSchema>> schemas;
     for( auto&& [name, value] : config )
 			schemas.emplace_back( ms<DBSchema>( name, Json::AsObject(value), authorizer ) );
@@ -18,7 +18,7 @@ namespace Jde::DB{
 
 	Catalog::Catalog( sv name, const jobject& config, sp<Access::IAcl> authorizer )ε:
 		Name{ name=="_" ? "" : name },
-		Schemas{ GetSchemas(Json::AsObject(config, "schemas"), authorizer) }
+		Schemas{ getSchemas(Json::AsObject(config, "schemas"), authorizer) }
 	{}
 
 	α Catalog::Initialize( sp<DB::Cluster> cluster, sp<Catalog> self )ε->void{

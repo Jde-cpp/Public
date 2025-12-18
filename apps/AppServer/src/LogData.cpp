@@ -17,12 +17,12 @@
 #define let const auto
 
 namespace Jde::App{
-	sp<DB::AppSchema> _logSchema;
+	sp<DB::AppSchema> _appSchema;
 	sp<Access::Authorize> _authorizer = ms<Access::Authorize>( "App" );
 	sp<Access::AccessListener> _listener;
 	constexpr ELogTags _tags{ ELogTags::App };
-	Ω ds()ι->DB::IDataSource&{ return *_logSchema->DS(); }
-	Ω instanceTableName()ε->string{ return _logSchema->GetView("app_instances").DBName; }
+	Ω ds()ι->DB::IDataSource&{ return *_appSchema->DS(); }
+	Ω instanceTableName()ε->string{ return _appSchema->GetView("connections").DBName; }
 
 namespace Server{
 
@@ -30,8 +30,8 @@ namespace Server{
 	α ConfigureDSAwait::Configure()ι->VoidAwait::Task{
 		try{
 			auto accessSchema = DB::GetAppSchema( "access", _authorizer );
-			_logSchema = DB::GetAppSchema( "log", _authorizer );
-			SetLocalQL( QL::Configure({accessSchema, _logSchema}, _authorizer) );
+			_appSchema = DB::GetAppSchema( "app", _authorizer );
+			SetLocalQL( QL::Configure({accessSchema, _appSchema}, _authorizer) );
 			_listener = ms<Access::AccessListener>( QLPtr() );
 			Process::AddShutdownFunction( []( bool terminate ){
 				_listener->Shutdown( terminate );
@@ -40,13 +40,13 @@ namespace Server{
 
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) ){
 				DB::NonProd::Recreate( *accessSchema, QLPtr() );
-				DB::NonProd::Recreate( *_logSchema, QLPtr() );
+				DB::NonProd::Recreate( *_appSchema, QLPtr() );
 			}
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) ){
 				DB::SyncSchema( *accessSchema, QLPtr() );
-				DB::SyncSchema( *_logSchema, QLPtr() );
+				DB::SyncSchema( *_appSchema, QLPtr() );
 			}
-			co_await Access::Server::Configure( {accessSchema, _logSchema}, QLPtr(), UserPK{UserPK::System}, _authorizer, _listener );
+			co_await Access::Server::Configure( {accessSchema, _appSchema}, QLPtr(), UserPK{UserPK::System}, _authorizer, _listener );
 			EndAppInstances();
 		}
 		catch( IException& e ){
@@ -55,7 +55,7 @@ namespace Server{
 	}
 	α ConfigureDSAwait::EndAppInstances()ι->DB::ExecuteAwait::Task{
 		try{
-			co_await ds().Execute( {Ƒ("update {} set end_time={} where end_time is null", instanceTableName(), ds().Syntax().UtcNow())} );
+			co_await ds().Execute( {Ƒ("update {} set deleted={} where deleted is null", instanceTableName(), ds().Syntax().UtcNow())} );
 			Resume();
 		}
 		catch( exception& e ){
@@ -87,19 +87,21 @@ namespace Server{
 }
 
 namespace Jde{
-	α App::AddInstance( str applicationName, str hostName, uint processId )ε->std::tuple<AppPK, AppInstancePK>{
-		AppPK applicationId{};
-		AppInstancePK applicationInstanceId{};
+	α App::AddConnection( str appName, str instanceName, str hostName, uint pid )ε->tuple<AppPK, AppInstancePK, AppConnectionPK>{
+		AppPK appId{};
+		AppInstancePK appInstanceId{};
+		AppConnectionPK appConnectionId{};
 		let rows = ds().Select( {
-			Ƒ("{}(?,?,?)", _logSchema->GetTable("app_instances").InsertProcName()),
-			{DB::Value{applicationName}, DB::Value{hostName}, DB::Value{processId}},
+			Ƒ("{}(?,?,?,?)", _appSchema->GetTable("connections").InsertProcName()),
+			{DB::Value{appName}, {instanceName}, DB::Value{hostName}, DB::Value{pid}},
 			true} );
 		for( auto&& row : rows ){
-			applicationId = row.GetUInt32(0);
-			applicationInstanceId = row.GetUInt32(1);
+			appId = row.GetUInt32(0);
+			appInstanceId = row.GetUInt32(1);
+			appConnectionId = row.GetUInt32(2);
 		}
 
-		return make_tuple( applicationId, applicationInstanceId );
+		return make_tuple( appId, appInstanceId, appConnectionId );
 	}
 	α App::EndInstance( AppInstancePK instanceId, SL sl )ι->DB::ExecuteAwait::Task{
 		try{
@@ -161,61 +163,4 @@ namespace Jde{
 		os << ")";
 	}
 */
-	namespace App{
-		α Data::LoadEntries( QL::TableQL table )ε->Proto::FromServer::Traces{
-			auto statement = QL::SelectStatement( table, true );
-			if( !statement )
-				return {};
-			flat_map<LogPK,Proto::FromServer::Trace> mapTraces;
-			constexpr uint limit = 1000;
-			statement->Limit( limit );
-			auto where = statement->Where;
-			auto rows = ds().Select( statement->Move() ); //TODO awaitable
-			for( auto& row : rows ){
-				auto t=FromServer::ToTrace( move(row), table.Columns );
-				auto id = t.id();
-				mapTraces.emplace( id, move(t) );
-			}
-			if( mapTraces.size() ){
-				constexpr sv variableSql = "select log_id, value, variable_index from log_variables join logs on logs.id=log_variables.log_id";
-				if( mapTraces.size()==limit ){
-					where.Add( "logs.id<?" );
-					where.Params().push_back( {mapTraces.rbegin()->first} );
-				}
-				auto rows = ds().Select( {Ƒ("{}\n{}\norder by log_id, variable_index", variableSql, where.Move()), where.Params()} );
-				for( auto&& row : rows ){
-					let id = row.GetUInt32( 0 );
-					if( auto pTrace = mapTraces.find(id); pTrace!=mapTraces.end() )
-						*pTrace->second.add_args() = move( row.GetString(1) );
-				}
-			}
-			Proto::FromServer::Traces traces;
-			for( auto& [id,trace] : mapTraces )
-				*traces.add_values() = move(trace);
-			return traces;
-		}
-
-		Ω loadStrings( str tableName, SRCE )ε->concurrent_flat_map<uuid,string>{
-			let& table = _logSchema->GetTablePtr( tableName );
-			DB::Statement statement{ table->Columns, DB::FromClause{DB::Join{table->GetPK(), _logSchema->GetTablePtr("entries")->GetPK(), true}}, {} };
-			auto rows = ds().Select( {statement.Move()}, sl );
-			concurrent_flat_map<uuid,string> map;
-			for( auto&& row : rows )
-				map.emplace( row.GetGuid(0), move(row.GetString(1)) );
-			return map;
-		}
-		Ω loadFiles( SL sl )ε->concurrent_flat_map<uuid,string>{
-			return loadStrings( "source_files", sl );
-		}
-		Ω loadFunctions( SL sl )ε->concurrent_flat_map<uuid,string>{
-			return loadStrings( "source_functions", sl );
-		}
-		Ω loadMessages( SL sl )ε->concurrent_flat_map<uuid,string>{
-			return loadStrings( "messages", sl );
-		}
-
-		α Data::LoadStrings( SL sl )ε->void{
-			StringCache::Merge( loadFiles(sl), loadFunctions(sl), loadMessages(sl) );
-		}
-	}
 }

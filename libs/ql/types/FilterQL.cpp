@@ -73,39 +73,39 @@ namespace Jde{
 		return ToEnum<DB::EOperator>( QLOperatorStrings, op ).value_or( DB::EOperator::Equal );
 	}
 
-	α QL::ToWhereClause( const TableQL& table, const DB::View& dbTable, bool includeDeleted )->DB::WhereClause{
-		let pFilter = Json::FindObject( table.Args, "filter" );
-		let& j = pFilter ? *pFilter : table.Args;
+	α QL::ToWhereClause( const TableQL& table, const DB::View& dbTable, bool includeDeleted )ε->DB::WhereClause{
+		//let filter = Json::FindObject( table.Args, "filter" );
+		//let& j = filter ? *filter : table.Args;
 		DB::WhereClause where;
-		for( let& [name,value] : j ){
-			auto pColumn = name!="id"
+		for( let& [name,value] : table.ExtrapolateVariables() ){
+			auto column = name!="id"
 				? dbTable.GetColumnPtr( DB::Names::FromJson(name) )
 				: AsTable(dbTable).Extends ? AsTable(dbTable).Extends->GetPK() : dbTable.GetPK(); //can't have left join users where users.id=?
 			if( name=="deleted" )
 				includeDeleted = false;
 			using enum DB::EOperator;
 			DB::EOperator op = Equal;
-			const jvalue* pJson{};
+			const jvalue* json{};
 			vector<DB::Value> params;
 			if( let array = value.try_as_array(); array ){
 				for( let& v : *array )
-					params.push_back( DB::Value{pColumn->Type, v} );
-				where.Add( pColumn, params );
+					params.push_back( DB::Value{column->Type, v} );
+				where.Add( column, params );
 			}
 			else{
 				if( value.is_string() || value.is_number() || value.is_null() || value.is_bool() )
-					pJson = &value;
+					json = &value;
 				else if( let o = value.try_as_object(); o && o->size() ){
 					let& first = *o->begin();
 					op = first.key()=="notIn" ? DB::EOperator::NotIn : DB::ToOperator( first.key() );
-					pJson = &first.value();
+					json = &first.value();
 				}
 				else
 					THROW("Invalid filter value type '{}'.", Json::Kind(value.kind()) );
-				if( pJson->is_array() )
-						where.Add( pColumn, op, DB::ToValue<uint>(Json::FromArray<uint>(pJson->get_array())) );
+				if( json->is_array() )
+						where.Add( column, op, DB::ToValue<uint>(Json::FromArray<uint>(json->get_array())) );
 					else
-						where.Add( pColumn, op, DB::Value{pColumn->Type, *pJson} );
+						where.Add( column, op, DB::Value{column->Type, *json} );
 			}
 		}
 		if( auto deleted = includeDeleted ? nullptr : dbTable.FindColumn("deleted"); deleted )

@@ -60,7 +60,7 @@ namespace Client{
 
 	α AppClientSocketSession::Connect( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>{
 		let requestId = NextRequestId();
-		auto instanceName = Settings::FindString( "instanceName" ).value_or( "" );
+		auto instanceName = Settings::FindString( "/instanceName" ).value_or( "" );
 		if( instanceName.empty() )
 			instanceName = _debug ? "Debug" : "Release";
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Connect: '{}'.", requestId, instanceName );
@@ -161,7 +161,7 @@ namespace Client{
 				INFO( "[{}]AppClientSocketSession created: {}://{}.", hex(Id()), IsSsl() ? "https" : "http", Host() );
 				}break;
 			case kConnectionInfo:
-				TRACE( "[{}]ConnectionInfo: applicationInstance: '{}'.", hex(Id()), m->connection_info().instance_pk() );
+				TRACE( "[{}]ConnectionInfo: connection: '{}'.", hex(Id()), hex(m->connection_info().connection_pk()) );
 				resume( move(hAny), move(*m->mutable_connection_info()) );
 				break;
 			case kGeneric:

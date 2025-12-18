@@ -22,12 +22,12 @@ namespace Jde::App::Server{
 			auto info = co_await Web::Server::Sessions::UpsertAwait( Ƒ("{:x}", instance.session_id()), _userEndpoint.address().to_string(), true, nullptr );
 			_userPK = info->UserPK;
 			base::SetSessionId( instance.session_id() );
-			let [appPK,instancePK] = App::AddInstance( instance.application(), instance.host(), instance.pid() );//TODO Don't block
-			INFOT( ELogTags::SocketServerRead, "[{}.{}]Adding application app:{}@{}:{} pid:{}, instancePK:{}, sessionId: {}, endpoint: '{}'", hex(Id()), hex(requestId), instance.application(), instance.host(), instance.web_port(), instance.pid(), hex(instancePK), hex(instance.session_id()), _userEndpoint.address().to_string() );
+			let [appPK,instancePK,connectionPK] = App::AddConnection( instance.application(), instance.instance_name(), instance.host(), instance.pid() );//TODO Don't block
+			INFOT( ELogTags::SocketServerRead, "[{}.{}]Adding application app:{}@{}:{} pid:{}, instancePK:{}, connectionPK:{}, sessionId: {}, endpoint: '{}'", hex(Id()), hex(requestId), instance.application(), instance.host(), instance.web_port(), instance.pid(), hex(instancePK), hex(connectionPK), hex(instance.session_id()), _userEndpoint.address().to_string() );
 			Server::RemoveExisting( instance.host(), instance.web_port() );
-			_instancePK = instancePK; _appPK = appPK;
+			_instancePK = instancePK; _appPK = appPK; _connectionPK = connectionPK;
 			_instance = move( instance );
-			Write( FromServer::ConnectionInfo(appPK, instancePK, requestId, AppClient()->PublicKey(), move(*info)) );
+			Write( FromServer::ConnectionInfo(appPK, instancePK, connectionPK, requestId, AppClient()->PublicKey(), move(*info)) );
 		}
 		catch( exception& e ){
 			WriteException( move(e), requestId );
@@ -264,7 +264,7 @@ namespace Jde::App::Server{
 				if( m.subscribe_status() )
 					Server::SubscribeStatus( *this );
 				else
-					Server::UnsubscribeStatus( InstancePK() );
+					Server::UnsubscribeStatus( ConnectionPK() );
 				break;
 			default:
 				LogRead( Ƒ("Unknown message type '{}'", underlying(m.Value_case())), requestId, ELogLevel::Critical );

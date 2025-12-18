@@ -1,4 +1,5 @@
 {
+	instanceName: "debug-linux",
 	sqlType: "mysql",
 	logDir: "$(JDE_BUILD_DIR)",
 	opc:{

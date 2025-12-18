@@ -1,4 +1,102 @@
 {
+	"settings": {
+		"window.title": "Access",
+		"name": "access",
+		"testTargetName": "Jde.Access.Tests",
+		"sourceDir": "${env:JDE_DIR}/jde/libs/access",
+		"debugDir": "${env:JDE_BUILD_DIR}",
+		"debugPreset": "linux-debug",
+		"buildTarget": "Debug",
+		"testBuildDir": "${config:debugDir}/libs/${config:name}/tests",
+		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh"
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [{
+			"label": "build",
+			"type": "shell",
+			"command": "cd ${config:debugDir}; tput reset; cmake --build . -j --target ${config:testTargetName};",
+			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+			"group": { "kind": "build", "isDefault": true }
+		},
+		{
+			"label": "buildProject",
+			"type": "shell",
+			"command": "tput reset;source $JDE_DIR/build/buildFunctions.sh;buildProject ${fileWorkspaceFolder} ${config:buildRoot}/${config:buildTarget};",
+			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+			"group": { "kind": "build", "isDefault": false }
+		},
+		{
+			"label": "compile",
+			"type": "shell",
+			"dependsOn": ["clearTerminal"],
+			"command": "tput reset; source $JDE_DIR/build/buildFunctions.sh;compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot}/${config:buildTarget};",
+			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+			"group": { "kind": "build", "isDefault": false }
+		},
+		{
+			"label": "clean",
+			"type": "shell",
+			"command": "tput reset; cd ${config:buildDir}; cd ..; rm -rf Debug; mkdir Debug;",
+		},
+		{
+			"label": "run",
+			"type": "shell",
+			"dependsOn": ["build", "clearTerminal"],
+			"command": "./${config:exe}",
+			"args": ["-c", "-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet"],
+			"options": {
+				"cwd": "${config:buildDir}",
+				"env": {
+					"JDE_MYSQL_CREDS": "root:dfs12975adsf"
+				}
+			}
+		}
+	]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [{
+			"name": "Debug",
+			"type": "cppdbg",
+			"request": "launch",
+			"program": "${config:testBuildDir}/${config:testTargetName}",
+			"args": [
+				"-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet",
+				"-tests"
+			],
+			"environment": [{ "name": "LD_LIBRARY_PATH", "value": "$LD_LIBRARY_PATH:${env:REPO_DIR}/install/g++-14/Debug/boost/lib" } ],
+			"stopAtEntry": false,
+			"cwd": "${config:testBuildDir}",
+			"externalConsole": false,
+			"MIMode": "gdb",
+			"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
+			"showDisplayString": true,
+			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
+			"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.27":"${env:REPO_DIR}/glibc-2.27" },
+			"preLaunchTask": "build"
+		},
+		{
+			"name": "Release",
+			"type": "cppdbg",
+			"request": "launch",
+			"program": "${env:JDE_DIR}/Release/g++-14/libs/access/tests/Jde.Access.Tests",
+			"args": [
+				"-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet",
+				"-tests"
+			],
+			"environment": [
+				{ "name": "LD_LIBRARY_PATH", "value": "${env:JDE_DIR}/Release/g++-14/libs/access/tests" }
+			],
+			"stopAtEntry": false,
+			"cwd": "${env:JDE_DIR}/Release/g++-14/libs/access/tests",
+			"externalConsole": false,
+			"MIMode": "gdb",
+			"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
+			"showDisplayString": true,
+			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
+		}]
+	},
 	"folders": [
 		{
 			"path": "config"
@@ -39,106 +137,4 @@
 			"name": "MySqlOld"
 		}
 	],
-	"settings": {
-		"window.title": "Access",
-		"name": "access",
-		"sourceDir": "${env:JDE_DIR}/jde/libs/access",
-		"buildRoot": "/mnt/ram/linux/g++-14/jde",
-		"buildDir": "${config:buildRoot}/${config:buildTarget}/libs/${config:name}",
-		"buildTarget": "Debug",
-		"exe": "tests/Jde.Access.Tests",
-	},
-	"tasks": {
-		"version": "2.0.0",
-		"tasks": [{
-			"label": "build",
-			"type": "shell",
-			"command": "cd ${config:buildDir}; tput reset; make -j;",
-			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
-			"group": { "kind": "build", "isDefault": true }
-		},
-		{
-			"label": "buildProject",
-			"type": "shell",
-			"command": "tput reset;source $JDE_DIR/build/buildFunctions.sh;buildProject ${fileWorkspaceFolder} ${config:buildRoot}/${config:buildTarget};",
-			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
-			"group": { "kind": "build", "isDefault": false }
-		},
-		{
-			"label": "compile",
-			"type": "shell",
-			"dependsOn": ["clearTerminal"],
-			"command": "tput reset; source $JDE_DIR/build/buildFunctions.sh;compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot}/${config:buildTarget};",
-			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
-			"group": { "kind": "build", "isDefault": false }
-		},
-		{
-			"label": "cmake",
-			"type": "shell",
-			"command": "mkdir -p ${config:buildDir}; cd ${config:buildDir}; tput reset; rm -f CMakeCache.txt; cmake $JDE_DIR/libs/access --preset linux-jde-debug",
-			"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
-			"group": { "kind": "build", "isDefault": false }
-		},
-		{
-			"label": "clean",
-			"type": "shell",
-			"command": "tput reset; cd ${config:buildDir}; cd ..; rm -rf Debug; mkdir Debug;",
-		},
-		{
-			"label": "run",
-			"type": "shell",
-			"dependsOn": ["build", "clearTerminal"],
-			"command": "./${config:exe}",
-			"args": ["-c", "-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet"],
-			"options": {
-				"cwd": "${config:buildDir}",
-				"env": {
-					"JDE_MYSQL_CREDS": "root:dfs12975adsf"
-				}
-			}
-		}
-	]
-	},
-	"launch": {
-		"version": "0.2.0",
-		"configurations": [{
-				"name": "Debug",
-				"type": "cppdbg",
-				"request": "launch",
-				"program": "${config:buildDir}/${config:exe}",
-				"args": [
-					"-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet",
-					"-tests"
-				],
-				"stopAtEntry": false,
-				"cwd": "${config:buildDir}",
-				"externalConsole": false,
-				"MIMode": "gdb",
-				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
-				"showDisplayString": true,
-				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
-				"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.27":"${env:REPO_DIR}/glibc-2.27" },
-				"preLaunchTask": "build"
-			},
-			{
-				"name": "Release",
-				"type": "cppdbg",
-				"request": "launch",
-				"program": "${env:JDE_DIR}/Release/g++-14/libs/access/tests/Jde.Access.Tests",
-				"args": [
-					"-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet",
-					"-tests"
-				],
-				"environment": [
-					{ "name": "LD_LIBRARY_PATH", "value": "${env:JDE_DIR}/Release/g++-14/libs/access/tests" }
-				],
-				"stopAtEntry": false,
-				"cwd": "${env:JDE_DIR}/Release/g++-14/libs/access/tests",
-				"externalConsole": false,
-				"MIMode": "gdb",
-				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
-				"showDisplayString": true,
-				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
-			}]
-		}
 }
