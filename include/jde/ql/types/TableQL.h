@@ -36,6 +36,7 @@ namespace Jde::QL{
 		α GetTable( sv jsonPluralName, SRCE )ε->TableQL&;
 		α IsPlural()Ι->bool{ return DB::Names::IsPlural(JsonName); }
 		α SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void;
+		α TransformResult( jarray&& result )Ι->jvalue;
 		α ToJson( DB::Row& row, const vector<DB::Object>& dbColumns )Ι->jobject;
 		α ToString()Ι->string;
 		α TrimColumns( const jobject& fullOutput )Ι->jobject;

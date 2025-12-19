@@ -41,7 +41,7 @@ namespace Jde::Opc::Gateway{
 			_localQL = QL::Configure( {schema}, authorize );
 			for( let& path : Settings::FindPathArray("/ql/introspection") )
 				QL::AddIntrospection( QL::Introspection{Json::ReadJsonNet(Settings::Directory()/path)} );
-			QL::SetSystemTables( {"node","nodes", "dataType", "dataTypes", "variable", "variables"} );
+			QL::SetSystemTables( {"dataType", "dataTypes", "discoveryUrls", "node","nodes", "securityMode", "securityPolicyUri", "serverDescription", "variable", "variables"} );
 			QL::SetSystemMutations( {"execute"} );
 			SetSchema( schema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )

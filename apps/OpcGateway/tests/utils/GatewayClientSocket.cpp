@@ -31,13 +31,17 @@ namespace Tests{
 	}
 
 	α GatewayClientSocket::HandleException( std::any&& h, Jde::Proto::Exception&& e )ι{
-		if( auto pEcho = std::any_cast<await<string>::Handle>(&h) ){
-			pEcho->promise().SetExp( Exception{e.what(), e.code()} );
-			pEcho->resume();
+		if( auto echo = std::any_cast<await<string>::Handle>(&h) ){
+			echo->promise().SetExp( Exception{e.what(), e.code()} );
+			echo->resume();
 		}
-		else if( auto pAck = std::any_cast<await<SessionPK>::Handle>(&h) ){
-			pAck->promise().SetExp( Exception{e.what(), e.code()} );
-			pAck->resume();
+		else if( auto ack = std::any_cast<await<SessionPK>::Handle>(&h) ){
+			ack->promise().SetExp( Exception{e.what(), e.code()} );
+			ack->resume();
+		}
+		else if( auto q = std::any_cast<await<jvalue>::Handle>(&h) ){
+			q->promise().SetExp( Exception{e.what(), e.code()} );
+			q->resume();
 		}
 		else
 			WARNT( ELogTags::SocketClientRead, "Failed to process incomming exception '{}'.", e.what() );

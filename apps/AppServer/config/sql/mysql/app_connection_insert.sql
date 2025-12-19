@@ -10,7 +10,7 @@ begin
 	if _program_id is null then
 		call app_program_insert( _program_name, _program_id );
 	end if;
-	select instance_id into _instance_id from app_instances where name=_instance_name;
+	select instance_id into _instance_id from app_instances where program_id=_program_id and name=_instance_name;
 	if _instance_id is null then
 		call app_instance_insert( _program_id, _instance_name, _host_name, _instance_id );
 	end if;

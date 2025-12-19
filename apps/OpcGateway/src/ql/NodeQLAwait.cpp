@@ -10,15 +10,12 @@
 namespace Jde::Opc::Gateway{
 
 	α NodeQLAwait::Execute()ι->TAwait<sp<UAClient>>::Task{
-		auto opcId{ _query.FindPtr<jstring>("opc") };
 		try{
-			_client = co_await ConnectAwait{ opcId ? string{move(*opcId)} : string{}, _sessionPK, _executer, _sl };
 			BrowsePathResponse pathNodes;
 			NodeId nodeId;
 			flat_map<NodeId, jobject> jParents;
 			flat_map<NodeId, jobject> jChildren;
 			auto parentsQL{ _query.FindTable("parents") };
-			//auto childrenQL{ _query.FindTable("children") };
 			if( auto nodePath = _query.FindPtr<jstring>("path"); nodePath ){
 				pathNodes = _client->BrowsePathsToNodeIds( *nodePath, parentsQL!=nullptr );
 				const bool savePath{ parentsQL && parentsQL->FindColumn("path") };

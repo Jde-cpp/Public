@@ -33,11 +33,11 @@
 			"name": "fwk"
 		},
 		{
-			"path": "/home/duffyj/code/jde/Release/g++-14/repos/open62541/src/open62541/src",
+			"path": "${env:JDE_BUILD_DIR}/repos/open62541/src/open62541/src",
 			"name": "open62541"
 		},
 		{
-			"path": "${env:JDE_DIR}/Release/g++-14/repos/open62541/src/open62541/tests",
+			"path": "${env:JDE_BUILD_DIR}/repos/open62541/src/open62541/tests",
 			"name": "openTests"
 		},
 		{
@@ -61,11 +61,11 @@
 			"name": "ql"
 		},
 		{
-			"path": "~../../libs/access/src",
+			"path": "../../libs/access/src",
 			"name": "access"
 		},
 		{
-			"path": "/mnt/ram/linux/g++-14/repos/Debug/nodeset-loader/src/open62541-nodeset-loader",
+			"path": "${env:JDE_BUILD_DIR}/repos/nodeset-loader/src/open62541-nodeset-loader",
 			"name": "nodeset-loader"
 		},
 

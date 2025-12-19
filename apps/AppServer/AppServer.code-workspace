@@ -52,10 +52,6 @@
 			"name": "webClient"
 		},
 		{
-			"path": "../../libs/crypto/src",
-			"name": "Crypto"
-		},
-		{
 			"path": "config",
 			"name": "config"
 		}

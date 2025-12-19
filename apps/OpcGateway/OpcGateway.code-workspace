@@ -142,18 +142,12 @@
 			"name": "fwk"
 		},
 		{
-			"path": "../../libs/crypto"
-		},
-		{
 			"path": "../../libs/db/src",
 			"name": "db"
 		},
 		{
 			"path": "../../libs/db/drivers/mysql",
 			"name": "mysql"
-		},
-		{
-			"path": "../../../open62541"
 		}
 	]
 }

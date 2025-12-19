@@ -157,6 +157,14 @@ namespace Jde::QL{
 			t.SetResult( o.at(t.JsonName).as_object(), dbColumn, move(value) );
 		}
 	}
+	α TableQL::TransformResult( jarray&& result )Ι->jvalue{
+		jvalue v;
+		if( IsPlural() )
+			v = move(result);
+		else
+			v = result.size() ? move(result[0].as_object()) : jobject{};
+		return ReturnRaw ? move(v) : jobject{{JsonName, move(v)}};
+	}
 	α TableQL::ToString()Ι->string{
 		string y = JsonName;
 		y.reserve( 64*(1+Tables.size()) );

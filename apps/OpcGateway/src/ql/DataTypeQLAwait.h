@@ -5,12 +5,11 @@ namespace Jde::QL{ struct TableQL; }
 
 namespace Jde::Opc::Gateway{
 	struct UAClient;
-	struct DataTypeQLAwait final: TAwaitEx<jvalue,TAwait<sp<UAClient>>::Task>{
-		using base = TAwaitEx<jvalue,TAwait<sp<UAClient>>::Task>;
-		DataTypeQLAwait( QL::TableQL&& ql, sp<Web::Server::SessionInfo> sessionInfo, SRCE )ι: base{ sl }, _sessionInfo{move(sessionInfo)}, _ql{move(ql)}{};
-		α Execute()ι->TAwait<sp<UAClient>>::Task override;
+	struct DataTypeQLAwait final: TAwait<jvalue>{
+		DataTypeQLAwait( QL::TableQL&& ql, sp<UAClient> client, SRCE )ι: TAwait{ sl }, _client{move(client)}, _ql{move(ql)}{};
+		α Suspend()ι->void override;
 	private:
-		sp<Web::Server::SessionInfo> _sessionInfo;
+		sp<UAClient> _client;
 		QL::TableQL _ql;
 	};
 }

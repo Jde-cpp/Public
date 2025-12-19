@@ -9,8 +9,8 @@ namespace Jde::Opc::Gateway{
 	struct UAClient;
 	struct NodeQLAwait final: TAwaitEx<jvalue,TAwait<sp<UAClient>>::Task>{
 		using base = TAwaitEx<jvalue,TAwait<sp<UAClient>>::Task>;
-		NodeQLAwait( QL::TableQL&& query, SessionPK sessionPK, UserPK executer, SRCE )ι:
-			base{ sl }, _executer{executer}, _query{move(query)}, _sessionPK{move(sessionPK)}
+		NodeQLAwait( QL::TableQL&& query, sp<UAClient> client, SRCE )ι:
+			base{ sl }, _client{client}, _query{move(query)}
 		{}
 		α Execute()ι->TAwait<sp<UAClient>>::Task override;
 	private:
@@ -23,8 +23,6 @@ namespace Jde::Opc::Gateway{
 		α Browse( NodeId parentId, QL::TableQL children )ι->TAwait<Browse::Response>::Task;
 
 		sp<UAClient> _client;
-		UserPK _executer;
 		QL::TableQL _query;
-		SessionPK _sessionPK;
 	};
 }

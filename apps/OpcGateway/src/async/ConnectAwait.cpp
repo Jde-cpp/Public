@@ -19,7 +19,7 @@ namespace Jde::Opc::Gateway{
 		_opcTarget{ move(opc) },
 		_cred{ credential(sessionId, user, _opcTarget).value_or(Credential{}) }
 	{}
-	ConnectAwait::ConnectAwait( ServerCnnctnNK&& opc, const Web::Server::SessionInfo& session, SL sl )ι:
+	ConnectAwait::ConnectAwait( ServerCnnctnNK opc, const Web::Server::SessionInfo& session, SL sl )ι:
 		ConnectAwait{ move(opc), session.SessionId, session.UserPK, sl }
 	{}
 

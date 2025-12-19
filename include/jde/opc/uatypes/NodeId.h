@@ -40,6 +40,7 @@ namespace Jde::Opc{
 		α Add( jobject& j )Ι->void;
 		α ToJson()Ι->jobject;
 		α ToString()Ι->string;
+		Ω ToString( const vector<NodeId>& nodeIds )ι->string;
 	};
 	α ToJson( const UA_NodeId& nodeId )ι->jobject;
 	Ξ operator==( const NodeId& x, const NodeId& y )ι->bool{ return !(x<y) && !(y<x); }

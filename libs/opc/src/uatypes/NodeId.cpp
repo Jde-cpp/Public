@@ -178,6 +178,13 @@ namespace Jde::Opc{
 		let y = Opc::ToString( j );
 		return y.size()>1 ? y.substr( 1, y.size()-2 ) : y; //remove quotes
 	}
+	α NodeId::ToString( const vector<NodeId>& nodeIds )ι->string{
+		jarray j;
+		for( let& nodeId : nodeIds )
+			j.push_back( nodeId.ToJson() );
+		return serialize( j );
+	}
+
 	α toJson( jobject& j, const UA_NodeId& nodeId )ι->jobject{
 		j["ns"] = nodeId.namespaceIndex;
 		const UA_NodeIdType type = nodeId.identifierType;
