@@ -2,6 +2,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <jde/fwk/io/protobuf.h>
 #include <jde/fwk/settings.h>
+#include <jde/web/Jwt.h>
 #include "Log.pb.h"
 
 using Jde::Protobuf::ToBytes;
@@ -35,12 +36,7 @@ namespace Jde::App{
 		*m.mutable_value() = move( value );
 		return m;
 	}
-/*	α FromClient::AddStringField( PFromClient::Transmission& t, Log::Proto::EFields field, uuid id, string&& value )ι->void{
-		auto& m = *t.add_messages()->mutable_string_field();
-		m.set_field( field );
-		*m.mutable_value() = ToString( id, move(value) );
-	}
-*/
+
 	α FromClient::Exception( exception&& e, RequestId requestId )ι->PFromClient::Transmission{
 		return setMessage( requestId, [&](auto& m){
 			auto& request = *m.mutable_exception();
@@ -82,6 +78,12 @@ namespace Jde::App{
 
 	α FromClient::Jwt( RequestId requestId )ι->StringTrans{
 		return transString( requestId, [&](auto& m){m.set_request_type(Proto::FromClient::ERequestType::Jwt);} );
+	}
+
+	α FromClient::Login( Web::Jwt&& jwt, RequestId requestId )ι->StringTrans{
+		return transString( requestId, [&](auto& m){
+			*m.mutable_jwt() = move(jwt.Payload());
+		} );
 	}
 
 	α FromClient::ToStatus( vector<string>&& details )ι->PFromClient::Status{

@@ -1,6 +1,7 @@
 ﻿#include <jde/fwk/str.h>
 #include <algorithm>
 #include <functional>
+#include <ranges>
 #include <boost/algorithm/hex.hpp>
 #include <boost/uuid/string_generator.hpp>
 #include <fmt/args.h>
@@ -8,7 +9,7 @@
 #ifdef _MSC_VER
 	#include <jde/fwk/process/os/windows/WindowsUtilities.h>
 #endif
-
+#define let const auto
 boost::uuids::string_generator _gen;
 α Jde::ToUuid( sv s, SL sl )ε->uuid{
 	try{
@@ -24,17 +25,17 @@ namespace Jde{
 	α Str::Empty()ι->str{ return _empty; };
 
 	α Str::DecodeUri( sv x )ι->string{
-		auto from_hex = [](char ch) { return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10; };
+		auto from_hex = []( char ch ) { return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10; };
 		string y{}; y.reserve( x.size() );
-    for (auto i = x.begin(), n = x.end(); i != n; ++i){
+    for( auto i = x.begin(), n = x.end(); i != n; ++i ){
 			char ch = *i;
       if( ch == '%' ){
-        if (i[1] && i[2]){
-          ch = (char)( from_hex(i[1]) << 4 | from_hex(i[2]) );
+        if( i[1] && i[2] ){
+          ch = ( char )( from_hex(i[1]) << 4 | from_hex(i[2]) );
           i += 2;
         }
       }
-			else if (ch == '+')
+			else if( ch == '+' )
         ch = ' ';
 			y+=ch;
 		}
@@ -44,14 +45,14 @@ namespace Jde{
     fmt::dynamic_format_arg_store<fmt::format_context> store;
 		for( auto&& arg : args )
 			store.push_back( move(arg) );
-    return fmt::vformat(format, store);
+    return fmt::vformat( format, store );
 	}
 	α Str::TryFormat( sv format, vector<string> args )ι->string{
 		try{
 			return Str::Format( format, move(args) );
 		}
 		catch( const std::exception& e ){
-			string msg = Ƒ("{}[{}]", format, Join(args, ", "));
+			string msg = Ƒ( "{}[{}]", format, Join(args, ", ") );
 			DBGT( ELogTags::Parsing, "Format error: {}, error: {}", msg, e.what() );
 			return string{ msg };
 		}
@@ -78,7 +79,7 @@ namespace Jde{
 		vector<sv> y;
 		for( uint fieldStart=0, fieldEnd;fieldStart<s.size();fieldStart = fieldEnd+1 ){
 			fieldEnd = std::min( s.find_first_of(delim, fieldStart), s.size() );
-			sv v{s.data()+fieldStart, fieldEnd-fieldStart };
+			sv v{ s.data()+fieldStart, fieldEnd-fieldStart };
 			if( v.size() )
 				y.push_back( v );
 		}
@@ -97,8 +98,8 @@ namespace Jde{
 		std::transform( result.begin(), result.end(), result.begin(), fnctn );
 		return result;
 	}
-	α Str::ToLower( sv source )ι->string{ return transform( source, ::tolower ); }
-	α Str::ToUpper( sv source )ι->string{ return transform( source, ::toupper ); }
+	α Str::ToLower( sv source )ι->string{ return transform(source, ::tolower); }
+	α Str::ToUpper( sv source )ι->string{ return transform(source, ::toupper); }
 
 
 	α GetChar( sv x, uint& i )ι->wchar_t{
@@ -112,32 +113,60 @@ namespace Jde{
 		return ch;
 	};
 
+	Ω isSpace( wchar_t ch )->bool{
+		return std::iswspace( ch ) || ch==L'\x80af' || ch==L'\x8093';
+	}
+
+	Ṫ ltrim( T&& s, function<bool(wchar_t)> f )->T{
+		uint i=0;
+		for( ; i<s.size() && f(*(std::begin(s)+i)); ++i );
+		return i==0 ? s : T{ std::begin(s)+i, std::end(s) };
+	}
+	Ṫ rtrim( T&& s, function<bool(wchar_t)> f )->T{
+		uint i=s.size();
+		for( ; i>0 && f(*(std::begin(s)+i-1)); --i );
+		return i==s.size() ? s : T{ std::begin(s), std::begin(s)+i };
+	}
+
+	α Str::LTrim( string&& s )->string{
+		return ltrim( move(s), isSpace );
+	}
 	α Str::LTrim( sv s )->sv{
 		uint i=0; wchar_t ch;
-		for( ch = GetChar( s, i );
-			std::isspace(ch) || ch==L'\x80af' || ch==L'\x8093';
-			ch = GetChar(s, ++i) );
+		for( ch = GetChar(s, i); isSpace(ch); ch = GetChar(s, ++i) );
 		if( ch>0xff && i>1 )
 			i-=2;
 		return i ? sv{ s.data()+i, s.size()-i } : s;
 	}
+	α Str::TrimFirstLast( string&& s, char first, char last )ι->string{
+		bool found{};
+		auto f = [&found]( char bracket, wchar_t ch ){
+			let skip = ch==bracket && !found;
+			if( skip )
+				found = true;
+			return skip || isSpace( ch );
+		};
+		auto trim = ltrim( move(s), [&f, first](wchar_t ch){return f(first, ch);} );
+		if( !found )
+			return RTrim( move(trim) );
+		found = false;
+		return rtrim( move(trim), [&f, last](wchar_t ch){return f(last, ch);} );
+	}
 
-
-	Ω rTrim( sv s, function<bool(char)> f )->sv{
-		sv y;
-		if( auto p = std::find_if(s.rbegin(), s.rend(), f); p!=s.rend() )
-			y = p==s.rbegin() ? s : sv{ s.data(), s.size()-std::distance(s.rbegin(), p) };
-		return y;
+	α Str::RTrim( string&& s )->string{
+		auto y = move( s );
+		let trimmed = RTrim( y );
+		return trimmed.size()==y.size() ? y : string{ trimmed };
 	}
 	α Str::RTrim( sv s )->sv{
-		return rTrim( s, [](int ch){return !std::isspace(ch);} );
+		return rtrim( sv{s}, [](wchar_t ch){return isSpace(ch);} );
 	}
 
 	α Str::StartsWithInsensitive( sv value, sv starting )ι->bool{
 		bool equal = starting.size() <= value.size();
 		if( equal ){
 			for( sv::size_type i=0; i<starting.size(); ++i ){
-				equal = ::toupper(starting[i])==::toupper(value[i]);
+				equal = ::toupper( starting[i] )==::toupper( value[i] );
 				if( !equal )
 					break;
 			}

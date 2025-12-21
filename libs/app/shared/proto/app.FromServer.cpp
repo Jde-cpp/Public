@@ -142,9 +142,9 @@ namespace Jde::App{
 		toServer->set_graph_ql( move(queryResults) );
 		return t;
 	}
-	α FromServer::Session( Web::Server::SessionInfo&& session, RequestId requestId )->Proto::FromServer::Transmission{
+	α FromServer::Session( const Web::Server::SessionInfo& session, RequestId requestId )->Proto::FromServer::Transmission{
 		return setMessage( requestId, [&](auto& m){
-			*m.mutable_session_info() = Web::Server::ToProto( move(session) );
+			*m.mutable_session_info() = Web::Server::ToProto( session );
 		});
 	}
 	α FromServer::ToTrace( DB::Row&& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace{

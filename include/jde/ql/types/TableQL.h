@@ -35,12 +35,17 @@ namespace Jde::QL{
 		α FindTablePrefix( sv jsonPluralName )Ι->const TableQL*;
 		α GetTable( sv jsonPluralName, SRCE )ε->TableQL&;
 		α IsPlural()Ι->bool{ return DB::Names::IsPlural(JsonName); }
+		α JTableName()Ι->string override{ return JsonName; }
 		α SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void;
+		α ReturnName()Ι->string{ return Alias.size() ? Alias : JsonName; }
 		α TransformResult( jarray&& result )Ι->jvalue;
+		α TransformResult( jobject&& result )Ι->jobject;
+		α TransformResult( string&& result )Ι->jvalue;
 		α ToJson( DB::Row& row, const vector<DB::Object>& dbColumns )Ι->jobject;
 		α ToString()Ι->string;
 		α TrimColumns( const jobject& fullOutput )Ι->jobject;
 
+		string Alias;
 		vector<ColumnQL> Columns;
 		mutable optional<QL::Filter> _filter;
 		mutable vector<QL::JsonMembers> JsonMembers; //used to map db columns to json names for results.

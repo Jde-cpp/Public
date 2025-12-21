@@ -38,7 +38,7 @@ namespace Jde::Opc::Gateway{
 				AddAttributes( move(nodeId), parentsQL, move(jParents) );
 			}
 			else if( auto children = _query.FindTable("children"); children ){
-				Browse( NodeId{_query.Args}, move(*children) );
+				Browse( NodeId{_query}, move(*children) );
 				co_return;
 			}
 			else

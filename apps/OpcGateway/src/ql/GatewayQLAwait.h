@@ -14,10 +14,8 @@ namespace Jde::Opc::Gateway{
 		α Introspect( QL::TableQL&& q )ι->jvalue;
 		α ConnectionAttributes( QL::TableQL&& q, sp<UAClient> client )ι->jvalue;
 		α ServerDescription( QL::TableQL&& q, sp<UAClient> client )ι->jobject;
-		α SecurityPolicyUri( sp<UAClient> client )ι->jvalue;
-		α SecurityMode( sp<UAClient> client )ι->jvalue;
-		α OpcClientNK( const QL::TableQL& q )Ι->optional<ServerCnnctnNK>;
-		α NeedsClient( const QL::TableQL& q )Ι->bool;
+		α SecurityPolicyUri( QL::TableQL&& q, sp<UAClient> client )ι->jvalue;
+		α SecurityMode( QL::TableQL&& q, sp<UAClient> client )ι->jvalue;
 
 		bool _raw;
 		QL::RequestQL _queries;

@@ -2,7 +2,7 @@ local args = import 'args.libsonnet';
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests:: "AppClientTests.ConnectionRow",
+		tests: "QLTests.multipleQueries",
 		recreateDB:: true,
 		embeddedAppServer: false,
 		embeddedOpcServer: false

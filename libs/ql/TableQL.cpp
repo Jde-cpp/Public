@@ -160,10 +160,17 @@ namespace Jde::QL{
 	α TableQL::TransformResult( jarray&& result )Ι->jvalue{
 		jvalue v;
 		if( IsPlural() )
-			v = move(result);
+			v = move( result );
 		else
-			v = result.size() ? move(result[0].as_object()) : jobject{};
-		return ReturnRaw ? move(v) : jobject{{JsonName, move(v)}};
+			v = result.size() ? move( result[0].as_object() ) : jobject{};
+		return ReturnRaw ? move( v ) : jobject{ {ReturnName(), move(v)} };
+	}
+	α TableQL::TransformResult( jobject&& result )Ι->jobject{
+		return ReturnRaw ? move( result ) : jobject{ {ReturnName(), move(result)} };
+	}
+	α TableQL::TransformResult( string&& result )Ι->jvalue{
+		jvalue v{ move(result) };
+		return ReturnRaw ? move(v) : jobject{ {ReturnName(), move(v)} };
 	}
 	α TableQL::ToString()Ι->string{
 		string y = JsonName;

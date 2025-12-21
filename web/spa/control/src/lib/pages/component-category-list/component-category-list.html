@@ -1,7 +1,7 @@
 <div class="docs-component-category-list-summary"
      id="category-summary"
      focusOnNavigation>
-  <div [innerHTML]="_categoryListSummary"></div>
+  <div [innerHTML]="_categoryListSummary()"></div>
 </div>
 @if( !this.isLoading() ){
   <div class="docs-component-category-list">

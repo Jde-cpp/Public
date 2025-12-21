@@ -77,7 +77,10 @@
 				"request": "launch",
 				"program": "${config:testBuildDir}/Jde.Opc.Tests",
 				"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/apps/OpcGateway/tests/config/Opc.Tests.jsonnet"],
-				"environment": [{ "name": "LD_LIBRARY_PATH", "value": "$LD_LIBRARY_PATH:${env:REPO_DIR}/install/g++-14/Debug/boost/lib" } ],
+				"environment": [
+					{ "name": "LD_LIBRARY_PATH", "value": "$LD_LIBRARY_PATH:${env:REPO_DIR}/install/g++-14/Debug/boost/lib" },
+					{ "name": "JDE_GOOGLE_JWT", "value": null }
+				],
 				"stopAtEntry": false,
 				"cwd": "${config:testBuildDir}",
 				"additionalSOLibSearchPath": "/lib64",

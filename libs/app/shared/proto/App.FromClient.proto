@@ -65,6 +65,7 @@ message Message{
 		ERequestType request_type = 14;//Just the request id is needed.
 		Jde.Proto.Query subscription = 15;
 		Unsubscription unsubscription = 16;
+		bytes jwt = 17;//webPage->appServer to authenticate user.
 
 		ForwardExecution forward_execution = 31;//webPage->appServer to call execute with creds.
 		ForwardExecution forward_execution_anonymous = 32;//call execute with no creds.

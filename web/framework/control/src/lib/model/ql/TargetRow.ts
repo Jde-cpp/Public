@@ -4,7 +4,7 @@ import { assert, clone } from '../../utils/utils';
 
 export type Target = string;
 export abstract class ITargetRow extends Row{
-	constructor(type:string,obj:any){
+	constructor(type:string,obj:TargetRowProps | number){
 		super( type );
 		if( typeof obj=="number" )
 			this.id = obj;
@@ -71,6 +71,7 @@ export abstract class ITargetRow extends Row{
 	readonly deleted:Date;
 	description:string;
 }
+export type TargetRowProps = { id:number; target:Target; name:string; created:Date; updated:Date; deleted:Date; description:string; };
 
 export abstract class TargetRow<T extends TargetRow<T>> extends ITargetRow{
 	constructor(type:string,obj:any){

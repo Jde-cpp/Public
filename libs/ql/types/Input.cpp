@@ -17,4 +17,17 @@ namespace Jde::QL{
 		}
 		return y;
 	}
+	α Input::GetKey(SL sl)ε->DB::Key{
+		let y = FindKey();
+		THROW_IFSL( !y, "Could not find id or target in mutation  query: {}, variables: {}", serialize(Args), serialize(*Variables) );
+		return *y;
+	}
+	α Input::FindKey()ι->optional<DB::Key>{
+		optional<DB::Key> y;
+		if( let id = FindId<uint>(); id )
+			y = DB::Key{ *id };
+		else if( let target = FindPtr<jstring>("target"); target )
+			y = DB::Key{ string{*target} };
+		return y;
+	}
 }

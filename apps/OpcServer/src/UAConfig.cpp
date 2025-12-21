@@ -24,17 +24,7 @@ namespace Jde::Opc::Server{
 		else
 			UA_ServerConfig_setDefault( this );
 
-/*		for( uint i=0; i<config.securityPoliciesSize; ++i ){
-			let& sp = config.securityPolicies[i];
-			INFOT( ELogTags::App, "[{}]PolicyUri={}", i, ToSV(sp.policyUri) );
-			if( ToSV(sp.policyUri)=="http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256" )
-				UA_AccessControl_default( &config, false/ *allowAnonymous* /, &sp.policyUri, usernamePasswordsSize, usernamePasswords );
-		}*/
-/*	applicationDescription.applicationUri = UA_STRING_NULL;
-		applicationDescription.productUri = UA_STRING("OpcServer");
-		applicationDescription.applicationName = UA_LOCALIZEDTEXT("en-US", "OpcServer");
-		applicationDescription.applicationType = UA_APPLICATIONTYPE_SERVER;
-*/
+		applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en-US", "Jde-Cpp OpcServer");
 	}
 
 	α UAConfig::SetupSecurityPolicies( fs::path&& certificateFile )ε->void{

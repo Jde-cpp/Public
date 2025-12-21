@@ -246,11 +246,11 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	public async browseObjectsFolder( cnnctn:CnnctnTarget, parent:UaNode, snapshot:boolean, log:Log ):Promise<UaNode[]>{
 		if( parent.isVariable )
 			throw new EvalError( `Cannot browse children of variable node.`, {cause:"Invalid Operation"} );
-		const args = `opc: "${cnnctn}", ${parent.nodeId.qlArgs()}`;
+		const vars = { opc: cnnctn, id: parent.nodeId.toJson() };
 		const commonColumns = "id name browse nodeClass refType typeDef description";
 		const variableColumns = "dataType value valueRank accessLevel userAccessLevel";
-		const ql = `node(${args}){children{${commonColumns} ... on Variable{${variableColumns}} }}`;
-		const children = (await this.query<any>( ql, (m)=>console.log(m) ))["node"]["children"];
+		const ql = `node(opc:$opc, id:$id){children{${commonColumns} ... on Variable{${variableColumns}} }}`;
+		const children = (await this.query<any>( ql, vars, (m)=>console.log(m) ))["node"]["children"];
 		var y = new Array<UaNode>();
 		for( const ref of children ){
 			let child:UaNode;

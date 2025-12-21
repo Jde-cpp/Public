@@ -19,7 +19,7 @@ namespace Jde::App::FromServer{
 	α GraphQL( string&& queryResults, RequestId requestId )ι->Proto::FromServer::Transmission;
 	α Jwt( Web::Jwt&& jwt, RequestId requestId )ι->Proto::FromServer::Transmission;
 	α LogSubscription( AppPK appPK, AppInstancePK instancePK, const Logging::Entry& e, const QL::Subscription& sub )ι->Proto::FromServer::Transmission;
-	α Session( Web::Server::SessionInfo&& session, RequestId requestId )->Proto::FromServer::Transmission;
+	α Session( const Web::Server::SessionInfo& session, RequestId requestId )->Proto::FromServer::Transmission;
 	α StatusBroadcast( Proto::FromServer::Status status )ι->Proto::FromServer::Transmission;
 	α SubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->Proto::FromServer::Transmission;
 	α Subscription( string&& s, RequestId requestId )ι->Proto::FromServer::Transmission;

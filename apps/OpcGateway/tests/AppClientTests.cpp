@@ -1,4 +1,5 @@
 #include <jde/fwk/chrono.h>
+#include <jde/fwk/process/process.h>
 #include "utils/helpers.h"
 #include "../src/GatewayAppClient.h"
 
@@ -22,5 +23,16 @@ namespace Jde::Opc::Gateway::Tests{
 		let startTime = string{ connections.at(0).as_object().at("created").get_string() };
 		TRACE( "Process::StartTime: '{}', startTime: '{}'.", ToIsoString(Process::StartTime()), startTime );
 		ASSERT_TRUE( std::chrono::abs(Process::StartTime()-Chrono::ToTimePoint(string{startTime})) < 5s );
+	}
+
+	TEST_F( AppClientTests, login ){
+		using Web::FromServer::SessionInfo;
+		auto payload = Process::GetEnv( "JDE_GOOGLE_JWT" );
+		if( !payload )
+			GTEST_SKIP() << "JDE_GOOGLE_JWT not set.";
+		else{
+			let value = BlockAwait<Web::Client::ClientSocketAwait<SessionInfo>,SessionInfo>( AppClient()->Login(Web::Jwt{*payload}, SL{}) );
+			ASSERT_TRUE( value.session_id()>0 );
+		}
 	}
 }

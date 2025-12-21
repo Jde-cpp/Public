@@ -1,10 +1,10 @@
-import { ITargetRow, Mutation, MutationType, TargetRow } from "jde-framework";
+import { ITargetRow, Mutation, MutationType, PropertyNames, TargetRow, TargetRowProps  } from "jde-framework";
 import { toBrowse } from "./types";
 
 export type CnnctnPK = number;
 export type CnnctnTarget = string;
 export class ServerCnnctn extends TargetRow<ServerCnnctn>{
-	constructor( obj:any ){
+	constructor( obj:ServerCnnctnProps ){
 		super(ServerCnnctn.typeName, obj);
 		this.url = obj.url;
 		this.certificateUri = obj.certificateUri;
@@ -39,3 +39,4 @@ export class ServerCnnctn extends TargetRow<ServerCnnctn>{
 	defaultBrowseNs:number=1;
 	static typeName = "ServerConnection";
 }
+export type ServerCnnctnProps = TargetRowProps & { url:string; certificateUri:string; defaultBrowseNs?:number; };

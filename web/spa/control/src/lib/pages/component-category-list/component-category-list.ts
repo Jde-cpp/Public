@@ -17,7 +17,7 @@ import {DocItem} from '../component-sidenav/component-sidenav'
 export class ComponentCategoryList implements OnInit/*, OnDestroy*/ {
   params: Observable<Params> | undefined;
   routeParamSubscription: Subscription = new Subscription();
-  _categoryListSummary: string | undefined;
+  _categoryListSummary = model<string | undefined>();
 	items = model<Signal<DocItem[]>>();  // Needs to be model to be set from ComponentSidenav.onRouterOutletActivate
 	isLoading = signal<boolean>( true );
 	section = model<string>();
@@ -43,7 +43,7 @@ export class ComponentCategoryList implements OnInit/*, OnDestroy*/ {
 				this._componentPageTitle.title = p.get( this.route.snapshot.title.substring(1) );
 		} );
 		const section = { name: this.route.data["value"].name, summary: this.route.data["value"].summary }; //
-		this._categoryListSummary = section.summary; //
+		this._categoryListSummary.set( section.summary ); //
   }
 	canActivate( component:DocItem ):boolean {
 		return false;

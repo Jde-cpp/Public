@@ -33,11 +33,15 @@
 			"name": "fwk"
 		},
 		{
-			"path": "${env:JDE_BUILD_DIR}/repos/open62541/src/open62541/src",
+			"path": "/mnt/ram/linux/g++-14/repos/open62541/src/open62541/src",
 			"name": "open62541"
 		},
 		{
-			"path": "${env:JDE_BUILD_DIR}/repos/open62541/src/open62541/tests",
+			"path": "/mnt/ram/linux/g++-14/repos/open62541/src/open62541/include",
+			"name": "openInclude"
+		},
+		{
+			"path": "/mnt/ram/linux/g++-14/repos/open62541/src/open62541/tests",
 			"name": "openTests"
 		},
 		{

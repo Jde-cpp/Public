@@ -18,11 +18,11 @@ namespace Jde::Opc::Gateway{
 			WARNT( EOpcLogTags::User, "Session has no user." );
 	}
 
-	α GatewayQLAwait::NeedsClient( const QL::TableQL& q )Ι->bool{
-		return !q.JsonName.starts_with( "serverConnection" ) && q.JsonName!="__type";
+	α needsClient( const QL::Input& q )ι->bool{
+		return !q.JTableName().starts_with( "serverConnection" ) && q.JTableName()!="__type";
 	}
-	α GatewayQLAwait::OpcClientNK( const QL::TableQL& q )Ι->optional<ServerCnnctnNK>{
-		if( !NeedsClient(q) )
+	α opcClientNK( const QL::Input& q )ι->optional<ServerCnnctnNK>{
+		if( !needsClient(q) )
 			return nullopt;
 
 		auto opcId = q.FindPtr<jstring>( "opc" );
@@ -30,9 +30,17 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α GatewayQLAwait::Suspend()ι->void{
-		for( auto& q : _queries.Queries() ){
-			if( auto opcId = OpcClientNK(q); opcId )
-				_clients.try_emplace( *opcId, nullptr );
+		if( _queries.IsQueries() ){
+			for( auto& q : _queries.Queries() ){
+				if( auto opcId = opcClientNK(q); opcId )
+					_clients.try_emplace( *opcId, nullptr );
+			}
+		}
+		else if( _queries.IsMutation() ){
+			for( auto& m : _queries.Mutations() ){
+				if( auto opcId = opcClientNK(m); opcId )
+					_clients.try_emplace( *opcId, nullptr );
+			}
 		}
 		GetClients();
 	}
@@ -49,34 +57,39 @@ namespace Jde::Opc::Gateway{
 	α GatewayQLAwait::Query()ι->TAwait<jvalue>::Task{
 		try{
 			if( _queries.IsQueries() ){
-				jarray results;
+				_raw = _raw && _queries.Queries().size()==1;
+				jvalue results = _raw ? jvalue{} : jobject{};
 				for( auto& q : _queries.Queries() ){
-					q.ReturnRaw = _raw;
-					if( !NeedsClient(q) ){
+					q.ReturnRaw = true;
+					let memberName = q.ReturnName();
+					jvalue queryResult;
+					if( !needsClient(q) ){
 						if( q.JsonName=="__type" && !q.Args.contains("name") ){
 							NodeId nodeId{ q.Args };
 							q.Args["name"] = nodeId.ToString();
 						}
-						results.push_back( co_await QL::QLAwait<>(move(q), _session->UserPK, _sl) );
+						queryResult = co_await QL::QLAwait<>(move(q), _session->UserPK, _sl);
 					}else{
-						auto client = _clients.at( *OpcClientNK(q) );
+						auto client = _clients.at( *opcClientNK(q) );
 						if( q.JsonName.starts_with("node") || q.JsonName.starts_with("variable") )
-							results.push_back( co_await NodeQLAwait{move(q), move(client), _sl} );
+							queryResult = co_await NodeQLAwait{move(q), move(client), _sl};
 						else if( q.JsonName.starts_with("dataType") )
-							results.push_back( co_await DataTypeQLAwait{move(q), move(client), _sl} );
+							queryResult = co_await DataTypeQLAwait{move(q), move(client), _sl};
 						else if( q.JsonName=="serverDescription" )
-							results.push_back( ServerDescription(move(q), move(client)) );
+							queryResult = ServerDescription(move(q), move(client));
 						else if( q.JsonName=="securityPolicyUri" )
-							results.push_back( SecurityPolicyUri(move(client)) );
+							queryResult = SecurityPolicyUri(move(q), move(client));
 						else if( q.JsonName=="securityMode" )
-							results.push_back( SecurityMode(move(client)) );
-
+							queryResult = SecurityMode(move(q), move(client));
 						else
 							throw Exception{ _sl, "Unknown query type: {}", q.JsonName };
 					}
+					if( _raw )
+						results = queryResult;
+					else
+						results.get_object()[memberName] = move( queryResult );
 				}
-				jvalue y{ results.size()==1 ? move(results[0]) : jvalue{results} };
-				Resume( _raw ? move(y) : jobject{{"data", y}} );
+				Resume( move(results) );
 			}
 			else if( _queries.IsMutation() ){
 				jarray results;
@@ -154,16 +167,16 @@ namespace Jde::Opc::Gateway{
 			j["discoveryUrls"] = discoveryUrls;
 		}
 		UA_Variant_clear( &uaAttrib );
-		return q.ReturnRaw ? j : jobject{ {"serverDescription", move(j)} };
+		return q.TransformResult( move(j) );
 	}
-	α GatewayQLAwait::SecurityPolicyUri( sp<UAClient> client )ι->jvalue{
+	α GatewayQLAwait::SecurityPolicyUri( QL::TableQL&& q, sp<UAClient> client )ι->jvalue{
 		UA_Variant uaAttrib;
 		UA_Client_getConnectionAttributeCopy( *client, BrowseName{"securityPolicyUri", 0}, &uaAttrib );
 		string uri = ToString( *(UA_String*)uaAttrib.data );
 		UA_Variant_clear( &uaAttrib );
-		return _raw ? jvalue{ uri } : jvalue{ jobject{{"securityPolicyUri", move(uri)}} };
+		return q.TransformResult( move(uri) );
 	}
-	α GatewayQLAwait::SecurityMode( sp<UAClient> client )ι->jvalue{
+	α GatewayQLAwait::SecurityMode( QL::TableQL&& q, sp<UAClient> client )ι->jvalue{
 		UA_Variant uaAttrib;
 		UA_Client_getConnectionAttributeCopy( *client, BrowseName{"securityMode", 0}, &uaAttrib );
 		UA_MessageSecurityMode emode = *( UA_MessageSecurityMode* )uaAttrib.data;
@@ -183,6 +196,6 @@ namespace Jde::Opc::Gateway{
 			break;
 		}
 		UA_Variant_clear( &uaAttrib );
-		return _raw ? jvalue{ mode } : jvalue{ jobject{{"securityMode", mode}} };
+		return q.TransformResult( string{mode} );
 	}
 }

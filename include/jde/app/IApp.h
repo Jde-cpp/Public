@@ -1,6 +1,7 @@
 #pragma once
 #include <jde/fwk/co/Await.h>
 #include <jde/fwk/crypto/OpenSsl.h>
+#include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/Jwt.h>
 #include <jde/app/usings.h>
 #include <jde/app/proto/Web.FromServer.pb.h>
@@ -15,6 +16,7 @@ namespace Jde::App{
 		α SetAppPKs( AppInstancePK instPK, AppConnectionPK pk )ι->void{ _instancePK = instPK; _connectionPK = pk; }
 		β SessionInfoAwait( SessionPK sessionPK, SRCE )ε->up<TAwait<Web::FromServer::SessionInfo>> = 0;
 		α Verify( const Web::Jwt& jwt )Ε->void;
+		β Login( Web::Jwt&& jwt, SRCE )ε->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo> = 0;
 
 		template<class T=jobject> α Query( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->up<TAwait<T>>;
 		template<class T=jobject> α QuerySync( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->T;

@@ -105,12 +105,12 @@ namespace Jde::App::Server{
 	}
 
 	α ServerSocketSession::SessionInfo( SessionPK sessionId, RequestId requestId )ι->void{
-		LogRead( Ƒ("SessionInfo={:x}", sessionId), requestId );
+		LogRead( Ƒ("SessionInfo={}", hex(sessionId)), requestId );
 		if( auto info = Web::Server::Sessions::Find(sessionId); info ){
 			LogWrite( Ƒ("SessionInfo userPK: {}, endpoint: {}, hasSocket: {}", info->UserPK.Value, info->UserEndpoint, info->HasSocket), requestId );
 			Write( FromServer::Session(move(*info), requestId) );
 		}else
-			WriteException( Exception{"Session not found."}, requestId );
+			WriteException( Exception{ Ƒ("[{}] Session not found.", hex(sessionId)) }, requestId );
 	}
 	α ServerSocketSession::SetSessionId( SessionPK sessionId, RequestId requestId )->Web::Server::Sessions::UpsertAwait::Task{
 		try{
@@ -136,6 +136,15 @@ namespace Jde::App::Server{
 			let info = Web::Server::Sessions::Find( SessionId() );
 			let expiration = Chrono::ToClock<Clock,steady_clock>( info->Expiration );
 			Write( FromServer::Jwt(Server::GetJwt(*_userPK, string{user.at("name").as_string()}, string{user.at("target").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );
+		}
+		catch( exception& e ){
+			WriteException( move(e), requestId );
+		}
+	}
+	α ServerSocketSession::Login( string&& jwt, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task{
+		try{
+			let session = co_await Sessions::UpsertAwait( "Bearer " + move(jwt), _userEndpoint.address().to_string(), true, Server::AppClient() );
+			Write( FromServer::Session(move(*session), requestId) );
 		}
 		catch( exception& e ){
 			WriteException( move(e), requestId );
@@ -182,6 +191,9 @@ namespace Jde::App::Server{
 				auto forward = anonymous ? m.mutable_forward_execution_anonymous() : m.mutable_forward_execution();
 				ForwardExecution( move(*forward), anonymous, requestId );
 				break;}
+			case kJwt:
+				Login( move(*m.mutable_jwt()), requestId );
+				break;
 			[[likely]]case kQuery:{
 				auto& query = *m.mutable_query();
 				auto& variableString = *query.mutable_variables();

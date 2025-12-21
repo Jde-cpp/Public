@@ -1,6 +1,7 @@
 #include "HttpRequestAwait.h"
 #include <jde/fwk/process/execution.h>
 #include <jde/web/server/auth/JwtLoginAwait.h>
+#include "LocalClient.h"
 #include "WebServer.h"
 #include "types/rest/json.h"
 #define let const auto
@@ -18,7 +19,7 @@ namespace Jde::App{
 			let authorization = req.Header("Authorization");
 			THROW_IFX( authorization.empty() || !authorization.starts_with("Bearer "), RestException<http::status::unauthorized>(SRCE_CUR, move(req), "Missing or invalid Authorization header") );
 
-			req.SessionInfo->UserPK = co_await JwtLoginAwait( Web::Jwt{authorization.substr(7)}, req.UserEndpoint.address().to_string(), true );
+			req.SessionInfo->UserPK = co_await JwtLoginAwait( Web::Jwt{authorization.substr(7)}, req.UserEndpoint.address().to_string(), Server::AppClient() );
 			jobject j{ {"expiration", ToIsoString(req.SessionInfo->Expiration)} };
 			req.SessionInfo->IsInitialRequest = true;  //expecting sessionId to be set.
 			h.promise().Resume( {move(j), move(req)}, h );

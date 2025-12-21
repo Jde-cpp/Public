@@ -20,6 +20,7 @@ namespace Jde::App::Server{
 	private:
 		α OnClose()ι->void;
 		α GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task;
+		α Login( string&& jwt, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task;
 		α ProcessTransmission( Proto::FromClient::Transmission&& transmission, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId )ι->void;
 		α SharedFromThis()ι->sp<ServerSocketSession>{ return std::dynamic_pointer_cast<ServerSocketSession>(shared_from_this()); }
 		//α WriteException( IException&& e, Request )ι->void override{ WriteException( move(e), 0 ); }

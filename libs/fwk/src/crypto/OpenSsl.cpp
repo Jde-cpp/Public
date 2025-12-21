@@ -176,14 +176,16 @@ namespace Jde{
 	}
 
 	α Crypto::Verify( const PublicKey& certificate, str decrypted, const Signature& signature )ε->void{
+		THROW_IF( certificate.Modulus.size() == 0, "certificate.Modulus.size() == 0" );
+		THROW_IF( certificate.Exponent.size() == 0, "certificate.Exponent.size() == 0" );
 		using ContextPtr = std::unique_ptr<EVP_MD_CTX, decltype(&::EVP_MD_CTX_free)>;
-		ContextPtr pCtx{ EVP_MD_CTX_create(), ::EVP_MD_CTX_free };
+		ContextPtr ctx{ EVP_MD_CTX_create(), ::EVP_MD_CTX_free };
 
-		let pMd = EVP_get_digestbyname( "SHA256" ); CHECK_NULL( pMd ); // do not need to be freed with EVP_MD_free
-		CALL( EVP_VerifyInit_ex( pCtx.get(), pMd, nullptr) );
-		CALL( EVP_VerifyUpdate( pCtx.get(), decrypted.c_str(), decrypted.size()) );
-		let pKey = rsaPemFromModExp( certificate.Modulus, certificate.Exponent );
-		CALL( EVP_VerifyFinal(pCtx.get(), (const unsigned char*)signature.data(), (int)signature.size(), pKey.get()) );
+		let md = EVP_get_digestbyname( "SHA256" ); CHECK_NULL( md ); // do not need to be freed with EVP_MD_free
+		CALL( EVP_VerifyInit_ex( ctx.get(), md, nullptr) );
+		CALL( EVP_VerifyUpdate( ctx.get(), decrypted.c_str(), decrypted.size()) );
+		let key = rsaPemFromModExp( certificate.Modulus, certificate.Exponent );
+		CALL( EVP_VerifyFinal(ctx.get(), (const unsigned char*)signature.data(), (int)signature.size(), key.get()) );
 	}
 
 	α Crypto::ReadCertificate( const fs::path& certificate )ε->vector<byte>{

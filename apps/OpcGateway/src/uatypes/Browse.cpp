@@ -34,11 +34,7 @@ namespace Jde::Opc::Gateway{
 	}
 
 namespace Browse{
-	Ω onResponse( UA_Client* /*ua*/, void* userdata, RequestId /*requestId*/, UA_BrowseResponse* response )ι->void {
-		FoldersAwait& await = *(FoldersAwait*)userdata;
-		await.OnComplete( response );
-	}
-
+	Ω onResponse( UA_Client* /*ua*/, void* userdata, RequestId /*requestId*/, UA_BrowseResponse* response )ι->void;
 	α FoldersAwait::Suspend()ι->void{
 		ASSERT( Promise() );
 		try{
@@ -51,16 +47,24 @@ namespace Browse{
 			ResumeExp( move(e) );
 		}
 	}
+	α onResponse( UA_Client* /*ua*/, void* userdata, RequestId /*requestId*/, UA_BrowseResponse* response )ι->void {
+		FoldersAwait& await = *(FoldersAwait*)userdata;
+		await.OnComplete( response );
+	}
 	α FoldersAwait::OnComplete( UA_BrowseResponse* response )ι->void{
 		ASSERT( Promise() );
 		_client->ClearRequest( _requestId );
 		let sc = response->responseHeader.serviceResult;
 		DBGT( BrowseTag, "[{}.{}]({})SendBrowseRequest::Complete", hex(_client->Handle()), hex(_requestId), hex(sc) );
-		if( !sc )
-			Post<Response>( move(*response), move(_h) );
-		else
+		if( !sc ){
+			if( auto resultSC = response->resultsSize>0 ? response->results[0].statusCode : UA_STATUSCODE_GOOD; resultSC ){
+				DBGT( BrowseTag, "[{}.{}]({})SendBrowseRequest::Results Error", hex(_client->Handle()), hex(_requestId), hex(sc) );
+				ResumeExp( UAClientException{resultSC, _client->Handle(), _requestId} );
+			}else
+				Post<Response>( move(*response), move(_h) );
+
+		}else
 			ResumeExp( UAClientException{sc, _client->Handle(), _requestId} );
-		ASSERT( Promise() );
 	}
 }
 
