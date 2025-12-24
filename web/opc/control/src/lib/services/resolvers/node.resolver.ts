@@ -31,7 +31,8 @@ export class NodeResolver implements Resolve<NodePageData> {
 			const server = await this.opcStore.getConnection( gateway, route.cnnctnTarget );
 			const defaultBrowseNs = server.connection.defaultBrowseNs;
 			if( !route.node ){
-				const node = (await gateway.query<any>(`node( opc: "${route.cnnctnTarget}", path:"${route.browsePath}"){id name parents{id name path}}`, (m)=>console.log(m)) )["node"];
+				const vars = { opc: route.cnnctnTarget, path: route.browsePath };
+				const node = (await gateway.query<any>(`node( opc: $opc, path:$path ){id name parents{id name path}}`, vars, (m)=>console.log(m)) )["node"];
 				if( node.sc )
 					throw new EvalError( (await gateway.errorCodeText(node.sc)), {cause:"Opc Interface"} );
 				route.node = new OpcObject( {...node, browse: route.browse(defaultBrowseNs)} );

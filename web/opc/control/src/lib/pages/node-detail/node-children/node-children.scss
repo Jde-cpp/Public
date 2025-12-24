@@ -1,0 +1,47 @@
+:host {
+	width: 100%;
+}
+
+input[type="number"] {
+	text-align: right;
+}
+
+button{
+	padding: 0;
+	margin: 0;
+	padding-left: 5px
+}
+mat-header-cell{
+	justify-content: center;
+}
+
+.mat-column-select{
+	flex: 0 0 40px;
+	justify-content: center;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+.mat-column-id{
+	flex: 0 0 100px;
+	//padding-left: 5px;
+	padding-right: 15px;
+}
+mat-cell.mat-column-id{
+	justify-content: right;
+}
+.mat-column-name{
+	flex: 0 0 150px;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+.mat-column-snapshot{
+	flex: 0 0 235px;
+	padding-left: 5px;
+	padding-right: 5px;
+//	justify-content: center;
+}
+.mat-column-description{
+	flex: 1 1 auto;
+	padding-left: 5px;
+	padding-right: 5px;
+}

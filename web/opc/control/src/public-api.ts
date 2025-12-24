@@ -12,3 +12,4 @@ export {OpcNodeRouteService} from './lib/services/routes/opc-node-route.service'
 export {SettingsRouteService} from './lib/services/routes/settings-route.service';
 export {OpcStore} from './lib/services/opc-store';
 export {NodeDetail} from './lib/pages/node-detail/node-detail';
+export {NodeChildren} from './lib/pages/node-detail/node-children/node-children';

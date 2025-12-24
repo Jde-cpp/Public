@@ -44,7 +44,8 @@ export class NodeRoute extends DocItem{
 	gatewayTarget:GatewayTarget;
 }
 export class UserProfile{
-	assign( value:UserProfile ){ this.sort = value.sort; this.columns = value.columns; this.visibleColumns=value.visibleColumns; }
+	assign( value:UserProfile ){ this.sort = value.sort; this.columns = value.columns; this.visibleColumns=value.visibleColumns; this.tabIndex = value.tabIndex; }
+	tabIndex:number = 0;
 	sort:Sort = {active: "name", direction: "asc"};
 	visibleColumns:string[] = ['select', 'id', 'name', 'snapshot', "description"];
 	columns:string[] = ['select', 'id', 'name', 'snapshot', "description"];

@@ -6,7 +6,7 @@ export interface ILocalizedText{
 	locale: string;
 	text: string;
 }
-export enum EAccessLevel{
+export enum EAccess{
 	None = 0,
 	Read = 1,
 	Write = 2,
@@ -15,6 +15,33 @@ export enum EAccessLevel{
 	SemanticChange = 0x10,
 	StatusWrite = 0x20,
 	TimestampWrite = 0x40
+}
+export enum EWriteAccess{
+	None = 0,
+	Access = 1,
+	ArrayDimensions = 2,
+	BrowseName = 4,
+	ContainsNoLoops = 8,
+	DataType = 0x10,
+	Description = 0x20,
+	DisplayName = 0x40,
+	EventNotifier = 0x80,
+	Executable = 0x100,
+	Historizing = 0x200,
+	InverseName = 0x400,
+	MinimumSamplingInterval = 0x800,
+	NodeClass = 0x1000,
+	Symmetric = 0x2000,
+	UserAccessLevel = 0x4000,
+	UserExecutable = 0x8000,
+	UserWriteMask = 0x10000,
+	ValueRank = 0x20000,
+	WriteMask = 0x40000,
+	ValueForVariableType = 0x80000,
+	DataTypeDefinition = 0x100000,
+	RolePermissions = 0x200000,
+	AccessRestrictions = 0x400000,
+	AccessLevelEx = 0x800000
 }
 
 export const toLocalizedText = ( value:any ):ILocalizedText=>{

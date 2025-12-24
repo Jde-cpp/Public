@@ -56,14 +56,12 @@ export class Settings<TUnderlying extends IAssignable<TUnderlying>> //implements
 		if( index!=-1 )
 			this.key = `${this.key.substr(0,index)}.${suffix}`;
 	}
-	save()
-	{
+	save(){
 		if( !this.isLoaded ){ debugger;console.log(`tried to save unloaded settings ${this.key}.`); return; }
 		const settings = JSON.stringify( this.value );
 		const originalSettings = this.original ? JSON.stringify( this.original ) : this.defaultJson;
 		const isDefault = settings==this.defaultJson;
-		if( originalSettings!=settings )
-		{
+		if( originalSettings!=settings ){
 			console.log( `Saving settings '${this.key}'.` );
 			this.profile.putJson( this.key, isDefault ? null : settings );
 			if( !this.original )

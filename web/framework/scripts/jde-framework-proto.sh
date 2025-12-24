@@ -7,6 +7,12 @@ frameworkDir=$baseDir;
 source $frameworkDir/scripts/common-proto.sh;
 
 if [ ! -d node_modules ]; then echo run from workspace dir.; exit 1; fi;
+
+npm list | grep protobufjs-cli &> /dev/null;
+if [ $? -ne 0 ]; then
+	echo installing protobufjs-cli;
+	npm install protobufjs-cli;
+fi;
 npm list | grep protobufjs &> /dev/null;
 if [ $? -ne 0 ]; then
 	echo installing protobufjs
@@ -14,8 +20,6 @@ if [ $? -ne 0 ]; then
 else
 	echo protobufjs already installed
 fi;
-npm list | grep protobufjs-cli &> /dev/null;
-if [ $? -ne 0 ]; then npm install protobufjs-cli; fi;
 
 cd projects/jde-framework/src/lib;
 moveToDir proto;
