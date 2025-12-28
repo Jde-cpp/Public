@@ -42,7 +42,7 @@ namespace Jde::Opc::Gateway{
 			CRITICAL( "{}ReadValueAwait::OnComplete - could not find requestId", logPrefix() );
 			return;
 		}
-		Value value = sc ? Value{ sc } : Value{ move(val ? *val : UA_DataValue{}) };
+		Value value = sc || !val ? Value{ sc } : Value{ move(*val) };
 		DBG( "{} Value: {}", logPrefix(), serialize(value.ToJson()) );
 		_results.emplace( nodeIdIt->second, move(value) );
 		if( _results.size()==_nodes.size() )

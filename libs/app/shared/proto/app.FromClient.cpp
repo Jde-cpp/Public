@@ -4,6 +4,7 @@
 #include <jde/fwk/settings.h>
 #include <jde/web/Jwt.h>
 #include "Log.pb.h"
+#include <jde/fwk/chrono.h>
 
 using Jde::Protobuf::ToBytes;
 namespace Jde::App::FromClient{

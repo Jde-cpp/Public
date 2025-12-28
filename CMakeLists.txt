@@ -2,7 +2,7 @@ cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 project( Superbuild VERSION ${JDE_VERSION} LANGUAGES CXX )
 
 option( jde_Superbuild "Generate the test targets." ON )
-option( jde_REPOS "Generate the 3rd party targets." ON )
+option( jde_REPOS "Generate the 3rd party targets." OFF )
 option( jde_TESTS "Generate the test targets." ON )
 option( jde_APPS "Generate the App Server target." ON )
 message( jde_Superbuild=${jde_Superbuild}, jde_REPOS=${jde_REPOS}, jde_TESTS=${jde_TESTS}, jde_APPS=${jde_APPS} )

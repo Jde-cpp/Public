@@ -35,7 +35,7 @@ namespace Jde::Opc::Gateway{
 			if( clientRequests.size()==1 ){
 				UACε( UA_Client_Subscriptions_create_async(_client->UAPointer(), UA_CreateSubscriptionRequest_default(), nullptr, statusChangeNotificationCallback, deleteSubscriptionCallback, createSubscriptionCallback, this, &_requestId) );
 				TRACE( "[{}.{}]CreateSubscription", hex(_client->Handle()), hex(_requestId) );
-				_client->Process( _requestId, nullptr, "Subscriptions_create" );
+				_client->Process( _requestId, "Subscriptions_create" );
 			}
 			else
 				TRACE( "[{}.{}]CreateSubscription - queued", hex(_client->Handle()), hex(_requestId) );
@@ -87,7 +87,7 @@ namespace Jde::Opc::Gateway{
 		};
 		UA_Client_Subscriptions_delete_async( _client->UAPointer(), request, onComplete, this, &_requestId );
 		UA_DeleteSubscriptionsRequest_clear( &request );
-		_client->Process( _requestId, nullptr, "Subscriptions_delete" );
+		_client->Process( _requestId, "Subscriptions_delete" );
 		TRACE( "[{}.{}]Unsubscribe", hex(_client->Handle()), hex(_requestId) );
 	}
 

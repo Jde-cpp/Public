@@ -58,7 +58,7 @@ add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E 
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Tests.jsonnet" )
 	copyCommonDlls()
-	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_DIR}/libxml2/bin/libxml2d.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "libxml2d.dll" )
+	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MULTI_INSTALL_PREFIX}/libxml2/bin/libxml2$<IF:$<CONFIG:Debug>,d,>.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "libxml2$<IF:$<CONFIG:Debug>,d,>.dll" )
 endif()
 target_precompile_headers( ${targetName} PRIVATE
 	pc.h

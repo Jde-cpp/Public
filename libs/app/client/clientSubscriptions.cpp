@@ -1,8 +1,8 @@
-#include <jde/web/client/socket/clientSubscriptions.h>
+#include <jde/app/client/clientSubscriptions.h>
 #include <jde/ql/types/Subscription.h>
 
 #define let const auto
-namespace Jde::Web::Client{
+namespace Jde::App::Client{
 	flat_map<QL::SubscriptionId,flat_set<sp<QL::IListener>>> _subs; std::shared_mutex _mutex;
 	α Subscriptions::StopListenRemote( sp<QL::IListener> listener, vector<QL::SubscriptionId> /*ids*/ )ι->jarray{
 		jarray y;

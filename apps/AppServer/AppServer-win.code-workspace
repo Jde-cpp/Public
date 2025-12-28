@@ -2,14 +2,13 @@
 	"settings": {
 		"window.title": "App",
 		"name": "AppServer",
-		"sourceDir": "${env:JDE_BASH}/apps/AppServer",
 		"compiler": "msvc",
+		"sourceDir": "${env:JDE_BASH}/apps/AppServer",
 		"exe": "Jde.App.Server.exe",
-		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/jde",
-		"buildDir": "${config:buildRoot}/apps/${config:name}",
-		"winBuildDir": "${env:JDE_BUILD_DIR}/${config:compiler}/jde/apps/${config:name}",
-		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
+		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
+		"debugPreset": "win-msvc-debug",
+		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
+		"winBuildDir": "${env:JDE_BUILD_DIR}\\${config:compiler}\\apps\\${config:name}",
 	},
 	"folders": [
 		{
@@ -75,7 +74,7 @@
 			{
 				"label": "build",
 				"type": "shell",
-				"command": "cd ${config:buildDir}; tput reset;cmake --build .;",
+				"command": "mkdir -p ${config:debugDir}; cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug --target Jde.App.Server;",
 				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": true }
 			},
@@ -120,10 +119,10 @@
 			"name": "Debug",
 			"type": "cppvsdbg",
 			"request": "launch",
-			"program": "${config:winBuildDir}\\${config:buildTarget}\\${config:exe}",
+			"program": "${config:winBuildDir}\\exe\\Debug\\${config:exe}",
 			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/apps/AppServer/config/App.Server.jsonnet"],
 			"stopAtEntry": false,
-			"cwd": "${config:winBuildDir}",
+			"cwd": "${env:JDE_BUILD_DIR}",
 			"console": "integratedTerminal",
 			"preLaunchTask": "build"
 		},

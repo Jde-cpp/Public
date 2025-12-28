@@ -103,30 +103,14 @@ namespace Jde::Opc::Gateway{
 						results.push_back( co_await VariableQLAwait{move(m), _session, _sl} );
 				}
 				jvalue y{ results.size()==1 ? move(results[0]) : jvalue{results} };
-				Resume( _raw ? move(y) : jobject{{"data", move(y)}} );
+				Resume( move(y) );
 			}
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α GatewayQLAwait::Mutate()ι->TAwait<jvalue>::Task{
-		try{
-			jarray results;
-			for( auto& m : _queries.Mutations() ){
-				m.ReturnRaw = _raw;
-				if( m.Type==QL::EMutationQL::Execute )
-					results.push_back( co_await JCallAwait(move(m), _session, _sl) );
-				else if( m.TableName()=="server_connections" )
-					results.push_back( co_await QL::QLAwait<>(move(m), _session->UserPK, _sl) );
-			}
-			jvalue y{ results.size()==1 ? move(results[0]) : jvalue{results} };
-			Resume( _raw ? move(y) : jobject{{"data", move(y)}} );
-		}
-		catch( exception& e ){
-			ResumeExp( move(e) );
-		}
-	}
+
 	α GatewayQLAwait::ServerDescription( QL::TableQL&& q, sp<UAClient> client )ι->jobject{
 		UA_Variant uaAttrib;
 		UA_Client_getConnectionAttributeCopy( *client, BrowseName{"serverDescription", 0}, &uaAttrib );

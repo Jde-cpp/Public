@@ -35,7 +35,7 @@ namespace Jde::Opc::Gateway{
 				UACε( UA_Client_MonitoredItems_delete_async(_client->UAPointer(), request, monitoredItemsDeleteCallback, this, &_requestId) );
 				TRACE( "[{}.{}]Deleting monitored items for subscriptionId={}, count={}", _client->Handle(), _requestId, subscriptionId, monitorIds.size() );
 				if( first ){
-					_client->Process( _requestId, nullptr, "MonitoredItems_delete" );
+					_client->Process( _requestId, "MonitoredItems_delete" );
 					first = false;
 				}
 				UA_DeleteMonitoredItemsRequest_clear( &request );

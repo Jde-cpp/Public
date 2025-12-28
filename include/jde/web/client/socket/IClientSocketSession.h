@@ -35,7 +35,6 @@ namespace Jde::Web::Client{
 		α RunSession( string host, PortType port )ι{ return CreateClientSocketSessionAwait{shared_from_this(), host, port}; }
 		β Query( string&& query, jobject variables, bool returnRaw, SRCE )ι->ClientSocketAwait<jvalue> = 0;
 		β Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->ClientSocketAwait<jarray> = 0;
-		α OnMessage( string&& j, RequestId requestId )ι->void;
 		α Write( string&& m )ι->void;
 		α NextRequestId()ι->uint32;
 		α SessionId()ι->SessionPK{ return _sessionInfo ? _sessionInfo->session_id() : SessionPK{}; }

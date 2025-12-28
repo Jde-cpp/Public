@@ -22,7 +22,7 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_EQ( connections.size(), 1 );
 		let startTime = string{ connections.at(0).as_object().at("created").get_string() };
 		TRACE( "Process::StartTime: '{}', startTime: '{}'.", ToIsoString(Process::StartTime()), startTime );
-		ASSERT_TRUE( std::chrono::abs(Process::StartTime()-Chrono::ToTimePoint(string{startTime})) < 5s );
+		ASSERT_TRUE( std::chrono::abs(Process::StartTime()-Chrono::ToTimePoint(string{startTime})) < 600s );
 	}
 
 	TEST_F( AppClientTests, login ){

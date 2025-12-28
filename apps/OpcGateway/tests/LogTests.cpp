@@ -70,11 +70,11 @@ namespace Jde::Opc::Gateway::Tests{
 		Logging::Entry eNow{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, string{now} };
 		Logging::Entry eHour{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, ToIsoString(eNow.Time - 1h) };
 		eHour.Time = eNow.Time - 1h;
+		TRACE( "prev.Time: {}, id: {}", ToIsoString(eHour.Time), boost::uuids::to_string(eHour.Id()) );
 		ProtoLog().Write( eHour );
-		TRACE( "eHour.Time: {}", ToIsoString(eHour.Time) );
-		ProtoLog().Write( eNow );
 		const string start{ ToIsoString(eHour.Time+1s) };
-		TRACE( "start: {}", start );
+		TRACE( "filter: time: {}, id: {}", start, boost::uuids::to_string(eNow.Id()) );
+		ProtoLog().Write( eNow );
 		auto ql = "logs( time: {gt: $start} ){ text arguments level tags line time user{id} fileName functionName message id fileId functionId }";
 		jobject vars{ {"start", start} };
 

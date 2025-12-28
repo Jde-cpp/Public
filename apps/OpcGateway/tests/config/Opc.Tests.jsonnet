@@ -2,7 +2,7 @@ local args = import 'args.libsonnet';
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests: "QLTests.multipleQueries",
+		tests: "LogTests.GraphQL",
 		recreateDB:: true,
 		embeddedAppServer: false,
 		embeddedOpcServer: false

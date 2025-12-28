@@ -10,7 +10,6 @@ namespace Jde::Opc::Gateway{
 	private:
 		α GetClients()ι->TAwait<sp<UAClient>>::Task;
 		α Query()ι->TAwait<jvalue>::Task;
-		α Mutate()ι->TAwait<jvalue>::Task;
 		α Introspect( QL::TableQL&& q )ι->jvalue;
 		α ConnectionAttributes( QL::TableQL&& q, sp<UAClient> client )ι->jvalue;
 		α ServerDescription( QL::TableQL&& q, sp<UAClient> client )ι->jobject;

@@ -19,9 +19,7 @@ namespace Jde::Opc::Gateway{
 	};
 
 	struct AsyncRequest final{
-		Ŧ Process( RequestId requestId, T&& h, sv what )ι->void;
-		α Process( RequestId requestId, sv what )ι->void{ Process(requestId, coroutine_handle<>{}, what); }
-		Ŧ ClearHandle( RequestId requestId )ι->T;
+		α Process( RequestId requestId, sv what )ι->void;
 		α Clear( RequestId requestId )ι->void;
 		α SetClient( sp<UAClient> client )ι{_client=client;}
 		α Stop()ι->void;
@@ -29,47 +27,10 @@ namespace Jde::Opc::Gateway{
 	private:
 		α UAHandle()ι->Handle;
 		α ProcessingLoop()ι->DurationTimer::Task;
-		flat_map<RequestId, std::any> _requests; shared_mutex _requestMutex;
+		flat_set<RequestId> _requests; shared_mutex _requestMutex;
 		sp<UAClient> _client;
 		atomic_flag _running;
 		atomic_flag _stopped; //set at shutdown
 		constexpr static ELogTags _tags{ (ELogTags)EOpcLogTags::ProcessingLoop };
 	};
-
-
-	Ξ AsyncRequest::Clear( RequestId requestId )ι->void{
-		TRACE( "[{}.{}]Clearing", hex(UAHandle()), hex(requestId) );
-		ul _{_requestMutex};
-		if( !_requests.erase(requestId) && requestId!=ConnectRequestId )
-			CRITICALT( ProcessingLoopTag, "[{}.{}]Could not find request handle.", hex(UAHandle()), hex(requestId) );
-	}
-	Ŧ AsyncRequest::ClearHandle( RequestId requestId )ι->T{
-		TRACE( "[{}.{}]Clearing", hex(UAHandle()), hex(requestId) );
-		T userData;
-		ul _{_requestMutex};
-		if( auto p = _requests.find(requestId); p!=_requests.end() ){
-			try{
-				userData = std::any_cast<T>( move(p->second) );
-				_requests.erase( p );
-			}
-			catch( const std::bad_any_cast& e ){
-				CRITICALT( ProcessingLoopTag, "[{:x}.{:x}]Bad any cast: {}", UAHandle(), requestId, e.what() );
-			}
-		}
-		else
-			CRITICALT( ProcessingLoopTag, "[{:x}.{:x}]Could not find request handle.", UAHandle(), requestId );
-		return userData;
-	}
-	Ŧ AsyncRequest::Process( RequestId requestId, T&& h, sv what )ι->void{
-		TRACE( "[{}.{}]Processing: {}", hex(UAHandle()), hex(requestId), what );
-		if( _stopped.test() )
-			return;
-		{
-			ul _{_requestMutex};
-			_requests.emplace( requestId, std::forward<T>(h) );
-		}
-		if( !_running.test_and_set() )
-			ProcessingLoop();
-		h = nullptr;
-	}
 }

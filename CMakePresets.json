@@ -55,7 +55,7 @@
 				"multiInstallPrefix": "$env{installRoot}/multi"
 			},
 			"cacheVariables":{
-				"Boost_USE_STATIC_LIBS": false,
+				"Boost_USE_STATIC_LIBS": true,
 				"CMAKE_BUILD_TYPE": "$env{buildType}",
 				"CMAKE_CONFIGURATION_TYPES": "$env{buildType}",
 				"CMAKE_CXX_COMPILER": "cl.exe",

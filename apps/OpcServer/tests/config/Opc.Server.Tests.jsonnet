@@ -2,7 +2,7 @@ local args = import 'args.libsonnet';
 {
 	testing:{
 		tests:: "UALoadTests.LoadMyKitchen",
-		recreateDB:: true,
+		recreateDB: true,
 		embeddedAppServer: true,
 		UANodeSets: "$(UA_NODE_SETS)",
 	},
@@ -13,7 +13,7 @@ local args = import 'args.libsonnet';
 			"$(JDE_DIR)/libs/access/config/sql/"+args.sqlType,
 			"$(JDE_DIR)/apps/OpcServer/config/sql/"+args.sqlType
 		],
-		dataPaths: ["$(JDE_DIR)/apps/AppServer/config", "$(JDE_D$(JDE_DIR)ccess/config"],
+		dataPaths: ["$(JDE_DIR)/apps/AppServer/config", "$(JDE_DIR)/libs/access/config"],
 		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,

@@ -47,9 +47,6 @@
 			"args": ["-c", "-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet"],
 			"options": {
 				"cwd": "${config:buildDir}",
-				"env": {
-					"JDE_MYSQL_CREDS": "root:dfs12975adsf"
-				}
 			}
 		}
 	]

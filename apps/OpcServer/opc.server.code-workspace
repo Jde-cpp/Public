@@ -125,7 +125,7 @@
 				"type": "cppdbg",
 				"request": "launch",
 				"program": "${config:buildDir}/tests/Jde.Opc.Server.Tests",
-				"args": [ "-c", "-tests", "-settings=${config:sourceDir}/tests/config/Opc.Server.Tests.jsonnet" ],
+				"args": [ "-tests", "-settings=${config:sourceDir}/tests/config/Opc.Server.Tests.jsonnet" ],
 				"stopAtEntry": false,
 				"cwd": "${config:buildDir}",
 				"environment": [],

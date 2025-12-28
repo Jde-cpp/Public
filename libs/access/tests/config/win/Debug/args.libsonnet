@@ -3,7 +3,7 @@
 	logDir: "$(JDE_BUILD_DIR)",
 	dbServers: {
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/msvc/Debug/libs/db/drivers/odbc/Debug/Jde.DB.Odbc.dll",
+			driver: "$(JDE_BUILD_DIR)/msvc/libs/db/drivers/odbc/Debug/Jde.DB.Odbc.dll",
 			connectionString: "DSN=TestAccessDebug",
 			username: null,
 			password: null,

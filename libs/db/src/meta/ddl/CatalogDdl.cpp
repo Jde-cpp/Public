@@ -9,9 +9,6 @@
 #define let const auto
 
 namespace Jde::DB{
-	α CatalogDdl::Create( IDataSource& ds, sv catalog )ε->void{
-		ds.ExecuteSync( {Ƒ("create database {}", catalog)} );
-	}
 
 #ifndef PROD
 namespace CatalogDdl{
@@ -20,8 +17,8 @@ namespace CatalogDdl{
 			? ds->AtCatalog( "master" )
 			: ds;
 	}
-	α DropCatalog( IDataSource& ds, sv catalog )ε->void{
-		ds.ExecuteSync( {Ƒ("DROP DATABASE IF EXISTS {}", catalog)} );
+	Ω recreateCatalog( IDataSource& ds, sv catalog )ε->void{
+		ds.ExecuteSync( {Ƒ("use master; DROP DATABASE IF EXISTS {0};create database {0};", catalog)} );
 	}
 
 	α NonProd::Drop( const AppSchema& schema )ε->void{
@@ -30,11 +27,11 @@ namespace CatalogDdl{
 			let catalogName = schema.DBSchema->Catalog->Name;
 			if( ds->CatalogName()==catalogName )
 				ds = SysDS( ds );
-			DropCatalog( *ds, catalogName );
-			Create( *ds, catalogName );
+			recreateCatalog( *ds, catalogName );
 			schema.DBSchema->Catalog->SetDS( ds->AtCatalog(catalogName) );
 		}
-		SchemaDdl::Drop( schema );
+		else
+			SchemaDdl::Drop( schema );
 	}
 #endif
 }}

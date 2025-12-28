@@ -17,7 +17,7 @@ namespace Server{
 		try{
 			co_await ConfigureDSAwait{};
 			str instanceName{ Settings::FindString("instanceName").value_or(_debug ? "Debug" : "Release") };
-			let pks = AddConnection( Process::Executable().filename(), instanceName, Process::HostName(), Process::ProcessId() );
+			let pks = AddConnection( Process::Executable().filename().string(), instanceName, Process::HostName(), Process::ProcessId() );
 			Logging::Add<Web::Server::SubscribeLog>( "subscribe", get<0>(pks), get<1>(pks) );
 			SetAppPKs( pks );
 

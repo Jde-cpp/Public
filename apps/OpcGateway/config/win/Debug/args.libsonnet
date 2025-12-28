@@ -8,7 +8,7 @@
 	dbServers: {
 		scriptPaths: ["$(JDE_DIR)/apps/OpcGateway/config/sql/sqlServer"],
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/msvc/jde/libs/db/drivers/odbc/Debug/Jde.DB.Odbc.dll",
+			driver: "$(JDE_BUILD_DIR)/msvc/apps/OpcGateway/exe/Debug/Jde.DB.Odbc.dll",
 			connectionString: "DSN=debug",
 			username: null,
 			password: null,

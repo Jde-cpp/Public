@@ -15,7 +15,7 @@
 #define Φ Γ auto
 namespace Jde{
 	Φ ToString( ELogLevel l )ι->string;
-	α ToLogLevel( sv op )ι->ELogLevel;
+	Φ ToLogLevel( sv op )ι->ELogLevel;
 	α LogLevelStrings()ι->const std::array<sv,7>;
 }
 

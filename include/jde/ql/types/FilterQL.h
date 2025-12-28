@@ -14,6 +14,7 @@ namespace Jde::QL{
 		α Test( const DB::Value& value, ELogTags logTags )Ι->bool;
 		Ŧ Test( T value )Ι->bool;
 		α TestAnd( uint value )Ι->bool;
+		α ToString()Ι->string;
 	};
 	struct Filter final{
 		α Empty()Ι->bool{ return ColumnFilters.empty() /*&& !StartTime && !EndTime*/; }
@@ -21,6 +22,7 @@ namespace Jde::QL{
 		α TestAnd( str columnName, uint value )Ι->bool;
 		Ŧ TestF( str columnName, function<T()> f )Ι->bool;
 		Ω Test( const DB::Value::Underlying& value, const vector<FilterValue>& filters, ELogTags logTags )ι->bool;
+		α ToString( str colName )Ι->string;
 		flat_map<string,vector<FilterValue>> ColumnFilters;
 	};
 	α ToWhereClause( const TableQL& table, const DB::View& schemaTable, bool includeDeleted=false )ε->DB::WhereClause;

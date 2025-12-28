@@ -2,11 +2,11 @@
 #include <jde/fwk/process/execution.h>
 #include <jde/web/client/socket/ClientQL.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
-#include <jde/web/client/socket/clientSubscriptions.h>
-#include <jde/app/StringCache.h>
+#include <jde/app/client/clientSubscriptions.h>
 #include <jde/app/proto/app.FromClient.h>
 #include <jde/app/proto/common.h>
 #include <jde/app/client/appClient.h>
+#include <jde/app/client/clientSubscriptions.h>
 #include <jde/app/client/IAppClient.h>
 
 #define let const auto
@@ -76,6 +76,15 @@ namespace Client{
 		_appClient->SetSession( nullptr );
 		if( !Process::ShuttingDown() )
 			App::Client::Connect( move(_appClient) );
+	}
+	α AppClientSocketSession::OnMessage( string&& j, RequestId requestId )ι->void{
+		TRACE( "[{}]OnMessage", hex(requestId), j.substr(0, Web::Client::MaxLogLength()) );
+		try{
+			Subscriptions::OnWebsocketReceive( Json::Parse(j), requestId );
+		}
+		catch( IException& e ){
+			e.SetLevel( ELogLevel::Error );
+		}
 	}
 	α AppClientSocketSession::SessionInfo( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Web::FromServer::SessionInfo>{
 		let requestId = NextRequestId();
@@ -201,7 +210,7 @@ namespace Client{
 					for( auto& sub : listenerSubs.second ){
 						if( sub.Id == 0 )
 							sub.Id = requestId;
-						Web::Client::Subscriptions::ListenRemote( listenerSubs.first, move(sub) );
+						Subscriptions::ListenRemote( listenerSubs.first, move(sub) );
 					}
 					return true;
 				}) ){ //request not found.
@@ -235,7 +244,7 @@ namespace Client{
 			[[likely]]case kTraces:{
 				auto& traces = *m->mutable_traces();
 				TRACE( "[{:x}]Traces: count='{}'.", Id(), traces.values_size() );
-				Web::Client::Subscriptions::OnTraces( move(traces), requestId );
+				App::Client::Subscriptions::OnTraces( move(traces), requestId );
 				break;}
 			[[unlikely]]
 			case kStatus:

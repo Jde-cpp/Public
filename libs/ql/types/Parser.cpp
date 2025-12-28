@@ -11,12 +11,9 @@ namespace Jde{
 
 	α QL::Parse( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL /*sl*/ )ε->RequestQL{
 		Parser parser{ Str::TrimFirstLast(move(query), '{', '}'), "{}()," };
-		auto name = parser.Next();
-		if( name=="query" ){
+		if( parser.Trim("query") )
 			returnRaw = true;
-			parser.Next();
-			name = parser.Next();
-		}
+		auto name = parser.Next();
 		auto vars = ms<jobject>( move(variables) );
 		if( name=="subscription" )
 			return RequestQL{ parser.LoadSubscriptions(vars, schemas) };
@@ -26,7 +23,7 @@ namespace Jde{
 			//returnRaw = name!="mutation"; should be what parameter is
 			if( parser.Peek()=="{" )
 				parser.Next();
-			return RequestQL{ {parser.LoadMutations(name=="mutation" ? parser.Next() : name, vars, returnRaw, schemas)} };
+			return RequestQL{ {parser.LoadMutations(name=="mutation" ? parser.Next() : move(name), vars, returnRaw, schemas)} };
 		}else
 			return RequestQL{ parser.LoadTables(move(name), vars, schemas, returnRaw) };
 	}
@@ -189,10 +186,8 @@ namespace Jde::QL{
 			i += parseWhitespace( json.substr(i), y );
 			THROW_IF( i>=json.size(), "Expected object to end '{}' @ '{}'.", json, i );
 			char ch = json[i];
-			if( ch=='}' ){
-//				y += json[i++];
+			if( ch=='}' )
 				return;
-			}
 			else if( ch=='"' )
 				i += parseString( json.substr(i), y )+1;
 			else{
@@ -276,9 +271,8 @@ namespace Jde::QL{
 			table.Alias = move(alias);
 			if( system.size() ){
 				if( system=="__type" ){
-					auto typeName =Json::FindDefaultSV( table.Args, "name" );
-					if( typeName.size() )
-						table.SetDBTable( DB::AppSchema::GetViewPtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(typeName)), sl ) );
+					if( auto typeName = table.FindPtr<jstring>( "name" ); typeName )
+						table.SetDBTable( DB::AppSchema::GetViewPtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(*typeName)), sl ) );
 				}
 				else if( system=="__schema" ){
 					THROW_IF( schemas.empty() || schemas[0]->Tables.empty(), "No schemas found." );
@@ -325,5 +319,15 @@ namespace Jde::QL{
 		string stringified; stringified.reserve( text.size()*2 );
 		parseObject(text, stringified);
 		return Json::FromArray<SubscriptionId>( Json::AsArray(Json::Parse(stringified), "id") );
+	}
+	α Parser::Trim( sv token )ι->bool{
+		let trimmed = Peek()==token;
+		if( trimmed ){
+			_peekValue = {};
+			i = 0;
+			_text = _text.substr(token.size() );
+			_text = Str::TrimFirstLast( move(_text), '{', '}' );
+		}
+		return trimmed;
 	}
 }

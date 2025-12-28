@@ -4,10 +4,11 @@
 		"name": "main",
 		"compiler": "msvc",
 		"sourceDir": "${env:JDE_BASH}",
-		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/Debug",
+		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
 		"releaseDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/RelWithDebInfo",
 		"debugPreset": "win-msvc-debug",
-		"releasePreset": "win-msvc-relWithDebInfo"
+		"releasePreset": "win-msvc-relWithDebInfo",
+		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
 	},
 	"folders": [
 		{
@@ -20,14 +21,14 @@
 			{
 				"label": "build",
 				"type": "shell",
-				"command": "cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug",
+				"command": "mkdir -p ${config:debugDir}; cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug;",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": true }
 			},
 			{
 				"label": "buildRelease",
 				"type": "shell",
-				"command": "cd ${config:releaseDir}; tput reset; cmake --build . -j --config RelWithDebInfo -t=open62541-nodeset-loader;",
+				"command": "mkdir -p ${config:releaseDir}; cd ${config:releaseDir}; tput reset; cmake --build . -j --config RelWithDebInfo -t=open62541-nodeset-loader;",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},

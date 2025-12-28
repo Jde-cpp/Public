@@ -27,7 +27,10 @@ namespace Jde::QL{
 		}
 		return valid;
 	}
-
+	α Filter::ToString( str colName )Ι->string{
+		auto p = ColumnFilters.find( colName );
+		return p==ColumnFilters.end() || p->second.empty() ? "none" : p->second[0].ToString();
+	}
 
 	α FilterValue::Test( const DB::Value& db, ELogTags logTags )Ι->bool{
 		using namespace Json;
@@ -63,6 +66,9 @@ namespace Jde::QL{
 		return filter && (*filter & value);
 	}
 
+	α FilterValue::ToString()Ι->string{
+		return Ƒ("{}={}", DB::ToString(Operator), serialize(Value));
+	}
 }
 namespace Jde{
 	α QL::ToString( DB::EOperator op )ι->string{
