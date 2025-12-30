@@ -25,7 +25,6 @@
 				"LIB_ROOT": "$env{REPO_DIR}/install/clang"
 			},
 			"cacheVariables":{
-				"CMAKE_BINARY_DIR": "$env(JDE_DIR)/bin/$env{buildType}",
 				"CMAKE_BUILD_TYPE": "$env{buildType}",
 				"CMAKE_CXX_COMPILER": "clang++.exe",
 				"CMAKE_C_COMPILER": "clang-cl.exe",
@@ -63,6 +62,7 @@
 				"CMAKE_EXE_LINKER_FLAGS": "/INCREMENTAL:NO /IGNORE:4099",
 				"CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL",
 				"CMAKE_PREFIX_PATH": "$env{installRoot}/$env{buildType};$env{multiInstallPrefix}",
+				"JSONNET_LIB_DIR": "$env{REPO_DIR}/jsonnet/vs2017/x64/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:RelWithDebInfo>:Release>",
 				"MULTI_INSTALL_PREFIX": "$env{multiInstallPrefix}",
 				"OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}",
 				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}"
@@ -91,15 +91,6 @@
 			}
 		},
 		{
-			"name": "foo",
-			"environment":{
-				"JSONNET_PREFIX_PATH": "$env{REPO_DIR}/jsonnet/vs2017/x64/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:RelWithDebInfo>:Release>"
-			},
-			"cacheVariables": {
-				"Boost_USE_STATIC_LIBS": true
-			}
-		},
-		{
 			"name": "debug",
 			"hidden": true,
 			"environment":{
@@ -123,7 +114,6 @@
 				"multiInstallPrefix": "$env{installRoot}/multi"
 			},
 			"cacheVariables":{
-				"CMAKE_BINARY_DIR": "$env(JDE_DIR)/bin/$env{buildType}",
 				"CMAKE_BUILD_TYPE": "$env{buildType}",
 				"CMAKE_CXX_COMPILER": "g++-14",
 				"CMAKE_C_COMPILER": "gcc-14",

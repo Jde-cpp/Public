@@ -16,6 +16,7 @@ include_directories( ${spdlog_DIR}/../../../include ) #${spdlog_INCLUDE_DIRS}
 if( WIN32 )
 	set( JSONNET_DIR $ENV{REPO_DIR}/jsonnet CACHE PATH "Jsonnet directory" )
 	include_directories( ${JSONNET_DIR}/include )
+	message( JSONNET_LIB_DIR=${JSONNET_LIB_DIR} )
 	link_directories( ${JSONNET_LIB_DIR} )
 else()
 	set( JSONNET_DIR ${MULTI_INSTALL_PREFIX}/jsonnet CACHE PATH "Jsonnet directory" )

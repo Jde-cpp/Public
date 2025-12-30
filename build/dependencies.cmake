@@ -18,7 +18,7 @@ else()
 	list( APPEND CMAKE_PREFIX_PATH "${MULTI_INSTALL_PREFIX}/protobuf/lib/cmake/utf8_range" )
 endif()
 
-find_package( protobuf CONFIG "32.1.0" EXACT REQUIRED )
+find_package( protobuf CONFIG "33.2.0" EXACT REQUIRED )
 get_filename_component( protobuf_INCLUDE_DIRS ${protobuf_DIR}/../../../include ABSOLUTE )
 include_directories( ${protobuf_INCLUDE_DIRS} )
 include_directories( ${absl_DIR}/../../../include )

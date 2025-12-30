@@ -113,7 +113,7 @@ IF( WIN32 )
 	)
 	set( LIBXML2_INCLUDE_DIR ${MULTI_INSTALL_PREFIX}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
 	#set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2$<IF:$<CONFIG:Debug>,d,>.lib CACHE PATH "the directory containing LibXml2 libraries" )
-	set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2.lib CACHE PATH "the directory containing LibXml2 libraries" )
+	#set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2.lib CACHE PATH "the directory containing LibXml2 libraries" )
 	#set( LIBXML2_LIBRARIES ${MULTI_INSTALL_PREFIX}/libxml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
 	#set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
 else()
@@ -133,7 +133,7 @@ else()
 endif()
 ExternalProject_Add(protobuf
 	GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-	GIT_TAG v32.1
+	GIT_TAG v33.2
 	PREFIX protobuf
 	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/protobuf
 	CMAKE_ARGS ${stdArgs}

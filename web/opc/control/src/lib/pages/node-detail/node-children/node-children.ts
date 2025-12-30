@@ -156,7 +156,6 @@ export class NodeChildren implements OnInit, OnDestroy {
 	async changeEnum( n:Variable, e:MatSelectChange<number> ){
 		try {
 			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.value, (x)=>console.log(x) );
-			debugger;
 		}
 		catch (err) {
 			e.source.value = <number>n.value;

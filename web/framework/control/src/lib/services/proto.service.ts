@@ -222,7 +222,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		return await this.postRaw<string>( 'login', null, true, options );
 	}
 
-	async post<Y>( target:string, body:any, preferSecure:boolean=false, log:Log ):Promise<Y>{
+	async post<Y>( target:string, body:any, preferSecure:boolean=false ):Promise<Y>{
 		return await this.postRaw<Y>( target, body, preferSecure );
 	}
 
@@ -264,7 +264,9 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		let args = {query: q};
 		if( vars )
 			args["variables"] = vars;
-		const y = await this.post<any>( `graphql`, args, false, log );
+		if( this.log.restRequests ) log( `POST graphql/${JSON.stringify(args).substring(0,this.log.maxLength)}` );
+		const y = await this.post<any>( `graphql`, args, false );
+		if( this.log.restResults ) log( JSON.stringify(y).substring(0,this.log.maxLength) );
 		return y ? y["data"] : null;
 	}
 	private async graphQL<Y>( query: string, vars:any, log?:Log ):Promise<Y>{
@@ -352,8 +354,8 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				queries.push(type);
 		};
 		for( let type of queries ){
-			const ql = `__type(name: "${type}") { fields { name type { name kind ofType{name kind} } } }`;
-			const data = await this.query( ql, log );
+			const ql = `__type(name: $type) { fields { name type { name kind ofType{name kind} } } }`;
+			const data = await this.query( ql, {type:type}, log );
 			if( data["__type"].length==0 )
 				throw `no such type: '${type}'`;
 			const schema = new TableSchema( data["__type"] );
