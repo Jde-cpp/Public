@@ -153,7 +153,10 @@ export class ComponentNav {
 	}
   ngOnInit(){
 		this.route.url.subscribe( (urlSegments) => {
-			this.parentUrl = urlSegments.slice(0, -1).map(segment => segment.path).join('/');
+			if( urlSegments.length==1 )
+				this.parentUrl = urlSegments[0].path; //access/users
+			else
+				this.parentUrl = urlSegments.slice(0, -1).map(segment => segment.path).join('/');
 		});
  	};
   isRoot( url:string ){

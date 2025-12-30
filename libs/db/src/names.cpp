@@ -46,6 +46,7 @@ namespace Jde::DB{
 		return y;
 	}
 	α Names::ToPlural( sv singular )ι->string{
+		ASSERT( singular.size() );
 		string y{ singular };
 		if( singular=="ac" )
 			y = "acl";

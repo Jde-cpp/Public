@@ -2,7 +2,9 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <jde/fwk/io/protobuf.h>
 #include <jde/fwk/settings.h>
+#include <jde/web/Jwt.h>
 #include "Log.pb.h"
+#include <jde/fwk/chrono.h>
 
 using Jde::Protobuf::ToBytes;
 namespace Jde::App::FromClient{
@@ -35,12 +37,7 @@ namespace Jde::App{
 		*m.mutable_value() = move( value );
 		return m;
 	}
-/*	α FromClient::AddStringField( PFromClient::Transmission& t, Log::Proto::EFields field, uuid id, string&& value )ι->void{
-		auto& m = *t.add_messages()->mutable_string_field();
-		m.set_field( field );
-		*m.mutable_value() = ToString( id, move(value) );
-	}
-*/
+
 	α FromClient::Exception( exception&& e, RequestId requestId )ι->PFromClient::Transmission{
 		return setMessage( requestId, [&](auto& m){
 			auto& request = *m.mutable_exception();
@@ -82,6 +79,12 @@ namespace Jde::App{
 
 	α FromClient::Jwt( RequestId requestId )ι->StringTrans{
 		return transString( requestId, [&](auto& m){m.set_request_type(Proto::FromClient::ERequestType::Jwt);} );
+	}
+
+	α FromClient::Login( Web::Jwt&& jwt, RequestId requestId )ι->StringTrans{
+		return transString( requestId, [&](auto& m){
+			*m.mutable_jwt() = move(jwt.Payload());
+		} );
 	}
 
 	α FromClient::ToStatus( vector<string>&& details )ι->PFromClient::Status{
@@ -136,8 +139,8 @@ namespace Jde::App{
 
 		return proto;
 	}
-	α FromClient::LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile{
-		Log::Proto::LogEntryFile proto;
+
+	Ŧ logEntry( const Logging::Entry& m, T& proto )ι->void{
 		proto.set_template_id( ToBytes(m.Id()) );
 		for( auto& arg : m.Arguments )
 			*proto.add_args() = ToBytes( Logging::Entry::GenerateId(arg) );
@@ -148,6 +151,17 @@ namespace Jde::App{
 		proto.set_user_pk( m.UserPK.Value );
 		proto.set_file_id( ToBytes(m.FileId()) );
 		proto.set_function_id( ToBytes(m.FunctionId()) );
+	}
+	α FromClient::LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile{
+		Log::Proto::LogEntryFile proto;
+		logEntry( m, proto );
+		return proto;
+	}
+	α FromClient::LogEntryFile( const Logging::Entry& m, App::AppPK appPK, App::AppInstancePK instancePK )ι->Log::Proto::LogEntryFileExternal{
+		Log::Proto::LogEntryFileExternal proto;
+		logEntry( m, proto );
+		proto.set_app_pk( appPK );
+		proto.set_app_instance_pk( instancePK );
 		return proto;
 	}
 

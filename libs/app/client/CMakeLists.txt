@@ -16,7 +16,7 @@ target_sources( ${targetName}
         "${headers}")
 
 add_definitions( -DJde_App_Client_EXPORTS )
-target_link_libraries( ${targetName} Jde.Access Jde.App.Shared Jde.Web.Client )
+target_link_libraries( ${targetName} PUBLIC Jde.Access Jde.App.Shared Jde.Web.Client )
 target_precompile_headers(${targetName}
   PRIVATE
 	pc.h

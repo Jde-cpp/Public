@@ -1,12 +1,13 @@
 #pragma once
 
 namespace Jde::QL{ struct TableQL; }
+namespace Jde::Opc{ struct Variant; }
 namespace Jde::Opc::Gateway{
 	namespace Browse{ struct Response; }
 	struct UAClient;
 	struct ReadRequest final : UA_ReadRequest{
 		ReadRequest( const NodeId& nodeId, UA_AttributeId attrib )ι;
-		ReadRequest( const NodeId& nodeId, const QL::TableQL& ql )ι;
+		ReadRequest( const vector<NodeId>& ids, const QL::TableQL& ql )ι;
 		ReadRequest( Browse::Response&& browse, QL::TableQL&& ql )ι;
 		α Add( const QL::TableQL& ql, const flat_map<NodeId, jobject>& nodes )ι->void;
 		Ω AtribString( UA_AttributeId id )->const string&;
@@ -16,14 +17,17 @@ namespace Jde::Opc::Gateway{
 	struct ReadResponse final : UA_ReadResponse{
 		ReadResponse():UA_ReadResponse{}{}
 		ReadResponse( ReadResponse&& rhs )ι;
-		ReadResponse( UA_ReadResponse&& rhs )ι;
+		ReadResponse( UA_ReadResponse&& rhs, ReadRequest&& request )ι;
 		~ReadResponse(){ UA_ReadResponse_clear(this); }
 		α operator=( ReadResponse&& rhs )ι->ReadResponse&;
 		α ScalerDataType()ι->UA_DataType*;
+		α ScalerNodeId()ε->NodeId;
+		α ScalerValue()ε->optional<Variant>;
 		α Validate( Handle uahandle, SL sl )ε->void;
 		α GetJson()ι{ flat_map<NodeId, jobject> nodes; SetJson(nodes); return nodes; }
 		α SetJson( flat_map<NodeId, jobject>& nodes )ι->void;
-		α ScalerJson()ι->jobject;
+		α ToJson( const QL::TableQL& ql )ι->jvalue;
+	private:
 		optional<ReadRequest> Request;
 	};
 
@@ -35,6 +39,7 @@ namespace Jde::Opc::Gateway{
 		α await_ready()ι->bool{ return !_request.nodesToReadSize; }
 		α Suspend()ι->void override;
 		Ω OnResponse( UA_Client* client, void* userdata, UA_UInt32 requestId, UA_ReadResponse* rr )ι->void;
+		α OnComplete( UA_ReadResponse* rr )ι->void;
 		α await_resume()ε->ReadResponse;
 	private:
 		ReadRequest _request;

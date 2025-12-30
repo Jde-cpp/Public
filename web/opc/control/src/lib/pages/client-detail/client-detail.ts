@@ -49,7 +49,7 @@ export class GatewayDetail implements OnDestroy, OnInit{
 	async onSubmitClick(){
 		try{
 			const upsert = new ServerCnnctn( {
-				id:this.properties().id,
+//				id:this.properties().id,
 				...this.properties(),
 			});
 			const mutation = upsert.mutation( this.serverCnnctn );

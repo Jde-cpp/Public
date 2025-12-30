@@ -2,14 +2,13 @@
 	"settings": {
 		"window.title": "App",
 		"name": "AppServer",
-		"sourceDir": "${env:JDE_BASH}/apps/AppServer",
 		"compiler": "msvc",
+		"sourceDir": "${env:JDE_BASH}/apps/AppServer",
 		"exe": "Jde.App.Server.exe",
-		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/jde",
-		"buildDir": "${config:buildRoot}/apps/${config:name}",
-		"winBuildDir": "${env:JDE_BUILD_DIR}/${config:compiler}/jde/apps/${config:name}",
-		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions.sh",
+		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
+		"debugPreset": "win-msvc-debug",
+		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
+		"winBuildDir": "${env:JDE_BUILD_DIR}\\${config:compiler}\\apps\\${config:name}",
 	},
 	"folders": [
 		{
@@ -75,7 +74,7 @@
 			{
 				"label": "build",
 				"type": "shell",
-				"command": "cd ${config:buildDir}; tput reset;cmake --build .;",
+				"command": "mkdir -p ${config:debugDir}; cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug --target Jde.App.Server;",
 				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": true }
 			},
@@ -83,33 +82,28 @@
 				"label": "compile",
 				"type": "shell",
 				"command": "tput reset;${config:sourceBash};compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot};",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},
 			{
 				"label": "buildProject",
 				"type": "shell",
 				"command": "tput reset; source $JDE_DIR/build/buildFunctions.sh;buildProject ${fileWorkspaceFolder} ${config:buildRoot};",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},
 			{
 				"label": "buildTests",
 				"type": "shell",
 				"command": "cd tests; tput reset;./build.sh;",
-				"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder:AppServer}"],
-					"pattern": {
-						"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
-						"file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
-					}
-				},
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},
 			{
 				"label": "cmake",
 				"type": "shell",
 				"command": "mkdir -p ${config:buildDir};cd ${config:buildDir}; tput reset; rm -f CMakeCache.txt; cmake ${config:sourceDir} --preset win-msvc-jde",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			}
 		]
@@ -120,10 +114,10 @@
 			"name": "Debug",
 			"type": "cppvsdbg",
 			"request": "launch",
-			"program": "${config:winBuildDir}\\${config:buildTarget}\\${config:exe}",
-			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/Public/apps/AppServer/config/App.Server.jsonnet"],
+			"program": "${config:winBuildDir}\\exe\\Debug\\${config:exe}",
+			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/apps/AppServer/config/App.Server.jsonnet"],
 			"stopAtEntry": false,
-			"cwd": "${config:winBuildDir}",
+			"cwd": "${env:JDE_BUILD_DIR}",
 			"console": "integratedTerminal",
 			"preLaunchTask": "build"
 		},
@@ -137,8 +131,6 @@
 			"cwd": "${workspaceFolder:AppServer}/../../bin/release",
 			"environment": [{ "name": "JDE_DB_DRIVER", "value": "libJde.MySql.so" }, { "name": "JDE_LOG_META", "value": "${workspaceFolder:AppServer}/../meta.json" }],
 			"externalConsole": false,
-			"MIMode": "gdb",
-			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing","ignoreFailures": true}],
 			"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
 			"preLaunchTask": "release"
 		},

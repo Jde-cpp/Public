@@ -28,15 +28,15 @@ cd $JDE_BASH;
 fetchDefault master Google 0;
 
 echo -------------Web.Server------------
-cd $JDE_BASH/Public/src/web/server;
+cd $JDE_BASH/src/web/server;
 buildCMake Jde.Web.Server;
 if [ $tests -eq 1 ]; then
-	cd $JDE_BASH/Public/tests/web;
+	cd $JDE_BASH/tests/web;
 	buildCMake Jde.Web.Tests;
 fi;
 
 echo -------------App.Shared------------
-cd $JDE_BASH/Public/src/app/shared;
+cd $JDE_BASH/src/app/shared;
 buildCMake Jde.App.Shared;
 
 fetchDefault master AppServer 0;
@@ -58,7 +58,7 @@ echo >&2 '
 # cd $JDE_BASH/AppServer/source; moveToDir types; moveToDir proto;
 # file=FromServer;
 # if [[ ! -f $file.pb.h || $shouldFetch -eq 1 ]]; then
-# 	mklink FromServer.proto $JDE_BASH/Public/src/web/proto;
+# 	mklink FromServer.proto $JDE_BASH/src/web/proto;
 # 	protoc --cpp_out dllexport_decl=JDE_WEB_EXPORTS:. -I. $file.proto;
 # 	rm FromServer.pb.cc;
 # 	sed -i -e 's/JDE_WEB_EXPORTS/ΓW/g' $file.pb.h;
@@ -66,7 +66,7 @@ echo >&2 '
 # fi;
 # file=AppFromServer;
 # if [[ ! -f $file.pb.h || $shouldFetch -eq 1 ]]; then
-# 	mklink $file.proto $JDE_BASH/Public/jde/appServer/proto;
+# 	mklink $file.proto $JDE_BASH/jde/appServer/proto;
 # 	protoc --cpp_out=. $file.proto;
 # 	sed -i 's/PROTOBUF_CONSTINIT StringValueDefaultTypeInternal/StringValueDefaultTypeInternal/' $file.pb.cc;
 # 	sed -i 's/PROTOBUF_CONSTINIT ApplicationDefaultTypeInternal/ApplicationDefaultTypeInternal/' $file.pb.cc;
@@ -77,7 +77,7 @@ echo >&2 '
 # fi;
 # file=AppFromClient;
 # if [[ ! -f $file.pb.h || $shouldFetch -eq 1 ]]; then
-# 	mklink $file.proto $JDE_BASH/Public/jde/appServer/proto;
+# 	mklink $file.proto $JDE_BASH/jde/appServer/proto;
 # 	sed -i 's/PROTOBUF_CONSTINIT CustomDefaultTypeInternal/CustomDefaultTypeInternal/' $file.pb.cc;
 # 	sed -i 's/PROTOBUF_CONSTINIT GraphQLDefaultTypeInternal/GraphQLDefaultTypeInternal/' $file.pb.cc;
 # 	protoc --cpp_out=. $file.proto;

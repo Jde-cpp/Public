@@ -2,9 +2,7 @@ function buildRelativePath() {
 	fileWorkspaceFolder=$1; #/home/duffyj/code/jde/Public/libs/web/tests
 	absoluteFile=$2; #/home/duffyj/code/jde/IotWebsocket/source/HttpRequestAwait.cpp
 	buildRoot=$3;
-	if [[ $fileWorkspaceFolder == *"jde/Framework/source" ]]; then
-		relativePath="libs/framework/lib";
-	elif [[ ${fileWorkspaceFolder##*Public/} != $fileWorkspaceFolder ]]; then
+	if [[ ${fileWorkspaceFolder##*Public/} != $fileWorkspaceFolder ]]; then
 		relativePath=${fileWorkspaceFolder##*Public/};
 		filename=$(basename "$absoluteFile");
 		if [[ $filename == "main.cpp" ]]; then
@@ -28,18 +26,26 @@ function buildProject() {
 	buildRoot=$2;
 
 	buildRelativePath=`buildRelativePath $fileDirname`;
-	if [[ $buildRelativePath == "apps/OpcGateway/tests" ]]; then
-		target=Jde.Opc.Tests;
+	if [[ $buildRelativePath == *"libs/fwk/lib"* ]]; then
+		target=Jde;
+	elif [[ $buildRelativePath == *"libs/fwk/tests"* ]]; then
+		target=Jde.Fwk.Tests;
+	elif [[ $buildRelativePath == *"web/client"* ]]; then
+		target=Jde.Web.Client;
 	elif [[ $buildRelativePath == *"web/server" ]]; then
 		target=Jde.Web.Server;
 	elif [[ $buildRelativePath == *"app/client" ]]; then
 		target=Jde.App.Client;
 	elif [[ $buildRelativePath == *"app/shared"* ]]; then
 		target=Jde.App.Shared;
-	elif [[ $buildRelativePath == *"OpcGateway/lib"* ]]; then
-		target=Jde.Opc.GatewayLib;
 	elif [[ $buildRelativePath == "apps/AppServer"* ]]; then
 		target=Jde.App.Server;
+	elif [[ $buildRelativePath == *"libs/opc/lib"* ]]; then
+		target=Jde.Opc;
+	elif [[ $buildRelativePath == *"libs/ql"* ]]; then
+		target=Jde.QL;
+	elif [[ $buildRelativePath == *"OpcGateway/lib"* ]]; then
+		target=Jde.Opc.GatewayLib;
 	elif [[ $buildRelativePath == "apps/OpcGateway/tests"* ]]; then
 		target=Jde.Opc.Tests;
 	else

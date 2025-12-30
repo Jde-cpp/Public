@@ -60,11 +60,12 @@ message Message{
 		Jde.App.Log.Proto.String stringKey = 9; //send a string.
 		Jde.App.Proto.StringMD5s request_strings = 10;
 		bool subscribe_status = 11;//subscribe to application statuses.
-		string subscribe_logs = 12;//subscribe to application logs.  TODO graphql
+		string subscribe_logs = 12;//subscribe to application logs.
 		Jde.Proto.Exception exception = 13;
 		ERequestType request_type = 14;//Just the request id is needed.
 		Jde.Proto.Query subscription = 15;
 		Unsubscription unsubscription = 16;
+		bytes jwt = 17;//webPage->appServer to authenticate user.
 
 		ForwardExecution forward_execution = 31;//webPage->appServer to call execute with creds.
 		ForwardExecution forward_execution_anonymous = 32;//call execute with no creds.

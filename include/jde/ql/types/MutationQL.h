@@ -12,8 +12,7 @@ namespace Jde::QL{
 		Ω IsMutation( sv name )ι->bool;
 		Ω ParseCommand( sv name, SRCE )ε->tuple<string,EMutationQL>;
 		α TableName()Ι->string; //json name=user returns users
-		//α ParentPK()Ε->uint;
-		//α ChildPK()Ε->uint;
+		α JTableName()Ι->string override{ return JsonTableName; }
 		α ToString()Ι->string;
 
 		string CommandName;

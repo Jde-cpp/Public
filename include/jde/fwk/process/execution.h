@@ -12,18 +12,17 @@ namespace Jde{
 	α PostIO( function<void()> f )ι->void;
 	Φ Post( VoidAwait::Handle&& h )ι->void;
 	Φ Post( VoidAwait::Handle&& h, Exception&& e )ι->void;
-	Ŧ Post( T&& value, typename TAwait<T>::Handle&& h )ι->void;
+	Ŧ Post( T&& value, typename TAwait<T>::Handle h )ι->void;
 
 	namespace Execution{
 		Φ AddShutdown( IShutdown* pShutdown )ι->void;
 		Φ AddCancelSignal( sp<boost::asio::cancellation_signal> s )ι->void;
 		Φ Run()->void;
 	}
-	Ŧ Jde::Post( T&& value, typename TAwait<T>::Handle&& h )ι->void{
+	Ŧ Jde::Post( T&& value, typename TAwait<T>::Handle h )ι->void{
 		PostM( [ v = move(value), h ]() mutable {
 			h.promise().Resume( move(v), h );
 		} );
-		h = nullptr;
 	}
 }
 #endif

@@ -16,16 +16,8 @@ namespace Jde::App::Server{
 		α EndAppInstances()ι->DB::ExecuteAwait::Task;
 		α Configure()ι->VoidAwait::Task;
 	};
-	//α SaveString( App::Log::Proto::EFields field, StringMd5 id, string value, SRCE )ι->void;
 }
 namespace Jde::App{
-	α AddInstance( str applicationName, str hostName, uint processId )ε->std::tuple<AppPK, AppInstancePK>;
+	α AddConnection( str applicationName, str instanceName, str hostName, uint pid )ε->tuple<AppPK, AppInstancePK, AppConnectionPK>;
 	α EndInstance( AppInstancePK instanceId, SRCE )ι->DB::ExecuteAwait::Task;
-
-	//α LoadApplications( AppPK pk=0 )ι->up<Proto::FromServer::Applications>;
-	namespace Data{
-		α LoadEntries( QL::TableQL table )ε->Proto::FromServer::Traces;
-		α LoadStrings( SRCE )ε->void;
-	}
-	//α SaveMessage( AppPK applicationId, AppInstancePK instanceId, const Log::Proto::LogEntryClient& m, SRCE )ι->void;
 }

@@ -33,7 +33,10 @@ namespace Jde::App{
 	α Server::Schemas()ι->const vector<sp<DB::AppSchema>>&{ return QL().Schemas(); }
 
 	α Server::GetAppPK()ι->AppPK{ return _appId; }
-	α Server::SetAppPKs( std::tuple<AppPK, AppInstancePK> x )ι->void{ _appId=get<0>(x); AppClient()->SetInstancePK(get<1>(x)); }
+	α Server::SetAppPKs( std::tuple<AppPK, AppInstancePK, AppConnectionPK> x )ι->void{
+		_appId=get<0>( x );
+		AppClient()->SetAppPKs( get<1>(x), get<2>(x) );
+	}
 	//α UpdateStatuses()ι->DurationTimer::Task;
 	α Server::StartWebServer( jobject&& settings )ε->void{
 		_requestHandler = ms<RequestHandler>( move(settings) );
@@ -64,8 +67,8 @@ namespace Jde::App{
 		// 	co_await DurationTimer{ 1s };
 		// }
 	//}
-
-	α TestLogPub( const Filter& subscriptionFilter, AppPK /*appId*/, AppInstancePK /*instancePK*/, const Logging::Entry& m )ι->bool{
+/*
+	α TestLogPub( const Filter& subscriptionFilter, AppPK / *appId* /, AppInstancePK / *instancePK* /, const Logging::Entry& m )ι->bool{
 		bool passesFilter{ true };
 		let logTags = ELogTags::Socket | ELogTags::Server | ELogTags::Subscription;
 		for( let& [jsonColName, columnFilters] : subscriptionFilter.ColumnFilters ){
@@ -102,6 +105,7 @@ namespace Jde::App{
 			}
 		});
 	}
+*/
 	α Server::BroadcastStatus( AppPK appPK, AppInstancePK statusInstancePK, str hostName, Proto::FromClient::Status&& status )ι->void{
 		auto value{ FromServer::ToStatus(appPK, statusInstancePK, hostName, move(status)) };
 		_statuses.emplace_or_visit( statusInstancePK, value, [&](auto& kv){kv.second = value;} );
@@ -125,38 +129,38 @@ namespace Jde::App{
 		return y;
 	}
 
-	α Server::FindInstance( AppInstancePK instancePK )ι->sp<ServerSocketSession>{
+	α Server::FindConnection( AppConnectionPK connectionPK )ι->sp<ServerSocketSession>{
 		sp<ServerSocketSession> y;
-		_sessions.visit( instancePK, [&](auto&& kv){y=kv.second;} );
+		_sessions.visit( connectionPK, [&](auto&& kv){y=kv.second;} );
 		return y;
 	}
 
 	α Server::NextRequestId()->RequestId{ return ++_requestId; }
-	α Server::Write( AppPK appPK, optional<AppInstancePK> instancePK, Proto::FromServer::Transmission&& msg )ε->void{
+	α Server::Write( AppPK appPK, optional<AppConnectionPK> connectionPK, Proto::FromServer::Transmission&& msg )ε->void{
 		if( !_sessions.visit_while([&](auto&& kv){
 			auto& session = kv.second;
-			auto appInstPK = session->AppPK()==appPK ? session->InstancePK() : 0;
-			let found = appInstPK && appInstPK==instancePK.value_or( appInstPK );
+			auto appInstPK = session->AppPK()==appPK ? session->ConnectionPK() : 0;
+			let found = appInstPK && appInstPK==connectionPK.value_or( appInstPK );
 			if( found )
 				session->Write( move(msg) );
 			return !found;
 		}) ){
-			THROW( "No session found for appPK:{}, instancePK:{}", appPK, instancePK.value_or(0) );
+			THROW( "No session found for appPK:{}, connectionPK:{}", appPK, connectionPK.value_or(0) );
 		}
 	}
-	α Server::RemoveSession( AppInstancePK instancePK )ι->void{
-		_logSubscriptions.erase( instancePK );
-		UnsubscribeStatus( instancePK );
-		UnsubscribeLogs( instancePK );
-		bool erased = _sessions.erase_if( instancePK, [&](auto&& kv){
-			_statuses.erase( kv.second->InstancePK() );
+	α Server::RemoveSession( AppConnectionPK connectionPK )ι->void{
+		_logSubscriptions.erase( connectionPK );
+		UnsubscribeStatus( connectionPK );
+		//UnsubscribeLogs( connectionPK );
+		bool erased = _sessions.erase_if( connectionPK, [&](auto&& kv){
+			_statuses.erase( kv.second->ConnectionPK() );
 			return true;
 		});
-		ForwardExecutionAwait::OnCloseConnection( instancePK );
-		TRACET( ELogTags::App, "[{:x}]RemoveSession erased: {}", instancePK, erased );
+		ForwardExecutionAwait::OnCloseConnection( connectionPK );
+		TRACET( ELogTags::App, "[{:x}]RemoveSession erased: {}", connectionPK, erased );
 	}
 
-	α Server::SubscribeLogs( string&& qlText, jobject variables, sp<ServerSocketSession> session )ε->void{
+/*	α Server::SubscribeLogs( string&& qlText, jobject variables, sp<ServerSocketSession> session )ε->void{
 		auto ql = QL::Parse( qlText, variables, Schemas() );
 		auto tables = ql.IsQueries() ? move( ql.Queries() ) : vector<QL::TableQL>{};
 		THROW_IF( tables.size()!=1, "Invalid query, expecting single table" );
@@ -172,9 +176,9 @@ namespace Jde::App{
 		*t.add_messages()->mutable_traces() = move( traces );
 		session->Write( move(t) );
 	}
-
+*/
 	α Server::SubscribeStatus( ServerSocketSession& session )ι->void{
-		_statusSubscriptions.emplace( session.InstancePK() );
+		_statusSubscriptions.emplace( session.ConnectionPK() );
 		Proto::FromServer::Transmission t;
 		_statuses.visit_all( [&](auto&& kv){
 			*t.add_messages()->mutable_status() = kv.second;
@@ -184,11 +188,8 @@ namespace Jde::App{
 			session.Write( move(t) );
 		}
 	}
-	α Server::UnsubscribeLogs( AppInstancePK instancePK )ι->bool{
-		return _logSubscriptions.erase( instancePK );
-	}
-	α Server::UnsubscribeStatus( AppInstancePK instancePK )ι->bool{
-		return _statusSubscriptions.erase( instancePK );
+	α Server::UnsubscribeStatus( AppConnectionPK connectionPK )ι->bool{
+		return _statusSubscriptions.erase( connectionPK );
 	}
 }
 namespace Jde::App::Server{

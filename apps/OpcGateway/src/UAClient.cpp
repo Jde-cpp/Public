@@ -165,7 +165,6 @@ namespace Jde::Opc::Gateway{
 	α UAClient::StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void{
 		constexpr std::array<sv,6> sessionStates = { "Closed", "CreateRequested", "Created", "ActivateRequested", "Activated", "Closing" };
 		DBG( "[{:x}]channelState='{}', sessionState='{}', connectStatus='({:x}){}'", (uint)ua, UAException::Message(channelState), FromEnum(sessionStates, sessionState), connectStatus, UAException::Message(connectStatus) );
-		BREAK_IF( connectStatus );
 		if( auto client = sessionState == UA_SESSIONSTATE_ACTIVATED ? UAClient::TryFind(ua) : sp<UAClient>{}; client ){
 			client->TriggerSessionAwaitables();
 			client->ClearRequest( ConnectRequestId );
@@ -251,7 +250,7 @@ namespace Jde::Opc::Gateway{
 		_awaitingActivation.emplace( shared_from_this() );
 		DBG( "[{:x}]Connecting to '{}', using '{}'", Handle(), Url(), Credential.ToString() );
 		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
-		_asyncRequest.SetParent( p );
+		_asyncRequest.SetClient( p );
 		Process( ConnectRequestId, "Connect" );
 	}
 
@@ -283,61 +282,6 @@ namespace Jde::Opc::Gateway{
 			}
 			catch( exception& e ){
 			}
-		}
-	}
-
-	α UAClient::SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void{
-		try{
-			RequestId requestId{};
-			TRACET( BrowseTag, "[{:x}]SendBrowseRequest", Handle() );
-			UAε( UA_Client_sendAsyncBrowseRequest(_ptr, &request, Browse::OnResponse, nullptr, &requestId) );
-			TRACET( BrowseTagPedantic, "[{:x}.{}]SendBrowseRequest", Handle(), requestId );
-			Process( requestId, move(h), "BrowseRequest" );
-		}
-		catch( UAException& e ){
-			Retry<Browse::FoldersAwait::Handle>(
-				[r{ move(request) }]( sp<UAClient>&& p, Browse::FoldersAwait::Handle h )mutable{
-					p->SendBrowseRequest( move(r), h );
-				},
-				move( e ), shared_from_this(), h
-			);
-		}
-	}
-
-	α UAClient::SendReadRequest( const flat_set<NodeId>&& nodeIds, ReadValueAwait::Handle h )ι->void{
-		if( nodeIds.empty() ){
-			h.promise().SetExp( Exception{"no nodes sent"} );
-			return h.resume();
-		}
-		flat_map<UA_UInt32, NodeId> ids;
-		RequestId firstRequestId{};
-		try{
-			//assume 1st will fail if any, request all again if latter node failed.
-			for( auto&& nodeId : nodeIds ){
-				RequestId requestId{};
-				UAε( UA_Client_readValueAttribute_async(_ptr, nodeId, Read::OnResponse, (void*)(uint)firstRequestId, &requestId) );
-				if( !firstRequestId )
-					firstRequestId = requestId;
-				ids.emplace( requestId, nodeId );
-	 		}
-			TRACET( IotReadTag, "[{:x}.{}]SendReadRequest - count={}", Handle(), firstRequestId, ids.size() );
-			_readRequests.try_emplace( firstRequestId, UARequestMulti<Value>{move(ids)} );
-			Process( firstRequestId, move(h), "readValueAttribute" );
-		}
-		catch( UAException& e ){
-			Retry<ReadValueAwait::Handle>( [n=move(nodeIds)](sp<UAClient>&& p, ReadValueAwait::Handle h)mutable{p->SendReadRequest(move(n), move(h));}, move(e), shared_from_this(), move(h) );
-		}
-	}
-	α UAClient::SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void{
-		UA_SetMonitoringModeRequest request{};
-		request.subscriptionId = subscriptionId;
-		try{
-			RequestId requestId{};
-			UAε( UA_Client_MonitoredItems_setMonitoringMode_async(UAPointer(), move(request), SetMonitoringModeCallback, nullptr, &requestId) );
-			Process( requestId, nullptr, "setMonitoringMode" );//if retry fails, don't want to process.
-		}
-		catch( UAException& e ){
-			RetryVoid( [subscriptionId](sp<UAClient>&& p)mutable{p->SetMonitoringMode(subscriptionId);}, move(e), shared_from_this() );
 		}
 	}
 

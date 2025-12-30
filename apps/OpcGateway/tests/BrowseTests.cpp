@@ -35,7 +35,7 @@ namespace Jde::Opc::Gateway::Tests{
 		auto query = "node( opc: $opc, path:$path ){ id name parents{id name path} }";
 		jobject variables{ {"opc", OpcServerTarget}, {"path", "4~Examples/4~Stacklights/4~ExampleStacklight/4~Lamp1"} };
 		auto ql = QL::Parse( move(query), move(variables), Schemas(), true );
-		auto value = BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(ql.Queries().front()), *Str::TryTo<SessionPK>(_jwt->SessionId, nullptr, 16), _jwt->UserPK} );
+		auto value = BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(ql.Queries().front()), _client} );
 		TRACE( "value: {}", serialize(value) );
 		auto result = ExNodeId{ value };
 		ASSERT_TRUE( *result.Numeric()>0 );

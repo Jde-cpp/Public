@@ -1,5 +1,5 @@
 import { NodeId, NodeIdJson } from "./NodeId";
-import { ETypes, Browse, ILocalizedText, Ns, toLocalizedText, EAccessLevel } from "./types";
+import { ETypes, Browse, ILocalizedText, Ns, toLocalizedText, EAccess, EWriteAccess } from "./types";
 import { toValue, Value } from "./Value";
 import { Enum } from "./Enum";
 
@@ -25,7 +25,6 @@ export abstract class UaNode extends NodeId{
 		this.refType = json.referenceType ? new NodeId( json.referenceType ) : null;
 		this.typeDef = json.typeDefinition ? new ObjectType( json.typeDefinition ) : null;
 	}
-	//equals(rhs:NodeId):boolean{ return  }
 	browseFQ( defaultNS:Ns ):string{ return this.browse.ns===defaultNS ? this.browse.name.toString() : `${this.browse.ns}~${this.browse.name}`; }
 
 	get nodeId(){ return new NodeId( this ); }
@@ -42,8 +41,8 @@ export abstract class UaNode extends NodeId{
 	refType?:NodeId;
 	specified:number;
 	typeDef?:ObjectType;
-	userWriteMask:number;
-	writeMask:number;
+	userWriteMask:EWriteAccess;
+	writeMask:EWriteAccess;
 }
 
 export class ObjectType extends UaNode{
@@ -76,8 +75,8 @@ export class Variable extends UaNode{
 	}
 	override get nodeClass():ENodeClass{ return ENodeClass.Variable; }
 
-	accessLevel?:EAccessLevel;
-	userAccessLevel?:EAccessLevel;
+	accessLevel?:EAccess;
+	userAccessLevel?:EAccess;
 	dataType?:ETypes;
 	customDataType?:NodeId|Enum;
 	override get displayed(){ return true; }
@@ -88,7 +87,4 @@ export class Variable extends UaNode{
 	get isUnsigned():boolean{ return [ETypes.Byte, ETypes.UInt16, ETypes.UInt32, ETypes.UInt64].includes(this.dataType); }
 	value?:Value;
 	valueRank?:number; // -1 scalar, 1 one-dimensional array, etc.
-//
-//	referenceType?:INodeId;
-//	typeDefinition?:INodeId;
 }

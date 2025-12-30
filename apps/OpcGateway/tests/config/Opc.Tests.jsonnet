@@ -1,10 +1,11 @@
 local args = import 'args.libsonnet';
 {
+	instanceName: args.instanceName,
 	testing:{
 		tests: "LogTests.GraphQL",
 		recreateDB:: true,
-		embeddedAppServer: true,
-		embeddedOpcServer: true
+		embeddedAppServer: false,
+		embeddedOpcServer: false
 	},
 	opc: args.opc,
 	dbServers: {
@@ -57,13 +58,13 @@ local args = import 'args.libsonnet';
 		spd:{
 			defaultLevel:: "Information",
 			tags: {
-				trace:["test", "app", "http.client.write", "http.client.read", "ql", "processingLoop"],
+				trace:["test", "app", "http.client.write", "http.client.read", "ql"],
 				debug:["settings", "sql", "scheduler", "uaEvent",
-					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
+					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"],
+				information:["threads", "processingLoop",
+					"uaSecure", "uaClient", "uaNet",
 					"uaSession", "uaServer", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
 					"monitoring", "browse", "monitoring.pedantic"],
-				information:["threads",
-					"uaSecure", "uaClient", "uaNet"],
 				warning:[],
 				"error":[],
 				critical:[]
@@ -81,6 +82,7 @@ local args = import 'args.libsonnet';
 			timeZone: "America/New_York",
 			delay: "PT1M"
 		},
+		subscribe:{}
 		// remote:{
 		// 	delay: "PT2S"
 		// }

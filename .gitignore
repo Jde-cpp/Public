@@ -62,7 +62,6 @@ tests/*.proto
 **/*.vcxproj
 **/*.vcxproj.filters
 libs/app/shared/proto/Web.FromServer.proto
-**/.*.sql
 **/my-workspace*/**
 *.7z
 **/.*
@@ -70,3 +69,8 @@ apps/OpcGateway/config/common-meta.libsonnet
 apps/OpcServer/config/common-meta.libsonnet
 apps/AppServer/config/common-meta.libsonnet
 **/*.aps
+apps/AppServer/src/build/CMakeFiles/3.28.3/CMakeDetermineCompilerABI_C.bin
+libs/fwk/src/build/**
+libs/fwk/tests/build/**
+apps/AppServer/src/build/**
+**/out/**

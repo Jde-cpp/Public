@@ -18,8 +18,8 @@ namespace Jde::Web::Server{
 					jvalue jv;
 					if( target=="restSessionTimeout" )
 						jv = Chrono::ToString<steady_clock::duration>( Sessions::RestSessionTimeout() );
-					else if( target=="serverInstance" ){
-						jv = _appClient->InstancePK();
+					else if( target=="serverConnection" ){
+						jv = _appClient->ConnectionPK();
 					}else{
 						let value = Settings::FindString( Ƒ("/http/clientSettings/{}", target) );
 						jv = value ? jvalue{ *value } : jvalue{ nullptr };

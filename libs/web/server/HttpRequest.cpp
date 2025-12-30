@@ -30,7 +30,7 @@ namespace Jde::Web::Server{
 		_start{ steady_clock::now() }{
 		ParseUri();
 	}
-	
+
 	α HttpRequest::operator[]( str x )Ι->const string&{
 		auto p = _params.find( x );
 		return p!=_params.end() ? p->second : Str::Empty();
@@ -77,6 +77,6 @@ namespace Jde::Web::Server{
 	}
 
 	α HttpRequest::LogRead( str text, SL sl )Ι->void{
-		LOGSL( ELogLevel::Trace, sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {}{} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
+		LOGSL( ELogLevel::Trace, sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {} - {} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
 	}
 }

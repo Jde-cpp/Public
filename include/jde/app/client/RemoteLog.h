@@ -12,6 +12,7 @@ namespace Jde::App::Client{
 		α Start( sp<IAppClient> client )ι->void;
 		α Shutdown( bool terminate )ι->void override;
 		α Write( const Logging::Entry& m )ι->void override;
+		α Write( const Logging::Entry& m, uint32 /*appPK*/, uint32 /*instancePK*/ )ι->void override{ Write(m); }
 		α Name()Ι->string override{ return "RemoteLog"; }
 	private:
 		α ResetTimer()ι->void;

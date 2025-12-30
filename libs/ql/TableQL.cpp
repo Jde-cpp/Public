@@ -15,13 +15,13 @@ namespace Jde::QL{
 
 	TableQL::TableQL( string jName, jobject args, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε:
 		Input{ move(args), move(variables) },
-		DBTable{ system ? sp<DB::View>{} : DB::AppSchema::GetViewPtr(schemas, DB::Names::ToPlural(DB::Names::FromJson(jName)), sl) },
-		JsonName{move(jName)}
+		JsonName{ jName },
+		_dbTable{ system ? sp<DB::View>{} : DB::AppSchema::GetViewPtr(schemas, DB::Names::ToPlural(DB::Names::FromJson(move(jName))), sl) }
 	{}
 
 	α addFilters( const jvalue& value, const sp<jobject>& variables )ε->vector<FilterValue>{
 			vector<FilterValue> columnFilters;
-			if( value.is_string() || value.is_number() || value.is_null() ) //(id: 42) or (name: "charlie") or (deleted: null)
+			if( value.is_string() || value.is_number() || value.is_null() ) //( id: 42 ) or ( name: "charlie" ) or ( deleted: null )
 				columnFilters.emplace_back( DB::EOperator::Equal, value );
 			else if( value.is_object() ){ //filter: {age: {gt: 18, lt: 60}}
 				for( let& [op,opValue] : value.as_object() ){
@@ -34,10 +34,10 @@ namespace Jde::QL{
 					columnFilters.emplace_back( ToQLOperator(op), opValue );
 				}
 			}
-			else if( value.is_array() ) //(id: [1,2,3]) or (name: ["charlie","bob"])
+			else if( value.is_array() ) //( id: [1,2,3] ) or ( name: ["charlie","bob"] )
 				columnFilters.emplace_back( EOperator::In, value );
 			else
-				THROW("Invalid filter value type '{}'.", Json::Kind(value.kind()) );
+				THROW( "Invalid filter value type '{}'.", Json::Kind(value.kind()) );
 			return columnFilters;
 	}
 	α TableQL::Filter()Ε->const QL::Filter&{
@@ -58,32 +58,32 @@ namespace Jde::QL{
 	}
 	α TableQL::AddFilter( const string& column, const jvalue& value )ι->void{
 		auto destination = &Args;
-		if( auto filter = Args.find( "filter" ); filter!=Args.end() )
+		if( auto filter = Args.find("filter"); filter!=Args.end() )
 			destination = &filter->value().as_object();
-		(*destination)[column] = value;
+		( *destination )[column] = value;
 	}
 
 	α TableQL::ExtractTable( sv jsonPluralName )ι->optional<TableQL>{
-		auto p = find_if( Tables, [&](let& t){return t.JsonName==jsonPluralName;});
+		auto p = find_if( Tables, [&](let& t){return t.JsonName==jsonPluralName;} );
 		if( p==Tables.end() )
-			p = find_if( Tables.begin(), Tables.end(), [&](let& t){return t.JsonName==DB::Names::ToSingular(jsonPluralName);});
+			p = find_if( Tables.begin(), Tables.end(), [&](let& t){return t.JsonName==DB::Names::ToSingular(jsonPluralName);} );
 		if( p==Tables.end() )
 			return {};
-		auto y = move(*p);
+		auto y = move( *p );
 		Tables.erase( p );
 		return y;
 	}
 
 	α TableQL::FindTable( sv jsonPluralName )ι->TableQL*{
 		TableQL* y{};
-		if( auto p = find_if( Tables, [&](let& t){return t.JsonName==jsonPluralName;}); p!=Tables.end() )
+		if( auto p = find_if(Tables, [&](let& t){return t.JsonName==jsonPluralName;}); p!=Tables.end() )
 			y = &*p;
-		else if( auto p = find_if( Tables.begin(), Tables.end(), [&](let& t){return t.JsonName==DB::Names::ToSingular(jsonPluralName);}); p!=Tables.end() )
+		else if( auto p = find_if(Tables.begin(), Tables.end(), [&](let& t){return t.JsonName==DB::Names::ToSingular(jsonPluralName);}); p!=Tables.end() )
 			y = &*p;
 		return y;
 	}
 	α TableQL::FindTable( sv jsonPluralName )Ι->const TableQL*{
-		return const_cast<TableQL*>(this)->FindTable( jsonPluralName );
+		return const_cast<TableQL*>( this )->FindTable( jsonPluralName );
 	}
 
 	α TableQL::GetTable( sv jsonPluralName, SL sl )ε->TableQL&{
@@ -94,9 +94,9 @@ namespace Jde::QL{
 
 	α TableQL::FindArgKey()Ι->optional<DB::Key>{
 		optional<DB::Key> y;
-		if( let id = Json::FindValue( Args, "id" ); id )
+		if( let id = Json::FindValue(Args, "id"); id )
 			y = DB::Key{ Json::AsNumber<uint>(move(*id)) };
-		else if( let target = Json::FindValue( Args, "target" ); target )
+		else if( let target = Json::FindValue(Args, "target"); target )
 			y = DB::Key{ Json::AsString(move(*target)) };
 		return y;
 	}
@@ -156,6 +156,21 @@ namespace Jde::QL{
 				o[t.JsonName] = jobject{};
 			t.SetResult( o.at(t.JsonName).as_object(), dbColumn, move(value) );
 		}
+	}
+	α TableQL::TransformResult( jarray&& result )Ι->jvalue{
+		jvalue v;
+		if( IsPlural() )
+			v = move( result );
+		else
+			v = result.size() ? move( result[0].as_object() ) : jobject{};
+		return ReturnRaw ? move( v ) : jobject{ {ReturnName(), move(v)} };
+	}
+	α TableQL::TransformResult( jobject&& result )Ι->jobject{
+		return ReturnRaw ? move( result ) : jobject{ {ReturnName(), move(result)} };
+	}
+	α TableQL::TransformResult( string&& result )Ι->jvalue{
+		jvalue v{ move(result) };
+		return ReturnRaw ? move(v) : jobject{ {ReturnName(), move(v)} };
 	}
 	α TableQL::ToString()Ι->string{
 		string y = JsonName;

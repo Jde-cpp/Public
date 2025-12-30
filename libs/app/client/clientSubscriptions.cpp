@@ -1,8 +1,8 @@
-#include <jde/web/client/socket/clientSubscriptions.h>
+#include <jde/app/client/clientSubscriptions.h>
 #include <jde/ql/types/Subscription.h>
 
 #define let const auto
-namespace Jde::Web::Client{
+namespace Jde::App::Client{
 	flat_map<QL::SubscriptionId,flat_set<sp<QL::IListener>>> _subs; std::shared_mutex _mutex;
 	α Subscriptions::StopListenRemote( sp<QL::IListener> listener, vector<QL::SubscriptionId> /*ids*/ )ι->jarray{
 		jarray y;
@@ -13,10 +13,14 @@ namespace Jde::Web::Client{
 		}
 		return y;
 	}
-	α Subscriptions::ListenRemote( sp<QL::IListener> listener, vector<QL::Subscription>&& subs )ι->void{
+	α Subscriptions::ListenRemote( sp<QL::IListener> listener, QL::Subscription&& sub )ι->void{
 		ul _{ _mutex };
-		for( auto&& s : subs )
-			_subs.try_emplace( s.Id ).first->second.emplace( listener );
+		_subs.try_emplace( sub.Id ).first->second.emplace( listener );
+	}
+	α Subscriptions::OnTraces( App::Proto::FromServer::Traces&& traces, QL::SubscriptionId requestId )ι->void{
+		sl l{ _mutex };
+		if( let& listener = _subs[requestId].begin(); listener!=_subs.at(requestId).end() )
+			(*listener)->OnTraces( move(traces) );
 	}
 	α Subscriptions::OnWebsocketReceive( const jobject& m, QL::SubscriptionId clientId )ι->void{
 		sl l{ _mutex };

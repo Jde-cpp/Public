@@ -28,9 +28,7 @@ file( GLOB sources *.cpp log/*.cpp crypto/*.cpp )
 file( GLOB_RECURSE headers *.h log/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
-if( Boost_USE_STATIC_LIBS )
-	target_link_libraries( ${targetName} Boost::json )
-endif()
+target_link_libraries( ${targetName} Boost::json )
 target_link_libraries( ${targetName} GTest::gtest GTest::gtest_main )
 target_link_libraries( ${targetName} fmt::fmt )
 target_link_libraries( ${targetName} Jde )
@@ -45,8 +43,8 @@ else()
 endif()
 
 add_test( NAME FwkTests COMMAND $<TARGET_FILE:Jde.Fwk.Tests> -tests -settings=$ENV{JDE_DIR}/libs/fwk/tests/config/Framework.Tests.jsonnet )
-#
 set( CMAKE_CTEST_ARGUMENTS "-tests;-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet" )
+
 
 target_precompile_headers( ${targetName} PRIVATE pc.h )
 if( WIN32 )

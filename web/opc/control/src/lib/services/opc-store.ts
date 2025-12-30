@@ -6,6 +6,7 @@ import { OpcObject, UaNode, ENodeClass } from "../model/Node";
 import { NodeId, NodeKey } from "../model/NodeId";
 import { DocItem } from "jde-spa";
 import { Gateway, GatewayTarget } from "./gateway.service";
+import { Server, ServerProps } from "../model/Server";
 
 class StoreNode{
 	constructor( node:UaNode ){
@@ -22,17 +23,23 @@ export class OpcStore{
 		console.log( `OpcStore::OpcStore` );
 	}
 
-	public async getConnection( gatewayService:Gateway, cnnctn:CnnctnTarget ):Promise<ServerCnnctn>{
+	public async getConnection( gatewayService:Gateway, cnnctn:CnnctnTarget ):Promise<Server>{
 		//#connections = new Map<GatewayTarget,Map<CnnctnTarget, ServerCnnctn>>();
 		const gateway = gatewayService.target;
 		let gatewayConnections = this.#connections.get( gateway );
 		if( !gatewayConnections )
-			this.#connections.set( gateway, gatewayConnections = new Map<CnnctnTarget, ServerCnnctn>() );
+			this.#connections.set( gateway, gatewayConnections = new Map<CnnctnTarget, Server>() );
 		if( gatewayConnections.has(cnnctn) )
 			return gatewayConnections.get(cnnctn);
-		let connection = new ServerCnnctn( (await gatewayService.query<any>(`serverConnection( target: "${cnnctn}"){ id name target url certificateUri defaultBrowseNs }`, (m)=>console.log(m)))["serverConnection"] );
-		gatewayConnections.set( cnnctn, connection );
-		return connection;
+		let q = `\
+			connection: serverConnection( target: $opc){ id name target url certificateUri defaultBrowseNs }
+			desc: serverDescription( opc: $opc ){ applicationUri productUri applicationName applicationType gatewayServerUri discoveryProfileUri discoveryUrls }
+			policy: securityPolicyUri( opc: $opc )
+			mode: securityMode( opc: $opc )`;
+		let props = await gatewayService.query<ServerProps>(q, {opc:cnnctn}, (m)=>console.log(m));
+		let server = new Server( props );
+		gatewayConnections.set( cnnctn, server );
+		return server;
 	}
 
 	private getNodes( gateway:GatewayTarget, cnnctn:CnnctnTarget ):Map<NodeKey,StoreNode>{
@@ -151,7 +158,7 @@ export class OpcStore{
 		let uaNode: UaNode;
 		let cnnctn = this.#connections.get( gateway )?.get( cnnctnTarget );
 		browsePath.split("/").forEach( (segment, i)=>{
-			uaNode = storeNode.children.find( (c)=>browseEq(c.browse, toBrowse(segment, cnnctn?.defaultBrowseNs)) );
+			uaNode = storeNode.children.find( (c)=>browseEq(c.browse, toBrowse(segment, cnnctn?.connection.defaultBrowseNs)) );
 			if( uaNode )
 				storeNode = this.findStore( gateway, cnnctnTarget, uaNode.nodeId );
 		} );
@@ -160,5 +167,5 @@ export class OpcStore{
 
 	#serverCnnctnRoutes: DocItem[];
 	#nodes = new Map<GatewayTarget,Map<CnnctnTarget, Map<NodeKey,StoreNode>>>();
-	#connections = new Map<GatewayTarget,Map<CnnctnTarget, ServerCnnctn>>();
+	#connections = new Map<GatewayTarget,Map<CnnctnTarget, Server>>();
 }

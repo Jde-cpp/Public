@@ -7,7 +7,7 @@
 		"buildRoot": "/mnt/ram/linux/g++-14/jde",
 		"buildDir": "${config:buildRoot}/${config:buildTarget}/libs/${config:name}",
 		"exe": "tests/Jde.Opc.Tests",
-		"sourceBash": "source ${env:JDE_DIR}/Public/build/buildFunctions.sh",
+		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
 		"[cpp]": {
 			"editor.suggest.insertMode": "insert"
 		}

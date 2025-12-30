@@ -16,7 +16,7 @@ namespace Jde::Access::Tests{
 	ProviderPK AuthTests::OpcProviderId{};
 
 	α AuthTests::SetUpTestCase()ε->void{
-	if( auto o = QL().QuerySync(Ƒ("provider(target:\"{}\"){{id}}", OpcServer), GetRoot()); !o.empty() )
+	if( auto o = QL().QuerySync(Ƒ("provider(name:\"{}\"){{id}}", OpcServer), GetRoot()); !o.empty() )
 			OpcProviderId = GetId( o );
 		else{
 			let createQL = Ƒ( "createProvider( target:\"{}\", providerType:{} ){{id}}", OpcServer, underlying(EProviderType::OpcServer) );

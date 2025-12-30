@@ -10,16 +10,16 @@
 #define let const auto
 
 namespace Jde::DB{
-	α GetCatalogs( const jobject& catalogs, sp<Access::IAcl> authorizer )ε->vector<sp<Catalog>>{
+	Ω getCatalogs( const jobject& catalogs, sp<Access::IAcl> authorizer )ε->vector<sp<Catalog>>{
 		vector<sp<Catalog>> y;
 		for( let& [name,catalog] : catalogs )
-				y.emplace_back( ms<Catalog>(name, catalog.get_object(), authorizer) );
+			y.emplace_back( ms<Catalog>(name, catalog.get_object(), authorizer) );
 		return y;
 	}
 
 	Cluster::Cluster( sv name, const jobject& config, sp<Access::IAcl> authorizer )ε:
 		ConfigName{ name },
-		Catalogs{ GetCatalogs( Json::AsObject(config, "catalogs"), authorizer) },
+		Catalogs{ getCatalogs( Json::AsObject(config, "catalogs"), authorizer) },
 		DataSource{ DB::DataSource(config) }
 	{}
 

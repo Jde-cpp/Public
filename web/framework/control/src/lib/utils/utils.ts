@@ -12,10 +12,6 @@ export function assert( expr:unknown, msg:string=undefined ):asserts expr{
 		throw new Error( msg ?? "Assertion failed" );
 }
 
-export function getEnumName(enumObj: any, enumValue: number | string): string | undefined {
-  return Object.keys(enumObj).find((key) => enumObj[key] === enumValue);
-}
-
 export function clone( obj: any ):any{
 	return JSON.parse( JSON.stringify(obj) );
 }
@@ -29,12 +25,6 @@ export function cloneClassArray<T>( from:Array<T>, ctor: new (item: T) => T ):T[
 	return clone;
 }
 
-export function toIdArray( from:number[] ):any{
-	let clone = [];
-	for( let id of from )
-		clone.push( {id:id} );
-	return clone;
-}
 //Temporal.Duration
 export function fromIsoDuration( str:string ):number{
 	if( str.length==0 )
@@ -71,6 +61,15 @@ export function fromIsoDuration( str:string ):number{
 	return seconds;
 }
 
+export function getEnumName(enumObj: any, enumValue: number | string): string | undefined {
+  return Object.keys(enumObj).find((key) => enumObj[key] === enumValue);
+}
+
+export type PropertyNames<T> = {
+  [K in keyof T]: T[K] extends Function ? never : K;
+}[keyof T];
+
+
 export function subscribe( route: ActivatedRoute, who: string ){
 	route.title.subscribe( (x)=>{
 		console.log( `${who}.title: ${JSON.stringify(x)}` );
@@ -96,4 +95,11 @@ export function subscribe( route: ActivatedRoute, who: string ){
 	route.url.subscribe( (x)=>{
 		console.log( `${who}.url: ${JSON.stringify(x)}` );
 	});
+}
+
+export function toIdArray( from:number[] ):any{
+	let clone = [];
+	for( let id of from )
+		clone.push( {id:id} );
+	return clone;
 }

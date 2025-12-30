@@ -24,14 +24,14 @@ namespace Jde::App::Server{
 	struct StopAwait : TAwait<jvalue>{
 		StopAwait( QL::MutationQL mutation, UserPK userPK, sp<IApp> appClient, SL sl )ι:
 			TAwait<jvalue>{ sl },
-			_mutation{mutation},
-			_userPK{userPK},
-			_appClient{move(appClient)}
+			_mutation{ mutation },
+			_userPK{ userPK },
+			_appClient{ move(appClient) }
 		{}
 		α Suspend()ι->void override{
-			let id = _mutation.Id<AppInstancePK>();
-			auto pid = id==_appClient->InstancePK() ? Process::ProcessId() : 0;
-			if( auto p = pid ? sp<ServerSocketSession>{} : Server::FindInstance( id ); p )
+			let id = _mutation.Id<AppConnectionPK>();
+			auto pid = id==_appClient->ConnectionPK() ? Process::ProcessId() : 0;
+			if( auto p = pid ? sp<ServerSocketSession>{} : Server::FindConnection(id); p )
 				pid = p->Instance().pid();
 			if( pid ){
 				if( !Process::Kill(pid) )

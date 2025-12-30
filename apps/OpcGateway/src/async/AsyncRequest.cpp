@@ -1,6 +1,6 @@
 ﻿#include "AsyncRequest.h"
 #include "../UAClient.h"
-#include <jde/fwk/process/thread.h>
+#include <jde/fwk/process/execution.h>
 #define let const auto
 
 namespace Jde::Opc::Gateway{
@@ -37,13 +37,13 @@ namespace Jde::Opc::Gateway{
 		DBG( "{}ProcessingLoop started", logPrefix() );
 		cancelPing();
 		StatusCode sc{};
+		auto client = _client;
 		while( _running.test() ){
-			auto client = _client;
 			uint size;
 			{
 				sl _{ _requestMutex };
 				if( size = _requests.size(); size ){
-					if( _requests.begin()->first==PingRequestId )
+					if( *_requests.begin()==PingRequestId )
 						_requests.erase( PingRequestId );
 					else
 						_lastRequest = Clock::now();
@@ -70,20 +70,38 @@ namespace Jde::Opc::Gateway{
 					}
 					break;
 				}
-				TRACE( "{}requestCount: {}, [0]={}", logPrefix(), newSize, hex(_requests.begin()->first) );
+				TRACE( "{}requestCount: {}, [0]={}", logPrefix(), newSize, hex(*_requests.begin()) );
 				_requestMutex.unlock();
 			}
 			if( size==newSize ){
-				let sleep = size==1 && _requests.begin()->first==SubscriptionRequestId ? 500ms : 1ms; //UA_CreateSubscriptionRequest_default
+				let sleep = size==1 && *_requests.begin()==SubscriptionRequestId ? 500ms : 1ms; //UA_CreateSubscriptionRequest_default
 				co_await DurationTimer{ sleep };
 			}
 		}
 		if( !sc && !_stopped.test() && _pingInterval.count()>0 )
-			ping( _client );
+			ping( client );
 		else
 			DBG( "{}ProcessingLoop stopped", logPrefix() );
 	}
 
+	α AsyncRequest::Clear( RequestId requestId )ι->void{
+		TRACE( "[{}.{}]Clearing", hex(UAHandle()), hex(requestId) );
+		ul _{_requestMutex};
+		if( !_requests.erase(requestId) && requestId!=ConnectRequestId )
+			CRITICALT( ProcessingLoopTag, "[{}.{}]Could not find request handle.", hex(UAHandle()), hex(requestId) );
+	}
+
+	α AsyncRequest::Process( RequestId requestId, sv what )ι->void{
+		TRACE( "[{}.{}]Processing: {}", hex(UAHandle()), hex(requestId), what );
+		if( _stopped.test() )
+			return;
+		{
+			ul _{_requestMutex};
+			_requests.emplace( requestId );
+		}
+		if( !_running.test_and_set() )
+			Post( std::bind(&AsyncRequest::ProcessingLoop, this) );
+	}
 	α AsyncRequest::Stop()ι->void{
 		DBG( "[{}]Stopping ProcessingLoop", UAHandle() );
 		ul _{ _requestMutex };

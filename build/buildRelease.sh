@@ -4,7 +4,7 @@ buildTests=${2:-1}
 runTests=${3:-1}
 clearCache=${4:-0}
 releaseRoot=$JDE_BASH/Release/g++-14
-sourceDir=$JDE_BASH/Public
+sourceDir=$JDE_BASH
 set -e
 
 function buildLib() {

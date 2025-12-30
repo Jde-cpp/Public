@@ -24,12 +24,12 @@ namespace Server{
 		if( isSsl ){
 			beast::ssl_stream<StreamType> ssl_stream{ move(stream), handler->Context() };
 			auto [ec, bytes_used] = co_await ssl_stream.async_handshake( ssl::stream_base::server, buffer.data() );
-			if(ec){
+			if( ec ){
 				CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Warning };
 				co_return;
 			}
 
-			buffer.consume(bytes_used);
+			buffer.consume( bytes_used );
 			co_await RunSession( ssl_stream, buffer, move(userEndpoint), true, index, cancel, handler );
 		}
 		else
@@ -53,10 +53,22 @@ namespace Server{
 	Ω graphQL( HttpRequest req, sp<RestStream> stream, const vector<sp<DB::AppSchema>>& schemas )->QL::QLAwait<>::Task{
 		constexpr sv contentType = "application/graphql-response+json";
 		try{
-			let returnRaw = req.Params().contains("raw");
-			auto& query = req["query"]; THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
-			auto& varContent = req["variables"];
-			auto vars = varContent.size() ? Json::Parse( move(varContent) ) : jobject{};
+			let returnRaw = req.Params().contains( "raw" );
+			string query;
+			jobject vars;
+			if( req.IsGet() ){
+				query = req["query"];
+				auto& varContent = req["variables"];
+				vars = varContent.size() ? Json::Parse( move(varContent) ) : jobject{};
+			}
+			else{
+				auto body = req.Body();
+				if( auto jquery = body.if_contains("query"); jquery && jquery->is_string() )
+					query = jquery->get_string();
+				if( auto jvars = body.if_contains("variables"); jvars && jvars->is_object() )
+					vars = move( jvars->get_object() );
+			}
+			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
 			req.LogRead( query );
 			auto result = co_await QL::QLAwait{ query, move(vars), req.UserPK(), schemas, returnRaw };
 			jobject y{ {"data", result} };
@@ -74,7 +86,7 @@ namespace Server{
 			co_return;
 		}
 		catch( exception& e ){
-			send( RestException{ SRCE_CUR, move(req), "Query failed: {}", e.what() }, move(stream), contentType );
+			send( RestException{SRCE_CUR, move(req), "Query failed: {}", e.what()}, move(stream), contentType );
 			co_return;
 		}
 	}
@@ -132,7 +144,7 @@ namespace Server{
 		let cert = IO::Load( settings.CertPath );
 		ctx.use_certificate_chain( net::buffer(cert.data(), cert.size()) );
 
-		ctx.set_password_callback( [=](uint, ssl::context_base::password_purpose){ return settings.Passcode; } );
+		ctx.set_password_callback( [=](uint, ssl::context_base::password_purpose){return settings.Passcode;} );
 		let key = IO::Load( settings.PrivateKeyPath );
 		ctx.use_private_key( net::buffer(key.data(), key.size()), ssl::context::file_format::pem );
 		static const string dhStatic =
@@ -166,7 +178,7 @@ namespace Server{
 				net::co_spawn(
 					exec,
 					detectSession( StreamType(move(sock)), move(userEndpoint), cancelSignal, handler.get() ),
-					net::bind_cancellation_slot(cancelSignal->slot(),
+					net::bind_cancellation_slot( cancelSignal->slot(),
 					net::detached)
 				);// We dont't need a strand, since the awaitable is an implicit strand.
 				Execution::AddCancelSignal( cancelSignal );
@@ -183,7 +195,7 @@ namespace Server{
 		net::co_spawn(
 			*Executor(),
 			listen( address, handler ),
-			net::bind_cancellation_slot(handler->CancelSignal()->slot(), net::detached)
+			net::bind_cancellation_slot( handler->CancelSignal()->slot(), net::detached )
 		);
 		Execution::AddCancelSignal( handler->CancelSignal() );
 		Execution::Run();
@@ -203,7 +215,7 @@ namespace Server{
 	}
 
 	α Internal::RemoveSocketSession( SocketId id )ι->void{
-		TRACET( ELogTags::SocketServerRead, "erased socket: {:x}", _socketSessions.erase( id ) );
+		TRACET( ELogTags::SocketServerRead, "erased socket: {:x}", _socketSessions.erase(id) );
 	}
 }
 	α Server::HandleRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task{
@@ -214,7 +226,7 @@ namespace Server{
 			send( RestException<http::status::unauthorized>{move(e), move(req), "Could not get sessionInfo."}, move(stream) );
 			co_return;
 		}
-		if( req.IsGet("/graphql") && !reqHandler->PassQL() )
+		if( !reqHandler->PassQL() && (req.IsGet("/graphql") || req.IsPost("/graphql")) )//TODO make sure mutations aren't get
 			graphQL( move(req), stream, reqHandler->Schemas() );
 		else
 			handleCustomRequest( move(req), move(stream), reqHandler );
@@ -232,12 +244,12 @@ namespace Server{
 		enum libdeflate_result result;
 		int ret = 0;
 
-		if (compressed_size < GZIP_MIN_OVERHEAD ||
+		if ( compressed_size < GZIP_MIN_OVERHEAD ||
 			compressed_data[0] != GZIP_ID1 ||
 			compressed_data[1] != GZIP_ID2) {
-			if (options->force && options->to_stdout)
-				return full_write(out, compressed_data, compressed_size);
-			msg("%"TS": not in gzip format", in->name);
+			if ( options->force && options->to_stdout )
+				return full_write( out, compressed_data, compressed_size );
+			msg( "%"TS": not in gzip format", in->name );
 			return -1;
 		}
 
@@ -249,37 +261,37 @@ namespace Server{
 		* to overflow.  In any case, make sure to allocate at least one byte.
 		*/
 		uncompressed_size =
-			get_unaligned_le32(&compressed_data[compressed_size - 4]);
-		if (uncompressed_size == 0)
+			get_unaligned_le32( &compressed_data[compressed_size - 4] );
+		if ( uncompressed_size == 0 )
 			uncompressed_size = 1;
 
 		/*
 		* DEFLATE cannot expand data more than 1032x, so there's no need to
 		* ever allocate a buffer more than 1032 times larger than the
 		* compressed data.  This is a fail-safe, albeit not a very good one, if
-		* ISIZE becomes corrupted on a small file.  (The 1032x number comes
+		* ISIZE becomes corrupted on a small file.  ( The 1032x number comes
 		* from each 2 bits generating a 258-byte match.  This is a hard upper
 		* bound; the real upper bound is slightly smaller due to overhead.)
 		*/
-		if (compressed_size <= SIZE_MAX / 1032)
+		if ( compressed_size <= SIZE_MAX / 1032 )
 			max_uncompressed_size = compressed_size * 1032;
 		else
 			max_uncompressed_size = SIZE_MAX;
 
 		do {
-			if (uncompressed_data == NULL) {
-				uncompressed_size = MIN(uncompressed_size,
+			if ( uncompressed_data == NULL ) {
+				uncompressed_size = MIN( uncompressed_size,
 					max_uncompressed_size);
-				uncompressed_data = xmalloc(uncompressed_size);
-				if (uncompressed_data == NULL) {
-					msg("%"TS": file is probably too large to be "
+				uncompressed_data = xmalloc( uncompressed_size );
+				if ( uncompressed_data == NULL ) {
+					msg( "%"TS": file is probably too large to be "
 						"processed by this program", in->name);
 					ret = -1;
 					goto out;
 				}
 			}
 
-			result = libdeflate_gzip_decompress_ex(decompressor,
+			result = libdeflate_gzip_decompress_ex( decompressor,
 				compressed_data,
 				compressed_size,
 				uncompressed_data,
@@ -287,51 +299,51 @@ namespace Server{
 				&actual_in_nbytes,
 				&actual_out_nbytes);
 
-			if (result == LIBDEFLATE_INSUFFICIENT_SPACE) {
-				if (uncompressed_size >= max_uncompressed_size) {
-					msg("Bug in libdeflate_gzip_decompress_ex(): data expanded too much!");
+			if ( result == LIBDEFLATE_INSUFFICIENT_SPACE ) {
+				if ( uncompressed_size >= max_uncompressed_size ) {
+					msg( "Bug in libdeflate_gzip_decompress_ex(): data expanded too much!" );
 					ret = -1;
 					goto out;
 				}
-				if (uncompressed_size * 2 <= uncompressed_size) {
-					msg("%"TS": file corrupt or too large to be "
+				if ( uncompressed_size * 2 <= uncompressed_size ) {
+					msg( "%"TS": file corrupt or too large to be "
 						"processed by this program", in->name);
 					ret = -1;
 					goto out;
 				}
 				uncompressed_size *= 2;
-				free(uncompressed_data);
+				free( uncompressed_data );
 				uncompressed_data = NULL;
 				continue;
 			}
 
-			if (result != LIBDEFLATE_SUCCESS) {
-				msg("%"TS": file corrupt or not in gzip format",
+			if ( result != LIBDEFLATE_SUCCESS ) {
+				msg( "%"TS": file corrupt or not in gzip format",
 					in->name);
 				ret = -1;
 				goto out;
 			}
 
-			if (actual_in_nbytes == 0 ||
+			if ( actual_in_nbytes == 0 ||
 				actual_in_nbytes > compressed_size ||
 				actual_out_nbytes > uncompressed_size) {
-				msg("Bug in libdeflate_gzip_decompress_ex(): impossible actual_nbytes value!");
+				msg( "Bug in libdeflate_gzip_decompress_ex(): impossible actual_nbytes value!" );
 				ret = -1;
 				goto out;
 			}
 
-			if (!options->test) {
-				ret = full_write(out, uncompressed_data, actual_out_nbytes);
-				if (ret != 0)
+			if ( !options->test ) {
+				ret = full_write( out, uncompressed_data, actual_out_nbytes );
+				if ( ret != 0 )
 					goto out;
 			}
 
 			compressed_data += actual_in_nbytes;
 			compressed_size -= actual_in_nbytes;
 
-		} while (compressed_size != 0);
+		} while ( compressed_size != 0 );
 	out:
-		free(uncompressed_data);
+		free( uncompressed_data );
 		return ret;
 	}
 #endif
@@ -362,10 +374,10 @@ namespace Server{
 	α Server::SendServerSettings( HttpRequest req, sp<RestStream> stream, sp<App::IApp> appClient )ι->Sessions::UpsertAwait::Task{
 		jobject j;
 		j["restSessionTimeout"] = Chrono::ToString( Sessions::RestSessionTimeout() );
-		j["serverInstance"] = appClient->InstancePK();
+		j["connectionId"] = appClient->ConnectionPK();
 		try{
 			let session = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false, appClient, false );
-			j["active"] = (bool)session;
+			j["active"] = ( bool )session;
 		}
 		catch( IException& e ){
 			j["active"] = false;

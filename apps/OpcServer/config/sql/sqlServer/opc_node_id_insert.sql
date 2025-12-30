@@ -13,7 +13,3 @@ create or alter proc [dbo].opc_node_id_insert( @ns smallint, @number int, @strin
 	values( @node_id, @ns, @number, @string, @guid, @bytes, @namespace_uri, @server_index, @is_global );
 end;
 go
-declare @node_id bigint;
-exec opc.node_id_insert 0,78,null,null,Null,null,0,null,@node_id;
-select @node_id as node_id;
-delete from opc.node_ids

@@ -15,7 +15,7 @@ namespace Jde::Web::Mock{
 		INFOT( ELogTags::SocketClientRead, "[{}] {} AppClientSocketSession created: {}.", Id(), IsSsl() ? "Ssl" : "Plain", Host() );
 	}
 
-	α ClientSocketSession::SetSessionId( str strSessionId, RequestId requestId )->Server::Sessions::UpsertAwait::Task{
+	α ClientSocketSession::SetSessionId( str strSessionId, RequestId /*requestId*/ )->Server::Sessions::UpsertAwait::Task{
 		//LogRead( Ƒ("sessionId: '{}'", strSessionId), requestId );
 		try{
 			auto sessionInfo = co_await Server::Sessions::UpsertAwait( strSessionId, "127.0.0.1", true, AppClient() );

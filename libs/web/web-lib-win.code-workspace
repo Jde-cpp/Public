@@ -62,7 +62,7 @@
 				"request": "launch",
 				"program": "${config:buildDir}/${config:buildTarget}/libs/${config:name}/${config:exe}",
 				"args": [
-					"-settings=${env:JDE_DIR}/Public/libs/access/tests/config/Access.Tests.jsonnet"
+					"-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet"
 				],
 				"stopAtEntry": false,
 				"cwd": "${config:buildDir}/${config:buildTarget}/libs/${config:name}",

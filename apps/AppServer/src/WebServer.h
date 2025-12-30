@@ -11,7 +11,7 @@ namespace Jde::App::Server{
 	using namespace Jde::Web::Server;
 	struct ServerSocketSession;
 	α GetAppPK()ι->AppPK;
-	α SetAppPKs( std::tuple<AppPK, AppInstancePK> x )ι->void;
+	α SetAppPKs( std::tuple<AppPK, AppInstancePK, AppConnectionPK> x )ι->void;
 	α QLPtr()ι->sp<QL::LocalQL>;
 	α QL()ι->QL::LocalQL&;
 	α SetLocalQL( sp<QL::LocalQL> ql )ι->void;
@@ -26,10 +26,10 @@ namespace Jde::App::Server{
 	α BroadcastStatus( AppPK appId, AppInstancePK statusInstancePK, str hostName, Proto::FromClient::Status&& status )ι->void;
 	α BroadcastAppStatus()ι->void;
 	α FindApplications( str name )ι->vector<Proto::FromClient::Instance>;
-	α FindInstance( AppInstancePK instancePK )ι->sp<ServerSocketSession>;
+	α FindConnection( AppConnectionPK connectionPK )ι->sp<ServerSocketSession>;
 	α NextRequestId()->RequestId;
 	α RemoveSession( AppInstancePK sessionPK )ι->void;
-	α SubscribeLogs( string&& qlText, jobject variables, sp<ServerSocketSession> session )ε->void;
+	//α SubscribeLogs( string&& qlText, jobject variables, sp<ServerSocketSession> session )ε->void;
 	α SubscribeStatus( ServerSocketSession& session )ι->void;
 
 	α UnsubscribeLogs( AppInstancePK instancePK )ι->bool;

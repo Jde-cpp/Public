@@ -5,13 +5,13 @@ import { Gateway, GatewayService } from '../gateway.service';
 import { OpcObject, UaNode } from '../../model/Node';
 import { NodeRoute, UserProfile } from '../../model/NodeRoute';
 import { OpcStore } from '../opc-store';
-import { ServerCnnctn } from '../../model/ServerCnnctn';
+import { Server } from '../../model/Server';
 
 export type NodePageData = {
 	route:NodeRoute;
 	nodes:UaNode[];
 	gateway: Gateway;
-	connection:ServerCnnctn;
+	server:Server;
 };
 @Injectable()
 export class NodeResolver implements Resolve<NodePageData> {
@@ -28,18 +28,20 @@ export class NodeResolver implements Resolve<NodePageData> {
 		try{
 			await route.settings.loadedPromise;//this.route.snapshot.children[0].paramMap.get('host')
 			let gateway = await this.gatewayService.gateway( route.gatewayTarget );
-			const cnnctn = await this.opcStore.getConnection( gateway, route.cnnctnTarget );
+			const server = await this.opcStore.getConnection( gateway, route.cnnctnTarget );
+			const defaultBrowseNs = server.connection.defaultBrowseNs;
 			if( !route.node ){
-				const node = (await gateway.query<any>(`node( opc: "${route.cnnctnTarget}", path:"${route.browsePath}"){id name parents{id name path}}`, (m)=>console.log(m)) )["node"];
+				const vars = { opc: route.cnnctnTarget, path: route.browsePath };
+				const node = (await gateway.query<any>(`node( opc: $opc, path:$path ){id name parents{id name path}}`, vars, (m)=>console.log(m)) )["node"];
 				if( node.sc )
 					throw new EvalError( (await gateway.errorCodeText(node.sc)), {cause:"Opc Interface"} );
-				route.node = new OpcObject( {...node, browse: route.browse(cnnctn.defaultBrowseNs)} );
-				this.opcStore.insertNode( route, node.parents, cnnctn.defaultBrowseNs );
+				route.node = new OpcObject( {...node, browse: route.browse(defaultBrowseNs)} );
+				this.opcStore.insertNode( route, node.parents, defaultBrowseNs );
 			}
 			let references = await gateway.browseObjectsFolder( route.cnnctnTarget, route.node, true, (m)=>console.log(m) );
 			let displayed = references.filter( (r)=>r.displayed );
-			this.opcStore.setRoute( route, cnnctn.defaultBrowseNs );
-			return { route: route, nodes: displayed, gateway: gateway, connection: cnnctn };
+			this.opcStore.setRoute( route, defaultBrowseNs );
+			return { route: route, nodes: displayed, gateway: gateway, server: server };
 		}catch( e ){
 			this.snackbar.exceptionInfo( e, `Not found:  '${route.cnnctnTarget}'`, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );

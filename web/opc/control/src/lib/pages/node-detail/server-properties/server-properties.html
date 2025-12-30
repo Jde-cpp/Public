@@ -1,0 +1,36 @@
+<mat-form-field style="width: 100%;" appearance="fill">
+	<mat-label>Application Name</mat-label>
+	<input matInput type=text  cdkFocusInitial=true [field]="form.applicationName">
+</mat-form-field>
+<mat-form-field style="width: 100%;" appearance="fill">
+	<mat-label>Application Uri</mat-label>
+	<input matInput type=text [field]="form.applicationUri">
+</mat-form-field>
+<mat-form-field style="width: 100%;" appearance="fill">
+	<mat-label>Application Type</mat-label>
+	<input matInput type=text [field]="form.applicationType">
+</mat-form-field>
+<mat-form-field style="width: 100%;" appearance="fill">
+	<mat-label>Discovery Profile Uri</mat-label>
+	<input matInput type=text [field]="form.discoveryProfileUri">
+</mat-form-field>
+<!--<mat-form-field style="width: 100%;" appearance="fill">
+	 <mat-label>Discovery Urls</mat-label>
+	<input matInput type=text [field]="form.discoveryUrls" [value]="form.discoveryUrls().join(', ')">
+</mat-form-field>-->
+<mat-form-field style="width: 100%;" appearance="fill">
+	<mat-label>Product Uri</mat-label>
+	<input matInput type=text [field]="form.productUri">
+</mat-form-field>
+<mat-form-field style="width: 100%;" appearance="fill">
+	<mat-label>Gateway Server Uri</mat-label>
+	<input matInput type=text [field]="form.gatewayServerUri">
+</mat-form-field>
+<mat-form-field style="width: 100%;" appearance="fill">
+	<mat-label>Policy</mat-label>
+	<input matInput type=text [field]="form.policy">
+</mat-form-field>
+<mat-form-field style="width: 100%;" appearance="fill">
+	<mat-label>Mode</mat-label>
+	<input matInput type=text [field]="form.mode">
+</mat-form-field>

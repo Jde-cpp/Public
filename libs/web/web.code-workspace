@@ -1,4 +1,18 @@
 {
+	"settings": {
+		"window.title": "Web",
+		"name": "web",
+		"testTargetName": "Jde.Web.Tests",
+		"sourceDir": "${env:JDE_DIR}/libs/${config:name}",
+		"buildTarget": "Debug",
+		"buildRoot": "${env:JDE_BUILD_DIR}",
+		"testBuildDir": "${config:buildRoot}/libs/${config:name}/tests",
+		"exe": "tests/Jde.Web.Tests",
+		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
+		"[cpp]": {
+			"editor.suggest.insertMode": "insert"
+		},
+	},
 	"folders": [
 		{
 			"path": "./client",
@@ -33,34 +47,15 @@
 			"name": "Framework"
 		}
 	],
-	"settings": {
-		"window.title": "Web",
-		"name": "web",
-		"buildTarget": "Debug",
-		"sourceDir": "${env:JDE_DIR}/libs/web",
-		"buildRoot": "/mnt/ram/linux/g++-14/jde",
-		"buildDir": "${config:buildRoot}/${config:buildTarget}/libs/${config:name}",
-		"exe": "tests/Jde.Web.Tests",
-		"[cpp]": {
-			"editor.suggest.insertMode": "insert"
-		},
-	},
 	"tasks": {
 		"version": "2.0.0",
 		"tasks": [
 			{
 				"label": "build",
 				"type": "shell",
-				"command": "cd ${config:buildDir}; tput reset; make -j;",
+				"command": "cd ${config:buildRoot}; tput reset; cmake --build . -j --target ${config:testTargetName};",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": true }
-			},
-			{
-				"label": "compile",
-				"type": "shell",
-				"command": "tput reset; source $JDE_DIR/build/buildFunctions.sh;compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot}/${config:buildTarget};",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
 			},
 			{
 				"label": "buildProject",
@@ -97,7 +92,7 @@
 				"program": "${config:buildDir}/${config:exe}",
 				"args": [
 					"-tests",
-					"-settings=${env:JDE_DIR}/Public/libs/web/tests/config/Web.Tests.jsonnet"
+					"-settings=${env:JDE_DIR}/libs/web/tests/config/Web.Tests.jsonnet"
 				],
 				"stopAtEntry": false,
 				"cwd": "${config:buildDir}",

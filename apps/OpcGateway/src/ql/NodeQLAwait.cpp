@@ -10,15 +10,12 @@
 namespace Jde::Opc::Gateway{
 
 	α NodeQLAwait::Execute()ι->TAwait<sp<UAClient>>::Task{
-		auto opcId{ _query.FindPtr<jstring>("opc") };
 		try{
-			_client = co_await ConnectAwait{ opcId ? string{move(*opcId)} : string{}, _sessionPK, _executer, _sl };
 			BrowsePathResponse pathNodes;
 			NodeId nodeId;
 			flat_map<NodeId, jobject> jParents;
 			flat_map<NodeId, jobject> jChildren;
 			auto parentsQL{ _query.FindTable("parents") };
-			//auto childrenQL{ _query.FindTable("children") };
 			if( auto nodePath = _query.FindPtr<jstring>("path"); nodePath ){
 				pathNodes = _client->BrowsePathsToNodeIds( *nodePath, parentsQL!=nullptr );
 				const bool savePath{ parentsQL && parentsQL->FindColumn("path") };
@@ -26,7 +23,7 @@ namespace Jde::Opc::Gateway{
 					if( node->second.has_value() ){
 						nodeId = node->second->nodeId;
 						if( savePath )
-							jParents.try_emplace( node->second->nodeId, jobject{{"path", node->first}});
+							jParents.try_emplace( node->second->nodeId, jobject{{"path", node->first}} );
 						continue;
 					}
 					else if( node==pathNodes.begin() )
@@ -35,19 +32,17 @@ namespace Jde::Opc::Gateway{
 						Browse( move(pathNodes), std::prev(node)->first, parentsQL, move(jParents) );
 					co_return;
 				}
-				auto lastNode = std::prev(jParents.end());
+				auto lastNode = std::prev( jParents.end() );
 				nodeId = lastNode->first;
 				jParents.erase( lastNode );
+				AddAttributes( move(nodeId), parentsQL, move(jParents) );
 			}
 			else if( auto children = _query.FindTable("children"); children ){
-				Browse( NodeId{_query.Args}, move(*children) );
+				Browse( NodeId{_query}, move(*children) );
 				co_return;
 			}
-			else{
-				nodeId = NodeId{ _query.Args };
-				pathNodes.emplace( string{}, ExNodeId{_query.Args} );
-			}
-			AddAttributes( move(nodeId), parentsQL, move(jParents) );
+			else
+				AddAttributes( NodeId::ParseQL(_query) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
@@ -71,7 +66,7 @@ namespace Jde::Opc::Gateway{
 			jarray a;
 			for( auto& [id, j] : jChildren )
 				a.emplace_back( move(j) );
-			jobject jReqNode{{"children", move(a)}};
+			jobject jReqNode{ {"children", move(a)} };
 			Resume( _query.ReturnRaw ? jReqNode : jobject{{"node", jReqNode}} );
 		}
 		catch( exception& e ){
@@ -86,7 +81,7 @@ namespace Jde::Opc::Gateway{
 				let response = co_await Browse::FoldersAwait{ parent->second.value().nodeId, UA_BROWSERESULTMASK_BROWSENAME, _client, _sl };
 				const BrowseName reqBrowse{ Str::Split(pathNode->first,'/').back(), _client->DefaultBrowseNs() };
 				const bool savePath{ parentsQL && parentsQL->FindColumn("path") };
-				let found = !response.VisitWhile( 0, [&]( const UA_ReferenceDescription& ref ){
+				let found = !response.VisitWhile( 0, [&](const UA_ReferenceDescription& ref){
 					let shouldContinue = reqBrowse!=ref.browseName;
 					if( !shouldContinue ){
 						nodeId = ExNodeId{ ref.nodeId };
@@ -111,15 +106,15 @@ namespace Jde::Opc::Gateway{
 		try{
 			jobject jReqNode;
 			if( nodeId ){
-				if( auto p = parents.find( nodeId->nodeId ); p!=parents.end() )
+				if( auto p = parents.find(nodeId->nodeId); p!=parents.end() )
 					parents.erase( p );
-				ReadRequest request{ nodeId->nodeId, _query };
+				ReadRequest request{ {nodeId->nodeId}, _query };
 				if( parentQL )
 					request.Add( *parentQL, parents );
 				auto resp = co_await ReadAwait{ move(request), _client };
 			 	auto json = resp.GetJson();
-				if( auto p = json.find( nodeId->nodeId ); p!=json.end() )
-					jReqNode = move(p->second);
+				if( auto p = json.find(nodeId->nodeId); p!=json.end() )
+					jReqNode = move( p->second );
 				for( auto& [id, jparent] : parents ){
 				 	if( auto p = json.find(id); p!=json.end() )
 						jparent.insert( p->second.begin(), p->second.end() );
@@ -137,9 +132,19 @@ namespace Jde::Opc::Gateway{
 						id.Add( jparent );
 					jparents.emplace_back( move(jparent) );
 				}
-				jReqNode["parents"] = move(jparents);
+				jReqNode["parents"] = move( jparents );
 			}
 			Resume( _query.ReturnRaw ? jReqNode : jobject{{"node", jReqNode}} );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α NodeQLAwait::AddAttributes( vector<NodeId> nodeIds )ι->TAwait<ReadResponse>::Task{
+		try{
+			auto resp = co_await ReadAwait{ ReadRequest{nodeIds, _query}, _client };
+		 	auto json = resp.ToJson( _query );
+			Resume( _query.ReturnRaw ? move(json) : jobject{{"nodes", move(json)}} );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

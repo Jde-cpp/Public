@@ -34,6 +34,11 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		return y["servers"];
 	}
 
+	async opcServerInstances():Promise<Instance[]>{
+		const y = await this.get( "opcServers", (m)=>console.log(m) );
+		return y["servers"];
+	}
+
 
 /*	getApplications():Promise<FromServer.IApplication[]>{
 		return this.applications.length

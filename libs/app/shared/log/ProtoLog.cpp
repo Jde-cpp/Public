@@ -20,7 +20,7 @@ namespace Jde::App{
 		Executor();//locks up if starts in StartTimer.
 		Execution::Run();
 		Process::AddShutdownFunction( [](bool /*terminate*/){	//member Shutdown gets called after timer thread shutdown.
-			if( auto log = Logging::GetLogger<App::ProtoLog>(); log ){
+			if( auto log = Logging::FindLogger<App::ProtoLog>(); log ){
 				log->_delay = Duration::min();
 				log->ResetTimer();
 			}
@@ -72,6 +72,20 @@ namespace Jde::App{
 		auto proto = FromClient::LogEntryFile( e );
 		App::Log::Proto::FileEntry fileEntry;
 		*fileEntry.mutable_entry() = move( proto );
+		Write( e, move(fileEntry) );
+	}
+
+	α ProtoLog::Write( const Logging::Entry& e, App::AppPK appPK, App::AppInstancePK instancePK )ι->void{
+		if( appPK==AppPK || !appPK || instancePK==InstancePK || !instancePK )
+			return Write( e );
+		if( !empty(e.Tags & _tags) )//recursion guard
+			return;
+		auto proto = FromClient::LogEntryFile( e, appPK, instancePK );
+		App::Log::Proto::FileEntry fileEntry;
+		*fileEntry.mutable_external_entry() = move( proto );
+		Write( e, move(fileEntry) );
+	}
+	α ProtoLog::Write( const Logging::Entry& e, App::Log::Proto::FileEntry&& fileEntry )ι->void{
 		_dailyFileStart = std::min<TimePoint>( _dailyFileStart, e.Time );
 		auto data = Protobuf::SizePrefixed( fileEntry );
 		_mutex.lock();

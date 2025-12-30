@@ -1,8 +1,10 @@
 #pragma once
+#include <jde/db/Key.h>
 
 #define let const auto
 namespace Jde::QL{
 	struct Input{
+		Input( jobject&& args, sp<jobject> variables )ι: Args{ move(args) }, Variables{ move(variables) }{}
 		Ŧ Find( sv name )Ι->optional<T>;
 		template<class T=jvalue> α FindPtr( sv name )Ι->const T*;
 		template<class T=jvalue> α As( sv name, SRCE )Ε->const T&;
@@ -11,8 +13,10 @@ namespace Jde::QL{
 		template<class T=uint> α Id()Ι->T;
 		template<class T=uint> α FindId()Ι->optional<T>;
 		α FindKey()ι->optional<DB::Key>;
-		α GetKey(SRCE)ε->DB::Key;
+		α GetKey( SRCE )ε->DB::Key;
 		Ŧ GetPath( sv path, SRCE )Ε->T;
+		α ExtrapolateVariables()Ι->jobject;
+		β JTableName()Ι->string=0;
 
 		jobject Args;
 		sp<jobject> Variables;
@@ -25,8 +29,6 @@ namespace Jde::QL{
 			if( value->get_string().starts_with(escape) )
 				value = Variables->if_contains( sv{value->get_string()}.substr(2) );
 		}
-		//if( auto param = value && value->is_string() && value->get_string().starts_with("\\b$") ? sv{value->get_string()} : sv{}; param.size() )
-		//	value = Variables->if_contains( param.substr(3) );
 		return value;
 	}
 	template<> Ξ Input::FindPtr( sv name )Ι->const jstring*{
@@ -47,16 +49,15 @@ namespace Jde::QL{
 		return p && p->is_bool() ? p->get_bool() : optional<bool>{};
 	}
 
-
 	Ŧ Input::As( sv key, SL sl )Ε->const T&{
 		auto p = FindPtr<T>( key );
-		THROW_IFSL( !p, "Could not find key '{}' in mutation query: {}, variables: {}", key, serialize(Args), serialize(*Variables) );
+		THROW_IFSL( !p, "Could not find key '{}' in query: {}, variables: {}", key, serialize(Args), serialize(*Variables) );
 		return *p;
 	}
 
 	Ŧ Input::TryNumber( sv name )Ι->optional<T>{
 		optional<T> y;
-		if( auto p = FindPtr( name ); p && p->is_number() ){
+		if( auto p = FindPtr(name); p && p->is_number() ){
 			if( auto n = p->try_to_number<T>(); n )
 				y = *n;
 		}
@@ -71,25 +72,12 @@ namespace Jde::QL{
 		return Json::FindNumber<T>( Args, "id" );
 	}
 
-	Ŧ Input::GetPath( sv path, SL sl )Ε->T{ return Json::AsPath<T>( Args, path, sl ); }
+	Ŧ Input::GetPath( sv path, SL sl )Ε->T{ return Json::AsPath<T>(Args, path, sl); }
 
 	Ŧ Input::Id()Ι->T{
 		const optional<T> y = FindId<T>();
 		ASSERT( y );
 		return y.value_or( T{} );
-	}
-	Ξ Input::GetKey(SL sl)ε->DB::Key{
-		let y = FindKey();
-		THROW_IFSL( !y, "Could not find id or target in mutation  query: {}, variables: {}", serialize(Args), serialize(*Variables) );
-		return *y;
-	}
-	Ξ Input::FindKey()ι->optional<DB::Key>{
-		optional<DB::Key> y;
-		if( let id = FindId<uint>(); id )
-			y = DB::Key{ *id };
-		else if( let target = FindPtr<jstring>("target"); target )
-			y = DB::Key{ string{*target} };
-		return y;
 	}
 }
 #undef let

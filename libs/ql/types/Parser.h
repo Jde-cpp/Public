@@ -14,6 +14,7 @@ namespace Jde::QL{
 		α Next( char end )ι->string;
 		α Peek()ι->str{ return _peekValue.empty() ? _peekValue = Next() : _peekValue; }
 		α Index()ι->uint{ return i; }
+		α Trim( sv token )ι->bool;
 		α Text()ι->string{ return i<_text.size() ? _text.substr(i) : string{}; }
 		α AllText()ι->string{ return _text; }
 

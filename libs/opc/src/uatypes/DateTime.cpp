@@ -1,5 +1,6 @@
 #include <jde/opc/uatypes/DateTime.h>
 #include <jde/fwk/io/protobuf.h>
+#include <jde/opc/uatypes/Logger.h>
 
 #define let const auto
 

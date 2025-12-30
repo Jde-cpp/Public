@@ -14,17 +14,17 @@ namespace Jde::Opc::Gateway{
 		f( m );
 		return Protobuf::ToString( t );
 	}
-	α FromClientUtils::Connection( RequestId requestId, SessionPK sessionId )ι->string{
+	α FromClientUtils::Connection( SessionPK sessionId, RequestId requestId )ι->string{
 		return setMessage( requestId, [&](FromClient::Message& m){
 			m.set_session_id( Ƒ("{:x}", sessionId) );
 		});
 	}
-	α FromClientUtils::Query( RequestId requestId, string&& query, jobject&& variables, bool returnRaw )ι->string{
+	α FromClientUtils::Query( string&& query, jobject&& variables, bool returnRaw, RequestId requestId )ι->string{
 		return setMessage( requestId, [&](FromClient::Message& m){
 			*m.mutable_query() = App::ProtoUtils::ToQuery( move(query), move(variables), returnRaw );
 		});
 	}
-	α FromClientUtils::Subscription( RequestId requestId, ServerCnnctnNK&& target, const vector<NodeId>& nodes )ι->string{
+	α FromClientUtils::Subscription( ServerCnnctnNK&& target, const vector<NodeId>& nodes, RequestId requestId )ι->string{
 		return setMessage( requestId, [&](FromClient::Message& m){
 			auto& s = *m.mutable_subscribe();
 			s.set_opc_id( move(target) );
@@ -32,7 +32,8 @@ namespace Jde::Opc::Gateway{
 				*s.add_nodes() = ProtoUtils::ToNodeId( n );
 		});
 	}
-	α FromClientUtils::Unsubscription( RequestId requestId, ServerCnnctnNK&& target, const vector<NodeId>& nodes )ι->string{
+
+	α FromClientUtils::Unsubscription( ServerCnnctnNK&& target, const vector<NodeId>& nodes, RequestId requestId )ι->string{
 		return setMessage( requestId, [&](FromClient::Message& m){
 			auto& u = *m.mutable_unsubscribe();
 			u.set_opc_id( move(target) );

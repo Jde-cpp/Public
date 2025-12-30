@@ -34,7 +34,7 @@ namespace Jde::App::Client{
 		α Connect( SessionPK sessionId, SRCE )ι->await<Proto::FromServer::ConnectionInfo>;
 		α SessionInfo( SessionPK creds, SRCE )ι->await<Web::FromServer::SessionInfo>;
 		α Query( string&& q, jobject variables, bool returnRaw, SRCE )ι->await<jvalue> override;
-		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray> override;
+		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray>;
 		α Unsubscribe( string&& query, SRCE )ε->await<vector<QL::SubscriptionId>>;
 		α UserPK()Ι{ return _userPK; }
 		α QLServer()ι{ return _qlServer; }
@@ -46,7 +46,7 @@ namespace Jde::App::Client{
 		α HandleException( std::any&& h, IException&& what, RequestId requestId )ι->void;
 		α OnRead( Proto::FromServer::Transmission&& transmission )ι->void override;
 		α OnClose( beast::error_code ec )ι->void override;
-
+		α OnMessage( string&& j, RequestId requestId )ι->void;
 		sp<IAppClient> _appClient;
 		sp<Access::Authorize> _authorize;
 		sp<QL::IQL> _qlServer;

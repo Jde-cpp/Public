@@ -36,9 +36,6 @@ namespace Jde::Opc::Gateway{
 
 		α SubscriptionId()Ι->SubscriptionId{ return CreatedSubscriptionResponse ? CreatedSubscriptionResponse->subscriptionId : 0;}
 
-		α SendBrowseRequest( Browse::Request&& request, Browse::FoldersAwait::Handle h )ι->void;
-		α SendReadRequest( const flat_set<NodeId>&& nodes, ReadValueAwait::Handle h )ι->void;
-		α SetMonitoringMode( Gateway::SubscriptionId subscriptionId )ι->void;
 		Ω ClearRequest( UA_Client* ua, RequestId requestId )ι->void;
 		Ṫ ClearRequestH( UA_Client* ua , RequestId requestId )ι->T;
 		α ClearRequest( RequestId requestId )ι->void{ _asyncRequest.Clear( requestId ); }
@@ -46,7 +43,6 @@ namespace Jde::Opc::Gateway{
 		α MonitoredNodes()ι->UAMonitoringNodes&{ if( !_monitoredNodes ) _monitoredNodes = mu<UAMonitoringNodes>(shared_from_this()); return *_monitoredNodes; }
 		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
 		α RetryVoid( function<void(sp<UAClient>&&) > f, UAException&& e, sp<UAClient>&& pClient )ι->ConnectAwait::Task;
-		Ŧ Process( RequestId requestId, T&& h, sv what )ι->void;
 		α Process( RequestId requestId, sv what )ι->void;
 		α Processing()ι->bool{ return _asyncRequest.IsRunning(); }
 		α ProcessDataSubscriptions()ι->void;
@@ -81,7 +77,6 @@ namespace Jde::Opc::Gateway{
 
 		ServerCnnctn _opcServer;
 
-		concurrent_flat_map<Jde::Handle, UARequestMulti<Value>> _readRequests;
 		vector<VoidAwait::Handle> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
 
 		AsyncRequest _asyncRequest;
@@ -95,19 +90,6 @@ namespace Jde::Opc::Gateway{
 
 		up<UAMonitoringNodes> _monitoredNodes;//destroy first
 	};
-
-	Ŧ UAClient::Process( RequestId requestId, T&& h, sv what )ι->void{
-		_asyncRequest.Process<T>( requestId, move(h), what );
-	}
-
-	Ŧ UAClient::ClearRequestH( UA_Client* ua, RequestId requestId )ι->T{
-		auto p = TryFind( ua );
-		return p ? p->ClearRequestH<T>( requestId ) : T{};
-	}
-
-	Ŧ UAClient::ClearRequestH( RequestId requestId )ι->T{
-		return _asyncRequest.ClearHandle<T>( requestId );
-	}
 
 #define let const auto
 	Ŧ UAClient::Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> client, T h )ι->ConnectAwait::Task{

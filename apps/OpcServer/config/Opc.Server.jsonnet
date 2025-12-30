@@ -1,5 +1,6 @@
 local args = import 'args.libsonnet';
 {
+	instanceName: args.instanceName,
 	dbServers:{
 		dataPaths: args.dbServers.dataPaths,
 		scriptPaths: args.dbServers.scriptPaths,
@@ -17,11 +18,11 @@ local args = import 'args.libsonnet';
 		spd:{
 			flushOn: "Trace",
 			tags: {
-				trace:["test","sql",
+				trace:["test","sql"],
+				debug:["ql","settings", "app"],
+				information:[],
+				warning:["io","uaEvent", "uaNet", "uaSession",
 					"uaServer", "uaUser", "uaSecurity", "threads", "uaClient", "uaSecure"],
-				debug:["ql","settings", "app", "uaNet", "uaSession"],
-				information:["uaEvent"],
-				warning:["io"],
 				"error":[],
 				critical:[]
 			},

@@ -113,8 +113,7 @@ IF( WIN32 )
 	)
 	set( LIBXML2_INCLUDE_DIR ${MULTI_INSTALL_PREFIX}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
 	#set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2$<IF:$<CONFIG:Debug>,d,>.lib CACHE PATH "the directory containing LibXml2 libraries" )
-	set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2.lib CACHE PATH "the directory containing LibXml2 libraries" )
-	MESSAGE( LIBXML2_LIBRARY=${LIBXML2_LIBRARY} )
+	#set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2.lib CACHE PATH "the directory containing LibXml2 libraries" )
 	#set( LIBXML2_LIBRARIES ${MULTI_INSTALL_PREFIX}/libxml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
 	#set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
 else()
@@ -134,7 +133,7 @@ else()
 endif()
 ExternalProject_Add(protobuf
 	GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-	GIT_TAG v32.1
+	GIT_TAG v33.2
 	PREFIX protobuf
 	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/protobuf
 	CMAKE_ARGS ${stdArgs}
@@ -161,6 +160,7 @@ ExternalProject_Add(open62541
 		-DUA_NAMESPACE_ZERO=FULL
 		-DUA_BUILD_EXAMPLES=OFF
 )
+
 ExternalProject_Add(open62541-nodeset-loader
 	GIT_REPOSITORY https://github.com/open62541/open62541-nodeset-loader.git
 #	GIT_TAG v0.5.0
@@ -170,20 +170,22 @@ ExternalProject_Add(open62541-nodeset-loader
 		-DENABLE_BACKEND_OPEN62541=OFF
 		-DENABLE_EXAMPLES=OFF
 		-DCMAKE_PREFIX_PATH=${MULTI_INSTALL_PREFIX}
-#		-DPC_LIBXML_INCLUDEDIR=${MULTI_INSTALL_PREFIX}/libxml2/include/libxml2
-#		-DPC_LIBXML_LIBDIR=${MULTI_INSTALL_PREFIX}/libxml2/lib
-		-DLIBXML2_LIBRARIES=${LIBXML2_LIBRARIES}
+#linux
 		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
+#		-DPC_LIBXML_LIBDIR=${LIBXML2_LIBDIR}
+#win
+#		-DLIBXML2_LIBRARIES=${LIBXML2_LIBRARIES}
+#		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
 		-DCMAKE_BUILD_TYPE=Debug
 
 )
 
 ExternalProject_Add_StepDependencies( spdlog configure fmt )
 ExternalProject_Add_StepDependencies( absl configure gtest )
-ExternalProject_Add_StepDependencies( protobuf configure zlib )
 ExternalProject_Add_StepDependencies( protobuf configure absl )
 ExternalProject_Add_StepDependencies( protobuf configure gtest )
-#ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure open62541 )
+ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure open62541 )
 if( WIN32 )
+	ExternalProject_Add_StepDependencies( protobuf configure zlib )
 #	ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure LibXml2 )
 endif()

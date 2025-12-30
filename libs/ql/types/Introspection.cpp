@@ -277,7 +277,7 @@ namespace QL{
 
 	α QueryType( const TableQL& typeTable )ε->jobject{
 		let typeName = Json::AsString( typeTable.Args, "name" );
-		auto dbTable = DB::AsTable( typeTable.DBTable );
+		auto dbTable = DB::AsTable( typeTable.DBTable() );
 		jobject y;
 		for( let& qlTable : typeTable.Tables ){
 			if( let preDefined = _introspection.Find(typeName); preDefined )
@@ -295,7 +295,7 @@ namespace QL{
 		THROW_IF( schemaTable.Tables.size()!=1, "Only Expected 1 table type for __schema {}", schemaTable.Tables.size() );
 		let& mutationTable = schemaTable.Tables[0]; THROW_IF( mutationTable.JsonName!="mutationType", "Only mutationType implemented for __schema - {}", mutationTable.JsonName );
 		jarray fields;
-		for( let& schema : schemaTable.DBTable->Schema->DBSchema->AppSchemas ){
+		for( let& schema : schemaTable.DBTable()->Schema->DBSchema->AppSchemas ){
 			for( let& nameTablePtr : schema.second->Tables ){
 				let pDBTable = nameTablePtr.second;
 				let childColumn = pDBTable->Map ? pDBTable->Map->Child : nullptr;

@@ -1,6 +1,3 @@
-//FILE=IotFromServer #see ./IotCommon.proto
-//cd $include;mklink FromServer.proto $JDE_BASH/Public/src/web/proto;cd $source; mklink FromServer.pb.h $JDE_BASH/Public/src/web/proto
-
 syntax = "proto3";
 package Jde.Opc.Gateway.FromServer;
 import "google/protobuf/duration.proto";

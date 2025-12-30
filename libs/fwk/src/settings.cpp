@@ -88,6 +88,8 @@ namespace Jde{
 	optional<vector<fs::path>> _importPaths;
 	Ω path()ι->fs::path{
 		static fs::path _path;
+		if( !_path.empty() )
+			return _path;
 		let fileName = fs::path{ Ƒ("{}.jsonnet", Settings::FileStem()) };
 
 		vector<fs::path> paths{ fileName, fs::path{"../config"}/fileName, fs::path{"config"}/fileName };

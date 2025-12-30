@@ -2,11 +2,11 @@
 #include <jde/fwk/process/execution.h>
 #include <jde/web/client/socket/ClientQL.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
-#include <jde/web/client/socket/clientSubscriptions.h>
-#include <jde/app/StringCache.h>
+#include <jde/app/client/clientSubscriptions.h>
 #include <jde/app/proto/app.FromClient.h>
 #include <jde/app/proto/common.h>
 #include <jde/app/client/appClient.h>
+#include <jde/app/client/clientSubscriptions.h>
 #include <jde/app/client/IAppClient.h>
 
 #define let const auto
@@ -60,7 +60,7 @@ namespace Client{
 
 	α AppClientSocketSession::Connect( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>{
 		let requestId = NextRequestId();
-		auto instanceName = Settings::FindString( "instanceName" ).value_or( "" );
+		auto instanceName = Settings::FindString( "/instanceName" ).value_or( "" );
 		if( instanceName.empty() )
 			instanceName = _debug ? "Debug" : "Release";
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Connect: '{}'.", requestId, instanceName );
@@ -76,6 +76,15 @@ namespace Client{
 		_appClient->SetSession( nullptr );
 		if( !Process::ShuttingDown() )
 			App::Client::Connect( move(_appClient) );
+	}
+	α AppClientSocketSession::OnMessage( string&& j, RequestId requestId )ι->void{
+		TRACE( "[{}]OnMessage", hex(requestId), j.substr(0, Web::Client::MaxLogLength()) );
+		try{
+			Subscriptions::OnWebsocketReceive( Json::Parse(j), requestId );
+		}
+		catch( IException& e ){
+			e.SetLevel( ELogLevel::Error );
+		}
 	}
 	α AppClientSocketSession::SessionInfo( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Web::FromServer::SessionInfo>{
 		let requestId = NextRequestId();
@@ -161,7 +170,7 @@ namespace Client{
 				INFO( "[{}]AppClientSocketSession created: {}://{}.", hex(Id()), IsSsl() ? "https" : "http", Host() );
 				}break;
 			case kConnectionInfo:
-				TRACE( "[{}]ConnectionInfo: applicationInstance: '{}'.", hex(Id()), m->connection_info().instance_pk() );
+				TRACE( "[{}]ConnectionInfo: connection: '{}'.", hex(Id()), hex(m->connection_info().connection_pk()) );
 				resume( move(hAny), move(*m->mutable_connection_info()) );
 				break;
 			case kGeneric:
@@ -198,12 +207,16 @@ namespace Client{
 			case kSubscriptionAck:
 				if( !_subscriptionRequests.erase_if(requestId, [&](auto&& kv){
 					auto& listenerSubs = kv.second;
-					Web::Client::Subscriptions::ListenRemote( listenerSubs.first, move(listenerSubs.second) );
+					for( auto& sub : listenerSubs.second ){
+						if( sub.Id == 0 )
+							sub.Id = requestId;
+						Subscriptions::ListenRemote( listenerSubs.first, move(sub) );
+					}
 					return true;
-				}) ){
+				}) ){ //request not found.
 					HandleException( move(hAny), Exception{"SubscriptionAck: '{}' not found.", requestId}, requestId );
 				}
-				else{
+				else{ //found the request.
 					jarray y;
 					for_each( m->subscription_ack().server_ids(), [&](auto id){y.emplace_back(id);} );
 					TRACE( "[{:x}]SubscriptionAck: '{}'.", Id(), serialize(y) );
@@ -228,7 +241,12 @@ namespace Client{
 			case kStringPks://strings already saved in db, no need to send.  not being requested by client yet.
 				CRITICAL( "[{:x}]No use case has been implemented on client app '{}'.", Id(), underlying(m->Value_case()) );
 				break;
-			case kTraces:
+			[[likely]]case kTraces:{
+				auto& traces = *m->mutable_traces();
+				TRACE( "[{:x}]Traces: count='{}'.", Id(), traces.values_size() );
+				App::Client::Subscriptions::OnTraces( move(traces), requestId );
+				break;}
+			[[unlikely]]
 			case kStatus:
 				CRITICAL( "[{:x}]Web only call not implemented on client app '{}'.", Id(), (uint)m->Value_case() );
 			break;
@@ -250,10 +268,12 @@ namespace Client{
 			handle( "Exception<string>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<Proto::FromServer::Strings>::Handle>(&h) )
 			handle( "Exception<Strings>: '{}'.", await );
-//		else if( auto await = std::any_cast<ClientSocketAwait<Web::FromServer::SessionInfo>::Handle>(&h) )
-//			handle( "Exception<SessionInfo>: '{}'.", await );
+		else if( auto await = std::any_cast<ClientSocketAwait<Web::FromServer::SessionInfo>::Handle>(&h) )
+			handle( "Exception<SessionInfo>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<jvalue>::Handle>(&h) )
 			handle( "Exception<jvalue>: '{}'.", await );
+		else if( auto await = std::any_cast<ClientSocketAwait<jarray>::Handle>(&h) )
+			handle( "Exception<jarray>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<Web::Jwt>::Handle>(&h) )
 			handle( "Exception<Jwt>: '{}'.", await );
 		else{

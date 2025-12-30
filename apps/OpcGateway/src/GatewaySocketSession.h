@@ -29,7 +29,8 @@ namespace Jde::Opc::Gateway{
 		α Unsubscribe( ServerCnnctnNK&& opcId, flat_set<NodeId> nodes, uint32 requestId )ι->void;
 
 		α WriteSubscription( const jvalue& j, Jde::RequestId requestId )ι->void override;
-		α WriteSubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, Jde::RequestId requestId )ι->void override;
+		α WriteSubscription( uint32 /*appPK*/, uint32 /*appInstancePK*/, const Logging::Entry& /*e*/, const QL::Subscription& /*sub*/ )ι->void override{ ASSERT(false); }
+		α WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, Jde::RequestId requestId )ι->void override;
 		α WriteComplete( Jde::RequestId requestId )ι->void override;
 		α WriteException( string&& e, Jde::RequestId requestId )ι->void override;
 		α WriteException( IException&& e )ι->void{ WriteException( move(e), 0 ); }

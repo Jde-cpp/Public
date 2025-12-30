@@ -1,4 +1,5 @@
 {
+	instanceName: "debug-windows",
 	sqlType: "sqlServer",
 	logDir: "$(JDE_BUILD_DIR)",
 	opc:{
@@ -12,7 +13,7 @@
 	},
 	dbServers: {
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/msvc/Debug/libs/db/drivers/odbc/Debug/Jde.DB.Odbc.dll",
+			driver: "$(JDE_BUILD_DIR)/msvc/libs/db/drivers/odbc/Debug/Jde.DB.Odbc.dll",
 			connectionString: "DSN=OpcTestsDebug",
 			username: null,
 			password: null,
@@ -25,9 +26,9 @@
 								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet"
 							}
 						},
-						log:{
-							log:{
-								meta: "$(JDE_DIR)/apps/AppServer/config/log-meta.jsonnet",
+						app:{
+							app:{
+								meta: "$(JDE_DIR)/apps/AppServer/config/app-meta.jsonnet",
 							}
 						},
 						gateway:{
@@ -38,7 +39,6 @@
 						opc:{
 							opc:{
 								meta: "$(JDE_DIR)/apps/OpcServer/config/opcServer-meta.jsonnet",
-								prefix: ""
 							},
 						}
 					}

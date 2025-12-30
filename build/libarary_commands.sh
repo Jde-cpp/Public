@@ -2,17 +2,18 @@
 cd /mnt/ram/external/Debug
 cls;rm -f CMakeCache.txt;cmake /home/duffyj/code/jde/Public/build --preset linux-debug;
 
-DST_DIR=$REPO_DIR/install/g++-14/Debug/boost
+DST_DIR=$REPO_DIR/install/g++-14/debug/boost
 ./bootstrap.sh --prefix=${DST_DIR} --includedir=headers --libdir=dist
 echo "using gcc : : /usr/bin/g++-14 ; " >> tools/build/src/user-config.jam
-./b2 --prefix=${DST_DIR} address-sanitizer=on install
-./b2 --prefix=${DST_DIR} install --with-json --with-charconv
+#./b2 --prefix=${DST_DIR} address-sanitizer=on install
+./b2 variant=debug --prefix=${DST_DIR} address-sanitizer=on install --with-json --with-charconv
 
 bootstrap.bat --prefix=C:\Users\duffyj\source\repos\libs\install\clang\boost --with-toolset=clang-win
 b2.exe toolset=clang --prefix=C:\Users\duffyj\source\repos\libs\install\clang\boost --with-json -q install
 
-bootstrap.bat --prefix=C:\Users\duffyj\source\repos\libs\install\msvc\boost --with-toolset=msvc
+bootstrap.bat --prefix=C:\Users\duffyj\source\repos\libs\install\msvc\multi\boost --with-toolset=msvc
 b2.exe toolset=msvc address-model=64 address-sanitizer=on --prefix=C:\Users\duffyj\source\repos\libs\install\msvc\multi\boost --with-json --with-headers -q install
+b2.exe variant=release toolset=msvc address-model=64 --prefix=C:\Users\duffyj\source\repos\libs\install\msvc\multi\boost --with-json -q install
 
 
 DST_DIR=$REPO_DIR/install/g++-14/RelWithDebInfo/boost

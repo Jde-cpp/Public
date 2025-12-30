@@ -27,18 +27,23 @@ namespace Jde::App::Client{
 	}
 
 	constexpr ELogTags _tags{ ELogTags::SocketClientWrite };
-	using Web::Client::ClientSocketAwait;
-	α IAppClient::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ε->ClientSocketAwait<Web::FromServer::SessionInfo>{
+	α IAppClient::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ε->await<Web::FromServer::SessionInfo>{
 		auto p = Session();
 		auto requestId = p->NextRequestId();
 		TRACESL( "AddSession domain: '{}', loginName: '{}', providerPK: {}, userEndPoint: '{}', isSocket: {}.", domain, loginName, providerPK, userEndPoint, isSocket );
-		return ClientSocketAwait<Web::FromServer::SessionInfo>{ FromClient::AddSession(domain, loginName, providerPK, userEndPoint, isSocket, requestId), requestId, p, sl };
+		return await<Web::FromServer::SessionInfo>{ FromClient::AddSession(domain, loginName, providerPK, userEndPoint, isSocket, requestId), requestId, p, sl };
 	}
-	α IAppClient::Jwt( SL sl )ε->ClientSocketAwait<Web::Jwt>{
+	α IAppClient::Jwt( SL sl )ε->await<Web::Jwt>{
 		auto p = Session();
 		auto requestId = p->NextRequestId();
 		TRACESL( "Jwt requestId: {}", requestId );
-		return ClientSocketAwait<Web::Jwt>{ FromClient::Jwt(requestId), requestId, p, sl };
+		return await<Web::Jwt>{ FromClient::Jwt(requestId), requestId, p, sl };
+	}
+	α IAppClient::Login( Web::Jwt&& jwt, SL sl )ε->await<Web::FromServer::SessionInfo>{
+		auto p = Session();
+		auto requestId = p->NextRequestId();
+		TRACESL( "[{}]Login via jwt: ...", hex(requestId) );
+		return await<Web::FromServer::SessionInfo>{ FromClient::Login(move(jwt), requestId), requestId, p, sl };
 	}
 
 	α IAppClient::UpdateStatus()ι->void{
@@ -56,6 +61,10 @@ namespace Jde::App::Client{
 		session = nullptr;
 		LOGSL( ELogLevel::Information, sl, tags, "ClosedSocketSession" );
 	}
+	α IAppClient::Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
+		return Session()->Subscribe( move(query), move(variables), listener, sl );
+	}
+
 	α IAppClient::Write( vector<Logging::Entry>&& entries )ι->void{
 		auto session = _session;
 		if( !session )

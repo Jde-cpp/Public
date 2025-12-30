@@ -1,6 +1,7 @@
 #include <jde/opc/uatypes/Variant.h>
 #include <jde/opc/UAException.h>
 #include <jde/opc/uatypes/BrowseName.h>
+#include <jde/opc/uatypes/DateTime.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/UAString.h>
 
@@ -130,6 +131,8 @@ namespace Jde::Opc{
 		auto toJson = [trimNames]( void* v, const UA_DataType& type )ε->jvalue{
 			if( &type==&UA_TYPES[UA_TYPES_LOCALIZEDTEXT] && trimNames )
 				return jstring{ ToString( ((UA_LocalizedText*)v)->text ) };
+			else if( &type==&UA_TYPES[UA_TYPES_DATETIME] )
+				return UADateTime{ *(UA_DateTime*)v }.ToJson();
 			else{
 				auto uaJson = uaJsonString( v, type );
 				try{

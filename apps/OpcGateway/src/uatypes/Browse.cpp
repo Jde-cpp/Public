@@ -32,11 +32,42 @@ namespace Jde::Opc::Gateway{
 			elem->targetName = {ns, AllocUAString(path)};
 		}
 	}
+
 namespace Browse{
+	Ω onResponse( UA_Client* /*ua*/, void* userdata, RequestId /*requestId*/, UA_BrowseResponse* response )ι->void;
 	α FoldersAwait::Suspend()ι->void{
-		_client->SendBrowseRequest( move(_request), _h );
+		ASSERT( Promise() );
+		try{
+			DBGT( BrowseTag, "[{}]SendBrowseRequest", hex(_client->Handle()) );
+			UAε( UA_Client_sendAsyncBrowseRequest(_client->UAPointer(), &_request, onResponse, this, &_requestId) );
+			TRACET( BrowseTag, "[{}.{}]SendBrowseRequest", hex(_client->Handle()), hex(_requestId) );
+			_client->Process( _requestId, "BrowseRequest" );
+		}
+		catch( UAException& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α onResponse( UA_Client* /*ua*/, void* userdata, RequestId /*requestId*/, UA_BrowseResponse* response )ι->void {
+		FoldersAwait& await = *(FoldersAwait*)userdata;
+		await.OnComplete( response );
+	}
+	α FoldersAwait::OnComplete( UA_BrowseResponse* response )ι->void{
+		ASSERT( Promise() );
+		_client->ClearRequest( _requestId );
+		let sc = response->responseHeader.serviceResult;
+		DBGT( BrowseTag, "[{}.{}]({})SendBrowseRequest::Complete", hex(_client->Handle()), hex(_requestId), hex(sc) );
+		if( !sc ){
+			if( auto resultSC = response->resultsSize>0 ? response->results[0].statusCode : UA_STATUSCODE_GOOD; resultSC ){
+				DBGT( BrowseTag, "[{}.{}]({})SendBrowseRequest::Results Error", hex(_client->Handle()), hex(_requestId), hex(sc) );
+				ResumeExp( UAClientException{resultSC, _client->Handle(), _requestId} );
+			}else
+				Post<Response>( move(*response), move(_h) );
+
+		}else
+			ResumeExp( UAClientException{sc, _client->Handle(), _requestId} );
 	}
 }
+
 	ObjectsFolderAwait::ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SL sl )ι:
 		base{ sl },
 		_client{ua},
@@ -110,20 +141,6 @@ namespace Browse{
 		}
 	}
 namespace Browse{
-	α OnResponse( UA_Client *ua, void* userdata, RequestId requestId, UA_BrowseResponse* response )ι->void {
-		auto h = UAClient::ClearRequestH<Browse::FoldersAwait::Handle>( ua, requestId );
-		let uaHandle = (Handle)(userdata ? userdata : ua);
-		if( !h ){
-			CRITICALT( BrowseTag, "[{:x}.{:x}]Could not find handle.", uaHandle, requestId );
-			return;
-		}
-		TRACET( BrowseTag, "[{:x}.{}]OnResponse", uaHandle, requestId );
-		if( !response->responseHeader.serviceResult )
-			Post<Response>( move(*response), move(h) ); // Cannot run EventLoop from the run method itself
-		else
-			h.promise().ResumeExp( UAClientException{response->responseHeader.serviceResult, uaHandle, requestId}, h );
-	}
-
 	flat_map<string, UA_BrowseResultMask> _attributes = {
 		{"none", UA_BROWSERESULTMASK_NONE},
 		{"browse", UA_BROWSERESULTMASK_BROWSENAME},

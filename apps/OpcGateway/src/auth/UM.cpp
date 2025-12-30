@@ -11,7 +11,7 @@
 namespace Jde::Opc::Gateway{
 	α ProviderSelectAwait::Select()ι->TAwait<jobject>::Task{
 		try{
-			let query = Ƒ( "provider(target:\"{}\", providerTypeId:{}){{ id }}", _opcId, (uint8)Access::EProviderType::OpcServer );
+			let query = Ƒ( "provider(name:\"{}\", providerTypeId:{}){{ id }}", _opcId, (uint8)Access::EProviderType::OpcServer );
 			auto appClient = AppClient();
 			let j = co_await *appClient->QLServer()->QueryObject( query, {}, appClient->UserPK() );
 			let providerId = Json::FindNumber<Access::ProviderPK>( j, "id" ).value_or(0);

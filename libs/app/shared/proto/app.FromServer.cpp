@@ -3,6 +3,7 @@
 #include <jde/db/Row.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/Column.h>
+#include <jde/ql/types/Subscription.h>
 #include <jde/ql/types/TableQL.h>
 #include <jde/web/Jwt.h>
 #include <jde/web/server/Web.FromServer.h>
@@ -30,11 +31,12 @@ namespace Jde::App{
 		t.add_messages()->set_request_id( requestId );
 		return t;
 	}
-	α FromServer::ConnectionInfo( AppPK appPK, AppInstancePK instancePK, RequestId clientRequestId, const Crypto::PublicKey& appServerPubKey, Web::Server::SessionInfo&& session )ι->Proto::FromServer::Transmission{
+	α FromServer::ConnectionInfo( AppPK appPK, AppInstancePK instancePK, AppConnectionPK connectionPK, RequestId clientRequestId, const Crypto::PublicKey& appServerPubKey, Web::Server::SessionInfo&& session )ι->Proto::FromServer::Transmission{
 		return setMessage( clientRequestId, [&](auto& m){
 			auto& info = *m.mutable_connection_info();
 			info.set_app_pk( appPK );
 			info.set_instance_pk( instancePK );
+			info.set_connection_pk( connectionPK );
 			info.set_certificate_modulus( {appServerPubKey.Modulus.begin(), appServerPubKey.Modulus.end()} );
 			info.set_certificate_exponent( {appServerPubKey.Exponent.begin(), appServerPubKey.Exponent.end()} );
 			*info.mutable_session_info() = move( Web::Server::ToProto(move(session)) );
@@ -63,6 +65,26 @@ namespace Jde::App{
 			m.set_jwt( jwt.Payload() );
 		});
 	}
+
+	α FromServer::LogSubscription( AppPK appPK, AppInstancePK instancePK, const Logging::Entry& m, const QL::Subscription& sub )ι->Proto::FromServer::Transmission{
+		return setMessage( sub.Id, [&](auto& msg){
+			auto& traces = *msg.mutable_traces();
+			traces.set_app_id( appPK );
+			auto proto = traces.add_values();
+			proto->set_id( sub.Id );
+			proto->set_instance_id( instancePK );
+			*proto->mutable_time() = Protobuf::ToTimestamp( m.Time );
+			proto->set_level( (Log::Proto::ELogLevel)m.Level );
+			proto->set_message_id( Protobuf::ToBytes(m.Id()) );
+			proto->set_file_id( Protobuf::ToBytes(m.FileId()) );
+			proto->set_function_id( Protobuf::ToBytes(m.FunctionId()) );
+			proto->set_line( m.Line );
+			proto->set_user_pk( m.UserPK.Value );
+			for( let& arg : m.Arguments )
+				proto->add_args( arg );
+		});
+	}
+
 	α FromServer::ToStatus( AppPK appId, AppInstancePK instanceId, str hostName, Proto::FromClient::Status&& input )ι->Proto::FromServer::Status{
 		Proto::FromServer::Status output;
 		output.set_application_id( (google::protobuf::uint32)appId );
@@ -79,7 +101,7 @@ namespace Jde::App{
 		*t.add_messages()->mutable_status() = move( status );
 		return t;
 	}
-	α FromServer::SubscriptionAck( vector<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->Proto::FromServer::Transmission{
+	α FromServer::SubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->Proto::FromServer::Transmission{
 		return setMessage( requestId, [&](auto& m){
 			auto& ack = *m.mutable_subscription_ack();
 			for_each( subscriptionIds, [&](auto id){ack.add_server_ids(id);} );
@@ -120,9 +142,9 @@ namespace Jde::App{
 		toServer->set_graph_ql( move(queryResults) );
 		return t;
 	}
-	α FromServer::Session( Web::Server::SessionInfo&& session, RequestId requestId )->Proto::FromServer::Transmission{
+	α FromServer::Session( const Web::Server::SessionInfo& session, RequestId requestId )->Proto::FromServer::Transmission{
 		return setMessage( requestId, [&](auto& m){
-			*m.mutable_session_info() = Web::Server::ToProto( move(session) );
+			*m.mutable_session_info() = Web::Server::ToProto( session );
 		});
 	}
 	α FromServer::ToTrace( DB::Row&& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace{
@@ -158,24 +180,6 @@ namespace Jde::App{
 			}
 			++i;
 		}
-		return t;
-	}
-	α FromServer::TraceBroadcast( LogPK id, AppPK appId, AppInstancePK instanceId, const Logging::Entry& m, const vector<string>& args )ι->Proto::FromServer::Transmission{
-		Proto::FromServer::Transmission t;
-		auto traces = t.add_messages()->mutable_traces();
-		traces->set_app_id( appId );
-		auto proto = traces->add_values();
-		proto->set_id( id );
-		proto->set_instance_id( instanceId );
-		*proto->mutable_time() = Protobuf::ToTimestamp( m.Time );
-		proto->set_level( (Log::Proto::ELogLevel)m.Level );
-		proto->set_message_id( Protobuf::ToBytes(m.Id()) );
-		proto->set_file_id( Protobuf::ToBytes(m.FileId()) );
-		proto->set_function_id( Protobuf::ToBytes(m.FunctionId()) );
-		proto->set_line( m.Line );
-		proto->set_user_pk( m.UserPK.Value );
-		for( let& arg : args )
-			proto->add_args( arg );
 		return t;
 	}
 }

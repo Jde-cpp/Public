@@ -9,4 +9,4 @@
 #include <jde/fwk.h>
 #include <jde/fwk/settings.h>
 #include <jde/web/client/exports.h>
-#include <jde/app/shared/proto/App.FromServer.pb.h>
+#include <jde/app/proto/App.FromServer.pb.h>

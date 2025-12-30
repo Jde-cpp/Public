@@ -60,6 +60,9 @@ export class NodeId implements INodeId{
 	qlArgs():string{
 		return JSON.stringify(this.toJson()).replace( /^{|}$/g, "" );
 	}
+	static qlArgsArray( nodes:NodeId[] ):string{
+		return nodes.map( n=>`{${n.qlArgs()}}` ).join( "," );
+	}
 
 	ns:number;
 	get isNumericId(){ return typeof this.id === "number"; }

@@ -18,7 +18,7 @@ namespace Jde::QL{
 				else{
 					if( !y )
 						y = jobject{};
-					y->get_object()[table.JsonName] = move( result );
+					y->get_object()[table.ReturnName()] = move( result );
 				}
 			}
 			Resume( y.value_or( jvalue{} ) );

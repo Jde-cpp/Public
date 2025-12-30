@@ -214,12 +214,8 @@ namespace Jde::Opc::Server {
 	α UAServer::FindDataType( NodePK nodePK )Ι->const UA_DataType*{
 		auto p = _dataTypes.find( nodePK );
 		if( p==_dataTypes.end() && nodePK<=32750 ){
-			for( uint i=0; i<UA_TYPES_COUNT; ++i ){
-				if( UA_TYPES[i].typeId.identifier.numeric==nodePK ){
-					p = _dataTypes.try_emplace( nodePK, &UA_TYPES[i] ).first;
-					break;
-				}
-			}
+			if( auto ua = Opc::FindDataType( NodeId{0, (uint32_t)nodePK} ); ua )
+				p = _dataTypes.try_emplace( nodePK, ua ).first;
 		}
 		return p==_dataTypes.end() ? nullptr : p->second;
 	}

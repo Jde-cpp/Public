@@ -3,6 +3,7 @@
 #include "../exports.h"
 
 namespace Jde::DB{ struct Row; struct Value; }
+namespace Jde::QL{ struct TableQL; }
 namespace Jde::Opc{
 	struct ΓOPC NodeId : UA_NodeId{
 		NodeId()ι:UA_NodeId{}{}
@@ -12,9 +13,10 @@ namespace Jde::Opc{
 		NodeId( UA_NodeId&& x )ι;
 		NodeId( UA_UInt16 namespaceIndex, UA_UInt32 numeric )ι:NodeId{UA_NodeId{namespaceIndex, UA_NODEIDTYPE_NUMERIC, {numeric}}}{}
 		NodeId( UA_UInt32 numeric )ι:NodeId{0, numeric}{}
-		NodeId( const flat_map<string,string>& x )ε;//rest params
+		NodeId( const QL::TableQL& q )ε;
 		explicit NodeId( const jvalue& j )ε;
 		NodeId( DB::Row& r, uint8 index )ε;
+		Ω ParseQL( const QL::TableQL& q )ε->vector<NodeId>;
 
 		α operator=( const NodeId& x )ι->NodeId&;
 		α operator=( NodeId&& x )ι->NodeId&;
@@ -38,6 +40,8 @@ namespace Jde::Opc{
 		α Add( jobject& j )Ι->void;
 		α ToJson()Ι->jobject;
 		α ToString()Ι->string;
+		Ω ToString( const vector<NodeId>& nodeIds )ι->string;
 	};
 	α ToJson( const UA_NodeId& nodeId )ι->jobject;
+	Ξ operator==( const NodeId& x, const NodeId& y )ι->bool{ return !(x<y) && !(y<x); }
 }

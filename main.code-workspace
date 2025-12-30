@@ -3,18 +3,28 @@
 		"window.title": "Main",
 		"name": "main",
 		"releaseRoot": "${env:JDE_BASH}/Release",
+		"debugDir": "${env:JDE_BUILD_DIR}",
 		"sourceDir": "${env:JDE_BASH}",
+		"debugPreset": "linux-debug",
+		"releasePreset": "linux-gcc-relWithDebInfo"
 	},
 	"tasks": {
 		"version": "2.0.0",
 		"tasks": [
 			{
+				"label": "build",
+				"type": "shell",
+				"command": "cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug",
+				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"group": { "kind": "build", "isDefault": true }
+			},
+			{
 				"label": "Release",
 				"type": "shell",
 				"command": "tput reset;build/buildRelease.sh",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": true }
-			}
+				"group": { "kind": "build", "isDefault": false }
+				}
 		]
 	},
 	"folders": [

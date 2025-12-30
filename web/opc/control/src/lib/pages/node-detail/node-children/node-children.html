@@ -1,0 +1,97 @@
+@if( !isLoading() ){
+	<mat-toolbar>
+		<button mat-raised-button [color]="retrievingSnapshot() ? 'primary' : null" (click)="retrieveSnapshot()" ><span class="material-symbols-outlined">preview</span><span style="text-align: center;vertical-align: baseline;height: 100%;">Snapshot</span></button>
+	</mat-toolbar>
+	<div style="align-content: center; margin: auto; text-align: center">
+		<mat-table [dataSource]=nodes class="mat-elevation-z8">
+			<!-- matSort (matSortChange)="sortData($event)" [matSortActive]="sort.active" [matSortDirection]="sort.direction" -->
+			<ng-container matColumnDef="select">
+				<mat-header-cell *matHeaderCellDef>
+					<mat-checkbox (change)="$event ? toggleAllRows() : null"
+												[checked]=isAllSelected()
+												[disabled]=!variables.length
+												[indeterminate]="selections.selected.length>0 && !isAllSelected()"
+												[aria-label]=checkboxLabel()>
+					</mat-checkbox>
+				</mat-header-cell>
+				<mat-cell *matCellDef="let node">
+					<mat-checkbox (click)=$event.stopPropagation()
+												(change)=selections.toggle(node)
+												[checked]=selections.isSelected(node)
+												[disabled]=!node.isVariable
+												[aria-label]=checkboxLabel(node)>
+					</mat-checkbox>
+				</mat-cell>
+			</ng-container>
+			@if( visibleColumns.includes("id") ){
+				<ng-container matColumnDef="id">
+					<mat-header-cell mat-sort-header *matHeaderCellDef> ID </mat-header-cell>
+					<mat-cell mat-cell (click)="test(r)" *matCellDef="let r">{{r.nodeId.id}}</mat-cell>
+				</ng-container>
+			}
+			<ng-container matColumnDef="name">
+				<mat-header-cell mat-sort-header *matHeaderCellDef> Name </mat-header-cell>
+				<mat-cell mat-cell *matCellDef="let r">
+					@if( r.isVariable ){
+						<span>{{r.name}}</span>
+					}
+					@else{
+						<a [routerLink]="routerLink(r)" routerLinkActive="router-link-active" >{{r.name}}</a>
+					}
+				</mat-cell>
+			</ng-container>
+			<!-- <ng-container matColumnDef="class">
+				<mat-header-cell mat-sort-header *matHeaderCellDef> Class </mat-header-cell>
+				<mat-cell mat-cell *matCellDef="let r">{{toObject[r.nodeClass]}}</mat-cell>
+			</ng-container> -->
+			<ng-container matColumnDef="snapshot">
+				<mat-header-cell mat-sort-header *matHeaderCellDef> Snapshot </mat-header-cell>
+				<mat-cell mat-cell *matCellDef="let r">
+					@if( r.dataType==ETypes.Boolean && !r.isArray ){
+						<mat-checkbox [checked]="r.value" (change)="toggleValue(r, $event);" [disabled]="r.userAccessLevel < EAccess.Write"></mat-checkbox>
+					}
+					@else if( r.isInteger && !r.isArray ){
+						<input type=number [value]="r.value?.toString()" [disabled]="r.userAccessLevel < EAccess.Write" (change)="changeDouble(r,$event);">
+					}
+					@else if( r.isUnsigned && !r.isArray ){
+						<input type=number [value]="r.value?.toString()" [disabled]="r.userAccessLevel < EAccess.Write" (change)="changeDouble(r,$event);">
+					}
+					@else if( r.isFloating && !r.isArray ){
+						<input type=number [value]=r.value [disabled]="r.userAccessLevel < EAccess.Write" (change)="changeDouble(r,$event);">
+					}
+					@else if( [ETypes.String, ETypes.LocalizedText].includes(r.dataType) && !r.isArray ){
+						<input type="text" [value]=r.value [disabled]="r.userAccessLevel < EAccess.Write" (change)="changeString(r,$event);">
+					}
+					@else if( r.dataType==ETypes.BaseData && !r.isArray ){
+						<span>{{toString(r.value)}}</span>
+					}
+					@else if( r.dataType==ETypes.UtcDateTime && !r.isArray ){
+						<!-- <mat-form-field> -->
+							<input matInput [matDatepicker]="picker" [value]="toDate(r.value)" (dateInput)="dateInput(r, $event);" (change)="changeDate(r, $event);">
+							<mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          		<mat-datepicker #picker></mat-datepicker>
+						<!-- </mat-form-field> -->
+					}
+					@else if( r.customDataType && !r.isArray ){
+						<mat-select [value]=r.value (selectionChange)="changeEnum(r, $event);" [disabled]="r.userAccessLevel < EAccess.Write">
+							@for( option of r.customDataType.enumValues; track option.id ){
+								<mat-option [value]=option.id>{{option.name}}</mat-option>
+							}
+						</mat-select>
+					}
+					<!-- <span *ngIf="r.dataType==ETypes.None">{{toString(r.value)}}</span> -->
+					<!-- <span *ngIf="valueType(r.value)!='boolean'" [title]="toString(r.value)">{{valueType(r.value)}}</span> -->
+					<!--  -->
+				</mat-cell>
+			</ng-container>
+			@if( visibleColumns.includes("description") ){
+				<ng-container matColumnDef="description">
+					<mat-header-cell mat-sort-header *matHeaderCellDef> Description </mat-header-cell>
+					<mat-cell mat-cell *matCellDef="let r">{{r.description.text}}</mat-cell>
+				</ng-container>
+			}
+			<mat-header-row *matHeaderRowDef=visibleColumns></mat-header-row>
+			<mat-row *matRowDef="let row; columns: visibleColumns"></mat-row>
+		</mat-table>
+	</div>
+}

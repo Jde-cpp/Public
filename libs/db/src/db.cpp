@@ -67,8 +67,8 @@ namespace Jde{
 	α DB::GetAppSchema( str metaName, sp<Access::IAcl> authorize )ε->sp<AppSchema>{
 		for( auto& cluster : GetClusters(authorize) ){
 			for( auto& catalog : cluster->Catalogs ){
-				if( auto pSchema = catalog->FindAppSchema(metaName); pSchema )
-					return pSchema;
+				if( auto schema = catalog->FindAppSchema(metaName); schema )
+					return schema;
 			}
 		}
 		THROW( "Schema '{}' not found.", metaName );

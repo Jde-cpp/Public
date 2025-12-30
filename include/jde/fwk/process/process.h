@@ -24,7 +24,7 @@ namespace Process{
 	Φ SetConsoleTitle( sv title )ι->void;
 	Φ MemorySize()ι->size_t;
 	Φ ProcessId()ι->uint32;
-	constexpr static sv ProductVersion="2025.11.01";
+	constexpr static sv ProductVersion="2025.12.01";
 	Φ ProgramDataFolder()ι->fs::path;
 	Φ ProductName()ι->sv;
 	Φ StartTime()ι->TimePoint;

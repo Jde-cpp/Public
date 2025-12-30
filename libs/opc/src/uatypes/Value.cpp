@@ -9,7 +9,13 @@
 #define let const auto
 
 namespace Jde::Opc{
-//#define ADD add.operator()
+	α Value::operator=( Value&& x )ι->Value&{
+		UA_DataValue_clear(this);
+		memccpy( this, &x, 1, sizeof(UA_DataValue) );
+		UA_DataValue_init(&x);
+		return *this;
+	}
+
 #define IS(ua) type==&UA_TYPES[ua]
 	α Value::ToJson()Ι->jvalue{
 		if( status )
@@ -76,9 +82,21 @@ namespace Jde::Opc{
 
 	α Value::Set( const jvalue& j, SL sl )ε->void{
 		//let scaler = UA_Variant_isScalar( &value ); null values==not scaler.
-		let type = value.type;
-		if( !type )
-			throw Exception{ sl, ELogLevel::Error, "Value has no type." };
+		auto& type = value.type;
+		if( !type ){
+			if( j.is_null() )
+				throw Exception{ sl, ELogLevel::Error, "Value has no type and json is null." };
+			else if( j.is_int64() )
+				type = &UA_TYPES[UA_TYPES_INT64];
+			else if( j.is_uint64() )
+				type = &UA_TYPES[UA_TYPES_UINT64];
+			else if( j.is_double() )
+				type = &UA_TYPES[UA_TYPES_DOUBLE];
+			else if( j.is_string() )
+				type = &UA_TYPES[UA_TYPES_STRING];
+			else
+				throw Exception{ sl, ELogLevel::Error, "Value has no type." };
+		}
 		auto setDuration = [&]()ε->void {
 			let& o = j.as_object();
 			THROW_IF( !o.contains("seconds") || !o.contains("nanos"), "Expected duration object with 'seconds' and 'nanos' - '{}'.", serialize(j) );
@@ -132,7 +150,7 @@ namespace Jde::Opc{
 			SetNumber<UA_UInt32>( j );
 		else if( IS(UA_TYPES_UINT64) )
 			SetNumber<UA_UInt64>( j );
-		else if( IS(UA_TYPES_DATETIME) )
+		else if( IS(UA_TYPES_DATETIME) || IS(UA_TYPES_UTCTIME) )
 			SetNumber<UA_DateTime>( UADateTime{j}.UA() );
 		else if( IS(UA_TYPES_DURATION) )//milliseconds double
 			setDuration();

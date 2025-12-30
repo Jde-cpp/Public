@@ -1,6 +1,7 @@
 {
 	sqlType: "mysql",
-	logDir: "$(JDE_BUILD_DIR)",
+	logDir: "/tmp/jde/logs",
+	instanceName: "Debug",
 	opcServer: {
 		trustedCertDirs: [
 			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs",
@@ -15,7 +16,7 @@
 		dataPaths: [],
 		scriptPaths:  ["$(JDE_DIR)/apps/OpcServer/config/sql/mysql"],
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",
+			driver: "$(JDE_BUILD_DIR)/libs/db/drivers/mysql/libJde.DB.MySql.so",
 			connectionString: null,
 			username: "$(JDE_MYSQL_USER)",
 			password: "$(JDE_MYSQL_PWD)",

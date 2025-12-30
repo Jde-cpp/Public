@@ -10,8 +10,7 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{
-	constexpr ELogTags _tags{ ELogTags::Test };
-
+	using Jde::Web::Client::ClientSocketAwait;
 	struct SubscribeTests : ITest{
 		struct Listener final : IListener{
 			Listener( SubscribeTests* tests )ι:_tests{ tests }{}
@@ -47,7 +46,7 @@ namespace Jde::Opc::Gateway::Tests{
 	α read( sp<UAClient> client, NodeId nodeId )ι->uint{
 		auto v = BlockTAwait<flat_map<NodeId, Value>>( ReadValueAwait{{nodeId}, move(client)} ).at( nodeId );
 		auto j = v.ToJson();
-		TRACE( "Initial value: {}.", serialize(j) );
+		TRACET( ELogTags::Test, "Initial value: {}.", serialize(j) );
 		let expected = v.ToJson().to_number<uint>();
 		return expected;
 	}

@@ -8,9 +8,9 @@ namespace Jde::Logging{
 	struct Entry;
 	struct Γ ILogger : LogTags, IShutdown{
 		ILogger( jobject o ): LogTags( move(o) ){}
-		Ṫ Init( sv configName )ι->void;
 		virtual ~ILogger(){} //important
 		β Write( const Entry& m )ι->void=0;
+		β Write( const Entry& m, uint32 appPK, uint32 instancePK )ι->void=0;
 	};
 
 	template<class T, class... Args>

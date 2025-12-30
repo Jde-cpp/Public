@@ -5,9 +5,9 @@
 		"compiler": "msvc",
 		"sourceDir": "${env:JDE_BASH}/libs/${config:name}",
 		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/Debug",
+		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
 		"buildDir": "${config:buildRoot}/libs/${config:name}",
-		"winBuildDir": "${env:JDE_BUILD_DIR}/msvc/Debug/libs/${config:name}",
+		"winBuildDir": "${env:JDE_BUILD_DIR}/msvc/libs/${config:name}",
 		"exe": "tests/${config:buildTarget}/Jde.Access.Tests",
 	},
 	"tasks": {
@@ -30,7 +30,7 @@
 			"label": "compile",
 			"type": "shell",
 			"dependsOn": ["clearTerminal"],
-			"command": "tput reset; source $JDE_DIR/build/buildFunctions-win.sh;compile \"${workspaceFolder}\" \"${fileWorkspaceFolder}\" \"${relativeFile}\" ${config:buildDir}/${config:name};",
+			"command": "tput reset; source $JDE_DIR/build/buildFunctions-win.sh;compile \"${workspaceFolder}\" \"${fileWorkspaceFolder}\" \"${relativeFile}\" ${config:buildRoot};",
 			"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 			"group": { "kind": "build", "isDefault": false }
 		},

@@ -4,10 +4,11 @@
 		"name": "main",
 		"compiler": "msvc",
 		"sourceDir": "${env:JDE_BASH}",
-		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/Debug",
-		"releaseDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}/RelWithDebInfo",
+		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
+		"releaseDir": "/z/RelWithDebInfo/${config:compiler}",
 		"debugPreset": "win-msvc-debug",
-		"releasePreset": "win-msvc-relWithDebInfo"
+		"releasePreset": "win-msvc-relWithDebInfo",
+		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
 	},
 	"folders": [
 		{
@@ -20,22 +21,29 @@
 			{
 				"label": "build",
 				"type": "shell",
-				"command": "cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"command": "mkdir -p ${config:debugDir}; cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug;",
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": true }
 			},
 			{
 				"label": "buildRelease",
 				"type": "shell",
-				"command": "cd ${config:releaseDir}; tput reset; cmake --build . -j --config RelWithDebInfo -t=open62541-nodeset-loader;",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"command": "mkdir -p ${config:releaseDir}; cd ${config:releaseDir}; tput reset; cmake --build . -j --config RelWithDebInfo --target open62541-nodeset-loader;",
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
+			},
+			{
+				"label": "cmakeRelease",
+				"type": "shell",
+				"command": "mkdir -p ${config:releaseDir};cd ${config:releaseDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} -Wno-dev --preset ${config:releasePreset} -Djde_REPOS=ON",
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"group": "build"
 			},
 			{
 				"label": "cmakeRepos",
 				"type": "shell",
 				"command": "mkdir -p ${config:releaseDir};cd ${config:releaseDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} --preset ${config:releasePreset} -Djde_REPOS=ON -Djde_TESTS=OFF -Djde_APPS=OFF",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": "build"
 			}
 		]

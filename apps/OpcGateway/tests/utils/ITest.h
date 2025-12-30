@@ -14,5 +14,4 @@ namespace Tests{
 		static optional<Web::Jwt> _jwt;
 		static sp<UAClient> _client;
 	};
-
 }}

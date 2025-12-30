@@ -1,9 +1,10 @@
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/db/Row.h>
+#include <jde/ql/types/TableQL.h>
 
 #define let const auto
 namespace Jde::Opc{
-	NodeId::NodeId( const NodeId& x )ι:NodeId{(UA_NodeId&)x}{}
+	NodeId::NodeId( const NodeId& x )ι:NodeId{ (UA_NodeId&)x }{}
 	NodeId::NodeId( const UA_NodeId& x )ι{
 		UA_NodeId_copy( &x, this );
 	}
@@ -42,31 +43,20 @@ namespace Jde::Opc{
 		}
 	}
 
-	NodeId::NodeId( const flat_map<string,string>& x )ε:
-		UA_NodeId{}{
-		if( auto p = x.find("ns"); p!=x.end() )
-			namespaceIndex = Str::TryTo<UA_UInt16>( p->second ).value_or( 0 );
-		if( auto p = x.find("s"); p!=x.end() ){
-			identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
-			identifier.string = UA_String_fromChars( p->second.c_str() );
-		}
-		else if( auto p = x.find("i"); p!=x.end() ){
-			identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
-			identifier.numeric = stoul( p->second );
-		}
-		else if( auto p = x.find("b"); p!=x.end() ){
-			identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
-			auto t = ToUV( p->second );
-			UA_ByteString_fromBase64( &identifier.byteString, &t );
-		}
-		else if( auto p = x.find("g"); p!=x.end() ){
-			identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
-			ToGuid( p->second, identifier.guid );
-		}
-		else
-			DBGT( ELogTags::App, "No identifier in nodeId" );
-	}
+	NodeId::NodeId( const QL::TableQL& q )ε:
+		UA_NodeId{ FromJson(q.As<jvalue>("id")) }
+	{}
 
+	α NodeId::ParseQL( const QL::TableQL& q )ε->vector<NodeId>{
+		vector<NodeId> y;
+		if( auto v = q.FindPtr<jvalue>("id"); v!=nullptr && v->is_array() ){
+			for( auto& item : v->get_array() )
+				y.emplace_back( item.as_object() );
+		}
+		else if( v && v->is_object() )
+			y.emplace_back( v->get_object() );
+		return y;
+	}
 	α NodeId::operator=( const NodeId& x )ι->NodeId&{
 		if( this!=&x ){
 			UA_NodeId_clear( this );
@@ -89,8 +79,8 @@ namespace Jde::Opc{
 			namespaceIndex==x.namespaceIndex ?
 				identifierType==x.identifierType ?
 					identifierType==UA_NodeIdType::UA_NODEIDTYPE_NUMERIC ? identifier.numeric<x.identifier.numeric :
-						identifierType==UA_NodeIdType::UA_NODEIDTYPE_STRING ? ToSV(identifier.string)<ToSV(x.identifier.string) :
-						identifierType==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING ? ToSV(identifier.byteString)<ToSV(x.identifier.byteString)
+						identifierType==UA_NodeIdType::UA_NODEIDTYPE_STRING ? ToSV( identifier.string )<ToSV( x.identifier.string ) :
+						identifierType==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING ? ToSV( identifier.byteString )<ToSV( x.identifier.byteString )
 					: memcmp( &identifier.guid, &x.identifier.guid, sizeof(UA_Guid) )<0
 				: identifierType<x.identifierType
 			: namespaceIndex<x.namespaceIndex;
@@ -163,11 +153,18 @@ namespace Jde::Opc{
 	α NodeId::ToString()Ι->string{
 		UAString j{ 1024 };
 		UA_EncodeJsonOptions options{};
-		if( let sc=UA_encodeJson( dynamic_cast<const UA_NodeId*>(this), &UA_TYPES[UA_TYPES_NODEID], &j, &options); sc )
+		if( let sc=UA_encodeJson(dynamic_cast<const UA_NodeId*>(this), &UA_TYPES[UA_TYPES_NODEID], &j, &options); sc )
 			return serialize( ToJson() );
 		let y = Opc::ToString( j );
 		return y.size()>1 ? y.substr( 1, y.size()-2 ) : y; //remove quotes
 	}
+	α NodeId::ToString( const vector<NodeId>& nodeIds )ι->string{
+		jarray j;
+		for( let& nodeId : nodeIds )
+			j.push_back( nodeId.ToJson() );
+		return serialize( j );
+	}
+
 	α toJson( jobject& j, const UA_NodeId& nodeId )ι->jobject{
 		j["ns"] = nodeId.namespaceIndex;
 		const UA_NodeIdType type = nodeId.identifierType;

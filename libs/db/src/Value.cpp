@@ -89,6 +89,7 @@ namespace Jde::DB{
 		case String: j = get_string(); break;
 		case Null: j = nullptr; break;
 		case Bool: j = get_bool(); break;
+		case Int8: j = get_int8(); break;
 		case Int64: j = get_int(); break;
 		case UInt64: j = get_uint(); break;
 		case Int32: j = get_int32(); break;

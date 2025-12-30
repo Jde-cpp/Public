@@ -37,12 +37,16 @@ namespace Jde::Str{
 	Φ StartsWithInsensitive( sv value, sv starting )ι->bool;
 	Φ LTrim( sv s )->sv;
 	Φ RTrim( sv s )->sv;
+	Φ LTrim( string&& s )->string;
+	Φ RTrim( string&& s )->string;
 	Φ ToHex( byte* p, uint size )ι->string; //binary to hex string, TODO span<byte>
 	Φ ToLower( sv source )ι->string;
 	Φ ToUpper( sv source )ι->string;
 	template<class T=uint> α TryTo( str s, uint* pos = nullptr, int base = 10 )ι->optional<T>;
 
 	Ξ Trim( sv s )->sv{ return RTrim(LTrim(s)); }
+	Ξ Trim( string&& s )->string{ return RTrim(LTrim(move(s))); }
+	Φ TrimFirstLast( string&& s, char first, char last )ι->string;
 
 	template<class Y=sv, class X> α ToView( const X& x )ι->Y{ return Y{x.data(),x.size()}; }
 	template<class T> using bsv = std::basic_string_view<char,T>;

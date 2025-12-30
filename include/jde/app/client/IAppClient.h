@@ -1,7 +1,6 @@
 #pragma once
 #include "../IApp.h"
 #include <jde/fwk/crypto/CryptoSettings.h>
-#include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/Jwt.h>
 #include <jde/app/client/awaits/SocketAwait.h>
 #include "AppClientSocketSession.h"
@@ -9,6 +8,7 @@
 namespace Jde::App::Client{
 	struct AppClientSocketSession;
 	struct IAppClient : IApp{
+		Τ using await = Web::Client::ClientSocketAwait<T>;
 		α InitLogging( sp<App::Client::IAppClient> client )ι->void;
 		α IsLocal()Ι->bool override{ return false; }
 		α UserName()Ι->const jobject&{ return _userName; }
@@ -19,11 +19,13 @@ namespace Jde::App::Client{
 
 		α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<Web::FromServer::SessionInfo>> override;
 		α SessionInfoAwait( Web::Jwt&& jwt, SRCE )ι->Client::SessionInfoAwait;
-		α AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ε->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>;
-		α Jwt( SRCE )ε->Web::Client::ClientSocketAwait<Web::Jwt>;
+		α AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ε->await<Web::FromServer::SessionInfo>;
+		α Jwt( SRCE )ε->await<Web::Jwt>;
+		α Login( Web::Jwt&& jwt, SRCE )ε->await<Web::FromServer::SessionInfo> override;
 		α CloseSocketSession( SL sl )ι->VoidTask;
 		α UpdateStatus()ι->void;
 		α SessionId()Ι->SessionPK{ return Session()->SessionId(); }
+		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray>;
 
 		β StatusDetails()ι->vector<string> = 0;
 		optional<Crypto::CryptoSettings> ClientCryptoSettings;

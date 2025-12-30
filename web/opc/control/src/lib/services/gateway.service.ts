@@ -246,11 +246,11 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	public async browseObjectsFolder( cnnctn:CnnctnTarget, parent:UaNode, snapshot:boolean, log:Log ):Promise<UaNode[]>{
 		if( parent.isVariable )
 			throw new EvalError( `Cannot browse children of variable node.`, {cause:"Invalid Operation"} );
-		const args = `opc: "${cnnctn}", ${parent.nodeId.qlArgs()}`;
+		const vars = { opc: cnnctn, id: parent.nodeId.toJson() };
 		const commonColumns = "id name browse nodeClass refType typeDef description";
 		const variableColumns = "dataType value valueRank accessLevel userAccessLevel";
-		const ql = `node(${args}){children{${commonColumns} ... on Variable{${variableColumns}} }}`;
-		const children = (await this.query<any>( ql, (m)=>console.log(m) ))["node"]["children"];
+		const ql = `node(opc:$opc, id:$id){children{${commonColumns} ... on Variable{${variableColumns}} }}`;
+		const children = (await this.query<any>( ql, vars, (m)=>console.log(m) ))["node"]["children"];
 		var y = new Array<UaNode>();
 		for( const ref of children ){
 			let child:UaNode;
@@ -279,12 +279,11 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		this.updateErrorCodes();
 		return y;
 	}
-	async snapshot( opcId:string, nodes:NodeId[] ):Promise<Map<NodeId,Value>>{
-		const args = encodeURIComponent( JSON.stringify(nodes.map(n=>n.toJson())) );
-		const json = await super.get( `snapshot?opc=${opcId}&nodes=${args}` );
+	async snapshot( opcId:CnnctnTarget, nodes:NodeId[] ):Promise<Map<NodeId,Value>>{
+		const results = await super.queryArray<{id:NodeId,value:Value}>( `nodes( opc: "${opcId}", id:[${NodeId.qlArgsArray(nodes)}]){id value}` );
 		var y = new Map<NodeId,Value>();
-		for( const snapshot of json["snapshots"] )
-			y.set( new NodeId(snapshot), toValue(snapshot.value) );
+		for( const snapshot of results )
+			y.set( new NodeId(snapshot.id), toValue(snapshot.value) );
 		this.updateErrorCodes();
 		return y;
 	}
@@ -296,7 +295,8 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		const q = `updateVariable( opc: $opc, id: $id, value: $value ){ value }`;
 		const vars = { opc: opcId, id: n.toJson(), value: valueJson(v) };
 		const newValue = toValue( await super.postQL<Value>(q, vars, log) );
-		return newValue;
+		this.updateErrorCodes();
+		return newValue["value"];
 	}
 
 	setRoute(route: NodeRoute){

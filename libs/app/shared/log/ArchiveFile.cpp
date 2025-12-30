@@ -26,7 +26,7 @@ namespace Jde::App{
 		valid = valid && filter.Test( "time", time );
 		valid = valid && filter.TestF<string>( "text", [&](){ return find(Templates, entry.template_id()); } );
 		valid = valid && filter.Test( "level", (uint8)entry.level() );
-		valid = valid && filter.Test( "tags", entry.tags() );
+		valid = valid && filter.TestAnd( "tags", entry.tags() );
 		valid = valid && filter.Test( "line", entry.line() );
 		valid = valid && filter.TestF<uuid>( "templateId", [&](){ return ToGuid(entry.template_id()); } );
 		valid = valid && filter.TestF<string>( "message", [&](){ return Message(entry); } );
@@ -98,7 +98,6 @@ namespace Jde::App{
 		};
 		for( let& entry : logEntries ){
 			let time = Protobuf::ToTimePoint( entry.time() );
-			TRACET( ELogTags::Test, "entry time: {}", ToIsoString(time) );
 			if( !Test(filter, time, entry) )
 				continue;
 			addString( Templates, entry.template_id() );

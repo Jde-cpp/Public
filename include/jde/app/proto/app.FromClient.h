@@ -3,6 +3,7 @@
 #include <jde/access/usings.h>
 #include "App.FromClient.pb.h"
 
+namespace Jde::Web{ struct Jwt; }
 namespace Jde::App::FromClient{
 	namespace PFromClient = Jde::App::Proto::FromClient;
 	using StringTrans = string;
@@ -10,6 +11,7 @@ namespace Jde::App::FromClient{
 	α Exception( exception&& e, RequestId requestId=0 )ι->PFromClient::Transmission;
 	α Exception( string&& e, RequestId requestId )ι->PFromClient::Transmission;
 	α Jwt( RequestId requestId )ι->StringTrans;
+	α Login( Web::Jwt&& jwt, RequestId requestId )ι->StringTrans;
 	α Query( string query, jobject variables, RequestId requestId, bool returnRaw=true )ι->string;
 	α Instance( str application, str instanceName, SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission;
 	α ToStatus( vector<string>&& details )ι->PFromClient::Status;
@@ -20,6 +22,7 @@ namespace Jde::App::FromClient{
 	α LogEntries( vector<Logging::Entry>&& entries )ι->PFromClient::Transmission;
 	α LogEntryClient( Logging::Entry&& m )ι->Log::Proto::LogEntryClient;
 	α LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile;
+	α LogEntryFile( const Logging::Entry& m, App::AppPK appPK, App::AppInstancePK instancePK )ι->Log::Proto::LogEntryFileExternal;
 	α FromLogEntry( Log::Proto::LogEntryClient&& m )ι->Logging::Entry;
 	α ToString( uuid id, string&& value )ι->Log::Proto::String;
 }

@@ -1,8 +1,8 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "GroupTests.Fields",
-		recreateDB:: true
+		tests:: "GroupTests.Fields",
+		recreateDB: true
 	},
 	dbServers:{
 		scriptPaths: ["$(JDE_DIR)/libs/access/config/sql/"+args.sqlType],

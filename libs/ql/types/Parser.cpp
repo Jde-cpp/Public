@@ -10,14 +10,10 @@ namespace Jde{
 	α QL::SetSystemTables( flat_set<string>&& x )ι->void{ _systemTables = move(x); }
 
 	α QL::Parse( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL /*sl*/ )ε->RequestQL{
-		sv trimmed = Str::Trim( query );//TODO move(query).
-		Parser parser{ string{trimmed.starts_with("{") ? trimmed.substr(1) : trimmed}, "{}()," };
-		auto name = parser.Next();
-		if( name=="query" ){
+		Parser parser{ Str::TrimFirstLast(move(query), '{', '}'), "{}()," };
+		if( parser.Trim("query") )
 			returnRaw = true;
-			parser.Next();
-			name = parser.Next();
-		}
+		auto name = parser.Next();
 		auto vars = ms<jobject>( move(variables) );
 		if( name=="subscription" )
 			return RequestQL{ parser.LoadSubscriptions(vars, schemas) };
@@ -27,12 +23,12 @@ namespace Jde{
 			//returnRaw = name!="mutation"; should be what parameter is
 			if( parser.Peek()=="{" )
 				parser.Next();
-			return RequestQL{ {parser.LoadMutations(name=="mutation" ? parser.Next() : name, vars, returnRaw, schemas)} };
+			return RequestQL{ {parser.LoadMutations(name=="mutation" ? parser.Next() : move(name), vars, returnRaw, schemas)} };
 		}else
 			return RequestQL{ parser.LoadTables(move(name), vars, schemas, returnRaw) };
 	}
-	α QL::ParseSubscriptions( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, SL sl )ε->vector<Subscription>{
-		auto request = Parse( move(query), variables, schemas, true, sl ); THROW_IFSL( !request.IsSubscription(), "Expected subscription query." );
+	α QL::ParseSubscriptions( string query, jobject vars, const vector<sp<DB::AppSchema>>& schemas, SL sl )ε->vector<Subscription>{
+		auto request = Parse( move(query), move(vars), schemas, true, sl ); THROW_IFSL( !request.IsSubscription(), "Expected subscription query." );
 		return request.Subscriptions();
 	}
 }
@@ -190,10 +186,8 @@ namespace Jde::QL{
 			i += parseWhitespace( json.substr(i), y );
 			THROW_IF( i>=json.size(), "Expected object to end '{}' @ '{}'.", json, i );
 			char ch = json[i];
-			if( ch=='}' ){
-//				y += json[i++];
+			if( ch=='}' )
 				return;
-			}
 			else if( ch=='"' )
 				i += parseString( json.substr(i), y )+1;
 			else{
@@ -202,7 +196,7 @@ namespace Jde::QL{
 					name += ch;
 					THROW_IF( i==json.size(), "Could not find ':' in '{}' @ {}", json, i );
 				}
-				y += Str::RTrim( name+'"' );
+				y += Str::RTrim( move(name) )+'"';
 			}
 			y += ":";
 			i += parseValue( json.substr(i), y );
@@ -229,34 +223,34 @@ namespace Jde::QL{
 		return Json::Parse( Str::Replace(stringified, "\n", "\\n") );
 	}
 
-	α Parser::LoadMutations( string&& command, sp<jobject> variables, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε->vector<MutationQL>{
+	α Parser::LoadMutations( string&& command, sp<jobject> vars, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε->vector<MutationQL>{
 		vector<MutationQL> y;
 		do{
 			auto args = ParseArgs();
 			let wantsResult = Peek()=="{";
 			auto name = get<0>( MutationQL::ParseCommand(command) );
 			let system = name.starts_with("__") || name.starts_with("setting") || _systemTables.contains(name);
-			auto returnCols = wantsResult ? LoadTable( move(name), variables, schemas, system ) : optional<TableQL>{};
-			y.push_back( {move(command), move(args), move(variables), move(returnCols), returnRaw, schemas, system} );
+			auto returnCols = wantsResult ? LoadTable( move(name), vars, schemas, system ) : optional<TableQL>{};
+			y.push_back( {move(command), move(args), move(vars), move(returnCols), returnRaw, schemas, system} );
 			command = Next();
 		}while( MutationQL::IsMutation(command) );
 		return y;
 	}
 
-	α Parser::LoadTable( string jsonName, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε->TableQL{//__type(name: "Account") { fields { name type { name kind ofType{name kind} } } }
+	α Parser::LoadTable( string jsonName, sp<jobject> vars, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε->TableQL{//__type(name: "Account") { fields { name type { name kind ofType{name kind} } } }
 		let j = Peek()=="(" ? ParseArgs() : jobject{};
 
-		TableQL table{ move(jsonName), j, variables, schemas, system, sl };
+		TableQL table{ move(jsonName), j, vars, schemas, system, sl };
 		if( Peek()=="{" ){//has columns
 			Next();
 			for( auto token = Next(); token!="}" && token.size(); token = Next() ){
 				if( Peek()=="{" || Peek()=="(" )
-					table.Tables.push_back( LoadTable(token, variables, schemas, system, sl) );
+					table.Tables.push_back( LoadTable(token, vars, schemas, system, sl) );
 				else{
 					THROW_IF( token==",", "don't separate columns with: ',' '{}' @ '{}'.", _text, Index()-1 );
 					if( token=="..." ){
 						THROW_IF( "on"!=Next(), "Expected 'on' after '...' in '{}' @ '{}'.", _text, Index()-1 );
-						table.InlineFragments.push_back( LoadTable(Next(), variables, schemas, system, sl) );
+						table.InlineFragments.push_back( LoadTable(Next(), vars, schemas, system, sl) );
 						continue;
 					}
 					table.Columns.emplace_back( ColumnQL{string{token}} );
@@ -266,32 +260,33 @@ namespace Jde::QL{
 		return table;
 	}
 
-	α Parser::LoadTables( string jsonName, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL sl )ε->vector<TableQL>{
+	α Parser::LoadTables( string jsonName, sp<jobject> vars, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL sl )ε->vector<TableQL>{
 		vector<TableQL> results;
 		do{
+			auto alias = jsonName.ends_with(':') ? jsonName.substr( 0, jsonName.size()-1 ) : string{};
+			if( alias.size() )
+				jsonName = Next();
 			let system = jsonName.starts_with("__") || jsonName.starts_with("setting") || jsonName=="logs" || _systemTables.contains(jsonName) ? jsonName : string{};
-			auto table = LoadTable( move(jsonName), variables, schemas, system.size(), sl );
+			auto table = LoadTable( move(jsonName), vars, schemas, system.size(), sl );
+			table.Alias = move(alias);
 			if( system.size() ){
 				if( system=="__type" ){
-					auto typeName =Json::FindDefaultSV( table.Args, "name" );
-					if( typeName.size() )
-						table.DBTable = DB::AppSchema::GetViewPtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(typeName)), sl );
+					if( auto typeName = table.FindPtr<jstring>( "name" ); typeName )
+						table.SetDBTable( DB::AppSchema::GetViewPtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(*typeName)), sl ) );
 				}
 				else if( system=="__schema" ){
 					THROW_IF( schemas.empty() || schemas[0]->Tables.empty(), "No schemas found." );
-					table.DBTable = schemas[0]->Tables.begin()->second;
+					table.SetDBTable( schemas[0]->Tables.begin()->second );
 				}
 			}
 			table.ReturnRaw = returnRaw;
 			results.push_back( move(table) );
-			if( Peek()=="," ){
-				Next();
+			if( Peek().size() )
 				jsonName = Next();
-			}
 		}while( jsonName.size() );
 		return results;
 	}
-	α Parser::LoadSubscription( sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas )ε->Subscription{
+	α Parser::LoadSubscription( sp<jobject> vars, const vector<sp<DB::AppSchema>>& schemas )ε->Subscription{
 		let name = Next();
 		//Sync with MutationQL::EMutationQL
 		constexpr array<sv,9> SubscriptionSuffexes{ "Created", "Updated", "Deleted", "Restored", "Purged", "Added", "Removed", "Started", "Stopped" };
@@ -305,14 +300,14 @@ namespace Jde::QL{
 		THROW_IF( !type, "Could not find subscription type for '{}'", name );
 		Next();	//{
 		Next(); //[userCreated]
-		auto table = LoadTable( tableName, variables, schemas );
+		auto table = LoadTable( tableName, vars, schemas, tableName=="logs" );
 		return Subscription{ move(tableName), *type, move(table) };
 
 	}
-	α Parser::LoadSubscriptions( sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas )ε->vector<Subscription>{
+	α Parser::LoadSubscriptions( sp<jobject> vars, const vector<sp<DB::AppSchema>>& schemas )ε->vector<Subscription>{
 		vector<Subscription> y;
 		do{
-			y.push_back( LoadSubscription(variables, schemas) );
+			y.push_back( LoadSubscription(vars, schemas) );
 		}while( Next()=="subscription" );
 
 		return y;
@@ -324,5 +319,15 @@ namespace Jde::QL{
 		string stringified; stringified.reserve( text.size()*2 );
 		parseObject(text, stringified);
 		return Json::FromArray<SubscriptionId>( Json::AsArray(Json::Parse(stringified), "id") );
+	}
+	α Parser::Trim( sv token )ι->bool{
+		let trimmed = Peek()==token;
+		if( trimmed ){
+			_peekValue = {};
+			i = 0;
+			_text = _text.substr(token.size() );
+			_text = Str::TrimFirstLast( move(_text), '{', '}' );
+		}
+		return trimmed;
 	}
 }

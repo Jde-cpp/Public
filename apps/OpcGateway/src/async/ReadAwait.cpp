@@ -8,34 +8,34 @@
 #define let const auto
 namespace Jde::Opc::Gateway{
 	flat_map<string,UA_AttributeId> _attributes{
-    {"invalid", UA_ATTRIBUTEID_INVALID},
-//		{"id", UA_ATTRIBUTEID_NODEID},
-		{"accessLevel", UA_ATTRIBUTEID_ACCESSLEVEL},
-		{"accessLevelEx", UA_ATTRIBUTEID_ACCESSLEVELEX},
-		{"accessRestrictions", UA_ATTRIBUTEID_ACCESSRESTRICTIONS},
-		{"arrayDimensions", UA_ATTRIBUTEID_ARRAYDIMENSIONS},
-    {"browse", UA_ATTRIBUTEID_BROWSENAME},
-		{"containsNoLoops", UA_ATTRIBUTEID_CONTAINSNOLOOPS},
-    {"dataType", UA_ATTRIBUTEID_DATATYPE},
-		{"dataTypeDefinition", UA_ATTRIBUTEID_DATATYPEDEFINITION},
-    {"description", UA_ATTRIBUTEID_DESCRIPTION},
-		{"eventNotifier", UA_ATTRIBUTEID_EVENTNOTIFIER},
-    {"executable", UA_ATTRIBUTEID_EXECUTABLE},
-		{"historizing", UA_ATTRIBUTEID_HISTORIZING},
-		{"inverseName", UA_ATTRIBUTEID_INVERSENAME},
-		{"isAbstract", UA_ATTRIBUTEID_ISABSTRACT},
-		{"minimumSamplingInterval", UA_ATTRIBUTEID_MINIMUMSAMPLINGINTERVAL},
-    {"name", UA_ATTRIBUTEID_DISPLAYNAME},
-		{"nodeClass", UA_ATTRIBUTEID_NODECLASS},
-		{"rolePermissions", UA_ATTRIBUTEID_ROLEPERMISSIONS},
-		{"userAccessLevel", UA_ATTRIBUTEID_USERACCESSLEVEL},
-		{"userExecutable", UA_ATTRIBUTEID_USEREXECUTABLE},
-		{"userRolePermissions", UA_ATTRIBUTEID_USERROLEPERMISSIONS},
-		{"userWriteMask", UA_ATTRIBUTEID_USERWRITEMASK},
-		{"writeMask", UA_ATTRIBUTEID_WRITEMASK},
-		{"symmetric", UA_ATTRIBUTEID_SYMMETRIC},
-    {"value", UA_ATTRIBUTEID_VALUE},
-		{"valueRank", UA_ATTRIBUTEID_VALUERANK},
+    { "invalid", UA_ATTRIBUTEID_INVALID },
+//		{ "id", UA_ATTRIBUTEID_NODEID },
+		{ "accessLevel", UA_ATTRIBUTEID_ACCESSLEVEL },
+		{ "accessLevelEx", UA_ATTRIBUTEID_ACCESSLEVELEX },
+		{ "accessRestrictions", UA_ATTRIBUTEID_ACCESSRESTRICTIONS },
+		{ "arrayDimensions", UA_ATTRIBUTEID_ARRAYDIMENSIONS },
+    { "browse", UA_ATTRIBUTEID_BROWSENAME },
+		{ "containsNoLoops", UA_ATTRIBUTEID_CONTAINSNOLOOPS },
+    { "dataType", UA_ATTRIBUTEID_DATATYPE },
+		{ "dataTypeDefinition", UA_ATTRIBUTEID_DATATYPEDEFINITION },
+    { "description", UA_ATTRIBUTEID_DESCRIPTION },
+		{ "eventNotifier", UA_ATTRIBUTEID_EVENTNOTIFIER },
+    { "executable", UA_ATTRIBUTEID_EXECUTABLE },
+		{ "historizing", UA_ATTRIBUTEID_HISTORIZING },
+		{ "inverseName", UA_ATTRIBUTEID_INVERSENAME },
+		{ "isAbstract", UA_ATTRIBUTEID_ISABSTRACT },
+		{ "minimumSamplingInterval", UA_ATTRIBUTEID_MINIMUMSAMPLINGINTERVAL },
+    { "name", UA_ATTRIBUTEID_DISPLAYNAME },
+		{ "nodeClass", UA_ATTRIBUTEID_NODECLASS },
+		{ "rolePermissions", UA_ATTRIBUTEID_ROLEPERMISSIONS },
+		{ "userAccessLevel", UA_ATTRIBUTEID_USERACCESSLEVEL },
+		{ "userExecutable", UA_ATTRIBUTEID_USEREXECUTABLE },
+		{ "userRolePermissions", UA_ATTRIBUTEID_USERROLEPERMISSIONS },
+		{ "userWriteMask", UA_ATTRIBUTEID_USERWRITEMASK },
+		{ "writeMask", UA_ATTRIBUTEID_WRITEMASK },
+		{ "symmetric", UA_ATTRIBUTEID_SYMMETRIC },
+    { "value", UA_ATTRIBUTEID_VALUE },
+		{ "valueRank", UA_ATTRIBUTEID_VALUERANK },
 	};
 
 	Ω attributes( const QL::TableQL& ql )ι->flat_map<UA_NodeClass, vector<UA_AttributeId>>{
@@ -47,7 +47,7 @@ namespace Jde::Opc::Gateway{
 					attribs.emplace_back( attrib->second );
 			}
 			if( !attribs.empty() )
-				 y[nodeClass] = move(attribs);
+				 y[nodeClass] = move( attribs );
 		};
 		extract( ql, UA_NODECLASS_UNSPECIFIED );
 		for( auto frag : ql.InlineFragments ){
@@ -88,21 +88,24 @@ namespace Jde::Opc::Gateway{
 			for( let& attrib : attribs )
 				_readIds.push_back( UA_ReadValueId{ref.nodeId.nodeId, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
 		};
-		browse.VisitWhile( 0, [&]( let& ref ){
+		browse.VisitWhile( 0, [&](let& ref){
 			if( all!=attribs.end() )
 				add( ref, all->second );
-			if( auto p = attribs.find( ref.nodeClass ); p != attribs.end() )
+			if( auto p = attribs.find(ref.nodeClass); p != attribs.end() )
 				add( ref, p->second );
 			return true;
 		});
 		nodesToReadSize=_readIds.size();
 		nodesToRead=_readIds.data();
 	}
-	ReadRequest::ReadRequest( const NodeId& nodeId, const QL::TableQL& ql )ι:
+
+	ReadRequest::ReadRequest( const vector<NodeId>& ids, const QL::TableQL& ql )ι:
 		UA_ReadRequest{}{
 		let attribs = allAttributes( ql );
-		for( let& attrib : attribs )
-			_readIds.push_back( UA_ReadValueId{nodeId, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
+		for( let& nodeId : ids ){
+			for( let& attrib : attribs )
+				_readIds.push_back( UA_ReadValueId{nodeId, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
+		}
 		nodesToReadSize=_readIds.size();
 		nodesToRead=_readIds.data();
 	}
@@ -130,8 +133,9 @@ namespace Jde::Opc::Gateway{
 		return _attributes.begin()->first;
 	}
 
-	ReadResponse::ReadResponse( UA_ReadResponse&& x )ι:
-		UA_ReadResponse{ x }{
+	ReadResponse::ReadResponse( UA_ReadResponse&& x, ReadRequest&& request )ι:
+		UA_ReadResponse{ x },
+		Request{ move(request) }{
 		UA_ReadResponse_init( &x );
 	}
 	ReadResponse::ReadResponse( ReadResponse&& x )ι:
@@ -142,9 +146,9 @@ namespace Jde::Opc::Gateway{
 
 	α ReadResponse::operator=( ReadResponse&& x )ι->ReadResponse&{
 		if( this != &x ){
-			UA_ReadResponse_clear(this);
-			*(UA_ReadResponse*)this = x;
-			Request = move(x.Request);
+			UA_ReadResponse_clear( this );
+			*( UA_ReadResponse* )this = x;
+			Request = move( x.Request );
 			UA_ReadResponse_init( &x );
 		}
 		return *this;
@@ -153,60 +157,61 @@ namespace Jde::Opc::Gateway{
 	α ReadResponse::Validate( Handle uahandle, SL sl )ε->void{
 		THROW_IFX( responseHeader.serviceResult, UAClientException(responseHeader.serviceResult, uahandle, "UA_Client_Service_read().", sl) );
 	}
-		// Request{ move(request) }{
-		// THROW_IFX( rhs.responseHeader.serviceResult, UAClientException(rhs.responseHeader.serviceResult, uaHandle, "UA_Client_Service_read().", sl) );
-	α ReadResponse::ScalerJson()ι->jobject{
-		jobject j;
-			for( uint i=0; i<std::min(Request->nodesToReadSize, (uint)resultsSize); ++i ){
-			let result = results[0];
-			UA_ReadValueId& attribReq = Request->nodesToRead[i];
-			Variant value = result.status ? Variant{ result.status } : Variant{ move(result.value) };
-			j[ReadRequest::AtribString((UA_AttributeId)attribReq.attributeId)] = move(value).ToJson( true );
+
+	α ReadResponse::ToJson( const QL::TableQL& ql )ι->jvalue{
+		auto nodeJson = GetJson();
+		jarray y;
+		for( auto& [nodeId, j] : nodeJson ){
+			if( ql.FindColumn("id") )
+				j["id"] = nodeId.ToJson();
+			y.push_back( move(j) );
 		}
-		return j;
+		return ql.IsPlural() ? jvalue{ move(y) } : ( y.size() ? jvalue{move(y[0])} : jobject{} );
 	}
+
 	α ReadResponse::SetJson( flat_map<NodeId, jobject>& nodes )ι->void{
-		for( uint i=0; i<std::min(Request->nodesToReadSize, (uint)resultsSize); ++i ){
+		for( uint i=0; i<Request->nodesToReadSize; ++i ){
 			UA_ReadValueId& attribReq = Request->nodesToRead[i];
-			auto result = results[i];
 			const NodeId nodeId{ attribReq.nodeId };
 			auto nodeIt = nodes.try_emplace( nodeId );
 			jobject& j = nodeIt.first->second;
+			auto result = results[i];
 			Variant value = result.status ? Variant{ result.status } : Variant{ move(result.value) };
-			let attrib = (UA_AttributeId)attribReq.attributeId;
-			j[ReadRequest::AtribString(attrib)] = move(value).ToJson( true );
+			let attrib = ( UA_AttributeId )attribReq.attributeId;
+			j[ReadRequest::AtribString( attrib )] = value.ToJson( true );
 		}
 	}
 
-	α ReadResponse::ScalerDataType()ι->UA_DataType*{
-		UA_DataType* dataType{};
-		if( auto value = resultsSize && results[0].hasValue ? &results[0].value : nullptr; value && value->type && value->type==&UA_TYPES[UA_TYPES_NODEID] ){
-			NodeId nodeId{ *(UA_NodeId*)results[0].value.data };
-			for( uint i=0; !dataType && i<UA_TYPES_COUNT; ++i ){
-				if( NodeId{UA_TYPES[i].typeId}==nodeId )
-					dataType = &UA_TYPES[i];
-			}
-		}
-		return dataType;
+	α ReadResponse::ScalerNodeId()ε->NodeId{
+		THROW_IF( resultsSize!=1, "Cannot get scalar NodeId for read response with no results." );
+		THROW_IF( !results[0].hasValue, "({})Cannot get scalar NodeId for read response with no value.", hex(results[0].status) );
+		THROW_IF( results[0].value.type!=&UA_TYPES[UA_TYPES_NODEID], "Cannot get scalar NodeId for type='{}'.", results[0].value.type->typeName );
+		return NodeId{ *(UA_NodeId*)results[0].value.data };
+	}
+	α ReadResponse::ScalerValue()ε->optional<Variant>{
+		return resultsSize==1 && results[0].hasValue  ? Variant{ move(results[0].value) } : optional<Variant>{};
 	}
 
 	α ReadAwait::Suspend()ι->void{
-		UA_Client_sendAsyncReadRequest( *_client, &_request, ReadAwait::OnResponse, &_h, &_requestId );
+		UA_Client_sendAsyncReadRequest( *_client, &_request, ReadAwait::OnResponse, this, &_requestId );
 		_client->Process( _requestId, "read" );
 	}
-	α ReadAwait::await_resume()ε->ReadResponse{
-		if( !Promise() )
-			return {};
-		ASSERT( Promise()->Emplaced() );
-		_client->ClearRequest( _requestId );
-		ReadResponse result{ std::move(*Promise()->Value()) };
-		result.Validate( _client->Handle(), _sl );
-		result.Request = move(_request);
-		return result;
+	α ReadAwait::OnResponse( UA_Client* /*client*/, void* await, UA_UInt32 /*requestId*/, UA_ReadResponse* rr )ι->void{
+		ASSERT( await );
+		( (ReadAwait*)await )->OnComplete( rr );
 	}
-	α ReadAwait::OnResponse( UA_Client* /*client*/, void* hptr, UA_UInt32 /*requestId*/, UA_ReadResponse* rr )ι->void{
-		ASSERT( hptr );
-		auto& h = *(Handle*)hptr;
-		h.promise().Resume( ReadResponse{move(*rr)}, h );
+	α ReadAwait::OnComplete( UA_ReadResponse* rr )ι->void{
+		_client->ClearRequest( _requestId );
+		ReadResponse response{ move(*rr), move(_request) };
+		try{
+			response.Validate( _client->Handle(), _sl );
+			Resume( move(response) );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α ReadAwait::await_resume()ε->ReadResponse{
+		return Promise() ? TAwait<ReadResponse>::await_resume() : ReadResponse{{}, move(_request)};
 	}
 }

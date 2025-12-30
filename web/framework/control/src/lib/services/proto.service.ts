@@ -222,7 +222,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		return await this.postRaw<string>( 'login', null, true, options );
 	}
 
-	async post<Y>( target:string, body:any, preferSecure:boolean=false, log:Log ):Promise<Y>{
+	async post<Y>( target:string, body:any, preferSecure:boolean=false ):Promise<Y>{
 		return await this.postRaw<Y>( target, body, preferSecure );
 	}
 
@@ -261,35 +261,50 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	}
 
 	async postQL<Y>( q:string, vars?:any, log?:Log ):Promise<Y>{
-		const y = await this.post<any>( `graphql`, {query: q, variables: vars}, false, log );
+		let args = {query: q};
+		if( vars )
+			args["variables"] = vars;
+		if( this.log.restRequests ) log( `POST graphql/${JSON.stringify(args).substring(0,this.log.maxLength)}` );
+		const y = await this.post<any>( `graphql`, args, false );
+		if( this.log.restResults ) log( JSON.stringify(y).substring(0,this.log.maxLength) );
 		return y ? y["data"] : null;
 	}
-	private async graphQL<Y>( query: string, log?:Log ):Promise<Y>{
+	private async graphQL<Y>( query: string, vars:any, log?:Log ):Promise<Y>{
 		var target = `graphql?query={${query}}`;
+		if( vars )
+			target += `&variables=${encodeURIComponent( JSON.stringify(vars))}`;
 		const y = await this.get( target, log );
 		return y ? y["data"] : null;
 	}
 
 	async providers( log:Log ):Promise<EProvider[]>{
 		const ql = `__type(name: "Provider") { enumValues { id name } }`;
-		const data = await this.query( ql, log );
+		const data = await this.query( ql, null, log );
 		return data["__type"]["enumValues"].map( (x:EnumValue)=>x.id );
 	}
-	async query<Y>( ql: string, log?:Log ):Promise<Y>{
-		return await this.graphQL( ql, log );
+	async query<Y>( ql: string, vars?:any, log?:Log ):Promise<Y>{
+		return await this.graphQL( ql, vars, log );
 	}
 	async querySingle<Y>( ql: string, log?:Log ):Promise<Y>{
-		const y = await this.query<any>( ql, log );
+		const y = await this.query<any>( ql, null, log );
 		return y[Object.keys(y)[0]];
 	}
 	async queryObject<Y>( ql: string, cnstrctr: new(...args:any[]) => Y, log?:Log ):Promise<Y>{
-		const result = await this.query<any>( ql, log );
+		const result = await this.query<any>( ql, null, log );
 		return new cnstrctr( result[Object.keys(result)[0]] );
 	}
 	async queryArray<Y>( ql: string, log?:Log ):Promise<Y[]>{
-		const member = ql.substring( 0, ql.indexOf('{') ).trim();
-		const y = await this.graphQL( ql, log );
-		return y[member];
+		const inputIndex = ql.indexOf('(');
+		const fieldIndex = ql.indexOf('{');
+		const index = inputIndex<0 ? fieldIndex : fieldIndex<0 ? inputIndex : Math.min( inputIndex, fieldIndex );
+		const member = ql.substring( 0, index ).trim();
+		const result = await this.graphQL( ql, null, log );
+		if( !result.hasOwnProperty(member) )
+			throw `'${member}' not found in ${JSON.stringify(result)}.`;
+		const y = result[member];
+		if( !Array.isArray(y) )
+			throw `'${member}' is not an array in ${JSON.stringify(y)}.`;
+		return y;
 	}
 
 	async querySetting( target:string, log:Log ):Promise<string>{
@@ -339,8 +354,8 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				queries.push(type);
 		};
 		for( let type of queries ){
-			const ql = `__type(name: "${type}") { fields { name type { name kind ofType{name kind} } } }`;
-			const data = await this.query( ql, log );
+			const ql = `__type(name: $type) { fields { name type { name kind ofType{name kind} } } }`;
+			const data = await this.query( ql, {type:type}, log );
 			if( data["__type"].length==0 )
 				throw `no such type: '${type}'`;
 			const schema = new TableSchema( data["__type"] );

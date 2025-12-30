@@ -130,7 +130,7 @@ namespace Sessions{
 	}
 	α UpsertAwait::FromJwt( str jwt )ι->TTask<UserPK>{
 		try{
-			auto userPK = co_await JwtLoginAwait{ Web::Jwt{jwt}, _endpoint, _appClient->IsLocal() };
+			auto userPK = co_await JwtLoginAwait{ Web::Jwt{jwt}, _endpoint, _appClient };
 			CreateSession( userPK );
 		}
 		catch( exception& e ){

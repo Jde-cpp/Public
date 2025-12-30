@@ -4,7 +4,7 @@ import { ComponentSidenav } from 'jde-spa';
 
 import{ DetailResolver, Cards, LoginPageComponent, QLList, QLListResolver, QLListRouteService, HomeRouteService } from 'jde-framework';
 import { AccessService, AuthGuard, Group, GroupDetail, Role, RoleDetail, User, UserDetail } from 'jde-access';
-import{ ConnectionResolver, CnnctnDetailResolver, GatewayDetail, GatewayRouteService, GatewayCnnctnRouteService,GatewayService, NodeDetail, NodeResolver, OpcNodeRouteService, SettingsRouteService } from 'jde-opc';
+import{ ConnectionResolver, CnnctnDetailResolver, GatewayDetail, GatewayRouteService, GatewayCnnctnRouteService,GatewayService, NodeDetail, NodeResolver, OpcNodeRouteService, OpcServerRouteService, SettingsRouteService } from 'jde-opc';
 
 
 const accessProvider = { provide: 'IGraphQL', useClass: AccessService };
@@ -94,6 +94,10 @@ export const routes: Routes = [
 	{
 		path: 'settings/gateways', title: "Gateways", providers: [{provide: 'IRouteService', useClass: GatewayRouteService}], component: Cards, canActivate: [AuthGuard],
 		data: { summary: "Gateways Connected" },
+	},
+	{
+		path: 'settings/opcServers', title: "OPC Servers", providers: [{provide: 'IRouteService', useClass: OpcServerRouteService}], component: Cards, canActivate: [AuthGuard],
+		data: { summary: "OPC Servers Connected" },
 	},
 	{
 		path: 'settings/gateways/:gateway', title: ":gateway", component: ComponentSidenav, canActivate: [AuthGuard],

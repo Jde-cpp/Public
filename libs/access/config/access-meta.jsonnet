@@ -71,6 +71,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		providersQL:{
 			columns: {
 				providerId: tables.providers.columns.providerId,
+				providerTypeId: tables.providers.columns.providerTypeId,
 				name: tables.providers.columns.target+{ comment: "if provider_id=OpcServer: the specific opcServer target, otherwise providers[provider_id].name " },
 			},
 			naturalKeys: [["provider_id", "name"]]

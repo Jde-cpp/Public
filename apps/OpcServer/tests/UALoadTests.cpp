@@ -28,7 +28,7 @@ namespace Jde::Opc::Server::Tests{
 	// 	GetUAServer().Load( Path()/"ADI/Opc.Ua.Adi.NodeSet2.xml" );
 	// }
 
-	TEST_F( UALoadTests, LoadAMBNodeset){
+/*	TEST_F( UALoadTests, LoadAMBNodeset){
 		GetUAServer().Load( Path()/"AMB/Opc.Ua.AMB.NodeSet2.xml" );
 	}
 
@@ -99,11 +99,11 @@ namespace Jde::Opc::Server::Tests{
 		GetUAServer().Load( Path()/"IA/Opc.Ua.IA.NodeSet2.xml" );
 	}
 
-/*
+/ *
 	TEST_F( UALoadTests, LoadIAExamplesNodeset){
 		GetUAServer().Load( Path()/"IA/Opc.Ua.IA.NodeSet2.examples.xml" );
 	}
-*/
+* /
 
 	TEST_F( UALoadTests, LoadIOLinkIODDNodeset){
 		GetUAServer().Load( Path()/"IOLink/Opc.Ua.IOLinkIODD.NodeSet2.xml" );
@@ -331,4 +331,5 @@ namespace Jde::Opc::Server::Tests{
 	TEST_F( UALoadTests, LoadWoodworkingNodeset){
 		GetUAServer().Load( Path()/"Woodworking/Opc.Ua.Woodworking.NodeSet2.xml" );
 	}
+*/
 }

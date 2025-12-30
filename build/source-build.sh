@@ -210,7 +210,7 @@ function findProtoc {
 		PROTOBUF_INCLUDE=$REPO_BASH/protobuf/src/google/protobuf;
 	fi;
 	if windows; then
-		findExecutable protoc.exe $JDE_BASH/Public/stage/release;
+		findExecutable protoc.exe $JDE_BASH/stage/release;
 	fi;
 }
 popd > /dev/null;

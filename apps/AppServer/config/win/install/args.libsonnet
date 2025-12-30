@@ -14,9 +14,9 @@
 						prefix: ""
 					}
 				},
-				log:{
-					log:{
-						meta: "$(ProgramData)/jde-cpp/AppServer/log-meta.jsonnet",
+				app:{
+					app:{
+						meta: "$(ProgramData)/jde-cpp/AppServer/app-meta.jsonnet",
 						prefix: ""
 					},
 				}

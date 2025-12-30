@@ -1,6 +1,7 @@
 #include "HttpRequestAwait.h"
 #include <jde/fwk/process/execution.h>
 #include <jde/web/server/auth/JwtLoginAwait.h>
+#include "LocalClient.h"
 #include "WebServer.h"
 #include "types/rest/json.h"
 #define let const auto
@@ -18,7 +19,7 @@ namespace Jde::App{
 			let authorization = req.Header("Authorization");
 			THROW_IFX( authorization.empty() || !authorization.starts_with("Bearer "), RestException<http::status::unauthorized>(SRCE_CUR, move(req), "Missing or invalid Authorization header") );
 
-			req.SessionInfo->UserPK = co_await JwtLoginAwait( Web::Jwt{authorization.substr(7)}, req.UserEndpoint.address().to_string(), true );
+			req.SessionInfo->UserPK = co_await JwtLoginAwait( Web::Jwt{authorization.substr(7)}, req.UserEndpoint.address().to_string(), Server::AppClient() );
 			jobject j{ {"expiration", ToIsoString(req.SessionInfo->Expiration)} };
 			req.SessionInfo->IsInitialRequest = true;  //expecting sessionId to be set.
 			h.promise().Resume( {move(j), move(req)}, h );
@@ -46,9 +47,9 @@ namespace Jde::App{
 				_request.LogRead();
 				_readyResult = mu<jvalue>( ValueJson(Settings::FindString("GoogleAuthClientId").value_or("GoogleAuthClientId Not Configured.")) );
 			}
-			else if( _request.Target()=="/opcGateways" ){
+			else if( _request.Target()=="/opcGateways" || _request.Target()=="/opcServers" ){
 				_request.LogRead();
-				let apps = Server::FindApplications( "Jde.OpcGateway" );
+				let apps = Server::FindApplications( _request.Target()=="/opcServers" ? "Jde.OpcServer" : "Jde.OpcGateway" );
 				jarray japps;
 				for( auto& app : apps )
 					japps.push_back( ToJson(app) );
@@ -77,9 +78,8 @@ namespace Jde::App{
 
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		if( auto e = Promise() ? Promise()->MoveExp() : nullptr; e ){
-			auto pRest = dynamic_cast<IRestException*>( e.get() );
-			if( pRest )
-				pRest->Throw();
+			if( auto rest = dynamic_cast<IRestException*>( e.get() ); rest )
+				rest->Throw();
 			else
 				throw RestException<http::status::internal_server_error>{ move(*e), move(_request) };
 		}

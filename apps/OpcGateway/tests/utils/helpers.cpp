@@ -44,15 +44,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 namespace Jde::Opc::Gateway{
 	α Tests::CreateServerCnnctn()ι->ServerCnnctnPK{
-		atomic_flag done;
-		ServerCnnctnPK y;
-		[&]()->CreateServerCnnctnAwait::Task {
-			y = co_await CreateServerCnnctnAwait();
-			done.test_and_set();
-			done.notify_one();
-		}();
-		done.wait( false );
-		return y;
+		return BlockTAwait<ServerCnnctnPK>( CreateServerCnnctnAwait{} );
 	}
 
 	α Tests::PurgeServerCnnctn( optional<ServerCnnctnPK> pk )ι->uint{
@@ -60,8 +52,8 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α Tests::SelectServerCnnctn( DB::Key id )ι->optional<ServerCnnctn>{
-		let subQuery = id.IsPrimary() ? Ƒ( "id:{{eq:{}}}", id.PK() ) : Ƒ( "target: {{eq:\"{}\"}}", id.NK() );
-		let select = Ƒ( "serverConnection(filter:{{ {} }}){{ id name attributes created updated deleted target description certificateUri isDefault url }}", subQuery );
+		let subQuery = id.IsPrimary() ? Ƒ( "id: {}", id.PK() ) : Ƒ( "target: \"{}\"", id.NK() );
+		let select = Ƒ( "serverConnection({}){{ id name attributes created updated deleted target description certificateUri isDefault url }}", subQuery );
 		auto o = QL().QuerySync<>( select, {UserPK::System} );
 		return o.empty() ? optional<ServerCnnctn>{} : ServerCnnctn( move(o) );
 	}
