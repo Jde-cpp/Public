@@ -17,7 +17,7 @@ export type DetailPageSettings = {
 };
 
 export class DetailRoute extends DocItem{
-	constructor( target:string, title:string, siblings:DocItem[], parent:ListRoute ){
+	constructor( target:string, title:string, siblings:DocItem[], parent:DocItem ){
 		super( {path:target, title:title, siblings:siblings, parent:parent} );
 	}
 }
@@ -46,7 +46,7 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 		const profile = new Settings<UserSettings>( UserSettings, `${collectionDisplay}-detail`, this.profileService );
 		await profile.loadedPromise;
 
-		let siblings = this.routeStore.getSiblings( collectionDisplay );
+		let siblings = this.routeStore.getChildren( collectionDisplay );
 		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings,
 			ListRoute.find(collectionDisplay, route.parent.routeConfig.children.find(x=>x.path==":collectionDisplay").data["collections"]) );
 		try{

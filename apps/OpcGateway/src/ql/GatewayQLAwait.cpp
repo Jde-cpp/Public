@@ -1,5 +1,6 @@
 #include "GatewayQLAwait.h"
 #include <jde/ql/QLAwait.h>
+#include <jde/app/IApp.h>
 #include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/Variant.h>
 #include "../async/CallAwait.h"
@@ -9,19 +10,24 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
+	GatewayQLAwait::GatewayQLAwait( QL::RequestQL&& q, Jde::UserPK executer, bool raw, SL sl )ι:
+		base{ sl },
+		_creds{ executer },
+		_queries{ move(q) },
+		_raw{ raw }
+	{}
+
 	GatewayQLAwait::GatewayQLAwait( QL::RequestQL&& q, sp<Web::Server::SessionInfo> session, bool returnRaw, SL sl )ι:
 		base{ sl },
-		_raw{ returnRaw },
+		_creds{ move(session) },
 		_queries{ move(q) },
-		_session{ move(session) }{
-		if( _session->UserPK==0 )
-			WARNT( EOpcLogTags::User, "Session has no user." );
-	}
+		_raw{ returnRaw }
+	{}
 
-	α needsClient( const QL::Input& q )ι->bool{
-		return !q.JTableName().starts_with( "serverConnection" ) && q.JTableName()!="__type";
+	Ω needsClient( const QL::Input& q )ι->bool{
+		return !q.JTableName().starts_with( "serverConnection" ) && q.JTableName()!="__type" && q.JTableName()!="status";
 	}
-	α opcClientNK( const QL::Input& q )ι->optional<ServerCnnctnNK>{
+	Ω opcClientNK( const QL::Input& q )ι->optional<ServerCnnctnNK>{
 		if( !needsClient(q) )
 			return nullopt;
 
@@ -46,8 +52,10 @@ namespace Jde::Opc::Gateway{
 	}
 	α GatewayQLAwait::GetClients()ι->TAwait<sp<UAClient>>::Task{
 		try{
+			auto session = Session();
+			THROW_IF( _clients.size() && !session, "No Session for query" );
 			for( auto p = _clients.begin(); p!=_clients.end(); ++p )
-				p->second = co_await ConnectAwait{ p->first, *_session, _sl };
+				p->second = co_await ConnectAwait{ p->first, *session, _sl };
 			Query();
 		}
 		catch( exception& e ){
@@ -64,23 +72,27 @@ namespace Jde::Opc::Gateway{
 					let memberName = q.ReturnName();
 					jvalue queryResult;
 					if( !needsClient(q) ){
-						if( q.JsonName=="__type" && !q.Args.contains("name") ){
-							NodeId nodeId{ q.Args };
-							q.Args["name"] = nodeId.ToString();
+						if( q.JsonName=="status" )
+							queryResult = App::IApp::Status();
+						else{
+							if( q.JsonName=="__type" && !q.Args.contains("name") ){
+								NodeId nodeId{ q.Args };
+								q.Args["name"] = nodeId.ToString();
+							}
+							queryResult = co_await QL::QLAwait<>( move(q), UserPK(), _sl );
 						}
-						queryResult = co_await QL::QLAwait<>(move(q), _session->UserPK, _sl);
 					}else{
 						auto client = _clients.at( *opcClientNK(q) );
 						if( q.JsonName.starts_with("node") || q.JsonName.starts_with("variable") )
-							queryResult = co_await NodeQLAwait{move(q), move(client), _sl};
+							queryResult = co_await NodeQLAwait{ move(q), move(client), _sl };
 						else if( q.JsonName.starts_with("dataType") )
-							queryResult = co_await DataTypeQLAwait{move(q), move(client), _sl};
+							queryResult = co_await DataTypeQLAwait{ move(q), move(client), _sl };
 						else if( q.JsonName=="serverDescription" )
-							queryResult = ServerDescription(move(q), move(client));
+							queryResult = ServerDescription( move(q), move(client) );
 						else if( q.JsonName=="securityPolicyUri" )
-							queryResult = SecurityPolicyUri(move(q), move(client));
+							queryResult = SecurityPolicyUri( move(q), move(client) );
 						else if( q.JsonName=="securityMode" )
-							queryResult = SecurityMode(move(q), move(client));
+							queryResult = SecurityMode( move(q), move(client) );
 						else
 							throw Exception{ _sl, "Unknown query type: {}", q.JsonName };
 					}
@@ -98,9 +110,12 @@ namespace Jde::Opc::Gateway{
 					// if( m.Type==QL::EMutationQL::Execute )
 					// 	results.push_back( co_await JCallAwait(move(m), _request.SessionInfo, _sl) );
 					if( m.DBTable && m.TableName()=="server_connections" )
-						results.push_back( co_await QL::QLAwait<>(move(m), _session->UserPK, _sl) );
-					else if( m.JsonTableName=="variable" )
-						results.push_back( co_await VariableQLAwait{move(m), _session, _sl} );
+						results.push_back( co_await QL::QLAwait<>(move(m), UserPK(), _sl) );
+					else if( m.JsonTableName=="variable" ){
+						auto session = Session();
+						THROW_IF( !session, "No Session for mutation" );
+						results.push_back( co_await VariableQLAwait{move(m), session, _sl} );
+					}
 				}
 				jvalue y{ results.size()==1 ? move(results[0]) : jvalue{results} };
 				Resume( move(y) );

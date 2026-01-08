@@ -13,10 +13,15 @@
 namespace Jde::QL{
 	using DB::EOperator;
 
+	α dbTable( string jName, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε->sp<DB::View>{
+		let dbName = DB::Names::ToPlural( DB::Names::FromJson(move(jName)) );
+		return system ? DB::AppSchema::FindView( schemas, dbName ) : DB::AppSchema::GetViewPtr( schemas, dbName, sl );
+	}
+
 	TableQL::TableQL( string jName, jobject args, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε:
 		Input{ move(args), move(variables) },
 		JsonName{ jName },
-		_dbTable{ system ? sp<DB::View>{} : DB::AppSchema::GetViewPtr(schemas, DB::Names::ToPlural(DB::Names::FromJson(move(jName))), sl) }
+		_dbTable{ dbTable(jName, schemas, system, sl) }
 	{}
 
 	α addFilters( const jvalue& value, const sp<jobject>& variables )ε->vector<FilterValue>{
@@ -56,6 +61,17 @@ namespace Jde::QL{
 		}
 		return *_filter;
 	}
+	α TableQL::AddColumn( sv jsonName )ι->bool{
+		auto existing = FindColumn( jsonName );
+		if( existing )
+			return false;
+
+		ASSERT( _dbTable );
+		auto dbColumn = _dbTable->FindColumn( DB::Names::FromJson(jsonName) );
+		Columns.push_back( ColumnQL{string{jsonName}, dbColumn} );
+		return true;
+	}
+
 	α TableQL::AddFilter( const string& column, const jvalue& value )ι->void{
 		auto destination = &Args;
 		if( auto filter = Args.find("filter"); filter!=Args.end() )
@@ -170,7 +186,7 @@ namespace Jde::QL{
 	}
 	α TableQL::TransformResult( string&& result )Ι->jvalue{
 		jvalue v{ move(result) };
-		return ReturnRaw ? move(v) : jobject{ {ReturnName(), move(v)} };
+		return ReturnRaw ? move( v ) : jobject{ {ReturnName(), move(v)} };
 	}
 	α TableQL::ToString()Ι->string{
 		string y = JsonName;

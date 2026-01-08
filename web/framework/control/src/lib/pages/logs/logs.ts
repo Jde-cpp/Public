@@ -56,14 +56,14 @@ export class LogsComponent implements OnInit, OnDestroy{
 			for( let app of applications )
 				this.applications.push( new AppStatus(app) );
 
-			this.statusSubscription = this.appService.statuses();
-			this.statusSubscription.subscribe( (status:FromServer.IStatus) =>{
+			//this.statusSubscription = this.appService.statuses();
+/*			this.statusSubscription.subscribe( (status:FromServer.IStatus) =>{
 				let found = this.applications.find( (existing)=>{return existing.id==status.applicationId;} );
 				if( !found )
 					console.error( `Could not find application '${status.applicationId}'` );
 				else
 					found.status = status;
-			} );
+			} );*/
 			this.subscribe( this.applicationId, this.level );
 			this.viewPromise = Promise.resolve( true );
 		}
@@ -72,7 +72,7 @@ export class LogsComponent implements OnInit, OnDestroy{
 		}
 	}
 	ngOnDestroy(){
-		this.appService.statusUnsubscribe( this.statusSubscription );
+		//this.appService.statusUnsubscribe( this.statusSubscription );
 		this.unsubscribe();
 		this.settingsContainer.save();
 	}
@@ -277,7 +277,7 @@ export class LogsComponent implements OnInit, OnDestroy{
 	private pushTimeout:{ entries: TraceEntry[], id:any, end:number };
 	get selectedIndex(){ return this.selectedEntry?.index; } set selectedIndex(x){ this.selectedEntry = this.data.data.find( (y)=>y.index==x ); }
 	get selectedEntry(){return this._selectedEntry; } set selectedEntry(x){ this._selectedEntry=x;} _selectedEntry:TraceEntry;
-	private statusSubscription:Observable<FromServer.IStatus>;//TODO make sure unsubscibing
+	//private statusSubscription:Observable<FromServer.IStatus>;//TODO make sure unsubscibing
 	viewPromise:Promise<boolean>;
 }
 

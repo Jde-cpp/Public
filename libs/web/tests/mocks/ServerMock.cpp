@@ -8,7 +8,7 @@ namespace Jde::Web{
 	struct TestAppClient final : App::IApp{
 		α IsLocal()Ι->bool override{ return true; }
 		α GraphQL( string&&, UserPK, bool, SL )ι->up<TAwait<jvalue>>{ return {}; }
-		α Login( Web::Jwt&& jwt, SRCE )ε->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>{ throw "noImpl"; }
+		α Login( Web::Jwt&&, SL )ε->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>{ throw "noImpl"; }
 		α SessionInfoAwait( SessionPK, SL )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return {}; }
 		α PublicKey()Ι->const Crypto::PublicKey& override{ return _publicKey; }
 

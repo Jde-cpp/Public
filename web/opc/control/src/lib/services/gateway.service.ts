@@ -52,7 +52,7 @@ export class GatewayService implements IGraphQL{
 			console.error("No IotServies running");
 		this.#gateways = gateways.map( instance=>new Gateway(instance, transport, http, authStore, opcStore) );
 		this.#gatewaysCallbacks.forEach( cb=>{cb.resolve(this.#gateways)} );
-		this.#gatewayCallbacks.forEach( cb=>cb.resolve(this.#gateways.find(gateway=>gateway.target==cb.gateway)) );
+		this.#gatewayCallbacks.forEach( cb=>cb.resolve(this.#gateways.find(gateway=>gateway.instances[0].instanceName==cb.instanceName)) );
 		this.#gatewayCallbacks = [];
 	}
 	onInstancesError(e:HttpErrorResponse){
@@ -60,10 +60,10 @@ export class GatewayService implements IGraphQL{
 		console.error( `Could not get IotServices.  (${e.status})${e.message}` );
 		this.#gatewayCallbacks.forEach( x=>x.reject(e) );
 	}
-	async gateway( target:GatewayTarget ):Promise<Gateway>{
+	async gateway( instanceName:string ):Promise<Gateway>{
 		if( !this.#gateways )
-			return new Promise<Gateway>( (resolve,reject)=>this.#gatewayCallbacks.push({gateway:target,resolve, reject}) );
-		const instance = this.#gateways.find( gateway=>gateway.target==target );
+			return new Promise<Gateway>( (resolve,reject)=>this.#gatewayCallbacks.push({instanceName, resolve, reject}) );
+		const instance = this.#gateways.find( gateway=>gateway.instances[0].instanceName==instanceName );
 		return instance;
 	}
 	async gateways():Promise<Gateway[]>{
@@ -95,7 +95,7 @@ export class GatewayService implements IGraphQL{
 	#gateways:Gateway[];
 
 	#gatewaysCallbacks:{resolve: (value:Gateway[])=>void, reject:(e?:any)=>void}[]= [];
-	#gatewayCallbacks:{ gateway:GatewayTarget, resolve: (value:Gateway)=>void, reject:(e?:any)=>void}[]= [];
+	#gatewayCallbacks:{ instanceName:string, resolve: (value:Gateway)=>void, reject:(e?:any)=>void}[]= [];
 }
 
 

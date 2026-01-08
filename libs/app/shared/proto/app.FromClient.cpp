@@ -77,6 +77,12 @@ namespace Jde::App{
 		} );
 	}
 
+	α FromClient::QueryResult( string&& result, RequestId requestId )ι->PFromClient::Transmission{
+		return setMessage( requestId, [&](auto& m){
+			*m.mutable_query_result() = move( result );
+		} );
+	}
+
 	α FromClient::Jwt( RequestId requestId )ι->StringTrans{
 		return transString( requestId, [&](auto& m){m.set_request_type(Proto::FromClient::ERequestType::Jwt);} );
 	}
@@ -86,24 +92,24 @@ namespace Jde::App{
 			*m.mutable_jwt() = move(jwt.Payload());
 		} );
 	}
-
-	α FromClient::ToStatus( vector<string>&& details )ι->PFromClient::Status{
+/*
+	α FromClient::ToStatus( flat_map<string,string>&& values )ι->PFromClient::Status{
 		PFromClient::Status y;
 		*y.mutable_start_time() = Jde::Protobuf::ToTimestamp( Process::StartTime() );
 		y.set_memory( Process::MemorySize() );
-		for_each( details, [&y](auto&& detail){y.add_details(move(detail));} );
+		for_each( values, [&y](auto&& value){(*y.mutable_values())[move(value.first)] = move(value.second); } );
 		return y;
 	}
 
-	α FromClient::Status( vector<string>&& details )ι->PFromClient::Transmission{
+	α FromClient::Status( flat_map<string,string>&& values )ι->PFromClient::Transmission{
 		PFromClient::Transmission t;
-		auto& status = *t.add_messages()->mutable_status() = ToStatus( move(details) );
+		auto& status = *t.add_messages()->mutable_status() = ToStatus( move(values) );
 		*status.mutable_start_time() = Jde::Protobuf::ToTimestamp( Process::StartTime() );
 		status.set_memory( Process::MemorySize() );
-		for_each( details, [&status](auto&& detail){status.add_details(move(detail));} );
+		//for_each( values, [&status](auto&& value){(*status.mutable_values())[move(value.first)] = move(value.second); } );
 		return t;
 	}
-
+*/
 	α FromClient::Session( SessionPK sessionId, RequestId requestId )ι->StringTrans{
 		return transString( requestId, [&](auto& m){
 			m.set_session_info( sessionId );
@@ -157,7 +163,7 @@ namespace Jde::App{
 		logEntry( m, proto );
 		return proto;
 	}
-	α FromClient::LogEntryFile( const Logging::Entry& m, App::AppPK appPK, App::AppInstancePK instancePK )ι->Log::Proto::LogEntryFileExternal{
+	α FromClient::LogEntryFile( const Logging::Entry& m, App::ProgramPK appPK, App::ProgInstPK instancePK )ι->Log::Proto::LogEntryFileExternal{
 		Log::Proto::LogEntryFileExternal proto;
 		logEntry( m, proto );
 		proto.set_app_pk( appPK );

@@ -25,8 +25,8 @@ export class CnnctnDetailResolver implements Resolve<DetailResolverData<ServerCn
 		const profile = new Settings<UserSettings>( UserSettings, `serverConnections-detail`, this.profileService );
 		await profile.loadedPromise;
 
-		let siblings = this.routeStore.getSiblings( route.parent.url ).map( s=>new DocItem({path:`${gatewayTarget}/${s.path}`, title:s.title}) );
-		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings, new ListRoute(gatewayTarget) );
+		let siblings = this.routeStore.getChildren( route.parent.url ).map( s=>new DocItem({path:`${s.path}`, title:s.title}) );
+		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings, new DocItem({path:'.', title:route.parent.params["instance"]}) );
 		try{
 			return CnnctnDetailResolver.load( this.ql, "serverConnections", target, profile, routing );
 		}

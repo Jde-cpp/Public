@@ -7,7 +7,26 @@
 #define let const auto
 namespace Jde{
 	flat_set<string> _systemTables{};
-	α QL::SetSystemTables( flat_set<string>&& x )ι->void{ _systemTables = move(x); }
+	α QL::SetSystemTables( flat_set<string>&& x )ι->void{
+		for( auto&& name : x )
+			_systemTables.emplace( move(name) );
+	}
+	Ω isSystem( str name )ι->bool{
+		return name.starts_with("__") || name.starts_with("setting") || name=="status" || name=="logs" || _systemTables.contains(name);
+	}
+
+	α QL::IsSystemQuery( const QL::RequestQL& q )ι->bool{
+		bool y{};
+		if( q.IsQueries() ){
+			for( auto table = q.Queries().begin(); !y && table!=q.Queries().end(); ++table )
+				y = isSystem( table->JTableName() );
+		}
+		else if( q.IsMutation() ){
+			for( auto mutation = q.Mutations().begin(); !y && mutation!=q.Mutations().end(); ++mutation )
+				y = isSystem( mutation->JTableName() );
+		}
+		return y;
+	}
 
 	α QL::Parse( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL /*sl*/ )ε->RequestQL{
 		Parser parser{ Str::TrimFirstLast(move(query), '{', '}'), "{}()," };
@@ -229,7 +248,7 @@ namespace Jde::QL{
 			auto args = ParseArgs();
 			let wantsResult = Peek()=="{";
 			auto name = get<0>( MutationQL::ParseCommand(command) );
-			let system = name.starts_with("__") || name.starts_with("setting") || _systemTables.contains(name);
+			let system = isSystem(name);
 			auto returnCols = wantsResult ? LoadTable( move(name), vars, schemas, system ) : optional<TableQL>{};
 			y.push_back( {move(command), move(args), move(vars), move(returnCols), returnRaw, schemas, system} );
 			command = Next();
@@ -244,9 +263,9 @@ namespace Jde::QL{
 		if( Peek()=="{" ){//has columns
 			Next();
 			for( auto token = Next(); token!="}" && token.size(); token = Next() ){
-				if( Peek()=="{" || Peek()=="(" )
-					table.Tables.push_back( LoadTable(token, vars, schemas, system, sl) );
-				else{
+				if( Peek()=="{" || Peek()=="(" ){
+					table.Tables.push_back( LoadTable(token, vars, schemas, system || isSystem(token), sl) );
+				}else{
 					THROW_IF( token==",", "don't separate columns with: ',' '{}' @ '{}'.", _text, Index()-1 );
 					if( token=="..." ){
 						THROW_IF( "on"!=Next(), "Expected 'on' after '...' in '{}' @ '{}'.", _text, Index()-1 );
@@ -259,14 +278,13 @@ namespace Jde::QL{
 		}
 		return table;
 	}
-
 	α Parser::LoadTables( string jsonName, sp<jobject> vars, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL sl )ε->vector<TableQL>{
 		vector<TableQL> results;
 		do{
 			auto alias = jsonName.ends_with(':') ? jsonName.substr( 0, jsonName.size()-1 ) : string{};
 			if( alias.size() )
 				jsonName = Next();
-			let system = jsonName.starts_with("__") || jsonName.starts_with("setting") || jsonName=="logs" || _systemTables.contains(jsonName) ? jsonName : string{};
+			let system = isSystem(jsonName) ? jsonName : string{};
 			auto table = LoadTable( move(jsonName), vars, schemas, system.size(), sl );
 			table.Alias = move(alias);
 			if( system.size() ){

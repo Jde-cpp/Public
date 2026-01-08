@@ -1,5 +1,4 @@
 #pragma once
-#include "Common.pb.h"
 
 namespace Jde::App::ProtoUtils{
 	α ToException( IException&& e )ι->Jde::Proto::Exception;

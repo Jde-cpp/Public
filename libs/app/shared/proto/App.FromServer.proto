@@ -7,9 +7,14 @@ import "Web.FromServer.proto";
 import "App.proto";
 import "Log.proto";
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
+message ClientQuery{
+	string query=1;
+	string variables=2;
+	uint32 executer_pk=3;
+	bool raw=4;
+}
 
-	message ConnectionInfo{
+message ConnectionInfo{
 	uint32 app_pk = 1;
 	uint32 instance_pk = 2; //TODO Rename to instance_pk
 	uint32 connection_pk = 3;
@@ -49,7 +54,7 @@ message Traces{
 //message Applications{
 //	repeated Application values=1;
 //}
-
+/*
 message Status{
 	uint32 application_id=1;
 	uint32 instance_id=2;
@@ -58,9 +63,9 @@ message Status{
 	uint64 memory=5;
 	uint32 log_count=6;
 	double cpu=7;
-	repeated string values=8;
+	map<string,string> values = 8;
 }
-
+*/
 message Strings{
 	map<uint32,string> messages = 1;
 	map<uint32,string> files = 2;
@@ -75,25 +80,26 @@ message SubscriptionAck{
 message Message{
 	uint32 request_id=1;
 	oneof Value{
-		uint32 ack = 2;//sends on handshake
+		uint32 ack = 2; //sends on handshake
 		string generic = 3;
-		Jde.App.Proto.StringMD5s string_pks = 4;//pks stored in db.
+		Jde.App.Proto.StringMD5s string_pks = 4; //pks stored in db.
 		//Jde.App.Log.Proto.LogLevels log_levels = 5;
 		double progress = 7;
 		Jde.Web.FromServer.SessionInfo session_info = 8;
-		string graph_ql = 10;
+		string query_result = 10;
 		Jde.Proto.Exception exception = 11;
 		Traces traces = 12;
 //		Applications applications = 13;
-		Status status = 14;
+		//Status status = 14;
 		Strings strings = 15;
 		SubscriptionAck subscription_ack = 16;
 		string subscription= 17;
 		ConnectionInfo connection_info = 18;
 		string jwt = 19;
+		ClientQuery client_query = 20;
 
-		bytes execute_anonymous = 33;//appServer->2ndServer, no user context.
-		Jde.App.Proto.Execute execute = 34;//execute with user context.
+		bytes execute_anonymous = 33; //appServer->2ndServer, no user context.
+		Jde.App.Proto.Execute execute = 34; //execute with user context.
 		bytes execute_response = 35;
 	}
 }

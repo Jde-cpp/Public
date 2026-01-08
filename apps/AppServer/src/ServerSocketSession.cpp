@@ -25,7 +25,7 @@ namespace Jde::App::Server{
 			let [appPK,instancePK,connectionPK] = App::AddConnection( instance.application(), instance.instance_name(), instance.host(), instance.pid() );//TODO Don't block
 			INFOT( ELogTags::SocketServerRead, "[{}.{}]Adding application app:{}@{}:{} pid:{}, instancePK:{}, connectionPK:{}, sessionId: {}, endpoint: '{}'", hex(Id()), hex(requestId), instance.application(), instance.host(), instance.web_port(), instance.pid(), hex(instancePK), hex(connectionPK), hex(instance.session_id()), _userEndpoint.address().to_string() );
 			Server::RemoveExisting( instance.host(), instance.web_port() );
-			_instancePK = instancePK; _appPK = appPK; _connectionPK = connectionPK;
+			_instancePK = instancePK; _programPK = appPK; _connectionPK = connectionPK;
 			_instance = move( instance );
 			Write( FromServer::ConnectionInfo(appPK, instancePK, connectionPK, requestId, AppClient()->PublicKey(), move(*info)) );
 		}
@@ -69,11 +69,16 @@ namespace Jde::App::Server{
 			WriteException( move(e), requestId );
 		}
 	}
-	α ServerSocketSession::GraphQL( string&& query, jobject variables, bool returnRaw, RequestId requestId )ι->QL::QLAwait<jvalue>::Task{
+	α ServerSocketSession::GraphQL( string&& query, jobject vars, bool returnRaw, RequestId requestId )ι->QL::QLAwait<jvalue>::Task{
 		let _ = shared_from_this();
 		try{
 			LogRead( Ƒ("GraphQL{}: {}", returnRaw ? "*" : "", query), requestId );
-			auto j = co_await QL::QLAwait( move(query), move(variables), _userPK.value_or(Jde::UserPK{0}), Server::Schemas(), returnRaw );
+			auto ql = QL::Parse( move(query), move(vars), Server::Schemas(), returnRaw );
+			auto reqHandler = Server::GetRequestHandler();
+			let executer = _userPK.value_or(Jde::UserPK{0});
+			auto j = QL::IsSystemQuery( ql ) && reqHandler
+				? co_await *reqHandler->Query( move(ql), executer, returnRaw )
+				: co_await QL::QLAwait( move(ql), executer );
 			auto y = serialize( j );
 			LogWrite( Ƒ("GraphQL: {}", y.substr(0,100)), requestId );
 			Write( FromServer::GraphQL(move(y), requestId) );
@@ -87,7 +92,7 @@ namespace Jde::App::Server{
 	}
 
 	α ServerSocketSession::SaveLogEntry( Log::Proto::LogEntryClient entry, RequestId requestId )->void{
-		if( !_appPK || !_instancePK ){
+		if( !_programPK || !_instancePK ){
 			WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 			return;
 		}
@@ -96,9 +101,9 @@ namespace Jde::App::Server{
 		//y.Text = StringCache::GetMessage( y.Id() );
 		//y.SetFile( StringCache::GetFile(y.FileId()) );
 		//y.SetFunction( StringCache::GetFunction(y.FunctionId()) );
-		Logging::Log( move(y), _appPK, _instancePK );
+		Logging::Log( move(y), _programPK, _instancePK );
 		// if( auto p = Logging::FindLogger<ProtoLog>(); p )
-		// 	p->Write( move(y), _appPK, _instancePK );
+		// 	p->Write( move(y), _programPK, _instancePK );
 	}
 	α ServerSocketSession::SendAck( uint32 id )ι->void{
 		Write( FromServer::Ack(id) );
@@ -110,7 +115,7 @@ namespace Jde::App::Server{
 			LogWrite( Ƒ("SessionInfo userPK: {}, endpoint: {}, hasSocket: {}", info->UserPK.Value, info->UserEndpoint, info->HasSocket), requestId );
 			Write( FromServer::Session(move(*info), requestId) );
 		}else
-			WriteException( Exception{ Ƒ("[{}] Session not found.", hex(sessionId)) }, requestId );
+			WriteException( Exception{Ƒ("[{}] Session not found.", hex(sessionId))}, requestId );
 	}
 	α ServerSocketSession::SetSessionId( SessionPK sessionId, RequestId requestId )->Web::Server::Sessions::UpsertAwait::Task{
 		try{
@@ -200,6 +205,9 @@ namespace Jde::App::Server{
 				jobject variables = variableString.empty() ? jobject{} : Json::Parse( variableString );
 				GraphQL( move(*query.mutable_text()), move(variables), query.return_raw(), requestId );
 				break;}
+			case kQueryResult:
+				QueryClientResults( move(*m.mutable_query_result()), requestId );
+				break;
 			[[likely]]case kLogEntry:
 				++cLog;
 				SaveLogEntry( move(*m.mutable_log_entry()), requestId );
@@ -219,12 +227,12 @@ namespace Jde::App::Server{
 			case kSessionInfo:
 				SessionInfo( m.session_info(), requestId );
 				break;
-			[[likely]]case kStatus:{
+/*			[[likely]]case kStatus:{
 				auto& status = *m.mutable_status();
 				//:10L
 				LogRead( "Status", requestId );
-				Server::BroadcastStatus( _appPK, _instancePK, _instance.host(), move(status) );
-				break;}
+				Server::BroadcastStatus( _programPK, _instancePK, _instance.host(), move(status) );
+				break;}*/
 			case kSubscription:{
 				auto& s = *m.mutable_subscription();
 				auto& ql = *s.mutable_text();
@@ -246,7 +254,7 @@ namespace Jde::App::Server{
 				RemoveSubscription( move(subIds), requestId );
 				break;}
 			[[likely]]case kStringKey:
-/*				if( !_appPK || !_instancePK ){
+/*				if( !_programPK || !_instancePK ){
 					WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 					continue;
 				}
@@ -270,14 +278,14 @@ namespace Jde::App::Server{
 						WriteException( move(e), requestId );
 					}
 				}
-				break;}*/
+				break;}
 			case kSubscribeStatus:
 				LogRead( Ƒ("SubscribeStatus - {}", m.subscribe_status()), requestId );
 				if( m.subscribe_status() )
 					Server::SubscribeStatus( *this );
 				else
 					Server::UnsubscribeStatus( ConnectionPK() );
-				break;
+				break;*/
 			default:
 				LogRead( Ƒ("Unknown message type '{}'", underlying(m.Value_case())), requestId, ELogLevel::Critical );
 			}
@@ -286,6 +294,11 @@ namespace Jde::App::Server{
 			TRACET( ELogTags::SocketServerRead, "[{:x}] log entries recieved: {} strings received: {}.", Id(), cLog, cString );
 	}
 
+	α ServerSocketSession::QueryClient( QL::TableQL&& query, Jde::UserPK executer, RequestId requestId )ι->void{
+		auto q = query.ToString();
+		LogWrite( Ƒ("QueryClient: {}", q.substr(0,100)), requestId );
+		Write( FromServer::QueryClient(move(q), move(query.Variables), executer, query.ReturnRaw, requestId) );
+	}
 	α ServerSocketSession::OnClose()ι->void{
 		LogRead( "OnClose", 0 );
 		Server::RemoveSession( Id() );
@@ -312,7 +325,7 @@ namespace Jde::App::Server{
 		LogWrite( Ƒ("Subscription: {}", serialized.substr(0,100)), requestId );
 		Write( FromServer::Subscription(move(serialized), requestId) );
 	}
-	α ServerSocketSession::WriteSubscription( App::AppPK appPK, App::AppInstancePK instancePK, const Logging::Entry& e, const QL::Subscription& sub )ι->void{
+	α ServerSocketSession::WriteSubscription( App::ProgramPK appPK, App::ProgInstPK instancePK, const Logging::Entry& e, const QL::Subscription& sub )ι->void{
 		LogWrite( Ƒ("Subscription: {}", e.Text), 0 );
 		Write( FromServer::LogSubscription(appPK, instancePK, e, sub) );
 	}

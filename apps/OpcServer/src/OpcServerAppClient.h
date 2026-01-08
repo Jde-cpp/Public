@@ -5,7 +5,7 @@
 
 namespace Jde::Opc::Server{
 	struct OpcServerAppClient final : App::Client::IAppClient{
-		α StatusDetails()ι->vector<string> override;
 		α InitLogging()ι->void;
+		α ClientQuery( QL::RequestQL&& q, Jde::UserPK executer, bool raw, SRCE )ε->up<TAwait<jvalue>> override;
 	};
 }

@@ -13,16 +13,14 @@ namespace Jde::App::FromClient{
 	α Jwt( RequestId requestId )ι->StringTrans;
 	α Login( Web::Jwt&& jwt, RequestId requestId )ι->StringTrans;
 	α Query( string query, jobject variables, RequestId requestId, bool returnRaw=true )ι->string;
+	α QueryResult( string&& result, RequestId requestId )ι->PFromClient::Transmission;
 	α Instance( str application, str instanceName, SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission;
-	α ToStatus( vector<string>&& details )ι->PFromClient::Status;
-	α ToStatus( AppPK appId, AppInstancePK instanceId, str hostName, App::Proto::FromClient::Status&& input )ι->PFromClient::Status;
-	α Status( vector<string>&& details )ι->PFromClient::Transmission;
 	α Session( SessionPK sessionId, RequestId requestId )ι->StringTrans;
 	α Subscription( string&& query, jobject variables, RequestId requestId )ι->string;
 	α LogEntries( vector<Logging::Entry>&& entries )ι->PFromClient::Transmission;
 	α LogEntryClient( Logging::Entry&& m )ι->Log::Proto::LogEntryClient;
 	α LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile;
-	α LogEntryFile( const Logging::Entry& m, App::AppPK appPK, App::AppInstancePK instancePK )ι->Log::Proto::LogEntryFileExternal;
+	α LogEntryFile( const Logging::Entry& m, App::ProgramPK appPK, App::ProgInstPK instancePK )ι->Log::Proto::LogEntryFileExternal;
 	α FromLogEntry( Log::Proto::LogEntryClient&& m )ι->Logging::Entry;
 	α ToString( uuid id, string&& value )ι->Log::Proto::String;
 }

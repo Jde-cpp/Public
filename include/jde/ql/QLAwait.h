@@ -33,6 +33,7 @@ namespace Jde::QL{
 			base{sl}, _request{{move(m)}}, _executer{executer}{}
 		QLAwait( string query, jobject variables, UserPK executer, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε:
 			base{sl}, _request{ Parse(move(query), move(variables), schemas, returnRaw) }, _executer{ executer }{}
+		QLAwait( RequestQL&& q, UserPK executer, SRCE )ε:base{sl}, _request{move(q)}, _executer{executer}{}
 	private:
 		α Execute()ι->TAwait<jvalue>::Task override;
 		RequestQL _request;

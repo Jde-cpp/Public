@@ -90,7 +90,17 @@ namespace Client{
 		let requestId = NextRequestId();
 		return ClientSocketAwait<Web::FromServer::SessionInfo>{ FromClient::Session(sessionId, requestId), requestId, shared_from_this(), sl };
 	}
-
+	α AppClientSocketSession::ClientQuery( Proto::FromServer::ClientQuery proto, RequestId requestId )ι->TAwait<jvalue>::Task{
+		TRACE( "[{}.{}]ClientQuery: size='{}'.", hex(Id()), hex(requestId), proto.query().substr(0, Web::Client::MaxLogLength()) );
+		try{
+			auto vars = proto.variables().empty() ? jobject{} : parse( proto.variables() ).as_object();
+			auto result = co_await *_appClient->ClientQuery( QL::Parse(move(*proto.mutable_query()), move(vars), {}, proto.raw()), {proto.executer_pk()}, proto.raw() );
+			Write( FromClient::QueryResult(serialize(result), requestId) );
+		}
+		catch( IException& e ){
+			WriteException( move(e), requestId );
+		}
+	}
 	α AppClientSocketSession::Query( string&& q, jobject variables, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]GraphQL: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
@@ -169,6 +179,13 @@ namespace Client{
 					_qlServer = ms<Web::Client::ClientQL>( shared_from_this(), move(_authorize) );
 				INFO( "[{}]AppClientSocketSession created: {}://{}.", hex(Id()), IsSsl() ? "https" : "http", Host() );
 				}break;
+			case kClientQuery:{
+				ClientQuery( move(*m->mutable_client_query()), requestId );
+//				auto& res = *m->mutable_client_query();
+//				TRACE( "[{:x}]ClientQuery: size='{}'.", Id(), res.query().size() );
+//				resumeJValue( move(hAny), move(*m->mutable_client_query()->mutable_query()) );
+//TODO
+				}break;
 			case kConnectionInfo:
 				TRACE( "[{}]ConnectionInfo: connection: '{}'.", hex(Id()), hex(m->connection_info().connection_pk()) );
 				resume( move(hAny), move(*m->mutable_connection_info()) );
@@ -200,9 +217,9 @@ namespace Client{
 				TRACE( "[{:x}]SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", Id(), ToIsoString(Protobuf::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
 				resume( move(hAny), move(res) );
 				}break;
-			case kGraphQl:
-				TRACE( "[{:x}]GraphQl: '{}'.", Id(), m->graph_ql().substr(0, Web::Client::MaxLogLength()) );
-				resumeJValue( move(hAny), move(*m->mutable_graph_ql()) );
+			case kQueryResult:
+				TRACE( "[{:x}]query: '{}'.", Id(), m->query_result().substr(0, Web::Client::MaxLogLength()) );
+				resumeJValue( move(hAny), move(*m->mutable_query_result()) );
 				break;
 			case kSubscriptionAck:
 				if( !_subscriptionRequests.erase_if(requestId, [&](auto&& kv){
@@ -246,10 +263,10 @@ namespace Client{
 				TRACE( "[{:x}]Traces: count='{}'.", Id(), traces.values_size() );
 				App::Client::Subscriptions::OnTraces( move(traces), requestId );
 				break;}
-			[[unlikely]]
-			case kStatus:
-				CRITICAL( "[{:x}]Web only call not implemented on client app '{}'.", Id(), (uint)m->Value_case() );
-			break;
+			//[[unlikely]]
+			// case kStatus:
+			// 	CRITICAL( "[{:x}]Web only call not implemented on client app '{}'.", Id(), (uint)m->Value_case() );
+			// break;
 			case VALUE_NOT_SET:
 				break;
 			}

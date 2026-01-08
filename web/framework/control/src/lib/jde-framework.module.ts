@@ -18,11 +18,7 @@ import {MatTabsModule} from '@angular/material/tabs';
 import {MatTableModule} from '@angular/material/table';
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatAutocompleteModule} from '@angular/material/autocomplete';
-import { GraphQLDetailComponent } from './pages/GraphQL/detail/graph-ql-detail';
-import { Properties } from './pages/GraphQL/properties/properties';
-import { GraphQLTable } from './pages/GraphQL/table/table';
-import { Applications } from './pages/applications/applications';
-import { LogsComponent } from './pages/logs/logs';
+import { Apps } from './pages/apps/apps';
 import { SeverityPicker } from './shared/severity-picker/severity-picker';
 
 @NgModule({

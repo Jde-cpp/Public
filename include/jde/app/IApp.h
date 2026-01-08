@@ -11,23 +11,26 @@ namespace Jde::App{
 		virtual ~IApp()=default;//msvc warning
 
 		β IsLocal()Ι->bool{ return false; }
-		α ConnectionPK()Ι->AppConnectionPK{ return _connectionPK; }
+		α ConnectionPK()Ι->App::ConnectionPK{ return _connectionPK; }
 		β PublicKey()Ι->const Crypto::PublicKey& = 0;
-		α SetAppPKs( AppInstancePK instPK, AppConnectionPK pk )ι->void{ _instancePK = instPK; _connectionPK = pk; }
+		α SetAppPKs( ProgInstPK instPK, App::ConnectionPK pk )ι->void{ _instancePK = instPK; _connectionPK = pk; }
 		β SessionInfoAwait( SessionPK sessionPK, SRCE )ε->up<TAwait<Web::FromServer::SessionInfo>> = 0;
 		α Verify( const Web::Jwt& jwt )Ε->void;
 		β Login( Web::Jwt&& jwt, SRCE )ε->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo> = 0;
+		β ClientQuery( QL::RequestQL&& q, UserPK executer, bool raw, SRCE )ε->up<TAwait<jvalue>> =0;
+		Ω Status()ι->jobject{ return jobject{{"memory", Process::MemorySize()}}; }
 
 		template<class T=jobject> α Query( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->up<TAwait<T>>;
 		template<class T=jobject> α QuerySync( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->T;
-		template<class T=jobject> α QuerySyncSecure( string&& q, jobject variables, SRCE )ε->T{ return QuerySync<T>(move(q), true, sl); } //TODO
+		template<class T=jobject> α QuerySyncSecure( string&& q, jobject variables, SRCE )ε->T{ return QuerySync<T>(move(q), true, sl); }
+
 	protected:
 		β QueryArray( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jarray>> = 0;
 		β QueryObject( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jobject>> = 0;
 		β QueryValue( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jvalue>> = 0;
 	private:
-		AppInstancePK _instancePK{};
-		AppConnectionPK _connectionPK{};
+		ProgInstPK _instancePK{};
+		App::ConnectionPK _connectionPK{};
 	};
 
 	Ŧ IApp::Query( string&& q, jobject variables, bool returnRaw, SL sl )ε->up<TAwait<T>>{

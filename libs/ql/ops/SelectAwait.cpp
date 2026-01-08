@@ -235,6 +235,7 @@ namespace Jde::QL{
 	α SelectAwait::Query()ι->void{
 		try{
 			let dbTable = _qlTable.DBTable();
+			THROW_IF( !dbTable, "No DB table for '{}'", _qlTable.JsonName );
 			_ds = dbTable->Schema->DS();
 			dbTable->Authorize( Access::ERights::Read, _executer, _sl );
 			auto statement = _statement ? move(*_statement) : SelectStatement( _qlTable );

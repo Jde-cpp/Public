@@ -27,7 +27,7 @@ namespace Jde::App::Server{
 		}
 	}
 
-	α ForwardExecutionAwait::OnCloseConnection( AppConnectionPK connectionPK )ι->void{
+	α ForwardExecutionAwait::OnCloseConnection( ConnectionPK connectionPK )ι->void{
 		_forwardExecutionMessages.erase_if( [=](auto&& kv){
 			if( kv.second.RequestSocketSession->ConnectionPK() != connectionPK )
 				return false;

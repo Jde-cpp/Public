@@ -55,12 +55,18 @@ namespace Jde::DB{
 		}
 		throw Exception{ sl, "Could not find table '{}'", tableName };
 	}
-	α AppSchema::GetViewPtr( const vector<sp<AppSchema>>& schemas, str viewName, SL sl )ε->sp<View>{
+
+	α AppSchema::FindView( const vector<sp<AppSchema>>& schemas, str viewName )ι->sp<View>{
 		for( let& schema : schemas ){
 			if( let view = schema->FindView(viewName) )
 				return view;
 		}
-		throw Exception{ sl, "Could not find view '{}'", viewName };
+		return nullptr;
+	}
+	α AppSchema::GetViewPtr( const vector<sp<AppSchema>>& schemas, str viewName, SL sl )ε->sp<View>{
+		auto y = FindView( schemas, viewName );
+		THROW_IFSL( !y, "Could not find view '{}'", viewName );
+		return y;
 	}
 	α AppSchema::ConfigPath()Ι->string{
 		let catalog = DBSchema->Catalog;

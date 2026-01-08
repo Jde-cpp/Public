@@ -63,7 +63,7 @@ namespace Jde::Web::Server{
 	α SubscribeLog::Write( const Logging::Entry& m )ι->void{
 		Write( m, _appPK, _connectionPK );
 	}
-	α SubscribeLog::Write( const Logging::Entry& m, uint32 appPK, App::AppConnectionPK connectionPK )ι->void{
+	α SubscribeLog::Write( const Logging::Entry& m, uint32 appPK, App::ConnectionPK connectionPK )ι->void{
 		sl _{ _mutex };
 		for( let& s : _subs ){
 			bool valid{ m.Level>=s.Sub.MinLevel };

@@ -79,7 +79,7 @@
 				"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/apps/OpcGateway/tests/config/Opc.Tests.jsonnet"],
 				"environment": [
 					{ "name": "LD_LIBRARY_PATH", "value": "$LD_LIBRARY_PATH:${env:REPO_DIR}/install/g++-14/Debug/boost/lib" },
-					{ "name": "JDE_GOOGLE_JWT", "value": null }
+					{ "name": "JDE_GOOGLE_JWT", "value": "" }
 				],
 				"stopAtEntry": false,
 				"cwd": "${config:testBuildDir}",
@@ -87,9 +87,9 @@
 				"externalConsole": false,
 				"MIMode": "gdb",
 				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing","ignoreFailures": true}],
-				"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
 				"preLaunchTask": "buildTests",
 				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
+				"logging": {"natvisDiagnostics":"verbose"},
 				"showDisplayString": true
 			}
 		],

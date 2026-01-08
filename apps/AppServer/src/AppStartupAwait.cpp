@@ -1,11 +1,11 @@
 #include "AppStartupAwait.h"
-#include "WebServer.h"
-#include "graphQL/AppInstanceHook.h"
+#include <jde/web/server/SessionGraphQL.h>
 #include <jde/web/server/SettingQL.h>
+#include <jde/web/server/SubscribeLog.h>
+#include "WebServer.h"
 #include "LocalClient.h"
 #include "LogData.h"
-#include <jde/web/server/SessionGraphQL.h>
-#include <jde/web/server/SubscribeLog.h>
+#include "ql/AppInstanceHook.h"
 
 #define let const auto
 namespace Jde::App{
@@ -16,12 +16,12 @@ namespace Server{
 	α AppStartupAwait::Execute()ι->VoidAwait::Task{
 		try{
 			co_await ConfigureDSAwait{};
-			str instanceName{ Settings::FindString("instanceName").value_or(_debug ? "Debug" : "Release") };
-			let pks = AddConnection( Process::Executable().filename().string(), instanceName, Process::HostName(), Process::ProcessId() );
+			str instanceName{ Settings::FindString("/instanceName").value_or(_debug ? "Debug" : "Release") };
+			let pks = AddConnection( Process::AppName(), instanceName, Process::HostName(), Process::ProcessId() );
 			Logging::Add<Web::Server::SubscribeLog>( "subscribe", get<0>(pks), get<1>(pks) );
 			SetAppPKs( pks );
 
-			//Data::LoadStrings();
+			QL::SetSystemTables( {"apps", "connections"} );
 			auto appClient = AppClient();
 			appClient->SetPublicKey( Crypto::CryptoSettings{Json::FindDefaultObject(_webServerSettings, "ssl")}.PublicKey() );
 			Server::StartWebServer( move(_webServerSettings) );

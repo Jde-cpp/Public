@@ -114,7 +114,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 
 	async loginWait<Y>( target:string, log:Log=console.log ):Promise<Y>{
 		let p = new Promise<Y>( (resolve,reject)=>{
-			this.#loginCallbacks.push( {target: target, resolve:resolve,reject:reject} );
+			this.#loginCallbacks.push( {target: target, resolve:resolve, reject:reject, log:log} );
 		});
 		if( this.#loginCallbacks.length==1 ){
 			let url = this.urlWithTarget( "serverSettings", true );
@@ -138,7 +138,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 					let y = await this.authGet<any>(
 						callback.target,
 						this.user().authorization,
-						log
+						callback.log
 					);
 					callback.resolve( y );
 				}
@@ -449,7 +449,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		}
 	} #instances:Instance[];
 	#initCallbacks:{resolve:()=>void, reject:Reject}[]=[];
-	#loginCallbacks:{target:string, resolve:(result:any)=>void, reject:( e:any )=>void}[]=[];
+	#loginCallbacks:{target:string, resolve:(result:any)=>void, reject:( e:any )=>void, log:Log}[]=[];
 
 	//abstract get queryId():number;
 	#socket:WebSocketSubject<protobuf.Buffer>;

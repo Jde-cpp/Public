@@ -143,9 +143,13 @@ export class ComponentNav {
 		effect(() => {
 			let loaded = this.item()()!=null;
 			if( loaded ){
-				let segments = this.parentUrl.split( "/" );
-				if( segments[segments.length-1].startsWith(":") ){
-					this.parentUrl = `${segments.slice(0,segments.length-1).join("/")}/${this.item()().parent?.path}`;
+				if( this.item()().parent )
+					this.parentUrl = this.item()().parent.path;
+				else{
+					let segments = this.parentUrl.split( "/" );
+					if( segments[segments.length-1].startsWith(":") ){
+						this.parentUrl = `${segments.slice(0,segments.length-1).join("/")}/${this.item()().parent?.path}`;
+					}
 				}
 			}
 			this.isLoading.set( !loaded );

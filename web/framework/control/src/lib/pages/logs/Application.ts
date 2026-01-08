@@ -7,8 +7,7 @@ import * as AppCommon from '../../proto/App'; import App = AppCommon.Jde.App.Pro
 export class ApplicationStrings{
 	constructor()
 	{}
-	requests( entry:TraceEntry ):App.StringMD5s
-	{
+	requests( entry:TraceEntry ):App.StringMD5s{
 		var request = new App.StringMD5s();
 		if( !this.messages.has(entry.messageId) ){
 			request.messages.push( new Guid(entry.messageId).value );

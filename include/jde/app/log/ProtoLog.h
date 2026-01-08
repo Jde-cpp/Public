@@ -28,9 +28,9 @@ namespace Jde::App{
 		α SetMinLevel( ELogLevel /*level*/ )ι->void override{}
 		α TimeZone()Ι->const std::chrono::time_zone&{ return _tz; }
 		α Write( const Logging::Entry& m )ι->void override;
-		α Write( const Logging::Entry& m, App::AppPK appPK, App::AppInstancePK instancePK )ι->void;
-		App::AppPK AppPK;
-		AppInstancePK InstancePK;
+		α Write( const Logging::Entry& m, App::ProgramPK appPK, App::ProgInstPK instancePK )ι->void;
+		App::ProgramPK ProgramPK;
+		ProgInstPK InstancePK;
 	private:
 		α Write( const Logging::Entry& m, App::Log::Proto::FileEntry&& entry )ι->void;
 		α AddString( uuid id, sv str )ι->void;

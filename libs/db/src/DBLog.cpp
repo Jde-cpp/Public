@@ -13,7 +13,7 @@ namespace Jde{
 		return result;
 	}
 	α DB::Log( const Sql& sql, SL sl )ι->void{
-		TRACESL( "sql: {}", sql.EmbedParams() );
+		DBGSL( "sql: {}", sql.EmbedParams() );
 	}
 	α DB::Log( const Sql& sql, ELogLevel level, string error, SL sl )ι->void{
 		Logging::Log( level, _tags, sl, "sqle: {}", LogDisplay(sql, move(error)) );

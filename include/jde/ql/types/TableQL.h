@@ -18,6 +18,7 @@ namespace Jde::QL{
 	struct TableQL final : Input{
 		TableQL( string jName, jobject args, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool system=false, SRCE )ε;
 
+		α AddColumn( sv jsonName )ι->bool;
 		α AddFilter( const string& column, const jvalue& value )ι->void;
 		α DBTable()Ι->sp<DB::View>{ return _dbTable && _dbTable->QLView ? _dbTable->QLView : _dbTable; }
 		α SetDBTable( sp<DB::View> x )ι->void{ _dbTable = move(x); }

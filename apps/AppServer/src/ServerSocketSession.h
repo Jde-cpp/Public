@@ -13,22 +13,22 @@ namespace Jde::App::Server{
 	struct ServerSocketSession : TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>{
 		using base = TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>;
 		ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
-		α AppPK()Ι->AppPK{ return _appPK; }
+		α ProgramPK()Ι->ProgramPK{ return _programPK; }
 		α Instance()Ι->const Proto::FromClient::Instance&{ return _instance; }
-		α ConnectionPK()Ι->AppConnectionPK{ return _connectionPK; }
-		α OnRead( Proto::FromClient::Transmission&& transmission )ι->void override;
+		α ConnectionPK()Ι->ConnectionPK{ return _connectionPK; }
 	private:
+		α OnRead( Proto::FromClient::Transmission&& transmission )ι->void override;
 		α OnClose()ι->void;
 		α GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task;
 		α Login( string&& jwt, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task;
 		α ProcessTransmission( Proto::FromClient::Transmission&& transmission, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId )ι->void;
+		α QueryClient( QL::TableQL&& query, Jde::UserPK executer, RequestId requestId )ι->void override;
 		α SharedFromThis()ι->sp<ServerSocketSession>{ return std::dynamic_pointer_cast<ServerSocketSession>(shared_from_this()); }
-		//α WriteException( IException&& e, Request )ι->void override{ WriteException( move(e), 0 ); }
 		α WriteException( exception&& e, RequestId requestId )ι->void override;
 		α WriteException(std::string&&, Jde::RequestId)ι->void override;
 		α WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void override;
 		α WriteSubscription( const jvalue& j, RequestId requestId )ι->void override;
-		α WriteSubscription( App::AppPK appPK, App::AppInstancePK instancePK, const Logging::Entry& e, const QL::Subscription& sub )ι->void override;
+		α WriteSubscription( App::ProgramPK appPK, App::ProgInstPK instancePK, const Logging::Entry& e, const QL::Subscription& sub )ι->void override;
 		α WriteComplete( RequestId requestId )ι->void override;
 
 		α AddSession( Proto::FromClient::AddSession addSession, RequestId clientRequestId, SL sl )ι->TAwait<Jde::UserPK>::Task;
@@ -43,9 +43,9 @@ namespace Jde::App::Server{
 		α SetSessionId( SessionPK sessionId, RequestId requestId )->Web::Server::Sessions::UpsertAwait::Task;
 
 		Proto::FromClient::Instance _instance;
-		App::AppPK _appPK{};
-		AppInstancePK _instancePK{};
-		AppConnectionPK _connectionPK{};
+		App::ProgramPK _programPK{};
+		ProgInstPK _instancePK{};
+		App::ConnectionPK _connectionPK{};
 		optional<Jde::UserPK> _userPK{};
 		ELogLevel _webLevel{ ELogLevel::NoLog };
 		ELogLevel _dbLevel{ ELogLevel::NoLog };

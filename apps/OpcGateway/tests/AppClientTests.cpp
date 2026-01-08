@@ -22,10 +22,23 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_EQ( connections.size(), 1 );
 		let startTime = string{ connections.at(0).as_object().at("created").get_string() };
 		TRACE( "Process::StartTime: '{}', startTime: '{}'.", ToIsoString(Process::StartTime()), startTime );
-		ASSERT_TRUE( std::chrono::abs(Process::StartTime()-Chrono::ToTimePoint(string{startTime})) < 600s );
+		ASSERT_TRUE( std::chrono::abs(Process::StartTime()-Chrono::ToTimePoint(string{startTime})) < 120s );
 	}
 
-	TEST_F( AppClientTests, login ){
+	TEST_F( AppClientTests, Status ){
+		auto q = "connections{id programName instanceName hostName created status{ memory values } }";
+		auto await = AppClient()->Query<jarray>( move(q), {} );
+		let connections = BlockTAwait<jarray>( move(*await) );
+		TRACE( "Connections: {}", serialize(connections) );
+		int count = 1;
+		if( !Settings::FindBool("/testing/embeddedAppServer").value_or(true) )
+			++count;
+		if( !Settings::FindBool("/testing/embeddedOpcServer").value_or(true) )
+			++count;
+		ASSERT_EQ( connections.size(), count );
+	}
+
+	TEST_F( AppClientTests, Login ){
 		using Web::FromServer::SessionInfo;
 		auto payload = Process::GetEnv( "JDE_GOOGLE_JWT" );
 		if( !payload )

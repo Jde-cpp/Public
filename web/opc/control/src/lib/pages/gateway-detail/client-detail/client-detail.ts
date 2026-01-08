@@ -8,8 +8,8 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { ComponentPageTitle } from 'jde-spa';
 import { DetailResolverData, IErrorService, IGraphQL, IProfile, Properties} from 'jde-framework';
 
-import { ServerCnnctn } from '../../model/ServerCnnctn';
-import { Gateway, GatewayService } from '../../services/gateway.service';
+import { ServerCnnctn } from '../../../model/ServerCnnctn';
+import { Gateway, GatewayService } from '../../../services/gateway.service';
 
 @Component( {
 	selector: 'roles',
@@ -18,7 +18,7 @@ import { Gateway, GatewayService } from '../../services/gateway.service';
 	host: {class:'main-content mat-drawer-container my-content'},
 	imports: [CommonModule, MatButtonModule, MatIcon, MatTabsModule, Properties]
 })
-export class GatewayDetail implements OnDestroy, OnInit{
+export class ClientDetail implements OnDestroy, OnInit{
 	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, @Inject('IProfile') private profileService: IProfile, @Inject('IErrorService') private snackbar: IErrorService ){
 		effect(() => {
 			if( !this.properties() )

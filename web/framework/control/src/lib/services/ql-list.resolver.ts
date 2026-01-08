@@ -79,7 +79,7 @@ export class QLListResolver implements Resolve<QLListData> {
 		let columns = Field.filter( schema.fields, pageSettings.excludedColumns, profile.value.showDeleted ).map( x=>x.name );
 		let query = `${collectionName}{ ${columns.join(" ")} }`;
 		const data = await ql.query<any>( query );
-		routeStore.setSiblings( routing.path, data[schema.collectionName].map( r=>{return {title:r.name, path:`${routing.path}/${r.target}`};}) );
+		routeStore.setChildren( routing.path, data[schema.collectionName].map( r=>{return {title:r.name, path:`${routing.path}/${r.target}`};}) );
 
 		return {
 			profile: profile,

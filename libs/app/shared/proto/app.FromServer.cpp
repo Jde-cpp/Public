@@ -31,7 +31,7 @@ namespace Jde::App{
 		t.add_messages()->set_request_id( requestId );
 		return t;
 	}
-	α FromServer::ConnectionInfo( AppPK appPK, AppInstancePK instancePK, AppConnectionPK connectionPK, RequestId clientRequestId, const Crypto::PublicKey& appServerPubKey, Web::Server::SessionInfo&& session )ι->Proto::FromServer::Transmission{
+	α FromServer::ConnectionInfo( ProgramPK appPK, ProgInstPK instancePK, ConnectionPK connectionPK, RequestId clientRequestId, const Crypto::PublicKey& appServerPubKey, Web::Server::SessionInfo&& session )ι->Proto::FromServer::Transmission{
 		return setMessage( clientRequestId, [&](auto& m){
 			auto& info = *m.mutable_connection_info();
 			info.set_app_pk( appPK );
@@ -66,7 +66,7 @@ namespace Jde::App{
 		});
 	}
 
-	α FromServer::LogSubscription( AppPK appPK, AppInstancePK instancePK, const Logging::Entry& m, const QL::Subscription& sub )ι->Proto::FromServer::Transmission{
+	α FromServer::LogSubscription( ProgramPK appPK, ProgInstPK instancePK, const Logging::Entry& m, const QL::Subscription& sub )ι->Proto::FromServer::Transmission{
 		return setMessage( sub.Id, [&](auto& msg){
 			auto& traces = *msg.mutable_traces();
 			traces.set_app_id( appPK );
@@ -85,14 +85,25 @@ namespace Jde::App{
 		});
 	}
 
-	α FromServer::ToStatus( AppPK appId, AppInstancePK instanceId, str hostName, Proto::FromClient::Status&& input )ι->Proto::FromServer::Status{
+	α FromServer::QueryClient( string&& query, sp<jobject> variables, Jde::UserPK executer, bool raw, RequestId requestId )ι->Proto::FromServer::Transmission{
+		return setMessage( requestId, [&](auto& m){
+			auto& clientQuery = *m.mutable_client_query();
+			clientQuery.set_query( move(query) );
+			clientQuery.set_executer_pk( executer );
+			clientQuery.set_raw( raw );
+			if( variables )
+				*clientQuery.mutable_variables() = serialize(*variables);
+		});
+	}
+/*
+	α FromServer::ToStatus( ProgramPK appId, ProgInstPK instanceId, str hostName, Proto::FromClient::Status&& input )ι->Proto::FromServer::Status{
 		Proto::FromServer::Status output;
 		output.set_application_id( (google::protobuf::uint32)appId );
 		output.set_instance_id( (google::protobuf::uint32)instanceId );
 		output.set_host_name( hostName );
 		*output.mutable_start_time() = input.start_time();
 		output.set_memory( input.memory() );
-		*output.mutable_values() = move( *input.mutable_details() );
+		*output.mutable_values() = move( *input.mutable_values() );
 		return output;
 	}
 
@@ -101,6 +112,7 @@ namespace Jde::App{
 		*t.add_messages()->mutable_status() = move( status );
 		return t;
 	}
+*/
 	α FromServer::SubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->Proto::FromServer::Transmission{
 		return setMessage( requestId, [&](auto& m){
 			auto& ack = *m.mutable_subscription_ack();
@@ -136,11 +148,9 @@ namespace Jde::App{
 	}
 
 	α FromServer::GraphQL( string&& queryResults, RequestId requestId )ι->Proto::FromServer::Transmission{
-		Proto::FromServer::Transmission t;
-		auto toServer = t.add_messages();
-		toServer->set_request_id( requestId );
-		toServer->set_graph_ql( move(queryResults) );
-		return t;
+		return setMessage( requestId, [&](auto& m){
+			m.set_query_result( move(queryResults) );
+		});
 	}
 	α FromServer::Session( const Web::Server::SessionInfo& session, RequestId requestId )->Proto::FromServer::Transmission{
 		return setMessage( requestId, [&](auto& m){

@@ -9,10 +9,11 @@ namespace Jde::Web::Server{
 	struct IRequestHandler{
 		IRequestHandler( jobject settings, sp<App::IApp> appServer )ι;
 		virtual ~IRequestHandler()=default; //msvc error
-		β HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> =0; //abstract, can't return a copy.
-		β GetWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> =0;
-		β Schemas()ι->const vector<sp<DB::AppSchema>>& =0;
+		β HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> =0;
 		β PassQL()ι->bool{ return false; }
+		β Query( QL::RequestQL&& ql, UserPK executer, bool raw, SRCE )ε->up<TAwait<jvalue>> = 0;
+		β Schemas()ι->const vector<sp<DB::AppSchema>>& =0;
+		β WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> =0;
 
 		α AppServer()ι->sp<App::IApp>{ return _appServer; }
 		α AppServerLocal()ι->bool{ return _appServer->IsLocal(); }

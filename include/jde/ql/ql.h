@@ -16,6 +16,7 @@ namespace Jde::QL{
 	Ŧ AsId( const jvalue& j, SRCE )ε->T;
 	α SetSystemMutations( flat_set<string>&& x )ι->void;
 	α SetSystemTables( flat_set<string>&& x )ι->void;
+	α IsSystemQuery( const QL::RequestQL& q )ι->bool;
 
 	template<class T=uint32> α FindId( const jobject& j )ι->T;
 	α Configure( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ε->sp<LocalQL>;

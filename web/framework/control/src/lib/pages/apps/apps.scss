@@ -1,5 +1,15 @@
 //@import '../../../../styles/constants';
 
+.cards {
+	display: flex;
+	flex-direction: column;
+	overflow: auto;
+	flex: 1;
+	margin-top: 56px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .docs-component-category-list-summary
 {
 	padding: 25px 40px 0;

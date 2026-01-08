@@ -29,7 +29,7 @@ namespace Jde::App::Server{
 			_appClient{ move(appClient) }
 		{}
 		α Suspend()ι->void override{
-			let id = _mutation.Id<AppConnectionPK>();
+			let id = _mutation.Id<ConnectionPK>();
 			auto pid = id==_appClient->ConnectionPK() ? Process::ProcessId() : 0;
 			if( auto p = pid ? sp<ServerSocketSession>{} : Server::FindConnection(id); p )
 				pid = p->Instance().pid();

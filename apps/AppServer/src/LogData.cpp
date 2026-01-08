@@ -87,10 +87,10 @@ namespace Server{
 }
 
 namespace Jde{
-	α App::AddConnection( str appName, str instanceName, str hostName, uint pid )ε->tuple<AppPK, AppInstancePK, AppConnectionPK>{
-		AppPK appId{};
-		AppInstancePK appInstanceId{};
-		AppConnectionPK appConnectionId{};
+	α App::AddConnection( str appName, str instanceName, str hostName, uint pid )ε->tuple<ProgramPK, ProgInstPK, ConnectionPK>{
+		ProgramPK appId{};
+		ProgInstPK appInstanceId{};
+		ConnectionPK appConnectionId{};
 		let rows = ds().Select( {
 			Ƒ("{}(?,?,?,?)", _appSchema->GetTable("connections").InsertProcName()),
 			{DB::Value{appName}, {instanceName}, DB::Value{hostName}, DB::Value{pid}},
@@ -103,7 +103,7 @@ namespace Jde{
 
 		return make_tuple( appId, appInstanceId, appConnectionId );
 	}
-	α App::EndInstance( AppInstancePK instanceId, SL sl )ι->DB::ExecuteAwait::Task{
+	α App::EndInstance( ProgInstPK instanceId, SL sl )ι->DB::ExecuteAwait::Task{
 		try{
 			co_await ds().Execute( {Ƒ("update {} set end_time=now() where id=?", instanceTableName()), {DB::Value{instanceId}}}, sl );
 		}
@@ -112,7 +112,7 @@ namespace Jde{
 	}
 
 /*
-	α App::LoadApplications( AppPK id )ι->up<Proto::FromServer::Applications>
+	α App::LoadApplications( ProgramPK id )ι->up<Proto::FromServer::Applications>
 	{
 		auto pApplications = mu<Proto::FromServer::Applications>();
 		auto fnctn = [&pApplications]( const DB::IRow& row )
@@ -136,7 +136,7 @@ namespace Jde{
 		return pApplications;
 	}
 
-	α App::SaveMessage( AppPK applicationId, AppInstancePK instanceId, const Log::Proto::LogEntryClient& m, SL )ι->void{
+	α App::SaveMessage( ProgramPK applicationId, ProgInstPK instanceId, const Log::Proto::LogEntryClient& m, SL )ι->void{
 		let variableCount = std::min( 5, m.args().size() );
 		vector<DB::Value> params{
 			{applicationId},

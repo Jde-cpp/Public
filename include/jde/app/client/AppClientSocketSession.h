@@ -39,6 +39,7 @@ namespace Jde::App::Client{
 		α UserPK()Ι{ return _userPK; }
 		α QLServer()ι{ return _qlServer; }
 	private:
+		α ClientQuery( Proto::FromServer::ClientQuery proto, RequestId requestId )ι->TAwait<jvalue>::Task;
 		α Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void;
 		α WriteException( exception&&, RequestId requestId )ι->void;
 		α WriteException( string&& e, RequestId requestId )ι->void;
