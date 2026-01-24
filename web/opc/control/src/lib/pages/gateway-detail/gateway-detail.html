@@ -1,5 +1,5 @@
 <mat-tab-group class="my-content" mat-stretch-tabs="false" mat-align-tabs="start"
-	[selectedIndex]="profile?.value.tabIndex ?? 0"
+	[selectedIndex]="tabIndex"
 	(selectedIndexChange)="tabIndexChanged($event)"
 	dynamicHeight="true">
 	<mat-tab>

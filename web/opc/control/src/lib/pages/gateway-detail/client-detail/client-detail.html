@@ -1,5 +1,5 @@
 <mat-tab-group class="my-content" mat-stretch-tabs="false" mat-align-tabs="start"
-	[selectedIndex]="profile.value.tabIndex"
+	[selectedIndex]="tabIndex"
 	(selectedIndexChange)="tabIndexChanged($event)"
 	dynamicHeight="true">
 	<mat-tab>
@@ -8,6 +8,14 @@
 			<properties [ctor]=ctor [(record)]=properties type=role [schema]=schema></properties>
 		</ng-template>
 	</mat-tab>
+	@if( server ){
+		<mat-tab>
+			<ng-template mat-tab-label>Connection</ng-template>
+			<ng-template matTabContent>
+					<server-properties [server]="server"></server-properties>
+			</ng-template>
+		</mat-tab>
+	}
 </mat-tab-group>
 <div style="display: flex; margin: 20px;border-top: 20px;border-color: primary;">
 	<button tabindex="100" mat-fab extended (click)="onSubmitClick()" [disabled]="!isChanged()"><mat-icon>done</mat-icon>Save</button>

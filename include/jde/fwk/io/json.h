@@ -3,6 +3,7 @@
 #define JSON_H
 #include <expected>
 #include <jde/fwk/exceptions/CodeException.h>
+#include <jde/db/Key.h>
 
 #define Φ Γ α
 namespace Jde{
@@ -31,6 +32,7 @@ namespace Jde{
 		Φ AsArrayPath( const jobject& o, sv path, SRCE )ε->const jarray&;
 		Ξ AsBool( const jvalue& v, SRCE )ε->bool{ return $(bool); }
 		Ξ AsBool( const jobject& o, sv path, SRCE )ε->bool{ return AsBool( AsValue(o,path,sl), sl ); }
+		α AsKey( const jobject& o, SRCE )ε->DB::Key;
 		Ŧ AsNumber( const jvalue& v, SRCE )ε->T;
 		Ŧ AsNumber( const jobject& o, sv path, SRCE )ε->T{ return AsNumber<T>( AsValue(o,path,sl), sl ); }
 		Ŧ AsPath( const jobject& o, sv path, SRCE )ε->T;
@@ -79,8 +81,8 @@ namespace Jde{
 
 		Φ Kind( boost::json::kind value )ι->string;
 
-		Ŧ FindNumber( const jobject& o, sv key )ι->optional<T>;
 		Ŧ FindKey( const jobject& o, sv key="id" )ι->optional<T>;
+		Ŧ FindNumber( const jobject& o, sv key )ι->optional<T>;
 		Ξ FindObject( const jobject& o, sv key )ι->const jobject*{ auto p = o.if_contains(key); return p ? p->if_object() : nullptr; }
 		Ξ FindObject( jobject& o, sv key )ι->jobject*{ auto p = o.if_contains(key); return p ? p->if_object() : nullptr; }
 		Φ FindString( const jobject& o, sv key )ι->optional<string>;

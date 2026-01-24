@@ -31,7 +31,7 @@ namespace Jde::App{
 		t.add_messages()->set_request_id( requestId );
 		return t;
 	}
-	α FromServer::ConnectionInfo( ProgramPK appPK, ProgInstPK instancePK, ConnectionPK connectionPK, RequestId clientRequestId, const Crypto::PublicKey& appServerPubKey, Web::Server::SessionInfo&& session )ι->Proto::FromServer::Transmission{
+	α FromServer::ConnectionInfo( ProgramPK appPK, ProgInstPK instancePK, ConnectionPK connectionPK, RequestId clientRequestId, const Crypto::PublicKey& appServerPubKey, Web::Server::SessionInfo&& session, optional<bool> authResult )ι->Proto::FromServer::Transmission{
 		return setMessage( clientRequestId, [&](auto& m){
 			auto& info = *m.mutable_connection_info();
 			info.set_app_pk( appPK );
@@ -39,7 +39,10 @@ namespace Jde::App{
 			info.set_connection_pk( connectionPK );
 			info.set_certificate_modulus( {appServerPubKey.Modulus.begin(), appServerPubKey.Modulus.end()} );
 			info.set_certificate_exponent( {appServerPubKey.Exponent.begin(), appServerPubKey.Exponent.end()} );
+			if( authResult )
+				info.set_auth_result( *authResult );
 			*info.mutable_session_info() = move( Web::Server::ToProto(move(session)) );
+			TRACET( ELogTags::Test, "Connected. UserPK='{}'", info.session_info().user_pk() );
 		});
 	}
 

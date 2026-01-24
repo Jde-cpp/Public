@@ -1,5 +1,4 @@
-#include "RoleHook.h"
-#include <jde/access/Authorize.h>
+#include <jde/access/server/awaits/RoleAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/InsertClause.h>
@@ -8,8 +7,10 @@
 #include <jde/db/awaits/ExecuteAwait.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/IQL.h>
+#include <jde/ql/LocalSubscriptions.h>
 #include <jde/ql/QLAwait.h>
 #include <jde/ql/types/TableQL.h>
+#include <jde/access/Authorize.h>
 #include "../serverInternal.h"
 #include "../../accessInternal.h"
 #pragma GCC diagnostic ignored "-Wdangling-reference"
@@ -18,29 +19,17 @@
 namespace Jde::Access::Server{
 	//α GetTable( str name )ε->sp<DB::View>;
 
-	struct RoleMutationAwait final : TAwait<jvalue>{
-		RoleMutationAwait( const QL::MutationQL& m, UserPK userPK, SL sl )ι:TAwait<jvalue>{ sl }, Mutation{m}, _userPK{userPK}{}
-		α Suspend()ι->void override{ if(Mutation.Type==QL::EMutationQL::Remove) Remove(); else Add(); }
-	private:
-		α Add()ι->void;
-		α AddRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task;
-		α AddPermission( RolePK parentRolePK, const jobject& permissionRights )ι->TAwait<PermissionPK>::Task;
-		α Remove()ι->DB::ExecuteAwait::Task;
-
-		QL::MutationQL Mutation;
-		UserPK _userPK;
-	};
-
 	//{ mutation addRole( id:42, allowed:255, denied:0, resource:{target:"users"} ) }
 	//{ mutation addRole( id:11, role:{id:13} ) }
 	α RoleMutationAwait::Add()ι->void{
-		let rolePK = Mutation.Id<RolePK>();
-		if( auto role = Mutation.Args.find("role"); role!=Mutation.Args.end() )
+		let rolePK = _mutation.Id<RolePK>();
+		let args = _mutation.ExtrapolateVariables();
+		if( auto role = args.find("role"); role!=args.end() )
 			AddRole( rolePK, Json::AsObject(role->value()) );
-		else if( auto rights = Mutation.Args.find("permissionRight"); rights!=Mutation.Args.end() )
+		else if( auto rights = args.find("permissionRight"); rights!=args.end() )
 			AddPermission( rolePK, Json::AsObject(rights->value()) );
 		else
-			ResumeExp( Exception{"Invalid mutation."} );
+			ResumeExp( Exception{"Invalid mutation, expecting 'role' or 'permissionRight'."} );
 	}
 	α RoleMutationAwait::AddRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task{
 		try{
@@ -53,25 +42,49 @@ namespace Jde::Access::Server{
 				insert.Add( table.GetColumnPtr("member_id"), childRolePK );
 				rowCount += co_await table.Schema->DS()->Execute( insert.Move() );
 			}
+			QL::Subscriptions::OnMutation( _mutation, jvalue{} );
 			Resume( rowCount );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α RoleMutationAwait::AddPermission( RolePK rolePK, const jobject& rights )ι->TAwait<PermissionPK>::Task{
+	α RoleMutationAwait::AddPermission( RolePK rolePK, const jobject& rights )ι->TAwait<PermissionRightsPK>::Task{
 		try{
-			const string resource{ Json::AsSVPath(rights, "resource/target") };
-			Authorizer().TestAdmin( resource, _userPK );
+			//addRole( id:1, permissionRight:{allowed:1, denied:0, resource:{schema:\"opc.default\", target:\"nodeIds\", criteria:null}} )","variables":{}}
+			let resource = Json::AsObject( rights, "resource" );
+			auto schema = Json::AsString(resource, "schemaName");
+			auto criteria = Json::FindString(resource, "criteria");
+			auto resourceName = Json::FindString(resource, "name");
+			let resourceTarget = Json::AsString(resource, "target");
+			auto& auth = Authorizer();
+			auth.TestAdmin( schema, resourceTarget, criteria.value_or(""), _userPK );
 			let& table = GetTable( "roles" );
 			DB::InsertClause insert{ DB::Names::ToSingular(table.DBName)+"_add" };
 			insert.Add( rolePK );
 			insert.Add( Json::FindNumber<uint8>(rights, "allowed").value_or(0) );
 			insert.Add( Json::FindNumber<uint8>(rights, "denied").value_or(0) );
-			insert.Add( resource );
-			let permissionPK = co_await table.Schema->DS()->InsertSeq<PermissionRightsPK>( move(insert) );
+			insert.Add( resourceTarget );
+			insert.Add( schema );
+			insert.AddOpt( move(resourceName) );
+			insert.AddOpt( criteria );
+			auto ds = table.Schema->DS();
+			let permissionPK = co_await ds->InsertSeq<PermissionRightsPK>( move(insert) );
 			jobject y;
-			y["permissionRight"].emplace_object()["id"] = permissionPK;
+			auto& permissionRight = y["permissionRight"].emplace_object();
+			if( criteria ){
+				auto resourcePK = auth.FindResourcePK(schema, resourceTarget, *criteria);
+				if( !resourcePK ){
+					resourcePK = co_await ds->Scaler<ResourcePK>({
+						Ƒ( "select resource_id from {} where schema_name=? and target=? and criteria=?", GetTable("resources").DBName ),
+						{ {schema}, {resourceTarget}, {*criteria} }
+					 });
+					auth.AddResource( *resourcePK, schema, resourceTarget, *criteria );
+				}
+				permissionRight["resource"].emplace_object()["id"] = *resourcePK;
+			}
+			permissionRight["id"] = permissionPK;
+			QL::Subscriptions::OnMutation( _mutation, y );
 			Resume( y );
 		}
 		catch( IException& e ){
@@ -82,28 +95,19 @@ namespace Jde::Access::Server{
 	α RoleMutationAwait::Remove()ι->DB::ExecuteAwait::Task{ //removeRole( id:42, permissionRight:{id:420} )
 		let& table = GetTable( "roles" );
 		DB::InsertClause remove{ DB::Names::ToSingular(table.DBName)+"_remove" };
-		remove.Add( Mutation.Id<RolePK>() );
-		remove.Add( Json::AsNumber<PermissionPK>(Mutation.Args, "permissionRight/id") );
+		remove.Add( _mutation.Id<RolePK>() );
+		remove.Add( _mutation.AsPathNumber<PermissionPK>("permissionRight/id") );
 		let y = co_await table.Schema->DS()->Execute( remove.Move() );
+		QL::Subscriptions::OnMutation( _mutation, jvalue{} );
 		ResumeScaler( y );
 	}
 
-	struct RoleSelectAwait final : TAwait<jvalue>{
-		RoleSelectAwait( const QL::TableQL& q, UserPK userPK, SRCE )ε:
-			TAwait<jvalue>{ sl },
-			MemberTable{ GetTablePtr("role_members") },
-			Query{ q },
-			UserPK{ userPK }
-		{}
-		α Suspend()ι->void override{ Select(); }
-		sp<DB::View> MemberTable;
-		QL::TableQL Query;
-		Jde::UserPK UserPK;
-	private:
-		α PermissionsStatement( QL::TableQL& permissionQL )ε->optional<DB::Statement>;
-		α RoleStatement( QL::TableQL& roleQL )ε->optional<DB::Statement>;
-		α Select()ι->QL::QLAwait<>::Task;
-	};
+	RoleSelectAwait::RoleSelectAwait( const QL::TableQL& q, Jde::UserPK userPK, SL sl )ε:
+		TAwait<jvalue>{ sl },
+		MemberTable{ GetTablePtr("role_members") },
+		Query{ q },
+		UserPK{ userPK }
+	{}
 
 	α RoleSelectAwait::RoleStatement( QL::TableQL& roleQL )ε->optional<DB::Statement>{ //role( id:11 ){ role(id:13){id target deleted} }
 		auto statement = QL::SelectStatement( roleQL, true );
@@ -112,7 +116,7 @@ namespace Jde::Access::Server{
 			statement->From = { {MemberTable->GetColumnPtr("member_id"), roleTable.GetPK(), true} };
 			let memberRoleIdCol = MemberTable->GetColumnPtr( "role_id" );
 			if( auto roleKey = Query.FindArgKey(); roleKey ){
-				if( roleKey->IsPrimary() )
+				if( roleKey->IsPK() )
 					statement->Where.Add( memberRoleIdCol, DB::Value::FromKey(*roleKey) );//role_members.role_id=?
 				else{
 					const string alias = "parent";
@@ -135,7 +139,7 @@ namespace Jde::Access::Server{
 			permissionStatement->From +={ permissionsTable.GetColumnPtr("resource_id"), GetTable("resources").GetPK(), true };
 			let rolePKCol = MemberTable->GetColumnPtr( "role_id" );
 			if( auto roleKey = Query.FindArgKey(); roleKey ){
-				if( roleKey->IsPrimary() )
+				if( roleKey->IsPK() )
 					permissionStatement->Where.Add( rolePKCol, DB::Value::FromKey(*roleKey) );
 				else{
 					auto rolesTable = GetTable( "roles" );
@@ -248,19 +252,5 @@ namespace Jde::Access::Server{
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
-	}
-
-	α RoleHook::Select( const QL::TableQL& q, UserPK userPK, SL sl )ι->HookResult{
-		return q.JsonName.starts_with("role") && (q.FindTable("roles") || q.FindTable("permissionRights"))
-			? mu<RoleSelectAwait>( q, userPK, sl )
-			: nullptr;
-	}
-
-	α RoleHook::Add( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.TableName()=="roles" ? mu<RoleMutationAwait>( m, userPK, sl ) : nullptr;
-	}
-
-	α RoleHook::Remove( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult{
-		return m.TableName()=="roles" ? mu<RoleMutationAwait>( m, userPK, sl ) : nullptr;
 	}
 }

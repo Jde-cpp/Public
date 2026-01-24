@@ -18,6 +18,7 @@ export class ServerDesc{
 	gatewayServerUri: string;
 	discoveryProfileUri: string;
 	discoveryUrls: string[];
+	get accessResource():string{ return `${this.applicationName.substring(this.applicationName.indexOf('[')+1,this.applicationName.indexOf(']'))}`; }
 }
 export type ServerDescProps = Pick<ServerDesc, PropertyNames<ServerDesc>>;
 

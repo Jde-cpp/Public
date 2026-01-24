@@ -1,12 +1,10 @@
 ﻿import { Injectable } from '@angular/core';
-import{ IProfile } from './IProfile'
+import{ IProfileStore } from './profile.store'
 import { Observable,of, throwError } from 'rxjs';
 
-@Injectable()
-export class CookieProfile implements IProfile
-{
-	get<T>( key:string ): Promise<T>
-	{
+@Injectable({ providedIn: 'root' })
+export class CookieProfile implements IProfileStore{
+	load<T>( key:string ): Promise<T>{
 		var obj:T = null;
 		let foundCookie = null;
 		const cookies = document ? document.cookie.split( ";" ) : [];
@@ -29,9 +27,8 @@ export class CookieProfile implements IProfile
 		}
 		return Promise.resolve( obj );
 	}
-	put<T>( name:string, value:T ):void
-	{
-		this.put( name, JSON.stringify(value) );
+	set<T>( name:string, value:T ):void{
+		this.putJson( name, JSON.stringify(value) );
 	}
 	putJson( name:string, json:string ):void
 	{

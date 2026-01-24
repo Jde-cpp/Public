@@ -2,6 +2,14 @@
 
 namespace Jde::Opc::Server{ struct UAConfig;}
 namespace Jde::Opc::Server::UAAccess{
+	struct SessionContext final{
+		SessionContext& operator=( const SessionContext& ) = delete;
+		string Endpoint;
+		TimePoint Expiration;
+		SessionPK SessionId;
+		UserPK UserPK;
+	};
+
 	α Init( UAConfig& config )ε->void;
 
 	α ActivateSession( UA_Server *server, UA_AccessControl *ac, const UA_EndpointDescription *endpointDescription, const UA_ByteString *secureChannelRemoteCertificate, const UA_NodeId *sessionId, const UA_ExtensionObject *userIdentityToken, void **sessionContext )ι->UA_StatusCode;

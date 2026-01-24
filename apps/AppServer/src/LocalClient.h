@@ -19,4 +19,5 @@ namespace Jde::App::Server{
 		Crypto::PublicKey _publicKey;
 	};
 	α AppClient()ι->sp<LocalClient>;
+	α Authorizer()ι->sp<Access::Authorize>;
 }

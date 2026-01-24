@@ -37,7 +37,10 @@ export class NavBar implements OnDestroy {
 		if( dflt )
 			dflt["default"] = true;
 
-    setTimeout(() => this.skipLinkHref = this.navigationFocusService.getSkipLinkHref(), 100);
+    setTimeout(() =>{
+			this.skipLinkHref = this.navigationFocusService.getSkipLinkHref();
+			console.log( 'Skip link href set to:', this.skipLinkHref );
+		}, 100);
   }
 
   get sections() {

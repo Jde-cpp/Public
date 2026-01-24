@@ -8,7 +8,6 @@
 
 #define let const auto
 namespace Jde::Opc::Gateway{
-
 	α NodeQLAwait::Execute()ι->TAwait<sp<UAClient>>::Task{
 		try{
 			BrowsePathResponse pathNodes;

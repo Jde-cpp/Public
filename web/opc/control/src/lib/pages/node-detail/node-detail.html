@@ -1,27 +1,19 @@
-	<mat-tab-group class="my-content" mat-stretch-tabs="false" mat-align-tabs="start"
-		[selectedIndex]="profile.tabIndex"
-		(selectedIndexChange)="tabIndexChanged($event)"
-		dynamicHeight="true">
-		<mat-tab>
-			<ng-template mat-tab-label>Children</ng-template>
-			<ng-template matTabContent>
-				<node-children [node]="node()"></node-children>
-			</ng-template>
-		</mat-tab>
-		@if( node().nodeId.ns==0 && node().nodeId.id==85 ){
-			<mat-tab>
-				<ng-template mat-tab-label>Properties</ng-template>
-				<ng-template matTabContent>
-					@if( node().nodeId.ns==0 && node().nodeId.id==85 ){
-						<server-properties [server]="server()"></server-properties>
-					}
-				</ng-template>
-			</mat-tab>
-		}
+<mat-tab-group class="my-content" mat-stretch-tabs="false" mat-align-tabs="start"
+	[selectedIndex]="tabIndex"
+	(selectedIndexChange)="onTabIndexChanged($event)"
+	dynamicHeight="true">
+	<mat-tab>
+		<ng-template mat-tab-label>Children</ng-template>
+		<ng-template matTabContent>
+			<node-children [node]="node()"></node-children>
+		</ng-template>
+	</mat-tab>
+	@if( pageData().server.applicationName.startsWith("Jde-Cpp OpcServer") ){
 		<mat-tab>
 			<ng-template mat-tab-label>Permissions</ng-template>
 			<ng-template matTabContent>
-				<node-roles [gatewayService]="pageData().gateway" [opcTarget]="pageData().server.opcTarget" [node]="node()"></node-roles>
+				<node-access [route]=this.sideNav() [accessResource]=pageData().server.accessResource [node]=node()></node-access>
 			</ng-template>
 		</mat-tab>
-	</mat-tab-group>
+	}
+</mat-tab-group>

@@ -3,9 +3,7 @@
 #include <jde/ql/LocalQL.h>
 #include <jde/access/awaits/ConfigureAwait.h>
 #include "serverInternal.h"
-#include "hooks/AclHook.h"
 #include "hooks/GroupHook.h"
-#include "hooks/RoleHook.h"
 #include "hooks/UserHook.h"
 #include "../accessInternal.h"
 
@@ -28,10 +26,8 @@ namespace Jde::Access{
 		THROW_IF( accessSchema==schemas.end(), "Access schema not found in schemas" );
 		SetSchema( *accessSchema );
 		_ql = localQL;
-		QL::Hook::Add( mu<AclHook>() );//select, insertBefore
 		QL::Hook::Add( mu<GroupHook>() );//add before
-		QL::Hook::Add( mu<RoleHook>() );//add remove
 		QL::Hook::Add( mu<UserHook>() );//select
-		return ConfigureAwait{ localQL, move(schemas), authorizer, executer, move(listener) };
+		return ConfigureAwait{ localQL, move(schemas), authorizer, executer, move(listener), {} };
 	}
 }

@@ -2,8 +2,8 @@
 #include <open62541/plugin/accesscontrol_default.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/access/IAcl.h>
-#include "globals.h"
-#include "UAConfig.h"
+#include "../UAConfig.h"
+#include "OpcAuthorize.h"
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
@@ -22,22 +22,14 @@ typedef struct {
 	UA_String UserTokenPolicyUri;
 } AccessControlContext;
 
-namespace Jde::Opc::Server{
-	struct SessionContext final{
-		SessionContext& operator=( const SessionContext& ) = delete;
-		string Endpoint;
-		TimePoint Expiration;
-		SessionPK SessionId;
-		UserPK UserPK;
-	};
-}
 
 namespace Jde::Opc::Server::UAAccess{
 	ELogTags _tags = ( ELogTags )( (EOpcLogTags)ELogTags::Access | EOpcLogTags::Opc );
+	string _schemaName;
 	Ω authorize( sv resource, Access::ERights rights, UserPK userPK )ι->bool{
 		bool allow{ true };
 		try{
-			GetSchema().Authorizer->Test( "opc", string{resource}, rights, userPK );
+			GetSchema().Authorizer->Test( _schemaName, string{resource}, rights, userPK );
 		}
 		catch( exception& e ){
 			TRACE( "Access denied to resource '{}' for user {}: {}", resource, userPK.Value, e.what() );
@@ -75,6 +67,8 @@ namespace Jde::Opc::Server::UAAccess{
 }
 namespace Jde::Opc::Server{
 	α UAAccess::Init( UAConfig& config )ε->void{
+		auto suffix = Settings::FindString( "/opcServer/resource" );
+		_schemaName = suffix ? "opc." + *move( suffix ) : "opc";
 		auto& ac = config.accessControl;
 		assignFunctions( ac );
 		auto& context = setContext( ac );
@@ -268,7 +262,7 @@ namespace Jde::Opc::Server{
 		delete ctx;
 	}
 	α UAAccess::GetUserRightsMask( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, void *nodeContext )ι->UA_UInt32{
-		let rights = GetSchema().Authorizer->Rights( "opc", "node", static_cast<SessionContext*>(sessionContext)->UserPK );
+		let rights = GetSchema().Authorizer->Rights( _schemaName, "node", static_cast<SessionContext*>(sessionContext)->UserPK );
 		UA_UInt32 mask = 0;
 		if( !empty(rights & Access::ERights::Update) )
 			mask = UA_WRITEMASK_ARRRAYDIMENSIONS | UA_WRITEMASK_BROWSENAME | UA_WRITEMASK_CONTAINSNOLOOPS | UA_WRITEMASK_DATATYPE | UA_WRITEMASK_DESCRIPTION | UA_WRITEMASK_DISPLAYNAME | UA_WRITEMASK_EVENTNOTIFIER | UA_WRITEMASK_EXECUTABLE | UA_WRITEMASK_HISTORIZING | UA_WRITEMASK_INVERSENAME | UA_WRITEMASK_ISABSTRACT  | UA_WRITEMASK_MINIMUMSAMPLINGINTERVAL | UA_WRITEMASK_NODECLASS | UA_WRITEMASK_NODEID | UA_WRITEMASK_SYMMETRIC | UA_WRITEMASK_USEREXECUTABLE | UA_WRITEMASK_VALUERANK | UA_WRITEMASK_VALUEFORVARIABLETYPE | UA_WRITEMASK_DATATYPEDEFINITION;
@@ -276,32 +270,16 @@ namespace Jde::Opc::Server{
 			mask |= UA_WRITEMASK_ROLEPERMISSIONS | UA_WRITEMASK_ACCESSRESTRICTIONS | UA_WRITEMASK_ACCESSLEVELEX | UA_WRITEMASK_USERWRITEMASK | UA_WRITEMASK_ACCESSLEVEL | UA_WRITEMASK_USERACCESSLEVEL | UA_WRITEMASK_WRITEMASK;
 		return mask;
 	}
-	α UAAccess::GetUserAccessLevel( UA_Server* server, UA_AccessControl* ac, const UA_NodeId* sessionId, void* sessionContext, const UA_NodeId* nodeId, void* nodeContext )ι->UA_Byte{
+	α UAAccess::GetUserAccessLevel( UA_Server* /*server*/, UA_AccessControl* /*ac*/, const UA_NodeId* /*sessionId*/, void* sessionContext, const UA_NodeId* nodeId, void* /*nodeContext*/ )ι->UA_Byte{
 		ASSERT( nodeId );
 		if( !nodeId )
-			return false;
+			return 0;
 		let id = nodeId->identifier.numeric;
 		ASSERT( nodeId->identifierType == UA_NODEIDTYPE_NUMERIC );
-		if( nodeId->namespaceIndex==0 && id == UA_NS0ID_SERVER_NAMESPACEARRAY ){
+		if( nodeId->namespaceIndex==0 && id == UA_NS0ID_SERVER_NAMESPACEARRAY )
 			return UA_ACCESSLEVELMASK_READ;
-		}
-		let rights = GetSchema().Authorizer->Rights( "opc", "node", static_cast<SessionContext*>(sessionContext)->UserPK );
-		UA_Byte accessLevel = 0;
-		if( !empty(rights & Access::ERights::Read) ){
-			accessLevel |= UA_ACCESSLEVELMASK_READ;
-			accessLevel |= UA_ACCESSLEVELMASK_CURRENTREAD;
-			accessLevel |= UA_ACCESSLEVELMASK_HISTORYREAD;
-		}
-		if( !empty(rights & Access::ERights::Update) ){
-			accessLevel |= UA_ACCESSLEVELMASK_WRITE;
-			accessLevel |= UA_ACCESSLEVELMASK_CURRENTWRITE;
-			accessLevel |= UA_ACCESSLEVELMASK_HISTORYWRITE;
-			accessLevel |= UA_ACCESSLEVELMASK_STATUSWRITE;
-			accessLevel |= UA_ACCESSLEVELMASK_TIMESTAMPWRITE;
-		}
-		if( !empty(rights & Access::ERights::Administer) )
-			accessLevel |= UA_ACCESSLEVELMASK_SEMANTICCHANGE;
-		return accessLevel;
+		OpcAuthorize& authorizer = static_cast<OpcAuthorize&>( *GetSchema().Authorizer );
+		return underlying( authorizer.UserRights(*nodeId, static_cast<SessionContext*>(sessionContext)->UserPK) );
 	}
 
 	α UAAccess::GetUserExecutable( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *methodId, void *methodContext )ι->UA_Boolean{

@@ -8,7 +8,7 @@ namespace Jde::Web::Server{
 		FromServer::SessionInfo proto;
 		*proto.mutable_expiration() = Protobuf::ToTimestamp( Chrono::ToClock<Clock,steady_clock>(session.Expiration) );
 		proto.set_session_id( session.SessionId );
-		proto.set_user_pk( session.UserPK );
+		proto.set_user_pk( session.UserPK.Value );
 		proto.set_user_endpoint( session.UserEndpoint );
 		proto.set_has_socket( session.HasSocket );
 		return proto;

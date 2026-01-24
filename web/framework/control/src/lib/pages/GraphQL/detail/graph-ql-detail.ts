@@ -10,8 +10,7 @@ import {IErrorService} from '../../../services/error/IErrorService';
 import {IGraphQL}  from '../../../services/IGraphQL';
 import {TableSchema} from '../../../model/ql/schema/TableSchema'
 import { MetaObject } from '../../../model/ql/schema/MetaObject';
-import {IProfile} from '../../../services/profile/IProfile';
-import {Settings} from '../../../utils/settings';
+import {LocalProfileStore} from '../../../services/profile/localProfile.store';
 import { MatTabsModule } from '@angular/material/tabs';
 import{ PageSettings } from '../model/PageSettings';
 import { clone } from '../../../utils/utils';
@@ -24,12 +23,13 @@ import { clone } from '../../../utils/utils';
     imports: [CommonModule, MatTabsModule/*, Properties*/]
 })
 export class GraphQLDetailComponent implements OnDestroy, OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private dialog : MatDialog, private componentPageTitle:ComponentPageTitle, @Inject('IGraphQL') private graphQL: IGraphQL, @Inject('IProfile') private profileService: IProfile, @Inject('IErrorService') private cnsle: IErrorService ){
+	constructor( private route: ActivatedRoute, private router:Router, private dialog : MatDialog, private componentPageTitle:ComponentPageTitle, @Inject('IGraphQL') private graphQL: IGraphQL, @Inject('IErrorService') private cnsle: IErrorService ){
 		this.target = this.router.url.substring( this.router.url.lastIndexOf('/')+1 );
 	}
 
-	ngOnDestroy(){ this.profile.save(); }
+	ngOnDestroy(){ LocalProfileStore.setTabIndex("graphQLDetail", this.tabIndex); }
 	ngOnInit(){
+		this.tabIndex = LocalProfileStore.tabIndex( "graphQLDetail" );
 		// @ts-ignore
 		//seems to be too much going on, component stays alive and continues to trigger this.
 		//this.router.events.pipe( filter(e=>e instanceof NavigationEnd) ).subscribe( this.onNavigationEnd );
@@ -42,8 +42,6 @@ export class GraphQLDetailComponent implements OnDestroy, OnInit{
 		this.name = pageSettings["name"];
 		const display = pageSettings["display"] || "name";
 		this.componentPageTitle.title = pageSettings["name"];
-		this.profile = new Settings<UserSettings>( UserSettings, `${this.type}-detail`, this.profileService );
-		await this.profile.loadedPromise;
 		try{
 			let schemaData = ( await this.graphQL.schema( [this.type] ) )[0];
 			if(  this.route.routeConfig?.data && this.route.routeConfig.data["excludedColumns"] )
@@ -134,25 +132,19 @@ export class GraphQLDetailComponent implements OnDestroy, OnInit{
 			fetch( columns );
 	}
 	tabIndexChanged( event ){
-		 this.settings.tabIndex=<number>event;
+		 this.tabIndex=<number>event;
 	}
 	get fetchName():string{ return this.schema.singular; }
 	data:any
 	name:string;
 	copy( x:any ){ return clone(x); }
 	pageSettings:PageSettings;
-	get settings(){ return this.profile.value;}
-	profile:Settings<UserSettings>;// = new Settings<PageSettings>( PageSettings, "UserComponent", this.profileService );
 	get propertiesName(){ return this.target=="$new" ? `New ${this.schema.type}` : "Properties"; }
 	schema:TableSchema;
 	siblings: Subject<Map<string,string>> = new Subject<Map<string,string>>();
 	tabs = new Array<TableSchema>();
+	tabIndex:number;
 	target:string;
 	get type():string{ return this.name.substr( 0, this.name.length-1 ); }
 	viewPromise:Promise<boolean>;
-}
-
-class UserSettings{
-	assign( value:UserSettings ){ this.tabIndex = value.tabIndex;  }
-	tabIndex:number=0;
 }

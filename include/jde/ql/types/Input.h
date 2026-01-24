@@ -4,31 +4,59 @@
 #define let const auto
 namespace Jde::QL{
 	struct Input{
+		static constexpr sv Escape{ "\b$" };
 		Input( jobject&& args, sp<jobject> variables )ι: Args{ move(args) }, Variables{ move(variables) }{}
 		Ŧ Find( sv name )Ι->optional<T>;
 		template<class T=jvalue> α FindPtr( sv name )Ι->const T*;
 		template<class T=jvalue> α As( sv name, SRCE )Ε->const T&;
+		template<class T> α AsPathNumber( sv path, SRCE )Ε->T;
+		template<class T=jvalue> α AsPathRef( sv path, SRCE )Ε->const T&;
 		Ŧ AsNumber( sv name, SRCE )Ε->T;
 		Ŧ TryNumber( sv name )Ι->optional<T>;
 		template<class T=uint> α Id()Ι->T;
 		template<class T=uint> α FindId()Ι->optional<T>;
-		α FindKey()ι->optional<DB::Key>;
-		α GetKey( SRCE )ε->DB::Key;
-		Ŧ GetPath( sv path, SRCE )Ε->T;
+		α FindKey()Ι->optional<DB::Key>;
+		α GetKey( SRCE )Ε->DB::Key;
 		α ExtrapolateVariables()Ι->jobject;
 		β JTableName()Ι->string=0;
 
 		jobject Args;
 		sp<jobject> Variables;
+	private:
+		α VariableName( const jvalue& v )Ι->string;
+		α VariablesString()Ι->string{ return Variables ? serialize(*Variables) : "{}"; }
 	};
+
+	Ξ Input::VariableName( const jvalue& v )Ι->string{
+		if( !v.is_string() )
+			return {};
+		if( let s = v.get_string(); s.starts_with(Escape) )
+			return string{sv{s}.substr(2)};
+		return {};
+	}
+
+	template<> Ξ Input::AsPathRef<jvalue>( sv path, SL sl )Ε->const jvalue&{
+		auto arg = Json::FindValue( Args,  path );
+		THROW_IFSL( !arg, "Could not find path '{}' in query: {}", path, serialize(Args) );
+		if( let variableName = VariableName(*arg); variableName.size() ){
+			auto varValue = Variables->if_contains( variableName );
+			THROW_IFSL( !varValue, "Could not find variable '{}' in variables: {}", variableName, VariablesString() );
+			return *varValue;
+		}
+		return *arg;
+	}
+
+	Ŧ Input::AsPathNumber( sv path, SL sl )Ε->T{
+		auto& v = Input::AsPathRef( path, sl );
+		auto y = v.try_to_number<T>();
+		THROW_IFSL( !y, "Could not convert path '{}:{}' to number ", path, serialize(v) );
+		return *y;
+	}
 
 	template<> Ξ Input::FindPtr<jvalue>( sv name )Ι->const jvalue*{
 		auto value = Args.if_contains( name );
-		if( value && value->is_string() ){
-			constexpr sv escape{ "\b$" };
-			if( value->get_string().starts_with(escape) )
-				value = Variables->if_contains( sv{value->get_string()}.substr(2) );
-		}
+		if( auto variableName = value!=nullptr ? VariableName( *value ) : string{}; variableName.size() )
+			value = Variables->if_contains( variableName );
 		return value;
 	}
 	template<> Ξ Input::FindPtr( sv name )Ι->const jstring*{
@@ -69,10 +97,12 @@ namespace Jde::QL{
 		return *y;
 	}
 	Ŧ Input::FindId()Ι->optional<T>{
-		return Json::FindNumber<T>( Args, "id" );
+		auto id = FindPtr<jvalue>( "id" );
+		if( !id )
+			return {};
+		auto n = id->try_to_number<T>();
+		return n ? optional<T>{*n} : optional<T>{};
 	}
-
-	Ŧ Input::GetPath( sv path, SL sl )Ε->T{ return Json::AsPath<T>(Args, path, sl); }
 
 	Ŧ Input::Id()Ι->T{
 		const optional<T> y = FindId<T>();

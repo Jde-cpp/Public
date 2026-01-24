@@ -9,7 +9,7 @@ import { ComponentPageTitle } from 'jde-spa';
 
 import {IErrorService} from '../../../services/error/IErrorService';
 import {IGraphQL, TableSchema, Field, FieldKind}  from '../../../services/IGraphQL';
-import {IProfile} from '../../../services/profile/IProfile';
+import {IProfile} from '../../../services/profile/profile.store';
 import {Settings} from '../../../utils/settings';
 import {StringUtils} from '../../../utils/StringUtils'
 //import { SelectDialog } from '../select-dialog/select-dialog';

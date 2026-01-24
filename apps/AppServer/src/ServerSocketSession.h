@@ -1,6 +1,7 @@
 #pragma once
 #include <jde/ql/ql.h>
 #include <jde/ql/QLAwait.h>
+#include <jde/access/IAcl.h>
 #include <jde/web/client/usings.h>
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/Sessions.h>
@@ -9,8 +10,7 @@
 
 namespace Jde::App::Server{
 	using namespace Jde::Web::Server;
-	//using namespace Jde::Http;
-	struct ServerSocketSession : TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>{
+	struct ServerSocketSession : TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>, Access::IAdminAcl{
 		using base = TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>;
 		ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α ProgramPK()Ι->ProgramPK{ return _programPK; }
@@ -24,6 +24,7 @@ namespace Jde::App::Server{
 		α ProcessTransmission( Proto::FromClient::Transmission&& transmission, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId )ι->void;
 		α QueryClient( QL::TableQL&& query, Jde::UserPK executer, RequestId requestId )ι->void override;
 		α SharedFromThis()ι->sp<ServerSocketSession>{ return std::dynamic_pointer_cast<ServerSocketSession>(shared_from_this()); }
+		α TestAdmin( str resource, str criteria, Jde::UserPK userPK, SRCE )ε->void override;
 		α WriteException( exception&& e, RequestId requestId )ι->void override;
 		α WriteException(std::string&&, Jde::RequestId)ι->void override;
 		α WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void override;

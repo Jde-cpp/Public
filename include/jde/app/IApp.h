@@ -20,7 +20,7 @@ namespace Jde::App{
 		β ClientQuery( QL::RequestQL&& q, UserPK executer, bool raw, SRCE )ε->up<TAwait<jvalue>> =0;
 		Ω Status()ι->jobject{ return jobject{{"memory", Process::MemorySize()}}; }
 
-		template<class T=jobject> α Query( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->up<TAwait<T>>;
+		template<class T=jobject> [[nodiscard]] α Query( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->up<TAwait<T>>;
 		template<class T=jobject> α QuerySync( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->T;
 		template<class T=jobject> α QuerySyncSecure( string&& q, jobject variables, SRCE )ε->T{ return QuerySync<T>(move(q), true, sl); }
 

@@ -19,9 +19,8 @@ class StoreNode{
 
 @Injectable({providedIn: 'root'})
 export class OpcStore{
-	constructor(){
-		console.log( `OpcStore::OpcStore` );
-	}
+	constructor()
+	{}
 
 	public async getConnection( gatewayService:Gateway, cnnctn:CnnctnTarget ):Promise<Server>{
 		//#connections = new Map<GatewayTarget,Map<CnnctnTarget, ServerCnnctn>>();
@@ -32,7 +31,7 @@ export class OpcStore{
 		if( gatewayConnections.has(cnnctn) )
 			return gatewayConnections.get(cnnctn);
 		let q = `\
-			connection: serverConnection( target: $opc){ id name target url certificateUri defaultBrowseNs }
+			connection: serverConnection( target: $opc ){ id name target url certificateUri defaultBrowseNs }
 			desc: serverDescription( opc: $opc ){ applicationUri productUri applicationName applicationType gatewayServerUri discoveryProfileUri discoveryUrls }
 			policy: securityPolicyUri( opc: $opc )
 			mode: securityMode( opc: $opc )`;

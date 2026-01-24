@@ -23,8 +23,8 @@ export * from './lib/services/auth.store'
 export * from './lib/services/proto.service'
 export * from './lib/services/route.store';
 export * from './lib/services/app/app.service';
-export * from './lib/services/profile/IProfile';
-export * from './lib/services/profile/localStorageProfile.service';
+export * from './lib/services/profile/profile.store';
+export * from './lib/services/profile/localProfile.store';
 export * from './lib/services/error/DefaultError.service';
 export * from './lib/services/error/IErrorService';
 export * from './lib/services/ql-list.resolver';
@@ -40,7 +40,6 @@ export * from './lib/utils/dateUtils';
 export * from './lib/utils/mathUtils';
 export * from './lib/utils/ProgressObservable';
 export * from './lib/utils/protoUtils';
-export * from './lib/utils/settings';
 export * from './lib/utils/stl';
 export * from './lib/utils/StringUtils';
 export * from './lib/utils/utils';

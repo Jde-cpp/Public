@@ -5,6 +5,7 @@
 #include <jde/app/proto/app.FromServer.h>
 #include <jde/app/StringCache.h>
 #include <jde/app/proto/app.FromClient.h>
+#include <jde/access/Authorize.h>
 #include <jde/access/server/accessServer.h>
 #include "LocalClient.h"
 #include "LogData.h"
@@ -16,7 +17,6 @@ namespace Jde::App::Server{
 	ServerSocketSession::ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
 		base{ move(stream), move(buffer), move(request), move(userEndpoint), connectionIndex }
 	{}
-
 	α ServerSocketSession::AddInstance( Proto::FromClient::Instance instance, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task{
 		try{
 			auto info = co_await Web::Server::Sessions::UpsertAwait( Ƒ("{:x}", instance.session_id()), _userEndpoint.address().to_string(), true, nullptr );
@@ -25,9 +25,24 @@ namespace Jde::App::Server{
 			let [appPK,instancePK,connectionPK] = App::AddConnection( instance.application(), instance.instance_name(), instance.host(), instance.pid() );//TODO Don't block
 			INFOT( ELogTags::SocketServerRead, "[{}.{}]Adding application app:{}@{}:{} pid:{}, instancePK:{}, connectionPK:{}, sessionId: {}, endpoint: '{}'", hex(Id()), hex(requestId), instance.application(), instance.host(), instance.web_port(), instance.pid(), hex(instancePK), hex(connectionPK), hex(instance.session_id()), _userEndpoint.address().to_string() );
 			Server::RemoveExisting( instance.host(), instance.web_port() );
+			optional<bool> authResult;
+			auto& resource = *instance.mutable_auth_resource();
+			if( instance.auth_resource().size() ){
+				try{
+				 	Authorizer()->TestAdmin( resource, _userPK.value() );
+					INFOT( ELogTags::Access, "[{}.{}]Instance '{}' authorizor with resource '{}'", hex(Id()), hex(requestId), instance.instance_name(), resource );
+					Authorizer()->AddAdminAuthorizer( resource, std::dynamic_pointer_cast<Access::IAdminAcl>(shared_from_this()) );
+					authResult = true;
+				}
+				catch( IException& ){
+					INFOT( ELogTags::Access, "[{}.{}]Instance '{}' denied authorizor with resource '{}'", hex(Id()), hex(requestId), instance.instance_name(), resource );
+					authResult = false;
+				}
+			}
+
 			_instancePK = instancePK; _programPK = appPK; _connectionPK = connectionPK;
 			_instance = move( instance );
-			Write( FromServer::ConnectionInfo(appPK, instancePK, connectionPK, requestId, AppClient()->PublicKey(), move(*info)) );
+			Write( FromServer::ConnectionInfo(appPK, instancePK, connectionPK, requestId, AppClient()->PublicKey(), move(*info), authResult) );
 		}
 		catch( exception& e ){
 			WriteException( move(e), requestId );
@@ -76,7 +91,7 @@ namespace Jde::App::Server{
 			auto ql = QL::Parse( move(query), move(vars), Server::Schemas(), returnRaw );
 			auto reqHandler = Server::GetRequestHandler();
 			let executer = _userPK.value_or(Jde::UserPK{0});
-			auto j = QL::IsSystemQuery( ql ) && reqHandler
+			auto j = reqHandler
 				? co_await *reqHandler->Query( move(ql), executer, returnRaw )
 				: co_await QL::QLAwait( move(ql), executer );
 			auto y = serialize( j );
@@ -128,7 +143,13 @@ namespace Jde::App::Server{
 			WriteException( move(e), requestId );
 		}
 	}
-
+	α ServerSocketSession::TestAdmin( str resource, str criteria, Jde::UserPK userPK, SL sl )ε->void{
+		string q = "permisionRight( user:$user ){isAdmin resource( resource:$resource, criteria:$criteria )}";
+		auto ql = QL::ParseQuery(move(q), jobject{{"user", userPK.Value}, {"resource", resource}, {"criteria", criteria}}, {}, true, sl);
+		auto await = IWebsocketSession::QueryClient(move(ql), UserPK(), sl );
+		auto result = BlockTAwait<jvalue>( move(await) );
+		THROW_IF( !result.at("permissionRight").at("isAdmin").as_bool(), "User {:x} is not admin for resource '{}' with criteria '{}'.", userPK.Value, resource, criteria );
+	}
 
 	α ServerSocketSession::OnRead( Proto::FromClient::Transmission&& t )ι->void{
 		ProcessTransmission( move(t), _userPK, nullopt );
@@ -165,11 +186,11 @@ namespace Jde::App::Server{
 			auto& m = *transmission.mutable_messages( i );
 			using enum Proto::FromClient::Message::ValueCase;
 			let requestId = clientRequestId.value_or( m.request_id() );
-			switch( m.Value_case() ){
+			switch( m.value_case() ){
 			[[unlikely]]case kInstance:
 				AddInstance( move(*m.mutable_instance()), requestId );
 				break;
-			case kAddSession:{
+			[[likely]] case kAddSession:{
 				AddSession( move(*m.mutable_add_session()), requestId, SRCE_CUR );
 				break;}
 			case kException:
@@ -180,9 +201,9 @@ namespace Jde::App::Server{
 				break;
 			case kExecute:
 			case kExecuteAnonymous:{
-				bool isAnonymous = m.Value_case()==kExecuteAnonymous;
+				bool isAnonymous = m.value_case()==kExecuteAnonymous;
 				auto bytes = isAnonymous ? move( *m.mutable_execute_anonymous() ) : move( *m.mutable_execute()->mutable_transmission() );
-				optional<Jde::UserPK> executor = m.Value_case()==kExecuteAnonymous ? nullopt : optional<Jde::UserPK>( {m.execute().user_pk()} );
+				optional<Jde::UserPK> executor = m.value_case()==kExecuteAnonymous ? nullopt : optional<Jde::UserPK>( {m.execute().user_pk()} );
 				LogRead( Ƒ("Execute{} size: {:10L}", isAnonymous ? "Anonymous" : "", bytes.size()), requestId );
 				Execute( move(bytes), executor, requestId );
 				break;}
@@ -192,7 +213,7 @@ namespace Jde::App::Server{
 				break;
 			case kForwardExecution:
 			case kForwardExecutionAnonymous:{
-				let anonymous = m.Value_case()==kForwardExecutionAnonymous;
+				let anonymous = m.value_case()==kForwardExecutionAnonymous;
 				auto forward = anonymous ? m.mutable_forward_execution_anonymous() : m.mutable_forward_execution();
 				ForwardExecution( move(*forward), anonymous, requestId );
 				break;}
@@ -287,7 +308,7 @@ namespace Jde::App::Server{
 					Server::UnsubscribeStatus( ConnectionPK() );
 				break;*/
 			default:
-				LogRead( Ƒ("Unknown message type '{}'", underlying(m.Value_case())), requestId, ELogLevel::Critical );
+				LogRead( Ƒ("Unknown message type '{}'", underlying(m.value_case())), requestId, ELogLevel::Critical );
 			}
 		}
 		if( cLog || cString )

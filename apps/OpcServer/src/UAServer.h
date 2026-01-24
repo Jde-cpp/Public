@@ -41,6 +41,7 @@ namespace Jde::Opc::Server {
 		α AddObjectType( sp<ObjectType> node, SRCE )ε->void;
 		α AddReference( NodePK nodePK, const Reference& ref, SRCE )ε->void;
 		α AddVariable( Variable variable, SRCE )->Variable;
+		α Ptr()ι->UA_Server*{ return _ua; }
 		string ServerName;
 	private:
 		UAConfig _config;

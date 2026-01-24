@@ -69,7 +69,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 	α ProviderCreatePurgeAwait::Suspend()ι->void{
-		if( _opcKey.IsPrimary() )
+		if( _opcKey.IsPK() )
 			Execute( _opcKey.PK() );
 		else if( _insert )
 			Insert( _opcKey.NK() );

@@ -147,9 +147,10 @@ export class ComponentNav {
 					this.parentUrl = this.item()().parent.path;
 				else{
 					let segments = this.parentUrl.split( "/" );
-					if( segments[segments.length-1].startsWith(":") ){
+					if( segments[segments.length-1].startsWith(":") )
 						this.parentUrl = `${segments.slice(0,segments.length-1).join("/")}/${this.item()().parent?.path}`;
-					}
+					//else
+					//	this.parentUrl = '';
 				}
 			}
 			this.isLoading.set( !loaded );
@@ -158,9 +159,9 @@ export class ComponentNav {
   ngOnInit(){
 		this.route.url.subscribe( (urlSegments) => {
 			if( urlSegments.length==1 )
-				this.parentUrl = urlSegments[0].path; //access/users
+				this.parentUrl = '/'+urlSegments[0].path; //access/users
 			else
-				this.parentUrl = urlSegments.slice(0, -1).map(segment => segment.path).join('/');
+				this.parentUrl = '/'+urlSegments.slice(0, -1).map(segment => segment.path).join('/');
 		});
  	};
   isRoot( url:string ){

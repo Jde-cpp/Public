@@ -62,6 +62,15 @@ namespace Jde{
 		}
 	}
 
+	α Json::AsKey( const jobject& o, SL sl )ε->DB::Key{
+		if( auto p = o.if_contains("id"); p )
+			return DB::Key{ p->to_number<uint>() };
+
+		if( auto p = o.if_contains("target"); p )
+			return DB::Key{ string{p->as_string()} };
+		throw Jde::Exception{ sl, ELogLevel::Debug, "Could not find 'id' or 'target' in {}.", serialize(o) };
+	}
+
 	α Json::TryReadJsonNet( fs::path path, const optional<vector<fs::path>>& importPaths, SL sl )ι->std::expected<jobject, string>{
 		jsonnet::Jsonnet vm;
 		vm.init();

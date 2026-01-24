@@ -10,11 +10,32 @@ namespace Jde::Access{
 	constexpr ELogTags _tags{ ELogTags::Access };
 	constexpr ELogTags _ptags{ ELogTags::Access | ELogTags::Pedantic };
 
-	α Authorize::Test( str schemaName, str resourceName, ERights rights, UserPK executer, SL sl )ε->void{
-		optional<ResourcePK> resourcePK;
+	α Authorize::AddAdminAuthorizer( str schemaName, sp<IAdminAcl> authorizer )ι->void{
+		_adminAuthorizers.emplace( schemaName, move(authorizer) );
+	}
+	α Authorize::FindAdminAuthorizer( str schemaName )ι->sp<IAdminAcl>{
+		sp<IAdminAcl> authorizer;
+		_adminAuthorizers.cvisit( schemaName, [&](let& pair){ authorizer = pair.second; } );
+		return authorizer ? authorizer : shared_from_this();
+	}
+	α Authorize::AddResource( ResourcePK resourcePK, string schema, string resourceTarget, string criteria )ι->void{
 		Jde::sl _{Mutex};
-		if( auto schemaResorces = SchemaResources.find(schemaName); schemaResorces!=SchemaResources.end() )
-			resourcePK = Find( schemaResorces->second, resourceName );
+		SchemaResources[schema][resourceTarget][criteria] = resourcePK;
+	}
+	α Authorize::FindResourcePK( str schemaName, str resourceName, str criteria, sl&  )ι->optional<ResourcePK>{
+		if( auto schemaResources = SchemaResources.find(schemaName); schemaResources!=SchemaResources.end() ){
+			if( auto targetResources = schemaResources->second.find(resourceName); targetResources!=schemaResources->second.end() ){
+				auto& criteras = targetResources->second;
+				if( criteras.contains({}) )// if permisions are enabled
+					return Find(criteras, criteria);
+			}
+		}
+		return {};
+	}
+
+	α Authorize::Test( str schemaName, str resourceName, ERights rights, UserPK executer, SL sl )ε->void{
+		Jde::sl _{Mutex};
+		auto resourcePK = FindResourcePK( schemaName, resourceName, {}, _ );
 		if( !resourcePK )//not enabled
 			return;
 
@@ -33,11 +54,19 @@ namespace Jde::Access{
 		if( resource!=Resources.end() && !resource->second.IsDeleted )
 			TestAdmin( resource->second, executer, sl );
 	}
+
 	α Authorize::TestAdmin( str resourceTarget, UserPK executer, SL sl )ε->void{
 		Jde::sl l{ Mutex };
 		auto resource = find_if( Resources, [&](let& r){ return r.second.Target==resourceTarget; } );
 		if( resource!=Resources.end() && !resource->second.IsDeleted )
 			TestAdmin( resource->second, executer, sl );
+	}
+	α Authorize::TestAdmin( str schema, str resource, str criteria, UserPK userPK, SL sl )ε->void{
+		auto authorizer = FindAdminAuthorizer( schema );
+		authorizer->TestAdmin( resource, criteria, userPK, sl );
+	}
+	α Authorize::TestAdmin( str resource, str /*criteria*/, UserPK userPK, SL sl )ε->void{
+		return TestAdmin( resource, userPK, sl ); //TODO handle criteria
 	}
 	α Authorize::TestAdmin( const Resource& resource, UserPK executer, SL sl )ε->void{
 		if( executer==UserPK{UserPK::System} )
@@ -61,10 +90,8 @@ namespace Jde::Access{
 	}
 
 	α Authorize::Rights( str schemaName, str resourceName, UserPK executer )ι->ERights{
-		optional<ResourcePK> resourcePK;
 		Jde::sl _{Mutex};
-		if( auto schemaResources = SchemaResources.find(schemaName); schemaResources!=SchemaResources.end() )
-			resourcePK = Find( schemaResources->second, resourceName );
+		auto resourcePK = FindResourcePK( schemaName, resourceName, {}, _ );
 		if( !resourcePK )//not enabled
 			return ERights::All;
 
@@ -162,7 +189,7 @@ namespace Jde::Access{
 	α Authorize::AddAcl( IdentityPK::Type userGroupPK, PermissionPK permissionPK, ERights allowed, ERights denied, ResourcePK resourcePK )ι->void{
 		ul l{ Mutex };
 		const PermissionRole permissionRole{ std::in_place_index<0>, permissionPK };
-		ASSERT( resourcePK );
+		ASSERT( Resources.find(resourcePK)!=Resources.end() );
 		const Permission permission{ permissionPK, resourcePK, allowed, denied };
 		Permissions.emplace( permissionPK, permission );
 		auto user = Users.find({userGroupPK});
@@ -228,7 +255,9 @@ namespace Jde::Access{
 				DBGT( _ptags, "[{}.{}.{}]Deleted from schema resource.", resource.Schema, resource.Target, resource.PK );
 			}
 			else if( !resource.IsDeleted ){
-				SchemaResources.try_emplace( string{resource.Schema} ).first->second.emplace( resource.Target, resource.PK );
+				auto& targetResources = SchemaResources.try_emplace( string{resource.Schema} ).first->second;
+				auto& criteras = targetResources.try_emplace( resource.Target ).first->second;
+				criteras.try_emplace( {}, resource.PK );
 				DBGT( _ptags, "[{}.{}.{}]Restored from schema resource.", resource.Schema, resource.Target, resource.PK );
 			}
 		}
@@ -295,15 +324,25 @@ namespace Jde::Access{
 		std::shared_lock _{ Mutex };
 		THROW_IFX( isChild(child, parent), Exception(sl, ELogLevel::Debug, "Role '{}' cannot be a member of '{}' because it is a ancester.", child, parent) );
 	}
-	α Authorize::AddRolePermission( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, sv resourceName )ι->void{
+	α Authorize::AddRolePermission( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, const jobject& jResource )ι->void{
 		ul l{ Mutex };
 		if( auto permssion = Permissions.find(member); permssion!=Permissions.end() ){
 			permssion->second.Allowed = allowed;
 			permssion->second.Denied = denied;
 		}
-		else if( auto resource = find_if(Resources, [&](let& r){ return r.second.Target==resourceName;}); resource!=Resources.end() )
-			Permissions.emplace( member, Permission{member, resource->first, allowed, denied} );
-
+		else{
+			Resource resource{ jResource };
+			if( auto resourceIt = resource.PK ? Resources.find(resource.PK) : Resources.end(); resourceIt!=Resources.end() )
+				Permissions.emplace( member, Permission{member, resourceIt->first, allowed, denied} );
+			else if( !resource.PK ){
+				CRITICAL( "[{}]Resource '{}' not found for role permission.", member, resource.Target );
+			}else{ //new resource
+				auto& saved = Resources.emplace( resource.PK, move(resource) ).first->second;
+				ASSERT( saved.Schema.size() && saved.Target.size() && saved.Filter.size() );
+				SchemaResources[saved.Schema][saved.Target][saved.Filter] = saved.PK;
+				Permissions.emplace( member, Permission{member, saved.PK, allowed, denied} );
+			}
+		}
 		auto role = Roles.try_emplace( rolePK, rolePK, false );
 		role.first->second.Members.emplace( PermissionRole{std::in_place_index<0>, member} );
 		Recalc( l );

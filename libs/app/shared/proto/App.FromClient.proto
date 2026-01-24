@@ -28,14 +28,8 @@ message Instance{
 	uint32 web_port=7;
 	string instance_name=8;
 	uint32 session_id=9;
+	string auth_resource=10;
 }
-/*
-message Status{
-	google.protobuf.Timestamp start_time=1;
-	uint64 memory=2;
-	map<string,string> values=3;
-}
-*/
 message ForwardExecution{
 	uint32 app_pk = 1;
 	uint32 app_instance_pk = 2; //0 for any
@@ -48,7 +42,7 @@ message Unsubscription{
 
 message Message{
 	uint32 request_id=1;
-	oneof Value{
+	oneof value{
 		AddSession add_session=2; //called from authenticators like OpcGateway
 		Jde.Proto.Query query=3;
 		Instance instance = 4;

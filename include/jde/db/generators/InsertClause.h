@@ -11,6 +11,7 @@ namespace Jde::DB{
 		α Move()ι->DB::Sql;
 		α Add( sp<Column> column, Value::Underlying value )ι->void;
 		α Add( Value::Underlying value )ι->void;
+		α AddOpt( optional<Value::Underlying>&& value )ι->void;
 		//Ŧ Add( PK<T> pk )ι{ Values.emplace_back( make_pair(sp<Column>{}, pk.Value) ); }
 		α SetValue( sp<Column> column, Value value )ε->void;
 		α SequenceColumn()Ι->sp<Column>;

@@ -1,10 +1,10 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "UALoadTests.LoadMyKitchen",
-		recreateDB: true,
-		embeddedAppServer: true,
-		UANodeSets: "$(UA_NODE_SETS)",
+		tests: "AccessTests.UserAccess",
+		recreateDB:: true,
+		embeddedAppServer: false,
+		UANodeSets: "$(UA_NODE_SETS)"
 	},
 	opc: args.opc,
 	dbServers: {
@@ -30,6 +30,7 @@ local args = import 'args.libsonnet';
 	},
 	opcServer:{
 		target: "TestServer",
+		resource: "test",
 		description: "Test OPC",
 		configDir: "$(JDE_DIR)/apps/OpcServer/config/mutations/pumps",
 		port: 4840,

@@ -71,7 +71,7 @@ export class AuthStore{
 		this.#userSignal.set( newAuth );
 	}
 
-	log:boolean = true;
+	log:boolean = false;
 	#userSignal = signal<User | null>( null );
 	get user():Signal<User | null>{ return this.#userSignal.asReadonly(); }
 }

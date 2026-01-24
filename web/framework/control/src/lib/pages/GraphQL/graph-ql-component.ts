@@ -4,7 +4,7 @@ import {ActivatedRoute, Params, Router, RouterModule, Routes} from '@angular/rou
 import { MatDialog } from '@angular/material/dialog';
 import {Sort} from '@angular/material/sort';
 import { MatTable } from '@angular/material/table';
-import {IProfile} from '../../services/profile/IProfile'
+import {IProfile} from '../../services/profile/profile.store'
 import {IErrorService} from '../../services/error/IErrorService'
 import {IGraphQL, IQueryResult}  from '../../services/IGraphQL';
 import {TableSchema}  from '../../model/ql/schema/TableSchema';

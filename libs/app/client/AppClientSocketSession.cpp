@@ -162,7 +162,7 @@ namespace Client{
 	}
 
 	α AppClientSocketSession::OnRead( Proto::FromServer::Transmission&& t )ι->void{
-		ProcessTransmission( move(t), _userPK, nullopt );
+		ProcessTransmission( move(t), UserPK(), nullopt );
 	}
 
 	α AppClientSocketSession::ProcessTransmission( Proto::FromServer::Transmission&& t, optional<Jde::UserPK> /*userPK*/, optional<RequestId> clientRequestId )ι->void{
@@ -171,21 +171,16 @@ namespace Client{
 			using enum Proto::FromServer::Message::ValueCase;
 			let requestId = clientRequestId.value_or( m->request_id() );
 			std::any hAny = requestId ? IClientSocketSession::PopTask( requestId ) : nullptr;
-			switch( m->Value_case() ){
-			[[unlikely]] case kAck:{
-				let serverSocketId = m->ack();
-				SetId( serverSocketId );
+			switch( m->value_case() ){
+			[[unlikely]] case kAck:
+				SetId( m->ack() );
 				if( !_qlServer )
 					_qlServer = ms<Web::Client::ClientQL>( shared_from_this(), move(_authorize) );
 				INFO( "[{}]AppClientSocketSession created: {}://{}.", hex(Id()), IsSsl() ? "https" : "http", Host() );
-				}break;
-			case kClientQuery:{
+				break;
+			case kClientQuery:
 				ClientQuery( move(*m->mutable_client_query()), requestId );
-//				auto& res = *m->mutable_client_query();
-//				TRACE( "[{:x}]ClientQuery: size='{}'.", Id(), res.query().size() );
-//				resumeJValue( move(hAny), move(*m->mutable_client_query()->mutable_query()) );
-//TODO
-				}break;
+				break;
 			case kConnectionInfo:
 				TRACE( "[{}]ConnectionInfo: connection: '{}'.", hex(Id()), hex(m->connection_info().connection_pk()) );
 				resume( move(hAny), move(*m->mutable_connection_info()) );
@@ -203,11 +198,6 @@ namespace Client{
 				TRACE( "[{:x}]Jwt: size='{}'.", Id(), m->jwt().size() );
 				resume( move(hAny), Web::Jwt{move(*m->mutable_jwt())} );
 				break;
-/*			case kLogLevels:{ //TODO implement when have tags.
-				auto& res = *m->mutable_log_levels();
-				TRACE( "[{:x}]LogLevels: server='{}', client='{}'.", Id(), ToString((ELogLevel)res.server()), ToString((ELogLevel)res.client()) );
-				resume( move(hAny), move(res) );
-				}break;*/
 			case kProgress://TODO not awaitable
 				TRACE( "[{:x}]Progress: '{}'.", Id(), m->progress() );
 				resumeScaler( move(hAny), m->progress() );
@@ -248,15 +238,15 @@ namespace Client{
 				break;
 			case kExecute:
 			case kExecuteAnonymous:{
-				bool isAnonymous = m->Value_case()==kExecuteAnonymous;
+				bool isAnonymous = m->value_case()==kExecuteAnonymous;
 				auto bytes = isAnonymous ? move( *m->mutable_execute_anonymous() ) : move( *m->mutable_execute()->mutable_transmission() );
-				optional<Jde::UserPK> runAsPK = m->Value_case()==kExecuteAnonymous ? nullopt : optional<Jde::UserPK>( {m->execute().user_pk()} );
+				optional<Jde::UserPK> runAsPK = m->value_case()==kExecuteAnonymous ? nullopt : optional<Jde::UserPK>( {m->execute().user_pk()} );
 				LogRead( "Execute{} size: {:10L}", isAnonymous ? "Anonymous" : "", bytes.size()  );
 				Execute( move(bytes), runAsPK, requestId );
 				break;}
 			case kExecuteResponse://wait for use case.
 			case kStringPks://strings already saved in db, no need to send.  not being requested by client yet.
-				CRITICAL( "[{:x}]No use case has been implemented on client app '{}'.", Id(), underlying(m->Value_case()) );
+				CRITICAL( "[{:x}]No use case has been implemented on client app '{}'.", Id(), underlying(m->value_case()) );
 				break;
 			[[likely]]case kTraces:{
 				auto& traces = *m->mutable_traces();
@@ -265,7 +255,7 @@ namespace Client{
 				break;}
 			//[[unlikely]]
 			// case kStatus:
-			// 	CRITICAL( "[{:x}]Web only call not implemented on client app '{}'.", Id(), (uint)m->Value_case() );
+			// 	CRITICAL( "[{:x}]Web only call not implemented on client app '{}'.", Id(), (uint)m->value_case() );
 			// break;
 			case VALUE_NOT_SET:
 				break;

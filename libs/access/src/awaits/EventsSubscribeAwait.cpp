@@ -40,7 +40,7 @@ namespace Jde::Access{
 			co_await EventTypeSubscribeAwait{ _qlServer, "grouping", Group, "id", Deleted | Restored | Purged, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "grouping", Group, "id memberId", Added | Removed, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "role", Role, "id", Deleted | Restored | Purged, _executer, _listener };
-			co_await EventTypeSubscribeAwait{ _qlServer, "role", Role, "id permissionRight{id allowed denied resource{target}} role{id}", Added | Removed, _executer, _listener };
+			co_await EventTypeSubscribeAwait{ _qlServer, "role", Role, "id permissionRight{id allowed denied resource{id target schemaName target criteria}} role{id}", Added | Removed, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "resources", Resources, "id schemaName target criteria deleted", Created, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "resources", Resources, "id schema target", Deleted | Restored, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "permission", Permission, "id allowed denied", Updated, _executer, _listener };

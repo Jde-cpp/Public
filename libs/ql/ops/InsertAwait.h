@@ -16,7 +16,7 @@ namespace Jde::QL{
 		α Suspend()ι->void override{ InsertBefore(); }
 		α await_resume()ε->jvalue override;
 	private:
-		α CreateQuery( const DB::Table& table, const jobject& input, bool nested=false )ε->void;
+		α CreateQuery( const DB::Table& table, jobject input, bool nested=false )ε->void;
 		α AddStatement( const DB::Table& table, const jobject& input, optional<DB::Criteria> criteria=nullopt )ε->void;
 		α InsertBefore()ι->MutationAwaits::Task;
 		α Execute()ι->DB::QueryAwait::Task;

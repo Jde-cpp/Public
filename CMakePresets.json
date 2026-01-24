@@ -1,11 +1,11 @@
 {
-  "version": 8,
+	"version": 8,
 	"cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 28,
-    "patch": 3
-  },
-  "configurePresets": [
+		"major": 3,
+		"minor": 28,
+		"patch": 3
+	},
+	"configurePresets": [
 		{
 			"name": "common",
 			"hidden": true,
@@ -131,10 +131,10 @@
 				"CMAKE_CXX_FLAGS_DEBUG": "-ggdb -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -D_GLIBCXX_DEBUG=ON -static-libstdc++ -static-libasan -lrt"
 			}
 		},
-    {
-      "name": "linux-relWithDebInfo",
+		{
+			"name": "linux-relWithDebInfo",
 			"inherits": ["linux", "relWithDebInfo"]
-    },
+		},
 		{
 			"name": "linux-jde",
 			"hidden": true,
@@ -155,5 +155,21 @@
 				"CMAKE_INSTALL_PREFIX": "$env{LIB_ROOT}/$env{buildType}"
 			}
 		}
-  ]
+	],
+	"buildPresets": [
+		{
+			"name": "linux-debug",
+			"description": "",
+			"displayName": "",
+			"configurePreset": "linux-debug"
+		}
+	],
+	"testPresets": [
+		{
+			"name": "linux-debug",
+			"description": "",
+			"displayName": "",
+			"configurePreset": "linux-debug"
+		}
+	]
 }

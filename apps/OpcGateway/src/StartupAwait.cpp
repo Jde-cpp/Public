@@ -67,7 +67,7 @@ namespace Jde::Opc::Gateway{
 				_listener->Shutdown( terminate );
 				_listener = nullptr;
 			});
-			co_await Access::Client::Configure( accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, _listener );
+			co_await Access::Client::Configure( accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, _listener, {} );
 			Process::AddShutdownFunction( [](bool terminate){UAClient::Shutdown(terminate);} );
 			QL::Hook::Add( mu<OpcQLHook>() );
 

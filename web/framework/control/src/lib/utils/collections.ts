@@ -1,4 +1,4 @@
-import { IAssignable } from './settings';
+//import { IAssignable } from './settings';
 
 export function toMap<T>( array:T[], getKey:(x:T)=>any ):Map<any,T>
 {
@@ -7,8 +7,7 @@ export function toMap<T>( array:T[], getKey:(x:T)=>any ):Map<any,T>
 	return results;
 }
 
-export class CircularBuffer<T> implements IAssignable<CircularBuffer<T>>
-{
+export class CircularBuffer<T>{
 	constructor( private _maxLength:number=3, private values:T[]=[] )
 	{}
 	add( x:T, begining:boolean )

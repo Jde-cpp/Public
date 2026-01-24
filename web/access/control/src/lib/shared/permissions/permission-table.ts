@@ -3,7 +3,7 @@ import { AfterViewInit, Component, Inject, model, OnDestroy, OnInit, signal, Vie
 import { MatCheckbox, MatCheckboxChange } from "@angular/material/checkbox";
 import { MatSortModule, Sort } from "@angular/material/sort";
 import { MatTable, MatTableModule } from "@angular/material/table";
-import { assert, EnumKeysPipe, IErrorService, IProfile, Settings } from "jde-framework";
+import { assert, EnumKeysPipe, IErrorService, IProfileStore } from "jde-framework";
 import { Permission, Rights } from "../../model/Permission";
 import { AccessService } from "../../services/access.service";
 import { Resource } from "../../model/Resource";
@@ -15,10 +15,11 @@ import { Resource } from "../../model/Resource";
 		imports: [CommonModule, MatTableModule, MatCheckbox, EnumKeysPipe, MatSortModule],
 })
 export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
-	constructor( @Inject('AccessService') private accessService: AccessService, @Inject('IProfile') private profileService: IProfile, @Inject('IErrorService') private cnsle: IErrorService )
+	constructor( @Inject('AccessService') private accessService: AccessService, @Inject('IProfileStore') private profileStore: IProfileStore, @Inject('IErrorService') private cnsle: IErrorService )
 	{}
 
 	async ngOnInit(){
+		this.profile = await this.profileStore.load<Profile>( 'permissionTable', PermissionTable.defaultProfile );
 		let resources = await this.accessService.loadResources();
 		for( const resource of resources ){ //.filter(x=>x.allowed!=Rights.None)
 			let permission = this.permissions().find( x=>x.resource?.id==resource.id );
@@ -40,7 +41,7 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 //		await this.profile.loadedPromise;
 	}
 	ngOnDestroy(){
-//		this.profile.save();
+		this.profileStore.save<Profile>( 'permissionTable', { sort: this.sort, showDeleted: this.profile?.showDeleted } );
 	}
 	sortData($event){
 		this.availablePermissions = this.availablePermissions.sort((a,b)=>{
@@ -93,12 +94,8 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 		let allowed = (permission.allowed ?? 0);
 		if( rights==Rights.All )
 			rights = permission.resource.availableRights;
-//		if( permission.resource.target=="providerTypes" && rights==Rights.Create )
-//			console.log( `allowed=${allowed}`);
 		let y = ( rights==Rights.None && !allowed && !permission.denied )
 			|| (rights!=Rights.None && (allowed & rights)==rights);
-//		if( permission.resource.target=="providerTypes" && rights==Rights.Create )
-//			console.log( `allowed=${y}`);
 		return y;
 	}
 
@@ -112,7 +109,8 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 		return rights==Rights.None || (permission.resource.availableRights & rights)!=0;
 	}
 
-	profile:Settings<UserSettings>;
+	profile:Profile;
+	static readonly defaultProfile:Profile = { sort: { active: "schema,resource", direction: "asc" } };
 	permissions=model.required<Permission[]>();
 	availablePermissions:Permission[] = [];
 	rights = Rights;
@@ -127,8 +125,5 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 		return y;
 	}
 }
-class UserSettings{
-	assign( value:UserSettings ){ this.sort = value.sort; this.showDeleted = value.showDeleted; }
-	sort:Sort = {active: "schema,resource", direction: "asc"};
-	showDeleted:boolean = false;
-}
+type Profile = { sort:Sort; showDeleted?:boolean; }
+

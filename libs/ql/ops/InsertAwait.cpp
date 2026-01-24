@@ -29,7 +29,7 @@ namespace Jde::QL{
 	α InsertAwait::await_ready()ι->bool{
 		try{
 			_table->Authorize( Access::ERights::Create, _executer, _sl );
-			CreateQuery( *_table, _mutation.Args );
+			CreateQuery( *_table, _mutation.ExtrapolateVariables() );
 		}
 		catch( IException& e ){
 			_exception = e.Move();
@@ -37,7 +37,7 @@ namespace Jde::QL{
 		return _exception || ( _statements.empty() && !_table->HasCustomInsertProc );
 	}
 
-	α InsertAwait::CreateQuery( const DB::Table& table, const jobject& input, bool nested )ε->void{
+	α InsertAwait::CreateQuery( const DB::Table& table, jobject input, bool nested )ε->void{
 		for( let& [key,value] : input ){ //look for nested tables.
 			if( auto nestedTable = value.is_object() ? table.Schema->FindTable(DB::Names::FromJson(DB::Names::ToPlural(key))) : nullptr; nestedTable ){
 				let& o = value.get_object();

@@ -3,7 +3,6 @@
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalQL.h>
 #include <jde/ql/QLHook.h>
-#include <jde/access/Authorize.h>
 #include <jde/access/AccessListener.h>
 #include <jde/access/client/accessClient.h>
 #include <jde/app/client/appClient.h>
@@ -11,6 +10,7 @@
 #include <jde/opc/uatypes/opcHelpers.h>
 #include "OpcServerAppClient.h"
 #include "UAServer.h"
+#include "access/OpcAuthorize.h"
 #include "awaits/ServerConfigAwait.h"
 #include "ql/ConstructorHook.h"
 #include "ql/ObjectTypeHook.h"
@@ -28,6 +28,10 @@ namespace Jde::Opc{
 namespace Jde::Opc::Server{
 
 	α StartupAwait::Execute()ι->VoidAwait::Task{
+		{
+			auto schemaSuffix = Settings::FindString( "/opcServer/resource" );
+			App::Client::SetAcl( ms<OpcAuthorize>( schemaSuffix ? "opc." + *move( schemaSuffix ) : "opc" ) );
+		}
 		try{
 			auto remoteAcl = App::Client::RemoteAcl( "opc" );
 			auto uaSchema = DB::GetAppSchema( "opc", remoteAcl );
@@ -67,7 +71,7 @@ namespace Jde::Opc::Server{
 				_listener->Shutdown( terminate );
 				_listener = nullptr;
 			});
-			co_await Access::Client::Configure( accessSchema, {uaSchema}, AppClient()->QLServer(), UserPK{UserPK::System}, remoteAcl, _listener );
+			co_await Access::Client::Configure( accessSchema, {uaSchema}, AppClient()->QLServer(), UserPK{UserPK::System}, remoteAcl, _listener, Settings::FindString("/opcServer/resource").value_or("") );
 			QL::Hook::Add( mu<ConstructorHook>() );
 			QL::Hook::Add( mu<ObjectHook>() );
 			QL::Hook::Add( mu<ObjectTypeHook>() );

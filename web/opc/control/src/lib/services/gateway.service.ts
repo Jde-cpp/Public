@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@angular/core';
+import { Injectable, Inject, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
@@ -28,14 +28,12 @@ export type GatewayTarget = string;
 @Injectable( {providedIn: 'root'} )
 export class GatewayService implements IGraphQL{
 	constructor(
-		appService:AppService,
-		http: HttpClient,
 		@Inject("AuthStore") authStore:AuthStore,
 		private route: ActivatedRoute,
 		private router: Router,
 		@Inject("OpcStore") opcStore:OpcStore ){
-		appService.gatewayInstances().then(
-			(instances)=>this.onGatewaySuccess( instances, appService.transport, http, authStore, opcStore ),
+		this.appService.gatewayInstances().then(
+			(instances)=>this.onGatewaySuccess( instances, this.appService.transport, this.http, authStore, opcStore ),
 			this.onInstancesError
 		);
 		route.paramMap.subscribe( async params=>{
@@ -75,8 +73,8 @@ export class GatewayService implements IGraphQL{
 	async querySingle<T>( ql: string ):Promise<T>{ return this.defaultGateway.querySingle<T>( ql ); }
 	async schema( names:string[] ):Promise<TableSchema[]>{ return this.defaultGateway.schema( names ); }
 	async schemaWithEnums( type:string, log?:Log ):Promise<TableSchema>{ return this.defaultGateway.schemaWithEnums( type, log ); }
-	async mutation<T>( ql: string|Mutation|Mutation[], log?:Log ):Promise<T>{
-		return this.defaultGateway.mutation<T>( ql, log );
+	async mutate<T>( ql: string|Mutation|Mutation[], log?:Log ):Promise<T>{
+		return this.defaultGateway.mutate<T>( ql, log );
 	}
 	async mutations():Promise<MutationSchema[]>{ return this.defaultGateway.mutations(); }
 
@@ -96,6 +94,8 @@ export class GatewayService implements IGraphQL{
 
 	#gatewaysCallbacks:{resolve: (value:Gateway[])=>void, reject:(e?:any)=>void}[]= [];
 	#gatewayCallbacks:{ instanceName:string, resolve: (value:Gateway)=>void, reject:(e?:any)=>void}[]= [];
+	appService = inject(AppService);
+	http = inject(HttpClient);
 }
 
 
@@ -103,7 +103,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	constructor( gateway:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore ){
 		super( FromClient.Transmission, http, transport, authStore );
 		super.instances = [gateway];
-		super.queryArray<ServerCnnctn>( `serverConnections{id target name url certificateUri defaultBrowseNs}`, (x)=>console.log(x) ).then( connections=>{
+		super.queryArray<ServerCnnctn>( `serverConnections{id target name url certificateUri defaultBrowseNs}`, null, (x)=>console.log(x) ).then( connections=>{
 			connections.forEach( c=>this.#connections.set(c.target, new ServerCnnctn(c)) );
 		});
 	}
@@ -263,7 +263,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 					if( variable.customDataType )
 						try{
 							const nodeId = <NodeId>variable.customDataType
-							let x = await super.querySingle<Type>( `__type( opc: "${cnnctn}", ${nodeId.qlArgs()}){ enumValues{id name description}}`, log );
+							let x = await super.querySingle<Type>( `__type( opc: "${cnnctn}", ${nodeId.qlArgs()}){ enumValues{id name description}}`, null, log );
 							variable.customDataType = new Enum(nodeId, x);
 						}
 						catch( e ){

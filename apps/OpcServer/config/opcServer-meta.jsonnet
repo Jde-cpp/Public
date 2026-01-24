@@ -85,6 +85,7 @@ local common = import 'common-meta.libsonnet';
 				name: common.targetColumns.name+{ i:2 }
 			},
 			naturalKeys: [ ["ns", "name"] ],
+			ops: ["None"]
 		},
 		constructors:{
 			columns:{
@@ -92,7 +93,8 @@ local common = import 'common-meta.libsonnet';
 				browseId: tables.browseNames.columns.browseId+{ sk:1, pkTable:"browse_names", i:1 },
 				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:2 },
 			},
-			customInsertProc: true
+			customInsertProc: true,
+			ops: ["None"]
 		},
 		dataTypes:{
 			columns:{
@@ -103,7 +105,8 @@ local common = import 'common-meta.libsonnet';
 				pointerFree: types.uint+{ i:5, default: 1 },
 				overlayable: types.uint+{ i:6, default: 1 },
 				description: types.varchar+{ i:7, length: 256, nullable: true },
-			}
+			},
+			ops: ["None"]
 		},
 		dataTypeMemberMap:{
 			columns:{
@@ -111,6 +114,7 @@ local common = import 'common-meta.libsonnet';
 				memberId: nodeId+{ pkTable:"data_types", i:1 }
 			},
 			map:{parentId:"data_type_id", childId:"member_id"},
+			ops: ["None"]
 		},
 		dataTypeMembers:{
 			columns:{
@@ -119,7 +123,8 @@ local common = import 'common-meta.libsonnet';
 				padding: types.uint8+{ i:3 },
 				isArray: types.bit+{ i:4 },
 				isOptional: types.bit+{ i:5 }
-			}
+			},
+			ops: ["None"]
 		},
 		nodeIds:{
 			columns:{
@@ -141,12 +146,14 @@ local common = import 'common-meta.libsonnet';
 		objects:nodeTableProps+{
 			columns: nodeColumns+{
 				eventNotifier: types.uint8+{ i:213, nullable: true },
-			}
+			},
+			ops: ["None"]
 		},
 		objectTypes:nodeTableProps+{
 			columns: common.filter(nodeColumns, "typeDefId") + {
 				isAbstract: types.bit+{ i:213, nullable: true },
-			}
+			},
+			ops: ["None"]
 		},
 		refs:{
 			columns:{
@@ -154,19 +161,22 @@ local common = import 'common-meta.libsonnet';
 				targetNodeId: nodeId+{ pkTable:"node_ids", sk:1, i:1 },
 				refTypeId: nodeId+{ pkTable:"node_ids", sk:2, i:2 },
 				isForward: types.bit+{ i:3, comment: "null=true", nullable: true },
-			}
+			},
+			ops: ["None"]
 		},
 		servers:{
 			columns:{
 				serverId: common.pkSequenced,
 			}+common.targetColumns,
+			ops: ["None"]
 		},
 		serverNodeMap:{
 			columns:{
 				serverId: tables.servers.columns.serverId+{ pkTable: "servers", i:0, sk: 0 },
 				nodeId: nodeId+{ pkTable: "node_ids", i:1, sk: 1 },
 			},
-			map:{parentId:"server_id", childId:"node_id"}
+			map:{parentId:"server_id", childId:"node_id"},
+			ops: ["None"]
 		},
 		variables:nodeTableProps+{
 			columns: nodeColumns+{
@@ -178,7 +188,8 @@ local common = import 'common-meta.libsonnet';
 				userAccessLevel: types.uint8+{ i:228, nullable: true },
 				minimumSamplingInterval: types.float+{ i:229, nullable: true },
 				historizing: types.bit+{ i:230, nullable: true }
-			}
+			},
+			ops: ["None"]
 		},
 		variants:{
 			columns:{
@@ -186,14 +197,16 @@ local common = import 'common-meta.libsonnet';
 				dataTypeId: nodeId+{ pkTable:"node_ids", i:401 },
 				arrayDims: types.varchar+{ length: 256, nullable: true, i:402 },
 			},
-			customInsertProc: true
+			customInsertProc: true,
+			ops: ["None"]
 		},
 		variantMembers:{
 			columns:{
 				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:0, sk:0 },
 				idx: types.uint+{ i:1, sk:1 },
 				value: types.varchar+{ i:2, length: 2096, nullable: true },
-			}
+			},
+			ops: ["None"]
 		},
 	}
 }

@@ -19,7 +19,7 @@ namespace Jde::Web::Server{
 		IWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α Run()ι->void;
 		α Id()Ι->SocketId{ return _id; }
-		α QueryClient( QL::TableQL query, Jde::UserPK executer )ι->QueryClientAwait{ return QueryClientAwait{move(query), executer, shared_from_this()}; }
+		α QueryClient( QL::TableQL query, Jde::UserPK executer, SRCE )ι->QueryClientAwait{ return QueryClientAwait{move(query), executer, shared_from_this(), sl}; }
 		α QueryClient( QL::TableQL&& query, Jde::UserPK executer, QueryClientAwait::Handle h, SRCE )ι->void;
 		α AddSubscription( string&& query, jobject variables, RequestId requestId, SRCE )ε->flat_set<QL::SubscriptionId>;
 		α LogWrite( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;

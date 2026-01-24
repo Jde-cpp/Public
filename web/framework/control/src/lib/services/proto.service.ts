@@ -159,6 +159,8 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	}
 
 	private async authGet<Y>( target:string, authorization?:string, log:Log=console.log ):Promise<Y>{
+		if( target.indexOf("undefined")>=0 )
+			debugger;
 		if( this.log.restRequests )	log( target.substring(0,this.log.maxLength) );
 		let url = this.urlWithTarget(target);
 		let y:Y;
@@ -282,23 +284,23 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		const data = await this.query( ql, null, log );
 		return data["__type"]["enumValues"].map( (x:EnumValue)=>x.id );
 	}
-	async query<Y>( ql: string, vars?:any, log?:Log ):Promise<Y>{
+	async query<Y>( ql:string, vars?:any, log?:Log ):Promise<Y>{
 		return await this.graphQL( ql, vars, log );
 	}
-	async querySingle<Y>( ql: string, log?:Log ):Promise<Y>{
-		const y = await this.query<any>( ql, null, log );
+	async querySingle<Y>( ql:string, vars?:any, log?:Log ):Promise<Y>{
+		const y = await this.query<any>( ql, vars, log );
 		return y[Object.keys(y)[0]];
 	}
-	async queryObject<Y>( ql: string, cnstrctr: new(...args:any[]) => Y, log?:Log ):Promise<Y>{
-		const result = await this.query<any>( ql, null, log );
+	async queryObject<Y>( ql:string, cnstrctr: new(...args:any[]) => Y, vars?:any, log?:Log ):Promise<Y>{
+		const result = await this.query<any>( ql, vars, log );
 		return new cnstrctr( result[Object.keys(result)[0]] );
 	}
-	async queryArray<Y>( ql: string, log?:Log ):Promise<Y[]>{
+	async queryArray<Y>( ql:string, vars?:any, log?:Log ):Promise<Y[]>{
 		const inputIndex = ql.indexOf('(');
 		const fieldIndex = ql.indexOf('{');
 		const index = inputIndex<0 ? fieldIndex : fieldIndex<0 ? inputIndex : Math.min( inputIndex, fieldIndex );
 		const member = ql.substring( 0, index ).trim();
-		const result = await this.graphQL( ql, null, log );
+		const result = await this.graphQL( ql, vars, log );
 		if( !result.hasOwnProperty(member) )
 			throw `'${member}' not found in ${JSON.stringify(result)}.`;
 		const y = result[member];
@@ -308,7 +310,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	}
 
 	async querySetting( target:string, log:Log ):Promise<string>{
-		const queryResult = await this.querySingle<string>( `setting(target:\"${target}\"){value}`, log );
+		const queryResult = await this.querySingle<string>( `setting(target:$target){value}`, {target: target}, log );
 		return queryResult["value"];
 	}
 	async querySettings(target:string[], log:Log):Promise<{[key:string]:string}>{
@@ -319,11 +321,11 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		return y;
 	}
 
-	async mutation<Y>( ql: string|Mutation|Mutation[], log?:Log ):Promise<Y>{
+	async mutate<Y>( ql: string|Mutation|Mutation[], log?:Log ):Promise<Y>{
 		if( Array.isArray(ql) ){
 			let y = [];
 			for( let m of <Mutation[]>ql )
-				y.push( await this.mutation(m, log) );
+				y.push( await this.mutate(m, log) );
 			return <Y>y;
 		}
 		let query = ql instanceof Mutation ? ql.toString() : ql;

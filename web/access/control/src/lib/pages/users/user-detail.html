@@ -1,12 +1,12 @@
 @if( !this.isLoading() ){
 	<mat-tab-group class="my-content" mat-stretch-tabs="false" mat-align-tabs="start"
-		[selectedIndex]="profile.value.tabIndex"
-		(selectedIndexChange)="tabIndexChanged($event)"
+		[selectedIndex]="tabIndex()"
+		(selectedIndexChange)="onTabIndexChanged($event)"
 		dynamicHeight="true">
 		<mat-tab>
 			<ng-template mat-tab-label>Properties</ng-template>
 			<ng-template matTabContent>
-				<properties [ctor]=ctor [(record)]=properties type=user [schema]=schema [excludedColumns]=pageData.pageSettings.excludedColumns></properties>
+				<properties [ctor]=ctor [(record)]=properties type=user [schema]=schema [excludedColumns]=pageData.excludedColumns></properties>
 			</ng-template>
 		</mat-tab>
 		@if( user.id ){

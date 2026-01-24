@@ -9,7 +9,7 @@ export {GatewayService} from './lib/services/gateway.service';
 export {GatewayResolver} from './lib/services/resolvers/gateway.resolver';
 export {NodeResolver} from './lib/services/resolvers/node.resolver';
 //export {ConnectionResolver} from './lib/services/resolvers/connection.resolver';
-export {CnnctnDetailResolver} from './lib/services/resolvers/connection-detail.resolver';
+export {ClientResolver} from './lib/services/resolvers/client.resolver';
 export {GatewayRouteService, GatewayCnnctnRouteService} from './lib/services/routes/gateway-route.service';
 export {OpcServerRouteService} from './lib/services/routes/opc-server-route.service';
 export {OpcNodeRouteService} from './lib/services/routes/opc-node-route.service';

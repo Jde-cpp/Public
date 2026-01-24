@@ -6,7 +6,7 @@
 #include <jde/ql/types/Subscription.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/client/socket/IClientSocketSession.h>
-#include "../proto/App.FromServer.pb.h"
+#include <jde/app/proto/App.FromServer.pb.h>
 #include "exports.h"
 
 #define Φ ΓAC auto
@@ -36,7 +36,6 @@ namespace Jde::App::Client{
 		α Query( string&& q, jobject variables, bool returnRaw, SRCE )ι->await<jvalue> override;
 		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray>;
 		α Unsubscribe( string&& query, SRCE )ε->await<vector<QL::SubscriptionId>>;
-		α UserPK()Ι{ return _userPK; }
 		α QLServer()ι{ return _qlServer; }
 	private:
 		α ClientQuery( Proto::FromServer::ClientQuery proto, RequestId requestId )ι->TAwait<jvalue>::Task;
@@ -51,8 +50,6 @@ namespace Jde::App::Client{
 		sp<IAppClient> _appClient;
 		sp<Access::Authorize> _authorize;
 		sp<QL::IQL> _qlServer;
-		optional<Proto::FromServer::ConnectionInfo> _sessionInfo;
-		Jde::UserPK _userPK{};
 	};
 }
 #undef Φ

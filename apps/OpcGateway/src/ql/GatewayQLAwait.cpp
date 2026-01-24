@@ -10,18 +10,8 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	GatewayQLAwait::GatewayQLAwait( QL::RequestQL&& q, Jde::UserPK executer, bool raw, SL sl )ι:
-		base{ sl },
-		_creds{ executer },
-		_queries{ move(q) },
-		_raw{ raw }
-	{}
-
-	GatewayQLAwait::GatewayQLAwait( QL::RequestQL&& q, sp<Web::Server::SessionInfo> session, bool returnRaw, SL sl )ι:
-		base{ sl },
-		_creds{ move(session) },
-		_queries{ move(q) },
-		_raw{ returnRaw }
+	GatewayQLAwait::GatewayQLAwait( QL::RequestQL&& q, variant<sp<Web::Server::SessionInfo>, Jde::UserPK> creds, bool raw, SL sl )ι:
+		base{ move(q), creds, raw, sl }
 	{}
 
 	Ω needsClient( const QL::Input& q )ι->bool{

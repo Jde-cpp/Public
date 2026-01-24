@@ -11,7 +11,7 @@ export enum MutationType{
 		Remove
 }
 export class Mutation{
-	constructor( private _typeName:TypeName=null, private id:number=0, public args:any=null, private type:MutationType=null, private result:string[]=null ){
+	constructor( private _typeName:TypeName=null, private _id:number=0, public args:any=null, private _type:MutationType=null, private result:string[]=null ){
 	}
 	add( child:Mutation ){
 		if( !this.#children.has(child.typeName) )
@@ -90,8 +90,10 @@ export class Mutation{
 		return query;
 	}
 
+	get id(){ return this._id; }
 	#children:Map<TypeName,Mutation[]> = new Map<TypeName,Mutation[]>();
 	get isEmpty():boolean{ return this.type!=MutationType.Remove && !this.args && !this.#children.size; }
 	get typeName(){ return this._typeName; }
+	get type(){ return this._type ?? (this.id ? MutationType.Update : MutationType.Create); }
 	get variables():any{ return {}; }
 }

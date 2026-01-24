@@ -86,7 +86,7 @@ namespace Jde::Access{
 				if( auto rights = Json::FindObject(o, "permissionRight"); rights ){
 					if( event==Added ){
 						Access::Permission permission{ *rights };
-						Authorizer().AddRolePermission( rolePK, permission.PK, (ERights)permission.Allowed, (ERights)permission.Denied, Json::AsSVPath(*rights, "resource/target") );
+						Authorizer().AddRolePermission( rolePK, permission.PK, (ERights)permission.Allowed, (ERights)permission.Denied, rights->at("resource").as_object() );
 					}
 					else{
 						flat_set<PermissionRightPK> members;
@@ -134,7 +134,8 @@ namespace Jde::Access{
 						Json::AsNumber<PermissionRightsPK>( permission, "id" ),
 						(ERights)Json::FindNumber<uint8>( permission, "allowed" ).value_or(0),
 						(ERights)Json::FindNumber<uint8>( permission, "denied" ).value_or(0),
-						Json::AsNumber<ResourcePK>( permission, "resource/id" ) );
+						Json::AsNumber<ResourcePK>( permission, "resource/id" )
+					);
 				}
 				else if( auto role = o.if_contains("role"); role ) //identity{id:y}, role:{ id:x }
 					Authorizer().AddAcl( Json::AsNumber<IdentityPK::Type>( o, "identity/id" ), QL::AsId<RolePK>(*role) );

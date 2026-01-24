@@ -9,27 +9,23 @@
 #define let const auto
 namespace Jde::Access{
 	constexpr ELogTags _tags{ ELogTags::Access };
+	Ω getSchemaName( const sp<DB::AppSchema>& schema, const string& opcServerInstance )ι->string{
+		return opcServerInstance.empty() ? schema->Name : Ƒ( "{}.{}", schema->Name, opcServerInstance );
+	}
 	α ResourceLoadAwait::Load()ι->QL::QLAwait<jarray>::Task{
 		ResourcePermissions y;
 		try{
-			string ql{ "resources" }; ql.reserve( 1024 );
-			string schemaInput;
-			if( _schemas.size() ){
-				schemaInput.reserve( 256 );
-				schemaInput+="(schemaName:[";
-				for( let& schema : _schemas )
-					schemaInput += Ƒ( "\"{}\",", schema->Name );
-				schemaInput.back() = ']';
-				schemaInput += ')';
-			}
-			let resources = co_await *_qlServer->QueryArray( Ƒ("resources{}{{ id schemaName target criteria deleted }}", schemaInput), {}, _executer );
+			jarray schemaNames;
+			for( let& schema : _schemas )
+				schemaNames.push_back( {getSchemaName(schema, _opcServerInstance)} );
+			jobject vars{ {"schemaNames", move(schemaNames)} };
+			let resources = co_await *_qlServer->QueryArray( "resources(schemaName:$schemaNames){ id schemaName target criteria deleted }", vars, _executer );
 			for( auto&& value : resources ){
 				auto resource = Resource{ Json::AsObject(move(value)) };
 				y.Resources.emplace( resource.PK, move(resource) );
 			}
 
-			let qlPermissions = Ƒ( "permissionRights{{ id allowed denied resource{}{{id}} }}", move(schemaInput) );
-			let permissions = co_await *_qlServer->QueryArray( qlPermissions, {}, _executer );
+			let permissions = co_await *_qlServer->QueryArray( "permissionRights{ id allowed denied resource(schemaName:$schemaNames){id} }", vars, _executer );
 			for( auto&& value : permissions ){
 				let permission = Permission{ Json::AsObject(move(value)) };
 				ASSERT(permission.ResourcePK);
@@ -45,7 +41,8 @@ namespace Jde::Access{
 	α ResourceSyncAwait::Sync()ι->TAwait<jvalue>::Task{
 		try{
 			for( let& schema : _schemas ){
-				auto q = Ƒ( "resources( schemaName:[\"{}\"] ){{target deleted}}", schema->Name );
+				let schemaName = getSchemaName(schema, _opcServerInstance);
+				auto q = Ƒ( "resources( schemaName:[\"{}\"] ){{target deleted}}", schemaName );
 				auto existing = Json::AsArray( co_await *_qlServer->Query(move(q), {}, _executer) );
 				flat_set<string> targets;
 				for( auto& resource : existing )
@@ -57,7 +54,7 @@ namespace Jde::Access{
 						continue;
 
 					auto create = Ƒ( "createResource( schemaName:\"{}\", name:\"{}\", target:\"{}\", allowed:{}, description:\"From installation\" ){{id}}",
-						schema->Name, table->Name, move(jsonName), underlying(table->Operations) );
+						schemaName, table->Name, move(jsonName), underlying(table->Operations) );
 					let resourceId = QL::AsId<UserPK::Type>( co_await *_qlServer->Query(move(create), {}, _executer) );
 					co_await *_qlServer->Query( Ƒ("deleteResource( id:{} )", resourceId), {}, _executer );
 				}

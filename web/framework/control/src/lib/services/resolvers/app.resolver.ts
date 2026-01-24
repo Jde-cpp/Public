@@ -22,7 +22,7 @@ export class AppResolver implements Resolve<Connection[]> {
 	constructor( @Inject("AppService") private appService: AppService, @Inject('IProfile') @Inject('IErrorService') private cnsl: IErrorService )
 	{}
 	async resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<Connection[]>{
-		let connections = await this.appService.queryArray<Connection>( "connections{id programName instanceName hostName created status{memory values}}", (m)=>console.log(m) );
+		let connections = await this.appService.queryArray<Connection>( "connections{id programName instanceName hostName created status{memory values}}", null, (m)=>console.log(m) );
 		let urlMap = {};
 		connections.forEach( c=>{
 			c.created = new Date( c.created+'Z' );

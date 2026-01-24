@@ -50,6 +50,12 @@ namespace Jde{
 		auto request = Parse( move(query), move(vars), schemas, true, sl ); THROW_IFSL( !request.IsSubscription(), "Expected subscription query." );
 		return request.Subscriptions();
 	}
+
+	α QL::ParseQuery( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL sl )ε->TableQL{
+		auto ql = Parse( move(query), move(variables), schemas, returnRaw, sl );
+		THROW_IFSL( !ql.IsQueries() || ql.Queries().size()!=1, "Expected single query." );
+		return move(ql.Queries().front());
+	}
 }
 namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL | ELogTags::Parsing };

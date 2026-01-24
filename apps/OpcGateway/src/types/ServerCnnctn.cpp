@@ -50,7 +50,7 @@ namespace Jde::Opc::Gateway{
 		if( !_includeDeleted )
 			where.Add( view->GetColumnPtr("deleted"), nullptr );
 		if( _key ){
-			if( _key->IsPrimary() )
+			if( _key->IsPK() )
 				where.Add( view->GetColumnPtr("server_connection_id"), _key->PK() );
 			else{
 				if( _key->NK().size() )

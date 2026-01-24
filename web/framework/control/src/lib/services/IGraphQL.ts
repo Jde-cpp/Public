@@ -11,7 +11,7 @@ export interface IGraphQL{
 	querySingle<T>( ql: string, log?:Log ):Promise<T>;
 	schema( names:string[], log?:Log ):Promise<TableSchema[]>;
 	schemaWithEnums( type:string, log?:Log ):Promise<TableSchema>;
-	mutation<T>( ql: string|Mutation|Mutation[], log?:Log ):Promise<T>;
+	mutate<T>( ql: string|Mutation|Mutation[], log?:Log ):Promise<T>;
 	mutations( log?:Log ):Promise<MutationSchema[]>;
 
 	targetQuery( schema:TableSchema, target: string, showDeleted:boolean ):string;

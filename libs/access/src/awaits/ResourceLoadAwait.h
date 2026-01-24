@@ -7,25 +7,27 @@ namespace Jde::DB{ struct IRow; struct AppSchema; }
 namespace Jde::QL{ struct IQL; }
 namespace Jde::Access{
 	struct ResourceSyncAwait final : VoidAwait, boost::noncopyable{
-		ResourceSyncAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, UserPK executer )ι:
-			_executer{executer}, _qlServer{qlServer}, _schemas{schemas}{};
+		ResourceSyncAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, string opcServerInstance, UserPK executer )ι:
+			_executer{executer}, _opcServerInstance{move(opcServerInstance)}, _qlServer{qlServer}, _schemas{schemas}{};
 	private:
 		α Suspend()ι->void{ Sync(); }
 		α Sync()ι->TAwait<jvalue>::Task;
 		UserPK _executer;
+		string _opcServerInstance;
 		sp<QL::IQL> _qlServer;
 		vector<sp<DB::AppSchema>> _schemas;
 	};
 
 	struct ResourcePermissions{ flat_map<ResourcePK,Resource> Resources; flat_map<PermissionPK,Permission> Permissions; };
 	struct ResourceLoadAwait final : TAwait<ResourcePermissions>, boost::noncopyable{
-		ResourceLoadAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, UserPK executer )ι:
-			_executer{executer}, _qlServer{qlServer}, _schemas{schemas}{};
+		ResourceLoadAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, string opcServerInstance, UserPK executer )ι:
+			_executer{executer}, _opcServerInstance{move(opcServerInstance)}, _qlServer{qlServer}, _schemas{schemas}{};
 	private:
 		α Suspend()ι->void{ Load(); }
 		α Load()ι->QL::QLAwait<jarray>::Task;
 
 		UserPK _executer;
+		string _opcServerInstance;
 		sp<QL::IQL> _qlServer;
 		vector<sp<DB::AppSchema>> _schemas;
 	};

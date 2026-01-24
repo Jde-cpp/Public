@@ -19,6 +19,7 @@ namespace Jde{
  	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
 		Logging::AddTagParser( mu<Opc::UALogParser>() );
 		Process::Startup( argc, argv, "Tests.OpcServer", "OpcServer tests", true );
+		Opc::Server::AppClient()->InitLogging( Opc::Server::AppClient() );
 		try{
 			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )
 				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };

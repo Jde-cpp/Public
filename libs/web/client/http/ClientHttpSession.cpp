@@ -9,13 +9,13 @@ namespace Jde::Web::Client{
 	Duration _handshakeTimeout{};
 	α handshakeTimeout()ι{
 		if( _handshakeTimeout==Duration::zero() )
-			_handshakeTimeout = Settings::FindDuration("web/client/timeoutHandshake").value_or(std::chrono::seconds(30));
+			_handshakeTimeout = Settings::FindDuration( "web/client/timeoutHandshake" ).value_or( std::chrono::seconds(30) );
 		return _handshakeTimeout;
 	}
 	Duration _timeout{};
 	α Timeout()ι{
 		if( _timeout==Duration::zero() )
-			_timeout = Settings::FindDuration("web/client/timeout").value_or( std::chrono::seconds(30) );
+			_timeout = Settings::FindDuration( "web/client/timeout" ).value_or( std::chrono::seconds(30) );
 		return _timeout;
 	}
 	ssl::context _ctx{ ssl::context::tlsv12_client };// The SSL context is required, and should hold certificates
@@ -23,7 +23,7 @@ namespace Jde::Web::Client{
 	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 
 	ClientHttpSession::ClientHttpSession( str host, PortType port, net::any_io_executor strand, bool isPlain, bool log, SL sl )ε:
-		Host{ host }, Port{ port }, IsSsl{ false }, _log{log}, _resolver{ strand },
+		Host{ host }, Port{ port }, IsSsl{ false }, _log{ log }, _resolver{ strand },
 		_stream{ beast::tcp_stream{strand} },
 		_sl{ sl }{
 		ASSERT( isPlain );
@@ -31,18 +31,18 @@ namespace Jde::Web::Client{
 	}
 
 	ClientHttpSession::ClientHttpSession( str host, PortType port, net::any_io_executor strand, SL sl )ε:
-		Host{ host }, Port{ port }, IsSsl{ true }, _log{true}, _resolver{ strand },
+		Host{ host }, Port{ port }, IsSsl{ true }, _log{ true }, _resolver{ strand },
 		_stream{ beast::ssl_stream<beast::tcp_stream>{strand, _ctx} },
 		_sl{ sl }{
-		_stream.SetSslTlsExtHostName(Host);
+		_stream.SetSslTlsExtHostName( Host );
 		_isRunning.test_and_set();
 	}
 
 	struct ConnectAwait final : VoidAwait{
 		ConnectAwait( tcp::resolver::results_type&& resolvedResults, sp<ClientHttpSession> session, SRCE )ι:
 			VoidAwait{ sl },
-			_resolvedResults{move(resolvedResults)},
-			_session{session}
+			_resolvedResults{ move(resolvedResults) },
+			_session{ session }
 		{}
 		α Suspend()ι->void override{
 			_session->Stream().expires_after( handshakeTimeout() );
@@ -59,7 +59,7 @@ namespace Jde::Web::Client{
 	};
 
 	struct HandshakeAwait final : VoidAwait{
-		HandshakeAwait( sp<ClientHttpSession> session, SRCE )ι:VoidAwait{ sl }, _session{session}{}
+		HandshakeAwait( sp<ClientHttpSession> session, SRCE )ι:VoidAwait{ sl }, _session{ session }{}
 		α Suspend()ι->void override{
 			_session->Stream().expires_after( handshakeTimeout() );
 			_session->Stream().async_handshake( beast::bind_front_handler(&HandshakeAwait::OnHandshake, this) );
@@ -74,7 +74,7 @@ namespace Jde::Web::Client{
 	};
 
 	struct MakeConnectionAwait final : VoidAwait{
-		MakeConnectionAwait( sp<ClientHttpSession> session, SRCE )ι:VoidAwait{ sl }, _session{session}{}
+		MakeConnectionAwait( sp<ClientHttpSession> session, SRCE )ι:VoidAwait{ sl }, _session{ session }{}
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->ConnectAwait::Task{
 			try{
@@ -96,7 +96,7 @@ namespace Jde::Web::Client{
 
 	struct AsyncWriteAwait final : TAwait<ClientHttpRes>{
 		using base=TAwait<ClientHttpRes>;
-		AsyncWriteAwait( http::request<http::string_body> req, const HttpAwaitArgs& args, sp<ClientHttpSession> session, SRCE )ι:base{ sl }, _req{move(req)}, _args{args}, _session{session}{}
+		AsyncWriteAwait( http::request<http::string_body> req, const HttpAwaitArgs& args, sp<ClientHttpSession> session, SRCE )ι:base{ sl }, _req{ move(req) }, _args{ args }, _session{ session }{}
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->void{
 			_session->Stream().expires_after( Timeout() );
@@ -137,14 +137,14 @@ namespace Jde::Web::Client{
 	};
 
 	struct ShutdownAwait final : VoidAwait{
-		ShutdownAwait( sp<ClientHttpSession> session, SRCE )ι:VoidAwait{ sl }, _session{session}{}
+		ShutdownAwait( sp<ClientHttpSession> session, SRCE )ι:VoidAwait{ sl }, _session{ session }{}
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->void{
 			_session->Stream().expires_after( handshakeTimeout() );
-      _session->Stream().async_shutdown( [this](beast::error_code ec){ ShutdownAwait::OnShutdown(ec); } );
+      _session->Stream().async_shutdown( [this](beast::error_code ec){ShutdownAwait::OnShutdown(ec);} );
 		}
 		α OnShutdown( beast::error_code ec )->void{
-			if( ec && (!_session->IsSsl || ( _session->IsSsl && ec !=net::error::eof)) )
+			if( ec && (!_session->IsSsl || (_session->IsSsl && ec !=net::error::eof)) )
 				TRACET( ELogTags::Shutdown | ELogTags::Http | ELogTags::Client, "shutdown: {}", ec.message() );
 			Resume();
 		}

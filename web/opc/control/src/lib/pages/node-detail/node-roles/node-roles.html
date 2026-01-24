@@ -1,6 +1,0 @@
-<mat-table matSort #mainTable [dataSource]="roles" class="mat-elevation-z8" (matSortChange)="sortData($event)" [matSortActive]="sort.active" [matSortDirection]="sort.direction">
-	<ng-container matColumnDef="schema">
-		<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header>Schema</mat-header-cell>
-		<mat-cell *matCellDef="let row"> {{row.resource.schema}} </mat-cell>
-	</ng-container>
-</mat-table>

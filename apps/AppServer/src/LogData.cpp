@@ -12,26 +12,26 @@
 #include <jde/access/server/accessServer.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/AccessListener.h>
+#include "LocalClient.h"
 #include "WebServer.h"
 
 #define let const auto
 
 namespace Jde::App{
 	sp<DB::AppSchema> _appSchema;
-	sp<Access::Authorize> _authorizer = ms<Access::Authorize>( "App" );
 	sp<Access::AccessListener> _listener;
 	constexpr ELogTags _tags{ ELogTags::App };
 	Ω ds()ι->DB::IDataSource&{ return *_appSchema->DS(); }
 	Ω instanceTableName()ε->string{ return _appSchema->GetView("connections").DBName; }
 
 namespace Server{
-
 	α ConfigureDSAwait::Suspend()ι->void{ Configure(); }
 	α ConfigureDSAwait::Configure()ι->VoidAwait::Task{
 		try{
-			auto accessSchema = DB::GetAppSchema( "access", _authorizer );
-			_appSchema = DB::GetAppSchema( "app", _authorizer );
-			SetLocalQL( QL::Configure({accessSchema, _appSchema}, _authorizer) );
+			auto authorizer = Authorizer();
+			auto accessSchema = DB::GetAppSchema( "access", authorizer );
+			_appSchema = DB::GetAppSchema( "app", authorizer );
+			SetLocalQL( QL::Configure({accessSchema, _appSchema}, authorizer) );
 			_listener = ms<Access::AccessListener>( QLPtr() );
 			Process::AddShutdownFunction( []( bool terminate ){
 				_listener->Shutdown( terminate );
@@ -46,7 +46,7 @@ namespace Server{
 				DB::SyncSchema( *accessSchema, QLPtr() );
 				DB::SyncSchema( *_appSchema, QLPtr() );
 			}
-			co_await Access::Server::Configure( {accessSchema, _appSchema}, QLPtr(), UserPK{UserPK::System}, _authorizer, _listener );
+			co_await Access::Server::Configure( {accessSchema, _appSchema}, QLPtr(), UserPK{UserPK::System}, authorizer, _listener );
 			EndAppInstances();
 		}
 		catch( IException& e ){

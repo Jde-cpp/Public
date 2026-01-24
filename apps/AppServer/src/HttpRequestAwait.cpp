@@ -3,10 +3,11 @@
 #include <jde/web/server/auth/JwtLoginAwait.h>
 #include "LocalClient.h"
 #include "WebServer.h"
+#include "ql/AppQLAwait.h"
 #include "types/rest/json.h"
 #define let const auto
 
-namespace Jde::App{
+namespace Jde::App::Server{
 	HttpRequestAwait::HttpRequestAwait( HttpRequest&& req, SL sl )ι:
 		base{ move(req), sl }
 	{}
@@ -70,11 +71,20 @@ namespace Jde::App{
 				processed = false;
 		}
 		if( !processed ){
-			_request.LogRead();
-			RestException<http::status::not_found> e{ SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() };
-			ResumeExp( RestException<http::status::not_found>(move(e)) );
+			if( _request.IsGet("/graphql") || _request.IsPost("/graphql") )
+				Query();
+			else{
+				_request.LogRead();
+				RestException<http::status::not_found> e{ SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() };
+				ResumeExp( RestException<http::status::not_found>(move(e)) );
+			}
 		}
 	}
+	α HttpRequestAwait::QueryHandler( QL::RequestQL&& q, variant<sp<SessionInfo>, Jde::UserPK> creds, bool returnRaw, SL sl )ι->up<IQLAwait>{
+		return mu<AppQLAwait>( move(q), move(creds), returnRaw, sl );
+	}
+
+	α HttpRequestAwait::Schemas()Ι->const vector<sp<DB::AppSchema>>&{ return Server::Schemas(); }
 
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		if( auto e = Promise() ? Promise()->MoveExp() : nullptr; e ){
