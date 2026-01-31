@@ -7,7 +7,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
 import { ComponentPageTitle, DocItem } from 'jde-spa';
-import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, IProfile, Properties, QLSelector, TargetRow, toIdArray} from 'jde-framework';
+import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, LocalProfileStore, Properties, QLSelector, TargetRow, toIdArray} from 'jde-framework';
 
 import { RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
@@ -23,7 +23,7 @@ import { User } from '../../model/User';
     imports: [CommonModule, MatButtonModule, MatIcon, MatTabsModule, Properties, PermissionTable, QLSelector]
 })
 export class UserDetail implements OnDestroy, OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, @Inject('IProfile') private profileService: IProfile, @Inject('IErrorService') private snackbar: IErrorService ){
+	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, @Inject('IErrorService') private snackbar: IErrorService ){
 		effect(() => {
 			if( !this.properties() )
 				return;
@@ -59,18 +59,18 @@ export class UserDetail implements OnDestroy, OnInit{
 		});
 	}
 	ngOnDestroy(){
-		this.profile.save();
+		LocalProfileStore.setTabIndex( 'userDetail', this.tabIndex() );
 	}
 	ngOnInit(){
 		this.sideNav.set( this.pageData.routing );
 	}
-	tabIndexChanged( index:number ){ this.profile.value.tabIndex = index;}
+	onTabIndexChanged( index:number ){ this.tabIndex.set(index);}
 
 	async onSubmitClick(){
 		try{
 			const upsert = new User( { ...this.properties(), permissions: this.permissions(), roles: this.roles().selected, groups: toIdArray(this.groups().selected) } );
 			const mutation = upsert.mutation( this.user );
-			await this.ql.mutation( mutation );
+			await this.ql.mutate( mutation );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 		}catch(e){
 			this.snackbar.exceptionInfo( e, "Save failed.", (m)=>console.log(m) );
@@ -95,7 +95,7 @@ export class UserDetail implements OnDestroy, OnInit{
 	sideNav = model.required<DocItem>();
 
 	pageData:DetailResolverData<User>;
-	get profile(){ return this.pageData.pageSettings.profile;}
 	get schema(){ return this.pageData.schema; }
+	tabIndex = signal<number>( LocalProfileStore.tabIndex('userDetail') );
 	ql:IGraphQL = inject( AccessService );
 }

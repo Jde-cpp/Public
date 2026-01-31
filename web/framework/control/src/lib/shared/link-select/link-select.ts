@@ -1,7 +1,6 @@
 import {Component, Input, Output, OnInit, EventEmitter, NgModule} from '@angular/core';
 import {MatChipListbox, MatChipsModule} from '@angular/material/chips';
 import {MatOption, MatSelect, MatSelectModule} from '@angular/material/select';
-import { IAssignable } from '../../utils/settings';
 import { CircularBuffer } from '../../utils/collections'
 import { KeyValuePipe,NgFor } from '@angular/common';
 
@@ -33,7 +32,7 @@ export class LinkSelect<TOptionKey> implements OnInit{
 		return y;
 	}
 }
-export class LinkSelectOptions<TOptionKey> implements IAssignable<LinkSelectOptions<TOptionKey>>
+export class LinkSelectOptions<TOptionKey>
 {
 	constructor( private readonly _values:Map<TOptionKey,string>, linkCount=3, public isValid:(TOptionKey,string)=>boolean=undefined )
 	{

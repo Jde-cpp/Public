@@ -6,24 +6,38 @@
 #include "types/User.h"
 
 namespace Jde::Access{
-	struct Listener; struct Loader; struct Permission;// struct User; struct Group;
+	namespace Server{ struct AuthenticateAwait; struct LoginAwait; }
+	struct Listener; struct Loader; struct Permission;
 
-	struct Authorize final: IAcl{
+	struct Authorize /*final*/ : IAcl, std::enable_shared_from_this<Authorize>{
 		Authorize( string app )ι:_app{move(app)}{}
+		α AddResource( ResourcePK resourcePK, string schema, string resourceTarget, string criteria )ι->void;
+		α FindResourcePK( string schema, str resourceName, str criteria )ι->optional<ResourcePK>{ Jde::sl _{Mutex}; return FindResourcePK(schema, resourceName, criteria, _); }
+		α FindSchema( str resourceTarget, SL sl )ε->string;
 		α Test( str schemaName, str resourceName, ERights rights, UserPK userPK, SRCE )ε->void override;
 		α Rights( str schemaName, str resourceName, UserPK executer )ι->ERights override;
 		α TestAdmin( str resource, UserPK userPK, SRCE )ε->void;
+		α TestAdmin( str schema, str resource, str criteria, UserPK userPK, SRCE )ε->void;
+		α TestAdmin( str resource, str criteria, UserPK userPK, SRCE )ε->void;
 		α TestAdmin( ResourcePK resourcePK, UserPK userPK, SRCE )ε->void;
 		α TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SRCE )ε->void;
+		α AddAdminAuthorizer( str resourceName, sp<IAdminAcl> authorizer )ι->void;
 
 		α TestAddGroupMember( GroupPK groupPK, flat_set<IdentityPK::Type>&& memberPKs, SRCE )ε->void;
 		α TestAddRoleMember( RolePK parent, RolePK child, SRCE )ε->void;
-	private:
+	protected:
+		α FindResource( const Resource& resource, ul& l )Ι->const Resource*;
+		Ŧ FindResourcePK( str schemaName, str resourceName, str criteria, T& l )Ι->optional<ResourcePK>;
+
+		string _app;
+		mutable std::shared_mutex Mutex;
+		flat_map<string, flat_map<string,flat_map<string,Access::ResourcePK>>> SchemaResources;//<schemaName, <resourceJsonName,<criteria, resourcePK>>> -- active only
+		flat_map<UserPK,User> Users;
 		α SetUserPermissions( flat_set<UserPK>&& users, const ul& l )ι->void;
 		α RecalcGroupMembers( GroupPK groupPK, const ul& l, bool remove=false )ι->void;
 		α Recalc( const ul& l )ι->void;
 		α RecursiveUsers( GroupPK groupPK, const ul& l, bool clear=false )ι->flat_set<UserPK>;
-
+		α FindAdminAuthorizer( str schemaName )ι->sp<IAdminAcl>;
 
 		α AddAcl( IdentityPK::Type userGroupPK, PermissionPK permissionPK, ERights allowed, ERights denied, ResourcePK resourcePK )ι->void;
 		α AddAcl( IdentityPK::Type userGroupPK, RolePK rolePK )ι->void;
@@ -43,7 +57,7 @@ namespace Jde::Access{
 
 		α DeleteRestoreRole( RolePK rolePK, bool deleted )ι->void;
 		α PurgeRole( RolePK rolePK )ι->void;
-		α AddRolePermission( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, sv resourceName )ι->void;
+		α AddRolePermission( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, const jobject& resource )ι->void;
 		α AddRoleChild( RolePK parentRolePK, vector<RolePK>&& childRolePK )ι->void;
 		α RemoveRoleChildren(	RolePK rolePK, flat_set<RolePK> toRemove )ι->void;
 
@@ -55,18 +69,25 @@ namespace Jde::Access{
 		α TestAdmin( const Resource& resource, UserPK userPK, SL sl )ε->void;
 		α ToIdentityPK( IdentityPK::Type userGroupPK, const ul& l )Ι->IdentityPK;
 
-		mutable std::shared_mutex Mutex;
-		flat_map<string, flat_map<string,Access::ResourcePK>> SchemaResources;//schemaName, resourceJsonName, resourcePK -- active only
 		flat_map<ResourcePK,Resource> Resources; //includes inactive resources.
-		flat_map<UserPK,User> Users;
 
 		flat_map<PermissionPK,Permission> Permissions;
 		flat_map<GroupPK,Group> Groups;
 		flat_map<RolePK,Role> Roles;
 		flat_multimap<IdentityPK,PermissionRole> Acl;
-
 	private:
-		string _app;
-		friend struct AccessListener; friend struct Loader; friend struct ConfigureAwait;
+		concurrent_flat_map<string,sp<IAdminAcl>> _adminAuthorizers;
+		friend struct AccessListener; friend struct Loader; friend struct ConfigureAwait; friend struct Server::AuthenticateAwait; friend struct Server::LoginAwait;
 	};
+
+	Ŧ Authorize::FindResourcePK( str schemaName, str resourceTarget, str criteria, T& /*lock*/ )Ι->optional<ResourcePK>{
+		if( auto schemaResources = SchemaResources.find(schemaName); schemaResources!=SchemaResources.end() ){
+			if( auto targetResources = schemaResources->second.find(resourceTarget); targetResources!=schemaResources->second.end() ){
+				auto& criteras = targetResources->second;
+				if( criteras.contains({}) )// if permisions are enabled
+					return Find(criteras, criteria);
+			}
+		}
+		return {};
+	}
 }

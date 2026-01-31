@@ -18,6 +18,6 @@ namespace Jde::App::Server{
 	};
 }
 namespace Jde::App{
-	α AddConnection( str applicationName, str instanceName, str hostName, uint pid )ε->tuple<AppPK, AppInstancePK, AppConnectionPK>;
-	α EndInstance( AppInstancePK instanceId, SRCE )ι->DB::ExecuteAwait::Task;
+	α AddConnection( str applicationName, str instanceName, str hostName, uint pid )ε->tuple<ProgramPK, ProgInstPK, ConnectionPK>;
+	α EndInstance( ProgInstPK instanceId, SRCE )ι->DB::ExecuteAwait::Task;
 }

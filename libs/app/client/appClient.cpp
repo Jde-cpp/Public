@@ -8,7 +8,9 @@
 #define let const auto
 
 
-namespace Jde::App::Client{ static sp<Access::Authorize> _authorize; }
+namespace Jde::App::Client{
+	static sp<Access::Authorize> _authorize;
+}
 namespace Jde::App{
 	using Web::Client::ClientHttpAwait;
 	α reconnectWait()ι->Duration{ return Settings::FindDuration("server/reconnectWait").value_or(5s); }
@@ -21,6 +23,10 @@ namespace Jde::App{
 			_authorize = ms<Access::Authorize>( move(libName) );
 		return _authorize;
 	}
+	α Client::SetAcl( sp<Access::Authorize> acl )ι->void{
+		_authorize = move(acl);
+	}
+
 	α Client::Connect( sp<IAppClient>&& appClient )ι->ConnectAwait::Task{
 		co_await ConnectAwait{ move(appClient), true };
 	}

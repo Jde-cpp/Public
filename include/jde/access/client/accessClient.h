@@ -7,5 +7,5 @@ namespace Jde::QL{  struct IQL; }
 namespace Jde::Access{ struct Authorize; struct AccessListener; }
 
 namespace Jde::Access::Client{
-	α Configure( sp<DB::AppSchema> accessSchema, vector<sp<DB::AppSchema>>&& localSchemas, sp<QL::IQL> appQL, UserPK executer, sp<Authorize> authorizer, sp<AccessListener> listener )ε->ConfigureAwait;
+	α Configure( sp<DB::AppSchema> accessSchema, vector<sp<DB::AppSchema>>&& localSchemas, sp<QL::IQL> appQL, UserPK executer, sp<Authorize> authorizer, sp<AccessListener> listener, string opcServerInstance, SRCE )ε->ConfigureAwait;
 }

@@ -12,26 +12,28 @@
 #include <jde/access/server/accessServer.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/AccessListener.h>
+#include "LocalClient.h"
 #include "WebServer.h"
+#include "ql/AppQL.h"
 
 #define let const auto
 
 namespace Jde::App{
 	sp<DB::AppSchema> _appSchema;
-	sp<Access::Authorize> _authorizer = ms<Access::Authorize>( "App" );
 	sp<Access::AccessListener> _listener;
 	constexpr ELogTags _tags{ ELogTags::App };
 	Ω ds()ι->DB::IDataSource&{ return *_appSchema->DS(); }
 	Ω instanceTableName()ε->string{ return _appSchema->GetView("connections").DBName; }
 
 namespace Server{
-
 	α ConfigureDSAwait::Suspend()ι->void{ Configure(); }
 	α ConfigureDSAwait::Configure()ι->VoidAwait::Task{
 		try{
-			auto accessSchema = DB::GetAppSchema( "access", _authorizer );
-			_appSchema = DB::GetAppSchema( "app", _authorizer );
-			SetLocalQL( QL::Configure({accessSchema, _appSchema}, _authorizer) );
+			auto authorizer = Authorizer();
+			auto accessSchema = DB::GetAppSchema( "access", authorizer );
+			_appSchema = DB::GetAppSchema( "app", authorizer );
+
+			ConfigureQL( {accessSchema, _appSchema}, authorizer );
 			_listener = ms<Access::AccessListener>( QLPtr() );
 			Process::AddShutdownFunction( []( bool terminate ){
 				_listener->Shutdown( terminate );
@@ -46,7 +48,7 @@ namespace Server{
 				DB::SyncSchema( *accessSchema, QLPtr() );
 				DB::SyncSchema( *_appSchema, QLPtr() );
 			}
-			co_await Access::Server::Configure( {accessSchema, _appSchema}, QLPtr(), UserPK{UserPK::System}, _authorizer, _listener );
+			co_await Access::Server::Configure( {accessSchema, _appSchema}, QLPtr(), UserPK{UserPK::System}, authorizer, _listener );
 			EndAppInstances();
 		}
 		catch( IException& e ){
@@ -87,10 +89,10 @@ namespace Server{
 }
 
 namespace Jde{
-	α App::AddConnection( str appName, str instanceName, str hostName, uint pid )ε->tuple<AppPK, AppInstancePK, AppConnectionPK>{
-		AppPK appId{};
-		AppInstancePK appInstanceId{};
-		AppConnectionPK appConnectionId{};
+	α App::AddConnection( str appName, str instanceName, str hostName, uint pid )ε->tuple<ProgramPK, ProgInstPK, ConnectionPK>{
+		ProgramPK appId{};
+		ProgInstPK appInstanceId{};
+		ConnectionPK appConnectionId{};
 		let rows = ds().Select( {
 			Ƒ("{}(?,?,?,?)", _appSchema->GetTable("connections").InsertProcName()),
 			{DB::Value{appName}, {instanceName}, DB::Value{hostName}, DB::Value{pid}},
@@ -103,7 +105,7 @@ namespace Jde{
 
 		return make_tuple( appId, appInstanceId, appConnectionId );
 	}
-	α App::EndInstance( AppInstancePK instanceId, SL sl )ι->DB::ExecuteAwait::Task{
+	α App::EndInstance( ProgInstPK instanceId, SL sl )ι->DB::ExecuteAwait::Task{
 		try{
 			co_await ds().Execute( {Ƒ("update {} set end_time=now() where id=?", instanceTableName()), {DB::Value{instanceId}}}, sl );
 		}
@@ -112,7 +114,7 @@ namespace Jde{
 	}
 
 /*
-	α App::LoadApplications( AppPK id )ι->up<Proto::FromServer::Applications>
+	α App::LoadApplications( ProgramPK id )ι->up<Proto::FromServer::Applications>
 	{
 		auto pApplications = mu<Proto::FromServer::Applications>();
 		auto fnctn = [&pApplications]( const DB::IRow& row )
@@ -136,7 +138,7 @@ namespace Jde{
 		return pApplications;
 	}
 
-	α App::SaveMessage( AppPK applicationId, AppInstancePK instanceId, const Log::Proto::LogEntryClient& m, SL )ι->void{
+	α App::SaveMessage( ProgramPK applicationId, ProgInstPK instanceId, const Log::Proto::LogEntryClient& m, SL )ι->void{
 		let variableCount = std::min( 5, m.args().size() );
 		vector<DB::Value> params{
 			{applicationId},

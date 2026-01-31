@@ -100,7 +100,14 @@ namespace Jde::QL{
 		auto deleted = table.GetColumnPtr( "deleted" );
 		let value = _mutation.Type==EMutationQL::Delete ? DB::Value{"$now"} : DB::Value{};
 		update.Add( deleted, value );
-		update.Where.Add( deleted->Table->GetPK(), DB::Value{_mutation.Id()} );//deleted=main table, table=possibly extension table.
+		auto key = _mutation.GetKey();
+		update.Where.Add( key.IsPK() ? deleted->Table->GetPK() : deleted->Table->GetColumnPtr("target"), DB::Value::FromKey(key) );//deleted=main table, table=possibly extension table.
+		for( let& arg : _mutation.ExtrapolateVariables() ){
+			if( arg.key()=="id" || arg.key()=="target" )
+				continue;
+			if( let column = table.FindColumn( arg.key() ); column )
+				update.Where.Add( column, DB::Value{column->Type, arg.value()} );
+		}
 		_updates.push_back( move(update) );
 	}
 

@@ -1,7 +1,5 @@
 #include "gtest/gtest.h"
-#include <jde/ql/QLAwait.h>
-#include <jde/access/types/Role.h>
-#include <jde/access/types/Resource.h>
+#include <jde/access/server/awaits/RoleAwait.h>
 #include "globals.h"
 
 #define let const auto
@@ -16,16 +14,19 @@ namespace Jde::Access::Tests{
 	}
 	α RemoveRolePermission( RolePK rolePK, PermissionPK permissionPK, UserPK userPK )ε->jvalue{
 		let remove = Ƒ( "mutation removeRole( id:{}, permissionRight:{{id:{}}} )", rolePK, permissionPK );
-		return QL().QuerySync<jvalue>( remove, userPK );
+		return BlockTAwait<jvalue>( Server::RoleMAwait{QL::ParseM(remove, {}, Schemas()), userPK} );
 	}
 	α GetRolePermission( RolePK rolePK, sv resourceName, UserPK executer )ε->jobject{
-		let ql = Ƒ("role( id:{} ){{permissionRight{{id allowed denied resource(target:\"{}\",criteria:null)}} }}", rolePK, resourceName );
-		let role = QL().QuerySync( ql, executer ); //{"role":{"member":{"id":1,"allowed":[],"denied":[]}}}
+		jobject vars{ {"roleId", rolePK}, {"resource", resourceName} };
+		let q = "role( id:$roleId ){permissionRight{id allowed denied resource(target:$resource,criteria:null)} }";
+		let role = BlockTAwait<jvalue>( Server::RoleAwait{QL::ParseQuery(q, vars, Schemas()), executer} ).as_object(); //{"role":{"member":{"id":1,"allowed":[],"denied":[]}}}
 		return Json::FindDefaultObjectPath( role, "permissionRight" );
 	}
 	α GetRoleChild( RolePK parentRolePK, RolePK childRolePK, UserPK userPK )ε->jobject{
-		let ql = Ƒ("role( id:{} ){{role(id:{}){{id target deleted}} }}", parentRolePK, childRolePK );
-		return Json::FindDefaultObjectPath( QL().QuerySync(ql, userPK), "role" );
+		jobject vars = { {"parent", parentRolePK}, {"child",childRolePK} };
+		let q = "role( id:$parent ){role(id:$child){id target deleted} }";
+		auto y = BlockTAwait<jvalue>( Server::RoleAwait{QL::ParseQuery(q, vars, Schemas()), userPK} );
+		return y.is_object() ? Json::FindDefaultObjectPath( y.get_object(), "role" ) : jobject{};
 	}
 
 	α AddRolePermission( RolePK rolePK, sv resourceName, ERights allowed, ERights denied, UserPK userPK )ε->jobject{
@@ -35,13 +36,14 @@ namespace Jde::Access::Tests{
 			let existingDenied = ToRights( Json::AsArray(permission, "denied") );
 			if( allowed!=existingAllowed || denied!=existingDenied ){
 				let update = Ƒ( "mutation updatePermissionRight( id:{}, allowed:{}, denied:{} )", GetId(permission), underlying(allowed), underlying(denied) );
-				QL().QuerySync( update, userPK );
+				QL().QuerySync<jvalue>( update, {}, userPK );
 				permission = GetRolePermission( rolePK, resourceName, userPK );
 			}
 		}
 		else{
-			let add = Ƒ( "mutation addRole( id:{}, permissionRight:{{allowed:{}, denied:{}, resource:{{target:\"{}\"}}}} )", rolePK, underlying(allowed), underlying(denied), resourceName );
-			QL().QuerySync<jvalue>( add, userPK );
+			jobject vars{ {"roleId", rolePK}, {"allowed", underlying(allowed)}, {"denied", underlying(denied)}, {"resource", resourceName} };
+			auto q = "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{target:$resource}} )";
+			BlockTAwait<jvalue>( Server::RoleMAwait{QL::ParseM(q, vars, Schemas()), userPK} );
 			permission = GetRolePermission( rolePK, resourceName, userPK );
 		}
 		return permission;
@@ -49,8 +51,9 @@ namespace Jde::Access::Tests{
 	α AddRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK userPK )ε->jobject{
 		auto y = GetRoleChild( parentRolePK, childRolePK, userPK );
 		if( y.empty() ){
-			let add = Ƒ( "mutation addRole( id:{}, role:{{id:{}}} )", parentRolePK, childRolePK );
-			QL().QuerySync<jvalue>( add, userPK );
+			jobject vars{ {"parent", parentRolePK}, {"child", childRolePK} };
+			let q = "mutation addRole( id:$parent, role:{id:$child} )";
+			BlockTAwait<jvalue>( Server::RoleMAwait{QL::ParseM(q, vars, Schemas()), userPK} );
 			y = GetRoleChild( parentRolePK, childRolePK, userPK );
 		}
 		return y;

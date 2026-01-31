@@ -1,0 +1,31 @@
+
+<mat-table matSort #mainTable [dataSource]=data class="mat-elevation-z8" (matSortChange)="sortData($event)" [matSortActive]="sort.active" [matSortDirection]="sort.direction">
+	<ng-container matColumnDef="roleName">
+		<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header>Role</mat-header-cell>
+		<mat-cell *matCellDef="let role"> {{role.roleName}} </mat-cell>
+	</ng-container>
+	<ng-container matColumnDef="inherited">
+		<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header>Inherited</mat-header-cell>
+		<mat-cell *matCellDef="let role">
+			<mat-checkbox disabled=true [checked]=role.inherited></mat-checkbox>
+		</mat-cell>
+	</ng-container>
+	@for( kv of available; track kv.key; let i = $index; ){
+		<ng-container matColumnDef={{kv.value}}>
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header [class.mat-column-alt]="i%2==0" class="mat-column-permission">{{kv.value}}</mat-header-cell>
+				<mat-cell *matCellDef="let row" class="mat-column-permission" [class.mat-column-alt]="i%2==0">
+					@if( self.isDenied(row, kv.key) ){
+						<span class="material-symbols-outlined denied" (click)="toggle(row, kv.key)">cancel</span>
+					}
+					@else if( self.isAvailable(row, kv.key) ){
+						<mat-checkbox
+							(change)="toggle(row, kv.key)"
+							[disabled]="kv.key==0 && self.isAllowed(row, kv.key)"
+							[checked]="self.isAllowed(row, kv.key)"></mat-checkbox>
+					}
+				</mat-cell>
+		</ng-container>
+	}
+	<mat-header-row *matHeaderRowDef="displayedColumnNames; sticky: true"></mat-header-row>
+	<mat-row mat-row *matRowDef="let row; columns: displayedColumnNames;"></mat-row>
+</mat-table>

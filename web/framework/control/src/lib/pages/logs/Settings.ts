@@ -1,10 +1,10 @@
 import {Sort} from '@angular/material/sort';
-import { IAssignable } from '../../utils/settings';
+//import { IAssignable } from '../../utils/settings';
 
 import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
 import * as LogProto from '../../proto/Log'; import Log = LogProto.Jde.App.Log.Proto;
 
-export class LogSettings implements IAssignable<LogSettings>{
+export class LogSettings{
 	constructor( params:LogSettings=null ){
 		if( !params )
 			return;

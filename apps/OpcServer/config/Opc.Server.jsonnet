@@ -39,6 +39,7 @@ local args = import 'args.libsonnet';
 	http:{port: 1970},
 	opcServer:{
 		target: "TestServer",
+		resource: "debug",
 		description: "Test OPC",
 		mutationsDir:: "$(JDE_DIR)/apps/OpcServer/config/mutations/pumps",
 		db: false,

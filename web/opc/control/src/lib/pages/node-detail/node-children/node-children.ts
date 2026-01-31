@@ -3,9 +3,10 @@ import {Component, computed, inject, Inject, model, OnDestroy, OnInit, signal} f
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
 import {MatSelectChange, MatSelectModule} from '@angular/material/select';
+import { Sort } from "@angular/material/sort";
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
 import { Gateway, GatewayService, SubscriptionResult } from '../../../services/gateway.service';
-import { DateUtils, IErrorService, ProtoUtils, Timestamp} from 'jde-framework'
+import { DateUtils, IErrorService, IProfileStore, ProtoUtils, Timestamp} from 'jde-framework'
 import { EAccess, ETypes } from '../../../model/types';
 import {  MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
@@ -22,6 +23,7 @@ import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/
 import { MatInputModule } from '@angular/material/input';
 import {provideNativeDateAdapter} from '@angular/material/core';
 import { Server } from '../../../model/Server';
+import { NodeId } from '../../../model/NodeId';
 
 @Component({
   selector: 'node-children',
@@ -36,13 +38,15 @@ export class NodeChildren implements OnInit, OnDestroy {
 		@Inject('GatewayService') private gatewayService:GatewayService,
 		private route: ActivatedRoute,
 		@Inject('IErrorService') private snackbar: IErrorService,
+		@Inject('IProfileStore') private profileStore: IProfileStore,
 		private componentPageTitle:ComponentPageTitle )
 	{}
 
 	async ngOnInit() {
-		this.route.data.subscribe( (data)=>{
+		this.route.data.subscribe( async (data)=>{
+			if( this.pageData )
+				this.profileStore.save<UserSettings>( this.pageData.route.profileKey, this.profile );
 			this.pageData = data["pageData"];
-//			this.sideNav.set( this.pageData.route );
 			this.nodes?.filter( (n:UaNode)=>this.profile.subscriptions.find((s)=>s.equals(n)) ).forEach( (n)=>this.selections.select(n) );
 			this.isLoading.set( false );
 			this.componentPageTitle.title = this.server.connection.name + (this.node().id==85 ? '' : `/${this.node.name}`);
@@ -53,7 +57,6 @@ export class NodeChildren implements OnInit, OnDestroy {
   ngOnDestroy() {
 		this.selections.clear();
 		this.selections.changed.unsubscribe();
-		this.pageData.route.settings.save();
 		this.subscription = null;
   }
 
@@ -200,7 +203,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	get server():Server{ return this.pageData.server; }
 	get cnnctnTarget():string{ return this.server.connection.target; }
 	pageData:NodePageData;
-	get profile(){ return this.pageData.route.profile; }
+	profile:UserSettings;
 	get nodes(){ if(!this.pageData) debugger; return this.pageData?.nodes; }
 	get variables():Variable[]{ return <Variable[]>this.nodes.filter((x)=>x.nodeClass==ENodeClass.Variable); }
 	retrievingSnapshot = signal<boolean>( false );
@@ -214,4 +217,12 @@ export class NodeChildren implements OnInit, OnDestroy {
 	get visibleColumns(){ return this.profile.visibleColumns; }
 
 	#routeService = inject( OpcNodeRouteService );
+}
+class UserSettings{
+	tabIndex:number = 0;
+	sort:Sort = {active: "name", direction: "asc"};
+	visibleColumns:string[] = ['select', 'id', 'name', 'snapshot', "description"];
+	columns:string[] = ['select', 'id', 'name', 'snapshot', "description"];
+	subscriptions:NodeId[] = [];
+//	access:NodeAccessProfile = new NodeAccessProfile();
 }

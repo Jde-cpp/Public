@@ -1,5 +1,6 @@
 import { ITargetRow, Mutation, MutationType, PropertyNames, TargetRow, TargetRowProps  } from "jde-framework";
 import { toBrowse } from "./types";
+import { Server } from "./Server";
 
 export type CnnctnPK = number;
 export type CnnctnTarget = string;
@@ -10,6 +11,7 @@ export class ServerCnnctn extends TargetRow<ServerCnnctn>{
 		this.certificateUri = obj.certificateUri;
 		if( obj.defaultBrowseNs )
 			this.defaultBrowseNs = obj.defaultBrowseNs;
+		this.server = obj.server;
 	}
 
 	override equals( row:ITargetRow ):boolean{
@@ -37,6 +39,7 @@ export class ServerCnnctn extends TargetRow<ServerCnnctn>{
 	url:string;
 	certificateUri:string;
 	defaultBrowseNs:number=1;
+	server:Server;
 	static typeName = "ServerConnection";
 }
-export type ServerCnnctnProps = TargetRowProps & { url:string; certificateUri:string; defaultBrowseNs?:number; };
+export type ServerCnnctnProps = TargetRowProps & { url:string; certificateUri:string; defaultBrowseNs?:number; server:Server };

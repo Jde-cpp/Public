@@ -17,7 +17,7 @@ export class OpcServerRouteService implements IRouteService{
 		for( const s of instances )
 			y.push( new DocItem({path: s.host, title: s.host}) );
 
-		this.routeStore.setSiblings( urlSegments, y );
+		this.routeStore.setChildren( urlSegments, y );
 		return y;
 	}
 

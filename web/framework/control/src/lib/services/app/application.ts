@@ -22,13 +22,13 @@ export class AppStatus{
 	logLevelDefaultDb:ELogLevel;
 	logLevelDefaultFile:ELogLevel;
 	name:string;
-	status:FromServer.IStatus
-	get instanceId():number{ return ProtoUtils.toNumber(this.status ? this.status.instanceId : 0); }
-	get startTime():Date|null{ return ProtoUtils.toDate(<Timestamp>this.status?.startTime); }
+	//status:FromServer.IStatus
+	//get instanceId():number{ return ProtoUtils.toNumber(this.status ? this.status.instanceId : 0); }
+	//get startTime():Date|null{ return ProtoUtils.toDate(<Timestamp>this.status?.startTime); }
 	get startTimeString():string{
-		if( !this.startTime )
+//		if( !this.startTime )
 			return "Stopped";
-		const startTime = this.startTime;
+/*		const startTime = this.startTime;
 		const now = Date.now();
 		const pipe = new DatePipe('en-US');
 		let result=null;
@@ -36,10 +36,10 @@ export class AppStatus{
 			result = pipe.transform( startTime, 'shortTime' );
 		else
 			result = pipe.transform( startTime, 'shortDate' );
-		return result;
+		return result;*/
 	}
-	get memory():number{ return this.status.memory ? ProtoUtils.toNumber(this.status.memory) : 0; }
-	get memoryString():string{
+	//get memory():number{ return this.status.memory ? ProtoUtils.toNumber(this.status.memory) : 0; }
+/*	get memoryString():string{
 		var value = this.memory;
 		var suffix = "";
 		const test = function( boundry, boundrySuffix ){
@@ -55,9 +55,9 @@ export class AppStatus{
 			if( !test(Math.pow(2,20), "MB") )
 				test( Math.pow(2,10), "KB" );
 		return Math.round(value).toString()+suffix;
-	}
-	get description():string[]{return this.status.values;}
-	get on():boolean{return this.startTime!=null && this.startTime.getTime()!=0; }
+	}*/
+	//get description():string[]{return this.status.values;}
+	//get on():boolean{return this.startTime!=null && this.startTime.getTime()!=0; }
 	get icon():string{
 		var icon="touch_app";
 		if( this.name=="Main" )

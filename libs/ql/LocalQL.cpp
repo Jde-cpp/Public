@@ -56,7 +56,7 @@ namespace Jde::QL{
 				m.Args["id"] = key->PK();
 				m.Args.erase( "shift" );
 			}
-			auto input = key->IsPrimary()
+			auto input = key->IsPK()
 				? "id:"+std::to_string(key->PK())
 				: "target:\""+move(key->NK())+'"';
 			auto ql = Ƒ( "{}({}){{ id }}", DB::Names::ToSingular(m.JsonTableName), move(input) );
@@ -65,7 +65,7 @@ namespace Jde::QL{
 					string name2 = Json::AsString(*name);
 					m.Args["name"] = name2;
 				}
-				if( auto t = key->IsPrimary() ? GetTablePtr(m.TableName()) : nullptr; t && t->SequenceColumn() )
+				if( auto t = key->IsPK() ? GetTablePtr(m.TableName()) : nullptr; t && t->SequenceColumn() )
 					y.push_back( BlockAwait<InsertAwait,jvalue>({DB::AsTable(t), move(m), true, executer}) );
 				else
 					y.push_back( BlockAwait<QLAwait<jvalue>,jvalue>(QLAwait<jvalue>{move(m), executer}) );

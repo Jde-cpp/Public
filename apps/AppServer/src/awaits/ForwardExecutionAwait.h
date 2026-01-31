@@ -7,7 +7,7 @@ namespace Jde::App::Server{
 		using base = TAwait<string>;
 		ForwardExecutionAwait( UserPK userPK, Proto::FromClient::ForwardExecution&& customRequest, sp<ServerSocketSession> serverSocketSession, SRCE )ι;
 		α Suspend()ι->void;
-		Ω OnCloseConnection( AppInstancePK instancePK )ι->void;
+		Ω OnCloseConnection( ProgInstPK instancePK )ι->void;
 		Ω Resume( string&& results, RequestId serverRequestId )ι->bool;
 
 	private:

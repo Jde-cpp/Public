@@ -7,7 +7,7 @@
 	},
 	dbServers: {
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/jde/$(JDE_BUILD_TYPE)/libs/db/drivers/mysql/libJde.DB.MySql.so",
+			driver: "$(JDE_BUILD_DIR)/libs/db/drivers/mysql/libJde.DB.MySql.so",
 			connectionString: null,
 			username: "$(JDE_MYSQL_USER)",
 			password: "$(JDE_MYSQL_PWD)",
@@ -17,7 +17,7 @@
 					schemas:{
 						test_opc_server:{
 							access:{
-								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet"
+								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet",
 								ql: "$(JDE_DIR)/libs/access/config/access-ql.jsonnet",
 								prefix: null  //test with null prefix, debug with prefix
 							},

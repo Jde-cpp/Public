@@ -2,5 +2,8 @@
 #include <open62541/types.h>
 #include <jde/fwk.h>
 #include <jde/db/Row.h>
+#include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/opcHelpers.h>
 #include "../src/usings.h"
+#include "../src/globals.h"
+#include "../src/UAServer.h"

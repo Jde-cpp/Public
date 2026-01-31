@@ -10,9 +10,9 @@ import {App,AppStatus} from '../../services/app/application';
 import {AppService} from '../../services/app/app.service';
 import {ApplicationStrings} from './Application';
 import {LogSettings} from './Settings';
-import {Settings} from '../../utils/settings';
+//import {Settings} from '../../utils/settings';
 import { ComponentPageTitle } from 'jde-spa';
-import {IProfile} from '../../services/profile/IProfile';
+import {IProfileStore} from '../../services/profile/profile.store';
 import {IErrorService} from '../../services/error/IErrorService';
 
 
@@ -36,9 +36,8 @@ import { Paginator } from '../../shared/paginator/paginator';
 	imports: [CommonModule, MatIcon, MatTableModule, MatToolbar, MatFormFieldModule, MatSelect, MatSortModule, MatOption, Paginator]
 })
 export class LogsComponent implements OnInit, OnDestroy{
-	constructor( public _componentPageTitle: ComponentPageTitle, private appService:AppService, @Inject('IProfile') private profileService: IProfile, @Inject('IErrorService') private errorService: IErrorService ){
-		this.settingsContainer = new Settings<LogSettings>( LogSettings, "LogComponent", this.profileService );
-	}
+	constructor( public _componentPageTitle: ComponentPageTitle, private appService:AppService, @Inject('IProfileStore') private profileStore: IProfileStore, @Inject('IErrorService') private errorService: IErrorService )
+	{}
 
 	async ngOnInit(){
 		this._componentPageTitle.title = "Logs";
@@ -48,22 +47,22 @@ export class LogsComponent implements OnInit, OnDestroy{
 		var start = beginningOfDay;
 		this._start.setValue( start );*/
 		this.data.onPageChange.subscribe( pageIndex=>this.pageIndex = pageIndex );
-		await this.settingsContainer.loadedPromise;
+		this.profile = await this.profileStore.load<LogSettings>( "logs", new LogSettings() );
 
-		this.data.sort = this.settings.sort;
+		this.data.sort = this.profile.sort;
 		try{
 			let applications = await this.appService.query<App[]>( "applications{id name dbLogLevel fileLogLevel}" );
 			for( let app of applications )
 				this.applications.push( new AppStatus(app) );
 
-			this.statusSubscription = this.appService.statuses();
-			this.statusSubscription.subscribe( (status:FromServer.IStatus) =>{
+			//this.statusSubscription = this.appService.statuses();
+/*			this.statusSubscription.subscribe( (status:FromServer.IStatus) =>{
 				let found = this.applications.find( (existing)=>{return existing.id==status.applicationId;} );
 				if( !found )
 					console.error( `Could not find application '${status.applicationId}'` );
 				else
 					found.status = status;
-			} );
+			} );*/
 			this.subscribe( this.applicationId, this.level );
 			this.viewPromise = Promise.resolve( true );
 		}
@@ -72,9 +71,9 @@ export class LogsComponent implements OnInit, OnDestroy{
 		}
 	}
 	ngOnDestroy(){
-		this.appService.statusUnsubscribe( this.statusSubscription );
+		//this.appService.statusUnsubscribe( this.statusSubscription );
 		this.unsubscribe();
-		this.settingsContainer.save();
+		this.profileStore.save<LogSettings>( "logs", this.profile );
 	}
 
 
@@ -88,7 +87,7 @@ export class LogsComponent implements OnInit, OnDestroy{
 		if( haveRequest )
 			this.onStrings( await this.appService.requestStrings(stringRequests) );
 
-		entry.hidden = this.settings.hiddenMessages.indexOf(entry.messageId)!=-1;
+		entry.hidden = this.profile.hiddenMessages.indexOf(entry.messageId)!=-1;
 		if( haveRequest || this.buffer.length )
 			this.buffer.push( entry );
 		else
@@ -151,7 +150,6 @@ export class LogsComponent implements OnInit, OnDestroy{
 	subscribe( applicationId:number, level:ELogLevel ){
 		var subscription = { applicationId: applicationId, level: level, start:this.start, limit:this.limit };
 		if( JSON.stringify(this.currentSubscription)!=JSON.stringify(subscription) ){
-			//this.profileService.put<Settings>( LogsComponent.profileKey, this.settings );
 			this.buffer.length=0;
 			this.data.clear();
 			this.startIndexChange.next( 0 );
@@ -159,7 +157,6 @@ export class LogsComponent implements OnInit, OnDestroy{
 			this.unsubscribe();
 			this.level = level;
 			this.currentSubscription = subscription;
-			this.settingsContainer.save();
 			this.subscription = this.appService.logs( subscription.applicationId, subscription.level, subscription.start, subscription.limit ).subscribe( traces => {this.onTrace(traces);} );
 		}
 	}
@@ -184,7 +181,6 @@ export class LogsComponent implements OnInit, OnDestroy{
 	sortData(sort: Sort|any){
 		this.data.sortData( sort );
 		this.sort = sort;
-		this.settingsContainer.save();
   	}
 	pageChangeEvent( event ){
 		//const offset = event.pageIndex * event.pageSize;
@@ -201,18 +197,17 @@ export class LogsComponent implements OnInit, OnDestroy{
 		this.selectedIndex = index==this.selectedIndex ? null : index;
 	}
 	hideSelectedMessage(){
-		this.settings.level = ELogLevel.Information;
-		this.settings.hiddenMessages.push( this.selectedEntry.messageId );
-		this.settings.level = ELogLevel.Debug;
-		this.settingsContainer.save();
+		this.profile.level = ELogLevel.Information;
+		this.profile.hiddenMessages.push( this.selectedEntry.messageId );
+		this.profile.level = ELogLevel.Debug;
 		this.filterData();
 	}
 	clearHiddenMessages(){
-		this.settings.hiddenMessages.length=0;
+		this.profile.hiddenMessages.length=0;
 		this.filterData();
 	}
 	filterData(){
-		var changes = this.data.filterData( this.settings.hiddenMessages, this.filter, this.selectedEntry ? this.selectedEntry.index : -1, this.level );
+		var changes = this.data.filterData( this.profile.hiddenMessages, this.filter, this.selectedEntry ? this.selectedEntry.index : -1, this.level );
 		if( changes.length )
 			this.lengthChange.next( changes.length );
 		if( changes.startIndex ){
@@ -242,9 +237,9 @@ export class LogsComponent implements OnInit, OnDestroy{
 		this.filter = value;
 		this.filterData();
 	}
-	get sort(){return this.settings.sort;} set sort(value){ this.data.sort = this.settings.sort = value; }
-	settingsContainer:Settings<LogSettings>;
-	get settings(){ return this.settingsContainer.value;}
+	get sort(){return this.profile.sort;} set sort(value){ this.data.sort = this.profile.sort = value; }
+	profile:LogSettings;
+//	get settings(){ return this.profile;}
 
 
 	//settings:Settings = new Settings();
@@ -259,8 +254,8 @@ export class LogsComponent implements OnInit, OnDestroy{
 
 	toLevel( level:ELogLevel ):string{ return ELogLevel[level]; }
 
-	get applicationId(){ return this.settings.applicationId; } set applicationId(value){ this.settings.applicationId=value; }
-	get start():Date{ return this._start.value; } set start(value:Date){ this._start.setValue(value); this.settings.start = value; } private _start = new FormControl();
+	get applicationId(){ return this.profile.applicationId; } set applicationId(value){ this.profile.applicationId=value; }
+	get start():Date{ return this._start.value; } set start(value:Date){ this._start.setValue(value); this.profile.start = value; } private _start = new FormControl();
 	private filter:string; 	//get filter(){return _filter;} set filter(value){ this._filter = value.trim().toLowerCase(); }
 	startChange( event: MatDatepickerInputEvent<Date> ){ this.subscribe( this.applicationId, this.level ); }
 	private buffer:TraceEntry[] = [];
@@ -268,8 +263,8 @@ export class LogsComponent implements OnInit, OnDestroy{
 	private currentSubscription:ISubscription=LogsComponent.DefaultSubscription;//actual subscribtion
 	lengthChange = new Subject<number>();
 	startIndexChange = new Subject<number>();
-	get level():ELogLevel{ return this.settings.level; } set level( value:ELogLevel ){ this.settings.level=value; }
-	private get limit():number{return this.settings.limit;} private set limit(value:number){ this.settings.limit = value; }
+	get level():ELogLevel{ return this.profile.level; } set level( value:ELogLevel ){ this.profile.level=value; }
+	private get limit():number{return this.profile.limit;} private set limit(value:number){ this.profile.limit = value; }
 	private get application():AppStatus|null{ return this.applications.find( (existing)=>{return existing.id==this.applicationId;} ); }
 	applications:AppStatus[]=[];
 	private subscription:Unsubscribable;
@@ -277,7 +272,7 @@ export class LogsComponent implements OnInit, OnDestroy{
 	private pushTimeout:{ entries: TraceEntry[], id:any, end:number };
 	get selectedIndex(){ return this.selectedEntry?.index; } set selectedIndex(x){ this.selectedEntry = this.data.data.find( (y)=>y.index==x ); }
 	get selectedEntry(){return this._selectedEntry; } set selectedEntry(x){ this._selectedEntry=x;} _selectedEntry:TraceEntry;
-	private statusSubscription:Observable<FromServer.IStatus>;//TODO make sure unsubscibing
+	//private statusSubscription:Observable<FromServer.IStatus>;//TODO make sure unsubscibing
 	viewPromise:Promise<boolean>;
 }
 

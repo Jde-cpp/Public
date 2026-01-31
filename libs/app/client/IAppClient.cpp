@@ -46,10 +46,10 @@ namespace Jde::App::Client{
 		return await<Web::FromServer::SessionInfo>{ FromClient::Login(move(jwt), requestId), requestId, p, sl };
 	}
 
-	α IAppClient::UpdateStatus()ι->void{
+/* α IAppClient::UpdateStatus()ι->void{
 		if( auto session = Process::ShuttingDown() ? nullptr : _session; session )
 			session->Write( FromClient::Status(StatusDetails()) );
-	}
+	}*/
 
 	α IAppClient::CloseSocketSession( SL sl )ι->VoidTask{
 		auto session = _session;

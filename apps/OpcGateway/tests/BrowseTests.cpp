@@ -2,7 +2,7 @@
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include "../src/GatewayAppClient.h"
 #include "../src/UAClient.h"
-#include "../src/StartupAwait.h"
+#include "../src/ql/GatewayQL.h"
 #include "../src/ql/NodeQLAwait.h"
 #include "utils/helpers.h"
 #define let const auto
@@ -40,6 +40,5 @@ namespace Jde::Opc::Gateway::Tests{
 		auto result = ExNodeId{ value };
 		ASSERT_TRUE( *result.Numeric()>0 );
 		ASSERT_EQ( value.at("name"), "Lamp1" );
-//		ASSERT_EQ( value.at("description"), "Test Explicit Object" );
 	}
 }

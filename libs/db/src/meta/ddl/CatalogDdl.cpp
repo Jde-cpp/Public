@@ -18,7 +18,7 @@ namespace CatalogDdl{
 			: ds;
 	}
 	Ω recreateCatalog( IDataSource& ds, sv catalog )ε->void{
-		ds.ExecuteSync( {Ƒ("use master; DROP DATABASE IF EXISTS {0};create database {0};", catalog)} );
+		ds.ExecuteSync( {Ƒ("use master; alter database {0} set single_user with rollback immediate; DROP DATABASE IF EXISTS {0};create database {0};", catalog)} );
 	}
 
 	α NonProd::Drop( const AppSchema& schema )ε->void{

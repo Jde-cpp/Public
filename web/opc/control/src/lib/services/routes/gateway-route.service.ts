@@ -17,7 +17,7 @@ export class GatewayRouteService implements IRouteService{
 		for( const gateway of gateways )
 			y.push( new DocItem({path: gateway.target, title: gateway.name}) );
 
-		this.routeStore.setSiblings( urlSegments, y );
+		this.routeStore.setChildren( urlSegments, y );
 		return y;
 	}
 
@@ -41,7 +41,7 @@ export class GatewayCnnctnRouteService implements IRouteService{
 		for( const c of connections )
 			y.push( new DocItem({path: c.target, title: c.name}) );
 
-		this.routeStore.setSiblings( route.url, y );
+		this.routeStore.setChildren( route.url, y );
 		return y;
 	}
 

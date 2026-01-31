@@ -14,7 +14,8 @@ export enum EAccess{
 	HistoryWrite = 8,
 	SemanticChange = 0x10,
 	StatusWrite = 0x20,
-	TimestampWrite = 0x40
+	TimestampWrite = 0x40,
+	All = 0x7F
 }
 export enum EWriteAccess{
 	None = 0,
@@ -41,7 +42,8 @@ export enum EWriteAccess{
 	DataTypeDefinition = 0x100000,
 	RolePermissions = 0x200000,
 	AccessRestrictions = 0x400000,
-	AccessLevelEx = 0x800000
+	AccessLevelEx = 0x800000,
+	All = 0xFFFFFF
 }
 
 export const toLocalizedText = ( value:any ):ILocalizedText=>{

@@ -4,7 +4,7 @@
 			<mat-nav-list>
 				@if( item()().parent ){
 					<a mat-list-item
-							[routerLink]="'/' + parentUrl+ '/'+ item()().parent.path"
+							[routerLink]="item()().parent.path"
 							[queryParams]="item()().parent.queryParams"
 							[attr.aria-current]="'false'">
 						{{item()().parent.title}}
@@ -13,7 +13,7 @@
 				@for (component of item()().siblings; track component.track) {
 					<a mat-list-item #link="routerLinkActive"
 							[ngClass]="{ 'child-nav': item()().parent }"
-							[routerLink]="'/' + parentUrl+ '/' + component.path"
+							[routerLink]="parentUrl+ '/' + component.path"
 							[queryParams]="component.queryParams"
 							[activated]="link.isActive"
 							routerLinkActive="docs-component-viewer-sidenav-item-selected"

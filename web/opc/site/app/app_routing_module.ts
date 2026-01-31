@@ -2,9 +2,9 @@ import { NgModule } from '@angular/core';
 import {Routes, ROUTES, RouterModule} from '@angular/router';
 import { ComponentSidenav } from 'jde-spa';
 
-import{ DetailResolver, Cards, LoginPageComponent, QLList, QLListResolver, QLListRouteService, HomeRouteService } from 'jde-framework';
+import{ DetailResolver, Cards, LoginPageComponent, QLList, QLListResolver, QLListRouteService, HomeRouteService, Apps, AppResolver } from 'jde-framework';
 import { AccessService, AuthGuard, Group, GroupDetail, Role, RoleDetail, User, UserDetail } from 'jde-access';
-import{ ConnectionResolver, CnnctnDetailResolver, GatewayDetail, GatewayRouteService, GatewayCnnctnRouteService,GatewayService, NodeDetail, NodeResolver, OpcNodeRouteService, OpcServerRouteService, SettingsRouteService } from 'jde-opc';
+import{ ClientResolver, GatewayDetail, GatewayRouteService, GatewayCnnctnRouteService,GatewayService, NodeDetail, NodeResolver, OpcNodeRouteService, OpcServerRouteService, SettingsRouteService, GatewayResolver, ClientDetail } from 'jde-opc';
 
 
 const accessProvider = { provide: 'IGraphQL', useClass: AccessService };
@@ -89,36 +89,42 @@ export const routes: Routes = [
 				},
 			]
 	},
-	{ path: 'settings', title: "Settings", canActivate: [AuthGuard], component: Cards, providers: [{provide: 'IRouteService', useClass: SettingsRouteService}],
-	},
 	{
-		path: 'settings/gateways', title: "Gateways", providers: [{provide: 'IRouteService', useClass: GatewayRouteService}], component: Cards, canActivate: [AuthGuard],
-		data: { summary: "Gateways Connected" },
+		path: 'apps',
+		title: "Applications",
+		canActivate: [AuthGuard],
+		component: Apps,
+		providers: [ AppResolver, accessProvider ],
+		resolve: { connections: AppResolver },
 	},
+	// {
+	// 	path: 'settings/appServer', title: "App Server", component: Applications, canActivate: [AuthGuard], data: { summary: "Applications" },
+	// },
+	// {
+	// 	path: 'settings/gateways', title: "Gateways", providers: [{provide: 'IRouteService', useClass: GatewayRouteService}], component: Cards, canActivate: [AuthGuard],
+	// 	data: { summary: "Gateways Connected" },
+	// },
+	// {
+	// 	path: 'settings/opcServers', title: "OPC Servers", providers: [{provide: 'IRouteService', useClass: OpcServerRouteService}], component: Cards, canActivate: [AuthGuard],
+	// 	data: { summary: "OPC Servers Connected" },
+	// },
 	{
-		path: 'settings/opcServers', title: "OPC Servers", providers: [{provide: 'IRouteService', useClass: OpcServerRouteService}], component: Cards, canActivate: [AuthGuard],
-		data: { summary: "OPC Servers Connected" },
-	},
-	{
-		path: 'settings/gateways/:gateway', title: ":gateway", component: ComponentSidenav, canActivate: [AuthGuard],
+		path: 'apps/gateways/:instance', title: ":instance", component: ComponentSidenav, canActivate: [AuthGuard],
 		children :[
 			{
 				path: '',
-				component: QLList,
-				providers:[ ConnectionResolver, gatewayProvider],
-				resolve: {data : ConnectionResolver},
-				canActivate: [AuthGuard],
-				data: { collections: [
-					{ path:"serverConnections", title: "OPC Connections", data:{summary: "Change OPC Connections on Gateway", collectionName: "serverConnections"} },
-				]}
+				component: GatewayDetail,
+				providers:[ GatewayResolver, gatewayProvider],
+				resolve: {data : GatewayResolver},
+				canActivate: [AuthGuard]
 			},
 			{
 				path: ':connection',
-				component: GatewayDetail,
-				providers: [ CnnctnDetailResolver, gatewayProvider ],
+				component: ClientDetail,
+				providers: [ ClientResolver, gatewayProvider ],
 				canActivate: [AuthGuard],
-				data: { summary: "Opc Gateway Detail", collectionName: "serverConnections" },
-				resolve: { pageData: CnnctnDetailResolver }
+				data: { summary: "Opc Connection", collectionName: "serverConnections" },
+				resolve: { pageData: ClientResolver }
 			}
 		]
 	},

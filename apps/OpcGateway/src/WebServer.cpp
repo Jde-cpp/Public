@@ -1,9 +1,10 @@
 #include "WebServer.h"
 #include <jde/web/server/Server.h>
-#include <jde/app/client/IAppClient.h>
+#include <jde/app/client/IAppClient.h> //!important
 #include "GatewaySocketSession.h"
 #include "HttpRequestAwait.h"
 #include "StartupAwait.h"
+#include "ql/GatewayQL.h"
 
 namespace Jde::Opc{
 	optional<std::jthread> _serverThread;
@@ -28,7 +29,7 @@ namespace Gateway{
 		return mu<HttpRequestAwait>( move(req), sl );
 	}
 
-	α RequestHandler::GetWebsocketSession( sp<Web::Server::RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<Web::Server::IWebsocketSession>{
+	α RequestHandler::WebsocketSession( sp<Web::Server::RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<Web::Server::IWebsocketSession>{
 		auto session = ms<Gateway::GatewaySocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
 		_sessions.emplace( session->Id(), session );
 		return session;

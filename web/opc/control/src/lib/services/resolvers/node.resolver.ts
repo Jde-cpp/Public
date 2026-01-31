@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@angular/core';
 import { ActivatedRoute, ActivatedRouteSnapshot, Params, Resolve, Router, RouterStateSnapshot } from '@angular/router';
-import { IErrorService, IProfile, Settings, TableSchema } from 'jde-framework';
+import { IErrorService } from 'jde-framework';
 import { Gateway, GatewayService } from '../gateway.service';
 import { OpcObject, UaNode } from '../../model/Node';
-import { NodeRoute, UserProfile } from '../../model/NodeRoute';
+import { NodeRoute } from '../../model/NodeRoute';
 import { OpcStore } from '../opc-store';
 import { Server } from '../../model/Server';
 
@@ -17,7 +17,6 @@ export type NodePageData = {
 export class NodeResolver implements Resolve<NodePageData> {
 	constructor(
 		private router:Router,
-		@Inject('IProfile') private profileService: IProfile,
 		@Inject('IErrorService') private snackbar: IErrorService,
 		@Inject('GatewayService') private gatewayService: GatewayService,
 		@Inject('OpcStore') private opcStore:OpcStore,
@@ -26,7 +25,6 @@ export class NodeResolver implements Resolve<NodePageData> {
 
 	async load( route:NodeRoute ):Promise<NodePageData>{
 		try{
-			await route.settings.loadedPromise;//this.route.snapshot.children[0].paramMap.get('host')
 			let gateway = await this.gatewayService.gateway( route.gatewayTarget );
 			const server = await this.opcStore.getConnection( gateway, route.cnnctnTarget );
 			const defaultBrowseNs = server.connection.defaultBrowseNs;
@@ -49,6 +47,6 @@ export class NodeResolver implements Resolve<NodePageData> {
 		}
 	}
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<NodePageData>{
-		return this.load( new NodeRoute(route, this.profileService, this.opcStore) );
+		return this.load( new NodeRoute(route, this.opcStore) );
 	}
 }

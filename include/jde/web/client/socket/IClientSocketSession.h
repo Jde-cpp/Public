@@ -38,7 +38,8 @@ namespace Jde::Web::Client{
 		α Write( string&& m )ι->void;
 		α NextRequestId()ι->uint32;
 		α SessionId()ι->SessionPK{ return _sessionInfo ? _sessionInfo->session_id() : SessionPK{}; }
-		α SetInfo( Web::FromServer::SessionInfo info )ι->void{ _sessionInfo = move(info); }
+		α SetInfo( Web::FromServer::SessionInfo&& info )ι->void{ _sessionInfo = move(info); }
+		α UserPK()Ι->UserPK{ return  { _sessionInfo ? _sessionInfo->user_pk() : 0}; }
 		[[nodiscard]] α Close()ι{ return CloseClientSocketSessionAwait(shared_from_this()); }
 		α Host()Ι->str{ return _host; }
 		α Id()ι->uint32{ return _id; }

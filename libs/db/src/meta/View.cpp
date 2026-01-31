@@ -97,6 +97,8 @@ namespace Jde::DB{
 	}
 
 	α View::FindColumn( sv name )Ι->sp<Column>{
+		if( name=="id" && SurrogateKeys.size()==1 )
+			return SurrogateKeys[0];
 		auto pColumn = find_if( Columns, [&name](let& c){return c->Name==name;} );
 		return pColumn==Columns.end() ? sp<Column>{} : *pColumn;
 	}

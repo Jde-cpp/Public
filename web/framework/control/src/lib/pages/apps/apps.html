@@ -1,0 +1,38 @@
+<!-- <component-page-header>Applications</component-page-header> -->
+<div class="cards">
+<div class="mat-drawer-container mat-sidenav-container docs-component-viewer-sidenav-container mat-drawer-transition">
+	@for( c of connections; track c.id ){
+		<a [routerLink]=c.urlSegments>
+			<span class="docs-component-list-item">
+				<mat-card class="docs-component-category-list-card">
+					<mat-card-title-group>
+						<mat-card-title>
+							<!-- <mat-icon aria-hidden="false" style="padding-right:10px" aria-label="App Icon">{{connection.icon}}</mat-icon> -->
+							{{c.programName}}
+						</mat-card-title>
+					</mat-card-title-group>
+					<mat-card-content style="height:144px">
+						<!-- @if( c.on ) { -->
+							<div>Start:  {{c.created | date:'short'}}</div>
+							<div>Memory:  {{formatMemory(c.status.memory)}}</div>
+							<div>Host:  {{c.hostName}}</div>
+							<div>Instance:  {{c.instanceName}}</div>
+							<!-- <ng-container>
+								@for( desc of c.description; track desc ){
+									<div>{{desc}}</div>
+								}
+							</ng-container> -->
+						<!-- } -->
+					</mat-card-content>
+					<!-- <mat-card-content class="docs-component-category-list-card-summary">{{application.summary}}</mat-card-content> -->
+					<mat-card-actions>
+						<!-- <button><mat-icon class="iconButton" (click)="togglePower(application)" >{{application.on ? 'toggle_off' : 'toggle_on' }}</mat-icon></button> -->
+						<!--[disabled]="!mainOn || application.Name=='Main'" -->
+						<!-- <button mat-icon-button><mat-icon class="iconButton">edit</mat-icon></button> -->
+					</mat-card-actions>
+				</mat-card>
+			</span>
+		</a>
+	}
+</div>
+</div>

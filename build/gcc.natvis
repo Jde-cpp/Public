@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-	<Type Name="std::optional&lt;*&gt;">
+	<!-- <Type Name="std::optional&lt;*&gt;">
 		<DisplayString Condition="_M_payload._M_engaged == false">null</DisplayString>
 		<DisplayString>{_M_payload._M_payload._M_value}</DisplayString>
 		<Expand>
@@ -87,7 +87,6 @@
 	<Type Name="std::vector&lt;*&gt;">
 		<AlternativeType Name="std::__debug::vector&lt;*&gt;"/>
 		<AlternativeType Name="std::__cxx1998::_Vector_base&lt;*&gt;"/>
-		<!-- <AlternativeType Name="nlohmann::basic_json&lt;*&gt;::array_t"/> -->
     <DisplayString>{{size={_M_impl._M_finish - _M_impl._M_start}}}</DisplayString>
     <Expand>
       <Item Name="[size]" ExcludeView="simple">_M_impl._M_finish - _M_impl._M_start</Item>
@@ -96,7 +95,35 @@
         <ValuePointer>_M_impl._M_start</ValuePointer>
       </ArrayItems>
     </Expand>
-  </Type>
+  </Type> -->
+	<Type Name="boost::container::vector&lt;*,*&gt;">
+    <DisplayString>{{ size={m_holder.m_size} }}</DisplayString>
+    <Expand>
+        <Item Name="[size]" ExcludeView="simple">m_holder.m_size</Item>
+        <Item Name="[capacity]" ExcludeView="simple">m_holder.m_capacity</Item>
+        <ArrayItems>
+            <Size>m_holder.m_size</Size>
+            <ValuePointer>m_holder.m_start</ValuePointer>
+        </ArrayItems>
+    </Expand>
+	</Type>
+
+	<Type Name="boost::container::dtl::flat_tree&lt;*,*&gt;">
+		<DisplayString>{{ size={m_data.m_seq.m_holder.m_size} }}</DisplayString>
+		<Expand>
+			<Item Name="[size]" ExcludeView="simple">m_data.m_seq.m_holder.m_size</Item>
+			<ArrayItems>
+				<Size>m_data.m_seq.m_holder.m_size</Size>
+				<ValuePointer>m_data.m_seq.m_holder.m_start</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="boost::container::flat_set&lt;*&gt;">
+    <DisplayString>{m_data.m_seq}</DisplayString>
+    <Expand>
+        <ExpandedItem>m_data.m_seq</ExpandedItem>
+    </Expand>
+	</Type>
 	<Type Name="boost::container::flat_map&lt;*&gt;">
 		<DisplayString>{{Size={m_flat_tree.m_data.m_seq.m_holder.m_size}}}</DisplayString>
 		<Expand>

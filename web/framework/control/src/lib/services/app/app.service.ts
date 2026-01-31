@@ -50,7 +50,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 					this.sendRequest( FromClient.ERequest.Applications );
 			});
 	};
-*/
+
 	statuses():Observable<FromServer.IStatus>{
 		var eventStream = new Subject<FromServer.IStatus>();
 		this.statusSubscriptions.push( eventStream );
@@ -66,7 +66,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		if( !this.statusSubscriptions.length )
 			this.send( {subscribeStatus:false}, "UnSubscribe: statuses" );
 	};
-
+*/
 	logs( applicationId:number, level:ELogLevel, start:Date, limit:number ):Observable<FromServer.ITrace>{
 		const columns = "id instance_id time level message_id file_id function_id line user_pk thread_id args";
 		const q = `subscribe logs(applicationId:${applicationId}, limit:${limit}, filter:{ level:{gte:${level}}, {time:{gte:${start.toISOString()}}} }){ ${columns} }`;
@@ -147,8 +147,8 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	private logsSubscriptions:Map<RequestId,Subject<FromServer.ITrace>>= new Map<RequestId,Subject<FromServer.ITrace>>();
 	//private addMessage( msg ):void{}
 	override handleConnectionError( err ):void{
-		this.statusSubscriptions.forEach( (x)=>x.error( err ) );
-		this.statusSubscriptions = [];
+	// 	this.statusSubscriptions.forEach( (x)=>x.error( err ) );
+	// 	this.statusSubscriptions = [];
 	}
 	encode( t:FromClient.Transmission ){ return FromClient.Transmission.encode(t); }
 	public async validateSessionId():Promise<User | null>{
@@ -160,8 +160,8 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	}
 	private complete():void{
 		console.log( 'complete' );
-		for( const subscription of this.statusSubscriptions )
-			subscription.complete();
+		// for( const subscription of this.statusSubscriptions )
+		// 	subscription.complete();
 	}
 
 	protected processMessage( bytearray:protobuf.Buffer ){
@@ -191,11 +191,11 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 					var promise = this.customCallbacks.get( requestId ); if( !promise ) throw `no promise for requestId=${requestId}`;
 					promise.resolve( message.executeResponse );
 				}
-				else if( message.status ){
+/*				else if( message.status ){
 					if( this.log.subResults )	console.log( `[App.${requestId}]status appId:${message.status.applicationId}` );
 					for( const callback of this.statusSubscriptions )
 						callback.next( message.status );
-				}
+				}*/
 				else if( message.strings ){
 					const x = message.strings;
 					if( this.log.sockResults ) console.log( `[App.${requestId}]strings messageCount: ${Object.keys(x.messages).length}` );
@@ -244,7 +244,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	//private singularRequests = new Map<number,{resolve:any,reject:any}>();
 	private stringRequests = new Map<number,{resolve:any,reject:any}>();
 	//private stringRequests:Map<FromClient.IRequestAppString,Subject<[number,FromServer.IApplicationString]>>= new Map<FromClient.IRequestAppString,Subject<[number,FromServer.IApplicationString]>>();
-	private statusSubscriptions:Subject<FromServer.IStatus>[]=[];
+	//private statusSubscriptions:Subject<FromServer.IStatus>[]=[];
 	private customCallbacks = new Map<number,{resolve:any,reject:any}>();
 	//private stringValuePromises = new Map<number,Promise<string>>();
 	//private _customRequestId:number=0;

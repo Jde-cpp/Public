@@ -15,7 +15,7 @@ namespace Jde{
 		string Key;
 	};
 
-	struct Γ LockKeyAwait final : TAwait<CoLockGuard>, boost::noncopyable{
+	struct Γ LockKeyAwait final : TAwait<CoLockGuard>, noncopyable{
 		using base=TAwait<CoLockGuard>;
 		LockKeyAwait( string key )ι:Key{move(key)}{}
 		~LockKeyAwait(){ TRACET( ELogTags::Locks, "({})~LockKeyAwait", Key ); }

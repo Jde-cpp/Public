@@ -8,7 +8,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 
 import { ComponentPageTitle, DocItem } from 'jde-spa';
 
-import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, IProfile, Properties, QLSelector, TargetRow, toIdArray} from 'jde-framework';
+import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, LocalProfileStore, Properties, QLSelector, TargetRow, toIdArray} from 'jde-framework';
 import { Role, RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
 import { Permission } from '../../model/Permission';
@@ -24,7 +24,7 @@ import { UserPK } from '../../model/User';
     imports: [CommonModule, MatButtonModule, MatIcon, MatTabsModule, Properties, PermissionTable, QLSelector]
 })
 export class RoleDetail implements OnDestroy, OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, @Inject('IProfile') private profileService: IProfile, @Inject('IErrorService') private snackbar: IErrorService ){
+	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, @Inject('IErrorService') private snackbar: IErrorService ){
 		effect(() => {
 			if( !this.properties() )
 				return;
@@ -50,7 +50,10 @@ export class RoleDetail implements OnDestroy, OnInit{
 				this.isChanged.set( true );
 		});
 
-		route.data.subscribe( (data)=>{
+		route.data.subscribe( async (data)=>{
+			if( this.tabIndex==null )
+				this.tabIndex = LocalProfileStore.tabIndex( 'roleDetail' );
+
 			this.pageData = data["pageData"];
 			this.role = new Role( this.pageData.row );
 			this.pageData.row = null;
@@ -63,12 +66,12 @@ export class RoleDetail implements OnDestroy, OnInit{
 		});
 	}
 	ngOnDestroy(){
-		this.profile.save();
+		LocalProfileStore.setTabIndex( 'roleDetail', this.tabIndex );
 	}
 	ngOnInit(){
 		this.sideNav.set( this.pageData.routing );
 	}
-	tabIndexChanged( index:number ){ this.profile.value.tabIndex = index;}
+	tabIndexChanged( index:number ){ this.tabIndex = index;}
 
 	async onSubmitClick(){
 		try{
@@ -81,7 +84,7 @@ export class RoleDetail implements OnDestroy, OnInit{
 				users: toIdArray(this.users().selected)
 			});
 			const mutation = upsert.mutation( this.role );
-			await this.ql.mutation( mutation );
+			await this.ql.mutate( mutation, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 		}catch(e){
 			this.snackbar.exceptionInfo( e, "Save failed.", (m)=>console.log(m) );
@@ -97,14 +100,13 @@ export class RoleDetail implements OnDestroy, OnInit{
 	pageData:DetailResolverData<Role>;
 	ctor:new (item: any) => any = Role;
 	isChanged = signal<boolean>( false );
-	get profile(){ return this.pageData.pageSettings.profile;}
-
 	permissions = signal<Permission[]>( null );
 	properties = signal<Role>( null );
 	childRoles = signal<SelectionModel<RolePK>>( null );
 
 	groups = signal<SelectionModel<RolePK>>( null );
 	sideNav = model.required<DocItem>();
+	tabIndex:number;
 	users = signal<SelectionModel<RolePK>>( null );
 
 	get schema(){ return this.pageData.schema; }

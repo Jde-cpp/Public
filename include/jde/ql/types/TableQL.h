@@ -18,6 +18,7 @@ namespace Jde::QL{
 	struct TableQL final : Input{
 		TableQL( string jName, jobject args, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool system=false, SRCE )ε;
 
+		α AddColumn( sv jsonName )ι->bool;
 		α AddFilter( const string& column, const jvalue& value )ι->void;
 		α DBTable()Ι->sp<DB::View>{ return _dbTable && _dbTable->QLView ? _dbTable->QLView : _dbTable; }
 		α SetDBTable( sp<DB::View> x )ι->void{ _dbTable = move(x); }
@@ -25,7 +26,6 @@ namespace Jde::QL{
 		α DefaultResult()Ι->jvalue{ return IsPlural() ? jvalue{jarray{}} : jvalue{jobject{}}; }
 		α EraseColumn( sv jsonName )ι->void{ Columns.erase( remove_if( Columns.begin(), Columns.end(), [&](let& c){return c.JsonName==jsonName;}), Columns.end() ); }
 		α Filter()Ε->const QL::Filter&;
-		α FindArgKey()Ι->optional<DB::Key>;
 		Ŧ GetArg( sv key )Ι->T;
 		α FindColumn( sv jsonName )Ι->const ColumnQL*{ auto p = find_if( Columns, [&](let& c){return c.JsonName==jsonName;}); return p==Columns.end() ? nullptr : &*p; }
 		α FindDBColumn( sp<DB::Column> dbColumn )Ι->const ColumnQL*;

@@ -13,10 +13,15 @@
 namespace Jde::QL{
 	using DB::EOperator;
 
+	α dbTable( string jName, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε->sp<DB::View>{
+		let dbName = DB::Names::ToPlural( DB::Names::FromJson(move(jName)) );
+		return system ? DB::AppSchema::FindView( schemas, dbName ) : DB::AppSchema::GetViewPtr( schemas, dbName, sl );
+	}
+
 	TableQL::TableQL( string jName, jobject args, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε:
 		Input{ move(args), move(variables) },
 		JsonName{ jName },
-		_dbTable{ system ? sp<DB::View>{} : DB::AppSchema::GetViewPtr(schemas, DB::Names::ToPlural(DB::Names::FromJson(move(jName))), sl) }
+		_dbTable{ dbTable(jName, schemas, system, sl) }
 	{}
 
 	α addFilters( const jvalue& value, const sp<jobject>& variables )ε->vector<FilterValue>{
@@ -56,6 +61,17 @@ namespace Jde::QL{
 		}
 		return *_filter;
 	}
+	α TableQL::AddColumn( sv jsonName )ι->bool{
+		auto existing = FindColumn( jsonName );
+		if( existing )
+			return false;
+
+		ASSERT( _dbTable );
+		auto dbColumn = _dbTable->FindColumn( DB::Names::FromJson(jsonName) );
+		Columns.push_back( ColumnQL{string{jsonName}, dbColumn} );
+		return true;
+	}
+
 	α TableQL::AddFilter( const string& column, const jvalue& value )ι->void{
 		auto destination = &Args;
 		if( auto filter = Args.find("filter"); filter!=Args.end() )
@@ -90,15 +106,6 @@ namespace Jde::QL{
 		TableQL* y = FindTable( jsonPluralName );
 		THROW_IFSL( !y, "Could not find table '{}'.", jsonPluralName );
 		return *y;
-	}
-
-	α TableQL::FindArgKey()Ι->optional<DB::Key>{
-		optional<DB::Key> y;
-		if( let id = Json::FindValue(Args, "id"); id )
-			y = DB::Key{ Json::AsNumber<uint>(move(*id)) };
-		else if( let target = Json::FindValue(Args, "target"); target )
-			y = DB::Key{ Json::AsString(move(*target)) };
-		return y;
 	}
 
 	α ColumnQL::QLType( const DB::Column& column, SL sl )ε->string{
@@ -170,7 +177,7 @@ namespace Jde::QL{
 	}
 	α TableQL::TransformResult( string&& result )Ι->jvalue{
 		jvalue v{ move(result) };
-		return ReturnRaw ? move(v) : jobject{ {ReturnName(), move(v)} };
+		return ReturnRaw ? move( v ) : jobject{ {ReturnName(), move(v)} };
 	}
 	α TableQL::ToString()Ι->string{
 		string y = JsonName;

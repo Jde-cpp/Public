@@ -7,7 +7,7 @@
 namespace Jde::Opc::Gateway{
 	struct UAClient; struct UAClientException;
 
-	struct ConnectAwait final : TAwait<sp<UAClient>>, boost::noncopyable{
+	struct ConnectAwait final : TAwait<sp<UAClient>>, noncopyable{
 		using base = TAwait<sp<UAClient>>;
 		ConnectAwait( ServerCnnctnNK&& opcTarget, Credential cred, SRCE )ι:base{sl},_opcTarget{move(opcTarget)}, _cred{move(cred)}{}
 		ConnectAwait( ServerCnnctnNK opc, SessionPK sessionId, UserPK user, SRCE )ι;

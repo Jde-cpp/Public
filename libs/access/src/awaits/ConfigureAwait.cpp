@@ -57,12 +57,13 @@ namespace Jde::Access{
 
 	α Loader::Resources( ConfigureAwait& await )ι->TAwait<ResourcePermissions>::Task{
 		try{
-			auto loaded = co_await ResourceLoadAwait{ await.QlServer, await.Schemas, await.Executer };
+			auto loaded = co_await ResourceLoadAwait{ await.QlServer, await.Schemas, await.OpcServerInstance, await.Executer };
 			ul l{ await.Authorizer->Mutex };
 			for( let& [pk, resource] : loaded.Resources ){
-				if( resource.Filter.empty() && !resource.IsDeleted ){
-					auto& namePK = await.Authorizer->SchemaResources.emplace( resource.Schema, flat_map<string,ResourcePK>{} ).first->second;
-					namePK.emplace( resource.Target, pk );
+				if( !resource.IsDeleted ){
+					auto& targetResources = await.Authorizer->SchemaResources.try_emplace( resource.Schema ).first->second;
+					auto& criteras = targetResources.try_emplace( resource.Target ).first->second;
+					criteras.try_emplace( resource.Criteria, pk );
 				}
 				await.Authorizer->Resources.emplace( pk, move(resource) );
 			}
@@ -76,7 +77,7 @@ namespace Jde::Access{
 	}
 
 	α ConfigureAwait::SyncResources()ι->VoidTask{
-		co_await ResourceSyncAwait{ QlServer, Schemas, Executer };
+		co_await ResourceSyncAwait{ QlServer, Schemas, OpcServerInstance, Executer };
 		LoadUsers();
 	};
 

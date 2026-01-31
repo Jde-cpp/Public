@@ -1,18 +1,16 @@
 #include <jde/access/server/awaits/LoginAwait.h>
 #include <jde/access/usings.h>
-#include <jde/fwk/str.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/Value.h>
-#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/View.h>
+#include <jde/access/Authorize.h>
 #include "../serverInternal.h"
 
 #define let const auto
 namespace Jde::Access::Server{
-//	α GetSchema()ι->sp<DB::AppSchema>;
 
 	LoginAwait::LoginAwait( Crypto::PublicKey publicKey, string&& name, string&& target, string&& description, SL sl )ι:
 			base{sl}, _publicKey{ move(publicKey) }, _name{ move(name) }, _target{ move(target) }, _description{ move(description) }
@@ -47,8 +45,9 @@ namespace Jde::Access::Server{
 			{ DB::Value{move(modulusHex)}, DB::Value{exponent}, DB::Value{underlying(EProviderType::Key)},
 				DB::Value{move(_name)}, DB::Value{move(_target)}, DB::Value{move(_description)}} };
 		try{
-			let userPK = co_await DS().InsertSeq<UserPK::Type>( move(insert) );
-			ResumeScaler( {userPK} );
+			UserPK userPK{ co_await DS().InsertSeq<UserPK::Type>(move(insert)) };
+			Authorizer().CreateUser( userPK );
+			ResumeScaler( userPK );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );

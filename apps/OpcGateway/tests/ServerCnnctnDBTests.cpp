@@ -1,19 +1,16 @@
-//#include "gtest/gtest.h"
 #include <jde/fwk/io/json.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/ql.h>
-#include <jde/ql/LocalQL.h>
-#include "../src/StartupAwait.h"
 #include "../src/opcInternal.h"
 #include "../src/auth/UM.h"
+#include "../src/ql/GatewayQL.h"
 #include "../src/ql/OpcQLHook.h"
 #include "utils/helpers.h"
 
 #define let const auto
 namespace Jde::Opc::Gateway::Tests{
 	constexpr ELogTags _tags{ ELogTags::Test };
-	using Gateway::QL;
 
 	struct ServerCnnctnDBTests : ::testing::Test{
 		atomic_flag Wait;
@@ -82,7 +79,7 @@ namespace Jde::Opc::Gateway::Tests{
 			PurgeServerCnnctn( existingOpcPK );
 		let createdId = BlockAwait<CreateServerCnnctnAwait,ServerCnnctnPK>( CreateServerCnnctnAwait{} );
 		let selectAll = "serverConnections{ id name attributes created updated deleted target description certificateUri isDefault url }";
-		let selectAllJson = QL().QuerySync<jarray>( selectAll, {UserPK::System} );
+		let selectAllJson = QL().QuerySync<jarray>( selectAll, {}, {UserPK::System} );
 		TRACET( _tags, "selectAllJson={}", serialize(selectAllJson) );
 		let id = Json::AsNumber<ServerCnnctnPK>( Json::AsObject(selectAllJson[0]), "id" );
 		THROW_IF( createdId!=id, "createdId={} id={}", createdId, id );
@@ -99,13 +96,13 @@ namespace Jde::Opc::Gateway::Tests{
 
 		let description = "new description";
 		let update = Ƒ( "mutation updateServerConnection( id:{}, description:\"{}\" ) }}", id, description );
-		let updateJson = QL().QuerySync<jvalue>( update, {UserPK::System} );
+		let updateJson = QL().QuerySync<jvalue>( update, {}, {UserPK::System} );
 		TRACET( _tags, "updateJson={}", serialize(updateJson) );
 		let updated = SelectServerCnnctn( id );
 		THROW_IF( updated->Description!=description, "description={} updated={}", description, serialize(updated->ToJson()) );
 
 		let del = Ƒ( "deleteServerConnection(\"id\":{})", id );
-		let deleteJson = QL().QuerySync<jvalue>( del, {UserPK::System} );
+		let deleteJson = QL().QuerySync<jvalue>( del, {}, {UserPK::System} );
 		TRACET( _tags, "deleted={}", serialize(deleteJson) );
 	 	conn = SelectServerCnnctn( id );
 		THROW_IF( !conn->Deleted, "deleted failed" );

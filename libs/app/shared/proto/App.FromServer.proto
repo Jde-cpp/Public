@@ -7,15 +7,21 @@ import "Web.FromServer.proto";
 import "App.proto";
 import "Log.proto";
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
+message ClientQuery{
+	string query=1;
+	string variables=2;
+	uint32 executer_pk=3;
+	bool raw=4;
+}
 
-	message ConnectionInfo{
+message ConnectionInfo{
 	uint32 app_pk = 1;
 	uint32 instance_pk = 2; //TODO Rename to instance_pk
 	uint32 connection_pk = 3;
 	Jde.Web.FromServer.SessionInfo session_info = 4;
-	bytes certificate_modulus = 5;
-	bytes certificate_exponent = 6;
+	bool auth_result = 5;
+	bytes certificate_modulus = 6;
+	bytes certificate_exponent = 7;
 }
 
 
@@ -39,34 +45,12 @@ message Traces{
 	repeated Trace values=2;
 }
 
-//message Application{
-//	uint32 id=1;
-//	string name=2;
-//	Jde.Proto.ELogLevel db_level=3;
-//	Jde.Proto.ELogLevel file_level=4;
-//}
-
-//message Applications{
-//	repeated Application values=1;
-//}
-
-message Status{
-	uint32 application_id=1;
-	uint32 instance_id=2;
-	string host_name=3;
-	google.protobuf.Timestamp start_time=4;
-	uint64 memory=5;
-	uint32 log_count=6;
-	double cpu=7;
-	repeated string values=8;
-}
-
 message Strings{
 	map<uint32,string> messages = 1;
 	map<uint32,string> files = 2;
 	map<uint32,string> functions = 3;
 	map<uint32,string> threads = 4;
-	map<uint32,string> userTargets = 5; //targets for web.
+	map<uint32,string> user_targets = 5; //targets for web.
 }
 message SubscriptionAck{
 	repeated uint32 server_ids = 1;
@@ -74,26 +58,24 @@ message SubscriptionAck{
 
 message Message{
 	uint32 request_id=1;
-	oneof Value{
-		uint32 ack = 2;//sends on handshake
+	oneof value{
+		uint32 ack = 2; //sends on handshake
 		string generic = 3;
-		Jde.App.Proto.StringMD5s string_pks = 4;//pks stored in db.
-		//Jde.App.Log.Proto.LogLevels log_levels = 5;
-		double progress = 7;
-		Jde.Web.FromServer.SessionInfo session_info = 8;
-		string graph_ql = 10;
-		Jde.Proto.Exception exception = 11;
-		Traces traces = 12;
-//		Applications applications = 13;
-		Status status = 14;
-		Strings strings = 15;
-		SubscriptionAck subscription_ack = 16;
-		string subscription= 17;
-		ConnectionInfo connection_info = 18;
-		string jwt = 19;
+		Jde.App.Proto.StringMD5s string_pks = 4; //pks stored in db.
+		double progress = 5;
+		Jde.Web.FromServer.SessionInfo session_info = 6;
+		string query_result = 7;
+		Jde.Proto.Exception exception = 8;
+		Traces traces = 9;
+		Strings strings = 10;
+		SubscriptionAck subscription_ack = 11;
+		string subscription= 12;
+		ConnectionInfo connection_info = 13;
+		string jwt = 14;
+		ClientQuery client_query = 15;
 
-		bytes execute_anonymous = 33;//appServer->2ndServer, no user context.
-		Jde.App.Proto.Execute execute = 34;//execute with user context.
+		bytes execute_anonymous = 33; //appServer->2ndServer, no user context.
+		Jde.App.Proto.Execute execute = 34; //execute with user context.
 		bytes execute_response = 35;
 	}
 }

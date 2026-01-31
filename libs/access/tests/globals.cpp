@@ -47,7 +47,7 @@ namespace Tests{
 		return Str::Replace( Ƒ("mutation update{}( id:{}, name:'{}' )", Capitalize(table), id, updatedName), '\'', '"' );
 	}
 	Ω testUpdateName( str table, uint id, UserPK executer, sv updatedName )ε->void{
- 		let updateJson = QL().QuerySync<jvalue>( updateNameQL(table, id, updatedName), executer );
+ 		let updateJson = QL().QuerySync<jvalue>( updateNameQL(table, id, updatedName), {}, executer );
 		ASSERT_TRUE( Json::AsSV(Select(table,id, GetRoot(), {}, true), "name")==updatedName );
 	}
 
@@ -55,11 +55,11 @@ namespace Tests{
 	Ω restoreQL( str table, uint id )ι->string{ return Ƒ( "mutation restore{}( id:{} )", Capitalize(table), id ); }
 	Ω testDeleteRestore( str table, uint id, UserPK executer )ε->void{
 		let del = Ƒ( "mutation delete{}(\"id\":{})", Capitalize(table), id );
-		let deleteJson = QL().QuerySync<jvalue>( deleteQL(table, id), executer );
+		let deleteJson = QL().QuerySync<jvalue>( deleteQL(table, id), {}, executer );
 		ASSERT_TRUE( Select(table, id, executer).empty() );
 		ASSERT_FALSE( Select(table, id, executer, {}, true).empty() );
 
- 		let restoreJson = QL().QuerySync<jvalue>( restoreQL(table, id), executer );
+ 		let restoreJson = QL().QuerySync<jvalue>( restoreQL(table, id), {}, executer );
 		ASSERT_FALSE( Select(table, id, executer).empty() );
 	}
 	Ω addRemoveQL( sv op, const DB::Table& table, uint pk, vector<uint> members )ε->string{
@@ -70,15 +70,15 @@ namespace Tests{
 		return Ƒ( "mutation {}{}( id:{}, {}:{} )", op, parentTableName, pk, ToJson(map.Child->Name), memberString );
 	}
 	Ω addRemove( sv op, const DB::Table& table, uint pk, vector<uint> members, UserPK executer )ε->jvalue{
-		return QL().QuerySync<jvalue>( addRemoveQL(op, table, pk, members), executer );
+		return QL().QuerySync<jvalue>( addRemoveQL(op, table, pk, members), {}, executer );
 	}
 }
 	α Tests::TestUnauthUpdateName( str table, uint id, UserPK executer, sv updatedName )ε->void{
- 		EXPECT_THROW( QL().QuerySync<jvalue>( updateNameQL(table, id, updatedName), executer), IException );
+ 		EXPECT_THROW( QL().QuerySync<jvalue>( updateNameQL(table, id, updatedName), {}, executer), IException );
 	}
 	α Tests::TestUnauthDeleteRestore( str table, uint id, UserPK executer )ε->void{
-		EXPECT_THROW( QL().QuerySync<jvalue>( deleteQL(table,id), executer), IException );
-		EXPECT_THROW( QL().QuerySync<jvalue>( restoreQL(table,id), executer), IException );
+		EXPECT_THROW( QL().QuerySync<jvalue>( deleteQL(table,id), {}, executer), IException );
+		EXPECT_THROW( QL().QuerySync<jvalue>( restoreQL(table,id), {}, executer), IException );
 	}
 
 	using namespace Json;
@@ -98,7 +98,7 @@ namespace Tests{
 	}
 	α Tests::AddToGroup( GroupPK id, vector<IdentityPK> members, UserPK executer )ε->void{
 		let ql =	Ƒ( "mutation addGrouping( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
-		let addJson = QL().QuerySync<jvalue>( ql, executer );
+		let addJson = QL().QuerySync<jvalue>( ql, {}, executer );
 	}
 
 	α Tests::Remove( const DB::Table& table, uint groupPK, vector<uint> members, UserPK executer )ε->void{
@@ -106,24 +106,25 @@ namespace Tests{
 	}
 	α Tests::RemoveFromGroup( GroupPK id, vector<IdentityPK> members, UserPK executer )ε->void{
 		let ql = Ƒ( "mutation removeGrouping( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
-		let removeJson = QL().QuerySync<jvalue>( ql, executer );
+		let removeJson = QL().QuerySync<jvalue>( ql, {}, executer );
 	}
 
 
 	α Tests::Create( str table, sv target, UserPK executer, str input, SL sl )ε->uint{
 		let create = Ƒ( "create{0}(  target:'{1}', name:'{1} - name', description:'{1} - description' {2} ){{id}}", Capitalize(table), target, input.size() ? ","s+input : "" );
-		let createJson = QL().QuerySync( Str::Replace(create, '\'', '"'), executer, true, sl );
+		let createJson = QL().QuerySync( Str::Replace(create, '\'', '"'), {}, executer, true, sl );
 		return GetId( createJson );//{"user":{"id":7}}
 	}
 	using Tests::QL;
 	Ω createUser( str target, ProviderPK providerId, UserPK executer )ε->UserPK{
-		let create = Ƒ( "createUser(  loginName:'{0}', target:'{0}', provider:{1}, name:'{0} - name', description:'{0} - description' ){{id}}", target, (uint)providerId );
-		let createJson = QL().QuerySync( Str::Replace(create, '\'', '"'), executer );
+		jobject vars{ {"target", target}, {"provider",providerId}, {"name", target+" - name "}, {"description", target+" - desc"} };
+		let q = "createUser(  loginName:$target, target:$target, providerId:$provider, name:$name, description:$description ){{id}}";
+		let createJson = QL().QuerySync( q, vars, executer );
 		return { Tests::GetId(createJson) };//{"user":{"id":7}}}
 	}
 	α createGroup( str target, UserPK executer )ε->GroupPK{
 		let create = Ƒ( "mutation createGrouping(  target:'{0}', name:'{0} - name', description:'{0} - description' ){{id}}", target );
-		let createJson = QL().QuerySync( Str::Replace(create, '\'', '"'), executer );
+		let createJson = QL().QuerySync( Str::Replace(create, '\'', '"'), {}, executer );
 		return {AsNumber<GroupPK::Type>( createJson, "id")};
 	}
 	α columns( sv cols, bool includeDeleted )ε->string{
@@ -131,7 +132,7 @@ namespace Tests{
 	}
 	α select( sv table, str filter, str cols, UserPK executer )ε->jobject{
 		let ql = Ƒ( "{}({}){{ {} }}", table, filter, cols );
-		return QL().QuerySync( ql, executer );
+		return QL().QuerySync( ql, {}, executer );
 	}
 
 	α Tests::Select( sv table, uint id, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
@@ -144,20 +145,26 @@ namespace Tests{
 
 	α Tests::SelectGroup( str target, UserPK executer, bool includeDeleted )ε->jobject{
 		let ql = Ƒ( "grouping(target:\"{}\"){{ id name attributes created updated target description {} groupMembers{{id name}} }}", target, includeDeleted ? "deleted" : "" );
-		return QL().QuerySync( ql, executer );
+		return QL().QuerySync( ql, {}, executer );
 	}
 	α Tests::SelectPermission( ResourcePK resourcePK, UserPK executer )ε->jobject{
 		let ql = Ƒ( "permission( resourceId:{} ){{ id resourceId allowed denied }}", resourcePK );
-		return QL().QuerySync( ql, executer );
+		return QL().QuerySync( ql, {}, executer );
 	}
 
 	α Tests::SelectResource( str target, UserPK executer, bool includeDeleted, SL sl )ε->jobject{
 		let ql = Ƒ( "resource( schemaName:\"access\", target:\"{}\", criteria:null ){{ id schemaName allowed denied name attributes created {} updated target description }}", target, includeDeleted ? "deleted" : "" );
-		return QL().QuerySync( ql, executer, true, sl );
+		return QL().QuerySync( ql, {}, executer, true, sl );
 	}
-	α Tests::SelectUser( str target, UserPK executer, bool includeDeleted )->jobject{
-		let selectAll = Ƒ( "user(target:\"{}\"){{ id name attributes created updated target description provider {} }}", target, includeDeleted ? "deleted" : "" );
-		return QL().QuerySync( selectAll, executer );
+	α Tests::SelectUser( str target, UserPK executer, optional<ProviderPK> provider, bool includeDeleted )->jobject{
+		jobject vars{ {"target", target} };
+		string providerQL;
+		if( provider ){
+			vars["provider"] = *provider;
+			providerQL = ", provider_id:$provider";
+		}
+		auto selectAll = Ƒ( "user(target:$target {}){{ id name attributes created updated target description provider {} }}", move(providerQL), includeDeleted ? "deleted" : "" );
+		return QL().QuerySync( move(selectAll), vars, executer );
 	}
 
 	α Tests::Get( str table, str target, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
@@ -176,7 +183,7 @@ namespace Tests{
 		auto root = SelectUser( "root", {UserPK::System} );
 		if( root.empty() ){
 			_root = createUser( "root", (ProviderPK)EProviderType::Google, {UserPK::System} );
-			let resourcePermissions = BlockAwait<ResourceLoadAwait,ResourcePermissions>( ResourceLoadAwait(_localQL, {GetTable("acl")->Schema}, {UserPK::System}) );
+			let resourcePermissions = BlockAwait<ResourceLoadAwait,ResourcePermissions>( ResourceLoadAwait(_localQL, {GetTable("acl")->Schema}, {}, {UserPK::System}) );
 			for( let& [pk,resource] : resourcePermissions.Resources )
 				CreateAcl( *_root, ERights::All, ERights::None, resource.Target, {UserPK::System} );
 		}
@@ -188,10 +195,10 @@ namespace Tests{
 	α Tests::GetUser( str target, UserPK executer, bool includeDeleted, ProviderPK provider )ε->jobject{
 		if( executer==UserPK{0} )
 		executer = GetRoot();
-		auto user = SelectUser( target, executer, includeDeleted );
+		auto user = SelectUser( target, executer, provider, includeDeleted );
 		if( user.empty() ){
 			createUser( target, provider, executer );
-			user = SelectUser( target, executer, includeDeleted );
+			user = SelectUser( target, executer, provider, includeDeleted );
 		}
 		return user;
 	}
@@ -207,24 +214,24 @@ namespace Tests{
 
 	α Tests::Purge( str table, uint id, UserPK executer )ε->jvalue{
 		let ql = Ƒ( "mutation purge{}(\"id\":{})", Capitalize(table), id );
-		let y = QL().QuerySync<jvalue>( ql, executer );
+		let y = QL().QuerySync<jvalue>( ql, {}, executer );
 		return y;
 	}
 	α Tests::PurgeUser( UserPK userId, UserPK executer, SL sl )ε->void{
 		let purge = Ƒ( "mutation purgeUser(\"id\":{})", userId.Value );
-		let purgeJson = QL().QuerySync<jvalue>( purge, executer, true, sl );
+		let purgeJson = QL().QuerySync<jvalue>( purge, {}, executer, true, sl );
 	}
 	α Tests::PurgeGroup( GroupPK id, UserPK executer )ε->void{
 		let purge = Ƒ( "mutation purgeGrouping(\"id\":{})", id.Value );
-		let purgeJson = QL().QuerySync<jvalue>( purge, executer );
+		let purgeJson = QL().QuerySync<jvalue>( purge, {}, executer );
 	}
 	α Tests::Delete( str table, uint id, UserPK executer )ε->jvalue{
 		let del = Ƒ( "mutation delete{}( id:{} )", Capitalize(table), id );
-		return QL().QuerySync<jvalue>( del, executer );
+		return QL().QuerySync<jvalue>( del, {}, executer );
 	}
 	α Tests::Restore( str table, uint id, UserPK executer )ε->jvalue{
 		let ql = Ƒ( "mutation restore{}( id:{} )", Capitalize(table), id );
-		return QL().QuerySync<jvalue>( ql, executer );
+		return QL().QuerySync<jvalue>( ql, {}, executer );
 	}
 	α Tests::TestAdd( str tableName, uint groupPK, vector<uint> members, UserPK executer )->void{
 		auto getMemberIds = [&]()->flat_set<uint>{

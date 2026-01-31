@@ -1,4 +1,5 @@
-import { IProfile } from '../services/profile/IProfile';
+/*
+import { IProfile } from '../services/profile/profile.store';
 
 export interface IAssignable<TUnderlying>
 {
@@ -90,3 +91,4 @@ export function JoinSettings( ...args: ILoad[] ):Promise<void>
 		resolve();
 	} );
 }
+*/

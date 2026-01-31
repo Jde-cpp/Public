@@ -5,10 +5,12 @@
 #include <jde/opc/UAException.h>
 #include "../usings.h"
 
-#define UACε(f) if( let sc = f; sc ) throw UAClientException{ sc, _client->Handle(), _requestId, _sl, ELogLevel::Debug };
+#define UACε(f) if( let sc = f; sc ) throw UAClientException{ sc, _client, _requestId, _sl, ELogLevel::Debug };
 namespace Jde::Web::Server{ struct HttpRequest; }
 namespace Jde::Opc::Gateway{
+	struct UAClient;
 	struct UAClientException : UAException{
+		UAClientException( StatusCode sc, sp<UAClient> client, RequestId requestId=0, SRCE, ELogLevel level=ELogLevel::Debug )ι;
 		UAClientException( StatusCode sc, Handle uaHandle, RequestId requestId=0, SRCE, ELogLevel level=ELogLevel::Debug )ι:
 			UAException{ sc, Ƒ("[{:x}.{:x}]{}", uaHandle, requestId, UAException::Message(sc)), sl, {level} }{}
 		UAClientException( StatusCode sc, Handle uaHandle, string /*description*/, SRCE )ι:

@@ -43,7 +43,7 @@ namespace Jde::Web{
 		for( auto cs = co_await net::this_coro::cancellation_state; cs.cancelled() == net::cancellation_type::none; cs = co_await net::this_coro::cancellation_state ){
 			if( websocket::is_upgrade(parser->get()) ){
 				beast::get_lowest_layer(stream).expires_never();// Disable the timeout. The websocket::stream uses its own timeout settings.
-				Internal::RunSocketSession( reqHandler->GetWebsocketSession(ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint, connectionIndex) );
+				Internal::RunSocketSession( reqHandler->WebsocketSession(ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint, connectionIndex) );
 				co_return;
 			}
 			HttpRequest req{ parser->release(), move(userEndpoint), isSsl, connectionIndex };

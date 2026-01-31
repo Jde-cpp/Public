@@ -5,7 +5,7 @@
 namespace Jde::QL{ struct TableQL; }
 namespace Jde::Opc::Gateway{
 	struct UAClient;
-	struct UABrowsePath : UA_BrowsePath, boost::noncopyable{
+	struct UABrowsePath : UA_BrowsePath, noncopyable{
 		UABrowsePath( std::span<const sv> segments, NsIndex defaultNS )ι;
 		UABrowsePath( UABrowsePath&& x )ι:UA_BrowsePath{ x }{ UA_BrowsePath_init( &x ); }
 		//UABrowsePath( const UABrowsePath& x )ι{ UA_BrowsePath_copy( &x, this ); }
@@ -38,7 +38,7 @@ namespace Browse{
 		UA_BrowseResultMask _attribs{ UA_BROWSERESULTMASK_NONE };
 	};
 
-	struct FoldersAwait final : TAwait<Response>, boost::noncopyable{
+	struct FoldersAwait final : TAwait<Response>, noncopyable{
 		FoldersAwait( NodeId id, UA_BrowseResultMask mask, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl},_client{c}, _request{move(id), mask}{}
 		FoldersAwait( NodeId id, const QL::TableQL& ql, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl},_client{c}, _request{move(id), ql}{}
 

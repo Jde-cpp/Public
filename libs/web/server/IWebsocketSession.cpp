@@ -21,8 +21,8 @@ namespace Jde::Web::Server{
 	IWebsocketSession::IWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
 		Stream{ ms<SocketStream>(move(stream), move(buffer)) },
 		_userEndpoint{ userEndpoint },
-		_initialRequest{ move(request) },
-		_id{ connectionIndex }
+		_id{ connectionIndex },
+		_initialRequest{ move(request) }
 	{}
 
 	α IWebsocketSession::Run()ι->void{
@@ -118,7 +118,7 @@ namespace Jde::Web::Server{
 		let _ = shared_from_this();
 		try{
 			LogRead( Ƒ("GraphQL{}: {}", query.return_raw() ? "*" : "", query.text()), requestId );
-			auto j = co_await QL::QLAwait<jvalue>( move(*query.mutable_text()), parse(move(*query.mutable_variables())).as_object(), _userPK, Schemas(), query.return_raw() );
+			auto j = co_await QL::QLAwait<jvalue>( move(*query.mutable_text()), parse(move(*query.mutable_variables())).as_object(), _userPK, LocalQL(), query.return_raw() );
 			auto y = serialize( move(j) );
 			LogWrite( Ƒ("GraphQL: {}", y.substr(0,100)), requestId );
 			Write( toProtoQuery(move(y), requestId) );
@@ -126,6 +126,56 @@ namespace Jde::Web::Server{
 		catch( exception& e ){
 			WriteException( move(e), requestId );
 		}
+	}
+
+	α IWebsocketSession::AddTimeout( RequestId requestId, QueryClientAwait::Handle h, Duration timeout, SL sl )ι->TimerAwait::Task{
+		auto timer = ms<DurationTimer>( timeout, ELogTags::SocketServerWrite, sl );
+		{
+			lg l{ _pendingQueriesMutex };
+			_pendingQueries.emplace( requestId, make_pair(h, timer) );
+		}
+		auto timedout = co_await *timer;
+		lg l{ _pendingQueriesMutex };
+		if( auto it = _pendingQueries.find(requestId); it!=_pendingQueries.end() ){
+			auto h = it->second.first;
+			_pendingQueries.erase( it );
+			if( h ){
+				h.promise().SetExp( Exception{ELogTags::SocketServerWrite, sl, "Query {} timed out after {}s", hex(requestId), Chrono::ToString(timeout)} );
+				h.resume();
+			}
+		}
+		else
+			CRITICALT( ELogTags::SocketServerRead, "[{}]No pending query", hex(requestId) );
+	}
+	α IWebsocketSession::QueryClient( QL::TableQL&& query, Jde::UserPK executer, QueryClientAwait::Handle h, SL sl )ι->void{
+		let requestId = ++_requestId;
+		AddTimeout( requestId, h, 10s, sl );
+		QueryClient( move(query), executer, requestId );
+	}
+	α IWebsocketSession::QueryClientResults( string&& queryResult, RequestId requestId )ι->void{
+		LogRead( Ƒ("QueryClientResults: {}", queryResult.substr(0,100)), requestId );
+		QueryClientAwait::Handle h;
+		{
+			lg l{ _pendingQueriesMutex };
+			if( auto it = _pendingQueries.find(requestId); it!=_pendingQueries.end() ){
+				h = it->second.first;
+				it->second.first = nullptr;
+				it->second.second->Cancel(); //will delete iterator
+			}
+			else
+				CRITICALT( ELogTags::SocketServerRead, "[{}]No pending query", hex(requestId) );
+		}
+		if( h ){
+			try{
+				h.promise().SetValue( parse(move(queryResult)) );
+			}
+			catch( exception& e ){
+				h.promise().SetExp( Exception{SRCE_CUR, move(e), ELogLevel::Warning, "[{}]QueryClientResults parse exception", hex(requestId)} );
+			}
+			h.resume();
+		}
+		else
+			WARNT( ELogTags::SocketServerRead, "[{}]No pending query", hex(requestId) );
 	}
 	α IWebsocketSession::SetSessionId( SessionPK sessionId )ι->void{
 		if( !_sessionInfo )

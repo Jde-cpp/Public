@@ -1,11 +1,14 @@
 #include <jde/ql/LocalSubscriptions.h>
+#include <jde/db/IDataSource.h>
+#include <jde/db/meta/AppSchema.h>
+#include <jde/db/meta/Table.h>
 #include <jde/ql/types/MutationQL.h>
 #include "types/Parser.h"
 
 #define let const auto
 namespace Jde::QL{
 	struct TableOp final{
-		TableOp( string tableName, EMutationQL type )ι: TableName{move(tableName)}, Type{type}{}
+		TableOp( string tableName, EMutationQL type )ι: TableName{ move(tableName) }, Type{ type }{}
 		string TableName;
 		EMutationQL Type;
 		α operator<( const TableOp& rhs )Ι->bool{
@@ -13,7 +16,7 @@ namespace Jde::QL{
 		}
 	};
 	struct ListenerSubs final{
-		ListenerSubs( SubscriptionId id, TableQL&& fields, sp<IListener> listener )ι: Id{id}, Fields{move(fields)}, Listener{listener}{}
+		ListenerSubs( SubscriptionId id, TableQL&& fields, sp<IListener> listener )ι: Id{ id }, Fields{ move(fields) }, Listener{ listener }{}
 		SubscriptionId Id;
 		TableQL Fields;
 		sp<IListener> Listener;
@@ -31,10 +34,16 @@ namespace Jde::QL{
 			if( available.empty() ){
 				if( let array = result.try_as_array(); array && array->size() )
 					result = (*array)[0];
-				available = result.is_object() ? Json::Combine( m.Args, result.get_object() ) : m.Args;
+				available = result.is_object() ? Json::Combine( m.ExtrapolateVariables(), result.get_object() ) : m.ExtrapolateVariables();
+				if( !available.contains("id") && m.DBTable && m.DBTable->FindPK() ){
+					available["id"] = m.DBTable->Schema->DS()->ScalerSync<uint>(
+						{ Ƒ("select {} from {} where target=?", m.DBTable->FindPK()->Name, m.DBTable->DBName), {{string{available.at("target").as_string()}}} }
+					);
+				}
 			}
 			jobject j;
-			j[sub.Fields.JsonName] = sub.Fields.TrimColumns( available );
+			auto value = sub.Fields.TrimColumns( available );
+			j[sub.Fields.JsonName] = move( value );
 			try{
 				sub.Listener->OnChange( j, sub.Id );
 			}
@@ -58,16 +67,16 @@ namespace Jde::QL{
 	α Subscriptions::StopListen( sp<IListener> listener, vector<SubscriptionId> ids )ι->jarray{
 		jarray y;
 		ul _{ _serverMutex };
-		for( auto tableOp = _serverSubs.begin(); tableOp!=_serverSubs.end(); ){//TableOp,vector<ListenerSubs>
+		for( auto tableOp = _serverSubs.begin(); tableOp!=_serverSubs.end(); ){ //TableOp,vector<ListenerSubs>
 			auto&& listenerSubs = tableOp->second;
 			for( auto listenerSub = listenerSubs.begin(); listenerSub!=listenerSubs.end(); ){
-				if( listenerSub->Listener==listener && (ids.empty() || find(ids, listenerSub->Id )!=ids.end()) ){
+				if( listenerSub->Listener==listener && (ids.empty() || find(ids, listenerSub->Id)!=ids.end()) ){
 					y.push_back( listenerSub->Id );
 					listenerSub = listenerSubs.erase( listenerSub );
 				}else
 					++listenerSub;
 			}
-			tableOp = listenerSubs.empty() ? _serverSubs.erase( tableOp ) : next(tableOp);
+			tableOp = listenerSubs.empty() ? _serverSubs.erase( tableOp ) : next( tableOp );
 		}
 		return y;
 	}

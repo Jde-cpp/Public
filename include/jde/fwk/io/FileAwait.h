@@ -40,7 +40,7 @@ namespace Jde::IO{
 		sp<FileIOArg> _fileIOArg;
 	};
 
-	struct FileIOArg final : std::enable_shared_from_this<FileIOArg>, boost::noncopyable{
+	struct FileIOArg final : std::enable_shared_from_this<FileIOArg>, noncopyable{
 		using HCo=variant<StringAwait::Handle,VoidAwait::Handle>;
 		FileIOArg( fs::path path, bool vec, SRCE )ι;
 		FileIOArg( fs::path path, variant<string,vector<byte>> data, ELogTags tags, SRCE )ι;
@@ -79,7 +79,7 @@ namespace Jde::IO{
 		up<IException> ExceptionPtr;
 		sp<FileIOArg> _arg;
 	};
-	struct Γ ReadAwait final : IFileAwait, StringAwait, boost::noncopyable{
+	struct Γ ReadAwait final : IFileAwait, StringAwait, noncopyable{
 		ReadAwait( fs::path path, bool cache=false, SRCE )ι:IFileAwait{ move(path), false, sl }, StringAwait{ sl },_cache{cache}{}
 		α Suspend()ι->void override;
 		α await_ready()ι->bool override;
@@ -87,7 +87,7 @@ namespace Jde::IO{
 	private:
 		bool _cache;
 	};
-	struct Γ WriteAwait final : IFileAwait, VoidAwait, boost::noncopyable{
+	struct Γ WriteAwait final : IFileAwait, VoidAwait, noncopyable{
 //		WriteAwait( fs::path path, variant<string,vector<char>> data, SRCE )ι:WriteAwait{ move(path), move(data), false, sl }{}
 		WriteAwait( fs::path path, variant<string,vector<byte>> data, bool create=false, ELogTags tags=ELogTags::IO, SRCE )ι:
 			IFileAwait{ move(path), move(data), tags, sl }, VoidAwait{ sl }, _create{create}{}

@@ -4,7 +4,7 @@
 namespace Jde::Opc::Gateway{
 	struct UAClient;
 
-	struct CertAwait : AuthAwait<bool>, boost::noncopyable{
+	struct CertAwait : AuthAwait<bool>, noncopyable{
 		using base = AuthAwait<bool>;
 		CertAwait( ServerCnnctnNK opcNK, string endpoint, bool isSocket, SessionPK sessionId, SRCE )ι:
 			AuthAwait{ Credential{Crypto::PublicKey{}}, move(opcNK), move(endpoint), isSocket, sessionId, sl }{}

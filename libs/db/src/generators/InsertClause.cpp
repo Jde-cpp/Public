@@ -34,6 +34,12 @@ namespace Jde::DB{
 	α InsertClause::Add( Value::Underlying value )ι->void{
 		Values.emplace_back( make_pair(sp<Column>{}, move(value)) );
 	}
+	α InsertClause::AddOpt( optional<Value::Underlying>&& value )ι->void{
+		if( value )
+			Add( move(*value) );
+		else
+			Add( nullptr );
+	}
 
 	α InsertClause::SequenceColumn()Ι->sp<Column>{
 		auto table = Values.size() ? Values.begin()->first->Table : nullptr;

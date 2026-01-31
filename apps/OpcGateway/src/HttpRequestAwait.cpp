@@ -1,17 +1,13 @@
 #include "HttpRequestAwait.h"
 #include <jde/ql/IQL.h>
-#include <jde/app/client/appClient.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
 #include "StartupAwait.h"
 #include "UAClient.h"
-#include "async/ReadValueAwait.h"
-#include "async/SessionAwait.h"
 #include "auth/PasswordAwait.h"
-#include "auth/UM.h"
+#include "ql/GatewayQL.h"
 #include "ql/GatewayQLAwait.h"
-#include "uatypes/Browse.h"
 
 #define let const auto
 
@@ -73,7 +69,6 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-
 	α HttpRequestAwait::Login( str endpoint )ι->TAwait<optional<Web::FromServer::SessionInfo>>::Task{
 		try{
 			let body = _request.Body();
@@ -110,7 +105,7 @@ namespace Jde::Opc::Gateway{
 		catch( IException& e )
 		{}
 	}
-	α HttpRequestAwait::Query()ι->TAwait<jvalue>::Task{
+/*	α HttpRequestAwait::Query()ι->TAwait<jvalue>::Task{
 		try{
 			string query = _request.IsGet() ? _request["query"] : Json::AsString(_request.Body(), "query");
 			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(_request), "no query") );
@@ -130,7 +125,14 @@ namespace Jde::Opc::Gateway{
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
+	}*/
+	α HttpRequestAwait::QueryHandler( QL::RequestQL&& q, variant<sp<SessionInfo>, Jde::UserPK> creds, bool returnRaw, SL sl )ι->up<IQLAwait>{
+		return mu<GatewayQLAwait>( move(q), move(creds), returnRaw, sl );
 	}
+	α HttpRequestAwait::Schemas()Ι->const vector<sp<DB::AppSchema>>&{
+		return Gateway::Schemas();
+	}
+	
 	α HttpRequestAwait::Suspend()ι->void{
  		if( _request.IsPost("/login") ) //used with user/password on Opc Server.
 			Login( _request.UserEndpoint.address().to_string() );

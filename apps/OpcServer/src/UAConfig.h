@@ -1,6 +1,5 @@
 #pragma once
 #include <jde/opc/uatypes/Logger.h>
-#include "UAAccess.h"
 
 namespace Jde::Opc::Server {
 	struct UAConfig final : UA_ServerConfig {

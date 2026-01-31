@@ -1,30 +1,29 @@
 import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { inject, Inject, Injectable } from '@angular/core';
 import { IErrorService } from './error/IErrorService';
-import { IProfile } from './profile/IProfile';
-import { Settings } from '../utils/settings';
+import { IProfileStore } from './profile/profile.store';
+//import { Settings } from '../utils/settings';
 import { TableSchema } from '../model/ql/schema/TableSchema';
 import { IGraphQL } from '../services/IGraphQL';
-import { UserSettings } from '../services/ql-list.resolver';
 import { ListRoute } from './ql-list.resolver';
 import { MetaObject } from '../model/ql/schema/MetaObject';
 import { DocItem } from 'jde-spa';
 import { RouteStore } from './route.store';
+import { LocalProfileStore } from 'jde-framework';
 
 export type DetailPageSettings = {
 	excludedColumns:string[];
-	profile:Settings<UserSettings>;
 };
 
 export class DetailRoute extends DocItem{
-	constructor( target:string, title:string, siblings:DocItem[], parent:ListRoute ){
+	constructor( target:string, title:string, siblings:DocItem[], parent:DocItem ){
 		super( {path:target, title:title, siblings:siblings, parent:parent} );
 	}
 }
 
 export type DetailResolverData<T>={
 	row:any;
-	pageSettings: DetailPageSettings;
+	excludedColumns:string[];
 	schema: TableSchema;
 	routing:DetailRoute;
 };
@@ -32,7 +31,6 @@ export type DetailResolverData<T>={
 @Injectable()
 export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 	constructor( private route: ActivatedRoute, private router:Router,
-		@Inject('IProfile') private profileService: IProfile,
 		@Inject('IErrorService') private snackbar: IErrorService,
 		@Inject('IGraphQL') private ql: IGraphQL
 	){}
@@ -43,14 +41,11 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 		return this.loadProfile( route, collectionDisplay, target, state.url );
 	}
 	private async loadProfile( route: ActivatedRouteSnapshot, collectionDisplay:string, target:string, url:string ):Promise<DetailResolverData<T>>{
-		const profile = new Settings<UserSettings>( UserSettings, `${collectionDisplay}-detail`, this.profileService );
-		await profile.loadedPromise;
-
-		let siblings = this.routeStore.getSiblings( collectionDisplay );
+		let siblings = this.routeStore.getChildren( collectionDisplay );
 		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings,
 			ListRoute.find(collectionDisplay, route.parent.routeConfig.children.find(x=>x.path==":collectionDisplay").data["collections"]) );
 		try{
-			return DetailResolver.load<T>( this.ql, this.ql.toCollectionName(collectionDisplay), target, profile, routing );
+			return DetailResolver.load<T>( this.ql, this.ql.toCollectionName(collectionDisplay), target, routing );
 		}
 		catch( e ){
 			this.snackbar.error( `Target not found:  '${target}'`, (m)=>console.log(m) );
@@ -59,11 +54,11 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 		}
 	}
 
-	static async load<T>( ql:IGraphQL, collectionName:string, target:string, profile:Settings<UserSettings>, routing:DetailRoute ):Promise<DetailResolverData<T>>{
+	static async load<T>( ql:IGraphQL, collectionName:string, target:string, routing:DetailRoute ):Promise<DetailResolverData<T>>{
 		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection(collectionName) );
 		let obj = {};
 		if( target!="$new" ){
-			obj = await ql.querySingle( ql.targetQuery(schema, target, profile.value.showDeleted) );
+			obj = await ql.querySingle( ql.targetQuery(schema, target, LocalProfileStore.showDeleted(collectionName)) );
 			for( let query of ql.subQueries(schema.type, obj["id"]) ){
 				const subRows = await ql.query<any>( query );
 				//"acl":[{"role":{"id":33,"name":"Opc Gateway Permissions","deleted":null},"identity":{"id":1}}]}
@@ -75,7 +70,7 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 			}
 		}
 		return {
-			pageSettings: {profile:profile,excludedColumns:ql.excludedColumns(schema.collectionName)},
+			excludedColumns:ql.excludedColumns(schema.collectionName),
 			row: obj,
 			schema: schema,
 			routing: routing

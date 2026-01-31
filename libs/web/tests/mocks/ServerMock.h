@@ -14,8 +14,9 @@ namespace Jde::Web::Mock{
 	struct RequestHandler final : IRequestHandler{
 		RequestHandler( jobject settings )ι: IRequestHandler{ settings, AppClient() }{}
 		α HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> override{ return mu<HttpRequestAwait>( move(req), sl ); }
-		α GetWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<Server::IWebsocketSession> override;
+		α WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<Server::IWebsocketSession> override;
 		α Schemas()ι->const vector<sp<DB::AppSchema>>&{ return _schemas; }
+		α Query( QL::RequestQL&& ql, UserPK executer, bool raw, SRCE )ε->up<TAwait<jvalue>>{ ASSERT(false); return {}; }
 	private:
 		vector<sp<DB::AppSchema>> _schemas;
 	};

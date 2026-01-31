@@ -4,8 +4,6 @@
 
 #define let const auto
 namespace Jde::Access::Tests{
-	UserPK _userId{};
-
 	class AuthTests : public ::testing::Test{
 	protected:
 		Ω SetUpTestCase()->void;
@@ -16,27 +14,25 @@ namespace Jde::Access::Tests{
 	ProviderPK AuthTests::OpcProviderId{};
 
 	α AuthTests::SetUpTestCase()ε->void{
-	if( auto o = QL().QuerySync(Ƒ("provider(name:\"{}\"){{id}}", OpcServer), GetRoot()); !o.empty() )
+		if( auto o = QL().QuerySync(Ƒ("provider(name:\"{}\"){{id}}", OpcServer), {}, GetRoot()); !o.empty() )
 			OpcProviderId = GetId( o );
 		else{
 			let createQL = Ƒ( "createProvider( target:\"{}\", providerType:{} ){{id}}", OpcServer, underlying(EProviderType::OpcServer) );
-			OpcProviderId = GetId( QL().QuerySync(createQL, GetRoot()) );
+			OpcProviderId = GetId( QL().QuerySync(createQL, {}, GetRoot()) );
 		}
 	}
 
 	α login( str loginName, ProviderPK providerId, string opcServer )ε->UserPK{
-		using Await = Server::AuthenticateAwait;
-		_userId = BlockAwait<Await,UserPK>( Await{loginName, providerId, opcServer} );
-		return _userId;
+		return BlockTAwait<UserPK>( Server::AuthenticateAwait{loginName, providerId, opcServer} );
 	}
 
 	TEST_F( AuthTests, Login_Existing ){
-		const string user{ "Login_Existing" };
+		const string user{ "Login_Existing-google" };
 		let provider = Access::EProviderType::Google;
-		const UserPK userId{ GetId( GetUser(user, GetRoot(), true, (ProviderPK)provider) ) };
-		login( user, underlying(provider), {} );
-		ASSERT_EQ( userId, _userId );
-		PurgeUser( userId, GetRoot() );
+		let fetchedUserPK{ GetId( GetUser(user, GetRoot(), true, (ProviderPK)provider) ) };
+		let loginUserPK = login( user, underlying(provider), {} );
+		ASSERT_EQ( fetchedUserPK, loginUserPK.Value );
+		PurgeUser( {fetchedUserPK}, GetRoot() );
 	}
 
 	TEST_F( AuthTests, Login_New ){
@@ -47,10 +43,10 @@ namespace Jde::Access::Tests{
 
 	TEST_F( AuthTests, Login_Existing_Opc ){
 		const string user{ "Login_Existing_Opc" };
-		let userId = GetId( GetUser(user, GetRoot(), true, OpcProviderId) );
-		login( user, OpcProviderId, string{OpcServer} );
-		ASSERT_EQ( UserPK{userId}, _userId );
-		PurgeUser( {userId}, GetRoot() );
+		let fetchedUserPK = GetId( GetUser(user, GetRoot(), true, OpcProviderId) );
+		let loginUserPK = login( user, OpcProviderId, string{OpcServer} );
+		ASSERT_EQ( fetchedUserPK, loginUserPK.Value );
+		PurgeUser( {fetchedUserPK}, GetRoot() );
 	}
 
 	TEST_F( AuthTests, Login_New_Opc ){

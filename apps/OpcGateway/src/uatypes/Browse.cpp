@@ -39,7 +39,7 @@ namespace Browse{
 		ASSERT( Promise() );
 		try{
 			DBGT( BrowseTag, "[{}]SendBrowseRequest", hex(_client->Handle()) );
-			UAε( UA_Client_sendAsyncBrowseRequest(_client->UAPointer(), &_request, onResponse, this, &_requestId) );
+			UACε( UA_Client_sendAsyncBrowseRequest(_client->UAPointer(), &_request, onResponse, this, &_requestId) );
 			TRACET( BrowseTag, "[{}.{}]SendBrowseRequest", hex(_client->Handle()), hex(_requestId) );
 			_client->Process( _requestId, "BrowseRequest" );
 		}

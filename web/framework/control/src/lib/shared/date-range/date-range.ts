@@ -5,7 +5,7 @@ import {MatDatepickerInputEvent, MatDatepickerModule, MatDatepickerToggle, MatDa
 import {MatFormField, MatFormFieldModule, MatLabel} from '@angular/material/form-field';
 
 import { DateUtils, Day } from '../../utils/dateUtils';
-import { IAssignable } from '../../utils/settings';
+//import { IAssignable } from '../../utils/settings';
 
 export enum TimeFrame{None=0, Week=7, Month=30, Quarter=90, Year=360, All=1000}
 
@@ -122,23 +122,17 @@ export class DateRange implements OnInit
 	get timeFrame(){return this.settings.timeFrame;} set timeFrame(x){this.settings.timeFrame = x;}TimeFrameType = TimeFrame;
 	range = new FormGroup( { start: new FormControl(), end: new FormControl() } );
 }
-export class DateRangeSettings implements IAssignable<DateRangeSettings>
-{
+export class DateRangeSettings{
 	constructor( public timeFrame:TimeFrame=undefined, private _max:Day = DateUtils.toDays(new Date()), private isValidDay:(_:Day)=>boolean=()=>{return true;} )
 	{}
-	assign(other: DateRangeSettings)
-	{
+	assign(other: DateRangeSettings){
 		this.end = other.end;
 		this.start = other.start;
 		this.timeFrame = other.timeFrame;
 	}
-	toJSON = function()
-	{
-		return { start: this.start, end: this.end, timeFrame: this.timeFrame };
-  	}
+	//toJSON = function(){ return { start: this.start, end: this.end, timeFrame: this.timeFrame }; }
 	get max(){ return this._max; }
-	get dayCount()
-	{
+	get dayCount(){
 		let dayCount = this.#dayCount ?? null;
 		if( this.timeFrame==TimeFrame.Week )
 			dayCount = 7;
@@ -155,8 +149,3 @@ export class DateRangeSettings implements IAssignable<DateRangeSettings>
 
 	get start(){ return this.#start; } set start( x:Day ){ this.#start = x; }  #start:Day;
 }
-/*
-@NgModule( {exports: [DateRange], declarations: [DateRange], imports:[MatChipsModule,MatDatepickerModule,MatFormFieldModule]} )
-export class DateRangeModule
-{}
-*/

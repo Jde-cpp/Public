@@ -19,7 +19,7 @@ namespace Jde::DB{
 		Value( Underlying v, Underlying nullValue )ι:Variant{v==nullValue ? nullptr : v}{}
 		Value( uuid guid )ι:Variant{vector<uint8_t>( (uint8_t*)guid.data(), (uint8_t*)guid.data()+16 )}{}
 		Value( EType type, const jvalue& j, SRCE )ε;
-		Ω FromKey( Key key )ι->Value{ return key.IsPrimary() ? Value{key.PK()} : Value{move(key.NK())}; }
+		Ω FromKey( Key key )ι->Value{ return key.IsPK() ? Value{key.PK()} : Value{move(key.NK())}; }
 
 		α ToJson( jvalue& j )Ι->void;
 		α ToJson()Ι->jvalue{ jvalue v; ToJson(v); return v; };

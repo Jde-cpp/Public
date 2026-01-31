@@ -2,23 +2,17 @@
 #include <jde/fwk/settings.h>
 #include <jde/opc/uatypes/opcHelpers.h>
 #include <jde/opc/UAException.h>
-#include <jde/db/meta/AppSchema.h>
-#include <jde/ql/ql.h>
-#include <jde/ql/LocalQL.h>
-#include <jde/web/Jwt.h>
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/app/client/IAppClient.h>
 #include "../../src/StartupAwait.h"
 #include "../../src/auth/OpcServerSession.h"
 #include "../../src/auth/UM.h"
-#include "../../src/ql/OpcQLHook.h"
+#include "../../src/ql/GatewayQL.h"
 
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{
-	using Gateway::QL;
 	constexpr ELogTags _tags{ ELogTags::Test };
-	//static Opc::OpcQLHook* _pHook;
 
 	α CreateServerCnnctnAwait::Execute()ι->QL::QLAwait<jobject>::Task{
 		try{
@@ -52,9 +46,9 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α Tests::SelectServerCnnctn( DB::Key id )ι->optional<ServerCnnctn>{
-		let subQuery = id.IsPrimary() ? Ƒ( "id: {}", id.PK() ) : Ƒ( "target: \"{}\"", id.NK() );
+		let subQuery = id.IsPK() ? Ƒ( "id: {}", id.PK() ) : Ƒ( "target: \"{}\"", id.NK() );
 		let select = Ƒ( "serverConnection({}){{ id name attributes created updated deleted target description certificateUri isDefault url }}", subQuery );
-		auto o = QL().QuerySync<>( select, {UserPK::System} );
+		auto o = QL().QuerySync<jobject>( select, {}, {UserPK::System} );
 		return o.empty() ? optional<ServerCnnctn>{} : ServerCnnctn( move(o) );
 	}
 

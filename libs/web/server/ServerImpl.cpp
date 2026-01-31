@@ -50,7 +50,7 @@ namespace Server{
 		stream->AsyncWrite( move(res) );
 	}
 
-	Ω graphQL( HttpRequest req, sp<RestStream> stream, const vector<sp<DB::AppSchema>>& schemas )->QL::QLAwait<>::Task{
+	Ω graphQL( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )->QL::QLAwait<>::Task{
 		constexpr sv contentType = "application/graphql-response+json";
 		try{
 			let returnRaw = req.Params().contains( "raw" );
@@ -70,8 +70,11 @@ namespace Server{
 			}
 			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
 			req.LogRead( query );
-			auto result = co_await QL::QLAwait{ query, move(vars), req.UserPK(), schemas, returnRaw };
-			jobject y{ {"data", result} };
+			auto ql = QL::Parse( move(query), move(vars), reqHandler->Schemas(), returnRaw );
+			auto result = QL::IsSystemQuery(ql)
+				? co_await *reqHandler->Query( move(ql), req.UserPK(), returnRaw )
+				: co_await QL::QLAwait{ move(ql), req.UserPK() };
+			jobject y{ {"data", move(result)} };
 			send( move(req), move(stream), move(y), contentType );
 		}
 		catch( IRestException& e ){
@@ -227,7 +230,7 @@ namespace Server{
 			co_return;
 		}
 		if( !reqHandler->PassQL() && (req.IsGet("/graphql") || req.IsPost("/graphql")) )//TODO make sure mutations aren't get
-			graphQL( move(req), stream, reqHandler->Schemas() );
+			graphQL( move(req), stream, reqHandler );
 		else
 			handleCustomRequest( move(req), move(stream), reqHandler );
 	}

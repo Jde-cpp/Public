@@ -1,17 +1,17 @@
 {
-  "version": 8,
+	"version": 8,
 	"cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 28,
-    "patch": 3
-  },
-  "configurePresets": [
+		"major": 3,
+		"minor": 28,
+		"patch": 3
+	},
+	"configurePresets": [
 		{
 			"name": "common",
 			"hidden": true,
 			"cacheVariables":{
 				"CMAKE_CXX_STANDARD": "23",
-				"JDE_VERSION": "2025.12.01",
+				"JDE_VERSION": "2026.12.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3",
 				"SPDLOG_FMT_EXTERNAL": "ON"
 			}
@@ -51,7 +51,8 @@
 			"environment": {
 				"COMPILER": "msvc",
 				"installRoot": "$env{REPO_DIR}/install/$env{COMPILER}",
-				"multiInstallPrefix": "$env{installRoot}/multi"
+				"multiInstallPrefix": "$env{installRoot}/multi",
+				"linkerFlags": "/INCREMENTAL:NO /IGNORE:4099"
 			},
 			"cacheVariables":{
 				"Boost_USE_STATIC_LIBS": true,
@@ -59,7 +60,6 @@
 				"CMAKE_CONFIGURATION_TYPES": "$env{buildType}",
 				"CMAKE_CXX_COMPILER": "cl.exe",
 				"CMAKE_CXX_FLAGS": "/EHsc /Zc:preprocessor /utf-8 /DSPDLOG_FMT_EXTERNAL /D_CRT_SECURE_NO_WARNINGS /D_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING /D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS /TP /D_WIN32_WINNT=0x0601 /DNOMINMAX /DWIN32_LEAN_AND_MEAN /DPUBLIC /W4 /wd4068 /wd4251 /wd4275 /wd4297 /wd4456 /wd4652 /wd5104 /wd5105",
-				"CMAKE_EXE_LINKER_FLAGS": "/INCREMENTAL:NO /IGNORE:4099",
 				"CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL",
 				"CMAKE_PREFIX_PATH": "$env{installRoot}/$env{buildType};$env{multiInstallPrefix}",
 				"JSONNET_LIB_DIR": "$env{REPO_DIR}/jsonnet/vs2017/x64/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:RelWithDebInfo>:Release>",
@@ -76,8 +76,8 @@
 			},
 			"cacheVariables":{
 				"CMAKE_CXX_FLAGS_DEBUG": "/Od /Zi /D_DEBUG /JMC /fsanitize=address",
-				"CMAKE_EXE_LINKER_FLAGS": "/DEBUG /INCREMENTAL:NO",
-				"CMAKE_SHARED_LINKER_FLAGS_DEBUG": "/DEBUG /INCREMENTAL:NO"
+				"CMAKE_EXE_LINKER_FLAGS_DEBUG": "/DEBUG $env{linkerFlags}",
+				"CMAKE_SHARED_LINKER_FLAGS_DEBUG": "/DEBUG $env{linkerFlags}"
 			}
 		},
 		{
@@ -87,7 +87,8 @@
 				"buildType": "RelWithDebInfo"
 			},
 			"cacheVariables":{
-				"CMAKE_CXX_FLAGS_RELEASE": "/O3 /Zi /DNDEBUG"
+				"CMAKE_CXX_FLAGS_RELEASE": "/O3 /Zi /DNDEBUG",
+				"CMAKE_EXE_LINKER_FLAGS_RELEASE": "$env{linkerFlags}"
 			}
 		},
 		{
@@ -131,10 +132,10 @@
 				"CMAKE_CXX_FLAGS_DEBUG": "-ggdb -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -D_GLIBCXX_DEBUG=ON -static-libstdc++ -static-libasan -lrt"
 			}
 		},
-    {
-      "name": "linux-relWithDebInfo",
+		{
+			"name": "linux-relWithDebInfo",
 			"inherits": ["linux", "relWithDebInfo"]
-    },
+		},
 		{
 			"name": "linux-jde",
 			"hidden": true,
@@ -155,5 +156,21 @@
 				"CMAKE_INSTALL_PREFIX": "$env{LIB_ROOT}/$env{buildType}"
 			}
 		}
-  ]
+	],
+	"buildPresets": [
+		{
+			"name": "linux-debug",
+			"description": "",
+			"displayName": "",
+			"configurePreset": "linux-debug"
+		}
+	],
+	"testPresets": [
+		{
+			"name": "linux-debug",
+			"description": "",
+			"displayName": "",
+			"configurePreset": "linux-debug"
+		}
+	]
 }

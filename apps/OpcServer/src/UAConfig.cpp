@@ -4,6 +4,7 @@
 #include <open62541/plugin/certificategroup_default.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/app/client/IAppClient.h>
+#include "access/UAAccess.h"
 
 #define let const auto
 namespace Jde::Opc::Server{
@@ -23,8 +24,8 @@ namespace Jde::Opc::Server{
 		}
 		else
 			UA_ServerConfig_setDefault( this );
-
-		applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en-US", "Jde-Cpp OpcServer");
+		auto accessResource = Settings::FindString( "/accessResource" ).value_or( "default" );
+		applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en-US", Ƒ("Jde-Cpp OpcServer [{}]", accessResource).c_str() );
 	}
 
 	α UAConfig::SetupSecurityPolicies( fs::path&& certificateFile )ε->void{

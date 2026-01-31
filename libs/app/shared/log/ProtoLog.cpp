@@ -75,8 +75,8 @@ namespace Jde::App{
 		Write( e, move(fileEntry) );
 	}
 
-	α ProtoLog::Write( const Logging::Entry& e, App::AppPK appPK, App::AppInstancePK instancePK )ι->void{
-		if( appPK==AppPK || !appPK || instancePK==InstancePK || !instancePK )
+	α ProtoLog::Write( const Logging::Entry& e, App::ProgramPK appPK, App::ProgInstPK instancePK )ι->void{
+		if( appPK==ProgramPK || !appPK || instancePK==InstancePK || !instancePK )
 			return Write( e );
 		if( !empty(e.Tags & _tags) )//recursion guard
 			return;

@@ -39,7 +39,7 @@ namespace Jde::Access::Tests{
 	α SelectGroup( str target, UserPK userPK, bool includeDeleted=false )ε->jobject;
 	α SelectPermission( ResourcePK resourcePK, UserPK userPK )ε->jobject;
 	α SelectResource( str target, UserPK userPK, bool includeDeleted=true, SRCE )ε->jobject;
-	α SelectUser( str target, UserPK userPK, bool includeDeleted=false )->jobject;
+	α SelectUser( str target, UserPK userPK, optional<ProviderPK> providerPK=nullopt, bool includeDeleted=false )->jobject;
 
 	α TestCrud( str table, str target, UserPK userPK )ε->uint;
 	α TestPurge( str table, uint id, UserPK userPK )ε->void;

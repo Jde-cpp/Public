@@ -8,7 +8,7 @@ namespace Jde::DB::Odbc
 {
 	struct FetchAwaitable; struct OdbcDataSource; struct ExecuteAwaitable;
 
-	struct HandleSession : boost::noncopyable{
+	struct HandleSession : noncopyable{
 		HandleSession()ε;
 		HandleSession( sv connectionString )ε;
 		HandleSession( HandleSession&& rhs )ι:_hStatement{rhs._hStatement}{ rhs._hStatement=nullptr; };
@@ -33,7 +33,7 @@ namespace Jde::DB::Odbc
 		HANDLE _event{ nullptr };
 	};
 	*/
-	struct HandleStatement : boost::noncopyable{
+	struct HandleStatement : noncopyable{
 		HandleStatement( string connectionString )ε;
 		HandleStatement( HandleStatement&& rhs )ι:_hStatement{move(rhs._hStatement)}, _session{move(rhs._session)}{ rhs._hStatement=nullptr; };
 		~HandleStatement();

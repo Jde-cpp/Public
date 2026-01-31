@@ -1,6 +1,6 @@
 @if( !isLoading() ){
 	<mat-toolbar>
-		<button mat-raised-button [color]="retrievingSnapshot() ? 'primary' : null" (click)="retrieveSnapshot()" ><span class="material-symbols-outlined">preview</span><span style="text-align: center;vertical-align: baseline;height: 100%;">Snapshot</span></button>
+		<button matButton="outlined" [disabled]="retrievingSnapshot() || !variables.length" (click)="retrieveSnapshot()" >Snapshot</button>
 	</mat-toolbar>
 	<div style="align-content: center; margin: auto; text-align: center">
 		<mat-table [dataSource]=nodes class="mat-elevation-z8">

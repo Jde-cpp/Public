@@ -14,10 +14,12 @@ namespace Jde::Opc::Gateway{
 		α Suspend()ι->void override;
 		α await_resume()ε->HttpTaskResult override;
 	private:
+		α QueryHandler( QL::RequestQL&& q, variant<sp<SessionInfo>, Jde::UserPK> creds, bool returnRaw, SRCE )ι->up<IQLAwait> override;
+		α Schemas()Ι->const vector<sp<DB::AppSchema>>& override;
+
 		α Login( str endpoint )ι->TAwait<optional<Web::FromServer::SessionInfo>>::Task;
 		α Logout()ι->TAwait<jvalue>::Task;
 		α CoHandleRequest( ServerCnnctnNK&& opcId )ι->TAwait<sp<UAClient>>::Task;
-		α Query()ι->TAwait<jvalue>::Task;
 		α ParseNodes()ε->tuple<flat_set<NodeId>,jarray>;
 		α ResumeSnapshots( flat_map<NodeId, Value>&& results, jarray&& j )ι->void;
 		α SnapshotWrite( flat_set<NodeId>&& nodes, flat_map<NodeId, Value> values, jarray jNodes )ι->TAwait<ReadResponse>::Task;

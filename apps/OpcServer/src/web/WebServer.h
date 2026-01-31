@@ -13,7 +13,8 @@ namespace Jde::Opc::Server{
 	struct RequestHandler final : IRequestHandler{
 		RequestHandler( jobject settings, sp<App::Client::IAppClient> appServer )ι: IRequestHandler{ move(settings), move(appServer) }{}
 		α HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> override{ return mu<HttpRequestAwait>( move(req), sl ); }
-		α GetWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> override;
+		α Query( QL::RequestQL&&, UserPK, bool, SL )ε->up<TAwait<jvalue>>{ throw Exception("NoImpl"); }
 		α Schemas()ι->const vector<sp<DB::AppSchema>>& override;
+		α WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> override;
 	};
 }
