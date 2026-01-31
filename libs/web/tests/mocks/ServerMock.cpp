@@ -9,6 +9,7 @@ namespace Jde::Web{
 		α IsLocal()Ι->bool override{ return true; }
 		α GraphQL( string&&, UserPK, bool, SL )ι->up<TAwait<jvalue>>{ return {}; }
 		α Login( Web::Jwt&&, SL )ε->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>{ throw "noImpl"; }
+		α ClientQuery( QL::RequestQL&& q, UserPK executer, bool raw, SRCE )ε->up<TAwait<jvalue>>{ ASSERT(false); return {}; }
 		α SessionInfoAwait( SessionPK, SL )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return {}; }
 		α PublicKey()Ι->const Crypto::PublicKey& override{ return _publicKey; }
 

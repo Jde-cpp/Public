@@ -39,7 +39,6 @@ namespace Jde{
 		else if( name=="unsubscribe" )
 			return RequestQL{ parser.LoadUnsubscriptions() };
 		else if( MutationQL::IsMutation(name) ){
-			//returnRaw = name!="mutation"; should be what parameter is
 			if( parser.Peek()=="{" )
 				parser.Next();
 			return RequestQL{ {parser.LoadMutations(name=="mutation" ? parser.Next() : move(name), vars, returnRaw, schemas)} };
@@ -55,6 +54,11 @@ namespace Jde{
 		auto ql = Parse( move(query), move(variables), schemas, returnRaw, sl );
 		THROW_IFSL( !ql.IsQueries() || ql.Queries().size()!=1, "Expected single query." );
 		return move(ql.Queries().front());
+	}
+	α QL::ParseM( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL sl )ε->MutationQL{
+		auto ql = Parse( move(query), move(variables), schemas, returnRaw, sl );
+		THROW_IFSL( !ql.IsMutation() || ql.Mutations().size()!=1, "Expected single mutation." );
+		return move(ql.Mutations().front());
 	}
 }
 namespace Jde::QL{

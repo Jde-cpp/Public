@@ -12,7 +12,7 @@ namespace Jde::Access{
 		Access::ResourcePK PK;
 		string Schema;
 		string Target;
-		string Filter;
+		string Criteria;
 		optional<TimePoint> IsDeleted;
 	};
 }

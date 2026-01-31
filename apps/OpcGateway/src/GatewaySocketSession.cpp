@@ -1,13 +1,11 @@
 #include "GatewaySocketSession.h"
 #include <jde/app/proto/Common.pb.h>
-#include <jde/app/client/IAppClient.h>
+#include <jde/app/client/IAppClient.h> //!important
 #include "StartupAwait.h"
 #include "UAClient.h"
 #include "WebServer.h"
 #include "async/Subscriptions.h"
 #include "async/DataChanges.h"
-#include "async/SessionAwait.h"
-#include "auth/UM.h"
 #include "ql/GatewayQLAwait.h"
 #include "types/proto/opc.Common.h"
 #include "types/proto/opc.FromServer.h"
@@ -25,9 +23,6 @@ namespace Jde::Opc::Gateway{
 		base::OnClose();
 	}
 
-	α GatewaySocketSession::Schemas()Ι->const vector<sp<DB::AppSchema>>&{
-		return Gateway::Schemas();
-	}
 	α GatewaySocketSession::SendAck( uint32 id )ι->void{
 		LogWrite( Ƒ("Ack id: {:x}", id), 0 );
 		Write( FromServer::AckTrans(id) );

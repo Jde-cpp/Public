@@ -108,15 +108,6 @@ namespace Jde::QL{
 		return *y;
 	}
 
-	α TableQL::FindArgKey()Ι->optional<DB::Key>{
-		optional<DB::Key> y;
-		if( let id = Json::FindValue(Args, "id"); id )
-			y = DB::Key{ Json::AsNumber<uint>(move(*id)) };
-		else if( let target = Json::FindValue(Args, "target"); target )
-			y = DB::Key{ Json::AsString(move(*target)) };
-		return y;
-	}
-
 	α ColumnQL::QLType( const DB::Column& column, SL sl )ε->string{
 		string qlTypeName = "ID";
 		if( !column.SKIndex ){

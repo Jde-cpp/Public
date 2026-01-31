@@ -14,7 +14,7 @@ namespace Jde::Opc::Server::Tests{
 		constexpr static UA_UInt32 _writerDenied = _adminAdded;
 		constexpr static UA_UInt32 _adminDenied = 0;
 
-		Ω SetUpTestCase()ι->void{
+		Ω SetUpTestCase()ε->void{
 			Server::Initialize( ServerId(), GetSchemaPtr() );
 			_ua = &Server::GetUAServer();
 			_app = AppClient();

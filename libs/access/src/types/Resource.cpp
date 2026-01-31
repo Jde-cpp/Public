@@ -9,14 +9,14 @@ namespace Jde::Access{
 		PK = row.GetUInt16(0);
 		Schema = move( row.GetString(1) );
 		Target = move( row.GetString(2) );
-		Filter = move( row.GetString(3) );
+		Criteria = move( row.GetString(3) );
 		IsDeleted = row.GetTimePointOpt(4);
 	}
 	Resource::Resource( ResourcePK pk, jobject j )ι:
 		PK{ pk },
 		Schema{ string{Json::FindDefaultSV(j, "schemaName")} },
 		Target{ string{Json::FindDefaultSV(j, "target")} },
-		Filter{ string{Json::FindDefaultSV(j, "criteria")} },
+		Criteria{ string{Json::FindDefaultSV(j, "criteria")} },
 		IsDeleted{ Json::FindTimePoint(j, "deleted") }
 	{}
 	Resource::Resource( jobject j )ι:

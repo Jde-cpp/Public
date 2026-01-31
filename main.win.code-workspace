@@ -9,6 +9,9 @@
 		"debugPreset": "win-msvc-debug",
 		"releasePreset": "win-msvc-relWithDebInfo",
 		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
+		"C_Cpp.default.systemIncludePath": [
+			"C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um"
+		]
 	},
 	"folders": [
 		{
@@ -26,6 +29,13 @@
 				"group": { "kind": "build", "isDefault": true }
 			},
 			{
+				"label": "buildProject",
+				"type": "shell",
+				"command": "tput reset;${config:sourceBash};buildProject \"${workspaceFolder}\" \"${fileWorkspaceFolder}\" \"${relativeFile}\" \"${config:debugDir}\";",
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"group": { "kind": "build", "isDefault": false }
+			},
+			{
 				"label": "buildRelease",
 				"type": "shell",
 				"command": "mkdir -p ${config:releaseDir}; cd ${config:releaseDir}; tput reset; cmake --build . -j --config RelWithDebInfo --target open62541-nodeset-loader;",
@@ -40,7 +50,14 @@
 				"group": "build"
 			},
 			{
-				"label": "cmakeRepos",
+				"label": "cmakeReposDebug",
+				"type": "shell",
+				"command": "mkdir -p ${config:debugDir};cd ${config:debugDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} --preset ${config:debugPreset} -Djde_REPOS=ON -Djde_TESTS=OFF -Djde_APPS=OFF",
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"group": "build"
+			},
+			{
+				"label": "cmakeReposRelease",
 				"type": "shell",
 				"command": "mkdir -p ${config:releaseDir};cd ${config:releaseDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} --preset ${config:releasePreset} -Djde_REPOS=ON -Djde_TESTS=OFF -Djde_APPS=OFF",
 				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },

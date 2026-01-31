@@ -1,16 +1,13 @@
 #include "ServerSocketSession.h"
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/log/Logger.h>
-#include <jde/app/log/ProtoLog.h>
 #include <jde/app/proto/app.FromServer.h>
-#include <jde/app/StringCache.h>
 #include <jde/app/proto/app.FromClient.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/server/accessServer.h>
 #include "LocalClient.h"
 #include "LogData.h"
 #include "WebServer.h"
-#include "ServerSocketSession.h"
 #define let const auto
 
 namespace Jde::App::Server{
@@ -102,8 +99,8 @@ namespace Jde::App::Server{
 			WriteException( move(e), requestId );
 		}
 	}
-	α ServerSocketSession::Schemas()Ι->const vector<sp<DB::AppSchema>>&{
-		return Server::Schemas();
+	α ServerSocketSession::LocalQL()Ι->sp<QL::IQL>{
+		return QLPtr();
 	}
 
 	α ServerSocketSession::SaveLogEntry( Log::Proto::LogEntryClient entry, RequestId requestId )->void{
@@ -158,7 +155,7 @@ namespace Jde::App::Server{
 	α ServerSocketSession::GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task{
 		try{
 			THROW_IF( !_userPK, "Not logged in to system." );
-			let user = co_await QL::QLAwait<jobject>( Ƒ("user(id:{}){{name target}}", _userPK->Value), {}, {UserPK::System}, Server::Schemas() );
+			let user = co_await QL::QLAwait<jobject>( "user(id:$id){{name target}}", {{"id",_userPK->Value}}, {UserPK::System}, QLPtr() );
 			let info = Web::Server::Sessions::Find( SessionId() );
 			let expiration = Chrono::ToClock<Clock,steady_clock>( info->Expiration );
 			Write( FromServer::Jwt(Server::GetJwt(*_userPK, string{user.at("name").as_string()}, string{user.at("target").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );

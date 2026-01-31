@@ -63,7 +63,7 @@ namespace Jde::Access{
 				if( !resource.IsDeleted ){
 					auto& targetResources = await.Authorizer->SchemaResources.try_emplace( resource.Schema ).first->second;
 					auto& criteras = targetResources.try_emplace( resource.Target ).first->second;
-					criteras.try_emplace( resource.Filter, pk );
+					criteras.try_emplace( resource.Criteria, pk );
 				}
 				await.Authorizer->Resources.emplace( pk, move(resource) );
 			}

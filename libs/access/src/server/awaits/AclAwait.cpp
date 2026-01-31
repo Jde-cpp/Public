@@ -34,7 +34,8 @@ namespace Jde::Access::Server{
 				Authorizer().TestAdmin( "roles", _executer, _sl );
 			}
 			else{
-				let resourcePK = co_await QL::QLAwait<jobject>( Ƒ("permissionRight(id:{}){{resource{{id deleted}}}}", *permissionPK), {}, {UserPK::System}, {GetSchemaPtr()} );
+				auto q = QL::ParseQuery( Ƒ("permissionRight(id:{}){{resource{{id deleted}}}}", *permissionPK), {}, {GetSchemaPtr()} );
+				let resourcePK = co_await QL::QLAwait<jobject>( move(q), {UserPK::System} );
 				Authorizer().TestAdmin( Json::AsNumber<ResourcePK>(resourcePK, "resource/id"), _executer, _sl );
 			}
 			THROW_IF( !permissionPK, "Could not find permissionRight or role id in '{}'", serialize(_mutation.Args) );
@@ -80,7 +81,6 @@ namespace Jde::Access::Server{
 			let rolePK = Json::AsNumber<ResourcePK>( args, "role/id" );
 			insert.Add( rolePK );
 			y["rowCount"] = co_await DS().Execute( insert.Move() );
-			//y["complete"] = true;
 			QL::Subscriptions::OnMutation( _mutation, y );
 			Resume( jvalue{y} );
 		}
@@ -88,7 +88,7 @@ namespace Jde::Access::Server{
 			ResumeExp( move(e) );
 		}
 	}
-	α AclQLAwait::InsertPermission( const jobject& permission )ι->DB::ScalerAwait<optional<ResourcePK>>::Task{
+	α AclQLAwait::InsertPermission( const jobject& permission )ι->TAwait<optional<ResourcePK>>::Task{
 		let allowed = ( ERights )Json::FindNumber<uint8>( permission, "allowed" ).value_or( 0 );
 		let denied = ( ERights )Json::FindNumber<uint8>( permission, "denied" ).value_or( 0 );
 		try{
@@ -126,7 +126,6 @@ namespace Jde::Access::Server{
 			let permissionPK = co_await DS().InsertSeq<PermissionPK>( move(insert) );
 			jobject y;
 			y["permissionRight"].emplace_object()["id"] = permissionPK;
-			//y["complete"]=true;
 			QL::Subscriptions::OnMutation( _mutation, y );
 			Resume( y );
 		}

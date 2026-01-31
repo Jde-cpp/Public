@@ -1,10 +1,9 @@
 #include <jde/access/server/awaits/AuthenticateAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/Value.h>
-#include <jde/db/generators/Functions.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/meta/AppSchema.h>
-#include "../../accessInternal.h"
+#include <jde/access/Authorize.h>
 #include "../serverInternal.h"
 
 #pragma GCC diagnostic ignored "-Wdangling-reference"
@@ -13,8 +12,9 @@
 namespace Jde::Access::Server{
 	α AuthenticateAwait::InsertUser( str prefix, vector<DB::Value>&& params )->TAwait<UserPK::Type>::Task{
 		try{
-			let userPK = co_await DS().InsertSeq<UserPK::Type>( DB::InsertClause{Ƒ("{}user_insert_login", prefix), move(params)} );
-			ResumeScaler( {userPK} );
+			let userPK = UserPK{ co_await DS().InsertSeq<UserPK::Type>(DB::InsertClause{Ƒ("{}user_insert_login", prefix), move(params)}) };
+			Authorizer().CreateUser( userPK );
+			ResumeScaler( userPK );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );

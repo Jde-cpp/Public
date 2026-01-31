@@ -11,6 +11,7 @@
 #include <jde/access/AccessListener.h>
 #include <jde/db/db.h>
 #include "globals.h"
+#include "AccessQL.h"
 
 #define let const auto
 
@@ -26,7 +27,7 @@ namespace Jde{
 		let metaDataName{ "access" };
 		auto authorizer = Access::Tests::Authorizer();
 		auto schema = DB::GetAppSchema( metaDataName, authorizer );
-		auto ql = QL::Configure( {schema}, authorizer );
+		auto ql = ms<Access::Tests::AccessQL>( vector<sp<DB::AppSchema>>{schema}, authorizer );
 		_listener = ms<Access::AccessListener>( ql );
 		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 			DB::NonProd::Recreate( *schema, ql );

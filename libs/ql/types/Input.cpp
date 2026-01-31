@@ -4,17 +4,31 @@
 
 namespace Jde::QL{
 	α Input::ExtrapolateVariables()Ι->jobject{
+		auto extrapolateString = [this]( const jstring& s )ι->jvalue{
+			let varName = sv{ s }.substr( 2 );
+			let varValue = Variables->if_contains( varName );
+			return varValue ? *varValue : jvalue{};
+		};
 		function<jobject( const jobject& )> extrapolate = [&]( const jobject& o )ι->jobject {
 			jobject y;
 			for( let& [key, value] : o ){
 				constexpr sv escape{ "\b$" };
-				if( value.is_string() && value.get_string().starts_with(escape) ){
-					let varName = sv{ value.get_string() }.substr( 2 );
-					let varValue = Variables->if_contains( varName );
-					y.emplace( key, varValue ? *varValue : jvalue{} );
-				}
+				if( value.is_string() && value.get_string().starts_with(escape) )
+					y.emplace( key, extrapolateString(value.get_string()) );
 				else if( value.is_object() )
 					y.emplace( key, extrapolate(Json::AsObject(value)) );
+				else if( value.is_array() ){
+					jarray newArray;
+					for( auto&& item : value.get_array() ){
+						if( item.is_string() && item.get_string().starts_with(escape) )
+							newArray.emplace_back( extrapolateString(item.get_string()) );
+						else if( item.is_object() )
+							newArray.emplace_back( extrapolate(item.get_object()) );
+						else
+							newArray.emplace_back( item );
+					}
+					y.emplace( key, newArray );
+				}
 				else
 					y.emplace( key, value );
 			}

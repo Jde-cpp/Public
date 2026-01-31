@@ -118,7 +118,7 @@ namespace Jde::Web::Server{
 		let _ = shared_from_this();
 		try{
 			LogRead( Ƒ("GraphQL{}: {}", query.return_raw() ? "*" : "", query.text()), requestId );
-			auto j = co_await QL::QLAwait<jvalue>( move(*query.mutable_text()), parse(move(*query.mutable_variables())).as_object(), _userPK, Schemas(), query.return_raw() );
+			auto j = co_await QL::QLAwait<jvalue>( move(*query.mutable_text()), parse(move(*query.mutable_variables())).as_object(), _userPK, LocalQL(), query.return_raw() );
 			auto y = serialize( move(j) );
 			LogWrite( Ƒ("GraphQL: {}", y.substr(0,100)), requestId );
 			Write( toProtoQuery(move(y), requestId) );

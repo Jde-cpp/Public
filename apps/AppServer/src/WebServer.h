@@ -14,9 +14,6 @@ namespace Jde::App::Server{
 	struct ServerSocketSession; struct RequestHandler;
 	α GetAppPK()ι->ProgramPK;
 	α SetAppPKs( std::tuple<ProgramPK, ProgInstPK, ConnectionPK> x )ι->void;
-	α QLPtr()ι->sp<QL::LocalQL>;
-	α QL()ι->QL::LocalQL&;
-	α SetLocalQL( sp<QL::LocalQL> ql )ι->void;
 	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
 	α GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ι->Web::Jwt;
 	α RemoveExisting( str host, PortType port )ι->void;

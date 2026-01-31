@@ -15,7 +15,7 @@
 			catalogs: {
 				test_opc_server_debug: {
 					schemas:{
-						access:{
+						acc:{
 							access:{
 								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet"
 							}

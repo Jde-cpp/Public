@@ -17,11 +17,10 @@
 
 #define let const auto
 namespace Jde::Access::Server{
-	//α GetTable( str name )ε->sp<DB::View>;
 
 	//{ mutation addRole( id:42, allowed:255, denied:0, resource:{target:"users"} ) }
 	//{ mutation addRole( id:11, role:{id:13} ) }
-	α RoleMutationAwait::Add()ι->void{
+	α RoleMAwait::Add()ι->void{
 		let rolePK = _mutation.Id<RolePK>();
 		let args = _mutation.ExtrapolateVariables();
 		if( auto role = args.find("role"); role!=args.end() )
@@ -31,7 +30,7 @@ namespace Jde::Access::Server{
 		else
 			ResumeExp( Exception{"Invalid mutation, expecting 'role' or 'permissionRight'."} );
 	}
-	α RoleMutationAwait::AddRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task{
+	α RoleMAwait::AddRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task{
 		try{
 			let& table = GetTable( "role_members" );
 			uint rowCount{};
@@ -49,23 +48,25 @@ namespace Jde::Access::Server{
 			ResumeExp( move(e) );
 		}
 	}
-	α RoleMutationAwait::AddPermission( RolePK rolePK, const jobject& rights )ι->TAwait<PermissionRightsPK>::Task{
+	α RoleMAwait::AddPermission( RolePK rolePK, const jobject& rights )ι->TAwait<PermissionRightsPK>::Task{
 		try{
 			//addRole( id:1, permissionRight:{allowed:1, denied:0, resource:{schema:\"opc.default\", target:\"nodeIds\", criteria:null}} )","variables":{}}
 			let resource = Json::AsObject( rights, "resource" );
-			auto schema = Json::AsString(resource, "schemaName");
+			auto schema = Json::FindString(resource, "schemaName");
 			auto criteria = Json::FindString(resource, "criteria");
 			auto resourceName = Json::FindString(resource, "name");
 			let resourceTarget = Json::AsString(resource, "target");
 			auto& auth = Authorizer();
-			auth.TestAdmin( schema, resourceTarget, criteria.value_or(""), _userPK );
+			if( !schema )
+				schema = auth.FindSchema( resourceTarget, _sl );
+			auth.TestAdmin( *schema, resourceTarget, criteria.value_or(""), _userPK );
 			let& table = GetTable( "roles" );
 			DB::InsertClause insert{ DB::Names::ToSingular(table.DBName)+"_add" };
 			insert.Add( rolePK );
 			insert.Add( Json::FindNumber<uint8>(rights, "allowed").value_or(0) );
 			insert.Add( Json::FindNumber<uint8>(rights, "denied").value_or(0) );
 			insert.Add( resourceTarget );
-			insert.Add( schema );
+			insert.Add( *schema );
 			insert.AddOpt( move(resourceName) );
 			insert.AddOpt( criteria );
 			auto ds = table.Schema->DS();
@@ -73,13 +74,13 @@ namespace Jde::Access::Server{
 			jobject y;
 			auto& permissionRight = y["permissionRight"].emplace_object();
 			if( criteria ){
-				auto resourcePK = auth.FindResourcePK(schema, resourceTarget, *criteria);
+				auto resourcePK = auth.FindResourcePK(*schema, resourceTarget, *criteria);
 				if( !resourcePK ){
 					resourcePK = co_await ds->Scaler<ResourcePK>({
 						Ƒ( "select resource_id from {} where schema_name=? and target=? and criteria=?", GetTable("resources").DBName ),
-						{ {schema}, {resourceTarget}, {*criteria} }
+						{ {*schema}, {resourceTarget}, {*criteria} }
 					 });
-					auth.AddResource( *resourcePK, schema, resourceTarget, *criteria );
+					auth.AddResource( *resourcePK, *schema, resourceTarget, *criteria );
 				}
 				permissionRight["resource"].emplace_object()["id"] = *resourcePK;
 			}
@@ -92,7 +93,7 @@ namespace Jde::Access::Server{
 		}
 	}
 
-	α RoleMutationAwait::Remove()ι->DB::ExecuteAwait::Task{ //removeRole( id:42, permissionRight:{id:420} )
+	α RoleMAwait::Remove()ι->DB::ExecuteAwait::Task{ //removeRole( id:42, permissionRight:{id:420} )
 		let& table = GetTable( "roles" );
 		DB::InsertClause remove{ DB::Names::ToSingular(table.DBName)+"_remove" };
 		remove.Add( _mutation.Id<RolePK>() );
@@ -102,20 +103,20 @@ namespace Jde::Access::Server{
 		ResumeScaler( y );
 	}
 
-	RoleSelectAwait::RoleSelectAwait( const QL::TableQL& q, Jde::UserPK userPK, SL sl )ε:
+	RoleAwait::RoleAwait( const QL::TableQL& q, Jde::UserPK userPK, SL sl )ε:
 		TAwait<jvalue>{ sl },
 		MemberTable{ GetTablePtr("role_members") },
 		Query{ q },
 		UserPK{ userPK }
 	{}
 
-	α RoleSelectAwait::RoleStatement( QL::TableQL& roleQL )ε->optional<DB::Statement>{ //role( id:11 ){ role(id:13){id target deleted} }
+	α RoleAwait::RoleStatement( QL::TableQL& roleQL )ε->optional<DB::Statement>{ //role( id:11 ){ role(id:13){id target deleted} }
 		auto statement = QL::SelectStatement( roleQL, true );
 		if( statement ){
 			let& roleTable = GetTable( "roles" );
 			statement->From = { {MemberTable->GetColumnPtr("member_id"), roleTable.GetPK(), true} };
 			let memberRoleIdCol = MemberTable->GetColumnPtr( "role_id" );
-			if( auto roleKey = Query.FindArgKey(); roleKey ){
+			if( auto roleKey = Query.FindKey(); roleKey ){
 				if( roleKey->IsPK() )
 					statement->Where.Add( memberRoleIdCol, DB::Value::FromKey(*roleKey) );//role_members.role_id=?
 				else{
@@ -131,14 +132,14 @@ namespace Jde::Access::Server{
 		return statement;
 	}
 
-	α RoleSelectAwait::PermissionsStatement( QL::TableQL& permissionQL )ε->optional<DB::Statement>{
+	α RoleAwait::PermissionsStatement( QL::TableQL& permissionQL )ε->optional<DB::Statement>{
 		auto permissionStatement = QL::SelectStatement( permissionQL, true );
 		if( permissionStatement ){
 			let& permissionsTable = GetTable( "permission_rights" );
 			permissionStatement->From = { {MemberTable->GetColumnPtr("member_id"), permissionsTable.GetPK(), true} };
 			permissionStatement->From +={ permissionsTable.GetColumnPtr("resource_id"), GetTable("resources").GetPK(), true };
 			let rolePKCol = MemberTable->GetColumnPtr( "role_id" );
-			if( auto roleKey = Query.FindArgKey(); roleKey ){
+			if( auto roleKey = Query.FindKey(); roleKey ){
 				if( roleKey->IsPK() )
 					permissionStatement->Where.Add( rolePKCol, DB::Value::FromKey(*roleKey) );
 				else{
@@ -159,7 +160,7 @@ namespace Jde::Access::Server{
 	}
 
 	//query{ role( id:42 ){permissionRights{id allowed denied resource(target:"users",criteria:null)}} }
-	α RoleSelectAwait::Select()ι->QL::QLAwait<>::Task{
+	α RoleAwait::Select()ι->QL::QLAwait<>::Task{
 		try{
 			optional<jvalue> permissions;
 			optional<jvalue> roleMembers;

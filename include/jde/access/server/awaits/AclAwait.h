@@ -6,8 +6,8 @@
 
 namespace Jde::QL{ struct MutationQL; struct TableQL; }
 namespace Jde::Access::Server{
-	struct AclQLAwait final : TAwait<jvalue>{
-		AclQLAwait( QL::MutationQL m, UserPK executer, SL sl )ι:
+	struct AclQLAwait final : TAwait<jvalue>, noncopyable{
+		AclQLAwait( QL::MutationQL m, UserPK executer, SRCE )ι:
 			TAwait<jvalue>{ sl },
 			_mutation{ move(m) },
 			_executer{ executer }
@@ -19,15 +19,15 @@ namespace Jde::Access::Server{
 		Jde::UserPK _executer;
 
 		α Table()ε->const DB::View&;
-		α InsertPermission( const jobject& permission )ι->DB::ScalerAwait<optional<ResourcePK>>::Task;
+		α InsertPermission( const jobject& permission )ι->TAwait<optional<ResourcePK>>::Task;
 		α InsertPermission( ERights allowed, ERights denied, ResourcePK resourcePK )ι->DB::ScalerAwait<PermissionPK>::Task;
 		α InsertRole()ι->DB::ExecuteAwait::Task;
 		α PurgeAcl()ι->QL::QLAwait<jobject>::Task;
 		α PurgeAcl( IdentityPK::Type identityPK, PermissionPK permissionPK )ι->DB::ExecuteAwait::Task;
 	};
 
-	struct AclQLSelectAwait final : TAwait<jvalue>{
-		AclQLSelectAwait( const QL::TableQL& ql, UserPK executer, SL sl )ι:
+	struct AclQLSelectAwait final : TAwait<jvalue>, noncopyable{
+		AclQLSelectAwait( const QL::TableQL& ql, UserPK executer, SRCE )ι:
 			TAwait<jvalue>{ sl },
 			Query{ ql },
 			_executer{ executer }
@@ -42,12 +42,4 @@ namespace Jde::Access::Server{
 		QL::TableQL Query;
 		Jde::UserPK _executer;
 	};
-
-	/*
-	struct AclHook final : QL::IQLHook{
-		α Select( const QL::TableQL& ql, UserPK userPK, SL sl )ι->HookResult override;
-		α PurgeBefore( const QL::MutationQL&, UserPK, SL sl )ι->HookResult  override;
-		α InsertBefore( const QL::MutationQL& m, UserPK userPK, SL sl )ι->HookResult override;
-	};
-	*/
 }

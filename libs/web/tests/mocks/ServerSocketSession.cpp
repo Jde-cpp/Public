@@ -10,7 +10,7 @@ namespace Jde::Web::Mock{
 	{}
 
 	α ServerSocketSession::OnConnect( SessionPK sessionId, RequestId requestId )ι->Server::Sessions::UpsertAwait::Task{
-			try{
+		try{
 			auto info = co_await Server::Sessions::UpsertAwait{ Ƒ("{:x}", sessionId), _userEndpoint.address().to_string(), true, AppClient(), true };
 			Proto::FromServerTransmission t;
 			auto m = t.add_messages();
@@ -70,8 +70,7 @@ namespace Jde::Web::Mock{
 			}
 		}
 	}
-	α RequestHandler::GetWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession>{
+	α RequestHandler::WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession>{
 		return ms<ServerSocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
 	};
-
 }

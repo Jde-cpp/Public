@@ -4,7 +4,7 @@
 namespace Jde::QL{
 	α VQLAwait::Select( vector<TableQL>&& tables )ι->TablesAwait::Task{
 		try{
-			Resume( co_await TablesAwait{move(tables), move(_statement), _executer, _sl} );
+			Resume( co_await TablesAwait{move(tables), move(_statement), _executer, move(_ql), _sl} );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
@@ -15,15 +15,18 @@ namespace Jde::QL{
 		try{
 			for( auto& m : mutations ){
 				LOGSL( ELogLevel::Trace, _sl, ELogTags::QL, "QL: {}", m.ToString() );
-				auto mutationResult = co_await MutationAwait( m, _executer, _sl );
-				if( !m.ResultRequest )
+				auto resultRequest = move(m.ResultRequest);
+				let returnRaw = m.ReturnRaw;
+				let commandName = m.CommandName;
+				auto mutationResult = co_await MutationAwait( m, _executer, move(_ql), _sl );
+				if( !resultRequest )
 					continue;
 				if( auto array = mutationResult.is_array() ? &mutationResult.get_array() : nullptr; array && array->size() )
 					mutationResult = Json::AsObject( move((*array)[0]) );
 				let available = mutationResult.is_object() ? Json::Combine( m.Args, mutationResult.get_object() ) : move(m.Args);
 				jobject result;
-				auto& returnObject = m.ReturnRaw ? result : result[m.CommandName].emplace_object();
-				returnObject = m.ResultRequest->TrimColumns( available );
+				auto& returnObject = returnRaw ? result : result[commandName].emplace_object();
+				returnObject = resultRequest->TrimColumns( available );
 				mutationResults.push_back( result );
 			}
 			Resume( mutationResults.size()==1 ? move(mutationResults[0]) : move(mutationResults) );

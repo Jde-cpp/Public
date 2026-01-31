@@ -42,7 +42,7 @@ namespace Jde::Opc{
 		return y;
 	};
 
-	Τ struct Iterable final : boost::noncopyable{
+	Τ struct Iterable final : noncopyable{
 		Iterable( T* begin, uint size )ι:_begin{begin}, _size{size}{}
 	  α begin()Ι->T*{ return _size ? _begin : end(); }
 		α cbegin()Ι->const T*{ return begin(); }

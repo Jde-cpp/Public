@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "GroupTests.Fields",
+		tests:: "UserTests.MultipleUsersSelect",
 		recreateDB: true
 	},
 	dbServers:{
@@ -21,7 +21,7 @@ local args = import 'args.libsonnet';
 		spd:{
 			tags: {
 				trace:["test", "access", "app"],
-				debug:["settings", "sql", "ql"],
+				debug:["settings", "ql", "sql"],
 				information:["app"],
 				warning:[],
 				"error":[],

@@ -1,17 +1,20 @@
 function buildRelativePath() {
-	fileWorkspaceFolder=$1; #/home/duffyj/code/jde/Public/libs/web/tests
-	absoluteFile=$2; #/home/duffyj/code/jde/IotWebsocket/source/HttpRequestAwait.cpp
-	if [[ $fileWorkspaceFolder == *"jde/Framework/source" ]]; then
-		relativePath="/libs/framework";
+	fileWorkspaceFolder=$1; #/c/Users/duffyj/source/repos/jde/Public
+	absoluteFile=$2; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
+	relativeFile=$3; #/libs/access/tests/main.cpp
+	if [[ $fileWorkspaceFolder == *"jde/Framework/src"* ]]; then
+		relativePath="libs/framework";
+	elif [[ $relativeFile == *"access/src"* ]]; then
+		relativePath="libs/access/lib";
 	elif [[ ${fileWorkspaceFolder##*Public/} != $fileWorkspaceFolder ]]; then
 		relativePath=${fileWorkspaceFolder##*Public/};
 		if [[ $relativePath == *"src" ]]; then
 			relativePath=${relativePath/src/lib};
 		fi;
-	elif [[ $absoluteFile == *"IotWebsocket/source"* ]]; then
-		relativePath="/apps/OpcClient";
-	elif [[ $fileWorkspaceFolder == *"AppServer/source" ]]; then
-		relativePath="/apps/AppServer/lib";
+	elif [[ $absoluteFile == *"IotWebsocket/src"* ]]; then
+		relativePath="apps/OpcClient";
+	elif [[ $relativeFile == *"AppServer/src"* ]]; then
+		relativePath="apps/AppServer/lib";
 	# elif [[ $fileWorkspaceFolder == *"web/client" ]]; then
 	# 	relativePath="/web/client";
 	# elif [[ $fileWorkspaceFolder == *"web/server" ]]; then
@@ -22,29 +25,36 @@ function buildRelativePath() {
 	# 	relativePath="/db/drivers/mysql";
 	# elif [[ $fileWorkspaceFolder == *"libs/ql" ]]; then
 	# 	relativePath="/ql";
-	# elif [[ $fileWorkspaceFolder == *"access/src" ]]; then
-	# 	relativePath="/access";
 	# elif [[ $fileWorkspaceFolder == *"app/shared" ]]; then
 	# 	relativePath="/app/shared";
 	# elif [[ $fileWorkspaceFolder == *"app/client" ]]; then
 	# 	relativePath="/app/client";
 	else
-		relativePath="";
+		relativePath=$(dirname "$relativeFile");
+		relativePath=${relativePath:1}; #remove leading /
 	fi;
+
 	echo $relativePath;
 }
 function projectName() {
-	fileWorkspaceFolder=$1;
-	if [[ $fileWorkspaceFolder == *"opc/src"* ]]; then
-		project="Jde.Opc.vcxproj";
-	elif [[ $fileWorkspaceFolder == *"fwk/src"* ]]; then
-		project="Jde.vcxproj";
-	elif [[ $fileWorkspaceFolder == *"fwk/tests"* ]]; then
-		project="Jde.Framework.Tests.vcxproj";
-	elif [[ $fileWorkspaceFolder == *"web/tests" ]]; then
-		project="Jde.Web.Tests.vcxproj";
+	#echo "projectName called with $1";
+	relativeFile=$1; #/libs/access/tests/main.cpp
+	if [[ $relativeFile == *"opc/src"* ]]; then
+		project="Jde.Opc";
+	elif [[ $relativeFile == *"fwk/src"* ]]; then
+		project="Jde";
+	elif [[ $relativeFile == *"fwk/tests"* ]]; then
+		project="Jde.Framework.Tests";
+	elif [[ $relativeFile == *"web/tests" ]]; then
+		project="Jde.Web.Tests";
+	elif [[ $relativeFile == *"access/src"* ]]; then
+		project="Jde.Access";
+	elif [[ $relativeFile == *"access/tests"* ]]; then
+		project="Jde.Access.Tests";
+	elif [[ $relativeFile == *"AppServer/src"* ]]; then
+		project="Jde.App.ServerLib";
 	fi;
-	echo $project;
+	echo $project.vcxproj;
 }
 function absoluteFile() {
 	workspaceFolder=$1;
@@ -54,24 +64,27 @@ function absoluteFile() {
 }
 function buildProject() {
 	source $JDE_BASH/build/common.sh;
-	toBashDir $1 fileWorkspaceFolder;
-	buildRoot=$2;
-	buildRelativePath=`buildRelativePath $fileWorkspaceFolder`;
-	echo "fileWorkspaceFolder:$fileWorkspaceFolder, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath";
+	toBashDir $1 workspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
+	toBashDir $2 fileWorkspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
+	toBashDir $3 relativeFile; #libs\access\tests\AuthTests.cpp
+	buildRoot=$4;
+	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
+	buildRelativePath=`buildRelativePath $fileWorkspaceFolder $absoluteFile $relativeFile`; #libs/web/server
+	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, absoluteFile=$absoluteFile, buildRelativePath=$buildRelativePath";
 	cd $buildRoot/$buildRelativePath;
-	project=`projectName $fileWorkspaceFolder`;
+	project=`projectName $relativeFile`;
 	echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug
-	msbuild.exe $project -p:Configuration=Debug //v:m
+	msbuild.exe $project -p:Configuration=Debug -v:m
 }
 function compile() {
 	source $JDE_BASH/build/common.sh;
-	toBashDir $1 workspaceFolder; #/home/duffyj/code/jde/IotWebsocket/config
-	toBashDir $2 fileWorkspaceFolder; #/home/duffyj/code/jde/Public/libs/web/server
-	toBashDir $3 relativeFile; #../../Public/libs/web/server/IHttpRequestAwait.cpp
-	toBashDir $4 buildRoot;  # /mnt/ram/jde/Debug
-	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/home/duffyj/code/jde/Public/libs/web/server/IHttpRequestAwait.cpp
-	buildRelativePath=`buildRelativePath $fileWorkspaceFolder $absoluteFile`; #libs/web/server
-	project=`projectName $fileWorkspaceFolder`;
+	toBashDir $1 workspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
+	toBashDir $2 fileWorkspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
+	toBashDir $3 relativeFile; #/libs/access/tests/main.cpp
+	toBashDir $4 buildRoot;  # /z/build/msvc
+	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
+	buildRelativePath=`buildRelativePath $fileWorkspaceFolder $absoluteFile $relativeFile`; #libs/web/server
+	project=`projectName $relativeFile`;
 	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile, project=$project";
 	cd $buildRoot/$buildRelativePath;
 	buildFile=${absoluteFile#"$fileWorkspaceFolder/"}

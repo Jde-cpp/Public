@@ -1,34 +1,15 @@
-#include "UserHook.h"
+#include "UserAwait.h"
 #include <jde/db/IDataSource.h>
-#include <jde/db/Row.h>
 #include <jde/db/generators/Statement.h>
-#include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
-#include <jde/db/meta/Table.h>
 #include <jde/db/meta/View.h>
 #include <jde/ql/QLAwait.h>
-#include "../../accessInternal.h"
 #include "../serverInternal.h"
 #define let const auto
 #pragma GCC diagnostic ignored "-Wdangling-reference"
 
 namespace Jde::Access::Server{
-	struct UserGraphQLAwait final : TAwait<jvalue>{
-		UserGraphQLAwait( const QL::TableQL& query, UserPK executer, SRCE )ι:
-			TAwait<jvalue>{ sl },
-			Query{ query },
-			Executer{ executer }
-		{}
-		α Suspend()ι->void override{ QueryGroups(); }
-		QL::TableQL Query;
-		UserPK Executer;
-	private:
-		α QueryGroups()ι->QL::QLAwait<jarray>::Task;
-		α QueryTables( jarray groups )ι->QL::QLAwait<jvalue>::Task;
-		α GroupStatement()->DB::Statement;
-		flat_map<uint8,string> _groupColumns;
-	};
-	α UserGraphQLAwait::GroupStatement()->DB::Statement{
+	α UserAwait::GroupStatement()->DB::Statement{
 		let& identityTable = GetTable( "identities" );
 		auto pk = identityTable.GetPK();
 		let& groupDBTable = GetTable( "groupings" );
@@ -39,7 +20,7 @@ namespace Jde::Access::Server{
 
 		statement.From+={ pk, memberIdColumn, true };
 		statement.From+={ groupDBTable.SurrogateKeys[0], {}, pk, "groups_", true };
-		if( let key = Query.FindArgKey(); key )
+		if( let key = Query.FindKey(); key )
 			statement.Where.Add( key->IsPK() ? pk : identityTable.GetColumnPtr("target"), DB::Value::FromKey(*key) );
 
 		statement.Where.Add( identityTable.GetColumnPtr("deleted"), DB::Value{} );
@@ -56,7 +37,7 @@ namespace Jde::Access::Server{
 		}
 		return statement;
 	}
-	α UserGraphQLAwait::QueryGroups()ι->QL::QLAwait<jarray>::Task{
+	α UserAwait::QueryGroups()ι->QL::QLAwait<jarray>::Task{
 		try{
 			auto groupStatement = GroupStatement();
 			auto groupInfo = co_await QL::QLAwait<jarray>{ move(Query.GetTable("groupings")), move(groupStatement), Executer, _sl };
@@ -66,7 +47,7 @@ namespace Jde::Access::Server{
 			ResumeExp( move(e) );
 		}
 	}
-	α UserGraphQLAwait::QueryTables( jarray groups )ι->QL::QLAwait<jvalue>::Task{
+	α UserAwait::QueryTables( jarray groups )ι->QL::QLAwait<jvalue>::Task{
 		try{
 			Query.Tables.clear();
 			//let returnRaw = Query.ReturnRaw;
@@ -93,11 +74,5 @@ namespace Jde::Access::Server{
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
-	}
-
-	α UserHook::Select( const QL::TableQL& query, UserPK executer, SL sl )ι->up<TAwait<jvalue>>{
-		return query.JsonName.starts_with( "user" ) && query.FindTable("groupings")
-			? mu<UserGraphQLAwait>( query, executer, sl )
-			: nullptr;
 	}
 }

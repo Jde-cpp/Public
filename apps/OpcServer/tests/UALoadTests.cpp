@@ -16,7 +16,7 @@ namespace Jde::Opc::Server::Tests{
 
 	TEST_F( UALoadTests, LoadMyKitchen ){
 		GetUAServer().Load( Path()/"CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml" );
-		GetUAServer().Load( fs::path{*Process::GetEnv("JDE_DIR")}/"Public/apps/OpcServer/config/nodesets/kitchen.xml" );
+		GetUAServer().Load( fs::path{*Process::GetEnv("JDE_DIR")}/"apps/OpcServer/config/nodesets/kitchen.xml" );
 	}
 
 	// never ending loop

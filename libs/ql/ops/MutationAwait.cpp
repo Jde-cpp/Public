@@ -1,57 +1,57 @@
 #include <jde/ql/ops/MutationAwait.h>
-#include <jde/db/IDataSource.h>
-#include <jde/db/names.h>
-#include <jde/db/meta/AppSchema.h>
-#include <jde/db/meta/Column.h>
-#include <jde/db/meta/Table.h>
+#include <jde/ql/IQL.h>
 #include "AddRemoveAwait.h"
 #include "InsertAwait.h"
 #include "PurgeAwait.h"
 #include "UpdateAwait.h"
-#include "../types/QLColumn.h"
 
 #define let const auto
 namespace Jde::QL{
-//	using namespace Coroutine;
 	using namespace DB::Names;
 
 	constexpr ELogTags _tags{ ELogTags::QL };
 
-	MutationAwait::MutationAwait( MutationQL mutation, UserPK userPK, SL sl )ι:
+	MutationAwait::MutationAwait( MutationQL mutation, UserPK executer, sp<IQL> ql, SL sl )ι:
 		TAwait<jvalue>{ sl },
 		_mutation{ move(mutation) },
-		_userPK{ userPK }
+		_executer{ executer },
+		_ql{ move(ql) }
 	{}
 
 	α MutationAwait::Execute()ι->TAwait<jvalue>::Task{
-		jvalue y;
+
 		try{
-			let& table = _mutation.DBTable;
-			switch( _mutation.Type ){
-			using enum EMutationQL;
-			case Update:
-			case Delete:
-			case Restore:
-				y = co_await UpdateAwait{ table, move(_mutation), _userPK, _sl };
-				break;
-			case Add:
-			case Remove:
-				y = co_await AddRemoveAwait{ table, move(_mutation), _userPK, _sl };
-				break;
-			case Create:
-				y = co_await InsertAwait( table, move(_mutation), _userPK, _sl );
-				break;
-			case Purge:
-				y = co_await PurgeAwait{ table, move(_mutation), _userPK, _sl };
-				break;
-			case Start:
-				MutationAwait::Start();
-				co_return;
-			case Stop:
-				MutationAwait::Stop();
-				co_return;
-			case Execute:
-				throw Exception{ ELogTags::QL, _sl, "Execute mutation not implemented." };
+			jvalue y;
+			if( auto await = _ql ? _ql->CustomMutation( _mutation, _executer, _sl ) : nullptr; await )
+				y = co_await move(*await);
+			else{
+				auto table = _mutation.DBTable;
+				switch( _mutation.Type ){
+				using enum EMutationQL;
+				case Update:
+				case Delete:
+				case Restore:
+					y = co_await UpdateAwait{ move(table), move(_mutation), _executer, _sl };
+					break;
+				case Add:
+				case Remove:
+					y = co_await AddRemoveAwait{ move(table), move(_mutation), _executer, _sl };
+					break;
+				case Create:
+					y = co_await InsertAwait( move(table), move(_mutation), _executer, _sl );
+					break;
+				case Purge:
+					y = co_await PurgeAwait{ move(table), move(_mutation), _executer, _sl };
+					break;
+				case Start:
+					MutationAwait::Start();
+					co_return;
+				case Stop:
+					MutationAwait::Stop();
+					co_return;
+				case Execute:
+					throw Exception{ ELogTags::QL, _sl, "Execute mutation not implemented." };
+				}
 			}
 			Resume( move(y) );
 		}
@@ -62,7 +62,7 @@ namespace Jde::QL{
 
 	α MutationAwait::Start()ι->MutationAwaits::Task{
 		try{
-			optional<jvalue> y = co_await Hook::Start( move(_mutation), _userPK );
+			optional<jvalue> y = co_await Hook::Start( move(_mutation), _executer );
 			Resume( y ? move(*y) : jvalue{} );
 		}
 		catch( IException& e ){
@@ -72,7 +72,7 @@ namespace Jde::QL{
 
 	α MutationAwait::Stop()ι->MutationAwaits::Task{
 		try{
-			optional<jvalue> y = co_await Hook::Stop( move(_mutation), _userPK );
+			optional<jvalue> y = co_await Hook::Stop( move(_mutation), _executer );
 			Resume( y ? move(*y) : jvalue{} );
 		}
 		catch( IException& e ){

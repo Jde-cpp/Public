@@ -9,7 +9,7 @@ begin
 	from access_resources
 	where target=_resourceTarget
 		and schema_name = coalesce(_schema, schema_name)
-		and criteria = coalesce(_criteria, criteria);
+		and criteria <=> _criteria;
 	if _resource_id is null then
 		insert into access_resources( target, schema_name, name, criteria ) values( _resourceTarget, _schema, _resourceName, _criteria );
 		set _resource_id = LAST_INSERT_ID();
@@ -17,10 +17,9 @@ begin
 	select permission_id
 	into _permission_id
 	from access_role_members members
-		join access_permission_rights permissions on members.member_id=permissions.permission_id
-		join access_resources resources using(resource_id)
+		join access_permission_rights rights on members.member_id=rights.permission_id
 	where members.role_id=_role_id
-		and resources.resource_id=_resource_id;
+		and rights.resource_id=_resource_id;
 
 	if _permission_id is not null then
 		update access_permission_rights set allowed=_allowed, denied=_denied

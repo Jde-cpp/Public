@@ -110,9 +110,9 @@ namespace Jde{
 	 	ASSERT( !_rawShutdowns.find(shutdown) );
 	 	_rawShutdowns.push_back( shutdown );
 	 }
-	 α Process::RemoveShutdown( IShutdown* pShutdown )ι->void{
-	 	ASSERT( _rawShutdowns.find(pShutdown) );
-	 	_rawShutdowns.erase( pShutdown );
+	 α Process::RemoveShutdown( IShutdown* shutdown )ι->void{
+	 	ASSERT( _rawShutdowns.find(shutdown) );
+	 	_rawShutdowns.erase( shutdown );
 	 }
 
 

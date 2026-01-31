@@ -32,7 +32,7 @@ namespace Jde{
 		Φ AsArrayPath( const jobject& o, sv path, SRCE )ε->const jarray&;
 		Ξ AsBool( const jvalue& v, SRCE )ε->bool{ return $(bool); }
 		Ξ AsBool( const jobject& o, sv path, SRCE )ε->bool{ return AsBool( AsValue(o,path,sl), sl ); }
-		α AsKey( const jobject& o, SRCE )ε->DB::Key;
+		Φ AsKey( const jobject& o, SRCE )ε->DB::Key;
 		Ŧ AsNumber( const jvalue& v, SRCE )ε->T;
 		Ŧ AsNumber( const jobject& o, sv path, SRCE )ε->T{ return AsNumber<T>( AsValue(o,path,sl), sl ); }
 		Ŧ AsPath( const jobject& o, sv path, SRCE )ε->T;

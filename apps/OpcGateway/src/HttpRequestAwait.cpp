@@ -1,17 +1,13 @@
 #include "HttpRequestAwait.h"
 #include <jde/ql/IQL.h>
-#include <jde/app/client/appClient.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
 #include "StartupAwait.h"
 #include "UAClient.h"
-#include "async/ReadValueAwait.h"
-#include "async/SessionAwait.h"
 #include "auth/PasswordAwait.h"
-#include "auth/UM.h"
+#include "ql/GatewayQL.h"
 #include "ql/GatewayQLAwait.h"
-#include "uatypes/Browse.h"
 
 #define let const auto
 

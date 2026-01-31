@@ -139,7 +139,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:102, nullable:true, comment: "available rights for this resource", sk:null },//why?
 			},
 			ops: ["Delete"],
-			naturalKeys: [["schemaName", "target", "criteria"]],
+			naturalKeys: [["schema_name", "target", "criteria"]],
 		},
 		permissions:{
 			columns: {

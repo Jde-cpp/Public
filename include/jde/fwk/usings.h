@@ -88,6 +88,7 @@ namespace Jde{
 	using jstring=boost::json::string;
 	using boost::json::parse;
 	using boost::json::serialize;
+	using boost::noncopyable;
 	using boost::uuids::uuid;
 	using str = const std::string&;
 

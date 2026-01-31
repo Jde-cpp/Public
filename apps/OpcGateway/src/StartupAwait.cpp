@@ -3,23 +3,20 @@
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalQL.h>
 #include <jde/ql/types/Introspection.h>
-#include <jde/access/Authorize.h>
+#include <jde/access/Authorize.h> //!important
 #include <jde/access/AccessListener.h>
 #include <jde/access/client/accessClient.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/IAppClient.h>
-#include <jde/app/client/AppClientSocketSession.h>
 #include "opcInternal.h"
 #include "UAClient.h"
 #include "WebServer.h"
+#include "ql/GatewayQL.h"
 #include "ql/OpcQLHook.h"
 
 #define let const auto
 namespace Jde::Opc{
-	static sp<QL::LocalQL> _localQL;
 	static sp<Access::AccessListener> _listener;
-	α Gateway::QL()ι->QL::LocalQL&{ return *_localQL; }
-	α Gateway::Schemas()ι->const vector<sp<DB::AppSchema>>&{ return _localQL->Schemas(); }
 }
 
 namespace Jde::Opc::Gateway{
@@ -38,16 +35,16 @@ namespace Jde::Opc::Gateway{
 		try{
 			auto authorize = App::Client::RemoteAcl( "gateway" );
 			auto schema = DB::GetAppSchema( "gateway", authorize );
-			_localQL = QL::Configure( {schema}, authorize );
+			ConfigureQL( {schema}, authorize );
 			for( let& path : Settings::FindPathArray("/ql/introspection") )
 				QL::AddIntrospection( QL::Introspection{Json::ReadJsonNet(Settings::Directory()/path)} );
 			QL::SetSystemTables( {"dataType", "dataTypes", "discoveryUrls", "node","nodes", "securityMode", "securityPolicyUri", "serverDescription", "variable", "variables"} );
 			QL::SetSystemMutations( {"execute"} );
 			SetSchema( schema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
-				DB::NonProd::Recreate( *schema, _localQL );
+				DB::NonProd::Recreate( *schema, QLPtr() );
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
-				DB::SyncSchema( *schema, _localQL );
+				DB::SyncSchema( *schema, QLPtr() );
 
 			Crypto::CryptoSettings settings{ Json::FindDefaultObject(_webServerSettings, "ssl") };
 			if( !fs::exists(settings.PrivateKeyPath) ){

@@ -46,7 +46,6 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 include_directories( $ENV{JDE_DIR}/include/jde/web/client/proto )
 if( WIN32 )
-#	target_link_libraries( ${targetName} ZLIB::ZLIB )
 	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
 else()
 	target_link_libraries( ${targetName} OpenSSL::SSL )
@@ -57,9 +56,7 @@ endif()
 if( Boost_USE_STATIC_LIBS )
 	target_link_libraries( ${targetName} Boost::json )
 endif()
-#target_link_libraries( ${targetName} protobuf::libprotobuf )
 target_link_libraries( ${targetName} Jde.App.ServerLib )
-#Jde Jde.QL Jde.Web.Server
 
 add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_DIR}/libs/db/config/common-meta.libsonnet" "$ENV{JDE_DIR}/apps/AppServer/config/common-meta.libsonnet" COMMENT "mklink common-meta.libsonnet" )
 if( WIN32 )

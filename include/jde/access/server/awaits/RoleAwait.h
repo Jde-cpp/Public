@@ -6,8 +6,8 @@
 namespace Jde::DB{ struct Statement; }
 namespace Jde::QL{ struct MutationQL; struct TableQL; }
 namespace Jde::Access::Server{
-	struct RoleSelectAwait final : TAwait<jvalue>{
-		RoleSelectAwait( const QL::TableQL& q, UserPK userPK, SRCE )ε;
+	struct RoleAwait final : TAwait<jvalue>, noncopyable{
+		RoleAwait( const QL::TableQL& q, UserPK userPK, SRCE )ε;
 		α Suspend()ι->void override{ Select(); }
 		sp<DB::View> MemberTable;
 		QL::TableQL Query;
@@ -18,8 +18,8 @@ namespace Jde::Access::Server{
 		α Select()ι->QL::QLAwait<>::Task;
 	};
 
-	struct RoleMutationAwait final : TAwait<jvalue>{
-		RoleMutationAwait( const QL::MutationQL& m, UserPK userPK, SL sl )ι:TAwait<jvalue>{ sl }, _mutation{m}, _userPK{userPK}{}
+	struct RoleMAwait final : TAwait<jvalue>{
+		RoleMAwait( const QL::MutationQL& m, UserPK userPK, SRCE )ι:TAwait<jvalue>{ sl }, _mutation{m}, _userPK{userPK}{}
 		α Suspend()ι->void override{ if(_mutation.Type==QL::EMutationQL::Remove) Remove(); else Add(); }
 	private:
 		α Add()ι->void;

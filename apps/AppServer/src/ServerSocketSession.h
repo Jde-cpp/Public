@@ -34,10 +34,10 @@ namespace Jde::App::Server{
 
 		α AddSession( Proto::FromClient::AddSession addSession, RequestId clientRequestId, SL sl )ι->TAwait<Jde::UserPK>::Task;
 		α AddInstance( Proto::FromClient::Instance instance, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task;
+		α LocalQL()Ι->sp<QL::IQL> override;
 		α Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void;
 		α ForwardExecution( Proto::FromClient::ForwardExecution&& clientMsg, bool anonymous, RequestId clientRequestId, SRCE )ι->ForwardExecutionAwait::Task;
 		α GraphQL( string&& query, jobject variables, bool returnRaw, RequestId requestId )ι->QL::QLAwait<jvalue>::Task;
-		α Schemas()Ι->const vector<sp<DB::AppSchema>>& override;
 		α SaveLogEntry( Log::Proto::LogEntryClient logEntry, RequestId requestId )->void;
 		α SendAck( uint32 id )ι->void override;
 		α SessionInfo( SessionPK sessionId, RequestId requestId )ι->void;

@@ -13,7 +13,7 @@ namespace Jde::App{
 		std::deque<uuid> Args;
 		std::deque<uuid> Strings;
 	};
-	struct ProtoLog final : Logging::ILogger, boost::noncopyable{
+	struct ProtoLog final : Logging::ILogger, noncopyable{
 		ProtoLog( const jobject& settings )ε;
 		Ω Init()ι->void;
 

@@ -43,9 +43,8 @@ include_directories( ${open62541Dir}include )
 target_link_libraries( ${targetName} GTest::gtest )
 
 target_link_libraries( ${targetName} Jde Jde.QL Jde.App.Shared Jde.App.Client Jde.Web.Client Jde.Web.Server Jde.App.ServerLib Jde.Opc Jde.Opc.GatewayLib Jde.Opc.ServerLib )
-target_link_libraries( ${targetName} protobuf::libprotobuf )
+#target_link_libraries( ${targetName} protobuf::libprotobuf ) //Jde.Web.Server should bring this in
 if( WIN32 )
-#	target_link_libraries( ${targetName} ZLIB::ZLIB )
 	target_link_libraries( ${targetName} Iphlpapi.lib )
 else()
 	target_link_libraries( ${targetName} OpenSSL::SSL )

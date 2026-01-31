@@ -12,7 +12,7 @@ namespace Jde::Opc::Gateway{
 		α ToJson()ι->jvalue;
 	};
 
-	struct ΓOPC CallAwait : TAwaitEx<CallResponse,TAwait<sp<UAClient>>::Task>, boost::noncopyable{
+	struct ΓOPC CallAwait : TAwaitEx<CallResponse,TAwait<sp<UAClient>>::Task>, noncopyable{
 		using base = TAwaitEx<CallResponse,TAwait<sp<UAClient>>::Task>;
 		CallAwait( QL::MutationQL&& req, sp<Web::Server::SessionInfo> session, SRCE )ι:base{sl}, _ql{move(req)}, _session{move(session)}{}
 
@@ -24,7 +24,7 @@ namespace Jde::Opc::Gateway{
 		RequestId 	_requestId{};
 		sp<Web::Server::SessionInfo> _session;
 	};
-	struct JCallAwait : TAwaitEx<jvalue,TAwait<CallResponse>::Task>, boost::noncopyable{
+	struct JCallAwait : TAwaitEx<jvalue,TAwait<CallResponse>::Task>, noncopyable{
 		using base = TAwaitEx<jvalue,TAwait<CallResponse>::Task>;
 		JCallAwait( QL::MutationQL&& req, sp<Web::Server::SessionInfo> session, SRCE )ι:base{sl}, _ql{move(req)}, _session{move(session)}{}
 

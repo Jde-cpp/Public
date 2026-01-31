@@ -6,7 +6,7 @@
 namespace Jde::DB{ struct IRow; struct AppSchema; }
 namespace Jde::QL{ struct IQL; }
 namespace Jde::Access{
-	struct ResourceSyncAwait final : VoidAwait, boost::noncopyable{
+	struct ResourceSyncAwait final : VoidAwait, noncopyable{
 		ResourceSyncAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, string opcServerInstance, UserPK executer )ι:
 			_executer{executer}, _opcServerInstance{move(opcServerInstance)}, _qlServer{qlServer}, _schemas{schemas}{};
 	private:
@@ -19,7 +19,7 @@ namespace Jde::Access{
 	};
 
 	struct ResourcePermissions{ flat_map<ResourcePK,Resource> Resources; flat_map<PermissionPK,Permission> Permissions; };
-	struct ResourceLoadAwait final : TAwait<ResourcePermissions>, boost::noncopyable{
+	struct ResourceLoadAwait final : TAwait<ResourcePermissions>, noncopyable{
 		ResourceLoadAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, string opcServerInstance, UserPK executer )ι:
 			_executer{executer}, _opcServerInstance{move(opcServerInstance)}, _qlServer{qlServer}, _schemas{schemas}{};
 	private:

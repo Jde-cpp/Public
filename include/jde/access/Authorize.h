@@ -6,12 +6,14 @@
 #include "types/User.h"
 
 namespace Jde::Access{
+	namespace Server{ struct AuthenticateAwait; struct LoginAwait; }
 	struct Listener; struct Loader; struct Permission;
 
 	struct Authorize /*final*/ : IAcl, std::enable_shared_from_this<Authorize>{
 		Authorize( string app )ι:_app{move(app)}{}
 		α AddResource( ResourcePK resourcePK, string schema, string resourceTarget, string criteria )ι->void;
-		α FindResourcePK( str schemaName, str resourceName, str criteria )ι->optional<ResourcePK>{ Jde::sl _{Mutex}; return FindResourcePK(schemaName, resourceName, criteria, _); }
+		α FindResourcePK( string schema, str resourceName, str criteria )ι->optional<ResourcePK>{ Jde::sl _{Mutex}; return FindResourcePK(schema, resourceName, criteria, _); }
+		α FindSchema( str resourceTarget, SL sl )ε->string;
 		α Test( str schemaName, str resourceName, ERights rights, UserPK userPK, SRCE )ε->void override;
 		α Rights( str schemaName, str resourceName, UserPK executer )ι->ERights override;
 		α TestAdmin( str resource, UserPK userPK, SRCE )ε->void;
@@ -24,7 +26,8 @@ namespace Jde::Access{
 		α TestAddGroupMember( GroupPK groupPK, flat_set<IdentityPK::Type>&& memberPKs, SRCE )ε->void;
 		α TestAddRoleMember( RolePK parent, RolePK child, SRCE )ε->void;
 	protected:
-		α FindResourcePK( str schemaName, str resourceName, str criteria, sl& _ )ι->optional<ResourcePK>;
+		α FindResource( const Resource& resource, ul& l )Ι->const Resource*;
+		Ŧ FindResourcePK( str schemaName, str resourceName, str criteria, T& l )Ι->optional<ResourcePK>;
 
 		string _app;
 		mutable std::shared_mutex Mutex;
@@ -74,6 +77,17 @@ namespace Jde::Access{
 		flat_multimap<IdentityPK,PermissionRole> Acl;
 	private:
 		concurrent_flat_map<string,sp<IAdminAcl>> _adminAuthorizers;
-		friend struct AccessListener; friend struct Loader; friend struct ConfigureAwait;
+		friend struct AccessListener; friend struct Loader; friend struct ConfigureAwait; friend struct Server::AuthenticateAwait; friend struct Server::LoginAwait;
 	};
+
+	Ŧ Authorize::FindResourcePK( str schemaName, str resourceTarget, str criteria, T& /*lock*/ )Ι->optional<ResourcePK>{
+		if( auto schemaResources = SchemaResources.find(schemaName); schemaResources!=SchemaResources.end() ){
+			if( auto targetResources = schemaResources->second.find(resourceTarget); targetResources!=schemaResources->second.end() ){
+				auto& criteras = targetResources->second;
+				if( criteras.contains({}) )// if permisions are enabled
+					return Find(criteras, criteria);
+			}
+		}
+		return {};
+	}
 }

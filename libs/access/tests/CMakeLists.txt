@@ -15,7 +15,6 @@ include( ../../../build/dependencies.cmake )
 
 if( NOT jde_Superbuild )
 	add_subdirectory( ../../fwk/src ../../fwk/lib )
-	#add_subdirectory( ../../db/src ../../db/lib ) should be with the driver
 	if( WIN32 )
 		add_subdirectory( ../../db/drivers/odbc ../../db/drivers/odbc )
 	else()
@@ -26,8 +25,6 @@ endif()
 
 add_executable( ${targetName} )
 if( WIN32)
-#	set( CMAKE_EXE_LINKER_FLAGS_DEBUG "/debug /INCREMENTAL:NO" )
-#	set_target_properties( ${targetName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>" )
 	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
 endif()
 

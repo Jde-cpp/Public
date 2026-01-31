@@ -13,6 +13,11 @@ file(GLOB headers  **/*.h $ENV{JDE_DIR}/include/jde/app/shared/*.h )
 file(GLOB protos proto/*.proto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
+if( WIN32 )
+	target_link_libraries( ${targetName} absl::cord absl::log_internal_check_op absl::log_internal_conditions absl::log_internal_message absl::raw_hash_set absl::status absl::statusor )
+	target_link_libraries( ${targetName} ${MULTI_INSTALL_PREFIX}/protobuf/lib/libprotobuf$<IF:$<CONFIG:Debug>,d,>.lib )
+endif()
+
 #######################################################
 target_precompile_headers(${targetName}
   PUBLIC

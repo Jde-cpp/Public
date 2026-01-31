@@ -14,6 +14,7 @@
 #include <jde/access/AccessListener.h>
 #include "LocalClient.h"
 #include "WebServer.h"
+#include "ql/AppQL.h"
 
 #define let const auto
 
@@ -31,7 +32,8 @@ namespace Server{
 			auto authorizer = Authorizer();
 			auto accessSchema = DB::GetAppSchema( "access", authorizer );
 			_appSchema = DB::GetAppSchema( "app", authorizer );
-			SetLocalQL( QL::Configure({accessSchema, _appSchema}, authorizer) );
+
+			ConfigureQL( {accessSchema, _appSchema}, authorizer );
 			_listener = ms<Access::AccessListener>( QLPtr() );
 			Process::AddShutdownFunction( []( bool terminate ){
 				_listener->Shutdown( terminate );

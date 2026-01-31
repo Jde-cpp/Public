@@ -112,10 +112,7 @@ IF( WIN32 )
 			-DLIBXML2_BUILD_SHARED_LIBS=OFF
 	)
 	set( LIBXML2_INCLUDE_DIR ${MULTI_INSTALL_PREFIX}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
-	#set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2$<IF:$<CONFIG:Debug>,d,>.lib CACHE PATH "the directory containing LibXml2 libraries" )
-	#set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2.lib CACHE PATH "the directory containing LibXml2 libraries" )
-	#set( LIBXML2_LIBRARIES ${MULTI_INSTALL_PREFIX}/libxml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
-	#set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib CACHE PATH "the directory containing LibXml2 libraries" )
+	set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2$<IF:$<CONFIG:Debug>,d,>.lib CACHE PATH "the directory containing LibXml2 libraries" )
 else()
 #need to add '#define _C4_STD_VECTOR_FWD_HPP_' to ryml_all.hpp to avoid redefinition errors
 	ExternalProject_Add(jsonnet
@@ -174,6 +171,7 @@ ExternalProject_Add(open62541-nodeset-loader
 		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
 #		-DPC_LIBXML_LIBDIR=${LIBXML2_LIBDIR}
 #win
+    -DLIBXML2_LIBRARY=${LIBXML2_LIBRARY}
 #		-DLIBXML2_LIBRARIES=${LIBXML2_LIBRARIES}
 #		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
 		-DCMAKE_BUILD_TYPE=Debug
@@ -187,5 +185,5 @@ ExternalProject_Add_StepDependencies( protobuf configure gtest )
 ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure open62541 )
 if( WIN32 )
 	ExternalProject_Add_StepDependencies( protobuf configure zlib )
-#	ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure LibXml2 )
+	ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure LibXml2 )
 endif()

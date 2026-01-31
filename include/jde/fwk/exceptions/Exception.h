@@ -87,6 +87,12 @@ namespace Jde{
 		auto p = dynamic_cast<IException*>( &e );
 		return p ? p->Move() : mu<exception>( move(e) );
 	}
+	[[noreturn]] Ξ Throw( exception&& e )ε->void{
+		if( auto p = dynamic_cast<IException*>( &e ); p )
+			p->Throw();
+		else
+			throw move(e);
+	}
 
 	struct Exception;
 	α make_exception_ptr( Exception&& e )ι->std::exception_ptr;

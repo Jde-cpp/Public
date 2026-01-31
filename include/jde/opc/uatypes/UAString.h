@@ -9,7 +9,7 @@ namespace Jde::Opc{
 	Ξ AllocUAString( str s )ι->UA_String{ return UA_String_fromChars( s.c_str() ); }
 	Ξ AllocUAString( sv s )ι->UA_String{ return AllocUAString( string{s} ); }
 
-	struct UAString final : UA_String, boost::noncopyable{
+	struct UAString final : UA_String, noncopyable{
 		explicit UAString( uint size )ι;
 		~UAString()ι;
 

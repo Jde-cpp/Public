@@ -1,13 +1,9 @@
 #include "StartupAwait.h"
 #include <jde/db/db.h>
-#include <jde/ql/ql.h>
-#include <jde/ql/LocalQL.h>
 #include <jde/ql/QLHook.h>
 #include <jde/access/AccessListener.h>
 #include <jde/access/client/accessClient.h>
 #include <jde/app/client/appClient.h>
-#include <jde/app/client/AppClientSocketSession.h>
-#include <jde/opc/uatypes/opcHelpers.h>
 #include "OpcServerAppClient.h"
 #include "UAServer.h"
 #include "access/OpcAuthorize.h"
@@ -15,18 +11,16 @@
 #include "ql/ConstructorHook.h"
 #include "ql/ObjectTypeHook.h"
 #include "ql/ObjectHook.h"
+#include "ql/OpcQL.h"
 #include "ql/OpcServerQL.h"
 #include "web/WebServer.h"
 
 
 #define let const auto
 namespace Jde::Opc{
-	sp<QL::LocalQL> _localQL;
 	sp<Access::AccessListener> _listener;
-	α Server::Schemas()ι->const vector<sp<DB::AppSchema>>&{ return _localQL->Schemas(); }
 }
 namespace Jde::Opc::Server{
-
 	α StartupAwait::Execute()ι->VoidAwait::Task{
 		{
 			auto schemaSuffix = Settings::FindString( "/opcServer/resource" );
@@ -35,12 +29,12 @@ namespace Jde::Opc::Server{
 		try{
 			auto remoteAcl = App::Client::RemoteAcl( "opc" );
 			auto uaSchema = DB::GetAppSchema( "opc", remoteAcl );
-			_localQL = QL::Configure( {uaSchema}, remoteAcl );
+			ConfigureQL( uaSchema, remoteAcl );
 			//Opc::Configure( uaSchema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
-				DB::NonProd::Recreate( *uaSchema, _localQL );
+				DB::NonProd::Recreate( *uaSchema, QLPtr() );
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
-				DB::SyncSchema( *uaSchema, _localQL );
+				DB::SyncSchema( *uaSchema, QLPtr() );
 
 			Crypto::CryptoSettings settings{ Json::FindDefaultObject(_webServerSettings,"ssl") };
 			if( !fs::exists(settings.PrivateKeyPath) ){

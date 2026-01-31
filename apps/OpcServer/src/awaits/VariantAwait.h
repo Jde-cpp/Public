@@ -13,7 +13,7 @@ namespace Jde::Opc::Server{
 		vector<DB::Value> _pks;
 	};
 
-	struct VariantAwait final : TAwaitEx<flat_map<VariantPK,Variant>,VariantMembersAwait::Task>, boost::noncopyable{
+	struct VariantAwait final : TAwaitEx<flat_map<VariantPK,Variant>,VariantMembersAwait::Task>, noncopyable{
 		using base=TAwaitEx<flat_map<VariantPK,Variant>,VariantMembersAwait::Task>;
 		VariantAwait( vector<DB::Value>&& pks, SRCE )ι: base{ sl }, _pks{ move(pks) }{}
 	private:

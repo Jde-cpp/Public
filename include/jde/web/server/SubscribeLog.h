@@ -5,7 +5,7 @@ namespace Jde::QL{ struct Subscription; }
 namespace Jde::Web::Server{
 	struct IWebsocketSession;
 
-	struct SubscribeLog final : Logging::ILogger, boost::noncopyable{
+	struct SubscribeLog final : Logging::ILogger, noncopyable{
 		SubscribeLog( jobject settings, const uint32& appPK, const App::ConnectionPK& connectionPK )ε:ILogger{ move(settings) }, _appPK(appPK), _connectionPK(connectionPK){}
 		Ω Init()ι->void;
 		Ω Unsubscribe( App::ConnectionPK connectionPK )ι->void;

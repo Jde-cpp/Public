@@ -1,4 +1,4 @@
-#include "GroupHook.h"
+#include "GroupAwait.h"
 //#include <jde/db/awaits/RowAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
@@ -18,39 +18,28 @@
 #define let const auto
 
 namespace Jde::Access::Server{
-	α RemoveFromGroup( GroupPK groupPK, flat_set<IdentityPK> members )ι->void;
-	struct GroupGraphQLAwait final : TAwait<jvalue>{
-		GroupGraphQLAwait( const QL::TableQL& query, UserPK executer, SRCE )ι:
-			TAwait<jvalue>{ sl },
-			Query{ query },
-			Executer{ executer }
-		{}
-		α Suspend()ι->void override{ Select(); }
-		QL::TableQL Query;
-		Jde::UserPK Executer;
-	private:
-		α Select()ι->QL::QLAwait<>::Task;
-	};
+	//Ω removeFromGroup( GroupPK groupPK, flat_set<IdentityPK> members )ι->void;
 
-	α GroupGraphQLAwait::Select()ι->QL::QLAwait<>::Task{
+
+	α GroupAwait::Select()ι->QL::QLAwait<>::Task{
 		try{
 			//group_id, member_id & member columns.
 			optional<QL::TableQL> membersQL = [&]()->optional<QL::TableQL>{
-				auto p = find_if( Query.Tables, [](let& t){ return t.JsonName.starts_with("groupMember"); } );
-				if( p==Query.Tables.end() )
+				auto p = find_if( _query.Tables, [](let& t){ return t.JsonName.starts_with("groupMember"); } );
+				if( p==_query.Tables.end() )
 					return {};
 				auto ql = *p;
-				Query.Tables.erase( p );
+				_query.Tables.erase( p );
 				return ql;
 			}();
-			GetTable( "groupings" ).Authorize( Access::ERights::Read, Executer, _sl );
+			GetTable( "groupings" ).Authorize( Access::ERights::Read, _executer, _sl );
 			optional<jarray> members;
 			bool haveId{};
-			Query.JsonName = Query.IsPlural() ? "identities" : "identity"; //from members, want distinct + nothing in members table except for members.
-			Query.AddFilter( "is_group", true );
-			Query.ReturnRaw = true;
-			let onlyHaveId = Query.Columns.size()==1 && Query.Columns[0].JsonName=="id";
-			auto groups = !onlyHaveId && Query.Columns.size() ? co_await QL::QLAwait( move(Query), Executer, _sl ) : jobject{};
+			_query.JsonName = _query.IsPlural() ? "identities" : "identity"; //from members, want distinct + nothing in members table except for members.
+			_query.AddFilter( "is_group", true );
+			_query.ReturnRaw = true;
+			let onlyHaveId = _query.Columns.size()==1 && _query.Columns[0].JsonName=="id";
+			auto groups = !onlyHaveId && _query.Columns.size() ? co_await QL::QLAwait( move(_query), _executer, _sl ) : jobject{};
 			if( membersQL ){
 				let& groupTable = GetTable( "group_members" );
 				haveId = membersQL->FindColumn( "id" );
@@ -66,7 +55,7 @@ namespace Jde::Access::Server{
 				membersQL->JsonName = "groupMembers";
 				auto statement = QL::SelectStatement( *membersQL );
 				if( statement ){
-					for( let& [name,value] : Query.Args ){
+					for( let& [name,value] : _query.Args ){
 						if( name=="is_group" )
 							continue;
 						string groupName = name=="id"
@@ -77,7 +66,7 @@ namespace Jde::Access::Server{
 					statement->Where = QL::ToWhereClause( *membersQL, groupTable, membersQL->FindColumn("deleted")!=nullptr );
 					//statement->Where.Remove( "is_group" );
 					//statement->Where.Replace( "identities.", "members." );
-					auto membersResult = co_await QL::QLAwait( move(*membersQL), move(*statement), Executer, _sl );
+					auto membersResult = co_await QL::QLAwait( move(*membersQL), move(*statement), _executer, _sl );
 					if( membersResult.is_array() )
 						members = move( membersResult.get_array() );
 					else if( membersResult.is_object() )
@@ -114,10 +103,6 @@ namespace Jde::Access::Server{
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
-	}
-
-	α GroupHook::Select( const QL::TableQL& query, UserPK executer, SL sl )ι->HookResult{
-		return query.JsonName.starts_with("grouping") ? mu<GroupGraphQLAwait>( query, executer, sl ) : nullptr;
 	}
 
 	//{ mutation addGrouping( "id":14, "memberId":[15,13] ) }

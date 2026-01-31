@@ -1,9 +1,10 @@
 #include "WebServer.h"
 #include <jde/web/server/Server.h>
-#include <jde/app/client/IAppClient.h>
+#include <jde/app/client/IAppClient.h> //!important
 #include "GatewaySocketSession.h"
 #include "HttpRequestAwait.h"
 #include "StartupAwait.h"
+#include "ql/GatewayQL.h"
 
 namespace Jde::Opc{
 	optional<std::jthread> _serverThread;

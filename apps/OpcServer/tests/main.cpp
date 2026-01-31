@@ -26,7 +26,8 @@ namespace Jde{
 			co_await Opc::Server::StartupAwait{ Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") };
 		}
 		catch( exception& e ){
-			_error = ToUP( move(e) );
+			auto p = ToUP( move(e) );
+			_error = move(p);
 		}
 		done.test_and_set();
 		done.notify_one();
@@ -41,8 +42,9 @@ namespace Jde{
 	done.wait( false );
 	int result{ EXIT_FAILURE };
 	try{
-		if( _error )
-			throw *_error;
+		if( _error ){
+			Throw( move(*_error) );
+		}
 		::testing::GTEST_FLAG( filter ) = Settings::FindString( "/testing/tests" ).value_or( "*" );
 		result = RUN_ALL_TESTS();
 	}

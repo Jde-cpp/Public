@@ -22,17 +22,29 @@ namespace Jde::Access{
 		Jde::sl _{Mutex};
 		SchemaResources[schema][resourceTarget][criteria] = resourcePK;
 	}
-	α Authorize::FindResourcePK( str schemaName, str resourceName, str criteria, sl&  )ι->optional<ResourcePK>{
-		if( auto schemaResources = SchemaResources.find(schemaName); schemaResources!=SchemaResources.end() ){
-			if( auto targetResources = schemaResources->second.find(resourceName); targetResources!=schemaResources->second.end() ){
-				auto& criteras = targetResources->second;
-				if( criteras.contains({}) )// if permisions are enabled
-					return Find(criteras, criteria);
+
+	α Authorize::FindResource( const Resource& resource, ul& l )Ι->const Resource*{
+		auto pk = resource.PK;
+		if( !pk && resource.Schema.size() && resource.Target.size() )
+			pk = FindResourcePK( resource.Schema, resource.Target, resource.Criteria, l ).value_or({});
+		if( auto p = pk ? Resources.find(resource.PK) : Resources.end(); p!=Resources.end() )
+			return &p->second;
+		else if( resource.Schema.empty() && resource.Target.size() ){
+			for( let& [pk,existing] : Resources ){
+				if( existing.Target==resource.Target && existing.Criteria.empty() )
+					return &existing;
 			}
 		}
-		return {};
+		return nullptr;
 	}
-
+	α Authorize::FindSchema( str resourceTarget, SL sl )ε->string{
+		Jde::sl _{Mutex};
+		for( let& [_,resource] : Resources ){
+			if( resource.Target==resourceTarget && !resource.Schema.contains('.') ) //exclude opc schemas which can have same target
+				return resource.Schema;
+		}
+		throw Exception{ sl, "Schema not found for resource target '{}'.", resourceTarget };
+	}
 	α Authorize::Test( str schemaName, str resourceName, ERights rights, UserPK executer, SL sl )ε->void{
 		Jde::sl _{Mutex};
 		auto resourcePK = FindResourcePK( schemaName, resourceName, {}, _ );
@@ -43,6 +55,7 @@ namespace Jde::Access{
 			THROW_IFX( user->second.IsDeleted, Exception(sl, ELogLevel::Debug, "[{}]User is deleted.", executer.Value) );
 			let configured = user->second.ResourceRights( *resourcePK );
 			THROW_IFX( !empty(configured.Denied & rights), Exception(sl, ELogLevel::Debug, "[{}]User denied '{}' access to '{}'.", executer.Value, ToString(rights), resourceName) );
+			BREAK_IF( empty(configured.Allowed & rights) && executer.Value==1001 );
 			THROW_IFX( empty(configured.Allowed & rights), Exception(sl, ELogLevel::Debug, "[{}]User does not have '{}' access to '{}'.", executer.Value, ToString(rights), resourceName) );
 		}
 		else if( executer.Value!=UserPK::System )
@@ -249,7 +262,7 @@ namespace Jde::Access{
 		auto& resource = pkResource->second;
 
 		resource.IsDeleted = restored ? optional<DB::DBTimePoint>{} : DB::DBClock::now();
-		if( resource.Filter.empty() ){
+		if( resource.Criteria.empty() ){
 			if( auto resources = resource.IsDeleted ? SchemaResources.find( resource.Schema ) : SchemaResources.end(); resources!=SchemaResources.end() ){
 				resources->second.erase( resource.Target );
 				DBGT( _ptags, "[{}.{}.{}]Deleted from schema resource.", resource.Schema, resource.Target, resource.PK );
@@ -332,14 +345,14 @@ namespace Jde::Access{
 		}
 		else{
 			Resource resource{ jResource };
-			if( auto resourceIt = resource.PK ? Resources.find(resource.PK) : Resources.end(); resourceIt!=Resources.end() )
-				Permissions.emplace( member, Permission{member, resourceIt->first, allowed, denied} );
+			if( auto p = FindResource(resource, l); p )
+				Permissions.emplace( member, Permission{member, p->PK, allowed, denied} );
 			else if( !resource.PK ){
 				CRITICAL( "[{}]Resource '{}' not found for role permission.", member, resource.Target );
 			}else{ //new resource
 				auto& saved = Resources.emplace( resource.PK, move(resource) ).first->second;
-				ASSERT( saved.Schema.size() && saved.Target.size() && saved.Filter.size() );
-				SchemaResources[saved.Schema][saved.Target][saved.Filter] = saved.PK;
+				ASSERT( saved.Schema.size() && saved.Target.size() && saved.Criteria.size() );
+				SchemaResources[saved.Schema][saved.Target][saved.Criteria] = saved.PK;
 				Permissions.emplace( member, Permission{member, saved.PK, allowed, denied} );
 			}
 		}

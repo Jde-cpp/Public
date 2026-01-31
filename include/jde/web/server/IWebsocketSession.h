@@ -44,6 +44,7 @@ namespace Jde::Web::Server{
 		α LogWriteException( const exception& e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α LogWriteException( str e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α QueryClientResults( string&& queryResult, RequestId requestId )ι->void;
+		α Schemas()Ι->const vector<sp<DB::AppSchema>>&{ return LocalQL()->Schemas(); }
 		α Session()Ι->const sp<SessionInfo>&{ return _sessionInfo; }
 		α SessionId()ι{ return _sessionInfo ? _sessionInfo->SessionId : SessionPK{}; }
 		α SetSessionId( SessionPK sessionId )ι->void;
@@ -60,7 +61,7 @@ namespace Jde::Web::Server{
 		α DoRead()ι->void;
 		α OnWrite( beast::error_code ec, std::size_t bytes_transferred )ι->void;
 		β QueryClient( QL::TableQL&& query, Jde::UserPK executer, RequestId requestId )ε->void=0;
-		β Schemas()Ι->const vector<sp<DB::AppSchema>>& = 0;
+		β LocalQL()Ι->sp<QL::IQL> = 0;
 
 		const SocketId _id{};
 		TRequestType _initialRequest;
