@@ -9,11 +9,11 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	α ProviderSelectAwait::Select()ι->TAwait<jobject>::Task{
+	α ProviderAwait::Execute()ι->TAwait<jobject>::Task{
 		try{
-			let query = Ƒ( "provider(name:\"{}\", providerTypeId:{}){{ id }}", _opcId, (uint8)Access::EProviderType::OpcServer );
-			auto appClient = AppClient();
-			let j = co_await *appClient->QLServer()->QueryObject( query, {}, appClient->UserPK() );
+			constexpr auto q = "provider(name:$opcTarget){ id }";
+			jobject vars{ {"opcTarget", _opcId} };
+			let j = co_await *AppClient()->Query( q, move(vars) );
 			let providerId = Json::FindNumber<Access::ProviderPK>( j, "id" ).value_or(0);
 			ResumeScaler( providerId );
 		}
@@ -22,7 +22,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α ProviderCreatePurgeAwait::Execute( ServerCnnctnPK opcPK )ι->TAwait<vector<ServerCnnctn>>::Task{
+	α ProviderMAwait::Execute( ServerCnnctnPK opcPK )ι->TAwait<vector<ServerCnnctn>>::Task{
 		try{
 			auto server = co_await ServerCnnctnAwait{ opcPK, true };
 			THROW_IF( server.empty(), "[{}]Could not find OpcServer", opcPK );
@@ -35,7 +35,7 @@ namespace Jde::Opc::Gateway{
 			ResumeExp( move(e) );
 		}
 	}
-	α ProviderCreatePurgeAwait::Insert( str target )ι->TAwait<jobject>::Task{
+	α ProviderMAwait::Insert( str target )ι->TAwait<jobject>::Task{
 		let q = Ƒ( "createProvider( target:\"{}\", providerType:\"OpcServer\" ){{id}}", target );
 		try{
 			auto appClient = AppClient();
@@ -48,27 +48,32 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α ProviderCreatePurgeAwait::Purge( str target )ι->ProviderSelectAwait::Task{
+	α ProviderMAwait::Purge( str target )ι->ProviderAwait::Task{
 		try{
-			let providerPK = co_await ProviderSelectAwait{ target };
-			Purge( providerPK );
+			let providerPK = co_await ProviderAwait{ target };
+			if( !providerPK )
+				ResumeScaler( providerPK );
+			else
+				Purge( providerPK );
 		}
 		catch( IException& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α ProviderCreatePurgeAwait::Purge( Access::ProviderPK providerPK )ι->TAwait<jvalue>::Task{
-		let q = Ƒ( "purgeProvider( id:{} )", providerPK );
+	α ProviderMAwait::Purge( Access::ProviderPK providerPK )ι->TAwait<jvalue>::Task{
+		ASSERT( providerPK );
+		jobject vars{ {"id", providerPK} };
+		constexpr auto q = "purgeProvider( id:$id )";
 		try{
 			auto appClient = AppClient();
-			co_await *appClient->QLServer()->Query( q, {}, appClient->UserPK() );
+			co_await *appClient->QLServer()->Query( q, move(vars), appClient->UserPK() );
 			ResumeScaler( providerPK );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α ProviderCreatePurgeAwait::Suspend()ι->void{
+	α ProviderMAwait::Suspend()ι->void{
 		if( _opcKey.IsPK() )
 			Execute( _opcKey.PK() );
 		else if( _insert )

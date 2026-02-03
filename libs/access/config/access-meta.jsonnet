@@ -126,15 +126,15 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		resources:{
 			columns: {
 				resourceId: smallSequenced,
-				schemaName: valuesColumns.name+{ i:1 },
+				schemaName: types.varchar+{ length: 32, i:1 },
 				name: types.varchar+{ length: 64, i:10 },
-				target:types.varchar+{ length: 64, i:20 },
+				target:types.varchar+{ length: 32, i:20 },
 				attributes: types.uint16+{ nullable: true, i:30 },
 				created: types.dateTime+{ insertable: false, updateable: false, default: sqlFunctions.now.name, i:40 },
 				updated: types.dateTime+{ nullable: true, insertable: false, updateable: false, i:50 },
 				deleted:types.dateTime+{ nullable: true, insertable: false, updateable: false, i:60 },
 				description: types.varchar+{ length: 2048, nullable: true, i:70 },
-				criteria: types.varchar+{ nullable: true, length:832, i:100 },
+				criteria: types.varchar+{ nullable: true, length:672, i:100 },
 				allowed: tables.rights.columns.rightId+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource", sk:null },
 				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:102, nullable:true, comment: "available rights for this resource", sk:null },//why?
 			},

@@ -3,7 +3,7 @@
 
 namespace Jde::Access::Tests{
 	AccessQL::AccessQL( vector<sp<DB::AppSchema>>&& schemas, sp<Access::Authorize> authorizer )ι:
-		QL::LocalQL{ move(vector<sp<DB::AppSchema>>{schemas}), authorizer }{
+		QL::LocalQL{ vector<sp<DB::AppSchema>>{schemas}, authorizer }{
 		QL::Configure( move(schemas) );
 	}
 

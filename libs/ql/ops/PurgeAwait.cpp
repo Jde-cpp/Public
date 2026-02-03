@@ -19,7 +19,7 @@ namespace Jde::QL{
 	α PurgeAwait::Before()ι->MutationAwaits::Task{
 		try{
 			optional<jarray> result = co_await Hook::PurgeBefore( _mutation, _userPK );
-			auto result0 = result ? result->if_contains(0) : nullptr;
+			auto result0 = result ? result->if_contains( 0 ) : nullptr;
 			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){
 				result0->get_object().erase( "complete" );
 				Resume( jarray{move(*result0)} );
@@ -36,8 +36,8 @@ namespace Jde::QL{
 
 		auto pk = table.Extends ? table.SurrogateKeys[0] : table.GetPK();
 		DB::Sql sql{
-			table.PurgeProcName.size() ? Ƒ("{}( ? )", table.Schema->Prefix+table.PurgeProcName) : Ƒ("delete from {} where {}=?", table.DBName, pk->Name),
-			{ DB::Value{DB::EType::ULong, Json::AsNumber<uint>(_mutation.Args, "id")} },
+			table.PurgeProcName.size() ? Ƒ( "{}( ? )", table.Schema->Prefix+table.PurgeProcName ) : Ƒ( "delete from {} where {}=?", table.DBName, pk->Name ),
+			{ DB::Value{_mutation.AsNumber<uint>("id", _sl)} },
 			!table.PurgeProcName.empty()
 		};
 		vector<DB::Sql> statements{ move(sql) };
@@ -56,7 +56,7 @@ namespace Jde::QL{
 			uint y{};
 			DB::IDataSource& ds = *_table->Schema->DS();
 			for( auto& statement : statements )
-				y += co_await ds.Execute(move(statement), _sl);
+				y += co_await ds.Execute( move(statement), _sl );
 			After( y );
 		}
 		catch( IException& e ){

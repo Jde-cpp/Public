@@ -59,7 +59,8 @@ namespace Jde::Opc::Gateway::Tests{
 		c.wait( false );
 		d.wait( false );
 		EXPECT_FALSE( _exception );
-		UAClient::RemoveClient( move(_client) );
+		if( _client )
+			UAClient::RemoveClient( move(_client) );
 	}
 
 	TEST_F( CertTests, Authenticate_Bad ){

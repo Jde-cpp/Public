@@ -12,7 +12,7 @@ namespace Jde::Opc::Gateway{
 
 	α PasswordAwait::CheckProvider()ι->TAwait<Access::ProviderPK>::Task{
 		try{
-			let providerPK = co_await ProviderSelectAwait{ _opcNK };
+			let providerPK = co_await ProviderAwait{ _opcNK };
 			THROW_IF( providerPK==0, "Provider not found for '{}'.", _opcNK );
 			AddSession( providerPK );
 		}

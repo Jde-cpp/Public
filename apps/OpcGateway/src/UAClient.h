@@ -71,7 +71,7 @@ namespace Jde::Opc::Gateway{
 		Ω LogServerEndpoints( str url, Jde::Handle h )ι->void;
 		α LogClientEndpoints()ι->void;
 		α RootSslDir()ι->fs::path{ return Process::AppDataFolder()/"ssl"; }
-		α Passcode()ι->const string{ return Process::GetEnv("JDE_PASSCODE").value_or( "" ); }
+		α Passcode()ι->string{ return Process::GetEnv("JDE_PASSCODE").value_or( "" ); }
 		α PrivateKeyFile()ι->fs::path{ return RootSslDir()/Ƒ("private/{}.pem", Target()); }
 		α CertificateFile()ι->fs::path{ return RootSslDir()/Ƒ("certs/{}.pem", Target()); }
 

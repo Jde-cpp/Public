@@ -2,11 +2,15 @@
 	"settings": {
 		"window.title": "Main",
 		"name": "main",
+		"cxxClang": "clang-21",
 		"releaseRoot": "${env:JDE_BASH}/Release",
 		"debugDir": "${env:JDE_BUILD_DIR}",
+		"debugClangDir": "/mnt/ram/linux/${config:cxxClang}",
 		"sourceDir": "${env:JDE_BASH}",
 		"debugPreset": "linux-debug",
-		"releasePreset": "linux-gcc-relWithDebInfo"
+		"debugClangPreset": "linux-clang-debug",
+		"releasePreset": "linux-gcc-relWithDebInfo",
+		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh"
 	},
 	"tasks": {
 		"version": "2.0.0",
@@ -24,7 +28,23 @@
 				"command": "tput reset;build/buildRelease.sh",
 				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
-				}
+			},
+			{
+				"label": "cmakeReposDebug",
+				"type": "shell",
+				"command": "mkdir -p ${config:debugDir};cd ${config:debugDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} -Djde_REPOS=ON -Djde_Superbuild=OFF -Djde_TESTS=OFF -Djde_APPS=OFF --preset ${config:debugPreset};",
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"group": "build"
+			},
+			{
+				"label": "cmakeReposDebugClang",
+				"type": "shell",
+				"command2": "echo ${config:debugClangDir};",
+				"command": "mkdir -p ${config:debugClangDir};cd ${config:debugClangDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} -DCMAKE_CXX_COMPILER=${config:cxxClang} -DCMAKE_C_COMPILER=${config:cxxClang} -Djde_REPOS=ON -Djde_Superbuild=OFF -Djde_TESTS=OFF -Djde_APPS=OFF --preset ${config:debugClangPreset};",
+				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+				"group": "build"
+			}
+
 		]
 	},
 	"folders": [

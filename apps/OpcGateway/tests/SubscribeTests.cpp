@@ -26,7 +26,7 @@ namespace Jde::Opc::Gateway::Tests{
 		private:
 			SubscribeTests* _tests;
 		};
-		Ω SetUpTestCase()ι->void{
+		Ω SetUpTestCase()ε->void{
 			ITest::SetUpTestCase();
 			optional<ssl::context> ctx;
 			_session = ms<GatewayClientSocket>( Executor(), ctx );

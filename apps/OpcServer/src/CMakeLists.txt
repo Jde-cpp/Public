@@ -8,11 +8,14 @@ find_package( open62541 REQUIRED )
 find_package( NodesetLoader REQUIRED )
 if( WIN32 )
 	if( NOT jde_REPOS )
-		set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2$<IF:$<CONFIG:Debug>,d,>.lib CACHE PATH "the directory containing LibXml2 libraries" )
+		set( XML2LIB ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2$<IF:$<CONFIG:Debug>,d,>.lib CACHE PATH "the directory containing LibXml2 libraries" )
 		set( LIBXML2_INCLUDE_DIR ${MULTI_INSTALL_PREFIX}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
 	endif()
-	find_package( LibXml2 REQUIRED )
+else()
+	set( XML2LIB LibXml2::LibXml2 )
 endif()
+find_package( LibXml2 REQUIRED )
+
 set( open62541Dir ${open62541_DIR}/../../.. )
 #cmake_path( ABSOLUTE_PATH open62541Dir NORMALIZE OUTPUT_VARIABLE open62541Dir )
 #NodesetLoader_DIR=/home/duffyj/code/libs/install/g++-14/Debug/NodesetLoader/lib/cmake/NodesetLoader
@@ -36,10 +39,12 @@ endif()
 include_directories( ${open62541Dir}/include )
 
 target_link_libraries( ${targetName} PUBLIC Jde.App.Client Jde.Web.Server Jde.Opc )
-IF( WIN32 )
-	message( "LIBXML2_LIBRARY=${LIBXML2_LIBRARY}" )
-	target_link_libraries( ${targetName} PUBLIC ${LIBXML2_LIBRARY} )
+if( NOT WIN32 )
+	target_link_libraries( ${targetName} PUBLIC protobuf::libprotobuf ) #why not Jde.Web.Server?
 endif()
+message( "XML2LIB=${XML2LIB}" )
+target_link_libraries( ${targetName} PUBLIC ${XML2LIB} )
+
 target_link_libraries( ${targetName} PUBLIC NodesetLoader )
 #######################################################
 target_precompile_headers( ${targetName}

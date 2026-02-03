@@ -91,7 +91,7 @@ namespace Jde::App::Client{
 	}
 	α ConnectAwait::HttpLogin()ι->LoginAwait::Task{
 		try{
-			let sessionId = co_await LoginAwait{ *_appClient->ClientCryptoSettings, _appClient->UserName() };//http call
+			let sessionId = co_await LoginAwait{ *_appClient->SslSettings, _appClient->UserName() };//http call
 			RunSocket( sessionId );
 		}
 		catch( IException& e ){

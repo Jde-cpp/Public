@@ -47,7 +47,7 @@ namespace Jde::Access::Tests{
 		if( existing.empty() ){
 			jobject vars{ {"id", identityPK.Underlying()}, {"roleId", rolePK} };
 			let q = "createAcl( identity:{ id:$id }, role:{ id:$roleId } )";
-			BlockTAwait<jvalue>( Server::AclQLAwait{ QL::ParseM(q, vars, Schemas()), GetRoot()} );
+			BlockTAwait<jvalue>( Server::AclQLAwait{ QL::ParseM(q, vars, Schemas()), executer} );
 		}
 	}
 

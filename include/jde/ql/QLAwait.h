@@ -40,8 +40,8 @@ namespace Jde::QL{
 		α Execute()ι->TAwait<jvalue>::Task override;
 		RequestQL _request;
 		optional<DB::Statement> _statement;
-		sp<IQL> _ql;
 		UserPK _executer;
+		sp<IQL> _ql;
 	};
 
 	template<> Ξ QLAwait<jvalue>::Execute()ι->TAwait<jvalue>::Task{

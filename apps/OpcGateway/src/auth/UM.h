@@ -9,20 +9,20 @@
 
 namespace Jde::Opc::Gateway{
 	//CRD - Insert/Purge/Select from um_providers table
-	struct ProviderSelectAwait final : TAwait<Access::ProviderPK>{
-		ProviderSelectAwait( string opcId, SRCE )ι:TAwait<Access::ProviderPK>{sl},_opcId{move(opcId)}{};//select
-		α Suspend()ι->void override{ Select(); }
+	struct ProviderAwait final : TAwaitEx<Access::ProviderPK, TAwait<jobject>::Task>{
+		using base = TAwaitEx<Access::ProviderPK, TAwait<jobject>::Task>;
+		ProviderAwait( string opcId, SRCE )ι:base{sl},_opcId{move(opcId)}{};//select
 	private:
-		α Select()ι->TAwait<jobject>::Task;
-		string _opcId;
+		α Execute()ι->TAwait<jobject>::Task;
+		ServerCnnctnNK _opcId;
 	};
-	struct ProviderCreatePurgeAwait : TAwait<Access::ProviderPK>{
-		ProviderCreatePurgeAwait( DB::Key opcKey, bool insert, SRCE )ι:TAwait<Access::ProviderPK>{sl},_insert{insert},_opcKey{move(opcKey)}{}
+	struct ProviderMAwait : TAwait<Access::ProviderPK>{
+		ProviderMAwait( DB::Key opcKey, bool insert, SRCE )ι:TAwait<Access::ProviderPK>{sl},_insert{insert},_opcKey{move(opcKey)}{}
 		α Suspend()ι->void override;
 	private:
 		α Execute( ServerCnnctnPK opcPK )ι->TAwait<vector<ServerCnnctn>>::Task;
 		α Insert( str target )ι->TAwait<jobject>::Task;
-		α Purge( str target )ι->ProviderSelectAwait::Task;
+		α Purge( str target )ι->ProviderAwait::Task;
 		α Purge( Access::ProviderPK pk )ι->TAwait<jvalue>::Task;
 
 		bool _insert;

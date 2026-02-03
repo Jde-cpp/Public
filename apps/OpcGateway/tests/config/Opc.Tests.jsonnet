@@ -2,10 +2,10 @@ local args = import 'args.libsonnet';
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests: "AppClientTests.Status",
+		tests: "LogTests.GraphQL",
 		recreateDB:: true,
-		embeddedAppServer: true,
-		embeddedOpcServer: true
+		embeddedAppServer: false,
+		embeddedOpcServer: false
 	},
 	opc: args.opc,
 	dbServers: {
@@ -31,7 +31,7 @@ local args = import 'args.libsonnet';
 	},
 	http:{
 		app:{ port: 1967, ssl:{productName: "AppServer"} },
-		gateway:{ port: 1968 },
+		gateway:{ port: 1968, ssl:{ cert:{altName: "URI:urn:open62541.server.application", domain: "localhost"}} },
 		opcServer:{ port: 1970, ssl:{productName: "OpcServer"} }
 	},
 	opcServer:{
@@ -58,10 +58,10 @@ local args = import 'args.libsonnet';
 		spd:{
 			defaultLevel:: "Information",
 			tags: {
-				trace:["test", "app", "http.client.write", "http.client.read", "ql", "sql"],
+				trace:["test", "app", "http.client.write", "http.client.read", "ql", "socket.client.write"],
 				debug:["settings", "scheduler", "uaEvent",
-					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"],
-				information:["threads", "processingLoop",
+					"http.server.write", "http.server.read", "socket.client.read", "socket.server.write", "socket.server.read"],
+				information:["threads", "processingLoop", "sql",
 					"uaSecure", "uaClient", "uaNet",
 					"uaSession", "uaServer", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
 					"monitoring", "browse", "monitoring.pedantic"],

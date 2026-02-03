@@ -155,7 +155,8 @@ namespace Jde::App::Server{
 	α ServerSocketSession::GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task{
 		try{
 			THROW_IF( !_userPK, "Not logged in to system." );
-			let user = co_await QL::QLAwait<jobject>( "user(id:$id){{name target}}", {{"id",_userPK->Value}}, {UserPK::System}, QLPtr() );
+			jobject vars{ {"id", _userPK->Value} };
+			let user = co_await QL::QLAwait<jobject>( "user(id:$id){name target}", move(vars), {UserPK::System}, QLPtr() );
 			let info = Web::Server::Sessions::Find( SessionId() );
 			let expiration = Chrono::ToClock<Clock,steady_clock>( info->Expiration );
 			Write( FromServer::Jwt(Server::GetJwt(*_userPK, string{user.at("name").as_string()}, string{user.at("target").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );

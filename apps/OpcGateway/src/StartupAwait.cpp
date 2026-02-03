@@ -46,16 +46,16 @@ namespace Jde::Opc::Gateway{
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
 				DB::SyncSchema( *schema, QLPtr() );
 
-			Crypto::CryptoSettings settings{ Json::FindDefaultObject(_webServerSettings, "ssl") };
-			if( !fs::exists(settings.PrivateKeyPath) ){
-				settings.CreateDirectories();
-				Crypto::CreateKeyCertificate( settings );
+			Crypto::CryptoSettings sslSettings{ Json::FindDefaultObject(_webServerSettings, "ssl") };
+			if( !fs::exists(sslSettings.PrivateKeyPath) ){
+				sslSettings.CreateDirectories();
+				Crypto::CreateKeyCertificate( sslSettings );
 			}
 			StartWebServer( move(_webServerSettings) );
 			auto accessSchema = DB::GetAppSchema( "access", authorize );
 			auto appClient = AppClient();
 			appClient->SubscriptionSchemas.push_back( accessSchema );
-			appClient->ClientCryptoSettings = move(settings);
+			appClient->SslSettings = move(sslSettings);
 			appClient->SetUserName( move(_userName) );
 			co_await App::Client::ConnectAwait{ appClient, false };
 

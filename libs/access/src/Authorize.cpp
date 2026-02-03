@@ -26,7 +26,7 @@ namespace Jde::Access{
 	α Authorize::FindResource( const Resource& resource, ul& l )Ι->const Resource*{
 		auto pk = resource.PK;
 		if( !pk && resource.Schema.size() && resource.Target.size() )
-			pk = FindResourcePK( resource.Schema, resource.Target, resource.Criteria, l ).value_or({});
+			pk = FindResourcePK( resource.Schema, resource.Target, resource.Criteria, l ).value_or(0);
 		if( auto p = pk ? Resources.find(resource.PK) : Resources.end(); p!=Resources.end() )
 			return &p->second;
 		else if( resource.Schema.empty() && resource.Target.size() ){

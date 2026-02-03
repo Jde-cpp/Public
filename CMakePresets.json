@@ -11,7 +11,7 @@
 			"hidden": true,
 			"cacheVariables":{
 				"CMAKE_CXX_STANDARD": "23",
-				"JDE_VERSION": "2026.12.01",
+				"JDE_VERSION": "2026.02.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3",
 				"SPDLOG_FMT_EXTERNAL": "ON"
 			}
@@ -118,11 +118,13 @@
 				"CMAKE_BUILD_TYPE": "$env{buildType}",
 				"CMAKE_CXX_COMPILER": "g++-14",
 				"CMAKE_C_COMPILER": "gcc-14",
+				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
 				"CMAKE_PREFIX_PATH": "$env{installRoot}/$env{buildType};$env{multiInstallPrefix}",
 				"CMAKE_CXX_FLAGS": "-Wno-unknown-pragmas -Wno-missing-field-initializers -Wno-changes-meaning",
 				"MULTI_INSTALL_PREFIX": "$env{multiInstallPrefix}",
 				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
-				"LIBXML2_INCLUDE_DIR": "/usr/include/libxml2"
+				"LIBXML2_INCLUDE_DIR": "/usr/include/libxml2",
+				"LIBXML2_LIBDIR": "/usr/lib/x86_64-linux-gnu"
 			}
 		},
 		{
@@ -142,7 +144,7 @@
 			"inherits": ["linux"],
 			"cacheVariables": {
 				"Boost_USE_STATIC_LIBS": true,
-				"BOOST_VERSION": "1.88.0",
+				"BOOST_VERSION": "1.90.0",
 				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-changes-meaning"
 			}
 		},
@@ -153,7 +155,19 @@
 				"OPTIMIZATION_LEVEL": "O3"
 			},
 			"cacheVariables": {
-				"CMAKE_INSTALL_PREFIX": "$env{LIB_ROOT}/$env{buildType}"
+			}
+		},
+		{
+			"name": "linux-clang-debug",
+			"inherits": ["linux", "debug"],
+			"environment": {
+				"CC": "clang-21",
+				"CXX": "clang-21"
+			},
+			"cacheVariables":{
+				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
+				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++",
+				"CMAKE_CXX_FLAGS_DEBUG": "-fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -lrt"
 			}
 		}
 	],

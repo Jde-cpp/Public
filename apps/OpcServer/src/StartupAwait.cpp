@@ -41,7 +41,7 @@ namespace Jde::Opc::Server{
 				settings.CreateDirectories();
 				Crypto::CreateKeyCertificate( settings );
 			}
-			AppClient()->ClientCryptoSettings = settings;
+			AppClient()->SslSettings = settings;
 			let serverName = Settings::FindString("/opcServer/target").value_or( "default" );
 			let& serverTable = uaSchema->GetViewPtr( "servers" );
 			auto serverId = uaSchema->DS()->ScalerSyncOpt<uint32>( DB::Statement{

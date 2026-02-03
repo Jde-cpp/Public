@@ -40,7 +40,7 @@ namespace Jde::Web::Client{
 			try{
 				Resume( co_await _session->Query(move(_query), move(_variables), _returnRaw, base::_sl) );
 			}
-			catch( IException& e ){
+			catch( exception& e ){
 				base::ResumeExp( move(e) );
 			}
 		}

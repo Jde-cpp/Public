@@ -23,9 +23,11 @@ else()
 endif()
 
 message( CMAKE_CONFIGURATION_TYPES=${CMAKE_CONFIGURATION_TYPES} )
+message( MULTI_INSTALL_PREFIX=${MULTI_INSTALL_PREFIX} )
+message( CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} )
 ExternalProject_Add(fmt
 	GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-	GIT_TAG 12.0.0
+	GIT_TAG 12.1.0
 	PREFIX fmt
 	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/fmt
 	CMAKE_ARGS ${stdArgs}
@@ -51,7 +53,7 @@ ExternalProject_Add(gtest
 
 ExternalProject_Add(spdlog
 	GIT_REPOSITORY https://github.com/gabime/spdlog.git
-	GIT_TAG v1.16.0
+	GIT_TAG v1.17.0
 	PREFIX spdlog
 	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/spdlog
 	CMAKE_ARGS ${stdArgs}
@@ -59,7 +61,7 @@ ExternalProject_Add(spdlog
 		-DSPDLOG_BUILD_EXAMPLE:BOOL=OFF
 		-DSPDLOG_BUILD_BENCH:BOOL=OFF
 		-DSPDLOG_BUILD_TESTS:BOOL=OFF
-		-DSPDLOG_FMT_EXTERNAL=ON
+		-DSPDLOG_FMT_EXTERNAL=${SPDLOG_FMT_EXTERNAL}
 		-DSPDLOG_NO_THREAD_ID=ON
 		-DSPDLOG_BUILD_SHARED=ON
 		-DSPDLOG_NO_ATOMIC_LEVELS=ON
@@ -68,7 +70,7 @@ ExternalProject_Add(spdlog
 
 ExternalProject_Add(absl
 	GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
-	GIT_TAG 20250814.1
+	GIT_TAG 20260107.0
 	PREFIX absl
 	INSTALL_DIR ${TYPE_INSTALL_PREFIX}/absl
 	CMAKE_ARGS ${stdArgs}
@@ -98,7 +100,7 @@ IF( WIN32 )
 	ExternalProject_Add(
 		LibXml2
 		GIT_REPOSITORY https://github.com/GNOME/libxml2.git
-		GIT_TAG v2.15.0
+		GIT_TAG v2.15.1
 		PREFIX libxml2
 		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/libxml2
 		CMAKE_ARGS ${stdArgs}
@@ -113,7 +115,16 @@ IF( WIN32 )
 	)
 	set( LIBXML2_INCLUDE_DIR ${MULTI_INSTALL_PREFIX}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
 	set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2$<IF:$<CONFIG:Debug>,d,>.lib CACHE PATH "the directory containing LibXml2 libraries" )
+	set( nodesetLoaderArgs
+		-DLIBXML2_LIBRARY=${LIBXML2_LIBRARY}
+		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR} )
 else()
+#	message( LIBXML2_LIBRARY=${LIBXML2_LIBDIR} )
+#	message( LIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR} )
+	set( nodesetLoaderArgs
+		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
+		-DLIBXML2_LIBRARY=${LIBXML2_LIBDIR}
+	)
 #need to add '#define _C4_STD_VECTOR_FWD_HPP_' to ryml_all.hpp to avoid redefinition errors
 	ExternalProject_Add(jsonnet
 		GIT_REPOSITORY https://github.com/google/jsonnet.git
@@ -130,7 +141,7 @@ else()
 endif()
 ExternalProject_Add(protobuf
 	GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-	GIT_TAG v33.2
+	GIT_TAG v33.5
 	PREFIX protobuf
 	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/protobuf
 	CMAKE_ARGS ${stdArgs}
@@ -144,7 +155,7 @@ ExternalProject_Add(protobuf
 
 ExternalProject_Add(open62541
 	GIT_REPOSITORY https://github.com/open62541/open62541.git
-#	GIT_TAG v1.4.13
+	GIT_TAG v1.5.0
 	PREFIX open62541
 	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/open62541
 		CMAKE_ARGS ${stdArgs}
@@ -168,14 +179,14 @@ ExternalProject_Add(open62541-nodeset-loader
 		-DENABLE_EXAMPLES=OFF
 		-DCMAKE_PREFIX_PATH=${MULTI_INSTALL_PREFIX}
 #linux
-		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
+#		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
 #		-DPC_LIBXML_LIBDIR=${LIBXML2_LIBDIR}
 #win
-    -DLIBXML2_LIBRARY=${LIBXML2_LIBRARY}
+#    -DLIBXML2_LIBRARY=${LIBXML2_LIBRARY}
 #		-DLIBXML2_LIBRARIES=${LIBXML2_LIBRARIES}
 #		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
 		-DCMAKE_BUILD_TYPE=Debug
-
+		${nodesetLoaderArgs}
 )
 
 ExternalProject_Add_StepDependencies( spdlog configure fmt )

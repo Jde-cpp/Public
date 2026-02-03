@@ -46,17 +46,16 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α Tests::SelectServerCnnctn( DB::Key id )ι->optional<ServerCnnctn>{
-		let subQuery = id.IsPK() ? Ƒ( "id: {}", id.PK() ) : Ƒ( "target: \"{}\"", id.NK() );
-		let select = Ƒ( "serverConnection({}){{ id name attributes created updated deleted target description certificateUri isDefault url }}", subQuery );
-		auto o = QL().QuerySync<jobject>( select, {}, {UserPK::System} );
+		let select = Ƒ( "serverConnection({}){{ id name attributes created updated deleted target description certificateUri isDefault url }}", id.QLInput() );
+		auto o = QL().QuerySync<jobject>( select, id.QLVariables(), {UserPK::System} );
 		return o.empty() ? optional<ServerCnnctn>{} : ServerCnnctn( move(o) );
 	}
 
-	α Tests::GetConnection( str target )ι->ServerCnnctn{
+	α Tests::GetConnection( str target )ε->ServerCnnctn{
 		auto con = SelectServerCnnctn( {target} );
 		if( !con ){
-			BlockAwait<ProviderCreatePurgeAwait, Access::ProviderPK>( ProviderCreatePurgeAwait{target, false} );
-			let id = BlockAwait<CreateServerCnnctnAwait, ServerCnnctnPK>( CreateServerCnnctnAwait{} );
+			BlockTAwait<Access::ProviderPK>( ProviderMAwait{target, false} );
+			let id = BlockTAwait<ServerCnnctnPK>( CreateServerCnnctnAwait{} );
 			con = SelectServerCnnctn( id );
 		}
 		return *con;

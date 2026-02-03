@@ -1,6 +1,7 @@
 #pragma once
 #include <jde/web/server/Sessions.h>
 #include <jde/web/client/usings.h>
+#include "ql/GatewayQL.h"
 #include "types/MonitoringNodes.h"
 #include <jde/web/server/IWebsocketSession.h>
 
@@ -18,7 +19,7 @@ namespace Jde::Opc::Gateway{
 		α WriteException( exception&& e, Jde::RequestId requestId )ι->void override;
 	private:
 		α CreateSubscription( sp<UAClient> client, flat_set<NodeId> nodes, RequestId requestId )ι->VoidAwait::Task;
-		α LocalQL()Ι->sp<QL::IQL> override;
+		α LocalQL()Ι->sp<QL::IQL> override{ return QLPtr(); }
 		α OnClose()ι->void;
 		α ProcessTransmission( FromClient::Transmission&& transmission )ι->void;
 		α QueryClient( QL::TableQL&&, Jde::UserPK, Jde::RequestId )ε->void override{ throw Exception{ "NoImpl" }; }

@@ -1,4 +1,4 @@
-﻿#include "UAClient.h"
+#include "UAClient.h"
 
 #include <open62541/plugin/securitypolicy_default.h>
 #include <jde/fwk/process/execution.h>
@@ -82,16 +82,17 @@ namespace Jde::Opc::Gateway{
 	α UAClient::Configuration()ε->UA_ClientConfig*{
 		const fs::path root = RootSslDir();
 		const fs::path privateKeyFile = PrivateKeyFile();
-		const string passcode = Passcode();
 		let uri = Str::Replace( _opcServer.CertificateUri, " ", "%20" );
 		bool addSecurity = !uri.empty();//urn:JDE-CPP:Kepware.KEPServerEX.V6:UA%20Server
+		auto certAuth = Credential.Type()==ETokenType::Certificate;
 		//TODO - test no security also
-		if( addSecurity && !fs::exists(CertificateFile()) ){
+		if( addSecurity && !certAuth && !fs::exists(CertificateFile()) ){
 			if( !fs::exists(root) )
 				fs::create_directories( root );
+			const string passcode = Passcode();
 			if( !fs::exists(privateKeyFile) )
 				Crypto::CreateKey( root/Ƒ("public/{}.pem", Target()), privateKeyFile, passcode );
-			Crypto::CreateCertificate( CertificateFile(), privateKeyFile, passcode, Jde::format("URI:{}", uri), "jde-cpp", "US", "localhost" );
+			Crypto::CreateCertificate( CertificateFile(), privateKeyFile, passcode, Ƒ("URI:{}", uri), "jde-cpp", "US", "localhost" );
 		}
 		auto config = UA_Client_getConfig( _ptr );
 		using SecurityPolicyPtr = up<UA_SecurityPolicy, decltype( &UA_free )>;
@@ -101,7 +102,13 @@ namespace Jde::Opc::Gateway{
 		if( addSecurity ){
 			config->applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			config->clientDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
-			auto certificate = ToUAByteString( Crypto::ReadCertificate(CertificateFile()) );
+			let& settings = AppClient()->SslSettings; //requires authentication[AppClient] & transport[OpcServer] security be equal.
+			certAuth = certAuth && settings.has_value();
+			let certificateFile = certAuth ? settings->CertPath : CertificateFile();
+			let privateKeyFile = certAuth ? settings->PrivateKeyPath : PrivateKeyFile();
+			let passcode = certAuth ? settings->Passcode : Passcode();
+			INFO( "[{}]Using Basic256Sha256 security policy with certificate '{}'", hex(Handle()), certificateFile.string() );
+			auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
 			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
 			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAClientException(sc, Handle()) );
 
@@ -184,12 +191,14 @@ namespace Jde::Opc::Gateway{
 						client->Connected = true;
 						auto& opcCreds = _clients.try_emplace( client->Target() ).first->second;
 						let inserted = opcCreds.try_emplace( client->Credential, client ).second;
-						ASSERT( inserted );//not sure why we would already have a record.
+						ASSERT( inserted ); // not sure why we would already have a record.
 					}
-					Post( [client]()ι->void{ConnectAwait::Resume(move(client));} );
+					Post( [client]()ι->void {
+						ConnectAwait::Resume(move(client));
+					});
 				}
 				else
-					Post( [client,connectStatus]()ι->void{ConnectAwait::Resume(client->Target(), client->Credential, UAClientException{connectStatus, client->Handle(), "Connection Failed"});} );
+					Post( [client,connectStatus]()ι->void {ConnectAwait::Resume(client->Target(), client->Credential, UAClientException{connectStatus, client->Handle(), "Connection Failed"});} );
 
 				return true;
 			});
@@ -214,12 +223,12 @@ namespace Jde::Opc::Gateway{
 			UA_ClientConfig_setAuthenticationUsername( &_config, Credential.LoginName().c_str(), Credential.Password().c_str() );
 			INFO( "[{}]Using username/password authentication: '{}'", hex(Handle()), Credential.LoginName() );
 		}else if( Credential.Type()==ETokenType::Certificate ){
-			INFO( "[{}]Using certificate authentication: '{}'", hex(Handle()), AppClient()->ClientCryptoSettings->CertPath.string() );
+			let& settings = AppClient()->SslSettings;
+			let& certPath = settings->CertPath;
+			INFO( "[{}]Using certificate authentication: '{}'", hex(Handle()), certPath.string() );
 			UA_ClientConfig_setAuthenticationCert( &_config,
-				*ToUAByteString( Crypto::ReadCertificate(AppClient()->ClientCryptoSettings->CertPath) ),
-				*ToUAByteString( Crypto::ReadPrivateKey(AppClient()->ClientCryptoSettings->PrivateKeyPath, AppClient()->ClientCryptoSettings->Passcode) )
-				//*ToUAByteString( Crypto::ReadCertificate(CertificateFile()) ),
-				//*ToUAByteString( Crypto::ReadPrivateKey(PrivateKeyFile(), Passcode()) )
+				*ToUAByteString( Crypto::ReadCertificate(certPath) ),
+				*ToUAByteString( Crypto::ReadPrivateKey(settings->PrivateKeyPath, settings->Passcode) )
 			);
 		}else if( Credential.Type()==ETokenType::IssuedToken ){
 			ASSERT( Credential.Token().size() );
@@ -312,10 +321,10 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α UAClient::TryFind( UA_Client* ua, SL srce )ι->sp<UAClient>{
-		sl _{ _clientsMutex };
 		if( Process::ShuttingDown() ){
 			LOGSL( ELogLevel::Warning, srce, _tags, "Application is shutting down." );
 		}else{
+			sl _{ _clientsMutex };
 			for( auto& [_, credClients] : _clients ){
 				for( auto& [_, client] : credClients ){
 					if( client->_ptr == ua )

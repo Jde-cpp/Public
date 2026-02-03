@@ -28,7 +28,7 @@ namespace Jde::App::Client{
 		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray>;
 
 		//β StatusDetails()ι->vector<string> = 0;
-		optional<Crypto::CryptoSettings> ClientCryptoSettings;
+		optional<Crypto::CryptoSettings> SslSettings;
 		Crypto::PublicKey ServerPublicKey;
 		vector<sp<DB::AppSchema>> SubscriptionSchemas;
 		α Write( vector<Logging::Entry>&& entries )ι->void;

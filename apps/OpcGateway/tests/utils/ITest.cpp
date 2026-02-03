@@ -7,7 +7,7 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{
-	α ITest::SetUpTestCase()ι->void{
+	α ITest::SetUpTestCase()ε->void{
 		_jwt = BlockAwait<Web::Client::ClientSocketAwait<Jde::Web::Jwt>,Web::Jwt>( AppClient()->Jwt() );
 		let sessionId = *Str::TryTo<SessionPK>(_jwt->SessionId, nullptr, 16);
 		TRACE( "UserPK: {:x}, SessionId: {:x}", _jwt->UserPK.Value, sessionId );
@@ -17,7 +17,8 @@ namespace Jde::Opc::Gateway::Tests{
 		AddSession( sessionId, OpcServerTarget, move(cred) );
 	}
 	α ITest::TearDownTestCase()ι->void{
-		UAClient::RemoveClient( move(_client) );
+		if( _client )
+			UAClient::RemoveClient( move(_client) );
 	}
 
 	optional<Web::Jwt> ITest::_jwt;

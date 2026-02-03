@@ -51,9 +51,10 @@ namespace Jde::Opc::Gateway{
 			}
 			TRACE( "{}run_iterate: requestCount: {}", logPrefix(), size );
 			if( sc = UA_Client_run_iterate(*client, 0); sc ){
-				ERR( "{}UA_Client_run_iterate returned ({:x}){}", logPrefix(), sc, UAException::Message(sc) );
 				_running.clear();
 				ul _{ _requestMutex };
+				let level = _requests.size()>0 ? ELogLevel::Critical : ELogLevel::Debug;
+				LOG( level, _tags, "{}UA_Client_run_iterate returned ({:x}){}, requestCount: {}", logPrefix(), sc, UAException::Message(sc), _requests.size() );
 				_requests.clear();
 				break;
 			}

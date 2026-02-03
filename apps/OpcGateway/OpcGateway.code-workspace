@@ -14,7 +14,9 @@
 		"C_Cpp.default.forcedInclude": [
 			"${env:JDE_DIR}/build/forcedInclude.h",
 			"${env:JDE_DIR}/apps/OpcGateway/src/pc.h"
-		]
+		],
+		"cmake.sourceDirectory": ["${env:JDE_DIR}"],
+		"cmake.defaultActiveFolder": "${env:JDE_DIR}"
 	},
 	"tasks": {
 		"version": "2.0.0",
