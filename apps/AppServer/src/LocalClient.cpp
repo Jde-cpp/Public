@@ -14,13 +14,12 @@ namespace Server{
 		Logging::Init();
 	}
 
-	struct AppServerQL : TAwait<jvalue>{
+	struct AppServerQLAwait : TAwait<jvalue>{
 		using base = TAwait<jvalue>;
-		AppServerQL( QL::RequestQL&& q, Jde::UserPK executer, bool raw, SL sl )ι:
+		AppServerQLAwait( QL::RequestQL&& q, Jde::UserPK executer, SL sl )ι:
 			base{ sl },
 			_q{ move(q) },
-			_executer{ executer },
-			_returnRaw{ raw }
+			_executer{ executer }
 		{}
 		α await_ready()ι->bool override{ return true; }
 		α await_resume()ε->jvalue override;
@@ -28,13 +27,12 @@ namespace Server{
 		α Suspend()ι->void override{ ASSERT(false); }
 		QL::RequestQL _q;
 		Jde::UserPK _executer;
-		bool _returnRaw;
 	};
-	α LocalClient::ClientQuery( QL::RequestQL&& q, UserPK executer, bool raw, SL sl )ε->up<TAwait<jvalue>>{
-		return mu<AppServerQL>( move(q), executer, raw, sl );
+	α LocalClient::ClientQuery( QL::RequestQL&& q, UserPK executer, SL sl )ε->up<TAwait<jvalue>>{
+		return mu<AppServerQLAwait>( move(q), executer, sl );
 	}
 
-	α AppServerQL::await_resume()ε->jvalue{
+	α AppServerQLAwait::await_resume()ε->jvalue{
 		THROW_IF( !_q.IsQueries(), "Only queries are supported." );
 		jvalue y;
 		for( const auto& table : _q.Queries() ){

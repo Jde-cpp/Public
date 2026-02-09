@@ -10,106 +10,73 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	GatewayQLAwait::GatewayQLAwait( QL::RequestQL&& q, variant<sp<Web::Server::SessionInfo>, Jde::UserPK> creds, bool raw, SL sl )ι:
-		base{ move(q), creds, raw, sl }
-	{}
+
+	α IGatewayQLAwait::GetClient( QL::IQLAwaitExe* await )ι->TAwait<sp<UAClient>>::Task{
+		try{
+			auto session = await->Session(); THROW_IF( !session, "No Session for query" );
+			auto opcId = await->Input().As<jstring>( "opc" );
+			_client = co_await ConnectAwait{ string{opcId}, *session };
+			await->Query();
+		}
+		catch( exception& e ){
+			await->ResumeExp( move(e) );
+		}
+	}
 
 	Ω needsClient( const QL::Input& q )ι->bool{
 		return !q.JTableName().starts_with( "serverConnection" ) && q.JTableName()!="__type" && q.JTableName()!="status";
 	}
-	Ω opcClientNK( const QL::Input& q )ι->optional<ServerCnnctnNK>{
-		if( !needsClient(q) )
-			return nullopt;
-
-		auto opcId = q.FindPtr<jstring>( "opc" );
-		return opcId ? string{ *opcId } : string{};
+	α GatewayQLAwait::Test( QL::TableQL& q, QL::Creds executer, SL sl )->up<TAwait<jvalue>>{
+		up<TAwait<jvalue>> await;
+		if( needsClient(q) )
+			await = mu<GatewayQLAwait>( move(q), move(executer), sl );
+		else if( q.JsonName=="__type" && !q.Args.contains("name") ){ //why?
+			NodeId nodeId{ q.Args };
+			q.Args["name"] = nodeId.ToString();
+		}
+		return await;
+	}
+	α GatewayQLMAwait::Test( QL::MutationQL& m, QL::Creds executer, SL sl )->up<TAwait<jvalue>>{
+		return m.JsonTableName=="variable" ? mu<GatewayQLMAwait>( move(m), move(executer), sl ) : nullptr;
 	}
 
-	α GatewayQLAwait::Suspend()ι->void{
-		if( _queries.IsQueries() ){
-			for( auto& q : _queries.Queries() ){
-				if( auto opcId = opcClientNK(q); opcId )
-					_clients.try_emplace( *opcId, nullptr );
-			}
-		}
-		else if( _queries.IsMutation() ){
-			for( auto& m : _queries.Mutations() ){
-				if( auto opcId = opcClientNK(m); opcId )
-					_clients.try_emplace( *opcId, nullptr );
-			}
-		}
-		GetClients();
-	}
-	α GatewayQLAwait::GetClients()ι->TAwait<sp<UAClient>>::Task{
+	α GatewayQLAwait::Query()ι->TAwait<jvalue>::Task{
 		try{
-			auto session = Session();
-			THROW_IF( _clients.size() && !session, "No Session for query" );
-			for( auto p = _clients.begin(); p!=_clients.end(); ++p )
-				p->second = co_await ConnectAwait{ p->first, *session, _sl };
-			Query();
+			jvalue y;
+			_query.ReturnRaw = true;
+			if( _query.JsonName.starts_with("node") || _query.JsonName.starts_with("variable") )
+				y = co_await NodeQLAwait{ move(_query), move(_client), _sl };
+			else if( _query.JsonName.starts_with("dataType") )
+				y = co_await DataTypeQLAwait{ move(_query), move(_client), _sl };
+			else if( _query.JsonName=="serverDescription" )
+				y = ServerDescription( move(_query), move(_client) );
+			else if( _query.JsonName=="securityPolicyUri" )
+				y = SecurityPolicyUri( move(_query), move(_client) );
+			else if( _query.JsonName=="securityMode" )
+				y = SecurityMode( move(_query), move(_client) );
+			else
+				throw Exception{ _sl, "Unknown query type: {}", _query.JsonName };
+			Resume( move(y) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α GatewayQLAwait::Query()ι->TAwait<jvalue>::Task{
+
+	α GatewayQLMAwait::Query()ι->TAwait<jvalue>::Task{
 		try{
-			if( _queries.IsQueries() ){
-				_raw = _raw && _queries.Queries().size()==1;
-				jvalue results = _raw ? jvalue{} : jobject{};
-				for( auto& q : _queries.Queries() ){
-					q.ReturnRaw = true;
-					let memberName = q.ReturnName();
-					jvalue queryResult;
-					if( !needsClient(q) ){
-						if( q.JsonName=="status" )
-							queryResult = App::IApp::Status();
-						else{
-							if( q.JsonName=="__type" && !q.Args.contains("name") ){
-								NodeId nodeId{ q.Args };
-								q.Args["name"] = nodeId.ToString();
-							}
-							queryResult = co_await QL::QLAwait<>( move(q), UserPK(), _sl );
-						}
-					}else{
-						auto client = _clients.at( *opcClientNK(q) );
-						if( q.JsonName.starts_with("node") || q.JsonName.starts_with("variable") )
-							queryResult = co_await NodeQLAwait{ move(q), move(client), _sl };
-						else if( q.JsonName.starts_with("dataType") )
-							queryResult = co_await DataTypeQLAwait{ move(q), move(client), _sl };
-						else if( q.JsonName=="serverDescription" )
-							queryResult = ServerDescription( move(q), move(client) );
-						else if( q.JsonName=="securityPolicyUri" )
-							queryResult = SecurityPolicyUri( move(q), move(client) );
-						else if( q.JsonName=="securityMode" )
-							queryResult = SecurityMode( move(q), move(client) );
-						else
-							throw Exception{ _sl, "Unknown query type: {}", q.JsonName };
-					}
-					if( _raw )
-						results = queryResult;
-					else
-						results.get_object()[memberName] = move( queryResult );
-				}
-				Resume( move(results) );
+			jvalue y;
+			// if( m.Type==QL::EMutationQL::Execute )
+			// 	results.push_back( co_await JCallAwait(move(m), _request.SessionInfo, _sl) );
+			if( _query.DBTable && _query.TableName()=="server_connections" )
+				y = co_await QL::QLAwait<>( move(_query), UserPK(), _sl );
+			else if( _query.JsonTableName=="variable" ){
+				auto session = Session();
+				THROW_IF( !session, "No Session for mutation" );
+				y = co_await VariableQLAwait{ move(_query), session, _sl };
 			}
-			else if( _queries.IsMutation() ){
-				jarray results;
-				for( auto& m : _queries.Mutations() ){
-					m.ReturnRaw = _raw;
-					// if( m.Type==QL::EMutationQL::Execute )
-					// 	results.push_back( co_await JCallAwait(move(m), _request.SessionInfo, _sl) );
-					if( m.DBTable && m.TableName()=="server_connections" )
-						results.push_back( co_await QL::QLAwait<>(move(m), UserPK(), _sl) );
-					else if( m.JsonTableName=="variable" ){
-						auto session = Session();
-						THROW_IF( !session, "No Session for mutation" );
-						results.push_back( co_await VariableQLAwait{move(m), session, _sl} );
-					}
-				}
-				jvalue y{ results.size()==1 ? move(results[0]) : jvalue{results} };
-				Resume( move(y) );
-			}
+			else
+				throw Exception{ _sl, "Unknown query type: {}", _query.JsonTableName };
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

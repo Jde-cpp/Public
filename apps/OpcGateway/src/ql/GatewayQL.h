@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/ql/LocalQL.h>
+#include <jde/app/AppQL.h>
 
 namespace Jde::Opc::Gateway{
 	struct GatewayQL;
@@ -8,9 +8,9 @@ namespace Jde::Opc::Gateway{
 	α ConfigureQL( sp<DB::AppSchema> schema, sp<Access::Authorize> authorizer )ι->void;
 	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
 
-	struct GatewayQL : QL::LocalQL{
+	struct GatewayQL : App::AppQL{
 		GatewayQL( sp<DB::AppSchema>&& schema, sp<Access::Authorize> authorizer )ι;
-		α CustomQuery( QL::TableQL& ql, UserPK executer, SL sl )ι->up<TAwait<jvalue>> override;
-		α CustomMutation( QL::MutationQL& ql, UserPK executer, SL sl )ι->up<TAwait<jvalue>> override;
+		α CustomQuery( QL::TableQL& ql, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>> override;
+		α CustomMutation( QL::MutationQL& ql, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>> override;
 	};
 }

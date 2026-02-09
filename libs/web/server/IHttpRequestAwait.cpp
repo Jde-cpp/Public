@@ -1,4 +1,5 @@
 #include <jde/ql/ql.h>
+#include <jde/ql/QLAwait.h>
 #include <jde/web/server/IHttpRequestAwait.h>
 
 namespace Jde::Web::Server{
@@ -31,7 +32,7 @@ namespace Jde::Web::Server{
 			_request.LogRead( query );
 			auto ql = QL::Parse( move(query), move(vars), Schemas(), _request.Params().contains("raw") );
 			THROW_IFX( ql.IsMutation() && !_request.IsPost(), RestException<http::status::bad_request>(SRCE_CUR, move(_request), "Mutations must use post.") );
-			auto y = co_await *QueryHandler( move(ql), _request.SessionInfo, _request.Params().contains("raw") );
+			auto y = co_await QL::QLAwait<>{ move(ql), {_request.SessionInfo}, _sl };
 			Resume( HttpTaskResult{jobject{{"data", move(y)}}, move(_request)} );
 		}
 		catch( exception& e ){

@@ -28,9 +28,9 @@ export class QLSelector implements OnInit{
 		try{
 			const columns = ["id", "name", "description"];
 			const input = this.excludedIds().length  ? `(id: {notIn: ${JSON.stringify(this.excludedIds())}})` : "";
-			this.data.set( (await this.ql().query(`${this.collectionName()}${input}{${columns.join(" ")}}`))[this.collectionName()] );
+			this.data.set( (await this.ql().query(`${this.collectionName()}${input}{${columns.join(" ")}}`, {}, (m)=>console.log(m)))[this.collectionName()] );
 			if( !this.schemaInput() )
-				this.#schema = await this.ql().schemaWithEnums( this.collectionName() );
+				this.#schema = await this.ql().schemaWithEnums( this.collectionName(), (m)=>console.log(m) );
 			this.displayedFields = Field.filterSort( this.schema.fields.filter((x)=>columns.includes(x.name)), columns, this.excludedColumnsInput() );
 			this.isLoading.set( false );
 		}

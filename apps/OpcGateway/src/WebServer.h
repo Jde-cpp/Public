@@ -13,7 +13,6 @@ namespace Jde::Opc::Gateway{
 		RequestHandler( jobject settings, sp<App::IApp> appClient )ι:Web::Server::IRequestHandler{move(settings), move(appClient)}{}
 		α HandleRequest( Web::Server::HttpRequest&& req, SRCE )ι->up<Web::Server::IHttpRequestAwait> override;
 		α WebsocketSession( sp<Web::Server::RestStream>&& stream, beast::flat_buffer&& buffer, Web::Server::TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<Web::Server::IWebsocketSession> override;
-		α Query( QL::RequestQL&&, UserPK, bool, SL )ε->up<TAwait<jvalue>> override{ throw Exception{ "NoImpl" }; }
 		α PassQL()ι->bool override{ return true; }
 		α Schemas()ι->const vector<sp<DB::AppSchema>>& override;
 	};

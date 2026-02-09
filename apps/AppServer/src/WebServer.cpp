@@ -3,7 +3,7 @@
 #include <jde/app/IApp.h>
 #include "LocalClient.h"
 #include "ServerSocketSession.h"
-#include "ql/AppQL.h"
+#include "ql/AppServerQL.h"
 #include "ql/AppQLAwait.h"
 
 #define let const auto
@@ -14,7 +14,6 @@ namespace Jde::App{
 	using QL::Filter;
 	concurrent_flat_map<uint32,sp<Server::ServerSocketSession>> _sessions; //Consider using main class+ql subscriptions
 	concurrent_flat_map<ProgInstPK,Filter> _logSubscriptions;
-	//concurrent_flat_map<ProgInstPK,Proto::FromServer::Status> _statuses;
 	concurrent_flat_set<ProgInstPK> _statusSubscriptions;
 
 	ProgramPK _appId;
@@ -102,10 +101,6 @@ namespace Jde::App::Server{
 	α RequestHandler::Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt{
 		auto publicKey = Crypto::ReadPublicKey( Settings().Crypto().PublicKeyPath );
 		return Web::Jwt{ move(publicKey), userPK, move(name), move(target), sessionId, move(endpoint), expires, move(description), Settings().Crypto().PrivateKeyPath };
-	}
-
-	α RequestHandler::Query( QL::RequestQL&& ql, UserPK executer, bool raw, SL sl )ι->up<TAwait<jvalue>>{
-		return mu<AppQLAwait>( move(ql), executer, raw, sl );
 	}
 
 	α RequestHandler::WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession>{

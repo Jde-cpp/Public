@@ -11,7 +11,6 @@ namespace Jde::Web::Server{
 		virtual ~IRequestHandler()=default; //msvc error
 		β HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> =0;
 		β PassQL()ι->bool{ return true; }
-		β Query( QL::RequestQL&& ql, UserPK executer, bool raw, SRCE )ε->up<TAwait<jvalue>> = 0;
 		β Schemas()ι->const vector<sp<DB::AppSchema>>& =0;
 		β WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> =0;
 

@@ -1,4 +1,26 @@
+import { Guid } from '../../model/Guid';
 import {ApplicationStrings} from './Application';
+
+type Entry={
+	templateId:number;
+	argIds:number[];
+	level:number;
+	tags:string[];
+	line:number;
+	time:Date;
+	userId:number;
+	fileId:number;
+	functionId:number;
+}
+type LogEntriesRest={ entries:Entry[]; strings:{id:string, value:string}[]; }
+export class LogEntries{
+	constructor( queryResult:LogEntriesRest ){
+		this.entries = queryResult.entries;
+		queryResult.strings.forEach( s=>this.strings.set( new Guid(s.id), s.value) );
+	}
+	entries:Entry[];
+	strings:Map<Guid,string> = new Map<Guid,string>();
+}
 /*
 export class LogEntry
 {
@@ -78,7 +100,7 @@ export class LogEntry
 	get thread():string{ return this.threadId ? this.applicationInstance.threads.get(this.threadId) : null; }
 	get file():string{ return this.fileId ? this.application.files.get(this.fileId) : null; }
 	get message():string
-	{ 
+	{
 		var message = this.messageId ? this.application.messages.get(this.messageId) : null;
 		if( message )
 		{
@@ -136,7 +158,7 @@ export class RequestStrings
 	{
 		strings.push( this.applicationInstanceId.toString() );
 		strings.push( this.requests.length.toString() );
-		this.requests.forEach(entryId => 
+		this.requests.forEach(entryId =>
 		{
 			strings.push( entryId[0].toString() );
 			strings.push( entryId[1].toString() );

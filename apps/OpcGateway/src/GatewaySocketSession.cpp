@@ -95,7 +95,7 @@ namespace Jde::Opc::Gateway{
 			if( auto p = proto.mutable_variables(); p->size() )
 				vars = parse( move(*p) ).as_object();
 			auto ql = QL::Parse( move(*proto.mutable_text()), move(vars), Schemas(), proto.return_raw() );
-			auto v = co_await GatewayQLAwait{ move(ql), Session(), proto.return_raw() };
+			auto v = co_await QL::QLAwait<>{ move(ql), {Session()} };
 			Write( FromServer::QueryTrans(serialize(move(v)), requestId) );
 		}
 		catch( exception& e ){

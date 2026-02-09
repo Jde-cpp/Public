@@ -1,15 +1,19 @@
 #pragma once
 #include "UnsubscribeAwait.h"
+#include "IQLSession.h"
 
 namespace Jde::Access{ struct Authorize; }
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::QL{
 	struct TableQL; struct MutationQL;
+
 	struct IQL : std::enable_shared_from_this<IQL>{
 		β Authorizer()ε->Access::Authorize& = 0;
 		β AuthorizerPtr()ε->sp<Access::Authorize> = 0;
-		β CustomQuery( QL::TableQL& ql, UserPK executer, SL sl )ι->up<TAwait<jvalue>> = 0;
-		β CustomMutation( QL::MutationQL& ql, UserPK executer, SL sl )ι->up<TAwait<jvalue>> = 0;
+		β CustomQuery( QL::TableQL& ql, Creds executer, SL sl )ι->up<TAwait<jvalue>> = 0;
+		β CustomMutation( QL::MutationQL& ql, Creds executer, SL sl )ι->up<TAwait<jvalue>> = 0;
+		β LogQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>> = 0;
+		β StatusQuery( QL::TableQL&& ql )ι->jobject = 0;
 		[[nodiscard]] β Query( string query, jobject variables, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jvalue>> =0;
 		[[nodiscard]] β QueryObject( string query, jobject variables, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jobject>> =0;
 		[[nodiscard]] β QueryArray( string query, jobject variables, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jarray>> =0;

@@ -102,7 +102,7 @@ namespace Jde{
 	using StringMd5=uuid;
 	Τ struct PK{
 		using Type=T;
-		Type Value;
+		Type Value{};
 		operator bool()Ι{ return Value!=0; }
 		α operator !()Ι{ return Value==0; }
 		α operator ==( const PK& rhs )Ι{ return Value==rhs.Value; }

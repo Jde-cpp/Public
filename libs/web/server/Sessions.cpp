@@ -71,7 +71,6 @@ namespace	Sessions{
 
 	SessionInfo::SessionInfo( SessionPK sessionPK, str userEndpoint, bool hasSocket )ι:
 		SessionId{ sessionPK },
-		UserPK{},
 		UserEndpoint{ userEndpoint },
 		HasSocket{ hasSocket },
 		Expiration{ NewExpiration() },
@@ -80,8 +79,8 @@ namespace	Sessions{
 	{}
 
 	SessionInfo::SessionInfo( SessionPK sessionPK, steady_clock::time_point expiration, Jde::UserPK userPK, str userEndpointAddress, bool hasSocket )ι:
+		QL::IQLSession{ userPK },
 		SessionId{ sessionPK },
-		UserPK{ userPK },
 		UserEndpoint{ userEndpointAddress },
 		HasSocket{ hasSocket },
 		Expiration{ expiration },

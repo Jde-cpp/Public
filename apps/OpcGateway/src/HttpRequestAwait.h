@@ -14,7 +14,6 @@ namespace Jde::Opc::Gateway{
 		α Suspend()ι->void override;
 		α await_resume()ε->HttpTaskResult override;
 	private:
-		α QueryHandler( QL::RequestQL&& q, variant<sp<SessionInfo>, Jde::UserPK> creds, bool returnRaw, SRCE )ι->up<IQLAwait> override;
 		α Schemas()Ι->const vector<sp<DB::AppSchema>>& override;
 
 		α Login( str endpoint )ι->TAwait<optional<Web::FromServer::SessionInfo>>::Task;

@@ -11,7 +11,6 @@ namespace Jde::Opc::Server{
 		α await_ready()ι->bool override;
 		α Suspend()ι->void override;
 		α await_resume()ε->HttpTaskResult override;
-		α QueryHandler( QL::RequestQL&&, variant<sp<SessionInfo>, Jde::UserPK>, bool, SL )ι->up<IQLAwait>{ ASSERT(false); return nullptr; }
 		α Schemas()Ι->const vector<sp<DB::AppSchema>>& override{ASSERT(false); return _schemas;}
 
 	private:

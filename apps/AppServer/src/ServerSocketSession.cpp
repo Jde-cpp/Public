@@ -86,12 +86,8 @@ namespace Jde::App::Server{
 		try{
 			LogRead( Ƒ("GraphQL{}: {}", returnRaw ? "*" : "", query), requestId );
 			auto ql = QL::Parse( move(query), move(vars), Server::Schemas(), returnRaw );
-			auto reqHandler = Server::GetRequestHandler();
-			let executer = _userPK.value_or(Jde::UserPK{0});
-			auto j = reqHandler
-				? co_await *reqHandler->Query( move(ql), executer, returnRaw )
-				: co_await QL::QLAwait( move(ql), executer );
-			auto y = serialize( j );
+			auto j = co_await QL::QLAwait( move(ql), {_userPK.value_or(Jde::UserPK{0})} );
+			auto y = serialize( move(j) );
 			LogWrite( Ƒ("GraphQL: {}", y.substr(0,100)), requestId );
 			Write( FromServer::GraphQL(move(y), requestId) );
 		}

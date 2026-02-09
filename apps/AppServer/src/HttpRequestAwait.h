@@ -9,7 +9,6 @@ namespace Jde::App::Server{
 		α Suspend()ι->void;
 		α await_resume()ε->Web::Server::HttpTaskResult override;
 	private:
-		α QueryHandler( QL::RequestQL&& q, variant<sp<Web::Server::SessionInfo>, Jde::UserPK> creds, bool returnRaw, SRCE )ι->up<Web::Server::IQLAwait>;
 		α Schemas()Ι->const vector<sp<DB::AppSchema>>&;
 	};
 }

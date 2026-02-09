@@ -1,7 +1,7 @@
 #pragma once
 #include <jde/ql/QLAwait.h>
 #include <jde/app/IApp.h>
-#include "ql/AppQL.h"
+#include "ql/AppServerQL.h"
 
 namespace Jde::App::Server{
 	struct LocalClient final : IApp{
@@ -13,7 +13,7 @@ namespace Jde::App::Server{
 		α SessionInfoAwait( SessionPK, SL )ι->up<TAwait<Web::FromServer::SessionInfo>> override{ return {}; }
 		α PublicKey()Ι->const Crypto::PublicKey& override{ return _publicKey; }
 		α SetPublicKey( Crypto::PublicKey publicKey )ι->void{ _publicKey = move(publicKey); }
-		α ClientQuery( QL::RequestQL&& q, UserPK executer, bool raw, SRCE )ε->up<TAwait<jvalue>> override;
+		α ClientQuery( QL::RequestQL&& q, UserPK executer, SRCE )ε->up<TAwait<jvalue>> override;
 		α Login( Web::Jwt&&, SL )ε->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo> override{ ASSERT(false); throw "noimpl"; }
 	private:
 		Crypto::PublicKey _publicKey;

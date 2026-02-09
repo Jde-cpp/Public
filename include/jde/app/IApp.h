@@ -17,7 +17,7 @@ namespace Jde::App{
 		β SessionInfoAwait( SessionPK sessionPK, SRCE )ε->up<TAwait<Web::FromServer::SessionInfo>> = 0;
 		α Verify( const Web::Jwt& jwt )Ε->void;
 		β Login( Web::Jwt&& jwt, SRCE )ε->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo> = 0;
-		β ClientQuery( QL::RequestQL&& q, UserPK executer, bool raw, SRCE )ε->up<TAwait<jvalue>> =0;
+		β ClientQuery( QL::RequestQL&& q, UserPK executer, SRCE )ε->up<TAwait<jvalue>> =0; //AppServer->[Gateway]|[OpcServer]
 		Ω Status()ι->jobject{ return jobject{{"memory", Process::MemorySize()}}; }
 
 		template<class T=jobject> [[nodiscard]] α Query( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->up<TAwait<T>>;

@@ -31,25 +31,25 @@ namespace Jde::Access{
 		QL::Hook::Add( mu<GroupHook>() );//add before
 		return ConfigureAwait{ localQL, move(schemas), authorizer, executer, move(listener), {} };
 	}
-	α Server::CustomQuery( QL::TableQL& q, UserPK executer, SL sl )ι->up<TAwait<jvalue>>{
+	α Server::CustomQuery( QL::TableQL& q, QL::Creds creds, SL sl )ι->up<TAwait<jvalue>>{
 		up<TAwait<jvalue>> y;
 		if( q.DBTableName()=="acl" )
-			y = mu<AclQLSelectAwait>( q, executer, sl );
+			y = mu<AclQLSelectAwait>( q, creds.UserPK(), sl );
 		else if( q.JsonName.starts_with("role") && (q.FindTable("roles") || q.FindTable("permissionRights")) )
-			y = mu<RoleAwait>( q, executer, sl );
+			y = mu<RoleAwait>( q, creds.UserPK(), sl );
 		else if( q.JsonName.starts_with( "user" ) && q.FindTable("groupings") )
-			y = mu<UserAwait>( q, executer, sl );
+			y = mu<UserAwait>( q, creds.UserPK(), sl );
 		else if( q.JsonName.starts_with( "grouping" ) )
-			y = mu<GroupAwait>( q, executer, sl );
+			y = mu<GroupAwait>( q, creds.UserPK(), sl );
 		return y;
 	}
-	α Server::CustomMutation( QL::MutationQL& m, UserPK executer, SL sl )ι->up<TAwait<jvalue>>{
+	α Server::CustomMutation( QL::MutationQL& m, QL::Creds creds, SL sl )ι->up<TAwait<jvalue>>{
 		up<TAwait<jvalue>> y;
 		using enum QL::EMutationQL;
 		if( m.TableName()=="acl" && (m.Type==Purge || m.Type==Create) )
-			y = mu<Access::Server::AclQLAwait>(move(m), executer, sl);
+			y = mu<Access::Server::AclQLAwait>(move(m), creds.UserPK(), sl);
 		else if( (m.Type==Add || m.Type==Remove) && m.TableName()=="roles" )
-			y = mu<Access::Server::RoleMAwait>(move(m), executer, sl);
+			y = mu<Access::Server::RoleMAwait>(move(m), creds.UserPK(), sl);
 		return y;
 	}
 }

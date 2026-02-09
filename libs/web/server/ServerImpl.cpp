@@ -71,9 +71,7 @@ namespace Server{
 			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
 			req.LogRead( query );
 			auto ql = QL::Parse( move(query), move(vars), reqHandler->Schemas(), returnRaw );
-			auto result = QL::IsSystemQuery(ql)
-				? co_await *reqHandler->Query( move(ql), req.UserPK(), returnRaw )
-				: co_await QL::QLAwait{ move(ql), req.UserPK() };
+			auto result = co_await QL::QLAwait{ move(ql), {req.UserPK()} };
 			jobject y{ {"data", move(result)} };
 			send( move(req), move(stream), move(y), contentType );
 		}

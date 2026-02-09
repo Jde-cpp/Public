@@ -14,7 +14,7 @@
 #include <jde/access/AccessListener.h>
 #include "LocalClient.h"
 #include "WebServer.h"
-#include "ql/AppQL.h"
+#include "ql/AppServerQL.h"
 
 #define let const auto
 
@@ -65,28 +65,7 @@ namespace Server{
 		}
 	}
 
-}
-/*
-	#define _pQueue if( auto p = _pDbQueue; p )p
-	α Server::SaveString( Proto::FromClient::EFields field, StringMd5 id, string value, SL )ι->void{
-		sv table = "log_messages";
-		if( field==Proto::FromClient::EFields::FileId )
-			table = "log_files";
-		else if( field==Proto::FromClient::EFields::FunctionId )
-			table = "log_functions";
-		else if( field!=Proto::FromClient::EFields::MessageId ){
-			//ERRX( "unknown field '{}'.", (int)field );
-			return;
-		}
-		DB::Sql sql{ Ƒ( "insert into {}(id,value)values(?,?)", table ) };
-		//ASSERT( Calc32RunTime(*pValue)==id );
-		//if( Calc32RunTime(value)!=id )
-			//return ERRX( "id '{}' does not match crc of '{}'", id, value );//locks itself on server log.
-		sql.Params.push_back( {id} );
-		sql.Params.push_back( {move(value)} );
-	}
-*/
-}
+}}
 
 namespace Jde{
 	α App::AddConnection( str appName, str instanceName, str hostName, uint pid )ε->tuple<ProgramPK, ProgInstPK, ConnectionPK>{
@@ -112,57 +91,4 @@ namespace Jde{
 		catch( exception& )
 		{}
 	}
-
-/*
-	α App::LoadApplications( ProgramPK id )ι->up<Proto::FromServer::Applications>
-	{
-		auto pApplications = mu<Proto::FromServer::Applications>();
-		auto fnctn = [&pApplications]( const DB::IRow& row )
-		{
-			auto pApplication = pApplications->add_values();
-			pApplication->set_id( row.GetUInt32(0) );
-			pApplication->set_name( row.GetString(1) );
-			optional<uint> dbLevel = row.GetUIntOpt( 2 );
-			pApplication->set_db_level( dbLevel.has_value() ? (Jde::Proto::ELogLevel)dbLevel.value() : Jde::Proto::ELogLevel::Information );
-			optional<uint> fileLevel = row.GetUIntOpt( 3 );
-			pApplication->set_file_level( fileLevel.has_value() ? (Jde::Proto::ELogLevel)fileLevel.value() : Jde::Proto::ELogLevel::Information );
-		};
-
-		constexpr sv baseSql = "select id, name, db_log_level, file_log_level from log_applications"sv;
-		Try( [&](){
-			string sql = id ? Ƒ("{} where id=?", baseSql) : string{baseSql};
-			let params = id ? vector<DB::object>{id} : vector<DB::object>{};
-			if( auto p = Datasource(); p )
-				p->Select( sql, fnctn, params );
-		} );
-		return pApplications;
-	}
-
-	α App::SaveMessage( ProgramPK applicationId, ProgInstPK instanceId, const Log::Proto::LogEntryClient& m, SL )ι->void{
-		let variableCount = std::min( 5, m.args().size() );
-		vector<DB::Value> params{
-			{applicationId},
-			{instanceId},
-			{m.file_id()},
-			{m.function_id()},
-			{m.line()},
-			{m.message_id()},
-			{(uint8)m.level()},
-//			{m.thread_id()},
-			{Jde::Proto::ToTimePoint(m.time())},
-			{m.user_pk()} };
-		constexpr sv procedure = "log_message_insert"sv;
-		constexpr sv args = "(?,?,?,?,?,?,?,?,?,?"sv;
-		std::ostringstream os;
-		os << procedure;
-		if( variableCount>0 )
-			os << variableCount;
-		os << args;
-		for( int i=0; i<variableCount; ++i ){
-			os << ",?";
-			params.push_back( {m.args()[i]} );
-		}
-		os << ")";
-	}
-*/
 }

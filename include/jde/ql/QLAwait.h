@@ -12,17 +12,16 @@ namespace Jde::QL{
 
 	struct VQLAwait : TAwait<jvalue>{
 		using base = TAwait<jvalue>;
-		VQLAwait( RequestQL&& request, optional<DB::Statement>&& statement, UserPK executer, sp<IQL> ql, SRCE )ι:base{sl}, _request{move(request)}, _statement{move(statement)}, _executer{executer}, _ql{ql}{}
+		VQLAwait( RequestQL&& request, optional<DB::Statement>&& statement, QL::Creds creds, sp<IQL> ql, SRCE )ι:base{sl}, _creds{creds}, _ql{ql}, _request{move(request)}, _statement{move(statement)}{}
 	private:
 		α Suspend()ι->void override;
 		α Select( vector<TableQL>&& tables )ι->TablesAwait::Task;
 		α Mutate( vector<MutationQL> mutations )ι->MutationAwait::Task;
+		QL::Creds _creds;
+		sp<IQL> _ql;
 		RequestQL _request;
 		optional<DB::Statement>	_statement;
-		UserPK _executer;
-		sp<IQL> _ql;
 	};
-
 	template<class T=jvalue>
 	struct QLAwait : TAwaitEx<T, TAwait<jvalue>::Task>, noncopyable{
 		using base = TAwaitEx<T, TAwait<jvalue>::Task>;
@@ -35,12 +34,13 @@ namespace Jde::QL{
 			base{sl}, _request{{move(m)}}, _executer{executer}{}
 		QLAwait( string query, jobject variables, UserPK executer, sp<IQL> ql, bool returnRaw=true, SRCE )ε:
 			base{sl}, _request{ Parse(move(query), move(variables), ql->Schemas(), returnRaw) }, _executer{ executer }, _ql{ql}{}
-		QLAwait( RequestQL&& q, UserPK executer, SRCE )ε:base{sl}, _request{move(q)}, _executer{executer}{}
+		QLAwait( RequestQL&& q, QL::Creds executer, SRCE )ε:base{sl}, _request{move(q)}, _executer{executer}{}
+
 	private:
 		α Execute()ι->TAwait<jvalue>::Task override;
 		RequestQL _request;
 		optional<DB::Statement> _statement;
-		UserPK _executer;
+		QL::Creds _executer;
 		sp<IQL> _ql;
 	};
 

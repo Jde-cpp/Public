@@ -94,7 +94,7 @@ namespace Client{
 		TRACE( "[{}.{}]ClientQuery: size='{}'.", hex(Id()), hex(requestId), proto.query().substr(0, Web::Client::MaxLogLength()) );
 		try{
 			auto vars = proto.variables().empty() ? jobject{} : parse( proto.variables() ).as_object();
-			auto result = co_await *_appClient->ClientQuery( QL::Parse(move(*proto.mutable_query()), move(vars), {}, proto.raw()), {proto.executer_pk()}, proto.raw() );
+			auto result = co_await *_appClient->ClientQuery( QL::Parse(move(*proto.mutable_query()), move(vars), {}, proto.raw()), {proto.executer_pk()} );
 			Write( FromClient::QueryResult(serialize(result), requestId) );
 		}
 		catch( IException& e ){

@@ -11,18 +11,17 @@ namespace Jde::QL{
 
 	constexpr ELogTags _tags{ ELogTags::QL };
 
-	MutationAwait::MutationAwait( MutationQL mutation, UserPK executer, sp<IQL> ql, SL sl )ι:
+	MutationAwait::MutationAwait( MutationQL mutation, QL::Creds creds, sp<IQL> ql, SL sl )ι:
 		TAwait<jvalue>{ sl },
 		_mutation{ move(mutation) },
-		_executer{ executer },
+		_creds{ move(creds) },
 		_ql{ move(ql) }
 	{}
 
 	α MutationAwait::Execute()ι->TAwait<jvalue>::Task{
-
 		try{
 			jvalue y;
-			if( auto await = _ql ? _ql->CustomMutation( _mutation, _executer, _sl ) : nullptr; await )
+			if( auto await = _ql ? _ql->CustomMutation( _mutation, _creds, _sl ) : nullptr; await )
 				y = co_await move(*await);
 			else{
 				auto table = _mutation.DBTable;
@@ -31,17 +30,17 @@ namespace Jde::QL{
 				case Update:
 				case Delete:
 				case Restore:
-					y = co_await UpdateAwait{ move(table), move(_mutation), _executer, _sl };
+					y = co_await UpdateAwait{ move(table), move(_mutation), _creds.UserPK(), _sl };
 					break;
 				case Add:
 				case Remove:
-					y = co_await AddRemoveAwait{ move(table), move(_mutation), _executer, _sl };
+					y = co_await AddRemoveAwait{ move(table), move(_mutation), _creds.UserPK(), _sl };
 					break;
 				case Create:
-					y = co_await InsertAwait( move(table), move(_mutation), _executer, _sl );
+					y = co_await InsertAwait( move(table), move(_mutation), _creds.UserPK(), _sl );
 					break;
 				case Purge:
-					y = co_await PurgeAwait{ move(table), move(_mutation), _executer, _sl };
+					y = co_await PurgeAwait{ move(table), move(_mutation), _creds.UserPK(), _sl };
 					break;
 				case Start:
 					MutationAwait::Start();
@@ -62,7 +61,7 @@ namespace Jde::QL{
 
 	α MutationAwait::Start()ι->MutationAwaits::Task{
 		try{
-			optional<jvalue> y = co_await Hook::Start( move(_mutation), _executer );
+			optional<jvalue> y = co_await Hook::Start( move(_mutation), _creds.UserPK() );
 			Resume( y ? move(*y) : jvalue{} );
 		}
 		catch( IException& e ){
@@ -72,7 +71,7 @@ namespace Jde::QL{
 
 	α MutationAwait::Stop()ι->MutationAwaits::Task{
 		try{
-			optional<jvalue> y = co_await Hook::Stop( move(_mutation), _executer );
+			optional<jvalue> y = co_await Hook::Stop( move(_mutation), _creds.UserPK() );
 			Resume( y ? move(*y) : jvalue{} );
 		}
 		catch( IException& e ){

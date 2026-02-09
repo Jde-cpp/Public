@@ -80,9 +80,6 @@ namespace Jde::App::Server{
 			}
 		}
 	}
-	α HttpRequestAwait::QueryHandler( QL::RequestQL&& q, variant<sp<SessionInfo>, Jde::UserPK> creds, bool returnRaw, SL sl )ι->up<IQLAwait>{
-		return mu<AppQLAwait>( move(q), move(creds), returnRaw, sl );
-	}
 
 	α HttpRequestAwait::Schemas()Ι->const vector<sp<DB::AppSchema>>&{ return Server::Schemas(); }
 

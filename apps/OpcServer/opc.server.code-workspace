@@ -60,6 +60,10 @@
 			"name": "headers"
 		},
 		{
+			"path": "../../libs/app/shared",
+			"name": "appShared"
+		},
+		{
 			"path": "../../libs/app/client",
 			"name": "appClient"
 		},

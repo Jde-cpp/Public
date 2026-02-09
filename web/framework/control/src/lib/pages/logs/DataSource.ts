@@ -1,4 +1,4 @@
-import {EventEmitter} from '@angular/core';
+import {EventEmitter, model, Signal, signal} from '@angular/core';
 import { MatTable } from '@angular/material/table';
 import {Sort} from '@angular/material/sort';
 import { Guid } from '../../model/Guid';
@@ -11,7 +11,7 @@ export class PageStats{ constructor( public length?:number, public startIndex?:n
 
 export class DataSource
 {
-	constructor( private pageSize:number=10 )
+	constructor( private pageSize:Signal<number> )
 	{
 	}
 	connect( table:MatTable<TraceEntry> )
@@ -28,14 +28,13 @@ export class DataSource
 		//console.log( "disconnect" );
 		this.data.length=0;
 	}
-	setPage( start=-1, pageSize=0 )
-	{
-		if( pageSize>0 )
-			this.pageSize=pageSize;
+	setPage( start=-1, pageSize=0 ){
+		// if( pageSize>0 )
+		// 	this.pageSize.set(pageSize);
 		const showEnd = start==-1 || start+pageSize>=this.data.length;
-		start = showEnd ? Math.max( this.data.length-this.pageSize, 0 ) : start;
+		start = showEnd ? Math.max( this.data.length-this.pageSize(), 0 ) : start;
 		let values = new Array<TraceEntry>();
-		var end = Math.min( start+this.pageSize, this.data.length );
+		var end = Math.min( start+this.pageSize(), this.data.length );
 		for( let i=start; i<end; ++i )
 			values.push( this.data[i] );
 		if( this.observable )
@@ -151,10 +150,11 @@ export class DataSource
 			if( this.data[visibleIndex].index==dataIndex )
 				break;
 		}
-		let page = this.page = Math.floor( visibleIndex/this.pageSize );
-		let start = page*this.pageSize;
+		let page = Math.floor( visibleIndex/this.pageSize() );
+		let start = page*this.pageSize();
+		this.#pageIndex.set( page );
 		let values = new Array<TraceEntry>();
-		const end = Math.min( start+this.pageSize, this.data.length );
+		const end = Math.min( start+this.pageSize(), this.data.length );
 		for( let i=start; i<end; ++i )
 			values.push( this.data[i] );
 		if( this.observable )
@@ -203,7 +203,10 @@ export class DataSource
 	autoScroll:boolean=true;
 	get paused(){return this._paused;} set paused(value){this._paused=value;}_paused=false;
 	get length():number{return this.data.length;}
-	get page(){return this._page;} set page(value){this._page=value;this.onPageChange.emit(value);} _page:number; onPageChange= new EventEmitter<number>();
+	// get page(){return this._page;} set page(value){this._page=value;this.onPageChange.emit(value);} _page:number;
+	// onPageChange= new EventEmitter<number>();
+	get pageIndex(){ return this.#pageIndex.asReadonly(); }
+	#pageIndex = signal<number>( 0 );
 	//get filter(){return _filter;} set filter( value){_filter=value; applyFilter(value);} string _filter;
 	sort:Sort;
 	observable:Subject<TraceEntry[]>;

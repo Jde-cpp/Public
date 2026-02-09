@@ -13,9 +13,9 @@ namespace Jde::Opc{
 
 namespace Jde::Opc::Server{
 	OpcQL::OpcQL( sp<DB::AppSchema>&& schema, sp<Access::Authorize> authorizer )ι:
-	QL::LocalQL{ {schema}, authorizer }{
+		App::AppQL{ {schema}, move(authorizer) }{
 		QL::Configure( {move(schema)} );
 	}
-	α OpcQL::CustomQuery( QL::TableQL&, UserPK, SL )ι->up<TAwait<jvalue>>{return nullptr;}
-	α OpcQL::CustomMutation( QL::MutationQL&, UserPK, SL )ι->up<TAwait<jvalue>>{return nullptr;}
+	α OpcQL::CustomQuery( QL::TableQL&, QL::Creds, SL )ι->up<TAwait<jvalue>>{return nullptr;}
+	α OpcQL::CustomMutation( QL::MutationQL&, QL::Creds, SL )ι->up<TAwait<jvalue>>{return nullptr;}
 }
