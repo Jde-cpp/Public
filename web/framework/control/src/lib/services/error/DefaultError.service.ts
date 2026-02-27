@@ -4,7 +4,7 @@ import {IErrorService} from './IErrorService'
 import { HttpErrorResponse } from '@angular/common/http';
 import { Log } from '../IGraphQL'
 
-@Injectable()
+@Injectable({ providedIn: 'root' })
 export class DefaultErrorService implements IErrorService
 {
 	constructor( private snackbar:MatSnackBar )

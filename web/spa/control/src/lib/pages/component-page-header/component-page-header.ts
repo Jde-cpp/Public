@@ -11,7 +11,8 @@ import { Router } from '@angular/router';
   imports: [MatButtonModule, MatIconModule]
 })
 export class ComponentPageHeader {
-  constructor(public _componentPageTitle: ComponentPageTitle, private router: Router) {}//
+  constructor(private _componentPageTitle: ComponentPageTitle, private router: Router) {
+	}//
   @Output() toggleSidenav = new EventEmitter<void>();
 
   getTitle() {//

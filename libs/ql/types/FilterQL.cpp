@@ -92,11 +92,16 @@ namespace Jde{
 			using enum DB::EOperator;
 			DB::EOperator op = Equal;
 			const jvalue* json{};
-			vector<DB::Value> params;
 			if( let array = value.try_as_array(); array ){
-				for( let& v : *array )
-					params.push_back( DB::Value{column->Type, v} );
-				where.Add( column, params );
+				vector<DB::Value> params;
+				bool haveNull{};
+				for( let& v : *array ){
+					if( v.is_null() )
+						haveNull = true;
+					else
+						params.push_back( DB::Value{column->Type, v} );
+				}
+				where.Add( column, move(params), haveNull );
 			}
 			else{
 				if( value.is_string() || value.is_number() || value.is_null() || value.is_bool() )

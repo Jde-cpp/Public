@@ -24,7 +24,8 @@ namespace Jde::Opc::Gateway{
 	}
 
 	Ω needsClient( const QL::Input& q )ι->bool{
-		return !q.JTableName().starts_with( "serverConnection" ) && q.JTableName()!="__type" && q.JTableName()!="status";
+		let tableName = q.JTableName();
+		return !tableName.starts_with( "serverConnection" ) && tableName!="__type" && tableName!="status";
 	}
 	α GatewayQLAwait::Test( QL::TableQL& q, QL::Creds executer, SL sl )->up<TAwait<jvalue>>{
 		up<TAwait<jvalue>> await;
@@ -59,6 +60,7 @@ namespace Jde::Opc::Gateway{
 			Resume( move(y) );
 		}
 		catch( exception& e ){
+			TRACET( ELogTags::Test, "Exception in GatewayQLAwait::Query: {}", e.what() );
 			ResumeExp( move(e) );
 		}
 	}
@@ -77,6 +79,7 @@ namespace Jde::Opc::Gateway{
 			}
 			else
 				throw Exception{ _sl, "Unknown query type: {}", _query.JsonTableName };
+			Resume( move(y) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

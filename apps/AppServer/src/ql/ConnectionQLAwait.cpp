@@ -9,7 +9,7 @@ namespace Jde::App::Server{
 	α ConnectionQLAwait::Execute()ι->TAwait<flat_map<ConnectionPK, jvalue>>::Task{
 		try{
 			flat_map<ConnectionPK, jvalue> conStatuses;
-			if( auto status = _ql.ExtractTable("status"); status ){
+			if( auto status = _query.ExtractTable("status"); status ){
 				conStatuses = co_await Server::QuerySessions( move(*status), _creds.UserPK(), _sl );
 				conStatuses.emplace( AppClient()->ConnectionPK(), IApp::Status() );
 			}
@@ -22,8 +22,8 @@ namespace Jde::App::Server{
 	}
 	α ConnectionQLAwait::QueryDB( flat_map<ConnectionPK, jvalue> conStatuses )ι->TAwait<jvalue>::Task{
 		try{
-			bool addedConId = _ql.AddColumn( "id" );
-			auto connections = co_await QL::QLAwait{ move(_ql), _creds };
+			bool addedConId = _query.AddColumn( "id" );
+			auto connections = co_await QL::QLAwait{ move(_query), _creds, QLPtr(), _sl };
 			Json::Visit( connections, [addedConId,&conStatuses]( jobject& o ){
 				let connectionPK = QL::AsId<ConnectionPK>( o );
 				if( addedConId )

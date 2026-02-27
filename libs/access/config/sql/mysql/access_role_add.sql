@@ -11,7 +11,7 @@ begin
 		and schema_name = coalesce(_schema, schema_name)
 		and criteria <=> _criteria;
 	if _resource_id is null then
-		insert into access_resources( target, schema_name, name, criteria ) values( _resourceTarget, _schema, _resourceName, _criteria );
+		insert into access_resources( target, schema_name, name, criteria ) values( _resourceTarget, _schema, coalesce(_resourceName, _resourceTarget), _criteria );
 		set _resource_id = LAST_INSERT_ID();
 	end if;
 	select permission_id

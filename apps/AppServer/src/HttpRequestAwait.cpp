@@ -12,12 +12,12 @@ namespace Jde::App::Server{
 		base{ move(req), sl }
 	{}
 
-	α ValueJson( string&& value )ι{ return Json::Parse( Ƒ("{{\"value\": \"{}\"}}", value) ); }
+	α ValueJson( string&& value )ι{ return Json::Parse(Ƒ("{{\"value\": \"{}\"}}", value)); }
 
 	Ω login( HttpRequest req, HttpRequestAwait::Handle h )ι->TAwait<UserPK>::Task{
 		try{
 			req.LogRead();
-			let authorization = req.Header("Authorization");
+			let authorization = req.Header( "Authorization" );
 			THROW_IFX( authorization.empty() || !authorization.starts_with("Bearer "), RestException<http::status::unauthorized>(SRCE_CUR, move(req), "Missing or invalid Authorization header") );
 
 			req.SessionInfo->UserPK = co_await JwtLoginAwait( Web::Jwt{authorization.substr(7)}, req.UserEndpoint.address().to_string(), Server::AppClient() );
@@ -72,7 +72,7 @@ namespace Jde::App::Server{
 		}
 		if( !processed ){
 			if( _request.IsGet("/graphql") || _request.IsPost("/graphql") )
-				Query();
+				Query( QLPtr() );
 			else{
 				_request.LogRead();
 				RestException<http::status::not_found> e{ SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() };
@@ -85,7 +85,7 @@ namespace Jde::App::Server{
 
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		if( auto e = Promise() ? Promise()->MoveExp() : nullptr; e ){
-			if( auto rest = dynamic_cast<IRestException*>( e.get() ); rest )
+			if( auto rest = dynamic_cast<IRestException*>(e.get()); rest )
 				rest->Throw();
 			else
 				throw RestException<http::status::internal_server_error>{ move(*e), move(_request) };

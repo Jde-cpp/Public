@@ -70,8 +70,8 @@ namespace Server{
 			}
 			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
 			req.LogRead( query );
-			auto ql = QL::Parse( move(query), move(vars), reqHandler->Schemas(), returnRaw );
-			auto result = co_await QL::QLAwait{ move(ql), {req.UserPK()} };
+			auto q = QL::Parse( move(query), move(vars), reqHandler->Schemas(), returnRaw );
+			auto result = co_await QL::QLAwait{ move(q), {req.SessionInfo}, reqHandler->QLServer() };
 			jobject y{ {"data", move(result)} };
 			send( move(req), move(stream), move(y), contentType );
 		}
@@ -227,7 +227,7 @@ namespace Server{
 			send( RestException<http::status::unauthorized>{move(e), move(req), "Could not get sessionInfo."}, move(stream) );
 			co_return;
 		}
-		if( !reqHandler->PassQL() && (req.IsGet("/graphql") || req.IsPost("/graphql")) )//TODO make sure mutations aren't get
+		if( req.IsGet("/graphql") || req.IsPost("/graphql") )
 			graphQL( move(req), stream, reqHandler );
 		else
 			handleCustomRequest( move(req), move(stream), reqHandler );

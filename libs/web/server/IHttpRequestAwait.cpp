@@ -18,7 +18,7 @@ namespace Jde::Web::Server{
 		return *this;
 	}
 
-	α IHttpRequestAwait::Query()ι->TAwait<jvalue>::Task{
+	α IHttpRequestAwait::Query( sp<QL::IQL> ql )ι->TAwait<jvalue>::Task{
 		try{
 			string query = _request.IsGet() ? _request["query"] : Json::AsString(_request.Body(), "query");
 			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(_request), "no query") );
@@ -30,9 +30,9 @@ namespace Jde::Web::Server{
 			if( query.starts_with("{") )
 				query = Str::TrimFirstLast( move(query), '{', '}' );
 			_request.LogRead( query );
-			auto ql = QL::Parse( move(query), move(vars), Schemas(), _request.Params().contains("raw") );
-			THROW_IFX( ql.IsMutation() && !_request.IsPost(), RestException<http::status::bad_request>(SRCE_CUR, move(_request), "Mutations must use post.") );
-			auto y = co_await QL::QLAwait<>{ move(ql), {_request.SessionInfo}, _sl };
+			auto q = QL::Parse( move(query), move(vars), Schemas(), _request.Params().contains("raw") );
+			THROW_IFX( q.IsMutation() && !_request.IsPost(), RestException<http::status::bad_request>(SRCE_CUR, move(_request), "Mutations must use post.") );
+			auto y = co_await QL::QLAwait<>{ move(q), {_request.SessionInfo}, move(ql), _sl };
 			Resume( HttpTaskResult{jobject{{"data", move(y)}}, move(_request)} );
 		}
 		catch( exception& e ){

@@ -8,10 +8,10 @@ namespace Jde::QL{
 		optional<jvalue> y;
 		try{
 			for( auto&& table : _tables ){
-				THROW_IF( table.Columns.empty() && table.Tables.empty(), "Table '{}' has no columns", table.ToString() );
 				ASSERT( !_statement || _statement->From.Joins.size() );
 				optional<jvalue> result;
 				let returnRaw = table.ReturnRaw && _tables.size()==1;
+				auto returnName = table.ReturnName();
 				if( _ql ){
 					if( table.JsonName=="status" )
 						result = _ql->StatusQuery(move(table));
@@ -31,7 +31,7 @@ namespace Jde::QL{
 				else{
 					if( !y )
 						y = jobject{};
-					y->get_object()[table.ReturnName()] = move( *result );
+					y->get_object()[move(returnName)] = move( *result );
 				}
 			}
 			Resume( y.value_or(jvalue{}) );

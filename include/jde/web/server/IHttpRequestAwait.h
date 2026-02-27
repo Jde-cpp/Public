@@ -4,6 +4,7 @@
 #include "HttpRequest.h"
 #include "RestException.h"
 
+namespace Jde::QL{ struct IQL; }
 namespace Jde::Web::Server{
 	struct ΓWS HttpTaskResult{
 		HttpTaskResult()=default;
@@ -24,7 +25,7 @@ namespace Jde::Web::Server{
 	protected:
 		HttpRequest _request;
 		up<jvalue> _readyResult;
-		α Query()ι->TAwait<jvalue>::Task;
+		α Query( sp<QL::IQL> ql )ι->TAwait<jvalue>::Task;
 	private:
 		β Schemas()Ι->const vector<sp<DB::AppSchema>>& = 0;
 	};

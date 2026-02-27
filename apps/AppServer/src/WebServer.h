@@ -38,5 +38,6 @@ namespace Jde::App::Server{
 		α Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt;
 		α Schemas()ι->const vector<sp<DB::AppSchema>>& override{ return Server::Schemas(); }
 		α WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> override;
+		α QLServer()ι->sp<QL::IQL> override;
 	};
 }

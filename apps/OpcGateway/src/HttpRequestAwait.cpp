@@ -114,9 +114,9 @@ namespace Jde::Opc::Gateway{
 			Login( _request.UserEndpoint.address().to_string() );
 		else if( _request.IsPost("/logout") )
 			Logout();
-		else if( _request.IsGet("/graphql") || _request.IsPost("/graphql") )
-			Query();
-		else{
+		else if( _request.IsGet("/graphql") || _request.IsPost("/graphql") ){
+			ASSERT(false);
+		}else{
 			auto opc = _request["opc"];
 			if( opc.size() )
 				CoHandleRequest( move(opc) );

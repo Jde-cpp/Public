@@ -108,4 +108,7 @@ namespace Jde::App::Server{
 		_sessions.emplace( session->Id(), session );
 		return session;
 	}
+	α RequestHandler::QLServer()ι->sp<QL::IQL>{
+		return QLPtr();
+	}
 }

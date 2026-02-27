@@ -77,8 +77,13 @@ namespace Jde::Access{
 	}
 
 	α ConfigureAwait::SyncResources()ι->VoidTask{
-		co_await ResourceSyncAwait{ QlServer, Schemas, OpcServerInstance, Executer };
-		LoadUsers();
+		try{
+			co_await ResourceSyncAwait{ QlServer, Schemas, OpcServerInstance, Executer };
+			LoadUsers();
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
 	};
 
 	α ConfigureAwait::LoadUsers()ι->TAwait<Identities>::Task{

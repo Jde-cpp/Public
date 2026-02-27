@@ -15,7 +15,7 @@ namespace Jde::QL{
 		try{
 			for( auto& m : mutations ){
 				LOGSL( ELogLevel::Trace, _sl, ELogTags::QL, "QL: {}", m.ToString() );
-				auto resultRequest = move(m.ResultRequest);
+				auto resultRequest = m.ResultRequest; // can't move, some mutations may need it
 				let returnRaw = m.ReturnRaw;
 				let commandName = m.CommandName;
 				auto mutationResult = co_await MutationAwait( m, _creds, move(_ql), _sl );
@@ -23,11 +23,11 @@ namespace Jde::QL{
 					continue;
 				if( auto array = mutationResult.is_array() ? &mutationResult.get_array() : nullptr; array && array->size() )
 					mutationResult = Json::AsObject( move((*array)[0]) );
-				let available = mutationResult.is_object() ? Json::Combine( m.Args, mutationResult.get_object() ) : move(m.Args);
+				let available = mutationResult.is_object() ? Json::Combine( m.ExtrapolateVariables(), mutationResult.get_object() ) : m.ExtrapolateVariables();
 				jobject result;
 				auto& returnObject = returnRaw ? result : result[commandName].emplace_object();
 				returnObject = resultRequest->TrimColumns( available );
-				mutationResults.push_back( result );
+				mutationResults.push_back( move(result) );
 			}
 			Resume( mutationResults.size()==1 ? move(mutationResults[0]) : move(mutationResults) );
 		}

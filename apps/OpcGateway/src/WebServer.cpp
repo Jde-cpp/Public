@@ -11,7 +11,7 @@ namespace Jde::Opc{
 	concurrent_flat_map<uint,sp<Opc::Gateway::GatewaySocketSession>> _sessions; // Consider using server
 	static sp<Gateway::RequestHandler> _requestHandler;
 	α Gateway::StartWebServer( jobject&& settings )ε->void{
-		_requestHandler = ms<RequestHandler>( move(settings), AppClient() );
+		_requestHandler = ms<RequestHandler>( move(settings), AppClient(), Gateway::QLPtr() );
 		Web::Server::Start( _requestHandler );
 		Process::AddShutdownFunction( [](bool terminate ){StopWebServer(terminate); } );//TODO move to Web::Server
 	}

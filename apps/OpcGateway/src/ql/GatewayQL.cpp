@@ -17,7 +17,6 @@ namespace Jde::Opc::Gateway{
 		QL::Configure( {move(schema)} );
 	}
 	α GatewayQL::CustomQuery( QL::TableQL& q, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>>{
-		BREAK;//if( q.JsonName=="status" ) queryResult = App::IApp::Status();
 		up<TAwait<jvalue>> await = GatewayQLAwait::Test( q, executer, sl );
 		return await;
 	}

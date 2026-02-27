@@ -6,20 +6,18 @@
 
 namespace Jde::App{
 	sp<Server::AppServerQL> _ql;
-	α Server::QLPtr()ι->sp<QL::LocalQL>{ ASSERT(_ql); return _ql; }
+	α Server::QLPtr()ι->sp<QL::LocalQL>{ return App::_ql; }
 	α Server::QL()ι->QL::LocalQL&{ return *QLPtr(); }
 	α Server::ConfigureQL( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ι->void{
 		QL::Configure( schemas );
-		AppServerQL x( move(schemas), move(authorizer) );
 		_ql = ms<AppServerQL>( move(schemas), move(authorizer) );
 	}
 }
 
 namespace Jde::App::Server{
-	AppServerQL::AppServerQL( vector<sp<DB::AppSchema>>&& schemas, sp<Access::Authorize> authorizer )ι:
-		AppQL{ move(schemas), move(authorizer) }{
-		QL::Configure( move(schemas) );
-	}
+	AppServerQL::AppServerQL( vector<sp<DB::AppSchema>>&& schemas, sp<Access::Authorize>&& authorizer )ι:
+		AppQL{ move(schemas), move(authorizer) }
+	{}
 
 	α AppServerQL::CustomQuery( QL::TableQL& q, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>>{
 		auto await = Access::Server::CustomQuery( q, move(executer), sl );

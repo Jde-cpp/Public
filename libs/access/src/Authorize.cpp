@@ -258,6 +258,7 @@ namespace Jde::Access{
 			let& r = pkResource.second;
 			return (pk && pk==r.PK) || ( r.Schema==schemaName && target && *target==r.Target );
 		} );
+		// ie Testing schema where testing app isn't started.
 		THROW_IFX( pkResource==Resources.end(), Exception(SRCE_CUR, ELogLevel::Debug, "Resource not found pk: {}, schema:'{}', args:'{}'", pk, schemaName, serialize(args)) );
 		auto& resource = pkResource->second;
 
@@ -351,7 +352,7 @@ namespace Jde::Access{
 				CRITICAL( "[{}]Resource '{}' not found for role permission.", member, resource.Target );
 			}else{ //new resource
 				auto& saved = Resources.emplace( resource.PK, move(resource) ).first->second;
-				ASSERT( saved.Schema.size() && saved.Target.size() && saved.Criteria.size() );
+				ASSERT( saved.Schema.size() && saved.Target.size() );
 				SchemaResources[saved.Schema][saved.Target][saved.Criteria] = saved.PK;
 				Permissions.emplace( member, Permission{member, saved.PK, allowed, denied} );
 			}
