@@ -29,6 +29,6 @@ namespace Jde::Opc::Gateway::Tests{
 	α SelectServerCnnctn( DB::Key id )ι->optional<ServerCnnctn>;
 
 	α AvailableUserTokens( sv url )ε->ETokenType;
-	α Query( sv ql, bool raw=true )ε->jobject;
+	α Query( sv ql, jobject vars={}, bool raw=true )ε->jobject;
 	Ξ GatewayPort()ι{ return Settings::FindNumber<PortType>("http/gateway/port").value_or(1968); }
 }

@@ -13,6 +13,7 @@ namespace Jde::QL{
 		β CustomQuery( QL::TableQL& ql, Creds executer, SL sl )ι->up<TAwait<jvalue>> = 0;
 		β CustomMutation( QL::MutationQL& ql, Creds executer, SL sl )ι->up<TAwait<jvalue>> = 0;
 		β LogQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>> = 0;
+		β LogSettingsQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>> = 0;
 		β StatusQuery( QL::TableQL&& ql )ι->jobject = 0;
 		[[nodiscard]] β Query( string query, jobject variables, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jvalue>> =0;
 		[[nodiscard]] β QueryObject( string query, jobject variables, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jobject>> =0;

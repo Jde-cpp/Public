@@ -20,6 +20,7 @@
 
 namespace Jde::App{
 	sp<DB::AppSchema> _appSchema;
+	α Server::AppSchema()ι->sp<DB::AppSchema>{ return _appSchema; }
 	sp<Access::AccessListener> _listener;
 	constexpr ELogTags _tags{ ELogTags::App };
 	Ω ds()ι->DB::IDataSource&{ return *_appSchema->DS(); }

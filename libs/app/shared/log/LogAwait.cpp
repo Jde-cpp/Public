@@ -10,7 +10,7 @@ namespace Jde::App{
 	α LogAwait::Execute()ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task{
 		let protoLog = Logging::FindLogger<ProtoLog>();
 		try{
-			THROW_IFX( !protoLog, "No logger running." );
+			THROW_IF( !protoLog, "No logger running." );
 			let& filters = _ql.Filter();
 			optional<TimePoint> startTime, endTime;
 			if( auto time = filters.ColumnFilters.find("time"); time!=filters.ColumnFilters.end() ){
@@ -27,15 +27,14 @@ namespace Jde::App{
 				: vector<App::Log::Proto::FileEntry>{};
 			ReadArchive( startTime, endTime, move(entries) );
 		}
-		catch( std::exception& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
 	α LogAwait::ReadArchive( optional<TimePoint> startTime, optional<TimePoint> endTime, vector<App::Log::Proto::FileEntry> entries )ι->TAwait<ArchiveFile>::Task{
 		try{
 			let& protoLog = Logging::GetLogger<ProtoLog>();
-			auto archive = co_await ArchiveLoadAwait{ startTime, endTime, _ql, protoLog.TimeZone(), protoLog.Root() };
-			archive.Append( _ql.Filter(), move(entries) );
+			auto archive = co_await ArchiveLoadAwait{ startTime, endTime, _ql, protoLog.TimeZone(), protoLog.Root(), move(entries) };
 			Resume( move(archive) );
 		}
 		catch( exception& e ){

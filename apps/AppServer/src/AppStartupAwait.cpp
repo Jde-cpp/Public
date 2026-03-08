@@ -21,9 +21,10 @@ namespace Server{
 			Logging::Add<Web::Server::SubscribeLog>( "subscribe", get<0>(pks), get<1>(pks) );
 			SetAppPKs( pks );
 
-			QL::SetSystemTables( {"apps", "connections"} );
+			QL::SetSystemTables( {"apps", "connections", "logSetting"} );
 			auto appClient = AppClient();
 			appClient->SetPublicKey( Crypto::CryptoSettings{Json::FindDefaultObject(_webServerSettings, "ssl")}.PublicKey() );
+			appClient->LoadLogSettings();
 			Server::StartWebServer( move(_webServerSettings) );
 			QL::Hook::Add( mu<AppInstanceHook>(appClient) );
 			QL::Hook::Add( mu<Web::Server::SessionGraphQL>(appClient) );

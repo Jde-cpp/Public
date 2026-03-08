@@ -21,11 +21,13 @@ namespace Jde::App{
 
 		struct ArchiveLoadAwait final : TAwaitEx<ArchiveFile,StringAwait::Task>{
 			using base=TAwaitEx<ArchiveFile,StringAwait::Task>;
-			ArchiveLoadAwait( optional<TimePoint> startTime, optional<TimePoint> endTime, QL::TableQL q, const std::chrono::time_zone& tz, const fs::path& root, SRCE )ι:base{sl}, _startTime{ move(startTime) }, _endTime{ move(endTime) }, _query{move(q)}, _root{root}, _tz{tz}{}
+			ArchiveLoadAwait( optional<TimePoint> startTime, optional<TimePoint> endTime, QL::TableQL q, const std::chrono::time_zone& tz, const fs::path& root, vector<App::Log::Proto::FileEntry>&& dailyFile, SRCE )ι:
+				base{sl}, _startTime{ move(startTime) }, _endTime{ move(endTime) }, _dailyFile{ move(dailyFile) }, _query{move(q)}, _root{root}, _tz{tz}{}
 			α Execute()ι->StringAwait::Task;
 		private:
 			optional<TimePoint> _startTime;
 			optional<TimePoint> _endTime;
+			vector<App::Log::Proto::FileEntry> _dailyFile;
 			QL::TableQL _query;
 			fs::path _root;
 			const std::chrono::time_zone& _tz;

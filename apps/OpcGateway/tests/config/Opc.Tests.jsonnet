@@ -2,7 +2,7 @@ local args = import 'args.libsonnet';
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests: "LogTests.GraphQL",
+		tests:: "LogSettingTests.UpdateDefault",
 		recreateDB:: true,
 		embeddedAppServer: false,
 		embeddedOpcServer: false
@@ -56,18 +56,36 @@ local args = import 'args.libsonnet';
 	},
 	logging:{
 		spd:{
-			defaultLevel:: "Information",
 			tags: {
-				trace:["test", "app", "http.client.write", "http.client.read", "ql", "socket.client.write"],
-				debug:["settings", "scheduler", "uaEvent",
-					"http.server.write", "http.server.read", "socket.client.read", "socket.server.write", "socket.server.read"],
-				information:["threads", "processingLoop", "sql",
-					"uaSecure", "uaClient", "uaNet",
-					"uaSession", "uaServer", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
-					"monitoring", "browse", "monitoring.pedantic"],
-				warning:[],
-				"error":[],
-				critical:[]
+				default: "Information",
+				app: "Trace",
+				ql: "Trace",
+				settings: "Debug",
+				scheduler: "Debug",
+				http_client_write: "Trace",
+				http_client_read: "Trace",
+				http_server_write: "Debug",
+				http_server_read: "Debug",
+				socket_client_read: "Trace",
+				socket_client_write: "Trace",
+				socket_server_read: "Debug",
+				socket_server_write: "Debug",
+				test: "Trace",
+				threads: "Information",
+				processingLoop: "Information",
+				sql: "Information",
+				browse: "Information",
+				monitoring: "Information",
+				uaClient: "Information",
+				uaDiscovery: "Information",
+				uaEvent: "Debug",
+				uaNet: "Information",
+				uaPubSub: "Information",
+				uaSecure: "Information",
+				uaSecurity: "Information",
+				uaSession: "Information",
+				uaServer: "Information",
+				uaUser: "Information",
 			},
 			sinks:{
 				console:{},
@@ -82,10 +100,10 @@ local args = import 'args.libsonnet';
 			timeZone: "America/New_York",
 			delay: "PT1M"
 		},
-		subscribe:{}
-		// remote:{
-		// 	delay: "PT2S"
-		// }
+		subscribe:{},
+		remote:{
+			delay: "PT0.001S"
+		}
 	},
 	workers:{
 		executor: {threads: 2},

@@ -143,10 +143,13 @@ namespace Jde::App{
 			ResumeExp( move(e) );
 		}
 	}
-
 	α ArchiveLoadAwait::Execute()ι->StringAwait::Task{
-		ArchiveFile archive{};
 		try{
+			ArchiveFile archive{ _query.Filter(), move(_dailyFile) };
+			if( archive.IsComplete(_query) ){
+				Resume( move(archive) );
+				co_return;
+			}
 			auto iterate = []( fs::path path, function<int(int)> valid )->vector<int> {
 				vector<int> result;
 				for( let& entry : fs::directory_iterator(path) ){

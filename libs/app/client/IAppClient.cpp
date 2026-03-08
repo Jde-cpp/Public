@@ -13,6 +13,23 @@ namespace Jde::App::Client{
 		App::Client::RemoteLog::Init( move(client) );
 		Logging::Init();
 	}
+	α IAppClient::LoadLogSettings( SL sl )ι->void{
+		try{
+			auto settings = QuerySync( "instanceTagLevel(id:$id){ text binary appServer }", {{"id",InstancePK()}}, true, sl );
+			IApp::LoadLogSettings( settings, sl );
+			if( auto logger = Logging::FindLogger<App::Client::RemoteLog>(); logger )
+				logger->SetLevels( move(settings.at("appServer").as_object()) );
+			Logging::UpdateCumulative( Logging::Loggers() );
+			Logging::Log( ELogLevel::Trace, ELogTags::Settings, sl, "Loaded log settings." );
+		}
+		catch( IException& e ){
+			e.SetLevel( ELogLevel::Critical );
+		}
+		catch( exception& e ){
+			Exception{ sl, move(e), ELogLevel::Critical };
+		}
+
+	}
 	α IAppClient::QueryArray( string&& q, jobject variables, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
 		return QLServer()->QueryArray( move(q), move(variables), UserPK(), returnRaw, sl );
 	}

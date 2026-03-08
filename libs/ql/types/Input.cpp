@@ -49,4 +49,21 @@ namespace Jde::QL{
 			y = DB::Key{ string{*target} };
 		return y;
 	}
+	α Input::OrderBy()Ι->const vector<std::pair<string,bool>>&{
+		if( _orderBy )
+			return *_orderBy;
+		_orderBy = vector<std::pair<string,bool>>{};
+		let orderBy = FindPtr<jvalue>("orderBy");
+		if( !orderBy )
+			return *_orderBy;
+		Json::Visit( *orderBy, [&]( const jvalue& v ){
+			if( v.is_string() )
+				_orderBy->emplace_back( string{ v.get_string() }, true );
+			else if( v.is_object() && !v.get_object().empty() ){
+				auto p = v.get_object().begin();
+				_orderBy->emplace_back( string{p->key()}, !p->value().is_string() || p->value().get_string()!="desc" );
+			}
+		} );
+		return *_orderBy;
+	}
 }

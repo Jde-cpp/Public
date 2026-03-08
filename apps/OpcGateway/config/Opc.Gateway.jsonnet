@@ -8,21 +8,44 @@ local args = import 'args.libsonnet';
 		spd:{
 			defaultLevel:: "Information",
 			tags: {
-				trace:[ "app", "browse", "ql", "access", "opc.access", "test",
-					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
-				],
-				debug:["settings", "uaEvent"],
-				information:[
-					"monitoring", "browse", "processingLoop"
-				],
-				warning:[ "uaNet","uaClient","uaSecure","uaSession", "uaServer", "uaUser", "uaSecurity", "uaPubSub", "uaDiscovery"],
-				"error":[],
-				critical:[]
+				app: "Trace",
+				browse: "Trace",
+				ql: "Trace",
+				access: "Trace",
+				opc_access: "Trace",
+				test: "Trace",
+				http_client_write: "Trace",
+				http_client_read: "Trace",
+				http_server_write: "Trace",
+				http_server_read: "Trace",
+				socket_client_write: "Trace",
+				socket_client_read: "Trace",
+				socket_server_write: "Trace",
+				socket_server_read: "Trace",
+				settings: "Debug",
+				uaEvent: "Debug",
+				monitoring: "Information",
+				browse: "Information",
+				processingLoop: "Information",
+				uaNet: "Warning",
+				uaClient: "Warning",
+				uaSecure: "Warning",
+				uaSession: "Warning",
+				uaServer: "Warning",
+				uaUser: "Warning",
+				uaSecurity: "Warning",
+				uaPubSub: "Warning",
+				uaDiscovery: "Warning"
 			},
 			sinks:{
 				console:{},
 				file:{ path: args.logDir, md: false }
 			}
+		},
+		proto:{
+			path: args.logDir + "/proto",
+			timeZone: "America/New_York",
+			delay: "PT1M"
 		}
 	},
 	dbServers: {

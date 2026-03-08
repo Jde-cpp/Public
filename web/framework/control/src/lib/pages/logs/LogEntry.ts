@@ -1,25 +1,37 @@
 import { Guid } from '../../model/Guid';
-import {ApplicationStrings} from './Application';
+import * as LogProto from '../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
 
-type Entry={
-	templateId:number;
-	argIds:number[];
-	level:number;
+export type Entry={
+	templateId:Guid;
+	argIds:Guid[];
+	level:ELogLevel;
 	tags:string[];
 	line:number;
 	time:Date;
 	userId:number;
-	fileId:number;
-	functionId:number;
+	fileId:Guid;
+	functionId:Guid;
+	index:number;
+	hidden:boolean;
 }
-type LogEntriesRest={ entries:Entry[]; strings:{id:string, value:string}[]; }
+export type LogEntriesRest={ entries:Entry[]; strings:{id:string, value:string}[]; }
 export class LogEntries{
 	constructor( queryResult:LogEntriesRest ){
 		this.entries = queryResult.entries;
-		queryResult.strings.forEach( s=>this.strings.set( new Guid(s.id), s.value) );
+		this.entries.forEach( e=>{
+			e.level = ELogLevel[<string><any>e.level as keyof typeof ELogLevel];
+			e.templateId = new Guid( <string><any>e.templateId );
+			e.fileId = new Guid( <string><any>e.fileId );
+			e.functionId = new Guid( <string><any>e.functionId );
+			e.time = new Date( e.time );
+			e.argIds.forEach( (id, index)=>{
+				e.argIds[index] = new Guid( <string><any>id );
+			});
+		});
+		queryResult.strings.forEach( s=>this.strings.set( s.id, s.value) );
 	}
 	entries:Entry[];
-	strings:Map<Guid,string> = new Map<Guid,string>();
+	strings:Map<string,string> = new Map<string,string>();
 }
 /*
 export class LogEntry

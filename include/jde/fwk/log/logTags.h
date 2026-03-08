@@ -51,17 +51,23 @@ namespace Jde{
 		α UpdateCumulative( const vector<up<Logging::ILogger>>& loggers )ι->void;
 	}
 	struct Γ LogTags{
-		LogTags( jobject o )ι;
 		LogTags( ELogLevel defaultLevel=ELogLevel::Information ):_minLevel{defaultLevel},_defaultLevel{defaultLevel}{}
-		β Name()Ι->string{ return "Cumulative"; }
+		LogTags( jobject o )ι;
+		LogTags( const LogTags& x )ι;
+		α operator+=( const LogTags& other )ι->LogTags&;
+		α SetLevels( const jobject& tagLevels )ι->void;
+		β Name()Ι->sv{ return "Cumulative"; }
+		α DefaultLevel()Ι->ELogLevel{ return _defaultLevel; }
+		α SetDefaultLevel( ELogLevel level )ι->void{ _defaultLevel = level; }
 		β MinLevel()Ι->ELogLevel{ return _minLevel; }
 		β MinLevel( ELogTags tags )Ι->ELogLevel;
 		β SetMinLevel( ELogLevel level )ι->void{ _minLevel = level; }
 		α SetLevel( ELogTags tags, ELogLevel level )ι->void;
 		β ShouldLog( ELogLevel level, ELogTags tags )Ι->bool;
 		β ToString()ι->string;
+		α ConfiguredTags()Ι->const concurrent_flat_map<ELogTags,ELogLevel>&{ return _configuredTags; }
 	protected:
-		concurrent_flat_map<ELogTags,ELogLevel> ConfiguredTags;
+		concurrent_flat_map<ELogTags,ELogLevel> _configuredTags;
 		mutable concurrent_flat_map<ELogTags,ELogLevel> ExtrapolatedTags;
 		ELogLevel	_minLevel;
 		ELogLevel _defaultLevel;
@@ -70,7 +76,7 @@ namespace Jde{
 
 	constexpr ELogTags DefaultTag=ELogTags::App;
 	Φ ShouldTrace( ELogTags tags )ι->bool;
-	Φ ToString( ELogTags tags )ι->string;
+	Φ ToString( ELogTags tags, bool outputArray=true )ι->string;
 	Φ ToArray( ELogTags tags )ι->jarray;
 	Φ ToLogTags( sv name )ι->ELogTags;
 	Φ ToLogTags( jvalue v )ι->ELogTags;
@@ -78,10 +84,11 @@ namespace Logging{
 	struct ITagParser{
 		β ToTag( str tagName )Ι->ELogTags=0;
 		β ToString( ELogTags tags )Ι->string=0;
+		β Tags()Ι->flat_map<string,uint> = 0;
 	};
 	Φ AddTagParser( up<ITagParser>&& tagParser )ι->void;
-
 	Φ ShouldLog( ELogLevel level, ELogTags tags )ι->bool;
+	Φ Tags()ι->flat_map<string,uint>;
 }}
 #undef Φ
 #endif

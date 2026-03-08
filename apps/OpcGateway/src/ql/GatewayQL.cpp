@@ -1,5 +1,6 @@
 #include "GatewayQL.h"
 #include "GatewayQLAwait.h"
+#include <jde/app/client/awaits/LogSettingsClientAwait.h>
 
 namespace Jde::Opc{
 	namespace Gateway{ sp<Gateway::GatewayQL> _ql; }
@@ -24,4 +25,8 @@ namespace Jde::Opc::Gateway{
 		up<TAwait<jvalue>> await = GatewayQLMAwait::Test( m, executer, sl );
 		return await;
 	}
+	α GatewayQL::LogSettingsQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>>{
+		return mu<App::Client::LogSettingsClientAwait>( move(ql), sl );
+	}
+
 }

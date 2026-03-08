@@ -53,4 +53,10 @@ namespace Jde::Opc{
 				tag = (ELogTags)(1ull << (32+i));
 		return tag;
 	}
+	α UALogParser::Tags()Ι->flat_map<string,uint>{
+		flat_map<string,uint> y;
+		for( uint i=0; i<EOpcLogTagstrings.size(); ++i )
+			y.emplace( string{EOpcLogTagstrings[i]}, 1ull << (32+i) );
+		return y;
+	}
 }

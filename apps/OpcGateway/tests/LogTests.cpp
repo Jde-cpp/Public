@@ -78,9 +78,9 @@ namespace Jde::Opc::Gateway::Tests{
 		auto ql = "logs( time: {gt: $start} ){ text arguments level tags line time user{id} fileName functionName message id fileId functionId }";
 		jobject vars{ {"start", start} };
 
-		let entries = BlockTAwait<jarray>( App::LogQLAwait{move(QL::Parse(ql, vars, {}).Queries()[0])} );
+		let entries = BlockTAwait<jvalue>( App::LogQLAwait{move(QL::Parse(ql, vars, {}).Queries()[0])} );
 		optional<jobject> jNow;
-		for( let& log : entries ){
+		for( let& log : entries.as_array() ){
 			let id = ToUuid( log.at("id").as_string() );
 			if( id==eNow.Id() )
 				jNow = log.as_object();

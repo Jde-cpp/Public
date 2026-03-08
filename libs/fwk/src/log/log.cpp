@@ -28,7 +28,7 @@ namespace Jde{
 α Jde::LogLevelStrings()ι->const std::array<sv,7>{ return ELogLevelStrings; }
 
 α Jde::ToString( ELogLevel l )ι->string{
-	return FromEnum( ELogLevelStrings, l );
+	return l==ELogLevel::NoLog ? "None" : FromEnum( ELogLevelStrings, l );
 }
 α Jde::ToLogLevel( sv l )ι->ELogLevel{
 	return ToEnum<ELogLevel>( ELogLevelStrings, l ).value_or( ELogLevel::Error );

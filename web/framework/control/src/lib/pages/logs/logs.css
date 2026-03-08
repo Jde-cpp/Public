@@ -5,7 +5,7 @@ table {
 div.table
 {
 	/* display: -webkit-box; */
-	flex-grow: 1; 
+	flex-grow: 1;
 	flex-basis: 100vh;
 	/* height: 100px; */
 	overflow: auto;
@@ -28,7 +28,7 @@ div.table
 	flex: 0 0 125px;
 }
 
-.table-row 
+.table-row
 {
 	height: 30px;
 	min-height: 30px;
@@ -40,4 +40,28 @@ div.table
 	border-color: orange;
 	border-width: 1px;
 	border-style: solid;
+}
+.mat-column-time {
+	flex: 0 0 110px;
+}
+.mat-column-level {
+	flex: 0 0 60px;
+}
+
+/*.log-trace{
+}*/
+.log-debug{
+	color: aqua;
+}
+.log-information{
+	color: green;
+}
+.log-warning{
+	color: orange;
+}
+.log-error{
+	color: red;
+}
+.log-critical{
+	color: darkred;
 }

@@ -23,7 +23,7 @@ namespace Jde::App{
 		α DailyFileStart()ι->TimePoint{ return _dailyFileStart; }//max if not started
 		Ω Deserialize( sv bytes )ε->vector<App::Log::Proto::FileEntry>;
 		α Entries()Ε->vector<App::Log::Proto::FileEntry>{ lg _{_mutex}; return Deserialize( sv{(char*)_toSave.data(), _toSave.size()} ); }
-		α Name()Ι->string override{ return "ProtoLog"; }
+		α Name()Ι->sv override{ return "ProtoLog"; }
 		α Root()Ι->const fs::path&{ return _root; }
 		α SetMinLevel( ELogLevel /*level*/ )ι->void override{}
 		α TimeZone()Ι->const std::chrono::time_zone&{ return _tz; }

@@ -1,12 +1,13 @@
 import { ProtoUtils, Timestamp } from '../../utils/protoUtils';
-import {ApplicationStrings} from './Application';
+//import {ApplicationStrings} from './Application';
 import { Guid } from '../../model/Guid';
 
 import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
 import * as LogProto from '../../proto/Log'; import Log = LogProto.Jde.App.Log.Proto;
-
+import { Entry } from './LogEntry';
+/*
 export class TraceEntry{
-	constructor( trace:FromServer.ITrace, private applicationStrings:ApplicationStrings ){
+	constructor( trace:FromServer.ITrace|Entry, private applicationStrings:ApplicationStrings ){
 		this.id = ProtoUtils.toNumber( trace.id );
 		this.instanceId = ProtoUtils.toNumber( trace.instanceId );
 		this.time = new Date( ProtoUtils.toDate(<Timestamp>trace.time) );
@@ -57,4 +58,4 @@ export class TraceEntry{
 	variables:string[] = [];
 	index:number;
 	hidden:boolean;
-}
+}*/

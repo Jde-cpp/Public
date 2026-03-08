@@ -31,7 +31,7 @@ namespace Jde::App::Client{
 		_client = nullptr;
 	}
 	α RemoteLog::Init( sp<IAppClient> client )ι->void{
-		if( auto log = Logging::Add<RemoteLog>( "remote", move(client) ); log )
+		if( auto log = Logging::Add<RemoteLog>( "remote", client ); log ){
 			log->Start( move(client) );
 	}
 
@@ -41,24 +41,28 @@ namespace Jde::App::Client{
 		_mutex.lock();
 		_entries.push_back( m );
 		if( !_timer )
-			StartTimer( _mutex );
+			StartTimer();
+		else
+			_mutex.unlock();
 	}
-	α RemoteLog::StartTimer( std::mutex& mtx )ι->TimerAwait::Task{
+	α RemoteLog::StartTimer()ι->TimerAwait::Task{
 		if( _delay<=Duration::zero() )
 			co_return;
 		_timer = mu<DurationTimer>( _delay, _tags, SRCE_CUR );
-		mtx.unlock();
+		_mutex.unlock();
 		let timedOut = co_await *_timer;
 		{
-			lg _{ mtx };
+			lg _{ _mutex };
 			_timer.reset();
 		}
 		if( timedOut )
 			Send();
 		else{
-			lg _{ _mutex };
+			_mutex.lock();
 			if( _entries.size() )
-				StartTimer( _mutex );
+				StartTimer();
+			else
+				_mutex.unlock();
 		}
 	}
 
@@ -71,6 +75,6 @@ namespace Jde::App::Client{
 		lg _{_mutex};
 		ASSERT( _client );
 		if( _client )
-			_client->Write( move(_entries) );
+			Post( [entries=move(_entries),client=_client]() mutable{ client->Write( move(entries) );} );
 	}
 }

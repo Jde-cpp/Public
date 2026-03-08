@@ -63,13 +63,17 @@ namespace Jde::Opc::Gateway{
 
 	using Web::Client::ClientHttpAwait;
 	using Web::Client::ClientHttpRes;
-	α Tests::Query( sv ql, bool raw )ε->jobject{
+	α Tests::Query( sv ql, jobject vars, bool raw )ε->jobject{
 		try{
+			jobject body{ {"query", ql} };
+			if( !vars.empty() )
+				body["variables"] = vars;
 			auto res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{
 				"localhost",
-				Ƒ("/graphql?query={}&{}", ql, raw ? "raw" : "" ),
+				Ƒ("/graphql?{}", raw ? "raw" : "" ),
+				serialize(body),
 				GatewayPort(),
-				{ .Authorization=Ƒ("{:x}", AppClient()->SessionId()), .Verb=http::verb::get, .IsSsl=false }
+				{ .Authorization=Ƒ("{:x}", AppClient()->SessionId()), .IsSsl=false }
 			});
 			return res.Json();
 		}

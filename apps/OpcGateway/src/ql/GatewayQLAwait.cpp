@@ -1,8 +1,9 @@
 #include "GatewayQLAwait.h"
 #include <jde/ql/QLAwait.h>
-#include <jde/app/IApp.h>
+#include <jde/app/client/awaits/LogSettingsClientAwait.h>
 #include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/Variant.h>
+#include "../GatewayAppClient.h"
 #include "../async/CallAwait.h"
 #include "DataTypeQLAwait.h"
 #include "NodeQLAwait.h"
@@ -38,7 +39,11 @@ namespace Jde::Opc::Gateway{
 		return await;
 	}
 	α GatewayQLMAwait::Test( QL::MutationQL& m, QL::Creds executer, SL sl )->up<TAwait<jvalue>>{
-		return m.JsonTableName=="variable" ? mu<GatewayQLMAwait>( move(m), move(executer), sl ) : nullptr;
+		if( m.JsonTableName=="variable" )
+			return mu<GatewayQLMAwait>( move(m), move(executer), sl );
+		if( App::LogSettingsMAwait::IsApplicable(m) )
+			return mu<App::Client::LogSettingsClientMAwait>( move(m), AppClient(), executer.UserPK(), sl );
+		return nullptr;
 	}
 
 	α GatewayQLAwait::Query()ι->TAwait<jvalue>::Task{

@@ -19,12 +19,16 @@ namespace Jde::QL{
 		α GetKey( SRCE )Ε->DB::Key;
 		α ExtrapolateVariables()Ι->jobject;
 		β JTableName()Ι->string=0;
+		α Limit()Ι->optional<uint>{ return TryNumber<uint>( "limit" ); }
+		α Skip()Ι->optional<uint>{ return TryNumber<uint>( "skip" ); }
+		α OrderBy()Ι->const vector<std::pair<string,bool>>&;
 
 		jobject Args;
 		sp<jobject> Variables;
 	private:
 		α VariableName( const jvalue& v )Ι->string;
 		α VariablesString()Ι->string{ return Variables ? serialize(*Variables) : "{}"; }
+		mutable optional<vector<std::pair<string,bool>>> _orderBy;
 	};
 
 	Ξ Input::VariableName( const jvalue& v )Ι->string{

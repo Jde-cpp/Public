@@ -10,6 +10,7 @@ namespace Jde::App::Client{
 	struct IAppClient : IApp{
 		Τ using await = Web::Client::ClientSocketAwait<T>;
 		α InitLogging( sp<App::Client::IAppClient> client )ι->void;
+		α LoadLogSettings( SRCE )ι->void;
 		α IsLocal()Ι->bool override{ return false; }
 		α UserName()Ι->const jobject&{ return _userName; }
 		α SetUserName( jobject&& userName )ι->void{ _userName = move(userName); }
@@ -23,11 +24,9 @@ namespace Jde::App::Client{
 		α Jwt( SRCE )ε->await<Web::Jwt>;
 		α Login( Web::Jwt&& jwt, SRCE )ε->await<Web::FromServer::SessionInfo> override;
 		α CloseSocketSession( SL sl )ι->VoidTask;
-		//α UpdateStatus()ι->void;
 		α SessionId()Ι->SessionPK{ return Session()->SessionId(); }
 		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray>;
 
-		//β StatusDetails()ι->vector<string> = 0;
 		optional<Crypto::CryptoSettings> SslSettings;
 		Crypto::PublicKey ServerPublicKey;
 		vector<sp<DB::AppSchema>> SubscriptionSchemas;

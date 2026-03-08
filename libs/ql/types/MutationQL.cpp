@@ -43,7 +43,7 @@ namespace Jde::QL{
 		auto args = serialize(Args);
 		if( args.size()>3 && args[0]=='{' )
 			args = args.substr(1, args.size()-2);
-		return Ƒ( "{}({}){}", CommandName, serialize(Args), ResultRequest ? ResultRequest->ToString() : "" );
+		return Ƒ( "{}({}){}", CommandName, move(args), ResultRequest ? ResultRequest->ToString() : "" );
 	}
 
 	// α MutationQL::GetParam( sv name, const jobject& variables, SL sl )Ε->const jvalue&{

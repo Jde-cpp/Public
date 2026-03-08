@@ -6,6 +6,11 @@
 #define let const auto
 
 namespace Jde::App::Server{
+	//{ connections{id programName instanceName hostName created status{memory values}} }
+	α ConnectionQLAwait::IsApplicable( QL::TableQL& q )ι->bool{
+		return q.JsonName.starts_with( "connection" ) && q.FindTable( "status" );
+	}
+
 	α ConnectionQLAwait::Execute()ι->TAwait<flat_map<ConnectionPK, jvalue>>::Task{
 		try{
 			flat_map<ConnectionPK, jvalue> conStatuses;
@@ -23,13 +28,14 @@ namespace Jde::App::Server{
 	α ConnectionQLAwait::QueryDB( flat_map<ConnectionPK, jvalue> conStatuses )ι->TAwait<jvalue>::Task{
 		try{
 			bool addedConId = _query.AddColumn( "id" );
+			_query.ReturnRaw = true;
 			auto connections = co_await QL::QLAwait{ move(_query), _creds, QLPtr(), _sl };
-			Json::Visit( connections, [addedConId,&conStatuses]( jobject& o ){
+			Json::Visit( connections, [addedConId,&conStatuses](jobject& o){
 				let connectionPK = QL::AsId<ConnectionPK>( o );
 				if( addedConId )
-					o.erase("id");
+					o.erase( "id" );
 				if( auto it=conStatuses.find(connectionPK); it!=conStatuses.end() )
-					o["status"] = move(it->second);
+					o["status"] = move( it->second );
 			});
 			Resume( move(connections) );
 		}

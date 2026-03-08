@@ -63,7 +63,7 @@ namespace Client{
 		auto instanceName = Settings::FindString( "/instanceName" ).value_or( "" );
 		if( instanceName.empty() )
 			instanceName = _debug ? "Debug" : "Release";
-		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Connect: '{}'.", requestId, instanceName );
+		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{}]Connect: '{}'.", hex(requestId), instanceName );
 		return ClientSocketAwait<Proto::FromServer::ConnectionInfo>{ ToString(FromClient::Instance(Process::AppName(), instanceName, sessionId, requestId)), requestId, shared_from_this(), sl };
 	}
 
@@ -166,6 +166,7 @@ namespace Client{
 	}
 
 	α AppClientSocketSession::ProcessTransmission( Proto::FromServer::Transmission&& t, optional<Jde::UserPK> /*userPK*/, optional<RequestId> clientRequestId )ι->void{
+		TRACET( ELogTags::Test, "[{}]ProcessTransmission: messages='{}', bytes='{}'.", hex(Id()), t.messages_size(), t.ByteSizeLong() );
 		for( auto i=0; i<t.messages_size(); ++i ){
 			auto m = t.mutable_messages( i );
 			using enum Proto::FromServer::Message::ValueCase;
@@ -204,11 +205,11 @@ namespace Client{
 				break;
 			case kSessionInfo:{
 				auto& res = *m->mutable_session_info();
-				TRACE( "[{:x}]SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", Id(), ToIsoString(Protobuf::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
+				TRACE( "[{}]SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", hex(Id()), ToIsoString(Protobuf::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
 				resume( move(hAny), move(res) );
 				}break;
 			case kQueryResult:
-				TRACE( "[{:x}]query: '{}'.", Id(), m->query_result().substr(0, Web::Client::MaxLogLength()) );
+				TRACE( "[{}]query: '{}'.", hex(Id()), m->query_result().substr(0, Web::Client::MaxLogLength()) );
 				resumeJValue( move(hAny), move(*m->mutable_query_result()) );
 				break;
 			case kSubscriptionAck:

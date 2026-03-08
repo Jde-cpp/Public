@@ -15,7 +15,7 @@ namespace Jde::QL{
 	Ŧ AsId( const jobject& j, SRCE )ε->T;
 	Ŧ AsId( const jvalue& j, SRCE )ε->T;
 	α SetSystemMutations( flat_set<string>&& x )ι->void;
-	α SetSystemTables( flat_set<string>&& x )ι->void;
+	α SetSystemTables( flat_set<string>&& jsonNames )ι->void;
 	α IsSystemQuery( const QL::RequestQL& q )ι->bool;
 
 	template<class T=uint32> α FindId( const jobject& j )ι->T;

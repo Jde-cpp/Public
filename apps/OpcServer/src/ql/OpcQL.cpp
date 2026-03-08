@@ -1,4 +1,5 @@
 #include "OpcQL.h"
+#include <jde/app/client/awaits/LogSettingsClientAwait.h>
 
 namespace Jde::Opc{
 	sp<Server::OpcQL> _ql;
@@ -18,4 +19,8 @@ namespace Jde::Opc::Server{
 	}
 	α OpcQL::CustomQuery( QL::TableQL&, QL::Creds, SL )ι->up<TAwait<jvalue>>{return nullptr;}
 	α OpcQL::CustomMutation( QL::MutationQL&, QL::Creds, SL )ι->up<TAwait<jvalue>>{return nullptr;}
+
+	α OpcQL::LogSettingsQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>>{
+		return mu<App::Client::LogSettingsClientAwait>( move(ql), sl );
+	}
 }

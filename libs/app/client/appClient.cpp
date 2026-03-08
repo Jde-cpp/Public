@@ -1,4 +1,5 @@
 #include <jde/app/client/appClient.h>
+#include <jde/fwk/process/execution.h>
 #include <jde/access/Authorize.h>
 #include <jde/web/client/socket/ClientQL.h>
 #include <jde/app/client/usings.h>
@@ -79,8 +80,9 @@ namespace Jde::App::Client{
 	α ConnectAwait::RunSocket( SessionPK sessionId )ι->TAwait<Proto::FromServer::ConnectionInfo>::Task{
 		try{
 			TRACET( ELogTags::App, "[{}]Creating socket session", hex(sessionId) );
-			co_await StartSocketAwait{ sessionId, _authorize, move(_appClient), _sl };
-			Resume();
+			auto info = co_await StartSocketAwait{ sessionId, _authorize, _appClient, _sl };
+			_appClient->SetAppPKs( info.instance_pk(), info.connection_pk() );
+			Post( _h );  //in OnRead, will block subsequent reads
 		}
 		catch( IException& e ){
 			if( _retry )

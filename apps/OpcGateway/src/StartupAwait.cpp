@@ -30,7 +30,6 @@ namespace Jde::Opc::Gateway{
 		if( _userName.empty() )
 			_userName = jobject{ {"name", Ƒ("OpcGateway-{}", Process::HostName())} };
 	}
-
 	α StartupAwait::Execute()ι->VoidAwait::Task{
 		try{
 			auto authorize = App::Client::RemoteAcl( "gateway" );
@@ -38,7 +37,7 @@ namespace Jde::Opc::Gateway{
 			ConfigureQL( {schema}, authorize );
 			for( let& path : Settings::FindPathArray("/ql/introspection") )
 				QL::AddIntrospection( QL::Introspection{Json::ReadJsonNet(Settings::Directory()/path)} );
-			QL::SetSystemTables( {"dataType", "dataTypes", "discoveryUrls", "node","nodes", "securityMode", "securityPolicyUri", "serverDescription", "variable", "variables"} );
+			QL::SetSystemTables( {"dataType", "dataTypes", "discoveryUrls", "logSetting", "node", "nodes", "securityMode", "securityPolicyUri", "serverDescription", "variable", "variables"} );
 			QL::SetSystemMutations( {"execute"} );
 			SetSchema( schema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
@@ -58,6 +57,7 @@ namespace Jde::Opc::Gateway{
 			appClient->SslSettings = move(sslSettings);
 			appClient->SetUserName( move(_userName) );
 			co_await App::Client::ConnectAwait{ appClient, false };
+			appClient->LoadLogSettings();
 
 			_listener = ms<Access::AccessListener>( appClient->QLServer() );
 			Process::AddShutdownFunction( []( bool terminate ){

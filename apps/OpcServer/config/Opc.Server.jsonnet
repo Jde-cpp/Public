@@ -18,13 +18,21 @@ local args = import 'args.libsonnet';
 		spd:{
 			flushOn: "Trace",
 			tags: {
-				trace:["test","sql"],
-				debug:["ql","settings", "app"],
-				information:[],
-				warning:["io","uaEvent", "uaNet", "uaSession",
-					"uaServer", "uaUser", "uaSecurity", "threads", "uaClient", "uaSecure"],
-				"error":[],
-				critical:[]
+				test: "Trace",
+				sql: "Trace",
+				ql: "Debug",
+				settings: "Debug",
+				app: "Debug",
+				io: "Warning",
+				uaEvent: "Warning",
+				uaNet: "Warning",
+				uaSession: "Warning",
+				uaServer: "Warning",
+				uaUser: "Warning",
+				uaSecurity: "Warning",
+				threads: "Warning",
+				uaClient: "Warning",
+				uaSecure: "Warning"
 			},
 			sinks:{
 				console:{},

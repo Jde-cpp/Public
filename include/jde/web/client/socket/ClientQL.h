@@ -10,6 +10,7 @@ namespace Jde::Web::Client{
 		α CustomQuery( QL::TableQL&, QL::Creds, SL )ι->up<TAwait<jvalue>> override{ ASSERT(false); return nullptr; }
 		α CustomMutation( QL::MutationQL&, QL::Creds, SL )ι->up<TAwait<jvalue>> override{ ASSERT(false); return nullptr; }
 		α LogQuery( QL::TableQL&&, SL )ι->up<TAwait<jvalue>> override{ASSERT(false); return nullptr; }
+		α LogSettingsQuery( QL::TableQL&&, SL )ι->up<TAwait<jvalue>> override{ASSERT(false); return nullptr; }
 		α StatusQuery( QL::TableQL&& )ι->jobject override{ASSERT(false); return {};}
 		α Query( string query, jobject variables, UserPK executer, bool returnRaw=true, SRCE )ι->up<TAwait<jvalue>> override;
 		α QueryObject( string query, jobject variables, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jobject>> override;

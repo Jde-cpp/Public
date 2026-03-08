@@ -7,8 +7,8 @@
 #define let const auto
 namespace Jde{
 	flat_set<string> _systemTables{};
-	α QL::SetSystemTables( flat_set<string>&& x )ι->void{
-		for( auto&& name : x )
+	α QL::SetSystemTables( flat_set<string>&& jsonNames )ι->void{
+		for( auto&& name : jsonNames )
 			_systemTables.emplace( move(name) );
 	}
 	Ω isSystem( str name )ι->bool{

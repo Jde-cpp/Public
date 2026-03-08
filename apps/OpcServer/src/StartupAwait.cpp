@@ -30,6 +30,7 @@ namespace Jde::Opc::Server{
 			auto remoteAcl = App::Client::RemoteAcl( "opc" );
 			auto uaSchema = DB::GetAppSchema( "opc", remoteAcl );
 			ConfigureQL( uaSchema, remoteAcl );
+			QL::SetSystemTables( {"logSetting"} );
 			//Opc::Configure( uaSchema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 				DB::NonProd::Recreate( *uaSchema, QLPtr() );
@@ -41,7 +42,8 @@ namespace Jde::Opc::Server{
 				settings.CreateDirectories();
 				Crypto::CreateKeyCertificate( settings );
 			}
-			AppClient()->SslSettings = settings;
+			auto appClient = AppClient();
+			appClient->SslSettings = settings;
 			let serverName = Settings::FindString("/opcServer/target").value_or( "default" );
 			let& serverTable = uaSchema->GetViewPtr( "servers" );
 			auto serverId = uaSchema->DS()->ScalerSyncOpt<uint32>( DB::Statement{
@@ -57,15 +59,17 @@ namespace Jde::Opc::Server{
 			}
 			StartWebServer( move(_webServerSettings) );
 			auto accessSchema = DB::GetAppSchema( "access", remoteAcl );
-			AppClient()->SubscriptionSchemas.push_back( accessSchema );
-			AppClient()->SetUserName( move(_userName) );
-			co_await App::Client::ConnectAwait{ AppClient(), false };
-			_listener = ms<Access::AccessListener>( AppClient()->QLServer() );
+			appClient->SubscriptionSchemas.push_back( accessSchema );
+			appClient->SetUserName( move(_userName) );
+			co_await App::Client::ConnectAwait{ appClient, false };
+			appClient->LoadLogSettings();
+
+			_listener = ms<Access::AccessListener>( appClient->QLServer() );
 			Process::AddShutdownFunction( []( bool terminate ){
 				_listener->Shutdown( terminate );
 				_listener = nullptr;
 			});
-			co_await Access::Client::Configure( accessSchema, {uaSchema}, AppClient()->QLServer(), UserPK{UserPK::System}, remoteAcl, _listener, Settings::FindString("/opcServer/resource").value_or("") );
+			co_await Access::Client::Configure( accessSchema, {uaSchema}, appClient->QLServer(), UserPK{UserPK::System}, remoteAcl, _listener, Settings::FindString("/opcServer/resource").value_or("") );
 			QL::Hook::Add( mu<ConstructorHook>() );
 			QL::Hook::Add( mu<ObjectHook>() );
 			QL::Hook::Add( mu<ObjectTypeHook>() );

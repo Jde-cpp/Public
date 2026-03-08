@@ -4,12 +4,14 @@
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/Jwt.h>
 #include <jde/app/usings.h>
+#include <jde/app/log/ProtoLog.h>
 #include <jde/app/proto/Web.FromServer.pb.h>
 
 namespace Jde::App{
 	struct IApp{
 		virtual ~IApp()=default;//msvc warning
 
+		α InstancePK()Ι->ProgInstPK{ return _instancePK; }
 		β IsLocal()Ι->bool{ return false; }
 		α ConnectionPK()Ι->App::ConnectionPK{ return _connectionPK; }
 		β PublicKey()Ι->const Crypto::PublicKey& = 0;
@@ -20,6 +22,7 @@ namespace Jde::App{
 		β ClientQuery( QL::RequestQL&& q, UserPK executer, SRCE )ε->up<TAwait<jvalue>> =0; //AppServer->[Gateway]|[OpcServer]
 		Ω Status()ι->jobject{ return jobject{{"memory", Process::MemorySize()}}; }
 
+		α LoadLogSettings( optional<jobject> clientSettings=nullopt, SRCE )ι->void;
 		template<class T=jobject> [[nodiscard]] α Query( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->up<TAwait<T>>;
 		template<class T=jobject> α QuerySync( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->T;
 		template<class T=jobject> α QuerySyncSecure( string&& q, jobject variables, SRCE )ε->T{ return QuerySync<T>(move(q), true, sl); }
@@ -50,5 +53,26 @@ namespace Jde::App{
 	Ξ IApp::Verify( const Web::Jwt& jwt )Ε->void{
 		THROW_IF( PublicKey()!=jwt.PublicKey, "Signor not trusted" );
 		Crypto::Verify( PublicKey(), jwt.HeaderBodyEncoded, jwt.Signature );
+	}
+
+	Ξ IApp::LoadLogSettings( optional<jobject> clientSettings, SL sl )ι->void{
+		try{
+			if( !clientSettings )
+				clientSettings = QuerySync( "instanceTagLevel(id:$id){ text binary }", {{"id",InstancePK()}}, true, sl );
+			if( auto logger = Logging::FindLogger<Logging::SpdLog>(); logger )
+				logger->SetLevels( clientSettings->at("text").as_object() );
+			if( auto logger = Logging::FindLogger<App::ProtoLog>(); logger )
+				logger->SetLevels( clientSettings->at("text").as_object() );
+			if( !clientSettings ){
+				Logging::UpdateCumulative( Logging::Loggers() );
+				Logging::Log( ELogLevel::Trace, ELogTags::Settings, sl, "Loaded log settings." );
+			}
+		}
+		catch( IException& e ){
+			e.SetLevel( ELogLevel::Critical );
+		}
+		catch( exception& e ){
+			Exception{ sl, move(e), ELogLevel::Critical };
+		}
 	}
 }
