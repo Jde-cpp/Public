@@ -14,6 +14,7 @@ namespace Jde::Opc::Server {
 		UAServer()ε;
 		~UAServer();
 
+		operator UA_Server&()ι{ ASSERT(_ua); return *_ua; }
 		Ω Constructor( UA_Server *server, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *typeId, void *typeContext, const UA_NodeId *nodeId, void **nodeContext )->UA_StatusCode;
 		α Run()ι->void;
 		α ConstructorValues( const NodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&;

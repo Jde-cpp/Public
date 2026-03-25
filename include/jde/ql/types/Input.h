@@ -1,5 +1,6 @@
 #pragma once
 #include <jde/db/Key.h>
+#include <jde/ql/types/FilterQL.h>
 
 #define let const auto
 namespace Jde::QL{
@@ -18,6 +19,7 @@ namespace Jde::QL{
 		α FindKey()Ι->optional<DB::Key>;
 		α GetKey( SRCE )Ε->DB::Key;
 		α ExtrapolateVariables()Ι->jobject;
+		α Filter()Ι->Filter;
 		β JTableName()Ι->string=0;
 		α Limit()Ι->optional<uint>{ return TryNumber<uint>( "limit" ); }
 		α Skip()Ι->optional<uint>{ return TryNumber<uint>( "skip" ); }
@@ -25,6 +27,7 @@ namespace Jde::QL{
 
 		jobject Args;
 		sp<jobject> Variables;
+		mutable optional<QL::Filter> _filter;
 	private:
 		α VariableName( const jvalue& v )Ι->string;
 		α VariablesString()Ι->string{ return Variables ? serialize(*Variables) : "{}"; }

@@ -31,7 +31,7 @@ namespace Jde::App::Client{
 		_client = nullptr;
 	}
 	α RemoteLog::Init( sp<IAppClient> client )ι->void{
-		if( auto log = Logging::Add<RemoteLog>( "remote", client ); log ){
+		if( auto log = Logging::Add<RemoteLog>( "remote", client ); log )
 			log->Start( move(client) );
 	}
 

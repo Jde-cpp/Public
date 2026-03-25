@@ -135,8 +135,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				deleted:types.dateTime+{ nullable: true, insertable: false, updateable: false, i:60 },
 				description: types.varchar+{ length: 2048, nullable: true, i:70 },
 				criteria: types.varchar+{ nullable: true, length:672, i:100 },
-				allowed: tables.rights.columns.rightId+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource", sk:null },
-				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:102, nullable:true, comment: "available rights for this resource", sk:null },//why?
+				allowed: types.ulong+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource" }
 			},
 			ops: ["Delete"],
 			naturalKeys: [["schema_name", "target", "criteria"]],
@@ -152,8 +151,8 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			columns: {
 				permissionId: tables.permissions.columns.permissionId+{ pkTable: "permissions", i:0, sk:0 },
 				resourceId: tables.resources.columns.resourceId+{ sk:null, pkTable: "resources", i:1 },
-				allowed: tables.rights.columns.rightId+{ pkTable: "rights", i:2 },
-				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:3 },
+				allowed: types.ulong+{ pkTable: "rights", i:2 },
+				denied: types.ulong+{ pkTable: "rights", i:3 },
 			},
 			ops: ["None"]
 		},

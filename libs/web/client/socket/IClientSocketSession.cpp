@@ -14,7 +14,7 @@ namespace Jde::Web{
 		return *_maxLogLength;
 	}
 }
-#define CHECK_EC(tag) if( ec ){ \
+#define CHECK_EC( tag ) if( ec ){ \
 	CodeException e{ static_cast<std::error_code>(ec), tag, GetLogLevel(ec) }; \
 	if( _connectHandle ){ \
 		_connectHandle.promise().SetExp( move(e) ); \
@@ -24,9 +24,11 @@ namespace Jde::Web{
 }
 namespace Jde::Web::Client{
 	α GetLogLevel( beast::error_code ec )->ELogLevel{
-		return ec == net::error::operation_aborted
-			? ELogLevel::Trace
-			: ELogLevel::Error;
+		if( ec==net::error::operation_aborted )
+			return ELogLevel::Trace;
+		if( ec==boost::asio::error::eof || ec==boost::asio::error::connection_reset ) // server down.
+			return ELogLevel::Information;
+		return ELogLevel::Error;
 	}
 
 	α IClientSocketSession::AddTask( RequestId requestId, std::any hCoroutine )ι->void{
@@ -35,7 +37,7 @@ namespace Jde::Web::Client{
 
 	α IClientSocketSession::PopTask( RequestId requestId )ι->std::any{
 		std::any h;
-		_tasks.erase_if( requestId, [&h](auto&& kv){ h=kv.second; return true;} );//Subscriptions aren't in tasks.
+		_tasks.erase_if( requestId, [&h](auto&& kv){h=kv.second; return true;} );//Subscriptions aren't in tasks.
 		return h;
 	}
 	α IClientSocketSession::CloseTasks( function<void(std::any&&)> f )ι->void{
@@ -65,7 +67,7 @@ namespace Jde::Web::Client{
 		_ioContext{ ioc }
 	{}
 
-	α IClientSocketSession::Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void{// Start the asynchronous operation
+	α IClientSocketSession::Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void{ // Start the asynchronous operation
 		_connectHandle = h;
 		_host = host;
 		net::post( *_ioContext, [=, self=shared_from_this()]{

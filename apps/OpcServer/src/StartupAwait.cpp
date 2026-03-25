@@ -17,21 +17,18 @@
 
 
 #define let const auto
-namespace Jde::Opc{
-	sp<Access::AccessListener> _listener;
-}
 namespace Jde::Opc::Server{
 	α StartupAwait::Execute()ι->VoidAwait::Task{
+		sp<OpcAuthorize> opcAuthorize;
 		{
 			auto schemaSuffix = Settings::FindString( "/opcServer/resource" );
-			App::Client::SetAcl( ms<OpcAuthorize>( schemaSuffix ? "opc." + *move( schemaSuffix ) : "opc" ) );
+			App::Client::SetAcl( opcAuthorize=ms<OpcAuthorize>(schemaSuffix ? "opc." + *move(schemaSuffix) : "opc") );
 		}
 		try{
 			auto remoteAcl = App::Client::RemoteAcl( "opc" );
 			auto uaSchema = DB::GetAppSchema( "opc", remoteAcl );
 			ConfigureQL( uaSchema, remoteAcl );
 			QL::SetSystemTables( {"logSetting"} );
-			//Opc::Configure( uaSchema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 				DB::NonProd::Recreate( *uaSchema, QLPtr() );
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
@@ -44,7 +41,7 @@ namespace Jde::Opc::Server{
 			}
 			auto appClient = AppClient();
 			appClient->SslSettings = settings;
-			let serverName = Settings::FindString("/opcServer/target").value_or( "default" );
+			let serverName = Settings::FindString( "/opcServer/target" ).value_or( "default" );
 			let& serverTable = uaSchema->GetViewPtr( "servers" );
 			auto serverId = uaSchema->DS()->ScalerSyncOpt<uint32>( DB::Statement{
 				{ serverTable->GetColumnPtr("server_id") },
@@ -57,19 +54,18 @@ namespace Jde::Opc::Server{
 					{ {serverName}, {serverName}, {0}, {} }
 				} );
 			}
-			StartWebServer( move(_webServerSettings) );
+			StartWebServer( move(_webServerSettings) ); //TODO take out.
 			auto accessSchema = DB::GetAppSchema( "access", remoteAcl );
 			appClient->SubscriptionSchemas.push_back( accessSchema );
+
+			auto resourceSchema = Settings::FindString( "/opcServer/resource" ).value_or( "" );
+			appClient->ResourceSchema = resourceSchema.size() ? Ƒ( "opc.{}", resourceSchema ) : "opc";
+
 			appClient->SetUserName( move(_userName) );
 			co_await App::Client::ConnectAwait{ appClient, false };
 			appClient->LoadLogSettings();
 
-			_listener = ms<Access::AccessListener>( appClient->QLServer() );
-			Process::AddShutdownFunction( []( bool terminate ){
-				_listener->Shutdown( terminate );
-				_listener = nullptr;
-			});
-			co_await Access::Client::Configure( accessSchema, {uaSchema}, appClient->QLServer(), UserPK{UserPK::System}, remoteAcl, _listener, Settings::FindString("/opcServer/resource").value_or("") );
+			co_await Access::Client::Configure( accessSchema, {uaSchema}, appClient->QLServer(), UserPK{UserPK::System}, remoteAcl, appClient->Listener(), resourceSchema );
 			QL::Hook::Add( mu<ConstructorHook>() );
 			QL::Hook::Add( mu<ObjectHook>() );
 			QL::Hook::Add( mu<ObjectTypeHook>() );
@@ -82,6 +78,8 @@ namespace Jde::Opc::Server{
 				co_await UpsertAwait{}; //mutations
 			for( let& config : Settings::FindPathArray("/opcServer/configFiles") )
 				ua.Load( config );
+
+			opcAuthorize->AssignRights( ua );
 			for( let& [idx, ns] : ua.Namespaces() )
 				INFOT( ELogTags::App, "ns: {}, uri: {}", idx, ns );
 

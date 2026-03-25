@@ -17,6 +17,7 @@ namespace Jde::QL{
 		α Trim( sv token )ι->bool;
 		α Text()ι->string{ return i<_text.size() ? _text.substr(i) : string{}; }
 		α AllText()ι->string{ return _text; }
+		Ω ParseArgs( const string& args )ε->jobject;
 
 		α LoadMutations( string&& command, sp<jobject> variables, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε->vector<MutationQL>;
 		α LoadTables( string jsonName, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SRCE )ε->vector<TableQL>;

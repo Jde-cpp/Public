@@ -12,20 +12,26 @@ namespace Jde::Access{
 	Ω getSchemaName( const sp<DB::AppSchema>& schema, const string& opcServerInstance )ι->string{
 		return opcServerInstance.empty() ? schema->Name : Ƒ( "{}.{}", schema->Name, opcServerInstance );
 	}
+
 	α ResourceLoadAwait::Load()ι->QL::QLAwait<jarray>::Task{
 		ResourcePermissions y;
 		try{
 			jarray schemaNames;
-			for( let& schema : _schemas )
+			bool loadAll{};
+			for( let& schema : _schemas ){
+				if( schema->Name=="app" )
+					loadAll = true;
 				schemaNames.push_back( {getSchemaName(schema, _opcServerInstance)} );
-			jobject vars{ {"schemaNames", move(schemaNames)} };
-			let resources = co_await *_qlServer->QueryArray( "resources(schemaName:$schemaNames){ id schemaName target criteria deleted }", vars, _executer );
+			}
+			auto vars = loadAll ? jobject{} : jobject{ {"schemaNames", move(schemaNames)} };
+			auto input = loadAll ? "" : "(schemaName:$schemaNames)";
+			let resources = co_await *_qlServer->QueryArray( Ƒ("resources{}{{ id schemaName target criteria deleted }}", input), move(vars), _executer );
 			for( auto&& value : resources ){
 				auto resource = Resource{ Json::AsObject(move(value)) };
 				y.Resources.emplace( resource.PK, move(resource) );
 			}
 
-			let permissions = co_await *_qlServer->QueryArray( "permissionRights{ id allowed denied resource(schemaName:$schemaNames){id} }", vars, _executer );
+			let permissions = co_await *_qlServer->QueryArray( Ƒ("permissionRights{{ id allowed denied resource{}{{id}} }}", input), move(vars), _executer );
 			for( auto&& value : permissions ){
 				let permission = Permission{ Json::AsObject(move(value)) };
 				ASSERT(permission.ResourcePK);

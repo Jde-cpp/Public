@@ -18,8 +18,10 @@ namespace Jde::Opc::Gateway{
 		{
 			lg _{ _pingMutex };
 			ASSERT( !_pingTimer );
-			_pingTimer.emplace( _pingInterval, SRCE_CUR );
-			DBGT( EOpcLogTags::ProcessingLoop, "Pinging '{}' in '{}'", client->Target(), Chrono::ToString(_pingInterval) );
+			if( !_pingTimer ){
+				_pingTimer.emplace( _pingInterval, SRCE_CUR );
+				DBGT( EOpcLogTags::ProcessingLoop, "Pinging '{}' in '{}'", client->Target(), Chrono::ToString(_pingInterval) );
+			}
 		}
 		auto result = co_await *_pingTimer;
 		{

@@ -70,7 +70,7 @@ namespace Jde::Web::Server{
 			valid = valid && !empty( m.Tags & s.Sub.Tags );
 			if( !valid )
 				continue;
-			auto& filter = s.Sub.Fields.Filter();
+			let& filter = s.Sub.Fields.Filter();
 			valid = valid && filter.Test( "time", m.Time );
 			valid = valid && filter.Test( "text", m.Text );
 			valid = valid && filter.Test( "line", m.Line );

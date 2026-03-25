@@ -252,10 +252,10 @@ namespace Jde::App::Server{
 				auto& s = *m.mutable_subscription();
 				auto& ql = *s.mutable_text();
 				auto& variablesString = *s.mutable_variables();
-				auto variables = variablesString.empty() ? jobject{} : Json::Parse( move(variablesString) );
+				auto vars = variablesString.empty() ? jobject{} : Json::Parse( move(variablesString) );
 				LogRead( Ƒ("Subscription - {}", ql.substr(0, MaxLogLength())), requestId );
 				try{
-					Write( FromServer::SubscriptionAck(AddSubscription(move(ql), variables, requestId), requestId) );
+					Write( FromServer::SubscriptionAck(AddSubscription(move(ql), move(vars), requestId), requestId) );
 				}
 				catch( std::exception& e ){
 					WriteException( move(e), requestId );

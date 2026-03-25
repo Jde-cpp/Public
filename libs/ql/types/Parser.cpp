@@ -1,4 +1,4 @@
-#include "Parser.h"
+#include <jde/ql/types/Parser.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
@@ -137,11 +137,16 @@ namespace Jde::QL{
 	}
 	Ω parseString( sv json, string& y )ε->uint{
 		uint i=0;
-		char ch = json[i++]; THROW_IF( i==json.size() || ch!='"', "Expected ending quote '{}' @ '{}'.", json, i );
+		char ch = json[i++]; THROW_IF( i==json.size() || ch!='"', "Expected starting quote '{}' @ '{}'.", json, i );
 		ASSERT( ch=='"' );
 		y += ch;
-		for( char ch=json[i++]; ch!='"' && i<json.size(); ch = json[i++] )
+		bool escape{};
+		for( char ch=json[i++]; i<json.size(); ch = json[i++] ){
+			if( ch=='"' && !escape )
+				break;
+			escape = ch=='\\' && !escape;
 			y += ch;
+		}
 		y += ch;
 		return i;
 	}
@@ -242,14 +247,17 @@ namespace Jde::QL{
 		return i;
 	}
 
+	α Parser::ParseArgs( const string& args )ε->jobject{
+		string stringified; stringified.reserve( args.size()*2 );
+		parseObject( args, stringified );
+		return Json::Parse( Str::Replace(stringified, "\n", "\\n") );
+	}
 	α Parser::ParseArgs()ε->jobject{
 		string params{ Next(')') };
 		THROW_IF( params.empty(), "params.empty()" );
 		THROW_IF( params.front()!='(', "Expected '(' vs {} @ '{}' to start function - '{}'.",  params.front(), Index()-1, Text() );
 		params.front()='{'; params.back() = '}';
-		string stringified; stringified.reserve( params.size()*2 );
-		parseObject( params, stringified );
-		return Json::Parse( Str::Replace(stringified, "\n", "\\n") );
+		return ParseArgs( params );
 	}
 
 	α Parser::LoadMutations( string&& command, sp<jobject> vars, bool returnRaw, const vector<sp<DB::AppSchema>>& schemas )ε->vector<MutationQL>{

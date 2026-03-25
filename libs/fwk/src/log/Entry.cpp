@@ -14,14 +14,18 @@ namespace Jde{
 	}
 }
 namespace Jde::Logging{
-	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, string&& m )ι:Entry{ sl, l, tags, move(m), vector<string>{} }{}
 	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, vector<string> args )ι:
+		Entry( sl, l, tags, {}, move(m), move(args) )
+	{}
+
+	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, string&& m, vector<string> args )ι:
 		Text{ move(m) },
 		Arguments{ move(args) },
 		Level{ l },
 		Tags{ tags },
 		Line{ sl.line() },
 		Time{ Clock::now() },
+		UserPK{ userPK },
 		_fileName{ string{sl.file_name()} },
 		_functionName{ string{sl.function_name()} }
 	{}

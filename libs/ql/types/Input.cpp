@@ -3,8 +3,46 @@
 #define let const auto
 
 namespace Jde::QL{
+	Ω addFilters( const jvalue& value, const sp<jobject>& variables )ε->vector<FilterValue>{
+		vector<FilterValue> columnFilters;
+		if( value.is_string() || value.is_number() || value.is_null() || value.is_bool() ) //( id: 42 ) or ( schemaName:"opc.default" ) or ( deleted: null )
+			columnFilters.emplace_back( DB::EOperator::Equal, value );
+		else if( value.is_object() ){ //criteria:{in:[null,"ns=4;i=6012"]}
+			for( let& [joperator,opValue] : value.as_object() ){
+				let oprtr{ ToQLOperator(joperator) };
+				if( opValue.is_string() && opValue.get_string().starts_with("\b$") ){
+					if( auto p = variables->if_contains(sv{opValue.get_string()}.substr(2)); p ){
+						columnFilters.emplace_back( oprtr, *p );
+						continue;
+					}
+				}
+				columnFilters.emplace_back( oprtr, opValue );
+			}
+		}
+		else if( value.is_array() ) //( id: [1,2,3] ) or ( name: ["charlie","bob"] )
+			columnFilters.emplace_back( DB::EOperator::In, value );
+		else
+			THROW( "Invalid filter value type '{}'.", Json::Kind(value.kind()) );
+		return columnFilters;
+	}
+
+	α Input::Filter()Ι->QL::Filter{
+		if( _filter )
+			return *_filter;
+		_filter = QL::Filter{};
+		for( let& [jsonColumnName,value] : Args ){
+			jvalue* variable = nullptr;
+			if( value.is_string() && value.get_string().starts_with("\b$") ){
+				if( auto p = Variables->if_contains(sv{value.get_string()}.substr(2)); p )
+					variable = p;
+			}
+			_filter->ColumnFilters.emplace( jsonColumnName, addFilters(variable ? *variable : value, Variables) );
+		}
+		return *_filter;
+	}
+
 	α Input::ExtrapolateVariables()Ι->jobject{
-		auto extrapolateString = [this]( const jstring& s )ι->jvalue{
+		auto extrapolateString = [this]( const jstring& s )ι->jvalue {
 			let varName = sv{ s }.substr( 2 );
 			let varValue = Variables->if_contains( varName );
 			return varValue ? *varValue : jvalue{};

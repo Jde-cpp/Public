@@ -4,18 +4,19 @@
 #include <jde/web/Jwt.h>
 #include <jde/app/client/awaits/SocketAwait.h>
 #include "AppClientSocketSession.h"
-
+namespace Jde::Access{ struct AccessListener; }
 namespace Jde::App::Client{
 	struct AppClientSocketSession;
 	struct IAppClient : IApp{
 		Τ using await = Web::Client::ClientSocketAwait<T>;
+		α Listener()Ι->sp<Access::AccessListener>;
 		α InitLogging( sp<App::Client::IAppClient> client )ι->void;
 		α LoadLogSettings( SRCE )ι->void;
 		α IsLocal()Ι->bool override{ return false; }
 		α UserName()Ι->const jobject&{ return _userName; }
 		α SetUserName( jobject&& userName )ι->void{ _userName = move(userName); }
 		α UserPK()Ι->Jde::UserPK{ auto p=Session(); return p ? p->UserPK() : Jde::UserPK{0}; }
-		α QLServer()ε->sp<QL::IQL>{ auto p=Session(); return p->QLServer(); }
+		α QLServer()Ε->sp<QL::IQL>{ auto p=Session(); return p->QLServer(); }
 		α PublicKey()Ι->const Crypto::PublicKey& override{ return ServerPublicKey; }
 
 		α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<Web::FromServer::SessionInfo>> override;
@@ -27,6 +28,7 @@ namespace Jde::App::Client{
 		α SessionId()Ι->SessionPK{ return Session()->SessionId(); }
 		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray>;
 
+		string ResourceSchema;
 		optional<Crypto::CryptoSettings> SslSettings;
 		Crypto::PublicKey ServerPublicKey;
 		vector<sp<DB::AppSchema>> SubscriptionSchemas;

@@ -1,6 +1,8 @@
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/db/Row.h>
+#include <jde/ql/types/Parser.h>
 #include <jde/ql/types/TableQL.h>
+#include <jde/opc/UAException.h>
 
 #define let const auto
 namespace Jde::Opc{
@@ -180,6 +182,21 @@ namespace Jde::Opc{
 	}
 	α NodeId::Add( jobject& j )Ι->void{
 		toJson( j, *this );
+	}
+
+	α NodeId::DecodeJson( const string& json )ε->NodeId{
+		if( json.find(':')!=string::npos ){ //ns:4,i:5002
+			return FromJson( QL::Parser::ParseArgs(json.starts_with('{') ? json : "{" + json + "}") );
+		}
+		//ns=4;i=5002
+		UA_ByteString jbs;
+		jbs.length = (UA_UInt32)json.size();
+		jbs.data = (UA_Byte*)json.data();
+		UA_DecodeJsonOptions options{};
+		NodeId nodeId;
+		if( let sc=UA_decodeJson( &jbs, &nodeId, &UA_TYPES[UA_TYPES_NODEID], &options ); sc ) // ns=4;i=5002 vs ns:4,i:5002
+			throw UAException{ sc, Ƒ("Could not decode NodeId from json: '{}'", json) };
+		return nodeId;
 	}
 }
 namespace Jde{

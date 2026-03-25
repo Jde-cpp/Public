@@ -24,6 +24,7 @@ namespace Jde::Web::Server{
 		α Start()ι->void;
 		α Stop()ι->void;
 		α BlockTillStarted()ι->void;
+		α UserName( UserPK userPK )ι->string;
 
 		struct WebServerSettings{
 			WebServerSettings( jobject settings )ι:_crypto{Json::FindDefaultObject(settings, "ssl")}, _settings(move(settings)){}
@@ -36,7 +37,7 @@ namespace Jde::Web::Server{
 			Crypto::CryptoSettings _crypto;
 			jobject _settings;
 		};
-	α Settings()Ι->const WebServerSettings&{ return _settings; }
+		α Settings()Ι->const WebServerSettings&{ return _settings; }
 	private:
 		sp<App::IApp> _appServer;
 		sp<net::cancellation_signal> _cancelSignal;

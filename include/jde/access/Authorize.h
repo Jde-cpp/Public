@@ -5,17 +5,23 @@
 #include "types/Role.h"
 #include "types/User.h"
 
+struct UA_Server;
 namespace Jde::Access{
 	namespace Server{ struct AuthenticateAwait; struct LoginAwait; }
 	struct Listener; struct Loader; struct Permission;
 
 	struct Authorize /*final*/ : IAcl, std::enable_shared_from_this<Authorize>{
 		Authorize( string app )ι:_app{move(app)}{}
-		α AddResource( ResourcePK resourcePK, string schema, string resourceTarget, string criteria )ι->void;
-		α FindResourcePK( string schema, str resourceName, str criteria )ι->optional<ResourcePK>{ Jde::sl _{Mutex}; return FindResourcePK(schema, resourceName, criteria, _); }
-		α FindSchema( str resourceTarget, SL sl )ε->string;
+
 		α Test( str schemaName, str resourceName, ERights rights, UserPK userPK, SRCE )ε->void override;
 		α Rights( str schemaName, str resourceName, UserPK executer )ι->ERights override;
+		α UserName( UserPK userPK )ι->string override;
+
+		α AddResource( ResourcePK resourcePK, string schema, string resourceTarget, string criteria )ι->void;
+		α FindResource( const Resource& resource )Ι->const Resource*{ ul l{Mutex}; return FindResource( resource, l ); }
+		α FindResourcePK( string schema, str resourceName, str criteria )ι->optional<ResourcePK>{ Jde::sl _{Mutex}; return FindResourcePK(schema, resourceName, criteria, _); }
+		α GetSchema( str resourceTarget, SL sl )ε->string;
+
 		α TestAdmin( str resource, UserPK userPK, SRCE )ε->void;
 		α TestAdmin( str schema, str resource, str criteria, UserPK userPK, SRCE )ε->void;
 		α TestAdmin( str resource, str criteria, UserPK userPK, SRCE )ε->void;

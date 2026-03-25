@@ -23,9 +23,11 @@ typedef struct {
 } AccessControlContext;
 
 
-namespace Jde::Opc::Server::UAAccess{
+namespace Jde::Opc::Server{
 	ELogTags _tags = ( ELogTags )( (EOpcLogTags)ELogTags::Access | EOpcLogTags::Opc );
 	string _schemaName;
+}
+namespace Jde::Opc::Server::UAAccess{
 	Ω authorize( sv resource, Access::ERights rights, UserPK userPK )ι->bool{
 		bool allow{ true };
 		try{

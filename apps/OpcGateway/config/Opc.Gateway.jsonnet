@@ -6,8 +6,8 @@ local args = import 'args.libsonnet';
 	},
 	logging:{
 		spd:{
-			defaultLevel:: "Information",
 			tags: {
+				default: "Information",
 				app: "Trace",
 				browse: "Trace",
 				ql: "Trace",
@@ -25,7 +25,6 @@ local args = import 'args.libsonnet';
 				settings: "Debug",
 				uaEvent: "Debug",
 				monitoring: "Information",
-				browse: "Information",
 				processingLoop: "Information",
 				uaNet: "Warning",
 				uaClient: "Warning",

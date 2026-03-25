@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/access/usings.h>
+#include <jde/access/access.h>
 #include <jde/ql/QLAwait.h>
 #include <jde/access/types/Permission.h>
 

@@ -3,6 +3,7 @@
 #include <jde/db/usings.h>
 #include <jde/access/types/Group.h>
 #include <jde/access/types/User.h>
+#include <jde/access/AccessException.h>
 #include <jde/fwk/utils/collections.h>
 
 #define let const auto
@@ -37,7 +38,7 @@ namespace Jde::Access{
 		}
 		return nullptr;
 	}
-	α Authorize::FindSchema( str resourceTarget, SL sl )ε->string{
+	α Authorize::GetSchema( str resourceTarget, SL sl )ε->string{
 		Jde::sl _{Mutex};
 		for( let& [_,resource] : Resources ){
 			if( resource.Target==resourceTarget && !resource.Schema.contains('.') ) //exclude opc schemas which can have same target
@@ -85,12 +86,11 @@ namespace Jde::Access{
 		if( executer==UserPK{UserPK::System} )
 			return;
 		auto user = Users.find( executer );
-		if( user==Users.end() )
-			THROW_IFX( user==Users.end(), Exception(sl, ELogLevel::Debug, "[{}]User not found.", executer.Value) );
-		THROW_IFX( user->second.IsDeleted, Exception(sl, ELogLevel::Debug, "[{}]User is deleted.", executer.Value) );
+		THROW_IFX( user==Users.end(), Access::AccessException(sl, executer, "User not found.") );
+		THROW_IFX( user->second.IsDeleted, Access::AccessException(sl, executer, "User is deleted.") );
 		let configured = user->second.ResourceRights( resource.PK );
-		THROW_IFX( !empty(configured.Denied & ERights::Administer), Exception(sl, ELogLevel::Debug, "[{}]User denied admin access to '{}'.", executer.Value, resource.Target) );
-		THROW_IFX( empty(configured.Allowed & ERights::Administer), Exception(sl, ELogLevel::Debug, "[{}]User does not have admin access to '{}'.", executer.Value, resource.Target) );
+		THROW_IFX( !empty(configured.Denied & ERights::Administer), Access::AccessException(sl, executer, "User denied admin access to '{}'.", resource.Target) );
+		THROW_IFX( empty(configured.Allowed & ERights::Administer), Access::AccessException(sl, executer, "User does not have admin access to '{}'.", resource.Target) );
 	}
 	α Authorize::TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SL sl )ε->void{
 		Jde::sl l{Mutex};
@@ -114,6 +114,13 @@ namespace Jde::Access{
 
 		auto rights = user->second.ResourceRights( *resourcePK );
 		return rights.Allowed & ~rights.Denied;
+	}
+	α Authorize::UserName( UserPK userPK )ι->string{
+		Jde::sl _{Mutex};
+		if( auto user = Users.find(userPK); user!=Users.end() )
+			return user->second.Name;
+		else
+			return std::to_string(userPK);
 	}
 
 	α Authorize::RecursiveUsers( GroupPK groupPK, const ul& l, bool clear )ι->flat_set<UserPK>{
@@ -280,7 +287,7 @@ namespace Jde::Access{
 
 	α Authorize::CreateUser( UserPK userPK )ι->void{
 		ul _{Mutex};
-		Users.emplace( userPK, User{userPK, false} );
+		Users.emplace( userPK, User{userPK, "", false} );
 	}
 	α Authorize::DeleteUser( UserPK identityPK )ι->void{
 		ul _{Mutex};

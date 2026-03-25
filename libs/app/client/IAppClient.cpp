@@ -1,6 +1,7 @@
 #include <jde/app/client/IAppClient.h>
 #include <jde/fwk/io/protobuf.h>
 #include <jde/ql/IQL.h>
+#include <jde/access/AccessListener.h>
 #include <jde/app/log/ProtoLog.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/RemoteLog.h>
@@ -28,8 +29,15 @@ namespace Jde::App::Client{
 		catch( exception& e ){
 			Exception{ sl, move(e), ELogLevel::Critical };
 		}
-
 	}
+
+	sp<Access::AccessListener> _listener;
+	α IAppClient::Listener()Ι->sp<Access::AccessListener>{
+		if( !_listener )
+			_listener = ms<Access::AccessListener>( QLServer() );
+		return _listener;
+	}
+
 	α IAppClient::QueryArray( string&& q, jobject variables, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
 		return QLServer()->QueryArray( move(q), move(variables), UserPK(), returnRaw, sl );
 	}

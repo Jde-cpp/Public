@@ -18,6 +18,9 @@ namespace Jde::Opc::Server{
 	struct OpcAuthorize final: Access::Authorize{
 		OpcAuthorize( string app )ι:Access::Authorize{move(app)}{}
 		α UserRights( NodeId nodeId, UserPK executer )ι->EAccess;
+		α AssignRights( UA_Server& server )ι->void;
 	private:
+		α AssignRights( const NodeId& nodeId, UA_Server& server, Access::ResourcePK resourcePK, const std::map<NodeId, Access::ResourcePK>& baseResources )ι->void;
+		std::map<NodeId, Access::ResourcePK> _nodeResources; shared_mutex _nodeResourcesMutex;
 	};
 }

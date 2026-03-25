@@ -77,9 +77,9 @@ namespace Jde{
 		if( Level()==ELogLevel::NoLog || Process::Finalizing() )
 			return;
 		if( auto sv = Format(); sv.size() )
-			Logging::Log( Logging::Entry{_stack.size() ? _stack.front() : SRCE_CUR, Level(), _tags, string{sv}, _args} );
+			Logging::Log( Logging::Entry{_stack.size() ? _stack.front() : SRCE_CUR, Level(), _tags | ELogTags::Exception, string{sv}, _args} );
 		else
-			Logging::Log( Logging::Entry{_stack.size() ? _stack.front() : SRCE_CUR, Level(), _tags, string{what()}} );
+			Logging::Log( Logging::Entry{_stack.size() ? _stack.front() : SRCE_CUR, Level(), _tags | ELogTags::Exception, string{what()}} );
 	}
 
 	α IException::what()Ι->const char*{

@@ -1,13 +1,14 @@
 ﻿#include "ServerImpl.h"
 #include <jde/fwk/crypto/OpenSsl.h>
-#include <jde/app/IApp.h>
+#include <jde/fwk/process/execution.h>
+#include <jde/access/AccessException.h>
+#include <jde/ql/ql.h>
+#include <jde/ql/QLAwait.h>
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/server/IRequestHandler.h>
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/RestException.h>
-#include <jde/ql/ql.h>
-#include <jde/ql/QLAwait.h>
-#include <jde/fwk/process/execution.h>
+#include <jde/app/IApp.h>
 #define let const auto
 
 namespace Jde::Web{
@@ -78,6 +79,9 @@ namespace Server{
 		catch( IRestException& e ){
 			send( move(e), move(stream), contentType );
 			co_return;
+		}
+		catch( Access::AccessException& e ){
+			send( RestException<http::status::unauthorized>{move(e), move(req), "[{}]{}", reqHandler->UserName(e.Executer), e.what()}, move(stream), contentType );
 		}
 		catch( IException& e ){
 			if( !empty(e.Tags() & ELogTags::Parsing) )

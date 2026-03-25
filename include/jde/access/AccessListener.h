@@ -5,7 +5,7 @@
 
 namespace Jde::QL{ struct IQL; }
 namespace Jde::Access{
-	enum class ESubscription;
+	enum class ESubscription : uint16;
 	struct Authorize;
 	α IsServer()ι->bool;
 	struct AccessListener : QL::IListener, IShutdown{

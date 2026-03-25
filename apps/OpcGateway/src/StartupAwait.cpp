@@ -15,10 +15,6 @@
 #include "ql/OpcQLHook.h"
 
 #define let const auto
-namespace Jde::Opc{
-	static sp<Access::AccessListener> _listener;
-}
-
 namespace Jde::Opc::Gateway{
 	extern Duration _pingInterval;
 	extern Duration _ttl;
@@ -59,12 +55,7 @@ namespace Jde::Opc::Gateway{
 			co_await App::Client::ConnectAwait{ appClient, false };
 			appClient->LoadLogSettings();
 
-			_listener = ms<Access::AccessListener>( appClient->QLServer() );
-			Process::AddShutdownFunction( []( bool terminate ){
-				_listener->Shutdown( terminate );
-				_listener = nullptr;
-			});
-			co_await Access::Client::Configure( accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, _listener, {} );
+			co_await Access::Client::Configure( accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, appClient->Listener(), {} );
 			Process::AddShutdownFunction( [](bool terminate){UAClient::Shutdown(terminate);} );
 			QL::Hook::Add( mu<OpcQLHook>() );
 

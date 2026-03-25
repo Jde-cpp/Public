@@ -24,7 +24,7 @@ namespace Jde::Opc::Server{
 		}
 		else
 			UA_ServerConfig_setDefault( this );
-		auto accessResource = Settings::FindString( "/accessResource" ).value_or( "default" );
+		auto accessResource = Settings::FindString( "/opcServer/resource" ).value_or( "default" );
 		applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en-US", Ƒ("Jde-Cpp OpcServer [{}]", accessResource).c_str() );
 	}
 

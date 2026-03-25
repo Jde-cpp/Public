@@ -5,7 +5,7 @@
 #define let const auto
 
 namespace Jde{
-	inline constexpr std::array<sv,11> OperatorStrings = { "=", "!=", "regex", "glob", "in", "not in", ">", ">=", "<", "<=", "elemMatch" };
+	inline constexpr std::array<sv,11> OperatorStrings = { "=", "!=", "regex", "glob", "in", "nin", ">", ">=", "<", "<=", "elemMatch" };
 	α DB::ToOperator( sv op )ι->EOperator{ return ToEnum<EOperator>( OperatorStrings, op ).value_or( EOperator::Equal ); }
 	α DB::ToString( EOperator op )ι->string{ return FromEnum<EOperator>( OperatorStrings, op ); }
 }

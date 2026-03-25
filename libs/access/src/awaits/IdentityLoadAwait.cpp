@@ -8,18 +8,19 @@
 namespace Jde::Access{
 	α IdentityLoadAwait::Load()ι->QL::QLAwait<jarray>::Task{
 		try{
-			auto await = _ql->QueryArray( "identities{ id deleted is_group }", {}, _executer, true, _sl );
+			auto await = _ql->QueryArray( "identities{ id deleted name is_group }", {}, _executer, true, _sl );
 			let values = co_await *await;
 			Identities identities;
 			for( let& value : values ){
 				let& identity = Json::AsObject( value );
 				let isGroup = Json::AsBool(identity, "is_group");
+				let name = Json::AsString( identity, "name" );
 				let pk{ Json::AsNumber<IdentityPK::Type>(identity, "id") };
 				let deleted = Json::FindTimePoint( identity, "deleted" ).has_value();
 				if( isGroup )
 					identities.Groups.emplace( GroupPK{pk}, Group{GroupPK{pk}, deleted} );
 				else
-					identities.Users.emplace( UserPK{pk}, User{UserPK{pk}, deleted} );
+					identities.Users.emplace( UserPK{pk}, User{UserPK{pk}, name, deleted} );
 			}
 			let jgroups = co_await *_ql->QueryArray( "groupings{ id deleted groupMembers{id} }", {}, _executer, true, _sl );
 			for( let& value : jgroups ){

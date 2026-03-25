@@ -1,6 +1,8 @@
 #include <jde/app/client/appClient.h>
 #include <jde/fwk/process/execution.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/access/Authorize.h>
+#include <jde/access/awaits/EventsSubscribeAwait.h>
 #include <jde/web/client/socket/ClientQL.h>
 #include <jde/app/client/usings.h>
 #include <jde/app/client/AppClientSocketSession.h>
@@ -28,8 +30,20 @@ namespace Jde::App{
 		_authorize = move(acl);
 	}
 
-	α Client::Connect( sp<IAppClient>&& appClient )ι->ConnectAwait::Task{
-		co_await ConnectAwait{ move(appClient), true };
+	Ω accessSubscribe( sp<Client::IAppClient>&& appClient )ι->Access::EventsSubscribeAwait::Task{
+		try{
+			co_await Access::EventsSubscribeAwait( appClient->QLServer(), {appClient->ResourceSchema}, appClient->UserPK(), appClient->Listener() );
+		}
+		catch( exception& )
+		{}
+	}
+	α Client::Connect( sp<IAppClient> appClient )ι->ConnectAwait::Task{
+		try{
+			co_await ConnectAwait{ appClient, true };
+			accessSubscribe( move(appClient) );
+		}
+		catch( exception& )
+		{}
 	}
 }
 namespace Jde::App::Client{
@@ -73,9 +87,15 @@ namespace Jde::App::Client{
 		_retry{ retry }
 	{}
 
-	α ConnectAwait::Retry()->DurationTimer::Task{
-		co_await DurationTimer{ reconnectWait() };
-		HttpLogin();
+	α ConnectAwait::Retry()ι->DurationTimer::Task{
+		try{
+			co_await DurationTimer{ reconnectWait() };
+			THROW_IF( Process::ShuttingDown(), "Shutting down." );
+			HttpLogin();
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
 	}
 	α ConnectAwait::RunSocket( SessionPK sessionId )ι->TAwait<Proto::FromServer::ConnectionInfo>::Task{
 		try{
@@ -84,7 +104,7 @@ namespace Jde::App::Client{
 			_appClient->SetAppPKs( info.instance_pk(), info.connection_pk() );
 			Post( _h );  //in OnRead, will block subsequent reads
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			if( _retry )
 				Retry();
 			else
@@ -96,7 +116,7 @@ namespace Jde::App::Client{
 			let sessionId = co_await LoginAwait{ *_appClient->SslSettings, _appClient->UserName() };//http call
 			RunSocket( sessionId );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			if( _retry )
 				Retry();
 			else
