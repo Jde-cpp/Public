@@ -21,9 +21,9 @@ namespace Jde::QL{
 		α ExtrapolateVariables()Ι->jobject;
 		α Filter()Ι->Filter;
 		β JTableName()Ι->string=0;
-		α Limit()Ι->optional<uint>{ return TryNumber<uint>( "limit" ); }
-		α Skip()Ι->optional<uint>{ return TryNumber<uint>( "skip" ); }
-		α OrderBy()Ι->const vector<std::pair<string,bool>>&;
+		α Limit()Ι->uint{ return TryNumber<uint>( "limit" ).value_or(0); }
+		α Skip()Ι->uint{ return TryNumber<uint>( "skip" ).value_or(0); }
+		α OrderByJson()Ι->const vector<std::pair<string,bool>>&;
 
 		jobject Args;
 		sp<jobject> Variables;

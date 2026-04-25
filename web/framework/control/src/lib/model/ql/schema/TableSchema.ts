@@ -4,8 +4,10 @@ import { EnumValue } from '../../../services/IGraphQL';
 
 export class TableSchema extends MetaObject{
 	constructor( j ){
-		super( j.name );
-		j.fields.forEach( (x)=>this.fields.push( new Field(x) ) );
+		super( j.name ?? j.type );
+		j.fields.forEach( (x)=>this.fields.push(new Field(x)) );
+		this.subType = j.subType;
+		this.enums = j.enums;
 	}
 	get columns():string{
 		var result = '';

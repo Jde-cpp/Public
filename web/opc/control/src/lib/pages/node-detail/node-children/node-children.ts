@@ -1,23 +1,22 @@
 import { SelectionModel, SelectionChange } from '@angular/cdk/collections';
-import {Component, computed, inject, Inject, model, OnDestroy, OnInit, signal} from '@angular/core';
+import {ChangeDetectorRef, Component, computed, inject, Inject, model, OnDestroy, OnInit, signal} from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
 import {MatSelectChange, MatSelectModule} from '@angular/material/select';
 import { Sort } from "@angular/material/sort";
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
 import { Gateway, GatewayService, SubscriptionResult } from '../../../services/gateway.service';
-import { DateUtils, IErrorService, IProfileStore, ProtoUtils, Timestamp} from 'jde-framework'
+import { ProfileStore } from 'jde-spa';
+import { DateUtils, IErrorService, ProtoUtils, Timestamp} from 'jde-framework'
 import { EAccess, ETypes } from '../../../model/types';
 import {  MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
 import { ComponentPageTitle } from 'jde-spa';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { NodePageData } from '../../../services/resolvers/node.resolver';
-import { NodeRoute } from '../../../model/NodeRoute';
 import { OpcNodeRouteService } from '../../../services/routes/opc-node-route.service';
 import { Value, valueString } from '../../../model/Value';
 import { ENodeClass, Variable, UaNode }  from '../../../model/Node';
-import { ServerCnnctn } from '../../../model/ServerCnnctn';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatInputModule } from '@angular/material/input';
@@ -38,15 +37,17 @@ export class NodeChildren implements OnInit, OnDestroy {
 		@Inject('GatewayService') private gatewayService:GatewayService,
 		private route: ActivatedRoute,
 		@Inject('IErrorService') private snackbar: IErrorService,
-		@Inject('IProfileStore') private profileStore: IProfileStore,
-		private componentPageTitle:ComponentPageTitle )
+		private componentPageTitle:ComponentPageTitle,
+		private cdRef:ChangeDetectorRef)
 	{}
 
 	async ngOnInit() {
 		this.route.data.subscribe( async (data)=>{
 			if( this.pageData )
-				this.profileStore.save<UserSettings>( this.pageData.route.profileKey, this.profile );
+				this.#profileStore.save<UserSettings>( this.pageData.route.profileKey, this.profile );
 			this.pageData = data["pageData"];
+			if( !this.profile )
+				this.profile = await this.#profileStore.load<UserSettings>( this.pageData.route.profileKey, new UserSettings() );
 			this.nodes?.filter( (n:UaNode)=>this.profile.subscriptions.find((s)=>s.equals(n)) ).forEach( (n)=>this.selections.select(n) );
 			this.isLoading.set( false );
 			this.componentPageTitle.title = this.server.connection.name + (this.node().id==85 ? '' : `/${this.node.name}`);
@@ -132,6 +133,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 		e.source.checked = !e.source.checked;
 		try {
 			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, !x.value, (x)=>console.log(x) );
+			this.cdRef.detectChanges();
 		}
 		catch (e) {
 			this.snackbar.exception( e, (m)=>console.log(m) );
@@ -217,6 +219,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	get visibleColumns(){ return this.profile.visibleColumns; }
 
 	#routeService = inject( OpcNodeRouteService );
+	#profileStore = inject( ProfileStore );
 }
 class UserSettings{
 	tabIndex:number = 0;

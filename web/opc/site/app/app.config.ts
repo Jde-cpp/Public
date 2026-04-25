@@ -2,7 +2,8 @@ import { provideHttpClient } from "@angular/common/http";
 import { ApplicationConfig } from '@angular/core';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
-import { AppService, AuthStore, DefaultErrorService,LocalProfileStore } from 'jde-framework'
+import { ProfileStore } from 'jde-spa';
+import { AppService, AuthStore, DefaultErrorService } from 'jde-framework'
 import { GatewayService, OpcAuthService, OpcNodeRouteService, OpcStore} from 'jde-opc';
 import {EnvironmentService} from './services/environment.service';
 import { routes } from './app_routing_module';
@@ -21,7 +22,7 @@ export const appConfig: ApplicationConfig = {
 		{provide: 'IErrorService', useClass: DefaultErrorService},
 		{provide: 'GatewayService', useClass: GatewayService},
 		{provide: 'OpcStore', useClass: OpcStore},
-		{provide: 'IProfileStore', useClass: LocalProfileStore},
+		{provide: 'ProfileStore', useClass: ProfileStore},
 		{provide: "OpcNodeRouteService", useClass: OpcNodeRouteService},
 	]
 };

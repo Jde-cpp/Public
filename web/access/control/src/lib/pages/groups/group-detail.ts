@@ -6,8 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle, DocItem } from 'jde-spa';
-import { arraysEqual, cloneClassArray, DetailResolverData, Properties, IErrorService, IGraphQL, QLSelector, toIdArray, TargetRow, LocalProfileStore} from 'jde-framework';
+import { ComponentPageTitle, DocItem, ProfileStore } from 'jde-spa';
+import { arraysEqual, cloneClassArray, DetailResolverData, Properties, IErrorService, IGraphQL, QLSelector, toIdArray, TargetRow} from 'jde-framework';
 
 import { RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
@@ -63,9 +63,9 @@ export class GroupDetail implements OnDestroy, OnInit{
 		});
 	}
 	ngOnDestroy(){
-		LocalProfileStore.setTabIndex( 'groupDetail', this.tabIndex() );
+		ProfileStore.setTabIndex( 'groupDetail', this.tabIndex() );
 	}
-	async ngOnInit(){
+	ngOnInit(){
 		this.sideNav.set( this.pageData.routing );
 	}
 	onTabIndexChanged( index:number ){ this.tabIndex.set(index); }
@@ -74,7 +74,7 @@ export class GroupDetail implements OnDestroy, OnInit{
 		try{
 			const upsert = new Group( {id:this.properties().id, ...this.properties(), permissions: this.permissions(), users: this.users().selected, roles: this.roles().selected, childGroups: toIdArray(this.childGroups().selected)} );
 			const mutation = upsert.mutation( this.group );
-			await this.ql.mutate( mutation );
+			await this.ql.mutate( mutation, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 		}catch(e){
 			this.snackbar.exceptionInfo( e, "Save failed.", (m)=>console.log(m) );
@@ -96,6 +96,11 @@ export class GroupDetail implements OnDestroy, OnInit{
 	pageData:DetailResolverData<Group>;
 	get schema(){ return this.pageData.schema; }
 	sideNav = model.required<DocItem>();
-	tabIndex = signal<number>( LocalProfileStore.tabIndex('groupDetail') );
+	tabIndex = signal<number>( ProfileStore.tabIndex('groupDetail') );
+	excludedColumns = groupTableSettings.excludedColumns;
 	ql:IGraphQL = inject( AccessService );
+}
+export const groupTableSettings = {
+	excludedColumns: ["isGroup", "members"],
+	collectionName: "groupings"
 }

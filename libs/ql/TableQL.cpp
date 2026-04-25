@@ -113,6 +113,23 @@ namespace Jde::QL{
 		}
 		return y;
 	}
+
+	α TableQL::OrderBy()Ι->string{
+		auto json = OrderByJson();
+		if( json.size()==0 )
+			return {};
+		string sql;
+		for( let& [jsonName, ascending] : json ){
+			let column = _dbTable->GetColumnPtr( DB::Names::FromJson(jsonName) );
+			if( sql.size()>0 )
+				sql += ", ";
+			sql += column->FQName();
+			if( !ascending )
+				sql += " desc";
+		}
+		return sql;
+	}
+
 	α ValueToJson( DB::Value&& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue;
 	α TableQL::SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void{
 		for( let& c : Columns ){

@@ -1,0 +1,68 @@
+import {ChangeDetectionStrategy, Component, ElementRef, Inject, Signal, ViewChild, computed, inject, input, model, output, resource, signal} from '@angular/core';
+import {form, FormField} from '@angular/forms/signals';
+import {MatButtonModule} from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import {MatInputModule} from '@angular/material/input';
+import {MatAutocompleteModule} from '@angular/material/autocomplete';
+import {MatFormFieldModule} from '@angular/material/form-field';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogActions, MatDialogClose, MatDialogConfig, MatDialogContent, MatDialogRef, MatDialogTitle } from '@angular/material/dialog';
+import { Favorite } from '../navbar';
+import { Title } from '@angular/platform-browser';
+
+type DialogData = { existing:Favorite, folderNames:string[], name:string };
+@Component( {
+	selector: "favorites",
+	template: "<mat-icon #icon (click)='onClick()' [class.highlight]='isFavorite()'>star</mat-icon>",
+	styles: ".highlight { color: gold; } mat-icon { cursor: pointer; }",
+	imports: [MatIconModule]
+})
+export class Favorites {
+	onClick(){
+		const rect = this.iconElementRef.nativeElement.getBoundingClientRect();
+		const folderNames = [ ...new Set(this.favorites().map( fav=>fav.folderName ?? "" )) ];
+		const dialogConfig: MatDialogConfig = {
+			position: {
+				top: `${rect.bottom + 5}px`, // Position 5px below the button
+				left: `${rect.left-370}px`,
+			},
+			width: '350px',
+			data:{existing: this.existing(), name: this.name(), folderNames: folderNames}
+		};
+		let ref = this.dialog.open( FavoritesDialog, dialogConfig );
+		ref.afterClosed().subscribe( ( result:Favorite )=>{
+			if( result || (result===null && this.isFavorite()) )
+				this.onChange.emit( result );
+		});
+	}
+	@ViewChild('icon', { read: ElementRef }) iconElementRef: ElementRef;
+	readonly dialog = inject(MatDialog);
+	existing = input.required<Favorite>();
+	favorites = input.required<Favorite[]>();
+	name = input.required<string>();
+  onChange = output<Favorite>();
+	isFavorite = computed<boolean>( ()=>this.existing()!=null );
+}
+
+@Component({
+ // selector: 'dialog-animations-example-dialog',
+  templateUrl: 'favorites-dialog.html',
+	styles: "mat-form-field { display: block; } .ok { background: var(--mat-sys-primary); } .remove { background: var(--mat-sys-error); }",
+  imports: [MatButtonModule, MatDialogActions, MatDialogClose, MatDialogTitle, MatDialogContent, MatFormFieldModule, MatInputModule, MatAutocompleteModule, FormField],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class FavoritesDialog {
+	constructor( public dialogRef: MatDialogRef<FavoritesDialog>, @Inject(MAT_DIALOG_DATA) public data: DialogData ){
+		this.favoriteModel.set( {name: this.titleService.getTitle(), folderName: data.existing?.folderName ?? ""} );
+		this.folderNames = data.folderNames;
+	};
+	onRemove(): void {
+		this.dialogRef.close( null );
+	}
+	onDone(): void {
+		this.dialogRef.close( this.favoriteModel() );
+	}
+	folderNames = [];
+  favoriteModel = signal<{ name:string, folderName:string }>(null);
+  favoriteForm = form(this.favoriteModel);
+	titleService = inject(Title);
+}

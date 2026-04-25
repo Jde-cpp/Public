@@ -165,6 +165,7 @@ namespace Jde::QL{
 	Ω parseValue( sv json, string& y )ε->uint{
 		uint i=0;
 		i += parseWhitespace( json.substr(i), y );
+		THROW_IF( i>=json.size(), "Unexpected end vs '{}' @ '{}'.", json, i );
 		char ch=json[i];
 		if( ch=='{' )
 			i += parseObject( json.substr(i), y );

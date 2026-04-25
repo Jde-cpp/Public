@@ -37,6 +37,8 @@ export class GatewayCnnctnRouteService implements IRouteService{
 		let route = this._route.snapshot.children[0];
 		let gatewayTarget = route.paramMap.get("gateway");
 		let gateway = await this._gatewayService.gateway( gatewayTarget );
+		if( !gateway )
+			throw new Error( "Gateway not found: "+gatewayTarget );
 		let connections = await gateway.queryArray<any>( `serverConnections{ name target }`,  );
 		for( const c of connections )
 			y.push( new DocItem({path: c.target, title: c.name}) );

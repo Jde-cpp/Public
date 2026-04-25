@@ -6,9 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle, DocItem } from 'jde-spa';
-
-import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, LocalProfileStore, Properties, QLSelector, TargetRow, toIdArray} from 'jde-framework';
+import { ComponentPageTitle, DocItem, ProfileStore } from 'jde-spa';
+import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, Properties, QLSelector, TableSettings, TargetRow, toIdArray} from 'jde-framework';
 import { Role, RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
 import { Permission } from '../../model/Permission';
@@ -52,7 +51,7 @@ export class RoleDetail implements OnDestroy, OnInit{
 
 		route.data.subscribe( async (data)=>{
 			if( this.tabIndex==null )
-				this.tabIndex = LocalProfileStore.tabIndex( 'roleDetail' );
+				this.tabIndex = ProfileStore.tabIndex( 'roleDetail' );
 
 			this.pageData = data["pageData"];
 			this.role = new Role( this.pageData.row );
@@ -66,7 +65,7 @@ export class RoleDetail implements OnDestroy, OnInit{
 		});
 	}
 	ngOnDestroy(){
-		LocalProfileStore.setTabIndex( 'roleDetail', this.tabIndex );
+		ProfileStore.setTabIndex( 'roleDetail', this.tabIndex );
 	}
 	ngOnInit(){
 		this.sideNav.set( this.pageData.routing );
@@ -112,4 +111,7 @@ export class RoleDetail implements OnDestroy, OnInit{
 	get schema(){ return this.pageData.schema; }
 
 	ql:IGraphQL = inject( AccessService );
+}
+export const roleTableSettings:TableSettings = {
+	excludedColumns:["permissions"]
 }

@@ -1,6 +1,7 @@
 import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { inject, Inject, Injectable } from '@angular/core';
-import { IErrorService, LocalProfileStore, TableSchema } from 'jde-framework';
+import { ProfileStore } from 'jde-spa';
+import { IErrorService, TableSchema } from 'jde-framework';
 import { Role, RoleNK } from '../model/Role';
 import { AccessService } from '../services/access.service';
 
@@ -15,7 +16,7 @@ export class RoleResolver implements Resolve<IRoleData> {
 	async load(target:RoleNK):Promise<IRoleData>{
 		const schema = await this.#ql.schemaWithEnums( "roles", (m)=>console.log(m) );
 
-		let ql = `role( target: "${target}" ){ id target name created updated ${LocalProfileStore.showDeleted("roles") ? "deleted" : ""} description permissionRights{id allowed denied resource{id}} roles{id} }`;
+		let ql = `role( target: "${target}" ){ id target name created updated ${ProfileStore.showDeleted("roles") ? "deleted" : ""} description permissionRights{id allowed denied resource{id}} roles{id} }`;
 		try{
 			const role = await this.#ql.querySingle(ql);
 			return { role: new Role(role), schema: schema };

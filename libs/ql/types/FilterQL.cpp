@@ -82,6 +82,8 @@ namespace Jde{
 	α QL::ToWhereClause( const TableQL& table, const DB::View& dbTable, bool includeDeleted )ε->DB::WhereClause{
 		DB::WhereClause where;
 		for( let& [name,filters] : table.Filter().ColumnFilters ){
+			if( name=="orderBy" || name=="limit" || name=="offset" )
+				continue;
 			auto column = name!="id"
 				? dbTable.GetColumnPtr( DB::Names::FromJson(name) )
 				: AsTable(dbTable).Extends ? AsTable(dbTable).Extends->GetPK() : dbTable.GetPK(); //can't have left join users where users.id=42

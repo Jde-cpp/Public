@@ -5,18 +5,18 @@ import { TableSchema } from '../model/ql/schema/TableSchema';
 
 export type TypeName = string;
 export type Log = (m:string)=>void;
+export type Query = {text:string, vars:any};
 
 export interface IGraphQL{
-	query<T>( ql: string, log?:Log ):Promise<T>;
-	querySingle<T>( ql: string, log?:Log ):Promise<T>;
-	schema( names:string[], log?:Log ):Promise<TableSchema[]>;
-	schemaWithEnums( type:string, log?:Log ):Promise<TableSchema>;
-	mutate<T>( ql: string|Mutation|Mutation[], log?:Log ):Promise<T>;
-	mutations( log?:Log ):Promise<MutationSchema[]>;
+	query<T>( ql: string, vars:any, log:Log ):Promise<T>;
+	querySingle<T>( ql: string, vars:any, log:Log ):Promise<T>;
+	schema( names:string[], log:Log ):Promise<TableSchema[]>;
+	schemaWithEnums( type:string, log:Log ):Promise<TableSchema>;
+	mutate<T>( ql: string|Mutation|Mutation[], log:Log ):Promise<T>;
+	mutations( log:Log ):Promise<MutationSchema[]>;
 
-	targetQuery( schema:TableSchema, target: string, showDeleted:boolean ):string;
+	targetQuery( schema:TableSchema, target: string, showDeleted:boolean, excludedColumns:string[] ):string;
 	subQueries( typeName: string, id: number ):string[];
-	excludedColumns( tableName:string ):string[];
 	toCollectionName( collectionDisplay:string ):string;
 }
 

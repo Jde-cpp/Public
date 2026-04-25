@@ -25,10 +25,10 @@ namespace Jde::App{
 		let limit = input.Limit();
 		if( !limit )
 			return false;
-		let& orderBy = input.OrderBy();
+		let& orderBy = input.OrderByJson();
 		if( orderBy.size()!=1 || orderBy.begin()->first!="time" || !orderBy.begin()->second )
 			return false;
-		return EntrySize()>=*limit+input.Skip().value_or( 0 );
+		return EntrySize()>=limit+input.Skip();
 	}
 	Ω find( const auto& map, string uuid )ι->str{
 		let it = map.find( ToGuid(uuid) );
@@ -219,7 +219,7 @@ namespace Jde::App{
 	}
 	//logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }
 	α ArchiveFile::ToJson( const QL::TableQL& ql )Ι->jobject{
-		let entries = Sort( ql.OrderBy() );
+		let entries = Sort( ql.OrderByJson() );
 		jobject o;
 		jarray jentries;
 		auto strings = ql.FindTable( "strings" ) ? flat_map<uuid,string>{} : optional<flat_map<uuid,string>>{};

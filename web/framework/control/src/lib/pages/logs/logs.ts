@@ -1,18 +1,14 @@
-import { HostListener, Component, OnDestroy, OnInit, ViewChild, Inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, Inject, input, effect, Signal, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import {MatSortModule, Sort} from '@angular/material/sort';
 import {MatDatepickerInputEvent} from '@angular/material/datepicker';
-import { Observable, Subject, Unsubscribable } from 'rxjs';
-import { TraceEntry } from './TraceEntry';
+import { Subject, Unsubscribable } from 'rxjs';
 import { DataSource } from './DataSource';
-import {App,AppStatus} from '../../services/app/application';
-import {AppService} from '../../services/app/app.service';
-import {ApplicationStrings} from './Application';
+import {AppStatus} from '../../services/app/application';
 import {LogSettings} from './Settings';
 //import {Settings} from '../../utils/settings';
 import { ComponentPageTitle } from 'jde-spa';
-import {IProfileStore} from '../../services/profile/profile.store';
 import {IErrorService} from '../../services/error/IErrorService';
 
 
@@ -24,20 +20,24 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatOption, MatSelect } from '@angular/material/select';
 import { MatIcon } from '@angular/material/icon';
 import { Paginator } from '../../shared/paginator/paginator';
+import { ProfileStore } from 'jde-spa';
+import { IGraphQL, ProtoService } from 'jde-framework';
+import { Entry,LogEntries, LogEntriesRest } from './LogEntry';
 
 // Move levels to combo.
 // Add dates.
 // Fix pause button.
 // Comment out statuses
 @Component({
-	selector: 'logs.main-content.mat-drawer-container.my-content',
+	selector: 'logs',
+	//.main-content.mat-drawer-container.my-content
 	templateUrl: './logs.html',
-	styleUrls: ['./logs.css'],
-	imports: [CommonModule, MatIcon, MatTableModule, MatToolbar, MatFormFieldModule, MatSelect, MatSortModule, MatOption, Paginator]
+	styleUrls: ['./logs.scss'],
+	imports: [CommonModule, /*MatIcon,*/ MatTableModule, MatToolbar, MatFormFieldModule, /*MatSelect,*/ MatSortModule, /*MatOption, Paginator*/]
 })
-export class LogsComponent implements OnInit, OnDestroy{
-	constructor( public _componentPageTitle: ComponentPageTitle, private appService:AppService, @Inject('IProfileStore') private profileStore: IProfileStore, @Inject('IErrorService') private errorService: IErrorService )
-	{}
+export class Logs implements OnInit, OnDestroy{
+	constructor( public _componentPageTitle: ComponentPageTitle, @Inject('IErrorService') private snackBar: IErrorService ){
+	}
 
 	async ngOnInit(){
 		this._componentPageTitle.title = "Logs";
@@ -46,25 +46,22 @@ export class LogsComponent implements OnInit, OnDestroy{
 		//var yesterday = ;
 		var start = beginningOfDay;
 		this._start.setValue( start );*/
-		this.data.onPageChange.subscribe( pageIndex=>this.pageIndex = pageIndex );
+		this.data = new DataSource( this.pageSize );
+		this.pageIndex = this.data.pageIndex;
 		this.profile = await this.profileStore.load<LogSettings>( "logs", new LogSettings() );
-
 		this.data.sort = this.profile.sort;
 		try{
-			let applications = await this.appService.query<App[]>( "applications{id name dbLogLevel fileLogLevel}" );
-			for( let app of applications )
-				this.applications.push( new AppStatus(app) );
-
-			//this.statusSubscription = this.appService.statuses();
-/*			this.statusSubscription.subscribe( (status:FromServer.IStatus) =>{
-				let found = this.applications.find( (existing)=>{return existing.id==status.applicationId;} );
-				if( !found )
-					console.error( `Could not find application '${status.applicationId}'` );
-				else
-					found.status = status;
-			} );*/
-			this.subscribe( this.applicationId, this.level );
-			this.viewPromise = Promise.resolve( true );
+			let orderBy = null;
+			if( this.data.sort && this.data.sort.active ){
+				orderBy = {};
+				orderBy[this.data.sort.active] = this.data.sort.direction;
+			}
+			let vars = {limit: this.pageSize()*3, skip: Math.max(0, this.pageIndex()-1)*this.pageSize(), orderBy: orderBy };
+			let q = "logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
+			let entries = ( await this.service().query<{logs: LogEntriesRest}>( q, vars, (m)=>console.log(m) ) ).logs;
+			this.push( new LogEntries(entries) );
+			//this.subscribe( this.applicationId, this.level );
+			this.isLoading.set( false );
 		}
 		catch(e){
 			console.log(e);
@@ -76,57 +73,33 @@ export class LogsComponent implements OnInit, OnDestroy{
 		this.profileStore.save<LogSettings>( "logs", this.profile );
 	}
 
-
-	onTrace = async ( trace:FromServer.ITrace ):Promise<void> =>{
+/*	onTrace = async ( trace:FromServer.ITrace ):Promise<void> =>{
 		//let status = this.applications.find( (app)=>{return app.id==trace.InstanceId;} );
 		//if( !status )
 		//	throw `no status for ${trace.InstanceId}`;
 		let entry = new TraceEntry( trace, this.applicationStrings );
 		var stringRequests = this.applicationStrings.requests( entry );
 		const haveRequest = stringRequests.files.length || stringRequests.functions.length || stringRequests.messages.length || stringRequests.userPKs.length;
-		if( haveRequest )
-			this.onStrings( await this.appService.requestStrings(stringRequests) );
+		// if( haveRequest )
+		// 	this.onStrings( await this.appService.requestStrings(stringRequests) );
 
 		entry.hidden = this.profile.hiddenMessages.indexOf(entry.messageId)!=-1;
 		if( haveRequest || this.buffer.length )
 			this.buffer.push( entry );
 		else
 			this.push( [entry] );
-	}
-	push( entries:TraceEntry[] ){
-		let fnctn = ( entries2:TraceEntry[] )=>{
-			var changes = this.data.pushArray( entries2 );
-			if( changes.length )
-				this.lengthChange.next( changes.length );
-			if( changes.startIndex )
-				this.startIndexChange.next( changes.startIndex );
-			this.pushTimeout = null;
-		};
-		const now = new Date();
-		let timeout = this.pushTimeout==null;
-		if( !timeout ){
-			entries = this.pushTimeout.entries.concat( entries );
-			clearTimeout( this.pushTimeout.id );
-			timeout = this.pushTimeout.end>now.getTime();
-			if( !timeout )
-				fnctn( entries );
-		}
-		if( timeout ){
-			this.pushTimeout ={
-				entries: entries,
-				end: this.pushTimeout ? this.pushTimeout.end : now.getTime()+1000,
-				id: setTimeout( ()=>{ fnctn(entries) }, 250 )
-			};
-		}
+	}*/
+	push( entries:LogEntries ){
+		this.data.pushArray( entries );
 	}
 	onStrings = ( value:FromServer.Strings ):void =>{
-		if( value )
-			this.applicationStrings.set( value );
+//		if( value )
+//			this.applicationStrings.set( value );
 		let i=0;
 		let entries = [];
 		for( ; i<this.buffer.length; ++i ){
 			let entry = this.buffer[i];
-			const haveStrings = (entry.messageId || entry.message!=null) && (!entry.fileId || entry.file!=null) && ( !entry.functionId || entry.functionName!=null );
+			const haveStrings = entry.templateId && !entry.fileId && !entry.functionId;
 			//haveStrings = entry.message!=null && entry.file!=null && entry.functionName!=null;
 			if( haveStrings )
 				entries.push( entry );
@@ -137,7 +110,7 @@ export class LogsComponent implements OnInit, OnDestroy{
 		}
 		if( i>0 ){
 			this.buffer.splice( 0, i );
-			this.push( entries );
+			//this.push( entries );
 		}
 	//	if( !this.buffer.length )
 	//		console.log( 'no buffer length' );
@@ -157,7 +130,7 @@ export class LogsComponent implements OnInit, OnDestroy{
 			this.unsubscribe();
 			this.level = level;
 			this.currentSubscription = subscription;
-			this.subscription = this.appService.logs( subscription.applicationId, subscription.level, subscription.start, subscription.limit ).subscribe( traces => {this.onTrace(traces);} );
+			//this.subscription = this.appService.logs( subscription.applicationId, subscription.level, subscription.start, subscription.limit ).subscribe( traces => {this.onTrace(traces);} );
 		}
 	}
 
@@ -165,7 +138,7 @@ export class LogsComponent implements OnInit, OnDestroy{
 		if( this.subscription ){
 			this.subscription.unsubscribe();
 			this.subscription = null;
-			this.currentSubscription = LogsComponent.DefaultSubscription;
+			this.currentSubscription = Logs.DefaultSubscription;
 		}
 	}
 	// @HostListener('window:scroll', ['$event'])
@@ -198,7 +171,7 @@ export class LogsComponent implements OnInit, OnDestroy{
 	}
 	hideSelectedMessage(){
 		this.profile.level = ELogLevel.Information;
-		this.profile.hiddenMessages.push( this.selectedEntry.messageId );
+		this.profile.hiddenMessages.push( this.selectedEntry.templateId );
 		this.profile.level = ELogLevel.Debug;
 		this.filterData();
 	}
@@ -216,14 +189,14 @@ export class LogsComponent implements OnInit, OnDestroy{
 		}
 	}
 	navigateNext(){
-		const messageId = this.selectedEntry.messageId;
+		const messageId = this.selectedEntry.templateId;
 		const currentIndex = this.data.data.findIndex( (x)=>x.index==this.selectedIndex );
 		const size = this.data.data.length;
 		const stop = size+currentIndex;
 		let foundIndex = currentIndex;
 		for( let i=currentIndex+1; i!=stop && foundIndex==currentIndex; ++i ){
 			const i2 = i%size;//<size ? i : i-size;
-			if( this.data.data[i2].messageId==messageId )
+			if( this.data.data[i2].templateId==messageId )
 				foundIndex = i2;
 		}
 		if( foundIndex!=currentIndex ){
@@ -231,36 +204,65 @@ export class LogsComponent implements OnInit, OnDestroy{
 			this.data.select( foundIndex );
 		}
 		else
-			this.errorService.warn( "No other instances found.", (m)=>console.log(m) );
+			this.snackBar.warn( "No other instances found.", (m)=>console.log(m) );
 	}
 	applyFilter( value:string ){
 		this.filter = value;
 		this.filterData();
 	}
 	get sort(){return this.profile.sort;} set sort(value){ this.data.sort = this.profile.sort = value; }
+
+	service = input.required<IGraphQL>();
+
 	profile:LogSettings;
 //	get settings(){ return this.profile;}
 
 
 	//settings:Settings = new Settings();
-	pageSize:number=23;
-	pageIndex:number=0;
-	data: DataSource = new DataSource( this.pageSize );
+	pageSize = signal<number>(23);
+	pageIndex:Signal<number>;
+	data: DataSource;
 	get paused(){return this.data.paused;} set paused(value){this.data.paused=value;}
 	connected = false;
-	displayedColumns : string[] = [ 'time', 'level', 'message', 'function', 'file', 'line' ];
+	displayedColumns : string[] = [ 'time', 'level', 'message' ]; //, 'function', 'file', 'line'
 	//configuration = { displayHeader:true }
-	@ViewChild('mainTable',{static: false}) _table:MatTable<TraceEntry>;
+	@ViewChild('mainTable',{static: false}) _table:MatTable<Entry>;
 
-	toLevel( level:ELogLevel ):string{ return ELogLevel[level]; }
+	toLevel( level:ELogLevel ):string{
+		switch( level ){
+			case ELogLevel.Trace: return "Trc";
+			case ELogLevel.Debug: return "Dbg";
+			case ELogLevel.Information: return "Inf";
+			case ELogLevel.Warning: return "Wrn";
+			case ELogLevel.Error: return "Err";
+			case ELogLevel.Critical: return "Crt";
+		}
+		return "";
+	}
+	levelClass(row:Entry){
+		let className = "";
+		//const levelValue = ELogLevel[row.level as keyof typeof ELogLevel];
+		switch( row.level ){
+			case ELogLevel.Trace: className = "log-trace"; break;
+			case ELogLevel.Debug: className = "log-debug"; break;
+			case ELogLevel.Information: className = "log-information"; break;
+			case ELogLevel.Warning: className = "log-warning"; break;
+			case ELogLevel.Error: className = "log-error"; break;
+			case ELogLevel.Critical: className = "log-critical"; break;
+		}
+		return "table-row "+className;
+	}
+	message(entry):string{
+		return this.data.message(entry);
+	}
 
 	get applicationId(){ return this.profile.applicationId; } set applicationId(value){ this.profile.applicationId=value; }
 	get start():Date{ return this._start.value; } set start(value:Date){ this._start.setValue(value); this.profile.start = value; } private _start = new FormControl();
 	private filter:string; 	//get filter(){return _filter;} set filter(value){ this._filter = value.trim().toLowerCase(); }
 	startChange( event: MatDatepickerInputEvent<Date> ){ this.subscribe( this.applicationId, this.level ); }
-	private buffer:TraceEntry[] = [];
+	private buffer:Entry[] = [];
 	static DefaultSubscription:ISubscription={ applicationId: 0, level:  ELogLevel.NoLog, start:null };
-	private currentSubscription:ISubscription=LogsComponent.DefaultSubscription;//actual subscribtion
+	private currentSubscription:ISubscription=Logs.DefaultSubscription;//actual subscribtion
 	lengthChange = new Subject<number>();
 	startIndexChange = new Subject<number>();
 	get level():ELogLevel{ return this.profile.level; } set level( value:ELogLevel ){ this.profile.level=value; }
@@ -268,12 +270,12 @@ export class LogsComponent implements OnInit, OnDestroy{
 	private get application():AppStatus|null{ return this.applications.find( (existing)=>{return existing.id==this.applicationId;} ); }
 	applications:AppStatus[]=[];
 	private subscription:Unsubscribable;
-	private applicationStrings:ApplicationStrings = new ApplicationStrings();
-	private pushTimeout:{ entries: TraceEntry[], id:any, end:number };
+	//private applicationStrings:ApplicationStrings = new ApplicationStrings();
+	//private pushTimeout:{ entries: TraceEntry[], id:any, end:number };
 	get selectedIndex(){ return this.selectedEntry?.index; } set selectedIndex(x){ this.selectedEntry = this.data.data.find( (y)=>y.index==x ); }
-	get selectedEntry(){return this._selectedEntry; } set selectedEntry(x){ this._selectedEntry=x;} _selectedEntry:TraceEntry;
-	//private statusSubscription:Observable<FromServer.IStatus>;//TODO make sure unsubscibing
-	viewPromise:Promise<boolean>;
+	get selectedEntry(){return this._selectedEntry; } set selectedEntry(x){ this._selectedEntry=x;} _selectedEntry:Entry;
+	isLoading = signal<boolean>( true );
+	profileStore = inject(ProfileStore);
 }
 
 interface ISubscription{ applicationId:number, level:ELogLevel, start:Date|null }

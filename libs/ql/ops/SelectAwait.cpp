@@ -289,6 +289,9 @@ namespace Jde{
 		auto dbTable = dbView->IsView() ? nullptr : AsTable(dbView);
 		if( optional<DB::Criteria> criteria = dbTable && dbTable->Extends ? dbTable->SurrogateKeys[0]->Criteria : nullopt; criteria ) //identities is_group
 			statement.Where.Add( *criteria );//group with no members.
+		statement.OrderBy = qlTable.OrderBy();
+		statement.Limit( qlTable.Limit() );
+		statement.Skip( qlTable.Skip() );
 
 		return statement;
 	}

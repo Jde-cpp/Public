@@ -1,3 +1,5 @@
+#ifndef STATEMENT_H
+#define STATEMENT_H
 #pragma once
 #include "../exports.h"
 #include "FromClause.h"
@@ -13,6 +15,7 @@ namespace Jde::DB{
 		Statement( SelectClause select, FromClause&& from, WhereClause&& where, string orderBy={} )ι;
 		α Empty()ι->bool;
 		α Limit( uint limit )ι->void{ _limit=limit; }
+		α Skip( uint skip )ι->void{ _skip=skip; }
 		α Move()ε->Sql;
 		α ToString()Ι->string;
 		SelectClause Select;
@@ -21,5 +24,7 @@ namespace Jde::DB{
 		string OrderBy;
 	private:
 		uint _limit{};
+		uint _skip{};
 	};
 }
+#endif

@@ -3,9 +3,8 @@ import {Routes, ROUTES, RouterModule} from '@angular/router';
 import { ComponentSidenav } from 'jde-spa';
 
 import{ DetailResolver, Cards, LoginPageComponent, QLList, QLListResolver, QLListRouteService, HomeRouteService, Apps, AppResolver } from 'jde-framework';
-import { AccessService, AuthGuard, Group, GroupDetail, Role, RoleDetail, User, UserDetail } from 'jde-access';
+import { AccessService, AuthGuard, Group, GroupDetail, groupTableSettings, Role, RoleDetail, roleTableSettings, User, UserDetail, userTableSettings } from 'jde-access';
 import{ ClientResolver, GatewayDetail, GatewayRouteService, GatewayCnnctnRouteService,GatewayService, NodeDetail, NodeResolver, OpcNodeRouteService, OpcServerRouteService, SettingsRouteService, GatewayResolver, ClientDetail } from 'jde-opc';
-
 
 const accessProvider = { provide: 'IGraphQL', useClass: AccessService };
 const gatewayProvider = { provide: 'IGraphQL', useClass: GatewayService };
@@ -50,7 +49,7 @@ export const routes: Routes = [
 	{ path: 'access', title: "Access", component: Cards, providers: [qlListProvider], canActivate: [AuthGuard], data: {
 		summary: "Configure User Access"
 	} },
-	{ path: 'access', component: ComponentSidenav, canActivate: [AuthGuard], providers:[qlListProvider],
+	{ path: 'access', component: ComponentSidenav, canActivate: [AuthGuard], providers: [qlListProvider],
 			children :[
 				{ path: 'users/:target',
 					component: UserDetail,
@@ -64,7 +63,7 @@ export const routes: Routes = [
 					providers: [ DetailResolver<Group>, accessProvider ],
 					resolve: { pageData: DetailResolver<Group> },
 					canActivate: [AuthGuard],
-					runGuardsAndResolvers: "paramsChange"
+					runGuardsAndResolvers: "paramsChange",
 				},
 				{ path: 'roles/:target',
 					component: RoleDetail,
@@ -81,9 +80,9 @@ export const routes: Routes = [
 					resolve: { data: QLListResolver },
 					canActivate: [AuthGuard],
 					data: { collections: [
-						{ path:"users", data:{showAdd:false} },
-						{ path:"groups", data:{collectionName: "groupings"} },
-						"roles",
+						{ path:"users", data:{tableSettings: userTableSettings} },
+						{ path:"groups", data:{tableSettings: groupTableSettings} },
+						{ path: "roles", data:{tableSettings: roleTableSettings} },
 						{ path:"resources", data:{canPurge:false} }
 					]}
 				},

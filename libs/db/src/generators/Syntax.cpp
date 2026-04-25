@@ -74,10 +74,14 @@ namespace Jde::DB{
 		return type == VarChar || type == Binary || type == Char || type == VarBinary;
 	}
 
-	α Syntax::Limit( str sql, uint limit )Ε->string{
-		THROW_IF( sql.size()<7, "expecting sql length>7 - {}", sql );
-		return Ƒ("{} top {} {}", sql.substr(0,7), limit, sql.substr(7) );
-	};
+	α Syntax::Limit( str input, uint limit, uint skip )Ε->string{
+		string sql = input;
+		if( skip )
+			sql += " offset "+std::to_string(skip)+" rows";
+		if( limit )
+			sql += " fetch next "+std::to_string(limit)+" rows only";
+		return sql;
+	}
 	α joinType( bool inner )ι->string{
 		return inner ? "" : "left ";
 	}

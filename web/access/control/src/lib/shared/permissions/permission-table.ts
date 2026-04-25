@@ -1,9 +1,10 @@
 import { CommonModule } from "@angular/common";
-import { AfterViewInit, Component, Inject, model, OnDestroy, OnInit, signal, ViewChild } from "@angular/core";
+import { AfterViewInit, Component, inject, Inject, model, OnDestroy, OnInit, signal, ViewChild } from "@angular/core";
 import { MatCheckbox, MatCheckboxChange } from "@angular/material/checkbox";
 import { MatSortModule, Sort } from "@angular/material/sort";
 import { MatTable, MatTableModule } from "@angular/material/table";
-import { assert, EnumKeysPipe, IErrorService, IProfileStore } from "jde-framework";
+import { ProfileStore } from "jde-spa";
+import { assert, EnumKeysPipe, IErrorService } from "jde-framework";
 import { Permission, Rights } from "../../model/Permission";
 import { AccessService } from "../../services/access.service";
 import { Resource } from "../../model/Resource";
@@ -15,7 +16,7 @@ import { Resource } from "../../model/Resource";
 		imports: [CommonModule, MatTableModule, MatCheckbox, EnumKeysPipe, MatSortModule],
 })
 export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
-	constructor( @Inject('AccessService') private accessService: AccessService, @Inject('IProfileStore') private profileStore: IProfileStore, @Inject('IErrorService') private cnsle: IErrorService )
+	constructor( @Inject('AccessService') private accessService: AccessService, @Inject('IErrorService') private cnsle: IErrorService )
 	{}
 
 	async ngOnInit(){
@@ -124,6 +125,7 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 			y.push( kv.value );
 		return y;
 	}
+	profileStore = inject(ProfileStore);
 }
 type Profile = { sort:Sort; showDeleted?:boolean; }
 

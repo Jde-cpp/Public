@@ -3,6 +3,7 @@ import {Sort} from '@angular/material/sort';
 
 import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
 import * as LogProto from '../../proto/Log'; import Log = LogProto.Jde.App.Log.Proto;
+import { Guid } from '../../model/Guid';
 
 export class LogSettings{
 	constructor( params:LogSettings=null ){
@@ -38,7 +39,7 @@ export class LogSettings{
 	applicationId;
 	level:Log.ELogLevel=Log.ELogLevel.Information;
 	limit:number=5000;
-	hiddenMessages:string[]=[];
+	hiddenMessages:Guid[]=[];
 	get start():Date{ return this._start || LogSettings.defaultDate; } set start( value:Date ){ this._start=value==LogSettings.defaultDate ? null : value;} private _start:Date;
 	static get defaultDate():Date{ var start = new Date(); start.setHours( 0, 0, 0, 0 ); start.setDate( start.getDate()-1 ); return start; }
 }

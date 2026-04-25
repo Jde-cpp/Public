@@ -1,15 +1,13 @@
 import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { inject, Inject, Injectable } from '@angular/core';
 import { IErrorService } from './error/IErrorService';
-import { IProfileStore } from './profile/profile.store';
-//import { Settings } from '../utils/settings';
 import { TableSchema } from '../model/ql/schema/TableSchema';
 import { IGraphQL } from '../services/IGraphQL';
-import { ListRoute } from './ql-list.resolver';
+import { ListRoute, TableSettings } from './ql-list.resolver';
 import { MetaObject } from '../model/ql/schema/MetaObject';
 import { DocItem } from 'jde-spa';
 import { RouteStore } from './route.store';
-import { LocalProfileStore } from 'jde-framework';
+import { ProfileStore } from 'jde-spa';
 
 export type DetailPageSettings = {
 	excludedColumns:string[];
@@ -19,11 +17,11 @@ export class DetailRoute extends DocItem{
 	constructor( target:string, title:string, siblings:DocItem[], parent:DocItem ){
 		super( {path:target, title:title, siblings:siblings, parent:parent} );
 	}
+	tableSettings: TableSettings;
 }
 
 export type DetailResolverData<T>={
 	row:any;
-	excludedColumns:string[];
 	schema: TableSchema;
 	routing:DetailRoute;
 };
@@ -55,12 +53,12 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 	}
 
 	static async load<T>( ql:IGraphQL, collectionName:string, target:string, routing:DetailRoute ):Promise<DetailResolverData<T>>{
-		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection(collectionName) );
+		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection(collectionName), (m)=>console.log(m) );
 		let obj = {};
 		if( target!="$new" ){
-			obj = await ql.querySingle( ql.targetQuery(schema, target, LocalProfileStore.showDeleted(collectionName)) );
+			obj = await ql.querySingle( ql.targetQuery(schema, target, ProfileStore.showDeleted(collectionName), routing.tableSettings.excludedColumns), {}, (m)=>console.log(m) );
 			for( let query of ql.subQueries(schema.type, obj["id"]) ){
-				const subRows = await ql.query<any>( query );
+				const subRows = await ql.query<any>( query, {}, (m)=>console.log(m) );
 				//"acl":[{"role":{"id":33,"name":"Opc Gateway Permissions","deleted":null},"identity":{"id":1}}]}
 				let [property, propValue] = Object.entries(subRows)[0];
 				if( !obj[property] )
@@ -70,7 +68,6 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 			}
 		}
 		return {
-			excludedColumns:ql.excludedColumns(schema.collectionName),
 			row: obj,
 			schema: schema,
 			routing: routing

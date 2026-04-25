@@ -8,8 +8,7 @@ import { NodeRoute } from '../../model/NodeRoute';
 import { NodeChildren } from './node-children/node-children';
 import { UaNode } from '../../model/Node';
 import { NodeAccess } from './node-access/node-access';
-import { IProfileStore } from '../../../../../jde-framework/src/lib/services/profile/profile.store';
-import { LocalProfileStore } from 'jde-framework';
+import { ProfileStore } from 'jde-spa';
 
 @Component( {
 	templateUrl: './node-detail.html',
@@ -18,10 +17,10 @@ import { LocalProfileStore } from 'jde-framework';
 	imports: [CommonModule, MatTabsModule, NodeChildren, NodeAccess]
 })
 export class NodeDetail implements OnDestroy, OnInit{
-	constructor( private activatedRoute: ActivatedRoute, private componentPageTitle:ComponentPageTitle, @Inject('IProfileStore') private profile: IProfileStore )
+	constructor( private activatedRoute: ActivatedRoute, private componentPageTitle:ComponentPageTitle )
 	{}
 	ngOnDestroy(){
-		LocalProfileStore.setTabIndex( `nodeDetail/${JSON.stringify(this.node().toJson())}`, this.tabIndex );
+		ProfileStore.setTabIndex( `nodeDetail/${JSON.stringify(this.node().toJson())}`, this.tabIndex );
   }
 	ngOnInit(){
 		this.activatedRoute.data.subscribe( (data:any)=>{

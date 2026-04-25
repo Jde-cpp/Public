@@ -1,27 +1,23 @@
-import { Component, Inject, input, effect, model, Signal } from '@angular/core';
+import { Component, Inject, input, effect, model, Signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SelectionModel } from '@angular/cdk/collections';
 import { MatTableModule } from '@angular/material/table';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { IErrorService } from '../../../services/error/IErrorService';
-import {Field, FieldKind} from '../../../model/ql/schema/Field';
+import {FieldKind} from '../../../model/ql/schema/Field';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { MatIcon } from '@angular/material/icon';
 import { StringUtils } from '../../../utils/StringUtils';
+import { ViewField } from '../../../model/ql/View';
 
 @Component({
-    selector: 'ql-table',
-    styleUrls: ['table.scss'],
-    templateUrl: 'table.html',
-    imports: [CommonModule, MatCheckbox, MatIcon, MatTableModule, MatSortModule]
+	selector: 'ql-table',
+	styleUrls: ['table.scss'],
+	templateUrl: 'table.html',
+	imports: [CommonModule, MatCheckbox, MatIcon, MatTableModule, MatSortModule]
 })
 export class GraphQLTable{
 	constructor( @Inject('IErrorService') private cnsle: IErrorService ){
-		effect(() => {
-			let field = this.displayedFields().find( (c)=>c.name=="deleted" );
-			if( field )
-				field.displayed = this.showDeleted();
-		});
 	}
 
 	checkboxLabel( row?: any ): string{
@@ -64,15 +60,16 @@ export class GraphQLTable{
 
 	isAllSelected(){ return this.selections().selected.length==this.dataSource()().length; }
 	isSelected( row:any ){ return this.selections().isSelected(row); }
-	sortData( event )
-	{}
-	columnName( fieldName ){ return StringUtils.capitalize(fieldName); }
+	columnName( colName ){ return StringUtils.capitalize(colName); }
+	columnStyle( colName ){ return this.displayedFields().find(f=>f.name===colName)?.style || {}; }
+	objectValue( obj: any ): string{ return typeof obj === 'string' ? obj : obj?.name || ''; }
 
 	dataSource=input.required<Signal<any[]>>();
-	displayedFields = input.required<Field[]>();
+	displayedFields = input.required<ViewField[]>();
 	selections=model.required<SelectionModel<number>>();
-	showDeleted = input<boolean>( false );
-	sort = input<Sort>( {active:"name", direction: 'asc'} );
+	//showDeleted = input<boolean>( false );
+	sort = model<Sort>();
+	onSortChange = output<Sort>();
 
 	get displayedColumnNames(){ return (this.selections().isMultipleSelection() ? ["select"] : []).concat( this.displayedFields().filter((x)=>x.displayed).map((x)=>x.name) ); };
 	get stringColumnNames(){ return this.displayedFields().filter( (x)=>(x.type.underlyingKind==FieldKind.SCALAR && x.type.underlyingName=="String") || x.type.underlyingKind==FieldKind.ENUM ).map( (x)=>x.name ); }
@@ -80,5 +77,5 @@ export class GraphQLTable{
 	get listColumnNames(){ return this.displayedFields().filter( (x)=>x.type.underlyingKind==FieldKind.LIST ).map( (x)=>x.name ); }
 	get dateColumnNames(){ return this.displayedFields().filter( (x)=>x.type.underlyingName=="DateTime" ).map( (x)=>x.name ); }
 	get boolColumnNames(){ return this.displayedFields().filter( (x)=>x.type.underlyingName=="Boolean" ).map( (x)=>x.name ); }
-	get uintColumnNames(){ return this.displayedFields().filter( (x)=>x.type.underlyingName=="UInt" ).map( (x)=>x.name ); }
+	get uintColumnNames(){ return this.displayedFields().filter( (x)=>["UInt", "ID"].includes(x.type.underlyingName) ).map( (x)=>x.name ); }
 }

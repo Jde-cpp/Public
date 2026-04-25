@@ -47,7 +47,7 @@
 			{
 				"type": "npm",
 				"script": "start",
-				"problemMatcher": [],
+				"problemMatcher": { "owner": "typescript", "pattern": "$tsc", "background": { "activeOnStart": true, "beginsPattern": { "regexp": "(.*?)" }, "endsPattern": { "regexp": "bundle generation complete" } } },
 				"label": "npm: start",
 				"detail": "ng serve"
 			},
@@ -55,19 +55,7 @@
 				"label": "build",
 				"type": "shell",
 				"command": "tput reset;ng build;",
-				"problemMatcher": {
-					"owner": "typescript",
-					"pattern": "$tsc",
-					"background": {
-						"activeOnStart": true,
-						"beginsPattern": {
-							"regexp": "(.*?)"
-						},
-						"endsPattern": {
-							"regexp": "bundle generation complete"
-						}
-					}
-				},
+				"problemMatcher": { "owner": "typescript", "pattern": "$tsc", "background": { "activeOnStart": true, "beginsPattern": { "regexp": "(.*?)" }, "endsPattern": { "regexp": "bundle generation complete" } } },
 				"group": { "kind": "build", "isDefault": true }
 			}
 		]

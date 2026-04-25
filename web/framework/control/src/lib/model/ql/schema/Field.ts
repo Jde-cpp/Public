@@ -35,20 +35,12 @@ export class Field extends QLSchema{
 		super( j )
 		this.type = j.type ? new FieldType( j.type ) : undefined;
 	}
-	static filter( fields:Field[], excludedColumns:string[], includeDeleted:boolean ):Field[]{
-		return fields.filter( (x)=>
-			(x.displayed || x.name=="id")
-		&& !excludedColumns?.includes(x.name)
-		&& (includeDeleted || x.name!="deleted") );
-	}
-	static filterSort( fields:Field[], order:string[], excludedColumns:string[]=[], includeDeleted:boolean=false ):Field[]{
-		const sort = ( x:Field,y:Field )=>{
-			const yIndex = order.indexOf( y.name )+1;
-			const xIndex = order.indexOf( x.name )+1;
-			return ( xIndex || order.length )-( yIndex || order.length );
-		};
-		return this.filter( fields, excludedColumns, includeDeleted ).sort( sort );
-	}
-	get displayed():boolean{ return this.#displayed ?? (this.type.ofType?.name!="ID" && this.name!="attributes" && this.type.kind!=FieldKind.LIST); } set displayed(x){this.#displayed=x;} #displayed:boolean;
 	type:FieldType;
+	get underlyingKind(){ return this.type.kind; }
+	get isNumber(){ return this.type.underlyingKind==FieldKind.SCALAR && ["Int", "Float", "ID", "UInt"].includes(this.type.underlyingName); }
+	get isString(){ return this.type.underlyingKind==FieldKind.SCALAR && this.type.underlyingName=="String"; }
+	get isBoolean(){ return this.type.underlyingKind==FieldKind.SCALAR && this.type.underlyingName=="Boolean"; }
+	get isEnum(){ return this.type.underlyingKind==FieldKind.ENUM; }
+	get isDateTime(){ return this.type.underlyingKind==FieldKind.SCALAR && ["DateTime"].includes(this.type.underlyingName); }
+	get isNullable(){ return this.type.kind!=FieldKind.NON_NULL; }
 }

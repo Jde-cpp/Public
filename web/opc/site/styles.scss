@@ -1,7 +1,5 @@
 @use '@angular/material' as mat;
 @use '@angular/cdk';
-//@use '../node_modules/@angular/material-experimental' as mat;
-//@use '../projects/jde-spa/src/app-theme';
 @use '../projects/jde-spa/src/styles/api';
 @use '../projects/jde-spa/src/styles/markdown';
 @use '../projects/jde-spa/src/styles/tables';
@@ -21,6 +19,7 @@ html {
     density: 0,
   ));
 
+	@include mat.system-classes();
   @include cdk.a11y-visually-hidden();
 }
 
@@ -33,4 +32,7 @@ a {
 }
 a:visited {
 	color: magenta;
+}
+.mat-column-select{
+	flex: 0 0 60px;
 }

@@ -6,4 +6,6 @@ mat-toolbar{
 	display: flex;
 	height:80px;
 	flex: 0 0 100%;
+	//border-bottom: 50px solid var(--mat-divider);
+	background: color-mix(in srgb, var(--mat-sys-primary) 20%, transparent);
 }

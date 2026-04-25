@@ -5,8 +5,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle } from 'jde-spa';
-import { DetailResolverData, IErrorService, IGraphQL, LocalProfileStore, Properties} from 'jde-framework';
+import { ProfileStore } from 'jde-spa';
+import { DetailResolverData, IErrorService, IGraphQL, Properties} from 'jde-framework';
 
 import { ServerProperties } from './server-properties/server-properties';
 import { ServerCnnctn } from '../../../model/ServerCnnctn';
@@ -39,7 +39,7 @@ export class ClientDetail implements OnDestroy, OnInit{
 		});
 	}
 	ngOnDestroy(){
-		LocalProfileStore.setTabIndex( 'client-detail', this.tabIndex );
+		ProfileStore.setTabIndex( 'client-detail', this.tabIndex );
 	}
 	async ngOnInit(){
 		const segments = this.router.url.split( "/" );
@@ -74,7 +74,7 @@ export class ClientDetail implements OnDestroy, OnInit{
 	get schema(){ return this.pageData.schema; }
 	get server(): Server{ return this.serverCnnctn?.server; }
 	sideNav = signal<any>( null );
-	tabIndex:number = LocalProfileStore.tabIndex( 'client-detail' );
+	tabIndex:number = ProfileStore.tabIndex( 'client-detail' );
 	gatewayService:GatewayService = inject( GatewayService );
 	gateway:Gateway;
 }

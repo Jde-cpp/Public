@@ -8,7 +8,8 @@ import { NodeRights } from './node-rights/node-rights';
 //import { Gateway } from '../../../../services/gateway.service';
 import { EAccess, EWriteAccess } from '../../../model/types';
 import { NodeRoute } from '../../../model/NodeRoute';
-import { AppService, LocalProfileStore, Mutation, MutationType } from 'jde-framework';
+import { ProfileStore } from 'jde-spa';
+import { AppService, Mutation, MutationType } from 'jde-framework';
 import { ActivatedRoute } from '@angular/router';
 import { Permission, Role } from 'jde-access';
 
@@ -63,7 +64,7 @@ export class NodeAccess implements OnInit, OnDestroy{
 	}
 
 	ngOnDestroy() {
-		LocalProfileStore.setTabIndex( 'nodeAccess', this.tabIndex );
+		ProfileStore.setTabIndex( 'nodeAccess', this.tabIndex );
   }
 	async save(){
 		await this.appService.mutate( this.mutations(), (m)=>console.log(m) );
@@ -121,7 +122,7 @@ export class NodeAccess implements OnInit, OnDestroy{
 	mutations = signal<Mutation[]>( [] );
 	isLoading = signal( true );
 	node = model.required<UaNode>();
-	tabIndex:number = LocalProfileStore.tabIndex( 'nodeAccess' );
+	tabIndex:number = ProfileStore.tabIndex( 'nodeAccess' );
 	original:RolePermission[];
 
 	accessResource = input.required<string>();

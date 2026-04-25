@@ -46,16 +46,15 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	{}
 
 	toCollectionName( collectionDisplay:string ):string{ return collectionDisplay; }
-	excludedColumns( tableName: string ): string[] { return []; }
 	subQueries( typeName: string, id: number ):string[]{ return []; }
-	targetQuery( schema: TableSchema, target: string, showDeleted:boolean ):string{
-		let fields = this.fieldColumns( schema, showDeleted );
+	targetQuery( schema: TableSchema, target: string, showDeleted:boolean, excludedColumns:string[] ):string{
+		let fields = this.fieldColumns( schema, showDeleted, excludedColumns );
 		return `${schema.singular}( target:"${target}" ){ ${fields.join(" ")} }`;
 	}
-	protected fieldColumns( schema: TableSchema, showDeleted:boolean ):string[]{
+	protected fieldColumns( schema: TableSchema, showDeleted:boolean, excludedColumns:string[] ):string[]{
 		let columns = [];
 		let filtered = schema.fields.filter(
-			(x)=>!this.excludedColumns(schema.collectionName).includes(x.name) && (x.name!="deleted" || showDeleted) );
+			(x)=>!excludedColumns.includes(x.name) && (x.name!="deleted" || showDeleted) );
 		for( const field of filtered ){
 			if( field.type.underlyingKind==FieldKind.UNION )
 				columns.push( `${field.name}{id}` );
@@ -161,7 +160,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	private async authGet<Y>( target:string, authorization?:string, log:Log=console.log ):Promise<Y>{
 		if( target.indexOf("undefined")>=0 )
 			debugger;
-		if( this.log.restRequests )	log( target.substring(0,this.log.maxLength) );
+		if( this.log.restRequests )	log( decodeURIComponent(target).substring(0,this.log.maxLength) );
 		let url = this.urlWithTarget(target);
 		let y:Y;
 		let options = {};
@@ -438,7 +437,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	protected abstract encode( t:Transmission );
 
 	protected backlog:Transmission[] = [];
-	protected log = { sockRequests:true, sockResults:true, restRequests:true, restResults:true, subRequest:true, subResults:true, maxLength:255 };
+	protected log = { sockRequests:true, sockResults:true, restRequests:true, restResults:false, subRequest:true, subResults:true, maxLength:255 };
 	//Informational purposes only to match with server logs.
 	protected get socketId():number{ return this.#socketId; } #socketId:number;
 	get instances(){return this.#instances;} set instances(x){

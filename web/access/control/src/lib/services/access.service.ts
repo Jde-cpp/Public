@@ -31,7 +31,7 @@ export class AccessService extends AppService implements OnDestroy{
 	}
 
 	override targetQuery( schema: TableSchema, target: string, showDeleted:boolean ):string{
-		let fields = super.fieldColumns( schema, showDeleted );
+		let fields = super.fieldColumns( schema, showDeleted, [] );
 		switch( schema.collectionName ){
 			case "users":
 				fields.push( `groupings{id}` );
@@ -66,15 +66,7 @@ export class AccessService extends AppService implements OnDestroy{
 		}
 		return queries;
 	}
-	override excludedColumns(collectionName: string): string[] {
-		let columns = [];
-		switch( collectionName ){
-			case "users": columns = ["isGroup"]; break;
-			case "roles": columns = ["permissions"]; break;
-			case "groupings": columns = ["isGroup", "members"]; break;
-		}
-		return columns;
-	}
+
 	override toCollectionName( collectionDisplay:string ):string{
 		return collectionDisplay=="groups" ? "groupings" : collectionDisplay;
 	}

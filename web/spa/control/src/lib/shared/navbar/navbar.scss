@@ -20,6 +20,10 @@
   }
 }
 
+.folder-item-selected {
+	background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+}
+
 .mat-mdc-icon-button {
   color: inherit;
 }

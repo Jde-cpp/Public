@@ -8,8 +8,10 @@ export function arraysEqual(a, b) {
 }
 
 export function assert( expr:unknown, msg:string=undefined ):asserts expr{
-	if( !expr )
+	if( !expr ){
+		debugger;
 		throw new Error( msg ?? "Assertion failed" );
+	}
 }
 
 export function clone( obj: any ):any{

@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy, Inject, ViewChild, input, signal, model, computed, Injectable, inject } from '@angular/core';
 import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute } from '@angular/router';
-import { DetailResolverData, LocalProfileStore, QLList, QLListData } from 'jde-framework';
+import {  ProfileStore } from 'jde-spa';
+import { DetailResolverData, QLList, QLListData } from 'jde-framework';
 import { DocItem } from 'jde-spa';
 
 @Component( {
@@ -24,7 +25,7 @@ export class GatewayDetail implements OnInit{
 	tabIndexChanged( index:number ){ this.tabIndex = index;}
 
 	pageData:QLListData;
-	get connections(){ return this.pageData?.data["serverConnections"];}
-	tabIndex:number = LocalProfileStore.tabIndex( 'gateway-detail' );
+	get connections(){ return this.pageData?.results["serverConnections"]; }
+	tabIndex:number = ProfileStore.tabIndex( 'gateway-detail' );
 	sideNav = model.required<DocItem>();
 }

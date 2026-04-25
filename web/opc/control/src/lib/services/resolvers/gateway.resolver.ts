@@ -1,8 +1,8 @@
 import {inject, Inject, Injectable} from '@angular/core';
 import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot} from '@angular/router';
-import { IErrorService, Field, ListRoute, PageSettings, QLListData, RouteStore, AppInstanceRoute, TableSchema, LocalProfileStore } from 'jde-framework';
+import { AppInstanceRoute, IErrorService, PageSettings, RouteStore, TableSchema, View } from 'jde-framework';
 import { Gateway, GatewayService } from '../gateway.service';
-import { DocItem } from 'jde-spa';
+import { DocItem, ProfileStore } from 'jde-spa';
 
 export type GatewayData = {
 	pageSettings:PageSettings;
@@ -28,14 +28,15 @@ export class GatewayResolver implements Resolve<GatewayData> {
 
 	private async load( instanceName:string, routing:AppInstanceRoute ):Promise<GatewayData>{
 		const gateway = await this.gatewayService.gateway( instanceName );
-		routing.excludedColumns = gateway.excludedColumns( "serverConnections" );
+		//routing.excludedColumns = gateway.excludedColumns( "serverConnections" );
 		return GatewayResolver.load( gateway, new PageSettings(routing), routing, this.routeStore );
 	}
 	static async load( gateway:Gateway, pageSettings:PageSettings, routing:AppInstanceRoute, routeStore:RouteStore ):Promise<GatewayData>{
 		const schema = await gateway.schemaWithEnums( "serverConnections", console.log );
-		let columns = Field.filter( schema.fields, pageSettings.excludedColumns, LocalProfileStore.showDeleted("gateways") ).map( x=>x.name );
-		let query = `serverConnections{ ${columns.join(" ")} }`;
-		const data = await gateway.query<any>( query );
+		const viewCols = schema.fields.map( f=>f.name );
+		const view = new View( {configColumns: viewCols, sort: [{active: "name", direction: "asc"}]}, schema );
+		const query = view.query( ProfileStore.showDeleted("gateways") );
+		const data = await gateway.query<any>( query.text, query.vars, console.log );
 		routeStore.setChildren( routing.path, data[schema.collectionName].map( r=>{return {title:r.name, path: r.target};}) );
 
 		return {

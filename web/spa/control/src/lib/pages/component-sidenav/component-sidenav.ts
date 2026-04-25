@@ -64,7 +64,6 @@ export class DocItem{
 	parent?:DocItem;
 	siblings?:DocItem[]; //includes this.
 	get track(){ return this.queryParams ? this.path+JSON.stringify(this.queryParams) : this.path; }
-	excludedColumns?:string[];
 }
 
 // Sidebar + router_outlet

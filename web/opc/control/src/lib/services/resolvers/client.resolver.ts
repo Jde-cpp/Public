@@ -1,7 +1,8 @@
 import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { inject, Inject, Injectable } from '@angular/core';
 import { DocItem } from 'jde-spa';
-import { DetailResolverData, DetailRoute, IErrorService, ListRoute, LocalProfileStore, MetaObject, RouteStore} from 'jde-framework'
+import {  ProfileStore } from 'jde-spa';
+import { DetailResolverData, DetailRoute, IErrorService, MetaObject, RouteStore} from 'jde-framework'
 import { Gateway, GatewayService } from '../gateway.service';
 import { ServerCnnctn } from '../../model/ServerCnnctn';
 import { OpcStore } from '../opc-store';
@@ -40,7 +41,7 @@ export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>>
 		let obj = {};
 		let server:Server = null;
 		if( target && target!="$new" ){
-			obj = await ql.querySingle( ql.targetQuery(schema, target, LocalProfileStore.showDeleted('clients')), null, (m)=>console.log(m) );
+			obj = await ql.querySingle( ql.targetQuery(schema, target, ProfileStore.showDeleted('clients'), routing.tableSettings.excludedColumns), null, (m)=>console.log(m) );
 			for( let query of ql.subQueries(schema.type, obj["id"]) ){
 				const subRows = await ql.query<any>( query, null, (m)=>console.log(m) );
 				let [property, propValue] = Object.entries(subRows)[0];
@@ -52,7 +53,6 @@ export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>>
 			obj["server"] = await opcStore.getConnection( ql, target );
 		}
 		return {
-			excludedColumns: ql.excludedColumns(schema.collectionName),
 			row: obj,
 			schema: schema,
 			routing: routing
