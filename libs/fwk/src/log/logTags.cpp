@@ -180,6 +180,7 @@ namespace Jde{
 	}
 	α LogTags::MinLevel( ELogTags tags )Ι->ELogLevel{
 		optional<ELogLevel> level;
+		BREAK_IF( !empty(tags & ELogTags::Locks) );
 		if( ExtrapolatedTags.cvisit(tags, [&](let& kv){level = kv.second;}) )
 			return *level;
 		vector<ELogTags> individual = split( tags );
@@ -218,7 +219,9 @@ namespace Jde{
 		if( level==ELogLevel::NoLog )
 			return false;
 		let configuredMin = MinLevel( tags );
-		return configuredMin!=ELogLevel::NoLog && configuredMin <= level;
+		let result = configuredMin!=ELogLevel::NoLog && configuredMin <= level;
+		ASSERT( !result || tags!=ELogTags::Locks );
+		return result;
 	}
 
 	α LogTags::ToString()ι->string{
@@ -229,8 +232,16 @@ namespace Jde{
 		string y; y.reserve( 1024 );
 		for( auto& [level, tags] : levels )
 			y += Ƒ( "{}: {}\n", FromEnum(LogLevelStrings(), level), Str::Join(tags, ",") );
+
+		levels.clear();
+		ExtrapolatedTags.cvisit_all( [&](let& kv){
+			levels.try_emplace( kv.second, vector<string>{} ).first->second.push_back( Jde::ToString(kv.first) );
+		} );
+		for( auto& [level, tags] : levels )
+			y += Ƒ( "{}: {}\n", FromEnum(LogLevelStrings(), level), Str::Join(tags, ",") );
 		if( y.size() )
 			y.pop_back();
+
 		return y;
 	}
 }

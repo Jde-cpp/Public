@@ -34,12 +34,12 @@ export class ListRoute extends DocItem{
 }
 
 export type QLListData = {
-	profile: PageProfile;
-	pageSettings:PageSettings;
-	schema: TableSchema;
 	columns: Record<string,string>;
+	pageSettings:PageSettings;
+	profile: PageProfile;
 	results: any; //{users:ITargetRow[]};
 	routing:ListRoute;
+	schema: TableSchema;
 };
 
 @Injectable()
@@ -67,9 +67,9 @@ export class QLListResolver implements Resolve<QLListData> {
 	private async load( routing:ListRoute ):Promise<QLListData>{
 		let pageSettings = new PageSettings( routing.tableSettings );
 		const collectionName = routing.collectionName;
-		var profile = new PageProfile();
 		const schema = await this.ql.schemaWithEnums( MetaObject.toTypeFromCollection(collectionName), (m)=>console.log(m) );
 		let defaultView = await QLListResolver.defaultView( schema, pageSettings.configColumns );
+		var profile = new PageProfile();
 		profile.views.push( defaultView );
 		await profile.loadViews( collectionName, this.profileStore, schema );
 		profile.currentViewIndex = ProfileStore.viewIndex( collectionName );
@@ -80,7 +80,7 @@ export class QLListResolver implements Resolve<QLListData> {
 		let defaultView = new View( {configColumns: configColumns, sort: [{active: "name", direction: "asc"}]}, schema );
 		return defaultView;
 	}
-	private static columns( schema:TableSchema, configColumns:(string|ViewFieldSettings)[], excluded: string[] ):Record<string,string>{
+	static columns( schema:TableSchema, configColumns:(string|ViewFieldSettings)[], excluded: string[] ):Record<string,string>{
 		let columns: Record<string,string> = {};
 		for( let field of schema.fields.filter(f=>!excluded.includes(f.name)) ){
 			let configColumn = configColumns.find( c=>typeof c=="object" && c.name==field.name ) as ViewFieldSettings;

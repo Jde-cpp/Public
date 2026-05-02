@@ -25,6 +25,7 @@ import { RouteStore } from '../../../services/route.store';
 import { View, ViewField, ViewType } from '../../../model/ql/View';
 import { PageProfile } from '../../GraphQL/model/PageSettings';
 import { MatSelect } from "@angular/material/select";
+import { assert } from '../../../utils/utils';
 
 @Component({
 	selector: 'ql-list',//.main-content.mat-drawer-container.my-content
@@ -54,6 +55,7 @@ export class QLList implements OnInit, OnDestroy{
 	}
 	async init( resolvedValue ){
 		let data = resolvedValue["data"] as QLListData;
+		assert( data.profile.view );
 		this.selections.set( new SelectionModel<any>(data.profile.view.showSelector, []) );
 		this.view.set( data.profile.view );
 		const collectionName = data.schema.collectionName;

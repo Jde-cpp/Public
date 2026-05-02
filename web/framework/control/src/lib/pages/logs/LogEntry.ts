@@ -28,7 +28,7 @@ export class LogEntries{
 				e.argIds[index] = new Guid( <string><any>id );
 			});
 		});
-		queryResult.strings.forEach( s=>this.strings.set( s.id, s.value) );
+		queryResult.strings.forEach( s=>this.strings.set(s.id, s.value) );
 	}
 	entries:Entry[];
 	strings:Map<string,string> = new Map<string,string>();

@@ -1,6 +1,6 @@
 import { ProfileStore } from "jde-spa";
 import { View, ViewFieldSettings } from "../../../model/ql/View";
-import { TableSchema } from "jde-framework";
+import { assert, TableSchema } from "jde-framework";
 
 export class PageProfile{
 	constructor( args?:PageProfile ){
@@ -39,7 +39,7 @@ export class PageProfile{
 }
 export class PageSettings{
 	constructor( x:any ){
-		this.configColumns = [ ...x.columns ];
+		this.configColumns = x.columns ? [ ...x.columns ] : [];
 		this.excludedColumns = x.excludedColumns;
 		this.name = x.name;
 		this.showAdd = x.showAdd;

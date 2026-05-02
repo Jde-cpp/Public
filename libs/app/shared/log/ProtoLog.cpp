@@ -140,7 +140,7 @@ namespace Jde::App{
 		AddString( id, str, _cache.Strings );
 	}
 	α ProtoLog::AddString( uuid id, sv str, std::deque<uuid>& cache )ι->void{
-		if( let i = find(cache, id); i!=cache.end() )
+		if( find(cache, id)!=cache.end() )
 			return;//TODO update position
 		cache.push_front( id );
 		App::Log::Proto::FileEntry fileEntry;

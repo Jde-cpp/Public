@@ -25,7 +25,7 @@ namespace Jde::App{
 			else if( name=="line" )
 				jEntry[name] = entry.Line;
 			else if( name=="time" )
-				jEntry[name] = ToIsoString( entry.Time );
+				jEntry[name] = ToIsoString( entry.Time )+"Z";
 			else if( name=="message" )
 				jEntry[name] = entry.Message();
 			else if( name=="id" )
