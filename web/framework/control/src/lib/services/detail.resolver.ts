@@ -5,7 +5,7 @@ import { TableSchema } from '../model/ql/schema/TableSchema';
 import { IGraphQL } from '../services/IGraphQL';
 import { ListRoute, TableSettings } from './ql-list.resolver';
 import { MetaObject } from '../model/ql/schema/MetaObject';
-import { DocItem } from 'jde-spa';
+import { RouteItem } from 'jde-spa';
 import { RouteStore } from './route.store';
 import { ProfileStore } from 'jde-spa';
 
@@ -13,8 +13,8 @@ export type DetailPageSettings = {
 	excludedColumns:string[];
 };
 
-export class DetailRoute extends DocItem{
-	constructor( target:string, title:string, siblings:DocItem[], parent:DocItem ){
+export class DetailRoute extends RouteItem{
+	constructor( target:string, title:string, siblings:RouteItem[], parent:RouteItem ){
 		super( {path:target, title:title, siblings:siblings, parent:parent} );
 	}
 	tableSettings: TableSettings;

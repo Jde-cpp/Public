@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { NodePageData } from '../../services/resolvers/node.resolver';
 import { ActivatedRoute } from '@angular/router';
-import { ComponentPageTitle, DocItem } from 'jde-spa';
+import { ComponentPageTitle, RouteItem } from 'jde-spa';
 import { NodeRoute } from '../../model/NodeRoute';
 import { NodeChildren } from './node-children/node-children';
 import { UaNode } from '../../model/Node';

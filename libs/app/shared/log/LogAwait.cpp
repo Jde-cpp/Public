@@ -5,8 +5,9 @@
 #include "ArchiveAwait.h"
 
 #define let const auto
-
 namespace Jde::App{
+	static constexpr ELogTags _tags{ ELogTags::ExternalLogger };
+
 	α LogAwait::Execute()ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task{
 		let protoLog = Logging::FindLogger<ProtoLog>();
 		try{
@@ -33,6 +34,7 @@ namespace Jde::App{
 	}
 	α LogAwait::ReadArchive( optional<TimePoint> startTime, optional<TimePoint> endTime, vector<App::Log::Proto::FileEntry> entries )ι->TAwait<ArchiveFile>::Task{
 		try{
+			TRACE( "Daily item count: {}", entries.size() );
 			let& protoLog = Logging::GetLogger<ProtoLog>();
 			auto archive = co_await ArchiveLoadAwait{ startTime, endTime, _ql, protoLog.TimeZone(), protoLog.Root(), move(entries) };
 			Resume( move(archive) );

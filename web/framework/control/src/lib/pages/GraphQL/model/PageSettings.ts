@@ -1,6 +1,6 @@
 import { ProfileStore } from "jde-spa";
 import { View, ViewFieldSettings } from "../../../model/ql/View";
-import { assert, TableSchema } from "jde-framework";
+import { TableSchema } from "jde-framework";
 
 export class PageProfile{
 	constructor( args?:PageProfile ){

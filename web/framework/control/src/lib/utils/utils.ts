@@ -7,7 +7,7 @@ export function arraysEqual(a, b) {
 	return a.every( (v,i)=>v==b[i] );
 }
 
-export function assert( expr:unknown, msg:string=undefined ):asserts expr{
+export function verify( expr:unknown, msg:string=undefined ):asserts expr{
 	if( !expr ){
 		debugger;
 		throw new Error( msg ?? "Assertion failed" );

@@ -1,40 +1,48 @@
 <!-- TODO: figure out if the <nav> should go inside of a <header> element. -->
 <!-- @if( !isLoading() ) { -->
 	<nav class="docs-navbar-header" aria-label="Top Toolbar">
-		@if (skipLinkHidden) {
-			<div class="skip-link-wrapper" [class.cdk-visually-hidden]="skipLinkHidden">
-				<a mat-raised-button [href]="skipLinkHref" (focus)="skipLinkHidden = false" (blur)="skipLinkHidden = true" color="accent">
-					Skip to main content
-				</a>
-			</div>
-		}
-		@for( fav of favoriteMenus(); track fav) {
-			@if( fav["folderName"] ) {
-				<mat-menu #favMenu="matMenu">
-					@for( item of asFolder(fav).items; track item) {
-						<a mat-menu-item [routerLink]=item.route routerLinkActive="folder-item-selected">{{item.name}}</a>
-					}
-				</mat-menu>
-				<button mat-button [matMenuTriggerFor]="favMenu" class="docs-navbar-hide-small docs-button">
-					{{fav["folderName"]}}
-					<mat-icon>arrow_drop_down</mat-icon>
-				</button>
-			} @else {
-				<a mat-button class="docs-navbar-hide-small docs-button"
-					[routerLink]='fav["route"]'
-					[routerLinkActiveOptions]="{exact: true}"
-					routerLinkActive="docs-navbar-header-item-selected">{{fav["name"]}}</a>
+		<div style="flex: 1;justify-content: flex-start;">
+			@for( fav of favoriteMenus(); track fav) {
+				@if( fav["folderName"] ) {
+					<mat-menu #favMenu="matMenu">
+						@for( item of asFolder(fav).items; track item) {
+							<a mat-menu-item [routerLink]=item.route routerLinkActive="folder-item-selected">{{item.name}}</a>
+						}
+					</mat-menu>
+					<button mat-button [matMenuTriggerFor]="favMenu" class="docs-navbar-hide-small docs-button">
+						{{fav["folderName"]}}
+						<mat-icon>arrow_drop_down</mat-icon>
+					</button>
+				} @else {
+					<a mat-button class="docs-navbar-hide-small docs-button"
+						[routerLink]='fav["route"]'
+						[routerLinkActiveOptions]="{exact: true}"
+						routerLinkActive="docs-navbar-header-item-selected">{{fav["name"]}}</a>
+				}
 			}
-		}
-		<div class="flex-spacer"></div>
-		<authorization></authorization>
-		<theme-picker></theme-picker>
-		<favorites [favorites]=favorites() [existing]=existing() [name]=name() (onChange)="onFavoriteChange($event)"></favorites>
+		</div>
+		<form>
+  		<mat-form-field class="rounded-input search" appearance="outline" subscriptSizing="dynamic">
+				<input matInput type=text class=search [formControl]=searchForm [matAutocomplete]=searchAC/>
+				<mat-icon matPrefix>search</mat-icon>
+				<mat-autocomplete #searchAC=matAutocomplete (optionSelected)="onSearchSelected($event.option.value)" (keypress.enter)="onSearch($event)">
+					@for( suggestion of (searchValues() | async); track suggestion) {
+						<mat-option [value]=suggestion>{{suggestion}}</mat-option>
+					}
+				</mat-autocomplete>
+			</mat-form-field>
+		</form>
+		<div style="flex: 1;justify-content: flex-end; display: flex;align-items: center;">
+			<authorization></authorization>
+			<theme-picker></theme-picker>
+			<favorites [favorites]=favorites() [existing]=existing() [name]=name() (onChange)="onFavoriteChange($event)"></favorites>
+		</div>
 	</nav>
 	<nav class="docs-navbar docs-navbar-show-small" aria-label="Section Nav Bar">
-		@for (key of sectionKeys; track key) {
+		<div>foo</div>
+		<!-- @for (key of sectionKeys; track key) {
 			<a mat-button class="docs-navbar-link"
 				[routerLink]="key">{{sections[key].name}}</a>
-		}
+		} -->
 	</nav>
 <!-- } -->

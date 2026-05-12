@@ -7,6 +7,7 @@ namespace Jde::QL{
 	struct Input{
 		static constexpr sv Escape{ "\b$" };
 		Input( jobject&& args, sp<jobject> variables )ι: Args{ move(args) }, Variables{ move(variables) }{}
+		α ArgString()Ι->string;
 		Ŧ Find( sv name )Ι->optional<T>;
 		template<class T=jvalue> α FindPtr( sv name )Ι->const T*;
 		template<class T=jvalue> α As( sv name, SRCE )Ε->const T&;

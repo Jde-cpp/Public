@@ -12,7 +12,7 @@ using boost::uuids::uuid;
 namespace Jde::IO::Tests{
 	constexpr ELogTags _tags{ ELogTags::Test };
 	Ω file( uint index )->fs::path{
-		let path = Settings::FindPath("/testing/file");
+		let path = Settings::FindPath( "/testing/file" );
 		return path
 			? path->parent_path()/Ƒ( "{}{}{}", path->stem().string(), index, path->extension().string() )
 			: fs::temp_directory_path()/Ƒ( "test{}.txt", index );
@@ -70,14 +70,14 @@ namespace Jde::IO::Tests{
 		array<uuid,1024> guids;
 		for( uint i=0; i<guids.size(); ++i ){
 			auto prefix = boost::endian::endian_reverse( fileIndex );
-			((uint*)guids[i].data())[0] = prefix;
+			( (uint*)guids[i].data() )[0] = prefix;
 			auto suffix = boost::endian::endian_reverse( i );
-			((uint*)guids[i].data())[1] = suffix;
+			( (uint*)guids[i].data() )[1] = suffix;
 		}
 
 		Vector<uuid> written;
-		let file = Tests::file(fileIndex);
-		let exists = fs::exists(file);
+		let file = Tests::file( fileIndex );
+		let exists = fs::exists( file );
 		if( exists ){
 			INFO( "Removing existing file: {}", file.string() );
 			fs::remove( file );
@@ -106,7 +106,7 @@ namespace Jde::IO::Tests{
 		ASSERT_TRUE( IO::ThreadSize()>1 ); //guid+\n
 		vector<std::jthread> threads;
 		for( uint i=0; i<_fileSize; ++i )
-			threads.emplace_back( [i](){testFile( i );} );
+			threads.emplace_back( [i](){testFile(i);} );
 		for( auto& thread : threads )
 				thread.join();
 	}

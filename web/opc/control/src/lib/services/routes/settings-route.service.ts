@@ -1,9 +1,6 @@
 import { inject, Inject, Injectable } from '@angular/core';
 import { ActivatedRoute, Router, Routes, UrlSegment } from "@angular/router";
-import { DocItem, RouteService } from "jde-spa";
-//import { AppService } from "jde-framework";
-//import { IotService } from './iot.service';
-//import { OpcStore } from './opc-store';
+import { RouteItem, RouteService } from "jde-spa";
 
 @Injectable( {providedIn: 'root'} )
 export class SettingsRouteService extends RouteService{
@@ -23,7 +20,7 @@ export class SettingsRouteService extends RouteService{
 	// 	throw new Error("Not implemented");
 	// }
 
-	// override docItems( urlSegments:UrlSegment[] ):Promise<DocItem[]>{
+	// override docItems( urlSegments:UrlSegment[] ):Promise<RouteItem[]>{
 	// 	let y = [];
 	// 	for( const s of this._iot.instances )
 	// 		y.push( {id: s.host, path: '/gatewayClients/'+s.host, title: s.host} );

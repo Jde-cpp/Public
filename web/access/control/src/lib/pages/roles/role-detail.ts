@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle, DocItem, ProfileStore } from 'jde-spa';
+import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
 import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, Properties, QLSelector, TableSettings, TargetRow, toIdArray} from 'jde-framework';
 import { Role, RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
@@ -104,7 +104,7 @@ export class RoleDetail implements OnDestroy, OnInit{
 	childRoles = signal<SelectionModel<RolePK>>( null );
 
 	groups = signal<SelectionModel<RolePK>>( null );
-	sideNav = model.required<DocItem>();
+	sideNav = model.required<RouteItem>();
 	tabIndex:number;
 	users = signal<SelectionModel<RolePK>>( null );
 

@@ -1,6 +1,6 @@
 import { Component, Inject, Injectable, OnInit, signal } from "@angular/core";
 import { ActivatedRoute, Router, Routes, UrlSegment } from "@angular/router";
-import { ComponentCategoryList, DocItem, IRouteService, RouteService } from "jde-spa";
+import { ComponentCategoryList, RouteItem, IRouteService, RouteService } from "jde-spa";
 
 
 @Injectable( {providedIn: 'root'} )
@@ -32,5 +32,5 @@ export class Cards implements OnInit {
 			this.items.set( items.filter((x)=>x.path.length && x.path!="login") );
 		});
 	}
-	items = signal<DocItem[]>( null );
+	items = signal<RouteItem[]>( null );
 }

@@ -1,6 +1,6 @@
 {
 	testing:{
-		tests:: "TimerTests.General",
+		tests: "LogGeneralTests.CachedTags",
 		file: "$(JDE_BUILD_DIR)/tests/test.txt"
 	},
 	cryptoTests:{
@@ -9,12 +9,12 @@
 	logging:{
 		spd:{
 			tags: {
-				trace:["exception", "app", "io", "test"],
-				debug:["test", "settings"],
-				information:[],
-				warning:[],
-				"error":[],
-				critical:[]
+				default: "Information",
+				app: "Trace",
+				exception: "Trace",
+				io: "Trace",
+				test: "Trace",
+				settings: "Debug"
 			},
 			sinks:{
 				console:{},

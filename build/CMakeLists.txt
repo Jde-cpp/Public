@@ -85,7 +85,7 @@ IF( WIN32 )
   message( MULTI_INSTALL_PREFIX=${MULTI_INSTALL_PREFIX} )
 	ExternalProject_Add(zlib
 		GIT_REPOSITORY https://github.com/madler/zlib
-		GIT_TAG "v1.3.1"
+		GIT_TAG "v1.3.2"
 		PREFIX ZLIB
 		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/zlib
 		CMAKE_ARGS ${stdArgs}
@@ -100,7 +100,7 @@ IF( WIN32 )
 	ExternalProject_Add(
 		LibXml2
 		GIT_REPOSITORY https://github.com/GNOME/libxml2.git
-		GIT_TAG v2.15.1
+		GIT_TAG v2.15.3
 		PREFIX libxml2
 		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/libxml2
 		CMAKE_ARGS ${stdArgs}
@@ -125,23 +125,39 @@ else()
 		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
 		-DLIBXML2_LIBRARY=${LIBXML2_LIBDIR}
 	)
-#need to add '#define _C4_STD_VECTOR_FWD_HPP_' to ryml_all.hpp to avoid redefinition errors
+	message( TYPE_INSTALL_PREFIX=${TYPE_INSTALL_PREFIX} )
+	ExternalProject_Add(ryml
+		GIT_REPOSITORY https://github.com/biojppm/rapidyaml.git
+		GIT_TAG "v0.10.0"
+		PREFIX ryml
+		INSTALL_DIR ${TYPE_INSTALL_PREFIX}/ryml
+		CMAKE_ARGS ${stdArgs}
+			-DRYML_BUILD_TESTS=OFF
+			-DRYML_BUILD_EXAMPLES=OFF
+			-DRYML_BUILD_BENCHMARKS=OFF
+			-DRYML_BUILD_TOOLS=OFF
+		GIT_SHALLOW FALSE  # ensure submodules are checked out
+	)
+#need to add '#define _C4_STD_VECTOR_FWD_HPP_' to rapidyaml-0.10.0.hpp to avoid redefinition errors
 	ExternalProject_Add(jsonnet
-		GIT_REPOSITORY https://github.com/google/jsonnet.git
-		GIT_TAG "v0.21.0"
+		GIT_REPOSITORY https://github.com/Jde-cpp/jsonnet.git
 		PREFIX jsonnet
 		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/jsonnet
 		CMAKE_ARGS ${stdArgs}
-			-DCMAKE_PREFIX_PATH=${MULTI_INSTALL_PREFIX}
-			-DUSE_SYSTEM_GTEST=ON
+			-DCMAKE_PREFIX_PATH=${TYPE_INSTALL_PREFIX}
 			-DBUILD_JSONNETFMT=OFF
 			-DBUILD_TESTS=OFF
+			-DUSE_SYSTEM_GTEST=ON
+			-DUSE_SYSTEM_RAPIDYAML=ON
 	)
+	# -D_C4_STD_VECTOR_FWD_HPP_=ON
+	# -DUSE_SYSTEM_RAPIDYAML=ON
+	#ExternalProject_Add_StepDependencies( jsonnet configure ryml )
 	ExternalProject_Add_StepDependencies( jsonnet configure gtest )
 endif()
 ExternalProject_Add(protobuf
 	GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-	GIT_TAG v33.5
+	GIT_TAG v34.1
 	PREFIX protobuf
 	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/protobuf
 	CMAKE_ARGS ${stdArgs}
@@ -155,7 +171,7 @@ ExternalProject_Add(protobuf
 
 ExternalProject_Add(open62541
 	GIT_REPOSITORY https://github.com/open62541/open62541.git
-	GIT_TAG v1.5.0
+	GIT_TAG v1.5.4
 	PREFIX open62541
 	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/open62541
 		CMAKE_ARGS ${stdArgs}

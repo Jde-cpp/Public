@@ -19,7 +19,7 @@ type DialogData = { existing:Favorite, folderNames:string[], name:string };
 export class Favorites {
 	onClick(){
 		const rect = this.iconElementRef.nativeElement.getBoundingClientRect();
-		const folderNames = [ ...new Set(this.favorites().map( fav=>fav.folderName ?? "" )) ];
+		const folderNames = [ ...new Set(this.favorites().filter(fav=>fav.folderName).map( fav=>fav.folderName )) ];
 		const dialogConfig: MatDialogConfig = {
 			position: {
 				top: `${rect.bottom + 5}px`, // Position 5px below the button

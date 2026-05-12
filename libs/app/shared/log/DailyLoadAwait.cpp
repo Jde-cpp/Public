@@ -4,7 +4,9 @@
 #include <jde/fwk/io/protobuf.h>
 #include <jde/app/log/ProtoLog.h>
 
+#define let const auto
 namespace Jde::App{
+	constexpr ELogTags _tags = ELogTags::ExternalLogger;
 	α DailyLoadAwait::Execute()ι->TAwait<CoLockGuard>::Task{
 		Read( co_await LockKeyAwait{_file.string()} );
 	}
@@ -12,8 +14,10 @@ namespace Jde::App{
 		auto log = Logging::FindLogger<App::ProtoLog>();
 		try{
 			auto y = log ? log->Entries() : vector<App::Log::Proto::FileEntry>{};
-			string content = co_await IO::ReadAwait( _file );
+			TRACE( "Memory item count: {}", y.size() );
+			auto content = co_await IO::ReadAwait( _file );
 			auto fileContent = App::ProtoLog::Deserialize( move(content) );
+			TRACE( "DailyFile item count: {}", fileContent.size() );
 			y.insert( y.end(), make_move_iterator(fileContent.begin()), make_move_iterator(fileContent.end()) );
 			Resume( move(y) );
 		}

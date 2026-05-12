@@ -8,6 +8,7 @@ function(boost)
 			find_package( Boost ${BOOST_VERSION} REQUIRED COMPONENTS json )
 		endif()
 	else()
+		cmake_policy(SET CMP0167 NEW)
 		find_package( Boost ${BOOST_VERSION} REQUIRED COMPONENTS json )
 	endif()
 

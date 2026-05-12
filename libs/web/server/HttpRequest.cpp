@@ -64,7 +64,7 @@ namespace Jde::Web::Server{
 		//if( !j.empty() )
 		y.body() = serialize( move(j) );
 		y.prepare_payload();
-		LOGSL( ELogLevel::Trace, sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo ? SessionInfo->SessionId : 0, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
+		LOGSL( ELogLevel::Debug, sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo ? SessionInfo->SessionId : 0, _connectionId, _index, Target(), y.body(), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
 		return y;
 	}
 
@@ -76,7 +76,7 @@ namespace Jde::Web::Server{
 		return sessionId;
 	}
 
-	α HttpRequest::LogRead( str text, SL sl )Ι->void{
-		LOGSL( ELogLevel::Trace, sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {} - {} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
+	α HttpRequest::LogRead( str text, ELogLevel level, SL sl )Ι->void{
+		LOGSL( level, sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {} - {} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
 	}
 }

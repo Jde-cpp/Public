@@ -1,6 +1,6 @@
 import { Row } from './Row';
 import { Mutation, MutationType } from './Mutation';
-import { assert, clone } from '../../utils/utils';
+import { verify, clone } from '../../utils/utils';
 
 export type Target = string;
 export abstract class ITargetRow extends Row{
@@ -89,7 +89,7 @@ export abstract class TargetRow<T extends TargetRow<T>> extends ITargetRow{
 		return args;
 	}
 	mutation( original:T ):Mutation[]{
-		assert( this.canSave );
+		verify( this.canSave );
 		let args = this.mutationArgs( original );
 		if( this.target!=original?.target )
 			args["target"] = this.target;

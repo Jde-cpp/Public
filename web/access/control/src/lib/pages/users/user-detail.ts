@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle, DocItem, ProfileStore } from 'jde-spa';
+import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
 import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, Properties, QLSelector, Style, TableSettings, TargetRow, toIdArray} from 'jde-framework';
 
 import { RolePK } from '../../model/Role';
@@ -92,7 +92,7 @@ export class UserDetail implements OnDestroy, OnInit{
 	permissions = signal<Permission[]>( null );
 	roles = signal<SelectionModel<RolePK>>( null );
 
-	sideNav = model.required<DocItem>();
+	sideNav = model.required<RouteItem>();
 
 	pageData:DetailResolverData<User>;
 	get schema(){ return this.pageData.schema; }

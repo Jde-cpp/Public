@@ -162,12 +162,7 @@ namespace Jde::QL{
 	α TableQL::ToString()Ι->string{
 		string y = JsonName;
 		y.reserve( 64*(1+Tables.size()) );
-		if( Args.size() ){
-			auto args = serialize( Args );
-			args.front() = '(';
-			args.back() = ')';
-			y += move( args );
-		}
+		y += ArgString();
 		y += '{';
 		if( Columns.size() ){
 			vector<string> cols;

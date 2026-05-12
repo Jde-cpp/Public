@@ -1,7 +1,7 @@
 import { P } from "@angular/cdk/keycodes";
 import { Component, Inject, OnInit, signal } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
-import { ComponentCategoryList, DocItem, IRouteService } from "jde-spa";
+import { ComponentCategoryList, RouteItem, IRouteService } from "jde-spa";
 
 @Component( {
 	templateUrl: './home.html',
@@ -18,5 +18,5 @@ export class Home implements OnInit {
 		this.items.set( items );
 	}
 
-	items = signal<DocItem[]>( null );
+	items = signal<RouteItem[]>( null );
 }

@@ -3,7 +3,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute } from '@angular/router';
 import {  ProfileStore } from 'jde-spa';
 import { AppService, Logs, QLList, QLListData } from 'jde-framework';
-import { DocItem } from 'jde-spa';
+import { RouteItem } from 'jde-spa';
 import { GatewayService } from 'jde-opc';
 import { Gateway } from '../../services/gateway.service';
 
@@ -30,7 +30,7 @@ export class GatewayDetail implements OnInit{
 	pageData:QLListData;
 	get connections(){ return this.pageData?.results["serverConnections"]; }
 	tabIndex:number = ProfileStore.tabIndex( 'gateway-detail' );
-	sideNav = model.required<DocItem>();
+	sideNav = model.required<RouteItem>();
 
 	gateway:Gateway;
 	gatewayService = inject(GatewayService);

@@ -1,4 +1,6 @@
 #pragma once
+#ifndef HTTP_REQUEST
+#define HTTP_REQUEST
 #include <jde/db/usings.h>
 #include <jde/fwk/io/json.h>
 #include "Sessions.h"
@@ -34,7 +36,7 @@ namespace Jde::Web::Server{
 		α Version()Ι->uint{ return _request.version(); }//TODO get rid of
 
 		ψ BadRequest( SL sl, fmt::format_string<Args...> format, Args&&... args )Ι->http::response<http::string_body>;
-		α LogRead( str text="", SRCE )Ι->void;
+		α LogRead( str text="", ELogLevel level=ELogLevel::Debug, SRCE )Ι->void;
 		template<class T=http::string_body>
 		α Response( http::status status=http::status::ok )Ι->http::response<T>;
 		α Response( jvalue j, SRCE )Ι->http::response<http::string_body>;
@@ -81,3 +83,4 @@ namespace Jde::Web::Server{
 		return res;
 	}
 }
+#endif

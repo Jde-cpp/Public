@@ -4,7 +4,7 @@ import { browseEq, ETypes, Ns, toBrowse } from '../model/types';
 import { NodeRoute } from "../model/NodeRoute";
 import { OpcObject, UaNode, ENodeClass } from "../model/Node";
 import { NodeId, NodeKey } from "../model/NodeId";
-import { DocItem } from "jde-spa";
+import { RouteItem } from "jde-spa";
 import { Gateway, GatewayTarget } from "./gateway.service";
 import { Server, ServerProps } from "../model/Server";
 
@@ -69,7 +69,7 @@ export class OpcStore{
 		}
 		return store;
 	}
-	setServerCnnctns( clients: DocItem[] ):void{
+	setServerCnnctns( clients: RouteItem[] ):void{
 		this.#serverCnnctnRoutes = [...clients];
 		for( let route of this.#serverCnnctnRoutes )
 			route.path = route.path.substring( route.path.lastIndexOf("/")+1 );
@@ -125,7 +125,7 @@ export class OpcStore{
 	}
 	setRoute(route: NodeRoute, defaultBrowseNs:Ns|null ):void{
 		if( route.node.equals(OpcObject.rootNode) ){
-			route.siblings = [new DocItem({title: route.cnnctnTarget, path: route.cnnctnTarget})]; //TODO add all connections.
+			route.siblings = [new RouteItem({title: route.cnnctnTarget, path: route.cnnctnTarget})]; //TODO add all connections.
 			return;
 		}
 		let findStore = (node:NodeId):StoreNode => {
@@ -140,13 +140,13 @@ export class OpcStore{
 		if( !parent )
 			throw new EvalError( `Parent not found for ${store?.node.browse}`, {cause:"Internal Error"} );
 
-		route.parent = new DocItem( {path: `${route.cnnctnTarget}/${parentPaths.reverse().join('/')}`, title: parent.node.name ?? route.cnnctnTarget} );
+		route.parent = new RouteItem( {path: `${route.cnnctnTarget}/${parentPaths.reverse().join('/')}`, title: parent.node.name ?? route.cnnctnTarget} );
 		route.siblings = [];
 		for( const sibling of parent.children ){
 			const siblingStore = sibling.key == route.nodeId.key ? store : findStore( sibling.nodeId );
 			const siblingRef = siblingStore?.node;
 			if( siblingRef?.isObject && siblingRef?.displayed )
-				route.siblings.push( new DocItem({path: `${route.parent.path}/${siblingRef.browseFQ(defaultBrowseNs)}`, title: siblingRef.name}) );
+				route.siblings.push( new RouteItem({path: `${route.parent.path}/${siblingRef.browseFQ(defaultBrowseNs)}`, title: siblingRef.name}) );
 		}
 	}
 	findNodeId( gateway:string, cnnctnTarget:string, browsePath:string ): UaNode {
@@ -164,7 +164,7 @@ export class OpcStore{
 		return uaNode;
 	}
 
-	#serverCnnctnRoutes: DocItem[];
+	#serverCnnctnRoutes: RouteItem[];
 	#nodes = new Map<GatewayTarget,Map<CnnctnTarget, Map<NodeKey,StoreNode>>>();
 	#connections = new Map<GatewayTarget,Map<CnnctnTarget, Server>>();
 }

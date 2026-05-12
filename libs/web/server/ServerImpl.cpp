@@ -70,9 +70,20 @@ namespace Server{
 					vars = move( jvars->get_object() );
 			}
 			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
-			req.LogRead( query );
-			auto q = QL::Parse( move(query), move(vars), reqHandler->Schemas(), returnRaw );
-			auto result = co_await QL::QLAwait{ move(q), {req.SessionInfo}, reqHandler->QLServer() };
+			req.LogRead( query, ELogLevel::Trace );
+			optional<QL::RequestQL> q;
+			try{
+				q = QL::Parse( move(query), move(vars), reqHandler->Schemas(), returnRaw );
+			}
+			catch( IException& e ){
+				DBGT( ELogTags::HttpServerRead, "parsing failed: {}", e.what() );
+				co_return send( RestException<http::status::bad_request>{move(e), move(req), "Query parsing failed."}, move(stream), contentType );
+			}
+			if( Logging::ShouldLog(ELogLevel::Debug, ELogTags::HttpServerRead) ){
+				req.LogRead( q->ToString(), ELogLevel::Debug );
+			}
+
+			auto result = co_await QL::QLAwait{ move(*q), {req.SessionInfo}, reqHandler->QLServer() };
 			jobject y{ {"data", move(result)} };
 			send( move(req), move(stream), move(y), contentType );
 		}

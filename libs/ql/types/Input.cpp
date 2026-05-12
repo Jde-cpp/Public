@@ -91,17 +91,37 @@ namespace Jde::QL{
 		if( _orderBy )
 			return *_orderBy;
 		_orderBy = vector<std::pair<string,bool>>{};
-		let orderBy = FindPtr<jvalue>("orderBy");
+		let orderBy = FindPtr<jvalue>( "orderBy" );
 		if( !orderBy )
 			return *_orderBy;
-		Json::Visit( *orderBy, [&]( const jvalue& v ){
+		Json::Visit( *orderBy, [&](const jvalue& v){
 			if( v.is_string() )
-				_orderBy->emplace_back( string{ v.get_string() }, true );
+				_orderBy->emplace_back( string{v.get_string()}, true );
 			else if( v.is_object() && !v.get_object().empty() ){
 				auto p = v.get_object().begin();
 				_orderBy->emplace_back( string{p->key()}, !p->value().is_string() || p->value().get_string()!="desc" );
 			}
 		} );
 		return *_orderBy;
+	}
+	α Input::ArgString()Ι->string{
+		if( Args.empty() )
+			return {};
+		string argStr{ '('};
+		for( let& [key, value] : Args ){
+			constexpr sv escape{ "\b$" };
+			auto addArg = [&key, &argStr]( const jvalue& v ){
+				if( v.is_string() )
+					argStr += Ƒ( "{}: \"{}\", ", key, (sv)v.get_string() );
+				else
+					argStr += Ƒ( "{}: {}, ", key, serialize(v) );
+			};
+			if( let vname = VariableName(value); vname.size() )
+				addArg( Variables->if_contains(vname) ? Variables->at(vname) : value );
+			else
+				addArg( value );
+		}
+		argStr.back() = ')';
+		return argStr;
 	}
 }

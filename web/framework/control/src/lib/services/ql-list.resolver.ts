@@ -7,14 +7,14 @@ import { PageProfile, PageSettings } from '../pages/GraphQL/model/PageSettings';
 import { StringUtils } from '../utils/StringUtils';
 import { MetaObject } from '../model/ql/schema/MetaObject';
 import { Field } from '../model/ql/schema/Field';
-import { DocItem, ProfileStore } from 'jde-spa';
+import { RouteItem, ProfileStore } from 'jde-spa';
 import { RouteStore } from './route.store';
 import { View, ViewFieldSettings } from '../model/ql/View';
 import { Sort } from '@angular/material/sort';
 
 export type TableSettings = {canPurge?:boolean,showAdd?:boolean, excludedColumns:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]};
 export type CollectionItem = string | { path:string, title?:string, data?:{summary:string, collectionName:string, tableSettings:TableSettings} };
-export class ListRoute extends DocItem{
+export class ListRoute extends RouteItem{
 	constructor( collection:string|CollectionItem ){
 		super();
 		if( typeof collection=='string' )

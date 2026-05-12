@@ -1,4 +1,4 @@
-import { assert, getEnumName } from '../../utils/utils';
+import { verify, getEnumName } from '../../utils/utils';
 import { TypeName } from '../../services/IGraphQL';
 import { StringUtils } from '../../utils/StringUtils';
 
@@ -66,7 +66,7 @@ export class Mutation{
 					else if( Array.isArray(value) )
 						clause += `${key}:[${value.join(",")}]`;
 					else{
-						assert( typeof value == "object" );
+						verify( typeof value == "object" );
 						clause += `${key}:{${argClause(value, false)}}`;
 					}
 				}

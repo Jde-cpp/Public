@@ -10,8 +10,8 @@
 			"name": "common",
 			"hidden": true,
 			"cacheVariables":{
-				"CMAKE_CXX_STANDARD": "23",
-				"JDE_VERSION": "2026.02.01",
+				"CMAKE_CXX_STANDARD": "26",
+				"JDE_VERSION": "2026.05.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3",
 				"SPDLOG_FMT_EXTERNAL": "ON"
 			}
@@ -109,15 +109,15 @@
 			"name": "linux",
 			"inherits": "common",
 			"environment": {
-				"CC": "gcc-14",
-				"CXX": "g++-14",
+				"CC": "gcc",
+				"CXX": "g++-15",
 				"installRoot": "$env{REPO_DIR}/install/$env{CXX}",
 				"multiInstallPrefix": "$env{installRoot}/multi"
 			},
 			"cacheVariables":{
 				"CMAKE_BUILD_TYPE": "$env{buildType}",
-				"CMAKE_CXX_COMPILER": "g++-14",
-				"CMAKE_C_COMPILER": "gcc-14",
+				"CMAKE_CXX_COMPILER": "g++-15",
+				"CMAKE_C_COMPILER": "gcc-15",
 				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
 				"CMAKE_PREFIX_PATH": "$env{installRoot}/$env{buildType};$env{multiInstallPrefix}",
 				"CMAKE_CXX_FLAGS": "-Wno-unknown-pragmas -Wno-missing-field-initializers -Wno-changes-meaning",
@@ -144,7 +144,7 @@
 			"inherits": ["linux"],
 			"cacheVariables": {
 				"Boost_USE_STATIC_LIBS": true,
-				"BOOST_VERSION": "1.90.0",
+				"BOOST_VERSION": "1.91.0",
 				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-changes-meaning"
 			}
 		},

@@ -116,7 +116,7 @@ namespace Jde::App{
 				strings[ToGuid( fe.str().id() )] = move( *fe.mutable_str()->mutable_value() );
 		}
 		auto addString = [&]( auto& map, auto& id ){
-			map.emplace( ToGuid(id), move(strings[ToGuid(id)]) );
+			map.try_emplace( ToGuid(id), move(strings[ToGuid(id)]) );
 		};
 		for( let& entry : logEntries ){
 			let time = Protobuf::ToTimePoint( entry.time() );
@@ -199,7 +199,7 @@ namespace Jde::App{
 			else if( name=="line" )
 				o[name] = entry.line();
 			else if( name=="time" )
-				o[name] = ToIsoString( Protobuf::ToTimePoint(entry.time()) );
+				o[name] = ToIsoString( Protobuf::ToTimePoint(entry.time()) )+'Z';
 			else if( name=="userId" )
 				o[name] = entry.user_pk();
 			else if( name=="fileId" ){

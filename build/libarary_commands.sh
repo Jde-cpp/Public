@@ -2,11 +2,13 @@
 cd /mnt/ram/external/Debug
 cls;rm -f CMakeCache.txt;cmake /home/duffyj/code/jde/Public/build --preset linux-debug;
 
-DST_DIR=$REPO_DIR/install/g++-14/debug/boost
+DST_DIR=$REPO_DIR/install/g++-15/Debug/boost
 ./bootstrap.sh --prefix=${DST_DIR} --includedir=headers --libdir=dist
-echo "using gcc : : /usr/bin/g++-14 ; " >> tools/build/src/user-config.jam
+echo "using gcc : : /usr/bin/g++-15 ; " >> tools/build/src/user-config.jam
 #./b2 --prefix=${DST_DIR} address-sanitizer=on install
-./b2 variant=debug --prefix=${DST_DIR} address-sanitizer=on install --with-json --with-charconv
+./b2 variant=debug --prefix=${DST_DIR} address-sanitizer=on install cxxflags="-static-libasan" linkflags="-static-libasan" --with-json --with-charconv
+./b2 variant=debug --prefix=${DST_DIR} address-sanitizer=on install cxxflags="-ggdb -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -D_GLIBCXX_DEBUG=ON -static-libstdc++ -static-libasan" linkflags="-static-libasan" --with-json --with-charconv
+
 
 bootstrap.bat --prefix=C:\Users\duffyj\source\repos\libs\install\clang\boost --with-toolset=clang-win
 b2.exe toolset=clang --prefix=C:\Users\duffyj\source\repos\libs\install\clang\boost --with-json -q install

@@ -36,12 +36,8 @@ import {map} from 'rxjs/operators';
 import {
   NavigationFocusService
 } from '../../shared/navigation-focus/navigation-focus.service';
-
-import {
-  ComponentCategoryListModule
-} from '../component-category-list/component-category-list';
 import {ComponentPageHeader} from '../component-page-header/component-page-header';
-import { IRouteService, RouteService } from '../../services/IRouteService';
+import { ComponentCategoryList } from '../component-category-list/component-category-list';
 
 // These constants are used by the ComponentSidenav for orchestrating the MatSidenav in a responsive
 // way. This includes hiding the sidenav, defaulting it to open, changing the mode from over to
@@ -52,8 +48,8 @@ import { IRouteService, RouteService } from '../../services/IRouteService';
 // src/styles/_constants.scss.
 const EXTRA_SMALL_WIDTH_BREAKPOINT = 720;
 const SMALL_WIDTH_BREAKPOINT = 959;
-export class DocItem{
-	constructor( args?:Partial<DocItem>){
+export class RouteItem{
+	constructor( args?:Partial<RouteItem>){
 		if( args )
 			Object.assign( this, args );
 	}
@@ -61,8 +57,9 @@ export class DocItem{
 	get title(){ return this._title; } set title(x){ this._title=x; } private _title: string;
 	get queryParams(){ return this._queryParams; } set queryParams(x){ this._queryParams=x; } private _queryParams: Params;
 	summary?: string;
-	parent?:DocItem;
-	siblings?:DocItem[]; //includes this.
+	parent?:RouteItem;
+	siblings?:RouteItem[]; //includes this.
+	externalRedirect?: string;
 	get track(){ return this.queryParams ? this.path+JSON.stringify(this.queryParams) : this.path; }
 }
 
@@ -80,7 +77,7 @@ export class ComponentSidenav implements OnInit, OnDestroy {
   isExtraScreenSmall: Observable<boolean>;
   isScreenSmall: Observable<boolean>;
   private subscriptions = new Subscription();
-	item = model<DocItem>(null);
+	item = model<RouteItem>(null);
   constructor( private _route: ActivatedRoute,
               private _navigationFocusService: NavigationFocusService,
               zone: NgZone,
@@ -167,7 +164,7 @@ export class ComponentNav {
     return url==`/${this.parentUrl}` || url.substr( this.parentUrl.length+2 ).indexOf('/')!=-1;
   }
   currentItemId: string | undefined;
-	item = input.required<Signal<DocItem>>();
+	item = input.required<Signal<RouteItem>>();
 	parentUrl: string;
 	isLoading = signal( true );
 }
@@ -177,7 +174,7 @@ export class ComponentNav {
     MatSidenavModule,
     MatListModule,
     RouterModule,
-    ComponentCategoryListModule,
+    ComponentCategoryList,
     FormsModule,
     CdkAccordionModule,
     MatIconModule,

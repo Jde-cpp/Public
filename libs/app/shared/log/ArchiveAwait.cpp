@@ -4,10 +4,12 @@
 #include <jde/fwk/io/protobuf.h>
 #include <jde/app/log/DailyLoadAwait.h>
 
+#include <boost/uuid/uuid_io.hpp>
+
 #define let const auto
 
 namespace Jde::App{
-	static constexpr ELogTags _tags{ ELogTags::ExternalLogger | ELogTags::IO };
+	static constexpr ELogTags _tags{ ELogTags::ExternalLogger };
 	using Protobuf::ToGuid;
 	α ArchiveAwait::Execute()ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task{
 		vector<App::Log::Proto::FileEntry> entries;
@@ -146,7 +148,15 @@ namespace Jde::App{
 	α ArchiveLoadAwait::Execute()ι->StringAwait::Task{
 		try{
 			ArchiveFile archive{ _query.Filter(), move(_dailyFile) };
-			if( archive.IsComplete(_query) ){
+			let isComplete = archive.IsComplete( _query );
+			TRACE( "daily file entries: {}, templates: {}, files: {}, functions: {}, args: {}, complete: {}",
+				archive.Entries.size(),
+				archive.Templates.size(),
+				archive.Files.size(),
+				archive.Functions.size(),
+				archive.Args.size(),
+				isComplete );
+			if( isComplete ){
 				Resume( move(archive) );
 				co_return;
 			}
@@ -169,7 +179,7 @@ namespace Jde::App{
 			};
 			for( let year : iterate(_root, validYear) ){
 				let yearPath = _root/std::to_string(year);
-				auto validMonth = [year,localStart,localEnd]( int m )ι->uint{
+				auto validMonth = [year,localStart,localEnd]( int m )ι->uint {
 					unsigned month = (unsigned)m;
 					if( year == (int)localStart.year() && month < (unsigned)localStart.month() )
 						return 0;
@@ -180,7 +190,7 @@ namespace Jde::App{
 				for( let& m : iterate(yearPath, validMonth) ){
 					unsigned month = (unsigned)m;
 					let monthPath = yearPath/std::to_string(month);
-					auto validDay = [year,month,localStart,localEnd]( int day )ι->uint{
+					auto validDay = [year,month,localStart,localEnd]( int day )ι->uint {
 						if( year == (int)localStart.year() && month == (unsigned)localStart.month() && ((unsigned)day) < (unsigned)localStart.day() )
 							return 0;
 						if( year == (int)localEnd.year() && month == (unsigned)localEnd.month() && ((unsigned)day) > (unsigned)localEnd.day() )

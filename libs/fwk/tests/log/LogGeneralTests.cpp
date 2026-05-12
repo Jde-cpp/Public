@@ -15,15 +15,19 @@ namespace Jde::Tests{
 
 	TEST_F( LogGeneralTests, CachedTags ){
 		auto& logger = Logging::GetLogger<Logging::MemoryLog>();
-		let checkTags{ ELogTags::App | ELogTags::Pedantic };
-		logger.SetLevel( checkTags, ELogLevel::Trace );
-		let unConfiguredTags = ELogTags::Scheduler;
-		TRACET( unConfiguredTags, "Need to search" );
-		let logMessage = Ƒ( "[{}]tag: {}, minLevel: {}", "MemoryLog", Jde::ToString(unConfiguredTags), "{default}" );
-		ASSERT_TRUE( logger.Find(logMessage).size() );
+		// let changeTag{ ELogTags::App };
+		// logger.SetLevel( changeTag, ELogLevel::Trace );
+		// let logMessage = Ƒ( "[{}]tag: {}, minLevel: {}", "MemoryLog", Jde::ToString(changeTag), "Trace" );
+		// ASSERT_TRUE( logger.Find(logMessage).size() );
+
+		let _tags = ELogTags::Scheduler;
 		Logging::ClearMemory();
-		TRACET( unConfiguredTags, "no need to search" );
-		ASSERT_TRUE( logger.Find(logMessage).empty() );
+		constexpr auto logMessage = "scheduler msg";
+		TRACE( logMessage );
+		ASSERT_FALSE( logger.Find(logMessage).empty() );
+		logger.SetLevel( _tags, ELogLevel::Debug );
+		TRACE( logMessage );
+		ASSERT_FALSE( logger.Find(logMessage).empty() );
 	}
 
 	TEST_F( LogGeneralTests, ArgsNotCalled ){

@@ -90,7 +90,7 @@
 			"request": "launch",
 			"program": "${config:exeDir}/Jde.App.Server",
 			"args": ["-c", "-tests", "-settings=$JDE_DIR/apps/AppServer/config/App.Server.jsonnet"],
-			"environment": [{ "name": "LD_LIBRARY_PATH", "value": "$LD_LIBRARY_PATH:${env:REPO_DIR}/install/g++-14/Debug/boost/lib" } ],
+			"environmentx": [{ "name": "LD_LIBRARY_PATH", "value": "$LD_LIBRARY_PATH:${env:REPO_DIR}/install/g++-15/Debug/boost/lib" } ],
 			"stopAtEntry": false,
 			"additionalSOLibSearchPath": "/lib/x86_64-linux-gnu",
 			"cwd": "${config:exeDir}",

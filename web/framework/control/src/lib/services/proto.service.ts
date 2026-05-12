@@ -2,7 +2,7 @@ import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { firstValueFrom } from 'rxjs';
 import { HttpClient, HttpEvent, HttpResponse, HttpSentEvent } from '@angular/common/http';
 import { FieldKind } from '../model/ql/schema/Field';
-import { fromIsoDuration } from '../utils/utils';
+import { fromIsoDuration, verify } from '../utils/utils';
 import { TableSchema } from '../model/ql/schema/TableSchema';
 import { EnumValue, Log, IQueryResult } from '../services/IGraphQL';
 import { MutationSchema } from '../model/ql/schema/MutationSchema';
@@ -10,7 +10,6 @@ import { Instance } from './app/app.service.types';
 import * as LogProto from '../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
 import * as CommonProto from '../proto/Common'; import IException = CommonProto.Jde.Proto.IException;
 import { AuthStore } from './auth.store';
-import { assert } from '../utils/utils';
 import { Mutation } from '../model/ql/Mutation';
 import { computed, Signal } from '@angular/core';
 import { EProvider, User } from 'jde-spa';
@@ -247,10 +246,10 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		let y:Y;
 		if( options.observe=="response" ){
 			let response:HttpResponse<Y> = <HttpResponse<Y>>( event instanceof HttpResponse ? event : null );
-			console.assert( response!=null, "response==null" );
+			verify( response!=null, "response==null" );
 			if( options?.transferCache?.includeHeaders.includes("Authorization") ){
 				let authorization = response.headers.get( "Authorization" );
-				console.assert( authorization!=null, "no authorization" );
+				verify( authorization!=null, "no authorization" );
 				if( authorization )
 					this.authStore.append( {sessionId:authorization} );
 			}
@@ -329,7 +328,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		}
 		let query = ql instanceof Mutation ? ql.toString() : ql;
 		let vars = ql instanceof Mutation ? ql.variables : undefined;
-		assert( query );
+		verify( query );
 		return await this.postQL<Y>( `mutation ${query}`, vars, log );
 	}
 

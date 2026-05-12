@@ -2,7 +2,7 @@ import {inject, Inject, Injectable} from '@angular/core';
 import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot} from '@angular/router';
 import { AppInstanceRoute, IErrorService, PageProfile, PageSettings, QLListResolver, RouteStore, TableSchema, View } from 'jde-framework';
 import { Gateway, GatewayService } from '../gateway.service';
-import { DocItem, ProfileStore } from 'jde-spa';
+import { RouteItem, ProfileStore } from 'jde-spa';
 
 export type GatewayData = {
 	columns: Record<string,string>;
@@ -21,7 +21,7 @@ export class GatewayResolver implements Resolve<GatewayData> {
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<GatewayData>{
 		const routing = new AppInstanceRoute( "gateways", route.params["instance"] );
 		routing.siblings = this.routeStore.getChildren( route.parent.url.slice(0, -1) );
-		routing.parent = new DocItem( { path: "/apps", title:"Applications" } );
+		routing.parent = new RouteItem( { path: "/apps", title:"Applications" } );
 		return this.load( route.params["instance"], routing );
 	}
 

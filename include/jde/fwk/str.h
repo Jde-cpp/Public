@@ -73,7 +73,7 @@ namespace Jde::Str{
 	using iv = bsv<Str::ci_traits>;
 }
 namespace Jde{
-	constexpr Str::iv operator "" _iv( const char* x, uint len )ι{ return Str::iv(x, len); }
+	constexpr Str::iv operator ""_iv( const char* x, uint len )ι{ return Str::iv(x, len); }
 
 	Ξ ToSV( Str::iv x )ι->sv{ return Str::ToView<sv,Str::iv>(x); }
 	Ξ ToIV( sv x )ι->Str::iv{ return Str::ToView<Str::iv,sv>(x); }

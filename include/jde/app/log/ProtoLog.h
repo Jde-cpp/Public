@@ -49,7 +49,7 @@ namespace Jde::App{
 		mutable mutex _mutex;
 		bool _needsArchive{false};
 		fs::path _root;
-		static constexpr ELogTags _tags{ ELogTags::ExternalLogger | ELogTags::IO };
+		static constexpr ELogTags _tags{ ELogTags::ExternalLogger };
 		up<DurationTimer> _timer;
 		const std::chrono::time_zone& _tz;
 		std::chrono::year_month_day _today;

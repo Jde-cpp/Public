@@ -69,15 +69,15 @@ namespace Jde{
 	return tagStrings.empty() ? jarray{ jstring{ELogTagStrings[0]} } : tagStrings;
 }
 α Jde::ToString( ELogTags tags, bool outputArray )ι->string{
-	auto array = ToArray(tags);
+	auto array = ToArray( tags );
 	if( outputArray )
 		return serialize( move(array) );
 	else{
-		string result; result.reserve(array.size()*12);
+		string result; result.reserve( array.size()*12 );
 		for( auto&& item : array ){
 			if( !result.empty() )
 				result += "_";
-			result += move(item.as_string());
+			result += move( item.as_string() );
 		}
 		return result;
 	}
@@ -139,8 +139,9 @@ namespace Jde{
 
 	LogTags::LogTags( jobject o )ι:
 		_configuredTags{ parseTags<concurrent_flat_map<ELogTags,ELogLevel>>(Json::FindDefaultObject(o, "tags")) },
-		ExtrapolatedTags{ _configuredTags }{
-		_configuredTags.erase_if( ELogTags::None, [&](let& kv ){ _defaultLevel= kv.second; return true; } );
+		ExtrapolatedTags{ _configuredTags },
+		_defaultLevel{ ELogLevel::Information }{
+		_configuredTags.erase_if( ELogTags::None, [&](let& kv){_defaultLevel= kv.second; return true;} ); //parseTags puts default in None.
 	}
 	LogTags::LogTags( const LogTags& x )ι:
 		_configuredTags{ x._configuredTags },
@@ -150,6 +151,7 @@ namespace Jde{
 	{}
 	α LogTags::operator+=( const LogTags& x )ι->LogTags&{
 		_minLevel = Logging::min( _minLevel, x._minLevel );
+		_defaultLevel = Logging::min( _defaultLevel, x._defaultLevel );
 		x._configuredTags.cvisit_all( [this](let& kv){
 			this->_configuredTags.insert_or_visit( kv, [&kv](auto& cumulativeValues){
 				cumulativeValues.second = Logging::min( cumulativeValues.second, kv.second );
@@ -180,7 +182,6 @@ namespace Jde{
 	}
 	α LogTags::MinLevel( ELogTags tags )Ι->ELogLevel{
 		optional<ELogLevel> level;
-		BREAK_IF( !empty(tags & ELogTags::Locks) );
 		if( ExtrapolatedTags.cvisit(tags, [&](let& kv){level = kv.second;}) )
 			return *level;
 		vector<ELogTags> individual = split( tags );
@@ -196,7 +197,7 @@ namespace Jde{
 				return matches+1<count;
 			} );
 		}
-		let levelString = level ? Jde::ToString( *level ) : "unset";
+		let levelString = level ? Jde::ToString( *level ) : Ƒ( "unset - {}", Jde::ToString(_defaultLevel) );
 		if( !level )
 			level = _defaultLevel;
 		ExtrapolatedTags.emplace( tags, *level );
@@ -209,7 +210,6 @@ namespace Jde{
 	}
 
 	α LogTags::SetLevel( ELogTags tags, ELogLevel level )ι->void{
-		std::cout << Ƒ( "[{}]tag: {}, minLevel: {}", Name(), Jde::ToString(tags), Jde::ToString(level) ) << std::endl;
 		_configuredTags.insert_or_assign( tags, level );
 		ExtrapolatedTags = _configuredTags;
 		UpdateCumulative( Logging::Loggers() );

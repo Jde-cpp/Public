@@ -1,4 +1,4 @@
-import { assert, Mutation, MutationType } from "jde-framework";
+import { verify, Mutation, MutationType } from "jde-framework";
 import { Resource } from "./Resource";
 import { Role, RolePK } from "./Role";
 import { Acl } from "./Acl";
@@ -46,7 +46,7 @@ export class Permission{
 						y.push( m );
 				}
 			}else{
-				console.assert( !mod.id );
+				verify( !mod.id );
 				y.push( new Mutation(Acl.typeName, null,
 					{identity:{ id:identityId },permissionRight:{allowed:mod.allowed ?? 0, denied:mod.denied ?? 0, resource:{id:mod.resource.id}}},
 					MutationType.Create/*,permissionRight{id}*/) );
@@ -68,7 +68,7 @@ export class Permission{
 						mutations.push( m );
 				}
 			}else{
-				assert( !altered.id );
+				verify( !altered.id );
 				//addRole( id:42, allowed:255, denied:0, resource:{target:"users"} )
 				mutations.push( new Mutation(Role.typeName, rolePK, {permissionRight:{allowed:altered.allowed ?? 0, denied:altered.denied ?? 0, resource:{target:altered.resource.target}}}, MutationType.Add) );
 			}

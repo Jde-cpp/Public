@@ -14,7 +14,7 @@ import {MatCheckboxModule} from '@angular/material/checkbox';
 import { MatChipsModule, type MatChipInputEvent } from "@angular/material/chips";
 import {MatFormFieldModule} from '@angular/material/form-field';
 import { MatInput } from "@angular/material/input";
-import { assert, Field, TableSchema } from 'jde-framework';
+import { verify, Field, TableSchema } from 'jde-framework';
 import { BehaviorSubject, from, map, Observable, startWith, Subject } from 'rxjs';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { provideNativeDateAdapter } from '@angular/material/core';
@@ -69,7 +69,7 @@ export class QLListSettingsFilter implements OnInit{
 		this.inputElements.toArray()[index].nativeElement.value = "";
 	}
 	onAddFilter( columnName: string ){
-		assert( !this.dataSource.find( c=>c.field?.name == columnName )?.field );
+		verify( !this.dataSource.find( c=>c.field?.name == columnName )?.field );
 		let field = this.schema().fields.find(f=>f.name == columnName);
 		const index = this.dataSource.length-1;
 		this.dataSource.push( this.dataSource[index] );

@@ -41,11 +41,6 @@ export class Logs implements OnInit, OnDestroy{
 
 	async ngOnInit(){
 		this._componentPageTitle.title = "Logs";
-		/*var beginningOfDay = DateUtilities.beginningOfDay( new Date() );
-		beginningOfDay.setDate( beginningOfDay.getDate()-1 );
-		//var yesterday = ;
-		var start = beginningOfDay;
-		this._start.setValue( start );*/
 		this.data = new DataSource( this.pageSize );
 		this.pageIndex = this.data.pageIndex;
 		this.profile = await this.profileStore.load<LogSettings>( "logs", new LogSettings() );
@@ -56,9 +51,9 @@ export class Logs implements OnInit, OnDestroy{
 				orderBy = {};
 				orderBy[this.data.sort.active] = this.data.sort.direction;
 			}
-			let vars = {limit: this.pageSize()*3, skip: Math.max(0, this.pageIndex()-1)*this.pageSize(), orderBy: orderBy };
-			let q = "logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
-			let entries = ( await this.service().query<{logs: LogEntriesRest}>( q, vars, (m)=>console.log(m) ) ).logs;
+			const vars = {limit: this.pageSize()*3, skip: Math.max(0, this.pageIndex()-1)*this.pageSize(), orderBy: orderBy };
+			const q = "logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
+			const entries = ( await this.service().query<{logs: LogEntriesRest}>( q, vars, (m)=>console.log(m) ) ).logs;
 			this.push( new LogEntries(entries) );
 			//this.subscribe( this.applicationId, this.level );
 			this.isLoading.set( false );
@@ -158,7 +153,7 @@ export class Logs implements OnInit, OnDestroy{
 	pageChangeEvent( event ){
 		//const offset = event.pageIndex * event.pageSize;
 		if( this.selectedEntry ){
-			let index = this.data.data.findIndex( (x)=>x.index==this.selectedIndex );
+			let index = this.data.entries.findIndex( (x)=>x.index==this.selectedIndex );
 			if( index<event.startIndex || index>event.startIndex+event.pageLength )
 				this.selectedEntry = null;
 		}
@@ -184,23 +179,23 @@ export class Logs implements OnInit, OnDestroy{
 		if( changes.length )
 			this.lengthChange.next( changes.length );
 		if( changes.startIndex ){
-			this.selectedEntry = this.data.data[changes.startIndex];
+			this.selectedEntry = this.data.entries[changes.startIndex];
 			this.startIndexChange.next( changes.startIndex );
 		}
 	}
 	navigateNext(){
 		const messageId = this.selectedEntry.templateId;
-		const currentIndex = this.data.data.findIndex( (x)=>x.index==this.selectedIndex );
-		const size = this.data.data.length;
+		const currentIndex = this.data.entries.findIndex( (x)=>x.index==this.selectedIndex );
+		const size = this.data.entries.length;
 		const stop = size+currentIndex;
 		let foundIndex = currentIndex;
 		for( let i=currentIndex+1; i!=stop && foundIndex==currentIndex; ++i ){
 			const i2 = i%size;//<size ? i : i-size;
-			if( this.data.data[i2].templateId==messageId )
+			if( this.data.entries[i2].templateId==messageId )
 				foundIndex = i2;
 		}
 		if( foundIndex!=currentIndex ){
-			this.selectedEntry = this.data.data[foundIndex];
+			this.selectedEntry = this.data.entries[foundIndex];
 			this.data.select( foundIndex );
 		}
 		else
@@ -272,7 +267,7 @@ export class Logs implements OnInit, OnDestroy{
 	private subscription:Unsubscribable;
 	//private applicationStrings:ApplicationStrings = new ApplicationStrings();
 	//private pushTimeout:{ entries: TraceEntry[], id:any, end:number };
-	get selectedIndex(){ return this.selectedEntry?.index; } set selectedIndex(x){ this.selectedEntry = this.data.data.find( (y)=>y.index==x ); }
+	get selectedIndex(){ return this.selectedEntry?.index; } set selectedIndex(x){ this.selectedEntry = this.data.entries.find( (y)=>y.index==x ); }
 	get selectedEntry(){return this._selectedEntry; } set selectedEntry(x){ this._selectedEntry=x;} _selectedEntry:Entry;
 	isLoading = signal<boolean>( true );
 	profileStore = inject(ProfileStore);

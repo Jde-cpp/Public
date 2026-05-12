@@ -1,4 +1,4 @@
-import { assert, Query, StringUtils, TableSettings } from "jde-framework";
+import { verify, Query, StringUtils, TableSettings } from "jde-framework";
 import { Field, FieldKind } from "./schema/Field";
 import { TableSchema } from "./schema/TableSchema";
 import { Sort } from "@angular/material/sort";
@@ -54,7 +54,7 @@ export class Flex{
 			}
 			else {
 				let parts = value.split(" ");
-				assert( parts.length==3, `Invalid flex string: ${value}` );
+				verify( parts.length==3, `Invalid flex string: ${value}` );
 				this.flexGrow = parseFloat( parts[0] );
 				this.flexShrink = parseFloat( parts[1] );
 				this.flexBasis = parts[2];
@@ -277,7 +277,7 @@ export class View{
 				args.push( `${name}:{"ne":null}` );
 			else{
 				args.push( `${name}:$${name}` );
-				assert( values.length>0 );
+				verify( values.length>0 );
 				vars[name] = [...values];
 			}
 		}

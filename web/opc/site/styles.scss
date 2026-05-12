@@ -5,6 +5,12 @@
 @use '../projects/jde-spa/src/styles/tables';
 @use '../projects/jde-spa/src/styles/general';
 
+.rounded-input{
+  --mdc-outlined-text-field-container-shape: 30px !important;
+  //border-radius: 50px 0 0 50px !important;
+	//background-color: red;
+}
+
 html {
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);

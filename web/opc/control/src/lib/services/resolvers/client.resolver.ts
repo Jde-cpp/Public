@@ -1,6 +1,6 @@
 import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { inject, Inject, Injectable } from '@angular/core';
-import { DocItem } from 'jde-spa';
+import { RouteItem } from 'jde-spa';
 import {  ProfileStore } from 'jde-spa';
 import { DetailResolverData, DetailRoute, IErrorService, MetaObject, RouteStore} from 'jde-framework'
 import { Gateway, GatewayService } from '../gateway.service';
@@ -24,8 +24,8 @@ export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>>
 	private async loadProfile( route: ActivatedRouteSnapshot, collectionDisplay:string, target:string, url:string ):Promise<DetailResolverData<ServerCnnctn>>{
 		let gatewayTarget = route.parent.url[route.parent.url.length-1].path;
 		const ql = await this.gatewayService.gateway( gatewayTarget );
-		let siblings = this.routeStore.getChildren( route.parent.url ).map( s=>new DocItem({path:`${s.path}`, title:s.title}) );
-		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings, new DocItem({path:'.', title:route.parent.params["instance"]}) );
+		let siblings = this.routeStore.getChildren( route.parent.url ).map( s=>new RouteItem({path:`${s.path}`, title:s.title}) );
+		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings, new RouteItem({path:'.', title:route.parent.params["instance"]}) );
 		try{
 			return ClientResolver.load( ql, this.opcStore, target, routing );
 		}

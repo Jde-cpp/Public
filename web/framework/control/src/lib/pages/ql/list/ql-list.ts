@@ -12,7 +12,7 @@ import {Field} from '../../../model/ql/schema/Field';
 import {TableSchema}  from '../../../model/ql/schema/TableSchema';
 import {MetaObject}  from '../../../model/ql/schema/MetaObject';
 
-import { ComponentPageTitle, DocItem, IRouteService, RouteService } from 'jde-spa';
+import { ComponentPageTitle, RouteItem, IRouteService, RouteService } from 'jde-spa';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton, MatAnchor } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
@@ -25,7 +25,7 @@ import { RouteStore } from '../../../services/route.store';
 import { View, ViewField, ViewType } from '../../../model/ql/View';
 import { PageProfile } from '../../GraphQL/model/PageSettings';
 import { MatSelect } from "@angular/material/select";
-import { assert } from '../../../utils/utils';
+import { verify } from '../../../utils/utils';
 
 @Component({
 	selector: 'ql-list',//.main-content.mat-drawer-container.my-content
@@ -55,7 +55,7 @@ export class QLList implements OnInit, OnDestroy{
 	}
 	async init( resolvedValue ){
 		let data = resolvedValue["data"] as QLListData;
-		assert( data.profile.view );
+		verify( data.profile.view );
 		this.selections.set( new SelectionModel<any>(data.profile.view.showSelector, []) );
 		this.view.set( data.profile.view );
 		const collectionName = data.schema.collectionName;
@@ -200,7 +200,7 @@ export class QLList implements OnInit, OnDestroy{
 		this.isSettings.set( false );
 	}
 
-	sideNav = model.required<DocItem>();
+	sideNav = model.required<RouteItem>();
 	collectionDisplay = input.required<string>();
 
 	isLoading = signal<boolean>( true );

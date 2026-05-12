@@ -4,7 +4,7 @@ import { MatCheckbox, MatCheckboxChange } from "@angular/material/checkbox";
 import { MatSortModule, Sort } from "@angular/material/sort";
 import { MatTable, MatTableModule } from "@angular/material/table";
 import { ProfileStore } from "jde-spa";
-import { assert, EnumKeysPipe, IErrorService } from "jde-framework";
+import { verify, EnumKeysPipe, IErrorService } from "jde-framework";
 import { Permission, Rights } from "../../model/Permission";
 import { AccessService } from "../../services/access.service";
 import { Resource } from "../../model/Resource";
@@ -26,7 +26,7 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 			let permission = this.permissions().find( x=>x.resource?.id==resource.id );
 			if( permission ){
 				permission.resource = resources.find( x=>x.id==resource.id );
-				assert( permission.resource, `Resource not found: ${resource.id}` );
+				verify( permission.resource, `Resource not found: ${resource.id}` );
 			}else
 				permission =  new Permission( {resource: new Resource( resource )} );
 			this.availablePermissions.push( permission );

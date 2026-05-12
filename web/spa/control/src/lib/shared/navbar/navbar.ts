@@ -1,20 +1,23 @@
 //https://github.com/angular/components/blob/a55b19797f0bccf467d5602f526eef236737498b/docs/src/app/shared/navbar/navbar.ts
+import { AsyncPipe } from '@angular/common';
 import {Component, computed, inject, OnInit, signal} from '@angular/core';
+import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
+import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import {MatButtonModule} from '@angular/material/button';
-import { MatMenuModule } from '@angular/material/menu';
+import {MatFormFieldModule} from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
 import {ActivatedRoute, NavigationEnd, RouterLink, RouterLinkActive} from '@angular/router';
 import {Route, Router} from '@angular/router';
 import { Title } from '@angular/platform-browser';
-import { filter } from 'rxjs';
-import {SECTIONS} from '../documentation-items/documentation-items';
+import { BehaviorSubject, filter, Observable } from 'rxjs';
 import {NavigationFocusService} from '../navigation-focus/navigation-focus.service';
 import {ThemePicker} from '../theme-picker/theme-picker';
 import { Authorization } from '../authorization/authorization';
 import { Favorites } from './favorites/favorites-dialog';
 import { ProfileStore } from '../../services/profile-store';
-
-const SECTIONS_KEYS = Object.keys(SECTIONS);
+import { MatAutocomplete } from "@angular/material/autocomplete";
 
 export type Favorite={
 	folderName?:string;
@@ -28,15 +31,21 @@ export type Folder = { folderName:string, items:Favorite[] };
   templateUrl: './navbar.html',
   styleUrls: ['./navbar.scss'],
   imports: [
+		AsyncPipe,
     Authorization,
+    Favorites,
+		FormsModule,
+		MatAutocompleteModule,
     MatButtonModule,
+		MatFormFieldModule,
+    MatIconModule,
+		MatInputModule,
+    MatMenuModule,
+		ReactiveFormsModule,
     RouterLink,
     RouterLinkActive,
-    ThemePicker,
-    Favorites,
-    MatMenuModule,
-    MatIconModule,
-  ]
+    ThemePicker
+]
 })
 export class NavBar implements OnInit {
   skipLinkHref: string | null | undefined;
@@ -110,6 +119,17 @@ export class NavBar implements OnInit {
 		this.favorites.set( favs );
 		//this.#profileStore.save( "favorites", favs );
 	}
+
+	onSearch( event ){
+
+	}
+	onSearchSelected( query:string ){
+		//return [];
+	}
+	searchValuesSubject = new BehaviorSubject<string[]>([]);
+	searchValues():Observable<string[]>{
+		return this.searchValuesSubject.asObservable();
+	}
 	favoriteMenus = computed( ()=>{
 		let items:Array<Favorite|Folder> = [];
 		if( !this.favorites() )
@@ -133,14 +153,7 @@ export class NavBar implements OnInit {
 	isLoading = signal<boolean>( true );
 	name = signal<string>( null );
 	route = signal<string>( null );
-  get sections() {
-    return SECTIONS;
-  }
-
-  get sectionKeys() {
-    return SECTIONS_KEYS;
-  }
-
 	existing = signal<Favorite>( null );// the favorite corresponding to the current route, if any
 	router = inject(Router);
+	searchForm = new FormControl<string>('');
 }

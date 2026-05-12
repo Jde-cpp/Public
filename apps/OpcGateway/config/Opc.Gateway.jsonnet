@@ -14,15 +14,16 @@ local args = import 'args.libsonnet';
 				access: "Trace",
 				opc_access: "Trace",
 				test: "Trace",
-				http_client_write: "Trace",
-				http_client_read: "Trace",
-				http_server_write: "Trace",
-				http_server_read: "Trace",
-				socket_client_write: "Trace",
-				socket_client_read: "Trace",
-				socket_server_write: "Trace",
-				socket_server_read: "Trace",
-				settings: "Debug",
+				externalLogger: "Trace",
+				http_client_write: "Debug",
+				http_client_read: "Debug",
+				http_server_write: "Debug",
+				http_server_read: "Debug",
+				socket_client_write: "Debug",
+				socket_client_read: "Debug",
+				socket_server_write: "Debug",
+				socket_server_read: "Debug",
+				settings: "Trace",
 				uaEvent: "Debug",
 				monitoring: "Information",
 				processingLoop: "Information",
@@ -44,7 +45,11 @@ local args = import 'args.libsonnet';
 		proto:{
 			path: args.logDir + "/proto",
 			timeZone: "America/New_York",
-			delay: "PT1M"
+			delay: "PT1M",
+			tags: {
+				default: "Debug",
+				externalLogger: "None"
+			}
 		}
 	},
 	dbServers: {
@@ -101,6 +106,6 @@ local args = import 'args.libsonnet';
 	},
 	workers:{
 		drive:{ threads:  2 },
-		executor:{ threads:  2 }
+		executor:{ threads:  3 }
 	}
 }

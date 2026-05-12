@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle, DocItem, ProfileStore } from 'jde-spa';
+import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
 import { arraysEqual, cloneClassArray, DetailResolverData, Properties, IErrorService, IGraphQL, QLSelector, toIdArray, TargetRow} from 'jde-framework';
 
 import { RolePK } from '../../model/Role';
@@ -95,7 +95,7 @@ export class GroupDetail implements OnDestroy, OnInit{
 	permissions = signal<Permission[]>( null );
 	pageData:DetailResolverData<Group>;
 	get schema(){ return this.pageData.schema; }
-	sideNav = model.required<DocItem>();
+	sideNav = model.required<RouteItem>();
 	tabIndex = signal<number>( ProfileStore.tabIndex('groupDetail') );
 	excludedColumns = groupTableSettings.excludedColumns;
 	ql:IGraphQL = inject( AccessService );
