@@ -127,7 +127,6 @@ namespace Jde::IO{
 	Ω checkProcessed( ELogTags _tags )ι->void;
 	Ω submit( sp<FileIOArg> op, ELogTags _tags )ι->void{
 		TRACE( "Submitting file IO: {}, size: {}, chunks: {}, requestCount: {}, isRead: {}", op->Path.string(), op->Size(), op->ChunksToSend, _requestCount.load(), op->IsRead );
-		//TRACE( "Submitting file IO: {}, size: {}, chunks: {}, requestCount: {}, isRead: {}", Path.string(), totalBytes, ChunksToSend, _requestCount.load(), IsRead );
 		int result = io_uring_submit( &_ring );
 		if( result>=0 ){
 			ASSERT( _requestCount );

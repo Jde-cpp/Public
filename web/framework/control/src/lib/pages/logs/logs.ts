@@ -77,6 +77,7 @@ export class Logs implements OnInit, OnDestroy{
 			orderBy = {};
 			orderBy[this.data.sort.active] = this.data.sort.direction;
 		}
+		//TODO use skip variable.
 		const limit = this.view().limit ?? LogView.default().limit;
 		const vars = {limit: limit*3, skip: this.data.length, orderBy: orderBy };
 		const q = "logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
