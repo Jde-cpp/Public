@@ -83,21 +83,21 @@ export class Style{
 	flex?: Flex;
 }
 export class ViewField{
-	constructor( args: {qlField: Field, settings?: ViewFieldSettings}|{field: ViewFieldJson, schema?: TableSchema}|ViewField ){
+	constructor( args: {qlField: Field, settings?: ViewFieldSettings}|{field: ViewFieldJson, schema: TableSchema}|ViewField ){
 		if( args instanceof ViewField ){
 			const copyFrom = args as ViewField;
 			this.qlField = copyFrom.qlField;
 			this.style = copyFrom.style;
 			this._displayed = copyFrom._displayed;
 			this.displayName = copyFrom.displayName;
-		}else if( args["settings"] ){
+		}else if( args["qlField"] ){
 			const settings = args["settings"] as ViewFieldSettings;
 			this.qlField = args["qlField"];
 			this.style = settings?.style;
 			this._displayed = settings?.hidden ? false : undefined;
 			this.displayName = settings?.displayName ?? StringUtils.idToDisplay( this.name );
 		}else{
-			const serialized = args as {field: ViewFieldJson, schema?: TableSchema};
+			const serialized = args as {field: ViewFieldJson, schema: TableSchema};
 			const json = serialized.field;
 			this.qlField = serialized.schema.fields.find( f=>f.name==json.name );
 			this.style = json.style;
@@ -127,7 +127,7 @@ export class ViewField{
 
 type ViewConfigArgs = { configColumns:(string|ViewFieldSettings)[], sort:Sort[] };
 type ViewJson = { name:string, collectionName:string, fields:ViewFieldJson[], filters:{ field: Field, filter: Filter }[], limit?:number, showSelector:boolean, sort:Sort[] };
-type ViewSerializedArgs = { name:string, collectionName:string, fields:ViewField[], limit?:number, showSelector:boolean, sort:Sort[] };
+export type ViewSerializedArgs = { name:string, collectionName:string, fields:ViewField[], limit?:number, showSelector:boolean, sort:Sort[] };
 export type FieldFilter = { field: Field, filter: Filter };
 export enum ViewType{
 	System,

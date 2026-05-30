@@ -2,7 +2,7 @@ local args = import 'args.libsonnet';
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests:: "LogSettingTests.UpdateDefault",
+		tests: "LogTests.LogTagsIntrospection",
 		recreateDB:: true,
 		embeddedAppServer: false,
 		embeddedOpcServer: false

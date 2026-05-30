@@ -52,6 +52,16 @@ export class ProfileStore{
 		return json.map( item => factory(ctor, ...[item, ...args]) );
 	}
 
+	static pageSize( key:string ):number{
+		return +(localStorage.getItem( key+".pageSize" ) ?? 24);
+	}
+	static setPageSize( key:string, value:number ):void{
+		if( value!=24 )
+			localStorage.setItem( key+".pageSize", value.toString() );
+		else
+			localStorage.removeItem( key+".pageSize" );
+	}
+
 	static tabIndex( key:string ):number{
 		const item = localStorage.getItem( key );
 		let value = item ? +item : 0;

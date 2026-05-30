@@ -42,6 +42,8 @@ namespace Jde{
 	using namespace Jde::Crypto::Internal;
 
 	α Crypto::CalcMd5( byte* data, uint size )ε->MD5{
+		if( size==0 )
+			return EmptyStringMd5;
 		auto ctx = NewMDCtx();
 		CALL( EVP_DigestInit_ex(ctx.get(), EVP_md5(), nullptr) );
 		CALL(	EVP_DigestUpdate(ctx.get(), data, size) );

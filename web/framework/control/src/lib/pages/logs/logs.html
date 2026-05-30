@@ -1,6 +1,22 @@
 @if( !isLoading() ) {
-	<ng-container>
+	@if( isSettings() ){
+		<ql-list-settings [suggestions]={} [columns]=columns [view]=view() [schema]=schema (onSave)=onViewSave($event) (onShow)=onViewShow($event) (onDelete)=onViewDelete($event)
+			(onCancel)="isSettings.set( false )"></ql-list-settings>
+	} @else {
+	<!-- <ng-container> -->
 		<mat-toolbar style="padding-top: 20px; width: 100%;">
+			<mat-form-field subscriptSizing="dynamic">
+				<mat-label>View</mat-label>
+				<mat-select [(value)]="viewIndex" (selectionChange)="onViewChange($event.value)">
+					@for (view of views; track view; let i=$index) {
+						<mat-option [value]=i>{{ (view.name ?? "&lt;default&gt;") + (view.isAdhoc ? "*" : "") }}</mat-option>
+					}
+				</mat-select>
+			</mat-form-field>
+			<button matIconButton aria-label="Settings" (click)="isSettings.set(true)">
+				<mat-icon>settings</mat-icon>
+			</button>
+
 			<!-- <i class="material-icons" [innerHTML]="connected ? 'power' : 'power_off'"></i> -->
 			<!-- <button class="mdc-icon-button material-icons" (click)="settings()" >settings</button>  -->
 			<!--  [value]="application.Name" -->
@@ -26,7 +42,8 @@
 				<mat-datepicker #dateId></mat-datepicker>
 			</mat-form-field> -->
 			<!-- <mat-paginator (page)="pageChangeEvent($event)" [pageIndex]="pageIndex" [length]="data.length" [pageSize]="pageSize" [pageSizeOptions]="[14, 100, 500, 1000]" showFirstLastButtons></mat-paginator> -->
-			<!-- <paginator (page)="pageChangeEvent($event)" [pageLength]="pageSize" [lengthChange]="lengthChange.asObservable()" [startIndexChange]="startIndexChange.asObservable()"></paginator>[startIndex]="pageInfo.startIndex" -->
+			<paginator (onPageEvent)="onPagerChange($event)"  [pageSize]="data.pageSize"></paginator>
+			<!-- [startIndex]="pageInfo.startIndex" -->
 			<!-- <mat-form-field>
 				<input matInput (keyup)="applyFilter($event.target['value'])" placeholder="Filter">
 			</mat-form-field> -->
@@ -34,7 +51,7 @@
 			<button mat-icon-button [disabled]="selectedIndex==null"><mat-icon class="iconButton" (click)="hideSelectedMessage()">clear</mat-icon></button>
 			<button mat-icon-button [disabled]="selectedIndex==null"><mat-icon class="iconButton" (click)="navigateNext()">navigate_next</mat-icon></button> -->
 		</mat-toolbar>
-		<mat-table #mainTable [dataSource]="data" class="mat-elevation-z8"  matSort (matSortChange)="sortData($event)" [matSortActive]="sort.active" [matSortDirection]="sort.direction">
+		<mat-table #mainTable [dataSource]="data" class="mat-elevation-z8" matSort (matSortChange)="sortData($event)" [matSortActive]="sort.active" [matSortDirection]="sort.direction">
 			<ng-container matColumnDef="time">
 				<mat-header-cell mat-sort-header *matHeaderCellDef> Time </mat-header-cell>
 				<mat-cell style="text-align: left" title="{{element.time | date }}" mat-cell *matCellDef="let element"> {{element.time | date: "HH:mm:ss.SSS"}} </mat-cell>
@@ -62,8 +79,9 @@
 			<ng-container matColumnDef="index">
 				<mat-cell mat-cell *matCellDef="let element" class="number"> {{element.index}} </mat-cell>
 			</ng-container>
-			<mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></mat-header-row>
-			<mat-row mat-row class="table-row" *matRowDef="let row; columns: displayedColumns" [attr.indx]="row.index" [class.highlight]="selectedIndex==row.index" (click)="cellClick($event)"></mat-row>
+			<mat-header-row *matHeaderRowDef="displayedColumns(); sticky: true"></mat-header-row>
+			<mat-row mat-row class="table-row" *matRowDef="let row; columns: displayedColumns()" [attr.indx]="row.index" [class.highlight]="selectedIndex==row.index" (click)="cellClick($event)"></mat-row>
 		</mat-table>
-	</ng-container>
+	<!-- </ng-container> -->
+	}
 }

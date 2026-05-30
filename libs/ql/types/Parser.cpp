@@ -308,7 +308,7 @@ namespace Jde::QL{
 			table.Alias = move(alias);
 			if( system.size() ){
 				if( system=="__type" ){
-					if( auto typeName = table.FindPtr<jstring>( "name" ); typeName )
+					if( auto typeName = table.FindPtr<jstring>( "name" ); typeName && *typeName!="logTags" )
 						table.SetDBTable( DB::AppSchema::GetViewPtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(*typeName)), sl ) );
 				}
 				else if( system=="__schema" ){

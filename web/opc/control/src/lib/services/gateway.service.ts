@@ -2,7 +2,7 @@ import { Injectable, Inject, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
-import { AppService, AuthStore, Duration, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Timestamp, Type } from 'jde-framework';
+import { AppService, AuthStore, Duration, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Timestamp, Type, Query } from 'jde-framework';
 import { EProvider, User } from 'jde-spa';
 
 
@@ -69,6 +69,7 @@ export class GatewayService implements IGraphQL{
 			return new Promise<Gateway[]>( (resolve,reject)=>this.#gatewaysCallbacks.push({resolve:resolve,reject:reject}) );
 		return Promise.resolve( this.#gateways );
 	}
+	async ql<Y>( q:Query, log:Log ):Promise<Y>{ return this.defaultGateway.ql( q, log ); }
 	async query<T>( ql: string ):Promise<T>{ return this.defaultGateway.query<T>( ql ); }
 	async querySingle<T>( ql: string ):Promise<T>{ return this.defaultGateway.querySingle<T>( ql ); }
 	async schema( names:string[] ):Promise<TableSchema[]>{ return this.defaultGateway.schema( names ); }

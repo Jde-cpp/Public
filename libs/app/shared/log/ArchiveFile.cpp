@@ -26,7 +26,7 @@ namespace Jde::App{
 		if( !limit )
 			return false;
 		let& orderBy = input.OrderByJson();
-		if( orderBy.size()!=1 || orderBy.begin()->first!="time" || !orderBy.begin()->second )
+		if( orderBy.size()!=1 || orderBy.begin()->first!="time" || orderBy.begin()->second )
 			return false;
 		return EntrySize()>=limit+input.Skip();
 	}
@@ -91,6 +91,7 @@ namespace Jde::App{
 			for( int i=0; i<collection.size(); ++i ){
 				auto& s = collection.at( i );
 				let id = ToGuid( s.id() );
+				ASSERT_DESC( s.value().size() || id==EmptyStringMd5, "String with empty value must have empty md5." );
 				map[id] = move( *s.mutable_value() );
 			}
 		};
@@ -112,8 +113,12 @@ namespace Jde::App{
 		for( auto& fe : entries ){
 			if( fe.value_case()==FileEntry::ValueCase::kEntry )
 				logEntries.emplace_back( move(*fe.mutable_entry()) );
-			else if( fe.value_case()==FileEntry::ValueCase::kStr )
-				strings[ToGuid( fe.str().id() )] = move( *fe.mutable_str()->mutable_value() );
+			else if( fe.value_case()==FileEntry::ValueCase::kStr ){
+				let id = ToGuid( fe.str().id() );
+				auto& value = *fe.mutable_str()->mutable_value();
+				ASSERT_DESC( value.size() || id==EmptyStringMd5, "String with empty value must have empty md5." );
+				strings[id] = move( value );
+			}
 		}
 		auto addString = [&]( auto& map, auto& id ){
 			map.try_emplace( ToGuid(id), move(strings[ToGuid(id)]) );
@@ -223,7 +228,10 @@ namespace Jde::App{
 		jobject o;
 		jarray jentries;
 		auto strings = ql.FindTable( "strings" ) ? flat_map<uuid,string>{} : optional<flat_map<uuid,string>>{};
-		for( let& entry : entries ){
+		for( uint i=0; i<entries.size(); ++i ){
+			if( i<ql.Skip() || (ql.Limit() && i>=ql.Skip()+ql.Limit()) )
+				continue;
+			auto& entry = entries.at( i );
 			for( auto&& table : ql.Tables ){
 				if( table.JsonName=="entries" )
 					jentries.push_back( ToEntry(table, entry, strings) );

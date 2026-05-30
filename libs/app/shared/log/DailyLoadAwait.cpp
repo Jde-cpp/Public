@@ -15,10 +15,12 @@ namespace Jde::App{
 		try{
 			auto y = log ? log->Entries() : vector<App::Log::Proto::FileEntry>{};
 			TRACE( "Memory item count: {}", y.size() );
-			auto content = co_await IO::ReadAwait( _file );
-			auto fileContent = App::ProtoLog::Deserialize( move(content) );
-			TRACE( "DailyFile item count: {}", fileContent.size() );
-			y.insert( y.end(), make_move_iterator(fileContent.begin()), make_move_iterator(fileContent.end()) );
+			if( fs::exists(_file) ){
+				auto content = co_await IO::ReadAwait( _file );
+				auto fileContent = App::ProtoLog::Deserialize( move(content) );
+				TRACE( "DailyFile item count: {}", fileContent.size() );
+				y.insert( y.end(), make_move_iterator(fileContent.begin()), make_move_iterator(fileContent.end()) );
+			}
 			Resume( move(y) );
 		}
 		catch( exception& e ){

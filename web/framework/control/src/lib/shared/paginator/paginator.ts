@@ -1,4 +1,4 @@
-import {Component,EventEmitter,OnInit,Input,Output, OnDestroy, ChangeDetectorRef, NgModule} from '@angular/core';
+import {Component,EventEmitter,OnInit,Input,Output, OnDestroy, ChangeDetectorRef, NgModule, input, model, signal, effect, output, computed} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 //import { BrowserModule } from '@angular/platform-browser';
@@ -8,51 +8,70 @@ import { MatIconModule } from '@angular/material/icon';
 import { Observable, Subscription } from 'rxjs';
 
 export class PageEvent{
-	constructor(){this.startIndex=0; this.pageLength=50;}
+	constructor( paginator:Paginator ){
+		this.startIndex = paginator.startIndex();
+		this.pageSize = paginator.pageSize();
+	}
 	startIndex:number;
-	pageLength: number;
+	pageSize:number=50;
 }
 
 @Component({
 	selector: 'paginator',
 	templateUrl: './paginator.html',
+	styleUrls: ['./paginator.scss'],
 	imports:[MatIconModule, MatButtonModule, CommonModule, /*BrowserModule,*/ MatInputModule, FormsModule]
-
 })
 export class Paginator implements OnInit, OnDestroy{
-	constructor( private cdr: ChangeDetectorRef )
-	{}
-	ngOnInit()
-	{
-		this.lengthChangeSubscription = this.lengthChange.subscribe( (value)=>this.length = value );
-		this.startIndexChangeSubscription = this.startIndexChange.subscribe( (value)=>this.startIndex = value );
+	constructor( private cdr: ChangeDetectorRef ){
+		effect( ()=>{
+			this.previousPageIndex.set( this.pageIndex() );
+		} );
 	}
-	ngOnDestroy()
-	{
-		this.lengthChangeSubscription.unsubscribe();
-		this.startIndexChangeSubscription.unsubscribe();
+	ngOnInit(){
+		//this.lengthChangeSubscription = this.lengthChange.subscribe( (value)=>this.length = value );
+		//this.startIndexChangeSubscription = this.startIndexChange.subscribe( (value)=>this.startIndex = value );
 	}
-	onSelectionChange(  )
+	ngOnDestroy(){
+		//this.lengthChangeSubscription.unsubscribe();
+		//this.startIndexChangeSubscription.unsubscribe();
+	}
+	onSelectionChange()
 	{}
 
-	firstPage(){ this.startIndex = 0; }
-	prevPage(){ this.startIndex = this.startIndex-this.pageLength; }
-	prevItem(){ --this.startIndex; }
-	nextItem(){ ++this.startIndex; }
-	nextPage(){ this.startIndex = this.startIndex+this.pageLength; }
-	lastPage(){ this.startIndex = this.length-this.length%this.pageLength; }
-
+	onFirstPage(){
+		this.startIndex.set( 0 );
+		this.onPageEvent.emit( new PageEvent(this) );
+	}
+	onPreviousPage(){
+		this.startIndex.update( value => Math.max(value-this.pageSize(), 0) );
+		this.onPageEvent.emit( new PageEvent(this) );
+	}
+	onPrevItem(){ this.startIndex.update( value => Math.max( value-1, 0 ) ); this.onPageEvent.emit(new PageEvent(this)); }
+	onNextItem(){ this.startIndex.update( value => value+1 ); this.onPageEvent.emit(new PageEvent(this)); }
+	onNextPage(){ this.startIndex.update( value => value+this.pageSize() ); this.onPageEvent.emit(new PageEvent(this)); }
+	onLastPage(){
+		if( this.pageIndex()==Math.ceil(this.length()/this.pageSize())-1 )
+			return;
+		this.startIndex.update( value => this.length()-this.length()%this.pageSize() );
+	}
+	firstItemShowing = computed( () => this.startIndex()==0 );
+	isLastPage = computed( () => this.length()!=null && this.startIndex()+this.pageSize()>=this.length() );
+	onChangePageSize(value:number){
+		this.pageSize.set( value );
+		this.onPageEvent.emit( new PageEvent(this) );
+	}
 	get disabled(){ return this._disabled; }
 	set disabled(value){this._disabled=value;} _disabled: boolean=false;
-	@Input() hidePageLength: boolean;
-	@Input() lengthChange:Observable<number>;	private lengthChangeSubscription: Subscription;
-	@Input() startIndexChange:Observable<number>; private startIndexChangeSubscription: Subscription;
-	set length(value)
+	hidePageLength = input<boolean>( false );
+	length = input<number>( null );
+	get lengthDescription(){ return this.length()!=null ? ` of ${this.length()}` : ''; }
+	startIndex = model<number>(0);
+/*	set length(value)
 	{
 		if( !value )
 			value = 0;
-		if( value!=this.length )
-		{
+		if( value!=this.length ){
 			this._length = value;
 			if( value!=0 )
 				this.startIndex = this.settingsIndex || this.startIndex;
@@ -60,48 +79,55 @@ export class Paginator implements OnInit, OnDestroy{
 			this.cdr.detectChanges();
 		}
 	} get length(){return this._length;} _length: number=0; //The length of the total number of items that are being paginated.
-	lengthTimeout;
-	@Input() set pageIndex( value ){ this.startIndex = value*this.pageLength; } get pageIndex(){return this.startIndex/this.length; }
-	@Input() set pageLength(value)
-	{
-		if( value!=this.pageLength )
-		{
+*/
+	lengthTimeout:any;
+
+	pageSize = model.required<number>();
+	pageIndex = model<number>(0);
+	previousPageIndex = signal<number>(0);
+/*	//@Input() set pageIndex( value ){ this.startIndex = value*this.pageLength; } get pageIndex(){return this.startIndex()/this.length; }
+	@Input() set pageLength(value){
+		if( value!=this.pageLength ){
 			this._pageLength=value;
 			this.startIndex=this.startIndex;
-			if( this.page )
-			{
+			if( this.page ){
 				if( this.lengthTimeout )
 					clearTimeout( this.lengthTimeout );
-				this.lengthTimeout = setTimeout( ()=>{ this.lengthTimeout = undefined; this.page.next( {startIndex:this.startIndex, pageLength:this.pageLength} ); }, 1000 );
+				this.lengthTimeout = setTimeout( ()=>{
+					this.lengthTimeout = undefined;
+					this.page.next( {startIndex:this.startIndex(), pageLength:this.pageLength} );
+				}, 1000 );
 			}
 		} } get pageLength(){return this._pageLength;} _pageLength:number=50;
+*/
 	@Input() showFirstLastButtons: boolean=true;
-	@Output() page = new EventEmitter<PageEvent>();
+	//@Output() onPageEvent = new EventEmitter<PageEvent>();
+	onPageEvent = output<PageEvent>();
 	settingsIndex:number;
-	@Input()	set startIndex(value)
-	{
-		if( value>this.length-1 )
-		{
+/*	@Input()	set startIndex(value){
+		if( value>this.length-1 ){
 			if( this.length==0 )
 				this.settingsIndex = value;
 			value = this.length-this.pageLength-1;
 		}
 		if( value<0 )
 			value = 0;
-		if( value!=this.startIndex )
-		{
+		if( value!=this.startIndex ){
 			this._startIndex = value;
 			if( this.page )
 				this.page.next( {startIndex:this.startIndex, pageLength:this.pageLength} );
 		}
 	}
-	get startIndex(){return this._startIndex}; _startIndex:number=0;
-	get startIndexDisplay(){ return Math.max(0,Math.min(this.startIndex,this.length-1)); }
-	get endIndex()
-	{
-		const endIndex = Math.max( Math.min(this.startIndex+this.pageLength, this.length-1), 0 );
-		return endIndex;
-	}
-	get onFirstPage(){ return this.startIndex==0; }
-	get onLastPage(){ return this.endIndex==this.length-1; }
+	get startIndex(){return this._startIndex}; _startIndex:number=0;*/
+	startNumber = computed( () => {
+		return this.startIndex()+1;
+	});
+	endIndex = computed( () => {
+		let endIndex = this.startIndex()+this.pageSize()-1;
+		return this.length() ? Math.min( endIndex, this.length()-1 ) : endIndex;
+	});
+	endNumber = computed( () => {
+		return this.endIndex()+1;
+	});
+
 }

@@ -13,7 +13,7 @@ import { Gateway } from '../../services/gateway.service';
 		host: {class:'main-content mat-drawer-container my-content'},
 		imports: [MatTabsModule, QLList, Logs]
 })
-export class GatewayDetail implements OnInit{
+export class GatewayDetail implements OnInit, OnDestroy{
 	constructor( private route: ActivatedRoute )
 	{}
 
@@ -22,7 +22,12 @@ export class GatewayDetail implements OnInit{
 			this.pageData = <QLListData>routeData["data"];
 			this.sideNav.set( this.pageData.routing );
 			this.gateway = await this.gatewayService.gateway( this.pageData.routing.path.split('/').slice(-1)[0] );
+			this.isLoading.set( false );
 		});
+	}
+	ngOnDestroy(): void {
+		ProfileStore.setTabIndex( 'gateway-detail', this.tabIndex );
+		// Cleanup logic if needed
 	}
 
 	tabIndexChanged( index:number ){ this.tabIndex = index;}
@@ -34,4 +39,5 @@ export class GatewayDetail implements OnInit{
 
 	gateway:Gateway;
 	gatewayService = inject(GatewayService);
+	isLoading = signal<boolean>( true );
 }

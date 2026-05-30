@@ -8,6 +8,7 @@ export type Log = (m:string)=>void;
 export type Query = {text:string, vars:any};
 
 export interface IGraphQL{
+	ql<T>( q:Query, log:Log ):Promise<T>;
 	query<T>( ql: string, vars:any, log:Log ):Promise<T>;
 	querySingle<T>( ql: string, vars:any, log:Log ):Promise<T>;
 	schema( names:string[], log:Log ):Promise<TableSchema[]>;

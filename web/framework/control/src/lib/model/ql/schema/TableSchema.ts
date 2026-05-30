@@ -16,6 +16,7 @@ export class TableSchema extends MetaObject{
 
 		return result;
 	}
+	find( name:string ):Field{ return this.fields.find((x)=>x.name==name); }
 	fields = new Array<Field>();
 	get nonListFields():Array<Field>{ return this.fields.filter((x)=>x.type.kind!=FieldKind.LIST); }
 	get listFields():Array<Field>{ return this.fields.filter((x)=>x.type.kind==FieldKind.LIST); }

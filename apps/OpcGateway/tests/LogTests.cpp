@@ -8,6 +8,7 @@
 #include <jde/app/log/ProtoLog.h>
 #include <jde/app/client/RemoteLog.h>
 #include "../src/GatewayAppClient.h"
+#include "utils/GatewayClientSocket.h"
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{
@@ -89,14 +90,14 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_TRUE( jNow );
 	}
 	TEST_F( LogTests, Subscribe ){
-		auto ql = "subscription LogCreated{ logCreated(level: { gte: $level }, tags: $tags, start: $start){time text} }";
+		auto ql = "subscription LogCreated{ logCreated(level: {gte: $level}, tags: $tags, start: $start){time text} }";
 		jobject vars{
 			{ "level", "Information" },
 			{ "tags", jarray{"test"} },
 			{ "start", ToIsoString(Clock::now() - 1min) }
 		};
 		auto subs = QL::ParseSubscriptions( move(ql), vars, {}, SRCE_CUR );
-		auto l = subs.front().Fields.FindPtr<jobject>("level");
+		auto l = subs.front().Fields.FindPtr<jobject>( "level" );
 		ASSERT_TRUE( l );
 		BlockAwait<Web::Client::ClientSocketAwait<jarray>, jarray>( AppClient()->Subscribe(move(ql), vars, _listener, SRCE_CUR) );
 		App::Client::RemoteLog remote{ {{"delay", "PT0.001S"}}, AppClient() };
@@ -111,5 +112,10 @@ namespace Jde::Opc::Gateway::Tests{
 		//TODO add logs before subscription to make sure they are retrieved.
 		//Make sure only fields requested are returned.
 		//Make sure meta data is correct.
+	}
+	TEST_F( LogTests, LogTagsIntrospection ){
+		auto q = "__type( name: \"logTags\" ){ enumValues{id name description} }";
+		let value = Socket().QuerySync( move(q), {} );
+		TRACE( "Received: {}", serialize(value) );
 	}
 }

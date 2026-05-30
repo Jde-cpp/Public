@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 import { QLSchema } from './Schema';
 //https://graphql.org/learn/introspection/
 export enum FieldKind{
@@ -11,18 +12,20 @@ export enum FieldKind{
 	NON_NULL=7
 }
 
+type OfTypeJson = { kind: string|FieldKind, name?: string };
 export class OfType extends QLSchema{
-	constructor( j ){
+	constructor( j:OfType|OfTypeJson ){
 		super( j );
 		this.kind = typeof j.kind==="string" ? FieldKind[j.kind] : j.kind;
 	}
 	kind:FieldKind;
 }
 
+type FieldTypeJson = { kind: string|FieldKind, name?: string, ofType?: OfTypeJson };
 export class FieldType extends OfType{
-	constructor( j ){
+	constructor( j:FieldType|FieldTypeJson ){
 		super( j )
-		this.ofType = j.ofType ? new OfType( j.ofType ) : null;
+		this.ofType = j.ofType ? new OfType( j.ofType ) : undefined;
 	}
 	get underlyingKind():FieldKind{ return this.ofType?.kind ?? this.kind; }
 	get underlyingName():string{ return this.ofType?.name ?? this.name; }
@@ -30,10 +33,14 @@ export class FieldType extends OfType{
 	ofType:OfType;
 }
 
+export type NullableField = {name:string, ofType:OfTypeJson};
 export class Field extends QLSchema{
-	constructor( j ){
+	constructor( j:Partial<Field>|NullableField ){
 		super( j )
-		this.type = j.type ? new FieldType( j.type ) : undefined;
+		if( "ofType" in j )
+			this.type = new FieldType( { kind: FieldKind.NON_NULL, ofType: j.ofType } );
+		else
+			this.type = j.type ? new FieldType( j.type ) : undefined;
 	}
 	type:FieldType;
 	get underlyingKind(){ return this.type.kind; }

@@ -13,11 +13,12 @@ namespace Jde::QL{
 				let returnRaw = table.ReturnRaw && _tables.size()==1;
 				auto returnName = table.ReturnName();
 				if( _ql ){
-					if( table.JsonName=="status" )
+					let& jsonName = table.JsonName;
+					if( jsonName=="status" )
 						result = _ql->StatusQuery(move(table));
-					else if( auto await = table.JsonName.starts_with("logSetting") ? _ql->LogSettingsQuery(move(table), _sl) : nullptr; await )
+					else if( auto await = jsonName.starts_with("logSetting") ? _ql->LogSettingsQuery(move(table), _sl) : nullptr; await )
 						result = co_await *await;
-					else if( auto await = table.JsonName.starts_with("log") && !table.JsonName.starts_with("logLevel") ? _ql->LogQuery(move(table), _sl) : nullptr; await )
+					else if( auto await = jsonName.starts_with("log") && !jsonName.starts_with("logLevel") ? _ql->LogQuery(move(table), _sl) : nullptr; await )
 						result = co_await *await;
 					else if( auto await = _ql->CustomQuery(table, _creds, _sl); await )
 						result = co_await *await;

@@ -1,5 +1,9 @@
 import { Guid } from '../../model/Guid';
 import * as LogProto from '../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
+import { View, ViewField, ViewSerializedArgs } from '../../model/ql/View';
+import { Query } from '../../services/IGraphQL';
+import { TableSchema } from '../../model/ql/schema/TableSchema';
+import { Field, FieldKind, FieldType } from '../../model/ql/schema/Field';
 
 export type Entry={
 	templateId:Guid;
@@ -30,8 +34,63 @@ export class LogEntries{
 		});
 		queryResult.strings.forEach( s=>this.strings.set(s.id, s.value) );
 	}
+	static equals( a:Entry, b:Entry ):boolean{
+		return a.time.getTime() === b.time.getTime()
+			&& a.userId === b.userId
+			&& a.line === b.line
+			&& a.level === b.level
+			&& a.templateId.equals(b.templateId)
+			&& a.fileId.equals(b.fileId)
+			&& a.functionId.equals(b.functionId);
+	}
+	static columns: Record<string,string> = {
+		time: "Time",
+		level: "Level",
+		line: "Line",
+		message: "Message",
+		file: "File",
+		function: "Function",
+		tags: "Tags",
+		user: "User"
+	};
 	entries:Entry[];
 	strings:Map<string,string> = new Map<string,string>();
+}
+export class LogView extends View{
+	override query():Query{
+		const vars = {limit: this.limit*3, skip: 0, orderBy: this.sort};
+		const q = "logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
+		return { text: q, vars: vars };
+	}
+	static schema:TableSchema = new TableSchema( {
+	name: "LogEntry",
+	fields: [
+		new Field( {name: "time", type: new FieldType({ kind: FieldKind.SCALAR, name: "Date"})} ),
+		new Field( {name: "level", type: new FieldType({ kind: FieldKind.OBJECT, name: "LogLevel" })} ),
+		new Field( {name: "message", type: new FieldType({kind: FieldKind.SCALAR, name: "String"})} ),
+		new Field( {name: "tags", type: new FieldType({kind: FieldKind.LIST, name:"LogTags"})} ),
+		new Field( {name: "user", ofType: { kind: FieldKind.SCALAR, name: "String" } }),
+		new Field( {name: "file", ofType: { kind: FieldKind.SCALAR, name: "String" } }),
+		new Field( {name: "line", ofType: { kind: FieldKind.SCALAR, name: "Number" } }),
+		new Field( {name: "function", ofType: { kind: FieldKind.SCALAR, name: "String" } }),
+	] } );
+	static default():LogView{
+		let schema = LogView.schema;
+		let toViewField = (name:string) => new ViewField( {qlField: schema.find(name)} );
+		let args:ViewSerializedArgs = {
+			name: undefined,
+			collectionName: "logs",
+			limit: 24,
+			showSelector: false,
+			sort: [ { active: 'time', direction: 'desc' } ],
+			fields: [
+				toViewField("time"),
+				toViewField("level"),
+				toViewField("message")
+			]
+		};
+		return new LogView( args, schema );
+	}
 }
 /*
 export class LogEntry

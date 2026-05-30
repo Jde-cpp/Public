@@ -15,5 +15,6 @@ export class Guid{
 		let y = this.value.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '');
 		return `${y.substring(0, 8)}-${y.substring(8, 12)}-${y.substring(12, 16)}-${y.substring(16, 20)}-${y.substring(20)}`;
 	}
+	equals( other:Guid ){ return this.value.every( (byte, index) => byte === other.value[index] ); }
 	value:Uint8Array;
 }

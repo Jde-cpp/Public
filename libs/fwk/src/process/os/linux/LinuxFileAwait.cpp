@@ -126,7 +126,8 @@ namespace Jde::IO{
 
 	Ω checkProcessed( ELogTags _tags )ι->void;
 	Ω submit( sp<FileIOArg> op, ELogTags _tags )ι->void{
-		TRACE( "Submitting file IO: {}, size: {}, chunks: {}, requestCount: {}", op->Path.string(), op->Size(), op->ChunksToSend, _requestCount.load() );
+		TRACE( "Submitting file IO: {}, size: {}, chunks: {}, requestCount: {}, isRead: {}", op->Path.string(), op->Size(), op->ChunksToSend, _requestCount.load(), op->IsRead );
+		//TRACE( "Submitting file IO: {}, size: {}, chunks: {}, requestCount: {}, isRead: {}", Path.string(), totalBytes, ChunksToSend, _requestCount.load(), IsRead );
 		int result = io_uring_submit( &_ring );
 		if( result>=0 ){
 			ASSERT( _requestCount );
@@ -204,7 +205,6 @@ namespace Jde::IO{
 			let content = IsRead ? "" : Str::Replace(string{ Data(), Size() }, "\n", "\\n" );
 		}
 		++_requestCount;
-		TRACE( "Submitting file IO: {}, size: {}, chunks: {}, requestCount: {}, isRead: {}", Path.string(), totalBytes, ChunksToSend, _requestCount.load(), IsRead );
 		PostIO( [self, initialSendTotal = std::min<uint8>((uint8)ChunksToSend, threadSize), tags=_tags ](){
 			for( uint i=0; i<initialSendTotal; ++i )
 				addNextChunkToQueue( self );

@@ -4,7 +4,7 @@ import { HttpClient, HttpEvent, HttpResponse, HttpSentEvent } from '@angular/com
 import { FieldKind } from '../model/ql/schema/Field';
 import { fromIsoDuration, verify } from '../utils/utils';
 import { TableSchema } from '../model/ql/schema/TableSchema';
-import { EnumValue, Log, IQueryResult } from '../services/IGraphQL';
+import { EnumValue, Log, IQueryResult, Query } from '../services/IGraphQL';
 import { MutationSchema } from '../model/ql/schema/MutationSchema';
 import { Instance } from './app/app.service.types';
 import * as LogProto from '../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
@@ -269,10 +269,10 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		if( this.log.restResults ) log( JSON.stringify(y).substring(0,this.log.maxLength) );
 		return y ? y["data"] : null;
 	}
-	private async graphQL<Y>( query: string, vars:any, log?:Log ):Promise<Y>{
-		var target = `graphql?query={${query}}`;
-		if( vars )
-			target += `&variables=${encodeURIComponent( JSON.stringify(vars))}`;
+	async ql<Y>( q:Query, log:Log ):Promise<Y>{
+		var target = `graphql?query={${q.text}}`;
+		if( q.vars )
+			target += `&variables=${encodeURIComponent( JSON.stringify(q.vars))}`;
 		const y = await this.get( target, log );
 		return y ? y["data"] : null;
 	}
@@ -283,7 +283,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		return data["__type"]["enumValues"].map( (x:EnumValue)=>x.id );
 	}
 	async query<Y>( ql:string, vars?:any, log?:Log ):Promise<Y>{
-		return await this.graphQL( ql, vars, log );
+		return await this.ql( {text: ql, vars:vars}, log ?? console.log );
 	}
 	async querySingle<Y>( ql:string, vars?:any, log?:Log ):Promise<Y>{
 		const y = await this.query<any>( ql, vars, log );
@@ -298,7 +298,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		const fieldIndex = ql.indexOf('{');
 		const index = inputIndex<0 ? fieldIndex : fieldIndex<0 ? inputIndex : Math.min( inputIndex, fieldIndex );
 		const member = ql.substring( 0, index ).trim();
-		const result = await this.graphQL( ql, vars, log );
+		const result = await this.ql( {text: ql, vars:vars}, log ?? console.log );
 		if( !result.hasOwnProperty(member) )
 			throw `'${member}' not found in ${JSON.stringify(result)}.`;
 		const y = result[member];
@@ -436,7 +436,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	protected abstract encode( t:Transmission );
 
 	protected backlog:Transmission[] = [];
-	protected log = { sockRequests:true, sockResults:true, restRequests:true, restResults:false, subRequest:true, subResults:true, maxLength:255 };
+	protected log = { sockRequests:true, sockResults:true, restRequests:true, restResults:true, subRequest:true, subResults:true, maxLength:255 };
 	//Informational purposes only to match with server logs.
 	protected get socketId():number{ return this.#socketId; } #socketId:number;
 	get instances(){return this.#instances;} set instances(x){

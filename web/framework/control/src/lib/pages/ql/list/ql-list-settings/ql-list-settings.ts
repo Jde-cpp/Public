@@ -47,7 +47,7 @@ export class QLListSettings implements OnInit, OnDestroy{
 			|| ( this.originalName()==this.name() && !this.view().name );
 	}
 	onTabIndexChanged( index:number ){ this.tabIndex.set(index); }
-	excludedColumns = input.required<string[]>();
+	excludedColumns = input<string[]>([]);
 	suggestions = input.required<Record<string,any[]>>();
 	schema = input.required<TableSchema>();
 	view = input.required<View>();

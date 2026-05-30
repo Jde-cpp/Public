@@ -16,6 +16,7 @@ import { MatToolbar } from '@angular/material/toolbar';
 import { Operator, View, ViewField } from '../../../../../model/ql/View';
 import { StringUtils } from '../../../../../utils/StringUtils';
 import { MatInput } from "@angular/material/input";
+import { Schema } from '@angular/forms/signals';
 
 
 @Component( {
@@ -27,24 +28,18 @@ import { MatInput } from "@angular/material/input";
 })
 export class QLListSettingsDisplay implements OnInit{
 	ngOnInit(){
-		this.dataSource = [{name:"Selector", displayed:this.view().showSelector}, ...this.view().fields.map( f => new ViewField(f) )];
+		let columns:(SelectorField|ViewField)[] = [{name:"Selector", displayed:this.view().showSelector}];
+		for( let [name,display] of Object.entries(this.columns()) ){
+			let field = this.view().fields.find( f=>f.name==name );
+			if( field )
+				columns.push( field );
+			else //if( !this.excludedColumns().includes(name) )
+				columns.push( new ViewField({field:{name: name, hidden:true, displayName: display}, schema:this.schema()}) );
+		}
+		//
+		//[{name:"Selector", displayed:this.view().showSelector}, ...this.view().fields.map( f => new ViewField(f) )]
+		this.dataSource = columns;
 	}
-/*	updateFilterValue( value: string, col: ViewField ){
-		let field = this.dataSource.find( c=>c.name==col.name );
-		if( !field.filter )
-			field.filter = { operator: Operator.In, value: value };
-		else
-			field.filter.value = value ? value : undefined;
-	}
-	updateFilterOperator(op: Operator, col: ViewField){
-		let field = this.dataSource.find( c=>c.name==col.name );
-		if( !field.filter )
-			field.filter = { operator: op, value: null };
-		else if( op == Operator.None )
-			field.filter = undefined;
-		else
-			field.filter.operator = op;
-	}*/
 	cellClick( row:any ){
 		this.selection.set( row );
 	}
@@ -62,8 +57,13 @@ export class QLListSettingsDisplay implements OnInit{
 	get columnNames(){ return ["position", "select", "name"] };
 	dataSource:(SelectorField|ViewField)[] = [];
 	selection = signal<ViewField>( null );
+
 	view = input.required<View>();
-  Operator = Operator;
+	columns = input.required<Record<string,string>>();
+	//excludedColumns = input.required<string[]>();
+	schema = input.required<TableSchema>();
+
+	Operator = Operator;
 	operatorList = Object.values(Operator);
   @ViewChild('table', {static: true}) table!: MatTable<SelectorField|ViewField>;
 }

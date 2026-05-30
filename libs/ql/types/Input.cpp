@@ -87,7 +87,7 @@ namespace Jde::QL{
 			y = DB::Key{ string{*target} };
 		return y;
 	}
-	α Input::OrderByJson()Ι->const vector<std::pair<string,bool>>&{
+	α Input::OrderByJson()Ι->const vector<std::pair<string,bool>>&{	//[column,asc]
 		if( _orderBy )
 			return *_orderBy;
 		_orderBy = vector<std::pair<string,bool>>{};

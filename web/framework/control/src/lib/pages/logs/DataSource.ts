@@ -3,42 +3,48 @@ import { MatTable } from '@angular/material/table';
 import {Sort} from '@angular/material/sort';
 import { Guid } from '../../model/Guid';
 //import { TraceEntry } from './TraceEntry';
-import { Subject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 
 import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
 import * as LogProto from '../../proto/Log'; import Log = LogProto.Jde.App.Log.Proto;
 import { Entry, LogEntries } from './LogEntry';
 import { verify } from '../../utils/utils';
-export class PageStats{ constructor( public length?:number, public startIndex?:number ){} };
+import { DataSource } from '@angular/cdk/table';
+import { CollectionViewer } from '@angular/cdk/collections';
+export type PageStats = { length?:number, startIndex?:number };
 
-export class DataSource{
-	constructor( private pageSize:Signal<number> )
-	{}
+export class LogDataSource extends DataSource<Entry>{
+	constructor(){
+		super();
+	}
 
-	connect( table:MatTable<Entry> ){
+	connect( collectionViewer: CollectionViewer ):Observable<readonly Entry[]>{
 		if( !this.observable ){
 			this.observable = new Subject<Entry[]>();
-			setTimeout( ()=>{this.setPage();}, 1 );
+			setTimeout( ()=>{this.setPage(0);}, 1 );
 		}
+		else if( this.entries.length )
+			setTimeout( ()=>{this.setPage(0);}, 1 );
 		return this.observable;
 	}
-	disconnect(){
-		this.entries.length=0;
+
+	disconnect(collectionViewer: CollectionViewer){
+		//this.entries.length=0;
 	}
 	setPage( start=-1, pageSize=0 ){
-		// if( pageSize>0 )
-		// 	this.pageSize.set(pageSize);
+		if( pageSize>0 )
+		 	this.pageSize = pageSize;
 		const showEnd = start==-1 || start+pageSize>=this.entries.length;
-		start = showEnd ? Math.max( this.entries.length-this.pageSize(), 0 ) : start;
+		start = showEnd ? Math.max( this.entries.length-this.pageSize, 0 ) : start;
 		let values = new Array<Entry>();
-		var end = Math.min( start+this.pageSize(), this.entries.length );
+		var end = Math.min( start+this.pageSize, this.entries.length );
 		for( let i=start; i<end; ++i )
 			values.push( this.entries[i] );
 		if( this.observable )
 			this.observable.next( values );
 		return start;
 	}
-	locationOf( data:Entry[], entry:Entry, start:number, end:number ){//https://stackoverflow.com/questions/1344500/efficient-way-to-insert-a-number-into-a-sorted-array-of-numbers
+	locationOf( data:Entry[], entry:Entry, start:number, end:number ):number{//https://stackoverflow.com/questions/1344500/efficient-way-to-insert-a-number-into-a-sorted-array-of-numbers
 		var result = end;
 		if( data.length>0 && this.compare(data[end-1],entry)==1 ){
 			if( this.compare(entry, data[start])==-1 )
@@ -59,15 +65,32 @@ export class DataSource{
 		return result;
 	}
 
-	pushArray( entries:LogEntries ):PageStats{
-		let result = null;
-		entries.entries.forEach( (x)=>result = this.push(x) );
-		entries.strings.forEach( (value,key)=>this.strings.set( key, value ) );
-		return result;
+	pushArray( data:LogEntries ):PageStats{
+		let result:PageStats = null;
+		//remove duplicates
+		let loaded = data.entries[0];
+		for( let i=this.allEntries.length-1; i>=0; --i ){
+			let existing = this.allEntries[i];
+			if( LogEntries.equals(loaded, existing) ){
+				data.entries.shift();
+				loaded = data.entries[0];
+				i=this.allEntries.length;
+			}
+			else if( this.sort.active=='time' ){
+				if( this.sort.direction=='desc' && loaded.time.getTime()<existing.time.getTime() )
+					break;
+				else if( this.sort.direction=='asc' && loaded.time.getTime()>existing.time.getTime() )
+					break;
+			}
+		}
+		data.entries.forEach( (x)=>result = this.push(x) );
+		data.strings.forEach( (value,key)=>this.strings.set( key, value ) );
+		return { length: this.entries.length, startIndex: 0 };
 	}
+
 	push( entry:Entry ):PageStats{
 		entry.index = this.allEntries.length;
-		let push2 = (data)=>{
+		let addToArray = (data)=>{
 			const location = this.locationOf( data, entry, 0, data.length );
 			if( location==data.length )
 				data.push( entry );
@@ -76,16 +99,15 @@ export class DataSource{
 			else
 				data.splice( location, 0, entry );
 		}
-		push2( this.allEntries );
-		let result = new PageStats( this.entries.length );
+		addToArray( this.allEntries );
+		let result:PageStats = { length: this.entries.length };
 		if( !entry.hidden )
-			push2( this.entries );
+			addToArray( this.entries );
 		if( this.autoScroll )
 			result.startIndex = this.setPage();
 		return result;
 	}
-	clear()
-	{
+	clear(){
 		this.entries.length=0;
 		this.setPage();
 	}
@@ -123,7 +145,7 @@ export class DataSource{
 		let argIndex = 0;
 		for( let i=0; i<template.length; ++i ){
 			let ch = template[i];
-			if( ch!='{' || i+2>=template.length || (ch=='{' && template[i+1]=='{') ){
+			if( ch!='{' || i+1>=template.length || (ch=='{' && template[i+1]=='{') ){
 				text += ch;
 				if( ch=='{' && i+1<template.length )
 					text += template[++i];
@@ -168,11 +190,11 @@ export class DataSource{
 			if( this.entries[visibleIndex].index==dataIndex )
 				break;
 		}
-		let page = Math.floor( visibleIndex/this.pageSize() );
-		let start = page*this.pageSize();
+		let page = Math.floor( visibleIndex/this.pageSize );
+		let start = page*this.pageSize;
 		this.#pageIndex.set( page );
 		let values = new Array<Entry>();
-		const end = Math.min( start+this.pageSize(), this.entries.length );
+		const end = Math.min( start+this.pageSize, this.entries.length );
 		for( let i=start; i<end; ++i )
 			values.push( this.entries[i] );
 		//if( this.observable )
@@ -203,7 +225,7 @@ export class DataSource{
 			selectedIndex = this.entries.length-1;
 		//this.entries = visibleData;
 		this.setPage( selectedIndex );
-		return new PageStats( this.entries.length, selectedIndex );
+		return { length: this.entries.length, startIndex: selectedIndex };
 	}
 	applyFilter( filter:string, hiddenIds:Guid[] ){
 		let visibleData:Entry[] = [];
@@ -222,6 +244,7 @@ export class DataSource{
 	// onPageChange= new EventEmitter<number>();
 	get pageIndex(){ return this.#pageIndex.asReadonly(); }
 	#pageIndex = signal<number>( 0 );
+	pageSize:number;
 	//get filter(){return _filter;} set filter( value){_filter=value; applyFilter(value);} string _filter;
 	sort:Sort;
 	observable:Subject<Entry[]>;

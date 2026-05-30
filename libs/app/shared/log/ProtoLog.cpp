@@ -141,6 +141,7 @@ namespace Jde::App{
 		AddString( id, str, _cache.Strings );
 	}
 	α ProtoLog::AddString( uuid id, sv str, std::deque<uuid>& cache )ι->void{
+		ASSERT_DESC( str.size() || id==EmptyStringMd5, "String with empty value must have empty md5." );
 		if( find(cache, id)!=cache.end() )
 			return;//TODO update position
 		cache.push_front( id );

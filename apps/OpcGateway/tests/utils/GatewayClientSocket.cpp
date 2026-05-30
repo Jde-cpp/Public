@@ -108,6 +108,9 @@ namespace Tests{
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]'{}', variables: {}.", requestId, query, serialize(variables) );
 		return await<jvalue>{ FromClientUtils::Query(move(query), move(variables), returnRaw, requestId), requestId, shared_from_this(), sl };
 	}
+	α GatewayClientSocket::QuerySync( string&& query, jobject variables )ι->jvalue{
+		return BlockAwait<await<jvalue>,jvalue>( Query(move(query), move(variables), true) );
+	}
 	α GatewayClientSocket::Subscribe( ServerCnnctnNK target, const vector<NodeId>& nodes, sp<IListener> listener, SL sl )ε->await<FromServer::SubscriptionAck>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, target );
@@ -122,7 +125,7 @@ namespace Tests{
 		ql["id"] = requestId;
 		ul _{ _logSubscriptionsMutex };
 		_logSubscriptions.emplace( (uint32)requestId, move(listener) );
-		auto query = serialize(ql);
+		auto query = serialize( ql );
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, query.substr(0, Web::Client::MaxLogLength()) );
 		return await<jarray>{ FromClientUtils::Query(move(query), move(vars), true, requestId), requestId, shared_from_this(), sl };
 	}
