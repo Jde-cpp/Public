@@ -5,6 +5,8 @@
 #include <jde/fwk/process/execution.h>
 #include <jde/fwk/utils/Vector.h>
 #include <jde/fwk/process/thread.h>
+#include <atomic>
+#include <fstream>
 
 #define let const auto
 
@@ -98,6 +100,46 @@ namespace Jde::IO::Tests{
 		readValues.visit( [&](const uuid& guid){
 			ASSERT_TRUE( find(guids, guid)!=guids.end() );
 		});
+	}
+
+	Ω writeRaw( fs::path file, string content, std::atomic<bool>& done, SRCE )->LockKeyAwait::Task{
+		auto l = co_await LockKeyAwait{ file.string() };
+		[sl]( fs::path file, string content, std::atomic<bool>& done, CoLockGuard )->VoidAwait::Task {
+			try{
+				co_await IO::WriteAwait{ move(file), move(content), true, Jde::ELogTags::Test, sl };
+			}
+			catch( IException& e ){
+				e.Log();
+			}
+			done = true;
+		}( move(file), move(content), done, move(l) );
+	}
+
+	// Regression for the ChunksToSend off-by-one: a write whose size is an exact multiple of
+	// ChunkByteSize() must still complete. ChunksToSend was computed as size/ChunkByteSize()+1,
+	// one more than the number of chunks actually queued whenever the size divides evenly, so the
+	// final chunk's completion never satisfied ChunksToSend==ChunksCompleted and the write hung.
+	TEST_F( FileTests, WriteExactChunkMultiple ){
+		let chunkSize = IO::ChunkByteSize();
+		for( uint chunks : {1u, 2u, 3u} ){
+			let size = chunks*chunkSize;
+			let file = Tests::file( 100+chunks );
+			if( fs::exists(file) )
+				fs::remove( file );
+			let content = string( size, (char)('A'+chunks) ); //distinct, deterministic per file
+			std::atomic<bool> done{};
+			writeRaw( file, content, done );
+
+			let deadline = steady_clock::now()+10s;
+			while( !done && steady_clock::now()<deadline )
+				std::this_thread::sleep_for( 5ms );
+			ASSERT_TRUE( done ) << "write of " << size << " bytes (" << chunks << " chunk(s)) never completed";
+
+			std::ifstream is{ file, std::ios::binary };
+			let actual = string{ std::istreambuf_iterator<char>{is}, std::istreambuf_iterator<char>{} };
+			ASSERT_EQ( actual.size(), size );
+			ASSERT_EQ( actual, content );
+		}
 	}
 
 	constexpr uint _fileSize{ 5 };

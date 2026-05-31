@@ -13,7 +13,6 @@
 #define let const auto
 
 namespace Jde{
-	constexpr ELogTags _tags = ELogTags::App;
 	string _applicationName;
 	α Process::AppName()ι->const string&{ return _applicationName; }
 
@@ -131,6 +130,7 @@ namespace Jde{
 	Ω cleanup( bool terminate )ι->void{
 		INFOT( ELogTags::App, "Clearing Logger" );
 		_finalizing = true;
+		std::this_thread::sleep_for( 100ms );
 		Logging::DestroyLoggers( terminate );
 		std::cout << "Shutdown complete." << std::endl;
 	}

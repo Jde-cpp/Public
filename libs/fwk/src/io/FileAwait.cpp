@@ -17,7 +17,6 @@ namespace Jde{
 	}
 
 namespace IO{
-	constexpr ELogTags _tags = ELogTags::IO;
 	α IFileChunkArg::Handle()Ι->HFile&{ return _fileIOArg->Handle; }
 	α IFileChunkArg::IsRead()Ι->bool{ return _fileIOArg->IsRead; }
 

@@ -18,8 +18,13 @@ namespace Jde::Logging{
 	struct Γ Entry final{
 		template<class... Args> Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι;
 		template<class... Args> Entry( SL sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, string&& m, ARGS... args )ι;
+#ifdef __cpp_lib_stacktrace
 		template<class... Args> Entry( const std::stacktrace_entry& sl, ELogLevel l, ELogTags tags, FormatString&& m, ARGS... args )ι;
 		template<class... Args> Entry( const std::stacktrace_entry& sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, FormatString&& m, ARGS... args )ι;
+#else
+		template<class... Args> Entry( const boost::stacktrace::frame& sl, ELogLevel l, ELogTags tags, FormatString&& m, ARGS... args )ι;
+		template<class... Args> Entry( const boost::stacktrace::frame& sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, FormatString&& m, ARGS... args )ι;
+#endif
 		Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, vector<string> args={} )ι;
 		Entry( SL sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, string&& m, vector<string> args )ι;
 		Entry( ELogLevel l, ELogTags tags, uint32_t line, TimePoint time, Jde::UserPK userId, uuid messageId, uuid fileId, uuid functionId, vector<string>&& args )ι;
@@ -65,6 +70,7 @@ namespace Jde::Logging{
 		ParamPack::Append( Arguments, args... );
 	}
 
+#ifdef __cpp_lib_stacktrace
 	template<class... Args>
 	Entry::Entry( const std::stacktrace_entry& sl, ELogLevel l, ELogTags tags, FormatString&& m, ARGS... args )ι:
 		Entry{ sl, l, tags, {}, FWD(m), FWD(args)... }
@@ -83,6 +89,8 @@ namespace Jde::Logging{
 		_functionName{ sl.description() }{
 		ParamPack::Append( Arguments, FWD(args)... );
 	}
+#endif
+
 }
 #undef ARGS
 #undef FormatString

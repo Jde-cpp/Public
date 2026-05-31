@@ -146,7 +146,7 @@
 			"cacheVariables": {
 				"Boost_USE_STATIC_LIBS": true,
 				"BOOST_VERSION": "1.91.0",
-				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-changes-meaning"
+				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-changes-meaning -Wno-unqualified-std-cast-call"
 			}
 		},
 		{
@@ -170,7 +170,9 @@
 				"CMAKE_CXX_COMPILER": "clang++-22",
 				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
 				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++",
-				"CMAKE_CXX_FLAGS_DEBUG": "-fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -lrt"
+				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++",
+				"CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL",
+				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-unqualified-std-cast-call"
 			}
 		}
 	],

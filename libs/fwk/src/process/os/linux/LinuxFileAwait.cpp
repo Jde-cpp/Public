@@ -1,7 +1,6 @@
 //#include <unistd.h>
 #include <aio.h>
 #include <liburing.h>
-#include "LinuxDrive.h"
 #include <jde/fwk/io/Cache.h>
 #include <jde/fwk/io/file.h>
 #include <jde/fwk/io/FileAwait.h>
@@ -70,28 +69,9 @@ namespace Jde::IO{
 
 	Ω addNextChunkToQueue( sp<FileIOArg> op )ι->bool;
 	uint _checkIndex;
-	Ω processFinishedChunks( uint size, struct io_uring_cqe** cqe )ι->sp<FileIOArg>{
-		sp<FileIOArg> submitOp;
-		sp<FileIOArg> lastOp;
-		let complete = [&]( ELogTags _tags ){
-			--_requestCount;
-			TRACE( "Completed file IO: {}, size: {}, chunks: {}, requestCount: {}", lastOp->Path.string(), lastOp->Size(), lastOp->ChunksToSend, _requestCount.load() );
-			if( lastOp->IsRead ){
-				if( auto h = lastOp->ReadCoHandle(); h ){
-					lastOp->_coHandle = (TAwait<string>::Handle)nullptr;
-					Post( get<string>(move(lastOp->Buffer)), move(h) );
-				}
-			}
-			else{
-				if( auto h = lastOp->WriteCoHandle(); h ){
-					lastOp->_coHandle = (VoidAwait::Handle)nullptr;
-					Post( move(h) );
-				}
-				else
-					CRITICAL( "[{}]no handle.", lastOp->Path.string() );
-			}
-		};
-
+	Ω processFinishedChunks( uint size, struct io_uring_cqe** cqe )ι->vector<sp<FileIOArg>>{
+		vector<sp<FileIOArg>> submitOps;
+		vector<sp<FileIOArg>> completedOps;
 		for( uint i=0; i<size; ++i ){
 			struct io_uring_cqe* cq = cqe[i];
 			if( cq->flags & IORING_CQE_F_MORE ){
@@ -112,16 +92,32 @@ namespace Jde::IO{
 				continue;
 			}
 			ASSERT( (uint)cq->res == chunk->Bytes );
-			lastOp = chunk->FileArg();
-			if( lastOp->ChunksToSend>++lastOp->ChunksCompleted && addNextChunkToQueue(lastOp) ){
-				submitOp = lastOp;
+			auto op = chunk->FileArg();
+			if( op->ChunksToSend>++op->ChunksCompleted ){
+				if( addNextChunkToQueue(op) )
+					submitOps.push_back(op);
+			}
+			else
+				completedOps.push_back(op);
+		}
+		for( auto& completed : completedOps ){
+			--_requestCount;
+			if( completed->IsRead ){
+				if( auto h = completed->ReadCoHandle(); h ){
+					completed->_coHandle = (TAwait<string>::Handle)nullptr;
+					Post( get<string>(move(completed->Buffer)), move(h) );
+				}
+			}
+			else{
+				if( auto h = completed->WriteCoHandle(); h ){
+					completed->_coHandle = (VoidAwait::Handle)nullptr;
+					Post( move(h) );
+				}
+				else
+					CRITICAL( "[{}]no handle.", completed->Path.string() );
 			}
 		}
-		if( lastOp->ChunksToSend==lastOp->ChunksCompleted ){
-			ASSERT( !submitOp );
-			complete( lastOp->_tags);
-		}
-		return submitOp;
+		return submitOps;
 	}
 
 	Ω checkProcessed( ELogTags _tags )ι->void;
@@ -149,10 +145,10 @@ namespace Jde::IO{
 			ASSERT( io_uring_cqe_get_data(cq) );
 		}
 
-		auto fileIOArg = size ? processFinishedChunks( size, pcqe ) : sp<FileIOArg>{};
-		if( fileIOArg )
-			submit( move(fileIOArg), _tags );
-		else if( _requestCount )
+		auto submitOps = size ? processFinishedChunks( size, pcqe ) : vector<sp<FileIOArg>>{};
+		for( auto& op : submitOps )
+			submit( move(op), _tags );
+		if( submitOps.empty() && _requestCount )
 			PostIO( [tags=_tags](){ checkProcessed(tags); } );
 	}
 	Ω addNextChunkToQueue( sp<FileIOArg> op )ι->bool{
@@ -198,7 +194,7 @@ namespace Jde::IO{
 		auto self = shared_from_this();
 		{
 			//lg l{ ChunkMutex };
-			ChunksToSend = totalBytes/chunkByteSize+1;
+			ChunksToSend = (totalBytes+chunkByteSize-1)/chunkByteSize; //ceil( totalBytes / chunkByteSize )
 			for( uint i=0; i*chunkByteSize<totalBytes; ++i )
 				Chunks.emplace( mu<LinuxChunk>(self, i) );
 			let content = IsRead ? "" : Str::Replace(string{ Data(), Size() }, "\n", "\\n" );

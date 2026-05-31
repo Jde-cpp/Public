@@ -36,7 +36,6 @@ namespace Jde{
 
 namespace Jde::Logging{
 	auto _pOnceMessages = mu<flat_map<uint,flat_set<string>>>(); std::shared_mutex OnceMessageMutex;
-	constexpr ELogTags _tags{ ELogTags::Settings };
 }
 
 namespace Jde{

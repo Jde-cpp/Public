@@ -54,13 +54,27 @@ namespace Jde{
 		}
 		return {};
 	}
+
 	α Chrono::ToTimePoint( string iso, SL sl )ε->TimePoint{
-		TimePoint tp;
-		std::istringstream is{ iso };
-		is >> std::chrono::parse( "%FT%T", tp );
-		THROW_IFSL( is.fail(), "Could not parse ISO time:  {}", iso );
-		return tp;
+		#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
+			TimePoint tp;
+			std::istringstream is{ iso };
+			is >> std::chrono::parse( "%FT%T", tp );
+			THROW_IFSL( is.fail(), "Could not parse ISO time:  {}", iso );
+			return tp;
+		#else
+			std::istringstream is{ iso };
+			std::tm tm{};
+			is >> std::get_time( &tm, "%Y-%m-%dT%H:%M:%S" );
+			THROW_IFSL( is.fail(), "Could not parse ISO time:  {}", iso );
+			// timegm interprets tm as UTC, matching the %FT%T sys_time branch (mktime would apply the local tz offset).
+			auto tp = std::chrono::system_clock::from_time_t( ::timegm(&tm) );
+			if( iso.size()>19 && iso[19]=='.' )
+				tp += std::chrono::milliseconds( Round(std::stod( iso.substr(19) )*1000) );
+			return tp;
+		#endif
 	}
+
 	α Chrono::ToTimePoint( uint16_t y, uint8_t mnth, uint8_t dayOfMonth, uint8 h, uint8 mnt, uint8 scnd, Duration subseconds, SL sl )ε->TimePoint{
     auto ymd = year{y}/month{mnth}/day{dayOfMonth};
 		THROW_IFSL( !ymd.ok(), "Invalid date: {}-{}-{}", y, mnth, dayOfMonth );

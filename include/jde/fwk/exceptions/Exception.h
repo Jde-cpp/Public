@@ -266,8 +266,6 @@ namespace Jde{
 		return result;
 	}
 
-	template <class Y, class X> α cast( sp<X> x, sv error, SRCE )ε->sp<Y>{ sp<Y> y = std::dynamic_pointer_cast<X,Y>(x); if( !y ) throw Jde::Exception{sl, ELogLevel::Error, error}; return y; }
-
 #undef $
 #undef COMMON
 #undef let

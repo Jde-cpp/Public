@@ -1,6 +1,6 @@
 {
 	testing:{
-		tests: "LogGeneralTests.CachedTags",
+		tests: "FileTests.WriteExactChunkMultiple",
 		file: "$(JDE_BUILD_DIR)/tests/test.txt"
 	},
 	cryptoTests:{
@@ -12,7 +12,7 @@
 				default: "Information",
 				app: "Trace",
 				exception: "Trace",
-				io: "Trace",
+				io: "Debug",
 				test: "Trace",
 				settings: "Debug"
 			},

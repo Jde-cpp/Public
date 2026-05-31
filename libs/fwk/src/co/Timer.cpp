@@ -4,14 +4,9 @@
 
 namespace Jde{
 	DurationTimer::DurationTimer( steady_clock::duration duration, SL sl )ι:
-		DurationTimer{ duration, ELogTags::Scheduler, sl }
-	{}
-
-	DurationTimer::DurationTimer( steady_clock::duration duration, ELogTags tags, SL sl )ι:
 		TimerAwait{sl},
 		_ctx{ Executor() },
 		_duration{duration},
-		_tags{tags},
 		_timer{ *_ctx }
 	{}
 

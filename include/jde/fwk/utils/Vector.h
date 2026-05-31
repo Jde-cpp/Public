@@ -31,7 +31,7 @@ namespace Jde{
 		ψ emplace_back( Args&&... args )ι->T&{ ul l(Mutex); return emplace_back(l, std::forward<Args>(args)...); }
 		ψ emplace_back( ul&, Args&&... args )ι->T&{ return base::emplace_back(std::forward<Args>(args)...); }
 		α reserve( uint size )ι->void{ ul l(Mutex); reserve(size, l); }
-		α reserve( uint size, ul& l )ι->void{ base::reserve(size); }
+		α reserve( uint size, ul& )ι->void{ base::reserve(size); }
 		α empty()Ι->uint{ sl _{Mutex}; return base::empty(); }
 		α size()Ι->uint{ sl l(Mutex); return base::size(); }
 		α size( ul& )Ι->uint{ return base::size(); }
@@ -52,7 +52,7 @@ namespace Jde{
 		ul _( Mutex );
 		for( auto p=base::begin(); p!=base::end(); p = test(*p) ? base::erase(p) : std::next(p) );
 	}
-	Ŧ	Vector<T>::erase_first( function<bool(const T& p)> test, ul& l )ι->bool{
+	Ŧ	Vector<T>::erase_first( function<bool(const T& p)> test, ul& )ι->bool{
 		auto p = find_if( Base(), test );
 		auto y = p != Base().end();
 		if( y )

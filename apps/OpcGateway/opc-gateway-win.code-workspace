@@ -26,7 +26,6 @@
 				"label": "buildProject",
 				"type": "shell",
 				"command": "tput reset;${config:sourceBash};buildProject \"${fileWorkspaceFolder}\" \"${config:debugDir}\";",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},
 			{

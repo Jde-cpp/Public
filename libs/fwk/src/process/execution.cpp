@@ -3,6 +3,7 @@
 #include <jde/fwk/settings.h>
 #include <jde/fwk/process/thread.h>
 #include <jde/fwk/utils/Vector.h>
+#include <version>
 
 #define let const auto
 namespace Jde{
@@ -140,10 +141,12 @@ namespace Jde{
 	asio::post( *ctx, f );
 	Execution::Run();
 }
+#ifdef __cpp_lib_move_only_function
 α Jde::PostM( std::move_only_function<void()> f )ι->void{
 	auto ctx = Executor();
 	asio::post( *ctx, std::move(f) );
 }
+#endif
 α Jde::PostIO( function<void()> f )ι->void{
 	Executor();
 	asio::post( *_ioStrand, f );
