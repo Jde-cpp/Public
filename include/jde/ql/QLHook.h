@@ -11,25 +11,25 @@ namespace Jde::QL{
 		using HookResult=up<TAwait<jvalue>>;
 	  virtual ~IQLHook() = default;
 
-		β Select( const TableQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-		β InsertBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-		β InsertAfter( const MutationQL&, UserPK, uint, SRCE )ι->HookResult{ return {}; }
-		β InsertFailure( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-		β UpdateBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-		β UpdateAfter( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }//includes delete/restore.
-		β PurgeBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-		β PurgeAfter( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-		β PurgeFailure( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β Select( const TableQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
+		β InsertBefore( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
+		β InsertAfter( const MutationQL&, UserPK, uint, SL=SRCE_CUR )ι->HookResult{ return {}; }
+		β InsertFailure( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
+		β UpdateBefore( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
+		β UpdateAfter( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }//includes delete/restore.
+		β PurgeBefore( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
+		β PurgeAfter( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
+		β PurgeFailure( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 
-		β AddBefore( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-		β Add( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-		β AddAfter( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-//		β RemoveBefore( const MutationQL& mutation, UserPK executer, SRCE )ι->HookResult{ return {}; }
-		β Remove( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-		β RemoveAfter( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β AddBefore( const MutationQL&, UserPK, std::source_location=SRCE_CUR )ι->HookResult{ return {}; }
+		β Add( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
+		β AddAfter( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
+//		β RemoveBefore( const MutationQL& mutation, UserPK executer, SL )ι->HookResult{ return {}; }
+		β Remove( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
+		β RemoveAfter( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 
-		β Start( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
-		β Stop( const MutationQL&, UserPK, SRCE )ι->HookResult{ return {}; }
+		β Start( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
+		β Stop( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 	};
 #pragma warning(pop)
 
@@ -40,9 +40,9 @@ namespace Jde::QL{
 
 	struct QueryHookAwaits final: TAwait<optional<jvalue>>{
 		//GraphQLHookAwait( const MutationQL& _mutation, UserPK executer, Hook::Operation op, SRCE )ι;
-		QueryHookAwaits( const TableQL& table_, UserPK executer, Hook::Operation op, SRCE )ι;
+		QueryHookAwaits( const TableQL& table_, UserPK executer, SRCE )ι;
 		α await_ready()ι->bool override;
-		α await_resume()ε->optional<jvalue>;//null=not handled.
+		α await_resume()ε->optional<jvalue> override;//null=not handled.
 	private:
 		//α CollectAwaits( const MutationQL& mutation, UserPK executer, Hook::Operation op )ι->optional<AwaitResult>;
 		α Suspend()ι->void override{ Execute(); }
@@ -50,7 +50,6 @@ namespace Jde::QL{
 		//α AwaitMutation()ι->TAwait<jvalue>::Task;
 		optional<jvalue> _readyResult;
 		vector<up<TAwait<jvalue>>> _awaitables;
-		Hook::Operation _op;
 		const TableQL& _ql;
 		UserPK _userPK;
 	};

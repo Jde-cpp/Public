@@ -1,5 +1,6 @@
 #pragma once
 #include <jde/db/meta/Table.h>
+#include "Index.h"
 
 namespace Jde::DB{
 	struct Index; struct SchemaDdl;

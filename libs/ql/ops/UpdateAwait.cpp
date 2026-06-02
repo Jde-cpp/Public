@@ -15,7 +15,6 @@
 
 namespace Jde::QL{
 	using DB::Value;
-	constexpr ELogTags _tags{ ELogTags::QL };
 	UpdateAwait::UpdateAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
 		base{ sl },
 		_mutation{ move(mutation) },

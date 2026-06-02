@@ -74,5 +74,4 @@ libs/fwk/src/build/**
 libs/fwk/tests/build/**
 apps/AppServer/src/build/**
 **/out/**
-compile_commands.json
-libs/fwk/compile_commands_debug.*
+**/compile_commands.*

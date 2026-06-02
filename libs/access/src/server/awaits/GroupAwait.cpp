@@ -13,7 +13,6 @@
 #include <jde/access/Authorize.h>
 #include "../serverInternal.h"
 #include "../../accessInternal.h"
-#pragma GCC diagnostic ignored "-Wdangling-reference"
 
 #define let const auto
 
@@ -53,7 +52,7 @@ namespace Jde::Access::Server{
 					membersQL->Args.erase( "id" );
 				}
 				membersQL->JsonName = "groupMembers";
-				auto statement = QL::SelectStatement( *membersQL );
+				auto statement = QL::SelectStatement( *membersQL, {}, false );
 				if( statement ){
 					for( let& [name,value] : _query.Args ){
 						if( name=="is_group" )

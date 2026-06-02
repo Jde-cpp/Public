@@ -25,7 +25,7 @@ namespace Jde{
 		Process::Startup( argc, argv, Process::ProductName(), "Access tests", true );
 		Logging::Init();
 		let metaDataName{ "access" };
-		auto authorizer = Access::Tests::Authorizer();
+		sp<Access::Authorize> authorizer = Access::Tests::Authorizer();
 		auto schema = DB::GetAppSchema( metaDataName, authorizer );
 		auto ql = ms<Access::Tests::AccessQL>( vector<sp<DB::AppSchema>>{schema}, authorizer );
 		_listener = ms<Access::AccessListener>( ql );

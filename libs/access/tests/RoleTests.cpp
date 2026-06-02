@@ -83,14 +83,14 @@ namespace Jde::Access::Tests{
 	TEST_F( RoleTests, Recursion ){
 		const RolePK aRole{ GetId(getRole("roleRecursionA", GetRoot())) };
 		const RolePK bRole{ GetId(getRole("roleRecursionB", GetRoot())) };
-		AddRoleMember( aRole, {bRole}, GetRoot() );
+		AddRoleMember( aRole, bRole, GetRoot() );
 		const RolePK cRole{ GetId(getRole("roleRecursionC", GetRoot())) };
-		AddRoleMember( bRole, {cRole}, GetRoot() );
+		AddRoleMember( bRole, cRole, GetRoot() );
 
 		const RolePK dRole{ GetId(getRole("roleRecursionD", GetRoot())) };
-		EXPECT_THROW( AddRoleMember( dRole, {dRole}, GetRoot() ), IException );
-		AddRoleMember( cRole, {dRole}, GetRoot() );
-		EXPECT_THROW( AddRoleMember( dRole, {aRole}, GetRoot() ), IException );
+		EXPECT_THROW( AddRoleMember( dRole, dRole, GetRoot() ), IException );
+		AddRoleMember( cRole, dRole, GetRoot() );
+		EXPECT_THROW( AddRoleMember( dRole, aRole, GetRoot() ), IException );
 		//TODO test implement deleted roles.
 	}
 }

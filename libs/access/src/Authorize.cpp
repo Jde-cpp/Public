@@ -436,11 +436,11 @@ namespace Jde::Access{
 		ul l{Mutex};
 		auto p = Permissions.find(permissionPK); THROW_IF( p==Permissions.end(), "[{}]Permission not found", permissionPK );
 		p->second.Update( allowed, denied );
-		for( auto& user : Users )
+		for( let& user : Users )
 			user.second.UpdatePermission( permissionPK, allowed, denied );
 	}
 	α Authorize::Recalc( const ul& l )ι->void{
-		for( auto& user : Users )
+		for( let& user : Users )
 			user.second.Clear();
 		SetUserPermissions( {}, l );
 	}

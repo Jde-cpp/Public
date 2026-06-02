@@ -10,6 +10,7 @@ namespace Jde::DB{
 	struct DBSchema{
 		DBSchema( sv name, const jobject& DBSchema, sp<Access::IAcl> authorizer )ε;
 		DBSchema( sv name, flat_map<string,sp<Table>> tables, sv prefix )ι;
+		virtual ~DBSchema()=default;
 		α ResetDS()Ι{ _dataSource = nullptr; }
 		α DS()Ε->sp<IDataSource>;
 

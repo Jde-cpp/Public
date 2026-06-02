@@ -30,6 +30,14 @@ function buildProject() {
 		target=Jde;
 	elif [[ $buildRelativePath == *"libs/fwk/tests"* ]]; then
 		target=Jde.Fwk.Tests;
+	elif [[ $buildRelativePath == *"libs/access/lib"* ]]; then
+		target=Jde.Access;
+	elif [[ $buildRelativePath == *"libs/access/tests"* ]]; then
+		target=Jde.Access.Tests;
+	elif [[ $buildRelativePath == *"libs/db/lib"* ]]; then
+		target=Jde.DB;
+	elif [[ $buildRelativePath == *"libs/db/drivers/mysql"* ]]; then
+		target=Jde.DB.MySql;
 	elif [[ $buildRelativePath == *"web/client"* ]]; then
 		target=Jde.Web.Client;
 	elif [[ $buildRelativePath == *"web/server" ]]; then
@@ -51,7 +59,7 @@ function buildProject() {
 	else
 		target=foo;
 	fi;
-	echo "fileWorkspaceFolder:$fileWorkspaceFolder, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, target=$target";
+	echo "fileDirname:$fileDirname, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, target=$target";
 	cd $buildRoot;
 	cmake --build . -j --target $target;
 }

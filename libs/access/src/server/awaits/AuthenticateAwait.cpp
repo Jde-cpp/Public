@@ -6,8 +6,6 @@
 #include <jde/access/Authorize.h>
 #include "../serverInternal.h"
 
-#pragma GCC diagnostic ignored "-Wdangling-reference"
-
 #define let const auto
 namespace Jde::Access::Server{
 	α AuthenticateAwait::InsertUser( str prefix, vector<DB::Value>&& params )->TAwait<UserPK::Type>::Task{

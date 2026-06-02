@@ -9,8 +9,8 @@ namespace Jde::QL{
 	struct IListener;
 	struct LocalQL /*final*/ : IQL{
 		LocalQL( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ι: _authorizer{authorizer}, _schemas{move(schemas)}{}
-		α Authorizer()ε->Access::Authorize&{ return *_authorizer; }
-		α AuthorizerPtr()ε->sp<Access::Authorize>{ return _authorizer; }
+		α Authorizer()ε->Access::Authorize& override{ return *_authorizer; }
+		α AuthorizerPtr()ε->sp<Access::Authorize> override{ return _authorizer; }
 		α Query( string query, jobject vars, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jvalue>> override{ return mu<QLAwait<jvalue>>( move(query), vars, executer, shared_from_this(), returnRaw, sl ); }
 		α QueryObject( string query, jobject vars, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jobject>> override{ return mu<QLAwait<jobject>>( move(query), vars, executer, shared_from_this(), returnRaw, sl ); }
 		α QueryArray( string query, jobject vars, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jarray>> override{ return mu<QLAwait<jarray>>( move(query), vars, executer, shared_from_this(), returnRaw, sl ); }
@@ -20,7 +20,7 @@ namespace Jde::QL{
 		α DS()ι->DB::IDataSource&;
 		α GetTable( str tableName, SRCE )ε->DB::View&;
 		α GetTablePtr( str tableName, SRCE )ε->sp<DB::View>;
-		α Schemas()Ι->const vector<sp<DB::AppSchema>>&{ return _schemas; }
+		α Schemas()Ι->const vector<sp<DB::AppSchema>>& override{ return _schemas; }
 
 		template<class T=jobject> α QuerySync( string query, jobject vars, UserPK executer, bool returnRaw=true, SRCE )ε->T;
 		private:

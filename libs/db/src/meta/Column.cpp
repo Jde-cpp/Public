@@ -6,8 +6,6 @@
 #define let const auto
 
 namespace Jde::DB{
-	constexpr array<sv,3> CardinalityStrings = { "0", "1", "N" };
-
 	α Column::Count()ι->sp<Column>{ return ms<Column>( "count(*)" ); }
 
 	α getDefault( const jobject& j, bool isNullable, EType type/*, sv name*/ )ε->optional<Value>{

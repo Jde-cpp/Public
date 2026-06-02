@@ -26,8 +26,7 @@ namespace Jde::DB::MySql{
 		co_await conn.async_connect( _ds->ConnectionParams() );
 		if( _sql.IsProc )
 			_sql.Text = Ƒ( "call {}", move(_sql.Text) );
-		if( log )
-			DB::Log( _sql, _sl );
+		DB::Log( _sql, _sl );
     auto stmt = co_await conn.async_prepare_statement( _sql.Text );
 
 		mysql::results mySqlResult;
@@ -35,9 +34,9 @@ namespace Jde::DB::MySql{
 		Result result;
 		if( mySqlResult.has_value() ){
 			if( _outParams )
-				result.Rows.push_back( ToRow(mySqlResult.out_params(), _sl) );
+				result.Rows.push_back( ToRow(mySqlResult.out_params()) );
 			for( auto&& row : mySqlResult.rows() )
-				result.Rows.push_back( ToRow(row, _sl) );
+				result.Rows.push_back( ToRow(row) );
 			result.RowsAffected = mySqlResult.affected_rows();
 		}
  		co_await conn.async_close_statement( stmt );

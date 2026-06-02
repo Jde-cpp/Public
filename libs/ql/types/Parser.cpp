@@ -62,8 +62,6 @@ namespace Jde{
 	}
 }
 namespace Jde::QL{
-	constexpr ELogTags _tags{ ELogTags::QL | ELogTags::Parsing };
-
 	α Parser::Next()ι->string{
 		string result = move( _peekValue );
 		if( result.empty() ){
@@ -81,7 +79,7 @@ namespace Jde::QL{
 		return result;
 	};
 
-	α Parser::Next( char end )ι->string{
+	α Parser::Next( char end )ε->string{
 		string result;
 		if( _peekValue.size() ){
 			i = i-_peekValue.size();

@@ -22,8 +22,6 @@ namespace Jde::QL{
 		return *GetTablePtr( tableName, sl );
 	}
 
-	constexpr ELogTags _tags{ ELogTags::QL };
-
 	struct SubscribeQueryAwait : TAwait<vector<SubscriptionId>>{
 		using Await = TAwait<jobject>;
 		using base = TAwait<vector<SubscriptionId>>;

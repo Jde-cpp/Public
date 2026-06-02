@@ -8,7 +8,6 @@
 
 #define let const auto
 namespace Jde::Access{
-	constexpr ELogTags _tags{ ELogTags::Access };
 	Ω getSchemaName( const sp<DB::AppSchema>& schema, const string& opcServerInstance )ι->string{
 		return opcServerInstance.empty() ? schema->Name : Ƒ( "{}.{}", schema->Name, opcServerInstance );
 	}
@@ -25,7 +24,7 @@ namespace Jde::Access{
 			}
 			auto vars = loadAll ? jobject{} : jobject{ {"schemaNames", move(schemaNames)} };
 			auto input = loadAll ? "" : "(schemaName:$schemaNames)";
-			let resources = co_await *_qlServer->QueryArray( Ƒ("resources{}{{ id schemaName target criteria deleted }}", input), move(vars), _executer );
+			let resources = co_await *_qlServer->QueryArray( Ƒ("resources{}{{ id schemaName target criteria deleted }}", input), vars, _executer );
 			for( auto&& value : resources ){
 				auto resource = Resource{ Json::AsObject(move(value)) };
 				y.Resources.emplace( resource.PK, move(resource) );

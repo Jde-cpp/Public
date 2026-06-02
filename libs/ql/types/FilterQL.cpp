@@ -113,9 +113,9 @@ namespace Jde{
 					else
 						THROW("Invalid filter value type '{}'.", Json::Kind(value.kind()) );
 					if( json->is_array() )
-							where.Add( column, filter.Operator, DB::ToValue<uint>(Json::FromArray<uint>(json->get_array())) );
-						else
-							where.Add( column, filter.Operator, DB::Value{column->Type, *json} );
+						where.Add( column, filter.Operator, DB::ToValue<uint>(Json::FromArray<uint>(json->get_array())) );
+					else
+						where.Add( column, filter.Operator, DB::Value{column->Type, *json} );
 				}
 			}
 		}

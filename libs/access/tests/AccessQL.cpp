@@ -7,10 +7,10 @@ namespace Jde::Access::Tests{
 		QL::Configure( move(schemas) );
 	}
 
-	α AccessQL::CustomQuery( QL::TableQL& q, UserPK executer, SL sl )ι->up<TAwait<jvalue>>{
+	α AccessQL::CustomQuery( QL::TableQL& q, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>>{
 		return Server::CustomQuery( q, executer, sl );
 	}
-	α AccessQL::CustomMutation( QL::MutationQL& m, UserPK executer, SL sl )ι->up<TAwait<jvalue>>{
+	α AccessQL::CustomMutation( QL::MutationQL& m, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>>{
 		return Server::CustomMutation( m, executer, sl );
 	}
 }

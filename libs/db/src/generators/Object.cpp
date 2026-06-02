@@ -11,7 +11,7 @@ namespace Jde {
 			using enum EObject;
 			case Value: params.push_back(move(get<DB::Value>(o))); break;
 			case Values: params = move(get<vector<DB::Value>>(o)); break;
-			case Coalesce: params = move(get<DB::Coalesce>(o).Params()); break;
+			case Coalesce: params = get<DB::Coalesce>(o).Params(); break;
 		}
 		return params;
 	};

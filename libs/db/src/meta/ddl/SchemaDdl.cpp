@@ -66,7 +66,7 @@ namespace Jde::DB{
 	}
 
 	α SchemaDdl::SyncFKs( const AppSchema& config )ε->void{
-		for( auto& [tableName, table] : config.Tables ){
+		for( let& [tableName, table] : config.Tables ){
 			for( auto& column : table->Columns ){
 				if( !column->PKTable )
 					continue;
@@ -225,7 +225,7 @@ namespace Jde::DB{
 	α DropObjects( const AppSchema& config )ε->void{
 		auto& ds = *config.DS();
 
-		for( auto& [name, fk] : config.DS()->ServerMeta().LoadForeignKeys(config.Name) ){
+		for( let& [name, fk] : config.DS()->ServerMeta().LoadForeignKeys(config.Name) ){
 			if( find_if(config.Tables, [&fk](let& t){return t.second->DBName==fk.Table;})!=config.Tables.end() )
 				ds.ExecuteSync( {Ƒ("ALTER TABLE {} DROP CONSTRAINT {}", fk.Table, name)} );
 		}

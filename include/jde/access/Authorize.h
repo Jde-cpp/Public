@@ -12,6 +12,7 @@ namespace Jde::Access{
 
 	struct Authorize /*final*/ : IAcl, std::enable_shared_from_this<Authorize>{
 		Authorize( string app )ι:_app{move(app)}{}
+		virtual ~Authorize()=default;
 
 		α Test( str schemaName, str resourceName, ERights rights, UserPK userPK, SRCE )ε->void override;
 		α Rights( str schemaName, str resourceName, UserPK executer )ι->ERights override;
@@ -24,7 +25,7 @@ namespace Jde::Access{
 
 		α TestAdmin( str resource, UserPK userPK, SRCE )ε->void;
 		α TestAdmin( str schema, str resource, str criteria, UserPK userPK, SRCE )ε->void;
-		α TestAdmin( str resource, str criteria, UserPK userPK, SRCE )ε->void;
+		α TestAdmin( str resource, str criteria, UserPK userPK, SRCE )ε->void override;
 		α TestAdmin( ResourcePK resourcePK, UserPK userPK, SRCE )ε->void;
 		α TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SRCE )ε->void;
 		α AddAdminAuthorizer( str resourceName, sp<IAdminAcl> authorizer )ι->void;

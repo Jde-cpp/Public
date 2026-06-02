@@ -9,8 +9,6 @@
 namespace Jde::QL{
 	using namespace DB::Names;
 
-	constexpr ELogTags _tags{ ELogTags::QL };
-
 	MutationAwait::MutationAwait( MutationQL mutation, QL::Creds creds, sp<IQL> ql, SL sl )ι:
 		TAwait<jvalue>{ sl },
 		_mutation{ move(mutation) },

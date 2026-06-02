@@ -11,7 +11,7 @@ namespace Jde::QL{
 	struct Parser{
 		Parser( string text, sv delimiters )ι: _text{move(text)}, Delimiters{delimiters}{}
 		α Next()ι->string;
-		α Next( char end )ι->string;
+		α Next( char end )ε->string;
 		α Peek()ι->str{ return _peekValue.empty() ? _peekValue = Next() : _peekValue; }
 		α Index()ι->uint{ return i; }
 		α Trim( sv token )ι->bool;

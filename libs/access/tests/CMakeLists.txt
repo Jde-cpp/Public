@@ -26,6 +26,8 @@ endif()
 add_executable( ${targetName} )
 if( WIN32)
 	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
+else()
+	add_dependencies( ${targetName} Jde.DB.MySql )
 endif()
 
 compileOptions( ${targetName} )

@@ -9,9 +9,8 @@ namespace Jde::QL{
 		_hooks.push_back( move(hook) );
 	}
 	using Hook::Operation;
-	QueryHookAwaits::QueryHookAwaits( const TableQL& ql, UserPK userPK_, Operation op_, SL sl )ι:
+	QueryHookAwaits::QueryHookAwaits( const TableQL& ql, UserPK userPK_, SL sl )ι:
 		TAwait<optional<jvalue>>{ sl },
-		_op{op_},
 		_ql{ ql },
 		_userPK{ userPK_ }
 	{}
@@ -107,7 +106,7 @@ namespace Jde::QL{
 			? TAwait<optional<jarray>>::await_resume()
 			: optional<jarray>{};
 	}
-	α Hook::Select( const TableQL& ql, UserPK executer, SL sl )ι->QueryHookAwaits{ return QueryHookAwaits{ ql, executer, Operation::Select, sl }; };
+	α Hook::Select( const TableQL& ql, UserPK executer, SL sl )ι->QueryHookAwaits{ return QueryHookAwaits{ ql, executer, sl }; };
 
 	α Hook::AddBefore( const MutationQL& m, UserPK executer, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, executer, Operation::Add|Operation::Before, sl }; }
 	α Hook::Add( const MutationQL& m, UserPK executer, SL sl )ι->MutationAwaits{ return MutationAwaits{ m, executer, Operation::Add, sl }; }

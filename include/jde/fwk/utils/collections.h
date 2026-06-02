@@ -14,7 +14,7 @@ namespace Jde{
 	}
 	Ŧ FindKey( const T& collection, const typename T::mapped_type& value )ι->optional<typename T::key_type>{
 		auto pEnd = collection.end();
-		auto p = boost::container::find_if( collection.begin(), pEnd, [&value](let& x)ι->bool { return x.second==value; } );
+		auto p = find_if( collection.begin(), pEnd, [&value](let& x)ι->bool { return x.second==value; } );
 		return p==pEnd ? nullopt : optional<typename T::key_type>{ p->first };
 	}
 	Ŧ FindDefault( const T& collection, typename T::key_type key )ι->typename T::mapped_type{

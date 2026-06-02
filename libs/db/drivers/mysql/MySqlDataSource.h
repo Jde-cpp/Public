@@ -22,7 +22,7 @@ namespace Jde::DB::MySql{
 		α AtCatalog( sv catalog, SRCE )ε->sp<IDataSource> override;
 		α AtSchema( sv schema, SRCE )ε->sp<IDataSource> override;
 		α SchemaNameConfig( SRCE )ι->string override;
-		α SetConfig( const jobject& config )ε->void;
+		α SetConfig( const jobject& config )ε->void override;
 		α Disconnect()ε->void override{ THROW("Not implemented"); }
 		α ConnectionParams()ι->const mysql::connect_params&{ return _cs; }
 	private:

@@ -230,14 +230,14 @@ namespace Jde{
 			levels.try_emplace( kv.second, vector<string>{} ).first->second.push_back( Jde::ToString(kv.first) );
 		});
 		string y; y.reserve( 1024 );
-		for( auto& [level, tags] : levels )
+		for( let& [level, tags] : levels )
 			y += Ƒ( "{}: {}\n", FromEnum(LogLevelStrings(), level), Str::Join(tags, ",") );
 
 		levels.clear();
 		ExtrapolatedTags.cvisit_all( [&](let& kv){
 			levels.try_emplace( kv.second, vector<string>{} ).first->second.push_back( Jde::ToString(kv.first) );
 		} );
-		for( auto& [level, tags] : levels )
+		for( let& [level, tags] : levels )
 			y += Ƒ( "{}: {}\n", FromEnum(LogLevelStrings(), level), Str::Join(tags, ",") );
 		if( y.size() )
 			y.pop_back();

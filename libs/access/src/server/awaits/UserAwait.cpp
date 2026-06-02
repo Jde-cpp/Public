@@ -6,7 +6,7 @@
 #include <jde/ql/QLAwait.h>
 #include "../serverInternal.h"
 #define let const auto
-#pragma GCC diagnostic ignored "-Wdangling-reference"
+
 
 namespace Jde::Access::Server{
 	α UserAwait::GroupStatement()->DB::Statement{

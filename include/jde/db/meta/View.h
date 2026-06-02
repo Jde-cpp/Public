@@ -10,6 +10,7 @@ namespace Jde::DB{
 	struct ΓDB View{
 		View( string name )ι:Name{name},DBName{move(name)}{}  //placeholder columns populated in Initialize
 		View( sv name, const jobject& j )ε;
+		virtual ~View()=default;
 		α Initialize( sp<DB::AppSchema> schema, sp<View> self )ε->void;
 
 		α Authorize( Access::ERights rights, UserPK userPK, SL sl )Ε->void;

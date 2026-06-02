@@ -24,8 +24,8 @@
 	#define ENABLE_WARNINGS
 #endif
 #include <boost/json.hpp>
-#include <boost/container/flat_map.hpp>
-#include <boost/container/flat_set.hpp>
+#include <flat_map>
+#include <flat_set>
 #include <boost/unordered/concurrent_flat_map.hpp>
 #include <boost/unordered/concurrent_flat_set.hpp>
 
