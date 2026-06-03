@@ -20,7 +20,7 @@ namespace Jde::Web::Client{
 		α AsyncWrite( string&& buffer, sp<IClientSocketSession> session )ι->LockAwait::Task;
 		α Close( sp<IClientSocketSession> session )ι->void;
 		α OnWrite( beast::error_code ec, uint bytes_transferred )ι->void;
-		α ReadBuffer()ι{ return std::basic_string_view<uint8_t>{(uint8_t*)_buffer.data().data(), _buffer.size()}; }
+		α ReadBuffer()ι{ return std::span<uint8_t>{(uint8_t*)_buffer.data().data(), _buffer.size()}; }
 		α IsSsl()ι->bool{ return _ws.index()==1; }
 	private:
 		beast::flat_buffer _buffer;

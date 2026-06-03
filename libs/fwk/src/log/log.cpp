@@ -31,7 +31,9 @@ namespace Jde{
 	return l==ELogLevel::NoLog ? "None" : FromEnum( ELogLevelStrings, l );
 }
 α Jde::ToLogLevel( sv l )ι->ELogLevel{
-	return ToEnum<ELogLevel>( ELogLevelStrings, l ).value_or( ELogLevel::Error );
+	let level = ToEnum<ELogLevel>( ELogLevelStrings, l );
+	ASSERT( level.has_value() );
+	return level.value_or( ELogLevel::Error );
 }
 
 namespace Jde::Logging{
@@ -56,7 +58,7 @@ namespace Jde{
 				continue;
 			memoryLogger.Write( *logger.get() );
 		}
-		auto memory = Settings::FindObject( "/logging/memory" );
+		auto memory = Settings::FindObject( "/logging/memory/tags" );
 		if( !memory || Json::FindEnum<ELogLevel>(*memory, "default", ToLogLevel).value_or(ELogLevel::NoLog)==ELogLevel::NoLog )
 			_loggers.erase( _loggers.begin() );
 		UpdateCumulative( _loggers );

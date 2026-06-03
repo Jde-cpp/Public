@@ -52,7 +52,7 @@ namespace Jde{
 	}
 	struct Γ LogTags{
 		LogTags( ELogLevel defaultLevel=ELogLevel::Information ):_minLevel{defaultLevel},_defaultLevel{defaultLevel}{}
-		LogTags( jobject o )ι;
+		LogTags( const jobject& o )ι;
 		LogTags( const LogTags& x )ι;
 		α operator+=( const LogTags& other )ι->LogTags&;
 		α SetLevels( const jobject& tagLevels )ι->void;

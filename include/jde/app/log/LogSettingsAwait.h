@@ -9,7 +9,7 @@ namespace Jde::App{
 	struct LogSettingsAwait : TAwait<jvalue>{
 		using base = TAwait<jvalue>;
 		LogSettingsAwait( QL::TableQL&& ql, SRCE )ι:base{sl}, _ql{move(ql)}{}
-		α await_ready()ι->bool;
+		α await_ready()ι->bool override;
 		α Suspend()ι->void override{ ASSERT(false); }
 		α await_resume()ε->jvalue override;
 	protected:

@@ -31,7 +31,7 @@ namespace Jde::Web::Client{
 		_headers{ res.base() }
 	{}
 
-	α ClientHttpRes::RedirectVariables()Ι->tuple<string,string,PortType>{
+	α ClientHttpRes::RedirectVariables()Ε->tuple<string,string,PortType>{
 		let location = _headers[http::field::location];
 		let startHost = location.find_first_of( "//" );
 		if( startHost==string::npos || startHost+3>location.size() )

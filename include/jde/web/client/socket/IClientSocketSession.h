@@ -55,7 +55,7 @@ namespace Jde::Web::Client{
 		α OnSslHandshake(beast::error_code ec )ι->void;
 		α OnHandshake( beast::error_code ec )ι->void;
 		α OnRead( beast::error_code ec, uint bytes_transferred )ι->void;
-		β OnReadData( std::basic_string_view<uint8_t> transmission )ι->void=0;
+		β OnReadData( std::span<uint8_t> transmission )ι->void=0;
 
 		tcp::resolver _resolver;
 		sp<ClientSocketStream> _stream;
@@ -76,13 +76,13 @@ namespace Jde::Web::Client{
 		TClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι:IClientSocketSession{ ioc, ctx }{}
 		α Write( TFromClientMsgs&& m )ι->void;
 	protected:
-		α OnReadData( std::basic_string_view<uint8_t> transmission )ι->void override;
+		α OnReadData( std::span<uint8_t> transmission )ι->void override;
 		β OnRead( TFromServerMsgs&& m )ι->void=0;
 	};
 
 	#define $ template<class TFromClientMsgs, class TFromServerMsgs> α TClientSocketSession<TFromClientMsgs,TFromServerMsgs>
 	$::Write( TFromClientMsgs&& m )ι->void{ base::Write( Protobuf::ToString(m) ); }
-	$::OnReadData( std::basic_string_view<uint8_t> transmission )ι->void{
+	$::OnReadData( std::span<uint8_t> transmission )ι->void{
 		try{
 			sv x{ (char*)transmission.data(), transmission.size() };
 			auto proto = Protobuf::Deserialize<TFromServerMsgs>( transmission.data(), (int)transmission.size() );

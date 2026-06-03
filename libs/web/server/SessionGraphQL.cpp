@@ -84,7 +84,7 @@ namespace Jde::Web::Server{
 
 	struct PurgeSessionAwait final: TAwait<jvalue>{
 		PurgeSessionAwait( const QL::MutationQL& m, UserPK executer, SRCE )ι: TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer }{}
-		α await_resume()ε->jvalue;
+		α await_resume()ε->jvalue override;
 		α await_ready()ι->bool override;
 	private:
 		QL::MutationQL _mutation;

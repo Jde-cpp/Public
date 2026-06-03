@@ -1,4 +1,5 @@
 //#include <boost/beast/ssl.hpp>
+#include "jde/fwk/usings.h"
 #include "mocks/ServerMock.h"
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/Jwt.h>
@@ -17,7 +18,6 @@ namespace Jde::Web{
 	using Client::ClientHttpAwait;
 	using Client::ClientHttpRes;
 
-	constexpr sv ContentType{ "application/x-www-form-urlencoded" };
 	using Mock::Host; using Mock::Port;
 
 	struct SocketTests : ::testing::Test{
@@ -145,7 +145,7 @@ namespace Jde::Web{
 			}
 			std::this_thread::sleep_for( 10ms );
 		}
-		for( auto& [id, text] : _requests )
+		for( auto&& [id, text] : _requests )
 			ASSERT_EQ( text, _responses[id] );
 	}
 

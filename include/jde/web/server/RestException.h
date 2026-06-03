@@ -33,7 +33,7 @@ namespace Jde::Web::Server{
 		template<class... Args> RestException( IException&& inner, HttpRequest&& req, fmt::format_string<Args...> fmt, Args&&... args )ι:IRestException{ move(inner), move(req), fmt, FWD(args)...}{}
 		RestException( const RestException& rhs ):IRestException{rhs}{ ASSERT(false); }
 		RestException( RestException&& ) = default;
-		constexpr α Status()Ι->http::status{ return TStatus; }
+		constexpr α Status()Ι->http::status override{ return TStatus; }
 		α Move()ι->up<IException> override{ return mu<RestException<TStatus>>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }
 	};

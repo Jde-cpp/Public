@@ -31,7 +31,7 @@ namespace Jde::App{
 				*archives[day].add_entries() = move( *entry.mutable_entry() );
 			}
 		}
-		for( auto& [ymd,archive] : archives ){
+		for( auto&& [ymd,archive] : archives ){
 			for( int i=0; i<archive.entries_size(); ++i ){
 				auto& entry = *archive.mutable_entries( i );
 				if( auto p = strings.find(ToGuid(entry.template_id())); p!=strings.end() )
@@ -58,7 +58,7 @@ namespace Jde::App{
 		fs::path _file;
 	};
 	α ArchiveAwait::Save( flat_map<year_month_day, App::Log::Proto::ArchiveFile> archives )ι->VoidAwait::Task{
-		for( auto& [ymd,archive] : archives ){
+		for( auto&& [ymd,archive] : archives ){
 			try{
 				co_await ArchiveFileAwait{ ymd, _path, move(archive), _sl };
 			}

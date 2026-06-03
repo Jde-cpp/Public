@@ -1,4 +1,5 @@
 #include "ServerMock.h"
+#include "jde/fwk.h"
 #include <jde/app/IApp.h>
 #include <jde/web/server/Server.h>
 
@@ -8,14 +9,14 @@ namespace Jde::Web{
 	struct TestAppClient final : App::IApp{
 		α IsLocal()Ι->bool override{ return true; }
 		α GraphQL( string&&, UserPK, bool, SL )ι->up<TAwait<jvalue>>{ return {}; }
-		α Login( Web::Jwt&&, SL )ε->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>{ throw "noImpl"; }
-		α ClientQuery( QL::RequestQL&&, UserPK, bool, SL )ε->up<TAwait<jvalue>>{ ASSERT(false); return {}; }
-		α SessionInfoAwait( SessionPK, SL )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return {}; }
+		α Login( Web::Jwt&&, SL )ε->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo> override{ throw "noImpl"; }
+		α ClientQuery( QL::RequestQL&&, UserPK, SL )ε->up<TAwait<jvalue>> override{ ASSERT(false); return {}; }
+		α SessionInfoAwait( SessionPK, SL )ι->up<TAwait<Web::FromServer::SessionInfo>> override{ return {}; }
 		α PublicKey()Ι->const Crypto::PublicKey& override{ return _publicKey; }
 
-		α QueryArray( string&&, jobject, bool, SRCE )ε->up<TAwait<jarray>>{ return {}; }
-		α QueryObject( string&&, jobject, bool, SRCE )ε->up<TAwait<jobject>>{ return {}; }
-		α QueryValue( string&&, jobject, bool, SRCE )ε->up<TAwait<jvalue>>{ return {}; }
+		α QueryArray( string&&, jobject, bool, SL=SRCE_CUR )ε->up<TAwait<jarray>> override{ return {}; }
+		α QueryObject( string&&, jobject, bool, SL=SRCE_CUR )ε->up<TAwait<jobject>> override{ return {}; }
+		α QueryValue( string&&, jobject, bool, SL=SRCE_CUR )ε->up<TAwait<jvalue>> override{ return {}; }
 	private:
 		Crypto::PublicKey _publicKey;
 	};

@@ -10,7 +10,7 @@
 #include "QueryClientAwait.h"
 
 namespace Jde::DB{ struct AppSchema; }
-namespace Jde::Proto{ struct Query; }
+namespace Jde::Proto{ class Query; }
 namespace Jde::QL{ struct Subscription; }
 
 namespace Jde::Web::Server{

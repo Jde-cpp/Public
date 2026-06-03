@@ -19,7 +19,7 @@ namespace Jde::Web::Client{
 	}
 
 	α ClientSocketStream::OnResolve( tcp::resolver::results_type results, sp<IClientSocketSession> session )ι->void{
-		std::visit( [this,&results,session](auto&& ws)->void {
+		std::visit( [&results,session](auto&& ws)->void {
 			beast::get_lowest_layer( ws ).expires_after( std::chrono::seconds(30) );
 			beast::get_lowest_layer( ws ).async_connect( results, beast::bind_front_handler(&IClientSocketSession::OnConnect, session) );// Make the connection on the IP address we get from a lookup
 		},

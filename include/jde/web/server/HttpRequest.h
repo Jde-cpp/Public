@@ -68,14 +68,14 @@ namespace Jde::Web::Server{
 			res.set( http::field::access_control_expose_headers, "Authorization" );
 			res.set( http::field::authorization, Jde::format("{:x}", SessionInfo->SessionId) );
 		}
-		for( auto& [key,value] : ResponseHeaders )
+		for( auto&& [key,value] : ResponseHeaders )
 			res.set( key, value );
 		res.keep_alive( _request.keep_alive() );
 		return res;
 	}
 
 	template<class... Args>
-	α HttpRequest::BadRequest( SL sl, fmt::format_string<Args...> format, Args&&... args )Ι->http::response<http::string_body>{
+	α HttpRequest::BadRequest( SL, fmt::format_string<Args...> format, Args&&... args )Ι->http::response<http::string_body>{
 		auto res = Response<http::string_body>( http::status::bad_request );
 		res.body() = Jde::format( format, args... );
 		res.prepare_payload();

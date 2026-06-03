@@ -40,8 +40,10 @@ function buildProject() {
 		target=Jde.DB.MySql;
 	elif [[ $buildRelativePath == *"web/client"* ]]; then
 		target=Jde.Web.Client;
-	elif [[ $buildRelativePath == *"web/server" ]]; then
+	elif [[ $buildRelativePath == *"web/server"* ]]; then
 		target=Jde.Web.Server;
+	elif [[ $buildRelativePath == *"libs/web/tests"* ]]; then
+		target=Jde.Web.Tests;
 	elif [[ $buildRelativePath == *"app/client" ]]; then
 		target=Jde.App.Client;
 	elif [[ $buildRelativePath == *"app/shared"* ]]; then

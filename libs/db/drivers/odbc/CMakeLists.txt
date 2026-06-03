@@ -6,8 +6,8 @@ include( ../../../../build/dependencies.cmake )
 add_library( ${targetName} MODULE )
 compileOptions( ${targetName} )
 
-file(GLOB sources *.cpp MsSql/*.cpp )
-file(GLOB headers   *.h )
+file( GLOB sources *.cpp MsSql/*.cpp )
+file( GLOB headers *.h )
 
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 

@@ -159,7 +159,7 @@ namespace Jde::App{
 	α ProtoLog::StartTimer()ι->TimerAwait::Task{
 		if( _delay==Duration::min() )
 			co_return;
-		_timer = mu<DurationTimer>( _delay, _tags, SRCE_CUR );
+		_timer = mu<DurationTimer>( _delay, SRCE_CUR );
 		let finished = co_await *_timer;
 		if( finished ){
 			if( !_toSave.empty() ){

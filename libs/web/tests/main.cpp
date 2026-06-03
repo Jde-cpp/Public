@@ -16,6 +16,7 @@ namespace Jde{
 #endif
 		SetThreadDscrptn( "Main" );
 		Process::Startup( argc, argv, "Tests.Web", "Web tests", true );
+		Logging::Init();
 	}
 }
 

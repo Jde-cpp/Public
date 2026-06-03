@@ -1,6 +1,7 @@
 #pragma once
 #include <jde/fwk/utils/Vector.h>
 #include "ILogger.h"
+#include "jde/fwk/usings.h"
 #define Φ Γ auto
 
 namespace Jde::Logging{
@@ -9,7 +10,7 @@ namespace Jde::Logging{
 	Φ Find( function<bool(const Logging::Entry&)> f )ι->vector<Logging::Entry>;
 
 	struct MemoryLog final : ILogger{
-		MemoryLog()ι:ILogger{ {{"default", "Trace"}} }{}
+		MemoryLog()ι:ILogger{ jobject{{"tags",jobject{{"default", "Trace"}}}} }{}
 		α Shutdown( bool /*terminate*/ )ι->void override{ _entries.clear(); }
 		α Write( const Entry& m )ι->void override;
 		α Write( const Entry& m, uint32 /*appPK*/, uint32 /*instancePK*/ )ι->void override{ Write(m); }

@@ -5,7 +5,6 @@
 namespace Jde::Web::Client{
 	struct ClientHttpSession;
 	struct ΓWC ClientHttpException : CodeException{
-		ClientHttpException()=default;
 		ClientHttpException( beast::error_code ec, ELogTags tags=ELogTags::HttpClientWrite, ELogLevel level=ELogLevel::Debug, SRCE )ι;
 		ClientHttpException( beast::error_code ec, str host, PortType port={}, ELogLevel level=ELogLevel::Debug, SRCE )ι;
 		ClientHttpException( beast::error_code ec, sp<ClientHttpSession>& session, http::request<http::string_body>* _req=nullptr, ELogLevel level=ELogLevel::Debug, SRCE )ι;

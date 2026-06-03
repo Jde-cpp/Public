@@ -11,7 +11,7 @@
 namespace Jde::App::Proto::FromServer{ struct Traces; }
 namespace Jde::Web::Server{
 	//TODO comment
-	struct SocketServerListener : QL::IListener{
+	struct SocketServerListener final: QL::IListener{
 		SocketServerListener( sp<IWebsocketSession> session )ι: QL::IListener{ Ƒ("[{}]Socket", session->Id()) }, _session{ session }{}
 		α OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void{ _session->WriteSubscription(j, clientId); }
 		α OnTraces( App::Proto::FromServer::Traces&& /*traces*/ )ι->void{ ASSERT(false); }
@@ -129,12 +129,12 @@ namespace Jde::Web::Server{
 	}
 
 	α IWebsocketSession::AddTimeout( RequestId requestId, QueryClientAwait::Handle h, Duration timeout, SL sl )ι->TimerAwait::Task{
-		auto timer = ms<DurationTimer>( timeout, ELogTags::SocketServerWrite, sl );
+		auto timer = ms<DurationTimer>( timeout, sl );
 		{
 			lg l{ _pendingQueriesMutex };
 			_pendingQueries.emplace( requestId, make_pair(h, timer) );
 		}
-		auto timedout = co_await *timer;
+		co_await *timer;
 		lg l{ _pendingQueriesMutex };
 		if( auto it = _pendingQueries.find(requestId); it!=_pendingQueries.end() ){
 			auto h = it->second.first;

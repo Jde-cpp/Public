@@ -157,7 +157,7 @@ namespace Jde{
 		return proto;
 	}
 	Ξ Protobuf::ToTimePoint( google::protobuf::Timestamp t )ι->TimePoint{
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__clang__)
 		Clock::duration duration = duration_cast<Clock::duration>( std::chrono::nanoseconds(t.nanos()) );
 		return Clock::from_time_t( t.seconds() ) + duration;
 #else

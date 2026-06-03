@@ -137,11 +137,14 @@ namespace Jde{
 		return y;
 	}
 
-	LogTags::LogTags( jobject o )ι:
+	LogTags::LogTags( const jobject& o )ι:
 		_configuredTags{ parseTags<concurrent_flat_map<ELogTags,ELogLevel>>(Json::FindDefaultObject(o, "tags")) },
 		ExtrapolatedTags{ _configuredTags },
 		_defaultLevel{ ELogLevel::Information }{
-		_configuredTags.erase_if( ELogTags::None, [&](let& kv){_defaultLevel= kv.second; return true;} ); //parseTags puts default in None.
+		_configuredTags.erase_if( ELogTags::None, [&](let& kv){
+			_defaultLevel= kv.second; //parseTags puts default in None.
+			return true;
+		});
 	}
 	LogTags::LogTags( const LogTags& x )ι:
 		_configuredTags{ x._configuredTags },
@@ -220,7 +223,7 @@ namespace Jde{
 			return false;
 		let configuredMin = MinLevel( tags );
 		let result = configuredMin!=ELogLevel::NoLog && configuredMin <= level;
-		ASSERT( !result || tags!=ELogTags::Locks );
+		//ASSERT( !result || tags!=ELogTags::Locks );
 		return result;
 	}
 

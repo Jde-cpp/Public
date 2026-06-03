@@ -25,7 +25,7 @@ namespace Jde::App{
 		α LoadLogSettings( optional<jobject> clientSettings=nullopt, SRCE )ι->void;
 		template<class T=jobject> [[nodiscard]] α Query( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->up<TAwait<T>>;
 		template<class T=jobject> α QuerySync( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->T;
-		template<class T=jobject> α QuerySyncSecure( string&& q, jobject variables, SRCE )ε->T{ return QuerySync<T>(move(q), true, sl); }
+		template<class T=jobject> α QuerySyncSecure( string&& q, jobject vars, SRCE )ε->T{ return QuerySync<T>(move(q), vars, true, sl); }
 
 	protected:
 		β QueryArray( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jarray>> = 0;
