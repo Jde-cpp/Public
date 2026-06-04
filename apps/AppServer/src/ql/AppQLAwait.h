@@ -4,7 +4,7 @@
 #include <jde/ql/IQLAwaitExe.h>
 
 namespace Jde::App::Server{
-	struct AppQLAwait final : QL::IQLTableAwaitExe{
+	struct AppQLAwait{
 		Ω Test( QL::TableQL& q, QL::Creds& executer, SL sl )->up<TAwait<jvalue>>;
 	};
 }

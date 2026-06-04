@@ -23,9 +23,10 @@ namespace Server{
 
 			QL::SetSystemTables( {"apps", "connections", "logSetting"} );
 			auto appClient = AppClient();
-			appClient->SetPublicKey( Crypto::CryptoSettings{Json::FindDefaultObject(_webServerSettings, "ssl")}.PublicKey() );
-			appClient->LoadLogSettings();
+			auto sslSettings = Crypto::CryptoSettings{ Json::FindDefaultObject(_webServerSettings, "ssl") };
 			Server::StartWebServer( move(_webServerSettings) );
+			appClient->SetPublicKey( Crypto::CryptoSettings{move(sslSettings)}.PublicKey() );
+			appClient->LoadLogSettings();
 			QL::Hook::Add( mu<AppInstanceHook>(appClient) );
 			QL::Hook::Add( mu<Web::Server::SessionGraphQL>(appClient) );
 			INFOT( ELogTags::App, "--AppServer Started.--" );

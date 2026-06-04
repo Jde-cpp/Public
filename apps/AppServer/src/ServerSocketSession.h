@@ -5,12 +5,12 @@
 #include <jde/web/client/usings.h>
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/Sessions.h>
-#include "../usings.h"
 #include "awaits/ForwardExecutionAwait.h"
 
 namespace Jde::App::Server{
 	using namespace Jde::Web::Server;
-	struct ServerSocketSession : TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>, Access::IAdminAcl{
+
+	struct ServerSocketSession final: TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>, Access::IAdminAcl{
 		using base = TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>;
 		ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α ProgramPK()Ι->ProgramPK{ return _programPK; }
@@ -18,7 +18,7 @@ namespace Jde::App::Server{
 		α ConnectionPK()Ι->ConnectionPK{ return _connectionPK; }
 	private:
 		α OnRead( Proto::FromClient::Transmission&& transmission )ι->void override;
-		α OnClose()ι->void;
+		α OnClose()ι->void override;
 		α GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task;
 		α Login( string&& jwt, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task;
 		α ProcessTransmission( Proto::FromClient::Transmission&& transmission, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId )ι->void;
@@ -34,7 +34,7 @@ namespace Jde::App::Server{
 
 		α AddSession( Proto::FromClient::AddSession addSession, RequestId clientRequestId, SL sl )ι->TAwait<Jde::UserPK>::Task;
 		α AddInstance( Proto::FromClient::Instance instance, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task;
-		α LocalQL()Ι->sp<QL::IQL>;
+		α LocalQL()Ι->sp<QL::IQL> override;
 		α Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void;
 		α ForwardExecution( Proto::FromClient::ForwardExecution&& clientMsg, bool anonymous, RequestId clientRequestId, SRCE )ι->ForwardExecutionAwait::Task;
 		α GraphQL( string&& query, jobject variables, bool returnRaw, RequestId requestId )ι->QL::QLAwait<jvalue>::Task;
@@ -48,7 +48,5 @@ namespace Jde::App::Server{
 		ProgInstPK _instancePK{};
 		App::ConnectionPK _connectionPK{};
 		optional<Jde::UserPK> _userPK{};
-		ELogLevel _webLevel{ ELogLevel::NoLog };
-		ELogLevel _dbLevel{ ELogLevel::NoLog };
 	};
 }
