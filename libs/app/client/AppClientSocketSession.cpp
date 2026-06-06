@@ -139,10 +139,9 @@ namespace Client{
 		}
 	}
 
-	ψ resumeVoid( std::any&& hAny, const fmt::format_string<Args...> m="", Args&&... args )ι->void{
+	ψ resumeVoid( std::any&& hAny )ι->void{
 		auto h = std::any_cast<Web::Client::ClientSocketVoidAwait::Handle>( &hAny );
 		ASSERT_DESC( h, Ƒ("typeT={}, typeV={}", typeid(Web::Client::ClientSocketVoidAwait::Handle).name(), hAny.type().name()) );
-		//h->promise().Log( FWD(m), FWD(args)... );
 		h->resume();
 	}
 

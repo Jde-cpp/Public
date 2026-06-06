@@ -223,7 +223,7 @@ namespace Jde::Opc::Server{
 				let exp = publicKey.ExponentInt();
 				let user = AppClient()->QuerySync( Ƒ("user( modulus: \"{}\", exponent: {} ){{id target name}}", publicKey.ModulusHex(), exp), {} );
 				THROW_IF( user.empty(), "Certificate user not found: modulus: {}, exponent: {}", publicKey.ModulusHex(), exp );
-				*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, QL::AsId<UserPK::Type>(user) };
+				*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, {QL::AsId<UserPK::Type>(user)} };
 			}
 			else if( tokenType == &UA_TYPES[UA_TYPES_ISSUEDIDENTITYTOKEN] ) {
 				const UA_IssuedIdentityToken* userToken = ( UA_IssuedIdentityToken* )userIdentityToken->content.decoded.data;
@@ -231,7 +231,7 @@ namespace Jde::Opc::Server{
 				if( userToken->tokenData.length<9 ){
 					let sessionId = std::stoul( string{ToSV(userToken->tokenData)}, 0, 16 );
 					let sessionInfo = BlockAwait<TAwait<Web::FromServer::SessionInfo>, Web::FromServer::SessionInfo>( 	move(*AppClient()->SessionInfoAwait(sessionId)) );
-					*sessionContext = new SessionContext{ sessionInfo.user_endpoint(), Protobuf::ToTimePoint(sessionInfo.expiration()), sessionInfo.session_id(), sessionInfo.user_pk() };
+					*sessionContext = new SessionContext{ sessionInfo.user_endpoint(), Protobuf::ToTimePoint(sessionInfo.expiration()), sessionInfo.session_id(), {sessionInfo.user_pk()} };
 				}
 				else{
 					Web::Jwt jwt{ ToSV(userToken->tokenData) };

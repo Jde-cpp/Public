@@ -35,7 +35,7 @@ namespace Jde::Opc::Server{
 	{}
 
 	Node::Node( NodePK pk ):
-		Node{ pk<=32750 ? UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, (UA_UInt32)pk} : UA_NodeId{}, pk }
+		Node{ pk<=32750 ? UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, {(UA_UInt32)pk}} : UA_NodeId{}, pk }
 	{}
 
 	Node::Node( DB::Row&& r, sp<ObjectType> typeDef )ι:

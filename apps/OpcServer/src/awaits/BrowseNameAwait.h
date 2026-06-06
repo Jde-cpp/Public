@@ -8,7 +8,7 @@ namespace Jde::Opc::Server{
 		// if browseName is null, it will return all browse names.  else it will fill in browseName.PK with value, create if necessary.
 		BrowseNameAwait( BrowseName* browseName=nullptr, SRCE )ι: base{ sl }, _browseName{ browseName }{}
 		α await_ready()ι->bool override;
-		α await_resume()ε->flat_map<BrowseNamePK,BrowseName>;
+		α await_resume()ε->flat_map<BrowseNamePK,BrowseName> override;
 		Ω GetOrInsert( BrowseName& browseName, SRCE )ε->bool;
 		Ω GetOrInsert( const jobject&, SRCE )ι->BrowseName;
 

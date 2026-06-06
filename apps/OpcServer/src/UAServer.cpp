@@ -133,7 +133,7 @@ namespace Jde::Opc::Server {
 		dynamic_cast<NodeId&>(*oType) = id;
 		DBGSL( "Added ObjectType: {}", oType->ToString(parent) );
 		if( oType->PK )
-			_typeDefs.try_emplace( oType->PK, oType ).first->second;
+			_typeDefs.try_emplace( oType->PK, oType );
 	}
 	α UAServer::AddReference( NodePK nodePK, const Reference& ref, SL sl )ε->void{
 		auto& source = GetVariable( ref.SourcePK );
@@ -261,7 +261,7 @@ namespace Jde::Opc::Server {
 	α UAServer::GetTypeDef( NodePK pk, SL sl )ε->sp<ObjectType>{
 		auto p = _typeDefs.find( pk );
 		if( p==_typeDefs.end() && pk<=32750 )
-			p = _typeDefs.try_emplace( pk, ms<ObjectType>(UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, (UA_UInt32)pk}) ).first;
+			p = _typeDefs.try_emplace( pk, ms<ObjectType>(UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, {(UA_UInt32)pk}}) ).first;
 		THROW_IFSL( p==_typeDefs.end(), "({})Object type not found", Ƒ("{:x}", pk) );
 		return p->second;
 	}

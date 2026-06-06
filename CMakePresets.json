@@ -169,8 +169,8 @@
 				"CMAKE_C_COMPILER": "clang-22",
 				"CMAKE_CXX_COMPILER": "clang++-22",
 				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
-				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++",
-				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++",
+				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
+				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
 				"CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL",
 				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-unqualified-std-cast-call;-Wno-missing-field-initializers;-Wno-dollar-in-identifier-extension;-Wno-nullability-extension"
 			}

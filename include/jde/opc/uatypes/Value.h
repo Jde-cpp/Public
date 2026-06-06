@@ -5,12 +5,12 @@
 
 namespace Jde::Opc{
 	struct Value : UA_DataValue{
-		Value( StatusCode sc )ι:UA_DataValue{ .status{sc}, .hasStatus{true} }{}
+		Value( StatusCode sc )ι:UA_DataValue{ .status=sc, .hasStatus=true }{}
 		Value( const UA_DataValue& x )ι{ UA_DataValue_copy( &x, this ); }
 		Value( UA_DataValue&& x )ι:UA_DataValue{x}{ UA_DataValue_init(&x); }
 		Value( const Value& x )ι{ UA_DataValue_copy( &x, this ); }
 		Value( Value&& x )ι:UA_DataValue{x}{ UA_DataValue_init(&x); }
-		Value( const jvalue& j, const UA_DataType* dt, SRCE )ε:UA_DataValue{ .value{.type{dt}} }{ Set(j, sl); }
+		Value( const jvalue& j, const UA_DataType* dt, SRCE )ε:UA_DataValue{ .value{.type=dt} }{ Set(j, sl); }
 		~Value(){ UA_DataValue_clear(this); }
 
 		α operator=( Value&& x )ι->Value&;

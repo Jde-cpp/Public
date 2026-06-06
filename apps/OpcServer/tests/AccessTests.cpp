@@ -75,7 +75,7 @@ namespace Jde::Opc::Server::Tests{
 	string AccessTests::_resource{ "opc."+Settings::FindString("/opcServer/resource").value_or("test") };
 
 	TEST_F( AccessTests, UserAccess ){
-		UAAccess::SessionContext ctx{ "", TimePoint::max(), 0, _users.at("readerUser") };
+		UAAccess::SessionContext ctx{ "", TimePoint::max(), 0, {_users.at("readerUser")} };
 		let nodeId = UA_NODEID_NUMERIC( 4, 6020 );
 		let accessLevel = (EOpcAccessLevel)UAAccess::GetUserAccessLevel( _ua->Ptr(), nullptr, nullptr, &ctx, &nodeId, nullptr );
 		EXPECT_EQ( accessLevel, _readerAllowed );

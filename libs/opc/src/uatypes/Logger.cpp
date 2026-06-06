@@ -1,5 +1,9 @@
 ﻿#include <jde/opc/uatypes/Logger.h>
-#include <stacktrace>
+#ifdef __cpp_lib_stacktrace
+	#include <stacktrace>
+#else
+	#include <boost/stacktrace.hpp>
+#endif
 #include <open62541/types.h>
 
 #define let const auto

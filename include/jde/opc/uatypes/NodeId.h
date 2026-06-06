@@ -16,6 +16,7 @@ namespace Jde::Opc{
 		NodeId( const QL::TableQL& q )ε;
 		explicit NodeId( const jvalue& j )ε;
 		NodeId( DB::Row& r, uint8 index )ε;
+		virtual ~NodeId(){ UA_NodeId_clear(this); }
 		Ω ParseQL( const QL::TableQL& q )ε->vector<NodeId>;
 		Ω ObjectsFolder()ι->NodeId{ return NodeId{0, UA_NS0ID_OBJECTSFOLDER}; }
 

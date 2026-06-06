@@ -8,7 +8,7 @@
 
 #define let const auto
 
-namespace Jde::App::Proto::FromServer{ struct Traces; }
+namespace Jde::App::Proto::FromServer{ class Traces; }
 namespace Jde::Web::Server{
 	//TODO comment
 	struct SocketServerListener final: QL::IListener{

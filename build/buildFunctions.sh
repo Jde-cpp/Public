@@ -58,6 +58,10 @@ function buildProject() {
 		target=Jde.Opc.GatewayLib;
 	elif [[ $buildRelativePath == "apps/OpcGateway/tests"* ]]; then
 		target=Jde.Opc.Tests;
+	elif [[ $buildRelativePath == "apps/OpcServer/lib"* ]]; then
+		target=Jde.Opc.ServerLib;
+	elif [[ $buildRelativePath == "apps/OpcServer/tests"* ]]; then
+		target=Jde.Opc.Server.Tests;
 	else
 		target=foo;
 	fi;

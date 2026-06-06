@@ -11,7 +11,7 @@ namespace Jde::Opc::Server{
 	constexpr ELogTags _tags = (ELogTags)EOpcLogTags::Opc;
 	UAConfig::UAConfig()ε:
 		UA_ServerConfig{
-			.logging{ &_logger },
+			.logging = &_logger,
 		}{
 		if( auto certificateFile = Settings::FindPath("/opcServer/ssl/certificate").value_or(fs::path{}); !certificateFile.empty() ){
 			try{

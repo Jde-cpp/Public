@@ -19,7 +19,7 @@ namespace Jde::Opc::Server{
 		ObjectTypeQLAwait( jobject o, sp<ObjectType> oType, UserPK executer, SL sl )ι:base{ sl }, _root{oType}, _input{ move(o) }, _executer{ executer } {}
 
 		α Suspend()ι->void override;
-		α await_resume()ε->jvalue;
+		α await_resume()ε->jvalue override;
 
 	private:
 		α Args()ι->jobject&{ return _input.index()==0 ? get<QL::MutationQL>(_input).Args : get<jobject>(_input); }
@@ -121,8 +121,8 @@ namespace Jde::Opc::Server{
 
 	α ObjectTypeQLAwait::CreateRefs( jobject o, sp<ObjectType> oType, flat_map<VariablePK,jarray>&& refs )ι->VoidAwait::Task{
 		try{
-			for( auto& [pk, varRefs] : refs ){
-				for( auto& jRef : varRefs )
+			for( auto&& [pk, varRefs] : refs ){
+				for( auto&& jRef : varRefs )
 					co_await ReferenceInsertAwait{ Reference{move(jRef.as_object()), pk}, _sl };
 			}
 			CreateChildren( move(o), move(oType) );

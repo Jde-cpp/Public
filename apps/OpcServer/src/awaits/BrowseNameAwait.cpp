@@ -23,7 +23,7 @@ namespace Jde::Opc::Server{
 				};
 			}
 			auto rows = co_await DS().SelectAsync( stmt.Move(), _sl );
-			flat_map<BrowseNamePK,BrowseName> names; names.reserve( rows.size() );
+			auto names = ReserveMap<BrowseNamePK,BrowseName>( rows.size() );
 			for( auto&& row : rows )
 				names.try_emplace( row.GetUInt32(0), row.GetUInt32(0), row.GetUInt16(1), row.GetString(2) );
 			if( _browseName ){
@@ -50,7 +50,7 @@ namespace Jde::Opc::Server{
 
 	α BrowseNameAwait::GetOrInsert( BrowseName& browseName, SL sl )ε->bool{
 		auto& browseNames = GetUAServer()._browseNames;
-		for( auto& [pk, name] : browseNames ){
+		for( auto&& [pk, name] : browseNames ){
 			if( name.namespaceIndex == browseName.namespaceIndex && ToSV(name.name) == ToSV(browseName.name) ){
 				browseName.PK = pk;
 				return false;

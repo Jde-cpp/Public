@@ -89,6 +89,24 @@ namespace Jde::Logging{
 		_functionName{ sl.description() }{
 		ParamPack::Append( Arguments, FWD(args)... );
 	}
+#else
+	template<class... Args>
+	Entry::Entry( const boost::stacktrace::frame& sl, ELogLevel l, ELogTags tags, FormatString&& m, ARGS... args )ι:
+		Entry{ sl, l, tags, {}, FWD(m), FWD(args)... }
+	{}
+	template<class... Args>
+	Entry::Entry( const boost::stacktrace::frame& sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, FormatString&& m, ARGS... args )ι:
+		Text{ m.get().data(), m.get().size() },
+		Level{ l },
+		Tags{ tags },
+		Line{ (uint32_t)sl.source_line() },
+		Time{ Clock::now() },
+		UserPK{ userPK },
+		_fileName{ sl.source_file() },
+		_functionName{ sl.name() },
+		_message{ fmt::vformat(m, fmt::make_format_args(FWD(args)...)) }{
+		ParamPack::Append( Arguments, FWD(args)... );
+	}
 #endif
 
 }

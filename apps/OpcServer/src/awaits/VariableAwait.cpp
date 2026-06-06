@@ -29,7 +29,7 @@ namespace Jde::Opc::Server {
 	α VariableAwait::LoadVariants( vector<DB::Value>&& pks, vector<DB::Row> rows )ι->VariantMembersAwait::Task{
 		try{
 			auto values = pks.size() ? co_await VariantMembersAwait{ move(pks) } : VariantMembers{};
-			flat_map<VariablePK, Variable> nodes; nodes.reserve(rows.size());
+			auto nodes = ReserveMap<VariablePK, Variable>( rows.size() );
 			for( auto&& row : rows ){
 				let variantPK = row.GetUInt32Opt(21);
 				let dtPK = row.GetUInt32Opt(29);

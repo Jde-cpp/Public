@@ -175,6 +175,11 @@ ExternalProject_Add(open62541
 	PREFIX open62541
 	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/open62541
 		CMAKE_ARGS ${stdArgs}
+		# open62541 appends "-fsanitize=undefined" to CMAKE_C_FLAGS in debug clang builds
+		# (its CMakeLists UA_ENABLE_DEBUG_SANITIZER block). Its casted copy/clear/order jump
+		# tables (e.g. String_copy via copyJumpTable) then trip -fsanitize=function. Put the
+		# opt-out in CMAKE_C_FLAGS_DEBUG so it lands AFTER that on the command line and wins.
+		-DCMAKE_C_FLAGS_DEBUG=-fno-sanitize=function
 		-DUA_ENABLE_ENCRYPTION=ON
 		-DUA_ENABLE_ENCRYPTION_OPENSSL=ON
 		-DOPENSSL_USE_STATIC_LIBS=ON

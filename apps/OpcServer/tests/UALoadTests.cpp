@@ -3,7 +3,6 @@
 #include "../src/UAServer.h"
 
 namespace Jde::Opc::Server::Tests{
-	constexpr ELogTags _tags{ ELogTags::Test };
 	struct UALoadTests : ::testing::Test{
 	protected:
 		Ω SetUpTestCase()ι->void{}

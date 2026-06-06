@@ -60,7 +60,7 @@ namespace Jde::Opc::Server{
 			DBG( "No base resources found for OPC UA server authorization." );
 			return;
 		}
-		Access::ResourcePK rootResourcePK;
+		Access::ResourcePK rootResourcePK{};
 		ul _2{ _nodeResourcesMutex };
 		if( let it = baseResources.find(root); it!=baseResources.end() ){
 			rootResourcePK = it->second;

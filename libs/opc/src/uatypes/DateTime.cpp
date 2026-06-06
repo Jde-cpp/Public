@@ -13,7 +13,7 @@ namespace Jde::Opc{
 	}
 
 	UADateTime::UADateTime( const UA_DateTime& dt )ι:
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__clang__)
 		_time{ Chrono::Epoch()+microseconds{(dt-_ua1970)/10} }
 #else
 		_time{ Chrono::Epoch()+nanoseconds{(dt-_ua1970)*100} }
