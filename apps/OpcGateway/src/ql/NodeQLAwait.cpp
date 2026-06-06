@@ -63,7 +63,7 @@ namespace Jde::Opc::Gateway{
 			auto resp = co_await ReadAwait{ move(browseResp), move(childrenQL), _client };
 			resp.SetJson( jChildren );
 			jarray a;
-			for( auto& [id, j] : jChildren )
+			for( auto&& [id, j] : jChildren )
 				a.emplace_back( move(j) );
 			jobject jReqNode{ {"children", move(a)} };
 			Resume( _query.ReturnRaw ? jReqNode : jobject{{"node", jReqNode}} );
@@ -114,7 +114,7 @@ namespace Jde::Opc::Gateway{
 			 	auto json = resp.GetJson();
 				if( auto p = json.find(nodeId->nodeId); p!=json.end() )
 					jReqNode = move( p->second );
-				for( auto& [id, jparent] : parents ){
+				for( auto&& [id, jparent] : parents ){
 				 	if( auto p = json.find(id); p!=json.end() )
 						jparent.insert( p->second.begin(), p->second.end() );
 				}
@@ -126,7 +126,7 @@ namespace Jde::Opc::Gateway{
 				jReqNode = UAException::ToJson( nodeId.error() );
 			if( parentQL ){
 				jarray jparents;
-				for( auto& [id, jparent] : parents ){
+				for( auto&& [id, jparent] : parents ){
 					if( parentQL->FindColumn("id") )
 						id.Add( jparent );
 					jparents.emplace_back( move(jparent) );

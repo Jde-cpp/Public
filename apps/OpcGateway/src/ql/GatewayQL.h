@@ -8,7 +8,7 @@ namespace Jde::Opc::Gateway{
 	α ConfigureQL( sp<DB::AppSchema> schema, sp<Access::Authorize> authorizer )ι->void;
 	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
 
-	struct GatewayQL : App::AppQL{
+	struct GatewayQL final: App::AppQL{
 		GatewayQL( sp<DB::AppSchema>&& schema, sp<Access::Authorize> authorizer )ι;
 		α CustomQuery( QL::TableQL& ql, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>> override;
 		α CustomMutation( QL::MutationQL& ql, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>> override;

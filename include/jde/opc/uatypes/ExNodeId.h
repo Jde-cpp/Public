@@ -20,7 +20,7 @@ namespace Jde::Opc{
 		ExNodeId( ExNodeId&& x )ι;
 		ExNodeId( DB::Row& r, uint8 nsIndex, bool extended=false )ε;
 		α operator=( ExNodeId&& x )ι->ExNodeId&;
-		~ExNodeId(){ Clear(); }
+		virtual ~ExNodeId(){ Clear(); }
 		α operator<( const ExNodeId& x )Ι->bool;
 		α operator=( const ExNodeId& x )ι->ExNodeId&;
 		α SetNodeId( UA_NodeId&& x )ι->void;

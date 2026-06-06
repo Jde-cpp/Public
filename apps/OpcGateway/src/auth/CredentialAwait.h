@@ -6,7 +6,7 @@ namespace Jde::Opc::Gateway{
 		using base = TAwait<Credential>;
 		CredentialAwait( SessionPK sessionId, ServerCnnctnNK opcId, SRCE )ι: base{sl}, _opcId{move(opcId)}, _sessionId{sessionId}{};
 		α await_ready()ι->bool override;
-		α Suspend()ι->void;
+		α Suspend()ι->void override;
 	private:
 		ServerCnnctnNK _opcId;
 		optional<Credential> _readyResult;

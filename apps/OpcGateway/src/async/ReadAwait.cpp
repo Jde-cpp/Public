@@ -161,7 +161,7 @@ namespace Jde::Opc::Gateway{
 	α ReadResponse::ToJson( const QL::TableQL& ql )ι->jvalue{
 		auto nodeJson = GetJson();
 		jarray y;
-		for( auto& [nodeId, j] : nodeJson ){
+		for( auto&& [nodeId, j] : nodeJson ){
 			if( ql.FindColumn("id") )
 				j["id"] = nodeId.ToJson();
 			y.push_back( move(j) );

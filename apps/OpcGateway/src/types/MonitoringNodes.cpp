@@ -139,7 +139,7 @@ namespace Jde::Opc::Gateway{
 		}
 
 		flat_map<SubscriptionId,flat_set<MonitorId>> toDelete;
-		for( auto& [h,subscription] : _subscriptions ){
+		for( auto&& [h,subscription] : _subscriptions ){
 			if( subscription.ClientCalls.erase(dataChange) && subscription.ClientCalls.empty() )
 				toDelete.try_emplace( h.SubId() ).first->second.emplace( h.MonitorId() );
 		}
@@ -173,8 +173,8 @@ namespace Jde::Opc::Gateway{
 		co_await DurationTimer{ wait };
 		flat_map<UA_UInt32,flat_set<MonitorId>> toDelete;
 		ul _{ _mutex };
-		for( auto& [subscriptionId, monitoredIds] : requested ){
-			for( auto& monitoredId : monitoredIds ){
+		for( auto&& [subscriptionId, monitoredIds] : requested ){
+			for( auto&& monitoredId : monitoredIds ){
 				const MonitorHandle h{subscriptionId,monitoredId};
 				if( auto p = _subscriptions.find(h); p!=_subscriptions.end() && p->second.ClientCalls.empty() ){
 					TRACE( "[{:x}.{:x}]DeleteMonitoring for:  {}", uaHandle, (Handle)h, p->second.Node.ToString() );

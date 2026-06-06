@@ -12,11 +12,13 @@ namespace Jde{
 	Φ Post( function<void()> f )ι->void;
 #ifdef __cpp_lib_move_only_function
 	Φ PostM( std::move_only_function<void()> f )ι->void;
+	Ŧ Post( T&& value, typename TAwait<T>::Handle h )ι->void;
+#else
+	//Ŧ Post( T value, typename TAwait<T>::Handle h )ι->void;
 #endif
 	α PostIO( function<void()> f )ι->void;
 	Φ Post( VoidAwait::Handle&& h )ι->void;
 	Φ Post( VoidAwait::Handle&& h, Exception&& e )ι->void;
-	Ŧ Post( T&& value, typename TAwait<T>::Handle h )ι->void;
 
 	namespace Execution{
 		Φ AddShutdown( IShutdown* pShutdown )ι->void;
@@ -24,17 +26,19 @@ namespace Jde{
 		Φ Run()->void;
 	}
 }
-Ŧ Jde::Post( T&& value, typename TAwait<T>::Handle h )ι->void{
-	#ifdef __cpp_lib_move_only_function
-		PostM( [ v = move(value), h ]() mutable {
-			h.promise().Resume( move(v), h );
-		} );
-	#else
-		Post( [ v = move(value), h ]() mutable {
-			h.promise().Resume( move(v), h );
-		} );
-	#endif
-}
+#ifdef __cpp_lib_move_only_function
+	Ŧ Jde::Post( T&& value, typename TAwait<T>::Handle h )ι->void{
+			PostM( [ v = move(value), h ]() mutable {
+				h.promise().Resume( move(v), h );
+			} );
+	}
+#else
+	// Ŧ Jde::Post( T value, typename TAwait<T>::Handle h )ι->void{
+	// 		Post( [ value, h ]() mutable {
+	// 			h.promise().Resume( move(v), h );
+	// 		} );
+	// }
+#endif
 
 #endif
 #undef Φ

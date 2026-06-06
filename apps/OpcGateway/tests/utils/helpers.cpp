@@ -12,8 +12,6 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{
-	constexpr ELogTags _tags{ ELogTags::Test };
-
 	α CreateServerCnnctnAwait::Execute()ι->QL::QLAwait<jobject>::Task{
 		try{
 			let certificateUri{ Settings::FindSV("/opc/urn").value_or("urn:open62541.server.application") };

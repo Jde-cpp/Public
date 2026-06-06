@@ -87,11 +87,7 @@
 			"program": "${config:exeDir}/${config:target}",
 			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/apps/AppServer/config/App.Server.jsonnet"],
 			"cwd": "${config:exeDir}",
-			"preLaunchTask": "build",
-				"initCommands": [
-					"command script import ~/.lldb/boost_json_formatter.py",
-					"command script import ~/.lldb/jde_formatter.py"
-				]
+			"preLaunchTask": "build"
 		},
 		{
 			"name": "RelWithDebInfo",

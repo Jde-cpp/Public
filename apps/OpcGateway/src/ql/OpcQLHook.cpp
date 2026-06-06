@@ -7,7 +7,6 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	constexpr EOpcLogTags _tags{ EOpcLogTags::Opc | (EOpcLogTags)ELogTags::QL };
 	using Jde::QL::Hook::Operation;
 
 	struct HookAwait final: TAwait<jvalue>{

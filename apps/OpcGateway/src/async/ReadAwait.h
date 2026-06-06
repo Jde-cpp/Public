@@ -36,11 +36,11 @@ namespace Jde::Opc::Gateway{
 		ReadAwait( NodeId nodeId, UA_AttributeId attrib, sp<UAClient> c )ι:ReadAwait{{move(nodeId), attrib}, move(c)}{}
 		ReadAwait( Browse::Response&& browse, QL::TableQL&& ql, sp<UAClient> c )ι:ReadAwait{{move(browse), move(ql)}, move(c)}{}
 
-		α await_ready()ι->bool{ return !_request.nodesToReadSize; }
+		α await_ready()ι->bool override{ return !_request.nodesToReadSize; }
 		α Suspend()ι->void override;
 		Ω OnResponse( UA_Client* client, void* userdata, UA_UInt32 requestId, UA_ReadResponse* rr )ι->void;
 		α OnComplete( UA_ReadResponse* rr )ι->void;
-		α await_resume()ε->ReadResponse;
+		α await_resume()ε->ReadResponse override;
 	private:
 		ReadRequest _request;
 		RequestId 	_requestId{};

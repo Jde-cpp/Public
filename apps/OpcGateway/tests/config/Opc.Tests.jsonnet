@@ -2,7 +2,7 @@ local args = import 'args.libsonnet';
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests: "LogTests.LogTagsIntrospection",
+		tests: "LogTests.GraphQL",
 		recreateDB:: true,
 		embeddedAppServer: false,
 		embeddedOpcServer: false
@@ -59,7 +59,7 @@ local args = import 'args.libsonnet';
 			tags: {
 				default: "Information",
 				app: "Trace",
-				ql: "Trace",
+				ql: "Information",
 				settings: "Trace",
 				scheduler: "Debug",
 				http_client_write: "Trace",

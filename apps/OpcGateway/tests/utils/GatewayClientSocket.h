@@ -22,7 +22,7 @@ namespace Jde::Opc::Gateway::Tests{
 		α Query( string&& query, jobject variables, bool returnRaw, SRCE )ι->await<jvalue> override;
 		α QuerySync( string&& query, jobject variables={} )ι->jvalue;
 		α Subscribe( ServerCnnctnNK target, const vector<NodeId>& nodes, sp<IListener> listener, SRCE )ε->await<FromServer::SubscriptionAck>;
-		α Subscribe( string&& /*query*/, jobject /*variables*/, sp<QL::IListener> /*listener*/, SL )ε->await<jarray>{ ASSERT(false); throw "noimpl"; }
+		α Subscribe( string&& /*query*/, jobject /*variables*/, sp<QL::IListener> /*listener*/, SL )ε->await<jarray> override{ ASSERT(false); throw "noimpl"; }
 		α LogSubscribe( jobject&& ql, jobject vars, sp<IListener> listener, SRCE )ε->await<jarray>;
 
 		α Unsubscribe( ServerCnnctnNK target, const vector<NodeId>& nodeIds, SRCE )ε->await<FromServer::UnsubscribeAck>;

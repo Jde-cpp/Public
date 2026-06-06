@@ -117,6 +117,9 @@ namespace Jde::Opc::Gateway{
 			case UA_ApplicationType::UA_APPLICATIONTYPE_DISCOVERYSERVER:
 				applicationType = "DiscoveryServer";
 				break;
+			case UA_ApplicationType::__UA_APPLICATIONTYPE_FORCE32BIT:
+				ASSERT( false );
+				break;
 			}
 			j["applicationType"] = applicationType;
 		}
@@ -157,6 +160,9 @@ namespace Jde::Opc::Gateway{
 			break;
 		case UA_MESSAGESECURITYMODE_SIGNANDENCRYPT:
 			mode = "SignAndEncrypt";
+			break;
+		case __UA_MESSAGESECURITYMODE_FORCE32BIT:
+			ASSERT( false );
 			break;
 		}
 		UA_Variant_clear( &uaAttrib );

@@ -11,7 +11,6 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	constexpr ELogTags _tags{ ELogTags::HttpServerRead };
 	HttpRequestAwait::HttpRequestAwait( HttpRequest&& req, SL sl )ι:
 		base{ move(req), sl }
 	{}

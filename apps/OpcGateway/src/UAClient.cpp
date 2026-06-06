@@ -66,8 +66,8 @@ namespace Jde::Opc::Gateway{
 	α UAClient::Shutdown( bool /*terminate*/ )ι->VoidAwait::Task{
 		{
 			sl _1{ _clientsMutex };
-			for( auto& [_,creds] : _clients ){
-				for( auto& [_,client] : creds ){
+			for( auto&& [_,creds] : _clients ){
+				for( auto&& [_,client] : creds ){
 					if( auto p = move(client->_monitoredNodes); p )
 						co_await p->Shutdown();
 					client->_asyncRequest.Stop();
@@ -296,13 +296,13 @@ namespace Jde::Opc::Gateway{
 
 	α UAClient::Unsubscribe( const sp<IDataChange>&& dataChange )ι->void{
 		sl _{ _clientsMutex };
-		for( auto& [_, credClients] : _clients ){
-			for( auto& [_, client] : credClients )
+		for( auto&& [_, credClients] : _clients ){
+			for( auto&& [_, client] : credClients )
 				client->MonitoredNodes().Unsubscribe( dataChange );
 		}
 	}
 
-	α UAClient::BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,std::expected<ExNodeId,StatusCode>>{
+	α UAClient::BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,ExpectedNodeId>{
 		let segments = Str::Split( path, '/' );
 		auto args = Reserve<UABrowsePath>( parents ? segments.size()-1 : 1 );
 		vector<string> paths;
@@ -325,8 +325,8 @@ namespace Jde::Opc::Gateway{
 			LOGSL( ELogLevel::Warning, srce, _tags, "Application is shutting down." );
 		}else{
 			sl _{ _clientsMutex };
-			for( auto& [_, credClients] : _clients ){
-				for( auto& [_, client] : credClients ){
+			for( auto&& [_, credClients] : _clients ){
+				for( auto&& [_, client] : credClients ){
 					if( client->_ptr == ua )
 						return client;
 				}

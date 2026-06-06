@@ -105,7 +105,15 @@ namespace Jde::IO{
 			if( completed->IsRead ){
 				if( auto h = completed->ReadCoHandle(); h ){
 					completed->_coHandle = (TAwait<string>::Handle)nullptr;
+#ifdef __cpp_lib_move_only_function
 					Post( get<string>(move(completed->Buffer)), move(h) );
+#else
+					auto p = new string{ get<string>(move(completed->Buffer)) };
+					Post( [=](){
+						h.promise().Resume( move(*p), h );
+						delete p;
+					} );
+#endif
 				}
 			}
 			else{

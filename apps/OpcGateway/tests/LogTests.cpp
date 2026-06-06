@@ -13,7 +13,7 @@
 
 namespace Jde::Opc::Gateway::Tests{
 	constexpr ELogTags _tags{ ELogTags::Test };
-	struct Listener : public QL::IListener{
+	struct Listener final: public QL::IListener{
 		Listener()ι:QL::IListener{ "LogTests" }{}
 		α OnChange( const Jde::jvalue&, Jde::QL::SubscriptionId ) ε->void override{ ASSERT(false); }
 		α OnTraces( App::Proto::FromServer::Traces&& traces )ι->void override{
@@ -76,13 +76,12 @@ namespace Jde::Opc::Gateway::Tests{
 		const string start{ ToIsoString(eHour.Time+1s) };
 		TRACE( "filter: time: {}, id: {}", start, boost::uuids::to_string(eNow.Id()) );
 		ProtoLog().Write( eNow );
-		auto ql = "logs( time: {gt: $start} ){ text arguments level tags line time user{id} fileName functionName message id fileId functionId }";
+		constexpr auto q = "logs( time: {gt: $start} ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
 		jobject vars{ {"start", start} };
-
-		let entries = BlockTAwait<jvalue>( App::LogQLAwait{move(QL::Parse(ql, vars, {}).Queries()[0])} );
+		let logs = BlockTAwait<jvalue>( App::LogQLAwait{move(QL::Parse(q, vars, {}).Queries()[0])} );
 		optional<jobject> jNow;
-		for( let& log : entries.as_array() ){
-			let id = ToUuid( log.at("id").as_string() );
+		for( let& log : logs.at("entries").as_array() ){
+			let id = ToUuid( log.at("templateId").as_string() );
 			if( id==eNow.Id() )
 				jNow = log.as_object();
 			ASSERT_FALSE( id==eHour.Id() ) << "Found hour log entry which should be excluded.";
