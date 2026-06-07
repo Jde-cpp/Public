@@ -62,7 +62,7 @@ namespace Jde::Web::Client{
 		}, _ws );
 	}
 
-	α ClientSocketStream::AsyncWrite( string&& buffer, sp<IClientSocketSession> /*session*/ )ι->LockAwait::Task{
+	α ClientSocketStream::AsyncWrite( string buffer, sp<IClientSocketSession> /*session*/ )ι->LockAwait::Task{
 		_writeGuard = co_await _writeLock.Lock();
 		_writeBuffer = move(buffer);
 		std::visit( [this](auto&& ws)->void {

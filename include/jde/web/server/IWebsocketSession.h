@@ -31,10 +31,10 @@ namespace Jde::Web::Server{
 		β WriteException( exception&& e, RequestId requestId )ι->void=0;
 		β WriteException( string&& e, RequestId requestId )ι->void=0;
 		α UserPK()Ι{ return _userPK; }
+		β Close()ι->void;
 	protected:
 		sp<SocketStream> Stream;
 		tcp::endpoint _userEndpoint;
-		β Close()ι->void;
 		β OnClose()ι->void;
 		β OnRead( const char* p, uint size )ι->void=0;
 		β SendAck( uint32 id )ι->void=0;

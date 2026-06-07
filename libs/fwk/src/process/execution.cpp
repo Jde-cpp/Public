@@ -24,6 +24,7 @@ namespace Jde{
 	}
 	return _ioc;
 }
+α Jde::ExecutorIoc()ι->sp<asio::io_context>{ return _ioc; }
 
 namespace Jde{
 	static up<Vector<IShutdown*>> _shutdowns;
@@ -106,8 +107,6 @@ namespace Jde{
 			_ioc->stop(); // Stop the `io_context`. This will cause `run()` to return immediately, eventually destroying the `io_context` and all of the sockets in it.
 		else{
 			_cancelSignals.Emit( asio::cancellation_type::all );
-			//_stopped.wait( false );  //TODO uncomment, don't want threads kept alive in finalization.  ordering of shutdowns.
-			std::this_thread::sleep_for( 5s ); //give threads a chance to finish after cancellation.
 		}
 		//Process::RemoveShutdown( this ); //deadlock
 	}
@@ -139,6 +138,7 @@ namespace Jde{
 		_started.test_and_set();
 		_started.notify_all();
 		ioc->run();
+		_ioStrand.reset();//non-owning ref into the io_context; drop it before the io_context can be destroyed.
 		_ioc.reset();
 		_started.clear();
 		if( _shutdowns )

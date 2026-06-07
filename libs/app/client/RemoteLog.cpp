@@ -24,6 +24,8 @@ namespace Jde::App::Client{
 		Execution::Run();
 	}
 	α RemoteLog::Shutdown( bool terminate, SL )ι->void{
+		if( !_client )
+			return;
 		_delay = Duration::min();
 		ResetTimer();
 		if( !terminate )
@@ -36,7 +38,7 @@ namespace Jde::App::Client{
 	}
 
 	α RemoteLog::Write( const Logging::Entry& m )ι->void{
-		if( !empty(m.Tags & _tags) )//recursion guard
+		if( !_client || !empty(m.Tags & _tags) )//recursion guard
 			return;
 		_mutex.lock();
 		_entries.push_back( m );
@@ -72,6 +74,8 @@ namespace Jde::App::Client{
 			_timer->Cancel();
 	}
 	α RemoteLog::Send()ι->void{
+		if( _entries.empty() || !_client->Connected() )
+			return;
 		lg _{_mutex};
 		ASSERT( _client );
 		if( _client )

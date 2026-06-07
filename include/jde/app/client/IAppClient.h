@@ -17,6 +17,7 @@ namespace Jde::App::Client{
 		α Listener()Ι->sp<Access::AccessListener>;
 		α InitLogging( sp<App::Client::IAppClient> client )ι->void;
 		α LoadLogSettings( SRCE )ι->void;
+		α Connected()Ι->bool{ return _session!=nullptr; }
 		α IsLocal()Ι->bool override{ return false; }
 		α UserName()Ι->const jobject&{ return _userName; }
 		α SetUserName( jobject&& userName )ι->void{ _userName = move(userName); }

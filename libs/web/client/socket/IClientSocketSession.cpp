@@ -1,3 +1,6 @@
+#include "boost/asio/error.hpp"
+#include "boost/beast/core/error.hpp"
+#include "boost/beast/websocket/error.hpp"
 #include "jde/fwk.h"
 #include <jde/web/client/socket/IClientSocketSession.h>
 #include <jde/app/client/clientSubscriptions.h>
@@ -25,7 +28,7 @@ namespace Jde::Web{
 }
 namespace Jde::Web::Client{
 	α GetLogLevel( beast::error_code ec )->ELogLevel{
-		if( ec==net::error::operation_aborted )
+		if( ec==net::error::operation_aborted || ec==boost::beast::websocket::error::closed )
 			return ELogLevel::Trace;
 		if( ec==boost::asio::error::eof || ec==boost::asio::error::connection_reset ) // server down.
 			return ELogLevel::Information;
@@ -57,6 +60,7 @@ namespace Jde::Web::Client{
 
 	α CreateClientSocketSessionAwait::Suspend()ι->void{
 		_session->Run( _host, _port, _h );
+		_session = nullptr;
 	}
 
 	atomic<RequestId> _requestId{ 1 };

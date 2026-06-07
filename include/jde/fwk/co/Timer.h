@@ -9,7 +9,7 @@ namespace Jde{
 		~DurationTimer();
 		α await_ready()ι->bool override{ return _duration<steady_clock::duration::zero(); }
 		α Suspend()ι->void override;
-		α Cancel()ι->void{ _timer.cancel(); }
+		α Cancel()ι->uint{ return _timer.cancel(); }
 		α Restart()ε->void;
 	private:
 		sp<boost::asio::io_context> _ctx;

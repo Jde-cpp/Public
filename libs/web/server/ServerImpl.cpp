@@ -219,11 +219,12 @@ namespace Server{
 		INFOT( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
+	concurrent_flat_map<SessionPK, sp<IWebsocketSession>> _socketSessions;
 	α Internal::Stop( sp<IRequestHandler>&& handler, bool terminate, SL sl )ι->void{
 		handler->Stop( terminate, sl );
+		_socketSessions.clear();//server sessions hold beast streams tied to the io_context; drop them here (still in the shutdown-function phase, io_context alive) so they don't outlive it and UAF at static destruction.
 	}
 
-	concurrent_flat_map<SessionPK, sp<IWebsocketSession>> _socketSessions;
 	α Internal::RunSocketSession( sp<IWebsocketSession>&& session )ι->void{
 		let id = session->Id();
 		_socketSessions.emplace( id, session );

@@ -21,7 +21,7 @@ namespace Jde::Web::Client{
 		α Upsert( string /*query*/, jobject /*variables*/, UserPK /*executer*/ )ε->jarray override{ throw Exception{"Not implemented."}; }
 	private:
 		const vector<sp<DB::AppSchema>> _schemas; //empty
-		sp<IClientSocketSession> _session;
+		wp<IClientSocketSession> _session;//weak: the session owns this ClientQL (its _qlServer); a strong ref back would form a cycle and leak the whole session graph.
 		sp<Access::Authorize> _authorize;
 	};
 }

@@ -17,6 +17,12 @@ namespace Jde::Opc::Gateway{
 			_session = ms<Tests::GatewayClientSocket>( Executor(), ctx );
 			BlockVoidAwait( _session->RunSession("localhost", GatewayPort()) );
 			BlockAwait<Web::Client::ClientSocketAwait<uint32>,uint>( _session->Connect(AppClient()->SessionId()) );
+			Process::AddShutdownFunction( [](bool terminate, SL sl){	//close before the executor drains; the pending async_read isn't bound to the global cancel signals, so it would otherwise keep io_context::run() alive.
+				if( _session ){
+					BlockVoidAwait( _session->Close(terminate, sl) );
+					_session = nullptr;
+				}
+			});
 		}
 		return *_session;
 	}

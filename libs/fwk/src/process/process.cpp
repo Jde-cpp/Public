@@ -1,13 +1,12 @@
 ﻿#include <jde/fwk/process/process.h>
-#include <signal.h>
 #include <sys/types.h>
-#include <stdexcept>
 
 #include <jde/fwk/settings.h>
 #include <jde/fwk/io/Cache.h>
 #include <jde/fwk/io/file.h>
 #include <jde/fwk/io/FileAwait.h>
 #include <jde/fwk/process/thread.h>
+#include <jde/fwk/process/execution.h>
 #include <jde/fwk/utils/Vector.h>
 
 #define let const auto
@@ -137,11 +136,15 @@ namespace Jde{
 		INFOT( ELogTags::App, "Clearing Logger" );
 		std::this_thread::sleep_for( 100ms );
 		_finalizing = true;
+		auto ioc = ExecutorIoc();//keep the io_context alive across teardown so it is destroyed last — after sessions, loggers and timers release their asio objects.
 		if( _executor ){
 			_executor->Shutdown( terminate );
 			_executor = nullptr;
 		}
 		Logging::DestroyLoggers( terminate );
+		if( ioc && ioc.use_count()>1 )//everything that used the io_context should have released it by now; a leftover ref means an asio object would otherwise outlive the io_context (use-after-free).
+			std::cout << "WARNING: io_context still has " << ioc.use_count()-1 << " reference(s) at finalize." << std::endl;
+		ioc = nullptr;//io_context destroyed here, deterministically last.
 		std::cout << "Shutdown complete." << std::endl;
 	}
 	α Process::AppDataFolder()ι->fs::path{

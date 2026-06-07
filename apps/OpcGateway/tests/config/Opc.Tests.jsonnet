@@ -2,7 +2,7 @@ local args = import 'args.libsonnet';
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests: "LogTests.GraphQL",
+		tests: "QLTests.ServerDescriptionTest",
 		recreateDB:: true,
 		embeddedAppServer: false,
 		embeddedOpcServer: false
@@ -103,7 +103,7 @@ local args = import 'args.libsonnet';
 		},
 		subscribe:{},
 		remote:{
-			delay: "PT0.001S"
+			delay: "PT0.1S"
 		}
 	},
 	workers:{

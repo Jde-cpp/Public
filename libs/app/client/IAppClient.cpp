@@ -90,9 +90,9 @@ namespace Jde::App::Client{
 			return;
 		let tags = ELogTags::Client | ELogTags::Socket;
 		LOGSL( ELogLevel::Trace, sl, tags, "ClosingSocketSession" );
-		BlockVoidAwait( session->Close(terminate, sl) );
+		BlockVoidAwait( session->Close(terminate, sl) ); //_session = nullptr;
 		session = nullptr;
-		_session = nullptr;
+
 		LOGSL( ELogLevel::Information, sl, tags, "ClosedSocketSession" );
 	}
 	α IAppClient::Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
@@ -101,6 +101,7 @@ namespace Jde::App::Client{
 
 	α IAppClient::Write( vector<Logging::Entry>&& entries )ι->void{
 		auto session = _session;
+		ASSERT_DESC( session, "Not connected." );
 		if( !session )
 			return;
 		session->Write( FromClient::LogEntries(move(entries)) );
