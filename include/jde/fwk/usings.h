@@ -130,4 +130,9 @@ namespace Jde{
 #else
 	inline constexpr bool _debug{ true };
 #endif
+#ifdef _MSC_VER
+	inline constexpr bool _windows{ true };
+#else
+	inline constexpr bool _windows{ false };
+#endif
 }

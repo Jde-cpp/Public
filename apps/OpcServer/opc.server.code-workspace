@@ -23,7 +23,7 @@
 			"${env:JDE_DIR}/build/forcedInclude.h",
 			"pc.h"
 		],
-		"cmake.buildDirectory": "/mnt/ram/linux/g++-14"
+		"cmake.buildDirectory": "/mnt/ram/linux/clang++-22"
 	},
 	"folders": [
 		{
@@ -45,15 +45,15 @@
 			"name": "fwk"
 		},
 		{
-			"path": "/mnt/ram/linux/g++-14/repos/open62541/src/open62541/src",
+			"path": "/mnt/ram/linux/clang++-22/repos/open62541/src/open62541/src",
 			"name": "open62541"
 		},
 		{
-			"path": "/mnt/ram/linux/g++-14/repos/open62541/src/open62541/include",
+			"path": "/mnt/ram/linux/clang++-22/repos/open62541/src/open62541/include",
 			"name": "openInclude"
 		},
 		{
-			"path": "/mnt/ram/linux/g++-14/repos/open62541/src/open62541/tests",
+			"path": "/mnt/ram/linux/clang++-22/repos/open62541/src/open62541/tests",
 			"name": "openTests"
 		},
 		{
@@ -117,10 +117,7 @@
 				"args": [ "-c", "-tests", "-settings=${config:sourceDir}/config/Opc.Server.jsonnet"],
 				"cwd": "${config:exeDir}",
 				"preLaunchTask": "build",
-				"initCommands": [
-					"command script import ~/.lldb/boost_json_formatter.py",
-					"command script import ~/.lldb/jde_formatter.py"
-				]},
+},
 			{
 				"name": "Tests - Debug",
 				"type": "lldb",
@@ -129,10 +126,6 @@
 				"args": [ "-tests", "-settings=${config:sourceDir}/tests/config/Opc.Server.Tests.jsonnet" ],
 				"cwd": "${config:buildDir}",
 				"preLaunchTask": "buildTests",
-				"initCommands": [
-					"command script import ~/.lldb/boost_json_formatter.py",
-					"command script import ~/.lldb/jde_formatter.py"
-				]
 			}
 		]
 	}

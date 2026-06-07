@@ -11,7 +11,6 @@
 			"hidden": true,
 			"cacheVariables":{
 				"CMAKE_CXX_STANDARD": "26",
-				"CMAKE_C_STANDARD": "23",
 				"JDE_VERSION": "2026.05.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3",
 				"SPDLOG_FMT_EXTERNAL": "ON"
@@ -171,7 +170,13 @@
 				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
 				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
 				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
-				"CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL",
+				"CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL"
+			}
+		},
+		{
+			"name": "linux-clang-jde-debug",
+			"inherits": ["linux-clang-debug"],
+			"cacheVariables":{
 				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-unqualified-std-cast-call;-Wno-missing-field-initializers;-Wno-dollar-in-identifier-extension;-Wno-nullability-extension"
 			}
 		}

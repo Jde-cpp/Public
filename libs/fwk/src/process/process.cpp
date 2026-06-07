@@ -72,7 +72,7 @@ namespace Jde{
 			Process::SetConsoleTitle( appName );
 		else
 			AsService();
-		SetThreadDscrptn( appName );
+		Thread::SetName( appName );
 		Process::AddSignals();
 		return values;
 	}
@@ -104,15 +104,21 @@ namespace Jde{
 		_shutdownFunctions.push_back( shutdown );
 	}
 
-	 Vector<IShutdown*> _rawShutdowns;
-	 α Process::AddShutdown( IShutdown* shutdown )ι->void{
-	 	ASSERT( !_rawShutdowns.find(shutdown) );
-	 	_rawShutdowns.push_back( shutdown );
-	 }
-	 α Process::RemoveShutdown( IShutdown* shutdown )ι->void{
-	 	ASSERT( _rawShutdowns.find(shutdown) );
-	 	_rawShutdowns.erase( shutdown );
-	 }
+	up<IShutdown> _executor;
+	α Process::SetExecutor( up<IShutdown>&& executor )ι->void{
+		_executor = move(executor);
+	}
+
+
+	Vector<IShutdown*> _rawShutdowns;
+	α Process::AddShutdown( IShutdown* shutdown )ι->void{
+		ASSERT( !_rawShutdowns.find(shutdown) );
+		_rawShutdowns.push_back( shutdown );
+	}
+	α Process::RemoveShutdown( IShutdown* shutdown )ι->void{
+		ASSERT( _rawShutdowns.find(shutdown) );
+		_rawShutdowns.erase( shutdown );
+	}
 
 
 	Ω cleanup( bool terminate )ι->void;
@@ -129,9 +135,13 @@ namespace Jde{
 
 	Ω cleanup( bool terminate )ι->void{
 		INFOT( ELogTags::App, "Clearing Logger" );
-		_finalizing = true;
 		std::this_thread::sleep_for( 100ms );
+		_finalizing = true;
 		Logging::DestroyLoggers( terminate );
+		if( _executor ){
+			_executor->Shutdown( terminate );
+			_executor = nullptr;
+		}
 		std::cout << "Shutdown complete." << std::endl;
 	}
 	α Process::AppDataFolder()ι->fs::path{

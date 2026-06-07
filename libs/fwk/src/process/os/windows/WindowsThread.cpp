@@ -1,8 +1,8 @@
-﻿#include <processthreadsapi.h>
-#include <codecvt>
+#include <processthreadsapi.h>
 #include <jde/fwk/process/thread.h>
-#include "../../../process/thread.cpp"
+#include <jde/fwk/usings.h>
 
+#define let const auto
 constexpr Jde::ELogTags _tags{ Jde::ELogTags::Threads };
 
 typedef HRESULT (WINAPI *TGetThreadDescription)( HANDLE, PWSTR* );
@@ -37,37 +37,38 @@ TSetThreadDescription pSetThreadDescription = nullptr;
 		ERR( "({:x})Could not set name for thread: '{}', h: {:x}", ::GetLastError(), ansiDescription, (uint)h );
 }
 
-α Jde::SetThreadDscrptn( std::thread& thread, sv pszDescription )ι->void{
-	winSetThreadDscrptn( static_cast<HANDLE>(thread.native_handle()), pszDescription );
-}
-α Jde::SetThreadDscrptn( sv description )ι->void{
-	winSetThreadDscrptn( ::GetCurrentThread(), description );
-}
-
-α Jde::ThreadDscrptn()ι->const char*{
-	if( std::strlen(ThreadName)>0 )
-		return ThreadName;
-
-	PWSTR pszThreadDescription;
-	let threadId = ::GetCurrentThread();
-	if( !pGetThreadDescription )
-		initialize();
-	if( !pGetThreadDescription )
-		return ThreadName;
-	let hr = (*pGetThreadDescription)( threadId, &pszThreadDescription );
-	if( SUCCEEDED(hr) ){
-		let size = wcslen(pszThreadDescription);
-		auto pDescription = std::make_unique<char[]>( size+1 );
-		uint size2;
-		wcstombs_s( &size2, pDescription.get(), size+1, pszThreadDescription, size );
-		::LocalFree( pszThreadDescription );
-		std::strncpy( ThreadName, pDescription.get(), sizeof(ThreadName)/sizeof(ThreadName[0]) );
+namespace Jde{
+	α Thread::SetName( Thread::ProcessThreadId id, sv description )ι->void{
+		winSetThreadDscrptn( id, description );
 	}
-	return ThreadName;
-}
+	α Thread::SetName( std::thread& thread, sv description )ι->void{
+		winSetThreadDscrptn( static_cast<HANDLE>(thread.native_handle()), description );
+	}
+	α Thread::SetName( sv description )ι->void{
+		winSetThreadDscrptn( ::GetCurrentThread(), description );
+	}
 
-α Jde::ThreadId()ι->uint{
-	if( !_threadId )
-		_threadId = ::GetCurrentThreadId();
-	return _threadId;
+	α Thread::Name()ι->string{
+		string y;
+		if( !pGetThreadDescription )
+			initialize();
+		if( !pGetThreadDescription )
+			return y;
+		PWSTR pszThreadDescription;
+		if( let hr = (*pGetThreadDescription)( ::GetCurrentThread(), &pszThreadDescription ); SUCCEEDED(hr) ){
+			let size = wcslen( pszThreadDescription );
+			auto pDescription = std::make_unique<char[]>( size+1 );
+			size_t converted;
+			wcstombs_s( &converted, pDescription.get(), size+1, pszThreadDescription, size );
+			::LocalFree( pszThreadDescription );
+			y = pDescription.get();
+		}
+		return y;
+	}
+
+	α Thread::Id()ι->Thread::ProcessThreadId{
+		// Return a real handle (unlike the GetCurrentThread() pseudo-handle) so an id collected on
+		// one thread can later be passed to SetName from another thread, matching pthread_self() on Linux.
+		return ::OpenThread( THREAD_SET_LIMITED_INFORMATION|THREAD_QUERY_LIMITED_INFORMATION, FALSE, ::GetCurrentThreadId() );
+	}
 }

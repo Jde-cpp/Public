@@ -18,7 +18,8 @@ namespace Jde{
 			return a==NoLog || b==NoLog ? std::max( a, b ) : std::min( a, b );
 		}
 	}
-	up<LogTags>	_cumulative = mu<LogTags>( ELogLevel::Trace );
+
+	up<LogTags> _cumulative;
 	vector<up<Logging::ITagParser>> _tagParsers;
 	α Logging::AddTagParser( up<ITagParser>&& tagParser )ι->void{ _tagParsers.emplace_back(std::move(tagParser)); }
 
@@ -31,8 +32,11 @@ namespace Jde{
 			}
 			*cumulative+=*logger;
 		}
-		if( cumulative )
+		if( cumulative ){
 			_cumulative = move( cumulative );
+		}
+		else if( !_cumulative )
+			_cumulative = mu<LogTags>();
 		if( auto l = _cumulative->MinLevel(ELogTags::Settings); l>=ELogLevel::Trace )
 			Logging::Log( ELogLevel::Trace, (ELogTags)ELogTags::Settings, SRCE_CUR, "Cumulative: {}", _cumulative->ToString() );
 	}

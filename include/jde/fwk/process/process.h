@@ -6,6 +6,7 @@
 namespace Jde{
 	struct IShutdown{
 		β Shutdown( bool terminate )ι->void=0;
+		virtual ~IShutdown() = default;
 	};
 namespace Process{
 	Φ AppName()ι->const string&;
@@ -21,6 +22,8 @@ namespace Process{
 	Φ IsConsole()ι->bool;
 	Φ IsDebuggerPresent()ι->bool;
 	Φ SetConsole( bool isConsole )ι->void;
+	Φ SetConsoleTitle( sv title )ι->void;
+	Φ SetExecutor( up<IShutdown>&& executor )ι->void;
 	Φ SetConsoleTitle( sv title )ι->void;
 	Φ MemorySize()ι->size_t;
 	Φ ProcessId()ι->uint32;

@@ -2,12 +2,11 @@
 	"settings": {
 		"window.title": "Main",
 		"name": "main",
-		"cxxClang": "clang-21",
 		"releaseRoot": "${env:JDE_BASH}/Release",
 		"debugDir": "${env:JDE_BUILD_DIR}",
-		"debugClangDir": "/mnt/ram/linux/${config:cxxClang}",
+		"buildRoot": "${env:JDE_BUILD_DIR}",
 		"sourceDir": "${env:JDE_BASH}",
-		"debugPreset": "linux-debug",
+		"debugPreset": "linux-clang-debug",
 		"debugClangPreset": "linux-clang-debug",
 		"releasePreset": "linux-gcc-relWithDebInfo",
 		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh"

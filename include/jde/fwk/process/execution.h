@@ -23,6 +23,7 @@ namespace Jde{
 	namespace Execution{
 		Φ AddShutdown( IShutdown* pShutdown )ι->void;
 		Φ AddCancelSignal( sp<boost::asio::cancellation_signal> s )ι->void;
+		Φ RemoveCancelSignal( const sp<boost::asio::cancellation_signal>& s )ι->void;
 		Φ Run()->void;
 	}
 }

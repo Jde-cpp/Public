@@ -84,7 +84,7 @@ namespace Jde::IO::Tests{
 			INFO( "Removing existing file: {}", file.string() );
 			fs::remove( file );
 		}
-		SetThreadDscrptn( file.filename().string() );
+		Thread::SetName( file.filename().string() );
 		for( uint i=0; i<guids.size(); i+=2 )
 			write( file, guids[i], guids[i+1], written, i==0 );
 

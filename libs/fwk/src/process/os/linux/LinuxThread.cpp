@@ -1,25 +1,32 @@
-#include "../../thread.cpp"
+//#include "../../thread.cpp"
+#include "jde/fwk/process/thread.h"
+//#include "jde/fwk/str.h"
+#include "jde/fwk/usings.h"
 #include <sys/prctl.h>
 
-α Jde::ThreadDscrptn()ι->const char*{
-	if( std::strlen(ThreadName)==0 ){
-		_threadId = pthread_self();
-		if( let rc = pthread_getname_np( _threadId, ThreadName, NameLength ); rc != 0 )
-			ERRT( ELogTags::Threads, "pthread_getname_np returned {}"sv, rc );
+#define let const auto
+constexpr Jde::ELogTags _tags{ Jde::ELogTags::Threads };
+constexpr uint _nameLength = 15;
+
+namespace Jde{
+	α Thread::Id()ι->ProcessThreadId{
+		return pthread_self();
 	}
-	return ThreadName;
-}
 
-α Jde::SetThreadDscrptn( std::thread& thread, sv pszDescription )ι->void{
-		pthread_setname_np( thread.native_handle(), string(pszDescription).c_str() );
-}
+	α Thread::Name()ι->string{
+		char threadName[_nameLength+1]{};
+		if( let rc = pthread_getname_np(Id(), threadName, _nameLength); rc != 0 )
+			ERR( "pthread_getname_np returned {}", rc );
+		return threadName;
+	}
+	α Thread::SetName( Thread::ProcessThreadId id, sv description )ι->void{
+		pthread_setname_np( id, string(description).substr(0, _nameLength).c_str() );
+	}
+	α Thread::SetName( std::thread& thread, sv pszDescription )ι->void{
+		SetName( thread.native_handle(), pszDescription );
+	}
 
-α Jde::SetThreadDscrptn( sv description )ι->void{
-	strncpy( ThreadName, string{description}.c_str(), NameLength-1 );
-	prctl( PR_SET_NAME, ThreadName, 0, 0, 0 );
-	_threadId = pthread_self();
-}
-
-α Jde::ThreadId()ι->uint{
-	return _threadId ? _threadId : _threadId = pthread_self();
+	α Thread::SetName( sv name )ι->void{
+		prctl( PR_SET_NAME, string{name}.substr(0, _nameLength).c_str(), 0, 0, 0 );
+	}
 }
