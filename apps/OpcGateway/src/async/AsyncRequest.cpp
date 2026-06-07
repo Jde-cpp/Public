@@ -69,7 +69,7 @@ namespace Jde::Opc::Gateway{
 					_requestMutex.unlock();
 					if( let now = Clock::now(); _lastRequest + _ttl < now ){
 						DBG( "{}No requests for {}, shutting down client.", logPrefix(), Chrono::ToString(now-_lastRequest) );
-						client->Shutdown( false );
+						client->Shutdown();
 					}
 					break;
 				}

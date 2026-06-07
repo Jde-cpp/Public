@@ -61,13 +61,15 @@ namespace Jde{
 
 	template<class T, class... Args>
 	requires std::constructible_from<T, Args...>
-	α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{
+	[[gnu::artificial]]
+	inline α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{
 		return up<T>( new T(std::forward<Args>(args)...) );
 	}
 
 	template<class T, class... Args>
 	requires std::constructible_from<T, Args...>
-	α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{
+	[[gnu::artificial]]
+	inline α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{
 		return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... );
 	}
 

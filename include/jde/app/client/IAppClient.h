@@ -4,10 +4,15 @@
 #include <jde/web/Jwt.h>
 #include <jde/app/client/awaits/SocketAwait.h>
 #include "AppClientSocketSession.h"
+#include "jde/fwk/process/process.h"
+
 namespace Jde::Access{ struct AccessListener; }
 namespace Jde::App::Client{
 	struct AppClientSocketSession;
-	struct IAppClient : IApp{
+	struct IAppClient : IApp, IShutdown{
+		IAppClient()ι;
+		α Shutdown( bool terminate, SL sl )ι->void override;
+
 		Τ using await = Web::Client::ClientSocketAwait<T>;
 		α Listener()Ι->sp<Access::AccessListener>;
 		α InitLogging( sp<App::Client::IAppClient> client )ι->void;
@@ -24,7 +29,7 @@ namespace Jde::App::Client{
 		α AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ε->await<Web::FromServer::SessionInfo>;
 		α Jwt( SRCE )ε->await<Web::Jwt>;
 		α Login( Web::Jwt&& jwt, SRCE )ε->await<Web::FromServer::SessionInfo> override;
-		α CloseSocketSession( SL sl )ι->VoidTask;
+		α CloseSocketSession( bool terminate, SL sl )ι->void;
 		α SessionId()Ι->SessionPK{ return Session()->SessionId(); }
 		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray>;
 

@@ -19,7 +19,7 @@ namespace Jde::Web::Server{
 		_started.test_and_set();
 		_started.notify_all();
 	}
-	α IRequestHandler::Stop()ι->void{
+	α IRequestHandler::Stop( bool, SL )ι->void{
 		if( _cancelSignal )
 			_cancelSignal->emit( net::cancellation_type::all );
 //		_cancelSignal = nullptr; heap use after free.

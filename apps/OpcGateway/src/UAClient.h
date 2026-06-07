@@ -27,7 +27,7 @@ namespace Jde::Opc::Gateway{
 		~UAClient();
 
 		operator UA_Client* ()ι{ return _ptr; }
-		Ω Shutdown( bool terminate )ι->VoidAwait::Task;
+		Ω Shutdown( bool terminate=false, SRCE )ι->VoidAwait::Task;
 		Ω GetClient( string id, Credential cred, SRCE )ι{ return ConnectAwait{move(id), move(cred), sl}; }
 		Ω Find( str id, const Gateway::Credential& cred )ι->sp<UAClient>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;

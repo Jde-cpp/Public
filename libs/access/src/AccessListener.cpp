@@ -8,7 +8,7 @@
 #define let const auto
 
 namespace Jde::Access{
-	α AccessListener::Shutdown( bool terminate )ι->void{
+	α AccessListener::Shutdown( bool terminate, SL )ι->void{
 		if( terminate )
 			return;
 		try{

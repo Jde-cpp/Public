@@ -62,7 +62,7 @@ namespace Jde::Opc::Gateway::Tests{
 		App::Client::RemoteLog remote{ {{"delay", "PT0.001S"}}, AppClient() };
 		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "Test message" };
 		remote.Write( e );
-		remote.Shutdown( false );
+		remote.Shutdown();
 		std::this_thread::sleep_for( 1s );
 	}
 

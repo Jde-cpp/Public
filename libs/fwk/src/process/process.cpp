@@ -99,8 +99,8 @@ namespace Jde{
 		return y;
 	}
 
-	vector<function<void(bool)>> _shutdownFunctions;
-	α Process::AddShutdownFunction( function<void(bool)>&& shutdown )ι->void{
+	vector<function<void(bool, SL)>> _shutdownFunctions;
+	α Process::AddShutdownFunction( function<void(bool, SL)>&& shutdown )ι->void{
 		_shutdownFunctions.push_back( shutdown );
 	}
 
@@ -126,7 +126,7 @@ namespace Jde{
 		bool terminate{ false }; //use case might be if non-terminate took too long
 		SetExitReason( exitReason, terminate );//Sets ShuttingDown should be called in OnExit handler
 
-		for_each( _shutdownFunctions, [=](let& shutdown){ shutdown( terminate ); } );
+		for_each( _shutdownFunctions, [=](let& shutdown){ shutdown( terminate, SRCE_CUR ); } );
 		DBGT( ELogTags::App | ELogTags::Shutdown, "{} Shutdown functions removed", _shutdownFunctions.size() );
 		_rawShutdowns.erase( [=](auto& p){ p->Shutdown( terminate );} );
 		DBGT( ELogTags::App | ELogTags::Shutdown, "Raw functions removed" );
@@ -137,11 +137,11 @@ namespace Jde{
 		INFOT( ELogTags::App, "Clearing Logger" );
 		std::this_thread::sleep_for( 100ms );
 		_finalizing = true;
-		Logging::DestroyLoggers( terminate );
 		if( _executor ){
 			_executor->Shutdown( terminate );
 			_executor = nullptr;
 		}
+		Logging::DestroyLoggers( terminate );
 		std::cout << "Shutdown complete." << std::endl;
 	}
 	α Process::AppDataFolder()ι->fs::path{

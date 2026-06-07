@@ -13,11 +13,11 @@ namespace Jde::Opc{
 	α Gateway::StartWebServer( jobject&& settings )ε->void{
 		_requestHandler = ms<RequestHandler>( move(settings), AppClient(), Gateway::QLPtr() );
 		Web::Server::Start( _requestHandler );
-		Process::AddShutdownFunction( [](bool terminate ){StopWebServer(terminate); } );//TODO move to Web::Server
+		Process::AddShutdownFunction( [](bool terminate, SL sl ){StopWebServer(terminate, sl); } );//TODO move to Web::Server
 	}
 
-	α Gateway::StopWebServer( bool terminate )ι->void{
-		Web::Server::Stop( move(_requestHandler), terminate );
+	α Gateway::StopWebServer( bool terminate, SL sl )ι->void{
+		Web::Server::Stop( move(_requestHandler), terminate, sl );
 	}
 namespace Gateway{
 	α Server::RemoveSession( uint socketSessionId )ι->void{

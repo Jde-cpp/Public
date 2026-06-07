@@ -19,15 +19,17 @@ namespace Jde::Web::Client{
 
 	struct CloseClientSocketSessionAwait final : VoidAwait{
 		using base = VoidAwait;
-		CloseClientSocketSessionAwait( sp<IClientSocketSession> session, SRCE )ι:base{sl}, _session{session}{};
+		CloseClientSocketSessionAwait( sp<IClientSocketSession> session, bool terminate, SRCE )ι:base{sl}, _session{session}, _terminate{terminate}{};
 		α Suspend()ι->void override;
 	private:
 		sp<IClientSocketSession> _session;
+		bool _terminate;
 	};
 
 	//TODO check what should be protected
 	struct ΓWC IClientSocketSession : std::enable_shared_from_this<IClientSocketSession>{
 		IClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι;// Resolver and socket require an io_context
+		virtual ~IClientSocketSession(){ BREAK; }
 		α AddTask( RequestId requestId, std::any hCoroutine )ι->void;
 		α PopTask( RequestId requestId )ι->std::any;
 
@@ -40,7 +42,7 @@ namespace Jde::Web::Client{
 		α SessionId()ι->SessionPK{ return _sessionInfo ? _sessionInfo->session_id() : SessionPK{}; }
 		α SetInfo( Web::FromServer::SessionInfo&& info )ι->void{ _sessionInfo = move(info); }
 		α UserPK()Ι->UserPK{ return  { _sessionInfo ? _sessionInfo->user_pk() : 0}; }
-		[[nodiscard]] α Close()ι{ return CloseClientSocketSessionAwait(shared_from_this()); }
+		[[nodiscard]] α Close( bool terminate, SL sl )ι{ return CloseClientSocketSessionAwait(shared_from_this(), terminate, sl); }
 		α Host()Ι->str{ return _host; }
 		α Id()ι->uint32{ return _id; }
 	protected:

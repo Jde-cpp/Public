@@ -20,7 +20,7 @@ namespace Jde::App::Server{
 	α RemoveExisting( str host, PortType port )ι->void;
 	α GetRequestHandler()ι->sp<RequestHandler>;
 	α StartWebServer( jobject&& settings )ε->void;
-	α StopWebServer( bool terminate )ι->void;
+	α StopWebServer( bool terminate, SL sl )ι->void;
 
 	α BroadcastLogEntry( LogPK id, ProgramPK logAppPK, ProgInstPK logInstancePK, const Logging::Entry& m, const vector<string>& args )ι->void;
 	α BroadcastAppStatus()ι->void;

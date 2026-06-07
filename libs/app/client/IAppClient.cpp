@@ -1,3 +1,5 @@
+#include "jde/fwk/co/Await.h"
+#include "jde/fwk/process/process.h"
 #include <jde/app/client/IAppClient.h>
 #include <jde/fwk/io/protobuf.h>
 #include <jde/ql/IQL.h>
@@ -9,6 +11,12 @@
 
 #define let const auto
 namespace Jde::App::Client{
+	IAppClient::IAppClient()ι{
+		Process::AddShutdown( this );
+	}
+	α IAppClient::Shutdown( bool terminate, SL sl )ι->void{
+		CloseSocketSession( terminate, sl );
+	}
 	α IAppClient::InitLogging( sp<App::Client::IAppClient> client )ι->void{
 		App::ProtoLog::Init();
 		App::Client::RemoteLog::Init( move(client) );
@@ -76,14 +84,15 @@ namespace Jde::App::Client{
 			session->Write( FromClient::Status(StatusDetails()) );
 	}*/
 
-	α IAppClient::CloseSocketSession( SL sl )ι->VoidTask{
+	α IAppClient::CloseSocketSession( bool terminate, SL sl )ι->void{
 		auto session = _session;
 		if( !session )
-			co_return;
+			return;
 		let tags = ELogTags::Client | ELogTags::Socket;
 		LOGSL( ELogLevel::Trace, sl, tags, "ClosingSocketSession" );
-		co_await session->Close();
+		BlockVoidAwait( session->Close(terminate, sl) );
 		session = nullptr;
+		_session = nullptr;
 		LOGSL( ELogLevel::Information, sl, tags, "ClosedSocketSession" );
 	}
 	α IAppClient::Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
@@ -94,6 +103,6 @@ namespace Jde::App::Client{
 		auto session = _session;
 		if( !session )
 			return;
-		session->Write( FromClient::LogEntries( move(entries) ) );
+		session->Write( FromClient::LogEntries(move(entries)) );
 	}
 }

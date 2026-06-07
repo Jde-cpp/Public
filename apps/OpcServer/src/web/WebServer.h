@@ -7,7 +7,7 @@
 
 namespace Jde::Opc::Server{
 	α StartWebServer( jobject&& settings )ε->void;
-	α StopWebServer( bool terminate )ι->void;
+	α StopWebServer( bool terminate, SL sl )ι->void;
 	namespace Server{
 		α RemoveSession( uint socketSessionId )ι->void;
 	}

@@ -18,7 +18,7 @@ namespace Jde::App{
 		Ω Init()ι->void;
 
 		α Archive()ι->VoidAwait::Task;
-		α Shutdown( bool terminate )ι->void override;
+		α Shutdown( bool terminate, SL sl )ι->void override;
 		α DailyFile()ι->fs::path{ return _root/"log.binpb"; }
 		α DailyFileStart()ι->TimePoint{ return _dailyFileStart; }//max if not started
 		Ω Deserialize( sv bytes )ε->vector<App::Log::Proto::FileEntry>;

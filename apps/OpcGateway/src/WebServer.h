@@ -5,7 +5,7 @@ namespace Jde::App{ struct IApp; }
 namespace Jde::Web::Server{ struct HttpRequest; struct IHttpRequestAwait; struct IWebsocketSession;struct RestStream; }
 namespace Jde::Opc::Gateway{
 	α StartWebServer( jobject&& settings )ε->void;
-	α StopWebServer( bool terminate )ι->void;
+	α StopWebServer( bool terminate, SL sl )ι->void;
 	namespace Server{
 		α RemoveSession( uint socketSessionId )ι->void;
 	}

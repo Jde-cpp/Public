@@ -16,13 +16,13 @@ This is a monorepo for the **Jde OpcGateway** system — an OPC-UA gateway with 
 
 ## Building (C++)
 
-Build outputs go to `/mnt/ram/`. The `$REPO_DIR` env var points to the repo root; `$JDE_DIR` points to the Public directory. Each preset gets its own out-of-source build directory under `/mnt/ram/linux/` (e.g. `clang++-22` for `linux-clang-debug`, `g++-15` for `linux-debug`).
+Build outputs go to `/mnt/ram/`. The `$REPO_DIR` env var points to the repo root; `$JDE_DIR` points to the Public directory. Each preset gets its own out-of-source build directory under `/mnt/ram/linux/` (e.g. `clang++-22` for `linux-clang-jde-debug`, `g++-15` for `linux-debug`).
 
 ```bash
 # Configure (from the matching out-of-source build dir)
 cd /mnt/ram/linux/clang++-22      # or /mnt/ram/linux/g++-15 for linux-debug
 rm -f CMakeCache.txt
-cmake /home/duffyj/code/jde/Public --preset linux-clang-debug
+cmake /home/duffyj/code/jde/Public --preset linux-clang-jde-debug
 
 # Build a specific target (add -j$(nproc) for parallel builds)
 cmake --build . --target Jde
@@ -32,9 +32,9 @@ cmake --build . --target Jde.Fwk.Tests
 cmake --install .
 ```
 
-Available CMake presets: `linux-debug`, `linux-relWithDebInfo`, `linux-jde-relWithDebInfo`, `linux-clang-debug`, `win-msvc-debug`, `win-msvc-relWithDebInfo`, `win-clang-relWithDebInfo`.
+Available CMake presets: `linux-debug`, `linux-relWithDebInfo`, `linux-jde-relWithDebInfo`, `linux-clang-jde-debug`, `win-msvc-debug`, `win-msvc-relWithDebInfo`, `win-clang-relWithDebInfo`.
 
-Linux uses **g++-15** by default; `linux-clang-debug` uses **clang++-22**. C++ standard is **C++26**.
+Linux uses **g++-15** by default; `linux-clang-jde-debug` uses **clang++-22**. C++ standard is **C++26**.
 
 ## Running Tests (C++)
 
@@ -141,3 +141,8 @@ Awaitables inherit from `VoidAwait` or `IAwait<TResult, TTask>` in `co/Await.h`.
 | `$JDE_DIR` | `$REPO_DIR/Public` (source root) |
 | `$JDE_BASH` | Same as `$JDE_DIR` (used in some CMake files) |
 | `$JDE_BUILD_DIR` | Active build output directory (e.g. `/mnt/ram/linux/clang++-22`) |
+
+## Other Stuff
+- NEVER use compound Bash commands containing 'cd' and output redirection (e.g., cd dir && cmd > file).
+- If you must execute a command in a different directory, always split it into two separate tool calls: first 'cd', then run the command.
+- Prefer using absolute paths directly inside the command or tool parameters over chaining 'cd'.

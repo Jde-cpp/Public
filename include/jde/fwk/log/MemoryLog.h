@@ -11,7 +11,7 @@ namespace Jde::Logging{
 
 	struct MemoryLog final : ILogger{
 		MemoryLog()ι:ILogger{ jobject{{"tags",jobject{{"default", "Trace"}}}} }{}
-		α Shutdown( bool /*terminate*/ )ι->void override{ _entries.clear(); }
+		α Shutdown( bool /*terminate*/, SL )ι->void override{ _entries.clear(); }
 		α Write( const Entry& m )ι->void override;
 		α Write( const Entry& m, uint32 /*appPK*/, uint32 /*instancePK*/ )ι->void override{ Write(m); }
 		α Write( ILogger& logger )ι->void;

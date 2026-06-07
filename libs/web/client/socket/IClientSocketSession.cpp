@@ -1,3 +1,4 @@
+#include "jde/fwk.h"
 #include <jde/web/client/socket/IClientSocketSession.h>
 #include <jde/app/client/clientSubscriptions.h>
 
@@ -73,7 +74,7 @@ namespace Jde::Web::Client{
 		net::post( *_ioContext, [=, self=shared_from_this()]{
 			TRACET( _connectPedanticTag, "[{}:{}]resolve socket.", self->_host, port );
 			beast::error_code ec;
-			auto results = self->_resolver.resolve( self->_host, std::to_string(port), ec );//async_resolve starts another thread.
+			auto results = self->_resolver.resolve( self->_host, std::to_string(port), ec );//TODO use async_resolve.  async_resolve starts another thread.
 			//_resolver.async_resolve( _host, std::to_string(port_), beast::bind_front_handler(&IClientSocketSession::OnResolve, shared_from_this()) );// Look up the domain name
 			self->OnResolve( ec, results );
 		});
@@ -113,7 +114,7 @@ namespace Jde::Web::Client{
 		if( ec ){
 			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{:x}]ClientSocket::DoRead", Id()), GetLogLevel(ec) };
 			if( ec!=net::error::operation_aborted )
-				_stream->Close( shared_from_this() );
+				_stream->Close( shared_from_this(), false, SRCE_CUR );
 			return;
 		}
 		OnReadData( _stream->ReadBuffer() );
@@ -121,7 +122,7 @@ namespace Jde::Web::Client{
 	}
 	α CloseClientSocketSessionAwait::Suspend()ι->void{
 		_session->_closeHandle = _h;
-		_session->_stream->Close( _session );
+		_session->_stream->Close( _session, _terminate );
 	}
 	α IClientSocketSession::OnClose( beast::error_code ec )ι->void{
 		if( ec )

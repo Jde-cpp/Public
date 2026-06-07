@@ -23,7 +23,7 @@ namespace Jde::App::Client{
 		Executor();//locks up if starts in StartTimer.
 		Execution::Run();
 	}
-	α RemoteLog::Shutdown( bool terminate )ι->void{
+	α RemoteLog::Shutdown( bool terminate, SL )ι->void{
 		_delay = Duration::min();
 		ResetTimer();
 		if( !terminate )

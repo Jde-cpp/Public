@@ -9,7 +9,7 @@ namespace Jde::App::Client{
 		RemoteLog( const jobject& settings, sp<IAppClient> client )ι;
 		~RemoteLog();
 		Ω Init( sp<IAppClient> client )ι->void;
-		α Shutdown( bool terminate )ι->void override;
+		α Shutdown( bool terminate=false, SRCE )ι->void override;
 		α Write( const Logging::Entry& m )ι->void override;
 		α Write( const Logging::Entry& m, uint32 /*appPK*/, uint32 /*instancePK*/ )ι->void override{ Write(m); }
 		α Name()Ι->sv override{ return "RemoteLog"; }

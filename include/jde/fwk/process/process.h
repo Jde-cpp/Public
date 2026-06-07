@@ -5,7 +5,7 @@
 #define Φ Γ α
 namespace Jde{
 	struct IShutdown{
-		β Shutdown( bool terminate )ι->void=0;
+		β Shutdown( bool terminate, SRCE )ι->void=0;
 		virtual ~IShutdown() = default;
 	};
 namespace Process{
@@ -45,7 +45,7 @@ namespace Process{
 	Φ AddApplicationLog( ELogLevel level, str value )ι->void;
 	Φ Kill( uint processId )ι->bool;
 
-	Φ AddShutdownFunction( function<void(bool terminating)>&& shutdown )ι->void;
+	Φ AddShutdownFunction( function<void(bool terminating, SL)>&& shutdown )ι->void;
 
 	Φ AddShutdown( IShutdown* pShutdown )ι->void; //global unique ptrs
 	Φ RemoveShutdown( IShutdown* pShutdown )ι->void;

@@ -19,7 +19,7 @@ namespace Jde::App{
 		_today{ Chrono::LocalYMD(Clock::now(), _tz) }{
 		Executor();//locks up if starts in StartTimer.
 		Execution::Run();
-		Process::AddShutdownFunction( [](bool /*terminate*/){	//member Shutdown gets called after timer thread shutdown.
+		Process::AddShutdownFunction( [](bool /*terminate*/, SL){	//member Shutdown gets called after timer thread shutdown.
 			if( auto log = Logging::FindLogger<App::ProtoLog>(); log ){
 				log->_delay = Duration::min();
 				log->ResetTimer();
@@ -52,7 +52,7 @@ namespace Jde::App{
 		Logging::Add<ProtoLog>( "proto" );
 	}
 
-	α ProtoLog::Shutdown( bool terminate )ι->void{
+	α ProtoLog::Shutdown( bool terminate, SL )ι->void{
 		if( !terminate && !_toSave.empty() ){
 			try{
 				lg _{ _mutex };

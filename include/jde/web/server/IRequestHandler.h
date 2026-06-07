@@ -22,7 +22,7 @@ namespace Jde::Web::Server{
 		α NextRequestId()ι->uint32{ return _requestId.fetch_add(1, std::memory_order_relaxed); }
 		α SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
 		α Start()ι->void;
-		α Stop()ι->void;
+		α Stop( bool terminate, SL sl )ι->void;
 		α BlockTillStarted()ι->void;
 		α UserName( UserPK userPK )ι->string;
 

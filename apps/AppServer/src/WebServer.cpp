@@ -31,7 +31,7 @@ namespace Jde::App{
 	α Server::StartWebServer( jobject&& settings )ε->void{
 		_requestHandler = ms<RequestHandler>( move(settings) );
 		Web::Server::Start( _requestHandler );
-		Process::AddShutdownFunction( [](bool terminate){Server::StopWebServer(terminate);} );//TODO move to Web::Server
+		Process::AddShutdownFunction( [](bool terminate, SL sl){Server::StopWebServer(terminate, sl);} );//TODO move to Web::Server
 	}
 	α Server::RemoveExisting( str host, PortType port )ι->void{
 		_sessions.erase_if( [&host=host,port=port](auto&& kv){
@@ -46,8 +46,8 @@ namespace Jde::App{
 		return requestHandler->Jwt( userPK, move(name), move(target), move(endpoint), sessionId, expires, move(description) );
 	}
 
-	α Server::StopWebServer( bool terminate )ι->void{
-		Web::Server::Stop( move(_requestHandler), terminate );
+	α Server::StopWebServer( bool terminate, SL sl )ι->void{
+		Web::Server::Stop( move(_requestHandler), terminate, sl );
 	}
 
 	α Server::FindApplications( str name )ι->vector<Proto::FromClient::Instance>{

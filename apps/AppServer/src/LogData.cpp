@@ -14,6 +14,7 @@
 #include <jde/access/AccessListener.h>
 #include "LocalClient.h"
 #include "WebServer.h"
+#include "jde/fwk.h"
 #include "ql/AppServerQL.h"
 
 #define let const auto
@@ -35,8 +36,8 @@ namespace Server{
 
 			ConfigureQL( {accessSchema, _appSchema}, authorizer );
 			_listener = ms<Access::AccessListener>( QLPtr() );
-			Process::AddShutdownFunction( []( bool terminate ){
-				_listener->Shutdown( terminate );
+			Process::AddShutdownFunction( []( bool terminate, SL sl ){
+				_listener->Shutdown( terminate, sl );
 				_listener = nullptr;
 			});
 

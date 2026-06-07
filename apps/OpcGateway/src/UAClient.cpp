@@ -63,7 +63,7 @@ namespace Jde::Opc::Gateway{
 		LogClientEndpoints();
 	}
 
-	α UAClient::Shutdown( bool /*terminate*/ )ι->VoidAwait::Task{
+	α UAClient::Shutdown( bool /*terminate*/, SL /*sl*/ )ι->VoidAwait::Task{
 		{
 			sl _1{ _clientsMutex };
 			for( auto&& [_,creds] : _clients ){

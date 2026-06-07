@@ -39,7 +39,7 @@ namespace Jde::Web::Server{
 	};
 
 	vector<SessionSubscription> _subs; shared_mutex _mutex;
-	α SubscribeLog::Shutdown( bool /*terminate*/ )ι->void{
+	α SubscribeLog::Shutdown( bool, SL )ι->void{
 		ul _{ _mutex };
 		_subs.clear();
 	}

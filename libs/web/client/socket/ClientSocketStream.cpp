@@ -80,9 +80,9 @@ namespace Jde::Web::Client{
 			CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientWrite };//TODO look at returning an error to caller.
 	}
 
-	α ClientSocketStream::Close( sp<IClientSocketSession> session )ι->void{
-		std::visit( [session](auto&& ws)->void {
-			ws.async_close( websocket::close_code::normal, beast::bind_front_handler(&IClientSocketSession::OnClose, session) );
+	α ClientSocketStream::Close( sp<IClientSocketSession> session, bool terminate, SL )ι->void{
+		std::visit( [session, terminate](auto&& ws)->void {
+			ws.async_close( terminate ? websocket::close_code::going_away : websocket::close_code::normal, beast::bind_front_handler(&IClientSocketSession::OnClose, session) );
 		}, _ws );
 	}
 }

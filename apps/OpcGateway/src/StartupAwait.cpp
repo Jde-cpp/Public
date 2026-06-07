@@ -56,7 +56,7 @@ namespace Jde::Opc::Gateway{
 			appClient->LoadLogSettings();
 
 			co_await Access::Client::Configure( accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, appClient->Listener(), {} );
-			Process::AddShutdownFunction( [](bool terminate){UAClient::Shutdown(terminate);} );
+			Process::AddShutdownFunction( [](bool terminate, SL sl){UAClient::Shutdown(terminate, sl);} );
 			QL::Hook::Add( mu<OpcQLHook>() );
 
 			_pingInterval = Settings::FindDuration("/gateway/pingInterval").value_or( 60s );

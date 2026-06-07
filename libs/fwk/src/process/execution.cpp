@@ -63,7 +63,7 @@ namespace Jde{
 		~ExecutorContext()ι{
 			_cancelSignals.Clear();
 		}
-		α Shutdown( bool terminate )ι->void override;
+		α Shutdown( bool terminate, SL sl )ι->void override;
 		Ω Started()ι->bool{ return _started.test(); }
 		Ω Ioc()ι->sp<asio::io_context>{ return _ioc; }
 	private:
@@ -96,12 +96,12 @@ namespace Jde{
 		auto p = find_if( _sigs, [](auto& sig){return !sig->slot().has_handler();} );
 		return p == _sigs.end() ? _sigs.emplace_back( ms<asio::cancellation_signal>() ) : *p;
 	}
-	α ExecutorContext::Shutdown( bool terminate )ι->void{
+	α ExecutorContext::Shutdown( bool terminate, SL sl )ι->void{
 		DBG( "Executor Shutdown: instances: {}.", _ioc.use_count() );
 		_keepAlive->reset();
 		_keepAlive = nullptr;
 		if( _shutdowns )
-			_shutdowns->erase( [=](auto p){p->Shutdown(terminate);} );
+			_shutdowns->erase( [=](auto p){p->Shutdown(terminate, sl);} );
 		if( _ioc && terminate )
 			_ioc->stop(); // Stop the `io_context`. This will cause `run()` to return immediately, eventually destroying the `io_context` and all of the sockets in it.
 		else{

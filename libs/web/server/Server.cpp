@@ -16,7 +16,7 @@ namespace Jde::Web{
 	α Server::Start( sp<IRequestHandler> handler )ε->void{
 		Internal::Start( move(handler) );
 	}
-	α Server::Stop( sp<IRequestHandler>&& handler, bool terminate )ι->void{
-		Internal::Stop( move(handler), terminate );
+	α Server::Stop( sp<IRequestHandler>&& handler, bool terminate, SL sl )ι->void{
+		Internal::Stop( move(handler), terminate, sl );
 	}
 }

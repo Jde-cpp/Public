@@ -219,8 +219,8 @@ namespace Server{
 		INFOT( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
-	α Internal::Stop( sp<IRequestHandler>&& handler, bool /*terminate*/ )ι->void{
-		handler->Stop();
+	α Internal::Stop( sp<IRequestHandler>&& handler, bool terminate, SL sl )ι->void{
+		handler->Stop( terminate, sl );
 	}
 
 	concurrent_flat_map<SessionPK, sp<IWebsocketSession>> _socketSessions;
