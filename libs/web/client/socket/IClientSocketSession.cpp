@@ -1,8 +1,10 @@
+#include <jde/web/client/socket/IClientSocketSession.h>
 #include "boost/asio/error.hpp"
 #include "boost/beast/core/error.hpp"
 #include "boost/beast/websocket/error.hpp"
 #include "jde/fwk.h"
-#include <jde/web/client/socket/IClientSocketSession.h>
+#include "jde/fwk/co/Await.h"
+#include "jde/fwk/log/logTags.h"
 #include <jde/app/client/clientSubscriptions.h>
 
 namespace Jde::Web{
@@ -29,10 +31,17 @@ namespace Jde::Web{
 namespace Jde::Web::Client{
 	α GetLogLevel( beast::error_code ec )->ELogLevel{
 		if( ec==net::error::operation_aborted || ec==boost::beast::websocket::error::closed )
-			return ELogLevel::Trace;
+			return ELogLevel::Debug;
 		if( ec==boost::asio::error::eof || ec==boost::asio::error::connection_reset ) // server down.
 			return ELogLevel::Information;
 		return ELogLevel::Error;
+	}
+
+	α IClientSocketSession::Shutdown( bool terminate, SL sl )ι->void{
+		if( _ioContext ){
+			TRACET( _connectTag, "[{}]Client::Shutdown: {}", hex(Id()), Host() );
+			BlockVoidAwait( Close(terminate, sl) );
+		}
 	}
 
 	α IClientSocketSession::AddTask( RequestId requestId, std::any hCoroutine )ι->void{
@@ -130,12 +139,14 @@ namespace Jde::Web::Client{
 	}
 	α IClientSocketSession::OnClose( beast::error_code ec )ι->void{
 		if( ec )
-			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{:x}]Client::OnClose", Id()), GetLogLevel(ec) };
+			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{}]Client::OnClose: {}", hex(Id()), _host), GetLogLevel(ec) };
 		else
-			TRACET( _writeTag, "[{:x}]Client::OnClose", Id() );
+			DBGT( _connectTag, "[{}]Client::OnClose: {}", hex(Id()), _host );
 		CloseTasks( [](std::any&&){} );
 		if( _closeHandle )
 			_closeHandle.resume();
 		_closeHandle = nullptr;
+		_stream = nullptr;
+		_ioContext = nullptr;
 	}
 }

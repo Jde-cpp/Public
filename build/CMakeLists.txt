@@ -182,7 +182,7 @@ ExternalProject_Add(open62541
 		#     (e.g. String_copy via copyJumpTable) -> opt back out with -fno-sanitize=function.
 		#  2. "-gline-tables-only" emits line tables but no variable/type DWARF, so debuggers
 		#     report "no variable information is available" -> trailing -g restores full info.
-		"-DCMAKE_C_FLAGS_DEBUG=-fno-sanitize=function -fno-sanitize=pointer-overflow -g"
+		"-DCMAKE_C_FLAGS_DEBUG=-fno-sanitize=function -fno-sanitize=pointer-overflow -fno-sanitize=alignment -g"
 		-DUA_ENABLE_ENCRYPTION=ON
 		-DUA_ENABLE_ENCRYPTION_OPENSSL=ON
 		-DOPENSSL_USE_STATIC_LIBS=ON

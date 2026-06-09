@@ -1,6 +1,4 @@
 #include "Auth.h"
-#include "../../src/auth/UM.h"
-#include "../../src/usings.h"
 
 #define let const auto
 

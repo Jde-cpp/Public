@@ -1,4 +1,5 @@
 #include <jde/app/client/RemoteLog.h>
+#include "jde/fwk/process/process.h"
 #include <jde/fwk/process/execution.h>
 #include <jde/app/client/IAppClient.h>
 
@@ -9,17 +10,18 @@ namespace Jde::App::Client{
 		ILogger{ settings },
 		_client{ move(client) },
 		_delay{ Json::FindDuration(settings, "delay", ELogLevel::Error).value_or(1min) }{
+		Process::AddShutdown( this );
 	}
 	RemoteLog::~RemoteLog(){
 		ASSERT( !_timer );
 		if( _timer ){
 			ResetTimer();
 			while( _timer )
-				std::this_thread::sleep_for(1ms);
+				std::this_thread::sleep_for( 1ms );
 		}
 	}
 	α RemoteLog::Start( sp<IAppClient> client )ι->void{
-		_client = move(client);
+		_client = move( client );
 		Executor();//locks up if starts in StartTimer.
 		Execution::Run();
 	}
@@ -33,7 +35,7 @@ namespace Jde::App::Client{
 		_client = nullptr;
 	}
 	α RemoteLog::Init( sp<IAppClient> client )ι->void{
-		if( auto log = Logging::Add<RemoteLog>( "remote", client ); log )
+		if( auto log = Logging::Add<RemoteLog>("remote", client); log )
 			log->Start( move(client) );
 	}
 
@@ -69,16 +71,16 @@ namespace Jde::App::Client{
 	}
 
 	α RemoteLog::ResetTimer()ι->void{
-		lg _{_mutex};
+		lg _{ _mutex };
 		if( _timer )
 			_timer->Cancel();
 	}
 	α RemoteLog::Send()ι->void{
 		if( _entries.empty() || !_client->Connected() )
 			return;
-		lg _{_mutex};
+		lg _{ _mutex };
 		ASSERT( _client );
 		if( _client )
-			Post( [entries=move(_entries),client=_client]() mutable{ client->Write( move(entries) );} );
+			Post( [entries=move(_entries),client=_client]() mutable{client->Write(move(entries));} );
 	}
 }

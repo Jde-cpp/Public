@@ -2,7 +2,7 @@ local args = import 'args.libsonnet';
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests: "QLTests.ServerDescriptionTest",
+		tests:: "WriteTests.Enum",
 		recreateDB:: true,
 		embeddedAppServer: false,
 		embeddedOpcServer: false
@@ -60,7 +60,7 @@ local args = import 'args.libsonnet';
 				default: "Information",
 				app: "Trace",
 				ql: "Information",
-				settings: "Trace",
+				settings: "Debug",
 				scheduler: "Debug",
 				http_client_write: "Trace",
 				http_client_read: "Trace",

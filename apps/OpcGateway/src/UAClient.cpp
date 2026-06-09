@@ -8,9 +8,7 @@
 #include <jde/opc/uatypes/Value.h>
 #include "StartupAwait.h"
 #include "async/DataChanges.h"
-#include "async/SetMonitoringMode.h"
 #include "uatypes/Browse.h"
-#include "uatypes/CreateMonitoredItemsRequest.h"
 #include "uatypes/uaTypes.h"
 
 #define let const auto
@@ -20,6 +18,7 @@ namespace Jde::Opc::Gateway{
 	flat_map<ServerCnnctnNK,flat_map<Credential,sp<UAClient>>> _clients; shared_mutex _clientsMutex;
 	α UAClient::RemoveClient( sp<UAClient>&& client )ι->bool{
 		client->Connected = false;
+		client->_asyncRequest.Stop();//cancels the ping timer & processing loop; otherwise the global _pingTimer stays pending on the io_context (and the ping coroutine keeps a UAClient ref), blocking shutdown.
 		bool erased{};
 		ul _{ _clientsMutex };
 		if( auto serverCreds = _clients.find(client->Target()); serverCreds!=_clients.end() ){
@@ -59,7 +58,7 @@ namespace Jde::Opc::Gateway{
 		_logger{ _handle },
 		_ptr{ Create() }{
 		UA_ClientConfig_setDefault( Configuration() );
-		INFO( "[{:x}]Creating UAClient target: '{}' url: '{}' credential: '{}' )", Handle(), Target(), Url(), Credential.ToString() );
+		INFO( "[{}]Creating UAClient target: '{}' url: '{}' credential: '{}' )", hex(Handle()), Target(), Url(), Credential.ToString() );
 		LogClientEndpoints();
 	}
 
@@ -347,6 +346,6 @@ namespace Jde::Opc::Gateway{
 
 	UAClient::~UAClient() {
 		UA_Client_delete( _ptr );
-		DBG( "[{:x}]~UAClient( '{}', '{}' )", Handle(), Target(), Url() );
+		INFO( "[{}]~UAClient( '{}', '{}' )", hex(Handle()), Target(), Url() );
 	}
 }

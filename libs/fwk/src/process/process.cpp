@@ -16,7 +16,7 @@ namespace Jde{
 	α Process::AppName()ι->const string&{ return _applicationName; }
 
 	bool _isConsole{};
-	α Process::SetConsole( bool value )ι->void{ _isConsole=value;}
+	α Process::SetConsole( bool value )ι->void{ _isConsole=value; }
 	α Process::IsConsole()ι->bool{ return _isConsole; }
 
 
@@ -105,7 +105,7 @@ namespace Jde{
 
 	up<IShutdown> _executor;
 	α Process::SetExecutor( up<IShutdown>&& executor )ι->void{
-		_executor = move(executor);
+		_executor = move( executor );
 	}
 
 
@@ -125,9 +125,11 @@ namespace Jde{
 		bool terminate{ false }; //use case might be if non-terminate took too long
 		SetExitReason( exitReason, terminate );//Sets ShuttingDown should be called in OnExit handler
 
-		for_each( _shutdownFunctions, [=](let& shutdown){ shutdown( terminate, SRCE_CUR ); } );
+		for_each( _shutdownFunctions, [=](let& shutdown){shutdown(terminate, SRCE_CUR);} );
 		DBGT( ELogTags::App | ELogTags::Shutdown, "{} Shutdown functions removed", _shutdownFunctions.size() );
-		_rawShutdowns.erase( [=](auto& p){ p->Shutdown( terminate );} );
+		_rawShutdowns.rerase( [=](auto& p){
+			p->Shutdown( terminate );
+		});
 		DBGT( ELogTags::App | ELogTags::Shutdown, "Raw functions removed" );
 		cleanup( terminate );
 	}
@@ -152,6 +154,6 @@ namespace Jde{
 	}
 	α Process::GetEnv( str variable )ι->optional<string>{
 		char* env = std::getenv( variable.c_str() );
-		return env ? string{env} : optional<string>{};
+		return env ? string{ env } : optional<string>{};
 	}
 }

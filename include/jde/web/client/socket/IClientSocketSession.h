@@ -4,6 +4,7 @@
 #include "../exports.h"
 #include "ClientSocketStream.h"
 #include "ClientSocketAwait.h"
+#include "jde/fwk/process/process.h"
 #include <jde/fwk/co/Await.h>
 #include <jde/fwk/io/protobuf.h>
 
@@ -27,9 +28,10 @@ namespace Jde::Web::Client{
 	};
 
 	//TODO check what should be protected
-	struct ΓWC IClientSocketSession : std::enable_shared_from_this<IClientSocketSession>{
+	struct ΓWC IClientSocketSession : IShutdown, std::enable_shared_from_this<IClientSocketSession>{
 		IClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι;// Resolver and socket require an io_context
 		virtual ~IClientSocketSession()=default;
+		α Shutdown( bool terminate, SL sl )ι->void override;
 		α AddTask( RequestId requestId, std::any hCoroutine )ι->void;
 		α PopTask( RequestId requestId )ι->std::any;
 

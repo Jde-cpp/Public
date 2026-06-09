@@ -21,6 +21,7 @@ namespace Jde{
 		α find( const T& x )ι->optional<T>{ sl l(Mutex); auto p = std::ranges::find(Base(), x); return p==end(l) ? nullopt : optional<T>{*p}; }
 		α erase( const T& x )ι->bool{ ul l(Mutex); auto p = std::ranges::find(Base(), x); bool found = p!=end(l); base::erase(p); return found; }
 		α	erase( function<void(const T& p)> before )ι->void;
+		α	rerase( function<void(const T& p)> before )ι->void;
 		α	erase_if( function<bool(const T& p)> test )ι->void;
 		α	erase_first( function<bool(const T& p)> test, ul& l )ι->bool;
 
@@ -47,6 +48,13 @@ namespace Jde{
 		ul _( Mutex );
 		for( auto p = base::begin(); p!=base::end(); p=base::erase(p) )
 			before( *p );
+	}
+	Ŧ	Vector<T>::rerase( function<void(const T& p)> before )ι->void{
+		ul _( Mutex );
+		for( int i=base::size()-1; i>=0; --i ){
+			before( base::at(i) );
+			base::erase( base::begin() + i );
+		}
 	}
 	Ŧ	Vector<T>::erase_if( function<bool(const T& p)> test )ι->void{
 		ul _( Mutex );

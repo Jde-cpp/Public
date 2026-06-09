@@ -3,6 +3,7 @@
 
 #define let const auto
 namespace Jde::Web::Client{
+	constexpr ELogTags _connectTag{ ELogTags::Socket | ELogTags::Client };
 	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 	string _sslUserAgent{ Ƒ("({})Jde.Web.Client SSL - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 
@@ -81,6 +82,7 @@ namespace Jde::Web::Client{
 	}
 
 	α ClientSocketStream::Close( sp<IClientSocketSession> session, bool terminate, SL )ι->void{
+		DBGT( _connectTag, "[{}]Client::Close: {}", hex(session->Id()), session->Host() );
 		std::visit( [session, terminate](auto&& ws)->void {
 			ws.async_close( terminate ? websocket::close_code::going_away : websocket::close_code::normal, beast::bind_front_handler(&IClientSocketSession::OnClose, session) );
 		}, _ws );

@@ -60,11 +60,15 @@ namespace Browse{
 			if( auto resultSC = response->resultsSize>0 ? response->results[0].statusCode : UA_STATUSCODE_GOOD; resultSC ){
 				DBGT( BrowseTag, "[{}.{}]({})SendBrowseRequest::Results Error", hex(_client->Handle()), hex(_requestId), hex(sc) );
 				ResumeExp( UAClientException{resultSC, _client->Handle(), _requestId} );
-			}else
+			}else{
 #ifdef __cpp_lib_move_only_function
 				Post<Response>( move(*response), move(_h) );
 #else
-				Post( [=,h=_h](){h.promise().Resume(Response{move(*response)}, h);} );
+				Post( [r=UA_BrowseResponse{*response},h=_h]()mutable{
+					h.promise().Resume(Response{move(r)}, h);
+				});
+				UA_BrowseResponse_init( response );
+			}
 #endif
 		}else
 			ResumeExp( UAClientException{sc, _client->Handle(), _requestId} );
