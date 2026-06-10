@@ -15,7 +15,12 @@ namespace Jde::Opc::Gateway::Tests{
 		CertTests()ι:Auth{ETokenType::Certificate}{}
 		~CertTests()override{}
 		Ω SetUpTestCase()ε->void;
-		α TearDown()ι->void override{}
+		α TearDown()ι->void override{
+			if( _client ){
+				UAClient::RemoveClient( move(_client) );
+				_client = nullptr;
+			}
+		}
 		Ω TearDownTestSuite();
 
 		α Connect( atomic_flag& flag, char id )ι->ConnectAwait::Task;
@@ -59,8 +64,6 @@ namespace Jde::Opc::Gateway::Tests{
 		c.wait( false );
 		d.wait( false );
 		EXPECT_FALSE( _exception );
-		if( _client )
-			UAClient::RemoveClient( move(_client) );
 	}
 
 	TEST_F( CertTests, Authenticate_Bad ){

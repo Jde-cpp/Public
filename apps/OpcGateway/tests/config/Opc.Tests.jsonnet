@@ -55,6 +55,7 @@ local args = import 'args.libsonnet';
 		opcServer:{ name: "OpcTests" }
 	},
 	logging:{
+		loadFromServer: false,
 		spd:{
 			tags: {
 				default: "Information",

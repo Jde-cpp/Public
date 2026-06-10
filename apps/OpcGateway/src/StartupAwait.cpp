@@ -8,6 +8,7 @@
 #include <jde/access/client/accessClient.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/IAppClient.h>
+#include "jde/fwk/settings.h"
 #include "opcInternal.h"
 #include "UAClient.h"
 #include "WebServer.h"
@@ -53,7 +54,8 @@ namespace Jde::Opc::Gateway{
 			appClient->SslSettings = move(sslSettings);
 			appClient->SetUserName( move(_userName) );
 			co_await App::Client::ConnectAwait{ appClient, false };
-			appClient->LoadLogSettings();
+			if( Settings::FindBool("/logging/loadFromServer").value_or(true) )
+				appClient->LoadLogSettings();
 
 			co_await Access::Client::Configure( accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, appClient->Listener(), {} );
 			Process::AddShutdownFunction( [](bool terminate, SL sl){UAClient::Shutdown(terminate, sl);} );

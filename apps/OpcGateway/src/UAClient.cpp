@@ -196,8 +196,10 @@ namespace Jde::Opc::Gateway{
 						ConnectAwait::Resume(move(client));
 					});
 				}
-				else
+				else{
+					client->_asyncRequest.Stop();// Break the UAClient<->_asyncRequest._client self-reference; on the failure path the client never enters _clients, so Shutdown would never Stop() it and the UAClient (and its UA_Client) would leak.
 					Post( [client,connectStatus]()ι->void {ConnectAwait::Resume(client->Target(), client->Credential, UAClientException{connectStatus, client->Handle(), "Connection Failed"});} );
+				}
 
 				return true;
 			});

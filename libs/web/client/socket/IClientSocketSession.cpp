@@ -126,7 +126,7 @@ namespace Jde::Web::Client{
 		boost::ignore_unused( bytes_transferred );
 		if( ec ){
 			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{:x}]ClientSocket::DoRead", Id()), GetLogLevel(ec) };
-			if( ec!=net::error::operation_aborted )
+			if( ec!=net::error::operation_aborted && ec!=boost::beast::websocket::error::closed )// websocket::error::closed means the close handshake already completed (Beast auto-replies to a received close frame); calling Close() again would initiate a second async_close that collides with the in-flight one on Beast's write soft_mutex.
 				_stream->Close( shared_from_this(), false, SRCE_CUR );
 			return;
 		}
