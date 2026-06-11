@@ -85,6 +85,8 @@ namespace Jde::Web::Server{
 		LogRead( "SererSocket::OnClose.", 0 );
 		Internal::RemoveSocketSession( Id() );
 		_listener = nullptr;
+		Stream->Close( shared_from_this() );
+		Stream = nullptr;
 	}
 
 	α IWebsocketSession::AddSubscription( string&& query, jobject vars, RequestId requestId, SL sl )ε->flat_set<QL::SubscriptionId>{

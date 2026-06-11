@@ -96,7 +96,17 @@ namespace Jde::App{
 		AddString( e.Id(), e.Text );
 		AddString( e.FileId(), e.File() );
 		AddString( e.FunctionId(), e.Function() );
-		AddArguments( e.Arguments, fileEntry.entry().args() );
+		switch( fileEntry.value_case() ){
+			case App::Log::Proto::FileEntry::kEntry:
+				AddArguments( e.Arguments, fileEntry.entry().args() );
+			break;
+			case App::Log::Proto::FileEntry::kExternalEntry:
+				AddArguments( e.Arguments, fileEntry.external_entry().args() );
+			break;
+			default:
+				ASSERTX( false );
+		}
+
 		std::copy( data.begin(), data.end(), std::back_inserter(_toSave) );
 		if( _toSave.size()>=_delaySize )
 			Save();
@@ -141,7 +151,7 @@ namespace Jde::App{
 		AddString( id, str, _cache.Strings );
 	}
 	α ProtoLog::AddString( uuid id, sv str, std::deque<uuid>& cache )ι->void{
-		ASSERT_DESC( str.size() || id==EmptyStringMd5, "String with empty value must have empty md5." );
+		ASSERTX( str.size() || id==EmptyStringMd5 );
 		if( find(cache, id)!=cache.end() )
 			return;//TODO update position
 		cache.push_front( id );
@@ -151,7 +161,7 @@ namespace Jde::App{
 		std::copy( data.begin(), data.end(), std::back_inserter(_toSave) );//TODO copy in SizePrefixed
 	}
 	α ProtoLog::AddArguments( const vector<string>& args, ::google::protobuf::RepeatedPtrField<std::string> ids )ι->void{
-		ASSERT( args.size()==(uint)ids.size() );
+		ASSERTX( args.size()==(uint)ids.size() );
 		for( uint i=0; i<args.size(); ++i )
 			AddString( ToGuid(ids.Get((int)i)), args[i], _cache.Args );
 	}

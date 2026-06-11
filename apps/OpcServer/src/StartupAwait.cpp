@@ -27,6 +27,7 @@ namespace Jde::Opc::Server{
 		try{
 			auto remoteAcl = App::Client::RemoteAcl( "opc" );
 			auto uaSchema = DB::GetAppSchema( "opc", remoteAcl );
+			uaSchema->Authorizer = opcAuthorize;// GetAppSchema returns a cached schema whose Authorizer is baked in when GetClusters first builds the cache. When another server (e.g. embedded AppServer) built it first with a base Access::Authorize, our SetAcl(OpcAuthorize) above is ignored here. Install it explicitly so UAAccess::GetUserAccessLevel's static_cast<OpcAuthorize&> is valid (and so UserRights reads the same _nodeResources that AssignRights populates).
 			ConfigureQL( uaSchema, remoteAcl );
 			QL::SetSystemTables( {"logSetting"} );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )

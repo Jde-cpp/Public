@@ -50,7 +50,19 @@ namespace Jde::Opc::Server::UAAccess{
 		return *cntxt;
 	}
 
+	Ω clearAccessControl( UA_AccessControl* ac )ι->void{
+		if( auto context = (AccessControlContext*)ac->context ){
+			UA_String_clear( &context->UserTokenPolicyUri );
+			UA_free( context );
+			ac->context = nullptr;
+		}
+		UA_Array_delete( ac->userTokenPolicies, ac->userTokenPoliciesSize, &UA_TYPES[UA_TYPES_USERTOKENPOLICY] );
+		ac->userTokenPolicies = nullptr;
+		ac->userTokenPoliciesSize = 0;
+	}
+
 	Ω assignFunctions( UA_AccessControl& ac )ι{
+		ac.clear = &clearAccessControl;
 		ac.activateSession = &ActivateSession;
 		ac.closeSession = &CloseSession;
 		ac.getUserRightsMask = &GetUserRightsMask;
@@ -101,13 +113,13 @@ namespace Jde::Opc::Server{
 			log += ToString( utpUri ) + ",";
       if( context.allowAnonymous ){
       	ac.userTokenPolicies[policies].tokenType = UA_USERTOKENTYPE_ANONYMOUS;
-        ac.userTokenPolicies[policies].policyId = ToUV( "open62541-anonymous-policy" );
+        ac.userTokenPolicies[policies].policyId = UA_STRING_ALLOC( "open62541-anonymous-policy" );// must be heap-owned: UA_Array_delete in clearAccessControl deep-frees policyId; a ToUV view would free a string literal.
         UA_String_copy( &utpUri, &ac.userTokenPolicies[policies].securityPolicyUri );
         ++policies;
       }
       if( context.AllowCertificate ){
         ac.userTokenPolicies[policies].tokenType = UA_USERTOKENTYPE_CERTIFICATE;
-        ac.userTokenPolicies[policies].policyId = ToUV( "open62541-certificate-policy" );
+        ac.userTokenPolicies[policies].policyId = UA_STRING_ALLOC( "open62541-certificate-policy" );// must be heap-owned: UA_Array_delete in clearAccessControl deep-frees policyId; a ToUV view would free a string literal.
         if( UA_String_equal(&utpUri, &UA_SECURITY_POLICY_NONE_URI) )
 					DBGT( (ELogTags)EOpcLogTags::Server, "x509 Certificate Authentication configured, but no encrypting SecurityPolicy. This can leak credentials on the network." );
         UA_String_copy( &utpUri, &ac.userTokenPolicies[policies].securityPolicyUri );

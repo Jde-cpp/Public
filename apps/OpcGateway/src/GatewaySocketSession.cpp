@@ -18,6 +18,8 @@ namespace Jde::Opc::Gateway{
 	{}
 
 	α GatewaySocketSession::OnClose()ι->void{
+		if( !Stream )
+			return;
 		LogRead( "OnClose", 0 );
 		Server::RemoveSession( Id() );
 		base::OnClose();

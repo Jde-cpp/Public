@@ -23,7 +23,7 @@ namespace Jde::Opc::Gateway{
 		ul _{ _clientsMutex };
 		if( auto serverCreds = _clients.find(client->Target()); serverCreds!=_clients.end() ){
 			if( auto cred = serverCreds->second.find(client->Credential); cred!=serverCreds->second.end() ){
-				DBG( "[{:x}]Removing client: '{}'.", client->Handle(), client->Target() );
+				DBG( "[{}]Removing client: '{}'.", hex(client->Handle()), client->Target() );
 				serverCreds->second.erase( cred );
 				erased = true;
 				if( serverCreds->second.empty() )
@@ -33,7 +33,7 @@ namespace Jde::Opc::Gateway{
 		}
 		client = nullptr;
 		if( !erased )
-			DBG( "[{:x}] - could not find client='{}'.", client->Handle(), client->Target() );
+			DBG( "[{}] - could not find client='{}'.", hex(client->Handle()), client->Target() );
 		return erased;
 	}
 	concurrent_flat_map<uint32_t, uint32_t> _handles;
@@ -71,7 +71,7 @@ namespace Jde::Opc::Gateway{
 						co_await p->Shutdown();
 					client->_asyncRequest.Stop();
 					if( client.use_count()>1 )
-					  WARN( "[{:x}]use_count={}", client->Handle(), client.use_count() );
+					  WARN( "[{}]use_count={}", hex(client->Handle()), client.use_count() );
 				}
 			}
 		}
@@ -143,7 +143,7 @@ namespace Jde::Opc::Gateway{
 		auto config = UA_Client_getConfig( _ptr );
 		for( let& sp : Iterable<UA_SecurityPolicy>( config->securityPolicies, config->securityPoliciesSize) )
 			policyUris.emplace_back( ToString(sp.policyUri) );
-		INFO( "[{:x}]Client Security Policies: {}", Handle(), Str::Join(policyUris) );
+		INFO( "[{}]Client Security Policies: {}", hex(Handle()), Str::Join(policyUris) );
 	}
 	α UAClient::LogServerEndpoints( str url, Jde::Handle h )ι->void{
     UA_Client *client = UA_Client_new();
@@ -170,7 +170,7 @@ namespace Jde::Opc::Gateway{
 
 	α UAClient::StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void{
 		constexpr std::array<sv,6> sessionStates = { "Closed", "CreateRequested", "Created", "ActivateRequested", "Activated", "Closing" };
-		DBG( "[{:x}]channelState='{}', sessionState='{}', connectStatus='({:x}){}'", (uint)ua, UAException::Message(channelState), FromEnum(sessionStates, sessionState), connectStatus, UAException::Message(connectStatus) );
+		DBG( "[{}]channelState='{}', sessionState='{}', connectStatus='({}){}'", hex((uint)ua), UAException::Message(channelState), FromEnum(sessionStates, sessionState), hex(connectStatus), UAException::Message(connectStatus) );
 		if( auto client = sessionState == UA_SESSIONSTATE_ACTIVATED ? UAClient::TryFind(ua) : sp<UAClient>{}; client ){
 			client->TriggerSessionAwaitables();
 			client->ClearRequest( ConnectRequestId );
@@ -209,7 +209,7 @@ namespace Jde::Opc::Gateway{
 		BREAK;
 	}
 	α subscriptionInactivityCallback( UA_Client *client, SubscriptionId subscriptionId, void* /*subContext*/ ){
-		DBG( "[{:x}.{:x}]subscriptionInactivityCallback", (uint)client, subscriptionId );
+		DBG( "[{}.{}]subscriptionInactivityCallback", hex((uint)client), hex(subscriptionId) );
 	}
 	α UAClient::Create()ι->UA_Client*{
 		_config.logging = &_logger;
@@ -258,7 +258,7 @@ namespace Jde::Opc::Gateway{
 		auto p = shared_from_this();
 		ASSERT( !_awaitingActivation.contains(p) );
 		_awaitingActivation.emplace( shared_from_this() );
-		DBG( "[{:x}]Connecting to '{}', using '{}'", Handle(), Url(), Credential.ToString() );
+		DBG( "[{}]Connecting to '{}', using '{}'", hex(Handle()), Url(), Credential.ToString() );
 		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
 		_asyncRequest.SetClient( p );
 		Process( ConnectRequestId, "Connect" );
@@ -317,7 +317,7 @@ namespace Jde::Opc::Gateway{
 	α UAClient::Find( UA_Client* ua, SL srce )ε->sp<UAClient>{
 		sp<UAClient> y = TryFind( ua, srce );
 		if( !y )
-	 		throw Exception{ srce, ELogLevel::Debug, "[{}]Could not find client.", format("{:x}", (uint)ua) };
+	 		throw Exception{ srce, ELogLevel::Debug, "[{}]Could not find client.", hex((uint)ua) };
 		return y;
 	}
 

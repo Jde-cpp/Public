@@ -104,14 +104,8 @@ namespace Jde::App::Server{
 			WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 			return;
 		}
-		vector<string> args = Protobuf::ToVector( move(*entry.mutable_args()) );
 		Logging::Entry y{ App::FromClient::FromLogEntry(move(entry)) };
-		//y.Text = StringCache::GetMessage( y.Id() );
-		//y.SetFile( StringCache::GetFile(y.FileId()) );
-		//y.SetFunction( StringCache::GetFunction(y.FunctionId()) );
 		Logging::Log( move(y), _programPK, _instancePK );
-		// if( auto p = Logging::FindLogger<ProtoLog>(); p )
-		// 	p->Write( move(y), _programPK, _instancePK );
 	}
 	α ServerSocketSession::SendAck( uint32 id )ι->void{
 		Write( FromServer::Ack(id) );
@@ -315,6 +309,8 @@ namespace Jde::App::Server{
 		Write( FromServer::QueryClient(move(q), move(query.Variables), executer, query.ReturnRaw, requestId) );
 	}
 	α ServerSocketSession::OnClose()ι->void{
+		if( !Stream )
+			return;
 		LogRead( "OnClose", 0 );
 		Server::RemoveSession( Id() );
 		base::OnClose();
