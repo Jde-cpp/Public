@@ -71,12 +71,12 @@ message ArchiveFile{
 
 message Host{
 	int32 id=1;
-	String name=2;
+	string name=2;
 }
 
 message App{
 	int32 id=1;
-	String name=2;
+	string name=2;
 }
 
 message AppInstance{

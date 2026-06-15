@@ -1,7 +1,7 @@
 <!-- @if( !isLoading() ) { -->
 	<mat-toolbar>
 		<mat-form-field>
-			<input matInput [(ngModel)]="name" placeholder="View Name">
+			<input matInput [(ngModel)]="name" placeholder="View Name" (focus)="$event.target.select()">
 		</mat-form-field>
 		<button matButton="tonal" (click)="onSave.emit(getView(false))" [disabled]=disableSave()>Save</button>
 		<button matButton="tonal" (click)="onShow.emit(getView(true))">Show</button>

@@ -1,10 +1,10 @@
 ﻿#pragma once
+#include "jde/fwk/usings.h"
 #ifndef JDE_STR_H
 #define JDE_STR_H
 DISABLE_WARNINGS
 #pragma GCC diagnostic ignored "-Wsubobject-linkage"
 #include <charconv>
-#include <codecvt>
 #include <span>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
@@ -20,9 +20,12 @@ namespace Jde{
 	template<> Ξ To( sv x )ι->double{ return stod(string{x}); }
 	Ŧ hex( T number )ι->string{ return Ƒ("{:x}", number); }
 	Φ ToUuid( sv s, SRCE )ε->uuid;
+	Φ ToString( const boost::uuids::uuid& u )ι->string;
 }
 namespace Jde::Str{
 	Φ Empty()ι->str;
+	Ξ Reserve( uint size )ι->string{ string s; s.reserve(size); return s; }
+
 	template<class T=string> α Decode64( sv s, bool convertFromFileSafe=false )ε->T;
 	Φ DecodeUri( sv str )ι->string;
 	template<class T, class I=T::const_iterator> α Encode64( const T& val, bool convertFromFileSafe=false )ι->string;

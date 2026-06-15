@@ -89,7 +89,7 @@ export class QLListResolver implements Resolve<QLListData> {
 		return columns;
 	}
 	static async load( ql:IGraphQL, data:QLListData, routeStore:RouteStore ):Promise<QLListData>{
-		const q = data.profile.view.query( data.profile.showDeleted );
+		const q = data.profile.view.query( data.profile.showDeleted, 0 );
 		data.results = await ql.query<any>( q.text, q.vars, (m)=>console.log(m) );
 		const children = data.results[data.schema.collectionName].map( r=>({title:r.name, path:`${data.routing.path}/${r.target}`}) );
 		routeStore.setChildren( data.routing.path, children );

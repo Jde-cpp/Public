@@ -103,14 +103,14 @@ namespace Client{
 	}
 	α AppClientSocketSession::Query( string&& q, jobject variables, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
 		let requestId = NextRequestId();
-		LOGSL( ELogLevel::Debug, sl, ELogTags::SocketClientWrite, "[{:x}]{}.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
+		LOGSL( ELogLevel::Debug, sl, ELogTags::SocketClientWrite, "[{}]{}.", hex(requestId), q.substr(0, Web::Client::MaxLogLength()) );
 
 		return ClientSocketAwait<jvalue>{ FromClient::Query(move(q), move(variables), requestId, returnRaw), requestId, shared_from_this(), sl };
 	}
 	concurrent_flat_map<RequestId, std::pair<sp<QL::IListener>,vector<QL::Subscription>>> _subscriptionRequests;
 	α AppClientSocketSession::Subscribe( string&& q, jobject vars, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
 		let requestId = NextRequestId();
-		LOGSL( ELogLevel::Debug, sl, ELogTags::SocketClientWrite, "[{:x}]{} {}.", requestId, q.substr(0, Web::Client::MaxLogLength()), serialize(vars) );
+		LOGSL( ELogLevel::Debug, sl, ELogTags::SocketClientWrite, "[{}]{} {}.", hex(requestId), q.substr(0, Web::Client::MaxLogLength()), serialize(vars) );
 		auto subscriptions = QL::ParseSubscriptions( q, vars, _appClient->SubscriptionSchemas, sl );
 		_subscriptionRequests.emplace( requestId, make_pair(listener, move(subscriptions)) );
 		return ClientSocketAwait<jarray>{ FromClient::Subscription(move(q), move(vars), requestId), requestId, shared_from_this(), sl };
@@ -194,16 +194,16 @@ namespace Client{
 				resume( move(hAny), move(*m->mutable_strings()) );
 				}break;
 			case kJwt:
-				DBG( "[{:x}]Jwt: size='{}'.", Id(), m->jwt().size() );
+				DBG( "[{}]Jwt: size='{}'.", hex(Id()), m->jwt().size() );
 				resume( move(hAny), Web::Jwt{move(*m->mutable_jwt())} );
 				break;
 			case kProgress://TODO not awaitable
-				DBG( "[{:x}]Progress: '{}'.", Id(), m->progress() );
+				DBG( "[{}]Progress: '{}'.", hex(Id()), m->progress() );
 				resumeScaler( move(hAny), m->progress() );
 				break;
 			case kSessionInfo:{
 				auto& res = *m->mutable_session_info();
-				DBG( "[{}]SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", hex(Id()), ToIsoString(Protobuf::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
+				DBG( "[{}]SessionInfo: expiration: '{}', session_id: '{}', user_pk: '{}', user_endpoint: '{}'.", hex(Id()), ToIsoString(Protobuf::ToTimePoint(res.expiration())), hex(res.session_id()), res.user_pk(), res.user_endpoint() );
 				resume( move(hAny), move(res) );
 				}break;
 			case kQueryResult:
@@ -225,7 +225,7 @@ namespace Client{
 				else{ //found the request.
 					jarray y;
 					for_each( m->subscription_ack().server_ids(), [&](auto id){y.emplace_back(id);} );
-					DBG( "[{:x}]SubscriptionAck: '{}'.", Id(), serialize(y) );
+					DBG( "[{}]SubscriptionAck: '{}'.", hex(Id()), serialize(y) );
 					resume( move(hAny), move(y) );
 				}
 				break;
@@ -245,11 +245,11 @@ namespace Client{
 				break;}
 			case kExecuteResponse://wait for use case.
 			case kStringPks://strings already saved in db, no need to send.  not being requested by client yet.
-				CRITICAL( "[{:x}]No use case has been implemented on client app '{}'.", Id(), underlying(m->value_case()) );
+				CRITICAL( "[{}]No use case has been implemented on client app '{}'.", hex(Id()), underlying(m->value_case()) );
 				break;
 			[[likely]]case kTraces:{
 				auto& traces = *m->mutable_traces();
-				DBG( "[{:x}]Traces: count='{}'.", Id(), traces.values_size() );
+				DBG( "[{}]Traces: count='{}'.", hex(Id()), traces.values_size() );
 				App::Client::Subscriptions::OnTraces( move(traces), requestId );
 				break;}
 			//[[unlikely]]
@@ -285,7 +285,7 @@ namespace Client{
 		else{
 			let severity{ requestId ? ELogLevel::Critical : ELogLevel::Debug };
 			ASSERT_DESC( !requestId, Ƒ("Type Not Expected={}", h.type().name()) );
-			LOG( severity, _tags, "[{:x}]Failed to process incoming exception '{}'.", requestId, e.what() );
+			LOG( severity, _tags, "[{}]Failed to process incoming exception '{}'.", hex(requestId), e.what() );
 		}
 	}
 	α AppClientSocketSession::WriteException( exception&& e, RequestId requestId )ι->void{

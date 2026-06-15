@@ -1,4 +1,6 @@
 #include "ArchiveAwait.h"
+#include <chrono>
+#include <filesystem>
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/io/FileAwait.h>
 #include <jde/fwk/io/protobuf.h>
@@ -25,7 +27,7 @@ namespace Jde::App{
 		std::map<uuid,App::Log::Proto::String> strings;
 		for( auto& entry : entries ){
 			if( entry.has_str() )
-				strings[ToGuid(entry.str().id())] = move( *entry.mutable_str() );
+				strings[ToGuid( entry.str().id() )] = move( *entry.mutable_str() );
 			else{
 				let day = Chrono::LocalYMD( Protobuf::ToTimePoint(entry.entry().time()), _tz );
 				*archives[day].add_entries() = move( *entry.mutable_entry() );
@@ -71,7 +73,7 @@ namespace Jde::App{
 		Resume();
 	}
 	Ω getFile( year_month_day ymd, const fs::path& root )ι->fs::path{
-		let dir = root/std::to_string((int)ymd.year())/std::to_string((unsigned)ymd.month())/std::to_string((unsigned)ymd.day());
+		let dir = root/std::to_string( (int)ymd.year() )/std::to_string( (unsigned)ymd.month() )/std::to_string( (unsigned)ymd.day() );
 		if( !fs::exists(dir) )
 			fs::create_directories( dir );
 		return dir/"archive.binpb";
@@ -102,7 +104,7 @@ namespace Jde::App{
 		auto existing = Protobuf::Deserialize<App::Log::Proto::ArchiveFile>( move(content) );
 		auto addEntries = [&entries]( App::Log::Proto::ArchiveFile& af ){
 			for( int i=0; i<af.entries_size(); ++i ){
-				auto& entry = *af.mutable_entries(i);
+				auto& entry = *af.mutable_entries( i );
 				entries.emplace_hint( entries.end(), Protobuf::ToTimePoint(entry.time()), move(entry) );
 			}
 		};
@@ -110,8 +112,8 @@ namespace Jde::App{
 		addEntries( _archive );
 #define ADD_STRINGS( collection, af ) \
 		for( int i=0; i<af.collection##_size(); ++i ){ \
-			auto& s = *af.mutable_##collection(i); \
-			collection[ToGuid(s.id())] = move(s); \
+			auto& s = *af.mutable_##collection( i ); \
+			collection[ToGuid( s.id() )] = move( s ); \
 		}
 		ADD_STRINGS( args, existing );
 		ADD_STRINGS( args, _archive );
@@ -124,15 +126,15 @@ namespace Jde::App{
 
 		App::Log::Proto::ArchiveFile cumulative;
 		for( auto& [_,entry] : entries )
-			*cumulative.add_entries() = move(entry);
+			*cumulative.add_entries() = move( entry );
 		for( auto& [_,s] : args )
-			*cumulative.add_args() = move(s);
+			*cumulative.add_args() = move( s );
 		for( auto& [_,s] : templates )
-			*cumulative.add_templates() = move(s);
+			*cumulative.add_templates() = move( s );
 		for( auto& [_,s] : files )
-			*cumulative.add_files() = move(s);
+			*cumulative.add_files() = move( s );
 		for( auto& [_,s] : functions )
-			*cumulative.add_functions() = move(s);
+			*cumulative.add_functions() = move( s );
 
 		Save( move(cumulative) );
 	}
@@ -145,7 +147,7 @@ namespace Jde::App{
 			ResumeExp( move(e) );
 		}
 	}
-	α ArchiveLoadAwait::Execute()ι->StringAwait::Task{
+	α ArchiveLoadAwait::Suspend()ι->void{
 		try{
 			ArchiveFile archive{ _query.Filter(), move(_dailyFile) };
 			let isComplete = archive.IsComplete( _query );
@@ -156,53 +158,73 @@ namespace Jde::App{
 				archive.Functions.size(),
 				archive.Args.size(),
 				isComplete );
-			if( isComplete ){
+			if( isComplete )
+				Resume( move(archive) );
+			else
+			 	LoadArchives( move(archive) );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+
+	α ArchiveLoadAwait::ArchiveFiles()ι->flat_map<year_month_day, fs::path>{
+		flat_map<year_month_day, fs::path> y;
+		for( let& yearEntry : fs::directory_iterator(_root) ){
+			if( let yearV = yearEntry.is_directory() ? Str::TryTo<year>(yearEntry.path().stem().string()) : nullopt; yearV ){
+				for( let& monthEntry : fs::directory_iterator(yearEntry.path()) ){
+					if( let monthV = monthEntry.is_directory() ? Str::TryTo<month>(monthEntry.path().stem().string()) : nullopt; monthV ){
+						for( let& dayEntry : fs::directory_iterator(monthEntry.path()) ){
+							if( let dayV = dayEntry.is_directory() ? Str::TryTo<day>(dayEntry.path().stem().string()) : nullopt; dayV ){
+								let ymd = year_month_day{ *yearV, *monthV, *dayV };
+								if( ymd.ok() && fs::exists(dayEntry.path()/"archive.binpb") )
+									y[ymd] = dayEntry.path()/"archive.binpb";
+							}
+						}
+					}
+				}
+			}
+		}
+		return y;
+	}
+
+	α ArchiveLoadAwait::LoadArchives( ArchiveFile archive )ι->StringAwait::Task{
+		try{
+			auto process = [this]( ArchiveFile& archive, string&& content )ι->bool {
+				archive.Append( _query, Protobuf::Deserialize<App::Log::Proto::ArchiveFile>(move(content)) );
+				return archive.IsComplete( _query );
+			};
+
+			let files = ArchiveFiles();
+			if( !files.size() ){
 				Resume( move(archive) );
 				co_return;
 			}
-			auto iterate = []( fs::path path, function<int(int)> valid )->vector<int> {
-				vector<int> result;
-				for( let& entry : fs::directory_iterator(path) ){
-					if( let value = entry.is_directory() ? valid(Str::TryTo<int>(entry.path().stem().string()).value_or(0)) : 0; value )
-						result.push_back( value );
-				}
-				return result;
+			let localStart = _startTime.has_value() ? year_month_day{ floor<days>(_tz.to_local(*_startTime)) } : files.begin()->first;
+			let localEnd = _endTime.has_value() ? year_month_day{ ceil<days>(_tz.to_local(*_endTime)) } : files.rbegin()->first;
+			auto test = [localStart, localEnd]( year_month_day fileDate )ι->bool {
+				return fileDate >= localStart && fileDate <= localEnd;
 			};
-			let localStart = _startTime.has_value() ? year_month_day{floor<days>(_tz.to_local(*_startTime))} : year_month_day{ year{1970},month{1},day{1} };
-			let localEnd = _endTime.has_value() ? year_month_day{floor<days>(_tz.to_local(*_endTime))} : year_month_day{ year{2099},month{12},day{31} };
-			auto validYear = [localStart,localEnd]( int year )ι->int {
-				if( year < (int)localStart.year()
-				 || year > (int)localEnd.year() ){
-					return 0;
+
+			if( let& ob = _query.OrderByJson(); ob.size() && ob[0].first=="time" && ob[0].second ){
+				for( auto&& [ymd,file] : files ){
+					if( !test(ymd) )
+						continue;
+					auto content = co_await IO::ReadAwait( file );
+					if( process(archive, move(content)) ){
+						Resume( move(archive) );
+						co_return;
+					}
 				}
-				return year>1970 ? year : 0;
-			};
-			for( let year : iterate(_root, validYear) ){
-				let yearPath = _root/std::to_string(year);
-				auto validMonth = [year,localStart,localEnd]( int m )ι->uint {
-					unsigned month = (unsigned)m;
-					if( year == (int)localStart.year() && month < (unsigned)localStart.month() )
-						return 0;
-					if( year == (int)localEnd.year() && month > (unsigned)localEnd.month() )
-						return 0;
-					return month>0 && month<=12 ? month : 0;
-				};
-				for( let& m : iterate(yearPath, validMonth) ){
-					unsigned month = (unsigned)m;
-					let monthPath = yearPath/std::to_string(month);
-					auto validDay = [year,month,localStart,localEnd]( int day )ι->uint {
-						if( year == (int)localStart.year() && month == (unsigned)localStart.month() && ((unsigned)day) < (unsigned)localStart.day() )
-							return 0;
-						if( year == (int)localEnd.year() && month == (unsigned)localEnd.month() && ((unsigned)day) > (unsigned)localEnd.day() )
-							return 0;
-						return day>0 && day<=31 ? day : 0;
-					};
-					for( let& day : iterate(monthPath, validDay) ){
-						let file = monthPath/std::to_string(day)/"archive.binpb";
-						if( !fs::exists(file) )
-							continue;
-						auto content = co_await IO::ReadAwait( file );
-						archive.Append( _query, Protobuf::Deserialize<App::Log::Proto::ArchiveFile>(move(content)) );
+			}
+			else{
+				for( auto it = files.rbegin(); it!=files.rend(); ++it ){
+					if( !test(it->first) )
+						continue;
+					auto content = co_await IO::ReadAwait( it->second );
+					if( process(archive, move(content)) ){
+						Resume( move(archive) );
+						co_return;
 					}
 				}
 			}

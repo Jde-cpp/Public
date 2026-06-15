@@ -63,7 +63,7 @@ export class Paginator implements OnInit, OnDestroy{
 	}
 	get disabled(){ return this._disabled; }
 	set disabled(value){this._disabled=value;} _disabled: boolean=false;
-	hidePageLength = input<boolean>( false );
+	hidePageLength = input<boolean>( true );
 	length = input<number>( null );
 	get lengthDescription(){ return this.length()!=null ? ` of ${this.length()}` : ''; }
 	startIndex = model<number>(0);

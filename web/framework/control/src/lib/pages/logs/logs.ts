@@ -23,7 +23,7 @@ import { MatIconButton } from '@angular/material/button';
 import {MatSelectModule} from '@angular/material/select';
 import { PageEvent, Paginator } from '../../shared/paginator/paginator';
 import { ProfileStore } from 'jde-spa';
-import { IGraphQL, ProtoService, TableSchema, View, ViewType } from 'jde-framework';
+import { IGraphQL, ProtoService, TableSchema, verify, View, ViewType } from 'jde-framework';
 import { Entry,LogEntries, LogEntriesRest, LogView } from './LogEntry';
 
 // Move levels to combo.
@@ -49,75 +49,44 @@ export class Logs implements OnInit, OnDestroy{
 
 	async ngOnInit(){
 		this._componentPageTitle.title = "Logs";
-		this.data = new LogDataSource();
+		this.data = new LogDataSource( this.view );
 		this.profile = await this.profileStore.load<LogSettings>( "logs", new LogSettings() );
-		this.data.sort = this.profile.sort;
 		const views = await this.profileStore.loadClassArray<LogView>( `logs/views`, LogView, LogView.schema );
-		this.views = [ LogView.default(), ...views ];
-		this.viewIndex = ProfileStore.viewIndex( "logs" );
-		this.view.set( this.views[this.viewIndex] );
-		try{
-			this.load();
-		}
-		catch(e){
-			this.snackBar.exception( e, (m)=>console.log(m) );
-		}
+		this.views.set( [ LogView.default(), ...views ] );
+		this.viewIndex.set( Math.min(ProfileStore.viewIndex("logs"), this.views().length - 1) );
+		this.load();
 	}
 	ngOnDestroy(){
 		//this.appService.statusUnsubscribe( this.statusSubscription );
-		if( this.data.pageSize!=ProfileStore.pageSize("logs") )
-			ProfileStore.setPageSize( "logs", this.data.pageSize );
 		this.unsubscribe();
 		this.profileStore.save<LogSettings>( "logs", this.profile );
 	}
 
 	async load( startIndex:number=0 ){
-		let orderBy = null;
-		if( this.data.sort && this.data.sort.active ){
-			orderBy = {};
-			orderBy[this.data.sort.active] = this.data.sort.direction;
+		try{
+			const entries = ( await this.service().ql<{logs: LogEntriesRest}>( this.view().query(undefined,startIndex), (m)=>console.log(m) ) ).logs;
+			if( Object.keys(entries).length )
+				this.push( new LogEntries(entries) );
+			this.data.setPage( startIndex );
+			this.isLoading.set( false );
 		}
-		//TODO use skip variable.
-		const limit = this.view().limit ?? LogView.default().limit;
-		const vars = {limit: limit*3, skip: this.data.length, orderBy: orderBy };
-		const q = "logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
-		const entries = ( await this.service().ql<{logs: LogEntriesRest}>( this.view().query(), (m)=>console.log(m) ) ).logs;
-		this.push( new LogEntries(entries) );
-		this.data.setPage( startIndex, limit );
-		this.isLoading.set( false );
+		catch(e){
+			this.snackBar.exception( e, (m)=>console.log(m) );
+		}
 	}
-/*	onTrace = async ( trace:FromServer.ITrace ):Promise<void> =>{
-		//let status = this.applications.find( (app)=>{return app.id==trace.InstanceId;} );
-		//if( !status )
-		//	throw `no status for ${trace.InstanceId}`;
-		let entry = new TraceEntry( trace, this.applicationStrings );
-		var stringRequests = this.applicationStrings.requests( entry );
-		const haveRequest = stringRequests.files.length || stringRequests.functions.length || stringRequests.messages.length || stringRequests.userPKs.length;
-		// if( haveRequest )
-		// 	this.onStrings( await this.appService.requestStrings(stringRequests) );
 
-		entry.hidden = this.profile.hiddenMessages.indexOf(entry.messageId)!=-1;
-		if( haveRequest || this.buffer.length )
-			this.buffer.push( entry );
-		else
-			this.push( [entry] );
-	}*/
 	push( entries:LogEntries ){
-		this.data.pushArray( entries );
+		this.data.addLoadedEntries( entries );
 	}
 	onStrings = ( value:FromServer.Strings ):void =>{
-//		if( value )
-//			this.applicationStrings.set( value );
 		let i=0;
 		let entries = [];
 		for( ; i<this.buffer.length; ++i ){
 			let entry = this.buffer[i];
 			const haveStrings = entry.templateId && !entry.fileId && !entry.functionId;
-			//haveStrings = entry.message!=null && entry.file!=null && entry.functionName!=null;
 			if( haveStrings )
 				entries.push( entry );
 			else{
-				//console.log( `~(${entry.messageId}) haveStrings='${haveStrings}' message='${entry.message}' && ${entry.file} && ${entry.functionName} - ${entry.lineNumber}, buffer.length=${this.buffer.length-i}` );
 				break;
 			}
 		}
@@ -134,12 +103,12 @@ export class Logs implements OnInit, OnDestroy{
 			this.subscribe( event, this.level );
 	}
 	subscribe( applicationId:number, level:ELogLevel ){
-		var subscription = { applicationId: applicationId, level: level, start:this.start, limit:this.limit };
+		var subscription = { applicationId: applicationId, level: level, start:this.start, limit:this.view().limit };
 		if( JSON.stringify(this.currentSubscription)!=JSON.stringify(subscription) ){
 			this.buffer.length=0;
 			this.data.clear();
 			this.startIndexChange.next( 0 );
-			this.lengthChange.next( 0 );
+			//this.lengthChange.next( 0 );
 			this.unsubscribe();
 			this.level = level;
 			this.currentSubscription = subscription;
@@ -163,57 +132,108 @@ export class Logs implements OnInit, OnDestroy{
 	onLevelChange( logLevel:ELogLevel ){
 		this.subscribe( this.applicationId, logLevel );
 	}
-	//@ViewChild("table-body") configuration:ConfigureTableComponent;
-	sortData(sort: Sort|any){
-		this.data.sortData( sort );
-		this.sort = sort;
-  	}
-	onPagerChange( event:PageEvent ){
-		//const offset = event.pageIndex * event.pageSize;
-		if( this.selectedEntry ){
-			let index = this.data.entries.findIndex( (x)=>x.index==this.selectedIndex );
-			if( index<event.startIndex || index>event.startIndex+event.pageSize )
-				this.selectedEntry = null;
+
+	onSort(sort: Sort|any){
+		let sortedView = new LogView( this.view() );
+		let newSort = sortedView.sort;
+		let applySort =()=>{
+			sortedView.sort = newSort;
+			sortedView.type = ViewType.Adhoc;
+			let newViews = [...this.views()];
+			let index = newViews.findIndex( v => v.name==sortedView.name && v.type==sortedView.type );
+			if( index==-1 ){
+				newViews.push( sortedView );
+				this.viewIndex.set( newViews.length - 1 );
+				index = newViews.length - 1;
+			}else
+				newViews[index] = sortedView;
+
+			this.views.set( [...this.views().filter( v => v.name!=sortedView.name || v.type!=sortedView.type ), sortedView] );
+			this.viewIndex.set( this.views().length - 1 );
+			this.data.clear();
+			this.load();
+		};
+		if( !sort.direction ){
+			if( sort.active=="time" )
+				sort.direction = "asc";
+			else{
+				newSort.shift();
+				applySort();
+				return;
+			}
 		}
-		if( event.startIndex+event.pageSize>this.data.length )
-			this.load( event.startIndex );
-		else
-			this.data.setPage( event.startIndex, event.pageSize );
+		let existingIndex = newSort.findIndex( s=>s.active==sort.active );
+		if( existingIndex>0 ){
+			newSort.splice( existingIndex, 1 );
+			newSort.unshift( sort );
+		}
+		else if( existingIndex==0 )
+			newSort[0] = sort;
+		applySort();
+	}
+	onPagerChange( event:PageEvent ){
+		if(	this.data.setPage(event.startIndex) )
+ 			this.load( this.data.allEntries.length );
 	}
 	onViewChange(index:number){
-		this.viewIndex = index;
+		this.views.set( this.views().filter(v=>v.type!=ViewType.Adhoc) );
+		this.viewIndex.set( index );
 		ProfileStore.setViewIndex( "logs", index );
-		this.view.set( this.views[index] );
+		this.data.clear();
 		this.load();
 	}
-	onViewSave($event:View){
-		debugger;
+	async onViewSave(view:LogView){
+		if( (view.isSystem || view.isAdhoc) && !this.views().find(v=>v.name==view.name && v.isSystem) )
+			view.type = ViewType.User;
+		let newViews = this.views().filter( v=>v.type!=ViewType.Adhoc );
+		let newIndex = newViews.findIndex( v=>v.name==view.name && view.type==v.type );
+		if( newIndex==-1 ){
+			newViews.push( view );
+			newIndex = newViews.length - 1;
+		}else
+			newViews[newIndex] = view;
+		this.views.set( newViews );
+		this.viewIndex.set( newIndex );
+		verify( view.type==ViewType.User );
+		if( view.type==ViewType.User )
+			this.profileStore.save( `logs/views`, newViews.filter(v=>v.isUser).map(v=>v.toJson(undefined)) );
+
+		this.data.clear();
+		this.load();
+		this.isSettings.set( false );
 	}
-	onViewShow(view:View){
+	onViewShow(view:LogView){
 		this.data.clear();
 		this.isSettings.set( false );
 		if( view.name?.endsWith("*") && view.isAdhoc )
 			view.name = view.name.substring( 0, view.name.length-1 );
 		view.type = ViewType.Adhoc;
-		let existing = this.views.findIndex( v=>v.name==view.name && view.type==v.type );
+		let existing = this.views().findIndex( v=>v.name==view.name && view.type==v.type );
+		let newView = new LogView( view );
 		if( existing>=0 ){
-			this.views[existing] = new LogView( view );
-			this.viewIndex = existing;
+			this.views()[existing] = newView;
+			this.viewIndex.set( existing );
 		}
 		else{
-			this.views.push( new LogView(view) );
-			this.viewIndex = this.views.length - 1;
+			this.views().push( newView );
+			this.viewIndex.set( this.views().length - 1 );
 		}
 		this.load();
 	}
-	onViewDelete($event:View){
+	onViewDelete(view:LogView){
+		verify( view.type==ViewType.User );
+		this.views.set( this.views().filter( v=>v.name!=view.name || v.type!=view.type ) );
+		this.viewIndex.set( 0 );
+		this.profileStore.save( `logs/views`, this.views().filter(v=>v.isUser).map(v=>v.toJson(undefined)) );
 		debugger;
 	}
 
-	cellClick( event ){
-		const row = event.target.parentElement as Element;
-		var index = +row.attributes["indx"].nodeValue;
-		this.selectedIndex = index==this.selectedIndex ? null : index;
+	cellClick( entry:Entry ){
+		let current =	this.selectedEntry;
+		if( current != entry )
+			entry.selected = true;
+		if( current )
+			current.selected = false;
 	}
 	hideSelectedMessage(){
 		this.profile.level = ELogLevel.Information;
@@ -226,50 +246,29 @@ export class Logs implements OnInit, OnDestroy{
 		this.filterData();
 	}
 	filterData(){
-		var changes = this.data.filterData( this.profile.hiddenMessages, this.filter, this.selectedEntry ? this.selectedEntry.index : -1, this.level );
-		if( changes.length )
-			this.lengthChange.next( changes.length );
-		if( changes.startIndex ){
-			this.selectedEntry = this.data.entries[changes.startIndex];
-			this.startIndexChange.next( changes.startIndex );
-		}
+		if( this.data.filterData({messageIds: this.profile.hiddenMessages, message: this.filter, level: this.level}) )
+			this.load( this.data.allEntries.length );
 	}
-	navigateNext(){
-		const messageId = this.selectedEntry.templateId;
-		const currentIndex = this.data.entries.findIndex( (x)=>x.index==this.selectedIndex );
-		const size = this.data.entries.length;
-		const stop = size+currentIndex;
-		let foundIndex = currentIndex;
-		for( let i=currentIndex+1; i!=stop && foundIndex==currentIndex; ++i ){
-			const i2 = i%size;//<size ? i : i-size;
-			if( this.data.entries[i2].templateId==messageId )
-				foundIndex = i2;
+	//navigate to next message with same template id
+	async navigateNext(){
+		if( !this.data.selectNext() ){
+			await this.load( this.data.allEntries.length );
+			if( !this.data.selectNext() )
+				this.snackBar.warn( "No more instances found.", (m)=>console.log(m) );
 		}
-		if( foundIndex!=currentIndex ){
-			this.selectedEntry = this.data.entries[foundIndex];
-			this.data.select( foundIndex );
-		}
-		else
-			this.snackBar.warn( "No other instances found.", (m)=>console.log(m) );
 	}
 	applyFilter( value:string ){
 		this.filter = value;
 		this.filterData();
 	}
-	get sort(){return this.profile.sort;} set sort(value){ this.data.sort = this.profile.sort = value; }
-
+	get sort(){return this.view().sort;}
 	service = input.required<IGraphQL>();
-
 	profile:LogSettings;
-//	get settings(){ return this.profile;}
-
-
-	//settings:Settings = new Settings();
 	data: LogDataSource;
 	get paused(){return this.data.paused;} set paused(value){this.data.paused=value;}
 	connected = false;
 	displayedColumns = computed( () => {
-		return this.view().fields.map( (f)=>f.name );
+		return this.view().fields.filter(f=>f.displayed).map( (f)=>f.name );
 	} );
 	//configuration = { displayHeader:true }
 	@ViewChild('mainTable',{static: false}) _table:MatTable<Entry>;
@@ -312,21 +311,21 @@ export class Logs implements OnInit, OnDestroy{
 	private currentSubscription:ISubscription=Logs.DefaultSubscription;//actual subscribtion
 	isLoading = signal<boolean>( true );
 	isSettings = signal<boolean>( false );
-	lengthChange = new Subject<number>();
+//	lengthChange = new Subject<number>();
 	startIndexChange = new Subject<number>();
 	get level():ELogLevel{ return this.profile.level; } set level( value:ELogLevel ){ this.profile.level=value; }
-	private get limit():number{return this.profile.limit;} private set limit(value:number){ this.profile.limit = value; }
 	private get application():AppStatus|null{ return this.applications.find( (existing)=>{return existing.id==this.applicationId;} ); }
 	applications:AppStatus[]=[];
 	schema:TableSchema = LogView.schema;
 	private subscription:Unsubscribable;
 	//private applicationStrings:ApplicationStrings = new ApplicationStrings();
 	//private pushTimeout:{ entries: TraceEntry[], id:any, end:number };
-	get selectedIndex(){ return this.selectedEntry?.index; } set selectedIndex(x){ this.selectedEntry = this.data.entries.find( (y)=>y.index==x ); }
-	get selectedEntry(){return this._selectedEntry; } set selectedEntry(x){ this._selectedEntry=x;} _selectedEntry:Entry;
-	views:LogView[];
-	view = signal<LogView>( null );
-	viewIndex:number;
+	//get selectedIndex(){ return this.selectedEntry?.index; } set selectedIndex(x){ this.selectedEntry = this.data.entries.find( (y)=>y.index==x ); }
+	get selectedEntry(){ return this.data.allEntries.find( (e)=>e.selected ); }
+	views = signal<LogView[]>(null);
+	view = computed<LogView>( () => this.views()[this.viewIndex()] );
+	get viewCopy(){ return new LogView( this.view() ); }
+	viewIndex = signal<number>(null);
 	profileStore = inject(ProfileStore);
 }
 

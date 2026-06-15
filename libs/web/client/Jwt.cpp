@@ -59,7 +59,7 @@ namespace Jde::Web{
 		Iat = Json::AsNumber<time_t>( Body, "iat" );
 		SessionId = Json::FindDefaultSV( Body, "sid" );
 
-		Description = Json::FindSV( Body, "description" ).value_or( fpKey ? Ƒ("Public key md5: {}", boost::uuids::to_string(*fpKey)) : "" );
+		Description = Json::FindSV( Body, "description" ).value_or( fpKey ? Ƒ("Public key md5: {}", ToString(*fpKey)) : "" );
 	}
 	α Jwt::Payload()Ι->string{
 		auto signature = Str::Encode64( Signature, true );

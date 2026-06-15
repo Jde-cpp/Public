@@ -73,10 +73,10 @@ namespace Jde::Opc::Gateway::Tests{
 		Logging::Entry eNow{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, string{now} };
 		Logging::Entry eHour{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, ToIsoString(eNow.Time - 1h) };
 		eHour.Time = eNow.Time - 1h;
-		TRACE( "prev.Time: {}, id: {}", ToIsoString(eHour.Time), boost::uuids::to_string(eHour.Id()) );
+		TRACE( "prev.Time: {}, id: {}", ToIsoString(eHour.Time), ToString(eHour.Id()) );
 		ProtoLog().Write( eHour );
 		const string start{ ToIsoString(eHour.Time+1s) };
-		TRACE( "filter: time: {}, id: {}", start, boost::uuids::to_string(eNow.Id()) );
+		TRACE( "filter: time: {}, id: {}", start, ToString(eNow.Id()) );
 		ProtoLog().Write( eNow );
 		constexpr auto q = "logs( time: {gt: $start} ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
 		jobject vars{ {"start", start} };

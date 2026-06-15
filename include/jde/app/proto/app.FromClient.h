@@ -18,9 +18,4 @@ namespace Jde::App::FromClient{
 	α Session( SessionPK sessionId, RequestId requestId )ι->StringTrans;
 	α Subscription( string&& query, jobject variables, RequestId requestId )ι->string;
 	α LogEntries( vector<Logging::Entry>&& entries )ι->PFromClient::Transmission;
-	α LogEntryClient( Logging::Entry&& m )ι->Log::Proto::LogEntryClient;
-	α LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile;
-	α LogEntryFile( const Logging::Entry& m, App::ProgramPK appPK, App::ProgInstPK instancePK )ι->Log::Proto::LogEntryFileExternal;
-	α FromLogEntry( Log::Proto::LogEntryClient&& m )ι->Logging::Entry;
-	α ToString( uuid id, string&& value )ι->Log::Proto::String;
 }

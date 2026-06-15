@@ -1,4 +1,5 @@
 ﻿#include "ServerImpl.h"
+#include "jde/fwk/io/file.h"
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/fwk/process/execution.h>
 #include <jde/access/AccessException.h>
@@ -84,6 +85,10 @@ namespace Server{
 			}
 
 			auto result = co_await QL::QLAwait{ move(*q), {req.SessionInfo}, reqHandler->QLServer() };
+#ifndef NDEBUG
+			auto debugString = serialize(result);
+			IO::SaveBinary<char>("/tmp/response.json", {debugString.data(), debugString.size()} );
+#endif
 			jobject y{ {"data", move(result)} };
 			send( move(req), move(stream), move(y), contentType );
 		}

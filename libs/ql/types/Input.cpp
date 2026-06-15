@@ -1,3 +1,4 @@
+#include "jde/fwk/usings.h"
 #include <jde/ql/types/Input.h>
 
 #define let const auto
@@ -84,9 +85,13 @@ namespace Jde::QL{
 		Json::Visit( *orderBy, [&](const jvalue& v){
 			if( v.is_string() )
 				_orderBy->emplace_back( string{v.get_string()}, true );
-			else if( v.is_object() && !v.get_object().empty() ){
-				auto p = v.get_object().begin();
-				_orderBy->emplace_back( string{p->key()}, !p->value().is_string() || p->value().get_string()!="desc" );
+			else if( auto o = v.is_object() ? v.get_object() : jobject{}; !o.empty() ){
+				if( o.contains("active") && o.contains("direction") )
+					_orderBy->emplace_back( o.at("active").as_string(), o.at("direction").as_string()!="desc" );
+				else{ //orderBy:{"name","desc"}
+					for( let& [key,value] : o )
+						_orderBy->emplace_back( key, value.is_string() && value.get_string()!="desc" );
+				}
 			}
 		} );
 		return *_orderBy;

@@ -151,7 +151,7 @@ export class View{
 		if( view.fieldFilters )
 			this.fieldFilters = [...view.fieldFilters];
 		this.showSelector = view.showSelector;
-		this.sort = view.sort;
+		this.sort = structuredClone( view.sort );
 		this.type = view.type;
 	}
 	private configConstructor( config:ViewConfigArgs, schema:TableSchema ):void{
@@ -252,7 +252,7 @@ export class View{
 		// 	return { field: field } as ViewField;
 		// } );
 	}
-	query( showDeleted:boolean ):Query{
+	query( showDeleted:boolean, skip:number ):Query{
 		let deletedField = this.fields.find( f=>f.name=="deleted" );
 		if( deletedField )
 				deletedField.displayed = showDeleted;
@@ -262,9 +262,13 @@ export class View{
 		let vars:Record<string, DbScalar[]> = {};
 		if( this.limit )
 			args.push( `limit:${this.limit}` );
+		if( skip )
+			args.push( `skip:${skip}` );
 		if( this.sort?.length ){
-			let sort = this.sort.reduce( (acc, item)=>{ acc[item.active] = item.direction; return acc; }, {} );
-			args.push( `orderBy:${JSON.stringify(sort)}` );
+			let sortStr = '';
+			for( let s of this.sort )
+				sortStr += `{${s.active}:"${s.direction}"},`;
+			args.push( `orderBy:[${sortStr.slice(0,-1)}]` );
 		}
 
 		for( const fieldFilter of this.fieldFilters ){
@@ -298,10 +302,10 @@ export class View{
 			this.fields.push( new ViewField({qlField: field, settings: {name: field.name, hidden: true}}) );
 	}
 	setDeletedDisplayed( show:boolean ){ this.fields.find(f=>f.name=="deleted").displayed = show; }
-	toJson( defaultSettings:TableSettings ):ViewJson{
+	toJson( defaultSettings:TableSettings|undefined ):ViewJson{
 		let fields = [];
 		for( let field of this.fields ){
-			const settings = defaultSettings.columns.find( c=>typeof c=="string" ? null : c.name==field.name ) as ViewFieldSettings;
+			const settings = defaultSettings?.columns.find( c=>typeof c=="string" ? null : c.name==field.name ) as ViewFieldSettings;
 			const customDisplay = (settings?.displayName ?? StringUtils.idToDisplay( field.name ))!=field.displayName;
 			if( field.displayed || customDisplay )
 				fields.push( field.toJson(customDisplay) );
@@ -309,7 +313,7 @@ export class View{
 		let filters = [];
 		for( let ff of this.fieldFilters )
 			filters.push( {name: ff.field.name, filter: ff.filter} );
-		let sort = JSON.stringify(this.sort)==JSON.stringify(defaultSettings.sort) ? undefined : this.sort;
+		let sort = defaultSettings && JSON.stringify(this.sort)==JSON.stringify(defaultSettings.sort) ? undefined : this.sort;
 		return {
 			name: this.name,
 			filters: filters,

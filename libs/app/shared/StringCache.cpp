@@ -20,7 +20,7 @@ namespace Jde::App{
 	α StringCache::Add( Log::Proto::EFields field, StringMd5 id, str value, ELogTags _tags )ι->bool{
 		bool save = false;
 		if( value.empty() ){
-			CRITICAL( "empty string field: {}, id: {}.", underlying(field), boost::uuids::to_string(id) );
+			CRITICAL( "empty string field: {}, id: {}.", underlying(field), ToString(id) );
 		}else if( field==Log::Proto::EFields::Template )
 			save = AddMessage( id, value );
 		else if( field==Log::Proto::EFields::File )

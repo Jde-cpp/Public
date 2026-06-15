@@ -1,6 +1,6 @@
 import { Guid } from '../../model/Guid';
 import * as LogProto from '../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
-import { View, ViewField, ViewSerializedArgs } from '../../model/ql/View';
+import { View, ViewField, ViewSerializedArgs, ViewType } from '../../model/ql/View';
 import { Query } from '../../services/IGraphQL';
 import { TableSchema } from '../../model/ql/schema/TableSchema';
 import { Field, FieldKind, FieldType } from '../../model/ql/schema/Field';
@@ -15,7 +15,8 @@ export type Entry={
 	userId:number;
 	fileId:Guid;
 	functionId:Guid;
-	index:number;
+
+	selected?:boolean;
 	hidden:boolean;
 }
 export type LogEntriesRest={ entries:Entry[]; strings:{id:string, value:string}[]; }
@@ -57,8 +58,8 @@ export class LogEntries{
 	strings:Map<string,string> = new Map<string,string>();
 }
 export class LogView extends View{
-	override query():Query{
-		const vars = {limit: this.limit*3, skip: 0, orderBy: this.sort};
+	override query( showDeleted:boolean, skip:number):Query{
+		const vars = {limit: this.limit*3, skip: skip, orderBy: this.sort};
 		const q = "logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
 		return { text: q, vars: vars };
 	}
@@ -89,7 +90,9 @@ export class LogView extends View{
 				toViewField("message")
 			]
 		};
-		return new LogView( args, schema );
+		let view = new LogView( args, schema );
+		view.type = ViewType.System;
+		return view;
 	}
 }
 /*

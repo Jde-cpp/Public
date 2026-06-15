@@ -1,6 +1,7 @@
 #include "ServerSocketSession.h"
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/log/Logger.h>
+#include <jde/app/proto/LogProto.h>
 #include <jde/app/proto/app.FromServer.h>
 #include <jde/app/proto/app.FromClient.h>
 #include <jde/access/Authorize.h>
@@ -104,7 +105,7 @@ namespace Jde::App::Server{
 			WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 			return;
 		}
-		Logging::Entry y{ App::FromClient::FromLogEntry(move(entry)) };
+		Logging::Entry y{ LogProto::FromLogEntry(move(entry)) };
 		Logging::Log( move(y), _programPK, _instancePK );
 	}
 	α ServerSocketSession::SendAck( uint32 id )ι->void{

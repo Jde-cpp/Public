@@ -199,7 +199,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 					throw e;
 			}
 		}
-		if( this.log.restResults ) log( JSON.stringify(y) );
+		if( this.log.restResults ) log( JSON.stringify(y).substring(0,this.log.maxLength) );
 		this.lastRestCall = new Date();
 		return y;
 	}

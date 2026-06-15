@@ -63,7 +63,7 @@ namespace Jde::Web::Server{
 		auto y = Response<http::string_body>();
 		y.body() = serialize( move(j) );
 		y.prepare_payload();
-		LOGSL( ELogLevel::Debug, sl, ELogTags::HttpServerWrite, "[{:x}.{:x}.{:x}]HttpResponse:  {}{} - {}", SessionInfo ? SessionInfo->SessionId : 0, _connectionId, _index, Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
+		LOGSL( ELogLevel::Debug, sl, ELogTags::HttpServerWrite, "[{}.{}.{}]HttpResponse:  {}{} - {}", hex(SessionInfo ? SessionInfo->SessionId : 0), hex(_connectionId), hex(_index), Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
 		return y;
 	}
 

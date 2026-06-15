@@ -63,9 +63,6 @@ namespace Jde{
 			CRITICALT( Jde::ELogTags::IO, "Could not serialize to an array:{:x}", success );
 		return bytes;
 	}
-	Ξ Protobuf::Save( const google::protobuf::MessageLite& msg, fs::path path, SRCE )ε->void{
-		IO::Save( move(path), ToString(msg), sl );
-	}
 
 	Ŧ Protobuf::Deserialize( const vector<char>& data )ε->up<T>{
 		auto p = mu<T>();

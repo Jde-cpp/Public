@@ -9,6 +9,7 @@ namespace Jde::App{
 		ArchiveFile( const QL::Filter& q, vector<App::Log::Proto::FileEntry>&& entries )ε;
 		α operator=( ArchiveFile&& x )ι->ArchiveFile& = default;
 		α Append( const QL::TableQL& q, App::Log::Proto::ArchiveFile&& af )ε->void;
+		α Append( const QL::Filter& q, vector<App::Log::Proto::FileEntry>&& entries )ε->void;
 		α ToJson( const QL::TableQL& ql )Ι->jobject;
 		α IsComplete( const QL::Input& input )Ι->bool;
 		α EntrySize()Ι->uint;
@@ -19,7 +20,6 @@ namespace Jde::App{
 		flat_map<uuid,string> Functions;
 		std::map<uuid,string> Args;
 	private:
-		α Append( const QL::Filter& q, vector<App::Log::Proto::FileEntry>&& entries )ε->void;
 		α Message( const App::Log::Proto::LogEntryFile& entry )Ι->string;
 		α Test( const QL::TableQL& q, TimePoint time, const App::Log::Proto::LogEntryFile& entry )Ε->bool;
 		α Test( const QL::Filter& filter, TimePoint time, const App::Log::Proto::LogEntryFile& entry )Ι->bool;

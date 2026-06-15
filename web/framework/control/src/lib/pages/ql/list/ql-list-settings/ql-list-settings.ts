@@ -14,11 +14,11 @@ import { ProfileStore } from 'jde-spa';
 import { TableSchema } from 'jde-framework';
 
 @Component({
-		selector: 'ql-list-settings',//.main-content.mat-drawer-container.my-content
-		styleUrls: ['ql-list-settings.scss'],
-		templateUrl: './ql-list-settings.html',
-		host: {class:'main-content.mat-drawer-container.my-content'},
-		imports: [CommonModule, FormsModule, MatButtonModule, MatInputModule, MatSelectModule, MatTabsModule, MatToolbar, QLListSettingsFilter, QLListSettingsDisplay, QLListSettingsSort]
+	selector: 'ql-list-settings',//.main-content.mat-drawer-container.my-content
+	styleUrls: ['ql-list-settings.scss'],
+	templateUrl: './ql-list-settings.html',
+	host: {class:'main-content.mat-drawer-container.my-content'},
+	imports: [CommonModule, FormsModule, MatButtonModule, MatInputModule, MatSelectModule, MatTabsModule, MatToolbar, QLListSettingsFilter, QLListSettingsDisplay, QLListSettingsSort]
 })
 export class QLListSettings implements OnInit, OnDestroy{
 	ngOnInit(){
@@ -28,8 +28,9 @@ export class QLListSettings implements OnInit, OnDestroy{
 	ngOnDestroy(){
 		ProfileStore.setTabIndex('groupDetail', this.tabIndex() );
 	}
+
 	getView( isAdhoc:boolean ):View{
-		let view = new View( this.view() );
+		let view = this.view();  // caller should send copy of view to avoid mutating original until save
 		if( !isAdhoc )
 			view.name = this.name();
 		let displayCols = this.display.dataSource;

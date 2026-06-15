@@ -8,7 +8,6 @@
 namespace Jde::App{
 	using App::Log::Proto::LogEntryFile;
 	using Protobuf::ToGuid;
-	using boost::uuids::to_string;
 
 	ArchiveFile::ArchiveFile( const QL::Filter& q, vector<App::Log::Proto::FileEntry>&& entries )ε{
 		Append( q, move(entries) );
@@ -26,7 +25,7 @@ namespace Jde::App{
 		if( !limit )
 			return false;
 		let& orderBy = input.OrderByJson();
-		if( orderBy.size()!=1 || orderBy.begin()->first!="time" || orderBy.begin()->second )
+		if( orderBy.empty() || orderBy.begin()->first!="time" )
 			return false;
 		return EntrySize()>=limit+input.Skip();
 	}

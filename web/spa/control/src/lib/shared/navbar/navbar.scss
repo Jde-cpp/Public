@@ -2,29 +2,12 @@
   color: var(--mat-sys-primary);
   background: var(--mat-sys-primary-container);
 }
-
-//mat-mdc-form-field rounded-input mat-mdc-form-field-type-mat-input mat-mdc-form-field-has-icon-prefix mat-form-field-appearance-outline mat-primary ng-touched ng-dirty ng-valid mat-form-field-animations-enabled
-// :host ::ng-deep .rounded-input .mdc-text-field--outlined {
-//   --mdc-outlined-text-field-container-shape: 30px;
-//   border-radius: 20px 0 0 20px !important;
-// 	background-color: red;
-// 	color: yellow;
-// }
-::ng-deep {
-  //.mdc-notched-outline__leading,
-  //.mdc-notched-outline__notch,
-  // .mdc-notched-outline__trailing {
-  //   border-radius: 30px !important;
-  // }
-}
 .mat-mdc-form-field {
   --mat-form-field-container-height: 40px; /* Adjust to your preferred height */
   --mat-form-field-container-vertical-padding: 8px;
 }
 .search{
-//	display: flex;
 	width: 360px;
-//	height: 40px;
 }
 .docs-navbar-header {
   display: flex;

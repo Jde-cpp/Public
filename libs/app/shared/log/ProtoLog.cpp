@@ -5,6 +5,7 @@
 #include <jde/fwk/io/FileAwait.h>
 #include <jde/fwk/process/execution.h>
 #include <jde/app/proto/app.FromClient.h>
+#include <jde/app/proto/LogProto.h>
 #include "ArchiveAwait.h"
 
 #define let const auto
@@ -69,7 +70,7 @@ namespace Jde::App{
 	α ProtoLog::Write( const Logging::Entry& e )ι->void{
 		if( !empty(e.Tags & _tags) )//recursion guard
 			return;
-		auto proto = FromClient::LogEntryFile( e );
+		auto proto = LogProto::LogEntryFile( e );
 		App::Log::Proto::FileEntry fileEntry;
 		*fileEntry.mutable_entry() = move( proto );
 		Write( e, move(fileEntry) );
@@ -80,7 +81,7 @@ namespace Jde::App{
 			return Write( e );
 		if( !empty(e.Tags & _tags) )//recursion guard
 			return;
-		auto proto = FromClient::LogEntryFile( e, appPK, instancePK );
+		auto proto = LogProto::LogEntryFile( e, appPK, instancePK );
 		App::Log::Proto::FileEntry fileEntry;
 		*fileEntry.mutable_external_entry() = move( proto );
 		Write( e, move(fileEntry) );
@@ -156,7 +157,7 @@ namespace Jde::App{
 			return;//TODO update position
 		cache.push_front( id );
 		App::Log::Proto::FileEntry fileEntry;
-		*fileEntry.mutable_str() = FromClient::ToString( id, string{str} );
+		*fileEntry.mutable_str() = LogProto::ToString( id, string{str} );
 		auto data = Protobuf::SizePrefixed( fileEntry );
 		std::copy( data.begin(), data.end(), std::back_inserter(_toSave) );//TODO copy in SizePrefixed
 	}
