@@ -93,12 +93,14 @@ namespace Jde::Access::Server{
 					}
 					else
 						dbCriteria = "criteria is null";
-					resourcePK = ds->ScalerSyncOpt<ResourcePK>({
-						Ƒ( "select resource_id from {} where schema_name=? and target=? and {} and deleted is null", GetTable("resources").DBName, dbCriteria ),
+					let foundPK = co_await ds->Scaler<ResourcePK>({ //COALESCE so a missing/deleted resource returns 0 instead of throwing "No value returned".
+						Ƒ( "select coalesce( (select resource_id from {} where schema_name=? and target=? and {} and deleted is null), 0 )", GetTable("resources").DBName, dbCriteria ),
 						move(params)
 					});
-					if( resourcePK )
+					if( foundPK ){
+						resourcePK = foundPK;
 						auth.AddResource( *resourcePK, *schema, resourceKey.NK(), criteria.value_or(string{}) );
+					}
 				}
 				if( resourcePK )
 					permissionRight["resource"].emplace_object()["id"] = *resourcePK;
