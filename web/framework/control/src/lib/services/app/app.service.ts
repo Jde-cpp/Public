@@ -30,12 +30,12 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	// }
 
 	async gatewayInstances():Promise<Instance[]>{
-		const y = await this.get( "opcGateways", (m)=>console.log(m) );
+		const y = await this.get( "opcGateways", (m)=>console.log(m) ) as any;
 		return y["servers"];
 	}
 
 	async opcServerInstances():Promise<Instance[]>{
-		const y = await this.get( "opcServers", (m)=>console.log(m) );
+		const y = await this.get( "opcServers", (m)=>console.log(m) ) as any;
 		return y["servers"];
 	}
 
@@ -124,7 +124,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		let self = this;
 		//if( this.log.restRequests )	log( `googleLogin( ${user.credential} )` );
 		console.assert( !user.sessionId );
-		user.sessionId = await super.loginJwt( user.authorization );
+		user.sessionId = await super.loginJwt( user.authorization! );
 		self.authStore.append( user );
 		//if( this.log.restResults )	log( `authorization='${self.authorization}'` );
 	}
@@ -146,17 +146,18 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 
 	private logsSubscriptions:Map<RequestId,Subject<FromServer.ITrace>>= new Map<RequestId,Subject<FromServer.ITrace>>();
 	//private addMessage( msg ):void{}
-	override handleConnectionError( err ):void{
+	override handleConnectionError( err:any ):void{
 	// 	this.statusSubscriptions.forEach( (x)=>x.error( err ) );
 	// 	this.statusSubscriptions = [];
 	}
 	encode( t:FromClient.Transmission ){ return FromClient.Transmission.encode(t); }
 	public async validateSessionId():Promise<User | null>{
 		console.log( `validateSessionId: ${this.user()?.authorization}` );
-		if( !this.user() )
+		let user = this.user();
+		if( !user )
 			return Promise.resolve( null );
-		const y = await this.query<{session:{domain:string,loginName:string}}>( `session( id:"${this.user().sessionId}" ){ domain loginName }` );
-		return new User( { domain:y.session.domain, id:y.session.loginName, sessionId:this.user().sessionId } );
+		const y = await this.query<{session:{domain:string,loginName:string}}>( `session( id:"${user.sessionId}" ){ domain loginName }` );
+		return new User( { domain:y.session.domain, id:y.session.loginName, sessionId:user.sessionId } );
 	}
 	private complete():void{
 		console.log( 'complete' );
@@ -174,7 +175,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 				throw `error decode ${bytearray.length} bytes, error: ${JSON.stringify(e)}`;
 			}
 			for( const message of t.messages ){
-				const requestId = message.requestId;
+				const requestId = message.requestId as number;
 				if( super.processCommonMessage(message, requestId) )
 					continue;
 				if( message.ack ){//first message after handshake
@@ -198,14 +199,14 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 				}*/
 				else if( message.strings ){
 					const x = message.strings;
-					if( this.log.sockResults ) console.log( `[App.${requestId}]strings messageCount: ${Object.keys(x.messages).length}` );
+					if( this.log.sockResults ) console.log( `[App.${requestId}]strings messageCount: ${Object.keys(x.messages as any).length}` );
 					let promise = this.stringRequests.get( requestId ); if( !promise ) throw `no promise for requestId=${requestId}`;
 					promise.resolve( x );
 				}
 				else if( message.traces ){
-					if( this.log.subResults )	console.log( `[App.${requestId}]traces count:${message.traces.values.length}` );
+					if( this.log.subResults )	console.log( `[App.${requestId}]traces count:${message.traces.values!.length}` );
 					let subject = this.logsSubscriptions.get( requestId ); if( !subject ) throw `no subscription for requestId=${requestId}`;
-					message.traces.values.forEach( x=>subject.next(x) );
+					message.traces.values!.forEach( x=>subject.next(x) );
 				}
 				else if( message.exception ){
 					let processed = false;
@@ -214,7 +215,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 							|| this.iotProcessError(message.exception, requestId);
 					}
 					if( !processed )
-						throw `[App.${requestId}]Error:  (${message.exception.code.toString(16)})${message.exception.what}`;
+						throw `[App.${requestId}]Error:  (${message.exception.code!.toString(16)})${message.exception.what}`;
 				}
 				else
 					throw `unknown message type ${Object.keys(message)}`
@@ -228,11 +229,11 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	iotProcessError( e:IException, requestId:RequestId ):boolean{
 		let processed = true;
 		if( this.stringRequests.has(requestId) ){
-			this.stringRequests.get( requestId ).reject( e );
+			this.stringRequests.get( requestId )!.reject( e );
 			this.stringRequests.delete( requestId );
 		}
 		else if( this.customCallbacks.has(requestId) ){
-			this.customCallbacks.get( requestId ).reject( e );
+			this.customCallbacks.get( requestId )!.reject( e );
 			this.customCallbacks.delete( requestId );
 		}
 		else

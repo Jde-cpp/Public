@@ -6,7 +6,7 @@ import * as LogProto from '../../proto/Log'; import Log = LogProto.Jde.App.Log.P
 import { Guid } from '../../model/Guid';
 
 export class LogSettings{
-	constructor( params:LogSettings=null ){
+	constructor( params:LogSettings|undefined=undefined ){
 		if( !params )
 			return;
 		if( params.autoScroll )
@@ -32,6 +32,6 @@ export class LogSettings{
 	applicationId:number|undefined;
 	level:Log.ELogLevel=Log.ELogLevel.Information;
 	hiddenMessages:Guid[]=[];
-	get start():Date{ return this._start || LogSettings.defaultDate; } set start( value:Date ){ this._start=value==LogSettings.defaultDate ? null : value;} private _start:Date;
+	get start():Date{ return this._start || LogSettings.defaultDate; } set start( value:Date ){ this._start=value==LogSettings.defaultDate ? undefined : value;} private _start:Date|undefined;
 	static get defaultDate():Date{ var start = new Date(); start.setHours( 0, 0, 0, 0 ); start.setDate( start.getDate()-1 ); return start; }
 }

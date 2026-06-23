@@ -20,7 +20,7 @@ export class SeverityPicker{
 			this.levelChange.emit( value );
 		}
 	}
-	get level(){ return this.#level; } @Input() set level(x){ let emit = this.#level!==undefined; this.#level=x; if( emit )this.levelChange.emit( x ); }   #level:ELogLevel;
+	get level(){ return this.#level; } @Input() set level(x){ let emit = this.#level!==undefined; this.#level=x; if( emit )this.levelChange.emit( x ); }   #level!:ELogLevel;
 	@Output() levelChange = new EventEmitter<ELogLevel>();
 	@Input() isSelect:boolean=true;
 

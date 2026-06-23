@@ -6,7 +6,7 @@ import {OpcError} from "../model/OpcError";
 
 export type Value = boolean | Duration | OpcError | ExNodeId | Guid | Long | NodeId | number | string | Timestamp | Uint8Array | Value[];
 
-export function valueJson( value: Value ){
+export function valueJson( value: Value ):any/*:NodeIdJson*/{
 	if( value instanceof ExNodeId )
 		return value.toJson();
 	else if( value instanceof NodeId )
@@ -21,7 +21,7 @@ export function valueJson( value: Value ){
 		return value;
 }
 
-export function valueString( value: Value ){
+export function valueString( value: Value ):string{
 	if( typeof value === "string" )
 		return value;
 	else if( typeof value === "number" )
@@ -35,15 +35,15 @@ export function valueString( value: Value ){
 	else if( value instanceof Uint8Array )
 		return btoa( value.reduce((acc, current) => acc + String.fromCharCode(current), "") );
 	else if( Object.hasOwn(value, "seconds") && Object.hasOwn(value, "nanos") )
-		return ProtoUtils.toDate( <Timestamp>value ).toISOString();
+		return ProtoUtils.toDate( <Timestamp>value )!.toISOString();
 	else if( value instanceof ExNodeId )
-		return value.toJson();
+		return JSON.stringify(value.toJson());
 	else if( value instanceof NodeId )
 		return value.id.toString();
 	else if( value instanceof OpcError )
 		return value.toString();
-	else if( Array.isArray(value) )
-		return value.map( x=>this.toString(x) ).join( "," );
+	// else if( Array.isArray(value) )
+	// 	return value.map( x=>this.toString(x) ).join( "," );
 	else
 		return `unknown type ${typeof value}`;
 }

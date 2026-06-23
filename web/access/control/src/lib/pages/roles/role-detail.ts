@@ -29,7 +29,7 @@ export class RoleDetail implements OnDestroy, OnInit{
 				return;
 			if( !this.properties().canSave )
 				this.isChanged.set( false );
-			else if( !this.properties().equals(this.role.properties) )
+			else if( !(this.properties() as Role).equals(this.role.properties!) )
 				this.isChanged.set( true );
 		});
 		effect(() => {
@@ -95,18 +95,18 @@ export class RoleDetail implements OnDestroy, OnInit{
 	public copy( existing:Role ):Role{
 		return new Role( existing );
 	}
-	role:Role;
-	pageData:DetailResolverData<Role>;
+	role!:Role;
+	pageData!:DetailResolverData<Role>;
 	ctor:new (item: any) => any = Role;
 	isChanged = signal<boolean>( false );
-	permissions = signal<Permission[]>( null );
-	properties = signal<Role>( null );
-	childRoles = signal<SelectionModel<RolePK>>( null );
+	permissions = signal<Permission[]>( null as any );
+	properties = signal<Partial<Role>>( null as any );
+	childRoles = signal<SelectionModel<RolePK>>( null as any );
 
-	groups = signal<SelectionModel<RolePK>>( null );
+	groups = signal<SelectionModel<RolePK>>( null as any );
 	sideNav = model.required<RouteItem>();
-	tabIndex:number;
-	users = signal<SelectionModel<RolePK>>( null );
+	tabIndex:number|undefined;
+	users = signal<SelectionModel<RolePK>>( null as any );
 
 	get schema(){ return this.pageData.schema; }
 

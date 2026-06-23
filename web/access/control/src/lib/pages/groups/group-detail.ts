@@ -29,7 +29,7 @@ export class GroupDetail implements OnDestroy, OnInit{
 				return;
 			if( !this.properties().canSave )
 				this.isChanged.set( false );
-			else if(  !this.properties().equals(this.group.properties) )
+			else if( !(this.properties() as Group).equals(this.group.properties) )
 				this.isChanged.set( true );
 		});
 
@@ -84,16 +84,16 @@ export class GroupDetail implements OnDestroy, OnInit{
 		this.router.navigate( ['..'], { relativeTo: this.route } );
 	}
 
-	group:Group;
+	group!:Group;
 	get id(){ return this.group.id; }
 	ctor:new (item: any) => any = User;
 	isChanged = signal<boolean>( false );
-	properties = signal<Group>( null );
-	users = signal<SelectionModel<UserPK>>( null );
-	childGroups = signal<SelectionModel<GroupPK>>( null );
-	roles = signal<SelectionModel<RolePK>>( null );
-	permissions = signal<Permission[]>( null );
-	pageData:DetailResolverData<Group>;
+	properties = signal<Partial<Group>>( null as any );
+	users = signal<SelectionModel<UserPK>>( null as any );
+	childGroups = signal<SelectionModel<GroupPK>>( null as any );
+	roles = signal<SelectionModel<RolePK>>( null as any );
+	permissions = signal<Permission[]>( null as any );
+	pageData!:DetailResolverData<Group>;
 	get schema(){ return this.pageData.schema; }
 	sideNav = model.required<RouteItem>();
 	tabIndex = signal<number>( ProfileStore.tabIndex('groupDetail') );

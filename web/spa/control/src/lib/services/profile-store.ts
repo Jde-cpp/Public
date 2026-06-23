@@ -67,7 +67,7 @@ export class ProfileStore{
 		let value = item ? +item : 0;
 		return value;
 	}
-	static setTabIndex( key:string, value:number ):void{
+	static setTabIndex( key:string, value:number|undefined ):void{
 		if( value )
 			localStorage.setItem( key, value.toString() );
 		else

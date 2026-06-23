@@ -14,7 +14,7 @@ import { CollectionViewer } from '@angular/cdk/collections';
 export type PageStats = { length?:number, startIndex?:number };
 
 type Filter = {
-	messageIds:Guid[], message:string, level:Log.ELogLevel
+	messageIds:Guid[], message:string|undefined, level:Log.ELogLevel
 }
 export class LogDataSource extends DataSource<Entry>{
 	constructor( view:Signal<LogView> ){
@@ -97,7 +97,7 @@ export class LogDataSource extends DataSource<Entry>{
 	}
 
 	push( entry:Entry ):void{
-		let addToArray = (data)=>{
+		let addToArray = (data:Entry[])=>{
 			const location = this.locationOf( data, entry, 0, data.length );
 			if( location==data.length )
 				data.push( entry );
@@ -130,18 +130,18 @@ export class LogDataSource extends DataSource<Entry>{
 		else if( active=='message' )
 			result = this.message(a)==this.message(b) ? 0 : this.message(a)<this.message(b) ? -1 : 1;
 		else if( active=='file' )
-			result = this.file(a)==this.file(b) ? 0 : this.file(a)<this.file(b) ? -1 : 1;
+			result = this.file(a)==this.file(b) ? 0 : this.file(a)!<this.file(b)! ? -1 : 1;
 		else if( active=='function' )
-			result = this.function(a)==this.function(b) ? 0 : this.function(a)<this.function(b) ? -1 : 1;
+			result = this.function(a)==this.function(b) ? 0 : this.function(a)!<this.function(b)! ? -1 : 1;
 		else
 			console.error( `unknown sort '${active}'` );
 
 		return this.sort[0].direction === 'asc' ? result : -result;
 	}
-	file( entry:Entry ):string{ return this.strings.get( entry.fileId.toString() ); }
-	function( entry:Entry ):string{ return this.strings.get( entry.functionId.toString() ); }
+	file( entry:Entry ):string|undefined{ return this.strings.get( entry.fileId.toString() ); }
+	function( entry:Entry ):string|undefined{ return this.strings.get( entry.functionId.toString() ); }
 	message( entry:Entry ):string{
-		let template = this.strings.get( entry.templateId.toString() );
+		let template = this.strings.get( entry.templateId.toString() ) ?? "";
 		let text = "";
 		let argIndex = 0;
 		for( let i=0; i<template.length; ++i ){
@@ -161,7 +161,7 @@ export class LogDataSource extends DataSource<Entry>{
 			verify( next==':' );
 			let type = template[++i];
 			if( type=='x' ){
-				text += (+this.strings.get( entry.argIds[argIndex++].toString() )).toString(16);
+				text += ( +this.strings.get( entry.argIds[argIndex++].toString())! ).toString(16);
 				verify( template[++i]=='}' );
 			}
 			else
@@ -197,9 +197,9 @@ export class LogDataSource extends DataSource<Entry>{
 
 	isHidden( entry:Entry ):boolean{
 		let filter = this.filter;
-		return filter.messageIds.find( guid=>guid.equals(entry.templateId) )!=null
+		return filter.messageIds.find( guid=>guid.equals(entry.templateId) )!=undefined
 			|| entry.level<filter.level
-			|| ( filter.message && this.message(entry).toLowerCase().indexOf(filter.message)==-1 );
+			|| ( filter.message!=undefined && this.message(entry).toLowerCase().indexOf(filter.message)==-1 );
 	}
 	/*
 	* @returns true if end of data is reached
@@ -223,7 +223,7 @@ export class LogDataSource extends DataSource<Entry>{
 	}
 	autoScroll:boolean=true;
 	get paused(){return this._paused;} set paused(value){this._paused=value;}_paused=false;
-	filter: Filter = { messageIds: [], message: null, level: Log.ELogLevel.NoLog };
+	filter: Filter = { messageIds: [], message: undefined, level: Log.ELogLevel.NoLog };
 	// get page(){return this._page;} set page(value){this._page=value;this.onPageChange.emit(value);} _page:number;
 	// onPageChange= new EventEmitter<number>();
 	get pageIndex(){ return this.#pageIndex.asReadonly(); }

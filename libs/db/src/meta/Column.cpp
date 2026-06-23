@@ -79,6 +79,6 @@ namespace Jde::DB{
 		return PKTable && PKTable->IsFlags;
 	}
 	α Column::IsPK()Ι->bool{
-		return Table->SurrogateKeys.size()==1 && SKIndex.has_value();
+		return Table && Table->SurrogateKeys.size()==1 && SKIndex.has_value();
 	}
 }

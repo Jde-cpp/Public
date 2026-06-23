@@ -63,6 +63,6 @@ export class QLListSettings implements OnInit, OnDestroy{
 	@ViewChild(QLListSettingsFilter) filter!: QLListSettingsFilter;
 	@ViewChild(QLListSettingsSort) sort!: QLListSettingsSort;
 
-	name = signal<string>( null );
+	name = signal<string>( null as any );
 	tabIndex = signal<number>( ProfileStore.tabIndex('groupDetail') );
 }

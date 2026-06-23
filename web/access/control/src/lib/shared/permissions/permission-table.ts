@@ -25,14 +25,14 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 		for( const resource of resources ){ //.filter(x=>x.allowed!=Rights.None)
 			let permission = this.permissions().find( x=>x.resource?.id==resource.id );
 			if( permission ){
-				permission.resource = resources.find( x=>x.id==resource.id );
+				permission.resource = resources.find( x=>x.id==resource.id )!;
 				verify( permission.resource, `Resource not found: ${resource.id}` );
 			}else
 				permission =  new Permission( {resource: new Resource( resource )} );
 			this.availablePermissions.push( permission );
 		}
 		//let sort = this.profile.value.sort;
-		let sort = {active: "schema,resource", direction: "asc"};
+		let sort:Sort = {active: "schema,resource", direction: "asc"};
 		for( const col of sort.active.split(",").filter(x=>this.displayedColumnNames.includes(x)).reverse() )
 			this.sortData( {active:col, direction: sort.direction} );
 		this.isLoading.set( false );
@@ -44,14 +44,17 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 	ngOnDestroy(){
 		this.profileStore.save<Profile>( 'permissionTable', { sort: this.sort, showDeleted: this.profile?.showDeleted } );
 	}
-	sortData($event){
-		this.availablePermissions = this.availablePermissions.sort((a,b)=>{
+	sortData($event:Sort){
+		this.availablePermissions = this.availablePermissions.sort((a:Permission,b:Permission)=>{
 			let y:number;
 			if( ["schema", "resource", "deleted", "target"].includes($event.active) ){
 				let col:string = $event.active=="resource" ? "name" : $event.active;
-				y = a.resource[col].localeCompare( b.resource[col] );
+				let r = a.resource as any;
+				let r2 = r[col];
+				y = 5;
+				y = (a.resource as any)[col].localeCompare( (b.resource as any)[col] );
 			}else{
-				let right = <number><any>Rights[$event.active];
+				let right = <number><any>Rights[+$event.active];
 				let value = (x:Permission)=>{ return this.isAllowed(x, right) ? 1 : this.isDenied(x, right) ? -1 : 0; };
 				y = value(b) - value(a);
 			}
@@ -110,7 +113,7 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 		return rights==Rights.None || (permission.resource.availableRights & rights)!=0;
 	}
 
-	profile:Profile;
+	profile!:Profile;
 	static readonly defaultProfile:Profile = { sort: { active: "schema,resource", direction: "asc" } };
 	permissions=model.required<Permission[]>();
 	availablePermissions:Permission[] = [];

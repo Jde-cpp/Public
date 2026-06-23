@@ -11,8 +11,6 @@
 
 #define let const auto
 namespace Jde::QL{
-	using DB::EOperator;
-
 	α dbTable( string jName, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε->sp<DB::View>{
 		let dbName = DB::Names::ToPlural( DB::Names::FromJson(move(jName)) );
 		return system ? DB::AppSchema::FindView( schemas, dbName ) : DB::AppSchema::GetViewPtr( schemas, dbName, sl );
@@ -132,6 +130,7 @@ namespace Jde::QL{
 
 	α ValueToJson( DB::Value&& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue;
 	α TableQL::SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void{
+		ASSERT(dbColumn);
 		for( let& c : Columns ){
 			if( c.DBColumn==dbColumn ){
 				o[dbColumn->IsPK() && !dbColumn->IsEnum() ? "id" : c.JsonName] = ValueToJson( move(value), &c );

@@ -25,7 +25,7 @@ export class GraphQLTable{
 			? `${this.selections().isSelected(row) ? 'deselect' : 'select'} row ${row.name}`
 			: `${this.isAllSelected() ? 'select' : 'deselect'} all`;
 	}
-	toggle( id ){
+	toggle( id: number ){
 		const newSelections = this.selections().isSelected(id) ? this.selections().selected.filter( (x)=>x!=id ) : this.selections().selected.concat( id );
 		console.log( `table set selections: ${newSelections}` );
 		this.selections.set( new SelectionModel<number>(this.selections().isMultipleSelection(), newSelections) );
@@ -60,8 +60,8 @@ export class GraphQLTable{
 
 	isAllSelected(){ return this.selections().selected.length==this.dataSource()().length; }
 	isSelected( row:any ){ return this.selections().isSelected(row); }
-	columnName( colName ){ return StringUtils.capitalize(colName); }
-	columnStyle( colName ){ return this.displayedFields().find(f=>f.name===colName)?.style || {}; }
+	columnName( colName:string ){ return StringUtils.capitalize(colName); }
+	columnStyle( colName:string ){ return this.displayedFields().find(f=>f.name===colName)?.style || {}; }
 	objectValue( obj: any ): string{ return typeof obj === 'string' ? obj : obj?.name || ''; }
 
 	dataSource=input.required<Signal<any[]>>();

@@ -146,3 +146,5 @@ Awaitables inherit from `VoidAwait` or `IAwait<TResult, TTask>` in `co/Await.h`.
 - NEVER use compound Bash commands containing 'cd' and output redirection (e.g., cd dir && cmd > file).
 - If you must execute a command in a different directory, always split it into two separate tool calls: first 'cd', then run the command.
 - Prefer using absolute paths directly inside the command or tool parameters over chaining 'cd'.
+- Never suggest enclosing single-line `if` statements with braces.
+

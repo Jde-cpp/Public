@@ -4,12 +4,12 @@
 @if( !providers.isLoading() ) {
 	@if( user()?.picture ){
 		<a mat-list-item (click)="onLogout()">
-			<img class="profile-picture" [src]="user().picture">
+			<img class="profile-picture" [src]="user()?.picture">
 		</a>
 	}
 	@else if( user()?.name ){
 		<a mat-list-item (click)="onLogout()">
-			{{`${user().domain}/${user().name}`}}
+			{{`${user()?.domain}/${user()?.name}`}}
 		</a>
 	}
 	@else {

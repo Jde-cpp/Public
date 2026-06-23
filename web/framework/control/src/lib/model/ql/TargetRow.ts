@@ -26,12 +26,12 @@ export abstract class ITargetRow extends Row{
 		return clone;
 	}
 
-	override equals( row:ITargetRow ):boolean{
+	override equals( row:Partial<ITargetRow> ):boolean{
 		return this.target==row.target && this.name==row.name && this.description==row.description;
 	}
 
 	protected addRemoveMutations<T extends TargetRow<T>>( parentType:string, originalChildren:TargetRow<T>[], modifiedChildren:TargetRow<T>[], input:any ):Mutation[]{
-		let y = [];
+		let y = new Array<Mutation>();
 		let getMutations = ( changes:TargetRow<T>[], type:MutationType )=>{
 			for( let change of changes )
 				y.push( new Mutation(parentType, change.id, input, type) );
@@ -42,8 +42,8 @@ export abstract class ITargetRow extends Row{
 		return y;
 	}
 
-	protected childMutations( parent:ITargetRow, originalChildren:ITargetRow[], modifiedChildren:ITargetRow[], input:any={} ):Mutation[]{
-		let y = [];
+	protected childMutations( parent:ITargetRow, originalChildren:ITargetRow[]|undefined, modifiedChildren:ITargetRow[]|undefined, input:any={} ):Mutation[]{
+		let y = new Array<Mutation>();
 		let addMutations = ( changes:number[], type:MutationType )=>{
 			if( !changes.length )
 				return;
@@ -53,8 +53,8 @@ export abstract class ITargetRow extends Row{
 			inputObj.id = changes;
 			y.push( new Mutation(parent.type, parent.id, mutationInput, type) );
 		}
-		let original = originalChildren.map( x=>x.id );
-		let current = modifiedChildren.map( x=>x.id );
+		let original = originalChildren!.map( x=>x.id );
+		let current = modifiedChildren!.map( x=>x.id );
 		addMutations( original.filter((x)=>!current.includes(x)), MutationType.Remove );
 		addMutations( current.filter((x)=>!original.includes(x)), MutationType.Add );
 
@@ -64,12 +64,12 @@ export abstract class ITargetRow extends Row{
 	get canSave():boolean{ return this.name?.length>0 && this.target?.length>0; }
 
 	readonly id:number;
-	target:Target;
-	name:string;
-	readonly created:Date;
-	readonly updated:Date;
-	readonly deleted:Date;
-	description:string;
+	target!:Target;
+	name!:string;
+	readonly created:Date|undefined;
+	readonly updated:Date|undefined;
+	readonly deleted:Date|undefined;
+	description:string|undefined;
 }
 export type TargetRowProps = { id:number; target:Target; name:string; created:Date; updated:Date; deleted:Date; description:string; };
 
@@ -79,13 +79,13 @@ export abstract class TargetRow<T extends TargetRow<T>> extends ITargetRow{
 	}
 
 	mutationArgs( original:T ){
-		let args = {};
+		let args:Partial<T> = {};
 		if( this.target!=original?.target )
-			args["target"] = this.target;
+			args.target = this.target;
 		if( this.name!=original?.name )
-			args["name"] = this.name;
+			args.name = this.name;
 		if( this.description!=original?.description )
-			args["description"] = this.description;
+			args.description = this.description;
 		return args;
 	}
 	mutation( original:T ):Mutation[]{

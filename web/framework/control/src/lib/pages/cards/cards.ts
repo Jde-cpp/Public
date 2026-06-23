@@ -1,5 +1,7 @@
+import { CommonModule } from "@angular/common";
 import { Component, Inject, Injectable, OnInit, signal } from "@angular/core";
-import { ActivatedRoute, Router, Routes, UrlSegment } from "@angular/router";
+import { ActivatedRoute, Router, RouterLink, Routes, UrlSegment } from "@angular/router";
+import { MatIconModule } from "@angular/material/icon";
 import { ComponentCategoryList, RouteItem, IRouteService, RouteService } from "jde-spa";
 
 
@@ -10,7 +12,7 @@ export class HomeRouteService extends RouteService{
 	}
 	override children():Promise<Routes>{
 		let y:Routes = [];
-		for( let config of this.router.config.filter(x=> x.title && x.path.length && x.path!="login" && !x.path.includes('/')) ){
+		for( let config of this.router.config.filter(x=> x.title && x.path!.length && x.path!="login" && !x.path!.includes('/')) ){
 			let pageSettings = config.data ? config.data["pageSettings"] : null;
 			y.push( {title: config.title, path: config.path, data:{ id: config.path, summary: pageSettings?.summary }} );
 		}
@@ -21,7 +23,7 @@ export class HomeRouteService extends RouteService{
 @Component( {
 	templateUrl: './cards.html',
 	styleUrls: ['./cards.scss'],
-	imports: [ComponentCategoryList]
+	imports: [CommonModule, MatIconModule, RouterLink]
 })
 export class Cards implements OnInit {
 	constructor( private route: ActivatedRoute, private router: Router, @Inject("IRouteService") private routerService: IRouteService )
@@ -32,5 +34,5 @@ export class Cards implements OnInit {
 			this.items.set( items.filter((x)=>x.path.length && x.path!="login") );
 		});
 	}
-	items = signal<RouteItem[]>( null );
+	items = signal<RouteItem[]>( null as any );
 }

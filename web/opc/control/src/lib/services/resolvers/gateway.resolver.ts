@@ -8,7 +8,7 @@ export type GatewayData = {
 	columns: Record<string,string>;
 	pageSettings:PageSettings;
 	profile: PageProfile;
-	results:{ serverConnections: any }; //{users:ITargetRow[]};
+	results:{ serverConnections: any }|undefined; //{users:ITargetRow[]};
 	routing:AppInstanceRoute;
 	schema: TableSchema;
 };
@@ -20,7 +20,7 @@ export class GatewayResolver implements Resolve<GatewayData> {
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<GatewayData>{
 		const routing = new AppInstanceRoute( "gateways", route.params["instance"] );
-		routing.siblings = this.routeStore.getChildren( route.parent.url.slice(0, -1) );
+		routing.siblings = this.routeStore.getChildren( route.parent!.url.slice(0, -1) );
 		routing.parent = new RouteItem( { path: "/apps", title:"Applications" } );
 		return this.load( route.params["instance"], routing );
 	}
@@ -37,12 +37,12 @@ export class GatewayResolver implements Resolve<GatewayData> {
 		profile.currentViewIndex = ProfileStore.viewIndex( schema.collectionName );
 		profile.showDeleted = ProfileStore.showDeleted( schema.collectionName );
 
-		return GatewayResolver.load( gateway, {columns: QLListResolver.columns(schema, [], []), pageSettings, profile, schema, results: null, routing}, this.routeStore );
+		return GatewayResolver.load( gateway, {columns: QLListResolver.columns(schema, [], []), pageSettings, profile, schema, results: undefined, routing}, this.routeStore );
 	}
 	static async load( gateway:Gateway, data:GatewayData, routeStore:RouteStore ):Promise<GatewayData>{
 		const query = data.profile.view.query( ProfileStore.showDeleted("gateways"), 0 );
 		const results = await gateway.query<any>( query.text, query.vars, (m)=>console.log(m) );
-		routeStore.setChildren( data.routing.path, results[data.schema.collectionName].map( r=>{return {title:r.name, path: r.target};}) );
+		routeStore.setChildren( data.routing.path, results[data.schema.collectionName].map( (r:any)=>{return {title:r.name, path: r.target};}) );
 		return {
 			columns: data.columns,
 			pageSettings: data.pageSettings,

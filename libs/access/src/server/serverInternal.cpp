@@ -13,7 +13,7 @@
 namespace Jde::Access{
 	static sp<QL::LocalQL> _ql;
 	α Server::AccessSchema()ι->DB::AppSchema&{ return GetSchema(); }
-	α Server::LocalQL()ι->QL::LocalQL&{ ASSERT( _ql );  return *_ql; }
+	α Server::LocalQL()ι->QL::LocalQL&{ ASSERT(_ql);  return *_ql; }
 	α Server::Authorizer()ι->Access::Authorize&{ return LocalQL().Authorizer(); }
 
 	α Server::Authenticate( str loginName, uint providerId, str opcServer, SL sl )ι->AuthenticateAwait{
@@ -24,7 +24,7 @@ namespace Jde::Access{
 	α Server::GetTable( str name, SL sl )ε->const DB::View&{ return LocalQL().GetTable(name, sl); }
 
 	α Server::Configure( vector<sp<DB::AppSchema>>&& schemas, sp<QL::LocalQL> localQL, UserPK executer, sp<Authorize> authorizer, sp<AccessListener> listener )ε->ConfigureAwait{
-		auto accessSchema = find_if( schemas, []( const sp<DB::AppSchema>& x ){ return x->Name=="access"; } );
+		auto accessSchema = find_if( schemas, [](const sp<DB::AppSchema>& x){return x->Name=="access";} );
 		THROW_IF( accessSchema==schemas.end(), "Access schema not found in schemas" );
 		SetSchema( *accessSchema );
 		_ql = localQL;
@@ -37,9 +37,9 @@ namespace Jde::Access{
 			y = mu<AclQLSelectAwait>( q, creds.UserPK(), sl );
 		else if( q.JsonName.starts_with("role") && (q.FindTable("roles") || q.FindTable("permissionRights")) )
 			y = mu<RoleAwait>( q, creds.UserPK(), sl );
-		else if( q.JsonName.starts_with( "user" ) && q.FindTable("groupings") )
-			y = mu<UserAwait>( q, creds.UserPK(), sl );
-		else if( q.JsonName.starts_with( "grouping" ) )
+		else if( q.JsonName.starts_with("user") && q.FindTable("groupings") )
+			y = mu<UserAwait>( move(q), creds.UserPK(), sl );
+		else if( q.JsonName.starts_with("grouping") )
 			y = mu<GroupAwait>( q, creds.UserPK(), sl );
 		return y;
 	}
@@ -47,9 +47,9 @@ namespace Jde::Access{
 		up<TAwait<jvalue>> y;
 		using enum QL::EMutationQL;
 		if( m.TableName()=="acl" && (m.Type==Purge || m.Type==Create) )
-			y = mu<Access::Server::AclQLAwait>(move(m), creds.UserPK(), sl);
+			y = mu<Access::Server::AclQLAwait>( move(m), creds.UserPK(), sl );
 		else if( (m.Type==Add || m.Type==Remove) && m.TableName()=="roles" )
-			y = mu<Access::Server::RoleMAwait>(move(m), creds.UserPK(), sl);
+			y = mu<Access::Server::RoleMAwait>( move(m), creds.UserPK(), sl );
 		return y;
 	}
 }

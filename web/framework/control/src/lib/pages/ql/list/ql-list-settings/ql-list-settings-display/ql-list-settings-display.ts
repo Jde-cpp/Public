@@ -50,13 +50,13 @@ export class QLListSettingsDisplay implements OnInit{
 		moveItemInArray( this.dataSource, event.previousIndex, event.currentIndex || 1 );
     this.table.renderRows();
 	}
-	columnName(col): string{
+	columnName(col:any): string{
 		return col ? StringUtils.idToDisplay(col.name) : "Selector";
 	}
 
 	get columnNames(){ return ["position", "select", "name"] };
 	dataSource:(SelectorField|ViewField)[] = [];
-	selection = signal<ViewField>( null );
+	selection = signal<ViewField>( null as any );
 
 	view = input.required<View>();
 	columns = input.required<Record<string,string>>();

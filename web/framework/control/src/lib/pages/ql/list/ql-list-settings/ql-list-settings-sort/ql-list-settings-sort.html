@@ -3,14 +3,11 @@
 		<mat-header-cell *matHeaderCellDef> Column </mat-header-cell>
 		<mat-cell *matCellDef="let element">
 		  <mat-form-field subscriptSizing="dynamic">
-				<!-- <input matInput type=text  [matAutocomplete]=auto [value]=element.active> -->
-				<!-- <mat-autocomplete #auto="matAutocomplete" requireSelection (optionSelected)="addToSort(element, $event.option.value)"> -->
-					<mat-select [value]="element.active" (selectionChange)="updateSort(element, $event.value)">
-						@for( column of selectableFields(element) | keyvalue; track column.key) {
-							<mat-option [value]=column.key>{{column.value}} </mat-option>
-						}
-					</mat-select>
-				<!-- </mat-autocomplete> -->
+				<mat-select [value]="element.active" (selectionChange)="updateSort(element, $event.value)">
+					@for( column of selectableFields(element) | keyvalue; track column.key) {
+						<mat-option [value]=column.key>{{column.value}} </mat-option>
+					}
+				</mat-select>
 			</mat-form-field>
 		</mat-cell>
 	</ng-container>

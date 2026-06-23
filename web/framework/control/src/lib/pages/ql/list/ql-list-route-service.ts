@@ -9,13 +9,14 @@ export class QLListRouteService extends RouteService implements IRouteService{
 	}
 	override children( urlSegments:UrlSegment[] ):Promise<Routes>{
 		let y:Routes = [];
-		let thisConfig = this.router.config.find( x=>x.path==urlSegments[urlSegments.length-1].path );
-		let childrenConfig = this.router.config.find( x=>x.path==thisConfig.path && x.children?.length );
-		for( let child of childrenConfig.children?.filter(x=> !x.path.endsWith(":target")) ){
+		let thisConfig = this.router.config.find( x=>x.path==urlSegments[urlSegments.length-1].path )!;
+		let childrenConfig = this.router.config.find( x=>x.path==thisConfig.path && x.children?.length )!;
+		const children = childrenConfig.children ? childrenConfig.children.filter(x=> !x.path!.endsWith(":target")) : [];
+		for( let child of children ){
 			if( child.path!=":collectionDisplay" )
 				y.push( child );
 			else{
-				for( let collection of child.data["collections"] ){
+				for( let collection of child.data!["collections"] ){
 					var route:Route;
 					if( typeof collection=='string' ){
 						route = {

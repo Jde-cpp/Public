@@ -4,7 +4,7 @@ import { MatTable, MatTableModule } from '@angular/material/table';
 import {MatSortModule, Sort} from '@angular/material/sort';
 import {MatDatepickerInputEvent} from '@angular/material/datepicker';
 import { Subject, Unsubscribable } from 'rxjs';
-import { LogDataSource } from './LogDataSource';
+import { LogDataSource } from './DataSource';
 import {AppStatus} from '../../services/app/application';
 import {LogSettings} from './Settings';
 import { QLListSettings } from '../ql/list/ql-list-settings/ql-list-settings';
@@ -102,7 +102,7 @@ export class Logs implements OnInit, OnDestroy{
 		//if( event.source.selected )
 			this.subscribe( event, this.level );
 	}
-	subscribe( applicationId:number, level:ELogLevel ){
+	subscribe( applicationId:number|undefined, level:ELogLevel ){
 		var subscription = { applicationId: applicationId, level: level, start:this.start, limit:this.view().limit };
 		if( JSON.stringify(this.currentSubscription)!=JSON.stringify(subscription) ){
 			this.buffer.length=0;
@@ -119,7 +119,7 @@ export class Logs implements OnInit, OnDestroy{
 	unsubscribe(){
 		if( this.subscription ){
 			this.subscription.unsubscribe();
-			this.subscription = null;
+			this.subscription = undefined;
 			this.currentSubscription = Logs.DefaultSubscription;
 		}
 	}
@@ -237,7 +237,7 @@ export class Logs implements OnInit, OnDestroy{
 	}
 	hideSelectedMessage(){
 		this.profile.level = ELogLevel.Information;
-		this.profile.hiddenMessages.push( this.selectedEntry.templateId );
+		this.profile.hiddenMessages.push( this.selectedEntry!.templateId );
 		this.profile.level = ELogLevel.Debug;
 		this.filterData();
 	}
@@ -263,15 +263,15 @@ export class Logs implements OnInit, OnDestroy{
 	}
 	get sort(){return this.view().sort;}
 	service = input.required<IGraphQL>();
-	profile:LogSettings;
-	data: LogDataSource;
+	profile!:LogSettings;
+	data!: LogDataSource;
 	get paused(){return this.data.paused;} set paused(value){this.data.paused=value;}
 	connected = false;
 	displayedColumns = computed( () => {
 		return this.view().fields.filter(f=>f.displayed).map( (f)=>f.name );
 	} );
 	//configuration = { displayHeader:true }
-	@ViewChild('mainTable',{static: false}) _table:MatTable<Entry>;
+	@ViewChild('mainTable',{static: false}) _table!:MatTable<Entry>;
 
 	toLevel( level:ELogLevel ):string{
 		switch( level ){
@@ -297,14 +297,14 @@ export class Logs implements OnInit, OnDestroy{
 		}
 		return "table-row "+className;
 	}
-	message(entry):string{
+	message(entry:Entry):string{
 		return this.data.message(entry);
 	}
 
 	get applicationId(){ return this.profile.applicationId; } set applicationId(value){ this.profile.applicationId=value; }
 	get columns():Record<string,string>{ return LogEntries.columns; }
 	get start():Date{ return this._start.value; } set start(value:Date){ this._start.setValue(value); this.profile.start = value; } private _start = new FormControl();
-	private filter:string; 	//get filter(){return _filter;} set filter(value){ this._filter = value.trim().toLowerCase(); }
+	private filter!:string; 	//get filter(){return _filter;} set filter(value){ this._filter = value.trim().toLowerCase(); }
 	startChange( event: MatDatepickerInputEvent<Date> ){ this.subscribe( this.applicationId, this.level ); }
 	private buffer:Entry[] = [];
 	static DefaultSubscription:ISubscription={ applicationId: 0, level:  ELogLevel.NoLog, start:null };
@@ -314,19 +314,19 @@ export class Logs implements OnInit, OnDestroy{
 //	lengthChange = new Subject<number>();
 	startIndexChange = new Subject<number>();
 	get level():ELogLevel{ return this.profile.level; } set level( value:ELogLevel ){ this.profile.level=value; }
-	private get application():AppStatus|null{ return this.applications.find( (existing)=>{return existing.id==this.applicationId;} ); }
+	private get application():AppStatus|undefined{ return this.applications.find( (existing)=>{return existing.id==this.applicationId;} ); }
 	applications:AppStatus[]=[];
 	schema:TableSchema = LogView.schema;
-	private subscription:Unsubscribable;
+	private subscription:Unsubscribable|undefined;
 	//private applicationStrings:ApplicationStrings = new ApplicationStrings();
 	//private pushTimeout:{ entries: TraceEntry[], id:any, end:number };
 	//get selectedIndex(){ return this.selectedEntry?.index; } set selectedIndex(x){ this.selectedEntry = this.data.entries.find( (y)=>y.index==x ); }
 	get selectedEntry(){ return this.data.allEntries.find( (e)=>e.selected ); }
-	views = signal<LogView[]>(null);
+	views = signal<LogView[]>(null as any);
 	view = computed<LogView>( () => this.views()[this.viewIndex()] );
 	get viewCopy(){ return new LogView( this.view() ); }
-	viewIndex = signal<number>(null);
+	viewIndex = signal<number>(null as any);
 	profileStore = inject(ProfileStore);
 }
 
-interface ISubscription{ applicationId:number, level:ELogLevel, start:Date|null }
+interface ISubscription{ applicationId:number|undefined, level:ELogLevel, start:Date|null }

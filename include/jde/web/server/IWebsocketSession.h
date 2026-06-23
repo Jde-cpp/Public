@@ -53,7 +53,7 @@ namespace Jde::Web::Server{
 
 	private:
 		α AddTimeout( RequestId requestId, QueryClientAwait::Handle h, Duration timeout, SRCE )ι->TimerAwait::Task;
-		α Disconnect( CodeException&& e )ι{ OnDisconnect(move(e)); /*_connected = false; _server.RemoveSession(Id);*/ }
+		α Disconnect( CodeException&& e )ι{ OnDisconnect(move(e)); }
 		β OnDisconnect( CodeException&& )ι->void{}
 		β OnAccept( beast::error_code ec )ι->void;
 
@@ -63,7 +63,7 @@ namespace Jde::Web::Server{
 		β QueryClient( QL::TableQL&& query, Jde::UserPK executer, RequestId requestId )ε->void=0;
 		β LocalQL()Ι->sp<QL::IQL> = 0;
 
-		const SocketId _id{};
+		const SocketId _id{}; // index starts at 0 for each app start.
 		TRequestType _initialRequest;
 		sp<QL::IListener> _listener;
 		flat_map<RequestId, std::pair<QueryClientAwait::Handle, sp<DurationTimer>>> _pendingQueries; mutex _pendingQueriesMutex;

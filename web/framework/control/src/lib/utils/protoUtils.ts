@@ -7,8 +7,8 @@ export class ProtoUtils{
 	static toNumber( value:number|Long ):number{
 		return typeof(value)==='object' ? value.toNumber() : value;
 	}
-	static toDate( value:Timestamp ):Date|null{
-		const date = value==null || value.seconds==0 ? null : new Date( ProtoUtils.toNumber(value.seconds)*1000 + value.nanos/1000000 );
+	static toDate( value:Timestamp ):Date|undefined{
+		const date = value==null || value.seconds==0 ? undefined : new Date( ProtoUtils.toNumber(value.seconds)*1000 + value.nanos/1000000 );
 		return date;
 	}
 	static fromDate( value:Date ):Timestamp|null{

@@ -33,7 +33,7 @@ export class User extends TargetRow<User>{
 		else
 			this.roles = cloneClassArray( obj.roles, Role ) ?? [];
 	}
-	override equals( row:User ):boolean{
+	override equals( row:Partial<User> ):boolean{
 		return super.equals(row)
 			&& JSON.stringify(this.groups)==JSON.stringify(row.groups)
 			&& JSON.stringify(this.permissions)==JSON.stringify(row.permissions)
@@ -54,7 +54,7 @@ export class User extends TargetRow<User>{
 	modulus:number;
 	password: string;
 	permissions: Permission[];
-	get properties():User{ let properties = new User(this); properties.roles=undefined; properties.permissions=undefined; properties.groups=undefined; return properties; }
+	get properties():Partial<User>{ let properties:Partial<User> = new User(this); properties.roles=undefined; properties.permissions=undefined; properties.groups=undefined; return properties; }
 	provider: string;
 	roles: Role[];
 	override get collectionName():string{ return "users"; }

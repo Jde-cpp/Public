@@ -3,21 +3,21 @@ import { TypeName } from '../../services/IGraphQL';
 import { StringUtils } from '../../utils/StringUtils';
 
 export enum MutationType{
-		Create,
-		Update,
-		Delete,
-		Purge,
-		Add,
-		Remove
+	Create,
+	Update,
+	Delete,
+	Purge,
+	Add,
+	Remove
 }
 export class Mutation{
-	constructor( private _typeName:TypeName=null, private _id:number=0, public args:any=null, private _type:MutationType=null, private result:string[]=null ){
+	constructor( private _typeName:TypeName, private _id:number=0, public args:any=null, private _type:MutationType, private result:string[]|undefined=undefined ){
 	}
 	add( child:Mutation ){
 		if( !this.#children.has(child.typeName) )
 			this.#children.set( child.typeName, [child] );
 		else
-			this.#children.get(child.typeName).push( child );
+			this.#children.get(child.typeName)!.push( child );
 	}
 	toString():string|null{
 		let query = null;

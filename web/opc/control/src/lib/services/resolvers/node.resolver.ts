@@ -43,7 +43,7 @@ export class NodeResolver implements Resolve<NodePageData> {
 		}catch( e ){
 			this.snackbar.exceptionInfo( e, `Not found:  '${route.cnnctnTarget}'`, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
-			return null;
+			return undefined as unknown as NodePageData;
 		}
 	}
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<NodePageData>{

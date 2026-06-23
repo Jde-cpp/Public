@@ -18,6 +18,6 @@ export class ComponentPageHeader {
   getTitle() {//
     return this._componentPageTitle.title;//
   }//
-  @Input()backUrl:string;//
+  @Input() backUrl!:string;//
   back(){ this.router.navigate([this.backUrl] ); }//
 }

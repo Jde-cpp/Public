@@ -53,9 +53,9 @@ export class NavBar implements OnInit {
   constructor( private navigationFocusService: NavigationFocusService ) {
     this.defaultFavorites = this.router.config.filter( x=>
 			x.path!="login"
-			&& x.path.indexOf(':target')==-1
-			&& !x.path.includes('/')
-			&& ( !x.children || x.children.find( y=>!y.path.length) )
+			&& x.path!.indexOf(':target')==-1
+			&& !x.path!.includes('/')
+			&& ( !x.children || x.children.find( y=>!y.path!.length) )
 		).map( x=>({ name: x.title as string, route: '/'+x.path } ));
   }
 	async ngOnInit(){
@@ -67,7 +67,7 @@ export class NavBar implements OnInit {
 			filter( (e)=> e instanceof NavigationEnd )
 		).subscribe( (e:NavigationEnd)=>{
 			this.router.config.find( config=>{
-				let configSegments = config.path.split('/');
+				let configSegments = config.path!.split('/');
 				let urlSegments = e.urlAfterRedirects.split('?')[0].split('/');
 				urlSegments.shift();
 				if( configSegments.length!=urlSegments.length )
@@ -79,14 +79,14 @@ export class NavBar implements OnInit {
 						return false;
 				}
 				let title = config.title as string;
-				this.name.set( !title || title.startsWith(':') ? e.urlAfterRedirects.split('?')[0].split('/').pop() : title );
+				this.name.set( !title || title.startsWith(':') ? e.urlAfterRedirects.split('?')[0].split('/').pop()! : title );
 				this.route.set( e.urlAfterRedirects.split('?')[0] );
 				return true;
 			});
 			let fav = this.favorites().find( fav=>{
 				const y = fav.route==e.urlAfterRedirects.split('?')[0];
 				return y ? fav : null;
-			});
+			})!;
 			this.existing.set( fav );
 		})
 	}
@@ -94,13 +94,13 @@ export class NavBar implements OnInit {
 		return item as Folder;
 	}
   routerLinkOptions( route:Route ):{exact:boolean}{
-    return {exact:!route.path.length};
+    return {exact:!route.path!.length};
   }
 	onFavoriteChange( change:Favorite ){
 		let favs;
 		if( this.existing() && !change ){ //delete
-			favs = this.favorites().filter( fav=>fav.route!=this.existing().route );
-			this.existing.set( null );
+			favs = this.favorites().filter( fav=>fav.route!=this.existing()!.route );
+			this.existing.set( undefined );
 		}
 		else{
 			let newFav = { ...change, route: this.route() };
@@ -120,7 +120,7 @@ export class NavBar implements OnInit {
 		//this.#profileStore.save( "favorites", favs );
 	}
 
-	onSearch( event ){
+	onSearch( event:any ){
 
 	}
 	onSearchSelected( query:string ){
@@ -149,11 +149,11 @@ export class NavBar implements OnInit {
 	});
 	#profileStore = inject(ProfileStore);
 	defaultFavorites:Favorite[];
-	favorites = signal<Favorite[]>(null);
+	favorites = signal<Favorite[]>(null as any);
 	isLoading = signal<boolean>( true );
-	name = signal<string>( null );
-	route = signal<string>( null );
-	existing = signal<Favorite>( null );// the favorite corresponding to the current route, if any
+	name = signal<string>( null as any );
+	route = signal<string>( null as any );
+	existing = signal<Favorite|undefined>( undefined );// the favorite corresponding to the current route, if any
 	router = inject(Router);
 	searchForm = new FormControl<string>('');
 }

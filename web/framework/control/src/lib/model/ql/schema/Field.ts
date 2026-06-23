@@ -16,7 +16,7 @@ type OfTypeJson = { kind: string|FieldKind, name?: string };
 export class OfType extends QLSchema{
 	constructor( j:OfType|OfTypeJson ){
 		super( j );
-		this.kind = typeof j.kind==="string" ? FieldKind[j.kind] : j.kind;
+		this.kind = typeof j.kind==="string" ? FieldKind[j.kind as keyof typeof FieldKind] : j.kind;
 	}
 	kind:FieldKind;
 }
@@ -30,7 +30,7 @@ export class FieldType extends OfType{
 	get underlyingKind():FieldKind{ return this.ofType?.kind ?? this.kind; }
 	get underlyingName():string{ return this.ofType?.name ?? this.name; }
 	get underlyingVariableName():string{ return this.underlyingName.charAt(0).toLowerCase()+this.underlyingName.slice(1) ; }
-	ofType:OfType;
+	ofType:OfType|undefined;
 }
 
 export type NullableField = {name:string, ofType:OfTypeJson};
@@ -40,7 +40,7 @@ export class Field extends QLSchema{
 		if( "ofType" in j )
 			this.type = new FieldType( { kind: FieldKind.NON_NULL, ofType: j.ofType } );
 		else
-			this.type = j.type ? new FieldType( j.type ) : undefined;
+			this.type = new FieldType( j.type! );
 	}
 	type:FieldType;
 	get underlyingKind(){ return this.type.kind; }

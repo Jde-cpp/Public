@@ -34,9 +34,9 @@ export class Favorites {
 				this.onChange.emit( result );
 		});
 	}
-	@ViewChild('icon', { read: ElementRef }) iconElementRef: ElementRef;
+	@ViewChild('icon', { read: ElementRef }) iconElementRef!: ElementRef;
 	readonly dialog = inject(MatDialog);
-	existing = input.required<Favorite>();
+	existing = input.required<Favorite|undefined>();
 	favorites = input.required<Favorite[]>();
 	name = input.required<string>();
   onChange = output<Favorite>();
@@ -61,8 +61,8 @@ export class FavoritesDialog {
 	onDone(): void {
 		this.dialogRef.close( this.favoriteModel() );
 	}
-	folderNames = [];
-  favoriteModel = signal<{ name:string, folderName:string }>(null);
+	folderNames = new Array<string>;
+  favoriteModel = signal<{ name:string, folderName:string }>(null as any);
   favoriteForm = form(this.favoriteModel);
 	titleService = inject(Title);
 }

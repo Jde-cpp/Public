@@ -115,6 +115,8 @@ namespace Jde::QL{
 				statement.From.TryAdd( {pEnum, pFKTable->GetPK(), !pEnum->IsNullable} );
 				dbColumn = pFKTable->GetColumnPtr( "name" );
 			}
+			else if( columnName== "count" )
+				dbColumn = DB::Column::Count();
 			THROW_IF( !dbColumn, "Could not find column '{}.{}'", dbTable.Name, columnName );
 		}
 

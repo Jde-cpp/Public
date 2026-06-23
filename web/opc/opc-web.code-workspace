@@ -17,7 +17,9 @@
 		// }
 	],
 	"settings": {
-		"window.title": "Web"
+		"window.title": "Web",
+		"typescript.tsdk": "node_modules/typescript/lib",
+		"typescript.enablePromptUseWorkspaceTsdk": true
 	},
 	"extensions": {
 		"recommendations": [
@@ -26,21 +28,21 @@
 	},
 	"launch": {
 		"version": "0.2.0",
-		"configurations": [
-    {
-      "name": "ng serve",
-      "type": "chrome",
-      "request": "launch",
-      "url": "http://localhost:4200/"
-    },
-    {
-      "name": "ng test",
-      "type": "chrome",
-      "request": "launch",
-      "preLaunchTask": "npm: test",
-      "url": "http://localhost:9876/debug.html"
-    }
-	]},
+		"configurations": [{
+				"name": "ng serve",
+				"type": "chrome",
+				"request": "launch",
+				"url": "http://localhost:4200/"
+			},
+			{
+				"name": "ng test",
+				"type": "chrome",
+				"request": "launch",
+				"preLaunchTask": "npm: test",
+				"url": "http://localhost:9876/debug.html"
+			}
+		]
+	},
 	"tasks": {
 		"version": "2.0.0",
 		"tasks": [

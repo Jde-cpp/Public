@@ -15,10 +15,12 @@ namespace Jde::App::Server{
 		ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α ProgramPK()Ι->ProgramPK{ return _programPK; }
 		α Instance()Ι->const Proto::FromClient::Instance&{ return _instance; }
+		α InstancePK()Ι->ProgInstPK{ return _instancePK; }
 		α ConnectionPK()Ι->ConnectionPK{ return _connectionPK; }
 	private:
 		α OnRead( Proto::FromClient::Transmission&& transmission )ι->void override;
 		α OnClose()ι->void override;
+		α OnDisconnect( CodeException&& e )ι->void override;
 		α GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task;
 		α Login( string&& jwt, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task;
 		α ProcessTransmission( Proto::FromClient::Transmission&& transmission, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId )ι->void;

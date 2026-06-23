@@ -3,8 +3,8 @@
 	matSort
 	(matSortChange)="onSortChange.emit($event)"
 	[matSortDisabled]="sort()==null"
-	[matSortActive]="sort()?.active"
-	[matSortDirection]="sort()?.direction"
+	[matSortActive]="sort()?.active ?? ''"
+	[matSortDirection]="sort()?.direction ?? ''"
 	matSortDisableClear=true
 >
 	@if( selections().isMultipleSelection() ){

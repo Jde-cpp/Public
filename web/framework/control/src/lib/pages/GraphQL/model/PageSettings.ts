@@ -32,7 +32,7 @@ export class PageProfile{
 	updateView( view:View ){
 		this.views[this.views.findIndex( v=>v.name==view.name && view.type==v.type)] = view;
 	}
-	showDeleted:boolean;
+	showDeleted!:boolean;
 	currentViewIndex:number=0;
 	get view():View{ return this.views[this.currentViewIndex]; }
 	views:View[] = [];

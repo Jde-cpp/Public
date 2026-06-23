@@ -93,13 +93,15 @@ namespace Jde::Access::Server{
 					}
 					else
 						dbCriteria = "criteria is null";
-					resourcePK = co_await ds->Scaler<ResourcePK>({
-						Ƒ( "select resource_id from {} where schema_name=? and target=? and {}", GetTable("resources").DBName, dbCriteria ),
+					resourcePK = ds->ScalerSyncOpt<ResourcePK>({
+						Ƒ( "select resource_id from {} where schema_name=? and target=? and {} and deleted is null", GetTable("resources").DBName, dbCriteria ),
 						move(params)
-					 });
-					auth.AddResource( *resourcePK, *schema, resourceKey.NK(), criteria.value_or(string{}) );
+					});
+					if( resourcePK )
+						auth.AddResource( *resourcePK, *schema, resourceKey.NK(), criteria.value_or(string{}) );
 				}
-				permissionRight["resource"].emplace_object()["id"] = *resourcePK;
+				if( resourcePK )
+					permissionRight["resource"].emplace_object()["id"] = *resourcePK;
 			//}
 			permissionRight["id"] = permissionPK;
 			QL::Subscriptions::OnMutation(

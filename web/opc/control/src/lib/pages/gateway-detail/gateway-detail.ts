@@ -32,12 +32,12 @@ export class GatewayDetail implements OnInit, OnDestroy{
 
 	tabIndexChanged( index:number ){ this.tabIndex = index;}
 
-	pageData:QLListData;
+	pageData!:QLListData;
 	get connections(){ return this.pageData?.results["serverConnections"]; }
 	tabIndex:number = ProfileStore.tabIndex( 'gateway-detail' );
 	sideNav = model.required<RouteItem>();
 
-	gateway:Gateway;
+	gateway!:Gateway;
 	gatewayService = inject(GatewayService);
 	isLoading = signal<boolean>( true );
 }

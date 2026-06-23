@@ -22,7 +22,7 @@ export class AuthStore{
 	}
 
 	append( user:UserJson ):void{
-		let current = this.user() ? new User(this.user()) : new User();
+		let current = this.user() ? new User(this.user() as UserJson) : new User();
 		current.append( user );
 		let stringify = JSON.stringify( current );
 		if( this.log ) console.log( `auth.append( ${stringify} )` );
@@ -31,13 +31,13 @@ export class AuthStore{
 	}
 
 	reset( serverInstance?:{url:string,instance:number}, jwt?:string ):void{
-		let user:User = null;
+		let user:User|undefined;
 		if( serverInstance ){
 			user = new User( jwt );
 			user.serverInstances = user.serverInstances || [];
 			AuthStore.upsertServerInstance( user, serverInstance.url, serverInstance.instance );
 		}
-		if( this.log ) console.log( `auth.reset( ${user.toString()} )` );
+		if( this.log ) console.log( `auth.reset( ${user ? user.toString() : "undefined"} )` );
 		if( user )
 			localStorage.setItem( userStorageKey, JSON.stringify(user) );
 		else
@@ -46,18 +46,19 @@ export class AuthStore{
 	}
 
 	setServerInstance( url: string, instance: number ){
-		let user = this.user() ?? null;
-		AuthStore.upsertServerInstance( user, url, instance );
+		let user = this.user() ?? undefined;
+		if( user )
+			AuthStore.upsertServerInstance( user, url, instance );
 		if( this.log ) console.log( `setServerInstance( ${JSON.stringify(user)} )` );
 		this.#userSignal.set( user );
 	}
 
 	static upsertServerInstance( user: User, url: string, instance: number ){
-		let index = user.serverInstances.findIndex( (x)=>x.url==url );
+		let index = user.serverInstances!.findIndex( (x)=>x.url==url );
 		if( index>=0 )
-			user.serverInstances[index].instance = instance;
+			user.serverInstances![index].instance = instance;
 		else
-			user.serverInstances.push({ url, instance });
+			user.serverInstances!.push({ url, instance });
 	}
 
 	logout(){
@@ -72,6 +73,6 @@ export class AuthStore{
 	}
 
 	log:boolean = false;
-	#userSignal = signal<User | null>( null );
-	get user():Signal<User | null>{ return this.#userSignal.asReadonly(); }
+	#userSignal = signal<User | undefined>( undefined );
+	get user():Signal<User | undefined>{ return this.#userSignal.asReadonly(); }
 }

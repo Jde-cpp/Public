@@ -45,7 +45,7 @@ local args = import 'args.libsonnet';
 			tags:{
 				default: "Information",
 				sql: "Trace",
-				exception: "Trace",
+				exception: "Debug",
 				parsing: "Trace",
 				test: "Trace",
 				sessions: "Trace",

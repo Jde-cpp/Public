@@ -35,7 +35,7 @@ export class QLListSettingsSort implements OnInit{
 	view = input.required<View>();
 	schema = input.required<TableSchema>();
 	excludedColumns = input.required<string[]>();
-	updateSort(element, value){
+	updateSort(element:Sort, value:string){
 		const isNew = !element.active;
 		element.active = value;
 		element.direction = 'asc';
@@ -53,6 +53,6 @@ export class QLListSettingsSort implements OnInit{
 			).map( f=>[f.name, f.name] )
 		);
 	}
-	static emptySort:Sort = {active: null, direction: 'asc'};
+	static emptySort:Sort = {active: "", direction: 'asc'};
 	@ViewChild('table', {static: true}) table!: MatTable<Sort>;
 }

@@ -7,7 +7,7 @@ local args = import 'args.libsonnet';
 	dbServers:{
 		scriptPaths: ["$(JDE_DIR)/libs/access/config/sql/"+args.sqlType],
 		dataPaths: ["$(JDE_DIR)/libs/access/config"],
-		sync: true,
+		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,
@@ -26,7 +26,8 @@ local args = import 'args.libsonnet';
 				app: "Trace",
 				settings: "Debug",
 				ql: "Debug",
-				sql: "Debug"
+				sql: "Debug",
+				exception: "Trace"
 			},
 			sinks:{
 				console:{},

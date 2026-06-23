@@ -26,7 +26,7 @@ export class ListRoute extends RouteItem{
 		this.title = collection.title ?? StringUtils.capitalize( this.path );
 	}
 	static find( target:string, collections:CollectionItem[] ):ListRoute{
-		let collection:CollectionItem = collections.find( c=>((typeof c =="string") && c==target) || c["path"]==target );
+		let collection:CollectionItem = collections.find( (c:any)=>((typeof c =="string") && c==target) || c["path"]==target )!;
 		return new ListRoute( collection );
 	}
 	tableSettings:TableSettings;
@@ -49,7 +49,7 @@ export class QLListResolver implements Resolve<QLListData> {
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<QLListData>{
 		const collectionDisplay = route.paramMap.get( "collectionDisplay" );
 		//let parent = { path: route.parent.url.map(seg=>seg.path).join("/"), title: route.parent.title ?? StringUtils.capitalize(route.parent.url[route.parent.url.length-1].path) };
-		let routing:ListRoute;
+		let routing:ListRoute|undefined;
 		const siblings:ListRoute[] = [];
 		for( let collection of route.data["collections"] ){
 			const sibling = new ListRoute( collection );
@@ -74,7 +74,7 @@ export class QLListResolver implements Resolve<QLListData> {
 		await profile.loadViews( collectionName, this.profileStore, schema );
 		profile.currentViewIndex = ProfileStore.viewIndex( collectionName );
 		profile.showDeleted = ProfileStore.showDeleted( collectionName );
-		return QLListResolver.load( this.ql, {pageSettings, profile, schema, results: null, routing, columns: QLListResolver.columns(schema, routing.tableSettings.columns, routing.tableSettings.excludedColumns)}, this.routeStore );
+		return QLListResolver.load( this.ql, {pageSettings, profile, schema, results: null, routing, columns: QLListResolver.columns(schema, routing.tableSettings.columns!, routing.tableSettings.excludedColumns)}, this.routeStore );
 	}
 	private static async defaultView( schema:TableSchema, configColumns:(string|ViewFieldSettings)[] ):Promise<View>{
 		let defaultView = new View( {configColumns: configColumns, sort: [{active: "name", direction: "asc"}]}, schema );
@@ -91,7 +91,7 @@ export class QLListResolver implements Resolve<QLListData> {
 	static async load( ql:IGraphQL, data:QLListData, routeStore:RouteStore ):Promise<QLListData>{
 		const q = data.profile.view.query( data.profile.showDeleted, 0 );
 		data.results = await ql.query<any>( q.text, q.vars, (m)=>console.log(m) );
-		const children = data.results[data.schema.collectionName].map( r=>({title:r.name, path:`${data.routing.path}/${r.target}`}) );
+		const children = data.results[data.schema.collectionName].map( (r:any)=>({title:r.name, path:`${data.routing.path}/${r.target}`}) );
 		routeStore.setChildren( data.routing.path, children );
 		return {
 			columns: data.columns,

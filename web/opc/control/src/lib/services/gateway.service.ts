@@ -38,19 +38,19 @@ export class GatewayService implements IGraphQL{
 		);
 		route.paramMap.subscribe( async params=>{
 			const gatewayTarget = params.get('gateway');
-			this.#defaultGateway = this.#gateways?.find( gateway=>gateway.target==gatewayTarget );
+			this.#defaultGateway = this.#gateways?.find( gateway=>gateway.target==gatewayTarget )!;
 		});
 		route.url.subscribe( async urlSegments=>{
 			const url = urlSegments.map(segment=>segment.path).join("/");
 			console.debug( `GatewayService:  url changed to '${url}'` );
 		});
 	}
-	onGatewaySuccess(gateways, transport:ETransport, http: HttpClient, authStore:AuthStore, opcStore:OpcStore){
+	onGatewaySuccess(gateways:Instance[], transport:ETransport, http: HttpClient, authStore:AuthStore, opcStore:OpcStore){
 		if( gateways.length==0 )
 			console.error("No IotServies running");
 		this.#gateways = gateways.map( instance=>new Gateway(instance, transport, http, authStore, opcStore) );
 		this.#gatewaysCallbacks.forEach( cb=>{cb.resolve(this.#gateways)} );
-		this.#gatewayCallbacks.forEach( cb=>cb.resolve(this.#gateways.find(gateway=>gateway.instances[0].instanceName==cb.instanceName)) );
+		this.#gatewayCallbacks.forEach( cb=>cb.resolve(this.#gateways.find(gateway=>gateway.instances[0].instanceName==cb.instanceName)!) );
 		this.#gatewayCallbacks = [];
 	}
 	onInstancesError(e:HttpErrorResponse){
@@ -61,8 +61,7 @@ export class GatewayService implements IGraphQL{
 	async gateway( instanceName:string ):Promise<Gateway>{
 		if( !this.#gateways )
 			return new Promise<Gateway>( (resolve,reject)=>this.#gatewayCallbacks.push({instanceName, resolve, reject}) );
-		const instance = this.#gateways.find( gateway=>gateway.instances[0].instanceName==instanceName );
-		return instance;
+		return this.#gateways.find( gateway=>gateway.instances[0].instanceName==instanceName )!;
 	}
 	async gateways():Promise<Gateway[]>{
 		if( !this.#gateways )
@@ -73,13 +72,13 @@ export class GatewayService implements IGraphQL{
 	async query<T>( ql: string ):Promise<T>{ return this.defaultGateway.query<T>( ql ); }
 	async querySingle<T>( ql: string ):Promise<T>{ return this.defaultGateway.querySingle<T>( ql ); }
 	async schema( names:string[] ):Promise<TableSchema[]>{ return this.defaultGateway.schema( names ); }
-	async schemaWithEnums( type:string, log?:Log ):Promise<TableSchema>{ return this.defaultGateway.schemaWithEnums( type, log ); }
+	async schemaWithEnums( type:string, log:Log ):Promise<TableSchema>{ return this.defaultGateway.schemaWithEnums( type, log ); }
 	async mutate<T>( ql: string|Mutation|Mutation[], log?:Log ):Promise<T>{
 		return this.defaultGateway.mutate<T>( ql, log );
 	}
 	async mutations():Promise<MutationSchema[]>{ return this.defaultGateway.mutations(); }
 
-	targetQuery( schema:TableSchema, target: string, showDeleted:boolean ):string{ return null; }
+	targetQuery( schema:TableSchema, target: string, showDeleted:boolean ):string{ return null as any; }
 	subQueries( typeName: string, id: number ):string[]{ return []; }
 	excludedColumns( tableName:string ):string[]{ return []; }
 	toCollectionName( collectionDisplay:string ):string{ return collectionDisplay; }
@@ -87,11 +86,11 @@ export class GatewayService implements IGraphQL{
 	get defaultGateway():Gateway{
 		if( !this.#defaultGateway ){
 			let target = this.router.url.split('/').slice(-1)[0];
-			this.#defaultGateway = this.#gateways?.find( gateway=>gateway.target==target );
+			this.#defaultGateway = this.#gateways?.find( gateway=>gateway.target==target )!;
 		}
 		return this.#defaultGateway;
-	} #defaultGateway:Gateway;
-	#gateways:Gateway[];
+	} #defaultGateway!:Gateway;
+	#gateways!:Gateway[];
 
 	#gatewaysCallbacks:{resolve: (value:Gateway[])=>void, reject:(e?:any)=>void}[]= [];
 	#gatewayCallbacks:{ instanceName:string, resolve: (value:Gateway)=>void, reject:(e?:any)=>void}[]= [];
@@ -105,7 +104,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		super( FromClient.Transmission, http, transport, authStore );
 		super.instances = [gateway];
 		super.queryArray<ServerCnnctn>( `serverConnections{id target name url certificateUri defaultBrowseNs}`, null, (x)=>console.log(x) ).then( connections=>{
-			connections.forEach( c=>this.#connections.set(c.target, new ServerCnnctn(c)) );
+			connections.forEach( c=>this.#connections.set(c.target, new ServerCnnctn(c as any)) );
 		});
 	}
 	async login( domain:string, username:string, password:string, log:Log ):Promise<void>{
@@ -135,7 +134,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 			await this.postRaw<string>( 'logout', {}, false, {} );
 			if( this.log.restResults ) console.log( `logout` );
 		}
-		catch( e ){
+		catch( e:any ){
 			log( `logout failed:  ${e["message"] ?? "Unknown error"}` );
 		}
 		this.authStore.logout();
@@ -172,7 +171,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 						throw e;
 				}
 				else
-					throw `unknown message:  ${JSON.stringify( message[message.Value] )}`;
+					throw `unknown message:  ${JSON.stringify( message[message.Value!] )}`;
 			}
 		}
 		catch( e ){
@@ -200,8 +199,8 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		return node;
 	}
 	private static toExpanded( proto:Common.IExpandedNodeId ):ExNodeId{
-		const en = new ExNodeId( {nsu:proto.namespaceUri, serverIndex:proto.serverIndex} );
-		const n = Gateway.toNode(proto.node);
+		const en = new ExNodeId( {nsu:proto.namespaceUri!, serverIndex:proto.serverIndex!} );
+		const n = Gateway.toNode(proto.node!);
 		en.id = n.id;
 		en.ns = n.ns;
 		return en;
@@ -231,7 +230,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	private async updateErrorCodes(){
 		const scs = OpcError.emptyMessages();
 		if( scs.length ){
-			const json = await super.get( `ErrorCodes?scs=${scs.join(',')}` );
+			const json = await super.get( `ErrorCodes?scs=${scs.join(',')}` ) as any;
 			OpcError.setMessages( json["errorCodes"] );
 		}
 	}
@@ -254,7 +253,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		const children = (await this.query<any>( ql, vars, (m)=>console.log(m) ))["node"]["children"];
 		var y = new Array<UaNode>();
 		for( const ref of children ){
-			let child:UaNode;
+			let child:UaNode|undefined;
 			switch( <ENodeClass>ref.nodeClass ){
 				case ENodeClass.Object: child = new OpcObject(ref, parent); break;
 				case ENodeClass.ObjectType: parent.typeDef = new ObjectType(ref); break; //y.push( new ObjectType(ref) ); break;
@@ -267,7 +266,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 							let x = await super.querySingle<Type>( `__type( opc: "${cnnctn}", ${nodeId.qlArgs()}){ enumValues{id name description}}`, null, log );
 							variable.customDataType = new Enum(nodeId, x);
 						}
-						catch( e ){
+						catch( e:any ){
 							log( e["message"] );
 						}
 					break;
@@ -295,7 +294,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	async write( opcId:CnnctnTarget, n:NodeId, v:Value, log:Log ):Promise<Value>{
 		const q = `updateVariable( opc: $opc, id: $id, value: $value ){ value }`;
 		const vars = { opc: opcId, id: n.toJson(), value: valueJson(v) };
-		const newValue = toValue( await super.postQL<Value>(q, vars, log) );
+		const newValue:any = toValue( await super.postQL<Value>(q, vars, log) );
 		this.updateErrorCodes();
 		return newValue["value"];
 	}
@@ -304,13 +303,13 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		this.store.setRoute( route, this.#connections.get(route.cnnctnTarget)?.defaultBrowseNs );
 	}
 
-	private onUnsubscriptionResult( requestId, result:FromServer.IUnsubscribeAck ){
+	private onUnsubscriptionResult( requestId:number, result:FromServer.IUnsubscribeAck ){
 		result.failures?.forEach( (node)=>console.log(`unsubscribe failed for:  ${JSON.stringify(node)}`) );
-		this._callbacks.get( requestId ).resolve( null );
+		this._callbacks.get( requestId )?.resolve( null );
 	}
 
-	private subscriptionAck( requestId, ack:FromServer.ISubscriptionAck ){
-		this._callbacks.get( requestId ).resolve( ack.results );
+	private subscriptionAck( requestId:number, ack:FromServer.ISubscriptionAck ){
+		this._callbacks.get( requestId )?.resolve( ack.results );
 	}
 
 	private async _subscribe( opcId:OpcId, nodes:NodeId[], subject:Subject<SubscriptionResult> ):Promise<void>{
@@ -322,12 +321,12 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 				const node = nodes[i];
 				if( y[i].statusCode ){
 					toDelete.push( node );
-					let e = new OpcError( y[i].statusCode, "Subscribe", new Error().stack, null );
+					let e = new OpcError( y[i].statusCode!, "Subscribe", new Error().stack!, undefined );
 					console.log( `Subscription failed for '${node} - ${e}` );
 				}
 		 	}
 		}
-		catch( e ){
+		catch( e:any ){
 			console.error( e["error"]["message"] );
 			toDelete.push( ...nodes );
 			subject.error( e );
@@ -337,7 +336,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 
 	#ownerSubscriptions = new Map<Owner,Subject<SubscriptionResult>>();
 	#subscriptions = new Map<OpcId,Map<NodeKey, Owner[]>>();
-	getOpcSubscriptions(opcId:OpcId):Map<NodeKey, Owner[]>{ return this.#subscriptions.has( opcId ) ? this.#subscriptions.get( opcId ) : this.#subscriptions.set( opcId, new Map<NodeKey, Owner[]> ).get( opcId ); }
+	getOpcSubscriptions(opcId:OpcId):Map<NodeKey, Owner[]>{ return this.#subscriptions.has( opcId ) ? this.#subscriptions.get( opcId )! : this.#subscriptions.set( opcId, new Map<NodeKey, Owner[]> ).get( opcId )!; }
 	#nodes = new Map<NodeKey, NodeId>();
 	private clearUnusedNodes(){
 		this.#nodes.forEach( (_, key)=>{
@@ -351,7 +350,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		for( const node of nodes ){
 			let owners:Owner[];
 			if( opcSubscriptions.has(node.key) ){
-				let owners = opcSubscriptions.get( node.key );
+				let owners = opcSubscriptions.get( node.key )!;
 				if( !owners.includes(owner) )
 					owners.push( owner );
 			}
@@ -360,12 +359,12 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 				this.#nodes.set( node.key, node );
 			}
 		}
-		let subject = this.#ownerSubscriptions.has( owner ) ? this.#ownerSubscriptions.get( owner ) : this.#ownerSubscriptions.set( owner, new Subject<SubscriptionResult>() ).get( owner );
+		let subject = this.#ownerSubscriptions.has( owner ) ? this.#ownerSubscriptions.get( owner )! : this.#ownerSubscriptions.set( owner, new Subject<SubscriptionResult>() ).get( owner )!;
 		this._subscribe( opcId, nodes, subject );
 	}
 	subscribe( opcId:OpcId, nodes:NodeId[], owner:Owner ):Observable<SubscriptionResult>{
 		this.addToSubscription( opcId, nodes, owner );
-		let subject = this.#ownerSubscriptions.get( owner );
+		let subject = this.#ownerSubscriptions.get( owner )!;
 		return subject.pipe(
 			finalize(() => {//https://stackoverflow.com/questions/62579473/detect-when-a-subject-has-no-more-subscriptions
 				if( !subject.observers.length ) {
@@ -376,7 +375,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 
 	private static toGuid( proto:Uint8Array ):Guid{ let guid = new Guid(); guid.value = proto; return guid; }
 	private static toValue( proto:FromServer.IValue ):Value{
-		let v:Value;
+		let v:Value|undefined;
 		if( proto.boolean )
 			v = proto.boolean;
 		else if( proto.byte )
@@ -417,7 +416,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 			v = proto.uint64;
 		else if( proto.xmlElement )
 			v = proto.xmlElement;
-		return v;
+		return v!;
 	}
 	private static toValues( proto:FromServer.IValue[] ):Value{
 		let value = proto.length==1 ? Gateway.toValue( proto[0] ) : new Array<Value>();
@@ -427,13 +426,13 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	}
 
 	private nodeValues( nodeValues:FromServer.INodeValues ):void{
-		let opcSubscriptions = this.#subscriptions.get( nodeValues.opcId ); if( !opcSubscriptions ){ return console.error(`Could not find opc ${nodeValues.opcId}`);}
-		const node = Gateway.toNode( nodeValues.node );
-		opcSubscriptions.get( node.key )?.forEach( owner=>this.#ownerSubscriptions.get(owner).next({opcId:nodeValues.opcId, node:node, value:Gateway.toValues(nodeValues.values)}) );
+		let opcSubscriptions = this.#subscriptions.get( nodeValues.opcId! ); if( !opcSubscriptions ){ return console.error(`Could not find opc ${nodeValues.opcId}`);}
+		const node = Gateway.toNode( nodeValues.node! );
+		opcSubscriptions.get( node.key )?.forEach( owner=>this.#ownerSubscriptions.get(owner)!.next({opcId:nodeValues.opcId!, node:node, value:Gateway.toValues(nodeValues.values!)}) );
 	};
 
 	private clearOwnerNode( opcSubscriptions:Map<NodeKey, Owner[]>,  key:NodeKey, owner:Owner ){
-		let owners = opcSubscriptions.get( key );
+		let owners = opcSubscriptions.get( key )!;
 		const index = owners.indexOf( owner );
 		let tombStone = false;
 		if( index!=-1 ){
@@ -451,13 +450,13 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		for( const [opcId, opcSubscriptions] of this.#subscriptions.entries() ){
 			for( const nodeKey of opcSubscriptions.keys() ){
 				if( this.clearOwnerNode(opcSubscriptions, nodeKey, owner) )
-				toDeleteKeys.has(opcId) ? toDeleteKeys.get(opcId).push(nodeKey) : toDeleteKeys.set( opcId, [nodeKey] );
+				toDeleteKeys.has(opcId) ? toDeleteKeys.get(opcId)!.push(nodeKey) : toDeleteKeys.set( opcId, [nodeKey] );
 			}
 		}
 		let toDeleteNodes = new Map<OpcId,NodeId[]>();
 		for( const [opcId,keys] of toDeleteKeys ){
-			let nodes = toDeleteNodes.set( opcId, [] ).get( opcId );
-			keys.forEach( key=>nodes.push( this.#nodes.get(key) ) );
+			let nodes = toDeleteNodes.set( opcId, [] ).get( opcId )!;
+			keys.forEach( key=>nodes.push( this.#nodes.get(key)! ) );
 		}
 		if( toDeleteNodes.size ){
 			for( const [opcId, nodes] of toDeleteNodes ){
@@ -469,7 +468,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	}
 	// Unsuscribe, but keep subscription open.
 	async unsubscribe( opcId:string, nodes:NodeId[], owner:Owner ):Promise<void>{
-		let opcSubscriptions = this.#subscriptions.get( opcId ); //if( !opcSubscriptions ){ return console.error(`Could not find opc ${opcId}`);}
+		let opcSubscriptions = this.#subscriptions.get( opcId )!;
 		let toDelete = new Array<NodeId>();
 		for( const node of nodes ){
 			if( this.clearOwnerNode( opcSubscriptions, node.key, owner ) )
@@ -484,8 +483,8 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		else
 			return Promise.resolve();
 	}
-	get name():string{ return this.instances[0].instanceName; }
-	get target():GatewayTarget{ return this.instances[0].instanceName; }
+	get name():string{ return this.instances[0].instanceName!; }
+	get target():GatewayTarget{ return this.instances[0].instanceName!; }
 	#connections = new Map<CnnctnTarget, ServerCnnctn>();
 }
 export type SubscriptionResult = {opcId:string, node:NodeId,value:Value};

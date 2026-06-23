@@ -46,7 +46,7 @@ if [ ! -d $workspace ]; then
 	#ng analytics disable;
 	echo -------------------- npm install start --------------------;
 	npm install material-design-icons;
-	npm install @angular/animations;
+	npm install @angular/animations@latest;
 	echo -------------------- icons installed --------------------;
 	ng add @angular/material --defaults --skip-confirmation; #use skip-confirmation when interactive
 	echo -------------------- material installed --------------------;

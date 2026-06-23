@@ -27,7 +27,6 @@ namespace Jde::Web::Server{
 
 	α IWebsocketSession::Run()ι->void{
 		LogRead( "Run", 0 );
-		SocketServerListener foo{ shared_from_this() };
 		_listener = ms<SocketServerListener>( shared_from_this() );
 		Stream->DoAccept( move(_initialRequest), shared_from_this() );
 	}
@@ -142,7 +141,7 @@ namespace Jde::Web::Server{
 			auto h = it->second.first;
 			_pendingQueries.erase( it );
 			if( h ){
-				h.promise().SetExp( Exception{ELogTags::SocketServerWrite, sl, "Query {} timed out after {}s", hex(requestId), Chrono::ToString(timeout)} );
+				h.promise().SetExp( Exception{ELogTags::SocketServerWrite, sl, "Query {} timed out after {}", hex(requestId), Chrono::ToString(timeout)} );
 				h.resume();
 			}
 		}

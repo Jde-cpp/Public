@@ -4,10 +4,10 @@
 			<mat-nav-list>
 				@if( item()().parent ){
 					<a mat-list-item
-							[routerLink]="item()().parent.path"
-							[queryParams]="item()().parent.queryParams"
+							[routerLink]="item()().parent!.path"
+							[queryParams]="item()().parent!.queryParams"
 							[attr.aria-current]="'false'">
-						{{item()().parent.title}}
+						{{item()().parent!.title}}
 					</a>
 				}
 				@for (component of item()().siblings; track component.track) {

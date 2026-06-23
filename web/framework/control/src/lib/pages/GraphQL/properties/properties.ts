@@ -48,11 +48,11 @@ export class Properties implements OnInit{
 		this.record.set( newRecord );
 	}
 
-	originalOrder = ( a, b )=> {return 0;}
+	originalOrder = ( a: any, b: any )=> {return 0;}
 
 	fields = computed<PropertyField[]>( ()=>{
 		let y = [];
-		let filter = (field)=>
+		let filter = (field: Field)=>
 			[FieldKind.OBJECT,FieldKind.LIST,FieldKind.LIST].indexOf(field.type.underlyingKind)==-1
 			&& field.type.ofType?.name!='Boolean'
 			&& Properties.noShowFields.indexOf(field.name)==-1
@@ -69,7 +69,7 @@ export class Properties implements OnInit{
 	});
 	getEnumId( field:PropertyField ):number{
 		let stringValue = this.record()[field.name];
-		return stringValue ? field.options.find( (x)=>x.name==stringValue ).id : 0;
+		return stringValue ? field.options!.find( (x)=>x.name==stringValue )!.id! : 0;
 	}
 
 	ctor = input.required<new (item: any) => any>();

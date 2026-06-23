@@ -15,9 +15,9 @@
 					</button>
 				} @else {
 					<a mat-button class="docs-navbar-hide-small docs-button"
-						[routerLink]='fav["route"]'
+						[routerLink]='$any(fav).route'
 						[routerLinkActiveOptions]="{exact: true}"
-						routerLinkActive="docs-navbar-header-item-selected">{{fav["name"]}}</a>
+						routerLinkActive="docs-navbar-header-item-selected">{{$any(fav).name}}</a>
 				}
 			}
 		</div>

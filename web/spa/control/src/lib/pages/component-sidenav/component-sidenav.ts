@@ -53,13 +53,15 @@ export class RouteItem{
 		if( args )
 			Object.assign( this, args );
 	}
-	get path(){ return this._path; } set path(x){ this._path=x; } private _path: string; //routerLink - access/groups or relative
-	get title(){ return this._title; } set title(x){ this._title=x; } private _title: string;
-	get queryParams(){ return this._queryParams; } set queryParams(x){ this._queryParams=x; } private _queryParams: Params;
-	summary?: string;
-	parent?:RouteItem;
-	siblings?:RouteItem[]; //includes this.
+	cardClass?: string;
 	externalRedirect?: string;
+	icon?: string;
+	parent?:RouteItem;
+	get path(){ return this._path; } set path(x){ this._path=x; } private _path!: string; //routerLink - access/groups or relative
+	get queryParams(){ return this._queryParams; } set queryParams(x){ this._queryParams=x; } private _queryParams!: Params;
+	siblings?:RouteItem[]; //includes this.
+	summary?: string;
+	get title(){ return this._title; } set title(x){ this._title=x; } private _title!: string;
 	get track(){ return this.queryParams ? this.path+JSON.stringify(this.queryParams) : this.path; }
 }
 
@@ -77,7 +79,7 @@ export class ComponentSidenav implements OnInit, OnDestroy {
   isExtraScreenSmall: Observable<boolean>;
   isScreenSmall: Observable<boolean>;
   private subscriptions = new Subscription();
-	item = model<RouteItem>(null);
+	item = model<RouteItem>(null as any);
   constructor( private _route: ActivatedRoute,
               private _navigationFocusService: NavigationFocusService,
               zone: NgZone,
@@ -140,7 +142,7 @@ export class ComponentNav {
 			let loaded = this.item()()!=null;
 			if( loaded ){
 				if( this.item()().parent )
-					this.parentUrl = this.item()().parent.path;
+					this.parentUrl = this.item()().parent!.path;
 				else{
 					let segments = this.parentUrl.split( "/" );
 					if( segments[segments.length-1].startsWith(":") )
@@ -165,7 +167,7 @@ export class ComponentNav {
   }
   currentItemId: string | undefined;
 	item = input.required<Signal<RouteItem>>();
-	parentUrl: string;
+	parentUrl!: string;
 	isLoading = signal( true );
 }
 

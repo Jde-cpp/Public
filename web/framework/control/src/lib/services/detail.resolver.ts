@@ -14,10 +14,10 @@ export type DetailPageSettings = {
 };
 
 export class DetailRoute extends RouteItem{
-	constructor( target:string, title:string, siblings:RouteItem[], parent:RouteItem ){
+	constructor( target:string, title:string|undefined, siblings:RouteItem[], parent:RouteItem ){
 		super( {path:target, title:title, siblings:siblings, parent:parent} );
 	}
-	tableSettings: TableSettings;
+	tableSettings!: TableSettings;
 }
 
 export type DetailResolverData<T>={
@@ -35,26 +35,26 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<DetailResolverData<T>>{
 		let collectionDisplay = route.url.length>1 ? route.url[route.url.length-2].path : route.data["collectionName"]; //users
-		let target = route.paramMap.get( "target" );
+		let target = route.paramMap.get( "target" )!;
 		return this.loadProfile( route, collectionDisplay, target, state.url );
 	}
 	private async loadProfile( route: ActivatedRouteSnapshot, collectionDisplay:string, target:string, url:string ):Promise<DetailResolverData<T>>{
 		let siblings = this.routeStore.getChildren( collectionDisplay );
 		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings,
-			ListRoute.find(collectionDisplay, route.parent.routeConfig.children.find(x=>x.path==":collectionDisplay").data["collections"]) );
+			ListRoute.find(collectionDisplay, route.parent!.routeConfig!.children!.find(x=>x.path==":collectionDisplay")!.data!["collections"]) );
 		try{
 			return DetailResolver.load<T>( this.ql, this.ql.toCollectionName(collectionDisplay), target, routing );
 		}
 		catch( e ){
 			this.snackbar.error( `Target not found:  '${target}'`, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
-			return null;
+			return null as unknown as DetailResolverData<T>;
 		}
 	}
 
 	static async load<T>( ql:IGraphQL, collectionName:string, target:string, routing:DetailRoute ):Promise<DetailResolverData<T>>{
 		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection(collectionName), (m)=>console.log(m) );
-		let obj = {};
+		let obj:any = {};
 		if( target!="$new" ){
 			obj = await ql.querySingle( ql.targetQuery(schema, target, ProfileStore.showDeleted(collectionName), routing.tableSettings.excludedColumns), {}, (m)=>console.log(m) );
 			for( let query of ql.subQueries(schema.type, obj["id"]) ){

@@ -31,10 +31,10 @@ export class NodeDetail implements OnDestroy, OnInit{
 	}
 
 	node = computed( ()=>this.sideNav().node );
-	pageData = signal<NodePageData>( null );
+	pageData = signal<NodePageData>( null as any );
 	//get profile(){ return this.pageData().route.profile; }
 	server = computed( ()=>this.pageData().server );
 	sideNav = model.required<NodeRoute>();
-	tabIndex:number;
+	tabIndex:number=0;
 	onTabIndexChanged( index:number ){ this.tabIndex = index; }
 }

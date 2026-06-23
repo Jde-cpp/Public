@@ -27,7 +27,8 @@ namespace Jde::App::Server{
 	α FindApplications( str name )ι->vector<Proto::FromClient::Instance>;
 	α FindConnection( ConnectionPK connectionPK )ι->sp<ServerSocketSession>;
 	α NextRequestId()->RequestId;
-	α RemoveSession( ProgInstPK sessionPK )ι->void;
+	α OnSessionDisconnect( sp<ServerSocketSession> session )ι->void;
+
 	α QuerySessions( QL::TableQL ql, UserPK executer, SRCE )ι->QuerySessionsAwait;
 
 	α UnsubscribeLogs( ProgInstPK instancePK )ι->bool;

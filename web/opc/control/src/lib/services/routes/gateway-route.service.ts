@@ -35,7 +35,7 @@ export class GatewayCnnctnRouteService implements IRouteService{
 	async docItems( urlSegments:UrlSegment[] ):Promise<RouteItem[]>{
 		let y = [];
 		let route = this._route.snapshot.children[0];
-		let gatewayTarget = route.paramMap.get("gateway");
+		let gatewayTarget = route.paramMap.get("gateway")!;
 		let gateway = await this._gatewayService.gateway( gatewayTarget );
 		if( !gateway )
 			throw new Error( "Gateway not found: "+gatewayTarget );

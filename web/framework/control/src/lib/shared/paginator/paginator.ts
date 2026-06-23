@@ -51,12 +51,12 @@ export class Paginator implements OnInit, OnDestroy{
 	onNextItem(){ this.startIndex.update( value => value+1 ); this.onPageEvent.emit(new PageEvent(this)); }
 	onNextPage(){ this.startIndex.update( value => value+this.pageSize() ); this.onPageEvent.emit(new PageEvent(this)); }
 	onLastPage(){
-		if( this.pageIndex()==Math.ceil(this.length()/this.pageSize())-1 )
+		if( this.pageIndex()==Math.ceil(this.length()!/this.pageSize())-1 )
 			return;
-		this.startIndex.update( value => this.length()-this.length()%this.pageSize() );
+		this.startIndex.update( value => this.length()!-this.length()!%this.pageSize() );
 	}
 	firstItemShowing = computed( () => this.startIndex()==0 );
-	isLastPage = computed( () => this.length()!=null && this.startIndex()+this.pageSize()>=this.length() );
+	isLastPage = computed( () => this.length() && this.startIndex()+this.pageSize()>=this.length()! );
 	onChangePageSize(value:number){
 		this.pageSize.set( value );
 		this.onPageEvent.emit( new PageEvent(this) );
@@ -64,8 +64,8 @@ export class Paginator implements OnInit, OnDestroy{
 	get disabled(){ return this._disabled; }
 	set disabled(value){this._disabled=value;} _disabled: boolean=false;
 	hidePageLength = input<boolean>( true );
-	length = input<number>( null );
-	get lengthDescription(){ return this.length()!=null ? ` of ${this.length()}` : ''; }
+	length = input<number>();
+	get lengthDescription(){ return this.length() ? ` of ${this.length()}` : ''; }
 	startIndex = model<number>(0);
 /*	set length(value)
 	{
@@ -103,7 +103,7 @@ export class Paginator implements OnInit, OnDestroy{
 	@Input() showFirstLastButtons: boolean=true;
 	//@Output() onPageEvent = new EventEmitter<PageEvent>();
 	onPageEvent = output<PageEvent>();
-	settingsIndex:number;
+	settingsIndex!:number;
 /*	@Input()	set startIndex(value){
 		if( value>this.length-1 ){
 			if( this.length==0 )
@@ -124,7 +124,7 @@ export class Paginator implements OnInit, OnDestroy{
 	});
 	endIndex = computed( () => {
 		let endIndex = this.startIndex()+this.pageSize()-1;
-		return this.length() ? Math.min( endIndex, this.length()-1 ) : endIndex;
+		return this.length() ? Math.min( endIndex, this.length()!-1 ) : endIndex;
 	});
 	endNumber = computed( () => {
 		return this.endIndex()+1;

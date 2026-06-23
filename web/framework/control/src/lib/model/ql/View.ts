@@ -90,16 +90,16 @@ export class ViewField{
 			this.style = copyFrom.style;
 			this._displayed = copyFrom._displayed;
 			this.displayName = copyFrom.displayName;
-		}else if( args["qlField"] ){
-			const settings = args["settings"] as ViewFieldSettings;
-			this.qlField = args["qlField"];
+		}else if( "qlField" in args ){
+			const settings = args.settings;
+			this.qlField = args.qlField;
 			this.style = settings?.style;
 			this._displayed = settings?.hidden ? false : undefined;
 			this.displayName = settings?.displayName ?? StringUtils.idToDisplay( this.name );
 		}else{
 			const serialized = args as {field: ViewFieldJson, schema: TableSchema};
 			const json = serialized.field;
-			this.qlField = serialized.schema.fields.find( f=>f.name==json.name );
+			this.qlField = serialized.schema.fields.find( f=>f.name==json.name )!;
 			this.style = json.style;
 			this._displayed = json.hidden ? false : undefined;
 			this.displayName = json.displayName ?? StringUtils.idToDisplay( this.name );
@@ -116,18 +116,18 @@ export class ViewField{
 		return y;
 	}
 	get displayed():boolean{ return this._displayed ?? (this.type.ofType?.name!="ID" && this.name!="attributes" && this.type.kind!=FieldKind.LIST); }
-	set displayed(x){this._displayed=x;} private _displayed:boolean;
+	set displayed(x){this._displayed=x;} private _displayed:boolean|undefined;
 
 	qlField: Field;
 	get name(){ return this.qlField.name; }
-	displayName;
+	displayName:string;
 	get type(){ return this.qlField.type; }
 	style?: Style;
 };
 
-type ViewConfigArgs = { configColumns:(string|ViewFieldSettings)[], sort:Sort[] };
-type ViewJson = { name:string, collectionName:string, fields:ViewFieldJson[], filters:{ field: Field, filter: Filter }[], limit?:number, showSelector:boolean, sort:Sort[] };
-export type ViewSerializedArgs = { name:string, collectionName:string, fields:ViewField[], limit?:number, showSelector:boolean, sort:Sort[] };
+type ViewConfigArgs = { configColumns:(string|ViewFieldSettings)[], sort:Sort[], filters?:{name: string, filter: Filter} };
+type ViewJson = { name:string|undefined, collectionName:string, fields:ViewFieldJson[], filters:{ field?: Field, name:string, filter: Filter }[], limit?:number, showSelector:boolean|undefined, sort:Sort[]|undefined };
+export type ViewSerializedArgs = { name:string|undefined, collectionName:string, fields:ViewField[], limit?:number, showSelector:boolean, sort:Sort[], filters?:{name: string, filter: Filter}[] };
 export type FieldFilter = { field: Field, filter: Filter };
 export enum ViewType{
 	System,
@@ -139,9 +139,9 @@ export class View{
 		if( value instanceof View )
 			this.copyConstructor( value as View );
 		else if( (value as ViewConfigArgs).configColumns )
-			this.configConstructor( value as ViewConfigArgs, schema );
+			this.configConstructor( value as ViewConfigArgs, schema! );
 		else if( (value as ViewSerializedArgs).fields )
-			this.serializedConstructor( value as ViewSerializedArgs, schema );
+			this.serializedConstructor( value as ViewSerializedArgs, schema! );
 	}
 	private copyConstructor( view:View ):void{
 		this.name = view.name;
@@ -162,10 +162,11 @@ export class View{
 	private serializedConstructor( config:ViewSerializedArgs, schema:TableSchema ):void{
 		this.name = config.name;
 		this.collectionName = config.collectionName;
-		this.limit = config.limit;
+		if( config.limit )
+			this.limit = config.limit;
 		this.fields = config.fields.map( f=>new ViewField({field: f, schema: schema}) );
-		for( let fieldFilter of config["filters"] ?? [] )//{name: string, filter: Filter}
-			this.fieldFilters.push( {field: schema.fields.find(f=>f.name==fieldFilter.name), filter: fieldFilter.filter} );
+		for( let fieldFilter of config.filters ?? [] )//{name: string, filter: Filter}
+			this.fieldFilters.push( {field: schema.fields.find(f=>f.name==fieldFilter.name)!, filter: fieldFilter.filter} );
 
 		this.showSelector = config.showSelector;
 		this.sort = config.sort;
@@ -190,7 +191,7 @@ export class View{
 		for( let col of configColumns ){
 			const fieldName = typeof col=="string" ? col : col.name;
 			const settings = typeof col=="string" ? {} : col;
-			const field = schema.fields.find( f=>f.name==fieldName );
+			const field = schema.fields.find( f=>f.name==fieldName )!;
 			const viewField = new ViewField( {qlField: field, settings: settings} );
 			if( field.name=="description" )
 				description = viewField;
@@ -259,7 +260,7 @@ export class View{
 
 		let fieldStr = this.fields.filter( f=>f.displayed || f.name=="id" ).map( f=>f.name ).join(" ");
 		let args = [];
-		let vars:Record<string, DbScalar[]> = {};
+		let vars:Record<string, DbScalar[]|null> = {};
 		if( this.limit )
 			args.push( `limit:${this.limit}` );
 		if( skip )
@@ -301,16 +302,16 @@ export class View{
 		for( let field of fields.filter(f=>!this.fields.find(v=>v.name==f.name)) )
 			this.fields.push( new ViewField({qlField: field, settings: {name: field.name, hidden: true}}) );
 	}
-	setDeletedDisplayed( show:boolean ){ this.fields.find(f=>f.name=="deleted").displayed = show; }
+	setDeletedDisplayed( show:boolean ){ this.fields.find(f=>f.name=="deleted")!.displayed = show; }
 	toJson( defaultSettings:TableSettings|undefined ):ViewJson{
 		let fields = [];
 		for( let field of this.fields ){
-			const settings = defaultSettings?.columns.find( c=>typeof c=="string" ? null : c.name==field.name ) as ViewFieldSettings;
+			const settings = defaultSettings?.columns!.find( c=>typeof c=="string" ? null : c.name==field.name ) as ViewFieldSettings;
 			const customDisplay = (settings?.displayName ?? StringUtils.idToDisplay( field.name ))!=field.displayName;
 			if( field.displayed || customDisplay )
 				fields.push( field.toJson(customDisplay) );
 		}
-		let filters = [];
+		let filters = new Array<{field?: Field, name:string,filter:Filter}>;
 		for( let ff of this.fieldFilters )
 			filters.push( {name: ff.field.name, filter: ff.filter} );
 		let sort = defaultSettings && JSON.stringify(this.sort)==JSON.stringify(defaultSettings.sort) ? undefined : this.sort;
@@ -325,14 +326,14 @@ export class View{
 		};
 	}
 	fieldFilters:FieldFilter[] = [];
-	name:string;
-	collectionName:string;
+	name:string|undefined;
+	collectionName!:string;
 	fields:ViewField[]=[];
-	limit?:number;
+	limit:number=25;
 	get isUser(){ return this.type==ViewType.User; }
 	get isSystem(){ return this.type==ViewType.System; }
 	get isAdhoc(){ return this.type==ViewType.Adhoc; }
-	showSelector:boolean;
+	showSelector:boolean=false;
 	sort:Sort[] = [];
 	type=ViewType.System;
 };

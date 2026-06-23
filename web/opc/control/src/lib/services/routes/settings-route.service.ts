@@ -10,10 +10,10 @@ export class SettingsRouteService extends RouteService{
 
 	override children( urlSegments:UrlSegment[] ):Promise<Routes>{
 		let y: Routes = [];
-		for( let config of this.router.config.filter(x => x.path.startsWith('settings/') && !x.path.includes(':')) ){
+		for( let config of this.router.config.filter(x => x.path!.startsWith('settings/') && !x.path!.includes(':')) ){
 			let pageSettings = config.data ? config.data["pageSettings"] : null;
-			y.push( {title: config.title, path: config.path.substring(9), data:{ id: config.path, summary: pageSettings?.summary }} );
-	}
+			y.push( {title: config.title, path: config.path!.substring(9), data:{ id: config.path, summary: pageSettings?.summary }} );
+		}
 		return Promise.resolve( y );
 	}
 	// override async children():Promise<Routes>{

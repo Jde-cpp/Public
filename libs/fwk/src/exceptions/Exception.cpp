@@ -1,4 +1,6 @@
-﻿#include <jde/fwk/exceptions/Exception.h>
+﻿#include "jde/fwk/log/logTags.h"
+#include "jde/fwk/usings.h"
+#include <jde/fwk/exceptions/Exception.h>
 #include <iostream>
 #include <boost/system/error_code.hpp>
 
@@ -66,12 +68,14 @@ namespace Jde{
 	}
 
 	α IException::BreakLog()Ι->void{
-#ifndef NDEBUG
 		if( Level()>=Logging::BreakLevel() ){
 			Log();
+#ifndef NDEBUG
 			SetLevel( ELogLevel::NoLog );
-		}
 #endif
+		}
+		else if( Logging::ShouldLog(ELogLevel::Trace, ELogTags::Exception) )
+			Log();
 	}
 	α IException::Log()Ι->void{
 		if( Level()==ELogLevel::NoLog || Process::Finalizing() )
@@ -85,7 +89,7 @@ namespace Jde{
 	α IException::what()Ι->const char*{
 		if( _what.empty() ){
 			if( auto sv = Format(); sv.size() )
-				_what = _args.size() ? Str::Format( sv, _args ) : string{sv};
+				_what = _args.size() ? Str::Format( sv, _args ) : string{ sv };
 			else if( _pInner )
 				_what = _pInner->what();
 		}
@@ -107,7 +111,7 @@ namespace Jde{
 		return Ƒ( "{} - {}", category.name(), message );
 	}
 
-	α CodeException::ToString( const std::error_category& errorCategory )ι->string{	return errorCategory.name(); }
+	α CodeException::ToString( const std::error_category& errorCategory )ι->string{ 	return errorCategory.name(); }
 
 	α CodeException::ToString( const std::error_condition& errorCondition )ι->string{
 		const int value = errorCondition.value();

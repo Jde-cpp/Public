@@ -29,7 +29,7 @@ export class UserDetail implements OnDestroy, OnInit{
 				return;
 			if( !this.properties().canSave )
 				this.isChanged.set( false );
-			else if(  !this.properties().equals(this.user.properties) )
+			else if(  !(this.properties() as User).equals(this.user.properties!) )
 				this.isChanged.set( true );
 		});
 
@@ -83,18 +83,18 @@ export class UserDetail implements OnDestroy, OnInit{
 		return new User( existing );
 	}
 
-	user:User;
+	user!:User;
 	ctor:new (item: any) => any = User;
 	isChanged = signal<boolean>( false );
 	isLoading = signal<boolean>( true );
-	properties = signal<User>( null );
-	groups = signal<SelectionModel<GroupPK>>( null );
-	permissions = signal<Permission[]>( null );
-	roles = signal<SelectionModel<RolePK>>( null );
+	properties = signal<Partial<User>>( null as any );
+	groups = signal<SelectionModel<GroupPK>>( null as any );
+	permissions = signal<Permission[]>( null as any );
+	roles = signal<SelectionModel<RolePK>>( null as any );
 
 	sideNav = model.required<RouteItem>();
 
-	pageData:DetailResolverData<User>;
+	pageData!:DetailResolverData<User>;
 	get schema(){ return this.pageData.schema; }
 	tabIndex = signal<number>( ProfileStore.tabIndex('userDetail') );
 	userTableSettings = userTableSettings;

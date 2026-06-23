@@ -9,7 +9,6 @@ export type GroupPK = number;
 export class Group extends TargetRow<Group>{
 	constructor( obj:any ){
 		super(Group.typeName, obj);
-		this.roles = obj.roles ? [] : undefined;
 		if( obj.acl ){
 			this.roles = [];
 			this.permissions = [];
@@ -40,7 +39,7 @@ export class Group extends TargetRow<Group>{
 			this.users = cloneClassArray( obj.users, User );
 		}
 	}
-	override equals( group:Group ):boolean{
+	override equals( group:Partial<Group> ):boolean{
 		return super.equals(group) && JSON.stringify(this.roles)==JSON.stringify(group.roles);
 	}
 	override mutation( original:Group ):Mutation[]{
@@ -48,7 +47,7 @@ export class Group extends TargetRow<Group>{
 		const roleMutations = Acl.roleMutations( this.id, original.roles ?? [], this.roles );
 		const permissionMutations = Permission.aclMutations( this.id, this.permissions ?? [], original.permissions  ?? [] );
 
-		let groupMutations = super.childMutations( this, original.childGroups ?? [], this.childGroups );
+		let groupMutations = super.childMutations( this, original.childGroups ?? [], this.childGroups! );
 		groupMutations.forEach( m=>m.args = {memberId:m.args.id} );
 
 		let users = super.childMutations( this, original.users ?? [], this.users );
@@ -60,8 +59,8 @@ export class Group extends TargetRow<Group>{
 	permissions: Permission[];
 	users: User[];
 
-	get properties():Group{
-		let properties = new Group(this);
+	get properties():Partial<Group>{
+		let properties:Partial<Group> = new Group(this);
 		properties.roles=undefined;
 		properties.childGroups=undefined;
 		return properties;

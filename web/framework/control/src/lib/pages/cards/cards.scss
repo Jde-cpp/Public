@@ -1,3 +1,110 @@
+.page {
+	margin-top: 56px;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+}
+.page-heading {
+	margin: 32px 0 0;
+	text-align: center;
+	font-size: 22px;
+	font-weight: 500;
+	color: var(--mat-sys-on-surface);
+
+	// full-width divider under the page title
+	&::after {
+		content: "";
+		display: block;
+		height: 1px;
+		margin: 16px 20px 0;
+		background: var(--mat-sys-outline-variant);
+	}
+}
+
+.card {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 28px;
+	padding: 24px 20px 32px;
+}
+
+.card-link {
+	text-decoration: none;
+	&, &:active, &:hover, &:focus { text-decoration: none; }
+
+	// takes the whole row, card centered within it
+	&.full-row {
+		flex-basis: 100%;
+		display: flex;
+		justify-content: center;
+	}
+}
+
+.card-icon {
+	position: absolute;
+	top: 18px;
+	right: 18px;
+	color: rgba(33, 43, 54, 0.35);
+}
+
+.card-title {
+	position: relative;
+	z-index: 1;
+	font-size: 20px;
+	font-weight: 700;
+	color: #212b36;
+	letter-spacing: 0.2px;
+}
+
+// sits just above the stat at the bottom, like the reference dashboard
+.card-label {
+	position: absolute;
+	left: 24px;
+	bottom: 60px;
+	z-index: 1;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 1px;
+	color: rgba(33, 43, 54, 0.55);
+}
+
+.card-stat {
+	position: absolute;
+	left: 24px;
+	bottom: 20px;
+	z-index: 1;
+	font-size: 34px;
+	font-weight: 700;
+	color: #1a2330;
+}
+
+.card-trend {
+	position: absolute;
+	right: 18px;
+	bottom: 20px;
+	z-index: 1;
+	font-size: 22px;
+	width: 22px;
+	height: 22px;
+	color: rgba(33, 43, 54, 0.6);
+}
+
+.card-badge {
+	position: absolute;
+	right: 52px;
+	top: 18px;
+	z-index: 1;
+	padding: 3px 10px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.55);
+	border: 1px solid rgba(33, 43, 54, 0.25);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.5px;
+	color: rgba(33, 43, 54, 0.75);
+}
+
+
 .cards {
 	display: flex;
 	flex-direction: column;
@@ -7,3 +114,16 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+.card::after {
+	top: 0;
+	height: auto;
+//	background-image: url("cards/gateways-topology.svg");
+	background-size: 210px auto;
+	background-position: center;
+}
+
+
+.card-gateways { background: linear-gradient(135deg, #d7f5e3 0%, #a8e6c5 100%); }
+.card-access   { background: linear-gradient(135deg, #fdf6d2 0%, #fbe48a 100%); }
+.card-applications { background: linear-gradient(135deg, #eceff2 0%, #cfd6de 100%); }

@@ -87,7 +87,7 @@ namespace Jde{
 	}
 	α App::EndInstance( ProgInstPK instanceId, SL sl )ι->DB::ExecuteAwait::Task{
 		try{
-			co_await ds().Execute( {Ƒ("update {} set end_time=now() where id=?", instanceTableName()), {DB::Value{instanceId}}}, sl );
+			co_await ds().Execute( {Ƒ("update {} set deleted=now() where connection_id=?", instanceTableName()), {DB::Value{instanceId}}}, sl );
 		}
 		catch( exception& )
 		{}

@@ -39,6 +39,6 @@ export class MathUtilities
 			};
 			variance = std.accumulate( values, 0.0, varianceFunction );
 		}
-		return { average:average, variance:variance, min:min, max:max };
+		return { average:average, variance:variance!, min:min, max:max };
 	}
 }

@@ -58,12 +58,12 @@ export class NodeChildren implements OnInit, OnDestroy {
   ngOnDestroy() {
 		this.selections.clear();
 		this.selections.changed.unsubscribe();
-		this.subscription = null;
+		this.subscription = undefined;
   }
 
 	async retrieveSnapshot(){
 		this.retrievingSnapshot.set( true );
-		this.variables.forEach( r=>r.value=null );
+		this.variables.forEach( r=>r.value=undefined );
 		var snapshots = await this._iot.snapshot( this.cnnctnTarget, this.variables );
 		for( let [node,value] of snapshots ){
 			let variable = this.variables.find( (n)=>n.equals(node) );
@@ -74,7 +74,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	}
 
 	toDate( value:Timestamp ):Date{
-		return DateUtils.asUtc( ProtoUtils.toDate(value) );
+		return DateUtils.asUtc( ProtoUtils.toDate(value)! );
 	}
 
 	toObject( x:ENodeClass ):string{ return ENodeClass[x]; }
@@ -92,7 +92,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 				if( !this.subscription){
 					this.subscription = this._iot.subscribe( this.cnnctnTarget, nodes, this.Key ).subscribe({
 						next:(value: SubscriptionResult) =>{
-							this.variables.find( (r)=>r.nodeId.equals(value.node) ).value = value.value;
+							this.variables.find( (r)=>r.nodeId.equals(value.node) )!.value = value.value;
 						},
 						error:(e: Error) =>{
 							this.snackbar.exception( e, (m)=>console.log(m) );
@@ -102,7 +102,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 				}
 				else
 					this._iot.addToSubscription( this.cnnctnTarget, nodes, this.Key );
-			} catch (e) {
+			} catch (e:any) {
 				this.snackbar.error( e["error"], (m)=>console.log(m) );
 			}
 		}
@@ -110,12 +110,12 @@ export class NodeChildren implements OnInit, OnDestroy {
 			let nodes = r.removed.map( r=>r.nodeId );
 			this.profile.subscriptions = this.profile.subscriptions.filter( s=>!nodes.includes(s) );
 			if( !this.selections.selected.length )
-				this.subscription = null;
+				this.subscription = undefined;
 			else{
 				try{
 					this._iot.unsubscribe( this.cnnctnTarget, nodes, this.Key );
 				}
-				catch (e) {
+				catch( e:any ) {
 					this.snackbar.error( e["error"], (m)=>console.log(m) );
 				}
 			}
@@ -141,28 +141,28 @@ export class NodeChildren implements OnInit, OnDestroy {
 	}
 	async changeDouble( x:Variable, e:Event ){
 		try {
-			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +e.target["value"], (x)=>console.log(x) );
+			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +(e.target as any)["value"], (x)=>console.log(x) );
 		}
-		catch (e) {
+		catch (e:any) {
 			this.snackbar.exception( e, (m)=>console.log(m) );
 			x.value = await this._iot.read( this.cnnctnTarget, x.nodeId );
 			console.log(x.value);
 		}
 	}
 	async changeString( n:Variable, e:Event ){
-		try {
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.target["value"], (x)=>console.log(x) );
+		try{
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, (e.target as any)["value"], (x)=>console.log(x) );
 		}
-		catch (err) {
-			e.target["value"] = n.value;
+		catch(err:any){
+			(e.target as any)["value"] = n.value;
 			this.snackbar.exception( err, (m)=>console.error(m) );
 		}
 	}
 	async changeEnum( n:Variable, e:MatSelectChange<number> ){
-		try {
+		try{
 			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.value, (x)=>console.log(x) );
 		}
-		catch (err) {
+		catch(err:any){
 			e.source.value = <number>n.value;
 			this.snackbar.exception( err, (m)=>console.error(m) );
 		}
@@ -179,12 +179,12 @@ export class NodeChildren implements OnInit, OnDestroy {
 		}
 	}
 	async changeDate( n:Variable, e:Event ){
-		try {
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(<Date>e.target["value"]), (x)=>console.log(x) );
+		try{
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(<Date>(e.target as any)["value"]), (x)=>console.log(x) );
 			debugger;
 		}
-		catch (err) {
-			e.target["value"] = n.value;
+		catch(err:any){
+			(e.target as any)["value"] = n.value;
 			this.snackbar.exception( err, (m)=>console.error(m) );
 		}
 	}
@@ -204,17 +204,17 @@ export class NodeChildren implements OnInit, OnDestroy {
 	get nodeId(){ return this.node().nodeId; }
 	get server():Server{ return this.pageData.server; }
 	get cnnctnTarget():string{ return this.server.connection.target; }
-	pageData:NodePageData;
-	profile:UserSettings;
+	pageData!:NodePageData;
+	profile!:UserSettings;
 	get nodes(){ if(!this.pageData) debugger; return this.pageData?.nodes; }
 	get variables():Variable[]{ return <Variable[]>this.nodes.filter((x)=>x.nodeClass==ENodeClass.Variable); }
 	retrievingSnapshot = signal<boolean>( false );
-	routerSubscription:Subscription;
+	routerSubscription!:Subscription;
 	selections = new SelectionModel<UaNode>(true, []);
 	get showSnapshot():boolean{ return this.visibleColumns.includes("snapshot");}
 	//sideNav = model.required<NodeRoute>();
 	get sort(){ return this.profile.sort; };
-	get subscription(){return this.#subscription;} #subscription:Subscription;
+	get subscription(){return this.#subscription;} #subscription:Subscription|undefined;
 	set subscription(x){ if(!x && this.subscription) this.subscription.unsubscribe(); this.#subscription=x; }
 	get visibleColumns(){ return this.profile.visibleColumns; }
 

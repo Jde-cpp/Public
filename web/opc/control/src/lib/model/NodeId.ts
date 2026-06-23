@@ -25,12 +25,12 @@ export class NodeId implements INodeId{
 			this.id = json;
 		else if( json instanceof Uint8Array )
 			this.id = json;
-		if( this.id )
+		if( this.id as any )
 			return;
 		let j = <NodeIdJson>json;
 		this.ns = j.ns ?? 0;
-		if( j["id"] )
-			this.id = j["id"];
+		if( (j as any)["id"] )
+			this.id = (j as any)["id"];
 		else if( j.i!==undefined )
 			this.id = +j.i;
 		else if( j.s!==undefined )
@@ -74,10 +74,10 @@ export class NodeId implements INodeId{
 		return nodes.map( n=>`{${n.qlArgs()}}` ).join( "," );
 	}
 
-	ns:number;
+	ns!:number;
 	get isNumericId(){ return typeof this.id === "number"; }
 	get numericId(){ return <number>this.id; }
-	id:NodeIdentifier;
+	id!:NodeIdentifier;
 	get isObjectsFolder(){ return this.equals(NodeId.objectsFolder); }
 
 	get key():NodeKey{
@@ -87,5 +87,5 @@ export class NodeId implements INodeId{
 		}
 		return this._key;
 	}
-	protected _key:NodeKey; //for Map
+	protected _key:NodeKey|undefined; //for Map
 }

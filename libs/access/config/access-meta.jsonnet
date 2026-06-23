@@ -75,6 +75,23 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				name: tables.providers.columns.target+{ comment: "if provider_id=OpcServer: the specific opcServer target, otherwise providers[provider_id].name " },
 			},
 			naturalKeys: [["provider_id", "name"]]
+		},
+		usersQL:{
+			columns: {
+				identityId: types.uint+{ sk: 0, i: 0 },
+				name: tables.identities.columns.name,
+				attributes: tables.identities.columns.attributes,
+				created: tables.identities.columns.created,
+				updated: tables.identities.columns.updated,
+				deleted: tables.identities.columns.deleted,
+				target: tables.identities.columns.target,
+				description: tables.identities.columns.description,
+				providerId: tables.identities.columns.providerId,
+				loginName: tables.users.columns.loginName,
+				modulus: tables.users.columns.modulus,
+				exponent: tables.users.columns.exponent
+			},
+			naturalKeys: tables.identities.naturalKeys,
 		}
 	},
 	tables:{
@@ -97,7 +114,8 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				exponent: types.uint+{ nullable:true, comment: "Used for RSA", i:103 }
 			},
 			ops: ["Create", "Read", "Update", "Delete", "Purge", "Administer", "Execute"],
-			extends: "identities"
+			extends: "identities",
+			qlView: "users_ql"
 		},
 		groupings:{
 			columns: {

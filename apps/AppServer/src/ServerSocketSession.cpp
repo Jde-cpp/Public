@@ -309,11 +309,13 @@ namespace Jde::App::Server{
 		LogWrite( Ƒ("QueryClient: {}", q.substr(0,100)), requestId );
 		Write( FromServer::QueryClient(move(q), move(query.Variables), executer, query.ReturnRaw, requestId) );
 	}
+	α ServerSocketSession::OnDisconnect( CodeException&& )ι->void{
+		Server::OnSessionDisconnect( SharedFromThis() );
+	}
 	α ServerSocketSession::OnClose()ι->void{
 		if( !Stream )
 			return;
 		LogRead( "OnClose", 0 );
-		Server::RemoveSession( Id() );
 		base::OnClose();
 	}
 

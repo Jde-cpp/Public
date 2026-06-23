@@ -58,8 +58,8 @@ export class LogEntries{
 	strings:Map<string,string> = new Map<string,string>();
 }
 export class LogView extends View{
-	override query( showDeleted:boolean, skip:number):Query{
-		const vars = {limit: this.limit*3, skip: skip, orderBy: this.sort};
+	override query( showDeleted:boolean|undefined, skip:number):Query{
+		const vars = {limit: this.limit!*3, skip: skip, orderBy: this.sort};
 		const q = "logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
 		return { text: q, vars: vars };
 	}

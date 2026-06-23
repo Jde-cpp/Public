@@ -3,8 +3,9 @@
 #include <jde/app/IApp.h>
 #include "LocalClient.h"
 #include "ServerSocketSession.h"
+#include "jde/fwk/usings.h"
 #include "ql/AppServerQL.h"
-#include "ql/AppQLAwait.h"
+#include "LogData.h"
 
 #define let const auto
 namespace Jde::App::Server{
@@ -13,8 +14,6 @@ namespace Jde::App::Server{
 namespace Jde::App{
 	using QL::Filter;
 	concurrent_flat_map<uint32,sp<Server::ServerSocketSession>> _sessions; //Consider using main class+ql subscriptions
-	concurrent_flat_map<ProgInstPK,Filter> _logSubscriptions;
-	concurrent_flat_set<ProgInstPK> _statusSubscriptions;
 
 	ProgramPK _appId;
 	ProgInstPK _instancePK;
@@ -39,6 +38,11 @@ namespace Jde::App{
 			return existing.host()==host && existing.web_port()==port;
 		});
 	}
+	α Server::OnSessionDisconnect( sp<ServerSocketSession> session )ι->void{
+		_sessions.erase( session->Id() );
+		ForwardExecutionAwait::OnCloseConnection( session->ConnectionPK() );
+		EndInstance( session->ConnectionPK() );
+	}
 
 	α Server::GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ε->Web::Jwt{
 		auto requestHandler = _requestHandler;
@@ -52,8 +56,8 @@ namespace Jde::App{
 
 	α Server::FindApplications( str name )ι->vector<Proto::FromClient::Instance>{
 		vector<Proto::FromClient::Instance> y;
-		_sessions.visit_all( [&](auto&& kv){
-			auto& session = kv.second;
+		_sessions.cvisit_all( [&](let& kv){
+			let& session = kv.second;
 			if( let instance = session->Instance(); instance.application()==name )
 				y.push_back( instance );
 		} );
@@ -86,12 +90,6 @@ namespace Jde::App{
 			THROW( "No session found for appPK:{}, connectionPK:{}", appPK, connectionPK.value_or(0) );
 		}
 	}
-	α Server::RemoveSession( ConnectionPK connectionPK )ι->void{
-		_logSubscriptions.erase( connectionPK );
-		ForwardExecutionAwait::OnCloseConnection( connectionPK );
-		TRACET( ELogTags::App, "[{:x}]RemoveSession", connectionPK );
-	}
-
 }
 namespace Jde::App::Server{
 	RequestHandler::RequestHandler( jobject&& settings )ι:

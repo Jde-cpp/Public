@@ -15,18 +15,17 @@ export class AccessService extends AppService implements OnDestroy{
 		console.log( 'AccessService.ngOnDestroy' );
 	}
 
-	#resources:Resource[];
 	async loadResources(){
 		if( !this.#resources ){
-			let resources = ( await this.query( `resources(criteria:null){ id schemaName allowed name deleted target }`))["resources"];
+			let resources = ( await this.queryArray<Partial<Resource>>( `resources(criteria:null){ id schemaName allowed name deleted target }`));
 			this.#resources = new Array<Resource>();
 			for( const resource of resources )
 				this.#resources.push( new Resource(resource) );
 		}
 		return this.#resources;
 	}
-	async getResource( target:string ):Promise<Resource>{
-		let resources = await this.#resources;
+	async getResource( target:string ):Promise<Resource|undefined>{
+		let resources:Resource[] = await this.#resources;
 		return resources.find( r=>r.target==target );
 	}
 
@@ -49,7 +48,7 @@ export class AccessService extends AppService implements OnDestroy{
 		return `${schema.singular}( target:"${target}" ){ ${fields.join(" ")} }`;
 	}
 	override subQueries( typeName: string, id: number ):string[]{
-		let queries = [];
+		let queries = new Array<string>();
 		switch( typeName ){
 		case "User":
 		case "Grouping":
@@ -72,6 +71,7 @@ export class AccessService extends AppService implements OnDestroy{
 	}
 
 
+	#resources!:Resource[];
 	#resourceSignal = signal<Resource[]>(new Array<Resource>());
   resources = this.#resourceSignal.asReadonly();
 };

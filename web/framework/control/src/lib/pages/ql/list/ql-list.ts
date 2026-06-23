@@ -53,7 +53,7 @@ export class QLList implements OnInit, OnDestroy{
 			this.init( data );
     });
 	}
-	async init( resolvedValue ){
+	async init( resolvedValue:any ){
 		let data = resolvedValue["data"] as QLListData;
 		verify( data.profile.view );
 		this.selections.set( new SelectionModel<any>(data.profile.view.showSelector, []) );
@@ -66,7 +66,7 @@ export class QLList implements OnInit, OnDestroy{
 		this.data.set( data.results[collectionName] );
 		this.sideNav.set( data.routing );
 		let paths = [];
-		for( let x = this.route; x.routeConfig?.data && x.routeConfig?.data["name"]; x = x.parent )
+		for( let x = this.route; x.routeConfig?.data && x.routeConfig?.data["name"]; x = x.parent! )
 			paths.push( x.routeConfig.data['name'] );
 		this.componentPageTitle.title = paths[0];//.join( " | " ); 	//this.componentPageTitle.title ? `${this.componentPageTitle.title} | ${title}` : title;
 
@@ -159,7 +159,7 @@ export class QLList implements OnInit, OnDestroy{
 	}
 	async onViewDelete(view:View){
 		let profile = this.resolvedData().profile;
-		profile.removeView( view.name, this.collectionName(), this.profileStore );
+		profile.removeView( view.name!, this.collectionName(), this.profileStore );
 		profile.currentViewIndex = 0;
 		let reload = await QLListResolver.load( this.ql, this.resolvedData(), this.routeStore );
 		this.init( {data:reload} );
@@ -205,21 +205,21 @@ export class QLList implements OnInit, OnDestroy{
 
 	isLoading = signal<boolean>( true );
 	isSettings = signal<boolean>( false );
-	selections = signal<SelectionModel<any>>(null);
+	selections = signal<SelectionModel<any>>(null as any);
 
 	displayedFields = computed<ViewField[]>( ()=>{
 		return this.view().fields.filter( v=>v.displayed );
 	});
-	@ViewChild('mainTable',{static: false}) _table:MatTable<any>;
-	canPurge = computed<boolean>( ()=>this.tableSettings().canPurge );
+	@ViewChild('mainTable',{static: false}) _table!:MatTable<any>;
+	canPurge = computed<boolean>( ()=>this.tableSettings().canPurge ?? false );
 	collectionName = computed<string>( ()=>this.schema().collectionName );
 	columns():Record<string,string>{ return this.resolvedData().columns; }
 	data = signal<any[]>([]);
 	excludedColumns = computed<string[]>( ()=>this.tableSettings().excludedColumns );
 	get name():string{ return <string>this.routeConfig.title; }
 	enums = computed<Map<string, EnumValue[]>>( ()=>this.schema().enums );
-	resolvedData = signal<QLListData>(null);
-	get routeConfig(){ return this.route.routeConfig; }
+	resolvedData = signal<QLListData>(null as any);
+	get routeConfig():Route{ return this.route.routeConfig!; }
 	routeStore = inject( RouteStore );
 	schema = computed<TableSchema>( ()=>this.resolvedData().schema );
 	get sort():Sort{ return this.view().sort.length ? this.view().sort[0] : {active: "name", direction: "asc"}; }
@@ -227,6 +227,6 @@ export class QLList implements OnInit, OnDestroy{
 	showAdd = computed<boolean>( ()=>this.resolvedData().pageSettings.showAdd ?? true );
 	tableSettings = computed<TableSettings>( ()=>this.resolvedData().routing.tableSettings );
 	type = computed<string>( ()=>MetaObject.toTypeFromCollection(this.collectionName()) );
-	view = signal<View>( null );
+	view = signal<View>( null as any );
 	profileStore = inject(ProfileStore);
 }

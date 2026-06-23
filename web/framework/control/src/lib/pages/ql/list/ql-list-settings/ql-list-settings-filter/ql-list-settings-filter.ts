@@ -37,12 +37,12 @@ export class QLListSettingsFilter implements OnInit{
 			this.dataSource.push( { field: fieldFilter.field, filter: fieldFilter.filter, displayName: this.columns()[fieldFilter.field.name] } );
 			this.addSignals( fieldFilter.field, fieldFilter.filter.operator );
 		}
-		this.dataSource.push( {field: null, filter: {operator: Operator.None, value: []}, displayName: ""} );
+		this.dataSource.push( {field: new Field({}), filter: {operator: Operator.None, value: []}, displayName: ""} );
 	}
 
 	onOperatorChange( op: Operator, col: ColumnFilter ){
 		//let arg = this.args.get(col.field.name);
-		this.operatorSignals.get(col.field.name).set(op);
+		this.operatorSignals.get(col.field.name)!.set(op);
 		col.filter.operator = op;
 		//arg.filter.operator = op;
 	}
@@ -53,7 +53,7 @@ export class QLListSettingsFilter implements OnInit{
 	onRemove(col:ColumnFilter, item: string){
 		//let arg = this.args.get(col.field.name);
 		col.filter.value.splice( col.filter.value.indexOf(item), 1 );
-		this.autoCompleteSubjects.get(col.field.name).next(this.colSuggestions(col, ""));
+		this.autoCompleteSubjects.get(col.field.name)!.next(this.colSuggestions(col, ""));
 	}
 	onAddValue( value:any, col: ColumnFilter ){
 		//let arg = this.args.get(col.field.name);
@@ -64,13 +64,13 @@ export class QLListSettingsFilter implements OnInit{
 				break;
 			++index;
 		}
-		let fc = this.autoCompleteInputs.get(col.field.name);
+		let fc = this.autoCompleteInputs.get(col.field.name)!;
 		fc.reset();
 		this.inputElements.toArray()[index].nativeElement.value = "";
 	}
 	onAddFilter( columnName: string ){
 		verify( !this.dataSource.find( c=>c.field?.name == columnName )?.field );
-		let field = this.schema().fields.find(f=>f.name == columnName);
+		let field = this.schema().fields.find(f=>f.name == columnName)!;
 		const index = this.dataSource.length-1;
 		this.dataSource.push( this.dataSource[index] );
 		let operator = field.isDateTime ? Operator.Greater : Operator.In;
@@ -86,23 +86,23 @@ export class QLListSettingsFilter implements OnInit{
 	onChangeDate( event:MatDatepickerInputEvent<Date>, col: ColumnFilter ){
 		//let arg = this.args.get( col.field.name );
 		if( col.filter.operator==Operator.Greater )
-			col.filter.value[0] = new Days(event.value);
+			col.filter.value[0] = new Days(event.value!);
 		else
 			col.filter.value[0] = event.value;
 	}
-	dateValue( col: ColumnFilter ): Date{
+	dateValue( col: ColumnFilter ): Date|undefined{
 		//let arg = this.args.get( col.field.name );
 		if( !col.filter.value.length )
-			return null;
+			return undefined;
 		for( let val of col.filter.value ){
 			if( val instanceof Days )
 				return (val as Days).fromNow();
 			else if( val instanceof Date )
 				return val;
 		}
-		return null;
+		return undefined;
 	}
-	colSuggestions(col, value:string):string[]{
+	colSuggestions(col:ColumnFilter, value:string):string[]{
 		let suggestions = this.suggestions()[col.field.name] as string[];
 		if( !suggestions ) //filter column not shown.
 			return [];
@@ -124,9 +124,9 @@ export class QLListSettingsFilter implements OnInit{
 	useObservable = false;
 	autoCompleteValues(col:ColumnFilter): Observable<string[]>{
 		if( !this.useObservable )
-			return this.autoCompleteSubjects.get(col.field.name).asObservable();
+			return this.autoCompleteSubjects.get(col.field.name)!.asObservable();
 		else
-			return this.autoCompleteObservables.get(col.field.name);
+			return this.autoCompleteObservables.get(col.field.name)!;
 	}
 	input(col: ColumnFilter): FormControl{
 		let input = this.autoCompleteInputs.get(col.field.name);
@@ -169,27 +169,27 @@ export class QLListSettingsFilter implements OnInit{
 	isSelected( row:any ){
 		return this.selection() === row;
 	}
-	columnName(col): string{
-		return col ? StringUtils.idToDisplay(col.name) : "Selector";
-	}
-	operatorSignal(col: ColumnFilter):WritableSignal<Operator>{
-		return this.operatorSignals.get(col.field.name);
+	// columnName(col: ColumnFilter): string{
+	// 	return col ? StringUtils.idToDisplay(col.name) : "Selector";
+	// }
+	operatorSignal(col:ColumnFilter):WritableSignal<Operator>{
+		return this.operatorSignals.get(col.field.name)!;
 	}
 	inputType( field:Field ):string{
 		return field.isNumber ?  "number" : "text";
 	}
-	onDelete(col){
+	onDelete(col:ColumnFilter){
 		//this.args.delete(col.field.name);
 		this.autoCompleteInputs.delete(col.field.name);
 		this.operatorSignals.delete(col.field.name);
-		if( col.field.qlField.isNullable )
+		if( col.field.isNullable )
 			this.nullSignals.delete(col.field.name);
 		this.dataSource.splice( this.dataSource.indexOf(col), 1 );
 		this.table.renderRows();
 	}
 
 	nullSignal(colName: string):WritableSignal<NullCriteria>{
-		return this.nullSignals.get(colName);
+		return this.nullSignals.get(colName)!;
 	}
 	// includeNonNull(colName): boolean{
 	// 	return this.args.get( colName ).filter.value.includes("<not null>");
@@ -204,12 +204,12 @@ export class QLListSettingsFilter implements OnInit{
 			if( notNullIndex != -1 )
 				col.filter.value.splice( notNullIndex, 1 );
 			col.filter.value.push("<null>");
-			this.nullSignals.get( col.field.name ).set( NullCriteria.Null );
+			this.nullSignals.get( col.field.name )!.set( NullCriteria.Null );
 		}else{
 			let nullIndex = col.filter.value.indexOf("<null>");
 			if( nullIndex != -1 )
 				col.filter.value.splice( nullIndex, 1 );
-			this.nullSignals.get( col.field.name ).set( NullCriteria.None );
+			this.nullSignals.get( col.field.name )!.set( NullCriteria.None );
 		}
 	}
 	onNonNullToggle( add:boolean, col: ColumnFilter ){
@@ -219,17 +219,17 @@ export class QLListSettingsFilter implements OnInit{
 			if( nullIndex != -1 )
 				col.filter.value.splice( nullIndex, 1 );
 			col.filter.value.push("<not null>");
-			this.nullSignals.get( col.field.name ).set( NullCriteria.NonNull );
+			this.nullSignals.get( col.field.name )!.set( NullCriteria.NonNull );
 		}else{
 			let notNullIndex = col.filter.value.indexOf("<not null>");
 			if( notNullIndex != -1 )
 				col.filter.value.splice( notNullIndex, 1 );
-			this.nullSignals.get( col.field.name ).set( NullCriteria.None );
+			this.nullSignals.get( col.field.name )!.set( NullCriteria.None );
 		}
 	}
 	get columnNames(){ return ["name", "operation", "filter", "delete"] };//
 	get unFilteredColumns():Record<string,string>{
-		let columns = {};
+		let columns:Record<string,string> = {};
 		for( const [name,display] of Object.entries(this.columns()) ){
 			if( !this.dataSource.some(c=>c.field?.name == name) )
 				columns[name] = display;
@@ -237,7 +237,7 @@ export class QLListSettingsFilter implements OnInit{
 		return columns;
 	}
 	dataSource:ColumnFilter[] = [];
-	selection = signal<ViewField>( null );
+	selection = signal<ViewField>( null as any );
 	//args:Map<string,FieldFilter> = new Map();
 	view = input.required<View>();
 	columns = input.required<Record<string,string>>();
@@ -251,7 +251,7 @@ export class QLListSettingsFilter implements OnInit{
 
 	autoCompleteInputs = new Map<string, FormControl>();
   readonly separatorKeysCodes: number[] = [ENTER, COMMA];
-	@ViewChildren('dynamicInput') inputElements: QueryList<ElementRef>;
+	@ViewChildren('dynamicInput') inputElements!: QueryList<ElementRef>;
 
   MyOperator = Operator;
 	NullCriteria = NullCriteria;
