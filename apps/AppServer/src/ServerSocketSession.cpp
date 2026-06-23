@@ -310,12 +310,13 @@ namespace Jde::App::Server{
 		Write( FromServer::QueryClient(move(q), move(query.Variables), executer, query.ReturnRaw, requestId) );
 	}
 	α ServerSocketSession::OnDisconnect( CodeException&& )ι->void{
-		Server::OnSessionDisconnect( SharedFromThis() );
+		OnClose();
 	}
 	α ServerSocketSession::OnClose()ι->void{
 		if( !Stream )
 			return;
 		LogRead( "OnClose", 0 );
+		Server::OnSessionDisconnect( SharedFromThis() );
 		base::OnClose();
 	}
 
