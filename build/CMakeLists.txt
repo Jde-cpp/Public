@@ -13,16 +13,27 @@ set( stdArgs
 	-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
 )
 if( isMultiConfig )
-	set( stdArgs ${stdArgs} -DCMAKE_CONFIGURATION_TYPES=${CMAKE_BUILD_TYPE} )
+	set( stdArgs ${stdArgs} -DCMAKE_CONFIGURATION_TYPES=$ENV{buildType} )
 endif()
 if( WIN32 )
-	set( stdArgs ${stdArgs} -DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY} )
+	# clang + lld-link on Windows can't link the cmake compiler test executable (mainCRTStartup).
+	# Bypass both C and CXX checks for every ExternalProject rather than patching them one by one.
+	set( stdArgs ${stdArgs} -DCMAKE_C_COMPILER_WORKS=ON -DCMAKE_CXX_COMPILER_WORKS=ON )
+	if( CMAKE_MSVC_RUNTIME_LIBRARY )
+		set( stdArgs ${stdArgs} -DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY} )
+	endif()
+	if( CMAKE_GENERATOR_PLATFORM )
+		set( stdArgs ${stdArgs} -DCMAKE_GENERATOR_PLATFORM=${CMAKE_GENERATOR_PLATFORM} )
+	elseif( CMAKE_VS_PLATFORM_NAME )
+		set( stdArgs ${stdArgs} -DCMAKE_GENERATOR_PLATFORM=${CMAKE_VS_PLATFORM_NAME} )
+	endif()
 else()
 	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath=$ORIGIN" )
 	set( stdArgs ${stdArgs} -DCMAKE_POSITION_INDEPENDENT_CODE=ON )
 endif()
 
 message( CMAKE_CONFIGURATION_TYPES=${CMAKE_CONFIGURATION_TYPES} )
+message( TYPE_INSTALL_PREFIX=${TYPE_INSTALL_PREFIX} )
 message( MULTI_INSTALL_PREFIX=${MULTI_INSTALL_PREFIX} )
 message( CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} )
 ExternalProject_Add(fmt
@@ -45,9 +56,7 @@ ExternalProject_Add(gtest
 	INSTALL_DIR ${TYPE_INSTALL_PREFIX}/gtest
 	LOG_CONFIGURE ON
   LOG_BUILD ON
-	CMAKE_C_COMPILER_WORKS ON
 	CMAKE_ARGS ${stdArgs}
-		-DCMAKE_C_COMPILER_WORKS=ON
 		-DBUILD_GMOCK=OFF
 )
 
@@ -82,7 +91,6 @@ ExternalProject_Add(absl
 )
 
 IF( WIN32 )
-  message( MULTI_INSTALL_PREFIX=${MULTI_INSTALL_PREFIX} )
 	ExternalProject_Add(zlib
 		GIT_REPOSITORY https://github.com/madler/zlib
 		GIT_TAG "v1.3.2"
@@ -113,6 +121,17 @@ IF( WIN32 )
 			-DLIBXML2_WITH_THREADS=ON
 			-DLIBXML2_BUILD_SHARED_LIBS=OFF
 	)
+
+	ExternalProject_Add( openssl
+		GIT_REPOSITORY https://github.com/janbar/openssl-cmake.git
+		GIT_TAG 1.1.1w-20250419
+		PREFIX openssl
+		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/openssl
+		CMAKE_ARGS ${stdArgs}
+			-DBUILD_SHARED_LIBS=OFF
+			-DWITH_APPS=OFF
+	)
+
 	set( LIBXML2_INCLUDE_DIR ${MULTI_INSTALL_PREFIX}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
 	set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2$<IF:$<CONFIG:Debug>,d,>.lib CACHE PATH "the directory containing LibXml2 libraries" )
 	set( nodesetLoaderArgs
@@ -125,7 +144,6 @@ else()
 		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
 		-DLIBXML2_LIBRARY=${LIBXML2_LIBDIR}
 	)
-	message( TYPE_INSTALL_PREFIX=${TYPE_INSTALL_PREFIX} )
 	ExternalProject_Add(ryml
 		GIT_REPOSITORY https://github.com/biojppm/rapidyaml.git
 		GIT_TAG "v0.10.0"
@@ -169,6 +187,44 @@ ExternalProject_Add(protobuf
 		-Dprotobuf_MSVC_STATIC_RUNTIME=OFF
 )
 
+if( WIN32 )
+	file( TO_CMAKE_PATH "${MULTI_INSTALL_PREFIX}" _opensslBase )
+	# Use an initial cache file (-C) so variables are set with FORCE before open62541's
+	# find_package(OpenSSL) runs.  Plain -D args lose to a cached NOTFOUND from a prior run.
+	set( _opensslCache "${CMAKE_CURRENT_BINARY_DIR}/openssl-cache.cmake" )
+	# FindOpenSSL's non-MSVC Windows branch searches LIB_EAY/SSL_EAY (not OPENSSL_CRYPTO_LIBRARY
+	# directly) and then overwrites OPENSSL_CRYPTO_LIBRARY from those.  Pre-setting them with
+	# FORCE ensures find_library() skips its search.  OPENSSL_USE_STATIC_LIBS is intentionally
+	# omitted: when set with a non-MSVC compiler it restricts CMAKE_FIND_LIBRARY_SUFFIXES to
+	# .a only, which hides our .lib files.
+	file( WRITE "${_opensslCache}"
+		"set(LIB_EAY \"${_opensslBase}/openssl/lib/libcrypto.lib\" CACHE FILEPATH \"\" FORCE)\n"
+		"set(SSL_EAY \"${_opensslBase}/openssl/lib/libssl.lib\" CACHE FILEPATH \"\" FORCE)\n"
+		"set(OPENSSL_ROOT_DIR \"${_opensslBase}/openssl\" CACHE PATH \"\" FORCE)\n"
+		"set(OPENSSL_INCLUDE_DIR \"${_opensslBase}/openssl/include\" CACHE PATH \"\" FORCE)\n"
+		"set(OPENSSL_CRYPTO_LIBRARY \"${_opensslBase}/openssl/lib/libcrypto.lib\" CACHE FILEPATH \"\" FORCE)\n"
+		"set(OPENSSL_SSL_LIBRARY \"${_opensslBase}/openssl/lib/libssl.lib\" CACHE FILEPATH \"\" FORCE)\n"
+	)
+	set( opensslArgs "-C${_opensslCache}" )
+	# nodeset-loader hardcodes -Werror for GCC/Clang; clang on Windows generates
+	# extra diagnostics that trip it.  Strip -Werror from the source at patch time.
+	set( _nodesetPatch "${CMAKE_CURRENT_BINARY_DIR}/nodeset-loader-remove-werror.cmake" )
+	file( CONFIGURE OUTPUT "${_nodesetPatch}" @ONLY CONTENT
+[[file(READ "${SOURCE_DIR}/CMakeLists.txt" _c)
+string(REPLACE " -Werror" "" _c "${_c}")
+string(REGEX REPLACE "[^\n]*ReferenceService\\.h[^\n]*" "" _c "${_c}")
+file(WRITE "${SOURCE_DIR}/CMakeLists.txt" "${_c}")
+]]
+	)
+	set( _nodesetPatchCmd PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -P "${_nodesetPatch}" )
+else()
+	set( opensslArgs
+		-DOPENSSL_USE_STATIC_LIBS=ON
+		-DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}
+	)
+	set( _nodesetPatchCmd "" )
+endif()
+
 ExternalProject_Add(open62541
 	GIT_REPOSITORY https://github.com/open62541/open62541.git
 	GIT_TAG v1.5.4
@@ -185,19 +241,21 @@ ExternalProject_Add(open62541
 		"-DCMAKE_C_FLAGS_DEBUG=-fno-sanitize=function -fno-sanitize=pointer-overflow -fno-sanitize=alignment -g"
 		-DUA_ENABLE_ENCRYPTION=ON
 		-DUA_ENABLE_ENCRYPTION_OPENSSL=ON
-		-DOPENSSL_USE_STATIC_LIBS=ON
-		-DOPENSSL_ROOT_DIR="${OPENSSL_ROOT_DIR}"
+		${opensslArgs}
 		-DBUILD_NODESET_LOADER=ON
 		-DUA_ENABLE_XML_ENCODING=ON
 		-DUA_NAMESPACE_ZERO=FULL
 		-DUA_BUILD_EXAMPLES=OFF
+		${nodesetLoaderArgs}
 )
 
 ExternalProject_Add(open62541-nodeset-loader
 	GIT_REPOSITORY https://github.com/open62541/open62541-nodeset-loader.git
 #	GIT_TAG v0.5.0
+	UPDATE_DISCONNECTED ON
 	PREFIX nodeset-loader
 	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/NodesetLoader
+	${_nodesetPatchCmd}
 		CMAKE_ARGS ${stdArgs}
 		-DENABLE_BACKEND_OPEN62541=OFF
 		-DENABLE_EXAMPLES=OFF
@@ -220,5 +278,8 @@ ExternalProject_Add_StepDependencies( protobuf configure gtest )
 ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure open62541 )
 if( WIN32 )
 	ExternalProject_Add_StepDependencies( protobuf configure zlib )
+	ExternalProject_Add_StepDependencies( openssl configure zlib )
+	ExternalProject_Add_StepDependencies( open62541 configure openssl )
+	ExternalProject_Add_StepDependencies( open62541 configure LibXml2 )
 	ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure LibXml2 )
 endif()
