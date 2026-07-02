@@ -5,21 +5,25 @@ message( "${PROJECT_NAME}:  ${PROJECT_VERSION}" )
 include( dependencies.cmake )
 
 if( WIN32 )
-	if( ${OPENSSL_ROOT_DIR} STREQUAL "" )
-		message( FATAL_ERROR "Set OPENSSL_ROOT_DIR cmake variable" )
-	endif()
-	set( OPENSSL_USE_STATIC_LIBS ON )
 	find_package( OpenSSL REQUIRED )
+	find_package( ryml REQUIRED )
 endif()
 
 set( targetName Jde )
 add_library( ${targetName} SHARED )
 compileOptions( ${targetName} )
 set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
-target_compile_definitions( ${targetName} PUBLIC SPDLOG_FMT_EXTERNAL )
 if( WIN32 )
-	target_link_directories( ${targetName} PRIVATE $ENV{REPO_DIR}/jsonnet/vs2017/x64/${CMAKE_BUILD_TYPE} )
+	set_target_properties( ${targetName} PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
+		ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
+		PDB_OUTPUT_DIRECTORY     "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
+	)
 endif()
+target_compile_definitions( ${targetName} PUBLIC SPDLOG_FMT_EXTERNAL )
+#if( WIN32 )
+#	target_link_directories( ${targetName} PRIVATE $ENV{REPO_DIR}/jsonnet/vs2017/x64/${CMAKE_BUILD_TYPE} )
+#endif()
 
 file(GLOB sources *.cpp **/*.cpp **/**/*.cpp )
 file(GLOB headers "**/*.h")
@@ -47,7 +51,7 @@ target_link_libraries( ${targetName} PUBLIC fmt::fmt )
 
 if( WIN32 )
 	target_link_libraries( ${targetName} PRIVATE version )
-	target_link_libraries( ${targetName} PRIVATE jsonnet )
+	target_link_libraries( ${targetName} PRIVATE jsonnet jsonnet++ ryml::ryml )
 else()
 	target_link_libraries( ${targetName} PRIVATE libjsonnet++.so )
 	target_link_libraries( ${targetName} PRIVATE PkgConfig::uring )

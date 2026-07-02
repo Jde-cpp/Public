@@ -60,7 +60,7 @@ file( GLOB sources *.cpp src/main.cpp )
 file( GLOB headers *.h )
 if( WIN32)
 	list( APPEND sources src/OpcGateway.rc )
-	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
+	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}" )
 endif()
 target_sources( ${targetName} PRIVATE ${sources} ${resources} ${headers} )
 

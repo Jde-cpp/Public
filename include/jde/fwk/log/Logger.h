@@ -31,6 +31,7 @@
 #endif
 
 namespace Jde::Logging{
+	Φ SetBreakLevel()ι->void;
 	Φ BreakLevel()ι->ELogLevel;
 	Φ CanBreak()ι->bool;
 	α LogException( const IException& e )ι->void;

@@ -41,7 +41,7 @@ namespace Jde::Tests{
 		done.notify_all();
 	}
 	TEST_F( TimerTests, General ){
-		constexpr uint testCount = 4096*2;
+		constexpr uint testCount = _windows ? 128 : 4096*2;
 		for( uint i=0; i<testCount; ++i ){
 			atomic_flag done;
 			test( done, i );

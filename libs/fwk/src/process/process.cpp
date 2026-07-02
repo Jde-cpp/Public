@@ -1,4 +1,5 @@
-﻿#include <jde/fwk/process/process.h>
+#include <jde/fwk/process/process.h>
+#include <iostream>
 #include <sys/types.h>
 
 #include <jde/fwk/settings.h>
@@ -153,7 +154,18 @@ namespace Jde{
 		return ProgramDataFolder()/CompanyRootDir()/Process::ProductName();
 	}
 	α Process::GetEnv( str variable )ι->optional<string>{
+#ifdef _WIN32
+		char* env = nullptr;
+		size_t size = 0;
+		if( _dupenv_s( &env, &size, variable.c_str() ) == 0 && env ){
+			string result{ env };
+			free( env );
+			return result;
+		}
+		return {};
+#else
 		char* env = std::getenv( variable.c_str() );
 		return env ? string{ env } : optional<string>{};
+#endif
 	}
 }

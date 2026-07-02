@@ -7,6 +7,7 @@
 #endif
 #include <jde/fwk/settings.h>
 #include <jde/fwk/str.h>
+#include "jde/fwk/log/logTags.h"
 #include <jde/fwk/log/MemoryLog.h>
 
 #define let const auto
@@ -51,6 +52,7 @@ namespace Jde{
 	};
 
 	α Logging::Init()ι->void{
+		SetBreakLevel();
 		Logging::Add<SpdLog>( "spd" );
 		auto& memoryLogger = Logging::GetLogger<MemoryLog>();
 		for( let& logger : _loggers ){
@@ -61,7 +63,9 @@ namespace Jde{
 		auto memory = Settings::FindObject( "/logging/memory/tags" );
 		if( !memory || Json::FindEnum<ELogLevel>(*memory, "default", ToLogLevel).value_or(ELogLevel::NoLog)==ELogLevel::NoLog )
 			_loggers.erase( _loggers.begin() );
-		UpdateCumulative( _loggers );
+		else
+		 	_loggers.front()->SetLevels( *memory );
+		Logging::UpdateCumulative( _loggers );
 	}
 
 /*	α SendStatus()ι->void

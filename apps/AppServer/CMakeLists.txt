@@ -46,7 +46,7 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 include_directories( $ENV{JDE_DIR}/include/jde/web/client/proto )
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
+	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}" )
 else()
 	target_link_libraries( ${targetName} OpenSSL::SSL )
 	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )

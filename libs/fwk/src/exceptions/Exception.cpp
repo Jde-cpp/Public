@@ -1,9 +1,10 @@
-﻿#include "jde/fwk/log/logTags.h"
+#include "jde/fwk/log/logTags.h"
 #include "jde/fwk/usings.h"
 #include <jde/fwk/exceptions/Exception.h>
 #include <iostream>
 #include <boost/system/error_code.hpp>
 
+#include <system_error>
 #include <jde/fwk/str.h>
 #include <jde/fwk/exceptions/CodeException.h>
 #include <jde/fwk/log/Entry.h>
@@ -149,7 +150,7 @@ namespace Jde{
 	}
 	α IOException::SetWhat()Ι->void{
 #ifdef _MSC_VER
-		let msg = std::strerror( Code );
+		let msg = std::system_category().message( (int)Code );
 #else
 		let msg = std::strerror( errno );
 #endif

@@ -5,7 +5,6 @@ include( $ENV{JDE_BASH}/build/linkSo.cmake )
 project( Jde.Framework.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( $ENV{JDE_BASH}/build/dependencies.cmake )
 message( Framework.Tests )
-message( CMAKE_MODULE_PATH=${CMAKE_MODULE_PATH} )
 find_package( GTest REQUIRED )
 
 if( NOT WIN32 )
@@ -27,7 +26,7 @@ target_link_libraries( ${targetName} GTest::gtest GTest::gtest_main )
 target_link_libraries( ${targetName} Jde )
 if( WIN32 )
 	include_directories( ${OPENSSL_ROOT_DIR}/include )
-	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
+	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}" )
 else()
 	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )
 		message( adding jsonnet++ and libjsonnet.a to link libraries )
@@ -41,7 +40,10 @@ set( CMAKE_CTEST_ARGUMENTS "-tests;-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/
 
 target_precompile_headers( ${targetName} PRIVATE pc.h )
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet" )
+	set_target_properties( ${targetName} PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
+		VS_DEBUGGER_COMMAND_ARGUMENTS "-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet"
+	)
 	copyLibDlls()
 else()
 	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )

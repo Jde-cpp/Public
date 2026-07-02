@@ -71,10 +71,15 @@ function buildProject() {
 	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
 	buildRelativePath=`buildRelativePath $fileWorkspaceFolder $absoluteFile $relativeFile`; #libs/web/server
 	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, absoluteFile=$absoluteFile, buildRelativePath=$buildRelativePath";
-	cd $buildRoot/$buildRelativePath;
-	project=`projectName $relativeFile`;
-	echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug
-	msbuild.exe $project -p:Configuration=Debug -v:m
+	project=`projectName $absoluteFile`;
+	if [ -f "$buildRoot/build.ninja" ]; then
+		echo ninja -C $buildRoot ${project%.vcxproj}
+		ninja -C $buildRoot ${project%.vcxproj}
+	else
+		cd $buildRoot/$buildRelativePath;
+		echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug
+		msbuild.exe $project -p:Configuration=Debug -v:m
+	fi
 }
 function compile() {
 	source $JDE_BASH/build/common.sh;
@@ -84,10 +89,15 @@ function compile() {
 	toBashDir $4 buildRoot;  # /z/build/msvc
 	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
 	buildRelativePath=`buildRelativePath $fileWorkspaceFolder $absoluteFile $relativeFile`; #libs/web/server
-	project=`projectName $relativeFile`;
+	project=`projectName $absoluteFile`;
 	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile, project=$project";
-	cd $buildRoot/$buildRelativePath;
 	buildFile=${absoluteFile#"$fileWorkspaceFolder/"}
-	echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile
-	msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile //v:m
+	if [ -f "$buildRoot/build.ninja" ]; then
+		echo ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/${project%.vcxproj}.dir/${buildFile}.obj
+		ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/${project%.vcxproj}.dir/${buildFile}.obj
+	else
+		cd $buildRoot/$buildRelativePath;
+		echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile
+		msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile //v:m
+	fi
 }

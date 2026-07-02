@@ -1,7 +1,7 @@
-﻿#include "WindowsDrive.h"
+#include "WindowsDrive.h"
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/io/Cache.h>
-#include <jde/fwk/io/File.h>
+#include <jde/fwk/io/file.h>
 #include "WindowsUtilities.h"
 #define let const auto
 

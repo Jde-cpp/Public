@@ -236,7 +236,7 @@ namespace Jde{
 		_configuredTags.cvisit_all( [&](let& kv){
 			levels.try_emplace( kv.second, vector<string>{} ).first->second.push_back( Jde::ToString(kv.first) );
 		});
-		string y; y.reserve( 1024 );
+		string y = Ƒ( "default: {}\n", Jde::ToString(_defaultLevel) ); y.reserve( 1024 );
 		for( let& [level, tags] : levels )
 			y += Ƒ( "{}: {}\n", FromEnum(LogLevelStrings(), level), Str::Join(tags, ",") );
 

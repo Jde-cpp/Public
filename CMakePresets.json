@@ -18,10 +18,16 @@
 				"JDE_VERSION": "2026.06.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3",
 				"MULTI_INSTALL_PREFIX": "$env{multiInstallPrefix}",
-				"SPDLOG_FMT_EXTERNAL": "ON",
-				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
-				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
-				"CMAKE_PREFIX_PATH": "$env{installRoot}/$env{buildType};$env{multiInstallPrefix}"
+				"SPDLOG_FMT_EXTERNAL": "ON"
+			}
+		},
+		{
+			"name": "repos",
+			"hidden": true,
+			"cacheVariables":{
+				"jde_REPOS": true,
+				"jde_TESTS": false,
+				"jde_APPS": false
 			}
 		},
 		{
@@ -29,6 +35,11 @@
 			"hidden": true,
 			"environment":{
 				"buildType": "Debug"
+			},
+			"cacheVariables": {
+				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/Debug",
+				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
+				"CMAKE_PREFIX_PATH": "$env{installRoot}/Debug;$env{multiInstallPrefix}"
 			}
 		},
 		{
@@ -36,11 +47,18 @@
 			"hidden": true,
 			"environment":{
 				"buildType": "RelWithDebInfo"
+			},
+			"cacheVariables": {
+				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/RelWithDebInfo",
+				"CMAKE_PREFIX_PATH": "$env{installRoot}/RelWithDebInfo;$env{multiInstallPrefix}"
 			}
 		},
     {
       "name": "win",
       "inherits": "common",
+			"environment":{
+				"cxxFlags": "-DWIN32_LEAN_AND_MEAN"
+			},
 			"cacheVariables":{
 				"CMAKE_GENERATOR_PLATFORM": "x64",
 				"CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
@@ -49,19 +67,13 @@
 		{
 			"name": "linux",
 			"inherits": "common",
-			"environment": {
-				"CC": "gcc",
-				"CXX": "g++-15"
-			},
 			"cacheVariables":{
 				"CMAKE_BUILD_TYPE": "$env{buildType}",
-				"CMAKE_CXX_COMPILER": "g++-15",
-				"CMAKE_C_COMPILER": "gcc-15",
-				"CMAKE_CXX_FLAGS": "-Wno-unknown-pragmas -Wno-missing-field-initializers -Wno-changes-meaning",
 				"LIBXML2_INCLUDE_DIR": "/usr/include/libxml2",
 				"LIBXML2_LIBDIR": "/usr/lib/x86_64-linux-gnu"
 			}
 		},
+
 		{
 			"name": "linux-debug",
 			"inherits": ["linux", "debug"],
@@ -79,8 +91,7 @@
 			"inherits": ["linux"],
 			"cacheVariables": {
 				"Boost_USE_STATIC_LIBS": true,
-				"BOOST_VERSION": "1.91.0",
-				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas -Wno-missing-field-initializers -Wno-changes-meaning -Wno-unqualified-std-cast-call"
+				"BOOST_VERSION": "1.91.0"
 			}
 		},
 		{
@@ -92,8 +103,17 @@
 			"cacheVariables": {
 			}
 		},
-    {
-      "name": "clang",
+		{
+			"name": "clang-jde",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_EXPORT_COMPILE_COMMANDS": true,
+				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-unqualified-std-cast-call;-Wno-language-extension-token"
+			}
+		},
+		{
+			"name": "clang-linux",
+			"inherits": ["clang","linux"],
 			"environment": {
 				"CC": "clang-22",
 				"CXX": "clang++-22"
@@ -102,41 +122,85 @@
 				"CMAKE_C_COMPILER": "clang-22",
 				"CMAKE_CXX_COMPILER": "clang++-22",
 				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
+				"CMAKE_CXX_FLAGS_DEBUG": "$env{cxxFlagsDebug} -glldb -static-libasan -fsanitize=leak -fsanitize=address -fno-omit-frame-pointer -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL",
 				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
-				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
-        "CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL"
-      }
-    },
+				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld"
+			}
+		},
     {
-      "name": "clang-win",
-      "hidden": true,
-      "generator": "Ninja",
+      "name": "clang",
       "environment": {
         "CC": "clang",
         "CXX": "clang++"
       },
+			"cacheVariables":{
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+			}
+    },
+    {
+      "name": "win-clang",
+			"inherits": ["clang","win"],
+      "hidden": true,
+      "generator": "Ninja",
       "cacheVariables":{
         "CMAKE_GENERATOR_PLATFORM": null,
-        "CMAKE_BUILD_TYPE": "$env{buildType}",
-        "CMAKE_C_COMPILER": "clang",
-        "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_CXX_FLAGS_DEBUG": "-g"
+				"CMAKE_CXX_FLAGS_DEBUG": "$env{cxxFlagsDebug}",
+				"CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections",
+				"CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static-md"
       }
     },
 		{
+			"name": "linux-clang",
+			"inherits": ["clang", "linux"],
+			"hidden": true,
+			"cacheVariables":{
+				"CMAKE_C_COMPILER": "clang-22",
+				"CMAKE_CXX_COMPILER": "clang++-22",
+				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
+				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
+				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
+        "CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL"
+
+			}
+		},
+		{
+			"name": "win-lldb",
+			"hidden": true,
+			"environment": {
+				"cxxFlagsDebugInfo": "-gdwarf-4"
+			},
+			"cacheVariables": {
+				"JDE_PDB": "OFF"
+			}
+		},
+		{
 			"name": "win-clang-debug",
-			"inherits": ["clang-win", "win", "debug"],
+			"hidden": true,
+			"inherits": ["win-clang", "debug"],
 			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-22"
 		},
 		{
+			"name": "win-clang-debug-jde",
+			"inherits": ["win-clang-debug", "clang-jde", "win-lldb"],
+			"cacheVariables": {
+				"CMAKE_CXX_FLAGS": "$env{cxxFlags} $env{cxxFlagsDebugInfo}"
+			}
+		},
+		{
+			"name": "win-clang-debug-repos",
+			"inherits": ["win-clang-debug", "repos"]
+		},
+		{
 			"name": "linux-clang-debug",
-			"inherits": ["linux", "debug", "clang"]
+			"inherits": ["linux-clang", "debug"],
 		},
 		{
 			"name": "linux-clang-jde-debug",
 			"inherits": ["linux-clang-debug"],
 			"cacheVariables":{
-				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-unqualified-std-cast-call;-Wno-missing-field-initializers;-Wno-dollar-in-identifier-extension;-Wno-nullability-extension"
 			}
 		}
 	],

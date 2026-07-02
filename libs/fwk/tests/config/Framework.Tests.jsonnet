@@ -12,16 +12,20 @@
 				default: "Information",
 				app: "Trace",
 				exception: "Trace",
-				io: "Debug",
+				io: "Information",
 				test: "Trace",
-				settings: "Debug"
+				settings: "Trace"
 			},
 			sinks:{
 				console:{},
 				file:{ path: "$(JDE_BUILD_DIR)", md: false, pattern: "%^%3!l%$-%H:%M:%S.%e \\033]8;;file://%g#%#\\a%v\\033]8;;\\a" }
 			}
 		},
-		memory:{ default: "trace" }
+		memory:{ 
+			tags: {
+				default: "Debug"
+			}
+		}
 	},
 	workers:{
 		executor: {threads: 2},

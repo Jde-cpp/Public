@@ -17,7 +17,7 @@ file( GLOB headers **/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
 IF( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
+	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}" )
 endif()
 target_include_directories( ${targetName} PRIVATE $ENV{JDE_DIR}/include/jde/app/proto )
 target_link_libraries( ${targetName} Jde.Web.Server Jde.App.Client Jde.Opc )

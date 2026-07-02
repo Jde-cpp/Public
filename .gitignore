@@ -75,3 +75,4 @@ libs/fwk/tests/build/**
 apps/AppServer/src/build/**
 **/out/**
 **/compile_commands.*
+**/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-*.txt

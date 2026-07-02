@@ -6,19 +6,20 @@ project( repos VERSION ${JDE_VERSION} LANGUAGES CXX )
 
 set( stdArgs
 	-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-	-DCMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}
 	-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
 	-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
 	-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
 	-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+	-DCMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}
 )
 if( isMultiConfig )
 	set( stdArgs ${stdArgs} -DCMAKE_CONFIGURATION_TYPES=$ENV{buildType} )
 endif()
 if( WIN32 )
 	# clang + lld-link on Windows can't link the cmake compiler test executable (mainCRTStartup).
-	# Bypass both C and CXX checks for every ExternalProject rather than patching them one by one.
-	set( stdArgs ${stdArgs} -DCMAKE_C_COMPILER_WORKS=ON -DCMAKE_CXX_COMPILER_WORKS=ON )
+	# Use STATIC_LIBRARY mode so cmake still identifies the compiler (features, ABI, MSVC runtime)
+	# without needing to link a test executable.
+	set( stdArgs ${stdArgs} -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DCMAKE_POLICY_DEFAULT_CMP0091=NEW )
 	if( CMAKE_MSVC_RUNTIME_LIBRARY )
 		set( stdArgs ${stdArgs} -DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY} )
 	endif()
@@ -26,6 +27,9 @@ if( WIN32 )
 		set( stdArgs ${stdArgs} -DCMAKE_GENERATOR_PLATFORM=${CMAKE_GENERATOR_PLATFORM} )
 	elseif( CMAKE_VS_PLATFORM_NAME )
 		set( stdArgs ${stdArgs} -DCMAKE_GENERATOR_PLATFORM=${CMAKE_VS_PLATFORM_NAME} )
+	endif()
+	if( CMAKE_TOOLCHAIN_FILE )
+		set( stdArgs ${stdArgs} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DVCPKG_TARGET_TRIPLET=${VCPKG_TARGET_TRIPLET} -DVCPKG_MANIFEST_MODE=OFF )
 	endif()
 else()
 	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-rpath=$ORIGIN" )
@@ -95,9 +99,9 @@ IF( WIN32 )
 		GIT_REPOSITORY https://github.com/madler/zlib
 		GIT_TAG "v1.3.2"
 		PREFIX ZLIB
-		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/zlib
+		INSTALL_DIR ${TYPE_INSTALL_PREFIX}/zlib
 		CMAKE_ARGS ${stdArgs}
-			-DZLIB_BUILD_SHARED=OFF
+			-DZLIB_BUILD_SHARED=ON
 			-DZLIB_BUILD_TESTING=OFF
 	)
 	#message( MULTI_INSTALL_PREFIX=${MULTI_INSTALL_PREFIX}/zlib/lib )
@@ -122,21 +126,72 @@ IF( WIN32 )
 			-DLIBXML2_BUILD_SHARED_LIBS=OFF
 	)
 
-	ExternalProject_Add( openssl
-		GIT_REPOSITORY https://github.com/janbar/openssl-cmake.git
-		GIT_TAG 1.1.1w-20250419
-		PREFIX openssl
-		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/openssl
-		CMAKE_ARGS ${stdArgs}
-			-DBUILD_SHARED_LIBS=OFF
-			-DWITH_APPS=OFF
-	)
-
 	set( LIBXML2_INCLUDE_DIR ${MULTI_INSTALL_PREFIX}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
 	set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2$<IF:$<CONFIG:Debug>,d,>.lib CACHE PATH "the directory containing LibXml2 libraries" )
 	set( nodesetLoaderArgs
 		-DLIBXML2_LIBRARY=${LIBXML2_LIBRARY}
 		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR} )
+
+	# c4core's _c4_get_platform_tag has no case for WIN32 + Clang (non-MSVC, non-MINGW).
+	# Patch c4Project.cmake to fall back to a generic tag rather than calling c4_err("not implemented").
+	set( _rymlPatch "${CMAKE_CURRENT_BINARY_DIR}/ryml-win-clang.cmake" )
+	file( WRITE "${_rymlPatch}" [=[
+file(READ "${SOURCE_DIR}/ext/c4core/cmake/c4Project.cmake" _c)
+string(REPLACE
+    "c4_err(\"not implemented\")"
+    "set(\${var} \"win-clang\" PARENT_SCOPE)"
+    _c "${_c}")
+file(WRITE "${SOURCE_DIR}/ext/c4core/cmake/c4Project.cmake" "${_c}")
+
+# alloca.h is POSIX-only; on Windows with non-MSVC clang use malloc.h instead
+file(READ "${SOURCE_DIR}/src/c4/yml/common.hpp" _c)
+string(REPLACE
+    "#include <alloca.h>"
+    "#ifdef _WIN32\n#  include <malloc.h>\n#  ifndef alloca\n#    define alloca _alloca\n#  endif\n#else\n#  include <alloca.h>\n#endif"
+    _c "${_c}")
+file(WRITE "${SOURCE_DIR}/src/c4/yml/common.hpp" "${_c}")
+]=] )
+	ExternalProject_Add(ryml
+		GIT_REPOSITORY https://github.com/biojppm/rapidyaml.git
+		GIT_TAG "v0.10.0"
+		PREFIX ryml
+		INSTALL_DIR ${TYPE_INSTALL_PREFIX}/ryml
+		PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -P "${_rymlPatch}"
+		CMAKE_ARGS ${stdArgs}
+			-DRYML_BUILD_TESTS=OFF
+			-DRYML_BUILD_EXAMPLES=OFF
+			-DRYML_BUILD_BENCHMARKS=OFF
+			-DRYML_BUILD_TOOLS=OFF
+		CMAKE_CACHE_ARGS
+			"-DCMAKE_CXX_COMPILE_FEATURES:STRING=cxx_std_11;cxx_std_14;cxx_std_17;cxx_std_20;cxx_std_23;cxx_std_26"
+		GIT_SUBMODULES_RECURSE TRUE
+	)
+	set( _jsonnetPatch "${CMAKE_CURRENT_BINARY_DIR}/jsonnet-ryml-ctor.cmake" )
+	file( WRITE "${_jsonnetPatch}" [=[
+file(READ "${SOURCE_DIR}/core/vm.cpp" _c)
+string(REPLACE
+    "Args&&... args): msg_(std::forward<Args>(args)...)"
+    "std::string msg): msg_(std::move(msg))"
+    _c "${_c}")
+file(WRITE "${SOURCE_DIR}/core/vm.cpp" "${_c}")
+]=] )
+	ExternalProject_Add(jsonnet
+		GIT_REPOSITORY https://github.com/Jde-cpp/jsonnet.git
+		PREFIX jsonnet
+		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/jsonnet
+		PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -P "${_jsonnetPatch}"
+		CMAKE_ARGS ${stdArgs}
+			"-DCMAKE_CXX_FLAGS_DEBUG=-g"
+			-DCMAKE_PREFIX_PATH=${TYPE_INSTALL_PREFIX}
+			-DBUILD_JSONNET=OFF
+			-DBUILD_JSONNETFMT=OFF
+			-DBUILD_TESTS=OFF
+			-DUSE_SYSTEM_GTEST=ON
+			-DUSE_SYSTEM_RAPIDYAML=ON
+			-DBUILD_SHARED_LIBS=OFF
+			-DBUILD_STATIC_LIBS=ON
+			-DBUILD_SHARED_BINARIES=OFF
+	)
 else()
 #	message( LIBXML2_LIBRARY=${LIBXML2_LIBDIR} )
 #	message( LIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR} )
@@ -154,7 +209,7 @@ else()
 			-DRYML_BUILD_EXAMPLES=OFF
 			-DRYML_BUILD_BENCHMARKS=OFF
 			-DRYML_BUILD_TOOLS=OFF
-		GIT_SHALLOW FALSE  # ensure submodules are checked out
+		GIT_SUBMODULES_RECURSE TRUE
 	)
 #need to add '#define _C4_STD_VECTOR_FWD_HPP_' to rapidyaml-0.10.0.hpp to avoid redefinition errors
 	ExternalProject_Add(jsonnet
@@ -188,24 +243,8 @@ ExternalProject_Add(protobuf
 )
 
 if( WIN32 )
-	file( TO_CMAKE_PATH "${MULTI_INSTALL_PREFIX}" _opensslBase )
-	# Use an initial cache file (-C) so variables are set with FORCE before open62541's
-	# find_package(OpenSSL) runs.  Plain -D args lose to a cached NOTFOUND from a prior run.
-	set( _opensslCache "${CMAKE_CURRENT_BINARY_DIR}/openssl-cache.cmake" )
-	# FindOpenSSL's non-MSVC Windows branch searches LIB_EAY/SSL_EAY (not OPENSSL_CRYPTO_LIBRARY
-	# directly) and then overwrites OPENSSL_CRYPTO_LIBRARY from those.  Pre-setting them with
-	# FORCE ensures find_library() skips its search.  OPENSSL_USE_STATIC_LIBS is intentionally
-	# omitted: when set with a non-MSVC compiler it restricts CMAKE_FIND_LIBRARY_SUFFIXES to
-	# .a only, which hides our .lib files.
-	file( WRITE "${_opensslCache}"
-		"set(LIB_EAY \"${_opensslBase}/openssl/lib/libcrypto.lib\" CACHE FILEPATH \"\" FORCE)\n"
-		"set(SSL_EAY \"${_opensslBase}/openssl/lib/libssl.lib\" CACHE FILEPATH \"\" FORCE)\n"
-		"set(OPENSSL_ROOT_DIR \"${_opensslBase}/openssl\" CACHE PATH \"\" FORCE)\n"
-		"set(OPENSSL_INCLUDE_DIR \"${_opensslBase}/openssl/include\" CACHE PATH \"\" FORCE)\n"
-		"set(OPENSSL_CRYPTO_LIBRARY \"${_opensslBase}/openssl/lib/libcrypto.lib\" CACHE FILEPATH \"\" FORCE)\n"
-		"set(OPENSSL_SSL_LIBRARY \"${_opensslBase}/openssl/lib/libssl.lib\" CACHE FILEPATH \"\" FORCE)\n"
-	)
-	set( opensslArgs "-C${_opensslCache}" )
+	# OpenSSL provided by vcpkg; toolchain file (forwarded via stdArgs) handles discovery for open62541.
+	set( opensslArgs "" )
 	# nodeset-loader hardcodes -Werror for GCC/Clang; clang on Windows generates
 	# extra diagnostics that trip it.  Strip -Werror from the source at patch time.
 	set( _nodesetPatch "${CMAKE_CURRENT_BINARY_DIR}/nodeset-loader-remove-werror.cmake" )
@@ -277,9 +316,8 @@ ExternalProject_Add_StepDependencies( protobuf configure absl )
 ExternalProject_Add_StepDependencies( protobuf configure gtest )
 ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure open62541 )
 if( WIN32 )
+	ExternalProject_Add_StepDependencies( jsonnet configure ryml )
 	ExternalProject_Add_StepDependencies( protobuf configure zlib )
-	ExternalProject_Add_StepDependencies( openssl configure zlib )
-	ExternalProject_Add_StepDependencies( open62541 configure openssl )
 	ExternalProject_Add_StepDependencies( open62541 configure LibXml2 )
 	ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure LibXml2 )
 endif()

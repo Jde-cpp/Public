@@ -39,7 +39,7 @@ namespace Jde::IO::Tests{
 		auto l = co_await LockKeyAwait{ file.string() };
 		[sl]( const fs::path& file, uuid guid1, uuid guid2, Vector<uuid>& written, CoLockGuard, bool createFile )->VoidAwait::Task {
 			try{
-				co_await IO::WriteAwait{ file, Ƒ("{}\n{}\n", to_string(guid1), to_string(guid2)), createFile, Jde::ELogTags::Test, sl };
+				co_await IO::WriteAwait{ file, Ƒ("{}\n{}\n", to_string(guid1), to_string(guid2)), createFile, Jde::ELogTags::IO, sl };
 			}
 			catch( IException& e ){
 				e.Log();
@@ -106,7 +106,7 @@ namespace Jde::IO::Tests{
 		auto l = co_await LockKeyAwait{ file.string() };
 		[sl]( fs::path file, string content, std::atomic<bool>& done, CoLockGuard )->VoidAwait::Task {
 			try{
-				co_await IO::WriteAwait{ move(file), move(content), true, Jde::ELogTags::Test, sl };
+				co_await IO::WriteAwait{ move(file), move(content), true, Jde::ELogTags::IO, sl };
 			}
 			catch( IException& e ){
 				e.Log();

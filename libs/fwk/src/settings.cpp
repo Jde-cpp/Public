@@ -1,4 +1,5 @@
 ﻿#include <jde/fwk/settings.h>
+#include <iostream>
 #include <regex>
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/process/process.h>

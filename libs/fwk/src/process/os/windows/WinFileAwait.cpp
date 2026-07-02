@@ -1,7 +1,7 @@
 #include "WinFileAwait.h"
 #include <boost/asio.hpp>
 #include <boost\asio\post.hpp>
-#include <jde/fwk/Settings.h>
+#include <jde/fwk/settings.h>
 #include <jde/fwk/str.h>
 #include <jde/fwk/io/FileAwait.h>
 #include <jde/fwk/process/thread.h>
@@ -31,10 +31,10 @@ namespace Jde::IO{
 		// }
 	}
 
-	α FileIOArg::Open( bool create )ε->void{
+	α FileIOArg::Open( bool create, bool append )ε->void{
 		const DWORD access = IsRead ? GENERIC_READ : GENERIC_WRITE;
 		const DWORD sharing = IsRead ? FILE_SHARE_READ : FILE_SHARE_WRITE;
-		const DWORD creationDisposition = IsRead ? OPEN_EXISTING : !create &&fs::exists(Path) ? OPEN_EXISTING : CREATE_ALWAYS;
+		const DWORD creationDisposition = IsRead ? OPEN_EXISTING : (append ? OPEN_ALWAYS : (!create && fs::exists(Path) ? OPEN_EXISTING : CREATE_ALWAYS));
 		const DWORD dwFlagsAndAttributes = IsRead ? FILE_FLAG_SEQUENTIAL_SCAN : FILE_ATTRIBUTE_ARCHIVE;
 		auto tmp = Str::Replace( Path.string(), '/', '\\' );
 		let path = string{"\\\\?\\"}+tmp;
@@ -113,7 +113,7 @@ namespace Jde::IO{
 		let totalBytes = Size();
 		let chunkByteSize = ChunkByteSize();
 		lg l{ ChunkMutex };
-		ChunksToSend = totalBytes/chunkByteSize+1;
+		ChunksToSend = (totalBytes+chunkByteSize-1)/chunkByteSize;
 		for( uint i=0; i*chunkByteSize<totalBytes; ++i )
 			Chunks.emplace( mu<Win::FileChunkArg>(shared_from_this(), i) );
 		TRACET( ELogTags::IO, "[{}] chunks = {}", Path.string(), ChunksToSend );
@@ -126,7 +126,7 @@ namespace Jde::IO{
 		//let newThreadCount = std::min<uint8>( (uint8)chunkSize, threadSize );
 		for( uint i = _threadCount.load(); i < initialSendTotal; ++i ){
 			std::jthread{ [=]{
-				SetThreadDscrptn( Ƒ("IO[{}]", i) );
+				Thread::SetName( Ƒ("IO[{}]", i) );
 				while( _callCount ){
 					asio::steady_timer timer{ *_ctx };
 					timer.expires_after( keepAlive() );

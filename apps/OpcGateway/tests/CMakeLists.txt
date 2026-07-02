@@ -24,7 +24,7 @@ compileOptions( ${targetName} )
 
 file( GLOB sources *.cpp **/*.cpp )
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
+	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}" )
 	list( APPEND sources OpcTests.rc )
 endif()
 file( GLOB headers *.h **/*.h )

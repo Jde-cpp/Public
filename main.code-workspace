@@ -9,7 +9,22 @@
 		"debugPreset": "linux-clang-debug",
 		"debugClangPreset": "linux-clang-debug",
 		"releasePreset": "linux-gcc-relWithDebInfo",
-		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh"
+		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
+		"files.watcherExclude": {
+			"**/my-workspace*/**": true,
+			"**/out/**": true,
+			"**/build/**": true
+		},
+		"files.exclude": {
+			"**/my-workspace*/**": true,
+			"**/out/**": true,
+			"**/build/**": true
+		},
+		"search.exclude": {
+			"**/my-workspace*/**": true,
+			"**/out/**": true,
+			"**/build/**": true
+		}
 	},
 	"tasks": {
 		"version": "2.0.0",
