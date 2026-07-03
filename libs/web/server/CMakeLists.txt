@@ -21,7 +21,7 @@ file( GLOB headers   *.h ../../../jde/web/server/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 if( WIN32 )
-	target_link_libraries( ${targetName} libprotobuf$<IF:$<CONFIG:Debug>,d,>.lib )
+	target_link_libraries( ${targetName} protobuf$<IF:$<CONFIG:Debug>,d,>.lib )
 	target_link_libraries( ${targetName} libutf8_range )
 else()
 	target_link_libraries( ${targetName} protobuf::libprotobuf )

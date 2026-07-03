@@ -59,7 +59,7 @@ namespace Jde::Access::Server{
 			auto& auth = Authorizer();
 			auto resourceKey = Json::AsKey( resource );
 			if( resourceKey.IsPK() ){
-				if( auto existing = auth.FindResource( Resource{resourceKey.PK(), {}} ); existing ){
+				if( auto existing = auth.FindResource( Resource{(ResourcePK)resourceKey.PK(), {}} ); existing ){
 					resourceKey = DB::Key{ existing->Target };
 					schema = existing->Schema;
 				}else

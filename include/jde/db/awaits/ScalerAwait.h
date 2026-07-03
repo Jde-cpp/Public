@@ -41,6 +41,16 @@ namespace Jde::DB{
 		variant<Sql,InsertClause> _sql;
 	};
 
+	//explicit specialization so IAwait<uint32,...> is exported once from here instead of separately by every dll that does ScalerAwait<uint32> (e.g. DS().InsertSeq<uint32>/Scaler<uint32>).
+	template<> struct ΓDB ScalerAwait<uint32> : UInt32Await{
+		using base = UInt32Await;
+		ScalerAwait( sp<IDataSource> ds, variant<Sql,InsertClause>&& s, SL sl )ι:base{sl}, _ds{ds}, _sql{move(s)}{}
+		α Suspend()ι->void override{ Execute(); }
+		α Execute()ι->ScalerAwaitOpt<uint32>::Task;
+	private:
+		sp<IDataSource> _ds;
+		variant<Sql,InsertClause> _sql;
+	};
 
 	Ŧ ScalerAwaitOpt<T>::Execute()ι->void{
 		if( std::holds_alternative<InsertClause>(_sql) )

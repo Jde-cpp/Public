@@ -6,7 +6,6 @@ project( ${targetName} VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
 if( WIN32 )
-	set( CMAKE_SHARED_LINKER_FLAGS_DEBUG "/debug /INCREMENTAL:NO" )
 	link_directories( ${CMAKE_BINARY_DIR}/../framework/${CMAKE_BUILD_TYPE_INIT} )
 endif()
 add_library( ${targetName} SHARED )

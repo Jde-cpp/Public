@@ -5,10 +5,11 @@
 
 namespace Jde::DB{
 	struct IDataSource;
-	struct ExecuteAwait : TAwaitEx<uint32,QueryAwait::Task>{
-		using base=TAwaitEx<uint32,QueryAwait::Task>;
+	struct ΓDB ExecuteAwait : UInt32Await{
+		using base=UInt32Await;
 		ExecuteAwait( sp<IDataSource> ds, Sql&& s, SL sl )ι: base{ sl }, _ds{ds}, _sql{ move(s) }{}
-		α Execute()ι->QueryAwait::Task override;
+		α Suspend()ι->void override{ Execute(); }
+		α Execute()ι->QueryAwait::Task;
 	private:
  		sp<IDataSource> _ds;
 		Sql _sql;

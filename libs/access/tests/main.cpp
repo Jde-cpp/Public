@@ -17,7 +17,9 @@
 
 namespace Jde{
 	sp<Access::AccessListener> _listener;
+#ifndef _WIN32
 	α Process::ProductName()ι->sv{ return "Tests.Access"; }
+#endif
  	α Startup( int argc, char **argv )ε->void{
 #ifdef _MSC_VER
 		ASSERT( Settings::FindNumber<uint>("/workers/drive/threadSize").value_or(5)>0 )

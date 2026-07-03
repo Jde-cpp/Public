@@ -7,7 +7,7 @@
 	},
 	dbServers: {
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/msvc/libs/db/drivers/odbc/Debug/Jde.DB.Odbc.dll",
+			driver: "$(JDE_BUILD_DIR)/$(JDE_COMPILER)/bin/Debug/Jde.DB.Odbc.dll",
 			connectionString: "DSN=OpcServerTestsDebug",
 			username: null,
 			password: null,

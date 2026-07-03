@@ -108,7 +108,7 @@
 			"hidden": true,
 			"cacheVariables": {
 				"CMAKE_EXPORT_COMPILE_COMMANDS": true,
-				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-unqualified-std-cast-call;-Wno-language-extension-token"
+				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-unqualified-std-cast-call;-Wno-language-extension-token;-Wno-dollar-in-identifier-extension"
 			}
 		},
 		{
@@ -173,7 +173,6 @@
 				"cxxFlagsDebugInfo": "-gdwarf-4"
 			},
 			"cacheVariables": {
-				"JDE_PDB": "OFF"
 			}
 		},
 		{
@@ -195,7 +194,7 @@
 		},
 		{
 			"name": "linux-clang-debug",
-			"inherits": ["linux-clang", "debug"],
+			"inherits": ["linux-clang", "debug"]
 		},
 		{
 			"name": "linux-clang-jde-debug",

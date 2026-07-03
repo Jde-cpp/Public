@@ -2,6 +2,20 @@
 #include <jde/db/IDataSource.h>
 
 #define let const auto
+namespace Jde::DB{
+	α ScalerAwait<uint32>::Execute()ι->ScalerAwaitOpt<uint32>::Task{
+		try{
+			auto opt = co_await ScalerAwaitOpt<uint32>{ move(_ds), move(_sql), base::_sl };
+			if( opt )
+				base::Resume( move(*opt) );
+			else
+				base::ResumeExp( Exception{"No value returned", ELogLevel::Error, base::_sl} );
+		}
+		catch( IException& e ){
+			base::ResumeExp( move(e) );
+		}
+	}
+}
 namespace Jde{
 	α DB::ScalerAwaitExecute( IDataSource& ds, variant<Sql,InsertClause>&& sql, function<void(optional<Row>)> onRow, function<void(IException&&)> onError, SL sl )ι->QueryAwait::Task{
 		let isInsert = std::holds_alternative<InsertClause>( sql );

@@ -13,13 +13,6 @@ set( targetName Jde )
 add_library( ${targetName} SHARED )
 compileOptions( ${targetName} )
 set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
-if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
-		ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
-		PDB_OUTPUT_DIRECTORY     "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
-	)
-endif()
 target_compile_definitions( ${targetName} PUBLIC SPDLOG_FMT_EXTERNAL )
 #if( WIN32 )
 #	target_link_directories( ${targetName} PRIVATE $ENV{REPO_DIR}/jsonnet/vs2017/x64/${CMAKE_BUILD_TYPE} )

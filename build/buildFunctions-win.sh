@@ -53,6 +53,8 @@ function projectName() {
 		project="Jde.Access.Tests";
 	elif [[ $relativeFile == *"AppServer/src"* ]]; then
 		project="Jde.App.ServerLib";
+	elif [[ $relativeFile == *"db/src"* ]]; then
+		project="Jde.DB";
 	fi;
 	echo $project.vcxproj;
 }

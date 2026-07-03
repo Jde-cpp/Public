@@ -5,9 +5,13 @@
 namespace Jde::DB::Odbc{
 #pragma warning( push )
 #pragma warning (disable: 4716)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wexceptions"
+#pragma clang diagnostic ignored "-Wmacro-redefined"
+
 #define $ [[noreturn]] β
 	struct IBindings{
-		IBindings( uint rowCount, SQLULEN size=0 ): _output{ new SQLLEN[rowCount] }, RowCount{ rowCount }, _size{ size }{}
+		IBindings( uint rowCount, SQLULEN size=0 ): _output{ new SQLLEN[rowCount] }, /*RowCount{ rowCount },*/ _size{ size }{}
 		virtual ~IBindings()=0;
 		Ω Create( SQLSMALLINT type, uint rowCount )->up<IBindings>;
 		Ω Create( SQLSMALLINT type, uint rowCount, uint size )ε->up<IBindings>;
@@ -41,7 +45,7 @@ namespace Jde::DB::Odbc{
 		
 	private:
 		up<SQLLEN[]> _output;
-		uint RowCount;
+		//uint RowCount;
 		SQLULEN _size;
 	};
 #undef $
@@ -66,7 +70,7 @@ namespace Jde::DB::Odbc{
 		BindingStrings( uint rowCount, SQLULEN size ):base{ rowCount, size }{}
 		α Object( uint i )Ι->Value override{ return base::IsNull( i ) ? DB::Value{} : DB::Value{ ToString(i) }; }
 		α ToString( uint i )Ι->string override{ const char* p=base::_pBuffer.get(); return base::IsNull( i ) ? string{} : string{ p+base::Size()*i, p+base::Size()*i+base::Output(i) }; }
-		α MoveString( uint i )ι->string{ auto result = ToString( i ); base::_pBuffer.reset(); return result; }
+		α MoveString( uint i )ι->string override{ auto result = ToString( i ); base::_pBuffer.reset(); return result; }
 
 		α BufferLength()Ι->SQLLEN override{ return base::Size(); }
 	};
@@ -87,7 +91,7 @@ namespace Jde::DB::Odbc{
 		α Int32( uint i )Ι->int32_t override{ return _pBuffer[i]; }
 		α Int( uint i )Ι->int64_t override{ return Int32(i); }
 		α UInt( uint i )Ι->uint override{ return static_cast<uint>(Int32(i)); }
-		α IntOpt( uint i )Ι->optional<_int>{ optional<_int> value; if( !IsNull(i) )value=Int( i ); return value; }
+		α IntOpt( uint i )Ι->optional<_int> override{ optional<_int> value; if( !IsNull(i) )value=Int( i ); return value; }
 		α UIntOpt( uint i )Ι->optional<uint> override{ optional<uint> optional; if( !IsNull(i) ) optional = UInt( i ); return optional; };
 	};
 	
@@ -97,11 +101,10 @@ namespace Jde::DB::Odbc{
 		α Object( uint i )Ι->Value override{ return Value{Int(i)}; };
 		α Int( uint i )Ι->int64_t override{ return _pBuffer[i]; }
 		α UInt( uint i )Ι->uint override{ return static_cast<uint>( Int(i) ); }
-		α UIntOpt( uint i )Ι->optional<uint>{ optional<uint> value; if(!IsNull(i))value=UInt( i ); return value; };
-		α DateTime( uint i )Ι->DBTimePoint{ return Clock::from_time_t(Int(i)); }
+		α UIntOpt( uint i )Ι->optional<uint> override{ optional<uint> value; if(!IsNull(i))value=UInt( i ); return value; };
+		α DateTime( uint i )Ι->DBTimePoint override{ return Clock::from_time_t(Int(i)); }
 	};
-#pragma warning(push)
-#pragma warning(disable:4005)
+#undef base
 #define base TBindings<SQL_TIMESTAMP_STRUCT, TSql, SQL_C_TYPE_TIMESTAMP>
 	template<SQLSMALLINT TSql>
 	struct BindingTimes : base
@@ -112,7 +115,7 @@ namespace Jde::DB::Odbc{
 		α BufferLength()Ι->SQLLEN override{ return sizeof(SQL_TIMESTAMP_STRUCT); }
 		α Size()Ι->SQLULEN override{ return 27; }//https://wezfurlong.org/blog/2005/Nov/calling-sqlbindparameter-to-bind-sql-timestamp-struct-as-sql-c-type-timestamp-avoiding-a-datetime-overflow/
 		α DecimalDigits()Ι->SQLSMALLINT override{ return 7; }
-		α DateTime( uint i )Ι->DBTimePoint
+		α DateTime( uint i )Ι->DBTimePoint override
 		{
 			if( base::IsNull(i) ) return DBTimePoint{};
 			SQL_TIMESTAMP_STRUCT data = base::_pBuffer[i];
@@ -121,6 +124,7 @@ namespace Jde::DB::Odbc{
 		α DateTimeOpt( uint i )Ι->optional<DBTimePoint> override{ return base::IsNull(i) ? nullopt : std::make_optional(DateTime(i)); }
 	};
 	////////////////////////////////////////////////////////////////////////////
+	#undef base
 	#define base TBindings<double, TSql, SQL_C_DOUBLE>
 	template<SQLSMALLINT TSql>
 	struct BindingDoubles : base
@@ -129,9 +133,10 @@ namespace Jde::DB::Odbc{
 
 		α Object( uint i )Ι->Value override{ return base::IsNull(i) ? Value{} : Value{ Double(i) }; }
 		α Double( uint i )Ι->double override{ return base::_pBuffer[i]; }
-		α DoubleOpt( uint i )Ι->optional<double>{ optional<double> value; if( !base::IsNull(i) ) value = Double(i); return value; }
+		α DoubleOpt( uint i )Ι->optional<double> override{ optional<double> value; if( !base::IsNull(i) ) value = Double(i); return value; }
 	};
 	////////////////////////////////////////////////////////////////////////////
+	#undef base
 	#define base TBindings<SQL_NUMERIC_STRUCT,SQL_NUMERIC,SQL_C_NUMERIC>
 	#define var const auto
 	struct BindingNumerics : public base{
@@ -157,6 +162,7 @@ namespace Jde::DB::Odbc{
 	};
 
 	////////////////////////////////////////////////////////////////////////////
+	#undef base
 	#define base TBindings<float, SQL_FLOAT, SQL_C_FLOAT>
 	struct BindingFloats : base
 	{
@@ -164,10 +170,11 @@ namespace Jde::DB::Odbc{
 
 		α Object( uint i )Ι->Value override{ return Value{ Double(i) }; }
 		α Double( uint i )Ι->double override{ return _pBuffer[i]; }
-		α DoubleOpt( uint i )Ι->optional<double>{ return IsNull(i) ? nullopt : optional<double>{ Double(i) }; }
+		α DoubleOpt( uint i )Ι->optional<double> override{ return IsNull(i) ? nullopt : optional<double>{ Double(i) }; }
 	};
 
 	////////////////////////////////////////////////////////////////////////////
+	#undef base
 	#define base TBindings<float, SQL_SMALLINT, SQL_C_SSHORT>
 	struct BindingInt16s : base
 	{
@@ -178,9 +185,10 @@ namespace Jde::DB::Odbc{
 		α Int( uint i )Ι->_int override{ return static_cast<_int>( _pBuffer[i] ); }
 		α IntOpt( uint i )Ι->optional<_int> override{ return IsNull(i) ? nullopt : optional<_int>( Int(i) ); }
 		α Double( uint i )Ι->double override{ return (double)Int(i); }
-		α DoubleOpt( uint i )Ι->optional<double>{ return IsNull(i) ? nullopt : optional<double>( Double(i) ); }
+		α DoubleOpt( uint i )Ι->optional<double> override{ return IsNull(i) ? nullopt : optional<double>( Double(i) ); }
 	};
 ////////////////////////////////////////////////////////////////////////////
+	#undef base
 	#define base TBindings<uint8_t, SQL_TINYINT, SQL_C_TINYINT>
 	struct BindingInt8s : base
 	{
@@ -192,7 +200,7 @@ namespace Jde::DB::Odbc{
 		α UIntOpt( uint i )Ι->optional<uint> override{ optional<uint> value; if( !IsNull(i) ) value = UInt( i ); return value; }
 		α IntOpt( uint i )Ι->optional<_int> override{ optional<_int> value; if( !IsNull(i) ) value = Int( i ); return value; }
 		α Int( uint i )Ι->int64_t override{ return static_cast<int64_t>( UInt(i) ); }
-		α Int32( uint i )Ι->int32_t{ return (int32_t)Int(i); }
+		α Int32( uint i )Ι->int32_t override{ return (int32_t)Int(i); }
 		α Double( uint i )Ι->double override{ return (double)UInt( i ); }
 		α DoubleOpt( uint i )Ι->optional<double> override{ optional<double> value; if( !IsNull(i) ) value = Double( i ); return value; }
 	};
@@ -245,5 +253,5 @@ namespace Jde::DB::Odbc{
 	}
 #undef base
 #undef var
-#pragma warning(pop)
+#pragma clang diagnostic pop
 }

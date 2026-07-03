@@ -14,8 +14,8 @@
 		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
 
 		"buildDir": "${config:buildRoot}/${config:subDir}",
-		"exe": "\\bin\\Debug\\Jde.Fwk.Tests.exe",
 		"winBuildDir": "${env:JDE_BUILD_DIR}\\${config:compiler}",
+		"exe": "\\bin\\Debug\\${config:target}.exe",
 	},
 	"folders": [
 		{

@@ -56,7 +56,6 @@ namespace Jde::Access{
 			THROW_IFX( user->second.IsDeleted, Exception(sl, ELogLevel::Debug, "[{}]User is deleted.", executer.Value) );
 			let configured = user->second.ResourceRights( *resourcePK );
 			THROW_IFX( !empty(configured.Denied & rights), Exception(sl, ELogLevel::Debug, "[{}]User denied '{}' access to '{}'.", executer.Value, ToString(rights), resourceName) );
-			BREAK_IF( !(Users.find(UserPK{1})->second.ResourceRights(5).Allowed & ERights::Administer) );
 			THROW_IFX( empty(configured.Allowed & rights), Exception(sl, ELogLevel::Debug, "[{}]User does not have '{}' access to '{}'.", executer.Value, ToString(rights), resourceName) );
 		}
 		else if( executer.Value!=UserPK::System )
