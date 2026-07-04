@@ -67,11 +67,13 @@ namespace Client{
 		return ClientSocketAwait<Proto::FromServer::ConnectionInfo>{ ToString(FromClient::Instance(Process::AppName(), instanceName, sessionId, requestId)), requestId, shared_from_this(), sl };
 	}
 
-	α AppClientSocketSession::OnClose( beast::error_code ec )ι->void{
+	α AppClientSocketSession::CloseTasks( beast::error_code ec )ι->void{
 		auto f = [this, ec]( std::any&& h )->void {
 			HandleException( move(h), CodeException{ec, _tags, ELogLevel::NoLog}, false );
 		};
-		CloseTasks( f );
+		base::CloseTasks( f );
+	}
+	α AppClientSocketSession::OnClose( beast::error_code ec )ι->void{
 		base::OnClose( ec );
 		_appClient->SetSession( nullptr );
 		if( !Process::ShuttingDown() )

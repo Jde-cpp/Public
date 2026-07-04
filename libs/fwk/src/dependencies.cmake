@@ -1,10 +1,5 @@
 boost()
-if( WIN32 )
-	include_directories( ${OPENSSL_ROOT_DIR}/include )
-	link_directories( ${OPENSSL_CRYPTO_LIBRARY_DIR} )
-else()
-	find_package( OpenSSL REQUIRED )
-endif()
+find_package( OpenSSL REQUIRED )
 
 include_directories( $ENV{JDE_DIR}/include )
 

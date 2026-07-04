@@ -113,12 +113,12 @@ namespace Jde::Web::Mock{
 		return ClientSocketAwait<string>{ Protobuf::ToString(t), requestId, shared_from_this(), sl };
 	}
 
-	α ClientSocketSession::CloseTasks( optional<beast::error_code> ec )ι->void{
+	α ClientSocketSession::CloseTasks( beast::error_code ec )ι->void{
 		auto f = [this, ec]( std::any&& h )->void {
 			HandleException(
 				0,
 				move(h),
-				ec && *ec ? CodeException{*ec, ELogTags::SocketClientWrite, ELogLevel::NoLog}.what() : "Session closed."
+				ec ? CodeException{ec, ELogTags::SocketClientWrite, ELogLevel::NoLog}.what() : "Session closed."
 			);
 		};
 		base::CloseTasks( f );

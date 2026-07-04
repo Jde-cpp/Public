@@ -20,6 +20,12 @@ if( WIN32 )
 	# Use STATIC_LIBRARY mode so cmake still identifies the compiler (features, ABI, MSVC runtime)
 	# without needing to link a test executable.
 	set( stdArgs ${stdArgs} -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DCMAKE_POLICY_DEFAULT_CMP0091=NEW )
+	# CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY above means try_compile() only archives objects and never
+	# links, so CheckLibraryExists()-based probes (e.g. FindThreads' search for -lpthreads/-lpthread, or
+	# LibXml2's search for -ldld/shl_load) report false positives instead of the real linker failure. The
+	# win-clang-debug-repos preset pre-seeds these so the probes are skipped and fall through to the correct
+	# native Windows behavior; forward them to the sub-builds here.
+	set( stdArgs ${stdArgs} -DCMAKE_HAVE_LIBC_PTHREAD=${CMAKE_HAVE_LIBC_PTHREAD} -DCMAKE_HAVE_PTHREADS_CREATE=${CMAKE_HAVE_PTHREADS_CREATE} -DCMAKE_HAVE_PTHREAD_CREATE=${CMAKE_HAVE_PTHREAD_CREATE} -DTHREADS_HAVE_PTHREAD_ARG=${THREADS_HAVE_PTHREAD_ARG} -DHAVE_SHLLOAD=${HAVE_SHLLOAD} )
 	if( CMAKE_MSVC_RUNTIME_LIBRARY )
 		set( stdArgs ${stdArgs} -DCMAKE_MSVC_RUNTIME_LIBRARY=${CMAKE_MSVC_RUNTIME_LIBRARY} )
 	endif()
@@ -104,17 +110,12 @@ IF( WIN32 )
 			-DZLIB_BUILD_SHARED=ON
 			-DZLIB_BUILD_TESTING=OFF
 	)
-	#message( MULTI_INSTALL_PREFIX=${MULTI_INSTALL_PREFIX}/zlib/lib )
-	# set( ZLIB_LIBRARY ${MULTI_INSTALL_PREFIX}/zlib/lib CACHE PATH "the directory containing zlib libraries" )
-	#message( ZLIB_LIBRARY=${ZLIB_LIBRARY} )
-	# set( ZLIB_INCLUDE_DIR ${MULTI_INSTALL_PREFIX}/zlib/include CACHE PATH "the directory containing zlib headers" )
-
-	ExternalProject_Add(
+		ExternalProject_Add(
 		LibXml2
 		GIT_REPOSITORY https://github.com/GNOME/libxml2.git
 		GIT_TAG v2.15.3
 		PREFIX libxml2
-		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/libxml2
+		INSTALL_DIR ${TYPE_INSTALL_PREFIX}/libxml2
 		CMAKE_ARGS ${stdArgs}
 			-DCMAKE_PREFIX_PATH=${MULTI_INSTALL_PREFIX}
 			-DLIBXML2_WITH_ZLIB=OFF
@@ -126,8 +127,8 @@ IF( WIN32 )
 			-DLIBXML2_BUILD_SHARED_LIBS=OFF
 	)
 
-	set( LIBXML2_INCLUDE_DIR ${MULTI_INSTALL_PREFIX}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
-	set( LIBXML2_LIBRARY ${MULTI_INSTALL_PREFIX}/libxml2/lib/libxml2$<IF:$<CONFIG:Debug>,d,>.lib CACHE PATH "the directory containing LibXml2 libraries" )
+	set( LIBXML2_INCLUDE_DIR ${TYPE_INSTALL_PREFIX}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
+	set( LIBXML2_LIBRARY ${TYPE_INSTALL_PREFIX}/libxml2/lib/libxml2.lib CACHE PATH "the directory containing LibXml2 libraries" )
 	set( nodesetLoaderArgs
 		-DLIBXML2_LIBRARY=${LIBXML2_LIBRARY}
 		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR} )
@@ -242,27 +243,43 @@ ExternalProject_Add(protobuf
 		-Dprotobuf_MSVC_STATIC_RUNTIME=OFF
 )
 
+# open62541-nodeset-loader only does install(EXPORT NodesetLoader ...), producing a bare
+# NodesetLoader.cmake targets file with no NodesetLoaderConfig.cmake wrapper. find_package()
+# in config mode requires that exact filename, so it can never locate the package as installed.
+# Patch their CMakeLists.txt (same patch-at-checkout mechanism used below for the Windows
+# -Werror fix) to also install a generated wrapper alongside the targets file.
+set( _nodesetLoaderCfgFile "${CMAKE_CURRENT_BINARY_DIR}/NodesetLoaderConfig.cmake" )
+file( WRITE "${_nodesetLoaderCfgFile}" "include(\"\${CMAKE_CURRENT_LIST_DIR}/NodesetLoader.cmake\")\n" )
+
 if( WIN32 )
 	# OpenSSL provided by vcpkg; toolchain file (forwarded via stdArgs) handles discovery for open62541.
 	set( opensslArgs "" )
 	# nodeset-loader hardcodes -Werror for GCC/Clang; clang on Windows generates
-	# extra diagnostics that trip it.  Strip -Werror from the source at patch time.
-	set( _nodesetPatch "${CMAKE_CURRENT_BINARY_DIR}/nodeset-loader-remove-werror.cmake" )
+	# extra diagnostics that trip it.  Strip -Werror from the source at patch time, and append
+	# the missing NodesetLoaderConfig.cmake install rule (see comment above).
+	set( _nodesetPatch "${CMAKE_CURRENT_BINARY_DIR}/nodeset-loader-patch.cmake" )
 	file( CONFIGURE OUTPUT "${_nodesetPatch}" @ONLY CONTENT
 [[file(READ "${SOURCE_DIR}/CMakeLists.txt" _c)
 string(REPLACE " -Werror" "" _c "${_c}")
 string(REGEX REPLACE "[^\n]*ReferenceService\\.h[^\n]*" "" _c "${_c}")
+string(APPEND _c "\ninstall(FILES \"@_nodesetLoaderCfgFile@\" DESTINATION \${CMAKE_INSTALL_LIBDIR}/cmake/NodesetLoader)\n")
 file(WRITE "${SOURCE_DIR}/CMakeLists.txt" "${_c}")
 ]]
 	)
-	set( _nodesetPatchCmd PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -P "${_nodesetPatch}" )
 else()
 	set( opensslArgs
 		-DOPENSSL_USE_STATIC_LIBS=ON
 		-DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}
 	)
-	set( _nodesetPatchCmd "" )
+	set( _nodesetPatch "${CMAKE_CURRENT_BINARY_DIR}/nodeset-loader-patch.cmake" )
+	file( CONFIGURE OUTPUT "${_nodesetPatch}" @ONLY CONTENT
+[[file(READ "${SOURCE_DIR}/CMakeLists.txt" _c)
+string(APPEND _c "\ninstall(FILES \"@_nodesetLoaderCfgFile@\" DESTINATION \${CMAKE_INSTALL_LIBDIR}/cmake/NodesetLoader)\n")
+file(WRITE "${SOURCE_DIR}/CMakeLists.txt" "${_c}")
+]]
+	)
 endif()
+set( _nodesetPatchCmd PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -P "${_nodesetPatch}" )
 
 ExternalProject_Add(open62541
 	GIT_REPOSITORY https://github.com/open62541/open62541.git

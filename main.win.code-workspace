@@ -2,6 +2,7 @@
   "settings": {
     "window.title": "Main",
     "name": "main",
+		"target": "all",
     "compiler": "${env:JDE_COMPILER}",
 		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
     "sourceDir": "${env:JDE_BASH}",
@@ -37,13 +38,6 @@
   "tasks": {
     "version": "2.0.0",
     "tasks": [
-      {
-        "label": "build",
-        "type": "shell",
-        "command": "mkdir -p ${config:debugDir}; cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug;",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": true }
-      },
       {
         "label": "buildProject",
         "type": "shell",

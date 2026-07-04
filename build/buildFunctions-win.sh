@@ -116,5 +116,17 @@ function reconfig() {
 	echo `pwd` > cmake.output;
 	echo "cmake $JDE_DIR -Wno-dev --preset $debugPreset 2>&1" | tee -a cmake.output;
 	cmake "$JDE_DIR" -Wno-dev --preset "$debugPreset" 2>&1 | tee -a cmake.output;
-	mv $buildRoot/compile_commands.json $sourceDir/compile_commands.json;
+	if [ -f "$buildRoot/compile_commands.json" ]; then
+		mv $buildRoot/compile_commands.json $sourceDir/compile_commands.json;
+	fi
+}
+function build() {
+	buildRoot=$1;
+	target=$2;
+	cd $buildRoot;
+	set -o pipefail;
+	tput reset;
+	echo `pwd` > $target.output;
+	echo "cmake --build . -j --target $target" >> $target.output;
+	cmake --build . -j --target $target | tee -a $target.output;
 }

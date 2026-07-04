@@ -20,7 +20,7 @@ if( NOT jde_Superbuild )
 endif()
 
 if( WIN32 )
-	add_definitions( -DZLIB_USE_STATIC_LIBS -D )
+	add_definitions( -DZLIB_USE_STATIC_LIBS )
 	set( ZLIB_ROOT ${LIB_ROOT}/zlib )
 else()
 	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )

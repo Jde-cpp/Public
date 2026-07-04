@@ -48,7 +48,7 @@ namespace Jde{
 
 	namespace Logging{
 		struct ILogger;
-		α UpdateCumulative( const vector<up<Logging::ILogger>>& loggers )ι->void;
+		Φ UpdateCumulative( const vector<up<Logging::ILogger>>& loggers )ι->void;
 	}
 	struct Γ LogTags{
 		LogTags( ELogLevel defaultLevel=ELogLevel::Information ):_minLevel{defaultLevel},_defaultLevel{defaultLevel}{}

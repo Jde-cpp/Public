@@ -89,7 +89,7 @@ namespace Jde::App::Client{
 
 	α ConnectAwait::Retry()ι->DurationTimer::Task{
 		try{
-			co_await DurationTimer{ reconnectWait() };
+			(void)co_await DurationTimer{ reconnectWait() };
 			THROW_IF( Process::ShuttingDown(), "Shutting down." );
 			HttpLogin();
 		}

@@ -190,8 +190,19 @@
 			}
 		},
 		{
+			"name": "win-repos",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_HAVE_LIBC_PTHREAD": "OFF",
+				"CMAKE_HAVE_PTHREADS_CREATE": "OFF",
+				"CMAKE_HAVE_PTHREAD_CREATE": "OFF",
+				"THREADS_HAVE_PTHREAD_ARG": "OFF",
+				"HAVE_SHLLOAD": "OFF"
+			}
+		},
+		{
 			"name": "win-clang-debug-repos",
-			"inherits": ["win-clang-debug", "repos"]
+			"inherits": ["win-clang-debug", "win-repos"]
 		},
 		{
 			"name": "linux-clang-debug",

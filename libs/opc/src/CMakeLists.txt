@@ -3,10 +3,7 @@ include( ../../../build/functions.cmake )
 message( Jde.Opc )
 project( Jde.Opc VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
-if( WIN32 )
-else()
-	find_package( OpenSSL )
-endif()
+find_package( OpenSSL REQUIRED )
 find_package( open62541 REQUIRED )
 set( open62541Dir ${open62541_DIR}/../../.. )
 cmake_path( ABSOLUTE_PATH open62541Dir NORMALIZE OUTPUT_VARIABLE open62541Dir )
@@ -33,6 +30,7 @@ if( WIN32 )
 endif()
 
 target_link_libraries( ${targetName} open62541::open62541 )
+target_link_libraries( ${targetName} OpenSSL::SSL )
 
 target_precompile_headers(${targetName}
   PRIVATE

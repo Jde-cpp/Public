@@ -46,6 +46,7 @@ namespace Jde::App::Client{
 		α HandleException( std::any&& h, IException&& what, RequestId requestId )ι->void;
 		α OnRead( Proto::FromServer::Transmission&& transmission )ι->void override;
 		α OnClose( beast::error_code ec )ι->void override;
+		α CloseTasks( beast::error_code ec )ι->void override;
 		α OnMessage( string&& j, RequestId requestId )ι->void;
 		sp<IAppClient> _appClient;
 		sp<Access::Authorize> _authorize;

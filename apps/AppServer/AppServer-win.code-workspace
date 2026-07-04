@@ -2,13 +2,36 @@
 	"settings": {
 		"window.title": "App",
 		"name": "AppServer",
-		"compiler": "msvc",
-		"sourceDir": "${env:JDE_BASH}/apps/AppServer",
-		"exe": "Jde.App.Server.exe",
-		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
-		"debugPreset": "win-msvc-debug",
-		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
-		"winBuildDir": "${env:JDE_BUILD_DIR}\\${config:compiler}\\apps\\${config:name}",
+		"target": "Jde.App.Server",
+		"subDir": "apps/${config:name}",
+		"sourceDir": "${env:JDE_BASH}/${config:subDir}",
+		"exe": "\\bin\\${config:buildTarget}\\${config:target}.exe",
+		"settings": "${env:JDE_DIR}/${config:subDir}/config/App.Server.jsonnet",
+		"clangd.arguments": [
+			"--compile-commands-dir=C:\\Users\\duffyj\\source\\repos\\jde\\Public\\apps\\AppServer",
+			"-j=8",
+			"--background-index-priority=background"
+		],
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Debug",
+				"type": "lldb",
+				"request": "launch",
+				"program": "${config:winBuildDir}\\${config:exe}",
+				"args": [
+					"-c",
+					"-tests",
+					"-settings=${config:settings}"
+				],
+				"cwd": "${config:winBuildDir}\\bin",
+				"console": "integratedTerminal",
+				"preLaunchTask": "build"
+			}
+		],
+		"compounds": []
 	},
 	"folders": [
 		{
@@ -52,128 +75,12 @@
 			"name": "webClient"
 		},
 		{
-			"path": "../../libs/crypto/src",
-			"name": "Crypto"
-		},
-		{
 			"path": "config",
 			"name": "config"
 		},
 		{
 			"path": "../../build",
 			"name": "pbuild"
-		},
-		{
-			"path": "xx../../libs/app/client",
-			"name": "client"
 		}
 	],
-	"tasks": {
-		"version": "2.0.0",
-		"tasks": [
-			{
-				"label": "build",
-				"type": "shell",
-				"command": "mkdir -p ${config:debugDir}; cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug --target Jde.App.Server;",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": true }
-			},
-			{
-				"label": "compile",
-				"type": "shell",
-				"command": "tput reset;${config:sourceBash};compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot};",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "buildProject",
-				"type": "shell",
-				"command": "tput reset; source $JDE_DIR/build/buildFunctions.sh;buildProject ${fileWorkspaceFolder} ${config:buildRoot};",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "buildTests",
-				"type": "shell",
-				"command": "cd tests; tput reset;./build.sh;",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "cmake",
-				"type": "shell",
-				"command": "mkdir -p ${config:buildDir};cd ${config:buildDir}; tput reset; rm -f CMakeCache.txt; cmake ${config:sourceDir} --preset win-msvc-jde",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
-			}
-		]
-	},
-	"launch": {
-		"version": "0.2.0",
-		"configurations": [{
-			"name": "Debug",
-			"type": "cppvsdbg",
-			"request": "launch",
-			"program": "${config:winBuildDir}\\exe\\Debug\\${config:exe}",
-			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/apps/AppServer/config/App.Server.jsonnet"],
-			"stopAtEntry": false,
-			"cwd": "${env:JDE_BUILD_DIR}",
-			"console": "integratedTerminal",
-			"preLaunchTask": "build"
-		},
-		{
-			"name": "Release",
-			"type": "cppvsdbg",
-			"request": "launch",
-			"program": "${workspaceFolder:AppServer}/../../bin/release/Jde.AppServer",
-			"args": ["-c"],
-			"stopAtEntry": false,
-			"cwd": "${workspaceFolder:AppServer}/../../bin/release",
-			"environment": [{ "name": "JDE_DB_DRIVER", "value": "libJde.MySql.so" }, { "name": "JDE_LOG_META", "value": "${workspaceFolder:AppServer}/../meta.json" }],
-			"externalConsole": false,
-			"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
-			"preLaunchTask": "release"
-		},
-		{
-			"name": "RelWithDebInfo",
-			"type": "cppdbg",
-			"request": "launch",
-			"program": "${workspaceFolder:AppServer}/../../bin/relwithdebinfo/Jde.AppServer",
-			"args": ["-c"],
-			"stopAtEntry": false,
-			"cwd": "${workspaceFolder:AppServer}/../../bin/relwithdebinfo",
-			"environment": [{ "name": "JDE_DB_DRIVER", "value": "libJde.MySql.so" }, { "name": "JDE_LOG_META", "value": "${workspaceFolder:AppServer}/../meta.json" }],
-			"externalConsole": false,
-			"MIMode": "gdb",
-			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing","ignoreFailures": true}],
-			"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
-			"preLaunchTask": "relWithDebInfo"
-		},
-		{
-			"name": "Tests Asan",
-			"type": "cppdbg",
-			"request": "launch",
-			"program": "${workspaceFolder:tests}/../../bin/asan/Tests.AppServer",
-			"args": ["-c"],
-			"stopAtEntry": false,
-			"cwd": "${workspaceFolder:tests}/../../bin/asan",
-			"environment": [
-				{ "name": "JDE_DB_DRIVER", "value": "./libJde.MySql.so" },
-				{ "name": "JDE_LOG_META", "value": "${env:JDE_DIR}/bin/config/AppServerMeta.json" },
-				{ "name": "Jde_Test_Connection", "value": "${env:Jde_Test_Connection}" }
-			],
-			"externalConsole": false,
-			"MIMode": "gdb",
-			"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
-			"sourceFileMap": { "/build/glibc-negH51/glibc-2.27":"$(REPO_DIR)/glibc-2.27" },
-			"preLaunchTask": "buildTests",
-			"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
-			"showDisplayString": true,
-			"logging": {
-				"natvisDiagnostics": "error",
-				"engineLogging":"none",
-			}
-		}],
-		"compounds": []
-	}
 }
