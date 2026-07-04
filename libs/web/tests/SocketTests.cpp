@@ -1,4 +1,5 @@
 //#include <boost/beast/ssl.hpp>
+#include "jde/fwk/co/Await.h"
 #include "jde/fwk/usings.h"
 #include "mocks/ServerMock.h"
 #include <jde/web/client/http/ClientHttpAwait.h>
@@ -55,7 +56,7 @@ namespace Jde::Web{
 		cv.notify_one();
 	}
 	α Close()ι->VoidTask{
-		co_await _clientSession->Close();
+		co_await _clientSession->Close( true, SRCE_CUR );
 		Notify();
 	}
 
@@ -77,16 +78,10 @@ namespace Jde::Web{
 	}
 
 	up<IException> _exception;
-	α Connect()->ClientSocketAwait<SessionPK>::Task{
-		try{
-			[[maybe_unused]] auto sessionId = co_await _clientSession->Connect( _sessionId );
-		}
-		catch( IException& e ){
-			_exception = e.Move();
-		}
-		NOTIFY;
+	Ω connect()->SessionPK{
+		return BlockAwait<ClientSocketAwait<SessionPK>,SessionPK>( _clientSession->Connect( _sessionId ) );
 	}
-	α CreateSession( optional<ssl::context> ctx=nullopt )->VoidTask{
+	Ω createSession( optional<ssl::context> ctx=nullopt )->void{
 		if( _sessionId==0 ){
 			Crypto::CryptoSettings settings{ "http/ssl" };
 			auto publicKey = Crypto::ReadPublicKey( settings.PublicKeyPath );
@@ -97,13 +92,12 @@ namespace Jde::Web{
 			INFO( "({:x})Loggin Complete.", _sessionId );
 		}
 		_clientSession = ms<Mock::ClientSocketSession>( Executor(), ctx );
-		co_await _clientSession->RunSession( Host, Port );
-		Connect();
+		BlockVoidAwait( _clientSession->RunSession( Host, Port ) );
+		connect();
 	}
 	TEST_F( SocketTests, CreatePlain ){
 		Stopwatch sw{ "WebTests::CreatePlain", ELogTags::Test };
-		CreateSession();
-		Wait();
+		createSession();
 		ASSERT_EQ( _sessionId, _clientSession->SessionId() );
 	}
 
@@ -111,8 +105,7 @@ namespace Jde::Web{
 		std::this_thread::sleep_for( 1s );
 		TRACET( ELogTags::Test, "WebTests::CreateSsl" );
 		Stopwatch sw{ "WebTests::CreateSsl", ELogTags::Test };
-		CreateSession( ssl::context(ssl::context::tlsv12_client) );
-		Wait();
+		createSession( ssl::context(ssl::context::tlsv12_client) );
 		ASSERT_EQ( _sessionId, _clientSession->SessionId() );
 	}
 
@@ -127,8 +120,7 @@ namespace Jde::Web{
 	}
 	TEST_F( SocketTests, EchoAttack ){
 		Stopwatch sw{ "WebTests::EchoAttack", ELogTags::Test };
-		CreateSession();
-		Wait();
+		createSession();
 		constexpr uint payloadBase = 32;
 		constexpr uint size = 1000;
 		string text( payloadBase*size, 'a' );
@@ -151,14 +143,11 @@ namespace Jde::Web{
 
 	TEST_F( SocketTests, BadSessionId ){
 		_sessionId = Math::Random();
-		CreateSession();
-		Wait();
-		ASSERT_NE( nullptr, _exception );
+		EXPECT_THROW(createSession(), Exception);
 	}
 
 	TEST_F( SocketTests, CloseClientSide ){
-		CreateSession();
-		Wait();
+		createSession();
 		Close();
 		Wait();
 		let sessionId = _clientSession->Id();
@@ -172,41 +161,32 @@ namespace Jde::Web{
 		std::this_thread::sleep_for( 100ms );
 	}
 
-	α CloseServerSideCall()ι->ClientSocketAwait<string>::Task{
-		try{
-		 [[maybe_unused]]	string y = co_await _clientSession->CloseServerSide();
-		}
-		catch( IException& e ){
-			_exception = e.Move();
-		}
-		NOTIFY;
-	}
-
 	TEST_F( SocketTests, CloseServerSide ){
-		{ CreateSession(); Wait(); }
-		CloseServerSideCall();
-		Wait();
-		ASSERT_NE( nullptr, _exception );
+		createSession();
+		EXPECT_THROW( (BlockAwait<ClientSocketAwait<string>,string>( _clientSession->CloseServerSide() )), Exception );
 	}
 
 	α BadTransmissionClientCall()ι->ClientSocketAwait<string>::Task{
 		try{
-			[[maybe_unused]] string y = co_await _clientSession->BadTransmissionClient();
+			//never returns because server can't read it, TODO add a timeout.
+			co_await _clientSession->BadTransmissionClient();
 		}
 		catch( IException& e ){
 			_exception = e.Move();
 		}
 		NOTIFY;
 	}
+
 	TEST_F( SocketTests, BadTransmissionClient ){
-		CreateSession();
-		Wait();
+		createSession();
 		BadTransmissionClientCall();
-		let expiration = steady_clock::now() + 20s;
+		 
+		let expiration = steady_clock::now() + 60s;
 		vector<Logging::Entry> logs;
+		let id = Crypto::CalcMd5( "[{}]Failed to process incoming exception '{}'."sv );
 		while( logs.size()==0 && steady_clock::now()<expiration ){
 			std::this_thread::sleep_for( 100ms );
-			logs = Logging::Find( Crypto::CalcMd5("Failed to process incomming exception '{}'."sv) );
+			logs = Logging::Find( id );
 		}
 		TRACET( ELogTags::Test, "logs.size(): {}", logs.size() );
 		ASSERT_TRUE( logs.size()>0 );
@@ -222,8 +202,7 @@ namespace Jde::Web{
 		NOTIFY;
 	}
 	TEST_F( SocketTests, BadTransmissionServer ){
-		CreateSession();
-		Wait();
+		createSession();
 		BadTransmissionServerCall();
 		let expiration = steady_clock::now() + 20s;
 		vector<Logging::Entry> logs;

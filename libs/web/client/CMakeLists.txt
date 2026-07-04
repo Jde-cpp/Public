@@ -6,6 +6,7 @@ include( ../../../build/dependencies.cmake )
 
 if( WIN32 )
 	set( ZLIB_ROOT ${CMAKE_INSTALL_PREFIX}/zlib )
+	find_package( OpenSSL REQUIRED )
 endif()
 find_package( ZLIB REQUIRED )
 include_directories( ${ZLIB_INCLUDE_DIRS} )
@@ -13,9 +14,6 @@ include_directories( ${ZLIB_INCLUDE_DIRS} )
 set( targetName Jde.Web.Client )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
-if( WIN32 )
-	target_compile_options( ${targetName} PRIVATE /bigobj )
-endif()
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 file( GLOB sources *.cpp http/*.cpp socket/*.cpp )
 set( includeDir $ENV{JDE_DIR}/include/jde/web/client )
@@ -23,7 +21,7 @@ file( GLOB headers *.h ${includeDir}/*.h ${includeDir}/http/*.h ${includeDir}/so
 file( GLOB protos proto/*.proto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
-target_link_libraries( ${targetName} PUBLIC ZLIB::ZLIB )
+target_link_libraries( ${targetName} PUBLIC ZLIB::ZLIB Boost::json OpenSSL::SSL )
 
 target_precompile_headers(${targetName}
   PUBLIC
@@ -36,8 +34,9 @@ protobuf_generate(
 	PROTOC_OUT_DIR ${PROJECT_SOURCE_DIR}/proto
 	EXPORT_MACRO Jde_Web_Client_EXPORT
 )
+suppressProtoWarnings( "${protos}" ${PROJECT_SOURCE_DIR}/proto )
 set( protoIncludeDir ${includeDir}/proto )
 file( MAKE_DIRECTORY ${protoIncludeDir} )
 
-add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.pb.h" "${protoIncludeDir}/Web.FromServer.pb.h" COMMENT "mklink web/client/proto/Web.FromServer.pb.h" )
-add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/Web.FromServer.pb.h" COMMENT "mklink jde/app/proto/Web.FromServer.pb.h" )
+linkGeneratedHeader( ${targetName} "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.pb.h" "${protoIncludeDir}/Web.FromServer.pb.h" )
+linkGeneratedHeader( ${targetName} "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/Web.FromServer.pb.h" )

@@ -1,6 +1,5 @@
 #pragma once
 #include <boost/unordered/concurrent_flat_map.hpp>
-#include "../usings.h"
 #include "../exports.h"
 #include "ClientSocketStream.h"
 #include "ClientSocketAwait.h"
@@ -48,6 +47,7 @@ namespace Jde::Web::Client{
 		α Host()Ι->str{ return _host; }
 		α Id()ι->uint32{ return _id; }
 	protected:
+		β CloseTasks( optional<beast::error_code> ec )ι->void = 0;
 		α CloseTasks( function<void(std::any&&)> f )ι->void;
 		β OnClose( beast::error_code ec )ι->void;
 		α IsSsl()Ι->bool{ return _stream->IsSsl(); }

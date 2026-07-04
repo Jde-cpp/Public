@@ -126,8 +126,12 @@ namespace Jde::Web::Client{
 		boost::ignore_unused( bytes_transferred );
 		if( ec ){
 			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{:x}]ClientSocket::DoRead", Id()), GetLogLevel(ec) };
-			if( ec!=net::error::operation_aborted && ec!=boost::beast::websocket::error::closed )// websocket::error::closed means the close handshake already completed (Beast auto-replies to a received close frame); calling Close() again would initiate a second async_close that collides with the in-flight one on Beast's write soft_mutex.
+			if( ec==net::error::operation_aborted )// our own in-flight Close() cancelled this read; its OnClose completion will drain _tasks with the real close reason, so don't preempt it with a misleading "operation_aborted" one here.
+				return;
+			if( ec!=boost::beast::websocket::error::closed )// websocket::error::closed means the close handshake already completed (Beast auto-replies to a received close frame); calling Close() again would initiate a second async_close that collides with the in-flight one on Beast's write soft_mutex.
 				_stream->Close( shared_from_this(), false, SRCE_CUR );
+			else
+				CloseTasks( ec );// remote-initiated close: we never call our own Close()/async_close for this case, so OnClose never fires - drain _tasks here instead.
 			return;
 		}
 		OnReadData( _stream->ReadBuffer() );
@@ -142,7 +146,7 @@ namespace Jde::Web::Client{
 			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{}]Client::OnClose: {}", hex(Id()), _host), GetLogLevel(ec) };
 		else
 			DBGT( _connectTag, "[{}]Client::OnClose: {}", hex(Id()), _host );
-		CloseTasks( [](std::any&&){} );
+		CloseTasks( ec );
 		if( _closeHandle )
 			_closeHandle.resume();
 		_closeHandle = nullptr;

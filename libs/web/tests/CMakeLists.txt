@@ -5,7 +5,7 @@ project( Jde.Web.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
 if( WIN32 )
-	add_definitions( -DZLIB_USE_STATIC_LIBS -D )
+	add_definitions( -DZLIB_USE_STATIC_LIBS )
 	set( ZLIB_ROOT ${LIB_ROOT}/zlib )
 	set( OPENSSL_USE_STATIC_LIBS ON )
 	find_package( OpenSSL REQUIRED )
@@ -81,3 +81,4 @@ protobuf_generate(
 	TARGET ${targetName}
 	PROTOC_OUT_DIR ${PROJECT_SOURCE_DIR}
 )
+suppressProtoWarnings( "${protos}" ${PROJECT_SOURCE_DIR}/proto )

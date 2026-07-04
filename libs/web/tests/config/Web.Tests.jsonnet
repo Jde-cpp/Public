@@ -1,7 +1,7 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "SocketTests.CloseClientSide",
+		tests:: "SocketTests.*",
 		certDir: args.logDir+'web-tests/ssl'
 	},
 	logging:{

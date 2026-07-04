@@ -78,14 +78,17 @@ namespace Jde::Web::Server{
 			QL::Subscriptions::StopListen( _listener );
 			_listener = nullptr;
 		}
-		Stream->Close( shared_from_this() );
+		if( Stream )
+			Stream->Close( shared_from_this() );
 	}
 	α IWebsocketSession::OnClose()ι->void{
 		LogRead( "SererSocket::OnClose.", 0 );
 		Internal::RemoveSocketSession( Id() );
 		_listener = nullptr;
-		Stream->Close( shared_from_this() );
-		Stream = nullptr;
+		if( Stream ){
+			Stream->Close( shared_from_this() );
+			Stream = nullptr;
+		}
 	}
 
 	α IWebsocketSession::AddSubscription( string&& query, jobject vars, RequestId requestId, SL sl )ε->flat_set<QL::SubscriptionId>{
@@ -135,7 +138,7 @@ namespace Jde::Web::Server{
 			lg l{ _pendingQueriesMutex };
 			_pendingQueries.emplace( requestId, make_pair(h, timer) );
 		}
-		co_await *timer;
+		auto _ = co_await *timer;
 		lg l{ _pendingQueriesMutex };
 		if( auto it = _pendingQueries.find(requestId); it!=_pendingQueries.end() ){
 			auto h = it->second.first;

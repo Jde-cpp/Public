@@ -15,7 +15,7 @@ function(boost)
 			set( _boostSrc $ENV{REPO_DIR}/boostorg/boost_1_91_0 )
 			add_library( boost_json STATIC ${_boostSrc}/libs/json/src/src.cpp )
 			add_library( Boost::json ALIAS boost_json )
-			target_include_directories( boost_json PUBLIC ${_boostSrc} )
+			target_include_directories( boost_json SYSTEM PUBLIC ${_boostSrc} )
 			target_compile_definitions( boost_json PUBLIC BOOST_JSON_NO_LIB=1 BOOST_ALL_NO_LIB=1 )
 		endif()
 	else()
@@ -23,6 +23,34 @@ function(boost)
 		find_package( Boost ${BOOST_VERSION} REQUIRED COMPONENTS json )
 		include_directories( ${Boost_INCLUDE_DIRS} )
 	endif()
+endfunction()
+
+# protobuf_generate(TARGET...)'s .pb.cc outputs don't exist yet at configure time (they're
+# produced by a build-time custom command), so file(GLOB ${outDir}/*.pb.cc) would find nothing
+# on a fresh checkout. Derive the expected output paths from the known .proto source list
+# instead - set_source_files_properties doesn't require the file to exist yet.
+function( suppressProtoWarnings protos outDir )
+	if( NOT MSVC )
+		set( _protoSources )
+		foreach( _proto ${protos} )
+			get_filename_component( _name ${_proto} NAME_WLE )
+			list( APPEND _protoSources ${outDir}/${_name}.pb.cc )
+		endforeach()
+		set_source_files_properties( ${_protoSources} PROPERTIES COMPILE_OPTIONS "-Wno-nullability-extension;-Wno-invalid-offsetof" )
+	endif()
+endfunction()
+
+# Symlinks src->dst as a proper build dependency (DEPENDS+OUTPUT) so it only
+# reruns when src actually changes, instead of on every build like a
+# TARGET-level PRE_BUILD/POST_BUILD custom command would.
+function( linkGeneratedHeader targetName src dst )
+	add_custom_command(
+		OUTPUT ${dst}
+		COMMAND ${CMAKE_COMMAND} -E create_symlink ${src} ${dst}
+		DEPENDS ${src}
+		COMMENT "mklink ${dst}"
+	)
+	target_sources( ${targetName} PRIVATE ${dst} )
 endfunction()
 
 function(dumpVariables)

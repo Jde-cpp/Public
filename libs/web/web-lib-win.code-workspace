@@ -2,7 +2,7 @@
 	"settings": {
 		"window.title": "Web",
 		"name": "web",
-		"target": "tests/Jde.Web.Tests",
+		"target": "Jde.Web.Tests",
 		"subDir": "libs/${config:name}",
 		"sourceDir": "${env:JDE_BASH}/${config:subDir}",
 		"compiler": "${env:JDE_COMPILER}",
@@ -14,30 +14,33 @@
 		"sourceBash": "source $JDE_DIR/build/buildFunctions-win.sh",
 
 		"buildDir": "${config:buildRoot}/libs/${config:name}",
-		"winBuildDir": "${env:JDE_BUILD_DIR}/msvc/Debug/libs/${config:name}",
-		"exe": "tests/${config:buildTarget}/Jde.Fwk.Tests.exe"
+		"winBuildDir": "${env:JDE_BUILD_DIR}\\${config:compiler}",
+		"exe": "\\bin\\${config:buildTarget}\\${config:target}.exe",
+		"clangd.arguments": [
+			"--compile-commands-dir=C:\\Users\\duffyj\\source\\repos\\jde\\Public\\libs\\web"
+		],
+		"editor.acceptSuggestionOnEnter": "on"
 	},
 	"tasks": {
 		"version": "2.0.0",
 		"tasks": [{
 			"label": "build",
 			"type": "shell",
-			"command": "cd ${config:buildRoot}; tput reset; cmake --build . -j --target=Jde.Web.Tests;",
-			"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
+			"command": "cd ${config:buildRoot}; set -o pipefail; tput reset; cmake --build . -j --target=Jde.Web.Tests | tee Jde.Web.Tests.output;",
+			"problemMatcher": {
+				"owner": "cpp",
+				"fileLocation": ["relative", "${config:buildRoot}"],
+				"pattern": {
+					"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+					"file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+				}
+			},
 			"group": { "kind": "build", "isDefault": true }
 		},
 		{
 			"label": "buildProject",
 			"type": "shell",
 			"command": "tput reset;${config:source};buildProject \"${fileWorkspaceFolder}\" ${config:buildRoot};",
-			"group": { "kind": "build", "isDefault": false }
-		},
-		{
-			"label": "compile",
-			"type": "shell",
-			"dependsOn": ["clearTerminal"],
-			"command": "tput reset;${config:source};compile \"${workspaceFolder}\" \"${fileWorkspaceFolder}\" \"${relativeFile}\" ${config:buildRoot}",
-			"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 			"group": { "kind": "build", "isDefault": false }
 		},
 		{
@@ -58,23 +61,15 @@
 		"version": "0.2.0",
 		"configurations": [{
 				"name": "Debug",
-				"type": "cppdbg",
+				"type": "lldb",
 				"request": "launch",
-				"program": "${config:buildDir}/${config:buildTarget}/libs/${config:name}/${config:exe}",
+				"program": "${config:winBuildDir}\\${config:exe}",
 				"args": [
-					"-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet"
+					"-tests",
+					"-settings=${env:JDE_DIR}/libs/web/tests/config/Web.Tests.jsonnet"
 				],
-				"stopAtEntry": false,
-				"cwd": "${config:buildDir}/${config:buildTarget}/libs/${config:name}",
-				"environment": [
-					{ "name": "JDE_MYSQL_CREDS", "value": "root:dfs12975adsf" }
-				],
-				"externalConsole": false,
-				"MIMode": "gdb",
-				"visualizerFile": "${env:JDE_DIR}/build/gcc.natvis",
-				"showDisplayString": true,
-				"setupCommands": [{"description": "Enable pretty-printing for gdb","text": "-enable-pretty-printing",	"ignoreFailures": true }],
-				"sourceFileMap": { "/build/glibc-eX1tMB/glibc-2.27":"${env:REPO_DIR}/glibc-2.27" },
+				"cwd": "${config:winBuildDir}\\bin",
+				"console":"integratedTerminal",
 				"preLaunchTask": "build"
 			}]
 		},

@@ -81,11 +81,7 @@
 					"-settings=${env:JDE_DIR}/libs/web/tests/config/Web.Tests.jsonnet"
 				],
 				"cwd": "${config:testBuildDir}",
-				"preLaunchTask": "build",
-				"initCommands": [
-					"command script import ~/.lldb/boost_json_formatter.py",
-					"command script import ~/.lldb/jde_formatter.py"
-				]
+				"preLaunchTask": "build"
 			}],
 		}
 }

@@ -38,22 +38,24 @@ function buildRelativePath() {
 }
 function projectName() {
 	#echo "projectName called with $1";
-	relativeFile=$1; #/libs/access/tests/main.cpp
-	if [[ $relativeFile == *"opc/src"* ]]; then
+	absoluteFile=$1; #/libs/access/tests/main.cpp
+	if [[ $absoluteFile == *"opc/src"* ]]; then
 		project="Jde.Opc";
-	elif [[ $relativeFile == *"fwk/src"* ]]; then
+	elif [[ $absoluteFile == *"fwk/src"* ]]; then
 		project="Jde";
-	elif [[ $relativeFile == *"fwk/tests"* ]]; then
+	elif [[ $absoluteFile == *"fwk/tests"* ]]; then
 		project="Jde.Framework.Tests";
-	elif [[ $relativeFile == *"web/tests" ]]; then
+	elif [[ $absoluteFile == *"web/client"* ]]; then
+		project="Jde.Web.Client";
+	elif [[ $absoluteFile == *"web/tests"* ]]; then
 		project="Jde.Web.Tests";
-	elif [[ $relativeFile == *"access/src"* ]]; then
+	elif [[ $absoluteFile == *"access/src"* ]]; then
 		project="Jde.Access";
-	elif [[ $relativeFile == *"access/tests"* ]]; then
+	elif [[ $absoluteFile == *"access/tests"* ]]; then
 		project="Jde.Access.Tests";
-	elif [[ $relativeFile == *"AppServer/src"* ]]; then
+	elif [[ $absoluteFile == *"AppServer/src"* ]]; then
 		project="Jde.App.ServerLib";
-	elif [[ $relativeFile == *"db/src"* ]]; then
+	elif [[ $absoluteFile == *"db/src"* ]]; then
 		project="Jde.DB";
 	fi;
 	echo $project.vcxproj;
@@ -102,4 +104,17 @@ function compile() {
 		echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile
 		msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile //v:m
 	fi
+}
+function reconfig() {
+	buildRoot=$1;
+	debugPreset=$2;
+	sourceDir=$3;
+	mkdir -p $buildRoot;
+	cd $buildRoot;
+	rm -f CMakeCache.txt;
+	tput reset;
+	echo `pwd` > cmake.output;
+	echo "cmake $JDE_DIR -Wno-dev --preset $debugPreset 2>&1" | tee -a cmake.output;
+	cmake "$JDE_DIR" -Wno-dev --preset "$debugPreset" 2>&1 | tee -a cmake.output;
+	mv $buildRoot/compile_commands.json $sourceDir/compile_commands.json;
 }
