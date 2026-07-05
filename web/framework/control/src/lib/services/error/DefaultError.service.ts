@@ -4,14 +4,14 @@ import {IErrorService} from './IErrorService'
 import { HttpErrorResponse } from '@angular/common/http';
 import { Log } from '../IGraphQL'
 
-@Injectable()
+@Injectable({ providedIn: 'root' })
 export class DefaultErrorService implements IErrorService
 {
 	constructor( private snackbar:MatSnackBar )
 	{}
 
 	private showUser( message:string, panelClass:string ){
-		this.snackbar.open( message, null, {panelClass: [panelClass], duration: 2000} );
+		this.snackbar.open( message, "", {panelClass: [panelClass], duration: 2000} );
 	}
 	private showUserError( message:string, log:Log ){
 		this.showUser( message ?? "Unknown error", 'red-snackbar' );
@@ -32,7 +32,7 @@ export class DefaultErrorService implements IErrorService
 		//this.showUserError( error && typeof error=='object' ? `${message} - ${error["message"]}` : message, log );
 	}
 
-	exception( e, log:Log ):void{
+	exception( e:any, log:Log ):void{
 		if( e instanceof HttpErrorResponse ){
 			if( e.error instanceof ProgressEvent )
 				this.error( `timeout`, log );  //this.error( `(${e.status})${e.message}`, log );

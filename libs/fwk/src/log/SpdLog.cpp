@@ -1,4 +1,5 @@
 #include <jde/fwk/log/SpdLog.h>
+#include <iostream>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #ifdef _MSC_VER
@@ -86,7 +87,10 @@ namespace Jde::Logging{
 
 	SpdLog::SpdLog( const jobject& settings )ι:
 		ILogger{ settings },
-		_logger{ move(logger(settings)) }{
-		INFOT( ELogTags::Settings, "{} minLevel='{}' flushOn='{}' {}", Name(), Jde::ToString((ELogLevel)_logger.level()), Jde::ToString((ELogLevel)_logger.flush_level()), ToString() );
+		_logger{ logger(settings) }{
+		INFOT( ELogTags::Settings, "{} minLevel='{}' default='{}' flushOn='{}' {}", Name(),
+			Jde::ToString((ELogLevel)_logger.level()),
+			Jde::ToString(DefaultLevel()),
+			Jde::ToString((ELogLevel)_logger.flush_level()), ToString() );
 	}
 }

@@ -1,4 +1,10 @@
 #include <jde/web/client/socket/IClientSocketSession.h>
+#include "boost/asio/error.hpp"
+#include "boost/beast/core/error.hpp"
+#include "boost/beast/websocket/error.hpp"
+#include "jde/fwk.h"
+#include "jde/fwk/co/Await.h"
+#include "jde/fwk/log/logTags.h"
 #include <jde/app/client/clientSubscriptions.h>
 
 namespace Jde::Web{
@@ -14,7 +20,7 @@ namespace Jde::Web{
 		return *_maxLogLength;
 	}
 }
-#define CHECK_EC(tag) if( ec ){ \
+#define CHECK_EC( tag ) if( ec ){ \
 	CodeException e{ static_cast<std::error_code>(ec), tag, GetLogLevel(ec) }; \
 	if( _connectHandle ){ \
 		_connectHandle.promise().SetExp( move(e) ); \
@@ -24,9 +30,18 @@ namespace Jde::Web{
 }
 namespace Jde::Web::Client{
 	α GetLogLevel( beast::error_code ec )->ELogLevel{
-		return ec == net::error::operation_aborted
-			? ELogLevel::Trace
-			: ELogLevel::Error;
+		if( ec==net::error::operation_aborted || ec==boost::beast::websocket::error::closed )
+			return ELogLevel::Debug;
+		if( ec==boost::asio::error::eof || ec==boost::asio::error::connection_reset ) // server down.
+			return ELogLevel::Information;
+		return ELogLevel::Error;
+	}
+
+	α IClientSocketSession::Shutdown( bool terminate, SL sl )ι->void{
+		if( _ioContext ){
+			TRACET( _connectTag, "[{}]Client::Shutdown: {}", hex(Id()), Host() );
+			BlockVoidAwait( Close(terminate, sl) );
+		}
 	}
 
 	α IClientSocketSession::AddTask( RequestId requestId, std::any hCoroutine )ι->void{
@@ -35,7 +50,7 @@ namespace Jde::Web::Client{
 
 	α IClientSocketSession::PopTask( RequestId requestId )ι->std::any{
 		std::any h;
-		_tasks.erase_if( requestId, [&h](auto&& kv){ h=kv.second; return true;} );//Subscriptions aren't in tasks.
+		_tasks.erase_if( requestId, [&h](auto&& kv){h=kv.second; return true;} );//Subscriptions aren't in tasks.
 		return h;
 	}
 	α IClientSocketSession::CloseTasks( function<void(std::any&&)> f )ι->void{
@@ -54,6 +69,7 @@ namespace Jde::Web::Client{
 
 	α CreateClientSocketSessionAwait::Suspend()ι->void{
 		_session->Run( _host, _port, _h );
+		_session = nullptr;
 	}
 
 	atomic<RequestId> _requestId{ 1 };
@@ -65,13 +81,13 @@ namespace Jde::Web::Client{
 		_ioContext{ ioc }
 	{}
 
-	α IClientSocketSession::Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void{// Start the asynchronous operation
+	α IClientSocketSession::Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void{ // Start the asynchronous operation
 		_connectHandle = h;
 		_host = host;
 		net::post( *_ioContext, [=, self=shared_from_this()]{
 			TRACET( _connectPedanticTag, "[{}:{}]resolve socket.", self->_host, port );
 			beast::error_code ec;
-			auto results = self->_resolver.resolve( self->_host, std::to_string(port), ec );//async_resolve starts another thread.
+			auto results = self->_resolver.resolve( self->_host, std::to_string(port), ec );//TODO use async_resolve.  async_resolve starts another thread.
 			//_resolver.async_resolve( _host, std::to_string(port_), beast::bind_front_handler(&IClientSocketSession::OnResolve, shared_from_this()) );// Look up the domain name
 			self->OnResolve( ec, results );
 		});
@@ -110,8 +126,12 @@ namespace Jde::Web::Client{
 		boost::ignore_unused( bytes_transferred );
 		if( ec ){
 			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{:x}]ClientSocket::DoRead", Id()), GetLogLevel(ec) };
-			if( ec!=net::error::operation_aborted )
-				_stream->Close( shared_from_this() );
+			if( ec==net::error::operation_aborted )// our own in-flight Close() cancelled this read; its OnClose completion will drain _tasks with the real close reason, so don't preempt it with a misleading "operation_aborted" one here.
+				return;
+			if( ec!=boost::beast::websocket::error::closed )// websocket::error::closed means the close handshake already completed (Beast auto-replies to a received close frame); calling Close() again would initiate a second async_close that collides with the in-flight one on Beast's write soft_mutex.
+				_stream->Close( shared_from_this(), false, SRCE_CUR );
+			else
+				CloseTasks( ec );// remote-initiated close: we never call our own Close()/async_close for this case, so OnClose never fires - drain _tasks here instead.
 			return;
 		}
 		OnReadData( _stream->ReadBuffer() );
@@ -119,16 +139,18 @@ namespace Jde::Web::Client{
 	}
 	α CloseClientSocketSessionAwait::Suspend()ι->void{
 		_session->_closeHandle = _h;
-		_session->_stream->Close( _session );
+		_session->_stream->Close( _session, _terminate );
 	}
 	α IClientSocketSession::OnClose( beast::error_code ec )ι->void{
 		if( ec )
-			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{:x}]Client::OnClose", Id()), GetLogLevel(ec) };
+			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{}]Client::OnClose: {}", hex(Id()), _host), GetLogLevel(ec) };
 		else
-			TRACET( _writeTag, "[{:x}]Client::OnClose", Id() );
-		CloseTasks( [](std::any&&){} );
+			DBGT( _connectTag, "[{}]Client::OnClose: {}", hex(Id()), _host );
+		CloseTasks( ec );
 		if( _closeHandle )
 			_closeHandle.resume();
 		_closeHandle = nullptr;
+		_stream = nullptr;
+		_ioContext = nullptr;
 	}
 }

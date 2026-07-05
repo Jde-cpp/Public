@@ -1,6 +1,6 @@
 import { inject, Inject, Injectable } from '@angular/core';
 import { ActivatedRoute, Routes, UrlSegment } from "@angular/router";
-import { DocItem, IRouteService } from "jde-spa";
+import { RouteItem, IRouteService } from "jde-spa";
 import { RouteStore, subscribe } from "jde-framework";
 import { GatewayService } from '../gateway.service';
 
@@ -11,11 +11,11 @@ export class GatewayRouteService implements IRouteService{
 		throw new Error("Not implemented");
 	}
 
-	async docItems( urlSegments:UrlSegment[] ):Promise<DocItem[]>{
+	async docItems( urlSegments:UrlSegment[] ):Promise<RouteItem[]>{
 		let y = [];
 		let gateways = await this._gatewayService.gateways();
 		for( const gateway of gateways )
-			y.push( new DocItem({path: gateway.target, title: gateway.name}) );
+			y.push( new RouteItem({path: gateway.target, title: gateway.name}) );
 
 		this.routeStore.setChildren( urlSegments, y );
 		return y;
@@ -32,14 +32,16 @@ export class GatewayCnnctnRouteService implements IRouteService{
 		throw new Error("Not implemented");
 	}
 
-	async docItems( urlSegments:UrlSegment[] ):Promise<DocItem[]>{
+	async docItems( urlSegments:UrlSegment[] ):Promise<RouteItem[]>{
 		let y = [];
 		let route = this._route.snapshot.children[0];
-		let gatewayTarget = route.paramMap.get("gateway");
+		let gatewayTarget = route.paramMap.get("gateway")!;
 		let gateway = await this._gatewayService.gateway( gatewayTarget );
+		if( !gateway )
+			throw new Error( "Gateway not found: "+gatewayTarget );
 		let connections = await gateway.queryArray<any>( `serverConnections{ name target }`,  );
 		for( const c of connections )
-			y.push( new DocItem({path: c.target, title: c.name}) );
+			y.push( new RouteItem({path: c.target, title: c.name}) );
 
 		this.routeStore.setChildren( route.url, y );
 		return y;

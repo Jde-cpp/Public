@@ -1,4 +1,5 @@
 #include <jde/app/client/RemoteLog.h>
+#include "jde/fwk/process/process.h"
 #include <jde/fwk/process/execution.h>
 #include <jde/app/client/IAppClient.h>
 
@@ -9,21 +10,24 @@ namespace Jde::App::Client{
 		ILogger{ settings },
 		_client{ move(client) },
 		_delay{ Json::FindDuration(settings, "delay", ELogLevel::Error).value_or(1min) }{
+		Process::AddShutdown( this );
 	}
 	RemoteLog::~RemoteLog(){
 		ASSERT( !_timer );
 		if( _timer ){
 			ResetTimer();
 			while( _timer )
-				std::this_thread::sleep_for(1ms);
+				std::this_thread::sleep_for( 1ms );
 		}
 	}
 	α RemoteLog::Start( sp<IAppClient> client )ι->void{
-		_client = move(client);
+		_client = move( client );
 		Executor();//locks up if starts in StartTimer.
 		Execution::Run();
 	}
-	α RemoteLog::Shutdown( bool terminate )ι->void{
+	α RemoteLog::Shutdown( bool terminate, SL )ι->void{
+		if( !_client )
+			return;
 		_delay = Duration::min();
 		ResetTimer();
 		if( !terminate )
@@ -31,46 +35,52 @@ namespace Jde::App::Client{
 		_client = nullptr;
 	}
 	α RemoteLog::Init( sp<IAppClient> client )ι->void{
-		if( auto log = Logging::Add<RemoteLog>( "remote", move(client) ); log )
+		if( auto log = Logging::Add<RemoteLog>("remote", client); log )
 			log->Start( move(client) );
 	}
 
 	α RemoteLog::Write( const Logging::Entry& m )ι->void{
-		if( !empty(m.Tags & _tags) )//recursion guard
+		if( !_client || !empty(m.Tags & _tags) )//recursion guard
 			return;
 		_mutex.lock();
 		_entries.push_back( m );
 		if( !_timer )
-			StartTimer( _mutex );
+			StartTimer();
+		else
+			_mutex.unlock();
 	}
-	α RemoteLog::StartTimer( std::mutex& mtx )ι->TimerAwait::Task{
+	α RemoteLog::StartTimer()ι->TimerAwait::Task{
 		if( _delay<=Duration::zero() )
 			co_return;
-		_timer = mu<DurationTimer>( _delay, _tags, SRCE_CUR );
-		mtx.unlock();
+		_timer = mu<DurationTimer>( _delay );
+		_mutex.unlock();
 		let timedOut = co_await *_timer;
 		{
-			lg _{ mtx };
+			lg _{ _mutex };
 			_timer.reset();
 		}
 		if( timedOut )
 			Send();
 		else{
-			lg _{ _mutex };
+			_mutex.lock();
 			if( _entries.size() )
-				StartTimer( _mutex );
+				StartTimer();
+			else
+				_mutex.unlock();
 		}
 	}
 
 	α RemoteLog::ResetTimer()ι->void{
-		lg _{_mutex};
+		lg _{ _mutex };
 		if( _timer )
 			_timer->Cancel();
 	}
 	α RemoteLog::Send()ι->void{
-		lg _{_mutex};
+		if( _entries.empty() || !_client->Connected() )
+			return;
+		lg _{ _mutex };
 		ASSERT( _client );
 		if( _client )
-			_client->Write( move(_entries) );
+			Post( [entries=move(_entries),client=_client]() mutable{client->Write(move(entries));} );
 	}
 }

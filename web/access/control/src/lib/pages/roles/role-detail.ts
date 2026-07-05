@@ -6,9 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle, DocItem } from 'jde-spa';
-
-import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, LocalProfileStore, Properties, QLSelector, TargetRow, toIdArray} from 'jde-framework';
+import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
+import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, Properties, QLSelector, TableSettings, TargetRow, toIdArray} from 'jde-framework';
 import { Role, RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
 import { Permission } from '../../model/Permission';
@@ -30,7 +29,7 @@ export class RoleDetail implements OnDestroy, OnInit{
 				return;
 			if( !this.properties().canSave )
 				this.isChanged.set( false );
-			else if( !this.properties().equals(this.role.properties) )
+			else if( !(this.properties() as Role).equals(this.role.properties!) )
 				this.isChanged.set( true );
 		});
 		effect(() => {
@@ -52,7 +51,7 @@ export class RoleDetail implements OnDestroy, OnInit{
 
 		route.data.subscribe( async (data)=>{
 			if( this.tabIndex==null )
-				this.tabIndex = LocalProfileStore.tabIndex( 'roleDetail' );
+				this.tabIndex = ProfileStore.tabIndex( 'roleDetail' );
 
 			this.pageData = data["pageData"];
 			this.role = new Role( this.pageData.row );
@@ -66,7 +65,7 @@ export class RoleDetail implements OnDestroy, OnInit{
 		});
 	}
 	ngOnDestroy(){
-		LocalProfileStore.setTabIndex( 'roleDetail', this.tabIndex );
+		ProfileStore.setTabIndex( 'roleDetail', this.tabIndex );
 	}
 	ngOnInit(){
 		this.sideNav.set( this.pageData.routing );
@@ -96,20 +95,23 @@ export class RoleDetail implements OnDestroy, OnInit{
 	public copy( existing:Role ):Role{
 		return new Role( existing );
 	}
-	role:Role;
-	pageData:DetailResolverData<Role>;
+	role!:Role;
+	pageData!:DetailResolverData<Role>;
 	ctor:new (item: any) => any = Role;
 	isChanged = signal<boolean>( false );
-	permissions = signal<Permission[]>( null );
-	properties = signal<Role>( null );
-	childRoles = signal<SelectionModel<RolePK>>( null );
+	permissions = signal<Permission[]>( null as any );
+	properties = signal<Partial<Role>>( null as any );
+	childRoles = signal<SelectionModel<RolePK>>( null as any );
 
-	groups = signal<SelectionModel<RolePK>>( null );
-	sideNav = model.required<DocItem>();
-	tabIndex:number;
-	users = signal<SelectionModel<RolePK>>( null );
+	groups = signal<SelectionModel<RolePK>>( null as any );
+	sideNav = model.required<RouteItem>();
+	tabIndex:number|undefined;
+	users = signal<SelectionModel<RolePK>>( null as any );
 
 	get schema(){ return this.pageData.schema; }
 
 	ql:IGraphQL = inject( AccessService );
+}
+export const roleTableSettings:TableSettings = {
+	excludedColumns:["permissions"]
 }

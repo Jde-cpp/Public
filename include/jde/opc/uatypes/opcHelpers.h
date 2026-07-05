@@ -16,11 +16,10 @@ namespace Jde::Opc{
 	struct NodeId;
 	α FindDataType( const NodeId& nodeId )ι->UA_DataType*;
 	Ŧ Zero( T& x )ι->void{ ::memset( &x, 0, sizeof(T) ); }
-	constexpr α operator "" _uv( const char* x, uint len )ι->UA_String{ return UA_String{ len, static_cast<UA_Byte*>((void*)x) }; } //(UA_Byte*) gcc error
+	constexpr α operator ""_uv( const char* x, uint len )ι->UA_String{ return UA_String{ len, static_cast<UA_Byte*>((void*)x) }; } //(UA_Byte*) gcc error
 	Ξ ToJson( UA_UInt64 v )ι->jobject{ return jobject{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",true} }; };
 	Ξ ToJson( UA_Int64 v )ι->jobject{ return jobject{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",false} }; };
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-	Ξ ToJson( UA_Guid v )ι->jstring{ uuid id; memcpy(&id.data, &v, id.size() ); return jstring{ boost::uuids::to_string(id) }; }
+	Ξ ToJson( UA_Guid v )ι->jstring{ uuid id; memcpy(&id.data, &v, id.size() ); return jstring{ Jde::ToString(id) }; }
 	Ξ ByteStringToJson( const UA_ByteString& v )ι->jstring{ string hex; hex.reserve( v.length*2 ); boost::algorithm::hex_lower( ToSV(v), std::back_inserter(hex) ); return jstring{hex}; }//TODO combine with Str::
 	Ξ ToGuid( string x, UA_Guid& ua )ι->void{ std::erase( x, '-' ); let uuid{boost::lexical_cast<boost::uuids::uuid>(x)}; ::memcpy( &ua, &uuid, sizeof(UA_Guid) ); }
 	Ξ ToGuid( UA_Guid ua )ι->uuid{ uuid uuid; ::memcpy( &uuid, &ua, sizeof(UA_Guid) ); return uuid; }

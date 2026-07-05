@@ -109,6 +109,10 @@ namespace Jde{
 	struct Γ StringAwait : TAwait<string>{
 		StringAwait( SRCE )ι:TAwait<string>{ sl }{}
 	};
+	
+	struct Γ UInt32Await : TAwait<uint32>{
+		UInt32Await( SRCE )ι:TAwait<uint32>{ sl }{}
+	};
 
 
 	Ξ BlockVoidAwaitExecute( VoidAwait&& a, up<IException>& e, atomic_flag& done )ι->VoidAwait::Task{

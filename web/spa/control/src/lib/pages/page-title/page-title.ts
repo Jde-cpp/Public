@@ -1,4 +1,4 @@
-import {Injectable} from '@angular/core';
+import {Injectable, signal} from '@angular/core';
 import {Title} from '@angular/platform-browser';
 
 /**
@@ -6,15 +6,15 @@ import {Title} from '@angular/platform-browser';
  */
 @Injectable({providedIn: 'root'})
 export class ComponentPageTitle {
-  _title = '';
+  private _title = signal<string>('');
   //_originalTitle = 'Angular Material UI component library';
 
   get title(): string {
-    return this._title;
+    return this._title();
   }
 
   set title(title: string) {
-    this._title = title;
+    this._title.set(title);
     if (title !== '') {
       //title = `${title} | Angular Material`;
       title = title; //
@@ -25,7 +25,7 @@ export class ComponentPageTitle {
   }
 	set detail( x:string ){//
 		//const main = this.title?.includes("|") ? this.title.substring( this.title.lastIndexOf('|') ) : this.title;
-		this.title = `${x}`;
+		this._title.set( x );
  	}
   constructor(private bodyTitle: Title) {}
 }

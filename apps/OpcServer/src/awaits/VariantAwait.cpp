@@ -14,7 +14,8 @@ namespace Jde::Opc::Server {
 				{table->GetSK0(), move(_pks)},
 				"variant_id, idx, value"
 			}.Move() );
-			VariantMembers values; values.reserve( rows.size() );
+
+			VariantMembers values;
 			for( auto&& row : rows )
 				values.try_emplace( values.end(), row.GetUInt32(0) )->second.try_emplace( row.GetUInt32(1), row.GetString(2) );
 			Resume( move(values) );
@@ -44,7 +45,7 @@ namespace Jde::Opc::Server {
 				"variant_id"
 			}.Move() );
 
-			flat_map<VariantPK, Variant> variants; variants.reserve( variantRows.size() );
+			auto variants = ReserveMap<VariantPK, Variant>( variantRows.size() );
 			for( auto&& row : variantRows ){
 				let variantPK = row.GetUInt32(0);
 				let& dt = DT( row.GetUInt(1) );

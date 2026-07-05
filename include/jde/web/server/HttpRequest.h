@@ -1,4 +1,6 @@
 #pragma once
+#ifndef HTTP_REQUEST
+#define HTTP_REQUEST
 #include <jde/db/usings.h>
 #include <jde/fwk/io/json.h>
 #include "Sessions.h"
@@ -34,7 +36,7 @@ namespace Jde::Web::Server{
 		α Version()Ι->uint{ return _request.version(); }//TODO get rid of
 
 		ψ BadRequest( SL sl, fmt::format_string<Args...> format, Args&&... args )Ι->http::response<http::string_body>;
-		α LogRead( str text="", SRCE )Ι->void;
+		α LogRead( str text="", ELogLevel level=ELogLevel::Debug, SRCE )Ι->void;
 		template<class T=http::string_body>
 		α Response( http::status status=http::status::ok )Ι->http::response<T>;
 		α Response( jvalue j, SRCE )Ι->http::response<http::string_body>;
@@ -66,14 +68,14 @@ namespace Jde::Web::Server{
 			res.set( http::field::access_control_expose_headers, "Authorization" );
 			res.set( http::field::authorization, Jde::format("{:x}", SessionInfo->SessionId) );
 		}
-		for( auto& [key,value] : ResponseHeaders )
+		for( auto&& [key,value] : ResponseHeaders )
 			res.set( key, value );
 		res.keep_alive( _request.keep_alive() );
 		return res;
 	}
 
 	template<class... Args>
-	α HttpRequest::BadRequest( SL sl, fmt::format_string<Args...> format, Args&&... args )Ι->http::response<http::string_body>{
+	α HttpRequest::BadRequest( SL, fmt::format_string<Args...> format, Args&&... args )Ι->http::response<http::string_body>{
 		auto res = Response<http::string_body>( http::status::bad_request );
 		res.body() = Jde::format( format, args... );
 		res.prepare_payload();
@@ -81,3 +83,4 @@ namespace Jde::Web::Server{
 		return res;
 	}
 }
+#endif

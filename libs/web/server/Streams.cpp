@@ -84,7 +84,7 @@ namespace Jde::Web::Server{
 		auto lock = co_await _writeLock.Lock();
 		std::visit(
 			[&]( auto&& ws ){
-				ws.async_write( buffer, [this, &ws, pKeepAlive=shared_from_this(), buffer, l=move(lock), out=move(outputPtr) ]( beast::error_code ec, uint bytes_transferred )mutable{
+				ws.async_write( buffer, [&ws, pKeepAlive=shared_from_this(), buffer, l=move(lock), out=move(outputPtr) ]( beast::error_code ec, uint bytes_transferred )mutable{
 					l.unlock();
 					let tags = ELogTags::SocketClientWrite | ELogTags::ExternalLogger;
 					if( ec || out->size()!=bytes_transferred ){
@@ -97,6 +97,7 @@ namespace Jde::Web::Server{
 						}
 						CodeException{ ec, ELogTags::SocketClientRead };
 					}
+					(void)buffer;
 				});
 			}, _ws );
 	}

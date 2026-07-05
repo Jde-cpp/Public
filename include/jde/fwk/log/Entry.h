@@ -17,9 +17,16 @@ namespace Jde{
 namespace Jde::Logging{
 	struct Γ Entry final{
 		template<class... Args> Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι;
+		template<class... Args> Entry( SL sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, string&& m, ARGS... args )ι;
+#ifdef __cpp_lib_stacktrace
 		template<class... Args> Entry( const std::stacktrace_entry& sl, ELogLevel l, ELogTags tags, FormatString&& m, ARGS... args )ι;
-		Entry( SL sl, ELogLevel l, ELogTags tags, string&& m )ι;
-		Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, vector<string> args )ι;
+		template<class... Args> Entry( const std::stacktrace_entry& sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, FormatString&& m, ARGS... args )ι;
+#else
+		template<class... Args> Entry( const boost::stacktrace::frame& sl, ELogLevel l, ELogTags tags, FormatString&& m, ARGS... args )ι;
+		template<class... Args> Entry( const boost::stacktrace::frame& sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, FormatString&& m, ARGS... args )ι;
+#endif
+		Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, vector<string> args={} )ι;
+		Entry( SL sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, string&& m, vector<string> args )ι;
 		Entry( ELogLevel l, ELogTags tags, uint32_t line, TimePoint time, Jde::UserPK userId, uuid messageId, uuid fileId, uuid functionId, vector<string>&& args )ι;
 		Entry( ELogLevel l, ELogTags tags, uint32_t line, TimePoint time, Jde::UserPK userId, string&& text, string&& file, string&& function, vector<string>&& args )ι;
 
@@ -54,22 +61,54 @@ namespace Jde::Logging{
 
 	template<class... Args>
 	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι:
+		Entry{ sl, l, tags, Jde::UserPK{}, FWD(m), FWD(args)... }
+	{}
+
+	template<class... Args>
+	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, string&& m, ARGS... args )ι:
 		Entry{ sl, l, tags, move(m), vector<string>{} }{
 		ParamPack::Append( Arguments, args... );
 	}
 
-		template<class... Args>
-	Entry::Entry( const std::stacktrace_entry& e, ELogLevel l, ELogTags tags, FormatString&& m, ARGS... args )ι:
+#ifdef __cpp_lib_stacktrace
+	template<class... Args>
+	Entry::Entry( const std::stacktrace_entry& sl, ELogLevel l, ELogTags tags, FormatString&& m, ARGS... args )ι:
+		Entry{ sl, l, tags, {}, FWD(m), FWD(args)... }
+	{}
+
+	template<class... Args>
+	Entry::Entry( const std::stacktrace_entry& sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, FormatString&& m, ARGS... args )ι:
 		Text{ m.get().data(), m.get().size() },
 		Level{ l },
 		Tags{ tags },
-		Line{ e.source_line() },
+		Line{ sl.source_line() },
 		Time{ Clock::now() },
+		UserPK{ userPK },
 		_message{ fmt::vformat(m, fmt::make_format_args(FWD(args)...)) },
-		_fileName{ e.source_file() },
-		_functionName{ e.description() }{
+		_fileName{ sl.source_file() },
+		_functionName{ sl.description() }{
 		ParamPack::Append( Arguments, FWD(args)... );
 	}
+#else
+	template<class... Args>
+	Entry::Entry( const boost::stacktrace::frame& sl, ELogLevel l, ELogTags tags, FormatString&& m, ARGS... args )ι:
+		Entry{ sl, l, tags, {}, FWD(m), FWD(args)... }
+	{}
+	template<class... Args>
+	Entry::Entry( const boost::stacktrace::frame& sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, FormatString&& m, ARGS... args )ι:
+		Text{ m.get().data(), m.get().size() },
+		Level{ l },
+		Tags{ tags },
+		Line{ (uint32_t)sl.source_line() },
+		Time{ Clock::now() },
+		UserPK{ userPK },
+		_fileName{ sl.source_file() },
+		_functionName{ sl.name() },
+		_message{ fmt::vformat(m, fmt::make_format_args(FWD(args)...)) }{
+		ParamPack::Append( Arguments, FWD(args)... );
+	}
+#endif
+
 }
 #undef ARGS
 #undef FormatString

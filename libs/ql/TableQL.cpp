@@ -11,8 +11,6 @@
 
 #define let const auto
 namespace Jde::QL{
-	using DB::EOperator;
-
 	α dbTable( string jName, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε->sp<DB::View>{
 		let dbName = DB::Names::ToPlural( DB::Names::FromJson(move(jName)) );
 		return system ? DB::AppSchema::FindView( schemas, dbName ) : DB::AppSchema::GetViewPtr( schemas, dbName, sl );
@@ -24,43 +22,6 @@ namespace Jde::QL{
 		_dbTable{ dbTable(jName, schemas, system, sl) }
 	{}
 
-	α addFilters( const jvalue& value, const sp<jobject>& variables )ε->vector<FilterValue>{
-			vector<FilterValue> columnFilters;
-			if( value.is_string() || value.is_number() || value.is_null() ) //( id: 42 ) or ( name: "charlie" ) or ( deleted: null )
-				columnFilters.emplace_back( DB::EOperator::Equal, value );
-			else if( value.is_object() ){ //filter: {age: {gt: 18, lt: 60}}
-				for( let& [op,opValue] : value.as_object() ){
-					if( opValue.is_string() && opValue.get_string().starts_with("\b$") ){
-						if( auto p = variables->if_contains(sv{opValue.get_string()}.substr(2)); p ){
-							columnFilters.emplace_back( ToQLOperator(op), *p );
-							continue;
-						}
-					}
-					columnFilters.emplace_back( ToQLOperator(op), opValue );
-				}
-			}
-			else if( value.is_array() ) //( id: [1,2,3] ) or ( name: ["charlie","bob"] )
-				columnFilters.emplace_back( EOperator::In, value );
-			else
-				THROW( "Invalid filter value type '{}'.", Json::Kind(value.kind()) );
-			return columnFilters;
-	}
-	α TableQL::Filter()Ε->const QL::Filter&{
-		if( _filter )
-			return *_filter;
-		//let filterArgs = Json::FindObject( Args, "filter" );
-		//let& j = filterArgs ? Args : *filterArgs;
-		_filter = QL::Filter{};
-		for( let& [jsonColumnName,value] : Args ){
-			jvalue* variable = nullptr;
-			if( value.is_string() && value.get_string().starts_with("\b$") ){
-				if( auto p = Variables->if_contains(sv{value.get_string()}.substr(2)); p )
-					variable = p;
-			}
-			_filter->ColumnFilters.emplace( jsonColumnName, addFilters(variable ? *variable : value, Variables) );
-		}
-		return *_filter;
-	}
 	α TableQL::AddColumn( sv jsonName )ι->bool{
 		auto existing = FindColumn( jsonName );
 		if( existing )
@@ -150,8 +111,26 @@ namespace Jde::QL{
 		}
 		return y;
 	}
+
+	α TableQL::OrderBy()Ι->string{
+		auto json = OrderByJson();
+		if( json.size()==0 )
+			return {};
+		string sql;
+		for( let& [jsonName, ascending] : json ){
+			let column = _dbTable->GetColumnPtr( DB::Names::FromJson(jsonName) );
+			if( sql.size()>0 )
+				sql += ", ";
+			sql += column->FQName();
+			if( !ascending )
+				sql += " desc";
+		}
+		return sql;
+	}
+
 	α ValueToJson( DB::Value&& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue;
 	α TableQL::SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void{
+		ASSERT(dbColumn);
 		for( let& c : Columns ){
 			if( c.DBColumn==dbColumn ){
 				o[dbColumn->IsPK() && !dbColumn->IsEnum() ? "id" : c.JsonName] = ValueToJson( move(value), &c );
@@ -182,12 +161,7 @@ namespace Jde::QL{
 	α TableQL::ToString()Ι->string{
 		string y = JsonName;
 		y.reserve( 64*(1+Tables.size()) );
-		if( Args.size() ){
-			auto args = serialize( Args );
-			args.front() = '(';
-			args.back() = ')';
-			y += move( args );
-		}
+		y += ArgString();
 		y += '{';
 		if( Columns.size() ){
 			vector<string> cols;

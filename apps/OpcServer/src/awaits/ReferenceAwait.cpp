@@ -14,7 +14,7 @@ namespace Jde::Opc::Server {
 				ServerConfigAwait::ServerWhereClause( *nodeTable, "n" )
 			};
 			auto rows = co_await DS().SelectAsync( stmt.Move() );
-			flat_map<NodePK,Reference> references; references.reserve( rows.size() );
+			auto references = ReserveMap<NodePK,Reference>( rows.size() );
 			for( auto&& row : rows )
 				references.try_emplace( row.GetUInt32(0), move(row) );
 			Resume( move(references) );

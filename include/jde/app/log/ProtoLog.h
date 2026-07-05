@@ -18,17 +18,17 @@ namespace Jde::App{
 		Ω Init()ι->void;
 
 		α Archive()ι->VoidAwait::Task;
-		α Shutdown( bool terminate )ι->void override;
+		α Shutdown( bool terminate, SL sl )ι->void override;
 		α DailyFile()ι->fs::path{ return _root/"log.binpb"; }
 		α DailyFileStart()ι->TimePoint{ return _dailyFileStart; }//max if not started
 		Ω Deserialize( sv bytes )ε->vector<App::Log::Proto::FileEntry>;
 		α Entries()Ε->vector<App::Log::Proto::FileEntry>{ lg _{_mutex}; return Deserialize( sv{(char*)_toSave.data(), _toSave.size()} ); }
-		α Name()Ι->string override{ return "ProtoLog"; }
+		α Name()Ι->sv override{ return "ProtoLog"; }
 		α Root()Ι->const fs::path&{ return _root; }
 		α SetMinLevel( ELogLevel /*level*/ )ι->void override{}
 		α TimeZone()Ι->const std::chrono::time_zone&{ return _tz; }
 		α Write( const Logging::Entry& m )ι->void override;
-		α Write( const Logging::Entry& m, App::ProgramPK appPK, App::ProgInstPK instancePK )ι->void;
+		α Write( const Logging::Entry& m, App::ProgramPK appPK, App::ProgInstPK instancePK )ι->void override;
 		App::ProgramPK ProgramPK;
 		ProgInstPK InstancePK;
 	private:
@@ -49,7 +49,7 @@ namespace Jde::App{
 		mutable mutex _mutex;
 		bool _needsArchive{false};
 		fs::path _root;
-		static constexpr ELogTags _tags{ ELogTags::ExternalLogger | ELogTags::IO };
+		static constexpr ELogTags _tags{ ELogTags::ExternalLogger };
 		up<DurationTimer> _timer;
 		const std::chrono::time_zone& _tz;
 		std::chrono::year_month_day _today;

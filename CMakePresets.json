@@ -9,86 +9,25 @@
 		{
 			"name": "common",
 			"hidden": true,
+			"environment": {
+				"installRoot": "$env{REPO_DIR}/install/$env{CXX}",
+				"multiInstallPrefix": "$env{installRoot}/multi"
+			},
 			"cacheVariables":{
-				"CMAKE_CXX_STANDARD": "23",
-				"JDE_VERSION": "2026.12.01",
+				"CMAKE_CXX_STANDARD": "26",
+				"JDE_VERSION": "2026.06.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3",
+				"MULTI_INSTALL_PREFIX": "$env{multiInstallPrefix}",
 				"SPDLOG_FMT_EXTERNAL": "ON"
 			}
 		},
 		{
-			"name": "win-clang",
-			"inherits": "common",
-			"environment": {
-				"CC": "clang-cl.exe",
-				"CXX": "clang++.exe",
-				"LIB_ROOT": "$env{REPO_DIR}/install/clang"
-			},
+			"name": "repos",
+			"hidden": true,
 			"cacheVariables":{
-				"CMAKE_BUILD_TYPE": "$env{buildType}",
-				"CMAKE_CXX_COMPILER": "clang++.exe",
-				"CMAKE_C_COMPILER": "clang-cl.exe",
-				"CMAKE_PREFIX_PATH": "$env{LIB_ROOT}/$env{buildType}",
-				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
-				"CMAKE_CXX_FLAGS_DEBUG": "-gcodeview -O0 -fsanitize=address",
-				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++",
-				"Boost_USE_STATIC_LIBS": true
-			}
-		},
-		{
-			"name": "win-clang-relWithDebInfo",
-			"inherits": ["win-clang", "relWithDebInfo"],
-			"environment": {
-				"OPTIMIZATION_LEVEL": "O3"
-			},
-			"cacheVariables": {
-				"CMAKE_INSTALL_PREFIX": "$env{LIB_ROOT}/$env{buildType}"
-			}
-		},
-		{
-			"name": "win-msvc",
-			"inherits": "common",
-			"environment": {
-				"COMPILER": "msvc",
-				"installRoot": "$env{REPO_DIR}/install/$env{COMPILER}",
-				"multiInstallPrefix": "$env{installRoot}/multi",
-				"linkerFlags": "/INCREMENTAL:NO /IGNORE:4099"
-			},
-			"cacheVariables":{
-				"Boost_USE_STATIC_LIBS": true,
-				"CMAKE_BUILD_TYPE": "$env{buildType}",
-				"CMAKE_CONFIGURATION_TYPES": "$env{buildType}",
-				"CMAKE_CXX_COMPILER": "cl.exe",
-				"CMAKE_CXX_FLAGS": "/EHsc /Zc:preprocessor /utf-8 /DSPDLOG_FMT_EXTERNAL /D_CRT_SECURE_NO_WARNINGS /D_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING /D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS /TP /D_WIN32_WINNT=0x0601 /DNOMINMAX /DWIN32_LEAN_AND_MEAN /DPUBLIC /W4 /wd4068 /wd4251 /wd4275 /wd4297 /wd4456 /wd4652 /wd5104 /wd5105",
-				"CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL",
-				"CMAKE_PREFIX_PATH": "$env{installRoot}/$env{buildType};$env{multiInstallPrefix}",
-				"JSONNET_LIB_DIR": "$env{REPO_DIR}/jsonnet/vs2017/x64/$<$<CONFIG:Debug>:Debug>$<$<CONFIG:RelWithDebInfo>:Release>",
-				"MULTI_INSTALL_PREFIX": "$env{multiInstallPrefix}",
-				"OPENSSL_ROOT_DIR": "$env{OPENSSL_ROOT_DIR}",
-				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}"
-			}
-		},
-		{
-			"name": "win-msvc-debug",
-			"inherits": "win-msvc",
-			"environment": {
-				"buildType": "Debug"
-			},
-			"cacheVariables":{
-				"CMAKE_CXX_FLAGS_DEBUG": "/Od /Zi /D_DEBUG /JMC /fsanitize=address",
-				"CMAKE_EXE_LINKER_FLAGS_DEBUG": "/DEBUG $env{linkerFlags}",
-				"CMAKE_SHARED_LINKER_FLAGS_DEBUG": "/DEBUG $env{linkerFlags}"
-			}
-		},
-		{
-			"name": "win-msvc-relWithDebInfo",
-			"inherits": "win-msvc",
-			"environment": {
-				"buildType": "RelWithDebInfo"
-			},
-			"cacheVariables":{
-				"CMAKE_CXX_FLAGS_RELEASE": "/O3 /Zi /DNDEBUG",
-				"CMAKE_EXE_LINKER_FLAGS_RELEASE": "$env{linkerFlags}"
+				"jde_REPOS": true,
+				"jde_TESTS": false,
+				"jde_APPS": false
 			}
 		},
 		{
@@ -96,6 +35,11 @@
 			"hidden": true,
 			"environment":{
 				"buildType": "Debug"
+			},
+			"cacheVariables": {
+				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/Debug",
+				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
+				"CMAKE_PREFIX_PATH": "$env{installRoot}/Debug;$env{multiInstallPrefix}"
 			}
 		},
 		{
@@ -103,28 +47,33 @@
 			"hidden": true,
 			"environment":{
 				"buildType": "RelWithDebInfo"
+			},
+			"cacheVariables": {
+				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/RelWithDebInfo",
+				"CMAKE_PREFIX_PATH": "$env{installRoot}/RelWithDebInfo;$env{multiInstallPrefix}"
+			}
+		},
+    {
+      "name": "win",
+      "inherits": "common",
+			"environment":{
+				"cxxFlags": "-DWIN32_LEAN_AND_MEAN"
+			},
+			"cacheVariables":{
+				"CMAKE_GENERATOR_PLATFORM": "x64",
+				"CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 			}
 		},
 		{
 			"name": "linux",
 			"inherits": "common",
-			"environment": {
-				"CC": "gcc-14",
-				"CXX": "g++-14",
-				"installRoot": "$env{REPO_DIR}/install/$env{CXX}",
-				"multiInstallPrefix": "$env{installRoot}/multi"
-			},
 			"cacheVariables":{
 				"CMAKE_BUILD_TYPE": "$env{buildType}",
-				"CMAKE_CXX_COMPILER": "g++-14",
-				"CMAKE_C_COMPILER": "gcc-14",
-				"CMAKE_PREFIX_PATH": "$env{installRoot}/$env{buildType};$env{multiInstallPrefix}",
-				"CMAKE_CXX_FLAGS": "-Wno-unknown-pragmas -Wno-missing-field-initializers -Wno-changes-meaning",
-				"MULTI_INSTALL_PREFIX": "$env{multiInstallPrefix}",
-				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
-				"LIBXML2_INCLUDE_DIR": "/usr/include/libxml2"
+				"LIBXML2_INCLUDE_DIR": "/usr/include/libxml2",
+				"LIBXML2_LIBDIR": "/usr/lib/x86_64-linux-gnu"
 			}
 		},
+
 		{
 			"name": "linux-debug",
 			"inherits": ["linux", "debug"],
@@ -142,8 +91,7 @@
 			"inherits": ["linux"],
 			"cacheVariables": {
 				"Boost_USE_STATIC_LIBS": true,
-				"BOOST_VERSION": "1.88.0",
-				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-changes-meaning"
+				"BOOST_VERSION": "1.91.0"
 			}
 		},
 		{
@@ -153,7 +101,117 @@
 				"OPTIMIZATION_LEVEL": "O3"
 			},
 			"cacheVariables": {
-				"CMAKE_INSTALL_PREFIX": "$env{LIB_ROOT}/$env{buildType}"
+			}
+		},
+		{
+			"name": "clang-jde",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_EXPORT_COMPILE_COMMANDS": true,
+				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-unqualified-std-cast-call;-Wno-language-extension-token;-Wno-dollar-in-identifier-extension"
+			}
+		},
+		{
+			"name": "clang-linux",
+			"inherits": ["clang","linux"],
+			"environment": {
+				"CC": "clang-22",
+				"CXX": "clang++-22"
+			},
+			"cacheVariables":{
+				"CMAKE_C_COMPILER": "clang-22",
+				"CMAKE_CXX_COMPILER": "clang++-22",
+				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
+				"CMAKE_CXX_FLAGS_DEBUG": "$env{cxxFlagsDebug} -glldb -static-libasan -fsanitize=leak -fsanitize=address -fno-omit-frame-pointer -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL",
+				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
+				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld"
+			}
+		},
+    {
+      "name": "clang",
+      "environment": {
+        "CC": "clang",
+        "CXX": "clang++"
+      },
+			"cacheVariables":{
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+			}
+    },
+    {
+      "name": "win-clang",
+			"inherits": ["clang","win"],
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables":{
+        "CMAKE_GENERATOR_PLATFORM": null,
+				"CMAKE_CXX_FLAGS_DEBUG": "$env{cxxFlagsDebug}",
+				"CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections",
+				"CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
+        "VCPKG_INSTALLED_DIR": "$env{VCPKG_ROOT}/installed"
+      }
+    },
+		{
+			"name": "linux-clang",
+			"inherits": ["clang", "linux"],
+			"hidden": true,
+			"cacheVariables":{
+				"CMAKE_C_COMPILER": "clang-22",
+				"CMAKE_CXX_COMPILER": "clang++-22",
+				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
+				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
+				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
+        "CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL"
+
+			}
+		},
+		{
+			"name": "win-lldb",
+			"hidden": true,
+			"environment": {
+				"cxxFlagsDebugInfo": "-gdwarf-4"
+			},
+			"cacheVariables": {
+			}
+		},
+		{
+			"name": "win-clang-debug",
+			"hidden": true,
+			"inherits": ["win-clang", "debug"],
+			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-22"
+		},
+		{
+			"name": "win-clang-debug-jde",
+			"inherits": ["win-clang-debug", "clang-jde", "win-lldb"],
+			"cacheVariables": {
+				"CMAKE_CXX_FLAGS": "$env{cxxFlags} $env{cxxFlagsDebugInfo}"
+			}
+		},
+		{
+			"name": "win-repos",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_HAVE_LIBC_PTHREAD": "OFF",
+				"CMAKE_HAVE_PTHREADS_CREATE": "OFF",
+				"CMAKE_HAVE_PTHREAD_CREATE": "OFF",
+				"THREADS_HAVE_PTHREAD_ARG": "OFF",
+				"HAVE_SHLLOAD": "OFF"
+			}
+		},
+		{
+			"name": "win-clang-debug-repos",
+			"inherits": ["win-clang-debug", "win-repos"]
+		},
+		{
+			"name": "linux-clang-debug",
+			"inherits": ["linux-clang", "debug"]
+		},
+		{
+			"name": "linux-clang-jde-debug",
+			"inherits": ["linux-clang-debug"],
+			"cacheVariables":{
 			}
 		}
 	],

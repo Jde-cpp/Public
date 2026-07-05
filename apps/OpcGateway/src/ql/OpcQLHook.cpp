@@ -7,7 +7,6 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	constexpr EOpcLogTags _tags{ EOpcLogTags::Opc | (EOpcLogTags)ELogTags::QL };
 	using Jde::QL::Hook::Operation;
 
 	struct HookAwait final: TAwait<jvalue>{
@@ -41,10 +40,10 @@ namespace Jde::Opc::Gateway{
 			ResumeExp( move(e) );
 		}
 	}
-	α HookAwait::Fix( DB::Key id )ι->ProviderCreatePurgeAwait::Task{
+	α HookAwait::Fix( DB::Key id )ι->ProviderMAwait::Task{
 		try{
 			let insert = _op==(Operation::Insert | Operation::Before) || _op==(Operation::Purge | Operation::Failure);
-			co_await ProviderCreatePurgeAwait( move(id), insert );
+			co_await ProviderMAwait( move(id), insert );
 			ResumeScaler( {{"rowCount", 1}} );
 		}
 		catch( IException& e ){

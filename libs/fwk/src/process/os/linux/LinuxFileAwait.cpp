@@ -1,7 +1,6 @@
 //#include <unistd.h>
 #include <aio.h>
 #include <liburing.h>
-#include "LinuxDrive.h"
 #include <jde/fwk/io/Cache.h>
 #include <jde/fwk/io/file.h>
 #include <jde/fwk/io/FileAwait.h>
@@ -33,90 +32,110 @@ namespace Jde::IO{
 	};
 
 
-	α FileIOArg::Open( bool create )ε->void{
+	α FileIOArg::Open( bool create, bool append )ε->void{
 		auto flags = O_NONBLOCK | ( IsRead ? O_RDONLY : O_WRONLY );
-		if( !IsRead )
-			flags |= create ? O_CREAT : O_APPEND;
-
+		if( !IsRead ){
+			if( create )
+				flags |= O_CREAT;
+			if( append )
+				 flags |= O_APPEND;
+		}
 		Handle = ::open( Path.string().c_str(), flags, 0666 );
 		if( Handle==-1 ){
 			Handle = 0;
 			if( !IsRead && errno==ENOENT ){
 				fs::create_directories( Path.parent_path() );
 				INFO( "Created dir {}", Path.parent_path().string() );
-				return Open( create );
+				return Open( create, append );
 			}
 			THROW_IFX( IsRead /*|| errno!=EACCES*/, IOException(move(Path), errno, "open", _sl) );
 		}
 		if( IsRead ){
 			struct stat st;
 			THROW_IFX( ::fstat( Handle, &st )==-1, IOException(move(Path), errno, "fstat", _sl) );
+			TRACE( "[{}]Opened file: {}, size: {}", hex(Handle), Path.string(), st.st_size );
 			std::visit( [size=st.st_size](auto&& b){b.resize(size);}, Buffer );
 		}
+		else
+			TRACE( "[{}]{} {}", hex(Handle), create ? "creating" : "appending", Path.string() );
 	}
 	FileIOArg::~FileIOArg(){
 		if( Handle ){
 			::close( Handle );
+			TRACE( "[{}]Closed file handle for {}", hex(Handle), Path.string() );
 			Handle = 0;
 		}
 	}
 
 	Ω addNextChunkToQueue( sp<FileIOArg> op )ι->bool;
 	uint _checkIndex;
-	Ω processFinishedChunks( uint size, struct io_uring_cqe* cqe )ι->sp<FileIOArg>{
-		sp<FileIOArg> submitOp;
+	Ω processFinishedChunks( uint size, struct io_uring_cqe** cqe )ι->vector<sp<FileIOArg>>{
+		vector<sp<FileIOArg>> submitOps;
+		vector<sp<FileIOArg>> completedOps;
 		for( uint i=0; i<size; ++i ){
-			struct io_uring_cqe& cq = cqe[i];
-			if( cq.flags & IORING_CQE_F_MORE ){
-				// bool buffered = cq.flags & IORING_CQE_F_BUFFER;
-				// bool nonEmpty = cq.flags & IORING_CQE_F_SOCK_NONEMPTY;
-				// let bufferId = (uint)io_uring_cqe_get_data(&cq) >> 32;
-				// TRACET( ELogTags::Test, "waitForMore data: {:x}, flags: {}, buffer: {}, nonEmpty: {}", bufferId, (uint)cq.flags, buffered, nonEmpty );
+			struct io_uring_cqe* cq = cqe[i];
+			if( cq->flags & IORING_CQE_F_MORE ){
+				bool buffered = cq->flags & IORING_CQE_F_BUFFER;
+				bool nonEmpty = cq->flags & IORING_CQE_F_SOCK_NONEMPTY;
+				let bufferId = (uint)io_uring_cqe_get_data(cq) >> 32;
+				TRACE( "waitForMore data: {:x}, flags: {}, buffer: {}, nonEmpty: {}", bufferId, (uint)cq->flags, buffered, nonEmpty );
 				continue;
 			}
-			io_uring_cqe_seen( &_ring, &cq );
-			up<LinuxChunk> chunk{ (LinuxChunk*)io_uring_cqe_get_data(&cq) };
-			if( cq.res < 0 ){
+			io_uring_cqe_seen( &_ring, cq );
+			up<LinuxChunk> chunk{ (LinuxChunk*)io_uring_cqe_get_data(cq) };
+			ASSERT( chunk );
+			if( !chunk )
+				continue;
+			if( cq->res < 0 ){
 				auto op = chunk->FileArg();
-				op->PostExp( move(chunk), -cq.res, Ƒ("AIO index: {} failed: {}\n", chunk->Index, strerror(-cq.res)) );
+				op->PostExp( move(chunk), -cq->res, Ƒ("AIO index: {} failed: {}\n", chunk->Index, strerror(-cq->res)) );
 				continue;
 			}
-			ASSERT( (uint)cq.res == chunk->Bytes );
+			ASSERT( (uint)cq->res == chunk->Bytes );
 			auto op = chunk->FileArg();
-			if( op->ChunksToSend==++op->ChunksCompleted ){
-				--_requestCount;
-				if( op->IsRead ){
-					if( auto h = op->ReadCoHandle(); h ){
-						op->_coHandle = (TAwait<string>::Handle)nullptr;
-						Post( get<string>(move(op->Buffer)), move(h) );//3
-					}
-				}
-				else{
-					if( auto h = op->WriteCoHandle(); h ){
-						op->_coHandle = (VoidAwait::Handle)nullptr;
-						Post( move(h) );//2
-					}
-					else
-						CRITICALT( ELogTags::IO, "[{}]no handle.", op->Path.string() );
+			if( op->ChunksToSend>++op->ChunksCompleted ){
+				if( addNextChunkToQueue(op) )
+					submitOps.push_back(op);
+			}
+			else
+				completedOps.push_back(op);
+		}
+		for( auto& completed : completedOps ){
+			--_requestCount;
+			if( completed->IsRead ){
+				if( auto h = completed->ReadCoHandle(); h ){
+					completed->_coHandle = (TAwait<string>::Handle)nullptr;
+#ifdef __cpp_lib_move_only_function
+					Post( get<string>(move(completed->Buffer)), move(h) );
+#else
+					auto p = new string{ get<string>(move(completed->Buffer)) };
+					Post( [=](){
+						h.promise().Resume( move(*p), h );
+						delete p;
+					} );
+#endif
 				}
 			}
 			else{
-				if( addNextChunkToQueue(op) )
-					submitOp = op;
+				if( auto h = completed->WriteCoHandle(); h ){
+					completed->_coHandle = (VoidAwait::Handle)nullptr;
+					Post( move(h) );
+				}
+				else
+					CRITICAL( "[{}]no handle.", completed->Path.string() );
 			}
-			chunk=nullptr;
 		}
-		return submitOp;
+		return submitOps;
 	}
 
-	Ω checkProcessed()ι->void;
-	Ω submit( sp<FileIOArg> op )ι->void{
+	Ω checkProcessed( ELogTags _tags )ι->void;
+	Ω submit( sp<FileIOArg> op, ELogTags _tags )ι->void{
+		TRACE( "Submitting file IO: {}, size: {}, chunks: {}, requestCount: {}, isRead: {}", op->Path.string(), op->Size(), op->ChunksToSend, _requestCount.load(), op->IsRead );
 		int result = io_uring_submit( &_ring );
 		if( result>=0 ){
 			ASSERT( _requestCount );
-			if( _requestCount ){
-				PostIO( [](){ checkProcessed(); } );//1
-			}
+			if( _requestCount )
+				PostIO( [tags=_tags](){ checkProcessed(tags); } );
 		}
 		else{
 			CRITICAL( "io_uring_submit failed: {}", strerror(-result) );
@@ -124,26 +143,30 @@ namespace Jde::IO{
 		}
 	}
 
-	Ω checkProcessed()ι->void{
+	Ω checkProcessed( ELogTags _tags )ι->void{
 		++_checkIndex;
 		array<struct io_uring_cqe*, 5> cqe;
 		let size = io_uring_peek_batch_cqe( &_ring, cqe.data(), cqe.size() );
-		auto fileIOArg = size ? processFinishedChunks( size, *cqe.data() ) : sp<FileIOArg>{};
-		if( fileIOArg )
-			submit( move(fileIOArg) );
-		else if( !size ){
-			//ASSERT( _requestCount );
-			if( _requestCount ){
-				PostIO( [](){ checkProcessed(); } );
-			}
+		struct io_uring_cqe** pcqe = cqe.data();
+		for( uint i=0; i<size; ++i ){
+			struct io_uring_cqe* cq = pcqe[i];
+			ASSERT( io_uring_cqe_get_data(cq) );
 		}
+
+		auto submitOps = size ? processFinishedChunks( size, pcqe ) : vector<sp<FileIOArg>>{};
+		for( auto& op : submitOps )
+			submit( move(op), _tags );
+		if( submitOps.empty() && _requestCount )
+			PostIO( [tags=_tags](){ checkProcessed(tags); } );
 	}
 	Ω addNextChunkToQueue( sp<FileIOArg> op )ι->bool{
 		up<IFileChunkArg> chunk;
 		{
 			lg l{ op->ChunkMutex };
-			if( !op->Chunks.size() )
+			if( !op->Chunks.size() ){
+				TRACE( "No more chunks to queue for file IO: {}, size: {}, chunks: {}, requestCount: {}", op->Path.string(), op->Size(), op->ChunksToSend, _requestCount.load() );
 				return false;
+			}
 			chunk = move( op->Chunks.front() );
 			op->Chunks.pop();
 		}
@@ -159,9 +182,11 @@ namespace Jde::IO{
 		}
 
 		if( isRead ){
+			TRACE( "Preparing read: {}, index: {}, bytes: {}", op->Path.string(), lchunk.Index, lchunk.Bytes );
 			io_uring_prep_read( sqe, op->Handle, op->Data()+lchunk.StartIndex, lchunk.Bytes, lchunk.StartIndex );
 		}
 		else{
+			TRACE( "Preparing write: {}, index: {}, bytes: {}", op->Path.string(), lchunk.Index, lchunk.Bytes );
 			io_uring_prep_write( sqe, op->Handle, op->Data()+lchunk.StartIndex, lchunk.Bytes, -1 );
 		}
 		auto pChunk = chunk.release();
@@ -177,16 +202,16 @@ namespace Jde::IO{
 		auto self = shared_from_this();
 		{
 			//lg l{ ChunkMutex };
-			ChunksToSend = totalBytes/chunkByteSize+1;
+			ChunksToSend = (totalBytes+chunkByteSize-1)/chunkByteSize; //ceil( totalBytes / chunkByteSize )
 			for( uint i=0; i*chunkByteSize<totalBytes; ++i )
 				Chunks.emplace( mu<LinuxChunk>(self, i) );
 			let content = IsRead ? "" : Str::Replace(string{ Data(), Size() }, "\n", "\\n" );
 		}
 		++_requestCount;
-		PostIO( [self, initialSendTotal = std::min<uint8>((uint8)ChunksToSend, threadSize) ](){
+		PostIO( [self, initialSendTotal = std::min<uint8>((uint8)ChunksToSend, threadSize), tags=_tags ](){
 			for( uint i=0; i<initialSendTotal; ++i )
 				addNextChunkToQueue( self );
-			submit( move(self) );
+			submit( move(self), tags );
 		} );
 	}
 }

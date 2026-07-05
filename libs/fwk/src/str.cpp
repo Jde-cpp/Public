@@ -1,9 +1,9 @@
 ﻿#include <jde/fwk/str.h>
 #include <algorithm>
 #include <functional>
-#include <ranges>
 #include <boost/algorithm/hex.hpp>
 #include <boost/uuid/string_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <fmt/args.h>
 
 #ifdef _MSC_VER
@@ -18,6 +18,9 @@ boost::uuids::string_generator _gen;
 	catch( const std::runtime_error& e ){
 		throw Exception( ELogTags::Parsing, sl, "Invalid UUID string '{}': {}", s, e.what() );
 	}
+}
+α Jde::ToString( const boost::uuids::uuid& u )ι->string{
+	return boost::uuids::to_string( u );
 }
 
 namespace Jde{

@@ -2,18 +2,18 @@
 #include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/Variant.h>
 #include "UAConfig.h"
+#include "jde/fwk/process/process.h"
 #include "uaTypes/Node.h"
-#include "uaTypes/ObjectAttr.h"
 #include "uaTypes/Object.h"
 #include "uaTypes/ObjectType.h"
 #include "uaTypes/Reference.h"
 #include "uaTypes/Variable.h"
 
 namespace Jde::Opc::Server {
-	struct UAServer{
+	struct UAServer final{
 		UAServer()ε;
 		~UAServer();
-
+		operator UA_Server&()ι{ ASSERT(_ua); return *_ua; }
 		Ω Constructor( UA_Server *server, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *typeId, void *typeContext, const UA_NodeId *nodeId, void **nodeContext )->UA_StatusCode;
 		α Run()ι->void;
 		α ConstructorValues( const NodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&;

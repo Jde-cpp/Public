@@ -1,0 +1,22 @@
+<h2 mat-dialog-title>Add Bookmark</h2>
+<mat-dialog-actions>
+  <button matButton=filled class="remove" mat-dialog-close (click)=onRemove()>{{data.existing ? 'Remove' : 'Cancel'}}</button>
+  <button matButton=filled class="ok" mat-dialog-close cdkFocusInitial (click)=onDone()>{{data.existing ? 'Update' : 'Add'}}</button>
+</mat-dialog-actions>
+<mat-dialog-content>
+  <form>
+  	<mat-form-field>
+    	<mat-label>Name</mat-label>
+    	<input matInput type=text [formField]=favoriteForm.name>
+  	</mat-form-field>
+		<mat-form-field>
+			<mat-label>Folder</mat-label>
+			<input matInput type=text [matAutocomplete]=auto [formField]=favoriteForm.folderName>
+			<mat-autocomplete #auto=matAutocomplete>
+				@for( folder of this.folderNames; track folder) {
+					<mat-option [value]=folder>{{folder}} </mat-option>
+				}
+			</mat-autocomplete>
+		</mat-form-field>
+	</form>
+</mat-dialog-content>

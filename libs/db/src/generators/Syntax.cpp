@@ -5,7 +5,7 @@
 #define let const auto
 
 namespace Jde{
-	inline constexpr std::array<sv,11> OperatorStrings = { "=", "!=", "regex", "glob", "in", "not in", ">", ">=", "<", "<=", "elemMatch" };
+	inline constexpr std::array<sv,11> OperatorStrings = { "=", "!=", "regex", "glob", "in", "nin", ">", ">=", "<", "<=", "elemMatch" };
 	α DB::ToOperator( sv op )ι->EOperator{ return ToEnum<EOperator>( OperatorStrings, op ).value_or( EOperator::Equal ); }
 	α DB::ToString( EOperator op )ι->string{ return FromEnum<EOperator>( OperatorStrings, op ); }
 }
@@ -74,10 +74,14 @@ namespace Jde::DB{
 		return type == VarChar || type == Binary || type == Char || type == VarBinary;
 	}
 
-	α Syntax::Limit( str sql, uint limit )Ε->string{
-		THROW_IF( sql.size()<7, "expecting sql length>7 - {}", sql );
-		return Ƒ("{} top {} {}", sql.substr(0,7), limit, sql.substr(7) );
-	};
+	α Syntax::Limit( str input, uint limit, uint skip )Ε->string{
+		string sql = input;
+		if( skip )
+			sql += " offset "+std::to_string(skip)+" rows";
+		if( limit )
+			sql += " fetch next "+std::to_string(limit)+" rows only";
+		return sql;
+	}
 	α joinType( bool inner )ι->string{
 		return inner ? "" : "left ";
 	}

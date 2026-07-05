@@ -2,7 +2,6 @@
 #include "../exports.h"
 #include "AliasColumn.h"
 #include "Object.h"
-#include "Functions.h"
 
 namespace Jde::DB{
 	struct Column;

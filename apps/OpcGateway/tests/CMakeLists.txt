@@ -24,8 +24,11 @@ compileOptions( ${targetName} )
 
 file( GLOB sources *.cpp **/*.cpp )
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
+	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}" )
 	list( APPEND sources OpcTests.rc )
+	add_dependencies( ${targetName} Jde.DB.Odbc )
+else()
+	add_dependencies( ${targetName} Jde.DB.MySql )
 endif()
 file( GLOB headers *.h **/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
@@ -43,7 +46,6 @@ include_directories( ${open62541Dir}include )
 target_link_libraries( ${targetName} GTest::gtest )
 
 target_link_libraries( ${targetName} Jde Jde.QL Jde.App.Shared Jde.App.Client Jde.Web.Client Jde.Web.Server Jde.App.ServerLib Jde.Opc Jde.Opc.GatewayLib Jde.Opc.ServerLib )
-#target_link_libraries( ${targetName} protobuf::libprotobuf ) //Jde.Web.Server should bring this in
 if( WIN32 )
 	target_link_libraries( ${targetName} Iphlpapi.lib )
 else()
@@ -57,7 +59,8 @@ add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E 
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Tests.jsonnet" )
 	copyCommonDlls()
-	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MULTI_INSTALL_PREFIX}/libxml2/bin/libxml2$<IF:$<CONFIG:Debug>,d,>.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "libxml2$<IF:$<CONFIG:Debug>,d,>.dll" )
+	target_compile_definitions( ${targetName} PRIVATE NOMINMAX )
+	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${TYPE_INSTALL_PREFIX}/libxml2/bin/libxml2.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "libxml2.dll" )
 endif()
 target_precompile_headers( ${targetName} PRIVATE
 	pc.h

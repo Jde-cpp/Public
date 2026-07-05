@@ -13,7 +13,7 @@ export class Authorization{
 		this.user = this.authService.user;
 	}
   async onLogout() {
-		let isGoogle = this.user().provider == EProvider.Google;
+		let isGoogle = this.user()!.provider == EProvider.Google;
     await this.authService.logout( (m)=>console.log(m) );
 		if( isGoogle && gapi.auth2 ){
 			var auth2 = gapi.auth2.getAuthInstance();
@@ -36,5 +36,5 @@ export class Authorization{
 	});
 
 	router = inject(Router);
-	user:Signal<User | null>;
+	user:Signal<User | undefined>;
 }

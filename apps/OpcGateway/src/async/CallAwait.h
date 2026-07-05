@@ -17,7 +17,7 @@ namespace Jde::Opc::Gateway{
 		CallAwait( QL::MutationQL&& req, sp<Web::Server::SessionInfo> session, SRCE )ι:base{sl}, _ql{move(req)}, _session{move(session)}{}
 
 		α Execute()ι->TAwait<sp<UAClient>>::Task override;
-		α await_resume()ι->CallResponse;
+		α await_resume()ι->CallResponse override;
 	private:
 		sp<UAClient> _client;
 		QL::MutationQL _ql;

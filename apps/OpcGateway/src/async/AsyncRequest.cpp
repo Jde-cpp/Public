@@ -18,8 +18,10 @@ namespace Jde::Opc::Gateway{
 		{
 			lg _{ _pingMutex };
 			ASSERT( !_pingTimer );
-			_pingTimer.emplace( _pingInterval, SRCE_CUR );
-			DBGT( EOpcLogTags::ProcessingLoop, "Pinging '{}' in '{}'", client->Target(), Chrono::ToString(_pingInterval) );
+			if( !_pingTimer ){
+				_pingTimer.emplace( _pingInterval, SRCE_CUR );
+				DBGT( EOpcLogTags::ProcessingLoop, "Pinging '{}' in '{}'", client->Target(), Chrono::ToString(_pingInterval) );
+			}
 		}
 		auto result = co_await *_pingTimer;
 		{
@@ -51,9 +53,12 @@ namespace Jde::Opc::Gateway{
 			}
 			TRACE( "{}run_iterate: requestCount: {}", logPrefix(), size );
 			if( sc = UA_Client_run_iterate(*client, 0); sc ){
-				ERR( "{}UA_Client_run_iterate returned ({:x}){}", logPrefix(), sc, UAException::Message(sc) );
 				_running.clear();
 				ul _{ _requestMutex };
+				let level = _requests.size()>0 ? ELogLevel::Critical : ELogLevel::Debug;
+				string requests;
+				for_each( _requests, [&requests](auto r){requests += Ƒ("{:x}, ", r);} );
+				LOG( level, _tags, "{}UA_Client_run_iterate returned ({:x}){}, requests: [{}]", logPrefix(), sc, UAException::Message(sc), requests );
 				_requests.clear();
 				break;
 			}
@@ -66,7 +71,7 @@ namespace Jde::Opc::Gateway{
 					_requestMutex.unlock();
 					if( let now = Clock::now(); _lastRequest + _ttl < now ){
 						DBG( "{}No requests for {}, shutting down client.", logPrefix(), Chrono::ToString(now-_lastRequest) );
-						client->Shutdown( false );
+						client->Shutdown();
 					}
 					break;
 				}
@@ -75,7 +80,7 @@ namespace Jde::Opc::Gateway{
 			}
 			if( size==newSize ){
 				let sleep = size==1 && *_requests.begin()==SubscriptionRequestId ? 500ms : 1ms; //UA_CreateSubscriptionRequest_default
-				co_await DurationTimer{ sleep };
+				(void)co_await DurationTimer{ sleep };
 			}
 		}
 		if( !sc && !_stopped.test() && _pingInterval.count()>0 )

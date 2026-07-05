@@ -6,8 +6,6 @@
 #define let const auto
 
 namespace Jde::DB{
-	constexpr array<sv,3> CardinalityStrings = { "0", "1", "N" };
-
 	α Column::Count()ι->sp<Column>{ return ms<Column>( "count(*)" ); }
 
 	α getDefault( const jobject& j, bool isNullable, EType type/*, sv name*/ )ε->optional<Value>{
@@ -57,9 +55,8 @@ namespace Jde::DB{
 
 	α Column::Initialize( sp<DB::View> view )ε->void{
 		Table = view;
-		if( PKTable ){
+		if( PKTable )
 			PKTable = view->Schema->GetTablePtr( PKTable->Name );
-		}
 		if( let table = Criteria ? dynamic_pointer_cast<DB::Table>(view) : sp<DB::Table>{}; table && table->Extends ){
 			Criteria->Column = table->Extends->GetColumnPtr( Criteria->Column->Name );
 			if( Criteria->Value.Type()==EValue::String )//physical table will have config value, not json from constructor.
@@ -82,6 +79,6 @@ namespace Jde::DB{
 		return PKTable && PKTable->IsFlags;
 	}
 	α Column::IsPK()Ι->bool{
-		return Table->SurrogateKeys.size()==1 && SKIndex.has_value();
+		return Table && Table->SurrogateKeys.size()==1 && SKIndex.has_value();
 	}
 }

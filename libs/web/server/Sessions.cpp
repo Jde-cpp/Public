@@ -26,7 +26,7 @@ namespace Jde::Web::Server{
 
 	concurrent_flat_map<SessionPK,sp<SessionInfo>> _sessions;
 	Ω upsert( sp<SessionInfo>& info )ι->void{
-		if( _sessions.emplace_or_visit(info->SessionId, info, [&info](auto& existing){existing.second->Expiration=existing.second->NewExpiration();}) )
+		if( _sessions.emplace_or_visit(info->SessionId, info, [](auto& existing){existing.second->Expiration=existing.second->NewExpiration();}) )
 			TRACE( "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK.Value, info->UserEndpoint );
 	}
 
@@ -71,7 +71,6 @@ namespace	Sessions{
 
 	SessionInfo::SessionInfo( SessionPK sessionPK, str userEndpoint, bool hasSocket )ι:
 		SessionId{ sessionPK },
-		UserPK{},
 		UserEndpoint{ userEndpoint },
 		HasSocket{ hasSocket },
 		Expiration{ NewExpiration() },
@@ -80,8 +79,8 @@ namespace	Sessions{
 	{}
 
 	SessionInfo::SessionInfo( SessionPK sessionPK, steady_clock::time_point expiration, Jde::UserPK userPK, str userEndpointAddress, bool hasSocket )ι:
+		QL::IQLSession{ userPK },
 		SessionId{ sessionPK },
-		UserPK{ userPK },
 		UserEndpoint{ userEndpointAddress },
 		HasSocket{ hasSocket },
 		Expiration{ expiration },
@@ -92,9 +91,9 @@ namespace	Sessions{
 		return steady_clock::now()+( HasSocket ? sockExpirationDuration() : Sessions::RestSessionTimeout() );
 	}
 
-	α UpdateExpiration( SessionPK sessionId, str userEndpoint )ε->sp<SessionInfo>{
+	α UpdateExpiration( SessionPK sessionId, str /*userEndpoint*/ )ε->sp<SessionInfo>{
 		sp<SessionInfo> info;
-		_sessions.visit( sessionId, [&info, &userEndpoint, sessionId](auto& kv){
+		_sessions.visit( sessionId, [&info, sessionId](auto& kv){
 			sp<SessionInfo> existing = kv.second;
 			//let& existingAddress = existing->UserEndpoint;
 			//THROW_IF( existingAddress!=userEndpoint, "[{}]existingAddress='{}' does not match userEndpoint='{}'", sessionId, existingAddress, userEndpoint );

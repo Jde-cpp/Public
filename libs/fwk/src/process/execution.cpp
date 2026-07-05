@@ -1,13 +1,17 @@
-﻿#include <jde/fwk/process/execution.h>
+﻿#include "jde/fwk/log/logTags.h"
+#include "jde/fwk/utils/collections.h"
+#include <jde/fwk/process/execution.h>
 #include <boost/asio.hpp>
 #include <jde/fwk/settings.h>
 #include <jde/fwk/process/thread.h>
 #include <jde/fwk/utils/Vector.h>
+#include <version>
 
 #define let const auto
 namespace Jde{
+	constexpr ELogTags _tags{ ELogTags::App };
 	namespace asio = boost::asio;
-	α ThreadCount()ι->int{ return std::max(Settings::FindNumber<int>( "/workers/executor/threads" ).value_or(std::thread::hardware_concurrency()), 1); }
+	α ThreadCount()ι->unsigned{ return std::max(1u, Settings::FindNumber<unsigned>("/workers/executor/threads").value_or(std::thread::hardware_concurrency())); }
 	sp<asio::io_context> _ioc;
   up<asio::io_context::strand> _ioStrand;
 	up<asio::executor_work_guard<asio::io_context::executor_type>> _keepAlive;
@@ -20,6 +24,7 @@ namespace Jde{
 	}
 	return _ioc;
 }
+α Jde::ExecutorIoc()ι->sp<asio::io_context>{ return _ioc; }
 
 namespace Jde{
 	static up<Vector<IShutdown*>> _shutdowns;
@@ -33,7 +38,8 @@ namespace Jde{
 		α Emit( asio::cancellation_type ct = asio::cancellation_type::all )ι->void;
 		α Slot()ι->asio::cancellation_slot;
 		α Signal()ι->sp<asio::cancellation_signal>;
-		α Add( sp<asio::cancellation_signal> s )ι->void{ lg _(_mtx); _sigs.push_back( s ); }
+		α Add( sp<asio::cancellation_signal> s )ι->void{ lg _(_mtx); _sigs.push_back(s); }
+		α Remove( const sp<asio::cancellation_signal>& s )ι->void{ lg _(_mtx); std::erase(_sigs, s); }
 		α Clear()ι->void{ lg _(_mtx); _sigs.clear(); }
 		α Size()ι->uint{ lg _(_mtx); return _sigs.size(); }
 	private:
@@ -41,7 +47,8 @@ namespace Jde{
 		mutex _mtx;
 	};
 	CancellationSignals _cancelSignals;
-	α Execution::AddCancelSignal( sp<asio::cancellation_signal> s )ι->void{ _cancelSignals.Add( s ); }
+	α Execution::AddCancelSignal( sp<asio::cancellation_signal> s )ι->void{ _cancelSignals.Add(s); }
+	α Execution::RemoveCancelSignal( const sp<asio::cancellation_signal>& s )ι->void{ _cancelSignals.Remove(s); }
 
 	α CancelSignals()->CancellationSignals&{ return _cancelSignals; }
 
@@ -52,11 +59,12 @@ namespace Jde{
 				Execute();
 			}}{
 			_started.wait( false );
-			INFOT( ELogTags::App, "Created executor threadCount: {}.", ThreadCount() );
-			Process::AddShutdown( this );
+			INFO( "Created executor threadCount: {}.", ThreadCount() );
 		}
-		~ExecutorContext()ι{ if( !Process::Finalizing() ) Process::RemoveShutdown( this ); _cancelSignals.Clear(); }
-		α Shutdown( bool terminate )ι->void override;
+		~ExecutorContext()ι{
+			_cancelSignals.Clear();
+		}
+		α Shutdown( bool terminate, SL sl )ι->void override;
 		Ω Started()ι->bool{ return _started.test(); }
 		Ω Ioc()ι->sp<asio::io_context>{ return _ioc; }
 	private:
@@ -65,20 +73,19 @@ namespace Jde{
 		static atomic_flag _started;
 		static atomic_flag _stopped;
 	};
-	up<ExecutorContext> _pExecutorContext;
 	atomic_flag ExecutorContext::_started{};
 	atomic_flag ExecutorContext::_stopped{};
 	α Execution::Run()->void{
 		if( !ExecutorContext::Started() ){
 			auto keepAlive = Executor();
-			_pExecutorContext = mu<ExecutorContext>();
+			Process::SetExecutor( mu<ExecutorContext>() );
 		}
 	}
 
 	α CancellationSignals::Emit( asio::cancellation_type ct )ι->void{
-		lg _(_mtx);
+		lg _( _mtx );
 		for( uint i=0; i<_sigs.size(); ++i ){
-			TRACET( ELogTags::App, "Emitting cancellation signal {}.", i );
+			TRACE( "Emitting cancellation signal {}.", i );
 			_sigs[i]->emit( ct );
 		}
 	}
@@ -86,48 +93,60 @@ namespace Jde{
 		return Signal()->slot();
 	}
 	α CancellationSignals::Signal()ι->sp<asio::cancellation_signal>{
-		lg _(_mtx);
-		auto p = find_if( _sigs, [](auto& sig){ return !sig->slot().has_handler();} );
+		lg _( _mtx );
+		auto p = find_if( _sigs, [](auto& sig){return !sig->slot().has_handler();} );
 		return p == _sigs.end() ? _sigs.emplace_back( ms<asio::cancellation_signal>() ) : *p;
 	}
-	α ExecutorContext::Shutdown( bool terminate )ι->void{
-		DBGT( ELogTags::App, "Executor Shutdown: instances: {}.", _ioc.use_count() );
+	α ExecutorContext::Shutdown( bool terminate, SL sl )ι->void{
+		DBG( "Executor Shutdown: instances: {}.", _ioc.use_count() );
 		_keepAlive->reset();
 		_keepAlive = nullptr;
 		if( _shutdowns )
-			_shutdowns->erase( [=](auto p){p->Shutdown(terminate);} );
+			_shutdowns->erase( [=](auto p){p->Shutdown(terminate, sl);} );
 		if( _ioc && terminate )
 			_ioc->stop(); // Stop the `io_context`. This will cause `run()` to return immediately, eventually destroying the `io_context` and all of the sockets in it.
 		else{
 			_cancelSignals.Emit( asio::cancellation_type::all );
-//			_stopped.wait( false );  TODO uncomment, don't want threads kept alive in finalization.  ordering of shutdowns.
 		}
-		//Process::RemoveShutdown( this ); deadlock
+		//Process::RemoveShutdown( this ); //deadlock
 	}
 	α ExecutorContext::Execute()ι->void{
-		SetThreadDscrptn( "Ex[0]" );
-		vector<std::jthread> v; v.reserve( ThreadCount() - 1 );
+		auto threads = Reserve<std::jthread>( ThreadCount() - 1 );
+		Vector<Thread::ProcessThreadId> threadIds;
+		threadIds.push_back( Thread::Id() );
 		auto ioc = _ioc; //keep alive
+		Thread::SetName( "Resolver" );
 		for( auto i = ThreadCount() - 1; i > 0; --i ){
-			v.emplace_back( [=]{
-				TRACET( ELogTags::Test, "Ex[{}]", i );
-				SetThreadDscrptn( Ƒ("Ex[{}]", i) );
+			threads.emplace_back( [ioc=ioc, &threadIds](){
+				threadIds.push_back( Thread::Id() );
+//				SetThreadDscrptn( Ƒ("Ex[{}]", index) );
 				ioc->run();
 			});
 		}
-		TRACET( ELogTags::App, "Executor Started: instances: {}.", ioc.use_count() );
+		TRACE( "Executor Started: instances: {}.", ioc.use_count() );
+
+		boost::asio::ip::tcp::resolver resolver( *ioc );
+    resolver.async_resolve( "localhost", "12345", [&](auto /*ec*/, auto /*endpoints*/){
+			while( threadIds.size() < ThreadCount() )
+				std::this_thread::sleep_for( 1ms );
+			uint i=0;
+			threadIds.visit( [&i](auto& id){
+				Thread::SetName( id, Ƒ("Ex[{}]", i++) );
+			});
+		});
 		_stopped.clear();
 		_started.test_and_set();
 		_started.notify_all();
 		ioc->run();
+		_ioStrand.reset();//non-owning ref into the io_context; drop it before the io_context can be destroyed.
 		_ioc.reset();
 		_started.clear();
 		if( _shutdowns )
-			_shutdowns->erase( [=](auto p){ p->Shutdown( false ); } );
-		INFOT( ELogTags::App, "Executor Stopped: instances: {}.", ioc.use_count() );
-		for( auto& t : v )
+			_shutdowns->erase( [=](auto p){p->Shutdown(false);} );
+		INFO( "Executor Stopped: instances: {}.", ioc.use_count() );
+		for( auto& t : threads )
 			t.join();
-		DBGT( ELogTags::App, "Removing Executor remaining instances: {}.", ioc.use_count()-1 );
+		DBG( "Removing Executor remaining instances: {}.", ioc.use_count()-1 );
 		ioc.reset(); //need to clear out client connections.
 		_cancelSignals.Clear();
 		_started.clear();
@@ -140,10 +159,12 @@ namespace Jde{
 	asio::post( *ctx, f );
 	Execution::Run();
 }
+#ifdef __cpp_lib_move_only_function
 α Jde::PostM( std::move_only_function<void()> f )ι->void{
 	auto ctx = Executor();
 	asio::post( *ctx, std::move(f) );
 }
+#endif
 α Jde::PostIO( function<void()> f )ι->void{
 	Executor();
 	asio::post( *_ioStrand, f );

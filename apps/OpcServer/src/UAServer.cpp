@@ -21,18 +21,15 @@ namespace Jde::Opc::Server {
 			_thread->join();
 			_thread.reset();
 		}
-		if( _ua ){
-			UA_Server_delete( _ua );
-			_ua = nullptr;
-		}
 	}
 	//
 	α UAServer::Run()ι->void{
 		if( !_thread ){
-			_thread = std::jthread{[this](std::stop_token /*st*/){
-				SetThreadDscrptn( "UAServer" );
+			_thread = std::jthread{ [this](std::stop_token /*st*/){
+				Thread::SetName( "UAServer" );
 				_running = true;
 				UA_Server_run( _ua, &_running );
+				ASSERT( _ua );
 				UA_Server_run_shutdown( _ua );
 				UA_Server_delete( _ua );
 				_ua = nullptr;
@@ -48,7 +45,7 @@ namespace Jde::Opc::Server {
 		THROW_IFSL( !success, "Failed to load nodeset file: '{}'", configFile.string() );
 	}
 
-	α UAServer::Constructor(UA_Server* /*server*/,
+	α UAServer::Constructor( UA_Server* /*server*/,
 	                    const UA_NodeId* /*sessionId*/, void* /*sessionContext*/,
 	                    const UA_NodeId* typeId, void* /*typeContext*/,
 	                    const UA_NodeId* nodeId, void** /*nodeContext*/)->UA_StatusCode{
@@ -56,15 +53,15 @@ namespace Jde::Opc::Server {
 		try{
 			for( let& [pk, variant] : ua.ConstructorValues(NodeId{*typeId}) ){
 				UA_RelativePathElement rpe;
-				UA_RelativePathElement_init(&rpe);
-				rpe.referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
+				UA_RelativePathElement_init( &rpe );
+				rpe.referenceTypeId = UA_NODEID_NUMERIC( 0, UA_NS0ID_HASCOMPONENT );
 				rpe.isInverse = false;
 				rpe.includeSubtypes = false;
 				//rpe.targetName = ua.GetBrowse( pk );
-				rpe.targetName = UA_QualifiedName{1, "status"_uv};
+				rpe.targetName = UA_QualifiedName{ 1, "status"_uv };
 
 				UA_BrowsePath bp{};
-		    UA_BrowsePath_init(&bp);
+		    UA_BrowsePath_init( &bp );
 				bp.startingNode = *nodeId;
 				bp.relativePath.elementsSize = 1;
 				bp.relativePath.elements = &rpe;
@@ -73,7 +70,7 @@ namespace Jde::Opc::Server {
 				UAε( bpr.statusCode );
 				THROW_IF( !bpr.targetsSize, "No targets found for node: {}, path: ({}){}", NodeId{*nodeId}.ToString(), rpe.targetName.namespaceIndex, ToString(rpe.targetName.name) );
 				UAε( UA_Server_writeValue(ua._ua, bpr.targets[0].targetId.nodeId, variant) );
-				UA_BrowsePathResult_clear(&bpr);
+				UA_BrowsePathResult_clear( &bpr );
 			}
 			return UA_STATUSCODE_GOOD;
 		}catch( exception& e ){
@@ -133,7 +130,7 @@ namespace Jde::Opc::Server {
 		dynamic_cast<NodeId&>(*oType) = id;
 		DBGSL( "Added ObjectType: {}", oType->ToString(parent) );
 		if( oType->PK )
-			_typeDefs.try_emplace( oType->PK, oType ).first->second;
+			_typeDefs.try_emplace( oType->PK, oType );
 	}
 	α UAServer::AddReference( NodePK nodePK, const Reference& ref, SL sl )ε->void{
 		auto& source = GetVariable( ref.SourcePK );
@@ -183,8 +180,8 @@ namespace Jde::Opc::Server {
 		for( const auto& [pk, node] : _objects ){
 			if( node.ParentNodePK != parent.PK )
 				continue;
-			if( let nodeBrowse = _browseNames.find( node.Browse.PK );
-				nodeBrowse==_browseNames.end() || nodeBrowse->second.namespaceIndex!=browse.namespaceIndex || ToSV(nodeBrowse->second.name)!=ToSV(browse.name) ){
+			if( let nodeBrowse = _browseNames.find(node.Browse.PK);
+				nodeBrowse==_browseNames.end() || nodeBrowse->second.namespaceIndex!=browse.namespaceIndex || ToSV( nodeBrowse->second.name )!=ToSV( browse.name ) ){
 				continue;
 			}
 			y = &node;
@@ -196,7 +193,7 @@ namespace Jde::Opc::Server {
 	α UAServer::FindBrowse( BrowseName& browse )Ι->bool{
 		let p = browse.PK
 			? _browseNames.find( browse.PK )
-			: find_if(_browseNames, [&browse](const auto& kv){ return kv.second.namespaceIndex==browse.namespaceIndex && ToSV(kv.second.name)==ToSV(browse.name); });
+			: find_if( _browseNames, [&browse](const auto& kv){return kv.second.namespaceIndex==browse.namespaceIndex && ToSV(kv.second.name)==ToSV(browse.name);} );
 		if( p!=_browseNames.end() )
 			browse = p->second;
 		return p!=_browseNames.end();
@@ -214,7 +211,7 @@ namespace Jde::Opc::Server {
 	α UAServer::FindDataType( NodePK nodePK )Ι->const UA_DataType*{
 		auto p = _dataTypes.find( nodePK );
 		if( p==_dataTypes.end() && nodePK<=32750 ){
-			if( auto ua = Opc::FindDataType( NodeId{0, (uint32_t)nodePK} ); ua )
+			if( auto ua = Opc::FindDataType(NodeId{0, (uint32_t)nodePK}); ua )
 				p = _dataTypes.try_emplace( nodePK, ua ).first;
 		}
 		return p==_dataTypes.end() ? nullptr : p->second;
@@ -242,31 +239,31 @@ namespace Jde::Opc::Server {
 		throw Exception{ sl, "[{:x}]Object[Type] node not found", pk };
 	}
 	α UAServer::GetObject( const NodeId& id, SL sl )ε->const Object&{
-		let p = find_if( _objects, [&]( let& kv ){return kv.second==id;} );
+		let p = find_if( _objects, [&](let& kv){return kv.second==id;} );
 		THROW_IFSL( p==_objects.end(), "Object not found: {}", id.ToString() );
 		return p->second;
 	}
 	α UAServer::GetRefType( NodePK pk, SL sl )ε->NodeId&{
-		auto p = _refTypes.find(pk);
+		auto p = _refTypes.find( pk );
 		if( p==_refTypes.end() && pk<=32750 )
 			p = _refTypes.try_emplace( pk, pk ).first;
 		THROW_IFSL( p==_refTypes.end(), "({:x})Reference type not found", pk );
 		return p->second;
 	}
 	α UAServer::GetTypeDef( const NodeId& id, SL sl )ε->sp<ObjectType>{
-		let p = find_if( _typeDefs, [&]( let& kv ){return *kv.second==id;} );
+		let p = find_if( _typeDefs, [&](let& kv){return *kv.second==id;} );
 		THROW_IFSL( p==_typeDefs.end(), "Object type not found: {}", id.ToString() );
 		return p->second;
 	}
 	α UAServer::GetTypeDef( NodePK pk, SL sl )ε->sp<ObjectType>{
 		auto p = _typeDefs.find( pk );
 		if( p==_typeDefs.end() && pk<=32750 )
-			p = _typeDefs.try_emplace( pk, ms<ObjectType>(UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, (UA_UInt32)pk}) ).first;
+			p = _typeDefs.try_emplace( pk, ms<ObjectType>(UA_NodeId{0, UA_NODEIDTYPE_NUMERIC, {(UA_UInt32)pk}}) ).first;
 		THROW_IFSL( p==_typeDefs.end(), "({})Object type not found", Ƒ("{:x}", pk) );
 		return p->second;
 	}
 	α UAServer::GetVariable( NodePK pk, SL sl )ε->const Variable&{
-		auto p = _variables.find(pk);
+		auto p = _variables.find( pk );
 		THROW_IFSL( p==_variables.end(), "({})Variable not found", Ƒ("{:x}", pk) );
 		return p->second;
 	}

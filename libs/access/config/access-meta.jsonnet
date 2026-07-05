@@ -75,6 +75,23 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				name: tables.providers.columns.target+{ comment: "if provider_id=OpcServer: the specific opcServer target, otherwise providers[provider_id].name " },
 			},
 			naturalKeys: [["provider_id", "name"]]
+		},
+		usersQL:{
+			columns: {
+				identityId: types.uint+{ sk: 0, i: 0 },
+				name: tables.identities.columns.name,
+				attributes: tables.identities.columns.attributes,
+				created: tables.identities.columns.created,
+				updated: tables.identities.columns.updated,
+				deleted: tables.identities.columns.deleted,
+				target: tables.identities.columns.target,
+				description: tables.identities.columns.description,
+				providerId: tables.identities.columns.providerId,
+				loginName: tables.users.columns.loginName,
+				modulus: tables.users.columns.modulus,
+				exponent: tables.users.columns.exponent
+			},
+			naturalKeys: tables.identities.naturalKeys,
 		}
 	},
 	tables:{
@@ -97,7 +114,8 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				exponent: types.uint+{ nullable:true, comment: "Used for RSA", i:103 }
 			},
 			ops: ["Create", "Read", "Update", "Delete", "Purge", "Administer", "Execute"],
-			extends: "identities"
+			extends: "identities",
+			qlView: "users_ql"
 		},
 		groupings:{
 			columns: {
@@ -126,17 +144,16 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		resources:{
 			columns: {
 				resourceId: smallSequenced,
-				schemaName: valuesColumns.name+{ i:1 },
+				schemaName: types.varchar+{ length: 32, i:1 },
 				name: types.varchar+{ length: 64, i:10 },
-				target:types.varchar+{ length: 64, i:20 },
+				target:types.varchar+{ length: 32, i:20 },
 				attributes: types.uint16+{ nullable: true, i:30 },
 				created: types.dateTime+{ insertable: false, updateable: false, default: sqlFunctions.now.name, i:40 },
 				updated: types.dateTime+{ nullable: true, insertable: false, updateable: false, i:50 },
 				deleted:types.dateTime+{ nullable: true, insertable: false, updateable: false, i:60 },
 				description: types.varchar+{ length: 2048, nullable: true, i:70 },
-				criteria: types.varchar+{ nullable: true, length:832, i:100 },
-				allowed: tables.rights.columns.rightId+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource", sk:null },
-				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:102, nullable:true, comment: "available rights for this resource", sk:null },//why?
+				criteria: types.varchar+{ nullable: true, length:672, i:100 },
+				allowed: types.ulong+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource" }
 			},
 			ops: ["Delete"],
 			naturalKeys: [["schema_name", "target", "criteria"]],
@@ -152,8 +169,8 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			columns: {
 				permissionId: tables.permissions.columns.permissionId+{ pkTable: "permissions", i:0, sk:0 },
 				resourceId: tables.resources.columns.resourceId+{ sk:null, pkTable: "resources", i:1 },
-				allowed: tables.rights.columns.rightId+{ pkTable: "rights", i:2 },
-				denied: tables.rights.columns.rightId+{ pkTable: "rights", i:3 },
+				allowed: types.ulong+{ pkTable: "rights", i:2 },
+				denied: types.ulong+{ pkTable: "rights", i:3 },
 			},
 			ops: ["None"]
 		},

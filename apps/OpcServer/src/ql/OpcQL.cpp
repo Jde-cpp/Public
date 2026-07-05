@@ -1,4 +1,5 @@
 #include "OpcQL.h"
+#include <jde/app/client/awaits/LogSettingsClientAwait.h>
 
 namespace Jde::Opc{
 	sp<Server::OpcQL> _ql;
@@ -13,9 +14,13 @@ namespace Jde::Opc{
 
 namespace Jde::Opc::Server{
 	OpcQL::OpcQL( sp<DB::AppSchema>&& schema, sp<Access::Authorize> authorizer )ι:
-	QL::LocalQL{ {schema}, authorizer }{
+		App::AppQL{ {schema}, move(authorizer) }{
 		QL::Configure( {move(schema)} );
 	}
-	α OpcQL::CustomQuery( QL::TableQL& ql, UserPK executer, SL sl )ι->up<TAwait<jvalue>>{return nullptr;}
-	α OpcQL::CustomMutation( QL::MutationQL& ql, UserPK executer, SL sl )ι->up<TAwait<jvalue>>{return nullptr;}
+	α OpcQL::CustomQuery( QL::TableQL&, QL::Creds, SL )ι->up<TAwait<jvalue>>{return nullptr;}
+	α OpcQL::CustomMutation( QL::MutationQL&, QL::Creds, SL )ι->up<TAwait<jvalue>>{return nullptr;}
+
+	α OpcQL::LogSettingsQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>>{
+		return mu<App::Client::LogSettingsClientAwait>( move(ql), sl );
+	}
 }

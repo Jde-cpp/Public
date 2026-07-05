@@ -12,8 +12,6 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{
-	constexpr ELogTags _tags{ ELogTags::Test };
-
 	α CreateServerCnnctnAwait::Execute()ι->QL::QLAwait<jobject>::Task{
 		try{
 			let certificateUri{ Settings::FindSV("/opc/urn").value_or("urn:open62541.server.application") };
@@ -46,17 +44,16 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α Tests::SelectServerCnnctn( DB::Key id )ι->optional<ServerCnnctn>{
-		let subQuery = id.IsPK() ? Ƒ( "id: {}", id.PK() ) : Ƒ( "target: \"{}\"", id.NK() );
-		let select = Ƒ( "serverConnection({}){{ id name attributes created updated deleted target description certificateUri isDefault url }}", subQuery );
-		auto o = QL().QuerySync<jobject>( select, {}, {UserPK::System} );
+		let select = Ƒ( "serverConnection({}){{ id name attributes created updated deleted target description certificateUri isDefault url }}", id.QLInput() );
+		auto o = QL().QuerySync<jobject>( select, id.QLVariables(), {UserPK::System} );
 		return o.empty() ? optional<ServerCnnctn>{} : ServerCnnctn( move(o) );
 	}
 
-	α Tests::GetConnection( str target )ι->ServerCnnctn{
+	α Tests::GetConnection( str target )ε->ServerCnnctn{
 		auto con = SelectServerCnnctn( {target} );
 		if( !con ){
-			BlockAwait<ProviderCreatePurgeAwait, Access::ProviderPK>( ProviderCreatePurgeAwait{target, false} );
-			let id = BlockAwait<CreateServerCnnctnAwait, ServerCnnctnPK>( CreateServerCnnctnAwait{} );
+			BlockTAwait<Access::ProviderPK>( ProviderMAwait{target, false} );
+			let id = BlockTAwait<ServerCnnctnPK>( CreateServerCnnctnAwait{} );
 			con = SelectServerCnnctn( id );
 		}
 		return *con;
@@ -64,13 +61,17 @@ namespace Jde::Opc::Gateway{
 
 	using Web::Client::ClientHttpAwait;
 	using Web::Client::ClientHttpRes;
-	α Tests::Query( sv ql, bool raw )ε->jobject{
+	α Tests::Query( sv ql, jobject vars, bool raw )ε->jobject{
 		try{
+			jobject body{ {"query", ql} };
+			if( !vars.empty() )
+				body["variables"] = vars;
 			auto res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{
 				"localhost",
-				Ƒ("/graphql?query={}&{}", ql, raw ? "raw" : "" ),
+				Ƒ("/graphql?{}", raw ? "raw" : "" ),
+				serialize(body),
 				GatewayPort(),
-				{ .Authorization=Ƒ("{:x}", AppClient()->SessionId()), .Verb=http::verb::get, .IsSsl=false }
+				{ .Authorization=Ƒ("{:x}", AppClient()->SessionId()), .IsSsl=false }
 			});
 			return res.Json();
 		}

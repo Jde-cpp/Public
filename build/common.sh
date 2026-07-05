@@ -81,7 +81,10 @@ function moveToDir {
 function toBashDir {
 	windowsDir=$1;
  	local -n _bashDir=$2
- 	_bashDir=${windowsDir/:/}; _bashDir=${_bashDir//\\//}; _bashDir=${_bashDir/C/c};
+ 	_bashDir=${windowsDir/:/}; _bashDir=${_bashDir//\\//};
+ 	if [[ $_bashDir == C/* || $_bashDir == C ]]; then
+ 		_bashDir="c${_bashDir:1}"
+ 	fi
 	if [[ ${_bashDir:0:1} != "/" ]]; then _bashDir=/$_bashDir; fi;
 }
 

@@ -1,8 +1,6 @@
-#ifdef BOOST_ALL_NO_LIB
-	#include <boost/json/src.hpp>
-#endif
 #include <jde/db/db.h>
 #include <jde/fwk/settings.h>
+#include <jde/fwk/process/dll.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/meta/Cluster.h>
@@ -11,7 +9,6 @@
 #include "meta/ddl/CatalogDdl.h"
 #include "meta/ddl/SchemaDdl.h"
 #include "meta/IServerMeta.h"
-#include <jde/fwk/process/dll.h>
 #include "c_api.h"
 
 #define let const auto

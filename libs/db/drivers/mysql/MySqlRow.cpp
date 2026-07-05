@@ -8,7 +8,7 @@
 namespace Jde::DB{
 	using namespace std::chrono;
 
-	Ω toValue( const boost::mysql::field_view& field, SL sl )ε->Value{
+	Ω toValue( const boost::mysql::field_view& field )ε->Value{
 		Value v;
 		switch( field.kind() ){
 			using enum boost::mysql::field_kind;
@@ -37,10 +37,10 @@ namespace Jde::DB{
 		return v;
 	}
 
-	α MySql::ToRow( const mysql::row_view& mySqlRow, SL sl )->Row{
+	α MySql::ToRow( const mysql::row_view& mySqlRow )->Row{
 		vector<Value> values;
 		for( auto&& field : mySqlRow )
-			values.push_back( toValue(field, sl) );
+			values.push_back( toValue(field) );
 		return Row{ move(values) };
 	}
 }

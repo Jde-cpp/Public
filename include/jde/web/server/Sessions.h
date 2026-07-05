@@ -2,6 +2,7 @@
 #include <jde/db/usings.h>
 #include <jde/fwk/co/Await.h>
 #include <jde/fwk/co/Task.h>
+#include <jde/ql/IQLSession.h>
 #include "exports.h"
 
 #define Φ auto ΓWS
@@ -12,12 +13,11 @@ namespace Jde::Web::FromServer{ struct SessionInfo; }
 namespace Jde::Web::Server{
 	struct SessionInfo;
 	namespace Sessions::Internal{ α CreateSession( UserPK userPK, str endpoint, bool isSocket, bool add )ι->sp<SessionInfo>; }
-	struct SessionInfo{
+	struct SessionInfo final : QL::IQLSession{
 		SessionInfo()ι=default;
 		SessionInfo( SessionPK sessionPK, steady_clock::time_point expiration, Jde::UserPK userPK, str userEndpointAddress, bool hasSocket )ι;
 
 		SessionPK SessionId;
-		Jde::UserPK UserPK;
 		string UserEndpoint;
 		bool HasSocket;//before Expiration
 		steady_clock::time_point Expiration;

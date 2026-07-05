@@ -26,7 +26,7 @@ export class OpcAuthService implements IAuth{
 			promise = await this.gatewayService.defaultGateway.logout( log );
 		else
 			promise = await this.app.logout( log );
-		this.isOpc.set( null );
+		this.isOpc.set( undefined );
 		return promise;
 	}
 	async loginPassword( domain:string, username:string, password:string, log:Log ):Promise<void>{
@@ -37,6 +37,6 @@ export class OpcAuthService implements IAuth{
 	}
 	user = computed( () => this.app?.user() );
 		//this.isOpc()==null ? null : this.isOpc() ? this.iot.user() : this.app.user() );
-	isOpc = signal<boolean|undefined>( null );
+	isOpc = signal<boolean|undefined>( undefined );
 //	iot = computed( () => this.isOpc() ? this.gatewayService.defaultGateway : null );
 }

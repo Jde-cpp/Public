@@ -1,7 +1,6 @@
 #pragma once
 #include "../Row.h"
 #include <jde/db/awaits/SelectAwait.h>
-#include <jde/db/generators/Statement.h>
 
 #define let const auto
 

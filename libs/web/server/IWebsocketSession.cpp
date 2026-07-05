@@ -8,10 +8,10 @@
 
 #define let const auto
 
-namespace Jde::App::Proto::FromServer{ struct Traces; }
+namespace Jde::App::Proto::FromServer{ class Traces; }
 namespace Jde::Web::Server{
 	//TODO comment
-	struct SocketServerListener : QL::IListener{
+	struct SocketServerListener final: QL::IListener{
 		SocketServerListener( sp<IWebsocketSession> session )ι: QL::IListener{ Ƒ("[{}]Socket", session->Id()) }, _session{ session }{}
 		α OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void{ _session->WriteSubscription(j, clientId); }
 		α OnTraces( App::Proto::FromServer::Traces&& /*traces*/ )ι->void{ ASSERT(false); }
@@ -27,7 +27,6 @@ namespace Jde::Web::Server{
 
 	α IWebsocketSession::Run()ι->void{
 		LogRead( "Run", 0 );
-		SocketServerListener foo{ shared_from_this() };
 		_listener = ms<SocketServerListener>( shared_from_this() );
 		Stream->DoAccept( move(_initialRequest), shared_from_this() );
 	}
@@ -79,16 +78,21 @@ namespace Jde::Web::Server{
 			QL::Subscriptions::StopListen( _listener );
 			_listener = nullptr;
 		}
-		Stream->Close( shared_from_this() );
+		if( Stream )
+			Stream->Close( shared_from_this() );
 	}
 	α IWebsocketSession::OnClose()ι->void{
 		LogRead( "SererSocket::OnClose.", 0 );
 		Internal::RemoveSocketSession( Id() );
 		_listener = nullptr;
+		if( Stream ){
+			Stream->Close( shared_from_this() );
+			Stream = nullptr;
+		}
 	}
 
-	α IWebsocketSession::AddSubscription( string&& query, jobject variables, RequestId requestId, SL sl )ε->flat_set<QL::SubscriptionId>{
-		auto subs = QL::ParseSubscriptions( move(query), variables, Schemas(), sl );
+	α IWebsocketSession::AddSubscription( string&& query, jobject vars, RequestId requestId, SL sl )ε->flat_set<QL::SubscriptionId>{
+		auto subs = QL::ParseSubscriptions( move(query), move(vars), Schemas(), sl );
 		flat_set<QL::SubscriptionId> subscriptionIds;//client ids.
 		vector<QL::Subscription> logSubs;
 		for( auto sub=subs.begin(); sub!=subs.end();  ){
@@ -129,18 +133,18 @@ namespace Jde::Web::Server{
 	}
 
 	α IWebsocketSession::AddTimeout( RequestId requestId, QueryClientAwait::Handle h, Duration timeout, SL sl )ι->TimerAwait::Task{
-		auto timer = ms<DurationTimer>( timeout, ELogTags::SocketServerWrite, sl );
+		auto timer = ms<DurationTimer>( timeout, sl );
 		{
 			lg l{ _pendingQueriesMutex };
 			_pendingQueries.emplace( requestId, make_pair(h, timer) );
 		}
-		auto timedout = co_await *timer;
+		auto _ = co_await *timer;
 		lg l{ _pendingQueriesMutex };
 		if( auto it = _pendingQueries.find(requestId); it!=_pendingQueries.end() ){
 			auto h = it->second.first;
 			_pendingQueries.erase( it );
 			if( h ){
-				h.promise().SetExp( Exception{ELogTags::SocketServerWrite, sl, "Query {} timed out after {}s", hex(requestId), Chrono::ToString(timeout)} );
+				h.promise().SetExp( Exception{ELogTags::SocketServerWrite, sl, "Query {} timed out after {}", hex(requestId), Chrono::ToString(timeout)} );
 				h.resume();
 			}
 		}

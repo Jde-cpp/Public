@@ -10,6 +10,7 @@ namespace Jde::DB{
 	struct ΓDB Table : View{
 		Table( string name )ι:View{move(name)}{}  //placeholder
 		Table( sv name, const jobject& j )ε;
+		virtual ~Table()=default;
 		α Initialize( sp<DB::AppSchema> schema, sp<Table> self )ε->void;
 
 		α FindColumn( sv name )Ι->sp<Column> override;

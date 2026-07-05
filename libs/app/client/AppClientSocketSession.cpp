@@ -63,22 +63,24 @@ namespace Client{
 		auto instanceName = Settings::FindString( "/instanceName" ).value_or( "" );
 		if( instanceName.empty() )
 			instanceName = _debug ? "Debug" : "Release";
-		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Connect: '{}'.", requestId, instanceName );
+		LOGSL( ELogLevel::Information, sl, ELogTags::SocketClientWrite, "[{}]Connect: '{}'.", hex(requestId), instanceName );
 		return ClientSocketAwait<Proto::FromServer::ConnectionInfo>{ ToString(FromClient::Instance(Process::AppName(), instanceName, sessionId, requestId)), requestId, shared_from_this(), sl };
 	}
 
-	α AppClientSocketSession::OnClose( beast::error_code ec )ι->void{
+	α AppClientSocketSession::CloseTasks( beast::error_code ec )ι->void{
 		auto f = [this, ec]( std::any&& h )->void {
 			HandleException( move(h), CodeException{ec, _tags, ELogLevel::NoLog}, false );
 		};
-		CloseTasks( f );
+		base::CloseTasks( f );
+	}
+	α AppClientSocketSession::OnClose( beast::error_code ec )ι->void{
 		base::OnClose( ec );
 		_appClient->SetSession( nullptr );
 		if( !Process::ShuttingDown() )
 			App::Client::Connect( move(_appClient) );
 	}
 	α AppClientSocketSession::OnMessage( string&& j, RequestId requestId )ι->void{
-		TRACE( "[{}]OnMessage", hex(requestId), j.substr(0, Web::Client::MaxLogLength()) );
+		DBG( "[{}]OnMessage", hex(requestId), j.substr(0, Web::Client::MaxLogLength()) );
 		try{
 			Subscriptions::OnWebsocketReceive( Json::Parse(j), requestId );
 		}
@@ -91,10 +93,10 @@ namespace Client{
 		return ClientSocketAwait<Web::FromServer::SessionInfo>{ FromClient::Session(sessionId, requestId), requestId, shared_from_this(), sl };
 	}
 	α AppClientSocketSession::ClientQuery( Proto::FromServer::ClientQuery proto, RequestId requestId )ι->TAwait<jvalue>::Task{
-		TRACE( "[{}.{}]ClientQuery: size='{}'.", hex(Id()), hex(requestId), proto.query().substr(0, Web::Client::MaxLogLength()) );
+		DBG( "[{}.{}]ClientQuery: size='{}'.", hex(Id()), hex(requestId), proto.query().substr(0, Web::Client::MaxLogLength()) );
 		try{
 			auto vars = proto.variables().empty() ? jobject{} : parse( proto.variables() ).as_object();
-			auto result = co_await *_appClient->ClientQuery( QL::Parse(move(*proto.mutable_query()), move(vars), {}, proto.raw()), {proto.executer_pk()}, proto.raw() );
+			auto result = co_await *_appClient->ClientQuery( QL::Parse(move(*proto.mutable_query()), move(vars), {}, proto.raw()), {proto.executer_pk()} );
 			Write( FromClient::QueryResult(serialize(result), requestId) );
 		}
 		catch( IException& e ){
@@ -103,14 +105,14 @@ namespace Client{
 	}
 	α AppClientSocketSession::Query( string&& q, jobject variables, bool returnRaw, SL sl )ι->ClientSocketAwait<jvalue>{
 		let requestId = NextRequestId();
-		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]GraphQL: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
+		LOGSL( ELogLevel::Debug, sl, ELogTags::SocketClientWrite, "[{}]{}.", hex(requestId), q.substr(0, Web::Client::MaxLogLength()) );
 
 		return ClientSocketAwait<jvalue>{ FromClient::Query(move(q), move(variables), requestId, returnRaw), requestId, shared_from_this(), sl };
 	}
 	concurrent_flat_map<RequestId, std::pair<sp<QL::IListener>,vector<QL::Subscription>>> _subscriptionRequests;
 	α AppClientSocketSession::Subscribe( string&& q, jobject vars, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
 		let requestId = NextRequestId();
-		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, q.substr(0, Web::Client::MaxLogLength()) );
+		LOGSL( ELogLevel::Debug, sl, ELogTags::SocketClientWrite, "[{}]{} {}.", hex(requestId), q.substr(0, Web::Client::MaxLogLength()), serialize(vars) );
 		auto subscriptions = QL::ParseSubscriptions( q, vars, _appClient->SubscriptionSchemas, sl );
 		_subscriptionRequests.emplace( requestId, make_pair(listener, move(subscriptions)) );
 		return ClientSocketAwait<jarray>{ FromClient::Subscription(move(q), move(vars), requestId), requestId, shared_from_this(), sl };
@@ -139,10 +141,9 @@ namespace Client{
 		}
 	}
 
-	ψ resumeVoid( std::any&& hAny, const fmt::format_string<Args...> m="", Args&&... args )ι->void{
+	ψ resumeVoid( std::any&& hAny )ι->void{
 		auto h = std::any_cast<Web::Client::ClientSocketVoidAwait::Handle>( &hAny );
 		ASSERT_DESC( h, Ƒ("typeT={}, typeV={}", typeid(Web::Client::ClientSocketVoidAwait::Handle).name(), hAny.type().name()) );
-		//h->promise().Log( FWD(m), FWD(args)... );
 		h->resume();
 	}
 
@@ -182,33 +183,33 @@ namespace Client{
 				ClientQuery( move(*m->mutable_client_query()), requestId );
 				break;
 			case kConnectionInfo:
-				TRACE( "[{}]ConnectionInfo: connection: '{}'.", hex(Id()), hex(m->connection_info().connection_pk()) );
+				DBG( "[{}]ConnectionInfo: connection: '{}'.", hex(Id()), hex(m->connection_info().connection_pk()) );
 				resume( move(hAny), move(*m->mutable_connection_info()) );
 				break;
 			case kGeneric:
-				TRACE( "[{}]Generic: '{}'.", hex(Id()), m->generic() );
+				DBG( "[{}]Generic: '{}'.", hex(Id()), m->generic() );
 				resume( move(hAny), move(*m->mutable_generic()) );
 				break;
 			[[likely]] case kStrings:{
 				auto& res = *m->mutable_strings();
-				TRACE( "[{}]Strings: count='{}'.", hex(Id()), res.messages().size()+res.files().size()+res.functions().size()+res.threads().size() );
+				DBG( "[{}]Strings: count='{}'.", hex(Id()), res.messages().size()+res.files().size()+res.functions().size()+res.threads().size() );
 				resume( move(hAny), move(*m->mutable_strings()) );
 				}break;
 			case kJwt:
-				TRACE( "[{:x}]Jwt: size='{}'.", Id(), m->jwt().size() );
+				DBG( "[{}]Jwt: size='{}'.", hex(Id()), m->jwt().size() );
 				resume( move(hAny), Web::Jwt{move(*m->mutable_jwt())} );
 				break;
 			case kProgress://TODO not awaitable
-				TRACE( "[{:x}]Progress: '{}'.", Id(), m->progress() );
+				DBG( "[{}]Progress: '{}'.", hex(Id()), m->progress() );
 				resumeScaler( move(hAny), m->progress() );
 				break;
 			case kSessionInfo:{
 				auto& res = *m->mutable_session_info();
-				TRACE( "[{:x}]SessionInfo: expiration: '{}', session_id: '{:x}', user_pk: '{}', user_endpoint: '{}'.", Id(), ToIsoString(Protobuf::ToTimePoint(res.expiration())), res.session_id(), res.user_pk(), res.user_endpoint() );
+				DBG( "[{}]SessionInfo: expiration: '{}', session_id: '{}', user_pk: '{}', user_endpoint: '{}'.", hex(Id()), ToIsoString(Protobuf::ToTimePoint(res.expiration())), hex(res.session_id()), res.user_pk(), res.user_endpoint() );
 				resume( move(hAny), move(res) );
 				}break;
 			case kQueryResult:
-				TRACE( "[{:x}]query: '{}'.", Id(), m->query_result().substr(0, Web::Client::MaxLogLength()) );
+				DBG( "[{}.{}]query: '{}'.", hex(Id()), hex(requestId), m->query_result().substr(0, Web::Client::MaxLogLength()) );
 				resumeJValue( move(hAny), move(*m->mutable_query_result()) );
 				break;
 			case kSubscriptionAck:
@@ -226,7 +227,7 @@ namespace Client{
 				else{ //found the request.
 					jarray y;
 					for_each( m->subscription_ack().server_ids(), [&](auto id){y.emplace_back(id);} );
-					TRACE( "[{:x}]SubscriptionAck: '{}'.", Id(), serialize(y) );
+					DBG( "[{}]SubscriptionAck: '{}'.", hex(Id()), serialize(y) );
 					resume( move(hAny), move(y) );
 				}
 				break;
@@ -246,11 +247,11 @@ namespace Client{
 				break;}
 			case kExecuteResponse://wait for use case.
 			case kStringPks://strings already saved in db, no need to send.  not being requested by client yet.
-				CRITICAL( "[{:x}]No use case has been implemented on client app '{}'.", Id(), underlying(m->value_case()) );
+				CRITICAL( "[{}]No use case has been implemented on client app '{}'.", hex(Id()), underlying(m->value_case()) );
 				break;
 			[[likely]]case kTraces:{
 				auto& traces = *m->mutable_traces();
-				TRACE( "[{:x}]Traces: count='{}'.", Id(), traces.values_size() );
+				DBG( "[{}]Traces: count='{}'.", hex(Id()), traces.values_size() );
 				App::Client::Subscriptions::OnTraces( move(traces), requestId );
 				break;}
 			//[[unlikely]]
@@ -286,7 +287,7 @@ namespace Client{
 		else{
 			let severity{ requestId ? ELogLevel::Critical : ELogLevel::Debug };
 			ASSERT_DESC( !requestId, Ƒ("Type Not Expected={}", h.type().name()) );
-			LOG( severity, _tags, "[{:x}]Failed to process incoming exception '{}'.", requestId, e.what() );
+			LOG( severity, _tags, "[{}]Failed to process incoming exception '{}'.", hex(requestId), e.what() );
 		}
 	}
 	α AppClientSocketSession::WriteException( exception&& e, RequestId requestId )ι->void{

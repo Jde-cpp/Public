@@ -32,7 +32,7 @@ namespace Jde::Access::Server{
 			auto sql = statement.Move();
 			let userPK = co_await DS().ScalerOpt<UserPK::Type>( move(sql) );
 			if( !userPK )
-				InsertUser( move(_publicKey.ModulusHex()), _publicKey.ExponentInt() );
+				InsertUser( _publicKey.ModulusHex(), _publicKey.ExponentInt() );
 			else
 				ResumeScaler( {*userPK} );
 		}

@@ -1,6 +1,9 @@
+#include "jde/fwk/co/Await.h"
+#include "jde/fwk/process/process.h"
 #include <jde/app/client/IAppClient.h>
 #include <jde/fwk/io/protobuf.h>
 #include <jde/ql/IQL.h>
+#include <jde/access/AccessListener.h>
 #include <jde/app/log/ProtoLog.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/RemoteLog.h>
@@ -8,11 +11,41 @@
 
 #define let const auto
 namespace Jde::App::Client{
+	IAppClient::IAppClient()ι{
+		Process::AddShutdown( this );
+	}
+	α IAppClient::Shutdown( bool terminate, SL sl )ι->void{
+		CloseSocketSession( terminate, sl );
+	}
 	α IAppClient::InitLogging( sp<App::Client::IAppClient> client )ι->void{
 		App::ProtoLog::Init();
 		App::Client::RemoteLog::Init( move(client) );
 		Logging::Init();
 	}
+	α IAppClient::LoadLogSettings( SL sl )ι->void{
+		try{
+			auto settings = QuerySync( "instanceTagLevel(id:$id){ text binary appServer }", {{"id",InstancePK()}}, true, sl );
+			IApp::LoadLogSettings( settings, sl );
+			if( auto logger = Logging::FindLogger<App::Client::RemoteLog>(); logger )
+				logger->SetLevels( move(settings.at("appServer").as_object()) );
+			Logging::UpdateCumulative( Logging::Loggers() );
+			Logging::Log( ELogLevel::Trace, ELogTags::Settings, sl, "Loaded log settings." );
+		}
+		catch( IException& e ){
+			e.SetLevel( ELogLevel::Critical );
+		}
+		catch( exception& e ){
+			Exception{ sl, move(e), ELogLevel::Critical };
+		}
+	}
+
+	sp<Access::AccessListener> _listener;
+	α IAppClient::Listener()Ι->sp<Access::AccessListener>{
+		if( !_listener )
+			_listener = ms<Access::AccessListener>( QLServer() );
+		return _listener;
+	}
+
 	α IAppClient::QueryArray( string&& q, jobject variables, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
 		return QLServer()->QueryArray( move(q), move(variables), UserPK(), returnRaw, sl );
 	}
@@ -51,14 +84,15 @@ namespace Jde::App::Client{
 			session->Write( FromClient::Status(StatusDetails()) );
 	}*/
 
-	α IAppClient::CloseSocketSession( SL sl )ι->VoidTask{
+	α IAppClient::CloseSocketSession( bool terminate, SL sl )ι->void{
 		auto session = _session;
 		if( !session )
-			co_return;
+			return;
 		let tags = ELogTags::Client | ELogTags::Socket;
 		LOGSL( ELogLevel::Trace, sl, tags, "ClosingSocketSession" );
-		co_await session->Close();
+		BlockVoidAwait( session->Close(terminate, sl) ); //_session = nullptr;
 		session = nullptr;
+
 		LOGSL( ELogLevel::Information, sl, tags, "ClosedSocketSession" );
 	}
 	α IAppClient::Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
@@ -67,8 +101,9 @@ namespace Jde::App::Client{
 
 	α IAppClient::Write( vector<Logging::Entry>&& entries )ι->void{
 		auto session = _session;
+		ASSERT_DESC( session, "Not connected." );
 		if( !session )
 			return;
-		session->Write( FromClient::LogEntries( move(entries) ) );
+		session->Write( FromClient::LogEntries(move(entries)) );
 	}
 }

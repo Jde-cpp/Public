@@ -1,4 +1,4 @@
-import { assert, Mutation, MutationType } from "jde-framework";
+import { verify, Mutation, MutationType } from "jde-framework";
 import { Resource } from "./Resource";
 import { Role, RolePK } from "./Role";
 import { Acl } from "./Acl";
@@ -30,7 +30,7 @@ export class Permission{
 		if( typeof x == "number" ) rights = x as Rights;
 		else if( typeof x == "string" ) rights = Rights[ x as keyof typeof Rights ];
 		else if( Array.isArray(x) ) rights = x.reduce( (accum,right)=>accum | Rights[right as keyof typeof Rights], Rights.None );
-		return rights;
+		return rights!;
 	}
 
 	static aclMutations( identityId:number, modified:Permission[], original:Permission[] ):Mutation[]{
@@ -39,15 +39,15 @@ export class Permission{
 			let existing = original?.find( x=>x.id==mod.id );
 			if( existing ){
 				if( !mod.allowed && !mod.denied )
-					y.push( new Mutation(Acl.typeName, null, { identity:{id:identityId}, permissionRight:{id:existing.id} }, MutationType.Purge) );
+					y.push( new Mutation(Acl.typeName, undefined, { identity:{id:identityId}, permissionRight:{id:existing.id} }, MutationType.Purge) );
 				else{
 					let m = mod.mutation(existing);
 					if( m )
 						y.push( m );
 				}
 			}else{
-				console.assert( !mod.id );
-				y.push( new Mutation(Acl.typeName, null,
+				verify( !mod.id );
+				y.push( new Mutation(Acl.typeName, undefined,
 					{identity:{ id:identityId },permissionRight:{allowed:mod.allowed ?? 0, denied:mod.denied ?? 0, resource:{id:mod.resource.id}}},
 					MutationType.Create/*,permissionRight{id}*/) );
 				console.log( y[0].toString() );
@@ -55,7 +55,7 @@ export class Permission{
 		}
 		return y;
 	}
-	static roleMutations( rolePK:RolePK, alteredRows:Permission[], originalRows:Permission[]|null ):Mutation[]{
+	static roleMutations( rolePK:RolePK, alteredRows:Permission[], originalRows:Permission[] ):Mutation[]{
 		let mutations = [];
 		for( let altered of alteredRows ){
 			let existing = originalRows.find( x=>x.id==altered.id );
@@ -68,7 +68,7 @@ export class Permission{
 						mutations.push( m );
 				}
 			}else{
-				assert( !altered.id );
+				verify( !altered.id );
 				//addRole( id:42, allowed:255, denied:0, resource:{target:"users"} )
 				mutations.push( new Mutation(Role.typeName, rolePK, {permissionRight:{allowed:altered.allowed ?? 0, denied:altered.denied ?? 0, resource:{target:altered.resource.target}}}, MutationType.Add) );
 			}
@@ -76,7 +76,7 @@ export class Permission{
 		return mutations;
 	}
 	mutation( original:Permission ):Mutation|null{
-		let args = {};
+		let args:any = {};
 		if( this.allowed!=original?.allowed )
 			args["allowed"] = this.allowed;
 		if( this.denied!=original?.denied )

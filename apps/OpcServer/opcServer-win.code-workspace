@@ -2,53 +2,16 @@
 	"settings": {
 		"window.title": "OpcServer",
 		"name": "OpcServer",
-		"compiler": "msvc",
-		"sourceDir": "${env:JDE_BASH}/apps/OpcServer",
-		"exe": "Jde.Opc.Server.exe",
-		"testExe": "Jde.Opc.Server.Tests.exe",
-		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
-		"debugPreset": "win-msvc-debug",
-		"winBuildDir": "${env:JDE_BUILD_DIR}/${config:compiler}/apps/${config:name}",
-		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
+		"target": "Jde.Opc.Server",
+		"subDir": "apps/OpcServer",
+		"sourceDirx": "${env:JDE_BASH}/${config:subDir}",
+		"exe": "\\bin\\${config:buildTarget}\\${config:target}.exe",
+		"testExe": "\\bin\\${config:buildTarget}\\${config:target}.Tests.exe",
+		"settings": "${env:JDE_DIR}/${config:subDir}/config/Opc.Server.jsonnet",
 	},
 	"tasks": {
 		"version": "2.0.0",
 		"tasks": [
-			{
-				"label": "build",
-				"type": "shell",
-				"command": "mkdir -p ${config:debugDir}; cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug --target Jde.Opc.Server;",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": true }
-			},
-			{
-				"label": "buildTests",
-				"type": "shell",
-				"command": "cd ${config:debugDir}; tput reset;cmake --build . -j --config Debug --target Jde.Opc.Server.Tests;",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": "build"
-			},
-			{
-				"label": "compile",
-				"type": "shell",
-				"command": "tput reset;${config:sourceBash};compile \"${workspaceFolder}\" \"${fileWorkspaceFolder}\" \"${relativeFile}\" \"${config:debugDir}\";",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "buildProject",
-				"type": "shell",
-				"command": "tput reset;${config:sourceBash};buildProject \"${fileWorkspaceFolder}\" \"${config:debugDir}\";",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "cmake",
-				"type": "shell",
-				"command": "mkdir -p ${config:buildDir};cd ${config:buildDir}; tput reset; rm -f CMakeCache.txt; cmake ${config:sourceDir} --preset win-msvc-jde",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
-			},
 			{
 				"label": "test",
 				"type": "shell",
@@ -62,27 +25,27 @@
 		"version": "0.2.0",
 		"configurations": [{
 			"name": "Debug",
-			"type": "cppvsdbg",
+			"type": "lldb",
 			"request": "launch",
-			"program": "${config:winBuildDir}\\exe\\Debug\\${config:exe}",
-			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/apps/OpcServer/config/Opc.Server.jsonnet"],
-			"stopAtEntry": false,
-			"cwd": "${env:JDE_BUILD_DIR}",
+			"program": "${config:winBuildDir}\\${config:exe}",
+			"args": [
+				"-c",
+				"-tests",
+				"-settings=${config:settings}"
+			],
+			"cwd": "${config:winBuildDir}\\bin",
 			"console": "integratedTerminal",
 			"preLaunchTask": "build"
 		},
 		{
 			"name": "Tests - Debug",
-			"type": "cppvsdbg",
+			"type": "lldb",
 			"request": "launch",
-			"program": "${config:winBuildDir}\\tests\\Debug\\${config:testExe}",
+			"program": "${config:winBuildDir}\\bin\\${config:buildTarget}\\${config:target}.Tests.exe",
 			"args": [ "-tests", "-settings=${config:sourceDir}/tests/config/Opc.Server.Tests.jsonnet" ],
-			"stopAtEntry": false,
-			"cwd": "${env:JDE_BUILD_DIR}",
-			"environment": [],
+			"cwd": "${env:JDE_BUILD_DIR}\\..\\runtime",
 			"console": "integratedTerminal",
-			"preLaunchTask": "buildTests",
-			"logging": {"natvisDiagnostics": "verbose" }
+			"preLaunchTask": "buildTests"
 		}]
 	},
 	"folders": [

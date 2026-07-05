@@ -2,7 +2,13 @@
   color: var(--mat-sys-primary);
   background: var(--mat-sys-primary-container);
 }
-
+.mat-mdc-form-field {
+  --mat-form-field-container-height: 40px; /* Adjust to your preferred height */
+  --mat-form-field-container-vertical-padding: 8px;
+}
+.search{
+	width: 360px;
+}
 .docs-navbar-header {
   display: flex;
   flex-wrap: wrap;
@@ -18,6 +24,10 @@
   .docs-navbar-header-item-selected {
     background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
   }
+}
+
+.folder-item-selected {
+	background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
 }
 
 .mat-mdc-icon-button {

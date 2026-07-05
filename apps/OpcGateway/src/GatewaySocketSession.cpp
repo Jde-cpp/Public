@@ -18,6 +18,8 @@ namespace Jde::Opc::Gateway{
 	{}
 
 	α GatewaySocketSession::OnClose()ι->void{
+		if( !Stream )
+			return;
 		LogRead( "OnClose", 0 );
 		Server::RemoveSession( Id() );
 		base::OnClose();
@@ -95,7 +97,7 @@ namespace Jde::Opc::Gateway{
 			if( auto p = proto.mutable_variables(); p->size() )
 				vars = parse( move(*p) ).as_object();
 			auto ql = QL::Parse( move(*proto.mutable_text()), move(vars), Schemas(), proto.return_raw() );
-			auto v = co_await GatewayQLAwait{ move(ql), Session(), proto.return_raw() };
+			auto v = co_await QL::QLAwait<>{ move(ql), {Session()}, Gateway::QLPtr() };
 			Write( FromServer::QueryTrans(serialize(move(v)), requestId) );
 		}
 		catch( exception& e ){

@@ -58,10 +58,10 @@ export class DateUtils{
 			DateUtils._easternTimezoneOffset = new Date(usaTime).getTimezoneOffset();
 		}
 		return DateUtils._easternTimezoneOffset;
-	} private static _easternTimezoneOffset:Minutes=null;
+	} private static _easternTimezoneOffset:Minutes|undefined;
 
 	static asUtc( date:Date ):Date{
-		const y = date ? new Date( date.getTime() + date.getTimezoneOffset()*60000 ) : null;
+		const y = new Date( date.getTime() + date.getTimezoneOffset()*60000 );
 		return y;
 	}
 

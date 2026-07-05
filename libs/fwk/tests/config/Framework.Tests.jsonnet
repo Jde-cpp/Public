@@ -1,6 +1,6 @@
 {
 	testing:{
-		tests:: "TimerTests.General",
+		tests: "FileTests.WriteExactChunkMultiple",
 		file: "$(JDE_BUILD_DIR)/tests/test.txt"
 	},
 	cryptoTests:{
@@ -9,19 +9,23 @@
 	logging:{
 		spd:{
 			tags: {
-				trace:["exception", "app", "io", "test"],
-				debug:["test", "settings"],
-				information:[],
-				warning:[],
-				"error":[],
-				critical:[]
+				default: "Information",
+				app: "Trace",
+				exception: "Trace",
+				io: "Information",
+				test: "Trace",
+				settings: "Trace"
 			},
 			sinks:{
 				console:{},
 				file:{ path: "$(JDE_BUILD_DIR)", md: false, pattern: "%^%3!l%$-%H:%M:%S.%e \\033]8;;file://%g#%#\\a%v\\033]8;;\\a" }
 			}
 		},
-		memory:{ default: "trace" }
+		memory:{ 
+			tags: {
+				default: "Debug"
+			}
+		}
 	},
 	workers:{
 		executor: {threads: 2},

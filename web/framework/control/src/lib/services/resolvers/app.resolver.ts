@@ -1,6 +1,6 @@
 import {inject, Inject, Injectable} from '@angular/core';
-import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, RouterStateSnapshot} from '@angular/router';
-import { DocItem } from 'jde-spa';
+import {ActivatedRouteSnapshot, Resolve, RouterStateSnapshot} from '@angular/router';
+import { RouteItem } from 'jde-spa';
 import { IErrorService } from '../error/IErrorService';
 import { AppService } from '../app/app.service';
 import { RouteStore } from '../route.store';
@@ -9,7 +9,7 @@ import { StringUtils } from '../../utils/StringUtils';
 
 export type Connection = { id: number, programName: string, instanceName: string, hostName: string, created: Date, status: { memory: number, values: any[] }, urlSegments:string[] };
 
-export class AppInstanceRoute extends DocItem{
+export class AppInstanceRoute extends RouteItem{
 	constructor( programName:string, instanceName:string ){
 		super();
 		this.path = `${programName}/${instanceName}`;
@@ -23,7 +23,7 @@ export class AppResolver implements Resolve<Connection[]> {
 	{}
 	async resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<Connection[]>{
 		let connections = await this.appService.queryArray<Connection>( "connections{id programName instanceName hostName created status{memory values}}", null, (m)=>console.log(m) );
-		let urlMap = {};
+		let urlMap:any = {};
 		connections.forEach( c=>{
 			c.created = new Date( c.created+'Z' );
 			c.programName = c.programName.startsWith("Jde.") ? c.programName.substring(4) : c.programName;
@@ -33,9 +33,8 @@ export class AppResolver implements Resolve<Connection[]> {
 			c.urlSegments = [ childPath, c.instanceName];
 			if( !urlMap[childPath] )
 				urlMap[childPath] = [];
-			urlMap[childPath].push( new DocItem({ path: c.urlSegments.join('/'), title: `${c.instanceName}` }) );
+			urlMap[childPath].push( new RouteItem({ path: c.urlSegments.join('/'), title: `${c.instanceName}` }) );
 		});
-//		let parent = new DocItem( { path: route.url.map( s=>s.path ).join('/') } );
 		Object.keys(urlMap).forEach( key=>{
 			this.routeStore.setChildren( 'apps/'+key, urlMap[key] );
 		} );

@@ -5,7 +5,8 @@
 #define Φ Γ α
 namespace Jde{
 	struct IShutdown{
-		β Shutdown( bool terminate )ι->void=0;
+		β Shutdown( bool terminate, SRCE )ι->void=0;
+		virtual ~IShutdown() = default;
 	};
 namespace Process{
 	Φ AppName()ι->const string&;
@@ -22,9 +23,11 @@ namespace Process{
 	Φ IsDebuggerPresent()ι->bool;
 	Φ SetConsole( bool isConsole )ι->void;
 	Φ SetConsoleTitle( sv title )ι->void;
+	Φ SetExecutor( up<IShutdown>&& executor )ι->void;
+	Φ SetConsoleTitle( sv title )ι->void;
 	Φ MemorySize()ι->size_t;
 	Φ ProcessId()ι->uint32;
-	constexpr static sv ProductVersion="2026.12.01";
+	constexpr static sv ProductVersion="2026.02.01";
 	Φ ProgramDataFolder()ι->fs::path;
 	Φ ProductName()ι->sv;
 	Φ StartTime()ι->TimePoint;
@@ -42,7 +45,7 @@ namespace Process{
 	Φ AddApplicationLog( ELogLevel level, str value )ι->void;
 	Φ Kill( uint processId )ι->bool;
 
-	Φ AddShutdownFunction( function<void(bool terminating)>&& shutdown )ι->void;
+	Φ AddShutdownFunction( function<void(bool terminating, SL)>&& shutdown )ι->void;
 
 	Φ AddShutdown( IShutdown* pShutdown )ι->void; //global unique ptrs
 	Φ RemoveShutdown( IShutdown* pShutdown )ι->void;

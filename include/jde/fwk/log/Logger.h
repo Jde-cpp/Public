@@ -1,7 +1,11 @@
 #pragma once
 #ifndef LOGGER
 #define LOGGER
-#include <stacktrace>
+#ifdef __cpp_lib_stacktrace
+	#include <stacktrace>
+#else
+	#include <boost/stacktrace.hpp>
+#endif
 #ifndef _MSC_VER
 	#include <signal.h>
 #endif
@@ -27,6 +31,7 @@
 #endif
 
 namespace Jde::Logging{
+	Φ SetBreakLevel()ι->void;
 	Φ BreakLevel()ι->ELogLevel;
 	Φ CanBreak()ι->bool;
 	α LogException( const IException& e )ι->void;
@@ -35,7 +40,7 @@ namespace Jde::Logging{
 
 	ψ Log( ELogLevel level, ELogTags tags, SL sl, FormatString&& m, ARGS... args )ι->void;
 //	ψ Log( ELogTags tags, SL sl, FormatString&& m, ARGS... args )ι->void;
-
+#ifdef __cpp_lib_stacktrace
 	ψ LogStack( ELogLevel level, ELogTags tags, std::stacktrace::size_type stackTraceIndex, FormatString&& m, ARGS... args )ι->void{
 		if( !ShouldLog(level, tags) )
 			return;
@@ -45,6 +50,16 @@ namespace Jde::Logging{
 		else
 			Log( level, tags, SRCE_CUR, FWD(m), FWD(args)... );
 	}
+	#else
+	ψ LogStack( ELogLevel level, ELogTags tags, boost::stacktrace::stacktrace::size_type stackTraceIndex, FormatString&& m, ARGS... args )ι->void{
+		if( !ShouldLog(level, tags) )
+			return;
+		if( let stacktrace = boost::stacktrace::stacktrace(); stacktrace.size() )
+			Log( Entry{stacktrace[ std::min(stacktrace.size()-1,stackTraceIndex+1) ], level, tags, FWD(m), FWD(args)...} );
+		else
+			Log( level, tags, SRCE_CUR, FWD(m), FWD(args)... );
+	}
+	#endif
 
 	Φ MarkLogged( StringMd5 id )ι->bool;
 	template<typename... Args>

@@ -28,7 +28,7 @@ export class UserJson{
 export class User extends UserJson {
 	constructor( arg?:UserJson|string ){
 		super();
-		this.jwt = typeof arg === 'string' ? <string>arg : arg ? (<UserJson>arg).jwt : null;
+		this.jwt = typeof arg === 'string' ? <string>arg : arg ? (<UserJson>arg).jwt : undefined;
 		if( this.jwt ){
 			const jwt = User.decodeJwt( this.jwt );
 			this.email = jwt.email;
@@ -47,8 +47,9 @@ export class User extends UserJson {
 
 	append( updated:UserJson ):void{
 		for( let key in updated ){
-			if( updated[key] !== undefined )
-				this[key] = updated[key];
+			const k = key as keyof UserJson;
+			if( updated[k] !== undefined )
+				(this as any)[k] = updated[k];
 		}
 	}
 
@@ -73,10 +74,10 @@ export class User extends UserJson {
 type Log = (m:string)=>void;
 export interface IAuth{
 	login( user:User, log:Log ):Promise<void>;
-	loginPassword( username:string, password:string, authenticator:string, log:Log ):Promise<void>;
+	loginPassword( username:string, password:string, authenticator:string|undefined, log:Log ):Promise<void>;
 	logout( log:Log ):Promise<void>;
 	providers( log:Log ):Promise<EProvider[]>;
 	validateSessionId( log:Log ):void;
 	googleAuthClientId( log:Log ):Promise<string>;
-	user:Signal<User | null>;
+	user:Signal<User | undefined>;
 }

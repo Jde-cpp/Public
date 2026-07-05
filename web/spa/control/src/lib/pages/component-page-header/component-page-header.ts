@@ -11,12 +11,13 @@ import { Router } from '@angular/router';
   imports: [MatButtonModule, MatIconModule]
 })
 export class ComponentPageHeader {
-  constructor(public _componentPageTitle: ComponentPageTitle, private router: Router) {}//
+  constructor(private _componentPageTitle: ComponentPageTitle, private router: Router) {
+	}//
   @Output() toggleSidenav = new EventEmitter<void>();
 
   getTitle() {//
     return this._componentPageTitle.title;//
   }//
-  @Input()backUrl:string;//
+  @Input() backUrl!:string;//
   back(){ this.router.navigate([this.backUrl] ); }//
 }

@@ -4,8 +4,8 @@
 #include "../../src/GatewayAppClient.h"
 #include "../../src/types/proto/opc.Common.h"
 #include "../../src/types/proto/opc.FromClient.h"
-#include "../../src/types/UAClientException.h"
 #include "helpers.h"
+#include "jde/fwk/process/process.h"
 
 #define let const auto
 
@@ -97,6 +97,7 @@ namespace Tests{
 		}
 	}
 	α GatewayClientSocket::Connect( SessionPK sessionId, SL sl )ι->await<uint32>{
+		Process::AddShutdown( this );
 		let requestId = NextRequestId();
 		return await<uint32>{ FromClientUtils::Connection(sessionId, requestId), requestId, shared_from_this(), sl };
 	}
@@ -107,6 +108,9 @@ namespace Tests{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]'{}', variables: {}.", requestId, query, serialize(variables) );
 		return await<jvalue>{ FromClientUtils::Query(move(query), move(variables), returnRaw, requestId), requestId, shared_from_this(), sl };
+	}
+	α GatewayClientSocket::QuerySync( string&& query, jobject variables )ι->jvalue{
+		return BlockAwait<await<jvalue>,jvalue>( Query(move(query), move(variables), true) );
 	}
 	α GatewayClientSocket::Subscribe( ServerCnnctnNK target, const vector<NodeId>& nodes, sp<IListener> listener, SL sl )ε->await<FromServer::SubscriptionAck>{
 		let requestId = NextRequestId();
@@ -122,7 +126,7 @@ namespace Tests{
 		ql["id"] = requestId;
 		ul _{ _logSubscriptionsMutex };
 		_logSubscriptions.emplace( (uint32)requestId, move(listener) );
-		auto query = serialize(ql);
+		auto query = serialize( ql );
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, query.substr(0, Web::Client::MaxLogLength()) );
 		return await<jarray>{ FromClientUtils::Query(move(query), move(vars), true, requestId), requestId, shared_from_this(), sl };
 	}
@@ -181,12 +185,14 @@ namespace Tests{
 		}
 	}
 
-	α GatewayClientSocket::OnClose( beast::error_code ec )ι->void{
+	α GatewayClientSocket::CloseTasks( beast::error_code ec )ι->void{
 		auto f = [this, ec]( std::any&& h )->void {
 			CodeException e{ ec, ELogTags::SocketClientWrite, ELogLevel::NoLog };
 			HandleException( move(h), App::ProtoUtils::ToException(move(e)) );
 		};
-		CloseTasks( f );
+		base::CloseTasks( f );
+	}
+	α GatewayClientSocket::OnClose( beast::error_code ec )ι->void{
 		base::OnClose( ec );
 	}
 }}

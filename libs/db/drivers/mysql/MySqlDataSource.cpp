@@ -7,11 +7,11 @@
 #include "MySqlRow.h"
 #include "MySqlServerMeta.h"
 #include "../../src/DBLog.h"
+#include "jde/fwk/usings.h"
 
-#ifndef NDEBUG
-	#ifndef _GLIBCXX_DEBUG
-			#error "_GLIBCXX_DEBUG must be defined to compile this code."
-	#endif
+
+#if !defined(NDEBUG) && !defined(_GLIBCXX_DEBUG) && !defined(__clang__)
+	#error "_GLIBCXX_DEBUG must be defined to compile this code."
 #endif
 
 #define let const auto
@@ -68,8 +68,7 @@ namespace Jde::DB::MySql{
 	α MySqlDataSource::Execute( DB::Sql&& sql, SL sl, Params exeParams )ε->uint{
 		if( sql.IsProc )
 			sql.Text = Ƒ( "call {}", move(sql.Text) );
-		if( log )
-			DB::Log( sql, sl );
+		DB::Log( sql, sl );
 
 		auto session = Session( _cs, sl );
 		vector<mysql::field_view> params; params.reserve( sql.Params.size() );
@@ -86,7 +85,7 @@ namespace Jde::DB::MySql{
 				session.Conn.execute( stmt.bind(params.begin(), params.end()), result );
 				auto view = result.out_params();
 				ASSERT( view.size() );
-				(*exeParams.Function)( ToRow(result.out_params(), sl) );
+				(*exeParams.Function)( ToRow(result.out_params()) );
 			}
 			else if( sql.Params.empty() )
 				session.Conn.execute( sql.Text, result );
@@ -98,7 +97,7 @@ namespace Jde::DB::MySql{
 		}
 		if( exeParams.Function && result.has_value() ){
 			for( auto&& row : result.rows() )
-				(*exeParams.Function)( ToRow(row, sl) );
+				(*exeParams.Function)( ToRow(row) );
 		}
 		if( stmt.valid() )
 			session.Conn.close_statement( stmt );
@@ -111,14 +110,14 @@ namespace Jde::DB::MySql{
 		return y;
 	}
 
-	α MySqlDataSource::AtCatalog( sv catalog, SL sl )ε->sp<IDataSource>{
-		CRITICAL( "MySql doesn't have catalogs." );
+	α MySqlDataSource::AtCatalog( sv , SL sl )ε->sp<IDataSource>{
+		LOGSL( ELogLevel::Critical, sl, _tags, "MySql doesn't have catalogs." );
 		return shared_from_this();
 	}
 
-	α MySqlDataSource::SchemaNameConfig( SL sl )ι->string{ return _cs.database.empty() ? string{} : _cs.database; }
+	α MySqlDataSource::SchemaNameConfig( SL )ι->string{ return _cs.database.empty() ? string{} : _cs.database; }
 
-	α MySqlDataSource::AtSchema( sv schema, SL sl )ε->sp<IDataSource>{
+	α MySqlDataSource::AtSchema( sv schema, SL )ε->sp<IDataSource>{
 		string schemaName;
 		try{
 			schemaName = SchemaName();

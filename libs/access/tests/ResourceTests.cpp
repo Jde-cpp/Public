@@ -15,12 +15,12 @@ namespace Jde::Access::Tests{
 		let targetFilter = target.size() ? Ƒ( ", target:\"{}\"", target ) : "";
 		if( filter.size() )
 			filter = Ƒ( ", criteria:\"{}\"", filter );
-		let ql = Ƒ( "resources( schemaName:\"access\"{}{} ){{ id schemaName allowed denied name attributes created {} updated target description }}", targetFilter, filter, includeDeleted ? "deleted" : "" );
+		let ql = Ƒ( "resources( schemaName:\"access\"{}{} ){{ id schemaName allowed name attributes created {} updated target description }}", targetFilter, filter, includeDeleted ? "deleted" : "" );
 		return QL().QuerySync<jarray>( ql, {}, GetRoot() );
 	}
 
 	TEST_F( ResourceTests, CheckDefaults ){
-		let ql = "resources( schemaName:\"access\", criteria:null ){ id allowed denied name attributes created deleted updated target description }";
+		let ql = "resources( schemaName:\"access\", criteria:null ){ id allowed name attributes created deleted updated target description }";
 		let& resources = QL().QuerySync<jarray>( ql, {}, GetRoot() );
 		ASSERT_EQ( resources.size(), 5 ); //"users", "members", "roles", "resources", "provider_types"
 		constexpr ERights base = ERights::Create | ERights::Read | ERights::Update | ERights::Delete | ERights::Purge | ERights::Administer;

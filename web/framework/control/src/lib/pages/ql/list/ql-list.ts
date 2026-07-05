@@ -3,68 +3,36 @@ import { CommonModule } from '@angular/common';
 import {ActivatedRoute, Route, Router, Routes, UrlSegment} from '@angular/router';
 import {Sort} from '@angular/material/sort';
 import { MatTable } from '@angular/material/table';
+import {FormsModule} from '@angular/forms';
+import {MatSelectModule} from '@angular/material/select';
+import { QLListSettings } from './ql-list-settings/ql-list-settings';
 import {IErrorService} from '../../../services/error/IErrorService'
 import {IGraphQL, EnumValue } from '../../../services/IGraphQL';
 import {Field} from '../../../model/ql/schema/Field';
 import {TableSchema}  from '../../../model/ql/schema/TableSchema';
 import {MetaObject}  from '../../../model/ql/schema/MetaObject';
 
-import { ComponentPageTitle, DocItem, IRouteService, RouteService } from 'jde-spa';
-import { Subject } from 'rxjs';
+import { ComponentPageTitle, RouteItem, IRouteService, RouteService } from 'jde-spa';
 import { MatIcon } from '@angular/material/icon';
-import { MatIconButton } from '@angular/material/button';
+import { MatIconButton, MatAnchor } from '@angular/material/button';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { MatToolbar } from '@angular/material/toolbar';
+import { ProfileStore } from 'jde-spa';
 import { GraphQLTable } from '../../GraphQL/table/table';
-import { QLListData, QLListResolver } from '../../../services/ql-list.resolver';
+import { QLListData, QLListResolver, TableSettings } from '../../../services/ql-list.resolver';
 import { SelectionModel } from '@angular/cdk/collections';
 import { RouteStore } from '../../../services/route.store';
-import { IProfileStore, LocalProfileStore } from 'jde-framework';
+import { View, ViewField, ViewType } from '../../../model/ql/View';
+import { PageProfile } from '../../GraphQL/model/PageSettings';
+import { MatSelect } from "@angular/material/select";
+import { verify } from '../../../utils/utils';
 
-@Injectable( {providedIn: 'root'} )
-export class QLListRouteService extends RouteService implements IRouteService{
-	constructor( private router:Router, route: ActivatedRoute ){
-		super( route )
-	}
-	override children( urlSegments:UrlSegment[] ):Promise<Routes>{
-		let y:Routes = [];
-		let thisConfig = this.router.config.find( x=>x.path==urlSegments[urlSegments.length-1].path );
-		let childrenConfig = this.router.config.find( x=>x.path==thisConfig.path && x.children?.length );
-		for( let child of childrenConfig.children?.filter(x=> !x.path.endsWith(":target")) ){
-			if( child.path!=":collectionDisplay" )
-				y.push( child );
-			else{
-				for( let collection of child.data["collections"] ){
-					var route:Route;
-					if( typeof collection=='string' ){
-						route = {
-							title: collection.charAt( 0 ).toUpperCase()+collection.slice(1),
-							data: {id: child.path.replace(":collectionDisplay", collection), collectionName:collection},
-							path: collection };
-					}else{
-						const data = collection.data;
-						const path = collection.path ?? data.collectionName;
-						const upper = path.charAt( 0 ).toUpperCase()+path.slice( 1 );
-						route = {
-							title: collection.title ?? upper,
-							data: data,
-							path: child.path.replace(":collectionDisplay", path),
-						};
-					}
-					y.push( route );
-				}
-			}
-		}
-		return Promise.resolve( y );
-	}
-}
-
-@Component( {
-		selector: 'ql-list',//.main-content.mat-drawer-container.my-content
-		styleUrls: ['ql-list.scss'],
-		templateUrl: './ql-list.html',
-		host: {class:'main-content mat-drawer-container my-content'},
-		imports: [CommonModule, MatCheckbox, MatIcon, MatIconButton, MatToolbar, GraphQLTable]
+@Component({
+	selector: 'ql-list',//.main-content.mat-drawer-container.my-content
+	styleUrls: ['ql-list.scss'],
+	templateUrl: './ql-list.html',
+	host: {class:'main-content mat-drawer-container my-content'},
+	imports: [CommonModule, FormsModule, GraphQLTable, MatAnchor, MatCheckbox, MatIcon, MatIconButton, MatSelectModule, MatToolbar, QLListSettings]
 })
 export class QLList implements OnInit, OnDestroy{
 	constructor(
@@ -72,51 +40,53 @@ export class QLList implements OnInit, OnDestroy{
 		private router:Router,
 		private componentPageTitle:ComponentPageTitle,
 		@Inject('IGraphQL') private ql: IGraphQL,
-		@Inject('IErrorService') private snackbar: IErrorService,
-		@Inject('IProfile') private profileStore: IProfileStore)
+		@Inject('IErrorService') private snackbar: IErrorService)
 	{}
 
 	ngOnDestroy(){
-		this.profileStore.save(this.collectionName, this.profile);
-		LocalProfileStore.setShowDeleted( this.collectionName, this.showDeleted );
+		//this.profileStore.save(this.collectionName(), this.profile);
+		ProfileStore.setShowDeleted( this.collectionName(), this.showDeleted() );
 	}
 
 	async ngOnInit(){
-		this.profile = await this.profileStore.load(this.collectionName, QLList.defaultProfile );
 		this.route.data.subscribe( (data)=>{
 			this.init( data );
     });
 	}
-	init( resolvedValue ){
-		this.resolvedData = resolvedValue["data"];
-		this.data.set( this.resolvedData.data[this.collectionName] );
-		this.sideNav.set( this.resolvedData.routing );
-		this.resolvedData.data[this.collectionName] = null;
+	async init( resolvedValue:any ){
+		let data = resolvedValue["data"] as QLListData;
+		verify( data.profile.view );
+		this.selections.set( new SelectionModel<any>(data.profile.view.showSelector, []) );
+		this.view.set( data.profile.view );
+		const collectionName = data.schema.collectionName;
+		this.resolvedData.set( data );
+		//if( !this.profile )
+			//this.profile = await this.profileStore.load(collectionName, QLList.defaultProfile );
+
+		this.data.set( data.results[collectionName] );
+		this.sideNav.set( data.routing );
 		let paths = [];
-		for( let x = this.route; x.routeConfig?.data && x.routeConfig?.data["name"]; x = x.parent )
+		for( let x = this.route; x.routeConfig?.data && x.routeConfig?.data["name"]; x = x.parent! )
 			paths.push( x.routeConfig.data['name'] );
 		this.componentPageTitle.title = paths[0];//.join( " | " ); 	//this.componentPageTitle.title ? `${this.componentPageTitle.title} | ${title}` : title;
 
-		const order = ["name", "created", "updated", "deleted", "target", "description"];
-		this.displayedFields = Field.filterSort( this.schema.fields, order, [...this.excludedColumns, "description"], this.showDeleted );
-		if( !this.excludedColumns.find(x=>x=="description") )
-			this.displayedFields.push( this.schema.fields.find(x=>x.name=="description") );
-
+/*		const order = ["name", "created", "updated", "deleted", "target", "description"];
+		this.displayedFields = Field.filterSort( this.schema().fields, order, [...this.excludedColumns(), "description"], this.showDeleted() );
+		if( !this.excludedColumns().find(x=>x=="description") )
+			this.displayedFields.push( this.schema().fields.find(x=>x.name=="description") );
+*/
 		this.isLoading.set( false );
 	};
-	sortData( options:Sort ){
-		const values = this.data().slice();
-		const multiplier = options.direction === 'asc' ? 1 : -1;
-		const name = options.active;
-		this.data.set( values.sort((a, b) =>{
-			let lessThan = a[name]<b[name];
-			return (lessThan ? -1 : 1)*multiplier;
-		}) );
+	onSortChange( sort:Sort ){
+		//let updateView = this.view().isUser && this.view().sort.length<2;
+		let newView = new View( this.view() );
+		newView.sort = [sort, ...newView.sort.filter(s=>s.active!=sort.active)];
+		this.onViewShow( newView );
 	}
 
 	edit(){
 		if( this.selection().deleted )
-			this.ql.mutate( `restore${this.type}("id":${this.selection().id})` ).then( ()=>this.selection().deleted=null ).catch( (e)=>console.log(e) );
+			this.ql.mutate( `restore${this.type}("id":${this.selection().id})`, (m)=>console.log(m) ).then( ()=>this.selection().deleted=null ).catch( (e)=>console.log(e) );
 		else{
 			try{
 				this.router.navigate([this.selection().target], {relativeTo: this.route} );
@@ -127,15 +97,15 @@ export class QLList implements OnInit, OnDestroy{
 	}
 
 	insert(){
-		this.router.navigate(['$new'], {relativeTo: this.route} );
+		this.router.navigate( ['$new'], {relativeTo: this.route} );
 	}
 
 	async delete(){
 		const purge = this.selection().deleted!=null;
 		const type = purge ? "purge" : "delete";
 		try{
-			await this.ql.mutate(`${type}${this.type}(id:${this.selection().id})`)
-			if( !purge && this.showDeleted )
+			await this.ql.mutate(`${type}${this.type()}(id:${this.selection().id})`, (m)=>console.log(m) );
+			if( !purge && this.showDeleted() )
 				this.selection().deleted = new Date();
 			else{
 				const values = this.data().slice();
@@ -152,37 +122,111 @@ export class QLList implements OnInit, OnDestroy{
 	selection = computed<any>( ()=>{
 		return this.selections().selected.length==1 ? this.selections().selected[0] : null;
 	});
+	async onViewSave(view:View){
+		this.data.set( [] );
+		let profile = this.resolvedData().profile;
+		if( view.isSystem && !profile.views.find(v=>v.name==view.name && v.isSystem) )
+			view.type = ViewType.User;
+		profile.upsertView( view, this.collectionName(), this.profileStore );
+		if( view.type==ViewType.User )
+			this.profileStore.save( `qlList/${this.collectionName()}/views`, profile.views.filter(v=>v.isUser).map(v=>v.toJson(this.tableSettings())) );
 
-	async toggleShowDeleted(){
-		this.showDeleted = !this.showDeleted;
-		let reload = await QLListResolver.load( this.ql, this.resolvedData.pageSettings, this.resolvedData.routing, this.routeStore );
+		let reload = await QLListResolver.load( this.ql, this.resolvedData(), this.routeStore );
+		this.init( {data:reload} );
+		this.isSettings.set( false );
+	}
+	async onViewShow(view:View){
+		this.data.set( [] );
+		this.isSettings.set( false );
+		if( view.name?.endsWith("*") && view.isAdhoc )
+		 	view.name = view.name.substring( 0, view.name.length-1 );
+		view.type = ViewType.Adhoc;
+		let profile = new PageProfile( this.resolvedData().profile );
+		profile.upsertView( view, this.collectionName(), this.profileStore );
+		this.refresh( profile );
+	}
+	async onChangeView(index:number){
+		let profile = new PageProfile( this.resolvedData().profile );
+		profile.currentViewIndex = index;
+		ProfileStore.setViewIndex( this.collectionName(), index );
+		this.refresh( profile );
+	}
+	async refresh( profile: PageProfile ){
+		this.resolvedData().profile = profile;
+		this.resolvedData().schema = new TableSchema( this.resolvedData().schema ); //TODO just copy
+		const reload = await QLListResolver.load( this.ql, this.resolvedData(), this.routeStore );
 		this.init( {data:reload} );
 	}
+	async onViewDelete(view:View){
+		let profile = this.resolvedData().profile;
+		profile.removeView( view.name!, this.collectionName(), this.profileStore );
+		profile.currentViewIndex = 0;
+		let reload = await QLListResolver.load( this.ql, this.resolvedData(), this.routeStore );
+		this.init( {data:reload} );
+		this.isSettings.set( false );
+	}
 
-	sideNav = model.required<DocItem>();
+	async onToggleShowDeleted(){
+		const showDeleted = !this.showDeleted();
+		let view = new View( this.view() );
+		view.setDeletedDisplayed( showDeleted );
+		ProfileStore.setShowDeleted( this.collectionName(), showDeleted );
+		let profile = new PageProfile( this.resolvedData().profile );
+		profile.updateView( view );
+		profile.showDeleted = showDeleted;
+		this.refresh( profile );
+	}
+
+	colSuggestions():Record<string,any[]>{
+		let suggestions: Record<string, any[]> = {};
+		for( let field of this.view().fields ){
+			let values = [];
+			if( field.qlField.isNullable ){
+				values.push("<null>");
+				values.push("<not null>");
+			}
+			suggestions[field.name] = values;
+		}
+		for( let row of this.data() ){
+			for( let col of Object.keys(row).filter(c=>row[c] && !suggestions[c].includes(row[c])) )
+				suggestions[col].push( row[col] );
+		}
+		for( let col of Object.keys(suggestions) )
+			suggestions[col] = suggestions[col].filter( (v,i,a) => a.indexOf(v)===i ).slice(0,100).sort((a, b)=>a-b);
+		return suggestions;
+	}
+
+	onViewCancel(){
+		this.isSettings.set( false );
+	}
+
+	sideNav = model.required<RouteItem>();
 	collectionDisplay = input.required<string>();
 
 	isLoading = signal<boolean>( true );
-	selections = signal<SelectionModel<any>>( new SelectionModel<any>(false, []) );
+	isSettings = signal<boolean>( false );
+	selections = signal<SelectionModel<any>>(null as any);
 
-	displayedFields:Field[];
-	@ViewChild('mainTable',{static: false}) _table:MatTable<any>;
-	get canPurge():boolean{ return this.resolvedData.pageSettings.canPurge; }
-	private get collectionName():string{ return this.schema.collectionName; }
+	displayedFields = computed<ViewField[]>( ()=>{
+		return this.view().fields.filter( v=>v.displayed );
+	});
+	@ViewChild('mainTable',{static: false}) _table!:MatTable<any>;
+	canPurge = computed<boolean>( ()=>this.tableSettings().canPurge ?? false );
+	collectionName = computed<string>( ()=>this.schema().collectionName );
+	columns():Record<string,string>{ return this.resolvedData().columns; }
 	data = signal<any[]>([]);
-	private get excludedColumns(){ return this.resolvedData.pageSettings.excludedColumns; }
+	excludedColumns = computed<string[]>( ()=>this.tableSettings().excludedColumns );
 	get name():string{ return <string>this.routeConfig.title; }
-	get enums():Map<string, EnumValue[]>{ return this.schema.enums; }
-	profile:Profile;
-	static defaultProfile: Profile ={ sort: {active: "name", direction: "asc"}, tabIndex:0 };
-	resolvedData:QLListData;
-	get routeConfig(){ return this.route.routeConfig; }
+	enums = computed<Map<string, EnumValue[]>>( ()=>this.schema().enums );
+	resolvedData = signal<QLListData>(null as any);
+	get routeConfig():Route{ return this.route.routeConfig!; }
 	routeStore = inject( RouteStore );
-	private get schema():TableSchema{ return this.resolvedData.schema; }
-	get sort(){ return this.profile.sort; }
-	get showDeleted(){ return this.resolvedData.showDeleted; } set showDeleted( value:boolean ){ this.resolvedData.showDeleted = value; }
-	get showAdd():boolean{ return this.resolvedData.pageSettings.showAdd ?? true };
-	showDeletedSubject = new Subject<boolean>();
-	get type(){ return MetaObject.toTypeFromCollection(this.collectionName);}
+	schema = computed<TableSchema>( ()=>this.resolvedData().schema );
+	get sort():Sort{ return this.view().sort.length ? this.view().sort[0] : {active: "name", direction: "asc"}; }
+	showDeleted = computed<boolean>( ()=>this.resolvedData().profile.showDeleted );
+	showAdd = computed<boolean>( ()=>this.resolvedData().pageSettings.showAdd ?? true );
+	tableSettings = computed<TableSettings>( ()=>this.resolvedData().routing.tableSettings );
+	type = computed<string>( ()=>MetaObject.toTypeFromCollection(this.collectionName()) );
+	view = signal<View>( null as any );
+	profileStore = inject(ProfileStore);
 }
-type Profile = { sort:Sort, tabIndex:number };

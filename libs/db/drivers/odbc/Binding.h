@@ -5,11 +5,14 @@
 namespace Jde::DB::Odbc{
 #pragma warning( push )
 #pragma warning (disable: 4716)
-	struct Binding{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wexceptions"
+
+struct Binding{
 		Binding( SQLSMALLINT type, SQLSMALLINT cType, SQLLEN output=0 )ι:
-			_dbType{ type },
+			Output{output},
 			CodeType{cType},
-			Output{output}
+			_dbType{ type }
 		{}
 		virtual ~Binding()=default;
 		Ω GetBinding( SQLSMALLINT type )ε->up<Binding>;
@@ -113,7 +116,7 @@ namespace Jde::DB::Odbc{
 		α Data()ι->void* override{ return &_data; }
 		α GetValue()Ι->Value override{ return IsNull() ? Value{} : Value{_data=='\1'}; }
 		α GetBit()Ι->bool override{ return _data!=0; }
-		α Size()Ι->SQLULEN{return 1;}
+		α Size()Ι->SQLULEN override{return 1;}
 		α GetInt()Ι->int64_t override{ return static_cast<int64_t>(_data); }
 		α to_string()Ι->string override{ return _data ? "true" : "false"; }
 	private:
@@ -128,8 +131,8 @@ namespace Jde::DB::Odbc{
 
 		int64_t GetInt()Ι override{ return GetInt32(); }
 		uint GetUInt()Ι override{ return static_cast<uint>(GetInt32()); }
-		std::optional<_int> GetIntOpt()Ι{ std::optional<_int> value; if( !IsNull() )value=GetInt(); return value; }
-		std::optional<uint> GetUIntOpt()Ι override{ std::optional<uint> optional; if( !IsNull() ) optional=GetUInt(); return optional; };
+		α GetIntOpt()Ι->std::optional<_int> override{ std::optional<_int> value; if( !IsNull() )value=GetInt(); return value; }
+		α GetUIntOpt()Ι->std::optional<uint> override{ std::optional<uint> optional; if( !IsNull() ) optional=GetUInt(); return optional; };
 	private:
 		int8_t _data;
 	};
@@ -142,14 +145,14 @@ namespace Jde::DB::Odbc{
 		α GetInt32()Ι->int32_t override{ return _data; }
 		int64_t GetInt()Ι override{ return GetInt32(); }
 		uint GetUInt()Ι override{ return static_cast<uint>(GetInt32()); }
-		std::optional<_int> GetIntOpt()Ι{ std::optional<_int> value; if( !IsNull() )value=GetInt(); return value; }
+		α GetIntOpt()Ι->std::optional<_int> override{ std::optional<_int> value; if( !IsNull() )value=GetInt(); return value; }
 		std::optional<uint> GetUIntOpt()Ι override{ std::optional<uint> optional; if( !IsNull() ) optional=GetUInt(); return optional; };
 	private:
 		int _data;
 	};
 
-	struct BindingDecimal final : Binding
-	{};
+	// struct BindingDecimal final : Binding
+	// {};
 
 	struct BindingInt final : Binding{
 		BindingInt( SQLSMALLINT type=SQL_C_SBIGINT )ι: Binding{ type, SQL_C_SBIGINT }{}
@@ -158,8 +161,8 @@ namespace Jde::DB::Odbc{
 		α GetValue()Ι->Value override{ return IsNull() ? Value{} : Value{_data}; }
 		int64_t GetInt()Ι override{ return _data; }
 		uint GetUInt()Ι override{ return static_cast<uint>( GetInt() ); }
-		std::optional<uint> GetUIntOpt()Ι{ std::optional<uint> value; if(!IsNull())value=GetUInt(); return value; }
-		β GetDateTime()Ι->DBTimePoint{ return Clock::from_time_t(_data); }
+		α GetIntOpt()Ι->std::optional<_int> override{ std::optional<_int> value; if( !IsNull() )value=GetInt(); return value; }
+		α GetUIntOpt()Ι->std::optional<uint> override{ std::optional<uint> optional; if( !IsNull() ) optional=GetUInt(); return optional; };
 	private:
 		_int _data ;
 	};
@@ -169,8 +172,8 @@ namespace Jde::DB::Odbc{
 		BindingTimeStamp( SQL_TIMESTAMP_STRUCT value )ι: Binding{ SQL_TYPE_TIMESTAMP, SQL_C_TYPE_TIMESTAMP },_data{value}{}
 		α Data()ι->void* override{ return &_data; }
 		α GetValue()Ι->Value override{ return IsNull() ? Value{} : Value{GetDateTime()}; }
-		DBTimePoint GetDateTime()Ι{ return IsNull() ? DBTimePoint{} : Chrono::ToTimePoint( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, Duration(_data.fraction) ); }
-		std::optional<DBTimePoint> GetDateTimeOpt()Ι override{ return IsNull() ? std::nullopt : std::make_optional(GetDateTime()); }
+		α GetDateTime()Ι->DBTimePoint override{ return IsNull() ? DBTimePoint{} : Chrono::ToTimePoint( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, Duration(_data.fraction) ); }
+		α GetDateTimeOpt()Ι->std::optional<DBTimePoint> override{ return IsNull() ? std::nullopt : std::make_optional(GetDateTime()); }
 	private:
 		SQL_TIMESTAMP_STRUCT _data;
 	};
@@ -196,9 +199,9 @@ namespace Jde::DB::Odbc{
 		//https://learn.microsoft.com/en-us/sql/odbc/reference/appendixes/column-size?view=sql-server-ver16&redirectedfrom=MSDN
 		//https://wezfurlong.org/blog/2005/Nov/calling-sqlbindparameter-to-bind-sql-timestamp-struct-as-sql-c-type-timestamp-avoiding-a-datetime-overflow/
 		SQLULEN Size()Ι override{ return 23; }//23 works with 0
-		SQLSMALLINT DecimalDigits()Ι{ return 3; }//https://stackoverflow.com/questions/40918607/cannot-bind-a-sql-type-timestamp-value-using-odbc-with-ms-sql-server-hy104-inv
-		DBTimePoint GetDateTime()Ι override{ return IsNull() ? DBTimePoint() : Chrono::ToTimePoint( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, Duration(_data.fraction) );}
-		std::optional<DBTimePoint> GetDateTimeOpt()Ι override{
+		α DecimalDigits()Ι->SQLSMALLINT override{ return 3; }//https://stackoverflow.com/questions/40918607/cannot-bind-a-sql-type-timestamp-value-using-odbc-with-ms-sql-server-hy104-inv
+		α GetDateTime()Ι->DBTimePoint override{ return IsNull() ? DBTimePoint() : Chrono::ToTimePoint( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, Duration(_data.fraction) );}
+		α GetDateTimeOpt()Ι->std::optional<DBTimePoint> override{
 			std::optional<DBTimePoint> value;
 			if( !IsNull() )
 				value = GetDateTime();
@@ -220,7 +223,7 @@ namespace Jde::DB::Odbc{
 		α GetValue()Ι->Value override{ return IsNull() ? Value{} : Value{_data}; }
 
 		α GetDouble()Ι->double override{ return _data; }
-		std::optional<double> GetDoubleOpt()Ι{ std::optional<double> value; if( !IsNull() ) value = GetDouble();	return value; }
+		α GetDoubleOpt()Ι->std::optional<double> override{ std::optional<double> value; if( !IsNull() ) value = GetDouble();	return value; }
 	private:
 		double _data;
 	};
@@ -253,7 +256,7 @@ namespace Jde::DB::Odbc{
 		α GetValue()Ι->Value override{ return IsNull() ? Value{} : Value{_data}; }
 
 		double GetDouble()Ι override{ return _data; }
-		std::optional<double> GetDoubleOpt()Ι{ std::optional<double> value; if( !IsNull() ) value = GetDouble();	return value; }
+		α GetDoubleOpt()Ι->std::optional<double> override{ std::optional<double> value; if( !IsNull() ) value = GetDouble();	return value; }
 	private:
 		float _data;
 	};
@@ -266,9 +269,9 @@ namespace Jde::DB::Odbc{
 		α GetValue()Ι->Value override { return IsNull() ? Value{} : Value{_data}; }
 		α GetUInt()Ι->uint override{ return static_cast<uint>(_data); }
 		α GetInt()Ι->_int override{ return static_cast<_int>(_data); }
-		α GetIntOpt()Ι->optional<_int> override{ std::optional<_int> value; if( !IsNull() ) value = GetInt(); return value; }
+		α GetIntOpt()Ι->std::optional<_int> override{ std::optional<_int> value; if( !IsNull() ) value = GetInt(); return value; }
 		α GetDouble()Ι->double override{ return _data; }
-		α GetDoubleOpt()Ι->std::optional<double>{ std::optional<double> value; if( !IsNull() ) value = GetDouble(); return value; }
+		α GetDoubleOpt()Ι->std::optional<double> override{ std::optional<double> value; if( !IsNull() ) value = GetDouble(); return value; }
 	private:
 		int16_t _data;
 	};
@@ -281,12 +284,12 @@ namespace Jde::DB::Odbc{
 		α GetValue()Ι->Value override{ return IsNull() ? Value{} : Value{_data}; }
 
 		α GetUInt()Ι->uint override{ return static_cast<uint>(_data); }
-		α GetUIntOpt()Ι->std::optional<uint>{ std::optional<_int> value; if( !IsNull() ) value = GetUInt(); return value; }
+		α GetUIntOpt()Ι->std::optional<uint> override{ std::optional<_int> value; if( !IsNull() ) value = GetUInt(); return value; }
 		α GetInt32()Ι->int32_t override{ return static_cast<int32_t>(_data); }
 		α GetIntOpt()Ι->std::optional<_int> override{ std::optional<_int> value; if( !IsNull() ) value = GetInt(); return value; }
 		α GetInt()Ι->_int override{ return static_cast<_int>(_data); }
 		α GetDouble()Ι->double override{ return _data; }
-		α GetDoubleOpt()Ι->std::optional<double>{ std::optional<double> value; if( !IsNull() ) value = GetDouble();	return value; }
+		α GetDoubleOpt()Ι->std::optional<double> override{ std::optional<double> value; if( !IsNull() ) value = GetDouble();	return value; }
 	private:
 		uint8_t _data;
 	};
@@ -366,3 +369,4 @@ namespace Jde::DB::Odbc{
 	}
 }
 #undef let
+#pragma clang diagnostic pop

@@ -6,22 +6,49 @@ local args = import 'args.libsonnet';
 	},
 	logging:{
 		spd:{
-			defaultLevel:: "Information",
 			tags: {
-				trace:[ "app", "browse", "ql", "access", "opc.access", "test",
-					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
-				],
-				debug:["settings", "uaEvent"],
-				information:[
-					"monitoring", "browse", "processingLoop"
-				],
-				warning:[ "uaNet","uaClient","uaSecure","uaSession", "uaServer", "uaUser", "uaSecurity", "uaPubSub", "uaDiscovery"],
-				"error":[],
-				critical:[]
+				default: "Information",
+				app: "Trace",
+				browse: "Trace",
+				ql: "Trace",
+				access: "Trace",
+				opc_access: "Trace",
+				test: "Trace",
+				externalLogger: "Trace",
+				http_client_write: "Debug",
+				http_client_read: "Debug",
+				http_server_write: "Debug",
+				http_server_read: "Debug",
+				socket_client_write: "Debug",
+				socket_client_read: "Debug",
+				socket_server_write: "Debug",
+				socket_server_read: "Debug",
+				settings: "Trace",
+				uaEvent: "Debug",
+				monitoring: "Information",
+				processingLoop: "Information",
+				uaNet: "Warning",
+				uaClient: "Warning",
+				uaSecure: "Warning",
+				uaSession: "Warning",
+				uaServer: "Warning",
+				uaUser: "Warning",
+				uaSecurity: "Warning",
+				uaPubSub: "Warning",
+				uaDiscovery: "Warning"
 			},
 			sinks:{
 				console:{},
 				file:{ path: args.logDir, md: false }
+			}
+		},
+		proto:{
+			path: args.logDir + "/proto",
+			timeZone: "America/New_York",
+			delay: "PT1M",
+			tags: {
+				default: "Debug",
+				externalLogger: "None"
 			}
 		}
 	},
@@ -61,11 +88,13 @@ local args = import 'args.libsonnet';
 			allowHeaders: "Content-Type, Authorization"
 		},
 		ssl: {
-			certificate:: "{AppDataFolder}/ssl/certs/cert.pem",
-			certificateAltName:: "DNS:localhost,IP:127.0.0.1",
-			certficateCompany:: "Jde-Cpp",
-			certficateCountry:: "US",
-			certficateDomain:: "localhost",
+			cert:{
+				file:: "{AppDataFolder}/ssl/certs/cert.pem",
+				altName: "URI:urn:open62541.server.application",
+				company:: "Jde-Cpp",
+				domain: "localhost",
+				country:: "US",
+			},
 			privateKey:: "{AppDataFolder}/ssl/private/private.pem",
 			publicKey:: "{AppDataFolder}/ssl/public/public.pem",
 			dh:: "{AppDataFolder}/certs/dh.pem",
@@ -77,6 +106,6 @@ local args = import 'args.libsonnet';
 	},
 	workers:{
 		drive:{ threads:  2 },
-		executor:{ threads:  2 }
+		executor:{ threads:  3 }
 	}
 }

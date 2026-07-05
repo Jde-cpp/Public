@@ -8,9 +8,10 @@ namespace Jde::Access{
 	struct AllowedDisallowed final{
 		ERights Allowed;
 		ERights Denied;
+		α Effective()Ι->ERights{ return Allowed & ~Denied; }
 	};
 	struct User final{
-		User( UserPK pk, bool deleted )ι:PK{pk}, IsDeleted{deleted}{}
+		User( UserPK pk, string name, bool deleted )ι:PK{pk}, IsDeleted{deleted}, Name{move(name)}{}
 		α operator+=( const Permission& permission )ι->User&;
 		α ResourceRights( ResourcePK resource )Ι->AllowedDisallowed{ return FindDefault( Rights, resource ); }
 		α UpdatePermission( PermissionPK permissionPK, optional<ERights> allowed, optional<ERights> denied )ε->void;
@@ -18,7 +19,8 @@ namespace Jde::Access{
 
 		UserPK PK;
 		bool IsDeleted;
-		flat_map<ResourcePK,AllowedDisallowed> Rights; //string=resourceName
+		string Name;
+		flat_map<ResourcePK,AllowedDisallowed> Rights;
 		flat_map<PermissionPK,Permission> Permissions;
 	};
 }

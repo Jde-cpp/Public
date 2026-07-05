@@ -71,12 +71,12 @@ message ArchiveFile{
 
 message Host{
 	int32 id=1;
-	String name=2;
+	string name=2;
 }
 
 message App{
 	int32 id=1;
-	String name=2;
+	string name=2;
 }
 
 message AppInstance{
@@ -98,9 +98,9 @@ message StringField{
 
 message FileEntry{
 	oneof value{
-		LogEntryFile entry=1;
-		LogEntryFileExternal external_entry=2;
-		String str=3;
+		LogEntryFile entry=1; //normal entry
+		LogEntryFileExternal external_entry=2; //app server creates for gateway/opc.
+		String str=3;	//for templates, files, functions, args.
 		App app=4;
 		AppInstance app_instance=5;
 		Host host=6;

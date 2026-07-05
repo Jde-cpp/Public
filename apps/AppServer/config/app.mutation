@@ -1,0 +1,8 @@
+mutation{
+	createLogLevel( id:0, name:"Trace" )
+	createLogLevel( id:1, name:"Debug" )
+	createLogLevel( id:2, name:"Information" )
+	createLogLevel( id:3, name:"Warning" )
+	createLogLevel( id:4, name:"Error" )
+	createLogLevel( id:5, name:"Critical" )
+}

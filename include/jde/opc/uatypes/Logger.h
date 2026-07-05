@@ -32,6 +32,7 @@ namespace Jde::Opc{
 	struct UALogParser final : Logging::ITagParser{
 		α ToTag( str tagName )Ι->ELogTags override;
 		α ToString( ELogTags tags )Ι->string override;
+		α Tags()Ι->flat_map<string,uint> override;
 	};
 	struct Logger : UA_Logger{
 		Logger( Handle context=0 )ι;

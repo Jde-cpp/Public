@@ -19,7 +19,7 @@ namespace Jde::DB::Odbc{
 		THROW_IF( !sbinding, "BindingString not found for index={}", i );
 		return sbinding->to_string();
 	}
-#define ASSRT ASSERT( i<_bindings.size(), sl )
+#define ASSRT ASSERT( i<_bindings.size() )
 	α OdbcRow::GetBit( uint i )Ι->bool{ ASSRT; return _bindings[i]->GetBit(); }
 	α OdbcRow::GetString( uint i )Ι->string{ ASSRT; return _bindings[i]->to_string(); }
 	α OdbcRow::GetInt( uint i )Ι->int64_t{ ASSRT; return _bindings[i]->GetInt(); }

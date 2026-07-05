@@ -33,8 +33,23 @@ local common = import 'common-meta.libsonnet';
 				hostId: tables.hosts.columns.hostId+{ pkTable: "hosts", i:3 },
 			},
 			customInsertProc: true,
-			naturalKeys:[["program_id", "name"]],
+			naturalKeys:[["program_id", "name"]]
+		},
+		logLevels:{
+			columns: {
+				levelId: common.types.uint8+{ sk:0, i:0 },
+				name: common.valuesColumns.name+{ i:1 }
+			},
+			naturalKeys:[["name"]],
 			ops: ["None"]
+		},
+		instanceTagLevels:{
+			columns: {
+				instanceId: tables.instances.columns.instanceId+{ pkTable: "instances", sk:0, i:0 },
+				type: common.valuesColumns.name+{ sk:1, i:1 },
+				tag: common.types.ulong+{ sk:2, i:2 },
+				levelId: tables.logLevels.columns.levelId+{ pkTable: "log_levels", i:3 }
+			},
 		},
 		connections:{
 			columns: {

@@ -1,6 +1,7 @@
 #include "ServerSocketSession.h"
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/log/Logger.h>
+#include <jde/app/proto/LogProto.h>
 #include <jde/app/proto/app.FromServer.h>
 #include <jde/app/proto/app.FromClient.h>
 #include <jde/access/Authorize.h>
@@ -86,12 +87,8 @@ namespace Jde::App::Server{
 		try{
 			LogRead( Ƒ("GraphQL{}: {}", returnRaw ? "*" : "", query), requestId );
 			auto ql = QL::Parse( move(query), move(vars), Server::Schemas(), returnRaw );
-			auto reqHandler = Server::GetRequestHandler();
-			let executer = _userPK.value_or(Jde::UserPK{0});
-			auto j = reqHandler
-				? co_await *reqHandler->Query( move(ql), executer, returnRaw )
-				: co_await QL::QLAwait( move(ql), executer );
-			auto y = serialize( j );
+			auto j = co_await QL::QLAwait( move(ql), {_userPK.value_or(Jde::UserPK{0})}, LocalQL() );
+			auto y = serialize( move(j) );
 			LogWrite( Ƒ("GraphQL: {}", y.substr(0,100)), requestId );
 			Write( FromServer::GraphQL(move(y), requestId) );
 		}
@@ -108,14 +105,8 @@ namespace Jde::App::Server{
 			WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 			return;
 		}
-		vector<string> args = Protobuf::ToVector( move(*entry.mutable_args()) );
-		Logging::Entry y{ App::FromClient::FromLogEntry(move(entry)) };
-		//y.Text = StringCache::GetMessage( y.Id() );
-		//y.SetFile( StringCache::GetFile(y.FileId()) );
-		//y.SetFunction( StringCache::GetFunction(y.FunctionId()) );
+		Logging::Entry y{ LogProto::FromLogEntry(move(entry)) };
 		Logging::Log( move(y), _programPK, _instancePK );
-		// if( auto p = Logging::FindLogger<ProtoLog>(); p )
-		// 	p->Write( move(y), _programPK, _instancePK );
 	}
 	α ServerSocketSession::SendAck( uint32 id )ι->void{
 		Write( FromServer::Ack(id) );
@@ -155,7 +146,8 @@ namespace Jde::App::Server{
 	α ServerSocketSession::GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task{
 		try{
 			THROW_IF( !_userPK, "Not logged in to system." );
-			let user = co_await QL::QLAwait<jobject>( "user(id:$id){{name target}}", {{"id",_userPK->Value}}, {UserPK::System}, QLPtr() );
+			jobject vars{ {"id", _userPK->Value} };
+			let user = co_await QL::QLAwait<jobject>( "user(id:$id){name target}", move(vars), {UserPK::System}, QLPtr() );
 			let info = Web::Server::Sessions::Find( SessionId() );
 			let expiration = Chrono::ToClock<Clock,steady_clock>( info->Expiration );
 			Write( FromServer::Jwt(Server::GetJwt(*_userPK, string{user.at("name").as_string()}, string{user.at("target").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );
@@ -255,10 +247,10 @@ namespace Jde::App::Server{
 				auto& s = *m.mutable_subscription();
 				auto& ql = *s.mutable_text();
 				auto& variablesString = *s.mutable_variables();
-				auto variables = variablesString.empty() ? jobject{} : Json::Parse( move(variablesString) );
+				auto vars = variablesString.empty() ? jobject{} : Json::Parse( move(variablesString) );
 				LogRead( Ƒ("Subscription - {}", ql.substr(0, MaxLogLength())), requestId );
 				try{
-					Write( FromServer::SubscriptionAck(AddSubscription(move(ql), variables, requestId), requestId) );
+					Write( FromServer::SubscriptionAck(AddSubscription(move(ql), move(vars), requestId), requestId) );
 				}
 				catch( std::exception& e ){
 					WriteException( move(e), requestId );
@@ -317,9 +309,14 @@ namespace Jde::App::Server{
 		LogWrite( Ƒ("QueryClient: {}", q.substr(0,100)), requestId );
 		Write( FromServer::QueryClient(move(q), move(query.Variables), executer, query.ReturnRaw, requestId) );
 	}
+	α ServerSocketSession::OnDisconnect( CodeException&& )ι->void{
+		OnClose();
+	}
 	α ServerSocketSession::OnClose()ι->void{
+		if( !Stream )
+			return;
 		LogRead( "OnClose", 0 );
-		Server::RemoveSession( Id() );
+		Server::OnSessionDisconnect( SharedFromThis() );
 		base::OnClose();
 	}
 

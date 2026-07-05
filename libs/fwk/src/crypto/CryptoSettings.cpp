@@ -21,10 +21,10 @@ namespace Jde::Crypto{
 		PublicKeyPath{ getPath(settings, "publicKey", "public/public.pem") },
 		DhPath{ getPath(settings, "dh", "dh.pem") },
 		Passcode{ Json::FindString(settings, "passcode").value_or("") },
-		AltName{ Json::FindString(settings, "certificateAltName").value_or("DNS:localhost,IP:127.0.0.1") },
-		Company{ Json::FindString(settings, "certificateCompany").value_or("Jde-Cpp") },
-		Country{ Json::FindString(settings, "certificateCountry").value_or("US") },
-		Domain{ Json::FindString(settings, "certificateDomain").value_or("localhost") }
+		AltName{ Json::FindSVPath(settings, "cert/altName").value_or("DNS:localhost,IP:127.0.0.1") },
+		Company{ Json::FindSVPath(settings, "cert/company").value_or("Jde-Cpp") },
+		Country{ Json::FindSVPath(settings, "cert/country").value_or("US") },
+		Domain{ Json::FindSVPath(settings, "cert/domain").value_or("localhost") }
 	{}
 
 	α CryptoSettings::CreateDirectories()Ε->void{

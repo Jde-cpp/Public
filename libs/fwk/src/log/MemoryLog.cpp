@@ -1,14 +1,9 @@
+#include "jde/fwk/log/log.h"
 #include <jde/fwk/log/MemoryLog.h>
 
 #define let const auto
 namespace Jde{
-	Ω memoryLog()ε->Logging::MemoryLog&{
-		for( let& logger : Logging::Loggers() ){
-			if( let pMemoryLog = dynamic_cast<Logging::MemoryLog*>(logger.get()); pMemoryLog )
-				return *pMemoryLog;
-		}
-		throw Exception( "No MemoryLog logger registered." );
-	}
+	Ω memoryLog()ε->Logging::MemoryLog&{ return Logging::GetLogger<Logging::MemoryLog>(); }
 	α Logging::ClearMemory()ι->void{ memoryLog().Clear(); }
 	α Logging::Find( StringMd5 entryId )ι->vector<Logging::Entry>{ return memoryLog().Find( entryId ); }
 	α Logging::Find( function<bool(const Logging::Entry&)> f )ι->vector<Logging::Entry>{ return memoryLog().Find( f ); }

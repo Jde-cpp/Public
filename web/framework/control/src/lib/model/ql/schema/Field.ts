@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 import { QLSchema } from './Schema';
 //https://graphql.org/learn/introspection/
 export enum FieldKind{
@@ -11,44 +12,42 @@ export enum FieldKind{
 	NON_NULL=7
 }
 
+type OfTypeJson = { kind: string|FieldKind, name?: string };
 export class OfType extends QLSchema{
-	constructor( j ){
+	constructor( j:OfType|OfTypeJson ){
 		super( j );
-		this.kind = typeof j.kind==="string" ? FieldKind[j.kind] : j.kind;
+		this.kind = typeof j.kind==="string" ? FieldKind[j.kind as keyof typeof FieldKind] : j.kind;
 	}
 	kind:FieldKind;
 }
 
+type FieldTypeJson = { kind: string|FieldKind, name?: string, ofType?: OfTypeJson };
 export class FieldType extends OfType{
-	constructor( j ){
+	constructor( j:FieldType|FieldTypeJson ){
 		super( j )
-		this.ofType = j.ofType ? new OfType( j.ofType ) : null;
+		this.ofType = j.ofType ? new OfType( j.ofType ) : undefined;
 	}
 	get underlyingKind():FieldKind{ return this.ofType?.kind ?? this.kind; }
 	get underlyingName():string{ return this.ofType?.name ?? this.name; }
 	get underlyingVariableName():string{ return this.underlyingName.charAt(0).toLowerCase()+this.underlyingName.slice(1) ; }
-	ofType:OfType;
+	ofType:OfType|undefined;
 }
 
+export type NullableField = {name:string, ofType:OfTypeJson};
 export class Field extends QLSchema{
-	constructor( j ){
+	constructor( j:Partial<Field>|NullableField ){
 		super( j )
-		this.type = j.type ? new FieldType( j.type ) : undefined;
+		if( "ofType" in j )
+			this.type = new FieldType( { kind: FieldKind.NON_NULL, ofType: j.ofType } );
+		else
+			this.type = new FieldType( j.type! );
 	}
-	static filter( fields:Field[], excludedColumns:string[], includeDeleted:boolean ):Field[]{
-		return fields.filter( (x)=>
-			(x.displayed || x.name=="id")
-		&& !excludedColumns?.includes(x.name)
-		&& (includeDeleted || x.name!="deleted") );
-	}
-	static filterSort( fields:Field[], order:string[], excludedColumns:string[]=[], includeDeleted:boolean=false ):Field[]{
-		const sort = ( x:Field,y:Field )=>{
-			const yIndex = order.indexOf( y.name )+1;
-			const xIndex = order.indexOf( x.name )+1;
-			return ( xIndex || order.length )-( yIndex || order.length );
-		};
-		return this.filter( fields, excludedColumns, includeDeleted ).sort( sort );
-	}
-	get displayed():boolean{ return this.#displayed ?? (this.type.ofType?.name!="ID" && this.name!="attributes" && this.type.kind!=FieldKind.LIST); } set displayed(x){this.#displayed=x;} #displayed:boolean;
 	type:FieldType;
+	get underlyingKind(){ return this.type.kind; }
+	get isNumber(){ return this.type.underlyingKind==FieldKind.SCALAR && ["Int", "Float", "ID", "UInt"].includes(this.type.underlyingName); }
+	get isString(){ return this.type.underlyingKind==FieldKind.SCALAR && this.type.underlyingName=="String"; }
+	get isBoolean(){ return this.type.underlyingKind==FieldKind.SCALAR && this.type.underlyingName=="Boolean"; }
+	get isEnum(){ return this.type.underlyingKind==FieldKind.ENUM; }
+	get isDateTime(){ return this.type.underlyingKind==FieldKind.SCALAR && ["DateTime"].includes(this.type.underlyingName); }
+	get isNullable(){ return this.type.kind!=FieldKind.NON_NULL; }
 }

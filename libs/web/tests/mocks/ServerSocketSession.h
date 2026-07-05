@@ -7,7 +7,7 @@
 namespace Jde::Web::Mock{
 	using namespace Jde::Web::Server;
 	using namespace Jde::Web::Client;
-	struct ServerSocketSession : TWebsocketSession<Proto::FromServerTransmission,Proto::FromClientTransmission>{
+	struct ServerSocketSession final : TWebsocketSession<Proto::FromServerTransmission,Proto::FromClientTransmission>{
 		using base = TWebsocketSession<Proto::FromServerTransmission,Proto::FromClientTransmission>;
 		ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α OnRead( Proto::FromClientTransmission&& transmission )ι->void override;
@@ -22,7 +22,7 @@ namespace Jde::Web::Mock{
 		α WriteSubscriptionAck( flat_set<QL::SubscriptionId>&&, RequestId )ι->void override{ ASSERT(false); }
 		α WriteComplete( RequestId )ι->void override{ ASSERT(false); }
 		α OnConnect( SessionPK sessionId, RequestId requestId )ι->Server::Sessions::UpsertAwait::Task;
-		α QueryClient( QL::TableQL&& query, Jde::UserPK executer, RequestId requestId )ε->void override{ ASSERT(false); }
+		α QueryClient( QL::TableQL&&, Jde::UserPK, RequestId )ε->void override{ ASSERT(false); }
 
 		vector<sp<DB::AppSchema>> _schemas;
 	};

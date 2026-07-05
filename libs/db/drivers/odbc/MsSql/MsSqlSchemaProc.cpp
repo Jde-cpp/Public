@@ -1,5 +1,5 @@
 ﻿#include "MsSqlSchemaProc.h"
-#include <jde/fwk/Str.h>
+#include <jde/fwk/str.h>
 #include <jde/db/Row.h>
 #include <jde/db/meta/Table.h>
 #include "../../../src/meta/ddl/ForeignKey.h"

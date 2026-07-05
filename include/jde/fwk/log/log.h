@@ -2,10 +2,6 @@
 #ifndef LOG_H
 #define LOG_H
 
-#include <iostream>
-#include "../exports.h"
-#include "../io/crc.h"
-#include "../process/process.h"
 #include "logTags.h"
 #include "Entry.h"
 #ifndef _MSC_VER

@@ -11,14 +11,11 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/InsertClause.h>
 #include "accessInternal.h"
-#include "awaits/ResourceLoadAwait.h"
-
 
 #define let const auto
 
-namespace Jde::Access{
-	constexpr ELogTags _tags{ ELogTags::Access };
+namespace Jde{
 	constexpr array<sv,8> ProviderTypeStrings = { "None", "Google", "Facebook", "Amazon", "Microsoft", "VK", "key", "OpcServer" };
-	α ToProviderType( sv x )ι->EProviderType{ return ToEnum<EProviderType>( ProviderTypeStrings, x ).value_or(EProviderType::None); }
-	α ToString( EProviderType x )ι->sv{ return FromEnum<EProviderType>( ProviderTypeStrings, x ); }
+	α /*Access::*/ToProviderType( sv x )ι->Access::EProviderType{ return ToEnum<Access::EProviderType>( ProviderTypeStrings, x ).value_or(Access::EProviderType::None); }
+	α /*Access::*/ToString( Access::EProviderType x )ι->string{ return FromEnum<Access::EProviderType>( ProviderTypeStrings, x ); }
 }

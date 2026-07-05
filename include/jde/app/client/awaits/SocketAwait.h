@@ -1,4 +1,5 @@
 #pragma once
+#include "jde/fwk/log/logTags.h"
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/Jwt.h>
@@ -29,7 +30,8 @@ namespace Jde::App::Client{
 	α SocketAwait<TProto,TResult>::await_resume()ε->TResult{
 		base::CheckException();
 		auto p = base::Promise();
-		THROW_IF( !p && !_session, "Shutting Down" );
+		if( !p && !_session )
+			throw Exception{ base::_sl, ELogLevel::Debug, "Socket Connection is closed." };
 		THROW_IF( !_session || !p->Value(), "No Connection to AppServer." );
 		return move( *p->Value() );
 	}

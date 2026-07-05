@@ -1,21 +1,32 @@
 #include "GatewayQL.h"
+#include "GatewayQLAwait.h"
+#include <jde/app/client/awaits/LogSettingsClientAwait.h>
 
 namespace Jde::Opc{
-	sp<Gateway::GatewayQL> _ql;
+	namespace Gateway{ sp<Gateway::GatewayQL> _ql; }
 	α Gateway::QLPtr()ι->sp<GatewayQL>{ ASSERT(_ql); return _ql; }
 	α Gateway::QL()ι->GatewayQL&{ return *QLPtr(); }
 	α Gateway::Schemas()ι->const vector<sp<DB::AppSchema>>&{ return QL().Schemas(); }
 	α Gateway::ConfigureQL( sp<DB::AppSchema> schema, sp<Access::Authorize> authorizer )ι->void{
 		QL::Configure( {schema} );
-		_ql = ms<GatewayQL>( move(schema), authorizer );
+		_ql = ms<GatewayQL>( move(schema), move(authorizer) );
 	}
 }
 namespace Jde::Opc::Gateway{
 	GatewayQL::GatewayQL( sp<DB::AppSchema>&& schema, sp<Access::Authorize> authorizer )ι:
-		QL::LocalQL{ {schema}, authorizer }{
+		App::AppQL{ {schema}, authorizer }{
 		QL::Configure( {move(schema)} );
 	}
-	α GatewayQL::CustomQuery( QL::TableQL& ql, UserPK executer, SL sl )ι->up<TAwait<jvalue>>{ return nullptr; }
-	α GatewayQL::CustomMutation( QL::MutationQL& ql, UserPK executer, SL sl )ι->up<TAwait<jvalue>>{ return nullptr; }
+	α GatewayQL::CustomQuery( QL::TableQL& q, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>>{
+		up<TAwait<jvalue>> await = GatewayQLAwait::Test( q, executer, sl );
+		return await;
+	}
+	α GatewayQL::CustomMutation( QL::MutationQL& m, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>>{
+		up<TAwait<jvalue>> await = GatewayQLMAwait::Test( m, executer, sl );
+		return await;
+	}
+	α GatewayQL::LogSettingsQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>>{
+		return mu<App::Client::LogSettingsClientAwait>( move(ql), sl );
+	}
 
 }

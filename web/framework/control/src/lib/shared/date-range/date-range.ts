@@ -17,15 +17,15 @@ export class DateRange implements OnInit
 {
 	get startDate()
 	{
-		let d = DateRange.toDate( this.settings.start );
+		let d = DateRange.toDate( this.settings.start! );
 		//console.log( `start=${d}` );
 		return d;
 	}
 	get endDate(){ return this.settings.end ? DateRange.toDate( this.settings.end ) : null; }
-	@ViewChild('picker',{static: false}) picker;
-	@ViewChild('dateRangeStart',{static: false}) dateRangeStart;
-	@ViewChild('dateRangeEnd',{static: false}) dateRangeEnd;
-	@ViewChild('dateRange',{static: false}) dateRange;
+	@ViewChild('picker',{static: false}) picker:any;
+	@ViewChild('dateRangeStart',{static: false}) dateRangeStart:any;
+	@ViewChild('dateRangeEnd',{static: false}) dateRangeEnd:any;
+	@ViewChild('dateRange',{static: false}) dateRange:any;
 	ngOnInit()
 	{
 		if( this.settings.timeFrame )
@@ -78,7 +78,7 @@ export class DateRange implements OnInit
 	startChange( e:MatDatepickerInputEvent<Date>|any )
 	{
 		console.log( `startChange = ${e.value}  - start=${this.settings.start} - end=${this.settings.end ?? this.settings.max}, days=${this.settings.dayCount}` );
-		this.settings.timeFrame = null;
+		this.settings.timeFrame = undefined;
 		const days = DateUtils.toDays( e.value );//18,962=12/1 18,983=12/22, 18,990=12/29
 		this.settings.start = days;
 		console.log( `start=${this.settings.start} - end=${ this.settings.end ?? this.settings.max }, days=${this.settings.dayCount}` );
@@ -89,7 +89,7 @@ export class DateRange implements OnInit
 	}
 	endChange( e:MatDatepickerInputEvent<Date>|any ){
 		console.log( `endChange = ${e.value}  - start=${this.settings.start} - end=${this.settings.end ?? this.settings.max}, days=${this.settings.dayCount}` );
-		this.settings.end = e.value ? DateUtils.toDays( e.value ) : null;
+		this.settings.end = e.value ? DateUtils.toDays( e.value ) : undefined;
 		//console.log( 'start='+this.range.controls['start'].value );
 		//console.log( 'end='+this.range.controls['end'].value );
 		if( this.settings.end )
@@ -116,14 +116,14 @@ export class DateRange implements OnInit
 	}
 	get dayCount(){ return this.settings.dayCount; }
 	@Input() set placeholder( value ){ this._placeholder = value;} get placeholder(){return this._placeholder} private _placeholder:string="Date range";
-	@Input()settings:DateRangeSettings; @Output("change") settingsChange = new EventEmitter<DateRangeSettings>();
-	start:FormControl;
-	end:FormControl;
+	@Input()settings!:DateRangeSettings; @Output("change") settingsChange = new EventEmitter<DateRangeSettings>();
+	start!:FormControl;
+	end!:FormControl;
 	get timeFrame(){return this.settings.timeFrame;} set timeFrame(x){this.settings.timeFrame = x;}TimeFrameType = TimeFrame;
 	range = new FormGroup( { start: new FormControl(), end: new FormControl() } );
 }
 export class DateRangeSettings{
-	constructor( public timeFrame:TimeFrame=undefined, private _max:Day = DateUtils.toDays(new Date()), private isValidDay:(_:Day)=>boolean=()=>{return true;} )
+	constructor( public timeFrame:TimeFrame|undefined=undefined, private _max:Day = DateUtils.toDays(new Date()), private isValidDay:(_:Day)=>boolean=()=>{return true;} )
 	{}
 	assign(other: DateRangeSettings){
 		this.end = other.end;
@@ -133,7 +133,7 @@ export class DateRangeSettings{
 	//toJSON = function(){ return { start: this.start, end: this.end, timeFrame: this.timeFrame }; }
 	get max(){ return this._max; }
 	get dayCount(){
-		let dayCount = this.#dayCount ?? null;
+		let dayCount = this.#dayCount;
 		if( this.timeFrame==TimeFrame.Week )
 			dayCount = 7;
 		else if( this.timeFrame && this.timeFrame!=TimeFrame.All )
@@ -145,7 +145,7 @@ export class DateRangeSettings{
 		}
 		return dayCount;
 	} set dayCount( x:number|undefined ){ this.#dayCount = x; } #dayCount:number | undefined;
-	get end(){ return this.#end; } set end( x:Day ){ this.#end = x; }  #end:Day;
+	get end(){ return this.#end; } set end( x ){ this.#end = x; }  #end:Day|undefined;
 
-	get start(){ return this.#start; } set start( x:Day ){ this.#start = x; }  #start:Day;
+	get start(){ return this.#start; } set start( x ){ this.#start = x; }  #start:Day|undefined;
 }

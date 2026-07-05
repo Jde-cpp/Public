@@ -20,12 +20,14 @@ namespace Jde::Opc::Gateway::Tests{
 
 		α Connect( SessionPK sessionId, SRCE )ι->await<uint32>;
 		α Query( string&& query, jobject variables, bool returnRaw, SRCE )ι->await<jvalue> override;
+		α QuerySync( string&& query, jobject variables={} )ι->jvalue;
 		α Subscribe( ServerCnnctnNK target, const vector<NodeId>& nodes, sp<IListener> listener, SRCE )ε->await<FromServer::SubscriptionAck>;
-		α Subscribe( string&& /*query*/, jobject /*variables*/, sp<QL::IListener> /*listener*/, SL )ε->await<jarray>{ ASSERT(false); throw "noimpl"; }
+		α Subscribe( string&& /*query*/, jobject /*variables*/, sp<QL::IListener> /*listener*/, SL )ε->await<jarray> override{ ASSERT(false); throw "noimpl"; }
 		α LogSubscribe( jobject&& ql, jobject vars, sp<IListener> listener, SRCE )ε->await<jarray>;
 
 		α Unsubscribe( ServerCnnctnNK target, const vector<NodeId>& nodeIds, SRCE )ε->await<FromServer::UnsubscribeAck>;
 	private:
+		α CloseTasks( beast::error_code ec )ι->void override;
 		α HandleException( std::any&& h, Jde::Proto::Exception&& what )ι;
 		α OnRead( FromServer::Transmission&& transmission )ι->void override;
 		α OnClose( beast::error_code ec )ι->void override;

@@ -55,7 +55,7 @@ namespace Jde::Opc::Gateway{
 	}
 	α VariableQLAwait::Read( QL::TableQL&& ql )ι->TAwait<ReadResponse>::Task{
 		try{
-			auto response = co_await ReadAwait{ {{_nodeId}, move(ql)}, _client };
+			auto response = co_await ReadAwait{ {{_nodeId}, ql}, _client };
 			Resume( response.ToJson(ql) );
 		}
 		catch( exception& e ){

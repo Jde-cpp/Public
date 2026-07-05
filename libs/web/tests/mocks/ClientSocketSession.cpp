@@ -2,6 +2,7 @@
 #include <jde/web/usings.h>
 #include <jde/app/proto/app.FromServer.h>
 #include "ServerMock.h"
+#include "jde/fwk/log/logTags.h"
 
 #define let const auto
 
@@ -29,7 +30,7 @@ namespace Jde::Web::Mock{
 	}
 
 
-	α ClientSocketSession::HandleException( std::any&& h, string&& what )ι{
+	α ClientSocketSession::HandleException( RequestId requestId, std::any&& h, string&& what )ι{
 		if( auto pEcho = std::any_cast<ClientSocketAwait<string>::Handle>(&h) ){
 			pEcho->promise().SetExp( Exception{what} );
 			pEcho->resume();
@@ -39,8 +40,11 @@ namespace Jde::Web::Mock{
 			pAck->resume();
 		}
 		else{
-			WARNT( ELogTags::SocketClientRead, "Failed to process incomming exception '{}'.", what );
+			let severity{ requestId ? ELogLevel::Critical : ELogLevel::Warning };
+			ASSERT_DESC( !requestId, Ƒ("[{}]Type Not Expected={}, {}", hex(requestId), h.type().name(), hex((uint)&h)) );
+			LOG( severity, ELogTags::SocketClientRead, "[{}]Failed to process incoming exception '{}'.", hex(requestId), what );
 		}
+
 	}
 
 	α ClientSocketSession::OnRead( Proto::FromServerTransmission&& transmission )ι->void{
@@ -65,7 +69,7 @@ namespace Jde::Web::Mock{
 				break;}
 			case kException:{
 				std::any h = requestId==0 ? coroutine_handle<>{} : PopTask( requestId );
-				HandleException( move(h), move(*m->mutable_exception()) );
+				HandleException( requestId, move(h), move(*m->mutable_exception()) );
 				break;}
 			default:
 				BREAK;
@@ -109,9 +113,14 @@ namespace Jde::Web::Mock{
 		return ClientSocketAwait<string>{ Protobuf::ToString(t), requestId, shared_from_this(), sl };
 	}
 
-	α ClientSocketSession::OnClose( beast::error_code ec )ι->void{
-		auto f = [this, ec]( std::any&& h )->void { HandleException(move(h), CodeException{ec, ELogTags::SocketClientWrite, ELogLevel::NoLog}.what()); };
-		CloseTasks( f );
-		base::OnClose( ec );
+	α ClientSocketSession::CloseTasks( beast::error_code ec )ι->void{
+		auto f = [this, ec]( std::any&& h )->void {
+			HandleException(
+				0,
+				move(h),
+				ec ? CodeException{ec, ELogTags::SocketClientWrite, ELogLevel::NoLog}.what() : "Session closed."
+			);
+		};
+		base::CloseTasks( f );
 	}
 }

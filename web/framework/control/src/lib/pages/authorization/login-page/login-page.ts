@@ -35,7 +35,7 @@ export class LoginPageComponent{
 			this.snackbar.error( "Enter an email and password.", (m)=>console.log(m) );
 			return;
 		}
-		let domain = null;
+		let domain = undefined;
 		if( username.indexOf('\\')!=-1 ){
 			const parts = username.split('\\');
 			domain = parts[0];
@@ -43,9 +43,9 @@ export class LoginPageComponent{
 		}
 		try{
 			await this.authService.loginPassword(
-				domain,
 				username,
 				password,
+				domain,
 				console.log
 			);
 			this.router.navigate( [''] );
@@ -62,7 +62,8 @@ export class LoginPageComponent{
 		let user = new User( credential );
 		try{
 			await this.authService.login( user, console.log );
-			localStorage.setItem( "googleLoginHint", user.email );
+			if( user.email )
+				localStorage.setItem( "googleLoginHint", user.email );
 			this.router.navigate( [''] );
 		}
 		catch( e ){
@@ -80,15 +81,15 @@ export class LoginPageComponent{
 				auto_select: true,
 				button_auto_select: true,
 				cancel_on_tap_outside: true,
-				callback:  (response) => {self.onGoogleLogin(response.credential); },
-				native_callback: (response) => {self.onGoogleLogin2(response.credential);},
+				callback:  (response:any) => {self.onGoogleLogin(response.credential); },
+				native_callback: (response:any) => {self.onGoogleLogin2(response.credential);},
 				login_hint: localStorage.getItem( "googleLoginHint" )
 			});
 			google.accounts.id.renderButton(
 				document.getElementById("google-button"),
 				{ theme: "outline", size: "large" }
 			);
-			if( this.googleCredential && !this.user().picture )
+			if( this.googleCredential && !this.user()!.picture )
 				this.onGoogleLogin( this.googleCredential );
 		}
 		catch( e ){
@@ -103,7 +104,7 @@ export class LoginPageComponent{
 			throw new Error( "googleAuthClientId is not defined" );
 		return y;
 	}
-	hasUserPassword = computed(() => { return !this.providers.isLoading() && this.providers.value().includes( EProvider.OpcServer ); });
+	hasUserPassword = computed(() => { return !this.providers.isLoading() && this.providers.value()!.includes( EProvider.OpcServer ); });
 	providers = resource<EProvider[], {}>( {loader: async () =>await this.authService.providers( console.log )} );
 
 	fb = inject(FormBuilder);
@@ -111,7 +112,7 @@ export class LoginPageComponent{
 	private showedGoogleLogin = false;
   form = this.fb.group({ username: [''], password: [''] });
 	router = inject(Router);
-	user = computed<User | null>( () => {
+	user = computed<User | undefined>( () => {
 		return this.authService.user();
 	});
 }

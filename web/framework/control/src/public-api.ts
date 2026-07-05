@@ -2,10 +2,12 @@ export * from './lib/model/Guid';
 export * from './lib/model/ql/Row';
 export * from './lib/model/ql/TargetRow';
 export * from './lib/model/ql/Mutation';
+export * from './lib/model/ql/View';
 export * from './lib/model/ql/schema/MetaObject';
 export * from './lib/model/ql/schema/MutationSchema';
 export * from './lib/model/ql/schema/TableSchema';
 export * from './lib/model/ql/schema/Field';
+
 export * from './lib/pages/GraphQL/detail/graph-ql-detail';
 export * from './lib/pages/GraphQL/properties/properties';
 export * from './lib/pages/GraphQL/model/PageSettings';
@@ -13,6 +15,7 @@ export * from './lib/pages/GraphQL/table/table';
 export * from './lib/pages/home/home';
 export * from './lib/pages/cards/cards';
 export * from './lib/pages/ql/list/ql-list';
+export * from './lib/pages/ql/list/ql-list-route-service';
 export * from './lib/pages/ql/selector/ql-selector';
 
 export * from './lib/pages/authorization/login-page/login-page';
@@ -23,8 +26,6 @@ export * from './lib/services/auth.store'
 export * from './lib/services/proto.service'
 export * from './lib/services/route.store';
 export * from './lib/services/app/app.service';
-export * from './lib/services/profile/profile.store';
-export * from './lib/services/profile/localProfile.store';
 export * from './lib/services/error/DefaultError.service';
 export * from './lib/services/error/IErrorService';
 export * from './lib/services/ql-list.resolver';

@@ -12,7 +12,7 @@ export class StringUtils{
 	static singular( value:string ):string{
 		return value.endsWith('s') ? value.slice(0,-1) : value;
 	}
-	static idToDisplay( id:string ){
+	static idToDisplay( id:string ){ //TODO change function name
 		let y=''
 		for( let i=0; i<id.length; ++i )
 		{

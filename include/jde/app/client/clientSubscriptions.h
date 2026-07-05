@@ -2,7 +2,7 @@
 #include <jde/ql/usings.h>
 
 namespace Jde::QL{ struct Subscription; }
-namespace Jde::App::Proto::FromServer{ struct Traces; }
+namespace Jde::App::Proto::FromServer{ class Traces; }
 namespace Jde::App::Client::Subscriptions{
 	α StopListenRemote( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids )ι->jarray;
 	α ListenRemote( sp<QL::IListener> listener, QL::Subscription&& sub )ι->void;

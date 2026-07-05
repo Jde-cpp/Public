@@ -94,7 +94,7 @@ namespace Jde::IO::Crc{
 			: crc32_rec( crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(*s)] ^ (crc >> 8), s + 1 );
 	}
 
-	inline constexpr α operator "" _crc32( const char *s, size_t )->unsigned int{
+	inline constexpr α operator ""_crc32( const char *s, size_t )->unsigned int{
 		return crc32_rec( 0xFFFFFFFF, s );
 	}
 

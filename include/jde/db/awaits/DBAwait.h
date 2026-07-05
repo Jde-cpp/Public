@@ -55,7 +55,7 @@ namespace Jde::DB{
 			TAwait<T>{sl},TSelect<T>( ds, move(sql), fnctn, sl )
 		{}
 		α Suspend()ι->void override{ TSelect<T>::Select( TAwait<T>::_h ); }
-		α await_resume()ι->T{
+		α await_resume()ι->T override{
 			if( TSelect<T>::_exception )
 				TSelect<T>::_exception->Throw();
 			return TSelect<T>::_result;

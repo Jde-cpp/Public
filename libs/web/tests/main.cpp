@@ -3,6 +3,8 @@
 #endif
 #include "gtest/gtest.h"
 #include <jde/fwk/process/thread.h>
+#include <jde/fwk/log/log.h>
+#include <jde/tests/SpdlogTestListener.h>
 #define let const auto
 
 namespace Jde{
@@ -11,11 +13,9 @@ namespace Jde{
 #endif
 
  	α Startup( int argc, char **argv )ι->void{
-#ifdef _MSC_VER
-		ASSERT( Settings::FindNumber<uint>("/workers/drive/threads").value_or(0)>0 )
-#endif
-		SetThreadDscrptn( "Main" );
+		Thread::SetName( "Main" );
 		Process::Startup( argc, argv, "Tests.Web", "Web tests", true );
+		Logging::Init();
 	}
 }
 
@@ -27,6 +27,7 @@ namespace Jde{
 	{
 		let filter=Settings::FindSV( "/testing/tests" ).value_or( "*" );
 		::testing::GTEST_FLAG( filter ) = filter;
+		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
 	   result = RUN_ALL_TESTS();
 		Process::Shutdown( result );
 	}

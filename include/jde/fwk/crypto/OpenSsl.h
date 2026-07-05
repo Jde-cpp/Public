@@ -46,7 +46,7 @@ namespace Jde::Crypto{
 			IException{ sl, ELogLevel::Warning, rc, fmt, std::forward<Args>(args)... }
 		{}
 		static Φ CurrentError()ι->string;
-		α Move()ι->up<IException>{ return mu<OpenSslException>(move(*this)); }
+		α Move()ι->up<IException> override{ return mu<OpenSslException>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }
   };
 }

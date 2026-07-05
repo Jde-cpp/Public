@@ -9,15 +9,15 @@ namespace Jde::App::Client{
 		RemoteLog( const jobject& settings, sp<IAppClient> client )ι;
 		~RemoteLog();
 		Ω Init( sp<IAppClient> client )ι->void;
-		α Start( sp<IAppClient> client )ι->void;
-		α Shutdown( bool terminate )ι->void override;
+		α Shutdown( bool terminate=false, SRCE )ι->void override;
 		α Write( const Logging::Entry& m )ι->void override;
 		α Write( const Logging::Entry& m, uint32 /*appPK*/, uint32 /*instancePK*/ )ι->void override{ Write(m); }
-		α Name()Ι->string override{ return "RemoteLog"; }
+		α Name()Ι->sv override{ return "RemoteLog"; }
 	private:
 		α ResetTimer()ι->void;
 		α Send()ι->void;
-		α StartTimer( std::mutex& mtx )ι->TimerAwait::Task;
+		α Start( sp<IAppClient> client )ι->void;
+		α StartTimer()ι->TimerAwait::Task;
 		ProtoLogCache _cache;
 		sp<IAppClient> _client;
 		Duration _delay;

@@ -30,10 +30,20 @@ function buildProject() {
 		target=Jde;
 	elif [[ $buildRelativePath == *"libs/fwk/tests"* ]]; then
 		target=Jde.Fwk.Tests;
+	elif [[ $buildRelativePath == *"libs/access/lib"* ]]; then
+		target=Jde.Access;
+	elif [[ $buildRelativePath == *"libs/access/tests"* ]]; then
+		target=Jde.Access.Tests;
+	elif [[ $buildRelativePath == *"libs/db/lib"* ]]; then
+		target=Jde.DB;
+	elif [[ $buildRelativePath == *"libs/db/drivers/mysql"* ]]; then
+		target=Jde.DB.MySql;
 	elif [[ $buildRelativePath == *"web/client"* ]]; then
 		target=Jde.Web.Client;
-	elif [[ $buildRelativePath == *"web/server" ]]; then
+	elif [[ $buildRelativePath == *"web/server"* ]]; then
 		target=Jde.Web.Server;
+	elif [[ $buildRelativePath == *"libs/web/tests"* ]]; then
+		target=Jde.Web.Tests;
 	elif [[ $buildRelativePath == *"app/client" ]]; then
 		target=Jde.App.Client;
 	elif [[ $buildRelativePath == *"app/shared"* ]]; then
@@ -48,10 +58,14 @@ function buildProject() {
 		target=Jde.Opc.GatewayLib;
 	elif [[ $buildRelativePath == "apps/OpcGateway/tests"* ]]; then
 		target=Jde.Opc.Tests;
+	elif [[ $buildRelativePath == "apps/OpcServer/lib"* ]]; then
+		target=Jde.Opc.ServerLib;
+	elif [[ $buildRelativePath == "apps/OpcServer/tests"* ]]; then
+		target=Jde.Opc.Server.Tests;
 	else
 		target=foo;
 	fi;
-	echo "fileWorkspaceFolder:$fileWorkspaceFolder, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, target=$target";
+	echo "fileDirname:$fileDirname, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, target=$target";
 	cd $buildRoot;
 	cmake --build . -j --target $target;
 }

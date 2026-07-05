@@ -1,20 +1,26 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "SocketTests.CreatePlain",
+		tests:: "SocketTests.*",
 		certDir: args.logDir+'web-tests/ssl'
 	},
 	logging:{
 		spd:{
 			tags:{
-				trace:["test", "exception", "app", "http.client.sessions",
-					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
-				],
-				debug:["settings"],
-				information:[],
-				warning:[],
-				"error":[],
-				critical:[]
+				default: "Information",
+				test: "Trace",
+				exception: "Trace",
+				app: "Trace",
+				http_client_sessions: "Trace",
+				http_client_write: "Trace",
+				http_client_read: "Trace",
+				http_server_write: "Trace",
+				http_server_read: "Trace",
+				socket_client_write: "Trace",
+				socket_client_read: "Trace",
+				socket_server_write: "Trace",
+				socket_server_read: "Trace",
+				settings: "Debug"
 			},
 			sinks:{
 				console:{},
@@ -22,7 +28,10 @@ local args = import 'args.libsonnet';
 			}
 		},
 		memory:{
-			default: "trace"
+			tags:{
+				default: "Trace",
+				locks: "Warning"
+			}
 		}
 	},
 	http:{

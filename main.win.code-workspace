@@ -1,68 +1,78 @@
 {
-	"settings": {
-		"window.title": "Main",
-		"name": "main",
-		"compiler": "msvc",
-		"sourceDir": "${env:JDE_BASH}",
-		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
-		"releaseDir": "/z/RelWithDebInfo/${config:compiler}",
-		"debugPreset": "win-msvc-debug",
-		"releasePreset": "win-msvc-relWithDebInfo",
-		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
-		"C_Cpp.default.systemIncludePath": [
-			"C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um"
-		]
-	},
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"tasks": {
-		"version": "2.0.0",
-		"tasks": [
-			{
-				"label": "build",
-				"type": "shell",
-				"command": "mkdir -p ${config:debugDir}; cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug;",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": true }
-			},
-			{
-				"label": "buildProject",
-				"type": "shell",
-				"command": "tput reset;${config:sourceBash};buildProject \"${workspaceFolder}\" \"${fileWorkspaceFolder}\" \"${relativeFile}\" \"${config:debugDir}\";",
+  "settings": {
+    "window.title": "Main",
+    "name": "main",
+		"target": "all",
+    "compiler": "${env:JDE_COMPILER}",
+		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
+    "sourceDir": "${env:JDE_BASH}",
+    "debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
+    "releaseDir": "/z/RelWithDebInfo/${config:compiler}",
+    "debugPreset": "win-clang-debug-repos",
+    "releasePreset": "win-msvc-relWithDebInfo",
+    "sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
+    "C_Cpp.default.systemIncludePath": [
+      "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um"
+    ],
+    "files.watcherExclude": {
+      "**/my-workspace*/**": true,
+      "**/out/**": true,
+      "**/build/**": true
+    },
+    "files.exclude": {
+      "**/my-workspace*/**": true,
+      "**/out/**": true,
+      "**/build/**": true
+    },
+    "search.exclude": {
+      "**/my-workspace*/**": true,
+      "**/out/**": true,
+      "**/build/**": true
+    }
+  },
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "buildProject",
+        "type": "shell",
+        "command": "tput reset;${config:sourceBash};buildProject \"${workspaceFolder}\" \"${fileWorkspaceFolder}\" \"${relativeFile}\" \"${config:debugDir}\";",
 				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "buildRelease",
-				"type": "shell",
-				"command": "mkdir -p ${config:releaseDir}; cd ${config:releaseDir}; tput reset; cmake --build . -j --config RelWithDebInfo --target open62541-nodeset-loader;",
+      },
+      {
+        "label": "buildRelease",
+        "type": "shell",
+        "command": "mkdir -p ${config:releaseDir}; cd ${config:releaseDir}; tput reset; cmake --build . -j --config RelWithDebInfo --target open62541-nodeset-loader;",
 				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "cmakeRelease",
-				"type": "shell",
-				"command": "mkdir -p ${config:releaseDir};cd ${config:releaseDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} -Wno-dev --preset ${config:releasePreset} -Djde_REPOS=ON",
+      },
+      {
+        "label": "cmakeRelease",
+        "type": "shell",
+        "command": "mkdir -p ${config:releaseDir};cd ${config:releaseDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} -Wno-dev --preset ${config:releasePreset} -Djde_REPOS=ON",
 				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": "build"
-			},
-			{
-				"label": "cmakeReposDebug",
-				"type": "shell",
-				"command": "mkdir -p ${config:debugDir};cd ${config:debugDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} --preset ${config:debugPreset} -Djde_REPOS=ON -Djde_TESTS=OFF -Djde_APPS=OFF",
+        "group": "build"
+      },
+      {
+        "label": "cmakeDebugRepos",
+        "type": "shell",
+        "command": "mkdir -p ${config:debugDir};cd ${config:debugDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} --preset ${config:debugPreset}",
 				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": "build"
-			},
-			{
-				"label": "cmakeReposRelease",
-				"type": "shell",
-				"command": "mkdir -p ${config:releaseDir};cd ${config:releaseDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} --preset ${config:releasePreset} -Djde_REPOS=ON -Djde_TESTS=OFF -Djde_APPS=OFF",
+        "group": "build"
+      },
+      {
+        "label": "cmakeReposRelease",
+        "type": "shell",
+        "command": "mkdir -p ${config:releaseDir};cd ${config:releaseDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} --preset ${config:releasePreset} -Djde_REPOS=ON -Djde_TESTS=OFF -Djde_APPS=OFF",
 				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": "build"
-			}
-		]
-	}
+        "group": "build"
+      }
+    ]
+  }
 }

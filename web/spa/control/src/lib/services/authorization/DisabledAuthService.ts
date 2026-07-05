@@ -13,7 +13,7 @@ export class DisabledAuthService implements IAuth{
 	googleAuthClientId():Promise<string>{ throw "noImpl"; }
 	validateSessionId():void{ throw "noImpl";}
 
-	get user():Signal<User | null>{ return signal<User | null>(null); }
+	get user():Signal<User|undefined>{ return signal<User|undefined>(undefined); }
 
 /*	onLogout():void{}
 	subscribe():Observable<string>{ return new Subject<string>().asObservable(); };

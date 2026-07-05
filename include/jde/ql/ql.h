@@ -15,7 +15,7 @@ namespace Jde::QL{
 	Ŧ AsId( const jobject& j, SRCE )ε->T;
 	Ŧ AsId( const jvalue& j, SRCE )ε->T;
 	α SetSystemMutations( flat_set<string>&& x )ι->void;
-	α SetSystemTables( flat_set<string>&& x )ι->void;
+	α SetSystemTables( flat_set<string>&& jsonNames )ι->void;
 	α IsSystemQuery( const QL::RequestQL& q )ι->bool;
 
 	template<class T=uint32> α FindId( const jobject& j )ι->T;
@@ -24,7 +24,7 @@ namespace Jde::QL{
 	α ParseM( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->MutationQL;
 	α ParseQuery( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->TableQL;
 	α ParseSubscriptions( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, SRCE )ε->vector<Subscription>;
-	α SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted=nullopt )ε->optional<DB::Statement>;
+	α SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted=nullopt, bool includeWhere=true )ε->optional<DB::Statement>;
 }
 namespace Jde{
 	Ŧ QL::FindId( const jobject& o )ι->T{

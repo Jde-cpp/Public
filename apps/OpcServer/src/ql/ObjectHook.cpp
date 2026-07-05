@@ -17,7 +17,7 @@ namespace Jde::Opc::Server{
 			Executer{ executer }
 		{}
 		α Suspend()ι->void override{ GetBrowseName(); }
-		α await_resume()ε->jvalue;
+		α await_resume()ε->jvalue override;
 
 		QL::MutationQL Mutation;
 		Jde::UserPK Executer;

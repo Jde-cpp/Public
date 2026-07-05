@@ -24,10 +24,10 @@ namespace Jde::App::Client{
 		α Suspend()ι->void{ HttpLogin(); }
 		α HttpLogin()ι->TAwait<SessionPK>::Task;
 		α RunSocket( SessionPK sessionId )ι->TAwait<Proto::FromServer::ConnectionInfo>::Task;
-		α Retry()->DurationTimer::Task;
+		α Retry()ι->DurationTimer::Task;
 
 		sp<IAppClient> _appClient;
 		bool _retry;
 	};
-	α Connect( sp<IAppClient>&& appClient )ι->ConnectAwait::Task;
+	α Connect( sp<IAppClient> appClient )ι->ConnectAwait::Task;
 }

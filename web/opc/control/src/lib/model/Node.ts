@@ -22,10 +22,13 @@ export abstract class UaNode extends NodeId{
 		this.description = toLocalizedText( json.description );
 		this.#name = toLocalizedText( json.name ); //TODO switch to just name?
 		this.parent = parent;
-		this.refType = json.referenceType ? new NodeId( json.referenceType ) : null;
-		this.typeDef = json.typeDefinition ? new ObjectType( json.typeDefinition ) : null;
+		this.refType = json.referenceType ? new NodeId( json.referenceType ) : undefined;
+		this.typeDef = json.typeDefinition ? new ObjectType( json.typeDefinition ) : undefined;
 	}
-	browseFQ( defaultNS:Ns ):string{ return this.browse.ns===defaultNS ? this.browse.name.toString() : `${this.browse.ns}~${this.browse.name}`; }
+	browseFQ( defaultNS:Ns|undefined ):string{
+		const browse = this.browse!;
+		return browse.ns===defaultNS ? browse.name.toString() : `${browse.ns}~${browse.name}`;
+	}
 
 	get nodeId(){ return new NodeId( this ); }
 	get name(){ return this.#name?.text; } #name:ILocalizedText;
@@ -39,10 +42,10 @@ export abstract class UaNode extends NodeId{
 	abstract get nodeClass():ENodeClass;
 	parent?:UaNode;
 	refType?:NodeId;
-	specified:number;
+	specified!:number;
 	typeDef?:ObjectType;
-	userWriteMask:EWriteAccess;
-	writeMask:EWriteAccess;
+	userWriteMask!:EWriteAccess;
+	writeMask!:EWriteAccess;
 }
 
 export class ObjectType extends UaNode{
@@ -60,7 +63,7 @@ export class OpcObject extends UaNode{
 }
 
 export class Variable extends UaNode{
-	constructor( json:{browseName?:Browse, dataType?:NodeIdJson, displayName:ILocalizedText, node?:NodeIdJson, nodeClass?:number, referenceType?:NodeIdJson, typeDefinition?:NodeIdJson, value?:any, valueRank?:number}, parent?:UaNode	){
+	constructor( json:{browseName?:Browse, dataType?:NodeIdJson, displayName:ILocalizedText, node?:NodeIdJson, nodeClass?:number, referenceType?:NodeIdJson, typeDefinition?:NodeIdJson, value?:any, valueRank?:number, accessLevel?:EAccess, userAccessLevel?:EAccess}, parent?:UaNode )	{
 		super( json, parent );
 		if( json.dataType?.ns ){
 			this.dataType = ETypes.None;
@@ -82,9 +85,9 @@ export class Variable extends UaNode{
 	override get displayed(){ return true; }
 	get isArray():boolean{ return this.valueRank!=-1 && Array.isArray(this.value); }
 	override get isVariable(){ return true; }
-	get isInteger():boolean{ return [ETypes.SByte, ETypes.Int16, ETypes.Int32, ETypes.Int64].includes(this.dataType); }
-	get isFloating():boolean{ return [ETypes.Float, ETypes.Double].includes(this.dataType); }
-	get isUnsigned():boolean{ return [ETypes.Byte, ETypes.UInt16, ETypes.UInt32, ETypes.UInt64].includes(this.dataType); }
+	get isInteger():boolean{ return [ETypes.SByte, ETypes.Int16, ETypes.Int32, ETypes.Int64].includes(this.dataType!); }
+	get isFloating():boolean{ return [ETypes.Float, ETypes.Double].includes(this.dataType!); }
+	get isUnsigned():boolean{ return [ETypes.Byte, ETypes.UInt16, ETypes.UInt32, ETypes.UInt64].includes(this.dataType!); }
 	value?:Value;
 	valueRank?:number; // -1 scalar, 1 one-dimensional array, etc.
 }

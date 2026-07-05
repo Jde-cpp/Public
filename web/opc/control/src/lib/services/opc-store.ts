@@ -4,7 +4,7 @@ import { browseEq, ETypes, Ns, toBrowse } from '../model/types';
 import { NodeRoute } from "../model/NodeRoute";
 import { OpcObject, UaNode, ENodeClass } from "../model/Node";
 import { NodeId, NodeKey } from "../model/NodeId";
-import { DocItem } from "jde-spa";
+import { RouteItem } from "jde-spa";
 import { Gateway, GatewayTarget } from "./gateway.service";
 import { Server, ServerProps } from "../model/Server";
 
@@ -12,7 +12,7 @@ class StoreNode{
 	constructor( node:UaNode ){
 		this.node = node;
 	}
-	parentId:NodeId;
+	parentId!:NodeId;
 	node:UaNode;
 	children:UaNode[] = [];
 }
@@ -29,7 +29,7 @@ export class OpcStore{
 		if( !gatewayConnections )
 			this.#connections.set( gateway, gatewayConnections = new Map<CnnctnTarget, Server>() );
 		if( gatewayConnections.has(cnnctn) )
-			return gatewayConnections.get(cnnctn);
+			return gatewayConnections.get(cnnctn)!;
 		let q = `\
 			connection: serverConnection( target: $opc ){ id name target url certificateUri defaultBrowseNs }
 			desc: serverDescription( opc: $opc ){ applicationUri productUri applicationName applicationType gatewayServerUri discoveryProfileUri discoveryUrls }
@@ -52,11 +52,11 @@ export class OpcStore{
 		}
 		return nodes;
 	}
-	private findStore( gateway:GatewayTarget, cnnctn:CnnctnTarget, node:NodeId ):StoreNode{
+	private findStore( gateway:GatewayTarget, cnnctn:CnnctnTarget, node:NodeId ):StoreNode|undefined{
 		const opcNodes = this.#nodes.get( gateway )?.get( cnnctn );
-		let store:StoreNode;
+		let store:StoreNode|undefined;
 		if( opcNodes )
-			store = opcNodes.get( node.key );
+			store = opcNodes.get( node.key )!;
 		return store;
 	}
 	private getStore( nodes:Map<NodeKey,StoreNode>, node:UaNode ):StoreNode{
@@ -69,12 +69,12 @@ export class OpcStore{
 		}
 		return store;
 	}
-	setServerCnnctns( clients: DocItem[] ):void{
+	setServerCnnctns( clients: RouteItem[] ):void{
 		this.#serverCnnctnRoutes = [...clients];
 		for( let route of this.#serverCnnctnRoutes )
 			route.path = route.path.substring( route.path.lastIndexOf("/")+1 );
 	}
-	getParent( opcNodes:Map<NodeKey,StoreNode>, path:string, defaultNs:Ns ):UaNode{
+	getParent( opcNodes:Map<NodeKey,StoreNode>, path:string, defaultNs:Ns ):UaNode|undefined{
 		let segments = path.split("/");
 		if( segments.length==1 )
 			return OpcObject.rootNode;
@@ -82,10 +82,10 @@ export class OpcStore{
 		let parent = opcNodes.get( OpcObject.rootNode.key );
 		for( let segment of segments.slice(0, -1) ){
 			if( !parent )
-				return null;
-			let child = parent.children.find( (c)=>browseEq(c.browse, toBrowse(segment, defaultNs)) );
+				return undefined;
+			let child = parent.children.find( (c)=>browseEq(c.browse!, toBrowse(segment, defaultNs)) );
 			if( !child )
-				return null;
+				return undefined;
 			parent = opcNodes.get( child.key );
 		}
 		if( !parent )
@@ -100,13 +100,13 @@ export class OpcStore{
 			if( !obj.parent )
 				obj.parent = this.getParent( opcNodes, parent.path, defaultNs );
 			if( !opcNodes.has(obj.key) )
-				this.addChildren( opcNodes, obj.parent, [obj] );
+				this.addChildren( opcNodes, obj.parent!, [obj] );
 		}
 
 		if( !route.node.parent )
 			route.node.parent = this.getParent( opcNodes, route.path, defaultNs );
 		if( !opcNodes.has(route.node.key) )
-			this.addChildren( opcNodes, route.node.parent, [route.node] );
+			this.addChildren( opcNodes, route.node.parent!, [route.node] );
 	}
 
 	setNodes( gateway:GatewayTarget, cnnctn:CnnctnTarget, parent:UaNode, children:UaNode[] ){
@@ -123,13 +123,13 @@ export class OpcStore{
 			childStore.node = child;
 		}
 	}
-	setRoute(route: NodeRoute, defaultBrowseNs:Ns|null ):void{
+	setRoute(route: NodeRoute, defaultBrowseNs:Ns|undefined ):void{
 		if( route.node.equals(OpcObject.rootNode) ){
-			route.siblings = [new DocItem({title: route.cnnctnTarget, path: route.cnnctnTarget})]; //TODO add all connections.
+			route.siblings = [new RouteItem({title: route.cnnctnTarget, path: route.cnnctnTarget})]; //TODO add all connections.
 			return;
 		}
-		let findStore = (node:NodeId):StoreNode => {
-			return node ? this.findStore( route.gatewayTarget, route.cnnctnTarget, node ) : null;
+		let findStore = (node:NodeId|undefined):StoreNode|undefined => {
+			return node ? this.findStore( route.gatewayTarget, route.cnnctnTarget, node ) : undefined;
 		};
 		const store = findStore( route.nodeId );
 		let parentPaths = [];
@@ -140,31 +140,31 @@ export class OpcStore{
 		if( !parent )
 			throw new EvalError( `Parent not found for ${store?.node.browse}`, {cause:"Internal Error"} );
 
-		route.parent = new DocItem( {path: `${route.cnnctnTarget}/${parentPaths.reverse().join('/')}`, title: parent.node.name ?? route.cnnctnTarget} );
+		route.parent = new RouteItem( {path: `${route.cnnctnTarget}/${parentPaths.reverse().join('/')}`, title: parent.node.name ?? route.cnnctnTarget} );
 		route.siblings = [];
 		for( const sibling of parent.children ){
 			const siblingStore = sibling.key == route.nodeId.key ? store : findStore( sibling.nodeId );
 			const siblingRef = siblingStore?.node;
 			if( siblingRef?.isObject && siblingRef?.displayed )
-				route.siblings.push( new DocItem({path: `${route.parent.path}/${siblingRef.browseFQ(defaultBrowseNs)}`, title: siblingRef.name}) );
+				route.siblings.push( new RouteItem({path: `${route.parent.path}/${siblingRef.browseFQ(defaultBrowseNs)}`, title: siblingRef.name}) );
 		}
 	}
-	findNodeId( gateway:string, cnnctnTarget:string, browsePath:string ): UaNode {
+	findNodeId( gateway:string, cnnctnTarget:string, browsePath:string ):UaNode|undefined{
 		let nodes = this.getNodes(gateway, cnnctnTarget);
-		let storeNode: StoreNode = nodes.get( OpcObject.rootNode.key );
+		let storeNode = nodes.get( OpcObject.rootNode.key )!;
 		if( !storeNode )
-			return null;
-		let uaNode: UaNode;
+			return undefined;
+		let uaNode: UaNode|undefined;
 		let cnnctn = this.#connections.get( gateway )?.get( cnnctnTarget );
 		browsePath.split("/").forEach( (segment, i)=>{
-			uaNode = storeNode.children.find( (c)=>browseEq(c.browse, toBrowse(segment, cnnctn?.connection.defaultBrowseNs)) );
+			uaNode = storeNode.children.find( (c)=>browseEq(c.browse!, toBrowse(segment, cnnctn?.connection.defaultBrowseNs)) );
 			if( uaNode )
-				storeNode = this.findStore( gateway, cnnctnTarget, uaNode.nodeId );
+				storeNode = this.findStore( gateway, cnnctnTarget, uaNode.nodeId )!;
 		} );
 		return uaNode;
 	}
 
-	#serverCnnctnRoutes: DocItem[];
+	#serverCnnctnRoutes!: RouteItem[];
 	#nodes = new Map<GatewayTarget,Map<CnnctnTarget, Map<NodeKey,StoreNode>>>();
 	#connections = new Map<GatewayTarget,Map<CnnctnTarget, Server>>();
 }

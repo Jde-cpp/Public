@@ -5,20 +5,23 @@ namespace Jde::Web::Client{
 	struct IClientSocketSession;
 	struct ClientQL final : QL::IQL, noncopyable{
 		ClientQL( sp<IClientSocketSession> session, sp<Access::Authorize> authorize )ι:_session{session}, _authorize{authorize}{}
-		α Authorizer()ε->Access::Authorize&{ return *_authorize; }
-		α AuthorizerPtr()ε->sp<Access::Authorize>{ return _authorize; }
-		α CustomQuery( QL::TableQL& ql, UserPK executer, SL sl )ι->up<TAwait<jvalue>> override{ return nullptr; }
-		α CustomMutation( QL::MutationQL& ql, UserPK executer, SL sl )ι->up<TAwait<jvalue>> override{ return nullptr; }
+		α Authorizer()ε->Access::Authorize& override{ return *_authorize; }
+		α AuthorizerPtr()ε->sp<Access::Authorize> override{ return _authorize; }
+		α CustomQuery( QL::TableQL&, QL::Creds, SL )ι->up<TAwait<jvalue>> override{ ASSERT(false); return nullptr; }
+		α CustomMutation( QL::MutationQL&, QL::Creds, SL )ι->up<TAwait<jvalue>> override{ ASSERT(false); return nullptr; }
+		α LogQuery( QL::TableQL&&, SL )ι->up<TAwait<jvalue>> override{ASSERT(false); return nullptr; }
+		α LogSettingsQuery( QL::TableQL&&, SL )ι->up<TAwait<jvalue>> override{ASSERT(false); return nullptr; }
+		α StatusQuery( QL::TableQL&& )ι->jobject override{ASSERT(false); return {};}
 		α Query( string query, jobject variables, UserPK executer, bool returnRaw=true, SRCE )ι->up<TAwait<jvalue>> override;
 		α QueryObject( string query, jobject variables, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jobject>> override;
 		α QueryArray( string query, jobject variables, UserPK executer, bool returnRaw=true, SRCE )ε->up<TAwait<jarray>> override;
 		α MutateIfNotFound( string /*query*/, UserPK /*executer*/ )ε->jarray{ throw Exception("Not implemented."); }
-		α Schemas()Ι->const vector<sp<DB::AppSchema>>&{ return _schemas;}
+		α Schemas()Ι->const vector<sp<DB::AppSchema>>& override{ return _schemas;}
 		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, UserPK executer, SRCE )ε->up<TAwait<vector<QL::SubscriptionId>>> override;
-		β Upsert( string /*query*/, jobject /*variables*/, UserPK /*executer*/ )ε->jarray{ throw Exception{"Not implemented."}; }
+		α Upsert( string /*query*/, jobject /*variables*/, UserPK /*executer*/ )ε->jarray override{ throw Exception{"Not implemented."}; }
 	private:
 		const vector<sp<DB::AppSchema>> _schemas; //empty
-		sp<IClientSocketSession> _session;
+		wp<IClientSocketSession> _session;//weak: the session owns this ClientQL (its _qlServer); a strong ref back would form a cycle and leak the whole session graph.
 		sp<Access::Authorize> _authorize;
 	};
 }

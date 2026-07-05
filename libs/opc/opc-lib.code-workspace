@@ -36,21 +36,18 @@
 				"label": "build",
 				"type": "shell",
 				"command": "cd ${config:buildDir}; tput reset; make -j;",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": true }
 			},
 			{
 				"label": "compile",
 				"type": "shell",
 				"command": "tput reset;${config:sourceBash};compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot}/${config:buildTarget};",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},
 			{
 				"label": "buildProject",
 				"type": "shell",
 				"command": "tput reset;source $JDE_DIR/build/buildFunctions.sh; buildProject ${fileWorkspaceFolder} ${config:buildRoot}/${config:buildTarget};",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
 			},
 			{
@@ -68,7 +65,6 @@
 				"label": "cmake",
 				"type": "shell",
 				"command": "mkdir -p ${config:buildDir};cd ${config:buildDir}; tput reset; rm -f CMakeCache.txt; cmake ${config:sourceDir} --preset linux-jde-debug",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": "build"
 			}]
 	},

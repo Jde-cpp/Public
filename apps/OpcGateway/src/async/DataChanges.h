@@ -1,8 +1,8 @@
 ﻿#pragma once
-//#include "../UAClient.h"
+#include "../uatypes/MonitoredItemCreateResult.h"
 
 namespace Jde::Opc::Gateway{
-	struct IDataChange; struct UAClient; struct MonitoredItemCreateResult;
+	struct IDataChange; struct UAClient;
 	struct DataChangeAwait final : TAwait<FromServer::SubscriptionAck>{
 		using base = TAwait<FromServer::SubscriptionAck>;
 		DataChangeAwait( flat_set<NodeId> nodes, sp<IDataChange> dataChange, sp<UAClient> c, SRCE )ι:base{sl}, _nodes{move(nodes)}, _dataChange{move(dataChange)}, _client{move(c)}{}

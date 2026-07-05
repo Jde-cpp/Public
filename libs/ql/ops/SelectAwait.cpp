@@ -115,6 +115,8 @@ namespace Jde::QL{
 				statement.From.TryAdd( {pEnum, pFKTable->GetPK(), !pEnum->IsNullable} );
 				dbColumn = pFKTable->GetColumnPtr( "name" );
 			}
+			else if( columnName== "count" )
+				dbColumn = DB::Column::Count();
 			THROW_IF( !dbColumn, "Could not find column '{}.{}'", dbTable.Name, columnName );
 		}
 
@@ -123,11 +125,12 @@ namespace Jde::QL{
 		qlTable.JsonMembers.push_back( {qlTable.JsonName, c.JsonName} );
 	}
 
-	Ω columnSql( const TableQL& qlTable, const DB::View& dbTable, bool excludeId, DB::Statement& statement, optional<bool> includeDeleted=nullopt )ε->void{
+	Ω columnSql( const TableQL& qlTable, const DB::View& dbTable, bool excludeId, DB::Statement& statement, optional<bool> includeDeleted=nullopt, bool includeWhere=true )ε->void{
 		for( let& c : qlTable.Columns )
 			addColumn( c, qlTable, dbTable, statement, excludeId );
 
-		statement.Where += QL::ToWhereClause( qlTable, dbTable, includeDeleted.value_or(statement.Select.FindColumn("deleted")!=nullptr) );
+		if( includeWhere )
+			statement.Where += QL::ToWhereClause( qlTable, dbTable, includeDeleted.value_or(statement.Select.FindColumn("deleted")!=nullptr) );
 		for( let& qlChild : qlTable.Tables ){
 			auto pFK = findFK( dbTable, qlChild.DBTable()->Name ); //members.
 			if( pFK ){
@@ -135,7 +138,7 @@ namespace Jde::QL{
 				if( sp<DB::Table> table = AsTable( pkTable ); table && table->QLView )
 					pkTable = table->QLView;
 				statement.From.TryAdd( {pFK, pkTable->GetPK(), !pFK->IsNullable} );
-				columnSql( qlChild, *pkTable, false, statement, includeDeleted );
+				columnSql( qlChild, *pkTable, false, statement, includeDeleted, includeWhere );
 			}
 		}
 	}
@@ -278,10 +281,10 @@ namespace Jde::QL{
 	}
 }
 namespace Jde{
-	α QL::SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted )ε->optional<DB::Statement>{
+	α QL::SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted, bool includeWhere )ε->optional<DB::Statement>{
 		let dbView = qlTable.DBTable();
 		DB::Statement statement;
-		columnSql( qlTable, *dbView, false, statement, includeDeleted );
+		columnSql( qlTable, *dbView, false, statement, includeDeleted, includeWhere );
 		// if( statement.Empty() ) could be a join with only where clause.
 		// 	return {};
 		if( statement.From.Empty() )
@@ -289,6 +292,9 @@ namespace Jde{
 		auto dbTable = dbView->IsView() ? nullptr : AsTable(dbView);
 		if( optional<DB::Criteria> criteria = dbTable && dbTable->Extends ? dbTable->SurrogateKeys[0]->Criteria : nullopt; criteria ) //identities is_group
 			statement.Where.Add( *criteria );//group with no members.
+		statement.OrderBy = qlTable.OrderBy();
+		statement.Limit( qlTable.Limit() );
+		statement.Skip( qlTable.Skip() );
 
 		return statement;
 	}

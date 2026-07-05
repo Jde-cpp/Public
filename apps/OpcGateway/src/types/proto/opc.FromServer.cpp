@@ -47,7 +47,7 @@ namespace Jde::Opc::Gateway{
 
 	α FromServer::ReadValuesTrans( string opcId, flat_map<NodeId, Opc::Value>&& values, RequestId requestId )ι->FromServer::Transmission{
 		FromServer::Transmission t;
-		for( auto& [nodeId, v] : values )
+		for( auto&& [nodeId, v] : values )
 			*t.add_messages() = ToProto( opcId, nodeId, v, requestId );
 		return t;
 	}
@@ -221,7 +221,7 @@ namespace Jde::Opc::Gateway{
 			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_XMLELEMENT] );
 			break;}
 		default:
-			THROW( "Unsupported FromServer::Value type {}.", (uint)proto.of_case() );
+			ASSERT_DESC( false, Ƒ("Unsupported FromServer::Value type {}.", (uint)proto.of_case()) );
 		}
 		UA_DataValue dv{};
 		dv.value = y;

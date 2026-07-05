@@ -41,7 +41,7 @@ namespace Jde::Web::Client{
 	struct ClientSocketVoidAwait final : VoidAwait, IClientSocketVoidAwait{
 		ClientSocketVoidAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι:
 			VoidAwait{ sl }, IClientSocketVoidAwait{ move(request), requestId, session }{}
-		α Suspend()ι->void{ IClientSocketVoidAwait::Suspend(_h); }
+		α Suspend()ι->void override{ IClientSocketVoidAwait::Suspend(_h); }
 		α await_resume()ε->void override;
 	};
 
@@ -55,7 +55,7 @@ namespace Jde::Web::Client{
 		using base = TAwait<T,TTimedTask<T>>;
 		ClientSocketAwait( string&& request, RequestId requestId, sp<IClientSocketSession> session, SRCE )ι;
 		ClientSocketAwait( ClientSocketAwait&& )=default;
-		α Suspend()ι->void{ IClientSocketVoidAwait::Suspend(base::_h); }
+		α Suspend()ι->void override{ IClientSocketVoidAwait::Suspend(base::_h); }
 		α await_resume()ε->T override;
 	};
 

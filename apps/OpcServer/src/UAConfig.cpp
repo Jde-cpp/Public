@@ -1,4 +1,5 @@
 #include "UAConfig.h"
+#include <open62541/config.h>
 #include <open62541/server_config_default.h>
 #include <open62541/plugin/accesscontrol_default.h>
 #include <open62541/plugin/certificategroup_default.h>
@@ -11,7 +12,7 @@ namespace Jde::Opc::Server{
 	constexpr ELogTags _tags = (ELogTags)EOpcLogTags::Opc;
 	UAConfig::UAConfig()ε:
 		UA_ServerConfig{
-			.logging{ &_logger },
+			.logging = &_logger,
 		}{
 		if( auto certificateFile = Settings::FindPath("/opcServer/ssl/certificate").value_or(fs::path{}); !certificateFile.empty() ){
 			try{
@@ -24,7 +25,8 @@ namespace Jde::Opc::Server{
 		}
 		else
 			UA_ServerConfig_setDefault( this );
-		auto accessResource = Settings::FindString( "/accessResource" ).value_or( "default" );
+		auto accessResource = Settings::FindString( "/opcServer/resource" ).value_or( "default" );
+		UA_LocalizedText_clear( &applicationDescription.applicationName );// setDefaultConfig/setBasics already allocated applicationName; clear before overwriting or it leaks.
 		applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en-US", Ƒ("Jde-Cpp OpcServer [{}]", accessResource).c_str() );
 	}
 
@@ -50,14 +52,16 @@ namespace Jde::Opc::Server{
 	α UAConfig::SetConfig( PortType port, ByteStringPtr&& certificate, const ByteStringPtr&& privateKey )ε->void{
     UAε( UA_ServerConfig_setBasics_withPort(this, port) );
 
-		vector<UA_ByteString> trustedCerts;
+		vector<ByteStringPtr> trustedCertOwners;// owns the struct+buffer; freed when SetConfig returns (after UA_Array_copy deep-copies into the trust list).
+		vector<UA_ByteString> trustedCerts;// shallow views into the owners, only used to feed UA_Array_copy.
 		for( let& sdir : Settings::FindStringArray("/opcServer/trustedCertDirs") ){
 			const fs::path dir{ sdir };
 			if( !fs::exists(dir) || !fs::is_directory(dir) )
 				continue;
 			for( let& entry : fs::directory_iterator(dir) ){
 				if( entry.path().extension()==".pem" || entry.path().extension()==".crt" ){
-					trustedCerts.push_back( *ToUAByteString(Crypto::ReadCertificate({entry.path()})).release() );
+					trustedCertOwners.push_back( ToUAByteString(Crypto::ReadCertificate({entry.path()})) );
+					trustedCerts.push_back( *trustedCertOwners.back() );
 					INFO( "Added certificate:  {}", entry.path().string() );
 				}
 			}

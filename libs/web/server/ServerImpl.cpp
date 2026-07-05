@@ -1,13 +1,15 @@
 ﻿#include "ServerImpl.h"
+#include "jde/fwk/io/file.h"
 #include <jde/fwk/crypto/OpenSsl.h>
-#include <jde/app/IApp.h>
+#include <jde/fwk/process/execution.h>
+#include <jde/access/AccessException.h>
+#include <jde/ql/ql.h>
+#include <jde/ql/QLAwait.h>
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/server/IRequestHandler.h>
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/RestException.h>
-#include <jde/ql/ql.h>
-#include <jde/ql/QLAwait.h>
-#include <jde/fwk/process/execution.h>
+#include <jde/app/IApp.h>
 #define let const auto
 
 namespace Jde::Web{
@@ -69,17 +71,33 @@ namespace Server{
 					vars = move( jvars->get_object() );
 			}
 			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
-			req.LogRead( query );
-			auto ql = QL::Parse( move(query), move(vars), reqHandler->Schemas(), returnRaw );
-			auto result = QL::IsSystemQuery(ql)
-				? co_await *reqHandler->Query( move(ql), req.UserPK(), returnRaw )
-				: co_await QL::QLAwait{ move(ql), req.UserPK() };
+			req.LogRead( query, ELogLevel::Trace );
+			optional<QL::RequestQL> q;
+			try{
+				q = QL::Parse( move(query), move(vars), reqHandler->Schemas(), returnRaw );
+			}
+			catch( IException& e ){
+				DBGT( ELogTags::HttpServerRead, "parsing failed: {}", e.what() );
+				co_return send( RestException<http::status::bad_request>{move(e), move(req), "Query parsing failed."}, move(stream), contentType );
+			}
+			if( Logging::ShouldLog(ELogLevel::Debug, ELogTags::HttpServerRead) ){
+				req.LogRead( q->ToString(), ELogLevel::Debug );
+			}
+
+			auto result = co_await QL::QLAwait{ move(*q), {req.SessionInfo}, reqHandler->QLServer() };
+#ifndef NDEBUG
+			auto debugString = serialize(result);
+			IO::SaveBinary<char>( fs::temp_directory_path()/"response.json", {debugString.data(), debugString.size()} );
+#endif
 			jobject y{ {"data", move(result)} };
 			send( move(req), move(stream), move(y), contentType );
 		}
 		catch( IRestException& e ){
 			send( move(e), move(stream), contentType );
 			co_return;
+		}
+		catch( Access::AccessException& e ){
+			send( RestException<http::status::unauthorized>{move(e), move(req), "[{}]{}", reqHandler->UserName(e.Executer), e.what()}, move(stream), contentType );
 		}
 		catch( IException& e ){
 			if( !empty(e.Tags() & ELogTags::Parsing) )
@@ -206,11 +224,12 @@ namespace Server{
 		INFOT( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
-	α Internal::Stop( sp<IRequestHandler>&& handler, bool /*terminate*/ )ι->void{
-		handler->Stop();
+	concurrent_flat_map<SessionPK, sp<IWebsocketSession>> _socketSessions;
+	α Internal::Stop( sp<IRequestHandler>&& handler, bool terminate, SL sl )ι->void{
+		handler->Stop( terminate, sl );
+		_socketSessions.clear();//server sessions hold beast streams tied to the io_context; drop them here (still in the shutdown-function phase, io_context alive) so they don't outlive it and UAF at static destruction.
 	}
 
-	concurrent_flat_map<SessionPK, sp<IWebsocketSession>> _socketSessions;
 	α Internal::RunSocketSession( sp<IWebsocketSession>&& session )ι->void{
 		let id = session->Id();
 		_socketSessions.emplace( id, session );
@@ -229,7 +248,7 @@ namespace Server{
 			send( RestException<http::status::unauthorized>{move(e), move(req), "Could not get sessionInfo."}, move(stream) );
 			co_return;
 		}
-		if( !reqHandler->PassQL() && (req.IsGet("/graphql") || req.IsPost("/graphql")) )//TODO make sure mutations aren't get
+		if( req.IsGet("/graphql") || req.IsPost("/graphql") )
 			graphQL( move(req), stream, reqHandler );
 		else
 			handleCustomRequest( move(req), move(stream), reqHandler );

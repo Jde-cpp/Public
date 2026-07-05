@@ -5,17 +5,13 @@ project( Jde.Web.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
 
 if( WIN32 )
-	add_definitions( -DZLIB_USE_STATIC_LIBS -D )
+	add_definitions( -DZLIB_USE_STATIC_LIBS )
 	set( ZLIB_ROOT ${LIB_ROOT}/zlib )
-	if( ${OPENSSL_ROOT_DIR} STREQUAL "" )
-		message( FATAL_ERROR "Set OPENSSL_ROOT_DIR cmake variable" )
-	endif()
 	set( OPENSSL_USE_STATIC_LIBS ON )
 	find_package( OpenSSL REQUIRED )
 endif()
 find_package( ZLIB REQUIRED )
-if( WIN32)
-elseif( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )
+if( NOT WIN32 AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )
 	set( jsonnet_DIR ${LIB_DIR}/jsonnet CACHE PATH "Jsonnet directory" )
 	link_directories( ${jsonnet_DIR}/lib )
 endif()
@@ -54,6 +50,7 @@ if( WIN32 )
 else()
 	target_link_libraries( ${targetName} libssl.a )
 	target_link_libraries( ${targetName} libcrypto.a )
+	target_link_libraries( ${targetName} libjitterentropy.a )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet" )
 endif()
 
@@ -71,6 +68,9 @@ else()
 		target_link_libraries( ${targetName} libjsonnet++.a libjsonnet.a ) #jsonnet
 		linkRepo( ${CMAKE_BINARY_DIR}/.. ${CMAKE_CURRENT_LIST_DIR} )
 	endif()
+	if( CMAKE_CXX_COMPILER_ID STREQUAL "Clang" )
+		target_link_libraries( ${targetName} libzstd.a )
+	endif()
 endif()
 
 target_precompile_headers( ${targetName} PRIVATE
@@ -81,3 +81,4 @@ protobuf_generate(
 	TARGET ${targetName}
 	PROTOC_OUT_DIR ${PROJECT_SOURCE_DIR}
 )
+suppressProtoWarnings( "${protos}" ${PROJECT_SOURCE_DIR}/proto )

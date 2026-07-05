@@ -3,5 +3,5 @@
 #include <jde/db/Row.h>
 
 namespace Jde::DB::MySql{
-	α ToRow( const mysql::row_view& row, SRCE )ε->Row;
+	α ToRow( const mysql::row_view& row )ε->Row;
 }

@@ -5,11 +5,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle } from 'jde-spa';
-import { DetailResolverData, IErrorService, IGraphQL, LocalProfileStore, Properties} from 'jde-framework';
+import { ProfileStore } from 'jde-spa';
+import { DetailResolverData, IErrorService, IGraphQL, Properties} from 'jde-framework';
 
 import { ServerProperties } from './server-properties/server-properties';
-import { ServerCnnctn } from '../../../model/ServerCnnctn';
+import { ServerCnnctn, ServerCnnctnProps } from '../../../model/ServerCnnctn';
 import { Gateway, GatewayService } from '../../../services/gateway.service';
 import { Server } from '../../../model/Server';
 
@@ -39,7 +39,7 @@ export class ClientDetail implements OnDestroy, OnInit{
 		});
 	}
 	ngOnDestroy(){
-		LocalProfileStore.setTabIndex( 'client-detail', this.tabIndex );
+		ProfileStore.setTabIndex( 'client-detail', this.tabIndex );
 	}
 	async ngOnInit(){
 		const segments = this.router.url.split( "/" );
@@ -53,7 +53,7 @@ export class ClientDetail implements OnDestroy, OnInit{
 			const upsert = new ServerCnnctn( {
 //				id:this.properties().id,
 				...this.properties(),
-			});
+			} as ServerCnnctnProps);
 			const mutation = upsert.mutation( this.serverCnnctn );
 			await this.gateway.mutate( mutation, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
@@ -65,16 +65,16 @@ export class ClientDetail implements OnDestroy, OnInit{
 		this.router.navigate( ['..'], { relativeTo: this.route } );
 	}
 
-	serverCnnctn:ServerCnnctn;
-	pageData:DetailResolverData<ServerCnnctn>;
+	serverCnnctn!:ServerCnnctn;
+	pageData!:DetailResolverData<ServerCnnctn>;
 	ctor:new (item: any) => any = ServerCnnctn;
 	isChanged = signal<boolean>( false );
 
-	properties = signal<ServerCnnctn>( null );
+	properties = signal<ServerCnnctn>( null as any );
 	get schema(){ return this.pageData.schema; }
 	get server(): Server{ return this.serverCnnctn?.server; }
 	sideNav = signal<any>( null );
-	tabIndex:number = LocalProfileStore.tabIndex( 'client-detail' );
+	tabIndex:number = ProfileStore.tabIndex( 'client-detail' );
 	gatewayService:GatewayService = inject( GatewayService );
-	gateway:Gateway;
+	gateway!:Gateway;
 }

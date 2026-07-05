@@ -11,7 +11,6 @@
 
 namespace Jde{
 	namespace Crypto{
-		constexpr ELogTags _logTag{ ELogTags::Crypto };
 		α OpenSslException::CurrentError()ι->string{ char b[120]; ERR_error_string( ERR_get_error(), b ); return {b}; }
 
 		//https://stackoverflow.com/questions/1986888/how-to-compute-a-32-bit-fingerprint-of-a-certificate
@@ -42,6 +41,8 @@ namespace Jde{
 	using namespace Jde::Crypto::Internal;
 
 	α Crypto::CalcMd5( byte* data, uint size )ε->MD5{
+		if( size==0 )
+			return EmptyStringMd5;
 		auto ctx = NewMDCtx();
 		CALL( EVP_DigestInit_ex(ctx.get(), EVP_md5(), nullptr) );
 		CALL(	EVP_DigestUpdate(ctx.get(), data, size) );

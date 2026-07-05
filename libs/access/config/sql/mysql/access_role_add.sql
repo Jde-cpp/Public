@@ -1,7 +1,7 @@
 drop procedure if exists access_role_add;
 go
 
-create procedure access_role_add( _role_id int unsigned, _allowed tinyint unsigned, _denied tinyint unsigned, _resourceTarget varchar(64), _schema varchar(256), _resourceName varchar(64), _criteria varchar(832), out _permission_id int unsigned )
+create procedure access_role_add( _role_id int unsigned, _allowed bigint unsigned, _denied bigint unsigned, _resourceTarget varchar(64), _schema varchar(256), _resourceName varchar(64), _criteria varchar(832), out _permission_id int unsigned )
 begin
 	declare _resource_id smallint unsigned;
 	select resource_id
@@ -11,7 +11,7 @@ begin
 		and schema_name = coalesce(_schema, schema_name)
 		and criteria <=> _criteria;
 	if _resource_id is null then
-		insert into access_resources( target, schema_name, name, criteria ) values( _resourceTarget, _schema, _resourceName, _criteria );
+		insert into access_resources( target, schema_name, name, criteria ) values( _resourceTarget, _schema, coalesce(_resourceName, _resourceTarget), _criteria );
 		set _resource_id = LAST_INSERT_ID();
 	end if;
 	select permission_id

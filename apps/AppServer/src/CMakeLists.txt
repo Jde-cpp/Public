@@ -14,7 +14,10 @@ file( GLOB headers **/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
+	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}" )
+	add_dependencies( ${targetName} Jde.DB.Odbc )
+else()
+	add_dependencies( ${targetName} Jde.DB.MySql )
 endif()
 
 include_directories( $ENV{JDE_DIR}/include/jde/web/client/proto )

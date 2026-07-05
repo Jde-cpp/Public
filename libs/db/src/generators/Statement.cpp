@@ -20,8 +20,8 @@ namespace Jde::DB{
 		sql.Text += '\n'+Where.Move();
 		if( !OrderBy.empty() )
 			sql.Text += "\norder by "+OrderBy;
-		if( _limit )
-			sql.Text = From.GetFirstTable()->Syntax().Limit( sql.Text, _limit );
+		if( _limit || _skip )
+			sql.Text = From.GetFirstTable()->Syntax().Limit( sql.Text, _limit, _skip );
 		sql.Params = move( Where.Params() );
 		return sql;
 	}
@@ -33,7 +33,7 @@ namespace Jde::DB{
 		if( !OrderBy.empty() )
 			y += "\norder by "+OrderBy;
 		if( _limit )
-			y = From.GetFirstTable()->Syntax().Limit( y, _limit );
+			y = From.GetFirstTable()->Syntax().Limit( y, _limit, _skip );
 		return y;
 	}
 }

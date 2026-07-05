@@ -29,7 +29,7 @@ namespace Jde::Opc::Gateway::Tests{
 	uint ServerCnnctnDBTests::OpcProviderId{};
 
 	α GetProviderPK( string target )ε->Access::ProviderPK{
-		return BlockAwait<ProviderSelectAwait,Access::ProviderPK>( ProviderSelectAwait{target} );
+		return BlockTAwait<Access::ProviderPK>( ProviderAwait{target} );
 	}
 	α GetOpcServers( optional<DB::Key> key=nullopt, bool includeDeleted=false )->vector<ServerCnnctn>{
 		return BlockAwait<ServerCnnctnAwait,vector<ServerCnnctn>>( ServerCnnctnAwait{key, includeDeleted} );
@@ -63,7 +63,7 @@ namespace Jde::Opc::Gateway::Tests{
 		if( !opcPK )
 			opcPK = BlockAwait<CreateServerCnnctnAwait,ServerCnnctnPK>( CreateServerCnnctnAwait{} );
 		Id = opcPK;
-		BlockAwait<ProviderCreatePurgeAwait,Access::ProviderPK>( ProviderCreatePurgeAwait{OpcServerTarget, false} );//BeforePurge mock.
+		BlockTAwait<Access::ProviderPK>( ProviderMAwait{OpcServerTarget, false} );//BeforePurge mock.
 
 		QL::MutationQL purge{ "purgeServerConnection", { {"id", opcPK} }, {}, nullopt, true, QL().Schemas(), false };
 		BlockAwait<TAwait<jvalue>,jvalue>( move(*OpcQLHook{}.PurgeFailure(purge, {UserPK::System})) );
@@ -91,7 +91,7 @@ namespace Jde::Opc::Gateway::Tests{
 		THROW_IF( conn->Id!=id, "id={} readJson={}", id, serialize(conn->ToJson()) );
 		let target = conn->Target;
 
-		let providerId = BlockAwait<ProviderSelectAwait,Access::ProviderPK>( ProviderSelectAwait{target} );
+		let providerId = BlockTAwait<Access::ProviderPK>( ProviderAwait{target} );
 		THROW_IF( providerId==0, "providerId==0" );
 
 		let description = "new description";

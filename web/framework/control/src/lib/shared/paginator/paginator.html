@@ -1,16 +1,20 @@
-@if( !hidePageLength ){
-	<mat-form-field style="margin-left: 10px;width: 80px">
-		<input matInput style="text-align: right;" type="number" [(ngModel)]="pageLength" placeholder="Page Size">
-	</mat-form-field>
-}
-<div style="margin-left: 10px;display:inline" class="mat-paginator-range-label">{{startIndexDisplay+1}} – {{endIndex}} of {{length}}</div>
-@if( showFirstLastButtons ){
-	<button mat-icon-button [disabled]="disabled || onFirstPage"><mat-icon class="iconButton" (click)="firstPage()">first_page</mat-icon></button>
-}
-<button mat-icon-button [disabled]="disabled || onFirstPage"><mat-icon class="iconButton" (click)="prevPage()">chevron_left</mat-icon></button>
-<button mat-icon-button [disabled]="disabled || onFirstPage"><mat-icon class="iconButton" (click)="prevItem()">arrow_left</mat-icon></button>
-<button mat-icon-button [disabled]="disabled || onLastPage"><mat-icon class="iconButton" (click)="nextItem()">arrow_right</mat-icon></button>
-<button mat-icon-button [disabled]="disabled || onLastPage"><mat-icon class="iconButton" (click)="nextPage()">chevron_right</mat-icon></button>
-@if( showFirstLastButtons ){
-	<button mat-icon-button [disabled]="disabled || onLastPage"><mat-icon class="iconButton" (click)="lastPage()">last_page</mat-icon></button>
-}
+<div class="mat-mdc-paginator-container">
+	@if( !hidePageLength() ){
+		<mat-form-field style="margin-left: 10px;width: 80px" subscriptSizing="dynamic">
+			<input matInput style="text-align: right;" type="number" [value]="pageSize()" (input)="onChangePageSize(+$event.target.value)" placeholder="Page Size">
+		</mat-form-field>
+	}
+	<div class="mat-mdc-paginator-range-actions">
+		<div class="mat-mdc-paginator-range-label">{{startNumber()}} – {{endNumber()}}{{lengthDescription}}</div>
+		@if( showFirstLastButtons ){
+			<button mat-icon-button [disabled]="disabled || firstItemShowing()"><mat-icon class="iconButton" (click)="onFirstPage()">first_page</mat-icon></button>
+		}
+		<button mat-icon-button [disabled]="disabled || firstItemShowing()"><mat-icon class="iconButton" (click)="onPreviousPage()">chevron_left</mat-icon></button>
+		<button mat-icon-button [disabled]="disabled || firstItemShowing()"><mat-icon class="iconButton" (click)="onPrevItem()">arrow_left</mat-icon></button>
+		<button mat-icon-button [disabled]="disabled || isLastPage()"><mat-icon class="iconButton" (click)="onNextItem()">arrow_right</mat-icon></button>
+		<button mat-icon-button [disabled]="disabled || isLastPage()"><mat-icon class="iconButton" (click)="onNextPage()">chevron_right</mat-icon></button>
+		@if( showFirstLastButtons && length() ){
+			<button mat-icon-button [disabled]="disabled || isLastPage()"><mat-icon class="iconButton" (click)="onLastPage()">last_page</mat-icon></button>
+		}
+	</div>
+</div>

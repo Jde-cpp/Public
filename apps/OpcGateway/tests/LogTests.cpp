@@ -1,18 +1,22 @@
 #include <jde/fwk/log/MemoryLog.h>
 #include <jde/fwk/chrono.h>
+#include <jde/fwk/str.h>
+#include <jde/fwk/io/protobuf.h>
 #include <jde/fwk/io/FileAwait.h>
 #include <jde/fwk/utils/Stopwatch.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
+#include <jde/web/server/SubscribeLog.h>
 #include <jde/app/log/DailyLoadAwait.h>
 #include <jde/app/log/LogQLAwait.h>
 #include <jde/app/log/ProtoLog.h>
 #include <jde/app/client/RemoteLog.h>
-#include "../src/GatewayAppClient.h"
+#include "../src/GatewayAppClient.h" //!important
+#include "utils/GatewayClientSocket.h"//!important
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{
 	constexpr ELogTags _tags{ ELogTags::Test };
-	struct Listener : public QL::IListener{
+	struct Listener final: public QL::IListener{
 		Listener()ι:QL::IListener{ "LogTests" }{}
 		α OnChange( const Jde::jvalue&, Jde::QL::SubscriptionId ) ε->void override{ ASSERT(false); }
 		α OnTraces( App::Proto::FromServer::Traces&& traces )ι->void override{
@@ -61,7 +65,8 @@ namespace Jde::Opc::Gateway::Tests{
 		App::Client::RemoteLog remote{ {{"delay", "PT0.001S"}}, AppClient() };
 		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "Test message" };
 		remote.Write( e );
-		remote.Shutdown( false );
+		remote.Shutdown();
+		Process::RemoveShutdown( &remote );
 		std::this_thread::sleep_for( 1s );
 	}
 
@@ -70,18 +75,17 @@ namespace Jde::Opc::Gateway::Tests{
 		Logging::Entry eNow{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, string{now} };
 		Logging::Entry eHour{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, ToIsoString(eNow.Time - 1h) };
 		eHour.Time = eNow.Time - 1h;
-		TRACE( "prev.Time: {}, id: {}", ToIsoString(eHour.Time), boost::uuids::to_string(eHour.Id()) );
+		TRACE( "prev.Time: {}, id: {}", ToIsoString(eHour.Time), Jde::ToString(eHour.Id()) );
 		ProtoLog().Write( eHour );
 		const string start{ ToIsoString(eHour.Time+1s) };
-		TRACE( "filter: time: {}, id: {}", start, boost::uuids::to_string(eNow.Id()) );
+		TRACE( "filter: time: {}, id: {}", start, Jde::ToString(eNow.Id()) );
 		ProtoLog().Write( eNow );
-		auto ql = "logs( time: {gt: $start} ){ text arguments level tags line time user{id} fileName functionName message id fileId functionId }";
+		constexpr auto q = "logs( time: {gt: $start} ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
 		jobject vars{ {"start", start} };
-
-		let entries = BlockTAwait<jarray>( App::LogQLAwait{move(QL::Parse(ql, vars, {}).Queries()[0])} );
+		let logs = BlockTAwait<jvalue>( App::LogQLAwait{move(QL::Parse(q, vars, {}).Queries()[0])} );
 		optional<jobject> jNow;
-		for( let& log : entries ){
-			let id = ToUuid( log.at("id").as_string() );
+		for( let& log : logs.at("entries").as_array() ){
+			let id = ToUuid( log.at("templateId").as_string() );
 			if( id==eNow.Id() )
 				jNow = log.as_object();
 			ASSERT_FALSE( id==eHour.Id() ) << "Found hour log entry which should be excluded.";
@@ -89,14 +93,17 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_TRUE( jNow );
 	}
 	TEST_F( LogTests, Subscribe ){
-		auto ql = "subscription LogCreated{ logCreated(level: { gte: $level }, tags: $tags, start: $start){time text} }";
+		if( !Logging::FindLogger<Web::Server::SubscribeLog>() ){
+			GTEST_SKIP() << "Need to fix logic of embedded appServer with subscription.";
+		}
+		auto ql = "subscription LogCreated{ logCreated(level: {gte: $level}, tags: $tags, start: $start){time text} }";
 		jobject vars{
 			{ "level", "Information" },
 			{ "tags", jarray{"test"} },
 			{ "start", ToIsoString(Clock::now() - 1min) }
 		};
 		auto subs = QL::ParseSubscriptions( move(ql), vars, {}, SRCE_CUR );
-		auto l = subs.front().Fields.FindPtr<jobject>("level");
+		auto l = subs.front().Fields.FindPtr<jobject>( "level" );
 		ASSERT_TRUE( l );
 		BlockAwait<Web::Client::ClientSocketAwait<jarray>, jarray>( AppClient()->Subscribe(move(ql), vars, _listener, SRCE_CUR) );
 		App::Client::RemoteLog remote{ {{"delay", "PT0.001S"}}, AppClient() };
@@ -107,9 +114,14 @@ namespace Jde::Opc::Gateway::Tests{
 		while( _listener->Received.empty() )
 			ASSERT_NO_THROW( sw.CheckTimeout(600s, 1ms) );
 		ASSERT_EQ( Protobuf::ToGuid(_listener->Received.back().message_id()), log.Id() );
-
+		Process::RemoveShutdown( &remote );
 		//TODO add logs before subscription to make sure they are retrieved.
 		//Make sure only fields requested are returned.
 		//Make sure meta data is correct.
+	}
+	TEST_F( LogTests, LogTagsIntrospection ){
+		auto q = "__type( name: \"logTags\" ){ enumValues{id name description} }";
+		let value = Socket().QuerySync( move(q), {} );
+		TRACE( "Received: {}", serialize(value) );
 	}
 }

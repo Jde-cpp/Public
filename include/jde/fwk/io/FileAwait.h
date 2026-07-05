@@ -45,7 +45,7 @@ namespace Jde::IO{
 		FileIOArg( fs::path path, bool vec, SRCE )ι;
 		FileIOArg( fs::path path, variant<string,vector<byte>> data, ELogTags tags, SRCE )ι;
 		~FileIOArg();
-		α Open( bool create )ε->void;
+		α Open( bool create, bool append )ε->void;
 		α Send( HCo h )ι->void;
 		α Data()ι->char*{ return visit( [](auto&& x){return (char*)x.data();}, Buffer ); }
 		α Size()Ι{ return visit( [](auto&& x){return x.size();}, Buffer ); }
@@ -88,7 +88,6 @@ namespace Jde::IO{
 		bool _cache;
 	};
 	struct Γ WriteAwait final : IFileAwait, VoidAwait, noncopyable{
-//		WriteAwait( fs::path path, variant<string,vector<char>> data, SRCE )ι:WriteAwait{ move(path), move(data), false, sl }{}
 		WriteAwait( fs::path path, variant<string,vector<byte>> data, bool create=false, ELogTags tags=ELogTags::IO, SRCE )ι:
 			IFileAwait{ move(path), move(data), tags, sl }, VoidAwait{ sl }, _create{create}{}
 		α Suspend()ι->void override;
@@ -96,6 +95,7 @@ namespace Jde::IO{
 		α await_resume()ε->void override;
 	private:
 		bool _create;
+		bool _append{true};
 	};
 }
 #undef Φ

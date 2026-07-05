@@ -1,7 +1,7 @@
 #pragma once
 #include <jde/db/awaits/ExecuteAwait.h>
 #include <jde/db/awaits/ScalerAwait.h>
-#include <jde/access/usings.h>
+#include <jde/access/access.h>
 #include <jde/ql/QLAwait.h>
 
 namespace Jde::QL{ struct MutationQL; struct TableQL; }

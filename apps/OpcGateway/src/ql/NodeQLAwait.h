@@ -1,6 +1,7 @@
 #pragma once
 #include <jde/ql/QLHook.h>
 #include "../uatypes/Browse.h"
+#include "../uatypes/ExpectedNodeId.h"
 #include "../async/ReadAwait.h"
 
 namespace Jde::Web::Server{ struct SessionInfo; }
@@ -14,7 +15,6 @@ namespace Jde::Opc::Gateway{
 		{}
 		α Execute()ι->TAwait<sp<UAClient>>::Task override;
 	private:
-		using ExpectedNodeId = std::expected<ExNodeId,StatusCode>;
 		using BrowsePathResponse = flat_map<string,ExpectedNodeId>;
 		α AddAttributes( ExpectedNodeId nodeId, QL::TableQL* parentsQL, flat_map<NodeId, jobject> parents )ι->TAwait<ReadResponse>::Task;
 		α AddAttributes( Browse::Response&& br, QL::TableQL&& childrenQL, flat_map<NodeId, jobject> jChildren )ι->TAwait<ReadResponse>::Task;

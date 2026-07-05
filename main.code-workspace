@@ -4,9 +4,27 @@
 		"name": "main",
 		"releaseRoot": "${env:JDE_BASH}/Release",
 		"debugDir": "${env:JDE_BUILD_DIR}",
+		"buildRoot": "${env:JDE_BUILD_DIR}",
 		"sourceDir": "${env:JDE_BASH}",
-		"debugPreset": "linux-debug",
-		"releasePreset": "linux-gcc-relWithDebInfo"
+		"debugPreset": "linux-clang-debug",
+		"debugClangPreset": "linux-clang-debug",
+		"releasePreset": "linux-gcc-relWithDebInfo",
+		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
+		"files.watcherExclude": {
+			"**/my-workspace*/**": true,
+			"**/out/**": true,
+			"**/build/**": true
+		},
+		"files.exclude": {
+			"**/my-workspace*/**": true,
+			"**/out/**": true,
+			"**/build/**": true
+		},
+		"search.exclude": {
+			"**/my-workspace*/**": true,
+			"**/out/**": true,
+			"**/build/**": true
+		}
 	},
 	"tasks": {
 		"version": "2.0.0",
@@ -15,21 +33,39 @@
 				"label": "build",
 				"type": "shell",
 				"command": "cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": true }
 			},
 			{
 				"label": "Release",
 				"type": "shell",
 				"command": "tput reset;build/buildRelease.sh",
-				"problemMatcher": { "base": "$gcc", "fileLocation": ["absolute"] },
 				"group": { "kind": "build", "isDefault": false }
-				}
+			},
+			{
+				"label": "cmakeReposDebug",
+				"type": "shell",
+				"command": "mkdir -p ${config:debugDir};cd ${config:debugDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} -Djde_REPOS=ON -Djde_Superbuild=OFF -Djde_TESTS=OFF -Djde_APPS=OFF --preset ${config:debugPreset};",
+				"group": "build"
+			},
+			{
+				"label": "cmakeReposDebugClang",
+				"type": "shell",
+				"command2": "echo ${config:debugClangDir};",
+				"command": "mkdir -p ${config:debugClangDir};cd ${config:debugClangDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} -DCMAKE_CXX_COMPILER=${config:cxxClang} -DCMAKE_C_COMPILER=${config:cxxClang} -Djde_REPOS=ON -Djde_Superbuild=OFF -Djde_TESTS=OFF -Djde_APPS=OFF --preset ${config:debugClangPreset};",
+				"group": "build"
+			}
+
 		]
 	},
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../../../../../mnt/ram/linux/clang++-22/repos/gtest"
+		},
+		{
+			"path": "../../../../../mnt/ram/linux/clang++-22/repos/fmt"
 		}
 	]
 }

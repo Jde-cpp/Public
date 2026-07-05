@@ -1,5 +1,21 @@
-<div class="cards">
-	<div class="mat-drawer-container mat-sidenav-container docs-component-viewer-sidenav-container mat-drawer-transition">
-		<app-component-category-list [items]="items"></app-component-category-list>
+<div class="page">
+	<h2 class="page-heading">Welcome</h2>
+	<div class="cards">
+		@for( c of items(); track c.title ){
+			<a [routerLink]="c.path" class="card-link">
+				<div class="card" [ngClass]="c.cardClass">
+					<mat-icon class="card-icon">{{c.icon}}</mat-icon>
+					<div class="card-title">{{c.title}}</div>
+					<!-- <div class="card-label">{{c.label}}</div> -->
+					<!-- <div class="card-stat">{{c.stat}}</div>
+					@if( c.badge ){
+						<span class="card-badge">{{c.badge}}</span>
+					}
+					@if( c.trend ){
+						<mat-icon class="card-trend">{{trendIcon(c.trend)}}</mat-icon>
+					} -->
+				</div>
+			</a>
+		}
 	</div>
 </div>

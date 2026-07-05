@@ -22,7 +22,7 @@ namespace Jde::Opc::Gateway{
 
 	α SubscribeAwait::await_ready()ι->bool{ return _client->CreatedSubscriptionResponse!=nullptr; }
 
-	flat_map<sp<UAClient>,vector<SubscribeAwait::Handle>> _requests; mutex _requestsMutex;
+	static flat_map<sp<UAClient>,vector<SubscribeAwait::Handle>> _requests; static mutex _requestsMutex;
 	Ω createSubscriptionCallback( UA_Client*, void* userdata, RequestId, UA_CreateSubscriptionResponse* response )ι->void{
 		auto await = (SubscribeAwait*)userdata;
 		await->OnComplete( *response );

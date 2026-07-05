@@ -4,7 +4,7 @@ local args = import 'args.libsonnet';
 	dbServers:{
 		dataPaths: args.dbServers.dataPaths,
 		scriptPaths: args.dbServers.scriptPaths,
-		sync:: true,
+		sync: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,
@@ -18,13 +18,25 @@ local args = import 'args.libsonnet';
 		spd:{
 			flushOn: "Trace",
 			tags: {
-				trace:["test","sql"],
-				debug:["ql","settings", "app"],
-				information:[],
-				warning:["io","uaEvent", "uaNet", "uaSession",
-					"uaServer", "uaUser", "uaSecurity", "threads", "uaClient", "uaSecure"],
-				"error":[],
-				critical:[]
+				default: "Information",
+				test: "Trace",
+				app: "Debug",
+				io: "Warning",
+				ql: "Debug",
+				settings: "Debug",
+				socket_client_write: "Debug",
+				socket_client_read: "Debug",
+				sql: "Debug",
+				threads: "Warning",
+				opc_access: "Trace",
+				uaEvent: "Warning",
+				uaNet: "Warning",
+				uaSession: "Warning",
+				uaServer: "Warning",
+				uaUser: "Warning",
+				uaSecurity: "Warning",
+				uaClient: "Warning",
+				uaSecure: "Warning"
 			},
 			sinks:{
 				console:{},

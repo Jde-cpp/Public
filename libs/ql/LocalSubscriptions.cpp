@@ -3,7 +3,7 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/types/MutationQL.h>
-#include "types/Parser.h"
+#include <jde/ql/types/Parser.h>
 
 #define let const auto
 namespace Jde::QL{
@@ -25,15 +25,20 @@ namespace Jde::QL{
 
 	//comes from a mutation.
 	α Subscriptions::OnMutation( const MutationQL& m, jvalue result )ι->void{
+		OnMutation( m, move(result), nullptr );
+	}
+	α Subscriptions::OnMutation( const MutationQL& m, jvalue result, function<bool(QL::TableQL&)> isApplicable )ι->void{
 		sl l{ _serverMutex };
 		auto subs = _serverSubs.find( {m.TableName(), m.Type} );
 		if( subs==_serverSubs.end() )
 			return;//everything is pushed.
 		jobject available;
 		for( auto& sub : subs->second ){
+			if( isApplicable && !isApplicable(sub.Fields) )
+				continue;
 			if( available.empty() ){
 				if( let array = result.try_as_array(); array && array->size() )
-					result = (*array)[0];
+					result = ( *array )[0];
 				available = result.is_object() ? Json::Combine( m.ExtrapolateVariables(), result.get_object() ) : m.ExtrapolateVariables();
 				if( !available.contains("id") && m.DBTable && m.DBTable->FindPK() ){
 					available["id"] = m.DBTable->Schema->DS()->ScalerSync<uint>(
@@ -52,18 +57,6 @@ namespace Jde::QL{
 		}
 	}
 
-/*
-	α Subscriptions::Add( vector<Subscription>&& subs )ι->jarray{
-		jarray y;
-		ul _{ _mutex };
-		for( auto&& s : subs ){
-			s.Id = ++_id;
-			y.emplace_back( s.Id );
-			_subscriptions.try_emplace( s.TableName ).first->second.emplace_back( move(s) );
-		}
-		return y;
-	}
-*/
 	α Subscriptions::StopListen( sp<IListener> listener, vector<SubscriptionId> ids )ι->jarray{
 		jarray y;
 		ul _{ _serverMutex };

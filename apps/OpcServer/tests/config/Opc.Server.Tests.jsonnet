@@ -2,8 +2,8 @@ local args = import 'args.libsonnet';
 {
 	testing:{
 		tests: "AccessTests.UserAccess",
-		recreateDB: true,
-		embeddedAppServer:: false,
+		recreateDB:: true,
+		embeddedAppServer: true,
 		UANodeSets: "$(UA_NODE_SETS)"
 	},
 	opc: args.opc,
@@ -25,7 +25,7 @@ local args = import 'args.libsonnet';
 			"$(JDE_DIR)/apps/OpcServer/config/sql/"+args.sqlType
 		],
 		dataPaths: ["$(JDE_DIR)/apps/AppServer/config", "$(JDE_DIR)/libs/access/config"],
-		sync: true,
+		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,
@@ -44,17 +44,37 @@ local args = import 'args.libsonnet';
 	},
 	logging:{
 		spd:{
-			defaultLevel:: "Information",
 			tags: {
-				trace:["test", "app", "http.client.write", "http.client.read"],
-				debug:["settings", "scheduler", "uaEvent","sql", "ql",
-					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read",
-					"monitoring", "browse", "processingLoop", "monitoring.pedantic"],
-				information:["threads", "uaSecure",
-				"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery"],
-				warning:[],
-				"error":[],
-				critical:[]
+				default: "Information",
+				test: "Trace",
+				app: "Trace",
+				ql: "Debug",
+				settings: "Debug",
+				scheduler: "Debug",
+				sql: "Debug",
+				threads: "Information",
+				http_client_write: "Trace",
+				http_client_read: "Trace",
+				http_server_write: "Debug",
+				http_server_read: "Debug",
+				socket_client_write: "Debug",
+				socket_client_read: "Debug",
+				socket_server_write: "Debug",
+				socket_server_read: "Debug",
+				monitoring: "Debug",
+				browse: "Debug",
+				processingLoop: "Debug",
+				monitoring_pedantic: "Debug",
+				uaClient: "Information",
+				uaDiscovery: "Information",
+				uaEvent: "Debug",
+				uaNet: "Information",
+				uaPubSub: "Information",
+				uaSecure: "Information",
+				uaSecurity: "Information",
+				uaSession: "Information",
+				uaServer: "Information",
+				uaUser: "Information"
 			},
 			sinks:{
 				console:{},

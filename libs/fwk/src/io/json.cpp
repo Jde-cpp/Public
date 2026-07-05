@@ -72,21 +72,22 @@ namespace Jde{
 	}
 
 	α Json::TryReadJsonNet( fs::path path, const optional<vector<fs::path>>& importPaths, SL sl )ι->std::expected<jobject, string>{
-		jsonnet::Jsonnet vm;
-		vm.init();
-		if( importPaths ){
-			for( let& importPath : *importPaths )
-				vm.addImportPath( importPath.string() );
-		}
-		string j;
-		let success = vm.evaluateFile( path.string(), &j );
-		if( !success )
-			return std::unexpected{ Ƒ("Failed to evaluate '{}'.  {}", path.string(), vm.lastError()) };
+			jsonnet::Jsonnet vm;
+			if( !vm.init() )
+				return std::unexpected{ Ƒ("Failed to initialize jsonnet VM for '{}'", path.string()) };
+			if( importPaths ){
+				for( let& importPath : *importPaths )
+					vm.addImportPath( importPath.string() );
+			}
+			string j;
+			let success = vm.evaluateFile( path.string(), &j );
+			if( !success )
+				return std::unexpected{ Ƒ("Failed to evaluate '{}'.  {}", path.string(), vm.lastError()) };
 		try{
 			return Parse( j, sl );
 		}
 		catch( exception& e ){
-			return std::unexpected{ Ƒ("Failed to parse '{}'.  {}", path.string(), e.what()) };
+			return std::unexpected{ Ƒ("Failed to read '{}': {}", path.string(), e.what()) };
 		}
 	}
 	α Json::ReadJsonNet( fs::path path, const optional<vector<fs::path>>& importPaths, SL sl )ε->jobject{

@@ -1,9 +1,9 @@
 #pragma once
 #include <boost/unordered/concurrent_flat_map.hpp>
-#include "../usings.h"
 #include "../exports.h"
 #include "ClientSocketStream.h"
 #include "ClientSocketAwait.h"
+#include "jde/fwk/process/process.h"
 #include <jde/fwk/co/Await.h>
 #include <jde/fwk/io/protobuf.h>
 
@@ -19,15 +19,18 @@ namespace Jde::Web::Client{
 
 	struct CloseClientSocketSessionAwait final : VoidAwait{
 		using base = VoidAwait;
-		CloseClientSocketSessionAwait( sp<IClientSocketSession> session, SRCE )ι:base{sl}, _session{session}{};
+		CloseClientSocketSessionAwait( sp<IClientSocketSession> session, bool terminate, SRCE )ι:base{sl}, _session{session}, _terminate{terminate}{};
 		α Suspend()ι->void override;
 	private:
 		sp<IClientSocketSession> _session;
+		bool _terminate;
 	};
 
 	//TODO check what should be protected
-	struct ΓWC IClientSocketSession : std::enable_shared_from_this<IClientSocketSession>{
+	struct ΓWC IClientSocketSession : IShutdown, std::enable_shared_from_this<IClientSocketSession>{
 		IClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι;// Resolver and socket require an io_context
+		virtual ~IClientSocketSession()=default;
+		α Shutdown( bool terminate, SL sl )ι->void override;
 		α AddTask( RequestId requestId, std::any hCoroutine )ι->void;
 		α PopTask( RequestId requestId )ι->std::any;
 
@@ -40,10 +43,11 @@ namespace Jde::Web::Client{
 		α SessionId()ι->SessionPK{ return _sessionInfo ? _sessionInfo->session_id() : SessionPK{}; }
 		α SetInfo( Web::FromServer::SessionInfo&& info )ι->void{ _sessionInfo = move(info); }
 		α UserPK()Ι->UserPK{ return  { _sessionInfo ? _sessionInfo->user_pk() : 0}; }
-		[[nodiscard]] α Close()ι{ return CloseClientSocketSessionAwait(shared_from_this()); }
+		[[nodiscard]] α Close( bool terminate, SL sl )ι{ return CloseClientSocketSessionAwait(shared_from_this(), terminate, sl); }
 		α Host()Ι->str{ return _host; }
 		α Id()ι->uint32{ return _id; }
 	protected:
+		β CloseTasks( beast::error_code ec )ι->void = 0;
 		α CloseTasks( function<void(std::any&&)> f )ι->void;
 		β OnClose( beast::error_code ec )ι->void;
 		α IsSsl()Ι->bool{ return _stream->IsSsl(); }
@@ -55,7 +59,7 @@ namespace Jde::Web::Client{
 		α OnSslHandshake(beast::error_code ec )ι->void;
 		α OnHandshake( beast::error_code ec )ι->void;
 		α OnRead( beast::error_code ec, uint bytes_transferred )ι->void;
-		β OnReadData( std::basic_string_view<uint8_t> transmission )ι->void=0;
+		β OnReadData( std::span<uint8_t> transmission )ι->void=0;
 
 		tcp::resolver _resolver;
 		sp<ClientSocketStream> _stream;
@@ -76,13 +80,13 @@ namespace Jde::Web::Client{
 		TClientSocketSession( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι:IClientSocketSession{ ioc, ctx }{}
 		α Write( TFromClientMsgs&& m )ι->void;
 	protected:
-		α OnReadData( std::basic_string_view<uint8_t> transmission )ι->void override;
+		α OnReadData( std::span<uint8_t> transmission )ι->void override;
 		β OnRead( TFromServerMsgs&& m )ι->void=0;
 	};
 
 	#define $ template<class TFromClientMsgs, class TFromServerMsgs> α TClientSocketSession<TFromClientMsgs,TFromServerMsgs>
 	$::Write( TFromClientMsgs&& m )ι->void{ base::Write( Protobuf::ToString(m) ); }
-	$::OnReadData( std::basic_string_view<uint8_t> transmission )ι->void{
+	$::OnReadData( std::span<uint8_t> transmission )ι->void{
 		try{
 			sv x{ (char*)transmission.data(), transmission.size() };
 			auto proto = Protobuf::Deserialize<TFromServerMsgs>( transmission.data(), (int)transmission.size() );

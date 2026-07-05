@@ -12,7 +12,7 @@ export class Role extends TargetRow<Role>{
 		this.permissions = cloneClassArray( obj.permissionRights ?? obj.permissions, Permission ) ?? [];
 		let childRoles = obj.roles ?? obj.childRoles;
 		if( childRoles )
-			this.childRoles = childRoles.map( (r)=>new Role(r) );
+			this.childRoles = childRoles.map( (r:any)=>new Role(r) );
 		if( obj.acl ){
 			this.users = [];
 			this.groups = [];
@@ -29,7 +29,7 @@ export class Role extends TargetRow<Role>{
 			this.groups = cloneClassArray( obj.groups, Group );
 		}
 	}
-	override equals( obj:Role ):boolean{
+	override equals( obj:Partial<Role> ):boolean{
 		const role = <Role><unknown>obj;
 		return super.equals(obj) && JSON.stringify(this.permissions)==JSON.stringify(role.permissions);
 	}
@@ -46,19 +46,19 @@ export class Role extends TargetRow<Role>{
 		let y = [];
 		for( let mod of modified ){
 			if( !original.find(x=>x.id==mod.id) )
-				y.push( new Mutation(Acl.typeName, null, {identity:{ id:mod.id },role:{id: this.id}}, MutationType.Create) );
+				y.push( new Mutation(Acl.typeName, undefined, {identity:{ id:mod.id },role:{id: this.id}}, MutationType.Create) );
 		}
 		for( let existing of original ){
 			if( !modified?.find(x=>x.id==existing.id) )
-				y.push( new Mutation(Acl.typeName, null, {identity:{ id:existing.id },role:{id: this.id}}, MutationType.Purge) );
+				y.push( new Mutation(Acl.typeName, undefined, {identity:{ id:existing.id },role:{id: this.id}}, MutationType.Purge) );
 		}
 		return y;
 	}
 
-	childRoles: Role[];
+	childRoles!: Role[];
 	groups: Group[];
 	permissions: Permission[];
-	get properties():Role{ let properties = new Role(this); properties.childRoles=undefined; properties.permissions=undefined; return properties; }
+	get properties():Partial<Role>{ let properties:Partial<Role> = new Role(this); properties.childRoles=undefined; properties.permissions=undefined; return properties; }
 	override get collectionName():string{ return "roles"; }
 	users: User[];
 	static typeName = "Role";

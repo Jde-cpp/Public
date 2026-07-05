@@ -3,10 +3,7 @@ include( ../../../build/functions.cmake )
 message( Jde.Opc )
 project( Jde.Opc VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ../../../build/dependencies.cmake )
-if( WIN32 )
-else()
-	find_package( OpenSSL )
-endif()
+find_package( OpenSSL REQUIRED )
 find_package( open62541 REQUIRED )
 set( open62541Dir ${open62541_DIR}/../../.. )
 cmake_path( ABSOLUTE_PATH open62541Dir NORMALIZE OUTPUT_VARIABLE open62541Dir )
@@ -29,10 +26,11 @@ else()
 endif()
 
 if( WIN32 )
-	target_link_libraries( ${targetName} ${MULTI_INSTALL_PREFIX}/protobuf/lib/libprotobuf$<IF:$<CONFIG:Debug>,d,>.lib )
+	target_link_libraries( ${targetName} ${MULTI_INSTALL_PREFIX}/protobuf/lib/protobuf$<IF:$<CONFIG:Debug>,d,>.lib )
 endif()
 
 target_link_libraries( ${targetName} open62541::open62541 )
+target_link_libraries( ${targetName} OpenSSL::SSL )
 
 target_precompile_headers(${targetName}
   PRIVATE

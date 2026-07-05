@@ -1,11 +1,13 @@
 #pragma once
 #include <jde/db/Key.h>
+#include <jde/ql/types/FilterQL.h>
 
 #define let const auto
 namespace Jde::QL{
 	struct Input{
 		static constexpr sv Escape{ "\b$" };
 		Input( jobject&& args, sp<jobject> variables )ι: Args{ move(args) }, Variables{ move(variables) }{}
+		α ArgString()Ι->string;
 		Ŧ Find( sv name )Ι->optional<T>;
 		template<class T=jvalue> α FindPtr( sv name )Ι->const T*;
 		template<class T=jvalue> α As( sv name, SRCE )Ε->const T&;
@@ -18,13 +20,19 @@ namespace Jde::QL{
 		α FindKey()Ι->optional<DB::Key>;
 		α GetKey( SRCE )Ε->DB::Key;
 		α ExtrapolateVariables()Ι->jobject;
+		α Filter()Ι->Filter;
 		β JTableName()Ι->string=0;
+		α Limit()Ι->uint{ return TryNumber<uint>( "limit" ).value_or(0); }
+		α Skip()Ι->uint{ return TryNumber<uint>( "skip" ).value_or(0); }
+		α OrderByJson()Ι->const vector<std::pair<string,bool>>&;
 
 		jobject Args;
 		sp<jobject> Variables;
+		mutable optional<QL::Filter> _filter;
 	private:
 		α VariableName( const jvalue& v )Ι->string;
 		α VariablesString()Ι->string{ return Variables ? serialize(*Variables) : "{}"; }
+		mutable optional<vector<std::pair<string,bool>>> _orderBy;
 	};
 
 	Ξ Input::VariableName( const jvalue& v )Ι->string{

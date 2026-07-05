@@ -3,7 +3,7 @@ import { NodeId } from "./NodeId";
 
 export class Enum{
 	constructor( public id:NodeId, value:Type ){
-		this.enumValues = value.enumValues;
+		this.enumValues = value.enumValues!;
 	}
 	enumValues:EnumValue[];
 }

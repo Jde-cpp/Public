@@ -3,8 +3,6 @@
 
 #define let const auto
 namespace Jde::Access{
-	constexpr ELogTags _tags{ ELogTags::Access };
-
 	Resource::Resource( DB::Row&& row )ι{
 		PK = row.GetUInt16(0);
 		Schema = move( row.GetString(1) );

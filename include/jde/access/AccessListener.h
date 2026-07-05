@@ -5,14 +5,14 @@
 
 namespace Jde::QL{ struct IQL; }
 namespace Jde::Access{
-	enum class ESubscription;
+	enum class ESubscription : uint16;
 	struct Authorize;
 	α IsServer()ι->bool;
-	struct AccessListener : QL::IListener, IShutdown{
+	struct AccessListener final : QL::IListener, IShutdown{
 		AccessListener( sp<QL::IQL> qlServer )ι:QL::IListener{"Access"},_qlServer{qlServer}{}
 		α OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void override;
 		α OnTraces( App::Proto::FromServer::Traces&& /*traces*/ )ι->void override{ASSERT(false);}
-		α Shutdown( bool /*terminate*/ )ι->void;
+		α Shutdown( bool terminate, SL sl )ι->void override;
 		sp<QL::IQL> _qlServer;
 	private:
 		α Authorizer()ι->Access::Authorize&{ return _qlServer->Authorizer(); }

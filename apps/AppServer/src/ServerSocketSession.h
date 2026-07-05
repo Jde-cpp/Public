@@ -5,20 +5,22 @@
 #include <jde/web/client/usings.h>
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/Sessions.h>
-#include "../usings.h"
 #include "awaits/ForwardExecutionAwait.h"
 
 namespace Jde::App::Server{
 	using namespace Jde::Web::Server;
-	struct ServerSocketSession : TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>, Access::IAdminAcl{
+
+	struct ServerSocketSession final: TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>, Access::IAdminAcl{
 		using base = TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>;
 		ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α ProgramPK()Ι->ProgramPK{ return _programPK; }
 		α Instance()Ι->const Proto::FromClient::Instance&{ return _instance; }
+		α InstancePK()Ι->ProgInstPK{ return _instancePK; }
 		α ConnectionPK()Ι->ConnectionPK{ return _connectionPK; }
 	private:
 		α OnRead( Proto::FromClient::Transmission&& transmission )ι->void override;
-		α OnClose()ι->void;
+		α OnClose()ι->void override;
+		α OnDisconnect( CodeException&& e )ι->void override;
 		α GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task;
 		α Login( string&& jwt, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task;
 		α ProcessTransmission( Proto::FromClient::Transmission&& transmission, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId )ι->void;
@@ -48,7 +50,5 @@ namespace Jde::App::Server{
 		ProgInstPK _instancePK{};
 		App::ConnectionPK _connectionPK{};
 		optional<Jde::UserPK> _userPK{};
-		ELogLevel _webLevel{ ELogLevel::NoLog };
-		ELogLevel _dbLevel{ ELogLevel::NoLog };
 	};
 }

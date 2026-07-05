@@ -16,3 +16,4 @@ export * from './lib/shared/theme-picker/theme-storage/theme-storage';
 export * from './lib/services/authorization/DisabledAuthService';
 export * from './lib/services/authorization/IAuth';
 export * from './lib/services/environment/IEnvironment';
+export * from './lib/services/profile-store';

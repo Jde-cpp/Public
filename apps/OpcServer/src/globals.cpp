@@ -1,4 +1,5 @@
 #include "globals.h"
+#include "jde/fwk/process/process.h"
 #include <jde/db/meta/AppSchema.h>
 #include <jde/app/client/IAppClient.h>
 #include "OpcServerAppClient.h"
@@ -14,6 +15,9 @@ namespace Jde::Opc {
 		_serverId = serverId;
 		_appSchema = schema;
 		_ua = mu<UAServer>();
+		Process::AddShutdownFunction( [](bool , SL){
+			_ua.reset();
+		} );
 	}
 
 	α Server::DS()ι->DB::IDataSource&{ return *_appSchema->DS(); }

@@ -38,23 +38,33 @@ function buildRelativePath() {
 }
 function projectName() {
 	#echo "projectName called with $1";
-	relativeFile=$1; #/libs/access/tests/main.cpp
-	if [[ $relativeFile == *"opc/src"* ]]; then
+	absoluteFile=$1; #/libs/access/tests/main.cpp
+	if [[ $absoluteFile == *"opc/src"* ]]; then
 		project="Jde.Opc";
-	elif [[ $relativeFile == *"fwk/src"* ]]; then
+	elif [[ $absoluteFile == *"fwk/src"* ]]; then
 		project="Jde";
-	elif [[ $relativeFile == *"fwk/tests"* ]]; then
+	elif [[ $absoluteFile == *"fwk/tests"* ]]; then
 		project="Jde.Framework.Tests";
-	elif [[ $relativeFile == *"web/tests" ]]; then
+	elif [[ $absoluteFile == *"web/client"* ]]; then
+		project="Jde.Web.Client";
+	elif [[ $absoluteFile == *"web/tests"* ]]; then
 		project="Jde.Web.Tests";
-	elif [[ $relativeFile == *"access/src"* ]]; then
+	elif [[ $absoluteFile == *"access/src"* ]]; then
 		project="Jde.Access";
-	elif [[ $relativeFile == *"access/tests"* ]]; then
+	elif [[ $absoluteFile == *"access/tests"* ]]; then
 		project="Jde.Access.Tests";
-	elif [[ $relativeFile == *"AppServer/src"* ]]; then
+	elif [[ $absoluteFile == *"AppServer/src"* ]]; then
 		project="Jde.App.ServerLib";
+	elif [[ $absoluteFile == *"db/src"* ]]; then
+		project="Jde.DB";
+	elif [[ $absoluteFile == *"OpcGateway/src"* ]]; then
+		project="Jde.Opc.GatewayLib";
+	elif [[ $absoluteFile == *"/OpcGateway/tests"* ]]; then
+		project="Jde.Opc.Tests";
+	elif [[ $absoluteFile == *"OpcServer/tests"* ]]; then
+		project="Jde.Opc.Server.Tests";
 	fi;
-	echo $project.vcxproj;
+	echo $project;
 }
 function absoluteFile() {
 	workspaceFolder=$1;
@@ -71,10 +81,19 @@ function buildProject() {
 	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
 	buildRelativePath=`buildRelativePath $fileWorkspaceFolder $absoluteFile $relativeFile`; #libs/web/server
 	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, absoluteFile=$absoluteFile, buildRelativePath=$buildRelativePath";
-	cd $buildRoot/$buildRelativePath;
-	project=`projectName $relativeFile`;
-	echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug
-	msbuild.exe $project -p:Configuration=Debug -v:m
+	project=`projectName $absoluteFile`;
+	if [ -f "$buildRoot/build.ninja" ]; then
+		log=$buildRoot/$project.output;
+		echo $log | tee $log;
+		echo `pwd` | tee -a $log;
+		echo ninja -C $buildRoot ${project}  | tee -a $log;
+		set -o pipefail;
+		ninja -C $buildRoot ${project} | tee -a $log;
+	else
+		cd $buildRoot/$buildRelativePath;
+		echo $buildRoot/$buildRelativePath msbuild.exe $project.vcxproj -p:Configuration=Debug
+		msbuild.exe $project.vcxproj -p:Configuration=Debug -v:m
+	fi
 }
 function compile() {
 	source $JDE_BASH/build/common.sh;
@@ -84,10 +103,50 @@ function compile() {
 	toBashDir $4 buildRoot;  # /z/build/msvc
 	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
 	buildRelativePath=`buildRelativePath $fileWorkspaceFolder $absoluteFile $relativeFile`; #libs/web/server
-	project=`projectName $relativeFile`;
+	project=`projectName $absoluteFile`;
 	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile, project=$project";
-	cd $buildRoot/$buildRelativePath;
 	buildFile=${absoluteFile#"$fileWorkspaceFolder/"}
-	echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile
-	msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile //v:m
+	if [ -f "$buildRoot/build.ninja" ]; then
+		log=$project.output;
+		echo `pwd`/$log | tee $log;
+		echo ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/$project.dir/${buildFile}.obj | tee -a $log;
+		set -o pipefail;
+		ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/$project.dir/${buildFile}.obj | tee -a $log;
+	else
+		cd $buildRoot/$buildRelativePath;
+		echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile
+		msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile //v:m
+	fi
+}
+function reconfig() {
+	buildRoot=$1;
+	debugPreset=$2;
+	sourceDir=$3;
+	mkdir -p $buildRoot;
+	cd $buildRoot;
+	rm -f CMakeCache.txt;
+	tput reset;
+	echo `pwd` > cmake.output;
+	echo "cmake $JDE_DIR -Wno-dev --preset $debugPreset 2>&1" | tee -a cmake.output;
+	cmake "$JDE_DIR" -Wno-dev --preset "$debugPreset" 2>&1 | tee -a cmake.output;
+	if [ -f "$buildRoot/compile_commands.json" ]; then
+		mv $buildRoot/compile_commands.json $sourceDir/compile_commands.json;
+	fi
+}
+function build() {
+	buildRoot=$1;
+	target=$2;
+	cd $buildRoot;
+	set -o pipefail;
+	tput reset;
+	echo `pwd`/$target.output > $target.output;
+	echo "cmake --build . -j --target $target" | tee -a $target.output;
+	cmake --build . -j --target $target | tee -a $target.output;
+}
+function buildTests() {
+	baseProject=$2;
+	if [ $baseProject == "Jde.Opc.Gateway" ]; then
+		baseProject="Jde.Opc";
+	fi;
+	build $1 $baseProject.Tests;
 }

@@ -1,4 +1,100 @@
-import {ApplicationStrings} from './Application';
+import { Guid } from '../../model/Guid';
+import * as LogProto from '../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
+import { View, ViewField, ViewSerializedArgs, ViewType } from '../../model/ql/View';
+import { Query } from '../../services/IGraphQL';
+import { TableSchema } from '../../model/ql/schema/TableSchema';
+import { Field, FieldKind, FieldType } from '../../model/ql/schema/Field';
+
+export type Entry={
+	templateId:Guid;
+	argIds:Guid[];
+	level:ELogLevel;
+	tags:string[];
+	line:number;
+	time:Date;
+	userId:number;
+	fileId:Guid;
+	functionId:Guid;
+
+	selected?:boolean;
+	hidden:boolean;
+}
+export type LogEntriesRest={ entries:Entry[]; strings:{id:string, value:string}[]; }
+export class LogEntries{
+	constructor( queryResult:LogEntriesRest ){
+		this.entries = queryResult.entries;
+		this.entries.forEach( e=>{
+			e.level = ELogLevel[<string><any>e.level as keyof typeof ELogLevel];
+			e.templateId = new Guid( <string><any>e.templateId );
+			e.fileId = new Guid( <string><any>e.fileId );
+			e.functionId = new Guid( <string><any>e.functionId );
+			e.time = new Date( e.time );
+			e.argIds.forEach( (id, index)=>{
+				e.argIds[index] = new Guid( <string><any>id );
+			});
+		});
+		queryResult.strings.forEach( s=>this.strings.set(s.id, s.value) );
+	}
+	static equals( a:Entry, b:Entry ):boolean{
+		return a.time.getTime() === b.time.getTime()
+			&& a.userId === b.userId
+			&& a.line === b.line
+			&& a.level === b.level
+			&& a.templateId.equals(b.templateId)
+			&& a.fileId.equals(b.fileId)
+			&& a.functionId.equals(b.functionId);
+	}
+	static columns: Record<string,string> = {
+		time: "Time",
+		level: "Level",
+		line: "Line",
+		message: "Message",
+		file: "File",
+		function: "Function",
+		tags: "Tags",
+		user: "User"
+	};
+	entries:Entry[];
+	strings:Map<string,string> = new Map<string,string>();
+}
+export class LogView extends View{
+	override query( showDeleted:boolean|undefined, skip:number):Query{
+		const vars = {limit: this.limit!*3, skip: skip, orderBy: this.sort};
+		const q = "logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
+		return { text: q, vars: vars };
+	}
+	static schema:TableSchema = new TableSchema( {
+	name: "LogEntry",
+	fields: [
+		new Field( {name: "time", type: new FieldType({ kind: FieldKind.SCALAR, name: "Date"})} ),
+		new Field( {name: "level", type: new FieldType({ kind: FieldKind.OBJECT, name: "LogLevel" })} ),
+		new Field( {name: "message", type: new FieldType({kind: FieldKind.SCALAR, name: "String"})} ),
+		new Field( {name: "tags", type: new FieldType({kind: FieldKind.LIST, name:"LogTags"})} ),
+		new Field( {name: "user", ofType: { kind: FieldKind.SCALAR, name: "String" } }),
+		new Field( {name: "file", ofType: { kind: FieldKind.SCALAR, name: "String" } }),
+		new Field( {name: "line", ofType: { kind: FieldKind.SCALAR, name: "Number" } }),
+		new Field( {name: "function", ofType: { kind: FieldKind.SCALAR, name: "String" } }),
+	] } );
+	static default():LogView{
+		let schema = LogView.schema;
+		let toViewField = (name:string) => new ViewField( {qlField: schema.find(name)} );
+		let args:ViewSerializedArgs = {
+			name: undefined,
+			collectionName: "logs",
+			limit: 24,
+			showSelector: false,
+			sort: [ { active: 'time', direction: 'desc' } ],
+			fields: [
+				toViewField("time"),
+				toViewField("level"),
+				toViewField("message")
+			]
+		};
+		let view = new LogView( args, schema );
+		view.type = ViewType.System;
+		return view;
+	}
+}
 /*
 export class LogEntry
 {
@@ -78,7 +174,7 @@ export class LogEntry
 	get thread():string{ return this.threadId ? this.applicationInstance.threads.get(this.threadId) : null; }
 	get file():string{ return this.fileId ? this.application.files.get(this.fileId) : null; }
 	get message():string
-	{ 
+	{
 		var message = this.messageId ? this.application.messages.get(this.messageId) : null;
 		if( message )
 		{
@@ -136,7 +232,7 @@ export class RequestStrings
 	{
 		strings.push( this.applicationInstanceId.toString() );
 		strings.push( this.requests.length.toString() );
-		this.requests.forEach(entryId => 
+		this.requests.forEach(entryId =>
 		{
 			strings.push( entryId[0].toString() );
 			strings.push( entryId[1].toString() );

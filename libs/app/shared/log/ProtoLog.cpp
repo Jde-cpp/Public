@@ -5,6 +5,7 @@
 #include <jde/fwk/io/FileAwait.h>
 #include <jde/fwk/process/execution.h>
 #include <jde/app/proto/app.FromClient.h>
+#include <jde/app/proto/LogProto.h>
 #include "ArchiveAwait.h"
 
 #define let const auto
@@ -19,7 +20,7 @@ namespace Jde::App{
 		_today{ Chrono::LocalYMD(Clock::now(), _tz) }{
 		Executor();//locks up if starts in StartTimer.
 		Execution::Run();
-		Process::AddShutdownFunction( [](bool /*terminate*/){	//member Shutdown gets called after timer thread shutdown.
+		Process::AddShutdownFunction( [](bool /*terminate*/, SL){	//member Shutdown gets called after timer thread shutdown.
 			if( auto log = Logging::FindLogger<App::ProtoLog>(); log ){
 				log->_delay = Duration::min();
 				log->ResetTimer();
@@ -52,7 +53,7 @@ namespace Jde::App{
 		Logging::Add<ProtoLog>( "proto" );
 	}
 
-	α ProtoLog::Shutdown( bool terminate )ι->void{
+	α ProtoLog::Shutdown( bool terminate, SL )ι->void{
 		if( !terminate && !_toSave.empty() ){
 			try{
 				lg _{ _mutex };
@@ -69,7 +70,7 @@ namespace Jde::App{
 	α ProtoLog::Write( const Logging::Entry& e )ι->void{
 		if( !empty(e.Tags & _tags) )//recursion guard
 			return;
-		auto proto = FromClient::LogEntryFile( e );
+		auto proto = LogProto::LogEntryFile( e );
 		App::Log::Proto::FileEntry fileEntry;
 		*fileEntry.mutable_entry() = move( proto );
 		Write( e, move(fileEntry) );
@@ -80,7 +81,7 @@ namespace Jde::App{
 			return Write( e );
 		if( !empty(e.Tags & _tags) )//recursion guard
 			return;
-		auto proto = FromClient::LogEntryFile( e, appPK, instancePK );
+		auto proto = LogProto::LogEntryFile( e, appPK, instancePK );
 		App::Log::Proto::FileEntry fileEntry;
 		*fileEntry.mutable_external_entry() = move( proto );
 		Write( e, move(fileEntry) );
@@ -96,7 +97,17 @@ namespace Jde::App{
 		AddString( e.Id(), e.Text );
 		AddString( e.FileId(), e.File() );
 		AddString( e.FunctionId(), e.Function() );
-		AddArguments( e.Arguments, fileEntry.entry().args() );
+		switch( fileEntry.value_case() ){
+			case App::Log::Proto::FileEntry::kEntry:
+				AddArguments( e.Arguments, fileEntry.entry().args() );
+			break;
+			case App::Log::Proto::FileEntry::kExternalEntry:
+				AddArguments( e.Arguments, fileEntry.external_entry().args() );
+			break;
+			default:
+				ASSERTX( false );
+		}
+
 		std::copy( data.begin(), data.end(), std::back_inserter(_toSave) );
 		if( _toSave.size()>=_delaySize )
 			Save();
@@ -116,6 +127,7 @@ namespace Jde::App{
 	}
 	α ProtoLog::Save( vector<byte> toSave, CoLockGuard )ι->VoidAwait::Task{
 		try{
+			TRACE( "Saving {} bytes to {}", toSave.size(), DailyFile().string() );
 			co_await IO::WriteAwait( DailyFile(), move(toSave), true, _tags );
 			_dailyFileStart = TimePoint::max();
 		}
@@ -140,16 +152,17 @@ namespace Jde::App{
 		AddString( id, str, _cache.Strings );
 	}
 	α ProtoLog::AddString( uuid id, sv str, std::deque<uuid>& cache )ι->void{
-		if( let i = find(cache, id); i!=cache.end() )
+		ASSERTX( str.size() || id==EmptyStringMd5 );
+		if( find(cache, id)!=cache.end() )
 			return;//TODO update position
 		cache.push_front( id );
 		App::Log::Proto::FileEntry fileEntry;
-		*fileEntry.mutable_str() = FromClient::ToString( id, string{str} );
+		*fileEntry.mutable_str() = LogProto::ToString( id, string{str} );
 		auto data = Protobuf::SizePrefixed( fileEntry );
 		std::copy( data.begin(), data.end(), std::back_inserter(_toSave) );//TODO copy in SizePrefixed
 	}
 	α ProtoLog::AddArguments( const vector<string>& args, ::google::protobuf::RepeatedPtrField<std::string> ids )ι->void{
-		ASSERT( args.size()==(uint)ids.size() );
+		ASSERTX( args.size()==(uint)ids.size() );
 		for( uint i=0; i<args.size(); ++i )
 			AddString( ToGuid(ids.Get((int)i)), args[i], _cache.Args );
 	}
@@ -157,7 +170,7 @@ namespace Jde::App{
 	α ProtoLog::StartTimer()ι->TimerAwait::Task{
 		if( _delay==Duration::min() )
 			co_return;
-		_timer = mu<DurationTimer>( _delay, _tags, SRCE_CUR );
+		_timer = mu<DurationTimer>( _delay, SRCE_CUR );
 		let finished = co_await *_timer;
 		if( finished ){
 			if( !_toSave.empty() ){

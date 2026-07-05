@@ -2,10 +2,10 @@ local args = import 'args.libsonnet';
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests: "AppClientTests.Status",
+		tests:: "TokenTests.*",
 		recreateDB:: true,
-		embeddedAppServer: true,
-		embeddedOpcServer: true
+		embeddedAppServer:: false,
+		embeddedOpcServer:: false
 	},
 	opc: args.opc,
 	dbServers: {
@@ -31,7 +31,7 @@ local args = import 'args.libsonnet';
 	},
 	http:{
 		app:{ port: 1967, ssl:{productName: "AppServer"} },
-		gateway:{ port: 1968 },
+		gateway:{ port: 1968, ssl:{ cert:{altName: "URI:urn:open62541.server.application", domain: "localhost"}} },
 		opcServer:{ port: 1970, ssl:{productName: "OpcServer"} }
 	},
 	opcServer:{
@@ -55,19 +55,41 @@ local args = import 'args.libsonnet';
 		opcServer:{ name: "OpcTests" }
 	},
 	logging:{
+		loadFromServer: false,
+		breakLevel: "Critical",
 		spd:{
-			defaultLevel:: "Information",
 			tags: {
-				trace:["test", "app", "http.client.write", "http.client.read", "ql", "sql"],
-				debug:["settings", "scheduler", "uaEvent",
-					"http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"],
-				information:["threads", "processingLoop",
-					"uaSecure", "uaClient", "uaNet",
-					"uaSession", "uaServer", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
-					"monitoring", "browse", "monitoring.pedantic"],
-				warning:[],
-				"error":[],
-				critical:[]
+				default: "Information",
+				app: "Debug",
+				ql: "Information",
+				settings: "Debug",
+				scheduler: "Debug",
+				http_client_write: "Debug",
+				http_client_read: "Debug",
+				http_server_write: "Debug",
+				http_server_read: "Debug",
+				locks: "Information",
+				socket_client_read: "Debug",
+				socket_client_write: "Debug",
+				socket_server_read: "Debug",
+				socket_server_write: "Debug",
+				test: "Trace",
+				threads: "Information",
+				processingLoop: "Trace",
+				sql: "Information",
+				browse: "Information",
+				monitoring: "Information",
+				opc: "Debug",
+				uaClient: "Information",
+				uaDiscovery: "Information",
+				uaEvent: "Information",
+				uaNet: "Information",
+				uaPubSub: "Information",
+				uaSecure: "Information",
+				uaSecurity: "Information",
+				uaSession: "Information",
+				uaServer: "Information",
+				uaUser: "Information",
 			},
 			sinks:{
 				console:{},
@@ -82,9 +104,9 @@ local args = import 'args.libsonnet';
 			timeZone: "America/New_York",
 			delay: "PT1M"
 		},
-		subscribe:{}
+		// subscribe:{},
 		// remote:{
-		// 	delay: "PT2S"
+		// 	delay: "PT0.1S"
 		// }
 	},
 	workers:{

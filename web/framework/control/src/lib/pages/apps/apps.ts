@@ -7,7 +7,7 @@ import { MatCardModule } from '@angular/material/card';
 import { Connection } from '../../services/resolvers/app.resolver';
 import { StringUtils } from '../../utils/StringUtils';
 import { RouteStore } from '../../services/route.store';
-import { DocItem } from '../../../../../jde-spa/src/lib/pages/component-sidenav/component-sidenav';
+import { RouteItem } from '../../../../../jde-spa/src/lib/pages/component-sidenav/component-sidenav';
 
 @Component({
     selector: 'apps',
@@ -22,7 +22,7 @@ export class Apps implements OnInit{
 	async ngOnInit(){
 		this.route.data.subscribe( (data)=>{
 			this.connections = data["connections"];
-			this.routeStore.setChildren( '/apps', this.connections.map( c=>new DocItem({ path: c.urlSegments.join('/'), title: `${c.programName}/${c.instanceName}` }) ) );
+			this.routeStore.setChildren( '/apps', this.connections.map( c=>new RouteItem({ path: c.urlSegments.join('/'), title: `${c.programName}/${c.instanceName}` }) ) );
     });
 	}
 	formatMemory(memory:number):string{

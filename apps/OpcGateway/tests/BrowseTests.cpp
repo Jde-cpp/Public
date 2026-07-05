@@ -11,7 +11,7 @@ namespace Jde::Opc::Gateway::Tests{
 	constexpr ELogTags _tags{ ELogTags::Test };
 	struct BrowseTests : ::testing::Test{
 	protected:
-		Ω SetUpTestCase()ι->void{
+		Ω SetUpTestCase()ε->void{
 			_jwt = BlockAwait<Web::Client::ClientSocketAwait<Jde::Web::Jwt>,Web::Jwt>( AppClient()->Jwt() );
 			auto sessionId = *Str::TryTo<SessionPK>(_jwt->SessionId, nullptr, 16);
 			TRACE( "UserPK: {:x}, SessionId: {:x}", _jwt->UserPK.Value, sessionId );
@@ -21,7 +21,8 @@ namespace Jde::Opc::Gateway::Tests{
 			AddSession( sessionId, OpcServerTarget, move(cred) );
 		};
 		Ω TearDownTestCase()ι->void{
-			UAClient::RemoveClient( move(_client) );
+			if( _client )
+				UAClient::RemoveClient( move(_client) );
 		}
 		α SetUp()ι->void{}
 

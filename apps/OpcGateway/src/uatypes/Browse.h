@@ -34,8 +34,6 @@ namespace Browse{
 		Request( Request&& x )ι:UA_BrowseRequest{ x }{ UA_BrowseRequest_init( &x );}
 		Request( const Request& x )ι{ UA_BrowseRequest_copy( &x, this ); }
 		~Request(){ UA_BrowseRequest_clear(this); }
-		private:
-		UA_BrowseResultMask _attribs{ UA_BROWSERESULTMASK_NONE };
 	};
 
 	struct FoldersAwait final : TAwait<Response>, noncopyable{

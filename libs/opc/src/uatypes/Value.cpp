@@ -11,7 +11,7 @@
 namespace Jde::Opc{
 	α Value::operator=( Value&& x )ι->Value&{
 		UA_DataValue_clear(this);
-		memccpy( this, &x, 1, sizeof(UA_DataValue) );
+		static_cast<UA_DataValue&>(*this) = static_cast<UA_DataValue&>(x);
 		UA_DataValue_init(&x);
 		return *this;
 	}

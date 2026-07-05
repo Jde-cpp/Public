@@ -1,15 +1,17 @@
 import { ActivatedRoute } from "@angular/router";
 
-export function arraysEqual(a, b) {
+export function arraysEqual(a:any[], b:any[]) {
   if (a == b) return true;
   if (a == null || b == null) return false;
   if (a.length !== b.length) return false;
 	return a.every( (v,i)=>v==b[i] );
 }
 
-export function assert( expr:unknown, msg:string=undefined ):asserts expr{
-	if( !expr )
+export function verify( expr:unknown, msg?:string ):asserts expr{
+	if( !expr ){
+		debugger;
 		throw new Error( msg ?? "Assertion failed" );
+	}
 }
 
 export function clone( obj: any ):any{
@@ -18,7 +20,7 @@ export function clone( obj: any ):any{
 
 export function cloneClassArray<T>( from:Array<T>, ctor: new (item: T) => T ):T[]{
 	if( from==undefined )
-		return undefined;
+		return undefined as unknown as T[];
 	let clone = [];
 	for( let item of from )
 		clone.push( new ctor(item) );
@@ -61,8 +63,8 @@ export function fromIsoDuration( str:string ):number{
 	return seconds;
 }
 
-export function getEnumName(enumObj: any, enumValue: number | string): string | undefined {
-  return Object.keys(enumObj).find((key) => enumObj[key] === enumValue);
+export function getEnumName(enumObj: any, enumValue: number | string): string {
+  return Object.keys(enumObj).find((key) => enumObj[key] === enumValue)!;
 }
 
 export type PropertyNames<T> = {

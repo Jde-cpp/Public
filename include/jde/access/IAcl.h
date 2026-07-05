@@ -8,5 +8,6 @@ namespace Jde::Access{
 	struct IAcl : IAdminAcl{
 		β Test( str schemaName, str resourceName, ERights rights, UserPK executer, SRCE )ε->void=0;
 		β Rights( str schemaName, str resourceName, UserPK executer )ι->ERights=0;
+		β UserName( UserPK userPK )ι->string=0;
 	};
 }

@@ -11,7 +11,7 @@ import { KeyValuePipe,NgFor } from '@angular/common';
 export class LinkSelect<TOptionKey> implements OnInit{
 	ngOnInit()
 	{}
-	valueChange( selectedId ){
+	valueChange( selectedId:any ){
 		this.selected = selectedId;
 		this.selectChange.emit( selectedId );
 		this.links.unshift( selectedId );
@@ -20,25 +20,25 @@ export class LinkSelect<TOptionKey> implements OnInit{
 	@Input() set placeholder( value ){ this._placeholder = value;} get placeholder(){return this._placeholder} private _placeholder:string="Date range";
 	get links(){ return this.options.links; }
 	get selected(){ return this.options.selected; } set selected(x){ if( this.options.selected!=x ) this.options.selected=x; } @Output() selectChange = new EventEmitter<TOptionKey>();
-	@Input() options:LinkSelectOptions<TOptionKey>;
+	@Input() options!:LinkSelectOptions<TOptionKey>;
 	get linkValues():Map<TOptionKey,string>
 	{
 		let y=new Map<TOptionKey,string>();
 		this.links?.forEach( x =>
 		{
 			if( x!=this.selected && this.options.values.has(x) )
-				y.set( x, this.options.values.get(x) );
+				y.set( x, this.options.values.get(x)! );
 		});
 		return y;
 	}
 }
 export class LinkSelectOptions<TOptionKey>
 {
-	constructor( private readonly _values:Map<TOptionKey,string>, linkCount=3, public isValid:(TOptionKey,string)=>boolean=undefined )
+	constructor( private readonly _values:Map<TOptionKey,string>, linkCount=3, public isValid?:(key:TOptionKey,value:string)=>boolean )
 	{
 		this.links = new CircularBuffer<TOptionKey>( linkCount );
 		this.fillLinks();
-		this.selected = _values.keys().next().value;
+		this.selected = _values.keys().next().value!;
 		//this.links.push( this.selected );
 	}
 	assign( other:LinkSelectOptions<TOptionKey> )
@@ -63,7 +63,7 @@ export class LinkSelectOptions<TOptionKey>
 		if( !this.isValid )
 			return this._values;
 		var values=new Map<TOptionKey,string>();
-		this._values.forEach( (value,key)=>{ if(this.isValid(key,value)) values.set(key,value);} );
+		this._values.forEach( (value,key)=>{ if(this.isValid!(key,value)) values.set(key,value);} );
 		return values;
 	}
 	selected:TOptionKey;

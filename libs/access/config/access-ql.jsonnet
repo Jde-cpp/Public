@@ -29,7 +29,6 @@ local NonNullDateTime = { kind:'NON_NULL',name:null, ofType: DateTime };
 				{ name: 'updated', type: DateTime },
 				{ name: 'deleted', type:DateTime },
 				{ name: 'description', type: String },
-				{ name: 'isGroup', type: {kind:'NON_NULL', name:null, ofType:{kind:'SCALAR', name:'Boolean'}} },
 				{ name: 'loginName', type: String },
 				{ name: 'modulus', type: String },
 				{ name: 'exponent', type: Attributes }

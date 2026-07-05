@@ -1,9 +1,10 @@
 import { CommonModule } from "@angular/common";
-import { AfterViewInit, Component, Inject, model, OnDestroy, OnInit, signal, ViewChild } from "@angular/core";
+import { AfterViewInit, Component, inject, Inject, model, OnDestroy, OnInit, signal, ViewChild } from "@angular/core";
 import { MatCheckbox, MatCheckboxChange } from "@angular/material/checkbox";
 import { MatSortModule, Sort } from "@angular/material/sort";
 import { MatTable, MatTableModule } from "@angular/material/table";
-import { assert, EnumKeysPipe, IErrorService, IProfileStore } from "jde-framework";
+import { ProfileStore } from "jde-spa";
+import { verify, EnumKeysPipe, IErrorService } from "jde-framework";
 import { Permission, Rights } from "../../model/Permission";
 import { AccessService } from "../../services/access.service";
 import { Resource } from "../../model/Resource";
@@ -15,7 +16,7 @@ import { Resource } from "../../model/Resource";
 		imports: [CommonModule, MatTableModule, MatCheckbox, EnumKeysPipe, MatSortModule],
 })
 export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
-	constructor( @Inject('AccessService') private accessService: AccessService, @Inject('IProfileStore') private profileStore: IProfileStore, @Inject('IErrorService') private cnsle: IErrorService )
+	constructor( @Inject('AccessService') private accessService: AccessService, @Inject('IErrorService') private cnsle: IErrorService )
 	{}
 
 	async ngOnInit(){
@@ -24,14 +25,14 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 		for( const resource of resources ){ //.filter(x=>x.allowed!=Rights.None)
 			let permission = this.permissions().find( x=>x.resource?.id==resource.id );
 			if( permission ){
-				permission.resource = resources.find( x=>x.id==resource.id );
-				assert( permission.resource, `Resource not found: ${resource.id}` );
+				permission.resource = resources.find( x=>x.id==resource.id )!;
+				verify( permission.resource, `Resource not found: ${resource.id}` );
 			}else
 				permission =  new Permission( {resource: new Resource( resource )} );
 			this.availablePermissions.push( permission );
 		}
 		//let sort = this.profile.value.sort;
-		let sort = {active: "schema,resource", direction: "asc"};
+		let sort:Sort = {active: "schema,resource", direction: "asc"};
 		for( const col of sort.active.split(",").filter(x=>this.displayedColumnNames.includes(x)).reverse() )
 			this.sortData( {active:col, direction: sort.direction} );
 		this.isLoading.set( false );
@@ -43,14 +44,17 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 	ngOnDestroy(){
 		this.profileStore.save<Profile>( 'permissionTable', { sort: this.sort, showDeleted: this.profile?.showDeleted } );
 	}
-	sortData($event){
-		this.availablePermissions = this.availablePermissions.sort((a,b)=>{
+	sortData($event:Sort){
+		this.availablePermissions = this.availablePermissions.sort((a:Permission,b:Permission)=>{
 			let y:number;
 			if( ["schema", "resource", "deleted", "target"].includes($event.active) ){
 				let col:string = $event.active=="resource" ? "name" : $event.active;
-				y = a.resource[col].localeCompare( b.resource[col] );
+				let r = a.resource as any;
+				let r2 = r[col];
+				y = 5;
+				y = (a.resource as any)[col].localeCompare( (b.resource as any)[col] );
 			}else{
-				let right = <number><any>Rights[$event.active];
+				let right = <number><any>Rights[+$event.active];
 				let value = (x:Permission)=>{ return this.isAllowed(x, right) ? 1 : this.isDenied(x, right) ? -1 : 0; };
 				y = value(b) - value(a);
 			}
@@ -109,7 +113,7 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 		return rights==Rights.None || (permission.resource.availableRights & rights)!=0;
 	}
 
-	profile:Profile;
+	profile!:Profile;
 	static readonly defaultProfile:Profile = { sort: { active: "schema,resource", direction: "asc" } };
 	permissions=model.required<Permission[]>();
 	availablePermissions:Permission[] = [];
@@ -124,6 +128,7 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 			y.push( kv.value );
 		return y;
 	}
+	profileStore = inject(ProfileStore);
 }
 type Profile = { sort:Sort; showDeleted?:boolean; }
 

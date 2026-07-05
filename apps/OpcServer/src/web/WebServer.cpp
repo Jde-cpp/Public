@@ -9,10 +9,10 @@ namespace Jde::Opc{
 	α Server::StartWebServer( jobject&& settings )ε->void{
 		_requestHandler = ms<RequestHandler>( move(settings), AppClient() );
 		Web::Server::Start( _requestHandler );
-		Process::AddShutdownFunction( [](bool terminate ){StopWebServer(terminate);} );//TODO move to Web::Server
+		Process::AddShutdownFunction( [](bool terminate, SL sl ){StopWebServer(terminate, sl);} );//TODO move to Web::Server
 	}
-	α Server::StopWebServer( bool terminate )ι->void{
-		Web::Server::Stop( move(_requestHandler), terminate );
+	α Server::StopWebServer( bool terminate, SL sl )ι->void{
+		Web::Server::Stop( move(_requestHandler), terminate, sl );
 	}
 	namespace Server{
 		α RequestHandler::WebsocketSession( sp<RestStream>&& /*stream*/, beast::flat_buffer&& /*buffer*/, TRequestType /*req*/, tcp::endpoint /*userEndpoint*/, uint32 /*connectionIndex*/ )ι->sp<IWebsocketSession>{

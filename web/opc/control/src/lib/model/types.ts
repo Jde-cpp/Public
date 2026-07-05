@@ -3,7 +3,7 @@ export type Ns = number;
 export type StatusCode = number;
 
 export interface ILocalizedText{
-	locale: string;
+	locale: string|undefined;
 	text: string;
 }
 export enum EAccess{
@@ -51,7 +51,7 @@ export const toLocalizedText = ( value:any ):ILocalizedText=>{
 }
 
 export type Browse = { ns?:number; name:String; }
-export function toBrowse( path:string, defaultNs:Ns ):Browse{
+export function toBrowse( path:string, defaultNs:Ns|undefined ):Browse{
 	const segments = path.split("/");
 	if( segments.length>1 )
 		return toBrowse( segments[segments.length-1], defaultNs );

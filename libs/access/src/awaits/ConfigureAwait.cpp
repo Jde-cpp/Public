@@ -1,11 +1,13 @@
 #include <jde/access/awaits/ConfigureAwait.h>
 
+#include <jde/db/meta/AppSchema.h>
 #include <jde/access/Authorize.h>
+#include <jde/access/awaits/EventsSubscribeAwait.h>
 #include "IdentityLoadAwait.h"
 #include "AclLoadAwait.h"
 #include "ResourceLoadAwait.h"
 #include "RoleLoadAwait.h"
-#include "EventsSubscribeAwait.h"
+
 
 #define let const auto
 
@@ -20,7 +22,10 @@ namespace Jde::Access{
 
 	α Loader::Subscribe( ConfigureAwait& await )ι->EventsSubscribeAwait::Task{
 		try{
-			co_await EventsSubscribeAwait{ await.QlServer, await.Executer, await.Listener };
+			vector<string> schemaNames;
+			for( let& schema : await.Schemas )
+				schemaNames.push_back( await.OpcServerInstance.size() ? Ƒ("{}.{}", schema->Name, await.OpcServerInstance ) : schema->Name );
+			co_await EventsSubscribeAwait{ await.QlServer, schemaNames, await.Executer, await.Listener };
 			await.Resume();
 		}
 		catch( IException& e ){
@@ -77,8 +82,13 @@ namespace Jde::Access{
 	}
 
 	α ConfigureAwait::SyncResources()ι->VoidTask{
-		co_await ResourceSyncAwait{ QlServer, Schemas, OpcServerInstance, Executer };
-		LoadUsers();
+		try{
+			co_await ResourceSyncAwait{ QlServer, Schemas, OpcServerInstance, Executer };
+			LoadUsers();
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
 	};
 
 	α ConfigureAwait::LoadUsers()ι->TAwait<Identities>::Task{

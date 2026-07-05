@@ -1,9 +1,9 @@
 //import { LogEntry } from "./LogEntry";
-import { TraceEntry } from "./TraceEntry";
+//import { TraceEntry } from "./TraceEntry";
 import { Guid } from "jde-framework";
 import * as AppFromClient from '../../proto/App.FromServer'; import FromServer = AppFromClient.Jde.App.Proto.FromServer;
 import * as AppCommon from '../../proto/App'; import App = AppCommon.Jde.App.Proto;
-
+/*
 export class ApplicationStrings{
 	constructor()
 	{}
@@ -40,7 +40,7 @@ export class ApplicationStrings{
 	messages:Map<string, string> = new Map<string, string>();
 	users:Map<number, string> = new Map<number, string>();
 }
-/*
+
 export class ApplicationInstance
 {
 	static parse( tokens:string[], startingIndex:number ):[ApplicationInstance, number]

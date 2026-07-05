@@ -6,22 +6,25 @@
 #include <jde/fwk/crypto/OpenSsl.h>
 
 namespace Jde{
-	optional<ELogLevel> _breakLevel;
-	α Logging::BreakLevel()ι->ELogLevel{
-		if( !_breakLevel )
-			_breakLevel = Settings::FindEnum<ELogLevel>( "/logging/breakLevel", ToLogLevel ).value_or( ELogLevel::Warning );
-		return *_breakLevel;
+	ELogLevel _breakLevel = ELogLevel::Warning;
+	α Logging::SetBreakLevel()ι->void{ 
+		_breakLevel = Settings::FindEnum<ELogLevel>( "/logging/breakLevel", ToLogLevel ).value_or( ELogLevel::Warning );
 	}
+	α Logging::BreakLevel()ι->ELogLevel{ return _breakLevel; }
 }
 namespace Jde::Logging{
-	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, string&& m )ι:Entry{ sl, l, tags, move(m), vector<string>{} }{}
 	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, vector<string> args )ι:
+		Entry( sl, l, tags, {}, move(m), move(args) )
+	{}
+
+	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, string&& m, vector<string> args )ι:
 		Text{ move(m) },
 		Arguments{ move(args) },
 		Level{ l },
 		Tags{ tags },
 		Line{ sl.line() },
 		Time{ Clock::now() },
+		UserPK{ userPK },
 		_fileName{ string{sl.file_name()} },
 		_functionName{ string{sl.function_name()} }
 	{}

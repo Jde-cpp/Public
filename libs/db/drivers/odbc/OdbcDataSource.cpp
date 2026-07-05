@@ -31,7 +31,7 @@ namespace Jde::DB::Odbc{
 		else{
 			ds = sp<OdbcDataSource>( (OdbcDataSource*)GetDataSource() );
 			ds->SetConnectionString( _connectionString );
-			ds->Execute( {"use "+string{catalog}} );
+			ds->ExecuteSync( {"use "+string{catalog}} );
 		}
 		return ds;
 	}

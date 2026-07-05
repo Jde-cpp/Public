@@ -17,7 +17,7 @@ namespace Jde::Access{
 		if( let array = Json::FindArray(o, key); array )
 			rights = ToRights( *array );
 		else
-			rights = (ERights)Json::AsNumber<uint8>(o, key);
+			rights = (ERights)Json::AsNumber<uint>(o, key); //opc rights use all 64 bits
 		return rights;
 	}
 	Permission::Permission( const jobject& o )ι:

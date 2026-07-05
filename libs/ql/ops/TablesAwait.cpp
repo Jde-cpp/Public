@@ -8,26 +8,36 @@ namespace Jde::QL{
 		optional<jvalue> y;
 		try{
 			for( auto&& table : _tables ){
-				THROW_IF( table.Columns.empty() && table.Tables.empty(), "Table '{}' has no columns", table.ToString() );
 				ASSERT( !_statement || _statement->From.Joins.size() );
-				jvalue result;
+				optional<jvalue> result;
 				let returnRaw = table.ReturnRaw && _tables.size()==1;
-				if( auto await = _ql ? _ql->CustomQuery( table, _executer, _sl ) : nullptr; await )
-					result = co_await *await;
-				else{
-					result = _statement
-						? co_await SelectAwait{ table, *_statement, _executer, true, _sl }
-						: co_await SelectAwait{ table, _executer, true, _sl };
+				auto returnName = table.ReturnName();
+				if( _ql ){
+					let& jsonName = table.JsonName;
+					if( jsonName=="status" )
+						result = _ql->StatusQuery(move(table));
+					else if( auto await = jsonName.starts_with("logSetting") ? _ql->LogSettingsQuery(move(table), _sl) : nullptr; await )
+						result = co_await *await;
+					else if( auto await = jsonName.starts_with("log") && !jsonName.starts_with("logLevel") ? _ql->LogQuery(move(table), _sl) : nullptr; await )
+						result = co_await *await;
+					else if( auto await = _ql->CustomQuery(table, _creds, _sl); await )
+						result = co_await *await;
+				}
+				if( !result ){
+					if( _statement )
+						result = co_await SelectAwait{ table, *_statement, _creds.UserPK(), true, _sl };
+					else
+						result = co_await SelectAwait{ table, _creds.UserPK(), true, _sl };
 				}
 				if( returnRaw )
-					y = move( result );
+					y = move( *result );
 				else{
 					if( !y )
 						y = jobject{};
-					y->get_object()[table.ReturnName()] = move( result );
+					y->get_object()[move(returnName)] = move( *result );
 				}
 			}
-			Resume( y.value_or( jvalue{} ) );
+			Resume( y.value_or(jvalue{}) );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

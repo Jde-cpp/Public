@@ -17,7 +17,6 @@ namespace Jde{
 	}
 
 namespace IO{
-	constexpr ELogTags _tags = ELogTags::IO;
 	α IFileChunkArg::Handle()Ι->HFile&{ return _fileIOArg->Handle; }
 	α IFileChunkArg::IsRead()Ι->bool{ return _fileIOArg->IsRead; }
 
@@ -80,7 +79,7 @@ namespace IO{
 		}
 		else{
 			try{
-				_arg->Open( false );
+				_arg->Open( false, false );
 			}
 			catch( IOException& e ){
 				ExceptionPtr = e.Move();
@@ -91,7 +90,7 @@ namespace IO{
 
 	α WriteAwait::await_ready()ι->bool{
 		try{
-			_arg->Open( _create );
+			_arg->Open( _create, _append );
 		}
 		catch( IOException& e ){
 			ExceptionPtr = e.Move();
@@ -100,14 +99,17 @@ namespace IO{
 	}
 
 	α ReadAwait::Suspend()ι->void{
+		DBGT( _arg->_tags, "ReadAwait::Suspend: {}, size: {}", _arg->Path.string(), _arg->Size() );
 		_arg->Send( _h );
 	}
 	α WriteAwait::Suspend()ι->void{
+		DBGT( _arg->_tags, "WriteAwait::Suspend: {}, size: {}", _arg->Path.string(), _arg->Size() );
 		_arg->Send( _h );
 	}
 	α ReadAwait::await_resume()ε->string{
 		if( ExceptionPtr )
 			ExceptionPtr->Throw();
+		DBGT( _arg->_tags, "ReadAwait::Complete: {}, size: {}", _arg->Path.string(), _arg->Size() );
 		auto& r = get<string>(_arg->Buffer);
 		if( r.size() )
 			return move(r);
@@ -119,6 +121,7 @@ namespace IO{
 	α WriteAwait::await_resume()ε->void{
 		if( ExceptionPtr )
 			ExceptionPtr->Throw();
+		DBGT( _arg->_tags, "WriteAwait::Complete: {}, size: {}", _arg->Path.string(), _arg->Size() );
 		VoidAwait::await_resume();
 	}
 }}

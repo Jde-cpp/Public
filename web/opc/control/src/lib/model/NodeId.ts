@@ -25,12 +25,12 @@ export class NodeId implements INodeId{
 			this.id = json;
 		else if( json instanceof Uint8Array )
 			this.id = json;
-		if( this.id )
+		if( this.id as any )
 			return;
 		let j = <NodeIdJson>json;
 		this.ns = j.ns ?? 0;
-		if( j["id"] )
-			this.id = j["id"];
+		if( (j as any)["id"] )
+			this.id = (j as any)["id"];
 		else if( j.i!==undefined )
 			this.id = +j.i;
 		else if( j.s!==undefined )
@@ -43,6 +43,7 @@ export class NodeId implements INodeId{
 			debugger;
 	}
 	public equals( rhs: NodeId ):boolean{ return this.ns==rhs.ns && this.id===rhs.id; }
+	static objectsFolder = new NodeId( { ns: 0, i: 85 } );
 	toJson():NodeIdJson{
 		let json:NodeIdJson = {};
 		json.ns = this.ns;
@@ -57,17 +58,27 @@ export class NodeId implements INodeId{
 
 		return json;
 	}
-	qlArgs():string{
-		return JSON.stringify(this.toJson()).replace( /^{|}$/g, "" );
+	qlArgs(escape:boolean=false):string{ // ns:4,i:5003
+		let y: string = `ns:${this.ns},`;
+		if( typeof this.id === "number" )
+			y += `i:${this.id}`;
+		else if( typeof this.id === "string" )
+			y += `s:"${this.id}"`;
+		else if( this.id instanceof Guid )
+			y += `g:"${this.id.toString()}"`;
+		else if( this.id instanceof Uint8Array )
+			y += `b:"${btoa( this.id.reduce((acc, current) => acc + String.fromCharCode(current), "") )}"`;
+		return escape ? y.replace(/['"]/g, '\\$&') : y;
 	}
 	static qlArgsArray( nodes:NodeId[] ):string{
 		return nodes.map( n=>`{${n.qlArgs()}}` ).join( "," );
 	}
 
-	ns:number;
+	ns!:number;
 	get isNumericId(){ return typeof this.id === "number"; }
 	get numericId(){ return <number>this.id; }
-	id:NodeIdentifier;
+	id!:NodeIdentifier;
+	get isObjectsFolder(){ return this.equals(NodeId.objectsFolder); }
 
 	get key():NodeKey{
 		if( !this._key ){
@@ -76,5 +87,5 @@ export class NodeId implements INodeId{
 		}
 		return this._key;
 	}
-	protected _key:NodeKey; //for Map
+	protected _key:NodeKey|undefined; //for Map
 }

@@ -4,7 +4,7 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/DBSchema.h>
 #include <jde/ql/ql.h>
-#include "Parser.h"
+#include <jde/ql/types/Parser.h>
 
 #define let const auto
 
@@ -16,11 +16,9 @@ namespace Jde::QL{
 	α MutationQL::ParseCommand( sv commandName, SL _sl )ε->tuple<string,EMutationQL>{
 		uint iType=0;
 		for( ;iType<MutationQLStrings.size() && !commandName.starts_with(MutationQLStrings[iType]); ++iType );
-		if( iType==MutationQLStrings.size() ){
-			// if( _systemMutations.find( string{commandName} )!=_systemMutations.end() )
-			// 	return { "", EMutationQL::Execute };
+		if( iType==MutationQLStrings.size() )
 			throw Exception{ ELogTags::QL, _sl, "Could not find mutation {}", commandName };
-		}
+
 		auto tableJsonName = string{ commandName.substr(MutationQLStrings[iType].size()) };
 		tableJsonName[0] = (char)tolower( tableJsonName[0] );
 
@@ -43,14 +41,8 @@ namespace Jde::QL{
 		auto args = serialize(Args);
 		if( args.size()>3 && args[0]=='{' )
 			args = args.substr(1, args.size()-2);
-		return Ƒ( "{}({}){}", CommandName, serialize(Args), ResultRequest ? ResultRequest->ToString() : "" );
+		return Ƒ( "{}({}){}", CommandName, move(args), ResultRequest ? ResultRequest->ToString() : "" );
 	}
-
-	// α MutationQL::GetParam( sv name, const jobject& variables, SL sl )Ε->const jvalue&{
-	// 	auto p = FindParam( name, variables );
-	// 	THROW_IFSL( !p, "Could not find param '{}' in '{}'", name, serialize(Args) );
-	// 	return *p;
-	// }
 
 	α MutationQL::IsMutation( sv name )ι->bool{
 		bool isMutation{ name=="mutation" };

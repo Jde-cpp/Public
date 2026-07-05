@@ -1,10 +1,11 @@
 #include <jde/app/proto/app.FromClient.h>
 #include <boost/uuid/uuid_io.hpp>
+#include <jde/fwk/chrono.h>
 #include <jde/fwk/io/protobuf.h>
 #include <jde/fwk/settings.h>
 #include <jde/web/Jwt.h>
+#include <jde/app/proto/LogProto.h>
 #include "Log.pb.h"
-#include <jde/fwk/chrono.h>
 
 using Jde::Protobuf::ToBytes;
 namespace Jde::App::FromClient{
@@ -30,12 +31,6 @@ namespace Jde::App{
 			s.set_user_endpoint( userEndPoint );
 			s.set_is_socket( isSocket );
 		} );
-	}
-	α FromClient::ToString( uuid id, string&& value )ι->Log::Proto::String{
-		Log::Proto::String m;
-		*m.mutable_id() = ToBytes( id );
-		*m.mutable_value() = move( value );
-		return m;
 	}
 
 	α FromClient::Exception( exception&& e, RequestId requestId )ι->PFromClient::Transmission{
@@ -126,62 +121,8 @@ namespace Jde::App{
 	α FromClient::LogEntries( vector<Logging::Entry>&& entries )ι->PFromClient::Transmission{
 		PFromClient::Transmission t;
 		for( auto&& entry : entries ){
-			*t.add_messages()->mutable_log_entry() = LogEntryClient( move(entry) );
+			*t.add_messages()->mutable_log_entry() = LogProto::LogEntryClient( move(entry) );
 		}
 		return t;
-	}
-
-	α FromClient::LogEntryClient( Logging::Entry&& e )ι->Log::Proto::LogEntryClient{
-		Log::Proto::LogEntryClient proto;
-		proto.set_text( move(e.Text) );
-		*proto.mutable_args() = Protobuf::FromVector( move(e.Arguments) );
-		proto.set_level( (Log::Proto::ELogLevel)e.Level );
-		proto.set_tags( (uint)e.Tags );
-		proto.set_line( e.Line );
-		*proto.mutable_time() = Protobuf::ToTimestamp( e.Time );
-		proto.set_user_pk( e.UserPK.Value );
-		proto.set_file( move(e.FileString()) );
-		proto.set_function( move(e.FunctionString()) );
-
-		return proto;
-	}
-
-	Ŧ logEntry( const Logging::Entry& m, T& proto )ι->void{
-		proto.set_template_id( ToBytes(m.Id()) );
-		for( auto& arg : m.Arguments )
-			*proto.add_args() = ToBytes( Logging::Entry::GenerateId(arg) );
-		proto.set_level( (Log::Proto::ELogLevel)m.Level );
-		proto.set_tags( (uint)m.Tags );
-		proto.set_line( m.Line );
-		*proto.mutable_time() = Protobuf::ToTimestamp( m.Time );
-		proto.set_user_pk( m.UserPK.Value );
-		proto.set_file_id( ToBytes(m.FileId()) );
-		proto.set_function_id( ToBytes(m.FunctionId()) );
-	}
-	α FromClient::LogEntryFile( const Logging::Entry& m )ι->Log::Proto::LogEntryFile{
-		Log::Proto::LogEntryFile proto;
-		logEntry( m, proto );
-		return proto;
-	}
-	α FromClient::LogEntryFile( const Logging::Entry& m, App::ProgramPK appPK, App::ProgInstPK instancePK )ι->Log::Proto::LogEntryFileExternal{
-		Log::Proto::LogEntryFileExternal proto;
-		logEntry( m, proto );
-		proto.set_app_pk( appPK );
-		proto.set_app_instance_pk( instancePK );
-		return proto;
-	}
-
-	α FromClient::FromLogEntry( Log::Proto::LogEntryClient&& m )ι->Logging::Entry{
-		return Logging::Entry{
-			( ELogLevel )m.level(),
-			( ELogTags )m.tags(),
-			m.line(),
-			Protobuf::ToTimePoint( m.time() ),
-			{ m.user_pk() },
-			move( *m.mutable_text() ),
-			move( *m.mutable_file() ),
-			move( *m.mutable_function() ),
-			Protobuf::ToVector( move(*m.mutable_args()) )
-		};
 	}
 }

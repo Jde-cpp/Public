@@ -1,4 +1,5 @@
 #pragma once
+#include <numeric>
 
 //https://stackoverflow.com/questions/21806561/concatenating-strings-and-numbers-in-variadic-template-function
 namespace Jde::ParamPack{

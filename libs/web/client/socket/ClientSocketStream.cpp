@@ -3,6 +3,7 @@
 
 #define let const auto
 namespace Jde::Web::Client{
+	constexpr ELogTags _connectTag{ ELogTags::Socket | ELogTags::Client };
 	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 	string _sslUserAgent{ Ƒ("({})Jde.Web.Client SSL - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 
@@ -19,7 +20,7 @@ namespace Jde::Web::Client{
 	}
 
 	α ClientSocketStream::OnResolve( tcp::resolver::results_type results, sp<IClientSocketSession> session )ι->void{
-		std::visit( [this,&results,session](auto&& ws)->void {
+		std::visit( [&results,session](auto&& ws)->void {
 			beast::get_lowest_layer( ws ).expires_after( std::chrono::seconds(30) );
 			beast::get_lowest_layer( ws ).async_connect( results, beast::bind_front_handler(&IClientSocketSession::OnConnect, session) );// Make the connection on the IP address we get from a lookup
 		},
@@ -62,7 +63,7 @@ namespace Jde::Web::Client{
 		}, _ws );
 	}
 
-	α ClientSocketStream::AsyncWrite( string&& buffer, sp<IClientSocketSession> /*session*/ )ι->LockAwait::Task{
+	α ClientSocketStream::AsyncWrite( string buffer, sp<IClientSocketSession> /*session*/ )ι->LockAwait::Task{
 		_writeGuard = co_await _writeLock.Lock();
 		_writeBuffer = move(buffer);
 		std::visit( [this](auto&& ws)->void {
@@ -80,9 +81,10 @@ namespace Jde::Web::Client{
 			CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientWrite };//TODO look at returning an error to caller.
 	}
 
-	α ClientSocketStream::Close( sp<IClientSocketSession> session )ι->void{
-		std::visit( [session](auto&& ws)->void {
-			ws.async_close( websocket::close_code::normal, beast::bind_front_handler(&IClientSocketSession::OnClose, session) );
+	α ClientSocketStream::Close( sp<IClientSocketSession> session, bool terminate, SL )ι->void{
+		DBGT( _connectTag, "[{}]Client::Close: {}", hex(session->Id()), session->Host() );
+		std::visit( [session, terminate](auto&& ws)->void {
+			ws.async_close( terminate ? websocket::close_code::going_away : websocket::close_code::normal, beast::bind_front_handler(&IClientSocketSession::OnClose, session) );
 		}, _ws );
 	}
 }

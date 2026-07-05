@@ -61,14 +61,16 @@ namespace Jde{
 
 	template<class T, class... Args>
 	requires std::constructible_from<T, Args...>
-	α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{
-		return up<T>( new T(std::forward<Args>(args)...) );
+	[[gnu::artificial]]
+	inline α mu( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->up<T>{
+		return up<T>( new T(FWD(args)...) );
 	}
 
 	template<class T, class... Args>
 	requires std::constructible_from<T, Args...>
-	α ms( Args&&... args )noexcept(noexcept(T(std::forward<Args>(args)...)))->sp<T>{
-		return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), std::forward<Args>(args)... );
+	[[gnu::artificial]]
+	inline α ms( Args&&... args )noexcept(noexcept(T(FWD(args)...)))->sp<T>{
+		return std::allocate_shared<T>( std::allocator<typename std::remove_const<T>::type>(), FWD(args)... );
 	}
 
 	using std::vector;
@@ -77,9 +79,9 @@ namespace Jde{
 	//using Day=uint_fast16_t;
 
 	namespace fs=std::filesystem;
-	using boost::container::flat_map;
-	using boost::container::flat_multimap;
-	using boost::container::flat_set;
+	using std::flat_map;
+	using std::flat_multimap;
+	using std::flat_set;
 	using boost::concurrent_flat_map;
 	using boost::concurrent_flat_set;
 	using jvalue=boost::json::value;
@@ -100,9 +102,13 @@ namespace Jde{
 	using SL = std::source_location;
 	using LogEntryPK=uint;
 	using StringMd5=uuid;
+	static constexpr boost::uuids::uuid EmptyStringMd5 =
+    {{0xd4, 0x1d, 0x8c, 0xd9, 0x8f, 0x00, 0xb2, 0x04,
+      0xe9, 0x80, 0x09, 0x98, 0xec, 0xf8, 0x42, 0x7e}};
+
 	Τ struct PK{
 		using Type=T;
-		Type Value;
+		Type Value{};
 		operator bool()Ι{ return Value!=0; }
 		α operator !()Ι{ return Value==0; }
 		α operator ==( const PK& rhs )Ι{ return Value==rhs.Value; }
@@ -125,5 +131,10 @@ namespace Jde{
 	inline constexpr bool _debug{ false };
 #else
 	inline constexpr bool _debug{ true };
+#endif
+#ifdef _MSC_VER
+	inline constexpr bool _windows{ true };
+#else
+	inline constexpr bool _windows{ false };
 #endif
 }

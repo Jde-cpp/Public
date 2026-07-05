@@ -7,6 +7,7 @@
 #endif
 #include <jde/fwk/settings.h>
 #include <jde/fwk/str.h>
+#include "jde/fwk/log/logTags.h"
 #include <jde/fwk/log/MemoryLog.h>
 
 #define let const auto
@@ -28,15 +29,16 @@ namespace Jde{
 α Jde::LogLevelStrings()ι->const std::array<sv,7>{ return ELogLevelStrings; }
 
 α Jde::ToString( ELogLevel l )ι->string{
-	return FromEnum( ELogLevelStrings, l );
+	return l==ELogLevel::NoLog ? "None" : FromEnum( ELogLevelStrings, l );
 }
 α Jde::ToLogLevel( sv l )ι->ELogLevel{
-	return ToEnum<ELogLevel>( ELogLevelStrings, l ).value_or( ELogLevel::Error );
+	let level = ToEnum<ELogLevel>( ELogLevelStrings, l );
+	ASSERT( level.has_value() );
+	return level.value_or( ELogLevel::Error );
 }
 
 namespace Jde::Logging{
 	auto _pOnceMessages = mu<flat_map<uint,flat_set<string>>>(); std::shared_mutex OnceMessageMutex;
-	constexpr ELogTags _tags{ ELogTags::Settings };
 }
 
 namespace Jde{
@@ -50,6 +52,7 @@ namespace Jde{
 	};
 
 	α Logging::Init()ι->void{
+		SetBreakLevel();
 		Logging::Add<SpdLog>( "spd" );
 		auto& memoryLogger = Logging::GetLogger<MemoryLog>();
 		for( let& logger : _loggers ){
@@ -57,10 +60,12 @@ namespace Jde{
 				continue;
 			memoryLogger.Write( *logger.get() );
 		}
-		auto memory = Settings::FindObject( "/logging/memory" );
+		auto memory = Settings::FindObject( "/logging/memory/tags" );
 		if( !memory || Json::FindEnum<ELogLevel>(*memory, "default", ToLogLevel).value_or(ELogLevel::NoLog)==ELogLevel::NoLog )
 			_loggers.erase( _loggers.begin() );
-		UpdateCumulative( _loggers );
+		else
+		 	_loggers.front()->SetLevels( *memory );
+		Logging::UpdateCumulative( _loggers );
 	}
 
 /*	α SendStatus()ι->void

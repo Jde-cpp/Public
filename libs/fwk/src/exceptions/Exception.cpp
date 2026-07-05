@@ -1,7 +1,10 @@
-﻿#include <jde/fwk/exceptions/Exception.h>
+#include "jde/fwk/log/logTags.h"
+#include "jde/fwk/usings.h"
+#include <jde/fwk/exceptions/Exception.h>
 #include <iostream>
 #include <boost/system/error_code.hpp>
 
+#include <system_error>
 #include <jde/fwk/str.h>
 #include <jde/fwk/exceptions/CodeException.h>
 #include <jde/fwk/log/Entry.h>
@@ -66,26 +69,28 @@ namespace Jde{
 	}
 
 	α IException::BreakLog()Ι->void{
-#ifndef NDEBUG
 		if( Level()>=Logging::BreakLevel() ){
 			Log();
+#ifndef NDEBUG
 			SetLevel( ELogLevel::NoLog );
-		}
 #endif
+		}
+		else if( Logging::ShouldLog(ELogLevel::Trace, ELogTags::Exception) )
+			Log();
 	}
 	α IException::Log()Ι->void{
 		if( Level()==ELogLevel::NoLog || Process::Finalizing() )
 			return;
 		if( auto sv = Format(); sv.size() )
-			Logging::Log( Logging::Entry{_stack.size() ? _stack.front() : SRCE_CUR, Level(), _tags, string{sv}, _args} );
+			Logging::Log( Logging::Entry{_stack.size() ? _stack.front() : SRCE_CUR, Level(), _tags | ELogTags::Exception, string{sv}, _args} );
 		else
-			Logging::Log( Logging::Entry{_stack.size() ? _stack.front() : SRCE_CUR, Level(), _tags, string{what()}} );
+			Logging::Log( Logging::Entry{_stack.size() ? _stack.front() : SRCE_CUR, Level(), _tags | ELogTags::Exception, string{what()}} );
 	}
 
 	α IException::what()Ι->const char*{
 		if( _what.empty() ){
 			if( auto sv = Format(); sv.size() )
-				_what = _args.size() ? Str::Format( sv, _args ) : string{sv};
+				_what = _args.size() ? Str::Format( sv, _args ) : string{ sv };
 			else if( _pInner )
 				_what = _pInner->what();
 		}
@@ -107,7 +112,7 @@ namespace Jde{
 		return Ƒ( "{} - {}", category.name(), message );
 	}
 
-	α CodeException::ToString( const std::error_category& errorCategory )ι->string{	return errorCategory.name(); }
+	α CodeException::ToString( const std::error_category& errorCategory )ι->string{ 	return errorCategory.name(); }
 
 	α CodeException::ToString( const std::error_condition& errorCondition )ι->string{
 		const int value = errorCondition.value();
@@ -145,7 +150,7 @@ namespace Jde{
 	}
 	α IOException::SetWhat()Ι->void{
 #ifdef _MSC_VER
-		let msg = std::strerror( Code );
+		let msg = std::system_category().message( (int)Code );
 #else
 		let msg = std::strerror( errno );
 #endif

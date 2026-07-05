@@ -46,8 +46,8 @@ export class NodeRights {
 			rights = rights << 32;
 		this.toggleEmitter.emit( { role: role, rights: rights } );
 	}
-	sortData($event){
-		this.data = this.data.slice().sort((a,b)=>{
+	sortData($event:Sort){
+		this.data = this.data.slice().sort((a:any,b:any)=>{
 			const colName = $event.active;
 			let y:number;
 			y = a[colName].localeCompare( b[colName] );

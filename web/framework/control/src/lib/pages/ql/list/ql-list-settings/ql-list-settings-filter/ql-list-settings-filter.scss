@@ -1,0 +1,28 @@
+table {
+	flex: 1 1 100%;
+  font-family: sans-serif;
+}
+
+.mat-column-position{
+	flex: 0 0 60px;
+	padding-right: 0px;
+}
+.mat-column-sort{
+	flex: 0 0 120px;
+}
+.mat-column-name{
+	flex: 0 0 180px;
+}
+.mat-column-operation{
+	flex: 0 0 120px;
+}
+.mat-column-filter{
+	flex: 1 0 720px;
+}
+.filter-text{
+	display: flex;
+	flex: 1 0 720px;
+}
+.mat-mdc-form-field-subscript-wrapper{
+	display:none;
+}

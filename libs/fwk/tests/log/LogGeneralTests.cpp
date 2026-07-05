@@ -1,3 +1,4 @@
+#include "jde/fwk/log/Logger.h"
 #include <jde/fwk/log/MemoryLog.h>
 #define let const auto
 #pragma warning( disable: 4702 )
@@ -15,15 +16,15 @@ namespace Jde::Tests{
 
 	TEST_F( LogGeneralTests, CachedTags ){
 		auto& logger = Logging::GetLogger<Logging::MemoryLog>();
-		let checkTags{ ELogTags::App | ELogTags::Pedantic };
-		logger.SetLevel( checkTags, ELogLevel::Trace );
-		let unConfiguredTags = ELogTags::Scheduler;
-		TRACET( unConfiguredTags, "Need to search" );
-		let logMessage = Ƒ( "[{}]tag: {}, minLevel: {}", "MemoryLog", Jde::ToString(unConfiguredTags), "{default}" );
-		ASSERT_TRUE( logger.Find(logMessage).size() );
+
+		let _tags = ELogTags::Scheduler;
 		Logging::ClearMemory();
-		TRACET( unConfiguredTags, "no need to search" );
+		constexpr auto logMessage = "scheduler msg";
+		TRACE( logMessage );
 		ASSERT_TRUE( logger.Find(logMessage).empty() );
+		logger.SetLevel( _tags, ELogLevel::Debug );
+		DBG( logMessage );
+		ASSERT_FALSE( logger.Find(logMessage).empty() );
 	}
 
 	TEST_F( LogGeneralTests, ArgsNotCalled ){

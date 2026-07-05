@@ -3,13 +3,12 @@ import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { NodePageData } from '../../services/resolvers/node.resolver';
 import { ActivatedRoute } from '@angular/router';
-import { ComponentPageTitle, DocItem } from 'jde-spa';
+import { ComponentPageTitle, RouteItem } from 'jde-spa';
 import { NodeRoute } from '../../model/NodeRoute';
 import { NodeChildren } from './node-children/node-children';
 import { UaNode } from '../../model/Node';
 import { NodeAccess } from './node-access/node-access';
-import { IProfileStore } from '../../../../../jde-framework/src/lib/services/profile/profile.store';
-import { LocalProfileStore } from 'jde-framework';
+import { ProfileStore } from 'jde-spa';
 
 @Component( {
 	templateUrl: './node-detail.html',
@@ -18,10 +17,10 @@ import { LocalProfileStore } from 'jde-framework';
 	imports: [CommonModule, MatTabsModule, NodeChildren, NodeAccess]
 })
 export class NodeDetail implements OnDestroy, OnInit{
-	constructor( private activatedRoute: ActivatedRoute, private componentPageTitle:ComponentPageTitle, @Inject('IProfileStore') private profile: IProfileStore )
+	constructor( private activatedRoute: ActivatedRoute, private componentPageTitle:ComponentPageTitle )
 	{}
 	ngOnDestroy(){
-		LocalProfileStore.setTabIndex( `nodeDetail/${JSON.stringify(this.node().toJson())}`, this.tabIndex );
+		ProfileStore.setTabIndex( `nodeDetail/${JSON.stringify(this.node().toJson())}`, this.tabIndex );
   }
 	ngOnInit(){
 		this.activatedRoute.data.subscribe( (data:any)=>{
@@ -32,10 +31,10 @@ export class NodeDetail implements OnDestroy, OnInit{
 	}
 
 	node = computed( ()=>this.sideNav().node );
-	pageData = signal<NodePageData>( null );
+	pageData = signal<NodePageData>( null as any );
 	//get profile(){ return this.pageData().route.profile; }
 	server = computed( ()=>this.pageData().server );
 	sideNav = model.required<NodeRoute>();
-	tabIndex:number;
+	tabIndex:number=0;
 	onTabIndexChanged( index:number ){ this.tabIndex = index; }
 }

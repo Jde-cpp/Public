@@ -6,6 +6,7 @@ include( ../../../build/dependencies.cmake )
 set( targetName Jde.App.Shared )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
+target_link_libraries( ${targetName} Boost::json )
 target_include_directories( ${targetName} PRIVATE $ENV{JDE_DIR}/include/jde/web/client/proto )
 
 file(GLOB sources *.cpp proto/*.cpp log/*.cpp )
@@ -14,8 +15,10 @@ file(GLOB protos proto/*.proto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
 if( WIN32 )
+	find_package( OpenSSL REQUIRED )
+	target_link_libraries( ${targetName} OpenSSL::SSL )
 	target_link_libraries( ${targetName} absl::cord absl::log_internal_check_op absl::log_internal_conditions absl::log_internal_message absl::raw_hash_set absl::status absl::statusor )
-	target_link_libraries( ${targetName} ${MULTI_INSTALL_PREFIX}/protobuf/lib/libprotobuf$<IF:$<CONFIG:Debug>,d,>.lib )
+	target_link_libraries( ${targetName} ${MULTI_INSTALL_PREFIX}/protobuf/lib/protobuf$<IF:$<CONFIG:Debug>,d,>.lib )
 endif()
 
 #######################################################
@@ -34,9 +37,10 @@ protobuf_generate(
 	IMPORT_DIRS proto ../../web/client/proto
 	PROTOC_OUT_DIR ${protoOutDir}
 )
+suppressProtoWarnings( "${protos}" ${protoOutDir} )
 
-add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/App.FromServer.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/App.FromServer.pb.h" COMMENT "mklink FromServer" )
-add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/App.FromClient.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/App.FromClient.pb.h" COMMENT "mklink FromClient" )
-add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/Common.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/Common.pb.h" COMMENT "mklink Common" )
-add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/App.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/App.pb.h" COMMENT "mklink App" )
-add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${protoOutDir}/Log.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/Log.pb.h" COMMENT "mklink Log" )
+linkGeneratedHeader( ${targetName} "${protoOutDir}/App.FromServer.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/App.FromServer.pb.h" )
+linkGeneratedHeader( ${targetName} "${protoOutDir}/App.FromClient.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/App.FromClient.pb.h" )
+linkGeneratedHeader( ${targetName} "${protoOutDir}/Common.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/Common.pb.h" )
+linkGeneratedHeader( ${targetName} "${protoOutDir}/App.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/App.pb.h" )
+linkGeneratedHeader( ${targetName} "${protoOutDir}/Log.pb.h" "$ENV{JDE_DIR}/include/jde/app/proto/Log.pb.h" )

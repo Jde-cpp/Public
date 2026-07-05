@@ -1,4 +1,6 @@
 #include <jde/web/server/IRequestHandler.h>
+#include <jde/db/meta/AppSchema.h>
+#include <jde/access/IAcl.h>
 
 namespace Jde::Web::Server{
 
@@ -17,11 +19,17 @@ namespace Jde::Web::Server{
 		_started.test_and_set();
 		_started.notify_all();
 	}
-	α IRequestHandler::Stop()ι->void{
+	α IRequestHandler::Stop( bool, SL )ι->void{
 		if( _cancelSignal )
 			_cancelSignal->emit( net::cancellation_type::all );
 //		_cancelSignal = nullptr; heap use after free.
 		_started.clear();
 		_started.notify_all();
+	}
+
+	α IRequestHandler::UserName( UserPK userPK )ι->string{
+		if( Schemas().size()==0 || Schemas().front()->Authorizer==nullptr )
+			return std::to_string(userPK);
+		return Schemas().front()->Authorizer->UserName( userPK );
 	}
 }

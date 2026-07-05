@@ -16,8 +16,8 @@ namespace Jde::DB{
 			clause = Ƒ( "{} {} {}", move(clause), DB::ToString(op), DB::ToString(b) );
 			auto aParams = GetParams( a );
 			auto bParams = GetParams( b );
-			move(aParams.begin(), aParams.end(), back_inserter(_params));
-			move(bParams.begin(), bParams.end(), back_inserter(_params));
+			move( aParams.begin(), aParams.end(), back_inserter(_params) );
+			move( bParams.begin(), bParams.end(), back_inserter(_params) );
 		}
 		_clauses.push_back( move(clause) );
 	}
@@ -48,7 +48,7 @@ namespace Jde::DB{
 			_clauses.push_back( Ƒ("{} is {}null", col->FQName(), prefix) );
 		}else{
 			_clauses.push_back( col->Table->Syntax().FormatOperator(*col, op, 1, sl) );
-			_params.push_back(move(param));
+			_params.push_back( move(param) );
 		}
 	}
 
@@ -56,6 +56,19 @@ namespace Jde::DB{
 		for( auto& param : inParams )
 			_params.emplace_back( move(param) );
 		_clauses.push_back( col->Table->Syntax().FormatOperator(*col, op, inParams.size(), sl) );
+	}
+
+	α WhereClause::Add( sp<Column> col, vector<Value> inParams, bool haveNull, SL sl )ε->void{
+		if( !haveNull )
+			return Add( col, EOperator::In, move(inParams), sl );
+		for( auto& param : inParams )
+			_params.emplace_back( move(param) );
+		if( inParams.empty() )
+			_clauses.push_back( Ƒ("{} is null", col->FQName()) );
+		else{
+			string inClause = col->Table->Syntax().FormatOperator( *col, EOperator::In, inParams.size(), sl );
+			_clauses.push_back( Ƒ("({} or {} is null)", move(inClause), col->FQName()) );
+		}
 	}
 
 	α WhereClause::Add( const DB::Criteria& criteria )ε->void{

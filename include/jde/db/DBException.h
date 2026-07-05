@@ -10,7 +10,7 @@ namespace Jde::DB{
 		DBException( int32 errorCode, DB::Sql&& sql, string what, SRCE )ι;
 		DBException( DB::Sql&& sql, string what, SRCE )ι:DBException{ 0, move(sql), move(what), sl }{}
 		DBException( DBException&& from )ι:IException{move(from)}, Sql{move(from.Sql)}{}
-		DBException( const DBException& from )ι=default;
+		DBException( const DBException& from )ι=delete;
 		~DBException(){ Log(); SetLevel( ELogLevel::NoLog ); };
 
 		α Log()Ι->void override;

@@ -9,7 +9,7 @@ namespace Jde::Opc::Gateway{
 		AuthAwait( Credential cred, ServerCnnctnNK opcNK, string endpoint, bool isSocket, SessionPK sessionId, SRCE )ι:
 			base{ sl }, _cred{ move(cred) }, _opcNK{ move(opcNK) }, _endpoint{ move(endpoint) }, _isSocket{ isSocket }, _sessionId{sessionId}{}
 		α await_ready()ι->bool override;
-		α Execute()ι->TAwait<sp<UAClient>>::Task;
+		α Execute()ι->TAwait<sp<UAClient>>::Task override;
 		β OnSuccess()ι->void=0;
 	protected:
 		Credential _cred; ServerCnnctnNK _opcNK; string _endpoint; bool _isSocket; sp<UAClient> _client; SessionPK _sessionId;

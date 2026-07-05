@@ -25,7 +25,6 @@ namespace Jde::QL{
 		α DBTableName()Ι->str{ return DBTable() ? DBTable()->Name : Str::Empty(); }
 		α DefaultResult()Ι->jvalue{ return IsPlural() ? jvalue{jarray{}} : jvalue{jobject{}}; }
 		α EraseColumn( sv jsonName )ι->void{ Columns.erase( remove_if( Columns.begin(), Columns.end(), [&](let& c){return c.JsonName==jsonName;}), Columns.end() ); }
-		α Filter()Ε->const QL::Filter&;
 		Ŧ GetArg( sv key )Ι->T;
 		α FindColumn( sv jsonName )Ι->const ColumnQL*{ auto p = find_if( Columns, [&](let& c){return c.JsonName==jsonName;}); return p==Columns.end() ? nullptr : &*p; }
 		α FindDBColumn( sp<DB::Column> dbColumn )Ι->const ColumnQL*;
@@ -36,6 +35,7 @@ namespace Jde::QL{
 		α GetTable( sv jsonPluralName, SRCE )ε->TableQL&;
 		α IsPlural()Ι->bool{ return DB::Names::IsPlural(JsonName); }
 		α JTableName()Ι->string override{ return JsonName; }
+		α OrderBy()Ι->string;
 		α SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void;
 		α ReturnName()Ι->string{ return Alias.size() ? Alias : JsonName; }
 		α TransformResult( jarray&& result )Ι->jvalue;
@@ -47,7 +47,6 @@ namespace Jde::QL{
 
 		string Alias;
 		vector<ColumnQL> Columns;
-		mutable optional<QL::Filter> _filter;
 		mutable vector<QL::JsonMembers> JsonMembers; //used to map db columns to json names for results.
 		string JsonName;
 		vector<TableQL> Tables;

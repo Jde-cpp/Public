@@ -42,16 +42,23 @@ local args = import 'args.libsonnet';
 	logging:{
 		spd:{
 			flushOn: "Trace",
-			defaultLevel: "Information",
 			tags:{
-				trace:["exception","parsing", "test", "sessions",
-					"http.client.write", "http.client.read", "http.server.write", "http.server.read", "socket.client.write", "socket.client.read", "socket.server.write", "socket.server.read"
-				],
-				debug:["ql","sql", "settings"],
-				information:[],
-				warning:[],
-				"error":[],
-				critical:[]
+				default: "Information",
+				sql: "Trace",
+				exception: "Debug",
+				parsing: "Trace",
+				test: "Trace",
+				sessions: "Trace",
+				http_client_write: "Trace",
+				http_client_read: "Trace",
+				http_server_write: "Trace",
+				http_server_read: "Trace",
+				socket_client_write: "Trace",
+				socket_client_read: "Trace",
+				socket_server_write: "Trace",
+				socket_server_read: "Trace",
+				ql: "Debug",
+				settings: "Debug"
 			},
 			sinks:{
 				console:{},

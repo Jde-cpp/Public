@@ -6,8 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle, DocItem } from 'jde-spa';
-import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, LocalProfileStore, Properties, QLSelector, TargetRow, toIdArray} from 'jde-framework';
+import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
+import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, Properties, QLSelector, Style, TableSettings, TargetRow, toIdArray} from 'jde-framework';
 
 import { RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
@@ -29,7 +29,7 @@ export class UserDetail implements OnDestroy, OnInit{
 				return;
 			if( !this.properties().canSave )
 				this.isChanged.set( false );
-			else if(  !this.properties().equals(this.user.properties) )
+			else if(  !(this.properties() as User).equals(this.user.properties!) )
 				this.isChanged.set( true );
 		});
 
@@ -59,7 +59,7 @@ export class UserDetail implements OnDestroy, OnInit{
 		});
 	}
 	ngOnDestroy(){
-		LocalProfileStore.setTabIndex( 'userDetail', this.tabIndex() );
+		ProfileStore.setTabIndex( 'userDetail', this.tabIndex() );
 	}
 	ngOnInit(){
 		this.sideNav.set( this.pageData.routing );
@@ -70,7 +70,7 @@ export class UserDetail implements OnDestroy, OnInit{
 		try{
 			const upsert = new User( { ...this.properties(), permissions: this.permissions(), roles: this.roles().selected, groups: toIdArray(this.groups().selected) } );
 			const mutation = upsert.mutation( this.user );
-			await this.ql.mutate( mutation );
+			await this.ql.mutate( mutation, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 		}catch(e){
 			this.snackbar.exceptionInfo( e, "Save failed.", (m)=>console.log(m) );
@@ -83,19 +83,29 @@ export class UserDetail implements OnDestroy, OnInit{
 		return new User( existing );
 	}
 
-	user:User;
+	user!:User;
 	ctor:new (item: any) => any = User;
 	isChanged = signal<boolean>( false );
 	isLoading = signal<boolean>( true );
-	properties = signal<User>( null );
-	groups = signal<SelectionModel<GroupPK>>( null );
-	permissions = signal<Permission[]>( null );
-	roles = signal<SelectionModel<RolePK>>( null );
+	properties = signal<Partial<User>>( null as any );
+	groups = signal<SelectionModel<GroupPK>>( null as any );
+	permissions = signal<Permission[]>( null as any );
+	roles = signal<SelectionModel<RolePK>>( null as any );
 
-	sideNav = model.required<DocItem>();
+	sideNav = model.required<RouteItem>();
 
-	pageData:DetailResolverData<User>;
+	pageData!:DetailResolverData<User>;
 	get schema(){ return this.pageData.schema; }
-	tabIndex = signal<number>( LocalProfileStore.tabIndex('userDetail') );
+	tabIndex = signal<number>( ProfileStore.tabIndex('userDetail') );
+	userTableSettings = userTableSettings;
 	ql:IGraphQL = inject( AccessService );
 }
+
+export const userTableSettings:TableSettings = {
+	excludedColumns: ["isGroup"],
+	columns: [
+		{ name:"target", displayName: "Trgt", style: new Style(300) },
+		{ name:"provider", style: new Style(100) },
+		"description"
+	]
+ }

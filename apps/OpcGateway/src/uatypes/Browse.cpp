@@ -13,7 +13,7 @@
 namespace Jde::Opc::Gateway{
 	UABrowsePath::UABrowsePath( std::span<const sv> segments, NsIndex defaultNS )ι:
 		UA_BrowsePath{
-			UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
+			UA_NODEID_NUMERIC( 0, UA_NS0ID_OBJECTSFOLDER ),
 			{ segments.size(), (UA_RelativePathElement*)UA_Array_new(segments.size(), &UA_TYPES[UA_TYPES_RELATIVEPATHELEMENT]) }
 		}{
 		for( size_t i=0; i<segments.size(); ++i ){
@@ -21,7 +21,7 @@ namespace Jde::Opc::Gateway{
 			elem->referenceTypeId = UA_NODEID_NUMERIC( 0, UA_NS0ID_ORGANIZES );
 			auto ns = defaultNS;
 			string path{ segments[i] };
-			if( let nsPath = Str::Split( segments[i], '~' ); nsPath.size()>1 ){
+			if( let nsPath = Str::Split(segments[i], '~'); nsPath.size()>1 ){
 				auto specifiedNs = Str::TryTo<NsIndex>( string{nsPath[0]} );
 				if( specifiedNs ){
 					ns = *specifiedNs;
@@ -29,7 +29,7 @@ namespace Jde::Opc::Gateway{
 				}
 			}
 			elem->includeSubtypes = elem->isInverse = false;
-			elem->targetName = {ns, AllocUAString(path)};
+			elem->targetName = { ns, AllocUAString(path) };
 		}
 	}
 
@@ -48,7 +48,7 @@ namespace Browse{
 		}
 	}
 	α onResponse( UA_Client* /*ua*/, void* userdata, RequestId /*requestId*/, UA_BrowseResponse* response )ι->void {
-		FoldersAwait& await = *(FoldersAwait*)userdata;
+		FoldersAwait& await = *( FoldersAwait* )userdata;
 		await.OnComplete( response );
 	}
 	α FoldersAwait::OnComplete( UA_BrowseResponse* response )ι->void{
@@ -60,9 +60,16 @@ namespace Browse{
 			if( auto resultSC = response->resultsSize>0 ? response->results[0].statusCode : UA_STATUSCODE_GOOD; resultSC ){
 				DBGT( BrowseTag, "[{}.{}]({})SendBrowseRequest::Results Error", hex(_client->Handle()), hex(_requestId), hex(sc) );
 				ResumeExp( UAClientException{resultSC, _client->Handle(), _requestId} );
-			}else
+			}else{
+#ifdef __cpp_lib_move_only_function
 				Post<Response>( move(*response), move(_h) );
-
+#else
+				Post( [r=UA_BrowseResponse{*response},h=_h]()mutable{
+					h.promise().Resume(Response{move(r)}, h);
+				});
+				UA_BrowseResponse_init( response );
+#endif
+			}
 		}else
 			ResumeExp( UAClientException{sc, _client->Handle(), _requestId} );
 	}
@@ -70,9 +77,9 @@ namespace Browse{
 
 	ObjectsFolderAwait::ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SL sl )ι:
 		base{ sl },
-		_client{ua},
-		_node{node},
-		_snapshot{snapshot}
+		_client{ ua },
+		_node{ node },
+		_snapshot{ snapshot }
 	{}
 
 
@@ -142,17 +149,17 @@ namespace Browse{
 	}
 namespace Browse{
 	flat_map<string, UA_BrowseResultMask> _attributes = {
-		{"none", UA_BROWSERESULTMASK_NONE},
-		{"browse", UA_BROWSERESULTMASK_BROWSENAME},
-		{"isForward", UA_BROWSERESULTMASK_ISFORWARD},
-		{"name", UA_BROWSERESULTMASK_DISPLAYNAME},
-		{"nodeClass", UA_BROWSERESULTMASK_NODECLASS},
-		{"refType", UA_BROWSERESULTMASK_REFERENCETYPEID},
-		{"typeDef", UA_BROWSERESULTMASK_TYPEDEFINITION},
+		{ "none", UA_BROWSERESULTMASK_NONE },
+		{ "browse", UA_BROWSERESULTMASK_BROWSENAME },
+		{ "isForward", UA_BROWSERESULTMASK_ISFORWARD },
+		{ "name", UA_BROWSERESULTMASK_DISPLAYNAME },
+		{ "nodeClass", UA_BROWSERESULTMASK_NODECLASS },
+		{ "refType", UA_BROWSERESULTMASK_REFERENCETYPEID },
+		{ "typeDef", UA_BROWSERESULTMASK_TYPEDEFINITION },
 	};
 
 	Request::Request( NodeId&& id, UA_BrowseResultMask mask )ι:
-		UA_BrowseRequest{.requestedMaxReferencesPerNode=0, .nodesToBrowseSize=1, .nodesToBrowse=UA_BrowseDescription_new()}{
+		UA_BrowseRequest{ .requestedMaxReferencesPerNode=0, .nodesToBrowseSize=1, .nodesToBrowse=UA_BrowseDescription_new() }{
 		nodesToBrowse[0].nodeId = move( id );
 	 	nodesToBrowse[0].resultMask = mask;
 	}
@@ -178,7 +185,7 @@ namespace Browse{
 
 	α Response::Nodes()Ι->flat_set<NodeId>{
 		flat_set<NodeId> y;
-		for( uint i = 0; i < resultsSize; ++i) {
+		for( uint i = 0; i < resultsSize; ++i ) {
       for( size_t j = 0; j < results[i].referencesSize; ++j )
 				y.emplace( results[i].references[j].nodeId.nodeId );
 		}
@@ -196,17 +203,17 @@ namespace Browse{
 		return y;
 	}
 	α Response::VisitWhile( uint resultsIndex, function<bool(const UA_ReferenceDescription& ref)> f )Ι->bool{
-		THROW_IF( resultsIndex>=resultsSize, "resultsIndex {} out of range {}.", resultsIndex, resultsSize );
+		ASSERT_DESC( resultsIndex<resultsSize, Ƒ("resultsIndex {} out of range {}.", resultsIndex, resultsSize) );
 		bool returnedFalse{};
 		for( size_t j = 0; j < results[resultsIndex].referencesSize; ++j ){
-			returnedFalse = !f(results[resultsIndex].references[j]);
+			returnedFalse = !f( results[resultsIndex].references[j] );
 			if( returnedFalse )
 				break;
 		}
 		return !returnedFalse; //Returns false if f ever returns false.
 	}
 	α Response::SetJson( flat_map<NodeId, jobject>& children, bool addId )Ι->void{
-		VisitWhile( 0, [&, addId=addId]( const UA_ReferenceDescription& ref ){
+		VisitWhile( 0, [&, addId=addId](const UA_ReferenceDescription& ref){
 			jobject o;
 			if( Attribs & UA_BROWSERESULTMASK_BROWSENAME )
 				o["browse"] = BrowseName::ToJson( ref.browseName );
@@ -229,8 +236,8 @@ namespace Browse{
 	}
 	α Response::ToJson( flat_map<NodeId, Value>&& snapshot, flat_map<NodeId, variant<NodeId, StatusCode>>&& dataTypes )ε->jobject{
 		jarray references;
-		for(size_t i = 0; i < resultsSize; ++i) {
-			for(size_t j = 0; j < results[i].referencesSize; ++j) {
+		for( size_t i = 0; i < resultsSize; ++i ) {
+			for( size_t j = 0; j < results[i].referencesSize; ++j ) {
 				UA_ReferenceDescription& ref = results[i].references[j];
 				const NodeId nodeId{ move(ref.nodeId.nodeId) };
 				jobject reference;
@@ -240,7 +247,7 @@ namespace Browse{
 					if( std::holds_alternative<StatusCode>(p->second) )
 						reference["dataType"] = jobject{ {"sc", std::get<StatusCode>(p->second)} };
 					else
-						reference["dataType"] = std::get<NodeId>(p->second).ToJson();
+						reference["dataType"] = std::get<NodeId>( p->second ).ToJson();
 				}
 				reference["refType"] = Opc::ToJson( ref.referenceTypeId );
 				reference["isForward"] = ref.isForward;

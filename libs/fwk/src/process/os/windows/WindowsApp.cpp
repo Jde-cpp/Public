@@ -1,8 +1,9 @@
-﻿#include <jde/fwk/process/process.h>
+#include <jde/fwk/process/process.h>
+#include <iostream>
 #include <Psapi.h>
 #include <shellapi.h>
 #include <strsafe.h>
-#include "WindowsDrive.h"
+//#include "WindowsDrive.h"
 #include "WindowsSvc.h"
 #include "WindowsWorker.h"
 #include "WindowsUtilities.h"
@@ -10,8 +11,6 @@
 #define var const auto
 
 namespace Jde{
-	constexpr ELogTags _tags{ ELogTags::App };
-
 	α Process::Kill( uint processId )ι->bool{
 		INFOT( ELogTags::App | ELogTags::Shutdown, "Kill received - stopping instance" );
 		var proc = ::OpenProcess( PROCESS_TERMINATE, false, (DWORD)processId );
@@ -51,13 +50,15 @@ namespace Jde{
 		return memCounter.WorkingSetSize;
 	}
 	α Process::ExePath()ι->fs::path{
-		return fs::path( _pgmptr );
+		char* pgmptr = nullptr;
+		_get_pgmptr( &pgmptr );
+		return fs::path( pgmptr ? pgmptr : "" );
 	}
 	α Process::HostName()ι->string{
 		DWORD maxHostName = 1024;
 		char hostname[1024];
 		if( !::GetComputerNameA(hostname, &maxHostName) )
-			strcpy( hostname, "GetComputerNameA failed" );
+			return "GetComputerNameA failed";
 
 		return hostname;
 	}

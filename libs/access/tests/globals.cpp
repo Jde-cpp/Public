@@ -13,7 +13,6 @@
 namespace Jde::DB{ struct IDataSource; struct AppSchema; }
 namespace Jde::Access{
 	using namespace DB::Names;
-	constexpr ELogTags _tags{ ELogTags::Test | ELogTags::Pedantic };
 	sp<QL::LocalQL> _localQL;
 	sp<Authorize> _authorizer = ms<Authorize>( "Tests" );
 
@@ -153,7 +152,7 @@ namespace Tests{
 	}
 
 	α Tests::SelectResource( str target, UserPK executer, bool includeDeleted, SL sl )ε->jobject{
-		let ql = Ƒ( "resource( schemaName:\"access\", target:\"{}\", criteria:null ){{ id schemaName allowed denied name attributes created {} updated target description }}", target, includeDeleted ? "deleted" : "" );
+		let ql = Ƒ( "resource( schemaName:\"access\", target:\"{}\", criteria:null ){{ id schemaName allowed name attributes created {} updated target description }}", target, includeDeleted ? "deleted" : "" );
 		return QL().QuerySync( ql, {}, executer, true, sl );
 	}
 	α Tests::SelectUser( str target, UserPK executer, optional<ProviderPK> provider, bool includeDeleted )->jobject{
@@ -194,7 +193,7 @@ namespace Tests{
 
 	α Tests::GetUser( str target, UserPK executer, bool includeDeleted, ProviderPK provider )ε->jobject{
 		if( executer==UserPK{0} )
-		executer = GetRoot();
+			executer = GetRoot();
 		auto user = SelectUser( target, executer, provider, includeDeleted );
 		if( user.empty() ){
 			createUser( target, provider, executer );

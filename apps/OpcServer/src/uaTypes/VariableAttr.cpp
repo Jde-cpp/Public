@@ -47,23 +47,28 @@ namespace Jde::Opc::Server {
 		else
 			return UA_VALUERANK_ANY;
 	}
-	VariableAttr::VariableAttr( jobject& j, SL sl )ε:
-		UA_VariableAttributes{
+	Ω toVariables( jobject& o, SL sl )->UA_VariableAttributes{
+		auto variant = o.contains("value") ? Variant{ o.at("value"), Json::FindSV(o, "dataType").value_or("") } : UA_VariableAttributes_default.value;
+		auto dataType = o.contains("dataType") ? DT( o.at("dataType"), sl ).typeId : variant.type ? variant.type->typeId : UA_TYPES[UA_TYPES_STRING].typeId;
+		return UA_VariableAttributes{
 			0,
-			UA_LocalizedText{ "en-US"_uv, AllocUAString(Json::AsString(j, "name")) },
-			UA_LocalizedText{ "en-US"_uv, AllocUAString(Json::FindDefaultSV(j, "description")) },
-			getAccessLevelMask( Json::FindArray(j,"writeMask") ),
-			getAccessLevelMask( Json::FindArray(j,"userWriteMask") ),
-			j.contains("value") ? Variant{ j.at("value"), Json::FindSV(j, "dataType").value_or("") } : UA_VariableAttributes_default.value,
-			j.contains("dataType") ? DT( j.at("dataType"), sl ).typeId : value.type ? value.type->typeId : UA_TYPES[UA_TYPES_STRING].typeId,
-			j.contains("valueRank") ? getValueRank(j.at("valueRank").as_string()) : UA_VALUERANK_ANY,       // valueRank
+			UA_LocalizedText{ "en-US"_uv, AllocUAString(Json::AsString(o, "name")) },
+			UA_LocalizedText{ "en-US"_uv, AllocUAString(Json::FindDefaultSV(o, "description")) },
+			getAccessLevelMask( Json::FindArray(o,"writeMask") ),
+			getAccessLevelMask( Json::FindArray(o,"userWriteMask") ),
+			move(variant),
+			dataType,
+			o.contains("valueRank") ? getValueRank(o.at("valueRank").as_string()) : UA_VALUERANK_ANY,       // valueRank
 			0,       // arrayDimensionsSize
 			nullptr, // arrayDimensions
-			getAccessLevelMask( Json::FindArray(j,"accessLevel") ),
-			getAccessLevelMask( Json::FindArray(j,"userAccessLevel") ),
-			Json::FindNumber<double>(j, "minimumSamplingInterval").value_or( -1.0 ),
-			Json::FindBool( j, "historizing" ).value_or( false )
-		}
+			getAccessLevelMask( Json::FindArray(o,"accessLevel") ),
+			getAccessLevelMask( Json::FindArray(o,"userAccessLevel") ),
+			Json::FindNumber<double>(o, "minimumSamplingInterval").value_or( -1.0 ),
+			Json::FindBool( o, "historizing" ).value_or( false )
+		};
+	}
+	VariableAttr::VariableAttr( jobject& o, SL sl )ε:
+		UA_VariableAttributes{ toVariables(o, sl) }
 	{}
 
 	VariableAttr::VariableAttr( DB::Row& r, UA_Variant&& variant, const UA_DataType& dataType, tuple<UA_UInt32*, uint> dims )ε:

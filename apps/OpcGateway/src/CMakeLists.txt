@@ -17,7 +17,7 @@ file( GLOB headers **/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
 IF( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS ${CMAKE_EXE_LINKER_FLAGS} )
+	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}" )
 endif()
 target_include_directories( ${targetName} PRIVATE $ENV{JDE_DIR}/include/jde/app/proto )
 target_link_libraries( ${targetName} Jde.Web.Server Jde.App.Client Jde.Opc )
@@ -37,5 +37,10 @@ protobuf_generate(
 		"${protoIncludeDir}"
 	PROTOC_OUT_DIR ${protoOutDir})
 
-#for intellisense
-add_custom_command( TARGET ${targetName} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_BASH}/include/jde/app/proto/Common.pb.h" "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" COMMENT "mklink Common.pb.h" )
+suppressProtoWarnings( "${protos}" ${protoOutDir} )
+
+#for intellisense; created once at configure time since recreating it as a PRE_BUILD/PRE_LINK step on every build
+#bumps its mtime, which is newer than the PCH's, forcing a full PCH rebuild (and thus a full target rebuild) every time
+if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" )
+	file( CREATE_LINK "$ENV{JDE_BASH}/include/jde/app/proto/Common.pb.h" "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" SYMBOLIC )
+endif()

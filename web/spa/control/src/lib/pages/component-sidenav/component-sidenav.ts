@@ -36,12 +36,8 @@ import {map} from 'rxjs/operators';
 import {
   NavigationFocusService
 } from '../../shared/navigation-focus/navigation-focus.service';
-
-import {
-  ComponentCategoryListModule
-} from '../component-category-list/component-category-list';
 import {ComponentPageHeader} from '../component-page-header/component-page-header';
-import { IRouteService, RouteService } from '../../services/IRouteService';
+import { ComponentCategoryList } from '../component-category-list/component-category-list';
 
 // These constants are used by the ComponentSidenav for orchestrating the MatSidenav in a responsive
 // way. This includes hiding the sidenav, defaulting it to open, changing the mode from over to
@@ -52,19 +48,21 @@ import { IRouteService, RouteService } from '../../services/IRouteService';
 // src/styles/_constants.scss.
 const EXTRA_SMALL_WIDTH_BREAKPOINT = 720;
 const SMALL_WIDTH_BREAKPOINT = 959;
-export class DocItem{
-	constructor( args?:Partial<DocItem>){
+export class RouteItem{
+	constructor( args?:Partial<RouteItem>){
 		if( args )
 			Object.assign( this, args );
 	}
-	get path(){ return this._path; } set path(x){ this._path=x; } private _path: string; //routerLink - access/groups or relative
-	get title(){ return this._title; } set title(x){ this._title=x; } private _title: string;
-	get queryParams(){ return this._queryParams; } set queryParams(x){ this._queryParams=x; } private _queryParams: Params;
+	cardClass?: string;
+	externalRedirect?: string;
+	icon?: string;
+	parent?:RouteItem;
+	get path(){ return this._path; } set path(x){ this._path=x; } private _path!: string; //routerLink - access/groups or relative
+	get queryParams(){ return this._queryParams; } set queryParams(x){ this._queryParams=x; } private _queryParams!: Params;
+	siblings?:RouteItem[]; //includes this.
 	summary?: string;
-	parent?:DocItem;
-	siblings?:DocItem[]; //includes this.
+	get title(){ return this._title; } set title(x){ this._title=x; } private _title!: string;
 	get track(){ return this.queryParams ? this.path+JSON.stringify(this.queryParams) : this.path; }
-	excludedColumns?:string[];
 }
 
 // Sidebar + router_outlet
@@ -81,7 +79,7 @@ export class ComponentSidenav implements OnInit, OnDestroy {
   isExtraScreenSmall: Observable<boolean>;
   isScreenSmall: Observable<boolean>;
   private subscriptions = new Subscription();
-	item = model<DocItem>(null);
+	item = model<RouteItem>(null as any);
   constructor( private _route: ActivatedRoute,
               private _navigationFocusService: NavigationFocusService,
               zone: NgZone,
@@ -144,7 +142,7 @@ export class ComponentNav {
 			let loaded = this.item()()!=null;
 			if( loaded ){
 				if( this.item()().parent )
-					this.parentUrl = this.item()().parent.path;
+					this.parentUrl = this.item()().parent!.path;
 				else{
 					let segments = this.parentUrl.split( "/" );
 					if( segments[segments.length-1].startsWith(":") )
@@ -168,8 +166,8 @@ export class ComponentNav {
     return url==`/${this.parentUrl}` || url.substr( this.parentUrl.length+2 ).indexOf('/')!=-1;
   }
   currentItemId: string | undefined;
-	item = input.required<Signal<DocItem>>();
-	parentUrl: string;
+	item = input.required<Signal<RouteItem>>();
+	parentUrl!: string;
 	isLoading = signal( true );
 }
 
@@ -178,7 +176,7 @@ export class ComponentNav {
     MatSidenavModule,
     MatListModule,
     RouterModule,
-    ComponentCategoryListModule,
+    ComponentCategoryList,
     FormsModule,
     CdkAccordionModule,
     MatIconModule,

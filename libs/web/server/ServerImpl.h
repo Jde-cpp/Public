@@ -11,7 +11,7 @@ namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Web::Server{
 namespace Internal{
 	α Start( sp<IRequestHandler> handler )ε->void;
-	α Stop( sp<IRequestHandler>&& handler, bool terminate )ι->void;
+	α Stop( sp<IRequestHandler>&& handler, bool terminate, SL sl )ι->void;
 	α RunSocketSession( sp<IWebsocketSession>&& session )ι->void;
 	α RemoveSocketSession( SocketId id )ι->void;
 }

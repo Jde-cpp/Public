@@ -14,7 +14,7 @@ namespace Jde::Opc::Server {
 				ServerConfigAwait::ServerWhereClause( *nodeTable, "n" )
 			};
 			auto rows = co_await DS().SelectAsync( stmt.Move() );
-			flat_map<OTypeAttrPK,ObjectTypeAttr> attributes; attributes.reserve( rows.size() );
+			auto attributes = ReserveMap<OTypeAttrPK,ObjectTypeAttr>( rows.size() );
 			for( auto&& row : rows )
 				attributes.try_emplace( row.GetUInt32(0), move(row) );
 			Resume( move(attributes) );

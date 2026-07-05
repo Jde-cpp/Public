@@ -18,7 +18,7 @@ namespace Jde::DB::Odbc{
 		α ExecuteSync( Sql&& sql, SRCE )ε->uint override;
 		α ExecuteScalerSync( Sql&& sql, EValue outValue, SRCE )ε->DB::Value override;
 		α ExecuteNoLog( Sql&& sql, SRCE )ε->uint override;
-		α InsertSeqSyncUInt( InsertClause&& insert, SRCE )ε->uint;
+		α InsertSeqSyncUInt( InsertClause&& insert, SRCE )ε->uint override;
 		α Query( Sql&& sql, bool outParams, SRCE )ε->QueryAwait override;
 
 		α Syntax()ι->const DB::Syntax& override{ return Syntax::Instance(); }

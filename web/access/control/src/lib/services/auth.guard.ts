@@ -1,10 +1,11 @@
-import {Inject, Injectable} from '@angular/core';
+import {inject, Inject, Injectable} from '@angular/core';
 import {ActivatedRouteSnapshot, CanActivate, CanActivateChild, GuardResult, Router, RouterStateSnapshot, UrlTree} from '@angular/router';
+import { AccessService } from 'jde-access';
 
 
 @Injectable( {providedIn: 'root'} )
 export class AuthGuard implements CanActivate, CanActivateChild {
-	constructor( @Inject('AccessService') private accessService, private router:Router)
+	constructor( private router:Router)
 	{}
 
 	canActivate( route: ActivatedRouteSnapshot, state: RouterStateSnapshot ):Promise<GuardResult>{
@@ -14,4 +15,5 @@ export class AuthGuard implements CanActivate, CanActivateChild {
 	canActivateChild( childRoute: ActivatedRouteSnapshot, state: RouterStateSnapshot ):Promise<GuardResult>{
 		return Promise.resolve(true);
 	}
+	accessService = inject(AccessService);
 }

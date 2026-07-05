@@ -7,12 +7,10 @@
 #include "UAClient.h"
 #include "auth/PasswordAwait.h"
 #include "ql/GatewayQL.h"
-#include "ql/GatewayQLAwait.h"
 
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	constexpr ELogTags _tags{ ELogTags::HttpServerRead };
 	HttpRequestAwait::HttpRequestAwait( HttpRequest&& req, SL sl )ι:
 		base{ move(req), sl }
 	{}
@@ -105,42 +103,19 @@ namespace Jde::Opc::Gateway{
 		catch( IException& e )
 		{}
 	}
-/*	α HttpRequestAwait::Query()ι->TAwait<jvalue>::Task{
-		try{
-			string query = _request.IsGet() ? _request["query"] : Json::AsString(_request.Body(), "query");
-			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(_request), "no query") );
-			jobject vars;
-			if( auto variableString = _request.IsGet() ? _request["variables"] : string{}; variableString.size() )
-				vars = Json::Parse( variableString );
-			else if( auto p = _request.IsPost() ? _request.Body().if_contains("variables") : nullptr; p && p->is_object() )
-				vars = move( p->get_object() );
-			if( query.starts_with("{") )
-				query = Str::TrimFirstLast( move(query), '{', '}' );
-			_request.LogRead( query );
-			auto ql = QL::Parse( move(query), move(vars), Schemas(), _request.Params().contains("raw") );
-			THROW_IFX( ql.IsMutation() && !_request.IsPost(), RestException<http::status::bad_request>(SRCE_CUR, move(_request), "Mutations must use post.") );
-			jvalue y = co_await GatewayQLAwait{ move(ql), _request.SessionInfo, _request.Params().contains("raw") };
-			Resume( HttpTaskResult{jobject{{"data", move(y)}}, move(_request)} );
-		}
-		catch( exception& e ){
-			ResumeExp( move(e) );
-		}
-	}*/
-	α HttpRequestAwait::QueryHandler( QL::RequestQL&& q, variant<sp<SessionInfo>, Jde::UserPK> creds, bool returnRaw, SL sl )ι->up<IQLAwait>{
-		return mu<GatewayQLAwait>( move(q), move(creds), returnRaw, sl );
-	}
+
 	α HttpRequestAwait::Schemas()Ι->const vector<sp<DB::AppSchema>>&{
 		return Gateway::Schemas();
 	}
-	
+
 	α HttpRequestAwait::Suspend()ι->void{
  		if( _request.IsPost("/login") ) //used with user/password on Opc Server.
 			Login( _request.UserEndpoint.address().to_string() );
 		else if( _request.IsPost("/logout") )
 			Logout();
-		else if( _request.IsGet("/graphql") || _request.IsPost("/graphql") )
-			Query();
-		else{
+		else if( _request.IsGet("/graphql") || _request.IsPost("/graphql") ){
+			ASSERT(false);
+		}else{
 			auto opc = _request["opc"];
 			if( opc.size() )
 				CoHandleRequest( move(opc) );

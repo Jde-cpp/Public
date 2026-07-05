@@ -12,6 +12,7 @@ import {MetaObject}  from '../../../model/ql/schema/MetaObject';
 import { ComponentPageTitle } from 'jde-spa';
 import { GraphQLTable } from '../../GraphQL/table/table';
 import { SelectionModel } from '@angular/cdk/collections';
+import { View, ViewField } from '../../../model/ql/View';
 
 @Component( {
 		selector: 'ql-selector',//.main-content.mat-drawer-container.my-content
@@ -28,10 +29,12 @@ export class QLSelector implements OnInit{
 		try{
 			const columns = ["id", "name", "description"];
 			const input = this.excludedIds().length  ? `(id: {notIn: ${JSON.stringify(this.excludedIds())}})` : "";
-			this.data.set( (await this.ql().query(`${this.collectionName()}${input}{${columns.join(" ")}}`))[this.collectionName()] );
+			let rows = await this.ql().query(`${this.collectionName()}${input}{${columns.join(" ")}}`, {}, (m)=>console.log(m)) as any;
+			this.data.set( rows[this.collectionName()] );
 			if( !this.schemaInput() )
-				this.#schema = await this.ql().schemaWithEnums( this.collectionName() );
-			this.displayedFields = Field.filterSort( this.schema.fields.filter((x)=>columns.includes(x.name)), columns, this.excludedColumnsInput() );
+				this.#schema = await this.ql().schemaWithEnums( this.collectionName(), (m)=>console.log(m) );
+			let view = new View( {configColumns: columns, sort: [{active: "name", direction: "asc"}]}, this.schema );
+			this.displayedFields = view.fields.filter( f=>f.displayed );
 			this.isLoading.set( false );
 		}
 		catch( e ){
@@ -54,15 +57,15 @@ export class QLSelector implements OnInit{
 	selections = model.required<SelectionModel<number>>();
 	isLoading = signal<boolean>( true );
 	collectionName = computed<string>( ()=> MetaObject.toCollectionName(this.type()) );
-	displayedFields:Field[];
+	displayedFields!:ViewField[];
 	excludedIds = input<number[]>( [] );
-	@ViewChild('mainTable',{static: false}) _table:MatTable<any>;
-	data=signal<any[]>( null );
+	@ViewChild('mainTable',{static: false}) _table!:MatTable<any>;
+	data=signal<any[]>( null as any );
 	excludedColumnsInput = input<string[]>([]);
-	get name():string{ return <string>this.routeConfig.title; }
+	get name():string{ return <string>this.routeConfig!.title; }
 	get routeConfig(){ return this.route.routeConfig;}
 	schemaInput=input<TableSchema>();
-	get schema():TableSchema{ return this.schemaInput() ?? this.#schema; } #schema:TableSchema;
+	get schema():TableSchema{ return this.schemaInput() ?? this.#schema; } #schema!:TableSchema;
 	ql=input.required<IGraphQL>();
 
 	get sort():Sort{ return {active: "name", direction: "asc"}; }

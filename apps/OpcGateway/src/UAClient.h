@@ -2,6 +2,7 @@
 //#include "../exports.h"
 #include <jde/opc/uatypes/Logger.h>
 #include <jde/opc/uatypes/ExNodeId.h>
+#include "uatypes/ExpectedNodeId.h"
 #include "async/AsyncRequest.h"
 #include "async/ConnectAwait.h"
 #include "async/DataChanges.h"
@@ -13,7 +14,6 @@
 
 namespace Jde::Opc{	struct Value; }
 namespace Jde::Opc::Gateway{
-	//struct Credential;
 	namespace Browse{ struct Request; }
 	namespace Read{ α OnResponse( UA_Client *client, void *userdata, RequestId requestId, StatusCode status, UA_DataValue *value )ι->void; }
 	namespace Write{ α OnResponse( UA_Client *ua, void *userdata, RequestId requestId, UA_WriteResponse *response )ι->void; }
@@ -27,7 +27,7 @@ namespace Jde::Opc::Gateway{
 		~UAClient();
 
 		operator UA_Client* ()ι{ return _ptr; }
-		Ω Shutdown( bool terminate )ι->VoidAwait::Task;
+		Ω Shutdown( bool terminate=false, SRCE )ι->VoidAwait::Task;
 		Ω GetClient( string id, Credential cred, SRCE )ι{ return ConnectAwait{move(id), move(cred), sl}; }
 		Ω Find( str id, const Gateway::Credential& cred )ι->sp<UAClient>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
@@ -56,7 +56,7 @@ namespace Jde::Opc::Gateway{
 		α DefaultBrowseNs()Ι->NsIndex{ return _opcServer.DefaultBrowseNs; }
 		α Handle()Ι->Jde::Handle{ return _handle;}
 		α UAPointer()Ι->UA_Client*{return _ptr;}
-		α BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,std::expected<ExNodeId,StatusCode>>;
+		α BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,ExpectedNodeId>;
 		sp<UA_SetMonitoringModeResponse> MonitoringModeResponse;
 		sp<UA_CreateSubscriptionResponse> CreatedSubscriptionResponse;
 		UA_ClientConfig _config{};//TODO move private.
@@ -71,7 +71,7 @@ namespace Jde::Opc::Gateway{
 		Ω LogServerEndpoints( str url, Jde::Handle h )ι->void;
 		α LogClientEndpoints()ι->void;
 		α RootSslDir()ι->fs::path{ return Process::AppDataFolder()/"ssl"; }
-		α Passcode()ι->const string{ return Process::GetEnv("JDE_PASSCODE").value_or( "" ); }
+		α Passcode()ι->string{ return Process::GetEnv("JDE_PASSCODE").value_or( "" ); }
 		α PrivateKeyFile()ι->fs::path{ return RootSslDir()/Ƒ("private/{}.pem", Target()); }
 		α CertificateFile()ι->fs::path{ return RootSslDir()/Ƒ("certs/{}.pem", Target()); }
 

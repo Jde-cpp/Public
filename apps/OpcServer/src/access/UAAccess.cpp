@@ -23,9 +23,11 @@ typedef struct {
 } AccessControlContext;
 
 
-namespace Jde::Opc::Server::UAAccess{
+namespace Jde::Opc::Server{
 	ELogTags _tags = ( ELogTags )( (EOpcLogTags)ELogTags::Access | EOpcLogTags::Opc );
 	string _schemaName;
+}
+namespace Jde::Opc::Server::UAAccess{
 	Ω authorize( sv resource, Access::ERights rights, UserPK userPK )ι->bool{
 		bool allow{ true };
 		try{
@@ -48,7 +50,19 @@ namespace Jde::Opc::Server::UAAccess{
 		return *cntxt;
 	}
 
+	Ω clearAccessControl( UA_AccessControl* ac )ι->void{
+		if( auto context = (AccessControlContext*)ac->context ){
+			UA_String_clear( &context->UserTokenPolicyUri );
+			UA_free( context );
+			ac->context = nullptr;
+		}
+		UA_Array_delete( ac->userTokenPolicies, ac->userTokenPoliciesSize, &UA_TYPES[UA_TYPES_USERTOKENPOLICY] );
+		ac->userTokenPolicies = nullptr;
+		ac->userTokenPoliciesSize = 0;
+	}
+
 	Ω assignFunctions( UA_AccessControl& ac )ι{
+		ac.clear = &clearAccessControl;
 		ac.activateSession = &ActivateSession;
 		ac.closeSession = &CloseSession;
 		ac.getUserRightsMask = &GetUserRightsMask;
@@ -99,13 +113,13 @@ namespace Jde::Opc::Server{
 			log += ToString( utpUri ) + ",";
       if( context.allowAnonymous ){
       	ac.userTokenPolicies[policies].tokenType = UA_USERTOKENTYPE_ANONYMOUS;
-        ac.userTokenPolicies[policies].policyId = ToUV( "open62541-anonymous-policy" );
+        ac.userTokenPolicies[policies].policyId = UA_STRING_ALLOC( "open62541-anonymous-policy" );// must be heap-owned: UA_Array_delete in clearAccessControl deep-frees policyId; a ToUV view would free a string literal.
         UA_String_copy( &utpUri, &ac.userTokenPolicies[policies].securityPolicyUri );
         ++policies;
       }
       if( context.AllowCertificate ){
         ac.userTokenPolicies[policies].tokenType = UA_USERTOKENTYPE_CERTIFICATE;
-        ac.userTokenPolicies[policies].policyId = ToUV( "open62541-certificate-policy" );
+        ac.userTokenPolicies[policies].policyId = UA_STRING_ALLOC( "open62541-certificate-policy" );// must be heap-owned: UA_Array_delete in clearAccessControl deep-frees policyId; a ToUV view would free a string literal.
         if( UA_String_equal(&utpUri, &UA_SECURITY_POLICY_NONE_URI) )
 					DBGT( (ELogTags)EOpcLogTags::Server, "x509 Certificate Authentication configured, but no encrypting SecurityPolicy. This can leak credentials on the network." );
         UA_String_copy( &utpUri, &ac.userTokenPolicies[policies].securityPolicyUri );
@@ -143,72 +157,72 @@ namespace Jde::Opc::Server{
         userIdentityToken = &tmpIdentity;
     }
 
-    /* Could the token be decoded? */
-    if( userIdentityToken->encoding < UA_EXTENSIONOBJECT_DECODED )
-        return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+		try{
+			/* Could the token be decoded? */
+			if( userIdentityToken->encoding < UA_EXTENSIONOBJECT_DECODED )
+				throw UAException{ UA_STATUSCODE_BADIDENTITYTOKENINVALID };
 
-    const UA_DataType *tokenType = userIdentityToken->content.decoded.type;
-    if( tokenType == &UA_TYPES[UA_TYPES_ANONYMOUSIDENTITYTOKEN] ) {
-        /* Anonymous login */
-        if( !context->allowAnonymous )
-            return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+			const UA_DataType *tokenType = userIdentityToken->content.decoded.type;
+			if( tokenType == &UA_TYPES[UA_TYPES_ANONYMOUSIDENTITYTOKEN] ) {
+					/* Anonymous login */
+					if( !context->allowAnonymous )
+							throw UAException{ UA_STATUSCODE_BADIDENTITYTOKENINVALID };
 
-        const UA_AnonymousIdentityToken *token = ( UA_AnonymousIdentityToken* )
-            userIdentityToken->content.decoded.data;
+					const UA_AnonymousIdentityToken *token = ( UA_AnonymousIdentityToken* )
+							userIdentityToken->content.decoded.data;
 
-        /* Match the beginnig of the PolicyId.
-         * Compatibility notice: Siemens OPC Scout v10 provides an empty
-         * policyId. This is not compliant. For compatibility, assume that empty
-         * policyId == ANONYMOUS_POLICY */
-        if( token->policyId.data &&
-           ( token->policyId.length < anonymous_policy.length ||
-            strncmp( (const char*)token->policyId.data,
-                    ( const char* )anonymous_policy.data,
-                    anonymous_policy.length) != 0)) {
-            return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
-        }
-    } else if( tokenType == &UA_TYPES[UA_TYPES_USERNAMEIDENTITYTOKEN] ) {
-			/* Username and password */
-			const UA_UserNameIdentityToken *userToken = ( UA_UserNameIdentityToken* )
-					userIdentityToken->content.decoded.data;
-
-			/* Match the beginnig of the PolicyId */
-			if( userToken->policyId.length < username_policy.length ||
-					strncmp( (const char*)userToken->policyId.data,
-									( const char* )username_policy.data,
-									username_policy.length) != 0) {
-					return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
-			}
-
-			/* The userToken has been decrypted by the server before forwarding
-				* it to the plugin. This information can be used here. */
-			/* if( userToken->encryptionAlgorithm.length > 0 ) {} */
-
-			/* Empty username and password */
-			if( userToken->userName.length == 0 && userToken->password.length == 0 )
-					return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
-
-			/* Try to match username/pw */
-			UA_Boolean match = false;
-			if( context->loginCallback ) {
-					if( context->loginCallback(&userToken->userName, &userToken->password,
-							context->usernamePasswordLoginSize, context->usernamePasswordLogin,
-							sessionContext, context->loginContext) == UA_STATUSCODE_GOOD)
-							match = true;
-			} else {
-					for( size_t i = 0; i < context->usernamePasswordLoginSize; i++ ) {
-							if( UA_String_equal(&userToken->userName, &context->usernamePasswordLogin[i].username) &&
-									UA_ByteString_equal( &userToken->password, &context->usernamePasswordLogin[i].password )) {
-									match = true;
-									break;
-							}
+					/* Match the beginnig of the PolicyId.
+					* Compatibility notice: Siemens OPC Scout v10 provides an empty
+					* policyId. This is not compliant. For compatibility, assume that empty
+					* policyId == ANONYMOUS_POLICY */
+					if( token->policyId.data &&
+						( token->policyId.length < anonymous_policy.length ||
+							strncmp( (const char*)token->policyId.data,
+											( const char* )anonymous_policy.data,
+											anonymous_policy.length) != 0)) {
+							throw UAException{ UA_STATUSCODE_BADIDENTITYTOKENINVALID };
 					}
-			}
-			if( !match )
-					return UA_STATUSCODE_BADUSERACCESSDENIED;
-    } else if( tokenType == &UA_TYPES[UA_TYPES_X509IDENTITYTOKEN] ) {
-			const UA_X509IdentityToken *userToken = ( UA_X509IdentityToken* )userIdentityToken->content.decoded.data;
-			try{
+			} else if( tokenType == &UA_TYPES[UA_TYPES_USERNAMEIDENTITYTOKEN] ) {
+				/* Username and password */
+				const UA_UserNameIdentityToken *userToken = ( UA_UserNameIdentityToken* )
+						userIdentityToken->content.decoded.data;
+
+				/* Match the beginnig of the PolicyId */
+				if( userToken->policyId.length < username_policy.length ||
+						strncmp( (const char*)userToken->policyId.data,
+										( const char* )username_policy.data,
+										username_policy.length) != 0) {
+						throw UAException{ UA_STATUSCODE_BADIDENTITYTOKENINVALID };
+				}
+
+				/* The userToken has been decrypted by the server before forwarding
+					* it to the plugin. This information can be used here. */
+				/* if( userToken->encryptionAlgorithm.length > 0 ) {} */
+
+				/* Empty username and password */
+				if( userToken->userName.length == 0 && userToken->password.length == 0 )
+						throw UAException{ UA_STATUSCODE_BADIDENTITYTOKENINVALID };
+
+				/* Try to match username/pw */
+				UA_Boolean match = false;
+				if( context->loginCallback ) {
+						if( context->loginCallback(&userToken->userName, &userToken->password,
+								context->usernamePasswordLoginSize, context->usernamePasswordLogin,
+								sessionContext, context->loginContext) == UA_STATUSCODE_GOOD)
+								match = true;
+				} else {
+						for( size_t i = 0; i < context->usernamePasswordLoginSize; i++ ) {
+								if( UA_String_equal(&userToken->userName, &context->usernamePasswordLogin[i].username) &&
+										UA_ByteString_equal( &userToken->password, &context->usernamePasswordLogin[i].password )) {
+										match = true;
+										break;
+								}
+						}
+				}
+				if( !match )
+						throw UAException{ UA_STATUSCODE_BADUSERACCESSDENIED };
+			} else if( tokenType == &UA_TYPES[UA_TYPES_X509IDENTITYTOKEN] ) {
+				const UA_X509IdentityToken *userToken = ( UA_X509IdentityToken* )userIdentityToken->content.decoded.data;
 				if( userToken->policyId.length < certificate_policy.length ||
 					strncmp( (const char*)userToken->policyId.data,
 									( const char* )certificate_policy.data,
@@ -221,41 +235,34 @@ namespace Jde::Opc::Server{
 				let exp = publicKey.ExponentInt();
 				let user = AppClient()->QuerySync( Ƒ("user( modulus: \"{}\", exponent: {} ){{id target name}}", publicKey.ModulusHex(), exp), {} );
 				THROW_IF( user.empty(), "Certificate user not found: modulus: {}, exponent: {}", publicKey.ModulusHex(), exp );
-				*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, QL::AsId<UserPK::Type>(user) };
+				*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, {QL::AsId<UserPK::Type>(user)} };
 			}
-			catch( const UAException& e ){
-				return e.Code;
-			}
-			catch( const exception& e ){
-				return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
-			}
-    }
-		else if( tokenType == &UA_TYPES[UA_TYPES_ISSUEDIDENTITYTOKEN] ) {
-      const UA_IssuedIdentityToken* userToken = ( UA_IssuedIdentityToken* )userIdentityToken->content.decoded.data;
-			try{
+			else if( tokenType == &UA_TYPES[UA_TYPES_ISSUEDIDENTITYTOKEN] ) {
+				const UA_IssuedIdentityToken* userToken = ( UA_IssuedIdentityToken* )userIdentityToken->content.decoded.data;
 				THROW_IFX( !userToken->tokenData.length, Exception(_tags, SRCE_CUR, "Empty issued token") );
 				if( userToken->tokenData.length<9 ){
 					let sessionId = std::stoul( string{ToSV(userToken->tokenData)}, 0, 16 );
 					let sessionInfo = BlockAwait<TAwait<Web::FromServer::SessionInfo>, Web::FromServer::SessionInfo>( 	move(*AppClient()->SessionInfoAwait(sessionId)) );
-					*sessionContext = new SessionContext{ sessionInfo.user_endpoint(), Protobuf::ToTimePoint(sessionInfo.expiration()), sessionInfo.session_id(), sessionInfo.user_pk() };
+					*sessionContext = new SessionContext{ sessionInfo.user_endpoint(), Protobuf::ToTimePoint(sessionInfo.expiration()), sessionInfo.session_id(), {sessionInfo.user_pk()} };
 				}
 				else{
 					Web::Jwt jwt{ ToSV(userToken->tokenData) };
 					AppClient()->Verify( jwt );
 					*sessionContext = new SessionContext{ {}, jwt.Expires(), Str::TryTo<SessionPK>(jwt.SessionId, 0, 16).value_or(0), jwt.UserPK };
 				}
-				//auto info = AppClient()->QuerySyncSecure( Ƒ("session(jwt: {}){{expiration sessionId userPK endpoint}}", ToString(userToken->tokenData)) );
 			}
-			catch( exception& e ){
-				return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+			else {
+					/* Unsupported token type */
+					throw UAException{ UA_STATUSCODE_BADIDENTITYTOKENINVALID };
 			}
-    }
-		 else {
-        /* Unsupported token type */
-        return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
-    }
-
-    return UA_STATUSCODE_GOOD;
+	    return UA_STATUSCODE_GOOD;
+		}
+		catch( const UAException& e ){
+			return e.Code;
+		}
+		catch( const exception& e ){
+			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+		}
 	}
 	α UAAccess::CloseSession( UA_Server* server, UA_AccessControl* ac,const UA_NodeId* sessionId, void* sessionContext )ι->void{
 		SessionContext* ctx = static_cast<SessionContext*>( sessionContext );

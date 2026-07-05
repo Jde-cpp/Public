@@ -8,7 +8,8 @@ import { NodeRights } from './node-rights/node-rights';
 //import { Gateway } from '../../../../services/gateway.service';
 import { EAccess, EWriteAccess } from '../../../model/types';
 import { NodeRoute } from '../../../model/NodeRoute';
-import { AppService, LocalProfileStore, Mutation, MutationType } from 'jde-framework';
+import { ProfileStore } from 'jde-spa';
+import { AppService, Mutation, MutationType } from 'jde-framework';
 import { ActivatedRoute } from '@angular/router';
 import { Permission, Role } from 'jde-access';
 
@@ -38,7 +39,7 @@ export class NodeAccess implements OnInit, OnDestroy{
 			let prev = null;
 			for( let segment of this.route().browsePath.split('/') ){
 				let path = prev ? prev + '/' + segment : segment;
-				criteria.push( segment=='' ? null : segment );
+				criteria.push( segment=='' ? null as unknown as any : segment );
 				prev = segment;
 			}
 			const vars = { schemaName: `opc.${this.accessResource()}`, target: "node", criteria: criteria };
@@ -63,7 +64,7 @@ export class NodeAccess implements OnInit, OnDestroy{
 	}
 
 	ngOnDestroy() {
-		LocalProfileStore.setTabIndex( 'nodeAccess', this.tabIndex );
+		ProfileStore.setTabIndex( 'nodeAccess', this.tabIndex );
   }
 	async save(){
 		await this.appService.mutate( this.mutations(), (m)=>console.log(m) );
@@ -84,19 +85,19 @@ export class NodeAccess implements OnInit, OnDestroy{
 				role.allowed |= rights;
 		}
 
-		let original = this.original.find( x=>x.roleId==role.roleId );
+		let original = this.original.find( x=>x.roleId==role.roleId )!;
 		let args:{allowed?: number, denied?: number} = {};
 		if( role.allowed != original.allowed )
 			args.allowed = role.allowed;
 		if( role.denied != original.denied )
 			args.denied = role.denied;
 		let index = this.mutations().findIndex( x=>x.id==role.roleId );
-		let mutation:Mutation = null;
+		let mutation:Mutation|undefined = undefined;
 		if( Object.keys(args).length>0 ){
 			if( !args.allowed && !args.denied )
 				mutation = new Mutation(Role.typeName, role.roleId, {permissionRight:{id: role.permissionId}}, MutationType.Remove );
 			else{
-				let resource = role.resourceId ? { id: role.resourceId } : { schema: `opc.${this.accessResource()}`, target: "nodeIds" };
+				let resource:any = role.resourceId ? { id: role.resourceId } : { schema: `opc.${this.accessResource()}`, target: "nodeIds" };
 				resource["criteria"] = role.criteria ? role.criteria : null;
 				mutation = new Mutation( Role.typeName, role.roleId, { permissionRight: {allowed: role.allowed, denied: role.denied, resource: resource} }, MutationType.Add );
 			}
@@ -121,13 +122,13 @@ export class NodeAccess implements OnInit, OnDestroy{
 	mutations = signal<Mutation[]>( [] );
 	isLoading = signal( true );
 	node = model.required<UaNode>();
-	tabIndex:number = LocalProfileStore.tabIndex( 'nodeAccess' );
-	original:RolePermission[];
+	tabIndex:number = ProfileStore.tabIndex( 'nodeAccess' );
+	original!:RolePermission[];
 
 	accessResource = input.required<string>();
 	route = model.required<NodeRoute>();
 	rights = EAccess;
 	roles: RolePermission[]=[];
-	writeRoles: RolePermission[];
+	writeRoles!: RolePermission[];
 	appService = inject(AppService);
 }

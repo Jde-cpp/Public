@@ -1,22 +1,36 @@
 @if( !isLoading() ) {
-	<ng-container>
-		<mat-toolbar>
-			<span></span>
-			@if( showAdd ){
-				<button mat-icon-button color="primary" style="margin-left :20px; margin-right:10px" (click)="insert()"><mat-icon>add</mat-icon></button>
-			}
-			<button mat-icon-button (click)="edit()" [disabled]="selection()==null" [title]='selection()?.deleted ? "Restore" : "Properties"'  color="primary" style="margin-left :20px; margin-right:10px">
-				<mat-icon>{{selection()?.deleted ? "restore" : "edit_attributes"}}</mat-icon>
-			</button>
-			<button mat-icon-button color="primary"  style="margin-left :20px; margin-right:10px"
-				[disabled]="selection()==null || (selection().deleted && !canPurge)"
-				(click)="delete()">
-				<mat-icon>{{selection()?.deleted ? "delete_forever" : "remove"}}</mat-icon></button>
-			<span></span>
-			<mat-checkbox [checked]="showDeleted" color="primary" (change)="toggleShowDeleted()">Show Deleted</mat-checkbox>
-		</mat-toolbar>
-		<div style="align-content: center; margin: auto;  text-align: center">
-			<ql-table [dataSource]=data [displayedFields]=displayedFields  [sort]=sort [showDeleted]=showDeleted [(selections)]=selections></ql-table>
-		</div>
-	</ng-container>
+	@if( isSettings() ){
+		<ql-list-settings [suggestions]=colSuggestions() [columns]=columns() [view]=view() [schema]=schema() [excludedColumns]=excludedColumns() (onSave)=onViewSave($event) (onShow)=onViewShow($event) (onDelete)=onViewDelete($event) (onCancel)=onViewCancel()></ql-list-settings>
+	} @else {
+		<ng-container>
+			<mat-toolbar>
+				<mat-form-field subscriptSizing="dynamic">
+					<mat-label>View</mat-label>
+					<mat-select [(value)]="resolvedData().profile.currentViewIndex" (selectionChange)="onChangeView($event.value)">
+						@for (view of resolvedData().profile.views; track view; let i=$index) {
+							<mat-option [value]=i>{{ (view.name ?? "&lt;default&gt;") + (view.isAdhoc ? "*" : "") }}</mat-option>
+						}
+					</mat-select>
+				</mat-form-field>
+				<button matIconButton aria-label="Settings" (click)="isSettings.set(true)">
+					<mat-icon>settings</mat-icon>
+				</button>
+				@if( showAdd() ){
+					<button matButton="tonal" style="margin-left :20px; margin-right:10px" (click)="insert()">Add</button>
+				}
+				<button mat-icon-button (click)="edit()" [disabled]="selection()==null" [title]='selection()?.deleted ? "Restore" : "Properties"'  color="primary" style="margin-left :20px; margin-right:10px">
+					<mat-icon>{{selection()?.deleted ? "restore" : "edit_attributes"}}</mat-icon>
+				</button>
+				<button mat-icon-button color="primary"  style="margin-left :20px; margin-right:10px"
+					[disabled]="selection()==null || (selection().deleted && !canPurge)"
+					(click)="delete()">
+					<mat-icon>{{selection()?.deleted ? "delete_forever" : "remove"}}</mat-icon></button>
+				<span></span>
+				<mat-checkbox [checked]="showDeleted()" color="primary" (change)="onToggleShowDeleted()">Show Deleted</mat-checkbox>
+			</mat-toolbar>
+			<div style="align-content: center; margin: auto;  text-align: center">
+				<ql-table [dataSource]=data [displayedFields]=displayedFields() [sort]=sort (onSortChange)=onSortChange($event) [(selections)]=selections></ql-table>
+			</div>
+		</ng-container>
+	}
 }

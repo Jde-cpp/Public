@@ -13,13 +13,12 @@
 #include <jde/access/Authorize.h>
 #include "../serverInternal.h"
 #include "../../accessInternal.h"
-#pragma GCC diagnostic ignored "-Wdangling-reference"
 
 #define let const auto
 namespace Jde::Access::Server{
 
-	//{ mutation addRole( id:42, allowed:255, denied:0, resource:{target:"users"} ) }
-	//{ mutation addRole( id:11, role:{id:13} ) }
+	//{ mutation addRole(id:42, allowed:255, denied:0, resource:{target:"users"}) }
+	//{ mutation addRole(id:11, role:{id:13}) }
 	α RoleMAwait::Add()ι->void{
 		let rolePK = _mutation.Id<RolePK>();
 		let args = _mutation.ExtrapolateVariables();
@@ -51,21 +50,31 @@ namespace Jde::Access::Server{
 	α RoleMAwait::AddPermission( RolePK rolePK, const jobject& rights )ι->TAwait<PermissionRightsPK>::Task{
 		try{
 			//addRole( id:1, permissionRight:{allowed:1, denied:0, resource:{schema:\"opc.default\", target:\"nodeIds\", criteria:null}} )","variables":{}}
-			let resource = Json::AsObject( rights, "resource" );
-			auto schema = Json::FindString(resource, "schemaName");
-			auto criteria = Json::FindString(resource, "criteria");
-			auto resourceName = Json::FindString(resource, "name");
-			let resourceTarget = Json::AsString(resource, "target");
+			auto& resource = Json::AsObject( rights, "resource" );
+			auto schema = Json::FindString( resource, "schemaName" );
+			auto criteria = Json::FindString( resource, "criteria" );
+			if( criteria && criteria->empty() )
+				criteria = nullopt;
+			auto resourceName = Json::FindString( resource, "name" );
 			auto& auth = Authorizer();
+			auto resourceKey = Json::AsKey( resource );
+			if( resourceKey.IsPK() ){
+				if( auto existing = auth.FindResource( Resource{(ResourcePK)resourceKey.PK(), {}} ); existing ){
+					resourceKey = DB::Key{ existing->Target };
+					schema = existing->Schema;
+				}else
+					THROW( "Resource with PK '{}' not found.", resourceKey.PK() );
+			}
 			if( !schema )
-				schema = auth.FindSchema( resourceTarget, _sl );
-			auth.TestAdmin( *schema, resourceTarget, criteria.value_or(""), _userPK );
+				schema = auth.GetSchema( resourceKey.NK(), _sl );
+
+			auth.TestAdmin( *schema, resourceKey.NK(), criteria.value_or(""), _userPK );
 			let& table = GetTable( "roles" );
 			DB::InsertClause insert{ DB::Names::ToSingular(table.DBName)+"_add" };
 			insert.Add( rolePK );
-			insert.Add( Json::FindNumber<uint8>(rights, "allowed").value_or(0) );
-			insert.Add( Json::FindNumber<uint8>(rights, "denied").value_or(0) );
-			insert.Add( resourceTarget );
+			insert.Add( Json::FindNumber<uint>(rights, "allowed").value_or(0) );
+			insert.Add( Json::FindNumber<uint>(rights, "denied").value_or(0) );
+			insert.Add( resourceKey.NK() );
 			insert.Add( *schema );
 			insert.AddOpt( move(resourceName) );
 			insert.AddOpt( criteria );
@@ -73,19 +82,56 @@ namespace Jde::Access::Server{
 			let permissionPK = co_await ds->InsertSeq<PermissionRightsPK>( move(insert) );
 			jobject y;
 			auto& permissionRight = y["permissionRight"].emplace_object();
-			if( criteria ){
-				auto resourcePK = auth.FindResourcePK(*schema, resourceTarget, *criteria);
+			//if( criteria ){
+				auto resourcePK = auth.FindResourcePK( *schema, resourceKey.NK(), criteria.value_or(string{}) );
+				vector<DB::Value> params{ {*schema}, {resourceKey.NK()} };
 				if( !resourcePK ){
-					resourcePK = co_await ds->Scaler<ResourcePK>({
-						Ƒ( "select resource_id from {} where schema_name=? and target=? and criteria=?", GetTable("resources").DBName ),
-						{ {*schema}, {resourceTarget}, {*criteria} }
-					 });
-					auth.AddResource( *resourcePK, *schema, resourceTarget, *criteria );
+					string dbCriteria;
+					if( criteria.has_value() ){
+						dbCriteria = "criteria=?";
+						params.emplace_back( *criteria );
+					}
+					else
+						dbCriteria = "criteria is null";
+					let foundPK = co_await ds->Scaler<ResourcePK>({ //COALESCE so a missing/deleted resource returns 0 instead of throwing "No value returned".
+						Ƒ( "select coalesce( (select resource_id from {} where schema_name=? and target=? and {} and deleted is null), 0 )", GetTable("resources").DBName, dbCriteria ),
+						move(params)
+					});
+					if( foundPK ){
+						resourcePK = foundPK;
+						auth.AddResource( *resourcePK, *schema, resourceKey.NK(), criteria.value_or(string{}) );
+					}
 				}
-				permissionRight["resource"].emplace_object()["id"] = *resourcePK;
-			}
+				if( resourcePK )
+					permissionRight["resource"].emplace_object()["id"] = *resourcePK;
+			//}
 			permissionRight["id"] = permissionPK;
-			QL::Subscriptions::OnMutation( _mutation, y );
+			QL::Subscriptions::OnMutation(
+				_mutation,
+				y,
+				[&]( QL::TableQL& subscription )->bool {
+					let permissionRights = subscription.FindTable("permissionRights");
+					if( !permissionRights )
+						return true;
+					let resource = permissionRights->FindTable("resource");
+					if( !resource )
+						return true;
+					let subscriptionSchema = resource->FindPtr<jvalue>("schemaName");
+					if( !subscriptionSchema )
+						return true;
+					if( subscriptionSchema->is_string() )
+						return *schema==subscriptionSchema->as_string();
+					else if( subscriptionSchema->is_array() ){
+						for( let& v : subscriptionSchema->as_array() ){
+							if( v.is_string() && *schema==v.get_string() )
+								return true;
+						}
+						return false;
+					}
+					DBGT( ELogTags::Access, "Unexpected schemaName type in subscription: {}", serialize(*subscriptionSchema) );
+					return false;
+				}
+			);
 			Resume( y );
 		}
 		catch( IException& e ){
@@ -93,7 +139,7 @@ namespace Jde::Access::Server{
 		}
 	}
 
-	α RoleMAwait::Remove()ι->DB::ExecuteAwait::Task{ //removeRole( id:42, permissionRight:{id:420} )
+	α RoleMAwait::Remove()ι->DB::ExecuteAwait::Task{ //removeRole(id:42, permissionRight:{id:420})
 		let& table = GetTable( "roles" );
 		DB::InsertClause remove{ DB::Names::ToSingular(table.DBName)+"_remove" };
 		remove.Add( _mutation.Id<RolePK>() );
@@ -110,7 +156,7 @@ namespace Jde::Access::Server{
 		UserPK{ userPK }
 	{}
 
-	α RoleAwait::RoleStatement( QL::TableQL& roleQL )ε->optional<DB::Statement>{ //role( id:11 ){ role(id:13){id target deleted} }
+	α RoleAwait::RoleStatement( QL::TableQL& roleQL )ε->optional<DB::Statement>{ //role(id:11){role(id:13){id target deleted}}
 		auto statement = QL::SelectStatement( roleQL, true );
 		if( statement ){
 			let& roleTable = GetTable( "roles" );
@@ -145,11 +191,11 @@ namespace Jde::Access::Server{
 				else{
 					auto rolesTable = GetTable( "roles" );
 					permissionStatement->Where.Add( rolesTable.GetColumnPtr("target"), DB::Value::FromKey(*roleKey) );
-					permissionStatement->From += {MemberTable->GetSK0(), rolesTable.GetPK() };
+					permissionStatement->From += { MemberTable->GetSK0(), rolesTable.GetPK() };
 				}
 			}
 
-			if( !permissionQL.FindColumn( "id" ) ){
+			if( !permissionQL.FindColumn("id") ){
 				permissionStatement->Select+=permissionsTable.GetPK();
 				permissionQL.Columns.push_back( QL::ColumnQL{"id", permissionsTable.GetPK()} );
 			}
@@ -159,27 +205,29 @@ namespace Jde::Access::Server{
 		return permissionStatement;
 	}
 
-	//query{ role( id:42 ){permissionRights{id allowed denied resource(target:"users",criteria:null)}} }
+	//query{ role(id:42){permissionRights{id allowed denied resource(target:"users",criteria:null)}} }
 	α RoleAwait::Select()ι->QL::QLAwait<>::Task{
 		try{
 			optional<jvalue> permissions;
 			optional<jvalue> roleMembers;
 			string permissionsKey = "permissionRights";
-			string roleKey = "roles";
-			// QL: role( id:16 ){permissionRight{id allowed denied resource(target:"users",criteria:null)} }
-			if( auto permissionQL = Query.ExtractTable("permissionRights"); permissionQL ){
-				if( auto statement = PermissionsStatement( *permissionQL ); statement ){
+			bool permissionsPlural = true;
+			// QL: role( id:16 ){ permissionRight{id allowed denied resource(target:"users",criteria:null)} }
+			if( auto permissionQL = Query.ExtractTable(permissionsKey); permissionQL ){
+				if( permissionsPlural = permissionQL->IsPlural(); !permissionsPlural ){
+					permissionQL->JsonName = permissionsKey;//bring back array could be single right for multiple roles.
+					permissionsKey = "permissionsRight";
+				}
+				if( auto statement = PermissionsStatement(*permissionQL); statement ){
 					auto rights = co_await QL::QLAwait<jvalue>{ move(*permissionQL), move(*statement), UserPK };
-					if( rights.is_array() )
-						permissions = move( rights.get_array() );
-					else if( rights.is_object() ){
-						permissionsKey = "permissionRight";
-						permissions = move( rights.get_object() );
-					}
+					permissions = move( rights.get_array() );
 				}
 			}
+			string roleKey = "roles";
+			bool rolePlural = true;
 			if( auto roleQL = Query.ExtractTable("roles"); roleQL ){
 				if( auto statement = RoleStatement(*roleQL); statement ){
+					rolePlural = roleQL->IsPlural();
 					auto dbMembers = co_await QL::QLAwait( move(*roleQL), move(*statement), UserPK );
 					if( dbMembers.is_array() )
 						roleMembers = dbMembers.get_array().empty() ? jarray{} : move( dbMembers.get_array() );
@@ -191,33 +239,33 @@ namespace Jde::Access::Server{
 			}
 
 			flat_map<RolePK,jobject> roles;
-			auto createRolesFromMembers = [&roles]( jvalue& roleMembers, str memberName ){
+			auto createRolesFromMembers = [&roles]( jvalue& roleMembers, str memberName, bool plural ){
 				auto addRoleMember = [&]( jobject& member ){
 					let parentRolePK = Json::AsNumber<RolePK>( member, "parentRoleId" );
 					member.erase( "parentRoleId" );
-					auto role = roles.try_emplace( parentRolePK, jobject{ {"id", parentRolePK} } );
+					auto role = roles.try_emplace( parentRolePK, jobject{{"id", parentRolePK}} );
 					auto& jmember = role.first->second;
-					if( role.second || !jmember.contains(memberName) ){//first row
-						if( roleMembers.is_array() ){
-							jmember[memberName] = jarray{move(member)};
-						}else
-							jmember[DB::Names::ToSingular(memberName)] = move( member );
+					if( role.second || !jmember.contains(memberName) ){ //first row
+						if( plural )
+							jmember[memberName] = jarray{ move(member) };
+						else
+							jmember[DB::Names::ToSingular( memberName )] = move( member );
 					}
-					else if( roleMembers.is_array() )
+					else if( plural )
 						jmember[memberName].get_array().emplace_back( move(member) );
 				};
 				Json::Visit( roleMembers, addRoleMember );
 			};
 
 			if( permissions )
-				createRolesFromMembers( *permissions, "permissionRights" );
+				createRolesFromMembers( *permissions, "permissionRights", permissionsPlural );
 			if( roleMembers )
-				createRolesFromMembers( *roleMembers, "roles" );
+				createRolesFromMembers( *roleMembers, "roles", rolePlural );
 			let& roleTable = GetTable( "roles" );
 			if( !Query.FindColumn("id") )
 				Query.Columns.push_back( QL::ColumnQL{"id", roleTable.GetPK()} );
 			let returnArray = Query.IsPlural();
-			if( auto roleStatement = QL::SelectStatement( Query ); roleStatement ){
+			if( auto roleStatement = QL::SelectStatement(Query); roleStatement ){
 				Query.ReturnRaw = true;
 				auto qlRoles = co_await QL::QLAwait( move(Query), UserPK );
 				auto addRole = [&]( jobject&& roleProperties ){
@@ -230,9 +278,9 @@ namespace Jde::Access::Server{
 						existing = roles.emplace( rolePK, move(roleProperties) ).first;
 					auto& role = existing->second;
 					if( permissions && !role.contains(permissionsKey) )
-						role["permissionRights"] = permissions->is_array() ? (jvalue)jarray{} : (jvalue)jobject{};
+						role[permissionsKey] = permissionsPlural ? ( jvalue )jarray{} : ( jvalue )jobject{};
 					if( roleMembers && !role.contains(roleKey) )
-						role["roles"] = roleMembers->is_array() ? (jvalue)jarray{} : (jvalue)jobject{};
+						role[roleKey] = rolePlural ? ( jvalue )jarray{} : ( jvalue )jobject{};
 				};
 				Json::Visit( move(qlRoles), addRole );
 			}

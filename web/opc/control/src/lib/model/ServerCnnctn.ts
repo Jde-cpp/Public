@@ -31,11 +31,11 @@ export class ServerCnnctn extends TargetRow<ServerCnnctn>{
 
 	getNs( segment:string ):number{
 		let browse = toBrowse( segment, this.defaultBrowseNs );
-		return browse.ns;
+		return browse.ns!;
 	}
 	removeNs( segment:string ):string{ return toBrowse( segment, this.defaultBrowseNs ).name.toString(); }
 
-	get properties():ServerCnnctn{ let properties = new ServerCnnctn(this); return properties; }
+	get properties():ServerCnnctn{ let properties = new ServerCnnctn(this as ServerCnnctnProps); return properties; }
 	url:string;
 	certificateUri:string;
 	defaultBrowseNs:number=1;

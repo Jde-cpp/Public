@@ -10,13 +10,13 @@
 							[attr.cdkFocusInitial]="field.name=='target' ? '' : null"
 							[value]="record()[field.name] ?? ''"
 							[tabIndex]=tab+1
-							(keyup)="onChange( field.name, $event.target['value'] )" >
+							(keyup)="onChange( field.name, $any($event.target).value )" >
 					}
 					@else if( field.type==InputTypes.Text ){
 						<textarea matInput
 							[value]="record()[field.name] ?? ''"
 							[tabIndex]="tab+1"
-							(keyup)="onChange( field.name, $event.target['value'] )">
+							(keyup)="onChange( field.name, $any($event.target).value )">
 						</textarea>
 					}
 					@else if( field.type==InputTypes.Select ){

@@ -16,7 +16,7 @@ message ClientQuery{
 
 message ConnectionInfo{
 	uint32 app_pk = 1;
-	uint32 instance_pk = 2; //TODO Rename to instance_pk
+	uint32 instance_pk = 2;
 	uint32 connection_pk = 3;
 	Jde.Web.FromServer.SessionInfo session_info = 4;
 	bool auth_result = 5;

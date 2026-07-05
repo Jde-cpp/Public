@@ -2,6 +2,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <jde/fwk/chrono.h>
 #include "LogAwait.h"
+#include "jde/fwk/log/log.h"
 
 #define let const auto
 
@@ -25,11 +26,11 @@ namespace Jde::App{
 			else if( name=="line" )
 				jEntry[name] = entry.Line;
 			else if( name=="time" )
-				jEntry[name] = ToIsoString( entry.Time );
+				jEntry[name] = ToIsoString( entry.Time )+"Z";
 			else if( name=="message" )
 				jEntry[name] = entry.Message();
 			else if( name=="id" )
-				jEntry[name] = boost::uuids::to_string( entry.Id() );
+				jEntry[name] = ToString( entry.Id() );
 			else if( name=="userId" )
 				jEntry[name] = entry.UserPK.Value;
 		}
@@ -39,7 +40,7 @@ namespace Jde::App{
 				if( table.FindColumn("name") )
 					o["name"] = entry.File();;
 				if( table.FindColumn("id") )
-					o["id"] = boost::uuids::to_string( entry.FileId() );
+					o["id"] = ToString( entry.FileId() );
 				jEntry[table.JsonName] = move(o);
 			}
 			else if( table.JsonName=="function" ){
@@ -47,7 +48,7 @@ namespace Jde::App{
 				if( table.FindColumn("name") )
 					o["name"] = entry.Function();;
 				if( table.FindColumn("id") )
-					o["id"] = boost::uuids::to_string( entry.FunctionId() );
+					o["id"] = ToString( entry.FunctionId() );
 				jEntry[table.JsonName] = move(o);
 			}
 			else if( table.JsonName=="user" ){

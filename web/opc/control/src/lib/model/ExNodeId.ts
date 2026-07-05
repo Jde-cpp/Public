@@ -9,8 +9,8 @@ export type ExNodeIdJson = {nsu?:string,serverIndex?:number} & NodeIdJson;
 export class ExNodeId extends NodeId /*implements IExNodeId*/{
 	constructor( json: ExNodeIdJson ){
 		super(json);
-		this.serverIndex = json.serverIndex;
-		this.nsu = json.nsu;
+		this.serverIndex = json.serverIndex!;
+		this.nsu = json.nsu!;
 		if( !this.ns && !this.nsu && ExNodeId.defaultNS )
 			this.ns = ExNodeId.defaultNS;
 	}
@@ -20,7 +20,7 @@ export class ExNodeId extends NodeId /*implements IExNodeId*/{
 
 	override get key():NodeKey{
 		if( !this._key ){
-			let j = this.toJson();
+			let j:any = this.toJson();
 			if( this.serverIndex )
 				j["serverIndex"] = this.serverIndex;
 			this._key = Symbol.for( JSON.stringify(j) );

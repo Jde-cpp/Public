@@ -284,8 +284,25 @@ namespace QL{
 				y = preDefined->ToJson( qlTable );
 			else if( qlTable.JsonName=="fields" )
 				y = introspectFields( typeName, *dbTable, qlTable );
-			else if( qlTable.JsonName=="enumValues" )
-				y = introspectEnum( dbTable, qlTable );
+			else if( qlTable.JsonName=="enumValues" ){
+				if( typeName=="logTags" ){
+					jarray enumValues;
+					bool haveId=qlTable.FindColumn("id"), haveName=qlTable.FindColumn("name"), haveDescription=qlTable.FindColumn("description");
+					for( let& [name, id] : Logging::Tags() ){
+						jobject j;
+						if( haveId )
+							j["id"] = std::to_string(id);
+						if( haveName )
+							j["name"] = name;
+						if( haveDescription )
+							j["description"] = nullptr;
+						enumValues.push_back( j );
+					}
+					y["enumValues"] = enumValues;
+				}
+				else
+					y = introspectEnum( dbTable, qlTable );
+			}
 			else
 				THROW( "__type data for '{}' not supported", qlTable.JsonName );
 		}

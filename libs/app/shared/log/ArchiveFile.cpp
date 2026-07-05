@@ -8,6 +8,27 @@
 namespace Jde::App{
 	using App::Log::Proto::LogEntryFile;
 	using Protobuf::ToGuid;
+
+	ArchiveFile::ArchiveFile( const QL::Filter& q, vector<App::Log::Proto::FileEntry>&& entries )ε{
+		Append( q, move(entries) );
+	}
+
+	α ArchiveFile::EntrySize()Ι->uint{
+		uint size{};
+		for( auto& [_,entries] : Entries )
+			size += ( uint )entries.size();
+		return size;
+	}
+
+	α ArchiveFile::IsComplete( const QL::Input& input )Ι->bool{
+		let limit = input.Limit();
+		if( !limit )
+			return false;
+		let& orderBy = input.OrderByJson();
+		if( orderBy.empty() || orderBy.begin()->first!="time" )
+			return false;
+		return EntrySize()>=limit+input.Skip();
+	}
 	Ω find( const auto& map, string uuid )ι->str{
 		let it = map.find( ToGuid(uuid) );
 		return it==map.end() ? Str::Empty() : it->second;
@@ -24,15 +45,15 @@ namespace Jde::App{
 	α ArchiveFile::Test( const QL::Filter& filter, TimePoint time, const LogEntryFile& entry )Ι->bool{
 		bool valid{ true };
 		valid = valid && filter.Test( "time", time );
-		valid = valid && filter.TestF<string>( "text", [&](){ return find(Templates, entry.template_id()); } );
+		valid = valid && filter.TestF<string>( "text", [&](){return find(Templates, entry.template_id());} );
 		valid = valid && filter.Test( "level", (uint8)entry.level() );
 		valid = valid && filter.TestAnd( "tags", entry.tags() );
 		valid = valid && filter.Test( "line", entry.line() );
-		valid = valid && filter.TestF<uuid>( "templateId", [&](){ return ToGuid(entry.template_id()); } );
-		valid = valid && filter.TestF<string>( "message", [&](){ return Message(entry); } );
+		valid = valid && filter.TestF<uuid>( "templateId", [&](){return ToGuid(entry.template_id());} );
+		valid = valid && filter.TestF<string>( "message", [&](){return Message(entry);} );
 		if( valid && filter.ColumnFilters.contains("args") ){
 			for( let& argId : entry.args() ){
-				if( valid = filter.TestF<string>("args", [&](){ return find(Args, argId); }); !valid )
+				if( valid = filter.TestF<string>("args", [&](){return find(Args, argId);}); !valid )
 					break;
 			}
 		}
@@ -44,15 +65,15 @@ namespace Jde::App{
 
 		if( valid ){
 			auto testFileFunction = [&]( const auto& filter, const auto& map, string id )ι->bool {
-				if( auto valid = filter.template TestF<string>( "id", [&](){return boost::uuids::to_string(ToGuid(id));} ); !valid )
+				if( auto valid = filter.template TestF<string>("id", [&](){return to_string(ToGuid(id));}); !valid )
 					return false;
-				if( auto valid = filter.template TestF<string>( "name", [&](){return find(map, id);} ); !valid )
+				if( auto valid = filter.template TestF<string>("name", [&](){return find(map, id);}); !valid )
 					return false;
 				return true;
 			};
 			for( auto& sub : q.Tables ){
 				if( sub.JsonName=="user" ){
-					if( valid = sub.Filter().Test( "id", entry.user_pk() ); !valid )
+					if( valid = sub.Filter().Test("id", entry.user_pk()); !valid )
 						break;
 				}
 				else if( valid = sub.JsonName=="file" ? testFileFunction(sub.Filter(), Files, entry.file_id()) : true; !valid )
@@ -67,9 +88,10 @@ namespace Jde::App{
 	α ArchiveFile::Append( const QL::TableQL& q, App::Log::Proto::ArchiveFile&& af )ε->void{
 		auto addStrings = []( auto&& collection, auto& map ){
 			for( int i=0; i<collection.size(); ++i ){
-				auto& s = collection.at(i);
-				let id = ToGuid(s.id());
-				map[id] = move(*s.mutable_value());
+				auto& s = collection.at( i );
+				let id = ToGuid( s.id() );
+				ASSERT_DESC( s.value().size() || id==EmptyStringMd5, "String with empty value must have empty md5." );
+				map[id] = move( *s.mutable_value() );
 			}
 		};
 		addStrings( move(*af.mutable_templates()), Templates );
@@ -77,7 +99,7 @@ namespace Jde::App{
 		addStrings( move(*af.mutable_functions()), Functions );
 		addStrings( move(*af.mutable_args()), Args );
 		for( int i=0; i<af.entries_size(); ++i ){
-			auto entry = af.mutable_entries(i);
+			auto entry = af.mutable_entries( i );
 			let time = Protobuf::ToTimePoint( entry->time() );
 			if( Test(q, time, *entry) )
 				Entries[time].emplace_back( move(*entry) );
@@ -90,11 +112,15 @@ namespace Jde::App{
 		for( auto& fe : entries ){
 			if( fe.value_case()==FileEntry::ValueCase::kEntry )
 				logEntries.emplace_back( move(*fe.mutable_entry()) );
-			else if( fe.value_case()==FileEntry::ValueCase::kStr )
-				strings[ToGuid(fe.str().id())] = move(*fe.mutable_str()->mutable_value());
+			else if( fe.value_case()==FileEntry::ValueCase::kStr ){
+				let id = ToGuid( fe.str().id() );
+				auto& value = *fe.mutable_str()->mutable_value();
+				ASSERT_DESC( value.size() || id==EmptyStringMd5, "String with empty value must have empty md5." );
+				strings[id] = move( value );
+			}
 		}
 		auto addString = [&]( auto& map, auto& id ){
-			map.emplace( ToGuid(id), move(strings[ToGuid(id)]) );
+			map.try_emplace( ToGuid(id), move(strings[ToGuid(id)]) );
 		};
 		for( let& entry : logEntries ){
 			let time = Protobuf::ToTimePoint( entry.time() );
@@ -108,61 +134,142 @@ namespace Jde::App{
 			Entries[time].emplace_back( move(entry) );
 		}
 	}
-	α ArchiveFile::ToJson( const QL::TableQL& ql )Ι->jarray{
-		jarray results;
-		for( let& [time, entries] : Entries ){
-			for( let& entry : entries ){
-				jobject o;
-				for( let& col : ql.Columns ){
-					let& name = col.JsonName;
-					if( name=="template" )
-						o[name] = find( Templates, entry.template_id() );
-					else if( name=="args" ){
-						jarray args;
-						for( auto&& arg : entry.args() )
-							args.push_back( {find(Args, arg)} );
-						o[name] = move(args);
-					}
-					else if( name=="level" )
-						o[name] = ToString( (ELogLevel)entry.level() );
-					else if( name=="tags" )
-						o[name] = ToArray( (ELogTags)entry.tags() );
-					else if( name=="line" )
-						o[name] = entry.line();
-					else if( name=="time" )
-						o[name] = ToIsoString( Protobuf::ToTimePoint(entry.time()) );
-					else if( name=="message" )
-						o[name] = Message( entry );
-					else if( name=="id" )
-						o[name] = boost::uuids::to_string( ToGuid(entry.template_id()) );
+
+	α ArchiveFile::Sort( const vector<std::pair<string,bool>>& orderBy )Ι->vector<App::Log::Proto::LogEntryFile>{
+		vector<App::Log::Proto::LogEntryFile> y;
+		for( let& [ts,entries] : Entries )
+			y.insert( y.end(), entries.begin(), entries.end() );
+
+		if( orderBy.empty() || (orderBy[0].first=="time" && orderBy[0].second) )
+			return y;
+
+		std::sort( y.begin(), y.end(), [&](let& a, let& b){
+			optional<bool> lessThan;
+			for( let& [field,asc] : orderBy ){
+				if( field=="time" ){
+					let aTime = Protobuf::ToTimePoint( a.time() );
+					let bTime = Protobuf::ToTimePoint( b.time() );
+					if( aTime != bTime )
+						lessThan = aTime<bTime;
 				}
-				for( auto&& table : ql.Tables ){
-					if( table.JsonName=="file" ){
-						jobject o;
-						if( table.FindColumn("name") )
-							o["name"] = find( Files, entry.file_id() );
-						if( table.FindColumn("id") )
-							o["id"] = boost::uuids::to_string( ToGuid(entry.file_id()) );
-						o[table.JsonName] = move(o);
-					}
-					else if( table.JsonName=="function" ){
-						jobject o;
-						if( table.FindColumn("name") )
-							o["name"] = find( Functions, entry.function_id() );
-						if( table.FindColumn("id") )
-							o["id"] = boost::uuids::to_string( ToGuid(entry.function_id()) );
-						o[table.JsonName] = move(o);
-					}
-					else if( table.JsonName=="user" ){
-						jobject o;
-						if( table.FindColumn("id") )
-							o["id"] = entry.user_pk();
-						o[table.JsonName] = move(o);
-					}
+				else if( field=="file" )
+					lessThan = a.file_id()==b.file_id() ? nullopt : optional<bool>{ a.file_id()<b.file_id() };
+				else if( field=="function" )
+					lessThan = a.function_id()==b.function_id() ? nullopt : optional<bool>{ a.function_id()<b.function_id() };
+				else if( field=="level" )
+					lessThan = a.level()==b.level() ? nullopt : optional<bool>{ a.level()<b.level() };
+				else if( field=="line" )
+					lessThan = a.line()==b.line() ? nullopt : optional<bool>{ a.line()<b.line() };
+				else if( field=="message" ){
+					let aMsg = Message( a );
+					let bMsg = Message( b );
+					lessThan = aMsg==bMsg ? nullopt : optional<bool>{ aMsg<bMsg };
 				}
-				results.push_back( move(o) );
+				else if( field=="tags" )
+					lessThan = a.tags()==b.tags() ? nullopt : optional<bool>{ a.tags()<b.tags() };
+				else if( field=="user" )
+					lessThan = a.user_pk()==b.user_pk() ? nullopt : optional<bool>{ a.user_pk()<b.user_pk() };
+				if( lessThan )
+					return asc ? *lessThan : !*lessThan;
+			}
+			return false;
+		} );
+		return y;
+	}
+	α ArchiveFile::ToEntry( const QL::TableQL& table, const App::Log::Proto::LogEntryFile& entry, optional<flat_map<uuid,string>>& strings )Ι->jobject{
+		jobject o;
+		for( let& col : table.Columns ){
+			let& name = col.JsonName;
+			if( name=="templateId" ){
+				let id = ToGuid( entry.template_id() );
+				o[name] = to_string( id );
+				if( strings )
+					( *strings )[id] = find( Templates, entry.template_id() );
+			}
+			else if( name=="argIds" ){
+				jarray args;
+				for( auto&& arg : entry.args() ){
+					let id = ToGuid( arg );
+					args.push_back( {to_string(id)} );
+					if( strings )
+						( *strings )[id] = find( Args, arg );
+				}
+				o[name] = move( args );
+			}
+			else if( name=="level" )
+				o[name] = Jde::ToString( (ELogLevel)entry.level() );
+			else if( name=="tags" )
+				o[name] = ToArray( (ELogTags)entry.tags() );
+			else if( name=="line" )
+				o[name] = entry.line();
+			else if( name=="time" )
+				o[name] = ToIsoString( Protobuf::ToTimePoint(entry.time()) )+'Z';
+			else if( name=="userId" )
+				o[name] = entry.user_pk();
+			else if( name=="fileId" ){
+				let id = ToGuid( entry.file_id() );
+				o[name] = to_string( id );
+				if( strings )
+					( *strings )[id] = find( Files, entry.file_id() );
+			}
+			else if( name=="functionId" ){
+				let id = ToGuid( entry.function_id() );
+				o[name] = to_string( id );
+				if( strings )
+					( *strings )[id] = find( Functions, entry.function_id() );
 			}
 		}
-		return results;
+		return o;
+	}
+	//logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }
+	α ArchiveFile::ToJson( const QL::TableQL& ql )Ι->jobject{
+		let entries = Sort( ql.OrderByJson() );
+		jobject o;
+		jarray jentries;
+		auto strings = ql.FindTable( "strings" ) ? flat_map<uuid,string>{} : optional<flat_map<uuid,string>>{};
+		for( uint i=0; i<entries.size(); ++i ){
+			if( i<ql.Skip() || (ql.Limit() && i>=ql.Skip()+ql.Limit()) )
+				continue;
+			auto& entry = entries.at( i );
+			for( auto&& table : ql.Tables ){
+				if( table.JsonName=="entries" )
+					jentries.push_back( ToEntry(table, entry, strings) );
+				else if( table.JsonName=="file" ){
+					jobject o;
+					if( table.FindColumn("name") )
+						o["name"] = find( Files, entry.file_id() );
+					if( table.FindColumn("id") )
+						o["id"] = to_string( ToGuid(entry.file_id()) );
+					o[table.JsonName] = move( o );
+				}
+				else if( table.JsonName=="function" ){
+					jobject o;
+					if( table.FindColumn("name") )
+						o["name"] = find( Functions, entry.function_id() );
+					if( table.FindColumn("id") )
+						o["id"] = to_string( ToGuid(entry.function_id()) );
+					o[table.JsonName] = move( o );
+				}
+				else if( table.JsonName=="user" ){
+					jobject o;
+					if( table.FindColumn("id") )
+						o["id"] = entry.user_pk();
+					o[table.JsonName] = move( o );
+				}
+			}
+		}
+		if( ql.FindTable("entries") )
+			o["entries"] = move( jentries );
+		if( strings ){
+			jarray jstrings;
+			for( let& [id,value] : *strings ){
+				jobject s;
+				s["id"] = to_string( id );
+				s["value"] = value;
+				jstrings.push_back( move(s) );
+			}
+			o["strings"] = move( jstrings );;
+		}
+		return o;
 	}
 }

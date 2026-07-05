@@ -1,4 +1,5 @@
 #pragma once
+#include <jde/access/access.h>
 #include <jde/fwk/io/json.h>
 
 namespace Jde::DB{ struct AppSchema; struct IDataSource; struct Table; }

@@ -2,48 +2,70 @@
 #define let const auto
 
 namespace Jde::Opc::Server::Tests{
+	using UAAccess::EOpcAccessLevel;
 	constexpr ELogTags _tags{ ELogTags::Test };
 	struct AccessTests : ::testing::Test{
 	protected:
-		constexpr static UA_UInt32 _readerAllowed = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_CURRENTREAD | UA_ACCESSLEVELMASK_HISTORYREAD;
-		constexpr static UA_UInt32 _writerAdded =  UA_ACCESSLEVELMASK_WRITE | UA_ACCESSLEVELMASK_CURRENTWRITE | UA_ACCESSLEVELMASK_HISTORYWRITE | UA_ACCESSLEVELMASK_STATUSWRITE | UA_ACCESSLEVELMASK_TIMESTAMPWRITE;
-		constexpr static UA_UInt32 _writerAllowed =  _readerAllowed | _writerAdded;
-		constexpr static UA_UInt32 _adminAdded = UA_ACCESSLEVELMASK_SEMANTICCHANGE;
-		constexpr static UA_UInt32 _adminAllowed = _writerAllowed | _adminAdded;
-		constexpr static UA_UInt32 _readerDenied = _writerAdded | _adminAdded;
-		constexpr static UA_UInt32 _writerDenied = _adminAdded;
-		constexpr static UA_UInt32 _adminDenied = 0;
+		constexpr static EOpcAccessLevel _readerAllowed = EOpcAccessLevel::Read | EOpcAccessLevel::HistoryRead;
+		constexpr static EOpcAccessLevel _writerAdded =  EOpcAccessLevel::Write | EOpcAccessLevel::HistoryWrite | EOpcAccessLevel::StatusWrite | EOpcAccessLevel::TimestampWrite;
+		constexpr static EOpcAccessLevel _writerAllowed =  _readerAllowed | _writerAdded;
+		constexpr static EOpcAccessLevel _adminAdded = EOpcAccessLevel::SemanticChange;
+		constexpr static EOpcAccessLevel _adminAllowed = _writerAllowed | _adminAdded;
+		constexpr static EOpcAccessLevel _readerDenied = _writerAdded | _adminAdded;
+		constexpr static EOpcAccessLevel _writerDenied = _adminAdded;
+		constexpr static EOpcAccessLevel _adminDenied = EOpcAccessLevel::AllAccess;
 
+		Ω addRole( const string& target, EOpcAccessLevel allowed, EOpcAccessLevel denied )ε->void{
+			let userTarget = Ƒ( "{}User", target );
+
+			auto user = _app->QuerySync( "user(target:$target){id}", {{"target", userTarget}} );
+			if( user.empty() )
+				user = _app->QuerySync<jobject>( "createUser( target:$target, name:$name ){id}", {{"target", userTarget}, {"name", userTarget+" name"}} );
+			let userId = Json::AsNumber<uint>( user.at("id") );
+			_users.emplace( userTarget, userId );
+
+			let roleTarget = DB::Names::Capitalize( target );
+			//auto role = _app->QuerySync("role(target:$target){id}", {{"target", roleTarget}});
+			//if( role.empty() )
+			auto role = _app->QuerySync<jobject>( "createRole( target:$target, name:$name ){id}", {{"target",roleTarget}, {"name", roleTarget+" name"}} );
+			let roleId = Json::AsNumber<Access::RolePK>( role.at("id") );
+			_roles.emplace( target, roleId );
+
+			jobject vars{ {"roleId", roleId}, {"allowed", underlying(allowed)}, {"denied", underlying(denied)}, {"schema", _resource} };
+			string query{ "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{schemaName:$schema, target:\"nodeIds\"}} )" };
+			_app->QuerySync<jvalue>( move(query), move(vars) );
+
+			vars = { {"roleId", roleId}, {"allowed", underlying(allowed) & ~UA_ACCESSLEVELMASK_HISTORYREAD}, {"denied", 0}, {"schema", _resource}, {"criteria", "ns=4;i=6020"}, {"resourceName", "SignalOn"} }; //Examples/Stacklights/ExampleStacklight/Lamp1/SignalOn
+			query = "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{schemaName:$schema, target:\"nodeIds\", criteria:$criteria, name:$resourceName}} )";
+			_app->QuerySync<jvalue>( move(query), move(vars) );
+
+			_app->QuerySync<jvalue>( "createAcl( identity:{ id:$userId }, role:{id:$roleId} )", {{"userId", userId}, {"roleId", roleId}} );
+		}
 		Ω SetUpTestCase()ε->void{
 			Server::Initialize( ServerId(), GetSchemaPtr() );
 			_ua = &Server::GetUAServer();
 			_app = AppClient();
-			string target{ "testReaders" };
-			auto role = _app->QuerySync<jobject>( "role( target: $target ){ id }", {{"target",target}} );
-			jobject user;
-			uint32 userId, roleId;
 
-			let haveRole = !role.empty();
-			if( !haveRole ){
-				_app->QuerySync<jobject>( "createAcl( identity:{id:$testProgUser}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName: $schemaName, target:$nodeResTarget}} )",
-					{ {"testProgUser", AppClient()->UserPK().Value}, {"allowed", underlying(Access::ERights::All)}, {"schemaName", _resource}, {"nodeResTarget", "nodeIds"} } );
-				_app->QuerySync<jobject>( "restoreResource( target:$target, criteria:null ){id}", {{"target","nodeIds"}} );
-				role = _app->QuerySync<jobject>( "createRole( target:$target, name:$name ){id}", {{"target",target}, {"name", target+" name"}} );
-				roleId = Json::AsNumber<uint>(role["id"]);
-				user = _app->QuerySync<jobject>( "createUser( target:$target, name:$name ){id}", {{"target","readerUser"}, {"name","Reader User"}} );
-				userId = Json::AsNumber<uint>(user["id"]);
-				jobject vars{ {"roleId", roleId}, {"allowed", _readerAllowed}, {"denied", _readerDenied}, {"schema", _resource}, {"criteria", "ns=4;i=6020"}, {"resourceName", "InitialOperationDate"} };
-				string query{ "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{schemaName:$schema, target:\"nodeIds\", criteria:$criteria, name:$resourceName}} )" };
-				_app->QuerySync<jvalue>( move(query), move(vars) );
-				_app->QuerySync<jvalue>( "createAcl( identity:{ id:$userId }, role:{id:$roleId} )", {{"userId", userId}, {"roleId", roleId}} );
+			let nodeTarget = jobject{ {"target","nodeIds"} };
+			_app->QuerySync<jvalue>( "deleteResource( target:$target, criteria:null )", nodeTarget );
+			let jroles = _app->QuerySync<jarray>( "roles(){ id target }", {} );
+			for( let& jrole : jroles )
+				_roles.emplace( jrole.at("target").get_string(), jrole.at("id").to_number<Access::RolePK>() );
+			if( !_roles.contains("opcTestReaders") ){
+				_app->QuerySync<jvalue>( "createAcl( identity:{id:$testProgUser}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName: $schemaName, target:$nodeResTarget}} )",
+					{ {"testProgUser", AppClient()->UserPK().Value}, {"allowed", underlying(EOpcAccessLevel::All)}, {"schemaName", _resource}, {"nodeResTarget", "nodeIds"} } );
+				addRole( "reader", _readerAllowed, _readerDenied );
 			}
 			else{
-				roleId = Json::AsNumber<uint>(role["id"]);
-				user = _app->QuerySync<jobject>( "user( target: $target ){ id }", {{"target","readerUser"}} );
-				userId = Json::AsNumber<uint>(user["id"]);
+				let jusers = _app->QuerySync<jarray>( "users(){ id, target }", {} );
+				for( let& juser : jusers )
+					_users.emplace( juser.at("target").get_string(), juser.at("id").to_number<UserPK::Type>() );
 			}
-			_users.emplace( "readerUser", userId );
-			_roles.emplace( move(target),  roleId );
+			if( !_roles.contains("opcTestWritters") )
+				addRole( "writer", _writerAllowed, _writerDenied );
+			if( !_roles.contains("opcTestAdmins") )
+				addRole( "admin", _adminAllowed, _adminDenied );
+			_app->QuerySync<jvalue>( "restoreResource( target:$target, criteria:null )", nodeTarget );
 		}
 		Ω TearDownTestCase()ι->void{}
 		α SetUp()ι->void{}
@@ -59,9 +81,17 @@ namespace Jde::Opc::Server::Tests{
 	string AccessTests::_resource{ "opc."+Settings::FindString("/opcServer/resource").value_or("test") };
 
 	TEST_F( AccessTests, UserAccess ){
-		UAAccess::SessionContext ctx{ "", TimePoint::max(), 0, _users.at("readerUser") };
+		UAAccess::SessionContext ctx{ "", TimePoint::max(), 0, {(UserPK::Type)_users.at("readerUser")} };
 		let nodeId = UA_NODEID_NUMERIC( 4, 6020 );
-		let accessLevel = UAAccess::GetUserAccessLevel( _ua->Ptr(), nullptr, nullptr, &ctx, &nodeId, nullptr );
+		let accessLevel = ( EOpcAccessLevel )UAAccess::GetUserAccessLevel( _ua->Ptr(), nullptr, nullptr, &ctx, &nodeId, nullptr );
 		EXPECT_EQ( accessLevel, _readerAllowed );
+	}
+	TEST_F( AccessTests, Query ){
+		auto q = "roles{ id name permissionRight{id allowed denied resource(schemaName:$schemaName, target:$target, criteria:$criteria){id criteria}} }";
+		jobject vars{ {"schemaName", "opc.default"}, {"target", "nodeIds"}, {"criteria", jarray{jvalue{}}} };
+		TRACE( "{}", q );
+		TRACE( "{}", serialize(vars) );
+		let result = _app->QuerySync<jvalue>( move(q), move(vars) );
+		TRACE( "{}", serialize(result) );
 	}
 }

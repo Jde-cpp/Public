@@ -41,7 +41,7 @@ namespace Jde::Opc::Gateway::Tests{
 	TEST_F( AppClientTests, Login ){
 		using Web::FromServer::SessionInfo;
 		auto payload = Process::GetEnv( "JDE_GOOGLE_JWT" );
-		if( !payload )
+		if( !payload || payload->empty() )
 			GTEST_SKIP() << "JDE_GOOGLE_JWT not set.";
 		else{
 			let value = BlockAwait<Web::Client::ClientSocketAwait<SessionInfo>,SessionInfo>( AppClient()->Login(Web::Jwt{*payload}, SL{}) );

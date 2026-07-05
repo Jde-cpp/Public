@@ -26,7 +26,9 @@ namespace Jde::Web::Client{
 	};
 
 	α ClientQL::Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, UserPK /*executer*/, SL sl )ε->up<TAwait<vector<QL::SubscriptionId>>>{
-		auto await = _session->Subscribe( move(query), move(variables), listener, sl );
+		auto session = _session.lock();
+		THROW_IF( !session, "Client socket session closed." );
+		auto await = session->Subscribe( move(query), move(variables), listener, sl );
 		return mu<SubscribeQueryAwait>( move(await), sl );
 	}
 
@@ -38,9 +40,11 @@ namespace Jde::Web::Client{
 	private:
 		α Execute()ι->Await::Task{
 			try{
+				if( !_session )
+					throw Exception{ base::_sl, "Client socket session closed." };
 				Resume( co_await _session->Query(move(_query), move(_variables), _returnRaw, base::_sl) );
 			}
-			catch( IException& e ){
+			catch( exception& e ){
 				base::ResumeExp( move(e) );
 			}
 		}
@@ -69,12 +73,12 @@ namespace Jde::Web::Client{
 
 
 	α ClientQL::Query( string query, jobject variables, UserPK, bool returnRaw, SL sl )ι->up<TAwait<jvalue>>{
-		return mu<QueryAwait<jvalue>>( move(query), move(variables), _session, returnRaw, sl );
+		return mu<QueryAwait<jvalue>>( move(query), move(variables), _session.lock(), returnRaw, sl );
 	}
 	α ClientQL::QueryObject( string query, jobject variables, UserPK /*executer*/, bool returnRaw, SL sl )ε->up<TAwait<jobject>>{
-		return mu<QueryAwait<jobject>>( move(query), move(variables), _session, returnRaw, sl );
+		return mu<QueryAwait<jobject>>( move(query), move(variables), _session.lock(), returnRaw, sl );
 	}
 	α ClientQL::QueryArray( string query, jobject variables, UserPK /*executer*/, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{
-		return mu<QueryAwait<jarray>>( move(query), move(variables), _session, returnRaw, sl );
+		return mu<QueryAwait<jarray>>( move(query), move(variables), _session.lock(), returnRaw, sl );
 	}
 }

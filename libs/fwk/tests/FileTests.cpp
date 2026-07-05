@@ -5,6 +5,8 @@
 #include <jde/fwk/process/execution.h>
 #include <jde/fwk/utils/Vector.h>
 #include <jde/fwk/process/thread.h>
+#include <atomic>
+#include <fstream>
 
 #define let const auto
 
@@ -12,7 +14,7 @@ using boost::uuids::uuid;
 namespace Jde::IO::Tests{
 	constexpr ELogTags _tags{ ELogTags::Test };
 	Ω file( uint index )->fs::path{
-		let path = Settings::FindPath("/testing/file");
+		let path = Settings::FindPath( "/testing/file" );
 		return path
 			? path->parent_path()/Ƒ( "{}{}{}", path->stem().string(), index, path->extension().string() )
 			: fs::temp_directory_path()/Ƒ( "test{}.txt", index );
@@ -37,7 +39,7 @@ namespace Jde::IO::Tests{
 		auto l = co_await LockKeyAwait{ file.string() };
 		[sl]( const fs::path& file, uuid guid1, uuid guid2, Vector<uuid>& written, CoLockGuard, bool createFile )->VoidAwait::Task {
 			try{
-				co_await IO::WriteAwait{ file, Ƒ("{}\n{}\n", to_string(guid1), to_string(guid2)), createFile, Jde::ELogTags::Test, sl };
+				co_await IO::WriteAwait{ file, Ƒ("{}\n{}\n", to_string(guid1), to_string(guid2)), createFile, Jde::ELogTags::IO, sl };
 			}
 			catch( IException& e ){
 				e.Log();
@@ -70,19 +72,19 @@ namespace Jde::IO::Tests{
 		array<uuid,1024> guids;
 		for( uint i=0; i<guids.size(); ++i ){
 			auto prefix = boost::endian::endian_reverse( fileIndex );
-			((uint*)guids[i].data())[0] = prefix;
+			( (uint*)guids[i].data() )[0] = prefix;
 			auto suffix = boost::endian::endian_reverse( i );
-			((uint*)guids[i].data())[1] = suffix;
+			( (uint*)guids[i].data() )[1] = suffix;
 		}
 
 		Vector<uuid> written;
-		let file = Tests::file(fileIndex);
-		let exists = fs::exists(file);
+		let file = Tests::file( fileIndex );
+		let exists = fs::exists( file );
 		if( exists ){
 			INFO( "Removing existing file: {}", file.string() );
 			fs::remove( file );
 		}
-		SetThreadDscrptn( file.filename().string() );
+		Thread::SetName( file.filename().string() );
 		for( uint i=0; i<guids.size(); i+=2 )
 			write( file, guids[i], guids[i+1], written, i==0 );
 
@@ -100,13 +102,53 @@ namespace Jde::IO::Tests{
 		});
 	}
 
+	Ω writeRaw( fs::path file, string content, std::atomic<bool>& done, SRCE )->LockKeyAwait::Task{
+		auto l = co_await LockKeyAwait{ file.string() };
+		[sl]( fs::path file, string content, std::atomic<bool>& done, CoLockGuard )->VoidAwait::Task {
+			try{
+				co_await IO::WriteAwait{ move(file), move(content), true, Jde::ELogTags::IO, sl };
+			}
+			catch( IException& e ){
+				e.Log();
+			}
+			done = true;
+		}( move(file), move(content), done, move(l) );
+	}
+
+	// Regression for the ChunksToSend off-by-one: a write whose size is an exact multiple of
+	// ChunkByteSize() must still complete. ChunksToSend was computed as size/ChunkByteSize()+1,
+	// one more than the number of chunks actually queued whenever the size divides evenly, so the
+	// final chunk's completion never satisfied ChunksToSend==ChunksCompleted and the write hung.
+	TEST_F( FileTests, WriteExactChunkMultiple ){
+		let chunkSize = IO::ChunkByteSize();
+		for( uint chunks : {1u, 2u, 3u} ){
+			let size = chunks*chunkSize;
+			let file = Tests::file( 100+chunks );
+			if( fs::exists(file) )
+				fs::remove( file );
+			let content = string( size, (char)('A'+chunks) ); //distinct, deterministic per file
+			std::atomic<bool> done{};
+			writeRaw( file, content, done );
+
+			let deadline = steady_clock::now()+10s;
+			while( !done && steady_clock::now()<deadline )
+				std::this_thread::sleep_for( 5ms );
+			ASSERT_TRUE( done ) << "write of " << size << " bytes (" << chunks << " chunk(s)) never completed";
+
+			std::ifstream is{ file, std::ios::binary };
+			let actual = string{ std::istreambuf_iterator<char>{is}, std::istreambuf_iterator<char>{} };
+			ASSERT_EQ( actual.size(), size );
+			ASSERT_EQ( actual, content );
+		}
+	}
+
 	constexpr uint _fileSize{ 5 };
 	TEST_F( FileTests, WriteRead ){
 		ASSERT_TRUE( IO::ChunkByteSize()<74 ); //guid+\n*2
 		ASSERT_TRUE( IO::ThreadSize()>1 ); //guid+\n
 		vector<std::jthread> threads;
 		for( uint i=0; i<_fileSize; ++i )
-			threads.emplace_back( [i](){testFile( i );} );
+			threads.emplace_back( [i](){testFile(i);} );
 		for( auto& thread : threads )
 				thread.join();
 	}

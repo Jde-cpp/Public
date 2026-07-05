@@ -16,6 +16,7 @@ namespace Jde::App::Server{
 		α EndAppInstances()ι->DB::ExecuteAwait::Task;
 		α Configure()ι->VoidAwait::Task;
 	};
+	α AppSchema()ι->sp<DB::AppSchema>;
 }
 namespace Jde::App{
 	α AddConnection( str applicationName, str instanceName, str hostName, uint pid )ε->tuple<ProgramPK, ProgInstPK, ConnectionPK>;

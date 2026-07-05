@@ -14,14 +14,15 @@
 #include <jde/access/AccessListener.h>
 #include "LocalClient.h"
 #include "WebServer.h"
-#include "ql/AppQL.h"
+#include "jde/fwk.h"
+#include "ql/AppServerQL.h"
 
 #define let const auto
 
 namespace Jde::App{
 	sp<DB::AppSchema> _appSchema;
+	α Server::AppSchema()ι->sp<DB::AppSchema>{ return _appSchema; }
 	sp<Access::AccessListener> _listener;
-	constexpr ELogTags _tags{ ELogTags::App };
 	Ω ds()ι->DB::IDataSource&{ return *_appSchema->DS(); }
 	Ω instanceTableName()ε->string{ return _appSchema->GetView("connections").DBName; }
 
@@ -35,8 +36,8 @@ namespace Server{
 
 			ConfigureQL( {accessSchema, _appSchema}, authorizer );
 			_listener = ms<Access::AccessListener>( QLPtr() );
-			Process::AddShutdownFunction( []( bool terminate ){
-				_listener->Shutdown( terminate );
+			Process::AddShutdownFunction( []( bool terminate, SL sl ){
+				_listener->Shutdown( terminate, sl );
 				_listener = nullptr;
 			});
 
@@ -65,28 +66,7 @@ namespace Server{
 		}
 	}
 
-}
-/*
-	#define _pQueue if( auto p = _pDbQueue; p )p
-	α Server::SaveString( Proto::FromClient::EFields field, StringMd5 id, string value, SL )ι->void{
-		sv table = "log_messages";
-		if( field==Proto::FromClient::EFields::FileId )
-			table = "log_files";
-		else if( field==Proto::FromClient::EFields::FunctionId )
-			table = "log_functions";
-		else if( field!=Proto::FromClient::EFields::MessageId ){
-			//ERRX( "unknown field '{}'.", (int)field );
-			return;
-		}
-		DB::Sql sql{ Ƒ( "insert into {}(id,value)values(?,?)", table ) };
-		//ASSERT( Calc32RunTime(*pValue)==id );
-		//if( Calc32RunTime(value)!=id )
-			//return ERRX( "id '{}' does not match crc of '{}'", id, value );//locks itself on server log.
-		sql.Params.push_back( {id} );
-		sql.Params.push_back( {move(value)} );
-	}
-*/
-}
+}}
 
 namespace Jde{
 	α App::AddConnection( str appName, str instanceName, str hostName, uint pid )ε->tuple<ProgramPK, ProgInstPK, ConnectionPK>{
@@ -107,62 +87,9 @@ namespace Jde{
 	}
 	α App::EndInstance( ProgInstPK instanceId, SL sl )ι->DB::ExecuteAwait::Task{
 		try{
-			co_await ds().Execute( {Ƒ("update {} set end_time=now() where id=?", instanceTableName()), {DB::Value{instanceId}}}, sl );
+			co_await ds().Execute( {Ƒ("update {} set deleted={} where connection_id=?", instanceTableName(), ds().Syntax().UtcNow()), {DB::Value{instanceId}}}, sl );
 		}
 		catch( exception& )
 		{}
 	}
-
-/*
-	α App::LoadApplications( ProgramPK id )ι->up<Proto::FromServer::Applications>
-	{
-		auto pApplications = mu<Proto::FromServer::Applications>();
-		auto fnctn = [&pApplications]( const DB::IRow& row )
-		{
-			auto pApplication = pApplications->add_values();
-			pApplication->set_id( row.GetUInt32(0) );
-			pApplication->set_name( row.GetString(1) );
-			optional<uint> dbLevel = row.GetUIntOpt( 2 );
-			pApplication->set_db_level( dbLevel.has_value() ? (Jde::Proto::ELogLevel)dbLevel.value() : Jde::Proto::ELogLevel::Information );
-			optional<uint> fileLevel = row.GetUIntOpt( 3 );
-			pApplication->set_file_level( fileLevel.has_value() ? (Jde::Proto::ELogLevel)fileLevel.value() : Jde::Proto::ELogLevel::Information );
-		};
-
-		constexpr sv baseSql = "select id, name, db_log_level, file_log_level from log_applications"sv;
-		Try( [&](){
-			string sql = id ? Ƒ("{} where id=?", baseSql) : string{baseSql};
-			let params = id ? vector<DB::object>{id} : vector<DB::object>{};
-			if( auto p = Datasource(); p )
-				p->Select( sql, fnctn, params );
-		} );
-		return pApplications;
-	}
-
-	α App::SaveMessage( ProgramPK applicationId, ProgInstPK instanceId, const Log::Proto::LogEntryClient& m, SL )ι->void{
-		let variableCount = std::min( 5, m.args().size() );
-		vector<DB::Value> params{
-			{applicationId},
-			{instanceId},
-			{m.file_id()},
-			{m.function_id()},
-			{m.line()},
-			{m.message_id()},
-			{(uint8)m.level()},
-//			{m.thread_id()},
-			{Jde::Proto::ToTimePoint(m.time())},
-			{m.user_pk()} };
-		constexpr sv procedure = "log_message_insert"sv;
-		constexpr sv args = "(?,?,?,?,?,?,?,?,?,?"sv;
-		std::ostringstream os;
-		os << procedure;
-		if( variableCount>0 )
-			os << variableCount;
-		os << args;
-		for( int i=0; i<variableCount; ++i ){
-			os << ",?";
-			params.push_back( {m.args()[i]} );
-		}
-		os << ")";
-	}
-*/
 }
