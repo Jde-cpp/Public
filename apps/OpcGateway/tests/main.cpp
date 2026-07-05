@@ -7,6 +7,7 @@
 #include "../src/StartupAwait.h"
 #include "../../AppServer/src/AppStartupAwait.h"
 #include "../../OpcServer/src/StartupAwait.h"
+#include <jde/tests/SpdlogTestListener.h>
 #define let const auto
 
 namespace Jde{
@@ -50,6 +51,7 @@ namespace Jde{
 		if( _error )
 			throw *_error;
 		::testing::GTEST_FLAG( filter ) = Settings::FindString( "/testing/tests" ).value_or( "*" );
+		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
 		result = RUN_ALL_TESTS();
 	}
 	catch( exception& e ){

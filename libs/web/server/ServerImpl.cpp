@@ -87,7 +87,7 @@ namespace Server{
 			auto result = co_await QL::QLAwait{ move(*q), {req.SessionInfo}, reqHandler->QLServer() };
 #ifndef NDEBUG
 			auto debugString = serialize(result);
-			IO::SaveBinary<char>("/tmp/response.json", {debugString.data(), debugString.size()} );
+			IO::SaveBinary<char>( fs::temp_directory_path()/"response.json", {debugString.data(), debugString.size()} );
 #endif
 			jobject y{ {"data", move(result)} };
 			send( move(req), move(stream), move(y), contentType );

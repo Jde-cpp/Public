@@ -6,6 +6,7 @@
 #include <jde/fwk/co/Timer.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/opc/uatypes/Logger.h>
+#include <jde/tests/SpdlogTestListener.h>
 #include "../src/StartupAwait.h"
 #include "../../AppServer/src/AppStartupAwait.h"
 #define let const auto
@@ -46,6 +47,7 @@ namespace Jde{
 			Throw( move(*_error) );
 		}
 		::testing::GTEST_FLAG( filter ) = Settings::FindString( "/testing/tests" ).value_or( "*" );
+		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
 		result = RUN_ALL_TESTS();
 	}
 	catch( exception& e ){

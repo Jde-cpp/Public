@@ -1,9 +1,9 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "AccessTests.Query",
+		tests: "AccessTests.UserAccess",
 		recreateDB:: true,
-		embeddedAppServer: false,
+		embeddedAppServer: true,
 		UANodeSets: "$(UA_NODE_SETS)"
 	},
 	opc: args.opc,

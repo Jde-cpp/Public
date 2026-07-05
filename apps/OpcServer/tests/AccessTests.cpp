@@ -15,14 +15,19 @@ namespace Jde::Opc::Server::Tests{
 		constexpr static EOpcAccessLevel _writerDenied = _adminAdded;
 		constexpr static EOpcAccessLevel _adminDenied = EOpcAccessLevel::AllAccess;
 
-		Ω AddRole( const string& target, EOpcAccessLevel allowed, EOpcAccessLevel denied )ε->void{
-			let userTarget = Ƒ("{}User", target);
-			let user = _app->QuerySync<jobject>( "createUser( target:$target, name:$name ){id}", {{"target", userTarget}, {"name", userTarget+" name"}} );
+		Ω addRole( const string& target, EOpcAccessLevel allowed, EOpcAccessLevel denied )ε->void{
+			let userTarget = Ƒ( "{}User", target );
+
+			auto user = _app->QuerySync( "user(target:$target){id}", {{"target", userTarget}} );
+			if( user.empty() )
+				user = _app->QuerySync<jobject>( "createUser( target:$target, name:$name ){id}", {{"target", userTarget}, {"name", userTarget+" name"}} );
 			let userId = Json::AsNumber<uint>( user.at("id") );
 			_users.emplace( userTarget, userId );
 
 			let roleTarget = DB::Names::Capitalize( target );
-			let role = _app->QuerySync<jobject>( "createRole( target:$target, name:$name ){id}", {{"target",roleTarget}, {"name", roleTarget+" name"}} );
+			//auto role = _app->QuerySync("role(target:$target){id}", {{"target", roleTarget}});
+			//if( role.empty() )
+			auto role = _app->QuerySync<jobject>( "createRole( target:$target, name:$name ){id}", {{"target",roleTarget}, {"name", roleTarget+" name"}} );
 			let roleId = Json::AsNumber<Access::RolePK>( role.at("id") );
 			_roles.emplace( target, roleId );
 
@@ -41,15 +46,15 @@ namespace Jde::Opc::Server::Tests{
 			_ua = &Server::GetUAServer();
 			_app = AppClient();
 
+			let nodeTarget = jobject{ {"target","nodeIds"} };
+			_app->QuerySync<jvalue>( "deleteResource( target:$target, criteria:null )", nodeTarget );
 			let jroles = _app->QuerySync<jarray>( "roles(){ id target }", {} );
 			for( let& jrole : jroles )
 				_roles.emplace( jrole.at("target").get_string(), jrole.at("id").to_number<Access::RolePK>() );
 			if( !_roles.contains("opcTestReaders") ){
 				_app->QuerySync<jvalue>( "createAcl( identity:{id:$testProgUser}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName: $schemaName, target:$nodeResTarget}} )",
 					{ {"testProgUser", AppClient()->UserPK().Value}, {"allowed", underlying(EOpcAccessLevel::All)}, {"schemaName", _resource}, {"nodeResTarget", "nodeIds"} } );
-				_app->QuerySync<jvalue>( "restoreResource( target:$target, criteria:null ){id}", {{"target","nodeIds"}} );
-
-				AddRole( "reader", _readerAllowed, _readerDenied );
+				addRole( "reader", _readerAllowed, _readerDenied );
 			}
 			else{
 				let jusers = _app->QuerySync<jarray>( "users(){ id, target }", {} );
@@ -57,9 +62,10 @@ namespace Jde::Opc::Server::Tests{
 					_users.emplace( juser.at("target").get_string(), juser.at("id").to_number<UserPK::Type>() );
 			}
 			if( !_roles.contains("opcTestWritters") )
-				AddRole( "writer", _writerAllowed, _writerDenied );
+				addRole( "writer", _writerAllowed, _writerDenied );
 			if( !_roles.contains("opcTestAdmins") )
-				AddRole( "admin", _adminAllowed, _adminDenied );
+				addRole( "admin", _adminAllowed, _adminDenied );
+			_app->QuerySync<jvalue>( "restoreResource( target:$target, criteria:null )", nodeTarget );
 		}
 		Ω TearDownTestCase()ι->void{}
 		α SetUp()ι->void{}
@@ -75,9 +81,9 @@ namespace Jde::Opc::Server::Tests{
 	string AccessTests::_resource{ "opc."+Settings::FindString("/opcServer/resource").value_or("test") };
 
 	TEST_F( AccessTests, UserAccess ){
-		UAAccess::SessionContext ctx{ "", TimePoint::max(), 0, {static_cast<UserPK::Type>(_users.at("readerUser"))} };
+		UAAccess::SessionContext ctx{ "", TimePoint::max(), 0, {(UserPK::Type)_users.at("readerUser")} };
 		let nodeId = UA_NODEID_NUMERIC( 4, 6020 );
-		let accessLevel = (EOpcAccessLevel)UAAccess::GetUserAccessLevel( _ua->Ptr(), nullptr, nullptr, &ctx, &nodeId, nullptr );
+		let accessLevel = ( EOpcAccessLevel )UAAccess::GetUserAccessLevel( _ua->Ptr(), nullptr, nullptr, &ctx, &nodeId, nullptr );
 		EXPECT_EQ( accessLevel, _readerAllowed );
 	}
 	TEST_F( AccessTests, Query ){

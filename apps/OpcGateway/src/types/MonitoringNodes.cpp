@@ -170,7 +170,7 @@ namespace Jde::Opc::Gateway{
 	α UAMonitoringNodes::DeleteMonitoring( wp<UAClient> ua, Handle uaHandle, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->DurationTimer::Task{
 		auto wait = 1s;
 		TRACE( "[{:x}]DeleteMonitoring count={}, wait={}", uaHandle, requested.size(), Chrono::ToString(wait) ); //duration_cast<std::chrono::seconds>(wait).count()
-		co_await DurationTimer{ wait };
+		(void)co_await DurationTimer{ wait };
 		flat_map<UA_UInt32,flat_set<MonitorId>> toDelete;
 		ul _{ _mutex };
 		for( auto&& [subscriptionId, monitoredIds] : requested ){

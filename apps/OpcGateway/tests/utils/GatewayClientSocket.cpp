@@ -185,12 +185,14 @@ namespace Tests{
 		}
 	}
 
-	α GatewayClientSocket::OnClose( beast::error_code ec )ι->void{
+	α GatewayClientSocket::CloseTasks( beast::error_code ec )ι->void{
 		auto f = [this, ec]( std::any&& h )->void {
 			CodeException e{ ec, ELogTags::SocketClientWrite, ELogLevel::NoLog };
 			HandleException( move(h), App::ProtoUtils::ToException(move(e)) );
 		};
-		CloseTasks( f );
+		base::CloseTasks( f );
+	}
+	α GatewayClientSocket::OnClose( beast::error_code ec )ι->void{
 		base::OnClose( ec );
 	}
 }}

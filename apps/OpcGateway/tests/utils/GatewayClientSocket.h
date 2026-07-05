@@ -27,6 +27,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 		α Unsubscribe( ServerCnnctnNK target, const vector<NodeId>& nodeIds, SRCE )ε->await<FromServer::UnsubscribeAck>;
 	private:
+		α CloseTasks( beast::error_code ec )ι->void override;
 		α HandleException( std::any&& h, Jde::Proto::Exception&& what )ι;
 		α OnRead( FromServer::Transmission&& transmission )ι->void override;
 		α OnClose( beast::error_code ec )ι->void override;

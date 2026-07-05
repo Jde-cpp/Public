@@ -68,8 +68,8 @@ namespace Browse{
 					h.promise().Resume(Response{move(r)}, h);
 				});
 				UA_BrowseResponse_init( response );
-			}
 #endif
+			}
 		}else
 			ResumeExp( UAClientException{sc, _client->Handle(), _requestId} );
 	}

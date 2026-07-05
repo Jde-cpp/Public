@@ -2,10 +2,10 @@ local args = import 'args.libsonnet';
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests:: "WriteTests.Enum",
+		tests:: "TokenTests.*",
 		recreateDB:: true,
-		embeddedAppServer: false,
-		embeddedOpcServer: false
+		embeddedAppServer:: false,
+		embeddedOpcServer:: false
 	},
 	opc: args.opc,
 	dbServers: {
@@ -56,31 +56,33 @@ local args = import 'args.libsonnet';
 	},
 	logging:{
 		loadFromServer: false,
+		breakLevel: "Critical",
 		spd:{
 			tags: {
 				default: "Information",
-				app: "Trace",
+				app: "Debug",
 				ql: "Information",
 				settings: "Debug",
 				scheduler: "Debug",
-				http_client_write: "Trace",
-				http_client_read: "Trace",
+				http_client_write: "Debug",
+				http_client_read: "Debug",
 				http_server_write: "Debug",
 				http_server_read: "Debug",
 				locks: "Information",
-				socket_client_read: "Trace",
-				socket_client_write: "Trace",
+				socket_client_read: "Debug",
+				socket_client_write: "Debug",
 				socket_server_read: "Debug",
 				socket_server_write: "Debug",
 				test: "Trace",
 				threads: "Information",
-				processingLoop: "Information",
+				processingLoop: "Trace",
 				sql: "Information",
 				browse: "Information",
 				monitoring: "Information",
+				opc: "Debug",
 				uaClient: "Information",
 				uaDiscovery: "Information",
-				uaEvent: "Debug",
+				uaEvent: "Information",
 				uaNet: "Information",
 				uaPubSub: "Information",
 				uaSecure: "Information",
@@ -102,10 +104,10 @@ local args = import 'args.libsonnet';
 			timeZone: "America/New_York",
 			delay: "PT1M"
 		},
-		subscribe:{},
-		remote:{
-			delay: "PT0.1S"
-		}
+		// subscribe:{},
+		// remote:{
+		// 	delay: "PT0.1S"
+		// }
 	},
 	workers:{
 		executor: {threads: 2},

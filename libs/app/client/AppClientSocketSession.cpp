@@ -209,7 +209,7 @@ namespace Client{
 				resume( move(hAny), move(res) );
 				}break;
 			case kQueryResult:
-				DBG( "[{}]query: '{}'.", hex(Id()), m->query_result().substr(0, Web::Client::MaxLogLength()) );
+				DBG( "[{}.{}]query: '{}'.", hex(Id()), hex(requestId), m->query_result().substr(0, Web::Client::MaxLogLength()) );
 				resumeJValue( move(hAny), move(*m->mutable_query_result()) );
 				break;
 			case kSubscriptionAck:

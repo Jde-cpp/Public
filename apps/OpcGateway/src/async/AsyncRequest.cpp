@@ -56,7 +56,9 @@ namespace Jde::Opc::Gateway{
 				_running.clear();
 				ul _{ _requestMutex };
 				let level = _requests.size()>0 ? ELogLevel::Critical : ELogLevel::Debug;
-				LOG( level, _tags, "{}UA_Client_run_iterate returned ({:x}){}, requestCount: {}", logPrefix(), sc, UAException::Message(sc), _requests.size() );
+				string requests;
+				for_each( _requests, [&requests](auto r){requests += Ƒ("{:x}, ", r);} );
+				LOG( level, _tags, "{}UA_Client_run_iterate returned ({:x}){}, requests: [{}]", logPrefix(), sc, UAException::Message(sc), requests );
 				_requests.clear();
 				break;
 			}
@@ -78,7 +80,7 @@ namespace Jde::Opc::Gateway{
 			}
 			if( size==newSize ){
 				let sleep = size==1 && *_requests.begin()==SubscriptionRequestId ? 500ms : 1ms; //UA_CreateSubscriptionRequest_default
-				co_await DurationTimer{ sleep };
+				(void)co_await DurationTimer{ sleep };
 			}
 		}
 		if( !sc && !_stopped.test() && _pingInterval.count()>0 )

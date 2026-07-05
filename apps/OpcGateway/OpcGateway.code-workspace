@@ -134,6 +134,10 @@
 		{
 			"path": "../../libs/db/drivers/mysql",
 			"name": "mysql"
+		},
+		{
+			"path": "X:\\build\\clang++-22\\repos\\open62541\\src\\open62541\\src",
+			"name": "open62541"
 		}
 	]
 }

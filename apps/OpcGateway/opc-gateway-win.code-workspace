@@ -2,53 +2,19 @@
 	"settings": {
 		"window.title": "Gateway",
 		"name": "OpcGateway",
-		"sourceDir": "${env:JDE_BASH}/apps/OpcGateway",
-		"compiler": "msvc",
-		"buildTarget": "Debug",
-		"debugDir": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
-		"winBuildDir": "${env:JDE_BUILD_DIR}\\${config:compiler}\\apps\\${config:name}",
-		"exe": "Jde.Opc.Gateway.exe",
-		"testExe": "tests/${config:buildTarget}/Jde.Opc.Tests.exe",
+		"target": "Jde.Opc.Gateway",
+		"subDir": "apps/OpcGateway",
 		"testTargetName": "Jde.Opc.Tests",
-		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh"
+		"settings": "${env:JDE_DIR}/${config:subDir}/config/Opc.Gateway.jsonnet",
+		"clangd.arguments": [
+			"--compile-commands-dir=C:\\Users\\duffyj\\source\\repos\\jde\\Public\\apps\\OpcGateway",
+			"-j=8",
+			"--background-index-priority=background"
+		],
 	},
 	"tasks": {
 		"version": "2.0.0",
 		"tasks": [
-			{
-				"label": "build",
-				"type": "shell",
-				"command": "mkdir -p ${config:debugDir}; cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug --target Jde.Opc.Gateway;",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": true }
-			},
-			{
-				"label": "buildProject",
-				"type": "shell",
-				"command": "tput reset;${config:sourceBash};buildProject \"${fileWorkspaceFolder}\" \"${config:debugDir}\";",
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "compile",
-				"type": "shell",
-				"command": "tput reset;${config:sourceBash};compile '${workspaceFolder}' '${fileWorkspaceFolder}' '${relativeFile}' ${config:debugDir};",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": "build"
-			},
-			{
-				"label": "cmake",
-				"type": "shell",
-				"command": "mkdir -p ${config:debugDir};cd ${config:debugDir}; tput reset; rm -f CMakeCache.txt; cmake ${config:sourceDir} --preset win-msvc-jde",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "cmakeTests",
-				"type": "shell",
-				"command": "mkdir -p ${config:debugDir};cd ${config:debugDir}; tput reset; rm -f CMakeCache.txt; cmake ${config:sourceDir} --preset win-msvc-jde -Djde_BUILD_TESTS=ON;",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": { "kind": "build", "isDefault": false }
-			},
 			{
 				"label": "test",
 				"type": "shell",
@@ -63,28 +29,27 @@
 		"configurations": [
 			{
 				"name": "Debug",
-				"type": "cppvsdbg",
+				"type": "lldb",
 				"request": "launch",
-				"program": "${config:winBuildDir}\\exe\\Debug\\${config:exe}",
+				"program": "${config:winBuildDir}\\bin\\${config:buildTarget}\\${config:target}.exe",
 				"args": [
+					"-c",
 					"-tests",
-					"-settings=${config:sourceDir}/config/Opc.Gateway.jsonnet"
+					"-settings=${config:settings}"
 				],
-				"stopAtEntry": false,
 				"cwd": "${env:JDE_BUILD_DIR}",
 				"console": "integratedTerminal",
 				"preLaunchTask": "build"
 			},
 			{
 				"name": "Tests",
-				"type": "cppvsdbg",
+				"type": "lldb",
 				"request": "launch",
-				"program": "${config:winBuildDir}\\${config:testExe}",
+				"program": "${config:winBuildDir}\\bin\\${config:buildTarget}\\${config:testTargetName}.exe",
 				"args": [
 					"-tests",
 					"-settings=${config:sourceDir}/tests/config/Opc.Tests.jsonnet"
 				],
-				"stopAtEntry": false,
 				"cwd": "${env:JDE_BUILD_DIR}",
 				"console": "integratedTerminal",
 				"preLaunchTask": "buildTests"
@@ -138,6 +103,10 @@
 		{
 			"path": "../../libs/app/shared",
 			"name": "appShared"
+		},
+		{
+			"path": "../../libs/web/client",
+			"name": "webClient"
 		},
 
 	]

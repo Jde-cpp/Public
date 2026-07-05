@@ -57,8 +57,14 @@ function projectName() {
 		project="Jde.App.ServerLib";
 	elif [[ $absoluteFile == *"db/src"* ]]; then
 		project="Jde.DB";
+	elif [[ $absoluteFile == *"OpcGateway/src"* ]]; then
+		project="Jde.Opc.GatewayLib";
+	elif [[ $absoluteFile == *"/OpcGateway/tests"* ]]; then
+		project="Jde.Opc.Tests";
+	elif [[ $absoluteFile == *"OpcServer/tests"* ]]; then
+		project="Jde.Opc.Server.Tests";
 	fi;
-	echo $project.vcxproj;
+	echo $project;
 }
 function absoluteFile() {
 	workspaceFolder=$1;
@@ -77,12 +83,16 @@ function buildProject() {
 	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, absoluteFile=$absoluteFile, buildRelativePath=$buildRelativePath";
 	project=`projectName $absoluteFile`;
 	if [ -f "$buildRoot/build.ninja" ]; then
-		echo ninja -C $buildRoot ${project%.vcxproj}
-		ninja -C $buildRoot ${project%.vcxproj}
+		log=$buildRoot/$project.output;
+		echo $log | tee $log;
+		echo `pwd` | tee -a $log;
+		echo ninja -C $buildRoot ${project}  | tee -a $log;
+		set -o pipefail;
+		ninja -C $buildRoot ${project} | tee -a $log;
 	else
 		cd $buildRoot/$buildRelativePath;
-		echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug
-		msbuild.exe $project -p:Configuration=Debug -v:m
+		echo $buildRoot/$buildRelativePath msbuild.exe $project.vcxproj -p:Configuration=Debug
+		msbuild.exe $project.vcxproj -p:Configuration=Debug -v:m
 	fi
 }
 function compile() {
@@ -97,8 +107,11 @@ function compile() {
 	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile, project=$project";
 	buildFile=${absoluteFile#"$fileWorkspaceFolder/"}
 	if [ -f "$buildRoot/build.ninja" ]; then
-		echo ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/${project%.vcxproj}.dir/${buildFile}.obj
-		ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/${project%.vcxproj}.dir/${buildFile}.obj
+		log=$project.output;
+		echo `pwd`/$log | tee $log;
+		echo ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/$project.dir/${buildFile}.obj | tee -a $log;
+		set -o pipefail;
+		ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/$project.dir/${buildFile}.obj | tee -a $log;
 	else
 		cd $buildRoot/$buildRelativePath;
 		echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile
@@ -126,7 +139,14 @@ function build() {
 	cd $buildRoot;
 	set -o pipefail;
 	tput reset;
-	echo `pwd` > $target.output;
-	echo "cmake --build . -j --target $target" >> $target.output;
+	echo `pwd`/$target.output > $target.output;
+	echo "cmake --build . -j --target $target" | tee -a $target.output;
 	cmake --build . -j --target $target | tee -a $target.output;
+}
+function buildTests() {
+	baseProject=$2;
+	if [ $baseProject == "Jde.Opc.Gateway" ]; then
+		baseProject="Jde.Opc";
+	fi;
+	build $1 $baseProject.Tests;
 }

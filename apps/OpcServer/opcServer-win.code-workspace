@@ -13,13 +13,6 @@
 		"version": "2.0.0",
 		"tasks": [
 			{
-				"label": "buildTests",
-				"type": "shell",
-				"command": "cd ${config:debugDir}; tput reset;cmake --build . -j --config Debug --target Jde.Opc.Server.Tests;",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": "build"
-			},
-			{
 				"label": "test",
 				"type": "shell",
 				"command": "cd ${config:buildDir}; ctest -C Debug -VV;", // tput reset;
@@ -46,16 +39,13 @@
 		},
 		{
 			"name": "Tests - Debug",
-			"type": "cppvsdbg",
+			"type": "lldb",
 			"request": "launch",
-			"program": "${config:winBuildDir}\\tests\\Debug\\${config:testExe}",
+			"program": "${config:winBuildDir}\\bin\\${config:buildTarget}\\${config:target}.Tests.exe",
 			"args": [ "-tests", "-settings=${config:sourceDir}/tests/config/Opc.Server.Tests.jsonnet" ],
-			"stopAtEntry": false,
-			"cwd": "${env:JDE_BUILD_DIR}",
-			"environment": [],
+			"cwd": "${env:JDE_BUILD_DIR}\\..\\runtime",
 			"console": "integratedTerminal",
-			"preLaunchTask": "buildTests",
-			"logging": {"natvisDiagnostics": "verbose" }
+			"preLaunchTask": "buildTests"
 		}]
 	},
 	"folders": [

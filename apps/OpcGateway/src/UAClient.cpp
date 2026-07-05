@@ -6,6 +6,7 @@
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
+#include <open62541/types.h>
 #include "StartupAwait.h"
 #include "async/DataChanges.h"
 #include "uatypes/Browse.h"
@@ -170,12 +171,13 @@ namespace Jde::Opc::Gateway{
 
 	α UAClient::StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void{
 		constexpr std::array<sv,6> sessionStates = { "Closed", "CreateRequested", "Created", "ActivateRequested", "Activated", "Closing" };
-		DBG( "[{}]channelState='{}', sessionState='{}', connectStatus='({}){}'", hex((uint)ua), UAException::Message(channelState), FromEnum(sessionStates, sessionState), hex(connectStatus), UAException::Message(connectStatus) );
+		DBG( "[{}]channelState: '{}', sessionState: '{}', connectStatus: '({}){}'", hex((uint)ua), UAException::Message(channelState), FromEnum(sessionStates, sessionState), hex(connectStatus), UAException::Message(connectStatus) );
 		if( auto client = sessionState == UA_SESSIONSTATE_ACTIVATED ? UAClient::TryFind(ua) : sp<UAClient>{}; client ){
 			client->TriggerSessionAwaitables();
 			client->ClearRequest( ConnectRequestId );
 		}
-		if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus==UA_STATUSCODE_BADIDENTITYTOKENINVALID || connectStatus==UA_STATUSCODE_BADCONNECTIONREJECTED || connectStatus==UA_STATUSCODE_BADINTERNALERROR || connectStatus==UA_STATUSCODE_BADUSERACCESSDENIED || connectStatus==UA_STATUSCODE_BADSECURITYCHECKSFAILED || connectStatus == UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
+
+		if( sessionState == UA_SESSIONSTATE_ACTIVATED || connectStatus ){
 			_awaitingActivation.erase_if( [ua, sessionState,connectStatus](sp<UAClient> client){
 				if( client->UAPointer()!=ua )return false;
 
@@ -183,6 +185,9 @@ namespace Jde::Opc::Gateway{
 					LogServerEndpoints( client->Url(), client->Handle() );
 					client->LogClientEndpoints();
 				}
+				else if( auto sslSettings=connectStatus==UA_STATUSCODE_BADCERTIFICATEINVALID ? AppClient()->SslSettings : optional<Crypto::CryptoSettings>{}; sslSettings )
+					ERR( "Certificate: {} rejected."	, sslSettings->CertPath.string() );
+
 				client->ClearRequest( ConnectRequestId );//previous clear didn't have client
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
 					{
