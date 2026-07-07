@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include <jde/access/server/awaits/RoleAwait.h>
+#include "../src/awaits/RoleLoadAwait.h"
 #include "globals.h"
 
 #define let const auto
@@ -92,5 +93,15 @@ namespace Jde::Access::Tests{
 		AddRoleMember( cRole, dRole, GetRoot() );
 		EXPECT_THROW( AddRoleMember( dRole, aRole, GetRoot() ), Exception );
 		//TODO test implement deleted roles.
+	}
+
+	TEST_F( RoleTests, DeletedLoad ){
+		const RolePK rolePK{ GetId(getRole("roleDeletedLoadTest", GetRoot())) };
+		Delete( "role", rolePK, GetRoot() );
+		let roles = BlockAwait<RoleLoadAwait, flat_map<RolePK,Role>>( RoleLoadAwait{QLPtr(), {UserPK::System}} );
+		auto p = roles.find( rolePK );
+		ASSERT_NE( p, roles.end() );
+		EXPECT_TRUE( p->second.IsDeleted );
+		Purge( "role", rolePK, GetRoot() );
 	}
 }

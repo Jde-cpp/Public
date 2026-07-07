@@ -42,6 +42,10 @@ namespace Jde::Access::Tests{
 		let y = BlockTAwait<jvalue>( Server::AclQLAwait{ QL::ParseM(q, vars, Schemas()), executer} ).as_object();
 		return Json::AsNumber<PermissionRightsPK>( y, "permissionRight/id" );
 	}
+	α PurgeAcl( IdentityPK identityPK, PermissionRightsPK permissionPK, UserPK executer )ε->void{
+		let q = Ƒ( "purgeAcl( identity:{{ id:{} }}, permissionRight:{{ id:{} }} )", identityPK.Underlying(), permissionPK );
+		BlockTAwait<jvalue>( Server::AclQLAwait{ QL::ParseM(q, {}, Schemas()), executer} );
+	}
 	α CreateAcl( IdentityPK identityPK, RolePK rolePK, UserPK executer )ε->void{
 		let existing = SelectAcl( identityPK, rolePK );
 		if( existing.empty() ){
@@ -116,6 +120,8 @@ namespace Jde::Access::Tests{
 		if( let existingPermission = GetRolePermission( rolePK, resourceName, GetRoot() ); !existingPermission.empty() )
 			RemoveRolePermission( rolePK, GetId(existingPermission), GetRoot() );
 		EXPECT_THROW( AddRolePermission(rolePK, resourceName, ERights::All, ERights::None, executer), Exception );
+		restoreResource( "roles", GetRoot() );
+		EXPECT_THROW( CreateAcl(_usersPKs["intruder"], rolePK, executer), Exception );
 	}
 
 	TEST_F( AclTests, EnabledPermissions ){
@@ -211,6 +217,35 @@ namespace Jde::Access::Tests{
 		CreateAcl( GroupPK{allowedGroupPK}, allowedRolePK, GetRoot() );
 		TestEnabeledPermissions( resourceName, "AclTests-TestDeny-Group", executer );
 	}
+	TEST_F( AclTests, PurgeAcl ){
+		let resourceName = "groupings";
+		restoreResource( resourceName, GetRoot() );
+		UserPK executer{ GetId( GetUser("purgeAclUser", GetRoot()) ) };
+		let permissionPK = Json::AsNumber<PermissionRightsPK>( GetAcl(executer, resourceName, ERights::All, ERights::None), "id" );
+		let groupId = TestCrud( resourceName, "AclTests-PurgeAcl-Group", executer );
+		TestPurge( resourceName, groupId, executer );
+		PurgeAcl( executer, permissionPK, GetRoot() );
+		let groupId2 = TestUnauthCrud( resourceName, "AclTests-PurgeAcl-Group", executer );
+		TestUnauthPurge( resourceName, groupId2, executer );
+	}
+	TEST_F( AclTests, ReadAuthorization ){
+		auto resource = SelectResource( "acl", GetRoot(), true );
+		if( resource.empty() ){ //never synced (ops:None) - create disabled like ResourceSyncAwait.
+			QL().QuerySync( "createResource( schemaName:\"access\", name:\"acl\", target:\"acl\", allowed:255, description:\"From ReadAuthorization test\" ){id}", {}, {UserPK::System} );
+			resource = SelectResource( "acl", GetRoot(), true );
+			Delete( "resources", GetId(resource), GetRoot() );
+		}
+		let permissionPK = CreateAcl( GetRoot(), ERights::All, ERights::None, "acl", {UserPK::System} ); //grant root while disabled.
+		restoreResource( "acl", GetRoot() );
+		let intruder = _usersPKs["intruder"];
+		let q = "acl( identityId:$identityId ){ identityId permissionRight{id} }";
+		jobject vars{ {"identityId", intruder.Value} };
+		EXPECT_THROW( BlockTAwait<jvalue>( Server::AclQLSelectAwait{QL::ParseQuery(q, vars, Schemas()), intruder} ), Exception );
+		BlockTAwait<jvalue>( Server::AclQLSelectAwait{QL::ParseQuery(q, vars, Schemas()), GetRoot()} );
+		Delete( "resources", GetId(resource), GetRoot() );
+		BlockTAwait<jvalue>( Server::AclQLSelectAwait{QL::ParseQuery(q, vars, Schemas()), intruder} ); //fail-open when disabled.
+		PurgeAcl( GetRoot(), permissionPK, GetRoot() );
+		Purge( "resource", GetId(resource), GetRoot() ); //leave no trace - ResourceTests.CheckDefaults counts rows.
+	}
 	//remove user from group/role.
-	//purge acl
 }

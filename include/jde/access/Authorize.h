@@ -44,6 +44,7 @@ namespace Jde::Access{
 		α RecalcGroupMembers( GroupPK groupPK, const ul& l, bool remove=false )ι->void;
 		α Recalc( const ul& l )ι->void;
 		α RecursiveUsers( GroupPK groupPK, const ul& l, bool clear=false )ι->flat_set<UserPK>;
+		α RecursiveUsers( GroupPK groupPK, const ul& l, bool clear, flat_set<GroupPK>& visited )ι->flat_set<UserPK>;
 		α FindAdminAuthorizer( str schemaName )ι->sp<IAdminAcl>;
 
 		α AddAcl( IdentityPK::Type userGroupPK, PermissionPK permissionPK, ERights allowed, ERights denied, ResourcePK resourcePK )ι->void;
@@ -57,6 +58,8 @@ namespace Jde::Access{
 		α PurgeGroup( GroupPK groupPK )ι->void;
 
 		α AddPermission( IdentityPK identityPK, PermissionRole permissionRole, const flat_set<UserPK>& users, const ul& l )ι->void;
+		α AddPermission( IdentityPK identityPK, PermissionRole permissionRole, const flat_set<UserPK>& users, flat_set<GroupPK>& visitedGroups, const ul& l )ι->void;
+		α AddUserPermissions( User& user, PermissionRole permissionRole, flat_set<RolePK>& visitedRoles )ι->void;
 		α UpdatePermission( PermissionPK permissionPK, optional<ERights> allowed, optional<ERights> denied )ε->void;
 
 		α CreateResource( Resource&& resource )ε->void;
@@ -66,7 +69,7 @@ namespace Jde::Access{
 		α PurgeRole( RolePK rolePK )ι->void;
 		α AddRolePermission( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, const jobject& resource )ι->void;
 		α AddRoleChild( RolePK parentRolePK, vector<RolePK>&& childRolePK )ι->void;
-		α RemoveRoleChildren(	RolePK rolePK, flat_set<RolePK> toRemove )ι->void;
+		α RemoveRoleChildren(	RolePK rolePK, flat_set<PermissionRightsPK> toRemove )ι->void;
 
 		α CreateUser( UserPK userPK )ι->void;
 		α DeleteUser( UserPK identityPK )ι->void;

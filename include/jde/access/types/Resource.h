@@ -9,7 +9,7 @@ namespace Jde::Access{
 		Resource( ResourcePK pk, jobject j )ι;
 		Resource( DB::Row&& row )ι;
 		Resource( jobject j )ι;
-		Access::ResourcePK PK;
+		Access::ResourcePK PK{};
 		string Schema;
 		string Target;
 		string Criteria;
