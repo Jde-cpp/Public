@@ -4,11 +4,6 @@
 #include "ClientHttpAwait.h"
 
 namespace Jde::Web::Client{
-	struct HttpRequestRunArgs {
-		string ContentType{ "application/x-www-form-urlencoded" };
-		optional<boost::beast::http::verb> _verb{ http::verb::unknown };
-	};
-
 	struct ΓWC ClientHttpSession : public std::enable_shared_from_this<ClientHttpSession>{
     ClientHttpSession( str host, PortType port, net::any_io_executor strand, SRCE )ε;
 		ClientHttpSession( str host, PortType port, net::any_io_executor strand, bool isPlain, bool log=true, SRCE )ε;

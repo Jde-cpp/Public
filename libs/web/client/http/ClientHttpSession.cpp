@@ -117,12 +117,17 @@ namespace Jde::Web::Client{
 				ClientHttpRes res{ move(_res) };
 				if( res.IsRedirect() && _session->AllowRedirects ){
 					auto [host,target,port] = res.RedirectVariables();
+					if( host.empty() ){//relative Location - reuse the original host & port.
+						host = _session->Host;
+						port = _session->Port;
+					}
 					DBG( "redirecting from {}{} to {}", _session->Host, _req.target(), res[http::field::location] );
 					try{
 						res = co_await ClientHttpAwait{ host, target, _req.body(), port, _args, _sl };
 					}
-					catch( Exception& ){
-						ResumeExp( ClientHttpException{ec, _session, &_req} );
+					catch( Exception& e ){
+						ResumeExp( move(e) );
+						co_return;
 					}
 				}
 				Resume( move(res) );

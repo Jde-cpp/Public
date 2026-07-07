@@ -31,7 +31,7 @@ namespace Jde::Web{
 	Jwt::Jwt( sv encoded )ε{
 		let fpIndex = encoded.find_last_of( '.' );
 		let bodyIndex = encoded.find_first_of( '.' );
-		if( fpIndex==string::npos || fpIndex==encoded.size() || bodyIndex==string::npos || fpIndex==bodyIndex )
+		if( fpIndex==string::npos || fpIndex+1==encoded.size() || bodyIndex==string::npos || fpIndex==bodyIndex )
 			THROW( "Invalid jwt.  Expected 3 parts." );
 		HeaderBodyEncoded = encoded.substr( 0, fpIndex );
 		let headerEncoded = HeaderBodyEncoded.substr( 0, bodyIndex );
@@ -52,6 +52,8 @@ namespace Jde::Web{
 			SetExponent( Json::AsString(Body, "e") );
 			fpKey = Crypto::Fingerprint( PublicKey );// Use PublicKey instead of Certificate
 		}
+		if( let exp = Json::FindNumber<time_t>(Body, "exp"); exp && *exp<time(nullptr) )
+			THROW( "Invalid jwt.  Expired at '{}'.", *exp );
 		UserPK = { Json::FindNumber<UserPK::Type>(Body, "sub").value_or(0) };
 		UserName = Json::FindString( Body, "name" ).value_or( fpKey ? Str::ToHex((byte*)fpKey->data(), fpKey->size()) : "" );
 		UserTarget = Json::FindString( Body, "target" ).value_or( UserName );

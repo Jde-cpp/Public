@@ -27,8 +27,8 @@ namespace Jde::Web::Client{
 				throw ClientHttpException{ *this, Tags, Level, Source };
 			}
 		}
-		ELogTags Tags;
-		ELogLevel Level;
-		source_location Source;
+		ELogTags Tags{ ELogTags::HttpClientWrite };
+		ELogLevel Level{ ELogLevel::Debug };
+		source_location Source{};
 	};
 }

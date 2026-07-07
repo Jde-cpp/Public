@@ -88,7 +88,6 @@ namespace Jde::Web::Client{
 	$::Write( TFromClientMsgs&& m )ι->void{ base::Write( Protobuf::ToString(m) ); }
 	$::OnReadData( std::span<uint8_t> transmission )ι->void{
 		try{
-			sv x{ (char*)transmission.data(), transmission.size() };
 			auto proto = Protobuf::Deserialize<TFromServerMsgs>( transmission.data(), (int)transmission.size() );
 			OnRead( move(proto) );
 		}
