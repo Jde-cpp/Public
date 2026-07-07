@@ -67,8 +67,8 @@ namespace Jde::Web::Client{
 		_writeGuard = co_await _writeLock.Lock();
 		_writeBuffer = move(buffer);
 		std::visit( [this](auto&& ws)->void {
-			net::post( _ioc, [this, &ws](){
-				ws.async_write( net::buffer(_writeBuffer), beast::bind_front_handler(&ClientSocketStream::OnWrite, shared_from_this()) );
+			net::post( _ioc, [self=shared_from_this(), &ws](){//self keeps the stream (and the variant ws refers into) alive until the post runs; raw 'this' could dangle if OnClose releases the stream first.
+				ws.async_write( net::buffer(self->_writeBuffer), beast::bind_front_handler(&ClientSocketStream::OnWrite, self) );
 			});
 		}, _ws );
 	}

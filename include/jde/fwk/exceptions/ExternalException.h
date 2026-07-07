@@ -23,7 +23,7 @@ namespace Jde{
 		//error code is part of format; ' - {}' description suffix only when a description exists.
 		Ω FormatMsg( string&& externalMessage, bool hasDescription, const ExceptionArgs& args )ι->string{
 			const sv suffix = hasDescription ? " - {}" : "";
-			return args.HasCode() ? Ƒ("({:x}){}{}", args.Code(), externalMessage, suffix) : Ƒ("{}{}", externalMessage, suffix);
+			return args.HasCode() ? Ƒ("({:x}){}{}", args._code, externalMessage, suffix) : Ƒ("{}{}", externalMessage, suffix);
 		}
 	};
 }

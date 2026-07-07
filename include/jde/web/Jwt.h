@@ -11,7 +11,7 @@ namespace Jde::Web{
 		α Payload()Ι->string;
 		α Aud()Ε->string{ return Json::AsString( Body, "aud" ); }
 		α Iss()Ι->sv{ return Json::FindDefaultSV( Body, "iss" ); }
-		α Expires()Ι->TimePoint{ return Clock::from_time_t(Iat); }
+		α Expires()Ι->TimePoint{ auto exp = Json::FindNumber<time_t>( Body, "exp" ); return exp ? Clock::from_time_t(*exp) : TimePoint::max(); }
 		string Kid;
 		jobject Body;
 		string HeaderBodyEncoded;

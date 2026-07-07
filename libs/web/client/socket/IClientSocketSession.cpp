@@ -22,11 +22,12 @@ namespace Jde::Web{
 }
 #define CHECK_EC( tag ) if( ec ){ \
 	CodeException e{ static_cast<std::error_code>(ec), tag, GetLogLevel(ec) }; \
-	if( _connectHandle ){ \
-		_connectHandle.promise().SetExp( move(e) ); \
-		_connectHandle.resume(); \
-		return; \
+	if( auto h = _connectHandle; h ){ \
+		_connectHandle = nullptr; \
+		h.promise().SetExp( move(e) ); \
+		h.resume(); \
 	}\
+	return; \
 }
 namespace Jde::Web::Client{
 	α GetLogLevel( beast::error_code ec )->ELogLevel{
@@ -114,8 +115,10 @@ namespace Jde::Web::Client{
 	α IClientSocketSession::OnHandshake( beast::error_code ec )ι->void{
 		CHECK_EC( _readTag )
 		DBGT( _connectTag, "[{}]OnHandshake succeeded. Calling read.", _host );
-		if( _connectHandle )
-			_connectHandle.resume();
+		if( auto h = _connectHandle; h ){
+			_connectHandle = nullptr;
+			h.resume();
+		}
 		_stream->AsyncRead( shared_from_this() );
 	}
 	α IClientSocketSession::Write( string&& m )ι->void{
