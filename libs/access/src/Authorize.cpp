@@ -28,7 +28,7 @@ namespace Jde::Access{
 		auto pk = resource.PK;
 		if( !pk && resource.Schema.size() && resource.Target.size() )
 			pk = FindResourcePK( resource.Schema, resource.Target, resource.Criteria, l ).value_or( 0 );
-		if( auto p = pk ? Resources.find(resource.PK) : Resources.end(); p!=Resources.end() )
+		if( auto p = pk ? Resources.find(pk) : Resources.end(); p!=Resources.end() )
 			return &p->second;
 		else if( resource.Schema.empty() && resource.Target.size() ){
 			for( let& [pk,existing] : Resources ){
@@ -70,7 +70,7 @@ namespace Jde::Access{
 
 	α Authorize::TestAdmin( str resourceTarget, UserPK executer, SL sl )ε->void{
 		Jde::sl l{ Mutex };
-		auto resource = find_if( Resources, [&](let& r){return r.second.Target==resourceTarget;} );
+		auto resource = find_if( Resources, [&](let& r){return r.second.Target==resourceTarget && !r.second.Schema.contains('.');} );//exclude opc schemas which can have same target
 		if( resource!=Resources.end() && !resource->second.IsDeleted )
 			TestAdmin( resource->second, executer, sl );
 	}
@@ -93,12 +93,11 @@ namespace Jde::Access{
 	}
 	α Authorize::TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SL sl )ε->void{
 		Jde::sl l{ Mutex };
-		if( auto permission = Permissions.find(permissionPK); permission!=Permissions.end() ){
-			l.unlock();
-			TestAdmin( permission->second.ResourcePK, userPK, sl );
-		}
-		else
-			THROW( "[{}]Permission not found.", permissionPK );
+		auto permission = Permissions.find( permissionPK );
+		THROW_IF( permission==Permissions.end(), "[{}]Permission not found.", permissionPK );
+		let resourcePK = permission->second.ResourcePK;
+		l.unlock();
+		TestAdmin( resourcePK, userPK, sl );
 	}
 
 	α Authorize::Rights( str schemaName, str resourceName, UserPK executer )ι->ERights{
@@ -123,20 +122,23 @@ namespace Jde::Access{
 	}
 
 	α Authorize::RecursiveUsers( GroupPK groupPK, const ul& l, bool clear )ι->flat_set<UserPK>{
+		flat_set<GroupPK> visited;
+		return RecursiveUsers( groupPK, l, clear, visited );
+	}
+	α Authorize::RecursiveUsers( GroupPK groupPK, const ul& l, bool clear, flat_set<GroupPK>& visited )ι->flat_set<UserPK>{
 		flat_set<UserPK> users;
-		auto group = Groups.find( groupPK );
+		auto group = visited.emplace(groupPK).second ? Groups.find( groupPK ) : Groups.end();//visited guards cycles in existing data.
 		if( group==Groups.end() || group->second.IsDeleted )
 			return users;
 
 		for( auto member : group->second.Members ){
 			if( member.IsUser() ){
 				users.emplace( member.UserPK() );
-				if( auto user = clear ? Users.end() : Users.find(member.UserPK()); user!=Users.end() )
+				if( auto user = clear ? Users.find(member.UserPK()) : Users.end(); user!=Users.end() )
 					user->second.Clear();
 			}
 			else{
-				ASSERT( groupPK!=member.GroupPK() );
-				let groupUsers = RecursiveUsers( member.GroupPK(), l );
+				let groupUsers = RecursiveUsers( member.GroupPK(), l, clear, visited );
 				users.insert( groupUsers.begin(), groupUsers.end() );
 			}
 		}
@@ -240,8 +242,11 @@ namespace Jde::Access{
 				break;
 			}
 		}
-		if( identityPK.IsUser() )
+		if( identityPK.IsUser() ){
+			if( auto user = Users.find(identityPK.UserPK()); user!=Users.end() )
+				user->second.Clear();
 			SetUserPermissions( {identityPK.UserPK()}, l );
+		}
 		else
 			RecalcGroupMembers( identityPK.GroupPK(), l );
 	}
@@ -331,8 +336,9 @@ namespace Jde::Access{
 
 	α Authorize::TestAddRoleMember( RolePK parent, RolePK child, SL sl )ε->void{
 		THROW_IFX( parent==child, Exception(sl, ELogLevel::Debug, "Role cannot be a member of itself.") );
+		flat_set<RolePK> visited;
 		function<bool( RolePK,RolePK )> isChild = [&]( RolePK parent, RolePK child )->bool {
-			auto children = Roles.find( parent );
+			auto children = visited.emplace(parent).second ? Roles.find( parent ) : Roles.end();//visited guards cycles in existing data.
 			if( children==Roles.end() )
 				return false;
 			for( PermissionRole member : children->second.Members ){
@@ -378,7 +384,7 @@ namespace Jde::Access{
 		TRACET( _ptags, "[{}+{}]Added role child.", parentRolePK, Str::Join(childRolePKs) );
 	}
 
-	α Authorize::RemoveRoleChildren( 	RolePK rolePK, flat_set<PermissionPK> toRemove )ι->void{
+	α Authorize::RemoveRoleChildren( 	RolePK rolePK, flat_set<PermissionRightsPK> toRemove )ι->void{
 		if( !toRemove.size() )
 			return;
 		ul l{ Mutex };
@@ -416,19 +422,27 @@ namespace Jde::Access{
 	}
 
 	α Authorize::AddPermission( IdentityPK identityPK, PermissionRole permissionRole, const flat_set<UserPK>& users, const ul& l )ι->void{
+		flat_set<GroupPK> visitedGroups;
+		AddPermission( identityPK, permissionRole, users, visitedGroups, l );
+	}
+	α Authorize::AddPermission( IdentityPK identityPK, PermissionRole permissionRole, const flat_set<UserPK>& users, flat_set<GroupPK>& visitedGroups, const ul& l )ι->void{
 		if( auto pkUser = identityPK.IsUser() ? Users.find(identityPK.UserPK()) : Users.end(); pkUser!=Users.end() ){
 			if( !users.empty() && !users.contains(pkUser->first) )
 				return;
-			if( auto p = permissionRole.index()==0 ? Permissions.find(get<0>(permissionRole)) : Permissions.end(); p!=Permissions.end() )
-				pkUser->second += p->second;
-			else if( auto rolePermissions = permissionRole.index()==1 ? Roles.find(get<1>(permissionRole)) : Roles.end(); rolePermissions!=Roles.end() && !rolePermissions->second.IsDeleted ){
-				for( let& rolePermission : rolePermissions->second.Members )
-					AddPermission( identityPK, rolePermission, users, l );
-			}
+			flat_set<RolePK> visitedRoles;
+			AddUserPermissions( pkUser->second, permissionRole, visitedRoles );
 		}
-		else if( auto group = identityPK.IsUser() ? Groups.end() : Groups.find(identityPK.GroupPK()); group!=Groups.end() ){
+		else if( auto group = identityPK.IsUser() ? Groups.end() : Groups.find(identityPK.GroupPK()); group!=Groups.end() && visitedGroups.emplace(group->first).second ){
 			for( auto member : group->second.Members )
-				AddPermission( member, permissionRole, users, l );//user
+				AddPermission( member, permissionRole, users, visitedGroups, l );//user
+		}
+	}
+	α Authorize::AddUserPermissions( User& user, PermissionRole permissionRole, flat_set<RolePK>& visitedRoles )ι->void{
+		if( auto p = permissionRole.index()==0 ? Permissions.find(get<0>(permissionRole)) : Permissions.end(); p!=Permissions.end() )
+			user += p->second;
+		else if( auto rolePermissions = permissionRole.index()==1 ? Roles.find(get<1>(permissionRole)) : Roles.end(); rolePermissions!=Roles.end() && !rolePermissions->second.IsDeleted && visitedRoles.emplace(rolePermissions->first).second ){
+			for( let& rolePermission : rolePermissions->second.Members )
+				AddUserPermissions( user, rolePermission, visitedRoles );
 		}
 	}
 	α Authorize::UpdatePermission( PermissionPK permissionPK, optional<ERights> allowed, optional<ERights> denied )ε->void{

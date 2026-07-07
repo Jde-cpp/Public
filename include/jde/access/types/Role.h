@@ -3,8 +3,6 @@
 
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Access{
-	using PermissionRightPK=uint32;
-
 	struct RoleRights final{
 		Access::RolePK RolePK;
 		Access::PermissionPK PermissionPK;

@@ -73,6 +73,7 @@ namespace Jde::Access::Server{
 	α AclQLAwait::InsertRole()ι->DB::ExecuteAwait::Task{
 		jobject y;
 		try{
+			Authorizer().TestAdmin( "roles", _executer, _sl );
 			DB::InsertClause insert{ Table().InsertProcName()+"_role" };
 			let args = _mutation.ExtrapolateVariables();
 			let identityPK = Json::AsNumber<IdentityPK::Type>( args, "identity/id" );
@@ -134,6 +135,13 @@ namespace Jde::Access::Server{
 	}
 
 	α AclQLSelectAwait::Suspend()ι->void{
+		try{
+			GetTable( "acl" ).Authorize( Access::ERights::Read, _executer, _sl );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+			return;
+		}
 		if( auto rights = Query.FindTable("permissionRights"); rights )
 			LoadPermissionRights( *rights );
 		else if( auto roles = Query.FindTable("roles"); roles )

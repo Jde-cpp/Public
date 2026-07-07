@@ -18,7 +18,7 @@ namespace Jde::Access{
 
 	Role::Role( const jobject& j )ι:
 		PK{ Json::FindNumber<RolePK>(j, "id").value_or(0) },
-		IsDeleted{ Json::FindBool(j, "deleted").value_or(false) },
+		IsDeleted{ Json::FindTimePoint(j, "deleted").has_value() },
 		Members{ getMembers(j) }
 	{}
 }

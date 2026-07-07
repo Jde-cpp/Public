@@ -89,8 +89,8 @@ namespace Jde::Access{
 						Authorizer().AddRolePermission( rolePK, permission.PK, (ERights)permission.Allowed, (ERights)permission.Denied, rights->at("resource").as_object() );
 					}
 					else{
-						flat_set<PermissionRightPK> members;
-						Json::Visit( Json::AsValue(o, "permissionRight/id"), [&](const jvalue& v){ members.insert( Json::AsNumber<PermissionRightPK>(v) );} );
+						flat_set<PermissionRightsPK> members;
+						Json::Visit( Json::AsValue(o, "permissionRight/id"), [&](const jvalue& v){ members.insert( Json::AsNumber<PermissionRightsPK>(v) );} );
 						Authorizer().RemoveRoleChildren( rolePK, members );
 					}
 				}
@@ -98,7 +98,7 @@ namespace Jde::Access{
 					if( event==Added )
 						Authorizer().AddRoleChild( rolePK, Json::ToVector<RolePK>(Json::AsValue(*child, "id")) );
 					else{
-						flat_set<PermissionRightPK> members;
+						flat_set<PermissionRightsPK> members;
 						Json::Visit( Json::AsValue(o, "id"), [&](const jvalue& v){ members.insert( Json::AsNumber<RolePK>(v) );} );
 						Authorizer().RemoveRoleChildren( rolePK, members );
 					}
@@ -122,7 +122,7 @@ namespace Jde::Access{
 		let denied = Json::FindNumber<uint8>( o, "denied" );
 		Authorizer().UpdatePermission( pk, allowed ? optional<ERights>((ERights)*allowed) : nullopt, denied ? optional<ERights>((ERights)*denied) : nullopt );
 	}
-	α AccessListener::AclChanged( ESubscription event, const jobject& o )ι->void{
+	α AccessListener::AclChanged( ESubscription event, const jobject& o )ε->void{
 		using enum ESubscription;
 		let identityPK = Json::AsNumber<IdentityPK::Type>( o, "identity/id" );
 		switch( event ){
@@ -142,7 +142,7 @@ namespace Jde::Access{
 			}break;
 			case Purged:{
 				optional<PermissionRole> permissionPK;
-				if( auto p = o.if_contains("permission"); p ) //identity{id:y}, permission:{ allowed:x, denied:x, resource:{id:x} }
+				if( auto p = o.if_contains("permissionRight"); p ) //identity{id:y}, permissionRight:{ allowed:x, denied:x, resource:{id:x} }
 					permissionPK = PermissionRole{ std::in_place_index<0>, QL::AsId<PermissionRightsPK>(*p) };
 				else if( auto role = o.if_contains("role"); role ) //identity{id:y}, role:{ id:x }
 					permissionPK = PermissionRole{ std::in_place_index<1>, QL::AsId<RolePK>(*role) };

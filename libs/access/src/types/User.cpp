@@ -11,13 +11,10 @@ namespace Jde::Access{
 		let resourcePK = permission->second.ResourcePK;
 		permission->second.Update( allowed, denied );
 		AllowedDisallowed rights{ ERights::None, ERights::None };
-		for( auto&& [_,p] : Permissions ){
+		for( let& [_,p] : Permissions ){
 			if( p.ResourcePK==resourcePK ){
-				p.Update( allowed, denied );
-				if( allowed )
-					rights.Allowed |= *allowed;
-				if( denied )
-					rights.Denied |= *denied;
+				rights.Allowed |= p.Allowed;
+				rights.Denied |= p.Denied;
 			}
 		}
 		Rights[resourcePK] = rights;
