@@ -66,20 +66,30 @@ struct Binding{
 	struct BindingString final: Binding{
 		BindingString( SQLSMALLINT type, SQLLEN size )ι:
 			Binding{ type, SQL_C_CHAR, size },
-			_buffer{std::make_unique_for_overwrite<char[]>( size )}{
+			_buffer{std::make_unique_for_overwrite<char[]>( size )},
+			_bufferSize{ size }{
 		}
 		BindingString( sv value )ι:
 			Binding{ SQL_VARCHAR, SQL_C_CHAR, (SQLLEN)value.size() },
-			_buffer{ std::make_unique_for_overwrite<char[]>(value.size()) }{
+			_buffer{ std::make_unique_for_overwrite<char[]>(value.size()) },
+			_bufferSize{ (SQLLEN)value.size() }{
 			std::copy(value.begin(), value.end(), _buffer.get());
 		}
 		α Data()ι->void* override{ return _buffer.get(); }
 		α GetValue()Ι->DB::Value override{ return IsNull() ? Value{} : Value{to_string()}; }
-		α to_string()Ι->string override{ return GetOutput()==-1 || !_buffer ? string{} : string{ _buffer.get(), _buffer.get()+GetOutput() }; }
+		α to_string()Ι->string override{
+			let output = GetOutput();
+			if( !_buffer || output==SQL_NULL_DATA )
+				return {};
+			let length = output==SQL_NO_TOTAL || output>=_bufferSize //indicator is the untruncated length; driver wrote _bufferSize-1 chars + null terminator.
+				? std::max<SQLLEN>( _bufferSize-1, 0 ) : output;
+			return string{ _buffer.get(), _buffer.get()+length };
+		}
 		α BufferLength()Ι->SQLLEN override{ return std::max<SQLLEN>( GetOutput(), 0 ); }
 		α Size()Ι->SQLULEN override{ return (SQLULEN)BufferLength(); }
 	private:
 		up<char[]> _buffer;
+		SQLLEN _bufferSize{};
 	};
 
 	struct BindingBinary final :Binding{
@@ -89,7 +99,7 @@ struct Binding{
 			Binding{ SQL_VARBINARY, SQL_C_BINARY, v.get_bytes().size()==0 ? SQL_NULL_DATA : (SQLLEN)v.get_bytes().size()  },
 			_value{ move(v) }
 		{}
-		α Data()ι->void* override{ return IsNull() ? nullptr : GetValue().get_bytes().data(); }
+		α Data()ι->void* override{ return IsNull() ? nullptr : _value.get_bytes().data(); }
 		α GetValue()Ι->Value override{ return _value; }
 		α GetOutput()Ι->SQLLEN override{ return Size()==0 ? SQL_NULL_DATA : Binding::GetOutput(); }
 
@@ -230,7 +240,7 @@ struct Binding{
 	struct BindingNumeric final : TBinding<SQL_NUMERIC_STRUCT,SQL_NUMERIC,SQL_C_NUMERIC>{
 		α GetValue()Ι->Value override{ return IsNull() ? Value{} : Value{GetDouble()}; }
 		α GetDouble()Ι->double override{//https://docs.microsoft.com/en-us/sql/odbc/reference/appendixes/retrieve-numeric-data-sql-numeric-struct-kb222831?view=sql-server-ver15
-			uint divisor = (uint)std::pow( 1, _data.scale );
+			double divisor = std::pow( 10.0, _data.scale );
 			_int value = 0, last=1;
 			for( uint i=0; i<SQL_MAX_NUMERIC_LEN; ++i ){
 				const int current = _data.val[i];

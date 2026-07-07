@@ -7,18 +7,18 @@
 #define let const auto
 namespace Jde::DB::Odbc{
 	constexpr ELogTags _tags{ ELogTags::App };
-	SQLHENV _hEnv{};
+	SQLHENV _hEnv{}; //shared by all sessions so SQL_CP_ONE_PER_HENV pooling works; lives for the process.
+	mutex _hEnvMutex;
 
 	Ω getEnvHandle()ε->SQLHENV{
-		if( !_hEnv){
-			//TRACE( "Creating _hEnv" );
-			SQLHENV hEnv;
+		lg l{ _hEnvMutex };
+		if( !_hEnv ){
 			CALL( nullptr, SQL_HANDLE_ENV, ::SQLSetEnvAttr(nullptr, SQL_ATTR_CONNECTION_POOLING, (SQLPOINTER)SQL_CP_ONE_PER_HENV, 0), "SQLSetEnvAttr(SQL_ATTR_CONNECTION_POOLING)" );
+			SQLHENV hEnv;
 			let rc=::SQLAllocHandle( SQL_HANDLE_ENV, SQL_NULL_HANDLE, &hEnv); THROW_IF( rc==SQL_ERROR, "({}) - Unable to allocate an environment handle", rc );
 			CALL(hEnv, SQL_HANDLE_ENV, ::SQLSetEnvAttr(hEnv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)SQL_OV_ODBC3_80, 0), "SQLSetEnvAttr(SQL_ATTR_ODBC_VERSION)" );
-			return hEnv;
+			_hEnv = hEnv;
 		}
-		TRACE( "_hEnv={:x}", (uint)_hEnv );
 		return _hEnv;
 	}
 
@@ -36,8 +36,6 @@ namespace Jde::DB::Odbc{
 			::SQLDisconnect( _hStatement );
 			::SQLFreeHandle( SQL_HANDLE_DBC, _hStatement );
 		}
-		if( _hEnv )
-			::SQLFreeHandle(SQL_HANDLE_ENV, _hEnv);
 	}
 
 	α HandleSession::Connect( sv connectionString )ε->void{
@@ -60,47 +58,4 @@ namespace Jde::DB::Odbc{
 				WARNT( ELogTags::App, "SQLFreeHandle( SQL_HANDLE_STMT, {} ) returned {}", _hStatement, rc );
 		}
 	}
-/*
-	HandleStatementAsync::~HandleStatementAsync(){
-		WARN_IF( _event && !::CloseHandle(_event), "CloseHandle returned {}", ::GetLastError() );
-		let rc = _handle ? ::SQLFreeHandle( SQL_HANDLE_STMT, _handle ) : SQL_SUCCESS;
-		WARN_IF( rc!=SQL_SUCCESS, "SQLFreeHandle(SQL_HANDLE_STMT) returned {} - {}", rc, ::GetLastError() );
-	}
-
-	auto HandleSessionAsync::Connect(sv connectionString)ε->void {
-		if (IsAsynchronous()) {
-			CALL(_hStatement, SQL_HANDLE_DBC, SQLSetConnectAttr(_hStatement, SQL_ATTR_ASYNC_DBC_FUNCTIONS_ENABLE, (SQLPOINTER)SQL_ASYNC_DBC_ENABLE_ON, SQL_IS_INTEGER), "SQLSetConnectAttr(SQL_ATTR_ASYNC_DBC_FUNCTIONS_ENABLE)");
-			_event = CreateEvent(nullptr, false, false, nullptr); THROW_IF(!_event, "CreateEvent - {}"sv, GetLastError());
-			CALL(_hStatement, SQL_HANDLE_DBC, SQLSetConnectAttr(_hStatement, SQL_ATTR_ASYNC_DBC_EVENT, _event, SQL_IS_POINTER), "SQLSetConnectAttr(SQL_ATTR_ASYNC_DBC_FUNCTIONS_ENABLE)");
-		}
-		else
-			HandleSession::Connect(connectionString);
-	}
-
-	α HandleStatementAsync::OBindings()ε->const vector<up<IBindings>>&{
-		if( !_bindings.size() ){
-			SQLSMALLINT columnCount;
-			CALL( _handle, SQL_HANDLE_STMT, SQLNumResultCols(_handle,&columnCount), "SQLNumResultCols" );
-			if( columnCount ){
-				_bindings.reserve( columnCount );
-				let rowCount = RowStatusesSize(); //for( ; rowCount<RowStatusesSize() && _rowStatus[rowCount]==0 ; ++rowCount );
-				for( SQLSMALLINT iCol = 1; iCol <= columnCount; ++iCol ){
-					SQLLEN ssType;
-					CALL( _handle, SQL_HANDLE_STMT, ::SQLColAttribute(_handle, iCol, SQL_DESC_CONCISE_TYPE, NULL, 0, NULL, &ssType), "SQLColAttribute::Concise" );
-
-					if( ssType == SQL_CHAR || ssType == SQL_VARCHAR || ssType == SQL_LONGVARCHAR || ssType == -9/ *varchar(max)?* / ){
-						SQLLEN bufferSize = 0;
-						CALL( _handle, SQL_HANDLE_STMT, ::SQLColAttribute(_handle, iCol, SQL_DESC_DISPLAY_SIZE, NULL, 0, NULL, &bufferSize), "SQLColAttribute::Display" );
-						if( ssType==-9 && bufferSize==0 )
-							bufferSize = (1 << 14) - 1;//TODO handle varchar(max).
-						_bindings.emplace_back( IBindings::Create((SQLSMALLINT)ssType, rowCount, ++bufferSize) );
-					}
-					else
-						_bindings.emplace_back( IBindings::Create((SQLSMALLINT)ssType,rowCount) );
-				}
-			}
-		}
-		return _bindings;
-	}
-	*/
 }

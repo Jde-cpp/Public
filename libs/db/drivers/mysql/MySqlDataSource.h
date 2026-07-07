@@ -8,8 +8,9 @@
 extern "C" ΓMY Jde::DB::IDataSource* GetDataSource();
 
 namespace Jde::DB::MySql{
-	struct MySqlServerMeta;
+	struct MySqlServerMeta; struct Session;
 	struct MySqlDataSource final : IDataSource{
+		~MySqlDataSource() override;
 		α ExecuteSync( Sql&& sql, SL sl )ε->uint override;
 		α ExecuteScalerSync( Sql&& sql, EValue outValue, SL sl )ε->Value override;
 		α ExecuteNoLog( Sql&& sql, SRCE )ε->uint override;
@@ -37,7 +38,10 @@ namespace Jde::DB::MySql{
 		α Execute( DB::Sql&& sql, SL sl )ε->uint{ return Execute( move(sql), sl, {} ); }
 		α Select( Sql&& s, RowΛ f, SL sl )ε->uint override;
 		α InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint override;
+		α AcquireSession( SL sl )ε->up<Session>; //pooled or fresh connection.
+		α ReleaseSession( up<Session>&& session )ι->void;
 		up<MySqlServerMeta> _schemaProc;
 		mysql::connect_params _cs;
+		vector<up<Session>> _idleSessions; mutex _idleSessionsMutex;
 	};
 }

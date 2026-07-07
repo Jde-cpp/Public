@@ -14,11 +14,19 @@ namespace Jde::DB{
 		Params.insert( Params.end(), std::make_move_iterator(where.Params().begin()), std::make_move_iterator(where.Params().end()) );
 		return *this;
 	}
-	α Sql::EmbedParams()Ι->string{
-		string fullSql; fullSql.reserve( Text.size()+Params.size()*2 );
-		uint iStart=0;
-		for( uint i=Text.find('?'), iParam=0; iParam<Params.size() && i<Text.size(); iStart=i+1, i=Text.find('?', i+1) ){
-			fullSql.append( Text, iStart, i-iStart );
+	α Sql::EmbedParams()Ι->string{ //display/logging only - not escaped for execution.
+		string fullSql; fullSql.reserve( Text.size()+Params.size()*8 );
+		char quote{};
+		for( uint i=0, iParam=0; i<Text.size(); ++i ){
+			const char ch = Text[i];
+			if( !quote && (ch=='\'' || ch=='"') )
+				quote = ch;
+			else if( ch==quote )
+				quote = 0;
+			if( ch!='?' || quote || iParam==Params.size() ){
+				fullSql.push_back( ch );
+				continue;
+			}
 			auto& param = Params[iParam++];
 			switch( param.Type() ){
 				using enum EValue;
@@ -30,12 +38,10 @@ namespace Jde::DB{
 				else
 					fullSql.append( '\''+Str::Encode64( param.get_bytes() )+'\'' );
 				break;
-			default: 
+			default:
 				fullSql.append( param.ToString() );
 			}
 		}
-		if( iStart<Text.size() )
-			fullSql.append( Text, iStart, Text.size()-iStart );
 		return fullSql;
 	}
 }

@@ -60,9 +60,6 @@ namespace Jde::DB{
 		db->SyncScripts( config, initConfig );
 		db->SyncData( config, Json::AsObject(initConfig, "tables") );
 		db->SyncFKs( config );
-		wp<AppSchema> appSchema = db->AppSchemas.begin()->second;
-		wp<SchemaDdl> db2 = db;
-		db = nullptr;
 	}
 
 	α SchemaDdl::SyncFKs( const AppSchema& config )ε->void{
@@ -142,7 +139,6 @@ namespace Jde::DB{
 			TRACE( "Executing '{}'", scriptFile.string() );
 			let queries = Str::Split<sv,Str::iv>( text, "\ngo"_iv );
 			for( let& text : queries ){
-				string newName = Ƒ("[{}]", config.DBSchema->Name);
 				let query = Str::Replace(
 					Str::Replace(text, "[dbo]"sv, Ƒ("[{}]", config.DBSchema->Name) ),
 					stdPrefix, prefix );

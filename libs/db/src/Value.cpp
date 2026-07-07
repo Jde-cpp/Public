@@ -9,7 +9,7 @@
 namespace Jde::DB{
 	using namespace Json;
 	constexpr ELogTags _tags{ ELogTags::Sql };
-	constexpr array<sv,10> EValueStrings = { "null", "string", "bool", "int8", "int32", "int64", "uint32", "uint64", "double", "time" };
+	constexpr array<sv,11> EValueStrings = { "null", "string", "bool", "int8", "int32", "int64", "uint32", "uint64", "double", "time", "bytes" };
 
 	Ω fromJson( EType type, const jvalue& j, SL sl )->Value::Underlying{
 		Value::Underlying value{ nullptr };
@@ -64,13 +64,19 @@ namespace Jde::DB{
 
 	α Value::ToUInt()Ι->uint{
 		uint y{};
-		using enum EValue;
-		if( Type()==Int32 )
-			y = get_int32();
-		else if( Type()==Int64 )
-			y = get_int();
-		else if( Type()==UInt64 )
-			y = get_uint();
+		switch( Type() ){
+			using enum EValue;
+		case Bool: y = get_bool() ? 1 : 0; break;
+		case Int8: y = (uint)get_int8(); break;
+		case Int32: y = (uint)get_int32(); break;
+		case Int64: y = (uint)get_int(); break;
+		case UInt32: y = get_uint32(); break;
+		case UInt64: y = get_uint(); break;
+		case Double: y = (uint)get_double(); break;
+		default: //Null intentionally 0.
+			if( !is_null() )
+				WARN( "ToUInt on non-numeric type '{}' returns 0.", TypeName() );
+		}
 		return y;
 	}
 
@@ -95,6 +101,7 @@ namespace Jde::DB{
 		case Int32: j = get_int32(); break;
 		case Double: j = get_double(); break;
 		case Time: j = ToIsoString( get_time() ); break;
+		case Bytes: j = Str::Encode64( get_bytes() ); break;
 		default: ERR( "Unknown type({}).", TypeName() );
 		}
 	}

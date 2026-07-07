@@ -37,7 +37,13 @@ namespace Jde::DB{
 		α get_bytes()Ι->const vector<uint8_t>&{ return const_cast<Value*>(this)->get_bytes(); }
 		α get_bytes()ι->vector<uint8_t>& { return get<vector<uint8_t>>( Variant ); }
 		α get_double()Ι->double{ return get<double>(Variant); }
-		α get_guid()Ι->boost::uuids::uuid{ boost::uuids::uuid u; const auto& bytes = get_bytes(); std::copy( bytes.begin(), bytes.end(), u.begin() ); return u; }
+		α get_guid()Ε->boost::uuids::uuid{
+			const auto& bytes = get_bytes();
+			THROW_IF( bytes.size()!=boost::uuids::uuid::static_size(), "Guid blob is {} bytes, expected {}.", bytes.size(), boost::uuids::uuid::static_size() );
+			boost::uuids::uuid u;
+			std::copy( bytes.begin(), bytes.end(), u.begin() );
+			return u;
+		}
  		α get_int8()Ι->int8_t{ return get<int8_t>(Variant); }
 		α get_int32()Ι->int{ return get<int>(Variant); }
 		α get_int()Ι->_int{ return get<_int>(Variant); }
