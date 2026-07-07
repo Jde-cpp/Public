@@ -54,6 +54,5 @@ namespace Jde::App{
 		const std::chrono::time_zone& _tz;
 		std::chrono::year_month_day _today;
 		vector<byte> _toSave;
-		flat_set<std::chrono::year_month_day> _archivedDays;
 	};
 }

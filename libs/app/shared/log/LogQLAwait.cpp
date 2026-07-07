@@ -38,7 +38,7 @@ namespace Jde::App{
 			if( table.JsonName=="file" ){
 				jobject o;
 				if( table.FindColumn("name") )
-					o["name"] = entry.File();;
+					o["name"] = entry.File();
 				if( table.FindColumn("id") )
 					o["id"] = ToString( entry.FileId() );
 				jEntry[table.JsonName] = move(o);
@@ -46,7 +46,7 @@ namespace Jde::App{
 			else if( table.JsonName=="function" ){
 				jobject o;
 				if( table.FindColumn("name") )
-					o["name"] = entry.Function();;
+					o["name"] = entry.Function();
 				if( table.FindColumn("id") )
 					o["id"] = ToString( entry.FunctionId() );
 				jEntry[table.JsonName] = move(o);

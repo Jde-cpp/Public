@@ -1,5 +1,8 @@
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/process/process.h>
+#include <jde/fwk/process/execution.h>
+#include <jde/app/client/AppClientSocketSession.h>
+#include <jde/app/client/appClient.h>
 #include "utils/helpers.h"
 #include "../src/GatewayAppClient.h"
 
@@ -36,6 +39,20 @@ namespace Jde::Opc::Gateway::Tests{
 		if( !Settings::FindBool("/testing/embeddedOpcServer").value_or(true) )
 			++count;
 		ASSERT_EQ( connections.size(), count );
+	}
+
+	TEST_F( AppClientTests, ConnectBadSessionId ){
+		//static: keep the socket open for process lifetime so OnClose doesn't clear AppClient's live session and trigger a reconnect mid-suite.
+		static auto session = ms<App::Client::AppClientSocketSession>( Executor(), optional<ssl::context>{}, App::Client::RemoteAcl(""), AppClient() );
+		BlockVoidAwait( session->RunSession(App::Client::Host(), App::Client::Port()) );
+		using ConnectionInfo = App::Proto::FromServer::ConnectionInfo;
+		try{
+			BlockAwait<Web::Client::ClientSocketAwait<ConnectionInfo>, ConnectionInfo>( session->Connect(0xBAD5E55) );
+			FAIL() << "Connect with an invalid session id should throw.";
+		}
+		catch( const std::exception& e ){
+			TRACE( "Expected exception: {}", e.what() );
+		}
 	}
 
 	TEST_F( AppClientTests, Login ){

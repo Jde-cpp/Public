@@ -97,6 +97,9 @@ namespace Jde::Opc{
 			else
 				throw Exception{ sl, ELogLevel::Error, "Value has no type." };
 		}
+		let dt = type;
+		UA_Variant_clear( &value );
+		type = dt;
 		auto setDuration = [&]()ε->void {
 			let& o = j.as_object();
 			THROW_IF( !o.contains("seconds") || !o.contains("nanos"), "Expected duration object with 'seconds' and 'nanos' - '{}'.", serialize(j) );

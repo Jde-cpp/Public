@@ -22,6 +22,20 @@ namespace Jde::App{
 		};
 	}
 
+	α LogProto::ToEntry( Log::Proto::LogEntryFileExternal&& x )ι->Log::Proto::LogEntryFile{
+		Log::Proto::LogEntryFile y;
+		*y.mutable_time() = x.time();
+		y.set_template_id( move(*x.mutable_template_id()) );
+		*y.mutable_args() = move( *x.mutable_args() );
+		y.set_level( x.level() );
+		y.set_tags( x.tags() );
+		y.set_line( x.line() );
+		y.set_user_pk( x.user_pk() );
+		y.set_file_id( move(*x.mutable_file_id()) );
+		y.set_function_id( move(*x.mutable_function_id()) );
+		return y;
+	}
+
 	α LogProto::LogEntryClient( Logging::Entry&& e )ι->Log::Proto::LogEntryClient{
 		Log::Proto::LogEntryClient proto;
 		proto.set_text( move(e.Text) );

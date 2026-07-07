@@ -11,9 +11,7 @@ namespace Jde::App{
 			α Suspend()ι->void override{ Execute(); }
 			α Execute()ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task;
 		private:
-			α Append( fs::path file, App::Log::Proto::ArchiveFile values )ι->TAwait<string>::Task;
 			α Save( flat_map<std::chrono::year_month_day, App::Log::Proto::ArchiveFile> archives )ι->VoidAwait::Task;
-			α Save( fs::path file, const App::Log::Proto::ArchiveFile values )ι->VoidAwait::Task;
 
 			fs::path _dailyFile;
 			fs::path _path;
@@ -26,7 +24,7 @@ namespace Jde::App{
 				base{ sl }, _startTime{ move(startTime) }, _endTime{ move(endTime) }, _dailyFile{ move(dailyFile) }, _query{ move(q) }, _root{ root }, _tz{ tz }{}
 			α Suspend()ι->void override;
 		private:
-			α ArchiveFiles()ι->flat_map<std::chrono::year_month_day, fs::path>;
+			α ArchiveFiles()ε->flat_map<std::chrono::year_month_day, fs::path>;
 			α LoadArchives( ArchiveFile archive )ι->StringAwait::Task;
 			optional<TimePoint> _startTime;
 			optional<TimePoint> _endTime;

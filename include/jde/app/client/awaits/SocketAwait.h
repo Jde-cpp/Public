@@ -30,7 +30,7 @@ namespace Jde::App::Client{
 	α SocketAwait<TProto,TResult>::await_resume()ε->TResult{
 		base::CheckException();
 		auto p = base::Promise();
-		if( !p && !_session )
+		if( !p )//never suspended: shutting down or no session.
 			throw Exception{ base::_sl, ELogLevel::Debug, "Socket Connection is closed." };
 		THROW_IF( !_session || !p->Value(), "No Connection to AppServer." );
 		return move( *p->Value() );

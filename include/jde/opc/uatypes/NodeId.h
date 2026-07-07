@@ -1,11 +1,10 @@
 #pragma once
 #include "opcHelpers.h"
-#include "../exports.h"
 
 namespace Jde::DB{ struct Row; struct Value; }
 namespace Jde::QL{ struct TableQL; }
 namespace Jde::Opc{
-	struct ΓOPC NodeId : UA_NodeId{
+	struct NodeId : UA_NodeId{
 		NodeId()ι:UA_NodeId{}{}
 		NodeId( const NodeId& x )ι;
 		NodeId( const UA_NodeId& x )ι;

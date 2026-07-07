@@ -27,7 +27,6 @@
 #include <jde/app/proto/App.FromClient.pb.h>
 #include <jde/app/proto/App.FromServer.pb.h>
 #include <jde/app/proto/Common.pb.h>
-#include <jde/opc/exports.h>
 #include <jde/opc/usings.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/ExNodeId.h>

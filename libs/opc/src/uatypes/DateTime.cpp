@@ -22,8 +22,14 @@ namespace Jde::Opc{
 	UADateTime::UADateTime( const jvalue& v, SL sl )ε{
 		if( v.is_object() ){
 			let& o = v.get_object();
-			if( let* seconds = o.if_contains("seconds"); seconds && seconds->is_object() )
+			let* secondsPtr = o.if_contains( "seconds" );
+			if( secondsPtr && secondsPtr->is_object() ) //protobufjs Long form {high,low}
 				_time = Jde::Protobuf::ToTimePoint( Protobuf::ToTimestamp(o) );
+			else if( secondsPtr && secondsPtr->is_number() ){ //plain numbers, as ToJson emits
+				let* nanos = o.if_contains( "nanos" );
+				_time = Chrono::Epoch() + duration_cast<TimePoint::duration>(
+					seconds{ secondsPtr->to_number<int64_t>() } + nanoseconds{ nanos && nanos->is_number() ? nanos->to_number<int64_t>() : 0 } );
+			}
 			else
 				throw Exception{ sl, {(ELogTags)EOpcLogTags::Opc}, "Invalid DateTime object: {}", serialize(v) };
 		}

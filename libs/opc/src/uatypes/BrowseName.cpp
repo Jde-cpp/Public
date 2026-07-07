@@ -2,7 +2,7 @@
 #include <jde/opc/uatypes/UAString.h>
 
 namespace Jde::Opc{
-	BrowseName::BrowseName( const jobject& j )ι:
+	BrowseName::BrowseName( const jobject& j )ε:
 		BrowseName( 0, Json::FindNumber<NsIndex>(j, "ns").value_or(0), Json::AsString(j, "name") )
 	{}
 
@@ -17,8 +17,37 @@ namespace Jde::Opc{
 	}
 	BrowseName::BrowseName( UA_QualifiedName&& rhs )ι:
 		UA_QualifiedName{ rhs },
-		PK{}
-	{}
+		PK{}{
+		UA_QualifiedName_init( &rhs );
+	}
+	BrowseName::BrowseName( const BrowseName& x )ι:
+		UA_QualifiedName{ x.namespaceIndex, UA_STRING_NULL },
+		PK{ x.PK }{
+		UA_String_copy( &x.name, &name );
+	}
+	BrowseName::BrowseName( BrowseName&& x )ι:
+		UA_QualifiedName{ x },
+		PK{ x.PK }{
+		UA_QualifiedName_init( &x );
+	}
+	α BrowseName::operator=( const BrowseName& x )ι->BrowseName&{
+		if( this!=&x ){
+			UA_QualifiedName_clear( this );
+			namespaceIndex = x.namespaceIndex;
+			UA_String_copy( &x.name, &name );
+			PK = x.PK;
+		}
+		return *this;
+	}
+	α BrowseName::operator=( BrowseName&& x )ι->BrowseName&{
+		if( this!=&x ){
+			UA_QualifiedName_clear( this );
+			static_cast<UA_QualifiedName&>(*this) = x;
+			PK = x.PK;
+			UA_QualifiedName_init( &x );
+		}
+		return *this;
+	}
 	α BrowseName::ToJson( UA_QualifiedName ua )ι->jobject{
 		jobject o;
 		if( ua.name.length ){

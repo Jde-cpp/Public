@@ -9,7 +9,6 @@ namespace Jde::App::StringCache{
 	α AddFile( StringMd5 id, str path )ι->bool;
 	α AddFunction( StringMd5 id, str name )ι->bool;
 	α AddMessage( StringMd5 id, str m )ι->bool;
-	α AddThread( StringMd5& id, str name )ι->bool;
 	α GetMessage( StringMd5 id )ι->string;
 	α GetFile( StringMd5 id )ι->string;
 	α GetFunction( StringMd5 id )ι->string;

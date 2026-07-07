@@ -4,7 +4,8 @@
 namespace Jde::QL{ struct Subscription; }
 namespace Jde::App::Proto::FromServer{ class Traces; }
 namespace Jde::App::Client::Subscriptions{
-	α StopListenRemote( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids )ι->jarray;
+	α Clear()ι->void;
+	α StopListenRemote( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids )ι->flat_set<QL::SubscriptionId>;
 	α ListenRemote( sp<QL::IListener> listener, QL::Subscription&& sub )ι->void;
 	α OnTraces( App::Proto::FromServer::Traces&& traces, QL::SubscriptionId requestId )ι->void;
 	α OnWebsocketReceive( const jobject& m, QL::SubscriptionId clientId )ι->void;

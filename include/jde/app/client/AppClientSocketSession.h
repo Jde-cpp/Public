@@ -21,7 +21,6 @@ namespace Jde::App::Client{
 		α RunSession()ι->VoidTask;
 		α SendSessionId()ι->Web::Client::ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Task;
 		sp<IAppClient> _appClient;
-		sp<Access::Authorize> _authorize;
 		SessionPK _sessionId;
 		sp<Client::AppClientSocketSession> _session;
 	};
@@ -35,7 +34,6 @@ namespace Jde::App::Client{
 		α SessionInfo( SessionPK creds, SRCE )ι->await<Web::FromServer::SessionInfo>;
 		α Query( string&& q, jobject variables, bool returnRaw, SRCE )ι->await<jvalue> override;
 		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray> override;
-		α Unsubscribe( string&& query, SRCE )ε->await<vector<QL::SubscriptionId>>;
 		α QLServer()ι{ return _qlServer; }
 	private:
 		α ClientQuery( Proto::FromServer::ClientQuery proto, RequestId requestId )ι->TAwait<jvalue>::Task;
@@ -51,6 +49,7 @@ namespace Jde::App::Client{
 		sp<IAppClient> _appClient;
 		sp<Access::Authorize> _authorize;
 		sp<QL::IQL> _qlServer;
+		concurrent_flat_map<RequestId, std::pair<sp<QL::IListener>,vector<QL::Subscription>>> _subscriptionRequests;
 	};
 }
 #undef Φ

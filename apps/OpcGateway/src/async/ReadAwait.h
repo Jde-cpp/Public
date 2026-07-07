@@ -31,7 +31,7 @@ namespace Jde::Opc::Gateway{
 		optional<ReadRequest> Request;
 	};
 
-	struct ΓOPC ReadAwait final : TAwait<ReadResponse>{
+	struct ReadAwait final : TAwait<ReadResponse>{
 		ReadAwait( ReadRequest&& req, sp<UAClient> c )ι:_request{move(req)}, _client{move(c)}{}
 		ReadAwait( NodeId nodeId, UA_AttributeId attrib, sp<UAClient> c )ι:ReadAwait{{move(nodeId), attrib}, move(c)}{}
 		ReadAwait( Browse::Response&& browse, QL::TableQL&& ql, sp<UAClient> c )ι:ReadAwait{{move(browse), move(ql)}, move(c)}{}

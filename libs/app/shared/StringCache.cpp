@@ -5,7 +5,6 @@ namespace Jde::App{
 	concurrent_flat_map<StringMd5,string> _files;
 	concurrent_flat_map<StringMd5,string> _functions;
 	concurrent_flat_map<StringMd5,string> _messages;
-	concurrent_flat_map<StringMd5,string> _threads;
 
 	α StringCache::Merge( concurrent_flat_map<StringMd5,string>&& files, concurrent_flat_map<StringMd5,string>&& functions, concurrent_flat_map<StringMd5,string>&& messages )ι->void{
 		_files.merge( files );
@@ -35,7 +34,6 @@ namespace Jde::App{
 	α StringCache::AddFile( StringMd5 id, str path )ι->bool{ return Emplace( _files, id, path ); }
 	α StringCache::AddFunction( StringMd5 id, str name )ι->bool{ return Emplace( _functions, id, name ); }
 	α StringCache::AddMessage( StringMd5 id, str m )ι->bool{ return Emplace( _messages, id, m ); }
-	α StringCache::AddThread( StringMd5& id, str name )ι->bool{ return Emplace( _threads, id, name ); }
 
 	α Get( StringMd5 id, const concurrent_flat_map<StringMd5,string>& map  )ι->string{ string y; map.cvisit(id, [&y](auto kv){ y=kv.second;}); return y; }
 	α StringCache::GetMessage( StringMd5 id )ι->string{ return Get( id, _messages ); }
