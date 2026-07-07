@@ -62,11 +62,15 @@ namespace Jde{
 	}
 }
 namespace Jde::QL{
+	α Parser::SkipWhitespace()ι->void{
+		while( i<_text.size() && isspace(_text[i]) )
+			++i;
+	}
+
 	α Parser::Next()ι->string{
 		string result = move( _peekValue );
 		if( result.empty() ){
-			if( i<_text.size() )
-				for( auto ch = _text[i]; i<_text.size() && isspace(ch); ch = i<_text.size()-1 ? _text[++i] : _text[i++] );
+			SkipWhitespace();
 			if( i<_text.size() ){
 				uint start=i;
 				i = start+std::distance( _text.begin()+i, std::find_if(_text.begin()+i, _text.end(), [this]( char ch )ι{ return isspace(ch) || Delimiters.find(ch)!=sv::npos;}) );
@@ -85,7 +89,7 @@ namespace Jde::QL{
 			i = i-_peekValue.size();
 			_peekValue.clear();
 		}
-		for( auto ch = _text[i]; i<_text.size() && isspace(ch); ch = _text[++i] );
+		SkipWhitespace();
 		if( i<_text.size() ){
 			uint start = i;
 			for( auto ch = _text[i]; i<_text.size()-1 && ch!=end; ch = _text[++i] ){

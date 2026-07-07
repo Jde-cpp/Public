@@ -27,7 +27,7 @@ namespace Jde::App{
 		let& orderBy = input.OrderByJson();
 		if( orderBy.empty() || orderBy.begin()->first!="time" )
 			return false;
-		return EntrySize()>=limit+input.Skip();
+		return EntrySize()>=limit+input.Offset();
 	}
 	Ω find( const auto& map, string uuid )ι->str{
 		let it = map.find( ToGuid(uuid) );
@@ -47,7 +47,7 @@ namespace Jde::App{
 		valid = valid && filter.Test( "time", time );
 		valid = valid && filter.TestF<string>( "text", [&](){return find(Templates, entry.template_id());} );
 		valid = valid && filter.Test( "level", (uint8)entry.level() );
-		valid = valid && filter.TestAnd( "tags", entry.tags() );
+		valid = valid && filter.TestOr( "tags", entry.tags() );
 		valid = valid && filter.Test( "line", entry.line() );
 		valid = valid && filter.TestF<uuid>( "templateId", [&](){return ToGuid(entry.template_id());} );
 		valid = valid && filter.TestF<string>( "message", [&](){return Message(entry);} );
@@ -221,14 +221,14 @@ namespace Jde::App{
 		}
 		return o;
 	}
-	//logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }
+	//logs( limit: $limit, offset: $offset, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }
 	α ArchiveFile::ToJson( const QL::TableQL& ql )Ι->jobject{
 		let entries = Sort( ql.OrderByJson() );
 		jobject o;
 		jarray jentries;
 		auto strings = ql.FindTable( "strings" ) ? flat_map<uuid,string>{} : optional<flat_map<uuid,string>>{};
 		for( uint i=0; i<entries.size(); ++i ){
-			if( i<ql.Skip() || (ql.Limit() && i>=ql.Skip()+ql.Limit()) )
+			if( i<ql.Offset() || (ql.Limit() && i>=ql.Offset()+ql.Limit()) )
 				continue;
 			auto& entry = entries.at( i );
 			for( auto&& table : ql.Tables ){

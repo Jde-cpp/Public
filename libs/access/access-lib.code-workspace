@@ -7,7 +7,6 @@
 		"sourceDir": "${env:JDE_DIR}/${config:subDir}",
 		"buildTarget": "Debug",
 		"buildRoot": "${env:JDE_BUILD_DIR}",
-		"debugPreset": "linux-clang-debug",
 		"testBuildDir": "${config:buildRoot}/${config:subDir}/tests",
 		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
 		"clangd.arguments": [
@@ -18,13 +17,6 @@
 	"tasks": {
 		"version": "2.0.0",
 		"tasks": [
-			{
-				"label": "build",
-				"type": "shell",
-				"command": "cd ${config:buildRoot}; tput reset; cmake --build . -j --target ${config:target};",
-				"problemMatcher": [{ "owner": "cpp", "fileLocation": "absolute", "pattern": { "regexp": "^(.*):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 } }],
-				"group": { "kind": "build", "isDefault": true }
-			},
 			{
 				"label": "clean",
 				"type": "shell",

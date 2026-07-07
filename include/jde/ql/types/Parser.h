@@ -28,6 +28,7 @@ namespace Jde::QL{
 
 		α LoadSubscription( sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas )ε->Subscription;
 		α ParseArgs()ε->jobject;
+		α SkipWhitespace()ι->void;
 		uint i{0};
 		string _text;
 		sv Delimiters;

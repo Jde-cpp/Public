@@ -18,7 +18,7 @@ namespace Jde::QL{
 				auto resultRequest = m.ResultRequest; // can't move, some mutations may need it
 				let returnRaw = m.ReturnRaw;
 				let commandName = m.CommandName;
-				auto mutationResult = co_await MutationAwait( m, _creds, move(_ql), _sl );
+				auto mutationResult = co_await MutationAwait( m, _creds, _ql, _sl );
 				if( !resultRequest )
 					continue;
 				if( auto array = mutationResult.is_array() ? &mutationResult.get_array() : nullptr; array && array->size() )

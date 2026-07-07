@@ -294,7 +294,7 @@ namespace Jde{
 			statement.Where.Add( *criteria );//group with no members.
 		statement.OrderBy = qlTable.OrderBy();
 		statement.Limit( qlTable.Limit() );
-		statement.Skip( qlTable.Skip() );
+		statement.Skip( qlTable.Offset() );
 
 		return statement;
 	}
