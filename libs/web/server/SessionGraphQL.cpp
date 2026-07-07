@@ -63,8 +63,8 @@ namespace Jde::Web::Server{
 #endif
 				if( Query.FindColumn("endpoint") )
 					j["endpoint"] = session->UserEndpoint;
-				if( Query.FindColumn("endpoint") )
-					j["lastUpdate"] = ToIsoString( session->Expiration );
+				if( Query.FindColumn("lastUpdate") )
+					j["lastUpdate"] = ToIsoString( session->LastServerUpdate );
 				if( Query.FindColumn("expiration") )
 					j["expiration"] = ToIsoString( session->Expiration );
 				if( array )
