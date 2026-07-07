@@ -6,6 +6,7 @@
 namespace Jde::QL{
 	struct Subscription{
 		Subscription( string tableName, EMutationQL type, TableQL fields )ι;
+		Ω NextId()ι->SubscriptionId;
 		SubscriptionId Id{};
 		TableQL Fields;
 		string TableName;

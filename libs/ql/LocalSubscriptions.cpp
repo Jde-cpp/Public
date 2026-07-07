@@ -28,32 +28,40 @@ namespace Jde::QL{
 		OnMutation( m, move(result), nullptr );
 	}
 	α Subscriptions::OnMutation( const MutationQL& m, jvalue result, function<bool(QL::TableQL&)> isApplicable )ι->void{
-		sl l{ _serverMutex };
-		auto subs = _serverSubs.find( {m.TableName(), m.Type} );
-		if( subs==_serverSubs.end() )
-			return;//everything is pushed.
-		jobject available;
-		for( auto& sub : subs->second ){
-			if( isApplicable && !isApplicable(sub.Fields) )
-				continue;
-			if( available.empty() ){
-				if( let array = result.try_as_array(); array && array->size() )
-					result = ( *array )[0];
-				available = result.is_object() ? Json::Combine( m.ExtrapolateVariables(), result.get_object() ) : m.ExtrapolateVariables();
-				if( !available.contains("id") && m.DBTable && m.DBTable->FindPK() ){
-					available["id"] = m.DBTable->Schema->DS()->ScalerSync<uint>(
-						{ Ƒ("select {} from {} where target=?", m.DBTable->FindPK()->Name, m.DBTable->DBName), {{string{available.at("target").as_string()}}} }
-					);
+		try{
+			vector<ListenerSubs> matches;
+			{
+				sl l{ _serverMutex };
+				auto subs = _serverSubs.find( {m.TableName(), m.Type} );
+				if( subs==_serverSubs.end() )
+					return;//everything is pushed.
+				matches = subs->second;
+			}//callbacks & db access below happen outside the lock - listeners can (un)subscribe from OnChange.
+			jobject available;
+			for( auto& sub : matches ){
+				if( isApplicable && !isApplicable(sub.Fields) )
+					continue;
+				if( available.empty() ){
+					if( let array = result.try_as_array(); array && array->size() )
+						result = ( *array )[0];
+					available = result.is_object() ? Json::Combine( m.ExtrapolateVariables(), result.get_object() ) : m.ExtrapolateVariables();
+					if( !available.contains("id") && m.DBTable && m.DBTable->FindPK() ){
+						available["id"] = m.DBTable->Schema->DS()->ScalerSync<uint>(
+							{ Ƒ("select {} from {} where target=?", m.DBTable->FindPK()->Name, m.DBTable->DBName), {{string{available.at("target").as_string()}}} }
+						);
+					}
 				}
+				jobject j;
+				auto value = sub.Fields.TrimColumns( available );
+				j[sub.Fields.JsonName] = move( value );
+				try{
+					sub.Listener->OnChange( j, sub.Id );
+				}
+				catch( std::exception& )
+				{}
 			}
-			jobject j;
-			auto value = sub.Fields.TrimColumns( available );
-			j[sub.Fields.JsonName] = move( value );
-			try{
-				sub.Listener->OnChange( j, sub.Id );
-			}
-			catch( std::exception& )
-			{}
+		}
+		catch( const std::exception& ){
 		}
 	}
 

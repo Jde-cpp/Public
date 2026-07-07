@@ -28,7 +28,11 @@ namespace Jde::QL{
 		SubscribeQueryAwait( vector<Subscription>&& sub, sp<IListener> listener, UserPK executer, SRCE )ι:
 			base{sl}, _executer{executer}, _listener{listener}, _subscriptions{move(sub)}{}
 		α await_ready()ι->bool override{
-			for_each( _subscriptions, [&]( Subscription& sub ){_result.push_back(sub.Id);} );
+			for_each( _subscriptions, [&]( Subscription& sub ){
+				if( !sub.Id )
+					sub.Id = Subscription::NextId();
+				_result.push_back( sub.Id );
+			} );
 			Subscriptions::Listen( _listener, move(_subscriptions) );
 			return true;
 		}

@@ -17,7 +17,7 @@ namespace Jde::QL{
 			passesFilters = p->Test( value, logTags );
 		return passesFilters;
 	}
-	α Filter::TestAnd( str columnName, uint value )Ι->bool{
+	α Filter::TestOr( str columnName, uint value )Ι->bool{
 		bool valid{ true };
 		if( let filters = ColumnFilters.find(columnName); filters!=ColumnFilters.end() ){
 			for( let& filterValue : filters->second ){
@@ -82,11 +82,11 @@ namespace Jde{
 	α QL::ToWhereClause( const TableQL& table, const DB::View& dbTable, bool includeDeleted )ε->DB::WhereClause{
 		DB::WhereClause where;
 		for( let& [name,filters] : table.Filter().ColumnFilters ){
-			if( name=="orderBy" || name=="limit" || name=="offset" )
+			if( name=="orderBy" || name=="limit" || name=="offset" || name=="skip" )
 				continue;
 			auto column = name!="id"
 				? dbTable.GetColumnPtr( DB::Names::FromJson(name) )
-				: AsTable(dbTable).Extends ? AsTable(dbTable).Extends->GetPK() : dbTable.GetPK(); //can't have left join users where users.id=42
+				: !dbTable.IsView() && AsTable(dbTable).Extends ? AsTable(dbTable).Extends->GetPK() : dbTable.GetPK(); //can't have left join users where users.id=42
 			if( name=="deleted" )
 				includeDeleted = false;
 			for( auto& filter : filters ){

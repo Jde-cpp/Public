@@ -19,7 +19,7 @@ namespace Jde::QL{
 	struct Filter final{
 		α Empty()Ι->bool{ return ColumnFilters.empty() /*&& !StartTime && !EndTime*/; }
 		Ŧ Test( str columnName, const T& value )Ι->bool;
-		α TestAnd( str columnName, uint value )Ι->bool;
+		α TestOr( str columnName, uint value )Ι->bool;
 		Ŧ TestF( str columnName, function<T()> f )Ι->bool;
 		Ω Test( const DB::Value::Underlying& value, const vector<FilterValue>& filters, ELogTags logTags )ι->bool;
 		α ToString( str colName )Ι->string;

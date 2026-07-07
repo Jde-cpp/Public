@@ -23,7 +23,7 @@ namespace Jde::QL{
 		α Filter()Ι->Filter;
 		β JTableName()Ι->string=0;
 		α Limit()Ι->uint{ return TryNumber<uint>( "limit" ).value_or(0); }
-		α Skip()Ι->uint{ return TryNumber<uint>( "skip" ).value_or(0); }
+		α Offset()Ι->uint{ auto offset = TryNumber<uint>( "offset" ); return offset ? *offset : TryNumber<uint>( "skip" ).value_or(0); }
 		α OrderByJson()Ι->const vector<std::pair<string,bool>>&;
 
 		jobject Args;
