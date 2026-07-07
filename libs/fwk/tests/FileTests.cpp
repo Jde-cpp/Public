@@ -115,6 +115,16 @@ namespace Jde::IO::Tests{
 		}( move(file), move(content), done, move(l) );
 	}
 
+	Ω readRaw( fs::path file, sp<string> content, std::atomic<bool>& done, SRCE )ι->TAwait<string>::Task{
+		try{
+			*content = co_await IO::ReadAwait{ move(file), false, sl };
+		}
+		catch( Exception& e ){
+			e.Log();
+		}
+		done = true;
+	}
+
 	// Regression for the ChunksToSend off-by-one: a write whose size is an exact multiple of
 	// ChunkByteSize() must still complete. ChunksToSend was computed as size/ChunkByteSize()+1,
 	// one more than the number of chunks actually queued whenever the size divides evenly, so the
@@ -140,6 +150,33 @@ namespace Jde::IO::Tests{
 			ASSERT_EQ( actual.size(), size );
 			ASSERT_EQ( actual, content );
 		}
+	}
+
+	// Regression: a zero-byte operation produced no chunks, so no completion ever arrived — the
+	// awaiting coroutine hung and a completion poller was leaked. Empty writes must create the file
+	// and resume; reads of empty files must resume with an empty string.
+	TEST_F( FileTests, EmptyFile ){
+		let file = Tests::file( 200 );
+		if( fs::exists(file) )
+			fs::remove( file );
+
+		std::atomic<bool> written{};
+		writeRaw( file, {}, written );
+		let writeDeadline = steady_clock::now()+10s;
+		while( !written && steady_clock::now()<writeDeadline )
+			std::this_thread::sleep_for( 5ms );
+		ASSERT_TRUE( written ) << "empty write never completed";
+		ASSERT_TRUE( fs::exists(file) );
+		ASSERT_EQ( fs::file_size(file), 0u );
+
+		auto content = ms<string>( "sentinel" );
+		std::atomic<bool> readDone{};
+		readRaw( file, content, readDone );
+		let readDeadline = steady_clock::now()+10s;
+		while( !readDone && steady_clock::now()<readDeadline )
+			std::this_thread::sleep_for( 5ms );
+		ASSERT_TRUE( readDone ) << "empty read never completed";
+		ASSERT_TRUE( content->empty() ) << "expected empty content, got: " << *content;
 	}
 
 	constexpr uint _fileSize{ 5 };
