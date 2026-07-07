@@ -8,6 +8,7 @@
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/RemoteLog.h>
 #include <jde/app/client/awaits/SocketAwait.h>
+#include <jde/app/client/clientSubscriptions.h>
 
 #define let const auto
 namespace Jde::App::Client{
@@ -40,7 +41,7 @@ namespace Jde::App::Client{
 	}
 
 	sp<Access::AccessListener> _listener;
-	α IAppClient::Listener()Ι->sp<Access::AccessListener>{
+	α IAppClient::Listener()Ε->sp<Access::AccessListener>{
 		if( !_listener )
 			_listener = ms<Access::AccessListener>( QLServer() );
 		return _listener;
@@ -56,7 +57,7 @@ namespace Jde::App::Client{
 		return QLServer()->Query( move(q), move(variables), UserPK(), returnRaw, sl );
 	}
 	α IAppClient::SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Web::FromServer::SessionInfo>>{
-	 	return mu<Client::SessionInfoAwait>( sessionPK, _session, sl );
+	 	return mu<Client::SessionInfoAwait>( sessionPK, LoadSession(), sl );
 	}
 
 	constexpr ELogTags _tags{ ELogTags::SocketClientWrite };
@@ -85,7 +86,7 @@ namespace Jde::App::Client{
 	}*/
 
 	α IAppClient::CloseSocketSession( bool terminate, SL sl )ι->void{
-		auto session = _session;
+		auto session = LoadSession();
 		if( !session )
 			return;
 		let tags = ELogTags::Client | ELogTags::Socket;
@@ -98,9 +99,12 @@ namespace Jde::App::Client{
 	α IAppClient::Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
 		return Session()->Subscribe( move(query), move(variables), listener, sl );
 	}
+	α IAppClient::Unsubscribe( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids, SL sl )ε->QL::UnsubscribeAwait{
+		return QLServer()->Unsubscribe( Subscriptions::StopListenRemote(move(listener), move(ids)), sl );
+	}
 
 	α IAppClient::Write( vector<Logging::Entry>&& entries )ι->void{
-		auto session = _session;
+		auto session = LoadSession();
 		ASSERT_DESC( session, "Not connected." );
 		if( !session )
 			return;

@@ -22,7 +22,8 @@ namespace Jde::Opc{
 		UA_NodeId{ FromJson(j) }
 	{}
 
-	NodeId::NodeId( DB::Row& r, uint8 index )ε{
+	NodeId::NodeId( DB::Row& r, uint8 index )ε:
+		UA_NodeId{}{
 		namespaceIndex = r.Get<uint16>( index );
 		if( !r.IsNull(index+1) ){
 			identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
@@ -34,8 +35,7 @@ namespace Jde::Opc{
 		}
 		else if( !r.IsNull(index+3) ){
 			identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
-			let guid = r.GetGuid( index+3 );
-			::memcpy( &identifier.guid, &guid, sizeof(UA_Guid) );
+			identifier.guid = ToUAGuid( r.GetGuid(index+3) );
 		}
 		else if( !r.IsNull(index+4) ){
 			identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;

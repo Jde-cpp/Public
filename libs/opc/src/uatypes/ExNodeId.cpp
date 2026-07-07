@@ -10,16 +10,14 @@ namespace Jde::Opc{
 		UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{
 		nodeId = x.Copy();
 		if( x.namespaceUri.length )
-			namespaceUri = UA_String_fromChars( string{ToSV(x.namespaceUri)}.c_str() );
+			UA_String_copy( &x.namespaceUri, &namespaceUri );
 		serverIndex = x.serverIndex;
 	}
 
 	ExNodeId::ExNodeId( const flat_map<string,string>& x )ε:
 		UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{
-		if( auto p = x.find("nsu"); p!=x.end() )
-			namespaceUri = UA_String_fromChars( p->second.c_str() );
 		if( auto p = x.find("serverindex"); p!=x.end() )
-			serverIndex = stoul( p->second );
+			serverIndex = To<UA_UInt32>( p->second );
 		if( auto p = x.find("ns"); p!=x.end() )
 			nodeId.namespaceIndex = Str::TryTo<UA_UInt16>( p->second ).value_or( 0 );
 		if( auto p = x.find("s"); p!=x.end() ){
@@ -28,7 +26,7 @@ namespace Jde::Opc{
 		}
 		else if( auto p = x.find("i"); p!=x.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
-			nodeId.identifier.numeric = stoul( p->second );
+			nodeId.identifier.numeric = To<UA_UInt32>( p->second );
 		}
 		else if( auto p = x.find("b"); p!=x.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
@@ -41,6 +39,8 @@ namespace Jde::Opc{
 		}
 		else
 			DBGT( ELogTags::App, "No identifier in nodeId" );
+		if( auto p = x.find("nsu"); p!=x.end() ) //allocated last: a throw above must not follow an allocation or the dtor never runs to free it.
+			namespaceUri = UA_String_fromChars( p->second.c_str() );
 	}
 
 	ExNodeId::ExNodeId( const jvalue& j )ε:
@@ -59,7 +59,8 @@ namespace Jde::Opc{
 		UA_ExpandedNodeId_init( &x );
 	}
 
-	ExNodeId::ExNodeId( DB::Row& r, uint8 index, bool extended )ε{
+	ExNodeId::ExNodeId( DB::Row& r, uint8 index, bool extended )ε:
+		UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{
 		nodeId.namespaceIndex = r.Get<uint16>( index );
 		if( !r.IsNull(index+1) ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
@@ -71,8 +72,7 @@ namespace Jde::Opc{
 		}
 		else if( !r.IsNull(index+3) ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
-			let guid = r.GetGuid( index+3 );
-			::memcpy( &nodeId.identifier.guid, &guid, sizeof(UA_Guid) );
+			nodeId.identifier.guid = ToUAGuid( r.GetGuid(index+3) );
 		}
 		else if( !r.IsNull(index+4) ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
@@ -100,19 +100,21 @@ namespace Jde::Opc{
 	}
 
 	α ExNodeId::SetNodeId( UA_NodeId&& x )ι->void{
-		nodeId.namespaceIndex = x.namespaceIndex;
-		nodeId.identifierType = x.identifierType;
-		nodeId.identifier = x.identifier;
-    UA_String_clear( &namespaceUri );
-    serverIndex = 0;
-		UA_NodeId_clear(&x);
+		UA_NodeId_clear( &nodeId );
+		nodeId = x;
+		UA_NodeId_init( &x );
+		UA_String_clear( &namespaceUri );
+		serverIndex = 0;
 	}
 
 	α ExNodeId::operator=( ExNodeId&& x )ι->ExNodeId&{
-		nodeId = x.Move();
-		namespaceUri=x.namespaceUri;
-		serverIndex=x.serverIndex;
-		UA_ExpandedNodeId_init( &x );
+		if( this!=&x ){
+			Clear();
+			nodeId = x.Move();
+			namespaceUri=x.namespaceUri;
+			serverIndex=x.serverIndex;
+			UA_ExpandedNodeId_init( &x );
+		}
 		return *this;
 	}
 
@@ -126,10 +128,12 @@ namespace Jde::Opc{
 	}
 
 	α ExNodeId::operator=( const ExNodeId& x )ι->ExNodeId&{
+		if( this==&x )
+			return *this;
 		Clear();
 		nodeId = x.Copy();
 		if( x.namespaceUri.length )
-			namespaceUri = UA_String_fromChars( string{ToSV(x.namespaceUri)}.c_str() );
+			UA_String_copy( &x.namespaceUri, &namespaceUri );
 		serverIndex = x.serverIndex;
 		return *this;
 	}
@@ -151,16 +155,7 @@ namespace Jde::Opc{
 
 	α ExNodeId::Copy()Ι->UA_NodeId{
 		UA_NodeId y{};
-    y.namespaceIndex = nodeId.namespaceIndex;
-    y.identifierType = nodeId.identifierType;
-		if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_NUMERIC )
-			y.identifier.numeric = nodeId.identifier.numeric;
-		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_STRING )
-			y.identifier.string = UA_String_fromChars( string{ToSV(nodeId.identifier.string)}.c_str() );
-		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
-			y.identifier.byteString =  UA_BYTESTRING_ALLOC( string{ToSV(nodeId.identifier.byteString)}.c_str() );
-		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_GUID )
-			y.identifier.guid = nodeId.identifier.guid;
+		UA_NodeId_copy( &nodeId, &y );
 		return y;
 	}
 

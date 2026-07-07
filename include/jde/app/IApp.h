@@ -57,13 +57,14 @@ namespace Jde::App{
 
 	Ξ IApp::LoadLogSettings( optional<jobject> clientSettings, SL sl )ι->void{
 		try{
-			if( !clientSettings )
+			const bool selfQuery = !clientSettings;//caller passed settings -> caller updates cumulative levels.
+			if( selfQuery )
 				clientSettings = QuerySync( "instanceTagLevel(id:$id){ text binary }", {{"id",InstancePK()}}, true, sl );
 			if( auto logger = Logging::FindLogger<Logging::SpdLog>(); logger )
 				logger->SetLevels( clientSettings->at("text").as_object() );
 			if( auto logger = Logging::FindLogger<App::ProtoLog>(); logger )
-				logger->SetLevels( clientSettings->at("text").as_object() );
-			if( !clientSettings ){
+				logger->SetLevels( clientSettings->at("binary").as_object() );
+			if( selfQuery ){
 				Logging::UpdateCumulative( Logging::Loggers() );
 				Logging::Log( ELogLevel::Trace, ELogTags::Settings, sl, "Loaded log settings." );
 			}

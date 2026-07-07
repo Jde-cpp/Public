@@ -2,6 +2,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/io/protobuf.h>
+#include <jde/app/proto/LogProto.h>
 
 #define let const auto
 
@@ -104,6 +105,12 @@ namespace Jde::App{
 			if( Test(q, time, *entry) )
 				Entries[time].emplace_back( move(*entry) );
 		}
+		for( int i=0; i<af.externalentries_size(); ++i ){
+			auto entry = LogProto::ToEntry( move(*af.mutable_externalentries(i)) );
+			let time = Protobuf::ToTimePoint( entry.time() );
+			if( Test(q, time, entry) )
+				Entries[time].emplace_back( move(entry) );
+		}
 	}
 	using App::Log::Proto::FileEntry;
 	α ArchiveFile::Append( const QL::Filter& filter, vector<FileEntry>&& entries )ε->void{
@@ -112,6 +119,8 @@ namespace Jde::App{
 		for( auto& fe : entries ){
 			if( fe.value_case()==FileEntry::ValueCase::kEntry )
 				logEntries.emplace_back( move(*fe.mutable_entry()) );
+			else if( fe.value_case()==FileEntry::ValueCase::kExternalEntry )
+				logEntries.emplace_back( LogProto::ToEntry(move(*fe.mutable_external_entry())) );
 			else if( fe.value_case()==FileEntry::ValueCase::kStr ){
 				let id = ToGuid( fe.str().id() );
 				auto& value = *fe.mutable_str()->mutable_value();
@@ -227,38 +236,39 @@ namespace Jde::App{
 		jobject o;
 		jarray jentries;
 		auto strings = ql.FindTable( "strings" ) ? flat_map<uuid,string>{} : optional<flat_map<uuid,string>>{};
+		let entriesTable = ql.FindTable( "entries" );
 		for( uint i=0; i<entries.size(); ++i ){
 			if( i<ql.Offset() || (ql.Limit() && i>=ql.Offset()+ql.Limit()) )
 				continue;
 			auto& entry = entries.at( i );
+			jobject jentry = entriesTable ? ToEntry( *entriesTable, entry, strings ) : jobject{};
 			for( auto&& table : ql.Tables ){
-				if( table.JsonName=="entries" )
-					jentries.push_back( ToEntry(table, entry, strings) );
-				else if( table.JsonName=="file" ){
-					jobject o;
+				if( table.JsonName=="file" ){
+					jobject jt;
 					if( table.FindColumn("name") )
-						o["name"] = find( Files, entry.file_id() );
+						jt["name"] = find( Files, entry.file_id() );
 					if( table.FindColumn("id") )
-						o["id"] = to_string( ToGuid(entry.file_id()) );
-					o[table.JsonName] = move( o );
+						jt["id"] = to_string( ToGuid(entry.file_id()) );
+					jentry[table.JsonName] = move( jt );
 				}
 				else if( table.JsonName=="function" ){
-					jobject o;
+					jobject jt;
 					if( table.FindColumn("name") )
-						o["name"] = find( Functions, entry.function_id() );
+						jt["name"] = find( Functions, entry.function_id() );
 					if( table.FindColumn("id") )
-						o["id"] = to_string( ToGuid(entry.function_id()) );
-					o[table.JsonName] = move( o );
+						jt["id"] = to_string( ToGuid(entry.function_id()) );
+					jentry[table.JsonName] = move( jt );
 				}
 				else if( table.JsonName=="user" ){
-					jobject o;
+					jobject jt;
 					if( table.FindColumn("id") )
-						o["id"] = entry.user_pk();
-					o[table.JsonName] = move( o );
+						jt["id"] = entry.user_pk();
+					jentry[table.JsonName] = move( jt );
 				}
 			}
+			jentries.push_back( move(jentry) );
 		}
-		if( ql.FindTable("entries") )
+		if( entriesTable )
 			o["entries"] = move( jentries );
 		if( strings ){
 			jarray jstrings;
@@ -268,7 +278,7 @@ namespace Jde::App{
 				s["value"] = value;
 				jstrings.push_back( move(s) );
 			}
-			o["strings"] = move( jstrings );;
+			o["strings"] = move( jstrings );
 		}
 		return o;
 	}

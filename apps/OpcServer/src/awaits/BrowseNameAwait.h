@@ -10,7 +10,7 @@ namespace Jde::Opc::Server{
 		α await_ready()ι->bool override;
 		α await_resume()ε->flat_map<BrowseNamePK,BrowseName> override;
 		Ω GetOrInsert( BrowseName& browseName, SRCE )ε->bool;
-		Ω GetOrInsert( const jobject&, SRCE )ι->BrowseName;
+		Ω GetOrInsert( const jobject&, SRCE )ε->BrowseName;
 
 	private:
 		α Execute()ι->DB::SelectAwait::Task override;

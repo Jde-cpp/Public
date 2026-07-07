@@ -26,12 +26,17 @@ namespace Jde::App::Client{
 		Execution::Run();
 	}
 	α RemoteLog::Shutdown( bool terminate, SL )ι->void{
-		if( !_client )
-			return;
-		_delay = Duration::min();
-		ResetTimer();
+		{
+			lg _{ _mutex };
+			if( !_client )
+				return;
+			_delay = Duration::min();
+			if( _timer )
+				_timer->Cancel();
+		}
 		if( !terminate )
 			Send();
+		lg _{ _mutex };
 		_client = nullptr;
 	}
 	α RemoteLog::Init( sp<IAppClient> client )ι->void{
@@ -40,9 +45,13 @@ namespace Jde::App::Client{
 	}
 
 	α RemoteLog::Write( const Logging::Entry& m )ι->void{
-		if( !_client || !empty(m.Tags & _tags) )//recursion guard
+		if( !empty(m.Tags & _tags) )//recursion guard
 			return;
 		_mutex.lock();
+		if( !_client ){
+			_mutex.unlock();
+			return;
+		}
 		_entries.push_back( m );
 		if( !_timer )
 			StartTimer();
@@ -50,8 +59,10 @@ namespace Jde::App::Client{
 			_mutex.unlock();
 	}
 	α RemoteLog::StartTimer()ι->TimerAwait::Task{
-		if( _delay<=Duration::zero() )
+		if( _delay<=Duration::zero() ){//callers hold _mutex and expect StartTimer to release it.
+			_mutex.unlock();
 			co_return;
+		}
 		_timer = mu<DurationTimer>( _delay );
 		_mutex.unlock();
 		let timedOut = co_await *_timer;
@@ -76,11 +87,9 @@ namespace Jde::App::Client{
 			_timer->Cancel();
 	}
 	α RemoteLog::Send()ι->void{
-		if( _entries.empty() || !_client->Connected() )
-			return;
 		lg _{ _mutex };
-		ASSERT( _client );
-		if( _client )
-			Post( [entries=move(_entries),client=_client]() mutable{client->Write(move(entries));} );
+		if( _entries.empty() || !_client || !_client->Connected() )
+			return;
+		Post( [entries=move(_entries),client=_client]() mutable{client->Write(move(entries));} );
 	}
 }

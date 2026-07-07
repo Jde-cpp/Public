@@ -1,15 +1,14 @@
 ﻿#pragma once
 #ifndef EXNODE_H
 #define EXNODE_H
-#include "../exports.h"
 #include "opcHelpers.h"
 
 namespace Jde::DB{ struct Row; struct Value; }
 namespace Jde::Opc{
 	struct NodeId;
-	struct ΓOPC ExNodeId : UA_ExpandedNodeId{
+	struct ExNodeId : UA_ExpandedNodeId{
 		ExNodeId()ι:UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{}
-		ExNodeId( UA_NodeId&& x )ι:UA_ExpandedNodeId{move(x), UA_EXPANDEDNODEID_NULL.namespaceUri, UA_EXPANDEDNODEID_NULL.serverIndex}{}
+		ExNodeId( UA_NodeId&& x )ι:UA_ExpandedNodeId{move(x), UA_EXPANDEDNODEID_NULL.namespaceUri, UA_EXPANDEDNODEID_NULL.serverIndex}{ UA_NodeId_init( &x ); }
 		ExNodeId( const NodeId& x )ι:ExNodeId{}{ UA_NodeId_copy( (UA_NodeId*)&x, &nodeId ); }
 		ExNodeId( const UA_ExpandedNodeId& x )ι:ExNodeId{}{ UA_ExpandedNodeId_copy( &x, this ); }
 		ExNodeId( UA_ExpandedNodeId&& x )ι:UA_ExpandedNodeId{move(x)}{ UA_ExpandedNodeId_init(&x); }

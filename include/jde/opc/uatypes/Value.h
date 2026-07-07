@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include <jde/fwk/io/json.h>
-#include "../exports.h"
 #include "Logger.h"
 
 namespace Jde::Opc{

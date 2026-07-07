@@ -48,7 +48,7 @@ namespace Browse{
 		RequestId _requestId{};
 	};
 }
-	struct ΓOPC ObjectsFolderAwait final : TAwaitEx<jobject, TAwait<Browse::Response>::Task>{
+	struct ObjectsFolderAwait final : TAwaitEx<jobject, TAwait<Browse::Response>::Task>{
 		using base = TAwaitEx<jobject,TAwait<Browse::Response>::Task>;
 		ObjectsFolderAwait( NodeId node, bool snapshot, sp<UAClient> ua, SRCE )ι;
 	private:

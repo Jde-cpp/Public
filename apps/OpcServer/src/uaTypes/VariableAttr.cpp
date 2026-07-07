@@ -48,7 +48,7 @@ namespace Jde::Opc::Server {
 			return UA_VALUERANK_ANY;
 	}
 	Ω toVariables( jobject& o, SL sl )->UA_VariableAttributes{
-		auto variant = o.contains("value") ? Variant{ o.at("value"), Json::FindSV(o, "dataType").value_or("") } : UA_VariableAttributes_default.value;
+		auto variant = o.contains("value") ? Variant{ o.at("value"), Json::FindSV(o, "dataType").value_or("") }.Move() : UA_VariableAttributes_default.value;
 		auto dataType = o.contains("dataType") ? DT( o.at("dataType"), sl ).typeId : variant.type ? variant.type->typeId : UA_TYPES[UA_TYPES_STRING].typeId;
 		return UA_VariableAttributes{
 			0,

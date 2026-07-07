@@ -1,6 +1,7 @@
 #pragma once
 #include "../IApp.h"
 #include <jde/fwk/crypto/CryptoSettings.h>
+#include <jde/ql/UnsubscribeAwait.h>
 #include <jde/web/Jwt.h>
 #include <jde/app/client/awaits/SocketAwait.h>
 #include "AppClientSocketSession.h"
@@ -14,14 +15,14 @@ namespace Jde::App::Client{
 		α Shutdown( bool terminate, SL sl )ι->void override;
 
 		Τ using await = Web::Client::ClientSocketAwait<T>;
-		α Listener()Ι->sp<Access::AccessListener>;
+		α Listener()Ε->sp<Access::AccessListener>;
 		α InitLogging( sp<App::Client::IAppClient> client )ι->void;
 		α LoadLogSettings( SRCE )ι->void;
-		α Connected()Ι->bool{ return _session!=nullptr; }
+		α Connected()Ι->bool{ return LoadSession()!=nullptr; }
 		α IsLocal()Ι->bool override{ return false; }
 		α UserName()Ι->const jobject&{ return _userName; }
 		α SetUserName( jobject&& userName )ι->void{ _userName = move(userName); }
-		α UserPK()Ι->Jde::UserPK{ auto p=Session(); return p ? p->UserPK() : Jde::UserPK{0}; }
+		α UserPK()Ι->Jde::UserPK{ auto p=LoadSession(); return p ? p->UserPK() : Jde::UserPK{0}; }
 		α QLServer()Ε->sp<QL::IQL>{ auto p=Session(); return p->QLServer(); }
 		α PublicKey()Ι->const Crypto::PublicKey& override{ return ServerPublicKey; }
 
@@ -31,8 +32,9 @@ namespace Jde::App::Client{
 		α Jwt( SRCE )ε->await<Web::Jwt>;
 		α Login( Web::Jwt&& jwt, SRCE )ε->await<Web::FromServer::SessionInfo> override;
 		α CloseSocketSession( bool terminate, SL sl )ι->void;
-		α SessionId()Ι->SessionPK{ return Session()->SessionId(); }
+    α SessionId()Ι->SessionPK{ auto p=LoadSession(); return p ? p->SessionId() : SessionPK{}; }
 		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray>;
+		[[nodiscard]] α Unsubscribe( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids, SRCE )ε->QL::UnsubscribeAwait;//ids empty = all of listener's subscriptions.
 
 		string ResourceSchema;
 		optional<Crypto::CryptoSettings> SslSettings;
@@ -43,10 +45,12 @@ namespace Jde::App::Client{
 		α QueryArray( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jarray>> override;
 		α QueryObject( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jobject>> override;
 		α QueryValue( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jvalue>> override;
-		α SetSession( sp<AppClientSocketSession> session )ι->void{ _session = session; }
-		α Session()Ε->sp<AppClientSocketSession>{ auto p = _session; THROW_IF( !p, "Not connected." ); THROW_IF( Process::ShuttingDown(), "Shutting down." ); return p; }
+		α SetSession( sp<AppClientSocketSession> session )ι->void{ lg _{_sessionMutex}; _session = move(session); }
+		α LoadSession()Ι->sp<AppClientSocketSession>{ lg _{_sessionMutex}; return _session; }
+		α Session()Ε->sp<AppClientSocketSession>{ auto p = LoadSession(); THROW_IF( !p, "Not connected." ); THROW_IF( Process::ShuttingDown(), "Shutting down." ); return p; }
 
 		jobject _userName;
+		mutable mutex _sessionMutex;
 		sp<AppClientSocketSession> _session;
 
 		friend struct AppClientSocketSession; friend struct StartSocketAwait;

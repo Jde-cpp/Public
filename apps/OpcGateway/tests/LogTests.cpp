@@ -61,6 +61,36 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_NO_THROW( Protobuf::Deserialize<App::Log::Proto::ArchiveFile>(move(content)) );
 	}
 
+	TEST_F( LogTests, ArchiveExternal ){
+		let archiveFile = ( *Settings::FindPath("/logging/proto/path") )/"2025/1/2/archive.binpb";
+		if( fs::exists(archiveFile) )
+			fs::remove( archiveFile );
+		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "External test message" };
+		e.Time = Chrono::ToTimePoint( 2025, 1, 2, 12 );
+		ProtoLog().Write( e, 123, 456 );
+		for( int i=0; i<100; ++i ){
+			ProtoLog().Write( {SRCE_CUR, ELogLevel::Information, ELogTags::Test, Ƒ("External filler - {}", i)} );
+			if( fs::exists(archiveFile) )
+				break;
+		}
+		std::this_thread::sleep_for( 1s );
+		ASSERT_TRUE( fs::exists(archiveFile) );
+		auto content = BlockTAwait<string>( IO::ReadAwait(archiveFile) );
+		App::Log::Proto::ArchiveFile archive;
+		ASSERT_NO_THROW( archive = Protobuf::Deserialize<App::Log::Proto::ArchiveFile>(move(content)) );
+		optional<App::Log::Proto::LogEntryFileExternal> external;
+		for( int i=0; i<archive.externalentries_size() && !external; ++i ){
+			if( let& x = archive.externalentries(i); x.app_pk()==123 && x.app_instance_pk()==456 )
+				external = x;
+		}
+		ASSERT_TRUE( external );
+		ASSERT_EQ( Protobuf::ToGuid(external->template_id()), e.Id() );
+		bool templateArchived{};
+		for( int i=0; i<archive.templates_size() && !templateArchived; ++i )
+			templateArchived = archive.templates(i).value()==e.Text;
+		ASSERT_TRUE( templateArchived ) << "External entry's template string not archived.";
+	}
+
 	TEST_F( LogTests, Remote ){
 		App::Client::RemoteLog remote{ {{"delay", "PT0.001S"}}, AppClient() };
 		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "Test message" };

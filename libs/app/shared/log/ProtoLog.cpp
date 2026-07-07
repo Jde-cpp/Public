@@ -32,22 +32,6 @@ namespace Jde::App{
 		catch( std::filesystem::filesystem_error& e ){
 			throw IO::IOException( move(e) );
 		}
-		for( auto yearDir : fs::directory_iterator(_root) ){
-			auto iyear = fs::is_directory( yearDir ) ? Str::TryTo<int>( yearDir.path().filename().string() ) : std::nullopt;
-			if( !iyear || *iyear<2025 )
-				continue;
-			for( auto monthDir : fs::directory_iterator(yearDir) ){
-				auto imonth = fs::is_directory( monthDir ) ? Str::TryTo<unsigned>( monthDir.path().filename().string() ) : std::nullopt;
-				if( !imonth || *imonth>12 )
-					continue;
-				for( auto dayDir : fs::directory_iterator(monthDir) ){
-					using namespace std::chrono;
-					auto iday = fs::is_directory( dayDir ) ? Str::TryTo<unsigned>( dayDir.path().filename().string() ) : std::nullopt;
-					if( iday && *iday>31 )
-						_archivedDays.insert( year_month_day{year{*iyear},month{*imonth},day{*iday}} );
-				}
-			}
-		}
 	}
 	α ProtoLog::Init()ι->void{
 		Logging::Add<ProtoLog>( "proto" );
@@ -57,7 +41,7 @@ namespace Jde::App{
 		if( !terminate && !_toSave.empty() ){
 			try{
 				lg _{ _mutex };
-				IO::SaveBinary<byte>( DailyFile(), _toSave );
+				IO::SaveBinary<byte>( DailyFile(), _toSave, true );
 			}
 			catch( exception& )
 			{}
@@ -128,12 +112,12 @@ namespace Jde::App{
 	α ProtoLog::Save( vector<byte> toSave, CoLockGuard )ι->VoidAwait::Task{
 		try{
 			TRACE( "Saving {} bytes to {}", toSave.size(), DailyFile().string() );
-			co_await IO::WriteAwait( DailyFile(), move(toSave), true, _tags );
+			co_await IO::WriteAwait( DailyFile(), vector<byte>{toSave}, true, _tags );//copy - keep toSave to re-queue on failure.
 			_dailyFileStart = TimePoint::max();
 		}
 		catch( exception& )	{
 			lg _{ _mutex };
-			std::copy( toSave.begin(), toSave.end(), std::back_inserter(_toSave) );
+			_toSave.insert( _toSave.begin(), toSave.begin(), toSave.end() );//prepend: strings must precede the entries referencing them.
 			co_return;
 		}
 		if( _needsArchive )
@@ -173,10 +157,12 @@ namespace Jde::App{
 		_timer = mu<DurationTimer>( _delay, SRCE_CUR );
 		let finished = co_await *_timer;
 		if( finished ){
-			if( !_toSave.empty() ){
-				_mutex.lock();
-				Save();
-			}
+			_mutex.lock();
+			_timer = nullptr;//let Write restart the timer for subsequent entries.
+			if( !_toSave.empty() )
+				Save();//unlocks _mutex.
+			else
+				_mutex.unlock();
 		}
 		else{
 			lg _{ _mutex };

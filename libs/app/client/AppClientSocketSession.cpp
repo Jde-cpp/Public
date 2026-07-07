@@ -19,9 +19,8 @@ namespace Client{
 	StartSocketAwait::StartSocketAwait( SessionPK sessionId, sp<Access::Authorize> authorize, sp<IAppClient> appClient, SL sl )ι:
 		base{ sl },
 		_appClient{ appClient },
-		_authorize{ authorize },
 		_sessionId{ sessionId },
-		_session{ ms<Client::AppClientSocketSession>(Executor(), IsSsl() ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{}, move(_authorize), move(appClient)) }
+		_session{ ms<Client::AppClientSocketSession>(Executor(), IsSsl() ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{}, move(authorize), move(appClient)) }
 	{}
 
 	α StartSocketAwait::Suspend()ι->void{
@@ -72,6 +71,8 @@ namespace Client{
 			HandleException( move(h), CodeException{ec, _tags, ELogLevel::NoLog}, false );
 		};
 		base::CloseTasks( f );
+		_subscriptionRequests.clear();
+		Subscriptions::Clear();//server-side subscriptions died with the socket; reconnect re-subscribes.
 	}
 	α AppClientSocketSession::OnClose( beast::error_code ec )ι->void{
 		base::OnClose( ec );
@@ -80,7 +81,7 @@ namespace Client{
 			App::Client::Connect( move(_appClient) );
 	}
 	α AppClientSocketSession::OnMessage( string&& j, RequestId requestId )ι->void{
-		DBG( "[{}]OnMessage", hex(requestId), j.substr(0, Web::Client::MaxLogLength()) );
+		DBG( "[{}]OnMessage: {}", hex(requestId), j.substr(0, Web::Client::MaxLogLength()) );
 		try{
 			Subscriptions::OnWebsocketReceive( Json::Parse(j), requestId );
 		}
@@ -109,7 +110,6 @@ namespace Client{
 
 		return ClientSocketAwait<jvalue>{ FromClient::Query(move(q), move(variables), requestId, returnRaw), requestId, shared_from_this(), sl };
 	}
-	concurrent_flat_map<RequestId, std::pair<sp<QL::IListener>,vector<QL::Subscription>>> _subscriptionRequests;
 	α AppClientSocketSession::Subscribe( string&& q, jobject vars, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Debug, sl, ELogTags::SocketClientWrite, "[{}]{} {}.", hex(requestId), q.substr(0, Web::Client::MaxLogLength()), serialize(vars) );
@@ -270,7 +270,9 @@ namespace Client{
 			await->promise().SetExp( move(e) );
 			await->resume();
 		};
-		if( auto await = std::any_cast<ClientSocketAwait<uint32>::Handle>(&h) )
+		if( auto await = std::any_cast<ClientSocketAwait<Proto::FromServer::ConnectionInfo>::Handle>(&h) )
+			handle( "Exception<ConnectionInfo>: '{}'.", await );
+		else if( auto await = std::any_cast<ClientSocketAwait<uint32>::Handle>(&h) )
 			handle( "Exception<uint32>: '{}'.", await );
 		else if( auto await = std::any_cast<ClientSocketAwait<string>::Handle>(&h) )
 			handle( "Exception<string>: '{}'.", await );

@@ -7,40 +7,31 @@
 
 #define let const auto
 namespace Jde::Opc{
-	α getDataType( const jvalue& v )ι->const UA_DataType*{
-		if( v.is_bool() )
-			return &UA_TYPES[UA_TYPES_BOOLEAN];
-		if( v.is_string() )
-			return &UA_TYPES[UA_TYPES_STRING];
-		if( v.is_object() ){
-			let type = Json::AsString( v.get_object(), "type" );
-			if( type=="double" )
-				return &UA_TYPES[UA_TYPES_DOUBLE];
-		}
-		WARNT( ELogTags::App, "Unsupported data type in Variant: ", serialize(v) );
-		return &UA_TYPES[UA_TYPES_STRING];
-	}
-	Variant::Variant( const jvalue& v, sv dataType )ι:
+	Variant::Variant( const jvalue& v, sv dataType )ε:
 		UA_Variant{},
 		VariantPK{0}{
 		if( v.is_bool() ){
 			auto boolValue = v.get_bool();
 			UA_Variant_setScalarCopy( this, &boolValue, &UA_TYPES[UA_TYPES_BOOLEAN] );
-		}else if( v.is_string() ){
+		}
+		else if( v.is_string() ){
 			auto sValue = ToUV( v.get_string() );
 			UA_Variant_setScalarCopy( this, &sValue, &UA_TYPES[UA_TYPES_STRING] );
-		}else if( dataType.size() ){
-			if( dataType=="double" ){
-				auto doubleValue = Json::AsNumber<double>( v );
-				UA_Variant_setScalarCopy( this, &doubleValue, &UA_TYPES[UA_TYPES_DOUBLE] );
-			}
-			else{
-				WARNT( ELogTags::App, "Unsupported data type in Variant: ", serialize(v) );
-				UA_Variant_setScalar( this, nullptr, &UA_TYPES[UA_TYPES_STRING] );
-			}
+		}
+		else if( dataType=="double" || v.is_double() ){
+			auto doubleValue = Json::AsNumber<double>( v );
+			UA_Variant_setScalarCopy( this, &doubleValue, &UA_TYPES[UA_TYPES_DOUBLE] );
+		}
+		else if( v.is_int64() ){
+			auto intValue = v.get_int64();
+			UA_Variant_setScalarCopy( this, &intValue, &UA_TYPES[UA_TYPES_INT64] );
+		}
+		else if( v.is_uint64() ){
+			auto uintValue = v.get_uint64();
+			UA_Variant_setScalarCopy( this, &uintValue, &UA_TYPES[UA_TYPES_UINT64] );
 		}
 		else{
-			WARNT( ELogTags::App, "Unsupported data type in Variant: ", serialize(v) );
+			WARNT( ELogTags::App, "Unsupported data type in Variant: {}", serialize(v) );
 			UA_Variant_setScalar( this, nullptr, &UA_TYPES[UA_TYPES_STRING] );
 		}
 	}
@@ -68,13 +59,14 @@ namespace Jde::Opc{
 		UA_Variant_init( &v );
 	}
 	Variant::Variant( StatusCode sc )ι:
-		UA_Variant{ &UA_TYPES[UA_TYPES_STATUSCODE], UA_VARIANT_DATA_NODELETE, 0, (void*)(uintptr_t)sc }
-		//UA_Variant_setScalar( this, &sc, &UA_TYPES[UA_TYPES_STATUSCODE] );
-	{}
+		UA_Variant{}{
+		UA_Variant_setScalarCopy( this, &sc, &UA_TYPES[UA_TYPES_STATUSCODE] );
+	}
 
 	α Variant::operator=( const Variant& v )ι->Variant&{
 		if( this==&v )
 			return *this;
+		UA_Variant_clear( this );
 		UA_Variant_copy( &v, this );
 		VariantPK = v.VariantPK;
 		return *this;
@@ -82,10 +74,17 @@ namespace Jde::Opc{
 	α Variant::operator=( Variant&& v )ι->Variant&{
 		if( this==&v )
 			return *this;
-		UA_Variant{ move(v) };
+		UA_Variant_clear( this );
+		static_cast<UA_Variant&>(*this) = v;
 		UA_Variant_init( &v );
-		VariantPK = move(v.VariantPK);
+		VariantPK = v.VariantPK;
 		return *this;
+	}
+
+	α Variant::Move()ι->UA_Variant{
+		UA_Variant y = *this;
+		UA_Variant_init( this );
+		return y;
 	}
 
 	α Variant::GetUAValue( const UA_DataType& type, UA_ByteString j )ε->void*{
@@ -120,7 +119,7 @@ namespace Jde::Opc{
 			y.emplace_back( uaJsonString(data, *this->type) );
 		}else{
 			for( uint i=0; i<arrayLength; ++i )
-				y.emplace_back( uaJsonString(((void**)data)[i], *type) );
+				y.emplace_back( uaJsonString((UA_Byte*)data+i*type->memSize, *type) );
 		}
 		return y;
 	}
@@ -145,9 +144,7 @@ namespace Jde::Opc{
 			}
 		};
 		if( IsScalar() ){
-			if( type==&UA_TYPES[UA_TYPES_STATUSCODE] )
-				y = toJson( &data, *type );
-			else if( type==&UA_TYPES[UA_TYPES_NODEID] )
+			if( type==&UA_TYPES[UA_TYPES_NODEID] )
 			  y = Opc::ToJson( *(UA_NodeId*)data );
 			else if( type==&UA_TYPES[UA_TYPES_QUALIFIEDNAME] )
 			  y = BrowseName::ToJson( *(UA_QualifiedName*)data );
@@ -157,7 +154,7 @@ namespace Jde::Opc{
 		else{
 			jarray arr;
 			for( uint i=0; i<arrayLength; ++i )
-				arr.emplace_back( toJson(((void**)data)[i], *type) );
+				arr.emplace_back( toJson((UA_Byte*)data+i*type->memSize, *type) );
 			y = move(arr);
 		}
 		return y;
@@ -169,10 +166,15 @@ namespace Jde::Opc{
 			if( size==1 )
 				data = GetUAValue( type, ToUV(values.begin()->second) );
 			else if( size>1 ){
-				data = UA_Array_new( values.size(), &type );
+				data = UA_Array_new( size, &type );
+				if( !data )
+					throw UAException{ UA_STATUSCODE_BADOUTOFMEMORY };
 				uint i=0;
-				for( auto&& [_, j] : values )
-					((void**)data)[i++] = GetUAValue( type, ToUV(j) );
+				for( auto&& [_, j] : values ){
+					let bytes = ToUV( j );
+					if( let sc = UA_decodeJson( &bytes, (UA_Byte*)data+i++*type.memSize, &type, nullptr ); sc )
+						throw UAException{ sc };
+				}
 			}
 			values.clear();
 		}

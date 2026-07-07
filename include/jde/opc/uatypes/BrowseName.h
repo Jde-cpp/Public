@@ -3,11 +3,15 @@
 namespace Jde::Opc{
 	struct BrowseName final : UA_QualifiedName{
 		BrowseName()ι = default;
-		BrowseName( const jobject& j )ι;
+		BrowseName( const jobject& j )ε;
 		BrowseName( BrowseNamePK pk, NsIndex ns=0, sv name={} )ι;
 		BrowseName( sv fqBrowseName, NsIndex defaultNs )ε;
 		BrowseName( UA_QualifiedName&& qn )ι;
+		BrowseName( const BrowseName& x )ι;
+		BrowseName( BrowseName&& x )ι;
 		~BrowseName(){ UA_QualifiedName_clear( this ); }
+		α operator=( const BrowseName& x )ι->BrowseName&;
+		α operator=( BrowseName&& x )ι->BrowseName&;
 		α operator==( const UA_QualifiedName& x )Ι->bool{ return namespaceIndex==x.namespaceIndex && ToSV(name)==ToSV(x.name); }
 
 		Ω ToJson( UA_QualifiedName ua )ι->jobject;

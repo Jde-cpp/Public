@@ -26,27 +26,44 @@ namespace Jde::App{
 		flat_map<year_month_day, App::Log::Proto::ArchiveFile> archives;
 		std::map<uuid,App::Log::Proto::String> strings;
 		for( auto& entry : entries ){
-			if( entry.has_str() )
+			using enum App::Log::Proto::FileEntry::ValueCase;
+			switch( entry.value_case() ){
+			case kStr:
 				strings[ToGuid( entry.str().id() )] = move( *entry.mutable_str() );
-			else{
+				break;
+			case kEntry:{
 				let day = Chrono::LocalYMD( Protobuf::ToTimePoint(entry.entry().time()), _tz );
 				*archives[day].add_entries() = move( *entry.mutable_entry() );
+				}break;
+			case kExternalEntry:{
+				let day = Chrono::LocalYMD( Protobuf::ToTimePoint(entry.external_entry().time()), _tz );
+				*archives[day].add_externalentries() = move( *entry.mutable_external_entry() );
+				}break;
+			default:
+				WARN( "Unhandled FileEntry case '{}' - not archived.", underlying(entry.value_case()) );
+				break;
 			}
 		}
 		for( auto&& [ymd,archive] : archives ){
-			for( int i=0; i<archive.entries_size(); ++i ){
-				auto& entry = *archive.mutable_entries( i );
-				if( auto p = strings.find(ToGuid(entry.template_id())); p!=strings.end() )
-					*archive.add_templates() = p->second;
-				if( auto p = strings.find(ToGuid(entry.file_id())); p!=strings.end() )
-					*archive.add_files() = p->second;
-				if( auto p = strings.find(ToGuid(entry.function_id())); p!=strings.end() )
-					*archive.add_functions() = p->second;
-				for( auto& argId : *entry.mutable_args() ){
-					if( let i = strings.find(ToGuid(argId)); i!=strings.end() )
-						*archive.add_args() = i->second;
-				}
-			}
+			flat_set<uuid> templateIds, fileIds, functionIds, argIds;
+			auto add = [&strings]( str idBytes, flat_set<uuid>& added, auto* collection ){
+				let id = ToGuid( idBytes );
+				if( !added.emplace(id).second )
+					return;
+				if( auto p = strings.find(id); p!=strings.end() )
+					*collection->Add() = p->second;
+			};
+			auto addStrings = [&]( auto& entry ){
+				add( entry.template_id(), templateIds, archive.mutable_templates() );
+				add( entry.file_id(), fileIds, archive.mutable_files() );
+				add( entry.function_id(), functionIds, archive.mutable_functions() );
+				for( let& argId : entry.args() )
+					add( argId, argIds, archive.mutable_args() );
+			};
+			for( int i=0; i<archive.entries_size(); ++i )
+				addStrings( *archive.mutable_entries(i) );
+			for( int i=0; i<archive.externalentries_size(); ++i )
+				addStrings( *archive.mutable_externalentries(i) );
 		}
 		Save( move(archives) );
 	}
@@ -72,7 +89,7 @@ namespace Jde::App{
 		fs::remove( _dailyFile );
 		Resume();
 	}
-	Ω getFile( year_month_day ymd, const fs::path& root )ι->fs::path{
+	Ω getFile( year_month_day ymd, const fs::path& root )ε->fs::path{
 		let dir = root/std::to_string( (int)ymd.year() )/std::to_string( (unsigned)ymd.month() )/std::to_string( (unsigned)ymd.day() );
 		if( !fs::exists(dir) )
 			fs::create_directories( dir );
@@ -100,7 +117,8 @@ namespace Jde::App{
 			co_return;
 		}
 		std::map<uuid,App::Log::Proto::String> args, templates, files, functions;
-		std::map<TimePoint,App::Log::Proto::LogEntryFile> entries;
+		std::multimap<TimePoint,App::Log::Proto::LogEntryFile> entries;
+		std::multimap<TimePoint,App::Log::Proto::LogEntryFileExternal> externalEntries;
 		auto existing = Protobuf::Deserialize<App::Log::Proto::ArchiveFile>( move(content) );
 		auto addEntries = [&entries]( App::Log::Proto::ArchiveFile& af ){
 			for( int i=0; i<af.entries_size(); ++i ){
@@ -108,8 +126,16 @@ namespace Jde::App{
 				entries.emplace_hint( entries.end(), Protobuf::ToTimePoint(entry.time()), move(entry) );
 			}
 		};
+		auto addExternalEntries = [&externalEntries]( App::Log::Proto::ArchiveFile& af ){
+			for( int i=0; i<af.externalentries_size(); ++i ){
+				auto& entry = *af.mutable_externalentries( i );
+				externalEntries.emplace_hint( externalEntries.end(), Protobuf::ToTimePoint(entry.time()), move(entry) );
+			}
+		};
 		addEntries( existing );
 		addEntries( _archive );
+		addExternalEntries( existing );
+		addExternalEntries( _archive );
 #define ADD_STRINGS( collection, af ) \
 		for( int i=0; i<af.collection##_size(); ++i ){ \
 			auto& s = *af.mutable_##collection( i ); \
@@ -127,6 +153,8 @@ namespace Jde::App{
 		App::Log::Proto::ArchiveFile cumulative;
 		for( auto& [_,entry] : entries )
 			*cumulative.add_entries() = move( entry );
+		for( auto& [_,entry] : externalEntries )
+			*cumulative.add_externalentries() = move( entry );
 		for( auto& [_,s] : args )
 			*cumulative.add_args() = move( s );
 		for( auto& [_,s] : templates )
@@ -168,7 +196,7 @@ namespace Jde::App{
 		}
 	}
 
-	α ArchiveLoadAwait::ArchiveFiles()ι->flat_map<year_month_day, fs::path>{
+	α ArchiveLoadAwait::ArchiveFiles()ε->flat_map<year_month_day, fs::path>{
 		flat_map<year_month_day, fs::path> y;
 		for( let& yearEntry : fs::directory_iterator(_root) ){
 			if( let yearV = yearEntry.is_directory() ? Str::TryTo<year>(yearEntry.path().stem().string()) : nullopt; yearV ){
