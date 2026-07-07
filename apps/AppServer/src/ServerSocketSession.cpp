@@ -16,6 +16,7 @@ namespace Jde::App::Server{
 		base{ move(stream), move(buffer), move(request), move(userEndpoint), connectionIndex }
 	{}
 	α ServerSocketSession::AddInstance( Proto::FromClient::Instance instance, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task{
+		let _ = shared_from_this();
 		try{
 			auto info = co_await Web::Server::Sessions::UpsertAwait( Ƒ("{:x}", instance.session_id()), _userEndpoint.address().to_string(), true, nullptr );
 			_userPK = info->UserPK;
@@ -40,7 +41,7 @@ namespace Jde::App::Server{
 
 			_instancePK = instancePK; _programPK = appPK; _connectionPK = connectionPK;
 			_instance = move( instance );
-			Write( FromServer::ConnectionInfo(appPK, instancePK, connectionPK, requestId, AppClient()->PublicKey(), move(*info), authResult) );
+			Write( FromServer::ConnectionInfo(appPK, instancePK, connectionPK, requestId, AppClient()->PublicKey(), info, authResult) );
 		}
 		catch( exception& e ){
 			WriteException( move(e), requestId );
@@ -54,7 +55,7 @@ namespace Jde::App::Server{
 
 			auto info = Web::Server::Sessions::Add( userPK, move(*m.mutable_user_endpoint()), m.is_socket() );
 			LogWrite( Ƒ("AddSession id: {:x}", info->SessionId), requestId );
-			Write( FromServer::Session(move(*info), requestId) );
+			Write( FromServer::Session(*info, requestId) );
 		}
 		catch( exception& e ){
 			WriteException( move(e), requestId );
@@ -100,7 +101,7 @@ namespace Jde::App::Server{
 		return QLPtr();
 	}
 
-	α ServerSocketSession::SaveLogEntry( Log::Proto::LogEntryClient entry, RequestId requestId )->void{
+	α ServerSocketSession::SaveLogEntry( Log::Proto::LogEntryClient entry, RequestId requestId )ι->void{
 		if( !_programPK || !_instancePK ){
 			WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 			return;
@@ -116,11 +117,12 @@ namespace Jde::App::Server{
 		LogRead( Ƒ("SessionInfo={}", hex(sessionId)), requestId );
 		if( auto info = Web::Server::Sessions::Find(sessionId); info ){
 			LogWrite( Ƒ("SessionInfo userPK: {}, endpoint: {}, hasSocket: {}", info->UserPK.Value, info->UserEndpoint, info->HasSocket), requestId );
-			Write( FromServer::Session(move(*info), requestId) );
+			Write( FromServer::Session(*info, requestId) );
 		}else
 			WriteException( Exception{Ƒ("[{}] Session not found.", hex(sessionId))}, requestId );
 	}
 	α ServerSocketSession::SetSessionId( SessionPK sessionId, RequestId requestId )->Web::Server::Sessions::UpsertAwait::Task{
+		let _ = shared_from_this();
 		try{
 			LogRead( Ƒ("SetSessionId={:x}", sessionId), requestId );
 			co_await Web::Server::Sessions::UpsertAwait( Ƒ("{:x}", sessionId), _userEndpoint.address().to_string(), true, nullptr );
@@ -132,7 +134,7 @@ namespace Jde::App::Server{
 		}
 	}
 	α ServerSocketSession::TestAdmin( str resource, str criteria, Jde::UserPK userPK, SL sl )ε->void{
-		string q = "permisionRight( user:$user ){isAdmin resource( resource:$resource, criteria:$criteria )}";
+		string q = "permissionRight( user:$user ){isAdmin resource( resource:$resource, criteria:$criteria )}";
 		auto ql = QL::ParseQuery(move(q), jobject{{"user", userPK.Value}, {"resource", resource}, {"criteria", criteria}}, {}, true, sl);
 		auto await = IWebsocketSession::QueryClient(move(ql), UserPK(), sl );
 		auto result = BlockTAwait<jvalue>( move(await) );
@@ -144,11 +146,13 @@ namespace Jde::App::Server{
 	}
 
 	α ServerSocketSession::GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task{
+		let _ = shared_from_this();
 		try{
 			THROW_IF( !_userPK, "Not logged in to system." );
 			jobject vars{ {"id", _userPK->Value} };
 			let user = co_await QL::QLAwait<jobject>( "user(id:$id){name target}", move(vars), {UserPK::System}, QLPtr() );
 			let info = Web::Server::Sessions::Find( SessionId() );
+			THROW_IF( !info, "Session not found." );
 			let expiration = Chrono::ToClock<Clock,steady_clock>( info->Expiration );
 			Write( FromServer::Jwt(Server::GetJwt(*_userPK, string{user.at("name").as_string()}, string{user.at("target").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );
 		}
@@ -157,9 +161,10 @@ namespace Jde::App::Server{
 		}
 	}
 	α ServerSocketSession::Login( string&& jwt, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task{
+		let _ = shared_from_this();
 		try{
 			let session = co_await Sessions::UpsertAwait( "Bearer " + move(jwt), _userEndpoint.address().to_string(), true, Server::AppClient() );
-			Write( FromServer::Session(move(*session), requestId) );
+			Write( FromServer::Session(*session, requestId) );
 		}
 		catch( exception& e ){
 			WriteException( move(e), requestId );
@@ -185,8 +190,11 @@ namespace Jde::App::Server{
 			case kException:
 				if( !requestId ){
 					DBGT( ELogTags::SocketServerRead | ELogTags::Exception, "[{:x}.{:x}]Exception - {}", Id(), 0, m.exception().what() );
-				}else if( !ForwardExecutionAwait::Resume(move(*m.mutable_execute_response()), requestId) )
-					LogRead( Ƒ("Exception not handled - {}", m.exception().what()), requestId, ELogLevel::Critical );
+				}else{
+					auto what = move( *m.mutable_exception()->mutable_what() );
+					if( !ForwardExecutionAwait::ResumeExp(Exception{what}, requestId) )
+						LogRead( Ƒ("Exception not handled - {}", what), requestId, ELogLevel::Critical );
+				}
 				break;
 			case kExecute:
 			case kExecuteAnonymous:{
@@ -264,38 +272,7 @@ namespace Jde::App::Server{
 				RemoveSubscription( move(subIds), requestId );
 				break;}
 			[[likely]]case kStringKey:
-/*				if( !_programPK || !_instancePK ){
-					WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
-					continue;
-				}
-				++cString;
-				auto& s = *m.mutable_string_value();
-				uuid id{ Protobuf::ToGuid(s.id()) };
-				if( StringCache::Add(s.field(), id, s.value(), ELogTags::SocketServerRead) )
-					Server::SaveString( (Proto::FromClient::EFields)s.field(), id, move(*s.mutable_value()) );*/
 				break;
-/*			case kSubscribeLogs:{
-				if( m.subscribe_logs().empty() ){
-					LogRead( Ƒ("SubscribeLogs unsubscribe"), requestId );
-					Server::UnsubscribeLogs( InstancePK() );
-				}
-				else{
-					try{
-						LogRead( Ƒ("SubscribeLogs subscribe - {}", m.subscribe_logs()), requestId );
-						Server::SubscribeLogs( move(*m.mutable_subscribe_logs()), SharedFromThis() );
-					}
-					catch( exception& e ){
-						WriteException( move(e), requestId );
-					}
-				}
-				break;}
-			case kSubscribeStatus:
-				LogRead( Ƒ("SubscribeStatus - {}", m.subscribe_status()), requestId );
-				if( m.subscribe_status() )
-					Server::SubscribeStatus( *this );
-				else
-					Server::UnsubscribeStatus( ConnectionPK() );
-				break;*/
 			default:
 				LogRead( Ƒ("Unknown message type '{}'", underlying(m.value_case())), requestId, ELogLevel::Critical );
 			}

@@ -34,7 +34,7 @@ namespace Jde::App::Server{
 			if( auto p = pid ? sp<ServerSocketSession>{} : Server::FindConnection(id); p )
 				pid = p->Instance().pid();
 			if( pid ){
-				if( !Process::Kill(pid) )
+				if( Process::Kill(pid) )
 					ResumeScaler( 0 );
 				else
 					ResumeExp( Exception{_sl, {ELogTags::SocketServerRead}, "Failed to kill process."} );

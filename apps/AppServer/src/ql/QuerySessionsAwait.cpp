@@ -9,20 +9,20 @@ namespace Jde::App::Server{
 			SessionQuery( session );
 	}
 	α QuerySessionsAwait::SessionQuery( sp<ServerSocketSession> session )ι->TAwait<jvalue>::Task{
-		uint size;
+		uint completed;//count responses independently of _results.size(): a duplicate ConnectionPK (e.g. 0) collapses map entries and would otherwise wedge completion.
 		try{
 			IWebsocketSession& s = dynamic_cast<IWebsocketSession&>( *session );
 			auto result = co_await s.QueryClient( _ql, _executer );
 			lg _{ _resultsMutex };
 			_results.emplace( session->ConnectionPK(), move(result) );
-			size = _results.size();
+			completed = ++_completed;
 		}
 		catch( const std::exception& e ){
 			lg _{ _resultsMutex };
 			_results.emplace( session->ConnectionPK(), jobject{{"error", e.what()}} );
-			size = _results.size();
+			completed = ++_completed;
 		}
-		if( size == _sessions.size() )
+		if( completed == _sessions.size() )
 			Resume( move(_results) );
 	}
 	α QuerySessionsAwait::await_resume()ε->flat_map<ConnectionPK, jvalue>{

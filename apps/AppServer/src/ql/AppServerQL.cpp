@@ -22,17 +22,17 @@ namespace Jde::App::Server{
 		AppQL{ move(schemas), move(authorizer) }
 	{}
 
-	α AppServerQL::CustomQuery( QL::TableQL& q, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>>{
-		if( auto await = Access::Server::CustomQuery( q, move(executer), sl ); await )
+	α AppServerQL::CustomQuery( QL::TableQL& q, QL::Creds creds, SL sl )ι->up<TAwait<jvalue>>{
+		if( auto await = Access::Server::CustomQuery(q, creds, sl); await )
 			return await;
-		return AppQLAwait::Test( q, executer, sl );
+		return AppQLAwait::Test( q, creds, sl );
 	}
-	α AppServerQL::CustomMutation( QL::MutationQL& m, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>>{
-		if( auto await = Access::Server::CustomMutation( m, move(executer), sl); await )
+	α AppServerQL::CustomMutation( QL::MutationQL& m, QL::Creds creds, SL sl )ι->up<TAwait<jvalue>>{
+		if( auto await = Access::Server::CustomMutation(m, creds, sl); await )
 			return await;
-		if( auto await = App::LogSettingsMAwait::IsApplicable(m) ? mu<App::LogSettingsMAwait>( move(m), AppClient(), executer.UserPK(), sl ) : nullptr; await )
+		if( auto await = App::LogSettingsMAwait::IsApplicable(m) ? mu<App::LogSettingsMAwait>(move(m), AppClient(), creds.UserPK(), sl) : nullptr; await )
 			return await;
-		if( auto await = InstanceTagLevelMAwait::IsApplicable(m) ? mu<InstanceTagLevelMAwait>( move(m), executer.UserPK(), sl ) : nullptr; await )
+		if( auto await = InstanceTagLevelMAwait::IsApplicable(m) ? mu<InstanceTagLevelMAwait>(move(m), creds.UserPK(), sl) : nullptr; await )
 			return await;
 		return nullptr;
 	}

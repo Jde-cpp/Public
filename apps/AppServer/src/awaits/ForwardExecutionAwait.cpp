@@ -36,6 +36,13 @@ namespace Jde::App::Server{
 			return true;
 		} );
 	}
+	α ForwardExecutionAwait::ResumeExp( Exception&& e, RequestId serverRequestId )ι->bool{
+		return _forwardExecutionMessages.erase_if( serverRequestId, [&](auto&& kv){
+			auto h = kv.second.Handle;
+			h.promise().ResumeExp( move(e), h );
+			return true;
+		});
+	}
 	α ForwardExecutionAwait::Resume( string&& results, RequestId serverRequestId )ι->bool{
 		return _forwardExecutionMessages.erase_if( serverRequestId, [&](auto&& kv){
 			auto h = kv.second.Handle;

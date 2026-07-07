@@ -12,7 +12,7 @@ namespace Jde::App::Server{
 		base{ move(req), sl }
 	{}
 
-	α ValueJson( string&& value )ι{ return Json::Parse(Ƒ("{{\"value\": \"{}\"}}", value)); }
+	α ValueJson( string&& value )ι->jvalue{ return jobject{{"value", move(value)}}; }//build directly so quotes/backslashes are escaped (Ƒ+Parse threw on unescaped input).
 
 	Ω login( HttpRequest req, HttpRequestAwait::Handle h )ι->TAwait<UserPK>::Task{
 		try{
@@ -50,6 +50,7 @@ namespace Jde::App::Server{
 			}
 			else if( _request.Target()=="/opcGateways" || _request.Target()=="/opcServers" ){
 				_request.LogRead();
+				//TODO require authentication: these endpoints disclose connected-instance topology (app name, host, pid, port, start time) to anonymous callers. Gate on _request.UserPK().
 				let apps = Server::FindApplications( _request.Target()=="/opcServers" ? "Jde.OpcServer" : "Jde.OpcGateway" );
 				jarray japps;
 				for( auto& app : apps )
@@ -60,7 +61,6 @@ namespace Jde::App::Server{
 		return _readyResult!=nullptr;
 	}
 	α HttpRequestAwait::Suspend()ι->void{
-		up<Exception> pException;
 		bool processed{ _request.Method() == http::verb::post };
 		if( _request.Method() == http::verb::post ){
 			if( _request.Target()=="/login" )

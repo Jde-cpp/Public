@@ -66,7 +66,13 @@ namespace Jde::App{
 
 	α Server::FindConnection( ConnectionPK connectionPK )ι->sp<ServerSocketSession>{
 		sp<ServerSocketSession> y;
-		_sessions.visit( connectionPK, [&](auto&& kv){y=kv.second;} );
+		if( connectionPK ){ //_sessions is keyed by socket Id, not ConnectionPK; 0=session not yet registered.
+			_sessions.cvisit_while( [&](let& kv){
+				if( kv.second->ConnectionPK()==connectionPK )
+					y = kv.second;
+				return !y;
+			});
+		}
 		return y;
 	}
 
@@ -74,12 +80,13 @@ namespace Jde::App{
 	α Server::QuerySessions( QL::TableQL ql, UserPK executer, SL sl )ι->QuerySessionsAwait{
 		vector<sp<ServerSocketSession>> sessions;
 		_sessions.visit_all( [&](auto&& kv){
-			sessions.push_back( kv.second );
+			if( kv.second->ConnectionPK() )//skip not-yet-registered sessions: no status to report and they share ConnectionPK 0.
+				sessions.push_back( kv.second );
 		});
 		return QuerySessionsAwait{ move(ql), executer, move(sessions), sl };
 	}
 	α Server::Write( ProgramPK appPK, optional<ConnectionPK> connectionPK, Proto::FromServer::Transmission&& msg )ε->void{
-		if( !_sessions.visit_while([&](auto&& kv){
+		if( _sessions.visit_while([&](auto&& kv){ //visit_while returns true if no lambda returned false, i.e. no session matched.
 			auto& session = kv.second;
 			auto appInstPK = session->ProgramPK()==appPK ? session->ConnectionPK() : 0;
 			let found = appInstPK && appInstPK==connectionPK.value_or( appInstPK );

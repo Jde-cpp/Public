@@ -5,13 +5,12 @@ namespace Jde::DB{ struct AppSchema; }
 namespace Jde::App::Server{
 	struct InstanceTagLevelAwait final : TAwait<jvalue>{
 		using base = TAwait<jvalue>;
-		InstanceTagLevelAwait( QL::TableQL&& m, SRCE )ι:base{sl}, _mutation{move(m)}{}
+		InstanceTagLevelAwait( QL::TableQL&& q, SRCE )ι:base{sl}, _query{move(q)}{}
 		Ω IsApplicable( const QL::TableQL& q )ι->bool{ return q.JsonName.starts_with("instanceTagLevel"); }
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->TAwait<vector<DB::Row>>::Task;
 	private:
-		QL::TableQL _mutation;
-		sp<DB::AppSchema> _schema;
+		QL::TableQL _query;
 	};
 
 	struct InstanceTagLevelMAwait final : TAwait<jvalue>{

@@ -12,17 +12,17 @@ namespace Jde::App::Server{
 	α InstanceTagLevelAwait::Execute()ι->TAwait<vector<DB::Row>>::Task{
 		try{
 			auto schema = AppSchema();
-			let instanceId = _mutation.Id();
+			let instanceId = _query.Id();
 			let& table = schema->GetView( "instance_tag_levels" );
 			DB::Sql sql{
-				Ƒ( "select type, tag, level_id from {} where instance_id=?", table.DBName, instanceId ),
+				Ƒ( "select type, tag, level_id from {} where instance_id=?", table.DBName ),
 				{ {instanceId} }
 			};
 			auto rows = co_await schema->DS()->SelectAsync( move(sql), _sl );
 
-			auto text = _mutation.FindColumn("text") ? jobject{} : optional<jobject>{};
-			auto binary = _mutation.FindColumn("binary") ? jobject{} : optional<jobject>{};
-			auto appServer = _mutation.FindColumn("appServer") ? jobject{} : optional<jobject>{};
+			auto text = _query.FindColumn("text") ? jobject{} : optional<jobject>{};
+			auto binary = _query.FindColumn("binary") ? jobject{} : optional<jobject>{};
+			auto appServer = _query.FindColumn("appServer") ? jobject{} : optional<jobject>{};
 			for( auto&& row : rows ){
 				let type = row.GetString( 0 );
 				let tag = row.GetUInt( 1 );

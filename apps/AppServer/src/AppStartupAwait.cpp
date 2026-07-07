@@ -25,7 +25,7 @@ namespace Server{
 			auto appClient = AppClient();
 			auto sslSettings = Crypto::CryptoSettings{ Json::FindDefaultObject(_webServerSettings, "ssl") };
 			Server::StartWebServer( move(_webServerSettings) );
-			appClient->SetPublicKey( Crypto::CryptoSettings{move(sslSettings)}.PublicKey() );
+			appClient->SetPublicKey( sslSettings.PublicKey() );
 			appClient->LoadLogSettings();
 			QL::Hook::Add( mu<AppInstanceHook>(appClient) );
 			QL::Hook::Add( mu<Web::Server::SessionGraphQL>(appClient) );
