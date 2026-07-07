@@ -15,7 +15,7 @@
 			},
 			"cacheVariables":{
 				"CMAKE_CXX_STANDARD": "26",
-				"JDE_VERSION": "2026.06.01",
+				"JDE_VERSION": "2026.07.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3",
 				"MULTI_INSTALL_PREFIX": "$env{multiInstallPrefix}",
 				"SPDLOG_FMT_EXTERNAL": "ON"
@@ -25,6 +25,7 @@
 			"name": "repos",
 			"hidden": true,
 			"cacheVariables":{
+				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
 				"jde_REPOS": true,
 				"jde_TESTS": false,
 				"jde_APPS": false
@@ -38,7 +39,6 @@
 			},
 			"cacheVariables": {
 				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/Debug",
-				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
 				"CMAKE_PREFIX_PATH": "$env{installRoot}/Debug;$env{multiInstallPrefix}"
 			}
 		},
@@ -69,8 +69,7 @@
 			"inherits": "common",
 			"cacheVariables":{
 				"CMAKE_BUILD_TYPE": "$env{buildType}",
-				"LIBXML2_INCLUDE_DIR": "/usr/include/libxml2",
-				"LIBXML2_LIBDIR": "/usr/lib/x86_64-linux-gnu"
+				"LIBXML2_INCLUDE_DIR": "/usr/include/libxml2"
 			}
 		},
 
@@ -114,13 +113,9 @@
 		{
 			"name": "clang-linux",
 			"inherits": ["clang","linux"],
-			"environment": {
-				"CC": "clang-22",
-				"CXX": "clang++-22"
-			},
 			"cacheVariables":{
-				"CMAKE_C_COMPILER": "clang-22",
-				"CMAKE_CXX_COMPILER": "clang++-22",
+				"CMAKE_C_COMPILER": "clang",
+				"CMAKE_CXX_COMPILER": "clang++",
 				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
 				"CMAKE_CXX_FLAGS_DEBUG": "$env{cxxFlagsDebug} -glldb -static-libasan -fsanitize=leak -fsanitize=address -fno-omit-frame-pointer -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL",
 				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
@@ -158,8 +153,6 @@
 			"inherits": ["clang", "linux"],
 			"hidden": true,
 			"cacheVariables":{
-				"CMAKE_C_COMPILER": "clang-22",
-				"CMAKE_CXX_COMPILER": "clang++-22",
 				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
 				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
 				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
@@ -177,10 +170,20 @@
 			}
 		},
 		{
+			"name": "linux-clang-debug",
+			"inherits": ["linux-clang", "debug"]
+		},
+		{
 			"name": "win-clang-debug",
 			"hidden": true,
 			"inherits": ["win-clang", "debug"],
-			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-22"
+			"binaryDir": "$env{JDE_BUILD_DIR}/clang++"
+		},
+		{
+			"name": "linux-clang-debug-jde",
+			"inherits": ["linux-clang-debug", "clang-jde"],
+			"cacheVariables":{
+			}
 		},
 		{
 			"name": "win-clang-debug-jde",
@@ -190,8 +193,18 @@
 			}
 		},
 		{
+			"name": "linux-repos",
+			"hidden": true,
+			"inherits": ["repos"],
+			"cacheVariables": {
+				"LIBXML2_LIBDIR": "/usr/lib/x86_64-linux-gnu",
+				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}"
+			}
+		},
+		{
 			"name": "win-repos",
 			"hidden": true,
+			"inherits": ["repos"],
 			"cacheVariables": {
 				"CMAKE_HAVE_LIBC_PTHREAD": "OFF",
 				"CMAKE_HAVE_PTHREADS_CREATE": "OFF",
@@ -203,16 +216,6 @@
 		{
 			"name": "win-clang-debug-repos",
 			"inherits": ["win-clang-debug", "win-repos"]
-		},
-		{
-			"name": "linux-clang-debug",
-			"inherits": ["linux-clang", "debug"]
-		},
-		{
-			"name": "linux-clang-jde-debug",
-			"inherits": ["linux-clang-debug"],
-			"cacheVariables":{
-			}
 		}
 	],
 	"buildPresets": [

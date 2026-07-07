@@ -10,7 +10,7 @@ namespace Jde{
 			return fs::file_size( fs::canonical(path) );
 		}
 		catch( fs::filesystem_error& e ){
-			throw IOException( move(e) );
+			throw IO::IOException( move(e) );
 		}
 	}
 
@@ -18,7 +18,7 @@ namespace Jde{
 		CHECK_PATH( path, sl );
 		auto size = fileSize( path );
 		TRACESL( "Opening {} - {} bytes ", path.string(), size );
-		std::ifstream f( path, std::ios::binary ); THROW_IFX(f.fail(), IOException(path, "Could not open file") );
+		std::ifstream f( path, std::ios::binary ); THROW_IFX(f.fail(), IO::IOException(path, "Could not open file") );
 		string y;
 		y.reserve( size );
 		y.assign( (std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>() );  //vexing parse
@@ -29,7 +29,7 @@ namespace Jde{
 		CHECK_PATH( path, sl );
 		auto size = fileSize( path );
 		TRACESL( "Opening {} - {} bytes ", path.string(), size );
-		std::ifstream f( path, std::ios::binary ); THROW_IFX( f.fail(), IOException(path, "Could not open file", sl) );
+		std::ifstream f( path, std::ios::binary ); THROW_IFX( f.fail(), IO::IOException(path, "Could not open file", sl) );
 
 		return vector<char>{ (std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>() };  //vexing parse
 	}

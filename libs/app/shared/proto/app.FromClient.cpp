@@ -37,8 +37,8 @@ namespace Jde::App{
 		return setMessage( requestId, [&](auto& m){
 			auto& request = *m.mutable_exception();
 			request.set_what( e.what() );
-			if( auto p = dynamic_cast<IException*>(&e); p )
-				request.set_code( (uint32)p->Code );
+			if( auto p = dynamic_cast<Jde::Exception*>(&e); p )
+				request.set_code( (uint32)p->Code() );
 		} );
 	}
 	α FromClient::Exception( string&& e, RequestId requestId )ι->PFromClient::Transmission{

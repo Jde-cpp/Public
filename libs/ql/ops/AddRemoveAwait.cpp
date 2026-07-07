@@ -68,7 +68,7 @@ namespace Jde::QL{
 			}
 			AddAfter( result );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -77,7 +77,7 @@ namespace Jde::QL{
 			co_await Hook::AddAfter( _mutation, _userPK );
 			Resume( move(v) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -93,7 +93,7 @@ namespace Jde::QL{
 			}
 			RemoveAfter( result );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -102,7 +102,7 @@ namespace Jde::QL{
 			co_await Hook::AddAfter( _mutation, _userPK );
 			Resume( move(v) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -111,7 +111,7 @@ namespace Jde::QL{
 			co_await Hook::AddBefore( _mutation, _userPK );
 			Add();
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -122,7 +122,7 @@ namespace Jde::QL{
 			TRACE( "AddHook::Add returned '{}'", serialize(*y) );
 			Resume( move(*y) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -132,7 +132,7 @@ namespace Jde::QL{
 			THROW_IF( !y, "Hook::RemoveHook returned null." );
 			Resume( move(*y) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -150,7 +150,7 @@ namespace Jde::QL{
 			THROW_IF( !_table->Map, "'{}' does not support add/remove.", _table->Name );
 			_params = getChildParentParams( _table->Map->Parent, _table->Map->Child, _mutation.Args );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 			return;
 		}

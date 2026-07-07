@@ -102,11 +102,11 @@ namespace Jde{
 			bytes = IO::LoadBinary( path, sl );
 		}
 		catch( fs::filesystem_error& e ){
-			throw IOException( move(e) );
+			throw IO::IOException( move(e) );
 		}
 		if( !bytes.size() ){
 			fs::remove( path );
-			throw IOException{ path, "has 0 bytes. Removed", sl };
+			throw IO::IOException{ path, "has 0 bytes. Removed", sl };
 		}
 		Internal::Deserialize( (google::protobuf::uint8*)bytes.data(), (uint32)bytes.size(), proto );
 	}
@@ -123,7 +123,7 @@ namespace Jde{
 			try{
 				pValue = Load<T>( path, sl );
 			}
-			catch( const IException& )
+			catch( const Exception& )
 			{}
 		}
 		return pValue;

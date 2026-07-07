@@ -41,7 +41,7 @@ namespace Jde::Opc::Gateway{
 				UA_DeleteMonitoredItemsRequest_clear( &request );
 			}
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			if( first )
 				ResumeExp( move(e) );
 		}

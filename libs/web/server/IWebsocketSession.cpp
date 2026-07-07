@@ -65,7 +65,7 @@ namespace Jde::Web::Server{
 	}
 
 	α IWebsocketSession::LogWriteException( const exception& e, RequestId requestId, ELogLevel level, SL sl )ι->void{
-		if( let p = dynamic_cast<const IException*>(&e); p )
+		if( let p = dynamic_cast<const Exception*>(&e); p )
 			p->SetLevel( ELogLevel::NoLog );
 		Exception{ sl, level, "[{}.{}]{}", Ƒ("{:x}", Id()), Ƒ("{:x}", requestId), e.what() }; //:x doesn't work with exception formatter
 	}
@@ -144,7 +144,7 @@ namespace Jde::Web::Server{
 			auto h = it->second.first;
 			_pendingQueries.erase( it );
 			if( h ){
-				h.promise().SetExp( Exception{ELogTags::SocketServerWrite, sl, "Query {} timed out after {}", hex(requestId), Chrono::ToString(timeout)} );
+				h.promise().SetExp( Exception{sl, {ELogTags::SocketServerWrite}, "Query {} timed out after {}", hex(requestId), Chrono::ToString(timeout)} );
 				h.resume();
 			}
 		}
@@ -174,7 +174,7 @@ namespace Jde::Web::Server{
 				h.promise().SetValue( parse(move(queryResult)) );
 			}
 			catch( exception& e ){
-				h.promise().SetExp( Exception{SRCE_CUR, move(e), ELogLevel::Warning, "[{}]QueryClientResults parse exception", hex(requestId)} );
+				h.promise().SetExp( Exception{SRCE_CUR, {ELogLevel::Warning}, move(e), "[{}]QueryClientResults parse exception", hex(requestId)} );
 			}
 			h.resume();
 		}

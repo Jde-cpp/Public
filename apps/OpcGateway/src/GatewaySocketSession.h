@@ -35,7 +35,7 @@ namespace Jde::Opc::Gateway{
 		α WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, Jde::RequestId requestId )ι->void override;
 		α WriteComplete( Jde::RequestId requestId )ι->void override;
 		α WriteException( string&& e, Jde::RequestId requestId )ι->void override;
-		α WriteException( IException&& e )ι->void{ WriteException( move(e), 0 ); }
+		α WriteException( Exception&& e )ι->void{ WriteException( move(e), 0 ); }
 
 		α SendAck( uint32 id )ι->void override;
 	};

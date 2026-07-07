@@ -11,9 +11,9 @@
 #define FormatString const fmt::format_string<Args const&...>
 #define ARGS const Args&
 
-namespace Jde{
-	struct IException;
-}
+// namespace Jde{
+// 	struct Exception;
+// }
 namespace Jde::Logging{
 	struct Γ Entry final{
 		template<class... Args> Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι;

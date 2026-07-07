@@ -10,6 +10,7 @@
 
 #define Φ Γ auto
 namespace Jde{
+	struct Exception;
 	Φ ToString( ELogLevel l )ι->string;
 	Φ ToLogLevel( sv op )ι->ELogLevel;
 	α LogLevelStrings()ι->const std::array<sv,7>;
@@ -39,7 +40,7 @@ namespace Jde{
 
 namespace Jde::Logging{
 	struct ILogger; struct MemoryLog;
-	Φ LogException( const IException& e )ι->void;
+	Φ LogException( const Exception& e )ι->void;
 	Φ DestroyLoggers( bool terminate )->void;
 	Φ Loggers()->const vector<up<ILogger>>&;
 	Ŧ GetLogger()ε->T&;

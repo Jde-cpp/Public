@@ -29,7 +29,7 @@ namespace Jde::QL{
 		const MutationQL _mutation;
 		sp<DB::Table> _table;
 
-		up<IException> _exception;
+		up<Exception> _exception;
 		vector<vector<sp<DB::Column>>> _missingColumns;
 		flat_map<string,DB::Value> _nestedIds;
 		vector<DB::InsertClause> _statements;

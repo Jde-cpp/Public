@@ -1,8 +1,9 @@
 ﻿#pragma once
 #ifndef OPEN_SSL_H
 #define OPEN_SSL_H
-#include <span>
+//#include <span>
 #include <boost/uuid/uuid.hpp>
+#include "jde/fwk/log/logTags.h"
 
 #define Φ Γ auto
 
@@ -40,13 +41,13 @@ namespace Jde::Crypto{
 	Φ WriteCertificate( const fs::path& path, vector<byte>&& certificate )ε->void;
 	Φ WritePrivateKey( const fs::path& path, vector<byte>&& privateKey, str passcode )ε->void;
 
-	struct OpenSslException final : IException{
+	struct OpenSslException final : Exception{
 		template<class... Args>
-		OpenSslException( fmt::format_string<Args...> fmt, uint32 rc, SRCE, Args&&... args )ι:
-			IException{ sl, ELogLevel::Warning, rc, fmt, std::forward<Args>(args)... }
+		OpenSslException( SL sl, uint32 rc, fmt::format_string<Args...> m, Args&&... args )ι:
+			Exception{ sl, {ELogLevel::Warning, ELogTags::Crypto, rc}, m, std::forward<Args>(args)... }
 		{}
 		static Φ CurrentError()ι->string;
-		α Move()ι->up<IException> override{ return mu<OpenSslException>(move(*this)); }
+		α Move()ι->up<Exception> override{ return mu<OpenSslException>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }
   };
 }

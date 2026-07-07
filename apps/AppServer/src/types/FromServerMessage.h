@@ -17,7 +17,7 @@ namespace Jde::ApplicationServer{
 		return t;
 	}
 
-	α ProtoException( IException&& e, uint requestId )ι->Logging::Proto::FromServer{
+	α ProtoException( exception&& e, uint requestId )ι->Logging::Proto::FromServer{
 		Logging::Proto::FromServer t;
 		auto p = t.add_messages()->mutable_exception();
 		p->set_request_id( requestId );

@@ -1,10 +1,10 @@
 #include <jde/app/proto/common.h>
 
 namespace Jde::App{
-	α ProtoUtils::ToException( IException&& e )ι->Jde::Proto::Exception{
+	α ProtoUtils::ToException( Exception&& e )ι->Jde::Proto::Exception{
 		Jde::Proto::Exception proto;
 		proto.set_what( e.what() );
-		proto.set_code( e.Code );
+		proto.set_code( e.Code() );
 		return proto;
 	}
 	α ProtoUtils::ToQuery( string&& text, jobject&& variables, bool returnRaw )ι->Jde::Proto::Query{

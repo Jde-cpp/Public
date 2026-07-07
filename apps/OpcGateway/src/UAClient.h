@@ -97,7 +97,7 @@ namespace Jde::Opc::Gateway{
 		let target = client->Target();
 		let credential = client->Credential;
 		RemoveClient( move(client) );
-		if( e.Code==UA_STATUSCODE_BADCONNECTIONCLOSED || e.Code==UA_STATUSCODE_BADSERVERNOTCONNECTED ){
+		if( e.Code()==UA_STATUSCODE_BADCONNECTIONCLOSED || e.Code()==UA_STATUSCODE_BADSERVERNOTCONNECTED ){
 			try{
 				client = co_await GetClient( move(target), move(credential) );
 				f( move(client), h );

@@ -76,7 +76,7 @@ namespace Server{
 			try{
 				q = QL::Parse( move(query), move(vars), reqHandler->Schemas(), returnRaw );
 			}
-			catch( IException& e ){
+			catch( Exception& e ){
 				DBGT( ELogTags::HttpServerRead, "parsing failed: {}", e.what() );
 				co_return send( RestException<http::status::bad_request>{move(e), move(req), "Query parsing failed."}, move(stream), contentType );
 			}
@@ -99,8 +99,8 @@ namespace Server{
 		catch( Access::AccessException& e ){
 			send( RestException<http::status::unauthorized>{move(e), move(req), "[{}]{}", reqHandler->UserName(e.Executer), e.what()}, move(stream), contentType );
 		}
-		catch( IException& e ){
-			if( !empty(e.Tags() & ELogTags::Parsing) )
+		catch( Exception& e ){
+			if( !empty(e.Tags & ELogTags::Parsing) )
 				send( RestException<http::status::bad_request>{move(e), move(req), "Query parsing failed."}, move(stream), contentType );
 			else
 				send( RestException{move(e), move(req), "Query failed."}, move(stream), contentType );
@@ -121,7 +121,7 @@ namespace Server{
 		catch( IRestException& e ){
 			send( move(e), move(stream) );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			e.SetLevel( ELogLevel::Critical );//no request object...
 			send( RestException<>{move(e), move(req), "Error handling request."}, move(stream) );
 		}
@@ -244,7 +244,7 @@ namespace Server{
 		try{
 			req.SessionInfo = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false, reqHandler->AppServer() );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			send( RestException<http::status::unauthorized>{move(e), move(req), "Could not get sessionInfo."}, move(stream) );
 			co_return;
 		}
@@ -401,7 +401,7 @@ namespace Server{
 			let session = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false, appClient, false );
 			j["active"] = ( bool )session;
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			j["active"] = false;
 			e.SetLevel( ELogLevel::Trace );
 		}

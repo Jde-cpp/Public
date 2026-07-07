@@ -37,7 +37,7 @@ namespace Jde::QL{
 			try{
 				results.push_back( co_await *awaitable );
 			}
-			catch( IException& e ){
+			catch( exception& e ){
 				ResumeExp( move(e) );
 				co_return;
 			}
@@ -97,7 +97,7 @@ namespace Jde::QL{
 				y.push_back( co_await *awaitable );
 			Resume( y );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

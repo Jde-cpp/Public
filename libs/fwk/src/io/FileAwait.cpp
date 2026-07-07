@@ -1,5 +1,6 @@
 ﻿#include <jde/fwk/io/FileAwait.h>
 #include <jde/fwk/process/execution.h>
+#include <jde/fwk/exceptions/IOException.h>
 #include <jde/fwk/io/Cache.h>
 
 #define let const auto
@@ -44,13 +45,13 @@ namespace IO{
 		if( IsRead ){
 			if( auto h = ReadCoHandle(); h ){
 				_coHandle = (StringAwait::Handle)nullptr;
-				Post( [path=move(Path),sl=_sl, m=move(m), code, h](){h.promise().ResumeExp(IOException{path, code, move(m), sl}, h);} );
+				Post( [path=move(Path),sl=_sl, m=move(m), code, h](){h.promise().ResumeExp(IO::IOException{path, code, move(m), sl}, h);} );
 			}
 		}
 		else{
 			if( auto h = WriteCoHandle(); h ){
 				_coHandle = (VoidAwait::Handle)nullptr;
-				Post( [path=move(Path),sl=_sl, m=move(m), code, h](){h.promise().ResumeExp(IOException{path, code, move(m), sl}, h);} );
+				Post( [path=move(Path),sl=_sl, m=move(m), code, h](){h.promise().ResumeExp(IO::IOException{path, code, move(m), sl}, h);} );
 			}
 		}
 		chunk=nullptr;

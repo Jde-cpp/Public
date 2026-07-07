@@ -16,7 +16,7 @@ namespace Jde::Opc::Gateway{
 			THROW_IF( providerPK==0, "Provider not found for '{}'.", _opcNK );
 			AddSession( providerPK );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -26,7 +26,7 @@ namespace Jde::Opc::Gateway{
 			Gateway::AddSession( sessionInfo.session_id(), _opcNK, move(_cred) );
 			Resume( move(sessionInfo) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

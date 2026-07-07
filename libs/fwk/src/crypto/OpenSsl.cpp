@@ -11,7 +11,7 @@
 
 namespace Jde{
 	namespace Crypto{
-		α OpenSslException::CurrentError()ι->string{ char b[120]; ERR_error_string( ERR_get_error(), b ); return {b}; }
+		α OpenSslException::CurrentError()ι->string{ char b[256]; ERR_error_string_n( ERR_get_error(), b, sizeof(b) ); return {b}; }
 
 		//https://stackoverflow.com/questions/1986888/how-to-compute-a-32-bit-fingerprint-of-a-certificate
 		α PublicKey::Hash32()Ι->uint32_t{
@@ -137,7 +137,7 @@ namespace Jde{
 		auto len = i2d_PUBKEY( key.get(), nullptr );
 		vector<byte> y( len );
 		unsigned char* p = (unsigned char*)y.data();
-		len = i2d_PUBKEY( key.get(), &p ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_PUBKEY - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
+		len = i2d_PUBKEY( key.get(), &p ); THROW_IFX( len<=0, Crypto::OpenSslException(SRCE_CUR, 0, "i2d_PUBKEY - {}", Crypto::OpenSslException::CurrentError()) );
 		return y;
 	}
 
@@ -192,18 +192,18 @@ namespace Jde{
 	α Crypto::ReadCertificate( const fs::path& certificate )ε->vector<byte>{
 		X509Ptr cert{ PEM_read_bio_X509(ReadFile(certificate).get(), nullptr, 0, nullptr), ::X509_free };  CHECK_NULL( cert );
 
-		auto len = i2d_X509( cert.get(), nullptr ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_X509 - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
+		auto len = i2d_X509( cert.get(), nullptr ); THROW_IFX( len<=0, Crypto::OpenSslException(SRCE_CUR, 0, "i2d_X509 - {}", Crypto::OpenSslException::CurrentError()) );
 		vector<byte> y( len );
 		unsigned char* p = (unsigned char*)y.data();
-		len = i2d_X509( cert.get(), &p ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_X509 - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
+		len = i2d_X509( cert.get(), &p ); THROW_IFX( len<=0, Crypto::OpenSslException(SRCE_CUR, 0, "i2d_X509 - {}", Crypto::OpenSslException::CurrentError()) );
 		return y;
 	}
 	α Crypto::ReadPrivateKey( const fs::path& privateKeyPath, str passcode )ε->vector<byte>{
 		auto pkey = Internal::ReadPrivateKey( privateKeyPath, passcode );
-		auto len = i2d_PrivateKey( pkey.get(), nullptr ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_PrivateKey - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
+		auto len = i2d_PrivateKey( pkey.get(), nullptr ); THROW_IFX( len<=0, Crypto::OpenSslException(SRCE_CUR, 0, "i2d_PrivateKey - {}", Crypto::OpenSslException::CurrentError()) );
 		vector<byte> y( len );
 		unsigned char* pTemp = (unsigned char*)y.data();
-		len = i2d_PrivateKey( pkey.get(), &pTemp ); THROW_IFX( len<=0, Crypto::OpenSslException("i2d_PrivateKey - {}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) );
+		len = i2d_PrivateKey( pkey.get(), &pTemp ); THROW_IFX( len<=0, Crypto::OpenSslException(SRCE_CUR, 0, "i2d_PrivateKey - {}", Crypto::OpenSslException::CurrentError()) );
 		return y;
 	}
 

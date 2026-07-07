@@ -92,10 +92,10 @@ namespace Jde::Access::Tests{
 			AddToGroup( groupB, {groupC}, GetRoot() );
 
 		const GroupPK groupD{ GetId(GetGroup("groupD", GetRoot())) };
-		EXPECT_THROW( AddToGroup( groupD, {groupD}, GetRoot() ), IException );
+		EXPECT_THROW( AddToGroup( groupD, {groupD}, GetRoot() ), Exception );
 		if( !IsMember( "groupC", groupD, GetRoot()) )
 			AddToGroup( groupC, {groupD}, GetRoot() );
-		EXPECT_THROW( AddToGroup( groupD, {groupA}, GetRoot() ), IException );
+		EXPECT_THROW( AddToGroup( groupD, {groupA}, GetRoot() ), Exception );
 		//TODO test implement deleted members.
 	}
 }

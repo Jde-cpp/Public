@@ -28,7 +28,7 @@ namespace Jde::Web::Server{
 				Json::AddOrAssign( _result, setting );
 			});
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			_exception = mu<Exception>( move(e) );
 		}
 		return true;

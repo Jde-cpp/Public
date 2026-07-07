@@ -52,7 +52,7 @@ namespace Server{
 			co_await Access::Server::Configure( {accessSchema, _appSchema}, QLPtr(), UserPK{UserPK::System}, authorizer, _listener );
 			EndAppInstances();
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

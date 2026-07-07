@@ -25,7 +25,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 		α Connect( atomic_flag& flag, char id )ι->ConnectAwait::Task;
 		optional<Credential> _cred;
-		up<IException> _exception;
+		up<Exception> _exception;
 		sp<UAClient> _client;
 	};
 
@@ -44,7 +44,7 @@ namespace Jde::Opc::Gateway::Tests{
 			//co_await CertAwait{ Client->Target, "localhost", true };
 			TRACE( "{} returned", id );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			TRACE( "{} failed", id );
 			_exception = e.Move();
 		}

@@ -31,7 +31,7 @@ namespace Jde::QL{
 			_table->Authorize( Access::ERights::Create, _executer, _sl );
 			CreateQuery( *_table, _mutation.ExtrapolateVariables() );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			_exception = e.Move();
 		}
 		return _exception || ( _statements.empty() && !_table->HasCustomInsertProc );
@@ -100,7 +100,7 @@ namespace Jde::QL{
 				co_return;
 			}
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 			co_return;
 		}
@@ -153,7 +153,7 @@ namespace Jde::QL{
 			co_await Hook::InsertAfter( id, _mutation, _executer );
 			Resume( move(result) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -162,7 +162,7 @@ namespace Jde::QL{
 			co_await Hook::InsertFailure( _mutation, _executer );
 			ResumeExp( move(e) );
 		}
-		catch( IException& e2 ){
+		catch( exception& e2 ){
 			ResumeExp( move(e2) );
 		}
 	}

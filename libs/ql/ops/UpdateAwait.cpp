@@ -35,7 +35,7 @@ namespace Jde::QL{
 				_table->Authorize( Access::ERights::Delete, _userPK, _sl );
 			}
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			_exception = e.Move();
 		}
 		return _exception!=nullptr;
@@ -126,7 +126,7 @@ namespace Jde::QL{
 				rowCount += co_await _table->Schema->DS()->Execute( update.Move() );
 			UpdateAfter( rowCount );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -135,7 +135,7 @@ namespace Jde::QL{
 			co_await Hook::UpdateAfter( _mutation, _userPK );
 			Resume( jvalue{rowCount} );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

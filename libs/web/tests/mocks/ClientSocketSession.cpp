@@ -24,7 +24,7 @@ namespace Jde::Web::Mock{
 			base::SetInfo( move(*t.mutable_messages(0)->mutable_session_info()) );
 			//Write( FromServer::CompleteTrans(requestId) );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			//WriteException( move(e), requestId );
 		}
 	}

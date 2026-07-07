@@ -1,13 +1,12 @@
 #include "MySqlDataSource.h"
 #include <jde/db/DBException.h>
 #include <jde/db/generators/Functions.h>
-#include "field.h"
+#include "field.h" //!important
 #include "MySqlException.h"
-#include "MySqlQueryAwait.h"
-#include "MySqlRow.h"
+#include "MySqlQueryAwait.h" //!important
+#include "MySqlRow.h" //!important
 #include "MySqlServerMeta.h"
-#include "../../src/DBLog.h"
-#include "jde/fwk/usings.h"
+#include "../../src/DBLog.h" //!important
 
 
 #if !defined(NDEBUG) && !defined(_GLIBCXX_DEBUG) && !defined(__clang__)
@@ -93,7 +92,7 @@ namespace Jde::DB::MySql{
 				session.Conn.execute( sql.EmbedParams(), result );
 		}
 		catch( mysql::error_with_diagnostics& e ){
-			throw MySqlException{ move(sql.Text), move(e), sl, ELogTags::DBDriver };
+			throw MySqlException{ sql.Text, move(e), sl, ELogTags::DBDriver };
 		}
 		if( exeParams.Function && result.has_value() ){
 			for( auto&& row : result.rows() )
@@ -122,7 +121,7 @@ namespace Jde::DB::MySql{
 		try{
 			schemaName = SchemaName();
 		}
-		catch( const IException& e ){//assume can't connect on current schema.
+		catch( const Exception& e ){//assume can't connect on current schema.
 		}
 		sp<MySqlDataSource> pDataSource;
 		if( schema==schemaName )

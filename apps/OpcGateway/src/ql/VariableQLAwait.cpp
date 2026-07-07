@@ -1,6 +1,5 @@
 #include "VariableQLAwait.h"
-#include <jde/fwk/exceptions/ArgException.h>
-#include "../async/ConnectAwait.h"
+#include "../async/ConnectAwait.h" //!important
 #include <jde/opc/uatypes/Variant.h>
 
 #define let const auto
@@ -14,8 +13,7 @@ namespace Jde::Opc::Gateway{
 			if( _mutation.Type==QL::EMutationQL::Update )
 				ReadDataType( _mutation.As<>("value"), _nodeId );
 			else
-				ResumeExp( Argε("Only update is supported") );
-
+				ResumeExp( Exception("Only update is supported") );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

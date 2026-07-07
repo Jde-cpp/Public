@@ -41,7 +41,7 @@ namespace Jde::Opc::Gateway{
 			base::SetSessionInfo( move(sessionInfo) );
 			Write( FromServer::CompleteTrans(requestId) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -57,7 +57,7 @@ namespace Jde::Opc::Gateway{
 			else
 				WriteException( Ƒ("Client not found: opcId: '{}'", move(opcId)), requestId );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -71,7 +71,7 @@ namespace Jde::Opc::Gateway{
 					auto values = co_await ReadValueAwait{ move(nodes), client };
 					session->Write( FromServer::ReadValuesTrans(client->Target(), move(values), requestId) );
 				}
-				catch( IException& e ){
+				catch( exception& e ){
 					session->WriteException( move(e), requestId );
 				}
 			}( move(nodes), move(client), requestId, move(session) );
@@ -117,7 +117,7 @@ namespace Jde::Opc::Gateway{
 			else
 				WriteException( Ƒ("Client not found: opcId: '{}'", opcId), requestId );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			WriteException( move(e), requestId );
 		}
 	}

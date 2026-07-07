@@ -76,25 +76,21 @@ namespace Jde::Web::Client{
 			else
 				retry = true;
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			ResumeExp( move(e) );
 		}
 		if( retry ){
 			try{
 				Resume( co_await ClientHttpAwaitSingle{ move(firstAttempt) } );
 			}
-			catch( IException& e ){
+			catch( Exception& e ){
 				ResumeExp( move(e) );
 			}
 		}
 	}
 	α ClientHttpAwait::await_resume()ε->ClientHttpRes{
 		ClientHttpRes res = base::await_resume();
-		if( res.IsError() ){
-			for( auto& h : res.Headers() )
-				TRACET( ELogTags::Test, "{}: {}", h.name_string(), h.value() );
-			throw ClientHttpResException( move(res) );
-		}
+		THROW_IFX( res.IsError(), ClientHttpResException(move(res), _sl) );
 		return res;
 	}
 

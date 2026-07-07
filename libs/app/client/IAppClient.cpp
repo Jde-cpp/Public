@@ -31,11 +31,11 @@ namespace Jde::App::Client{
 			Logging::UpdateCumulative( Logging::Loggers() );
 			Logging::Log( ELogLevel::Trace, ELogTags::Settings, sl, "Loaded log settings." );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			e.SetLevel( ELogLevel::Critical );
 		}
 		catch( exception& e ){
-			Exception{ sl, move(e), ELogLevel::Critical };
+			Exception{ move(e), {ELogLevel::Critical}, sl };
 		}
 	}
 

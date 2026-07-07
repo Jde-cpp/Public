@@ -1,26 +1,20 @@
 ﻿#pragma once
 #include "exports.h"
-#include "Value.h"
+#include <jde/db/generators/Sql.h>
 
-#define Φ ΓDB auto
 namespace Jde::DB{
-	struct Sql; struct Value;
-
-	struct ΓDB DBException final: IException{
+	struct ΓDB DBException final : Exception{
 		DBException( int32 errorCode, DB::Sql&& sql, string what, SRCE )ι;
 		DBException( DB::Sql&& sql, string what, SRCE )ι:DBException{ 0, move(sql), move(what), sl }{}
-		DBException( DBException&& from )ι:IException{move(from)}, Sql{move(from.Sql)}{}
+		DBException( DBException&& from )ι:Exception{move(from)}, Sql{move(from.Sql)}{}
 		DBException( const DBException& from )ι=delete;
 		~DBException(){ Log(); SetLevel( ELogLevel::NoLog ); };
 
 		α Log()Ι->void override;
 		α what()const noexcept->const char* override;
-		using T=DBException;
-		α Move()ι->up<IException> override{ return mu<T>(move(*this)); }
-		α Ptr()ι->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }
+		α Move()ι->up<Exception> override{ return mu<DBException>(move(*this)); }
 		[[noreturn]] α Throw()ε->void override{ throw move(*this); }
 
-		DB::Sql&& Sql;
+		DB::Sql Sql;
 	};
 }
-#undef Φ

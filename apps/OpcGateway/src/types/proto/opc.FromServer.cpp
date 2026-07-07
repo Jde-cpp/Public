@@ -29,8 +29,8 @@ namespace Jde::Opc::Gateway{
 
 		auto& proto = *m.mutable_exception();
 		proto.set_what( string{e.what()} );
-		if( auto p = dynamic_cast<const IException*>(&e) )
-			proto.set_code( p->Code );
+		if( auto p = dynamic_cast<const Exception*>(&e) )
+			proto.set_code( p->Code() );
 		return t;
 	}
 	α FromServer::MessageTrans( FromServer::Message&& m, RequestId requestId )ι->FromServer::Transmission{

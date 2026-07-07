@@ -1,16 +1,17 @@
 ﻿#include "OpenSslInternal.h"
 #include <jde/fwk/crypto/OpenSsl.h>
+#include <jde/fwk/exceptions/IOException.h>
 
 namespace Jde::Crypto{
 	template<typename T, typename D>
 	α MakeHandle( T* p, D deleter, SRCE )ε{
-		THROW_IFX( !p, Crypto::OpenSslException("MakeHandle - p is null - {}", 0, sl, Crypto::OpenSslException::CurrentError()) );
+		THROW_IFX( !p, Crypto::OpenSslException(sl, 0, "MakeHandle - p is null - {}", Crypto::OpenSslException::CurrentError()) );
 		return up<T,D>{ p, deleter };
 	}
 
 	using namespace Jde::Crypto::Internal;
 	α Internal::File( const fs::path& path, bool write )ε->BioPtr{
-		THROW_IFX( !write && !fs::exists(path), IOException(path, "File does not exist.") );
+		THROW_IFX( !write && !fs::exists(path), IO::IOException(path, "File does not exist.") );
 		auto p = BIO_new_file(path.string().c_str(), write ? "w" : "r"); CHECK_NULL( p );
 		return BioPtr{ p, ::BIO_free };
 	}

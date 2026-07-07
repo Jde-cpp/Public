@@ -16,7 +16,7 @@ boost::uuids::string_generator _gen;
 		return _gen( s.data(), s.data()+s.size() );
 	}
 	catch( const std::runtime_error& e ){
-		throw Exception( ELogTags::Parsing, sl, "Invalid UUID string '{}': {}", s, e.what() );
+		throw Exception( sl, {ELogTags::Parsing}, "Invalid UUID string '{}': {}", s, e.what() );
 	}
 }
 α Jde::ToString( const boost::uuids::uuid& u )ι->string{

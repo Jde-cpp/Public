@@ -89,7 +89,7 @@ namespace Jde::Web::Server{
 			auto t = Protobuf::Deserialize<TFromClient>( (const google::protobuf::uint8*)p, (int)size );
 			OnRead( move(t) );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			WriteException( move(e), RequestId{0} );
 		}
 	}

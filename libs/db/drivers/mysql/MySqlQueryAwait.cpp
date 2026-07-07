@@ -61,11 +61,11 @@ namespace Jde::DB::MySql{
 				catch( mysql::error_with_diagnostics& e ){
 					ResumeExp( MySqlException{_sql.EmbedParams(), move(e), _sl} );
 				}
-				catch( IException& e ){
+				catch( Exception& e ){
 					ResumeExp( move(e) );
 				}
 				catch( ... ){
-					ResumeExp( move(*IException::FromExceptionPtr(e)) );
+					ResumeExp( move(*Exception::FromPtr(e, _sl)) );
 				}
 			}
     );

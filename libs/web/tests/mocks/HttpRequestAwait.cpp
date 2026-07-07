@@ -25,7 +25,7 @@ namespace Jde::Web::Mock{
 			req.SessionInfo->IsInitialRequest = true;  //expecting sessionId to be set.
 			return j;
 		}
-		catch( IException& ){
+		catch( Exception& ){
 			ASSERT(false);
 			return {};
 		}

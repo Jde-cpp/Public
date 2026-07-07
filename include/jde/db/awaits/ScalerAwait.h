@@ -7,14 +7,14 @@
 #define let const auto
 
 namespace Jde::DB{
-	ΓDB α ScalerAwaitExecute( IDataSource& _ds, variant<Sql,InsertClause>&& _sql, function<void(optional<Row>)> onRow, function<void(IException&&)> onError, SL sl )ι->QueryAwait::Task;
+	ΓDB α ScalerAwaitExecute( IDataSource& _ds, variant<Sql,InsertClause>&& _sql, function<void(optional<Row>)> onRow, function<void(Exception&&)> onError, SL sl )ι->QueryAwait::Task;
 
 	Τ struct ScalerAwaitOpt : TAwaitEx<optional<T>,void>{
 		using base=TAwaitEx<optional<T>,void>;
 		ScalerAwaitOpt( sp<IDataSource> ds, variant<Sql,InsertClause>&& s, SL sl )ι: base{ sl }, _ds{ move(ds) }, _sql{ move(s) }{}
 		α Execute()ι->void override;
 		α OnRow( optional<Row> result )ι->void;
-		α OnError( IException&& e )ι->void;
+		α OnError( Exception&& e )ι->void;
 	private:
 		sp<IDataSource> _ds;
 		variant<Sql,InsertClause> _sql;
@@ -32,7 +32,7 @@ namespace Jde::DB{
 				else
 					base::ResumeExp( Exception{"No value returned", ELogLevel::Error, base::_sl} );
 			}
-			catch( IException& e ){
+			catch( Exception& e ){
 				base::ResumeExp( move(e) );
 			}
 		}
@@ -57,18 +57,18 @@ namespace Jde::DB{
 			get<InsertClause>(_sql).Add( T{} );
 		ScalerAwaitExecute( *_ds, move(_sql),
 		[this](optional<Row> r){OnRow(move(r));},
-		[this](IException&& e){OnError(move(e));},
+		[this](Exception&& e){OnError(move(e));},
 		base::_sl );
 	}
 	Ŧ ScalerAwaitOpt<T>::OnRow( optional<Row> r )ι->void{
 		try{
 			base::ResumeScaler( r ? r->template Get<T>(0) : optional<T>{} );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			base::ResumeExp( move(e) );
 		}
 	}
-	Ŧ ScalerAwaitOpt<T>::OnError( IException&& e )ι->void{
+	Ŧ ScalerAwaitOpt<T>::OnError( Exception&& e )ι->void{
 		base::ResumeExp( move(e) );
 	}
 }

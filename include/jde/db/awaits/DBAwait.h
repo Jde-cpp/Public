@@ -15,7 +15,7 @@ namespace Jde::DB{
 	Τ using CoRowΛ=function<void( T& pResult, Row&& r )ε>;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-	α ΓDB TAwaitExecute( sp<IDataSource>&& _ds, Sql&& _sql, function<void(vector<Row>&&)> onRows, function<void(IException&&)> onError, SL sl )ι->SelectAwait::Task;
+	α ΓDB TAwaitExecute( sp<IDataSource>&& _ds, Sql&& _sql, function<void(vector<Row>&&)> onRows, function<void(Exception&&)> onError, SL sl )ι->SelectAwait::Task;
 	Τ class TSelect{  //TODO need a TSelect for scaler, _pResult can be null in that case.
 	protected:
 		TSelect( sp<IDataSource> ds, Sql&& sql, CoRowΛ<T> fnctn, SL sl )ι:
@@ -26,7 +26,7 @@ namespace Jde::DB{
 		//α Result()ι->T&{ return _result; }
 		α OnRow( Row&& r )ε->void{ _fnctn( _result, move(r) ); }
 		T _result{};
-		up<IException> _exception;
+		up<Exception> _exception;
 	private:
 		sp<IDataSource> _ds;
 		CoRowΛ<T> _fnctn;
@@ -44,7 +44,7 @@ namespace Jde::DB{
 					OnRow( move(r) );
 				_h.resume();
 			},
-			[&](IException&& e){ _exception = e.Move(); _h.resume(); },
+			[&](Exception&& e){ _exception = e.Move(); _h.resume(); },
 			_sl
 		);
 	}

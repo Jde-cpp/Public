@@ -32,7 +32,7 @@ namespace Jde::App::Server{
 					Authorizer()->AddAdminAuthorizer( resource, std::dynamic_pointer_cast<Access::IAdminAcl>(shared_from_this()) );
 					authResult = true;
 				}
-				catch( IException& ){
+				catch( exception& ){
 					INFOT( ELogTags::Access, "[{}.{}]Instance '{}' denied authorizor with resource '{}'", hex(Id()), hex(requestId), instance.instance_name(), resource );
 					authResult = false;
 				}
@@ -56,7 +56,7 @@ namespace Jde::App::Server{
 			LogWrite( Ƒ("AddSession id: {:x}", info->SessionId), requestId );
 			Write( FromServer::Session(move(*info), requestId) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -65,7 +65,7 @@ namespace Jde::App::Server{
 			auto t = Protobuf::Deserialize<Proto::FromClient::Transmission>( move(bytes) );
 			ProcessTransmission( move(t), userPK, clientRequestId );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			WriteException( move(e), clientRequestId );
 		}
 	}
@@ -78,7 +78,7 @@ namespace Jde::App::Server{
 			LogWrite( Ƒ("ForwardExecution{} size: {:10L}", functionSuffix, result.size()), requestId );
 			Write( FromServer::Execute(move(result), requestId) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -92,7 +92,7 @@ namespace Jde::App::Server{
 			LogWrite( Ƒ("GraphQL: {}", y.substr(0,100)), requestId );
 			Write( FromServer::GraphQL(move(y), requestId) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -127,7 +127,7 @@ namespace Jde::App::Server{
 			base::SetSessionId( sessionId );
 			Write( FromServer::Complete(requestId) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -284,7 +284,7 @@ namespace Jde::App::Server{
 						LogRead( Ƒ("SubscribeLogs subscribe - {}", m.subscribe_logs()), requestId );
 						Server::SubscribeLogs( move(*m.mutable_subscribe_logs()), SharedFromThis() );
 					}
-					catch( IException& e ){
+					catch( exception& e ){
 						WriteException( move(e), requestId );
 					}
 				}

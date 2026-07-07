@@ -61,7 +61,7 @@ namespace Jde::Opc::Gateway{
 			else if( _query.JsonName=="securityMode" )
 				y = SecurityMode( move(_query), move(_client) );
 			else
-				throw Exception{ _sl, "Unknown query type: {}", _query.JsonName };
+				throw Exception{ _sl, {}, "Unknown query type: {}", _query.JsonName };
 			Resume( move(y) );
 		}
 		catch( exception& e ){
@@ -83,7 +83,7 @@ namespace Jde::Opc::Gateway{
 				y = co_await VariableQLAwait{ move(_query), session, _sl };
 			}
 			else
-				throw Exception{ _sl, "Unknown query type: {}", _query.JsonTableName };
+				throw Exception{ _sl, {},	"Unknown query type: {}", _query.JsonTableName };
 			Resume( move(y) );
 		}
 		catch( exception& e ){

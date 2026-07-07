@@ -37,10 +37,10 @@ namespace Jde::App::Server{
 				if( !Process::Kill(pid) )
 					ResumeScaler( 0 );
 				else
-					ResumeExp( Exception{ELogTags::SocketServerRead, _sl, "Failed to kill process."} );
+					ResumeExp( Exception{_sl, {ELogTags::SocketServerRead}, "Failed to kill process."} );
 			}
 			else
-				ResumeExp( Exception{ELogTags::SocketServerRead, _sl, "Instance not found."} );
+				ResumeExp( Exception{_sl, {ELogTags::SocketServerRead}, "Instance not found."} );
 		}
 		QL::MutationQL _mutation;
 		UserPK _userPK;

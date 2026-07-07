@@ -12,7 +12,7 @@ namespace Jde{
 		β await_ready()ι->bool{ return false; }
 		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
 		β await_resume()ε->void{ AwaitResume(); }
-		α ResumeExp( IException&& e )ι{
+		α ResumeExp( Exception&& e )ι{
 			ASSERT( Promise() );
 			Promise()->ResumeExp( move(e), _h );
 		}
@@ -23,10 +23,10 @@ namespace Jde{
 		α Resume()ι{ ASSERT(_h); auto h=_h; _h=nullptr; h.resume(); }
 		α Source()ι->SL{ return _sl; }
 	protected:
-		α SetError( IException&& e )ι{ ASSERT(Promise()); Promise()->SetExp( move(e) ); }
+		α SetError( Exception&& e )ι{ ASSERT(Promise()); Promise()->SetExp( move(e) ); }
 		β Suspend()ι->void=0;
 		α AwaitResume()ε->void{
-			if( up<IException> e = Promise() ? Promise()->MoveExp() : nullptr; e ){
+			if( up<Exception> e = Promise() ? Promise()->MoveExp() : nullptr; e ){
 				_h = nullptr;
 				e->Throw();
 			}
@@ -46,7 +46,7 @@ namespace Jde{
 		β await_ready()ι->bool{ return false; }
 		Ξ await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
 		β await_resume()ε->TResult = 0;
-		α ResumeExp( IException&& e )ι{
+		α ResumeExp( Exception&& e )ι{
 			ASSERT(Promise());
 			Promise()->ResumeExp( move(e), _h );
 		}
@@ -57,10 +57,10 @@ namespace Jde{
 		α Resume()ι{ ASSERT(_h); auto h=_h; _h=nullptr; h.resume(); }
 		α Source()ι->SL{ return _sl; }
 	protected:
-		α SetError( IException&& e )ι{ ASSERT(Promise()); Promise()->SetExp( move(e) ); }
+		α SetError( Exception&& e )ι{ ASSERT(Promise()); Promise()->SetExp( move(e) ); }
 		β Suspend()ι->void{};
 		α CheckException()ε->void{
-			if( up<IException> e = Promise() ? Promise()->MoveExp() : nullptr; e ){
+			if( up<Exception> e = Promise() ? Promise()->MoveExp() : nullptr; e ){
 				_h = nullptr;
 				e->Throw();
 			}
@@ -109,17 +109,17 @@ namespace Jde{
 	struct Γ StringAwait : TAwait<string>{
 		StringAwait( SRCE )ι:TAwait<string>{ sl }{}
 	};
-	
+
 	struct Γ UInt32Await : TAwait<uint32>{
 		UInt32Await( SRCE )ι:TAwait<uint32>{ sl }{}
 	};
 
 
-	Ξ BlockVoidAwaitExecute( VoidAwait&& a, up<IException>& e, atomic_flag& done )ι->VoidAwait::Task{
+	Ξ BlockVoidAwaitExecute( VoidAwait&& a, up<Exception>& e, atomic_flag& done )ι->VoidAwait::Task{
 		try{
 			co_await a;
 		}
-		catch( IException& e2 ){
+		catch( Exception& e2 ){
 			e = e2.Move();
 		}
 		done.test_and_set();
@@ -128,7 +128,7 @@ namespace Jde{
 
 	Ξ BlockVoidAwait( VoidAwait&& a )ε->void{
 		atomic_flag done;
-		up<IException> e;
+		up<Exception> e;
 		BlockVoidAwaitExecute( move(a), e, done );
 		done.wait( false );
 		if( e )
@@ -136,11 +136,11 @@ namespace Jde{
 	}
 
 	template<class TAwait, class TResult>
-	α BlockAwaitExecute( TAwait& a, optional<TResult>& y, up<IException>& e, atomic_flag& done )ι->TAwait::Task{
+	α BlockAwaitExecute( TAwait& a, optional<TResult>& y, up<Exception>& e, atomic_flag& done )ι->TAwait::Task{
 		try{
 			y = co_await a;
 		}
-		catch( IException& e2 ){
+		catch( Exception& e2 ){
 			e = e2.Move();
 		}
 		done.test_and_set();
@@ -150,7 +150,7 @@ namespace Jde{
 	template<class TAwait, class TResult>
 	α BlockAwait( TAwait&& a )ε->TResult{
 		atomic_flag done;
-		optional<TResult> y; up<IException> e;
+		optional<TResult> y; up<Exception> e;
 		BlockAwaitExecute<TAwait,TResult>( a, y, e, done );
 		done.wait( false );
 		if( e )
