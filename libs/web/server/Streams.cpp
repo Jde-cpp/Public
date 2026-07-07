@@ -23,10 +23,6 @@ namespace Jde::Web::Server{
 			CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientWrite, ec.value()==(int)boost::beast::error::timeout ? ELogLevel::Debug : ELogLevel::Error };
   }
 
-	α Test( beast::ssl_stream<StreamType>&& stream )ι->void{
-		websocket::stream<beast::ssl_stream<StreamType>> x{ move(stream) };
-	}
-
 	α CreateWS( sp<RestStream>&& stream )ι->optional<SocketStream::Stream>{
 		optional<SocketStream::Stream> y;
 		if( stream->Plain )
@@ -78,23 +74,17 @@ namespace Jde::Web::Server{
 			}, _ws );
 	}
 
-	α SocketStream::Write( string&& output )ι->LockAwait::Task{
+	α SocketStream::Write( string&& output, sp<IWebsocketSession> session )ι->LockAwait::Task{
 		auto outputPtr = mu<string>( move(output) );
 		let buffer = net::buffer( (const void*)outputPtr->data(), outputPtr->size() );
 		auto lock = co_await _writeLock.Lock();
 		std::visit(
 			[&]( auto&& ws ){
-				ws.async_write( buffer, [&ws, pKeepAlive=shared_from_this(), buffer, l=move(lock), out=move(outputPtr) ]( beast::error_code ec, uint bytes_transferred )mutable{
+				ws.async_write( buffer, [this, pKeepAlive=shared_from_this(), session=move(session), buffer, l=move(lock), out=move(outputPtr) ]( beast::error_code ec, uint bytes_transferred )mutable{
 					l.unlock();
-					let tags = ELogTags::SocketClientWrite | ELogTags::ExternalLogger;
 					if( ec || out->size()!=bytes_transferred ){
-						DBGT( tags, "({})Error writing to Session:  '{}'", ec.value(), boost::diagnostic_information(ec) );
-						try{
-							ws.close( websocket::close_code::none );
-						}
-						catch( const boost::exception& ){
-							DBGT( tags, "Error closing:  '{}')", boost::diagnostic_information(ec) );
-						}
+						DBGT( ELogTags::SocketClientWrite | ELogTags::ExternalLogger, "({})Error writing to Session:  '{}'", ec.value(), boost::diagnostic_information(ec) );
+						Close( move(session) );
 						CodeException{ ec, ELogTags::SocketClientRead };
 					}
 					(void)buffer;
@@ -102,10 +92,12 @@ namespace Jde::Web::Server{
 			}, _ws );
 	}
 
-	α SocketStream::Close( sp<IWebsocketSession> session )ι->void{
+	α SocketStream::Close( sp<IWebsocketSession> session )ι->LockAwait::Task{
+		auto lock = co_await _writeLock.Lock();//async_close is a write op - can't overlap pending writes.
 		std::visit(
 			[&]( auto&& ws ){
-				ws.async_close( websocket::close_code::normal, [session]( beast::error_code ec ){
+				ws.async_close( websocket::close_code::normal, [pKeepAlive=shared_from_this(), session=move(session), l=move(lock)]( beast::error_code ec )mutable{
+					l.unlock();
 					if( ec )
 						CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientRead };
 					session->OnClose();

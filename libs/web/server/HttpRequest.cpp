@@ -46,15 +46,15 @@ namespace Jde::Web::Server{
 		return *_body;
 	}
 	α HttpRequest::ParseUri()->void{
-		let& uri = Str::DecodeUri( _request.target() );
-	  _target = uri.substr( 0, uri.find('?') );
-		if( _target.size()+1<uri.size() ){
-			let start = _target.size()+1;
-			sv paramString = sv{ uri.data()+start, uri.size()-start };
-			let paramStringSplit = Str::Split( paramString, '&' );
-			for( auto param : paramStringSplit ){
+		let uri = sv{ _request.target() };//split before decoding so encoded '&'/'=' in values don't corrupt parsing.
+		let queryStart = uri.find( '?' );
+		_target = Str::DecodeUri( uri.substr(0, queryStart) );
+		if( queryStart!=sv::npos ){
+			for( let& param : Str::Split(uri.substr(queryStart+1), '&') ){
 				let keyValue = Str::Split( param, '=' );
-				_params[string{keyValue[0]}]=keyValue.size()==2 ? string{keyValue[1]} : string{};
+				if( keyValue.empty() )
+					continue;
+				_params[Str::DecodeUri(keyValue[0])] = keyValue.size()==2 ? Str::DecodeUri(keyValue[1]) : string{};
 			}
 		}
 	}
@@ -63,7 +63,7 @@ namespace Jde::Web::Server{
 		auto y = Response<http::string_body>();
 		y.body() = serialize( move(j) );
 		y.prepare_payload();
-		LOGSL( ELogLevel::Debug, sl, ELogTags::HttpServerWrite, "[{}.{}.{}]HttpResponse:  {}{} - {}", hex(SessionInfo ? SessionInfo->SessionId : 0), hex(_connectionId), hex(_index), Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
+		LOGSL( ELogLevel::Debug, sl, ELogTags::HttpServerWrite, "[{}.{}.{}]HttpResponse:  {}{} - {}", hex(SessionInfo ? SessionInfo->SessionId : 0), hex(_connectionId), hex(_index), Target(), y.body().substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(steady_clock::now()-_start) );
 		return y;
 	}
 
@@ -76,6 +76,6 @@ namespace Jde::Web::Server{
 	}
 
 	α HttpRequest::LogRead( str text, ELogLevel level, SL sl )Ι->void{
-		LOGSL( level, sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {} - {} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(_start-steady_clock::now()) );
+		LOGSL( level, sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {} - {} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(steady_clock::now()-_start) );
 	}
 }

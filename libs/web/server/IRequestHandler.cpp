@@ -12,7 +12,7 @@ namespace Jde::Web::Server{
 	{}
 
 	α IRequestHandler::BlockTillStarted()ι->void{
-		if( !_started.test_and_set() )
+		while( !_started.test() )
 			_started.wait( false );
 	}
 	α IRequestHandler::Start()ι->void{

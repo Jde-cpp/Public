@@ -30,7 +30,7 @@ namespace Jde::Web{
 	Ŧ Server::RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> /*cancel*/, IRequestHandler* reqHandler )ι->net::awaitable<void, executor_type>{
 		optional<http::request_parser<http::string_body>> parser;// a new parser must be used for every message so we use an optional to reconstruct it every time.
 		parser.emplace();
-		parser->body_limit(10000); // Apply a reasonable limit to the allowed size  of the body in bytes to prevent abuse.
+		parser->body_limit(10000); // TODO Make Setting. Apply a reasonable limit to the allowed size  of the body in bytes to prevent abuse.
 		auto [ec, bytes_transferred] = co_await http::async_read( stream, buffer, *parser );
 		if( ec == http::error::end_of_stream )
 			co_await DoEof( stream );
@@ -78,11 +78,11 @@ namespace Jde::Web{
 				http::async_read( stream, buffer, *parser, net::deferred ),
 				beast::async_write( stream, move(msg), net::deferred ) ).async_wait( net::experimental::wait_for_all(), net::as_tuple(net::use_awaitable_t<executor_type>{}) );
 			if (ec_r){
-				CodeException{ ec, ELogTags::HttpServerRead, ELogLevel::Trace };
+				CodeException{ ec_r, ELogTags::HttpServerRead, ELogLevel::Trace };
 				co_return;
 			}
 			if (ec_w){
-				CodeException{ ec, ELogTags::HttpServerWrite, ELogLevel::Trace };
+				CodeException{ ec_w, ELogTags::HttpServerWrite, ELogLevel::Trace };
 				co_return;
 			}
 		}

@@ -46,9 +46,7 @@ namespace Jde::Web::Server{
 
 	α SubscribeLog::Unsubscribe( SocketId socketId )ι->void{
 		ul _{ _mutex };
-		auto p = find_if( _subs, [=](auto&& s){ return s.Session->Id() == socketId; } );
-		if( p != _subs.end() )
-			_subs.erase( p );
+		std::erase_if( _subs, [=](auto&& s){ return s.Session->Id() == socketId; } );
 	}
 
 	α SubscribeLog::Add( sp<Web::Server::IWebsocketSession> session, vector<QL::Subscription>&& subs )ι->void{

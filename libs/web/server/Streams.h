@@ -25,11 +25,11 @@ namespace Jde::Web::Server{
 	struct ΓWS SocketStream final: std::enable_shared_from_this<SocketStream>{
 		using Stream = std::variant<websocket::stream<StreamType>,websocket::stream<beast::ssl_stream<StreamType>>>;
 		SocketStream( sp<RestStream>&& stream, beast::flat_buffer&& buffer )ι;
-		α Write( string&& buffer )ι->LockAwait::Task;
+		α Write( string&& buffer, sp<IWebsocketSession> session )ι->LockAwait::Task;
 		α GetExecutor()ι->executor_type;
 		α DoAccept( TRequestType request, sp<IWebsocketSession> session )ι->void;
 		α DoRead( sp<IWebsocketSession> session )ι->void;
-		α Close( sp<IWebsocketSession> session )ι->void;
+		α Close( sp<IWebsocketSession> session )ι->LockAwait::Task;
 	private:
 		beast::flat_buffer _buffer;
 		CoLock _writeLock;

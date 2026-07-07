@@ -44,7 +44,7 @@ namespace Jde::Web::Server{
 	}
 
 	α IWebsocketSession::Write( string&& m )ι->void{
-		Stream->Write( move(m) );
+		Stream->Write( move(m), shared_from_this() );
 	}
 
 	α IWebsocketSession::OnWrite( beast::error_code ec, uint c )ι->void{
@@ -82,13 +82,13 @@ namespace Jde::Web::Server{
 			Stream->Close( shared_from_this() );
 	}
 	α IWebsocketSession::OnClose()ι->void{
-		LogRead( "SererSocket::OnClose.", 0 );
+		LogRead( "ServerSocket::OnClose.", 0 );
 		Internal::RemoveSocketSession( Id() );
-		_listener = nullptr;
-		if( Stream ){
-			Stream->Close( shared_from_this() );
-			Stream = nullptr;
+		if( _listener ){
+			QL::Subscriptions::StopListen( _listener );
+			_listener = nullptr;
 		}
+		Stream = nullptr;
 	}
 
 	α IWebsocketSession::AddSubscription( string&& query, jobject vars, RequestId requestId, SL sl )ε->flat_set<QL::SubscriptionId>{

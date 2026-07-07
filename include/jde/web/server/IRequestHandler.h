@@ -30,8 +30,6 @@ namespace Jde::Web::Server{
 			WebServerSettings( jobject settings )ι:_crypto{Json::FindDefaultObject(settings, "ssl")}, _settings(move(settings)){}
 			α Address()Ι->string{ return Json::FindString(_settings, "address" ).value_or( "0.0.0.0" ); }
 			α Port()Ι->PortType{ return Json::FindNumber<PortType>(_settings, "port" ).value_or( 6809 ); }
-			α DhPath()Ι->string{ return Json::FindString( _settings,  "dh" ).value_or( "/etc/ssl/certs/server.crt" ); }
-			α CertPath()Ι->string{ return Json::FindString( _settings, "cert" ).value_or( "/etc/ssl/private/server.key" ); }
 			α Crypto()Ι->const Crypto::CryptoSettings&{ return _crypto; }
 		private:
 			Crypto::CryptoSettings _crypto;
