@@ -1,3 +1,4 @@
+#include "jde/fwk/process/process.h"
 #include <jde/fwk/log/SpdLog.h>
 #include <iostream>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -44,7 +45,7 @@ namespace Jde::Logging{
 					pPath = fs::path{ *p };
 #pragma warning(disable: 4127)
 				if( !_msvc && pPath && pPath->string().starts_with("/Jde-cpp") )
-					pPath = fs::path{ "~/."+pPath->string().substr(1) };
+					pPath = fs::path{ fs::path{Process::GetEnv("HOME").value_or("")}/pPath->string().substr(1) };
 				let markdown = Json::FindBool(sink, "/md" ).value_or( false );
 				let fileNameWithExt = Settings::FileStem()+( markdown ? ".md" : ".log" );
 				let path = pPath && !pPath->empty() ? *pPath/fileNameWithExt : Process::AppDataFolder()/"logs"/fileNameWithExt;

@@ -8,6 +8,9 @@ namespace Jde{
 		DurationTimer( steady_clock::duration duration, SRCE )ι;
 		~DurationTimer();
 		α await_ready()ι->bool override{ return _duration<steady_clock::duration::zero(); }
+		α await_resume()ε->std::expected<void, boost::system::error_code> override{//ready path attaches no promise - complete successfully instead of the base's 'promise is null' throw.
+			return _h ? TimerAwait::await_resume() : std::expected<void, boost::system::error_code>{};
+		}
 		α Suspend()ι->void override;
 		α Cancel()ι->uint{ return _timer.cancel(); }
 		α Restart()ε->void;

@@ -1,5 +1,6 @@
 ﻿#include <jde/fwk/co/CoLock.h>
 #include <boost/container/flat_map.hpp>
+#include <jde/fwk/process/execution.h>
 #define let const auto
 namespace Jde{
 	constexpr ELogTags _tags = ELogTags::Locks;
@@ -31,8 +32,12 @@ namespace Jde{
 		rhs._lock = nullptr;
 	}
 	α CoGuard::operator=( CoGuard&& rhs )ι->CoGuard&{
-		_lock = move( rhs._lock );
-		rhs._lock = nullptr;
+		if( this!=&rhs ){
+			if( _lock )
+				_lock->Clear();//release the held lock - overwriting would leave it locked forever.
+			_lock = rhs._lock;
+			rhs._lock = nullptr;
+		}
 		return *this;
 	}
 	CoGuard::~CoGuard(){
@@ -41,7 +46,7 @@ namespace Jde{
 			_lock->Clear();
 		}
 	}
-	α CoGuard::unlock()ι->void{ _lock->Clear(); _lock=nullptr; }
+	α CoGuard::unlock()ι->void{ if( _lock ){ _lock->Clear(); _lock=nullptr; } }//idempotent - safe on a moved-from or already-unlocked guard.
 
 	α CoLock::TestAndSet()ι->optional<CoGuard>{
 		lg l{ _mutex };
@@ -59,34 +64,21 @@ namespace Jde{
 		return guard;
 	}
 	α CoLock::Clear()ι->void{
-		lg _{ _mutex };
-		if( _queue.size() ){
-			TRACE( "[{:x}]CoLock::Clear resuming queueSize={}", (uint)this, _queue.size() );
-			auto h = _queue.front();
-			_queue.pop();
-			h.promise().SetValue( CoGuard{*this} );
-			h.resume();
+		LockAwait::Handle h{};
+		{
+			lg _{ _mutex };
+			if( _queue.size() ){
+				TRACE( "[{:x}]CoLock::Clear resuming queueSize={}", (uint)this, _queue.size() );
+				h = _queue.front();
+				_queue.pop();
+				h.promise().SetValue( CoGuard{*this} );//ownership transfers - _locked stays set.
+			}
+			else{
+				_locked.clear();
+				TRACE( "[{:x}]CoLock::Clear locked={}", (uint)this, _locked.test() );
+			}
 		}
-		else{
-			_locked.clear();
-			TRACE( "[{:x}]CoLock::Clear locked={}", (uint)this, _locked.test() );
-		}
+		if( h )//resume off-mutex & deferred: the waiter's release re-enters Clear, which would deadlock on _mutex if resumed inline here.
+			Post( [h](){ h.resume(); } );
 	}
-}
-namespace Jde::Threading{
-/*	static boost::container::flat_map<string,sp<shared_mutex>> _mutexes;
-	mutex _mutex;
-	unique_lock<shared_mutex> UniqueLock( str key )ι
-	{
-		unique_lock l{_mutex};
-
-		auto p = _mutexes.find( key );
-		auto pKeyMutex = p == _mutexes.end() ? _mutexes.emplace( key, ms<shared_mutex>() ).first->second : p->second;
-		for( auto pExisting = _mutexes.begin(); pExisting != _mutexes.end();  )
-			pExisting = pExisting->first!=key && pExisting->second.use_count()==1 && pExisting->second->try_lock() ? _mutexes.erase( pExisting ) : std::next( pExisting );
-		l.unlock();
-		TRACE( "UniqueLock( '{}' )", key );
-		return unique_lock{ *pKeyMutex };
-	}
-*/
 }

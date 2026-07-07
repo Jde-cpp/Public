@@ -25,7 +25,7 @@ namespace Jde::Web::Server{
 				if( _query.FindColumn("value") )
 					setting["value"] = jv;
 
-				Json::AddOrAssign( _result, setting );
+				Json::AppendOrAssign( _result, setting );
 			});
 		}
 		catch( Exception& e ){

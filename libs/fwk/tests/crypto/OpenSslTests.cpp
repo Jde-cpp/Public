@@ -48,7 +48,7 @@ namespace Jde::Crypto{
 	}
 
 	TEST_F( OpenSslTests, Main ){
-		let signature = Crypto::RsaSign( HeaderPayload, PrivateKeyFile );
+		let signature = Crypto::RsaSign( HeaderPayload, PrivateKeyFile, passcode );
 		auto publicKey = Crypto::ReadPublicKey( PublicKeyFile );
 
 		Crypto::Verify( publicKey, HeaderPayload, signature );
@@ -59,6 +59,8 @@ namespace Jde::Crypto{
 		ExtractPublicKey( bytes );
 	}
 	TEST_F( OpenSslTests, PrivateKey ){
-		Crypto::ReadPrivateKey( PrivateKeyFile, {} );
+		Crypto::ReadPrivateKey( PrivateKeyFile, passcode );
+		//the key was created with a passcode - it must be encrypted at rest, i.e. unreadable without it.
+		EXPECT_THROW( Crypto::ReadPrivateKey(PrivateKeyFile, {}), Exception );
 	}
 }

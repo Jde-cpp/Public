@@ -12,7 +12,7 @@ namespace Jde{
 	jarray _emptyArray;
 	jobject _emptyObject;
 
-	α Json::AddOrAssign( jvalue& objOrArray, jvalue&& item, SL sl )ε->void{
+	α Json::AppendOrAssign( jvalue& objOrArray, jvalue&& item, SL sl )ε->void{
 		if( objOrArray.is_array() )
 			objOrArray.get_array().push_back( move(item) );
 		else if( objOrArray.is_object() )
@@ -210,18 +210,17 @@ namespace Jde{
 		return p && p->is_string() ? p->get_string() : optional<sv>{};
 	}
 
+	//json-pointer semantics, same engine as the jvalue overloads; tolerates the legacy form without the leading '/'.
+	//jobject has no try_at_pointer - resolve the first token, then delegate the tail to value::try_at_pointer.
 	α Json::FindValue( jobject& o, sv path )ι->jvalue*{
-		auto keys = Str::Split( path, '/' );
-		jobject* jobj = &o;
-		for( uint i=0; jobj && i<keys.size(); ++i ){
-			if( i==keys.size()-1 ){
-				auto p = jobj->if_contains( keys[i] );
-				return p;
-			}
-			else
-				jobj = FindObject( *jobj, keys[i] );
-		}
-		return nullptr;
+		if( path.starts_with('/') )
+			path.remove_prefix( 1 );
+		let iNext = path.find( '/' );
+		auto p = o.if_contains( path.substr(0, iNext) );
+		if( !p || iNext==sv::npos )
+			return p;
+		auto y = p->try_at_pointer( path.substr(iNext) );//substr keeps the '/' the pointer syntax requires.
+		return y.has_value() ? &*y : nullptr;
 	}
 
 	α Json::FindArray( const jvalue& v, sv path )ι->const jarray*{
@@ -271,7 +270,7 @@ namespace Jde{
 		auto y = container.is_primitive() && item.is_primitive() && container==item ? &item : nullptr;
 		if( let array = y || !container.is_array() ? nullptr : &container.get_array(); array ){
 			for( auto p = array->begin(); !y && p!=array->end(); ++p )
-				y = p->is_primitive() && container==*p ? &*p : nullptr;
+				y = p->is_primitive() && item==*p ? &*p : nullptr;
 		}
 		return y;
 	}
@@ -301,8 +300,21 @@ namespace Jde{
 			less = a.get_string() < b.get_string();
 		else if( a.is_double() && b.is_double() )
 			less = a.get_double() < b.get_double();
-		else if( a.is_number() && b.is_number() )
-			less = a.to_number<uint>() < b.to_number<uint>();
+		else if( a.is_number() && b.is_number() ){//to_number<uint> throws for negative/fractional values - this is noexcept.
+			if( a.is_int64() && b.is_int64() )
+				less = a.get_int64() < b.get_int64();
+			else if( a.is_uint64() && b.is_uint64() )
+				less = a.get_uint64() < b.get_uint64();
+			else if( a.is_int64() && b.is_uint64() )
+				less = a.get_int64()<0 || (uint64_t)a.get_int64() < b.get_uint64();
+			else if( a.is_uint64() && b.is_int64() )
+				less = b.get_int64()>=0 && a.get_uint64() < (uint64_t)b.get_int64();
+			else{//at least one double
+				boost::system::error_code e1, e2;
+				let x = a.to_number<double>( e1 ); let y = b.to_number<double>( e2 );
+				less = !e1 && !e2 && x<y;
+			}
+		}
 		else if( a.is_bool() && b.is_bool() )
 			less = a.get_bool() < b.get_bool();
 	}

@@ -18,7 +18,7 @@ set( targetName Jde.Fwk.Tests )
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
 
-file( GLOB sources *.cpp log/*.cpp crypto/*.cpp )
+file( GLOB sources *.cpp co/*.cpp log/*.cpp crypto/*.cpp )
 file( GLOB_RECURSE headers *.h log/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 

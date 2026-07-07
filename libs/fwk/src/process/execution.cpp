@@ -13,18 +13,25 @@ namespace Jde{
 	namespace asio = boost::asio;
 	α ThreadCount()ι->unsigned{ return std::max(1u, Settings::FindNumber<unsigned>("/workers/executor/threads").value_or(std::thread::hardware_concurrency())); }
 	sp<asio::io_context> _ioc;
-  up<asio::io_context::strand> _ioStrand;
+	struct IoStrand{
+		IoStrand( sp<asio::io_context> ioc )ι: Ioc{ move(ioc) }, Strand{ *Ioc }{}
+		sp<asio::io_context> Ioc;//keeps the io_context alive while a poster holds the strand.
+		asio::io_context::strand Strand;
+	};
+	sp<IoStrand> _ioStrand;
+	mutex _executorMutex;//guards _ioc/_ioStrand creation & teardown - PostIO races the executor thread's shutdown reset.
 	up<asio::executor_work_guard<asio::io_context::executor_type>> _keepAlive;
 }
 α Jde::Executor()ι->sp<asio::io_context>{
+	lg _{ _executorMutex };
 	if( !_ioc ){
 		_ioc = ms<asio::io_context>( ThreadCount() );
-		_ioStrand = mu<asio::io_context::strand>( *_ioc );
+		_ioStrand = ms<IoStrand>( _ioc );
 		_keepAlive = mu<asio::executor_work_guard<asio::io_context::executor_type>>( _ioc->get_executor() );
 	}
 	return _ioc;
 }
-α Jde::ExecutorIoc()ι->sp<asio::io_context>{ return _ioc; }
+α Jde::ExecutorIoc()ι->sp<asio::io_context>{ lg _{ _executorMutex }; return _ioc; }
 
 namespace Jde{
 	static up<Vector<IShutdown*>> _shutdowns;
@@ -138,8 +145,11 @@ namespace Jde{
 		_started.test_and_set();
 		_started.notify_all();
 		ioc->run();
-		_ioStrand.reset();//non-owning ref into the io_context; drop it before the io_context can be destroyed.
-		_ioc.reset();
+		{//in-flight PostIO holds its own sp - clearing under the mutex keeps it from posting into a torn-down strand.
+			lg _{ _executorMutex };
+			_ioStrand = nullptr;
+			_ioc.reset();
+		}
 		_started.clear();
 		if( _shutdowns )
 			_shutdowns->erase( [=](auto p){p->Shutdown(false);} );
@@ -167,7 +177,10 @@ namespace Jde{
 #endif
 α Jde::PostIO( function<void()> f )ι->void{
 	Executor();
-	asio::post( *_ioStrand, f );
+	sp<IoStrand> s;
+	{ lg _{ _executorMutex }; s = _ioStrand; }
+	if( s )//null while shutting down - the io threads are gone & the work could never run anyway.
+		asio::post( s->Strand, move(f) );
 	Execution::Run();
 }
 α Jde::Post( VoidAwait::Handle&& h )ι->void{

@@ -115,47 +115,54 @@ namespace Jde{
 	};
 
 
-	Ξ BlockVoidAwaitExecute( VoidAwait&& a, up<Exception>& e, atomic_flag& done )ι->VoidAwait::Task{
+	//shared between the blocked thread & the coroutine: the waiter can wake & return between test_and_set and notify_all,
+	//so stack-owned state would be destroyed while notify_all still touches it - the coroutine frame co-owns it instead.
+	template<class TResult>
+	struct BlockAwaitState{
+		optional<TResult> Result;
+		up<Exception> Error;
+		atomic_flag Done;
+	};
+
+	Ξ BlockVoidAwaitExecute( VoidAwait&& a, sp<BlockAwaitState<std::monostate>> s )ι->VoidAwait::Task{
 		try{
 			co_await a;
 		}
 		catch( Exception& e2 ){
-			e = e2.Move();
+			s->Error = e2.Move();
 		}
-		done.test_and_set();
-		done.notify_all();
+		s->Done.test_and_set();
+		s->Done.notify_all();
 	}
 
 	Ξ BlockVoidAwait( VoidAwait&& a )ε->void{
-		atomic_flag done;
-		up<Exception> e;
-		BlockVoidAwaitExecute( move(a), e, done );
-		done.wait( false );
-		if( e )
-			e->Throw();
+		auto s = ms<BlockAwaitState<std::monostate>>();
+		BlockVoidAwaitExecute( move(a), s );
+		s->Done.wait( false );
+		if( s->Error )
+			s->Error->Throw();
 	}
 
 	template<class TAwait, class TResult>
-	α BlockAwaitExecute( TAwait& a, optional<TResult>& y, up<Exception>& e, atomic_flag& done )ι->TAwait::Task{
+	α BlockAwaitExecute( TAwait& a, sp<BlockAwaitState<TResult>> s )ι->TAwait::Task{
 		try{
-			y = co_await a;
+			s->Result = co_await a;
 		}
 		catch( Exception& e2 ){
-			e = e2.Move();
+			s->Error = e2.Move();
 		}
-		done.test_and_set();
-		done.notify_all();
+		s->Done.test_and_set();
+		s->Done.notify_all();
 	}
 
 	template<class TAwait, class TResult>
 	α BlockAwait( TAwait&& a )ε->TResult{
-		atomic_flag done;
-		optional<TResult> y; up<Exception> e;
-		BlockAwaitExecute<TAwait,TResult>( a, y, e, done );
-		done.wait( false );
-		if( e )
-			e->Throw();
-		return *y;
+		auto s = ms<BlockAwaitState<TResult>>();
+		BlockAwaitExecute<TAwait,TResult>( a, s );
+		s->Done.wait( false );
+		if( s->Error )
+			s->Error->Throw();
+		return move( *s->Result );
 	}
 
 	Ŧ BlockTAwait( TAwait<T>&& a )ε->T{

@@ -10,7 +10,6 @@ namespace Jde{
 		Vector()ι:base{}{}
 		Vector( uint size )ι:base{ size }{}
 		α copy()Ι->vector<T>{ sl _{Mutex}; vector<T> y; y.reserve(base::size()); std::copy(base::begin(),base::end(),std::back_inserter(y)); return y; }
-		α at( uint index )ι->T&{ ul l{Mutex}; return at(index, l); }
 		α at( uint index, ul& )ι->T&{ return base::at(index); }
 		α begin( sl& )Ι->typename base::const_iterator{ return base::begin(); }
 		α end( sl& )Ι->typename base::const_iterator{ return base::end(); }
@@ -19,7 +18,7 @@ namespace Jde{
 
 		α clear()ι{ ul _(Mutex); base::clear(); }
 		α find( const T& x )ι->optional<T>{ sl l(Mutex); auto p = std::ranges::find(Base(), x); return p==end(l) ? nullopt : optional<T>{*p}; }
-		α erase( const T& x )ι->bool{ ul l(Mutex); auto p = std::ranges::find(Base(), x); bool found = p!=end(l); base::erase(p); return found; }
+		α erase( const T& x )ι->bool{ ul l(Mutex); auto p = std::ranges::find(Base(), x); bool found = p!=end(l); if( found ) base::erase(p); return found; }
 		α	erase( function<void(const T& p)> before )ι->void;
 		α	rerase( function<void(const T& p)> before )ι->void;
 		α	erase_if( function<bool(const T& p)> test )ι->void;
@@ -33,7 +32,7 @@ namespace Jde{
 		ψ emplace_back( ul&, Args&&... args )ι->T&{ return base::emplace_back(std::forward<Args>(args)...); }
 		α reserve( uint size )ι->void{ ul l(Mutex); reserve(size, l); }
 		α reserve( uint size, ul& )ι->void{ base::reserve(size); }
-		α empty()Ι->uint{ sl _{Mutex}; return base::empty(); }
+		α empty()Ι->bool{ sl _{Mutex}; return base::empty(); }
 		α size()Ι->uint{ sl l(Mutex); return base::size(); }
 		α size( ul& )Ι->uint{ return base::size(); }
 		α size( sl& )Ι->uint{ return base::size(); }

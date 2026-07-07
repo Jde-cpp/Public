@@ -14,7 +14,7 @@ namespace Jde{
 	//α operator==( const jvalue& a, const jvalue& b )ι->bool{ return a.is_primitive() && !(b<a) && !(b>a); }
 	Ŧ Eval( const boost::system::result<T>& x, string&& message, SRCE )ε->T;//TODO forward args...
 	namespace Json{
-		Φ AddOrAssign( jvalue& objOrArray, jvalue&& item, SRCE )ε->void;
+		Φ AppendOrAssign( jvalue& objOrArray, jvalue&& item, SRCE )ε->void;//array → push_back, object → whole-value assignment.
 		Φ Combine( const jobject& a, const jobject& b )ι->jobject;
 		Φ Visit( jvalue&& v, function<void(jobject&& o)> op )ε->void;
 		Φ Visit( const jvalue& v, function<void(const jvalue& o)> op )ε->void;

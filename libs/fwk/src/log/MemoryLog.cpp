@@ -10,7 +10,7 @@ namespace Jde{
 }
 namespace Jde::Logging{
 	α MemoryLog::Write( const Entry& m )ι->void{
-		_entries.emplace_back( move(m) );
+		_entries.emplace_back( m );
 	}
 	α MemoryLog::Write( ILogger& logger )ι->void{
 		auto entries = _entries.copy(); //Write may log additional _entries.

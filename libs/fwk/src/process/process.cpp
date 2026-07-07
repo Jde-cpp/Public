@@ -123,8 +123,9 @@ namespace Jde{
 
 	Ω cleanup( bool terminate )ι->void;
 	α Process::Shutdown( int exitReason )ι->void{
-		bool terminate{ false }; //use case might be if non-terminate took too long
-		SetExitReason( exitReason, terminate );//Sets ShuttingDown should be called in OnExit handler
+		if( !ExitReason() )//ExitHandler may have recorded the reason & terminate flag (SIGTERM) already - first cause wins.
+			SetExitReason( exitReason, false );
+		let terminate = _terminate;
 
 		for_each( _shutdownFunctions, [=](let& shutdown){shutdown(terminate, SRCE_CUR);} );
 		DBGT( ELogTags::App | ELogTags::Shutdown, "{} Shutdown functions removed", _shutdownFunctions.size() );

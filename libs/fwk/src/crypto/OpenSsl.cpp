@@ -141,10 +141,10 @@ namespace Jde{
 		return y;
 	}
 
-	α Crypto::RsaSign( str content, const fs::path& privateKeyFile )ε->Signature{
+	α Crypto::RsaSign( str content, const fs::path& privateKeyFile, str passcode )ε->Signature{
 		array<unsigned char, SHA256_DIGEST_LENGTH> md;
 		auto pDigest = SHA256( (const unsigned char*)content.data(), content.size(), md.data() ); CHECK_NULL( pDigest );
-		KeyPtr pKey{ Internal::ReadPrivateKey(privateKeyFile) };
+		KeyPtr pKey{ Internal::ReadPrivateKey(privateKeyFile, passcode) };
 		CtxPtr ctx{ NewCtx(pKey) };
 		CALL( EVP_PKEY_sign_init(ctx.get()) );
 		CALL( EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_PADDING) );
