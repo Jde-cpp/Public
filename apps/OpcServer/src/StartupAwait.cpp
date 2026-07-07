@@ -87,7 +87,7 @@ namespace Jde::Opc::Server{
 			INFOT( ELogTags::App, "---Started OPC Server---" );
 			Resume();
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

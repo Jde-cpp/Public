@@ -36,7 +36,7 @@ namespace Jde::App::Server{
 			jobject j{ {"removed", Sessions::Remove(req.SessionInfo->SessionId)} };
 			h.promise().SetValue( {move(j), move(req)} );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			h.promise().SetExp( move(e) );
 		}
 		h.resume();
@@ -60,7 +60,7 @@ namespace Jde::App::Server{
 		return _readyResult!=nullptr;
 	}
 	α HttpRequestAwait::Suspend()ι->void{
-		up<IException> pException;
+		up<Exception> pException;
 		bool processed{ _request.Method() == http::verb::post };
 		if( _request.Method() == http::verb::post ){
 			if( _request.Target()=="/login" )

@@ -67,7 +67,7 @@ namespace Jde::Opc::Gateway{
 				if( ua )
 					h.promise().ResumeExp( UAClientException(*ua), h );
 				else
-					h.promise().ResumeExp( Exception{e.what(), 0, ELogLevel::Error, SRCE_CUR}, h );
+					h.promise().ResumeExp( Exception{e.what(), {ELogLevel::Error}}, h );
 			}
 		}
 	}

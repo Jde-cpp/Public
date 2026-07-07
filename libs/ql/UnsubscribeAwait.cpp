@@ -9,7 +9,7 @@ namespace Jde::QL{
 			co_await *_qlServer->Query( Ƒ("unsubscribe( id:[{}] )", Str::Join(_ids, ",")), {}, {0}, true, _sl );
 			Resume();
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

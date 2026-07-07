@@ -44,7 +44,7 @@ namespace Jde::Access{
 			if( resource.Target==resourceTarget && !resource.Schema.contains('.') ) //exclude opc schemas which can have same target
 				return resource.Schema;
 		}
-		throw Exception{ sl, "Schema not found for resource target '{}'.", resourceTarget };
+		THROWSL( "Schema not found for resource target '{}'.", resourceTarget );
 	}
 	α Authorize::Test( str schemaName, str resourceName, ERights rights, UserPK executer, SL sl )ε->void{
 		Jde::sl l{ Mutex };

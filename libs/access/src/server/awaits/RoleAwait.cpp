@@ -134,7 +134,7 @@ namespace Jde::Access::Server{
 			);
 			Resume( y );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -298,7 +298,7 @@ namespace Jde::Access::Server{
 		catch( boost::system::system_error& e ){
 			ResumeExp( CodeException{e.code(), ELogTags::Access, ELogLevel::Debug} );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

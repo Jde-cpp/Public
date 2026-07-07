@@ -32,7 +32,7 @@ namespace Jde{
 		}
 		catch( exception& e ){
 			_error = ToUP( move(e) );
-			if( auto p = dynamic_cast<IException*>( _error.get() ); p )
+			if( auto p = dynamic_cast<Exception*>( _error.get() ); p )
 				p->Log();
 			done.test_and_set();
 			done.notify_one();
@@ -55,7 +55,7 @@ namespace Jde{
 		result = RUN_ALL_TESTS();
 	}
 	catch( exception& e ){
-		if( auto p = dynamic_cast<IException*>( &e ); p )
+		if( auto p = dynamic_cast<Exception*>( &e ); p )
 			p->Log();
 		Process::ExitException( move(e) );
 	}

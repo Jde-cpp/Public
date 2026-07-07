@@ -53,8 +53,8 @@ namespace Jde::App{
 			m.set_request_id( *requestId );
 		auto& proto = *m.mutable_exception();
 		proto.set_what( e.what() );
-		if( let p = dynamic_cast<const IException*>(&e); p )
-			proto.set_code( p->Code );
+		if( let p = dynamic_cast<const Jde::Exception*>(&e); p )
+			proto.set_code( p->Code() );
 		return t;
 	}
 	α FromServer::Exception( string&& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission{

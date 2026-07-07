@@ -33,7 +33,7 @@ namespace Jde::Access{
 				co_await *_qlServer->Subscribe( Ƒ(format, capitalized, _name, "Updated", _cols), vars(Updated), _listener, _executer );
 			Resume();
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -54,7 +54,7 @@ namespace Jde::Access{
 			co_await EventTypeSubscribeAwait{ _qlServer, "acl", Acl, "identity{id} permissionRight{id resource(schema:$schemas)} role{id}", Purged, vars, _executer, _listener };
 			Resume();
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

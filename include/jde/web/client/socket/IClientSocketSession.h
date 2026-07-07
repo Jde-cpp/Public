@@ -92,7 +92,7 @@ namespace Jde::Web::Client{
 			auto proto = Protobuf::Deserialize<TFromServerMsgs>( transmission.data(), (int)transmission.size() );
 			OnRead( move(proto) );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			e.SetTags( ELogTags::SocketClientRead );
 		}
 	}

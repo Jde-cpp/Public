@@ -1,7 +1,9 @@
 #include "UAServer.h"
+#include <jde/fwk/exceptions/IOException.h>
 #include <jde/fwk/process/thread.h>
 #include <jde/opc/uatypes/opcHelpers.h>
 #include <NodesetLoader/backendOpen62541.h>
+
 
 #define let const auto
 namespace Jde::Opc::Server {
@@ -228,7 +230,7 @@ namespace Jde::Opc::Server {
 			return *p->second;
 		if( let p = _variables.find(pk); p!=_variables.end() )
 			return p->second;
-		throw Exception{ sl, "({:x})Parent node not found", pk };
+		THROWSL( "({:x})Parent node not found", pk );
 	}
 
 	α UAServer::GetObjectish( NodePK pk, SL sl )Ε->const Node&{
@@ -236,7 +238,7 @@ namespace Jde::Opc::Server {
 			return p->second;
 		if( let p = _typeDefs.find(pk); p!=_typeDefs.end() )
 			return *p->second;
-		throw Exception{ sl, "[{:x}]Object[Type] node not found", pk };
+		THROWSL( "[{:x}]Object[Type] node not found", pk );
 	}
 	α UAServer::GetObject( const NodeId& id, SL sl )ε->const Object&{
 		let p = find_if( _objects, [&](let& kv){return kv.second==id;} );

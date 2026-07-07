@@ -38,7 +38,7 @@ namespace Jde::Access{
 			}
 			Resume( move(y) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

@@ -10,7 +10,7 @@ namespace Jde::App::Client{
 			info = co_await _session->SessionInfo( _credentials );
 			Resume( move(info) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

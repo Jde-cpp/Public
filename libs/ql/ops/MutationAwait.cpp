@@ -47,12 +47,12 @@ namespace Jde::QL{
 					MutationAwait::Stop();
 					co_return;
 				case Execute:
-					throw Exception{ ELogTags::QL, _sl, "Execute mutation not implemented." };
+					throw Exception{ "Execute mutation not implemented.", {ELogTags::QL}, _sl };
 				}
 			}
 			Resume( move(y) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -62,7 +62,7 @@ namespace Jde::QL{
 			optional<jvalue> y = co_await Hook::Start( move(_mutation), _creds.UserPK() );
 			Resume( y ? move(*y) : jvalue{} );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -72,7 +72,7 @@ namespace Jde::QL{
 			optional<jvalue> y = co_await Hook::Stop( move(_mutation), _creds.UserPK() );
 			Resume( y ? move(*y) : jvalue{} );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

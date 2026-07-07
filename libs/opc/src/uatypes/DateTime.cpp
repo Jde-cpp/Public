@@ -25,14 +25,14 @@ namespace Jde::Opc{
 			if( let* seconds = o.if_contains("seconds"); seconds && seconds->is_object() )
 				_time = Jde::Protobuf::ToTimePoint( Protobuf::ToTimestamp(o) );
 			else
-				throw Exception{ (ELogTags)EOpcLogTags::Opc, sl, "Invalid DateTime object: {}", serialize(v) };
+				throw Exception{ sl, {(ELogTags)EOpcLogTags::Opc}, "Invalid DateTime object: {}", serialize(v) };
 		}
 		else if( v.is_string() )
 			_time = Chrono::ToTimePoint( string{v.get_string()} );
 		else if( v.is_number() )
 			_time = Chrono::Epoch() + milliseconds{ v.to_number<_int>() };
 		else
-			throw Exception{ (ELogTags)EOpcLogTags::Opc, sl, "Invalid DateTime object: {}", serialize(v) };
+			throw Exception{ sl, {(ELogTags)EOpcLogTags::Opc}, "Invalid DateTime object: {}", serialize(v) };
 	}
 	UADateTime::UADateTime( const google::protobuf::Timestamp& timestamp )ι:
 		_time{ Jde::Protobuf::ToTimePoint( timestamp ) }

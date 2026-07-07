@@ -17,7 +17,7 @@ namespace Jde::Opc::Gateway{
 			let providerId = Json::FindNumber<Access::ProviderPK>( j, "id" ).value_or(0);
 			ResumeScaler( providerId );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -31,7 +31,7 @@ namespace Jde::Opc::Gateway{
 			else
 				Purge( move(server.front().Target) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -43,7 +43,7 @@ namespace Jde::Opc::Gateway{
 			let newPK = QL::AsId<Access::ProviderPK>( j );
 			ResumeScaler( newPK );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -56,7 +56,7 @@ namespace Jde::Opc::Gateway{
 			else
 				Purge( providerPK );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

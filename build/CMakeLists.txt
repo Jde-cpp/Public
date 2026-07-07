@@ -198,7 +198,7 @@ else()
 #	message( LIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR} )
 	set( nodesetLoaderArgs
 		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
-		-DLIBXML2_LIBRARY=${LIBXML2_LIBDIR}
+		-DLIBXML2_LIBRARY=${LIBXML2_LIBDIR}/libxml2.so
 	)
 	ExternalProject_Add(ryml
 		GIT_REPOSITORY https://github.com/biojppm/rapidyaml.git

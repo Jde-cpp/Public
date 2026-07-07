@@ -280,7 +280,7 @@ namespace Jde::DB{
 		try{
 			return config.DS()->ScalerSyncOpt<string>( {"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", {Value{config.Name}}} ).has_value();
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			e.SetLevel( ELogLevel::Debug );
 			e.Log();
 			return false;//connected to schema which doesn't exist.

@@ -1,3 +1,5 @@
+#!/bin/bash
+source buildFunctions.sh;
 function buildRelativePath() {
 	fileWorkspaceFolder=$1; #/c/Users/duffyj/source/repos/jde/Public
 	absoluteFile=$2; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
@@ -133,20 +135,20 @@ function reconfig() {
 		mv $buildRoot/compile_commands.json $sourceDir/compile_commands.json;
 	fi
 }
-function build() {
-	buildRoot=$1;
-	target=$2;
-	cd $buildRoot;
-	set -o pipefail;
-	tput reset;
-	echo `pwd`/$target.output > $target.output;
-	echo "cmake --build . -j --target $target" | tee -a $target.output;
-	cmake --build . -j --target $target | tee -a $target.output;
-}
-function buildTests() {
-	baseProject=$2;
-	if [ $baseProject == "Jde.Opc.Gateway" ]; then
-		baseProject="Jde.Opc";
-	fi;
-	build $1 $baseProject.Tests;
-}
+# function build() {
+# 	buildRoot=$1;
+# 	target=$2;
+# 	cd $buildRoot;
+# 	set -o pipefail;
+# 	tput reset;
+# 	echo `pwd`/$target.output > $target.output;
+# 	echo "cmake --build . -j --target $target" | tee -a $target.output;
+# 	cmake --build . -j --target $target | tee -a $target.output;
+# }
+# function buildTests() {
+# 	baseProject=$2;
+# 	if [ $baseProject == "Jde.Opc.Gateway" ]; then
+# 		baseProject="Jde.Opc";
+# 	fi;
+# 	build $1 $baseProject.Tests;
+# }

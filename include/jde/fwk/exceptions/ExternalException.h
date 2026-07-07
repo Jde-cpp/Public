@@ -1,29 +1,29 @@
 #pragma once
 #include <jde/fwk/str.h>
+#include "Exception.h"
 
 namespace Jde{
-	struct ExternalException : IException{
-		//when error code is part of format.
-		ExternalException( string externalMessage, string description, SL sl, ELogTags tags=ELogTags::None, ELogLevel l=IException::DefaultLogLevel ):
-			IException{ Ƒ("{} - {{}}", externalMessage), ELogLevel::NoLog, 0, tags, sl }{
-			Initialize( move(description), l );
-		}
-
-		ExternalException( string externalMessage, string description, uint code, SL sl, ELogTags tags, ELogLevel l=IException::DefaultLogLevel )ι:
-			IException{ Ƒ("({:x}){} - {{}}", code, externalMessage), ELogLevel::NoLog, 0, tags, sl }{
-			Initialize( move(description), l );
-		}
-		ExternalException( ExternalException&& from )ι:IException{ move(from) }{}
+	struct ExternalException : Exception{
 		ExternalException( const ExternalException& from )ι:
-			IException{ get<string>(from._format), ELogLevel::NoLog, 0, from._tags, from._stack.stack.front() }{
+			Exception{ string{from.Format()}, {ELogLevel::NoLog, from.Tags, from._code}, from._sl }{
 			_args = from._args;
 		}
-	private:
-		α Initialize( string&& description, ELogLevel level )->void{
-			_what = Str::Format( Format(), {description} );
-			_args.push_back( move(description) );
-			SetLevel( level );
+		ExternalException( ExternalException&& from )ι=default;
+
+		ExternalException( string externalMessage, string description, ExceptionArgs args, SRCE )ι:
+			Exception{ FormatMsg(move(externalMessage), description.size(), args), {ELogLevel::NoLog, args.Tags, args._code}, sl }{
+			if( description.size() ){
+				_what = Str::Format( Format(), {description} );
+				_args.push_back( move(description) );
+			}
+			SetLevel( args.Level() );
 			BreakLog();
+		}
+	private:
+		//error code is part of format; ' - {}' description suffix only when a description exists.
+		Ω FormatMsg( string&& externalMessage, bool hasDescription, const ExceptionArgs& args )ι->string{
+			const sv suffix = hasDescription ? " - {}" : "";
+			return args.HasCode() ? Ƒ("({:x}){}{}", args.Code(), externalMessage, suffix) : Ƒ("{}{}", externalMessage, suffix);
 		}
 	};
 }

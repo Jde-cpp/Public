@@ -14,7 +14,7 @@ namespace Jde::Access::Server{
 			Authorizer().CreateUser( userPK );
 			ResumeScaler( userPK );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -49,7 +49,7 @@ namespace Jde::Access::Server{
 			}
 			ResumeScaler( {*userPK} );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

@@ -51,9 +51,9 @@ namespace Jde{
 		exitCode = RUN_ALL_TESTS();
 	}
 	catch( exception& e ){
-		if( auto p = dynamic_cast<IException*>(&e); p ){
+		if( auto p = dynamic_cast<Exception*>(&e); p ){
 			p->Log();
-			exitCode = p->Code ? (int)p->Code : EXIT_FAILURE;
+			exitCode = p->HasCode() ? (int)p->Code() : EXIT_FAILURE;
 		}
 		std::cerr << e.what() << std::endl;
 	}

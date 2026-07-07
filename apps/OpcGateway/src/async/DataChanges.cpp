@@ -64,8 +64,8 @@ namespace Jde::Opc::Gateway{
 	}
 	α DataChangeAwait::await_resume()ι->FromServer::SubscriptionAck{
 		StatusCode sc{};
-		if( up<IException> e = Promise() && Promise()->Exp() ? Promise()->MoveExp() : nullptr; e )
-			sc = e->Code ? (StatusCode)e->Code : UA_STATUSCODE_BADINTERNALERROR;
+		if( up<Exception> e = Promise() && Promise()->Exp() ? Promise()->MoveExp() : nullptr; e )
+			sc = e->HasCode() ? (StatusCode)e->Code() : UA_STATUSCODE_BADINTERNALERROR;
 		return FromServer::SubscriptionAck{ _client->MonitoredNodes().GetResult(_monitoredRequestId, sc) };
 	}
 }

@@ -28,7 +28,7 @@ namespace Jde::Access{
 				TRACET( _tags | ELogTags::Pedantic, "[{}]AddedRole membersSize={}", role.PK, role.Members.size() );
 			Resume( move(y) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

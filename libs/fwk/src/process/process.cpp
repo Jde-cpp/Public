@@ -91,9 +91,9 @@ namespace Jde{
 			sv prefix = y==0 ? "Exiting on exception:  " : "Exiting on error:  ";
 			std::cerr << prefix << e.what() << std::endl;
 		};
-		if( auto p = dynamic_cast<IException*>(&e); p ){
+		if( auto p = dynamic_cast<Exception*>(&e); p ){
 			y = p->Level()==ELogLevel::Trace ? EXIT_SUCCESS :
-				p->Code ? (int)p->Code : EXIT_FAILURE;
+				p->Code() ? (int)p->Code() : EXIT_FAILURE;
 		}
 		cerrOutput();
 		return y;

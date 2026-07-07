@@ -239,7 +239,7 @@ namespace Jde::Opc::Server{
 			}
 			else if( tokenType == &UA_TYPES[UA_TYPES_ISSUEDIDENTITYTOKEN] ) {
 				const UA_IssuedIdentityToken* userToken = ( UA_IssuedIdentityToken* )userIdentityToken->content.decoded.data;
-				THROW_IFX( !userToken->tokenData.length, Exception(_tags, SRCE_CUR, "Empty issued token") );
+				THROW_IFX( !userToken->tokenData.length, Exception("Empty issued token", {_tags}) );
 				if( userToken->tokenData.length<9 ){
 					let sessionId = std::stoul( string{ToSV(userToken->tokenData)}, 0, 16 );
 					let sessionInfo = BlockAwait<TAwait<Web::FromServer::SessionInfo>, Web::FromServer::SessionInfo>( 	move(*AppClient()->SessionInfoAwait(sessionId)) );
@@ -258,7 +258,7 @@ namespace Jde::Opc::Server{
 	    return UA_STATUSCODE_GOOD;
 		}
 		catch( const UAException& e ){
-			return e.Code;
+			return e.Code();
 		}
 		catch( const exception& e ){
 			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;

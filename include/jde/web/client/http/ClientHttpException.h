@@ -12,8 +12,8 @@ namespace Jde::Web::Client{
 		ClientHttpException( const ClientHttpException& e )ι=default;
 
 		α SslStreamTruncated()ι{ return _errorCode.category()==ssl::error::get_stream_category() && _errorCode.value()==ssl::error::stream_truncated; }
-		α Move()ι->up<IException> override{ return mu<ClientHttpException>(move(*this)); }
-		α Ptr()ι->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }
+		α Move()ι->up<Exception> override{ return mu<ClientHttpException>(move(*this)); }
+		//α Ptr()ι->std::exception_ptr override{ return Jde::make_exception_ptr(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }
 		const string Host;
 		const string Target;

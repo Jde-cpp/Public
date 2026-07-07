@@ -53,7 +53,7 @@ namespace Jde::Opc::Server{
 				if( _startup )
 					Resume( jobject{{"complete", true}} );
 				else
-					ResumeExp( Exception{_sl, "Object Type exists parent: {}, browseName: '{}'", Ƒ("{:x}", parent->PK), browseName.ToString()} );
+					ResumeExp( Exception{_sl, {}, "Object Type exists parent: {}, browseName: '{}'", Ƒ("{:x}", parent->PK), browseName.ToString()} );
 				co_return;
 			}
 			Create( move(o), move(browseName), parent );

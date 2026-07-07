@@ -29,7 +29,7 @@ namespace Jde::Opc::Gateway::Tests{
 		Auth::TearDownTestSuite();
 	}
 
-	up<IException> _exception;
+	up<Exception> _exception;
 	Ω authenticateTest( const Web::Jwt& jwt, ServerCnnctnNK opcId, atomic_flag& flag, bool bad=false )ι->TAwait<sp<UAClient>>::Task{
 		try{
 			auto text = jwt.Payload();
@@ -39,7 +39,7 @@ namespace Jde::Opc::Gateway::Tests{
 			//co_await TokenAwait{ text, move(opcId), "localhost", true };
 			//_sessionIds.push_back( sessionInfo.session_id() );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			_exception = e.Move();
 		}
 		flag.test_and_set();

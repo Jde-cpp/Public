@@ -5,8 +5,8 @@ namespace Jde::Access{
 		if( Level()==ELogLevel::NoLog || Process::Finalizing() )
 			return;
 		if( auto sv = Format(); sv.size() )
-			Logging::Log( Logging::Entry{_stack.size() ? _stack.front() : SRCE_CUR, Level(), _tags, Executer, string{sv}, _args} );
+			Logging::Log( Logging::Entry{_sl, Level(), Tags, Executer, string{sv}, _args} );
 		else
-			Logging::Log( Logging::Entry{_stack.size() ? _stack.front() : SRCE_CUR, Level(), _tags, Executer, string{what()}} );
+			Logging::Log( Logging::Entry{_sl, Level(), Tags, Executer, string{what()}} );
 	}
 }

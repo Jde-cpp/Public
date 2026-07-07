@@ -99,7 +99,7 @@ namespace Jde::Access::Server{
 		catch( boost::system::system_error& e ){
 			ResumeExp( CodeException{e.code(), ELogTags::Access, ELogLevel::Debug} );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -125,7 +125,7 @@ namespace Jde::Access::Server{
 			auto [groupPK, memberPKs] = AddRemoveArgs( m );
 			try{
 				Authorizer().TestAddGroupMember( groupPK, move(memberPKs), sl );
-			}catch( IException& e ){
+			}catch( Exception& e ){
 				return mu<QL::ExceptionAwait>( e.Move() );
 			}
 		}

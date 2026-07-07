@@ -26,7 +26,7 @@ namespace Jde::Web{
 		sp<Server::IRequestHandler> _requestHandler;
 	};
 	constexpr sv ContentType{ "application/x-www-form-urlencoded" };
-	up<IException> _pException;
+	up<Exception> _pException;
 
 	α WebTests::SetUpTestCase()->void{
 		Stopwatch _{ "WebTests::SetUpTestCase", _tags };
@@ -93,7 +93,7 @@ namespace Jde::Web{
 							THROW( "index={} echoIndex={}", idx, echoIndex );
 						(*pSessionIds)[idx] = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
 					}
-					catch( IException& e ){
+					catch( Exception& e ){
 						DBG( "connections={}", connections.load() );
 						_pException = e.Move();
 					}
@@ -116,7 +116,7 @@ namespace Jde::Web{
 				}();
 			});
 		}
-		catch( const IException& e ){
+		catch( const Exception& e ){
 			e.SetLevel( ELogLevel::Critical );
 			e.Log();
 			ASSERT_FALSE( true );

@@ -41,7 +41,7 @@ namespace Jde::IO::Tests{
 			try{
 				co_await IO::WriteAwait{ file, Ƒ("{}\n{}\n", to_string(guid1), to_string(guid2)), createFile, Jde::ELogTags::IO, sl };
 			}
-			catch( IException& e ){
+			catch( Exception& e ){
 				e.Log();
 				e.Throw();
 			}
@@ -108,7 +108,7 @@ namespace Jde::IO::Tests{
 			try{
 				co_await IO::WriteAwait{ move(file), move(content), true, Jde::ELogTags::IO, sl };
 			}
-			catch( IException& e ){
+			catch( Exception& e ){
 				e.Log();
 			}
 			done = true;

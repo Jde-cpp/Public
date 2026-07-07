@@ -87,7 +87,7 @@ namespace Jde::Web::Client{
 					co_await HandshakeAwait{ _session };
 				Resume();
 			}
-			catch( IException& e ){
+			catch( Exception& e ){
 				ResumeExp( move(e) );
 			}
 		}
@@ -121,7 +121,7 @@ namespace Jde::Web::Client{
 					try{
 						res = co_await ClientHttpAwait{ host, target, _req.body(), port, _args, _sl };
 					}
-					catch( IException& ){
+					catch( Exception& ){
 						ResumeExp( ClientHttpException{ec, _session, &_req} );
 					}
 				}
@@ -160,7 +160,7 @@ namespace Jde::Web::Client{
 			}
 			Write( move(target), move(body), args, h );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			SetIsRunning( false );
 			h.promise().ResumeExp( move(e), h );
 		}

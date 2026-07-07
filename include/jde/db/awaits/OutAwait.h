@@ -4,7 +4,7 @@
 
 namespace Jde::DB{
 	struct IDataSource;
-	α ΓDB OutExecute( sp<IDataSource>&& _ds, Sql&& _sql, function<void(DB::Value&&)> onResult, function<void(IException&&)> onError, SL sl )ι->QueryAwait::Task;
+	α ΓDB OutExecute( sp<IDataSource>&& _ds, Sql&& _sql, function<void(DB::Value&&)> onResult, function<void(Exception&&)> onError, SL sl )ι->QueryAwait::Task;
 
 	Τ struct OutAwait : TAwaitEx<T,QueryAwait::Task>{
 		using base=TAwaitEx<T,void>;
@@ -18,7 +18,7 @@ namespace Jde::DB{
 	Ŧ OutAwait<T>::Execute()ι->void{
 		OutExecute( move(_ds), move(_sql),
 			[&](DB::Value&& v){ base::Resume( move(v.Get<T>()) ); },
-			[&](IException&& e){ base::ResumeExp( move(e) ); },
+			[&](Exception&& e){ base::ResumeExp( move(e) ); },
 			base::_sl );
 	}
 }

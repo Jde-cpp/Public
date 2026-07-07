@@ -26,7 +26,7 @@ namespace Jde::Opc::Gateway::Tests{
 	static std::condition_variable_any cv;
 	static std::shared_mutex mtx;
 	static vector<SessionPK> _sessionIds;
-	static up<IException> _exception;
+	static up<Exception> _exception;
 	const string _password = "0123456789ABCD";
 	α AuthenticateTest( ServerCnnctnNK opcId, bool badPassword=false )ι->TAwait<optional<Web::FromServer::SessionInfo>>::Task{
 		try{
@@ -34,7 +34,7 @@ namespace Jde::Opc::Gateway::Tests{
 			if( sessionInfo )
 				_sessionIds.push_back( sessionInfo->session_id() );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			_exception = e.Move();
 		}
 		std::shared_lock l{ mtx };

@@ -30,9 +30,9 @@ namespace Jde::DB{
 		case SmallFloat: case Float: case Decimal: case Numeric: case Money: value = AsNumber<double>( j ); break;
 		case DateTime: case SmallDateTime: value = AsString( j ); break; //should be $now
 		case None: case Binary: case VarBinary: case Guid: case Cursor: case RefCursor: case Image: case Blob: case TimeSpan:
-			throw Exception{ sl, "EValue {} is not implemented.", (uint)type };
+			THROW( "EValue {} is not implemented.", (uint)type );
 		case WChar: case Char: default:
-			throw Exception{ sl, "char EValue {} is not implemented.", (uint)type };
+			THROW( "char EValue {} is not implemented.", (uint)type );
 		}
 		return value;
 	}

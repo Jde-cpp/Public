@@ -16,7 +16,7 @@ namespace Jde::QL{
 			if( auto t = schema->FindView(tableName); t )
 				return t;
 		}
-		throw Exception{ sl, "Table not found:  {}", tableName };
+		THROWSL( "Table not found:  {}", tableName );
 	}
 	α LocalQL::GetTable( str tableName, SL sl )ε->DB::View&{
 		return *GetTablePtr( tableName, sl );

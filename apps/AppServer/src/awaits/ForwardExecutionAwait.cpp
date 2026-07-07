@@ -22,7 +22,7 @@ namespace Jde::App::Server{
 		try{
 			Server::Write( _forwardExecutionMessage.app_pk(), _forwardExecutionMessage.app_instance_pk(), FromServer::ExecuteRequest(serverRequestId, _userPK, move(*_forwardExecutionMessage.mutable_execution_transmission())) );
 		}
-		catch( IException& e ){ //Could not find app instance.
+		catch( exception& e ){ //Could not find app instance.
 			ResumeExp( move(e) );
 		}
 	}

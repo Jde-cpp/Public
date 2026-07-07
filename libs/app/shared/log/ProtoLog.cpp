@@ -30,7 +30,7 @@ namespace Jde::App{
 			fs::create_directories( _root );
 		}
 		catch( std::filesystem::filesystem_error& e ){
-			throw IOException( move(e) );
+			throw IO::IOException( move(e) );
 		}
 		for( auto yearDir : fs::directory_iterator(_root) ){
 			auto iyear = fs::is_directory( yearDir ) ? Str::TryTo<int>( yearDir.path().filename().string() ) : std::nullopt;

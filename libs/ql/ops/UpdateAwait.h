@@ -25,7 +25,7 @@ namespace Jde::QL{
 		const MutationQL _mutation;
 		sp<DB::Table> _table;
 		UserPK _userPK;
-		up<IException> _exception;
+		up<Exception> _exception;
 		vector<DB::UpdateClause> _updates;
 	};
 }

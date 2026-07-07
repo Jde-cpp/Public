@@ -18,7 +18,7 @@ namespace Jde::Web::Mock{
 			m->set_session_id( sessionId );
 			Write( move(t) );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			Proto::FromServerTransmission t;
 			auto m = t.add_messages();
 			m->set_request_id( requestId );

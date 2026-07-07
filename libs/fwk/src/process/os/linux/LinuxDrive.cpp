@@ -40,7 +40,7 @@ namespace Jde::IO::Drive{
 
 			return AwaitResult{ move(pVoid) };
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			return AwaitResult{ e.Move() };
 		}
 	}

@@ -17,7 +17,7 @@ namespace Jde::Web::Client{
 				auto y = Json::FromArray<QL::SubscriptionId>( co_await _await );
 				base::Resume( move(y) );
 			}
-			catch( IException& e ){
+			catch( Exception& e ){
 				base::ResumeExp( move(e) );
 			}
 		}
@@ -41,7 +41,7 @@ namespace Jde::Web::Client{
 		α Execute()ι->Await::Task{
 			try{
 				if( !_session )
-					throw Exception{ base::_sl, "Client socket session closed." };
+					throw Exception{ "Client socket session closed.", {}, base::_sl };
 				Resume( co_await _session->Query(move(_query), move(_variables), _returnRaw, base::_sl) );
 			}
 			catch( exception& e ){
@@ -62,13 +62,13 @@ namespace Jde::Web::Client{
 		else if( result.is_null() )
 			base::Resume( jobject{} );
 		else
-			ResumeExp( Exception{_sl, "Expected object."} );
+			ResumeExp( Exception{"Expected object.", {}, _sl} );
 	}
 	template<> Ξ QueryAwait<jarray>::Resume( jvalue&& result )ι->void{
 		if( result.is_array() )
 			base::Resume( move(result.get_array()) );
 		else
-			ResumeExp( Exception{_sl, "Expected array."} );
+			ResumeExp( Exception{"Expected array.", {}, _sl} );
 	}
 
 

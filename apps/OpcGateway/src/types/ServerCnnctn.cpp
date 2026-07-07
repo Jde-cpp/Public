@@ -67,7 +67,7 @@ namespace Jde::Opc::Gateway{
 				y.push_back( ServerCnnctn{move(row)} );
 			Resume( move(y) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

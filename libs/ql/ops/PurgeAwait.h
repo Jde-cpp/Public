@@ -15,7 +15,7 @@ namespace Jde::QL{
 		α Before()ι->MutationAwaits::Task;
 		α Statements( const DB::Table& table )ε->vector<DB::Sql>;
 		α Execute()ι->DB::ExecuteAwait::Task;
-		α After( up<IException>&& e )ι->MutationAwaits::Task;
+		α After( Exception e )ι->MutationAwaits::Task;
 		α After( uint y )ι->MutationAwaits::Task;
 		α Resume( jvalue&& v )ι->void;
 		const MutationQL _mutation;

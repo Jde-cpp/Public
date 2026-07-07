@@ -27,7 +27,7 @@ namespace Jde::Opc::Gateway{
 				_client->Process( requestId, "readValueAttribute" );
 			}
 			catch( UAException& e ){
-				_results.emplace( nodeId, Value{(StatusCode)e.Code} );
+				_results.emplace( nodeId, Value{(StatusCode)e.Code()} );
 				if( _results.size()==_nodes.size() )
 					Resume( move(_results) );
 			}

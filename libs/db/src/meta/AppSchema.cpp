@@ -53,7 +53,7 @@ namespace Jde::DB{
 			if( let table = schema->FindTable(tableName) )
 				return table;
 		}
-		throw Exception{ sl, "Could not find table '{}'", tableName };
+		THROWSL( "Could not find table '{}'", tableName );
 	}
 
 	α AppSchema::FindView( const vector<sp<AppSchema>>& schemas, str viewName )ι->sp<View>{

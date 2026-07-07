@@ -4,7 +4,13 @@
 #define let const auto
 namespace Jde::DB{
 	α IDataSource::TrySelect( Sql&& sql, RowΛ f, SL sl )ι->bool{
-		return Try( [&]{Select(move(sql), f, sl);} );
+		try{
+			Select( move(sql), f, sl );
+			return true;
+		}
+		catch( const Exception& ){
+			return false;
+		}
 	}
 
 	α IDataSource::TryExecuteSync( Sql&& sql, SL sl )ι->optional<uint>{
@@ -12,7 +18,7 @@ namespace Jde::DB{
 		try{
 			result = ExecuteSync( move(sql), sl );
 		}
-		catch( const IException& )
+		catch( const Exception& )
 		{}
 		return result;
 	}

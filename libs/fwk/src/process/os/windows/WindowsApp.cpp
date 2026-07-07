@@ -156,7 +156,7 @@ namespace Jde{
 			::VerQueryValue( block.data(),  name, (LPVOID*)&pCompanyName, &bytes );
 			y = sv{ pCompanyName, bytes-1 };
 		}
-		catch( IException& )
+		catch( Exception& )
 		{}
 		return y;
 	}

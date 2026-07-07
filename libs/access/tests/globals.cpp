@@ -34,9 +34,9 @@ namespace Tests{
 				Create(table, target, executer);
 				throw std::runtime_error( "Should not be able to create." );
 			}
-			catch( IException& e ){ e.SetLevel(ELogLevel::NoLog); }
+			catch( Exception& e ){ e.SetLevel(ELogLevel::NoLog); }
 			Create( table, target, GetRoot() );
-			EXPECT_THROW( Select(table, target, executer, cols, includeDeleted), IException );
+			EXPECT_THROW( Select(table, target, executer, cols, includeDeleted), Exception );
 			y = Select( table, target, GetRoot(), cols, includeDeleted );
 		}
 		return y;
@@ -73,11 +73,11 @@ namespace Tests{
 	}
 }
 	α Tests::TestUnauthUpdateName( str table, uint id, UserPK executer, sv updatedName )ε->void{
- 		EXPECT_THROW( QL().QuerySync<jvalue>( updateNameQL(table, id, updatedName), {}, executer), IException );
+ 		EXPECT_THROW( QL().QuerySync<jvalue>( updateNameQL(table, id, updatedName), {}, executer), Exception );
 	}
 	α Tests::TestUnauthDeleteRestore( str table, uint id, UserPK executer )ε->void{
-		EXPECT_THROW( QL().QuerySync<jvalue>( deleteQL(table,id), {}, executer), IException );
-		EXPECT_THROW( QL().QuerySync<jvalue>( restoreQL(table,id), {}, executer), IException );
+		EXPECT_THROW( QL().QuerySync<jvalue>( deleteQL(table,id), {}, executer), Exception );
+		EXPECT_THROW( QL().QuerySync<jvalue>( restoreQL(table,id), {}, executer), Exception );
 	}
 
 	using namespace Json;
@@ -281,11 +281,11 @@ namespace Jde::Access{
 	}
 	α Tests::TestUnauthAddRemove( str tableName, uint pk, vector<uint> members, UserPK executer )->void{
 		let& table = *GetTable( tableName );
-		EXPECT_THROW( addRemove("add", table, pk, members, executer), IException );
-		EXPECT_THROW( addRemove("remove", table, pk, members, executer), IException );
+		EXPECT_THROW( addRemove("add", table, pk, members, executer), Exception );
+		EXPECT_THROW( addRemove("remove", table, pk, members, executer), Exception );
 	}
 	α Tests::TestUnauthPurge( str table, uint id, UserPK executer )ε->void{
-		EXPECT_THROW( Purge(table, id, executer), IException );
+		EXPECT_THROW( Purge(table, id, executer), Exception );
 		Purge( table, id, GetRoot() );
 	}
 }

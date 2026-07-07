@@ -88,9 +88,9 @@ namespace Jde::Access::Tests{
 		AddRoleMember( bRole, cRole, GetRoot() );
 
 		const RolePK dRole{ GetId(getRole("roleRecursionD", GetRoot())) };
-		EXPECT_THROW( AddRoleMember( dRole, dRole, GetRoot() ), IException );
+		EXPECT_THROW( AddRoleMember( dRole, dRole, GetRoot() ), Exception );
 		AddRoleMember( cRole, dRole, GetRoot() );
-		EXPECT_THROW( AddRoleMember( dRole, aRole, GetRoot() ), IException );
+		EXPECT_THROW( AddRoleMember( dRole, aRole, GetRoot() ), Exception );
 		//TODO test implement deleted roles.
 	}
 }

@@ -17,7 +17,7 @@ namespace Jde::QL{
 		uint iType=0;
 		for( ;iType<MutationQLStrings.size() && !commandName.starts_with(MutationQLStrings[iType]); ++iType );
 		if( iType==MutationQLStrings.size() )
-			throw Exception{ ELogTags::QL, _sl, "Could not find mutation {}", commandName };
+			throw Exception{ _sl, {ELogTags::QL}, "Could not find mutation {}", commandName };
 
 		auto tableJsonName = string{ commandName.substr(MutationQLStrings[iType].size()) };
 		tableJsonName[0] = (char)tolower( tableJsonName[0] );

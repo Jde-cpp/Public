@@ -5,7 +5,7 @@ namespace Jde::DB{
 		try{
 			Resume( co_await *_awaitable );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			ResumeExp( move(e) );
 		}
 	}

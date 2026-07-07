@@ -18,17 +18,17 @@ namespace Jde::Opc::Gateway{
 		UAClientException( UAClientException&& from )ι:UAException{ move(from) }{}
 		UAClientException( const UAClientException& from )ι:UAException{ from }{}
 
-		α Move()ι->up<IException> override{ return mu<UAClientException>(move(*this)); }
+		α Move()ι->up<Exception> override{ return mu<UAClientException>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }
-		α IsBadSession()Ι->bool{ return Code==UA_STATUSCODE_BADSESSIONIDINVALID; }
+		α IsBadSession()Ι->bool{ return Code()==UA_STATUSCODE_BADSESSIONIDINVALID; }
 		[[noreturn]] α ThrowRest( UAClientException&& e, Web::Server::HttpRequest&& request )ε->void;
 	};
 
 	Ξ UAClientException::ThrowRest( UAClientException&& e, Web::Server::HttpRequest&& request )ε->void{
-		if( e.Code==UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
+		if( e.Code()==UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
 			throw Web::Server::RestException<http::status::unauthorized>( move(e), move(request), "Bad identity token" );
 		}
-		else if( e.Code==UA_STATUSCODE_BADCONNECTIONREJECTED )
+		else if( e.Code()==UA_STATUSCODE_BADCONNECTIONREJECTED )
 			throw Web::Server::RestException<http::status::bad_gateway>{ move(e), move(request), "Opc Server not reachable" };
 		throw Web::Server::RestException<>( move(e), move(request) );
 	}

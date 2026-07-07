@@ -41,8 +41,8 @@ namespace Jde::QL{
 		else if( _request.IsMutation() )
 			Mutate( move(_request.Mutations()) );
 		else if( _request.IsSubscription() )
-			ResumeExp( Exception{_sl, "Subscriptions are not supported in this context." } ); //would need a listener
+			ResumeExp( Exception{"Subscriptions are not supported in this context.", {}, _sl} ); //would need a listener
 		else
-			ResumeExp( Exception{_sl, "Unsubscribe is not supported in this context."} ); //would need a listener
+			ResumeExp( Exception{"Unsubscribe is not supported in this context.", {}, _sl} ); //would need a listener
 	}
 }

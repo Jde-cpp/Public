@@ -16,13 +16,13 @@ This is a monorepo for the **Jde OpcGateway** system — an OPC-UA gateway with 
 
 ## Building (C++)
 
-Build outputs go to `/mnt/ram/`. The `$REPO_DIR` env var points to the repo root; `$JDE_DIR` points to the Public directory. Each preset gets its own out-of-source build directory under `/mnt/ram/linux/` (e.g. `clang++-22` for `linux-clang-jde-debug`, `g++-15` for `linux-debug`).
+Build outputs go to `/mnt/ram/`. The `$REPO_DIR` env var points to the repo root; `$JDE_DIR` points to the Public directory. Each preset gets its own out-of-source build directory under `/mnt/ram/linux/` (e.g. `clang++-22` for `linux-clang-debug-jde`, `g++-15` for `linux-debug`).
 
 ```bash
 # Configure (from the matching out-of-source build dir)
 cd /mnt/ram/linux/clang++-22      # or /mnt/ram/linux/g++-15 for linux-debug
 rm -f CMakeCache.txt
-cmake /home/duffyj/code/jde/Public --preset linux-clang-jde-debug
+cmake /home/duffyj/code/jde/Public --preset linux-clang-debug-jde
 
 # Build a specific target (add -j$(nproc) for parallel builds)
 cmake --build . --target Jde
@@ -32,9 +32,9 @@ cmake --build . --target Jde.Fwk.Tests
 cmake --install .
 ```
 
-Available CMake presets: `linux-debug`, `linux-relWithDebInfo`, `linux-jde-relWithDebInfo`, `linux-clang-jde-debug`, `win-msvc-debug`, `win-msvc-relWithDebInfo`, `win-clang-relWithDebInfo`.
+Available CMake presets: `linux-debug`, `linux-relWithDebInfo`, `linux-jde-relWithDebInfo`, `linux-clang-debug-jde`, `win-msvc-debug`, `win-msvc-relWithDebInfo`, `win-clang-relWithDebInfo`.
 
-Linux uses **g++-15** by default; `linux-clang-jde-debug` uses **clang++-22**. C++ standard is **C++26**.
+Linux uses **g++-15** by default; `linux-clang-debug-jde` uses **clang++-22**. C++ standard is **C++26**.
 
 ## Running Tests (C++)
 

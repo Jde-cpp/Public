@@ -76,7 +76,7 @@ namespace Jde::IO{
 	struct Γ IFileAwait{
 		IFileAwait( fs::path&& path, bool vec, SL sl )ι:_arg{ ms<FileIOArg>(move(path), vec, sl) }{}
 		IFileAwait( fs::path&& path, variant<string,vector<byte>>&& data, ELogTags tags, SL sl )ι:_arg{ ms<FileIOArg>(move(path), move(data), tags, sl) }{}
-		up<IException> ExceptionPtr;
+		up<Exception> ExceptionPtr;
 		sp<FileIOArg> _arg;
 	};
 	struct Γ ReadAwait final : IFileAwait, StringAwait, noncopyable{

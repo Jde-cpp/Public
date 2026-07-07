@@ -18,7 +18,7 @@ namespace Jde{
 		else if( objOrArray.is_object() )
 			objOrArray = move(item);
 		else
-			throw Exception{ sl, "'{}' is not an array or object.", Kind(objOrArray.kind()) };
+			THROWSL( "'{}' is not an array or object.", Kind(objOrArray.kind()) );
 	}
 	α Json::Visit( const jvalue& v, function<void(sv s)> op )ε->void{
 		if( v.is_array() ){
@@ -68,7 +68,7 @@ namespace Jde{
 
 		if( auto p = o.if_contains("target"); p )
 			return DB::Key{ string{p->as_string()} };
-		throw Jde::Exception{ sl, ELogLevel::Debug, "Could not find 'id' or 'target' in {}.", serialize(o) };
+		THROWSL( "Could not find 'id' or 'target' in {}.", serialize(o) );
 	}
 
 	α Json::TryReadJsonNet( fs::path path, const optional<vector<fs::path>>& importPaths, SL sl )ι->std::expected<jobject, string>{

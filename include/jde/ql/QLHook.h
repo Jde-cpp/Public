@@ -106,10 +106,10 @@ namespace Jde::QL{
 
 	//need awaitable to throw an exception
 	struct ExceptionAwait final : TAwait<jvalue>{
-		ExceptionAwait( up<IException>&& e, SRCE )ι:TAwait<jvalue>{ sl }, _exception{ move(e) }{}
+		ExceptionAwait( up<Exception>&& e, SRCE )ι:TAwait<jvalue>{ sl }, _exception{ move(e) }{}
 		α await_ready()ι->bool override{ return true; }
 		α Suspend()ι->void override{}
 		α await_resume()ε->jvalue override{ _exception->Throw(); return {}; }
-		up<IException> _exception;
+		up<Exception> _exception;
 	};
 }

@@ -19,7 +19,7 @@ namespace Jde::Opc::Gateway{
 			_client->Process( _requestId, "setMonitoringMode" );
 		}
 		catch( UAException& e ){
-			Resume( (StatusCode)e.Code, _client );
+			Resume( (StatusCode)e.Code(), _client );
 		}
 	}
 	α SetMonitoringModeAwait::OnComplete( UA_SetMonitoringModeResponse& response )ι->void{

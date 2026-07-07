@@ -7,9 +7,9 @@
 //#include <openssl/bio.h>
 
 #ifndef CALL
-	#define CALL( call ) if( int rc=call; rc!=1 ) throw Crypto::OpenSslException( "##call - {}", rc, SRCE_CUR, Crypto::OpenSslException::CurrentError() )
-	#define CALLSL( call ) if( int rc=call; rc!=1 ) throw Crypto::OpenSslException( "##call - {}", rc, sl, Crypto::OpenSslException::CurrentError() )
-	#define CHECK_NULL( p ) THROW_IFX( !p, Crypto::OpenSslException("{}", 0, SRCE_CUR, Crypto::OpenSslException::CurrentError()) )
+	#define CALL( call ) if( int rc=call; rc!=1 ) throw Crypto::OpenSslException( SRCE_CUR, rc, #call " - {}", Crypto::OpenSslException::CurrentError() )
+	#define CALLSL( call ) if( int rc=call; rc!=1 ) throw Crypto::OpenSslException( sl, rc, #call " - {}", Crypto::OpenSslException::CurrentError() )
+	#define CHECK_NULL( p ) THROW_IFX( !p, Crypto::OpenSslException(SRCE_CUR, 0, "{}", Crypto::OpenSslException::CurrentError()) )
 #endif
 
 namespace Jde::Crypto::Internal{

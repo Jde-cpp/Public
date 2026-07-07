@@ -1,12 +1,12 @@
-#include <fstream>
+#include <iostream> // !important
 #include <syslog.h>
 #include <execinfo.h>
 #include <signal.h>
 #include <dlfcn.h>
 
 #include <jde/fwk/process/process.h>
-#include "LinuxDrive.h"
 #include <jde/fwk/io/FileAwait.h>
+#include <jde/fwk/exceptions/IOException.h>
 
 #define let const auto
 namespace Jde{
@@ -17,7 +17,7 @@ namespace Jde{
 
 	α Process::LoadLibrary( const fs::path& path )ε->void*{
 		auto p = ::dlopen( path.c_str(), RTLD_LAZY );
-		THROW_IFX( !p, IO_EX(path, ELogLevel::Error, "Can not load library - '{}'", dlerror()) );
+		THROW_IFX( !p, IO::IOException(SRCE_CUR, path, ELogLevel::Error, "Can not load library - '{}'", dlerror()) );
 		INFO( "[{}] Opened", path.string() );
 		return p;
 	}
@@ -83,7 +83,7 @@ namespace Jde{
 		let exitReason = ::pause();
 		INFOT( ELogTags::App, "Pause returned = {}.", exitReason );
 		Shutdown( exitReason );
-		std::cout << "pause returned" << std::endl;
+		//std::cout << "pause returned" << std::endl;
 		return exitReason;
 	}
 
@@ -109,7 +109,7 @@ namespace Jde{
 	}
 
 	α Process::ExitHandler( int s )->void{
-		std::cout << "Caught signal " << s << std::endl;
+		//std::cout << "Caught signal " << s << std::endl;
 		if( !Process::ExitReason() )
 			Process::SetExitReason( s, s==SIGTERM );
 		//Handled in main.cpp

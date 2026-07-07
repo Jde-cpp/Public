@@ -62,7 +62,7 @@ namespace Jde::Opc::Gateway{
 			else
 				throw RestException<http::status::forbidden>{ SRCE_CUR, move(_request), "Only get/post verb is supported for target '{}'", target };
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -88,7 +88,7 @@ namespace Jde::Opc::Gateway{
 		catch( RestException<http::status::bad_request>& e ){
 			ResumeExp( move(e) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			ResumeExp( RestException<http::status::unauthorized>(move(e), move(_request)) );
 		}
 	}
@@ -100,7 +100,7 @@ namespace Jde::Opc::Gateway{
 			co_await *( appClient->QLServer()->Query(Ƒ("purgeSession(id:\"{:x}\")", _request.SessionId()), {}, appClient->UserPK()) );
 			Resume( move(_request) );
 		}
-		catch( IException& e )
+		catch( exception& e )
 		{}
 	}
 

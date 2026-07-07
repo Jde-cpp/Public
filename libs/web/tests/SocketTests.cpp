@@ -77,7 +77,7 @@ namespace Jde::Web{
 		_sessionId = 0;
 	}
 
-	up<IException> _exception;
+	up<Exception> _exception;
 	Ω connect()->SessionPK{
 		return BlockAwait<ClientSocketAwait<SessionPK>,SessionPK>( _clientSession->Connect( _sessionId ) );
 	}
@@ -171,7 +171,7 @@ namespace Jde::Web{
 			//never returns because server can't read it, TODO add a timeout.
 			co_await _clientSession->BadTransmissionClient();
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			_exception = e.Move();
 		}
 		NOTIFY;
@@ -196,7 +196,7 @@ namespace Jde::Web{
 		try{
 			[[maybe_unused]] string y = co_await _clientSession->BadTransmissionServer();
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			_exception = e.Move();
 		}
 		NOTIFY;

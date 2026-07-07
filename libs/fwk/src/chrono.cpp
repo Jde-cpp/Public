@@ -9,7 +9,7 @@ namespace Jde{
 			return std::format( "{0:%H:%M:}{1:%S}", tp, time.time_since_epoch() );
 		}
 		catch( const std::exception& e ){
-			throw Exception{ sl, "Failed to convert time point to local time: {} - {}", ToIsoString(time), e.what() };
+			THROWSL( "Failed to convert time point to local time: {} - {}", ToIsoString(time), e.what() );
 		}
 	}
 	α Chrono::ToDuration( string&& iso, SL sl )ε->Duration{
@@ -49,7 +49,7 @@ namespace Jde{
 		try{
 			return ToDuration( move(iso), sl );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			e.SetLevel( level );
 		}
 		return {};

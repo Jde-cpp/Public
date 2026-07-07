@@ -84,7 +84,7 @@ namespace Client{
 		try{
 			Subscriptions::OnWebsocketReceive( Json::Parse(j), requestId );
 		}
-		catch( IException& e ){
+		catch( Exception& e ){
 			e.SetLevel( ELogLevel::Error );
 		}
 	}
@@ -99,7 +99,7 @@ namespace Client{
 			auto result = co_await *_appClient->ClientQuery( QL::Parse(move(*proto.mutable_query()), move(vars), {}, proto.raw()), {proto.executer_pk()} );
 			Write( FromClient::QueryResult(serialize(result), requestId) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -131,7 +131,7 @@ namespace Client{
 		try{
 			resume<jvalue>( move(hAny), Json::ParseValue(move(v)) );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			if( auto h = std::any_cast<typename ClientSocketAwait<jvalue>::Handle>(&hAny); h ){
 				h->promise().SetExp( move(e) );
 				h->resume();
@@ -157,7 +157,7 @@ namespace Client{
 			auto t = Protobuf::Deserialize<Proto::FromServer::Transmission>( move(bytes) );
 			ProcessTransmission( move(t), userPK, clientRequestId );
 		}
-		catch( IException& e ){
+		catch( exception& e ){
 			WriteException( move(e), clientRequestId );
 		}
 	}
@@ -263,7 +263,7 @@ namespace Client{
 			}
 		}
 	}
-	α AppClientSocketSession::HandleException( std::any&& h, IException&& e, RequestId requestId )ι->void{
+	α AppClientSocketSession::HandleException( std::any&& h, Exception&& e, RequestId requestId )ι->void{
 		auto handle = [&]( sv /*msg*/, auto await ){
 			await->promise().ResponseMessage = "Error: {}";
 			await->promise().MessageArgs.emplace_back( e.what() );
