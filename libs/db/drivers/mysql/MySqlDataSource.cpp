@@ -15,10 +15,6 @@
 
 #define let const auto
 
-Jde::DB::IDataSource* GetDataSource(){
-	return new Jde::DB::MySql::MySqlDataSource();
-}
-
 namespace Jde::DB::MySql{
 //	constexpr ELogTags _tags{ ELogTags::Sql };
 //	using mysqlx::SessionOption;
@@ -52,6 +48,46 @@ namespace Jde::DB::MySql{
 	public:
 		mysql::any_connection Conn;
 	};
+	constexpr uint MaxIdleSessions{ 4 };
+
+	MySqlDataSource::~MySqlDataSource(){
+		for( auto& session : _idleSessions ){
+			try{
+				session->Conn.close();
+			}
+			catch( ... ){}
+		}
+	}
+
+	α MySqlDataSource::AcquireSession( SL sl )ε->up<Session>{
+		for(;;){
+			up<Session> session;
+			{
+				lg l{ _idleSessionsMutex };
+				if( _idleSessions.empty() )
+					break;
+				session = move( _idleSessions.back() );
+				_idleSessions.pop_back();
+			}
+			try{ //liveness check + restore default schema (a pooled connection loses it if the schema was dropped) - still much cheaper than a fresh connect.
+				if( _cs.database.empty() )
+					session->Conn.ping();
+				else{
+					mysql::results r;
+					session->Conn.execute( Ƒ("use `{}`", _cs.database), r );
+				}
+				return session;
+			}
+			catch( const boost::system::system_error& ){} //stale - discard & try the next one.
+		}
+		return mu<Session>( _cs, sl );
+	}
+
+	α MySqlDataSource::ReleaseSession( up<Session>&& session )ι->void{
+		lg l{ _idleSessionsMutex };
+		if( _idleSessions.size()<MaxIdleSessions )
+			_idleSessions.push_back( move(session) );
+	}
 
 	α MySqlDataSource::SetConfig( const jobject& config )ε->void{
 		auto host = Json::FindSV( config, "host" ).value_or( "localhost" );
@@ -69,8 +105,9 @@ namespace Jde::DB::MySql{
 			sql.Text = Ƒ( "call {}", move(sql.Text) );
 		DB::Log( sql, sl );
 
-		auto session = Session( _cs, sl );
+		auto session = AcquireSession( sl ); //not returned to the pool on exception - connection state is uncertain.
 		vector<mysql::field_view> params; params.reserve( sql.Params.size() );
+		ASSERT( !exeParams.HasOut() || sql.Params.size()>0 );
 		for( uint i=0; i<sql.Params.size()+(exeParams.HasOut() ? -1 : 0); ++i )
 			params.push_back( ToField(sql.Params[i], sl) );
 		if( exeParams.HasOut() )
@@ -78,18 +115,17 @@ namespace Jde::DB::MySql{
    	mysql::results result;
 		mysql::statement stmt;
 		try{
-			if( exeParams.Function && exeParams.HasOut() ){
-				ASSERT( sql.Params.size() );
-				stmt = session.Conn.prepare_statement( move(sql.Text) );
-				session.Conn.execute( stmt.bind(params.begin(), params.end()), result );
-				auto view = result.out_params();
-				ASSERT( view.size() );
-				(*exeParams.Function)( ToRow(result.out_params()) );
+			if( sql.Params.empty() )
+				session->Conn.execute( sql.Text, result );
+			else{
+				stmt = session->Conn.prepare_statement( sql.Text );
+				session->Conn.execute( stmt.bind(params.begin(), params.end()), result );
+				if( exeParams.Function && exeParams.HasOut() ){
+					auto view = result.out_params();
+					ASSERT( view.size() );
+					(*exeParams.Function)( ToRow(view) );
+				}
 			}
-			else if( sql.Params.empty() )
-				session.Conn.execute( sql.Text, result );
-			else
-				session.Conn.execute( sql.EmbedParams(), result );
 		}
 		catch( mysql::error_with_diagnostics& e ){
 			throw MySqlException{ sql.Text, move(e), sl, ELogTags::DBDriver };
@@ -99,8 +135,8 @@ namespace Jde::DB::MySql{
 				(*exeParams.Function)( ToRow(row) );
 		}
 		if( stmt.valid() )
-			session.Conn.close_statement( stmt );
-		session.Conn.close();
+			session->Conn.close_statement( stmt );
+		ReleaseSession( move(session) );
 
 		let y = result.has_value()
 			? exeParams.Sequence ? result.last_insert_id() : result.affected_rows()
@@ -157,7 +193,6 @@ namespace Jde::DB::MySql{
 
 
 	α MySqlDataSource::ServerMeta()ι->IServerMeta&{
-		MySqlServerMeta a( shared_from_this() );
 		if( !_schemaProc )
 			_schemaProc = mu<MySqlServerMeta>( shared_from_this() );
 		return *_schemaProc;
@@ -181,4 +216,7 @@ namespace Jde::DB::MySql{
 	α MySqlDataSource::ExecuteNoLog( Sql&& sql, SL sl )ε->uint{
 		return Execute( move(sql), sl, {.Log=false} );
 	}
+}
+Jde::DB::IDataSource* GetDataSource(){ //below Session definition: implicit MySqlDataSource ctor needs the complete type.
+	return new Jde::DB::MySql::MySqlDataSource();
 }

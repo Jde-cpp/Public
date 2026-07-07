@@ -4,13 +4,15 @@
 #include <jde/db/generators/Functions.h>
 
 namespace Jde::DB{
-	WhereClause::WhereClause( const Object& a, EOperator op, const Object& b, SL /*sl*/ )ε{
+	WhereClause::WhereClause( const Object& a, EOperator op, const Object& b, SL sl )ε{
 		auto clause = DB::ToString( a );
 		if( b.index()==underlying(EObject::Value) && get<Value>(b).is_null() ){
 			if( op==EOperator::Equal )
 				clause = Ƒ( "{} is null", move(clause) );
 			else if( op==EOperator::NotEqual )
 				clause = Ƒ( "{} is not null", move(clause) );
+			else
+				throw Exception{ sl, Jde::ELogLevel::Debug, "Null value not allowed for operator '{}'.", DB::ToString(op) };
 		}
 		else{
 			clause = Ƒ( "{} {} {}", move(clause), DB::ToString(op), DB::ToString(b) );

@@ -39,8 +39,4 @@ namespace Jde::DB::Odbc{
 		return { move(values) };
 	}
 
-	α OdbcRowMulti::MoveString( uint i )ε->string{
-		ASSERT( i<_bindings.size() );
-		return _bindings[i]->MoveString( _row );
-	}
 }

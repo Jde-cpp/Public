@@ -97,7 +97,7 @@ namespace Jde::DB::Odbc{
 			else{
 				SQLLEN count;
 				CALL( statement, SQL_HANDLE_STMT, SQLRowCount(statement,&count), "SQLRowCount" );
-				resultCount = count;
+				resultCount = std::max<SQLLEN>( count, 0 ); //-1 when unavailable (e.g. selects).
 			}
 			break;
 		}
