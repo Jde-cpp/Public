@@ -28,19 +28,24 @@ namespace Jde{
 	α Str::Empty()ι->str{ return _empty; };
 
 	α Str::DecodeUri( sv x )ι->string{
-		auto from_hex = []( char ch ) { return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10; };
-		string y{}; y.reserve( x.size() );
-    for( auto i = x.begin(), n = x.end(); i != n; ++i ){
-			char ch = *i;
-      if( ch == '%' ){
-        if( i[1] && i[2] ){
-          ch = ( char )( from_hex(i[1]) << 4 | from_hex(i[2]) );
-          i += 2;
-        }
-      }
-			else if( ch == '+' )
-        ch = ' ';
-			y+=ch;
+		auto fromHex = []( char ch )->int{
+			if( ch>='0' && ch<='9' )
+				return ch-'0';
+			ch = (char)::tolower( (unsigned char)ch );
+			return ch>='a' && ch<='f' ? ch-'a'+10 : -1;
+		};
+		string y; y.reserve( x.size() );
+		for( uint i=0; i<x.size(); ++i ){
+			char ch = x[i];
+			if( ch=='%' && i+2<x.size() ){//sv isn't null terminated - a trailing '%' must not read past the end.
+				if( let hi = fromHex(x[i+1]), lo = fromHex(x[i+2]); hi>=0 && lo>=0 ){//invalid escapes pass through literally.
+					ch = (char)( hi<<4 | lo );
+					i += 2;
+				}
+			}
+			else if( ch=='+' )
+				ch = ' ';
+			y += ch;
 		}
 		return y;
 	}
@@ -62,9 +67,7 @@ namespace Jde{
 	}
 	α Str::Replace( sv source, char find_, char replace )ι->string{
 		string result{ source };
-		for( char* pFrom=(char*)source.data(), *pTo=(char*)result.data(); pFrom<source.data()+source.size(); ++pFrom, ++pTo )
-			*pTo = *pFrom==find_ ? replace : *pFrom;
-
+		std::ranges::replace( result, find_, replace );
 		return result;
 	}
 	α Str::Replace( sv source, sv find, sv replace )ι->string{
@@ -95,10 +98,9 @@ namespace Jde{
 		return hex;
 	}
 
-#pragma warning( disable: 4244 )
-	Ω transform( sv source, function<int(int)> fnctn )ι->string{
+	Ω transform( sv source, int(*f)(int) )ι->string{
 		string result{ source };
-		std::transform( result.begin(), result.end(), result.begin(), fnctn );
+		std::ranges::transform( result, result.begin(), [f](char ch){ return (char)f((unsigned char)ch); } );//unsigned cast: tolower/toupper are ub for negative chars.
 		return result;
 	}
 	α Str::ToLower( sv source )ι->string{ return transform(source, ::tolower); }

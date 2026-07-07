@@ -16,22 +16,24 @@ namespace Jde{
 
 	α IO::Load( const fs::path& path, SL sl )ε->string{
 		CHECK_PATH( path, sl );
-		auto size = fileSize( path );
+		let size = fileSize( path );
 		TRACESL( "Opening {} - {} bytes ", path.string(), size );
-		std::ifstream f( path, std::ios::binary ); THROW_IFX(f.fail(), IO::IOException(path, "Could not open file") );
-		string y;
-		y.reserve( size );
-		y.assign( (std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>() );  //vexing parse
+		std::ifstream f( path, std::ios::binary ); THROW_IFX( f.fail(), IO::IOException(path, "Could not open file", sl) );
+		string y( size, '\0' );
+		f.read( y.data(), (std::streamsize)size );
+		THROW_IFX( (uint)f.gcount()!=size, IO::IOException(path, Ƒ("Read {} of {} bytes.", f.gcount(), size), sl) );
 		return y;
 	}
 
 	α IO::LoadBinary( const fs::path& path, SL sl )ε->vector<char>{//fs::filesystem_error
 		CHECK_PATH( path, sl );
-		auto size = fileSize( path );
+		let size = fileSize( path );
 		TRACESL( "Opening {} - {} bytes ", path.string(), size );
 		std::ifstream f( path, std::ios::binary ); THROW_IFX( f.fail(), IO::IOException(path, "Could not open file", sl) );
-
-		return vector<char>{ (std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>() };  //vexing parse
+		vector<char> y( size );
+		f.read( y.data(), (std::streamsize)size );
+		THROW_IFX( (uint)f.gcount()!=size, IO::IOException(path, Ƒ("Read {} of {} bytes.", f.gcount(), size), sl) );
+		return y;
 	}
 #ifdef _WIN32
 	α IO::BashToWindows( const fs::path& path )ι->fs::path{

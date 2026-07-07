@@ -40,6 +40,28 @@ namespace Jde::Tests{
 		done.test_and_set();
 		done.notify_all();
 	}
+	Ω negativeTest( atomic_flag& done, std::expected<void, boost::system::error_code>& result, string& error )ι->TimerAwait::Task{
+		try{
+			result = co_await DurationTimer{ microseconds(-1) };
+		}
+		catch( const std::exception& e ){
+			error = e.what();
+		}
+		done.test_and_set();
+		done.notify_all();
+	}
+	// Regression: a negative duration is ready immediately, so no promise is attached - await_resume
+	// must complete successfully instead of throwing 'promise is null'.
+	TEST_F( TimerTests, NegativeDuration ){
+		atomic_flag done;
+		std::expected<void, boost::system::error_code> result{ std::unexpected{boost::system::error_code{}} };
+		string error;
+		negativeTest( done, result, error );
+		done.wait( false );
+		ASSERT_TRUE( error.empty() ) << error;
+		ASSERT_TRUE( result.has_value() );
+	}
+
 	TEST_F( TimerTests, General ){
 		constexpr uint testCount = _windows ? 128 : 4096*2;
 		for( uint i=0; i<testCount; ++i ){

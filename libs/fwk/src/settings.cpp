@@ -26,16 +26,31 @@ namespace Jde{
 		return y;
 	}
 
+	consteval α buildTypeSubDir()->sv{
+		if constexpr( _debug )
+			return "Debug";
+		else
+			return "Release";
+	}
+
 	Ω expandEnvVariable( string setting )ι->string{
-		std::regex regex( "\\$\\((.+?)\\)" );
-		for(;;){
+		static const std::regex regex{ "\\$\\((.+?)\\)" };
+		constexpr uint maxPasses{ 32 };//expansion is transitive but must be bounded - a value containing its own $(NAME) rescans forever.
+		for( uint i=0;; ++i ){
 			auto begin = std::sregex_iterator( setting.begin(), setting.end(), regex );
 			if( begin==std::sregex_iterator() )
 				break;
-			std::smatch b = *begin;
+			if( i==maxPasses ){
+				WARN( "'{}' - env expansion exceeded {} passes, cyclical $()?", setting, maxPasses );
+				break;
+			}
 			let match = begin->str();
 			let group = match.substr( 2, match.size()-3 );
-			let env = Process::GetEnv( group ).value_or( "" );
+			auto env = Process::GetEnv( group ).value_or( "" );
+			if( env.empty() && group=="JDE_BUILD_TYPE" )
+				env = buildTypeSubDir();
+			if( env.empty() )
+				DBG( "Environment variable '{}' not found", group );
 			setting = Str::Replace( setting, match, env );
 		}
 		return setting;
@@ -67,13 +82,6 @@ namespace Jde{
 			}
 		}
 		return y;
-	}
-
-	consteval α buildTypeSubDir()->sv{
-		if constexpr( _debug )
-			return "Debug";
-		else
-			return "Release";
 	}
 
 	α Settings::FileStem()ι->string{
@@ -119,26 +127,8 @@ namespace Jde{
 
 	α SetEnv( jobject& j )->void{
 		for( auto& [key,value] : j ){
-			if( value.is_string() ){
-				string setting{ value.get_string() };
-				std::regex regex( "\\$\\((.+?)\\)" );
-				for(;;){
-					auto begin = std::sregex_iterator( setting.begin(), setting.end(), regex );
-					if( begin==std::sregex_iterator() )
-						break;
-					std::smatch b = *begin;
-					let match = begin->str();
-					let group = match.substr( 2, match.size()-3 );
-					auto env = Process::GetEnv( group ).value_or( "" );
-					if( env.empty() && group=="JDE_BUILD_TYPE" )
-						env = buildTypeSubDir();
-					if( env.empty() )
-						DBG( "Environment variable '{}' not found", group );
-
-					setting = Str::Replace( setting, match, env );
-				}
-				value = setting;
-			}
+			if( value.is_string() )
+				value = expandEnvVariable( string{value.get_string()} );
 			else if( value.is_object() )
 				SetEnv( value.get_object() );
 		}
@@ -167,21 +157,10 @@ namespace Jde{
 	α Settings::Set( sv path, jvalue v, SL sl )ε->jvalue*{
 		ASSERT( _settings );
 		boost::system::error_code ec;
-		let y = _settings->set_at_pointer( path, move(v), ec );
-		if( ec ){
-			let parts = Str::Split( path, '/' );
-			auto& object = _settings->get_object();
-			for( uint i=0; i<(parts.size() ? parts.size()-1 : 0); ++i ){
-				if( auto p = object.find(parts[i]); p!=object.end() ){
-					THROW_IFSL( !p->value().is_object(), "Could not set '{}' to '{}'", path, serialize(v) );
-					object = p->value().get_object();
-				}
-				else
-					object = object.emplace( parts[i], jobject{} ).first->value().get_object();
-			}
-			//let x = serialize(*_settings);
-			object.emplace( parts.back(), move(v) );
-		}
+		boost::json::set_pointer_options opts;
+		opts.create_objects = true;//create missing intermediate objects - replaces a hand-rolled fallback that corrupted the root.
+		auto y = _settings->set_at_pointer( path, move(v), ec, opts );
+		THROW_IFSL( !y, "Could not set '{}': {}", path, ec.message() );
 		return y;
 	}
 }

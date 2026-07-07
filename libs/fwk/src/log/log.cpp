@@ -67,38 +67,4 @@ namespace Jde{
 		 	_loggers.front()->SetLevels( *memory );
 		Logging::UpdateCumulative( _loggers );
 	}
-
-/*	α SendStatus()ι->void
-	{
-		lg _{ _statusMutex };
-		vector<string> variables; variables.reserve( _status.details_size()+1 );
-		_status.set_memory( IApplication::MemorySize() );
-		ostringstream os;
-		os << "Memory=" << _status.memory();
-		for( int i=0; i<_status.details_size(); ++i )
-			os << ";  " << _status.details( i );
-
-		TRACET( Logging::_statusTag, "{}", os.str() );
-		if( Logging::Server::Enabled() )
-			Logging::Server::SetSendStatus();
-		_lastStatusUpdate = Clock::now();
-	}
-
-	α Logging::SetStatus( const vector<string>& values )ι->void{
-		{
-			lg _{ _statusMutex };
-			_status.clear_details();
-			for( let& value : values )
-				_status.add_details( value );
-		}
-		let now = Clock::now();
-		if( _lastStatusUpdate+10s<now )
-			SendStatus();
-	}
-	α Logging::GetStatus()ι->up<Logging::Proto::Status>
-	{
-		lg _{ _statusMutex };
-		return mu<Proto::Status>( _status );
-	}
-*/
 }

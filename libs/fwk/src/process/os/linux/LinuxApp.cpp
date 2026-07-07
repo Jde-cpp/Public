@@ -29,7 +29,7 @@ namespace Jde{
 		THROW( "Not Implemeented" );
 	}
 	α Process::UnPause()ι->void{
-		::raise( SIGKILL );
+		::raise( SIGALRM );//handled by ExitHandler - interrupts ::pause(). SIGKILL is uncatchable & would kill the process outright.
 	}
 	α Process::Uninstall()ε->void{
 		THROW( "Not Implemeented");
@@ -70,9 +70,9 @@ namespace Jde{
 	α Process::ExePath()ι->fs::path{ return fs::canonical( "/proc/self/exe" ); }
 
 	α Process::HostName()ι->string{
-		constexpr uint maxHostName = HOST_NAME_MAX;
-		char hostname[maxHostName];
-		::gethostname( hostname, maxHostName );
+		char hostname[HOST_NAME_MAX+1]{};//+1 & zero-init: gethostname may not nul-terminate on truncation.
+		if( ::gethostname(hostname, HOST_NAME_MAX)!=0 )
+			ERR( "gethostname failed: {}", strerror(errno) );
 		return hostname;
 	}
 
@@ -168,8 +168,6 @@ namespace Jde{
 		sigemptyset( &sigIntHandler.sa_mask );
 		sigIntHandler.sa_flags = 0;*/
 		::signal( SIGINT, Process::ExitHandler );
-		::signal( SIGSTOP, Process::ExitHandler );
-		::signal( SIGKILL, Process::ExitHandler );
 		::signal( SIGTERM, Process::ExitHandler );
 		::signal( SIGALRM, Process::ExitHandler );
 		::signal( SIGUSR1, Process::ExitHandler );

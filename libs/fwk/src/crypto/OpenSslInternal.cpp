@@ -28,7 +28,8 @@ namespace Jde::Crypto{
 		return { pkey, ::EVP_PKEY_free };
 	}
 	α Internal::WritePrivateKey( const fs::path& path, KeyPtr&& key, str passcode )ε->void{
-		::PEM_write_bio_PrivateKey( File(path, true).get(), key.get(), nullptr, (unsigned char*)passcode.c_str(), (int)passcode.size(), nullptr, nullptr );
+		auto enc = passcode.empty() ? nullptr : EVP_aes_256_cbc();//openssl silently ignores the passphrase & writes cleartext when the cipher is null.
+		CALL( ::PEM_write_bio_PrivateKey(File(path, true).get(), key.get(), enc, passcode.empty() ? nullptr : (unsigned char*)passcode.c_str(), (int)passcode.size(), nullptr, nullptr) );
 	}
 
 	α Internal::NewRsaCtx(SL sl)ε->CtxPtr{

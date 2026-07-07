@@ -26,12 +26,10 @@ namespace Jde{
 		let uflag = underlying( flag );
 		if( uflag==0 )
 			return stringValues.size() ? string{stringValues[0]} : "0";
-		uint remaining = uflag;
 		string flags;
 		for( uint i=0; i+1<stringValues.size(); ++i ){
 			if( uint current = (1ul<<i); uflag & current ){
 				flags += stringValues[i+1];
-				remaining -= current;
 				flags.push_back( ',' );
 			}
 		}

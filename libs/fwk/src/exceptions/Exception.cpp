@@ -24,7 +24,8 @@ namespace Jde{
 	Exception::Exception( const Exception& from )ι:
 		ExceptionArgs{ from },
 		_what{ from._what },
-		_inner{ from._inner ? mu<std::exception>( *from._inner ) : nullptr },
+		_logged{ from._logged },
+		_inner{ from._inner ? up<std::exception>{mu<std::runtime_error>( from._inner->what() )} : nullptr },//a base std::exception copy slices - what() is all consumers read; preserve it.
 		_format{ from._format },
 		_args{ from._args },
 		_sl{ from._sl }{
@@ -33,12 +34,12 @@ namespace Jde{
 	Exception::Exception( Exception&& from )ι:
 		ExceptionArgs{ move(from) },
 		_what{ move(from._what) },
+		_logged{ from._logged },
 		_inner{ move(from._inner) },
 		_format{ move(from._format) },
 		_args{ move(from._args) },
 		_sl{ from._sl }{
-		from._level = ELogLevel::NoLog;
-		BreakLog();
+		from._logged = true;//the source made its log decision at construction - the moved-to object owns any future logging.
 	}
 	Exception::Exception( std::exception&& from, ExceptionArgs args, SL sl )ι:
 		ExceptionArgs{ args },
@@ -64,7 +65,8 @@ namespace Jde{
 	}
 	α Exception::operator=( Exception&& from )ι->Exception&{
 		ExceptionArgs::operator=( from );
-		from._level = ELogLevel::NoLog;
+		_logged = from._logged;
+		from._logged = true;
 		_what = move(from._what);
 		_inner = move(from._inner);
 		_format = move(from._format);
@@ -78,18 +80,13 @@ namespace Jde{
 	}
 
 	α Exception::BreakLog()Ι->void{
-		if( Level()>=Logging::BreakLevel() ){
-			Log();
-#ifndef NDEBUG
-			SetLevel( ELogLevel::NoLog );
-#endif
-		}
-		else if( Logging::ShouldLog(ELogLevel::Trace, ELogTags::Exception) )
+		if( Level()>=Logging::BreakLevel() || Logging::ShouldLog(ELogLevel::Trace, ELogTags::Exception) )
 			Log();
 	}
 	α Exception::Log()Ι->void{
-		if( Level()==ELogLevel::NoLog || Process::Finalizing() )
+		if( _logged || Level()==ELogLevel::NoLog || Process::Finalizing() )
 			return;
+		_logged = true;
 		if( auto sv = Format(); sv.size() )
 			Logging::Log( Logging::Entry{_sl, Level(), Tags | ELogTags::Exception, string{sv}, _args} );
 		else

@@ -29,7 +29,7 @@ namespace Jde::Protobuf{
 	α SizePrefixed( const google::protobuf::MessageLite& m )ι->vector<byte>;
 	α ToTimestamp( TimePoint t )ι->google::protobuf::Timestamp;
 	Ξ ToBytes( const uuid& g )ι->sv{ return sv{(char*)g.data(), 16}; }
-	Ξ ToGuid( string g )ι->uuid{ uuid y; memcpy(&y, g.data(), std::min(sizeof(uuid), g.size())); return y; }
+	Ξ ToGuid( string g )ι->uuid{ uuid y{}; memcpy(&y, g.data(), std::min(sizeof(uuid), g.size())); return y; }//value-init: short input must zero-fill the tail, not leave it indeterminate.
 	α ToTimePoint( google::protobuf::Timestamp t )ι->TimePoint;
 	α ToTimePoint( const jobject& j )ε->TimePoint;
 	α ToTimestamp( const jobject& j, SRCE )ε->google::protobuf::Timestamp;
@@ -53,7 +53,7 @@ namespace Jde{
 	Ξ Protobuf::SizePrefixed( const google::protobuf::MessageLite& m )ι->vector<byte>{
 		const uint32_t length = ( uint32_t )m.ByteSizeLong();
 		let size = length+4;
-		vector<byte> bytes( size ); bytes.reserve( size );
+		vector<byte> bytes( size );
 		auto dest = bytes.data();
 		const char* pLength = reinterpret_cast<const char*>( &length )+3;
 		for( auto i=0; i<4; ++i )
@@ -167,9 +167,10 @@ namespace Jde{
 		auto jseconds = j.at( "seconds" );
 		if( jseconds.is_number() )
 			proto.set_seconds( jseconds.to_number<_int>() );
-		else if( jseconds.is_object() ){
+		else if( jseconds.is_object() ){//protobufjs Long: signed int32 halves - low is negative when bit 31 is set.
 			auto o = jseconds.as_object();
-			proto.set_seconds( Json::AsNumber<_int>(o, "high", sl) | Json::AsNumber<uint32>(o, "low", sl) );
+			let high = Json::AsNumber<int64_t>( o, "high", sl ); let low = Json::AsNumber<int64_t>( o, "low", sl );
+			proto.set_seconds( high<<32 | (low & 0xFFFFFFFF) );
 		}
 		else
 			throw Jde::Exception{ sl, ELogLevel::Debug, "Timestamp seconds is not a number or object: {}", serialize(j) };

@@ -25,8 +25,8 @@ namespace Jde::Logging{
 		Line{ sl.line() },
 		Time{ Clock::now() },
 		UserPK{ userPK },
-		_fileName{ string{sl.file_name()} },
-		_functionName{ string{sl.function_name()} }
+		_fileName{ sv{sl.file_name()} },//static storage - copying into strings costs 2 allocations per log call.
+		_functionName{ sv{sl.function_name()} }
 	{}
 	Entry::Entry( ELogLevel l, ELogTags tags, uint32_t line, TimePoint time, Jde::UserPK userId, uuid messageId, uuid fileId, uuid functionId, vector<string>&& args )ι:
 		Arguments{ move(args) },

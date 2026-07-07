@@ -1,4 +1,5 @@
 #pragma once
+#include <stdexcept>
 #include "jde/fwk/log/logTags.h"
 #include <jde/fwk/io/crc.h>
 
@@ -61,6 +62,7 @@ namespace Jde{
 		α BreakLog()Ι->void;
 
 		mutable string _what;
+		mutable bool _logged{};//log once: at construction when Level()>=BreakLevel, otherwise at destruction/explicit Log().
 		up<std::exception> _inner;
 		variant<sv,string> _format;
 		vector<string> _args;
@@ -77,7 +79,7 @@ namespace Jde{
 
 	Ξ ToUP( exception&& e )ι->up<exception>{
 		auto p = dynamic_cast<Exception*>( &e );
-		return p ? p->Move() : mu<exception>( move(e) );
+		return p ? p->Move() : up<exception>{ mu<std::runtime_error>(e.what()) };//copying the std::exception base would slice - its what() is the generic implementation string.
 	}
 
 	$ Exception::Exception( SL sl, ExceptionArgs args, std::exception&& inner, fmt::format_string<Args...> m, Args&&... sargs )ι:

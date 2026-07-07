@@ -15,7 +15,7 @@ namespace Jde{
 
 	α Thread::Name()ι->string{
 		char threadName[_nameLength+1]{};
-		if( let rc = pthread_getname_np(Id(), threadName, _nameLength); rc != 0 )
+		if( let rc = pthread_getname_np(Id(), threadName, sizeof(threadName)); rc != 0 )//needs room for 15 chars + nul; passing 15 fails with ERANGE on 15-char names.
 			ERR( "pthread_getname_np returned {}", rc );
 		return threadName;
 	}

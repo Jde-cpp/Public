@@ -11,6 +11,7 @@ namespace Jde{
 		α operator=( CoLockGuard&& rhs )ι->CoLockGuard&;
 		~CoLockGuard();
 	private:
+		α Release()ι->void;//pops our queue entry & wakes the next waiter; disengages the guard.
 		variant<uint,coroutine_handle<>> Handle;
 		string Key;
 	};

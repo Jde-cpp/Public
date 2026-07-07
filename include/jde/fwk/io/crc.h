@@ -74,46 +74,21 @@ namespace Jde::IO::Crc{
 		0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D
 	};
 
-	template<unsigned int CRC, char ...Chars> struct Crc32Impl
-	{};
-#pragma warning( disable : 4309 )
-	template<unsigned int CRC, char Head, char ...Tail> struct Crc32Impl<CRC, Head, Tail...>{
-		static constexpr unsigned int value = Crc32Impl<crc32_table[static_cast<unsigned char>(CRC) ^ static_cast<unsigned char>(Head)] ^ (CRC >> 8), Tail...>::value;
-	};
-#pragma warning( default : 4309 )
-	template<unsigned int CRC> struct Crc32Impl<CRC>{
-		static constexpr unsigned int value = CRC ^ 0xFFFFFFFF;
-	};
-
-
-	template<char ...Chars> using Crc32 = Crc32Impl<0xFFFFFFFF, Chars...>;
-
-	inline constexpr α crc32_rec( unsigned int crc, const char *s )->unsigned int{
-		return *s == 0
-			? crc ^ 0xFFFFFFFF
-			: crc32_rec( crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(*s)] ^ (crc >> 8), s + 1 );
-	}
-
-	inline constexpr α operator ""_crc32( const char *s, size_t )->unsigned int{
-		return crc32_rec( 0xFFFFFFFF, s );
-	}
-
-	inline consteval α Calc32( sv value, unsigned int crc=0xFFFFFFFF, size_t index=0 )->unsigned int{
-		return index == value.size()
-			? crc ^ 0xFFFFFFFF
-			: Calc32( value, crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(value[index])] ^ (crc >> 8), index + 1 );
-	}
-
-	static_assert( "Hello"_crc32 == Crc32<'H', 'e', 'l', 'l', 'o'>::value, "CRC32 values don't match" );
-	static_assert( "0"_crc32 == Crc32<'0'>::value, "CRC32 values don't match" );
-}
-namespace Jde{
-	Ξ Calc32RunTime( sv value )->unsigned int
-	{
-		unsigned int crc=0xFFFFFFFF;
-		for( uint index=0; index<value.size(); ++index )
-			crc = IO::Crc::crc32_table[static_cast<unsigned char>(crc) ^ value[index]] ^ (crc >> 8);
+	//the single crc32 implementation - constexpr so it serves compile-time & runtime callers alike.
+	inline constexpr α Calc32( sv value )->unsigned int{
+		unsigned int crc = 0xFFFFFFFF;
+		for( char ch : value )
+			crc = crc32_table[static_cast<unsigned char>(crc) ^ static_cast<unsigned char>(ch)] ^ (crc >> 8);//unsigned casts: bytes ≥0x80 sign-extend & index out of bounds.
 		return crc ^ 0xFFFFFFFF;
 	}
+
+	inline constexpr α operator ""_crc32( const char *s, size_t n )->unsigned int{
+		return Calc32( sv{s, n} );
+	}
+
+	static_assert( "Hello"_crc32 == 0xF7D18982, "CRC32 sanity check failed" );
+}
+namespace Jde{
+	Ξ Calc32RunTime( sv value )->unsigned int{ return IO::Crc::Calc32( value ); }
 }
 #endif

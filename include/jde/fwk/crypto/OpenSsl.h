@@ -36,7 +36,7 @@ namespace Jde::Crypto{
 	Φ ToBytes( const PublicKey& key, SRCE )ε->vector<byte>;
 	Φ ReadCertificate( const fs::path& certificate )ε->vector<byte>;
 	Φ ReadPrivateKey( const fs::path& privateKeyPath, str passcode )ε->vector<byte>;
-	Φ RsaSign( str content, const fs::path& privateKeyFile )ε->Signature;
+	Φ RsaSign( str content, const fs::path& privateKeyFile, str passcode={} )ε->Signature;
 	Φ Verify( const PublicKey& certificate, str decrypted, const Signature& signature )ε->void;
 	Φ WriteCertificate( const fs::path& path, vector<byte>&& certificate )ε->void;
 	Φ WritePrivateKey( const fs::path& path, vector<byte>&& privateKey, str passcode )ε->void;
