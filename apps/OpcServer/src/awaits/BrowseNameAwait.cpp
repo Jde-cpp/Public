@@ -41,11 +41,16 @@ namespace Jde::Opc::Server{
 		}
 	}
 	α BrowseNameAwait::Create()ι->DB::ScalerAwait<BrowseNamePK>::Task{
-		_browseName->PK = co_await DS().InsertSeq<BrowseNamePK>( DB::InsertClause{
-			GetView("browse_names").InsertProcName(),
-			{ {_browseName->namespaceIndex}, {Opc::ToString(_browseName->name)} }
-		}, _sl );
-		Resume( {} );
+		try{
+			_browseName->PK = co_await DS().InsertSeq<BrowseNamePK>( DB::InsertClause{
+				GetView("browse_names").InsertProcName(),
+				{ {_browseName->namespaceIndex}, {Opc::ToString(_browseName->name)} }
+			}, _sl );
+			Resume( {} );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
 	}
 
 	α BrowseNameAwait::GetOrInsert( BrowseName& browseName, SL sl )ε->bool{

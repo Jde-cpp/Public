@@ -27,12 +27,12 @@ namespace Jde::Access{
 	α Authorize::FindResource( const Resource& resource, ul& l )Ι->const Resource*{
 		auto pk = resource.PK;
 		if( !pk && resource.Schema.size() && resource.Target.size() )
-			pk = FindResourcePK( resource.Schema, resource.Target, resource.Criteria, l ).value_or( 0 );
+			pk = FindActiveResourcePK( resource.Schema, resource.Target, resource.Criteria, l ).value_or( 0 );
 		if( auto p = pk ? Resources.find(pk) : Resources.end(); p!=Resources.end() )
 			return &p->second;
-		else if( resource.Schema.empty() && resource.Target.size() ){
+		else if( /*resource.Schema.empty() &&*/ resource.Target.size() ){
 			for( let& [pk,existing] : Resources ){
-				if( existing.Target==resource.Target && existing.Criteria.empty() )
+				if( (resource.Schema.empty() || existing.Schema==resource.Schema) && existing.Target==resource.Target && existing.Criteria.empty() )
 					return &existing;
 			}
 		}
@@ -48,7 +48,7 @@ namespace Jde::Access{
 	}
 	α Authorize::Test( str schemaName, str resourceName, ERights rights, UserPK executer, SL sl )ε->void{
 		Jde::sl l{ Mutex };
-		auto resourcePK = FindResourcePK( schemaName, resourceName, {}, l );
+		auto resourcePK = FindActiveResourcePK( schemaName, resourceName, {}, l );
 		if( !resourcePK )//not enabled
 			return;
 
@@ -102,7 +102,7 @@ namespace Jde::Access{
 
 	α Authorize::Rights( str schemaName, str resourceName, UserPK executer )ι->ERights{
 		Jde::sl _{ Mutex };
-		auto resourcePK = FindResourcePK( schemaName, resourceName, {}, _ );
+		auto resourcePK = FindActiveResourcePK( schemaName, resourceName, {}, _ );
 		if( !resourcePK )//not enabled
 			return ERights::All;
 
@@ -127,7 +127,7 @@ namespace Jde::Access{
 	}
 	α Authorize::RecursiveUsers( GroupPK groupPK, const ul& l, bool clear, flat_set<GroupPK>& visited )ι->flat_set<UserPK>{
 		flat_set<UserPK> users;
-		auto group = visited.emplace(groupPK).second ? Groups.find( groupPK ) : Groups.end();//visited guards cycles in existing data.
+		auto group = visited.emplace( groupPK ).second ? Groups.find( groupPK ) : Groups.end();//visited guards cycles in existing data.
 		if( group==Groups.end() || group->second.IsDeleted )
 			return users;
 
@@ -338,7 +338,7 @@ namespace Jde::Access{
 		THROW_IFX( parent==child, Exception(sl, ELogLevel::Debug, "Role cannot be a member of itself.") );
 		flat_set<RolePK> visited;
 		function<bool( RolePK,RolePK )> isChild = [&]( RolePK parent, RolePK child )->bool {
-			auto children = visited.emplace(parent).second ? Roles.find( parent ) : Roles.end();//visited guards cycles in existing data.
+			auto children = visited.emplace( parent ).second ? Roles.find( parent ) : Roles.end();//visited guards cycles in existing data.
 			if( children==Roles.end() )
 				return false;
 			for( PermissionRole member : children->second.Members ){
@@ -395,7 +395,7 @@ namespace Jde::Access{
 		for( let& member : toRemove ){
 			auto& members = role->second.Members;
 			for( auto p = members.begin(); p!=members.end(); ++p ){
-				if( member==std::visit([](auto id)->PermissionRightsPK{return id;}, *p) ){
+				if( member==std::visit([](auto id)->PermissionRightsPK{return id;}, *p) ) {
 					members.erase( p );
 					break;
 				}

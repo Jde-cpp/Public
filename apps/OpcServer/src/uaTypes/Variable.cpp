@@ -53,21 +53,24 @@ namespace Jde::Opc::Server{
 	α Variable::operator=( const Variable& v )ι->Variable&{
 		if( this != &v ){
 			Node::operator=( v );
+			UA_VariableAttributes_clear( this );//free the attributes we already own before UA_..._copy overwrites the pointers.
 			UA_VariableAttributes_copy( &v, this );
 			_refs = v._refs;
 		}
-		BREAK_IF(PK==50898);
 		return *this;
 	}
 	α Variable::operator=( Variable&& v )ι->Variable&{
 		if( this != &v ){
 			Node::operator=( move(v) );
+			UA_VariableAttributes_clear( this );//free our current attributes before overwriting them with v's.
 			memcpy( &this->specifiedAttributes, &v.specifiedAttributes, sizeof(UA_VariableAttributes) );
 			_refs = move(v._refs);
-			UA_VariableAttributes_init( &v );
+			UA_VariableAttributes_init( &v );//v no longer owns the attributes; keep its destructor from freeing them.
 		}
-		BREAK_IF(PK==50898);
 		return *this;
+	}
+	Variable::~Variable(){
+		UA_VariableAttributes_clear( this );
 	}
 
 	α Variable::InsertParams()Ι->vector<DB::Value>{

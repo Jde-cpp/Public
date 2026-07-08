@@ -20,7 +20,7 @@ namespace Jde::Access{
 
 		α AddResource( ResourcePK resourcePK, string schema, string resourceTarget, string criteria )ι->void;
 		α FindResource( const Resource& resource )Ι->const Resource*{ ul l{Mutex}; return FindResource( resource, l ); }
-		α FindResourcePK( string schema, str resourceName, str criteria )ι->optional<ResourcePK>{ Jde::sl _{Mutex}; return FindResourcePK(schema, resourceName, criteria, _); }
+		α FindActiveResourcePK( string schema, str resourceName, str criteria )ι->optional<ResourcePK>{ Jde::sl _{Mutex}; return FindActiveResourcePK(schema, resourceName, criteria, _); }
 		α GetSchema( str resourceTarget, SL sl )ε->string;
 
 		α TestAdmin( str resource, UserPK userPK, SRCE )ε->void;
@@ -34,11 +34,12 @@ namespace Jde::Access{
 		α TestAddRoleMember( RolePK parent, RolePK child, SRCE )ε->void;
 	protected:
 		α FindResource( const Resource& resource, ul& l )Ι->const Resource*;
-		Ŧ FindResourcePK( str schemaName, str resourceName, str criteria, T& l )Ι->optional<ResourcePK>;
+		Ŧ FindActiveResourcePK( str schemaName, str resourceName, str criteria, T& l )Ι->optional<ResourcePK>;
 
 		string _app;
 		mutable std::shared_mutex Mutex;
-		flat_map<string, flat_map<string,flat_map<string,Access::ResourcePK>>> SchemaResources;//<schemaName, <resourceJsonName,<criteria, resourcePK>>> -- active only
+		/// Active only <schemaName, <resourceJsonName,<criteria, resourcePK>>>
+		flat_map<string, flat_map<string,flat_map<string,Access::ResourcePK>>> SchemaResources;
 		flat_map<UserPK,User> Users;
 		α SetUserPermissions( flat_set<UserPK>&& users, const ul& l )ι->void;
 		α RecalcGroupMembers( GroupPK groupPK, const ul& l, bool remove=false )ι->void;
@@ -79,7 +80,8 @@ namespace Jde::Access{
 		α TestAdmin( const Resource& resource, UserPK userPK, SL sl )ε->void;
 		α ToIdentityPK( IdentityPK::Type userGroupPK, const ul& l )Ι->IdentityPK;
 
-		flat_map<ResourcePK,Resource> Resources; //includes inactive resources.
+		/// Includes inactive resources.
+		flat_map<ResourcePK,Resource> Resources;
 
 		flat_map<PermissionPK,Permission> Permissions;
 		flat_map<GroupPK,Group> Groups;
@@ -90,7 +92,7 @@ namespace Jde::Access{
 		friend struct AccessListener; friend struct Loader; friend struct ConfigureAwait; friend struct Server::AuthenticateAwait; friend struct Server::LoginAwait;
 	};
 
-	Ŧ Authorize::FindResourcePK( str schemaName, str resourceTarget, str criteria, T& /*lock*/ )Ι->optional<ResourcePK>{
+	Ŧ Authorize::FindActiveResourcePK( str schemaName, str resourceTarget, str criteria, T& /*lock*/ )Ι->optional<ResourcePK>{
 		if( auto schemaResources = SchemaResources.find(schemaName); schemaResources!=SchemaResources.end() ){
 			if( auto targetResources = schemaResources->second.find(resourceTarget); targetResources!=schemaResources->second.end() ){
 				auto& criteras = targetResources->second;

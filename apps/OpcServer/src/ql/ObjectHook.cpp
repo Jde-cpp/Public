@@ -80,13 +80,14 @@ namespace Jde::Opc::Server{
 		}
 	}
 	α ObjectQLAwait::await_resume()ε->jvalue{
-		jvalue y;
-		if( auto e = Mutation.Find<bool>("$silent").value_or(false) && Promise() ? Promise()->MoveExp() : nullptr; e ){
-			e->SetLevel( ELogLevel::Trace );
-			y = jobject{ {"complete", true} };
-		}else
-			y = TAwait<jvalue>::await_resume();
-		return y;
+		//peek via Exp() (no move) and let real OPC errors (UAException) propagate even when $silent, matching ObjectTypeQLAwait.
+		if( Mutation.Find<bool>("$silent").value_or(false) && Promise() ){
+			if( const up<Exception>& e = Promise()->Exp(); e && !dynamic_cast<UAException*>(e.get()) ){
+				e->SetLevel( ELogLevel::Trace );//assume "already exists": downgrade and report success.
+				return jobject{ {"complete", true} };
+			}
+		}
+		return TAwait<jvalue>::await_resume();
 	}
 
 	α ObjectHook::InsertBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{

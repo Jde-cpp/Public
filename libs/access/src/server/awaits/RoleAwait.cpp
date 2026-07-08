@@ -83,7 +83,7 @@ namespace Jde::Access::Server{
 			jobject y;
 			auto& permissionRight = y["permissionRight"].emplace_object();
 			//if( criteria ){
-				auto resourcePK = auth.FindResourcePK( *schema, resourceKey.NK(), criteria.value_or(string{}) );
+				auto resourcePK = auth.FindActiveResourcePK( *schema, resourceKey.NK(), criteria.value_or(string{}) );
 				vector<DB::Value> params{ {*schema}, {resourceKey.NK()} };
 				if( !resourcePK ){
 					string dbCriteria;

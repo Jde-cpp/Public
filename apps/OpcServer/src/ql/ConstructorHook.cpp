@@ -31,8 +31,8 @@ namespace Jde::Opc::Server{
 				let variantPK = co_await VariantInsertAwait{ variant };
 				values.try_emplace( browse.PK, move(variant) );
 				y.emplace_back( jobject{
-					{"browse", {"id", browse.PK}},
-					{"value", {"id", variantPK}}
+					{"browse", jobject{{"id", browse.PK}}},
+					{"value", jobject{{"id", variantPK}}}
 				} );
 				co_await DS().Execute( DB::InsertClause{
 					GetSchema().GetView("constructors").InsertProcName(),

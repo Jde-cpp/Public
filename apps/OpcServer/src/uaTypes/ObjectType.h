@@ -12,6 +12,11 @@ namespace Jde::Opc::Server{
 		//ObjectType( Node&& n )ι;
 		ObjectType( Node&& n, ObjectTypeAttr&& a )ι;
 		ObjectType( DB::Row& r )ι;
+		ObjectType( const ObjectType& v )ι;
+		ObjectType( ObjectType&& v )ι;
+		α operator=( const ObjectType& v )ι->ObjectType&;
+		α operator=( ObjectType&& v )ι->ObjectType&;
+		~ObjectType() override;
 
 		α ToString()Ι->string;
 		α ToString( const Node& parent )Ι->string override;

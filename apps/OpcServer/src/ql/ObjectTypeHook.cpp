@@ -145,14 +145,15 @@ namespace Jde::Opc::Server{
 	}
 
 	α ObjectTypeQLAwait::await_resume()ε->jvalue{
-		jvalue y;
-		if( auto e = Json::FindBool(Args(),"$silent").value_or(false) && Promise() ? Promise()->MoveExp() : nullptr; e && !dynamic_cast<UAException*>(e.get()) ){
-			e->SetLevel( ELogLevel::Trace );
-			y = jobject{ {"complete", true} };
+		//use _startup (captured pre-Suspend): Args() was moved out in Suspend, so re-reading $silent here always saw false.
+		//peek via Exp() rather than MoveExp(): draining the exception here made the fall-through base::await_resume() lose a real UAException and throw "Value is null" instead.
+		if( _startup && Promise() ){
+			if( const up<Exception>& e = Promise()->Exp(); e && !dynamic_cast<UAException*>(e.get()) ){
+				e->SetLevel( ELogLevel::Trace );//assume "already exists": downgrade and report success.
+				return jobject{ {"complete", true} };
+			}
 		}
-		else
-			y = TAwait<jvalue>::await_resume();
-		return y;
+		return TAwait<jvalue>::await_resume();//no exception → value; UAException or non-startup → propagate.
 	}
 
 	α ObjectTypeHook::InsertBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{

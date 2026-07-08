@@ -14,7 +14,7 @@ namespace Jde::Opc::Server{
 		if( let configRoot = Settings::FindPath("/opcServer/mutationsDir"); configRoot && fs::exists(*configRoot) ){
 			for( let& entry : fs::directory_iterator(*configRoot) ){
 				let& path = entry.path();
-				if( !entry.is_directory() && path.extension().string().starts_with(".mutation") )
+				if( !entry.is_directory() && path.extension()==".mutation" )//exact: starts_with also matched .mutationbak, .mutation~, etc.
 					_files.push_back( path );
 			}
 		}

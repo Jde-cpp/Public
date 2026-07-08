@@ -147,7 +147,7 @@ namespace Jde::Opc::Server{
 					continue;
 				NodeId node{pk};
 				let nodePK = co_await DS().InsertSeq<NodePK>( insertNodeIdClause(node) );
-				ua._variables.try_emplace( nodePK, move(node) );
+				ua._typeDefs.try_emplace( nodePK, ms<ObjectType>(node) );//variable types are type defs (matches AllocateNodes); the contains-check above tests _typeDefs, so filing them in _variables left them uncached and re-inserted every run.
 			}
 			Set();
 		}

@@ -35,6 +35,35 @@ namespace Jde::Opc::Server{
 		}
 	{}
 
+	Object::Object( const Object& v )ι:
+		Node{ v }{
+		UA_ObjectAttributes_copy( &v, this );//deep-copy: without an explicit copy ctor the implicit one shares attribute pointers, which the destructor would then double-free.
+	}
+	Object::Object( Object&& v )ι:
+		Node{ move(v) },
+		UA_ObjectAttributes{ move(v) }{
+		UA_ObjectAttributes_init( &v );//we stole v's attributes; keep its destructor from freeing them.
+	}
+	α Object::operator=( const Object& v )ι->Object&{
+		if( this != &v ){
+			Node::operator=( v );
+			UA_ObjectAttributes_clear( this );
+			UA_ObjectAttributes_copy( &v, this );
+		}
+		return *this;
+	}
+	α Object::operator=( Object&& v )ι->Object&{
+		if( this != &v ){
+			Node::operator=( move(v) );
+			UA_ObjectAttributes_clear( this );
+			memcpy( &this->specifiedAttributes, &v.specifiedAttributes, sizeof(UA_ObjectAttributes) );
+			UA_ObjectAttributes_init( &v );
+		}
+		return *this;
+	}
+	Object::~Object(){
+		UA_ObjectAttributes_clear( this );
+	}
 	α Object::InsertParams()Ι->vector<DB::Value>{
 		vector<DB::Value> params = Node::InsertParams();
 		params.emplace_back( eventNotifier, 0 );
