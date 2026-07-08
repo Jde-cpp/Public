@@ -15,6 +15,7 @@ namespace Jde::Opc::Server{
 
 		α operator=( const Variable& v )ι->Variable&;
 		α operator=( Variable&& v )ι->Variable&;
+		~Variable() override;
 
 		α InsertParams()Ι->vector<DB::Value> override;
 		α InsertParams( DB::Value variantPK )Ι->vector<DB::Value>;

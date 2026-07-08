@@ -1,8 +1,8 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests: "AccessTests.UserAccess",
-		recreateDB:: true,
+		tests:: "AccessTests.UserAccess",
+		recreateDB: true,
 		embeddedAppServer: true,
 		UANodeSets: "$(UA_NODE_SETS)"
 	},
@@ -25,7 +25,7 @@ local args = import 'args.libsonnet';
 			"$(JDE_DIR)/apps/OpcServer/config/sql/"+args.sqlType
 		],
 		dataPaths: ["$(JDE_DIR)/apps/AppServer/config", "$(JDE_DIR)/libs/access/config"],
-		sync:: true,
+		sync: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,

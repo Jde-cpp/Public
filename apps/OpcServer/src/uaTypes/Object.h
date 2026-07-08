@@ -11,6 +11,11 @@ namespace Jde::Opc::Server{
 		Object( NodePK pk, UA_NodeId&& n )ι;
 		//Object( Node&& n, ObjectAttr&& attr )ι;
 		Object( DB::Row&& r, sp<ObjectType> typeDef )ι;
+		Object( const Object& v )ι;
+		Object( Object&& v )ι;
+		α operator=( const Object& v )ι->Object&;
+		α operator=( Object&& v )ι->Object&;
+		~Object() override;
 		α InsertParams()Ι->vector<DB::Value> override;
 
 		α Specified()Ι->UA_UInt32 override{ return specifiedAttributes; }

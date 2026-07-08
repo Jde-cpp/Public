@@ -23,21 +23,30 @@ namespace Jde::Opc::Server {
 			_thread->join();
 			_thread.reset();
 		}
+		else if( _ua ){//Run() was never called, so the worker thread that owns shutdown/delete never started: free here to avoid leaking the server (and its config).
+			UA_Server_delete( _ua );
+			_ua = nullptr;
+		}
 	}
 	//
 	α UAServer::Run()ι->void{
-		if( !_thread ){
-			_thread = std::jthread{ [this](std::stop_token /*st*/){
-				Thread::SetName( "UAServer" );
-				_running = true;
-				UA_Server_run( _ua, &_running );
-				ASSERT( _ua );
+		if( _thread )
+			return;
+		_running = true;//set before spawning: otherwise a destructor racing an early Run() could clear it before the thread reads it, and join() would hang.
+		_thread = std::jthread{ [this](std::stop_token st){
+			Thread::SetName( "UAServer" );
+			//UA_Server_run(...) demands a volatile UA_Boolean*; run the loop manually against a std::atomic instead. This is what UA_Server_run does internally, and it also drops the original's double run_shutdown.
+			if( UA_StatusCode sc = UA_Server_run_startup(_ua); sc==UA_STATUSCODE_GOOD ){
+				while( _running && !st.stop_requested() )
+					UA_Server_run_iterate( _ua, true );
 				UA_Server_run_shutdown( _ua );
-				UA_Server_delete( _ua );
-				_ua = nullptr;
-				INFOT( ELogTags::App, "OPC UA server stopped." );
-			}};
-		}
+			}
+			else
+				ERRT( ELogTags::App, "UA_Server_run_startup failed: {}", UA_StatusCode_name(sc) );
+			UA_Server_delete( _ua );
+			_ua = nullptr;
+			INFOT( ELogTags::App, "OPC UA server stopped." );
+		}};
 	}
 	α UAServer::Load( fs::path configFile, SL sl )ε->void{
 		INFOT( ELogTags::App, "Loading configuration from: '{}'", configFile.string() );
@@ -114,7 +123,12 @@ namespace Jde::Opc::Server {
 		THROW_IFSL( status, "({})Failed to add object node: error:'{}', node:'{}'", Ƒ("{:x}", status), UA_StatusCode_name(status), object.ToString() );
 		dynamic_cast<NodeId&>(object) = id;
 		DBGSL( "Added Object: {}", object.ToString(parent) );
-		return object.PK ? _objects.try_emplace( object.PK, move(object) ).first->second : object;
+		if( !object.PK )
+			return object;
+		auto [it, inserted] = _objects.try_emplace( object.PK, move(object) );
+		if( !inserted )
+			dynamic_cast<NodeId&>( it->second ) = id;//existing cache entry may hold a null/stale id (auto-assign requested); refresh with the server-assigned id so GetObject(NodeId)/Find resolve it.
+		return it->second;
 	}
 
 	α UAServer::AddObjectType( sp<ObjectType> oType, SL sl )ε->void{
@@ -135,17 +149,16 @@ namespace Jde::Opc::Server {
 			_typeDefs.try_emplace( oType->PK, oType );
 	}
 	α UAServer::AddReference( NodePK nodePK, const Reference& ref, SL sl )ε->void{
-		auto& source = GetVariable( ref.SourcePK );
+		const Node* source = ref.SourcePK ? &GetParent( ref.SourcePK, sl ) : nullptr;//PK lookup across objects/types/variables; a source need not be a variable, and SourcePK==0 means "no source".
 		UAε( UA_Server_addReference(
 			_ua,
-			ref.SourcePK ? source : UA_NODEID_NULL,
+			source ? *source : UA_NODEID_NULL,
 			GetRefType( ref.RefTypePK, sl ),
-			ref.TargetPK ? (UA_ExpandedNodeId)ExNodeId{ (NodeId&)GetObject(NodeId{(uint32_t)ref.TargetPK}, sl) } : UA_EXPANDEDNODEID_NULL,
+			ref.TargetPK ? (UA_ExpandedNodeId)ExNodeId{ GetParent(ref.TargetPK, sl) } : UA_EXPANDEDNODEID_NULL,//by PK: TargetPK is a DB key, not an ns0 numeric NodeId.
 			ref.IsForward
 		) );
 		_refs.try_emplace( nodePK, ref );
-		auto& sourceParent = GetParent( source.ParentNodePK, sl );
-		DBGSL( "Added Reference: {} -> {} ({})", source.ToString(sourceParent), ref.TargetPK, ref.RefTypePK );
+		DBGSL( "Added Reference: {} -> {} ({})", source ? source->ToString() : Ƒ("[null:{:x}]", nodePK), ref.TargetPK, ref.RefTypePK );
 	}
 	α UAServer::AddVariable( Variable variable, SL sl )->Variable{
 		ASSERT( variable.TypeDef );
@@ -164,7 +177,12 @@ namespace Jde::Opc::Server {
 		THROW_IFX( status, UAException(status, variable.ToString(), sl, {ELogLevel::Error, EOpcLogTags::Opc}) );
 		dynamic_cast<NodeId&>(variable) = id;
 		DBGSL( "Added Variable: {}", variable.ToString(parent) );
-		return variable.PK ? _variables.try_emplace( variable.PK, move(variable) ).first->second : variable;
+		if( !variable.PK )
+			return variable;
+		auto [it, inserted] = _variables.try_emplace( variable.PK, move(variable) );
+		if( !inserted )
+			dynamic_cast<NodeId&>( it->second ) = id;//existing cache entry may hold a null/stale id (auto-assign requested); refresh with the server-assigned id so GetVariable/Find resolve it.
+		return it->second;
 	}
 
 

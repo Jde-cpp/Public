@@ -26,6 +26,35 @@ namespace Jde::Opc::Server{
 			r.GetBitOpt(20).value_or(false)
 		}
 	{}
+	ObjectType::ObjectType( const ObjectType& v )ι:
+		Node{ v }{
+		UA_ObjectTypeAttributes_copy( &v, this );//deep-copy: the implicit copy ctor would share attribute pointers that the destructor would then double-free.
+	}
+	ObjectType::ObjectType( ObjectType&& v )ι:
+		Node{ move(v) },
+		UA_ObjectTypeAttributes{ move(v) }{
+		UA_ObjectTypeAttributes_init( &v );//we stole v's attributes; keep its destructor from freeing them.
+	}
+	α ObjectType::operator=( const ObjectType& v )ι->ObjectType&{
+		if( this != &v ){
+			Node::operator=( v );
+			UA_ObjectTypeAttributes_clear( this );
+			UA_ObjectTypeAttributes_copy( &v, this );
+		}
+		return *this;
+	}
+	α ObjectType::operator=( ObjectType&& v )ι->ObjectType&{
+		if( this != &v ){
+			Node::operator=( move(v) );
+			UA_ObjectTypeAttributes_clear( this );
+			memcpy( &this->specifiedAttributes, &v.specifiedAttributes, sizeof(UA_ObjectTypeAttributes) );
+			UA_ObjectTypeAttributes_init( &v );
+		}
+		return *this;
+	}
+	ObjectType::~ObjectType(){
+		UA_ObjectTypeAttributes_clear( this );
+	}
 	α ObjectType::InsertParams()Ι->vector<DB::Value>{
 		vector<DB::Value> params = Node::InsertParams();
 		params.emplace_back( isAbstract, 0 );

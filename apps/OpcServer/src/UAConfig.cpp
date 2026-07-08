@@ -18,9 +18,9 @@ namespace Jde::Opc::Server{
 			try{
 				SetupSecurityPolicies( move(certificateFile) );
 			}
-			catch( std::exception& e ){
+			catch( std::exception& ){
 				UA_ServerConfig_clear( this );
-				throw move(e);
+				throw;//rethrow original: `throw move(e)` slices to std::exception, losing the derived type and Jde::Exception state.
 			}
 		}
 		else
@@ -109,9 +109,9 @@ namespace Jde::Opc::Server{
     	UA_NodeId defaultUserTokenGroup = UA_NODEID_NUMERIC( 0, UA_NS0ID_SERVERCONFIGURATION_CERTIFICATEGROUPS_DEFAULTUSERTOKENGROUP );
     	UAε( UA_CertificateGroup_Memorystore( &sessionPKI, &defaultUserTokenGroup, &list, logging, &paramsMap) );
 		}
-		catch( std::exception& e ){
+		catch( std::exception& ){
 			UA_TrustListDataType_clear(&list);
-			throw move(e);
+			throw;//rethrow original: `throw move(e)` slices to std::exception, losing the derived type and Jde::Exception state.
 		}
     UA_TrustListDataType_clear(&list);
 		AddSecurityPolicies( move(certificate), move(privateKey) );
@@ -144,8 +144,4 @@ namespace Jde::Opc::Server{
 	α UAConfig::SetAccessControl()ι{
 
 	}
-	constexpr uint usernamePasswordsSize = 2;
-	UA_UsernamePasswordLogin usernamePasswords[usernamePasswordsSize] = {
-    {UA_STRING_STATIC("user1"), UA_STRING_STATIC("0123456789ABCD")},
-    {UA_STRING_STATIC("user2"), UA_STRING_STATIC("0123456789ABCD")}};
 }

@@ -28,6 +28,13 @@ namespace Jde::Opc::Server{
 	string _schemaName;
 }
 namespace Jde::Opc::Server::UAAccess{
+	Ω expired( const SessionContext* ctx )ι->bool{//non-authenticated paths set Expiration=TimePoint::max(); only JWT/SessionInfo sessions carry a real expiry.
+		if( ctx && ctx->Expiration<Clock::now() ){
+			TRACE( "Session for user {} expired at {}", ctx->UserPK.Value, ToIsoString(ctx->Expiration) );
+			return true;
+		}
+		return false;
+	}
 	Ω authorize( sv resource, Access::ERights rights, UserPK userPK )ι->bool{
 		bool allow{ true };
 		try{
@@ -101,7 +108,8 @@ namespace Jde::Opc::Server{
       ++policies;
 		}
 		THROW_IF( !policies, "No allowed policies set." );
-		log.pop_back();
+		if( !log.empty() )
+			log.pop_back();//drop trailing comma
 		INFOT( (ELogTags)EOpcLogTags::Server, "UserToken Uris:  [{}]", move(log) );
 		log.clear();
 
@@ -134,7 +142,8 @@ namespace Jde::Opc::Server{
 				++policies;
       }
     }
-		log.pop_back();
+		if( !log.empty() )
+			log.pop_back();//drop trailing comma; loop may not have run when numOfPolicies==0, leaving log empty (pop_back on empty is UB).
 		INFOT( (ELogTags)EOpcLogTags::Server, "UserToken Uris:  [{}]", move(log) );
 	}
 	α UAAccess::ActivateSession( UA_Server *server, UA_AccessControl *ac, const UA_EndpointDescription *endpointDescription, const UA_ByteString *secureChannelRemoteCertificate, const UA_NodeId *sessionId, const UA_ExtensionObject *userIdentityToken, void **sessionContext )ι->UA_StatusCode{
@@ -182,6 +191,7 @@ namespace Jde::Opc::Server{
 											anonymous_policy.length) != 0)) {
 							throw UAException{ UA_STATUSCODE_BADIDENTITYTOKENINVALID };
 					}
+					*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, {} };//UserPK{}==0: unauthenticated. Every later callback dereferences sessionContext, so it must be non-null on the GOOD path.
 			} else if( tokenType == &UA_TYPES[UA_TYPES_USERNAMEIDENTITYTOKEN] ) {
 				/* Username and password */
 				const UA_UserNameIdentityToken *userToken = ( UA_UserNameIdentityToken* )
@@ -221,6 +231,7 @@ namespace Jde::Opc::Server{
 				}
 				if( !match )
 						throw UAException{ UA_STATUSCODE_BADUSERACCESSDENIED };
+				*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, {} };//the static login list carries no UserPK; grant no rights until username auth resolves a real user. Must be non-null so later callbacks don't deref null.
 			} else if( tokenType == &UA_TYPES[UA_TYPES_X509IDENTITYTOKEN] ) {
 				const UA_X509IdentityToken *userToken = ( UA_X509IdentityToken* )userIdentityToken->content.decoded.data;
 				if( userToken->policyId.length < certificate_policy.length ||
@@ -269,7 +280,10 @@ namespace Jde::Opc::Server{
 		delete ctx;
 	}
 	α UAAccess::GetUserRightsMask( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, void *nodeContext )ι->UA_UInt32{
-		let rights = GetSchema().Authorizer->Rights( _schemaName, "node", static_cast<SessionContext*>(sessionContext)->UserPK );
+		let ctx = static_cast<SessionContext*>( sessionContext ); ASSERT( ctx );
+		if( !ctx || expired(ctx) )
+			return 0;
+		let rights = GetSchema().Authorizer->Rights( _schemaName, "node", ctx->UserPK );
 		UA_UInt32 mask = 0;
 		if( !empty(rights & Access::ERights::Update) )
 			mask = UA_WRITEMASK_ARRRAYDIMENSIONS | UA_WRITEMASK_BROWSENAME | UA_WRITEMASK_CONTAINSNOLOOPS | UA_WRITEMASK_DATATYPE | UA_WRITEMASK_DESCRIPTION | UA_WRITEMASK_DISPLAYNAME | UA_WRITEMASK_EVENTNOTIFIER | UA_WRITEMASK_EXECUTABLE | UA_WRITEMASK_HISTORIZING | UA_WRITEMASK_INVERSENAME | UA_WRITEMASK_ISABSTRACT  | UA_WRITEMASK_MINIMUMSAMPLINGINTERVAL | UA_WRITEMASK_NODECLASS | UA_WRITEMASK_NODEID | UA_WRITEMASK_SYMMETRIC | UA_WRITEMASK_USEREXECUTABLE | UA_WRITEMASK_VALUERANK | UA_WRITEMASK_VALUEFORVARIABLETYPE | UA_WRITEMASK_DATATYPEDEFINITION;
@@ -281,31 +295,31 @@ namespace Jde::Opc::Server{
 		ASSERT( nodeId );
 		if( !nodeId )
 			return 0;
-		let id = nodeId->identifier.numeric;
-		ASSERT( nodeId->identifierType == UA_NODEIDTYPE_NUMERIC );
-		if( nodeId->namespaceIndex==0 && id == UA_NS0ID_SERVER_NAMESPACEARRAY )
+		//only read identifier.numeric once the id is known numeric; string/GUID ids are valid here and go straight to UserRights.
+		if( nodeId->namespaceIndex==0 && nodeId->identifierType==UA_NODEIDTYPE_NUMERIC && nodeId->identifier.numeric==UA_NS0ID_SERVER_NAMESPACEARRAY )
 			return UA_ACCESSLEVELMASK_READ;
+		let ctx = static_cast<SessionContext*>( sessionContext ); ASSERT( ctx );
+		if( !ctx || expired(ctx) )
+			return 0;
 		OpcAuthorize& authorizer = static_cast<OpcAuthorize&>( *GetSchema().Authorizer );
-		return underlying( authorizer.UserRights(*nodeId, static_cast<SessionContext*>(sessionContext)->UserPK) );
+		return underlying( authorizer.UserRights(*nodeId, ctx->UserPK) );
 	}
 
 	α UAAccess::GetUserExecutable( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *methodId, void *methodContext )ι->UA_Boolean{
 		ASSERT( methodId );
 		if( !methodId )
 			return false;
-		ASSERT( methodId->identifierType == UA_NODEIDTYPE_NUMERIC && methodId->namespaceIndex == 0 );
-		let id = methodId->identifier.numeric;
-		if( id == UA_NS0ID_SERVER_NAMESPACEARRAY ){
+		if( methodId->namespaceIndex==0 && methodId->identifierType==UA_NODEIDTYPE_NUMERIC && methodId->identifier.numeric==UA_NS0ID_SERVER_NAMESPACEARRAY )
 			return true;
-		}
-		WARNT( (ELogTags)EOpcLogTags::Server, "GetUserExecutable: MethodId {} not enforced", id );
-		BREAK;
-		return true;
+		WARNT( (ELogTags)EOpcLogTags::Server, "GetUserExecutable: MethodId {} not enforced; denying by default.", NodeId{*methodId}.ToString() );
+		return false;//deny-by-default, matching the other unenforced Allow* callbacks; method execution has no ACL yet.
 	}
 	α UAAccess::GetUserExecutableOnObject( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *methodId, void *methodContext, const UA_NodeId *objectId, void *objectContext )ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowAddNode( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_AddNodesItem *item )ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowAddReference( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_AddReferencesItem *item )ι->UA_Boolean{
 		let ctx = static_cast<SessionContext*>( sessionContext ); ASSERT( ctx );
+		if( !ctx || expired(ctx) )
+			return false;
 		let authorized = authorize( "variables", Access::ERights::Subscribe, ctx->UserPK );
 		return authorized;
 	}
@@ -313,6 +327,8 @@ namespace Jde::Opc::Server{
 	α UAAccess::AllowDeleteReference( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_DeleteReferencesItem *item )ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowBrowseNode( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, void *nodeContext )ι->UA_Boolean{
 		let ctx = static_cast<SessionContext*>( sessionContext ); ASSERT( ctx );
+		if( !ctx || expired(ctx) )
+			return false;
 		return authorize( "browse", Access::ERights::Read, ctx->UserPK );
 	}
 	α UAAccess::AllowTransferSubscription( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *oldSessionId, void *oldSessionContext, const UA_NodeId *newSessionId, void *newSessionContext )ι->UA_Boolean{ ASSERT(false); return false; }

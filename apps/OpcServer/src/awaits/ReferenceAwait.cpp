@@ -34,6 +34,7 @@ namespace Jde::Opc::Server {
 			sql.IsStoredProc = false;
 			co_await schema.DS()->Execute( sql.Move(), _sl );
 			GetUAServer().AddReference( _ref.SourcePK, _ref );
+			Resume();
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
