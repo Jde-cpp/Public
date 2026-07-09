@@ -6,6 +6,7 @@
 #include "StartupAwait.h"
 #include "UAClient.h"
 #include "auth/PasswordAwait.h"
+#include "jde/fwk/str.h"
 #include "ql/GatewayQL.h"
 
 #define let const auto
@@ -22,8 +23,8 @@ namespace Jde::Opc::Gateway{
 			auto strings = Str::Split( scsString );
 			jarray j;
 			for( let s : strings ){
-				let sc = To<StatusCode>( s );
-				j.push_back( UAException::ToJson(sc, true) );
+				if( let sc = Str::TryTo<StatusCode>(string(s)); sc )
+					j.push_back( UAException::ToJson(*sc, true) );
 			}
 			_readyResult = mu<jvalue>( jobject{{"errorCodes", j}} );
 		}
@@ -50,10 +51,10 @@ namespace Jde::Opc::Gateway{
 	}
 
 
-	α HttpRequestAwait::CoHandleRequest( ServerCnnctnNK&& opcId )ι->ConnectAwait::Task{
+	α HttpRequestAwait::CoHandleRequest( ServerCnnctnNK&& opcId )ι->void{
 		let& target = _request.Target();
 		try{
-			_client = co_await ConnectAwait( move(opcId), _request.SessionId(), _request.UserPK(), SRCE_CUR );
+			//_client = co_await ConnectAwait( move(opcId), _request.SessionId(), _request.UserPK(), SRCE_CUR );
 			if( _request.IsGet() ){
 				throw RestException<http::status::not_found>{ SRCE_CUR, move(_request), "Unknown get target '{}'", target };
 			}
@@ -100,8 +101,9 @@ namespace Jde::Opc::Gateway{
 			co_await *( appClient->QLServer()->Query(Ƒ("purgeSession(id:\"{:x}\")", _request.SessionId()), {}, appClient->UserPK()) );
 			Resume( move(_request) );
 		}
-		catch( exception& e )
-		{}
+		catch( exception& e ){
+			ResumeExp( RestException<http::status::internal_server_error>(move(e), move(_request)) );
+		}
 	}
 
 	α HttpRequestAwait::Schemas()Ι->const vector<sp<DB::AppSchema>>&{
@@ -113,9 +115,9 @@ namespace Jde::Opc::Gateway{
 			Login( _request.UserEndpoint.address().to_string() );
 		else if( _request.IsPost("/logout") )
 			Logout();
-		else if( _request.IsGet("/graphql") || _request.IsPost("/graphql") ){
-			ASSERT(false);
-		}else{
+		else if( _request.IsGet("/graphql") || _request.IsPost("/graphql") )
+			ResumeExp( RestException<http::status::not_found>{ SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() } );
+		else{
 			auto opc = _request["opc"];
 			if( opc.size() )
 				CoHandleRequest( move(opc) );

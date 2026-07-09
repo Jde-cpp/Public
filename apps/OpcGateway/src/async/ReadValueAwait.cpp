@@ -22,13 +22,21 @@ namespace Jde::Opc::Gateway{
 		for( auto&& nodeId : _nodes ){
 			RequestId requestId{};
 			try{
-				UAε( UA_Client_readValueAttribute_async(_client->UAPointer(), nodeId, onResponse, this, &requestId) );
-				_requests.emplace( requestId, move(nodeId) );
+				{
+					lg l{ _mutex };
+					UAε( UA_Client_readValueAttribute_async(_client->UAPointer(), nodeId, onResponse, this, &requestId) );
+					_requests.emplace( requestId, move(nodeId) );
+				}
 				_client->Process( requestId, "readValueAttribute" );
 			}
 			catch( UAException& e ){
-				_results.emplace( nodeId, Value{(StatusCode)e.Code()} );
-				if( _results.size()==_nodes.size() )
+				bool done;
+				{
+					lg l{ _mutex };
+					_results.emplace( nodeId, Value{(StatusCode)e.Code()} );
+					done = _results.size()==_nodes.size();
+				}
+				if( done )
 					Resume( move(_results) );
 			}
 		}
@@ -37,15 +45,20 @@ namespace Jde::Opc::Gateway{
 	α ReadValueAwait::OnComplete( RequestId requestId, StatusCode sc, UA_DataValue* val )ι->void{
 		_client->ClearRequest( requestId );
 		auto logPrefix = [&](){ return Ƒ("[{}.{}]", hex(_client->Handle()), requestId); };
-		auto nodeIdIt = _requests.find( requestId );
-		if( nodeIdIt==_requests.end() ){
-			CRITICAL( "{}ReadValueAwait::OnComplete - could not find requestId", logPrefix() );
-			return;
+		bool done;
+		{
+			lg l{ _mutex };
+			auto nodeIdIt = _requests.find( requestId );
+			if( nodeIdIt==_requests.end() ){
+				CRITICAL( "{}ReadValueAwait::OnComplete - could not find requestId", logPrefix() );
+				return;
+			}
+			Value value = sc || !val ? Value{ sc } : Value{ move(*val) };
+			DBG( "{} Value: {}", logPrefix(), serialize(value.ToJson()) );
+			_results.emplace( nodeIdIt->second, move(value) );
+			done = _results.size()==_nodes.size();
 		}
-		Value value = sc || !val ? Value{ sc } : Value{ move(*val) };
-		DBG( "{} Value: {}", logPrefix(), serialize(value.ToJson()) );
-		_results.emplace( nodeIdIt->second, move(value) );
-		if( _results.size()==_nodes.size() )
+		if( done )
 			Resume( move(_results) );
 	}
 }

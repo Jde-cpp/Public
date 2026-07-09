@@ -172,7 +172,7 @@ namespace Jde::Opc::Gateway{
 			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_FLOAT] );
 			break;}
 		case FromServer::Value::OfCase::kGuid:{
-			UA_Guid v;
+			UA_Guid v{};//zero-init: a proto guid shorter than 16 bytes would otherwise leave the tail uninitialized and send garbage to the server.
 			memcpy( &v, proto.guid().data(), std::min(sizeof(UA_Guid),proto.guid().size()) );
 			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_GUID] );
 			break;}

@@ -163,7 +163,7 @@ namespace Jde::Opc::Gateway{
 				break;}
 			default:
 				LogRead( Ƒ("Unknown message type '{}'", underlying(m.Value_case())), requestId, ELogLevel::Critical );
-				WriteException( Exception("({})Message not implemented."), requestId );
+				WriteException( Exception("({})Message not implemented.", m.Value_case()), requestId );
 			}
 		}
 	}

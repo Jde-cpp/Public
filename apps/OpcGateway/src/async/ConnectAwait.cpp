@@ -40,17 +40,24 @@ namespace Jde::Opc::Gateway{
 		if( auto client = UAClient::Find(_opcTarget, _cred); client ){
 			TRACET( ((ELogTags)EOpcLogTags::Opc) | ELogTags::Access, "[{:x}]Found client for cred: {}", client->Handle(), _cred.ToString() );
 			base::Resume( move(client) );
+			return;
 		}
-		else{
-			_requestMutex.lock();
-			auto opcHandles = _requests.try_emplace( _opcTarget ).first;
-			auto credHandles = opcHandles->second.try_emplace( _cred ).first;
-			credHandles->second.push_back( _h );
-			let size = credHandles->second.size();
-			_requestMutex.unlock();
-			if( size == 1 )
-				Create();
+		sp<UAClient> client;
+		bool create = false;
+		{
+			lg l{ _requestMutex };
+			//Re-check under _requestMutex: a client can activate and drain _requests between the unlocked Find above and here. StateCallback inserts into _clients *before* Posting the drain (which needs this mutex), so a locked Find cannot miss a client whose drain already ran. Without this, a stale miss registers as the new first handle → duplicate Create() → the second client fails StateCallback's ASSERT(inserted) and is silently dropped.
+			if( client = UAClient::Find(_opcTarget, _cred); !client ){
+				auto opcHandles = _requests.try_emplace( _opcTarget ).first;
+				auto credHandles = opcHandles->second.try_emplace( _cred ).first;
+				credHandles->second.push_back( _h );
+				create = credHandles->second.size()==1;
+			}
 		}
+		if( client )
+			base::Resume( move(client) );
+		else if( create )
+			Create();
 	}
 	α ConnectAwait::Create()ι->TAwait<vector<ServerCnnctn>>::Task{
 		try{

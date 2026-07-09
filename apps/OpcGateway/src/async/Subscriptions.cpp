@@ -85,8 +85,14 @@ namespace Jde::Opc::Gateway{
 			UnsubscribeAwait& await = *(UnsubscribeAwait*)userdata;
 			await.OnComplete( *response );
 		};
-		UA_Client_Subscriptions_delete_async( _client->UAPointer(), request, onComplete, this, &_requestId );
+		let sc = UA_Client_Subscriptions_delete_async( _client->UAPointer(), request, onComplete, this, &_requestId );
 		UA_DeleteSubscriptionsRequest_clear( &request );
+		if( sc ){
+			//The async delete never dispatched, so onComplete/Resume() will never fire. This awaiter is co_awaited from UAClient::Shutdown; resume it anyway or shutdown wedges forever.
+			WARN( "[{}]Could not delete subscriptions ({}); resuming to avoid wedging shutdown.", hex(_client->Handle()), UAException::Message(sc) );
+			Resume();
+			return;
+		}
 		_client->Process( _requestId, "Subscriptions_delete" );
 		TRACE( "[{}.{}]Unsubscribe", hex(_client->Handle()), hex(_requestId) );
 	}

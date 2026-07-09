@@ -32,14 +32,15 @@ namespace Jde::Opc::Gateway{
 
 			}
 		}
-		client = nullptr;
 		if( !erased )
 			DBG( "[{}] - could not find client='{}'.", hex(client->Handle()), client->Target() );
+		client = nullptr;
 		return erased;
 	}
 	concurrent_flat_map<uint32_t, uint32_t> _handles;
 	α createHandle( const ServerCnnctn& target )ι->Jde::Handle{
-		uint32_t serverHash = target.Id ? target.Id : std::hash<string>{}( target.Url );
+		//Handle packs the server id into its top 32 bits, so fold the 64-bit hash rather than truncating it (xor high^low keeps more entropy). A collision only merges two servers' connection-index counters, which are purely for log correlation - benign.
+		uint32_t serverHash = target.Id ? target.Id : []( size_t h )ι{ return (uint32_t)h ^ (uint32_t)(h>>32); }( std::hash<string>{}(target.Url) );
 		uint32_t connectionIndex{};
 		auto increment = [&connectionIndex]( auto& last ){ connectionIndex = ++last.second; };
 		_handles.try_emplace_and_visit( serverHash, 0, increment, increment );
@@ -58,23 +59,27 @@ namespace Jde::Opc::Gateway{
 		_handle{ createHandle(_opcServer) },
 		_logger{ _handle },
 		_ptr{ Create() }{
-		UA_ClientConfig_setDefault( Configuration() );
+		//Configuration() must run BEFORE setDefault: it installs the custom security policies (and asserts securityPoliciesSize==0 first). setDefault then only back-fills fields left unset — its own None-policy install is guarded by securityPoliciesSize==0, so it won't clobber ours (open62541 ua_config_default.c). Reversing the order would trip Configuration()'s assert and leak the default policy.
+		let sc = UA_ClientConfig_setDefault( Configuration() ); THROW_IFX( sc, UAClientException(sc, Handle()) );
 		INFO( "[{}]Creating UAClient target: '{}' url: '{}' credential: '{}' )", hex(Handle()), Target(), Url(), Credential.ToString() );
 		LogClientEndpoints();
 	}
 
 	α UAClient::Shutdown( bool /*terminate*/, SL /*sl*/ )ι->VoidAwait::Task{
+		vector<sp<UAClient>> clients;
 		{
 			sl _1{ _clientsMutex };
-			for( auto&& [_,creds] : _clients ){
-				for( auto&& [_,client] : creds ){
-					if( auto p = move(client->_monitoredNodes); p )
-						co_await p->Shutdown();
-					client->_asyncRequest.Stop();
-					if( client.use_count()>1 )
-					  WARN( "[{}]use_count={}", hex(client->Handle()), client.use_count() );
-				}
-			}
+			for( auto&& [_,creds] : _clients )
+				for( auto&& [_,client] : creds )
+					clients.push_back( client );
+		}
+		//Must not hold _clientsMutex across co_await: the awaitable resumes on another pool thread (UB to unlock a shared_mutex off-thread) and the resume path (RemoveClient, StateCallback insertion) needs the unique lock.
+		for( auto& client : clients ){
+			if( auto p = move(client->_monitoredNodes); p )
+				co_await p->Shutdown();
+			client->_asyncRequest.Stop();
+			if( client.use_count()>2 )//_clients + this local copy are expected; more means a leaked reference.
+				WARN( "[{}]use_count={}", hex(client->Handle()), client.use_count() );
 		}
 		ul _{ _clientsMutex };
 		_clients.clear();
@@ -95,12 +100,16 @@ namespace Jde::Opc::Gateway{
 			Crypto::CreateCertificate( CertificateFile(), privateKeyFile, passcode, Ƒ("URI:{}", uri), "jde-cpp", "US", "localhost" );
 		}
 		auto config = UA_Client_getConfig( _ptr );
-		using SecurityPolicyPtr = up<UA_SecurityPolicy, decltype( &UA_free )>;
 		const uint size = addSecurity ? 2 : 1; ASSERT( !config->securityPoliciesSize );
-		SecurityPolicyPtr securityPolicies{ (UA_SecurityPolicy*)UA_malloc(sizeof(UA_SecurityPolicy)*size), &UA_free };
+		uint initialized = 0;//policies actually constructed; on an exception before ownership transfers to config, the deleter clears these — UA_free alone would leak each policy's internals (policyUri, contexts, ...).
+		auto clearPolicies = [&initialized]( UA_SecurityPolicy* p )ι{ for( uint i=0; i<initialized; ++i ) p[i].clear( &p[i] ); UA_free( p ); };
+		up<UA_SecurityPolicy, decltype(clearPolicies)> securityPolicies{ (UA_SecurityPolicy*)UA_malloc(sizeof(UA_SecurityPolicy)*size), clearPolicies };
 		auto sc = UA_SecurityPolicy_None( &securityPolicies.get()[0], UA_BYTESTRING_NULL, &_logger ); THROW_IFX( sc, UAClientException(sc, Handle()) );
+		++initialized;
 		if( addSecurity ){
+			UA_String_clear( &config->applicationUri );//clear any existing value before overwriting so the default isn't leaked.
 			config->applicationUri = UA_STRING_ALLOC( uri.c_str() );
+			UA_String_clear( &config->clientDescription.applicationUri );
 			config->clientDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			let& settings = AppClient()->SslSettings; //requires authentication[AppClient] & transport[OpcServer] security be equal.
 			certAuth = certAuth && settings.has_value();
@@ -111,9 +120,12 @@ namespace Jde::Opc::Gateway{
 			auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
 			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
 			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAClientException(sc, Handle()) );
+			++initialized;
 
-			config->authSecurityPolicies = ( UA_SecurityPolicy * )UA_realloc( config->authSecurityPolicies, sizeof(UA_SecurityPolicy) *(config->authSecurityPoliciesSize + 1) );
-			UA_SecurityPolicy_Basic256Sha256( &config->authSecurityPolicies[config->authSecurityPoliciesSize], *certificate.get(), *privateKey.get(), config->logging );
+			auto grown = ( UA_SecurityPolicy* )UA_realloc( config->authSecurityPolicies, sizeof(UA_SecurityPolicy) *(config->authSecurityPoliciesSize + 1) );
+			THROW_IFX( !grown, UAClientException(UA_STATUSCODE_BADOUTOFMEMORY, Handle()) );//realloc failure leaves the original block valid; don't overwrite the pointer with null (would leak it and null-deref below).
+			config->authSecurityPolicies = grown;
+			sc = UA_SecurityPolicy_Basic256Sha256( &config->authSecurityPolicies[config->authSecurityPoliciesSize], *certificate.get(), *privateKey.get(), config->logging ); THROW_IFX( sc, UAClientException(sc, Handle()) );
 			config->authSecurityPoliciesSize++;
 		}
 		config->securityPolicies = securityPolicies.release();
@@ -260,11 +272,11 @@ namespace Jde::Opc::Gateway{
 		return ua;
 	}
 	α UAClient::Connect()ε->void{
+		DBG( "[{}]Connecting to '{}', using '{}'", hex(Handle()), Url(), Credential.ToString() );
+		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
 		auto p = shared_from_this();
 		ASSERT( !_awaitingActivation.contains(p) );
 		_awaitingActivation.emplace( shared_from_this() );
-		DBG( "[{}]Connecting to '{}', using '{}'", hex(Handle()), Url(), Credential.ToString() );
-		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
 		_asyncRequest.SetClient( p );
 		Process( ConnectRequestId, "Connect" );
 	}
@@ -295,7 +307,8 @@ namespace Jde::Opc::Gateway{
 				client = co_await GetClient( move(target), move(credential) );
 				f( move(client) );
 			}
-			catch( exception& e ){
+			catch( const exception& retryEx ){
+				WARN( "[{}]Retry after '{}' failed: {}", target, UAException::Message(e.Code()), retryEx.what() );
 			}
 		}
 	}

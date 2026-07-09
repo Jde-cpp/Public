@@ -31,6 +31,11 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 	α PasswordAwait::await_resume()ε->optional<Web::FromServer::SessionInfo>{
-		return Promise() ? base::await_resume() : nullopt;
+		if( Promise() )
+			return base::await_resume();
+		//Cache hit (await_ready()==true): AuthCache already registered _sessionId as authenticated for this opc, but Execute()/AddSession never ran so there's no SessionInfo. Return one carrying that session id instead of nullopt, otherwise Login skips setting the session id and the client gets none. (The deeper "a fresh login shouldn't reuse another session's cache" concern is the AuthCache design, review #14.)
+		Web::FromServer::SessionInfo info;
+		info.set_session_id( _sessionId );
+		return info;
 	}
 }
