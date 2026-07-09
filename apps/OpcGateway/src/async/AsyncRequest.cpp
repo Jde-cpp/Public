@@ -4,8 +4,9 @@
 #define let const auto
 
 namespace Jde::Opc::Gateway{
-	Duration _pingInterval;
-	Duration _ttl;
+	Duration _pingInterval;//config, set once at startup - safe to share.
+	Duration _ttl;//config, set once at startup - safe to share.
+	//TODO! _lastRequest and _pingTimer are per-client state but live at file scope, shared across every UAClient's ProcessingLoop. With >=2 clients: _lastRequest is written under different per-client _requestMutexes (data race; one client's traffic suppresses another's TTL shutdown), and ping()'s ASSERT(!_pingTimer) fires / both coroutines co_await the same DurationTimer and the first reset()s it under the other (UB). Move both into AsyncRequest. Deferred to be fixed together with the #3 threading redesign.
 	TimePoint _lastRequest;
 	optional<DurationTimer> _pingTimer; mutex _pingMutex;
 
@@ -35,15 +36,16 @@ namespace Jde::Opc::Gateway{
 	}
 	// 1 per UAClient
 	α AsyncRequest::ProcessingLoop()ι->DurationTimer::Task{
-		function<string()> logPrefix = [this](){ return Ƒ("[{:x}]", _client ? _client->Handle() : 0); };
+		sp<UAClient> client;
+		{ ul _{ _requestMutex }; client = _client; }//Stop() writes _client under the same mutex; read it once here to avoid the shared_ptr data race.
+		function<string()> logPrefix = [client](){ return Ƒ("[{:x}]", client ? client->Handle() : 0); };
 		DBG( "{}ProcessingLoop started", logPrefix() );
 		cancelPing();
 		StatusCode sc{};
-		auto client = _client;
 		while( _running.test() ){
 			uint size;
 			{
-				sl _{ _requestMutex };
+				ul _{ _requestMutex };
 				if( size = _requests.size(); size ){
 					if( *_requests.begin()==PingRequestId )
 						_requests.erase( PingRequestId );
@@ -52,6 +54,12 @@ namespace Jde::Opc::Gateway{
 				}
 			}
 			TRACE( "{}run_iterate: requestCount: {}", logPrefix(), size );
+			//TODO! open62541 UA_Client is not thread-safe, but the fwk executor is a multi-threaded io_context pool.
+			// run_iterate() runs here on one pool thread while other pool threads submit async requests (ReadAwait,
+			// ReadValueAwait, WriteAwait, DataChanges, Subscriptions, ...) and call synchronous services
+			// (translateBrowsePathsToNodeIds, getRemoteDataTypes, getConnectionAttributeCopy) against the same client.
+			// Fix requires a design decision: route ALL UA_Client_* calls through this loop (queue of closures), or
+			// guard run_iterate + every UA_Client_* call with a per-client mutex. Deferred (review finding #3).
 			if( sc = UA_Client_run_iterate(*client, 0); sc ){
 				_running.clear();
 				ul _{ _requestMutex };
@@ -63,6 +71,7 @@ namespace Jde::Opc::Gateway{
 				break;
 			}
 			uint newSize;
+			RequestId firstRequest{};
 			{
 				_requestMutex.lock();
 				if( newSize=_requests.size(); !newSize ){
@@ -75,11 +84,12 @@ namespace Jde::Opc::Gateway{
 					}
 					break;
 				}
-				TRACE( "{}requestCount: {}, [0]={}", logPrefix(), newSize, hex(*_requests.begin()) );
+				firstRequest = *_requests.begin();
+				TRACE( "{}requestCount: {}, [0]={}", logPrefix(), newSize, hex(firstRequest) );
 				_requestMutex.unlock();
 			}
 			if( size==newSize ){
-				let sleep = size==1 && *_requests.begin()==SubscriptionRequestId ? 500ms : 1ms; //UA_CreateSubscriptionRequest_default
+				let sleep = size==1 && firstRequest==SubscriptionRequestId ? 500ms : 1ms; //UA_CreateSubscriptionRequest_default
 				(void)co_await DurationTimer{ sleep };
 			}
 		}
@@ -100,12 +110,14 @@ namespace Jde::Opc::Gateway{
 		TRACE( "[{}.{}]Processing: {}", hex(UAHandle()), hex(requestId), what );
 		if( _stopped.test() )
 			return;
+		sp<UAClient> self;
 		{
 			ul _{_requestMutex};
 			_requests.emplace( requestId );
+			self = _client;//keep the owning UAClient (and thus `this`) alive across the Post; Stop() nulls _client under this mutex.
 		}
-		if( !_running.test_and_set() )
-			Post( std::bind(&AsyncRequest::ProcessingLoop, this) );
+		if( self && !_running.test_and_set() )
+			Post( [self,this]{ ProcessingLoop(); } );
 	}
 	α AsyncRequest::Stop()ι->void{
 		DBG( "[{}]Stopping ProcessingLoop", UAHandle() );

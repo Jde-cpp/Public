@@ -36,7 +36,8 @@ namespace Jde::Opc{
 		}
 		else if( id.has_string() ){
 			y.identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
-			y.identifier.string = UA_String_fromChars( id.string().c_str() );
+			UA_ByteString_allocBuffer( &y.identifier.string, id.string().size() );//not UA_String_fromChars(c_str()): that stops at an embedded NUL. Copy by size to preserve the full node-id string.
+			memcpy( y.identifier.string.data, id.string().data(), id.string().size() );
 		}
 		else if( id.has_byte_string() ){
 			y.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
@@ -45,7 +46,7 @@ namespace Jde::Opc{
 		}
 		else if( id.has_guid() ){
 			y.identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
-			memcpy( &y.identifier.guid, id.guid().data(), std::min(sizeof(UA_Guid),id.guid().size()) );
+			memcpy( &y.identifier.guid, id.guid().data(), std::min(sizeof(UA_Guid),id.guid().size()) );//NodeId's ctor zero-inits UA_NodeId, so a guid shorter than 16 bytes leaves the tail zeroed (not garbage).
 		}
 		return y;
 	}

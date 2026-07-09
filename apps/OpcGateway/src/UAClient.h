@@ -39,7 +39,7 @@ namespace Jde::Opc::Gateway{
 		Ṫ ClearRequestH( UA_Client* ua , RequestId requestId )ι->T;
 		α ClearRequest( RequestId requestId )ι->void{ _asyncRequest.Clear( requestId ); }
 		Ŧ ClearRequestH( RequestId requestId )ι->T;//{ return ClearRequest<UARequest<T>>( requestId )->CoHandle; }
-		α MonitoredNodes()ι->UAMonitoringNodes&{ if( !_monitoredNodes ) _monitoredNodes = mu<UAMonitoringNodes>(shared_from_this()); return *_monitoredNodes; }
+		α MonitoredNodes()ι->UAMonitoringNodes&{ std::call_once( _monitoredNodesOnce, [this]{ _monitoredNodes = mu<UAMonitoringNodes>(shared_from_this()); } ); return *_monitoredNodes; }//lazy but thread-safe: callers run on the loop thread (data-change callbacks) and pool threads (subscribe/unsubscribe) concurrently. Can't build eagerly in the ctor — shared_from_this() isn't valid until make_shared finishes wiring the weak ref.
 		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
 		α RetryVoid( function<void(sp<UAClient>&&) > f, UAException&& e, sp<UAClient>&& pClient )ι->ConnectAwait::Task;
 		α Process( RequestId requestId, sv what )ι->void;
@@ -87,6 +87,7 @@ namespace Jde::Opc::Gateway{
 		friend α Write::OnResponse( UA_Client *ua, void *userdata, RequestId requestId, UA_WriteResponse *response )ι->void;
 		friend α Attributes::OnResponse( UA_Client* ua, void* userdata, RequestId requestId, StatusCode status, UA_NodeId* dataType )ι->void;
 
+		std::once_flag _monitoredNodesOnce;
 		up<UAMonitoringNodes> _monitoredNodes;//destroy first
 	};
 

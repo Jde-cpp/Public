@@ -1,5 +1,6 @@
 #pragma once
 
+#include <shared_mutex>
 namespace Jde::Opc{ struct Value; }
 namespace Jde::Opc::Gateway {
 	struct UAClient;
@@ -12,6 +13,7 @@ namespace Jde::Opc::Gateway {
 	private:
 		flat_set<NodeId> _nodes;
 		sp<UAClient> _client;
+		std::mutex _mutex;
 		flat_map<RequestId, NodeId> _requests;
 		flat_map<NodeId, Value> _results;
 	};

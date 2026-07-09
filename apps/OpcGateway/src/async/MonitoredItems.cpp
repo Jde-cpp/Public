@@ -19,7 +19,6 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α DeleteMonitoredItemsAwait::Suspend()ι->void{
-		bool first{true};
 		try{
 			for( let& [subscriptionId, monitorIds] : _monitoredItems ){
 				UA_DeleteMonitoredItemsRequest request{
@@ -31,20 +30,35 @@ namespace Jde::Opc::Gateway{
 				for( let& id : monitorIds )
 					request.monitoredItemIds[i++] = id;
 
-				RequestId _requestId{};
+				RequestId _requestId{};//name required by the UACε macro (it references _requestId).
 				UACε( UA_Client_MonitoredItems_delete_async(_client->UAPointer(), request, monitoredItemsDeleteCallback, this, &_requestId) );
-				TRACE( "[{}.{}]Deleting monitored items for subscriptionId={}, count={}", _client->Handle(), _requestId, subscriptionId, monitorIds.size() );
-				if( first ){
-					_client->Process( _requestId, "MonitoredItems_delete" );
-					first = false;
-				}
 				UA_DeleteMonitoredItemsRequest_clear( &request );
+				TRACE( "[{}.{}]Deleting monitored items for subscriptionId={}, count={}", _client->Handle(), _requestId, subscriptionId, monitorIds.size() );
+				bool first;
+				{ lg l{ _mutex }; first = _submitted++==0; }
+				if( first )
+					_client->Process( _requestId, "MonitoredItems_delete" );
 			}
 		}
 		catch( exception& e ){
-			if( first )
+			//_submitted has no concurrent writer here (the loop has exited); if nothing was accepted, no callback will fire, so propagate like the original. Otherwise the in-flight deletes complete and TryResume() resumes normally.
+			WARN( "[{}]Delete monitored items: {}/{} submitted before error: {}", _client->Handle(), _submitted, _monitoredItems.size(), e.what() );
+			if( !_submitted ){
 				ResumeExp( move(e) );
+				return;
+			}
 		}
+		{ lg l{ _mutex }; _submissionsComplete = true; }
+		TryResume();
+	}
+	α DeleteMonitoredItemsAwait::TryResume()ι->void{
+		{
+			lg l{ _mutex };
+			if( _resumed || !_submissionsComplete || _finished.size()!=_submitted )
+				return;
+			_resumed = true;
+		}
+		Resume();//outside the lock: may synchronously resume+destroy this. Do not touch members after.
 	}
 	α DeleteMonitoredItemsAwait::OnComplete( UA_DeleteMonitoredItemsResponse& response, RequestId requestId )ι->void{
 		_client->ClearRequest( requestId );
@@ -56,8 +70,7 @@ namespace Jde::Opc::Gateway{
 				WARN( "[{}.{}]Could not delete monitored item:  {}.", _client->Handle(), requestId, UAException::Message(sc) );
 		}
 		UA_DeleteMonitoredItemsResponse_clear( &response );
-		_finished.emplace( requestId );
-		if( _finished.size()==_monitoredItems.size() )
-			Resume();
+		{ lg l{ _mutex }; _finished.emplace( requestId ); }
+		TryResume();
 	}
 }

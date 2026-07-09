@@ -5,12 +5,19 @@
 #include <jde/opc/uatypes/Variant.h>
 #include "../GatewayAppClient.h"
 #include "../async/CallAwait.h"
+#include "../types/UAClientException.h"
 #include "DataTypeQLAwait.h"
 #include "NodeQLAwait.h"
 #include "VariableQLAwait.h"
 #define let const auto
 
 namespace Jde::Opc::Gateway{
+	Ω connectionAttribute( const sp<UAClient>& client, sv name )ε->UA_Variant{
+		UA_Variant v{};
+		if( let sc = UA_Client_getConnectionAttributeCopy(*client, BrowseName{name, 0}, &v); sc )
+			throw UAClientException{ sc, client->Handle(), Ƒ("getConnectionAttribute('{}')", name) };
+		return v;
+	}
 
 	α IGatewayQLAwait::GetClient( QL::IQLAwaitExe* await )ι->TAwait<sp<UAClient>>::Task{
 		try{
@@ -91,9 +98,8 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α GatewayQLAwait::ServerDescription( QL::TableQL&& q, sp<UAClient> client )ι->jobject{
-		UA_Variant uaAttrib;
-		UA_Client_getConnectionAttributeCopy( *client, BrowseName{"serverDescription", 0}, &uaAttrib );
+	α GatewayQLAwait::ServerDescription( QL::TableQL&& q, sp<UAClient> client )ε->jobject{
+		UA_Variant uaAttrib = connectionAttribute( client, "serverDescription" );
 		let desc = ( UA_ApplicationDescription* )uaAttrib.data;
 		jobject j;
 		if( q.FindColumn("applicationUri") )
@@ -136,16 +142,14 @@ namespace Jde::Opc::Gateway{
 		UA_Variant_clear( &uaAttrib );
 		return q.TransformResult( move(j) );
 	}
-	α GatewayQLAwait::SecurityPolicyUri( QL::TableQL&& q, sp<UAClient> client )ι->jvalue{
-		UA_Variant uaAttrib;
-		UA_Client_getConnectionAttributeCopy( *client, BrowseName{"securityPolicyUri", 0}, &uaAttrib );
+	α GatewayQLAwait::SecurityPolicyUri( QL::TableQL&& q, sp<UAClient> client )ε->jvalue{
+		UA_Variant uaAttrib = connectionAttribute( client, "securityPolicyUri" );
 		string uri = ToString( *(UA_String*)uaAttrib.data );
 		UA_Variant_clear( &uaAttrib );
 		return q.TransformResult( move(uri) );
 	}
-	α GatewayQLAwait::SecurityMode( QL::TableQL&& q, sp<UAClient> client )ι->jvalue{
-		UA_Variant uaAttrib;
-		UA_Client_getConnectionAttributeCopy( *client, BrowseName{"securityMode", 0}, &uaAttrib );
+	α GatewayQLAwait::SecurityMode( QL::TableQL&& q, sp<UAClient> client )ε->jvalue{
+		UA_Variant uaAttrib = connectionAttribute( client, "securityMode" );
 		UA_MessageSecurityMode emode = *( UA_MessageSecurityMode* )uaAttrib.data;
 		sv mode;
 		switch( emode ){

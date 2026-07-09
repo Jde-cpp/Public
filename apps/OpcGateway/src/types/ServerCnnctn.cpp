@@ -22,7 +22,7 @@ namespace Jde::Opc::Gateway{
 		Id{ Json::FindNumber<uint32>(o, "id").value_or(0) },
 		Url{ Json::FindDefaultSV(o, "url") },
 		CertificateUri{ Json::FindDefaultSV(o, "certificate_uri") },
-		DefaultBrowseNs{ Json::FindNumber<NsIndex>(o, "defaultBrowseNs").value_or(1) },
+		DefaultBrowseNs{ Json::FindNumber<NsIndex>(o, "defaultBrowseNs").value_or(0) },
 		Description{ Json::FindDefaultSV(o, "description") },
 		IsDefault{ Json::FindBool(o, "is_default") },
 		Name{ Json::FindDefaultSV(o, "name") },

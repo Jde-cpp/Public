@@ -130,7 +130,7 @@ namespace Jde::Opc::Gateway{
 		for( let& [k,v] : _attributes )
 			if( v==id )
 				return k;
-		return _attributes.begin()->first;
+		return _attributes.find("invalid")->first;
 	}
 
 	ReadResponse::ReadResponse( UA_ReadResponse&& x, ReadRequest&& request )ι:

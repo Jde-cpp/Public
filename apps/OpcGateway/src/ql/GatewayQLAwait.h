@@ -18,9 +18,9 @@ namespace Jde::Opc::Gateway{
 	private:
 		α Query()ι->TAwait<jvalue>::Task override;
 		α ConnectionAttributes( QL::TableQL&& q, sp<UAClient> client )ι->jvalue;
-		α ServerDescription( QL::TableQL&& q, sp<UAClient> client )ι->jobject;
-		α SecurityPolicyUri( QL::TableQL&& q, sp<UAClient> client )ι->jvalue;
-		α SecurityMode( QL::TableQL&& q, sp<UAClient> client )ι->jvalue;
+		α ServerDescription( QL::TableQL&& q, sp<UAClient> client )ε->jobject;
+		α SecurityPolicyUri( QL::TableQL&& q, sp<UAClient> client )ε->jvalue;
+		α SecurityMode( QL::TableQL&& q, sp<UAClient> client )ε->jvalue;
 	};
 	struct GatewayQLMAwait final : QL::IQLTableMutationExe, IGatewayQLAwait{
 		using base = QL::IQLTableMutationExe;

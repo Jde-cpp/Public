@@ -1,5 +1,5 @@
 ﻿#include "DataTypeAttribAwait.h"
-#include "../UAClient.h"
+#include "../UAClient.h" //!important
 #define let const auto
 
 namespace Jde::Opc::Gateway{
@@ -13,6 +13,7 @@ namespace Jde::Opc::Gateway{
 		try{
 			for( auto& nodeId : _nodeIds ){
 				RequestId requestId{};
+				lg l{ _mutex };
 				UAε( UA_Client_readDataTypeAttribute_async(_client->UAPointer(), nodeId, onResponse, this, &requestId) );
 				if( _requestNodes.empty() )
 					_client->Process( requestId, "readDataTypeAttribute" );
@@ -24,19 +25,25 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 	α DataTypeAttribAwait::OnComplete( RequestId requestId, StatusCode sc, UA_NodeId* dataType )ι->void{
-		auto p = _requestNodes.find( requestId );
-		RETURN_IF( p==_requestNodes.end(), ELogLevel::Critical, "[{}.{}]Could not find requestId in requestNodes.", hex(_client->Handle()), hex(requestId) );
-		if( sc ){
-			DBG( "[{}.{}]DataTypeAttribAwait - {}", hex(_client->Handle()), hex(requestId), UAException::Message(sc) );
-			_results.try_emplace( move(p->second), sc );
+		bool done;
+		RequestId anyRequestId;
+		{
+			lg l{ _mutex };
+			auto p = _requestNodes.find( requestId );
+			RETURN_IF( p==_requestNodes.end(), ELogLevel::Critical, "[{}.{}]Could not find requestId in requestNodes.", hex(_client->Handle()), hex(requestId) );
+			if( sc ){
+				DBG( "[{}.{}]DataTypeAttribAwait - {}", hex(_client->Handle()), hex(requestId), UAException::Message(sc) );
+				_results.try_emplace( move(p->second), sc );
+			}
+			else{
+				TRACE( "[{}.{}]DataTypeAttribAwait - dataType: {}", hex(_client->Handle()), hex(requestId), NodeId{*dataType}.ToString() );
+				_results.try_emplace( move(p->second), NodeId{move(*dataType)} );
+			}
+			done = _results.size()==_nodeIds.size();
+			anyRequestId = _requestNodes.begin()->first;
 		}
-		else{
-			TRACE( "[{}.{}]DataTypeAttribAwait - dataType: {}", hex(_client->Handle()), hex(requestId), NodeId{*dataType}.ToString() );
-			_results.try_emplace( move(p->second), NodeId{move(*dataType)} );
-		}
-
-		if( _results.size()==_requestNodes.size() ){
-			_client->ClearRequest( _requestNodes.begin()->first );
+		if( done ){
+			_client->ClearRequest( anyRequestId );
 			Resume( move(_results) );
 		}
 	}

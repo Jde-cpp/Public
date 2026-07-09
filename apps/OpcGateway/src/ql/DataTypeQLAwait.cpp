@@ -39,6 +39,26 @@ namespace Jde::Opc::Gateway{
 		}
 		return j;
 	}
+	//getRemoteDataTypes allocates the array with cleanup=true but does not add it to the client config, so the caller owns it. open62541's UA_cleanupDataTypeWithCustom is not exported; mirror it here.
+	Ω freeRemoteDataTypes( UA_DataTypeArray* a )ι->void{
+		while( a ){
+			auto next = a->next;
+			if( a->cleanup ){
+				for( size_t i=0; i<a->typesSize; ++i ){
+					const UA_DataType& t = a->types[i];
+#ifdef UA_ENABLE_TYPEDESCRIPTION
+					UA_free( (void*)(uintptr_t)t.typeName );
+					for( size_t j=0; j<t.membersSize; ++j )
+						UA_free( (void*)(uintptr_t)t.members[j].memberName );
+#endif
+					UA_free( (void*)t.members );
+				}
+				UA_free( (void*)(uintptr_t)a->types );
+				UA_free( (void*)(uintptr_t)a );
+			}
+			a = next;
+		}
+	}
 	α DataTypeQLAwait::Suspend()ι->void{
 		try{
 			jarray y;
@@ -49,6 +69,7 @@ namespace Jde::Opc::Gateway{
 				throw UAClientException{ sc, _client->Handle(), Ƒ("Could not get data types: {}", NodeId::ToString(nodeIds)), _sl };
 			for( uint i=0; i<customTypes->typesSize; ++i )
 				y.push_back( toJson(customTypes->types[i], _ql) );
+			freeRemoteDataTypes( customTypes );
 			Resume( _ql.TransformResult(move(y)) );
 		}
 		catch( exception& e ){

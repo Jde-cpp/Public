@@ -6,7 +6,7 @@ namespace Jde::Opc::Gateway{
 		CreateMonitoredItemsRequest( flat_set<NodeId>&& nodes )ι;
 		CreateMonitoredItemsRequest( CreateMonitoredItemsRequest&& x )ι;
 		~CreateMonitoredItemsRequest(){ UA_CreateMonitoredItemsRequest_clear( this ); }
-		α operator=( CreateMonitoredItemsRequest&& )ι->UA_CreateMonitoredItemsRequest;
+		α operator=( CreateMonitoredItemsRequest&& x )ι->CreateMonitoredItemsRequest&;
 		α ToJson()ι->jarray;
 	};
 
@@ -17,7 +17,7 @@ namespace Jde::Opc::Gateway{
 		uint i=0;
 		for( auto& n : nodes ){
 			auto& item = itemsToCreate[i++];
-			item.itemToMonitor.nodeId = n;
+			UA_NodeId_copy( &n, &item.itemToMonitor.nodeId );//deep copy - clear() owns it; assignment would alias the NodeId's heap data.
 			item.itemToMonitor.attributeId = UA_ATTRIBUTEID_VALUE;
 			item.monitoringMode = UA_MONITORINGMODE_REPORTING;
 			item.requestedParameters.samplingInterval = 500.0;
@@ -30,10 +30,13 @@ namespace Jde::Opc::Gateway{
 		UA_CreateMonitoredItemsRequest_init( &x );
 	}
 
-	Ξ CreateMonitoredItemsRequest::operator=( CreateMonitoredItemsRequest&& )ι->UA_CreateMonitoredItemsRequest{
-		UA_CreateMonitoredItemsRequest r = *this;
-		UA_CreateMonitoredItemsRequest_init( this );
-		return r;
+	Ξ CreateMonitoredItemsRequest::operator=( CreateMonitoredItemsRequest&& x )ι->CreateMonitoredItemsRequest&{
+		if( this!=&x ){
+			UA_CreateMonitoredItemsRequest_clear( this );//free our current contents before overwriting.
+			*(UA_CreateMonitoredItemsRequest*)this = x;//shallow-transfer ownership from x...
+			UA_CreateMonitoredItemsRequest_init( &x );//...then zero x so its dtor won't free what we now own.
+		}
+		return *this;
 	}
 
 	Ξ CreateMonitoredItemsRequest::ToJson()ι->jarray{

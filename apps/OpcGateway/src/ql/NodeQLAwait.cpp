@@ -31,9 +31,7 @@ namespace Jde::Opc::Gateway{
 						Browse( move(pathNodes), std::prev(node)->first, parentsQL, move(jParents) );
 					co_return;
 				}
-				auto lastNode = std::prev( jParents.end() );
-				nodeId = lastNode->first;
-				jParents.erase( lastNode );
+				jParents.erase( nodeId );//the loop leaves nodeId as the deepest (full-path) node; the remainder of jParents are its parents.
 				AddAttributes( move(nodeId), parentsQL, move(jParents) );
 			}
 			else if( auto children = _query.FindTable("children"); children ){
