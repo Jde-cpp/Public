@@ -46,7 +46,7 @@ export class GroupDetail implements OnDestroy, OnInit{
 				this.isChanged.set( true );
 		});
 		effect(() => {
-			if( !arraysEqual(this?.group?.permissions, this.permissions()) )
+			if( this.permissions() && !Permission.arraysEqual(this.group?.permissions ?? [], this.permissions()) )//value-compare like role-detail — identity arraysEqual on the clones marked the page dirty on load
 				this.isChanged.set( true );
 		});
 

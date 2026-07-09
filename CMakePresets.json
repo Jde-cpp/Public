@@ -140,9 +140,10 @@
       "generator": "Ninja",
       "cacheVariables":{
         "CMAKE_GENERATOR_PLATFORM": null,
+				"CMAKE_CXX_FLAGS": "$env{cxxFlags} -DBOOST_STACKTRACE_USE_WINDBG",
 				"CMAKE_CXX_FLAGS_DEBUG": "$env{cxxFlagsDebug}",
-				"CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections",
-				"CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections",
+				"CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections -ldbgeng",
+				"CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections -ldbgeng",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
         "VCPKG_INSTALLED_DIR": "$env{VCPKG_ROOT}/installed"
@@ -153,9 +154,9 @@
 			"inherits": ["clang", "linux"],
 			"hidden": true,
 			"cacheVariables":{
-				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
-				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
-				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
+				"CMAKE_CXX_FLAGS": "-stdlib=libc++ -DBOOST_STACKTRACE_USE_BACKTRACE",
+				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld -lbacktrace",
+				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld -lbacktrace",
         "CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL"
 
 			}
@@ -189,7 +190,7 @@
 			"name": "win-clang-debug-jde",
 			"inherits": ["win-clang-debug", "clang-jde", "win-lldb"],
 			"cacheVariables": {
-				"CMAKE_CXX_FLAGS": "$env{cxxFlags} $env{cxxFlagsDebugInfo}"
+				"CMAKE_CXX_FLAGS": "$env{cxxFlags} $env{cxxFlagsDebugInfo} -DBOOST_STACKTRACE_USE_WINDBG"
 			}
 		},
 		{

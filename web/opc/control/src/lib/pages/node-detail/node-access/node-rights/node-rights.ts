@@ -1,10 +1,9 @@
-import { Component, computed, ViewChild, input, output, effect } from '@angular/core';
+import { Component, ViewChild, input, output, effect } from '@angular/core';
 import { CommonModule, KeyValue } from '@angular/common';
 import { MatCheckboxModule } from "@angular/material/checkbox";
 import { MatTable, MatTableModule } from "@angular/material/table";
 
 import { MatSortModule, Sort } from "@angular/material/sort";
-import { EAccess, EWriteAccess } from '../../../../model/types';
 import { RolePermission } from '../node-access';
 
 @Component( {
@@ -22,12 +21,6 @@ export class NodeRights {
 		});
 	}
 
-	static toAccess( rights:number ):EAccess{
-		return rights & EAccess.All;
-	}
-	static toWrite( rights:number ):EWriteAccess{
-		return rights >> 32;
-	}
 	static isDenied( role: RolePermission, rights:number ):boolean{
 		let denied = role.denied ?? 0;
 		return rights!=0 && (denied & rights)==rights;
@@ -42,8 +35,6 @@ export class NodeRights {
 		return true;
 	}
 	toggle( role: RolePermission, rights:number ):void{
-		if( this.isWriteRights() )
-			rights = rights << 32;
 		this.toggleEmitter.emit( { role: role, rights: rights } );
 	}
 	sortData($event:Sort){
@@ -76,7 +67,6 @@ export class NodeRights {
 	rights = input<any>();
 	self = NodeRights;
 	get allRights(): number{ return this.available[this.available.length-1].key; }
-	isWriteRights = computed<boolean>( ()=>this.rights()==EWriteAccess );
 	roles = input.required<RolePermission[]>();
 	data:RolePermission[] = [];
 	get sort():Sort{ return {active: "roleName", direction: "asc"}; }

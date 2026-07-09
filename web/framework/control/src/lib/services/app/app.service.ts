@@ -181,7 +181,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 				if( message.ack ){//first message after handshake
 					console.log( `[App.${requestId}]Connected to '${super.socketUrl}', socketId: ${message.ack}` );
 					let socketId = message.ack;
-					if( !this.user() )
+					if( this.user() )
 						super.sendAuthorization( socketId );
 					else{
 						console.warn( `no authorization` );
@@ -190,6 +190,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 				}
 				else if( message.executeResponse ){
 					var promise = this.customCallbacks.get( requestId ); if( !promise ) throw `no promise for requestId=${requestId}`;
+					this.customCallbacks.delete( requestId );//settled requests must be removed or the map grows for the socket's lifetime
 					promise.resolve( message.executeResponse );
 				}
 /*				else if( message.status ){
@@ -201,6 +202,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 					const x = message.strings;
 					if( this.log.sockResults ) console.log( `[App.${requestId}]strings messageCount: ${Object.keys(x.messages as any).length}` );
 					let promise = this.stringRequests.get( requestId ); if( !promise ) throw `no promise for requestId=${requestId}`;
+					this.stringRequests.delete( requestId );
 					promise.resolve( x );
 				}
 				else if( message.traces ){

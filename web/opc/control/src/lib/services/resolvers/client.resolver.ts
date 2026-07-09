@@ -28,7 +28,7 @@ export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>>
 		let siblings = this.routeStore.getChildren( parent.url ).map( s=>new RouteItem({path:`${s.path}`, title:s.title}) );
 		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings, new RouteItem({path:'.', title:parent.params["instance"]}) );
 		try{
-			return ClientResolver.load( ql, this.opcStore, target, routing );
+			return await ClientResolver.load( ql, this.opcStore, target, routing );//await inside try — without it, async failures skip the catch entirely
 		}
 		catch( e:any ){
 			this.snackbar.exceptionInfo( e, `Target not found:  '${target}'`, (m)=>console.log(`${m} - ${e.toString()}`) );

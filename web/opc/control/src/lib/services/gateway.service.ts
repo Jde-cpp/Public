@@ -34,7 +34,7 @@ export class GatewayService implements IGraphQL{
 		@Inject("OpcStore") opcStore:OpcStore ){
 		this.appService.gatewayInstances().then(
 			(instances)=>this.onGatewaySuccess( instances, this.appService.transport, this.http, authStore, opcStore ),
-			this.onInstancesError
+			(e)=>this.onInstancesError( e )//wrap so `this` is bound (bare method reference would run with this===undefined)
 		);
 		route.paramMap.subscribe( async params=>{
 			const gatewayTarget = params.get('gateway');
@@ -49,14 +49,17 @@ export class GatewayService implements IGraphQL{
 		if( gateways.length==0 )
 			console.error("No IotServies running");
 		this.#gateways = gateways.map( instance=>new Gateway(instance, transport, http, authStore, opcStore) );
-		this.#gatewaysCallbacks.forEach( cb=>{cb.resolve(this.#gateways)} );
+		this.#gatewaysCallbacks.forEach( cb=>cb.resolve(this.#gateways) );
+		this.#gatewaysCallbacks = [];
 		this.#gatewayCallbacks.forEach( cb=>cb.resolve(this.#gateways.find(gateway=>gateway.instances[0].instanceName==cb.instanceName)!) );
 		this.#gatewayCallbacks = [];
 	}
 	onInstancesError(e:HttpErrorResponse){
-		debugger;
 		console.error( `Could not get IotServices.  (${e.status})${e.message}` );
+		this.#gatewaysCallbacks.forEach( x=>x.reject(e) );//reject BOTH lists so gateways() awaiters don't hang, not just gateway()
+		this.#gatewaysCallbacks = [];
 		this.#gatewayCallbacks.forEach( x=>x.reject(e) );
+		this.#gatewayCallbacks = [];
 	}
 	async gateway( instanceName:string ):Promise<Gateway>{
 		if( !this.#gateways )
@@ -188,14 +191,12 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	}
 	private static toNode( proto:Common.INodeId ):NodeId{
 		let node = new NodeId( {ns:proto.namespaceIndex} );
-		if( proto.numeric )
-			node.id = proto.numeric;
-		else if( proto.string )
-			node.id = proto.string;
-		else if( proto.byteString )
-			node.id = proto.byteString;
-		else if( proto.guid )
-			node.id = Gateway.toGuid(proto.guid);
+		switch( proto.Identifier ){//oneof discriminator: identifies the set field even when its value is 0/"" (falsy)
+			case "numeric":    node.id = proto.numeric!; break;
+			case "string":     node.id = proto.string!; break;
+			case "byteString": node.id = proto.byteString!; break;
+			case "guid":       node.id = Gateway.toGuid( proto.guid! ); break;
+		}
 		return node;
 	}
 	private static toExpanded( proto:Common.IExpandedNodeId ):ExNodeId{
@@ -209,19 +210,17 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	private static toProto( nodes:NodeId[] ):Common.INodeId[]{
 		let protoNodes = [];
 		for( const node of nodes ){
-			let proto = new Common.ExpandedNodeId();
-			// proto.namespaceUri = node.nsu;
-			// proto.serverIndex = node.serverIndex;
-			proto.node = new Common.NodeId();
-			proto.node.namespaceIndex = node.ns;
+			//Subscribe/Unsubscribe.nodes are plain Proto.NodeId — the previous ExpandedNodeId{node:…} wrapper encoded as an EMPTY node (fields read off the wrapper), so every subscribe failed with BadNodeIdUnknown
+			let proto = new Common.NodeId();
+			proto.namespaceIndex = node.ns;
 			if( typeof node.id === "number" )
-				proto.node.numeric = node.id;
+				proto.numeric = node.id;
 			else if( typeof node.id === "string" )
-				proto.node.string = node.id;
+				proto.string = node.id;
 			else if( node.id instanceof Guid )
-				proto.node.guid = node.id.value;
+				proto.guid = node.id.value;
 			else if( node.id instanceof Uint8Array )
-				proto.node.byteString = node.id;
+				proto.byteString = node.id;
 			protoNodes.push( proto );
 		}
 		return protoNodes;
@@ -270,7 +269,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 							log( e["message"] );
 						}
 					break;
-				default: debugger;
+				default: console.error( `browseObjectsFolder - unhandled nodeClass ${ref.nodeClass} for '${ref.name}'` );//was `debugger;` — froze the app whenever a debugger (DevTools/automation) was attached
 			}
 			if( child )
 				y.push( child );
@@ -305,11 +304,19 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 
 	private onUnsubscriptionResult( requestId:number, result:FromServer.IUnsubscribeAck ){
 		result.failures?.forEach( (node)=>console.log(`unsubscribe failed for:  ${JSON.stringify(node)}`) );
-		this._callbacks.get( requestId )?.resolve( null );
+		const c = this._callbacks.get( requestId );
+		if( c ){
+			this._callbacks.delete( requestId );//settled requests must be removed or the map grows for the socket's lifetime
+			c.resolve( null );
+		}
 	}
 
 	private subscriptionAck( requestId:number, ack:FromServer.ISubscriptionAck ){
-		this._callbacks.get( requestId )?.resolve( ack.results );
+		const c = this._callbacks.get( requestId );
+		if( c ){
+			this._callbacks.delete( requestId );
+			c.resolve( ack.results );
+		}
 	}
 
 	private async _subscribe( opcId:OpcId, nodes:NodeId[], subject:Subject<SubscriptionResult> ):Promise<void>{
@@ -375,48 +382,29 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 
 	private static toGuid( proto:Uint8Array ):Guid{ let guid = new Guid(); guid.value = proto; return guid; }
 	private static toValue( proto:FromServer.IValue ):Value{
-		let v:Value|undefined;
-		if( proto.boolean )
-			v = proto.boolean;
-		else if( proto.byte )
-			v = proto.byte;
-		else if( proto.byteString )
-			v = proto.byteString;
-		else if( proto.date )
-			v = <Timestamp>proto.date;
-		else if( proto.doubleValue )
-			v = proto.doubleValue;
-		else if( proto.duration )
-			v = <Duration>proto.duration;
-		else if( proto.expandedNode )
-			v = Gateway.toExpanded( proto.expandedNode );
-		else if( proto.floatValue )
-			v = proto.floatValue;
-		else if( proto.guid )
-			v = Gateway.toGuid( proto.guid );
-		else if( proto.int16 )
-			v = proto.int16;
-		else if( proto.int32 )
-			v = proto.int32;
-		else if( proto.int64 )
-			v = proto.int64;
-		else if( proto.node )
-			v = Gateway.toNode(proto.node);
-		else if( proto.sbyte )
-			v = proto.sbyte;
-		else if( proto.statusCode )
-			v = proto.statusCode;
-		else if( proto.stringValue )
-			v = proto.stringValue;
-		else if( proto.uint16 )
-			v = proto.uint16;
-		else if( proto.uint32 )
-			v = proto.uint32;
-		else if( proto.uint64 )
-			v = proto.uint64;
-		else if( proto.xmlElement )
-			v = proto.xmlElement;
-		return v!;
+		switch( proto.of ){//oneof discriminator: dispatch on the set field, not its truthiness, so false/0/"" are not dropped
+			case "boolean":      return proto.boolean!;
+			case "byte":         return proto.byte!;
+			case "byteString":   return proto.byteString!;
+			case "date":         return <Timestamp>proto.date;
+			case "doubleValue":  return proto.doubleValue!;
+			case "duration":     return <Duration>proto.duration;
+			case "expandedNode": return Gateway.toExpanded( proto.expandedNode! );
+			case "floatValue":   return proto.floatValue!;
+			case "guid":         return Gateway.toGuid( proto.guid! );
+			case "int16":        return proto.int16!;
+			case "int32":        return proto.int32!;
+			case "int64":        return proto.int64!;
+			case "node":         return Gateway.toNode( proto.node! );
+			case "sbyte":        return proto.sbyte!;
+			case "statusCode":   return proto.statusCode!;
+			case "stringValue":  return proto.stringValue!;
+			case "uint16":       return proto.uint16!;
+			case "uint32":       return proto.uint32!;
+			case "uint64":       return proto.uint64!;
+			case "xmlElement":   return proto.xmlElement!;
+		}
+		return undefined!;
 	}
 	private static toValues( proto:FromServer.IValue[] ):Value{
 		let value = proto.length==1 ? Gateway.toValue( proto[0] ) : new Array<Value>();

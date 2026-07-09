@@ -86,7 +86,7 @@ export class QLList implements OnInit, OnDestroy{
 
 	edit(){
 		if( this.selection().deleted )
-			this.ql.mutate( `restore${this.type}("id":${this.selection().id})`, (m)=>console.log(m) ).then( ()=>this.selection().deleted=null ).catch( (e)=>console.log(e) );
+			this.ql.mutate( `restore${this.type()}(id:${this.selection().id})`, (m)=>console.log(m) ).then( ()=>this.selection().deleted=null ).catch( (e)=>console.log(e) );
 		else{
 			try{
 				this.router.navigate([this.selection().target], {relativeTo: this.route} );

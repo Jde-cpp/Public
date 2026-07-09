@@ -42,7 +42,7 @@ export class UserDetail implements OnDestroy, OnInit{
 				this.isChanged.set( true );
 		});
 		effect(() => {
-			if( !arraysEqual(this?.user?.permissions, this.permissions()) )
+			if( this.permissions() && !Permission.arraysEqual(this.user?.permissions ?? [], this.permissions()) )//value-compare like role-detail — identity arraysEqual on the clones marked the page dirty on load
 				this.isChanged.set( true );
 		});
 		route.data.subscribe( (data)=>{

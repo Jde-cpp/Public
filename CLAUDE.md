@@ -12,7 +12,7 @@ This is a monorepo for the **Jde OpcGateway** system — an OPC-UA gateway with 
 - `apps/OpcGateway/` — OPC-UA gateway (main product, exposes REST/WebSocket)
 - `apps/OpcServer/` — OPC server bridge
 - `include/jde/fwk/` — Public C++ headers for the framework
-- `web/opc/my-workspace3/` — Angular 21 frontend (the active workspace)
+- `web/opc/my-workspace/` — Angular 21 frontend (the active workspace)
 
 ## Building (C++)
 

@@ -78,7 +78,7 @@ export class LogDataSource extends DataSource<Entry>{
 	addLoadedEntries( data:LogEntries ){
 		//remove duplicates
 		let loaded = data.entries[0];
-		for( let i=this.allEntries.length-1; i>=0; --i ){
+		for( let i=this.allEntries.length-1; loaded && i>=0; --i ){//loaded is undefined for an empty batch or once shift() exhausts it — stop before dereferencing it
 			let existing = this.allEntries[i];
 			if( LogEntries.equals(loaded, existing) ){
 				data.entries.shift();

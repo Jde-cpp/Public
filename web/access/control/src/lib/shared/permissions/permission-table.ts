@@ -48,13 +48,10 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 		this.availablePermissions = this.availablePermissions.sort((a:Permission,b:Permission)=>{
 			let y:number;
 			if( ["schema", "resource", "deleted", "target"].includes($event.active) ){
-				let col:string = $event.active=="resource" ? "name" : $event.active;
-				let r = a.resource as any;
-				let r2 = r[col];
-				y = 5;
-				y = (a.resource as any)[col].localeCompare( (b.resource as any)[col] );
+				const col:string = $event.active=="resource" ? "name" : $event.active;
+				y = `${(a.resource as any)[col] ?? ''}`.localeCompare( `${(b.resource as any)[col] ?? ''}` );//stringify+default — `deleted` is a Date|undefined
 			}else{
-				let right = <number><any>Rights[+$event.active];
+				const right = Rights[$event.active as keyof typeof Rights];//rights columns are named by Right ("Read"…) — `Rights[+active]` was Rights[NaN], a sorting no-op
 				let value = (x:Permission)=>{ return this.isAllowed(x, right) ? 1 : this.isDenied(x, right) ? -1 : 0; };
 				y = value(b) - value(a);
 			}

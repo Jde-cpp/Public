@@ -134,9 +134,9 @@ namespace QL{
 	using namespace DB::Names;
 	Ω introspectFields( sv /*typeName*/, const DB::Table& mainTable, const TableQL& fieldTable )ε->jobject{
 		jarray fields;
-		let pTypeTable = fieldTable.FindTable( "type" );
 		let haveName = fieldTable.FindColumn( "name" )!=nullptr;
-		let pOfTypeTable = pTypeTable->FindTable( "ofType" );
+		let typeTable = fieldTable.FindTable( "type" );
+		let ofTypeTable = typeTable ? typeTable->FindTable( "ofType" ) : nullptr;
 		jobject jTable;
 		jTable["name"] = mainTable.JsonName();
 
@@ -144,7 +144,7 @@ namespace QL{
 			jobject field;
 			if( haveName )
 				field["name"] = name;
-			if( pTypeTable ){
+			if( typeTable ){
 				jobject type;
 				auto setField = []( const TableQL& t, jobject& j, str key, sv x ){ if( t.FindColumn(key) ){ if(x.size()) j[key]=x; else j[key]=nullptr; } };
 				auto setKind = []( const TableQL& t, jobject& j, optional<EFieldKind> pKind ){
@@ -155,12 +155,12 @@ namespace QL{
 							j["kind"] = nullptr;
 					}
 				};
-				setField( *pTypeTable, type, "name", typeName );
-				setKind( *pTypeTable, type, typeKind );
-				if( pOfTypeTable && (ofTypeName.size() || ofTypeKind) ){
+				setField( *typeTable, type, "name", typeName );
+				setKind( *typeTable, type, typeKind );
+				if( ofTypeTable && (ofTypeName.size() || ofTypeKind) ){
 					jobject ofType;
-					setField( *pOfTypeTable, ofType, "name", ofTypeName );
-					setKind( *pOfTypeTable, ofType, ofTypeKind );
+					setField( *ofTypeTable, ofType, "name", ofTypeName );
+					setKind( *ofTypeTable, ofType, ofTypeKind );
 					type["ofType"] = ofType;
 				}
 				field["type"] = type;
