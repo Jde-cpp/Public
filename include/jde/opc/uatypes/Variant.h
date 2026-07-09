@@ -10,7 +10,7 @@ namespace Jde::Opc{
 		Variant( const UA_Variant& v )ι;
 		Variant( UA_Variant&& v )ι;
 		Variant( StatusCode sc )ι;
-		~Variant(){ UA_Variant_clear(this); }
+		~Variant(){ UA_Variant_clear(this);  }
 
 		α operator=( const Variant& v )ι->Variant&;
 		α operator=( Variant&& v )ι->Variant&;

@@ -12,11 +12,5 @@
 				<node-rights [rights]=access (toggleEmitter)=onToggle($event) [roles]=roles></node-rights>
 			</ng-template>
 		</mat-tab>
-		<mat-tab>
-			<ng-template mat-tab-label>Write</ng-template>
-			<ng-template matTabContent>
-				<node-rights [rights]=writeAccess (toggleEmitter)=onToggle($event) [roles]=roles></node-rights>
-			</ng-template>
-		</mat-tab>
 	</mat-tab-group>
 }

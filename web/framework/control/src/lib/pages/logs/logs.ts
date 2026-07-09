@@ -65,7 +65,7 @@ export class Logs implements OnInit, OnDestroy{
 	async load( startIndex:number=0 ){
 		try{
 			const entries = ( await this.service().ql<{logs: LogEntriesRest}>( this.view().query(undefined,startIndex), (m)=>console.log(m) ) ).logs;
-			if( Object.keys(entries).length )
+			if( entries?.entries?.length )//was Object.keys(entries).length, always >=2 ({entries,strings}); check the actual entry count
 				this.push( new LogEntries(entries) );
 			this.data.setPage( startIndex );
 			this.isLoading.set( false );
@@ -169,6 +169,8 @@ export class Logs implements OnInit, OnDestroy{
 		}
 		else if( existingIndex==0 )
 			newSort[0] = sort;
+		else
+			newSort.unshift( sort );//column not yet in the sort list: make it primary (was a silent no-op)
 		applySort();
 	}
 	onPagerChange( event:PageEvent ){

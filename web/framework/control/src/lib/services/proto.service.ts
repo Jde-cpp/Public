@@ -67,6 +67,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 
 	//
 	error( err:any ){
+		this.#socket = undefined;//drop the dead socket so the next send reconnects
 		this.setSocketId( 0 );
 		console.log( "No longer connected to Server.", err );
 		this.handleConnectionError( err );
@@ -74,7 +75,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	sendTransmission( t:Transmission ){
 		console.log( JSON.stringify(t) );
 		var toSend = this.encode(t).finish();
-		this.#socket.next( toSend );
+		this.#socket?.next( toSend );
 	}
 	send( m:any, log:string ):RequestId{
 		const requestId = this.getRequestId();
@@ -85,12 +86,14 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		let t = new this.TCreator() as any;
 		if( this.log.subRequest ) console.log( `[${requestId}]${log.substring(0, this.log.maxLength)}` );
 		t["messages"].push( {requestId:requestId,...m} );
-		if( (!this.socketId || !this.#socket) && !Object.hasOwn(m, 'sessionId') ){
-			this.backlog.push( t );
-			this.connect();
-		}
-		else
+		const isAuthorization = Object.hasOwn( m, 'sessionId' );//the handshake message that releases the backlog; must go out before socketId is set
+		if( this.#socket && (this.socketId || isAuthorization) )
 			this.sendTransmission( t );
+		else{
+			this.backlog.push( t );
+			if( !this.#socket )//open exactly one socket; sends before the ack queue rather than each opening a new connection
+				this.connect();
+		}
 	}
 
 	protected async sendAuthorization( socketId:number ):Promise<void>{
@@ -177,7 +180,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				y = response.body as Y;
 			}
 			catch( e:any ){
-				if( e["status"]==401 ){
+				if( e["status"]==401 && authorization ){//retry anonymously only if a (stale) credential was sent — an anonymous 401 must throw, or this recurses forever
 					log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
 					this.authStore.logout();
 					y = await this.authGet<Y>( target, undefined, log );
@@ -191,7 +194,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				y = await firstValueFrom( this.http.get<Y>(url, options) ) as Y;
 			}
 			catch( e:any ){
-				if( e["status"]==401 ){
+				if( e["status"]==401 && authorization ){//always true here (sessionId branch), but keeps the retry bound explicit
 					log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
 					this.authStore.logout();
 					y = await this.authGet<Y>( target, undefined, log );
@@ -366,29 +369,24 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 			const data:any = await this.query( ql, {type:type}, log );
 			if( data["__type"].length==0 )
 				throw `no such type: '${type}'`;
-			const schema = new TableSchema( data["__type"] );
+			const schema = new TableSchema( { ...data["__type"], name: type } );//keep the requested canonical type — the server may alias internal names (e.g. User → "UsersQl"), which broke collectionName/singular conventions downstream
 			this.#tables.set( type, schema );
 			results.push( schema );
 		}
 		return results;
 	}
 
-	mutations():Promise<MutationSchema[]>{
-		return new Promise<MutationSchema[]>( (resolve, reject)=>{
-			if( ProtoService.#mutations )
-				resolve( ProtoService.#mutations );
-			else{
-				let ql = `__schema{mutationType{name fields { name args { name defaultValue type { name } } } }`;
-				this.query( ql ).then( ( data:any )=>
-				{
-					ProtoService.#mutations = data.__schema.fields;
-					resolve( ProtoService.#mutations );
-				}).catch( (e)=>reject(e) );
-			}
-		});
+	async mutations():Promise<MutationSchema[]>{
+		//NOTE: needs server-side `__schema{mutationType}` introspection, which the current backend rejects ("Query failed.") — callers must handle rejection.
+		if( !this.#mutations ){
+			const ql = `__schema{ mutationType{ name fields{ name args{ name defaultValue type{ name } } } } }`;//was missing a closing brace
+			const data:any = await this.query( ql );
+			this.#mutations = data.__schema.mutationType.fields;//was data.__schema.fields (always undefined)
+		}
+		return this.#mutations;
 	}
 
-	socketComplete(){ console.log( 'complete' ); }
+	socketComplete(){ this.#socket = undefined; console.log( 'complete' ); }
 	//get nextRequestId():RequestId{ return this.#requestId+1; }  why?
 	getRequestId():RequestId{ return ++this.#requestId;} #requestId:RequestId=0;
 
@@ -406,15 +404,19 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 
 	processCommonMessage( m:any, requestId:RequestId ):boolean{
 		let handled = true;
-		let message:any = Object.entries(m)[0][1];
-		let c = this._callbacks.get( requestId )!;
+		let c = this._callbacks.get( requestId );
 		if( c ){
-			if( !m.Value )
+			if( !m.Value ){//bare response (no oneof payload), e.g. the authorization ack
+				this._callbacks.delete( requestId );//settled requests must be removed or the map grows for the socket's lifetime
 				c.resolve( null );
-			else if( m["graphQl"] )
-				c.resolve( c.transformInput!(message["json"])! );
+			}
+			else if( m["graphQl"] ){
+				this._callbacks.delete( requestId );
+				const json = m["graphQl"]["json"];//payload keyed by its field — Object.entries(m)[0][1] assumed decode order
+				c.resolve( c.transformInput ? c.transformInput(json) : json );
+			}
 			else
-				handled = false;
+				handled = false;//payload is for a subclass handler (subscriptionAck etc.) — leave the callback for it
 		}
 		else
 			handled = false;
@@ -460,10 +462,10 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	#loginCallbacks:{target:string, resolve:(result:any)=>void, reject:( e:any )=>void, log:Log}[]=[];
 
 	//abstract get queryId():number;
-	#socket!:WebSocketSubject<protobuf.Buffer>;
+	#socket:WebSocketSubject<protobuf.Buffer>|undefined;
 	protected _callbacks = new Map<number, RequestPromise<ResultMessage>>();
 	#tables = new Map<string,TableSchema>();
-	static #mutations:Array<MutationSchema>;
+	#mutations!:Array<MutationSchema>;//per-instance — a static cache shared one schema across AppService/AccessService/Gateway (different endpoints)
 	private get url(){
 		if( !this.instances?.length ) throw "no instances";
 		return `${this.instances[0].host}:${this.instances[0].port}`;

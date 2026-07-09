@@ -15,7 +15,7 @@ namespace Jde{
 
 	class ExceptionArgs{
 	public:
-		ExceptionArgs( const ExceptionArgs& args )ι:_level{args._level}, Tags{args.Tags}, _code{args._code}{}
+		ExceptionArgs( const ExceptionArgs& args )ι:Tags{args.Tags}, _level{args._level}, _code{args._code}{}
 		ExceptionArgs( ELogLevel level=DefaultExceptionLevel, ELogTags tags=ELogTags::Exception, uint32 code=UninitializedCode )ι: Tags{tags}, _level{level}, _code{code}{}
 		ExceptionArgs( ELogTags tags )ι:ExceptionArgs{DefaultExceptionLevel, tags}{}
 		ExceptionArgs( uint32 code )ι:ExceptionArgs{DefaultExceptionLevel, ELogTags::Exception, code}{}

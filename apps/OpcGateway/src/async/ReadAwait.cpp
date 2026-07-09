@@ -175,7 +175,7 @@ namespace Jde::Opc::Gateway{
 			const NodeId nodeId{ attribReq.nodeId };
 			auto nodeIt = nodes.try_emplace( nodeId );
 			jobject& j = nodeIt.first->second;
-			auto result = results[i];
+			auto& result = results[i];
 			Variant value = result.status ? Variant{ result.status } : Variant{ move(result.value) };
 			let attrib = ( UA_AttributeId )attribReq.attributeId;
 			j[ReadRequest::AtribString( attrib )] = value.ToJson( true );

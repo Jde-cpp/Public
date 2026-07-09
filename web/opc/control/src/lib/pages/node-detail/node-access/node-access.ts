@@ -6,12 +6,11 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { UaNode } from '../../../model/Node';
 import { NodeRights } from './node-rights/node-rights';
 //import { Gateway } from '../../../../services/gateway.service';
-import { EAccess, EWriteAccess } from '../../../model/types';
 import { NodeRoute } from '../../../model/NodeRoute';
 import { ProfileStore } from 'jde-spa';
 import { AppService, Mutation, MutationType } from 'jde-framework';
 import { ActivatedRoute } from '@angular/router';
-import { Permission, Role } from 'jde-access';
+import { Permission, Rights, Role } from 'jde-access';
 
 export type RolePermission = {
 	roleId: number;
@@ -35,30 +34,24 @@ export class NodeAccess implements OnInit, OnDestroy{
 
 	async ngOnInit(): Promise<void> {
 		this.actRoute.data.subscribe( async (data)=>{
-			let criteria: string[] = [];
-			let prev = null;
-			for( let segment of this.route().browsePath.split('/') ){
-				let path = prev ? prev + '/' + segment : segment;
-				criteria.push( segment=='' ? null as unknown as any : segment );
-				prev = segment;
-			}
-			const vars = { schemaName: `opc.${this.accessResource()}`, target: "node", criteria: criteria };
-			let q = 'roles{ id name permissionRight{id allowed denied resource(schemaName:$schemaName, criteria:$criteria, target:$node){ id criteria }';
-			let db = await this.appService.queryArray<any>( q, vars, (m)=>console.log(m) );
-			let applicable:Record<string,RolePermission> = {};
-			for( const role of db ){
-				const rights = role.permissionRight ?? { id: 0, allowed: 0, denied: 0, resource: { id: 0, criteria: '' } };
-				let criteria = rights.resource.criteria;
-				if( !applicable[role.name] || applicable[role.name].criteria.length > criteria.length )
-					applicable[role.name] = { roleId: role.id, roleName: role.name, permissionId: rights.id, allowed: Permission.toRights( rights.allowed ), denied: Permission.toRights( rights.denied ), resourceId: rights.resource.id, criteria: rights.resource.criteria ?? prev };
-			}
-			let roles:RolePermission[] = [];
-			for( const roleName in applicable )
-				roles.push( applicable[roleName] );
-			roles = roles.sort( (a,b)=>a.roleName.localeCompare(b.roleName) );
+			const criteria = this.node().nodeId.uaString();//e.g. "ns=4;i=6020" — the server's resource criteria for this node
+			const vars = { schemaName: `opc.${this.accessResource()}`, target: "nodeIds", criteria };
+			const q = 'roles{ id name permissionRight{ id allowed denied resource(schemaName:$schemaName, criteria:$criteria, target:$target){ id criteria } } }';
+			const db = await this.appService.queryArray<any>( q, vars, (m)=>console.log(m) );
+			const roles:RolePermission[] = db.map( (role:any)=>{
+				const pr = role.permissionRight;//present only where a permission exists for this exact node; allowed/denied are [Right] name arrays
+				return {
+					roleId: role.id,
+					roleName: role.name,
+					permissionId: pr?.id ?? 0,
+					allowed: Permission.toRights( pr?.allowed ?? [] ),
+					denied: Permission.toRights( pr?.denied ?? [] ),
+					resourceId: pr?.resource?.id ?? 0,
+					criteria: pr?.resource?.criteria ?? criteria,
+				};
+			}).sort( (a,b)=>a.roleName.localeCompare(b.roleName) );
 			this.original = roles;
-			for( const role of roles )
-				this.roles.push( {...role} );
+			this.roles = roles.map( r=>({...r}) );
 			this.isLoading.set( false );
 		});
 	}
@@ -97,7 +90,7 @@ export class NodeAccess implements OnInit, OnDestroy{
 			if( !args.allowed && !args.denied )
 				mutation = new Mutation(Role.typeName, role.roleId, {permissionRight:{id: role.permissionId}}, MutationType.Remove );
 			else{
-				let resource:any = role.resourceId ? { id: role.resourceId } : { schema: `opc.${this.accessResource()}`, target: "nodeIds" };
+				let resource:any = role.resourceId ? { id: role.resourceId } : { schemaName: `opc.${this.accessResource()}`, target: "nodeIds" };//was `schema:` — server ignored it and stored schemaName as "opc", putting the permission on the wrong resource
 				resource["criteria"] = role.criteria ? role.criteria : null;
 				mutation = new Mutation( Role.typeName, role.roleId, { permissionRight: {allowed: role.allowed, denied: role.denied, resource: resource} }, MutationType.Add );
 			}
@@ -117,8 +110,7 @@ export class NodeAccess implements OnInit, OnDestroy{
 			console.log( mutation.toString() );
 	}
 
-	access = EAccess;
-	writeAccess = EWriteAccess;
+	access = Rights;//node ACLs use the generic Right enum (Create/Read/Update/Delete/Purge/Administer/Subscribe/Execute), same as the rest of access — NOT EAccess/EWriteAccess
 	mutations = signal<Mutation[]>( [] );
 	isLoading = signal( true );
 	node = model.required<UaNode>();
@@ -127,8 +119,6 @@ export class NodeAccess implements OnInit, OnDestroy{
 
 	accessResource = input.required<string>();
 	route = model.required<NodeRoute>();
-	rights = EAccess;
 	roles: RolePermission[]=[];
-	writeRoles!: RolePermission[];
 	appService = inject(AppService);
 }

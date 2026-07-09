@@ -25,11 +25,13 @@ export class NodeId implements INodeId{
 			this.id = json;
 		else if( json instanceof Uint8Array )
 			this.id = json;
-		if( this.id as any )
+		if( this.id !== undefined ){//id may legitimately be 0 or "" — test presence, not truthiness
+			this.ns ??= 0;
 			return;
+		}
 		let j = <NodeIdJson>json;
 		this.ns = j.ns ?? 0;
-		if( (j as any)["id"] )
+		if( (j as any)["id"] !== undefined )
 			this.id = (j as any)["id"];
 		else if( j.i!==undefined )
 			this.id = +j.i;
@@ -40,7 +42,7 @@ export class NodeId implements INodeId{
 		else if( j.b!==undefined )
 			this.id = toBinary( j.b );
 		else
-			debugger;
+			console.error( `NodeId - unrecognized json: ${JSON.stringify(json)}` );//was `debugger;` — froze the app whenever a debugger (DevTools/automation) was attached
 	}
 	public equals( rhs: NodeId ):boolean{ return this.ns==rhs.ns && this.id===rhs.id; }
 	static objectsFolder = new NodeId( { ns: 0, i: 85 } );
@@ -57,6 +59,16 @@ export class NodeId implements INodeId{
 			json.b = btoa( this.id.reduce((acc, current) => acc + String.fromCharCode(current), "") );
 
 		return json;
+	}
+	toJSON():NodeIdJson{ return this.toJson(); }//serialize NodeId[] (e.g. saved subscriptions) in the NodeIdJson form the constructor can revive
+	toString():string{ return JSON.stringify( this.toJson() ); }//stable + unique per node (was "[object Object]", collapsing every node onto one profile key)
+	uaString():string{//OPC-UA standard NodeId string, e.g. "ns=4;i=6020" (ns=0 omitted, per open62541) — matches the server's resource `criteria`
+		const p = this.ns ? `ns=${this.ns};` : "";
+		if( typeof this.id === "number" )        return `${p}i=${this.id}`;
+		else if( typeof this.id === "string" )   return `${p}s=${this.id}`;
+		else if( this.id instanceof Guid )       return `${p}g=${this.id.toString()}`;
+		else if( this.id instanceof Uint8Array ) return `${p}b=${btoa( this.id.reduce((acc, current) => acc + String.fromCharCode(current), "") )}`;
+		return p;
 	}
 	qlArgs(escape:boolean=false):string{ // ns:4,i:5003
 		let y: string = `ns:${this.ns},`;

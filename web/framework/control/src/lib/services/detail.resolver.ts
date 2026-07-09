@@ -16,8 +16,10 @@ export type DetailPageSettings = {
 export class DetailRoute extends RouteItem{
 	constructor( target:string, title:string|undefined, siblings:RouteItem[], parent:RouteItem ){
 		super( {path:target, title:title, siblings:siblings, parent:parent} );
+		if( parent instanceof ListRoute )//adopt the collection's settings; was never assigned — `routing.tableSettings.excludedColumns` threw and no detail page could resolve
+			this.tableSettings = parent.tableSettings;
 	}
-	tableSettings!: TableSettings;
+	tableSettings: TableSettings = { excludedColumns: [] };
 }
 
 export type DetailResolverData<T>={
@@ -43,7 +45,7 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings,
 			ListRoute.find(collectionDisplay, route.parent!.routeConfig!.children!.find(x=>x.path==":collectionDisplay")!.data!["collections"]) );
 		try{
-			return DetailResolver.load<T>( this.ql, this.ql.toCollectionName(collectionDisplay), target, routing );
+			return await DetailResolver.load<T>( this.ql, this.ql.toCollectionName(collectionDisplay), target, routing );//await inside try — without it, async failures skip the catch entirely
 		}
 		catch( e ){
 			this.snackbar.error( `Target not found:  '${target}'`, (m)=>console.log(m) );

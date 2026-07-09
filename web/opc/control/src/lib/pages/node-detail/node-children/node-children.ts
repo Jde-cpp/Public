@@ -1,5 +1,5 @@
 import { SelectionModel, SelectionChange } from '@angular/cdk/collections';
-import {ChangeDetectorRef, Component, computed, inject, Inject, model, OnDestroy, OnInit, signal} from '@angular/core';
+import {ChangeDetectorRef, Component, inject, Inject, model, OnDestroy, OnInit, signal} from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
 import {MatSelectChange, MatSelectModule} from '@angular/material/select';
@@ -46,9 +46,9 @@ export class NodeChildren implements OnInit, OnDestroy {
 			if( this.pageData )
 				this.#profileStore.save<UserSettings>( this.pageData.route.profileKey, this.profile );
 			this.pageData = data["pageData"];
-			if( !this.profile )
-				this.profile = await this.#profileStore.load<UserSettings>( this.pageData.route.profileKey, new UserSettings() );
-			this.nodes?.filter( (n:UaNode)=>this.profile.subscriptions.find((s)=>s.equals(n)) ).forEach( (n)=>this.selections.select(n) );
+			this.profile = await this.#profileStore.load<UserSettings>( this.pageData.route.profileKey, new UserSettings() );
+			this.profile.subscriptions = (this.profile.subscriptions ?? []).map( (s)=>new NodeId(s) );//revive persisted plain objects into NodeId instances (s.equals/s.key below would otherwise throw)
+			this.nodes?.filter( (n:UaNode)=>this.profile.subscriptions.some((s)=>s.key==n.key) ).forEach( (n)=>this.selections.select(n) );
 			this.isLoading.set( false );
 			this.componentPageTitle.title = this.server.connection.name + (this.node().id==85 ? '' : `/${this.node.name}`);
 		});
@@ -108,7 +108,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 		}
 		if( r.removed.length>0 ){
 			let nodes = r.removed.map( r=>r.nodeId );
-			this.profile.subscriptions = this.profile.subscriptions.filter( s=>!nodes.includes(s) );
+			this.profile.subscriptions = this.profile.subscriptions.filter( s=>!nodes.some(n=>n.key==s.key) );//compare by value: r.removed nodeIds are fresh instances, so reference includes() never matched
 			if( !this.selections.selected.length )
 				this.subscription = undefined;
 			else{
@@ -197,7 +197,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	EAccess = EAccess;
 	ETypes = ETypes;
 	get _iot():Gateway{ return this.pageData.gateway; }
-	isAllSelected = computed<boolean>( ()=>{ return this.selections.selected.length==this.nodes.length; } );
+	isAllSelected():boolean{ return this.selections.selected.length==this.nodes.length; }//was computed() over the non-signal SelectionModel — with no signal deps it cached its first value forever, freezing the header checkbox
 	isLoading = signal<boolean>( true );
 	get Key():string{ return this.pageData.route.profileKey; }
 	node = model.required<UaNode>();

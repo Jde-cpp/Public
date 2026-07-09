@@ -29,9 +29,9 @@ export class OpcAuthService implements IAuth{
 		this.isOpc.set( undefined );
 		return promise;
 	}
-	async loginPassword( domain:string, username:string, password:string, log:Log ):Promise<void>{
-		//let gateway = await	 this.gatewayService.instance( domain );
-		let promise = await this.gatewayService.defaultGateway.login( domain, username, password, log );
+	async loginPassword( username:string, password:string, authenticator:string|undefined, log:Log ):Promise<void>{
+		//let gateway = await	 this.gatewayService.instance( authenticator );
+		let promise = await this.gatewayService.defaultGateway.login( authenticator ?? "", username, password, log );
 		this.isOpc.set( true );
 		return promise;
 	}
