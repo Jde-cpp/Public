@@ -42,8 +42,15 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	TEST_F( AppClientTests, ConnectBadSessionId ){
-		//static: keep the socket open for process lifetime so OnClose doesn't clear AppClient's live session and trigger a reconnect mid-suite.
-		static auto session = ms<App::Client::AppClientSocketSession>( Executor(), optional<ssl::context>{}, App::Client::RemoteAcl(""), AppClient() );
+		//static: keep the socket open for the rest of the suite so OnClose doesn't clear AppClient's live session and trigger a reconnect mid-suite.
+		//Released via shutdown function, NOT at static destruction: the beast stream must be destroyed while the io_context is alive
+		//(~stream touches the ioc's service registry - UAF after cleanup destroys the ioc). The server's Internal::Stop closes the
+		//socket, completing the pending read; dropping the last ref here lets the session die during the executor drain.
+		static sp<App::Client::AppClientSocketSession> session;
+		if( !session ){
+			session = ms<App::Client::AppClientSocketSession>( Executor(), optional<ssl::context>{}, App::Client::RemoteAcl(""), AppClient() );
+			Process::AddShutdownFunction( [](bool, SL){ session = nullptr; } );
+		}
 		BlockVoidAwait( session->RunSession(App::Client::Host(), App::Client::Port()) );
 		using ConnectionInfo = App::Proto::FromServer::ConnectionInfo;
 		try{
