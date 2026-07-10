@@ -1,9 +1,9 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( ../../../build/functions.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../../build/functions.cmake )
 project( Jde.App.Client VERSION ${JDE_VERSION} LANGUAGES CXX )
-include( ../../../build/dependencies.cmake )
+include( ${jdeRoot}/build/dependencies.cmake )
 
-include_directories( $ENV{JDE_DIR}/include/jde/web/client/proto )
+include_directories( ${jdeRoot}/include/jde/web/client/proto )
 
 set( targetName Jde.App.Client )
 add_library( ${targetName} )

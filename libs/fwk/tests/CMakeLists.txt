@@ -1,9 +1,9 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 enable_testing()
-include( $ENV{JDE_BASH}/build/functions.cmake )
-include( $ENV{JDE_BASH}/build/linkSo.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../../build/functions.cmake )
+include( ${jdeRoot}/build/linkSo.cmake )
 project( Jde.Framework.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
-include( $ENV{JDE_BASH}/build/dependencies.cmake )
+include( ${jdeRoot}/build/dependencies.cmake )
 message( Framework.Tests )
 find_package( GTest REQUIRED )
 
@@ -34,7 +34,7 @@ else()
 	endif()
 endif()
 
-add_test( NAME FwkTests COMMAND $<TARGET_FILE:Jde.Fwk.Tests> -tests -settings=$ENV{JDE_DIR}/libs/fwk/tests/config/Framework.Tests.jsonnet )
+add_test( NAME FwkTests COMMAND $<TARGET_FILE:Jde.Fwk.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet )
 set( CMAKE_CTEST_ARGUMENTS "-tests;-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet" )
 
 

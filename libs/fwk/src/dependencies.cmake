@@ -1,7 +1,7 @@
 boost()
 find_package( OpenSSL REQUIRED )
 
-include_directories( $ENV{JDE_DIR}/include )
+include_directories( ${jdeRoot}/include )
 
 find_package( fmt REQUIRED )
 

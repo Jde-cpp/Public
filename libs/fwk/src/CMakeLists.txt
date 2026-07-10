@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( $ENV{JDE_DIR}/build/functions.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../../build/functions.cmake )
 project( Framework VERSION ${JDE_VERSION} LANGUAGES CXX )
 message( "${PROJECT_NAME}:  ${PROJECT_VERSION}" )
 include( dependencies.cmake )

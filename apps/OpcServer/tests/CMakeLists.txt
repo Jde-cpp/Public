@@ -1,7 +1,7 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( ../../../build/functions.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../../build/functions.cmake )
 project( Jde.Opc.Server.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
-include( ../../../build/dependencies.cmake )
+include( ${jdeRoot}/build/dependencies.cmake )
 
 find_package( open62541 REQUIRED )
 set( open62541Dir ${open62541_DIR}/../../.. )
@@ -57,7 +57,7 @@ endif()
 
 add_test( NAME OpcServerTests COMMAND $<TARGET_FILE:Jde.Opc.Server.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Server.Tests.jsonnet )
 
-add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "$ENV{JDE_BASH}/libs/db/config/common-meta.libsonnet" "$ENV{JDE_BASH}/apps/OpcServer/config/common-meta.libsonnet" COMMENT "mklink common-meta.libsonnet" )
+add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink "${jdeRoot}/libs/db/config/common-meta.libsonnet" "${jdeRoot}/apps/OpcServer/config/common-meta.libsonnet" COMMENT "mklink common-meta.libsonnet" )
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Server.Tests.jsonnet" )
 	copyCommonDlls()

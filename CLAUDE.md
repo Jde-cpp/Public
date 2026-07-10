@@ -16,13 +16,17 @@ This is a monorepo for the **Jde OpcGateway** system — an OPC-UA gateway with 
 
 ## Building (C++)
 
-Build outputs go to `/mnt/ram/`. The `$REPO_DIR` env var points to the repo root; `$JDE_DIR` points to the Public directory. Each preset gets its own out-of-source build directory under `/mnt/ram/linux/` (e.g. `clang++-22` for `linux-clang-debug-jde`, `g++-15` for `linux-debug`).
+Build outputs go to `/mnt/ram/`. The `$REPO_DIR` env var points to the repo root; `$JDE_DIR` points to the Public directory. Each compiler+checkout pair gets its own out-of-source build directory at `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>` (e.g. `/mnt/ram/linux/clang++/Public2` for this checkout). The `reconfig` function in `build/buildFunctions.sh` creates this layout; it also moves the generated `compile_commands.json` to the source root for clangd.
 
 ```bash
 # Configure (from the matching out-of-source build dir)
-cd /mnt/ram/linux/clang++-22      # or /mnt/ram/linux/g++-15 for linux-debug
+cd $JDE_BUILD_DIR/$JDE_COMPILER/Public2   # e.g. /mnt/ram/linux/clang++/Public2
 rm -f CMakeCache.txt
-cmake /home/duffyj/code/jde/Public --preset linux-clang-debug-jde
+cmake /home/duffyj/code/jde/Public2 --preset linux-clang-debug-jde
+
+# Or use the helper (creates the build dir and runtime/ if missing):
+source build/buildFunctions.sh
+reconfig $JDE_BUILD_DIR/$JDE_COMPILER /home/duffyj/code/jde/Public2 linux-clang-debug-jde
 
 # Build a specific target (add -j$(nproc) for parallel builds)
 cmake --build . --target Jde
@@ -48,7 +52,7 @@ Tests use **GoogleTest**. Each test binary requires a `-settings=` argument poin
 
 ```bash
 # Run a test binary directly
-./Jde.Fwk.Tests -settings=/home/duffyj/code/jde/Public/libs/fwk/tests/config/Framework.Tests.jsonnet
+./Jde.Fwk.Tests -settings=/home/duffyj/code/jde/Public2/libs/fwk/tests/config/Framework.Tests.jsonnet
 
 # Via ctest (from build dir)
 ctest --preset linux-debug
@@ -138,9 +142,10 @@ Awaitables inherit from `VoidAwait` or `IAwait<TResult, TTask>` in `co/Await.h`.
 | Variable | Purpose |
 |----------|---------|
 | `$REPO_DIR` | Root of the repository |
-| `$JDE_DIR` | `$REPO_DIR/Public` (source root) |
-| `$JDE_BASH` | Same as `$JDE_DIR` (used in some CMake files) |
-| `$JDE_BUILD_DIR` | Active build output directory (e.g. `/mnt/ram/linux/clang++-22`) |
+| `$JDE_DIR` | `$REPO_DIR/Public` (source root; used by shell scripts and VS Code workspace configs — CMake files use paths relative to `CMAKE_CURRENT_LIST_DIR` instead) |
+| `$JDE_BASH` | Same as `$JDE_DIR` |
+| `$JDE_BUILD_DIR` | Build-output parent directory (e.g. `/mnt/ram/linux`); actual build dirs are `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>` |
+| `$JDE_COMPILER` | Compiler subdirectory name under `$JDE_BUILD_DIR` (e.g. `clang++`) |
 
 ## Other Stuff
 - NEVER use compound Bash commands containing 'cd' and output redirection (e.g., cd dir && cmd > file).

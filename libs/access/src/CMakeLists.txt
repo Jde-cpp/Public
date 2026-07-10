@@ -1,7 +1,7 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( ../../../build/functions.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../../build/functions.cmake )
 project( Jde.AccessLib VERSION ${JDE_VERSION} LANGUAGES CXX )
-include( ../../../build/dependencies.cmake )
+include( ${jdeRoot}/build/dependencies.cmake )
 
 set( targetName Jde.Access )
 add_library( ${targetName} )
@@ -12,9 +12,9 @@ file( GLOB sources
 	server/*.cpp server/awaits/*.cpp server/hooks/*.cpp
 	client/*.cpp )
 file( GLOB headers *.h server/*.h server/awaits/*.h awaits/*.h client/*.h types/*.h
-	$ENV{JDE_DIR}/include/jde/access/*.h $ENV{JDE_DIR}/include/jde/access/types/*.h
-	$ENV{JDE_DIR}/include/jde/access/awaits/*.h $ENV{JDE_DIR}/include/jde/access/client/*.h
-	$ENV{JDE_DIR}/include/jde/access/server/*.h $ENV{JDE_DIR}/include/jde/access/server/awaits/*.h )
+	${jdeRoot}/include/jde/access/*.h ${jdeRoot}/include/jde/access/types/*.h
+	${jdeRoot}/include/jde/access/awaits/*.h ${jdeRoot}/include/jde/access/client/*.h
+	${jdeRoot}/include/jde/access/server/*.h ${jdeRoot}/include/jde/access/server/awaits/*.h )
 target_sources(${targetName} PRIVATE ${sources} ${headers} )
 target_link_libraries( ${targetName} Jde Jde.DB Jde.QL )
 

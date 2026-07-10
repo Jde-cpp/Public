@@ -1,8 +1,8 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( $ENV{JDE_DIR}/build/functions.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../../build/functions.cmake )
 project( Jde.App.ServerLib )
 
-include( $ENV{JDE_DIR}/build/dependencies.cmake )
+include( ${jdeRoot}/build/dependencies.cmake )
 
 set( targetName Jde.App.ServerLib )
 add_library( ${targetName} )
@@ -20,7 +20,7 @@ else()
 	add_dependencies( ${targetName} Jde.DB.MySql )
 endif()
 
-include_directories( $ENV{JDE_DIR}/include/jde/web/client/proto )
+include_directories( ${jdeRoot}/include/jde/web/client/proto )
 target_link_libraries( ${targetName} Jde.Access Jde.Web.Server Jde.App.Shared )
 target_precompile_headers( ${targetName} PRIVATE
 	<jde/fwk.h>

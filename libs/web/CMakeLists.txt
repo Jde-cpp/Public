@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 enable_testing()
-include( ../../build/functions.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../build/functions.cmake )
 
 project( Jde.Web VERSION ${JDE_VERSION} LANGUAGES CXX )
 
