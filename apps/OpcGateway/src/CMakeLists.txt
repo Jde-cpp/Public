@@ -1,8 +1,8 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( $ENV{JDE_BASH}/build/functions.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../../build/functions.cmake )
 message( "Jde.Opc.GatewayLib" )
 project( Jde.Opc.GatewayLib VERSION ${JDE_VERSION} LANGUAGES CXX )
-include( ../../../build/dependencies.cmake )
+include( ${jdeRoot}/build/dependencies.cmake )
 
 include_directories( ${open62541Dir}include )
 
@@ -19,7 +19,7 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 IF( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}" )
 endif()
-target_include_directories( ${targetName} PRIVATE $ENV{JDE_DIR}/include/jde/app/proto )
+target_include_directories( ${targetName} PRIVATE ${jdeRoot}/include/jde/app/proto )
 target_link_libraries( ${targetName} Jde.Web.Server Jde.App.Client Jde.Opc )
 
 target_precompile_headers(${targetName}
@@ -29,7 +29,7 @@ target_precompile_headers(${targetName}
 
 set( PROTO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 set( protoOutDir ${PROJECT_SOURCE_DIR}/types/proto )
-set( protoIncludeDir "$ENV{JDE_DIR}/libs/app/shared/proto" )
+set( protoIncludeDir "${jdeRoot}/libs/app/shared/proto" )
 protobuf_generate(
 	TARGET ${targetName}
 	IMPORT_DIRS
@@ -42,5 +42,5 @@ suppressProtoWarnings( "${protos}" ${protoOutDir} )
 #for intellisense; created once at configure time since recreating it as a PRE_BUILD/PRE_LINK step on every build
 #bumps its mtime, which is newer than the PCH's, forcing a full PCH rebuild (and thus a full target rebuild) every time
 if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" )
-	file( CREATE_LINK "$ENV{JDE_BASH}/include/jde/app/proto/Common.pb.h" "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" SYMBOLIC )
+	file( CREATE_LINK "${jdeRoot}/include/jde/app/proto/Common.pb.h" "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" SYMBOLIC )
 endif()

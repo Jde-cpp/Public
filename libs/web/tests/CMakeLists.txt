@@ -1,8 +1,8 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 enable_testing()
-include( ../../../build/functions.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../../build/functions.cmake )
 project( Jde.Web.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
-include( ../../../build/dependencies.cmake )
+include( ${jdeRoot}/build/dependencies.cmake )
 
 if( WIN32 )
 	add_definitions( -DZLIB_USE_STATIC_LIBS )
@@ -54,8 +54,7 @@ else()
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet" )
 endif()
 
-include_directories( ${targetName} $ENV{JDE_DIR}/include/jde/web/client/proto )
-include_directories( ${targetName} $ENV{JDE_DIR}/include/app/shared/proto )
+include_directories( ${jdeRoot}/include/jde/web/client/proto )
 
 add_test( NAME WebTests COMMAND $<TARGET_FILE:Jde.Web.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet )
 set( CMAKE_CTEST_ARGUMENTS "-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet" )

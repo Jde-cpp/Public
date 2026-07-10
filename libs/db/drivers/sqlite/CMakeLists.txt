@@ -1,8 +1,8 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( ../../../../build/functions.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../../../build/functions.cmake )
 project( Jde.DB.Sqlite VERSION ${JDE_VERSION} LANGUAGES CXX )
 message( ${PROJECT_NAME} )
-include( ../../../../build/dependencies.cmake )
+include( ${jdeRoot}/build/dependencies.cmake )
 
 find_package( SQLite3 REQUIRED ) #apt install libsqlite3-dev
 find_package( Threads REQUIRED )

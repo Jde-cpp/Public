@@ -1,3 +1,9 @@
+cmake_path( SET jdeRoot NORMALIZE ${CMAKE_CURRENT_LIST_DIR}/.. )
+
+if( CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR )
+	message( FATAL_ERROR "In-source builds are not allowed. Configure from an out-of-source build directory, e.g.:\n  cd $JDE_BUILD_DIR/$JDE_COMPILER/<repo-name> && cmake ${CMAKE_SOURCE_DIR} --preset <preset>" )
+endif()
+
 if( CMAKE_HOST_WIN32 )
 	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>" )
 	set( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>" )

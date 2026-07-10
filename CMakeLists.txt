@@ -1,4 +1,5 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
+include( build/functions.cmake )
 project( Superbuild VERSION ${JDE_VERSION} LANGUAGES CXX )
 
 option( jde_Superbuild "Generate the test targets." ON )

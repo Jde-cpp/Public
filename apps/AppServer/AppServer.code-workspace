@@ -4,14 +4,12 @@
 		"name": "AppServer",
 		"target": "Jde.App.Server",
 		"subDir": "apps/${config:name}",
-		"sourceDir": "${env:JDE_DIR}/${config:subDir}",
-		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_DIR}",
-		"debugDir": "${config:buildRoot}",
-		"exeDir": "${config:buildRoot}/${config:subDir}/exe",
-		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
-		"clangd.arguments": [
-			"--compile-commands-dir=/home/duffyj/code/jde/Public/apps/AppServer"
+		"cmake.sourceDirectory": "${workspaceFolder}/../../..",
+		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
+	},
+	"extensions": {
+		"recommendations": [
+			"augustocdias.tasks-shell-input"
 		]
 	},
 	"folders": [
@@ -60,32 +58,19 @@
 			"name": "config"
 		}
 	],
-	"tasks": {
-		"version": "2.0.0",
-		"tasks": [
-			{
-				"label": "compile",
-				"type": "shell",
-				"command": "tput reset;${config:sourceBash};compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot};",
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "buildProject",
-				"type": "shell",
-				"command": "tput reset; source $JDE_DIR/build/buildFunctions.sh;buildProject ${fileWorkspaceFolder} ${config:buildRoot};",
-				"group": { "kind": "build", "isDefault": false }
-			}
-		]
-	},
 	"launch": {
 		"version": "0.2.0",
 		"configurations": [{
 			"name": "Debug",
 			"type": "lldb",
 			"request": "launch",
-			"program": "${config:exeDir}/${config:target}",
-			"args": ["-c", "-tests", "-settings=${env:JDE_DIR}/apps/AppServer/config/App.Server.jsonnet"],
-			"cwd": "${config:exeDir}",
+			"program": "${input:repoBuildDir}/${config:subDir}/exe/${config:target}",
+			"args": ["-c", "-tests", "-settings=${workspaceFolder:config}/App.Server.jsonnet"],
+			"cwd": "${input:repoBuildDir}/runtime",
+			"env":{
+				"JDE_DIR": "${workspaceFolder:config}/../../..",
+				"JDE_BUILD_DIR": "${input:repoBuildDir}",
+			},
 			"preLaunchTask": "build"
 		},
 		{
@@ -100,6 +85,20 @@
 				"command script import ~/.lldb/boost_json_formatter.py",
 				"command script import ~/.lldb/jde_formatter.py"
 			]
-		}]
+		}],
+		"inputs": [
+			{
+				"id": "repoBuildDir",
+				"type": "command",
+				"command": "shellCommand.execute",
+				"args": {
+					"command": "echo $JDE_BUILD_DIR/$JDE_COMPILER/$(basename $(realpath ../../..))",
+					"cwd": "${workspaceFolder:AppServer}",
+					"useFirstResult": true,
+					"taskId": "repoBuildDir"
+				}
+			}
+		],
+		"compounds": []
 	}
 }

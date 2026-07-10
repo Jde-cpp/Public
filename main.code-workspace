@@ -4,12 +4,10 @@
 		"name": "main",
 		"releaseRoot": "${env:JDE_BASH}/Release",
 		"debugDir": "${env:JDE_BUILD_DIR}",
-		"buildRoot": "${env:JDE_BUILD_DIR}",
-		"sourceDir": "${env:JDE_BASH}",
+		"sourceDir": "${workspaceFolder}",
 		"debugPreset": "linux-clang-debug",
 		"debugClangPreset": "linux-clang-debug",
 		"releasePreset": "linux-gcc-relWithDebInfo",
-		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
 		"files.watcherExclude": {
 			"**/my-workspace*/**": true,
 			"**/out/**": true,

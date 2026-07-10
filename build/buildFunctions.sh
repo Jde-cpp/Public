@@ -88,34 +88,34 @@ function compile() {
 	make ${buildFile}.o;
 }
 function reconfig() {
-	buildRoot=$1;
-	preset=$2;
-	sourceDir=$3;
-	mkdir -p $buildRoot;
+	cmakeDir=$(realpath $2);
+	buildRoot=$1/$(basename $cmakeDir);
+	preset=$3;
+	mkdir -p $buildRoot/runtime/logs;
 	cd $buildRoot;
 	rm -f CMakeCache.txt;
 	tput reset;
 	echo `pwd` > cmake.output;
-	echo "cmake $JDE_DIR -Wno-dev --preset $preset 2>&1" | tee -a cmake.output;
-	cmake "$JDE_DIR" -Wno-dev --preset "$preset" 2>&1 | tee -a cmake.output;
+	echo "cmake $cmakeDir -Wno-dev --preset $preset 2>&1" | tee -a cmake.output;
+	cmake $cmakeDir -Wno-dev --preset "$preset" 2>&1 | tee -a cmake.output;
 	if [ -f "$buildRoot/compile_commands.json" ]; then
-		mv $buildRoot/compile_commands.json $JDE_BASH/compile_commands_$preset.json;
+		mv $buildRoot/compile_commands.json $cmakeDir/compile_commands.json;
 	fi
 }
 function build() {
-	buildRoot=$1;
-	target=$2;
+	cmakeDir=$(realpath $2);
+	buildRoot=$1/$(basename $cmakeDir);
+	target=$3;
 	cd $buildRoot;
 	set -o pipefail;
-	tput reset;
 	echo `pwd`/$target.output > $target.output;
 	echo "cmake --build . -j --target $target" | tee -a $target.output;
 	cmake --build . -j --target $target | tee -a $target.output;
 }
 function buildTests() {
-	baseProject=$2;
-	if [ $baseProject == "Jde.Opc.Gateway" ]; then
-		baseProject="Jde.Opc";
+	baseTarget=$3;
+	if [ $baseTarget == "Jde.Opc.Gateway" ]; then
+		baseTarget="Jde.Opc";
 	fi;
-	build $1 $baseProject.Tests;
+	build $1 $2 $baseTarget.Tests;
 }

@@ -1,12 +1,12 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( ../../build/functions.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../build/functions.cmake )
 set( targetName Jde.QL )
 project( ${targetName} VERSION ${JDE_VERSION} LANGUAGES CXX )
-include( ../../build/dependencies.cmake )
+include( ${jdeRoot}/build/dependencies.cmake )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
 file( GLOB sources *.cpp **/*.cpp )
-file( GLOB headers **/*.h $ENV{JDE_DIR}/include/jde/ql )
+file( GLOB headers **/*.h ${jdeRoot}/include/jde/ql )
 target_sources(${targetName}
 	PRIVATE
 		${sources}

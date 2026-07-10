@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( ../../../build/functions.cmake )
-include( ../../../build/linkSo.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../../build/functions.cmake )
+include( ${jdeRoot}/build/linkSo.cmake )
 
 if( NOT WIN32 )
 	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )
@@ -11,7 +11,7 @@ endif()
 
 set( targetName Jde.Access.Tests )
 project( ${targetName} VERSION ${JDE_VERSION} LANGUAGES CXX )
-include( ../../../build/dependencies.cmake )
+include( ${jdeRoot}/build/dependencies.cmake )
 
 if( NOT jde_Superbuild )
 	add_subdirectory( ../../fwk/src ../../fwk/lib )
