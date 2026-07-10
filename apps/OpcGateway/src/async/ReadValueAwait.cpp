@@ -18,47 +18,39 @@ namespace Jde::Opc::Gateway{
 		_client{ move(c) }
 	{}
 
+	//Suspend's closure and OnComplete (invoked inside run_iterate) both run on the client's strand, so
+	//_requests/_results are strand-confined - no lock needed, and a response can't be processed before its
+	//requestId is registered.
 	α ReadValueAwait::Suspend()ι->void{
-		for( auto&& nodeId : _nodes ){
-			RequestId requestId{};
-			try{
-				{
-					lg l{ _mutex };
+		_client->PostUA( [this]{
+			for( auto&& nodeId : _nodes ){
+				RequestId requestId{};
+				try{
 					UAε( UA_Client_readValueAttribute_async(_client->UAPointer(), nodeId, onResponse, this, &requestId) );
 					_requests.emplace( requestId, move(nodeId) );
+					_client->Process( requestId, "readValueAttribute" );
 				}
-				_client->Process( requestId, "readValueAttribute" );
-			}
-			catch( UAException& e ){
-				bool done;
-				{
-					lg l{ _mutex };
+				catch( UAException& e ){
 					_results.emplace( nodeId, Value{(StatusCode)e.Code()} );
-					done = _results.size()==_nodes.size();
+					if( _results.size()==_nodes.size() )
+						Resume( move(_results) );
 				}
-				if( done )
-					Resume( move(_results) );
 			}
-		}
+		});
 	}
 
 	α ReadValueAwait::OnComplete( RequestId requestId, StatusCode sc, UA_DataValue* val )ι->void{
 		_client->ClearRequest( requestId );
 		auto logPrefix = [&](){ return Ƒ("[{}.{}]", hex(_client->Handle()), requestId); };
-		bool done;
-		{
-			lg l{ _mutex };
-			auto nodeIdIt = _requests.find( requestId );
-			if( nodeIdIt==_requests.end() ){
-				CRITICAL( "{}ReadValueAwait::OnComplete - could not find requestId", logPrefix() );
-				return;
-			}
-			Value value = sc || !val ? Value{ sc } : Value{ move(*val) };
-			DBG( "{} Value: {}", logPrefix(), serialize(value.ToJson()) );
-			_results.emplace( nodeIdIt->second, move(value) );
-			done = _results.size()==_nodes.size();
+		auto nodeIdIt = _requests.find( requestId );
+		if( nodeIdIt==_requests.end() ){
+			CRITICAL( "{}ReadValueAwait::OnComplete - could not find requestId", logPrefix() );
+			return;
 		}
-		if( done )
+		Value value = sc || !val ? Value{ sc } : Value{ move(*val) };
+		DBG( "{} Value: {}", logPrefix(), serialize(value.ToJson()) );
+		_results.emplace( nodeIdIt->second, move(value) );
+		if( _results.size()==_nodes.size() )
 			Resume( move(_results) );
 	}
 }

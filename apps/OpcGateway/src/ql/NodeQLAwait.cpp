@@ -5,10 +5,11 @@
 #include "../UAClient.h"
 #include "../async/ConnectAwait.h"
 #include "../async/ReadValueAwait.h"
+#include "../async/UAStrandAwait.h"
 
 #define let const auto
 namespace Jde::Opc::Gateway{
-	α NodeQLAwait::Execute()ι->TAwait<sp<UAClient>>::Task{
+	α NodeQLAwait::Execute()ι->TAwait<BrowsePathResponse>::Task{
 		try{
 			BrowsePathResponse pathNodes;
 			NodeId nodeId;
@@ -16,7 +17,7 @@ namespace Jde::Opc::Gateway{
 			flat_map<NodeId, jobject> jChildren;
 			auto parentsQL{ _query.FindTable("parents") };
 			if( auto nodePath = _query.FindPtr<jstring>("path"); nodePath ){
-				pathNodes = _client->BrowsePathsToNodeIds( *nodePath, parentsQL!=nullptr );
+				pathNodes = co_await UAStrandAwait<BrowsePathResponse>{ _client, [this, nodePath, parentsQL]{ return _client->BrowsePathsToNodeIds(*nodePath, parentsQL!=nullptr); }, _sl };//sync UA service - must run on the client's strand.
 				const bool savePath{ parentsQL && parentsQL->FindColumn("path") };
 				for( auto node = pathNodes.begin(); node != pathNodes.end(); ++node ){
 					if( node->second.has_value() ){

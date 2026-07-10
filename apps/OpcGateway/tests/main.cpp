@@ -48,8 +48,10 @@ namespace Jde{
 	done.wait( false );
 	int result{ EXIT_FAILURE };
 	try{
-		if( _error )
+		if( _error ){
+			std::cerr << "startup error: " << _error->what() << std::endl;//throw *_error slices to std::exception, losing the message.
 			throw *_error;
+		}
 		::testing::GTEST_FLAG( filter ) = Settings::FindString( "/testing/tests" ).value_or( "*" );
 		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
 		result = RUN_ALL_TESTS();

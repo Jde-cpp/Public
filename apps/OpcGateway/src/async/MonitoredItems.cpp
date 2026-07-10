@@ -19,6 +19,9 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α DeleteMonitoredItemsAwait::Suspend()ι->void{
+		_client->PostUA( [this]{ SuspendOnStrand(); } );//UA submissions must run on the client's strand.
+	}
+	α DeleteMonitoredItemsAwait::SuspendOnStrand()ι->void{
 		try{
 			for( let& [subscriptionId, monitorIds] : _monitoredItems ){
 				UA_DeleteMonitoredItemsRequest request{

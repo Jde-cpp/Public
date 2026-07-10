@@ -5,6 +5,7 @@
 #include <jde/opc/uatypes/Variant.h>
 #include "../GatewayAppClient.h"
 #include "../async/CallAwait.h"
+#include "../async/UAStrandAwait.h"
 #include "../types/UAClientException.h"
 #include "DataTypeQLAwait.h"
 #include "NodeQLAwait.h"
@@ -61,12 +62,12 @@ namespace Jde::Opc::Gateway{
 				y = co_await NodeQLAwait{ move(_query), move(_client), _sl };
 			else if( _query.JsonName.starts_with("dataType") )
 				y = co_await DataTypeQLAwait{ move(_query), move(_client), _sl };
-			else if( _query.JsonName=="serverDescription" )
-				y = ServerDescription( move(_query), move(_client) );
+			else if( _query.JsonName=="serverDescription" )//connection attributes are sync UA services - run them on the client's strand.
+				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue{ return ServerDescription( move(_query), _client ); }, _sl };
 			else if( _query.JsonName=="securityPolicyUri" )
-				y = SecurityPolicyUri( move(_query), move(_client) );
+				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue{ return SecurityPolicyUri( move(_query), _client ); }, _sl };
 			else if( _query.JsonName=="securityMode" )
-				y = SecurityMode( move(_query), move(_client) );
+				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue{ return SecurityMode( move(_query), _client ); }, _sl };
 			else
 				throw Exception{ _sl, {}, "Unknown query type: {}", _query.JsonName };
 			Resume( move(y) );

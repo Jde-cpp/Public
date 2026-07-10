@@ -2,7 +2,7 @@ local args = import 'args.libsonnet';
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests:: "TokenTests.*",
+		tests:: "SubscribeTests.Basic",
 		recreateDB:: true,
 		embeddedAppServer:: false,
 		embeddedOpcServer:: false
@@ -89,7 +89,7 @@ local args = import 'args.libsonnet';
 				uaSecurity: "Information",
 				uaSession: "Information",
 				uaServer: "Information",
-				uaUser: "Information",
+				uaUser: "Information"
 			},
 			sinks:{
 				console:{},

@@ -29,6 +29,9 @@
 					"JDE_DIR": "${workspaceFolder:config}/../../..",
 					"JDE_BUILD_DIR": "${input:repoBuildDir}",
 				},
+				"sourceMap": {
+					"/mnt/ram/linux/clang++-22/repos/open62541/src": "/mnt/ram/linux/clang++/repos/open62541/src"
+				},
 				"preLaunchTask": "build",
 			},
 			{
@@ -58,6 +61,9 @@
 				"env":{
 					"JDE_DIR": "${workspaceFolder:config}/../../..",
 					"JDE_BUILD_DIR": "${input:repoBuildDir}",
+				},
+				"sourceMap": {
+					"/mnt/ram/linux/clang++-22/repos/open62541/src": "/mnt/ram/linux/clang++/repos/open62541/src"
 				},
 				"preLaunchTask": "buildTests"
 			}
@@ -133,6 +139,10 @@
 		{
 			"path": "../../libs/db/drivers/mysql",
 			"name": "mysql"
+		},
+		{
+			"path": "/mnt/ram/linux/clang++/repos/open62541/src/open62541",
+			"name": "open62541"
 		}
 	]
 }

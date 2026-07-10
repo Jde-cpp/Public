@@ -12,13 +12,19 @@ namespace Jde::Opc::Gateway::Tests{
 	struct BrowseTests : ::testing::Test{
 	protected:
 		Ω SetUpTestCase()ε->void{
-			_jwt = BlockAwait<Web::Client::ClientSocketAwait<Jde::Web::Jwt>,Web::Jwt>( AppClient()->Jwt() );
-			auto sessionId = *Str::TryTo<SessionPK>(_jwt->SessionId, nullptr, 16);
-			TRACE( "UserPK: {:x}, SessionId: {:x}", _jwt->UserPK.Value, sessionId );
-			auto con = GetConnection( OpcServerTarget );
-			Credential cred{ _jwt->Payload() };
-			_client = BlockAwait<TAwait<sp<UAClient>>,sp<UAClient>>( ConnectAwait{move(con.Target), cred} );
-			AddSession( sessionId, OpcServerTarget, move(cred) );
+			try{
+				_jwt = BlockAwait<Web::Client::ClientSocketAwait<Jde::Web::Jwt>,Web::Jwt>( AppClient()->Jwt() );
+				auto sessionId = *Str::TryTo<SessionPK>(_jwt->SessionId, nullptr, 16);
+				TRACE( "UserPK: {:x}, SessionId: {:x}", _jwt->UserPK.Value, sessionId );
+				auto con = GetConnection( OpcServerTarget );
+				Credential cred{ _jwt->Payload() };
+				_client = BlockAwait<TAwait<sp<UAClient>>,sp<UAClient>>( ConnectAwait{move(con.Target), cred} );
+				AddSession( sessionId, OpcServerTarget, move(cred) );
+			}
+			catch( exception& e ){
+				INFOT( ELogTags::Test, "Failed to connect to gateway: {}", e.what() );
+				THROW( "Failed to connect to gateway: {}", e.what() );
+			}
 		};
 		Ω TearDownTestCase()ι->void{
 			if( _client )

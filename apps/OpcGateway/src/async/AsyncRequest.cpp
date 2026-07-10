@@ -1,68 +1,56 @@
-﻿#include "AsyncRequest.h"
+#include "AsyncRequest.h"
 #include "../UAClient.h"
 #include <jde/fwk/process/execution.h>
 #define let const auto
 
 namespace Jde::Opc::Gateway{
+	namespace asio = boost::asio;
 	Duration _pingInterval;//config, set once at startup - safe to share.
 	Duration _ttl;//config, set once at startup - safe to share.
-	//TODO! _lastRequest and _pingTimer are per-client state but live at file scope, shared across every UAClient's ProcessingLoop. With >=2 clients: _lastRequest is written under different per-client _requestMutexes (data race; one client's traffic suppresses another's TTL shutdown), and ping()'s ASSERT(!_pingTimer) fires / both coroutines co_await the same DurationTimer and the first reset()s it under the other (UB). Move both into AsyncRequest. Deferred to be fixed together with the #3 threading redesign.
-	TimePoint _lastRequest;
-	optional<DurationTimer> _pingTimer; mutex _pingMutex;
 
-	Ω cancelPing()ι->void{
-		lg _{ _pingMutex };
+	AsyncRequest::AsyncRequest()ι:
+		_strand{ Executor()->get_executor() }
+	{}
+
+	α AsyncRequest::CancelPing()ι->void{//strand-only
 		if( _pingTimer )
 			_pingTimer->Cancel();
 	}
-	Ω ping( sp<UAClient> client )ι->DurationTimer::Task{
-		{
-			lg _{ _pingMutex };
-			ASSERT( !_pingTimer );
-			if( !_pingTimer ){
-				_pingTimer.emplace( _pingInterval, SRCE_CUR );
-				DBGT( EOpcLogTags::ProcessingLoop, "Pinging '{}' in '{}'", client->Target(), Chrono::ToString(_pingInterval) );
-			}
-		}
-		auto result = co_await *_pingTimer;
-		{
-			lg _{ _pingMutex };
-			_pingTimer.reset();
-		}
+	α AsyncRequest::Ping( sp<UAClient> client )ι->DurationTimer::Task{//strand-confined; `client` keeps `this` (a UAClient member) alive across the await.
+		ASSERT( !_pingTimer );
+		if( _pingTimer )
+			co_return;
+		_pingTimer.emplace( _pingInterval, _strand, SRCE_CUR );
+		DBGT( EOpcLogTags::ProcessingLoop, "Pinging '{}' in '{}'", client->Target(), Chrono::ToString(_pingInterval) );
+		auto result = co_await *_pingTimer;//resumes on _strand
+		_pingTimer.reset();
 		if( result )
 			client->Process( PingRequestId, "ping" );
 		else
 			CodeException resultEx{ result.error(), (ELogTags)EOpcLogTags::ProcessingLoop };
 	}
-	// 1 per UAClient
+	// 1 per UAClient. Runs entirely on _strand: started there by Process, and every co_await below resumes there
+	// (executor-bound DurationTimer), so _requests/_client/_lastRequest/_pingTimer need no locks and
+	// UA_Client_run_iterate never overlaps other UA_Client_* calls - submissions and sync services are dispatched
+	// to the same strand via UAClient::PostUA.
 	α AsyncRequest::ProcessingLoop()ι->DurationTimer::Task{
-		sp<UAClient> client;
-		{ ul _{ _requestMutex }; client = _client; }//Stop() writes _client under the same mutex; read it once here to avoid the shared_ptr data race.
+		ASSERT( _strand.running_in_this_thread() );
+		sp<UAClient> client = _client;//keeps the owning UAClient (and thus `this`) alive across suspensions.
 		function<string()> logPrefix = [client](){ return Ƒ("[{:x}]", client ? client->Handle() : 0); };
 		DBG( "{}ProcessingLoop started", logPrefix() );
-		cancelPing();
+		CancelPing();
 		StatusCode sc{};
 		while( _running.test() ){
-			uint size;
-			{
-				ul _{ _requestMutex };
-				if( size = _requests.size(); size ){
-					if( *_requests.begin()==PingRequestId )
-						_requests.erase( PingRequestId );
-					else
-						_lastRequest = Clock::now();
-				}
+			let size = _requests.size();
+			if( size ){
+				if( *_requests.begin()==PingRequestId )
+					_requests.erase( PingRequestId );
+				else
+					_lastRequest = Clock::now();
 			}
 			TRACE( "{}run_iterate: requestCount: {}", logPrefix(), size );
-			//TODO! open62541 UA_Client is not thread-safe, but the fwk executor is a multi-threaded io_context pool.
-			// run_iterate() runs here on one pool thread while other pool threads submit async requests (ReadAwait,
-			// ReadValueAwait, WriteAwait, DataChanges, Subscriptions, ...) and call synchronous services
-			// (translateBrowsePathsToNodeIds, getRemoteDataTypes, getConnectionAttributeCopy) against the same client.
-			// Fix requires a design decision: route ALL UA_Client_* calls through this loop (queue of closures), or
-			// guard run_iterate + every UA_Client_* call with a per-client mutex. Deferred (review finding #3).
 			if( sc = UA_Client_run_iterate(*client, 0); sc ){
 				_running.clear();
-				ul _{ _requestMutex };
 				let level = _requests.size()>0 ? ELogLevel::Critical : ELogLevel::Debug;
 				string requests;
 				for_each( _requests, [&requests](auto r){requests += Ƒ("{:x}, ", r);} );
@@ -70,63 +58,59 @@ namespace Jde::Opc::Gateway{
 				_requests.clear();
 				break;
 			}
-			uint newSize;
-			RequestId firstRequest{};
-			{
-				_requestMutex.lock();
-				if( newSize=_requests.size(); !newSize ){
-					TRACE( "{}requestCount: {}", logPrefix(), newSize );
-					_running.clear();
-					_requestMutex.unlock();
-					if( let now = Clock::now(); _lastRequest + _ttl < now ){
-						DBG( "{}No requests for {}, shutting down client.", logPrefix(), Chrono::ToString(now-_lastRequest) );
-						client->Shutdown();
-					}
-					break;
+			let newSize = _requests.size();
+			if( !newSize ){
+				TRACE( "{}requestCount: {}", logPrefix(), newSize );
+				_running.clear();
+				if( let now = Clock::now(); _lastRequest + _ttl < now ){
+					DBG( "{}No requests for {}, shutting down client.", logPrefix(), Chrono::ToString(now-_lastRequest) );
+					UAClient::ShutdownIdle( client );//per-client teardown: _lastRequest is per-client, so this client idling out must not tear down the others.
 				}
-				firstRequest = *_requests.begin();
-				TRACE( "{}requestCount: {}, [0]={}", logPrefix(), newSize, hex(firstRequest) );
-				_requestMutex.unlock();
+				break;
 			}
+			let firstRequest = *_requests.begin();
+			TRACE( "{}requestCount: {}, [0]={}", logPrefix(), newSize, hex(firstRequest) );
 			if( size==newSize ){
 				let sleep = size==1 && firstRequest==SubscriptionRequestId ? 500ms : 1ms; //UA_CreateSubscriptionRequest_default
-				(void)co_await DurationTimer{ sleep };
+				(void)co_await DurationTimer{ sleep, _strand, SRCE_CUR };
 			}
 		}
-		if( !sc && !_stopped.test() && _pingInterval.count()>0 )
-			ping( client );
+		if( !sc && !_stopped.test() && _pingInterval.count()>0 ){
+			//post rather than call: a cancelled ping's resumption may still be queued on the strand (it resets _pingTimer);
+			//strand FIFO guarantees it runs before this starter, so Ping always sees a settled _pingTimer.
+			asio::post( _strand, [this, client]{
+				if( !_stopped.test() && !_pingTimer )
+					Ping( client );
+			});
+		}
 		else
 			DBG( "{}ProcessingLoop stopped", logPrefix() );
 	}
 
-	α AsyncRequest::Clear( RequestId requestId )ι->void{
+	α AsyncRequest::Clear( RequestId requestId )ι->void{//strand-only (cross-thread callers go through UAClient::ClearRequest)
+		ASSERT( _strand.running_in_this_thread() );
 		TRACE( "[{}.{}]Clearing", hex(UAHandle()), hex(requestId) );
-		ul _{_requestMutex};
 		if( !_requests.erase(requestId) && requestId!=ConnectRequestId )
 			CRITICALT( ProcessingLoopTag, "[{}.{}]Could not find request handle.", hex(UAHandle()), hex(requestId) );
 	}
 
-	α AsyncRequest::Process( RequestId requestId, sv what )ι->void{
+	α AsyncRequest::Process( RequestId requestId, sv what )ι->void{//strand-only (cross-thread callers go through UAClient::Process)
+		ASSERT( _strand.running_in_this_thread() );
 		TRACE( "[{}.{}]Processing: {}", hex(UAHandle()), hex(requestId), what );
-		if( _stopped.test() )
+		if( _stopped.test() || !_client )
 			return;
-		sp<UAClient> self;
-		{
-			ul _{_requestMutex};
-			_requests.emplace( requestId );
-			self = _client;//keep the owning UAClient (and thus `this`) alive across the Post; Stop() nulls _client under this mutex.
-		}
-		if( self && !_running.test_and_set() )
-			Post( [self,this]{ ProcessingLoop(); } );
+		_requests.emplace( requestId );
+		if( !_running.test_and_set() )
+			ProcessingLoop();
 	}
-	α AsyncRequest::Stop()ι->void{
+	α AsyncRequest::Stop()ι->void{//strand-only (cross-thread callers go through UAClient::StopProcessing)
+		ASSERT( _strand.running_in_this_thread() );
 		DBG( "[{}]Stopping ProcessingLoop", UAHandle() );
-		ul _{ _requestMutex };
-		cancelPing();
+		CancelPing();
 		_stopped.test_and_set();
 		_requests.clear();
 		_running.clear();
-		_client=nullptr;
+		_client=nullptr;//breaks the UAClient<->AsyncRequest._client self-reference; the dispatching closure's keep-alive lets the UAClient be destroyed afterwards.
 	}
 	α AsyncRequest::UAHandle()ι->Handle{ return _client ? _client->Handle() : 0; }
 }

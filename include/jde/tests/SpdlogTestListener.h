@@ -31,7 +31,7 @@ namespace Jde{
 		}
 		α OnTestPartResult( const ::testing::TestPartResult& result )->void override{
 			if( result.failed() ){
-				auto info = ::testing::UnitTest::GetInstance()->current_test_info();
+				auto info = result.file_name() ? ::testing::UnitTest::GetInstance()->current_test_info() : nullptr;
 				Logging::Entry entry{ ELogLevel::Error, ELogTags::Test, (uint32_t)result.line_number(), Clock::now(), {0}, string{result.message()}, result.file_name() ? result.file_name() : "unknown file", info ? info->name() : "unknown", {} };
 				Logging::Log( entry );
 			}

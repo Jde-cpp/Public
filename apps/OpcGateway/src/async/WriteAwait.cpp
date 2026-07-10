@@ -16,11 +16,13 @@ namespace Jde::Opc::Gateway{
 		await.AddResponse( requestId, move(*response) );
 	}
 	α WriteAwait::Suspend()ι->void{
-		let sc = UA_Client_writeValueAttribute_async( *_client, _nodeId, &_value.value, onResponse, this, &_requestId );
-		if( sc )
-			ResumeExp( UAClientException{sc, _client->Handle(), "writeValueAttribute", _sl} );
-		else
-			_client->Process( _requestId, "writeValueAttribute" );
+		_client->PostUA( [this]{//UA submissions must run on the client's strand.
+			let sc = UA_Client_writeValueAttribute_async( *_client, _nodeId, &_value.value, onResponse, this, &_requestId );
+			if( sc )
+				ResumeExp( UAClientException{sc, _client->Handle(), "writeValueAttribute", _sl} );
+			else
+				_client->Process( _requestId, "writeValueAttribute" );
+		});
 	}
 	α WriteAwait::AddResponse( RequestId reqId, UA_WriteResponse&& response )ι->void{
 		_client->ClearRequest( reqId );

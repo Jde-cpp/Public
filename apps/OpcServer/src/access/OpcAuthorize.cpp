@@ -89,10 +89,17 @@ namespace Jde::Opc::Server{
 			}
 		}
 
+
 		sl _{ Mutex };
 		auto user = Users.find( executer );
 		if( user==Users.end() || user->second.IsDeleted )
 			return EAccess::None;
+		if( auto resource = Resources.find(*resourcePK); resource->second.IsDeleted )
+			return EAccess::All;
+		else{
+			CRITICAL( "Resource {} not found for node {}. This should never happen.", *resourcePK, nodeId.ToString() );
+			return EAccess::None;
+		}
 		auto rights = user->second.ResourceRights( *resourcePK );
 		return ( EAccess )rights.Effective();
 	}

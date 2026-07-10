@@ -48,21 +48,28 @@ namespace Jde::Opc::Gateway{
 		try{
 			_client = co_await ConnectAwait{ Json::FindString(_ql.Args,"opc").value_or(""), *_session, _sl };
 
-			jarray jargs = Json::FindDefaultArray( _ql.Args, "args" );
-			auto args = Reserve<Variant>( jargs.size() );
-			// for( size_t i=0; i<jargs.size(); ++i )
-			// 	args[i] = Variant{ jargs[i], &UA_TYPES[UA_TYPES_VARIANT] };
-			UA_Client_call_async(
-				*_client,
-				NodeId{ _ql.Args },
-				NodeId{ _ql.As<jobject>("method") },
-				jargs.size(),
-				args.data(),
-				callback,
-				&_h,
-				&_requestId
-			);
-			_client->Process( _requestId, "call" );
+			_client->PostUA( [this]{//UA submission must run on the client's strand; runs after Execute's try, so catch locally.
+				try{
+					jarray jargs = Json::FindDefaultArray( _ql.Args, "args" );
+					auto args = Reserve<Variant>( jargs.size() );
+					// for( size_t i=0; i<jargs.size(); ++i )
+					// 	args[i] = Variant{ jargs[i], &UA_TYPES[UA_TYPES_VARIANT] };
+					UA_Client_call_async(
+						*_client,
+						NodeId{ _ql.Args },
+						NodeId{ _ql.As<jobject>("method") },
+						jargs.size(),
+						args.data(),
+						callback,
+						&_h,
+						&_requestId
+					);
+					_client->Process( _requestId, "call" );
+				}
+				catch( exception& e ){
+					ResumeExp( move(e) );
+				}
+			});
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );

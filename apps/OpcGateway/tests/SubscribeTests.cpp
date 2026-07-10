@@ -3,6 +3,7 @@
 #include "../src/GatewayAppClient.h"
 #include "../src/async/ConnectAwait.h"
 #include "../src/UAClient.h"
+#include "../src/types/UAClientException.h"
 #include "utils/GatewayClientSocket.h"
 #include "../src/types/proto/opc.FromServer.h"
 #include "utils/ITest.h"
@@ -43,10 +44,13 @@ namespace Jde::Opc::Gateway::Tests{
 	};
 	sp<GatewayClientSocket> SubscribeTests::_session;
 
-	α read( sp<UAClient> client, NodeId nodeId )ι->uint{
-		auto v = BlockTAwait<flat_map<NodeId, Value>>( ReadValueAwait{{nodeId}, move(client)} ).at( nodeId );
+	Ω read( sp<UAClient> client, NodeId nodeId )ε->uint{
+		auto v = BlockTAwait<flat_map<NodeId, Value>>( ReadValueAwait{{nodeId}, client} ).at( nodeId );
+		THROW_IFX( v.status, UAClientException(v.status, client) );
 		auto j = v.ToJson();
 		TRACET( ELogTags::Test, "Initial value: {}.", serialize(j) );
+		if( j.is_object() && j.as_object().contains("value") )
+			j = j.as_object().at("value");
 		let expected = v.ToJson().to_number<uint>();
 		return expected;
 	}

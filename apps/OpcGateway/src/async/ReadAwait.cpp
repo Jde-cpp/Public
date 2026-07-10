@@ -193,8 +193,10 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α ReadAwait::Suspend()ι->void{
-		UA_Client_sendAsyncReadRequest( *_client, &_request, ReadAwait::OnResponse, this, &_requestId );
-		_client->Process( _requestId, "read" );
+		_client->PostUA( [this]{//UA submissions must run on the client's strand; `this` outlives suspension (resume only via OnComplete).
+			UA_Client_sendAsyncReadRequest( *_client, &_request, ReadAwait::OnResponse, this, &_requestId );
+			_client->Process( _requestId, "read" );
+		});
 	}
 	α ReadAwait::OnResponse( UA_Client* /*client*/, void* await, UA_UInt32 /*requestId*/, UA_ReadResponse* rr )ι->void{
 		ASSERT( await );

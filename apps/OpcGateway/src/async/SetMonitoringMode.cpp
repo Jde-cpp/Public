@@ -8,19 +8,21 @@ namespace Jde::Opc::Gateway{
 		await.OnComplete( *response );
 	}
 
-	α SetMonitoringModeAwait::await_ready()ι->bool{ return _client->MonitoringModeResponse!=nullptr; }
+	α SetMonitoringModeAwait::await_ready()ι->bool{ return _client->MonitoringModeResponse()!=nullptr; }
 	α SetMonitoringModeAwait::Suspend()ι->void{
 		if( !_monitoringRequests.try_emplace_or_visit(_client, vector<SetMonitoringModeAwait::Handle>{_h}, [ h=_h](auto x){x.second.push_back(h);}) )
 			return;
-		UA_SetMonitoringModeRequest request{};
-		request.subscriptionId = _subscriptionId;
-		try{
-			UAε( UA_Client_MonitoredItems_setMonitoringMode_async(_client->UAPointer(), move(request), callback, this, &_requestId) );
-			_client->Process( _requestId, "setMonitoringMode" );
-		}
-		catch( UAException& e ){
-			Resume( (StatusCode)e.Code(), _client );
-		}
+		_client->PostUA( [this]{//UA submission must run on the client's strand.
+			UA_SetMonitoringModeRequest request{};
+			request.subscriptionId = _subscriptionId;
+			try{
+				UAε( UA_Client_MonitoredItems_setMonitoringMode_async(_client->UAPointer(), move(request), callback, this, &_requestId) );
+				_client->Process( _requestId, "setMonitoringMode" );
+			}
+			catch( UAException& e ){
+				Resume( (StatusCode)e.Code(), _client );
+			}
+		});
 	}
 	α SetMonitoringModeAwait::OnComplete( UA_SetMonitoringModeResponse& response )ι->void{
 		_client->ClearRequest( _requestId );
@@ -32,15 +34,16 @@ namespace Jde::Opc::Gateway{
 		if( sc )
 			SetMonitoringModeAwait::Resume( sc, _client );
 		else{
-			_client->MonitoringModeResponse = ms<UA_SetMonitoringModeResponse>( move(response) );
+			_client->SetMonitoringModeResponse( ms<UA_SetMonitoringModeResponse>( move(response) ) );
 			SetMonitoringModeAwait::Resume( _client );
 		}
 	}
 
 	α SetMonitoringModeAwait::await_resume()ι->sp<UA_SetMonitoringModeResponse>{
 		CheckException();
-		ASSERT( _client->MonitoringModeResponse );
-		return _client->MonitoringModeResponse;
+		auto p = _client->MonitoringModeResponse();
+		ASSERT( p );
+		return p;
 	}
 	α SetMonitoringModeAwait::Resume( sp<UAClient> _client, function<void(SetMonitoringModeAwait::Handle&&)> resume )ι->void{
 		ASSERT( _client );
@@ -55,7 +58,7 @@ namespace Jde::Opc::Gateway{
 
 	α SetMonitoringModeAwait::Resume( sp<UAClient> client )ι->void{
 		Resume( client, [client](SetMonitoringModeAwait::Handle h){
-			h.promise().Resume( sp<UA_SetMonitoringModeResponse>{client->MonitoringModeResponse}, h );
+			h.promise().Resume( client->MonitoringModeResponse(), h );
 		});
 	}
 	α SetMonitoringModeAwait::Resume( StatusCode sc, sp<UAClient> client )ι->void{

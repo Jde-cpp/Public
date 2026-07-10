@@ -16,11 +16,11 @@ namespace Jde::Opc::Gateway{
 	Ω deleteSubscriptionCallback( UA_Client* ua, UA_UInt32 subId, void* /*subContext*/ )ι->void{
 		if( auto client = UAClient::TryFind(ua); client ){
 			INFO( "[{}.{}]DeleteSubscriptionCallback", hex(client->Handle()), subId );
-			client->CreatedSubscriptionResponse = nullptr;
+			client->SetCreatedSubscriptionResponse( nullptr );
 		}
 	}
 
-	α SubscribeAwait::await_ready()ι->bool{ return _client->CreatedSubscriptionResponse!=nullptr; }
+	α SubscribeAwait::await_ready()ι->bool{ return _client->CreatedSubscriptionResponse()!=nullptr; }
 
 	static flat_map<sp<UAClient>,vector<SubscribeAwait::Handle>> _requests; static mutex _requestsMutex;
 	Ω createSubscriptionCallback( UA_Client*, void* userdata, RequestId, UA_CreateSubscriptionResponse* response )ι->void{
@@ -28,21 +28,23 @@ namespace Jde::Opc::Gateway{
 		await->OnComplete( *response );
 	}
 	α SubscribeAwait::Suspend()ι->void{
-		try{
-			lg _{ _requestsMutex };
-			auto& clientRequests = _requests[_client];
-			clientRequests.push_back( _h );
-			if( clientRequests.size()==1 ){
-				UACε( UA_Client_Subscriptions_create_async(_client->UAPointer(), UA_CreateSubscriptionRequest_default(), nullptr, statusChangeNotificationCallback, deleteSubscriptionCallback, createSubscriptionCallback, this, &_requestId) );
-				TRACE( "[{}.{}]CreateSubscription", hex(_client->Handle()), hex(_requestId) );
-				_client->Process( _requestId, "Subscriptions_create" );
+		_client->PostUA( [this]{//UA submission must run on the client's strand; _requests is cross-client so it keeps its own mutex.
+			try{
+				lg _{ _requestsMutex };
+				auto& clientRequests = _requests[_client];
+				clientRequests.push_back( _h );
+				if( clientRequests.size()==1 ){
+					UACε( UA_Client_Subscriptions_create_async(_client->UAPointer(), UA_CreateSubscriptionRequest_default(), nullptr, statusChangeNotificationCallback, deleteSubscriptionCallback, createSubscriptionCallback, this, &_requestId) );
+					TRACE( "[{}.{}]CreateSubscription", hex(_client->Handle()), hex(_requestId) );
+					_client->Process( _requestId, "Subscriptions_create" );
+				}
+				else
+					TRACE( "[{}.{}]CreateSubscription - queued", hex(_client->Handle()), hex(_requestId) );
 			}
-			else
-				TRACE( "[{}.{}]CreateSubscription - queued", hex(_client->Handle()), hex(_requestId) );
-		}
-		catch( exception& e ){
-			ResumeExp( move(e) );
-		}
+			catch( exception& e ){
+				ResumeExp( move(e) );
+			}
+		});
 	}
 	α SubscribeAwait::OnComplete( UA_CreateSubscriptionResponse& response )ι->void{
 		_client->ClearRequest( _requestId );
@@ -50,7 +52,7 @@ namespace Jde::Opc::Gateway{
 		TRACE( "[{}.{}]createSubscriptionCallback - subscriptionId: {}, sc: {}", hex(_client->Handle()), hex(_requestId), response.subscriptionId, hex(sc) );
 		lg _{ _requestsMutex };
 		if( !sc )
-			_client->CreatedSubscriptionResponse = ms<UA_CreateSubscriptionResponse>( move(response) );
+			_client->SetCreatedSubscriptionResponse( ms<UA_CreateSubscriptionResponse>( move(response) ) );
 		if( auto clientRequests = _requests.find(_client); clientRequests != _requests.end() ){
 			for( auto&& h : clientRequests->second ){
 				if( sc )
@@ -74,27 +76,29 @@ namespace Jde::Opc::Gateway{
 		Unsubscribe();
 	}
 	α UnsubscribeAwait::Unsubscribe()ι->void{
-		UA_DeleteSubscriptionsRequest request{
-			.subscriptionIdsSize = _subscriptions.size(),
-			.subscriptionIds = ( UA_UInt32* )UA_Array_new( _subscriptions.size(), &UA_TYPES[UA_TYPES_UINT32] )
-		};
-		uint i=0;
-		for( let& [subscriptionId, _] : _subscriptions )
-			request.subscriptionIds[i++] = subscriptionId;
-		auto onComplete = []( UA_Client*, void* userdata, RequestId, UA_DeleteSubscriptionsResponse* response )ι->void {
-			UnsubscribeAwait& await = *(UnsubscribeAwait*)userdata;
-			await.OnComplete( *response );
-		};
-		let sc = UA_Client_Subscriptions_delete_async( _client->UAPointer(), request, onComplete, this, &_requestId );
-		UA_DeleteSubscriptionsRequest_clear( &request );
-		if( sc ){
-			//The async delete never dispatched, so onComplete/Resume() will never fire. This awaiter is co_awaited from UAClient::Shutdown; resume it anyway or shutdown wedges forever.
-			WARN( "[{}]Could not delete subscriptions ({}); resuming to avoid wedging shutdown.", hex(_client->Handle()), UAException::Message(sc) );
-			Resume();
-			return;
-		}
-		_client->Process( _requestId, "Subscriptions_delete" );
-		TRACE( "[{}.{}]Unsubscribe", hex(_client->Handle()), hex(_requestId) );
+		_client->PostUA( [this]{//UA submission must run on the client's strand.
+			UA_DeleteSubscriptionsRequest request{
+				.subscriptionIdsSize = _subscriptions.size(),
+				.subscriptionIds = ( UA_UInt32* )UA_Array_new( _subscriptions.size(), &UA_TYPES[UA_TYPES_UINT32] )
+			};
+			uint i=0;
+			for( let& [subscriptionId, _] : _subscriptions )
+				request.subscriptionIds[i++] = subscriptionId;
+			auto onComplete = []( UA_Client*, void* userdata, RequestId, UA_DeleteSubscriptionsResponse* response )ι->void {
+				UnsubscribeAwait& await = *(UnsubscribeAwait*)userdata;
+				await.OnComplete( *response );
+			};
+			let sc = UA_Client_Subscriptions_delete_async( _client->UAPointer(), request, onComplete, this, &_requestId );
+			UA_DeleteSubscriptionsRequest_clear( &request );
+			if( sc ){
+				//The async delete never dispatched, so onComplete/Resume() will never fire. This awaiter is co_awaited from UAClient::Shutdown; resume it anyway or shutdown wedges forever.
+				WARN( "[{}]Could not delete subscriptions ({}); resuming to avoid wedging shutdown.", hex(_client->Handle()), UAException::Message(sc) );
+				Resume();
+				return;
+			}
+			_client->Process( _requestId, "Subscriptions_delete" );
+			TRACE( "[{}.{}]Unsubscribe", hex(_client->Handle()), hex(_requestId) );
+		});
 	}
 
 	α UnsubscribeAwait::OnComplete( UA_DeleteSubscriptionsResponse& response )ι->void{

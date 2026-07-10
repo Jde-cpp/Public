@@ -37,15 +37,17 @@ namespace Browse{
 	Ω onResponse( UA_Client* /*ua*/, void* userdata, RequestId /*requestId*/, UA_BrowseResponse* response )ι->void;
 	α FoldersAwait::Suspend()ι->void{
 		ASSERT( Promise() );
-		try{
-			DBGT( BrowseTag, "[{}]SendBrowseRequest", hex(_client->Handle()) );
-			UACε( UA_Client_sendAsyncBrowseRequest(_client->UAPointer(), &_request, onResponse, this, &_requestId) );
-			TRACET( BrowseTag, "[{}.{}]SendBrowseRequest", hex(_client->Handle()), hex(_requestId) );
-			_client->Process( _requestId, "BrowseRequest" );
-		}
-		catch( UAException& e ){
-			ResumeExp( move(e) );
-		}
+		_client->PostUA( [this]{//UA submission must run on the client's strand.
+			try{
+				DBGT( BrowseTag, "[{}]SendBrowseRequest", hex(_client->Handle()) );
+				UACε( UA_Client_sendAsyncBrowseRequest(_client->UAPointer(), &_request, onResponse, this, &_requestId) );
+				TRACET( BrowseTag, "[{}.{}]SendBrowseRequest", hex(_client->Handle()), hex(_requestId) );
+				_client->Process( _requestId, "BrowseRequest" );
+			}
+			catch( UAException& e ){
+				ResumeExp( move(e) );
+			}
+		});
 	}
 	α onResponse( UA_Client* /*ua*/, void* userdata, RequestId /*requestId*/, UA_BrowseResponse* response )ι->void {
 		FoldersAwait& await = *( FoldersAwait* )userdata;

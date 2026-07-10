@@ -1,17 +1,13 @@
 function buildRelativePath() {
-	fileWorkspaceFolder=$1; #/home/duffyj/code/jde/Public/libs/web/tests
-	absoluteFile=$2; #/home/duffyj/code/jde/IotWebsocket/source/HttpRequestAwait.cpp
-	buildRoot=$3;
-	if [[ ${fileWorkspaceFolder##*Public/} != $fileWorkspaceFolder ]]; then
-		relativePath=${fileWorkspaceFolder##*Public/};
-		filename=$(basename "$absoluteFile");
-		if [[ $filename == "main.cpp" ]]; then
-			relativePath=${relativePath/src/exe};
-		else
-			relativePath=${relativePath/src/lib};
-		fi;
+	cmakeSourceDir=$1; #/home/duffyj/code/jde/Public2
+	absoluteFile=$2; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
+	relativePath=${absoluteFile#"$cmakeSourceDir/"};
+	relativePath=${relativePath%/*};
+	filename=$(basename "$absoluteFile");
+	if [[ $filename == "main.cpp" ]]; then
+		relativePath=${relativePath/src/exe};
 	else
-		relativePath="";
+		relativePath=${relativePath/src/lib};
 	fi;
 	echo $relativePath;
 }
@@ -22,10 +18,13 @@ function absoluteFile() {
 	echo $absoluteFile;
 }
 function buildProject() {
-	fileDirname=$1;
-	buildRoot=$2;
+	cmakeSourceDir=$(realpath $2); #/home/duffyj/code/jde/PublicX
+	buildRoot=$1/$(basename $cmakeSourceDir); # /mnt/ram/jde/clang++/PublicX
+	workspaceFolder=$3; #/home/duffyj/code/jde/IotWebsocket/config
+	relativeFile=$4; #../tests/BrowseTests.cpp
+	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
+	buildRelativePath=`buildRelativePath $cmakeSourceDir $absoluteFile`;
 
-	buildRelativePath=`buildRelativePath $fileDirname`;
 	if [[ $buildRelativePath == *"libs/fwk/lib"* ]]; then
 		target=Jde;
 	elif [[ $buildRelativePath == *"libs/fwk/tests"* ]]; then
@@ -65,19 +64,21 @@ function buildProject() {
 	else
 		target=foo;
 	fi;
-	echo "fileDirname:$fileDirname, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, target=$target";
+
+	echo cmakeSourceDir=$cmakeSourceDir, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, target=$target;
 	cd $buildRoot;
 	cmake --build . -j --target $target;
 }
 function compile() {
-	workspaceFolder=$1; #/home/duffyj/code/jde/IotWebsocket/config
-	fileWorkspaceFolder=$2; #/home/duffyj/code/jde/Public/libs/web/server
-	relativeFile=$3; #../../Public/libs/web/server/IHttpRequestAwait.cpp
-	buildRoot=$4;  # /mnt/ram/jde/Debug
-	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/home/duffyj/code/jde/Public/libs/web/server/IHttpRequestAwait.cpp
-	buildRelativePath=`buildRelativePath $fileWorkspaceFolder $absoluteFile $buildRoot`; #libs/web/server
+	cmakeSourceDir=$(realpath $2); #/home/duffyj/code/jde/PublicX
+	buildRoot=$1/$(basename $cmakeSourceDir); # /mnt/ram/jde/clang++/PublicX
+	workspaceFolder=$3; #/home/duffyj/code/jde/IotWebsocket/config
+	fileWorkspaceFolder=$4; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests
+	relativeFile=$5; #../tests/BrowseTests.cpp
+	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
+	buildRelativePath=`buildRelativePath $cmakeSourceDir $absoluteFile`; #libs/web/server
 
-	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile";
+	echo "cmakeSourceDir=$cmakeSourceDir, buildRoot=$buildRoot, workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile";
 	cd $buildRoot/$buildRelativePath;
 	buildFile=${absoluteFile#"$fileWorkspaceFolder/"} #shortest-match prefix removal
 	filename=$(basename "$absoluteFile");

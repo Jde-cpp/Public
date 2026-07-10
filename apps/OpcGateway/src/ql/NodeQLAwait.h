@@ -8,14 +8,14 @@ namespace Jde::Web::Server{ struct SessionInfo; }
 namespace Jde::QL{ struct TableQL; }
 namespace Jde::Opc::Gateway{
 	struct UAClient;
-	struct NodeQLAwait final: TAwaitEx<jvalue,TAwait<sp<UAClient>>::Task>{
-		using base = TAwaitEx<jvalue,TAwait<sp<UAClient>>::Task>;
+	using BrowsePathResponse = flat_map<string,ExpectedNodeId>;
+	struct NodeQLAwait final: TAwaitEx<jvalue,TAwait<BrowsePathResponse>::Task>{//Execute's task type matches the UAStrandAwait<BrowsePathResponse> it co_awaits.
+		using base = TAwaitEx<jvalue,TAwait<BrowsePathResponse>::Task>;
 		NodeQLAwait( QL::TableQL&& query, sp<UAClient> client, SRCE )ι:
 			base{ sl }, _client{client}, _query{move(query)}
 		{}
-		α Execute()ι->TAwait<sp<UAClient>>::Task override;
+		α Execute()ι->TAwait<BrowsePathResponse>::Task override;
 	private:
-		using BrowsePathResponse = flat_map<string,ExpectedNodeId>;
 		α AddAttributes( ExpectedNodeId nodeId, QL::TableQL* parentsQL, flat_map<NodeId, jobject> parents )ι->TAwait<ReadResponse>::Task;
 		α AddAttributes( Browse::Response&& br, QL::TableQL&& childrenQL, flat_map<NodeId, jobject> jChildren )ι->TAwait<ReadResponse>::Task;
 		α AddAttributes( vector<NodeId> nodeIds )ι->TAwait<ReadResponse>::Task;

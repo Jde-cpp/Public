@@ -27,22 +27,30 @@ namespace Jde::Opc::Gateway{
 
 		operator UA_Client* ()ι{ return _ptr; }
 		Ω Shutdown( bool terminate=false, SRCE )ι->VoidAwait::Task;
+		Ω ShutdownIdle( sp<UAClient> client )ι->VoidAwait::Task;//TTL expiry - tears down only this client (per-client _lastRequest).
 		Ω GetClient( string id, Credential cred, SRCE )ι{ return ConnectAwait{move(id), move(cred), sl}; }
 		Ω Find( str id, const Gateway::Credential& cred )ι->sp<UAClient>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
 		Ω RemoveClient( sp<UAClient>&& client )ι->bool;
 
-		α SubscriptionId()Ι->SubscriptionId{ return CreatedSubscriptionResponse ? CreatedSubscriptionResponse->subscriptionId : 0;}
+		α SubscriptionId()Ι->SubscriptionId{ auto p = CreatedSubscriptionResponse(); return p ? p->subscriptionId : 0;}
+		//Responses are written on the strand but read by await_ready/await_resume on arbitrary threads - guard the shared_ptrs themselves.
+		α CreatedSubscriptionResponse()Ι->sp<UA_CreateSubscriptionResponse>{ lg _{_responseMutex}; return _createdSubscriptionResponse; }
+		α SetCreatedSubscriptionResponse( sp<UA_CreateSubscriptionResponse> p )ι->void{ lg _{_responseMutex}; _createdSubscriptionResponse = move(p); }
+		α MonitoringModeResponse()Ι->sp<UA_SetMonitoringModeResponse>{ lg _{_responseMutex}; return _monitoringModeResponse; }
+		α SetMonitoringModeResponse( sp<UA_SetMonitoringModeResponse> p )ι->void{ lg _{_responseMutex}; _monitoringModeResponse = move(p); }
 
 		Ω ClearRequest( UA_Client* ua, RequestId requestId )ι->void;
 		Ṫ ClearRequestH( UA_Client* ua , RequestId requestId )ι->T;
-		α ClearRequest( RequestId requestId )ι->void{ _asyncRequest.Clear( requestId ); }
+		α ClearRequest( RequestId requestId )ι->void;
 		Ŧ ClearRequestH( RequestId requestId )ι->T;//{ return ClearRequest<UARequest<T>>( requestId )->CoHandle; }
 		α MonitoredNodes()ι->UAMonitoringNodes&{ std::call_once( _monitoredNodesOnce, [this]{ _monitoredNodes = mu<UAMonitoringNodes>(shared_from_this()); } ); return *_monitoredNodes; }//lazy but thread-safe: callers run on the loop thread (data-change callbacks) and pool threads (subscribe/unsubscribe) concurrently. Can't build eagerly in the ctor — shared_from_this() isn't valid until make_shared finishes wiring the weak ref.
 		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
 		α RetryVoid( function<void(sp<UAClient>&&) > f, UAException&& e, sp<UAClient>&& pClient )ι->ConnectAwait::Task;
 		α Process( RequestId requestId, sv what )ι->void;
+		α StopProcessing()ι->void;//dispatches AsyncRequest::Stop onto the strand with a keep-alive.
+		α PostUA( function<void()> f )ι->void;//runs f on this client's strand - the only place UA_Client_* calls are allowed once the processing loop can run. Holds shared_from_this until f runs.
 		α Processing()ι->bool{ return _asyncRequest.IsRunning(); }
 		α ProcessDataSubscriptions()ι->void;
 		α StopProcessDataSubscriptions()ι->void;
@@ -56,8 +64,6 @@ namespace Jde::Opc::Gateway{
 		α Handle()Ι->Jde::Handle{ return _handle;}
 		α UAPointer()Ι->UA_Client*{return _ptr;}
 		α BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,ExpectedNodeId>;
-		sp<UA_SetMonitoringModeResponse> MonitoringModeResponse;
-		sp<UA_CreateSubscriptionResponse> CreatedSubscriptionResponse;
 		UA_ClientConfig _config{};//TODO move private.
 		Gateway::Credential Credential;
 		bool Connected{};
@@ -77,6 +83,10 @@ namespace Jde::Opc::Gateway{
 		ServerCnnctn _opcServer;
 
 		vector<VoidAwait::Handle> _sessionAwaitables; mutable mutex _sessionAwaitableMutex;
+
+		sp<UA_SetMonitoringModeResponse> _monitoringModeResponse;
+		sp<UA_CreateSubscriptionResponse> _createdSubscriptionResponse;
+		mutable mutex _responseMutex;
 
 		AsyncRequest _asyncRequest;
 		Jde::Handle _handle;

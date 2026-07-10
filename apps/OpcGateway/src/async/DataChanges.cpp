@@ -26,30 +26,32 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α DataChangeAwait::Suspend()ι->void{
-		auto subscription = _client->CreatedSubscriptionResponse;
-		if( !subscription ){
-			ResumeExp( Exception{"CreatedSubscriptionResponse==null"} );
-			return;
-		}
-		auto request = _client->MonitoredNodes().MonitoredItemsRequest( move(_dataChange), move(_nodes), _monitoredRequestId );
-		if( !request ){
-			_h.resume();
-			return;
-		}
-		try{
-			vector<UA_Client_DeleteMonitoredItemCallback> deleteCallbacks{ request->itemsToCreateSize, dataChangesDeleteCallback };
-			vector<UA_Client_DataChangeNotificationCallback> dataChangeCallbacks{ request->itemsToCreateSize, dataChangesCallback };
-			void** contexts = nullptr;
-			request->subscriptionId = subscription->subscriptionId;
+		_client->PostUA( [this]{//UA submissions must run on the client's strand.
+			auto subscription = _client->CreatedSubscriptionResponse();
+			if( !subscription ){
+				ResumeExp( Exception{"CreatedSubscriptionResponse==null"} );
+				return;
+			}
+			auto request = _client->MonitoredNodes().MonitoredItemsRequest( move(_dataChange), move(_nodes), _monitoredRequestId );
+			if( !request ){
+				_h.resume();
+				return;
+			}
+			try{
+				vector<UA_Client_DeleteMonitoredItemCallback> deleteCallbacks{ request->itemsToCreateSize, dataChangesDeleteCallback };
+				vector<UA_Client_DataChangeNotificationCallback> dataChangeCallbacks{ request->itemsToCreateSize, dataChangesCallback };
+				void** contexts = nullptr;
+				request->subscriptionId = subscription->subscriptionId;
 
-			UAε( UA_Client_MonitoredItems_createDataChanges_async(_client->UAPointer(), *request, contexts, dataChangeCallbacks.data(), deleteCallbacks.data(), createDataChangesCallback, this, &_requestId) );
-			UA_CreateMonitoredItemsRequest_clear( &*request );
-			//TRACET( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, serialize(request.ToJson()) );
-			_client->Process( _requestId, "MonitoredItems_createDataChanges" );//TODO handle BadSubscriptionIdInvalid
-		}
-		catch( UAException& e ){
-			ResumeExp( move(e) );
-		}
+				UAε( UA_Client_MonitoredItems_createDataChanges_async(_client->UAPointer(), *request, contexts, dataChangeCallbacks.data(), deleteCallbacks.data(), createDataChangesCallback, this, &_requestId) );
+				UA_CreateMonitoredItemsRequest_clear( &*request );
+				//TRACET( MonitoringTag, "[{:x}.{:x}]DataSubscriptions - {}", Handle(), requestId, serialize(request.ToJson()) );
+				_client->Process( _requestId, "MonitoredItems_createDataChanges" );//TODO handle BadSubscriptionIdInvalid
+			}
+			catch( UAException& e ){
+				ResumeExp( move(e) );
+			}
+		});
 	}
 	α DataChangeAwait::OnComplete( UA_CreateMonitoredItemsResponse* response )ι->void{
 		_client->ClearRequest( _requestId );

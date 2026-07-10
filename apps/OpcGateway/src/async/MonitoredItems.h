@@ -10,6 +10,7 @@ namespace Jde::Opc::Gateway{
 		α Suspend()ι->void override;
 		α OnComplete( UA_DeleteMonitoredItemsResponse& response, RequestId requestId )ι->void;
 	private:
+		α SuspendOnStrand()ι->void;//the UA submissions, dispatched onto the client's strand by Suspend.
 		α TryResume()ι->void;//resume once all successfully-submitted deletes have completed.
 		sp<UAClient> _client;
 		flat_map<SubscriptionId,flat_set<MonitorId>> _monitoredItems;

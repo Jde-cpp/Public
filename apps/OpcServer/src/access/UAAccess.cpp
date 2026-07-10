@@ -30,7 +30,7 @@ namespace Jde::Opc::Server{
 namespace Jde::Opc::Server::UAAccess{
 	Ω expired( const SessionContext* ctx )ι->bool{//non-authenticated paths set Expiration=TimePoint::max(); only JWT/SessionInfo sessions carry a real expiry.
 		if( ctx && ctx->Expiration<Clock::now() ){
-			TRACE( "Session for user {} expired at {}", ctx->UserPK.Value, ToIsoString(ctx->Expiration) );
+			DBG( "Session for user '{}' expired at '{}'", ctx->UserPK.Value, ToIsoString(ctx->Expiration) );
 			return true;
 		}
 		return false;

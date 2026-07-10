@@ -19,7 +19,7 @@ namespace Jde::Opc::Gateway{
 	flat_map<ServerCnnctnNK,flat_map<Credential,sp<UAClient>>> _clients; shared_mutex _clientsMutex;
 	α UAClient::RemoveClient( sp<UAClient>&& client )ι->bool{
 		client->Connected = false;
-		client->_asyncRequest.Stop();//cancels the ping timer & processing loop; otherwise the global _pingTimer stays pending on the io_context (and the ping coroutine keeps a UAClient ref), blocking shutdown.
+		client->StopProcessing();//cancels the ping timer & processing loop; otherwise _pingTimer stays pending on the io_context (and the ping coroutine keeps a UAClient ref), blocking shutdown.
 		bool erased{};
 		ul _{ _clientsMutex };
 		if( auto serverCreds = _clients.find(client->Target()); serverCreds!=_clients.end() ){
@@ -77,8 +77,8 @@ namespace Jde::Opc::Gateway{
 		for( auto& client : clients ){
 			if( auto p = move(client->_monitoredNodes); p )
 				co_await p->Shutdown();
-			client->_asyncRequest.Stop();
-			if( client.use_count()>2 )//_clients + this local copy are expected; more means a leaked reference.
+			client->StopProcessing();
+			if( client.use_count()>2 )//_clients + this local copy are expected; more may just be pending strand closures (StopProcessing above) - log-only heuristic.
 				WARN( "[{}]use_count={}", hex(client->Handle()), client.use_count() );
 		}
 		ul _{ _clientsMutex };
@@ -185,6 +185,8 @@ namespace Jde::Opc::Gateway{
 		constexpr std::array<sv,6> sessionStates = { "Closed", "CreateRequested", "Created", "ActivateRequested", "Activated", "Closing" };
 		DBG( "[{}]channelState: '{}', sessionState: '{}', connectStatus: '({}){}'", hex((uint)ua), UAException::Message(channelState), FromEnum(sessionStates, sessionState), hex(connectStatus), UAException::Message(connectStatus) );
 		if( auto client = sessionState == UA_SESSIONSTATE_ACTIVATED ? UAClient::TryFind(ua) : sp<UAClient>{}; client ){
+			if constexpr( _debug )
+				client->Process( PingRequestId, "ping" ); //mitigate No result in the read namespace array response
 			client->TriggerSessionAwaitables();
 			client->ClearRequest( ConnectRequestId );
 		}
@@ -214,7 +216,7 @@ namespace Jde::Opc::Gateway{
 					});
 				}
 				else{
-					client->_asyncRequest.Stop();// Break the UAClient<->_asyncRequest._client self-reference; on the failure path the client never enters _clients, so Shutdown would never Stop() it and the UAClient (and its UA_Client) would leak.
+					client->StopProcessing();// Break the UAClient<->_asyncRequest._client self-reference; on the failure path the client never enters _clients, so Shutdown would never Stop() it and the UAClient (and its UA_Client) would leak.
 					Post( [client,connectStatus]()ι->void {ConnectAwait::Resume(client->Target(), client->Credential, UAClientException{connectStatus, client->Handle(), "Connection Failed"});} );
 				}
 
@@ -272,6 +274,9 @@ namespace Jde::Opc::Gateway{
 		return ua;
 	}
 	α UAClient::Connect()ε->void{
+		//Pre-concurrency: nothing drives this client's run_iterate until Process below starts the loop, so the direct
+		//UA_Client_connectAsync/SetClient calls here are single-threaded. Process must stay the LAST statement - after
+		//it, every UA_Client_* call must go through the strand (PostUA).
 		DBG( "[{}]Connecting to '{}', using '{}'", hex(Handle()), Url(), Credential.ToString() );
 		let sc = UA_Client_connectAsync( UAPointer(), Url().c_str() ); THROW_IFX( sc, UAException(sc) );
 		auto p = shared_from_this();
@@ -281,8 +286,34 @@ namespace Jde::Opc::Gateway{
 		Process( ConnectRequestId, "Connect" );
 	}
 
+	α UAClient::PostUA( function<void()> f )ι->void{
+		//All UA_Client_* calls must run on this client's strand (open62541 clients are not thread-safe): run_iterate,
+		//async submissions, and sync services all serialize here. dispatch runs f inline when the caller is already on
+		//the strand (e.g. completion callbacks inside run_iterate) and posts otherwise. `self` keeps the client - and
+		//with it _asyncRequest and the raw UA_Client - alive until f runs.
+		boost::asio::dispatch( _asyncRequest.Strand(), [self=shared_from_this(), f=move(f)]{ f(); } );
+	}
+
 	α UAClient::Process( RequestId requestId, sv what )ι->void{
-		_asyncRequest.Process( requestId, what );
+		if( _asyncRequest.IsStopped() )
+			return;
+		PostUA( [this, requestId, what=string{what}]{ _asyncRequest.Process(requestId, what); } );
+	}
+
+	α UAClient::ClearRequest( RequestId requestId )ι->void{
+		PostUA( [this, requestId]{ _asyncRequest.Clear(requestId); } );
+	}
+
+	α UAClient::StopProcessing()ι->void{
+		PostUA( [this]{ _asyncRequest.Stop(); } );
+	}
+
+	α UAClient::ShutdownIdle( sp<UAClient> client )ι->VoidAwait::Task{
+		//TTL expiry (called from the processing loop): tear down only this client - _lastRequest is per-client, so one
+		//client idling out must not disconnect the others (Shutdown() stops everything).
+		if( client->_monitoredNodes )//not moved out: data-change callbacks can still arrive until RemoveClient below.
+			co_await client->_monitoredNodes->Shutdown();
+		RemoveClient( move(client) );
 	}
 
 	α UAClient::ProcessDataSubscriptions()ι->void{
@@ -322,6 +353,7 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α UAClient::BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,ExpectedNodeId>{
+		ASSERT( _asyncRequest.Strand().running_in_this_thread() );//sync UA service - must be serialized with run_iterate (route callers through PostUA/UAStrandAwait).
 		let segments = Str::Split( path, '/' );
 		auto args = Reserve<UABrowsePath>( parents ? segments.size()-1 : 1 );
 		vector<string> paths;

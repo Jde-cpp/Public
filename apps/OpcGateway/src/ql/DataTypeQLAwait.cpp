@@ -60,20 +60,22 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 	α DataTypeQLAwait::Suspend()ι->void{
-		try{
-			jarray y;
-			let nodeIds = NodeId::ParseQL( _ql );
-			THROW_IF( nodeIds.empty(), "No nodeIds specified." );
-			UA_DataTypeArray *customTypes;
-			if( auto sc = UA_Client_getRemoteDataTypes(*_client, nodeIds.size(), nodeIds.data(), &customTypes); sc )
-				throw UAClientException{ sc, _client->Handle(), Ƒ("Could not get data types: {}", NodeId::ToString(nodeIds)), _sl };
-			for( uint i=0; i<customTypes->typesSize; ++i )
-				y.push_back( toJson(customTypes->types[i], _ql) );
-			freeRemoteDataTypes( customTypes );
-			Resume( _ql.TransformResult(move(y)) );
-		}
-		catch( exception& e ){
-			ResumeExp( move(e) );
-		}
+		_client->PostUA( [this]{//getRemoteDataTypes is a sync UA service - must run on the client's strand.
+			try{
+				jarray y;
+				let nodeIds = NodeId::ParseQL( _ql );
+				THROW_IF( nodeIds.empty(), "No nodeIds specified." );
+				UA_DataTypeArray *customTypes;
+				if( auto sc = UA_Client_getRemoteDataTypes(*_client, nodeIds.size(), nodeIds.data(), &customTypes); sc )
+					throw UAClientException{ sc, _client->Handle(), Ƒ("Could not get data types: {}", NodeId::ToString(nodeIds)), _sl };
+				for( uint i=0; i<customTypes->typesSize; ++i )
+					y.push_back( toJson(customTypes->types[i], _ql) );
+				freeRemoteDataTypes( customTypes );
+				Resume( _ql.TransformResult(move(y)) );
+			}
+			catch( exception& e ){
+				ResumeExp( move(e) );
+			}
+		});
 	}
 }

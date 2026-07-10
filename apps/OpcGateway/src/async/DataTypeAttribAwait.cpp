@@ -9,41 +9,38 @@ namespace Jde::Opc::Gateway{
 		await.OnComplete( requestId, sc, dataType );
 	}
 
+	//Suspend's closure and OnComplete (invoked inside run_iterate) both run on the client's strand, so
+	//_requestNodes/_results are strand-confined - no lock, and a response can't arrive before its requestId
+	//is registered (run_iterate is queued behind this closure).
 	α DataTypeAttribAwait::Suspend()ι->void{
-		try{
-			for( auto& nodeId : _nodeIds ){
-				RequestId requestId{};
-				lg l{ _mutex };
-				UAε( UA_Client_readDataTypeAttribute_async(_client->UAPointer(), nodeId, onResponse, this, &requestId) );
-				if( _requestNodes.empty() )
-					_client->Process( requestId, "readDataTypeAttribute" );
-				_requestNodes.emplace( requestId, move(nodeId) );
+		_client->PostUA( [this]{
+			try{
+				for( auto& nodeId : _nodeIds ){
+					RequestId requestId{};
+					UAε( UA_Client_readDataTypeAttribute_async(_client->UAPointer(), nodeId, onResponse, this, &requestId) );
+					_requestNodes.emplace( requestId, move(nodeId) );
+					if( _requestNodes.size()==1 )
+						_client->Process( requestId, "readDataTypeAttribute" );
+				}
 			}
-		}
-		catch( UAException& e ){
-			ResumeExp( move(e) );
-		}
+			catch( UAException& e ){
+				ResumeExp( move(e) );
+			}
+		});
 	}
 	α DataTypeAttribAwait::OnComplete( RequestId requestId, StatusCode sc, UA_NodeId* dataType )ι->void{
-		bool done;
-		RequestId anyRequestId;
-		{
-			lg l{ _mutex };
-			auto p = _requestNodes.find( requestId );
-			RETURN_IF( p==_requestNodes.end(), ELogLevel::Critical, "[{}.{}]Could not find requestId in requestNodes.", hex(_client->Handle()), hex(requestId) );
-			if( sc ){
-				DBG( "[{}.{}]DataTypeAttribAwait - {}", hex(_client->Handle()), hex(requestId), UAException::Message(sc) );
-				_results.try_emplace( move(p->second), sc );
-			}
-			else{
-				TRACE( "[{}.{}]DataTypeAttribAwait - dataType: {}", hex(_client->Handle()), hex(requestId), NodeId{*dataType}.ToString() );
-				_results.try_emplace( move(p->second), NodeId{move(*dataType)} );
-			}
-			done = _results.size()==_nodeIds.size();
-			anyRequestId = _requestNodes.begin()->first;
+		auto p = _requestNodes.find( requestId );
+		RETURN_IF( p==_requestNodes.end(), ELogLevel::Critical, "[{}.{}]Could not find requestId in requestNodes.", hex(_client->Handle()), hex(requestId) );
+		if( sc ){
+			DBG( "[{}.{}]DataTypeAttribAwait - {}", hex(_client->Handle()), hex(requestId), UAException::Message(sc) );
+			_results.try_emplace( move(p->second), sc );
 		}
-		if( done ){
-			_client->ClearRequest( anyRequestId );
+		else{
+			TRACE( "[{}.{}]DataTypeAttribAwait - dataType: {}", hex(_client->Handle()), hex(requestId), NodeId{*dataType}.ToString() );
+			_results.try_emplace( move(p->second), NodeId{move(*dataType)} );
+		}
+		if( _results.size()==_nodeIds.size() ){
+			_client->ClearRequest( _requestNodes.begin()->first );
 			Resume( move(_results) );
 		}
 	}

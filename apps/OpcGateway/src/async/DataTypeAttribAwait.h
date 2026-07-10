@@ -11,8 +11,7 @@ namespace Jde::Opc::Gateway{
 	private:
 		flat_set<NodeId> _nodeIds;
 		sp<UAClient> _client;
-		std::mutex _mutex;
-		flat_map<NodeId, variant<NodeId, StatusCode>> _results;
-		flat_map<RequestId, NodeId> _requestNodes;
+		flat_map<NodeId, variant<NodeId, StatusCode>> _results;//strand-confined (Suspend closure + OnComplete)
+		flat_map<RequestId, NodeId> _requestNodes;//strand-confined
 	};
 }
