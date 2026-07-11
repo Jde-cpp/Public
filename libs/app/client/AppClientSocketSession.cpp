@@ -76,6 +76,8 @@ namespace Client{
 	}
 	α AppClientSocketSession::OnClose( beast::error_code ec )ι->void{
 		base::OnClose( ec );
+		if( _appClient->LoadSession().get() != this )
+			return;//a secondary session (tests create their own) - clearing the live session here would make IAppClient::Shutdown skip closing it, and reconnecting would be spurious.
 		_appClient->SetSession( nullptr );
 		if( !Process::ShuttingDown() )
 			App::Client::Connect( move(_appClient) );

@@ -6,11 +6,7 @@
 		"subDir": "apps/${config:name}",
 		"cmake.sourceDirectory": "${workspaceFolder}/../../..",
 		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
-	},
-	"extensions": {
-		"recommendations": [
-			"augustocdias.tasks-shell-input"
-		]
+		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 	},
 	"folders": [
 		{
@@ -64,12 +60,12 @@
 			"name": "Debug",
 			"type": "lldb",
 			"request": "launch",
-			"program": "${input:repoBuildDir}/${config:subDir}/exe/${config:target}",
+			"program": "${command:jde.repoBuildDir}/${config:subDir}/exe/${config:target}",
 			"args": ["-c", "-tests", "-settings=${workspaceFolder:config}/App.Server.jsonnet"],
-			"cwd": "${input:repoBuildDir}/runtime",
+			"cwd": "${command:jde.repoBuildDir}/runtime",
 			"env":{
 				"JDE_DIR": "${workspaceFolder:config}/../../..",
-				"JDE_BUILD_DIR": "${input:repoBuildDir}",
+				"JDE_BUILD_DIR": "${command:jde.repoBuildDir}",
 			},
 			"preLaunchTask": "build"
 		},
@@ -80,25 +76,8 @@
 			"program": "${workspaceFolder:AppServer}/../../bin/relwithdebinfo/Jde.App.Server",
 			"args": ["-c"],
 			"cwd": "${workspaceFolder:AppServer}/../../bin/relwithdebinfo",
-			"preLaunchTask": "relWithDebInfo",
-			"initCommands": [
-				"command script import ~/.lldb/boost_json_formatter.py",
-				"command script import ~/.lldb/jde_formatter.py"
-			]
+			"preLaunchTask": "relWithDebInfo"
 		}],
-		"inputs": [
-			{
-				"id": "repoBuildDir",
-				"type": "command",
-				"command": "shellCommand.execute",
-				"args": {
-					"command": "echo $JDE_BUILD_DIR/$JDE_COMPILER/$(basename $(realpath ../../..))",
-					"cwd": "${workspaceFolder:AppServer}",
-					"useFirstResult": true,
-					"taskId": "repoBuildDir"
-				}
-			}
-		],
 		"compounds": []
 	}
 }

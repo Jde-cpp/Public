@@ -74,5 +74,9 @@ libs/fwk/src/build/**
 libs/fwk/tests/build/**
 apps/AppServer/src/build/**
 **/out/**
+!extensions/jde/.vscode/
+!extensions/jde/.vscodeignore
+**/node_modules/**
+**/*.vsix
 **/compile_commands.*
 **/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-*.txt

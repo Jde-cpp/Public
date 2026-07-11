@@ -1,0 +1,24 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "npm",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"compile",
+				"--loglevel",
+				"silent"
+			],
+			// one-shot `tsc -p ./`; must complete before the extension host launches - a
+			// background task with $tsc-watch would wait forever for a "Watching..." line tsc never prints.
+			"isBackground": false,
+			"problemMatcher": "$tsc",
+			"group": {
+				"_id": "build",
+				"isDefault": false
+			}
+		}
+	]
+}

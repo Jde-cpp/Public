@@ -4,13 +4,10 @@
 		"name": "OpcServer",
 		"target": "Jde.Opc.Server",
 		"testTargetName": "Jde.Opc.Server.Tests",
-		"sourceDir": "${env:JDE_DIR}/apps/OpcServer",
-		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_DIR}",
-		"debugDir": "${env:JDE_BUILD_DIR}",
-		"buildDir": "${config:buildRoot}/apps/${config:name}",
-		"exeDir": "${config:buildDir}/exe",
-		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh",
+		"subDir": "apps/${config:name}",
+		"cmake.sourceDirectory": "${workspaceFolder}/../../..",
+		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
+		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"C_Cpp.default.defines": [
 			"UA_ENABLE_ENCRYPTION",
 			"UA_ENABLE_ENCRYPTION_OPENSSL",
@@ -22,7 +19,6 @@
 			"${env:JDE_DIR}/build/forcedInclude.h",
 			"pc.h"
 		],
-		"cmake.buildDirectory": "/mnt/ram/linux/clang++-22"
 	},
 	"folders": [
 		{
@@ -88,23 +84,6 @@
 			"name": "nodeset-loader"
 		}
 	],
-	"tasks": {
-		"version": "2.0.0",
-		"tasks": [
-			{
-				"label": "buildProject",
-				"type": "shell",
-				"command": "tput reset; ${config:sourceBash};buildProject ${fileWorkspaceFolder} ${config:buildRoot};",
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "compile",
-				"type": "shell",
-				"command": "tput reset; ${config:sourceBash};compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot};",
-				"group": { "kind": "build", "isDefault": false }
-			}
-		]
-	},
 	"launch": {
 		"version": "0.2.0",
 		"configurations": [
@@ -112,20 +91,28 @@
 				"name": "Debug",
 				"type": "lldb",
 				"request": "launch",
-				"program": "${config:exeDir}/Jde.Opc.Server",
-				"args": [ "-c", "-tests", "-settings=${config:sourceDir}/config/Opc.Server.jsonnet"],
-				"cwd": "${config:exeDir}",
+				"program": "${command:jde.repoBuildDir}/${config:subDir}/exe/${config:target}",
+				"args": [ "-c", "-tests", "-settings=${workspaceFolder:config}/Opc.Server.jsonnet"],
+				"cwd": "${command:jde.repoBuildDir}/runtime",
+				"env":{
+					"JDE_DIR": "${workspaceFolder:config}/../../..",
+					"JDE_BUILD_DIR": "${command:jde.repoBuildDir}",
+				},
 				"preLaunchTask": "build",
-},
+			},
 			{
 				"name": "Tests - Debug",
 				"type": "lldb",
 				"request": "launch",
-				"program": "${config:buildDir}/tests/Jde.Opc.Server.Tests",
-				"args": [ "-tests", "-settings=${config:sourceDir}/tests/config/Opc.Server.Tests.jsonnet" ],
-				"cwd": "${config:buildDir}",
+				"program": "${command:jde.repoBuildDir}/${config:subDir}/tests/${config:testTargetName}",
+				"args": [ "-tests", "-settings=${workspaceFolder:tests}/config/Opc.Server.Tests.jsonnet" ],
+				"cwd": "${command:jde.repoBuildDir}/runtime",
+				"env":{
+					"JDE_DIR": "${workspaceFolder:config}/../../..",
+					"JDE_BUILD_DIR": "${command:jde.repoBuildDir}",
+				},
 				"preLaunchTask": "buildTests",
 			}
-		]
+		],
 	}
 }

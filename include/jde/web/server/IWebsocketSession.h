@@ -34,6 +34,7 @@ namespace Jde::Web::Server{
 		β Close()ι->void;
 	protected:
 		sp<SocketStream> Stream;
+		α StreamPtr()ι->sp<SocketStream>{ lg _{ _streamMutex }; return Stream; }//Stream is written by OnClose on the strand & read from other threads (Write/Close) - always copy through here outside the strand.
 		tcp::endpoint _userEndpoint;
 		β OnClose()ι->void;
 		β OnRead( const char* p, uint size )ι->void=0;
@@ -64,6 +65,7 @@ namespace Jde::Web::Server{
 		β LocalQL()Ι->sp<QL::IQL> = 0;
 
 		const SocketId _id{}; // index starts at 0 for each app start.
+		mutex _streamMutex;//guards Stream only - everything else session-related runs on the stream's strand.
 		TRequestType _initialRequest;
 		sp<QL::IListener> _listener;
 		flat_map<RequestId, std::pair<QueryClientAwait::Handle, sp<DurationTimer>>> _pendingQueries; mutex _pendingQueriesMutex;

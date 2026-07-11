@@ -7,13 +7,9 @@
 		"subDir": "apps/${config:name}",
 		"cmake.sourceDirectory": "${workspaceFolder}/../../..",
 		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
+		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"search.searchView.semanticSearchBehavior": "manual",
 		"github.copilot.chat.search.semanticTextResults": false
-	},
-	"extensions": {
-		"recommendations": [
-			"augustocdias.tasks-shell-input"
-		]
 	},
 	"launch": {
 		"version": "0.2.0",
@@ -22,12 +18,12 @@
 				"name": "Debug",
 				"type": "lldb",
 				"request": "launch",
-				"program": "${input:repoBuildDir}/${config:subDir}/exe/${config:target}",
+				"program": "${command:jde.repoBuildDir}/${config:subDir}/exe/${config:target}",
 				"args": ["-c", "-tests", "-settings=${workspaceFolder:config}/Opc.Gateway.jsonnet"],
-				"cwd": "${input:repoBuildDir}/runtime",
+				"cwd": "${command:jde.repoBuildDir}/runtime",
 				"env":{
 					"JDE_DIR": "${workspaceFolder:config}/../../..",
-					"JDE_BUILD_DIR": "${input:repoBuildDir}",
+					"JDE_BUILD_DIR": "${command:jde.repoBuildDir}",
 				},
 				"sourceMap": {
 					"/mnt/ram/linux/clang++-22/repos/open62541/src": "/mnt/ram/linux/clang++/repos/open62541/src"
@@ -55,30 +51,17 @@
 				"name": "Debug Tests",
 				"type": "lldb",
 				"request": "launch",
-				"program": "${input:repoBuildDir}/${config:subDir}/tests/${config:testTargetName}",
+				"program": "${command:jde.repoBuildDir}/${config:subDir}/tests/${config:testTargetName}",
 				"args": ["-c", "-tests", "-settings=${workspaceFolder:tests}/config/Opc.Tests.jsonnet"],
-				"cwd": "${input:repoBuildDir}/runtime",
+				"cwd": "${command:jde.repoBuildDir}/runtime",
 				"env":{
 					"JDE_DIR": "${workspaceFolder:config}/../../..",
-					"JDE_BUILD_DIR": "${input:repoBuildDir}",
+					"JDE_BUILD_DIR": "${command:jde.repoBuildDir}",
 				},
 				"sourceMap": {
 					"/mnt/ram/linux/clang++-22/repos/open62541/src": "/mnt/ram/linux/clang++/repos/open62541/src"
 				},
 				"preLaunchTask": "buildTests"
-			}
-		],
-		"inputs": [
-			{
-				"id": "repoBuildDir",
-				"type": "command",
-				"command": "shellCommand.execute",
-				"args": {
-					"command": "echo $JDE_BUILD_DIR/$JDE_COMPILER/$(basename $(realpath ../../..))",
-					"cwd": "${workspaceFolder:OpcGateway}",
-					"useFirstResult": true,
-					"taskId": "repoBuildDir"
-				}
 			}
 		],
 		"compounds": []

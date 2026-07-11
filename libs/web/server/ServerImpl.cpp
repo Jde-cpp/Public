@@ -234,8 +234,9 @@ namespace Server{
 		handler->Stop( terminate, sl );
 		//Close each session, don't just drop the refs: a pending async_read holds the session (and io_context work count)
 		//alive, so a peer that never disconnects (e.g. an abandoned client socket) would keep ioc->run() from returning and
-		//wedge shutdown at the executor join. async_close completes the read; the close closure keeps the session alive
-		//until then, and OnClose erases it from _socketSessions.
+		//wedge shutdown at the executor join. Close hops to the stream's strand, so calling it from this (shutdown) thread
+		//while io threads run the sessions' handlers is safe; async_close completes the read; the close closure keeps the
+		//session alive until then, and OnClose erases it from _socketSessions.
 		_socketSessions.visit_all( []( auto& idSession ){ idSession.second->Close(); } );
 		_socketSessions.clear();//server sessions hold beast streams tied to the io_context; drop them here (still in the shutdown-function phase, io_context alive) so they don't outlive it and UAF at static destruction.
 	}

@@ -19,6 +19,8 @@ function absoluteFile() {
 }
 function buildProject() {
 	cmakeSourceDir=$(realpath $2); #/home/duffyj/code/jde/PublicX
+	# buildRoot layout `$1/<repo-basename>` (`$1`=`$JDE_BUILD_DIR/$JDE_COMPILER`) is mirrored in TS by
+	# extensions/jde/src/extension.ts repoBuildDir(); a change here must update both. Repeated at 74/93/108.
 	buildRoot=$1/$(basename $cmakeSourceDir); # /mnt/ram/jde/clang++/PublicX
 	workspaceFolder=$3; #/home/duffyj/code/jde/IotWebsocket/config
 	relativeFile=$4; #../tests/BrowseTests.cpp
