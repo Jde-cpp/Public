@@ -53,7 +53,7 @@ namespace Jde{
 		const fs::path driver{ Json::AsString(config, "driver") };
 		THROW_IF( !fs::is_regular_file(driver), "Library '{}' not found.", driver.string() );
 		sp<IDataSource> pDataSource;
-		std::unique_lock l{_dsMutex};
+		lg _{_dsMutex};
 		string key = driver.string();
 		auto pSource = _dataSources.find( key );
 		if( pSource==_dataSources.end() )

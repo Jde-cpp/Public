@@ -1,0 +1,31 @@
+{
+	"folders": [
+		{
+			"name": "src",
+			"path": "src"
+		},
+		{
+			"name": "tests",
+			"path": "tests"
+		},
+		{
+			"name": "app",
+			"path": "../../../../apps/AppServer/config/sql/sqlite"
+		},
+		{
+			"name": "gateway",
+			"path": "../../../../apps/OpcGateway/config/sql/sqlite"
+		},
+		{
+			"name": "opcServer",
+			"path": "../../../../apps/OpcServer/config/sql/sqlite"
+		},
+		{
+			"name": "access",
+			"path": "../../../access/config/sql/sqlite"
+		}
+	],
+	"settings": {
+		"window.title": "SqlLite"
+	}
+}

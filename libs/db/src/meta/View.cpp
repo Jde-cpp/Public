@@ -141,7 +141,9 @@ namespace Jde::DB{
 
 	α View::InsertProcName()Ι->string{
 		let haveSequence = find_if( Columns, [](let& c){return c->IsSequence;} )!=Columns.end();
-		return !haveSequence && !HasCustomInsertProc ? string{} : Ƒ( "{}_insert", Names::ToSingular(DBName) );
+		if( !HasCustomInsertProc && (!haveSequence || !Syntax().HasProcs()) ) //no procs (sqlite): generated inserts use plain sql + last_insert_rowid.
+			return {};
+		return Ƒ( "{}_insert", Names::ToSingular(DBName) );
 	}
 	α View::UpsertProcName()Ι->string{
 		return Ƒ( "{}_upsert", Names::ToSingular(DBName) );

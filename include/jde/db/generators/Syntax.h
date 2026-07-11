@@ -17,6 +17,7 @@ namespace Jde::DB{
 		α FormatOperator( const Column& col, EOperator op, uint size=1, SRCE )Ε->string;
 		β AddDefault( sv tableName, sv columnName, Value dflt )Ι->string;
 		β AltDelimiter()Ι->sv{ return {}; }
+		β CanAddForeignKeys()Ι->bool{ return true; } //false (sqlite): no 'alter table add constraint' - fks only enforced when inline in create table.
 		β CanSetDefaultSchema()Ι->bool{ return false; }
 		β CatalogSelect()Ι->sv{ return "select db_name();"; }
 		β CreatePrimaryKey( str tableName, str columnName )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
@@ -26,6 +27,7 @@ namespace Jde::DB{
 		β GuidType()Ι->sv{ return "uniqueidentifier"; }
 		β HasLength( EType type )Ι->bool;
 		β HasCatalogs()Ι->bool{ return true; }
+		β HasProcs()Ι->bool{ return true; } //false (sqlite): generated insert procs become plain sql; hand-written procs dispatch to a native registry.
 		β HasUnsigned()Ι->bool{ return false; }
 		β IdentityColumnSyntax()Ι->sv{ return "identity(1001,1)"; }
 		β IdentitySelect()Ι->sv{ return "@@identity"; }
@@ -37,10 +39,11 @@ namespace Jde::DB{
 		β ProcStart()Ι->sv{ return "as\n\tset nocount on;\n"; }
 		β ProcEnd()Ι->sv{ return {}; }
 		β SchemaDropsObjects()Ι->bool{ return false; }
+		β SchemaExistsSql()Ι->sv{ return "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?"; }
 		β SchemaSelect()Ι->sv{ return "select schema_name();"; }
 		β SpecifyIndexCluster()Ι->bool{ return true; }
 		β SysSchema()Ι->sv{ return "dbo"; }
-		α ToString( EType type )Ι->string;
+		β ToString( EType type )Ι->string;
 
 		β UniqueIndexNames()Ι->bool{ return false; }
 		β UsingClause( const Join& join )Ι->string;

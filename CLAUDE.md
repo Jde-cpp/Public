@@ -45,6 +45,7 @@ Linux uses **g++-15** by default; `linux-clang-debug-jde` uses **clang++-22**. C
 Tests use **GoogleTest**. Each test binary requires a `-settings=` argument pointing at a Jsonnet config. Per-library configs live at `libs/<lib>/tests/config/<Lib>.Tests.jsonnet` (and `apps/<app>/tests/config/<App>.Tests.jsonnet`):
 
 - `libs/fwk/tests/config/Framework.Tests.jsonnet`
+- `libs/db/drivers/sqlite/tests/config/Sqlite.Tests.jsonnet` (in-process, no db server needed)
 - `libs/access/tests/config/Access.Tests.jsonnet`
 - `libs/web/tests/config/Web.Tests.jsonnet`
 - `apps/OpcGateway/tests/config/Opc.Tests.jsonnet`

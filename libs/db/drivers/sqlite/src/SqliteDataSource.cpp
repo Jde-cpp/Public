@@ -6,7 +6,7 @@
 #include "SqliteQueryAwait.h"
 #include "SqliteRow.h"
 #include "SqliteServerMeta.h"
-#include "../../src/DBLog.h"
+#include "../../../src/DBLog.h"
 
 #define let const auto
 

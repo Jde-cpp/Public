@@ -25,7 +25,7 @@ namespace Jde::DB::Sqlite{
 
 		α AtCatalog( sv catalog, SRCE )ε->sp<IDataSource> override; //no catalogs - returns self.
 		α AtSchema( sv schema, SRCE )ε->sp<IDataSource> override;   //'main' only; ATTACH could emulate others.
-		α SchemaNameConfig( SRCE )ι->string override{ return "main"; }
+		α SchemaNameConfig( SL=SRCE_CUR )ι->string override{ return "main"; }
 		α SetConfig( const jobject& config )ε->void override;
 		α Disconnect()ε->void override;
 	private:

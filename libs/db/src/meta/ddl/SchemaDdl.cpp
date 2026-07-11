@@ -63,6 +63,10 @@ namespace Jde::DB{
 	}
 
 	α SchemaDdl::SyncFKs( const AppSchema& config )ε->void{
+		if( !config.DS()->Syntax().CanAddForeignKeys() ){
+			DBG( "Syntax can't add fks to existing tables - skipping sync." );
+			return;
+		}
 		for( let& [tableName, table] : config.Tables ){
 			for( auto& column : table->Columns ){
 				if( !column->PKTable )
@@ -274,7 +278,7 @@ namespace Jde::DB{
 
 	α Exists( const DBSchema& config )ι->bool{
 		try{
-			return config.DS()->ScalerSyncOpt<string>( {"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", {Value{config.Name}}} ).has_value();
+			return config.DS()->ScalerSyncOpt<string>( {string{config.DS()->Syntax().SchemaExistsSql()}, {Value{config.Name}}} ).has_value();
 		}
 		catch( Exception& e ){
 			e.SetLevel( ELogLevel::Debug );

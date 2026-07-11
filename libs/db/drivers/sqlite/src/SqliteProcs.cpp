@@ -9,13 +9,20 @@ namespace Jde::DB::Sqlite{
 	flat_map<string,ProcΛ> _procs; std::shared_mutex _procsMutex;
 
 	α RegisterProc( string name, ProcΛ proc )ι->void{
-		std::unique_lock l{ _procsMutex };
+		ul _{ _procsMutex };
 		_procs[move(name)] = move(proc);
 	}
 	α FindProc( sv name )ι->const ProcΛ*{
-		std::shared_lock l{ _procsMutex };
+		sl _{ _procsMutex };
 		let p = _procs.find( string{name} );
 		return p==_procs.end() ? nullptr : &p->second;
+	}
+	α RegisteredProcNames()ι->vector<string>{
+		sl _{ _procsMutex };
+		vector<string> names; names.reserve( _procs.size() );
+		for( let& [name, _] : _procs )
+			names.push_back( name );
+		return names;
 	}
 
 	α ExecuteStatement( sqlite3& db, sv sql, const vector<Value>& params, RowΛ* onRow, SL sl )ε->uint{
@@ -37,22 +44,5 @@ namespace Jde::DB::Sqlite{
 		RowΛ f = [&y]( Row&& row ){ if( !row.IsNull(0) ) y = row.GetUInt(0); };
 		ExecuteStatement( db, sql, params, &f, sl );
 		return y;
-	}
-
-	//Example twin of apps/AppServer/config/sql/{mysql,sqlServer}/app_instance_insert.sql.
-	//Registration belongs in the owning app (e.g. AppServer startup), not here - shown for the pattern.
-	//	params: [0]=_programId, [1]=_name, [2]=_hostName; out _instanceId returned as the single result row.
-	α RegisterAppServerProcs()ι->void{
-		RegisterProc( "app_instance_insert", []( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
-			auto hostId = ScalarUInt( db, "select host_id from app_hosts where name=?", {params[2]}, sl );
-			if( !hostId ){
-				ExecuteStatement( db, "insert into app_hosts( name ) values( ? )", {params[2]}, nullptr, sl );
-				hostId = (uint)sqlite3_last_insert_rowid( &db );
-			}
-			let y = ExecuteStatement( db, "insert into app_instances( program_id, name, host_id ) values( ?, ?, ? )", {params[0], params[1], Value{*hostId}}, nullptr, sl );
-			if( onRow )
-				(*onRow)( Row{ {Value{(uint)sqlite3_last_insert_rowid(&db)}} } ); //out _instanceId
-			return y;
-		});
 	}
 }
