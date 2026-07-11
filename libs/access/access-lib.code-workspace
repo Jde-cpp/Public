@@ -6,9 +6,9 @@
 		"subDir": "libs/${config:name}",
 		"sourceDir": "${env:JDE_DIR}/${config:subDir}",
 		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_DIR}",
-		"testBuildDir": "${config:buildRoot}/${config:subDir}/tests",
-		"sourceBash": "source ${env:JDE_DIR}/build/buildFunctions.sh"
+		"cmake.sourceDirectory": "${workspaceFolder}/../../..",
+		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
+		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 	},
 	"tasks": {
 		"version": "2.0.0",
@@ -16,16 +16,16 @@
 			{
 				"label": "clean",
 				"type": "shell",
-				"command": "tput reset; cd ${config:buildRoot}; cd ..; rm -rf Debug; mkdir Debug;",
+				"command": "tput reset; cd ${command:jde.repoBuildDir}; cmake --build . --target clean;",
 			},
 			{
 				"label": "run",
 				"type": "shell",
 				"dependsOn": ["build", "clearTerminal"],
-				"command": "./${config:exe}",
+				"command": "./${config:target}",
 				"args": ["-c", "-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet"],
 				"options": {
-					"cwd": "${config:buildDir}",
+					"cwd": "${command:jde.repoBuildDir}/${config:subDir}/tests",
 				}
 			}
 		]
@@ -36,17 +36,13 @@
 			"name": "Debug",
 			"type": "lldb",
 			"request": "launch",
-			"program": "${config:testBuildDir}/${config:target}",
+			"program": "${command:jde.repoBuildDir}/${config:subDir}/tests/${config:target}",
 			"args": [
 				"-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet",
 				"-tests"
 			],
-			"cwd": "${config:testBuildDir}",
-			"preLaunchTask": "build",
-			"initCommands": [
-				"command script import ~/.lldb/boost_json_formatter.py",
-				"command script import ~/.lldb/jde_formatter.py"
-			]
+			"cwd": "${command:jde.repoBuildDir}/${config:subDir}/tests",
+			"preLaunchTask": "build"
 		},
 		{
 			"name": "Release",

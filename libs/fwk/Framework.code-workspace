@@ -6,9 +6,9 @@
 		"subDir": "libs/${config:name}",
 		"sourceDir": "${env:JDE_DIR}/${config:subDir}",
 		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_DIR}",
-		"debugDir": "${env:JDE_BUILD_DIR}",
-		"testBuildDir": "${config:buildRoot}/${config:subDir}/tests"
+		"cmake.sourceDirectory": "${workspaceFolder}/../../..",
+		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
+		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 	},
 	"folders": [
 		{
@@ -22,24 +22,6 @@
 			"name": "include"
 		}
 	],
-	"tasks": {
-		"version": "2.0.0",
-		"tasks": [
-
-			{
-				"label": "compile",
-				"command": "tput reset; source $JDE_DIR/build/buildFunctions.sh;compile ${workspaceFolder} ${fileWorkspaceFolder} ${relativeFile} ${config:buildRoot};",
-				"type": "shell",
-				"group": "build"
-			},
-			{
-				"label": "buildProject",
-				"type": "shell",
-				"command": "tput reset; source $JDE_DIR/build/buildFunctions.sh;buildProject ${fileWorkspaceFolder} ${config:buildRoot};",
-				"group": { "kind": "build", "isDefault": false }
-			}
-		]
-	},
 	"launch": {
 		"version": "0.2.0",
 		"configurations": [
@@ -48,11 +30,11 @@
 				"type": "lldb",
 				"breakpointMode":"path",
 				"request": "launch",
-				"program": "${config:testBuildDir}/${config:target}",
+				"program": "${command:jde.repoBuildDir}/${config:subDir}/tests/${config:target}",
 				"args": [
 					"-settings=${config:sourceDir}/tests/config/Framework.Tests.jsonnet"
 				],
-				"cwd": "${config:testBuildDir}",
+				"cwd": "${command:jde.repoBuildDir}/${config:subDir}/tests",
 				"preLaunchTask": "build"
 			},
 		],

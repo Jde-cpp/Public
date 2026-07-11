@@ -3,8 +3,10 @@
 		"window.title": "Main",
 		"name": "main",
 		"releaseRoot": "${env:JDE_BASH}/Release",
-		"debugDir": "${env:JDE_BUILD_DIR}",
 		"sourceDir": "${workspaceFolder}",
+		"cmake.sourceDirectory": "${workspaceFolder}",
+		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
+		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"debugPreset": "linux-clang-debug",
 		"debugClangPreset": "linux-clang-debug",
 		"releasePreset": "linux-gcc-relWithDebInfo",
@@ -30,7 +32,7 @@
 			{
 				"label": "build",
 				"type": "shell",
-				"command": "cd ${config:debugDir}; tput reset; cmake --build . -j --config Debug",
+				"command": "cd ${command:jde.repoBuildDir}; tput reset; cmake --build . -j --config Debug",
 				"group": { "kind": "build", "isDefault": true }
 			},
 			{
@@ -42,7 +44,7 @@
 			{
 				"label": "cmakeReposDebug",
 				"type": "shell",
-				"command": "mkdir -p ${config:debugDir};cd ${config:debugDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} -Djde_REPOS=ON -Djde_Superbuild=OFF -Djde_TESTS=OFF -Djde_APPS=OFF --preset ${config:debugPreset};",
+				"command": "mkdir -p ${command:jde.repoBuildDir};cd ${command:jde.repoBuildDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} -Djde_REPOS=ON -Djde_Superbuild=OFF -Djde_TESTS=OFF -Djde_APPS=OFF --preset ${config:debugPreset};",
 				"group": "build"
 			},
 			{

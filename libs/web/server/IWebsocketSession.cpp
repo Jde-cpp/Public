@@ -26,9 +26,16 @@ namespace Jde::Web::Server{
 	{}
 
 	α IWebsocketSession::Run()ι->void{
-		LogRead( "Run", 0 );
-		_listener = ms<SocketServerListener>( shared_from_this() );
-		Stream->DoAccept( move(_initialRequest), shared_from_this() );
+		auto stream = StreamPtr();
+		if( !stream )
+			return;//closed before we started.
+		net::dispatch( stream->Strand(), [self=shared_from_this(), stream]()mutable{//_listener & _initialRequest are strand-confined; Internal::Stop can Close concurrently right after RunSocketSession emplaces us.
+			if( !self->StreamPtr() )
+				return;//Close ran first - OnClose already stopped the listener; setting one now would leak the session in a sp cycle.
+			self->LogRead( "Run", 0 );
+			self->_listener = ms<SocketServerListener>( self );
+			stream->DoAccept( move(self->_initialRequest), self );
+		});
 	}
 
 #define CHECK_EC( ec,tag,  ... ) if( ec ){ CodeException(static_cast<std::error_code>(ec), tag __VA_OPT__(,) __VA_ARGS__); return; }
@@ -40,11 +47,13 @@ namespace Jde::Web::Server{
 	}
 
 	α IWebsocketSession::DoRead()ι->void{
-		Stream->DoRead( shared_from_this() );
+		if( auto stream = StreamPtr(); stream )
+			stream->DoRead( shared_from_this() );
 	}
 
 	α IWebsocketSession::Write( string&& m )ι->void{
-		Stream->Write( move(m), shared_from_this() );
+		if( auto stream = StreamPtr(); stream )
+			stream->Write( move(m), shared_from_this() );
 	}
 
 	α IWebsocketSession::OnWrite( beast::error_code ec, uint c )ι->void{
@@ -73,13 +82,9 @@ namespace Jde::Web::Server{
 		Exception{ sl, level, "[{}.{}]{}", Ƒ("{:x}", Id()), Ƒ("{:x}", requestId), move(e) }; //:x doesn't work with exception formatter
 	}
 
-	α IWebsocketSession::Close()ι->void{
-		if( _listener ){
-			QL::Subscriptions::StopListen( _listener );
-			_listener = nullptr;
-		}
-		if( Stream )
-			Stream->Close( shared_from_this() );
+	α IWebsocketSession::Close()ι->void{//safe from any thread (e.g. Internal::Stop's shutdown thread) - hops to the stream's strand; every close path ends in OnClose, which stops the listener.
+		if( auto stream = StreamPtr(); stream )
+			stream->Close( shared_from_this() );
 	}
 	α IWebsocketSession::OnClose()ι->void{
 		LogRead( "ServerSocket::OnClose.", 0 );
@@ -88,6 +93,7 @@ namespace Jde::Web::Server{
 			QL::Subscriptions::StopListen( _listener );
 			_listener = nullptr;
 		}
+		lg _{ _streamMutex };
 		Stream = nullptr;
 	}
 
