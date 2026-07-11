@@ -17,6 +17,7 @@ namespace Jde::DB::Sqlite{
 
 	ΓLITE auto RegisterProc( string name, ProcΛ proc )ι->void;
 	ΓLITE auto FindProc( sv name )ι->const ProcΛ*; //nullptr if not registered.
+	ΓLITE auto RegisteredProcNames()ι->vector<string>; //for SqliteServerMeta::LoadProcs - DDL sync treats registered procs as existing.
 
 	//Helpers for proc bodies - prepare/bind/step plain statements against `db`.
 	ΓLITE auto ExecuteStatement( sqlite3& db, sv sql, const vector<Value>& params, RowΛ* onRow, SL sl )ε->uint;

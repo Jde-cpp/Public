@@ -1,7 +1,7 @@
 # Jde.DB.Sqlite Driver Sketch
 
-Skeleton for an embedded in-memory (SQLite) driver alongside the Odbc & MySql drivers.
-Created 2026-07-08 on branch `opcGateway-refactor`; not yet compiled — see "To take it from sketch to building" below.
+Embedded in-memory (SQLite) driver alongside the Odbc & MySql drivers.
+Created 2026-07-08; building since 2026-07-10 with a passing `Jde.DB.Sqlite.Tests` target — see "Status" below.
 
 ## Why SQLite (vs DuckDB / CrossDB / ObjectBox)
 
@@ -36,7 +36,7 @@ SQLite has no server, hence no server-side procs. Two approaches, combined here:
 | `SqliteDataSource.h/.cpp` | All `IDataSource` overrides. `Execute` dispatches `IsProc` statements to the registry wrapped in `begin immediate`/`commit`/`rollback`. `InsertSeqSyncUInt` just uses `sqlite3_last_insert_rowid` — no out-param dance. |
 | `SqliteRow.h/.cpp` | `Bind`/`ToRow`/`ToValue` between `DB::Value` and `sqlite3_stmt`. |
 | `SqliteQueryAwait.h` | Trivial vs MySql's asio coroutine: sqlite is in-process, so `Suspend()` executes synchronously and resumes immediately. Post to a worker pool if large scans ever block coroutine threads. |
-| `SqliteServerMeta.h/.cpp` | Stubbed with `THROW`s; each method documents its pragma (`table_info`, `index_list`+`index_info`, `foreign_key_list`). `LoadProcs` should report the native registry so DDL sync treats registered procs as existing. |
+| `SqliteServerMeta.h/.cpp` | Implemented via pragma table-valued functions (`pragma_table_info`, `pragma_index_list`+`pragma_index_info`, `pragma_foreign_key_list`) joined against `sqlite_master`. `LoadProcs` reports the native registry so DDL sync treats registered procs as existing. FK names aren't preserved by sqlite — synthesized as `<table>_fk<id>`; `SyncFKs` matches on Table+Columns, not name. `ToType` maps declared names first, then falls back to sqlite affinity rules. |
 | `exports.h` / `usings.h` / `pc.h` / `CMakeLists.txt` | Boilerplate mirroring the mysql driver; links `SQLite::SQLite3`. |
 
 ## Design decisions
@@ -51,19 +51,50 @@ SQLite has no server, hence no server-side procs. Two approaches, combined here:
   `integer primary key` rowid alias (see `CreatePrimaryKey`).
 - **Out params**: MySql passes them as trailing placeholders; the native proc returns them as a row instead,
   so `ExecuteProc` drops the trailing placeholder before dispatch.
+- **Declared types recover Time/Bool** (`SqliteRow::ToValue`): sqlite stores datetimes as epoch ints and
+  bits as 0/1; `sqlite3_column_decltype` (contains `date`/`time` → Time, `bit`/`bool` → Bool) converts on
+  read. Expressions have no decltype and stay ints.
+- **Core `Syntax` knobs added for sqlite** (defaults preserve MySql/SqlServer behavior — access tests pass):
+  - `HasProcs()` false → `View::InsertProcName` returns empty for generated procs, so `InsertClause::Move`
+    takes the plain-`Insert` path and `SyncTables` skips `create procedure`. Custom procs
+    (`HasCustomInsertProc`) keep their name and dispatch to the native registry.
+  - `CanAddForeignKeys()` false → `SyncFKs` skips (`alter table add constraint` unsupported; FKs only
+    enforced when inline in `create table`).
+  - `SchemaExistsSql()` → `pragma_database_list`, so `main` always exists and `CREATE SCHEMA` never runs.
+  - `ToString( EType )` now virtual: sqlite maps Int/UInt/Long/ULong → `integer` because the rowid alias
+    (identity) requires the declared type be exactly `integer` — `int`/`bigint` pks don't auto-assign.
 
-## To take it from sketch to building
+## Status (2026-07-10)
 
-1. `sudo apt install libsqlite3-dev` — until then every `.cpp` shows false "sqlite3.h not found" errors
-   (only runtime `libsqlite3-0` is installed).
-2. Add `add_subdirectory( ${libDir}/db/drivers/sqlite libs/db/drivers/sqlite )` to the root
-   `CMakeLists.txt` (~line 31–35). It currently splits odbc (WIN32) / mysql (else); sqlite builds on both
-   platforms, so it likely belongs outside the conditional.
-3. Implement `SqliteServerMeta` — needed for DDL sync / `SyncSchema`.
-4. Decide the `DateTime` round-trip: `ToValue` can't distinguish an epoch integer from a plain int without
-   schema-driven column types (TODO at `SqliteRow.cpp` `ToValue`).
-5. Register each app's native procs at startup (see `RegisterAppServerProcs` for the shape) and verify the
-   generated-proc paths (`InsertClause::Proc`) either dispatch to the registry or switch to the plain-SQL
-   generator path.
-6. Tests: a `Jde.DB.Sqlite.Tests` target would be the first db driver with in-process tests — no server
-   needed, so it could run in CI.
+Done:
+1. ~~sqlite headers~~ — static lib built from the 3.46.1 amalgamation into
+   `$REPO_DIR/install/<compiler>/multi/sqlite` (clang++ & xg++-15); the driver/tests CMakeLists append that
+   to `CMAKE_PREFIX_PATH` before `find_package( SQLite3 )`, so system `libsqlite3-dev` also works.
+2. ~~Root `CMakeLists.txt`~~ — sqlite added outside the odbc/mysql platform conditional; tests under `jde_TESTS`.
+3. ~~`SqliteServerMeta`~~ — implemented (see Files).
+4. ~~DateTime round-trip~~ — decltype-driven (see above).
+5. ~~Generated-proc paths~~ — `Syntax::HasProcs` (see above). Custom procs live in per-app
+   `config/sql/sqlite/` dirs — one `<proc>.cpp` twin per `../mysql/<proc>.sql` (plus sqlite `.sql`
+   translations of the views/triggers), built into per-app dlopen-able MODULEs whose single C export is
+   `RegisterAppServerProcs` (`include/jde/db/sqlite_api.h`); they link the driver (now `SHARED`, still
+   dlopen'd) so all share one proc registry:
+   - `Jde.AppServer.Sqlite` = `apps/AppServer/config/sql/sqlite/` + `libs/access/config/sql/sqlite/`
+     (AppServer hosts access). The access user_insert procs `call` the *generated* `access_identity_insert`,
+     which doesn't exist on sqlite — `AccessProcs::IdentityInsert` inlines its body.
+   - `Jde.OpcGateway.Sqlite` = `apps/OpcGateway/config/sql/sqlite/`; the mysql file's trigger half became
+     `gateway_server_connection_update.sql` (sqlite triggers can't assign NEW → `after update` + corrective
+     update; own file because SyncScripts skips files named after registered procs).
+   - `Jde.OpcServer.Sqlite` = `apps/OpcServer/config/sql/sqlite/` (7 procs + 5 view `.sql`s); mysql's
+     `CRC32`/`BIN_TO_UUID` in the node-id computation are done in C++ (`boost::crc_32_type` = mysql CRC32).
+6. ~~Tests~~ — `Jde.DB.Sqlite.Tests` (12 tests): round-trips incl. datetime/bit/blob/null, `returning`
+   identity, native proc dispatch + rollback-on-throw, ServerMeta tables/indexes/fks/procs, dialect. Driver
+   and AppServer-proc sources are compiled into the test target. First db driver testable in CI —
+   no server needed.
+
+Open:
+- End-to-end `SyncSchema`/`GetAppSchema` integration test against `:memory:` (would exercise
+  `TableDdl::CreateStatement` + data seeding through the sqlite dialect).
+- `NonProd::Recreate`/`Drop` use `DROP SCHEMA` — meaningless for sqlite; a file-backed db recreates by
+  deleting the file, `:memory:` by reconnecting.
+- AppServer startup doesn't load `Jde.AppServer.Sqlite` yet — dlopen it + call `RegisterAppServerProcs`
+  when the configured driver is sqlite (config needs a way to point at the procs dll).

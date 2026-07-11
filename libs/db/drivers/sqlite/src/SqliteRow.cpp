@@ -31,7 +31,18 @@ namespace Jde::DB::Sqlite{
 	α ToValue( sqlite3_stmt& stmt, int col )ε->Value{
 		switch( sqlite3_column_type(&stmt, col) ){
 			case SQLITE_NULL: return Value{};
-			case SQLITE_INTEGER: return Value{ sqlite3_column_int64(&stmt, col) }; //TODO: DateTime columns need schema-driven EType to round-trip as Time - see meta/Column.
+			case SQLITE_INTEGER:{
+				let v = sqlite3_column_int64( &stmt, col );
+				//sqlite stores datetimes as epoch ints & bits as 0/1 - the declared type recovers them. Expressions have no decltype and stay ints.
+				if( let declared = sqlite3_column_decltype(&stmt, col); declared ){
+					let lower = Str::ToLower( declared );
+					if( lower.find("date")!=string::npos || lower.find("time")!=string::npos )
+						return Value{ DBTimePoint{Chrono::Epoch()+std::chrono::seconds{v}} };
+					if( lower=="bit" || lower=="bool" || lower=="boolean" )
+						return Value{ v!=0 };
+				}
+				return Value{ v };
+			}
 			case SQLITE_FLOAT: return Value{ sqlite3_column_double(&stmt, col) };
 			case SQLITE_BLOB:{
 				let p = (const uint8_t*)sqlite3_column_blob( &stmt, col );
