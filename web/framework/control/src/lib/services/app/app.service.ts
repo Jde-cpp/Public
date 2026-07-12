@@ -121,11 +121,9 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	}
 */
 	async login( user:User, log:Log ):Promise<void>{
-		let self = this;
-		//if( this.log.restRequests )	log( `googleLogin( ${user.credential} )` );
 		console.assert( !user.sessionId );
-		user.sessionId = await super.loginJwt( user.authorization! );
-		self.authStore.append( user );
+		await super.loginJwt( user.authorization! );//the sessionId arrives in the response Authorization header — postRaw already appended it to authStore; the /login body is metadata ({expiration}), NOT the sessionId
+		this.authStore.append( user );//persist the jwt/identity fields; user.sessionId stays undefined so append() keeps the header-derived sessionId instead of clobbering it with the body
 		//if( this.log.restResults )	log( `authorization='${self.authorization}'` );
 	}
 	loginPassword( username:string, password:string, authenticator:string ):Promise<void>{

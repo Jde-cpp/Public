@@ -118,7 +118,7 @@ namespace Jde::QL{
 			return {};
 		string sql;
 		for( let& [jsonName, ascending] : json ){
-			let column = _dbTable->GetColumnPtr( DB::Names::FromJson(jsonName) );
+			let column = DBTable()->GetColumnPtr( DB::Names::FromJson(jsonName) );
 			if( sql.size()>0 )
 				sql += ", ";
 			sql += column->FQName();

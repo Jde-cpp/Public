@@ -8,10 +8,8 @@ export function arraysEqual(a:any[], b:any[]) {
 }
 
 export function verify( expr:unknown, msg?:string ):asserts expr{
-	if( !expr ){
-		debugger;
+	if( !expr )
 		throw new Error( msg ?? "Assertion failed" );
-	}
 }
 
 export function clone( obj: any ):any{
@@ -43,21 +41,24 @@ export function fromIsoDuration( str:string ):number{
 		let value = 0;
 		while( i<str.length && str[i]>='0' && str[i]<='9' )
 			value = value*10 + (+str[i++]);
-		let type = str[i++];
-		let multiplier = 1;
-		if( type!='S' ){
-			multiplier *= 60;
-			if( type!='M' ){
-				multiplier *= 60;
-				if( type!='H' ){
-					multiplier *= 24;
-					if( type=='Y' )
-						multiplier *= 365.25;
-					else
-						throw `Unknown type '${type}' in duration. '${str}'`;
-				}
-			}
-		}
+		let type = str[i];//the for's i++ advances past the designator
+		let multiplier;
+		if( type=='S' && parsingTime )
+			multiplier = 1;
+		else if( type=='M' && parsingTime )
+			multiplier = 60;
+		else if( type=='H' && parsingTime )
+			multiplier = 3600;
+		else if( type=='D' && !parsingTime )
+			multiplier = 86400;
+		else if( type=='W' && !parsingTime )
+			multiplier = 7*86400;
+		else if( type=='M' && !parsingTime )
+			multiplier = 86400*365.25/12;
+		else if( type=='Y' && !parsingTime )
+			multiplier = 86400*365.25;
+		else
+			throw `Unknown type '${type}' in duration. '${str}'`;
 		seconds += multiplier*value;
 	}
 	return seconds;

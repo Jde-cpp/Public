@@ -62,7 +62,7 @@ local args = import 'args.libsonnet';
 			},
 			sinks:{
 				console:{},
-				file:{ path: args.logDir, md: false }
+				file:{ path: "$(RUNTIME_DIR)/logs", md: false }
 			}
 		},
 		subscribe:{},

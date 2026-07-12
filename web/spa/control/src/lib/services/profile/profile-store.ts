@@ -30,7 +30,7 @@ export class ProfileStore{
 
 		const item = localStorage.getItem( key );
 		if( item )
-			ProfileStore.localOriginalValues.set( key, JSON.stringify(item) );
+			ProfileStore.localOriginalValues.set( key, item );
 		return item ? JSON.parse( item ) as T : defaultValue;
 	}
 	async set<T>( key:string, value:T|string|null ):Promise<void>{
@@ -88,7 +88,6 @@ export class ProfileStore{
 		return Promise.resolve( this.set<T>(key, value) );
 	}
 	private static localDefaults:Map<string, string> = new Map<string, string>();
-	#defaults:Map<string, string> = new Map<string, string>();
+	//#defaults:Map<string, string> = new Map<string, string>();
 	private static localOriginalValues:Map<string, string> = new Map<string, string>();
-	#originalValues:Map<string, string> = new Map<string, string>();
 }

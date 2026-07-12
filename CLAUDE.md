@@ -12,7 +12,7 @@ This is a monorepo for the **Jde OpcGateway** system — an OPC-UA gateway with 
 - `apps/OpcGateway/` — OPC-UA gateway (main product, exposes REST/WebSocket)
 - `apps/OpcServer/` — OPC server bridge
 - `include/jde/fwk/` — Public C++ headers for the framework
-- `web/opc/my-workspace/` — Angular 21 frontend (the active workspace)
+- `web/opc/my-workspace/` — Angular 22 frontend (the active workspace)
 
 ## Building (C++)
 
@@ -66,17 +66,17 @@ build/tests.sh            # Debug; args: <buildTarget> <clean> <buildDir>
 
 ## Frontend (Angular)
 
-The active Angular workspace is `web/opc/my-workspace3/`. It is an Angular 21 workspace with one application (`my-workspace`) and four libraries (`jde-spa`, `jde-framework`, `jde-access`, `jde-opc`).
+The active Angular workspace is `web/opc/my-workspace/`. It is an Angular 22 workspace with one application (`my-workspace`) and four libraries (`jde-spa`, `jde-framework`, `jde-access`, `jde-opc`).
 
 ```bash
-cd web/opc/my-workspace3
+cd web/opc/my-workspace
 ng serve          # dev server
 ng build          # production build
 ng test           # run tests (Vitest, not Karma)
 ng build --watch --configuration development  # watch mode
 ```
 
-The four libraries (`jde-spa`, `jde-framework`, `jde-access`, `jde-opc`) and the `my-workspace` application are all defined in `web/opc/my-workspace3/angular.json`. Older sibling workspaces (`my-workspace`, `my-workspace2`) are inactive — work only in `my-workspace3`.
+The four libraries (`jde-spa`, `jde-framework`, `jde-access`, `jde-opc`) and the `my-workspace` application are all defined in `web/opc/my-workspace/angular.json`.
 
 ## C++ Code Conventions
 

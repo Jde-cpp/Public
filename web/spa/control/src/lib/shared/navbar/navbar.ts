@@ -16,7 +16,7 @@ import {NavigationFocusService} from '../navigation-focus/navigation-focus.servi
 import {ThemePicker} from '../theme-picker/theme-picker';
 import { Authorization } from '../authorization/authorization';
 import { Favorites } from './favorites/favorites-dialog';
-import { ProfileStore } from '../../services/profile-store';
+import { ProfileStore } from '../../services/profile/profile-store';
 import { MatAutocomplete } from "@angular/material/autocomplete";
 
 export type Favorite={

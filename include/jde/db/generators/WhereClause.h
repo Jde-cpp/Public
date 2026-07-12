@@ -26,7 +26,8 @@ namespace Jde::DB{
 		α Add( sp<Column> col, Value::Underlying param, SRCE )ε->void{ Add( col, EOperator::Equal, move(param), sl ); }
 		α Add( sp<Column> col, Value param, SRCE )ε->void{ Add( col, EOperator::Equal, move(param.Variant), sl ); }
 		α Add( sp<Column> col, vector<Value> inParams, SRCE )ε->void{ Add( col, EOperator::In, move(inParams), sl ); }
-		α Add( sp<Column> col, vector<Value> inParams, bool haveNull, SRCE )ε->void;
+		α Add( sp<Column> col, EOperator op, vector<Value> inParams, bool haveNull, SRCE )ε->void;
+		α Add( sp<Column> col, vector<Value> inParams, bool haveNull, SRCE )ε->void{ Add( col, EOperator::In, move(inParams), haveNull, sl ); }
 		α Add( string clause )ε{ _clauses.push_back(move(clause)); }
 		α Add( const DB::Criteria& criteria )ε->void;
 		α Empty()Ι->bool{ return _clauses.empty(); }

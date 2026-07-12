@@ -8,7 +8,6 @@ export class OpcNodeRouteService implements IRouteService{
 		throw new Error("Not implemented");
 	}
 	async docItems( urlSegments:UrlSegment[] ):Promise<RouteItem[]>{
-		debugger;
 		return Promise.resolve( [] );
 	}
 }

@@ -37,7 +37,7 @@ export class QLListSettingsFilter implements OnInit{
 			this.dataSource.push( { field: fieldFilter.field, filter: fieldFilter.filter, displayName: this.columns()[fieldFilter.field.name] } );
 			this.addSignals( fieldFilter.field, fieldFilter.filter.operator );
 		}
-		this.dataSource.push( {field: new Field({}), filter: {operator: Operator.None, value: []}, displayName: ""} );
+		this.dataSource.push( {field: undefined as any, filter: {operator: Operator.None, value: []}, displayName: ""} );//placeholder add-row: the template renders the column-select only when field is falsy (new Field({}) also threw in Field's ctor)
 	}
 
 	onOperatorChange( op: Operator, col: ColumnFilter ){

@@ -287,8 +287,8 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		return y;
 	}
 	async read( opcId:CnnctnTarget, n:NodeId ):Promise<Value>{
-		const v = super.querySingle<Value>( `node( opc: "${opcId}", ${n.qlArgs()}){value}` );
-		return v;
+		const v = await super.querySingle<{value:any}>( `node( opc: "${opcId}", ${n.qlArgs()}){value}` );
+		return toValue( v["value"] );
 	}
 	async write( opcId:CnnctnTarget, n:NodeId, v:Value, log:Log ):Promise<Value>{
 		const q = `updateVariable( opc: $opc, id: $id, value: $value ){ value }`;
@@ -319,9 +319,10 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		}
 	}
 
-	private async _subscribe( opcId:OpcId, nodes:NodeId[], subject:Subject<SubscriptionResult> ):Promise<void>{
+	private async _subscribe( opcId:OpcId, nodes:NodeId[], owner:Owner ):Promise<void>{
 		const request:FromClient.ISubscribe = { nodes:Gateway.toProto(nodes), opcId:opcId };
 		let toDelete = new Array<NodeId>();
+		let error:any;
 		try{
 		 	let y = await this.sendPromise<FromServer.IMonitoredItemCreateResult[]>( {"subscribe":request}, `subscribe opcId: ${opcId}, nodeCount: ${nodes.length}` );
 		 	for( let i=0; i<y.length; ++i ){
@@ -329,16 +330,21 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 				if( y[i].statusCode ){
 					toDelete.push( node );
 					let e = new OpcError( y[i].statusCode!, "Subscribe", new Error().stack!, undefined );
-					console.log( `Subscription failed for '${node} - ${e}` );
+					console.log( `Subscription failed for '${node}' - ${e}` );
 				}
 		 	}
 		}
 		catch( e:any ){
-			console.error( e["error"]["message"] );
+			console.error( `subscribe failed - ${e?.error?.message ?? e?.message ?? e}` );
 			toDelete.push( ...nodes );
-			subject.error( e );
+			error = e;
 		}
 		toDelete.forEach( (n)=>this.getOpcSubscriptions(opcId).delete(n.key) );
+		if( error ){
+			const subject = this.#ownerSubscriptions.get( owner );
+			this.clearOwner( owner );//error() terminates the Subject — drop the owner so a later addToSubscription starts a fresh one
+			subject?.error( error );
+		}
 	}
 
 	#ownerSubscriptions = new Map<Owner,Subject<SubscriptionResult>>();
@@ -366,8 +372,9 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 				this.#nodes.set( node.key, node );
 			}
 		}
-		let subject = this.#ownerSubscriptions.has( owner ) ? this.#ownerSubscriptions.get( owner )! : this.#ownerSubscriptions.set( owner, new Subject<SubscriptionResult>() ).get( owner )!;
-		this._subscribe( opcId, nodes, subject );
+		if( !this.#ownerSubscriptions.has(owner) )
+			this.#ownerSubscriptions.set( owner, new Subject<SubscriptionResult>() );
+		this._subscribe( opcId, nodes, owner );
 	}
 	subscribe( opcId:OpcId, nodes:NodeId[], owner:Owner ):Observable<SubscriptionResult>{
 		this.addToSubscription( opcId, nodes, owner );
@@ -420,7 +427,9 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	};
 
 	private clearOwnerNode( opcSubscriptions:Map<NodeKey, Owner[]>,  key:NodeKey, owner:Owner ){
-		let owners = opcSubscriptions.get( key )!;
+		let owners = opcSubscriptions.get( key );
+		if( !owners )
+			return false;//node not tracked — nothing to remove, not a tombstone
 		const index = owners.indexOf( owner );
 		let tombStone = false;
 		if( index!=-1 ){
@@ -456,7 +465,9 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	}
 	// Unsuscribe, but keep subscription open.
 	async unsubscribe( opcId:string, nodes:NodeId[], owner:Owner ):Promise<void>{
-		let opcSubscriptions = this.#subscriptions.get( opcId )!;
+		let opcSubscriptions = this.#subscriptions.get( opcId );
+		if( !opcSubscriptions )
+			return;//opc not tracked — nothing to unsubscribe
 		let toDelete = new Array<NodeId>();
 		for( const node of nodes ){
 			if( this.clearOwnerNode( opcSubscriptions, node.key, owner ) )

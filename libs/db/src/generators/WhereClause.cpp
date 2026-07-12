@@ -3,6 +3,8 @@
 #include <jde/db/meta/Table.h>
 #include <jde/db/generators/Functions.h>
 
+#define let const auto
+
 namespace Jde::DB{
 	WhereClause::WhereClause( const Object& a, EOperator op, const Object& b, SL sl )ε{
 		auto clause = DB::ToString( a );
@@ -60,16 +62,19 @@ namespace Jde::DB{
 		_clauses.push_back( col->Table->Syntax().FormatOperator(*col, op, inParams.size(), sl) );
 	}
 
-	α WhereClause::Add( sp<Column> col, vector<Value> inParams, bool haveNull, SL sl )ε->void{
+	α WhereClause::Add( sp<Column> col, EOperator op, vector<Value> inParams, bool haveNull, SL sl )ε->void{
 		if( !haveNull )
-			return Add( col, EOperator::In, move(inParams), sl );
+			return Add( col, op, move(inParams), sl );
 		for( auto& param : inParams )
 			_params.emplace_back( move(param) );
+		let notIn = op==EOperator::NotIn;
 		if( inParams.empty() )
-			_clauses.push_back( Ƒ("{} is null", col->FQName()) );
+			_clauses.push_back( Ƒ("{} is {}null", col->FQName(), notIn ? "not " : "") );
 		else{
-			string inClause = col->Table->Syntax().FormatOperator( *col, EOperator::In, inParams.size(), sl );
-			_clauses.push_back( Ƒ("({} or {} is null)", move(inClause), col->FQName()) );
+			string inClause = col->Table->Syntax().FormatOperator( *col, op, inParams.size(), sl );
+			_clauses.push_back( notIn
+				? Ƒ("({} and {} is not null)", move(inClause), col->FQName())
+				: Ƒ("({} or {} is null)", move(inClause), col->FQName()) );
 		}
 	}
 

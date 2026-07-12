@@ -26,7 +26,7 @@ namespace Jde::DB{
 		ASSERT( params.size() );
 		if( params.size() )
 			params.pop_back();
-		return Ƒ( "{} {}({})", col.FQName(), OperatorStrings[(uint)op], params );
+		return Ƒ( "{} {}({})", col.FQName(), op==EOperator::NotIn ? "not in" : "in", params );
 	}
 
 	α Syntax::AddDefault( sv tableName, sv columnName, Value dflt )Ι->string{

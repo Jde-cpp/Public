@@ -45,14 +45,20 @@ namespace Jde::Access{
 	TEST_F( UserTests, MultipleUsersSelect ){
 		let a = GetId( GetUser("MultipleUsersA", GetRoot()) );
 		let b = GetId( GetUser("MultipleUsersB", GetRoot()) );
-		auto q = "query{ users(id:[$a,$b]){id loginName provider} }";
-		auto vars = jobject{ {"a", a}, {"b", b} };
+		auto q = "query{ users(id:[$a,$b], orderBy:$orderBy){id loginName provider} }";
+		auto vars = jobject{ {"a", a}, {"b", b}, {"orderBy", jarray{{{"name", "asc"}}}} };
 		auto saved = QL().QuerySync<jarray>( move(q), move(vars), GetRoot() );
 		ASSERT_EQ( saved.size(), 2 );
 		ASSERT_EQ( saved[0].at("loginName").get_string(), "MultipleUsersA" );
 		ASSERT_EQ( saved[1].at("loginName").get_string(), "MultipleUsersB" );
 		PurgeUser( {a}, GetRoot() );
 		PurgeUser( {b}, GetRoot() );
+	}
+	TEST_F( UserTests, NotIn ){
+		auto q = "{users(target:{nin:[\"root\"]}){target} }";
+		auto notRoot = QL().QuerySync<jarray>( move(q), {}, GetRoot() );
+		for( auto& user : notRoot )
+			ASSERT_NE( user.at("target").get_string(), "root" );
 	}
 	TEST_F( UserTests, ProvidersSelect ){
 		let readGroups = "__type(name: \"Provider\") { enumValues { id name } }";

@@ -162,7 +162,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 
 	private async authGet<Y>( target:string, authorization?:string, log:Log=console.log ):Promise<Y>{
 		if( target.indexOf("undefined")>=0 )
-			debugger;
+			console.error( `authGet - target contains 'undefined': ${target}` );
 		if( this.log.restRequests )	log( decodeURIComponent(target).substring(0,this.log.maxLength) );
 		let url = this.urlWithTarget(target);
 		let y:Y;
@@ -320,7 +320,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		return queryResult.value;
 	}
 	async querySettings(target:string[], log:Log):Promise<{[key:string]:string}>{
-		const queryResult = await this.query<{settings:{target:string, value:string}[]}>( `settings(target:${JSON.stringify(target)}){target value}`, log );
+		const queryResult = await this.query<{settings:{target:string, value:string}[]}>( `settings(target:${JSON.stringify(target)}){target value}`, undefined, log );
 		let y:{[key:string]:string} = {};
 		for( const setting of queryResult.settings )
 			y[setting.target] = setting.value;
@@ -344,7 +344,9 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		let schema = ( await this.schema([type], log) )[0];
 		if( !schema.enums ){
 			schema.enums = new Map<string, EnumValue[]>();
-			for( const field of schema.fields.filter((x)=>x.type.underlyingKind==FieldKind.ENUM && !schema.enums.has(x.name)) ){
+			for( const field of schema.fields.filter((x)=>x.type.underlyingKind==FieldKind.ENUM) ){
+				if( schema.enums.has(field.type.name) )
+					continue;//dedup by enum-type name (was `!enums.has(x.name)` — the field name — checked before the loop populated the map, so same-type fields each re-fetched)
 				let enumResult = await this.query<{__type: {enumValues: Array<EnumValue>;}}>(
 					`__type(name: $type) { enumValues { id name } }`,
 					{ type: field.type.name }
@@ -367,7 +369,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		for( let type of queries ){
 			const ql = `__type(name: $type) { fields { name type { name kind ofType{name kind} } } }`;
 			const data:any = await this.query( ql, {type:type}, log );
-			if( data["__type"].length==0 )
+			if( !data?.["__type"] )//`__type` is an object for a valid type, null for a missing one — `.length` threw on null (and was always undefined!=0 for the object)
 				throw `no such type: '${type}'`;
 			const schema = new TableSchema( { ...data["__type"], name: type } );//keep the requested canonical type — the server may alias internal names (e.g. User → "UsersQl"), which broke collectionName/singular conventions downstream
 			this.#tables.set( type, schema );
@@ -474,7 +476,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	private get restUrl(){return this.transport==ETransport.Secure ? this.secureRestUrl : `http://${this.url}`;}
 	private get secureRestUrl(){return `https://${this.url}`;}
 
-	isLoggedIn = computed( () => this.user()!= null );
+	isLoggedIn = computed( () => { const u = this.user(); return !!(u && (u.jwt || u.id)); } );//not `!=null`: logout() keeps a serverInstances-only User, and anonymous REST gets a sessionId — only jwt (Google) or id (password/OpcServer) means logged in
 	get user():Signal<User|undefined>{return this.authStore.user; }
 	lastRestCall!:Date;
 	timeoutSeconds!:number;

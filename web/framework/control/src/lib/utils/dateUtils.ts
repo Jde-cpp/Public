@@ -24,7 +24,7 @@ export class DateUtils{
 	}
 	static toDays( value:Date ):Day{
 		if( value==null )
-		    debugger;
+			console.error( "toDays( null )" );
 		return Math.floor( value.getTime()/(24*60*60000) );
 	}
 	static dayOfWeek( date:Date ){
@@ -52,14 +52,6 @@ export class DateUtils{
 	static displayDay( day:Day ){
 		return DateUtils.display( DateUtils.fromDays(day) );
 	}
-	static easternTimezoneOffset():Minutes{//in Minutes
-		if( !DateUtils._easternTimezoneOffset ){
-			var usaTime = new Date().toLocaleString( "en-US", {timeZone: "America/New_York"} );
-			DateUtils._easternTimezoneOffset = new Date(usaTime).getTimezoneOffset();
-		}
-		return DateUtils._easternTimezoneOffset;
-	} private static _easternTimezoneOffset:Minutes|undefined;
-
 	static asUtc( date:Date ):Date{
 		const y = new Date( date.getTime() + date.getTimezoneOffset()*60000 );
 		return y;

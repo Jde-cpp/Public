@@ -30,7 +30,7 @@ export class QLListSettings implements OnInit, OnDestroy{
 	}
 
 	getView( isAdhoc:boolean ):View{
-		let view = this.view();  // caller should send copy of view to avoid mutating original until save
+		let view = new View( this.view() );//copy — mutating the profile's own instance made onViewSave's duplicate-check self-match, so views were never promoted to User/persisted
 		if( !isAdhoc )
 			view.name = this.name();
 		let displayCols = this.display.dataSource;

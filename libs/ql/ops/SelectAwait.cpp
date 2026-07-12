@@ -285,8 +285,6 @@ namespace Jde{
 		let dbView = qlTable.DBTable();
 		DB::Statement statement;
 		columnSql( qlTable, *dbView, false, statement, includeDeleted, includeWhere );
-		// if( statement.Empty() ) could be a join with only where clause.
-		// 	return {};
 		if( statement.From.Empty() )
 			statement.From += { dbView->Columns[0] };
 		auto dbTable = dbView->IsView() ? nullptr : AsTable(dbView);

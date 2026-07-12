@@ -188,11 +188,12 @@ export class QLList implements OnInit, OnDestroy{
 			suggestions[field.name] = values;
 		}
 		for( let row of this.data() ){
-			for( let col of Object.keys(row).filter(c=>row[c] && !suggestions[c].includes(row[c])) )
+			for( let col of Object.keys(row).filter(c=>row[c] && suggestions[c] && !suggestions[c].includes(row[c])) )//guard suggestions[c]: rows can carry keys outside the view's fields
 				suggestions[col].push( row[col] );
 		}
 		for( let col of Object.keys(suggestions) )
-			suggestions[col] = suggestions[col].filter( (v,i,a) => a.indexOf(v)===i ).slice(0,100).sort((a, b)=>a-b);
+			suggestions[col] = suggestions[col].filter( (v,i,a) => a.indexOf(v)===i ).slice(0,100)
+				.sort( (a,b)=> typeof a=="number" && typeof b=="number" ? a-b : String(a).localeCompare(String(b)) );//`a-b` was NaN for string values
 		return suggestions;
 	}
 

@@ -4,10 +4,8 @@
 		"name": "access",
 		"target": "Jde.Access.Tests",
 		"subDir": "libs/${config:name}",
-		"sourceDir": "${env:JDE_DIR}/${config:subDir}",
 		"buildTarget": "Debug",
-		"cmake.sourceDirectory": "${workspaceFolder}/../../..",
-		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
+		"cmake.sourceDirectory": "${workspaceFolder:tests}/../../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 	},
 	"tasks": {
@@ -16,16 +14,16 @@
 			{
 				"label": "clean",
 				"type": "shell",
-				"command": "tput reset; cd ${command:jde.repoBuildDir}; cmake --build . --target clean;",
+				"command": "tput reset; cd ${config:cmake.buildDirectory}; cmake --build . --target clean;",
 			},
 			{
 				"label": "run",
 				"type": "shell",
 				"dependsOn": ["build", "clearTerminal"],
 				"command": "./${config:target}",
-				"args": ["-c", "-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet"],
+				"args": ["-tests", "-settings=${workspaceFolder:tests}/config/Access.Tests.jsonnet"],
 				"options": {
-					"cwd": "${command:jde.repoBuildDir}/${config:subDir}/tests",
+					"cwd": "${config:cmake.buildDirectory}/runtime",
 				}
 			}
 		]
@@ -36,12 +34,14 @@
 			"name": "Debug",
 			"type": "lldb",
 			"request": "launch",
-			"program": "${command:jde.repoBuildDir}/${config:subDir}/tests/${config:target}",
-			"args": [
-				"-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet",
-				"-tests"
-			],
-			"cwd": "${command:jde.repoBuildDir}/${config:subDir}/tests",
+			"program": "${config:cmake.buildDirectory}/${config:subDir}/tests/${config:target}",
+			"args": ["-tests", "-settings=${workspaceFolder:tests}/config/Access.Tests.jsonnet"],
+			"env": {
+				"RUNTIME_DIR": "${config:cmake.buildDirectory}/runtime",
+				"REPO_SOURCE_DIR": "${config:cmake.sourceDirectory}",
+				"REPO_BUILD_DIR": "${config:cmake.buildDirectory}"
+			},
+			"cwd": "${config:cmake.buildDirectory}/runtime",
 			"preLaunchTask": "build"
 		},
 		{

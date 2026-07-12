@@ -43,6 +43,8 @@ export class DefaultErrorService implements IErrorService
 		}
 		else if( typeof e=='object' && typeof e.message=="string" )
 			this.showUserError( e.message, log );
+		else
+			this.showUserError( typeof e=='string' ? e : `Unknown error:  ${JSON.stringify(e)}`, log );//plain-string throws are common in this codebase — must reach the user
 	}
 	exceptionInfo( e:any, info:string, log:Log ):void{
 		if( e instanceof HttpErrorResponse ){
@@ -57,9 +59,10 @@ export class DefaultErrorService implements IErrorService
 			this.showUser( `${e.cause}:  ${e.message}`, 'red-snackbar' );
 			log( `info: '${info}', cause: '${e.cause}' ${e.stack}` );
 		}
-	}
-	show( e: any, message?:string ){
-		this.error( message, e );
+		else{
+			this.showUser( `${info}  ${typeof e=='string' ? e : JSON.stringify(e)}`, 'red-snackbar' );
+			log( `info: '${info}', e: ${JSON.stringify(e)}` );
+		}
 	}
 
 	warn( message:string ){

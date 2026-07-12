@@ -212,14 +212,18 @@ export class Logs implements OnInit, OnDestroy{
 		view.type = ViewType.Adhoc;
 		let existing = this.views().findIndex( v=>v.name==view.name && view.type==v.type );
 		let newView = new LogView( view );
+		let newViews = [...this.views()];//new array + views.set so the signal notifies — in-place mutation only refreshed consumers when viewIndex happened to change
+		let newIndex;
 		if( existing>=0 ){
-			this.views()[existing] = newView;
-			this.viewIndex.set( existing );
+			newViews[existing] = newView;
+			newIndex = existing;
 		}
 		else{
-			this.views().push( newView );
-			this.viewIndex.set( this.views().length - 1 );
+			newViews.push( newView );
+			newIndex = newViews.length - 1;
 		}
+		this.views.set( newViews );
+		this.viewIndex.set( newIndex );
 		this.load();
 	}
 	onViewDelete(view:LogView){
@@ -227,7 +231,6 @@ export class Logs implements OnInit, OnDestroy{
 		this.views.set( this.views().filter( v=>v.name!=view.name || v.type!=view.type ) );
 		this.viewIndex.set( 0 );
 		this.profileStore.save( `logs/views`, this.views().filter(v=>v.isUser).map(v=>v.toJson(undefined)) );
-		debugger;
 	}
 
 	cellClick( entry:Entry ){

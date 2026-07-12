@@ -12,6 +12,11 @@ export class Days{
 		bod.setHours( 0, 0, 0, 0 );
 		this.days = Math.round( (eod.getTime()-bod.getTime())/(1000*60*60*24) );
 	}
+	static fromJson( json:{days:number} ):Days{
+		let y = new Days( new Date() );
+		y.days = json.days;
+		return y;
+	}
 	fromNow():Date{
 		let start = new Date();
 		start.setHours( 0, 0, 0, 0 );
@@ -165,8 +170,12 @@ export class View{
 		if( config.limit )
 			this.limit = config.limit;
 		this.fields = config.fields.map( f=>new ViewField({field: f, schema: schema}) );
-		for( let fieldFilter of config.filters ?? [] )//{name: string, filter: Filter}
-			this.fieldFilters.push( {field: schema.fields.find(f=>f.name==fieldFilter.name)!, filter: fieldFilter.filter} );
+		for( let fieldFilter of config.filters ?? [] ){//{name: string, filter: Filter}
+			const field = schema.fields.find( f=>f.name==fieldFilter.name )!;
+			if( field?.isDateTime )//JSON round-trip leaves Days as {days:n} and Date as an ISO string — the filter UI's instanceof checks need real instances
+				fieldFilter.filter.value = fieldFilter.filter.value.map( v=>View.reviveDateValue(v) );
+			this.fieldFilters.push( {field: field, filter: fieldFilter.filter} );
+		}
 
 		this.showSelector = config.showSelector;
 		this.sort = config.sort;
@@ -210,6 +219,30 @@ export class View{
 		if( description )
 			selectCols.push( description );
 		return selectCols;
+	}
+	private static comparisonOperator( op:Operator ):string|undefined{
+		switch( op ){
+			case Operator.Less:           return "lt";
+			case Operator.LessOrEqual:    return "lte";
+			case Operator.Greater:        return "gt";
+			case Operator.GreaterOrEqual: return "gte";
+			case Operator.NotIn:          return "nin";
+			default: return undefined;//In keeps the bare-array form the server treats as `in`
+		}
+	}
+	private static comparisonJson( v:DbScalar ):DbScalar{
+		if( v instanceof Days )
+			v = v.fromNow();//resolve the relative "last N days" at query time
+		return v instanceof Date ? v.toISOString() : v;
+	}
+	private static reviveDateValue( v:DbScalar ):DbScalar{
+		if( v==null || v instanceof Date || v instanceof Days )
+			return v;
+		if( typeof v=="string" ){
+			const d = new Date( v );
+			return isNaN( d.getTime() ) ? v : d;//"<not null>" etc. stay strings
+		}
+		return typeof v=="object" && "days" in v ? Days.fromJson( <{days:number}>v ) : v;
 	}
 	private parseQuery( query:string, vars:any, schema:TableSchema ){
 		const addField = ( fieldName:string, hidden=true )=>{
@@ -260,7 +293,7 @@ export class View{
 
 		let fieldStr = this.fields.filter( f=>f.displayed || f.name=="id" ).map( f=>f.name ).join(" ");
 		let args = [];
-		let vars:Record<string, DbScalar[]|null> = {};
+		let vars:Record<string, DbScalar[]|DbScalar|null> = {};
 		if( this.limit )
 			args.push( `limit:${this.limit}` );
 		if( skip )
@@ -281,9 +314,19 @@ export class View{
 			if( values.length==1 && values[0]=="<not null>" )
 				args.push( `${name}:{"ne":null}` );
 			else{
-				args.push( `${name}:$${name}` );
-				verify( values.length>0 );
-				vars[name] = [...values];
+				const op = View.comparisonOperator( filter.operator );
+				if( op=="nin" ){//NotIn takes the full value array (server nin now fixed)
+					args.push( `${name}:{nin:$${name}}` );
+					vars[name] = [...values];
+				}
+				else if( op ){
+					args.push( `${name}:{${op}:$${name}}` );
+					vars[name] = View.comparisonJson( values[0] );
+				}
+				else{//In → bare-array form the server treats as `in`
+					args.push( `${name}:$${name}` );
+					vars[name] = [...values];
+				}
 			}
 		}
 		const iDeletedArg = args.findIndex( a=>a.startsWith("deleted:") );

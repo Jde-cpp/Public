@@ -2,12 +2,10 @@ import {Component, OnDestroy, OnInit, Inject, inject} from '@angular/core';
 import { DatePipe } from '@angular/common';
 import {ActivatedRoute} from '@angular/router';
 import { RouterLink } from '@angular/router';
-//import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
 import { MatCardModule } from '@angular/material/card';
+import { RouteItem } from 'jde-spa';
 import { Connection } from '../../services/resolvers/app.resolver';
-import { StringUtils } from '../../utils/StringUtils';
 import { RouteStore } from '../../services/route.store';
-import { RouteItem } from '../../../../../jde-spa/src/lib/pages/component-sidenav/component-sidenav';
 
 @Component({
     selector: 'apps',

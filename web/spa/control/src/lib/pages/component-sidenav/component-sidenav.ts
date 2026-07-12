@@ -112,7 +112,7 @@ export class ComponentSidenav implements OnInit, OnDestroy {
 			event.sideNav = this.item;
 		}
 		else
-			debugger;
+			console.warn( `onRouterOutletActivate: activated component has no 'sideNav' input` );
 	}
   ngOnDestroy() {
     this.subscriptions.unsubscribe();

@@ -42,7 +42,6 @@ export class AccessService extends AppService implements OnDestroy{
 				fields.push( ...[`permissionRights{id allowed denied resource{id}}`, `roles{id}`] );
 				break;
 			default:
-				debugger;
 				throw new Error( `Unknown table: ${schema.collectionDisplay}` );
 		}
 		return `${schema.singular}( target:"${target}" ){ ${fields.join(" ")} }`;

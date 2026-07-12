@@ -96,7 +96,7 @@ namespace Jde::DB{
 			else
 				y += ' '+ DB::ToString(o) + ',';
 		}
-		if( !y.empty() )
+		if( !Columns.empty() )
 			y.pop_back();
 		return y;
 	}

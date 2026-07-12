@@ -101,7 +101,7 @@ namespace Jde{
 						else
 							params.push_back( DB::Value{column->Type, v} );
 					}
-					where.Add( column, move(params), haveNull );
+					where.Add( column, filter.Operator, move(params), haveNull );
 				}
 				else{
 					if( value.is_string() || value.is_number() || value.is_null() || value.is_bool() )

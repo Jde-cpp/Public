@@ -32,7 +32,7 @@ fi;
 if [ ! -d $workspace ]; then
 	echo -------------------- create workspace start --------------------;
 	createApplication=true;
-	cmd="ng new $workspace --create-application=$createApplication --defaults --routing=false --style=scss"
+	cmd="ng new $workspace --create-application=$createApplication --ai-config=claude --defaults --routing=false --style=scss"
 	$cmd; if [ $? -ne 0 ]; then echo $cmd; exit 1; fi;
 	echo -------------------- create workspace complete --------------------;
 	cd $workspace;

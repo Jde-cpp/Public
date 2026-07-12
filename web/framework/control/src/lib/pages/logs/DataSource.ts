@@ -149,7 +149,7 @@ export class LogDataSource extends DataSource<Entry>{
 			if( ch!='{' || i+1>=template.length || (ch=='{' && template[i+1]=='{') ){
 				text += ch;
 				if( ch=='{' && i+1<template.length )
-					text += template[++i];
+					++i;//"{{" escape: emitted one "{" above, skip the second so it collapses to "{" (was `text += template[++i]` → doubled)
 				continue;
 			}
 			let next = template[++i];

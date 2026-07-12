@@ -1,13 +1,13 @@
 local args = import 'args.libsonnet';
 {
 	testing:{
-		tests:: "UserTests.MultipleUsersSelect",
-		recreateDB: true
+		tests: "UserTests.NotIn",
+		recreateDB:: true
 	},
 	dbServers:{
-		scriptPaths: ["$(JDE_DIR)/libs/access/config/sql/"+args.sqlType],
-		dataPaths: ["$(JDE_DIR)/libs/access/config"],
-		sync: true,
+		scriptPaths: [args.repoSourceDir+"/libs/access/config/sql/"+args.sqlType],
+		dataPaths: [args.repoSourceDir+"/libs/access/config"],
+		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,
@@ -31,7 +31,7 @@ local args = import 'args.libsonnet';
 			},
 			sinks:{
 				console:{},
-				file:{ path: args.logDir, md: false }
+				file:{ path: "$(RUNTIME_DIR)/logs", md: false }
 			}
 		}
 	},

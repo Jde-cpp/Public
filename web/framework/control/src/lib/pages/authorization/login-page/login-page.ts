@@ -55,7 +55,6 @@ export class LoginPageComponent{
 		}
   }
 	onGoogleLogin2(credential:string){
-		debugger;
 		this.onGoogleLogin( credential );
 	}
 	async onGoogleLogin(credential: string){
@@ -89,7 +88,7 @@ export class LoginPageComponent{
 				document.getElementById("google-button"),
 				{ theme: "outline", size: "large" }
 			);
-			if( this.googleCredential && !this.user()!.picture )
+			if( this.googleCredential && !this.user()?.picture )//user() is undefined when nobody's logged in
 				this.onGoogleLogin( this.googleCredential );
 		}
 		catch( e ){
@@ -104,7 +103,7 @@ export class LoginPageComponent{
 			throw new Error( "googleAuthClientId is not defined" );
 		return y;
 	}
-	hasUserPassword = computed(() => { return !this.providers.isLoading() && this.providers.value()!.includes( EProvider.OpcServer ); });
+	hasUserPassword = computed(() => { return !this.providers.isLoading() && (this.providers.value()?.includes( EProvider.OpcServer ) ?? false); });//value() is undefined when the providers resource errored
 	providers = resource<EProvider[], {}>( {loader: async () =>await this.authService.providers( console.log )} );
 
 	fb = inject(FormBuilder);

@@ -38,11 +38,8 @@ export class User extends UserJson {
 			if( jwt.iss=="https://accounts.google.com" )
 				this.provider = EProvider.Google;
 		}
-		if( arg && !this.jwt ){
-			let json = arg as UserJson;
-			this.sessionId = json.sessionId;
-			this.serverInstances = json.serverInstances;
-		}
+		if( arg && !this.jwt )
+			this.append( arg as UserJson );//faithfully preserve id/domain/provider/sessionId/serverInstances for password/OpcServer logins — dropping id broke isLoggedIn across reload & append-clone
 	}
 
 	append( updated:UserJson ):void{

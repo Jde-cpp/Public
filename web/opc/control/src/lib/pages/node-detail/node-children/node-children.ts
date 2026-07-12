@@ -171,7 +171,6 @@ export class NodeChildren implements OnInit, OnDestroy {
 		try {
 			let date = DateUtils.beginningOfDay( e.value );
 			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(date), (x)=>console.log(x) );
-			debugger;
 		}
 		catch (err) {
 			e.target["value"] = n.value;
@@ -181,7 +180,6 @@ export class NodeChildren implements OnInit, OnDestroy {
 	async changeDate( n:Variable, e:Event ){
 		try{
 			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(<Date>(e.target as any)["value"]), (x)=>console.log(x) );
-			debugger;
 		}
 		catch(err:any){
 			(e.target as any)["value"] = n.value;
@@ -192,7 +190,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	routerLink(n:UaNode):string[]{
 		return [ `./${n.browseFQ(this.server.connection.defaultBrowseNs)}` ];
 	}
-	test(r:UaNode){ debugger;}
+	test(r:UaNode){}
 	get columns():string[]{ return this.profile.columns; }
 	EAccess = EAccess;
 	ETypes = ETypes;
@@ -206,7 +204,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	get cnnctnTarget():string{ return this.server.connection.target; }
 	pageData!:NodePageData;
 	profile!:UserSettings;
-	get nodes(){ if(!this.pageData) debugger; return this.pageData?.nodes; }
+	get nodes(){ return this.pageData?.nodes; }
 	get variables():Variable[]{ return <Variable[]>this.nodes.filter((x)=>x.nodeClass==ENodeClass.Variable); }
 	retrievingSnapshot = signal<boolean>( false );
 	routerSubscription!:Subscription;

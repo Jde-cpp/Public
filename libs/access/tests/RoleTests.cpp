@@ -60,6 +60,10 @@ namespace Jde::Access::Tests{
 		return y;
 	}
 
+	TEST_F( RoleTests, Select ){
+		let role = QL().QuerySync<jobject>( "{role( target:\"Admin\" ){ id name }}", {}, GetRoot() );
+		ASSERT( role.at("name").as_string().starts_with("Admin") );
+	}
 	TEST_F( RoleTests, Crud ){
 		let pk = TestCrud( "role", "roleTest", GetRoot() );
 		TestPurge( "role", pk, GetRoot() );

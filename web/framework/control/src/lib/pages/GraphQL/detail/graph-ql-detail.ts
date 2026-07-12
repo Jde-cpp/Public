@@ -4,13 +4,12 @@ import { CommonModule } from '@angular/common';
 import {ActivatedRoute, NavigationEnd, Params, Router, RouterModule, Routes} from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 
-import { ComponentPageTitle } from 'jde-spa';
+import { ProfileStore, ComponentPageTitle } from 'jde-spa';
 
 import {IErrorService} from '../../../services/error/IErrorService';
 import {IGraphQL}  from '../../../services/IGraphQL';
 import {TableSchema} from '../../../model/ql/schema/TableSchema'
 import { MetaObject } from '../../../model/ql/schema/MetaObject';
-import {ProfileStore} from '../../../../../../jde-spa/src/lib/services/profile-store';
 import { MatTabsModule } from '@angular/material/tabs';
 import{ PageSettings } from '../model/PageSettings';
 import { clone } from '../../../utils/utils';
@@ -71,7 +70,6 @@ export class GraphQLDetailComponent implements OnDestroy, OnInit{
 		}
 	}
 	onNavigationEnd =( val:NavigationEnd )=>{///settings
-		debugger;
 		var parts = val.url.split( '/' ); parts.shift();
 		if( parts.length<3 )//users->portfolio=2
 			return;
@@ -91,20 +89,15 @@ export class GraphQLDetailComponent implements OnDestroy, OnInit{
 		this.load();
 	}
 	load(){
-		if( this.target=="settings" )
-			debugger;
 		const fetch = async ( columns:any )=>{
 			const ql = `${this.fetchName}(filter:{target:{ eq:"${this.target}"}}){ ${columns} }`;
 			try{
 				const data:any = await this.graphQL.query( ql, {}, (m)=>console.log(m) );
-				if( data==null ){
-					debugger;
+				if( data==null )
 					throw "data==null";
-				}
 				this.data = data[this.fetchName];
 			}
 			catch( e ){
-				debugger;
 				this.cnsle.exceptionInfo( e, `${this.target} not found`, (m)=>console.log(m) );
 			}
 			this.viewPromise = Promise.resolve( true );

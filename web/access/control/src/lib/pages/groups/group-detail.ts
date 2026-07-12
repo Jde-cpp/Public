@@ -14,7 +14,7 @@ import { PermissionTable } from '../../shared/permissions/permission-table';
 import { Permission } from '../../model/Permission';
 import { AccessService } from '../../services/access.service';
 import { Group, GroupPK } from '../../model/Group';
-import { User, UserPK } from '../../model/User';
+import { UserPK } from '../../model/User';
 
 @Component( {
     templateUrl: './group-detail.html',
@@ -86,7 +86,7 @@ export class GroupDetail implements OnDestroy, OnInit{
 
 	group!:Group;
 	get id(){ return this.group.id; }
-	ctor:new (item: any) => any = User;
+	ctor:new (item: any) => any = Group;
 	isChanged = signal<boolean>( false );
 	properties = signal<Partial<Group>>( null as any );
 	users = signal<SelectionModel<UserPK>>( null as any );

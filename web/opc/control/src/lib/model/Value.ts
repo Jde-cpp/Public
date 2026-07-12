@@ -51,7 +51,7 @@ export function valueString( value: Value ):string{
 export function toValue( json:any ):Value{
 	let value = json;
 	if( value?.hasOwnProperty('sc') )
-		value = new Error( json.sc );
+		value = new OpcError( json.sc, "OpcError", "", undefined );//was `new Error(sc)` — a plain Error isn't `instanceof OpcError`, so valueString rendered it as "unknown type object"
 	else if( value?.hasOwnProperty('unsigned') )
 		value = new Long( json.low, json.high, json.unsigned );
 	return value;
