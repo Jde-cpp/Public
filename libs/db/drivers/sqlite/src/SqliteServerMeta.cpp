@@ -65,6 +65,22 @@ namespace Jde::DB::Sqlite{
 			if( auto pTable = tables.find( index.TableName ); pTable!=tables.end() )
 				std::dynamic_pointer_cast<TableDdl>( pTable->second )->Indexes.push_back( index );
 		}
+		//pragma_index_list omits the rowid-alias single-integer pk, so synthesize the pk index from pragma_table_info's pk columns (skip when an origin='pk' auto-index already covered a composite/non-rowid pk). Lets SchemaDdl's dedup skip the unsupported 'alter table add constraint ... primary key'.
+		for( auto&& [name, table] : tables ){
+			auto& dbIndexes = std::dynamic_pointer_cast<TableDdl>( table )->Indexes;
+			if( find_if(dbIndexes, [](let& x){ return x.PrimaryKey; })!=dbIndexes.end() )
+				continue;
+			flat_map<uint8,string> pkColumns; //keyed by SKIndex (pk-1) to order composite keys.
+			for( let& c : table->Columns )
+				if( c->SKIndex )
+					pkColumns.emplace( *c->SKIndex, c->Name );
+			if( pkColumns.empty() )
+				continue;
+			vector<string> columns;
+			for( let& [_,col] : pkColumns )
+				columns.push_back( col );
+			dbIndexes.emplace_back( "pk", name, true, &columns, true, optional<bool>{} );
+		}
 		return tables;
 	}
 

@@ -6,6 +6,8 @@
 #include <jde/db/meta/Cluster.h>
 #include <jde/db/meta/Catalog.h>
 #include <jde/db/meta/AppSchema.h>
+#include "jde/fwk/log/logTags.h"
+#include "jde/fwk/usings.h"
 #include "meta/ddl/CatalogDdl.h"
 #include "meta/ddl/SchemaDdl.h"
 #include "meta/IServerMeta.h"
@@ -16,17 +18,20 @@
 namespace Jde::DB{
 	vector<sp<Cluster>> _clusters;
 	fs::path _scriptPath;
-	α GetClusters( sp<Access::IAcl> authorize )ε->vector<sp<Cluster>>{
-		if( _clusters.empty() ){
-			let& clusters = Settings::AsObject( "/dbServers" );
-			for( auto&& [name, value] : clusters ){
-				if( value.is_object() ){ //vs sync script dir
-					_clusters.emplace_back( ms<Cluster>(name, value.get_object(), authorize) );
-					Cluster::Initialize( _clusters.back() );
-				}
+	Ω buildClusters( const jobject& dbServers, sp<Access::IAcl> authorize )ε->vector<sp<Cluster>>{
+		vector<sp<Cluster>> y;
+		for( auto&& [name, value] : dbServers ){
+			if( value.is_object() ){ //vs sync script dir
+				y.emplace_back( ms<Cluster>(name, value.get_object(), authorize) );
+				Cluster::Initialize( y.back() );
 			}
-			THROW_IF( _clusters.empty(), "No db servers found." );
 		}
+		THROW_IF( y.empty(), "No db servers found." );
+		return y;
+	}
+	Ω getClusters( sp<Access::IAcl> authorize )ε->const vector<sp<Cluster>>&{ //global-settings cache; supplied dbSettings go through buildClusters instead (see GetAppSchema).
+		if( _clusters.empty() )
+			_clusters = buildClusters( Settings::AsObject("/dbServers"), authorize );
 		return _clusters;
 	}
 }
@@ -34,35 +39,34 @@ namespace Jde{
 	class DataSourceApi{
 		DllHelper _dll;
 	public:
-		DataSourceApi( const fs::path& path ):
-			_dll{ path },
+		DataSourceApi( fs::path path ):
+			_dll{ move(path) },
 			GetDataSourceFunction{ _dll["GetDataSource"] }
 		{}
 		decltype(GetDataSource) *GetDataSourceFunction;
-
-		α Emplace( const jobject& config )ε->sp<DB::IDataSource>{
-			auto ds = sp<Jde::DB::IDataSource>{ GetDataSourceFunction() };
-			ds->SetConfig( config );
-			return ds;
-		}
 	};
 
-	flat_map<string,sp<DataSourceApi>> _dataSources; mutex _dsMutex;
-	std::once_flag _singleShutdown;
-	α DB::DataSource( const jobject& config )ε->sp<IDataSource>{
-		const fs::path driver{ Json::AsString(config, "driver") };
-		THROW_IF( !fs::is_regular_file(driver), "Library '{}' not found.", driver.string() );
-		sp<IDataSource> pDataSource;
-		lg _{_dsMutex};
-		string key = driver.string();
-		auto pSource = _dataSources.find( key );
-		if( pSource==_dataSources.end() )
-			pSource = _dataSources.emplace( key, ms<DataSourceApi>(driver) ).first;
-		return pSource->second->Emplace( config );
+	DllApiCache<DataSourceApi> _dataSources;
+	α DB::DataSource( const jobject& config, SL sl )ε->sp<IDataSource>{
+		fs::path driver{ Json::AsString(config, "driver") };
+		THROW_IF( !fs::is_regular_file(driver), Exception(sl, {ELogLevel::Critical, ELogTags::App}, "Dynamic Library '{}' not found.", driver.string()) );
+		auto api = _dataSources.Get( driver );
+		sp<IDataSource> ds{ api->GetDataSourceFunction(), [api](IDataSource* p){ delete p; } }; //deleter keeps the api (and dll) mapped until after the last data source built from it is destroyed.
+		ds->SetConfig( config );
+		return ds;
 	}
 
-	α DB::GetAppSchema( str metaName, sp<Access::IAcl> authorize )ε->sp<AppSchema>{
-		for( auto& cluster : GetClusters(authorize) ){
+	α DB::GetCluster( sv configName, sp<Access::IAcl> authorize, SL sl )ε->sp<Cluster>{
+		for( auto& cluster : getClusters(authorize) )
+			if( cluster->ConfigName==configName )
+				return cluster;
+		THROW( Exception(sl, {ELogLevel::Critical, ELogTags::App}, "Cluster '{}' not found.", configName) );
+	}
+
+	α DB::GetAppSchema( str metaName, sp<Access::IAcl> authorize, optional<jobject> dbSettings )ε->sp<AppSchema>{
+		//Supplied dbSettings bypass the cache both ways - clusters built from exactly these settings, no cache pollution.
+		let adHoc = dbSettings ? buildClusters( *dbSettings, authorize ) : vector<sp<Cluster>>{};
+		for( auto& cluster : dbSettings ? adHoc : getClusters(authorize) ){
 			for( auto& catalog : cluster->Catalogs ){
 				if( auto schema = catalog->FindAppSchema(metaName); schema )
 					return schema;
@@ -79,7 +83,7 @@ namespace Jde{
 
 #ifndef PROD
 namespace Jde::DB{
-	bool recreated{};
+	bool recreated{}; //TODO: make this per dbSchema.
 	α NonProd::Recreate( const AppSchema& schema, sp<QL::IQL> ql )ε->void{
 		if( !recreated )
 			CatalogDdl::NonProd::Drop( schema );

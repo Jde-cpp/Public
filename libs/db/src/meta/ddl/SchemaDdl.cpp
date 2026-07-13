@@ -26,11 +26,10 @@ namespace Jde::DB{
 		_ql{ql}
 	{}
 
-	α abbrevName( sv schemaName )ι->string;
-	α GetData( const Table& table, const jobject& j )ε->vector<flat_map<string,Value>>;
-	α Exists( const DBSchema& config )ι->bool;
+	Ω abbrevName( sv schemaName )ι->string;
+	Ω exists( const DBSchema& config )ι->bool;
 	α GetFlagsData( const jobject& j )ε->flat_map<uint,Value>;
-	α UniqueIndexName( const Index& index, bool uniqueName, const vector<Index>& indexes )ε->string;
+	α UniqueIndexName( const Index& index, sv tableName, const DB::Syntax& syntax, const vector<Index>& indexes )ε->string;
 
 	α ConfigurationJson( const AppSchema& config )ε->const jobject{
 		let appSchema = Settings::AsObject( config.ConfigPath() );
@@ -42,7 +41,7 @@ namespace Jde::DB{
 //todo doc relativeScriptPath
 //todo add db version table.
 	α SchemaDdl::Sync( const AppSchema& config, sp<QL::IQL> ql )ε->void{
-		if( !Exists(*config.DBSchema) ){
+		if( config.Syntax().HasSchemas() && !exists(*config.DBSchema) ){
 			Create( *config.DBSchema );
 			config.ResetDS();
 		}
@@ -63,22 +62,21 @@ namespace Jde::DB{
 	}
 
 	α SchemaDdl::SyncFKs( const AppSchema& config )ε->void{
-		if( !config.DS()->Syntax().CanAddForeignKeys() ){
-			DBG( "Syntax can't add fks to existing tables - skipping sync." );
-			return;
-		}
+		let canAddFKs = config.DS()->Syntax().CanAddForeignKeys();
 		for( let& [tableName, table] : config.Tables ){
 			for( auto& column : table->Columns ){
-				if( !column->PKTable )
+				if( !column->NeedsFK() )
 					continue;
 				if( find_if(FKs, [&,t=config.ObjectPrefix()+table->Name](let& fk){
 					return fk.second.Table==t && fk.second.Columns==vector<string>{column->Name};
 				})!=FKs.end() ){
 					continue;
 				}
-				let pkTable = column->PKTable;
-				if( column->IsFlags() )
+				if( !canAddFKs ){
+					ERR( "Syntax can't add fks to existing tables - skipping sync for '{}.{}'.", tableName, column->Name );
 					continue;
+				}
+				let pkTable = column->PKTable;
 				auto getName = [&, &t=tableName](auto i)->string {//&t for clang
 					return Ƒ( "{}_{}{}_fk", abbrevName(t), abbrevName(pkTable->Name), i==0 ? "" : std::to_string(i) );
 				};
@@ -169,6 +167,7 @@ namespace Jde::DB{
 			sp<TableDdl> dbTable;
 			if( let kv=Tables().find(config.ObjectPrefix()+tableName); kv!=Tables().end() ){
 				dbTable = std::dynamic_pointer_cast<TableDdl>( kv->second );
+				ASSERT( dbTable );
 				for( auto& column : table->Columns ){
 					auto pDBColumn = dbTable->FindColumn( column->Name ); if( !pDBColumn ){ CRITICAL("Could not find db column {}.{}", tableName, column->Name); continue; }
 					pDBColumn->Insertable = column->Insertable;
@@ -189,8 +188,9 @@ namespace Jde::DB{
 			for( let& index : Index::GetConfig(*table) ){
 				if( find_if(dbIndexes, [&](let& db){ return db.TableName==config.ObjectPrefix()+tableName && db.Columns==index.Columns;} )!=dbIndexes.end() )
 					continue;
-				let name = UniqueIndexName( index, syntax.UniqueIndexNames(), dbIndexes );
-				ds.ExecuteSync( {index.Create(name, schemaName+'.'+dbTable->DBName, syntax)} );
+				let name = UniqueIndexName( index, dbTable->DBName, syntax, dbIndexes );
+				let fqTableName = syntax.QualifiedName( schemaName, dbTable->DBName );
+				ds.ExecuteSync( {index.Create(name, fqTableName, syntax)} );
 				dbIndexes.push_back( Index{name, tableName, index} );
 				INFO( "Created index '{}.{}'.", table->DBName, name );
 			}
@@ -210,16 +210,23 @@ namespace Jde::DB{
 			//p->Initialize( Meta(), p );
 			//placeholder
 		}
+		if( !syntax.CanAddForeignKeys() )
+			FKs = config.DS()->ServerMeta().LoadForeignKeys(config.Name);
+
 		for( let& [_, table] : Tables() ){
 			table->Initialize( Meta(), table );
 		}
 	}
 
 	α SchemaDdl::Create( const DBSchema& config )ε->void{
-		auto ds = config.DS()->Syntax().CanSetDefaultSchema()
-			? config.DS()->AtSchema( config.DS()->Syntax().SysSchema() )
-			: config.DS();
-		ds->ExecuteSync( {Ƒ("CREATE SCHEMA {}", config.Name)} );
+		auto currentDS = config.DS();
+		auto& syntax = currentDS->Syntax();
+		if( !syntax.HasSchemas() )
+			return;
+		auto sysDS = syntax.CanSetDefaultSchema()
+			? move(currentDS)->AtSchema( syntax.SysSchema() )
+			: move(currentDS);
+		sysDS->ExecuteSync( {Ƒ("CREATE SCHEMA {}", config.Name)} );
 	}
 #ifndef PROD
 	α DropObjects( const AppSchema& config )ε->void{
@@ -246,7 +253,7 @@ namespace Jde::DB{
 	}
 
 	α SchemaDdl::Drop( const AppSchema& config )ε->void{
-		if( Exists(*config.DBSchema) ){
+		if( exists(*config.DBSchema) ){
 			// if catalogs, would have dropped catalog
 			//if( !config.DS()->Syntax().SchemaDropsObjects() )
 			//	DropObjects( config );
@@ -276,7 +283,7 @@ namespace Jde::DB{
 		return name.str();
 	}
 
-	α Exists( const DBSchema& config )ι->bool{
+	α exists( const DBSchema& config )ι->bool{
 		try{
 			return config.DS()->ScalerSyncOpt<string>( {string{config.DS()->Syntax().SchemaExistsSql()}, {Value{config.Name}}} ).has_value();
 		}
@@ -285,34 +292,6 @@ namespace Jde::DB{
 			e.Log();
 			return false;//connected to schema which doesn't exist.
 		}
-	}
-
-	α GetData( const Table& table, const jobject& j )ε->vector<flat_map<string,Value>>{
-		vector<flat_map<string,Value>> data;
-		auto jdata = Json::FindArray( j, "data" );
-		if( !jdata )
-			return data;
-
-		uint id = 0;
-		for( let& jrow : *jdata ){
-			flat_map<string,Value> row;
-			if( jrow.is_string() ){
-				row[table.GetPK()->Name] = ++id;
-				row["name"] = Value{ string{jrow.get_string()} };
-			}
-			else if( jrow.is_object() ){
-				for( let& [name, value] : jrow.get_object() ){
-					if( name=="comment" )
-						continue;
-					let c = table.GetColumnPtr( name=="id" ? table.GetPK()->Name : Names::FromJson(name) );
-					row[c->Name] = Value{ c->Type, value };
-				}
-			}
-			else
-				THROW( "Invalid data '{}' expecting string or object.", serialize(jrow) );
-			data.push_back( row );
-		}
-		return data;
 	}
 
 	α GetFlagsData( const jobject& j )ε->flat_map<uint,Value>{
@@ -327,10 +306,11 @@ namespace Jde::DB{
 		return flagsData;
 	}
 
-	α UniqueIndexName( const DB::Index& index, bool uniqueName, const vector<Index>& indexes )ε->string{
-		auto indexName=index.Name;
-		bool checkOnlyTable = !index.PrimaryKey && !uniqueName;
-		for( uint i=2; ; indexName = Ƒ( "{}{}", index.Name, i++ ) ){
+	α UniqueIndexName( const DB::Index& index, sv tableName, const DB::Syntax& syntax, const vector<Index>& indexes )ε->string{
+		let baseName = syntax.IndexName( tableName, index.Name ); //dialect owns the composition - schema-wide namespaces (sqlite) qualify with the table.
+		auto indexName = baseName;
+		bool checkOnlyTable = !index.PrimaryKey && !syntax.UniqueIndexNames();
+		for( uint i=2; ; indexName = Ƒ( "{}{}", baseName, i++ ) ){
 			if( find_if(indexes, [&](let& x){ return ToIV(x.Name)==ToIV(indexName) && (!checkOnlyTable || index.TableName==x.TableName);})==indexes.end() )
 				break;
 		}

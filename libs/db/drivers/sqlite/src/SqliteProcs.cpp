@@ -10,7 +10,13 @@ namespace Jde::DB::Sqlite{
 
 	α RegisterProc( string name, ProcΛ proc )ι->void{
 		ul _{ _procsMutex };
+		//ASSERT( !_procs.contains(name) ); TODO
 		_procs[move(name)] = move(proc);
+	}
+	α UnregisterProcs( const vector<string>& names )ι->void{
+		ul _{ _procsMutex };
+		for( let& name : names )
+			_procs.erase( name );
 	}
 	α FindProc( sv name )ι->const ProcΛ*{
 		sl _{ _procsMutex };

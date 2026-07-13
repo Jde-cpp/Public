@@ -12,14 +12,14 @@
 //	[18]=_access_level, [19]=_user_access_level, [20]=_minimum_sampling_interval, [21]=_historizing;
 //	out _node_id returned as the result row.
 namespace Jde::DB::Sqlite::OpcProcs{
-	α RegisterOpcVariableInsert()ι->void{
-		RegisterProc( "opc_variable_insert", []( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
+	α RegisterOpcVariableInsert( IProcs& procs )ι->void{
+		procs.RegisterProc( "opc_variable_insert", [&procs]( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
 			THROW_IFSL( !params[15].is_null() && params[15].get_number<uint>(sl)==0, "Data type ID cannot be zero" );
 			Value nodeId;
 			if( !params[1].is_null() || !params[2].is_null() || !params[3].is_null() || !params[4].is_null() )
-				nodeId = Value{ NodeIdInsert(db, params[0], params[1], params[2], params[3], params[4], Value{}, Value{}, Value{}, sl) };
-			EnsureDataTypeNodeId( db, params[15], sl );
-			let y = ExecuteStatement( db,
+				nodeId = Value{ NodeIdInsert(procs, db, params[0], params[1], params[2], params[3], params[4], Value{}, Value{}, Value{}, sl) };
+			EnsureDataTypeNodeId( procs, db, params[15], sl );
+			let y = procs.ExecuteStatement( db,
 				"insert into opc_variables( node_id, parent_node_id, ref_type_id, type_def_id, browse_id, specified, name, description, write_mask, user_write_mask,"
 				" variant_id, data_type_id, value_rank, array_dims, access_level, user_access_level, minimum_sampling_interval, historizing )"
 				" values( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",

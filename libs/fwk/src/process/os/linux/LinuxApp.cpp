@@ -21,8 +21,8 @@ namespace Jde{
 		INFO( "[{}] Opened", path.string() );
 		return p;
 	}
-	α Process::GetProcAddress( void* pModule, str procName )ε->void*{
-		auto p = ::dlsym( pModule, procName.c_str() ); CHECK( p );
+	α Process::GetProcAddress( void* module, str procName )ε->void*{
+		auto p = ::dlsym( module, procName.c_str() ); CHECK( p );
 		return p;
 	}
 	α Process::Install( str /*serviceDescription*/ )ε->void{

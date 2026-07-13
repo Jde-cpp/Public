@@ -21,15 +21,15 @@ endif()
 
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
-file( GLOB sources *.cpp ../src/*.cpp ${jdeRoot}/apps/AppServer/config/sql/sqlite/*.cpp ${jdeRoot}/libs/access/config/sql/sqlite/*.cpp ) #driver + AppServer/access proc sources compiled in - tests the real native procs.
+file( GLOB sources *.cpp )
 target_sources( ${targetName} PRIVATE ${sources} )
 target_compile_definitions( ${targetName} PRIVATE TESTS JDE_SQLITE_EXPORTS )
-
+add_dependencies( ${targetName} Jde.DB.Sqlite Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcServer Jde.DB.Sqlite.OpcGateway )
 if( Boost_USE_STATIC_LIBS )
 	target_link_libraries( ${targetName} Boost::json )
 endif()
 target_link_libraries( ${targetName} GTest::gtest SQLite::SQLite3 Threads::Threads )
-target_link_libraries( ${targetName} Jde.DB Jde )
+target_link_libraries( ${targetName} Jde.Access Jde.DB Jde )
 
 if( NOT WIN32 )
 	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )

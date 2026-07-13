@@ -1,7 +1,8 @@
-#include <sqlite3.h>
 #include "SqliteDataSource.h"
+#include "jde/fwk/process/dll.h"
 #include <jde/db/DBException.h>
 #include <jde/db/generators/Functions.h>
+#include "SqliteException.h"
 #include "SqliteProcs.h"
 #include "SqliteQueryAwait.h"
 #include "SqliteRow.h"
@@ -11,24 +12,76 @@
 #define let const auto
 
 namespace Jde::DB::Sqlite{
+	//A loaded proc dll. Extends ProcRegistry so the dll registers through us; we record the names it registers and
+	//unregister them in the destructor - before _dll unloads - so their ProcΛ std::functions (bodies in the dll)
+	//aren't destroyed after dlclose (which would fault during the registry's static teardown at exit).
+	class SqliteApi final : public ProcRegistry{
+		DllHelper _dll;
+		vector<string> _procNames;
+	public:
+		SqliteApi( fs::path path ): _dll{ move(path) }{
+			decltype(RegisterProcs)* registerProcs{ _dll["RegisterProcs"] };
+			registerProcs( *this );
+		}
+		~SqliteApi(){ UnregisterProcs( _procNames ); } //while _dll is still mapped (destroyed after this body).
+
+		α RegisterProc( string name, ProcΛ proc )ι->void override{
+			_procNames.push_back( name );
+			ProcRegistry::RegisterProc( move(name), move(proc) );
+		}
+	};
+
+	//One SqliteApi per dll, shared process-wide: the proc registry is global, so two data sources configured with the
+	//same dll register the same names - a per-data-source SqliteApi would unregister them when either was destroyed,
+	//stripping procs the survivor still dispatches. Weak entries so the dll still unloads with its last data source.
+	DllApiCache<SqliteApi> _dllApis;
+
 	SqliteDataSource::~SqliteDataSource(){
 		if( _db )
 			sqlite3_close_v2( _db );
 	}
 
 	α SqliteDataSource::SetConfig( const jobject& config )ε->void{
-		//{ "driver": ".../Jde.DB.Sqlite.so", "path": ":memory:" | "/var/lib/jde/gateway.db" }
-		_path = string{ Json::FindSV(config, "path").value_or(":memory:") };
+		for( auto&& [catalogName, vcatalog] : Json::AsObject(config, "catalogs") ){
+			let& catalog = Json::AsObject( vcatalog );
+			if( let path = Json::FindSV(catalog, "path") )
+				_path = *path; //defaults to ':memory:' when no catalog supplies a path.
+			for( auto&& [dbSchemaName, dbSchema] : Json::AsObject(catalog, "schemas") ){
+				for( auto&& [appSchemaName, vappSchema] : Json::AsObject(dbSchema) ){
+					let lib = Json::FindSV( Json::AsObject(vappSchema), "dynamicLib" );
+					THROW_IF( !lib, "No dynamicLib for {}.{}.{}", catalogName, dbSchemaName, appSchemaName );
+					fs::path dynamicLib{ *lib };
+					if( !_procDlls.contains(dynamicLib) ){
+						auto api = _dllApis.Get( dynamicLib ); //ctor loads the dll and registers its procs.
+						_procDlls.emplace( move(dynamicLib), move(api) );
+					}
+				}
+			}
+		}
 	}
 
 	α SqliteDataSource::Connection( SL sl )ε->sqlite3&{
 		if( !_db ){
 			//SQLITE_OPEN_FULLMUTEX (serialized) as a backstop; _connMutex is the real serialization.
 			let rc = sqlite3_open_v2( _path.c_str(), &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr );
-			THROW_IFSL( rc!=SQLITE_OK, "sqlite3_open_v2('{}') failed: {}", _path, sqlite3_errstr(rc) );
-			sqlite3_exec( _db, "pragma foreign_keys=on", nullptr, nullptr, nullptr );
-			if( _path!=":memory:" )
-				sqlite3_exec( _db, "pragma journal_mode=wal", nullptr, nullptr, nullptr );
+			THROW_IFX( rc, SqliteException( sl, rc, "sqlite3_open_v2('{}')", _path) );
+			try{
+				//exec succeeds even when fks are compiled out (the pragma no-ops) - read the setting back instead of trusting rc.
+				ExecuteStatement( *_db, "pragma foreign_keys=on", {}, nullptr, sl );
+				THROW_IFSL( ScalarUInt(*_db, "pragma foreign_keys", {}, sl).value_or(0)!=1, "Could not enable foreign_keys on '{}' - fks would go unenforced.", _path );
+				if( _path!=":memory:" ){
+					string mode; //journal_mode=wal reports the resulting mode - stays on the prior journal if wal can't be used (e.g. network fs).
+					RowΛ f = [&mode]( Row&& r ){ mode = r.GetString(0); };
+					ExecuteStatement( *_db, "pragma journal_mode=wal", {}, &f, sl );
+					if( mode!="wal" )
+						WARN( "('{}') journal_mode=wal not applied - using '{}'.", _path, mode );
+				}
+			}
+			catch( ... ){ //don't cache a half-configured connection - a retry would skip the pragmas.
+				sqlite3_close_v2( _db );
+				_db = nullptr;
+				throw;
+			}
 		}
 		return *_db;
 	}

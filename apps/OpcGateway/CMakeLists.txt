@@ -23,6 +23,7 @@ endif()
 find_package( ZLIB REQUIRED )
 
 if( NOT jde_Superbuild )
+	add_subdirectory( config/sql/sqlite )
 	set( libDir ${jdeRoot}/libs )
 	add_subdirectory( ${libDir}/fwk/src ../../libs/fwk/lib )
 	add_subdirectory( ${libDir}/db/src ../../libs/db/lib )

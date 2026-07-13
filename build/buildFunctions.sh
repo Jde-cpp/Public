@@ -39,6 +39,10 @@ function buildProject() {
 		target=Jde.DB;
 	elif [[ $buildRelativePath == *"libs/db/drivers/mysql"* ]]; then
 		target=Jde.DB.MySql;
+	elif [[ $buildRelativePath == *"libs/db/drivers/sqlite/src"* ]]; then
+		target=Jde.DB.Sqlite;
+	elif [[ $buildRelativePath == *"libs/db/drivers/sqlite/tests"* ]]; then
+		target=Jde.DB.Sqlite.Tests;
 	elif [[ $buildRelativePath == *"web/client"* ]]; then
 		target=Jde.Web.Client;
 	elif [[ $buildRelativePath == *"web/server"* ]]; then
@@ -69,7 +73,7 @@ function buildProject() {
 
 	echo cmakeSourceDir=$cmakeSourceDir, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, target=$target;
 	cd $buildRoot;
-	cmake --build . -j --target $target;
+	cmake --build . -j --target $target 2>&1;
 }
 function compile() {
 	cmakeSourceDir=$(realpath $2); #/home/duffyj/code/jde/PublicX
@@ -88,7 +92,7 @@ function compile() {
 		buildFile=src/main.cpp;
 	fi;
 	echo $buildRoot/$buildRelativePath/make $buildFile.o;
-	make ${buildFile}.o;
+	make ${buildFile}.o 2>&1;
 }
 function reconfig() {
 	cmakeDir=$(realpath $2);
@@ -106,14 +110,14 @@ function reconfig() {
 	fi
 }
 function build() {
-	cmakeDir=$(realpath $2);
-	buildRoot=$1/$(basename $cmakeDir);
+	repoSourceDir=$(realpath $2);
+	repoBuildDir=$1/$(basename $repoSourceDir);
 	target=$3;
-	cd $buildRoot;
+	cd $repoBuildDir;
 	set -o pipefail;
-	echo `pwd`/$target.output > $target.output;
+	echo `pwd`/$target.output | tee $target.output;
 	echo "cmake --build . -j --target $target" | tee -a $target.output;
-	cmake --build . -j --target $target | tee -a $target.output;
+	cmake --build . -j --target $target 2>&1 | tee -a $target.output;
 }
 function buildTests() {
 	baseTarget=$3;

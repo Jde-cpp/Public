@@ -20,17 +20,19 @@ namespace Jde::DB{
 		β CanAddForeignKeys()Ι->bool{ return true; } //false (sqlite): no 'alter table add constraint' - fks only enforced when inline in create table.
 		β CanSetDefaultSchema()Ι->bool{ return false; }
 		β CatalogSelect()Ι->sv{ return "select db_name();"; }
-		β CreatePrimaryKey( str tableName, str columnName )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
+		β CreatePrimaryKey( str tableName, str columns )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columns); } //columns: comma-separated for composite keys.
 		β DateTimeSelect( sv columnName )Ι->string{ return string{ columnName }; }
 		β DriverReturnsLastInsertId()Ι->bool{ return true; }
 		β EscapeDdl( sv sql )Ι->string;
 		β GuidType()Ι->sv{ return "uniqueidentifier"; }
 		β HasLength( EType type )Ι->bool;
 		β HasCatalogs()Ι->bool{ return true; }
-		β HasProcs()Ι->bool{ return true; } //false (sqlite): generated insert procs become plain sql; hand-written procs dispatch to a native registry.
+		β HasProcs()Ι->bool{ return true; }
+		β HasSchemas()Ι->bool{ return true; }
 		β HasUnsigned()Ι->bool{ return false; }
 		β IdentityColumnSyntax()Ι->sv{ return "identity(1001,1)"; }
 		β IdentitySelect()Ι->sv{ return "@@identity"; }
+		β IndexName( sv /*tableName*/, sv indexName )Ι->string{ return string{indexName}; } //per-table index namespace; schema-wide dialects qualify with the table.
 		β Limit( str syntax, uint limit, uint skip )Ε->string;
 		β NeedsIdentityInsert()Ι->bool{ return true; }
 		β NowDefault()Ι->sv{ return UtcNow(); }
@@ -40,7 +42,8 @@ namespace Jde::DB{
 		β ProcEnd()Ι->sv{ return {}; }
 		β SchemaDropsObjects()Ι->bool{ return false; }
 		β SchemaExistsSql()Ι->sv{ return "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?"; }
-		β SchemaSelect()Ι->sv{ return "select schema_name();"; }
+		β QualifiedName( sv schema, sv name )Ι->string{ return HasSchemas() ? Ƒ("{}.{}", schema, name) : string{name}; } //fully-qualified object name; schemaless dialects use the bare name.
+		β SchemaSelect()Ι->sv{ return "select schema_name();"; } //empty (like CatalogSelect): SchemaName falls back to SysSchema without querying.
 		β SpecifyIndexCluster()Ι->bool{ return true; }
 		β SysSchema()Ι->sv{ return "dbo"; }
 		β ToString( EType type )Ι->string;
@@ -57,7 +60,7 @@ namespace Jde::DB{
 		α AltDelimiter()Ι->sv override{ return "$$"; }
 		α CanSetDefaultSchema()Ι->bool override{ return true; }
 		α CatalogSelect()Ι->sv override{ return {}; }
-		α CreatePrimaryKey( str tableName, str columnName )Ι->string override{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columnName); }
+		α CreatePrimaryKey( str tableName, str columns )Ι->string override{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columns); } //columns: comma-separated for composite keys.
 		α DateTimeSelect( sv columnName )Ι->string override{ return Ƒ( "UNIX_TIMESTAMP({})", columnName ); }
 		α DriverReturnsLastInsertId()Ι->bool override{ return true; }
 		α EscapeDdl( sv sql )Ι->string override;

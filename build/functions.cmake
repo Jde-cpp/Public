@@ -94,3 +94,33 @@ function(compileOptions)
 		set_property( TARGET ${ARGV0} PROPERTY POSITION_INDEPENDENT_CODE ON )
 	endif()
 endfunction()
+
+#Native-proc MODULE for the sqlite driver - dlopen'd for sqlite_api.h's RegisterProcs( IProcs& ), never linked.
+#Globs *.cpp/*.h from the calling directory plus any extra source dirs passed after the target name.
+function( sqliteProcModule targetName )
+	list( APPEND CMAKE_PREFIX_PATH ${MULTI_INSTALL_PREFIX}/sqlite ) #static lib built from the amalgamation - see libs/db/drivers/sqlite/sketch.md.
+	find_package( SQLite3 REQUIRED )
+	find_package( Threads REQUIRED )
+
+	add_library( ${targetName} MODULE )
+	compileOptions( ${targetName} )
+	set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
+
+	foreach( dir ${CMAKE_CURRENT_SOURCE_DIR} ${ARGN} )
+		file( GLOB sources ${dir}/*.cpp )
+		file( GLOB headers ${dir}/*.h )
+		target_sources( ${targetName} PRIVATE ${sources} ${headers} )
+	endforeach()
+
+	target_link_libraries( ${targetName} PRIVATE SQLite::SQLite3 Threads::Threads ) #sqlite3 C API used directly (last_insert_rowid); the driver is reached only through IProcs at runtime.
+	target_link_libraries( ${targetName} PRIVATE fmt::fmt Jde.DB )
+
+	target_precompile_headers( ${targetName}
+	  PRIVATE
+		<sqlite3.h>
+		<jde/fwk.h>
+		<jde/fwk/str.h>
+		<jde/fwk/io/json.h>
+		<jde/fwk/chrono.h>
+	)
+endfunction()

@@ -32,26 +32,28 @@ namespace Jde::DB{
 	}
 
 	α DBSchema::DS()Ε->sp<IDataSource>{
-		if( !_dataSource ){
-			auto ds = Catalog->DS();
-			string name;
-			let canSetSchema = ds->Syntax().CanSetDefaultSchema();
-			try{
-				name = ds->SchemaName();
-			}
-			catch( Exception& ){
-				if( !canSetSchema )
-					throw;
-				if( ds->SchemaNameConfig()==Name ){
-					ds = ds->AtSchema( MySqlSyntax::Instance().SysSchema() );//no connection, can't figure out syntax.
-					ds->ExecuteSync( {Ƒ("create schema {}", Name)} );
-				}
-			}
-			_dataSource = name==Name || !canSetSchema
-				? ds
-				: ds->AtSchema( Name );
-			INFOT( ELogTags::Sql, "At Schema: {}", _dataSource->SchemaName() );
+		if( _dataSource )
+			return _dataSource;
+
+		auto ds = Catalog->DS();
+		string name;
+		let& syntax = ds->Syntax();
+		let canSetSchema = syntax.CanSetDefaultSchema();
+		try{
+			name = ds->SchemaName();
 		}
+		catch( Exception& ){
+			if( !canSetSchema )
+				throw;
+			if( ds->SchemaNameConfig()==Name ){
+				ds = ds->AtSchema( syntax.SysSchema() );//no connection, can't figure out syntax.
+				ds->ExecuteSync( {Ƒ("create schema {}", Name)} );
+			}
+		}
+		_dataSource = name==Name || !canSetSchema
+			? ds
+			: ds->AtSchema( Name );
+		INFOT( ELogTags::Sql, "At Schema: {}", _dataSource->SchemaName() ); //schemaless dialects answer SysSchema.
 		return _dataSource;
 	}
 
