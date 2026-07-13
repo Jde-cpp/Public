@@ -53,8 +53,7 @@ namespace Jde::DB{
 		_dataSource = name==Name || !canSetSchema
 			? ds
 			: ds->AtSchema( Name );
-		if( syntax.HasSchemas() )
-			INFOT( ELogTags::Sql, "At Schema: {}", _dataSource->SchemaName() );
+		INFOT( ELogTags::Sql, "At Schema: {}", _dataSource->SchemaName() ); //schemaless dialects answer SysSchema.
 		return _dataSource;
 	}
 

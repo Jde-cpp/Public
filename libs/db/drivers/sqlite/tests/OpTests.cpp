@@ -1,28 +1,13 @@
 #include <jde/db/Row.h>
 #include <jde/db/IDataSource.h>
+#include "jde/fwk/settings.h"
+#include <jde/access/Authorize.h>
 
 #define let const auto
 
 namespace Jde::DB::Sqlite::Tests{
-	struct OpTests : ::testing::TestWithParam<string>{
-		α SetUp()ε->void override{
-			let& cluster = GetParam();
-			if( auto it=_dsByCluster.find(cluster); it!=_dsByCluster.end() ){ //sync each backend once.
-				_ds = it->second;
-				return;
-			}
-			Schema::Create( cluster );
-			_ds = DS( cluster );
-			_dsByCluster[cluster] = _ds;
-		}
-		static flat_map<string,sp<IDataSource>> _dsByCluster;
-		sp<IDataSource> _ds;
-	};
-	flat_map<string,sp<IDataSource>> OpTests::_dsByCluster;
-	INSTANTIATE_TEST_SUITE_P( Backends, OpTests,
-		::testing::Values( "memory", "file" ),
-		[]( let& info ){ return info.param; }
-	);
+	struct OpTests : BackendTests{};
+	INSTANTIATE_BACKENDS( OpTests );
 		//TODO Test Data, Test Procs, Test FKs, Test Indexes, Test Triggers.
 
 	TEST_P( OpTests, InsertSelectRoundTrip ){
@@ -73,5 +58,20 @@ namespace Jde::DB::Sqlite::Tests{
 
 		Sql unregistered{ "no_such_proc( ? )", {Value{(uint)1}}, true };
 		EXPECT_THROW( _ds->ExecuteSync(move(unregistered)), Exception );
+	}
+
+	TEST_P( OpTests, ProcsSurviveSiblingTeardown ){
+		{ //A 2nd data source over the same proc dlls - the registry is process-global, so its teardown must not strip procs _ds still dispatches.
+			let sibling = DB::DataSource( Settings::AsObject(Ƒ("/dbServers/{}", GetParam())) );
+		}
+		Sql call{ "access_role_insert( ?, ?, ?, ?, ? )", {Value{"survivor"}, Value{"survivor"}, Value{}, Value{}, Value{}}, true };
+		EXPECT_GT( _ds->ExecuteScalerSync(move(call), EValue::UInt64).get_number<uint>(), 0u );
+	}
+
+	TEST_P( OpTests, DbSettingsHonoredAfterCache ){
+		//The fixture already populated the global cluster cache - supplied dbSettings must still be honored, not silently swapped for the cache.
+		auto auth = ms<Access::Authorize>( "SqliteTests" );
+		EXPECT_THROW( DB::GetAppSchema("access", auth, jobject{{"scriptPaths", jarray{}}}), Exception ); //no cluster objects -> 'No db servers found.', not the cached schema.
+		EXPECT_TRUE( DB::GetAppSchema("access", auth, Settings::AsObject("/dbServers")) );
 	}
 }

@@ -32,7 +32,7 @@ SQLite has no server, hence no server-side procs. Two approaches, combined here:
 | File | Purpose |
 |------|---------|
 | `SqliteSyntax.h` | Driver-local dialect. No core changes needed — syntax resolves dynamically through `IDataSource::Syntax()`. Could move next to `MySqlSyntax` in `include/jde/db/generators/Syntax.h` if generators ever need it statically. |
-| `SqliteProcs.h/.cpp` | Driver-internal proc registry (`RegisterProc`/`FindProc`/`RegisteredProcNames`) + the `ExecuteStatement`/`ScalarUInt` statement helpers. `Procs()` returns the `IProcs` (declared in `<jde/db/sqlite_api.h>`) the driver hands to each proc DLL's `RegisterProcs`, forwarding to these free functions — so a proc DLL registers + runs statements without linking the driver. `ProcΛ`/`IProcs` live in the public `sqlite_api.h`. |
+| `SqliteProcs.h/.cpp` | Driver-internal proc registry (`RegisterProc`/`FindProc`/`RegisteredProcNames`) + the `ExecuteStatement`/`ScalarUInt` statement helpers. `ProcRegistry` is the `IProcs` (declared in `<jde/db/sqlite_api.h>`) the driver hands to each proc DLL's `RegisterProcs`, forwarding to these free functions — so a proc DLL registers + runs statements without linking the driver. `ProcΛ`/`IProcs` live in the public `sqlite_api.h`. |
 | `SqliteDataSource.h/.cpp` | All `IDataSource` overrides. `Execute` dispatches `IsProc` statements to the registry wrapped in `begin immediate`/`commit`/`rollback`. `InsertSeqSyncUInt` just uses `sqlite3_last_insert_rowid` — no out-param dance. |
 | `SqliteRow.h/.cpp` | `Bind`/`ToRow`/`ToValue` between `DB::Value` and `sqlite3_stmt`. |
 | `SqliteQueryAwait.h` | Trivial vs MySql's asio coroutine: sqlite is in-process, so `Suspend()` executes synchronously and resumes immediately. Post to a worker pool if large scans ever block coroutine threads. |
@@ -98,6 +98,6 @@ Open:
   `TableDdl::CreateStatement` + data seeding through the sqlite dialect).
 - `NonProd::Recreate`/`Drop` use `DROP SCHEMA` — meaningless for sqlite; a file-backed db recreates by
   deleting the file, `:memory:` by reconnecting.
-- AppServer startup doesn't load `Jde.DB.Sqlite.AppServer` yet — dlopen it + call
-  `RegisterProcs( Sqlite::Procs() )` when the configured driver is sqlite (config needs a way to point at the
-  procs dll).
+- AppServer startup doesn't load `Jde.DB.Sqlite.AppServer` yet — point its dbServers config at the procs dll
+  via each app schema's `dynamicLib` key; `SqliteDataSource::SetConfig` dlopens it and registers through
+  `ProcRegistry` (shared process-wide per dll - see `_dllApis`).

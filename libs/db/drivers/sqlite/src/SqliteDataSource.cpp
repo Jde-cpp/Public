@@ -31,25 +31,28 @@ namespace Jde::DB::Sqlite{
 		}
 	};
 
+	//One SqliteApi per dll, shared process-wide: the proc registry is global, so two data sources configured with the
+	//same dll register the same names - a per-data-source SqliteApi would unregister them when either was destroyed,
+	//stripping procs the survivor still dispatches. Weak entries so the dll still unloads with its last data source.
+	DllApiCache<SqliteApi> _dllApis;
+
 	SqliteDataSource::~SqliteDataSource(){
 		if( _db )
 			sqlite3_close_v2( _db );
 	}
 
 	α SqliteDataSource::SetConfig( const jobject& config )ε->void{
-		//{ "path": ":memory:" | "/var/lib/jde/gateway.db",  }
-		//_path = string{ Json::FindSV(config, "path").value_or(":memory:") };
-		for( auto&& [catalogName, vcatalog] : config.at("catalogs").get_object() ){
-			auto& catalog = vcatalog.as_object();
-			if( auto path = catalog.if_contains("path"); path && path->is_string() )
-				_path = path->as_string();
-			for( auto&& [dbSchemaName, dbSchema] : catalog.at("schemas").get_object() ){
-				for( auto&& [appSchemaName, vappSchema] : dbSchema.as_object() ){
-					let& appSchema = vappSchema.as_object();
-					THROW_IF( !appSchema.contains("dynamicLib"), "No dynamicLib for {}.{}.{}", catalogName, dbSchemaName, appSchemaName );
-					fs::path dynamicLib{ appSchema.at("dynamicLib").as_string().c_str() };
+		for( auto&& [catalogName, vcatalog] : Json::AsObject(config, "catalogs") ){
+			let& catalog = Json::AsObject( vcatalog );
+			if( let path = Json::FindSV(catalog, "path") )
+				_path = *path; //defaults to ':memory:' when no catalog supplies a path.
+			for( auto&& [dbSchemaName, dbSchema] : Json::AsObject(catalog, "schemas") ){
+				for( auto&& [appSchemaName, vappSchema] : Json::AsObject(dbSchema) ){
+					let lib = Json::FindSV( Json::AsObject(vappSchema), "dynamicLib" );
+					THROW_IF( !lib, "No dynamicLib for {}.{}.{}", catalogName, dbSchemaName, appSchemaName );
+					fs::path dynamicLib{ *lib };
 					if( !_procDlls.contains(dynamicLib) ){
-						up<SqliteApi> api = mu<SqliteApi>( dynamicLib ); //ctor loads the dll and registers its procs.
+						auto api = _dllApis.Get( dynamicLib ); //ctor loads the dll and registers its procs.
 						_procDlls.emplace( move(dynamicLib), move(api) );
 					}
 				}
@@ -62,9 +65,23 @@ namespace Jde::DB::Sqlite{
 			//SQLITE_OPEN_FULLMUTEX (serialized) as a backstop; _connMutex is the real serialization.
 			let rc = sqlite3_open_v2( _path.c_str(), &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr );
 			THROW_IFX( rc, SqliteException( sl, rc, "sqlite3_open_v2('{}')", _path) );
-			sqlite3_exec( _db, "pragma foreign_keys=on", nullptr, nullptr, nullptr );
-			if( _path!=":memory:" )
-				sqlite3_exec( _db, "pragma journal_mode=wal", nullptr, nullptr, nullptr );
+			try{
+				//exec succeeds even when fks are compiled out (the pragma no-ops) - read the setting back instead of trusting rc.
+				ExecuteStatement( *_db, "pragma foreign_keys=on", {}, nullptr, sl );
+				THROW_IFSL( ScalarUInt(*_db, "pragma foreign_keys", {}, sl).value_or(0)!=1, "Could not enable foreign_keys on '{}' - fks would go unenforced.", _path );
+				if( _path!=":memory:" ){
+					string mode; //journal_mode=wal reports the resulting mode - stays on the prior journal if wal can't be used (e.g. network fs).
+					RowΛ f = [&mode]( Row&& r ){ mode = r.GetString(0); };
+					ExecuteStatement( *_db, "pragma journal_mode=wal", {}, &f, sl );
+					if( mode!="wal" )
+						WARN( "('{}') journal_mode=wal not applied - using '{}'.", _path, mode );
+				}
+			}
+			catch( ... ){ //don't cache a half-configured connection - a retry would skip the pragmas.
+				sqlite3_close_v2( _db );
+				_db = nullptr;
+				throw;
+			}
 		}
 		return *_db;
 	}

@@ -38,4 +38,21 @@ namespace Jde{
 		fs::path _path;
 		HMODULE _module;
 	};
+
+	//Process-wide cache of dll-backed api objects keyed by path - the same dll requested twice shares one T.
+	//Weak entries: T is destroyed (and its dll freed) when the last owner releases it; hold the sp to keep the api loaded.
+	template<class T>
+	struct DllApiCache{
+		α Get( const fs::path& path )ε->sp<T>{
+			lg _{ _mutex };
+			auto& cached = _apis[path];
+			auto api = cached.lock();
+			if( !api )
+				cached = api = ms<T>( path );
+			return api;
+		}
+	private:
+		flat_map<fs::path,wp<T>> _apis;
+		std::mutex _mutex;
+	};
 }

@@ -23,6 +23,7 @@ namespace Jde::DB{
 		α IsEnum()Ι->bool; //cache=true
 		α IsFlags()Ι->bool;
 		α IsPK()Ι->bool;  //surrogate keys==1 && SKIndex==0
+		α NeedsFK()Ι->bool{ return PKTable && !IsFlags(); } //references a pk table and isn't a flags bitmask - the single fk-eligibility rule for ddl (inline sqlite fks + SyncFKs).
 
 		string Name;
 

@@ -27,10 +27,9 @@ namespace Jde::DB{
 	{}
 
 	Ω abbrevName( sv schemaName )ι->string;
-	//Ω getData( const Table& table, const jobject& j )ε->vector<flat_map<string,Value>>;
 	Ω exists( const DBSchema& config )ι->bool;
 	α GetFlagsData( const jobject& j )ε->flat_map<uint,Value>;
-	α UniqueIndexName( const Index& index, sv tableName, bool uniqueName, const vector<Index>& indexes )ε->string;
+	α UniqueIndexName( const Index& index, sv tableName, const DB::Syntax& syntax, const vector<Index>& indexes )ε->string;
 
 	α ConfigurationJson( const AppSchema& config )ε->const jobject{
 		let appSchema = Settings::AsObject( config.ConfigPath() );
@@ -66,7 +65,7 @@ namespace Jde::DB{
 		let canAddFKs = config.DS()->Syntax().CanAddForeignKeys();
 		for( let& [tableName, table] : config.Tables ){
 			for( auto& column : table->Columns ){
-				if( !column->PKTable || column->IsFlags() )
+				if( !column->NeedsFK() )
 					continue;
 				if( find_if(FKs, [&,t=config.ObjectPrefix()+table->Name](let& fk){
 					return fk.second.Table==t && fk.second.Columns==vector<string>{column->Name};
@@ -78,8 +77,6 @@ namespace Jde::DB{
 					continue;
 				}
 				let pkTable = column->PKTable;
-				if( column->IsFlags() )
-					continue;
 				auto getName = [&, &t=tableName](auto i)->string {//&t for clang
 					return Ƒ( "{}_{}{}_fk", abbrevName(t), abbrevName(pkTable->Name), i==0 ? "" : std::to_string(i) );
 				};
@@ -191,8 +188,8 @@ namespace Jde::DB{
 			for( let& index : Index::GetConfig(*table) ){
 				if( find_if(dbIndexes, [&](let& db){ return db.TableName==config.ObjectPrefix()+tableName && db.Columns==index.Columns;} )!=dbIndexes.end() )
 					continue;
-				let name = UniqueIndexName( index, dbTable->DBName, syntax.UniqueIndexNames(), dbIndexes );
-				let fqTableName = syntax.HasSchemas() ? schemaName+'.'+dbTable->DBName : dbTable->DBName;
+				let name = UniqueIndexName( index, dbTable->DBName, syntax, dbIndexes );
+				let fqTableName = syntax.QualifiedName( schemaName, dbTable->DBName );
 				ds.ExecuteSync( {index.Create(name, fqTableName, syntax)} );
 				dbIndexes.push_back( Index{name, tableName, index} );
 				INFO( "Created index '{}.{}'.", table->DBName, name );
@@ -297,34 +294,6 @@ namespace Jde::DB{
 		}
 	}
 
-/*	α getData( const Table& table, const jobject& j )ε->vector<flat_map<string,Value>>{
-		vector<flat_map<string,Value>> data;
-		auto jdata = Json::FindArray( j, "data" );
-		if( !jdata )
-			return data;
-
-		uint id = 0;
-		for( let& jrow : *jdata ){
-			flat_map<string,Value> row;
-			if( jrow.is_string() ){
-				row[table.GetPK()->Name] = ++id;
-				row["name"] = Value{ string{jrow.get_string()} };
-			}
-			else if( jrow.is_object() ){
-				for( let& [name, value] : jrow.get_object() ){
-					if( name=="comment" )
-						continue;
-					let c = table.GetColumnPtr( name=="id" ? table.GetPK()->Name : Names::FromJson(name) );
-					row[c->Name] = Value{ c->Type, value };
-				}
-			}
-			else
-				THROW( "Invalid data '{}' expecting string or object.", serialize(jrow) );
-			data.push_back( row );
-		}
-		return data;
-	}
-*/
 	α GetFlagsData( const jobject& j )ε->flat_map<uint,Value>{
 		flat_map<uint,Value> flagsData;
 		if( auto kv = j.find("flagsData"); kv!=j.end() ){
@@ -337,10 +306,10 @@ namespace Jde::DB{
 		return flagsData;
 	}
 
-	α UniqueIndexName( const DB::Index& index, sv tableName, bool uniqueName, const vector<Index>& indexes )ε->string{
-		let baseName = uniqueName ? Ƒ("{}_{}", tableName, index.Name) : string{index.Name}; //sqlite index names are schema-wide - qualify with the table (e.g. access_providers_nk).
+	α UniqueIndexName( const DB::Index& index, sv tableName, const DB::Syntax& syntax, const vector<Index>& indexes )ε->string{
+		let baseName = syntax.IndexName( tableName, index.Name ); //dialect owns the composition - schema-wide namespaces (sqlite) qualify with the table.
 		auto indexName = baseName;
-		bool checkOnlyTable = !index.PrimaryKey && !uniqueName;
+		bool checkOnlyTable = !index.PrimaryKey && !syntax.UniqueIndexNames();
 		for( uint i=2; ; indexName = Ƒ( "{}{}", baseName, i++ ) ){
 			if( find_if(indexes, [&](let& x){ return ToIV(x.Name)==ToIV(indexName) && (!checkOnlyTable || index.TableName==x.TableName);})==indexes.end() )
 				break;

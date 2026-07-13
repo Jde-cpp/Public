@@ -21,6 +21,7 @@ namespace Jde::DB::Sqlite{
 		α HasUnsigned()Ι->bool override{ return false; }
 		α IdentityColumnSyntax()Ι->sv override{ return {}; } //rowid alias: pk must be declared 'integer primary key' - see CreatePrimaryKey.
 		α IdentitySelect()Ι->sv override{ return "last_insert_rowid()"; }
+		α IndexName( sv tableName, sv indexName )Ι->string override{ return Ƒ("{}_{}", tableName, indexName); } //index names are schema-wide - qualify with the table (e.g. access_providers_nk).
 		α CreatePrimaryKey( str /*tableName*/, str columns )Ι->string override{ return Ƒ("PRIMARY KEY( {} )", columns); } //columns: comma-separated for composite keys. Single-column integer pk stays a rowid alias.
 		α Limit( str sql, uint limit, uint skip )Ι->string override{ return Ƒ("{} limit {} offset {}", sql, limit, skip); }
 		α NeedsIdentityInsert()Ι->bool override{ return false; }
@@ -32,7 +33,7 @@ namespace Jde::DB::Sqlite{
 		α ProcEnd()Ι->sv override{ return {}; }
 		α SchemaDropsObjects()Ι->bool override{ return true; }
 		α SchemaExistsSql()Ι->sv override{ return "select name from pragma_database_list where name=?"; } //'main' always exists - schema creation is a no-op.
-		α SchemaSelect()Ι->sv override{ ASSERT_DESC(false, "sqlite does not have schemas"); return ""; }
+		α SchemaSelect()Ι->sv override{ return {}; } //no schemas - SchemaName falls back to SysSchema ('main').
 		α SpecifyIndexCluster()Ι->bool override{ return false; }
 		α SysSchema()Ι->sv override{ return "main"; }
 		//rowid alias requires the declared type be exactly 'integer' - 'int'/'bigint' pks don't auto-assign. https://sqlite.org/lang_createtable.html#rowid

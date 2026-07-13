@@ -31,10 +31,10 @@ namespace Jde::DB{
 			createStatement << suffix << endl << "\t" << syntax.CreatePrimaryKey( Name, columns ) << endl;
 		}
 		//When the syntax can't 'alter table add constraint' (sqlite), SyncFKs is skipped, so declare fks inline here -
-		//it's the only place they get enforced. Mirrors SchemaDdl::SyncFKs' column->PKTable selection.
+		//it's the only place they get enforced. Column::NeedsFK is the selection rule shared with SchemaDdl::SyncFKs.
 		if( !syntax.CanAddForeignKeys() ){
 			for( let& c : Columns ){
-				if( !c->PKTable || c->IsFlags() )
+				if( !c->NeedsFK() )
 					continue;
 				let& pk = *c->PKTable;
 				createStatement << suffix << endl << "\tforeign key(" << c->Name << ") references " << pk.DBName << "(" << pk.GetPK()->Name << ")";

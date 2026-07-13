@@ -34,10 +34,14 @@ namespace Jde::DB{
 	}
 
 	α IDataSource::SchemaName( SL sl )ε->string{
-		let& syntax = Syntax();
-		if( syntax.HasSchemas() && _schema.empty() ){
-			let schema = ScalerSyncOpt<string>( {string{syntax.SchemaSelect()}}, sl ); THROW_IF( !schema, "Schema name is empty." );
-			_schema = *schema;
+		if( _schema.empty() ){
+			let& syntax = Syntax();
+			if( let sql = syntax.SchemaSelect(); sql.size() ){
+				let schema = ScalerSyncOpt<string>( {string{sql}}, sl ); THROW_IF( !schema, "Schema name is empty." );
+				_schema = *schema;
+			}
+			else //schemaless dialect (sqlite) - answer with SysSchema so callers needn't branch on HasSchemas.
+				_schema = syntax.SysSchema();
 		}
 		return _schema;
 	}

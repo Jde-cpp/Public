@@ -11,25 +11,8 @@
 #define let const auto
 
 namespace Jde::DB::Sqlite::Tests{
-	struct SchemaTests : ::testing::TestWithParam<string>{
-		α SetUp()ε->void override{
-			let& cluster = GetParam();
-			if( auto it=_dsByCluster.find(cluster); it!=_dsByCluster.end() ){ //sync each backend once.
-				_ds = it->second;
-				return;
-			}
-			Schema::Create( cluster );
-			_ds = DS( cluster );
-			_dsByCluster[cluster] = _ds;
-		}
-		static flat_map<string,sp<IDataSource>> _dsByCluster;
-		sp<IDataSource> _ds;
-	};
-	flat_map<string,sp<IDataSource>> SchemaTests::_dsByCluster;
-	INSTANTIATE_TEST_SUITE_P( Backends, SchemaTests,
-		::testing::Values( "memory", "file" ),
-		[]( let& info ){ return info.param; }
-	);
+	struct SchemaTests : BackendTests{};
+	INSTANTIATE_BACKENDS( SchemaTests );
 
 	TEST_P( SchemaTests, ServerMetaLoadTable ){
 		let table = _ds->ServerMeta().LoadTable( "main", "access_identities" );

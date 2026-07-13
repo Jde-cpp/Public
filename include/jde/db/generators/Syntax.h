@@ -32,6 +32,7 @@ namespace Jde::DB{
 		β HasUnsigned()Ι->bool{ return false; }
 		β IdentityColumnSyntax()Ι->sv{ return "identity(1001,1)"; }
 		β IdentitySelect()Ι->sv{ return "@@identity"; }
+		β IndexName( sv /*tableName*/, sv indexName )Ι->string{ return string{indexName}; } //per-table index namespace; schema-wide dialects qualify with the table.
 		β Limit( str syntax, uint limit, uint skip )Ε->string;
 		β NeedsIdentityInsert()Ι->bool{ return true; }
 		β NowDefault()Ι->sv{ return UtcNow(); }
@@ -41,7 +42,8 @@ namespace Jde::DB{
 		β ProcEnd()Ι->sv{ return {}; }
 		β SchemaDropsObjects()Ι->bool{ return false; }
 		β SchemaExistsSql()Ι->sv{ return "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?"; }
-		β SchemaSelect()Ι->sv{ return "select schema_name();"; }
+		β QualifiedName( sv schema, sv name )Ι->string{ return HasSchemas() ? Ƒ("{}.{}", schema, name) : string{name}; } //fully-qualified object name; schemaless dialects use the bare name.
+		β SchemaSelect()Ι->sv{ return "select schema_name();"; } //empty (like CatalogSelect): SchemaName falls back to SysSchema without querying.
 		β SpecifyIndexCluster()Ι->bool{ return true; }
 		β SysSchema()Ι->sv{ return "dbo"; }
 		β ToString( EType type )Ι->string;
