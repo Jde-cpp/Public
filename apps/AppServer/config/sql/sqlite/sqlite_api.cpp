@@ -2,22 +2,23 @@
 #include "appProcs.h"
 #include "../../../../../libs/access/config/sql/sqlite/accessProcs.h"
 
-//Loaded by the app when the datasource is sqlite - the driver dispatches Sql::IsProc calls to these twins.
-void RegisterAppServerProcs(){
+//Exported symbol the driver calls with its registry when the datasource is sqlite - it dispatches Sql::IsProc
+//calls to the twins registered here (AppServer hosts access, so both proc sets register through this DLL).
+void RegisterProcs( Jde::DB::Sqlite::IProcs& procs ){
 	using namespace Jde::DB::Sqlite;
-	AppProcs::RegisterAppConnectionInsert();
-	AppProcs::RegisterAppInstanceInsert();
-	AppProcs::RegisterAppInstanceTagLevelUpsert();
-	AppProcs::RegisterAppProgramInsert();
+	AppProcs::RegisterAppConnectionInsert( procs );
+	AppProcs::RegisterAppInstanceInsert( procs );
+	AppProcs::RegisterAppInstanceTagLevelUpsert( procs );
+	AppProcs::RegisterAppProgramInsert( procs );
 
-	AccessProcs::RegisterAccessAcInsertRole();
-	AccessProcs::RegisterAccessAcUpsertPermission();
-	AccessProcs::RegisterAccessProviderPurge();
-	AccessProcs::RegisterAccessRoleAdd();
-	AccessProcs::RegisterAccessRoleInsert();
-	AccessProcs::RegisterAccessRolePurge();
-	AccessProcs::RegisterAccessRoleRemove();
-	AccessProcs::RegisterAccessUserInsert();
-	AccessProcs::RegisterAccessUserInsertKey();
-	AccessProcs::RegisterAccessUserInsertLogin();
+	AccessProcs::RegisterAccessAcInsertRole( procs );
+	AccessProcs::RegisterAccessAcUpsertPermission( procs );
+	AccessProcs::RegisterAccessProviderPurge( procs );
+	AccessProcs::RegisterAccessRoleAdd( procs );
+	AccessProcs::RegisterAccessRoleInsert( procs );
+	AccessProcs::RegisterAccessRolePurge( procs );
+	AccessProcs::RegisterAccessRoleRemove( procs );
+	AccessProcs::RegisterAccessUserInsert( procs );
+	AccessProcs::RegisterAccessUserInsertKey( procs );
+	AccessProcs::RegisterAccessUserInsertLogin( procs );
 }

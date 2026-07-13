@@ -4,6 +4,7 @@ include( ${CMAKE_CURRENT_LIST_DIR}/../../build/functions.cmake )
 project( Jde.Opc.Server VERSION ${JDE_VERSION} LANGUAGES CXX )
 
 if( NOT jde_Superbuild )
+	add_subdirectory( config/sql/sqlite )
 	add_subdirectory( ${jdeRoot}/libs/fwk/src ../../libs/fwk/lib )
 	set( opcCommonDir ${jdeRoot}/libs/opc )
 	add_subdirectory( ${opcCommonDir}/src ../../libs/opc/lib )

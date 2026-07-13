@@ -14,6 +14,12 @@ compileOptions( ${targetName} )
 target_compile_definitions( ${targetName} PRIVATE JDE_SQLITE_EXPORTS )
 
 set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
+
+#Hide everything by default; only GetDataSource (marked ΓLITE=visibility("default")) stays exported for dlsym.
+set_target_properties( ${targetName} PROPERTIES
+	CXX_VISIBILITY_PRESET hidden
+	VISIBILITY_INLINES_HIDDEN ON )
+target_link_options( ${targetName} PRIVATE -Wl,--exclude-libs,ALL ) #don't re-export the statically-linked sqlite3 amalgamation.
 file( GLOB sources *.cpp )
 file( GLOB headers *.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )

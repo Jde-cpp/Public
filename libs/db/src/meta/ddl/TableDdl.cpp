@@ -10,19 +10,37 @@
 namespace Jde::DB{
 	using std::endl;
 
+	TableDdl::~TableDdl()=default;
+
 	α TableDdl::CreateStatement()Ε->string{
+		let& syntax = Syntax();
 		std::ostringstream createStatement;
 		createStatement << "create table " << DBName << "(";
 		string suffix = "";
-		string pk;
 		for( let& c : Columns ){
-			if( c->IsSequence )
-				pk = Syntax().CreatePrimaryKey( Name, c->Name );
 			createStatement << suffix << endl << "\t" << ColumnDdl::CreateStatement( *c );
 			suffix = ",";
 		}
-		if( pk.size() )
-			createStatement << suffix << endl << "\t" << pk << endl;
+		//SurrogateKeys is the (possibly composite) primary key, ordered by SKIndex; a sequence column has SKIndex 0 so it is included here.
+		if( SurrogateKeys.size() ){
+			string columns, columnDelimiter;
+			for( let& c : SurrogateKeys ){
+				columns += columnDelimiter + c->Name;
+				columnDelimiter = ", ";
+			}
+			createStatement << suffix << endl << "\t" << syntax.CreatePrimaryKey( Name, columns ) << endl;
+		}
+		//When the syntax can't 'alter table add constraint' (sqlite), SyncFKs is skipped, so declare fks inline here -
+		//it's the only place they get enforced. Mirrors SchemaDdl::SyncFKs' column->PKTable selection.
+		if( !syntax.CanAddForeignKeys() ){
+			for( let& c : Columns ){
+				if( !c->PKTable || c->IsFlags() )
+					continue;
+				let& pk = *c->PKTable;
+				createStatement << suffix << endl << "\tforeign key(" << c->Name << ") references " << pk.DBName << "(" << pk.GetPK()->Name << ")";
+				suffix = ",";
+			}
+		}
 		createStatement << ")";
 		return createStatement.str();
 	}

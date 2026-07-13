@@ -27,7 +27,7 @@ namespace Jde::DB::Sqlite::OpcProcs{
 		return y;
 	}
 
-	α NodeIdInsert( sqlite3& db, const Value& ns, const Value& number, const Value& string_, const Value& guid, const Value& bytes, const Value& namespaceUri, const Value& serverIndex, const Value& isGlobal, SL sl )ε->uint{
+	α NodeIdInsert( IProcs& procs, sqlite3& db, const Value& ns, const Value& number, const Value& string_, const Value& guid, const Value& bytes, const Value& namespaceUri, const Value& serverIndex, const Value& isGlobal, SL sl )ε->uint{
 		uint nodeId = ns.get_number<uint>( sl ) << 32;
 		if( !number.is_null() )
 			nodeId |= number.get_number<uint>( sl );
@@ -39,21 +39,21 @@ namespace Jde::DB::Sqlite::OpcProcs{
 		}
 		else if( !bytes.is_null() )
 			nodeId |= crc32( bytes.get_bytes().data(), bytes.get_bytes().size() ); //mysql casts to char - same bytes.
-		ExecuteStatement( db, "insert into opc_node_ids( node_id, ns, number, string, guid, bytes, namespace_uri, server_index, is_global ) values( ?, ?, ?, ?, ?, ?, ?, ?, ? )",
+		procs.ExecuteStatement( db, "insert into opc_node_ids( node_id, ns, number, string, guid, bytes, namespace_uri, server_index, is_global ) values( ?, ?, ?, ?, ?, ?, ?, ?, ? )",
 			{Value{nodeId}, ns, number, string_, guid, bytes, namespaceUri, serverIndex, isGlobal}, nullptr, sl );
 		return nodeId;
 	}
 
-	α EnsureDataTypeNodeId( sqlite3& db, const Value& dataTypeId, SL sl )ε->void{
+	α EnsureDataTypeNodeId( IProcs& procs, sqlite3& db, const Value& dataTypeId, SL sl )ε->void{
 		if( dataTypeId.is_null() || dataTypeId.get_number<uint>(sl)>32750 )
 			return;
-		if( let count = ScalarUInt(db, "select count(*) from opc_node_ids where node_id=?", {dataTypeId}, sl); count && *count==0 )
-			NodeIdInsert( db, Value{(uint)0}, dataTypeId, Value{}, Value{}, Value{}, Value{}, Value{}, Value{}, sl );
+		if( let count = procs.ScalarUInt(db, "select count(*) from opc_node_ids where node_id=?", {dataTypeId}, sl); count && *count==0 )
+			NodeIdInsert( procs, db, Value{(uint)0}, dataTypeId, Value{}, Value{}, Value{}, Value{}, Value{}, Value{}, sl );
 	}
 
-	α RegisterOpcNodeIdInsert()ι->void{
-		RegisterProc( "opc_node_id_insert", []( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
-			let nodeId = NodeIdInsert( db, params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7], sl );
+	α RegisterOpcNodeIdInsert( IProcs& procs )ι->void{
+		procs.RegisterProc( "opc_node_id_insert", [&procs]( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
+			let nodeId = NodeIdInsert( procs, db, params[0], params[1], params[2], params[3], params[4], params[5], params[6], params[7], sl );
 			if( onRow )
 				(*onRow)( Row{ {Value{nodeId}} } ); //out _node_id
 			return 1;

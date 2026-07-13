@@ -4,4 +4,7 @@
 #include <jde/fwk/str.h>
 #include <jde/fwk/io/json.h>
 #include <jde/fwk/chrono.h>
+#include "jde/db/db.h"
+#include <jde/db/IDataSource.h>
 #include "../src/usings.h"
+#include "globals.h"

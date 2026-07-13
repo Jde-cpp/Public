@@ -1,8 +1,10 @@
 #pragma once
 #include "exports.h"
+#include "jde/db/sqlite_api.h"
 #include "usings.h"
 #include <jde/db/Value.h>
 #include <jde/db/IDataSource.h>
+#include "SqliteProcs.h"
 #include "SqliteSyntax.h"
 
 struct sqlite3;
@@ -11,6 +13,7 @@ extern "C" ΓLITE Jde::DB::IDataSource* GetDataSource();
 
 namespace Jde::DB::Sqlite{
 	struct SqliteServerMeta;
+	class SqliteApi;
 	struct SqliteDataSource final : IDataSource{
 		~SqliteDataSource() override;
 		α ExecuteSync( Sql&& sql, SL sl )ε->uint override;
@@ -42,6 +45,7 @@ namespace Jde::DB::Sqlite{
 		α Connection( SL sl )ε->sqlite3&; //lazy open.
 		α ExecuteProc( DB::Sql& sql, SL sl, Params& exeParams )ε->uint; //dispatch to SqliteProcs registry inside a transaction.
 
+		flat_map<fs::path,up<SqliteApi>> _procDlls;
 		//Single connection, serialized by _connMutex: an in-memory db is per-connection, so a MySql-style
 		//session pool would hand each caller its own empty database. For file-backed dbs a pool + WAL is an option.
 		sqlite3* _db{};

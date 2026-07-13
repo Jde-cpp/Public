@@ -34,8 +34,9 @@ namespace Jde::DB{
 	}
 
 	α IDataSource::SchemaName( SL sl )ε->string{
-		if( _schema.empty() ){
-			let schema = ScalerSyncOpt<string>( {string{Syntax().SchemaSelect()}}, sl ); THROW_IF( !schema, "Schema name is empty." );
+		let& syntax = Syntax();
+		if( syntax.HasSchemas() && _schema.empty() ){
+			let schema = ScalerSyncOpt<string>( {string{syntax.SchemaSelect()}}, sl ); THROW_IF( !schema, "Schema name is empty." );
 			_schema = *schema;
 		}
 		return _schema;

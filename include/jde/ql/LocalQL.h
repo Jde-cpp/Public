@@ -7,7 +7,7 @@
 namespace Jde::DB{ struct AppSchema; struct IDataSource; }
 namespace Jde::QL{
 	struct IListener;
-	struct LocalQL /*final*/ : IQL{
+	struct LocalQL /*abstract*/ : IQL{
 		LocalQL( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ι: _authorizer{authorizer}, _schemas{move(schemas)}{}
 		α Authorizer()ε->Access::Authorize& override{ return *_authorizer; }
 		α AuthorizerPtr()ε->sp<Access::Authorize> override{ return _authorizer; }

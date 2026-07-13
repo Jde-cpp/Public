@@ -1,14 +1,15 @@
 #include <jde/db/sqlite_api.h>
 #include "opcProcs.h"
 
-//Loaded by OpcServer when the datasource is sqlite - the driver dispatches Sql::IsProc calls to these twins.
-void RegisterAppServerProcs(){
+//Exported symbol the driver calls with its registry when OpcServer's datasource is sqlite - it dispatches
+//Sql::IsProc calls to the twins registered here.
+void RegisterProcs( Jde::DB::Sqlite::IProcs& procs ){
 	using namespace Jde::DB::Sqlite::OpcProcs;
-	RegisterOpcConstructorInsert();
-	RegisterOpcNodeIdInsert();
-	RegisterOpcNodeInsert();
-	RegisterOpcObjectInsert();
-	RegisterOpcObjectTypeInsert();
-	RegisterOpcVariableInsert();
-	RegisterOpcVariantInsert();
+	RegisterOpcConstructorInsert( procs );
+	RegisterOpcNodeIdInsert( procs );
+	RegisterOpcNodeInsert( procs );
+	RegisterOpcObjectInsert( procs );
+	RegisterOpcObjectTypeInsert( procs );
+	RegisterOpcVariableInsert( procs );
+	RegisterOpcVariantInsert( procs );
 }

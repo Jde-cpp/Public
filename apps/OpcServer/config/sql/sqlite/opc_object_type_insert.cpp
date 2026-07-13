@@ -9,10 +9,10 @@
 //	[7]=_browse_id, [8]=_specified, [9]=_name, [10]=_description, [11]=_write_mask, [12]=_user_write_mask,
 //	[13]=_is_abstract; out _node_id returned as the result row.
 namespace Jde::DB::Sqlite::OpcProcs{
-	α RegisterOpcObjectTypeInsert()ι->void{
-		RegisterProc( "opc_object_type_insert", []( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
-			let nodeId = NodeIdInsert( db, params[0], params[1], params[2], params[3], params[4], Value{}, Value{}, Value{true}, sl );
-			let y = ExecuteStatement( db,
+	α RegisterOpcObjectTypeInsert( IProcs& procs )ι->void{
+		procs.RegisterProc( "opc_object_type_insert", [&procs]( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
+			let nodeId = NodeIdInsert( procs, db, params[0], params[1], params[2], params[3], params[4], Value{}, Value{}, Value{true}, sl );
+			let y = procs.ExecuteStatement( db,
 				"insert into opc_object_types( node_id, parent_node_id, ref_type_id, browse_id, name, description, write_mask, user_write_mask, is_abstract )"
 				" values( ?, ?, ?, ?, ?, ?, ?, ?, ? )", {Value{nodeId}, params[5], params[6], params[7], params[9], params[10], params[11], params[12], params[13]}, nullptr, sl );
 			if( onRow )

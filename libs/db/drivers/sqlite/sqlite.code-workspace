@@ -1,4 +1,31 @@
 {
+	"settings": {
+		"window.title": "Sqlite",
+		"name": "sqlite",
+		"target": "Jde.DB.Sqlite.Tests",
+		"subDir": "libs/db/drivers/${config:name}",
+		"cmake.sourceDirectory": "${workspaceFolder:src}/../../../../..",
+		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Debug",
+				"type": "lldb",
+				"request": "launch",
+				"program": "${command:jde.repoBuildDir}/${config:subDir}/tests/${config:target}",
+				"args": ["-c", "-settings=${workspaceFolder:tests}/config/Sqlite.Tests.jsonnet"],
+				"cwd": "${command:jde.repoBuildDir}/runtime",
+				"env":{
+					"RUNTIME_DIR": "${config:cmake.buildDirectory}/runtime",
+					"REPO_SOURCE_DIR": "${config:cmake.sourceDirectory}",
+					"REPO_BUILD_DIR": "${config:cmake.buildDirectory}",
+				},
+				"preLaunchTask": "build",
+			},
+		],
+	},
 	"folders": [
 		{
 			"name": "src",
@@ -24,8 +51,5 @@
 			"name": "access",
 			"path": "../../../access/config/sql/sqlite"
 		}
-	],
-	"settings": {
-		"window.title": "SqlLite"
-	}
+	]
 }

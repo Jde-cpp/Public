@@ -1,7 +1,8 @@
-#include <sqlite3.h>
 #include "SqliteDataSource.h"
+#include "jde/fwk/process/dll.h"
 #include <jde/db/DBException.h>
 #include <jde/db/generators/Functions.h>
+#include "SqliteException.h"
 #include "SqliteProcs.h"
 #include "SqliteQueryAwait.h"
 #include "SqliteRow.h"
@@ -11,21 +12,56 @@
 #define let const auto
 
 namespace Jde::DB::Sqlite{
+	//A loaded proc dll. Extends ProcRegistry so the dll registers through us; we record the names it registers and
+	//unregister them in the destructor - before _dll unloads - so their ProcΛ std::functions (bodies in the dll)
+	//aren't destroyed after dlclose (which would fault during the registry's static teardown at exit).
+	class SqliteApi final : public ProcRegistry{
+		DllHelper _dll;
+		vector<string> _procNames;
+	public:
+		SqliteApi( fs::path path ): _dll{ move(path) }{
+			decltype(RegisterProcs)* registerProcs{ _dll["RegisterProcs"] };
+			registerProcs( *this );
+		}
+		~SqliteApi(){ UnregisterProcs( _procNames ); } //while _dll is still mapped (destroyed after this body).
+
+		α RegisterProc( string name, ProcΛ proc )ι->void override{
+			_procNames.push_back( name );
+			ProcRegistry::RegisterProc( move(name), move(proc) );
+		}
+	};
+
 	SqliteDataSource::~SqliteDataSource(){
 		if( _db )
 			sqlite3_close_v2( _db );
 	}
 
 	α SqliteDataSource::SetConfig( const jobject& config )ε->void{
-		//{ "driver": ".../Jde.DB.Sqlite.so", "path": ":memory:" | "/var/lib/jde/gateway.db" }
-		_path = string{ Json::FindSV(config, "path").value_or(":memory:") };
+		//{ "path": ":memory:" | "/var/lib/jde/gateway.db",  }
+		//_path = string{ Json::FindSV(config, "path").value_or(":memory:") };
+		for( auto&& [catalogName, vcatalog] : config.at("catalogs").get_object() ){
+			auto& catalog = vcatalog.as_object();
+			if( auto path = catalog.if_contains("path"); path && path->is_string() )
+				_path = path->as_string();
+			for( auto&& [dbSchemaName, dbSchema] : catalog.at("schemas").get_object() ){
+				for( auto&& [appSchemaName, vappSchema] : dbSchema.as_object() ){
+					let& appSchema = vappSchema.as_object();
+					THROW_IF( !appSchema.contains("dynamicLib"), "No dynamicLib for {}.{}.{}", catalogName, dbSchemaName, appSchemaName );
+					fs::path dynamicLib{ appSchema.at("dynamicLib").as_string().c_str() };
+					if( !_procDlls.contains(dynamicLib) ){
+						up<SqliteApi> api = mu<SqliteApi>( dynamicLib ); //ctor loads the dll and registers its procs.
+						_procDlls.emplace( move(dynamicLib), move(api) );
+					}
+				}
+			}
+		}
 	}
 
 	α SqliteDataSource::Connection( SL sl )ε->sqlite3&{
 		if( !_db ){
 			//SQLITE_OPEN_FULLMUTEX (serialized) as a backstop; _connMutex is the real serialization.
 			let rc = sqlite3_open_v2( _path.c_str(), &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr );
-			THROW_IFSL( rc!=SQLITE_OK, "sqlite3_open_v2('{}') failed: {}", _path, sqlite3_errstr(rc) );
+			THROW_IFX( rc, SqliteException( sl, rc, "sqlite3_open_v2('{}')", _path) );
 			sqlite3_exec( _db, "pragma foreign_keys=on", nullptr, nullptr, nullptr );
 			if( _path!=":memory:" )
 				sqlite3_exec( _db, "pragma journal_mode=wal", nullptr, nullptr, nullptr );

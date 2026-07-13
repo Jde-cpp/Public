@@ -17,10 +17,11 @@ namespace Jde::DB::Sqlite{
 		α HasLength( EType )Ι->bool override{ return false; } //type affinity - lengths are documentation only.
 		α HasCatalogs()Ι->bool override{ return false; }
 		α HasProcs()Ι->bool override{ return false; } //generated insert procs -> plain sql + last_insert_rowid; hand-written procs dispatch to SqliteProcs registry.
+		α HasSchemas()Ι->bool override{ return false; }
 		α HasUnsigned()Ι->bool override{ return false; }
 		α IdentityColumnSyntax()Ι->sv override{ return {}; } //rowid alias: pk must be declared 'integer primary key' - see CreatePrimaryKey.
 		α IdentitySelect()Ι->sv override{ return "last_insert_rowid()"; }
-		α CreatePrimaryKey( str /*tableName*/, str columnName )Ι->string override{ return Ƒ("PRIMARY KEY( {} )", columnName); }
+		α CreatePrimaryKey( str /*tableName*/, str columns )Ι->string override{ return Ƒ("PRIMARY KEY( {} )", columns); } //columns: comma-separated for composite keys. Single-column integer pk stays a rowid alias.
 		α Limit( str sql, uint limit, uint skip )Ι->string override{ return Ƒ("{} limit {} offset {}", sql, limit, skip); }
 		α NeedsIdentityInsert()Ι->bool override{ return false; }
 		α NowDefault()Ι->sv override{ return "(unixepoch())"; }
@@ -31,7 +32,7 @@ namespace Jde::DB::Sqlite{
 		α ProcEnd()Ι->sv override{ return {}; }
 		α SchemaDropsObjects()Ι->bool override{ return true; }
 		α SchemaExistsSql()Ι->sv override{ return "select name from pragma_database_list where name=?"; } //'main' always exists - schema creation is a no-op.
-		α SchemaSelect()Ι->sv override{ return "select 'main';"; }
+		α SchemaSelect()Ι->sv override{ ASSERT_DESC(false, "sqlite does not have schemas"); return ""; }
 		α SpecifyIndexCluster()Ι->bool override{ return false; }
 		α SysSchema()Ι->sv override{ return "main"; }
 		//rowid alias requires the declared type be exactly 'integer' - 'int'/'bigint' pks don't auto-assign. https://sqlite.org/lang_createtable.html#rowid

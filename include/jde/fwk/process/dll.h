@@ -22,9 +22,9 @@ namespace Jde{
 	};
 #undef LoadLibrary
 	struct DllHelper{
-		DllHelper( const fs::path& path )ε:
-			_path{path},
-			_module{ (HMODULE)Process::LoadLibrary(path) }
+		DllHelper( fs::path&& path )ε:
+			_path{move(path)},
+			_module{ (HMODULE)Process::LoadLibrary(_path) }
 		{}
 
 		~DllHelper(){

@@ -4,6 +4,7 @@ include( ${CMAKE_CURRENT_LIST_DIR}/../../build/functions.cmake )
 project( Jde.App.Server VERSION ${JDE_VERSION} LANGUAGES CXX )
 
 if( NOT jde_Superbuild )
+	add_subdirectory( config/sql/sqlite )
 	add_subdirectory( ${jdeRoot}/libs/fwk/src ../../libs/fwk/lib )
 	add_subdirectory( ${jdeRoot}/libs/db/src ../../libs/db/lib )
 	if( WIN32 )
@@ -35,7 +36,6 @@ project( ${targetName} )
 
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
-
 set( sources src/main.cpp )
 if( WIN32 )
 

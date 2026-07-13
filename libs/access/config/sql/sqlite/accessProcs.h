@@ -1,24 +1,24 @@
 #pragma once
-#include "../../../../db/drivers/sqlite/src/SqliteProcs.h"
+#include <jde/db/sqlite_api.h>
 
 struct sqlite3;
 
 //Native twins of the server procs in the sibling mysql/sqlServer dirs - one <proc>.cpp per proc, same names,
-//same param order, out params returned as the result row. Registered with the AppServer procs by
-//RegisterAppServerProcs (jde/db/sqlite_api.h) in apps/AppServer/config/sql/sqlite.
+//same param order, out params returned as the result row. Registered alongside the AppServer procs by
+//RegisterProcs (jde/db/sqlite_api.h) in apps/AppServer/config/sql/sqlite, through the driver's IProcs.
 namespace Jde::DB::Sqlite::AccessProcs{
-	α RegisterAccessAcInsertRole()ι->void;
-	α RegisterAccessAcUpsertPermission()ι->void;
-	α RegisterAccessProviderPurge()ι->void;
-	α RegisterAccessRoleAdd()ι->void;
-	α RegisterAccessRoleInsert()ι->void;
-	α RegisterAccessRolePurge()ι->void;
-	α RegisterAccessRoleRemove()ι->void;
-	α RegisterAccessUserInsert()ι->void;
-	α RegisterAccessUserInsertKey()ι->void;
-	α RegisterAccessUserInsertLogin()ι->void;
+	α RegisterAccessAcInsertRole( IProcs& procs )ι->void;
+	α RegisterAccessAcUpsertPermission( IProcs& procs )ι->void;
+	α RegisterAccessProviderPurge( IProcs& procs )ι->void;
+	α RegisterAccessRoleAdd( IProcs& procs )ι->void;
+	α RegisterAccessRoleInsert( IProcs& procs )ι->void;
+	α RegisterAccessRolePurge( IProcs& procs )ι->void;
+	α RegisterAccessRoleRemove( IProcs& procs )ι->void;
+	α RegisterAccessUserInsert( IProcs& procs )ι->void;
+	α RegisterAccessUserInsertKey( IProcs& procs )ι->void;
+	α RegisterAccessUserInsertLogin( IProcs& procs )ι->void;
 
 	//Twin of the *generated* access_identity_insert proc the mysql user_insert procs `call` - sqlite has no
 	//generated procs (Syntax::HasProcs false), so its body is inlined here: insertable columns + created=$now.
-	α IdentityInsert( sqlite3& db, const Value& name, const Value& providerId, const Value& target, const Value& attributes, const Value& description, const Value& isGroup, SL sl )ε->uint; //returns new identity_id.
+	α IdentityInsert( IProcs& procs, sqlite3& db, const Value& name, const Value& providerId, const Value& target, const Value& attributes, const Value& description, const Value& isGroup, SL sl )ε->uint; //returns new identity_id.
 }
