@@ -57,12 +57,9 @@ Tests use **GoogleTest**. Each test binary requires a `-settings=` argument poin
 
 # Via ctest (from build dir)
 ctest --preset linux-debug
-
-# Configure + build + run crypto/access/web tests in one shot
-build/tests.sh            # Debug; args: <buildTarget> <clean> <buildDir>
 ```
 
-**Running a single test:** the `testing.tests` field in the Jsonnet config is the GoogleTest filter. Set it to e.g. `"FileTests.WriteRead"` (or a pattern like `"FileTests.*"`) to restrict the run. `build/tests.sh` symlinks each config into `~/.Jde-Cpp/Tests.<Lib>/` for the binaries to find.
+**Running a single test:** the `testing.tests` field in the Jsonnet config is the GoogleTest filter. Set it to e.g. `"FileTests.WriteRead"` (or a pattern like `"FileTests.*"`) to restrict the run. Some test binaries look for their config in `~/.Jde-Cpp/Tests.<Lib>/<Lib>.Tests.jsonnet` — symlink the repo config there if missing.
 
 ## Frontend (Angular)
 

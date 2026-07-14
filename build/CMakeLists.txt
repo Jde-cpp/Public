@@ -1,4 +1,8 @@
-#cls;rm -f CMakeCache.txt;cmake $JDE_DIR/build --preset linux-debug
+#Configured via the root CMakeLists (jde_REPOS=ON), not this directory directly - e.g.:
+#  cmake $JDE_DIR -B $JDE_BUILD_DIR/$JDE_COMPILER-repos/<repo-basename> --preset linux-relWithDebInfo-repos   (or linux-debug-repos, win-clang-debug-repos)
+if( NOT DEFINED MIN_REQ_CMAKE_VERSION )
+	message( FATAL_ERROR "MIN_REQ_CMAKE_VERSION not set - configure with a preset (see comment above)." )
+endif()
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( ExternalProject )
 include( ${CMAKE_CURRENT_SOURCE_DIR}/functions.cmake )
@@ -178,6 +182,8 @@ file(WRITE "${SOURCE_DIR}/core/vm.cpp" "${_c}")
 ]=] )
 	ExternalProject_Add(jsonnet
 		GIT_REPOSITORY https://github.com/Jde-cpp/jsonnet.git
+		GIT_TAG 4825d892984f139eccf23c1401a448b811591bdd #fork master 2026-06-30
+		UPDATE_DISCONNECTED ON
 		PREFIX jsonnet
 		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/jsonnet
 		PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -P "${_jsonnetPatch}"
@@ -215,6 +221,8 @@ else()
 #need to add '#define _C4_STD_VECTOR_FWD_HPP_' to rapidyaml-0.10.0.hpp to avoid redefinition errors
 	ExternalProject_Add(jsonnet
 		GIT_REPOSITORY https://github.com/Jde-cpp/jsonnet.git
+		GIT_TAG 4825d892984f139eccf23c1401a448b811591bdd #fork master 2026-06-30
+		UPDATE_DISCONNECTED ON
 		PREFIX jsonnet
 		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/jsonnet
 		CMAKE_ARGS ${stdArgs}
@@ -226,7 +234,7 @@ else()
 	)
 	# -D_C4_STD_VECTOR_FWD_HPP_=ON
 	# -DUSE_SYSTEM_RAPIDYAML=ON
-	#ExternalProject_Add_StepDependencies( jsonnet configure ryml )
+	ExternalProject_Add_StepDependencies( jsonnet configure ryml ) #USE_SYSTEM_RAPIDYAML=ON needs ryml installed first
 	ExternalProject_Add_StepDependencies( jsonnet configure gtest )
 endif()
 ExternalProject_Add(protobuf
@@ -307,7 +315,7 @@ ExternalProject_Add(open62541
 
 ExternalProject_Add(open62541-nodeset-loader
 	GIT_REPOSITORY https://github.com/open62541/open62541-nodeset-loader.git
-#	GIT_TAG v0.5.0
+	GIT_TAG de474df8c114eef0c4efeb988df5901f9adc5005 #upstream master 2026-07 (v0.5.0 is older; this matches the locally-built clone)
 	UPDATE_DISCONNECTED ON
 	PREFIX nodeset-loader
 	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/NodesetLoader
@@ -323,7 +331,6 @@ ExternalProject_Add(open62541-nodeset-loader
 #    -DLIBXML2_LIBRARY=${LIBXML2_LIBRARY}
 #		-DLIBXML2_LIBRARIES=${LIBXML2_LIBRARIES}
 #		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
-		-DCMAKE_BUILD_TYPE=Debug
 		${nodesetLoaderArgs}
 )
 

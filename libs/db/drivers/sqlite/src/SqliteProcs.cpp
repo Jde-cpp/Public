@@ -51,4 +51,8 @@ namespace Jde::DB::Sqlite{
 		ExecuteStatement( db, sql, params, &f, sl );
 		return y;
 	}
+
+	α LastInsertRowId( sqlite3& db )ι->uint{
+		return (uint)sqlite3_last_insert_rowid( &db );
+	}
 }

@@ -1,4 +1,3 @@
-#include <sqlite3.h>
 #include "accessProcs.h"
 
 #define let const auto

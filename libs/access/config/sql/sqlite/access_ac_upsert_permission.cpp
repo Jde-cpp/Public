@@ -1,4 +1,3 @@
-#include <sqlite3.h>
 #include "accessProcs.h"
 
 #define let const auto
@@ -14,7 +13,7 @@ namespace Jde::DB::Sqlite::AccessProcs{
 			uint y;
 			if( !permissionId ){
 				procs.ExecuteStatement( db, "insert into access_permissions( is_role ) values( ? )", {Value{false}}, nullptr, sl );
-				permissionId = (uint)sqlite3_last_insert_rowid( &db );
+				permissionId = procs.LastInsertRowId( db );
 				procs.ExecuteStatement( db, "insert into access_permission_rights( permission_id, resource_id, allowed, denied ) values( ?, ?, ?, ? )", {Value{*permissionId}, params[3], params[1], params[2]}, nullptr, sl );
 				y = procs.ExecuteStatement( db, "insert into access_acl( identity_id, permission_id ) values( ?, ? )", {params[0], Value{*permissionId}}, nullptr, sl );
 			}

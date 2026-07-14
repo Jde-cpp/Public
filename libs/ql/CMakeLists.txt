@@ -5,8 +5,8 @@ project( ${targetName} VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ${jdeRoot}/build/dependencies.cmake )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
-file( GLOB sources *.cpp **/*.cpp )
-file( GLOB headers **/*.h ${jdeRoot}/include/jde/ql )
+file( GLOB sources *.cpp */*.cpp )
+file( GLOB headers */*.h ${jdeRoot}/include/jde/ql/*.h )
 target_sources(${targetName}
 	PRIVATE
 		${sources}

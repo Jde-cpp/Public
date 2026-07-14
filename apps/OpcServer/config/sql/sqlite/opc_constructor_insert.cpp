@@ -1,4 +1,3 @@
-#include <sqlite3.h>
 #include "opcProcs.h"
 
 //Twin of ../mysql/opc_constructor_insert.sql.

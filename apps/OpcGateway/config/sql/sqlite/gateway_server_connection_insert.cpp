@@ -1,4 +1,3 @@
-#include <sqlite3.h>
 #include "gatewayProcs.h"
 
 #define let const auto
@@ -16,7 +15,7 @@ namespace Jde::DB::Sqlite::GatewayProcs{
 				"insert into gateway_server_connections( name, attributes, created, target, description, certificate_uri, is_default, default_browse_ns, url )"
 				" values( ?, ?, unixepoch(), ?, ?, ?, ?, ?, ? )", {params[0], params[2], params[1], params[3], params[6], params[4], params[5], params[7]}, nullptr, sl );
 			if( onRow )
-				(*onRow)( Row{ {Value{(uint)sqlite3_last_insert_rowid(&db)}} } ); //out _server_connection_id
+				(*onRow)( Row{ {Value{procs.LastInsertRowId(db)}} } ); //out _server_connection_id
 			return y;
 		});
 	}

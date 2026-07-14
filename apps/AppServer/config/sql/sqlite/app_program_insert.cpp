@@ -1,4 +1,3 @@
-#include <sqlite3.h>
 #include "appProcs.h"
 
 #define let const auto
@@ -8,7 +7,7 @@
 namespace Jde::DB::Sqlite::AppProcs{
 	α ProgramInsert( IProcs& procs, sqlite3& db, const Value& name, SL sl )ε->uint{
 		procs.ExecuteStatement( db, "insert into app_programs( name ) values( ? )", {name}, nullptr, sl );
-		return (uint)sqlite3_last_insert_rowid( &db );
+		return procs.LastInsertRowId( db );
 	}
 
 	α RegisterAppProgramInsert( IProcs& procs )ι->void{

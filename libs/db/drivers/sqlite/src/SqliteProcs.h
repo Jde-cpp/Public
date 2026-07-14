@@ -16,6 +16,7 @@ namespace Jde::DB::Sqlite{
 	//Helpers for proc bodies - prepare/bind/step plain statements against `db`.
 	α ExecuteStatement( sqlite3& db, sv sql, const vector<Value>& params, RowΛ* onRow, SL sl )ε->uint;
 	α ScalarUInt( sqlite3& db, sv sql, const vector<Value>& params, SL sl )ε->optional<uint>;
+	α LastInsertRowId( sqlite3& db )ι->uint;
 
 	//The IProcs handed to proc DLLs (see sqlite_api.h); forwards to the registry free functions above so a DLL
 	//can register + run statements without linking this driver.
@@ -23,5 +24,6 @@ namespace Jde::DB::Sqlite{
 		α RegisterProc( string name, ProcΛ proc )ι->void override{ Sqlite::RegisterProc( move(name), move(proc) ); }
 		α ExecuteStatement( sqlite3& db, sv sql, const vector<Value>& params, RowΛ* onRow, SL sl )ε->uint override{ return Sqlite::ExecuteStatement( db, sql, params, onRow, sl ); }
 		α ScalarUInt( sqlite3& db, sv sql, const vector<Value>& params, SL sl )ε->optional<uint> override{ return Sqlite::ScalarUInt( db, sql, params, sl ); }
+		α LastInsertRowId( sqlite3& db )Ι->uint override{ return Sqlite::LastInsertRowId( db ); }
 	};
 }

@@ -18,8 +18,8 @@ target_compile_definitions( ${targetName} PUBLIC SPDLOG_FMT_EXTERNAL )
 #	target_link_directories( ${targetName} PRIVATE $ENV{REPO_DIR}/jsonnet/vs2017/x64/${CMAKE_BUILD_TYPE} )
 #endif()
 
-file(GLOB sources *.cpp **/*.cpp **/**/*.cpp )
-file(GLOB headers "**/*.h")
+file(GLOB sources *.cpp */*.cpp */*/*.cpp )
+file(GLOB headers "*/*.h")
 
 set( osDir ${CMAKE_CURRENT_SOURCE_DIR}/process/os )
 if( WIN32 )

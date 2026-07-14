@@ -1,4 +1,3 @@
-#include <sqlite3.h>
 #include <boost/crc.hpp>
 #include "opcProcs.h"
 #include <jde/db/DBException.h>

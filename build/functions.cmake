@@ -1,4 +1,5 @@
 cmake_path( SET jdeRoot NORMALIZE ${CMAKE_CURRENT_LIST_DIR}/.. )
+#Note: file(GLOB) calls repo-wide deliberately omit CONFIGURE_DEPENDS - adding a new source file requires a manual reconfigure.
 
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR )
 	message( FATAL_ERROR "In-source builds are not allowed. Configure from an out-of-source build directory, e.g.:\n  cd $JDE_BUILD_DIR/$JDE_COMPILER/<repo-name> && cmake ${CMAKE_SOURCE_DIR} --preset <preset>" )
@@ -62,6 +63,12 @@ function( linkGeneratedHeader targetName src dst )
 	target_sources( ${targetName} PRIVATE ${dst} )
 endfunction()
 
+#Configure-time symlink for static config files - idempotent; replaces the old POST_BUILD create_symlink steps that reran every build.
+function( linkConfigFile src dst )
+	file( REMOVE ${dst} )
+	file( CREATE_LINK ${src} ${dst} SYMBOLIC )
+endfunction()
+
 function(dumpVariables)
 	get_cmake_property(_variableNames VARIABLES)
 	list (SORT _variableNames)
@@ -86,9 +93,9 @@ endif()
 
 function(compileOptions)
 	if( NOT MSVC )
-		message( VERBOSE "compileOptions: ${ARGV0}" PRIVATE -Wall -Wextra -pedantic -Werror ${EXCLUDED_WARNINGS} )
+		message( VERBOSE "compileOptions: ${ARGV0} -Wall -Wextra -pedantic -Werror ${EXCLUDED_WARNINGS}" )
 		target_compile_options( ${ARGV0} PRIVATE -Wall -Wextra -pedantic -Werror ${EXCLUDED_WARNINGS} )
-		if( NOT $ENV{OPTIMIZATION_LEVEL} STREQUAL "" )
+		if( NOT "$ENV{OPTIMIZATION_LEVEL}" STREQUAL "" )
 			target_compile_options( ${ARGV0} PRIVATE -$ENV{OPTIMIZATION_LEVEL} )
 		endif()
 		set_property( TARGET ${ARGV0} PROPERTY POSITION_INDEPENDENT_CODE ON )
@@ -98,8 +105,6 @@ endfunction()
 #Native-proc MODULE for the sqlite driver - dlopen'd for sqlite_api.h's RegisterProcs( IProcs& ), never linked.
 #Globs *.cpp/*.h from the calling directory plus any extra source dirs passed after the target name.
 function( sqliteProcModule targetName )
-	list( APPEND CMAKE_PREFIX_PATH ${MULTI_INSTALL_PREFIX}/sqlite ) #static lib built from the amalgamation - see libs/db/drivers/sqlite/sketch.md.
-	find_package( SQLite3 REQUIRED )
 	find_package( Threads REQUIRED )
 
 	add_library( ${targetName} MODULE )
@@ -112,12 +117,11 @@ function( sqliteProcModule targetName )
 		target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 	endforeach()
 
-	target_link_libraries( ${targetName} PRIVATE SQLite::SQLite3 Threads::Threads ) #sqlite3 C API used directly (last_insert_rowid); the driver is reached only through IProcs at runtime.
+	target_link_libraries( ${targetName} PRIVATE Threads::Threads ) #no sqlite3 link: the driver is reached only through IProcs (sqlite_api.h), which forward-declares sqlite3.
 	target_link_libraries( ${targetName} PRIVATE fmt::fmt Jde.DB )
 
 	target_precompile_headers( ${targetName}
 	  PRIVATE
-		<sqlite3.h>
 		<jde/fwk.h>
 		<jde/fwk/str.h>
 		<jde/fwk/io/json.h>

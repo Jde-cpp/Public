@@ -22,8 +22,8 @@ target_sources(${targetName}
 if( Boost_USE_STATIC_LIBS )
 	target_link_libraries( ${targetName} PRIVATE Boost::json )
 endif()
+target_link_libraries( ${targetName} PRIVATE fmt::fmt )
 if( WIN32 )
-	target_link_libraries( ${targetName} PRIVATE fmt::fmt )
 	target_link_libraries( ${targetName} PRIVATE Jde )
 endif()
 

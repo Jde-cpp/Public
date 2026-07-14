@@ -9,7 +9,7 @@ find_package( SQLite3 REQUIRED )
 find_package( Threads REQUIRED )
 
 set( targetName Jde.DB.Sqlite )
-add_library( ${targetName} SHARED ) #SHARED not MODULE: still dlopen'd like the other drivers, but apps/AppServer/config/sql/sqlite links RegisterProc etc.
+add_library( ${targetName} MODULE ) #dlopen'd only - nothing links it; proc modules reach it through IProcs (sqlite_api.h).
 compileOptions( ${targetName} )
 target_compile_definitions( ${targetName} PRIVATE JDE_SQLITE_EXPORTS )
 
@@ -19,7 +19,9 @@ set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
 set_target_properties( ${targetName} PROPERTIES
 	CXX_VISIBILITY_PRESET hidden
 	VISIBILITY_INLINES_HIDDEN ON )
-target_link_options( ${targetName} PRIVATE -Wl,--exclude-libs,ALL ) #don't re-export the statically-linked sqlite3 amalgamation.
+if( NOT WIN32 )
+	target_link_options( ${targetName} PRIVATE LINKER:--exclude-libs,ALL ) #don't re-export the statically-linked sqlite3 amalgamation.
+endif()
 file( GLOB sources *.cpp )
 file( GLOB headers *.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )

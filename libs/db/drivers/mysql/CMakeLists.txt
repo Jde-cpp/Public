@@ -22,11 +22,6 @@ target_link_libraries(${targetName} PRIVATE Boost::charconv Threads::Threads Ope
 # We need to define BOOST_MYSQL_SEPARATE_COMPILATION in any code using Boost.MySQL in separate-build mode
 target_compile_definitions(${targetName} PRIVATE BOOST_MYSQL_SEPARATE_COMPILATION)
 
-set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
-file(GLOB sources *.cpp )
-file(GLOB headers *.h )
-target_sources(${targetName} PRIVATE ${sources} ${headers} )
-
 target_link_libraries( ${targetName} PRIVATE fmt::fmt )
 target_link_libraries( ${targetName} PRIVATE Jde.DB )
 

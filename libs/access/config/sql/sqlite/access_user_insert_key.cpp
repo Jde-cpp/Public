@@ -1,4 +1,3 @@
-#include <sqlite3.h>
 #include "accessProcs.h"
 #include <jde/db/DBException.h>
 
@@ -10,7 +9,7 @@ namespace Jde::DB::Sqlite::AccessProcs{
 	//Generated proc twin - see accessProcs.h. Column order/defaults match TableDdl::InsertProcCreateStatement for access_identities.
 	α IdentityInsert( IProcs& procs, sqlite3& db, const Value& name, const Value& providerId, const Value& target, const Value& attributes, const Value& description, const Value& isGroup, SL sl )ε->uint{
 		procs.ExecuteStatement( db, "insert into access_identities( name, provider_id, target, attributes, created, description, is_group ) values( ?, ?, ?, ?, unixepoch(), ?, ? )", {name, providerId, target, attributes, description, isGroup}, nullptr, sl );
-		return (uint)sqlite3_last_insert_rowid( &db );
+		return procs.LastInsertRowId( db );
 	}
 
 	α RegisterAccessUserInsertKey( IProcs& procs )ι->void{

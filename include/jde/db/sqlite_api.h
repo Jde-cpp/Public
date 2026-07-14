@@ -16,6 +16,7 @@ namespace Jde::DB::Sqlite{
 		β RegisterProc( string name, ProcΛ proc )ι->void =0;
 		β ExecuteStatement( sqlite3& db, sv sql, const vector<Value>& params, RowΛ* onRow, SL sl )ε->uint =0; //rows affected
 		β ScalarUInt( sqlite3& db, sv sql, const vector<Value>& params, SL sl )ε->optional<uint> =0;
+		β LastInsertRowId( sqlite3& db )Ι->uint =0; //sqlite3_last_insert_rowid - here so proc DLLs needn't link their own sqlite3 copy.
 	protected:
 		virtual ~IProcs()=default;
 	};

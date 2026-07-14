@@ -1,4 +1,3 @@
-#include <sqlite3.h>
 #include "appProcs.h"
 
 #define let const auto
@@ -19,7 +18,7 @@ namespace Jde::DB::Sqlite::AppProcs{
 			procs.ExecuteStatement( db, "update app_connections set deleted=unixepoch() where instance_id=? and deleted is null", {Value{*instanceId}}, nullptr, sl );
 			let y = procs.ExecuteStatement( db, "insert into app_connections( instance_id, pid, created ) values( ?, ?, unixepoch() )", {Value{*instanceId}, params[3]}, nullptr, sl );
 			if( onRow )
-				(*onRow)( Row{ {Value{*programId}, Value{*instanceId}, Value{(uint)sqlite3_last_insert_rowid(&db)}} } );
+				(*onRow)( Row{ {Value{*programId}, Value{*instanceId}, Value{procs.LastInsertRowId(db)}} } );
 			return y;
 		});
 	}

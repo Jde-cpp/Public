@@ -1,4 +1,3 @@
-#include <sqlite3.h>
 #include "accessProcs.h"
 
 //Twin of ../mysql/access_user_insert.sql.

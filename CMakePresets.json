@@ -13,19 +13,19 @@
 				"installRoot": "$env{REPO_DIR}/install/$env{CXX}",
 				"multiInstallPrefix": "$env{installRoot}/multi"
 			},
-			"cacheVariables":{
+			"cacheVariables": {
 				"CMAKE_CXX_STANDARD": "26",
 				"JDE_VERSION": "2026.07.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3",
 				"MULTI_INSTALL_PREFIX": "$env{multiInstallPrefix}",
+				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
 				"SPDLOG_FMT_EXTERNAL": "ON"
 			}
 		},
 		{
 			"name": "repos",
 			"hidden": true,
-			"cacheVariables":{
-				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
+			"cacheVariables": {
 				"jde_REPOS": true,
 				"jde_TESTS": false,
 				"jde_APPS": false
@@ -34,7 +34,7 @@
 		{
 			"name": "debug",
 			"hidden": true,
-			"environment":{
+			"environment": {
 				"buildType": "Debug"
 			},
 			"cacheVariables": {
@@ -45,7 +45,7 @@
 		{
 			"name": "relWithDebInfo",
 			"hidden": true,
-			"environment":{
+			"environment": {
 				"buildType": "RelWithDebInfo"
 			},
 			"cacheVariables": {
@@ -53,13 +53,13 @@
 				"CMAKE_PREFIX_PATH": "$env{installRoot}/RelWithDebInfo;$env{multiInstallPrefix}"
 			}
 		},
-    {
-      "name": "win",
-      "inherits": "common",
-			"environment":{
+		{
+			"name": "win",
+			"inherits": "common",
+			"environment": {
 				"cxxFlags": "-DWIN32_LEAN_AND_MEAN"
 			},
-			"cacheVariables":{
+			"cacheVariables": {
 				"CMAKE_GENERATOR_PLATFORM": "x64",
 				"CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 			}
@@ -67,27 +67,40 @@
 		{
 			"name": "linux",
 			"inherits": "common",
-			"cacheVariables":{
+			"environment": {
+				"multiInstallPrefix": "$env{installRoot}/$env{buildType}"
+			},
+			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "$env{buildType}",
 				"LIBXML2_INCLUDE_DIR": "/usr/include/libxml2"
+			},
+			"vendor": {
+				"comment": "multiInstallPrefix override: single-config generator, so Debug deps (ASan, _GLIBCXX_DEBUG) share artifact names with RelWithDebInfo and would clobber each other in a shared multi dir - install per build type instead; Windows multi-config keeps the shared multi dir."
 			}
 		},
-
 		{
 			"name": "linux-debug",
-			"inherits": ["linux", "debug"],
-			"cacheVariables":{
+			"inherits": [
+				"linux",
+				"debug"
+			],
+			"cacheVariables": {
 				"CMAKE_CXX_FLAGS_DEBUG": "-ggdb -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -D_GLIBCXX_DEBUG=ON -static-libstdc++ -static-libasan -lrt"
 			}
 		},
 		{
 			"name": "linux-relWithDebInfo",
-			"inherits": ["linux", "relWithDebInfo"]
+			"inherits": [
+				"linux",
+				"relWithDebInfo"
+			]
 		},
 		{
 			"name": "linux-jde",
 			"hidden": true,
-			"inherits": ["linux"],
+			"inherits": [
+				"linux"
+			],
 			"cacheVariables": {
 				"Boost_USE_STATIC_LIBS": true,
 				"BOOST_VERSION": "1.91.0"
@@ -95,12 +108,14 @@
 		},
 		{
 			"name": "linux-jde-relWithDebInfo",
-			"inherits": ["linux-jde","relWithDebInfo"],
+			"inherits": [
+				"linux-jde",
+				"relWithDebInfo"
+			],
 			"environment": {
 				"OPTIMIZATION_LEVEL": "O3"
 			},
-			"cacheVariables": {
-			}
+			"cacheVariables": {}
 		},
 		{
 			"name": "clang-jde",
@@ -111,54 +126,47 @@
 			}
 		},
 		{
-			"name": "clang-linux",
-			"inherits": ["clang","linux"],
-			"cacheVariables":{
+			"name": "clang",
+			"environment": {
+				"CC": "clang",
+				"CXX": "clang++"
+			},
+			"cacheVariables": {
 				"CMAKE_C_COMPILER": "clang",
-				"CMAKE_CXX_COMPILER": "clang++",
-				"CMAKE_CXX_FLAGS": "-stdlib=libc++",
-				"CMAKE_CXX_FLAGS_DEBUG": "$env{cxxFlagsDebug} -glldb -static-libasan -fsanitize=leak -fsanitize=address -fno-omit-frame-pointer -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL",
-				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
-				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld"
+				"CMAKE_CXX_COMPILER": "clang++"
 			}
 		},
-    {
-      "name": "clang",
-      "environment": {
-        "CC": "clang",
-        "CXX": "clang++"
-      },
-			"cacheVariables":{
-        "CMAKE_C_COMPILER": "clang",
-        "CMAKE_CXX_COMPILER": "clang++"
-			}
-    },
-    {
-      "name": "win-clang",
-			"inherits": ["clang","win"],
-      "hidden": true,
-      "generator": "Ninja",
-      "cacheVariables":{
-        "CMAKE_GENERATOR_PLATFORM": null,
+		{
+			"name": "win-clang",
+			"inherits": [
+				"clang",
+				"win"
+			],
+			"hidden": true,
+			"generator": "Ninja",
+			"cacheVariables": {
+				"CMAKE_GENERATOR_PLATFORM": null,
 				"CMAKE_CXX_FLAGS": "$env{cxxFlags} -DBOOST_STACKTRACE_USE_WINDBG",
 				"CMAKE_CXX_FLAGS_DEBUG": "$env{cxxFlagsDebug}",
 				"CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections -ldbgeng",
 				"CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections -ldbgeng",
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
-        "VCPKG_INSTALLED_DIR": "$env{VCPKG_ROOT}/installed"
-      }
-    },
+				"CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+				"VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
+				"VCPKG_INSTALLED_DIR": "$env{VCPKG_ROOT}/installed"
+			}
+		},
 		{
 			"name": "linux-clang",
-			"inherits": ["clang", "linux"],
+			"inherits": [
+				"clang",
+				"linux"
+			],
 			"hidden": true,
-			"cacheVariables":{
+			"cacheVariables": {
 				"CMAKE_CXX_FLAGS": "-stdlib=libc++ -DBOOST_STACKTRACE_USE_BACKTRACE",
 				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld -lbacktrace",
 				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld -lbacktrace",
-        "CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL"
-
+				"CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL"
 			}
 		},
 		{
@@ -167,28 +175,42 @@
 			"environment": {
 				"cxxFlagsDebugInfo": "-gdwarf-4"
 			},
-			"cacheVariables": {
-			}
+			"cacheVariables": {}
 		},
 		{
 			"name": "linux-clang-debug",
-			"inherits": ["linux-clang", "debug"]
+			"inherits": [
+				"linux-clang",
+				"debug"
+			]
 		},
 		{
 			"name": "win-clang-debug",
 			"hidden": true,
-			"inherits": ["win-clang", "debug"],
+			"inherits": [
+				"win-clang",
+				"debug"
+			],
 			"binaryDir": "$env{JDE_BUILD_DIR}/clang++"
 		},
 		{
 			"name": "linux-clang-debug-jde",
-			"inherits": ["linux-clang-debug", "clang-jde"],
-			"cacheVariables":{
+			"inherits": [
+				"linux-clang-debug",
+				"clang-jde"
+			],
+			"cacheVariables": {},
+			"vendor": {
+				"comment": "Deliberately does NOT inherit linux-jde: clang/libc++ uses dynamic system Boost; linux-jde-relWithDebInfo (g++) uses static Boost $env{BOOST_VERSION}."
 			}
 		},
 		{
 			"name": "win-clang-debug-jde",
-			"inherits": ["win-clang-debug", "clang-jde", "win-lldb"],
+			"inherits": [
+				"win-clang-debug",
+				"clang-jde",
+				"win-lldb"
+			],
 			"cacheVariables": {
 				"CMAKE_CXX_FLAGS": "$env{cxxFlags} $env{cxxFlagsDebugInfo} -DBOOST_STACKTRACE_USE_WINDBG"
 			}
@@ -196,16 +218,33 @@
 		{
 			"name": "linux-repos",
 			"hidden": true,
-			"inherits": ["repos"],
+			"inherits": [
+				"repos"
+			],
 			"cacheVariables": {
-				"LIBXML2_LIBDIR": "/usr/lib/x86_64-linux-gnu",
-				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}"
+				"LIBXML2_LIBDIR": "/usr/lib/x86_64-linux-gnu"
 			}
+		},
+		{
+			"name": "linux-debug-repos",
+			"inherits": [
+				"linux-debug",
+				"linux-repos"
+			]
+		},
+		{
+			"name": "linux-relWithDebInfo-repos",
+			"inherits": [
+				"linux-relWithDebInfo",
+				"linux-repos"
+			]
 		},
 		{
 			"name": "win-repos",
 			"hidden": true,
-			"inherits": ["repos"],
+			"inherits": [
+				"repos"
+			],
 			"cacheVariables": {
 				"CMAKE_HAVE_LIBC_PTHREAD": "OFF",
 				"CMAKE_HAVE_PTHREADS_CREATE": "OFF",
@@ -216,7 +255,11 @@
 		},
 		{
 			"name": "win-clang-debug-repos",
-			"inherits": ["win-clang-debug", "win-repos"]
+			"inherits": [
+				"win-clang-debug",
+				"win-repos"
+			],
+			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-repos"
 		}
 	],
 	"buildPresets": [

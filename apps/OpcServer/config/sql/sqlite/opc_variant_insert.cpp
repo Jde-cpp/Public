@@ -1,4 +1,3 @@
-#include <sqlite3.h>
 #include "opcProcs.h"
 
 #define let const auto
@@ -11,7 +10,7 @@ namespace Jde::DB::Sqlite::OpcProcs{
 			EnsureDataTypeNodeId( procs, db, params[0], sl );
 			let y = procs.ExecuteStatement( db, "insert into opc_variants( data_type_id, array_dims ) values( ?, ? )", {params[0], params[1]}, nullptr, sl );
 			if( onRow )
-				(*onRow)( Row{ {Value{(uint)sqlite3_last_insert_rowid(&db)}} } ); //out _variant_id
+				(*onRow)( Row{ {Value{procs.LastInsertRowId(db)}} } ); //out _variant_id
 			return y;
 		});
 	}

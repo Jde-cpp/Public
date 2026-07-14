@@ -4,8 +4,6 @@ message( "Jde.Opc.GatewayLib" )
 project( Jde.Opc.GatewayLib VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ${jdeRoot}/build/dependencies.cmake )
 
-include_directories( ${open62541Dir}include )
-
 set( targetName Jde.Opc.GatewayLib )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
@@ -13,12 +11,9 @@ file( GLOB sources *.cpp async/*.cpp auth/*.cpp ql/*.cpp types/*.cpp types/proto
 file( GLOB protos types/proto/*.proto )
 get_filename_component( main_cpp ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp ABSOLUTE )
 list( REMOVE_ITEM sources ${main_cpp} )
-file( GLOB headers **/*.h )
+file( GLOB headers */*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
-IF( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}" )
-endif()
 target_include_directories( ${targetName} PRIVATE ${jdeRoot}/include/jde/app/proto )
 target_link_libraries( ${targetName} Jde.Web.Server Jde.App.Client Jde.Opc )
 

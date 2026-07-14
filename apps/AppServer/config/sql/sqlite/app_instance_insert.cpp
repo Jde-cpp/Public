@@ -1,4 +1,3 @@
-#include <sqlite3.h>
 #include "appProcs.h"
 
 #define let const auto
@@ -10,10 +9,10 @@ namespace Jde::DB::Sqlite::AppProcs{
 		auto hostId = procs.ScalarUInt( db, "select host_id from app_hosts where name=?", {hostName}, sl );
 		if( !hostId ){
 			procs.ExecuteStatement( db, "insert into app_hosts( name ) values( ? )", {hostName}, nullptr, sl );
-			hostId = (uint)sqlite3_last_insert_rowid( &db );
+			hostId = procs.LastInsertRowId( db );
 		}
 		procs.ExecuteStatement( db, "insert into app_instances( program_id, name, host_id ) values( ?, ?, ? )", {programId, name, Value{*hostId}}, nullptr, sl );
-		return (uint)sqlite3_last_insert_rowid( &db );
+		return procs.LastInsertRowId( db );
 	}
 
 	α RegisterAppInstanceInsert( IProcs& procs )ι->void{

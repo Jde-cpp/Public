@@ -1,154 +1,104 @@
 #!/bin/bash
-source buildFunctions.sh;
-function buildRelativePath() {
-	fileWorkspaceFolder=$1; #/c/Users/duffyj/source/repos/jde/Public
-	absoluteFile=$2; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
-	relativeFile=$3; #/libs/access/tests/main.cpp
-	if [[ $fileWorkspaceFolder == *"jde/Framework/src"* ]]; then
-		relativePath="libs/framework";
-	elif [[ $relativeFile == *"access/src"* ]]; then
-		relativePath="libs/access/lib";
-	elif [[ ${fileWorkspaceFolder##*Public/} != $fileWorkspaceFolder ]]; then
-		relativePath=${fileWorkspaceFolder##*Public/};
-		if [[ $relativePath == *"src" ]]; then
-			relativePath=${relativePath/src/lib};
-		fi;
-	elif [[ $absoluteFile == *"IotWebsocket/src"* ]]; then
-		relativePath="apps/OpcClient";
-	elif [[ $relativeFile == *"AppServer/src"* ]]; then
-		relativePath="apps/AppServer/lib";
-	# elif [[ $fileWorkspaceFolder == *"web/client" ]]; then
-	# 	relativePath="/web/client";
-	# elif [[ $fileWorkspaceFolder == *"web/server" ]]; then
-	# 	relativePath="/web/server";
-	# elif [[ $fileWorkspaceFolder == *"db/src" ]]; then
-	# 	relativePath="/db/framework";
-	# elif [[ $fileWorkspaceFolder == *"drivers/mysql" ]]; then
-	# 	relativePath="/db/drivers/mysql";
-	# elif [[ $fileWorkspaceFolder == *"libs/ql" ]]; then
-	# 	relativePath="/ql";
-	# elif [[ $fileWorkspaceFolder == *"app/shared" ]]; then
-	# 	relativePath="/app/shared";
-	# elif [[ $fileWorkspaceFolder == *"app/client" ]]; then
-	# 	relativePath="/app/client";
-	else
-		relativePath=$(dirname "$relativeFile");
-		relativePath=${relativePath:1}; #remove leading /
-	fi;
+source ${BASH_SOURCE%/*}/buildFunctions.sh; #shared helpers: buildRelativePath (src->lib/exe mapping), absoluteFile. Function bodies are subshells - see note there.
 
-	echo $relativePath;
-}
-function projectName() {
-	#echo "projectName called with $1";
-	absoluteFile=$1; #/libs/access/tests/main.cpp
-	if [[ $absoluteFile == *"opc/src"* ]]; then
-		project="Jde.Opc";
-	elif [[ $absoluteFile == *"fwk/src"* ]]; then
-		project="Jde";
-	elif [[ $absoluteFile == *"fwk/tests"* ]]; then
-		project="Jde.Framework.Tests";
-	elif [[ $absoluteFile == *"web/client"* ]]; then
-		project="Jde.Web.Client";
-	elif [[ $absoluteFile == *"web/tests"* ]]; then
-		project="Jde.Web.Tests";
-	elif [[ $absoluteFile == *"access/src"* ]]; then
-		project="Jde.Access";
-	elif [[ $absoluteFile == *"access/tests"* ]]; then
-		project="Jde.Access.Tests";
-	elif [[ $absoluteFile == *"AppServer/src"* ]]; then
-		project="Jde.App.ServerLib";
-	elif [[ $absoluteFile == *"db/src"* ]]; then
-		project="Jde.DB";
-	elif [[ $absoluteFile == *"OpcGateway/src"* ]]; then
-		project="Jde.Opc.GatewayLib";
-	elif [[ $absoluteFile == *"/OpcGateway/tests"* ]]; then
-		project="Jde.Opc.Tests";
-	elif [[ $absoluteFile == *"OpcServer/tests"* ]]; then
-		project="Jde.Opc.Server.Tests";
+#vcxproj/ninja target name for a source file - msbuild and single-file compiles need it; buildProject's ninja branch uses <dir>/all instead.
+#Echoes empty when unmapped - callers must check, or ninja would silently build everything.
+function projectName() (
+	absoluteFile=$1;
+	filename=$(basename "$absoluteFile");
+	project="";
+	if [[ $filename == "main.cpp" ]]; then
+		if [[ $absoluteFile == *"AppServer"* ]]; then project="Jde.App.Server";
+		elif [[ $absoluteFile == *"OpcGateway"* ]]; then project="Jde.Opc.Gateway";
+		elif [[ $absoluteFile == *"OpcServer"* ]]; then project="Jde.Opc.Server";
+		fi;
+	elif [[ $absoluteFile == *"fwk/src"* ]]; then project="Jde";
+	elif [[ $absoluteFile == *"fwk/tests"* ]]; then project="Jde.Fwk.Tests";
+	elif [[ $absoluteFile == *"access/tests"* ]]; then project="Jde.Access.Tests";
+	elif [[ $absoluteFile == *"config/sql/sqlite"* ]]; then #native-proc modules
+		if [[ $absoluteFile == *"AppServer"* || $absoluteFile == *"access"* ]]; then project="Jde.DB.Sqlite.AppServer"; #access procs are registered in AppServer's module
+		elif [[ $absoluteFile == *"OpcGateway"* ]]; then project="Jde.DB.Sqlite.OpcGateway";
+		elif [[ $absoluteFile == *"OpcServer"* ]]; then project="Jde.DB.Sqlite.OpcServer";
+		fi;
+	elif [[ $absoluteFile == *"access/src"* ]]; then project="Jde.Access";
+	elif [[ $absoluteFile == *"db/drivers/sqlite/tests"* ]]; then project="Jde.DB.Sqlite.Tests";
+	elif [[ $absoluteFile == *"db/drivers/sqlite"* ]]; then project="Jde.DB.Sqlite";
+	elif [[ $absoluteFile == *"db/drivers/mysql"* ]]; then project="Jde.DB.MySql";
+	elif [[ $absoluteFile == *"db/drivers/odbc"* ]]; then project="Jde.DB.Odbc";
+	elif [[ $absoluteFile == *"db/src"* ]]; then project="Jde.DB";
+	elif [[ $absoluteFile == *"libs/ql"* ]]; then project="Jde.QL";
+	elif [[ $absoluteFile == *"web/client"* ]]; then project="Jde.Web.Client";
+	elif [[ $absoluteFile == *"web/server"* ]]; then project="Jde.Web.Server";
+	elif [[ $absoluteFile == *"web/tests"* ]]; then project="Jde.Web.Tests";
+	elif [[ $absoluteFile == *"app/shared"* ]]; then project="Jde.App.Shared";
+	elif [[ $absoluteFile == *"app/client"* ]]; then project="Jde.App.Client";
+	elif [[ $absoluteFile == *"opc/src"* ]]; then project="Jde.Opc";
+	elif [[ $absoluteFile == *"AppServer/src"* ]]; then project="Jde.App.ServerLib";
+	elif [[ $absoluteFile == *"OpcGateway/src"* ]]; then project="Jde.Opc.GatewayLib";
+	elif [[ $absoluteFile == *"OpcGateway/tests"* ]]; then project="Jde.Opc.Tests";
+	elif [[ $absoluteFile == *"OpcServer/src"* ]]; then project="Jde.Opc.ServerLib";
+	elif [[ $absoluteFile == *"OpcServer/tests"* ]]; then project="Jde.Opc.Server.Tests";
 	fi;
 	echo $project;
-}
-function absoluteFile() {
-	workspaceFolder=$1;
-	relativeFile=$2;
-	absoluteFile=`realpath $workspaceFolder/$relativeFile`; #/home/duffyj/code/jde/Framework/source/io/DiskWatcher.cpp
-	echo $absoluteFile;
-}
-function buildProject() {
-	source $JDE_BASH/build/common.sh;
+)
+function buildProject() (
+	source $JDE_BASH/build/common.sh; #toBashDir
 	toBashDir $1 workspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
 	toBashDir $2 fileWorkspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
 	toBashDir $3 relativeFile; #libs\access\tests\AuthTests.cpp
 	buildRoot=$4;
 	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
-	buildRelativePath=`buildRelativePath $fileWorkspaceFolder $absoluteFile $relativeFile`; #libs/web/server
+	buildRelativePath=`buildRelativePath $workspaceFolder $absoluteFile`; #libs/web/server
 	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, absoluteFile=$absoluteFile, buildRelativePath=$buildRelativePath";
-	project=`projectName $absoluteFile`;
 	if [ -f "$buildRoot/build.ninja" ]; then
-		log=$buildRoot/$project.output;
+		log=$buildRoot/${buildRelativePath//\//.}.output;
 		echo $log | tee $log;
-		echo `pwd` | tee -a $log;
-		echo ninja -C $buildRoot ${project}  | tee -a $log;
 		set -o pipefail;
-		ninja -C $buildRoot ${project} | tee -a $log;
+		echo ninja -C $buildRoot $buildRelativePath/all | tee -a $log; #CMake's Ninja generator makes a phony <dir>/all per directory - no target map needed.
+		ninja -C $buildRoot $buildRelativePath/all | tee -a $log;
 	else
-		cd $buildRoot/$buildRelativePath;
-		echo $buildRoot/$buildRelativePath msbuild.exe $project.vcxproj -p:Configuration=Debug
-		msbuild.exe $project.vcxproj -p:Configuration=Debug -v:m
+		project=`projectName $absoluteFile`;
+		if [[ -z $project ]]; then echo "buildProject: no project mapping for $absoluteFile"; return 1; fi;
+		cd $buildRoot/$buildRelativePath || return 1;
+		echo $buildRoot/$buildRelativePath msbuild.exe $project.vcxproj -p:Configuration=Debug;
+		msbuild.exe $project.vcxproj -p:Configuration=Debug -v:m;
 	fi
-}
-function compile() {
-	source $JDE_BASH/build/common.sh;
+)
+function compile() (
+	source $JDE_BASH/build/common.sh; #toBashDir
 	toBashDir $1 workspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
 	toBashDir $2 fileWorkspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
 	toBashDir $3 relativeFile; #/libs/access/tests/main.cpp
 	toBashDir $4 buildRoot;  # /z/build/msvc
 	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
-	buildRelativePath=`buildRelativePath $fileWorkspaceFolder $absoluteFile $relativeFile`; #libs/web/server
+	buildRelativePath=`buildRelativePath $workspaceFolder $absoluteFile`; #libs/web/server
 	project=`projectName $absoluteFile`;
+	if [[ -z $project ]]; then echo "compile: no project mapping for $absoluteFile"; return 1; fi;
 	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile, project=$project";
-	buildFile=${absoluteFile#"$fileWorkspaceFolder/"}
+	buildFile=${absoluteFile#"$fileWorkspaceFolder/"};
 	if [ -f "$buildRoot/build.ninja" ]; then
 		log=$project.output;
 		echo `pwd`/$log | tee $log;
-		echo ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/$project.dir/${buildFile}.obj | tee -a $log;
 		set -o pipefail;
+		echo ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/$project.dir/${buildFile}.obj | tee -a $log;
 		ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/$project.dir/${buildFile}.obj | tee -a $log;
 	else
-		cd $buildRoot/$buildRelativePath;
-		echo $buildRoot/$buildRelativePath msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile
-		msbuild.exe $project -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile //v:m
+		cd $buildRoot/$buildRelativePath || return 1;
+		echo $buildRoot/$buildRelativePath msbuild.exe $project.vcxproj -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile;
+		msbuild.exe $project.vcxproj -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile //v:m; #single-file ClCompile via property is IDE-flavored; outside VS it may compile the whole project.
 	fi
-}
-function reconfig() {
+)
+function reconfig() (
 	buildRoot=$1;
 	debugPreset=$2;
 	sourceDir=$3;
 	mkdir -p $buildRoot;
-	cd $buildRoot;
+	cd $buildRoot || return 1;
 	rm -f CMakeCache.txt;
-	tput reset;
 	echo `pwd` > cmake.output;
-	echo "cmake $JDE_DIR -Wno-dev --preset $debugPreset 2>&1" | tee -a cmake.output;
-	cmake "$JDE_DIR" -Wno-dev --preset "$debugPreset" 2>&1 | tee -a cmake.output;
+	echo "cmake $sourceDir -B $buildRoot -Wno-dev --preset $debugPreset 2>&1" | tee -a cmake.output;
+	cmake "$sourceDir" -B "$buildRoot" -Wno-dev --preset "$debugPreset" 2>&1 | tee -a cmake.output; #-B: only win-clang-debug defines binaryDir, so msvc presets would configure in-source under CMake 4.x. $sourceDir (not $JDE_DIR) so Public2 checkouts work.
 	if [ -f "$buildRoot/compile_commands.json" ]; then
 		mv $buildRoot/compile_commands.json $sourceDir/compile_commands.json;
 	fi
-}
-# function build() {
-# 	buildRoot=$1;
-# 	target=$2;
-# 	cd $buildRoot;
-# 	set -o pipefail;
-# 	tput reset;
-# 	echo `pwd`/$target.output > $target.output;
-# 	echo "cmake --build . -j --target $target" | tee -a $target.output;
-# 	cmake --build . -j --target $target | tee -a $target.output;
-# }
-# function buildTests() {
-# 	baseProject=$2;
-# 	if [ $baseProject == "Jde.Opc.Gateway" ]; then
-# 		baseProject="Jde.Opc";
-# 	fi;
-# 	build $1 $baseProject.Tests;
-# }
+)

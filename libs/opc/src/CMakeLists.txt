@@ -4,10 +4,7 @@ message( Jde.Opc )
 project( Jde.Opc VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ${jdeRoot}/build/dependencies.cmake )
 find_package( OpenSSL REQUIRED )
-find_package( open62541 REQUIRED )
-set( open62541Dir ${open62541_DIR}/../../.. )
-cmake_path( ABSOLUTE_PATH open62541Dir NORMALIZE OUTPUT_VARIABLE open62541Dir )
-link_directories( ${open62541Dir}/lib )
+find_package( open62541 REQUIRED ) #open62541::open62541 (linked below) carries the include/lib dirs.
 add_definitions( -DUA_ENABLE_ENCRYPTION )
 
 set( targetName Jde.Opc )
@@ -15,8 +12,6 @@ add_library( ${targetName} )
 compileOptions( ${targetName} )
 file( GLOB_RECURSE sources *.cpp )
 file( GLOB_RECURSE headers  *.h )
-
-target_include_directories( ${targetName} PUBLIC ${open62541Dir}include )
 
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
@@ -31,6 +26,7 @@ endif()
 
 target_link_libraries( ${targetName} open62541::open62541 )
 target_link_libraries( ${targetName} OpenSSL::SSL )
+target_link_libraries( ${targetName} fmt::fmt )
 
 target_precompile_headers(${targetName}
   PRIVATE

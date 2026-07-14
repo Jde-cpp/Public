@@ -1,14 +1,11 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 include( ${CMAKE_CURRENT_LIST_DIR}/../../../../../build/functions.cmake )
-include( ${jdeRoot}/build/linkSo.cmake )
 
 set( targetName Jde.DB.Sqlite.Tests )
 project( ${targetName} VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ${jdeRoot}/build/dependencies.cmake )
 message( ${targetName} )
 
-list( APPEND CMAKE_PREFIX_PATH ${MULTI_INSTALL_PREFIX}/sqlite ) #static lib built from the amalgamation - see ../sketch.md; system libsqlite3-dev also works.
-find_package( SQLite3 REQUIRED )
 find_package( GTest REQUIRED )
 find_package( Threads REQUIRED )
 
@@ -28,13 +25,12 @@ add_dependencies( ${targetName} Jde.DB.Sqlite Jde.DB.Sqlite.AppServer Jde.DB.Sql
 if( Boost_USE_STATIC_LIBS )
 	target_link_libraries( ${targetName} Boost::json )
 endif()
-target_link_libraries( ${targetName} GTest::gtest SQLite::SQLite3 Threads::Threads )
+target_link_libraries( ${targetName} GTest::gtest Threads::Threads )
 target_link_libraries( ${targetName} Jde.Access Jde.DB Jde )
 
 if( NOT WIN32 )
 	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )
 		target_link_libraries( ${targetName} jsonnet++ libjsonnet.a ) #jsonnet
-		linkRepo( ${CMAKE_BINARY_DIR}/.. ${CMAKE_CURRENT_LIST_DIR} )
 	endif()
 endif()
 

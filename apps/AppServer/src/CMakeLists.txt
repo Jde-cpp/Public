@@ -7,20 +7,18 @@ include( ${jdeRoot}/build/dependencies.cmake )
 set( targetName Jde.App.ServerLib )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
-file(GLOB sources *.cpp **/*.cpp )
+file(GLOB sources *.cpp */*.cpp )
 get_filename_component( main_cpp ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp ABSOLUTE )
 list( REMOVE_ITEM sources ${main_cpp} )
-file( GLOB headers **/*.h )
+file( GLOB headers */*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS}" )
 	add_dependencies( ${targetName} Jde.DB.Odbc )
 else()
 	add_dependencies( ${targetName} Jde.DB.MySql )
 endif()
 
-include_directories( ${jdeRoot}/include/jde/web/client/proto )
 target_link_libraries( ${targetName} Jde.Access Jde.Web.Server Jde.App.Shared )
 target_precompile_headers( ${targetName} PRIVATE
 	<jde/fwk.h>

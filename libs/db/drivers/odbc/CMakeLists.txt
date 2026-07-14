@@ -12,7 +12,6 @@ file( GLOB headers *.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES LINK_FLAGS "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}" )
 	target_link_libraries( ${targetName} odbc32.dll )
 	target_link_libraries( ${targetName} Jde Jde.DB )
 	target_compile_definitions( ${targetName} PRIVATE NOMINMAX )
