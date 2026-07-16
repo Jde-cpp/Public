@@ -112,7 +112,7 @@ namespace Jde::QL{
 		return y;
 	}
 
-	α TableQL::OrderBy()Ι->string{
+	α TableQL::OrderBy()Ε->string{
 		auto json = OrderByJson();
 		if( json.size()==0 )
 			return {};

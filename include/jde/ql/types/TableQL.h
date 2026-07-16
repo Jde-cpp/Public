@@ -35,7 +35,7 @@ namespace Jde::QL{
 		α GetTable( sv jsonPluralName, SRCE )ε->TableQL&;
 		α IsPlural()Ι->bool{ return DB::Names::IsPlural(JsonName); }
 		α JTableName()Ι->string override{ return JsonName; }
-		α OrderBy()Ι->string;
+		α OrderBy()Ε->string;
 		α SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void;
 		α ReturnName()Ι->string{ return Alias.size() ? Alias : JsonName; }
 		α TransformResult( jarray&& result )Ι->jvalue;

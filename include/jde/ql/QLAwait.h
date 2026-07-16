@@ -10,18 +10,6 @@
 namespace Jde::QL{
 	struct TableQL;
 
-	struct VQLAwait : TAwait<jvalue>{
-		using base = TAwait<jvalue>;
-		VQLAwait( RequestQL&& request, optional<DB::Statement>&& statement, QL::Creds creds, sp<IQL> ql, SRCE )ι:base{sl}, _creds{creds}, _ql{ql}, _request{move(request)}, _statement{move(statement)}{}
-	private:
-		α Suspend()ι->void override;
-		α Select( vector<TableQL>&& tables )ι->TablesAwait::Task;
-		α Mutate( vector<MutationQL> mutations )ι->MutationAwait::Task;
-		QL::Creds _creds;
-		sp<IQL> _ql;
-		RequestQL _request;
-		optional<DB::Statement>	_statement;
-	};
 	template<class T=jvalue>
 	struct QLAwait : TAwaitEx<T, TAwait<jvalue>::Task>, noncopyable{
 		using base = TAwaitEx<T, TAwait<jvalue>::Task>;
@@ -35,6 +23,8 @@ namespace Jde::QL{
 		QLAwait( string query, jobject variables, UserPK executer, sp<IQL> ql, bool returnRaw=true, SRCE )ε:
 			base{sl}, _request{ Parse(move(query), move(variables), ql->Schemas(), returnRaw) }, _executer{ executer }, _ql{ql}{}
 		QLAwait( RequestQL&& q, QL::Creds executer, sp<IQL> ql, SRCE )ε:base{sl}, _request{move(q)}, _executer{executer}, _ql{ql}{}
+		QLAwait( RequestQL&& q, optional<DB::Statement>&& statement, QL::Creds creds, sp<IQL> ql, SRCE )ι://engine ctor: dispatch a request that already carries its statement (used by the jobject/jarray adapters).
+			base{sl}, _request{move(q)}, _statement{move(statement)}, _executer{move(creds)}, _ql{move(ql)}{}
 
 	private:
 		α Execute()ι->TAwait<jvalue>::Task override;
@@ -44,17 +34,10 @@ namespace Jde::QL{
 		sp<IQL> _ql;
 	};
 
-	template<> Ξ QLAwait<jvalue>::Execute()ι->TAwait<jvalue>::Task{
-		try{
-			Resume( co_await VQLAwait{move(_request), move(_statement), _executer, _ql, base::_sl} );
-		}
-		catch( exception& e ){
-			ResumeExp( move(e) );
-		}
-	}
+	template<> α QLAwait<jvalue>::Execute()ι->TAwait<jvalue>::Task;//the engine: dispatches _request to Tables/Mutation awaits (defined in QLAwait.cpp). Must be declared before the adapters below co_await a QLAwait<jvalue>.
 	template<> Ξ QLAwait<jobject>::Execute()ι->TAwait<jvalue>::Task{
 		try{
-			jvalue v = co_await VQLAwait{move(_request), move(_statement), _executer, _ql, base::_sl};
+			jvalue v = co_await QLAwait<jvalue>{move(_request), move(_statement), _executer, _ql, base::_sl};
 			Resume( v.is_null() ? jobject{} : move(Json::AsObject(v)) );
 		}
 		catch( exception& e ){
@@ -63,7 +46,7 @@ namespace Jde::QL{
 	}
 	template<> Ξ QLAwait<jarray>::Execute()ι->TAwait<jvalue>::Task{
 		try{
-			jvalue v = co_await VQLAwait{move(_request), move(_statement), _executer, _ql, base::_sl};
+			jvalue v = co_await QLAwait<jvalue>{move(_request), move(_statement), _executer, _ql, base::_sl};
 			auto a = Json::AsArray(v);
 			Resume( move(a) );
 		}
