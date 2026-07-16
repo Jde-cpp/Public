@@ -271,7 +271,7 @@ namespace Jde::QL{
 			auto name = get<0>( MutationQL::ParseCommand(command) );
 			let system = isSystem(name);
 			auto returnCols = wantsResult ? LoadTable( move(name), vars, schemas, system ) : optional<TableQL>{};
-			y.push_back( {move(command), move(args), move(vars), move(returnCols), returnRaw, schemas, system} );
+			y.push_back( {move(command), move(args), vars, move(returnCols), returnRaw, schemas, system} );//vars is loop-invariant: copy the sp, don't move (2nd+ mutation would get a null Variables).
 			command = Next();
 		}while( MutationQL::IsMutation(command) );
 		return y;
