@@ -12,7 +12,7 @@ set( targetName Jde.Web.Server )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
 if( WIN32 )
-	target_link_directories( ${targetName} PUBLIC ${MULTI_INSTALL_PREFIX}/protobuf/lib )
+	target_link_directories( ${targetName} PUBLIC ${CMAKE_INSTALL_PREFIX}/protobuf/lib )
 endif()
 
 file( GLOB sources *.cpp auth/*.cpp )

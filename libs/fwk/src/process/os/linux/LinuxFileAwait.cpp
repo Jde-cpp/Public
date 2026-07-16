@@ -93,7 +93,9 @@ namespace Jde::IO{
 			op->PostExp( move(chunk), EBUSY, move(message) );
 			return false;
 		}
-		sqe->flags |= IOSQE_IO_LINK;
+		//no IOSQE_IO_LINK: a link chain spans whatever sqes share a submission batch - including unrelated
+		//ops/files - and a short read severs the chain, canceling the rest with -ECANCELED. Ordering isn't
+		//needed here: reads use explicit offsets and appends allow only one write chunk in flight (Send).
 
 		if( isRead ){
 			TRACE( "Preparing read: {}, index: {}, bytes: {}", op->Path.string(), lchunk.Index, lchunk.Bytes );
@@ -120,25 +122,26 @@ namespace Jde::IO{
 				TRACE( "waitForMore data: {:x}, flags: {}, buffer: {}, nonEmpty: {}", bufferId, (uint)cq->flags, buffered, nonEmpty );
 				continue;
 			}
-			io_uring_cqe_seen( &_ring, cq );
+			let res = cq->res;
 			up<LinuxChunk> chunk{ (LinuxChunk*)io_uring_cqe_get_data(cq) };
+			io_uring_cqe_seen( &_ring, cq );//releases the slot for kernel reuse - cq must not be read past this point.
 			ASSERT( chunk );
 			if( !chunk )
 				continue;
-			if( cq->res < 0 ){
+			if( res < 0 ){
 				auto op = chunk->FileArg();
-				op->PostExp( move(chunk), -cq->res, Ƒ("AIO index: {} failed: {}\n", chunk->Index, strerror(-cq->res)) );
+				op->PostExp( move(chunk), -res, Ƒ("AIO index: {} failed: {}\n", chunk->Index, strerror(-res)) );
 				continue;
 			}
-			if( (uint)cq->res < chunk->Bytes ){//partial read/write - resubmit the remainder.
+			if( (uint)res < chunk->Bytes ){//partial read/write - resubmit the remainder.
 				auto op = chunk->FileArg();
-				if( cq->res==0 ){//no progress - EOF or full disk; resubmitting would loop forever.
+				if( res==0 ){//no progress - EOF or full disk; resubmitting would loop forever.
 					op->PostExp( move(chunk), EIO, Ƒ("AIO index: {} {} returned 0 with {} bytes remaining.\n", chunk->Index, chunk->IsRead() ? "read" : "write", chunk->Bytes) );
 					continue;
 				}
-				TRACE( "Partial {}: {}, index: {}, completed: {} of {} - resubmitting remainder.", chunk->IsRead() ? "read" : "write", op->Path.string(), chunk->Index, cq->res, chunk->Bytes );
-				chunk->StartIndex += cq->res;
-				chunk->Bytes -= cq->res;
+				TRACE( "Partial {}: {}, index: {}, completed: {} of {} - resubmitting remainder.", chunk->IsRead() ? "read" : "write", op->Path.string(), chunk->Index, res, chunk->Bytes );
+				chunk->StartIndex += res;
+				chunk->Bytes -= res;
 				if( prepChunk(move(chunk), op) )
 					submitOps.push_back( op );
 				continue;
@@ -290,7 +293,10 @@ namespace Jde::IO{
 			return;
 		}
 		++_requestCount;
-		PostIO( [self, initialSendTotal = std::min<uint>(ChunksToSend, threadSize), tags=_tags ](){
+		//writes append (offset -1/O_APPEND): concurrent in-flight chunks can be executed out of order by the
+		//kernel (io-wq), permuting the file's contents - only one write chunk may be in flight at a time.
+		//reads use explicit offsets, so a window of parallel chunks is safe.
+		PostIO( [self, initialSendTotal = IsRead ? std::min<uint>(ChunksToSend, threadSize) : 1u, tags=_tags ](){
 			for( uint i=0; i<initialSendTotal; ++i )
 				addNextChunkToQueue( self );
 			submit( move(self), tags );

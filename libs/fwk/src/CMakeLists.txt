@@ -37,10 +37,7 @@ list(REMOVE_ITEM sources "${thread_cpp}")
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 target_link_libraries( ${targetName} PUBLIC fmt::fmt )
-#if( Boost_USE_STATIC_LIBS )
-#	message( "Using static Boost libraries" )
-	target_link_libraries( ${targetName} PUBLIC Boost::json )
-#endif()
+target_link_libraries( ${targetName} PUBLIC Boost::json )
 
 if( WIN32 )
 	target_link_libraries( ${targetName} PRIVATE version )

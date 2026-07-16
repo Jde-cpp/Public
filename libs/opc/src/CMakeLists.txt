@@ -21,7 +21,7 @@ else()
 endif()
 
 if( WIN32 )
-	target_link_libraries( ${targetName} ${MULTI_INSTALL_PREFIX}/protobuf/lib/protobuf$<IF:$<CONFIG:Debug>,d,>.lib )
+	target_link_libraries( ${targetName} ${CMAKE_INSTALL_PREFIX}/protobuf/lib/protobuf$<IF:$<CONFIG:Debug>,d,>.lib )
 endif()
 
 target_link_libraries( ${targetName} open62541::open62541 )

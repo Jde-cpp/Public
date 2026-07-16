@@ -5,7 +5,7 @@ project( Jde.Web.Client VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ${jdeRoot}/build/dependencies.cmake )
 
 if( WIN32 )
-	set( ZLIB_ROOT ${TYPE_INSTALL_PREFIX}/zlib )
+	set( ZLIB_ROOT ${CMAKE_INSTALL_PREFIX}/zlib )
 	find_package( OpenSSL REQUIRED )
 endif()
 find_package( ZLIB REQUIRED )

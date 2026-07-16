@@ -1,8 +1,9 @@
 local args = import 'args.libsonnet';
+local logsDir = args.logsDir;
 {
 	testing:{
-		tests: "UserTests.NotIn",
-		recreateDB:: true
+		tests:: "RoleTests.Crud",
+		recreateDB: true
 	},
 	dbServers:{
 		scriptPaths: [args.repoSourceDir+"/libs/access/config/sql/"+args.sqlType],
@@ -31,7 +32,7 @@ local args = import 'args.libsonnet';
 			},
 			sinks:{
 				console:{},
-				file:{ path: "$(RUNTIME_DIR)/logs", md: false }
+				file:{ path: logsDir, md: false }
 			}
 		}
 	},

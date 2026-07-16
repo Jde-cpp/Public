@@ -14,6 +14,7 @@ set( stdArgs
 	-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
 	-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
 	-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+	-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
 	-DCMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}
 )
 if( isMultiConfig )
@@ -47,14 +48,12 @@ else()
 endif()
 
 message( CMAKE_CONFIGURATION_TYPES=${CMAKE_CONFIGURATION_TYPES} )
-message( TYPE_INSTALL_PREFIX=${TYPE_INSTALL_PREFIX} )
-message( MULTI_INSTALL_PREFIX=${MULTI_INSTALL_PREFIX} )
 message( CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} )
 ExternalProject_Add(fmt
 	GIT_REPOSITORY https://github.com/fmtlib/fmt.git
 	GIT_TAG 12.1.0
 	PREFIX fmt
-	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/fmt
+	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/fmt
 	CMAKE_ARGS ${stdArgs}
 		-DBUILD_SHARED_LIBS=ON
 		-DFMT_MASTER_PROJECT=OFF
@@ -67,7 +66,7 @@ ExternalProject_Add(gtest
 	GIT_REPOSITORY https://github.com/google/googletest.git
 	GIT_TAG v1.17.0
 	PREFIX gtest
-	INSTALL_DIR ${TYPE_INSTALL_PREFIX}/gtest
+	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/gtest
 	LOG_CONFIGURE ON
   LOG_BUILD ON
 	CMAKE_ARGS ${stdArgs}
@@ -78,9 +77,9 @@ ExternalProject_Add(spdlog
 	GIT_REPOSITORY https://github.com/gabime/spdlog.git
 	GIT_TAG v1.17.0
 	PREFIX spdlog
-	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/spdlog
+	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/spdlog
 	CMAKE_ARGS ${stdArgs}
-		-DCMAKE_PREFIX_PATH=${MULTI_INSTALL_PREFIX}
+		-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
 		-DSPDLOG_BUILD_EXAMPLE:BOOL=OFF
 		-DSPDLOG_BUILD_BENCH:BOOL=OFF
 		-DSPDLOG_BUILD_TESTS:BOOL=OFF
@@ -95,7 +94,7 @@ ExternalProject_Add(absl
 	GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
 	GIT_TAG 20260107.0
 	PREFIX absl
-	INSTALL_DIR ${TYPE_INSTALL_PREFIX}/absl
+	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/absl
 	CMAKE_ARGS ${stdArgs}
 		-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
 		-DABSL_BUILD_TESTING=OFF
@@ -109,7 +108,7 @@ IF( WIN32 )
 		GIT_REPOSITORY https://github.com/madler/zlib
 		GIT_TAG "v1.3.2"
 		PREFIX ZLIB
-		INSTALL_DIR ${TYPE_INSTALL_PREFIX}/zlib
+		INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/zlib
 		CMAKE_ARGS ${stdArgs}
 			-DZLIB_BUILD_SHARED=ON
 			-DZLIB_BUILD_TESTING=OFF
@@ -119,9 +118,9 @@ IF( WIN32 )
 		GIT_REPOSITORY https://github.com/GNOME/libxml2.git
 		GIT_TAG v2.15.3
 		PREFIX libxml2
-		INSTALL_DIR ${TYPE_INSTALL_PREFIX}/libxml2
+		INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/libxml2
 		CMAKE_ARGS ${stdArgs}
-			-DCMAKE_PREFIX_PATH=${MULTI_INSTALL_PREFIX}
+			-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
 			-DLIBXML2_WITH_ZLIB=OFF
 			-DLIBXML2_WITH_PYTHON=OFF
 			-DLIBXML2_WITH_TESTS=OFF
@@ -131,8 +130,8 @@ IF( WIN32 )
 			-DLIBXML2_BUILD_SHARED_LIBS=OFF
 	)
 
-	set( LIBXML2_INCLUDE_DIR ${TYPE_INSTALL_PREFIX}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
-	set( LIBXML2_LIBRARY ${TYPE_INSTALL_PREFIX}/libxml2/lib/libxml2.lib CACHE PATH "the directory containing LibXml2 libraries" )
+	set( LIBXML2_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/libxml2/include/libxml2 CACHE PATH "the directory containing LibXml2 headers" )
+	set( LIBXML2_LIBRARY ${CMAKE_INSTALL_PREFIX}/libxml2/lib/libxml2.lib CACHE PATH "the directory containing LibXml2 libraries" )
 	set( nodesetLoaderArgs
 		-DLIBXML2_LIBRARY=${LIBXML2_LIBRARY}
 		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR} )
@@ -160,7 +159,7 @@ file(WRITE "${SOURCE_DIR}/src/c4/yml/common.hpp" "${_c}")
 		GIT_REPOSITORY https://github.com/biojppm/rapidyaml.git
 		GIT_TAG "v0.10.0"
 		PREFIX ryml
-		INSTALL_DIR ${TYPE_INSTALL_PREFIX}/ryml
+		INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/ryml
 		PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -P "${_rymlPatch}"
 		CMAKE_ARGS ${stdArgs}
 			-DRYML_BUILD_TESTS=OFF
@@ -185,11 +184,11 @@ file(WRITE "${SOURCE_DIR}/core/vm.cpp" "${_c}")
 		GIT_TAG 4825d892984f139eccf23c1401a448b811591bdd #fork master 2026-06-30
 		UPDATE_DISCONNECTED ON
 		PREFIX jsonnet
-		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/jsonnet
+		INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/jsonnet
 		PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -P "${_jsonnetPatch}"
 		CMAKE_ARGS ${stdArgs}
 			"-DCMAKE_CXX_FLAGS_DEBUG=-g"
-			-DCMAKE_PREFIX_PATH=${TYPE_INSTALL_PREFIX}
+			-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
 			-DBUILD_JSONNET=OFF
 			-DBUILD_JSONNETFMT=OFF
 			-DBUILD_TESTS=OFF
@@ -210,7 +209,7 @@ else()
 		GIT_REPOSITORY https://github.com/biojppm/rapidyaml.git
 		GIT_TAG "v0.10.0"
 		PREFIX ryml
-		INSTALL_DIR ${TYPE_INSTALL_PREFIX}/ryml
+		INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/ryml
 		CMAKE_ARGS ${stdArgs}
 			-DRYML_BUILD_TESTS=OFF
 			-DRYML_BUILD_EXAMPLES=OFF
@@ -224,9 +223,9 @@ else()
 		GIT_TAG 4825d892984f139eccf23c1401a448b811591bdd #fork master 2026-06-30
 		UPDATE_DISCONNECTED ON
 		PREFIX jsonnet
-		INSTALL_DIR ${MULTI_INSTALL_PREFIX}/jsonnet
+		INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/jsonnet
 		CMAKE_ARGS ${stdArgs}
-			-DCMAKE_PREFIX_PATH=${TYPE_INSTALL_PREFIX}
+			-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
 			-DBUILD_JSONNETFMT=OFF
 			-DBUILD_TESTS=OFF
 			-DUSE_SYSTEM_GTEST=ON
@@ -241,9 +240,9 @@ ExternalProject_Add(protobuf
 	GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
 	GIT_TAG v34.1
 	PREFIX protobuf
-	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/protobuf
+	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/protobuf
 	CMAKE_ARGS ${stdArgs}
-		-DCMAKE_PREFIX_PATH=${TYPE_INSTALL_PREFIX}
+		-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
 		-Dprotobuf_USE_EXTERNAL_GTEST=ON
 		-Dprotobuf_BUILD_TESTS=OFF
 		-Dprotobuf_ABSL_PROVIDER=package
@@ -262,38 +261,32 @@ file( WRITE "${_nodesetLoaderCfgFile}" "include(\"\${CMAKE_CURRENT_LIST_DIR}/Nod
 if( WIN32 )
 	# OpenSSL provided by vcpkg; toolchain file (forwarded via stdArgs) handles discovery for open62541.
 	set( opensslArgs "" )
-	# nodeset-loader hardcodes -Werror for GCC/Clang; clang on Windows generates
-	# extra diagnostics that trip it.  Strip -Werror from the source at patch time, and append
-	# the missing NodesetLoaderConfig.cmake install rule (see comment above).
-	set( _nodesetPatch "${CMAKE_CURRENT_BINARY_DIR}/nodeset-loader-patch.cmake" )
-	file( CONFIGURE OUTPUT "${_nodesetPatch}" @ONLY CONTENT
+else()
+	set( opensslArgs
+		-DOPENSSL_USE_STATIC_LIBS=ON
+		-DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}
+	)
+endif()
+# nodeset-loader hardcodes -std=c99 -pedantic -Werror; clang trips it (on Linux, glibc's strchr
+# is now a _Generic macro -> -Wc11-extensions) so strip -Werror. Their CMakeLists also installs
+# include/NodesetLoader/ReferenceService.h, which no longer exists in the repo - drop that line.
+# Finally append the missing NodesetLoaderConfig.cmake install rule (see comment above).
+set( _nodesetPatch "${CMAKE_CURRENT_BINARY_DIR}/nodeset-loader-patch.cmake" )
+file( CONFIGURE OUTPUT "${_nodesetPatch}" @ONLY CONTENT
 [[file(READ "${SOURCE_DIR}/CMakeLists.txt" _c)
 string(REPLACE " -Werror" "" _c "${_c}")
 string(REGEX REPLACE "[^\n]*ReferenceService\\.h[^\n]*" "" _c "${_c}")
 string(APPEND _c "\ninstall(FILES \"@_nodesetLoaderCfgFile@\" DESTINATION \${CMAKE_INSTALL_LIBDIR}/cmake/NodesetLoader)\n")
 file(WRITE "${SOURCE_DIR}/CMakeLists.txt" "${_c}")
 ]]
-	)
-else()
-	set( opensslArgs
-		-DOPENSSL_USE_STATIC_LIBS=ON
-		-DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}
-	)
-	set( _nodesetPatch "${CMAKE_CURRENT_BINARY_DIR}/nodeset-loader-patch.cmake" )
-	file( CONFIGURE OUTPUT "${_nodesetPatch}" @ONLY CONTENT
-[[file(READ "${SOURCE_DIR}/CMakeLists.txt" _c)
-string(APPEND _c "\ninstall(FILES \"@_nodesetLoaderCfgFile@\" DESTINATION \${CMAKE_INSTALL_LIBDIR}/cmake/NodesetLoader)\n")
-file(WRITE "${SOURCE_DIR}/CMakeLists.txt" "${_c}")
-]]
-	)
-endif()
+)
 set( _nodesetPatchCmd PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -P "${_nodesetPatch}" )
 
 ExternalProject_Add(open62541
 	GIT_REPOSITORY https://github.com/open62541/open62541.git
 	GIT_TAG v1.5.4
 	PREFIX open62541
-	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/open62541
+	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/open62541
 		CMAKE_ARGS ${stdArgs}
 		# open62541's UA_ENABLE_DEBUG_SANITIZER block appends SANITIZER_FLAGS to CMAKE_C_FLAGS
 		# in debug clang builds. Two problems we fix here, both via CMAKE_C_FLAGS_DEBUG since it
@@ -318,12 +311,12 @@ ExternalProject_Add(open62541-nodeset-loader
 	GIT_TAG de474df8c114eef0c4efeb988df5901f9adc5005 #upstream master 2026-07 (v0.5.0 is older; this matches the locally-built clone)
 	UPDATE_DISCONNECTED ON
 	PREFIX nodeset-loader
-	INSTALL_DIR ${MULTI_INSTALL_PREFIX}/NodesetLoader
+	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/NodesetLoader
 	${_nodesetPatchCmd}
 		CMAKE_ARGS ${stdArgs}
 		-DENABLE_BACKEND_OPEN62541=OFF
 		-DENABLE_EXAMPLES=OFF
-		-DCMAKE_PREFIX_PATH=${MULTI_INSTALL_PREFIX}
+		-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
 #linux
 #		-DLIBXML2_INCLUDE_DIR=${LIBXML2_INCLUDE_DIR}
 #		-DPC_LIBXML_LIBDIR=${LIBXML2_LIBDIR}

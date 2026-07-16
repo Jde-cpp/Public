@@ -11,10 +11,10 @@ namespace Jde::Opc {
 	up<Server::UAServer> _ua;
 	static sp<App::Client::IAppClient> _appClient = ms<Server::OpcServerAppClient>();
 
-	α Server::Initialize( uint32 serverId, sp<DB::AppSchema> schema )ι->void{
+	α Server::Initialize( uint32 serverId, sp<DB::AppSchema> schema )ε->void{
 		_serverId = serverId;
 		_appSchema = schema;
-		_ua = mu<UAServer>();
+		_ua = mu<UAServer>();//throws
 		Process::AddShutdownFunction( [](bool , SL){
 			_ua.reset();
 		} );

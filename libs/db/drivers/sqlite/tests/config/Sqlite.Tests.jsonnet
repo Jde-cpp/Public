@@ -1,6 +1,6 @@
-//local args = import 'args.libsonnet';
-//local runtimeDir = "$(RUNTIME_DIR)";
-local repoBuildDir = "$(REPO_BUILD_DIR)";
+local logsDir = std.extVar("logsDir");
+local buildTarget = std.extVar("buildTarget");
+local repoBuildDir = "$(REPO_BUILD_DIR)/"+buildTarget;
 local repoSourceDir = "$(REPO_SOURCE_DIR)";
 local cluster(path) = { //one backend; instantiated per-path as the 'memory' and 'file' clusters below.
 	driver: repoBuildDir+"/libs/db/drivers/sqlite/lib/libJde.DB.Sqlite.so",
@@ -67,7 +67,7 @@ local cluster(path) = { //one backend; instantiated per-path as the 'memory' and
 			},
 			sinks:{
 				console:{},
-				file:{ path: "$(RUNTIME_DIR)/logs", md: false }
+				file:{ path: logsDir, md: false }
 			}
 		}
 	},

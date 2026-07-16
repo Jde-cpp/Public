@@ -16,29 +16,46 @@ This is a monorepo for the **Jde OpcGateway** system — an OPC-UA gateway with 
 
 ## Building (C++)
 
-Build outputs go to `/mnt/ram/`. The `$REPO_DIR` env var points to the repo root; `$JDE_DIR` points to the Public directory. Each compiler+checkout pair gets its own out-of-source build directory at `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>` (e.g. `/mnt/ram/linux/clang++/Public2` for this checkout). The `reconfig` function in `build/buildFunctions.sh` creates this layout; it also moves the generated `compile_commands.json` to the source root for clangd.
+Build outputs go to `/mnt/ram/`. `$JDE_DIR` (= `$JDE_BASH`) is this checkout's source root; `$REPO_DIR` is the **third-party** root (`/home/duffyj/code/libs`) that the presets install dependencies under (`installRoot = $env{REPO_DIR}/install/$env{CXX}`) — it is not the jde repo. Each compiler+checkout pair gets an out-of-source build directory per build type: `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>/<debug|release>` (e.g. `/mnt/ram/linux/clang++/Public/debug`). The helpers in `build/buildFunctions.sh` take that full build dir as their first argument; `reconfig` creates it (plus `runtime/logs`) and moves the generated `compile_commands.json` to the source root for clangd.
 
 ```bash
-# Configure (from the matching out-of-source build dir)
-cd $JDE_BUILD_DIR/$JDE_COMPILER/Public2   # e.g. /mnt/ram/linux/clang++/Public2
-rm -f CMakeCache.txt
-cmake /home/duffyj/code/jde/Public2 --preset linux-clang-debug-jde
+source $JDE_DIR/build/buildFunctions.sh
+buildDir=$JDE_BUILD_DIR/$JDE_COMPILER/$(basename $JDE_DIR)/debug   # /mnt/ram/linux/clang++/Public/debug
 
-# Or use the helper (creates the build dir and runtime/ if missing):
-source build/buildFunctions.sh
-reconfig $JDE_BUILD_DIR/$JDE_COMPILER /home/duffyj/code/jde/Public2 linux-clang-debug-jde
+# Configure (wipes CMakeCache.txt, creates runtime/logs, relocates compile_commands.json)
+reconfig $buildDir $JDE_DIR linux-clang-debug-jde
 
-# Build a specific target (add -j$(nproc) for parallel builds)
-cmake --build . --target Jde
-cmake --build . --target Jde.Fwk.Tests
+# Build a target
+build $buildDir $JDE_DIR Jde
+build $buildDir $JDE_DIR Jde.Fwk.Tests
 
-# Install
-cmake --install .
+# Compile one file (resolves the object target from the build tree)
+compile $buildDir $JDE_DIR/libs/fwk/src/io/json.cpp
+
+# Raw cmake equivalents. -B is required: no Linux preset sets binaryDir, and preset mode ignores cwd.
+cmake -B $buildDir -S $JDE_DIR -Wno-dev --preset linux-clang-debug-jde
+cmake --build $buildDir -j --target Jde
+cmake --install $buildDir
 ```
 
-Available CMake presets: `linux-debug`, `linux-relWithDebInfo`, `linux-jde-relWithDebInfo`, `linux-clang-debug-jde`, `win-msvc-debug`, `win-msvc-relWithDebInfo`, `win-clang-relWithDebInfo`.
+Linux uses **clang++-22** with libc++ (plus ASan/LSan in debug); Windows uses clang too. C++ standard is **C++26**. Every selectable configure preset (`cmake --list-presets`) carries one of two suffixes; everything else in `CMakePresets.json` is a `hidden` building block.
 
-Linux uses **g++-15** by default; `linux-clang-debug-jde` uses **clang++-22**. C++ standard is **C++26**.
+**`-jde`** — builds the project (libs, apps, tests: `jde_TESTS=ON`, `jde_APPS=ON`), adding `CMAKE_EXPORT_COMPILE_COMMANDS` and the house warning exclusions. This is the day-to-day dev build:
+
+| compiler | debug | relWithDebInfo |
+|---|---|---|
+| clang | `linux-clang-debug-jde` | `linux-clang-relWithDebInfo-jde` |
+| win clang | `win-clang-debug-jde` | — |
+
+**`-repos`** — builds only the third-party dependencies (`jde_REPOS=ON`, `jde_TESTS=OFF`, `jde_APPS=OFF`):
+
+| compiler | debug | relWithDebInfo |
+|---|---|---|
+| clang | `linux-clang-debug-repos` | `linux-clang-relWithDebInfo-repos` |
+| win clang | `win-clang-debug-repos` | — |
+| g++ | `linux-debug-repos` | `linux-relWithDebInfo-repos` |
+
+The g++ (`linux-*`, **g++-15**) presets exist only for the dependency build — there is no g++ `-jde` preset, so the project itself is built with clang. Note the leftover `linux-debug` **build**/**test** presets are currently unusable: they name the now-hidden `linux-debug` configure preset, and CMake rejects that (`Cannot use hidden configure preset`) — see `reviews/todo.md` §3.
 
 ## Running Tests (C++)
 
@@ -51,12 +68,15 @@ Tests use **GoogleTest**. Each test binary requires a `-settings=` argument poin
 - `apps/OpcGateway/tests/config/Opc.Tests.jsonnet`
 - `apps/OpcServer/tests/config/Opc.Server.Tests.jsonnet`
 
+`-tests` is **required**: it is what binds the `logsDir` ext var the configs read, and on Linux it selects the `config/args/mysql` import dir — without it jsonnet evaluation fails and the binary starts with an `{"error":…}` settings object. Logs are written to `<cwd>/logs`, so run from `runtime/`.
+
 ```bash
 # Run a test binary directly
-./Jde.Fwk.Tests -settings=/home/duffyj/code/jde/Public2/libs/fwk/tests/config/Framework.Tests.jsonnet
+cd $buildDir/runtime
+$buildDir/libs/fwk/tests/Jde.Fwk.Tests -tests -settings=$JDE_DIR/libs/fwk/tests/config/Framework.Tests.jsonnet
 
-# Via ctest (from build dir)
-ctest --preset linux-debug
+# Or every suite via ctest (each add_test already passes -tests); --preset is broken, see reviews/todo.md §3
+cd $buildDir && ctest
 ```
 
 **Running a single test:** the `testing.tests` field in the Jsonnet config is the GoogleTest filter. Set it to e.g. `"FileTests.WriteRead"` (or a pattern like `"FileTests.*"`) to restrict the run. Some test binaries look for their config in `~/.Jde-Cpp/Tests.<Lib>/<Lib>.Tests.jsonnet` — symlink the repo config there if missing.
@@ -139,10 +159,10 @@ Awaitables inherit from `VoidAwait` or `IAwait<TResult, TTask>` in `co/Await.h`.
 
 | Variable | Purpose |
 |----------|---------|
-| `$REPO_DIR` | Root of the repository |
-| `$JDE_DIR` | `$REPO_DIR/Public` (source root; used by shell scripts and VS Code workspace configs — CMake files use paths relative to `CMAKE_CURRENT_LIST_DIR` instead) |
+| `$REPO_DIR` | Third-party/dependency root (e.g. `/home/duffyj/code/libs`) — **not** the jde repo. Presets install deps under `$REPO_DIR/install/$CXX/<buildType>`; `functions.cmake` reads Boost sources from `$REPO_DIR/boostorg` on Windows |
+| `$JDE_DIR` | This checkout's source root (e.g. `/home/duffyj/code/jde/Public`); used by shell scripts and VS Code workspace configs — CMake files use paths relative to `CMAKE_CURRENT_LIST_DIR` instead |
 | `$JDE_BASH` | Same as `$JDE_DIR` |
-| `$JDE_BUILD_DIR` | Build-output parent directory (e.g. `/mnt/ram/linux`); actual build dirs are `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>` |
+| `$JDE_BUILD_DIR` | Build-output parent directory (e.g. `/mnt/ram/linux`); actual build dirs are `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>/<debug\|release>` |
 | `$JDE_COMPILER` | Compiler subdirectory name under `$JDE_BUILD_DIR` (e.g. `clang++`) |
 
 ## Other Stuff

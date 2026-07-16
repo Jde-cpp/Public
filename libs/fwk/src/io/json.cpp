@@ -71,14 +71,14 @@ namespace Jde{
 		THROWSL( "Could not find 'id' or 'target' in {}.", serialize(o) );
 	}
 
-	α Json::TryReadJsonNet( fs::path path, const optional<vector<fs::path>>& importPaths, SL sl )ι->std::expected<jobject, string>{
+	α Json::TryReadJsonNet( const fs::path& path, const vector<fs::path>& importPaths, const flat_map<string,string>& extVars, SL sl )ι->std::expected<jobject, string>{
 			jsonnet::Jsonnet vm;
 			if( !vm.init() )
 				return std::unexpected{ Ƒ("Failed to initialize jsonnet VM for '{}'", path.string()) };
-			if( importPaths ){
-				for( let& importPath : *importPaths )
-					vm.addImportPath( importPath.string() );
-			}
+			for( let& importPath : importPaths )
+				vm.addImportPath( importPath.string() );
+			for( let& [key, value] : extVars )
+				vm.bindExtVar( key, value );
 			string j;
 			let success = vm.evaluateFile( path.string(), &j );
 			if( !success )
@@ -90,8 +90,8 @@ namespace Jde{
 			return std::unexpected{ Ƒ("Failed to read '{}': {}", path.string(), e.what()) };
 		}
 	}
-	α Json::ReadJsonNet( fs::path path, const optional<vector<fs::path>>& importPaths, SL sl )ε->jobject{
-		let json = TryReadJsonNet( path, importPaths, sl );
+	α Json::ReadJsonNet( const fs::path& path, const vector<fs::path>& importPaths, const flat_map<string,string>& extVars, SL sl )ε->jobject{
+		let json = TryReadJsonNet( path, importPaths, extVars, sl );
 		THROW_IFSL( !json, "Failed to evaluate '{}'.  {}", path.string(), json.error() );
 		return *json;
 	}

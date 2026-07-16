@@ -2,6 +2,7 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
+#include <jde/db/names.h>
 #include <jde/ql/types/MutationQL.h>
 #include <jde/ql/types/Parser.h>
 
@@ -46,9 +47,25 @@ namespace Jde::QL{
 						result = ( *array )[0];
 					available = result.is_object() ? Json::Combine( m.ExtrapolateVariables(), result.get_object() ) : m.ExtrapolateVariables();
 					if( !available.contains("id") && m.DBTable && m.DBTable->FindPK() ){
-						available["id"] = m.DBTable->Schema->DS()->ScalerSync<uint>(
-							{ Ƒ("select {} from {} where target=?", m.DBTable->FindPK()->Name, m.DBTable->DBName), {{string{available.at("target").as_string()}}} }
-						);
+						string where; vector<DB::Value> params;
+						for( let& [key, value] : available ){//match every scalar arg that maps to a column - target alone is ambiguous (e.g. resources rows differing only by criteria).
+							let column = value.is_object() || value.is_array() ? sp<DB::Column>{} : m.DBTable->FindColumn( DB::Names::FromJson(key) );
+							if( !column || column==m.DBTable->FindPK() )
+								continue;
+							if( !where.empty() )
+								where += " and ";
+							if( value.is_null() )
+								where += Ƒ( "{} is null", column->Name );
+							else{
+								where += Ƒ( "{}=?", column->Name );
+								params.emplace_back( column->Type, value );
+							}
+						}
+						if( !where.empty() ){
+							available["id"] = m.DBTable->Schema->DS()->ScalerSync<uint>(
+								{ Ƒ("select {} from {} where {}", m.DBTable->FindPK()->Name, m.DBTable->DBName, where), move(params) }
+							);
+						}
 					}
 				}
 				jobject j;

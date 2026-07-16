@@ -1,4 +1,5 @@
 local args = import 'args.libsonnet';
+local logsDir = args.logsDir;
 {
 	testing:{
 		tests:: "AccessTests.UserAccess",
@@ -11,21 +12,21 @@ local args = import 'args.libsonnet';
 		target: "TestServer",
 		resource: "test",
 		description: "Test OPC",
-		configDir: "$(JDE_DIR)/apps/OpcServer/config/mutations/pumps",
+		configDir: args.repoSourceDir + "/apps/OpcServer/config/mutations/pumps",
 		port: 4840,
 		ssl:{
-			certificate: "$(JDE_BUILD_DIR)/OpcServer/ssl/certs/cert.pem",
-			privateKey: {path:"$(JDE_BUILD_DIR)/OpcServer/ssl/private/private.pem", passcode: ""}
+			certificate: args.repoBuildDir + "/OpcServer/ssl/certs/cert.pem",
+			privateKey: {path: args.repoBuildDir + "/OpcServer/ssl/private/private.pem", passcode: ""}
 		}
 	},
 	dbServers: {
 		scriptPaths: [
-			"$(JDE_DIR)/apps/AppServer/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/libs/access/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/apps/OpcServer/config/sql/"+args.sqlType
+			args.repoSourceDir + "/apps/AppServer/config/sql/"+args.sqlType,
+			args.repoSourceDir + "/libs/access/config/sql/"+args.sqlType,
+			args.repoSourceDir + "/apps/OpcServer/config/sql/"+args.sqlType
 		],
-		dataPaths: ["$(JDE_DIR)/apps/AppServer/config", "$(JDE_DIR)/libs/access/config"],
-		sync: true,
+		dataPaths: [args.repoSourceDir + "/apps/AppServer/config", args.repoSourceDir + "/libs/access/config"],
+		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,
@@ -43,6 +44,7 @@ local args = import 'args.libsonnet';
 		opcServer:{ name: "OpcTests" }
 	},
 	logging:{
+		breakLevel: "Critical",
 		spd:{
 			tags: {
 				default: "Information",
@@ -78,7 +80,7 @@ local args = import 'args.libsonnet';
 			},
 			sinks:{
 				console:{},
-				file:{ path: args.logDir, md: false }
+				file:{ path: logsDir, md: false }
 			}
 		},
 		memory:{

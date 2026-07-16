@@ -26,17 +26,19 @@ namespace Jde{
 			return Logging::Entry{ level, ELogTags::Test, (uint32_t)info.line(), Clock::now(), {0}, string{format}, info.file(), info.name(), move(args) };
 		}
 		α OnTestStart( const ::testing::TestInfo& info )->void override{
+			_currentTest = info.name();
 			auto entry = toEntry( info, ELogLevel::Information, "[ RUN      ] {}.{}", {info.test_suite_name(), info.name()} );
 			Logging::Log( entry );
 		}
+		//Called with UnitTest::mutex_ held - calling back into UnitTest (e.g. current_test_info()) self-deadlocks.
 		α OnTestPartResult( const ::testing::TestPartResult& result )->void override{
 			if( result.failed() ){
-				auto info = result.file_name() ? ::testing::UnitTest::GetInstance()->current_test_info() : nullptr;
-				Logging::Entry entry{ ELogLevel::Error, ELogTags::Test, (uint32_t)result.line_number(), Clock::now(), {0}, string{result.message()}, result.file_name() ? result.file_name() : "unknown file", info ? info->name() : "unknown", {} };
+				Logging::Entry entry{ ELogLevel::Error, ELogTags::Test, (uint32_t)result.line_number(), Clock::now(), {0}, string{result.message()}, result.file_name() ? result.file_name() : "unknown file", _currentTest.empty() ? "unknown" : _currentTest, {} };
 				Logging::Log( entry );
 			}
 		}
 		α OnTestEnd( const ::testing::TestInfo& info )->void override{
+			_currentTest.clear();
 			let ms = std::to_string( info.result()->elapsed_time() );
 			auto level = ELogLevel::Information;
 			sv format = "[       OK ] {}.{} ({} ms)";
@@ -70,6 +72,8 @@ namespace Jde{
 				}
 			}
 		}
+	private:
+		string _currentTest;//benign race if an assertion fires off the main thread - logging only.
 	};
 }
 #undef let

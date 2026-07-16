@@ -80,3 +80,9 @@ apps/AppServer/src/build/**
 **/*.vsix
 **/compile_commands.*
 **/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-*.txt
+
+# Runtime/test logs: the spd file sink and proto log write under logsDir, which Settings::Load sets to
+# <cwd>/logs - so any run with a cwd inside the repo drops them in-tree.
+# Deliberately not a bare "logs/": that would also match web/framework/control/src/lib/pages/logs, which is source.
+*.log
+/logs/

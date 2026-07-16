@@ -4,12 +4,10 @@
 		"name": "main",
 		"releaseRoot": "${env:JDE_BASH}/Release",
 		"sourceDir": "${workspaceFolder}",
+		"target": "all",
 		"cmake.sourceDirectory": "${workspaceFolder}",
-		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
-		"debugPreset": "linux-clang-debug",
-		"debugClangPreset": "linux-clang-debug",
-		"releasePreset": "linux-gcc-relWithDebInfo",
+		"presetSuffix": "-repos",
 		"files.watcherExclude": {
 			"**/my-workspace*/**": true,
 			"**/out/**": true,
@@ -25,37 +23,6 @@
 			"**/out/**": true,
 			"**/build/**": true
 		}
-	},
-	"tasks": {
-		"version": "2.0.0",
-		"tasks": [
-			{
-				"label": "build",
-				"type": "shell",
-				"command": "cd ${command:jde.repoBuildDir}; tput reset; cmake --build . -j --config Debug",
-				"group": { "kind": "build", "isDefault": true }
-			},
-			{
-				"label": "Release",
-				"type": "shell",
-				"command": "tput reset;build/buildRelease.sh",
-				"group": { "kind": "build", "isDefault": false }
-			},
-			{
-				"label": "cmakeReposDebug",
-				"type": "shell",
-				"command": "mkdir -p ${command:jde.repoBuildDir};cd ${command:jde.repoBuildDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} -Djde_REPOS=ON -Djde_Superbuild=OFF -Djde_TESTS=OFF -Djde_APPS=OFF --preset ${config:debugPreset};",
-				"group": "build"
-			},
-			{
-				"label": "cmakeReposDebugClang",
-				"type": "shell",
-				"command2": "echo ${config:debugClangDir};",
-				"command": "mkdir -p ${config:debugClangDir};cd ${config:debugClangDir}; rm -f CMakeCache.txt; tput reset;cmake ${config:sourceDir} -DCMAKE_CXX_COMPILER=${config:cxxClang} -DCMAKE_C_COMPILER=${config:cxxClang} -Djde_REPOS=ON -Djde_Superbuild=OFF -Djde_TESTS=OFF -Djde_APPS=OFF --preset ${config:debugClangPreset};",
-				"group": "build"
-			}
-
-		]
 	},
 	"folders": [
 		{

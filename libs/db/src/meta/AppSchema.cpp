@@ -43,9 +43,11 @@ namespace Jde::DB{
 
 	α AppSchema::Initialize( sp<DB::DBSchema> db, sp<AppSchema> self )ε->void{
 		self->DBSchema = db;
-		let& syntax = self->Syntax();
-		if( !db->IsQLOnly() && syntax.HasSchemas() && !syntax.CanSetDefaultSchema() && db->DS()->SchemaName() != db->Name )
-			self->Prefix = Ƒ( "{}.{}", db->Name, self->Prefix );
+		if( !db->IsQLOnly() ){
+			let& syntax = self->Syntax();
+			if( syntax.HasSchemas() && !syntax.CanSetDefaultSchema() && db->DS()->SchemaName() != db->Name )
+				self->Prefix = Ƒ( "{}.{}", db->Name, self->Prefix );
+		}
 		for_each( self->Tables, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
 		for_each( self->Views, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
 	}

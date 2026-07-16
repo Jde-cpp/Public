@@ -1,21 +1,22 @@
 local args = import 'args.libsonnet';
+local logsDir = args.logsDir;
 {
 	instanceName: args.instanceName,
 	testing:{
 		tests:: "SubscribeTests.Basic",
-		recreateDB:: true,
+		recreateDB: true,
 		embeddedAppServer:: false,
 		embeddedOpcServer:: false
 	},
 	opc: args.opc,
 	dbServers: {
 		scriptPaths: [
-			"$(JDE_DIR)/apps/AppServer/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/libs/access/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/apps/OpcGateway/config/sql/"+args.sqlType,
-			"$(JDE_DIR)/apps/OpcServer/config/sql/"+args.sqlType
+			args.repoSourceDir + "/apps/AppServer/config/sql/"+args.sqlType,
+			args.repoSourceDir + "/libs/access/config/sql/"+args.sqlType,
+			args.repoSourceDir + "/apps/OpcGateway/config/sql/"+args.sqlType,
+			args.repoSourceDir + "/apps/OpcServer/config/sql/"+args.sqlType
 		],
-		dataPaths: ["$(JDE_DIR)/apps/AppServer/config", "$(JDE_DIR)/libs/access/config"],
+		dataPaths: [args.repoSourceDir + "/apps/AppServer/config", args.repoSourceDir + "/libs/access/config"],
 		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
@@ -37,7 +38,7 @@ local args = import 'args.libsonnet';
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",
-		mutationsDir:: "$(JDE_DIR)/apps/OpcServer/config/mutations/pumps",
+		mutationsDir:: args.repoSourceDir + "/apps/OpcServer/config/mutations/pumps",
 		configFiles: [
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
@@ -46,8 +47,8 @@ local args = import 'args.libsonnet';
 		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840,
 		ssl:{
-			certificate: "$(JDE_BUILD_DIR)/OpcServer/ssl/certs/cert.pem",
-			privateKey: {path:"$(JDE_BUILD_DIR)/OpcServer/ssl/private/private.pem", passcode: ""}
+			certificate: args.repoBuildDir + "/runtime/ssl/certs/opc-tests-server.pem",
+			privateKey: {path: args.repoBuildDir + "/runtime/ssl/private/opc-tests-server.pem", passcode: ""}
 		}
 	},
 	credentials:{
@@ -93,14 +94,14 @@ local args = import 'args.libsonnet';
 			},
 			sinks:{
 				console:{},
-				file:{ path: args.logDir, md: false }
+				file:{ path: logsDir, md: false }
 			}
 		},
 		memory:{
 			default: "trace"
 		},
 		proto:{
-			path: args.logDir + "/proto",
+			path: logsDir + "/opc-tests",
 			timeZone: "America/New_York",
 			delay: "PT1M"
 		},

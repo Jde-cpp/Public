@@ -129,17 +129,17 @@ namespace Tests{
 	α columns( sv cols, bool includeDeleted )ε->string{
 		return Ƒ( "id name attributes created updated target description {} {}", cols, includeDeleted ? "deleted" : "" );
 	}
-	α select( sv table, str filter, str cols, UserPK executer )ε->jobject{
+	Ω select( sv table, str filter, str cols, UserPK executer, SRCE )ε->jobject{
 		let ql = Ƒ( "{}({}){{ {} }}", table, filter, cols );
-		return QL().QuerySync( ql, {}, executer );
+		return QL().QuerySync( ql, {}, executer, true, sl );
 	}
 
-	α Tests::Select( sv table, uint id, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
-		return select( DB::Names::ToSingular(table), Ƒ("id:{} ", id), columns(cols, includeDeleted), executer );
+	α Tests::Select( sv table, uint id, UserPK executer, sv cols, bool includeDeleted, SL sl )ε->jobject{
+		return select( DB::Names::ToSingular(table), Ƒ("id:{} ", id), columns(cols, includeDeleted), executer, sl );
 	}
 
-	α Tests::Select( sv table, str target, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
-		return select( DB::Names::ToSingular(table), Ƒ("target:\"{}\" ", target), columns(cols, includeDeleted), executer );
+	α Tests::Select( sv table, str target, UserPK executer, sv cols, bool includeDeleted, SL sl )ε->jobject{
+		return select( DB::Names::ToSingular(table), Ƒ("target:\"{}\" ", target), columns(cols, includeDeleted), executer, sl );
 	}
 
 	α Tests::SelectGroup( str target, UserPK executer, bool includeDeleted )ε->jobject{

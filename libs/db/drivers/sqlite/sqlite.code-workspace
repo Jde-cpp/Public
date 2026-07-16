@@ -6,6 +6,8 @@
 		"subDir": "libs/db/drivers/${config:name}",
 		"cmake.sourceDirectory": "${workspaceFolder:src}/../../../../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
+		"settings": "${workspaceFolder:tests}/config/Sqlite.Tests.jsonnet",
+		"program": "${config:subDir}/tests/${config:target}"
 	},
 	"launch": {
 		"version": "0.2.0",
@@ -14,11 +16,10 @@
 				"name": "Debug",
 				"type": "lldb",
 				"request": "launch",
-				"program": "${command:jde.repoBuildDir}/${config:subDir}/tests/${config:target}",
-				"args": ["-c", "-settings=${workspaceFolder:tests}/config/Sqlite.Tests.jsonnet"],
-				"cwd": "${command:jde.repoBuildDir}/runtime",
+				"program": "${command:jde.repoBuildDir}/debug/${config:program}",
+				"args": ["-tests", "-settings=${config:settings}"],
+				"cwd": "${command:jde.repoBuildDir}/debug/runtime",
 				"env":{
-					"RUNTIME_DIR": "${config:cmake.buildDirectory}/runtime",
 					"REPO_SOURCE_DIR": "${config:cmake.sourceDirectory}",
 					"REPO_BUILD_DIR": "${config:cmake.buildDirectory}",
 				},

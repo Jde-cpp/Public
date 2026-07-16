@@ -35,8 +35,8 @@ namespace Jde::Access::Tests{
 	α PurgeGroup( GroupPK id, UserPK userPK )ε->void;
 	α PurgeUser( UserPK userId, UserPK userPK, SRCE )ε->void;
 
-	α Select( sv table, uint id, UserPK userPK, sv cols={}, bool includeDeleted=false )ε->jobject;
-	α Select( sv table, str target, UserPK userPK, sv cols={}, bool includeDeleted=false )ε->jobject;
+	α Select( sv table, uint id, UserPK userPK, sv cols={}, bool includeDeleted=false, SRCE )ε->jobject;
+	α Select( sv table, str target, UserPK userPK, sv cols={}, bool includeDeleted=false, SRCE )ε->jobject;
 	α SelectGroup( str target, UserPK userPK, bool includeDeleted=false )ε->jobject;
 	α SelectPermission( ResourcePK resourcePK, UserPK userPK )ε->jobject;
 	α SelectResource( str target, UserPK userPK, bool includeDeleted=true, SRCE )ε->jobject;

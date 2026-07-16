@@ -94,12 +94,13 @@ namespace Jde::Opc::Server{
 		auto user = Users.find( executer );
 		if( user==Users.end() || user->second.IsDeleted )
 			return EAccess::None;
-		if( auto resource = Resources.find(*resourcePK); resource->second.IsDeleted )
-			return EAccess::All;
-		else{
+		auto resource = Resources.find( *resourcePK );
+		if( resource==Resources.end() ){
 			CRITICAL( "Resource {} not found for node {}. This should never happen.", *resourcePK, nodeId.ToString() );
 			return EAccess::None;
 		}
+		if( resource->second.IsDeleted )
+			return EAccess::All; //resource deleted: node no longer protected.
 		auto rights = user->second.ResourceRights( *resourcePK );
 		return ( EAccess )rights.Effective();
 	}

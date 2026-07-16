@@ -10,15 +10,12 @@
 			"name": "common",
 			"hidden": true,
 			"environment": {
-				"installRoot": "$env{REPO_DIR}/install/$env{CXX}",
-				"multiInstallPrefix": "$env{installRoot}/multi"
+				"installRoot": "$env{REPO_DIR}/install/$env{CXX}"
 			},
 			"cacheVariables": {
 				"CMAKE_CXX_STANDARD": "26",
 				"JDE_VERSION": "2026.07.01",
 				"MIN_REQ_CMAKE_VERSION": "3.28.3",
-				"MULTI_INSTALL_PREFIX": "$env{multiInstallPrefix}",
-				"TYPE_INSTALL_PREFIX": "$env{installRoot}/$env{buildType}",
 				"SPDLOG_FMT_EXTERNAL": "ON"
 			}
 		},
@@ -39,7 +36,7 @@
 			},
 			"cacheVariables": {
 				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/Debug",
-				"CMAKE_PREFIX_PATH": "$env{installRoot}/Debug;$env{multiInstallPrefix}"
+				"CMAKE_PREFIX_PATH": "$env{installRoot}/Debug"
 			}
 		},
 		{
@@ -50,11 +47,12 @@
 			},
 			"cacheVariables": {
 				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/RelWithDebInfo",
-				"CMAKE_PREFIX_PATH": "$env{installRoot}/RelWithDebInfo;$env{multiInstallPrefix}"
+				"CMAKE_PREFIX_PATH": "$env{installRoot}/RelWithDebInfo"
 			}
 		},
 		{
 			"name": "win",
+			"hidden": true,
 			"inherits": "common",
 			"environment": {
 				"cxxFlags": "-DWIN32_LEAN_AND_MEAN"
@@ -66,20 +64,16 @@
 		},
 		{
 			"name": "linux",
+			"hidden": true,
 			"inherits": "common",
-			"environment": {
-				"multiInstallPrefix": "$env{installRoot}/$env{buildType}"
-			},
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "$env{buildType}",
 				"LIBXML2_INCLUDE_DIR": "/usr/include/libxml2"
-			},
-			"vendor": {
-				"comment": "multiInstallPrefix override: single-config generator, so Debug deps (ASan, _GLIBCXX_DEBUG) share artifact names with RelWithDebInfo and would clobber each other in a shared multi dir - install per build type instead; Windows multi-config keeps the shared multi dir."
 			}
 		},
 		{
 			"name": "linux-debug",
+			"hidden": true,
 			"inherits": [
 				"linux",
 				"debug"
@@ -90,32 +84,11 @@
 		},
 		{
 			"name": "linux-relWithDebInfo",
+			"hidden": true,
 			"inherits": [
 				"linux",
 				"relWithDebInfo"
 			]
-		},
-		{
-			"name": "linux-jde",
-			"hidden": true,
-			"inherits": [
-				"linux"
-			],
-			"cacheVariables": {
-				"Boost_USE_STATIC_LIBS": true,
-				"BOOST_VERSION": "1.91.0"
-			}
-		},
-		{
-			"name": "linux-jde-relWithDebInfo",
-			"inherits": [
-				"linux-jde",
-				"relWithDebInfo"
-			],
-			"environment": {
-				"OPTIMIZATION_LEVEL": "O3"
-			},
-			"cacheVariables": {}
 		},
 		{
 			"name": "clang-jde",
@@ -127,6 +100,7 @@
 		},
 		{
 			"name": "clang",
+			"hidden": true,
 			"environment": {
 				"CC": "clang",
 				"CXX": "clang++"
@@ -138,11 +112,11 @@
 		},
 		{
 			"name": "win-clang",
+			"hidden": true,
 			"inherits": [
 				"clang",
 				"win"
 			],
-			"hidden": true,
 			"generator": "Ninja",
 			"cacheVariables": {
 				"CMAKE_GENERATOR_PLATFORM": null,
@@ -157,16 +131,16 @@
 		},
 		{
 			"name": "linux-clang",
+			"hidden": true,
 			"inherits": [
 				"clang",
 				"linux"
 			],
-			"hidden": true,
 			"cacheVariables": {
-				"CMAKE_CXX_FLAGS": "-stdlib=libc++ -DBOOST_STACKTRACE_USE_BACKTRACE",
+				"CMAKE_CXX_FLAGS": "-stdlib=libc++ -fexperimental-library -DBOOST_STACKTRACE_USE_BACKTRACE",
 				"CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld -lbacktrace",
 				"CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld -lbacktrace",
-				"CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan -fexperimental-library -D_LIBCPP_ENABLE_EXPERIMENTAL"
+				"CMAKE_CXX_FLAGS_DEBUG": "-glldb -stdlib=libc++ -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libasan"
 			}
 		},
 		{
@@ -179,9 +153,25 @@
 		},
 		{
 			"name": "linux-clang-debug",
+			"hidden": true,
 			"inherits": [
 				"linux-clang",
 				"debug"
+			]
+		},
+		{
+			"name": "linux-clang-relWithDebInfo",
+			"hidden": true,
+			"inherits": [
+				"linux-clang",
+				"relWithDebInfo"
+			]
+		},
+		{
+			"name": "linux-clang-debug-repos",
+			"inherits": [
+				"linux-clang-debug",
+				"linux-repos"
 			]
 		},
 		{
@@ -198,11 +188,21 @@
 			"inherits": [
 				"linux-clang-debug",
 				"clang-jde"
-			],
-			"cacheVariables": {},
-			"vendor": {
-				"comment": "Deliberately does NOT inherit linux-jde: clang/libc++ uses dynamic system Boost; linux-jde-relWithDebInfo (g++) uses static Boost $env{BOOST_VERSION}."
-			}
+			]
+		},
+		{
+			"name": "linux-clang-relWithDebInfo-jde",
+			"inherits": [
+				"linux-clang-relWithDebInfo",
+				"clang-jde"
+			]
+		},
+		{
+			"name": "linux-clang-relWithDebInfo-repos",
+			"inherits": [
+				"linux-clang-relWithDebInfo",
+				"linux-repos"
+			]
 		},
 		{
 			"name": "win-clang-debug-jde",
