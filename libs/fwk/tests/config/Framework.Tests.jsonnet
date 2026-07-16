@@ -1,7 +1,8 @@
+local logsDir = std.extVar("logsDir");
 {
 	testing:{
-		tests: "FileTests.WriteExactChunkMultiple",
-		file: "$(JDE_BUILD_DIR)/tests/test.txt"
+		tests:: "FileTests.WriteExactChunkMultiple",
+		file: logsDir + "/tests/test.txt"
 	},
 	cryptoTests:{
 		clear: false
@@ -18,10 +19,10 @@
 			},
 			sinks:{
 				console:{},
-				file:{ path: "$(JDE_BUILD_DIR)", md: false, pattern: "%^%3!l%$-%H:%M:%S.%e \\033]8;;file://%g#%#\\a%v\\033]8;;\\a" }
+				file:{ path: logsDir, md: false, pattern: "%^%3!l%$-%H:%M:%S.%e \\033]8;;file://%g#%#\\a%v\\033]8;;\\a" }
 			}
 		},
-		memory:{ 
+		memory:{
 			tags: {
 				default: "Debug"
 			}

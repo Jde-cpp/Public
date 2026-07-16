@@ -4,12 +4,10 @@
 		"name": "web",
 		"target": "Jde.Web.Tests",
 		"subDir": "libs/${config:name}",
-		"sourceDir": "${env:JDE_DIR}/${config:subDir}",
-		"buildTarget": "Debug",
-		"debugPreset": "linux-clang-debug",
-		"cmake.sourceDirectory": "${workspaceFolder}/../../..",
-		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
+		"cmake.sourceDirectory": "${workspaceFolder:tests}/../../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
+		"settings": "${workspaceFolder:tests}/config/Web.Tests.jsonnet",
+		"program": "${config:subDir}/tests/${config:target}"
 	},
 	"folders": [
 		{
@@ -22,7 +20,7 @@
 		},
 		{
 			"path": "tests",
-			"name": "Tests"
+			"name": "tests"
 		},
 		{
 			"path": "../app/shared",
@@ -45,39 +43,18 @@
 			"name": "fwk"
 		}
 	],
-	"tasks": {
-		"version": "2.0.0",
-		"tasks": [
-			{
-				"label": "clean",
-				"type": "shell",
-				"command": "tput reset; cd ${command:jde.repoBuildDir}; cmake --build . --target clean;",
-				"problemMatcher": {"owner": "cpp", "fileLocation": ["relative", "${workspaceFolder}"],
-					"pattern": {
-						"regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
-						"file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
-					}
-				}
-			},
-			{
-				"label": "cmake",
-				"type": "shell",
-				"command": "mkdir -p ${command:jde.repoBuildDir}; cd ${command:jde.repoBuildDir}; tput reset; rm -f CMakeCache.txt; cmake ${workspaceFolder:Client}/../../.. --preset linux-clang-debug-jde",
-				"group": "build"
-			}]
-	},
 	"launch": {
 		"version": "0.2.0",
 		"configurations": [{
 				"name": "Debug",
 				"type": "lldb",
 				"request": "launch",
-				"program": "${command:jde.repoBuildDir}/${config:subDir}/tests/${config:target}",
+				"program": "${command:jde.repoBuildDir}/debug/${config:subDir}/tests/${config:target}",
 				"args": [
 					"-tests",
 					"-settings=${env:JDE_DIR}/libs/web/tests/config/Web.Tests.jsonnet"
 				],
-				"cwd": "${command:jde.repoBuildDir}/${config:subDir}/tests",
+				"cwd": "${command:jde.repoBuildDir}/debug/runtime",
 				"preLaunchTask": "build"
 			}],
 		}

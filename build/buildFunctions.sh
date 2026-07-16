@@ -37,41 +37,65 @@ function buildProject() (
 	make -C $buildDir -j$(nproc) 2>&1;
 )
 function compile() (
-	cmakeSourceDir=$(realpath $2); #/home/duffyj/code/jde/PublicX
-	buildRoot=$1/$(basename $cmakeSourceDir); # /mnt/ram/jde/clang++/PublicX
-	workspaceFolder=$3; #/home/duffyj/code/jde/IotWebsocket/config
-	fileWorkspaceFolder=$4; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests
-	relativeFile=$5; #../tests/BrowseTests.cpp
-	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
-	buildRelativePath=`buildRelativePath $cmakeSourceDir $absoluteFile`; #libs/web/server
-
-	echo "cmakeSourceDir=$cmakeSourceDir, buildRoot=$buildRoot, workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile";
-	cd $buildRoot/$buildRelativePath || return 1;
-	buildFile=${absoluteFile#"$fileWorkspaceFolder/"} #shortest-match prefix removal
-	filename=$(basename "$absoluteFile");
-	if [[ $filename == "main.cpp" ]]; then
-		buildFile=src/main.cpp;
+	buildRoot=$1; # /mnt/ram/jde/clang++/PublicX/debug
+	file=$(realpath "$2"); #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
+	cache=$buildRoot/CMakeCache.txt;
+	if [ ! -f "$cache" ]; then
+		echo "compile: no CMakeCache.txt in $buildRoot - run reconfig first.";
+		return 1;
 	fi;
-	echo $buildRoot/$buildRelativePath/make $buildFile.o;
-	make ${buildFile}.o 2>&1;
+	#the cache is authoritative for the source dir; deriving it from $buildRoot's basename breaks whenever the
+	#build dir and the checkout are named differently.
+	repoSourceDir=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$cache");
+	relativeFile=${file#"$repoSourceDir/"}; #libs/fwk/src/io/json.cpp
+	if [[ $relativeFile == "$file" ]]; then
+		echo "compile: $file is not under $repoSourceDir.";
+		return 1;
+	fi;
+
+	#Only add_subdirectory() dirs get a build dir - nested source dirs (libs/ql/ops, libs/web/server/auth) don't,
+	#so walk up to the nearest Makefile.  buildRelativePath supplies the src->lib/exe rename first.
+	buildDir=$buildRoot/`buildRelativePath $repoSourceDir $file`;
+	while [[ $buildDir != $buildRoot && ! -f $buildDir/Makefile ]]; do buildDir=${buildDir%/*}; done;
+	if [[ $buildDir == $buildRoot ]]; then
+		echo "compile: no Makefile for $relativeFile under $buildRoot - not a configured source dir.";
+		return 1;
+	fi;
+
+	#The Makefile is authoritative for the object target: its name is relative to the CMakeLists that owns the
+	#file, which isn't derivable from the path - e.g. apps/<App>/CMakeLists.txt lists src/main.cpp, so the rule
+	#in apps/<App>/exe is src/main.cpp.o, not main.cpp.o.  Longest path-anchored suffix match wins.
+	obj=$(grep -oE '^[A-Za-z0-9_/.+-]+\.o:' $buildDir/Makefile | sed 's/:$//' | awk -v f="$relativeFile" '
+		{ o=$0; sub(/\.o$/, "", o); n=length(f); m=length(o);
+			if( n>=m && substr(f, n-m+1)==o && (n==m || substr(f, n-m, 1)=="/") && m>bestLen ){ best=$0; bestLen=m } }
+		END{ if( bestLen ) print best }' );
+	if [ -z "$obj" ]; then
+		echo "compile: no object rule for $relativeFile in $buildDir/Makefile - not a source of any target there.";
+		return 1;
+	fi;
+	cd $buildDir || return 1;
+	echo "make -C $buildDir $obj";
+	make $obj 2>&1;
 )
 function reconfig() (
-	cmakeDir=$(realpath $2);
-	buildRoot=$1/$(basename $cmakeDir);
+	buildDir=$1;
+	repoSourceDir=$(realpath $2);
 	preset=$3;
-	mkdir -p $buildRoot/runtime/logs;
-	cd $buildRoot || return 1;
+	echo "reconfig repoSourceDir=$repoSourceDir buildDir=$buildDir preset=$preset";
+	mkdir -p $buildDir/runtime/logs;
+	cd $buildDir || return 1;
 	rm -f CMakeCache.txt;
-	echo `pwd` > cmake.output;
-	echo "cmake $cmakeDir -B $buildRoot -Wno-dev --preset $preset 2>&1" | tee -a cmake.output;
-	cmake $cmakeDir -B $buildRoot -Wno-dev --preset "$preset" 2>&1 | tee -a cmake.output; #-B required: no Linux preset sets binaryDir, and preset mode ignores cwd (defaults to the source dir).
-	if [ -f "$buildRoot/compile_commands.json" ]; then
-		mv $buildRoot/compile_commands.json $cmakeDir/compile_commands.json;
+	echo `pwd` | tee cmake.output;
+	echo "cmake -B $buildDir -S $repoSourceDir -Wno-dev --preset "$preset" 2>&1" | tee -a cmake.output;
+	#-B required: no Linux preset sets binaryDir, and preset mode ignores cwd (defaults to the source dir).
+	cmake -B $buildDir -S $repoSourceDir -Wno-dev --preset "$preset" 2>&1 | tee -a cmake.output;
+	if [ -f "$buildDir/compile_commands.json" ]; then
+		mv $buildDir/compile_commands.json $repoSourceDir/compile_commands.json;
 	fi
 )
 function build() (
+	repoBuildDir=$1;
 	repoSourceDir=$(realpath $2);
-	repoBuildDir=$1/$(basename $repoSourceDir);
 	target=$3;
 	cd $repoBuildDir || return 1;
 	set -o pipefail;

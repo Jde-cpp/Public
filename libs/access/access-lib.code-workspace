@@ -4,18 +4,14 @@
 		"name": "access",
 		"target": "Jde.Access.Tests",
 		"subDir": "libs/${config:name}",
-		"buildTarget": "Debug",
 		"cmake.sourceDirectory": "${workspaceFolder:tests}/../../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
+		"settings": "${workspaceFolder:tests}/config/Access.Tests.jsonnet",
+		"program": "${config:subDir}/tests/${config:target}"
 	},
 	"tasks": {
 		"version": "2.0.0",
 		"tasks": [
-			{
-				"label": "clean",
-				"type": "shell",
-				"command": "tput reset; cd ${config:cmake.buildDirectory}; cmake --build . --target clean;",
-			},
 			{
 				"label": "run",
 				"type": "shell",
@@ -34,26 +30,14 @@
 			"name": "Debug",
 			"type": "lldb",
 			"request": "launch",
-			"program": "${config:cmake.buildDirectory}/${config:subDir}/tests/${config:target}",
-			"args": ["-tests", "-settings=${workspaceFolder:tests}/config/Access.Tests.jsonnet"],
+			"program": "${config:cmake.buildDirectory}/debug/${config:program}",
+			"args": ["-tests", "-settings=${config:settings}"],
 			"env": {
-				"RUNTIME_DIR": "${config:cmake.buildDirectory}/runtime",
 				"REPO_SOURCE_DIR": "${config:cmake.sourceDirectory}",
 				"REPO_BUILD_DIR": "${config:cmake.buildDirectory}"
 			},
-			"cwd": "${config:cmake.buildDirectory}/runtime",
+			"cwd": "${config:cmake.buildDirectory}/debug/runtime",
 			"preLaunchTask": "build"
-		},
-		{
-			"name": "Release",
-			"type": "lldb",
-			"request": "launch",
-			"program": "${env:JDE_DIR}/Release/g++-14/libs/access/tests/Jde.Access.Tests",
-			"args": [
-				"-settings=${env:JDE_DIR}/libs/access/tests/config/Access.Tests.jsonnet",
-				"-tests"
-			],
-			"cwd": "${env:JDE_DIR}/Release/g++-14/libs/access/tests",
 		}]
 	},
 	"folders": [

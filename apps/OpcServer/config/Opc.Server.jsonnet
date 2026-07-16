@@ -1,10 +1,11 @@
 local args = import 'args.libsonnet';
+local logsDir = args.logsDir;
 {
 	instanceName: args.instanceName,
 	dbServers:{
 		dataPaths: args.dbServers.dataPaths,
 		scriptPaths: args.dbServers.scriptPaths,
-		sync: true,
+		sync:: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,
@@ -40,20 +41,20 @@ local args = import 'args.libsonnet';
 			},
 			sinks:{
 				console:{},
-				file:{ path: args.logDir, md: false }
+				file:{ path: logsDir, md: false }
 			}
 		}
 	},
 	credentials:{
-		name: "OpcServer.Test.$(JDE_BUILD_TYPE)",
+		name: "OpcServer.Test."+args.buildTarget,
 		target:: "OpcServer"
 	},
 	http:{port: 1970},
 	opcServer:{
 		target: "TestServer",
-		resource: "debug",
+		resource: args.buildTarget,
 		description: "Test OPC",
-		mutationsDir:: "$(JDE_DIR)/apps/OpcServer/config/mutations/pumps",
+		mutationsDir:: args.repoSourceDir + "/apps/OpcServer/config/mutations/pumps",
 		db: false,
 		opcNodeSet:{
 			path: "$(UA_NODE_SETS)/Opc.Ua.PredefinedNodes.xml",

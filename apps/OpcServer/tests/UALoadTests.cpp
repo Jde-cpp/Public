@@ -7,7 +7,7 @@ namespace Jde::Opc::Server::Tests{
 	protected:
 		Ω SetUpTestCase()ι->void{}
 		Ω TearDownTestCase()ι->void{}
-		α SetUp()ι->void{
+		α SetUp()ε->void{
 			Server::Initialize( ServerId(), GetSchemaPtr() );
 		}
 		Ω Path()ι->fs::path{ return *Settings::FindPath("/testing/UANodeSets"); }

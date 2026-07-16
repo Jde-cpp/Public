@@ -88,13 +88,14 @@ namespace Jde{
 		let executable = Process::Executable().filename();
 	#ifdef _MSC_VER
 			auto stem = executable.stem().string();
-			return stem.size()>4 ? stem.substr(4) : stem;
+			return stem.size()>4 ? stem.substr( 4 ) : stem;
 	#else
 			return executable.string().starts_with( "Jde." ) ? fs::path( executable.string().substr(4) ) : executable;
 	#endif
 		}
 
 	optional<vector<fs::path>> _importPaths;
+	const vector<fs::path> _noImportPaths;//bound instead of _importPaths.value_or({}), which deep-copies the paths every Load.
 	Ω path()ι->fs::path{
 		static fs::path _path;
 		if( !_path.empty() )
@@ -102,21 +103,26 @@ namespace Jde{
 		let fileName = fs::path{ Ƒ("{}.jsonnet", Settings::FileStem()) };
 
 		vector<fs::path> paths{ fileName, fs::path{"../config"}/fileName, fs::path{"config"}/fileName };
-		if( auto cli = Process::FindArg("-settings"); cli ){
-			if( Process::FindArg("-tests") && !_importPaths ){
+		if( auto settingsFile = _importPaths ? nullopt : Process::FindArg("-settings"); settingsFile ){
+			if( Process::FindArg("-tests") ){
 				_importPaths = vector<fs::path>{};
 				#ifdef _WIN32
-					string osPath = "win";
-					cli = IO::BashToWindows( *cli ).string().substr(4); //remove //?/
+					string sqlTypePath = "sqlServer";
+					settingsFile = IO::BashToWindows( *settingsFile ).string().substr( 4 ); //remove //?/
 				#else
-					string osPath = "linux";
+					string sqlTypePath = "mysql";
 				#endif
-				_importPaths->push_back( fs::path{*cli}.parent_path()/osPath/buildTypeSubDir() );
+				_importPaths->push_back( fs::path{*settingsFile}.parent_path()/"args"/sqlTypePath );
 			}
-			paths = { fs::path{*cli} };
+			else if( auto cli = Process::FindArg("-include"); cli ){
+				_importPaths = vector<fs::path>{};
+				for( auto& relPath : Str::Split(*cli, ';') )
+					_importPaths->push_back( fs::path{*settingsFile}.parent_path()/relPath );
+			}
+			paths = { fs::path{*settingsFile} };
 		}
 
-		auto p = find_if( paths, []( let& path ){return fs::exists(path);} );
+		auto p = find_if( paths, [](let& path){return fs::exists(path);} );
 		_path = p!=paths.end() ? *p : Process::AppDataFolder()/fileName;
 		std::cout << "settings path=" << _path.string() << std::endl;
 		return _path;
@@ -139,7 +145,13 @@ namespace Jde{
 		try{
 			if( !fs::exists(settingsPath) )
 				throw std::runtime_error{ Ƒ("file does not exist: '{}'", settingsPath.string()) };
-			let settings = Json::TryReadJsonNet( settingsPath, _importPaths );
+			flat_map<string,string> args ={
+				{ "buildTarget", _debug ? "debug" : "release" }
+			};
+			if( Process::FindArg("-tests") )
+				args["logsDir"] = ( fs::current_path()/"logs" ).string();
+
+			let settings = Json::TryReadJsonNet( settingsPath, _importPaths ? *_importPaths : _noImportPaths, args );
 			if( !settings )
 				throw std::runtime_error{ settings.error() };
 			_settings = mu<jvalue>( *settings );

@@ -3,22 +3,13 @@
 		"window.title": "OpcServer",
 		"name": "OpcServer",
 		"target": "Jde.Opc.Server",
-		"testTargetName": "Jde.Opc.Server.Tests",
+		"testTarget": "Jde.Opc.Server.Tests",
 		"subDir": "apps/${config:name}",
-		"cmake.sourceDirectory": "${workspaceFolder}/../../..",
-		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
+		"cmake.sourceDirectory": "${workspaceFolder:src}/../../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
-		"C_Cpp.default.defines": [
-			"UA_ENABLE_ENCRYPTION",
-			"UA_ENABLE_ENCRYPTION_OPENSSL",
-			"SPDLOG_FMT_EXTERNAL",
-			"_GLIBCXX_DEBUG"
-		],
-		"C_Cpp.default.forcedInclude": [
-			"${env:JDE_DIR}/libs/opc/src/pc.h",
-			"${env:JDE_DIR}/build/forcedInclude.h",
-			"pc.h"
-		],
+		"settings": "${workspaceFolder:config}/Opc.Server.jsonnet",
+		"testSettings": "${workspaceFolder:tests}/config/Opc.Server.Tests.jsonnet",
+		"program": "${config:subDir}/exe/${config:target}"
 	},
 	"folders": [
 		{
@@ -91,27 +82,14 @@
 				"name": "Debug",
 				"type": "lldb",
 				"request": "launch",
-				"program": "${command:jde.repoBuildDir}/${config:subDir}/exe/${config:target}",
-				"args": [ "-c", "-tests", "-settings=${workspaceFolder:config}/Opc.Server.jsonnet"],
-				"cwd": "${command:jde.repoBuildDir}/runtime",
+				"program": "${config:cmake.buildDirectory}/debug/${config:program}",
+				"args": [ "-c", "-tests", "-settings=${config:settings}" ],
+				"cwd": "${config:cmake.buildDirectory}/debug/runtime",
 				"env":{
-					"JDE_DIR": "${workspaceFolder:config}/../../..",
-					"JDE_BUILD_DIR": "${command:jde.repoBuildDir}",
+					"REPO_SOURCE_DIR": "${config:cmake.sourceDirectory}",
+					"REPO_BUILD_DIR": "${config:cmake.buildDirectory}",
 				},
 				"preLaunchTask": "build",
-			},
-			{
-				"name": "Tests - Debug",
-				"type": "lldb",
-				"request": "launch",
-				"program": "${command:jde.repoBuildDir}/${config:subDir}/tests/${config:testTargetName}",
-				"args": [ "-tests", "-settings=${workspaceFolder:tests}/config/Opc.Server.Tests.jsonnet" ],
-				"cwd": "${command:jde.repoBuildDir}/runtime",
-				"env":{
-					"JDE_DIR": "${workspaceFolder:config}/../../..",
-					"JDE_BUILD_DIR": "${command:jde.repoBuildDir}",
-				},
-				"preLaunchTask": "buildTests",
 			}
 		],
 	}

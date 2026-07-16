@@ -1,0 +1,27 @@
+{
+	sqlType: "sqlServer",
+	repoSourceDir: "$(REPO_SOURCE_DIR)",
+	logsDir: std.extVar("logsDir"),
+	dbServers: {
+		localhost:{
+			driver: "$(JDE_BUILD_DIR)/$(JDE_COMPILER)/bin/Debug/Jde.DB.Odbc.dll",
+			connectionString: "DSN=TestAccessDebug",
+			username: null,
+			password: null,
+			schema: null,
+			catalogs: {
+				test_access_debug: {
+					schemas:{
+						acc:{   //test debug with schema, debug with default schema ie dbo.
+							access:{
+								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet",
+								ql: "$(JDE_DIR)/libs/access/config/access-ql.jsonnet",
+								prefix: null  //test with null prefix, debug with prefix
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

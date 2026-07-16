@@ -1,8 +1,8 @@
-local args = import 'args.libsonnet';
+local logsDir = std.extVar("logsDir");
 {
 	testing:{
 		tests:: "SocketTests.*",
-		certDir: args.logDir+'web-tests/ssl'
+		certDir: logsDir+'/web-tests/ssl'
 	},
 	logging:{
 		spd:{
@@ -24,7 +24,7 @@ local args = import 'args.libsonnet';
 			},
 			sinks:{
 				console:{},
-				file:{ path: args.logDir, md: false }
+				file:{ path: logsDir, md: false }
 			}
 		},
 		memory:{

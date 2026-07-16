@@ -1,4 +1,5 @@
 local args = import 'args.libsonnet';
+local logsDir = args.logsDir;
 {
 	gateway:{
 		pingInterval: "PT30S",
@@ -39,11 +40,11 @@ local args = import 'args.libsonnet';
 			},
 			sinks:{
 				console:{},
-				file:{ path: args.logDir, md: false }
+				file:{ path: logsDir, md: false }
 			}
 		},
 		proto:{
-			path: args.logDir + "/proto",
+			path: logsDir + "/opc-gateway",
 			timeZone: "America/New_York",
 			delay: "PT1M",
 			tags: {
@@ -60,7 +61,7 @@ local args = import 'args.libsonnet';
 			connectionString: args.dbServers.localhost.connectionString,
 			username: args.dbServers.localhost.username,
 			password: args.dbServers.localhost.password,
-			schema: "debug",
+			schema: args.dbServers.localhost.schema,
 			catalogs: args.dbServers.localhost.catalogs
 		}
 	},

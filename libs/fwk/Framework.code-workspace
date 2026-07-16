@@ -4,11 +4,11 @@
 		"name": "fwk",
 		"target": "Jde.Fwk.Tests",
 		"subDir": "libs/${config:name}",
-		"sourceDir": "${env:JDE_DIR}/${config:subDir}",
-		"buildTarget": "Debug",
 		"cmake.sourceDirectory": "${workspaceFolder}/../../..",
 		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
+		"settings": "${workspaceFolder:tests}/config/Framework.Tests.jsonnet",
+		"program": "${config:subDir}/tests/${config:target}"
 	},
 	"folders": [
 		{
@@ -30,13 +30,14 @@
 				"type": "lldb",
 				"breakpointMode":"path",
 				"request": "launch",
-				"program": "${command:jde.repoBuildDir}/${config:subDir}/tests/${config:target}",
+				"program": "${command:jde.repoBuildDir}/debug/${config:subDir}/tests/${config:target}",
 				"args": [
-					"-settings=${config:sourceDir}/tests/config/Framework.Tests.jsonnet"
+					"-tests",
+					"-settings=${config:settings}"
 				],
-				"cwd": "${command:jde.repoBuildDir}/${config:subDir}/tests",
+				"cwd": "${command:jde.repoBuildDir}/debug/runtime",
 				"preLaunchTask": "build"
-			},
+			}
 		],
 		"compounds": []
 	}

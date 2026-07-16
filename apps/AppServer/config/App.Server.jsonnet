@@ -1,4 +1,5 @@
 local args = import 'args.libsonnet';
+local logsDir = args.logsDir;
 {
 	http:{
 		address: null,
@@ -62,7 +63,7 @@ local args = import 'args.libsonnet';
 			},
 			sinks:{
 				console:{},
-				file:{ path: "$(RUNTIME_DIR)/logs", md: false }
+				file:{ path: logsDir, md: false }
 			}
 		},
 		subscribe:{},

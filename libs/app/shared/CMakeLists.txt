@@ -19,7 +19,7 @@ if( WIN32 )
 	find_package( OpenSSL REQUIRED )
 	target_link_libraries( ${targetName} OpenSSL::SSL )
 	target_link_libraries( ${targetName} absl::cord absl::log_internal_check_op absl::log_internal_conditions absl::log_internal_message absl::raw_hash_set absl::status absl::statusor )
-	target_link_libraries( ${targetName} ${MULTI_INSTALL_PREFIX}/protobuf/lib/protobuf$<IF:$<CONFIG:Debug>,d,>.lib )
+	target_link_libraries( ${targetName} ${CMAKE_INSTALL_PREFIX}/protobuf/lib/protobuf$<IF:$<CONFIG:Debug>,d,>.lib )
 endif()
 
 #######################################################
