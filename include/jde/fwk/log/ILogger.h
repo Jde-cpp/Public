@@ -1,10 +1,18 @@
 ﻿#pragma once
-#ifndef LOGGER_H
-#define LOGGER_H
-#include "../settings.h"
 #include "logTags.h"
+#include "../settings.h"
+#include "../process/process.h"
 
+#define Φ Γ auto
 namespace Jde::Logging{
+
+	Φ DestroyLoggers( bool terminate )->void;
+	Φ Loggers()->const vector<up<ILogger>>&;
+	Ŧ GetLogger()ε->T&;
+	Ŧ FindLogger()ι->T*;
+	Φ AddLogger( up<ILogger>&& logger )ι->ILogger*;
+	Φ Init()ι->void;
+
 	struct Entry;
 	struct Γ ILogger : LogTags, IShutdown{
 		ILogger( const jobject& o ): LogTags( o ){}
@@ -26,4 +34,19 @@ namespace Jde::Logging{
 		return y;
 	}
 }
-#endif
+namespace Jde{
+	Ŧ Logging::FindLogger()ι->T*{
+		for( auto& logger : Loggers() ){
+			if( auto log = dynamic_cast<T*>( logger.get() ) )
+				return log;
+		}
+		return nullptr;
+	}
+	Ŧ Logging::GetLogger()ε->T&{
+		auto p = FindLogger<T>();
+		if( !p )
+			throw std::runtime_error( Ƒ("Logger of type {} not found.", typeid(T).name()) );
+		return *p;
+	}
+}
+#undef Φ

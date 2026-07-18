@@ -111,10 +111,11 @@ function findRepoRoot( start:string ):string {
 	}
 }
 
-// The out-of-source build root for a repo checkout. This is the single JS/TS encoding of the layout
-// formula `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>`; the shell mirror is `buildRoot=$1/$(basename $cmakeDir)`
-// (`$1`=`$JDE_BUILD_DIR/$JDE_COMPILER`) in build/buildFunctions.sh (lines 22/74/93/108). A layout change
-// must update both — this stays JS (not a shell-out) so the command resolves synchronously and cross-platform.
+// The out-of-source build root for a repo checkout. This is the single encoding of the layout
+// formula `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>` (without the trailing `<debug|release>` segment).
+// build/buildFunctions.sh no longer re-derives this: its helpers now receive the full build dir - callers
+// compose `${command:jde.repoBuildDir}/<debug|release>` - and read the source dir back from CMakeCache.txt.
+// This stays JS (not a shell-out) so the command resolves synchronously and cross-platform.
 // Throws if the env is missing rather than yielding a repo-relative path (stray dirs / opaque "program not found").
 function repoBuildDir( repoRoot:string ):string {
 	const buildDir = process.env['JDE_BUILD_DIR'];

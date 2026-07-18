@@ -4,6 +4,7 @@
 		"releaseRoot": "${env:JDE_BASH}/Release",
 		"sourceDir": "${workspaceFolder}",
 		"target": "all",
+		"testTarget": ".*",
 		"cmake.sourceDirectory": "${workspaceFolder}",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"presetSuffix": "-jde",

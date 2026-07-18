@@ -1,5 +1,4 @@
 #pragma once
-#include <signal.h>
 #include <aio.h>
 #include <jde/fwk/io/FileAwait.h>
 #include "../../../io/IDrive.h"

@@ -2,16 +2,8 @@
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/settings.h>
 #include <jde/fwk/str.h>
-//#include <jde/fwk/io/crc.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 
-namespace Jde{
-	ELogLevel _breakLevel = ELogLevel::Warning;
-	α Logging::SetBreakLevel()ι->void{
-		_breakLevel = Settings::FindEnum<ELogLevel>( "/logging/breakLevel", ToLogLevel ).value_or( ELogLevel::Warning );
-	}
-	α Logging::BreakLevel()ι->ELogLevel{ return _breakLevel; }
-}
 namespace Jde::Logging{
 	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, vector<string> args )ι:
 		Entry( sl, l, tags, {}, move(m), move(args) )

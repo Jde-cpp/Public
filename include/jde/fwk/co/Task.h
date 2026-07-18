@@ -1,7 +1,7 @@
 ﻿#pragma once
 #ifndef TASK_H
 #define TASK_H
-#include "../log/Logger.h"
+#include "../log/break.h"
 
 namespace Jde{
 	template<class Task,class TResult>

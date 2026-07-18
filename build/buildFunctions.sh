@@ -16,51 +16,55 @@ function absoluteFile() (
 	absoluteFile=`realpath $workspaceFolder/$relativeFile`; #/home/duffyj/code/jde/Framework/source/io/DiskWatcher.cpp
 	echo $absoluteFile;
 )
-function buildProject() (
-	cmakeSourceDir=$(realpath $2); #/home/duffyj/code/jde/PublicX
-	# buildRoot layout `$1/<repo-basename>` (`$1`=`$JDE_BUILD_DIR/$JDE_COMPILER`) is mirrored in TS by
-	# extensions/jde/src/extension.ts repoBuildDir(); a change here must update both. Repeated in compile/reconfig/build.
-	buildRoot=$1/$(basename $cmakeSourceDir); # /mnt/ram/jde/clang++/PublicX
-	workspaceFolder=$3; #/home/duffyj/code/jde/IotWebsocket/config
-	relativeFile=$4; #../tests/BrowseTests.cpp
-	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
-	buildRelativePath=`buildRelativePath $cmakeSourceDir $absoluteFile`;
-
-	#The per-directory Makefiles already know their targets; walk up to the nearest one for files in nested source dirs.
-	buildDir=$buildRoot/$buildRelativePath;
-	while [[ $buildDir != $buildRoot && ! -f $buildDir/Makefile ]]; do buildDir=${buildDir%/*}; done;
-	if [[ $buildDir == $buildRoot ]]; then
-		echo "buildProject: no Makefile found under $buildRoot/$buildRelativePath - not a configured source dir.";
+#Shared by compile/buildProject.  The cache is authoritative for the source dir; deriving it from $buildRoot's
+#basename breaks whenever the build dir and the checkout are named differently.  Only add_subdirectory() dirs get
+#a build dir - nested source dirs (libs/ql/ops, libs/web/server/auth) don't, so walk up to the nearest Makefile;
+#buildRelativePath supplies the src->lib/exe rename first.  Echoes "<repoSourceDir> <buildDir> <relativeFile>"
+#on success, the failure reason on non-zero return.
+function makefileDirForFile() (
+	buildRoot=$1; # /mnt/ram/jde/clang++/PublicX/debug
+	file=$2; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
+	cache=$buildRoot/CMakeCache.txt;
+	if [ ! -f "$cache" ]; then
+		echo "no CMakeCache.txt in $buildRoot - run reconfig first.";
 		return 1;
 	fi;
-	echo cmakeSourceDir=$cmakeSourceDir, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, buildDir=$buildDir;
+	#realpath both sides: $file is already canonical (callers realpath it), but CMAKE_HOME_DIRECTORY is the raw
+	#-S path - VS Code CMake Tools passes an unresolved ${workspaceFolder}/../../.. so symlinks/.. wouldn't match.
+	homeDir=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$cache");
+	if [[ -z $homeDir ]]; then
+		echo "no CMAKE_HOME_DIRECTORY in $cache - reconfigure the build.";
+		return 1;
+	fi;
+	repoSourceDir=$(realpath "$homeDir");
+	relativeFile=${file#"$repoSourceDir/"}; #libs/fwk/src/io/json.cpp
+	if [[ $relativeFile == "$file" ]]; then
+		echo "$file is not under $repoSourceDir.";
+		return 1;
+	fi;
+	buildDir=$buildRoot/`buildRelativePath $repoSourceDir $file`;
+	while [[ $buildDir != $buildRoot && ! -f $buildDir/Makefile ]]; do buildDir=${buildDir%/*}; done;
+	if [[ $buildDir == $buildRoot ]]; then
+		echo "no Makefile for $relativeFile under $buildRoot - not a configured source dir.";
+		return 1;
+	fi;
+	echo "$repoSourceDir $buildDir $relativeFile";
+)
+function buildProject() (
+	buildRoot=$1; # ${config:cmake.buildDirectory}/debug - full build dir, same as compile.
+	workspaceFolder=$2; #${fileWorkspaceFolder}
+	relativeFile=$3; #${relativeFile} e.g. ../tests/BrowseTests.cpp
+	file=`absoluteFile $workspaceFolder $relativeFile`; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
+	resolved=$(makefileDirForFile "$buildRoot" "$file") || { echo "buildProject: $resolved"; return 1; };
+	read repoSourceDir buildDir relativeFile <<< "$resolved";
+	echo "buildProject buildRoot=$buildRoot, buildDir=$buildDir";
 	make -C $buildDir -j$(nproc) 2>&1;
 )
 function compile() (
 	buildRoot=$1; # /mnt/ram/jde/clang++/PublicX/debug
 	file=$(realpath "$2"); #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
-	cache=$buildRoot/CMakeCache.txt;
-	if [ ! -f "$cache" ]; then
-		echo "compile: no CMakeCache.txt in $buildRoot - run reconfig first.";
-		return 1;
-	fi;
-	#the cache is authoritative for the source dir; deriving it from $buildRoot's basename breaks whenever the
-	#build dir and the checkout are named differently.
-	repoSourceDir=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$cache");
-	relativeFile=${file#"$repoSourceDir/"}; #libs/fwk/src/io/json.cpp
-	if [[ $relativeFile == "$file" ]]; then
-		echo "compile: $file is not under $repoSourceDir.";
-		return 1;
-	fi;
-
-	#Only add_subdirectory() dirs get a build dir - nested source dirs (libs/ql/ops, libs/web/server/auth) don't,
-	#so walk up to the nearest Makefile.  buildRelativePath supplies the src->lib/exe rename first.
-	buildDir=$buildRoot/`buildRelativePath $repoSourceDir $file`;
-	while [[ $buildDir != $buildRoot && ! -f $buildDir/Makefile ]]; do buildDir=${buildDir%/*}; done;
-	if [[ $buildDir == $buildRoot ]]; then
-		echo "compile: no Makefile for $relativeFile under $buildRoot - not a configured source dir.";
-		return 1;
-	fi;
+	resolved=$(makefileDirForFile "$buildRoot" "$file") || { echo "compile: $resolved"; return 1; };
+	read repoSourceDir buildDir relativeFile <<< "$resolved"; #relativeFile=libs/fwk/src/io/json.cpp
 
 	#The Makefile is authoritative for the object target: its name is relative to the CMakeLists that owns the
 	#file, which isn't derivable from the path - e.g. apps/<App>/CMakeLists.txt lists src/main.cpp, so the rule
@@ -104,8 +108,7 @@ function build() (
 	cmake --build . -j --target $target 2>&1 | tee -a $target.output;
 )
 function clean() (
-	repoSourceDir=$(realpath $2);
-	repoBuildDir=$1/$(basename $repoSourceDir); #scope to this checkout's build dir - a find from $1 would sweep every checkout's PCHs.
+	repoBuildDir=$1; #scope to this checkout's build dir - a find from $1 would sweep every checkout's PCHs.
 	cd $repoBuildDir || return 1;
 	cmake --build . --target clean;
 	find . -name 'cmake_pch.hxx.pch' -print -delete;
