@@ -1,7 +1,6 @@
 #include <jde/fwk/log/break.h>
 
 namespace Jde{
-	α ToLogLevel( sv op )ι->ELogLevel;
 	ELogLevel _breakLevel = ELogLevel::Warning;
 	α Logging::SetBreakLevel()ι->void{
 		_breakLevel = Settings::FindEnum<ELogLevel>( "/logging/breakLevel", ToLogLevel ).value_or( ELogLevel::Warning );

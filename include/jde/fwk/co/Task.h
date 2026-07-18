@@ -1,7 +1,6 @@
 ﻿#pragma once
 #ifndef TASK_H
 #define TASK_H
-//#include "../log/ILogger.h"
 #include "../log/break.h"
 
 namespace Jde{

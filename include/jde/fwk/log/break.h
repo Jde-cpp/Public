@@ -12,6 +12,9 @@
 	#define BREAK_IF(x) if( x ){ BREAK; }
 #endif
 #define Φ Γ auto
+namespace Jde{
+	Φ ToLogLevel( sv op )ι->ELogLevel;
+}
 namespace Jde::Logging{
 	Φ SetBreakLevel()ι->void;
 	Φ BreakLevel()ι->ELogLevel;
