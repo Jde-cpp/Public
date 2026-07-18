@@ -40,18 +40,12 @@ namespace Jde{
 
 namespace Jde::Logging{
 	struct ILogger; struct MemoryLog;
-	Φ LogException( const Exception& e )ι->void;
 	Φ DestroyLoggers( bool terminate )->void;
 	Φ Loggers()->const vector<up<ILogger>>&;
 	Ŧ GetLogger()ε->T&;
 	Ŧ FindLogger()ι->T*;
 	Φ AddLogger( up<ILogger>&& logger )ι->ILogger*;
 	Φ Init()ι->void;
-	Φ ClientMinLevel()ι->ELogLevel;
-	namespace Proto{class Status;}
-	Φ SetStatus( const vector<string>& values )ι->void;
-	α SetLogLevel( ELogLevel client, ELogLevel server )ι->void;
-	α GetStatus()ι->up<Proto::Status>;
 }
 namespace Jde{
 	Ŧ Logging::FindLogger()ι->T*{

@@ -34,7 +34,6 @@ namespace Jde::IO{
 		β FileArg()Ι->sp<FileIOArg>{ return _fileIOArg; }
 		α IsRead()Ι->bool;
 
-		std::atomic<bool> Sent;
 		uint Index;
 	private:
 		sp<FileIOArg> _fileIOArg;
@@ -52,7 +51,6 @@ namespace Jde::IO{
 		α PostExp( up<IFileChunkArg>&& chunk, uint32 code, string&& msg )ι->void;
 		α ResumeExp( uint32 code, string&& msg )ι->void;
 		α ResumeExp( uint32 code, string&& m, lg& chunkLock )ι->void;
-		α Key()Ι->uint8{ return std::hash<fs::path>{}( Path ); }
 
 		//α ResumeExp( exception&& e )ι->void;
 		//α ResumeExp( exception&& e, lg& chunkLock )ι->void;
@@ -63,9 +61,14 @@ namespace Jde::IO{
 
 		variant<string,vector<byte>> Buffer;
 		std::queue<up<IFileChunkArg>> Chunks; std::mutex ChunkMutex;
+		std::atomic<bool> Finished{};//set on the op's first terminal transition (all chunks completed, or an error resume) - guards one-shot bookkeeping such as the platform request count.
 		atomic<uint> ChunksCompleted;
 		uint ChunksToSend;
-		HFile Handle{};
+#ifdef _MSC_VER
+		HFile Handle{};//owning HandlePtr - null is the "no handle" sentinel and it self-closes.
+#else
+		HFile Handle{ -1 };//raw fd - -1 is "no handle"; 0 is a *valid* descriptor and must not be conflated with unopened.
+#endif
 		bool IsRead;
 		fs::path Path;
 		SL _sl;
@@ -86,6 +89,7 @@ namespace Jde::IO{
 		α await_resume()ε->string override;
 	private:
 		bool _cache;
+		bool _fromCache{};//ready path taken - the buffer is the result, even when empty; there is no promise to fall back on.
 	};
 	struct Γ WriteAwait final : IFileAwait, VoidAwait, noncopyable{
 		WriteAwait( fs::path path, variant<string,vector<byte>> data, bool create=false, ELogTags tags=ELogTags::IO, SRCE )ι:

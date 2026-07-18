@@ -17,7 +17,7 @@ ENABLE_WARNINGS
 #define let const auto
 namespace Jde{
 	Ŧ To( sv value )ι->T{ T v{}; std::from_chars(value.data(), value.data()+value.size(), v); return v; }
-	template<> Ξ To( sv x )ι->double{ return stod(string{x}); }
+	template<> Ξ To( sv x )ι->double{ try{ return stod(string{x}); }catch( const exception& ){ return std::numeric_limits<double>::quiet_NaN(); } }
 	Ŧ hex( T number )ι->string{ return Ƒ("{:x}", number); }
 	Φ ToUuid( sv s, SRCE )ε->uuid;
 	Φ ToString( const boost::uuids::uuid& u )ι->string;
@@ -85,12 +85,18 @@ namespace Jde{
 		string encoded{ s };
 		if( convertFromFileSafe )
 			encoded = Str::Replace( Str::Replace(encoded, '_', '/'), '-', '+' );
+		while( encoded.size() && encoded.back()=='=' )
+			encoded.pop_back();
+		uint charCount{};
+		for( char c : encoded )
+			if( !isspace((unsigned char)c) )
+				++charCount;
 
 		using namespace boost::archive::iterators;
 		using TW = transform_width<binary_from_base64<remove_whitespace<string::const_iterator>>, 8, 6>;
 		T y{ TW(encoded.begin()), TW(encoded.end()) };
-		while( y.size() && y.back()==0 )
-			y.pop_back();
+		if( uint decodedSize = charCount*6/8; y.size()>decodedSize )
+			y.resize( decodedSize );
 		return y;
 	}
 

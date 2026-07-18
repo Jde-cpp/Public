@@ -1,6 +1,7 @@
 ﻿#include <jde/fwk/crypto/OpenSsl.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
+#include <openssl/rand.h>
 
 #include <openssl/x509v3.h>
 #include "OpenSslInternal.h"
@@ -12,6 +13,10 @@
 namespace Jde{
 	namespace Crypto{
 		α OpenSslException::CurrentError()ι->string{ char b[256]; ERR_error_string_n( ERR_get_error(), b, sizeof(b) ); return {b}; }
+
+		α Random( unsigned char* p, uint size )ε->void{
+			THROW_IFX( ::RAND_bytes(p, (int)size)!=1, OpenSslException(SRCE_CUR, (uint32)ERR_get_error(), "RAND_bytes({}) failed", size) );
+		}
 
 		//https://stackoverflow.com/questions/1986888/how-to-compute-a-32-bit-fingerprint-of-a-certificate
 		α PublicKey::Hash32()Ι->uint32_t{

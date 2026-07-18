@@ -53,7 +53,7 @@ namespace Jde{
 			}
 			constexpr auto days = hours( 24 );
 			if( d >= days || d <= -days ){
-				os << duration_cast<hours>( d ).count() / days.count() << "M";
+				os << duration_cast<hours>( d ).count() / days.count() << "D";
 				d %= days;
 			}
 		}

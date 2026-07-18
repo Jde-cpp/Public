@@ -43,17 +43,30 @@ namespace Jde{
 		α Base()ι->vector<T>&{ return (vector<T>&)*this; }
 	};
 
+	//erase/rerase drain the whole container, calling `before` on each element. The callback is invoked
+	//*after* releasing the lock (on a moved-out snapshot) so a callback that re-enters this same Vector -
+	//e.g. an IShutdown::Shutdown calling RemoveShutdown - doesn't self-deadlock on the non-recursive mutex.
 	Ŧ	Vector<T>::erase( function<void(const T& p)> before )ι->void{
-		ul _( Mutex );
-		for( auto p = base::begin(); p!=base::end(); p=base::erase(p) )
-			before( *p );
+		vector<T> snapshot;
+		{
+			ul _( Mutex );
+			snapshot.reserve( base::size() );
+			std::move( base::begin(), base::end(), std::back_inserter(snapshot) );
+			base::clear();
+		}
+		for( auto& p : snapshot )
+			before( p );
 	}
 	Ŧ	Vector<T>::rerase( function<void(const T& p)> before )ι->void{
-		ul _( Mutex );
-		for( int i=base::size()-1; i>=0; --i ){
-			before( base::at(i) );
-			base::erase( base::begin() + i );
+		vector<T> snapshot;
+		{
+			ul _( Mutex );
+			snapshot.reserve( base::size() );
+			std::move( base::rbegin(), base::rend(), std::back_inserter(snapshot) );//reverse order preserved.
+			base::clear();
 		}
+		for( auto& p : snapshot )
+			before( p );
 	}
 	Ŧ	Vector<T>::erase_if( function<bool(const T& p)> test )ι->void{
 		ul _( Mutex );

@@ -37,13 +37,8 @@ namespace Jde{
 	return level.value_or( ELogLevel::Error );
 }
 
-namespace Jde::Logging{
-	auto _pOnceMessages = mu<flat_map<uint,flat_set<string>>>(); std::shared_mutex OnceMessageMutex;
-}
-
 namespace Jde{
 	α Logging::DestroyLoggers( bool terminate )->void{
-		Logging::_pOnceMessages = nullptr;
 		for( auto p=_loggers.begin(); p!=_loggers.end(); ){
 			auto logger = move( *p );
 			p = _loggers.erase( p );

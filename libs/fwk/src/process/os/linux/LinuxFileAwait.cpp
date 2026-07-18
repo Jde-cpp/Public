@@ -55,20 +55,19 @@ namespace Jde::IO{
 			Handle = ::open( Path.string().c_str(), flags, 0666 );
 			if( Handle!=-1 )
 				break;
-			Handle = 0;
 			let err = errno;
 			if( !retried && !IsRead && err==ENOENT ){//parent dir may not exist - create it & retry once.
 				std::error_code ec;
 				fs::create_directories( Path.parent_path(), ec );
-				THROW_IFX( ec, IOException(move(Path), (uint32)ec.value(), "create_directories", _sl) );
+				THROW_IFX( ec, IOException(Path, (uint32)ec.value(), "create_directories", _sl) );//copy, not move: keep Path for later logging on this object.
 				INFO( "Created dir {}", Path.parent_path().string() );
 				continue;
 			}
-			throw IOException{ move(Path), (uint32)err, "open", _sl };
+			throw IOException{ Path, (uint32)err, "open", _sl };
 		}
 		if( IsRead ){
 			struct stat st;
-			THROW_IFX( ::fstat( Handle, &st )==-1, IOException(move(Path), errno, "fstat", _sl) );
+			THROW_IFX( ::fstat( Handle, &st )==-1, IOException(Path, errno, "fstat", _sl) );
 			TRACE( "[{}]Opened file: {}, size: {}", hex(Handle), Path.string(), st.st_size );
 			std::visit( [size=st.st_size](auto&& b){b.resize(size);}, Buffer );
 		}
@@ -76,11 +75,16 @@ namespace Jde::IO{
 			TRACE( "[{}]{} {}", hex(Handle), create ? "creating" : "appending", Path.string() );
 	}
 	FileIOArg::~FileIOArg(){
-		if( Handle ){
+		if( Handle>=0 ){//fd -1 is invalid
 			::close( Handle );
 			TRACE( "[{}]Closed file handle for {}", hex(Handle), Path.string() );
-			Handle = 0;
+			Handle = -1;
 		}
+	}
+
+	Ω markFinished( const sp<FileIOArg>& op )ι->void{//balance Send's ++_requestCount exactly once per op - a multi-chunk read can error on more than one in-flight chunk.
+		if( !op->Finished.exchange(true) )
+			--_requestCount;
 	}
 
 	Ω prepChunk( up<IFileChunkArg>&& chunk, const sp<FileIOArg>& op )ι->bool{
@@ -90,6 +94,7 @@ namespace Jde::IO{
 		if( !sqe ){
 			BREAK;
 			auto message = Ƒ( "Could not get file queue:  aio_{} index: {}\n", isRead ? "read" : "write", index );
+			markFinished( op );
 			op->PostExp( move(chunk), EBUSY, move(message) );
 			return false;
 		}
@@ -115,13 +120,8 @@ namespace Jde::IO{
 		vector<sp<FileIOArg>> completedOps;
 		for( uint i=0; i<size; ++i ){
 			struct io_uring_cqe* cq = cqe[i];
-			if( cq->flags & IORING_CQE_F_MORE ){
-				bool buffered = cq->flags & IORING_CQE_F_BUFFER;
-				bool nonEmpty = cq->flags & IORING_CQE_F_SOCK_NONEMPTY;
-				let bufferId = (uint)io_uring_cqe_get_data(cq) >> 32;
-				TRACE( "waitForMore data: {:x}, flags: {}, buffer: {}, nonEmpty: {}", bufferId, (uint)cq->flags, buffered, nonEmpty );
-				continue;
-			}
+			//no IORING_CQE_F_MORE handling: the flag is multishot-only (accept/recv/poll) - impossible for plain
+			//file read/write sqes - and skipping io_uring_cqe_seen would make peek_batch return the cqe forever.
 			let res = cq->res;
 			up<LinuxChunk> chunk{ (LinuxChunk*)io_uring_cqe_get_data(cq) };
 			io_uring_cqe_seen( &_ring, cq );//releases the slot for kernel reuse - cq must not be read past this point.
@@ -130,12 +130,14 @@ namespace Jde::IO{
 				continue;
 			if( res < 0 ){
 				auto op = chunk->FileArg();
+				markFinished( op );
 				op->PostExp( move(chunk), -res, Ƒ("AIO index: {} failed: {}\n", chunk->Index, strerror(-res)) );
 				continue;
 			}
 			if( (uint)res < chunk->Bytes ){//partial read/write - resubmit the remainder.
 				auto op = chunk->FileArg();
 				if( res==0 ){//no progress - EOF or full disk; resubmitting would loop forever.
+					markFinished( op );
 					op->PostExp( move(chunk), EIO, Ƒ("AIO index: {} {} returned 0 with {} bytes remaining.\n", chunk->Index, chunk->IsRead() ? "read" : "write", chunk->Bytes) );
 					continue;
 				}
@@ -155,10 +157,9 @@ namespace Jde::IO{
 				completedOps.push_back(op);
 		}
 		for( auto& completed : completedOps ){
-			--_requestCount;
+			markFinished( completed );
 			if( completed->IsRead ){
-				if( auto h = completed->ReadCoHandle(); h ){
-					completed->_coHandle = (TAwait<string>::Handle)nullptr;
+				if( auto h = completed->ReadCoHandle(); h ){//ReadCoHandle already nulled _coHandle under _coHandleMutex.
 #ifdef __cpp_lib_move_only_function
 					Post( get<string>(move(completed->Buffer)), move(h) );
 #else
@@ -171,8 +172,7 @@ namespace Jde::IO{
 				}
 			}
 			else{
-				if( auto h = completed->WriteCoHandle(); h ){
-					completed->_coHandle = (VoidAwait::Handle)nullptr;
+				if( auto h = completed->WriteCoHandle(); h ){//WriteCoHandle already nulled _coHandle under _coHandleMutex.
 					Post( move(h) );
 				}
 				else
@@ -187,12 +187,12 @@ namespace Jde::IO{
 		TRACE( "Submitting file IO: {}, size: {}, chunks: {}, requestCount: {}, isRead: {}", op->Path.string(), op->Size(), op->ChunksToSend, _requestCount.load(), op->IsRead );
 		int result = io_uring_submit( &_ring );
 		if( result>=0 ){
-			ASSERT( _requestCount );
-			if( _requestCount )
+			if( _requestCount )//can be 0: a lone op that failed in prepChunk was already finished.
 				armCompletionWait( _tags );
 		}
 		else{
 			CRITICAL( "io_uring_submit failed: {}", strerror(-result) );
+			markFinished( op );
 			op->ResumeExp( -result, "io_uring_submit failed" );
 		}
 	}

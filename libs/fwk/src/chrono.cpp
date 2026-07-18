@@ -22,20 +22,34 @@ namespace Jde{
 		}
 		bool parsingTime = false;
 		Duration duration{ Duration::zero() };
-		while( is.good() ){
-			if( !parsingTime && (parsingTime = is.peek()=='T') ){
+		while( true ){
+			let c = is.peek();
+			if( c==std::char_traits<char>::eof() )
+				break;
+			if( !parsingTime && c=='T' ){
+				parsingTime = true;
 				is.get();
 				continue;
 			}
-			double value;
-			is >> value;
+			//scan the number digit-by-digit: istream>>double treats a trailing 'D' (a hex digit) as part of the
+			//number candidate and then fails, silently swallowing the days token - so read only decimal chars.
+			string num;
+			if( c=='+' || c=='-' )
+				num += (char)is.get();
+			for( auto d=is.peek(); (d>='0'&&d<='9')||d=='.'; d=is.peek() )
+				num += (char)is.get();
 			let type = is.get();
+			if( num.empty() || type==std::char_traits<char>::eof() )
+				break;
+			let value = std::stod( num );
+			//date units use the exact std::chrono period ratios so ToDuration is the inverse of ToString
+			//(which emits years/months/days) - a month is ~730.5h, not 720h; a year 365.2425d, not 365.25d.
 			if( type=='Y' )
-				duration += hours( Round(value*365.25*24) );
+				duration += duration_cast<Duration>( std::chrono::duration<double,years::period>{value} );
 			else if( !parsingTime && type=='M' )
-				duration += hours( Round(value*30*24) );
+				duration += duration_cast<Duration>( std::chrono::duration<double,months::period>{value} );
 			else if( type=='D' )
-				duration += hours( Round(value*24) );
+				duration += duration_cast<Duration>( std::chrono::duration<double,days::period>{value} );
 			else if( type=='H' )
 				duration += minutes( Round(value*60) );
 			else if( type=='M' )
@@ -58,11 +72,34 @@ namespace Jde{
 	α Chrono::ToTimePoint( string iso, SL sl )ε->TimePoint{
 		#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
 			TimePoint tp;
-			std::istringstream is{ iso };
-			is >> std::chrono::parse( "%FT%T", tp );
-			THROW_IFSL( is.fail(), "Could not parse ISO time:  {}", iso );
+			//an optional zone follows the seconds: 'Z' (UTC) or a numeric ±hh[:mm] offset. %FT%T reads the
+			//date/time fields as UTC; a numeric offset is subtracted explicitly to normalize (local = UTC + offset).
+			let zonePos = iso.size()>19 ? iso.find_first_of("+-", 19) : string::npos;
+			if( !iso.empty() && iso.back()=='Z' ){
+				std::istringstream is{ iso.substr(0, iso.size()-1) };
+				is >> std::chrono::parse( "%FT%T", tp );
+				THROW_IFSL( is.fail(), "Could not parse ISO time:  {}", iso );
+			}
+			else if( zonePos!=string::npos ){
+				std::istringstream is{ iso.substr(0, zonePos) };
+				is >> std::chrono::parse( "%FT%T", tp );
+				THROW_IFSL( is.fail(), "Could not parse ISO time:  {}", iso );
+				let off = iso.substr( zonePos );
+				let sign = off[0]=='-' ? -1 : 1;
+				string digits; for( char ch : off.substr(1) ) if( ch!=':' ) digits += ch;
+				let oh = digits.size()>=2 ? std::stoi(digits.substr(0,2)) : 0;
+				let om = digits.size()>=4 ? std::stoi(digits.substr(2,2)) : 0;
+				tp -= sign*( hours{oh}+minutes{om} );
+			}
+			else{
+				std::istringstream is{ iso };
+				is >> std::chrono::parse( "%FT%T", tp );
+				THROW_IFSL( is.fail(), "Could not parse ISO time:  {}", iso );
+			}
 			return tp;
 		#else
+			if( !iso.empty() && iso.back()=='Z' )//UTC designator; timegm below already treats the fields as UTC.
+				iso.pop_back();
 			std::istringstream is{ iso };
 			std::tm tm{};
 			is >> std::get_time( &tm, "%Y-%m-%dT%H:%M:%S" );
@@ -71,6 +108,14 @@ namespace Jde{
 			auto tp = std::chrono::system_clock::from_time_t( ::timegm(&tm) );
 			if( iso.size()>19 && iso[19]=='.' )
 				tp += std::chrono::milliseconds( Round(std::stod( iso.substr(19) )*1000) );
+			if( let zonePos = iso.size()>19 ? iso.find_first_of("+-", 19) : string::npos; zonePos!=string::npos ){//numeric offset: local = UTC + offset, so subtract it to normalize.
+				let off = iso.substr( zonePos );
+				let sign = off[0]=='-' ? -1 : 1;
+				string digits; for( char ch : off.substr(1) ) if( ch!=':' ) digits += ch;
+				let oh = digits.size()>=2 ? std::stoi(digits.substr(0,2)) : 0;
+				let om = digits.size()>=4 ? std::stoi(digits.substr(2,2)) : 0;
+				tp -= sign*( hours{oh}+minutes{om} );
+			}
 			return tp;
 		#endif
 	}

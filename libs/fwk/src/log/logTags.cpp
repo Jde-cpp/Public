@@ -94,8 +94,8 @@ namespace Jde{
 	ELogTags y{};
 	for( let& subName : flags ){
 		ELogTags tag{};
-		if( auto i = (ELogTags)std::distance(ELogTagStrings.begin(), find(ELogTagStrings, subName)); i<(ELogTags)ELogTagStrings.size() )
-			tag |= ( ELogTags )( 1ul<<(underlying(i)-1) );
+		if( auto i = std::distance(ELogTagStrings.begin(), find(ELogTagStrings, subName)); i>0 && i<(std::ptrdiff_t)ELogTagStrings.size() )
+			tag |= ( ELogTags )( 1ul<<(i-1) );
 		else{
 			for( uint i=0; i<_tagParsers.size() && empty(tag); ++i )
 				tag |= _tagParsers[i]->ToTag( string{subName} );
@@ -149,6 +149,7 @@ namespace Jde{
 			_defaultLevel= kv.second; //parseTags puts default in None.
 			return true;
 		});
+		_minLevel = _defaultLevel;
 	}
 	LogTags::LogTags( const LogTags& x )ι:
 		_configuredTags{ x._configuredTags },
@@ -180,7 +181,7 @@ namespace Jde{
 
 	Ω split( ELogTags tags )ι->vector<ELogTags>{
 		vector<ELogTags> result;
-		for( uint i=0; i<ELogTagStrings.size(); ++i ){
+		for( uint i=1; i<ELogTagStrings.size(); ++i ){
 			let flag = ( ELogTags )( 1ul<<(i-1) );
 			if( !empty(tags & flag) )
 				result.push_back( flag );
@@ -197,7 +198,7 @@ namespace Jde{
 			ExtrapolatedTags.cvisit_while( [&level,&matches,tags,count=individual.size()](let& kv){
 				if( empty(kv.first & tags) )
 					return true;
-				if( auto iterCount = split(tags).size(); iterCount>matches ){
+				if( auto iterCount = split(kv.first & tags).size(); iterCount>matches ){
 					level = kv.second;
 					matches = iterCount;
 				}

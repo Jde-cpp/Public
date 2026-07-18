@@ -96,7 +96,7 @@ namespace Jde{
 	α Exception::what()Ι->const char*{
 		if( _what.empty() ){
 			if( auto sv = Format(); sv.size() )
-				_what = _args.size() ? Str::Format( sv, _args ) : string{ sv };
+				_what = _args.size() ? Str::TryFormat( sv, _args ) : string{ sv };
 			else if( _inner )
 				_what = _inner->what();
 		}

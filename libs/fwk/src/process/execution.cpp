@@ -3,6 +3,7 @@
 #include <jde/fwk/process/execution.h>
 #include <boost/asio.hpp>
 #include <jde/fwk/settings.h>
+#include <jde/fwk/process/process.h>
 #include <jde/fwk/process/thread.h>
 #include <jde/fwk/utils/Vector.h>
 #include <version>
@@ -24,7 +25,7 @@ namespace Jde{
 }
 α Jde::Executor()ι->sp<asio::io_context>{
 	lg _{ _executorMutex };
-	if( !_ioc ){
+	if( !_ioc && !Process::Finalizing() ){//never resurrect after cleanup - a stray Post would otherwise re-create the io_context (and Run a new executor thread) with nothing left to tear them down.
 		_ioc = ms<asio::io_context>( ThreadCount() );
 		_ioStrand = ms<IoStrand>( _ioc );
 		_keepAlive = mu<asio::executor_work_guard<asio::io_context::executor_type>>( _ioc->get_executor() );
@@ -82,10 +83,14 @@ namespace Jde{
 	};
 	atomic_flag ExecutorContext::_started{};
 	atomic_flag ExecutorContext::_stopped{};
+	mutex _runMutex;//serializes first-call construction: concurrent Run()s used to each build an ExecutorContext, and SetExecutor's overwrite joined the loser's thread - parked in ioc->run() - until shutdown.
 	α Execution::Run()->void{
-		if( !ExecutorContext::Started() ){
-			auto keepAlive = Executor();
-			Process::SetExecutor( mu<ExecutorContext>() );
+		if( ExecutorContext::Started() )
+			return;
+		lg _{ _runMutex };
+		if( !ExecutorContext::Started() ){//re-check: another thread may have constructed while this one waited - the ctor returns only after _started is set.
+			if( auto keepAlive = Executor(); keepAlive )//null once finalizing - don't start a new executor thread at teardown.
+				Process::SetExecutor( mu<ExecutorContext>() );
 		}
 	}
 
@@ -106,8 +111,13 @@ namespace Jde{
 	}
 	α ExecutorContext::Shutdown( bool terminate, SL sl )ι->void{
 		DBG( "Executor Shutdown: instances: {}.", _ioc.use_count() );
-		_keepAlive->reset();
-		_keepAlive = nullptr;
+		{//may run twice, or after Execute() tore down - _keepAlive is already null then.
+			lg _{ _executorMutex };
+			if( _keepAlive ){
+				_keepAlive->reset();
+				_keepAlive = nullptr;
+			}
+		}
 		if( _shutdowns )
 			_shutdowns->erase( [=](auto p){p->Shutdown(terminate, sl);} );
 		if( _ioc && terminate )
@@ -126,7 +136,6 @@ namespace Jde{
 		for( auto i = ThreadCount() - 1; i > 0; --i ){
 			threads.emplace_back( [ioc=ioc, &threadIds](){
 				threadIds.push_back( Thread::Id() );
-//				SetThreadDscrptn( Ƒ("Ex[{}]", index) );
 				ioc->run();
 			});
 		}
@@ -166,12 +175,20 @@ namespace Jde{
 }
 α Jde::Post( function<void()> f )ι->void{
 	auto ctx = Executor();
+	if( !ctx ){
+		WARN( "Post after executor teardown - dropping work." );
+		return;
+	}
 	asio::post( *ctx, f );
 	Execution::Run();
 }
 #ifdef __cpp_lib_move_only_function
 α Jde::PostM( std::move_only_function<void()> f )ι->void{
 	auto ctx = Executor();
+	if( !ctx ){
+		WARN( "PostM after executor teardown - dropping work." );
+		return;
+	}
 	asio::post( *ctx, std::move(f) );
 }
 #endif
@@ -185,11 +202,21 @@ namespace Jde{
 }
 α Jde::Post( VoidAwait::Handle&& h )ι->void{
 	auto ctx = Executor();
+	if( !ctx ){
+		WARN( "Post after executor teardown - coroutine will not resume." );
+		h = nullptr;
+		return;
+	}
 	asio::post( *ctx, [h](){h.resume();} );
 	h = nullptr;
 }
 α Jde::Post( VoidAwait::Handle&& h, Exception&& e )ι->void{
 	auto ctx = Executor();
+	if( !ctx ){
+		WARN( "Post after executor teardown - coroutine will not resume: {}", e.what() );
+		h = nullptr;
+		return;
+	}
 	asio::post( *ctx, [h, e = move(e)]() mutable {
 		h.promise().ResumeExp( move(e), h );
 	} );

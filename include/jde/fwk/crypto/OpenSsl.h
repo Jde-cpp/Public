@@ -27,6 +27,8 @@ namespace Jde::Crypto{
 	using MD5 = boost::uuids::uuid;
 	Φ CalcMd5( byte* data, uint size )ε->MD5;
 	Ŧ CalcMd5( T content )ε->MD5{ return CalcMd5( (byte*)content.data(), content.size() ); }
+	Φ Random( unsigned char* p, uint size )ε->void;//throws on entropy failure.
+	Ŧ Random()ε->T{ T y{}; Random( (unsigned char*)&y, sizeof(T) ); return y; }
 	Φ CreateKey( const fs::path& publicKeyPath, const fs::path& privateKeyPath, str passcode )ε->void;
 	Φ CreateCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain )ε->void;
 	Φ CreateKeyCertificate( const CryptoSettings& settings )ε->void;
