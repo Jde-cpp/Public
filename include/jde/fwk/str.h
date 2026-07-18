@@ -17,7 +17,7 @@ ENABLE_WARNINGS
 #define let const auto
 namespace Jde{
 	Ŧ To( sv value )ι->T{ T v{}; std::from_chars(value.data(), value.data()+value.size(), v); return v; }
-	template<> Ξ To( sv x )ι->double{ try{ return stod(string{x}); }catch( const exception& ){ return std::numeric_limits<double>::quiet_NaN(); } }
+	template<> Φ To( sv x )ι->double;
 	Ŧ hex( T number )ι->string{ return Ƒ("{:x}", number); }
 	Φ ToUuid( sv s, SRCE )ε->uuid;
 	Φ ToString( const boost::uuids::uuid& u )ι->string;
@@ -32,7 +32,7 @@ namespace Jde::Str{
 
 	Φ Format( sv format, vector<string> args )ε->string;
 	Φ TryFormat( sv format, vector<string> args )ι->string;
-	Ŧ Join( T collection, sv separator=",", bool quote=false )ι->string;
+	Ŧ Join( const T& collection, sv separator=",", bool quote=false )ι->string;
 	Φ Replace( sv source, sv find, sv replace )ι->string;
 	Φ Replace( sv source, char find, char replace )ι->string;
 	Φ Split( sv s, char delim=',' )ι->vector<sv>;
@@ -110,7 +110,7 @@ namespace Jde{
 		return encoded;
 	}
 
-	Ŧ Str::Join( T collection, sv separator, bool quote )ι->string{
+	Ŧ Str::Join( const T& collection, sv separator, bool quote )ι->string{
 		std::ostringstream os;
 		auto first = true;
 		for( const auto& item : collection ){

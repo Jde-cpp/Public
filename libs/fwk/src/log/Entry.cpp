@@ -7,7 +7,7 @@
 
 namespace Jde{
 	ELogLevel _breakLevel = ELogLevel::Warning;
-	α Logging::SetBreakLevel()ι->void{ 
+	α Logging::SetBreakLevel()ι->void{
 		_breakLevel = Settings::FindEnum<ELogLevel>( "/logging/breakLevel", ToLogLevel ).value_or( ELogLevel::Warning );
 	}
 	α Logging::BreakLevel()ι->ELogLevel{ return _breakLevel; }
@@ -72,7 +72,8 @@ namespace Jde::Logging{
 			_message = Arguments.size()==0 ? Text : fmt::vformat(Text, store);
 		}
 		catch( const exception& e ){
-			CRITICALT( Tags, "Bad Format: {}", Text );
+			CRITICALT( Tags, "Bad Format: {}, args: '{}', what: '{}'", Text, Str::Join(Arguments, ", ", true), e.what() );
+			_message = Ƒ( "{}, args: '{}'", Text, Str::Join(Arguments, ", ", true) );
 		}
     return _message;
 	}

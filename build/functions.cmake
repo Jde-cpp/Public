@@ -97,6 +97,19 @@ function(compileOptions)
 	endif()
 endfunction()
 
+#Registers targetName with ctest: runs from ${CMAKE_BINARY_DIR}/Testing with the env vars the jsonnet
+#configs expand via $(REPO_SOURCE_DIR)/$(REPO_BUILD_DIR); extra COMMAND args can follow the settings file.
+function( addJdeTest targetName settingsFile )
+	add_test(
+		NAME ${targetName}
+		COMMAND $<TARGET_FILE:${targetName}> -tests -settings=${settingsFile} ${ARGN}
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/Testing
+	)
+	set_tests_properties( ${targetName} PROPERTIES ENVIRONMENT
+		"REPO_SOURCE_DIR=${CMAKE_SOURCE_DIR};REPO_BUILD_DIR=${CMAKE_BINARY_DIR}/.."
+	)
+endfunction()
+
 #Native-proc MODULE for the sqlite driver - dlopen'd for sqlite_api.h's RegisterProcs( IProcs& ), never linked.
 #Globs *.cpp/*.h from the calling directory plus any extra source dirs passed after the target name.
 function( sqliteProcModule targetName )

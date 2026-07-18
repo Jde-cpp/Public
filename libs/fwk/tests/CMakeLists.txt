@@ -20,13 +20,12 @@ if( WIN32 )
 	include_directories( ${OPENSSL_ROOT_DIR}/include )
 endif()
 
-add_test( NAME FwkTests COMMAND $<TARGET_FILE:Jde.Fwk.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet )
-
+addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet )
 
 target_precompile_headers( ${targetName} PRIVATE pc.h )
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES
-		VS_DEBUGGER_COMMAND_ARGUMENTS "-settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet"
+		VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet"
 	)
 	copyLibDlls()
 endif()

@@ -95,8 +95,14 @@ namespace Jde{
 
 	α Exception::what()Ι->const char*{
 		if( _what.empty() ){
-			if( auto sv = Format(); sv.size() )
-				_what = _args.size() ? Str::TryFormat( sv, _args ) : string{ sv };
+			if( auto sv = Format(); sv.size() ){
+				try{
+					_what = _args.size() ? Str::Format( sv, _args ) : string{ sv };
+				}
+				catch( const std::exception& e ){
+					_what = Ƒ( "bad format: {}, args: '{}', what: '{}'", sv, Str::Join(_args, ", ", true), e.what() );
+				}
+			}
 			else if( _inner )
 				_what = _inner->what();
 		}

@@ -46,7 +46,7 @@ else()
 	endif()
 endif()
 
-add_test( NAME OpcServerTests COMMAND $<TARGET_FILE:Jde.Opc.Server.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Server.Tests.jsonnet )
+addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Server.Tests.jsonnet )
 
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Server.Tests.jsonnet" )
