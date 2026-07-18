@@ -30,7 +30,6 @@ file( GLOB headers *.h */*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 target_include_directories( ${targetName} PRIVATE ${jdeRoot}/include/jde/app/proto )
-add_test( NAME gatewaytests COMMAND $<TARGET_FILE:Jde.Opc.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Tests.jsonnet )
 
 if( NOT jde_Superbuild )
 	add_subdirectory( ../../OpcServer/src ../../../apps/OpcServer/lib )
@@ -49,6 +48,8 @@ else()
 		target_link_libraries( ${targetName} libjsonnet++.so libjsonnet.so )
 	endif()
 endif()
+
+addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Tests.jsonnet )
 
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Tests.jsonnet" )

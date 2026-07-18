@@ -38,6 +38,7 @@ namespace Jde::DB::Sqlite{
 			if( !_reset.insert(cluster).second )
 				return;
 			let path = Settings::FindString( Ƒ("/dbServers/{}/catalogs/testDb/path", cluster) ).value_or( "" );
+			INFO( "[{}]using {}.", cluster, path );
 			if( path.empty() || path==":memory:" )
 				return;
 			fs::remove( path );
@@ -56,7 +57,6 @@ namespace Jde::DB::Sqlite{
 			auto uaSchema = dbCluster->GetAppSchema( "opc" );
 			auto gatewaySchema = dbCluster->GetAppSchema( "gateway" );
 
-			// TODO add fks
 			vector<sp<AppSchema>> schemas{ accessSchema, appSchema, uaSchema, gatewaySchema };
 			QL::Configure( schemas );
 			auto ql = ms<SqliteQL>( move(schemas), move(authorizer) );
@@ -64,6 +64,14 @@ namespace Jde::DB::Sqlite{
 			DB::SyncSchema( *appSchema, ql );
 			DB::SyncSchema( *uaSchema, ql );
 			DB::SyncSchema( *gatewaySchema, ql );
+		}
+
+		α BackendTests::SetUp()ε->void{
+			const auto& cluster = GetParam();
+			static flat_set<string> synced;
+			if( synced.insert(cluster).second )
+				Schema::Create( cluster );
+			_ds = DS( cluster );
 		}
 	}
 }

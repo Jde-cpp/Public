@@ -53,7 +53,7 @@ local cluster(path) = { //one backend; instantiated per-path as the 'memory' and
 		],
 		sync:: true,
 		memory: cluster(":memory:"),
-		file: cluster(repoBuildDir+"/libs/db/drivers/sqlite/tests/sqlite-tests.db")
+		file: cluster( std.extVar("cwd")+"/sqlite-tests.db" )
 	},
 	logging:{
 		spd:{

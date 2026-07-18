@@ -31,6 +31,6 @@ if( NOT WIN32 )
 	endif()
 endif()
 
-add_test( NAME SqliteTests COMMAND $<TARGET_FILE:${targetName}> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Sqlite.Tests.jsonnet )
+addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Sqlite.Tests.jsonnet )
 
 target_precompile_headers( ${targetName} PRIVATE pc.h )

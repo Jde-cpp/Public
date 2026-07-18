@@ -1,13 +1,12 @@
 {
 	"settings": {
-		"window.title": "Main",
-		"name": "main",
+		"window.title": "Jde",
 		"releaseRoot": "${env:JDE_BASH}/Release",
 		"sourceDir": "${workspaceFolder}",
 		"target": "all",
 		"cmake.sourceDirectory": "${workspaceFolder}",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
-		"presetSuffix": "-repos",
+		"presetSuffix": "-jde",
 		"files.watcherExclude": {
 			"**/my-workspace*/**": true,
 			"**/out/**": true,
@@ -27,12 +26,6 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "../../../../../mnt/ram/linux/clang++-22/repos/gtest"
-		},
-		{
-			"path": "../../../../../mnt/ram/linux/clang++-22/repos/fmt"
 		}
 	]
 }
