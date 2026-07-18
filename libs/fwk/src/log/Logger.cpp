@@ -1,11 +1,10 @@
-#include <jde/fwk/log/Logger.h>
+#include <jde/fwk/log/log.h>
 
 namespace Jde{
 	concurrent_flat_set<StringMd5> _loggedEntries;
 	α Logging::MarkLogged( StringMd5 id )ι->bool{
 		return _loggedEntries.insert(id);
 	}
-	α Logging::CanBreak()ι->bool{ return Process::IsDebuggerPresent(); }
 
 	α Logging::Log( const Entry& entry )ι->void{
 		if( Process::Finalizing() || !ShouldLog(entry.Level, entry.Tags) )

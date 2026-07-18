@@ -1,7 +1,6 @@
 #include <iostream> // !important
 #include <syslog.h>
 #include <execinfo.h>
-#include <signal.h>
 #include <dlfcn.h>
 
 #include <jde/fwk/process/process.h>

@@ -1,5 +1,6 @@
 #pragma once
 #include <stdexcept>
+#include <jde/fwk/utils/paramPack.h>
 #include "jde/fwk/log/logTags.h"
 #include <jde/fwk/io/crc.h>
 

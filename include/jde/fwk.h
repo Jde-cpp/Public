@@ -57,11 +57,12 @@ ENABLE_WARNINGS
 	#endif
 #else
 	constexpr bool _msvc{ false };
+	#include <signal.h>
 #endif
 #include "fwk/macros.h"
 #include "fwk/usings.h"
 #include "fwk/enum.h"
 #include "fwk/exceptions/assert.h"
 #include "fwk/exports.h"
-#include "fwk/log/Logger.h"
+#include "fwk/log/log.h"
 #include "fwk/exceptions/Exception.h"

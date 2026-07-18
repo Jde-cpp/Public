@@ -3,11 +3,13 @@
 		"window.title": "Fwk",
 		"name": "fwk",
 		"target": "Jde.Fwk.Tests",
+		"testTarget": "${config:target}",
 		"subDir": "libs/${config:name}",
-		"cmake.sourceDirectory": "${workspaceFolder}/../../..",
+		"cmake.sourceDirectory": "${workspaceFolder:src}/../../..",
 		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"settings": "${workspaceFolder:tests}/config/Framework.Tests.jsonnet",
+		"testSettings": "${config:settings}",
 		"program": "${config:subDir}/tests/${config:target}"
 	},
 	"folders": [

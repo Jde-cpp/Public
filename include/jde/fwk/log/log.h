@@ -1,21 +1,19 @@
-﻿#pragma once
-#ifndef LOG_H
-#define LOG_H
-
-#include "logTags.h"
-#include "Entry.h"
-#ifndef _MSC_VER
-	#include <signal.h>
+#pragma once
+#ifndef LOGGER
+#define LOGGER
+#ifdef __cpp_lib_stacktrace
+	#include <stacktrace>
+#else
+	#include <boost/stacktrace.hpp>
 #endif
+#include "../process/process.h"
+#include "break.h"
+#include "SpdLog.h"
 
+#define FormatString const fmt::format_string<Args const&...>
+#define ARGS const Args&
+#define let const auto
 #define Φ Γ auto
-namespace Jde{
-	struct Exception;
-	Φ ToString( ELogLevel l )ι->string;
-	Φ ToLogLevel( sv op )ι->ELogLevel;
-	α LogLevelStrings()ι->const std::array<sv,7>;
-}
-
 
 #define LOGSL(level, sl, tags, message,...) \
 	if( Logging::ShouldLog(level, (ELogTags)tags) && !Process::Finalizing() ){\
@@ -38,29 +36,71 @@ namespace Jde{
 #define TRACET(tags, message,...) LOG( ELogLevel::Trace, tags, message __VA_OPT__(,) __VA_ARGS__ )
 #define TRACESL(message,...) LOGSL( ELogLevel::Trace, sl, _tags, message __VA_OPT__(,) __VA_ARGS__ )
 
-namespace Jde::Logging{
-	struct ILogger; struct MemoryLog;
-	Φ DestroyLoggers( bool terminate )->void;
-	Φ Loggers()->const vector<up<ILogger>>&;
-	Ŧ GetLogger()ε->T&;
-	Ŧ FindLogger()ι->T*;
-	Φ AddLogger( up<ILogger>&& logger )ι->ILogger*;
-	Φ Init()ι->void;
-}
 namespace Jde{
-	Ŧ Logging::FindLogger()ι->T*{
-		for( auto& logger : Loggers() ){
-			if( auto log = dynamic_cast<T*>( logger.get() ) )
-				return log;
-		}
-		return nullptr;
+	struct Exception;
+	Φ ToString( ELogLevel l )ι->string;
+	Φ ToLogLevel( sv op )ι->ELogLevel;
+	α LogLevelStrings()ι->const std::array<sv,7>;
+}
+
+namespace Jde::Logging{
+	Φ Log( const Entry& entry )ι->void;
+	Φ Log( const Entry& entry, uint32 appPK, uint32 instancePK )ι->void;
+
+	ψ Log( ELogLevel level, ELogTags tags, SL sl, FormatString&& m, ARGS... args )ι->void;
+#ifdef __cpp_lib_stacktrace
+	ψ LogStack( ELogLevel level, ELogTags tags, std::stacktrace::size_type stackTraceIndex, FormatString&& m, ARGS... args )ι->void{
+		if( !ShouldLog(level, tags) )
+			return;
+
+		if( let stacktrace = std::stacktrace::current(); stacktrace.size() )
+			Log( Entry{stacktrace[ std::min(stacktrace.size()-1,stackTraceIndex+1) ], level, tags, FWD(m), FWD(args)...} );
+		else
+			Log( level, tags, SRCE_CUR, FWD(m), FWD(args)... );
 	}
-	Ŧ Logging::GetLogger()ε->T&{
-		auto p = FindLogger<T>();
-		if( !p )
-			throw std::runtime_error( Ƒ("Logger of type {} not found.", typeid(T).name()) );
-		return *p;
+	#else
+	ψ LogStack( ELogLevel level, ELogTags tags, boost::stacktrace::stacktrace::size_type stackTraceIndex, FormatString&& m, ARGS... args )ι->void{
+		if( !ShouldLog(level, tags) )
+			return;
+		if( let stacktrace = boost::stacktrace::stacktrace(); stacktrace.size() )
+			Log( Entry{stacktrace[ std::min(stacktrace.size()-1,stackTraceIndex+1) ], level, tags, FWD(m), FWD(args)...} );
+		else
+			Log( level, tags, SRCE_CUR, FWD(m), FWD(args)... );
+	}
+	#endif
+
+	Φ MarkLogged( StringMd5 id )ι->bool;
+	template<typename... Args>
+	α LogOnce( SL sl, ELogTags tags, FormatString&& m, ARGS... args )ι->void{
+		if( MarkLogged(Entry::GenerateId(sv{m.get().data(), m.get().size()})) )
+			Log( ELogLevel::Information, tags, sl, FWD(m), FWD(args)... );
 	}
 }
+
+namespace Jde{
+	ψ Logging::Log( ELogLevel level, ELogTags tags, SL sl, FormatString&& m, ARGS... args )ι->void{
+		BREAK_IF( m.get().size()==0 );
+		if( Process::Finalizing() || !ShouldLog(level, tags) )
+			return;
+		for( auto& logger : Loggers() ){
+			if( !logger->ShouldLog(level, tags) )
+				continue;
+			try{
+				if( auto p = dynamic_cast<SpdLog*>(logger.get()); p )
+					p->Write( level, sl, FWD(m), FWD(args)... );
+				else
+					logger->Write( Entry{sl, level, tags, string{m.get().data(), m.get().size()}, FWD(args)...} );
+			}
+			catch( const fmt::format_error& e ){
+				Log( ELogLevel::Critical, ELogTags::App, SRCE_CUR, "could not format '{}' cargs: {} error: '{}'", string{m.get().data(), m.get().size()}, sizeof...(args), string{e.what()} );
+			}
+		}
+		BREAK_IF( tags<=ELogTags::Write && level>=BreakLevel() );//don't want to break for opc server.
+	}
+}
+
+#undef FormatString
+#undef ARGS
+#undef let
 #undef Φ
 #endif

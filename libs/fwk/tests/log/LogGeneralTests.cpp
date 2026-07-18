@@ -1,4 +1,4 @@
-#include "jde/fwk/log/Logger.h"
+#include "jde/fwk/log/ILogger.h"
 #include <jde/fwk/log/MemoryLog.h>
 #define let const auto
 #pragma warning( disable: 4702 )

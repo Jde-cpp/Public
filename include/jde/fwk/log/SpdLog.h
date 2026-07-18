@@ -2,6 +2,7 @@
 #ifndef SPDLOG
 #define SPDLOG
 #include <jde/fwk/log/ILogger.h>
+#include <jde/fwk/log/Entry.h>
 #include <spdlog/common.h>
 #include <spdlog/logger.h>
 
