@@ -144,11 +144,12 @@ namespace Jde{
 		try{
 			if( !fs::exists(settingsPath) )
 				throw std::runtime_error{ Ƒ("file does not exist: '{}'", settingsPath.string()) };
-			flat_map<string,string> args ={
-				{ "buildTarget", _debug ? "debug" : "release" }
-			};
-			if( Process::FindArg("-tests") )
-				args["logsDir"] = ( fs::current_path()/"logs" ).string();
+			flat_map<string,string> args;
+			if( Process::FindArg("-tests") ){
+				args["buildTarget"] = _debug ? "debug" : "release";
+				args["cwd"] = fs::current_path().string();
+				args["logsDir"] = args["cwd"] + "/logs";
+			}
 
 			let settings = Json::TryReadJsonNet( settingsPath, _importPaths ? *_importPaths : _noImportPaths, args );
 			if( !settings )

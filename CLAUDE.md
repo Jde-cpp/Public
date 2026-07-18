@@ -68,14 +68,19 @@ Tests use **GoogleTest**. Each test binary requires a `-settings=` argument poin
 - `apps/OpcGateway/tests/config/Opc.Tests.jsonnet`
 - `apps/OpcServer/tests/config/Opc.Server.Tests.jsonnet`
 
-`-tests` is **required**: it is what binds the `logsDir` ext var the configs read, and on Linux it selects the `config/args/mysql` import dir — without it jsonnet evaluation fails and the binary starts with an `{"error":…}` settings object. Logs are written to `<cwd>/logs`, so run from `runtime/`.
+`-tests` is **required**: it is what binds the `buildTarget`/`cwd`/`logsDir` ext vars the configs read, and on Linux it selects the `config/args/mysql` import dir — without it jsonnet evaluation fails and the binary starts with an `{"error":…}` settings object. Test output is cwd-relative: logs go to `<cwd>/logs` and the sqlite tests' file db to `<cwd>/sqlite-tests.db`.
+
+The two workflows use **different working directories**, so they keep separate logs/db files:
+
+- **ctest**: `addJdeTest()` (`build/functions.cmake`) registers each suite with `WORKING_DIRECTORY $buildDir/Testing` (ctest creates it) and sets the `REPO_SOURCE_DIR`/`REPO_BUILD_DIR` env vars the configs expand via `$(…)` — output lands in `$buildDir/Testing/{logs,sqlite-tests.db}`.
+- **direct/debugger runs**: run from `runtime/` (created by `reconfig`; the VS Code launch configs use it too) with `REPO_SOURCE_DIR`/`REPO_BUILD_DIR` exported in the shell — output lands in `$buildDir/runtime/{logs,sqlite-tests.db}`.
 
 ```bash
 # Run a test binary directly
 cd $buildDir/runtime
 $buildDir/libs/fwk/tests/Jde.Fwk.Tests -tests -settings=$JDE_DIR/libs/fwk/tests/config/Framework.Tests.jsonnet
 
-# Or every suite via ctest (each add_test already passes -tests); --preset is broken, see reviews/todo.md §3
+# Or every suite via ctest (addJdeTest passes -tests and the env); --preset is broken, see reviews/todo.md §3
 cd $buildDir && ctest
 ```
 

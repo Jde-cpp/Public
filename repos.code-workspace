@@ -1,0 +1,31 @@
+{
+	"settings": {
+		"window.title": "Repos",
+		"releaseRoot": "${env:JDE_BASH}/Release",
+		"sourceDir": "${workspaceFolder}",
+		"target": "all",
+		"cmake.sourceDirectory": "${workspaceFolder}",
+		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
+		"presetSuffix": "-repos",
+		"files.watcherExclude": {
+			"**/my-workspace*/**": true,
+			"**/out/**": true,
+			"**/build/**": true
+		},
+		"files.exclude": {
+			"**/my-workspace*/**": true,
+			"**/out/**": true,
+			"**/build/**": true
+		},
+		"search.exclude": {
+			"**/my-workspace*/**": true,
+			"**/out/**": true,
+			"**/build/**": true
+		}
+	},
+	"folders": [
+		{
+			"path": "."
+		}
+	]
+}

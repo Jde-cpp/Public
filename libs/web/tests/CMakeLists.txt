@@ -46,7 +46,8 @@ else()
 	target_link_libraries( ${targetName} libjitterentropy.a )
 endif()
 
-add_test( NAME WebTests COMMAND $<TARGET_FILE:Jde.Web.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet )
+addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet )
+
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Web.Tests.jsonnet" )
 	copyCommonDlls()

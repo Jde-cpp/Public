@@ -38,7 +38,7 @@ else()
 	endif()
 endif()
 
-add_test( NAME AccessTests COMMAND $<TARGET_FILE:Jde.Access.Tests> -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet )
+addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet )
 
 target_precompile_headers(${targetName}
   PRIVATE

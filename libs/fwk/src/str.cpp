@@ -10,6 +10,17 @@
 	#include <jde/fwk/process/os/windows/WindowsUtilities.h>
 #endif
 #define let const auto
+
+template<> α Jde::To<double>( sv x )ι->double{
+	double y{}; //use 0.0 to keep consistent with the other To<T>.
+	try{
+		y = stod(string{x});
+	}catch( const exception& e ){
+		DBGT( ELogTags::Parsing, "stod failed on '{}': {}", x, e.what() );
+	}
+	return y;
+}
+
 boost::uuids::string_generator _gen;
 α Jde::ToUuid( sv s, SL sl )ε->uuid{
 	try{
@@ -60,9 +71,9 @@ namespace Jde{
 			return Str::Format( format, move(args) );
 		}
 		catch( const std::exception& e ){
-			string msg = Ƒ( "{}[{}]", format, Join(args, ", ") );
+			string msg = Ƒ( "{}", format ); //args is moved
 			DBGT( ELogTags::Parsing, "Format error: {}, error: {}", msg, e.what() );
-			return string{ msg };
+			return msg;
 		}
 	}
 	α Str::Replace( sv source, char find_, char replace )ι->string{

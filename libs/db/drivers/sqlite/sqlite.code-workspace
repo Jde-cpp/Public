@@ -51,6 +51,10 @@
 		{
 			"name": "access",
 			"path": "../../../access/config/sql/sqlite"
+		},
+		{
+			"name": "include",
+			"path": "../../../../include/jde"
 		}
 	]
 }
