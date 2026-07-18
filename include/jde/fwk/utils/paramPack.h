@@ -10,8 +10,8 @@ namespace Jde::ParamPack{
 
 	template<typename... Tail>
 	void Append( vector<string>& values, string&& h, Tail&&... t )ι{
-		values.push_back( h );
-		return Apend( values, std::forward<Tail>(t)... );
+		values.push_back( std::move(h) );
+		return Append( values, std::forward<Tail>(t)... );
 	}
 
 	template<class T> inline α ToStringT( const T& x )ι->string{

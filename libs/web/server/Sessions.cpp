@@ -2,7 +2,7 @@
 
 #include <jde/web/server/HttpRequest.h>
 #include <jde/fwk/str.h>
-#include <jde/fwk/utils/mathUtils.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/web/server/auth/JwtLoginAwait.h>
 #include <jde/app/IApp.h>
 #include "ServerImpl.h"
@@ -31,9 +31,9 @@ namespace Jde::Web::Server{
 	}
 
 	α GetNewSessionId()ι->SessionPK{
-		auto sessionId{ Math::Random() };
+		auto sessionId{ Crypto::Random<uint32_t>() };
 		while( _sessions.contains(sessionId) )
-			sessionId = Math::Random();
+			sessionId = Crypto::Random<uint32_t>();
 		return sessionId;
 	}
 

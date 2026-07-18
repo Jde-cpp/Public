@@ -63,4 +63,12 @@ namespace Jde::Crypto{
 		//the key was created with a passcode - it must be encrypted at rest, i.e. unreadable without it.
 		EXPECT_THROW( Crypto::ReadPrivateKey(PrivateKeyFile, {}), Exception );
 	}
+	TEST_F( OpenSslTests, Random ){
+		array<unsigned char,16> a{}, b{};
+		Crypto::Random( a.data(), a.size() );
+		Crypto::Random( b.data(), b.size() );
+		EXPECT_NE( a, b );//2⁻¹²⁸ false-failure odds.
+		EXPECT_NE( a, (array<unsigned char,16>{}) );
+		Crypto::Random<uint32_t>();
+	}
 }

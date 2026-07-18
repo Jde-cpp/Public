@@ -7,7 +7,7 @@ namespace Jde::Crypto{
 		CryptoSettings( jobject settings )ι;
 		α CreateDirectories()Ε->void;
 
-		 α PublicKey()Ι->const Crypto::PublicKey&{
+		 α PublicKey()Ε->const Crypto::PublicKey&{
 			if( !_publicKey )
 				_publicKey = Crypto::ReadPublicKey( PublicKeyPath );
 			return *_publicKey;

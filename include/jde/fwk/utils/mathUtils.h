@@ -16,18 +16,14 @@ namespace Jde::Math{
 		T Max{0.0};
 	};
 
-  static up<std::mt19937> _engine;
-	Ξ Random()->uint32{
-		if( !_engine ){
-			_engine = mu<std::mt19937>();
-#ifdef NDEBUG
-	    std::random_device rd;
-	    auto rd_range = std::ranges::transform_view(std::ranges::iota_view(static_cast<std::size_t>(0), std::mt19937::state_size), [&rd](size_t){return rd();});
-	    std::seed_seq seeds(rd_range.begin(), rd_range.end());
-			_engine->seed( seeds );
-#endif
-		}
-		return (*_engine)();
+	Ξ Random()->uint32{//not cryptographically secure - use Crypto::Random for anything security-bearing (session ids, tokens, keys).
+		static thread_local std::mt19937 engine{ [](){
+			std::random_device rd;
+			auto rd_range = std::ranges::transform_view( std::ranges::iota_view(static_cast<std::size_t>(0), std::mt19937::state_size), [&rd](size_t){return rd();} );
+			std::seed_seq seeds( rd_range.begin(), rd_range.end() );
+			return std::mt19937{ seeds };
+		}() };
+		return engine();
 	}
 
 	template<typename T=double> struct Point{
@@ -43,7 +39,7 @@ namespace Jde::Math{
 		//ASSERT( size>0 );
 		TValue sum{};
 		TValue min{ std::numeric_limits<TValue>::max() };
-		TValue max{ std::numeric_limits<TValue>::min() };
+		TValue max{ std::numeric_limits<TValue>::lowest() };//min() is the smallest *positive* normal for floating point.
 		TValue average{};
 		TValue variance{};
 		for( let& value : values ){

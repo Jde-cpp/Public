@@ -1,5 +1,7 @@
 #include "LinuxDrive.h"
-//#include <unistd.h>
+#include <spawn.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <jde/fwk/io/file.h>
 #include <jde/fwk/io/Cache.h>
 
@@ -71,7 +73,7 @@ namespace Jde::IO::Drive{
 			let modifiedTime = to_timespec( dirEntry.ModifiedTime );
 			let accessedTime = dirEntry.AccessedTime.time_since_epoch()==Duration::zero() ? modifiedTime : to_timespec( dirEntry.AccessedTime );
 			timespec values[] = {accessedTime, modifiedTime};
-			if( !utimensat(AT_FDCWD, dir.string().c_str(), values, 0) )
+			if( utimensat(AT_FDCWD, dir.string().c_str(), values, 0) )
 				WARN( "utimensat returned {} on {}", errno, dir.string() );
 		}
 		return mu<DirEntry>( dir );
@@ -98,9 +100,17 @@ namespace Jde::IO::Drive{
 	}
 	α NativeDrive::Trash( const fs::path& path )ι->void{
 		DBG( "Trashing '{}'."sv, path.string() );
-
-		let result = system( Jde::format("gio trash {}", path.string()).c_str() );
-		DBG( "Trashing '{}' returned '{}'."sv, path.string(), result );
+		let pathString = path.string();
+		const char* argv[] = { "gio", "trash", "--", pathString.c_str(), nullptr };//no shell - path is a plain argv element.
+		pid_t pid; int status;
+		if( let err = ::posix_spawnp( &pid, "gio", nullptr, nullptr, const_cast<char**>(argv), environ ); err ){
+			WARN( "Trashing '{}' - posix_spawnp failed: {}"sv, pathString, strerror(err) );
+		}
+		else if( ::waitpid( pid, &status, 0 )==-1 ){
+			WARN( "Trashing '{}' - waitpid failed: {}"sv, pathString, strerror(errno) );
+		}
+		else
+			DBG( "Trashing '{}' returned '{}'."sv, pathString, WIFEXITED(status) ? WEXITSTATUS(status) : status );
 	}
 	α NativeDrive::SoftLink( const fs::path& existingFile, const fs::path& newSymLink )ε->void{
 		let result = ::symlink( existingFile.string().c_str(), newSymLink.string().c_str() );

@@ -21,6 +21,7 @@ namespace Jde{
 		std::ofstream f( path, append ? std::ios::binary|std::ios::app : std::ios::binary );
 		THROW_IFX( f.fail(), IOException(path, "Could not open file", sl) );
 		f.write( (char*)data.data(), data.size() );
+		THROW_IFX( f.fail(), IOException(path, "Could not write file", sl) );
 	}
 }
 #endif

@@ -1,12 +1,9 @@
-﻿#include <jde/fwk/io/FileAwait.h>
+﻿#include <jde/fwk/io/Cache.h>
+#include <jde/fwk/io/FileAwait.h>
 #include <jde/fwk/co/LockKey.h>
-#include <boost/uuid.hpp>
-#include <boost/endian/conversion.hpp>
 #include <jde/fwk/process/execution.h>
 #include <jde/fwk/utils/Vector.h>
 #include <jde/fwk/process/thread.h>
-#include <atomic>
-#include <fstream>
 
 #define let const auto
 
@@ -39,7 +36,7 @@ namespace Jde::IO::Tests{
 		auto l = co_await LockKeyAwait{ file.string() };
 		[sl]( const fs::path& file, uuid guid1, uuid guid2, Vector<uuid>& written, CoLockGuard, bool createFile )->VoidAwait::Task {
 			try{
-				co_await IO::WriteAwait{ file, Ƒ("{}\n{}\n", to_string(guid1), to_string(guid2)), createFile, Jde::ELogTags::IO, sl };
+				co_await IO::WriteAwait{ file, Ƒ("{}\n{}\n", ToString(guid1), ToString(guid2)), createFile, Jde::ELogTags::IO, sl };
 			}
 			catch( Exception& e ){
 				e.Log();
@@ -56,7 +53,7 @@ namespace Jde::IO::Tests{
 			ul l{ readValues.Mutex };
 			for( auto&& guid : guidStrings ){
 				try{
-					readValues.push_back( boost::uuids::string_generator{}(string{guid}), l );
+					readValues.push_back( ToUuid(string{guid}), l );
 				}
 				catch( const std::exception& e ){
 					THROW( "[{}] Failed to parse GUID from string '{}': {}", file.string(), guid, e.what() );
@@ -115,9 +112,9 @@ namespace Jde::IO::Tests{
 		}( move(file), move(content), done, move(l) );
 	}
 
-	Ω readRaw( fs::path file, sp<string> content, std::atomic<bool>& done, SRCE )ι->TAwait<string>::Task{
+	Ω readRaw( fs::path file, sp<string> content, std::atomic<bool>& done, bool cache=false, SRCE )ι->TAwait<string>::Task{
 		try{
-			*content = co_await IO::ReadAwait{ move(file), false, sl };
+			*content = co_await IO::ReadAwait{ move(file), cache, sl };
 		}
 		catch( Exception& e ){
 			e.Log();
@@ -177,6 +174,20 @@ namespace Jde::IO::Tests{
 			std::this_thread::sleep_for( 5ms );
 		ASSERT_TRUE( readDone ) << "empty read never completed";
 		ASSERT_TRUE( content->empty() ) << "expected empty content, got: " << *content;
+	}
+
+	TEST_F( FileTests, CachedEmptyString ){
+		let file = Tests::file( 300 );//never created on disk - a cache hit must not open the file.
+		Cache::Set<string>( file.string(), ms<string>() );
+		auto content = ms<string>( "sentinel" );
+		std::atomic<bool> done{};
+		readRaw( file, content, done, true );
+		let deadline = steady_clock::now()+10s;
+		while( !done && steady_clock::now()<deadline )
+			std::this_thread::sleep_for( 5ms );
+		ASSERT_TRUE( done ) << "cached empty read never completed";
+		EXPECT_TRUE( content->empty() ) << "expected empty content, got: " << *content;
+		Cache::Clear( file.string() );
 	}
 
 	constexpr uint _fileSize{ 5 };

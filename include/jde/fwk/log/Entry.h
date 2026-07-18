@@ -66,7 +66,7 @@ namespace Jde::Logging{
 
 	template<class... Args>
 	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, string&& m, ARGS... args )ι:
-		Entry{ sl, l, tags, move(m), vector<string>{} }{
+		Entry{ sl, l, tags, userPK, move(m), vector<string>{} }{
 		ParamPack::Append( Arguments, args... );
 	}
 

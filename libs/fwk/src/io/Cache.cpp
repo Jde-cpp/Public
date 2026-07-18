@@ -28,6 +28,7 @@ namespace Jde
 			if( let d{ Duration(id) }; d!=Duration::max() )
 				t =  Clock::now()+d;
 		}
+		unique_lock l{ _cacheDoubleLock };
 		auto r = _cacheDouble.emplace( move(id), make_tuple(v,t) );
 		if( !r.second )
 			r.first->second = make_tuple( v, t );
@@ -64,6 +65,7 @@ namespace Jde
 			if( let d{ Duration(id) }; d!=Duration::max() )
 				expiration =  Clock::now()+d;
 		}
+		unique_lock l{ _cacheDoubleLock };
 		auto r = _cacheDouble.emplace( move(id), make_tuple(v,expiration) );
 		if( !r.second )
 			r.first->second = make_tuple( v, expiration );

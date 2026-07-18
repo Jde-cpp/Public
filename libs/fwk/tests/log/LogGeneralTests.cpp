@@ -37,6 +37,7 @@ namespace Jde::Tests{
 		};
 		ASSERT_NO_THROW( TRACET(unConfiguredTags, "{}", arg()) );
 	}
+
 	//TODO makesure cumulative is updated when some obscure tag is sent.
 	//How quick is md5 calculation.
 	//How quick is noop.

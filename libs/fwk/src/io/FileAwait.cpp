@@ -43,14 +43,12 @@ namespace IO{
 				Chunks.pop();
 		}
 		if( IsRead ){
-			if( auto h = ReadCoHandle(); h ){
-				_coHandle = (StringAwait::Handle)nullptr;
+			if( auto h = ReadCoHandle(); h ){//ReadCoHandle already nulled _coHandle under _coHandleMutex.
 				Post( [path=move(Path),sl=_sl, m=move(m), code, h](){h.promise().ResumeExp(IO::IOException{path, code, move(m), sl}, h);} );
 			}
 		}
 		else{
-			if( auto h = WriteCoHandle(); h ){
-				_coHandle = (VoidAwait::Handle)nullptr;
+			if( auto h = WriteCoHandle(); h ){//WriteCoHandle already nulled _coHandle under _coHandleMutex.
 				Post( [path=move(Path),sl=_sl, m=move(m), code, h](){h.promise().ResumeExp(IO::IOException{path, code, move(m), sl}, h);} );
 			}
 		}
@@ -76,6 +74,7 @@ namespace IO{
 	α ReadAwait::await_ready()ι->bool{
 		if( auto p = _cache ? Cache::Get<string>(_arg->Path.string()) : sp<string>{}; p ){
 			_arg->Buffer = *p;
+			_fromCache = true;
 			return true;
 		}
 		else{
@@ -112,7 +111,7 @@ namespace IO{
 			ExceptionPtr->Throw();
 		DBGT( _arg->_tags, "ReadAwait::Complete: {}, size: {}", _arg->Path.string(), _arg->Size() );
 		auto& r = get<string>(_arg->Buffer);
-		if( r.size() )
+		if( _fromCache || r.size() )//an empty cache hit must not fall through - StringAwait has no promise on the ready path.
 			return move(r);
 		auto y = StringAwait::await_resume();
 		if( _cache )

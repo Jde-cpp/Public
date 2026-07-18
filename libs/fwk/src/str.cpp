@@ -28,7 +28,7 @@ namespace Jde{
 	α Str::Empty()ι->str{ return _empty; };
 
 	α Str::DecodeUri( sv x )ι->string{
-		auto fromHex = []( char ch )->int{
+		auto fromHex = []( char ch )->int {
 			if( ch>='0' && ch<='9' )
 				return ch-'0';
 			ch = (char)::tolower( (unsigned char)ch );
@@ -107,29 +107,35 @@ namespace Jde{
 	α Str::ToUpper( sv source )ι->string{ return transform(source, ::toupper); }
 
 
-	α GetChar( sv x, uint& i )ι->wchar_t{
-		wchar_t ch = i<x.size() ? x[i] : '\0';
-		if( ch==L'\xffe2' && i+2<x.size() ){
-			ch =  x[++i];
-			ch = ch << 8;
-			wchar_t lo = x[++i] & 0xff; //lo &= 0xff;
-			ch += lo;
+	//decode one code point at x[i]. Bytes read unsigned - a signed char sign-extends into a negative
+	//wchar_t, which is UB in the space check. Only ASCII and the UTF-8 3-byte block led by 0xE2
+	//(U+2000..U+2FFF, general punctuation - where Unicode spaces live) are decoded; else the raw byte 0..255.
+	α GetChar( sv x, uint& i )ι->char32_t{
+		if( i>=x.size() )
+			return 0;
+		let b = (unsigned char)x[i];
+		if( b==0xE2 && i+2<x.size() ){
+			let hi = (unsigned char)x[i+1] & 0x3Fu, lo = (unsigned char)x[i+2] & 0x3Fu;
+			i += 2;
+			return 0x2000u | (hi << 6) | lo;
 		}
-		return ch;
+		return b;
 	};
 
-	Ω isSpace( wchar_t ch )->bool{
-		return std::iswspace( ch ) || ch==L'\x80af' || ch==L'\x8093';
+	Ω isSpace( char32_t ch )->bool{
+		if( ch<0x80 )
+			return std::isspace( (int)ch )!=0;
+		return (ch>=0x2000 && ch<=0x200A) || ch==0x2028 || ch==0x2029 || ch==0x202F || ch==0x205F;//Unicode spaces in the general-punctuation block.
 	}
 
-	Ṫ ltrim( T&& s, function<bool(wchar_t)> f )->T{
+	Ṫ ltrim( T&& s, function<bool(char32_t)> f )->T{
 		uint i=0;
-		for( ; i<s.size() && f(*(std::begin(s)+i)); ++i );
+		for( ; i<s.size() && f((unsigned char)*(std::begin(s)+i)); ++i );//unsigned: byte-wise paths must not sign-extend into f.
 		return i==0 ? s : T{ std::begin(s)+i, std::end(s) };
 	}
-	Ṫ rtrim( T&& s, function<bool(wchar_t)> f )->T{
+	Ṫ rtrim( T&& s, function<bool(char32_t)> f )->T{
 		uint i=s.size();
-		for( ; i>0 && f(*(std::begin(s)+i-1)); --i );
+		for( ; i>0 && f((unsigned char)*(std::begin(s)+i-1)); --i );
 		return i==s.size() ? s : T{ std::begin(s), std::begin(s)+i };
 	}
 
@@ -137,7 +143,7 @@ namespace Jde{
 		return ltrim( move(s), isSpace );
 	}
 	α Str::LTrim( sv s )->sv{
-		uint i=0; wchar_t ch;
+		uint i=0; char32_t ch;
 		for( ch = GetChar(s, i); isSpace(ch); ch = GetChar(s, ++i) );
 		if( ch>0xff && i>1 )
 			i-=2;
@@ -145,17 +151,17 @@ namespace Jde{
 	}
 	α Str::TrimFirstLast( string&& s, char first, char last )ι->string{
 		bool found{};
-		auto f = [&found]( char bracket, wchar_t ch ){
-			let skip = ch==bracket && !found;
+		auto f = [&found]( char bracket, char32_t ch ){
+			let skip = ch==(char32_t)(unsigned char)bracket && !found;
 			if( skip )
 				found = true;
 			return skip || isSpace( ch );
 		};
-		auto trim = ltrim( move(s), [&f, first](wchar_t ch){return f(first, ch);} );
+		auto trim = ltrim( move(s), [&f, first](char32_t ch){return f(first, ch);} );
 		if( !found )
 			return RTrim( move(trim) );
 		found = false;
-		return rtrim( move(trim), [&f, last](wchar_t ch){return f(last, ch);} );
+		return rtrim( move(trim), [&f, last](char32_t ch){return f(last, ch);} );
 	}
 
 	α Str::RTrim( string&& s )->string{
@@ -164,7 +170,7 @@ namespace Jde{
 		return trimmed.size()==y.size() ? y : string{ trimmed };
 	}
 	α Str::RTrim( sv s )->sv{
-		return rtrim( sv{s}, [](wchar_t ch){return isSpace(ch);} );
+		return rtrim( sv{s}, [](char32_t ch){return isSpace(ch);} );
 	}
 
 	α Str::StartsWithInsensitive( sv value, sv starting )ι->bool{
