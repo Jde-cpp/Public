@@ -22,7 +22,6 @@ namespace Jde{
 	using Clock=std::chrono::system_clock;
 	using Duration=Clock::duration;
 	using TimePoint=Clock::time_point;
-	using TP=Clock::time_point;
 
 	using std::array;
 	using std::atomic;

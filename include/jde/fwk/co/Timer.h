@@ -1,6 +1,8 @@
 #pragma once
 #include <boost/asio.hpp>
+#include <chrono>
 #include "Await.h"
+#include "jde/fwk/usings.h"
 
 namespace Jde{
 	using TimerAwait = TAwait<std::expected<void, boost::system::error_code>>;
@@ -13,9 +15,9 @@ namespace Jde{
 			return _h ? TimerAwait::await_resume() : std::expected<void, boost::system::error_code>{};
 		}
 		α Suspend()ι->void override;
-		α Cancel()ι->uint{ return _timer.cancel(); }
-		α Restart()ε->void;
+		α Cancel()ι->uint{ lg _{_mutex}; return _timer.cancel(); }//asio timers aren't safe for concurrent cancel vs Start's async_wait.
 	private:
+		α Start()ε->void;
 		sp<boost::asio::io_context> _ctx;
 		steady_clock::duration _duration;
 		optional<boost::asio::any_io_executor> _executor;//when set, completion handlers are bound to it.

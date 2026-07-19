@@ -70,7 +70,7 @@ namespace Jde::DB{
 		α await_ready()ι->bool override;
 		α await_resume()ι->T override;
 	private:
-		sp<T> _cache;
+		sp<const T> _cache;
 		string _cacheName;
 	};
 
@@ -82,10 +82,9 @@ namespace Jde::DB{
 	Ŧ CacheAwait<T>::await_resume()ι->T{
 		if( _cache )
 			return *_cache;
-		let y = TSelectAwait<T>::await_resume();
-		Cache::Set<T>( _cacheName, ms<T>(y) );
+		auto y = TSelectAwait<T>::await_resume();
 		TRACET( ELogTags::Test, "Cache.sizeof: {}", sizeof(T) );
-		return y;
+		return *Cache::Set<T>( _cacheName, move(y) );//move into the cache, copy out once - `Set(name, y); return y;` copies twice.
 	}
 }
 #undef let

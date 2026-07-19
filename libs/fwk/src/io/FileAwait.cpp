@@ -72,7 +72,7 @@ namespace IO{
 	}
 
 	α ReadAwait::await_ready()ι->bool{
-		if( auto p = _cache ? Cache::Get<string>(_arg->Path.string()) : sp<string>{}; p ){
+		if( auto p = _cache ? Cache::Get<string>(_arg->Path.string()) : nullptr; p ){
 			_arg->Buffer = *p;
 			_fromCache = true;
 			return true;
@@ -115,7 +115,7 @@ namespace IO{
 			return move(r);
 		auto y = StringAwait::await_resume();
 		if( _cache )
-			Cache::Set<string>( _arg->Path.string(), ms<string>(y) );
+			Cache::Set<string>( _arg->Path.string(), y );
 		return y;
 	}
 	α WriteAwait::await_resume()ε->void{

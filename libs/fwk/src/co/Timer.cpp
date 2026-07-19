@@ -1,6 +1,7 @@
 #include <jde/fwk/co/Timer.h>
 #include <jde/fwk/process/execution.h>
 
+#define let const auto
 
 namespace Jde{
 	DurationTimer::DurationTimer( steady_clock::duration duration, SL sl )ι:
@@ -22,7 +23,7 @@ namespace Jde{
 		ASSERT( !_h && "Timer destroyed before awaited completion." );
 	}
 
-	α DurationTimer::Restart()ε->void{
+	α DurationTimer::Start()ε->void{
 		lg _{_mutex};
 		THROW_IF( !_h, "Already triggered." );
 		_timer.expires_after( _duration );
@@ -38,7 +39,7 @@ namespace Jde{
 			_timer.async_wait( move(handler) );
 	}
 	α DurationTimer::Suspend()ι->void{
-		Restart();
+		Start();
 		Execution::Run();
 	}
 }

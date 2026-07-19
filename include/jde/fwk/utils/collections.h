@@ -8,7 +8,7 @@
 
 #define let const auto
 namespace Jde{
-	Ŧ Find( const T& map, typename T::key_type key )ι->typename std::optional<typename T::mapped_type>{
+	Ŧ Find( const T& map, const typename T::key_type& key )ι->typename std::optional<typename T::mapped_type>{
 		auto p = map.find( key );
 		return p==map.end() ? std::optional<typename T::mapped_type>{} : p->second;
 	}
@@ -17,7 +17,7 @@ namespace Jde{
 		auto p = find_if( collection.begin(), pEnd, [&value](let& x)ι->bool { return x.second==value; } );
 		return p==pEnd ? nullopt : optional<typename T::key_type>{ p->first };
 	}
-	Ŧ FindDefault( const T& collection, typename T::key_type key )ι->typename T::mapped_type{
+	Ŧ FindDefault( const T& collection, const typename T::key_type& key )ι->typename T::mapped_type{
 		auto pItem = collection.find( key );
 		return pItem==collection.end() ? typename T::mapped_type{} : pItem->second;
 	}
