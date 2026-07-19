@@ -178,7 +178,7 @@ namespace Jde::IO::Tests{
 
 	TEST_F( FileTests, CachedEmptyString ){
 		let file = Tests::file( 300 );//never created on disk - a cache hit must not open the file.
-		Cache::Set<string>( file.string(), ms<string>() );
+		Cache::Set<string>( file.string(), "" );//explicit - `{}` is ambiguous between the T and sp<const T> overloads.
 		auto content = ms<string>( "sentinel" );
 		std::atomic<bool> done{};
 		readRaw( file, content, done, true );

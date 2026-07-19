@@ -1,74 +1,125 @@
 ﻿#include <jde/fwk/io/Cache.h>
+#include <chrono>
+#include <thread>
+#include "jde/fwk/log/logTags.h"
+#include "jde/fwk/process/process.h"
+#include "jde/fwk/usings.h"
+#include <jde/fwk/co/Timer.h>
+
 #define let const auto
-namespace Jde
-{
-	std::map<string,tuple<double,TP>> _cacheDouble; shared_mutex _cacheDoubleLock;
-
-	std::map<string,sp<void>> Cache2::_cache; shared_mutex Cache2::_cacheLock;
-
-	α Cache2::Has( str id )ι->bool{ sl _{_cacheLock}; return _cache.find( id )!=_cache.end(); }
-	α Cache2::Duration( str id )ι->Jde::Duration
-	{
-		return Settings::FindDuration( Jde::format("/cache/{}/duration",id) ).value_or(
-			Settings::FindDuration( "/cache/default/duration" ).value_or( Jde::Duration::max() ));
+namespace Jde{
+	steady_clock::duration _defaultDuration = 1h;
+	α Cache::DefaultDuration()ι->steady_clock::duration{ return _defaultDuration; }
+	α Cache::Init()ι->void{
+		_defaultDuration = Settings::FindDuration( "/cache/default/duration" ).value_or( 1h );
 	}
-
-	α Cache2::Double( str id )ι->double
-	{
-		sl l{ _cacheDoubleLock };
-		auto p = _cacheDouble.find( id );
-		return p==_cacheDouble.end() ? std::nan( "" ) : get<0>( p->second );
-	}
-
-	//Find out about this...
-	α Cache2::SetDouble( str id, double v, TP t )ι->bool
-	{
-		if( t==TP::max() )
+	up<DurationTimer> _timer; mutex _timerMutex;//_timer guarded by _timerMutex. Requires _finalizing set before this is called - the sweep re-arms otherwise.
+	α Cache::Shutdown( bool terminate, SL sl )ι->void{
 		{
-			if( let d{ Duration(id) }; d!=Duration::max() )
-				t =  Clock::now()+d;
+			lg _{ _timerMutex };
+			if( !_timer )
+				return;
+			LOGSL( ELogLevel::Information, sl, ELogTags::App, "Shutting down cache timer" );
+			if( terminate )
+				_timer = nullptr;
+			else
+				_timer->Cancel();
 		}
-		unique_lock l{ _cacheDoubleLock };
-		auto r = _cacheDouble.emplace( move(id), make_tuple(v,t) );
-		if( !r.second )
-			r.first->second = make_tuple( v, t );
-		return r.second;
+		for( uint i=0; i<100; ++i ){//wait for the sweep coroutine to finish - its frame leaks if the executor stops before the cancel handler runs.
+			{
+				lg _{ _timerMutex };
+				if( !_timer )
+					return;
+			}
+			std::this_thread::sleep_for( 1ms );
+		}
 	}
-
-	constexpr ELogTags _tags = ELogTags::Cache;
-	Cache _instance;
-	α Cache::Instance()ι->Cache&{ return _instance; }
-
-	α Cache::InstanceClear( sv name )ι->bool
-	{
-		unique_lock l{_cacheLock};
-		auto p = _cache.find( name );
-		let erased = p!=_cache.end();
+	std::multimap<steady_clock::time_point,string> _timeouts; shared_mutex _timeoutsLock;
+	std::flat_map<string,sp<const std::any>> _cache; shared_mutex _cacheLock;
+	Ω eraseTimeout( str id, ul& /*timeoutsLock*/ )ι->void{
+		for( auto p = _timeouts.begin(); p!=_timeouts.end(); ++p ){
+			if( p->second==id ){
+				_timeouts.erase( p );
+				break;
+			}
+		}
+	}
+	Ω getTimer( ul& /*timeoutsLock*/ )ι->up<DurationTimer>{
+		return _timeouts.empty() || Process::Finalizing()
+			? nullptr
+      : mu<DurationTimer>( std::max(_timeouts.begin()->first-steady_clock::now(), steady_clock::duration::zero()) );
+	}
+	Ω startTimer( up<DurationTimer>&& timer, mutex& timerMutex )ι->DurationTimer::Task{
+		ASSERT( !_timer );
+		_timer = move( timer );
+		timerMutex.unlock();
+		co_await *_timer;
+		ul timeoutsLock{ _timeoutsLock };
+		for( auto p = _timeouts.begin(); p!=_timeouts.end() && p->first<=steady_clock::now(); ){
+			{
+				ul _{ _cacheLock };
+				DBGT( ELogTags::Cache, "[{}]Cache removed", p->second );
+				_cache.erase( p->second );
+			}
+			p = _timeouts.erase( p );
+		}
+		auto newTimer = getTimer( timeoutsLock );
+		_timerMutex.lock();
+		_timer = nullptr;
+		if( newTimer && !Process::Finalizing() )//re-checked under _timerMutex - getTimer's read isn't ordered with Shutdown.
+			startTimer( move(newTimer), _timerMutex );
+		else
+		 	_timerMutex.unlock();
+	}
+	namespace Cache{
+		α Internal::Get( str id )ι->sp<const std::any>{
+			sl l{ _cacheLock };
+			return FindDefault( _cache, id );
+		}
+		α Internal::Set( str id, sp<std::any> value, optional<steady_clock::duration> duration )ι->sp<const std::any>{
+			if( duration && *duration<steady_clock::duration::zero() ){
+				Clear( id );//negative duration = don't cache - drop any prior entry so Get can't serve a stale value.
+				return value;
+			}
+			ul timeoutsLock{ _timeoutsLock };//taken before _cacheLock, matching the sweep's nesting - otherwise the sweep can evict a freshly assigned value via the old due timeout.
+			bool isNew;
+			{
+				ul _{ _cacheLock };
+				isNew = _cache.insert_or_assign( id, value ).second;
+			}
+			if( !isNew ) // could have replaced existing duration
+				eraseTimeout( id, timeoutsLock );
+			if( duration.has_value() ){
+				let deadline = steady_clock::now() + *duration;
+				let isEarliest = _timeouts.empty() || deadline<_timeouts.begin()->first;
+				_timeouts.emplace( deadline, id );
+				_timerMutex.lock();
+				if( _timer ){
+					if( isEarliest )
+						_timer->Cancel();//pending wait completes with operation_aborted; the sweep wakes, re-derives the earliest deadline from _timeouts and re-arms.
+					_timerMutex.unlock();
+				}
+				else{
+					auto newTimer = getTimer( timeoutsLock );
+					if( newTimer )
+						startTimer( move(newTimer), _timerMutex );
+					else
+					 	_timerMutex.unlock();
+				}
+			}
+			return value;
+		}
+	}
+	α Cache::Clear( str id )ι->bool{
+		ul timeoutsLock{ _timeoutsLock };
+		bool erased;
+		{
+			ul _{ _cacheLock };
+			erased = _cache.erase( id )>0;
+			DBGT( ELogTags::Cache, "[{}]Cache removed", id );
+		}
 		if( erased )
-		{
-			_cache.erase( p );
-			TRACE( "Cache::{} erased={}"sv, name, erased );
-		}
+			eraseTimeout( id, timeoutsLock );
 		return erased;
-	}
-
-	α Cache::Double( string id )ι->double
-	{
-		sl l{ _cacheDoubleLock };
-		auto p = _cacheDouble.find( id );
-		return p==_cacheDouble.end() ? std::nan( "" ) : get<0>( p->second );
-	}
-	α Cache::SetDouble( string id, double v, TP expiration )ι->bool
-	{
-		if( expiration==TP::max() )
-		{
-			if( let d{ Duration(id) }; d!=Duration::max() )
-				expiration =  Clock::now()+d;
-		}
-		unique_lock l{ _cacheDoubleLock };
-		auto r = _cacheDouble.emplace( move(id), make_tuple(v,expiration) );
-		if( !r.second )
-			r.first->second = make_tuple( v, expiration );
-		return r.second;
 	}
 }
