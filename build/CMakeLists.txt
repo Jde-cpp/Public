@@ -49,9 +49,20 @@ endif()
 
 message( CMAKE_CONFIGURATION_TYPES=${CMAKE_CONFIGURATION_TYPES} )
 message( CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} )
+
+# Tags of dependencies that other superbuild projects compile against. Each consumer
+# echoes the tag back as an inert -Djde_DEP_TAG_<dep> so its recorded configure command
+# changes — forcing a reconfigure+rebuild — when the dependency is bumped. Stamps never
+# invalidate across ExternalProjects on their own (StepDependencies only orders steps),
+# so without the echo a bump leaves consumers built against the old headers.
+set( fmtTag 12.2.0 )
+set( abslTag 20260526.0 )
+set( rymlTag v0.10.0 )
+set( open62541Tag v1.5.5 )
+
 ExternalProject_Add(fmt
 	GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-	GIT_TAG 12.1.0
+	GIT_TAG ${fmtTag}
 	PREFIX fmt
 	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/fmt
 	CMAKE_ARGS ${stdArgs}
@@ -80,6 +91,7 @@ ExternalProject_Add(spdlog
 	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/spdlog
 	CMAKE_ARGS ${stdArgs}
 		-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
+		-Djde_DEP_TAG_fmt=${fmtTag}
 		-DSPDLOG_BUILD_EXAMPLE:BOOL=OFF
 		-DSPDLOG_BUILD_BENCH:BOOL=OFF
 		-DSPDLOG_BUILD_TESTS:BOOL=OFF
@@ -92,7 +104,7 @@ ExternalProject_Add(spdlog
 
 ExternalProject_Add(absl
 	GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
-	GIT_TAG 20260107.0
+	GIT_TAG ${abslTag}
 	PREFIX absl
 	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/absl
 	CMAKE_ARGS ${stdArgs}
@@ -102,6 +114,50 @@ ExternalProject_Add(absl
 		#-DABSL_FIND_GOOGLETEST=ON
 		-DABSL_PROPAGATE_CXX_STD=ON
 )
+
+# jsonnet is pinned to upstream v0.22.0 plus the source patches below (previously held
+# as commits on a Jde-cpp fork). Shared by both platforms; the Windows-only RuntimeError
+# ctor fix is enabled with -DPATCH_CTOR=ON.
+set( _jsonnetPatch "${CMAKE_CURRENT_BINARY_DIR}/jsonnet-patch.cmake" )
+set( _jsonnetPatchBody [=[
+# Literal replace that fails the build when the needle is gone (upstream drift)
+# and skips files already patched (re-runs). Writes only when changing content.
+function(replace_or_die file needle replacement)
+    file(READ "${file}" _c)
+    string(FIND "${_c}" "${replacement}" _at)
+    if(_at EQUAL -1)
+        string(FIND "${_c}" "${needle}" _at)
+        if(_at EQUAL -1)
+            message(FATAL_ERROR "jsonnet patch no longer applies to ${file}: cannot find '${needle}'")
+        endif()
+        string(REPLACE "${needle}" "${replacement}" _c "${_c}")
+        file(WRITE "${file}" "${_c}")
+    endif()
+endfunction()
+
+# VERSION is not a find_package keyword; CMake treats VERSION/0.10.0 as required
+# components, so ryml's check_required_components() sets ryml_FOUND to FALSE.
+replace_or_die("${SOURCE_DIR}/CMakeLists.txt"
+    "find_package(ryml REQUIRED VERSION 0.10.0)"
+    "find_package(ryml 0.10.0 REQUIRED)")
+
+# <ryml.hpp> only forward-declares c4::to_csubstr(std::string); the C4_ALWAYS_INLINE
+# definition is in <ryml_std.hpp>, so without it vm.cpp.o has an undefined reference.
+replace_or_die("${SOURCE_DIR}/core/vm.cpp"
+    "#include <ryml.hpp>"
+    "#include <ryml_std.hpp>\n#include <ryml.hpp>")
+
+if(PATCH_CTOR) # RuntimeError's variadic ctor is ill-formed for win-clang; collapse to the std::string overload
+    replace_or_die("${SOURCE_DIR}/core/vm.cpp"
+        "Args&&... args): msg_(std::forward<Args>(args)...)"
+        "std::string msg): msg_(std::move(msg))")
+endif()
+]=] )
+file( WRITE "${_jsonnetPatch}" "${_jsonnetPatchBody}" )
+# The patch stamp only records the script's *path* (patch-info.txt), so edits to the body
+# would never re-apply; embedding the body's hash in the command makes the recorded
+# command — and therefore the stamp — go stale whenever the script changes.
+string( SHA1 _jsonnetPatchSha "${_jsonnetPatchBody}" )
 
 IF( WIN32 )
 	ExternalProject_Add(zlib
@@ -157,7 +213,7 @@ file(WRITE "${SOURCE_DIR}/src/c4/yml/common.hpp" "${_c}")
 ]=] )
 	ExternalProject_Add(ryml
 		GIT_REPOSITORY https://github.com/biojppm/rapidyaml.git
-		GIT_TAG "v0.10.0"
+		GIT_TAG "${rymlTag}"
 		PREFIX ryml
 		INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/ryml
 		PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -P "${_rymlPatch}"
@@ -170,33 +226,12 @@ file(WRITE "${SOURCE_DIR}/src/c4/yml/common.hpp" "${_c}")
 			"-DCMAKE_CXX_COMPILE_FEATURES:STRING=cxx_std_11;cxx_std_14;cxx_std_17;cxx_std_20;cxx_std_23;cxx_std_26"
 		GIT_SUBMODULES_RECURSE TRUE
 	)
-	set( _jsonnetPatch "${CMAKE_CURRENT_BINARY_DIR}/jsonnet-ryml-ctor.cmake" )
-	file( WRITE "${_jsonnetPatch}" [=[
-file(READ "${SOURCE_DIR}/core/vm.cpp" _c)
-string(REPLACE
-    "Args&&... args): msg_(std::forward<Args>(args)...)"
-    "std::string msg): msg_(std::move(msg))"
-    _c "${_c}")
-file(WRITE "${SOURCE_DIR}/core/vm.cpp" "${_c}")
-]=] )
-	ExternalProject_Add(jsonnet
-		GIT_REPOSITORY https://github.com/Jde-cpp/jsonnet.git
-		GIT_TAG 4825d892984f139eccf23c1401a448b811591bdd #fork master 2026-06-30
-		UPDATE_DISCONNECTED ON
-		PREFIX jsonnet
-		INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/jsonnet
-		PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -P "${_jsonnetPatch}"
-		CMAKE_ARGS ${stdArgs}
-			"-DCMAKE_CXX_FLAGS_DEBUG=-g"
-			-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
-			-DBUILD_JSONNET=OFF
-			-DBUILD_JSONNETFMT=OFF
-			-DBUILD_TESTS=OFF
-			-DUSE_SYSTEM_GTEST=ON
-			-DUSE_SYSTEM_RAPIDYAML=ON
-			-DBUILD_SHARED_LIBS=OFF
-			-DBUILD_STATIC_LIBS=ON
-			-DBUILD_SHARED_BINARIES=OFF
+	set( _jsonnetPatchArgs -DPATCH_CTOR=ON )
+	set( jsonnetPlatformArgs
+		"-DCMAKE_CXX_FLAGS_DEBUG=-g"
+		-DBUILD_SHARED_LIBS=OFF
+		-DBUILD_STATIC_LIBS=ON
+		-DBUILD_SHARED_BINARIES=OFF
 	)
 else()
 #	message( LIBXML2_LIBRARY=${LIBXML2_LIBDIR} )
@@ -207,7 +242,7 @@ else()
 	)
 	ExternalProject_Add(ryml
 		GIT_REPOSITORY https://github.com/biojppm/rapidyaml.git
-		GIT_TAG "v0.10.0"
+		GIT_TAG "${rymlTag}"
 		PREFIX ryml
 		INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/ryml
 		CMAKE_ARGS ${stdArgs}
@@ -217,32 +252,69 @@ else()
 			-DRYML_BUILD_TOOLS=OFF
 		GIT_SUBMODULES_RECURSE TRUE
 	)
-#need to add '#define _C4_STD_VECTOR_FWD_HPP_' to rapidyaml-0.10.0.hpp to avoid redefinition errors
-	ExternalProject_Add(jsonnet
-		GIT_REPOSITORY https://github.com/Jde-cpp/jsonnet.git
-		GIT_TAG 4825d892984f139eccf23c1401a448b811591bdd #fork master 2026-06-30
-		UPDATE_DISCONNECTED ON
-		PREFIX jsonnet
-		INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/jsonnet
-		CMAKE_ARGS ${stdArgs}
-			-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
-			-DBUILD_JSONNETFMT=OFF
-			-DBUILD_TESTS=OFF
-			-DUSE_SYSTEM_GTEST=ON
-			-DUSE_SYSTEM_RAPIDYAML=ON
-	)
-	# -D_C4_STD_VECTOR_FWD_HPP_=ON
-	# -DUSE_SYSTEM_RAPIDYAML=ON
-	ExternalProject_Add_StepDependencies( jsonnet configure ryml ) #USE_SYSTEM_RAPIDYAML=ON needs ryml installed first
-	ExternalProject_Add_StepDependencies( jsonnet configure gtest )
+	set( _jsonnetPatchArgs "" )
+	set( jsonnetPlatformArgs "" )
 endif()
+
+# ryml's installed export omits its c4core dependency: rymlTargets.cmake gives ryml::ryml no
+# INTERFACE_LINK_LIBRARIES, while libryml needs c4core symbols (c4::handle_error, …), so every
+# consumer of ryml::ryml would hit undefined references. Append the archive to the installed
+# rymlConfig.cmake after install.
+set( _rymlExportPatch "${CMAKE_CURRENT_BINARY_DIR}/ryml-export-c4core.cmake" )
+file( WRITE "${_rymlExportPatch}" [=[
+file(READ "${CONFIG}" _c)
+string(FIND "${_c}" "c4core" _at)
+if(_at EQUAL -1)
+    string(APPEND _c "
+# Appended by the Jde superbuild: link the c4core archive ryml requires but does not export.
+set_property(TARGET ryml::ryml APPEND PROPERTY INTERFACE_LINK_LIBRARIES \"\${RYML_LIB_DIR}${LIB_NAME}\")
+")
+    file(WRITE "${CONFIG}" "${_c}")
+endif()
+]=] )
+if( WIN32 )
+	set( _c4coreLib c4core.lib )
+else()
+	set( _c4coreLib libc4core.a )
+endif()
+ExternalProject_Add_Step( ryml fix-export
+	COMMAND ${CMAKE_COMMAND} "-DCONFIG=${CMAKE_INSTALL_PREFIX}/ryml/lib/cmake/ryml/rymlConfig.cmake" -DLIB_NAME=${_c4coreLib} -P "${_rymlExportPatch}"
+	DEPENDEES install
+	DEPENDS "${_rymlExportPatch}"
+	COMMENT "ryml: appending the c4core dependency to the installed export"
+)
+
+ExternalProject_Add(jsonnet
+	GIT_REPOSITORY https://github.com/google/jsonnet.git
+	GIT_TAG v0.22.0
+	UPDATE_DISCONNECTED ON
+	PREFIX jsonnet
+	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/jsonnet
+	PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>" -DPATCH_SHA1=${_jsonnetPatchSha} ${_jsonnetPatchArgs} -P "${_jsonnetPatch}"
+	CMAKE_ARGS ${stdArgs}
+		-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
+		-Djde_DEP_TAG_ryml=${rymlTag}
+		-DBUILD_JSONNET=OFF #cli is unused; skip building it
+		-DBUILD_JSONNETFMT=OFF
+		# Keep OFF: upstream core/unicode_test.cpp has a C++23 cast-conformance error under this
+		# clang/libc++ toolchain (the abandoned Jde-cpp fork carried the fix as commit 2138da80).
+		# To re-enable tests, port that fix into the shared jsonnet-patch.cmake as a replace_or_die.
+		-DBUILD_TESTS=OFF
+		-DUSE_SYSTEM_GTEST=ON
+		-DUSE_SYSTEM_RAPIDYAML=ON
+		${jsonnetPlatformArgs}
+)
+ExternalProject_Add_StepDependencies( jsonnet configure ryml ) #USE_SYSTEM_RAPIDYAML=ON needs ryml installed first
+ExternalProject_Add_StepDependencies( jsonnet configure gtest )
+
 ExternalProject_Add(protobuf
 	GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-	GIT_TAG v34.1
+	GIT_TAG v35.1
 	PREFIX protobuf
 	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/protobuf
 	CMAKE_ARGS ${stdArgs}
 		-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
+		-Djde_DEP_TAG_absl=${abslTag}
 		-Dprotobuf_USE_EXTERNAL_GTEST=ON
 		-Dprotobuf_BUILD_TESTS=OFF
 		-Dprotobuf_ABSL_PROVIDER=package
@@ -284,7 +356,7 @@ set( _nodesetPatchCmd PATCH_COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=<SOURCE_DIR>"
 
 ExternalProject_Add(open62541
 	GIT_REPOSITORY https://github.com/open62541/open62541.git
-	GIT_TAG v1.5.4
+	GIT_TAG ${open62541Tag}
 	PREFIX open62541
 	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/open62541
 		CMAKE_ARGS ${stdArgs}
@@ -314,6 +386,7 @@ ExternalProject_Add(open62541-nodeset-loader
 	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/NodesetLoader
 	${_nodesetPatchCmd}
 		CMAKE_ARGS ${stdArgs}
+		-Djde_DEP_TAG_open62541=${open62541Tag}
 		-DENABLE_BACKEND_OPEN62541=OFF
 		-DENABLE_EXAMPLES=OFF
 		-DCMAKE_PREFIX_PATH=${CMAKE_INSTALL_PREFIX}
@@ -333,7 +406,6 @@ ExternalProject_Add_StepDependencies( protobuf configure absl )
 ExternalProject_Add_StepDependencies( protobuf configure gtest )
 ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure open62541 )
 if( WIN32 )
-	ExternalProject_Add_StepDependencies( jsonnet configure ryml )
 	ExternalProject_Add_StepDependencies( protobuf configure zlib )
 	ExternalProject_Add_StepDependencies( open62541 configure LibXml2 )
 	ExternalProject_Add_StepDependencies( open62541-nodeset-loader configure LibXml2 )
