@@ -21,8 +21,10 @@ ARG LLVM_VERSION=22
 USER root
 
 # clang/libc++/lld from apt.llvm.org, plus the system -dev packages the presets
-# reference: libxml2 (LIBXML2_INCLUDE_DIR), liburing (fwk io_uring), OpenSSL.
-# libbacktrace is built from source below (no apt package on noble).
+# reference: libxml2 (LIBXML2_INCLUDE_DIR), liburing (fwk io_uring), OpenSSL, and
+# zstd + zlib static libs (open62541's export links static system OpenSSL, which
+# drags in -lzstd and libz.a). libbacktrace and libjitterentropy are built from
+# source below (no usable apt package on noble).
 RUN set -eux; \
     export DEBIAN_FRONTEND=noninteractive; \
     apt-get update; \
@@ -37,7 +39,7 @@ RUN set -eux; \
         libc++-${LLVM_VERSION}-dev \
         libc++abi-${LLVM_VERSION}-dev \
         ninja-build make git pkg-config \
-        libxml2-dev liburing-dev libssl-dev; \
+        libxml2-dev liburing-dev libssl-dev libzstd-dev zlib1g-dev; \
     rm -rf /var/lib/apt/lists/* /tmp/llvm.sh
 
 # libbacktrace (BOOST_STACKTRACE_USE_BACKTRACE / the presets' -lbacktrace): Ubuntu
@@ -53,6 +55,18 @@ RUN set -eux; \
     make -j"$(nproc)"; \
     make install; \
     rm -rf /tmp/libbacktrace
+
+# libjitterentropy: open62541's exported link interface (baked on the host, which
+# links static system OpenSSL) requires -l:libjitterentropy.a / -ljitterentropy.
+# noble packages only the jitterentropy-rngd daemon, not the library, so build it
+# from source. Installed to /usr (linker searches /usr/lib) as both static+shared.
+RUN set -eux; \
+    git clone --depth 1 https://github.com/smuellerDD/jitterentropy-library.git /tmp/jent; \
+    cd /tmp/jent; \
+    make -j"$(nproc)" CC=clang-${LLVM_VERSION}; \
+    make install PREFIX=/usr; \
+    ldconfig; \
+    rm -rf /tmp/jent
 
 # cmake from the Kitware release rather than apt: noble ships 3.28.3 — exactly the
 # preset's floor — whereas the host builds on cmake 4.x. Pin to match the host.
