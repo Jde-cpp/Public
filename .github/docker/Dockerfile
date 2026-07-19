@@ -59,12 +59,16 @@ RUN set -eux; \
 # libjitterentropy: open62541's exported link interface (baked on the host, which
 # links static system OpenSSL) requires -l:libjitterentropy.a / -ljitterentropy.
 # noble packages only the jitterentropy-rngd daemon, not the library, so build it
-# from source. Installed to /usr (linker searches /usr/lib) as both static+shared.
+# from source. Install the static archive straight into the multiarch libdir —
+# `make install` uses /usr/lib, which this clang/lld config does not search, while
+# /usr/lib/x86_64-linux-gnu (where libzstd-dev lands) is searched. The .a alone
+# satisfies both -ljitterentropy and -l:libjitterentropy.a (statically linked, so
+# no runtime .so needed).
 RUN set -eux; \
     git clone --depth 1 https://github.com/smuellerDD/jitterentropy-library.git /tmp/jent; \
     cd /tmp/jent; \
     make -j"$(nproc)" CC=clang-${LLVM_VERSION}; \
-    make install PREFIX=/usr; \
+    install -m 644 libjitterentropy.a /usr/lib/x86_64-linux-gnu/; \
     ldconfig; \
     rm -rf /tmp/jent
 
