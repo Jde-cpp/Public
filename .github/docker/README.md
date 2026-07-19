@@ -42,18 +42,25 @@ sudo docker run -d --restart always --name gha-runner \
   -e LABELS="linux,container,clang22" \
   -e REPO_DIR="/deps" \
   -v /home/duffyj/code/libs/install:/deps/install:ro \
-  --tmpfs /mnt/ram:exec,size=8g \
+  --tmpfs /mnt/ram:exec,size=24g \
   --security-opt seccomp=unconfined \
   --cap-add SYS_PTRACE \
   jde-ci-runner:latest
 ```
+
+The build writes to `/mnt/ram` (per `JDE_BUILD_DIR`) on a tmpfs ramdisk for speed.
+Size it above the full debug build (ASan + debug info, ~13 GB) — `24g` — or it hits
+`No space left on device` mid-compile; this needs ~24 GB of free host RAM. If RAM
+is tight, drop the `--tmpfs` line entirely and the build falls back to the
+container's disk-backed overlay (slower, but no RAM cost and effectively unlimited
+space).
 
 Why each non-obvious flag:
 
 | Flag | Reason |
 |------|--------|
 | `-v .../install:/deps/install:ro` | Host-built Boost/protobuf/open62541/… — the presets read `$REPO_DIR/install/clang++/<Debug\|RelWithDebInfo>`. |
-| `--tmpfs /mnt/ram:exec,size=8g` | Build output dir. `exec` because tmpfs is `noexec` by default and the build runs the binaries/`.so`s it produces. Wiped between jobs → clean builds. |
+| `--tmpfs /mnt/ram:exec,size=24g` | Build output dir on a ramdisk. `size=24g` clears the ~13 GB debug build; `exec` because tmpfs is `noexec` by default and the build runs the binaries/`.so`s it produces. Wiped on restart → clean builds. |
 | `--security-opt seccomp=unconfined` | Docker's default seccomp profile blocks `io_uring_setup`; the fwk tests exercise io_uring. |
 | `--cap-add SYS_PTRACE` | LeakSanitizer (debug preset builds with ASan/LSan) needs `ptrace`. |
 | `EPHEMERAL=1` | Runner deregisters after each job; `--restart always` brings up a fresh registration. Reduces blast radius of a bad job. |
@@ -64,9 +71,10 @@ Runners**.
 
 ## Notes / trade-offs
 
-- **Incremental builds:** the tmpfs `/mnt/ram` is wiped when the ephemeral
-  container restarts, so every job is a clean build. To trade isolation for speed,
-  swap the `--tmpfs` for a named volume (`-v jde-build:/mnt/ram`).
+- **Clean vs incremental builds:** the `--tmpfs /mnt/ram` is recreated empty when
+  the ephemeral container restarts, so each job is a clean build. For incremental
+  builds across jobs (faster, less isolation), drop `--tmpfs` for the disk-backed
+  overlay or a named volume (`-v jde-build:/mnt/ram`).
 - **Public repo safety:** self-hosted + public repo means fork PRs must not run
   here — the workflow triggers on `push`/`workflow_dispatch` only. Also keep repo
   **Settings → Actions → General → Fork pull request workflows** at "require
