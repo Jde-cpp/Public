@@ -1,0 +1,77 @@
+name: CI
+
+# Runs on the self-hosted, containerised runner (see .github/docker/). Triggered
+# on branch pushes and manual dispatch only — deliberately NOT on `pull_request`:
+# this is a self-hosted runner, so a fork PR must never be able to execute code on
+# it. Keep fork-PR checks on GitHub-hosted runners in a separate workflow if needed.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+# One in-flight run per branch; a newer push cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    # Matches the LABELS set when the runner container was registered.
+    runs-on: [self-hosted, clang22]
+
+    env:
+      JDE_DIR: ${{ github.workspace }}
+      JDE_BASH: ${{ github.workspace }}
+      JDE_COMPILER: clang++
+      # Container-local tmpfs (mounted at `docker run`), so each job builds clean.
+      JDE_BUILD_DIR: /mnt/ram/linux
+      # Bind-mount point of the host's third-party install tree; the presets read
+      # $REPO_DIR/install/clang++/<Debug|RelWithDebInfo>.
+      REPO_DIR: /deps
+      PRESET: linux-clang-debug-jde
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Resolve build dir
+        shell: bash
+        run: echo "BUILD_DIR=$JDE_BUILD_DIR/$JDE_COMPILER/$(basename "$JDE_DIR")/debug" >> "$GITHUB_ENV"
+
+      - name: Configure
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "$JDE_DIR/build/buildFunctions.sh"
+          reconfig "$BUILD_DIR" "$JDE_DIR" "$PRESET"
+
+      - name: Build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --build "$BUILD_DIR" -j "$(nproc)"
+
+      - name: Test
+        shell: bash
+        # Run suites serially: addJdeTest gives every suite the same
+        # WORKING_DIRECTORY ($BUILD_DIR/Testing), so they share logs/ and
+        # sqlite-tests.db and must not run in parallel.
+        env:
+          # Defensive: resolve any dep .so whose baked rpath points at the host path.
+          LD_LIBRARY_PATH: /deps/install/clang++/Debug/lib
+        run: |
+          set -euo pipefail
+          cd "$BUILD_DIR"
+          ctest --output-on-failure
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ github.run_id }}
+          path: |
+            ${{ env.BUILD_DIR }}/Testing/logs/**
+          if-no-files-found: ignore
+          retention-days: 7
