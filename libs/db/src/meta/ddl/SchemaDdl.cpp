@@ -194,7 +194,9 @@ namespace Jde::DB{
 				dbIndexes.push_back( Index{name, tableName, index} );
 				INFO( "Created index '{}.{}'.", table->DBName, name );
 			}
-			if( auto procName = table->HasCustomInsertProc ? "" : table->InsertProcName(); procName.size() ){
+			//DdlInsertProcName is empty when there is no server object to create - !HasProcs (sqlite) registers a
+			//native twin through IProcs instead.  HasCustomInsertProc is create-specific: those come from .sql scripts.
+			if( auto procName = table->HasCustomInsertProc ? string{} : table->DdlInsertProcName(); procName.size() ){
 				if( let index = procName.find_first_of('.'); index<procName.size()-1 )
 					procName = procName.substr( index+1 );
 				if( Procs.find(procName)!=Procs.end() )
@@ -232,15 +234,21 @@ namespace Jde::DB{
 	α DropObjects( const AppSchema& config )ε->void{
 		auto& ds = *config.DS();
 
-		for( let& [name, fk] : config.DS()->ServerMeta().LoadForeignKeys(config.Name) ){
-			if( find_if(config.Tables, [&fk](let& t){return t.second->DBName==fk.Table;})!=config.Tables.end() )
-				ds.ExecuteSync( {Ƒ("ALTER TABLE {} DROP CONSTRAINT {}", fk.Table, name)} );
+		//A dialect that can't ALTER TABLE ADD CONSTRAINT can't drop one either - its fks are inline in the create
+		//statement and go away with the table below (sqlite rejects 'alter table … drop constraint' as a syntax
+		//error).  Guarding the loop also skips LoadForeignKeys' per-table pragma scan for those dialects.
+		if( ds.Syntax().CanAddForeignKeys() ){
+			for( let& [name, fk] : config.DS()->ServerMeta().LoadForeignKeys(config.Name) ){
+				if( find_if(config.Tables, [&fk](let& t){return t.second->DBName==fk.Table;})!=config.Tables.end() )
+					ds.ExecuteSync( {Ƒ("ALTER TABLE {} DROP CONSTRAINT {}", fk.Table, name)} );
+			}
 		}
 
+		let hasProcs = ds.Syntax().HasProcs(); //sqlite: procs are native twins, there is nothing on the server to drop.
 		for( let& [tableName, table] : config.Tables ){
-			if( table->InsertProcName().size() )
-				ds.ExecuteSync( {Ƒ("DROP PROCEDURE IF EXISTS {}", table->InsertProcName())} );
-			if( table->PurgeProcName.size() )
+			if( let procName = table->DdlInsertProcName(); procName.size() ) //once, not twice - it allocates.
+				ds.ExecuteSync( {Ƒ("DROP PROCEDURE IF EXISTS {}", procName)} );
+			if( hasProcs && table->PurgeProcName.size() )
 				ds.ExecuteSync( {Ƒ("DROP PROCEDURE IF EXISTS {}", table->PurgeProcName)} );
 			ds.ExecuteSync( {Ƒ("DROP TABLE IF EXISTS {}", table->DBName)} );
 		}

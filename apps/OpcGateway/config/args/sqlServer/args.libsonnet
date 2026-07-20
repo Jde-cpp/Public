@@ -1,10 +1,6 @@
 {
 	sqlType: "sqlServer",
 	logsDir: std.extVar("logsDir"),
-	opc:{
-		urn: "urn:JDE-CPP:Kepware.KEPServerEX.V6:UA%20Server",
-		url: "opc.tcp://127.0.0.1:49320"
-	},
 	dbServers: {
 		scriptPaths: ["$(JDE_DIR)/apps/OpcGateway/config/sql/sqlServer"],
 		localhost:{

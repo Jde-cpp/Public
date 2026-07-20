@@ -6,13 +6,8 @@
 	repoBuildDir: "$(REPO_BUILD_DIR)/"+args.buildTarget,
 	repoSourceDir: "$(REPO_SOURCE_DIR)",
 	sqlType: "mysql",
-	opc:{
-		urn: "urn:open62541.server.application",
-		url: "opc.tcp://127.0.0.1:4840"
-	},
 	dbServers: {
 		scriptPaths: [args.repoSourceDir + "/apps/OpcGateway/config/sql/mysql"],
-		sync:: true,
 		localhost:{
 			driver: args.repoBuildDir + "/libs/db/drivers/mysql/libJde.DB.MySql.so",
 			connectionString: null,

@@ -32,7 +32,7 @@ namespace Jde::Opc::Server{
 			QL::SetSystemTables( {"logSetting"} );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 				DB::NonProd::Recreate( *uaSchema, QLPtr() );
-			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
+			else if( Settings::FindBool("/dbServers/sync").value_or(false) || uaSchema->DS()->RequiresSync() )
 				DB::SyncSchema( *uaSchema, QLPtr() );
 
 			Crypto::CryptoSettings settings{ Json::FindDefaultObject(_webServerSettings,"ssl") };

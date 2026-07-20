@@ -7,6 +7,7 @@ if( NOT jde_Superbuild )
 	add_subdirectory( config/sql/sqlite )
 	add_subdirectory( ${jdeRoot}/libs/fwk/src ../../libs/fwk/lib )
 	add_subdirectory( ${jdeRoot}/libs/db/src ../../libs/db/lib )
+	add_subdirectory( ${jdeRoot}/libs/db/drivers/sqlite/src ../../libs/db/drivers/sqlite/lib ) #the config/sql/sqlite MODULE above is only reachable through this driver
 	if( WIN32 )
 		add_subdirectory( ${jdeRoot}/libs/db/drivers/odbc ../../libs/db/drivers/odbc )
 	else()

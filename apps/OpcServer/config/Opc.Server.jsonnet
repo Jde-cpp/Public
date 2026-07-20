@@ -1,11 +1,12 @@
 local args = import 'args.libsonnet';
 local logsDir = args.logsDir;
+function( sync=false )
 {
 	instanceName: args.instanceName,
 	dbServers:{
 		dataPaths: args.dbServers.dataPaths,
 		scriptPaths: args.dbServers.scriptPaths,
-		sync:: true,
+		sync: sync,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,

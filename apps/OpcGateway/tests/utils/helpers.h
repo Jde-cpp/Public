@@ -15,7 +15,7 @@ namespace Jde::Opc::Gateway::Tests{
 		CreateServerCnnctnAwait( SRCE )ι:base{ sl }{}
 		α Execute()ι->QL::QLAwait<jobject>::Task override;
 	};
-	α CreateServerCnnctn()ι->ServerCnnctnPK;
+	α CreateServerCnnctn()ε->ServerCnnctnPK;
 
 	struct PurgeServerCnnctnAwait : TAwaitEx<uint,QL::QLAwait<>::Task>{
 		PurgeServerCnnctnAwait( optional<ServerCnnctnPK> pk )ι:_pk{pk}{}

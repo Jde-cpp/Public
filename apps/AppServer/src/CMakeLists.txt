@@ -18,6 +18,7 @@ if( WIN32 )
 else()
 	add_dependencies( ${targetName} Jde.DB.MySql )
 endif()
+sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer ) #config/args/sqlite + the 'Debug - sqlite' launch config load these
 
 target_link_libraries( ${targetName} Jde.Access Jde.Web.Server Jde.App.Shared )
 target_precompile_headers( ${targetName} PRIVATE

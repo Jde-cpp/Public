@@ -1,5 +1,7 @@
 cmake_path( SET jdeRoot NORMALIZE ${CMAKE_CURRENT_LIST_DIR}/.. )
 #Note: file(GLOB) calls repo-wide deliberately omit CONFIGURE_DEPENDS - adding a new source file requires a manual reconfigure.
+#Sole exception: sqliteProcModule (below).  Its targets are MODULEs, where a source missing from a stale glob still
+#links - undefined symbols are legal - and only fails at dlopen; everywhere else a missed source is a link error.
 
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR )
 	message( FATAL_ERROR "In-source builds are not allowed. Configure from an out-of-source build directory, e.g.:\n  cd $JDE_BUILD_DIR/$JDE_COMPILER/<repo-name> && cmake ${CMAKE_SOURCE_DIR} --preset <preset>" )
@@ -102,12 +104,21 @@ endfunction()
 function( addJdeTest targetName settingsFile )
 	add_test(
 		NAME ${targetName}
-		COMMAND $<TARGET_FILE:${targetName}> -tests -settings=${settingsFile} ${ARGN}
+		COMMAND $<TARGET_FILE:${targetName}> -ctest -settings=${settingsFile} ${ARGN}
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/Testing
 	)
 	set_tests_properties( ${targetName} PROPERTIES ENVIRONMENT
 		"REPO_SOURCE_DIR=${CMAKE_SOURCE_DIR};REPO_BUILD_DIR=${CMAKE_BINARY_DIR}/.."
 	)
+endfunction()
+
+#Build-order dependency on the sqlite driver plus the native-proc MODULEs targetName dlopen's at runtime from the
+#paths in its jsonnet.  They are never linked, so without this nothing makes the build produce them and the run dies
+#in DB::DataSource with "Dynamic Library ... not found".  Jde.DB.Sqlite is implied - a proc MODULE is only reachable
+#through it.  Deliberately unguarded: add_dependencies resolves at generate time, so naming a target defined by a
+#later add_subdirectory is fine, whereas an `if( TARGET )` guard would evaluate now and silently drop it.
+function( sqliteProcDependencies targetName )
+	add_dependencies( ${targetName} Jde.DB.Sqlite ${ARGN} )
 endfunction()
 
 #Native-proc MODULE for the sqlite driver - dlopen'd for sqlite_api.h's RegisterProcs( IProcs& ), never linked.
@@ -119,9 +130,11 @@ function( sqliteProcModule targetName )
 	compileOptions( ${targetName} )
 	set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
 
+	#CONFIGURE_DEPENDS: the module is a MODULE, so a new proc twin that isn't in the glob still links (undefined
+	#symbols are legal) and only fails at dlopen - re-glob on build instead of making that a reconfigure-or-else.
 	foreach( dir ${CMAKE_CURRENT_SOURCE_DIR} ${ARGN} )
-		file( GLOB sources ${dir}/*.cpp )
-		file( GLOB headers ${dir}/*.h )
+		file( GLOB sources CONFIGURE_DEPENDS ${dir}/*.cpp )
+		file( GLOB headers CONFIGURE_DEPENDS ${dir}/*.h )
 		target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 	endforeach()
 

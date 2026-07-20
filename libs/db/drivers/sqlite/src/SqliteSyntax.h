@@ -36,8 +36,11 @@ namespace Jde::DB::Sqlite{
 		α SchemaSelect()Ι->sv override{ return {}; } //no schemas - SchemaName falls back to SysSchema ('main').
 		α SpecifyIndexCluster()Ι->bool override{ return false; }
 		α SysSchema()Ι->sv override{ return "main"; }
-		//rowid alias requires the declared type be exactly 'integer' - 'int'/'bigint' pks don't auto-assign. https://sqlite.org/lang_createtable.html#rowid
-		α ToString( EType type )Ι->string override{ using enum EType; return type==Int || type==UInt || type==Long || type==ULong ? "integer" : Syntax::ToString( type ); }
+		//rowid alias requires the declared type be exactly 'integer' - 'smallint'/'tinyint'/'bigint' pks don't auto-assign
+		//(inserting without them fails the not-null constraint). https://sqlite.org/lang_createtable.html#rowid
+		//Every integral width already has integer affinity, so declaring them all 'integer' costs nothing and keeps
+		//narrow sequences (access_resources.resource_id, access_providers.provider_id) auto-assigning.
+		α ToString( EType type )Ι->string override{ using enum EType; return type==Int || type==UInt || type==Long || type==ULong || type==Int16 || type==UInt16 || type==Int8 || type==UInt8 ? "integer" : Syntax::ToString( type ); }
 		α UniqueIndexNames()Ι->bool override{ return true; } //index names are schema-wide in sqlite.
 		α UtcNow()Ι->sv override{ return "unixepoch()"; }
 	};

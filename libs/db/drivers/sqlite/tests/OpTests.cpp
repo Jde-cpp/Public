@@ -60,6 +60,35 @@ namespace Jde::DB::Sqlite::Tests{
 		EXPECT_THROW( _ds->ExecuteSync(move(unregistered)), Exception );
 	}
 
+	TEST_P( OpTests, InsertSeqSyncThroughProcTwin ){
+		//InsertClause built from a proc name dispatches to a twin, so Execute returns ExecuteProc's rows-affected and
+		//never reaches its last_insert_rowid line - the twin's out row is the only source of the new pk.  Pre-fix both
+		//calls returned 1 (sqlite3_changes) and every caller silently shared one pk.
+		//params: [0]=name, [1]=provider_id, [2]=target, [3]=attributes, [4]=description, [5]=is_group.
+		let insert = []( string name, string target ){
+			return DB::InsertClause{ "access_identity_insert",
+				vector<Value>{Value{move(name)}, Value{}, Value{move(target)}, Value{}, Value{}, Value{false}} };
+		};
+		let id1 = _ds->InsertSeqSync<uint>( insert("erin", "erin@example.com") );
+		let id2 = _ds->InsertSeqSync<uint>( insert("frank", "frank@example.com") );
+		EXPECT_GT( id1, 0u );
+		EXPECT_EQ( id2, id1+1 ); //not 1,1 - identity_id is a rowid alias that auto-assigns.
+
+		let rows = _ds->Select( {"select name from access_identities where identity_id=?", {Value{id2}}} );
+		ASSERT_EQ( rows.size(), 1u ); //the returned pk must address the row just written.
+		EXPECT_EQ( rows[0].GetString(0), "frank" );
+	}
+
+	TEST_P( OpTests, ProcArityGuard ){
+		//Twins index params[N] positionally with unchecked operator[]; a short vector used to read past the end and
+		//copy a Value variant from uninitialized memory.  RegisterProc's minParams turns that into a diagnosable throw.
+		Sql tooFew{ "access_identity_insert( ?, ? )", {Value{"short"}, Value{}}, true }; //declares 6 params
+		EXPECT_THROW( _ds->ExecuteSync(move(tooFew)), Exception );
+		//...and the extra trailing out-param placeholder callers append must still be accepted (minParams is a floor).
+		Sql extra{ "access_permission_insert( ?, ? )", {Value{false}, Value{(uint)0}}, true }; //declares 1
+		EXPECT_NO_THROW( _ds->ExecuteSync(move(extra)) );
+	}
+
 	TEST_P( OpTests, ProcsSurviveSiblingTeardown ){
 		{ //A 2nd data source over the same proc dlls - the registry is process-global, so its teardown must not strip procs _ds still dispatches.
 			let sibling = DB::DataSource( Settings::AsObject(Ƒ("/dbServers/{}", GetParam())) );

@@ -90,3 +90,6 @@ apps/AppServer/src/build/**
 # Deliberately not a bare "logs/": that would also match web/framework/control/src/lib/pages/logs, which is source.
 *.log
 /logs/
+**/*.db
+**/*.db-shm
+**/*.db-wal

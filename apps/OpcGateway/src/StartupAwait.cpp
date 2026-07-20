@@ -1,5 +1,7 @@
 #include "StartupAwait.h"
 #include <jde/db/db.h>
+#include <jde/db/IDataSource.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalQL.h>
 #include <jde/ql/types/Introspection.h>
@@ -39,7 +41,7 @@ namespace Jde::Opc::Gateway{
 			SetSchema( schema );
 			if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 				DB::NonProd::Recreate( *schema, QLPtr() );
-			else if( Settings::FindBool("/dbServers/sync").value_or(false) )
+			else if( Settings::FindBool("/dbServers/sync").value_or(false) || schema->DS()->RequiresSync() )
 				DB::SyncSchema( *schema, QLPtr() );
 
 			Crypto::CryptoSettings sslSettings{ Json::FindDefaultObject(_webServerSettings, "ssl") };

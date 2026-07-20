@@ -5,11 +5,13 @@
 //Sql::IsProc calls to the twins registered here.
 void RegisterProcs( Jde::DB::Sqlite::IProcs& procs ){
 	using namespace Jde::DB::Sqlite::OpcProcs;
+	RegisterOpcBrowseNameInsert( procs );
 	RegisterOpcConstructorInsert( procs );
 	RegisterOpcNodeIdInsert( procs );
 	RegisterOpcNodeInsert( procs );
 	RegisterOpcObjectInsert( procs );
 	RegisterOpcObjectTypeInsert( procs );
+	RegisterOpcServerInsert( procs );
 	RegisterOpcVariableInsert( procs );
 	RegisterOpcVariantInsert( procs );
 }

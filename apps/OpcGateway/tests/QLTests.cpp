@@ -10,7 +10,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	struct QLTests : ::testing::Test{
 	protected:
-		Ω SetUpTestCase()ι->void{
+		Ω SetUpTestCase()ε->void{ //ε: CreateServerCnnctn throws - under ι gtest never sees it and the whole binary terminates.
 			if( !SelectServerCnnctn( OpcServerTarget ) )
 				CreateServerCnnctn();
 		};

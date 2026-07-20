@@ -9,7 +9,11 @@ struct sqlite3;
 namespace Jde::DB::Sqlite::AccessProcs{
 	α RegisterAccessAcInsertRole( IProcs& procs )ι->void;
 	α RegisterAccessAcUpsertPermission( IProcs& procs )ι->void;
+	α RegisterAccessIdentityInsert( IProcs& procs )ι->void;
+	α RegisterAccessPermissionInsert( IProcs& procs )ι->void;
+	α RegisterAccessProviderInsert( IProcs& procs )ι->void;
 	α RegisterAccessProviderPurge( IProcs& procs )ι->void;
+	α RegisterAccessResourceInsert( IProcs& procs )ι->void;
 	α RegisterAccessRoleAdd( IProcs& procs )ι->void;
 	α RegisterAccessRoleInsert( IProcs& procs )ι->void;
 	α RegisterAccessRolePurge( IProcs& procs )ι->void;
@@ -18,7 +22,7 @@ namespace Jde::DB::Sqlite::AccessProcs{
 	α RegisterAccessUserInsertKey( IProcs& procs )ι->void;
 	α RegisterAccessUserInsertLogin( IProcs& procs )ι->void;
 
-	//Twin of the *generated* access_identity_insert proc the mysql user_insert procs `call` - sqlite has no
-	//generated procs (Syntax::HasProcs false), so its body is inlined here: insertable columns + created=$now.
+	//Body of access_identity_insert, shared with the user_insert procs that `call` it in mysql - sqlite has no
+	//procs (Syntax::HasProcs false), so they call it directly instead.  Defined in access_identity_insert.cpp.
 	α IdentityInsert( IProcs& procs, sqlite3& db, const Value& name, const Value& providerId, const Value& target, const Value& attributes, const Value& description, const Value& isGroup, SL sl )ε->uint; //returns new identity_id.
 }

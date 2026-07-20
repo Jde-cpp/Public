@@ -94,7 +94,6 @@ namespace Jde{
 		}
 
 	optional<vector<fs::path>> _importPaths;
-	const vector<fs::path> _noImportPaths;//bound instead of _importPaths.value_or({}), which deep-copies the paths every Load.
 	Ω path()ι->fs::path{
 		static fs::path _path;
 		if( !_path.empty() )
@@ -103,20 +102,24 @@ namespace Jde{
 
 		vector<fs::path> paths{ fileName, fs::path{"../config"}/fileName, fs::path{"config"}/fileName };
 		if( auto settingsFile = _importPaths ? nullopt : Process::FindArg("-settings"); settingsFile ){
-			if( Process::FindArg("-tests") ){
+			#ifdef _WIN32 //normalize once, before the branches: every use below (both import-dir forms and `paths`)
+				//derives from this path, and a bash-style '/c/…' won't fs::exists on windows.  Idempotent - a native
+				//path just round-trips through the '\\?\' prefix that substr(4) strips back off.
+				settingsFile = IO::BashToWindows( *settingsFile ).string().substr( 4 ); //remove //?/
+			#endif
+			if( auto cli = Process::FindArg("-include"); cli ){
+				_importPaths = vector<fs::path>{};
+				for( auto& relPath : Str::Split(*cli, ';') )
+					_importPaths->push_back( fs::path{*settingsFile}.parent_path()/relPath );
+			}
+			else if( Process::FindArg("-tests") || Process::FindArg("-ctest") ){
 				_importPaths = vector<fs::path>{};
 				#ifdef _WIN32
 					string sqlTypePath = "sqlServer";
-					settingsFile = IO::BashToWindows( *settingsFile ).string().substr( 4 ); //remove //?/
 				#else
 					string sqlTypePath = "mysql";
 				#endif
 				_importPaths->push_back( fs::path{*settingsFile}.parent_path()/"args"/sqlTypePath );
-			}
-			else if( auto cli = Process::FindArg("-include"); cli ){
-				_importPaths = vector<fs::path>{};
-				for( auto& relPath : Str::Split(*cli, ';') )
-					_importPaths->push_back( fs::path{*settingsFile}.parent_path()/relPath );
 			}
 			paths = { fs::path{*settingsFile} };
 		}
@@ -139,21 +142,49 @@ namespace Jde{
 		}
 	}
 
+	Ω argMap( sv flag )ι->flat_map<string,string>{
+		flat_map<string,string> y;
+		let range = Process::Args().equal_range( string{flag} );
+		for( auto it = range.first; it != range.second; ++it ){
+			if( it->second.empty() )
+				continue;
+			if( let i = it->second.find('='); i!=string::npos )
+				y.emplace( it->second.substr(0, i), it->second.substr(i+1) );
+			else
+				WARN( "Ignoring {} '{}' - must be key=value.", flag, it->second );
+		}
+		return y;
+	}
+
 	α Settings::Load()ι->void{
 		let settingsPath = path();
 		try{
 			if( !fs::exists(settingsPath) )
 				throw std::runtime_error{ Ƒ("file does not exist: '{}'", settingsPath.string()) };
 			flat_map<string,string> args;
-			if( Process::FindArg("-tests") ){
+			if( Process::FindArg("-tests") || Process::FindArg("-ctest") ){
 				args["buildTarget"] = _debug ? "debug" : "release";
 				args["cwd"] = fs::current_path().string();
 				args["logsDir"] = args["cwd"] + "/logs";
 			}
+			for( let& [key, value] : argMap("-arg") )
+				args[key] = value;
+			let tlas = Process::FindArg("-sync") ? flat_map<string,string>{{"sync", "true"}} : flat_map<string,string>{};
+			let settings = Json::TryReadJsonNet( settingsPath, _importPaths ? *_importPaths : vector<fs::path>{}, args, tlas );
+			if( !settings ){
+				let joinKV = []( let& pairs ){ //Str::Join streams items, and pair<> has no operator<< - map to k=v first.
+					vector<string> y;
+					for_each( pairs, [&](let& pair){ y.push_back( pair.first+"="+pair.second ); } );
+					return Str::Join( y, ";" );
+				};
+				vector<string> importPaths;
+				if( _importPaths )
+					for( let& path : *_importPaths )
+						importPaths.push_back( path.string() ); //.string(): operator<<(fs::path) would quote it.
 
-			let settings = Json::TryReadJsonNet( settingsPath, _importPaths ? *_importPaths : _noImportPaths, args );
-			if( !settings )
-				throw std::runtime_error{ settings.error() };
+				auto error = Ƒ("Could not load settings from '{}': {}\n-include: {}\nargs: {}\ntlas: {}", settingsPath.string(), settings.error(), Str::Join(importPaths,";"), joinKV(args), joinKV(tlas) );
+				throw std::runtime_error{ error };
+			}
 			_settings = mu<jvalue>( *settings );
 			if( _settings->is_object() )
 				SetEnv( _settings->get_object() );

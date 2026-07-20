@@ -7,13 +7,18 @@
 void RegisterProcs( Jde::DB::Sqlite::IProcs& procs ){
 	using namespace Jde::DB::Sqlite;
 	AppProcs::RegisterAppConnectionInsert( procs );
+	AppProcs::RegisterAppHostInsert( procs );
 	AppProcs::RegisterAppInstanceInsert( procs );
 	AppProcs::RegisterAppInstanceTagLevelUpsert( procs );
 	AppProcs::RegisterAppProgramInsert( procs );
 
 	AccessProcs::RegisterAccessAcInsertRole( procs );
 	AccessProcs::RegisterAccessAcUpsertPermission( procs );
+	AccessProcs::RegisterAccessIdentityInsert( procs );
+	AccessProcs::RegisterAccessPermissionInsert( procs );
+	AccessProcs::RegisterAccessProviderInsert( procs );
 	AccessProcs::RegisterAccessProviderPurge( procs );
+	AccessProcs::RegisterAccessResourceInsert( procs );
 	AccessProcs::RegisterAccessRoleAdd( procs );
 	AccessProcs::RegisterAccessRoleInsert( procs );
 	AccessProcs::RegisterAccessRolePurge( procs );

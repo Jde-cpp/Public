@@ -1,4 +1,5 @@
 #include "SqliteDataSource.h"
+#include "jde/fwk/exceptions/Exception.h"
 #include "jde/fwk/process/dll.h"
 #include <jde/db/DBException.h>
 #include <jde/db/generators/Functions.h>
@@ -25,9 +26,9 @@ namespace Jde::DB::Sqlite{
 		}
 		~SqliteApi(){ UnregisterProcs( _procNames ); } //while _dll is still mapped (destroyed after this body).
 
-		α RegisterProc( string name, ProcΛ proc )ι->void override{
+		α RegisterProc( string name, ProcΛ proc, uint minParams )ι->void override{
 			_procNames.push_back( name );
-			ProcRegistry::RegisterProc( move(name), move(proc) );
+			ProcRegistry::RegisterProc( move(name), move(proc), minParams );
 		}
 	};
 
@@ -47,9 +48,11 @@ namespace Jde::DB::Sqlite{
 			if( let path = Json::FindSV(catalog, "path") )
 				_path = *path; //defaults to ':memory:' when no catalog supplies a path.
 			for( auto&& [dbSchemaName, dbSchema] : Json::AsObject(catalog, "schemas") ){
+				if( dbSchemaName.starts_with('_') ) //internal schema, not a real db schema.
+					continue;
 				for( auto&& [appSchemaName, vappSchema] : Json::AsObject(dbSchema) ){
 					let lib = Json::FindSV( Json::AsObject(vappSchema), "dynamicLib" );
-					THROW_IF( !lib, "No dynamicLib for {}.{}.{}", catalogName, dbSchemaName, appSchemaName );
+					THROW_IFX( !lib, Exception(SRCE_CUR, {ELogLevel::Critical, ELogTags::App}, "No dynamicLib for {}.{}.{}", catalogName, dbSchemaName, appSchemaName) );
 					fs::path dynamicLib{ *lib };
 					if( !_procDlls.contains(dynamicLib) ){
 						auto api = _dllApis.Get( dynamicLib ); //ctor loads the dll and registers its procs.
@@ -144,8 +147,23 @@ namespace Jde::DB::Sqlite{
 	}
 
 	α SqliteDataSource::InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint{
+		auto sql = insert.Move();
 		//Plain inserts: last_insert_rowid covers it - no out param needed, unlike MySql.
-		return Execute( insert.Move(), sl, {.Sequence=true} );
+		if( !sql.IsProc )
+			return Execute( move(sql), sl, {.Sequence=true} );
+		//Proc twins return the sequence as their out row - the native equivalent of the generated mysql proc's OUT
+		//param - so capture that rather than last_insert_rowid: a multi-statement twin's *last* insert needn't be the
+		//sequence table (app_instance_insert inserts app_hosts first).  Execute's Sequence path can't see it: it
+		//returns ExecuteProc's rows-affected before reaching the last_insert_rowid line.
+		optional<uint> sequence;
+		RowΛ f = [&sequence]( Row&& r ){
+			if( !sequence && r.Size() )
+				sequence = r.GetUInt( 0 );
+		};
+		let procName = string{ Str::RTrim(sv{sql.Text}.substr(0, sql.Text.find('('))) }; //owned - sql is moved below.
+		Execute( move(sql), sl, {.Function=&f} );
+		THROW_IFSL( !sequence, "Proc '{}' returned no out row - its twin must emit the sequence column.", procName );
+		return *sequence;
 	}
 
 	α SqliteDataSource::Select( Sql&& s, SL sl )ε->vector<Row>{

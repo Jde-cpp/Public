@@ -52,7 +52,11 @@ namespace Jde{
 		THROW_IF( !fs::is_regular_file(driver), Exception(sl, {ELogLevel::Critical, ELogTags::App}, "Dynamic Library '{}' not found.", driver.string()) );
 		auto api = _dataSources.Get( driver );
 		sp<IDataSource> ds{ api->GetDataSourceFunction(), [api](IDataSource* p){ delete p; } }; //deleter keeps the api (and dll) mapped until after the last data source built from it is destroyed.
-		ds->SetConfig( config );
+		try{
+			ds->SetConfig( config );
+		} catch( const std::exception& e ){
+			THROW( "Failed to configure data source: {}", e.what() ); //dll gets closed here, taking the format literal and source_location with it.
+		}
 		return ds;
 	}
 
