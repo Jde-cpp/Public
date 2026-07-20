@@ -57,6 +57,7 @@ namespace Jde::Opc::Gateway{
 		α AddSessionAwait( VoidAwait::Handle h )ι->void;
 		α TriggerSessionAwaitables()ι->void;
 
+		Ω EnsureCertificate( const ServerCnnctnNK& target, sv certificateUri )ε->void;//no-op if the cert exists. Callable before any client - servers that snapshot trustedCertDirs at startup (UAConfig::SetConfig) must see it before they start.
 		α Target()Ι->const ServerCnnctnNK&{ return _opcServer.Target; }
 		α Url()Ι->str{ return _opcServer.Url; }
 		α IsDefault()Ι->bool{ return _opcServer.IsDefault; }
@@ -75,10 +76,12 @@ namespace Jde::Opc::Gateway{
 		α Connect()ε->void;
 		Ω LogServerEndpoints( str url, Jde::Handle h )ι->void;
 		α LogClientEndpoints()ι->void;
-		α RootSslDir()ι->fs::path{ return Process::AppDataFolder()/"ssl"; }
-		α Passcode()ι->string{ return Process::GetEnv("JDE_PASSCODE").value_or( "" ); }
-		α PrivateKeyFile()ι->fs::path{ return RootSslDir()/Ƒ("private/{}.pem", Target()); }
-		α CertificateFile()ι->fs::path{ return RootSslDir()/Ƒ("certs/{}.pem", Target()); }
+		Ω RootSslDir()ι->fs::path{ return Process::AppDataFolder()/"ssl"; }
+		Ω Passcode()ι->string{ return Process::GetEnv("JDE_PASSCODE").value_or( "" ); }
+		Ω PrivateKeyFile( const ServerCnnctnNK& target )ι->fs::path{ return RootSslDir()/Ƒ("private/{}.pem", target); }
+		α PrivateKeyFile()Ι->fs::path{ return PrivateKeyFile( Target() ); }
+		Ω CertificateFile( const ServerCnnctnNK& target )ι->fs::path{ return RootSslDir()/Ƒ("certs/{}.pem", target); }
+		α CertificateFile()Ι->fs::path{ return CertificateFile( Target() ); }
 
 		ServerCnnctn _opcServer;
 
