@@ -5,11 +5,13 @@
 #include <jde/fwk/process/process.h>
 #include <jde/fwk/settings.h>
 #include <jde/fwk/co/Timer.h>
+#include <jde/db/db.h>
+#include <jde/db/IDataSource.h>
+#include <jde/db/meta/AppSchema.h>
 #include <jde/ql/ql.h>
 #include <jde/access/Authorize.h> //!
 #include <jde/access/server/accessServer.h>
 #include <jde/access/AccessListener.h>
-#include <jde/db/db.h>
 #include "globals.h"
 #include "AccessQL.h"
 
@@ -33,7 +35,7 @@ namespace Jde{
 		_listener = ms<Access::AccessListener>( ql );
 		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 			DB::NonProd::Recreate( *schema, ql );
-		else if( Settings::FindBool("/dbServers/sync").value_or(false) )
+		else if( Settings::FindBool("/dbServers/sync").value_or(false) || schema->DS()->RequiresSync() )
 			DB::SyncSchema( *schema, ql );
 		auto await = Access::Server::Configure( {schema}, ql, UserPK{UserPK::System}, authorizer, _listener );
 		BlockVoidAwait( move(await) );

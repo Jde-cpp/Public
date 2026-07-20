@@ -23,6 +23,7 @@ namespace Jde::DB{
 		α CatalogName( SRCE )ε->string;
 		α SchemaName( SRCE )ε->string;
 		β SchemaNameConfig( SL=SRCE_CUR )ι->string{ return {}; } //schema name in connection string.
+		β RequiresSync()ι->bool{ return false; } //sqlite :memory:=true
 		β SetConfig( const jobject& config )ε->void=0;
 		β AtCatalog( sv catalog, SRCE )ε->sp<IDataSource> = 0; //create new pointing to other catalog.  If have catalogs.
 		β AtSchema( sv schema, SRCE )ε->sp<IDataSource> = 0; //create new pointing to other schema.  If can specify schema in connection.

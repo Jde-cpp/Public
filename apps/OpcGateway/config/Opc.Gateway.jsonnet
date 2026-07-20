@@ -1,5 +1,6 @@
 local args = import 'args.libsonnet';
 local logsDir = args.logsDir;
+function( sync=false )
 {
 	gateway:{
 		pingInterval: "PT30S",
@@ -55,7 +56,7 @@ local logsDir = args.logsDir;
 	},
 	dbServers: {
 		scriptPaths: args.dbServers.scriptPaths,
-		sync: true,
+		sync: sync,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,

@@ -16,6 +16,7 @@ namespace Jde::DB::Sqlite{
 	class SqliteApi;
 	struct SqliteDataSource final : IDataSource{
 		~SqliteDataSource() override;
+		α RequiresSync()ι->bool override{ return _path == ":memory:"; }
 		α ExecuteSync( Sql&& sql, SL sl )ε->uint override;
 		α ExecuteScalerSync( Sql&& sql, EValue outValue, SL sl )ε->Value override;
 		α ExecuteNoLog( Sql&& sql, SRCE )ε->uint override;

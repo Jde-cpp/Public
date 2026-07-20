@@ -148,8 +148,23 @@ namespace Jde::DB::Sqlite{
 	}
 
 	α SqliteDataSource::InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint{
+		auto sql = insert.Move();
 		//Plain inserts: last_insert_rowid covers it - no out param needed, unlike MySql.
-		return Execute( insert.Move(), sl, {.Sequence=true} );
+		if( !sql.IsProc )
+			return Execute( move(sql), sl, {.Sequence=true} );
+		//Proc twins return the sequence as their out row - the native equivalent of the generated mysql proc's OUT
+		//param - so capture that rather than last_insert_rowid: a multi-statement twin's *last* insert needn't be the
+		//sequence table (app_instance_insert inserts app_hosts first).  Execute's Sequence path can't see it: it
+		//returns ExecuteProc's rows-affected before reaching the last_insert_rowid line.
+		optional<uint> sequence;
+		RowΛ f = [&sequence]( Row&& r ){
+			if( !sequence && r.Size() )
+				sequence = r.GetUInt( 0 );
+		};
+		let procName = string{ Str::RTrim(sv{sql.Text}.substr(0, sql.Text.find('('))) }; //owned - sql is moved below.
+		Execute( move(sql), sl, {.Function=&f} );
+		THROW_IFSL( !sequence, "Proc '{}' returned no out row - its twin must emit the sequence column.", procName );
+		return *sequence;
 	}
 
 	α SqliteDataSource::Select( Sql&& s, SL sl )ε->vector<Row>{

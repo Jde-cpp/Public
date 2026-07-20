@@ -1,6 +1,4 @@
 ﻿#include "LogData.h"
-#include <jde/app/StringCache.h>
-#include <jde/app/proto/app.FromServer.h>
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/db.h>
 #include <jde/db/IDataSource.h>
@@ -12,6 +10,8 @@
 #include <jde/access/server/accessServer.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/AccessListener.h>
+#include <jde/app/StringCache.h>
+#include <jde/app/proto/app.FromServer.h>
 #include "LocalClient.h"
 #include "WebServer.h"
 #include "jde/fwk.h"
@@ -45,7 +45,7 @@ namespace Server{
 				DB::NonProd::Recreate( *accessSchema, QLPtr() );
 				DB::NonProd::Recreate( *_appSchema, QLPtr() );
 			}
-			else if( Settings::FindBool("/dbServers/sync").value_or(false) ){
+			else if( Settings::FindBool("/dbServers/sync").value_or(false) || accessSchema->DS()->RequiresSync() ){
 				DB::SyncSchema( *accessSchema, QLPtr() );
 				DB::SyncSchema( *_appSchema, QLPtr() );
 			}

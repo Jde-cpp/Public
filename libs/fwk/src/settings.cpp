@@ -138,6 +138,20 @@ namespace Jde{
 		}
 	}
 
+	Ω argMap( sv flag )ι->flat_map<string,string>{
+		flat_map<string,string> y;
+		let range = Process::Args().equal_range( string{flag} );
+		for( auto it = range.first; it != range.second; ++it ){
+			if( it->second.empty() )
+				continue;
+			if( let i = it->second.find('='); i!=string::npos )
+				y.emplace( it->second.substr(0, i), it->second.substr(i+1) );
+			else
+				WARN( "Ignoring {} '{}' - must be key=value.", flag, it->second );
+		}
+		return y;
+	}
+
 	α Settings::Load()ι->void{
 		let settingsPath = path();
 		try{
@@ -149,27 +163,22 @@ namespace Jde{
 				args["cwd"] = fs::current_path().string();
 				args["logsDir"] = args["cwd"] + "/logs";
 			}
-	    auto range = Process::Args().equal_range("-arg");
-			for( auto it = range.first; it != range.second; ++it ){
-				auto keyValue = Str::Split( it->second, '=' );
-				if( keyValue.size()==2 )
-					args[string{keyValue[0]}] = keyValue[1];
-				else
-					std::cout << "Invalid -arg '" << it->second << "', must be key=value" << std::endl;
-			}
-
-			let settings = Json::TryReadJsonNet( settingsPath, _importPaths ? *_importPaths : vector<fs::path>{}, args );
+			for( let& [key, value] : argMap("-arg") )
+				args[key] = value;
+			let tlas = Process::FindArg("sync") ? flat_map<string,string>{{"sync", "true"}} : flat_map<string,string>{};
+			let settings = Json::TryReadJsonNet( settingsPath, _importPaths ? *_importPaths : vector<fs::path>{}, args, tlas );
 			if( !settings ){
-				string importPaths = "";
-				if( _importPaths ){
-					importPaths = " -include=";
+				let join = []( let& pairs ){
+					string y;
+					for_each( pairs, [&](let& pair){ y += (y.empty() ? "" : ";")+pair.first+"="+pair.second; } );
+					return y;
+				};
+				string importPaths;
+				if( _importPaths )
 					for( auto& path : *_importPaths )
-						importPaths += path.string() + ";";
-				}
-				string argLogString;
-				for_each( args, [&](let& pair){argLogString += pair.first+"="+pair.second+";";} );
+						importPaths += (importPaths.empty() ? "" : ";")+path.string();
 
-				auto error = Ƒ("Could not load settings from '{}': {}\n-include: {}\nargs: {}", settingsPath.string(), settings.error(), importPaths, argLogString );
+				auto error = Ƒ("Could not load settings from '{}': {}\n-include: {}\nargs: {}\ntlas: {}", settingsPath.string(), settings.error(), importPaths, join(args), join(tlas) );
 				throw std::runtime_error{ error };
 			}
 			_settings = mu<jvalue>( *settings );
