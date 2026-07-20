@@ -28,6 +28,9 @@ jobs:
       # Bind-mount point of the host's third-party install tree; the presets read
       # $REPO_DIR/install/clang++/<Debug|RelWithDebInfo>.
       REPO_DIR: /deps
+      # Bind-mounted clone of https://github.com/OPCFoundation/UA-Nodeset (see
+      # .github/docker/README.md); the OpcServer UALoadTests read it via /testing/UANodeSets.
+      UA_NODE_SETS: /deps/UA-Nodeset
       PRESET: linux-clang-debug-jde
 
     steps:
