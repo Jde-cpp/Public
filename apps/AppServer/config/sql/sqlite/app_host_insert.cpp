@@ -16,7 +16,7 @@ namespace Jde::DB::Sqlite::AppProcs{
 			let hostId = HostInsert( procs, db, params[0], sl );
 			if( onRow )
 				(*onRow)( Row{ {Value{hostId}} } ); //out _host_id
-			return 1;
+			return 1; //one row - see ProcΛ.
 		}, 1);
 	}
 }

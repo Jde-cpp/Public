@@ -23,6 +23,7 @@ namespace Jde::DB{
 		α GetPK( SRCE )Ε->sp<Column>;
 		α GetSK0(SRCE)Ε->sp<Column>;
 		α InsertProcName()Ι->string;
+		α DdlInsertProcName()Ι->string; //InsertProcName, but empty when there is no server object to create/drop.
 		α UpsertProcName()Ι->string;
 		α IsEnum()Ι->bool;
 		β IsView()Ι->bool{ return true; }

@@ -143,6 +143,12 @@ namespace Jde::DB{
 		let haveSequence = find_if( Columns, [](let& c){return c->IsSequence;} )!=Columns.end();
 		return !haveSequence && !HasCustomInsertProc ? string{} : Ƒ( "{}_insert", Names::ToSingular(DBName) );
 	}
+	//The insert proc as a *server object*.  Empty when the dialect has no procs (sqlite), where the insert exists as
+	//a native twin registered through IProcs and there is nothing for DDL sync to create or drop.  Keeping the rule
+	//here means the DDL paths call one function instead of each re-deriving `!Syntax().HasProcs()`.
+	α View::DdlInsertProcName()Ι->string{
+		return Syntax().HasProcs() ? InsertProcName() : string{};
+	}
 	α View::UpsertProcName()Ι->string{
 		return Ƒ( "{}_upsert", Names::ToSingular(DBName) );
 	}

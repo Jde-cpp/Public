@@ -68,7 +68,19 @@ Tests use **GoogleTest**. Each test binary requires a `-settings=` argument poin
 - `apps/OpcGateway/tests/config/Opc.Tests.jsonnet`
 - `apps/OpcServer/tests/config/Opc.Server.Tests.jsonnet`
 
-`-tests` is **required**: it is what binds the `buildTarget`/`cwd`/`logsDir` ext vars the configs read, and on Linux it selects the `config/args/mysql` import dir — without it jsonnet evaluation fails and the binary starts with an `{"error":…}` settings object. Test output is cwd-relative: logs go to `<cwd>/logs` and the sqlite tests' file db to `<cwd>/sqlite-tests.db`.
+A **test-mode flag is required** — `-tests` for direct runs, `-ctest` for ctest. They are equivalent except that `-ctest` also selects a compact console log pattern (`log/SpdLog.cpp`). One of them binds the `buildTarget`/`cwd`/`logsDir` ext vars the configs read, and selects the default import dir — `config/args/mysql` on Linux, `config/args/sqlServer` on Windows. Without one, jsonnet evaluation fails and the binary starts with an `{"error":…}` settings object. Test output is cwd-relative: logs go to `<cwd>/logs` and file-backed sqlite dbs to `<cwd>/sqlite-tests.db`.
+
+Settings-related CLI flags (`libs/fwk/src/settings.cpp`):
+
+| flag | effect |
+|------|--------|
+| `-settings=<file>` | the Jsonnet config to load |
+| `-tests` / `-ctest` | test mode, as above; `addJdeTest` passes `-ctest` |
+| `-include=<dir>[;<dir>…]` | replaces the import dirs, each relative to the settings file's directory. **Takes priority over the `-tests`/`-ctest` default** — but does not bind the ext vars, so pair it with a test flag |
+| `-arg <k>=<v>` | binds jsonnet ext var `k`; split on the *first* `=`, so values may contain more |
+| `-sync` | sets the `sync` top-level argument to `true`, enabling startup DDL schema-sync (off by default — see the `function( sync=false )` heading in the app configs) |
+
+`libs/access/tests` is the one suite wired to sqlite: on non-Windows its ctest run adds `-include=args/sqlite -arg path=:memory:`, so it needs no db server and writes no db file. Every other suite still takes the default mysql/sqlServer path.
 
 The two workflows use **different working directories**, so they keep separate logs/db files:
 
@@ -80,7 +92,7 @@ The two workflows use **different working directories**, so they keep separate l
 cd $buildDir/runtime
 $buildDir/libs/fwk/tests/Jde.Fwk.Tests -tests -settings=$JDE_DIR/libs/fwk/tests/config/Framework.Tests.jsonnet
 
-# Or every suite via ctest (addJdeTest passes -tests and the env); --preset is broken, see reviews/todo.md §3
+# Or every suite via ctest (addJdeTest passes -ctest and the env); --preset is broken, see reviews/todo.md §3
 cd $buildDir && ctest
 ```
 

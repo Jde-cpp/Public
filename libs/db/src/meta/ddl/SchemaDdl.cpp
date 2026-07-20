@@ -194,8 +194,9 @@ namespace Jde::DB{
 				dbIndexes.push_back( Index{name, tableName, index} );
 				INFO( "Created index '{}.{}'.", table->DBName, name );
 			}
-			//!HasProcs (sqlite): the insert proc exists as a native twin registered through IProcs, not as a server object to create.
-			if( auto procName = table->HasCustomInsertProc || !syntax.HasProcs() ? "" : table->InsertProcName(); procName.size() ){
+			//DdlInsertProcName is empty when there is no server object to create - !HasProcs (sqlite) registers a
+			//native twin through IProcs instead.  HasCustomInsertProc is create-specific: those come from .sql scripts.
+			if( auto procName = table->HasCustomInsertProc ? string{} : table->DdlInsertProcName(); procName.size() ){
 				if( let index = procName.find_first_of('.'); index<procName.size()-1 )
 					procName = procName.substr( index+1 );
 				if( Procs.find(procName)!=Procs.end() )
@@ -245,8 +246,8 @@ namespace Jde::DB{
 
 		let hasProcs = ds.Syntax().HasProcs(); //sqlite: procs are native twins, there is nothing on the server to drop.
 		for( let& [tableName, table] : config.Tables ){
-			if( hasProcs && table->InsertProcName().size() )
-				ds.ExecuteSync( {Ƒ("DROP PROCEDURE IF EXISTS {}", table->InsertProcName())} );
+			if( let procName = table->DdlInsertProcName(); procName.size() ) //once, not twice - it allocates.
+				ds.ExecuteSync( {Ƒ("DROP PROCEDURE IF EXISTS {}", procName)} );
 			if( hasProcs && table->PurgeProcName.size() )
 				ds.ExecuteSync( {Ƒ("DROP PROCEDURE IF EXISTS {}", table->PurgeProcName)} );
 			ds.ExecuteSync( {Ƒ("DROP TABLE IF EXISTS {}", table->DBName)} );

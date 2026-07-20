@@ -172,17 +172,17 @@ namespace Jde{
 			let tlas = Process::FindArg("-sync") ? flat_map<string,string>{{"sync", "true"}} : flat_map<string,string>{};
 			let settings = Json::TryReadJsonNet( settingsPath, _importPaths ? *_importPaths : vector<fs::path>{}, args, tlas );
 			if( !settings ){
-				let join = []( let& pairs ){
-					string y;
-					for_each( pairs, [&](let& pair){ y += (y.empty() ? "" : ";")+pair.first+"="+pair.second; } );
-					return y;
+				let joinKV = []( let& pairs ){ //Str::Join streams items, and pair<> has no operator<< - map to k=v first.
+					vector<string> y;
+					for_each( pairs, [&](let& pair){ y.push_back( pair.first+"="+pair.second ); } );
+					return Str::Join( y, ";" );
 				};
-				string importPaths;
+				vector<string> importPaths;
 				if( _importPaths )
-					for( auto& path : *_importPaths )
-						importPaths += (importPaths.empty() ? "" : ";")+path.string();
+					for( let& path : *_importPaths )
+						importPaths.push_back( path.string() ); //.string(): operator<<(fs::path) would quote it.
 
-				auto error = Ƒ("Could not load settings from '{}': {}\n-include: {}\nargs: {}\ntlas: {}", settingsPath.string(), settings.error(), importPaths, join(args), join(tlas) );
+				auto error = Ƒ("Could not load settings from '{}': {}\n-include: {}\nargs: {}\ntlas: {}", settingsPath.string(), settings.error(), Str::Join(importPaths,";"), joinKV(args), joinKV(tlas) );
 				throw std::runtime_error{ error };
 			}
 			_settings = mu<jvalue>( *settings );

@@ -1,5 +1,4 @@
 #include "SqliteDataSource.h"
-#include "jde/fwk.h"
 #include "jde/fwk/exceptions/Exception.h"
 #include "jde/fwk/process/dll.h"
 #include <jde/db/DBException.h>

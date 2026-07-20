@@ -1,11 +1,7 @@
-{
+local common = import '../../../../../libs/db/config/sqlite-common.libsonnet';
+common + {
 	local args = self,
 	local cwd = std.extVar("cwd"),
-	buildTarget: std.extVar("buildTarget"),
-	logsDir: std.extVar("logsDir"),
-	repoBuildDir: "$(REPO_BUILD_DIR)/"+args.buildTarget,
-	repoSourceDir: "$(REPO_SOURCE_DIR)",
-	sqlType: "sqlite",
 	instanceName: args.buildTarget+".sqlite",
 	opcServer: {
 		trustedCertDirs: [
@@ -20,32 +16,15 @@
 	dbServers: {
 		dataPaths: [],
 		scriptPaths:  [args.repoSourceDir + "/apps/OpcServer/config/sql/"+args.sqlType],
-		localhost:{
-			driver: args.repoBuildDir + "/libs/db/drivers/sqlite/lib/libJde.DB.Sqlite.so",
-			connectionString: null,
-			username: null,
-			password: null,
-			schema: null,
-			catalogs: {
-				master: { // n/a for sqlite
-					schemas:{
-						_appServer:{
-							access:{  //test debug with schema, debug with default schema ie dbo.
-								meta: args.repoSourceDir + "/libs/access/config/access-meta.jsonnet",
-								ql: args.repoSourceDir + "/libs/access/config/access-ql.jsonnet",
-								prefix: "access_"
-							},
-						},
-						dbo:{ // n/a for sqlite
-							opc:{
-								meta: args.repoSourceDir + "/apps/OpcServer/config/opcServer-meta.jsonnet",
-								prefix: "opc_",
-								dynamicLib: args.repoBuildDir+"/apps/OpcServer/config/sql/sqlite/libJde.DB.Sqlite.OpcServer.so"
-							},
-						}
-					}
-				}
+		localhost: common.localhost({
+			_appServer:{
+				//test debug with schema, debug with default schema ie dbo.  No dynamicLib: this process loads no
+				//access twins - the '_' prefix makes SqliteDataSource skip the schema when loading proc dlls.
+				access:{ meta: common.accessMeta, ql: common.accessQL, prefix: "access_" },
+			},
+			dbo:{ // n/a for sqlite
+				opc: common.opc(),
 			}
-		}
+		})
 	}
 }

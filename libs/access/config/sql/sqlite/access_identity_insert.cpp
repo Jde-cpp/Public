@@ -17,7 +17,7 @@ namespace Jde::DB::Sqlite::AccessProcs{
 			let identityId = IdentityInsert( procs, db, params[0], params[1], params[2], params[3], params[4], params[5], sl );
 			if( onRow )
 				(*onRow)( Row{ {Value{identityId}} } ); //out _identity_id
-			return 1; //ExecuteStatement throws rather than affecting 0 rows.
+			return 1; //one row - see ProcΛ.
 		}, 6);
 	}
 }
