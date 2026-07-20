@@ -27,6 +27,7 @@ if( WIN32 )
 	add_dependencies( ${targetName} Jde.DB.Odbc )
 else()
 	add_dependencies( ${targetName} Jde.DB.MySql )
+	sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcServer ) #the ctest run below dlopens these via config/args/sqlite
 endif()
 file( GLOB headers *.h */*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
@@ -46,7 +47,13 @@ else()
 	endif()
 endif()
 
-addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Server.Tests.jsonnet )
+#sqlite/:memory: needs no db server, so ctest is self-contained.  Windows keeps the default import dir (-ctest picks
+#args/sqlServer): config/args/sqlite hardcodes the linux .so driver paths, so -include there would load nothing.
+if( WIN32 )
+	addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Server.Tests.jsonnet )
+else()
+	addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Server.Tests.jsonnet -include=args/sqlite -arg path=:memory: )
+endif()
 
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Server.Tests.jsonnet" )
