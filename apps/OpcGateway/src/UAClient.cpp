@@ -84,21 +84,26 @@ namespace Jde::Opc::Gateway{
 		ul _{ _clientsMutex };
 		_clients.clear();
 	}
-	α UAClient::Configuration()ε->UA_ClientConfig*{
+	α UAClient::EnsureCertificate( const ServerCnnctnNK& target, sv uri )ε->void{
+		let certificateFile = CertificateFile( target );
+		if( fs::exists(certificateFile) )
+			return;
 		const fs::path root = RootSslDir();
-		const fs::path privateKeyFile = PrivateKeyFile();
+		for( sv sub : {"certs", "private", "public"} )//CreateKey/CreateCertificate open the files directly - ENOENT without the parents.
+			fs::create_directories( root/sub );
+		const string passcode = Passcode();
+		let privateKeyFile = PrivateKeyFile( target );
+		if( !fs::exists(privateKeyFile) )
+			Crypto::CreateKey( root/Ƒ("public/{}.pem", target), privateKeyFile, passcode );
+		Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Ƒ("URI:{}", uri), "jde-cpp", "US", "localhost" );
+	}
+	α UAClient::Configuration()ε->UA_ClientConfig*{
 		let uri = Str::Replace( _opcServer.CertificateUri, " ", "%20" );
 		bool addSecurity = !uri.empty();//urn:JDE-CPP:Kepware.KEPServerEX.V6:UA%20Server
 		auto certAuth = Credential.Type()==ETokenType::Certificate;
 		//TODO - test no security also
-		if( addSecurity && !certAuth && !fs::exists(CertificateFile()) ){
-			if( !fs::exists(root) )
-				fs::create_directories( root );
-			const string passcode = Passcode();
-			if( !fs::exists(privateKeyFile) )
-				Crypto::CreateKey( root/Ƒ("public/{}.pem", Target()), privateKeyFile, passcode );
-			Crypto::CreateCertificate( CertificateFile(), privateKeyFile, passcode, Ƒ("URI:{}", uri), "jde-cpp", "US", "localhost" );
-		}
+		if( addSecurity && !certAuth )
+			EnsureCertificate( Target(), uri );
 		auto config = UA_Client_getConfig( _ptr );
 		const uint size = addSecurity ? 2 : 1; ASSERT( !config->securityPoliciesSize );
 		uint initialized = 0;//policies actually constructed; on an exception before ownership transfers to config, the deleter clears these — UA_free alone would leak each policy's internals (policyUri, contexts, ...).
