@@ -233,9 +233,14 @@ namespace Jde::DB{
 	α DropObjects( const AppSchema& config )ε->void{
 		auto& ds = *config.DS();
 
-		for( let& [name, fk] : config.DS()->ServerMeta().LoadForeignKeys(config.Name) ){
-			if( find_if(config.Tables, [&fk](let& t){return t.second->DBName==fk.Table;})!=config.Tables.end() )
-				ds.ExecuteSync( {Ƒ("ALTER TABLE {} DROP CONSTRAINT {}", fk.Table, name)} );
+		//A dialect that can't ALTER TABLE ADD CONSTRAINT can't drop one either - its fks are inline in the create
+		//statement and go away with the table below (sqlite rejects 'alter table … drop constraint' as a syntax
+		//error).  Guarding the loop also skips LoadForeignKeys' per-table pragma scan for those dialects.
+		if( ds.Syntax().CanAddForeignKeys() ){
+			for( let& [name, fk] : config.DS()->ServerMeta().LoadForeignKeys(config.Name) ){
+				if( find_if(config.Tables, [&fk](let& t){return t.second->DBName==fk.Table;})!=config.Tables.end() )
+					ds.ExecuteSync( {Ƒ("ALTER TABLE {} DROP CONSTRAINT {}", fk.Table, name)} );
+			}
 		}
 
 		let hasProcs = ds.Syntax().HasProcs(); //sqlite: procs are native twins, there is nothing on the server to drop.

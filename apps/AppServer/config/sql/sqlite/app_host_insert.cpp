@@ -17,6 +17,6 @@ namespace Jde::DB::Sqlite::AppProcs{
 			if( onRow )
 				(*onRow)( Row{ {Value{hostId}} } ); //out _host_id
 			return 1;
-		});
+		}, 1);
 	}
 }

@@ -21,7 +21,7 @@ compileOptions( ${targetName} )
 file( GLOB sources *.cpp )
 target_sources( ${targetName} PRIVATE ${sources} )
 target_compile_definitions( ${targetName} PRIVATE TESTS JDE_SQLITE_EXPORTS )
-add_dependencies( ${targetName} Jde.DB.Sqlite Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcServer Jde.DB.Sqlite.OpcGateway )
+sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcServer Jde.DB.Sqlite.OpcGateway )
 target_link_libraries( ${targetName} GTest::gtest Threads::Threads )
 target_link_libraries( ${targetName} Jde.Access Jde.DB Jde )
 

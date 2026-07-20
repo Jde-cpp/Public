@@ -8,7 +8,12 @@
 namespace Jde::DB::Sqlite{
 	flat_map<string,ProcΛ> _procs; std::shared_mutex _procsMutex;
 
-	α RegisterProc( string name, ProcΛ proc )ι->void{
+	α RegisterProc( string name, ProcΛ proc, uint minParams )ι->void{
+		if( minParams ) //wrap once here: the dispatch path can't know what arity each twin expects.
+			proc = [minParams, name, body=move(proc)]( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
+				THROW_IFSL( params.size()<minParams, "Proc '{}' expects {} params, got {}.", name, minParams, params.size() );
+				return body( db, params, onRow, sl );
+			};
 		ul _{ _procsMutex };
 		//ASSERT( !_procs.contains(name) ); TODO
 		_procs[move(name)] = move(proc);

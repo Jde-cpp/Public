@@ -12,6 +12,6 @@ namespace Jde::DB::Sqlite::OpcProcs{
 			if( onRow )
 				(*onRow)( Row{ {Value{procs.LastInsertRowId(db)}} } ); //out _browse_id
 			return y;
-		});
+		}, 2);
 	}
 }

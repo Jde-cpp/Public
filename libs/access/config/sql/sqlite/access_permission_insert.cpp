@@ -11,6 +11,6 @@ namespace Jde::DB::Sqlite::AccessProcs{
 			if( onRow )
 				(*onRow)( Row{ {Value{procs.LastInsertRowId(db)}} } ); //out _permission_id
 			return y;
-		});
+		}, 1);
 	}
 }

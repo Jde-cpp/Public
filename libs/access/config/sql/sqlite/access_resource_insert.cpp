@@ -13,6 +13,6 @@ namespace Jde::DB::Sqlite::AccessProcs{
 			if( onRow )
 				(*onRow)( Row{ {Value{procs.LastInsertRowId(db)}} } ); //out _resource_id
 			return y;
-		});
+		}, 7);
 	}
 }

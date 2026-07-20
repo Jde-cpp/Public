@@ -14,6 +14,8 @@ list( REMOVE_ITEM sources ${main_cpp} )
 file( GLOB headers */*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
+sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.OpcGateway ) #config/args/sqlite + the 'Debug - Sqlite' launch config load these
+
 target_include_directories( ${targetName} PRIVATE ${jdeRoot}/include/jde/app/proto )
 target_link_libraries( ${targetName} Jde.Web.Server Jde.App.Client Jde.Opc )
 

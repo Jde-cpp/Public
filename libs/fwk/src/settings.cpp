@@ -102,6 +102,11 @@ namespace Jde{
 
 		vector<fs::path> paths{ fileName, fs::path{"../config"}/fileName, fs::path{"config"}/fileName };
 		if( auto settingsFile = _importPaths ? nullopt : Process::FindArg("-settings"); settingsFile ){
+			#ifdef _WIN32 //normalize once, before the branches: every use below (both import-dir forms and `paths`)
+				//derives from this path, and a bash-style '/c/…' won't fs::exists on windows.  Idempotent - a native
+				//path just round-trips through the '\\?\' prefix that substr(4) strips back off.
+				settingsFile = IO::BashToWindows( *settingsFile ).string().substr( 4 ); //remove //?/
+			#endif
 			if( auto cli = Process::FindArg("-include"); cli ){
 				_importPaths = vector<fs::path>{};
 				for( auto& relPath : Str::Split(*cli, ';') )
@@ -111,7 +116,6 @@ namespace Jde{
 				_importPaths = vector<fs::path>{};
 				#ifdef _WIN32
 					string sqlTypePath = "sqlServer";
-					settingsFile = IO::BashToWindows( *settingsFile ).string().substr( 4 ); //remove //?/
 				#else
 					string sqlTypePath = "mysql";
 				#endif
@@ -165,7 +169,7 @@ namespace Jde{
 			}
 			for( let& [key, value] : argMap("-arg") )
 				args[key] = value;
-			let tlas = Process::FindArg("sync") ? flat_map<string,string>{{"sync", "true"}} : flat_map<string,string>{};
+			let tlas = Process::FindArg("-sync") ? flat_map<string,string>{{"sync", "true"}} : flat_map<string,string>{};
 			let settings = Json::TryReadJsonNet( settingsPath, _importPaths ? *_importPaths : vector<fs::path>{}, args, tlas );
 			if( !settings ){
 				let join = []( let& pairs ){

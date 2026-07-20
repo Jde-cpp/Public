@@ -27,9 +27,9 @@ namespace Jde::DB::Sqlite{
 		}
 		~SqliteApi(){ UnregisterProcs( _procNames ); } //while _dll is still mapped (destroyed after this body).
 
-		α RegisterProc( string name, ProcΛ proc )ι->void override{
+		α RegisterProc( string name, ProcΛ proc, uint minParams )ι->void override{
 			_procNames.push_back( name );
-			ProcRegistry::RegisterProc( move(name), move(proc) );
+			ProcRegistry::RegisterProc( move(name), move(proc), minParams );
 		}
 	};
 

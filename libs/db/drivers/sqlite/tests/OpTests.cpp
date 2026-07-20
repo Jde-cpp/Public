@@ -79,6 +79,16 @@ namespace Jde::DB::Sqlite::Tests{
 		EXPECT_EQ( rows[0].GetString(0), "frank" );
 	}
 
+	TEST_P( OpTests, ProcArityGuard ){
+		//Twins index params[N] positionally with unchecked operator[]; a short vector used to read past the end and
+		//copy a Value variant from uninitialized memory.  RegisterProc's minParams turns that into a diagnosable throw.
+		Sql tooFew{ "access_identity_insert( ?, ? )", {Value{"short"}, Value{}}, true }; //declares 6 params
+		EXPECT_THROW( _ds->ExecuteSync(move(tooFew)), Exception );
+		//...and the extra trailing out-param placeholder callers append must still be accepted (minParams is a floor).
+		Sql extra{ "access_permission_insert( ?, ? )", {Value{false}, Value{(uint)0}}, true }; //declares 1
+		EXPECT_NO_THROW( _ds->ExecuteSync(move(extra)) );
+	}
+
 	TEST_P( OpTests, ProcsSurviveSiblingTeardown ){
 		{ //A 2nd data source over the same proc dlls - the registry is process-global, so its teardown must not strip procs _ds still dispatches.
 			let sibling = DB::DataSource( Settings::AsObject(Ƒ("/dbServers/{}", GetParam())) );

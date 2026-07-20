@@ -136,27 +136,27 @@ namespace Jde{
 		if( !_args ){
 			_args = mu<flat_multimap<string,string>>();
 			std::ifstream file( "/proc/self/cmdline" );
-			optional<string> key;
+			optional<string> key; //flag awaiting a value: `-k v` binds on the next token, `-k` alone binds empty.
 			for( string current; std::getline<char>(file, current, '\0'); ){
-				if( current.starts_with('-') ){
-					if( key )
-						_args->emplace( *key, string{} );
-					if( uint i=current.find('='); i<current.size() ){
-						key = current.substr(0, i);
-						auto value = current.substr(i+1);
-						if( value.size() && value[0]=='"' && value.back()=='"' )
-							value = value.substr( 1, value.size()-2 );
-						_args->emplace( move(*key), move(value) );
-					}else
-						key = current;
+				if( !current.starts_with('-') ){ //the pending flag's value, or a positional (empty key).
+					_args->emplace( key ? move(*key) : string{}, current );
+					key.reset();
+					continue;
 				}
-				else if( key )
-					_args->emplace( *key, current );
+				if( key ) //previous flag never got a value.
+					_args->emplace( move(*key), string{} );
+				key.reset(); //every path that consumes key resets it - reading a moved-from optional emplaced junk.
+				if( uint i=current.find('='); i<current.size() ){
+					auto value = current.substr( i+1 );
+					if( value.size()>1 && value.front()=='"' && value.back()=='"' ) //lldb/VS Code pass argv unshelled, so the quotes are literal.
+						value = value.substr( 1, value.size()-2 );
+					_args->emplace( current.substr(0, i), move(value) );
+				}
 				else
-					_args->emplace( string{}, current );
+					key = current;
 			}
 			if( key )
-				_args->emplace( *key, string{} );
+				_args->emplace( move(*key), string{} );
 		}
 		return *_args;
 	}

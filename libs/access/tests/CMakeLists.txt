@@ -17,6 +17,7 @@ if( WIN32)
 	add_dependencies( ${targetName} Jde.DB.Odbc )
 else()
 	add_dependencies( ${targetName} Jde.DB.MySql )
+	sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer ) #the ctest run below dlopens these via config/args/sqlite
 endif()
 
 compileOptions( ${targetName} )
@@ -38,7 +39,13 @@ else()
 	endif()
 endif()
 
-addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet -include=args/sqlite -arg path=:memory: )
+#sqlite/:memory: needs no db server, so ctest is self-contained.  Windows keeps the default import dir (-ctest picks
+#args/sqlServer): config/args/sqlite hardcodes the linux .so driver paths, so -include there would load nothing.
+if( WIN32 )
+	addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet )
+else()
+	addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet -include=args/sqlite -arg path=:memory: )
+endif()
 
 target_precompile_headers(${targetName}
   PRIVATE

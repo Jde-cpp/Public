@@ -18,6 +18,6 @@ namespace Jde::DB::Sqlite::AccessProcs{
 			if( onRow )
 				(*onRow)( Row{ {Value{identityId}} } ); //out _identity_id
 			return 1; //ExecuteStatement throws rather than affecting 0 rows.
-		});
+		}, 6);
 	}
 }
