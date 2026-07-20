@@ -102,7 +102,7 @@ endfunction()
 function( addJdeTest targetName settingsFile )
 	add_test(
 		NAME ${targetName}
-		COMMAND $<TARGET_FILE:${targetName}> -tests -settings=${settingsFile} ${ARGN}
+		COMMAND $<TARGET_FILE:${targetName}> -ctest -settings=${settingsFile} ${ARGN}
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/Testing
 	)
 	set_tests_properties( ${targetName} PROPERTIES ENVIRONMENT

@@ -6,12 +6,6 @@
 //Twin of ../mysql/access_user_insert_key.sql - the generated access_identity_insert `call` is inlined via IdentityInsert.
 //	params: [0]=modulus, [1]=exponent, [2]=provider_id, [3]=name, [4]=target, [5]=description; out _identity_id returned as the result row.
 namespace Jde::DB::Sqlite::AccessProcs{
-	//Generated proc twin - see accessProcs.h. Column order/defaults match TableDdl::InsertProcCreateStatement for access_identities.
-	α IdentityInsert( IProcs& procs, sqlite3& db, const Value& name, const Value& providerId, const Value& target, const Value& attributes, const Value& description, const Value& isGroup, SL sl )ε->uint{
-		procs.ExecuteStatement( db, "insert into access_identities( name, provider_id, target, attributes, created, description, is_group ) values( ?, ?, ?, ?, unixepoch(), ?, ? )", {name, providerId, target, attributes, description, isGroup}, nullptr, sl );
-		return procs.LastInsertRowId( db );
-	}
-
 	α RegisterAccessUserInsertKey( IProcs& procs )ι->void{
 		procs.RegisterProc( "access_user_insert_key", [&procs]( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
 			let emptyString = []( const Value& v ){ return v.is_string() && v.get_string().empty(); };

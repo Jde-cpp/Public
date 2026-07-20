@@ -7,10 +7,8 @@
 namespace Jde::DB::Sqlite::AppProcs{
 	α InstanceInsert( IProcs& procs, sqlite3& db, const Value& programId, const Value& name, const Value& hostName, SL sl )ε->uint{
 		auto hostId = procs.ScalarUInt( db, "select host_id from app_hosts where name=?", {hostName}, sl );
-		if( !hostId ){
-			procs.ExecuteStatement( db, "insert into app_hosts( name ) values( ? )", {hostName}, nullptr, sl );
-			hostId = procs.LastInsertRowId( db );
-		}
+		if( !hostId )
+			hostId = HostInsert( procs, db, hostName, sl );
 		procs.ExecuteStatement( db, "insert into app_instances( program_id, name, host_id ) values( ?, ?, ? )", {programId, name, Value{*hostId}}, nullptr, sl );
 		return procs.LastInsertRowId( db );
 	}

@@ -3,10 +3,12 @@
 		"window.title": "Access",
 		"name": "access",
 		"target": "Jde.Access.Tests",
+		"testTarget": "${config:target}",
 		"subDir": "libs/${config:name}",
 		"cmake.sourceDirectory": "${workspaceFolder:tests}/../../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"settings": "${workspaceFolder:tests}/config/Access.Tests.jsonnet",
+		"testSettings": "${config:settings}",
 		"program": "${config:subDir}/tests/${config:target}"
 	},
 	"tasks": {

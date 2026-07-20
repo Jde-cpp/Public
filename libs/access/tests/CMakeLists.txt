@@ -38,7 +38,7 @@ else()
 	endif()
 endif()
 
-addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet )
+addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Access.Tests.jsonnet -include=args/sqlite -arg path=:memory: )
 
 target_precompile_headers(${targetName}
   PRIVATE

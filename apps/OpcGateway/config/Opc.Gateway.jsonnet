@@ -55,7 +55,7 @@ local logsDir = args.logsDir;
 	},
 	dbServers: {
 		scriptPaths: args.dbServers.scriptPaths,
-		sync:: true,
+		sync: true,
 		localhost:{
 			driver: args.dbServers.localhost.driver,
 			connectionString: args.dbServers.localhost.connectionString,

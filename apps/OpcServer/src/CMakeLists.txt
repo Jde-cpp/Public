@@ -31,13 +31,13 @@ if( NOT WIN32 )
   target_include_directories( ${targetName} PRIVATE /usr/include/libxml2 )
 endif()
 
+add_dependencies( ${targetName} Jde.DB.Sqlite Jde.DB.Sqlite.OpcServer )
+
 target_link_libraries( ${targetName} PUBLIC Jde.App.Client Jde.Web.Server Jde.Opc )
 if( NOT WIN32 )
 	target_link_libraries( ${targetName} PUBLIC protobuf::libprotobuf ) #why not Jde.Web.Server?
 endif()
-message( "XML2LIB=${XML2LIB}" )
 target_link_libraries( ${targetName} PUBLIC ${XML2LIB} )
-
 target_link_libraries( ${targetName} PUBLIC NodesetLoader )
 #######################################################
 target_precompile_headers( ${targetName}

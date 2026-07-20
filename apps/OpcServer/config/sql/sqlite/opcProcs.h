@@ -7,11 +7,13 @@ struct sqlite3;
 //order, out params returned as the result row. RegisterProcs (jde/db/sqlite_api.h) registers them all through
 //the driver's IProcs, so this DLL needn't link the driver.
 namespace Jde::DB::Sqlite::OpcProcs{
+	α RegisterOpcBrowseNameInsert( IProcs& procs )ι->void;
 	α RegisterOpcConstructorInsert( IProcs& procs )ι->void;
 	α RegisterOpcNodeIdInsert( IProcs& procs )ι->void;
 	α RegisterOpcNodeInsert( IProcs& procs )ι->void;
 	α RegisterOpcObjectInsert( IProcs& procs )ι->void;
 	α RegisterOpcObjectTypeInsert( IProcs& procs )ι->void;
+	α RegisterOpcServerInsert( IProcs& procs )ι->void;
 	α RegisterOpcVariableInsert( IProcs& procs )ι->void;
 	α RegisterOpcVariantInsert( IProcs& procs )ι->void;
 

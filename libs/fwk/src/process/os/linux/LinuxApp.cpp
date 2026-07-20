@@ -142,8 +142,11 @@ namespace Jde{
 					if( key )
 						_args->emplace( *key, string{} );
 					if( uint i=current.find('='); i<current.size() ){
-						_args->emplace( current.substr(0, i), current.substr(i+1) );
-						key.reset();
+						key = current.substr(0, i);
+						auto value = current.substr(i+1);
+						if( value.size() && value[0]=='"' && value.back()=='"' )
+							value = value.substr( 1, value.size()-2 );
+						_args->emplace( move(*key), move(value) );
 					}else
 						key = current;
 				}

@@ -25,7 +25,9 @@ namespace Jde::Logging{
 			auto pattern =  Json::FindSV( sink, "/pattern" );
 			if( name=="console" && Process::IsConsole() ){
 				if( !pattern ){
-					if constexpr( _debug ){
+					if( Process::Args().find("-ctest")!=Process::Args().end() )
+						pattern = "%^%3!l%$-%H:%M:%S.%e %v %g:%#";//%-64@  %v
+					else if constexpr( _debug ){
 #ifdef _MSC_VER
 							pattern = "\u001b]8;;file://%g\u001b\\%3!#-%3!l%$-%H:%M:%S.%e %v\u001b]8;;\u001b";
 #else

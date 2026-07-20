@@ -94,7 +94,6 @@ namespace Jde{
 		}
 
 	optional<vector<fs::path>> _importPaths;
-	const vector<fs::path> _noImportPaths;//bound instead of _importPaths.value_or({}), which deep-copies the paths every Load.
 	Ω path()ι->fs::path{
 		static fs::path _path;
 		if( !_path.empty() )
@@ -103,7 +102,12 @@ namespace Jde{
 
 		vector<fs::path> paths{ fileName, fs::path{"../config"}/fileName, fs::path{"config"}/fileName };
 		if( auto settingsFile = _importPaths ? nullopt : Process::FindArg("-settings"); settingsFile ){
-			if( Process::FindArg("-tests") ){
+			if( auto cli = Process::FindArg("-include"); cli ){
+				_importPaths = vector<fs::path>{};
+				for( auto& relPath : Str::Split(*cli, ';') )
+					_importPaths->push_back( fs::path{*settingsFile}.parent_path()/relPath );
+			}
+			else if( Process::FindArg("-tests") || Process::FindArg("-ctest") ){
 				_importPaths = vector<fs::path>{};
 				#ifdef _WIN32
 					string sqlTypePath = "sqlServer";
@@ -112,11 +116,6 @@ namespace Jde{
 					string sqlTypePath = "mysql";
 				#endif
 				_importPaths->push_back( fs::path{*settingsFile}.parent_path()/"args"/sqlTypePath );
-			}
-			else if( auto cli = Process::FindArg("-include"); cli ){
-				_importPaths = vector<fs::path>{};
-				for( auto& relPath : Str::Split(*cli, ';') )
-					_importPaths->push_back( fs::path{*settingsFile}.parent_path()/relPath );
 			}
 			paths = { fs::path{*settingsFile} };
 		}
@@ -145,15 +144,34 @@ namespace Jde{
 			if( !fs::exists(settingsPath) )
 				throw std::runtime_error{ Ƒ("file does not exist: '{}'", settingsPath.string()) };
 			flat_map<string,string> args;
-			if( Process::FindArg("-tests") ){
+			if( Process::FindArg("-tests") || Process::FindArg("-ctest") ){
 				args["buildTarget"] = _debug ? "debug" : "release";
 				args["cwd"] = fs::current_path().string();
 				args["logsDir"] = args["cwd"] + "/logs";
 			}
+	    auto range = Process::Args().equal_range("-arg");
+			for( auto it = range.first; it != range.second; ++it ){
+				auto keyValue = Str::Split( it->second, '=' );
+				if( keyValue.size()==2 )
+					args[string{keyValue[0]}] = keyValue[1];
+				else
+					std::cout << "Invalid -arg '" << it->second << "', must be key=value" << std::endl;
+			}
 
-			let settings = Json::TryReadJsonNet( settingsPath, _importPaths ? *_importPaths : _noImportPaths, args );
-			if( !settings )
-				throw std::runtime_error{ settings.error() };
+			let settings = Json::TryReadJsonNet( settingsPath, _importPaths ? *_importPaths : vector<fs::path>{}, args );
+			if( !settings ){
+				string importPaths = "";
+				if( _importPaths ){
+					importPaths = " -include=";
+					for( auto& path : *_importPaths )
+						importPaths += path.string() + ";";
+				}
+				string argLogString;
+				for_each( args, [&](let& pair){argLogString += pair.first+"="+pair.second+";";} );
+
+				auto error = Ƒ("Could not load settings from '{}': {}\n-include: {}\nargs: {}", settingsPath.string(), settings.error(), importPaths, argLogString );
+				throw std::runtime_error{ error };
+			}
 			_settings = mu<jvalue>( *settings );
 			if( _settings->is_object() )
 				SetEnv( _settings->get_object() );
