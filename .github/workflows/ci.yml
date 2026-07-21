@@ -1,12 +1,16 @@
 name: Linux x64
 
-# Runs on the self-hosted, containerised runner (see .github/docker/). Triggered
-# on branch pushes and manual dispatch only — deliberately NOT on `pull_request`:
-# this is a self-hosted runner, so a fork PR must never be able to execute code on
-# it. Keep fork-PR checks on GitHub-hosted runners in a separate workflow if needed.
+# Runs on the self-hosted, containerised runner (see .github/docker/). Triggered on
+# pull requests, pushes to main (the merge commit of a landed PR — also feeds the
+# README badge), and manual dispatch. This is a self-hosted runner on a public repo,
+# so a fork PR must never execute code on it: the same-repo `if` on the job skips
+# fork PRs (keep Settings → Actions → "Require approval for all outside
+# collaborators" as a second fence). Fork-PR checks belong on GitHub-hosted runners
+# in a separate workflow if ever needed.
 on:
+  pull_request: # opened/synchronize/reopened — new commits on an open PR re-test it
   push:
-    branches: ['**']
+    branches: [main]
   workflow_dispatch:
 
 # One in-flight run per branch; a newer push cancels the older run.
@@ -16,6 +20,8 @@ concurrency:
 
 jobs:
   build-and-test:
+    # Never run fork-PR code on the self-hosted runner — see the trigger comment.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     # Matches the LABELS set when the runner container was registered.
     runs-on: [self-hosted, clang22]
 
