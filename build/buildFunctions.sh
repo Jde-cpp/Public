@@ -94,7 +94,7 @@ function reconfig() (
 	#-B required: no Linux preset sets binaryDir, and preset mode ignores cwd (defaults to the source dir).
 	cmake -B $buildDir -S $repoSourceDir -Wno-dev --preset "$preset" 2>&1 | tee -a cmake.output;
 	if [ -f "$buildDir/compile_commands.json" ]; then
-		mv $buildDir/compile_commands.json $repoSourceDir/compile_commands.json;
+		cp $buildDir/compile_commands.json $repoSourceDir/compile_commands.json;
 	fi
 )
 function build() (

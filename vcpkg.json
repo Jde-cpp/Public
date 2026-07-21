@@ -3,6 +3,10 @@
     {
       "name": "openssl",
       "platform": "windows"
+    },
+    {
+      "name": "sqlite3",
+      "platform": "windows"
     }
   ]
 }

@@ -1,0 +1,35 @@
+{
+  "settings": {
+    "window.title": "Jde",
+		"releaseRoot": "${env:JDE_BASH}/Release",
+		"sourceDir": "${workspaceFolder}",
+		"target": "all",
+		"testTarget": ".*",
+		"cmake.sourceDirectory": "${workspaceFolder}",
+		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
+		"presetSuffix": "-jde",
+    "C_Cpp.default.systemIncludePath": [
+      "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um"
+    ],
+    "files.watcherExclude": {
+      "**/my-workspace*/**": true,
+      "**/out/**": true,
+      "**/build/**": true
+    },
+    "files.exclude": {
+      "**/my-workspace*/**": true,
+      "**/out/**": true,
+      "**/build/**": true
+    },
+    "search.exclude": {
+      "**/my-workspace*/**": true,
+      "**/out/**": true,
+      "**/build/**": true
+    }
+  },
+  "folders": [
+    {
+      "path": "."
+    }
+  ]
+}

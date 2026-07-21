@@ -20,8 +20,8 @@ target_sources(${targetName}
 )
 
 target_link_libraries( ${targetName} PRIVATE fmt::fmt )
-if( WIN32 )
-	target_link_libraries( ${targetName} PRIVATE Jde )
+if( WIN32 ) #PUBLIC: lld-link requires every symbol resolved at link time, and every Jde.DB consumer's translation units instantiate Jde framework templates directly - propagate the requirement instead of repeating it per consumer.
+	target_link_libraries( ${targetName} PUBLIC Jde )
 endif()
 
 target_precompile_headers(${targetName}

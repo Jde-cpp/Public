@@ -247,7 +247,7 @@ namespace Jde{
 	}
 #undef LoadLibrary
 	α Process::LoadLibrary( const fs::path& path )ε->void*{
-		auto p = ::LoadLibraryA( path.string().c_str() ); THROW_IFX( !p, IOException(path, GetLastError(), "Can not load library") );
+		auto p = ::LoadLibraryA( path.string().c_str() ); THROW_IFX( !p, IO::IOException(path, GetLastError(), "Can not load library") );
 		INFOT( ELogTags::App, "({})Opened"sv, path.string() );
 		return p;
 	}

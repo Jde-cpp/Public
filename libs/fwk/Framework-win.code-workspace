@@ -15,7 +15,7 @@
 
 		"buildDir": "${config:buildRoot}/${config:subDir}",
 		"winBuildDir": "${env:JDE_BUILD_DIR}\\${config:compiler}",
-		"exe": "\\bin\\Debug\\${config:target}.exe",
+		"exe": "\\bin\\${config:target}.exe",
 	},
 	"folders": [
 		{
@@ -35,7 +35,7 @@
 			{
 				"label": "compile",
 				"type": "shell",
-				"command": "tput reset;${config:sourceBash};compile '${workspaceFolder}' '${fileWorkspaceFolder}' '${relativeFile}' ${config:buildRoot};",
+				"command": "tput reset;${config:sourceBash};compile ${config:buildRoot} '${file}';",
 				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 				"group": "build"
 			},

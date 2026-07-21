@@ -6,7 +6,6 @@
 		"subDir": "libs/${config:name}",
 		"sourceDir": "${env:JDE_BASH}/${config:subDir}",
 		"compiler": "${env:JDE_COMPILER}",
-		"buildTarget": "Debug",
 		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
 		"debugPreset": "win-clang-debug-jde",
 		"testBuildDir": "${config:buildRoot}/${config:subDir}/tests",
@@ -14,7 +13,7 @@
 
 		"buildDir": "${config:buildRoot}/libs/${config:name}",
 		"winBuildDir": "${env:JDE_BUILD_DIR}\\${config:compiler}",
-		"exe": "\\bin\\${config:buildTarget}\\${config:target}.exe",
+		"exe": "\\bin\\${config:target}.exe",
 		"clangd.arguments": [
 			"--compile-commands-dir=C:\\Users\\duffyj\\source\\repos\\jde\\Public\\libs\\web"
 		],
@@ -26,7 +25,7 @@
 		{
 			"label": "buildProject",
 			"type": "shell",
-			"command": "tput reset;${config:source};buildProject \"${fileWorkspaceFolder}\" ${config:buildRoot};",
+			"command": "tput reset;${config:sourceBash};buildProject ${config:buildRoot} '${file}';",
 			"group": { "kind": "build", "isDefault": false }
 		},
 		{

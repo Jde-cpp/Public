@@ -1,4 +1,5 @@
-﻿#include <jde/fwk/io/Cache.h>
+﻿#include <fstream>
+#include <jde/fwk/io/Cache.h>
 #include <jde/fwk/io/FileAwait.h>
 #include <jde/fwk/co/LockKey.h>
 #include <jde/fwk/process/execution.h>

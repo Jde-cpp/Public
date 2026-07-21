@@ -1,8 +1,7 @@
 ﻿#pragma once
 #ifndef FILE_H
 #define FILE_H
-//#include <fstream>
-//#include <span>
+#include <fstream> //!important
 #include <jde/fwk/exceptions/IOException.h>
 
 #define Φ Γ auto

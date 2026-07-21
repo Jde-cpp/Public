@@ -1,11 +1,12 @@
 #pragma once
+#include "../exports.h"
 
 namespace Jde::Access{ struct IAcl; }
 namespace Jde::DB{
 	//Cluster > Catalog > Schema > Table > Columns & Rows
 	//sql server, mysql = service instance.
 	struct Catalog; struct IDataSource; struct AppSchema; struct Syntax;
-	struct Cluster final{
+	struct ΓDB Cluster final{
 		Cluster( sv name, const jobject& config, sp<Access::IAcl> authorizer )ε;
 
 		Ω Initialize( sp<Cluster> cluster )ε->void;

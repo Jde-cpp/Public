@@ -53,7 +53,7 @@ namespace Jde{
 		ASSERT( !_timer );
 		_timer = move( timer );
 		timerMutex.unlock();
-		co_await *_timer;
+		auto _ = co_await *_timer;
 		ul timeoutsLock{ _timeoutsLock };
 		for( auto p = _timeouts.begin(); p!=_timeouts.end() && p->first<=steady_clock::now(); ){
 			{

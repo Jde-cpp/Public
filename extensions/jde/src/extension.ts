@@ -126,7 +126,11 @@ function repoBuildDir( repoRoot:string ):string {
 		vscode.window.showErrorMessage( msg );
 		throw new Error( msg );
 	}
-	return path.join( buildDir!, compiler!, path.basename(repoRoot) );
+	const joined = path.join( buildDir!, compiler!, path.basename(repoRoot) );
+	//tasks.json splices this into an unquoted bash command line (see cmakeDebug), which VS Code tokenizes
+	//and bash then parses again - backslashes get eaten as escape chars either way. '/' has no escaping
+	//meaning to either layer and is a valid Windows path separator, so use it instead of trying to survive escaping.
+	return process.platform == 'win32' ? joined.replace( /\\/g, '/' ) : joined;
 }
 
 export function activate(context: vscode.ExtensionContext) {
