@@ -16,13 +16,13 @@ This is a monorepo for the **Jde OpcGateway** system — an OPC-UA gateway with 
 
 ## Building (C++)
 
-Build outputs go to `/mnt/ram/`. `$JDE_DIR` (= `$JDE_BASH`) is this checkout's source root; `$REPO_DIR` is the **third-party** root (`/home/duffyj/code/libs`) that the presets install dependencies under (`installRoot = $env{REPO_DIR}/install/$env{CXX}`) — it is not the jde repo. Each compiler+checkout pair gets an out-of-source build directory per build type: `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>/<debug|release>` (e.g. `/mnt/ram/linux/clang++/Public/debug`). The helpers in `build/buildFunctions.sh` take that full build dir as their first argument; `reconfig` creates it (plus `runtime/logs`) and moves the generated `compile_commands.json` to the source root for clangd.
+Build outputs go to `/mnt/ram/`. `$JDE_DIR` (= `$JDE_BASH`) is this checkout's source root; `$REPO_DIR` is the **third-party** root (`/home/duffyj/code/libs`) that the presets install dependencies under (`installRoot = $env{REPO_DIR}/install/$env{CXX}`) — it is not the jde repo. Each compiler+checkout pair gets an out-of-source build directory per build type: `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>/<debug|release>` (e.g. `/mnt/ram/linux/clang++/Public/debug`). The helpers in `build/buildFunctions.sh` take that full build dir as their first argument; `reconfig` creates it (plus `runtime/logs`) and copies the generated `compile_commands.json` to the source root for clangd (the build dir keeps its own copy too, for tools like VS Code's CMake Tools that expect it there).
 
 ```bash
 source $JDE_DIR/build/buildFunctions.sh
 buildDir=$JDE_BUILD_DIR/$JDE_COMPILER/$(basename $JDE_DIR)/debug   # /mnt/ram/linux/clang++/Public/debug
 
-# Configure (wipes CMakeCache.txt, creates runtime/logs, relocates compile_commands.json)
+# Configure (wipes CMakeCache.txt, creates runtime/logs, copies compile_commands.json to the source root)
 reconfig $buildDir $JDE_DIR linux-clang-debug-jde
 
 # Build a target

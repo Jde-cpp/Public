@@ -1,0 +1,32 @@
+/c/Users/duffyj/source/repos/jde/Public/Jde.output
+ninja -C /x/build/clang++-22 libs/fwk/lib/io/CMakeFiles/Jde.dir/libs/fwk/src/io/Cache.cpp.obj
+ninja: Entering directory `X:/build/clang++-22'
+[0/1] Re-running CMake...
+-- Running vcpkg install
+Detecting compiler hash for triplet x64-windows...
+Compiler found: C:/Program Files/Microsoft Visual Studio/18/Professional/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/cl.exe
+Detecting compiler hash for triplet x64-windows-static-md...
+Compiler found: C:/Program Files/Microsoft Visual Studio/18/Professional/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/cl.exe
+The following packages are already installed:
+    openssl:x64-windows-static-md@3.6.3
+    sqlite3[core,json1]:x64-windows-static-md@3.53.2#1
+  * vcpkg-cmake:x64-windows@2024-04-23
+  * vcpkg-cmake-config:x64-windows@2024-05-23
+  * vcpkg-cmake-get-vars:x64-windows@2025-05-29
+openssl is compatible with built-in CMake targets:
+
+  find_package(OpenSSL REQUIRED)
+  target_link_libraries(main PRIVATE OpenSSL::SSL)
+  target_link_libraries(main PRIVATE OpenSSL::Crypto)
+
+sqlite3 provides pkgconfig bindings.
+sqlite3 provides CMake targets:
+
+    find_package(unofficial-sqlite3 CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE unofficial::sqlite3::sqlite3)
+
+All requested installations completed successfully in: 206 us
+-- Running vcpkg install - done
+-- Configuring done (4.9s)
+-- Generating done (0.1s)
+-- Build files have been written to: X:/build/clang++-22

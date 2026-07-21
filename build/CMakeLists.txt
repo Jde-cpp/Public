@@ -278,7 +278,7 @@ else()
 	set( _c4coreLib libc4core.a )
 endif()
 ExternalProject_Add_Step( ryml fix-export
-	COMMAND ${CMAKE_COMMAND} "-DCONFIG=${CMAKE_INSTALL_PREFIX}/ryml/lib/cmake/ryml/rymlConfig.cmake" -DLIB_NAME=${_c4coreLib} -P "${_rymlExportPatch}"
+	COMMAND ${CMAKE_COMMAND} "-DCONFIG=${CMAKE_INSTALL_PREFIX}/ryml/cmake/rymlConfig.cmake" -DLIB_NAME=${_c4coreLib} -P "${_rymlExportPatch}"
 	DEPENDEES install
 	DEPENDS "${_rymlExportPatch}"
 	COMMENT "ryml: appending the c4core dependency to the installed export"

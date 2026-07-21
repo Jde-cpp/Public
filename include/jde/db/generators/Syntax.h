@@ -11,8 +11,8 @@ namespace Jde::DB{
 	enum class EOperator : uint8{Equal,NotEqual,Regex,Glob,In,NotIn,Greater,GreaterOrEqual,Less,LessOrEqual,ElementMatch};
 	Φ ToOperator( sv op )ι->EOperator;
 	Φ ToString( EOperator op )ι->string;
-	struct Syntax{
-		ΓDB Ω Instance()->const Syntax&;
+	struct ΓDB Syntax{
+		Ω Instance()->const Syntax&;
 		virtual ~Syntax()=default;
 		α FormatOperator( const Column& col, EOperator op, uint size=1, SRCE )Ε->string;
 		β AddDefault( sv tableName, sv columnName, Value dflt )Ι->string;

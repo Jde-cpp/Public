@@ -8,10 +8,10 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR )
 endif()
 
 if( CMAKE_HOST_WIN32 )
-	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>" )
-	set( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>" )
-	set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>" )
-	set( CMAKE_PDB_OUTPUT_DIRECTORY     "${CMAKE_BINARY_DIR}/bin/$<CONFIG>" )
+	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+	set( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+	set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+	set( CMAKE_PDB_OUTPUT_DIRECTORY     "${CMAKE_BINARY_DIR}/bin" )
 endif()
 
 function(boost)
@@ -139,7 +139,7 @@ function( sqliteProcModule targetName )
 	endforeach()
 
 	target_link_libraries( ${targetName} PRIVATE Threads::Threads ) #no sqlite3 link: the driver is reached only through IProcs (sqlite_api.h), which forward-declares sqlite3.
-	target_link_libraries( ${targetName} PRIVATE fmt::fmt Jde.DB )
+	target_link_libraries( ${targetName} PRIVATE fmt::fmt Jde.DB ) #PUBLIC-links Jde on WIN32, propagated transitively.
 
 	target_precompile_headers( ${targetName}
 	  PRIVATE

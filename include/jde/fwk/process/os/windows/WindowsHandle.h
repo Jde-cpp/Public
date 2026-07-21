@@ -1,12 +1,12 @@
 ﻿#pragma once
-#include <jde/fwk/exceptions/Exception.h>
+#include <jde/fwk/exceptions/IOException.h>
 #include <jde/fwk/process/process.h>
 
 namespace Jde{
   struct WinHandle final{
     WinHandle( std::nullptr_t=nullptr )ι : _value(nullptr) {}
 		//TODO: forward exception?
-    WinHandle( HANDLE value, function<IOException()> e )ε:
+    WinHandle( HANDLE value, function<IO::IOException()> e )ε:
       _value( value ){
       if( _value==INVALID_HANDLE_VALUE )
 				throw e();

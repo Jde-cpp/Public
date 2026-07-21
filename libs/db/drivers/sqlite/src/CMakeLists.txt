@@ -28,7 +28,7 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 target_link_libraries( ${targetName} PRIVATE SQLite::SQLite3 Threads::Threads )
 target_link_libraries( ${targetName} PRIVATE fmt::fmt )
-target_link_libraries( ${targetName} PRIVATE Jde.DB )
+target_link_libraries( ${targetName} PRIVATE Jde.DB ) #PUBLIC-links Jde on WIN32, propagated transitively.
 
 target_precompile_headers( ${targetName}
   PRIVATE

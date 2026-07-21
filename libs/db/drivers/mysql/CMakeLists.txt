@@ -23,7 +23,7 @@ target_link_libraries(${targetName} PRIVATE Boost::charconv Threads::Threads Ope
 target_compile_definitions(${targetName} PRIVATE BOOST_MYSQL_SEPARATE_COMPILATION)
 
 target_link_libraries( ${targetName} PRIVATE fmt::fmt )
-target_link_libraries( ${targetName} PRIVATE Jde.DB )
+target_link_libraries( ${targetName} PRIVATE Jde.DB ) #PUBLIC-links Jde on WIN32, propagated transitively.
 
 target_precompile_headers( ${targetName}
   PRIVATE

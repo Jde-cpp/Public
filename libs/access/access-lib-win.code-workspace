@@ -7,7 +7,6 @@
 		"subDir": "libs/${config:name}",
 		"sourceDir": "${env:JDE_BASH}/${config:subDir}",
 		"compiler": "${env:JDE_COMPILER}",
-		"buildTarget": "Debug",
 		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
 		"debugDir": "${config:buildRoot}",
 		"debugPreset": "win-clang-debug-jde",
@@ -16,7 +15,7 @@
 
 		"buildDir": "${config:buildRoot}/${config:subDir}",
 		"winBuildDir": "${env:JDE_BUILD_DIR}\\${config:compiler}",
-		"exe": "\\bin\\${config:buildTarget}\\${config:target}.exe",
+		"exe": "\\bin\\${config:target}.exe",
 	},
 	"tasks": {
 		"version": "2.0.0",
@@ -31,7 +30,7 @@
 			"label": "compile",
 			"type": "shell",
 			"dependsOn": ["clearTerminal"],
-			"command": "tput reset;${config:sourceBash};compile '${workspaceFolder}' '${fileWorkspaceFolder}' '${relativeFile}' ${config:buildRoot};",
+			"command": "tput reset;${config:sourceBash};compile ${config:buildRoot} '${file}';",
 			"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
 			"group": { "kind": "build", "isDefault": false }
 		},

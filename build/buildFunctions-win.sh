@@ -41,24 +41,77 @@ function projectName() (
 	fi;
 	echo $project;
 )
+#CMAKE_HOME_DIRECTORY is the -S path CMake cached at configure time - authoritative source root for buildRoot,
+#same role it plays in buildFunctions.sh's makefileDirForFile. Echoes the repo source dir on success, the
+#failure reason on non-zero return.
+function repoSourceDirFor() (
+	source $JDE_BASH/build/common.sh; #toBashDir
+	buildRoot=$1; # /mnt/ram/win/clang++/Public/debug
+	cache=$buildRoot/CMakeCache.txt;
+	if [ ! -f "$cache" ]; then
+		echo "no CMakeCache.txt in $buildRoot - run reconfig first.";
+		return 1;
+	fi;
+	homeDir=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$cache"); #CMake caches this as a Windows-style C:/... path
+	if [[ -z $homeDir ]]; then
+		echo "no CMAKE_HOME_DIRECTORY in $cache - reconfigure the build.";
+		return 1;
+	fi;
+	toBashDir "$homeDir" bashHomeDir;
+	realpath "$bashHomeDir";
+)
+#Ninja is monolithic (one build.ninja per buildRoot, no per-directory Makefiles), so instead of walking up
+#directories like makefileDirForFile does, look up the .obj target compile_commands.json already recorded for
+#this source file - CMake's Ninja generator writes each entry's "output" as the ninja target path, so no
+#hardcoded project->target table, and no dependency on ninja query's human-readable stdout format, is needed.
+#Echoes "<repoSourceDir> <ninjaTarget> <relativeFile>" on success, the failure reason on non-zero return.
+function ninjaTargetForFile() (
+	buildRoot=$1; # /mnt/ram/win/clang++/Public/debug
+	file=$2; #/c/Users/duffyj/source/repos/jde/Public/libs/fwk/src/io/json.cpp
+	repoSourceDir=$(repoSourceDirFor "$buildRoot") || { echo "$repoSourceDir"; return 1; };
+	relativeFile=${file#"$repoSourceDir/"}; #libs/fwk/src/io/json.cpp
+	if [[ $relativeFile == "$file" ]]; then
+		echo "$file is not under $repoSourceDir.";
+		return 1;
+	fi;
+	ccj="$buildRoot/compile_commands.json";
+	if [ ! -f "$ccj" ]; then
+		echo "no compile_commands.json in $buildRoot - reconfigure the build.";
+		return 1;
+	fi;
+	#compile_commands.json's "file" entries are Windows-style C:/... paths - convert to match.
+	winFile="${file#/}"; winFile="${winFile^}"; winFile="${winFile:0:1}:${winFile:1}"; #/c/Users/... -> C:/Users/...
+	target=$(jq -r --arg f "$winFile" '[.[] | select(.file == $f)] | if length==0 then empty else (.[0] as $e | $e.output | ltrimstr($e.directory + "/")) end' "$ccj");
+	if [[ -z $target ]]; then
+		echo "no compile command for $relativeFile in $ccj - not a source of any target there.";
+		return 1;
+	fi;
+	echo "$repoSourceDir $target $relativeFile";
+)
 function buildProject() (
 	source $JDE_BASH/build/common.sh; #toBashDir
-	toBashDir $1 workspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
-	toBashDir $2 fileWorkspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
-	toBashDir $3 relativeFile; #libs\access\tests\AuthTests.cpp
-	buildRoot=$4;
-	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
-	buildRelativePath=`buildRelativePath $workspaceFolder $absoluteFile`; #libs/web/server
-	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, absoluteFile=$absoluteFile, buildRelativePath=$buildRelativePath";
+	toBashDir $1 buildRoot; # /mnt/ram/win/clang++/Public/debug
+	toBashDir $2 file; #/c/Users/duffyj/source/repos/jde/Public/libs/web/server/Server.cpp
+	file=$(realpath "$file");
+	repoSourceDir=$(repoSourceDirFor "$buildRoot") || { echo "buildProject: $repoSourceDir"; return 1; };
+	buildRelativePath=`buildRelativePath $repoSourceDir $file`; #libs/web/server/auth - may be nested below the CMakeLists.txt dir
+	echo "buildProject buildRoot=$buildRoot, repoSourceDir=$repoSourceDir, buildRelativePath=$buildRelativePath";
 	if [ -f "$buildRoot/build.ninja" ]; then
-		log=$buildRoot/${buildRelativePath//\//.}.output;
-		echo $log | tee $log;
-		set -o pipefail;
-		echo ninja -C $buildRoot $buildRelativePath/all | tee -a $log; #CMake's Ninja generator makes a phony <dir>/all per directory - no target map needed.
-		ninja -C $buildRoot $buildRelativePath/all | tee -a $log;
+		#CMake's Ninja generator makes a phony <dir>/all only per CMakeLists.txt directory (add_subdirectory), same
+		#granularity as the Makefiles generator's per-directory Makefile - so walk up like makefileDirForFile does
+		#until the phony target resolves, since a source file's own folder (e.g. .../server/auth) may not have one.
+		dir=$buildRelativePath;
+		while [[ -n $dir ]] && ! ninja -C "$buildRoot" -t query "$dir/all" >/dev/null 2>&1; do
+			if [[ $dir == */* ]]; then dir=${dir%/*}; else dir=""; fi;
+		done;
+		if [[ -z $dir ]]; then echo "buildProject: no ninja 'all' target found for $buildRelativePath under $buildRoot"; return 1; fi;
+		cd $buildRoot || return 1;
+		echo ninja -C $buildRoot $dir/all;
+		ninja -C $buildRoot $dir/all 2>&1;
 	else
-		project=`projectName $absoluteFile`;
-		if [[ -z $project ]]; then echo "buildProject: no project mapping for $absoluteFile"; return 1; fi;
+		#legacy fallback for a Visual Studio/vcxproj-generated build - none of the documented -jde presets use it (win-clang* is Ninja-only).
+		project=`projectName $file`;
+		if [[ -z $project ]]; then echo "buildProject: no project mapping for $file"; return 1; fi;
 		cd $buildRoot/$buildRelativePath || return 1;
 		echo $buildRoot/$buildRelativePath msbuild.exe $project.vcxproj -p:Configuration=Debug;
 		msbuild.exe $project.vcxproj -p:Configuration=Debug -v:m;
@@ -66,39 +119,43 @@ function buildProject() (
 )
 function compile() (
 	source $JDE_BASH/build/common.sh; #toBashDir
-	toBashDir $1 workspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
-	toBashDir $2 fileWorkspaceFolder; #/c/Users/duffyj/source/repos/jde/Public
-	toBashDir $3 relativeFile; #/libs/access/tests/main.cpp
-	toBashDir $4 buildRoot;  # /z/build/msvc
-	absoluteFile=`absoluteFile $workspaceFolder $relativeFile`; #/c/Users/duffyj/source/repos/jde/Public/libs/access/tests/main.cpp
-	buildRelativePath=`buildRelativePath $workspaceFolder $absoluteFile`; #libs/web/server
-	project=`projectName $absoluteFile`;
-	if [[ -z $project ]]; then echo "compile: no project mapping for $absoluteFile"; return 1; fi;
-	echo "workspaceFolder: $workspaceFolder, fileWorkspaceFolder:$fileWorkspaceFolder, relativeFile=$relativeFile, buildRoot=$buildRoot, buildRelativePath=$buildRelativePath, absoluteFile=$absoluteFile, project=$project";
-	buildFile=${absoluteFile#"$fileWorkspaceFolder/"};
+	toBashDir $1 buildRoot; # /mnt/ram/win/clang++/Public/debug
+	toBashDir $2 file; #/c/Users/duffyj/source/repos/jde/Public/libs/fwk/src/io/json.cpp
+	file=$(realpath "$file");
 	if [ -f "$buildRoot/build.ninja" ]; then
-		log=$project.output;
-		echo `pwd`/$log | tee $log;
-		set -o pipefail;
-		echo ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/$project.dir/${buildFile}.obj | tee -a $log;
-		ninja -C $buildRoot ${buildRelativePath}/CMakeFiles/$project.dir/${buildFile}.obj | tee -a $log;
+		resolved=$(ninjaTargetForFile "$buildRoot" "$file") || { echo "compile: $resolved"; return 1; };
+		read repoSourceDir target relativeFile <<< "$resolved"; #relativeFile=libs/fwk/src/io/json.cpp
+		cd $buildRoot || return 1;
+		echo "ninja -C $buildRoot $target";
+		ninja -C $buildRoot $target 2>&1;
 	else
+		#legacy fallback for a Visual Studio/vcxproj-generated build - none of the documented -jde presets use it (win-clang* is Ninja-only).
+		repoSourceDir=$(repoSourceDirFor "$buildRoot") || { echo "compile: $repoSourceDir"; return 1; };
+		project=`projectName $file`;
+		if [[ -z $project ]]; then echo "compile: no project mapping for $file"; return 1; fi;
+		buildRelativePath=`buildRelativePath $repoSourceDir $file`;
+		relativeFile=${file#"$repoSourceDir/"};
 		cd $buildRoot/$buildRelativePath || return 1;
 		echo $buildRoot/$buildRelativePath msbuild.exe $project.vcxproj -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile;
 		msbuild.exe $project.vcxproj -p:Configuration=Debug -t:ClCompile -p:ClCompile=$relativeFile //v:m; #single-file ClCompile via property is IDE-flavored; outside VS it may compile the whole project.
 	fi
 )
-function reconfig() (
-	buildRoot=$1;
-	debugPreset=$2;
-	sourceDir=$3;
-	mkdir -p $buildRoot;
-	cd $buildRoot || return 1;
-	rm -f CMakeCache.txt;
-	echo `pwd` > cmake.output;
-	echo "cmake $sourceDir -B $buildRoot -Wno-dev --preset $debugPreset 2>&1" | tee -a cmake.output;
-	cmake "$sourceDir" -B "$buildRoot" -Wno-dev --preset "$debugPreset" 2>&1 | tee -a cmake.output; #-B: only win-clang-debug defines binaryDir, so msvc presets would configure in-source under CMake 4.x. $sourceDir (not $JDE_DIR) so Public2 checkouts work.
-	if [ -f "$buildRoot/compile_commands.json" ]; then
-		mv $buildRoot/compile_commands.json $sourceDir/compile_commands.json;
-	fi
+function clean() (
+	repoBuildDir=$1; #scope to this checkout's build dir - a find from $1 would sweep every checkout's PCHs.
+	cd $repoBuildDir || return 1;
+	cmake --build . --target clean;
+	find . -name 'cmake_pch.hxx.pch' -print -delete;
+	find . -name '*.obj' -print -delete;
+	find . -name '*.pack' -print -delete;
+	find . -name '*.lib' -print -delete;
+	find . -name '*.xml' -print -delete;
+	find . -name '*.srcjar' -print -delete;
+	find . -name '*.yml' -print -delete;
+	find . -name '*.exe' -print -delete;
+	find . -name '*.pcm' -print -delete;
+	find . -name '*.idx' -print -delete;
+	find . -name '*.yaml' -print -delete;
+	find . -name '*.pdb' -print -delete;
+	find . -name '*.pdf' -print -delete;
+	find . -name '*.json' -print -delete;
 )

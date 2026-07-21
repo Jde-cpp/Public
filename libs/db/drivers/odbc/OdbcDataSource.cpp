@@ -23,7 +23,7 @@ namespace Jde::DB::Odbc{
 		try{
 			catalogName = CatalogName();
 		}
-		catch( const IException& ){//assume can't connect on current schema.
+		catch( const exception& ){//assume can't connect on current schema.
 		}
 		sp<OdbcDataSource> ds;
 		if( catalog==catalogName )
