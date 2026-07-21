@@ -20,6 +20,7 @@ namespace Jde::DB{
 		flat_map<string,Procedure> Procs;
 		flat_map<string,ForeignKey> FKs;//fk name, fk
 	private:
+		α Teardown()ι->void;//the metadata graph is strongly cyclic - Sync must call this or the temporary never destructs.
 		α SyncData( const AppSchema& config, const jobject& initConfig )ε->void;
 		α SyncFKs( const AppSchema& config )ε->void;
 		α SyncScripts(const AppSchema& config, const jobject& jconfig )ε->void;

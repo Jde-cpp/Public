@@ -55,10 +55,47 @@ namespace Jde::DB{
 		db->Initialize( catalog, db );
 		catalog = nullptr;
 
-		db->SyncTables( config );
-		db->SyncScripts( config, initConfig );
-		db->SyncData( config, Json::AsObject(initConfig, "tables") );
-		db->SyncFKs( config );
+		try{
+			db->SyncTables( config );
+			db->SyncScripts( config, initConfig );
+			db->SyncData( config, Json::AsObject(initConfig, "tables") );
+			db->SyncFKs( config );
+		}
+		catch( ... ){
+			db->Teardown();
+			throw;
+		}
+		db->Teardown();
+	}
+
+	//The metadata graph is strongly cyclic - AppSchema::DBSchema, View::Schema, Column::Table/PKTable, plus
+	//QLView/Children/Map/Extends - so this temporary's refcount never reaches zero on scope exit.  Unwire only the
+	//objects this graph initialized (Schema points at its own AppSchema): SyncTables also emplaces the config
+	//schema's live views, which must merely be released, never mutated.
+	α SchemaDdl::Teardown()ι->void{
+		for( auto&& [_, appSchema] : AppSchemas ){
+			auto clear = []( View& v )ι{
+				v.Columns.clear();
+				v.Map.reset();
+				v.QLView = nullptr;
+				v.Children.clear();
+				v.Schema = nullptr;
+			};
+			for( auto&& [_, t] : appSchema->Tables ){
+				if( t->Schema!=appSchema )
+					continue;
+				clear( *t );
+				t->Extends = nullptr;
+			}
+			for( auto&& [_, v] : appSchema->Views ){
+				if( v->Schema==appSchema )
+					clear( *v );
+			}
+			appSchema->Tables.clear();
+			appSchema->Views.clear();
+			appSchema->DBSchema = nullptr;
+		}
+		AppSchemas.clear();
 	}
 
 	α SchemaDdl::SyncFKs( const AppSchema& config )ε->void{
