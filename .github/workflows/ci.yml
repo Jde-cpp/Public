@@ -1,4 +1,4 @@
-name: CI
+name: Linux x64
 
 # Runs on the self-hosted, containerised runner (see .github/docker/). Triggered
 # on branch pushes and manual dispatch only — deliberately NOT on `pull_request`:
