@@ -127,9 +127,11 @@ namespace Jde::IO::Tests{
 	// ChunkByteSize() must still complete. ChunksToSend was computed as size/ChunkByteSize()+1,
 	// one more than the number of chunks actually queued whenever the size divides evenly, so the
 	// final chunk's completion never satisfied ChunksToSend==ChunksCompleted and the write hung.
+	// 256 guards the Windows initial-window truncation: (uint8)ChunksToSend turned any multiple of
+	// 256 chunks into a zero-size window, so no chunk ever started and the coroutine hung.
 	TEST_F( FileTests, WriteExactChunkMultiple ){
 		let chunkSize = IO::ChunkByteSize();
-		for( uint chunks : {1u, 2u, 3u} ){
+		for( uint chunks : {1u, 2u, 3u, 256u} ){
 			let size = chunks*chunkSize;
 			let file = Tests::file( 100+chunks );
 			if( fs::exists(file) )
