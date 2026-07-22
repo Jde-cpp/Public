@@ -65,7 +65,8 @@ namespace Jde::IO{
 		atomic<uint> ChunksCompleted;
 		uint ChunksToSend;
 #ifdef _MSC_VER
-		HFile Handle{};//owning HandlePtr - null is the "no handle" sentinel and it self-closes.
+		HFile Handle{};//owning HandlePtr - null is the "no handle" sentinel and it self-closes; Send releases it into the asio handle, which then owns the close.
+		uint InitialSize{};//EOF captured by Open for appends - write chunks land at the explicit offset InitialSize+StartIndex; reads leave it 0.
 #else
 		HFile Handle{ -1 };//raw fd - -1 is "no handle"; 0 is a *valid* descriptor and must not be conflated with unopened.
 #endif

@@ -3,19 +3,14 @@
 		"window.title": "Fwk",
 		"name": "fwk",
 		"target": "Jde.Fwk.Tests",
+		"testTarget": "${config:target}",
 		"subDir": "libs/${config:name}",
-		"sourceDir": "${env:JDE_BASH}/${config:subDir}",
-		"compiler": "${env:JDE_COMPILER}",
-		"buildTarget": "Debug",
-		"buildRoot": "${env:JDE_BUILD_BASH_DIR}/${config:compiler}",
-		"debugDir": "${config:buildRoot}",
-		"debugPreset": "win-clang-debug-jde",
-		"testBuildDir": "${config:buildRoot}/${config:subDir}/tests",
-		"sourceBash": "source ${env:JDE_BASH}/build/buildFunctions-win.sh",
-
-		"buildDir": "${config:buildRoot}/${config:subDir}",
-		"winBuildDir": "${env:JDE_BUILD_DIR}\\${config:compiler}",
-		"exe": "\\bin\\${config:target}.exe",
+		"cmake.sourceDirectory": "${workspaceFolder:src}/../../..",
+		"cmake.defaultActiveFolder": "${config:cmake.sourceDirectory}",
+		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
+		"settings": "${workspaceFolder:tests}/config/Framework.Tests.jsonnet",
+		"testSettings": "${config:settings}",
+		"program": "${config:subDir}/tests/${config:target}"
 	},
 	"folders": [
 		{
@@ -29,60 +24,22 @@
 			"name": "headers"
 		}
 	],
-	"tasks": {
-		"version": "2.0.0",
-		"tasks": [
-			{
-				"label": "compile",
-				"type": "shell",
-				"command": "tput reset;${config:sourceBash};compile ${config:buildRoot} '${file}';",
-				"problemMatcher": { "base": "$msCompile", "fileLocation": ["absolute"] },
-				"group": "build"
-			},
-			{
-				"label": "build",
-				"type": "shell",
-				"command": "cd ${config:debugDir}; tput reset; set -o pipefail; cmake --build . -j --target=${config:target} | tee ${config:target}.output;",
-				"group": { "kind": "build", "isDefault": true }
-			},
-			{
-				"label": "test",
-				"type": "shell",
-				"command": "cd ${config:debugDir}; tput reset; ctest -C Debug -VV;", // --output-on-failure
-				"dependsOn": "build",
-				"group": { "kind": "test", "isDefault": true }
-			}
-		]
-	},
 	"launch": {
 		"version": "0.2.0",
 		"configurations": [
 			{
-				"name": "DebugMsvc",
-				"type": "cppvsdbg",
-				"request": "launch",
-				"program": "${config:winBuildDir}\\${config:exe}",
-				"args": [
-					"-tests",
-					"-settings=${config:sourceDir}/tests/config/Framework.Tests.jsonnet"
-				],
-				"stopAtEntry": false,
-				"cwd": "${config:winBuildDir}\\tests\\${config:buildTarget}",
-				"console": "integratedTerminal",
-				"preLaunchTask": "build"
-			},
-			{
 				"name": "Debug",
 				"type": "lldb",
 				"request": "launch",
-				"program": "${config:winBuildDir}\\${config:exe}",
+				"program": "${command:jde.repoBuildDir}\\debug\\bin\\${config:target}.exe",
 				"args": [
 					"-tests",
-					"-settings=${config:sourceDir}/tests/config/Framework.Tests.jsonnet"
+					"-settings=${config:testSettings}"
 				],
-				"cwd": "${config:winBuildDir}\\bin",
+				"cwd": "${command:jde.repoBuildDir}\\debug\\runtime",
 				"console": "integratedTerminal",
 				"preLaunchTask": "build"
-			}]
+			}
+		]
 	},
 }

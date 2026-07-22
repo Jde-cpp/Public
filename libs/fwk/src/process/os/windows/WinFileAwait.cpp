@@ -1,35 +1,29 @@
-#include "WinFileAwait.h"
-#include <boost/asio.hpp>
-#include <boost\asio\post.hpp>
-#include <jde/fwk/settings.h>
-#include <jde/fwk/str.h>
 #include <jde/fwk/io/FileAwait.h>
-#include <jde/fwk/process/thread.h>
+#include <cerrno>
+#include <boost/asio.hpp>
+#include <jde/fwk/process/execution.h>
+#include <jde/fwk/str.h>
 
 #define let const auto
 
 namespace Jde::IO{
 	namespace asio = boost::asio;
 	constexpr ELogTags _tags{ ELogTags::IO };
-	up<asio::io_context> _ctx; mutex _ctxMutex;
-	steady_clock::duration _keepAlive{ steady_clock::duration::zero() };
-	Ω keepAlive()->steady_clock::duration{ return _keepAlive==steady_clock::duration::zero() ? Settings::FindDuration("/workers/io/keepAlive").value_or(5s) : _keepAlive; }
+	using RandomAccessHandle=asio::windows::random_access_handle;//owns the file HANDLE & registers it with the executor's iocp; closed on the op's terminal path, destroyed when the last chunk handler releases it.
 
-	atomic<uint> _threadCount;
-	atomic<uint> _callCount;
-	atomic<steady_clock::time_point> _finishFileIO{ steady_clock::time_point::min() };
-	Ω keepAliveMillisecs()->std::chrono::milliseconds{
-		let finishFileIO = _finishFileIO.load();
-		auto milliSeconds = std::chrono::duration_cast<std::chrono::milliseconds>( finishFileIO==steady_clock::time_point::min() ? keepAlive() : steady_clock::now()-finishFileIO );
-		return milliSeconds;
-	}
+	struct WinChunk final : IFileChunkArg{
+		WinChunk( sp<FileIOArg> arg, uint index )ι:
+			IFileChunkArg{ arg, index },
+			StartIndex{ Index*ChunkByteSize() },
+			Bytes{ std::min(StartIndex+ChunkByteSize(), FileArg()->Size())-StartIndex },
+			FileOffset{ arg->InitialSize+StartIndex }
+		{}
+		uint StartIndex;//offset into Buffer - partial transfers advance this together with FileOffset.
+		uint Bytes;//bytes still to transfer for this chunk.
+		uint FileOffset;//explicit file offset - reads: ==StartIndex; appends: EOF at Open + StartIndex. Never eof (offset -1) semantics: chunks past the first would land at the wrong offset & parallel chunks would interleave.
+	};
 
-	FileIOArg::~FileIOArg(){
-		// if( Handle ){
-		// 	::close( Handle );
-		// 	Handle = 0;
-		// }
-	}
+	FileIOArg::~FileIOArg(){}//HandlePtr self-closes when Send never ran (cache hit / open failure); after Send the asio handle owns the close.
 
 	α FileIOArg::Open( bool create, bool append )ε->void{
 		const DWORD access = IsRead ? GENERIC_READ : GENERIC_WRITE;
@@ -39,63 +33,94 @@ namespace Jde::IO{
 		auto tmp = Str::Replace( Path.string(), '/', '\\' );
 		let path = string{"\\\\?\\"}+tmp;
 		Handle = HandlePtr( WinHandle(::CreateFile(path.c_str(), access, sharing, nullptr, creationDisposition, FILE_FLAG_OVERLAPPED | dwFlagsAndAttributes, nullptr), [&](){
-			return IOException(move(Path), GetLastError(), "CreateFile");
+			return IOException( Path, GetLastError(), "CreateFile" );//copy, not move: keep Path for later logging on this object.
 		}) );
+		LARGE_INTEGER fileSize;
 		if( IsRead ){
-			LARGE_INTEGER fileSize;
-			THROW_IFX( !::GetFileSizeEx(Handle.get(), &fileSize), IOException(move(Path), GetLastError(), "GetFileSizeEx") );
+			THROW_IFX( !::GetFileSizeEx(Handle.get(), &fileSize), IOException(Path, GetLastError(), "GetFileSizeEx") );
 			std::visit( [fileSize](auto&& b){b.resize(fileSize.QuadPart);}, Buffer );
 		}
-		TRACET( ELogTags::IO, "[{}]{} size={}", Path.string().c_str(), IsRead ? "Read" : "Write", Size() );
+		else if( append ){//chunks write at explicit offsets - capture the base here. (a file is appended by one process at a time - eof-offset semantics couldn't handle multiple chunks anyway.)
+			THROW_IFX( !::GetFileSizeEx(Handle.get(), &fileSize), IOException(Path, GetLastError(), "GetFileSizeEx") );
+			InitialSize = fileSize.QuadPart;
+		}
+		TRACE( "[{}]{} size={}", Path.string(), IsRead ? "Read" : "Write", Size() );
 	}
 
-	Ω overlappedCompletionRoutine( DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED pOverlapped )->void;
-	Ω send( FileIOArg& op )ι->void{
-		up<IFileChunkArg> keepAlive;
+	Ω start( const sp<RandomAccessHandle>& h, sp<IFileChunkArg>&& chunk )ι->void;
+	Ω startNext( const sp<RandomAccessHandle>& h, const sp<FileIOArg>& op )ι->void{
+		sp<IFileChunkArg> chunk;
 		{
-			lg l{ op.ChunkMutex };
-			if( !op.Chunks.size() )
-				return;
-			keepAlive = move( op.Chunks.front() );
-			op.Chunks.pop();
-			Win::FileChunkArg& chunk = dynamic_cast<Win::FileChunkArg&>( *keepAlive.get() );
-			if( op.IsRead ){
-				if( !::ReadFileEx(op.Handle.get(), chunk.Buffer(), (DWORD)(chunk.Bytes), &chunk.Overlap, overlappedCompletionRoutine) )
-					op.ResumeExp( GetLastError(), "Read failed", l );
-			}
-			else{
-				TRACE( "({})Writing {} - {}", op.Path.string(), chunk.StartIndex, std::min(chunk.StartIndex+ChunkByteSize(), chunk.EndIndex) );
-				if( !::WriteFileEx(op.Handle.get(), chunk.Buffer(), (DWORD)(chunk.Bytes), &chunk.Overlap, overlappedCompletionRoutine) )
-					op.ResumeExp( GetLastError(), "Write Failed", l );
-			}
+			lg l{ op->ChunkMutex };
+			if( !op->Chunks.size() )
+				return;//all chunks started, or an error path cleared the queue.
+			chunk = sp<IFileChunkArg>{ move(op->Chunks.front()) };
+			op->Chunks.pop();
 		}
-		for( int result = WAIT_TIMEOUT; result != WAIT_IO_COMPLETION; ){
-			result = ::SleepEx( keepAliveMillisecs().count(), true );
-			if( result==0 )
-				WARN( "FileOp timed out." );
-		}
+		start( h, move(chunk) );
 	}
 
-	α overlappedCompletionRoutine( DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED pOverlapped )->void{
-		Win::FileChunkArg& chunk = *(Win::FileChunkArg*)pOverlapped->hEvent;
-		auto arg = chunk.FileArg();
-		if( dwErrorCode!=ERROR_SUCCESS )
-			arg->ResumeExp( dwErrorCode, Ƒ("overlappedCompletionRoutine xfered='{}'", dwNumberOfBytesTransfered) );//no pOverlapped
-		else if( arg->ChunksToSend==++arg->ChunksCompleted ){
-			if( --_callCount==0 )
-				_finishFileIO = steady_clock::now();
-			if( arg->IsRead ){
-				auto h = get<TAwait<string>::Handle>( arg->CoHandle() );
-				h.promise().Resume( get<string>(move(arg->Buffer)), h );
+	Ω resumeCompleted( const sp<RandomAccessHandle>& h, const sp<FileIOArg>& op )ι->void{//final chunk completed.
+		boost::system::error_code ec;
+		h->close( ec );//before the resume posts: the sharing mode may not admit a reader the coroutine opens right after. Safe inline - the queue is empty, so no initiation can race the close.
+		if( ec )
+			WARN( "[{}]close failed: {}", op->Path.string(), ec.message() );
+		if( op->IsRead ){
+			if( auto h2 = op->ReadCoHandle(); h2 ){//ReadCoHandle already nulled _coHandle under _coHandleMutex.
+#ifdef __cpp_lib_move_only_function
+				Post( get<string>(move(op->Buffer)), move(h2) );
+#else
+				auto p = new string{ get<string>(move(op->Buffer)) };
+				Post( [=](){
+					h2.promise().Resume( move(*p), h2 );
+					delete p;
+				} );
+#endif
 			}
-			else
-				get<VoidAwait::Handle>(arg->CoHandle()).resume();
 		}
 		else{
-			lg _{arg->ChunkMutex};
-			if( arg->Chunks.size() )
-				asio::post( *_ctx, [p=arg](){send( *p );} );
+			if( auto h2 = op->WriteCoHandle(); h2 )//WriteCoHandle already nulled _coHandle under _coHandleMutex.
+				Post( move(h2) );
+			else
+				CRITICAL( "[{}]no handle.", op->Path.string() );
 		}
+	}
+
+	Ω onChunk( const sp<RandomAccessHandle>& h, const sp<IFileChunkArg>& chunk, const boost::system::error_code& ec, uint bytes )ι->void{
+		WinChunk& wchunk = dynamic_cast<WinChunk&>( *chunk );
+		auto op = chunk->FileArg();
+		if( bytes==wchunk.Bytes ){//chunk complete.
+			if( op->ChunksToSend>++op->ChunksCompleted )
+				startNext( h, op );
+			else
+				resumeCompleted( h, op );
+		}
+		else if( bytes ){//partial transfer - resubmit the remainder; a hard error resurfaces on the resubmit.
+			TRACE( "Partial {}: {}, index: {}, completed: {} of {} - resubmitting remainder.", chunk->IsRead() ? "read" : "write", op->Path.string(), chunk->Index, bytes, wchunk.Bytes );
+			wchunk.StartIndex += bytes;
+			wchunk.FileOffset += bytes;
+			wchunk.Bytes -= bytes;
+			start( h, sp<IFileChunkArg>{chunk} );
+		}
+		else{//error or zero progress - resume with the exception; the close cancels the op's other in-flight chunks (they land here with operation_aborted & no-op: the queue is cleared & the handle nulled).
+			PostIO( [h](){ boost::system::error_code closeEc; h->close(closeEc); } );//via the strand - a close may not race an initiation.
+			op->PostExp( up<IFileChunkArg>{}, ec ? (uint32)ec.value() : (uint32)EIO, Ƒ("{} index: {} failed with {} bytes remaining: {}\n", chunk->IsRead() ? "read" : "write", chunk->Index, wchunk.Bytes, ec ? ec.message() : "no progress") );
+		}
+	}
+
+	Ω start( const sp<RandomAccessHandle>& h, sp<IFileChunkArg>&& chunk )ι->void{
+		PostIO( [h, chunk=move(chunk)](){//initiations are strand-serialized - asio handles aren't safe for concurrent calls on the same object.
+			if( !h->is_open() )//an error path closed the handle after this initiation was queued.
+				return;
+			WinChunk& wchunk = dynamic_cast<WinChunk&>( *chunk );
+			auto op = chunk->FileArg();
+			TRACE( "({}){} chunk {}: offset {}, {} bytes.", op->Path.string(), chunk->IsRead() ? "Reading" : "Writing", chunk->Index, wchunk.FileOffset, wchunk.Bytes );
+			auto handler = [h, chunk]( const boost::system::error_code& ec, size_t bytes ){ onChunk( h, chunk, ec, (uint)bytes ); };
+			if( chunk->IsRead() )
+				h->async_read_some_at( wchunk.FileOffset, asio::buffer(op->Data()+wchunk.StartIndex, wchunk.Bytes), move(handler) );
+			else
+				h->async_write_some_at( wchunk.FileOffset, asio::buffer(op->Data()+wchunk.StartIndex, wchunk.Bytes), move(handler) );
+		} );
 	}
 
 	α FileIOArg::Send( HCo h )ι->void{
@@ -103,36 +128,53 @@ namespace Jde::IO{
 			lg l{ _coHandleMutex };
 			_coHandle = h;
 		}
-		++_callCount;
-		let threadSize = ThreadSize();
-		{
-			lg _{ _ctxMutex };
-			if( !_ctx )
-				_ctx = mu<asio::io_context>( threadSize );
-		}
+		auto self = shared_from_this();
 		let totalBytes = Size();
 		let chunkByteSize = ChunkByteSize();
-		lg l{ ChunkMutex };
-		ChunksToSend = (totalBytes+chunkByteSize-1)/chunkByteSize;
-		for( uint i=0; i*chunkByteSize<totalBytes; ++i )
-			Chunks.emplace( mu<Win::FileChunkArg>(shared_from_this(), i) );
-		TRACET( ELogTags::IO, "[{}] chunks = {}", Path.string(), ChunksToSend );
-
-		let initialSendTotal = std::min<uint8>( (uint8)ChunksToSend, threadSize );
-		for( uint i=0; i<initialSendTotal; ++i ){
-			asio::post( *_ctx, [this]{send( *this );} );
+		{
+			lg l{ ChunkMutex };
+			ChunksToSend = (totalBytes+chunkByteSize-1)/chunkByteSize;//ceil( totalBytes / chunkByteSize )
+			for( uint i=0; i*chunkByteSize<totalBytes; ++i )
+				Chunks.emplace( mu<WinChunk>(self, i) );
 		}
-		//let available = threadSize -  count_if(_threads, []( auto& t ){ return t.has_value(); }
-		//let newThreadCount = std::min<uint8>( (uint8)chunkSize, threadSize );
-		for( uint i = _threadCount.load(); i < initialSendTotal; ++i ){
-			std::jthread{ [=]{
-				Thread::SetName( Ƒ("IO[{}]", i) );
-				while( _callCount ){
-					asio::steady_timer timer{ *_ctx };
-					timer.expires_after( keepAlive() );
-					_ctx->run();
+		TRACE( "[{}] chunks = {}", Path.string(), ChunksToSend );
+		if( ChunksToSend==0 ){//empty file - no completions will arrive; resume immediately.
+			TRACE( "[{}]Empty file - resuming without io.", Path.string() );
+			if( IsRead ){
+				if( auto h2 = ReadCoHandle(); h2 ){
+#ifdef __cpp_lib_move_only_function
+					Post( get<string>(move(Buffer)), move(h2) );
+#else
+					auto p = new string{ get<string>(move(Buffer)) };
+					Post( [=](){
+						h2.promise().Resume( move(*p), h2 );
+						delete p;
+					} );
+#endif
 				}
-			}}.detach();
+			}
+			else if( auto h2 = WriteCoHandle(); h2 )
+				Post( move(h2) );
+			return;
 		}
+		auto executor = Executor();
+		if( !executor ){//finalizing - the io could never run; mirror Post's drop semantics.
+			WARN( "[{}]Send after executor teardown - dropping file io.", Path.string() );
+			return;
+		}
+		HANDLE raw = Handle.release();
+		sp<RandomAccessHandle> handle;
+		try{
+			handle = ms<RandomAccessHandle>( *executor, raw );
+		}
+		catch( const boost::system::system_error& e ){
+			::CloseHandle( raw );
+			PostExp( up<IFileChunkArg>{}, (uint32)e.code().value(), Ƒ("iocp registration failed: {}", e.what()) );
+			return;
+		}
+		//explicit offsets make parallel chunks order-independent for reads & writes both - the append base is fixed in Open.
+		let window = std::min<uint>( ChunksToSend, ThreadSize() );
+		for( uint i=0; i<window; ++i )
+			startNext( handle, self );
 	}
 }
