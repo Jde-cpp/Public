@@ -1,10 +1,7 @@
-{
+local common = import '../../../../../../libs/db/config/args-common.libsonnet';
+common + {
 	local args = self,
 	sqlType: "mysql",
-	buildTarget: std.extVar("buildTarget"),
-	logsDir: std.extVar("logsDir"),
-	repoBuildDir: "$(REPO_BUILD_DIR)/"+args.buildTarget,
-	repoSourceDir: "$(REPO_SOURCE_DIR)",
 	instanceName: "debug-linux",
 	opc:{
 		urn: "urn:open62541.server.application",

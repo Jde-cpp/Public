@@ -7,7 +7,8 @@
 		"cmake.sourceDirectory": "${workspaceFolder:AppServer}/../../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"settings": "${workspaceFolder:config}/App.Server.jsonnet",
-		"program": "${config:subDir}/exe/${config:target}"
+		"program-linux": "${config:subDir}/exe/${config:target}",
+		"program": "${config:binDir}/${config:target}${config:targetExtension}"
 	},
 	"folders": [
 		{

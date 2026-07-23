@@ -9,7 +9,7 @@ common + {
 			dbo:{ // n/a for sqlite
 				access: common.access(),
 				app: common.app(),
-				opc: common.opc(),
+				opc: common.opcSchema(),
 			}
 		})
 	}

@@ -45,8 +45,17 @@ namespace Jde::DB::Sqlite{
 	}
 }
 
+//A MODULE dll exports nothing by default on Windows; each proc DLL defines RegisterProcs and the driver
+//GetProcAddress's it (no import side), so it is always dllexport - unlike ΓLITE there is no import half.  On non-MSVC
+//the attribute is inert today (MODULEs aren't -fvisibility=hidden) but survives that flag if ever added.
+#ifdef _MSC_VER
+	#define JDE_SQLITE_PROC __declspec( dllexport )
+#else
+	#define JDE_SQLITE_PROC __attribute__(( visibility("default") ))
+#endif
+
 extern "C"{
 	//Every proc DLL exports this single symbol. The driver dlopens the DLL and calls it with its registry when the
 	//configured datasource is sqlite; the DLL registers all its native proc twins through `procs`.
-	void RegisterProcs( Jde::DB::Sqlite::IProcs& procs );
+	JDE_SQLITE_PROC void RegisterProcs( Jde::DB::Sqlite::IProcs& procs );
 }

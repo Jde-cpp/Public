@@ -1,10 +1,6 @@
-{
+local common = import '../../../../../libs/db/config/args-common.libsonnet';
+common + {
 	local args = self,
-	buildTarget: std.extVar("buildTarget"),
-	logsDir: std.extVar("logsDir"),
-	schema():: if args.buildTarget == "release" then "rls" else args.buildTarget,
-	repoBuildDir: "$(REPO_BUILD_DIR)/"+args.buildTarget,
-	repoSourceDir: "$(REPO_SOURCE_DIR)",
 	sqlType: "mysql",
 	dbServers: {
 		scriptPaths: [args.repoSourceDir + "/apps/OpcGateway/config/sql/mysql"],

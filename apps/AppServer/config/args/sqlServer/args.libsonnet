@@ -1,11 +1,14 @@
 {
+	local args = self,
 	sqlType: "sqlServer",
 	logsDir: std.extVar("logsDir"),
+	buildTarget: std.extVar("buildTarget"),
+	repoBuildDir: "$(REPO_BUILD_DIR)/"+args.buildTarget,
 	dbServers: {
 		dataPaths: ["$(JDE_DIR)/apps/AppServer/config", "$(JDE_DIR)/libs/access/config"],
 		scriptPaths:  ["$(JDE_DIR)/apps/AppServer/config/sql/sqlServer", "$(JDE_DIR)/libs/access/config/sql/sqlServer"],
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/$(JDE_COMPILER)/bin/Debug/Jde.DB.Odbc.dll",
+			driver: args.repoBuildDir+"/bin/Jde.DB.Odbc.dll",
 			connectionString: "DSN=debug",
 			username: null,
 			password: null,

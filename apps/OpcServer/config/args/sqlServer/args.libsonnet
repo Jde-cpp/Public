@@ -1,28 +1,25 @@
-{
-	local programDataCompany = self.programDataCompany,
-	local programDataApp = self.programDataApp,
-	instanceName: "Debug",
+local common = import '../../../../../libs/db/config/args-common.libsonnet';
+common + {
+	local args = self,
 	programDataCompany: "$(ProgramData)/jde-cpp",
-	programDataApp: programDataCompany+"/OpcServer",
+	programDataApp: args.programDataCompany+"/OpcServer",
 	sqlType: "sqlServer",
-	buildTarget: std.extVar("buildTarget"),
-	repoSourceDir: "$(REPO_SOURCE_DIR)",
-	logsDir: std.extVar("logsDir"),
+	instanceName: args.buildTarget,
 	opcServer: {
 		trustedCertDirs: [
-			programDataCompany+"/OpcGateway/ssl/certs",
-			programDataCompany+"/OpcTests/ssl/certs"
+			args.programDataCompany+"/OpcGateway/ssl/certs",
+			args.programDataCompany+"/OpcTests/ssl/certs"
 		],
 		ssl:{
-			certificate: programDataApp+"/ssl/certs/opcServer.pem",
-			privateKey: {path: programDataApp+"/ssl/private/opcServer.pem", passcode: ""}
+			certificate: args.programDataApp+"/ssl/certs/opcServer.pem",
+			privateKey: {path: args.programDataApp+"/ssl/private/opcServer.pem", passcode: ""}
 		}
 	},
 	dbServers: {
 		dataPaths: [],
-		scriptPaths:  ["$(JDE_DIR)/apps/OpcServer/config/sql/sqlServer"],
+		scriptPaths:  [ args.repoSourceDir+"/apps/OpcServer/config/sql/sqlServer"],
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/$(JDE_COMPILER)/bin/Debug/Jde.DB.Odbc.dll",
+			driver: args.repoBuildDir+"/bin/Jde.DB.Odbc.dll",
 			connectionString: "DSN=debug",
 			username: null,
 			password: null,
@@ -32,13 +29,13 @@
 					schemas:{
 						_appServer:{
 							access:{
-								meta: "$(JDE_DIR)/libs/access/config/access-meta.jsonnet",
-								ql: "$(JDE_DIR)/libs/access/config/access-ql.jsonnet",
+								meta: args.repoSourceDir+"/libs/access/config/access-meta.jsonnet",
+								ql: args.repoSourceDir+"/libs/access/config/access-ql.jsonnet",
 							},
 						},
 						dbo:{
 							opc:{
-								meta: "$(JDE_DIR)/apps/OpcServer/config/opcServer-meta.jsonnet",
+								meta: args.repoSourceDir+"/apps/OpcServer/config/opcServer-meta.jsonnet",
 								prefix: "opc_"  //test with null prefix, debug with prefix
 							},
 						}

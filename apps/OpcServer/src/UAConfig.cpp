@@ -56,8 +56,10 @@ namespace Jde::Opc::Server{
 		vector<UA_ByteString> trustedCerts;// shallow views into the owners, only used to feed UA_Array_copy.
 		for( let& sdir : Settings::FindStringArray("/opcServer/trustedCertDirs") ){
 			const fs::path dir{ sdir };
-			if( !fs::exists(dir) || !fs::is_directory(dir) )
+			if( !fs::exists(dir) || !fs::is_directory(dir) ){
+				CRITICAL( "Trusted certificate directory does not exist: '{}'.", dir.string() );
 				continue;
+			}
 			for( let& entry : fs::directory_iterator(dir) ){
 				if( entry.path().extension()==".pem" || entry.path().extension()==".crt" ){
 					trustedCertOwners.push_back( ToUAByteString(Crypto::ReadCertificate({entry.path()})) );

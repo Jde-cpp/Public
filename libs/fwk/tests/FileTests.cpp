@@ -100,27 +100,38 @@ namespace Jde::IO::Tests{
 		});
 	}
 
-	Ω writeRaw( fs::path file, string content, std::atomic<bool>& done, SRCE )->LockKeyAwait::Task{
+	//done is co-owned: on a timed-out wait the test returns while the detached coroutine is still running, so a
+	//reference would dangle when the completion finally stores true.
+	Ω writeRaw( fs::path file, string content, sp<std::atomic<bool>> done, SRCE )->LockKeyAwait::Task{
 		auto l = co_await LockKeyAwait{ file.string() };
-		[sl]( fs::path file, string content, std::atomic<bool>& done, CoLockGuard )->VoidAwait::Task {
+		[sl]( fs::path file, string content, sp<std::atomic<bool>> done, CoLockGuard )->VoidAwait::Task {
 			try{
 				co_await IO::WriteAwait{ move(file), move(content), true, Jde::ELogTags::IO, sl };
 			}
 			catch( Exception& e ){
 				e.Log();
 			}
-			done = true;
-		}( move(file), move(content), done, move(l) );
+			*done = true;
+		}( move(file), move(content), move(done), move(l) );
 	}
 
-	Ω readRaw( fs::path file, sp<string> content, std::atomic<bool>& done, bool cache=false, SRCE )ι->TAwait<string>::Task{
+	Ω readRaw( fs::path file, sp<string> content, sp<std::atomic<bool>> done, bool cache=false, SRCE )ι->TAwait<string>::Task{
 		try{
 			*content = co_await IO::ReadAwait{ move(file), cache, sl };
 		}
 		catch( Exception& e ){
 			e.Log();
 		}
-		done = true;
+		*done = true;
+	}
+
+	//poll until the co-owned flag flips or the 10s deadline passes; returns whether it completed.  The ASSERT stays
+	//at the call site so a GoogleTest fatal failure returns from the test, not just from here.
+	Ω waitDone( const std::atomic<bool>& done )ι->bool{
+		let deadline = steady_clock::now()+10s;
+		while( !done && steady_clock::now()<deadline )
+			std::this_thread::sleep_for( 5ms );
+		return done;
 	}
 
 	// Regression for the ChunksToSend off-by-one: a write whose size is an exact multiple of
@@ -137,19 +148,36 @@ namespace Jde::IO::Tests{
 			if( fs::exists(file) )
 				fs::remove( file );
 			let content = string( size, (char)('A'+chunks) ); //distinct, deterministic per file
-			std::atomic<bool> done{};
+			auto done = ms<std::atomic<bool>>();
 			writeRaw( file, content, done );
-
-			let deadline = steady_clock::now()+10s;
-			while( !done && steady_clock::now()<deadline )
-				std::this_thread::sleep_for( 5ms );
-			ASSERT_TRUE( done ) << "write of " << size << " bytes (" << chunks << " chunk(s)) never completed";
+			ASSERT_TRUE( waitDone(*done) ) << "write of " << size << " bytes (" << chunks << " chunk(s)) never completed";
 
 			std::ifstream is{ file, std::ios::binary };
 			let actual = string{ std::istreambuf_iterator<char>{is}, std::istreambuf_iterator<char>{} };
 			ASSERT_EQ( actual.size(), size );
 			ASSERT_EQ( actual, content );
 		}
+	}
+
+	// Regression for the Windows chunk-offset scheme: chunk 0 wrote at EOF (offset -1) while chunks
+	// 1+ wrote at their absolute buffer offsets, so a multi-chunk append to a non-empty file
+	// overwrote the head of the file and appended only the first chunk's bytes. The second write
+	// must land wholly after the first.
+	TEST_F( FileTests, AppendMultiChunk ){
+		let chunkSize = IO::ChunkByteSize();
+		let file = Tests::file( 400 );
+		if( fs::exists(file) )
+			fs::remove( file );
+		let first = string( chunkSize*3+chunkSize/2, 'x' );
+		let second = string( chunkSize*3+chunkSize/2, 'y' );
+		for( const string* content : {&first, &second} ){ //pointers, not {first,second} - that copies both into the init-list.
+			auto done = ms<std::atomic<bool>>();
+			writeRaw( file, *content, done );
+			ASSERT_TRUE( waitDone(*done) ) << "append of " << content->size() << " bytes never completed";
+		}
+		std::ifstream is{ file, std::ios::binary };
+		let actual = string{ std::istreambuf_iterator<char>{is}, std::istreambuf_iterator<char>{} };
+		ASSERT_EQ( actual, first+second );
 	}
 
 	// Regression: a zero-byte operation produced no chunks, so no completion ever arrived — the
@@ -160,22 +188,16 @@ namespace Jde::IO::Tests{
 		if( fs::exists(file) )
 			fs::remove( file );
 
-		std::atomic<bool> written{};
+		auto written = ms<std::atomic<bool>>();
 		writeRaw( file, {}, written );
-		let writeDeadline = steady_clock::now()+10s;
-		while( !written && steady_clock::now()<writeDeadline )
-			std::this_thread::sleep_for( 5ms );
-		ASSERT_TRUE( written ) << "empty write never completed";
+		ASSERT_TRUE( waitDone(*written) ) << "empty write never completed";
 		ASSERT_TRUE( fs::exists(file) );
 		ASSERT_EQ( fs::file_size(file), 0u );
 
 		auto content = ms<string>( "sentinel" );
-		std::atomic<bool> readDone{};
+		auto readDone = ms<std::atomic<bool>>();
 		readRaw( file, content, readDone );
-		let readDeadline = steady_clock::now()+10s;
-		while( !readDone && steady_clock::now()<readDeadline )
-			std::this_thread::sleep_for( 5ms );
-		ASSERT_TRUE( readDone ) << "empty read never completed";
+		ASSERT_TRUE( waitDone(*readDone) ) << "empty read never completed";
 		ASSERT_TRUE( content->empty() ) << "expected empty content, got: " << *content;
 	}
 
@@ -183,12 +205,9 @@ namespace Jde::IO::Tests{
 		let file = Tests::file( 300 );//never created on disk - a cache hit must not open the file.
 		Cache::Set<string>( file.string(), "" );//explicit - `{}` is ambiguous between the T and sp<const T> overloads.
 		auto content = ms<string>( "sentinel" );
-		std::atomic<bool> done{};
+		auto done = ms<std::atomic<bool>>();
 		readRaw( file, content, done, true );
-		let deadline = steady_clock::now()+10s;
-		while( !done && steady_clock::now()<deadline )
-			std::this_thread::sleep_for( 5ms );
-		ASSERT_TRUE( done ) << "cached empty read never completed";
+		ASSERT_TRUE( waitDone(*done) ) << "cached empty read never completed";
 		EXPECT_TRUE( content->empty() ) << "expected empty content, got: " << *content;
 		Cache::Clear( file.string() );
 	}

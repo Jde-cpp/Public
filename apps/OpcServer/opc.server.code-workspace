@@ -9,7 +9,8 @@
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"settings": "${workspaceFolder:config}/Opc.Server.jsonnet",
 		"testSettings": "${workspaceFolder:tests}/config/Opc.Server.Tests.jsonnet",
-		"program": "${config:subDir}/exe/${config:target}"
+		"program-linux": "${config:subDir}/exe/${config:target}",
+		"program": "${config:binDir}/${config:target}${config:targetExtension}"
 	},
 	"folders": [
 		{

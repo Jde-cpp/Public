@@ -1,11 +1,7 @@
-{
+local common = import '../../../../../libs/db/config/args-common.libsonnet';
+common + {
 	local args = self,
 	sqlType: "mysql",
-	buildTarget: std.extVar("buildTarget"),
-	logsDir: std.extVar("logsDir"),
-	schema():: if args.buildTarget == "release" then "rls" else args.buildTarget,
-	repoBuildDir: "$(REPO_BUILD_DIR)/"+args.buildTarget,
-	repoSourceDir: "$(REPO_SOURCE_DIR)",
 	dbServers: {
 		dataPaths: [ args.repoSourceDir + "/apps/AppServer/config", args.repoSourceDir + "/libs/access/config"],
 		scriptPaths:  [args.repoSourceDir + "/apps/AppServer/config/sql/mysql", args.repoSourceDir + "/libs/access/config/sql/mysql"],

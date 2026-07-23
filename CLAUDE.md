@@ -68,7 +68,7 @@ Tests use **GoogleTest**. Each test binary requires a `-settings=` argument poin
 - `apps/OpcGateway/tests/config/Opc.Tests.jsonnet`
 - `apps/OpcServer/tests/config/Opc.Server.Tests.jsonnet`
 
-A **test-mode flag is required** — `-tests` for direct runs, `-ctest` for ctest. They are equivalent except that `-ctest` also selects a compact console log pattern (`log/SpdLog.cpp`). One of them binds the `buildTarget`/`cwd`/`logsDir` ext vars the configs read, and selects the default import dir — `config/args/mysql` on Linux, `config/args/sqlServer` on Windows. Without one, jsonnet evaluation fails and the binary starts with an `{"error":…}` settings object. Test output is cwd-relative: logs go to `<cwd>/logs` and file-backed sqlite dbs to `<cwd>/sqlite-tests.db`.
+A **test-mode flag is required** — `-tests` for direct runs, `-ctest` for ctest. They are equivalent except that `-ctest` also selects a compact console log pattern (`log/SpdLog.cpp`). One of them binds the `buildTarget`/`cwd`/`logsDir`/`windows` ext vars the configs read, and selects the default import dir — `config/args/mysql` on Linux, `config/args/sqlServer` on Windows. Without one, jsonnet evaluation fails and the binary starts with an `{"error":…}` settings object. Test output is cwd-relative: logs go to `<cwd>/logs` and file-backed sqlite dbs to `<cwd>/sqlite-tests.db`.
 
 Settings-related CLI flags (`libs/fwk/src/settings.cpp`):
 
@@ -80,7 +80,7 @@ Settings-related CLI flags (`libs/fwk/src/settings.cpp`):
 | `-arg <k>=<v>` | binds jsonnet ext var `k`; split on the *first* `=`, so values may contain more |
 | `-sync` | sets the `sync` top-level argument to `true`, enabling startup DDL schema-sync (off by default — see the `function( sync=false )` heading in the app configs) |
 
-`libs/access/tests` is the one suite wired to sqlite: on non-Windows its ctest run adds `-include=args/sqlite -arg path=:memory:`, so it needs no db server and writes no db file. Every other suite still takes the default mysql/sqlServer path.
+The three db-backed ctest suites — `libs/access/tests`, `apps/OpcGateway/tests`, and `apps/OpcServer/tests` — are wired to sqlite on **every** platform: their `addJdeTest` call adds `-include=args/sqlite -arg path=:memory:`, so ctest needs no db server and writes no db file. (A direct, non-ctest `-tests` run of the same binary still takes the default mysql/sqlServer import dir, since `-include` is only on the ctest registration.) The `libs/fwk` and `libs/web` suites use no database, and `libs/db/drivers/sqlite/tests` is inherently sqlite.
 
 The two workflows use **different working directories**, so they keep separate logs/db files:
 

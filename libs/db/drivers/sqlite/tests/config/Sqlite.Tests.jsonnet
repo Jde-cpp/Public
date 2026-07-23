@@ -1,35 +1,18 @@
-local logsDir = std.extVar("logsDir");
-local buildTarget = std.extVar("buildTarget");
-local repoBuildDir = "$(REPO_BUILD_DIR)/"+buildTarget;
-local repoSourceDir = "$(REPO_SOURCE_DIR)";
+local common = import '../../../../config/sqlite-common.libsonnet';
+local logsDir = common.logsDir;
+local repoSourceDir = common.repoSourceDir;
+local lib = common.lib;
 local cluster(path) = { //one backend; instantiated per-path as the 'memory' and 'file' clusters below.
-	driver: repoBuildDir+"/libs/db/drivers/sqlite/lib/libJde.DB.Sqlite.so",
+	driver: lib( "Jde.DB.Sqlite", "/libs/db/drivers/sqlite/lib" ),
 	catalogs: {
 		testDb: { // n/a for sqlite
 			path: path,
 			schemas:{
 				master:{ // n/a for sqlite
-					access:{
-						meta: repoSourceDir + "/libs/access/config/access-meta.jsonnet",
-						ql: repoSourceDir + "/libs/access/config/access-ql.jsonnet",
-						prefix: "access_",
-						dynamicLib: repoBuildDir+"/apps/AppServer/config/sql/sqlite/libJde.DB.Sqlite.AppServer.so"
-					},
-					app:{
-						meta: repoSourceDir + "/apps/AppServer/config/app-meta.jsonnet",
-						prefix: "app_",
-						dynamicLib: repoBuildDir+"/apps/AppServer/config/sql/sqlite/libJde.DB.Sqlite.AppServer.so"
-					},
-					opc:{
-						meta: repoSourceDir +"/apps/OpcServer/config/opcServer-meta.jsonnet",
-						prefix: "opc_",
-						dynamicLib: repoBuildDir+"/apps/OpcServer/config/sql/sqlite/libJde.DB.Sqlite.OpcServer.so"
-					},
-					gateway:{
-						meta: repoSourceDir + "/apps/OpcGateway/config/opcGateway-meta.jsonnet",
-						prefix: "gtw_",
-						dynamicLib: repoBuildDir+"/apps/OpcGateway/config/sql/sqlite/libJde.DB.Sqlite.OpcGateway.so"
-					}
+					access: common.access(),
+					app: common.app(),
+					opc: common.opcSchema(),
+					gateway: common.gateway( {prefix: "gtw_"} )
 				}
 			}
 		}

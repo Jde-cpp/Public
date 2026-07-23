@@ -21,6 +21,16 @@ namespace Jde::Tests{
 		EXPECT_EQ( Chrono::ToDuration(s), d ) << "str=" << s;
 	}
 
+	// Regression: the sub-second remainder was emitted with no unit suffix ("PT1S500"), which ToDuration dropped.
+	TEST( ChronoTests, DurationRoundTripSubSecond ){
+		let d = duration_cast<Duration>( milliseconds{1500} );
+		EXPECT_EQ( Chrono::ToString(d), "PT1.5S" );
+		EXPECT_EQ( Chrono::ToDuration(Chrono::ToString(d)), d );
+		EXPECT_EQ( Chrono::ToString(duration_cast<Duration>(milliseconds{-1050})), "PT-1.05S" );
+		EXPECT_EQ( Chrono::ToDuration(sv{"PT-1.05S"}), duration_cast<Duration>(milliseconds{-1050}) );
+		EXPECT_EQ( Chrono::ToDuration(Chrono::ToString(duration_cast<Duration>(milliseconds{50}))), duration_cast<Duration>(milliseconds{50}) );
+	}
+
 	TEST( ChronoTests, ToTimePointZulu ){
 		EXPECT_EQ( Chrono::ToTimePoint("2024-01-02T03:04:05Z"), Chrono::ToTimePoint("2024-01-02T03:04:05") );
 	}

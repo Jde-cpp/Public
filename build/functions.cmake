@@ -101,10 +101,13 @@ endfunction()
 
 #Registers targetName with ctest: runs from ${CMAKE_BINARY_DIR}/Testing with the env vars the jsonnet
 #configs expand via $(REPO_SOURCE_DIR)/$(REPO_BUILD_DIR); extra COMMAND args can follow the settings file.
+#`-include=args/sqlite -arg path=:memory:` is the default so every ctest run is self-contained (in-memory sqlite, no
+#db server): the db-backed suites need it as a pair, and fwk/web/sqlite-driver import no args dir and don't read
+#`path`, so it is inert for them.  Extra args in ARGN follow it.
 function( addJdeTest targetName settingsFile )
 	add_test(
 		NAME ${targetName}
-		COMMAND $<TARGET_FILE:${targetName}> -ctest -settings=${settingsFile} ${ARGN}
+		COMMAND $<TARGET_FILE:${targetName}> -ctest -settings=${settingsFile} -include=args/sqlite -arg path=:memory: ${ARGN}
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/Testing
 	)
 	set_tests_properties( ${targetName} PROPERTIES ENVIRONMENT
@@ -129,6 +132,7 @@ function( sqliteProcModule targetName )
 	add_library( ${targetName} MODULE )
 	compileOptions( ${targetName} )
 	set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
+	#RegisterProcs is exported from source via JDE_SQLITE_PROC in <jde/db/sqlite_api.h> - no /EXPORT: link flag needed.
 
 	#CONFIGURE_DEPENDS: the module is a MODULE, so a new proc twin that isn't in the glob still links (undefined
 	#symbols are legal) and only fails at dlopen - re-glob on build instead of making that a reconfigure-or-else.

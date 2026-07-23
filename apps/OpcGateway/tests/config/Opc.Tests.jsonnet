@@ -47,8 +47,8 @@ local logsDir = args.logsDir;
 		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840,
 		ssl:{
-			certificate: args.repoBuildDir + "/runtime/ssl/certs/opc-tests-server.pem",
-			privateKey: {path: args.repoBuildDir + "/runtime/ssl/private/opc-tests-server.pem", passcode: ""}
+			certificate: args.repoBuildDir + "/runtime/ssl/certs/gtwy-tests-server.pem",
+			privateKey: {path: args.repoBuildDir + "/runtime/ssl/private/gtwy-tests-server.pem", passcode: ""}
 		}
 	},
 	credentials:{
