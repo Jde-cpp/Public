@@ -38,7 +38,9 @@ cmake --build $buildDir -j --target Jde
 cmake --install $buildDir
 ```
 
-Linux uses **clang++-22** with libc++ (plus ASan/LSan in debug); Windows uses clang too. C++ standard is **C++26**. Every selectable configure preset (`cmake --list-presets`) carries one of two suffixes; everything else in `CMakePresets.json` is a `hidden` building block.
+Linux uses **clang++-22** with libc++ (plus ASan/LSan in debug); Windows uses clang too. C++ standard is **C++26**. Every selectable configure preset (`cmake --list-presets`) carries one of two suffixes; everything else is a `hidden` building block.
+
+The presets are **split by OS across four files** (presets schema `version: 9`). The auto-loaded `CMakePresets.json` only does `"include": ["CMakePresets.${hostSystemName}.json"]`, which resolves to `CMakePresets.Windows.json` or `CMakePresets.Linux.json` — capitalized to match `CMAKE_HOST_SYSTEM_NAME`, and case must match exactly since Linux is case-sensitive. Each OS file in turn includes `CMakePresets.common.json`, which holds the OS-agnostic hidden building blocks (`common`, `repos`, `debug`, `relWithDebInfo`, `release`, `clang`, `clang-jde`). So on any host `cmake --list-presets` shows only that OS's presets. `common.json` **must stay a separate file**: a preset may only inherit from its own file or a file it includes (inheritance flows downward along includes), so the shared blocks can't be folded up into the root — the OS files include the common file and inherit from it. `${hostSystemName}` is allowed in `include` because it is not a preset-specific macro (unlike `${presetName}`/`${generator}`), but that needs schema `version: 9`.
 
 **`-jde`** — builds the project (libs, apps, tests: `jde_TESTS=ON`, `jde_APPS=ON`), adding `CMAKE_EXPORT_COMPILE_COMMANDS` and the house warning exclusions. This is the day-to-day dev build:
 
