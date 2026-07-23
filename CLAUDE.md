@@ -51,11 +51,11 @@ The presets are **split by OS across four files** (presets schema `version: 9`).
 
 **`-repos`** — builds only the third-party dependencies (`jde_REPOS=ON`, `jde_TESTS=OFF`, `jde_APPS=OFF`):
 
-| compiler | debug | relWithDebInfo |
-|---|---|---|
-| clang | `linux-clang-debug-repos` | `linux-clang-relWithDebInfo-repos` |
-| win clang | `win-clang-debug-repos` | — |
-| g++ | `linux-debug-repos` | `linux-relWithDebInfo-repos` |
+| compiler | debug | relWithDebInfo | release |
+|---|---|---|---|
+| clang | `linux-clang-debug-repos` | `linux-clang-relWithDebInfo-repos` | — |
+| win clang | `win-clang-debug-repos` | — | `win-clang-release-repos` |
+| g++ | `linux-debug-repos` | `linux-relWithDebInfo-repos` | — |
 
 The g++ (`linux-*`, **g++-15**) presets exist only for the dependency build — there is no g++ `-jde` preset, so the project itself is built with clang. Note the leftover `linux-debug` **build**/**test** presets are currently unusable: they name the now-hidden `linux-debug` configure preset, and CMake rejects that (`Cannot use hidden configure preset`) — see `reviews/todo.md` §3.
 

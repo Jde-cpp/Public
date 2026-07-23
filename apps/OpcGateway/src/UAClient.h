@@ -51,6 +51,7 @@ namespace Jde::Opc::Gateway{
 		α Process( RequestId requestId, sv what )ι->void;
 		α StopProcessing()ι->void;//dispatches AsyncRequest::Stop onto the strand with a keep-alive.
 		α PostUA( function<void()> f )ι->void;//runs f on this client's strand - the only place UA_Client_* calls are allowed once the processing loop can run. Holds shared_from_this until f runs.
+		α PostStrand( function<void()> f )ι->void;//like PostUA but always defers (asio::post, not dispatch): use when a strand callback must not run re-entrantly inside the current strand handler. Holds shared_from_this until f runs.
 		α Processing()ι->bool{ return _asyncRequest.IsRunning(); }
 		α ProcessDataSubscriptions()ι->void;
 		α StopProcessDataSubscriptions()ι->void;

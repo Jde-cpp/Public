@@ -13,6 +13,7 @@
 #define let const auto
 
 namespace Jde{
+	constexpr ELogTags _tags = ELogTags::App;
 	string _applicationName;
 	α Process::AppName()ι->const string&{ return _applicationName; }
 
@@ -39,12 +40,23 @@ namespace Jde{
 		Process::SetConsole( isConsole );
 		IO::Init();
 		{
-			std::ostringstream os;
-			os << "(" << ProcessId() << ")";
+			std::ostringstream args;
 			for( auto i=0; i<argc; ++i )
-				os << argv[i] << " ";
-			os << ";cwd=" << fs::current_path().string();
-			INFOT( ELogTags::App, "Starting {}{}", appName, os.str() );
+				args << argv[i] << " ";
+			if( FindArg("-tests") || FindArg("-ctest") ){
+				std::cout
+#if _WIN32
+					<< "export REPO_BUILD_DIR=\"" << GetEnv("REPO_BUILD_DIR").value_or("") << "\"" << std::endl
+     			<< "export REPO_SOURCE_DIR=\"" << GetEnv("REPO_SOURCE_DIR").value_or("") << "\"" << std::endl
+#else
+					<< "REPO_BUILD_DIR=" << GetEnv("REPO_BUILD_DIR").value_or("") << std::endl
+					<< "REPO_SOURCE_DIR=" << GetEnv("REPO_SOURCE_DIR").value_or("") << std::endl
+#endif
+					<< "@" << fs::current_path().string() << std::endl
+					<< args.str() << std::endl;
+			}
+			INFO( "Program: {}", args.str() );
+			INFO( "pid/cwd: ({}){}", ProcessId(), fs::current_path().string() );
 		}
 		_applicationName = appName;
 		const string arg0{ argv[0] };
@@ -94,13 +106,13 @@ namespace Jde{
 		};
 		if( auto p = dynamic_cast<Exception*>(&e); p ){
 			y = p->Level()==ELogLevel::Trace ? EXIT_SUCCESS :
-				p->Code() ? (int)p->Code() : EXIT_FAILURE;
+				p->Code() ? ( int )p->Code() : EXIT_FAILURE;
 		}
 		cerrOutput();
 		return y;
 	}
 
-	vector<function<void(bool, SL)>> _shutdownFunctions;
+	vector<function<void( bool, SL )>> _shutdownFunctions;
 	α Process::AddShutdownFunction( function<void(bool, SL)>&& shutdown )ι->void{
 		_shutdownFunctions.push_back( shutdown );
 	}
@@ -160,7 +172,7 @@ namespace Jde{
 #ifdef _WIN32
 		char* env = nullptr;
 		size_t size = 0;
-		if( _dupenv_s( &env, &size, variable.c_str() ) == 0 && env ){
+		if( _dupenv_s(&env, &size, variable.c_str()) == 0 && env ){
 			string result{ env };
 			free( env );
 			return result;
