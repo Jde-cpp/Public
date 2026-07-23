@@ -12,6 +12,7 @@
 				"cxxFlags": "-DWIN32_LEAN_AND_MEAN"
 			},
 			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "$env{buildType}",
 				"CMAKE_GENERATOR_PLATFORM": "x64",
 				"CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 			}
@@ -92,7 +93,7 @@
 				"win-clang-debug",
 				"win-repos"
 			],
-			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-repos"
+			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-repos/debug"
 		},
 		{
 			"name": "win-clang-release-repos",
@@ -100,7 +101,7 @@
 				"win-clang-release",
 				"win-repos"
 			],
-			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-repos"
+			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-repos/release"
 		}
 	]
 }

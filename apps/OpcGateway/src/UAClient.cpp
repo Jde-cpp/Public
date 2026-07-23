@@ -299,6 +299,13 @@ namespace Jde::Opc::Gateway{
 		boost::asio::dispatch( _asyncRequest.Strand(), [self=shared_from_this(), f=move(f)]{ f(); } );
 	}
 
+	α UAClient::PostStrand( function<void()> f )ι->void{
+		//Always post (never dispatch inline): the handler runs after the current strand op returns. Used to break
+		//re-entrancy - e.g. resuming a caller from inside run_iterate must not unblock/destroy the awaitable while the
+		//strand handler that drove run_iterate is still touching it. `self` keeps the client (and its strand) alive until f runs.
+		boost::asio::post( _asyncRequest.Strand(), [self=shared_from_this(), f=move(f)]{ f(); } );
+	}
+
 	α UAClient::Process( RequestId requestId, sv what )ι->void{
 		if( _asyncRequest.IsStopped() )
 			return;

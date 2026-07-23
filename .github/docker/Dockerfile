@@ -72,8 +72,10 @@ RUN set -eux; \
     ldconfig; \
     rm -rf /tmp/jent
 
-# cmake from the Kitware release rather than apt: noble ships 3.28.3 — exactly the
-# preset's floor — whereas the host builds on cmake 4.x. Pin to match the host.
+# cmake from the Kitware release rather than apt: noble ships 3.28.3, below the
+# preset floor (cmakeMinimumRequired/MIN_REQ_CMAKE_VERSION = 4.2.3), so apt's
+# cmake cannot configure the repo. Pin exactly the floor so CI proves the stated
+# minimum actually works.
 ARG CMAKE_VERSION=4.2.3
 RUN set -eux; \
     wget -qO /tmp/cmake.tar.gz \

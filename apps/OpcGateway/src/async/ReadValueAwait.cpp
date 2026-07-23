@@ -33,7 +33,7 @@ namespace Jde::Opc::Gateway{
 				catch( UAException& e ){
 					_results.emplace( nodeId, Value{(StatusCode)e.Code()} );
 					if( _results.size()==_nodes.size() )
-						Resume( move(_results) );
+						_client->PostStrand( [this]{ Resume(move(_results)); } );//defer: resuming inline lets the awaiting caller destroy `this`/_nodes while this loop is still iterating them (invalidated-iterator crash on ++).
 				}
 			}
 		});
@@ -51,6 +51,6 @@ namespace Jde::Opc::Gateway{
 		DBG( "{} Value: {}", logPrefix(), serialize(value.ToJson()) );
 		_results.emplace( nodeIdIt->second, move(value) );
 		if( _results.size()==_nodes.size() )
-			Resume( move(_results) );
+			_client->PostStrand( [this]{ Resume(move(_results)); } );//defer resume off the current strand handler (which may be a run_iterate driven re-entrantly from Suspend's loop) - see Suspend.
 	}
 }
