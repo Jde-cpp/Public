@@ -93,13 +93,18 @@ namespace Jde{
 						if( key )
 							_args->emplace( *key, string{} );
 						if( uint i=current.find('='); i<current.size() ){
-							_args->emplace( current.substr(0, i), current.substr(i+1) );
+							auto value = current.substr( i+1 );
+							if( value.size()>1 && value.front()=='"' && value.back()=='"' ) //lldb/VS Code pass argv unshelled, so the quotes are literal.
+								value = value.substr( 1, value.size()-2 );
+							_args->emplace( current.substr(0, i), move(value) );
 							key.reset();
 						}else
 							key = current;
 					}
-					else if( key )
+					else if( key ){
 						_args->emplace( *key, current );
+						key.reset(); //else the next positional binds to the same flag and the post-loop flush emplaces a duplicate.
+					}
 					else
 						_args->emplace( string{}, current );
 				}

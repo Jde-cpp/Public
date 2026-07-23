@@ -4,7 +4,7 @@ project( Jde.DB.Sqlite VERSION ${JDE_VERSION} LANGUAGES CXX )
 message( ${PROJECT_NAME} )
 include( ${jdeRoot}/build/dependencies.cmake )
 
-list( APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/sqlite ) #static lib built from the amalgamation - see sketch.md; system libsqlite3-dev also works.
+list( APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/sqlite ) #static lib built from the sqlite amalgamation into this prefix; system libsqlite3-dev also works.
 find_package( SQLite3 REQUIRED )
 find_package( Threads REQUIRED )
 

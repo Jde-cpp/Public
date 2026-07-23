@@ -166,6 +166,7 @@ namespace Jde{
 				args["buildTarget"] = _debug ? "debug" : "release";
 				args["cwd"] = fs::current_path().string();
 				args["logsDir"] = args["cwd"] + "/logs";
+				args["windows"] = _windows ? "true" : "false";
 			}
 			for( let& [key, value] : argMap("-arg") )
 				args[key] = value;

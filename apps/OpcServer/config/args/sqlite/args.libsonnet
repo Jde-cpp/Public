@@ -5,8 +5,8 @@ common + {
 	instanceName: args.buildTarget+".sqlite",
 	opcServer: {
 		trustedCertDirs: [
-			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs",
-			"$(HOME)/.Jde-Cpp/Tests.Opc/ssl/certs"
+			common.certsDir( "OpcGateway" ),
+			common.certsDir( common.opcTestsProduct )
 		],
 		ssl:{
 			certificate: cwd+"/ssl/certs/OpcServer.pem",
@@ -23,7 +23,7 @@ common + {
 				access:{ meta: common.accessMeta, ql: common.accessQL, prefix: "access_" },
 			},
 			dbo:{ // n/a for sqlite
-				opc: common.opc(),
+				opc: common.opcSchema(),
 			}
 		})
 	}

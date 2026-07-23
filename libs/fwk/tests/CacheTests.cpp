@@ -18,7 +18,7 @@ namespace Jde::Tests{
 	}
 	TEST_F( CacheTests, Expires ){
 		auto p = Cache::Set<string>( "expired", "value", 1ms );
-		std::this_thread::sleep_for( 2ms );
+		std::this_thread::sleep_for( 50ms );//expiry is sweep-driven; windows timers tick at ~15.6ms, so leave slack past the deadline.
 		ASSERT_EQ( Cache::Get<string>("expired"), nullptr );
 	}
 	TEST_F( CacheTests, Stress ){
@@ -51,7 +51,7 @@ namespace Jde::Tests{
 			}
 		}//jthreads join here.
 		INFOT( ELogTags::Test, "threads: {}, retrieved: {}, missed: {}, sets: {}", threadCount, retrieved.load(), missed.load(), sets.load() );
-		std::this_thread::sleep_for( 11ms );
+		std::this_thread::sleep_for( 60ms );//10ms max entry duration + ~15.6ms windows timer tick + slack.
 		for( let& key : keys )
 			ASSERT_EQ( Cache::Get<string>(key), nullptr );
 	}

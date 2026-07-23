@@ -1,8 +1,9 @@
 {
 	"settings": {
-		"window.title": "Web",
+		"window.title": "WebLib",
 		"name": "web",
 		"target": "Jde.Web.Tests",
+		"testTarget": "${config:target}",
 		"subDir": "libs/${config:name}",
 		"cmake.sourceDirectory": "${workspaceFolder:tests}/../../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",

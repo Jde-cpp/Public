@@ -37,41 +37,37 @@ template<>
 }
 namespace Jde{
 	Ŧ Chrono::ToString( T d )ι->string{
+		//seconds-or-finer only: for coarser T (minutes, hours…) `d %= years{1}` in the output() macro is ill-formed,
+		//since years/months aren't an exact multiple of T's period.  Every caller passes Duration/steady_clock ticks.
+		static_assert( T::period::num==1, "Chrono::ToString requires a seconds-or-finer duration (T::period::num==1)." );
 		std::ostringstream os;
 		os << 'P';
+		//date units use the exact std::chrono period ratios so ToDuration is the inverse - a month is ~730.5h, not 720h.
 		#define output( period,suffix ) if( d>=period{1} || d<=period{-1} ){ os << duration_cast<period>(d).count() << suffix; d%=period{1}; }
-		if constexpr( _msvc ){
-			constexpr auto year = hours( 24 * 365 );
-			if( d >= year || d <= -year ){
-				os << duration_cast<hours>( d ).count()/year.count() << "Y";
-				d %= year;
-			}
-			constexpr auto month = hours( 24 * 30 );
-			if( d >= month || d <= -month ){
-				os << duration_cast<hours>( d ).count() / month.count() << "M";
-				d %= month;
-			}
-			constexpr auto days = hours( 24 );
-			if( d >= days || d <= -days ){
-				os << duration_cast<hours>( d ).count() / days.count() << "D";
-				d %= days;
-			}
-		}
-		else{
-			output( years, "Y" )
-			output( months, "M" )
-			output( days, "D" )
-		}
+		output( years, "Y" )
+		output( months, "M" )
+		output( days, "D" )
 		if( d!=Duration::zero() ){
 			os << "T";
 			output( hours, "H" );
 			output( minutes, "M" );
-			output( seconds, "S" );
-			if( d!=Duration::zero() )
-				os << duration_cast<milliseconds>( d ).count();
+			if( d!=Duration::zero() ){
+				auto ms = duration_cast<milliseconds>( d ).count(); //remainder <1min: emit as fractional seconds - ToDuration reads 'S' decimals, but drops a unitless tail.
+				if( ms<0 ){ os << '-'; ms = -ms; }
+				os << ms/1000;
+				if( auto frac = ms%1000; frac ){
+					os << '.';
+					if( frac<100 ) os << '0';
+					if( frac<10 ) os << '0';
+					while( frac%10==0 ) frac/=10;
+					os << frac;
+				}
+				os << 'S';
+			}
 		}
 		return os.str();
 	}
 }
+#undef output
 #undef Φ
 #endif

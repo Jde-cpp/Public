@@ -181,7 +181,7 @@
 				"win-clang",
 				"debug"
 			],
-			"binaryDir": "$env{JDE_BUILD_DIR}/clang++"
+			"binaryDir": "$env{JDE_BUILD_DIR}/clang++/${sourceDirName}/debug"
 		},
 		{
 			"name": "linux-clang-debug-jde",

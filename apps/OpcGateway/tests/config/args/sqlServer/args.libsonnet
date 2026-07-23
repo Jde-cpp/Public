@@ -1,11 +1,8 @@
-{
+local common = import '../../../../../../libs/db/config/args-common.libsonnet';
+common + {
 	local args = self,
 	instanceName: "debug-windows",
 	sqlType: "sqlServer",
-	buildTarget: std.extVar("buildTarget"),
-	repoBuildDir: "$(REPO_BUILD_DIR)/"+args.buildTarget,
-	repoSourceDir: "$(REPO_SOURCE_DIR)",
-	logsDir: std.extVar("logsDir"),
 	opc:{
 		urn: "urn:open62541.server.application",
 		url: "opc.tcp://127.0.0.1:4840"
@@ -17,7 +14,7 @@
 	},
 	dbServers: {
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/$(JDE_COMPILER)/bin/Debug/Jde.DB.Odbc.dll",
+			driver: args.repoBuildDir+"/bin/Jde.DB.Odbc.dll",
 			connectionString: "DSN=OpcTestsDebug",
 			username: null,
 			password: null,

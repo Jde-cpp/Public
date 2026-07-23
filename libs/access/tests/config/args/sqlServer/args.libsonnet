@@ -1,10 +1,10 @@
-{
+local common = import '../../../../../../libs/db/config/args-common.libsonnet';
+common + {
+	local args = self,
 	sqlType: "sqlServer",
-	repoSourceDir: "$(REPO_SOURCE_DIR)",
-	logsDir: std.extVar("logsDir"),
 	dbServers: {
 		localhost:{
-			driver: "$(JDE_BUILD_DIR)/$(JDE_COMPILER)/bin/Debug/Jde.DB.Odbc.dll",
+			driver: args.repoBuildDir+"/bin/Jde.DB.Odbc.dll",
 			connectionString: "DSN=TestAccessDebug",
 			username: null,
 			password: null,
