@@ -1,0 +1,80 @@
+{
+	"version": 9,
+	"configurePresets": [
+		{
+			"name": "common",
+			"hidden": true,
+			"environment": {
+				"installRoot": "$env{REPO_DIR}/install/$env{CXX}"
+			},
+			"cacheVariables": {
+				"CMAKE_CXX_STANDARD": "26",
+				"JDE_VERSION": "2026.07.01",
+				"MIN_REQ_CMAKE_VERSION": "4.2.3",
+				"SPDLOG_FMT_EXTERNAL": "ON"
+			}
+		},
+		{
+			"name": "repos",
+			"hidden": true,
+			"cacheVariables": {
+				"jde_REPOS": true,
+				"jde_TESTS": false,
+				"jde_APPS": false
+			}
+		},
+		{
+			"name": "debug",
+			"hidden": true,
+			"environment": {
+				"buildType": "Debug"
+			},
+			"cacheVariables": {
+				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/Debug",
+				"CMAKE_PREFIX_PATH": "$env{installRoot}/Debug"
+			}
+		},
+		{
+			"name": "relWithDebInfo",
+			"hidden": true,
+			"environment": {
+				"buildType": "RelWithDebInfo"
+			},
+			"cacheVariables": {
+				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/RelWithDebInfo",
+				"CMAKE_PREFIX_PATH": "$env{installRoot}/RelWithDebInfo"
+			}
+		},
+		{
+			"name": "release",
+			"hidden": true,
+			"environment": {
+				"buildType": "Release"
+			},
+			"cacheVariables": {
+				"CMAKE_INSTALL_PREFIX": "$env{installRoot}/Release",
+				"CMAKE_PREFIX_PATH": "$env{installRoot}/Release"
+			}
+		},
+		{
+			"name": "clang",
+			"hidden": true,
+			"environment": {
+				"CC": "clang",
+				"CXX": "clang++"
+			},
+			"cacheVariables": {
+				"CMAKE_C_COMPILER": "clang",
+				"CMAKE_CXX_COMPILER": "clang++"
+			}
+		},
+		{
+			"name": "clang-jde",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_EXPORT_COMPILE_COMMANDS": true,
+				"EXCLUDED_WARNINGS": "-Wno-unknown-pragmas;-Wno-missing-field-initializers;-Wno-unqualified-std-cast-call;-Wno-language-extension-token;-Wno-dollar-in-identifier-extension"
+			}
+		}
+	]
+}
