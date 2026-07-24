@@ -1,0 +1,78 @@
+name: Windows 2025 Build
+
+# Builds the repository's own exe/DLLs (win-clang-release-jde) on the
+# GitHub-hosted windows-2025 (VS2026) image, consuming the third-party deps
+# tree that win2025-deps.yml built and cached. Strict coupling: if the deps
+# cache is missing this workflow fails fast — it never builds deps itself.
+# Run "Windows 2025 Deps" on `main` first (and after any dep/preset bump).
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: win2025-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Setup Windows toolchain
+        id: toolchain
+        uses: ./.github/actions/setup-windows-toolchain
+
+      # Strict restore: exact key only, no restore-keys. A miss leaves the paths
+      # empty and the guard below fails the job with an actionable message.
+      - name: Restore deps cache
+        id: deps
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ steps.toolchain.outputs.deps-cache-key }}
+          path: |
+            C:/jde/libs/install/clang++/Release
+            C:/jde/libs/boostorg/boost_1_91_0
+            C:/vcpkg/installed
+
+      - name: Require deps cache
+        if: steps.deps.outputs.cache-hit != 'true'
+        run: |
+          Write-Host "::error::Third-party deps cache missing for key '${{ steps.toolchain.outputs.deps-cache-key }}'. Run the 'Windows 2025 Deps' workflow on main first (it builds + caches the -repos Release tree). A dep/preset bump on this branch also invalidates the key until deps is re-run."
+          exit 1
+
+      - name: Configure
+        run: cmake --preset win-clang-release-jde
+
+      - name: Build
+        # protobuf generates in-source (PROTOC_OUT_DIR = <lib>/proto); under full
+        # parallelism a consumer compile can hold a *.pb.h open while protoc
+        # rewrites it, which Windows share-locks ("<file>: Invalid argument"). If
+        # the parallel pass fails, finish serially (-j 1, race-free) — a genuine
+        # compile error still fails the serial pass, so nothing is masked.
+        run: |
+          $buildDir = "C:/jde/build/clang++-jde/release"
+          cmake --build $buildDir -j $env:NUMBER_OF_PROCESSORS
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::warning::Parallel build failed once (in-source protobuf codegen race); completing serially (-j 1)."
+            cmake --build $buildDir -j 1
+          }
+
+      - name: Upload binaries
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-binaries-${{ github.run_id }}
+          # functions.cmake redirects all exe/DLL/lib/pdb output to <build>/bin.
+          path: C:/jde/build/clang++-jde/release/bin/**
+          if-no-files-found: error
+          retention-days: 7

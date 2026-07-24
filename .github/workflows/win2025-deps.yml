@@ -1,0 +1,93 @@
+name: Windows 2025 Deps
+
+# Builds the third-party libraries defined in build/CMakeLists.txt (the -repos
+# superbuild: fmt, spdlog, abseil, protobuf, open62541, ryml, jsonnet, gtest,
+# zlib, libxml2, plus boost_json) in Release on the GitHub-hosted windows-2025
+# (VS2026) image, and saves the result to actions/cache. The companion
+# win2025-build.yml restores this cache and builds the repo's own exe/DLLs; it
+# never builds deps itself (strict coupling), so this workflow must have run at
+# least once on `main` before the build workflow can succeed.
+#
+# Cache visibility: GitHub scopes caches to the creating branch + its default
+# branch. Running on `main` makes the deps cache visible to every branch/PR.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    # Rebuild deps only when something that defines them changes.
+    paths:
+      - 'CMakePresets*.json'
+      - 'build/CMakeLists.txt'
+      - 'build/functions.cmake'
+      - 'vcpkg.json'
+      - '.github/actions/setup-windows-toolchain/action.yml'
+      - '.github/workflows/win2025-deps.yml'
+  schedule:
+    # Weekly refresh so the cache never lapses the 7-day inactivity eviction.
+    - cron: '0 6 * * 1'
+
+concurrency:
+  group: win2025-deps-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-deps:
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Setup Windows toolchain
+        id: toolchain
+        uses: ./.github/actions/setup-windows-toolchain
+
+      # Restore first: if an identical deps tree is already cached there is
+      # nothing to do, so every heavy step below is gated on a miss.
+      - name: Restore deps cache
+        id: deps
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ steps.toolchain.outputs.deps-cache-key }}
+          path: |
+            C:/jde/libs/install/clang++/Release
+            C:/jde/libs/boostorg/boost_1_91_0
+            C:/vcpkg/installed
+
+      - name: Download Boost source
+        if: steps.deps.outputs.cache-hit != 'true'
+        run: |
+          $u = "${{ steps.toolchain.outputs.boost-underscore }}"
+          $url = "https://archives.boost.io/release/${{ steps.toolchain.outputs.boost-version }}/source/boost_$u.tar.gz"
+          $tgz = "$env:RUNNER_TEMP/boost.tar.gz"
+          Write-Host "Downloading $url"
+          Invoke-WebRequest -Uri $url -OutFile $tgz
+          New-Item -ItemType Directory -Force -Path C:/jde/libs/boostorg | Out-Null
+          tar -xf $tgz -C C:/jde/libs/boostorg
+          if ($LASTEXITCODE -ne 0) { throw "Boost extract failed" }
+
+      # Top-level configure with the vcpkg toolchain + vcpkg.json manifest
+      # installs openssl + sqlite3 into %VCPKG_ROOT%/installed (x64-windows-static-md)
+      # before any ExternalProject builds, which is where open62541 finds OpenSSL.
+      - name: Configure deps
+        if: steps.deps.outputs.cache-hit != 'true'
+        run: cmake --preset win-clang-release-repos
+
+      - name: Build deps
+        if: steps.deps.outputs.cache-hit != 'true'
+        run: cmake --build C:/jde/build/clang++-repos/release -j $env:NUMBER_OF_PROCESSORS
+
+      - name: Save deps cache
+        if: steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ steps.toolchain.outputs.deps-cache-key }}
+          path: |
+            C:/jde/libs/install/clang++/Release
+            C:/jde/libs/boostorg/boost_1_91_0
+            C:/vcpkg/installed
