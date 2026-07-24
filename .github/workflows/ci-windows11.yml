@@ -1,0 +1,84 @@
+name: Windows 11 x64
+
+# Manual-only: builds + tests on the self-hosted Windows 11 workstation runner
+# (label win11-clang). Unlike the Linux runner it is a real workstation, not an
+# ephemeral container, so it runs only on explicit request (workflow_dispatch) —
+# never automatically on push/PR. workflow_dispatch is gated to users with write
+# access, so no fork-PR fence is needed.
+#
+# Runner prerequisites (see .github/windows11-runner.md):
+#   - LLVM clang++ / ld.lld 22, CMake >=4.2.3, Ninja on the *service* PATH.
+#   - The runner service account must be able to create symlinks (Developer Mode
+#     or SeCreateSymbolicLinkPrivilege) — functions.cmake uses create_symlink.
+#   - Prebuilt third-party trees present: %REPO_DIR%\install\clang++\Debug,
+#     %REPO_DIR%\boostorg\boost_1_91_0, %VCPKG_ROOT%\installed, %UA_NODE_SETS%.
+on:
+  workflow_dispatch:
+
+# Supersede an older manual run of the same ref (a single self-hosted runner
+# serializes jobs anyway; this just avoids a stale queued run).
+concurrency:
+  group: ci-windows11-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: [self-hosted, win11-clang]
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      # CI-only build root — separate from the local dev build
+      # (x:\build\clang++\Public\debug) so the two never collide. The preset
+      # appends \clang++\${sourceDirName}\debug, and the runner checks out to
+      # ...\_work\Public\Public, so the real build dir is BUILD_DIR below.
+      JDE_BUILD_DIR: C:/Users/duffyj/source/build/ci
+      REPO_DIR: C:/Users/duffyj/source/repos/libs
+      VCPKG_ROOT: C:/Users/duffyj/source/repos/libs/vcpkg
+      UA_NODE_SETS: C:/Users/duffyj/source/repos/libs/UA-Nodeset
+      PRESET: win-clang-debug-jde
+      BUILD_DIR: C:/Users/duffyj/source/build/ci/clang++/Public/debug
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      # The preset sets binaryDir, so no -B / reconfig needed.
+      - name: Configure
+        run: cmake --preset $env:PRESET
+
+      - name: Build
+        # protobuf generates in-source (PROTOC_OUT_DIR = <lib>/proto), and
+        # actions/checkout clean:true (git clean -ffdx) deletes those gitignored
+        # *.pb.* first, so every run regenerates them under full parallelism. A
+        # consumer compile can then hold a *.pb.h open for read while protoc
+        # rewrites it; on Windows that share-locks protoc's output and fails the
+        # build ("<file>: Invalid argument"). It is latent on Linux (POSIX allows
+        # the concurrent open). If the parallel pass fails, finish serially
+        # (-j 1, race-free) — a genuine compile error still fails the serial pass,
+        # so this masks nothing. Proper fix: generate protos out-of-source.
+        run: |
+          cmake --build "$env:BUILD_DIR" -j $env:NUMBER_OF_PROCESSORS
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::warning::Parallel build failed once (in-source protobuf codegen race); completing serially (-j 1)."
+            cmake --build "$env:BUILD_DIR" -j 1
+          }
+
+      - name: Test
+        # Serial (no -j): suites share WORKING_DIRECTORY (<build>/Testing) and
+        # thus logs/ + sqlite-tests.db. DB suites use in-memory sqlite → no DB
+        # server. --no-tests=error flags a mis-built/empty suite instead of
+        # silently passing.
+        run: ctest --test-dir "$env:BUILD_DIR" --output-on-failure --no-tests=error
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-windows11-${{ github.run_id }}
+          path: ${{ env.BUILD_DIR }}/Testing/logs/**
+          if-no-files-found: ignore
+          retention-days: 7
