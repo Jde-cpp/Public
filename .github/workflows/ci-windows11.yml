@@ -26,7 +26,9 @@ jobs:
     runs-on: [self-hosted, win11-clang]
     defaults:
       run:
-        shell: pwsh
+        # Windows PowerShell 5.1 (always present); this self-hosted box has no
+        # pwsh (PS7). The steps below use no PS7-only syntax.
+        shell: powershell
 
     env:
       # CI-only build root — separate from the local dev build
