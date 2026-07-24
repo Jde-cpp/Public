@@ -2,6 +2,11 @@
 #include <jde/fwk/co/Timer.h>
 #include <jde/fwk/utils/Stopwatch.h>
 #include <jde/fwk/utils/mathUtils.h>
+#ifdef _WIN32
+	#include <windows.h>
+	#include <timeapi.h>          // timeBeginPeriod/timeEndPeriod (WIN32_LEAN_AND_MEAN excludes it from windows.h)
+	#pragma comment( lib, "winmm.lib" )
+#endif
 
 #define let const auto
 namespace Jde::Tests{
@@ -10,11 +15,21 @@ namespace Jde::Tests{
 	struct TimerTests : public ::testing::Test
 	{};
 
+	// Windows' default timer/scheduler resolution is ~15.6ms, so every sub-millisecond timer/sleep in the
+	// loop below rounds up to a full tick — 8192 sequential iterations then take ~123s instead of ~1s. Raise
+	// the resolution to 1ms for the test's duration (no-op on Linux, which already honors µs-scale delays).
+	struct TimerResolutionGuard{
+#ifdef _WIN32
+		TimerResolutionGuard()ι{ timeBeginPeriod( 1 ); }
+		~TimerResolutionGuard(){ timeEndPeriod( 1 ); }
+#endif
+	};
+
 	uint _successCount{};
 	uint _canceledCount{};
 	Ω test( atomic_flag& done, uint i )ι->TimerAwait::Task{
-		let delay = Math::Random()%200;
-		let kill = Math::Random()%100;
+		let delay = _windows ? Math::Random()%4000 : Math::Random()%200;
+		let kill = _windows ? Math::Random()%4000 : Math::Random()%100;
 		atomic_flag threadDone;
 		atomic_flag threadStart;
 		auto timer = mu<DurationTimer>( microseconds(delay) );
@@ -63,7 +78,8 @@ namespace Jde::Tests{
 	}
 
 	TEST_F( TimerTests, General ){
-		constexpr uint testCount = _windows ? 128 : 4096*2;
+		TimerResolutionGuard timerResolution;
+		constexpr uint testCount = _windows ? 1024 : 4096*2;
 		for( uint i=0; i<testCount; ++i ){
 			atomic_flag done;
 			test( done, i );

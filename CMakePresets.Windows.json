@@ -74,6 +74,15 @@
 			}
 		},
 		{
+			"name": "win-clang-release-jde",
+			"inherits": [
+				"win-clang-release",
+				"clang-jde",
+				"win-lldb"
+			],
+			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-jde/release"
+		},
+		{
 			"name": "win-repos",
 			"hidden": true,
 			"inherits": [

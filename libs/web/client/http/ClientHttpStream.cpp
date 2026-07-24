@@ -1,7 +1,7 @@
 #include <jde/web/client/http/ClientHttpStream.h>
+#include "webClientUtils.h"
 
 namespace Jde::Web::Client{
-
 	α ClientHttpStream::SetSslTlsExtHostName(str host)ε->void{
 		if( !SSL_set_tlsext_host_name( get<1>(_stream).native_handle(), host.c_str()) ){
 			beast::error_code ec{ static_cast<int>(::ERR_get_error()), net::error::get_ssl_category() };
@@ -10,9 +10,10 @@ namespace Jde::Web::Client{
 	}
 
 	α ClientHttpStream::async_connect( const tcp::resolver::results_type& resolved, function<void(beast::error_code ec, tcp::resolver::results_type::endpoint_type)>&& token )ε->void{
+		auto endpoints = PreferV4( resolved );// async_connect walks endpoints serially; try IPv4 first to avoid dead-IPv6 connect stalls (see PreferV4).
 		std::visit(
-			[&resolved,&token](auto&& arg)->auto {
-				return beast::get_lowest_layer(arg).async_connect( resolved, token );
+			[&endpoints,&token](auto&& arg)->auto {
+				return beast::get_lowest_layer(arg).async_connect( endpoints, token );
 			}, _stream );
 	}
 
