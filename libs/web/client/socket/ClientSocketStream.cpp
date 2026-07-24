@@ -1,5 +1,6 @@
 #include <jde/web/client/socket/ClientSocketStream.h>
 #include <jde/web/client/socket/IClientSocketSession.h>
+#include "webClientUtils.h"
 
 #define let const auto
 namespace Jde::Web::Client{
@@ -20,9 +21,10 @@ namespace Jde::Web::Client{
 	}
 
 	α ClientSocketStream::OnResolve( tcp::resolver::results_type results, sp<IClientSocketSession> session )ι->void{
-		std::visit( [&results,session](auto&& ws)->void {
+		auto endpoints = PreferV4( results );// async_connect walks endpoints serially; try IPv4 first to avoid dead-IPv6 connect stalls (see PreferV4).
+		std::visit( [&endpoints,session](auto&& ws)->void {
 			beast::get_lowest_layer( ws ).expires_after( std::chrono::seconds(30) );
-			beast::get_lowest_layer( ws ).async_connect( results, beast::bind_front_handler(&IClientSocketSession::OnConnect, session) );// Make the connection on the IP address we get from a lookup
+			beast::get_lowest_layer( ws ).async_connect( endpoints, beast::bind_front_handler(&IClientSocketSession::OnConnect, session) );// Make the connection on the IP address we get from a lookup
 		},
 		_ws);
 	}
