@@ -78,7 +78,9 @@ namespace Jde::Tests{
 	}
 
 	TEST_F( TimerTests, General ){
+#ifdef _WIN32
 		TimerResolutionGuard timerResolution;
+#endif
 		constexpr uint testCount = _windows ? 1024 : 4096*2;
 		for( uint i=0; i<testCount; ++i ){
 			atomic_flag done;
