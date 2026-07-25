@@ -9,22 +9,14 @@ name: Windows 2025 Deps
 # least once on `main` before the build workflow can succeed.
 #
 # Cache visibility: GitHub scopes caches to the creating branch + its default
-# branch. Running on `main` makes the deps cache visible to every branch/PR.
+# branch. Dispatch this on `main` so the deps cache is visible to every branch/PR.
+#
+# On demand only: dispatch it manually (Actions -> Windows 2025 Deps -> Run
+# workflow). Re-run it after bumping any dependency / preset / vcpkg manifest, or
+# if the cache was evicted (GitHub drops caches unused for 7 days) — otherwise the
+# strict build workflow fails on a cache miss. There is no push/schedule refresh.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    # Rebuild deps only when something that defines them changes.
-    paths:
-      - 'CMakePresets*.json'
-      - 'build/CMakeLists.txt'
-      - 'build/functions.cmake'
-      - 'vcpkg.json'
-      - '.github/actions/setup-windows-toolchain/action.yml'
-      - '.github/workflows/win2025-deps.yml'
-  schedule:
-    # Weekly refresh so the cache never lapses the 7-day inactivity eviction.
-    - cron: '0 6 * * 1'
 
 concurrency:
   group: win2025-deps-${{ github.ref }}

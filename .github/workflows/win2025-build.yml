@@ -5,11 +5,12 @@ name: Windows 2025 Build
 # tree that win2025-deps.yml built and cached. Strict coupling: if the deps
 # cache is missing this workflow fails fast — it never builds deps itself.
 # Run "Windows 2025 Deps" on `main` first (and after any dep/preset bump).
+#
+# On demand only: dispatch it manually (Actions -> Windows 2025 Build -> Run
+# workflow), picking the branch to build. workflow_dispatch is gated to users
+# with write access, so no fork-PR fence is needed.
 on:
   workflow_dispatch:
-  pull_request:
-  push:
-    branches: [main]
 
 concurrency:
   group: win2025-build-${{ github.ref }}

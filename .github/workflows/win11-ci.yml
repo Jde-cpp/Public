@@ -6,7 +6,7 @@ name: Windows 11 x64
 # never automatically on push/PR. workflow_dispatch is gated to users with write
 # access, so no fork-PR fence is needed.
 #
-# Runner prerequisites (see .github/windows11-runner.md):
+# Runner prerequisites (see .github/win11-runner.md):
 #   - LLVM clang++ / ld.lld 22, CMake >=4.2.3, Ninja on the *service* PATH.
 #   - The runner service account must be able to create symlinks (Developer Mode
 #     or SeCreateSymbolicLinkPrivilege) — functions.cmake uses create_symlink.
@@ -18,7 +18,7 @@ on:
 # Supersede an older manual run of the same ref (a single self-hosted runner
 # serializes jobs anyway; this just avoids a stale queued run).
 concurrency:
-  group: ci-windows11-${{ github.ref }}
+  group: win11-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
