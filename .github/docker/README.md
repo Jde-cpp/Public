@@ -4,7 +4,7 @@ Containerised, auto-registering GitHub Actions runner for the Jde OpcGateway
 build. The image adds the clang++-22 / libc++ toolchain to
 [`myoung34/github-runner`](https://github.com/myoung34/docker-github-actions-runner);
 the 2 GB third-party dependency tree is **bind-mounted from the host**, not baked
-in. Consumed by [`.github/workflows/ci.yml`](../workflows/ci.yml).
+in. Consumed by [`.github/workflows/linux-ci.yml`](../workflows/linux-ci.yml).
 
 ## Build the image
 
@@ -61,7 +61,7 @@ Why each non-obvious flag:
 | Flag | Reason |
 |------|--------|
 | `-v .../install:/deps/install:ro` | Host-built Boost/protobuf/open62541/… — the presets read `$REPO_DIR/install/clang++/<Debug\|RelWithDebInfo>`. |
-| `-v .../UA-Nodeset:/deps/UA-Nodeset:ro` | Clone of [OPCFoundation/UA-Nodeset](https://github.com/OPCFoundation/UA-Nodeset) (clone it to the host path if missing) — `ci.yml` points `UA_NODE_SETS` here for the OpcServer nodeset-load tests. |
+| `-v .../UA-Nodeset:/deps/UA-Nodeset:ro` | Clone of [OPCFoundation/UA-Nodeset](https://github.com/OPCFoundation/UA-Nodeset) (clone it to the host path if missing) — `linux-ci.yml` points `UA_NODE_SETS` here for the OpcServer nodeset-load tests. |
 | `--tmpfs /mnt/ram:exec,size=24g` | Build output dir on a ramdisk. `size=24g` clears the ~13 GB debug build; `exec` because tmpfs is `noexec` by default and the build runs the binaries/`.so`s it produces. Wiped on restart → clean builds. |
 | `--security-opt seccomp=unconfined` | Docker's default seccomp profile blocks `io_uring_setup`; the fwk tests exercise io_uring. |
 | `--cap-add SYS_PTRACE` | LeakSanitizer (debug preset builds with ASan/LSan) needs `ptrace`. |

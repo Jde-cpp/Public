@@ -1,8 +1,8 @@
 name: Linux x64
 
 # Runs on the self-hosted, containerised runner (see .github/docker/). Triggered on
-# pull requests, pushes to main (the merge commit of a landed PR — also feeds the
-# README badge), and manual dispatch. This is a self-hosted runner on a public repo,
+# pull requests and pushes to main (the merge commit of a landed PR — also feeds the
+# README badge). This is a self-hosted runner on a public repo,
 # so a fork PR must never execute code on it: the same-repo `if` on the job skips
 # fork PRs (keep Settings → Actions → "Require approval for all outside
 # collaborators" as a second fence). Fork-PR checks belong on GitHub-hosted runners
@@ -11,11 +11,10 @@ on:
   pull_request: # opened/synchronize/reopened — new commits on an open PR re-test it
   push:
     branches: [main]
-  workflow_dispatch:
 
 # One in-flight run per branch; a newer push cancels the older run.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: linux-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
