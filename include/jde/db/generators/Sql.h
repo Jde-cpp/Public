@@ -1,10 +1,12 @@
 #pragma once
 #include <jde/db/Value.h>
 #include <jde/db/generators/FromClause.h>
+#include <jde/db/exports.h>
 
+#define Φ ΓDB α
 namespace Jde::DB{
 	struct Column; struct FromClause; struct JoinClause; struct Table; struct WhereClause;
-	struct Sql final{
+	struct ΓDB Sql final{ //the drivers are separate modules: operator+= and EmbedParams are out-of-line in Jde.DB.
 		α operator+=( WhereClause&& sql )ι->Sql&;
 		string Text;
 		vector<Value> Params;
@@ -12,7 +14,8 @@ namespace Jde::DB{
 		α EmbedParams()Ι->string;
 	};
 
-	α SelectSql( vec<sp<Column>> columns, FromClause from, WhereClause where, SRCE )ε->Sql;
-	α SelectSql( vec<string> columns, FromClause from, WhereClause where, SRCE )ε->Sql;
-	α SelectSKsSql( sp<Table> table )ε->Sql;
+	Φ SelectSql( vec<sp<Column>> columns, FromClause from, WhereClause where, SRCE )ε->Sql;
+	Φ SelectSql( vec<string> columns, FromClause from, WhereClause where, SRCE )ε->Sql;
+	Φ SelectSKsSql( sp<Table> table )ε->Sql;
 }
+#undef Φ

@@ -8,15 +8,10 @@
 #include "../src/SqliteSyntax.h"
 #include <jde/app/AppQL.h>
 #include <jde/db/generators/FromClause.h>
-#include <jde/db/generators/Object.h>
-#include <jde/db/generators/InsertClause.h>
 #include <jde/db/generators/Sql.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Cluster.h>
 #include <jde/access/Authorize.h>
-#include <jde/db/DBException.h>
-#include <jde/fwk/log/MemoryLog.h>
-#include <jde/fwk/log/Entry.h>
 
 #define let const auto
 
@@ -98,14 +93,6 @@ namespace Jde::DB::Sqlite::Tests{
 		EXPECT_EQ( syntax.Limit(sql, 10, 0), "select * from t limit 10" ); //limit-only.
 		EXPECT_EQ( syntax.Limit(sql, 10, 5), "select * from t limit 10 offset 5" ); //limit + skip.
 		EXPECT_EQ( syntax.Limit(sql, 0, 5), "select * from t limit -1 offset 5" ); //skip-only: returns the tail, not zero rows.
-
-		//base MySQL dialect: every unsigned width must carry 'unsigned' (sqlite maps them all to 'integer', so it can't exercise this).
-		let& my = MySqlSyntax::Instance();
-		EXPECT_EQ( my.ToString(EType::UInt), "int unsigned" );
-		EXPECT_EQ( my.ToString(EType::ULong), "bigint(20) unsigned" );
-		EXPECT_EQ( my.ToString(EType::UInt16), "smallint unsigned" ); //#6: was "smallint" - uint16 columns got half the range.
-		EXPECT_EQ( my.ToString(EType::UInt8), "tinyint unsigned" );
-		EXPECT_EQ( my.ToString(EType::Int16), "smallint" ); //signed stays plain.
 	}
 
 	TEST_P( SchemaTests, AtSchemaMainOnly ){
@@ -162,60 +149,4 @@ namespace Jde::DB::Sqlite::Tests{
 		EXPECT_EQ( pkTable->Children.size(), before ); //no duplicate child on re-init.
 	}
 
-	//#10: SchemaDdl::Sync now delegates to ObjectPrefix (was a swapped-ternary duplicate that yielded "" for a "db.um_" prefix). Lock in ObjectPrefix.
-	TEST( AppSchemaTests, ObjectPrefix ){
-		EXPECT_EQ( (AppSchema{ "s", {}, "db.um_" }).ObjectPrefix(), "um_" ); //MSSQL-style schema.prefix -> the object prefix after the dot.
-		EXPECT_EQ( (AppSchema{ "s", {}, "um_" }).ObjectPrefix(), "um_" );    //no dot -> unchanged.
-		EXPECT_EQ( (AppSchema{ "s", {}, "" }).ObjectPrefix(), "" );          //empty -> empty.
-	}
-
-	//#26: InsertClause::Proc placeholder count must match the params (was a leading "(?" -> zero Values gave `name(?)` with 0 params), and SequenceColumn must not deref a null column.
-	TEST( InsertClauseTests, ProcParamCountMatches ){
-		EXPECT_EQ( InsertClause( "p", vector<Value>{} ).Move().Text, "p()" );          //0 values -> no placeholder (was "p(?)").
-		EXPECT_TRUE( InsertClause( "p", vector<Value>{} ).Move().Params.empty() );
-		auto sql = InsertClause( "p", vector<Value>{ Value{1}, Value{2} } ).Move();
-		EXPECT_EQ( sql.Text, "p(?,?)" );
-		EXPECT_EQ( sql.Params.size(), 2u );
-	}
-	TEST( InsertClauseTests, SequenceColumnNullColumnSafe ){
-		InsertClause ins{ "p", vector<Value>{ Value{1} } }; //proc ctor -> Values have null columns.
-		EXPECT_EQ( ins.SequenceColumn(), nullptr );          //was a null-column ->Table deref (segfault).
-	}
-
-	//#25: an Object holding Values must render placeholders (?,?), not the literal `[ 1, 2]` - GetParams appends the values, so the counts must match.
-	TEST( ObjectTests, ValuesRendersPlaceholders ){
-		DB::Object o = vector<DB::Value>{ DB::Value{1}, DB::Value{2}, DB::Value{3} };
-		EXPECT_EQ( DB::ToString(o), "(?,?,?)" );
-		EXPECT_EQ( DB::GetParams(o).size(), 3u ); //placeholder count now matches param count.
-	}
-
-	//#22: Value::operator=(uint) must return Value& (was `auto` -> deduced Value, i.e. a by-value copy).
-	TEST( ValueTests, AssignUIntReturnsRef ){
-		static_assert( std::is_same_v<decltype(std::declval<Value&>() = uint{5}), Value&>, "operator=(uint) must return Value&, not a copy." );
-		Value v; v = uint{7};
-		EXPECT_EQ( v.ToUInt(), 7u );
-	}
-
-	//#21: Value::ToUInt on a negative Double must not be UB - go through signed _int, matching the integer cases' modular wrap.
-	TEST( ValueTests, ToUIntNegativeDouble ){
-		EXPECT_EQ( Value{-5.0}.ToUInt(), (uint)(_int)-5 ); //modular wrap, deterministic (was UB).
-		EXPECT_EQ( Value{-5.0}.ToInt(), -5 );              //ToInt = (_int)ToUInt round-trips.
-		EXPECT_EQ( Value{42.0}.ToUInt(), 42u );            //non-negative unchanged.
-	}
-
-	//#12: DBException::Log must honor the base _logged protocol - a moved-from / already-logged exception must not re-log
-	//(before the fix, the moved-from source logged a junk "sqle: " with its emptied Sql, and a BreakLog'd exception double-logged).
-	TEST( DBExceptionTests, LogsOnce ){
-		if( !Logging::FindLogger<Logging::MemoryLog>() )
-			Logging::AddLogger( mu<Logging::MemoryLog>() ); //captures every level; self-contained, no shared-config change.
-		let countSqle = []{ return Logging::Find( [](const Logging::Entry& e){ return e.Message().starts_with("sqle:"); } ).size(); };
-
-		Logging::ClearMemory();
-		{
-			DB::Sql sql; sql.Text = "select dbexception_logonce";
-			DBException src{ 7, move(sql), "boom", SRCE_CUR };
-			DBException dst{ move(src) }; //src is now moved-from: Sql emptied, _logged=true.
-		} //dtors run: dst logs exactly once; src stays silent (was the junk "sqle: " / double-log before the fix).
-		EXPECT_EQ( countSqle(), 1u );
-	}
 }

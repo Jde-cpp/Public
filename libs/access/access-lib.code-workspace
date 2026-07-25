@@ -74,11 +74,11 @@
 			"name": "fwk"
 		},
 		{
-			"path": "../db/drivers/mysql",
+			"path": "../db/drivers/mysql/src",
 			"name": "MySql"
 		},
 		{
-			"path": "../db/drivers/mysql",
+			"path": "../db/drivers/mysql/src",
 			"name": "MySqlOld"
 		}
 	],

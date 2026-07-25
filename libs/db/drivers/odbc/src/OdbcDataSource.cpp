@@ -1,6 +1,6 @@
 ﻿#include "OdbcDataSource.h"
 #include <jde/db/DBException.h>
-#include "../../src/DBLog.h"
+#include "../../../src/DBLog.h"
 #include "MsSql/MsSqlSchemaProc.h"
 #include "OdbcQueryAwait.h"
 #include "OdbcRow.h"

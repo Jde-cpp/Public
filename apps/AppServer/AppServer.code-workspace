@@ -40,7 +40,7 @@
 			"name": "fwk"
 		},
 		{
-			"path": "../../libs/db/drivers/mysql",
+			"path": "../../libs/db/drivers/mysql/src",
 			"name": "MySql"
 		},
 		{

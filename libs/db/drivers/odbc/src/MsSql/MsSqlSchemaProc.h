@@ -1,9 +1,9 @@
 ﻿#pragma once
-#include "../../../src/meta/IServerMeta.h"
+#include "../../../../src/meta/IServerMeta.h"
 #include <jde/db/generators/Sql.h>
-//#include "../../../Framework/source/db/types/Schema.h"
-//#include "../../../Framework/source/db/types/Table.h"
-//#include "../../../Framework/source/db/SchemaProc.h"
+//#include "../../../../Framework/source/db/types/Schema.h"
+//#include "../../../../Framework/source/db/types/Table.h"
+//#include "../../../../Framework/source/db/SchemaProc.h"
 
 namespace Jde::DB{
 	struct IDataSource;

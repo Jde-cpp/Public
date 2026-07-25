@@ -2,10 +2,10 @@
 #include <jde/fwk/str.h>
 #include <jde/db/Row.h>
 #include <jde/db/meta/Table.h>
-#include "../../../src/meta/ddl/ForeignKey.h"
-#include "../../../src/meta/ddl/Index.h"
-#include "../../../src/meta/ddl/Procedure.h"
-#include "../../../src/meta/ddl/TableDdl.h"
+#include "../../../../src/meta/ddl/ForeignKey.h"
+#include "../../../../src/meta/ddl/Index.h"
+#include "../../../../src/meta/ddl/Procedure.h"
+#include "../../../../src/meta/ddl/TableDdl.h"
 #include "MsSqlStatements.h"
 #include "../OdbcDataSource.h"
 #define let const auto

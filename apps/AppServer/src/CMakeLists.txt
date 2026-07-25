@@ -13,10 +13,9 @@ list( REMOVE_ITEM sources ${main_cpp} )
 file( GLOB headers */*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
+add_dependencies( ${targetName} Jde.DB.MySql ) #built on every platform; odbc only exists on windows.
 if( WIN32 )
 	add_dependencies( ${targetName} Jde.DB.Odbc )
-else()
-	add_dependencies( ${targetName} Jde.DB.MySql )
 endif()
 sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer ) #config/args/sqlite + the 'Debug - sqlite' launch config load these
 
