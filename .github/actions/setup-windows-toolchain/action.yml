@@ -1,0 +1,98 @@
+name: Setup Windows toolchain
+description: >-
+  Provision the GitHub-hosted windows-2025 (VS2026) image for a clang/C++26
+  Jde build: install LLVM 22 (the image ships 20.1.8, too old), fix the fixed
+  build/dep paths + PATH, and emit the deterministic third-party deps cache key.
+  Shared by win2025-deps.yml and win2025-build.yml so the toolchain and — most
+  importantly — the cache key can never drift between the two workflows. This
+  action does NOT build the third-party deps; the deps workflow does that.
+
+outputs:
+  deps-cache-key:
+    description: Exact-match cache key for the third-party (-repos Release) install tree.
+    value: ${{ steps.meta.outputs.deps-cache-key }}
+  boost-version:
+    description: Boost version to download (dotted, e.g. 1.91.0).
+    value: ${{ steps.meta.outputs.boost }}
+  boost-underscore:
+    description: Boost version with underscores (e.g. 1_91_0), for the archive name.
+    value: ${{ steps.meta.outputs.boost-underscore }}
+
+runs:
+  using: composite
+  steps:
+    # Fixed roots on the OS drive — short paths keep deep object files clear of
+    # the 260-char limit. REPO_DIR mirrors the self-hosted layout so the presets
+    # resolve installRoot=$REPO_DIR/install/$CXX exactly as they do locally.
+    - name: Set environment
+      shell: pwsh
+      run: |
+        @(
+          "REPO_DIR=C:/jde/libs"
+          "JDE_BUILD_DIR=C:/jde/build"
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT"
+          "CXX=clang++"
+        ) | Add-Content -Path $env:GITHUB_ENV -Encoding utf8
+        # Deep object paths under the CI build root can approach MAX_PATH; enable
+        # long paths for both git (clones/checkout) and the Win32 API (compiler
+        # output). Idempotent; the hosted runner account is elevated.
+        git config --system core.longpaths true
+        New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled' -Value 1 -PropertyType DWORD -Force | Out-Null
+
+    # Single source of truth for the pinned tool versions AND the deps cache key.
+    # build/CMakeLists.txt holds every dependency GIT_TAG, so bumping any dep (or
+    # a preset / vcpkg manifest) changes the hash -> a fresh, non-colliding cache.
+    - name: Compute versions and deps cache key
+      id: meta
+      shell: pwsh
+      run: |
+        $llvm  = "22.1.8"
+        $boost = "1.91.0"
+        $boostU = $boost -replace '\.','_'
+        $hash = "${{ hashFiles('CMakePresets*.json', 'build/CMakeLists.txt', 'build/functions.cmake', 'vcpkg.json') }}"
+        $key = "windows-deps-release-llvm$llvm-boost$boost-$hash"
+        @(
+          "llvm=$llvm"
+          "boost=$boost"
+          "boost-underscore=$boostU"
+          "deps-cache-key=$key"
+        ) | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
+        Write-Host "deps cache key: $key"
+
+    # LLVM 22 is cached as a plain tool (keyed only on version) — this is the
+    # compiler, not the third-party deps, so restoring it in the build workflow
+    # does not weaken the strict "deps must come from the deps workflow" rule.
+    - name: Cache LLVM ${{ steps.meta.outputs.llvm }}
+      id: llvm-cache
+      uses: actions/cache@v4
+      with:
+        path: C:/llvm22
+        key: llvm-${{ steps.meta.outputs.llvm }}-x86_64-pc-windows-msvc
+
+    - name: Install LLVM ${{ steps.meta.outputs.llvm }}
+      if: steps.llvm-cache.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        $ver = "${{ steps.meta.outputs.llvm }}"
+        $url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-$ver/clang+llvm-$ver-x86_64-pc-windows-msvc.tar.xz"
+        $xz  = "$env:RUNNER_TEMP/llvm.tar.xz"
+        Write-Host "Downloading $url"
+        Invoke-WebRequest -Uri $url -OutFile $xz
+        New-Item -ItemType Directory -Force -Path C:/llvm22 | Out-Null
+        # bsdtar on the image decompresses .xz in one pass; strip the top
+        # clang+llvm-<ver>-... dir so bin/ lands directly at C:/llvm22/bin.
+        tar -xf $xz -C C:/llvm22 --strip-components=1
+        if ($LASTEXITCODE -ne 0) { throw "LLVM extract failed" }
+
+    # PATH runs on both hit and miss so clang++/ld.lld are always resolvable.
+    - name: Add LLVM to PATH
+      shell: pwsh
+      run: |
+        "C:/llvm22/bin" | Add-Content -Path $env:GITHUB_PATH -Encoding utf8
+
+    - name: Report toolchain
+      shell: pwsh
+      run: |
+        clang++ --version
+        cmake --version
+        ninja --version
