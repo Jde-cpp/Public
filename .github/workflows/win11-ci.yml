@@ -23,6 +23,10 @@ concurrency:
 
 jobs:
   build-and-test:
+    # This becomes the check-run name on the commit the run was dispatched against,
+    # which is what the README badge filters on (shields.io …?nameFilter=Win11).
+    # Keep it unique across workflows and in sync with the badge URL.
+    name: Win11
     runs-on: [self-hosted, win11-clang]
     defaults:
       run:
