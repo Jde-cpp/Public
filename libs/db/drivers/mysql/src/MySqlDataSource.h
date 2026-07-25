@@ -4,6 +4,7 @@
 #include <jde/db/Value.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Syntax.h>
+#include "MySqlSyntax.h"
 
 extern "C" ΓMY Jde::DB::IDataSource* GetDataSource();
 

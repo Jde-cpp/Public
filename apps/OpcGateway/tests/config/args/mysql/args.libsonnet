@@ -15,7 +15,7 @@ common + {
 	},
 	dbServers: {
 		localhost:{
-			driver: args.repoBuildDir + "/libs/db/drivers/mysql/libJde.DB.MySql.so",
+			driver: args.repoBuildDir + "/libs/db/drivers/mysql/lib/libJde.DB.MySql.so",
 			connectionString: null,
 			username: "$(JDE_MYSQL_USER)",
 			password: "$(JDE_MYSQL_PWD)",

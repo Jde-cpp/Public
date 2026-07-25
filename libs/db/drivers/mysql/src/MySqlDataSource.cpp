@@ -6,7 +6,7 @@
 #include "MySqlQueryAwait.h" //!important
 #include "MySqlRow.h" //!important
 #include "MySqlServerMeta.h"
-#include "../../src/DBLog.h" //!important
+#include "../../../src/DBLog.h" //!important
 
 
 #if !defined(NDEBUG) && !defined(_GLIBCXX_DEBUG) && !defined(__clang__)
@@ -184,7 +184,7 @@ namespace Jde::DB::MySql{
 	}
 
 	α MySqlDataSource::InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint{
-		insert.Add( {}, 0ul );
+		insert.Add( {}, 0ull ); //0ul is 32-bit under LLP64, so it matches both the unsigned int and unsigned long long alternatives of Value::Underlying - name the 64-bit one the OUT param wants.
 		uint y{};
 		RowΛ f = [&y]( Row&& r ){ y = r.GetUInt(0); };
 		Execute( insert.Move(), sl, {.Function=&f, .OutValue=EValue::UInt64} );

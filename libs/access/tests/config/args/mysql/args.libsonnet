@@ -7,7 +7,7 @@
 	logsDir: std.extVar("logsDir"),
 	dbServers: {
 		localhost:{
-			driver: repoBuildDir+"/libs/db/drivers/mysql/libJde.DB.MySql.so",
+			driver: repoBuildDir+"/libs/db/drivers/mysql/lib/libJde.DB.MySql.so",
 			connectionString: null,
 			username: "$(JDE_MYSQL_USER)",
 			password: "$(JDE_MYSQL_PWD)",

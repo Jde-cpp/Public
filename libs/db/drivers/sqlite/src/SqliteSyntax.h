@@ -3,7 +3,8 @@
 
 namespace Jde::DB::Sqlite{
 	//Driver-local dialect - resolved dynamically through IDataSource::Syntax(), so nothing in Jde.DB needs to know about it.
-	//Could move next to MySqlSyntax in include/jde/db/generators/Syntax.h if DDL/generators ever need it statically.
+	//Would have to move into include/jde/db/generators/Syntax.h (next to the base dialect) if DDL/generators ever
+	//needed it statically; the mysql driver keeps its MySqlSyntax the same way.
 	struct SqliteSyntax final : Syntax{
 		Ω Instance()->const SqliteSyntax&{ static const SqliteSyntax _instance; return _instance; }
 		α AltDelimiter()Ι->sv override{ return {}; }

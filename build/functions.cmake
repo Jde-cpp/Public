@@ -25,6 +25,13 @@ function(boost)
 			add_library( Boost::json ALIAS boost_json )
 			target_include_directories( boost_json SYSTEM PUBLIC ${_boostSrc} )
 		endif()
+		#charconv is a compiled library too (the mysql driver's Boost.MySQL needs it).  There is no BoostConfig.cmake in
+		#this source tree, so find_package( Boost COMPONENTS charconv ) cannot work here - build it like json above.
+		if( NOT TARGET boost_charconv )
+			add_library( boost_charconv STATIC ${_boostSrc}/libs/charconv/src/from_chars.cpp ${_boostSrc}/libs/charconv/src/to_chars.cpp )
+			add_library( Boost::charconv ALIAS boost_charconv )
+			target_include_directories( boost_charconv SYSTEM PUBLIC ${_boostSrc} )
+		endif()
 	else()
 		cmake_policy(SET CMP0167 NEW)
 		find_package( Boost REQUIRED COMPONENTS json )

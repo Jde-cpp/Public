@@ -12,9 +12,7 @@ namespace Jde{
 namespace Jde::DB{
 	constexpr ELogTags _tags{ ELogTags::Sql };
 	static Syntax _sqlInstance;
-	static MySqlSyntax _mySqlInstance;
 	α Syntax::Instance()->const Syntax&{ return _sqlInstance; }
-	α MySqlSyntax::Instance()->const MySqlSyntax&{ return _mySqlInstance; }
 
 	α Syntax::FormatOperator( const Column& col, EOperator op, uint size, SL )Ε->string{
 		if( op!=EOperator::In && op!=EOperator::NotIn )
@@ -42,31 +40,11 @@ namespace Jde::DB{
 		return Ƒ("alter table {} add default {} for {}", tableName, v, columnName);
 	}
 
-	α MySqlSyntax::AddDefault( sv tableName, sv columnName, Value dflt )Ι->string{
-		string v;
-		if( dflt.is_bool() )
-			v = dflt.get_bool() ? "true" : "false";
-		else if( dflt.is_string() )
-			v = dflt.get_string();
-		else
-			CRITICALT( ELogTags::Sql, "Default for index={} not implemented.", dflt.TypeName() );
-
-		return Ƒ( "ALTER TABLE {} ALTER COLUMN {} SET DEFAULT {}", tableName, columnName, v );
-	}
-
 	α Syntax::EscapeDdl( sv sql )Ι->string{
 		let parts = Str::Split( sql, '.' );
 		string y;
 		for( let part : parts )
 			y += '['+string{part}+"].";
-		y.pop_back();
-		return y;
-	}
-	α MySqlSyntax::EscapeDdl( sv sql )Ι->string{
-		let parts = Str::Split( sql, '.' );
-		string y;
-		for( let part : parts )
-			y += '`'+string{part}+"`.";
 		y.pop_back();
 		return y;
 	}
@@ -81,12 +59,6 @@ namespace Jde::DB{
 		if( limit )
 			sql += " fetch next "+std::to_string(limit)+" rows only";
 		return sql;
-	}
-	α MySqlSyntax::Limit( str sql, uint limit, uint skip )Ι->string{
-		ASSERT( limit || skip );
-		return skip
-			? Ƒ("{} limit {} offset {}", sql, limit ? std::to_string(limit) : "18446744073709551615", skip)
-			: Ƒ("{} limit {}", sql, limit); //MySQL: OFFSET requires a LIMIT; 2^64-1 = "all rows" when limit is unset (skip-only).
 	}
 	α joinType( bool inner )ι->string{
 		return inner ? "" : "left ";
@@ -103,13 +75,6 @@ namespace Jde::DB{
 			join.ToAlias.empty() ? c1.Table->DBName : join.ToAlias,
 			c1.Name );
 	}
-	α MySqlSyntax::UsingClause( const Join& join )Ι->string{
-		let& c1 = *join.To;
-		return join.From->Name==c1.Name && join.ToAlias.empty() && join.FromAlias.empty()
-			? Ƒ( "\n\t{}join {} using({})", joinType(join.Inner), c1.Table->DBName, c1.Name )
-			: Syntax::UsingClause( join );
-	}
-
 	α Syntax::ToString( EType type )Ι->string{
 		using enum EType;
 		string typeName;

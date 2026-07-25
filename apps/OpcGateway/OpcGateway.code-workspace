@@ -105,7 +105,7 @@
 			"name": "db"
 		},
 		{
-			"path": "../../libs/db/drivers/mysql",
+			"path": "../../libs/db/drivers/mysql/src",
 			"name": "mysql"
 		},
 		{

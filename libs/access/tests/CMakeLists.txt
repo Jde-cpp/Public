@@ -13,10 +13,9 @@ project( ${targetName} VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ${jdeRoot}/build/dependencies.cmake )
 
 add_executable( ${targetName} )
-if( WIN32)
+add_dependencies( ${targetName} Jde.DB.MySql ) #built on every platform; odbc only exists on windows.
+if( WIN32 )
 	add_dependencies( ${targetName} Jde.DB.Odbc )
-else()
-	add_dependencies( ${targetName} Jde.DB.MySql )
 endif()
 sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer ) #the ctest run below dlopens these via config/args/sqlite
 

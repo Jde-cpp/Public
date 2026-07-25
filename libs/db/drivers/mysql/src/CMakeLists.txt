@@ -1,15 +1,18 @@
 cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
-include( ${CMAKE_CURRENT_LIST_DIR}/../../../../build/functions.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../../../../../build/functions.cmake )
 project( Jde.DB.MySql VERSION ${JDE_VERSION} LANGUAGES CXX )
 message( ${PROJECT_NAME} )
 include( ${jdeRoot}/build/dependencies.cmake )
 
-find_package( Boost REQUIRED COMPONENTS charconv )
+if( NOT WIN32 ) #windows gets Boost::charconv from boost() in functions.cmake - the source tree there ships no BoostConfig.cmake.
+	find_package( Boost REQUIRED COMPONENTS charconv )
+endif()
 find_package( Threads REQUIRED )
 
 set( targetName Jde.DB.MySql )
 add_library( ${targetName} MODULE )
 compileOptions( ${targetName} )
+target_compile_definitions( ${targetName} PRIVATE JDE_MYSQL_EXPORTS ) #exports.h guards on this, not CMake's auto Jde_DB_MySql_EXPORTS - without it ΓMY is dllimport on windows and GetDataSource never leaves the MODULE.
 
 set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
 file( GLOB sources *.cpp )

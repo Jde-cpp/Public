@@ -4,11 +4,11 @@
 #include <jde/db/Row.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/generators/Syntax.h>
-#include "../../src/meta/ddl/ColumnDdl.h"
-#include "../../src/meta/ddl/ForeignKey.h"
-#include "../../src/meta/ddl/Index.h"
-#include "../../src/meta/ddl/Procedure.h"
-#include "../../src/meta/ddl/TableDdl.h"
+#include "../../../src/meta/ddl/ColumnDdl.h"
+#include "../../../src/meta/ddl/ForeignKey.h"
+#include "../../../src/meta/ddl/Index.h"
+#include "../../../src/meta/ddl/Procedure.h"
+#include "../../../src/meta/ddl/TableDdl.h"
 
 #define let const auto
 

@@ -21,10 +21,13 @@ function projectName() (
 		elif [[ $absoluteFile == *"OpcServer"* ]]; then project="Jde.DB.Sqlite.OpcServer";
 		fi;
 	elif [[ $absoluteFile == *"access/src"* ]]; then project="Jde.Access";
-	elif [[ $absoluteFile == *"db/drivers/sqlite/tests"* ]]; then project="Jde.DB.Sqlite.Tests";
+	elif [[ $absoluteFile == *"db/drivers/sqlite/tests"* ]]; then project="Jde.DB.Sqlite.Tests"; #each tests arm precedes its driver arm - the driver pattern also matches files under it.
 	elif [[ $absoluteFile == *"db/drivers/sqlite"* ]]; then project="Jde.DB.Sqlite";
+	elif [[ $absoluteFile == *"db/drivers/mysql/tests"* ]]; then project="Jde.DB.MySql.Tests";
 	elif [[ $absoluteFile == *"db/drivers/mysql"* ]]; then project="Jde.DB.MySql";
+	elif [[ $absoluteFile == *"db/drivers/odbc/tests"* ]]; then project="Jde.DB.Odbc.Tests";
 	elif [[ $absoluteFile == *"db/drivers/odbc"* ]]; then project="Jde.DB.Odbc";
+	elif [[ $absoluteFile == *"db/tests"* ]]; then project="Jde.DB.Tests";
 	elif [[ $absoluteFile == *"db/src"* ]]; then project="Jde.DB";
 	elif [[ $absoluteFile == *"libs/ql"* ]]; then project="Jde.QL";
 	elif [[ $absoluteFile == *"web/client"* ]]; then project="Jde.Web.Client";
