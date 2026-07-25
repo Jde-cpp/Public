@@ -89,6 +89,20 @@ namespace Jde::Opc::Gateway::Soak{
 		_latenciesMs.reserve( 1'000 );
 	}
 
+	α GrantWriteRights( const sp<App::Client::IAppClient>& client )ι->void{
+		try{
+			let schema = argString( "-opcSchema", "/soak/opcSchema", _debug ? "opc.debug" : "opc.release" );
+			constexpr uint allAccess{ 0x7F };//the UA access-level byte: read|write|historyRead|historyWrite|semanticChange|statusWrite|timestampWrite.
+			client->QuerySync<jvalue>(
+				"createAcl( identity:{id:$userId}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName:$schemaName, target:\"nodeIds\"}} )",
+				{{"userId", client->UserPK().Value}, {"allowed", allAccess}, {"schemaName", schema}} );
+			INFO( "Granted OPC node access for user {} on '{}'.", client->UserPK().Value, schema );
+		}
+		catch( const std::exception& e ){
+			INFO( "createAcl failed (already granted on a previous run?): {}", e.what() );
+		}
+	}
+
 	α SoakRunner::Connect()ε->void{
 		optional<ssl::context> ctx;
 		_socket = ms<GatewayClientSocket>( Executor(), ctx );

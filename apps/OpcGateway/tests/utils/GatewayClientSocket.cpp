@@ -43,6 +43,14 @@ namespace Tests{
 			q->promise().SetExp( Exception{e.what(), e.code()} );
 			q->resume();
 		}
+		else if( auto sub = std::any_cast<await<FromServer::SubscriptionAck>::Handle>(&h) ){
+			sub->promise().SetExp( Exception{e.what(), e.code()} );
+			sub->resume();
+		}
+		else if( auto unsub = std::any_cast<await<FromServer::UnsubscribeAck>::Handle>(&h) ){
+			unsub->promise().SetExp( Exception{e.what(), e.code()} );
+			unsub->resume();
+		}
 		else
 			WARNT( ELogTags::SocketClientRead, "Failed to process incomming exception '{}'.", e.what() );
 	}
@@ -109,7 +117,7 @@ namespace Tests{
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]'{}', variables: {}.", requestId, query, serialize(variables) );
 		return await<jvalue>{ FromClientUtils::Query(move(query), move(variables), returnRaw, requestId), requestId, shared_from_this(), sl };
 	}
-	α GatewayClientSocket::QuerySync( string&& query, jobject variables )ι->jvalue{
+	α GatewayClientSocket::QuerySync( string&& query, jobject variables )ε->jvalue{
 		return BlockAwait<await<jvalue>,jvalue>( Query(move(query), move(variables), true) );
 	}
 	α GatewayClientSocket::Subscribe( ServerCnnctnNK target, const vector<NodeId>& nodes, sp<IListener> listener, SL sl )ε->await<FromServer::SubscriptionAck>{

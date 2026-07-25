@@ -10,7 +10,6 @@ namespace Jde::Web::Client{
 
 
 	ClientSocketStream::ClientSocketStream( net::io_context& ioc, optional<ssl::context>& ctx )ι:
-		_ioc{ ioc },
 		_ws{ ctx
 			? Stream{ websocket::stream<beast::ssl_stream<BaseStream>>{net::make_strand(ioc), *ctx} }
 			: Stream{ websocket::stream<BaseStream>{net::make_strand(ioc)} }}
@@ -66,10 +65,17 @@ namespace Jde::Web::Client{
 	}
 
 	α ClientSocketStream::AsyncWrite( string buffer, sp<IClientSocketSession> /*session*/ )ι->LockAwait::Task{
-		_writeGuard = co_await _writeLock.Lock();
-		_writeBuffer = move(buffer);
+		auto guard = co_await _writeLock.Lock();
+		if( _closing.test() )
+			co_return;//close initiated: beast forbids overlapping write-type ops, so drop the frame. guard releases here.
+		_writeGuard = move( guard );
+		_writeBuffer = move( buffer );
 		std::visit( [this](auto&& ws)->void {
-			net::post( _ioc, [self=shared_from_this(), &ws](){//self keeps the stream (and the variant ws refers into) alive until the post runs; raw 'this' could dangle if OnClose releases the stream first.
+			//initiate on the stream's strand, not the raw ioc: beast streams are not thread-safe, and an off-strand
+			//initiation racing a read completion intermittently loses the write with no completion - OnWrite then never
+			//releases _writeLock and every later frame on the session queues forever (soak finding #3).
+			//self keeps the stream (and the variant ws refers into) alive until the post runs.
+			net::post( ws.get_executor(), [self=shared_from_this(), &ws](){
 				ws.async_write( net::buffer(self->_writeBuffer), beast::bind_front_handler(&ClientSocketStream::OnWrite, self) );
 			});
 		}, _ws );
@@ -83,10 +89,16 @@ namespace Jde::Web::Client{
 			CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientWrite };//TODO look at returning an error to caller.
 	}
 
-	α ClientSocketStream::Close( sp<IClientSocketSession> session, bool terminate, SL )ι->void{
+	α ClientSocketStream::Close( sp<IClientSocketSession> session, bool terminate, SL )ι->LockAwait::Task{
+		if( _closing.test_and_set() )
+			co_return;//already closing - a second async_close would overlap the first (write-type op).
 		DBGT( _connectTag, "[{}]Client::Close: {}", hex(session->Id()), session->Host() );
-		std::visit( [session, terminate](auto&& ws)->void {
-			ws.async_close( terminate ? websocket::close_code::going_away : websocket::close_code::normal, beast::bind_front_handler(&IClientSocketSession::OnClose, session) );
+		auto guard = co_await _writeLock.Lock();//wait out any in-flight write - async_close is a write-type op and must not overlap it.
+		std::visit( [this, session, terminate](auto&& ws)->void {
+			net::post( ws.get_executor(), [self=shared_from_this(), session, terminate, &ws](){//strand, as in AsyncWrite.
+				ws.async_close( terminate ? websocket::close_code::going_away : websocket::close_code::normal, beast::bind_front_handler(&IClientSocketSession::OnClose, session) );
+			});
 		}, _ws );
+		guard.unlock();//_closing keeps later writers from initiating; release so queued writers wake and drop out.
 	}
 }

@@ -256,9 +256,6 @@ launch appserver "$appServerExe" "$scriptDir/config/App.Server.Soak.jsonnet" "..
 	-arg "path=$(np "$runDir/db/app.db")"
 waitPort appserver 1967
 
-# Note: no rights seeding. With no 'nodeIds' resource row, the OPC server's node authorization is unconfigured
-# (all nodes open - same posture as the ctest suites). Creating an acl live would flip enforcement on without the
-# user's rights ever reaching the split-process OpcServer, locking the soak user out of writes (see soak findings).
 launch opcserver "$opcServerExe" "$scriptDir/config/Opc.Server.Soak.jsonnet" "../../../OpcServer/config/args/sqlite" \
 	-arg "path=$(np "$runDir/db/opc.db")"
 waitPort opcserver 4840
@@ -266,6 +263,22 @@ waitPort opcserver 4840
 launch gateway "$gatewayExe" "$scriptDir/config/Opc.Gateway.Soak.jsonnet" "../../config/args/sqlite" \
 	-arg "path=$(np "$runDir/db/gateway.db")"
 waitHttp gateway "http://localhost:1968/ErrorCodes"
+
+# Rights seeding, in two steps because live acl events never update a split-process OpcServer's in-memory rights
+# (soak finding): grant AFTER OpcServer's first boot registered the nodeIds resource, then RESTART OpcServer so its
+# startup load picks the acl up. First boot may or may not have enabled enforcement (its own registration races
+# AssignRights); after the restart, enforcement is deterministically on and the soak user is authorized.
+"$soakExe" -c -tests "-settings=$(np "$scriptDir/config/Opc.Soak.jsonnet")" "-include=." -grant >"$runDir/client/grant.log" 2>&1 \
+	|| failEarly "rights grant failed - see $runDir/client/grant.log"
+echo "soak user granted OPC node access - restarting opcserver to load it"
+stopGraceful "${pids[opcserver]}"
+for i in $(seq 1 30); do alive "${pids[opcserver]}" || break; sleep 1; done
+alive "${pids[opcserver]}" && { hardKill "${pids[opcserver]}"; sleep 1; }
+wait "${pids[opcserver]}" 2>/dev/null
+mv "$runDir/opcserver/console.log" "$runDir/opcserver/console.boot1.log" 2>/dev/null
+launch opcserver "$opcServerExe" "$scriptDir/config/Opc.Server.Soak.jsonnet" "../../../OpcServer/config/args/sqlite" \
+	-arg "path=$(np "$runDir/db/opc.db")"
+waitPort opcserver 4840
 
 clientArgs=( "-duration=$duration" "-csv=$(np "$runDir/client/soak.csv")" "-summary=$(np "$runDir/client/summary.json")" )
 if [[ $smoke -eq 1 ]]; then
