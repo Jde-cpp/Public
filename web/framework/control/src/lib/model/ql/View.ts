@@ -242,7 +242,7 @@ export class View{
 			const d = new Date( v );
 			return isNaN( d.getTime() ) ? v : d;//"<not null>" etc. stay strings
 		}
-		return typeof v=="object" && "days" in v ? Days.fromJson( <{days:number}>v ) : v;
+		return typeof v=="object" && "days" in (v as object) ? Days.fromJson( <{days:number}>v ) : v;
 	}
 	private parseQuery( query:string, vars:any, schema:TableSchema ){
 		const addField = ( fieldName:string, hidden=true )=>{

@@ -73,6 +73,31 @@ function mklink {
 	fi;
 }
 
+#Directory counterpart of mklink.  It cannot share mklink's body: cmd mklink needs /D for a directory, and the
+#existence tests differ.  /D is a real symlink, matching the file mklink above and the workspace's preserveSymlinks;
+#swap to /J (junction) if creating links without Developer Mode/elevation turns out to matter.
+#Only an existing *symlink* is replaced - a real directory is left for the caller, so this never deletes a source
+#tree through a link.
+function mklinkDir {
+	local dir=$1;
+	local fetchLocation=$2;
+	if [ -L $dir ]; then rm $dir; fi;
+	if windows; then
+		#test the bash-side path - the converted one is only good as an argument to cmd, not to test.
+		if [ ! -d "$fetchLocation/$dir" ]; then echo $PS4 $fetchLocation/$dir not found; exit 1; fi;
+		toWinDir "$fetchLocation" _source;
+		toWinDir "`pwd`" _destination;
+		cmd <<< "mklink /D \"$_destination\\$dir\" \"$_source\\$dir\" " > /dev/null;  #"
+		if [ $? -ne 0 ]; then
+			echo `pwd`;
+			echo mklink /D "$_destination\\$dir" "$_source\\$dir";
+			exit 1;
+		fi;
+	else
+		ln -s $fetchLocation/$dir .;
+	fi;
+}
+
 function moveToDir {
 	local dir=$1;
 	mkdir -p $dir; cd $dir;

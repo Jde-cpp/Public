@@ -1,6 +1,5 @@
 import { provideHttpClient } from "@angular/common/http";
 import { ApplicationConfig } from '@angular/core';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
 import { ProfileStore } from 'jde-spa';
 import { AppService, AuthStore, DefaultErrorService } from 'jde-framework'
@@ -10,7 +9,7 @@ import { routes } from './app_routing_module';
 import { AuthGuard, AccessService } from "jde-access";
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideAnimationsAsync(),
+  providers: [
 		provideHttpClient(),
 		provideRouter(routes),
 		{provide: "AccessService", useClass: AccessService},
