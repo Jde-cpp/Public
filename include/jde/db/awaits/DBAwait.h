@@ -58,7 +58,7 @@ namespace Jde::DB{
 		α await_resume()ι->T override{
 			if( TSelect<T>::_exception )
 				TSelect<T>::_exception->Throw();
-			return TSelect<T>::_result;
+			return move( TSelect<T>::_result );//await_resume is terminal; move the member out (CacheAwait's miss path then moves it into the cache, one copy total).
 		}
 	};
 

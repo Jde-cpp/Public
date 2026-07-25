@@ -73,8 +73,12 @@ namespace Jde::DB{
 		if( QLView )
 			QLView = schema->GetViewPtr( QLView->Name );
 
-		if( Map )
-			Map->Parent->PKTable->Children.emplace_back( self );
+		if( Map ){
+			let& pkTable = Map->Parent->PKTable;
+			THROW_IF( !pkTable, "[{}]Map parent column '{}' has no pkTable.", Name, Map->Parent->Name );
+			if( find(pkTable->Children, self)==pkTable->Children.end() ) //idempotent: SyncTables re-initializes tables (ctor Initialize + SyncTables), so don't duplicate Children.
+				pkTable->Children.emplace_back( self );
+		}
 
 		//if mssql & schema is not default & ds schema!=config schema.
 		let& dbSchema = *Schema->DBSchema;

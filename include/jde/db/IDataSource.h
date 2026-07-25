@@ -46,7 +46,6 @@ namespace Jde::DB{
 
 		ẗ SelectMap( Sql&& sql, string cacheName, SRCE )ι->CacheAwait<flat_map<K,V>>;
 		ẗ SelectMap( Sql&& sql, SRCE )ι->MapAwait<K,V>{ return MapAwait<K,V>{shared_from_this(), move(sql), sl}; }
-		ẗ SelectMultiMap( Sql&& sql, SRCE )ι->up<TAwait<flat_multimap<K,V>>>;
 		Ŧ SelectSet( Sql&& sql, SRCE )ι->TSelectAwait<flat_set<T>>{ return SelectSet<T>( move(sql.Text), move(sql.Params), sl ); }
 		Ŧ SelectSet( Sql&& sql, string cacheName, SRCE )ι->CacheAwait<flat_set<T>>;
 
@@ -88,11 +87,6 @@ namespace Jde::DB{
 
 	ẗ IDataSource::SelectMap( Sql&& sql, string cacheName, SL sl )ι->CacheAwait<flat_map<K,V>>{
 		return CacheAwait<flat_map<K,V>>( shared_from_this(), move(sql), zInternal::ProcessMapRow<K,V>, move(cacheName), sl );
-	}
-
-	ẗ IDataSource::SelectMultiMap( Sql&& s, SL sl )ι->up<TAwait<flat_multimap<K,V>>>{
-		MultimapAwait<K,V> m{ shared_from_this(), move(s), sl };
-		return mu<MultimapAwait<K,V>>( move(m) );
 	}
 }
 #undef let

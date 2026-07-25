@@ -20,12 +20,13 @@ namespace Jde::DB{
 		if( op!=EOperator::In && op!=EOperator::NotIn )
 			return Ƒ( "{}{}?", col.FQName(), OperatorStrings[(uint)op] );
 
+		if( size==0 ) //`col in ()` is invalid SQL; an empty IN matches nothing, an empty NOT IN matches everything.
+			return op==EOperator::NotIn ? "1=1" : "1=0";
+
 		string params;
 		for( uint i=0; i<size; ++i )
 			params += "?,";
-		ASSERT( params.size() );
-		if( params.size() )
-			params.pop_back();
+		params.pop_back();
 		return Ƒ( "{} {}({})", col.FQName(), op==EOperator::NotIn ? "not in" : "in", params );
 	}
 
@@ -75,12 +76,17 @@ namespace Jde::DB{
 	}
 
 	α Syntax::Limit( str input, uint limit, uint skip )Ε->string{
-		string sql = input;
-		if( skip )
-			sql += " offset "+std::to_string(skip)+" rows";
+		ASSERT( limit || skip );
+		string sql = input+" offset "+std::to_string(skip)+" rows"; //T-SQL: OFFSET is mandatory before FETCH (emit it even for skip==0); both require an ORDER BY on the statement.
 		if( limit )
 			sql += " fetch next "+std::to_string(limit)+" rows only";
 		return sql;
+	}
+	α MySqlSyntax::Limit( str sql, uint limit, uint skip )Ι->string{
+		ASSERT( limit || skip );
+		return skip
+			? Ƒ("{} limit {} offset {}", sql, limit ? std::to_string(limit) : "18446744073709551615", skip)
+			: Ƒ("{} limit {}", sql, limit); //MySQL: OFFSET requires a LIMIT; 2^64-1 = "all rows" when limit is unset (skip-only).
 	}
 	α joinType( bool inner )ι->string{
 		return inner ? "" : "left ";
@@ -117,7 +123,7 @@ namespace Jde::DB{
 		else if( type == SmallFloat )typeName = "real";
 		else if( type == VarWChar ) typeName = "nvarchar";
 		else if( type == WChar ) typeName = "nchar";
-		else if( HasUnsigned() && type == UInt16 ) typeName="smallint";
+		else if( HasUnsigned() && type == UInt16 ) typeName="smallint unsigned";
 		else if( type == Int16 || type == UInt16 ) typeName="smallint";
 		else if( HasUnsigned() && type == UInt8 ) typeName =  "tinyint unsigned";
 		else if( type == Int8 || type == UInt8 ) typeName = "tinyint";

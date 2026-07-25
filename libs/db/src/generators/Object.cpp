@@ -50,10 +50,10 @@ namespace Jde {
 			case Count: return get<DB::Count>(o).ToString();
 			case Values:{
 				const auto& values = get<vector<DB::Value>>(o);
-				string s( "[" ); s.reserve( values.size() * 10 );
-				for( const auto& v : values )
-					s += ' '+v.ToString()+',';
-				s.back() = ']';
+				string s( "(" ); s.reserve( values.size()*2 + 1 );
+				for( size_t i=0; i<values.size(); ++i )
+					s += i ? ",?" : "?";
+				s += ')';
 				return s;
 			}
 		}

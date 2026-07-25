@@ -28,7 +28,15 @@ namespace Jde::DB::Odbc{
 	HandleSession::HandleSession( sv connectionString )ε{
 		let hEnv = getEnvHandle();
 		CALL(hEnv, SQL_HANDLE_ENV, ::SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &_hStatement), "SQLAllocHandle");
-		Connect( connectionString );
+		try{
+			Connect( connectionString );
+		}
+		catch( ... ){ //ctor throw => ~HandleSession never runs => free the DBC handle here, else one leaks per failed connect.
+			::SQLDisconnect( _hStatement );
+			::SQLFreeHandle( SQL_HANDLE_DBC, _hStatement );
+			_hStatement = nullptr;
+			throw;
+		}
 	}
 
 	HandleSession::~HandleSession() {
@@ -54,7 +62,7 @@ namespace Jde::DB::Odbc{
 	}
 	HandleStatement::~HandleStatement(){
 		if( _hStatement )	{
-			if( let rc=SQLFreeHandle( SQL_HANDLE_STMT, _hStatement )!=SQL_SUCCESS )
+			if( let rc=SQLFreeHandle( SQL_HANDLE_STMT, _hStatement ); rc!=SQL_SUCCESS )//was rc=(...!=SQL_SUCCESS): != bound first, so rc was a bool and the log printed 1.
 				WARNT( ELogTags::App, "SQLFreeHandle( SQL_HANDLE_STMT, {} ) returned {}", _hStatement, rc );
 		}
 	}

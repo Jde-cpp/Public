@@ -23,7 +23,12 @@ namespace Jde::DB::Sqlite{
 		α IdentitySelect()Ι->sv override{ return "last_insert_rowid()"; }
 		α IndexName( sv tableName, sv indexName )Ι->string override{ return Ƒ("{}_{}", tableName, indexName); } //index names are schema-wide - qualify with the table (e.g. access_providers_nk).
 		α CreatePrimaryKey( str /*tableName*/, str columns )Ι->string override{ return Ƒ("PRIMARY KEY( {} )", columns); } //columns: comma-separated for composite keys. Single-column integer pk stays a rowid alias.
-		α Limit( str sql, uint limit, uint skip )Ι->string override{ return Ƒ("{} limit {} offset {}", sql, limit, skip); }
+		α Limit( str sql, uint limit, uint skip )Ι->string override{
+			ASSERT( limit || skip );
+			return skip
+				? Ƒ("{} limit {} offset {}", sql, limit ? std::to_string(limit) : "-1", skip)
+				: Ƒ("{} limit {}", sql, limit); //sqlite: negative limit = no upper bound; OFFSET requires a LIMIT (skip-only).
+		}
 		α NeedsIdentityInsert()Ι->bool override{ return false; }
 		α NowDefault()Ι->sv override{ return "(unixepoch())"; }
 		α PrefixOut()Ι->bool override{ return false; }

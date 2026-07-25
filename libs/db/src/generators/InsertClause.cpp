@@ -42,16 +42,17 @@ namespace Jde::DB{
 	}
 
 	α InsertClause::SequenceColumn()Ι->sp<Column>{
-		auto table = Values.size() ? Values.begin()->first->Table : nullptr;
+		auto table = Values.size() && Values.begin()->first ? Values.begin()->first->Table : nullptr; //the (name,params) ctor leaves first==null (out param) - was a null deref.
 		return table ? table->SequenceColumn() : nullptr;
 	}
 
 	α InsertClause::Proc( str procName )ι->DB::Sql{
 		DB::Sql sql; sql.Text.reserve( 128 );
-		sql.Text = procName+"(?";
+		sql.Text = procName+"(";
 		for( auto& [_,value] : Values ){
 			if( sql.Params.size() )
-				sql.Text += ",?";
+				sql.Text += ",";
+			sql.Text += "?";
 			sql.Params.emplace_back( move(value) );
 		}
 		sql.Text+=")";

@@ -10,7 +10,7 @@ namespace Jde::DB::MySql{
 			<< "\twhere t.TABLE_SCHEMA=?" << endl
 			<< "\tand\tt.TABLE_TYPE in ('BASE TABLE', 'VIEW')" << endl;
 		if( addTable )
-			os << "\tand t.TABLE_NAME=:table_name" << endl;
+			os << "\tand t.TABLE_NAME=?" << endl;
 		else if( tablePrefix.size() )
 			os << "\tand t.TABLE_NAME like ?" << endl;
 		os << "order by t.TABLE_NAME, ORDINAL_POSITION" << endl;
