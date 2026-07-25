@@ -2,12 +2,12 @@
 
 Two workflows build the project on the **GitHub-hosted** `windows-2025` (VS2026)
 image — no self-hosted workstation, everything is provisioned per run. They are
-additive to and independent of the self-hosted [`ci-windows11.yml`](workflows/ci-windows11.yml).
+additive to and independent of the self-hosted [`win11-ci.yml`](workflows/win11-ci.yml).
 
 | Workflow | File | Does |
 |----------|------|------|
-| **Windows 2025 Deps** | [`workflows/win2025-deps.yml`](workflows/win2025-deps.yml) | Builds the third-party libraries from [`build/CMakeLists.txt`](../build/CMakeLists.txt) (`win-clang-release-repos`) and saves them to `actions/cache`. |
-| **Windows 2025 Build** | [`workflows/win2025-build.yml`](workflows/win2025-build.yml) | Restores that cache and builds the repo's exe/DLLs (`win-clang-release-jde`), uploading them as an artifact. No tests. |
+| **Win2025 Deps** | [`workflows/win2025-deps.yml`](workflows/win2025-deps.yml) | Builds the third-party libraries from [`build/CMakeLists.txt`](../build/CMakeLists.txt) (`win-clang-release-repos`) and saves them to `actions/cache`. |
+| **Win2025** | [`workflows/win2025-build.yml`](workflows/win2025-build.yml) | Restores that cache and builds the repo's exe/DLLs (`win-clang-release-jde`), uploading them as an artifact. No tests. |
 
 Both share [`actions/setup-windows-toolchain`](actions/setup-windows-toolchain/action.yml),
 which installs the toolchain and — critically — computes the **one** deps cache
@@ -53,27 +53,28 @@ changes the hash and forces a fresh deps build.
 The build workflow **fails fast** if the deps cache is absent — it never builds
 deps. Therefore:
 
-1. **First**, run **Windows 2025 Deps** on `main` (Actions → Windows 2025 Deps →
+1. **First**, run **Win2025 Deps** on `main` (Actions → Win2025 Deps →
    Run workflow). This populates the repo-wide cache. Cache created on `main` is
    visible to all branches and PRs; a feature-branch run is only visible to that
    branch.
-2. **Then** **Windows 2025 Build** runs on push/PR (or on demand) and hits the
-   cache.
+2. **Then** dispatch **Win2025** (on demand only — pick the branch to
+   build) and it hits the cache.
 
 If you bump a dependency `GIT_TAG` (or a preset / `vcpkg.json`) on a branch, the
 key changes and the build workflow will strict-miss on that branch until
-**Windows 2025 Deps** re-runs for it (merge to `main`, or dispatch deps on the
-branch).
+**Win2025 Deps** re-runs for it (dispatch deps on that branch, or merge to
+`main` and dispatch deps there).
 
-The deps workflow also re-runs automatically on `main` when any key input
-changes, and weekly (`cron`) to stay ahead of the 7-day inactivity eviction.
+**Win2025 Deps** is manual-only — there is no automatic push/schedule
+refresh. Re-dispatch it whenever a key input changes or the cache lapses the
+7-day inactivity eviction, or the strict build workflow will fail on a miss.
 
 ## Notes / risks
 
 - **Release is new to CI.** The self-hosted CI only exercises Debug; the Release
   `-repos`/`-jde` presets may surface first-run issues. The build step keeps the
   `-j 1` serial fallback for the in-source protobuf codegen race (see
-  [`windows11-runner.md`](windows11-runner.md)).
+  [`win11-runner.md`](win11-runner.md)).
 - **LLVM 22 on hosted Windows is the biggest unknown** — if a future pinned
   version lacks the `...-x86_64-pc-windows-msvc.tar.xz` asset, switch the
   composite action to the `LLVM-<ver>-win64.exe` installer (`/S`).

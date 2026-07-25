@@ -10,10 +10,9 @@ if( NOT jde_Superbuild )
 	add_subdirectory( ${opcCommonDir}/src ../../libs/opc/lib )
 	add_subdirectory( ${jdeRoot}/libs/db/src ../../libs/db/lib )
 	add_subdirectory( ${jdeRoot}/libs/db/drivers/sqlite/src ../../libs/db/drivers/sqlite/lib ) #the config/sql/sqlite MODULE above is only reachable through this driver
-	if( WIN32 )
-		add_subdirectory( ${jdeRoot}/libs/db/drivers/odbc ../../libs/db/drivers/odbc )
-	else()
-		add_subdirectory( ${jdeRoot}/libs/db/drivers/mysql ../../libs/db/drivers/mysql )
+	add_subdirectory( ${jdeRoot}/libs/db/drivers/mysql/src ../../libs/db/drivers/mysql/lib )
+	if( WIN32 ) #odbc is windows-only; mysql builds everywhere.
+		add_subdirectory( ${jdeRoot}/libs/db/drivers/odbc/src ../../libs/db/drivers/odbc/lib )
 	endif()
 	add_subdirectory( ${jdeRoot}/libs/ql ../../libs/ql )
 	add_subdirectory( ${jdeRoot}/libs/access/src ../../libs/access/lib )

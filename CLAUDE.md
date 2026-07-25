@@ -64,7 +64,10 @@ The g++ (`linux-*`, **g++-15**) presets exist only for the dependency build — 
 Tests use **GoogleTest**. Each test binary requires a `-settings=` argument pointing at a Jsonnet config. Per-library configs live at `libs/<lib>/tests/config/<Lib>.Tests.jsonnet` (and `apps/<app>/tests/config/<App>.Tests.jsonnet`):
 
 - `libs/fwk/tests/config/Framework.Tests.jsonnet`
+- `libs/db/tests/config/DB.Tests.jsonnet` (driver-agnostic generators/Value/DBException — no db)
 - `libs/db/drivers/sqlite/tests/config/Sqlite.Tests.jsonnet` (in-process, no db server needed)
+- `libs/db/drivers/mysql/tests/config/MySql.Tests.jsonnet` (dialect only — no db)
+- `libs/db/drivers/odbc/tests/config/Odbc.Tests.jsonnet` (dialect only — no db; Windows-only target)
 - `libs/access/tests/config/Access.Tests.jsonnet`
 - `libs/web/tests/config/Web.Tests.jsonnet`
 - `apps/OpcGateway/tests/config/Opc.Tests.jsonnet`
@@ -82,7 +85,7 @@ Settings-related CLI flags (`libs/fwk/src/settings.cpp`):
 | `-arg <k>=<v>` | binds jsonnet ext var `k`; split on the *first* `=`, so values may contain more |
 | `-sync` | sets the `sync` top-level argument to `true`, enabling startup DDL schema-sync (off by default — see the `function( sync=false )` heading in the app configs) |
 
-The three db-backed ctest suites — `libs/access/tests`, `apps/OpcGateway/tests`, and `apps/OpcServer/tests` — are wired to sqlite on **every** platform: their `addJdeTest` call adds `-include=args/sqlite -arg path=:memory:`, so ctest needs no db server and writes no db file. (A direct, non-ctest `-tests` run of the same binary still takes the default mysql/sqlServer import dir, since `-include` is only on the ctest registration.) The `libs/fwk` and `libs/web` suites use no database, and `libs/db/drivers/sqlite/tests` is inherently sqlite.
+The three db-backed ctest suites — `libs/access/tests`, `apps/OpcGateway/tests`, and `apps/OpcServer/tests` — are wired to sqlite on **every** platform: their `addJdeTest` call adds `-include=args/sqlite -arg path=:memory:`, so ctest needs no db server and writes no db file. (A direct, non-ctest `-tests` run of the same binary still takes the default mysql/sqlServer import dir, since `-include` is only on the ctest registration.) The `libs/fwk` and `libs/web` suites use no database, and `libs/db/drivers/sqlite/tests` is inherently sqlite. The `libs/db/tests`, `libs/db/drivers/mysql/tests`, and `libs/db/drivers/odbc/tests` suites open no data source at all — they assert on generators, `Value`, and the per-dialect `Syntax` implementations, so they need no server on any platform.
 
 The two workflows use **different working directories**, so they keep separate logs/db files:
 

@@ -1,7 +1,7 @@
 # Self-hosted Windows 11 CI runner
 
-Setup notes for the **Windows 11 x64** workflow
-([`.github/workflows/ci-windows11.yml`](workflows/ci-windows11.yml)). Unlike the Linux runner
+Setup notes for the **Win11** workflow
+([`.github/workflows/win11-ci.yml`](workflows/win11-ci.yml)). Unlike the Linux runner
 ([`.github/docker/`](docker/README.md)), which is a containerised, ephemeral, auto-registering
 runner, the Windows runner is a **bare runner on a real workstation** using the developer toolchain
 already installed there. Because it is not sandboxed, the workflow runs **only on manual request**

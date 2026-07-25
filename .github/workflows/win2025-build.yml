@@ -1,15 +1,16 @@
-name: Windows 2025 Build
+name: Win2025
 
 # Builds the repository's own exe/DLLs (win-clang-release-jde) on the
 # GitHub-hosted windows-2025 (VS2026) image, consuming the third-party deps
 # tree that win2025-deps.yml built and cached. Strict coupling: if the deps
 # cache is missing this workflow fails fast — it never builds deps itself.
-# Run "Windows 2025 Deps" on `main` first (and after any dep/preset bump).
+# Run "Win2025 Deps" on `main` first (and after any dep/preset bump).
+#
+# On demand only: dispatch it manually (Actions -> Win2025 -> Run
+# workflow), picking the branch to build. workflow_dispatch is gated to users
+# with write access, so no fork-PR fence is needed.
 on:
   workflow_dispatch:
-  pull_request:
-  push:
-    branches: [main]
 
 concurrency:
   group: win2025-build-${{ github.ref }}
@@ -47,7 +48,7 @@ jobs:
       - name: Require deps cache
         if: steps.deps.outputs.cache-hit != 'true'
         run: |
-          Write-Host "::error::Third-party deps cache missing for key '${{ steps.toolchain.outputs.deps-cache-key }}'. Run the 'Windows 2025 Deps' workflow on main first (it builds + caches the -repos Release tree). A dep/preset bump on this branch also invalidates the key until deps is re-run."
+          Write-Host "::error::Third-party deps cache missing for key '${{ steps.toolchain.outputs.deps-cache-key }}'. Run the 'Win2025 Deps' workflow on main first (it builds + caches the -repos Release tree). A dep/preset bump on this branch also invalidates the key until deps is re-run."
           exit 1
 
       - name: Configure

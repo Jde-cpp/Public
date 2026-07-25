@@ -93,7 +93,7 @@
 			"name": "db"
 		},
 		{
-			"path": "../../libs/db/drivers/odbc",
+			"path": "../../libs/db/drivers/odbc/src",
 			"name": "ODBCDriver"
 		},
 		{

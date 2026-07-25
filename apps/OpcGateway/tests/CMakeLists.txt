@@ -20,11 +20,10 @@ add_executable( ${targetName} )
 compileOptions( ${targetName} )
 
 file( GLOB sources *.cpp */*.cpp )
+add_dependencies( ${targetName} Jde.DB.MySql ) #built on every platform; odbc only exists on windows.
 if( WIN32 )
 	list( APPEND sources OpcTests.rc )
 	add_dependencies( ${targetName} Jde.DB.Odbc )
-else()
-	add_dependencies( ${targetName} Jde.DB.MySql )
 endif()
 sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcServer Jde.DB.Sqlite.OpcGateway ) #the ctest run below dlopens these via config/args/sqlite
 file( GLOB headers *.h */*.h )

@@ -26,10 +26,9 @@ if( NOT jde_Superbuild )
 	add_subdirectory( ${libDir}/fwk/src ../../libs/fwk/lib )
 	add_subdirectory( ${libDir}/db/src ../../libs/db/lib )
 	add_subdirectory( ${libDir}/db/drivers/sqlite/src ../../libs/db/drivers/sqlite/lib ) #the config/sql/sqlite MODULE above is only reachable through this driver
-	if( WIN32 )
-		add_subdirectory( ${libDir}/db/drivers/odbc ../../libs/db/drivers/odbc )
-	else()
-		add_subdirectory( ${libDir}/db/drivers/mysql ../../libs/db/drivers/mysql )
+	add_subdirectory( ${libDir}/db/drivers/mysql/src ../../libs/db/drivers/mysql/lib )
+	if( WIN32 ) #odbc is windows-only; mysql builds everywhere.
+		add_subdirectory( ${libDir}/db/drivers/odbc/src ../../libs/db/drivers/odbc/lib )
 	endif()
 	add_subdirectory( ${libDir}/ql ../../libs/ql )
 	add_subdirectory( ${libDir}/access/src ../../libs/access/lib )

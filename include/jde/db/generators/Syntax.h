@@ -53,38 +53,8 @@ namespace Jde::DB{
 		β UtcNow()Ι->sv{ return "getutcdate()"; }
 		β ZeroSequenceMode()Ι->sv{ return {}; }
 	};
-
-	struct MySqlSyntax final: Syntax{
-		Ω Instance()->const MySqlSyntax&;
-		α AddDefault( sv tableName, sv columnName, Value dflt )Ι->string override;
-		α AltDelimiter()Ι->sv override{ return "$$"; }
-		α CanSetDefaultSchema()Ι->bool override{ return true; }
-		α CatalogSelect()Ι->sv override{ return {}; }
-		α CreatePrimaryKey( str tableName, str columns )Ι->string override{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columns); } //columns: comma-separated for composite keys.
-		α DateTimeSelect( sv columnName )Ι->string override{ return Ƒ( "UNIX_TIMESTAMP({})", columnName ); }
-		α DriverReturnsLastInsertId()Ι->bool override{ return true; }
-		α EscapeDdl( sv sql )Ι->string override;
-		α GuidType()Ι->sv override{ return "binary" ; }
-		α HasLength( EType /*type*/ )Ι->bool override{ return true; }
-		α HasCatalogs()Ι->bool override{ return false; }
-		α HasUnsigned()Ι->bool override{ return true; }
-		α IdentityColumnSyntax()Ι->sv override{ return "AUTO_INCREMENT"; }
-		α IdentitySelect()Ι->sv override{ return "LAST_INSERT_ID()"; }
-		α Limit( str sql, uint limit, uint skip )Ι->string override;
-		α NeedsIdentityInsert()Ι->bool override{ return false; }
-		α NowDefault()Ι->sv override{ return "CURRENT_TIMESTAMP"; }
-		α PrefixOut()Ι->bool override{ return true; }
-		α ProcParameterPrefix()Ι->sv override{ return {}; }
-		α ProcStart()Ι->sv override{ return "begin"; }
-		α ProcEnd()Ι->sv override{ return "end"; }
-		α SchemaDropsObjects()Ι->bool override{ return true; }
-		α SchemaSelect()Ι->sv override{ return "select database() from dual;"; }
-		α SpecifyIndexCluster()Ι->bool override{ return false; }
-		α SysSchema()Ι->sv override{ return "sys"; }
-		α UsingClause( const Join& join )Ι->string override;
-		α UtcNow()Ι->sv override{ return "CURRENT_TIMESTAMP()"; }
-		α ZeroSequenceMode()Ι->sv override{ return "SET @@session.sql_mode = CASE WHEN @@session.sql_mode NOT LIKE '%NO_AUTO_VALUE_ON_ZERO%' THEN CASE WHEN LENGTH(@@session.sql_mode)>0 THEN CONCAT_WS(',',@@session.sql_mode,'NO_AUTO_VALUE_ON_ZERO') ELSE 'NO_AUTO_VALUE_ON_ZERO' END ELSE @@session.sql_mode END"; }
-	};
+	//The MySQL dialect lives with its driver, in libs/db/drivers/mysql/src/MySqlSyntax.h - like Sqlite::SqliteSyntax,
+	//it is only reached through IDataSource::Syntax(), so Jde.DB never needs the type statically.
 }
 #undef Φ
 #endif

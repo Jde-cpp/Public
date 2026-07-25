@@ -1,4 +1,4 @@
-name: Linux x64
+name: Linux
 
 # Runs on the self-hosted, containerised runner (see .github/docker/). Triggered only
 # by pushes to main — i.e. the merge commit of a landed PR (which also feeds the README
@@ -11,11 +11,10 @@ name: Linux x64
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 
 # One in-flight run per branch; a newer push cancels the older run.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: linux-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
