@@ -30,10 +30,14 @@ namespace Jde::Opc::Gateway{
 	α SubscribeAwait::Suspend()ι->void{
 		_client->PostUA( [this]{//UA submission must run on the client's strand; _requests is cross-client so it keeps its own mutex.
 			try{
-				lg _{ _requestsMutex };
-				auto& clientRequests = _requests[_client];
-				clientRequests.push_back( _h );
-				if( clientRequests.size()==1 ){
+				bool first;
+				{//must not hold _requestsMutex across Process(): it can run ProcessingLoop inline, and a same-iterate create response re-enters OnComplete's lock on this stack - self-deadlock.
+					lg _{ _requestsMutex };
+					auto& clientRequests = _requests[_client];
+					clientRequests.push_back( _h );
+					first = clientRequests.size()==1;
+				}
+				if( first ){
 					UACε( UA_Client_Subscriptions_create_async(_client->UAPointer(), UA_CreateSubscriptionRequest_default(), nullptr, statusChangeNotificationCallback, deleteSubscriptionCallback, createSubscriptionCallback, this, &_requestId) );
 					TRACE( "[{}.{}]CreateSubscription", hex(_client->Handle()), hex(_requestId) );
 					_client->Process( _requestId, "Subscriptions_create" );
@@ -50,17 +54,21 @@ namespace Jde::Opc::Gateway{
 		_client->ClearRequest( _requestId );
 		let sc = response.responseHeader.serviceResult;
 		TRACE( "[{}.{}]createSubscriptionCallback - subscriptionId: {}, sc: {}", hex(_client->Handle()), hex(_requestId), response.subscriptionId, hex(sc) );
-		lg _{ _requestsMutex };
 		if( !sc )
 			_client->SetCreatedSubscriptionResponse( ms<UA_CreateSubscriptionResponse>( move(response) ) );
-		if( auto clientRequests = _requests.find(_client); clientRequests != _requests.end() ){
-			for( auto&& h : clientRequests->second ){
-				if( sc )
-					Post( move(h), UAClientException{sc, _client->Handle()} );
-				else
-					Post( move(h) );
+		vector<SubscribeAwait::Handle> handles;
+		{//resume outside the lock - a resumed chain can subscribe again (Suspend takes _requestsMutex).
+			lg _{ _requestsMutex };
+			if( auto clientRequests = _requests.find(_client); clientRequests != _requests.end() ){
+				handles = move( clientRequests->second );
+				_requests.erase( clientRequests );
 			}
-			_requests.erase( clientRequests );
+		}
+		for( auto&& h : handles ){
+			if( sc )
+				Post( move(h), UAClientException{sc, _client->Handle()} );
+			else
+				Post( move(h) );
 		}
 	}
 

@@ -136,12 +136,16 @@ namespace Jde{
 
 	Ω cleanup( bool terminate )ι->void;
 	α Process::Shutdown( int exitReason )ι->void{
+		static std::atomic_flag _ran;
+		if( _ran.test_and_set() )//linux signal exits run this twice - Pause() calls it before returning, then main calls it with Pause's result; the 2nd pass re-ran the shutdown functions against already-nulled state (e.g. AppServer's AccessListener).
+			return;
 		if( !ExitReason() )//ExitHandler may have recorded the reason & terminate flag (SIGTERM) already - first cause wins.
 			SetExitReason( exitReason, false );
 		let terminate = _terminate;
 
 		for_each( _shutdownFunctions, [=](let& shutdown){shutdown(terminate, SRCE_CUR);} );
 		DBGT( ELogTags::App | ELogTags::Shutdown, "{} Shutdown functions removed", _shutdownFunctions.size() );
+		_shutdownFunctions.clear();
 		_rawShutdowns.rerase( [=](auto& p){
 			p->Shutdown( terminate );
 		});

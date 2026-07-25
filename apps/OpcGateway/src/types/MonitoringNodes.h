@@ -35,6 +35,7 @@ namespace Jde::Opc::Gateway{
 		α SendDataChange( Handle h, const Value&& value )ι->uint;
 		α OnCreateResponse( UA_CreateMonitoredItemsResponse* response, Handle requestId )ι->void;
 		α GetResult( Handle requestId, StatusCode status )ι->FromServer::SubscriptionAck;
+		α Count()ι->uint{ sl _{_mutex}; return _subscriptions.size(); }
 	private:
 		struct Subscription{
 			Subscription( /*ServerCnnctnNK opcId,*/ NodeId node, MonitoredItemCreateResult result, sp<IDataChange> clientCall )ι: /*ServerCnnctnNK{move(opcId)},*/ Node{ move(node) }, Result{ move(result) }, ClientCalls{ move(clientCall) }{}

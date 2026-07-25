@@ -1,4 +1,5 @@
 #pragma once
+#include <jde/fwk/chrono.h>
 #include <jde/fwk/co/Await.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
@@ -20,7 +21,12 @@ namespace Jde::App{
 		α Verify( const Web::Jwt& jwt )Ε->void;
 		β Login( Web::Jwt&& jwt, SRCE )ε->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo> = 0;
 		β ClientQuery( QL::RequestQL&& q, UserPK executer, SRCE )ε->up<TAwait<jvalue>> =0; //AppServer->[Gateway]|[OpcServer]
-		Ω Status()ι->jobject{ return jobject{{"memory", Process::MemorySize()}}; }
+		Ω Status()ι->jobject{
+			return jobject{
+				{"memory", Process::MemorySize()},
+				{"startTime", ToIsoString(Process::StartTime())},
+				{"uptimeSeconds", duration_cast<std::chrono::seconds>(Clock::now()-Process::StartTime()).count()} };
+		}
 
 		α LoadLogSettings( optional<jobject> clientSettings=nullopt, SRCE )ι->void;
 		template<class T=jobject> [[nodiscard]] α Query( string&& q, jobject variables, bool returnRaw=true, SRCE )ε->up<TAwait<T>>;
