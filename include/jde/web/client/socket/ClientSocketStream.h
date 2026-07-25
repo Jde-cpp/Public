@@ -19,16 +19,16 @@ namespace Jde::Web::Client{
 		α AfterHandshake( const string& host, sp<IClientSocketSession> session )ι->void;
 		α AsyncRead( sp<IClientSocketSession> session )ι->void;
 		α AsyncWrite( string buffer, sp<IClientSocketSession> session )ι->LockAwait::Task;
-		α Close( sp<IClientSocketSession> session, bool terminate, SRCE )ι->void;
+		α Close( sp<IClientSocketSession> session, bool terminate, SRCE )ι->LockAwait::Task;
 		α OnWrite( beast::error_code ec, uint bytes_transferred )ι->void;
 		α ReadBuffer()ι{ return std::span<uint8_t>{(uint8_t*)_buffer.data().data(), _buffer.size()}; }
 		α IsSsl()ι->bool{ return _ws.index()==1; }
 	private:
 		beast::flat_buffer _buffer;
 		CoLock _writeLock;
-		net::io_context& _ioc;
 		optional<CoGuard> _writeGuard;
 		string _writeBuffer;
+		std::atomic_flag _closing;//set by Close: later writers drop instead of overlapping the close (a write-type op).
 		Stream _ws;
 	};
 }
