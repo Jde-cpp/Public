@@ -70,7 +70,7 @@ namespace Jde::DB{
 		α HasUnsigned()Ι->bool override{ return true; }
 		α IdentityColumnSyntax()Ι->sv override{ return "AUTO_INCREMENT"; }
 		α IdentitySelect()Ι->sv override{ return "LAST_INSERT_ID()"; }
-		α Limit( str sql, uint limit, uint skip )Ι->string override{ return Ƒ("{} limit {} offset {}", sql, limit, skip); }
+		α Limit( str sql, uint limit, uint skip )Ι->string override;
 		α NeedsIdentityInsert()Ι->bool override{ return false; }
 		α NowDefault()Ι->sv override{ return "CURRENT_TIMESTAMP"; }
 		α PrefixOut()Ι->bool override{ return true; }

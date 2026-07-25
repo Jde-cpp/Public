@@ -72,7 +72,7 @@ namespace Jde::DB{
 		case Int64: y = (uint)get_int(); break;
 		case UInt32: y = get_uint32(); break;
 		case UInt64: y = get_uint(); break;
-		case Double: y = (uint)get_double(); break;
+		case Double: y = (uint)(_int)get_double(); break;
 		default: //Null intentionally 0.
 			if( !is_null() )
 				WARN( "ToUInt on non-numeric type '{}' returns 0.", TypeName() );

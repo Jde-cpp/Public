@@ -62,7 +62,10 @@ namespace Jde{
 		}
 		if( !haveDeleted )
 			from.SetActive( where, sl );
-		sql[sql.size()-1] = '\n';
+		if( columns.size() )
+			sql[sql.size()-1] = '\n';//replace the trailing ','; with no columns sql is just "select " and this would clobber the space.
+		else
+			sql += '\n';
 		sql += from.ToString()+'\n';
 		sql += where.Move();
 		return {move(sql), move(where.Params())};
@@ -72,7 +75,7 @@ namespace Jde{
 		vector<sp<Column>> cols;
 		for( let& column : columns )
 			cols.push_back( from.GetColumnPtr(column, sl) );
-		return SelectSql( cols, move(from), where );
+		return SelectSql( cols, move(from), move(where), sl );
 	}
 
 	α DB::SelectSKsSql( sp<Table> table )ε->Sql{

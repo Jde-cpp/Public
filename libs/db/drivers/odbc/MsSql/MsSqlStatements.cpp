@@ -5,12 +5,13 @@ namespace Jde::DB::MsSql::Sql
 	using std::endl;
 	α ColumnSql( bool addTable )ι->string{
 		std::ostringstream os;
-		os << "select tables.name table_name, columns.name column_name, columns.column_id, constraints.definition, columns.is_nullable, types.name, columns.max_length, is_identity, case when indexes.object_id is null then 0 else 1 end, columns.precision, columns.scale" << endl
+		os << "select tables.name table_name, columns.name column_name, columns.column_id, constraints.definition, columns.is_nullable, types.name, columns.max_length, is_identity, case when pk_columns.column_id is null then 0 else 1 end, columns.precision, columns.scale" << endl
 			<< "from sys.schemas" << endl
 			<< "join sys.tables on tables.schema_id=schemas.schema_id" << endl
 			<< "join sys.columns on tables.object_id=columns.object_id" << endl
-			<< "join sys.types on columns.system_type_id=types.system_type_id" << endl
-			<< "left join sys.indexes on tables.object_id=indexes.object_id and is_primary_key=1" << endl
+			<< "join sys.types on columns.user_type_id=types.user_type_id" << endl//user_type_id, not system_type_id: the latter is shared by base+alias types (nvarchar/sysname) and duplicates every such column.
+			<< "left join sys.indexes pk on tables.object_id=pk.object_id and pk.is_primary_key=1" << endl
+			<< "left join sys.index_columns pk_columns on pk_columns.object_id=pk.object_id and pk_columns.index_id=pk.index_id and pk_columns.column_id=columns.column_id" << endl//column-specific, so is_id marks only PK members, not every column of a PK table.
 			<< "left join sys.default_constraints constraints on columns.default_object_id=constraints.object_id" << endl
 			<< "where schemas.name=?" << endl;
 		if( addTable )

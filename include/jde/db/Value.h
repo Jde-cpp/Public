@@ -66,7 +66,7 @@ namespace Jde::DB{
 		α is_string()Ι->bool{ return holds_alternative<string>(Variant); }
 
 		α set_bool( bool v )ι->void{ Variant=v; }
-		α operator=( uint v )ι{ Variant=v; return *this; }
+		α operator=( uint v )ι->Value&{ Variant=v; return *this; }
 		Underlying Variant;
 	};
 

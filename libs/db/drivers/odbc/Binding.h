@@ -92,6 +92,61 @@ struct Binding{
 		SQLLEN _bufferSize{};
 	};
 
+	//SQL Server nchar/nvarchar/ntext (SQL_WCHAR -8, SQL_WVARCHAR -9, SQL_WLONGVARCHAR -10) arrive as UTF-16LE.
+	//Decode to UTF-8 rather than binding SQL_C_CHAR (which transcodes to the ANSI code page and turns non-ANSI into '?').
+	Ξ Utf16ToUtf8( const char16_t* p, size_t n )->string{
+		string out; out.reserve( n );
+		for( size_t i=0; i<n; ++i ){
+			char32_t cp = p[i];
+			if( cp>=0xD800 && cp<=0xDBFF && i+1<n ){//high surrogate + low surrogate => astral code point
+				char32_t lo = p[i+1];
+				if( lo>=0xDC00 && lo<=0xDFFF ){ cp = 0x10000 + ((cp-0xD800)<<10) + (lo-0xDC00); ++i; }
+			}
+			if( cp<0x80 )
+				out += (char)cp;
+			else if( cp<0x800 ){
+				out += (char)(0xC0 | (cp>>6));
+				out += (char)(0x80 | (cp&0x3F));
+			}
+			else if( cp<0x10000 ){
+				out += (char)(0xE0 | (cp>>12));
+				out += (char)(0x80 | ((cp>>6)&0x3F));
+				out += (char)(0x80 | (cp&0x3F));
+			}
+			else{
+				out += (char)(0xF0 | (cp>>18));
+				out += (char)(0x80 | ((cp>>12)&0x3F));
+				out += (char)(0x80 | ((cp>>6)&0x3F));
+				out += (char)(0x80 | (cp&0x3F));
+			}
+		}
+		return out;
+	}
+
+	struct BindingWString final: Binding{
+		BindingWString( SQLSMALLINT type, SQLLEN charCapacity )ι://charCapacity includes the null terminator.
+			Binding{ type, SQL_C_WCHAR },
+			_buffer{ std::make_unique_for_overwrite<char16_t[]>( charCapacity ) },
+			_charCapacity{ charCapacity }{
+		}
+		α Data()ι->void* override{ return _buffer.get(); }
+		α GetValue()Ι->DB::Value override{ return IsNull() ? Value{} : Value{to_string()}; }
+		α to_string()Ι->string override{
+			let output = GetOutput();//for SQL_C_WCHAR the indicator is the untruncated length in BYTES (or SQL_NO_TOTAL).
+			if( !_buffer || output==SQL_NULL_DATA )
+				return {};
+			let allocBytes = _charCapacity*(SQLLEN)sizeof(char16_t);
+			let dataBytes = output==SQL_NO_TOTAL || output>=allocBytes//truncated => we hold (_charCapacity-1) code units.
+				? std::max<SQLLEN>( (_charCapacity-1)*(SQLLEN)sizeof(char16_t), 0 ) : output;
+			return Utf16ToUtf8( _buffer.get(), (size_t)(dataBytes/(SQLLEN)sizeof(char16_t)) );
+		}
+		α BufferLength()Ι->SQLLEN override{ return std::max<SQLLEN>( GetOutput(), 0 ); }
+		α Size()Ι->SQLULEN override{ return (SQLULEN)BufferLength(); }
+	private:
+		up<char16_t[]> _buffer;
+		SQLLEN _charCapacity{};
+	};
+
 	struct BindingBinary final :Binding{
 		BindingBinary():Binding{ SQL_VARBINARY, SQL_C_BINARY }{}
 		BindingBinary( SQLLEN size ):Binding{ SQL_VARBINARY, SQL_C_BINARY, size==0 ? SQL_NULL_DATA : size },_value{ vector<uint8_t>(size) }{}
@@ -100,7 +155,14 @@ struct Binding{
 			_value{ move(v) }
 		{}
 		α Data()ι->void* override{ return IsNull() ? nullptr : _value.get_bytes().data(); }
-		α GetValue()Ι->Value override{ return _value; }
+		α GetValue()Ι->Value override{
+			if( IsNull() ) //null row: Output==SQL_NULL_DATA - was returning the whole garbage buffer.
+				return Value{};
+			let& bytes = _value.get_bytes();
+			let indicator = GetOutput(); //driver-written fetched length for this row; SQL_NO_TOTAL(<0) => unknown, take the whole buffer.
+			let count = indicator<0 || (SQLULEN)indicator>bytes.size() ? bytes.size() : (size_t)indicator;
+			return count==bytes.size() ? _value : Value{ vector<uint8_t>{ bytes.begin(), bytes.begin()+count } }; //truncate off the column-max padding / stale bytes from a longer prior row.
+		}
 		α GetOutput()Ι->SQLLEN override{ return Size()==0 ? SQL_NULL_DATA : Binding::GetOutput(); }
 
 		α Size()Ι->SQLULEN override { return _value.get_bytes().size(); }
@@ -110,10 +172,24 @@ struct Binding{
 		BindingGuid():Binding{ SQL_GUID, SQL_C_GUID }{}
 		BindingGuid( const uuid& v ):
 			Binding{ SQL_GUID, SQL_C_GUID, 16 }{
-			memcpy( &_guid, v.data(), sizeof(SQLGUID) );
+			//boost::uuids::uuid holds 16 bytes in RFC-4122 (big-endian) order; SQLGUID.Data1/2/3 are native-endian integers.
+			//Assemble them explicitly (endian-independent) so the stored uniqueidentifier matches the uuid in SSMS / other clients.
+			//NB: this changes the on-disk byte order vs the old raw memcpy - GUIDs written by the previous build are stored byte-shuffled and need migration.
+			let* b = (const uint8_t*)v.data();
+			_guid.Data1 = ((uint32_t)b[0]<<24) | ((uint32_t)b[1]<<16) | ((uint32_t)b[2]<<8) | b[3];
+			_guid.Data2 = (uint16_t)((b[4]<<8) | b[5]);
+			_guid.Data3 = (uint16_t)((b[6]<<8) | b[7]);
+			memcpy( _guid.Data4, b+8, 8 );
 		}
 		α Data()ι->void* override{ return &_guid; }
-		α GetValue()Ι->Value override { uuid id; memcpy( id.data(), &_guid, sizeof(SQLGUID) ); return Value{ id }; }
+		α GetValue()Ι->Value override {
+			uuid id; let b = (uint8_t*)id.data();
+			b[0]=(uint8_t)(_guid.Data1>>24); b[1]=(uint8_t)(_guid.Data1>>16); b[2]=(uint8_t)(_guid.Data1>>8); b[3]=(uint8_t)_guid.Data1;
+			b[4]=(uint8_t)(_guid.Data2>>8);  b[5]=(uint8_t)_guid.Data2;
+			b[6]=(uint8_t)(_guid.Data3>>8);  b[7]=(uint8_t)_guid.Data3;
+			memcpy( b+8, _guid.Data4, 8 );
+			return Value{ id };
+		}
 		α GetOutput()Ι->SQLLEN override{ return sizeof(SQLGUID); }
 		α Size()Ι->SQLULEN override { return sizeof(SQLGUID); }
 
@@ -182,7 +258,7 @@ struct Binding{
 		BindingTimeStamp( SQL_TIMESTAMP_STRUCT value )ι: Binding{ SQL_TYPE_TIMESTAMP, SQL_C_TYPE_TIMESTAMP },_data{value}{}
 		α Data()ι->void* override{ return &_data; }
 		α GetValue()Ι->Value override{ return IsNull() ? Value{} : Value{GetDateTime()}; }
-		α GetDateTime()Ι->DBTimePoint override{ return IsNull() ? DBTimePoint{} : Chrono::ToTimePoint( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, Duration(_data.fraction) ); }
+		α GetDateTime()Ι->DBTimePoint override{ return IsNull() ? DBTimePoint{} : Chrono::ToTimePoint( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, std::chrono::duration_cast<Duration>(std::chrono::nanoseconds(_data.fraction)) ); }
 		α GetDateTimeOpt()Ι->std::optional<DBTimePoint> override{ return IsNull() ? std::nullopt : std::make_optional(GetDateTime()); }
 	private:
 		SQL_TIMESTAMP_STRUCT _data;
@@ -190,7 +266,7 @@ struct Binding{
 
 	struct BindingUInt final : Binding{
 		BindingUInt( SQLSMALLINT type )ι:	Binding{ type, SQL_C_UBIGINT }{}
-		BindingUInt( uint value )ι: Binding{ SQL_INTEGER, SQL_C_SLONG }, _data{value}{}
+		BindingUInt( uint value )ι: Binding{ SQL_BIGINT, SQL_C_UBIGINT }, _data{value}{}
 		α Data()ι->void* override{ return &_data; }
 		α GetValue()Ι->Value override{ return IsNull() ? Value{} : Value{_data}; }
 		uint GetUInt()Ι override{ return _data; }
@@ -210,7 +286,7 @@ struct Binding{
 		//https://wezfurlong.org/blog/2005/Nov/calling-sqlbindparameter-to-bind-sql-timestamp-struct-as-sql-c-type-timestamp-avoiding-a-datetime-overflow/
 		SQLULEN Size()Ι override{ return 23; }//23 works with 0
 		α DecimalDigits()Ι->SQLSMALLINT override{ return 3; }//https://stackoverflow.com/questions/40918607/cannot-bind-a-sql-type-timestamp-value-using-odbc-with-ms-sql-server-hy104-inv
-		α GetDateTime()Ι->DBTimePoint override{ return IsNull() ? DBTimePoint() : Chrono::ToTimePoint( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, Duration(_data.fraction) );}
+		α GetDateTime()Ι->DBTimePoint override{ return IsNull() ? DBTimePoint() : Chrono::ToTimePoint( _data.year, (uint8)_data.month, (uint8)_data.day, (uint8)_data.hour, (uint8)_data.minute, (uint8)_data.second, std::chrono::duration_cast<Duration>(std::chrono::nanoseconds(_data.fraction)) );}
 		α GetDateTimeOpt()Ι->std::optional<DBTimePoint> override{
 			std::optional<DBTimePoint> value;
 			if( !IsNull() )
@@ -374,7 +450,7 @@ struct Binding{
 			_data.hour = (SQLUSMALLINT)(unsigned)time.hours().count();
 			_data.minute = (SQLUSMALLINT)time.minutes().count();
 			_data.second = (SQLUSMALLINT)time.seconds().count();
-			_data.fraction = time.subseconds().count();
+			_data.fraction = (SQLUINTEGER)duration_cast<nanoseconds>( time.subseconds() ).count();//fraction is nanoseconds (ODBC spec); subseconds() counts system_clock ticks (100ns on Windows) - was 100x low.
 		}
 	}
 }

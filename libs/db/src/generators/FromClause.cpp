@@ -83,7 +83,7 @@ namespace Jde::DB{
 	α FromClause::Contains( sv tableName )ι->bool{
 		bool contains{};
 		for( auto p = Joins.begin(); !contains && p!=Joins.end(); ++p )
-			contains = p->From->Table->Name==tableName || p->To->Table->Name==tableName;
+			contains = p->From->Table->Name==tableName || (p->To && p->To->Table->Name==tableName); //single-table Joins[0] has a null To.
 		return contains;
 	}
 
@@ -93,7 +93,7 @@ namespace Jde::DB{
 			let& join = Joins[i];
 			if( i==0 )
 				column = join.From->Table->FindColumn( name );
-			if( !column )
+			if( !column && join.To ) //single-table Joins[0] has a null To; fall through to THROW below.
 				column = join.To->Table->FindColumn( name );
 		}
 		THROW_IFSL( !column, "Column '{}' not found.", name );

@@ -23,7 +23,8 @@ namespace Jde::DB::MySql{
 		auto onRow = [&]( Row&& row ){
 			fromColumns( move(row.GetString(0)), move(row.GetString(1)), move(row.GetInt(2)), move(row.GetString(3)), move(row.GetString(4)), move(row.GetString(5)), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
 		};
-		Sql sql{ Ddl::ColumnSql(tablePrefix), {Value{schemaName}} };
+		let exact = !like && tablePrefix.size();//LoadTable wants an exact match - LIKE treats '_' in names like role_member as a wildcard.
+		Sql sql{ Ddl::ColumnSql(tablePrefix, exact), {Value{schemaName}} };
 		if( tablePrefix.size() )
 			sql.Params.emplace_back( like ? string{tablePrefix}+'%' : string{tablePrefix} );
 		ds->Select( move(sql), onRow );

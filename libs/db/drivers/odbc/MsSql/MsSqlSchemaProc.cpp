@@ -17,13 +17,10 @@ namespace Jde::DB::MsSql{
 			optional<Value> defaultValue;
 			if( !dflt.empty() ){
 				if( dataType==EType::Int ){
-					auto start = dflt.find_first_of( '\'' );
-					auto end = dflt.find_last_of( '\'' );
-					if( end-start<2 && dflt.size()>4 ){//"((?))
-						start = 1;
-						end = dflt.size()-4;
-					}
-					if( let value = end-start>1 ? Str::TryTo<_int>(string{dflt.substr(start+1, end-start)}) : std::optional<_int>{}; value )
+					sv v = dflt;//MSSQL wraps numeric defaults in parens, e.g. ((100)); strip them all, then parse. Expression defaults ("((1)+(2))") fail TryTo->no default, which is fine.
+					while( v.size()>=2 && v.front()=='(' && v.back()==')' )
+						v = v.substr( 1, v.size()-2 );
+					if( let value = Str::TryTo<_int>(string{v}); value )
 						defaultValue = *value;
 				}
 				else if( dataType==EType::Bit )
@@ -82,7 +79,7 @@ namespace Jde::DB::MsSql{
 			let tableName = move(row.GetString(i++)); let indexName = move(row.GetString(i++)); let columnName = move(row.GetString(i++)); let unique = row.GetBit(i++)==0;
 
 			vector<string>* pColumns;
-			auto pExisting = std::find_if( indexes.begin(), indexes.end(), [&](auto index){ return index.Name==indexName && index.TableName==tableName; } );
+			auto pExisting = std::find_if( indexes.begin(), indexes.end(), [&](let& index){ return index.Name==indexName && index.TableName==tableName; } );
 			if( pExisting==indexes.end() ){
 				bool clustered = false;//Boolean.Parse( row["CLUSTERED"].ToString() );
 				let primaryKey = indexName==Ƒ( "{}_pk", tableName );//Boolean.Parse( row["PRIMARY_KEY"].ToString() );

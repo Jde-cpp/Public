@@ -30,8 +30,10 @@ namespace Jde::DB::Odbc{
 			ds = dynamic_pointer_cast<OdbcDataSource>( shared_from_this() );
 		else{
 			ds = sp<OdbcDataSource>( (OdbcDataSource*)GetDataSource() );
-			ds->SetConnectionString( _connectionString );
-			ds->ExecuteSync( {"use "+string{catalog}} );
+			//Bake Database=<catalog> into a *distinct* connection string so this ds gets its own pool that opens directly on <catalog>.
+			//The old shared-string + per-statement `use <catalog>` landed on an arbitrary pooled connection and didn't stick for later statements.
+			//SQL Server uses the first occurrence of a duplicated keyword, so prepending wins over any Database= already in _connectionString.
+			ds->SetConnectionString( Ƒ("Database={};{}", catalog, _connectionString) );
 		}
 		return ds;
 	}
@@ -88,7 +90,9 @@ namespace Jde::DB::Odbc{
 			if( columnCount>0 ){
 				let bindings = AllocateBindings( statement, columnCount );
 				OdbcRow row{ bindings };
-				while( ::SQLFetch(statement)!=SQL_NO_DATA_FOUND ){
+				for( SQLRETURN fetch; (fetch=::SQLFetch(statement))!=SQL_NO_DATA_FOUND; ){
+					if( fetch!=SQL_SUCCESS && fetch!=SQL_SUCCESS_WITH_INFO ) //SQL_ERROR/SQL_INVALID_HANDLE: was an infinite loop feeding garbage rows to the callback.
+						throw DBException{ fetch, move(sql), HandleDiagnosticRecord("SQLFetch", statement, SQL_HANDLE_STMT, fetch, sl), sl };
 					row.Reset();
 					(*params.Function)( row.ToRow() );
 					++resultCount;
@@ -125,14 +129,20 @@ namespace Jde::DB::Odbc{
 
 			SQLLEN bufferSize = 0;
 			up<Binding> binding;
-			if( ssType == SQL_CHAR || ssType == SQL_VARCHAR || ssType == SQL_LONGVARCHAR || ssType==SQL_VARBINARY || ssType == -9/*varchar(max)?*/ || ssType == -10/*nvarchar(max)?*/ ){
+			if( ssType == SQL_CHAR || ssType == SQL_VARCHAR || ssType == SQL_LONGVARCHAR || ssType==SQL_VARBINARY ){
 				CALL( statement, SQL_HANDLE_STMT, ::SQLColAttribute(statement, iCol, SQL_DESC_DISPLAY_SIZE, NULL, 0, NULL, &bufferSize), "SQLColAttribute::Display" );
-				if( (ssType==-9 || ssType==-10) && bufferSize==0 )
-					bufferSize = (1 << 14) - 1;//TODO handle varchar(max).
 				if( ssType==SQL_VARBINARY )
 					binding = mu<BindingBinary>( ++bufferSize );
 				else
 					binding = mu<BindingString>( (SQLSMALLINT)ssType, ++bufferSize );
+			}
+			else if( ssType==-8/*nchar*/ || ssType==-9/*nvarchar*/ || ssType==-10/*ntext/nvarchar(max)*/ ){//Unicode: bind SQL_C_WCHAR + decode UTF-16, else non-ANSI comes back as '?'.
+				CALL( statement, SQL_HANDLE_STMT, ::SQLColAttribute(statement, iCol, SQL_DESC_DISPLAY_SIZE, NULL, 0, NULL, &bufferSize), "SQLColAttribute::Display" );//in characters.
+				if( ssType==-10 && bufferSize==0 )
+					bufferSize = (1 << 14) - 1;//TODO MAX/LOB: stream via SQLGetData - still truncates at 16KB.
+				++bufferSize;//+1 code unit for the null terminator.
+				binding = mu<BindingWString>( (SQLSMALLINT)ssType, bufferSize );//allocates bufferSize char16_t.
+				bufferSize *= (SQLLEN)sizeof(char16_t);//SQLBindCol BufferLength is in BYTES for SQL_C_WCHAR.
 			}
 			else
 				binding = Binding::GetBinding( (SQLSMALLINT)ssType );
@@ -177,7 +187,7 @@ namespace Jde::DB::Odbc{
 			THROW_IFSL( r.Size()==0, "Query did not return any {}.", empty(outValue) ? "rows" : "out params" );
 			y = move(r[0]);
 		};
-		ExecDirect( move(sql), sl, {.Function=&f} );
+		ExecDirect( move(sql), sl, {.Function=&f, .OutValue=outValue} ); //was dropping outValue -> HasOut() false -> last param bound INPUT not OUTPUT (cf. MySqlDataSource::ExecuteScalerSync).
 		return y;
 	}
 

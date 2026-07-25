@@ -46,9 +46,7 @@ namespace Jde::DB{
 			config.ResetDS();
 		}
 		let& initConfig = ConfigurationJson( config );//has data, scripts.
-		string prefix = config.Prefix;
-		if( uint index = prefix.find('.'); index!=string::npos )
-			prefix = index<prefix.size()-2 ? string{} : prefix.substr( index+1 );
+		string prefix = config.ObjectPrefix(); //single source of truth; was a swapped-ternary duplicate that yielded "" for an "db.um_"-style prefix and broke SyncTables' ObjectPrefix()+tableName lookups.
 
 		auto catalog = ms<DB::Catalog>( config.DS() );
 		auto db = ms<SchemaDdl>( config.DBSchema->Name, prefix, config.DS()->ServerMeta(), ql ); //dbSchema
@@ -320,8 +318,8 @@ namespace Jde::DB{
 		let singular = Names::ToSingular( schemaName );
 		let splits = Str::Split( singular, '_' );
 		std::ostringstream name;
-		for( uint i=1; i<splits.size(); ++i ){
-			if( i>1 )
+		for( uint i=0; i<splits.size(); ++i ){
+			if( i>0 )
 				name << '_';
 			name << fnctn( splits[i] );
 		}

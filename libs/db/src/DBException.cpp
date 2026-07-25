@@ -21,8 +21,9 @@ namespace Jde::DB{
 	}
 
 	α DBException::Log()Ι->void{
-		if( Level()==ELogLevel::NoLog )
+		if( _logged || Level()==ELogLevel::NoLog || Process::Finalizing() ) //participate in the base _logged protocol: don't re-log a moved-from/BreakLog'd exception, and stay quiet during teardown.
 			return;
+		_logged = true;
 		if( Sql.Text.find("log_message_insert")==string::npos && Sql.Text.find("log_files")==string::npos && Sql.Text.find("log_functions")==string::npos )
 			DB::Log( Sql, Level(), _inner ? string{_inner->what()} : what(), _sl );
 		else
