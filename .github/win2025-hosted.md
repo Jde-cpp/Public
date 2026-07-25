@@ -6,8 +6,8 @@ additive to and independent of the self-hosted [`win11-ci.yml`](workflows/win11-
 
 | Workflow | File | Does |
 |----------|------|------|
-| **Windows 2025 Deps** | [`workflows/win2025-deps.yml`](workflows/win2025-deps.yml) | Builds the third-party libraries from [`build/CMakeLists.txt`](../build/CMakeLists.txt) (`win-clang-release-repos`) and saves them to `actions/cache`. |
-| **Windows 2025 Build** | [`workflows/win2025-build.yml`](workflows/win2025-build.yml) | Restores that cache and builds the repo's exe/DLLs (`win-clang-release-jde`), uploading them as an artifact. No tests. |
+| **Win2025 Deps** | [`workflows/win2025-deps.yml`](workflows/win2025-deps.yml) | Builds the third-party libraries from [`build/CMakeLists.txt`](../build/CMakeLists.txt) (`win-clang-release-repos`) and saves them to `actions/cache`. |
+| **Win2025** | [`workflows/win2025-build.yml`](workflows/win2025-build.yml) | Restores that cache and builds the repo's exe/DLLs (`win-clang-release-jde`), uploading them as an artifact. No tests. |
 
 Both share [`actions/setup-windows-toolchain`](actions/setup-windows-toolchain/action.yml),
 which installs the toolchain and — critically — computes the **one** deps cache
@@ -53,19 +53,19 @@ changes the hash and forces a fresh deps build.
 The build workflow **fails fast** if the deps cache is absent — it never builds
 deps. Therefore:
 
-1. **First**, run **Windows 2025 Deps** on `main` (Actions → Windows 2025 Deps →
+1. **First**, run **Win2025 Deps** on `main` (Actions → Win2025 Deps →
    Run workflow). This populates the repo-wide cache. Cache created on `main` is
    visible to all branches and PRs; a feature-branch run is only visible to that
    branch.
-2. **Then** dispatch **Windows 2025 Build** (on demand only — pick the branch to
+2. **Then** dispatch **Win2025** (on demand only — pick the branch to
    build) and it hits the cache.
 
 If you bump a dependency `GIT_TAG` (or a preset / `vcpkg.json`) on a branch, the
 key changes and the build workflow will strict-miss on that branch until
-**Windows 2025 Deps** re-runs for it (dispatch deps on that branch, or merge to
+**Win2025 Deps** re-runs for it (dispatch deps on that branch, or merge to
 `main` and dispatch deps there).
 
-**Windows 2025 Deps** is manual-only — there is no automatic push/schedule
+**Win2025 Deps** is manual-only — there is no automatic push/schedule
 refresh. Re-dispatch it whenever a key input changes or the cache lapses the
 7-day inactivity eviction, or the strict build workflow will fail on a miss.
 

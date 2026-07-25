@@ -1,4 +1,4 @@
-name: Windows 2025 Deps
+name: Win2025 Deps
 
 # Builds the third-party libraries defined in build/CMakeLists.txt (the -repos
 # superbuild: fmt, spdlog, abseil, protobuf, open62541, ryml, jsonnet, gtest,
@@ -11,7 +11,7 @@ name: Windows 2025 Deps
 # Cache visibility: GitHub scopes caches to the creating branch + its default
 # branch. Dispatch this on `main` so the deps cache is visible to every branch/PR.
 #
-# On demand only: dispatch it manually (Actions -> Windows 2025 Deps -> Run
+# On demand only: dispatch it manually (Actions -> Win2025 Deps -> Run
 # workflow). Re-run it after bumping any dependency / preset / vcpkg manifest, or
 # if the cache was evicted (GitHub drops caches unused for 7 days) — otherwise the
 # strict build workflow fails on a cache miss. There is no push/schedule refresh.

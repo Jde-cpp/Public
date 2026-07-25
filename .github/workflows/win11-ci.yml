@@ -1,4 +1,4 @@
-name: Windows 11 x64
+name: Win11
 
 # Manual-only: builds + tests on the self-hosted Windows 11 workstation runner
 # (label win11-clang). Unlike the Linux runner it is a real workstation, not an
