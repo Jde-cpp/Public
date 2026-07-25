@@ -37,6 +37,19 @@ namespace Jde::Opc::Gateway{
 		client = nullptr;
 		return erased;
 	}
+	α UAClient::StatusCounts()ι->tuple<uint,uint>{
+		vector<sp<UAClient>> clients;
+		{
+			sl _{ _clientsMutex };
+			for( let& [target, creds] : _clients )
+				for( let& [cred, client] : creds )
+					clients.push_back( client );
+		}
+		uint monitored{};//count outside the lock - MonitoredNodes() lazily constructs and Count() takes the nodes mutex.
+		for( let& client : clients )
+			monitored += client->MonitoredNodes().Count();
+		return { clients.size(), monitored };
+	}
 	concurrent_flat_map<uint32_t, uint32_t> _handles;
 	α createHandle( const ServerCnnctn& target )ι->Jde::Handle{
 		//Handle packs the server id into its top 32 bits, so fold the 64-bit hash rather than truncating it (xor high^low keeps more entropy). A collision only merges two servers' connection-index counters, which are purely for log correlation - benign.

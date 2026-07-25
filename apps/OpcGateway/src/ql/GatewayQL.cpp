@@ -1,6 +1,7 @@
 #include "GatewayQL.h"
 #include "GatewayQLAwait.h"
 #include <jde/app/client/awaits/LogSettingsClientAwait.h>
+#include "../UAClient.h"
 
 namespace Jde::Opc{
 	namespace Gateway{ sp<Gateway::GatewayQL> _ql; }
@@ -27,6 +28,13 @@ namespace Jde::Opc::Gateway{
 	}
 	α GatewayQL::LogSettingsQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>>{
 		return mu<App::Client::LogSettingsClientAwait>( move(ql), sl );
+	}
+	α GatewayQL::StatusQuery( QL::TableQL&& ql )ι->jobject{
+		auto y = App::AppQL::StatusQuery( move(ql) );
+		const auto [clients, monitoredItems] = UAClient::StatusCounts();
+		y["clients"] = clients;
+		y["monitoredItems"] = monitoredItems;
+		return y;
 	}
 
 }
