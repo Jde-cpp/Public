@@ -1,4 +1,4 @@
-name: Linux x64
+name: Linux
 
 # Runs on the self-hosted, containerised runner (see .github/docker/). Triggered on
 # pull requests and pushes to main (the merge commit of a landed PR — also feeds the
