@@ -24,7 +24,7 @@ namespace Jde::DB{
 		vector<Object> Objects;
 	};
 
-  α operator==(const Object& a, const Object& b)ι->bool;
+	ΓDB α operator==(const Object& a, const Object& b)ι->bool;
 
 	ΓDB α ToString( const Object& o )ι->string;
 	ΓDB α GetParams( Object& o )ι->vector<Value>;

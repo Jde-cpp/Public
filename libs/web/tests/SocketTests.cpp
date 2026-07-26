@@ -4,6 +4,7 @@
 #include "mocks/ServerMock.h"
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/Jwt.h>
+#include <jde/fwk/chrono.h>
 #include <jde/fwk/utils/mathUtils.h>
 #include <jde/fwk/utils/Stopwatch.h>
 #include <jde/fwk/log/MemoryLog.h>
@@ -81,19 +82,25 @@ namespace Jde::Web{
 	Ω connect()->SessionPK{
 		return BlockAwait<ClientSocketAwait<SessionPK>,SessionPK>( _clientSession->Connect( _sessionId ) );
 	}
-	Ω createSession( optional<ssl::context> ctx=nullopt )->void{
-		if( _sessionId==0 ){
-			Crypto::CryptoSettings settings{ "http/ssl" };
-			auto publicKey = Crypto::ReadPublicKey( settings.PublicKeyPath );
-			Web::Jwt jwt{ move(publicKey), {0}, "testUser", "testUserCallSign", 0, "127.0.0.1", Clock::now()+1h, {}/*description*/, settings.PrivateKeyPath };
-			auto await = ClientHttpAwait{ Host, "/login", serialize(jobject{{"jwt", jwt.Payload()}}), Port };
-			let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
-			_sessionId = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
-			INFO( "({:x})Loggin Complete.", _sessionId );
-		}
+	Ω login()->void{
+		if( _sessionId )
+			return;
+		Crypto::CryptoSettings settings{ "http/ssl" };
+		auto publicKey = Crypto::ReadPublicKey( settings.PublicKeyPath );
+		Web::Jwt jwt{ move(publicKey), {0}, "testUser", "testUserCallSign", 0, "127.0.0.1", Clock::now()+1h, {}/*description*/, settings.PrivateKeyPath };
+		auto await = ClientHttpAwait{ Host, "/login", serialize(jobject{{"jwt", jwt.Payload()}}), Port };
+		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
+		_sessionId = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
+		INFO( "({:x})Loggin Complete.", _sessionId );
+	}
+	Ω connectSocket( optional<ssl::context> ctx=nullopt )->void{
 		_clientSession = ms<Mock::ClientSocketSession>( Executor(), ctx );
 		BlockVoidAwait( _clientSession->RunSession( Host, Port ) );
 		connect();
+	}
+	Ω createSession( optional<ssl::context> ctx=nullopt )->void{
+		login();
+		connectSocket( move(ctx) );
 	}
 	TEST_F( SocketTests, CreatePlain ){
 		Stopwatch sw{ "WebTests::CreatePlain", ELogTags::Test };
@@ -118,6 +125,33 @@ namespace Jde::Web{
 			_responses.emplace( requestId, move(y) );
 		}
 	}
+	//A session created over rest carries the rest timeout; the socket connecting on it must promote it to /http/socketTimeout.
+	TEST_F( SocketTests, SocketPromotesSessionTimeout ){
+		Stopwatch sw{ "SocketTests::SocketPromotesSessionTimeout", ELogTags::Test };
+		let restTimeout = Chrono::ToDuration( Settings::FindSV("/http/timeout").value_or("PT30S") );
+		let socketTimeout = Chrono::ToDuration( Settings::FindSV("/http/socketTimeout").value_or("P1D") );
+		ASSERT_GT( socketTimeout, restTimeout*2 );//need an unambiguous gap to tell the two apart.
+
+		login();
+		let authorization = Ƒ( "{:x}", _sessionId );
+		let expiration = [&authorization]()->TimePoint{//the mock '/timeout' target echos SessionInfo::Expiration.
+			let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/timeout", Port, {.Authorization=authorization}} );
+			return Chrono::ToTimePoint( Json::AsString(res.Json(), "value") );
+		};
+
+		let restStart = Chrono::ToClock<Clock,steady_clock>( steady_clock::now() );
+		let restExpiration = expiration();
+		DBG( "rest expiration: '{}', expected before '{}'", ToIsoString(restExpiration), ToIsoString(restStart+restTimeout+1s) );
+		ASSERT_LT( restExpiration, restStart+restTimeout+1s );//no socket yet.
+
+		connectSocket();
+		let socketStart = Chrono::ToClock<Clock,steady_clock>( steady_clock::now() );
+		let socketExpiration = expiration();//a rest request, so this also proves the promotion is sticky.
+		DBG( "socket expiration: '{}', expected after '{}'", ToIsoString(socketExpiration), ToIsoString(socketStart+restTimeout+1s) );
+		ASSERT_GT( socketExpiration, socketStart+restTimeout+1s );
+		ASSERT_LE( socketExpiration, socketStart+socketTimeout+1s );
+	}
+
 	TEST_F( SocketTests, EchoAttack ){
 		Stopwatch sw{ "WebTests::EchoAttack", ELogTags::Test };
 		createSession();

@@ -82,7 +82,8 @@ function( sync=false )
 		address: null,
 		port: 1968,
 		threads: 1,
-		timeout: "PT30M",
+		timeout:: "PT30M",
+		socketTimeout:: "P1D",
 		maxLogLength: 255,
 		accessControl: {
 			allowOrigin: "*",

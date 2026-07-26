@@ -26,8 +26,12 @@ namespace Jde::Web::Server{
 
 	concurrent_flat_map<SessionPK,sp<SessionInfo>> _sessions;
 	Ω upsert( sp<SessionInfo>& info )ι->void{
-		if( _sessions.emplace_or_visit(info->SessionId, info, [](auto& existing){existing.second->Expiration=existing.second->NewExpiration();}) )
+		if( _sessions.emplace_or_visit(info->SessionId, info, [hasSocket=info->HasSocket](auto& existing){
+			existing.second->HasSocket|=hasSocket;
+			existing.second->Expiration=existing.second->NewExpiration();
+		}) ){
 			TRACE( "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK.Value, info->UserEndpoint );
+		}
 	}
 
 	α GetNewSessionId()ι->SessionPK{
@@ -91,14 +95,15 @@ namespace	Sessions{
 		return steady_clock::now()+( HasSocket ? sockExpirationDuration() : Sessions::RestSessionTimeout() );
 	}
 
-	α UpdateExpiration( SessionPK sessionId, str /*userEndpoint*/ )ε->sp<SessionInfo>{
+	α UpdateExpiration( SessionPK sessionId, str /*userEndpoint*/, bool socket )ε->sp<SessionInfo>{
 		sp<SessionInfo> info;
-		_sessions.visit( sessionId, [&info, sessionId](auto& kv){
+		_sessions.visit( sessionId, [&info, sessionId, socket](auto& kv){
 			sp<SessionInfo> existing = kv.second;
 			//let& existingAddress = existing->UserEndpoint;
 			//THROW_IF( existingAddress!=userEndpoint, "[{}]existingAddress='{}' does not match userEndpoint='{}'", sessionId, existingAddress, userEndpoint );
 			auto& existingExpiration = existing->Expiration;
 			if( existingExpiration>steady_clock::now() ){
+				existing->HasSocket |= socket;//sticky - a socket connecting on a rest session promotes it to the socket timeout, later rest requests must not demote it.
 				existingExpiration = existing->NewExpiration();
 				info = existing;
 			}
@@ -145,7 +150,7 @@ namespace Sessions{
 		try{
 			optional<SessionPK> sessionId = Str::TryTo<SessionPK>( string{_authorization}, nullptr, 16 );
 			THROW_IF( !sessionId, "Invalid sessionId:  '{}'.", _authorization );
-			auto info = UpdateExpiration( *sessionId, _endpoint );
+			auto info = UpdateExpiration( *sessionId, _endpoint, _socket );
 			if( !info ){
 				up<TAwait<Web::FromServer::SessionInfo>> await{ !_appClient || _appClient->IsLocal() ? nullptr : _appClient->SessionInfoAwait(*sessionId, _sl) };//3rd party, eg AppServer
 				if( !await ){  //no 3rd party
