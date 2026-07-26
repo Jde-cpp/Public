@@ -48,6 +48,8 @@ namespace Jde::Access{
 		α RecursiveUsers( GroupPK groupPK, const ul& l, bool clear, flat_set<GroupPK>& visited )ι->flat_set<UserPK>;
 		α FindAdminAuthorizer( str schemaName )ι->sp<IAdminAcl>;
 
+		α AddAclEntry( IdentityPK identityPK, PermissionRole permissionRole, const ul& l )ι->void;
+		α PurgeIdentity( IdentityPK identityPK, const ul& l )ι->void;
 		α AddAcl( IdentityPK::Type userGroupPK, PermissionPK permissionPK, ERights allowed, ERights denied, ResourcePK resourcePK )ι->void;
 		α AddAcl( IdentityPK::Type userGroupPK, RolePK rolePK )ι->void;
 		α RemoveAcl( IdentityPK::Type userGroupPK, PermissionRole rolePK )ι->void;

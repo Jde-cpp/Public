@@ -99,7 +99,7 @@ namespace Jde::Access{
 						Authorizer().AddRoleChild( rolePK, Json::ToVector<RolePK>(Json::AsValue(*child, "id")) );
 					else{
 						flat_set<PermissionRightsPK> members;
-						Json::Visit( Json::AsValue(o, "id"), [&](const jvalue& v){ members.insert( Json::AsNumber<RolePK>(v) );} );
+						Json::Visit( Json::AsValue(*child, "id"), [&](const jvalue& v){ members.insert( Json::AsNumber<RolePK>(v) );} );//child's id - o["id"] is the parent role.
 						Authorizer().RemoveRoleChildren( rolePK, members );
 					}
 				}

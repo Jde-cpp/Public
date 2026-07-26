@@ -4,15 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a monorepo for the **Jde OpcGateway** system — an OPC-UA gateway with REST/WebSocket API, Angular frontend, and C++ backend services. Key components:
-
-- `libs/fwk/` — Core C++ framework library (`libJde.so`)
-- `libs/db/`, `libs/access/`, `libs/web/`, `libs/opc/`, `libs/ql/`, `libs/app/` — Supporting libraries
-- `apps/AppServer/` — Application server (logging, message transfer)
-- `apps/OpcGateway/` — OPC-UA gateway (main product, exposes REST/WebSocket)
-- `apps/OpcServer/` — OPC server bridge
-- `include/jde/fwk/` — Public C++ headers for the framework
-- `web/opc/my-workspace/` — Angular 22 frontend (the active workspace)
+This is a monorepo for the **Jde OpcGateway** system — an OPC-UA gateway with REST/WebSocket API, Angular frontend, and C++ backend services.
 
 ## Building (C++)
 
@@ -61,61 +53,11 @@ The g++ (`linux-*`, **g++-15**) presets exist only for the dependency build — 
 
 ## Running Tests (C++)
 
-Tests use **GoogleTest**. Each test binary requires a `-settings=` argument pointing at a Jsonnet config. Per-library configs live at `libs/<lib>/tests/config/<Lib>.Tests.jsonnet` (and `apps/<app>/tests/config/<App>.Tests.jsonnet`):
-
-- `libs/fwk/tests/config/Framework.Tests.jsonnet`
-- `libs/db/tests/config/DB.Tests.jsonnet` (driver-agnostic generators/Value/DBException — no db)
-- `libs/db/drivers/sqlite/tests/config/Sqlite.Tests.jsonnet` (in-process, no db server needed)
-- `libs/db/drivers/mysql/tests/config/MySql.Tests.jsonnet` (dialect only — no db)
-- `libs/db/drivers/odbc/tests/config/Odbc.Tests.jsonnet` (dialect only — no db; Windows-only target)
-- `libs/access/tests/config/Access.Tests.jsonnet`
-- `libs/web/tests/config/Web.Tests.jsonnet`
-- `apps/OpcGateway/tests/config/Opc.Tests.jsonnet`
-- `apps/OpcServer/tests/config/Opc.Server.Tests.jsonnet`
-
-A **test-mode flag is required** — `-tests` for direct runs, `-ctest` for ctest. They are equivalent except that `-ctest` also selects a compact console log pattern (`log/SpdLog.cpp`). One of them binds the `buildTarget`/`cwd`/`logsDir`/`windows` ext vars the configs read, and selects the default import dir — `config/args/mysql` on Linux, `config/args/sqlServer` on Windows. Without one, jsonnet evaluation fails and the binary starts with an `{"error":…}` settings object. Test output is cwd-relative: logs go to `<cwd>/logs` and file-backed sqlite dbs to `<cwd>/sqlite-tests.db`.
-
-Settings-related CLI flags (`libs/fwk/src/settings.cpp`):
-
-| flag | effect |
-|------|--------|
-| `-settings=<file>` | the Jsonnet config to load |
-| `-tests` / `-ctest` | test mode, as above; `addJdeTest` passes `-ctest` |
-| `-include=<dir>[;<dir>…]` | replaces the import dirs, each relative to the settings file's directory. **Takes priority over the `-tests`/`-ctest` default** — but does not bind the ext vars, so pair it with a test flag |
-| `-arg <k>=<v>` | binds jsonnet ext var `k`; split on the *first* `=`, so values may contain more |
-| `-sync` | sets the `sync` top-level argument to `true`, enabling startup DDL schema-sync (off by default — see the `function( sync=false )` heading in the app configs) |
-
-The three db-backed ctest suites — `libs/access/tests`, `apps/OpcGateway/tests`, and `apps/OpcServer/tests` — are wired to sqlite on **every** platform: their `addJdeTest` call adds `-include=args/sqlite -arg path=:memory:`, so ctest needs no db server and writes no db file. (A direct, non-ctest `-tests` run of the same binary still takes the default mysql/sqlServer import dir, since `-include` is only on the ctest registration.) The `libs/fwk` and `libs/web` suites use no database, and `libs/db/drivers/sqlite/tests` is inherently sqlite. The `libs/db/tests`, `libs/db/drivers/mysql/tests`, and `libs/db/drivers/odbc/tests` suites open no data source at all — they assert on generators, `Value`, and the per-dialect `Syntax` implementations, so they need no server on any platform.
-
-The two workflows use **different working directories**, so they keep separate logs/db files:
-
-- **ctest**: `addJdeTest()` (`build/functions.cmake`) registers each suite with `WORKING_DIRECTORY $buildDir/Testing` (ctest creates it) and sets the `REPO_SOURCE_DIR`/`REPO_BUILD_DIR` env vars the configs expand via `$(…)` — output lands in `$buildDir/Testing/{logs,sqlite-tests.db}`.
-- **direct/debugger runs**: run from `runtime/` (created by `reconfig`; the VS Code launch configs use it too) with `REPO_SOURCE_DIR`/`REPO_BUILD_DIR` exported in the shell — output lands in `$buildDir/runtime/{logs,sqlite-tests.db}`.
-
-```bash
-# Run a test binary directly
-cd $buildDir/runtime
-$buildDir/libs/fwk/tests/Jde.Fwk.Tests -tests -settings=$JDE_DIR/libs/fwk/tests/config/Framework.Tests.jsonnet
-
-# Or every suite via ctest (addJdeTest passes -ctest and the env); --preset is broken, see reviews/todo.md §3
-cd $buildDir && ctest
-```
-
-**Running a single test:** the `testing.tests` field in the Jsonnet config is the GoogleTest filter. Set it to e.g. `"FileTests.WriteRead"` (or a pattern like `"FileTests.*"`) to restrict the run. Some test binaries look for their config in `~/.Jde-Cpp/Tests.<Lib>/<Lib>.Tests.jsonnet` — symlink the repo config there if missing.
+See the **`cpp-tests`** skill (`.claude/skills/cpp-tests/SKILL.md`) for the full procedure — the required `-settings` and `-tests`/`-ctest` flags, the settings CLI flag table, which suites are sqlite-backed under ctest, the differing working directories for ctest vs direct runs, and single-test filtering.
 
 ## Frontend (Angular)
 
-The active Angular workspace is `web/opc/my-workspace/`. It is an Angular 22 workspace with one application (`my-workspace`) and four libraries (`jde-spa`, `jde-framework`, `jde-access`, `jde-opc`).
-
-```bash
-cd web/opc/my-workspace
-ng serve          # dev server
-ng build          # production build
-ng test           # run tests (Vitest, not Karma)
-ng build --watch --configuration development  # watch mode
-```
-
-The four libraries (`jde-spa`, `jde-framework`, `jde-access`, `jde-opc`) and the `my-workspace` application are all defined in `web/opc/my-workspace/angular.json`.
+The active Angular workspace is `web/opc/my-workspace/` — Angular 22, one application (`my-workspace`) and four libraries (`jde-spa`, `jde-framework`, `jde-access`, `jde-opc`), all defined in its `angular.json`. Standard `ng` commands apply from that directory; note `ng test` runs **Vitest, not Karma**.
 
 ## C++ Code Conventions
 
@@ -166,16 +108,6 @@ Use `#ifdef __cpp_lib_stacktrace` to branch between `std::stacktrace_entry` (GCC
 ### Coroutines
 
 Awaitables inherit from `VoidAwait` or `IAwait<TResult, TTask>` in `co/Await.h`. Tasks use `VoidTask` and typed task types from `co/Task.h`.
-
-## Key Dependencies
-
-- **fmt** + **spdlog** (external fmt, `SPDLOG_FMT_EXTERNAL=ON`)
-- **Boost** (json, container, uuid, stacktrace, coroutine)
-- **OpenSSL**
-- **jsonnet** (config parsing)
-- **open62541** (OPC-UA, OpcGateway/OpcServer only)
-- **protobuf** + **abseil** (frontend/backend proto transport)
-- **liburing** (Linux async I/O in fwk)
 
 ## Environment Variables
 

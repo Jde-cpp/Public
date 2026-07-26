@@ -107,7 +107,9 @@ namespace Jde::Access{
 			return ERights::All;
 
 		auto user = Users.find( executer );
-		if( user==Users.end() || user->second.IsDeleted )
+		if( user==Users.end() )
+			return executer.Value==UserPK::System ? ERights::All : ERights::None;//System early-passes in Test/TestAdmin - stay consistent.
+		if( user->second.IsDeleted )
 			return ERights::None;
 
 		auto rights = user->second.ResourceRights( *resourcePK );
@@ -207,17 +209,31 @@ namespace Jde::Access{
 		if( users.size() )
 			SetUserPermissions( move(users), l );
 	}
+	α Authorize::AddAclEntry( IdentityPK identityPK, PermissionRole permissionRole, const ul& )ι->void{
+		let range = Acl.equal_range( identityPK );
+		for( auto p=range.first; p!=range.second; ++p ){
+			if( p->second==permissionRole )
+				return;//multimap - a duplicate would survive RemoveAcl, which erases only the first match.
+		}
+		Acl.emplace( identityPK, permissionRole );
+	}
 	α Authorize::AddAcl( IdentityPK::Type userGroupPK, PermissionPK permissionPK, ERights allowed, ERights denied, ResourcePK resourcePK )ι->void{
 		ul l{ Mutex };
 		const PermissionRole permissionRole{ std::in_place_index<0>, permissionPK };
 		ASSERT( Resources.find(resourcePK)!=Resources.end() );
-		const Permission permission{ permissionPK, resourcePK, allowed, denied };
-		Permissions.emplace( permissionPK, permission );
+		//access_ac_upsert_permission is an upsert on (identity, resource) - a re-grant returns the same pk carrying new rights.
+		auto existing = Permissions.find( permissionPK );
+		let changed = existing!=Permissions.end() && (existing->second.Allowed!=allowed || existing->second.Denied!=denied || existing->second.ResourcePK!=resourcePK);
+		Permissions.insert_or_assign( permissionPK, Permission{permissionPK, resourcePK, allowed, denied} );
 		auto user = Users.find( {userGroupPK} );
 		let identityPK = user!=Users.end() ? IdentityPK{ user->first } : IdentityPK{ GroupPK{userGroupPK} };
-		Acl.emplace( identityPK, permissionRole );
-		if( user!=Users.end() )
-			user->second += permission;
+		AddAclEntry( identityPK, permissionRole, l );
+		if( changed )
+			Recalc( l );//rebuild everything - the pk may be cached on identities other than this one.
+		else if( user!=Users.end() ){
+			user->second.Clear();//rebuild, operator+= can only raise rights.
+			SetUserPermissions( {user->first}, l );
+		}
 		else
 			RecalcGroupMembers( identityPK.GroupPK(), l );
 	}
@@ -226,7 +242,7 @@ namespace Jde::Access{
 		ul l{ Mutex };
 		auto user = Users.find( {userGroupPK} );
 		let identityPK = user!=Users.end() ? IdentityPK{ user->first } : IdentityPK{ GroupPK{userGroupPK} };
-		Acl.emplace( identityPK, PermissionRole{std::in_place_index<1>, rolePK} );
+		AddAclEntry( identityPK, PermissionRole{std::in_place_index<1>, rolePK}, l );
 		if( user!=Users.end() )
 			AddPermission( identityPK, PermissionRole{std::in_place_index<1>, rolePK}, {user->first}, l );
 		else
@@ -298,9 +314,16 @@ namespace Jde::Access{
 		if( auto p = Users.find(identityPK); p!=Users.end() )
 			p->second.IsDeleted = true;
 	}
+	//a purged identity's acl rows and memberships are inert (lookups skip what isn't in Users/Groups) but would leak for the process lifetime.
+	α Authorize::PurgeIdentity( IdentityPK identityPK, const ul& )ι->void{
+		Acl.erase( identityPK );
+		for( auto group=Groups.begin(); group!=Groups.end(); ++group )
+			group->second.Members.erase( identityPK );//IdentityPK orders on Underlying(), so this matches a user or group member.
+	}
 	α Authorize::PurgeUser( UserPK identityPK )ι->void{
-		ul _{ Mutex };
+		ul l{ Mutex };
 		Users.erase( identityPK );
+		PurgeIdentity( identityPK, l );
 	}
 	α Authorize::RestoreUser( UserPK identityPK )ι->void{
 		ul _{ Mutex };
@@ -309,7 +332,13 @@ namespace Jde::Access{
 	}
 	α Authorize::DeleteGroup( GroupPK groupPK )ι->void{
 		ul l{ Mutex };
-		RecalcGroupMembers( groupPK, l, true );
+		auto p = Groups.find( groupPK );
+		if( p==Groups.end() || p->second.IsDeleted )
+			return;
+		auto users = RecursiveUsers( groupPK, l, true );//collect+clear while still active, RecursiveUsers early-outs on a deleted group.
+		p->second.IsDeleted = true;//soft delete, symmetric with DeleteUser - RestoreGroup needs the row.
+		if( users.size() )
+			SetUserPermissions( move(users), l );
 	}
 	//TODO test on deleted members.
 	α Authorize::TestAddGroupMember( GroupPK parentGroupPK/*groupD*/, flat_set<IdentityPK::Type>&& memberPKs, SL sl )ε->void{
@@ -328,10 +357,11 @@ namespace Jde::Access{
 		auto p = Groups.find( groupPK );
 		if( p==Groups.end() )
 			return;
-		let deleted = p->second.IsDeleted;
-		Groups.erase( p );
-		if( !deleted )
-			RecalcGroupMembers( groupPK, l );
+		if( p->second.IsDeleted )
+			Groups.erase( p );//members were cleared+recalculated when it was deleted.
+		else
+			RecalcGroupMembers( groupPK, l, true );//collect+clear the members before erasing, RecursiveUsers can't find them after.
+		PurgeIdentity( groupPK, l );//after the recalc - the group is already out of Groups, so its acl rows are inert either way.
 	}
 
 	α Authorize::TestAddRoleMember( RolePK parent, RolePK child, SL sl )ε->void{
@@ -417,6 +447,11 @@ namespace Jde::Access{
 			return;
 		let deleted = p->second.IsDeleted;
 		Roles.erase( p );
+		const PermissionRole member{ std::in_place_index<1>, rolePK };
+		for( auto acl=Acl.begin(); acl!=Acl.end(); )//Acl is keyed by identity, so a role has to be swept by value.
+			acl = acl->second==member ? Acl.erase( acl ) : std::next( acl );
+		for( auto role=Roles.begin(); role!=Roles.end(); ++role )
+			role->second.Members.erase( member );
 		if( !deleted )
 			Recalc( l );
 	}
@@ -432,7 +467,7 @@ namespace Jde::Access{
 			flat_set<RolePK> visitedRoles;
 			AddUserPermissions( pkUser->second, permissionRole, visitedRoles );
 		}
-		else if( auto group = identityPK.IsUser() ? Groups.end() : Groups.find(identityPK.GroupPK()); group!=Groups.end() && visitedGroups.emplace(group->first).second ){
+		else if( auto group = identityPK.IsUser() ? Groups.end() : Groups.find(identityPK.GroupPK()); group!=Groups.end() && !group->second.IsDeleted && visitedGroups.emplace(group->first).second ){//deleted groups don't propagate, mirrors RecursiveUsers.
 			for( auto member : group->second.Members )
 				AddPermission( member, permissionRole, users, visitedGroups, l );//user
 		}

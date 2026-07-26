@@ -25,7 +25,9 @@ namespace Jde::Access::Server{
 		α Add()ι->void;
 		α AddRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task;
 		α AddPermission( RolePK parentRolePK, const jobject& permissionRights )ι->TAwait<PermissionRightsPK>::Task;
-		α Remove()ι->DB::ExecuteAwait::Task;
+		α Remove()ι->void;
+		α RemoveRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task;
+		α RemovePermission( RolePK parentRolePK )ι->DB::ExecuteAwait::Task;
 
 		QL::MutationQL _mutation;
 		UserPK _userPK;
