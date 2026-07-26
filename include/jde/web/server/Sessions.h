@@ -38,7 +38,7 @@ namespace Jde::Web::Server{
 		α Get()ι->vector<sp<SessionInfo>>;
 		α Size()ι->uint;
 
-		struct ΓWS UpsertAwait : TAwait<sp<SessionInfo>>{
+		struct ΓWS UpsertAwait : TAwait<sp<SessionInfo>>, noncopyable{
 			using base = TAwait<sp<SessionInfo>>;
 			UpsertAwait( str authorization, str endpoint, bool socket, sp<App::IApp> appClient, bool throw_=true, SRCE )ι:base{sl}, _appClient{move(appClient)}, _authorization{authorization}, _endpoint{endpoint}, _socket{socket}, _throw{throw_}{}
 			α Suspend()ι->void;

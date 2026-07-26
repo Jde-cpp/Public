@@ -24,7 +24,10 @@ endif()
 
 if( jde_APPS )
 	include( build/functions.cmake )
-
+	if( NOT MSVC )
+		add_compile_options( -fmacro-prefix-map=${CMAKE_SOURCE_DIR}/= )
+		add_compile_definitions( JDE_SOURCE_ROOT="${CMAKE_SOURCE_DIR}/" )#SpdLog.cpp rebuilds an absolute uri for the terminal's osc-8 link.
+	endif()
 	set( libDir ${CMAKE_CURRENT_SOURCE_DIR}/libs )
 	add_subdirectory( ${libDir}/fwk/src libs/fwk/lib )
 	add_subdirectory( ${libDir}/db/src libs/db/lib )

@@ -19,7 +19,7 @@ local logsDir = std.extVar("logsDir");
 			},
 			sinks:{
 				console:{},
-				file:{ path: logsDir, md: false, pattern: "%^%3!l%$-%H:%M:%S.%e \\033]8;;file://%g#%#\\a%v\\033]8;;\\a" }
+				file:{ path: logsDir, md: false }
 			}
 		},
 		memory:{

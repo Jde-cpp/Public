@@ -1,6 +1,7 @@
 local common = import '../../../../../libs/db/config/args-common.libsonnet';
 common + {
 	local args = self,
+	local cwd = std.extVar("cwd"),
 	sqlType: "mysql",
 	instanceName: args.buildTarget,
 	opcServer: {
@@ -9,8 +10,8 @@ common + {
 			"$(HOME)/.Jde-Cpp/Tests.Opc/ssl/certs"
 		],
 		ssl:{
-			certificate: "/tmp/cert.pem",
-			privateKey: {path:"/tmp/private.pem", passcode: ""}
+			certificate: cwd+"/ssl/certs/OpcServer.mysql.pem",
+			privateKey: {path: cwd+"/ssl/private/OpcServer.mysql.pem", passcode: "OpcServer.mysql"}
 		}
 	},
 	dbServers: {

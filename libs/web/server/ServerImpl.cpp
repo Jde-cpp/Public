@@ -294,7 +294,7 @@ namespace Server{
 		j["connectionId"] = appClient->ConnectionPK();
 		try{
 			let session = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false, appClient, false );
-			j["active"] = ( bool )session;
+			j["active"] = ( bool )session && session->UserPK;
 		}
 		catch( Exception& e ){
 			j["active"] = false;

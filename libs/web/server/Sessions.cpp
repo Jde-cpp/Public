@@ -1,3 +1,4 @@
+#include <chrono>
 #include <jde/web/server/Sessions.h>
 
 #include <jde/web/server/HttpRequest.h>
@@ -6,6 +7,8 @@
 #include <jde/web/server/auth/JwtLoginAwait.h>
 #include <jde/app/IApp.h>
 #include "ServerImpl.h"
+#include "jde/fwk/exceptions/Exception.h"
+#include "jde/fwk/usings.h"
 
 #define let const auto
 namespace Jde::Web::Server{
@@ -161,11 +164,18 @@ namespace Sessions{
 						co_return;
 					}
 				}
-				Web::FromServer::SessionInfo proto{ co_await *await };
-				let expiration = Chrono::ToClock<steady_clock,Clock>( Protobuf::ToTimePoint(proto.expiration()) );
-				info = ms<SessionInfo>( *sessionId, expiration, UserPK{proto.user_pk()}, proto.user_endpoint(), proto.has_socket() );
-				info->UserEndpoint = _endpoint;
-				info->HasSocket = _socket;
+				try{
+					Web::FromServer::SessionInfo proto{ co_await *await };
+					let expiration = Chrono::ToClock<steady_clock,Clock>( Protobuf::ToTimePoint(proto.expiration()) );
+					info = ms<SessionInfo>( *sessionId, expiration, UserPK{proto.user_pk()}, proto.user_endpoint(), proto.has_socket() );
+					info->UserEndpoint = _endpoint;
+					info->HasSocket = _socket;
+				}
+				catch( Exception& e ){
+					//anonymous user,
+					e.SetLevel(ELogLevel::Debug);
+					info = ms<SessionInfo>( *sessionId, steady_clock::now()+RestSessionTimeout(), UserPK{0}, _endpoint, _socket );
+				}
 				upsert( info );
 			}
 			Resume( move(info) );
