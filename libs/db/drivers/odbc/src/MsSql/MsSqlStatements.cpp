@@ -39,10 +39,12 @@ namespace Jde::DB::MsSql::Sql
 
 	α ForeignKeySql( bool addSchema )ι->string{
 		std::ostringstream os;
+		//Schema-qualified con joins: constraint names are unique per schema, not per database, so joining on name
+		//alone duplicates every fk row once per same-named constraint in another schema of the same database.
 		os << "select  fk.CONSTRAINT_NAME name, fk.TABLE_NAME foreign_table, fk.COLUMN_NAME fk, pk.TABLE_NAME primary_table, pk.COLUMN_NAME pk, pk.ORDINAL_POSITION ordinal" << endl
 			<< "from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS con" << endl
-			<< "\tjoin INFORMATION_SCHEMA.KEY_COLUMN_USAGE fk on con.CONSTRAINT_NAME=fk.CONSTRAINT_NAME" << endl
-			<< "\tjoin INFORMATION_SCHEMA.KEY_COLUMN_USAGE pk on con.UNIQUE_CONSTRAINT_NAME=pk.CONSTRAINT_NAME and fk.TABLE_SCHEMA=pk.TABLE_SCHEMA and fk.ORDINAL_POSITION=pk.ORDINAL_POSITION" << endl;
+			<< "\tjoin INFORMATION_SCHEMA.KEY_COLUMN_USAGE fk on con.CONSTRAINT_SCHEMA=fk.CONSTRAINT_SCHEMA and con.CONSTRAINT_NAME=fk.CONSTRAINT_NAME" << endl
+			<< "\tjoin INFORMATION_SCHEMA.KEY_COLUMN_USAGE pk on con.UNIQUE_CONSTRAINT_SCHEMA=pk.CONSTRAINT_SCHEMA and con.UNIQUE_CONSTRAINT_NAME=pk.CONSTRAINT_NAME and fk.TABLE_SCHEMA=pk.TABLE_SCHEMA and fk.ORDINAL_POSITION=pk.ORDINAL_POSITION" << endl;
 		if( addSchema )
 			os << "where pk.TABLE_SCHEMA=?" << endl;
 		os << "order by name, ordinal";

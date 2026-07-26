@@ -33,5 +33,6 @@ namespace CatalogDdl{
 		else
 			SchemaDdl::Drop( schema );
 	}
+}
 #endif
-}}
+}

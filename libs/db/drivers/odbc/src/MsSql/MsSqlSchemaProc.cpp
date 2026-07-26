@@ -171,8 +171,8 @@ namespace Jde::DB::MsSql{
 			auto pExisting = fks.find( name );
 			if( pExisting==fks.end() )
 				fks.emplace( name, ForeignKey{name, fkTable, {column}, pkTable} );
-			else
-				pExisting->second.Columns.push_back( column );
+			else if( auto& columns=pExisting->second.Columns; find(columns, column)==columns.end() )
+				columns.push_back( column );//a constraint can't list the same column twice, so a repeat is a duplicated row - folding it in would break SyncFKs' Columns compare and re-create every fk each sync.
 		};
 		_pDataSource->Select( {Sql::ForeignKeySql(schemaName.size()), {Value{schemaName}}}, result );
 		return fks;

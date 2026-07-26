@@ -47,7 +47,7 @@ namespace Jde::DB{
  		α get_int8()Ι->int8_t{ return get<int8_t>(Variant); }
 		α get_int32()Ι->int{ return get<int>(Variant); }
 		α get_int()Ι->_int{ return get<_int>(Variant); }
-		Ŧ get_number( SRCE )Ε->T;
+		Ŧ get_number( SRCE )Ε->T requires std::is_arithmetic_v<T>;
 		Ŧ Get( SRCE )Ε->T;
 		α get_uint32()Ι->uint32_t{ return get<uint32_t>(Variant); }
 		α get_uint()Ι->uint{ return get<uint>(Variant); }
@@ -67,13 +67,14 @@ namespace Jde::DB{
 
 		α set_bool( bool v )ι->void{ Variant=v; }
 		α operator=( uint v )ι->Value&{ Variant=v; return *this; }
+		α operator==( const Value& r )Ι->bool{ return Variant==r.Variant; }
 		Underlying Variant;
 	};
 
 	Ŧ ToValue( vec<T> x )ι->vector<Value>;
 	Ŧ ToValue( const flat_set<T>& x )ι->vector<Value>;
 #define GET(x) static_cast<T>( get_##x() )
-	Ŧ Value::get_number( SL sl )Ε->T{
+	Ŧ Value::get_number( SL sl )Ε->T requires std::is_arithmetic_v<T>{
 		THROW_IFSL( is_null(), "Number is null" );
 		switch( Type() ){
 			using enum EValue;
@@ -89,14 +90,12 @@ namespace Jde::DB{
 		}
 	}
 	Ŧ Value::Get( SL sl )Ε->T{
-		switch( Type() ){
-			using enum EValue;
-		case String:
-			THROW_IFSL( !is_string(), "Value is not a string." );
-			return GET(string);
-		default:
-			return get_number<T>( sl );
+		if constexpr( std::same_as<T,string> ){
+			THROW_IFSL( !is_string(), "Value is a {}, not a string.", TypeName() );
+			return get_string();
 		}
+		else
+			return get_number<T>( sl );
 	}
 #undef GET
 }

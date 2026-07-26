@@ -94,5 +94,5 @@ namespace Jde::DB{
 		recreated = true;
 		return SchemaDdl::Sync( schema, ql );
 	}
-#endif
 }
+#endif
