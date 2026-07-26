@@ -16,7 +16,10 @@
 	repoBuildDir: "$(REPO_BUILD_DIR)/"+common.buildTarget,
 	repoSourceDir: "$(REPO_SOURCE_DIR)",
 	windows:: std.extVar("windows")=="true",
-	binDir:: std.extVar("cwd")+"/../bin", //windows dlls all land in <buildDir>/bin; cwd is <buildDir>/Testing (ctest) or <buildDir>/runtime (direct runs).
+	//windows dlls all land in <buildDir>/bin.  Derived from repoBuildDir, not cwd, so it stays correct wherever the
+	//process runs: ctest uses <buildDir>/Testing and direct runs <buildDir>/runtime (both one level down, which the
+	//old cwd+"/../bin" relied on), but the soak harness runs each app from a per-run dir outside the build tree.
+	binDir:: common.repoBuildDir+"/bin",
 	lib( name, linuxDir ):: if common.windows then common.binDir+"/"+name+".dll" else common.repoBuildDir+linuxDir+"/lib"+name+".so",
 	companyDir:: if common.windows then "$(ProgramData)/Jde-Cpp" else "$(HOME)/.Jde-Cpp", //per-OS company data root the apps write certs under.
 	certsDir( product ):: common.companyDir+"/"+product+"/ssl/certs",

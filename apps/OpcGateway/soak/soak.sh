@@ -8,8 +8,15 @@
 # powershell.exe -Command one-liner for Ctrl-C delivery, which bash cannot send to native console apps).
 #
 #   soak.sh [--duration PT24H] [--run-dir DIR] [--smoke] [--build-dir DIR]
+#           [--warmup PT1H] [--quiet-interval PT6H] [--quiet-period PT10M]
 #
 #   --smoke   10-minute validation run: PT30S status samples, quiet window at 3m for 1m.
+#
+#   The remaining three exist because the defaults are tuned for the 24h run and do not scale down on their own:
+#   --warmup          RSS baseline offset from start (default 1h, 2m under --smoke). MUST be shorter than
+#                     --duration or no baseline sample exists and the RSS criterion is silently skipped.
+#   --quiet-interval  idle gap between write bursts (client default PT6H - never fires in a run under 6h)
+#   --quiet-period    how long each idle window lasts (client default PT10M)
 #
 # Verdict criteria (verdict.json + exit code):
 #   - soak client exit 0 (completed, zero misses/writeFailures/socketDrops/statusFailures)
@@ -25,15 +32,38 @@ duration="PT24H"
 runDir=""
 smoke=0
 buildDirOverride=""
+warmup=""
+quietInterval=""
+quietPeriod=""
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--duration) duration="$2"; shift 2;;
 		--run-dir) runDir="$2"; shift 2;;
 		--build-dir) buildDirOverride="$2"; shift 2;;
+		--warmup) warmup="$2"; shift 2;;
+		--quiet-interval) quietInterval="$2"; shift 2;;
+		--quiet-period) quietPeriod="$2"; shift 2;;
 		--smoke) smoke=1; duration="PT10M"; shift;;
 		*) echo "unknown argument: $1" >&2; exit 2;;
 	esac
 done
+
+isoSeconds(){ # <PT#H#M#S | plain seconds> -> seconds ; the apps parse ISO-8601, awk/date here do not.
+	local v h=0 m=0 s=0
+	v=$( echo "$1" | tr '[:lower:]' '[:upper:]' )
+	if [[ $v =~ ^[0-9]+$ ]]; then echo "$v"; return 0; fi
+	[[ $v =~ ^PT([0-9]+H)?([0-9]+M)?([0-9]+S)?$ && $v != "PT" ]] || { echo "invalid duration '$1' (want PT#H#M#S)" >&2; return 1; }
+	[[ -z ${BASH_REMATCH[1]} ]] || h=${BASH_REMATCH[1]%H}
+	[[ -z ${BASH_REMATCH[2]} ]] || m=${BASH_REMATCH[2]%M}
+	[[ -z ${BASH_REMATCH[3]} ]] || s=${BASH_REMATCH[3]%S}
+	echo $(( h*3600+m*60+s ))
+}
+
+durationSeconds=$( isoSeconds "$duration" ) || exit 2
+warmupSeconds=3600; [[ $smoke -eq 0 ]] || warmupSeconds=120
+[[ -z "$warmup" ]] || warmupSeconds=$( isoSeconds "$warmup" ) || exit 2
+# Fail here, not 24h later: a baseline at/after the last sample leaves rssVerdict with nothing to compare.
+[[ $warmupSeconds -lt $durationSeconds ]] || { echo "warmup ($warmupSeconds s) must be shorter than duration ($durationSeconds s) - pass --warmup" >&2; exit 2; }
 
 isWindows=0
 case "${OSTYPE:-}" in msys*|cygwin*) isWindows=1;; esac
@@ -98,6 +128,8 @@ echo "=== soak run: $runDir (duration $duration, build $buildDir) ==="
 
 # ---------------------------------------------------------------- process helpers
 declare -A pids exitCodes cleanStop
+stopBroadcast=0 #set once a console-wide Ctrl-C has gone out (windows), so stopAll can tell an expected sibling exit
+                #from a premature death.  Stays 0 on linux, where each SIGINT is aimed at one pid.
 winpid(){ cat /proc/$1/winpid 2>/dev/null || echo "$1"; }
 
 alive(){ kill -0 "$1" 2>/dev/null; }
@@ -116,6 +148,12 @@ stopGraceful(){ # <pid> - SIGINT / console Ctrl-C; caller waits+escalates
 		local wp; wp=$(winpid "$1")
 		# Attach to the target's console and broadcast Ctrl-C: the apps route it through SetConsoleCtrlHandler ->
 		# the same worker-stop path SIGINT takes on Linux. powershell.exe gets its own console, so FreeConsole is safe.
+		#
+		# NOT per-process: GenerateConsoleCtrlEvent's group 0 signals every process on the attached console, and MSYS
+		# bash hands all its children its own console rather than creating one each - so this reaches all three servers
+		# AND this script.  Harmless for teardown (they are all stopping anyway), but the INT mask is required or the
+		# script trips its own `trap failEarly INT` and aborts the run.  Callers needing to stop ONE app must hardKill.
+		trap '' INT
 		powershell.exe -NoProfile -Command "
 			Add-Type -Namespace W -Name K -MemberDefinition '
 				[DllImport(\"kernel32.dll\")] public static extern bool FreeConsole();
@@ -127,6 +165,9 @@ stopGraceful(){ # <pid> - SIGINT / console Ctrl-C; caller waits+escalates
 				[W.K]::SetConsoleCtrlHandler([IntPtr]::Zero, \$true) | Out-Null;
 				[W.K]::GenerateConsoleCtrlEvent(0, 0) | Out-Null;
 			}" >/dev/null 2>&1
+		sleep 2 #the event is asynchronous - stay masked until it lands, or the trap fires just after the restore.
+		trap 'failEarly "interrupted"' INT
+		stopBroadcast=1
 	else
 		kill -INT "$1" 2>/dev/null
 	fi
@@ -141,7 +182,10 @@ stopAll(){ # graceful teardown: gateway -> opcserver -> appserver; 60s grace eac
 	for name in gateway opcserver appserver; do
 		pid=${pids[$name]:-}
 		[[ -n "$pid" ]] || continue
-		if ! alive "$pid"; then wait "$pid" 2>/dev/null; exitCodes[$name]=$?; cleanStop[$name]=0; continue; fi
+		#Already gone: premature death (unclean) unless a console-wide Ctrl-C has already gone out, in which case this
+		#app stopped on that same signal - the expected path on windows, where the broadcast cannot be aimed at one pid.
+		#A genuine mid-run death is still caught: the monitor loop clears serversOk before teardown ever starts.
+		if ! alive "$pid"; then wait "$pid" 2>/dev/null; exitCodes[$name]=$?; cleanStop[$name]=$stopBroadcast; continue; fi
 		echo "stopping $name ($pid)..."
 		stopGraceful "$pid"
 		deadline=$(( $(date +%s)+60 )); clean=1
@@ -271,7 +315,10 @@ waitHttp gateway "http://localhost:1968/ErrorCodes"
 "$soakExe" -c -tests "-settings=$(np "$scriptDir/config/Opc.Soak.jsonnet")" "-include=." -grant >"$runDir/client/grant.log" 2>&1 \
 	|| failEarly "rights grant failed - see $runDir/client/grant.log"
 echo "soak user granted OPC node access - restarting opcserver to load it"
-stopGraceful "${pids[opcserver]}"
+# Hard kill on windows: a console Ctrl-C cannot be aimed at one process (see stopGraceful), and signalling the whole
+# console here would take the AppServer and gateway down mid-startup.  This is a restart, not a shutdown assertion -
+# the verdict never reads this stop - and OpcServer reloads its per-run sqlite db from disk on the way back up.
+if [[ $isWindows -eq 1 ]]; then hardKill "${pids[opcserver]}"; else stopGraceful "${pids[opcserver]}"; fi
 for i in $(seq 1 30); do alive "${pids[opcserver]}" || break; sleep 1; done
 alive "${pids[opcserver]}" && { hardKill "${pids[opcserver]}"; sleep 1; }
 wait "${pids[opcserver]}" 2>/dev/null
@@ -282,8 +329,12 @@ waitPort opcserver 4840
 
 clientArgs=( "-duration=$duration" "-csv=$(np "$runDir/client/soak.csv")" "-summary=$(np "$runDir/client/summary.json")" )
 if [[ $smoke -eq 1 ]]; then
-	clientArgs+=( "-statusPeriod=PT30S" "-quietInterval=PT3M" "-quietPeriod=PT1M" )
+	clientArgs+=( "-statusPeriod=PT30S" )
+	[[ -n "$quietInterval" ]] || quietInterval="PT3M"
+	[[ -n "$quietPeriod" ]] || quietPeriod="PT1M"
 fi
+[[ -z "$quietInterval" ]] || clientArgs+=( "-quietInterval=$quietInterval" )
+[[ -z "$quietPeriod" ]] || clientArgs+=( "-quietPeriod=$quietPeriod" )
 launch client "$soakExe" "$scriptDir/config/Opc.Soak.jsonnet" "." "${clientArgs[@]}"
 
 # ---------------------------------------------------------------- monitor until the client finishes
@@ -337,7 +388,6 @@ if [[ -n "$crashes" ]]; then
 	failReasons+=( "crash events recorded (crash-events.txt)" )
 fi
 
-warmupSeconds=3600; [[ $smoke -eq 1 ]] && warmupSeconds=120
 rssReport=$(rssVerdict $((startEpoch+warmupSeconds))) || failReasons+=( "RSS growth over limit" )
 echo "$rssReport"
 echo "$rssReport" >"$runDir/rss-report.txt"
