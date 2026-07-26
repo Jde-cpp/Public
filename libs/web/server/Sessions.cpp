@@ -13,13 +13,13 @@ namespace Jde::Web::Server{
 	steady_clock::duration _restExpirationDuration{};
 	α Sessions::RestSessionTimeout()ι->steady_clock::duration{
 		if( _restExpirationDuration==steady_clock::duration::zero() )
-			_restExpirationDuration = Chrono::ToDuration( Settings::FindSV("/http/timeout").value_or("PT30S") );
+			_restExpirationDuration = Chrono::ToDuration( Settings::FindSV("/http/timeout").value_or("PT30M") );
 		return _restExpirationDuration;
 	}
 	steady_clock::duration _sockExpirationDuration{};
 	Ω sockExpirationDuration(){
 		if( _sockExpirationDuration==steady_clock::duration::zero() )
-			_sockExpirationDuration = Chrono::ToDuration( Settings::FindSV("/http/timeout").value_or("P1D") );
+			_sockExpirationDuration = Chrono::ToDuration( Settings::FindSV("/http/socketTimeout").value_or("P1D") );
 		return _sockExpirationDuration;
 	}
 	steady_clock::time_point _lastTrim{ steady_clock::now() };

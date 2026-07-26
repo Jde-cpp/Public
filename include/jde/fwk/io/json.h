@@ -54,7 +54,7 @@ namespace Jde{
 		Ξ FindValuePtr( const jvalue& v, sv path )ι->const jvalue*{ auto y = v.try_at_pointer(path); return y.has_value() ? &*y : nullptr; }
 		Φ FindValue( jobject& o, sv path )ι->jvalue*;
 		Ξ FindValue( const jobject& o, sv path )ι->const jvalue*{ jvalue* v = FindValue(const_cast<jobject&>(o), path); return v; }
-		α FindArray( const jvalue& v, sv path )ι->const jarray*;
+		Φ FindArray( const jvalue& v, sv path )ι->const jarray*;
 		Φ FindArray( const jobject& o, sv key )ι->const jarray*;
 		Ξ FindBool( const jvalue& v, sv path )ι->optional<bool>{ auto p = FindValue(v,path); return p && p->is_bool() ? p->get_bool() : optional<bool>{}; }
 		Φ FindBool( const jobject& o, sv key )ι->optional<bool>;
