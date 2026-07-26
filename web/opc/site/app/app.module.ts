@@ -3,7 +3,6 @@ import { NgModule } from '@angular/core';
 import {COMMA, SPACE} from '@angular/cdk/keycodes';
 import {MAT_CHIPS_DEFAULT_OPTIONS } from '@angular/material/chips';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import {MatDialogModule} from '@angular/material/dialog';
 import {MatSnackBarModule} from '@angular/material/snack-bar';
 import { RouterModule } from '@angular/router';
@@ -18,7 +17,7 @@ import { AppRoutingModule } from './app_routing_module';
 @NgModule({
   	imports: [
 		AppComponent,
-		RouterModule, HttpClientModule, BrowserAnimationsModule, FormsModule, ReactiveFormsModule,
+		RouterModule, HttpClientModule, FormsModule, ReactiveFormsModule,
 		MatDialogModule, MatSnackBarModule, MatAutocompleteModule, MatSelectModule,// MatInputModule,//MatFormFieldModule,
 		AppRoutingModule,NavBar
   ],

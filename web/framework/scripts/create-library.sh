@@ -43,7 +43,7 @@ cd projects/$library;
 #if [ -d $controlDir/environments ]; then addHardDir environments $controlDir; fi;
 #if [ -d $controlDir/styles ]; then addHardDir styles $controlDir; fi;
 cd src;
-addHard public-api.ts $controlDir/src;
+#public-api.ts is symlinked by create-workspace.sh on every run, not hard-linked here on first create only.
 cd lib;
 if [ -f $library.component.ts ]; then rm $library.component.*; fi;
 if [ -f $library.service.ts ]; then rm $library.service.*; fi;

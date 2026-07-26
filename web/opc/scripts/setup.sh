@@ -1,6 +1,6 @@
 #!/bin/bash
 clean=${1:-0};
-shouldFetch=${2:0};
+shouldFetch=${2:-0};
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd $scriptDir;
 source env.sh;
