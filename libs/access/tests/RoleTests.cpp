@@ -17,6 +17,11 @@ namespace Jde::Access::Tests{
 		let remove = Ƒ( "mutation removeRole( id:{}, permissionRight:{{id:{}}} )", rolePK, permissionPK );
 		return BlockTAwait<jvalue>( Server::RoleMAwait{QL::ParseM(remove, {}, Schemas()), userPK} );
 	}
+	α RemoveRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK userPK )ε->jvalue{
+		jobject vars{ {"parent", parentRolePK}, {"child", childRolePK} };
+		let q = "mutation removeRole( id:$parent, role:{id:$child} )";
+		return BlockTAwait<jvalue>( Server::RoleMAwait{QL::ParseM(q, vars, Schemas()), userPK} );
+	}
 	α GetRolePermission( RolePK rolePK, sv resourceName, UserPK executer )ε->jobject{
 		jobject vars{ {"roleId", rolePK}, {"resource", resourceName} };
 		let q = "role( id:$roleId ){permissionRight{id allowed denied resource(target:$resource,criteria:null)} }";
@@ -93,6 +98,17 @@ namespace Jde::Access::Tests{
 		AddRoleMember( cRole, dRole, GetRoot() );
 		EXPECT_THROW( AddRoleMember( dRole, aRole, GetRoot() ), Exception );
 		//TODO test implement deleted roles.
+	}
+
+	TEST_F( RoleTests, RemoveChild ){
+		const RolePK parent{ GetId(getRole("roleRemoveChildParent", GetRoot())) };
+		const RolePK child{ GetId(getRole("roleRemoveChildChild", GetRoot())) };
+		ASSERT_FALSE( AddRoleMember(parent, child, GetRoot()).empty() );
+		RemoveRoleMember( parent, child, GetRoot() );
+		ASSERT_TRUE( GetRoleChild(parent, child, GetRoot()).empty() );//the membership is gone...
+		ASSERT_FALSE( getRole("roleRemoveChildChild", GetRoot()).empty() );//...but the child role itself survives.
+		Purge( "role", parent, GetRoot() );
+		Purge( "role", child, GetRoot() );
 	}
 
 	TEST_F( RoleTests, DeletedLoad ){

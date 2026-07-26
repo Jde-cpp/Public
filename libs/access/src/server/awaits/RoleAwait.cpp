@@ -139,14 +139,46 @@ namespace Jde::Access::Server{
 		}
 	}
 
-	α RoleMAwait::Remove()ι->DB::ExecuteAwait::Task{ //removeRole(id:42, permissionRight:{id:420})
-		let& table = GetTable( "roles" );
-		DB::InsertClause remove{ DB::Names::ToSingular(table.DBName)+"_remove" };
-		remove.Add( _mutation.Id<RolePK>() );
-		remove.Add( _mutation.AsPathNumber<PermissionPK>("permissionRight/id") );
-		let y = co_await table.Schema->DS()->Execute( remove.Move() );
-		QL::Subscriptions::OnMutation( _mutation, jvalue{} );
-		ResumeScaler( y );
+	//{ mutation removeRole(id:42, permissionRight:{id:420}) }
+	//{ mutation removeRole(id:11, role:{id:13}) }
+	α RoleMAwait::Remove()ι->void{
+		let rolePK = _mutation.Id<RolePK>();
+		let args = _mutation.ExtrapolateVariables();
+		if( auto role = args.find("role"); role!=args.end() )
+			RemoveRole( rolePK, Json::AsObject(role->value()) );
+		else if( args.contains("permissionRight") )
+			RemovePermission( rolePK );
+		else
+			ResumeExp( Exception{"Invalid mutation, expecting 'role' or 'permissionRight'."} );
+	}
+	α RoleMAwait::RemoveRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task{
+		try{
+			let& table = GetTable( "role_members" );
+			//the membership row only - access_role_remove would also drop the child's access_permissions row, ie purge the role itself.
+			let sql = Ƒ( "delete from {} where {}=? and {}=?", table.DBName, table.GetColumnPtr("role_id")->Name, table.GetColumnPtr("member_id")->Name );
+			uint rowCount{};
+			for( let childRolePK : Json::ToVector<RolePK>(Json::AsValue(childRole, "id")) )
+				rowCount += co_await table.Schema->DS()->Execute( DB::Sql{sql, {DB::Value{parentRolePK}, DB::Value{childRolePK}}} );
+			QL::Subscriptions::OnMutation( _mutation, jvalue{} );
+			Resume( rowCount );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α RoleMAwait::RemovePermission( RolePK parentRolePK )ι->DB::ExecuteAwait::Task{
+		try{
+			let& table = GetTable( "roles" );
+			DB::InsertClause remove{ DB::Names::ToSingular(table.DBName)+"_remove" };
+			remove.Add( parentRolePK );
+			remove.Add( _mutation.AsPathNumber<PermissionPK>("permissionRight/id") );
+			let y = co_await table.Schema->DS()->Execute( remove.Move() );
+			QL::Subscriptions::OnMutation( _mutation, jvalue{} );
+			ResumeScaler( y );
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
 	}
 
 	RoleAwait::RoleAwait( const QL::TableQL& q, Jde::UserPK userPK, SL sl )ε:

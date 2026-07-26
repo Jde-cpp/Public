@@ -10,6 +10,7 @@ namespace Jde::Access::Tests{
 	α AddRolePermission( RolePK rolePK, sv resourceName, ERights allowed, ERights denied, UserPK executer )ε->jobject;
 	α AddRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK executer )ε->jobject;
 	α RemoveRolePermission( RolePK rolePK, PermissionPK permissionPK, UserPK executer )ε->jvalue;
+	α RemoveRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK executer )ε->jvalue;
 	using namespace Json;
 	class AclTests : public ::testing::Test{
 	protected:
@@ -216,6 +217,20 @@ namespace Jde::Access::Tests{
 		CreateAcl( GroupPK{deniedGroupPK}, deniedRolePK, GetRoot() );
 		CreateAcl( GroupPK{allowedGroupPK}, allowedRolePK, GetRoot() );
 		TestEnabeledPermissions( resourceName, "AclTests-TestDeny-Group", executer );
+	}
+	TEST_F( AclTests, RemoveRoleChild ){
+		let resourceName = "groupings";
+		restoreResource( resourceName, GetRoot() );
+		UserPK executer{ GetId( GetUser("roleChildUser", GetRoot()) ) };
+		let parentRolePK = GetId( Get("role", "RoleChildParent", GetRoot()) );
+		let childRolePK = GetId( Get("role", "RoleChildChild", GetRoot()) );
+		AddRolePermission( childRolePK, resourceName, ERights::All, ERights::None, GetRoot() );//rights live on the child only.
+		AddRoleMember( parentRolePK, childRolePK, GetRoot() );
+		CreateAcl( executer, parentRolePK, GetRoot() );
+		TestPurge( resourceName, TestCrud(resourceName, "AclTests-RoleChild-Group", executer), executer );//inherited through the child.
+
+		RemoveRoleMember( parentRolePK, childRolePK, GetRoot() );
+		TestUnauthPurge( resourceName, TestUnauthCrud(resourceName, "AclTests-RoleChild-Group", executer), executer );
 	}
 	TEST_F( AclTests, PurgeAcl ){
 		let resourceName = "groupings";
