@@ -3,18 +3,35 @@
 #include <iostream>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
-#ifdef _MSC_VER
-	#include <crtdbg.h>
-	#include <spdlog/spdlog.h>
-	#include <spdlog/sinks/msvc_sink.h>
-#endif
+#include <spdlog/pattern_formatter.h>
 #include <jde/fwk/settings.h>
 #include <jde/fwk/log/log.h>
 
 #define let const auto
+#ifndef JDE_SOURCE_ROOT
+	#define JDE_SOURCE_ROOT ""
+#endif
 
 namespace Jde::Logging{
 	using spdlog::level::level_enum;
+
+	//`-fmacro-prefix-map` makes source paths repo-relative;  the terminal's osc-8 link needs an absolute file:// uri.
+	struct SourceUri final : spdlog::custom_flag_formatter{
+		α format( const spdlog::details::log_msg& msg, const std::tm&, spdlog::memory_buf_t& dest )ι->void override{
+			let file = msg.source.filename ? sv{msg.source.filename} : sv{};
+			if( file.empty() )
+				return;
+			let absolute = file[0]=='/' || file[0]=='\\' || (file.size()>1 && file[1]==':');//sources outside CMAKE_SOURCE_DIR (pch stubs, generated, 3rd party) are not remapped.
+			let root = absolute ? sv{} : sv{ JDE_SOURCE_ROOT };
+			let& first = root.empty() ? file : root;
+			if( first[0]!='/' )
+				dest.push_back( '/' );//file:// + c:/x -> file:///c:/x
+			for( let& part : {root, file} )
+				for( let ch : part )
+					dest.push_back( ch=='\\' ? '/' : ch );
+		}
+		α clone()Ι->up<spdlog::custom_flag_formatter> override{ return mu<SourceUri>(); }
+	};
 
 	Ω loadSinks( const jobject& settings )ι->vector<spdlog::sink_ptr>{
 		vector<spdlog::sink_ptr> sinks;
@@ -27,14 +44,8 @@ namespace Jde::Logging{
 				if( !pattern ){
 					if( Process::Args().find("-ctest")!=Process::Args().end() )
 						pattern = "%^%3!l%$-%H:%M:%S.%e %v %g:%#";//%-64@  %v
-					else if constexpr( _debug ){
-#ifdef _MSC_VER
-							pattern = "\u001b]8;;file://%g\u001b\\%3!#-%3!l%$-%H:%M:%S.%e %v\u001b]8;;\u001b";
-#else
-						pattern = "%^%3!l%$-%H:%M:%S.%e \033]8;;file://%g#%#\a%v\033]8;;\a";
-						//pattern = "%^%3!l%$-%H:%M:%S.%e %v %g#%#";//%-64@  %v
-#endif
-					}
+					else if constexpr( _debug )
+						pattern = "\033]8;;file://%U#%#\a%^%3!l%$\033]8;;\a-%H:%M:%S.%e %v";//osc-8 link on the level;  the message stays plain so vscode finds the paths inside it.
 					else
 						pattern = "%^%3!l%$-%H:%M:%S.%e %v";//%-64@  %v
 				}
@@ -66,7 +77,9 @@ namespace Jde::Logging{
 			}
 			else
 				continue;
-			pSink->set_pattern( string{*pattern} );
+			auto formatter = mu<spdlog::pattern_formatter>();
+			formatter->add_flag<SourceUri>( 'U' ).set_pattern( string{*pattern} );//every sink - an unregistered %U would print as literal text.
+			pSink->set_formatter( move(formatter) );
 			let level = Json::FindEnum<ELogLevel>( sink, "/level", ToLogLevel ).value_or( ELogLevel::Trace );
 			pSink->set_level( (level_enum)level );
 			//std::cout << Ƒ( "({})level='{}' pattern='{}'{}", name, ToString(level), pattern, additional ) << std::endl;
