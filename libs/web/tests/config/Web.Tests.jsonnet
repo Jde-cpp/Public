@@ -37,10 +37,12 @@ local logsDir = std.extVar("logsDir");
 	http:{
 		address: null,
 		port: 5005,
-		# Session-expiry duration. WebTests.TestTimeout sleeps timeout+1s, so keep it short.
-		# Also caps websocket-session lifetime (Sessions.cpp), but every SocketTest finishes
-		# in ~1.1s, so 3s leaves ample margin.
+		# Rest session-expiry duration. WebTests.TestTimeout sleeps timeout+1s, so keep it short.
 		timeout: "PT3S",
+		# Websocket session-expiry duration.  A session is promoted to this the moment a socket
+		# connects on it (Sessions.cpp UpdateExpiration), and SocketTests.SocketPromotesSessionTimeout
+		# asserts the jump - so keep it far enough above timeout to be unambiguous.
+		socketTimeout: "PT30S",
 		maxLogLength: 31,
 		accessControl: {
 			allowOrigin: "*",
