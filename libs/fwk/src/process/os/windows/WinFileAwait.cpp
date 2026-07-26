@@ -28,7 +28,8 @@ namespace Jde::IO{
 	α FileIOArg::Open( bool create, bool append )ε->void{
 		const DWORD access = IsRead ? GENERIC_READ : GENERIC_WRITE;
 		const DWORD sharing = IsRead ? FILE_SHARE_READ : FILE_SHARE_WRITE;
-		const DWORD creationDisposition = IsRead ? OPEN_EXISTING : (append ? OPEN_ALWAYS : (!create && fs::exists(Path) ? OPEN_EXISTING : CREATE_ALWAYS));
+		//truncate must drop the old contents: chunks write from offset 0 (InitialSize stays 0), so OPEN_EXISTING would leave a longer previous version's tail behind.  create picks whether a missing file is an error, matching linux's O_CREAT.
+		const DWORD creationDisposition = IsRead ? OPEN_EXISTING : (append ? OPEN_ALWAYS : (create ? CREATE_ALWAYS : TRUNCATE_EXISTING));
 		const DWORD dwFlagsAndAttributes = IsRead ? FILE_FLAG_SEQUENTIAL_SCAN : FILE_ATTRIBUTE_ARCHIVE;
 		auto tmp = Str::Replace( Path.string(), '/', '\\' );
 		let path = string{"\\\\?\\"}+tmp;

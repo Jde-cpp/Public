@@ -112,7 +112,7 @@ namespace Jde::App{
 	α ProtoLog::Save( vector<byte> toSave, CoLockGuard )ι->VoidAwait::Task{
 		try{
 			TRACE( "Saving {} bytes to {}", toSave.size(), DailyFile().string() );
-			co_await IO::WriteAwait( DailyFile(), vector<byte>{toSave}, true, _tags );//copy - keep toSave to re-queue on failure.
+			co_await IO::WriteAwait( DailyFile(), vector<byte>{toSave}, true, IO::EWriteMode::Append, _tags );
 			_dailyFileStart = TimePoint::max();
 		}
 		catch( exception& )	{

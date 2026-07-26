@@ -13,12 +13,20 @@
 namespace Jde::App{
 	static constexpr ELogTags _tags{ ELogTags::ExternalLogger };
 	using Protobuf::ToGuid;
-	α ArchiveAwait::Execute()ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task{
+	//The daily file's lock is held from before the read until after Save's fs::remove.  DailyLoadAwait drops it at the end
+	//of the read, which left the read→remove window unguarded: a second archive round could read the same entries before
+	//the remove ran and archive them twice (`entries` below is a multimap, so the merge preserves the duplicate), and a
+	//ProtoLog flush could append entries that the remove then discarded unarchived.
+	α ArchiveAwait::Execute()ι->TAwait<CoLockGuard>::Task{
+		Archive( co_await LockKeyAwait{_dailyFile.string()} );
+	}
+	α ArchiveAwait::Archive( optional<CoLockGuard> lock )ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task{
 		vector<App::Log::Proto::FileEntry> entries;
 		try{
-			entries = co_await DailyLoadAwait{ _dailyFile }; //TODO lock until done
+			entries = co_await DailyLoadAwait{ _dailyFile, true };//true: the lock is ours & stays ours.
 		}
 		catch( exception& e ){
+			lock.reset();
 			ResumeExp( move(e) );
 			co_return;
 		}
@@ -65,7 +73,7 @@ namespace Jde::App{
 			for( int i=0; i<archive.externalentries_size(); ++i )
 				addStrings( *archive.mutable_externalentries(i) );
 		}
-		Save( move(archives) );
+		Save( move(archives), move(lock) );
 	}
 	struct ArchiveFileAwait final : VoidAwait{
 		ArchiveFileAwait( year_month_day ymd, const fs::path& root, App::Log::Proto::ArchiveFile&& archive, SL sl )ε;
@@ -76,17 +84,19 @@ namespace Jde::App{
 		App::Log::Proto::ArchiveFile _archive;
 		fs::path _file;
 	};
-	α ArchiveAwait::Save( flat_map<year_month_day, App::Log::Proto::ArchiveFile> archives )ι->VoidAwait::Task{
+	α ArchiveAwait::Save( flat_map<year_month_day, App::Log::Proto::ArchiveFile> archives, optional<CoLockGuard> lock )ι->VoidAwait::Task{
 		for( auto&& [ymd,archive] : archives ){
 			try{
 				co_await ArchiveFileAwait{ ymd, _path, move(archive), _sl };
 			}
 			catch( exception& e ){
+				lock.reset();//the daily file survives a failed archive - drop the lock so the next flush & round can proceed.
 				ResumeExp( move(e) );
 				co_return;
 			}
 		}
 		fs::remove( _dailyFile );
+		lock.reset();//before resuming: Resume() runs the continuation on this stack, which must not inherit the daily file's lock.
 		Resume();
 	}
 	Ω getFile( year_month_day ymd, const fs::path& root )ε->fs::path{
@@ -108,67 +118,67 @@ namespace Jde::App{
 			Save( move(_archive) );
 	}
 	α ArchiveFileAwait::Append()ι->TAwait<string>::Task{
-		string content;
-		try{
-			content = co_await IO::ReadAwait( _file );
+		App::Log::Proto::ArchiveFile cumulative;
+		try{//the whole merge is guarded: an unparseable archive must fail this await, not escape into a coroutine nobody is awaiting.
+			auto content = co_await IO::ReadAwait( _file );
+			std::map<uuid,App::Log::Proto::String> args, templates, files, functions;
+			std::multimap<TimePoint,App::Log::Proto::LogEntryFile> entries;
+			std::multimap<TimePoint,App::Log::Proto::LogEntryFileExternal> externalEntries;
+			auto existing = Protobuf::Deserialize<App::Log::Proto::ArchiveFile>( move(content) );
+			auto addEntries = [&entries]( App::Log::Proto::ArchiveFile& af ){
+				for( int i=0; i<af.entries_size(); ++i ){
+					auto& entry = *af.mutable_entries( i );
+					entries.emplace_hint( entries.end(), Protobuf::ToTimePoint(entry.time()), move(entry) );
+				}
+			};
+			auto addExternalEntries = [&externalEntries]( App::Log::Proto::ArchiveFile& af ){
+				for( int i=0; i<af.externalentries_size(); ++i ){
+					auto& entry = *af.mutable_externalentries( i );
+					externalEntries.emplace_hint( externalEntries.end(), Protobuf::ToTimePoint(entry.time()), move(entry) );
+				}
+			};
+			addEntries( existing );
+			addEntries( _archive );
+			addExternalEntries( existing );
+			addExternalEntries( _archive );
+#define ADD_STRINGS( collection, af ) \
+			for( int i=0; i<af.collection##_size(); ++i ){ \
+				auto& s = *af.mutable_##collection( i ); \
+				collection[ToGuid( s.id() )] = move( s ); \
+			}
+			ADD_STRINGS( args, existing );
+			ADD_STRINGS( args, _archive );
+			ADD_STRINGS( templates, existing );
+			ADD_STRINGS( templates, _archive );
+			ADD_STRINGS( files, existing );
+			ADD_STRINGS( files, _archive );
+			ADD_STRINGS( functions, existing );
+			ADD_STRINGS( functions, _archive );
+#undef ADD_STRINGS
+
+			for( auto& [_,entry] : entries )
+				*cumulative.add_entries() = move( entry );
+			for( auto& [_,entry] : externalEntries )
+				*cumulative.add_externalentries() = move( entry );
+			for( auto& [_,s] : args )
+				*cumulative.add_args() = move( s );
+			for( auto& [_,s] : templates )
+				*cumulative.add_templates() = move( s );
+			for( auto& [_,s] : files )
+				*cumulative.add_files() = move( s );
+			for( auto& [_,s] : functions )
+				*cumulative.add_functions() = move( s );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
 			co_return;
 		}
-		std::map<uuid,App::Log::Proto::String> args, templates, files, functions;
-		std::multimap<TimePoint,App::Log::Proto::LogEntryFile> entries;
-		std::multimap<TimePoint,App::Log::Proto::LogEntryFileExternal> externalEntries;
-		auto existing = Protobuf::Deserialize<App::Log::Proto::ArchiveFile>( move(content) );
-		auto addEntries = [&entries]( App::Log::Proto::ArchiveFile& af ){
-			for( int i=0; i<af.entries_size(); ++i ){
-				auto& entry = *af.mutable_entries( i );
-				entries.emplace_hint( entries.end(), Protobuf::ToTimePoint(entry.time()), move(entry) );
-			}
-		};
-		auto addExternalEntries = [&externalEntries]( App::Log::Proto::ArchiveFile& af ){
-			for( int i=0; i<af.externalentries_size(); ++i ){
-				auto& entry = *af.mutable_externalentries( i );
-				externalEntries.emplace_hint( externalEntries.end(), Protobuf::ToTimePoint(entry.time()), move(entry) );
-			}
-		};
-		addEntries( existing );
-		addEntries( _archive );
-		addExternalEntries( existing );
-		addExternalEntries( _archive );
-#define ADD_STRINGS( collection, af ) \
-		for( int i=0; i<af.collection##_size(); ++i ){ \
-			auto& s = *af.mutable_##collection( i ); \
-			collection[ToGuid( s.id() )] = move( s ); \
-		}
-		ADD_STRINGS( args, existing );
-		ADD_STRINGS( args, _archive );
-		ADD_STRINGS( templates, existing );
-		ADD_STRINGS( templates, _archive );
-		ADD_STRINGS( files, existing );
-		ADD_STRINGS( files, _archive );
-		ADD_STRINGS( functions, existing );
-		ADD_STRINGS( functions, _archive );
-
-		App::Log::Proto::ArchiveFile cumulative;
-		for( auto& [_,entry] : entries )
-			*cumulative.add_entries() = move( entry );
-		for( auto& [_,entry] : externalEntries )
-			*cumulative.add_externalentries() = move( entry );
-		for( auto& [_,s] : args )
-			*cumulative.add_args() = move( s );
-		for( auto& [_,s] : templates )
-			*cumulative.add_templates() = move( s );
-		for( auto& [_,s] : files )
-			*cumulative.add_files() = move( s );
-		for( auto& [_,s] : functions )
-			*cumulative.add_functions() = move( s );
-
 		Save( move(cumulative) );
 	}
 	α ArchiveFileAwait::Save( App::Log::Proto::ArchiveFile&& values )ι->VoidAwait::Task{
 		try{
-			co_await IO::WriteAwait( move(_file), Protobuf::ToString(values), true, _tags );
+			//truncate: values is the complete file - Append already merged what is on disk into it, so appending would write every existing entry a second time (the file grew ~x3.7 per archive round until it no longer parsed).
+			co_await IO::WriteAwait( move(_file), Protobuf::ToString(values), true, IO::EWriteMode::Truncate, _tags );
 			Resume();
 		}
 		catch( exception& e ){

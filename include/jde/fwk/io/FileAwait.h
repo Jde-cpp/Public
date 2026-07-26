@@ -92,15 +92,16 @@ namespace Jde::IO{
 		bool _cache;
 		bool _fromCache{};//ready path taken - the buffer is the result, even when empty; there is no promise to fall back on.
 	};
+	enum class EWriteMode : uint8{ Append, Truncate };//Truncate replaces the file - required whenever data is the whole file, otherwise a shorter write leaves the previous version's tail behind.
 	struct Γ WriteAwait final : IFileAwait, VoidAwait, noncopyable{
-		WriteAwait( fs::path path, variant<string,vector<byte>> data, bool create=false, ELogTags tags=ELogTags::IO, SRCE )ι:
-			IFileAwait{ move(path), move(data), tags, sl }, VoidAwait{ sl }, _create{create}{}
+		WriteAwait( fs::path path, variant<string,vector<byte>> data, bool create=false, EWriteMode mode=EWriteMode::Append, ELogTags tags=ELogTags::IO, SRCE )ι:
+			IFileAwait{ move(path), move(data), tags, sl }, VoidAwait{ sl }, _create{create}, _append{mode==EWriteMode::Append}{}
 		α Suspend()ι->void override;
 		α await_ready()ι->bool override;
 		α await_resume()ε->void override;
 	private:
 		bool _create;
-		bool _append{true};
+		bool _append;
 	};
 }
 #undef Φ
