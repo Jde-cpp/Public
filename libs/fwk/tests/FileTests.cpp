@@ -37,7 +37,7 @@ namespace Jde::IO::Tests{
 		auto l = co_await LockKeyAwait{ file.string() };
 		[sl]( const fs::path& file, uuid guid1, uuid guid2, Vector<uuid>& written, CoLockGuard, bool createFile )->VoidAwait::Task {
 			try{
-				co_await IO::WriteAwait{ file, Ƒ("{}\n{}\n", ToString(guid1), ToString(guid2)), createFile, Jde::ELogTags::IO, sl };
+				co_await IO::WriteAwait{ file, Ƒ("{}\n{}\n", ToString(guid1), ToString(guid2)), createFile, IO::EWriteMode::Append, Jde::ELogTags::IO, sl };
 			}
 			catch( Exception& e ){
 				e.Log();
@@ -102,17 +102,17 @@ namespace Jde::IO::Tests{
 
 	//done is co-owned: on a timed-out wait the test returns while the detached coroutine is still running, so a
 	//reference would dangle when the completion finally stores true.
-	Ω writeRaw( fs::path file, string content, sp<std::atomic<bool>> done, SRCE )->LockKeyAwait::Task{
+	Ω writeRaw( fs::path file, string content, sp<std::atomic<bool>> done, IO::EWriteMode mode=IO::EWriteMode::Append, SRCE )->LockKeyAwait::Task{
 		auto l = co_await LockKeyAwait{ file.string() };
-		[sl]( fs::path file, string content, sp<std::atomic<bool>> done, CoLockGuard )->VoidAwait::Task {
+		[sl]( fs::path file, string content, sp<std::atomic<bool>> done, CoLockGuard, IO::EWriteMode mode )->VoidAwait::Task {
 			try{
-				co_await IO::WriteAwait{ move(file), move(content), true, Jde::ELogTags::IO, sl };
+				co_await IO::WriteAwait{ move(file), move(content), true, mode, Jde::ELogTags::IO, sl };
 			}
 			catch( Exception& e ){
 				e.Log();
 			}
 			*done = true;
-		}( move(file), move(content), move(done), move(l) );
+		}( move(file), move(content), move(done), move(l), mode );
 	}
 
 	Ω readRaw( fs::path file, sp<string> content, sp<std::atomic<bool>> done, bool cache=false, SRCE )ι->TAwait<string>::Task{
@@ -178,6 +178,35 @@ namespace Jde::IO::Tests{
 		std::ifstream is{ file, std::ios::binary };
 		let actual = string{ std::istreambuf_iterator<char>{is}, std::istreambuf_iterator<char>{} };
 		ASSERT_EQ( actual, first+second );
+	}
+
+	// Regression for the hardcoded WriteAwait::_append{true}: no caller could ask for truncation, so a
+	// read-modify-write (the log archive) appended its merged-in-full contents to the file it had just
+	// read, growing it geometrically.  A Truncate write must replace the file, tail included.
+	TEST_F( FileTests, TruncateReplacesFile ){
+		let file = Tests::file( 500 );
+		if( fs::exists(file) )
+			fs::remove( file );
+		let readBack = [&file](){
+			std::ifstream is{ file, std::ios::binary };
+			return string{ std::istreambuf_iterator<char>{is}, std::istreambuf_iterator<char>{} };
+		};
+		let long_ = string( IO::ChunkByteSize()*2, 'l' );//multi-chunk: the short write must not leave chunk 1 behind.
+		auto done = ms<std::atomic<bool>>();
+		writeRaw( file, long_, done, IO::EWriteMode::Truncate );
+		ASSERT_TRUE( waitDone(*done) ) << "truncating write never completed";
+		ASSERT_EQ( readBack(), long_ );
+
+		let short_ = string( 16, 's' );
+		done = ms<std::atomic<bool>>();
+		writeRaw( file, short_, done, IO::EWriteMode::Truncate );
+		ASSERT_TRUE( waitDone(*done) ) << "second truncating write never completed";
+		ASSERT_EQ( readBack(), short_ ) << "truncate left the previous, longer contents in place";
+
+		done = ms<std::atomic<bool>>();//the default must still append - the daily proto log depends on it.
+		writeRaw( file, short_, done );
+		ASSERT_TRUE( waitDone(*done) ) << "append never completed";
+		ASSERT_EQ( readBack(), short_+short_ );
 	}
 
 	// Regression: a zero-byte operation produced no chunks, so no completion ever arrived — the

@@ -7,6 +7,7 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/timestamp.pb.h>
 #pragma warning( pop )
+#include <limits>
 #include <jde/fwk/io/file.h>
 #include <jde/fwk/io/json.h>
 
@@ -17,7 +18,7 @@ namespace Jde::Protobuf{
 	Ŧ Load( const fs::path& path, T& p, SRCE )ε->void;
 
 	Ŧ Deserialize( const vector<char>& data )ε->up<T>;
-	Ŧ Deserialize( const google::protobuf::uint8* p, int size )ε->T;
+	Ŧ Deserialize( const google::protobuf::uint8* p, uint size )ε->T;
 	Ŧ Deserialize( string&& x )ε->T;
 	Ŧ DeserializeVector( sv x )ε->vector<T>;
 	Ŧ FromVector( vector<T>&& x )ι->google::protobuf::RepeatedPtrField<T>;
@@ -35,8 +36,9 @@ namespace Jde::Protobuf{
 	α ToTimestamp( const jobject& j, SRCE )ε->google::protobuf::Timestamp;
 
 	namespace Internal{
-		Ŧ Deserialize( const google::protobuf::uint8* p, int size, T& proto )ε->void{
-			google::protobuf::io::CodedInputStream input{ p, size };
+		Ŧ Deserialize( const google::protobuf::uint8* p, uint size, T& proto )ε->void{
+			THROW_IF( size>(uint)std::numeric_limits<int>::max(), "{} bytes exceeds protobuf's {} byte limit.", size, std::numeric_limits<int>::max() );//CodedInputStream takes an int - a narrowing cast would silently negate/truncate the size.
+			google::protobuf::io::CodedInputStream input{ p, (int)size };
 			THROW_IF( !proto.MergePartialFromCodedStream(&input), "MergePartialFromCodedStream returned false." );
 		}
 	}
@@ -66,17 +68,17 @@ namespace Jde{
 
 	Ŧ Protobuf::Deserialize( const vector<char>& data )ε->up<T>{
 		auto p = mu<T>();
-		Internal::Deserialize<T>( (google::protobuf::uint8*)data.data(), (uint32)data.size(), *p );
+		Internal::Deserialize<T>( (google::protobuf::uint8*)data.data(), data.size(), *p );
 		return p;
 	}
-	Ŧ Protobuf::Deserialize( const google::protobuf::uint8* p, int size )ε->T{
+	Ŧ Protobuf::Deserialize( const google::protobuf::uint8* p, uint size )ε->T{
 		T y;
 		Internal::Deserialize<T>( p, size, y );
 		return y;
 	}
 	Ŧ Protobuf::Deserialize( string&& x )ε->T{
 		T y;
-		Internal::Deserialize<T>( (google::protobuf::uint8*)x.data(), (int)x.size(), y );
+		Internal::Deserialize<T>( (google::protobuf::uint8*)x.data(), x.size(), y );
 		x.clear();
 		return y;
 	}
@@ -90,7 +92,7 @@ namespace Jde{
 			}
 			ASSERT( p+length<=end );
 			if( p+length<=end )
-				y.push_back( Deserialize<T>((google::protobuf::uint8*)p, (int)length) );
+				y.push_back( Deserialize<T>((google::protobuf::uint8*)p, length) );
 			p += length;
 		}
 		return y;
@@ -108,7 +110,7 @@ namespace Jde{
 			fs::remove( path );
 			throw IO::IOException{ path, "has 0 bytes. Removed", sl };
 		}
-		Internal::Deserialize( (google::protobuf::uint8*)bytes.data(), (uint32)bytes.size(), proto );
+		Internal::Deserialize( (google::protobuf::uint8*)bytes.data(), bytes.size(), proto );
 	}
 
 	Ŧ Protobuf::Load( const fs::path& path, SL sl )ε->up<T>{

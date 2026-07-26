@@ -9,9 +9,11 @@ namespace Jde::App{
 		struct ArchiveAwait : VoidAwait{
 			ArchiveAwait( fs::path dailyFile, fs::path path, const std::chrono::time_zone& tz, SRCE )ι:VoidAwait{ sl }, _dailyFile{ move(dailyFile) }, _path{ move(path) }, _tz{ tz } {}
 			α Suspend()ι->void override{ Execute(); }
-			α Execute()ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task;
+			α Execute()ι->TAwait<CoLockGuard>::Task;
 		private:
-			α Save( flat_map<std::chrono::year_month_day, App::Log::Proto::ArchiveFile> archives )ι->VoidAwait::Task;
+			//the daily file's lock is threaded through the whole chain - see Execute().  optional, not by value, so each step can release it before resuming its continuation on the same stack.
+			α Archive( optional<CoLockGuard> lock )ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task;
+			α Save( flat_map<std::chrono::year_month_day, App::Log::Proto::ArchiveFile> archives, optional<CoLockGuard> lock )ι->VoidAwait::Task;
 
 			fs::path _dailyFile;
 			fs::path _path;

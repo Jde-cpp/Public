@@ -48,8 +48,7 @@ namespace Jde::IO{
 		if( !IsRead ){
 			if( create )
 				flags |= O_CREAT;
-			if( append )
-				 flags |= O_APPEND;
+			flags |= append ? O_APPEND : O_TRUNC;//O_TRUNC, not a plain overwrite: chunks write from offset 0, so without it a shorter write leaves the old file's tail in place.
 		}
 		for( bool retried = false;; retried = true ){
 			Handle = ::open( Path.string().c_str(), flags, 0666 );
@@ -72,7 +71,7 @@ namespace Jde::IO{
 			std::visit( [size=st.st_size](auto&& b){b.resize(size);}, Buffer );
 		}
 		else
-			TRACE( "[{}]{} {}", hex(Handle), create ? "creating" : "appending", Path.string() );
+			TRACE( "[{}]{} {}", hex(Handle), append ? "appending" : "truncating", Path.string() );
 	}
 	FileIOArg::~FileIOArg(){
 		if( Handle>=0 ){//fd -1 is invalid

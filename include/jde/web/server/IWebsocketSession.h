@@ -88,7 +88,7 @@ namespace Jde::Web::Server{
 #define $ template<class TFromServer, class TFromClient> auto TWebsocketSession<TFromServer,TFromClient>
 	$::OnRead( const char* p, uint size )ι->void{
 		try{
-			auto t = Protobuf::Deserialize<TFromClient>( (const google::protobuf::uint8*)p, (int)size );
+			auto t = Protobuf::Deserialize<TFromClient>( (const google::protobuf::uint8*)p, size );
 			OnRead( move(t) );
 		}
 		catch( Exception& e ){

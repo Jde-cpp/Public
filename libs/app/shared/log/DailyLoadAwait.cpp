@@ -9,9 +9,12 @@
 namespace Jde::App{
 	constexpr ELogTags _tags = ELogTags::ExternalLogger;
 	α DailyLoadAwait::Execute()ι->TAwait<CoLockGuard>::Task{
-		Read( co_await LockKeyAwait{_file.string()} );
+		if( _locked )
+			Read( nullopt );
+		else
+			Read( co_await LockKeyAwait{_file.string()} );
 	}
-	α DailyLoadAwait::Read( CoLockGuard )ι->TAwait<string>::Task{
+	α DailyLoadAwait::Read( optional<CoLockGuard> )ι->TAwait<string>::Task{
 		auto log = Logging::FindLogger<App::ProtoLog>();
 		try{
 			auto y = log ? log->Entries() : vector<App::Log::Proto::FileEntry>{};

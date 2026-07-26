@@ -91,6 +91,59 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_TRUE( templateArchived ) << "External entry's template string not archived.";
 	}
 
+	// Regression: ArchiveFileAwait::Save appended the fully-merged archive to the very file it had just merged
+	// from, so every round wrote back everything already on disk - archive.binpb grew ~x3.7 per round until it
+	// no longer parsed and aborted the suite.  A second round must not duplicate the first round's entries.
+	TEST_F( LogTests, ArchiveReplacesFile ){
+		let archiveFile = ( *Settings::FindPath("/logging/proto/path") )/"2025/1/3/archive.binpb";
+		if( fs::exists(archiveFile) )
+			fs::remove( archiveFile );
+		auto count = []( const App::Log::Proto::ArchiveFile& archive, const uuid& id )ι->uint{
+			uint y{};
+			for( int i=0; i<archive.entries_size(); ++i )
+				y += Protobuf::ToGuid( archive.entries(i).template_id() )==id;
+			return y;
+		};
+		//the archive is written asynchronously & rewritten in place, so a read can catch it mid-write - retry until
+		//`until` lands, then let the round quiesce: two archive rounds can overlap (the "lock until done" TODO in
+		//ArchiveAwait::Execute), so a count sampled the instant an entry appears is still moving.
+		auto archived = [&archiveFile,&count]( const uuid& until )ι->App::Log::Proto::ArchiveFile{
+			App::Log::Proto::ArchiveFile y;
+			for( int i=0; i<100; ++i ){
+				try{
+					if( fs::exists(archiveFile) ){
+						auto archive = Protobuf::Deserialize<App::Log::Proto::ArchiveFile>( BlockTAwait<string>(IO::ReadAwait(archiveFile)) );
+						if( count(archive, until) ){
+							if( y.entries_size()==archive.entries_size() )//unchanged over the last interval - settled.
+								return archive;
+							y = move( archive );
+						}
+					}
+				}
+				catch( const Exception& )
+				{}
+				std::this_thread::sleep_for( 250ms );
+			}
+			return y;
+		};
+		//an entry dated other than today flags ProtoLog for archiving; today-dated filler flips the day back and fills the flush buffer.
+		auto round = [this]( sv text )->uuid{
+			Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, string{text} };
+			e.Time = Chrono::ToTimePoint( 2025, 1, 3, 12 );
+			ProtoLog().Write( e );
+			for( int i=0; i<200; ++i )
+				ProtoLog().Write( {SRCE_CUR, ELogLevel::Information, ELogTags::Test, Ƒ("{} filler {}", text, i)} );
+			return e.Id();
+		};
+		let first = round( "ArchiveReplacesFile first" );
+		ASSERT_EQ( count(archived(first), first), 1u ) << "first round's entry not archived exactly once";
+		let second = round( "ArchiveReplacesFile second" );
+		let after = archived( second );
+		ASSERT_EQ( count(after, second), 1u ) << "second round's entry not archived exactly once";
+		//exactly once, not "same as before": ArchiveAwait holds the daily file's lock until fs::remove, so no round can re-read entries an earlier round already archived.
+		EXPECT_EQ( count(after, first), 1u ) << "the second round wrote the first round's entry again - archive.binpb was appended to, not replaced";
+	}
+
 	TEST_F( LogTests, Remote ){
 		App::Client::RemoteLog remote{ {{"delay", "PT0.001S"}}, AppClient() };
 		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "Test message" };
