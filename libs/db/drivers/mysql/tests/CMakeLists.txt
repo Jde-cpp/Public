@@ -19,9 +19,10 @@ endif()
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
 file( GLOB sources *.cpp )
-target_sources( ${targetName} PRIVATE ${sources} )
+target_sources( ${targetName} PRIVATE ${sources} ${CMAKE_CURRENT_LIST_DIR}/../src/MySqlStatements.cpp )
 target_compile_definitions( ${targetName} PRIVATE TESTS )
-#MySqlSyntax is header-only in ../src, so these link no driver and open no connection - pure dialect assertions.
+#MySqlSyntax is header-only in ../src and MySqlStatements.cpp is a pure string builder (compiled in above), so these
+#link no driver and open no connection - pure dialect/statement-text assertions.
 target_link_libraries( ${targetName} GTest::gtest Threads::Threads )
 target_link_libraries( ${targetName} Jde.DB Jde )
 

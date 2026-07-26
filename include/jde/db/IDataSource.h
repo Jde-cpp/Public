@@ -5,7 +5,6 @@
 #include "awaits/MapAwait.h"
 #include "awaits/DBAwait.h"
 #include "awaits/ExecuteAwait.h"
-#include "awaits/OutAwait.h"
 #include "awaits/QueryAwait.h"
 #include "awaits/ScalerAwait.h"
 #include "awaits/SelectAwait.h"
@@ -52,7 +51,6 @@ namespace Jde::DB{
 		α TryExecuteSync( Sql&& sql, SRCE )ι->optional<uint>;
 
 		[[nodiscard]] α Execute( Sql&& sql, SRCE )ε->ExecuteAwait{ return ExecuteAwait{shared_from_this(), move(sql), sl}; }
-		Ŧ ExecuteScaler( Sql&& sql, EValue outValue, SRCE )ε->OutAwait<T>{ return OutAwait<T>{shared_from_this(), move(sql), outValue, sl}; }
 		β ExecuteSync( Sql&& sql, SRCE )ε->uint=0;
 		β ExecuteScalerSync( Sql&& sql, EValue outValue, SRCE )ε->DB::Value=0;
 		Ŧ InsertSeq( DB::InsertClause&& sql, SRCE )ι{ return ScalerAwait<T>{ shared_from_this(), move(sql), sl }; }

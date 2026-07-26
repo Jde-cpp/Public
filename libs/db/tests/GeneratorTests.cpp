@@ -26,6 +26,19 @@ namespace Jde::DB::Tests{
 		EXPECT_EQ( ins.SequenceColumn(), nullptr );          //was a null-column ->Table deref (segfault).
 	}
 
+	TEST( ObjectTests, ValueEquality ){
+		const DB::Object a = DB::Value{5}, b = DB::Value{5}, c = DB::Value{6};
+		EXPECT_TRUE( a==b );
+		EXPECT_FALSE( a==c );
+
+		const DB::Object v1 = vector<DB::Value>{ DB::Value{1}, DB::Value{2} };
+		const DB::Object v2 = vector<DB::Value>{ DB::Value{1}, DB::Value{2} };
+		const DB::Object v3 = vector<DB::Value>{ DB::Value{1} };
+		EXPECT_TRUE( v1==v2 );
+		EXPECT_FALSE( v1==v3 );
+		EXPECT_FALSE( a==v1 ); //different alternatives.
+	}
+
 	//#25: an Object holding Values must render placeholders (?,?), not the literal `[ 1, 2]` - GetParams appends the values, so the counts must match.
 	TEST( ObjectTests, ValuesRendersPlaceholders ){
 		DB::Object o = vector<DB::Value>{ DB::Value{1}, DB::Value{2}, DB::Value{3} };
