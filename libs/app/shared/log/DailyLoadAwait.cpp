@@ -9,16 +9,19 @@
 namespace Jde::App{
 	constexpr ELogTags _tags = ELogTags::ExternalLogger;
 	α DailyLoadAwait::Execute()ι->TAwait<CoLockGuard>::Task{
-		if( _locked )
-			Read( nullopt );
+		if( _mode==EDailyLoad::Archive )
+			Read( nullopt );//the caller's lock is ours & stays ours.
 		else
 			Read( co_await LockKeyAwait{_file.string()} );
 	}
 	α DailyLoadAwait::Read( optional<CoLockGuard> )ι->TAwait<string>::Task{
-		auto log = Logging::FindLogger<App::ProtoLog>();
 		try{
-			auto y = log ? log->Entries() : vector<App::Log::Proto::FileEntry>{};
-			TRACE( "Memory item count: {}", y.size() );
+			vector<App::Log::Proto::FileEntry> y;
+			if( _mode==EDailyLoad::Query ){//Archive reads the file only - see EDailyLoad.
+				auto log = Logging::FindLogger<App::ProtoLog>();
+				y = log ? log->Entries() : vector<App::Log::Proto::FileEntry>{};
+				TRACE( "Memory item count: {}", y.size() );
+			}
 			if( fs::exists(_file) ){
 				auto content = co_await IO::ReadAwait( _file );
 				auto fileContent = App::ProtoLog::Deserialize( move(content) );

@@ -17,13 +17,16 @@ namespace Jde::App{
 	//of the read, which left the read→remove window unguarded: a second archive round could read the same entries before
 	//the remove ran and archive them twice (`entries` below is a multimap, so the merge preserves the duplicate), and a
 	//ProtoLog flush could append entries that the remove then discarded unarchived.
+	//The lock covers the daily *file* only - ProtoLog::Write never takes it, it only takes ProtoLog::_mutex.  So the round
+	//archives what is durably in the file and nothing else; ProtoLog::Save flushes its buffer into the file before starting
+	//a round, and entries written after that stay buffered for the next one.
 	α ArchiveAwait::Execute()ι->TAwait<CoLockGuard>::Task{
 		Archive( co_await LockKeyAwait{_dailyFile.string()} );
 	}
 	α ArchiveAwait::Archive( optional<CoLockGuard> lock )ι->TAwait<vector<App::Log::Proto::FileEntry>>::Task{
 		vector<App::Log::Proto::FileEntry> entries;
 		try{
-			entries = co_await DailyLoadAwait{ _dailyFile, true };//true: the lock is ours & stays ours.
+			entries = co_await DailyLoadAwait{ _dailyFile, EDailyLoad::Archive };//the lock is ours & stays ours; the daily file is read, ProtoLog's buffer is not.
 		}
 		catch( exception& e ){
 			lock.reset();
