@@ -120,12 +120,34 @@ namespace Jde::App{
 			_toSave.insert( _toSave.begin(), toSave.begin(), toSave.end() );//prepend: strings must precede the entries referencing them.
 			co_return;
 		}
-		if( _needsArchive )
-			Archive();
+		//An archive round reads the daily file only, so anything written while this flush was in flight has to land in the file
+		//first or it is archived a round late.  It must not be archived out of the buffer instead: the round deletes the file but
+		//cannot trim the buffer, so those entries would be archived again as soon as the next flush wrote them to disk.
+		//Still holding the daily file's LockKey, so no other flush can interleave with the drain.
+		vector<byte> pending;
+		{
+			lg _{ _mutex };
+			if( !_needsArchive )
+				co_return;
+			pending = move( _toSave );
+			_toSave.reserve( pending.size() );
+			_needsArchive = false;//cleared here, under _mutex: a day-changed entry arriving after the drain re-arms it for the next round instead of being stranded in the daily file.
+		}
+		if( pending.size() ){
+			try{
+				co_await IO::WriteAwait( DailyFile(), vector<byte>{pending}, true, IO::EWriteMode::Append, _tags );
+			}
+			catch( exception& ){
+				lg _{ _mutex };
+				_toSave.insert( _toSave.begin(), pending.begin(), pending.end() );
+				_needsArchive = true;//nothing archived - re-arm so the next flush retries the round.
+				co_return;
+			}
+		}
+		Archive();
 	}
 	α ProtoLog::Archive()ι->VoidAwait::Task{
 		try{
-			_needsArchive = false;
 			co_await ArchiveAwait{ DailyFile(), _root, _tz };
 		}
 		catch( const exception& )

@@ -91,9 +91,15 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_TRUE( templateArchived ) << "External entry's template string not archived.";
 	}
 
-	// Regression: ArchiveFileAwait::Save appended the fully-merged archive to the very file it had just merged
-	// from, so every round wrote back everything already on disk - archive.binpb grew ~x3.7 per round until it
-	// no longer parsed and aborted the suite.  A second round must not duplicate the first round's entries.
+	// Regression, two ways a round could write an entry it had already archived:
+	//   1. ArchiveFileAwait::Save appended the fully-merged archive to the very file it had just merged from, so every
+	//      round wrote back everything already on disk - archive.binpb grew ~x3.7 per round until it no longer parsed
+	//      and aborted the suite.
+	//   2. the round archived ProtoLog's unflushed buffer as well as the daily file, but deleted only the file, so an
+	//      entry still buffered when a round ran was archived again as soon as the next flush wrote it to disk.  Timing
+	//      dependent - it needed a flush already in flight when the entry was written, so it only flaked (release more
+	//      often than debug).
+	// Either way, a second round must not duplicate the first round's entries.
 	TEST_F( LogTests, ArchiveReplacesFile ){
 		let archiveFile = ( *Settings::FindPath("/logging/proto/path") )/"2025/1/3/archive.binpb";
 		if( fs::exists(archiveFile) )
@@ -105,8 +111,8 @@ namespace Jde::Opc::Gateway::Tests{
 			return y;
 		};
 		//the archive is written asynchronously & rewritten in place, so a read can catch it mid-write - retry until
-		//`until` lands, then let the round quiesce: two archive rounds can overlap (the "lock until done" TODO in
-		//ArchiveAwait::Execute), so a count sampled the instant an entry appears is still moving.
+		//`until` lands, then let the round quiesce: the round's remaining entries are still arriving (and a later flush
+		//can start another round), so a count sampled the instant an entry appears is still moving.
 		auto archived = [&archiveFile,&count]( const uuid& until )ι->App::Log::Proto::ArchiveFile{
 			App::Log::Proto::ArchiveFile y;
 			for( int i=0; i<100; ++i ){
@@ -140,7 +146,7 @@ namespace Jde::Opc::Gateway::Tests{
 		let second = round( "ArchiveReplacesFile second" );
 		let after = archived( second );
 		ASSERT_EQ( count(after, second), 1u ) << "second round's entry not archived exactly once";
-		//exactly once, not "same as before": ArchiveAwait holds the daily file's lock until fs::remove, so no round can re-read entries an earlier round already archived.
+		//exactly once, not "same as before": a round archives the daily file and nothing else, and holds that file's lock from the read until fs::remove - so an entry has one source, and no round can re-read what an earlier one archived.
 		EXPECT_EQ( count(after, first), 1u ) << "the second round wrote the first round's entry again - archive.binpb was appended to, not replaced";
 	}
 
