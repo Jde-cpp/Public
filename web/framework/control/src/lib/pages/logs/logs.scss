@@ -11,6 +11,15 @@ div.table
 	overflow: auto;
 }
 
+/* center the column headings only - data cells keep their own alignment, so .number cells stay right aligned
+under a centered heading.  mat-header-cell.number is needed to outrank .number's justify-content below. */
+mat-header-cell,
+mat-header-cell.number
+{
+	justify-content: center;
+	text-align: center;
+}
+
 .level
 {
 	flex: 0 0 85px;
@@ -26,6 +35,31 @@ div.table
 .function
 {
 	flex: 0 0 125px;
+}
+
+/* file values are absolute paths wider than the column - clip the front so the file name stays visible.
+direction:rtl moves the ellipsis to the start; the span is required because text-overflow does not apply
+to the bare text of a flex mat-cell.  the inner <bdi> isolates the path as its own ltr run, else the
+leading "/" is a neutral character and rtl renders it after the file name.  full path is on the title. */
+/* min-width:0 lets the span shrink below its text inside the flex mat-cell, so the span itself clips - the
+cell cannot, text-overflow does not apply to a flex container's anonymous text.  that also makes
+scrollWidth>clientWidth true exactly when the text is cut, which is what drives the tooltip. */
+.clip
+{
+	flex: 1 1 auto;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.path
+{
+	direction: rtl;
+	text-align: left;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .table-row

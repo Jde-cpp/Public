@@ -7,6 +7,12 @@
 {
 	min-width: 100px;
 }
+/* center the column headings only - data cells keep their own alignment. */
+mat-header-cell
+{
+	justify-content: center;
+	text-align: center;
+}
 .highlight
 {
 	/* background-color: aqua;

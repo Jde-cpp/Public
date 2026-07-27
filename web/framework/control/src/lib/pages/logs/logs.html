@@ -42,6 +42,17 @@
 				<mat-datepicker #dateId></mat-datepicker>
 			</mat-form-field> -->
 			<!-- <mat-paginator (page)="pageChangeEvent($event)" [pageIndex]="pageIndex" [length]="data.length" [pageSize]="pageSize" [pageSizeOptions]="[14, 100, 500, 1000]" showFirstLastButtons></mat-paginator> -->
+			<button matIconButton aria-label="Refresh" (click)="refresh()">
+				<mat-icon>refresh</mat-icon>
+			</button>
+			<mat-form-field subscriptSizing="dynamic" style="margin-left: 10px; width: 130px;">
+				<mat-label>Level</mat-label>
+				<mat-select [value]="level" (selectionChange)="onMinLevelChange($event.value)">
+					@for( l of levels; track l.value ){
+						<mat-option [value]=l.value>{{l.name}}</mat-option>
+					}
+				</mat-select>
+			</mat-form-field>
 			<paginator (onPageEvent)="onPagerChange($event)" [pageSize]="view().limit"></paginator>
 			<!-- [startIndex]="pageInfo.startIndex" -->
 			<!-- <mat-form-field>
@@ -62,15 +73,15 @@
 			</ng-container>
 			<ng-container matColumnDef="message">
 				<mat-header-cell mat-sort-header *matHeaderCellDef> Message </mat-header-cell>
-				<mat-cell style="white-space: nowrap;overflow: hidden; text-overflow: ellipsis;" mat-cell *matCellDef="let entry">{{message(entry)}}</mat-cell>
+				<mat-cell mat-cell *matCellDef="let entry"><span class="clip" (mouseenter)="overflowTitle($event)">{{message(entry)}}</span></mat-cell>
 			</ng-container>
 			<ng-container matColumnDef="file">
 				<mat-header-cell mat-sort-header *matHeaderCellDef [style.flex]="'0 0 200px'"> File </mat-header-cell>
-				<mat-cell mat-cell *matCellDef="let element" [style.flex]="'0 0 200px'"> {{element.fileName}} </mat-cell>
+				<mat-cell mat-cell *matCellDef="let element" [style.flex]="'0 0 200px'" title="{{fileName(element)}}"><span class="path"><bdi>{{fileName(element)}}</bdi></span></mat-cell>
 			</ng-container>
 			<ng-container matColumnDef="function">
 				<mat-header-cell mat-sort-header *matHeaderCellDef class="function"> Function </mat-header-cell>
-				<mat-cell mat-cell *matCellDef="let element" class="function"> {{element.functionName}} </mat-cell>
+				<mat-cell mat-cell *matCellDef="let element" class="function"><span class="clip" (mouseenter)="overflowTitle($event)">{{functionName(element)}}</span></mat-cell>
 			</ng-container>
 			<ng-container matColumnDef="line">
 				<mat-header-cell *matHeaderCellDef class="number"> Line </mat-header-cell>

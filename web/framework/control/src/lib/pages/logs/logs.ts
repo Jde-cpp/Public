@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild, Inject, input, effect, Signal, signal, inject, computed } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, Inject, input, effect, Signal, signal, inject, computed, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import {MatSortModule, Sort} from '@angular/material/sort';
@@ -51,10 +51,11 @@ export class Logs implements OnInit, OnDestroy{
 		this._componentPageTitle.title = "Logs";
 		this.data = new LogDataSource( this.view );
 		this.profile = await this.profileStore.load<LogSettings>( "logs", new LogSettings() );
+		this.data.filter.level = this.profile.level;//assigned straight in, so the level setter did not run
 		const views = await this.profileStore.loadClassArray<LogView>( `logs/views`, LogView, LogView.schema );
 		this.views.set( [ LogView.default(), ...views ] );
 		this.viewIndex.set( Math.min(ProfileStore.viewIndex("logs"), this.views().length - 1) );
-		this.load();
+		await this.load();//load() sends the profile's level, so the first page already matches the combo
 	}
 	ngOnDestroy(){
 		//this.appService.statusUnsubscribe( this.statusSubscription );
@@ -64,7 +65,7 @@ export class Logs implements OnInit, OnDestroy{
 
 	async load( startIndex:number=0 ){
 		try{
-			const entries = ( await this.service().ql<{logs: LogEntriesRest}>( this.view().query(undefined,startIndex), (m)=>console.log(m) ) ).logs;
+			const entries = ( await this.service().ql<{logs: LogEntriesRest}>( this.view().query(undefined,startIndex,this.level), (m)=>console.log(m) ) ).logs;
 			if( entries?.entries?.length )//was Object.keys(entries).length, always >=2 ({entries,strings}); check the actual entry count
 				this.push( new LogEntries(entries) );
 			this.data.setPage( startIndex );
@@ -77,6 +78,13 @@ export class Logs implements OnInit, OnDestroy{
 
 	push( entries:LogEntries ){
 		this.data.addLoadedEntries( entries );
+	}
+	//re-read from the top.  the pager owns its own startIndex, so reset it too or its range keeps reading
+	//"49 - 72" over the first page.  set(), not onFirstPage(), which would emit and load a second time.
+	refresh(){
+		this.data.clear();
+		this.paginator()?.startIndex.set( 0 );
+		this.load();
 	}
 	onStrings = ( value:FromServer.Strings ):void =>{
 		let i=0;
@@ -132,6 +140,19 @@ export class Logs implements OnInit, OnDestroy{
 	onLevelChange( logLevel:ELogLevel ){
 		this.subscribe( this.applicationId, logLevel );
 	}
+	//minimum level to show - the level goes into the query, so re-read instead of filtering what is loaded.
+	onMinLevelChange( level:ELogLevel ){
+		this.level = level;
+		this.refresh();
+	}
+	levels = [
+		{ value: ELogLevel.Trace, name: "Trace" },
+		{ value: ELogLevel.Debug, name: "Debug" },
+		{ value: ELogLevel.Information, name: "Information" },
+		{ value: ELogLevel.Warning, name: "Warning" },
+		{ value: ELogLevel.Error, name: "Error" },
+		{ value: ELogLevel.Critical, name: "Critical" }
+	];
 
 	onSort(sort: Sort|any){
 		let sortedView = new LogView( this.view() );
@@ -184,7 +205,10 @@ export class Logs implements OnInit, OnDestroy{
 		this.data.clear();
 		this.load();
 	}
-	async onViewSave(view:LogView){
+	//ql-list-settings emits a base View;  storing it unwrapped left view() without LogView.query, so every later
+	//load sent View.query's flat column shape, which the log query answers with {} - no entries.
+	async onViewSave(saved:View){
+		let view = new LogView( saved );
 		if( (view.isSystem || view.isAdhoc) && !this.views().find(v=>v.name==view.name && v.isSystem) )
 			view.type = ViewType.User;
 		let newViews = this.views().filter( v=>v.type!=ViewType.Adhoc );
@@ -204,7 +228,7 @@ export class Logs implements OnInit, OnDestroy{
 		this.load();
 		this.isSettings.set( false );
 	}
-	onViewShow(view:LogView){
+	onViewShow(view:View){//base View, as onViewSave - the `new LogView` below is what keeps query() overridden.
 		this.data.clear();
 		this.isSettings.set( false );
 		if( view.name?.endsWith("*") && view.isAdhoc )
@@ -277,6 +301,7 @@ export class Logs implements OnInit, OnDestroy{
 	} );
 	//configuration = { displayHeader:true }
 	@ViewChild('mainTable',{static: false}) _table!:MatTable<Entry>;
+	paginator = viewChild( Paginator );//absent while the settings pane is up
 
 	toLevel( level:ELogLevel ):string{
 		switch( level ){
@@ -306,6 +331,18 @@ export class Logs implements OnInit, OnDestroy{
 		return this.data.message(entry);
 	}
 
+	fileName(entry:Entry):string{
+		return this.data.file(entry) ?? "";
+	}
+	functionName(entry:Entry):string{
+		return this.data.function(entry) ?? "";
+	}
+	//measured on hover, before the browser's tooltip delay elapses, so only clipped text gets a tooltip.
+	overflowTitle( event:Event ){
+		const el = event.currentTarget as HTMLElement;
+		el.title = el.scrollWidth>el.clientWidth ? el.innerText.trim() : "";
+	}
+
 	get applicationId(){ return this.profile.applicationId; } set applicationId(value){ this.profile.applicationId=value; }
 	get columns():Record<string,string>{ return LogEntries.columns; }
 	get start():Date{ return this._start.value; } set start(value:Date){ this._start.setValue(value); this.profile.start = value; } private _start = new FormControl();
@@ -318,7 +355,9 @@ export class Logs implements OnInit, OnDestroy{
 	isSettings = signal<boolean>( false );
 //	lengthChange = new Subject<number>();
 	startIndexChange = new Subject<number>();
-	get level():ELogLevel{ return this.profile.level; } set level( value:ELogLevel ){ this.profile.level=value; }
+	//push() hides arriving rows below data.filter.level, so the setter writes both.  otherwise widening the combo
+	//re-reads the lower levels and they are hidden on arrival against the level that was in force before.
+	get level():ELogLevel{ return this.profile.level; } set level( value:ELogLevel ){ this.profile.level=value; this.data.filter.level=value; }
 	private get application():AppStatus|undefined{ return this.applications.find( (existing)=>{return existing.id==this.applicationId;} ); }
 	applications:AppStatus[]=[];
 	schema:TableSchema = LogView.schema;

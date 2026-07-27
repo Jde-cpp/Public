@@ -58,9 +58,15 @@ export class LogEntries{
 	strings:Map<string,string> = new Map<string,string>();
 }
 export class LogView extends View{
-	override query( showDeleted:boolean|undefined, skip:number):Query{
-		const vars = {limit: this.limit!*3, skip: skip, orderBy: this.sort};
-		const q = "logs( limit: $limit, skip: $skip, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
+	override query( showDeleted:boolean|undefined, skip:number, level?:ELogLevel ):Query{
+		const vars:Record<string,any> = {limit: this.limit!*3, skip: skip, orderBy: this.sort};
+		let args = "limit: $limit, skip: $skip, orderBy: $orderBy";
+		//Trace is every level, so send no filter at all; above it the minimum is expressed as gt the level below.
+		if( level!=undefined && level>ELogLevel.Trace ){
+			args += ", level:{gt:$level}";
+			vars["level"] = level-1;
+		}
+		const q = `logs( ${args} ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }`;
 		return { text: q, vars: vars };
 	}
 	static schema:TableSchema = new TableSchema( {

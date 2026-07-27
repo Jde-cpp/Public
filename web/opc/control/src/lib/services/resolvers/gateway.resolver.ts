@@ -28,7 +28,7 @@ export class GatewayResolver implements Resolve<GatewayData> {
 	private async load( instanceName:string, routing:AppInstanceRoute ):Promise<GatewayData>{
 		const gateway = await this.gatewayService.gateway( instanceName );
 		const pageSettings = new PageSettings(routing);
-		const schema = await gateway.schemaWithEnums( "serverConnections", (m)=>console.log(m) );
+		const schema = await gateway.schemaWithEnums( "ServerConnection", (m)=>console.log(m) );
 		var profile = new PageProfile();
 		const viewCols = schema.fields.map( f=>f.name );
 		const defaultView = new View( {configColumns: viewCols, sort: [{active: "name", direction: "asc"}]}, schema );

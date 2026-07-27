@@ -51,9 +51,11 @@ export class Paginator implements OnInit, OnDestroy{
 	onNextItem(){ this.startIndex.update( value => value+1 ); this.onPageEvent.emit(new PageEvent(this)); }
 	onNextPage(){ this.startIndex.update( value => value+this.pageSize() ); this.onPageEvent.emit(new PageEvent(this)); }
 	onLastPage(){
-		if( this.pageIndex()==Math.ceil(this.length()!/this.pageSize())-1 )
+		if( !this.length() )
 			return;
-		this.startIndex.update( value => this.length()!-this.length()!%this.pageSize() );
+		//ceil-1 rather than length-length%pageSize, which lands on length itself when the last page is exactly full
+		this.startIndex.set( (Math.ceil(this.length()!/this.pageSize())-1)*this.pageSize() );
+		this.onPageEvent.emit( new PageEvent(this) );
 	}
 	firstItemShowing = computed( () => this.startIndex()==0 );
 	isLastPage = computed( () => this.length() && this.startIndex()+this.pageSize()>=this.length()! );

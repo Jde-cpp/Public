@@ -341,6 +341,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	}
 
 	async schemaWithEnums( type:string, log:Log ):Promise<TableSchema>{
+		verify( type[0]==type[0].toUpperCase() );
 		let schema = ( await this.schema([type], log) )[0];
 		if( !schema.enums ){
 			schema.enums = new Map<string, EnumValue[]>();

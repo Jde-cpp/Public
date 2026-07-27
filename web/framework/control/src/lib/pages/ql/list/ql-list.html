@@ -16,7 +16,7 @@
 					<mat-icon>settings</mat-icon>
 				</button>
 				@if( showAdd() ){
-					<button matButton="tonal" style="margin-left :20px; margin-right:10px" (click)="insert()">Add</button>
+					<button matButton="tonal" style="margin-left :20px; margin-right:10px" (click)="onAdd()">Add</button>
 				}
 				<button mat-icon-button (click)="edit()" [disabled]="selection()==null" [title]='selection()?.deleted ? "Restore" : "Properties"'  color="primary" style="margin-left :20px; margin-right:10px">
 					<mat-icon>{{selection()?.deleted ? "restore" : "edit_attributes"}}</mat-icon>

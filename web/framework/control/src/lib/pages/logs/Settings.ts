@@ -13,7 +13,7 @@ export class LogSettings{
 			this.autoScroll = params.autoScroll;
 		if( params.applicationId )
 			this.applicationId = params.applicationId;
-		if( params.level )
+		if( params.level!=undefined )//Trace is 0 - a truthy test dropped it and silently restored the default
 			this.level = params.level;
 		if( params.start )
 			this.start = params.start;
@@ -30,7 +30,8 @@ export class LogSettings{
 
 	autoScroll:boolean=true;
 	applicationId:number|undefined;
-	level:Log.ELogLevel=Log.ELogLevel.Information;
+	//Trace, ie show everything: the level is only applied as a filter now, and nothing filtered the first page before.
+	level:Log.ELogLevel=Log.ELogLevel.Trace;
 	hiddenMessages:Guid[]=[];
 	get start():Date{ return this._start || LogSettings.defaultDate; } set start( value:Date ){ this._start=value==LogSettings.defaultDate ? undefined : value;} private _start:Date|undefined;
 	static get defaultDate():Date{ var start = new Date(); start.setHours( 0, 0, 0, 0 ); start.setDate( start.getDate()-1 ); return start; }

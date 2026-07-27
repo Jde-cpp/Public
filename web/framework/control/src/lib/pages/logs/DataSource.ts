@@ -76,6 +76,9 @@ export class LogDataSource extends DataSource<Entry>{
 	}
 
 	addLoadedEntries( data:LogEntries ){
+		//before the push loop, which resolves each entry's text to filter and to sort it - a template that has not
+		//been merged yet reads as "".  the dedup loop below compares only ids and times, so it is unaffected.
+		data.strings.forEach( (value,key)=>this.strings.set( key, value ) );
 		//remove duplicates
 		let loaded = data.entries[0];
 		for( let i=this.allEntries.length-1; loaded && i>=0; --i ){//loaded is undefined for an empty batch or once shift() exhausts it — stop before dereferencing it
@@ -93,10 +96,12 @@ export class LogDataSource extends DataSource<Entry>{
 			}
 		}
 		data.entries.forEach( (x)=>this.push(x) );
-		data.strings.forEach( (value,key)=>this.strings.set( key, value ) );
 	}
 
 	push( entry:Entry ):void{
+		//against the current filter, else entries paged in after the level was set come back visible.  a no-op
+		//until something filters: the default level is NoLog(-1), which nothing is below.
+		entry.hidden = this.isHidden( entry );
 		let addToArray = (data:Entry[])=>{
 			const location = this.locationOf( data, entry, 0, data.length );
 			if( location==data.length )
