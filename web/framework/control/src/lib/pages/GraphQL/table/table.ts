@@ -47,6 +47,7 @@ export class GraphQLTable{
 		else
 			selections = isSelected ? [] : [row];
 		this.selections.set( new SelectionModel<any>(multi, selections) );
+		this.onRowActivate.emit( row );
 	}
 
 	edit( column:string, element: any ): void{
@@ -70,6 +71,7 @@ export class GraphQLTable{
 	//showDeleted = input<boolean>( false );
 	sort = model<Sort>();
 	onSortChange = output<Sort>();
+	onRowActivate = output<any>();
 
 	get displayedColumnNames(){ return (this.selections().isMultipleSelection() ? ["select"] : []).concat( this.displayedFields().filter((x)=>x.displayed).map((x)=>x.name) ); };
 	get stringColumnNames(){ return this.displayedFields().filter( (x)=>(x.type.underlyingKind==FieldKind.SCALAR && x.type.underlyingName=="String") || x.type.underlyingKind==FieldKind.ENUM ).map( (x)=>x.name ); }

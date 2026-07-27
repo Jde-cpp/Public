@@ -20,7 +20,7 @@ namespace Jde::QL{
 		jvalue y;
 		if( c.Type==DB::EType::DateTime ){
 			let v = dbValue.get_number<uint>();
-			y = ToIsoString( TimePoint{std::chrono::seconds(v)} );
+			y = ToIsoString( TimePoint{std::chrono::seconds(v)} )+"Z";
 		}
 		else if( c.PKTable && (c.IsEnum() || c.IsFlags()) ){
 			let values = GetEnumValues( *c.PKTable );
