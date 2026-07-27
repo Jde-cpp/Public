@@ -84,20 +84,32 @@ export class QLList implements OnInit, OnDestroy{
 		this.onViewShow( newView );
 	}
 
-	edit(){
-		if( this.selection().deleted )
-			this.ql.mutate( `restore${this.type()}(id:${this.selection().id})`, (m)=>console.log(m) ).then( ()=>this.selection().deleted=null ).catch( (e)=>console.log(e) );
-		else{
-			try{
-				this.router.navigate([this.selection().target], {relativeTo: this.route} );
-			}catch( e ){
-				this.snackbar.exceptionInfo( e, "Could not navigate to properties", (m)=>console.log(m) );
-			}
+	restore(){
+		this.ql.mutate( `restore${this.type()}(id:${this.selection().id})`, (m)=>console.log(m) ).then( ()=>this.selection().deleted=null ).catch( (e)=>console.log(e) );
+	}
+
+	onRowActivate( row:any ){
+		if( row.deleted )	//deleted rows just select, so restore/purge stay reachable
+			return;
+		try{
+			this.router.navigate([row.target], {relativeTo: this.route} );
+		}catch( e ){
+			this.snackbar.exceptionInfo( e, "Could not navigate to properties", (m)=>console.log(m) );
 		}
 	}
 
 	onAdd(){
 		this.router.navigate( ['$new'], {relativeTo: this.route} );
+	}
+
+	async onRefresh(){
+		this.data.set( [] );
+		try{
+			await this.refresh( this.resolvedData().profile );
+		}
+		catch( e ){
+			this.snackbar.exception( e, (m)=>console.log(m) );
+		}
 	}
 
 	async delete(){

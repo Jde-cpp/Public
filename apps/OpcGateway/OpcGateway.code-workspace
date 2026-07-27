@@ -6,7 +6,7 @@
 		"testTarget": "Jde.Opc.Tests",
 		"subDir": "apps/${config:name}",
 		"workspace": "${workspaceFolder:OpcGateway}/..",
-		"cmake.sourceDirectory": "${workspaceFolder:OpcGateway}/../../..",
+		"cmake.sourceDirectory": "${config:workspace}/../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"search.searchView.semanticSearchBehavior": "manual",
 		"github.copilot.chat.search.semanticTextResults": false,

@@ -15,11 +15,14 @@
 				<button matIconButton aria-label="Settings" (click)="isSettings.set(true)">
 					<mat-icon>settings</mat-icon>
 				</button>
+				<button matIconButton aria-label="Refresh" title="Refresh" (click)="onRefresh()">
+					<mat-icon>refresh</mat-icon>
+				</button>
 				@if( showAdd() ){
 					<button matButton="tonal" style="margin-left :20px; margin-right:10px" (click)="onAdd()">Add</button>
 				}
-				<button mat-icon-button (click)="edit()" [disabled]="selection()==null" [title]='selection()?.deleted ? "Restore" : "Properties"'  color="primary" style="margin-left :20px; margin-right:10px">
-					<mat-icon>{{selection()?.deleted ? "restore" : "edit_attributes"}}</mat-icon>
+				<button mat-icon-button (click)="restore()" [disabled]="selection()?.deleted==null" title="Restore" color="primary" style="margin-left :20px; margin-right:10px">
+					<mat-icon>restore</mat-icon>
 				</button>
 				<button mat-icon-button color="primary"  style="margin-left :20px; margin-right:10px"
 					[disabled]="selection()==null || (selection().deleted && !canPurge)"
@@ -29,7 +32,7 @@
 				<mat-checkbox [checked]="showDeleted()" color="primary" (change)="onToggleShowDeleted()">Show Deleted</mat-checkbox>
 			</mat-toolbar>
 			<div style="align-content: center; margin: auto;  text-align: center">
-				<ql-table [dataSource]=data [displayedFields]=displayedFields() [sort]=sort (onSortChange)=onSortChange($event) [(selections)]=selections></ql-table>
+				<ql-table [dataSource]=data [displayedFields]=displayedFields() [sort]=sort (onSortChange)=onSortChange($event) (onRowActivate)=onRowActivate($event) [(selections)]=selections></ql-table>
 			</div>
 		</ng-container>
 	}

@@ -18,8 +18,8 @@
 	],
 	"settings": {
 		"window.title": "Web",
-		"typescript.tsdk": "node_modules/typescript/lib",
-		"typescript.enablePromptUseWorkspaceTsdk": true
+		"typescript.tsdk.path": "node_modules/typescript/lib",
+		"typescript.tsdk.enablePromptUseWorkspaceTsdk": true
 	},
 	"extensions": {
 		"recommendations": [
@@ -32,7 +32,9 @@
 				"name": "ng serve",
 				"type": "chrome",
 				"request": "launch",
-				"url": "http://localhost:4200/"
+				"preLaunchTask": "npm: start",
+				"url": "http://localhost:4200/",
+				"userDataDir": false
 			},
 			{
 				"name": "ng test",
@@ -47,10 +49,27 @@
 		"version": "2.0.0",
 		"tasks": [
 			{
-				"type": "npm",
-				"script": "start",
-				"problemMatcher": { "owner": "typescript", "pattern": "$tsc", "background": { "activeOnStart": true, "beginsPattern": { "regexp": "(.*?)" }, "endsPattern": { "regexp": "bundle generation complete" } } },
 				"label": "npm: start",
+				"type": "shell",
+				"command": "npm start",
+				"options": { "cwd": "${workspaceFolder:my-workspace}" },
+				"isBackground": true,
+				"problemMatcher": { "owner": "typescript", "pattern": "$tsc", "background": { "activeOnStart": true, "beginsPattern": { "regexp": "Changes detected" }, "endsPattern": { "regexp": "bundle generation (complete|failed)" } } }
+			},
+			{
+				"label": "npm: test",
+				"type": "shell",
+				"command": "npm test",
+				"options": { "cwd": "${workspaceFolder:my-workspace}" },
+				"isBackground": true,
+				"problemMatcher": { "owner": "typescript", "pattern": "$tsc", "background": { "activeOnStart": true, "beginsPattern": { "regexp": "Changes detected" }, "endsPattern": { "regexp": "bundle generation (complete|failed)" } } }
+			},
+
+			{
+				"type": "npm",
+				"script": "startxx",
+				"problemMatcher": { "owner": "typescript", "pattern": "$tsc", "background": { "activeOnStart": true, "beginsPattern": { "regexp": "(.*?)" }, "endsPattern": { "regexp": "bundle generation complete" } } },
+				"label": "npm: startx",
 				"detail": "ng serve"
 			},
 			{

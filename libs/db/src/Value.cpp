@@ -100,7 +100,7 @@ namespace Jde::DB{
 		case UInt64: j = get_uint(); break;
 		case Int32: j = get_int32(); break;
 		case Double: j = get_double(); break;
-		case Time: j = ToIsoString( get_time() ); break;
+		case Time: j = ToIsoString( get_time() )+"Z"; break;
 		case Bytes: j = Str::Encode64( get_bytes() ); break;
 		default: ERR( "Unknown type({}).", TypeName() );
 		}

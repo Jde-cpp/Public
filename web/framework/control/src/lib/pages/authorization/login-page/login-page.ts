@@ -88,6 +88,7 @@ export class LoginPageComponent{
 				document.getElementById("google-button"),
 				{ theme: "outline", size: "large" }
 			);
+			google.accounts.id.prompt();//auto_select only takes effect during prompt() — silently re-signs-in a returning user after session timeout
 			if( this.googleCredential && !this.user()?.picture )//user() is undefined when nobody's logged in
 				this.onGoogleLogin( this.googleCredential );
 		}

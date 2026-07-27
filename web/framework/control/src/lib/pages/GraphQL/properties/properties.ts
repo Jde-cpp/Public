@@ -54,11 +54,11 @@ export class Properties implements OnInit{
 		let y = [];
 		let filter = (field: Field)=>
 			[FieldKind.OBJECT,FieldKind.LIST,FieldKind.LIST].indexOf(field.type.underlyingKind)==-1
-			&& field.type.ofType?.name!='Boolean'
-			&& Properties.noShowFields.indexOf(field.name)==-1
-			&& this.excludedColumns().indexOf(field.name)==-1;
+			&& !field.isBoolean
+			&& !Properties.noShowFields.includes(field.name)
+			&& !this.excludedColumns().includes(field.name);
 		for( const field of this.schema().fields.filter(filter) ){
-			let values = field.type.underlyingKind==FieldKind.ENUM ? this.schema().enums.get(field.type.name) : undefined;
+			let values = field.isEnum ? this.schema().enums.get(field.type.name) : undefined;
 			y.push( new PropertyField(field, values) );
 		}
 		return y;
