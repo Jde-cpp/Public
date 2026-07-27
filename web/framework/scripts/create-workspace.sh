@@ -46,9 +46,18 @@ if [ ! -d $workspace ]; then
 	#the workspace must come out on the same Angular as the global cli that scaffolds it.  `ng new` already writes
 	#its own version, but the installs below default to @latest and would drag a newer major into a workspace built
 	#by an older cli.  Read the version off the package.json next to the resolved ng, not `ng --version` output.
+	#`which ng` resolves through the symlink to <pkg>/bin/ng.js on linux, so the manifest is one level up.  on windows
+	#npm writes a plain sh shim into the prefix itself and readlink -f returns that shim, leaving <prefix>/../package.json
+	#pointing at nothing - there the package sits under <prefix>/node_modules.  try both, and match on .name rather than
+	#mere existence, since <prefix>/../package.json can be an unrelated manifest.
 	ngPath=`readlink -f "$(which ng)"`;
-	ngVersion=`node -p "require('$(dirname $ngPath)/../package.json').version" 2> /dev/null`;
-	if [ -z "$ngVersion" ]; then echo `pwd`; echo could not read the global @angular/cli version near $ngPath; exit 1; fi;
+	ngPackage=;
+	for candidate in "`dirname $ngPath`/.." "`dirname $ngPath`/node_modules/@angular/cli"; do
+		if [ "`jq -r .name "$candidate/package.json" 2> /dev/null`" == "@angular/cli" ]; then ngPackage=$candidate/package.json; break; fi;
+	done;
+	if [ -z "$ngPackage" ]; then echo `pwd`; echo could not find the @angular/cli package.json near $ngPath; exit 1; fi;
+	ngVersion=`jq -er .version "$ngPackage" 2> /dev/null`;
+	if [ -z "$ngVersion" ]; then echo `pwd`; echo could not read the global @angular/cli version from $ngPackage; exit 1; fi;
 	ngMajor=${ngVersion%%.*};
 	echo global @angular/cli $ngVersion - creating the workspace to match;
 	createApplication=true;

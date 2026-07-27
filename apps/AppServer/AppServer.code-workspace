@@ -67,7 +67,7 @@
 				"-c",
 				"-tests",
 				"-settings=${config:settings}",
-				"-include=args/mysql",
+				"-include=${config:settingsInclude}",
 				"-xsync"
 			],
 			"cwd": "${config:cmake.buildDirectory}/debug/runtime",
