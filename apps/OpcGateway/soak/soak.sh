@@ -9,8 +9,21 @@
 #
 #   soak.sh [--duration PT24H] [--run-dir DIR] [--smoke] [--build-dir DIR]
 #           [--warmup PT1H] [--quiet-interval PT6H] [--quiet-period PT10M]
+#           [--external] [--external-url opc.tcp://host:port] [--external-uri URI]
+#           [--external-user USER] [--external-pwd PWD]
 #
 #   --smoke   10-minute validation run: PT30S status samples, quiet window at 3m for 1m.
+#
+#   --external  add a second gateway connection to an externally-managed OPC-UA server - it is NOT launched,
+#               stopped, or RSS-monitored here, only pre-checked for reachability. The other --external-* flags
+#               imply --external and override the config's flagged /soak/servers entry:
+#               --external-url   endpoint (default opc.tcp://127.0.0.1:49320)
+#               --external-uri   the server's application URI - enables Basic256Sha256 + the per-target client
+#                                cert; without it the gateway connects with SecurityPolicy None and no cert.
+#               --external-user/--external-pwd  server account with tag-write access; the client logs in with it
+#                                (POST /login) and runs the leg on that session.
+#               One-time setup: trust <ProgramData>/Jde-Cpp/OpcGateway/ssl/certs/ExternalSoak.pem in the external
+#               server (created by the -createCert step below), and make sure the configured node exists writable.
 #
 #   The remaining three exist because the defaults are tuned for the 24h run and do not scale down on their own:
 #   --warmup          RSS baseline offset from start (default 1h, 2m under --smoke). MUST be shorter than
@@ -35,6 +48,11 @@ buildDirOverride=""
 warmup=""
 quietInterval=""
 quietPeriod=""
+external=0
+externalUrl=""
+externalUri=""
+externalUser=""
+externalPwd=""
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--duration) duration="$2"; shift 2;;
@@ -44,8 +62,38 @@ while [[ $# -gt 0 ]]; do
 		--quiet-interval) quietInterval="$2"; shift 2;;
 		--quiet-period) quietPeriod="$2"; shift 2;;
 		--smoke) smoke=1; duration="PT10M"; shift;;
+		--external) external=1; shift;;
+		--external-url) external=1; externalUrl="$2"; shift 2;;
+		--external-uri) external=1; externalUri="$2"; shift 2;;
+		--external-user) external=1; externalUser="$2"; shift 2;;
+		--external-pwd) external=1; externalPwd="$2"; shift 2;;
 		*) echo "unknown argument: $1" >&2; exit 2;;
 	esac
+done
+
+# The external server is not managed here - fail fast if it is not listening before anything launches.
+externalArgs=()
+if [[ $external -eq 1 ]]; then
+	externalArgs=( "-external" )
+	[[ -z "$externalUrl" ]] || externalArgs+=( "-externalUrl=$externalUrl" )
+	[[ -z "$externalUri" ]] || externalArgs+=( "-externalUri=$externalUri" )
+	[[ -z "$externalUser" ]] || externalArgs+=( "-externalUser=$externalUser" )
+	[[ -z "$externalPwd" ]] || externalArgs+=( "-externalPwd=$externalPwd" )
+	extUrl="${externalUrl:-opc.tcp://127.0.0.1:49320}" # default must match the flagged /soak/servers entry
+	extHostPort="${extUrl#*://}"; extHostPort="${extHostPort%%/*}"
+	extHost="${extHostPort%%:*}"; extPort="${extHostPort##*:}"
+	[[ "$extPort" =~ ^[0-9]+$ ]] || { echo "cannot parse port from --external-url '$extUrl'" >&2; exit 2; }
+	(exec 3<>"/dev/tcp/$extHost/$extPort") 2>/dev/null || { echo "external OPC-UA server not reachable at $extUrl" >&2; exit 2; }
+	echo "external OPC-UA server reachable at $extHost:$extPort"
+fi
+
+# A leftover AppServer/OpcServer/Gateway from another session answers waitPort/waitHttp instantly, silently routing
+# the whole run (and its db writes) to the wrong stack - every criterion then measures the wrong processes.
+for stale in "appserver:1967" "opcserver:4840" "gateway:1968"; do
+	if (exec 3<>"/dev/tcp/127.0.0.1/${stale#*:}") 2>/dev/null; then
+		echo "FATAL: :${stale#*:} (${stale%:*}) is already in use - stop the stale stack before a soak run" >&2
+		exit 2
+	fi
 done
 
 isoSeconds(){ # <PT#H#M#S | plain seconds> -> seconds ; the apps parse ISO-8601, awk/date here do not.
@@ -88,9 +136,9 @@ else
 	np(){ echo "$1"; }
 fi
 
-findExe(){ # <relative-path-without-suffix> ; windows builds may also drop exes into <buildDir>/bin
+findExe(){ # <relative-path-without-suffix> ; windows builds may also drop exes into <buildDir>/bin or <buildDir>/bin/<name>
 	local rel=$1 p
-	for p in "$buildDir/$rel$exeSuffix" "$buildDir/bin/$(basename "$rel")$exeSuffix"; do
+	for p in "$buildDir/$rel$exeSuffix" "$buildDir/bin/$(basename "$rel")$exeSuffix" "$buildDir/bin/$(basename "$rel")/$(basename "$rel")$exeSuffix"; do
 		[[ -x "$p" ]] && { echo "$p"; return 0; }
 	done
 	echo "ERROR: $rel$exeSuffix not found under $buildDir (build target $(basename "$rel") first)" >&2
@@ -291,7 +339,7 @@ writeVerdict(){ # <PASS|FAIL> <reason>
 
 # ---------------------------------------------------------------- cert bootstrap (before OpcServer starts!)
 # OpcServer snapshots trustedCertDirs at startup; the gateway creates its per-target OPC cert only at first connect.
-"$soakExe" -c -tests "-settings=$(np "$scriptDir/config/Opc.Soak.jsonnet")" -createCert >"$runDir/client/createCert.log" 2>&1 \
+"$soakExe" -c -tests "-settings=$(np "$scriptDir/config/Opc.Soak.jsonnet")" -createCert ${externalArgs[@]+"${externalArgs[@]}"} >"$runDir/client/createCert.log" 2>&1 \
 	|| failEarly "cert bootstrap failed - see $runDir/client/createCert.log"
 echo "gateway certificate bootstrapped"
 
@@ -335,6 +383,7 @@ if [[ $smoke -eq 1 ]]; then
 fi
 [[ -z "$quietInterval" ]] || clientArgs+=( "-quietInterval=$quietInterval" )
 [[ -z "$quietPeriod" ]] || clientArgs+=( "-quietPeriod=$quietPeriod" )
+[[ $external -eq 0 ]] || clientArgs+=( "${externalArgs[@]}" )
 launch client "$soakExe" "$scriptDir/config/Opc.Soak.jsonnet" "." "${clientArgs[@]}"
 
 # ---------------------------------------------------------------- monitor until the client finishes

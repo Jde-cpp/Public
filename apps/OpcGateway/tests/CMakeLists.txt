@@ -52,7 +52,11 @@ endif()
 addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Tests.jsonnet )
 
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Tests.jsonnet" )
+	set( appOutDir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${targetName}" )
+	set_target_properties( ${targetName} PROPERTIES
+		VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Tests.jsonnet"
+		RUNTIME_OUTPUT_DIRECTORY "${appOutDir}"
+	)
 	copyCommonDlls()
 	target_compile_definitions( ${targetName} PRIVATE NOMINMAX )
 	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_INSTALL_PREFIX}/libxml2/bin/libxml2.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "libxml2.dll" )

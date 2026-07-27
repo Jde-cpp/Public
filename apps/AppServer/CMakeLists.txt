@@ -37,7 +37,6 @@ add_executable( ${targetName} )
 compileOptions( ${targetName} )
 set( sources src/main.cpp )
 if( WIN32 )
-
 	list( APPEND sources src/AppServer.rc )
 endif()
 file( GLOB headers src/*/*.h )
@@ -53,6 +52,11 @@ target_link_libraries( ${targetName} Jde.App.ServerLib )
 
 linkConfigFile( "${jdeRoot}/libs/db/config/common-meta.libsonnet" "${jdeRoot}/apps/AppServer/config/common-meta.libsonnet" )
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-c -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/App.Server.jsonnet" )
+	set( appOutDir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${targetName}" )
+	set_target_properties( ${targetName} PROPERTIES
+		VS_DEBUGGER_COMMAND_ARGUMENTS "-c -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/App.Server.jsonnet"
+		RUNTIME_OUTPUT_DIRECTORY "${appOutDir}"
+		PDB_OUTPUT_DIRECTORY "${appOutDir}"
+	)
 	copyCommonDlls()
 endif()

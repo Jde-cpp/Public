@@ -3,7 +3,7 @@ local logsDir = args.logsDir;
 {
 	instanceName: args.instanceName,
 	testing:{
-		tests:: "SubscribeTests.Basic",
+		tests: "NoCredentialTests.*",
 		recreateDB: true,
 		embeddedAppServer:: false,
 		embeddedOpcServer:: false

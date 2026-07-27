@@ -74,6 +74,11 @@ target_link_libraries( ${targetName} Jde.Opc.GatewayLib )
 
 linkConfigFile( "${jdeRoot}/libs/db/config/common-meta.libsonnet" "${CMAKE_CURRENT_SOURCE_DIR}/config/common-meta.libsonnet" )
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-c -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Gateway.jsonnet" )
+	set( appOutDir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${targetName}" )
+	set_target_properties( ${targetName} PROPERTIES
+		VS_DEBUGGER_COMMAND_ARGUMENTS "-c -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Gateway.jsonnet"
+		RUNTIME_OUTPUT_DIRECTORY "${appOutDir}"
+		PDB_OUTPUT_DIRECTORY "${appOutDir}"
+	)
 	copyCommonDlls()
 endif()

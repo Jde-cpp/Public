@@ -112,7 +112,7 @@ namespace Jde::Opc::Gateway{
 	}
 	α UAClient::Configuration()ε->UA_ClientConfig*{
 		let uri = Str::Replace( _opcServer.CertificateUri, " ", "%20" );
-		bool addSecurity = !uri.empty();//urn:JDE-CPP:Kepware.KEPServerEX.V6:UA%20Server
+		bool addSecurity = !uri.empty();
 		auto certAuth = Credential.Type()==ETokenType::Certificate;
 		//TODO - test no security also
 		if( addSecurity && !certAuth )

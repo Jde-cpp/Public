@@ -5,6 +5,7 @@
 #include <jde/fwk/process/execution.h>
 #include <jde/fwk/process/process.h>
 #include <jde/fwk/settings.h>
+#include <jde/fwk/str.h>
 #include <jde/fwk/crypto/CryptoSettings.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/app/client/IAppClient.h>
@@ -20,24 +21,31 @@
 
 namespace Jde::Opc::Gateway::Soak{
 	constexpr ELogTags _tags{ ELogTags::Test };
-	//Creates the gateway's client certificate for the soak target. Must run before OpcServer starts: OpcServer
+	//Creates the gateway's client certificate for each active soak leg. Must run before OpcServer starts: OpcServer
 	//snapshots trustedCertDirs at startup, but the gateway only creates the cert lazily at first connect - too late
-	//in a split-process run. Mirrors UAClient::EnsureCertificate with the gateway's RootSslDir spelled out.
-	Ω createGatewayCert()ε->void{
-		let target = Settings::FindString( "/soak/target" ).value_or( "OpcSoak" );
-		let urn = Settings::FindString( "/opc/urn" ).value_or( "urn:open62541.server.application" );
+	//in a split-process run. Mirrors UAClient::EnsureCertificate with the gateway's RootSslDir spelled out - including
+	//the %20-encoded applicationUri, which servers that check SAN==ApplicationUri require.
+	Ω createGatewayCerts()ε->void{
 		let product = Settings::FindString( "/soak/gatewayProduct" ).value_or( "OpcGateway" );
 		const fs::path root = Process::ProgramDataFolder()/Process::CompanyRootDir()/product/"ssl";
 		for( sv sub : {"certs", "private", "public"} )
 			fs::create_directories( root/sub );
 		let passcode = Process::GetEnv( "JDE_PASSCODE" ).value_or( "" );
-		let privateKeyFile = root/Ƒ("private/{}.pem", target);
-		if( !fs::exists(privateKeyFile) )
-			Crypto::CreateKey( root/Ƒ("public/{}.pem", target), privateKeyFile, passcode );
-		let certificateFile = root/Ƒ("certs/{}.pem", target);
-		if( !fs::exists(certificateFile) )
-			Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Ƒ("URI:{}", urn), "jde-cpp", "US", "localhost" );
-		INFO( "Gateway certificate ready: {}.", certificateFile.string() );
+		for( let& leg : ActiveServers() ){
+			if( leg.CertificateUri.empty() ){//no uri -> the gateway connects with SecurityPolicy None and never presents a cert.
+				INFO( "No certificateUri for '{}' - skipping certificate.", leg.Target );
+				continue;
+			}
+			let privateKeyFile = root/Ƒ("private/{}.pem", leg.Target);
+			if( !fs::exists(privateKeyFile) )
+				Crypto::CreateKey( root/Ƒ("public/{}.pem", leg.Target), privateKeyFile, passcode );
+			let certificateFile = root/Ƒ("certs/{}.pem", leg.Target);
+			if( !fs::exists(certificateFile) )
+				Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Ƒ("URI:{}", Str::Replace(leg.CertificateUri, " ", "%20")), "jde-cpp", "US", "localhost" );
+			INFO( "Gateway certificate ready: {}.", certificateFile.string() );
+			if( leg.User.size() )
+				INFO( "External server '{}': trust {} in its server configuration before the run.", leg.Target, certificateFile.string() );
+		}
 	}
 }
 
@@ -49,7 +57,7 @@ namespace Jde::Opc::Gateway::Soak{
 	try{
 		Process::Startup( argc, argv, "Jde.Opc.Soak", "OpcGateway soak driver" );
 		if( Process::FindArg("-createCert") ){
-			Soak::createGatewayCert();
+			Soak::createGatewayCerts();
 			exitCode = EXIT_SUCCESS;
 		}
 		else{
