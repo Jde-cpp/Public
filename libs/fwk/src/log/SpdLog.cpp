@@ -18,10 +18,10 @@ namespace Jde::Logging{
 	//`-fmacro-prefix-map` makes source paths repo-relative;  the terminal's osc-8 link needs an absolute file:// uri.
 	struct SourceUri final : spdlog::custom_flag_formatter{
 		α format( const spdlog::details::log_msg& msg, const std::tm&, spdlog::memory_buf_t& dest )ι->void override{
-			let file = msg.source.filename ? sv{msg.source.filename} : sv{};
+			let file = msg.source.filename ? sv{ msg.source.filename } : sv{};
 			if( file.empty() )
 				return;
-			let absolute = file[0]=='/' || file[0]=='\\' || (file.size()>1 && file[1]==':');//sources outside CMAKE_SOURCE_DIR (pch stubs, generated, 3rd party) are not remapped.
+			let absolute = file[0]=='/' || file[0]=='\\' || ( file.size()>1 && file[1]==':' );//sources outside CMAKE_SOURCE_DIR (pch stubs, generated, 3rd party) are not remapped.
 			let root = absolute ? sv{} : sv{ JDE_SOURCE_ROOT };
 			let& first = root.empty() ? file : root;
 			if( first[0]!='/' )
@@ -42,24 +42,22 @@ namespace Jde::Logging{
 			auto pattern =  Json::FindSV( sink, "/pattern" );
 			if( name=="console" && Process::IsConsole() ){
 				if( !pattern ){
-					if( Process::Args().find("-ctest")!=Process::Args().end() )
+					if( Process::Args().contains("-ctest") )
 						pattern = "%^%3!l%$-%H:%M:%S.%e %v %g:%#";//%-64@  %v
-					else if constexpr( _debug )
-						pattern = "\033]8;;file://%U#%#\a%^%3!l%$\033]8;;\a-%H:%M:%S.%e %v";//osc-8 link on the level;  the message stays plain so vscode finds the paths inside it.
 					else
-						pattern = "%^%3!l%$-%H:%M:%S.%e %v";//%-64@  %v
+						pattern = "\033]8;;file://%U#%#\a%^%3!l%$\033]8;;\a-%H:%M:%S.%e %v";//osc-8 link on the level;  the message stays plain so vscode finds the paths inside it.
 				}
 				pSink = ms<spdlog::sinks::stdout_color_sink_mt>();
 			}
 			else if( name=="file" ){
-				std::cout << "file sink:" << serialize(sink) << std::endl;
+				std::cout << "file sink:" << serialize( sink ) << std::endl;
 				optional<fs::path> pPath;
 				if( auto p = Json::FindString(sink, "/path"); p )
 					pPath = fs::path{ *p };
-#pragma warning(disable: 4127)
+#pragma warning( disable: 4127 )
 				if( !_msvc && pPath && pPath->string().starts_with("/Jde-cpp") )
 					pPath = fs::path{ fs::path{Process::GetEnv("HOME").value_or("")}/pPath->string().substr(1) };
-				let markdown = Json::FindBool(sink, "/md" ).value_or( false );
+				let markdown = Json::FindBool( sink, "/md" ).value_or( false );
 				let fileNameWithExt = Settings::FileStem()+( markdown ? ".md" : ".log" );
 				let path = pPath && !pPath->empty() ? *pPath/fileNameWithExt : Process::AppDataFolder()/"logs"/fileNameWithExt;
 				let truncate = Json::FindBool( sink, "/truncate" ).value_or( true );
@@ -95,7 +93,7 @@ namespace Jde::Logging{
 		let flushOn = Json::FindEnum<ELogLevel>( settings, "/logging/spd/flushOn", ToLogLevel ).value_or( _debug ? ELogLevel::Debug : ELogLevel::Information );
 		logger.flush_on( (level_enum)flushOn );
 
-		let minSinkLevel = std::accumulate( sinks.begin(), sinks.end(), ELogLevel::Critical, [](ELogLevel min, auto& p){ return std::min((ELogLevel)p->level(), min);} );
+		let minSinkLevel = std::accumulate( sinks.begin(), sinks.end(), ELogLevel::Critical, [](ELogLevel min, auto& p){return std::min((ELogLevel)p->level(), min);} );
 		logger.set_level( (level_enum)minSinkLevel );
 
 		return logger;
@@ -105,8 +103,9 @@ namespace Jde::Logging{
 		ILogger{ settings },
 		_logger{ logger(settings) }{
 		INFOT( ELogTags::Settings, "{} minLevel='{}' default='{}' flushOn='{}' {}", Name(),
-			Jde::ToString((ELogLevel)_logger.level()),
-			Jde::ToString(DefaultLevel()),
-			Jde::ToString((ELogLevel)_logger.flush_level()), ToString() );
+			Jde::ToString( (ELogLevel)_logger.level() ),
+			Jde::ToString( DefaultLevel() ),
+			Jde::ToString( (ELogLevel)_logger.flush_level() ), ToString()
+		);
 	}
 }

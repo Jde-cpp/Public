@@ -5,6 +5,7 @@
 		"target": "Jde.Opc.Gateway",
 		"testTarget": "Jde.Opc.Tests",
 		"subDir": "apps/${config:name}",
+		"workspace": "${workspaceFolder:OpcGateway}/..",
 		"cmake.sourceDirectory": "${workspaceFolder:OpcGateway}/../../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"search.searchView.semanticSearchBehavior": "manual",

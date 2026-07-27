@@ -20,6 +20,8 @@ endif()
 sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer ) #config/args/sqlite + the 'Debug - sqlite' launch config load these
 
 target_link_libraries( ${targetName} Jde.Access Jde.Web.Server Jde.App.Shared )
+
+message( CMAKE_CURRENT_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR} )
 target_precompile_headers( ${targetName} PRIVATE
 	<jde/fwk.h>
 	<jde/fwk/io/protobuf.h>

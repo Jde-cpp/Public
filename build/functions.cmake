@@ -7,6 +7,13 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR )
 	message( FATAL_ERROR "In-source builds are not allowed. Configure from an out-of-source build directory, e.g.:\n  cd $JDE_BUILD_DIR/$JDE_COMPILER/<repo-name> && cmake ${CMAKE_SOURCE_DIR} --preset <preset>" )
 endif()
 
+#Nothing here uses modules (no `export module`, no `import`), but the C++26 standard level turns scanning on by
+#default, costing a clang scan pass per TU plus a dyndep regen per target.  It also makes every object edge in a
+#target depend on that target's single CXX.dd, so touching one source provisionally dirties all of them (a one-file
+#change reads as a whole-target rebuild in ninja's progress count).  Must be set before any target is created -
+#it seeds the CXX_SCAN_FOR_MODULES property at add_library/add_executable time.  Turn back on to adopt `import std`.
+set( CMAKE_CXX_SCAN_FOR_MODULES OFF )
+
 if( CMAKE_HOST_WIN32 )
 	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
 	set( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
@@ -89,9 +96,27 @@ if( WIN32 )
 		add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_INSTALL_PREFIX}/fmt/bin/fmt$<IF:$<CONFIG:Debug>,d,>.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "fmtd.dll" )
 		add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_INSTALL_PREFIX}/zlib/bin/z$<IF:$<CONFIG:Debug>,d,>.dll" $<TARGET_FILE_DIR:${targetName}> COMMENT "copy z.dll" )
 	endfunction()
+	#Stages Jde/Jde.DB (+pdbs) next to ${targetName}, for the targets whose RUNTIME_OUTPUT_DIRECTORY is not <buildDir>/bin.
+	#Deliberately NOT a POST_BUILD step on ${targetName}: ninja lists bin/Jde.dll only as an order-only input (`||`) of the
+	#consumer's link, and lld-link leaves the import lib byte-identical when the exported symbols don't change, so RESTAT
+	#prunes the consumer's relink - a POST_BUILD command hanging off that link then silently never runs and leaves a stale
+	#dll beside the exe (edit a function body, debug the old code).  An OUTPUT rule that DEPENDS on the dlls themselves is a
+	#first-class edge that reruns whenever they are rewritten, relink or not.
+	#The stamp exists because the destination cannot be the OUTPUT: for the targets that do live in bin, that path is
+	#already the dll's own producing rule and ninja rejects the duplicate (the copy is then a no-op onto itself).
+	#The pdbs are copied but kept out of DEPENDS - ninja knows no rule producing them, so listing them fails a clean tree.
 	function( copyCommonDlls )
 		copyLibDlls()
-		set( buildLibDir ${CMAKE_BINARY_DIR}/libs )
+		set( stamp ${CMAKE_CURRENT_BINARY_DIR}/${targetName}.dlls.stamp )
+		add_custom_command( OUTPUT ${stamp}
+			COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${targetName}> #may not exist yet: this runs before ${targetName} links.
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Jde> $<TARGET_FILE:Jde.DB> $<TARGET_PDB_FILE:Jde> $<TARGET_PDB_FILE:Jde.DB> $<TARGET_FILE_DIR:${targetName}>
+			COMMAND ${CMAKE_COMMAND} -E touch ${stamp}
+			DEPENDS Jde Jde.DB $<TARGET_FILE:Jde> $<TARGET_FILE:Jde.DB>
+			COMMENT "copy Jde/Jde.DB dlls -> ${targetName}"
+		)
+		add_custom_target( ${targetName}.dlls DEPENDS ${stamp} )
+		add_dependencies( ${targetName} ${targetName}.dlls ) #staging depends on Jde/Jde.DB, not on ${targetName}, so this is not a cycle - and `--target ${targetName}` stages too.
 	endfunction()
 endif()
 

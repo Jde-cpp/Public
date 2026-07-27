@@ -61,7 +61,12 @@ else()
 endif()
 target_link_libraries( ${targetName} Jde Jde.DB Jde.QL Jde.Access Jde.Web.Server Jde.App.Client Jde.Opc Jde.Opc.ServerLib )
 if( WIN32 )
-	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-c -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Server.jsonnet" )
+	set( appOutDir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${targetName}" )
+	set_target_properties( ${targetName} PROPERTIES
+		VS_DEBUGGER_COMMAND_ARGUMENTS "-c -tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Opc.Server.jsonnet"
+		RUNTIME_OUTPUT_DIRECTORY "${appOutDir}"
+		PDB_OUTPUT_DIRECTORY "${appOutDir}"
+	)
 	copyCommonDlls()
 	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_INSTALL_PREFIX}/libxml2/bin/libxml2.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "libxml2.dll" )
 endif()

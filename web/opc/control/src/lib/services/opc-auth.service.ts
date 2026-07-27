@@ -30,8 +30,12 @@ export class OpcAuthService implements IAuth{
 		return promise;
 	}
 	async loginPassword( username:string, password:string, authenticator:string|undefined, log:Log ):Promise<void>{
-		//let gateway = await	 this.gatewayService.instance( authenticator );
-		let promise = await this.gatewayService.defaultGateway.login( authenticator ?? "", username, password, log );
+		// multiple gateways aren't implemented yet.  gateway/connection/user?
+		let gateways = await this.gatewayService.gateways();
+		if( !gateways.length )
+			throw "No gateways defined to authorize user.";
+		let gateway = gateways[0];
+		let promise = await gateway.login( authenticator ?? "", username, password, log );
 		this.isOpc.set( true );
 		return promise;
 	}
