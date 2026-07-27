@@ -96,7 +96,7 @@ export class QLList implements OnInit, OnDestroy{
 		}
 	}
 
-	insert(){
+	onAdd(){
 		this.router.navigate( ['$new'], {relativeTo: this.route} );
 	}
 

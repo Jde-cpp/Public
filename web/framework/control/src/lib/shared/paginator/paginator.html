@@ -5,16 +5,16 @@
 		</mat-form-field>
 	}
 	<div class="mat-mdc-paginator-range-actions">
-		<div class="mat-mdc-paginator-range-label">{{startNumber()}} – {{endNumber()}}{{lengthDescription}}</div>
 		@if( showFirstLastButtons ){
 			<button mat-icon-button [disabled]="disabled || firstItemShowing()"><mat-icon class="iconButton" (click)="onFirstPage()">first_page</mat-icon></button>
 		}
 		<button mat-icon-button [disabled]="disabled || firstItemShowing()"><mat-icon class="iconButton" (click)="onPreviousPage()">chevron_left</mat-icon></button>
 		<button mat-icon-button [disabled]="disabled || firstItemShowing()"><mat-icon class="iconButton" (click)="onPrevItem()">arrow_left</mat-icon></button>
+		<div class="mat-mdc-paginator-range-label">{{startNumber()}} – {{endNumber()}}{{lengthDescription}}</div>
 		<button mat-icon-button [disabled]="disabled || isLastPage()"><mat-icon class="iconButton" (click)="onNextItem()">arrow_right</mat-icon></button>
 		<button mat-icon-button [disabled]="disabled || isLastPage()"><mat-icon class="iconButton" (click)="onNextPage()">chevron_right</mat-icon></button>
-		@if( showFirstLastButtons && length() ){
-			<button mat-icon-button [disabled]="disabled || isLastPage()"><mat-icon class="iconButton" (click)="onLastPage()">last_page</mat-icon></button>
+		@if( showFirstLastButtons ){
+			<button mat-icon-button [disabled]="disabled || isLastPage() || !length()"><mat-icon class="iconButton" (click)="onLastPage()">last_page</mat-icon></button>
 		}
 	</div>
 </div>

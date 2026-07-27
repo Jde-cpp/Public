@@ -56,6 +56,17 @@ if [ ! -d $workspace ]; then
 	$cmd; if [ $? -ne 0 ]; then echo $cmd; exit 1; fi;
 	echo -------------------- create workspace complete --------------------;
 	cd $workspace;
+	#claude code reads .mcp.json from the workspace root, so give the workspace its own angular cli mcp server
+	#(list_projects, get_best_practices, search_documentation, ai_tutor).  pinned for the same reason as the installs
+	#below - an unpinned npx fetches @latest and would answer for a cli the workspace was not built with.
+	cat > .mcp.json <<-EOF
+	{
+	  "mcpServers": {
+	    "angular-cli": { "command": "npx", "args": ["-y", "@angular/cli@$ngVersion", "mcp"] }
+	  }
+	}
+	EOF
+	if [ $? -ne 0 ]; then echo `pwd`; echo could not write .mcp.json; exit 1; fi;
 	jqEdit angular.json ".projects.\"$workspace\".architect.build.configurations.production.budgets[0].maximumError = \"2mb\"";
 	jqEdit angular.json ".projects.\"$workspace\".architect.build.configurations.production.budgets[0].maximumWarning = \"1mb\"";
 	#was a sed on '"strict": true,' - Angular 22's --defaults template emits the individual noImplicit* flags and no
