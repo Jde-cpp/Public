@@ -20,12 +20,12 @@ common + {
 		scriptPaths:  [ args.repoSourceDir+"/apps/OpcServer/config/sql/sqlServer"],
 		localhost:{
 			driver: args.repoBuildDir+"/bin/Jde.DB.Odbc.dll",
-			connectionString: "DSN=debug",
+			connectionString: "DSN="+args.schema(),
 			username: null,
 			password: null,
 			schema: null,
 			catalogs: {
-				debug: {
+				[args.schema()]: {
 					schemas:{
 						_appServer:{
 							access:{

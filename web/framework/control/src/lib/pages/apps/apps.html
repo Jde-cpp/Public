@@ -14,7 +14,7 @@
 					<mat-card-content style="height:144px">
 						<!-- @if( c.on ) { -->
 							<div>Start:  {{c.created | date:'short'}}</div>
-							<div>Memory:  {{formatMemory(c.status.memory)}}</div>
+							<div>Memory:  {{formatMemory(c.status?.memory)}}</div>
 							<div>Host:  {{c.hostName}}</div>
 							<div>Instance:  {{c.instanceName}}</div>
 							<!-- <ng-container>

@@ -11,7 +11,7 @@
 		"github.copilot.chat.search.semanticTextResults": false,
 		"settings": "${workspaceFolder:config}/Opc.Gateway.jsonnet",
 		"testSettings": "${workspaceFolder:tests}/config/Opc.Tests.jsonnet",
-		"program": "${config:subDir}/exe/${config:target}"
+		"program": "${config:binDir}/${config:target}${config:targetExtension}"
 	},
 	"launch": {
 		"version": "0.2.0",

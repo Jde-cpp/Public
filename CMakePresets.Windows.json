@@ -80,7 +80,11 @@
 				"clang-jde",
 				"win-lldb"
 			],
-			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-jde/release"
+			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-jde/release",
+			"cacheVariables": {
+				"CMAKE_CXX_FLAGS": "$env{cxxFlags} $env{cxxFlagsDebugInfo} -DBOOST_STACKTRACE_USE_WINDBG",
+				"CMAKE_MSVC_DEBUG_INFORMATION_FORMAT": "Embedded"
+			}
 		},
 		{
 			"name": "win-repos",
