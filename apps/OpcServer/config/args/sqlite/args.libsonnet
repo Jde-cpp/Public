@@ -7,11 +7,7 @@ common + {
 		trustedCertDirs: [
 			common.certsDir( "OpcGateway" ),
 			common.certsDir( common.opcTestsProduct )
-		],
-		ssl:{
-			certificate: cwd+"/ssl/certs/OpcServer.pem",
-			privateKey: {path: cwd+"/ssl/private/OpcServer.pem", passcode: "OpcServer"}
-		}
+		]
 	},
 	dbServers: {
 		dataPaths: [],

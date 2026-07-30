@@ -28,7 +28,7 @@ function( sync=false )
 				settings: "Debug",
 				socket_client_write: "Debug",
 				socket_client_read: "Debug",
-				sql: "Debug",
+				sql: "Information",
 				threads: "Warning",
 				opc_access: "Trace",
 				uaEvent: "Warning",
@@ -57,6 +57,23 @@ function( sync=false )
 		description: "Test OPC",
 		mutationsDir:: args.repoSourceDir + "/apps/OpcServer/config/mutations/pumps",
 		db: false,
+		ssl:{
+			certificate: {
+				path:: "{ApplicationDataFolder}/ssl/certs/OpcServer.pem",
+				subjectAltName: "URI:urn:open62541.server.application",
+				company:: "Jde-Cpp",
+				country: "US",
+				domain:: "localhost"
+			},
+			privateKey: {
+				path:: "{ApplicationDataFolder}/ssl/private/OpcServer.pem",
+				passcode:: "OpcServer"
+			},
+			publicKey:{
+				path:: "{ApplicationDataFolder}/ssl/public/OpcServer.pem"
+			},
+			dh:: "{ApplicationDataFolder}/ssl/dh.pem",
+		},
 		opcNodeSet:{
 			path: "$(UA_NODE_SETS)/Opc.Ua.PredefinedNodes.xml",
 			nodeIds: [23513]
@@ -90,11 +107,7 @@ function( sync=false )
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"
 		],
 		trustedCertDirs: args.opcServer.trustedCertDirs,
-		port: 4840,
-		ssl:{
-			certificate: args.opcServer.ssl.certificate,
-			privateKey: {path: args.opcServer.ssl.privateKey.path, passcode: args.opcServer.ssl.privateKey.passcode}
-		}
+		port: 4840
 	},
 	workers:{
 		executor:{ threads:  2 },

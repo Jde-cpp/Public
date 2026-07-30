@@ -5,6 +5,12 @@ common + {
 		urn: "urn:open62541.server.application",
 		url: "opc.tcp://127.0.0.1:4840"
 	},
+	access: {
+		trustedCertDirs: [
+			common.certsDir( common.opcTestsProduct ), //gateway client cert - no ssl productName, so it lands under the test exe's product.
+			common.certsDir( "OpcServer" )
+		]
+	},
 	opcServer: {
 		trustedCertDirs: if common.windows then [
 			common.certsDir( common.opcTestsProduct )

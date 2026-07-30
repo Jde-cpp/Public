@@ -19,7 +19,8 @@ namespace Jde::DB::Sqlite::AccessProcs{
 				procs.ExecuteStatement( db, "select name from access_provider_types where provider_type_id=?", {params[1]}, &nameRow, sl );
 			}
 			let providerTarget = providerName ? *providerName+"-"+params[0].get_string() : params[0].get_string();
-			let identityId = IdentityInsert( procs, db, params[0], providerId, Value{providerTarget}, Value{}, Value{}, Value{false}, sl );
+			let email = providerName && *providerName=="Google" ? params[0] : Value{};//google login_name is the email; opcServer names are not.
+			let identityId = IdentityInsert( procs, db, params[0], providerId, Value{providerTarget}, Value{}, Value{}, Value{false}, email, sl );
 			let y = procs.ExecuteStatement( db, "insert into access_users( identity_id, login_name ) values( ?, ? )", {Value{identityId}, params[0]}, nullptr, sl );
 			if( onRow )
 				(*onRow)( Row{ {Value{identityId}} } ); //out _identity_id

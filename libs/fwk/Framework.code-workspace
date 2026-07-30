@@ -10,7 +10,7 @@
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"settings": "${workspaceFolder:tests}/config/Framework.Tests.jsonnet",
 		"testSettings": "${config:settings}",
-		"program": "${config:subDir}/tests/${config:target}"
+		"program": "${config:binDir}/${config:target}${config:targetExtension}"
 	},
 	"folders": [
 		{
@@ -32,7 +32,7 @@
 				"type": "lldb",
 				"breakpointMode":"path",
 				"request": "launch",
-				"program": "${command:jde.repoBuildDir}/debug/${config:subDir}/tests/${config:target}",
+				"program": "${config:cmake.buildDirectory}/debug/${config:program}",
 				"args": [
 					"-tests",
 					"-settings=${config:settings}"

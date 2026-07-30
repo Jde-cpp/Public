@@ -18,6 +18,14 @@
 
 #define let const auto
 namespace Jde::Opc::Server{
+	Ω defaultSslFileName()ι->string{
+		string defaultSslFileName = Settings::FindString("/instanceName").value_or( string{Process::ProductName()} );
+		if constexpr( _debug )
+			defaultSslFileName+= ".debug";
+		defaultSslFileName+= ".webServer";
+		return defaultSslFileName;
+	}
+
 	α StartupAwait::Execute()ι->VoidAwait::Task{
 		sp<OpcAuthorize> opcAuthorize;
 		{
@@ -34,12 +42,9 @@ namespace Jde::Opc::Server{
 				DB::NonProd::Recreate( *uaSchema, QLPtr() );
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) || uaSchema->DS()->RequiresSync() )
 				DB::SyncSchema( *uaSchema, QLPtr() );
-
-			Crypto::CryptoSettings settings{ Json::FindDefaultObject(_webServerSettings,"ssl") };
-			if( !fs::exists(settings.PrivateKeyPath) ){
-				settings.CreateDirectories();
-				Crypto::CreateKeyCertificate( settings );
-			}
+			auto defaultSslFileName = Server::defaultSslFileName();
+			Crypto::CryptoSettings settings{ Json::FindDefaultObject(_webServerSettings,"ssl"), defaultSslFileName };
+			Crypto::EnsureKeyCertificate( settings );
 			auto appClient = AppClient();
 			appClient->SslSettings = settings;
 			let serverName = Settings::FindString( "/opcServer/target" ).value_or( "default" );
@@ -55,7 +60,7 @@ namespace Jde::Opc::Server{
 					{ {serverName}, {serverName}, {0}, {} }
 				} );
 			}
-			StartWebServer( move(_webServerSettings) ); //TODO take out.
+			StartWebServer( move(_webServerSettings), defaultSslFileName ); //TODO take out.
 			auto accessSchema = DB::GetAppSchema( "access", remoteAcl );
 			appClient->SubscriptionSchemas.push_back( accessSchema );
 

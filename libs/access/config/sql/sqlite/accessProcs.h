@@ -24,5 +24,5 @@ namespace Jde::DB::Sqlite::AccessProcs{
 
 	//Body of access_identity_insert, shared with the user_insert procs that `call` it in mysql - sqlite has no
 	//procs (Syntax::HasProcs false), so they call it directly instead.  Defined in access_identity_insert.cpp.
-	α IdentityInsert( IProcs& procs, sqlite3& db, const Value& name, const Value& providerId, const Value& target, const Value& attributes, const Value& description, const Value& isGroup, SL sl )ε->uint; //returns new identity_id.
+	α IdentityInsert( IProcs& procs, sqlite3& db, const Value& name, const Value& providerId, const Value& target, const Value& attributes, const Value& description, const Value& isGroup, const Value& email, SL sl )ε->uint; //returns new identity_id.
 }

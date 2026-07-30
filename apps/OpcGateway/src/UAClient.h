@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include <jde/opc/uatypes/Logger.h>
 #include <jde/opc/uatypes/ExNodeId.h>
+#include "jde/fwk/crypto/CryptoSettings.h"
+#include "jde/fwk/settings.h"
 #include "uatypes/ExpectedNodeId.h"
 #include "async/AsyncRequest.h"
 #include "async/ConnectAwait.h"
@@ -59,7 +61,7 @@ namespace Jde::Opc::Gateway{
 		α AddSessionAwait( VoidAwait::Handle h )ι->void;
 		α TriggerSessionAwaitables()ι->void;
 
-		Ω EnsureCertificate( const ServerCnnctnNK& target, sv certificateUri )ε->void;//no-op if the cert exists. Callable before any client - servers that snapshot trustedCertDirs at startup (UAConfig::SetConfig) must see it before they start.
+		Ω EnsureCertificate( const ServerCnnctnNK& target, sv certificateUri, SRCE )ε->void;//no-op if the cert exists. Callable before any client - servers that snapshot trustedCertDirs at startup (UAConfig::SetConfig) must see it before they start.
 		α Target()Ι->const ServerCnnctnNK&{ return _opcServer.Target; }
 		α Url()Ι->str{ return _opcServer.Url; }
 		α IsDefault()Ι->bool{ return _opcServer.IsDefault; }
@@ -78,12 +80,15 @@ namespace Jde::Opc::Gateway{
 		α Connect()ε->void;
 		Ω LogServerEndpoints( str url, Jde::Handle h )ι->void;
 		α LogClientEndpoints()ι->void;
-		Ω RootSslDir()ι->fs::path{ return Process::AppDataFolder()/"ssl"; }
-		Ω Passcode()ι->string{ return Process::GetEnv("JDE_PASSCODE").value_or( "" ); }
-		Ω PrivateKeyFile( const ServerCnnctnNK& target )ι->fs::path{ return RootSslDir()/Ƒ("private/{}.pem", target); }
-		α PrivateKeyFile()Ι->fs::path{ return PrivateKeyFile( Target() ); }
-		Ω CertificateFile( const ServerCnnctnNK& target )ι->fs::path{ return RootSslDir()/Ƒ("certs/{}.pem", target); }
-		α CertificateFile()Ι->fs::path{ return CertificateFile( Target() ); }
+
+		Ω CryptoSettings( const ServerCnnctnNK& target )ι->Crypto::CryptoSettings;
+		α CryptoSettings()Ι->Crypto::CryptoSettings{ return CryptoSettings( Target() ); }
+
+		//optional<Crypto::CryptoSettings> _cryptoSettings;
+		//Ω PrivateKey( const ServerCnnctnNK& target )ι->Crypto::PrivateKeySettings;
+		//α PrivateKey()Ι->Crypto::PrivateKeySettings{ return PrivateKey( Target() ); }
+		//Ω Certificate( const ServerCnnctnNK& target )ι->Crypto::Certificate;
+		//α Certificate()Ι->Crypto::Certificate{ return Certificate( Target() ); }
 
 		ServerCnnctn _opcServer;
 

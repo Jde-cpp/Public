@@ -22,7 +22,7 @@ namespace Jde::DB::Sqlite::Tests{
 	TEST_P( SchemaTests, ServerMetaLoadTable ){
 		let table = _ds->ServerMeta().LoadTable( "main", "access_identities" );
 		ASSERT_TRUE( table );
-		ASSERT_EQ( table->Columns.size(), 10u );
+		ASSERT_EQ( table->Columns.size(), 11u );
 
 		let id = table->FindColumn( "identity_id" );
 		ASSERT_TRUE( id );

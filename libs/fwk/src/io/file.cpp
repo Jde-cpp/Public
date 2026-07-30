@@ -1,4 +1,6 @@
-﻿#include <jde/fwk/io/file.h>
+﻿#include "jde/fwk/exceptions/IOException.h"
+#include <filesystem>
+#include <jde/fwk/io/file.h>
 #include <jde/fwk/str.h>
 #include <fstream>
 
@@ -13,7 +15,14 @@ namespace Jde{
 			throw IO::IOException( move(e) );
 		}
 	}
-
+	α IO::CreateDirectories( const fs::path& path, SL sl )ε->bool{
+		try{
+			return fs::create_directories( path ); //false=already exists
+		}
+		catch( fs::filesystem_error& e ){
+			throw IO::IOException{ move(e), sl };
+		}
+	}
 	α IO::Load( const fs::path& path, SL sl )ε->string{
 		CHECK_PATH( path, sl );
 		let size = fileSize( path );

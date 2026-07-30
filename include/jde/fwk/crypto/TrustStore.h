@@ -9,10 +9,10 @@ namespace Jde::Crypto{
 	//Linux: X509_STORE default paths - SSL_CERT_FILE/SSL_CERT_DIR override a custom-built OpenSSL whose OPENSSLDIR points away from /etc/ssl.
 	//Thread-safety: X509_STORE is internally refcounted+locked and Verify uses a per-call X509_STORE_CTX, so concurrent Verify/IsTrusted on one instance are safe. Intended pattern is configure-then-verify.
 	struct Γ TrustStore final{
-		TrustStore( bool loadOsStore=true )ε;
+		TrustStore( bool loadOsStore=true, SRCE )ε;
 		α AddCertificate( std::span<const byte> der, SRCE )ε->void;//extra trust anchor (self-signed peer certs, tests).
 		α Verify( std::span<const byte> der, SRCE )Ε->void;//throws OpenSslException with X509_verify_cert_error_string reason+code+depth.
-		α IsTrusted( std::span<const byte> der )Ι->bool;//non-throwing wrapper.
+		α IsTrusted( std::span<const byte> der )Ι->bool;
 		α CertCount()Ι->uint;//loaded objects (certs+CRLs); lazy hash-dir lookups on Linux can leave this 0 even when Verify works.
 	private:
 		up<X509_STORE, void(*)(X509_STORE*)> _store;

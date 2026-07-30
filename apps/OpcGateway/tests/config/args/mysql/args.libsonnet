@@ -7,6 +7,12 @@ common + {
 		urn: "urn:open62541.server.application",
 		url: "opc.tcp://127.0.0.1:4840"
 	},
+	access: {
+		trustedCertDirs: [
+			"$(HOME)/.Jde-Cpp/Tests.Opc/ssl/certs",
+			"$(HOME)/.Jde-Cpp/OpcServer/ssl/certs"
+		]
+	},
 	opcServer: {
 		trustedCertDirs: [
 			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs",

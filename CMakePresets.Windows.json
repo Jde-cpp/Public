@@ -31,6 +31,7 @@
 				"CMAKE_CXX_FLAGS_DEBUG": "$env{cxxFlagsDebug}",
 				"CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections -ldbgeng",
 				"CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections -ldbgeng",
+				"CMAKE_MODULE_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections -ldbgeng",
 				"CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
 				"VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
 				"VCPKG_INSTALLED_DIR": "$env{VCPKG_ROOT}/installed"
@@ -106,7 +107,10 @@
 				"win-clang-debug",
 				"win-repos"
 			],
-			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-repos/debug"
+			"binaryDir": "$env{JDE_BUILD_DIR}/clang++-repos/debug",
+			"cacheVariables": {
+				"CMAKE_CXX_FLAGS": "$env{cxxFlags} $env{cxxFlagsDebugInfo} -DBOOST_STACKTRACE_USE_WINDBG"
+			}
 		},
 		{
 			"name": "win-clang-release-repos",

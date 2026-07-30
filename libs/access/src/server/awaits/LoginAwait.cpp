@@ -1,4 +1,5 @@
 #include <jde/access/server/awaits/LoginAwait.h>
+#include <jde/access/server/accessServer.h>
 #include <jde/access/usings.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/Value.h>
@@ -12,8 +13,8 @@
 #define let const auto
 namespace Jde::Access::Server{
 
-	LoginAwait::LoginAwait( Crypto::PublicKey publicKey, string&& name, string&& target, string&& description, SL sl )ι:
-			base{sl}, _publicKey{ move(publicKey) }, _name{ move(name) }, _target{ move(target) }, _description{ move(description) }
+	LoginAwait::LoginAwait( Crypto::PublicKey publicKey, vector<byte> certificate, string&& description, SL sl )ι:
+		base{ sl }, _certificate{ move(certificate) }, _description{ move(description) }, _publicKey{ move(publicKey) }
 	{}
 
 	α LoginAwait::LoginTask()ι->TAwait<optional<UserPK::Type>>::Task{
@@ -25,14 +26,22 @@ namespace Jde::Access::Server{
 			where.Add( userTable->GetColumnPtr("exponent"), DB::Value{_publicKey.ExponentInt()} );
 			where.Add( userTable->GetColumnPtr("provider_id"), DB::Value{underlying(EProviderType::Key)} );
 			DB::Statement statement{
-				{userTable->GetPK()},
+				{ userTable->GetPK() },
 				{ DB::Join{userTable->GetPK(), identityTable->GetPK()} },
-				move(where)
+				move( where )
 			};
 			auto sql = statement.Move();
 			let userPK = co_await DS().ScalerOpt<UserPK::Type>( move(sql) );
-			if( !userPK )
-				InsertUser( _publicKey.ModulusHex(), _publicKey.ExponentInt() );
+			if( !userPK ){ //enrollment - the presented certificate must chain to a trust anchor and bind the jwt key; it is also the identity authority.
+				THROW_IF( _certificate.empty(), "Public key not enrolled and no certificate presented." );
+				TrustVerify( _certificate, _sl );
+				THROW_IF( Crypto::ExtractPublicKey(_certificate, _sl)!=_publicKey, "Certificate public key does not match jwt key." );
+				Crypto::Certificate info{ _certificate, _sl };
+				THROW_IF( info.CommonName.empty(), "Certificate subject CN is required for enrollment." );
+				THROW_IF( info.CommonName=="localhost", "Certificate CN 'localhost' is not unique - set ssl/certificate/commonName." );//the CN is the identity target; a generic CN means the operator never chose one.
+				auto name = info.Upn.size() ? info.Upn : info.Email.size() ? info.Email : info.CommonName;//UPN → email → CN.
+				InsertUser( _publicKey.ModulusHex(), _publicKey.ExponentInt(), move(info), move(name) );
+			}
 			else
 				ResumeScaler( {*userPK} );
 		}
@@ -40,10 +49,12 @@ namespace Jde::Access::Server{
 			ResumeExp( move(e) );
 		}
 	}
-	α LoginAwait::InsertUser( string&& modulusHex, uint32_t exponent )ι->DB::ScalerAwait<UserPK::Type>::Task{
+	α LoginAwait::InsertUser( string&& modulusHex, uint32_t exponent, Crypto::Certificate&& info, string&& name )ι->DB::ScalerAwait<UserPK::Type>::Task{
 		DB::InsertClause insert{ AccessSchema().Prefix+"user_insert_key",
 			{ DB::Value{move(modulusHex)}, DB::Value{exponent}, DB::Value{underlying(EProviderType::Key)},
-				DB::Value{move(_name)}, DB::Value{move(_target)}, DB::Value{move(_description)}} };
+				DB::Value{ move(name) }, DB::Value{ move(info.CommonName) }, DB::Value{ move(_description) },
+				DB::Value{ move(info.Issuer) }, DB::Value{ move(info.SubjectAltName) },
+				info.Email.empty() ? DB::Value{ nullptr } : DB::Value{ move(info.Email) }, DB::Value{ info.Expiration }} };
 		try{
 			UserPK userPK{ co_await DS().InsertSeq<UserPK::Type>(move(insert)) };
 			Authorizer().CreateUser( userPK );

@@ -88,7 +88,7 @@
 					"-c",
 					"-tests",
 					"-settings=${config:settings}",
-					"-xsync"
+					"-sync"
 				],
 				"cwd": "${config:cmake.buildDirectory}/debug/runtime",
 				"env":{

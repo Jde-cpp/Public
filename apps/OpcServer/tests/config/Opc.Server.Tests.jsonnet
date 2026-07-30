@@ -8,6 +8,9 @@ local logsDir = args.logsDir;
 		UANodeSets: "$(UA_NODE_SETS)"
 	},
 	opc: args.opc,
+	access:{
+		trustedCertDirs: args.access.trustedCertDirs //anchors the client cert the embedded AppServer enrolls.
+	},
 	opcServer:{
 		target: "TestServer",
 		resource: "test",

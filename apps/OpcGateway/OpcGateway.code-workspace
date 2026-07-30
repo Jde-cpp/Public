@@ -26,8 +26,7 @@
 					"-c",
 					"-tests",
 					"-settings=${workspaceFolder:config}/Opc.Gateway.jsonnet",
-					"-include=args/mysql",
-					"-xsync"
+					"-sync"
 				],
 				"cwd": "${config:cmake.buildDirectory}/debug/runtime",
 				"env":{

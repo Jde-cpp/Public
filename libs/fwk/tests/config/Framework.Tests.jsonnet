@@ -1,7 +1,7 @@
 local logsDir = std.extVar("logsDir");
 {
 	testing:{
-		tests:: "FileTests.WriteExactChunkMultiple",
+		tests:: "TrustStoreTests.*",
 		file: logsDir + "/tests/test.txt"
 	},
 	cryptoTests:{

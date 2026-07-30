@@ -1,5 +1,9 @@
 #include <jde/access/server/accessServer.h>
+#include <mutex>
 #include <jde/db/meta/AppSchema.h>
+#include <jde/fwk/crypto/OpenSsl.h>
+#include <jde/fwk/crypto/TrustStore.h>
+#include <jde/fwk/settings.h>
 #include <jde/ql/LocalQL.h>
 #include <jde/access/awaits/ConfigureAwait.h>
 #include "serverInternal.h"
@@ -11,13 +15,69 @@
 
 
 namespace Jde::Access{
+	constexpr ELogTags _tags{ ELogTags::Access };
 	static sp<QL::LocalQL> _ql;
+	static std::mutex _anchorMutex;
+	static flat_map<fs::path, fs::file_time_type> _anchorFiles;//mtime at load - failed files are recorded too, retried only when they change.
+
+	Ω loadTrustAnchors( Crypto::TrustStore& trust )ι->bool{//loads new/changed certs from /access/trustedCertDirs; true if an anchor was added.
+		std::lock_guard _{ _anchorMutex };
+		bool added{};
+		for( const string& sdir : Settings::FindStringArray("/access/trustedCertDirs") ){
+			try{
+				const fs::path dir{ sdir };
+				if( !fs::is_directory(dir) ){
+					WARN( "Trusted certificate directory does not exist: '{}'.", sdir );//normal pre-provisioning state - no client cert has been anchored yet.
+					continue;
+				}
+				for( const auto& entry : fs::directory_iterator(dir) ){
+					if( entry.path().extension()!=".pem" && entry.path().extension()!=".crt" )
+						continue;
+					const auto mtime = entry.last_write_time();
+					if( auto it = _anchorFiles.find(entry.path()); it!=_anchorFiles.end() && it->second==mtime )
+						continue;
+					_anchorFiles[entry.path()] = mtime;
+					try{
+						trust.AddCertificate( Crypto::ReadCertificate(entry.path()) );
+						added = true;
+						INFO( "Added trust anchor: '{}'.", entry.path().string() );
+					}
+					catch( const std::exception& e ){
+						CRITICAL( "Could not load trust anchor '{}': {}", entry.path().string(), e.what() );
+					}
+				}
+			}
+			catch( const std::exception& e ){
+				CRITICAL( "Could not scan trusted certificate directory '{}': {}", sdir, e.what() );
+			}
+		}
+		return added;
+	}
 	α Server::AccessSchema()ι->DB::AppSchema&{ return GetSchema(); }
 	α Server::LocalQL()ι->QL::LocalQL&{ ASSERT(_ql);  return *_ql; }
 	α Server::Authorizer()ι->Access::Authorize&{ return LocalQL().Authorizer(); }
 
 	α Server::Authenticate( str loginName, uint providerId, str opcServer, SL sl )ι->AuthenticateAwait{
 		return AuthenticateAwait{ loginName, providerId, opcServer, sl };
+	}
+	α Server::Trust()ε->Crypto::TrustStore&{
+		static Crypto::TrustStore _trust = []{
+			Crypto::TrustStore trust{ false };//operator anchors only - OS roots would let any public-CA cert holder enroll.
+			loadTrustAnchors( trust );
+			return trust;
+		}();
+		return _trust;
+	}
+	α Server::TrustVerify( std::span<const byte> der, SL sl )ε->void{
+		auto& trust = Trust();
+		try{
+			trust.Verify( der, sl );
+		}
+		catch( ... ){
+			if( !loadTrustAnchors(trust) )//an anchor copied in after startup shouldn't require a restart - rescan before failing.
+				throw;
+			trust.Verify( der, sl );
+		}
 	}
 	α Server::DS()ι->DB::IDataSource&{ return LocalQL().DS(); }
 	α Server::GetTablePtr( str name, SL sl )ε->sp<DB::View>{ return LocalQL().GetTablePtr(name, sl); }

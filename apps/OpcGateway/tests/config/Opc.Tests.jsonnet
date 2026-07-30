@@ -9,6 +9,9 @@ local logsDir = args.logsDir;
 		embeddedOpcServer:: false
 	},
 	opc: args.opc,
+	access:{
+		trustedCertDirs: args.access.trustedCertDirs //anchors the gateway+opcServer client certs the embedded AppServer enrolls.
+	},
 	dbServers: {
 		scriptPaths: [
 			args.repoSourceDir + "/apps/AppServer/config/sql/"+args.sqlType,
@@ -31,9 +34,26 @@ local logsDir = args.logsDir;
 		target: "Default"
 	},
 	http:{
-		app:{ port: 1967, ssl:{productName: "AppServer"} },
-		gateway:{ port: 1968, ssl:{ cert:{altName: "URI:urn:open62541.server.application", domain: "localhost"}} },
-		opcServer:{ port: 1970, ssl:{productName: "OpcServer"} }
+		app:{
+			port: 1967,
+			ssl:{productName: "AppServer"}
+		},
+		gateway:{
+			port: 1968,
+			ssl:{
+				certificate:{
+					subjectAltName: "URI:urn:open62541.server.application",
+					commonName: "gateway-tests"
+				}
+			}
+		},
+		opcServer:{
+			port: 1970,
+			ssl:{
+				productName: "OpcServer",
+				certificate:{commonName: "opcServer-tests"}
+			}
+		}
 	},
 	opcServer:{
 		target: "TestServer",

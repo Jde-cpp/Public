@@ -4,11 +4,11 @@
 
 namespace Jde::Web::Server{
 
-	IRequestHandler::IRequestHandler( jobject settings, sp<App::IApp> appServer )ι:
+	IRequestHandler::IRequestHandler( jobject settings, sp<App::IApp> appServer, sv sslDefaultFileName )ι:
 		_appServer{move(appServer)},
 		_cancelSignal{ ms<net::cancellation_signal>() },
 		_ctx{ ssl::context{ssl::context::tlsv12} },
-		_settings{settings}
+		_settings{settings, sslDefaultFileName}
 	{}
 
 	α IRequestHandler::BlockTillStarted()ι->void{

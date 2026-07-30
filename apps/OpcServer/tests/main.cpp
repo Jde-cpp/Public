@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 #include <jde/fwk/settings.h>
 #include <jde/fwk/co/Timer.h>
-#include <jde/fwk/crypto/OpenSsl.h>
+#include <jde/fwk/io/json.h>
 #include <jde/opc/uatypes/Logger.h>
 #include <jde/tests/SpdlogTestListener.h>
 #include "../src/StartupAwait.h"
@@ -22,7 +22,7 @@ namespace Jde{
 		Process::Startup( argc, argv, "Tests.OpcServer", "OpcServer tests", true );
 		Opc::Server::AppClient()->InitLogging( Opc::Server::AppClient() );
 		try{
-			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )
+			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )//the fresh db enrolls the client cert every run: /access/trustedCertDirs anchors its dir, StartupAwait ensures the cert, and TrustVerify rescans - no pre-anchoring here.
 				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };
 			co_await Opc::Server::StartupAwait{ Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") };
 		}

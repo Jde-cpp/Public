@@ -10,10 +10,6 @@ common + {
 			args.programDataCompany+"/OpcGateway/ssl/certs",
 			args.programDataCompany+"/OpcTests/ssl/certs"
 		],
-		ssl:{
-			certificate: args.programDataApp+"/ssl/certs/opcServer.pem",
-			privateKey: {path: args.programDataApp+"/ssl/private/opcServer.pem", passcode: ""}
-		}
 	},
 	dbServers: {
 		dataPaths: [],

@@ -64,10 +64,7 @@ namespace Jde::Opc::Gateway::Soak{
 			auto client = Soak::AppClient();
 			client->InitLogging( client );
 			Crypto::CryptoSettings ssl{ Json::FindDefaultObject(Settings::AsObject("/http"), "ssl") };
-			if( !fs::exists(ssl.PrivateKeyPath) ){
-				ssl.CreateDirectories();
-				Crypto::CreateKeyCertificate( ssl );
-			}
+			Crypto::EnsureKeyCertificate( ssl );
 			client->SslSettings = ssl;
 			client->SetUserName( jobject{Settings::AsObject("/credentials")} );
 			Execution::Run();//without proto/remote logging or a web server, nothing else starts the executor thread the socket/http awaitables need.

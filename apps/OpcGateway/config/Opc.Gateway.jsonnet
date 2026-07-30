@@ -4,7 +4,19 @@ function( sync=false )
 {
 	gateway:{
 		pingInterval: "PT30S",
-		ttl: "PT2M"
+		ttl: "PT2M",
+		issuedCerts:{
+			cert: {
+				path: "$(ProgramData)/jde-cpp/OpcGateway/ssl/certs",
+			},
+			privateKey: {
+				path: "$(ProgramData)/jde-cpp/OpcGateway/ssl/private",
+				passcode: "$(JDE_PASSCODE)"
+			},
+			publicKey: {
+				path: "$(ProgramData)/jde-cpp/OpcGateway/ssl/public",
+			}
+		}
 	},
 	logging:{
 		spd:{
@@ -92,11 +104,11 @@ function( sync=false )
 			allowHeaders: "Content-Type, Authorization"
 		},
 		ssl: {
-			cert:{
-				file:: "{AppDataFolder}/ssl/certs/cert.pem",
-				altName: "URI:urn:open62541.server.application",
+			certificate:{
+				path:: "{AppDataFolder}/ssl/certs/cert.pem",
+				subjectAltName: "URI:urn:open62541.server.application",
 				company:: "Jde-Cpp",
-				domain: "localhost",
+				commonName: "Opc.Gateway.$(HostName)",//subject CN - the enrollment identity target; grants reference it.
 				country:: "US",
 			},
 			privateKey:: "{AppDataFolder}/ssl/private/private.pem",

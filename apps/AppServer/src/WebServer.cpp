@@ -27,8 +27,8 @@ namespace Jde::App{
 		_appId=get<0>( x );
 		AppClient()->SetAppPKs( get<1>(x), get<2>(x) );
 	}
-	α Server::StartWebServer( jobject&& settings )ε->void{
-		_requestHandler = ms<RequestHandler>( move(settings) );
+	α Server::StartWebServer( jobject&& settings, sv sslDefaultFileName )ε->void{
+		_requestHandler = ms<RequestHandler>( move(settings), sslDefaultFileName );
 		Web::Server::Start( _requestHandler );
 		Process::AddShutdownFunction( [](bool terminate, SL sl){Server::StopWebServer(terminate, sl);} );//TODO move to Web::Server
 	}
@@ -99,13 +99,13 @@ namespace Jde::App{
 	}
 }
 namespace Jde::App::Server{
-	RequestHandler::RequestHandler( jobject&& settings )ι:
-		IRequestHandler{ move(settings), Server::AppClient() }
+	RequestHandler::RequestHandler( jobject&& settings, sv sslDefaultFileName )ι:
+		IRequestHandler{ move(settings), Server::AppClient(), sslDefaultFileName }
 	{}
 
 	α RequestHandler::Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt{
-		auto publicKey = Crypto::ReadPublicKey( Settings().Crypto().PublicKeyPath );
-		return Web::Jwt{ move(publicKey), userPK, move(name), move(target), sessionId, move(endpoint), expires, move(description), Settings().Crypto().PrivateKeyPath };
+		auto publicKey = Crypto::ReadPublicKey( Settings().Crypto().PublicKey.Path );
+		return Web::Jwt{ move(publicKey), userPK, move(name), move(target), sessionId, move(endpoint), expires, move(description), Settings().Crypto().PrivateKey };
 	}
 
 	α RequestHandler::WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession>{

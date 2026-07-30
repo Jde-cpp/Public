@@ -9,6 +9,8 @@
 #include <open62541/types.h>
 #include "StartupAwait.h"
 #include "async/DataChanges.h"
+#include "jde/fwk/crypto/CryptoSettings.h"
+#include "jde/fwk/settings.h"
 #include "uatypes/Browse.h"
 #include "uatypes/uaTypes.h"
 
@@ -97,18 +99,20 @@ namespace Jde::Opc::Gateway{
 		ul _{ _clientsMutex };
 		_clients.clear();
 	}
-	α UAClient::EnsureCertificate( const ServerCnnctnNK& target, sv uri )ε->void{
-		let certificateFile = CertificateFile( target );
-		if( fs::exists(certificateFile) )
+
+	α UAClient::CryptoSettings( const ServerCnnctnNK& target )ι->Crypto::CryptoSettings{
+		return Crypto::CryptoSettings{ Settings::FindDefaultObject("/gateway/issuedCerts"), target };
+	}
+
+	α UAClient::EnsureCertificate( const ServerCnnctnNK& target, sv uri, SL sl )ε->void{
+		let& settings = CryptoSettings( target );
+		if( fs::exists(settings.Certificate.Path) )
 			return;
-		const fs::path root = RootSslDir();
-		for( sv sub : {"certs", "private", "public"} )//CreateKey/CreateCertificate open the files directly - ENOENT without the parents.
-			fs::create_directories( root/sub );
-		const string passcode = Passcode();
-		let privateKeyFile = PrivateKeyFile( target );
-		if( !fs::exists(privateKeyFile) )
-			Crypto::CreateKey( root/Ƒ("public/{}.pem", target), privateKeyFile, passcode );
-		Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Ƒ("URI:{}", uri), "jde-cpp", "US", "localhost" );
+		settings.CreateDirectories();
+		let& privateKey = settings.PrivateKey;
+		if( !fs::exists(privateKey.Path) )
+			Crypto::CreateKey( settings, sl );
+		Crypto::CreateCertificate( settings, sl );
 	}
 	α UAClient::Configuration()ε->UA_ClientConfig*{
 		let uri = Str::Replace( _opcServer.CertificateUri, " ", "%20" );
@@ -129,14 +133,11 @@ namespace Jde::Opc::Gateway{
 			config->applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			UA_String_clear( &config->clientDescription.applicationUri );
 			config->clientDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
-			let& settings = AppClient()->SslSettings; //requires authentication[AppClient] & transport[OpcServer] security be equal.
-			certAuth = certAuth && settings.has_value();
-			let certificateFile = certAuth ? settings->CertPath : CertificateFile();
-			let privateKeyFile = certAuth ? settings->PrivateKeyPath : PrivateKeyFile();
-			let passcode = certAuth ? settings->Passcode : Passcode();
-			INFO( "[{}]Using Basic256Sha256 security policy with certificate '{}'", hex(Handle()), certificateFile.string() );
-			auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
-			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
+			certAuth = certAuth && AppClient()->SslSettings.has_value();
+			let& settings = certAuth ? *AppClient()->SslSettings : CryptoSettings(); //requires authentication[AppClient] & transport[OpcServer] security be equal.
+			INFO( "[{}]Using Basic256Sha256 security policy with certificate '{}'", hex(Handle()), settings.Certificate.Path.string() );
+			auto certificate = ToUAByteString( Crypto::ReadCertificate(settings.Certificate.Path) );
+			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(settings.PrivateKey) );
 			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAClientException(sc, Handle()) );
 			++initialized;
 
@@ -218,7 +219,7 @@ namespace Jde::Opc::Gateway{
 					client->LogClientEndpoints();
 				}
 				else if( auto sslSettings=connectStatus==UA_STATUSCODE_BADCERTIFICATEINVALID ? AppClient()->SslSettings : optional<Crypto::CryptoSettings>{}; sslSettings )
-					ERR( "Certificate: {} rejected."	, sslSettings->CertPath.string() );
+					ERR( "Certificate: {} rejected.", sslSettings->Certificate.ToString() );
 
 				client->ClearRequest( ConnectRequestId );//previous clear didn't have client
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
@@ -261,12 +262,11 @@ namespace Jde::Opc::Gateway{
 			UA_ClientConfig_setAuthenticationUsername( &_config, Credential.LoginName().c_str(), Credential.Password().c_str() );
 			INFO( "[{}]Using username/password authentication: '{}'", hex(Handle()), Credential.LoginName() );
 		}else if( Credential.Type()==ETokenType::Certificate ){
-			let& settings = AppClient()->SslSettings;
-			let& certPath = settings->CertPath;
-			INFO( "[{}]Using certificate authentication: '{}'", hex(Handle()), certPath.string() );
+			let& settings = *AppClient()->SslSettings;
+			INFO( "[{}]Using certificate authentication: '{}'", hex(Handle()), settings.Certificate.ToString() );
 			UA_ClientConfig_setAuthenticationCert( &_config,
-				*ToUAByteString( Crypto::ReadCertificate(certPath) ),
-				*ToUAByteString( Crypto::ReadPrivateKey(settings->PrivateKeyPath, settings->Passcode) )
+				*ToUAByteString( Crypto::ReadCertificate(settings.Certificate.Path) ),
+				*ToUAByteString( Crypto::ReadPrivateKey(settings.PrivateKey) )
 			);
 		}else if( Credential.Type()==ETokenType::IssuedToken ){
 			ASSERT( Credential.Token().size() );

@@ -2,26 +2,15 @@
 #ifndef OPEN_SSL_H
 #define OPEN_SSL_H
 //#include <span>
-#include <boost/uuid/uuid.hpp>
+//#include <boost/uuid/uuid.hpp>
 #include "jde/fwk/log/logTags.h"
+#include <jde/fwk/chrono.h>
+#include "CryptoSettings.h"
 
 #define Φ Γ auto
 
 namespace Jde::Crypto{
 	struct CryptoSettings;
-	using Modulus = vector<unsigned char>;
-	using Exponent = vector<unsigned char>;
-
-	struct PublicKey{
-		α operator==( const PublicKey& other )Ι->bool{ return Modulus == other.Modulus && Exponent == other.Exponent; }
-		α operator<( const PublicKey& other )Ι->bool{ return Exponent == other.Exponent ? Modulus < other.Modulus : Exponent < other.Exponent; }
-		Φ Hash32()Ι->uint32_t;
-		Φ ExponentInt()Ι->uint32_t;
-		Φ ModulusHex()Ε->string;
-		α ToBytes()ε->vector<byte>;
-		Crypto::Modulus Modulus;
-		Crypto::Exponent Exponent;
-	};
 
 	using Signature = vector<unsigned char>;
 	using MD5 = boost::uuids::uuid;
@@ -29,26 +18,35 @@ namespace Jde::Crypto{
 	Ŧ CalcMd5( T content )ε->MD5{ return CalcMd5( (byte*)content.data(), content.size() ); }
 	Φ Random( unsigned char* p, uint size )ε->void;//throws on entropy failure.
 	Ŧ Random()ε->T{ T y{}; Random( (unsigned char*)&y, sizeof(T) ); return y; }
-	Φ CreateKey( const fs::path& publicKeyPath, const fs::path& privateKeyPath, str passcode )ε->void;
-	Φ CreateCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain )ε->void;
-	Φ CreateKeyCertificate( const CryptoSettings& settings )ε->void;
-	Φ ExtractPublicKey( std::span<byte> certificate )ε->PublicKey;
+	Φ CreateKey( const CryptoSettings& settings, SL sl )ε->void;
+	//Φ CreateCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain, SL sl )ε->void;
+	Φ CreateCertificate( const CryptoSettings& settings, SRCE )ε->void;
+	Φ CreateKeyCertificate( const CryptoSettings& settings, SRCE )ε->void;
+	Φ EnsureKeyCertificate( const CryptoSettings& settings, SRCE )ε->void;//creates key+cert if the key is missing; re-issues the cert on the existing key if the cert is missing/unreadable.
+	Φ ExtractPublicKey( std::span<byte> certificate, SL sl )ε->PublicKey;
 	Φ Fingerprint( const PublicKey& key, SRCE )ε->MD5;
-	Φ ReadPublicKey( const fs::path& publicKey )ε->PublicKey;
+	Φ ReadPublicKey( const fs::path& publicKey, SRCE )ε->PublicKey;
 	Φ ToBytes( const PublicKey& key, SRCE )ε->vector<byte>;
-	Φ ReadCertificate( const fs::path& certificate )ε->vector<byte>;
-	Φ ReadPrivateKey( const fs::path& privateKeyPath, str passcode )ε->vector<byte>;
-	Φ RsaSign( str content, const fs::path& privateKeyFile, str passcode={} )ε->Signature;
-	Φ Verify( const PublicKey& certificate, str decrypted, const Signature& signature )ε->void;
-	Φ WriteCertificate( const fs::path& path, vector<byte>&& certificate )ε->void;
-	Φ WritePrivateKey( const fs::path& path, vector<byte>&& privateKey, str passcode )ε->void;
+	Φ ReadCertificate( const fs::path& certificate, SRCE )ε->vector<byte>;
+	Φ ReadPrivateKey( const PrivateKeySettings& settings )ε->vector<byte>;
+	Φ RsaSign( str content, const fs::path& privateKeyFile, str passcode={}, SRCE )ε->Signature;
+	Φ Verify( const PublicKey& certificate, str decrypted, const Signature& signature, SRCE )ε->void;
+	Φ WriteCertificate( const fs::path& path, vector<byte>&& certificate, SL sl )ε->void;
+	Φ WritePrivateKey( const fs::path& path, vector<byte>&& privateKey, str passcode, SL sl )ε->void;
 
-	struct OpenSslException final : Exception{
-		template<class... Args>
-		OpenSslException( SL sl, uint32 rc, fmt::format_string<Args...> m, Args&&... args )ι:
-			Exception{ sl, {ELogLevel::Warning, ELogTags::Crypto, rc}, m, std::forward<Args>(args)... }
+	struct OpenSslException final : ExternalException{
+		OpenSslException( string m, SRCE )ι:
+			OpenSslException{ move(m), CurrentErrorCode(), sl }
+		{}
+		OpenSslException( string m, uint32 rc, SRCE )ι:
+			OpenSslException{ CurrentError(rc), move(m), {ELogLevel::Warning, ELogTags::Crypto, rc}, sl }
+		{}
+		OpenSslException( string externalMessage, string description, ExceptionArgs args, SRCE )ι:
+			ExternalException{ move(externalMessage), move(description), args, sl }
 		{}
 		static Φ CurrentError()ι->string;
+		static Φ CurrentError( uint32 rc )ι->string;
+		static Φ CurrentErrorCode()ι->uint32;
 		α Move()ι->up<Exception> override{ return mu<OpenSslException>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }
   };

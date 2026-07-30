@@ -6,6 +6,9 @@ common + {
 		urn: "urn:open62541.server.application",
 		url: "opc.tcp://127.0.0.1:4840"
 	},
+	access: {
+		trustedCertDirs: ["$(ProgramData)/Jde-Cpp/OpcServer/ssl/certs"]
+	},
 	dbServers: {
 		localhost:{
 			driver: args.repoBuildDir+"/bin/Jde.DB.Odbc.dll",

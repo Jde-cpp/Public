@@ -18,16 +18,31 @@ function( sync=false )
 			googleAuthClientId:"445012155442-1v8ntaa22konm0boge6hj5mfs15o9lvd.apps.googleusercontent.com"
 		},
 		ssl:{
-			_certificate: "{ApplicationDataFolder}/ssl/certs/cert.pem",
-			certificateAltName: "DNS:localhost,IP:127.0.0.1",
-			_certficateCompany: "Jde-Cpp",
-			_certficateCountry: "US",
-			_certficateDomain: "localhost",
-			_privateKey: "{ApplicationDataFolder}/ssl/private/private.pem",
-			_publicKey: "{ApplicationDataFolder}/ssl/public/public.pem",
-			_dh: "{ApplicationDataFolder}/certs/dh.pem",
-			_passcode: "$(JDE_PASSCODE)"
+			certificate:{
+				path:: "{ApplicationDataFolder}/ssl/certs/AppServer.pem",
+				subjectAltName: "DNS:localhost,IP:127.0.0.1",
+				company:: "Jde-Cpp",
+				country: "US",
+				commonName: "AppServer"//subject CN - TLS clients match the SAN, not this; a non-"localhost" value keeps it distinct per product.
+			},
+			privateKey:{
+				path:: "{ApplicationDataFolder}/ssl/private/AppServer.pem",
+				passcode:: "$(JDE_PASSCODE)"
+			},
+			publicKey:{
+				path:: "{ApplicationDataFolder}/ssl/public/AppServer.pem"
+			},
+			dh:{
+				path:: "{ApplicationDataFolder}/ssl/dh.pem"
+			},
 		},
+	},
+	access:{
+		//operator drop-dir for enrollment trust anchors: a client cert (.pem/.crt) copied here authorizes its key-login enrollment. Rescanned on failed verification - no restart needed.
+		trustedCertDirs: [
+			"$(ProgramData)/jde-cpp/OpcServer/ssl/certs",
+			"$(ProgramData)/jde-cpp/OpcGateway/ssl/certs"
+		]
 	},
 	dbServers:{
 		dataPaths: args.dbServers.dataPaths,
@@ -47,7 +62,7 @@ function( sync=false )
 			flushOn: "Trace",
 			tags:{
 				default: "Information",
-				sql: "Trace",
+				sql: "Information",
 				exception: "Debug",
 				parsing: "Trace",
 				test: "Trace",

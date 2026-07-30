@@ -1,3 +1,4 @@
+#include "jde/fwk/crypto/CryptoSettings.h"
 #include <jde/web/Jwt.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <jde/fwk/io/json.h>
@@ -6,17 +7,23 @@
 #define let const auto
 
 namespace Jde::Web{
-	Jwt::Jwt( Crypto::PublicKey key, Jde::UserPK userPK, str userName, str userTarget, SessionPK sessionId, str endpoint, TimePoint expires, str description, const fs::path& privateKeyPath )ι:
-		PublicKey{ move(key) }, Host{ endpoint }, Iat{ time(nullptr) }, UserPK{ userPK }, UserName{ userName }, UserTarget{ userTarget }, Description{ description }{
+	Jwt::Jwt( Crypto::PublicKey key, Jde::UserPK userPK, str userName, str userTarget, SessionPK sessionId, str endpoint, TimePoint expires, str description, const struct Crypto::PrivateKeySettings& privateKey, vector<byte> certificate, SL sl )ε:
+		PublicKey{ certificate.size() ? Crypto::ExtractPublicKey(certificate, sl) : move(key) }, Host{ endpoint }, Iat{ time(nullptr) }, UserPK{ userPK }, UserName{ userName }, UserTarget{ userTarget }, Description{ description }{
 		Body = jobject{
-			{ "n", Str::Encode64(PublicKey.Modulus, true) },
-			{ "e", Str::Encode64(PublicKey.Exponent, true) },
 			{ "iat", Iat },
 			{ "host", Host },
 			{ "sub", UserPK.Value },
 			{ "name", userName },
 			{ "target", userTarget },
 		};
+		if( certificate.size() ){//the cert is the single source of key material - n/e derive from it on parse. Encode64 iterates elements - std::byte won't feed transform_width, so view as chars.
+			Body["x5c"] = Str::Encode64( sv{(const char*)certificate.data(), certificate.size()}, true );
+			Certificate = move( certificate );
+		}
+		else{
+			Body["n"] = Str::Encode64( PublicKey.Modulus, true );
+			Body["e"] = Str::Encode64( PublicKey.Exponent, true );
+		}
 		if( sessionId )
 			Body["sid"] = hex( sessionId );
 		if( description.size() )
@@ -26,9 +33,9 @@ namespace Jde::Web{
 
 		let head = jobject{ {"alg","RS256"}, {"typ","JWT"} };
 		HeaderBodyEncoded = Str::Encode64( serialize(head), true )+ "." + Str::Encode64( serialize(Body), true );
-		Signature = Crypto::RsaSign( HeaderBodyEncoded, privateKeyPath );
+		Signature = Crypto::RsaSign( HeaderBodyEncoded, privateKey.Path, privateKey.Passcode, sl );
 	}
-	Jwt::Jwt( sv encoded )ε{
+	Jwt::Jwt( sv encoded, SL sl )ε{
 		let fpIndex = encoded.find_last_of( '.' );
 		let bodyIndex = encoded.find_first_of( '.' );
 		if( fpIndex==string::npos || fpIndex+1==encoded.size() || bodyIndex==string::npos || fpIndex==bodyIndex )
@@ -47,10 +54,16 @@ namespace Jde::Web{
 		auto body = Str::Decode64( HeaderBodyEncoded.substr(bodyIndex+1), true );
 		Body = Json::Parse( body );
 		optional<Crypto::MD5> fpKey;
-		if( auto modulus = Json::FindString(Body, "n"); modulus ){
+		if( auto x5c = Json::FindString(Body, "x5c"); x5c ){
+			let der = Str::Decode64<string>( *x5c, true );
+			Certificate.assign( (const byte*)der.data(), (const byte*)der.data()+der.size() );
+			PublicKey = Crypto::ExtractPublicKey( Certificate, sl );
+			fpKey = Crypto::Fingerprint( PublicKey );
+		}
+		else if( auto modulus = Json::FindString(Body, "n"); modulus ){//certless jwts - session reissue, google jwks keys.
 			SetModulus( move(*modulus) );
 			SetExponent( Json::AsString(Body, "e") );
-			fpKey = Crypto::Fingerprint( PublicKey );// Use PublicKey instead of Certificate
+			fpKey = Crypto::Fingerprint( PublicKey );
 		}
 		if( let exp = Json::FindNumber<time_t>(Body, "exp"); exp && *exp<time(nullptr) )
 			THROW( "Invalid jwt.  Expired at '{}'.", *exp );

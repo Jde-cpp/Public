@@ -8,11 +8,7 @@ common + {
 		trustedCertDirs: [
 			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs",
 			"$(HOME)/.Jde-Cpp/Tests.Opc/ssl/certs"
-		],
-		ssl:{
-			certificate: cwd+"/ssl/certs/OpcServer.mysql.pem",
-			privateKey: {path: cwd+"/ssl/private/OpcServer.mysql.pem", passcode: "OpcServer.mysql"}
-		}
+		]
 	},
 	dbServers: {
 		dataPaths: [],
