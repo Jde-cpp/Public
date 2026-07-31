@@ -7,7 +7,7 @@ namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Web::Server{
 	struct HttpRequest; struct IHttpRequestAwait; struct IWebsocketSession;struct RestStream;
 	struct IRequestHandler{
-		IRequestHandler( jobject settings, sp<App::IApp> appServer, sv sslDefaultFileName )ι;
+		IRequestHandler( jobject settings, sp<App::IApp> appServer )ι;
 		virtual ~IRequestHandler()=default; //msvc error
 		β HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> =0;
 		β QLServer()ι->sp<QL::IQL> =0;
@@ -27,7 +27,7 @@ namespace Jde::Web::Server{
 		α UserName( UserPK userPK )ι->string;
 
 		struct WebServerSettings{
-			WebServerSettings( jobject settings, sv sslDefaultFileName )ι:_crypto{Json::FindDefaultObject(settings, "ssl"), sslDefaultFileName}, _settings(move(settings)){}
+			WebServerSettings( jobject settings )ι:_crypto{Json::FindDefaultObject(settings, "ssl")}, _settings(move(settings)){}
 			α Address()Ι->string{ return Json::FindString(_settings, "address" ).value_or( "0.0.0.0" ); }
 			α Port()Ι->PortType{ return Json::FindNumber<PortType>(_settings, "port" ).value_or( 6809 ); }
 			α Crypto()Ι->const Crypto::CryptoSettings&{ return _crypto; }

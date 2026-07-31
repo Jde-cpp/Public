@@ -50,7 +50,14 @@ function( sync=false )
 		name: "OpcServer.Test."+args.buildTarget,
 		target:: "OpcServer"
 	},
-	http:{port: 1970},
+	http:{
+		port: 1970,
+		ssl:{
+			certificate:{
+				commonName: args.instanceName + ".web"
+			}
+		}
+	},
 	opcServer:{
 		target: "TestServer",
 		resource: args.buildTarget,
@@ -63,7 +70,6 @@ function( sync=false )
 				subjectAltName: "URI:urn:open62541.server.application",
 				company:: "Jde-Cpp",
 				country: "US",
-				domain:: "localhost"
 			},
 			privateKey: {
 				path:: "{ApplicationDataFolder}/ssl/private/OpcServer.pem",
@@ -106,8 +112,12 @@ function( sync=false )
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"
 		],
-		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840
+	},
+	//the UA server's trust list.  UAConfig reads /access/trustedCertDirs, not /opcServer/trustedCertDirs - anchoring it
+	//under opcServer leaves the server with zero anchors and every secured client rejected BadCertificateUntrusted.
+	access:{
+		trustedCertDirs: args.access.trustedCertDirs
 	},
 	workers:{
 		executor:{ threads:  2 },

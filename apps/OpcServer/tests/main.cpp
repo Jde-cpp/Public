@@ -7,6 +7,7 @@
 #include <jde/fwk/io/json.h>
 #include <jde/opc/uatypes/Logger.h>
 #include <jde/tests/SpdlogTestListener.h>
+#include <jde/tests/testMain.h>
 #include "../src/StartupAwait.h"
 #include "../../AppServer/src/AppStartupAwait.h"
 #define let const auto
@@ -48,7 +49,7 @@ namespace Jde{
 		}
 		::testing::GTEST_FLAG( filter ) = Settings::FindString( "/testing/tests" ).value_or( "*" );
 		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
-		result = RUN_ALL_TESTS();
+		result = CheckTestsRan( RUN_ALL_TESTS() );
 	}
 	catch( exception& e ){
 		Process::ExitException( move(e) );

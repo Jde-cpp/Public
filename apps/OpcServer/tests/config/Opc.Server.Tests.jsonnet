@@ -9,7 +9,9 @@ local logsDir = args.logsDir;
 	},
 	opc: args.opc,
 	access:{
-		trustedCertDirs: args.access.trustedCertDirs //anchors the client cert the embedded AppServer enrolls.
+		trustedCertDirs: [
+			"$(ProgramData)/Jde-Cpp/$(PRODUCT_NAME)/ssl/certs"
+		]
 	},
 	opcServer:{
 		target: "TestServer",

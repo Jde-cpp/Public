@@ -3,6 +3,7 @@
 #endif
 #include "gtest/gtest.h"
 #include <jde/fwk/settings.h>
+#include <jde/tests/testMain.h>
 #define let const auto
 
 namespace Jde{
@@ -28,7 +29,7 @@ namespace Jde{
 			INFOT( ELogTags::App, "filter:'{}'", filter );
 			::testing::GTEST_FLAG( filter ) = filter;
 		}
-		result = RUN_ALL_TESTS();
+		result = CheckTestsRan( RUN_ALL_TESTS() );
 		Process::Shutdown( result );
 	}
 	return result;

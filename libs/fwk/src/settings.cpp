@@ -32,6 +32,19 @@ namespace Jde{
 			return "Release";
 	}
 
+	//$(NAME) names that resolve without an environment variable.  A table, not a branch chain: every one of these was
+	//added later than the code around it, and the ones that were missing (HostName) silently expanded to "" instead of
+	//failing.  Consulted only when the environment has no such variable, so a real one always wins.
+	Ω builtIns()ι->const flat_map<sv,function<string()>>&{
+		static const flat_map<sv,function<string()>> y{
+			{ "JDE_BUILD_TYPE", []{ return string{buildTypeSubDir()}; } },
+			{ "ProgramData", []{ return Process::ProgramDataFolder().string(); } },
+			{ "PRODUCT_NAME", []{ return string{Process::ProductName()}; } },
+			{ "HostName", []{ return Process::HostName(); } }
+		};
+		return y;
+	}
+
 	Ω expandEnvVariable( string setting )ι->string{
 		static const std::regex regex{ "\\$\\((.+?)\\)" };
 		constexpr uint maxPasses{ 32 };//expansion is transitive but must be bounded - a value containing its own $(NAME) rescans forever.
@@ -46,8 +59,10 @@ namespace Jde{
 			let match = begin->str();
 			let group = match.substr( 2, match.size()-3 );
 			auto env = Process::GetEnv( group ).value_or( "" );
-			if( env.empty() && group=="JDE_BUILD_TYPE" )
-				env = buildTypeSubDir();
+			if( env.empty() ){
+				if( let p = builtIns().find( group ); p!=builtIns().end() )
+					env = p->second();
+			}
 			if( env.empty() )
 				DBG( "Environment variable '{}' not found", group );
 			setting = Str::Replace( setting, match, env );
@@ -133,13 +148,19 @@ namespace Jde{
 		return path().parent_path();
 	}
 
+	α SetEnv( jvalue& value )->void{
+		if( value.is_string() )
+			value = expandEnvVariable( string{value.get_string()} );
+		else if( value.is_object() )
+			for( auto& [key,child] : value.get_object() )
+				SetEnv( child );
+		else if( value.is_array() )//arrays too: expanding only objects left every trustedCertDirs/scriptPaths entry
+			for( auto& child : value.get_array() )//literal unless its reader happened to be Find{String,Path}Array.
+				SetEnv( child );
+	}
 	α SetEnv( jobject& j )->void{
-		for( auto& [key,value] : j ){
-			if( value.is_string() )
-				value = expandEnvVariable( string{value.get_string()} );
-			else if( value.is_object() )
-				SetEnv( value.get_object() );
-		}
+		for( auto& [key,value] : j )
+			SetEnv( value );
 	}
 
 	Ω argMap( sv flag )ι->flat_map<string,string>{

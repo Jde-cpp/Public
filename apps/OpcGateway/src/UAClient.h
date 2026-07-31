@@ -62,6 +62,7 @@ namespace Jde::Opc::Gateway{
 		α TriggerSessionAwaitables()ι->void;
 
 		Ω EnsureCertificate( const ServerCnnctnNK& target, sv certificateUri, SRCE )ε->void;//no-op if the cert exists. Callable before any client - servers that snapshot trustedCertDirs at startup (UAConfig::SetConfig) must see it before they start.
+		Ω CryptoSettings( const ServerCnnctnNK& target, sv certificateUri={} )ι->Crypto::CryptoSettings; //for soak
 		α Target()Ι->const ServerCnnctnNK&{ return _opcServer.Target; }
 		α Url()Ι->str{ return _opcServer.Url; }
 		α IsDefault()Ι->bool{ return _opcServer.IsDefault; }
@@ -76,13 +77,12 @@ namespace Jde::Opc::Gateway{
 		Ω Unsubscribe( const sp<IDataChange>&& dataChange )ι->void;
 		Ω StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void;
 		α Configuration()ε->UA_ClientConfig*;
-		α Create()ι->UA_Client*;
+		α Create()ε->UA_Client*;
 		α Connect()ε->void;
 		Ω LogServerEndpoints( str url, Jde::Handle h )ι->void;
 		α LogClientEndpoints()ι->void;
 
-		Ω CryptoSettings( const ServerCnnctnNK& target )ι->Crypto::CryptoSettings;
-		α CryptoSettings()Ι->Crypto::CryptoSettings{ return CryptoSettings( Target() ); }
+		α CryptoSettings()Ι->Crypto::CryptoSettings{ return CryptoSettings( Target(), _opcServer.CertificateUri ); }
 
 		//optional<Crypto::CryptoSettings> _cryptoSettings;
 		//Ω PrivateKey( const ServerCnnctnNK& target )ι->Crypto::PrivateKeySettings;

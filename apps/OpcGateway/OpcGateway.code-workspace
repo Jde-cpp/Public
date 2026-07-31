@@ -26,7 +26,7 @@
 					"-c",
 					"-tests",
 					"-settings=${workspaceFolder:config}/Opc.Gateway.jsonnet",
-					"-sync"
+					"-xsync"
 				],
 				"cwd": "${config:cmake.buildDirectory}/debug/runtime",
 				"env":{

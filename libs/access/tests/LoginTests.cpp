@@ -72,12 +72,14 @@ namespace Jde::Access::Tests{
 		Server::Trust().AddCertificate( Trusted.Der );
 		let userPK = keyLogin( Trusted.Key, vector<byte>{Trusted.Der} );
 		ASSERT_TRUE( userPK.Value );
-		let user = Select( "users", userPK.Value, GetRoot(), "email issuer subject expiration" );//the cert is the identity authority: UPN→name, CN→target.
+		let user = Select( "users", userPK.Value, GetRoot(), "email issuer subjectAlt distinguished expiration" );//the cert is the identity authority: UPN→name, CN→target.
 		EXPECT_EQ( Json::AsSV(user, "name"), "trusted-upn@jde-cpp.com" );
 		EXPECT_EQ( Json::AsSV(user, "target"), "loginTests-trusted" );
 		EXPECT_EQ( Json::AsSV(user, "email"), "trusted@jde-cpp.com" );
-		EXPECT_EQ( Json::AsSV(user, "subject"), "CN=loginTests-trusted,O=jde-cpp,C=US" );
-		EXPECT_EQ( Json::AsSV(user, "issuer"), Json::AsSV(user, "subject") );//self-signed.
+		EXPECT_EQ( Json::AsSV(user, "distinguished"), "CN=loginTests-trusted,O=jde-cpp,C=US" );//subject DN.
+		EXPECT_EQ( Json::AsSV(user, "issuer"), Json::AsSV(user, "distinguished") );//self-signed.
+		//the SAN, openssl config syntax - the columns hold two different things and must not be interchangeable.
+		EXPECT_EQ( Json::AsSV(user, "subjectAlt"), "email:trusted@jde-cpp.com,otherName:msUPN;UTF8:trusted-upn@jde-cpp.com,URI:urn:my.server.application" );
 		EXPECT_FALSE( user.at("expiration").is_null() );//notAfter - CreateCertificate issues 365-day certs.
 		let again = keyLogin( Trusted.Key, {} );//existing user bypasses the gate.
 		ASSERT_EQ( userPK.Value, again.Value );

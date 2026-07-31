@@ -5,6 +5,7 @@
 
 #include <openssl/x509v3.h>
 #include "OpenSslInternal.h"
+#include "jde/fwk/io/file.h"
 #include <jde/fwk/str.h>
 #include <jde/fwk/crypto/CryptoSettings.h>
 
@@ -15,7 +16,7 @@ namespace Jde{
 	namespace Crypto{
 		constexpr ELogTags _tags{ ELogTags::Crypto };
 		α OpenSslException::CurrentError()ι->string{ return CurrentError(CurrentErrorCode()); }
-		α OpenSslException::CurrentError( uint32 rc )ι->string{ if( !rc ) return "no queued openssl error"; char b[256]; ERR_error_string_n(rc, b, sizeof(b)); return {b}; }//0 would format as 'error:00000000...' - noise masquerading as detail.
+		α OpenSslException::CurrentError( uint32 rc )ι->string{ if(!rc) return "no queued openssl error"; char b[256]; ERR_error_string_n(rc, b, sizeof(b)); return {b}; }//0 would format as 'error:00000000...' - noise masquerading as detail.
 		α OpenSslException::CurrentErrorCode()ι->uint32{ return (uint32)ERR_get_error(); }
 
 		//https://stackoverflow.com/questions/1986888/how-to-compute-a-32-bit-fingerprint-of-a-certificate
@@ -61,23 +62,21 @@ namespace Jde{
 
 	α Crypto::CreateKeyCertificate( const CryptoSettings& settings, SL sl )ε->void{
 		CreateKey( settings, sl );
-		CreateCertificate( settings, sl );
+		IssueCertificate( settings, sl );
 	}
-
+	
 	α Crypto::EnsureKeyCertificate( const CryptoSettings& settings, SL sl )ε->void{
-		if( !fs::exists(settings.PrivateKey.Path) ){
-			settings.CreateDirectories();
-			CreateKeyCertificate( settings, sl );
-			return;
-		}
-		try{
-			Certificate{ ReadCertificate(settings.Certificate.Path), sl }.Log( Ƒ("Read Certificate at {}", settings.Certificate.Path.string()), sl );
-		}
-		catch( const std::exception& e ){//missing or unreadable cert (interrupted write, partial restore) - re-issue on the existing key rather than fail every start; the modulus is unchanged, so enrolled users are unaffected.
-			WARN( "Re-issuing certificate '{}': {}", settings.Certificate.Path.string(), e.what() );
-			settings.CreateDirectories();
-			CreateCertificate( settings, sl );
-		}
+		if( !fs::exists(settings.PrivateKey.Path) )
+			CreateKey( settings, sl );
+		if( !fs::exists(settings.Certificate.Path) )
+			IssueCertificate( settings, sl );
+
+		Certificate{ ReadCertificate(settings.Certificate.Path), sl }.Log( Ƒ("Read Certificate at {}", settings.Certificate.Path.string()), sl );
+		// catch( const std::exception& e ){//missing or unreadable cert (interrupted write, partial restore) - re-issue on the existing key rather than fail every start; the modulus is unchanged, so enrolled users are unaffected.
+		// 	WARN( "Re-issuing certificate '{}': {}", settings.Certificate.Path.string(), e.what() );
+		// 	settings.CreateDirectories();
+		// 	IssueCertificate( settings, sl );
+		// }
 	}
 
 	//https://stackoverflow.com/questions/5927164/how-to-generate-rsa-private-key-using-openssl
@@ -90,6 +89,8 @@ namespace Jde{
 		EVP_PKEY* key{};
 		EVP_PKEY_generate( pctx.get(), &key ); CHECK_NULL( key );
 		KeyPtr pKey( key, ::EVP_PKEY_free );
+		if( !fs::exists(settings.PublicKey.Path.parent_path()) )
+			settings.CreateDirectories();
 
 		BioPtr publicBio{ BIO_new_file(settings.PublicKey.Path.string().c_str(), "w"), ::BIO_free }; CHECK_NULL( publicBio );
 		INFO( "Created public key at {}", settings.PublicKey.Path.string() );
@@ -97,7 +98,7 @@ namespace Jde{
 		Internal::WritePrivateKey( settings.PrivateKey.Path, move(pKey), settings.PrivateKey.Passcode );
 	}
 
-	α Crypto::CreateCertificate( const CryptoSettings& settings, SL sl )ε->void{
+	α Crypto::IssueCertificate( const CryptoSettings& settings, SL sl )ε->void{
 		X509Ptr cert{ ::X509_new(), ::X509_free };
 		auto pCert = cert.get();
 
@@ -131,6 +132,8 @@ namespace Jde{
 		::X509_sign( pCert, privateKey.get(), ::EVP_sha256() );
 
 		let path = certSettings.Path;
+		if( !fs::exists(path.parent_path()) )
+			IO::CreateDirectories( path.parent_path() );
 		BioPtr file{ BIO_new_file(path.string().c_str(), "w"), ::BIO_free }; CHECK_NULL( file );
 		CALL( PEM_write_bio_X509(file.get(), pCert) );
 		file = nullptr; //write

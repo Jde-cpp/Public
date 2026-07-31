@@ -8,7 +8,8 @@
 // the `+ {…}` does NOT reach the helpers - they read the ext var bound here.  Only fields read back through the
 // merged `self` would see such an override, and no importer does that, so vary behavior by passing helper args.
 // `::` members are hidden - helpers and path constants, not config, so they never reach the manifested settings.
-{
+local paths = import 'paths-common.libsonnet'; //companyDir/certsDir, shared with args-common so the two can't drift.
+paths + {
 	local common = self,
 	sqlType: "sqlite",
 	buildTarget: std.extVar("buildTarget"),
@@ -21,8 +22,6 @@
 	//old cwd+"/../bin" relied on), but the soak harness runs each app from a per-run dir outside the build tree.
 	binDir:: common.repoBuildDir+"/bin",
 	lib( name, linuxDir ):: if common.windows then common.binDir+"/"+name+".dll" else common.repoBuildDir+linuxDir+"/lib"+name+".so",
-	companyDir:: if common.windows then "$(ProgramData)/Jde-Cpp" else "$(HOME)/.Jde-Cpp", //per-OS company data root the apps write certs under.
-	certsDir( product ):: common.companyDir+"/"+product+"/ssl/certs",
 	opcTestsProduct:: if common.windows then "OpcTests" else "Tests.Opc", //the opc test client's ProductName: windows takes the .rc value, linux the hardcoded one.
 
 	// Paths named once.  The proc MODULEs are dlopen'd by the driver from these (see IProcs/sqlite_api.h).

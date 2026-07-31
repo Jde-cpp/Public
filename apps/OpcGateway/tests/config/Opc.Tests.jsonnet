@@ -1,16 +1,19 @@
 local args = import 'args.libsonnet';
 local logsDir = args.logsDir;
 {
+	local instance = self,
 	instanceName: args.instanceName,
 	testing:{
-		tests: "NoCredentialTests.*",
+		tests:: "QLTests.ServerDescriptionTest",
 		recreateDB: true,
 		embeddedAppServer:: false,
 		embeddedOpcServer:: false
 	},
 	opc: args.opc,
 	access:{
-		trustedCertDirs: args.access.trustedCertDirs //anchors the gateway+opcServer client certs the embedded AppServer enrolls.
+		trustedCertDirs: [
+			"$(ProgramData)/Jde-Cpp/$(PRODUCT_NAME)/ssl/certs"
+		]
 	},
 	dbServers: {
 		scriptPaths: [
@@ -36,24 +39,34 @@ local logsDir = args.logsDir;
 	http:{
 		app:{
 			port: 1967,
-			ssl:{productName: "AppServer"}
+			ssl:{
+				certificate:{
+					subjectAltName:: "DNS:localhost,IP:127.0.0.1",
+					commonName: args.instanceName + ".appServer.web"
+				}
+			}
 		},
 		gateway:{
 			port: 1968,
 			ssl:{
 				certificate:{
 					subjectAltName: "URI:urn:open62541.server.application",
-					commonName: "gateway-tests"
+					commonName: args.instanceName + ".gateway.web"
 				}
 			}
 		},
 		opcServer:{
 			port: 1970,
 			ssl:{
-				productName: "OpcServer",
-				certificate:{commonName: "opcServer-tests"}
+				certificate:{
+					subjectAltName: "URI:urn:open62541.server.application",
+					commonName: args.instanceName + ".opcServer.web"
+				}
 			}
 		}
+	},
+	gateway:{
+		issuedCerts: instance.http.gateway.ssl,
 	},
 	opcServer:{
 		target: "TestServer",
@@ -64,12 +77,8 @@ local logsDir = args.logsDir;
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"
 		],
-		trustedCertDirs: args.opcServer.trustedCertDirs,
 		port: 4840,
-		ssl:{
-			certificate: args.repoBuildDir + "/runtime/ssl/certs/gtwy-tests-server.pem",
-			privateKey: {path: args.repoBuildDir + "/runtime/ssl/private/gtwy-tests-server.pem", passcode: ""}
-		}
+		ssl: instance.http.opcServer.ssl
 	},
 	credentials:{
 		gateway:{ name: "GatewayTests" },
@@ -91,7 +100,9 @@ local logsDir = args.logsDir;
 				http_server_read: "Debug",
 				locks: "Information",
 				socket_client_read: "Debug",
+				socket_client_read_sub: "Information",
 				socket_client_write: "Debug",
+				socket_client_write_sub: "Information",
 				socket_server_read: "Debug",
 				socket_server_write: "Debug",
 				test: "Trace",

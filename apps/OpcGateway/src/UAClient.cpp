@@ -100,19 +100,28 @@ namespace Jde::Opc::Gateway{
 		_clients.clear();
 	}
 
-	α UAClient::CryptoSettings( const ServerCnnctnNK& target )ι->Crypto::CryptoSettings{
-		return Crypto::CryptoSettings{ Settings::FindDefaultObject("/gateway/issuedCerts"), target };
+	//for soak
+	α UAClient::CryptoSettings( const ServerCnnctnNK& target, sv certificateUri )ι->Crypto::CryptoSettings{
+		auto settings = Settings::FindDefaultObject( "/gateway/issuedCerts" );//a copy - the SAN below is per-target.
+		if( certificateUri.size() ){
+			//the client cert's SAN uri is what a server matches against the applicationUri we advertise (Configuration()
+			//sets both from the target's certificateUri), so it cannot come from a single config-wide constant.
+			auto certificate = Json::FindDefaultObject( settings, "certificate" );
+			certificate["subjectAltName"] = Ƒ( "URI:{}", Str::Replace(string{certificateUri}, " ", "%20") );
+			settings["certificate"] = move( certificate );
+		}
+		return Crypto::CryptoSettings{ settings, target };
 	}
 
 	α UAClient::EnsureCertificate( const ServerCnnctnNK& target, sv uri, SL sl )ε->void{
-		let& settings = CryptoSettings( target );
+		let& settings = CryptoSettings( target, uri );
 		if( fs::exists(settings.Certificate.Path) )
 			return;
 		settings.CreateDirectories();
 		let& privateKey = settings.PrivateKey;
 		if( !fs::exists(privateKey.Path) )
 			Crypto::CreateKey( settings, sl );
-		Crypto::CreateCertificate( settings, sl );
+		Crypto::IssueCertificate( settings, sl );
 	}
 	α UAClient::Configuration()ε->UA_ClientConfig*{
 		let uri = Str::Replace( _opcServer.CertificateUri, " ", "%20" );
@@ -249,7 +258,7 @@ namespace Jde::Opc::Gateway{
 	α subscriptionInactivityCallback( UA_Client *client, SubscriptionId subscriptionId, void* /*subContext*/ ){
 		DBG( "[{}.{}]subscriptionInactivityCallback", hex((uint)client), hex(subscriptionId) );
 	}
-	α UAClient::Create()ι->UA_Client*{
+	α UAClient::Create()ε->UA_Client*{
 		_config.logging = &_logger;
 		_config.eventLoop = UA_EventLoop_new_POSIX( _config.logging );
 		UA_ConnectionManager *tcpCM = UA_ConnectionManager_new_POSIX_TCP( "tcp connection manager"_uv );

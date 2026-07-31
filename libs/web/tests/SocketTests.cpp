@@ -85,9 +85,13 @@ namespace Jde::Web{
 	Ω login()->void{
 		if( _sessionId )
 			return;
-		Crypto::CryptoSettings settings{ "http/ssl" };
-		auto publicKey = Crypto::ReadPublicKey( settings.PublicKeyPath );
-		Web::Jwt jwt{ move(publicKey), {0}, "testUser", "testUserCallSign", 0, "127.0.0.1", Clock::now()+1h, {}/*description*/, settings.PrivateKeyPath };
+		Crypto::CryptoSettings settings{ "http/ssl" };//the client signs the jwt with its own key pair - the server's 'web.tests' identity is not the caller's.
+		if( !fs::exists(settings.PrivateKey.Path) || !fs::exists(settings.PublicKey.Path) ){//first run on a machine; no certificate needed, the mock '/login' verifies the signature against the jwt's key.
+			settings.CreateDirectories();
+			Crypto::CreateKey( settings, SRCE_CUR );
+		}
+		auto publicKey = Crypto::ReadPublicKey( settings.PublicKey.Path );
+		Web::Jwt jwt{ move(publicKey), {0}, "testUser", "testUserCallSign", 0, "127.0.0.1", Clock::now()+1h, {}/*description*/, settings.PrivateKey };
 		auto await = ClientHttpAwait{ Host, "/login", serialize(jobject{{"jwt", jwt.Payload()}}), Port };
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
 		_sessionId = *Str::TryTo<SessionPK>( res[http::field::authorization], nullptr, 16 );
@@ -214,7 +218,7 @@ namespace Jde::Web{
 	TEST_F( SocketTests, BadTransmissionClient ){
 		createSession();
 		BadTransmissionClientCall();
-		 
+
 		let expiration = steady_clock::now() + 60s;
 		vector<Logging::Entry> logs;
 		let id = Crypto::CalcMd5( "[{}]Failed to process incoming exception '{}'."sv );

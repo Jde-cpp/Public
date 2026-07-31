@@ -11,6 +11,7 @@
 #include "../../OpcServer/src/StartupAwait.h"
 #include "utils/helpers.h"
 #include <jde/tests/SpdlogTestListener.h>
+#include <jde/tests/testMain.h>
 #define let const auto
 
 namespace Jde{
@@ -62,7 +63,7 @@ namespace Jde{
 		}
 		::testing::GTEST_FLAG( filter ) = Settings::FindString( "/testing/tests" ).value_or( "*" );
 		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
-		result = RUN_ALL_TESTS();
+		result = CheckTestsRan( RUN_ALL_TESTS() );
 	}
 	catch( exception& e ){
 		if( auto p = dynamic_cast<Exception*>( &e ); p )

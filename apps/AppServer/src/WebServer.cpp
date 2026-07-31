@@ -27,8 +27,8 @@ namespace Jde::App{
 		_appId=get<0>( x );
 		AppClient()->SetAppPKs( get<1>(x), get<2>(x) );
 	}
-	α Server::StartWebServer( jobject&& settings, sv sslDefaultFileName )ε->void{
-		_requestHandler = ms<RequestHandler>( move(settings), sslDefaultFileName );
+	α Server::StartWebServer( jobject&& settings )ε->void{
+		_requestHandler = ms<RequestHandler>( move(settings) );
 		Web::Server::Start( _requestHandler );
 		Process::AddShutdownFunction( [](bool terminate, SL sl){Server::StopWebServer(terminate, sl);} );//TODO move to Web::Server
 	}
@@ -99,8 +99,8 @@ namespace Jde::App{
 	}
 }
 namespace Jde::App::Server{
-	RequestHandler::RequestHandler( jobject&& settings, sv sslDefaultFileName )ι:
-		IRequestHandler{ move(settings), Server::AppClient(), sslDefaultFileName }
+	RequestHandler::RequestHandler( jobject&& settings )ι:
+		IRequestHandler{ move(settings), Server::AppClient() }
 	{}
 
 	α RequestHandler::Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt{

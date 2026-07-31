@@ -1,3 +1,4 @@
+#include "jde/fwk/log/logTags.h"
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/fwk/process/execution.h>
 #include <jde/web/client/socket/ClientQL.h>
@@ -229,7 +230,7 @@ namespace Client{
 				else{ //found the request.
 					jarray y;
 					for_each( m->subscription_ack().server_ids(), [&](auto id){y.emplace_back(id);} );
-					DBG( "[{}]SubscriptionAck: '{}'.", hex(Id()), serialize(y) );
+					DBGT( _tags | ELogTags::Subscription, "[{}]SubscriptionAck: '{}'.", hex(Id()), serialize(y) );
 					resume( move(hAny), move(y) );
 				}
 				break;

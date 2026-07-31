@@ -7,8 +7,8 @@
 
 namespace Jde::Opc{
 	sp<Server::RequestHandler> _requestHandler;
-	α Server::StartWebServer( jobject&& settings, sv defaultSslFileName )ε->void{
-		_requestHandler = ms<RequestHandler>( move(settings), AppClient(), defaultSslFileName );
+	α Server::StartWebServer( jobject&& settings )ε->void{
+		_requestHandler = ms<RequestHandler>( move(settings), AppClient() );
 		Web::Server::Start( _requestHandler );
 		Process::AddShutdownFunction( [](bool terminate, SL sl ){StopWebServer(terminate, sl);} );//TODO move to Web::Server
 	}

@@ -41,7 +41,9 @@ namespace Jde{
 		HttpServerRead	  = Http | Server | Read,
 		HttpServerWrite		= Http | Server | Write,
 		SocketClientRead  = Socket | Client | Read,
+		SocketClientReadSub  = Socket | Client | Read | Subscription,
 		SocketClientWrite	= Socket | Client | Write,
+		SocketClientWriteSub	= Socket | Client | Write | Subscription,
 		SocketServerRead  = Socket | Server | Read,
 		SocketServerWrite	= Socket | Server | Write
 	};

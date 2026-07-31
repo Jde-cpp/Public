@@ -52,8 +52,11 @@ namespace Jde::Access::Server{
 	α LoginAwait::InsertUser( string&& modulusHex, uint32_t exponent, Crypto::Certificate&& info, string&& name )ι->DB::ScalerAwait<UserPK::Type>::Task{
 		DB::InsertClause insert{ AccessSchema().Prefix+"user_insert_key",
 			{ DB::Value{move(modulusHex)}, DB::Value{exponent}, DB::Value{underlying(EProviderType::Key)},
-				DB::Value{ move(name) }, DB::Value{ move(info.CommonName) }, DB::Value{ move(_description) },
-				DB::Value{ move(info.Issuer) }, DB::Value{ move(info.SubjectAltName) },
+				DB::Value{ move(name) }, //users.name
+				DB::Value{ move(info.CommonName) }, //users.target
+				DB::Value{ move(_description) }, DB::Value{ move(info.Issuer) },
+				DB::Value{ move(info.SubjectAltName) },
+				DB::Value{ move(info.DistinguishedName) },
 				info.Email.empty() ? DB::Value{ nullptr } : DB::Value{ move(info.Email) }, DB::Value{ info.Expiration }} };
 		try{
 			UserPK userPK{ co_await DS().InsertSeq<UserPK::Type>(move(insert)) };

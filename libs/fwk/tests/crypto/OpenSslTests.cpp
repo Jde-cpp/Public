@@ -17,6 +17,7 @@ namespace Jde::Crypto{
 		α TearDown()->void override{}
 
 		static α GetModulusExponent( fs::path publicKey )ε->tuple<vector<unsigned char>,vector<unsigned char>>;
+		static α SslSettings( str publicKeyFile, str privateKeyFile, str certificateFile, sv commonName, sv subjectAltName="URI:urn:my.server.application" )ε->CryptoSettings;
 
 		static string HeaderPayload;
 		static string passcode;
@@ -31,18 +32,27 @@ namespace Jde::Crypto{
 	string OpenSslTests::CertificateFile{ _msvc ? (Process::AppDataFolder() / "cert.pem").string() : "/tmp/cert.pem" };
 
 
+	α OpenSslTests::SslSettings( str publicKeyFile, str privateKeyFile, str certificateFile, sv commonName, sv subjectAltName )ε->CryptoSettings{
+		return CryptoSettings{ jobject{
+			{"certificate", jobject{{"path", certificateFile}, {"subjectAltName", subjectAltName}, {"company", "jde-cpp"}, {"country", "US"}, {"commonName", commonName}}},
+			{"privateKey", jobject{{"path", privateKeyFile}, {"passcode", passcode}}},
+			{"publicKey", jobject{{"path", publicKeyFile}}}
+		}, {} };
+	}
+
 	α OpenSslTests::SetUpTestCase()->void{
 		let clear = Settings::FindBool( "cryptoTests/clear" ).value_or( true );
 		INFO( "clear={}", clear );
 		INFO( "HeaderPayload={}", HeaderPayload );
+		let settings = SslSettings( PublicKeyFile, PrivateKeyFile, CertificateFile, "openSslTests" );//the CN is the identity target - never "localhost".
 		if( clear || (!fs::exists(PublicKeyFile) || !fs::exists(PrivateKeyFile)) ){
 			if( !fs::exists(fs::path{PublicKeyFile}.parent_path()) )
 				fs::create_directories( fs::path{PublicKeyFile}.parent_path() );
-			Crypto::CreateKey( PublicKeyFile, PrivateKeyFile, passcode );
+			Crypto::CreateKey( settings, SRCE_CUR );
 			INFO( "Created keys {} {}", PublicKeyFile, PrivateKeyFile );
 		}
 		if( clear || !fs::exists(CertificateFile) ){
-			Crypto::CreateCertificate( CertificateFile, PrivateKeyFile, passcode, "URI:urn:my.server.application", "jde-cpp", "US", "localhost" );
+			Crypto::IssueCertificate( settings );
 			INFO( "Created certificate {}", CertificateFile );
 		}
 	}
@@ -56,29 +66,32 @@ namespace Jde::Crypto{
 
 	TEST_F( OpenSslTests, Certificate ){
 		auto bytes = ReadCertificate( CertificateFile );
-		ExtractPublicKey( bytes );
+		ExtractPublicKey( bytes, SRCE_CUR );
 	}
 	TEST_F( OpenSslTests, ExtractInfo ){
 		let publicKeyFile = _msvc ? (Process::AppDataFolder()/"extractInfo-public.pem").string() : "/tmp/extractInfo-public.pem";
 		let privateKeyFile = _msvc ? (Process::AppDataFolder()/"extractInfo-private.pem").string() : "/tmp/extractInfo-private.pem";
 		let certificateFile = _msvc ? (Process::AppDataFolder()/"extractInfo-cert.pem").string() : "/tmp/extractInfo-cert.pem";
-		Crypto::CreateKey( publicKeyFile, privateKeyFile, passcode );
-		Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, "email:tester@jde-cpp.com,otherName:1.3.6.1.4.1.311.20.2.3;UTF8:upn-tester@jde-cpp.com,URI:urn:my.server.application", "jde-cpp", "US", "extract-info-cn" );
-		let info = Crypto::ExtractInfo( ReadCertificate(certificateFile) );
+		Crypto::CreateKeyCertificate( SslSettings(publicKeyFile, privateKeyFile, certificateFile, "extract-info-cn", "email:tester@jde-cpp.com,otherName:1.3.6.1.4.1.311.20.2.3;UTF8:upn-tester@jde-cpp.com,URI:urn:my.server.application") );
+		let info = Crypto::Certificate{ ReadCertificate(certificateFile) };
 		EXPECT_EQ( info.CommonName, "extract-info-cn" );
 		EXPECT_EQ( info.Email, "tester@jde-cpp.com" );
 		EXPECT_EQ( info.Upn, "upn-tester@jde-cpp.com" );
-		EXPECT_EQ( info.Subject, "CN=extract-info-cn,O=jde-cpp,C=US" );
-		EXPECT_EQ( info.Issuer, info.Subject );//self-signed.
+		EXPECT_EQ( info.DistinguishedName, "CN=extract-info-cn,O=jde-cpp,C=US" );
+		EXPECT_EQ( info.Issuer, info.DistinguishedName );//self-signed.
+		//the SAN must come back in the openssl config syntax it was issued with, so a parsed cert can be re-issued.
+		EXPECT_EQ( info.SubjectAltName, "email:tester@jde-cpp.com,otherName:msUPN;UTF8:upn-tester@jde-cpp.com,URI:urn:my.server.application" );
+		EXPECT_EQ( info.SanUri(), "urn:my.server.application" );//not the whole SAN - that was the applicationUri bug.
 		EXPECT_GT( info.Expiration, Clock::now() );//CreateCertificate issues 365-day certs.
-		let plain = Crypto::ExtractInfo( ReadCertificate(CertificateFile) );//fixture cert has a URI-only SAN.
+		let plain = Crypto::Certificate{ ReadCertificate(CertificateFile) };//fixture cert has a URI-only SAN.
 		EXPECT_TRUE( plain.Email.empty() );
 		EXPECT_TRUE( plain.Upn.empty() );
+		EXPECT_EQ( plain.SubjectAltName, "URI:"+plain.SanUri() );//single entry - SanUri is the whole thing bar the prefix.
 	}
 	TEST_F( OpenSslTests, PrivateKey ){
-		Crypto::ReadPrivateKey( PrivateKeyFile, passcode );
+		Crypto::ReadPrivateKey( PrivateKeySettings{PrivateKeyFile, passcode} );
 		//the key was created with a passcode - it must be encrypted at rest, i.e. unreadable without it.
-		EXPECT_THROW( Crypto::ReadPrivateKey(PrivateKeyFile, {}), Exception );
+		EXPECT_THROW( Crypto::ReadPrivateKey(PrivateKeySettings{PrivateKeyFile, string{}}), Exception );
 	}
 	TEST_F( OpenSslTests, Random ){
 		array<unsigned char,16> a{}, b{};

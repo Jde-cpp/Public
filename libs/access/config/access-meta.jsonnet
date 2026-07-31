@@ -92,7 +92,8 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				modulus: tables.users.columns.modulus,
 				exponent: tables.users.columns.exponent,
 				issuer: tables.users.columns.issuer,
-				subject: tables.users.columns.subject,
+				subjectAlt: tables.users.columns.subjectAlt,
+				distinguished: tables.users.columns.distinguished,
 				expiration: tables.users.columns.expiration
 			},
 			naturalKeys: tables.identities.naturalKeys,
@@ -118,8 +119,9 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				modulus: types.varchar+{ length: 2048, nullable:true, comment: "Used for RSA", i:102 },
 				exponent: types.uint+{ nullable:true, comment: "Used for RSA", i:103 },
 				issuer: types.varchar+{ length: 1024, nullable: true, insertable: false, updateable: false, comment: "cert issuer DN (RFC2253) - key enrollment", i:104 },
-				subject: types.varchar+{ length: 1024, nullable: true, insertable: false, updateable: false, comment: "cert subject DN (RFC2253) - key enrollment", i:105 },
-				expiration: types.dateTime+{ nullable: true, insertable: false, updateable: false, comment: "cert notAfter - key enrollment", i:106 }
+				subjectAlt: types.varchar+{ length: 1024, nullable: true, insertable: false, updateable: false, comment: "cert subjectAltName, openssl config syntax (URI:…,DNS:…) - key enrollment", i:105 },
+				distinguished: types.varchar+{ length: 1024, nullable: true, insertable: false, updateable: false, comment: "cert subject DN (RFC2253) - key enrollment", i:106 },
+				expiration: types.dateTime+{ nullable: true, insertable: false, updateable: false, comment: "cert notAfter - key enrollment", i:107 }
 			},
 			ops: ["Create", "Read", "Update", "Delete", "Purge", "Administer", "Execute"],
 			extends: "identities",

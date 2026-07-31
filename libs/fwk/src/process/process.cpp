@@ -172,19 +172,19 @@ namespace Jde{
 	α Process::AppDataFolder()ι->fs::path{
 		return ProgramDataFolder()/CompanyRootDir()/Process::ProductName();
 	}
-	α Process::GetEnv( str variable )ι->optional<string>{
+	α Process::GetEnv( str variable, bool emptyIsNullOpt )ι->optional<string>{
+		optional<string> y;
 #ifdef _WIN32
 		char* env = nullptr;
 		size_t size = 0;
 		if( _dupenv_s(&env, &size, variable.c_str()) == 0 && env ){
-			string result{ env };
+			y = string{ env };
 			free( env );
-			return result;
 		}
-		return {};
 #else
-		char* env = std::getenv( variable.c_str() );
-		return env ? string{ env } : optional<string>{};
+		if( let env = std::getenv(variable.c_str()); env )
+			y = string{ env };
 #endif
+		return emptyIsNullOpt && y && y->empty() ? optional<string>{} : y;
 	}
 }

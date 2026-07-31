@@ -34,7 +34,8 @@ local NonNullDateTime = { kind:'NON_NULL',name:null, ofType: DateTime };
 				{ name: 'modulus', type: String },
 				{ name: 'exponent', type: Attributes },
 				{ name: 'issuer', type: String },
-				{ name: 'subject', type: String },
+				{ name: 'subjectAlt', type: String },
+				{ name: 'distinguished', type: String },
 				{ name: 'expiration', type: DateTime }
 		]}
 }

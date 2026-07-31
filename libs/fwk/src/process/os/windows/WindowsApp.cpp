@@ -170,7 +170,7 @@ namespace Jde{
 		if(! _companyName.size() ){
 			_companyName = loadResource( "CompanyName" );
 			if( _companyName.empty() )
-				_companyName = "Jde-cpp";
+				_companyName = "Jde-Cpp";//matches LinuxApp's literal and every .rc - this is CompanyRootDir, so a second spelling forks the data dir on a case-sensitive filesystem.
 		}
 		return _companyName;
 	}

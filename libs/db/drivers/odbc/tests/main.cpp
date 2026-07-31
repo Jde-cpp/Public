@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 #include <jde/fwk/process/process.h>
 #include <jde/fwk/settings.h>
+#include <jde/tests/testMain.h>
 
 #define let const auto
 
@@ -26,7 +27,7 @@ namespace Jde{
 		startup( argc, argv );
 		if( !filterSet )
 			::testing::GTEST_FLAG( filter ) = Settings::FindSV( "/testing/tests" ).value_or( "*" );
-		exitCode = RUN_ALL_TESTS();
+		exitCode = CheckTestsRan( RUN_ALL_TESTS() );
 	}
 	catch( exception& e ){
 		if( auto p = dynamic_cast<Exception*>(&e); p ){

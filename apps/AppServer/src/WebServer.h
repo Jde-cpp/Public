@@ -19,7 +19,7 @@ namespace Jde::App::Server{
 	α GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ε->Web::Jwt;
 	α RemoveExisting( str host, PortType port )ι->void;
 	α GetRequestHandler()ι->sp<RequestHandler>;
-	α StartWebServer( jobject&& settings, sv sslDefaultFileName )ε->void;
+	α StartWebServer( jobject&& settings )ε->void;
 	α StopWebServer( bool terminate, SL sl )ι->void;
 
 	α BroadcastLogEntry( LogPK id, ProgramPK logAppPK, ProgInstPK logInstancePK, const Logging::Entry& m, const vector<string>& args )ι->void;
@@ -35,7 +35,7 @@ namespace Jde::App::Server{
 	α Write( ProgramPK appPK, optional<ProgInstPK> instancePK, Proto::FromServer::Transmission&& msg )ε->void;
 
 	struct RequestHandler final : IRequestHandler{
-		RequestHandler( jobject&& settings, sv sslDefaultFileName )ι;
+		RequestHandler( jobject&& settings )ι;
 		α HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> override{ return mu<HttpRequestAwait>( move(req), sl ); }
 		α Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt;
 		α Schemas()ι->const vector<sp<DB::AppSchema>>& override{ return Server::Schemas(); }

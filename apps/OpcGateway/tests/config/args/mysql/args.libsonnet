@@ -2,22 +2,10 @@ local common = import '../../../../../../libs/db/config/args-common.libsonnet';
 common + {
 	local args = self,
 	sqlType: "mysql",
-	instanceName: "debug-linux",
+	instanceName: "$(PRODUCT_NAME)."+common.buildTarget,
 	opc:{
 		urn: "urn:open62541.server.application",
 		url: "opc.tcp://127.0.0.1:4840"
-	},
-	access: {
-		trustedCertDirs: [
-			"$(HOME)/.Jde-Cpp/Tests.Opc/ssl/certs",
-			"$(HOME)/.Jde-Cpp/OpcServer/ssl/certs"
-		]
-	},
-	opcServer: {
-		trustedCertDirs: [
-			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs",
-			"$(HOME)/.Jde-Cpp/Tests.Opc/ssl/certs"
-		]
 	},
 	dbServers: {
 		localhost:{

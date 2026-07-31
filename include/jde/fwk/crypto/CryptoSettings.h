@@ -9,7 +9,7 @@ namespace Jde::Crypto{
 
 	struct PrivateKeySettings{
 		PrivateKeySettings( fs::path path, string passcode )ι: Path{move(path)}, Passcode{move(passcode)}{}
-		PrivateKeySettings( const jobject& settings, optional<sv> defaultFileName )ι;
+		PrivateKeySettings( const jobject& settings, sv defaultFileName )ι;
 		fs::path Path;
 		string Passcode;
 	};
@@ -29,14 +29,19 @@ namespace Jde::Crypto{
 	};
 
 	struct Γ Certificate{
-		Certificate( const jobject& settings, optional<sv> defaultFileName )ι;
+		Certificate( const jobject& settings, sv certInstance={} )ι;
 		Certificate( std::span<const byte> certificate, SRCE )ε;
 		α Log( string prefix, SRCE )Ι->void;
 		α ToString()Ι->string;
+		Φ SanUri()Ι->string;//the SAN's URI entry with the "URI:" prefix stripped, empty if it has none.
+		//users.name = UPN → email → CN
+		string CommonName; //subject CN, empty if absent. users.target
 		fs::path Path;
-		string Issuer;     //RFC2253 one-line DN.
-		string SubjectAltName;    //RFC2253 one-line DN.
-		string CommonName; //subject CN, empty if absent.
+		string Issuer;     //issuer RFC2253 one-line DN, der ctor only.
+		string DistinguishedName; //subject RFC2253 one-line DN, der ctor only.  identities.subject
+		//openssl config syntax - "URI:urn:x,DNS:host,IP:127.0.0.1,email:a@b" - i.e. what X509V3_EXT_conf_nid consumes,
+		//NOT a DN.  Both ctors produce this form, so a cert can be parsed and re-issued without mangling the extension.
+		string SubjectAltName;
 		string Country;			//subject C, empty if absent.
 		string Company;		//subject O, empty if absent.
 		//string Domain;		//subject CN, empty if absent.
@@ -46,20 +51,20 @@ namespace Jde::Crypto{
 	};
 
 	struct Γ CryptoSettings final{
-		CryptoSettings( str settingsPath, optional<sv> defaultFileName )ι;
-		CryptoSettings( const jobject& settings, optional<sv> defaultFileName )ι;
+		CryptoSettings( str settingsPath )ι;
+		CryptoSettings( const jobject& settings, sv certInstance={} )ι;
 		α CreateDirectories()Ε->void;
 
 		struct PublicKeyPath{
-			PublicKeyPath( const jobject& o, optional<sv> defaultFileName )ι;
+			PublicKeyPath( const jobject& o, sv defaultFileName )ι;
 			α Γ Value(SL sl)Ε->const struct Crypto::PublicKey&;
 			fs::path Path;
 		private:
 			mutable optional<Crypto::PublicKey> _value;
 		};
 
-		PrivateKeySettings PrivateKey;
 		Certificate Certificate;
+		PrivateKeySettings PrivateKey;
 		PublicKeyPath PublicKey;
 		fs::path DhPath;
 

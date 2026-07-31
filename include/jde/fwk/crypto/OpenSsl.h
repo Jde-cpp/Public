@@ -19,8 +19,8 @@ namespace Jde::Crypto{
 	Φ Random( unsigned char* p, uint size )ε->void;//throws on entropy failure.
 	Ŧ Random()ε->T{ T y{}; Random( (unsigned char*)&y, sizeof(T) ); return y; }
 	Φ CreateKey( const CryptoSettings& settings, SL sl )ε->void;
-	//Φ CreateCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain, SL sl )ε->void;
-	Φ CreateCertificate( const CryptoSettings& settings, SRCE )ε->void;
+	//Φ IssueCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain, SL sl )ε->void;
+	Φ IssueCertificate( const CryptoSettings& settings, SRCE )ε->void;
 	Φ CreateKeyCertificate( const CryptoSettings& settings, SRCE )ε->void;
 	Φ EnsureKeyCertificate( const CryptoSettings& settings, SRCE )ε->void;//creates key+cert if the key is missing; re-issues the cert on the existing key if the cert is missing/unreadable.
 	Φ ExtractPublicKey( std::span<byte> certificate, SL sl )ε->PublicKey;

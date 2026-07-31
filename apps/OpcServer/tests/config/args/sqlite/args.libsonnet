@@ -4,9 +4,6 @@ common + {
 		urn: "urn:open62541.server.application",
 		url: "opc.tcp://127.0.0.1:4840"
 	},
-	access: {
-		trustedCertDirs: [common.certsDir( "OpcServer" )] //client cert dir - /http/opcServer ssl productName.
-	},
 	dbServers: {
 		localhost: common.localhost({
 			dbo:{ // n/a for sqlite

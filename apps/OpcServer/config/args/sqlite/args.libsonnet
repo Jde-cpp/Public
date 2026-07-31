@@ -2,8 +2,8 @@ local common = import '../../../../../libs/db/config/sqlite-common.libsonnet';
 common + {
 	local args = self,
 	local cwd = std.extVar("cwd"),
-	instanceName: args.buildTarget+".sqlite",
-	opcServer: {
+	instanceName: "OpcServer."+args.sqlType+"."+args.buildTarget,
+	access: {
 		trustedCertDirs: [
 			common.certsDir( "OpcGateway" ),
 			common.certsDir( common.opcTestsProduct )

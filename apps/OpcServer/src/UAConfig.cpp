@@ -8,7 +8,6 @@
 #include "access/UAAccess.h"
 #include "jde/fwk/crypto/CryptoSettings.h"
 #include "jde/fwk/settings.h"
-#include "jde/fwk/str.h"
 
 #define let const auto
 namespace Jde::Opc::Server{
@@ -19,7 +18,7 @@ namespace Jde::Opc::Server{
 		}{
 		if( auto ssl = Settings::FindObject("/opcServer/ssl"); ssl ){
 			try{
-				SetupSecurityPolicies( Crypto::CryptoSettings{*ssl, Process::ProductName()} );
+				SetupSecurityPolicies( Crypto::CryptoSettings{*ssl} );
 			}
 			catch( std::exception& ){
 				UA_ServerConfig_clear( this );
@@ -41,7 +40,10 @@ namespace Jde::Opc::Server{
 		SetConfig( Settings::FindNumber<PortType>("/opcServer/port").value_or(4840), move(certificate), move(privateKey) );
 //		UA_ServerConfig_setDefaultWithSecurityPolicies( &config, Settings::FindNumber<PortType>("/tcp/port").value_or(4840), certificate.get(), privateKey.get(), &trustList, 0, &issuerList, 0, &revocationList, 0 );
 		UA_String_clear( &applicationDescription.applicationUri );
-		applicationDescription.applicationUri = UA_STRING_ALLOC( Str::Replace(settings.Certificate.SubjectAltName, "URI:", "").c_str() );
+		let uri = settings.Certificate.SanUri();
+		if( uri.empty() )//clients compare their configured applicationUri against ours; an empty one rejects every endpoint.
+			WARN( "ssl certificate '{}' has no URI entry in its subjectAltName '{}' - applicationUri will be empty.", settings.Certificate.Path.string(), settings.Certificate.SubjectAltName );
+		applicationDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
 	}
 
 	α UAConfig::SetConfig( PortType port, ByteStringPtr&& certificate, const ByteStringPtr&& privateKey )ε->void{
@@ -49,7 +51,7 @@ namespace Jde::Opc::Server{
 
 		vector<ByteStringPtr> trustedCertOwners;// owns the struct+buffer; freed when SetConfig returns (after UA_Array_copy deep-copies into the trust list).
 		vector<UA_ByteString> trustedCerts;// shallow views into the owners, only used to feed UA_Array_copy.
-		for( let& sdir : Settings::FindStringArray("/opcServer/trustedCertDirs") ){
+		for( let& sdir : Settings::FindStringArray("/access/trustedCertDirs") ){
 			const fs::path dir{ sdir };
 			if( !fs::exists(dir) || !fs::is_directory(dir) ){
 				CRITICAL( "Trusted certificate directory does not exist: '{}'.", dir.string() );

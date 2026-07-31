@@ -12,6 +12,7 @@
 #include <jde/access/Authorize.h> //!
 #include <jde/access/server/accessServer.h>
 #include <jde/access/AccessListener.h>
+#include <jde/tests/testMain.h>
 #include "globals.h"
 #include "AccessQL.h"
 
@@ -52,7 +53,7 @@ namespace Jde{
 		Startup( argc, argv );
 		if( !filterSet )
 			::testing::GTEST_FLAG( filter ) = Settings::FindSV( "/testing/tests" ).value_or( "*" );
-		exitCode = RUN_ALL_TESTS();
+		exitCode = CheckTestsRan( RUN_ALL_TESTS() );
 	}
 	catch( exception& e ){
 		if( auto p = dynamic_cast<Exception*>(&e); p ){

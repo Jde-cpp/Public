@@ -10,8 +10,8 @@ namespace Jde::Opc{
 	optional<std::jthread> _serverThread;
 	concurrent_flat_map<uint,sp<Opc::Gateway::GatewaySocketSession>> _sessions; // Consider using server
 	static sp<Gateway::RequestHandler> _requestHandler;
-	α Gateway::StartWebServer( jobject&& settings, sv defaultSslFileName )ε->void{
-		_requestHandler = ms<RequestHandler>( move(settings), AppClient(), Gateway::QLPtr(), defaultSslFileName );
+	α Gateway::StartWebServer( jobject&& settings )ε->void{
+		_requestHandler = ms<RequestHandler>( move(settings), AppClient(), Gateway::QLPtr() );
 		Web::Server::Start( _requestHandler );
 		Process::AddShutdownFunction( [](bool terminate, SL sl ){
 			_sessions.erase_if( []( auto& s ){

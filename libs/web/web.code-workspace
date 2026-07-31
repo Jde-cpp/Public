@@ -5,7 +5,8 @@
 		"target": "Jde.Web.Tests",
 		"testTarget": "${config:target}",
 		"subDir": "libs/${config:name}",
-		"cmake.sourceDirectory": "${workspaceFolder:tests}/../../..",
+		"workspace": "${workspaceFolder:tests}/..",
+		"cmake.sourceDirectory": "${config:workspace}/../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"settings": "${workspaceFolder:tests}/config/Web.Tests.jsonnet",
 		"program": "${config:subDir}/tests/${config:target}"

@@ -12,13 +12,6 @@ namespace Jde::App{
 	α Server::InitLogging()ι->void{
 		AppClient()->InitLogging();
 	}
-	Ω defaultSslFileName()ι->string{
-		string defaultSslFileName = Settings::FindString("/instanceName").value_or( string{Process::ProductName()} );
-		if constexpr( _debug )
-			defaultSslFileName+= ".debug";
-		defaultSslFileName+= ".webServer";
-		return defaultSslFileName;
-	}
 namespace Server{
 	α AppStartupAwait::Execute()ι->VoidAwait::Task{
 		try{
@@ -30,8 +23,8 @@ namespace Server{
 
 			QL::SetSystemTables( {"apps", "connections", "logSetting"} );
 			auto appClient = AppClient();
-			auto sslSettings = Crypto::CryptoSettings{ Json::FindDefaultObject(_webServerSettings, "ssl"), defaultSslFileName() };
-			Server::StartWebServer( move(_webServerSettings), defaultSslFileName() );
+			auto sslSettings = Crypto::CryptoSettings{ Json::FindDefaultObject(_webServerSettings, "ssl") };
+			Server::StartWebServer( move(_webServerSettings) );
 			appClient->SetPublicKey( sslSettings.PublicKey.Value(SRCE_CUR) );
 			appClient->LoadLogSettings();
 			QL::Hook::Add( mu<AppInstanceHook>(appClient) );

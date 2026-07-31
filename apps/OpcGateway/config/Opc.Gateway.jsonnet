@@ -2,19 +2,14 @@ local args = import 'args.libsonnet';
 local logsDir = args.logsDir;
 function( sync=false )
 {
+	local instance = self,
 	gateway:{
 		pingInterval: "PT30S",
 		ttl: "PT2M",
-		issuedCerts:{
-			cert: {
-				path: "$(ProgramData)/jde-cpp/OpcGateway/ssl/certs",
-			},
-			privateKey: {
-				path: "$(ProgramData)/jde-cpp/OpcGateway/ssl/private",
-				passcode: "$(JDE_PASSCODE)"
-			},
-			publicKey: {
-				path: "$(ProgramData)/jde-cpp/OpcGateway/ssl/public",
+		issuedCerts: {
+			certificate:{
+				subjectAltName: "URI:urn:open62541.server.application",
+				commonName: args.instanceName,
 			}
 		}
 	},
@@ -105,10 +100,9 @@ function( sync=false )
 		},
 		ssl: {
 			certificate:{
-				path:: "{AppDataFolder}/ssl/certs/cert.pem",
 				subjectAltName: "URI:urn:open62541.server.application",
 				company:: "Jde-Cpp",
-				commonName: "Opc.Gateway.$(HostName)",//subject CN - the enrollment identity target; grants reference it.
+				commonName: args.instanceName + ".web.$(HostName)",
 				country:: "US",
 			},
 			privateKey:: "{AppDataFolder}/ssl/private/private.pem",

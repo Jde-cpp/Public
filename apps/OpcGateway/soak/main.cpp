@@ -11,6 +11,7 @@
 #include <jde/app/client/IAppClient.h>
 #include <jde/app/client/appClient.h>
 #include <jde/opc/uatypes/Logger.h>
+#include "../src/UAClient.h"
 #include "SoakAppClient.h"
 #include "SoakRunner.h"
 
@@ -23,25 +24,16 @@ namespace Jde::Opc::Gateway::Soak{
 	constexpr ELogTags _tags{ ELogTags::Test };
 	//Creates the gateway's client certificate for each active soak leg. Must run before OpcServer starts: OpcServer
 	//snapshots trustedCertDirs at startup, but the gateway only creates the cert lazily at first connect - too late
-	//in a split-process run. Mirrors UAClient::EnsureCertificate with the gateway's RootSslDir spelled out - including
-	//the %20-encoded applicationUri, which servers that check SAN==ApplicationUri require.
+	//in a split-process run.  Goes through UAClient's own helpers so the files land exactly where the gateway process
+	//will look for them; /gateway/issuedCerts in Opc.Soak.jsonnet supplies the gateway's product and CN.
 	Ω createGatewayCerts()ε->void{
-		let product = Settings::FindString( "/soak/gatewayProduct" ).value_or( "OpcGateway" );
-		const fs::path root = Process::ProgramDataFolder()/Process::CompanyRootDir()/product/"ssl";
-		for( sv sub : {"certs", "private", "public"} )
-			fs::create_directories( root/sub );
-		let passcode = Process::GetEnv( "JDE_PASSCODE" ).value_or( "" );
 		for( let& leg : ActiveServers() ){
 			if( leg.CertificateUri.empty() ){//no uri -> the gateway connects with SecurityPolicy None and never presents a cert.
 				INFO( "No certificateUri for '{}' - skipping certificate.", leg.Target );
 				continue;
 			}
-			let privateKeyFile = root/Ƒ("private/{}.pem", leg.Target);
-			if( !fs::exists(privateKeyFile) )
-				Crypto::CreateKey( root/Ƒ("public/{}.pem", leg.Target), privateKeyFile, passcode );
-			let certificateFile = root/Ƒ("certs/{}.pem", leg.Target);
-			if( !fs::exists(certificateFile) )
-				Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Ƒ("URI:{}", Str::Replace(leg.CertificateUri, " ", "%20")), "jde-cpp", "US", "localhost" );
+			UAClient::EnsureCertificate( leg.Target, leg.CertificateUri );
+			let certificateFile = UAClient::CryptoSettings( leg.Target, leg.CertificateUri ).Certificate.Path;
 			INFO( "Gateway certificate ready: {}.", certificateFile.string() );
 			if( leg.User.size() )
 				INFO( "External server '{}': trust {} in its server configuration before the run.", leg.Target, certificateFile.string() );
@@ -63,7 +55,7 @@ namespace Jde::Opc::Gateway::Soak{
 		else{
 			auto client = Soak::AppClient();
 			client->InitLogging( client );
-			Crypto::CryptoSettings ssl{ Json::FindDefaultObject(Settings::AsObject("/http"), "ssl") };
+			Crypto::CryptoSettings ssl{ Json::FindDefaultObject(Settings::AsObject("/http"), "ssl"), Process::ProductName() };//the file name doubles as the subject CN - the soak client's enrollment identity.
 			Crypto::EnsureKeyCertificate( ssl );
 			client->SslSettings = ssl;
 			client->SetUserName( jobject{Settings::AsObject("/credentials")} );

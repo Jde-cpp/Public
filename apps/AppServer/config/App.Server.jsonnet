@@ -23,7 +23,7 @@ function( sync=false )
 				subjectAltName: "DNS:localhost,IP:127.0.0.1",
 				company:: "Jde-Cpp",
 				country: "US",
-				commonName: "AppServer"//subject CN - TLS clients match the SAN, not this; a non-"localhost" value keeps it distinct per product.
+				commonName: "AppServer"
 			},
 			privateKey:{
 				path:: "{ApplicationDataFolder}/ssl/private/AppServer.pem",
@@ -39,9 +39,12 @@ function( sync=false )
 	},
 	access:{
 		//operator drop-dir for enrollment trust anchors: a client cert (.pem/.crt) copied here authorizes its key-login enrollment. Rescanned on failed verification - no restart needed.
+		//Production products only.  Every cert under these dirs can enroll a user whose identity is the cert's CN, so a
+		//test/dev product dir here would let anything that writes one provision an account in the production access db;
+		//the test binaries anchor their own dirs in their own configs (Opc.Server.Tests.jsonnet, Opc.Tests.jsonnet).
 		trustedCertDirs: [
-			"$(ProgramData)/jde-cpp/OpcServer/ssl/certs",
-			"$(ProgramData)/jde-cpp/OpcGateway/ssl/certs"
+			"$(ProgramData)/Jde-Cpp/OpcServer/ssl/certs",
+			"$(ProgramData)/Jde-Cpp/OpcGateway/ssl/certs"
 		]
 	},
 	dbServers:{

@@ -21,14 +21,6 @@
 namespace Jde::Opc::Gateway{
 	extern Duration _pingInterval;
 	extern Duration _ttl;
-	Ω defaultSslFileName()ι->string{
-		string defaultSslFileName = Settings::FindString("/instanceName").value_or( string{Process::ProductName()} );
-		if constexpr( _debug )
-			defaultSslFileName+= ".debug";
-		defaultSslFileName+= ".webServer";
-		return defaultSslFileName;
-	}
-
 	StartupAwait::StartupAwait( jobject webServerSettings, jobject userName, SL sl )ι:
 		VoidAwait{sl},
 		_webServerSettings{move(webServerSettings)},
@@ -51,9 +43,9 @@ namespace Jde::Opc::Gateway{
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) || schema->DS()->RequiresSync() )
 				DB::SyncSchema( *schema, QLPtr() );
 
-			Crypto::CryptoSettings sslSettings{ Json::FindDefaultObject(_webServerSettings, "ssl"), defaultSslFileName() };
+			Crypto::CryptoSettings sslSettings{ Json::FindDefaultObject(_webServerSettings, "ssl") };
 			Crypto::EnsureKeyCertificate( sslSettings );
-			StartWebServer( move(_webServerSettings), defaultSslFileName() );
+			StartWebServer( move(_webServerSettings) );
 			auto accessSchema = DB::GetAppSchema( "access", authorize );
 			auto appClient = AppClient();
 			appClient->SubscriptionSchemas.push_back( accessSchema );

@@ -9,6 +9,7 @@ namespace Jde::Crypto{
 	struct TrustStoreTests : public ::testing::Test{
 	protected:
 		static α SetUpTestCase()->void;
+		static α SslSettings( str publicKeyFile, str privateKeyFile, str certificateFile )ε->CryptoSettings;
 
 		static string passcode;
 		static string PublicKeyFile;
@@ -30,14 +31,20 @@ namespace Jde::Crypto{
 	vector<byte> TrustStoreTests::Der;
 	vector<byte> TrustStoreTests::Der2;
 
+	α TrustStoreTests::SslSettings( str publicKeyFile, str privateKeyFile, str certificateFile )ε->CryptoSettings{//both pairs share the subject DN - SameSubjectAnchors depends on it.
+		return CryptoSettings{ jobject{
+			{"certificate", jobject{{"path", certificateFile}, {"subjectAltName", "URI:urn:my.server.application"}, {"company", "jde-cpp"}, {"country", "US"}, {"commonName", "trustStoreTests"}}},
+			{"privateKey", jobject{{"path", privateKeyFile}, {"passcode", passcode}}},
+			{"publicKey", jobject{{"path", publicKeyFile}}}
+		}, {} };
+	}
+
 	α TrustStoreTests::SetUpTestCase()->void{
 		if( !fs::exists(fs::path{PublicKeyFile}.parent_path()) )
 			fs::create_directories( fs::path{PublicKeyFile}.parent_path() );
-		Crypto::CreateKey( PublicKeyFile, PrivateKeyFile, passcode );
-		Crypto::CreateCertificate( CertificateFile, PrivateKeyFile, passcode, "URI:urn:my.server.application", "jde-cpp", "US", "localhost" );
+		Crypto::CreateKeyCertificate( SslSettings(PublicKeyFile, PrivateKeyFile, CertificateFile) );
 		Der = Crypto::ReadCertificate( CertificateFile );
-		Crypto::CreateKey( PublicKeyFile2, PrivateKeyFile2, passcode );
-		Crypto::CreateCertificate( CertificateFile2, PrivateKeyFile2, passcode, "URI:urn:my.server.application", "jde-cpp", "US", "localhost" );
+		Crypto::CreateKeyCertificate( SslSettings(PublicKeyFile2, PrivateKeyFile2, CertificateFile2) );
 		Der2 = Crypto::ReadCertificate( CertificateFile2 );
 	}
 

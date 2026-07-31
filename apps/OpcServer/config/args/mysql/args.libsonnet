@@ -3,11 +3,11 @@ common + {
 	local args = self,
 	local cwd = std.extVar("cwd"),
 	sqlType: "mysql",
-	instanceName: args.buildTarget,
-	opcServer: {
+	instanceName: "OpcServer."+args.sqlType+"."+args.buildTarget,
+	access: {
 		trustedCertDirs: [
-			"$(HOME)/.Jde-Cpp/OpcGateway/ssl/certs",
-			"$(HOME)/.Jde-Cpp/Tests.Opc/ssl/certs"
+			args.certsDir( "OpcGateway" ),
+			args.certsDir( "Tests.Opc" ) //mysql is the linux default args dir, so the linux ProductName - windows uses args/sqlServer.
 		]
 	},
 	dbServers: {
