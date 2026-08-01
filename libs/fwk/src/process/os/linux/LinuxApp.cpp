@@ -104,7 +104,7 @@ namespace Jde{
 	}
 
 	α Process::ProgramDataFolder()ι->fs::path{
-		return fs::path{ GetEnv("HOME").value_or("/") };
+		return GetEnv("XDG_CONFIG_HOME").value_or( Process::GetEnv("HOME").value_or("/etc/app")+"/.config" );
 	}
 
 	α Process::ExitHandler( int s )->void{
@@ -161,7 +161,7 @@ namespace Jde{
 		return *_args;
 	}
 
-	α Process::CompanyRootDir()ι->fs::path{ return fs::path{ "."+Process::CompanyName() }; };
+	α Process::CompanyRootDir()ι->fs::path{ return Process::CompanyName(); };
 
 	α Process::AddSignals()ε->void{/*ε for windows*/
 /* 		struct sigaction sigIntHandler;//_XOPEN_SOURCE

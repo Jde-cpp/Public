@@ -18,16 +18,34 @@ function( sync=false )
 			googleAuthClientId:"445012155442-1v8ntaa22konm0boge6hj5mfs15o9lvd.apps.googleusercontent.com"
 		},
 		ssl:{
-			_certificate: "{ApplicationDataFolder}/ssl/certs/cert.pem",
-			certificateAltName: "DNS:localhost,IP:127.0.0.1",
-			_certficateCompany: "Jde-Cpp",
-			_certficateCountry: "US",
-			_certficateDomain: "localhost",
-			_privateKey: "{ApplicationDataFolder}/ssl/private/private.pem",
-			_publicKey: "{ApplicationDataFolder}/ssl/public/public.pem",
-			_dh: "{ApplicationDataFolder}/certs/dh.pem",
-			_passcode: "$(JDE_PASSCODE)"
+			certificate:{
+				path:: "{ApplicationDataFolder}/ssl/certs/AppServer.pem",
+				subjectAltName: "DNS:localhost,IP:127.0.0.1",
+				company:: "Jde-Cpp",
+				country: "US",
+				commonName: "AppServer"
+			},
+			privateKey:{
+				path:: "{ApplicationDataFolder}/ssl/private/AppServer.pem",
+				passcode:: "$(JDE_PASSCODE)"
+			},
+			publicKey:{
+				path:: "{ApplicationDataFolder}/ssl/public/AppServer.pem"
+			},
+			dh:{
+				path:: "{ApplicationDataFolder}/ssl/dh.pem"
+			},
 		},
+	},
+	access:{
+		//operator drop-dir for enrollment trust anchors: a client cert (.pem/.crt) copied here authorizes its key-login enrollment. Rescanned on failed verification - no restart needed.
+		//Production products only.  Every cert under these dirs can enroll a user whose identity is the cert's CN, so a
+		//test/dev product dir here would let anything that writes one provision an account in the production access db;
+		//the test binaries anchor their own dirs in their own configs (Opc.Server.Tests.jsonnet, Opc.Tests.jsonnet).
+		trustedCertDirs: [
+			"$(ProgramData)/Jde-Cpp/OpcServer/ssl/certs",
+			"$(ProgramData)/Jde-Cpp/OpcGateway/ssl/certs"
+		]
 	},
 	dbServers:{
 		dataPaths: args.dbServers.dataPaths,
@@ -47,7 +65,7 @@ function( sync=false )
 			flushOn: "Trace",
 			tags:{
 				default: "Information",
-				sql: "Trace",
+				sql: "Information",
 				exception: "Debug",
 				parsing: "Trace",
 				test: "Trace",

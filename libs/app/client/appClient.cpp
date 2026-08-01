@@ -49,22 +49,22 @@ namespace Jde::App{
 namespace Jde::App::Client{
 	struct LoginAwait final : TAwait<SessionPK>{
 		using base = TAwait<SessionPK>;
-		LoginAwait( const Crypto::CryptoSettings& cryptoSettings, const jobject& userName, SRCE )ε;
+		LoginAwait( const Crypto::CryptoSettings& cryptoSettings, SRCE )ε;
 		α Suspend()ι->void{ Execute(); };
 	private:
 		α Execute()ι->Web::Client::ClientHttpAwait::Task;
 		Web::Jwt _jwt;
 	};
 
-	Ω getJwt( const Crypto::CryptoSettings& cryptoSettings, const jobject& userName )ε->Web::Jwt{
-		auto pubKey = Crypto::ReadPublicKey( cryptoSettings.PublicKeyPath );
-		auto name = Json::FindString( userName, "name" ); THROW_IF( !name, "credentials/name not found in settings." );
-		auto target = Json::FindString( userName, "target" ).value_or( *name );
-		return Web::Jwt{ pubKey, {0}, move(*name), move(target), 0, {}, TimePoint::min(), {}, cryptoSettings.PrivateKeyPath };
+	Ω getJwt( const Crypto::CryptoSettings& cryptoSettings )ε->Web::Jwt{
+		auto certificate = Crypto::ReadCertificate( cryptoSettings.Certificate.Path );//sole key material - the jwt derives the public key from it; the server's TrustStore chains it at enrollment.
+		const Crypto::Certificate info{ certificate };//the cert is also the identity authority - claims mirror the server's enrollment derivation (name: UPN → email → CN, target: CN) so they can't disagree with what enrollment records.
+		auto name = info.Upn.size() ? info.Upn : info.Email.size() ? info.Email : info.CommonName;
+		return Web::Jwt{ {}, {0}, move(name), info.CommonName, 0, {}, TimePoint::min(), {}, cryptoSettings.PrivateKey, move(certificate) };
 	}
-	LoginAwait::LoginAwait( const Crypto::CryptoSettings& cryptoSettings, const jobject& userName, SL sl )ε:
+	LoginAwait::LoginAwait( const Crypto::CryptoSettings& cryptoSettings, SL sl )ε:
 		base{sl},
-		_jwt{ getJwt(cryptoSettings, userName) }
+		_jwt{ getJwt(cryptoSettings) }
 	{}
 
 	α LoginAwait::Execute()ι->ClientHttpAwait::Task{
@@ -113,7 +113,7 @@ namespace Jde::App::Client{
 	}
 	α ConnectAwait::HttpLogin()ι->LoginAwait::Task{
 		try{
-			let sessionId = co_await LoginAwait{ *_appClient->SslSettings, _appClient->UserName() };//http call
+			let sessionId = co_await LoginAwait{ *_appClient->SslSettings };//http call
 			RunSocket( sessionId );
 		}
 		catch( exception& e ){

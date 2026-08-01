@@ -8,6 +8,11 @@ local logsDir = args.logsDir;
 		UANodeSets: "$(UA_NODE_SETS)"
 	},
 	opc: args.opc,
+	access:{
+		trustedCertDirs: [
+			"$(ProgramData)/Jde-Cpp/$(PRODUCT_NAME)/ssl/certs"
+		]
+	},
 	opcServer:{
 		target: "TestServer",
 		resource: "test",

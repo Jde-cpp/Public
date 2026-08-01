@@ -6,17 +6,19 @@
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/app/client/IAppClient.h>
 #include "access/UAAccess.h"
+#include "jde/fwk/crypto/CryptoSettings.h"
+#include "jde/fwk/settings.h"
 
 #define let const auto
 namespace Jde::Opc::Server{
-	constexpr ELogTags _tags = (ELogTags)EOpcLogTags::Opc;
+	constexpr ELogTags _tags = ( ELogTags )EOpcLogTags::Opc;
 	UAConfig::UAConfig()ε:
 		UA_ServerConfig{
 			.logging = &_logger,
 		}{
-		if( auto certificateFile = Settings::FindPath("/opcServer/ssl/certificate").value_or(fs::path{}); !certificateFile.empty() ){
+		if( auto ssl = Settings::FindObject("/opcServer/ssl"); ssl ){
 			try{
-				SetupSecurityPolicies( move(certificateFile) );
+				SetupSecurityPolicies( Crypto::CryptoSettings{*ssl} );
 			}
 			catch( std::exception& ){
 				UA_ServerConfig_clear( this );
@@ -27,26 +29,21 @@ namespace Jde::Opc::Server{
 			UA_ServerConfig_setDefault( this );
 		auto accessResource = Settings::FindString( "/opcServer/resource" ).value_or( "default" );
 		UA_LocalizedText_clear( &applicationDescription.applicationName );// setDefaultConfig/setBasics already allocated applicationName; clear before overwriting or it leaks.
-		applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC("en-US", Ƒ("Jde-Cpp OpcServer [{}]", accessResource).c_str() );
+		applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC( "en-US", Ƒ("Jde-Cpp OpcServer [{}]", accessResource).c_str() );
 	}
 
-	α UAConfig::SetupSecurityPolicies( fs::path&& certificateFile )ε->void{
-		let passcode = Settings::FindString("/opcServer/ssl/privateKey/passcode").value_or("");
-		auto privateKeyFile = Settings::FindPath( "/opcServer/ssl/privateKey/path" ).value_or( fs::path{} );
-		if( !fs::exists(certificateFile) ){
-			let parentPath = certificateFile.parent_path();
-			fs::create_directories( parentPath );
-			fs::create_directories( privateKeyFile.parent_path() );
-			Crypto::CreateKey( parentPath/"public.pem", privateKeyFile, passcode );
-			const string uri{ "urn:open62541.server.application" };
-			Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Ƒ("URI:{}", uri), "jde-cpp", "US", "localhost" );
-		}
-		auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
-		auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
+	α UAConfig::SetupSecurityPolicies( const Crypto::CryptoSettings& settings, SL sl )ε->void{
+		Crypto::EnsureKeyCertificate( settings );
+
+		auto certificate = ToUAByteString( Crypto::ReadCertificate(settings.Certificate.Path) );
+		auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(settings.PrivateKey) );
 		SetConfig( Settings::FindNumber<PortType>("/opcServer/port").value_or(4840), move(certificate), move(privateKey) );
 //		UA_ServerConfig_setDefaultWithSecurityPolicies( &config, Settings::FindNumber<PortType>("/tcp/port").value_or(4840), certificate.get(), privateKey.get(), &trustList, 0, &issuerList, 0, &revocationList, 0 );
 		UA_String_clear( &applicationDescription.applicationUri );
-		applicationDescription.applicationUri = UA_STRING_ALLOC("urn:open62541.server.application");
+		let uri = settings.Certificate.SanUri();
+		if( uri.empty() )//clients compare their configured applicationUri against ours; an empty one rejects every endpoint.
+			WARN( "ssl certificate '{}' has no URI entry in its subjectAltName '{}' - applicationUri will be empty.", settings.Certificate.Path.string(), settings.Certificate.SubjectAltName );
+		applicationDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
 	}
 
 	α UAConfig::SetConfig( PortType port, ByteStringPtr&& certificate, const ByteStringPtr&& privateKey )ε->void{
@@ -54,7 +51,7 @@ namespace Jde::Opc::Server{
 
 		vector<ByteStringPtr> trustedCertOwners;// owns the struct+buffer; freed when SetConfig returns (after UA_Array_copy deep-copies into the trust list).
 		vector<UA_ByteString> trustedCerts;// shallow views into the owners, only used to feed UA_Array_copy.
-		for( let& sdir : Settings::FindStringArray("/opcServer/trustedCertDirs") ){
+		for( let& sdir : Settings::FindStringArray("/access/trustedCertDirs") ){
 			const fs::path dir{ sdir };
 			if( !fs::exists(dir) || !fs::is_directory(dir) ){
 				CRITICAL( "Trusted certificate directory does not exist: '{}'.", dir.string() );
@@ -71,18 +68,18 @@ namespace Jde::Opc::Server{
 		UA_ByteString issuerList; uint issuerListSize = 0;
 		UA_ByteString revocationList; uint revocationListSize = 0;
     UA_TrustListDataType list;
-    UA_TrustListDataType_init(&list);
+    UA_TrustListDataType_init( &list );
     if( trustedCerts.size() ){
 			list.specifiedLists |= UA_TRUSTLISTMASKS_TRUSTEDCERTIFICATES;
 			UAε( UA_Array_copy(&trustedCerts[0], trustedCerts.size(), (void**)&list.trustedCertificates, &UA_TYPES[UA_TYPES_BYTESTRING]) );
 			list.trustedCertificatesSize = trustedCerts.size();
     }
-    if(issuerListSize > 0) {
+    if( issuerListSize > 0 ) {
 			list.specifiedLists |= UA_TRUSTLISTMASKS_ISSUERCERTIFICATES;
 			UAε( UA_Array_copy(&issuerList, issuerListSize, (void**)&list.issuerCertificates, &UA_TYPES[UA_TYPES_BYTESTRING]) );
 			list.issuerCertificatesSize = issuerListSize;
     }
-    if(revocationListSize > 0) {
+    if( revocationListSize > 0 ) {
 			list.specifiedLists |= UA_TRUSTLISTMASKS_TRUSTEDCRLS;
 			UAε( UA_Array_copy(&revocationList, revocationListSize, (void**)&list.trustedCrls, &UA_TYPES[UA_TYPES_BYTESTRING]) );
 			list.trustedCrlsSize = revocationListSize;
@@ -93,9 +90,9 @@ namespace Jde::Opc::Server{
     size_t paramsSize = 2;
 
     params[0].key = UA_QualifiedName{ 0, "max-trust-listsize"_uv };
-    UA_Variant_setScalar(&params[0].value, &maxTrustListSize, &UA_TYPES[UA_TYPES_UINT32]);
+    UA_Variant_setScalar( &params[0].value, &maxTrustListSize, &UA_TYPES[UA_TYPES_UINT32] );
     params[1].key = UA_QualifiedName{ 0, "max-rejected-listsize"_uv };
-    UA_Variant_setScalar(&params[1].value, &maxRejectedListSize, &UA_TYPES[UA_TYPES_UINT32]);
+    UA_Variant_setScalar( &params[1].value, &maxRejectedListSize, &UA_TYPES[UA_TYPES_UINT32] );
 
     UA_KeyValueMap paramsMap;
     paramsMap.map = params;
@@ -109,13 +106,13 @@ namespace Jde::Opc::Server{
 		  if( sessionPKI.clear )
         sessionPKI.clear( &sessionPKI );
     	UA_NodeId defaultUserTokenGroup = UA_NODEID_NUMERIC( 0, UA_NS0ID_SERVERCONFIGURATION_CERTIFICATEGROUPS_DEFAULTUSERTOKENGROUP );
-    	UAε( UA_CertificateGroup_Memorystore( &sessionPKI, &defaultUserTokenGroup, &list, logging, &paramsMap) );
+    	UAε( UA_CertificateGroup_Memorystore(&sessionPKI, &defaultUserTokenGroup, &list, logging, &paramsMap) );
 		}
 		catch( std::exception& ){
-			UA_TrustListDataType_clear(&list);
+			UA_TrustListDataType_clear( &list );
 			throw;//rethrow original: `throw move(e)` slices to std::exception, losing the derived type and Jde::Exception state.
 		}
-    UA_TrustListDataType_clear(&list);
+    UA_TrustListDataType_clear( &list );
 		AddSecurityPolicies( move(certificate), move(privateKey) );
 
 		UAAccess::Init( *this );
@@ -130,7 +127,7 @@ namespace Jde::Opc::Server{
     // Load the private key and convert to the DER format. Use an empty password on the first try -- maybe the key does not require a password.
     UA_ByteString decryptedPrivateKey = UA_BYTESTRING_NULL;
     UA_ByteString keyPassword = UA_BYTESTRING_NULL;
-    if (privateKey && privateKey->length > 0)
+    if ( privateKey && privateKey->length > 0 )
         UAε( UA_CertificateUtils_decryptPrivateKey(localPrivateKey, keyPassword, &decryptedPrivateKey) );
     /* Basic256Sha256 */
     UAε( UA_ServerConfig_addSecurityPolicyBasic256Sha256(this, &localCertificate,&decryptedPrivateKey) );

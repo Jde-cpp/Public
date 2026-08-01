@@ -2,9 +2,16 @@ local args = import 'args.libsonnet';
 local logsDir = args.logsDir;
 function( sync=false )
 {
+	local instance = self,
 	gateway:{
 		pingInterval: "PT30S",
-		ttl: "PT2M"
+		ttl: "PT2M",
+		issuedCerts: {
+			certificate:{
+				subjectAltName: "URI:urn:open62541.server.application",
+				commonName: args.instanceName,
+			}
+		}
 	},
 	logging:{
 		spd:{
@@ -92,11 +99,11 @@ function( sync=false )
 			allowHeaders: "Content-Type, Authorization"
 		},
 		ssl: {
-			cert:{
-				file:: "{AppDataFolder}/ssl/certs/cert.pem",
-				altName: "URI:urn:open62541.server.application",
+			certificate:{
+				subjectAltName: "URI:urn:open62541.server.application",
 				company:: "Jde-Cpp",
-				domain: "localhost",
+				fileName: args.instanceName + ".web",
+				commonName: args.instanceName + ".web.$(HostName)",
 				country:: "US",
 			},
 			privateKey:: "{AppDataFolder}/ssl/private/private.pem",

@@ -1,19 +1,13 @@
 local common = import '../../../../../libs/db/config/args-common.libsonnet';
 common + {
 	local args = self,
-	programDataCompany: "$(ProgramData)/jde-cpp",
-	programDataApp: args.programDataCompany+"/OpcServer",
 	sqlType: "sqlServer",
-	instanceName: args.buildTarget,
-	opcServer: {
+	instanceName: "OpcServer."+args.sqlType+"."+args.buildTarget,
+	access: {
 		trustedCertDirs: [
-			args.programDataCompany+"/OpcGateway/ssl/certs",
-			args.programDataCompany+"/OpcTests/ssl/certs"
+			args.certsDir( "OpcGateway" ),
+			args.certsDir( "OpcTests" ) //sqlServer is the windows default args dir, so the windows ProductName (OpcTests.rc) - linux uses args/mysql.
 		],
-		ssl:{
-			certificate: args.programDataApp+"/ssl/certs/opcServer.pem",
-			privateKey: {path: args.programDataApp+"/ssl/private/opcServer.pem", passcode: ""}
-		}
 	},
 	dbServers: {
 		dataPaths: [],

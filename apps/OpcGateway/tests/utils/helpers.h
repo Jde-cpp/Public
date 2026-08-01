@@ -9,7 +9,7 @@
 
 namespace Jde::Opc::Gateway{ enum class ETokenType : uint8; }
 namespace Jde::Opc::Gateway::Tests{
-	const static string OpcServerTarget{ "OpcServerTests" };
+	const static string OpcServerTarget{ "opcTestsConnectionTarget" };
 	struct CreateServerCnnctnAwait : TAwaitEx<ServerCnnctnPK,QL::QLAwait<jobject>::Task>{
 		using base = TAwaitEx<ServerCnnctnPK,QL::QLAwait<jobject>::Task>;
 		CreateServerCnnctnAwait( SRCE )ι:base{ sl }{}

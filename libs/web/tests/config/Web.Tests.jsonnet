@@ -50,14 +50,16 @@ local logsDir = std.extVar("logsDir");
 			allowHeaders: "Content-Type, Authorization"
 		},
 		ssl: {
-			certificate:: "{ApplicationDataFolder}/ssl/certs/server.pem",
-			certificateAltName: "DNS:localhost,IP:127.0.0.1",
-			certficateCompany:: "Jde-Cpp",
-			certficateCountry:: "US",
-			certficateDomain:: "localhost",
+			certificate:{
+				path:: "{ApplicationDataFolder}/ssl/certs/server.pem",
+				subjectAltName: "DNS:localhost,IP:127.0.0.1",
+				company:: "Jde-Cpp",
+				country:: "US",
+				commonName: "web-tests"//subject CN - TLS clients match the SAN, not this.
+			},
 			privateKey:: "{ApplicationDataFolder}/ssl/private/server.pem",
 			publicKey:: "{ApplicationDataFolder}/ssl/public/server.pem",
-			dh:: "{ApplicationDataFolder}/certs/dh.pem",
+			dh:: "{ApplicationDataFolder}/ssl/dh.pem",
 			passcode:: "$(JDE_PASSCODE)"
 		}
 	},

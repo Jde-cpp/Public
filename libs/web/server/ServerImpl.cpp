@@ -1,5 +1,5 @@
 ﻿#include "ServerImpl.h"
-#include "jde/fwk/io/file.h"
+//#include "jde/fwk/io/file.h"
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/fwk/process/execution.h>
 #include <jde/access/AccessException.h>
@@ -156,17 +156,14 @@ namespace Server{
 		return true;
 	}
 
-	Ω loadServerCertificate( ssl::context& ctx, const Crypto::CryptoSettings& settings )ε->void{
-		if( !fs::exists(settings.PrivateKeyPath) ){
-			settings.CreateDirectories();
-			Crypto::CreateKeyCertificate( settings );
-		}
+	Ω loadServerCertificate( ssl::context& ctx, const Crypto::CryptoSettings& settings, SRCE )ε->void{
+		Crypto::EnsureKeyCertificate( settings, sl );
 		ctx.set_options( ssl::context::default_workarounds | ssl::context::no_sslv2 | ssl::context::single_dh_use );
-		let cert = IO::Load( settings.CertPath );
+		let cert = IO::Load( settings.Certificate.Path );
 		ctx.use_certificate_chain( net::buffer(cert.data(), cert.size()) );
 
-		ctx.set_password_callback( [=](uint, ssl::context_base::password_purpose){return settings.Passcode;} );
-		let key = IO::Load( settings.PrivateKeyPath );
+		ctx.set_password_callback( [=](uint, ssl::context_base::password_purpose){return settings.PrivateKey.Passcode;} );
+		let key = IO::Load( settings.PrivateKey.Path );
 		ctx.use_private_key( net::buffer(key.data(), key.size()), ssl::context::file_format::pem );
 		static const string dhStatic =
 			"-----BEGIN DH PARAMETERS-----\n"

@@ -98,14 +98,21 @@ function reconfig() (
 	fi
 )
 function build() (
+	echo "build $@";
 	repoBuildDir=$1;
 	repoSourceDir=$(realpath $2);
 	target=$3;
+	file=$3;
+	case "$target" in ""|.*) file=all;; esac; #an empty or dot-leading target would make the log a hidden ".output".
+	#No target = cmake's default target (all).  --target must be omitted entirely, not passed empty: cmake reads the
+	#next argument as the target name, and with nothing after it errors out rather than building anything.
+	targetArg=();
+	[ -n "$target" ] && targetArg=( --target "$target" );
 	cd $repoBuildDir || return 1;
 	set -o pipefail;
-	echo `pwd`/$target.output | tee $target.output;
-	echo "cmake --build . -j --target $target" | tee -a $target.output;
-	cmake --build . -j --target $target 2>&1 | tee -a $target.output;
+	echo `pwd`/$file.output | tee $file.output;
+	echo "cmake --build . -j ${targetArg[*]}" | tee -a $file.output;
+	cmake --build . -j "${targetArg[@]}" 2>&1 | tee -a $file.output;
 )
 function clean() (
 	repoBuildDir=$1; #scope to this checkout's build dir - a find from $1 would sweep every checkout's PCHs.
@@ -115,8 +122,12 @@ function clean() (
 )
 function buildTests() (
 	baseTarget=$3;
-	if [ $baseTarget == "Jde.Opc.Gateway" ]; then
+	if [[ $baseTarget == "Jde.Opc.Gateway" ]]; then
 		baseTarget="Jde.Opc";
 	fi;
-	build $1 $2 $baseTarget.Tests;
+	if [[ -z $baseTarget ]]; then
+		build $1 $2;
+	else
+		build $1 $2 $baseTarget.Tests;
+	fi;
 )

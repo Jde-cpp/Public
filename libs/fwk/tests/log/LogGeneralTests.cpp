@@ -14,6 +14,20 @@ namespace Jde::Tests{
 		α TearDown()->void override {}
 	};
 
+	//config keys are split on '_' and each part looked up in ELogTagStrings, so an unrecognised part is simply dropped
+	//and the key silently collapses onto a shorter one's mask - where parseTags' insert_or_assign then overwrites it.
+	TEST_F( LogGeneralTests, CompositeTagNamesResolveDistinctly ){
+		let tags = []( sv name ){ return ToLogTags( name ); };//sv, not a literal - ToLogTags(sv)/ToLogTags(jvalue) are ambiguous for const char*.
+		EXPECT_EQ( tags("socket_client_read_subscription"), ELogTags::SocketClientReadSub );
+		EXPECT_EQ( tags("socket_client_write_subscription"), ELogTags::SocketClientWriteSub );
+		//the collision the "_sub" spelling caused: it must not resolve to the plain read/write tag.
+		EXPECT_NE( tags("socket_client_read_subscription"), tags("socket_client_read") );
+		EXPECT_NE( tags("socket_client_write_subscription"), tags("socket_client_write") );
+		EXPECT_EQ( tags("socket_client_read"), ELogTags::SocketClientRead );
+		//an unknown part contributes nothing, which is exactly how "_sub" aliased onto socket_client_read.
+		EXPECT_EQ( tags("socket_client_read_sub"), ELogTags::SocketClientRead );
+	}
+
 	TEST_F( LogGeneralTests, CachedTags ){
 		auto& logger = Logging::GetLogger<Logging::MemoryLog>();
 

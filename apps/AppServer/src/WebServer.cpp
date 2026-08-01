@@ -104,8 +104,8 @@ namespace Jde::App::Server{
 	{}
 
 	α RequestHandler::Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt{
-		auto publicKey = Crypto::ReadPublicKey( Settings().Crypto().PublicKeyPath );
-		return Web::Jwt{ move(publicKey), userPK, move(name), move(target), sessionId, move(endpoint), expires, move(description), Settings().Crypto().PrivateKeyPath };
+		auto publicKey = Crypto::ReadPublicKey( Settings().Crypto().PublicKey.Path );
+		return Web::Jwt{ move(publicKey), userPK, move(name), move(target), sessionId, move(endpoint), expires, move(description), Settings().Crypto().PrivateKey };
 	}
 
 	α RequestHandler::WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession>{

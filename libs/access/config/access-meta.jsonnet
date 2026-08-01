@@ -87,9 +87,14 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				target: tables.identities.columns.target,
 				description: tables.identities.columns.description,
 				providerId: tables.identities.columns.providerId,
+				email: tables.identities.columns.email,
 				loginName: tables.users.columns.loginName,
 				modulus: tables.users.columns.modulus,
-				exponent: tables.users.columns.exponent
+				exponent: tables.users.columns.exponent,
+				issuer: tables.users.columns.issuer,
+				subjectAlt: tables.users.columns.subjectAlt,
+				distinguished: tables.users.columns.distinguished,
+				expiration: tables.users.columns.expiration
 			},
 			naturalKeys: tables.identities.naturalKeys,
 		}
@@ -101,6 +106,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				identityId: pkSequenced,
 				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true, i: 15, sk:null },
 				isGroup: types.bit+{ default: false, i: 101 },
+				email: types.varchar+{ length: 256, nullable: true, comment: "cert SAN rfc822 at key enrollment, login email for Google", i: 110 },//not in targetColumns - roles shares that block.
 			}+targetColumns,
 			naturalKeys:[ ["name","provider_id"], ["target"] ],
 			ops: ["None"]
@@ -111,7 +117,11 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				loginName: valuesColumns.name+{ nullable: true },
 				password: types.varbinary+{ length: 2048, encrypted:true, nullable: true, i:101 },
 				modulus: types.varchar+{ length: 2048, nullable:true, comment: "Used for RSA", i:102 },
-				exponent: types.uint+{ nullable:true, comment: "Used for RSA", i:103 }
+				exponent: types.uint+{ nullable:true, comment: "Used for RSA", i:103 },
+				issuer: types.varchar+{ length: 1024, nullable: true, insertable: false, updateable: false, comment: "cert issuer DN (RFC2253) - key enrollment", i:104 },
+				subjectAlt: types.varchar+{ length: 1024, nullable: true, insertable: false, updateable: false, comment: "cert subjectAltName, openssl config syntax (URI:…,DNS:…) - key enrollment", i:105 },
+				distinguished: types.varchar+{ length: 1024, nullable: true, insertable: false, updateable: false, comment: "cert subject DN (RFC2253) - key enrollment", i:106 },
+				expiration: types.dateTime+{ nullable: true, insertable: false, updateable: false, comment: "cert notAfter - key enrollment", i:107 }
 			},
 			ops: ["Create", "Read", "Update", "Delete", "Purge", "Administer", "Execute"],
 			extends: "identities",

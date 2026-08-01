@@ -117,12 +117,13 @@ function findRepoRoot( start:string ):string {
 // compose `${command:jde.repoBuildDir}/<debug|release>` - and read the source dir back from CMakeCache.txt.
 // This stays JS (not a shell-out) so the command resolves synchronously and cross-platform.
 // Throws if the env is missing rather than yielding a repo-relative path (stray dirs / opaque "program not found").
-function repoBuildDir( repoRoot:string ):string {
-	const buildDir = process.env['JDE_BUILD_DIR'];
+//`vars` are the build-root env vars in precedence order - the first one set wins.
+function repoBuildDirFrom( repoRoot:string, command:string, ...vars:string[] ):string {
+	const buildDir = vars.map( v=>process.env[v] ).find( Boolean );
 	const compiler = process.env['JDE_COMPILER'];
-	const missing = [!buildDir && 'JDE_BUILD_DIR', !compiler && 'JDE_COMPILER'].filter( Boolean );
+	const missing = [!buildDir && vars.join(' or '), !compiler && 'JDE_COMPILER'].filter( Boolean );
 	if( missing.length ){
-		const msg = `jde.repoBuildDir: ${missing.join(' and ')} not set - launch/build paths cannot be resolved. Start VS Code from a shell that sources ~/.profile.`;
+		const msg = `${command}: ${missing.join(' and ')} not set - launch/build paths cannot be resolved. Start VS Code from a shell that sources ~/.profile.`;
 		vscode.window.showErrorMessage( msg );
 		throw new Error( msg );
 	}
@@ -133,11 +134,24 @@ function repoBuildDir( repoRoot:string ):string {
 	return process.platform == 'win32' ? joined.replace( /\\/g, '/' ) : joined;
 }
 
+function repoBuildDir( repoRoot:string ):string {
+	return repoBuildDirFrom( repoRoot, 'jde.repoBuildDir', 'JDE_BUILD_DIR' );
+}
+
+// The same layout rooted at $JDE_RBUILD_DIR when it is set, so a checkout can put its release outputs on a
+// different volume than the debug tree. Falls back to $JDE_BUILD_DIR, so a machine that never sets
+// JDE_RBUILD_DIR resolves identically to repoBuildDir.
+function repoBuildRelDir( repoRoot:string ):string {
+	return repoBuildDirFrom( repoRoot, 'jde.repoBuildRelDir', 'JDE_RBUILD_DIR', 'JDE_BUILD_DIR' );
+}
+
 export function activate(context: vscode.ExtensionContext) {
-	context.subscriptions.push( vscode.commands.registerCommand('jde.repoBuildDir', ():string => {
+	const workspaceRepoRoot = ():string => {
 		const folder = vscode.workspace.workspaceFolders?.[0];
-		return repoBuildDir( folder ? findRepoRoot(folder.uri.fsPath) : '' );
-	}) );
+		return folder ? findRepoRoot( folder.uri.fsPath ) : '';
+	};
+	context.subscriptions.push( vscode.commands.registerCommand('jde.repoBuildDir', ():string => repoBuildDir(workspaceRepoRoot())) );
+	context.subscriptions.push( vscode.commands.registerCommand('jde.repoBuildRelDir', ():string => repoBuildRelDir(workspaceRepoRoot())) );
 	context.subscriptions.push( vscode.languages.registerDocumentFormattingEditProvider( "cpp", {
 		provideDocumentFormattingEdits( document:vscode.TextDocument ):vscode.TextEdit[] {
 			console.log('~~Providing document formatting edits for C++');

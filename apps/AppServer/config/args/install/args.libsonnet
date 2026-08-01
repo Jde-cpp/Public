@@ -1,10 +1,13 @@
-{
-	logsDir: "$(ProgramData)/jde-cpp/AppServer",
+local paths = import '../../../../../libs/db/config/paths-common.libsonnet';
+paths + {
+	local args = self,
+	local appDir = args.companyDir+"/AppServer", //companyDir is the one spelling of the company root - see paths-common.
+	logsDir: appDir,
 	dbServers: {
-		dataPaths: ["$(ProgramData)/jde-cpp/AppServer/sql"],
-		scriptPaths: ["$(ProgramData)/jde-cpp/AppServer/sql"],
+		dataPaths: [appDir+"/sql"],
+		scriptPaths: [appDir+"/sql"],
 		localhost:{
-			driver: "$(ProgramW6432)/jde-cpp/AppServer/Jde.DB.Odbc.dll",
+			driver: "$(ProgramW6432)/Jde-Cpp/AppServer/Jde.DB.Odbc.dll", //program files, not programData - a different root, so not companyDir.
 			connectionString: "DSN=jde",
 			username: null,
 			password: null,
@@ -14,14 +17,14 @@
 					schemas:{
 						acc:{
 							access:{
-								meta: "$(ProgramData)/jde-cpp/AppServer/access-meta.jsonnet",
-								ql: "$(ProgramData)/jde-cpp/AppServer/access-ql.jsonnet",
+								meta: appDir+"/access-meta.jsonnet",
+								ql: appDir+"/access-ql.jsonnet",
 								prefix: ""
 							}
 						},
 						app:{
 							app:{
-								meta: "$(ProgramData)/jde-cpp/AppServer/app-meta.jsonnet",
+								meta: appDir+"/app-meta.jsonnet",
 								prefix: ""
 							},
 						}

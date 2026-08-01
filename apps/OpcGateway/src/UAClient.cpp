@@ -9,6 +9,8 @@
 #include <open62541/types.h>
 #include "StartupAwait.h"
 #include "async/DataChanges.h"
+#include "jde/fwk/crypto/CryptoSettings.h"
+#include "jde/fwk/settings.h"
 #include "uatypes/Browse.h"
 #include "uatypes/uaTypes.h"
 
@@ -72,10 +74,17 @@ namespace Jde::Opc::Gateway{
 		_handle{ createHandle(_opcServer) },
 		_logger{ _handle },
 		_ptr{ Create() }{
-		//Configuration() must run BEFORE setDefault: it installs the custom security policies (and asserts securityPoliciesSize==0 first). setDefault then only back-fills fields left unset — its own None-policy install is guarded by securityPoliciesSize==0, so it won't clobber ours (open62541 ua_config_default.c). Reversing the order would trip Configuration()'s assert and leak the default policy.
-		let sc = UA_ClientConfig_setDefault( Configuration() ); THROW_IFX( sc, UAClientException(sc, Handle()) );
-		INFO( "[{}]Creating UAClient target: '{}' url: '{}' credential: '{}' )", hex(Handle()), Target(), Url(), Credential.ToString() );
-		LogClientEndpoints();
+		try{
+			//Configuration() must run BEFORE setDefault: it installs the custom security policies (and asserts securityPoliciesSize==0 first). setDefault then only back-fills fields left unset — its own None-policy install is guarded by securityPoliciesSize==0, so it won't clobber ours (open62541 ua_config_default.c). Reversing the order would trip Configuration()'s assert and leak the default policy.
+			let sc = UA_ClientConfig_setDefault( Configuration() ); THROW_IFX( sc, UAClientException(sc, Handle()) );
+			INFO( "[{}]Creating UAClient target: '{}' url: '{}' credential: '{}' )", hex(Handle()), Target(), Url(), Credential.ToString() );
+			LogClientEndpoints();
+		}
+		catch( ... ){
+			UA_Client_delete( _ptr );
+			_ptr = nullptr;
+			throw;
+		}
 	}
 
 	α UAClient::Shutdown( bool /*terminate*/, SL /*sl*/ )ι->VoidAwait::Task{
@@ -97,18 +106,42 @@ namespace Jde::Opc::Gateway{
 		ul _{ _clientsMutex };
 		_clients.clear();
 	}
-	α UAClient::EnsureCertificate( const ServerCnnctnNK& target, sv uri )ε->void{
-		let certificateFile = CertificateFile( target );
-		if( fs::exists(certificateFile) )
+
+	//for soak
+	α UAClient::CryptoSettings( const ServerCnnctnNK& target, sv certificateUri )ι->Crypto::CryptoSettings{
+		auto settings = Settings::FindDefaultObject( "/gateway/issuedCerts" );//a copy - the SAN below is per-target.
+		if( certificateUri.size() ){
+			//the client cert's SAN uri is what a server matches against the applicationUri we advertise (Configuration()
+			//sets both from the target's certificateUri), so it cannot come from a single config-wide constant.
+			auto certificate = Json::FindDefaultObject( settings, "certificate" );
+			certificate["subjectAltName"] = Ƒ( "URI:{}", Str::Replace(string{certificateUri}, " ", "%20") );
+			settings["certificate"] = move( certificate );
+		}
+		return Crypto::CryptoSettings{ settings, target };
+	}
+
+	//the file name keys on the target but the SAN on the certificateUri, so an existing file is not proof it is the
+	//cert this config describes; a changed uri would otherwise be rejected as BadCertificateUriInvalid forever with
+	//nothing naming the file to delete.  SanUri only, never the whole SubjectAltName: the der ctor rebuilds that by
+	//joining sanEntry() renderings, and any lossy round-trip would mismatch on every connect and re-issue in a loop.
+	Ω certificateMatches( const Crypto::CryptoSettings& settings, SL sl )ε->bool{
+		if( !fs::exists(settings.Certificate.Path) )
+			return false;
+		let onDisk = Crypto::Certificate{ Crypto::ReadCertificate(settings.Certificate.Path), sl };//an unreadable cert throws, as it does in EnsureKeyCertificate - keep the two policies together.
+		let matches = onDisk.SanUri()==settings.Certificate.SanUri();
+		if( !matches )
+			INFO( "Re-issuing '{}': certificateUri '{}' -> '{}'.", settings.Certificate.Path.string(), onDisk.SanUri(), settings.Certificate.SanUri() );
+		return matches;
+	}
+
+	α UAClient::EnsureCertificate( const ServerCnnctnNK& target, sv uri, SL sl )ε->void{
+		let& settings = CryptoSettings( target, uri );
+		if( certificateMatches(settings, sl) )
 			return;
-		const fs::path root = RootSslDir();
-		for( sv sub : {"certs", "private", "public"} )//CreateKey/CreateCertificate open the files directly - ENOENT without the parents.
-			fs::create_directories( root/sub );
-		const string passcode = Passcode();
-		let privateKeyFile = PrivateKeyFile( target );
-		if( !fs::exists(privateKeyFile) )
-			Crypto::CreateKey( root/Ƒ("public/{}.pem", target), privateKeyFile, passcode );
-		Crypto::CreateCertificate( certificateFile, privateKeyFile, passcode, Ƒ("URI:{}", uri), "jde-cpp", "US", "localhost" );
+		settings.CreateDirectories();
+		if( !fs::exists(settings.PrivateKey.Path) )
+			Crypto::CreateKey( settings, sl );
+		Crypto::IssueCertificate( settings, sl );
 	}
 	α UAClient::Configuration()ε->UA_ClientConfig*{
 		let uri = Str::Replace( _opcServer.CertificateUri, " ", "%20" );
@@ -129,14 +162,11 @@ namespace Jde::Opc::Gateway{
 			config->applicationUri = UA_STRING_ALLOC( uri.c_str() );
 			UA_String_clear( &config->clientDescription.applicationUri );
 			config->clientDescription.applicationUri = UA_STRING_ALLOC( uri.c_str() );
-			let& settings = AppClient()->SslSettings; //requires authentication[AppClient] & transport[OpcServer] security be equal.
-			certAuth = certAuth && settings.has_value();
-			let certificateFile = certAuth ? settings->CertPath : CertificateFile();
-			let privateKeyFile = certAuth ? settings->PrivateKeyPath : PrivateKeyFile();
-			let passcode = certAuth ? settings->Passcode : Passcode();
-			INFO( "[{}]Using Basic256Sha256 security policy with certificate '{}'", hex(Handle()), certificateFile.string() );
-			auto certificate = ToUAByteString( Crypto::ReadCertificate(certificateFile) );
-			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(privateKeyFile, passcode) );
+			certAuth = certAuth && AppClient()->SslSettings.has_value();
+			let& settings = certAuth ? *AppClient()->SslSettings : CryptoSettings(); //requires authentication[AppClient] & transport[OpcServer] security be equal.
+			INFO( "[{}]Using Basic256Sha256 security policy with certificate '{}'", hex(Handle()), settings.Certificate.Path.string() );
+			auto certificate = ToUAByteString( Crypto::ReadCertificate(settings.Certificate.Path) );
+			auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(settings.PrivateKey) );
 			sc = UA_SecurityPolicy_Basic256Sha256( &securityPolicies.get()[1], *certificate, *privateKey, &_logger ); THROW_IFX( sc, UAClientException(sc, Handle()) );
 			++initialized;
 
@@ -218,7 +248,7 @@ namespace Jde::Opc::Gateway{
 					client->LogClientEndpoints();
 				}
 				else if( auto sslSettings=connectStatus==UA_STATUSCODE_BADCERTIFICATEINVALID ? AppClient()->SslSettings : optional<Crypto::CryptoSettings>{}; sslSettings )
-					ERR( "Certificate: {} rejected."	, sslSettings->CertPath.string() );
+					ERR( "Certificate: {} rejected.", sslSettings->Certificate.ToString() );
 
 				client->ClearRequest( ConnectRequestId );//previous clear didn't have client
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
@@ -248,7 +278,20 @@ namespace Jde::Opc::Gateway{
 	α subscriptionInactivityCallback( UA_Client *client, SubscriptionId subscriptionId, void* /*subContext*/ ){
 		DBG( "[{}.{}]subscriptionInactivityCallback", hex((uint)client), hex(subscriptionId) );
 	}
-	α UAClient::Create()ι->UA_Client*{
+	α UAClient::Create()ε->UA_Client*{
+		//Every throwing step stays ABOVE the first allocation.  Create() is called from UAClient's member-initializer
+		//list, so a throw out of it escapes before the object exists: ~UAClient never runs, and nothing else knows
+		//about the event loop, the connection managers or the UA_Client.  Reading the credential material first means
+		//the only failure that can realistically happen (missing/unreadable cert) leaves nothing to clean up.
+		ByteStringPtr certificate{ nullptr, UA_ByteString_delete };
+		ByteStringPtr privateKey{ nullptr, UA_ByteString_delete };
+		if( Credential.Type()==ETokenType::Certificate ){
+			//never blind-deref: Configuration() guards the same optional, and cert auth without ssl settings is a
+			//configuration error, not a crash.
+			let& ssl = AppClient()->SslSettings; THROW_IF( !ssl, "[{}]Certificate authentication configured but the app client has no ssl settings.", hex(Handle()) );
+			certificate = ToUAByteString( Crypto::ReadCertificate(ssl->Certificate.Path) );
+			privateKey = ToUAByteString( Crypto::ReadPrivateKey(ssl->PrivateKey) );
+		}
 		_config.logging = &_logger;
 		_config.eventLoop = UA_EventLoop_new_POSIX( _config.logging );
 		UA_ConnectionManager *tcpCM = UA_ConnectionManager_new_POSIX_TCP( "tcp connection manager"_uv );
@@ -261,13 +304,8 @@ namespace Jde::Opc::Gateway{
 			UA_ClientConfig_setAuthenticationUsername( &_config, Credential.LoginName().c_str(), Credential.Password().c_str() );
 			INFO( "[{}]Using username/password authentication: '{}'", hex(Handle()), Credential.LoginName() );
 		}else if( Credential.Type()==ETokenType::Certificate ){
-			let& settings = AppClient()->SslSettings;
-			let& certPath = settings->CertPath;
-			INFO( "[{}]Using certificate authentication: '{}'", hex(Handle()), certPath.string() );
-			UA_ClientConfig_setAuthenticationCert( &_config,
-				*ToUAByteString( Crypto::ReadCertificate(certPath) ),
-				*ToUAByteString( Crypto::ReadPrivateKey(settings->PrivateKeyPath, settings->Passcode) )
-			);
+			INFO( "[{}]Using certificate authentication: '{}'", hex(Handle()), AppClient()->SslSettings->Certificate.ToString() );
+			UA_ClientConfig_setAuthenticationCert( &_config, *certificate, *privateKey );//read above, before anything was allocated.
 		}else if( Credential.Type()==ETokenType::IssuedToken ){
 			ASSERT( Credential.Token().size() );
 			INFO( "[{}]Using issued token authentication: '{}'", hex(Handle()), Credential.Token() );

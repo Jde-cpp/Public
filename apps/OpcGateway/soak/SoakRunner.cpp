@@ -12,6 +12,7 @@
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/client/http/ClientHttpResException.h>
 #include "../tests/utils/GatewayClientSocket.h"
+#include "../src/UAClient.h"
 #include "../src/types/proto/opc.FromServer.h"
 
 #define let const auto
@@ -78,10 +79,10 @@ namespace Jde::Opc::Gateway::Soak{
 		return legs;
 	}
 
-	//Where -createCert wrote the leg's client certificate - the file an external server has to trust. Mirrors main.cpp's layout.
+	//Where -createCert wrote the leg's client certificate - the file an external server has to trust.  Asks UAClient
+	//rather than re-deriving the layout; the SAN doesn't affect the path, so the uri is not needed here.
 	Ω CertPath( sv target )ι->string{
-		let product = Settings::FindString( "/soak/gatewayProduct" ).value_or( "OpcGateway" );
-		return ( Process::ProgramDataFolder()/Process::CompanyRootDir()/product/"ssl"/"certs"/Ƒ("{}.pem", target) ).string();
+		return UAClient::CryptoSettings( ServerCnnctnNK{target} ).Certificate.Path.string();
 	}
 
 	Ω percentile( const vector<uint32>& latencies, double p )ι->uint{

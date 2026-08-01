@@ -4,7 +4,24 @@
 // (-external here - soak.sh --external), so Linux/CI runs are unchanged. For the flagged entry, -externalUrl=/
 // -externalUri=/-externalUser=/-externalPwd= override url/certificateUri/user/password (never commit a real password).
 local logsDir = std.extVar("logsDir");
+local gatewayProduct = "OpcGateway"; //must match the gateway process's ProductName - that is whose cert tree -createCert writes into.
 {
+	//-createCert pre-creates the gateway's per-leg client certs through UAClient's own helpers, so this block has to
+	//resolve to the same files the gateway process would: its product (not the soak exe's "Opc.Soak") and the CN
+	//Opc.Gateway.jsonnet configures, `args.instanceName` = <product>.<buildTarget>.  No passcode, likewise matching -
+	//an encrypted key here would be unreadable to the gateway, which configures none.
+	//getPath reads productName from each key's own sub-object, not from the block around them, so all three carry it.
+	gateway:{
+		issuedCerts:{
+			certificate:{
+				productName: gatewayProduct,
+				commonName: gatewayProduct+"."+std.extVar("buildTarget"),
+				subjectAltName: "URI:urn:open62541.server.application" //per-leg certificateUri overrides this at issue time.
+			},
+			privateKey:{ productName: gatewayProduct },
+			publicKey:{ productName: gatewayProduct }
+		}
+	},
 	server:{
 		host: "localhost",
 		port: 1967,
@@ -16,7 +33,6 @@ local logsDir = std.extVar("logsDir");
 	soak:{
 		gatewayHost: "localhost",
 		gatewayPort: 1968,
-		gatewayProduct: "OpcGateway", //where -createCert writes: $(companyDir)/<gatewayProduct>/ssl - must match the gateway's ProductName.
 		duration: "PT24H",
 		writePeriod: "PT1S",
 		pushTimeout: "PT5S",

@@ -8,9 +8,8 @@
 namespace Jde::Opc::Server{
 	α StartWebServer( jobject&& settings )ε->void;
 	α StopWebServer( bool terminate, SL sl )ι->void;
-	namespace Server{
-		α RemoveSession( uint socketSessionId )ι->void;
-	}
+	α RemoveSession( uint socketSessionId )ι->void;
+	α DefaultSslFileName()ι->string;
 	struct RequestHandler final : IRequestHandler{
 		RequestHandler( jobject settings, sp<App::Client::IAppClient> appServer )ι: IRequestHandler{ move(settings), move(appServer) }{}
 		α HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> override{ return mu<HttpRequestAwait>( move(req), sl ); }

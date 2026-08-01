@@ -28,7 +28,7 @@ function( sync=false )
 				settings: "Debug",
 				socket_client_write: "Debug",
 				socket_client_read: "Debug",
-				sql: "Debug",
+				sql: "Information",
 				threads: "Warning",
 				opc_access: "Trace",
 				uaEvent: "Warning",
@@ -50,13 +50,36 @@ function( sync=false )
 		name: "OpcServer.Test."+args.buildTarget,
 		target:: "OpcServer"
 	},
-	http:{port: 1970},
+	http:{
+		port: 1970,
+		ssl:{
+			certificate:{
+				commonName: args.instanceName + ".web"
+			}
+		}
+	},
 	opcServer:{
 		target: "TestServer",
 		resource: args.buildTarget,
 		description: "Test OPC",
 		mutationsDir:: args.repoSourceDir + "/apps/OpcServer/config/mutations/pumps",
 		db: false,
+		ssl:{
+			certificate: {
+				path:: "{ApplicationDataFolder}/ssl/certs/OpcServer.pem",
+				subjectAltName: "URI:urn:open62541.server.application",
+				company:: "Jde-Cpp",
+				country: "US",
+			},
+			privateKey: {
+				path:: "{ApplicationDataFolder}/ssl/private/OpcServer.pem",
+				passcode:: "OpcServer"
+			},
+			publicKey:{
+				path:: "{ApplicationDataFolder}/ssl/public/OpcServer.pem"
+			},
+			dh:: "{ApplicationDataFolder}/ssl/dh.pem",
+		},
 		opcNodeSet:{
 			path: "$(UA_NODE_SETS)/Opc.Ua.PredefinedNodes.xml",
 			nodeIds: [23513]
@@ -89,12 +112,12 @@ function( sync=false )
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"
 		],
-		trustedCertDirs: args.opcServer.trustedCertDirs,
-		port: 4840,
-		ssl:{
-			certificate: args.opcServer.ssl.certificate,
-			privateKey: {path: args.opcServer.ssl.privateKey.path, passcode: args.opcServer.ssl.privateKey.passcode}
-		}
+		port: 4840
+	},
+	//the UA server's trust list.  UAConfig reads /access/trustedCertDirs, not /opcServer/trustedCertDirs - anchoring it
+	//under opcServer leaves the server with zero anchors and every secured client rejected BadCertificateUntrusted.
+	access:{
+		trustedCertDirs: args.access.trustedCertDirs
 	},
 	workers:{
 		executor:{ threads:  2 },

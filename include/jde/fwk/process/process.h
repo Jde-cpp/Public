@@ -15,7 +15,7 @@ namespace Process{
 	Φ FindArg( string key )ι->optional<string>;
 	Φ CompanyName()ι->string;
 	Φ CompanyRootDir()ι->fs::path;
-	Φ GetEnv( str variable )ι->optional<string>;
+	Φ GetEnv( str variable, bool emptyIsNullOpt=true )ι->optional<string>;
 	Φ Executable()ι->fs::path;
 	Φ ExePath()ι->fs::path;
 	Φ HostName()ι->string;

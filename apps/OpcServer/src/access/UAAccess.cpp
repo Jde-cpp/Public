@@ -242,7 +242,7 @@ namespace Jde::Opc::Server{
 				}
 				THROW_IFX( !config->sessionPKI.verifyCertificate, UAException{UA_STATUSCODE_BADIDENTITYTOKENINVALID} );
 				UAε( config->sessionPKI.verifyCertificate(&config->sessionPKI, &userToken->certificateData) );
-				auto publicKey = Crypto::ExtractPublicKey( std::span<byte>{(byte*)userToken->certificateData.data, userToken->certificateData.length} );
+				auto publicKey = Crypto::ExtractPublicKey( std::span<byte>{(byte*)userToken->certificateData.data, userToken->certificateData.length}, SRCE_CUR );
 				let exp = publicKey.ExponentInt();
 				let user = AppClient()->QuerySync( Ƒ("user( modulus: \"{}\", exponent: {} ){{id target name}}", publicKey.ModulusHex(), exp), {} );
 				THROW_IF( user.empty(), "Certificate user not found: modulus: {}, exponent: {}", publicKey.ModulusHex(), exp );

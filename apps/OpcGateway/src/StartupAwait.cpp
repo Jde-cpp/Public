@@ -21,7 +21,6 @@
 namespace Jde::Opc::Gateway{
 	extern Duration _pingInterval;
 	extern Duration _ttl;
-
 	StartupAwait::StartupAwait( jobject webServerSettings, jobject userName, SL sl )ι:
 		VoidAwait{sl},
 		_webServerSettings{move(webServerSettings)},
@@ -45,10 +44,7 @@ namespace Jde::Opc::Gateway{
 				DB::SyncSchema( *schema, QLPtr() );
 
 			Crypto::CryptoSettings sslSettings{ Json::FindDefaultObject(_webServerSettings, "ssl") };
-			if( !fs::exists(sslSettings.PrivateKeyPath) ){
-				sslSettings.CreateDirectories();
-				Crypto::CreateKeyCertificate( sslSettings );
-			}
+			Crypto::EnsureKeyCertificate( sslSettings );
 			StartWebServer( move(_webServerSettings) );
 			auto accessSchema = DB::GetAppSchema( "access", authorize );
 			auto appClient = AppClient();

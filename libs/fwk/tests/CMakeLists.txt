@@ -26,6 +26,7 @@ target_precompile_headers( ${targetName} PRIVATE pc.h )
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES
 		VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet"
+		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${targetName}"
 	)
-	copyLibDlls()
+	copyCommonDlls()
 endif()

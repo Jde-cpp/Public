@@ -17,6 +17,6 @@ begin
 	else
 		set provider_target = _login_name;
 	end if;
-	CALL access_identity_insert(_login_name, _provider_id, provider_target, null, null, false, _identity_id);
+	CALL access_identity_insert(_login_name, _provider_id, provider_target, null, null, false, if(provider_name = 'Google', _login_name, null), _identity_id);
 	insert into access_users(identity_id, login_name) values(_identity_id, _login_name);
 end

@@ -17,11 +17,11 @@ namespace Jde::Crypto{
 	Ω parseDer( std::span<const byte> der, SL sl )ε->X509Ptr{
 		const unsigned char* p = (const unsigned char*)der.data();
 		X509Ptr cert{ ::d2i_X509(nullptr, &p, (long)der.size()), ::X509_free };
-		THROW_IFX( !cert, OpenSslException(sl, 0, "d2i_X509 - {}", OpenSslException::CurrentError()) );
+		THROW_IFX( !cert, OpenSslException("d2i_X509", sl) );
 		return cert;
 	}
 
-	TrustStore::TrustStore( bool loadOsStore )ε:
+	TrustStore::TrustStore( bool loadOsStore, SL sl )ε:
 		_store{ ::X509_STORE_new(), ::X509_STORE_free }{
 		CHECK_NULL( _store );
 		if( !loadOsStore )
@@ -29,7 +29,7 @@ namespace Jde::Crypto{
 #ifdef _WIN32
 		//OpenSSL's winstore loader only serves by-subject searches (providers/implementations/storemgmt/winstore_store.c) - enumerate ROOT directly for an eager snapshot.
 		let winStore = ::CertOpenSystemStoreW( 0, L"ROOT" );
-		THROW_IFX( !winStore, OpenSslException(SRCE_CUR, (uint32)::GetLastError(), "CertOpenSystemStoreW(ROOT) failed") );
+		THROW_IFX( !winStore, OpenSslException("CertOpenSystemStoreW(ROOT) failed", sl) );
 		for( PCCERT_CONTEXT winCert{}; (winCert = ::CertEnumCertificatesInStore(winStore, winCert))!=nullptr; ){
 			const unsigned char* p = winCert->pbCertEncoded;
 			if( X509Ptr cert{ ::d2i_X509(nullptr, &p, (long)winCert->cbCertEncoded), ::X509_free }; cert )
@@ -56,12 +56,27 @@ namespace Jde::Crypto{
 
 	α TrustStore::Verify( std::span<const byte> der, SL sl )Ε->void{
 		let cert = parseDer( der, sl );
+		//OpenSSL resolves anchors by subject name and X509_likely_issued never checks signatures, so same-DN anchors (every CreateCertificate cert is CN=localhost) can bind the wrong "issuer" and fail depth-zero-self-signed. An exact anchor match is a depth-0 chain - check it first, keeping the time checks chain verification would have run.
+		auto anchors = ::X509_STORE_get1_all_certs( _store.get() );
+		bool anchored{};
+		for( int i = 0; !anchored && i<sk_X509_num(anchors); ++i )
+			anchored = ::X509_cmp( sk_X509_value(anchors, i), cert.get() )==0;
+		::sk_X509_pop_free( anchors, ::X509_free );
+		if( anchored ){
+			let err = ::X509_cmp_current_time(::X509_get0_notBefore(cert.get()))>0 ? X509_V_ERR_CERT_NOT_YET_VALID
+				: ::X509_cmp_current_time(::X509_get0_notAfter(cert.get()))<0 ? X509_V_ERR_CERT_HAS_EXPIRED
+				: X509_V_OK;
+			if( err==X509_V_OK )
+				return;
+			throw OpenSslException{ ::X509_verify_cert_error_string(err), "Certificate not trusted. depth: 0", {ELogLevel::Warning, ELogTags::Crypto, (uint32)err}, sl };
+		}
 		up<X509_STORE_CTX, decltype(&::X509_STORE_CTX_free)> ctx{ ::X509_STORE_CTX_new(), ::X509_STORE_CTX_free };
 		CHECK_NULL( ctx );
 		CALLSL( ::X509_STORE_CTX_init(ctx.get(), _store.get(), cert.get(), nullptr) );
 		if( ::X509_verify_cert(ctx.get())!=1 ){//verify error lives in the ctx, not the ERR queue.
 			let err = ::X509_STORE_CTX_get_error( ctx.get() );
-			throw OpenSslException{ sl, (uint32)err, "Certificate not trusted: {} (code={}, depth={})", ::X509_verify_cert_error_string(err), err, ::X509_STORE_CTX_get_error_depth(ctx.get()) };
+			Certificate{ der, sl }.Log( Ƒ("Certificate verification failed with error: {}", ::X509_verify_cert_error_string(err)) );
+			throw OpenSslException{ ::X509_verify_cert_error_string(err), Ƒ("Certificate not trusted. depth: {}", ::X509_STORE_CTX_get_error_depth(ctx.get())), {ELogLevel::Warning, ELogTags::Crypto, (uint32)err}, sl };
 		}
 	}
 

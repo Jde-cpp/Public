@@ -34,12 +34,8 @@ namespace Jde::Opc::Server{
 				DB::NonProd::Recreate( *uaSchema, QLPtr() );
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) || uaSchema->DS()->RequiresSync() )
 				DB::SyncSchema( *uaSchema, QLPtr() );
-
 			Crypto::CryptoSettings settings{ Json::FindDefaultObject(_webServerSettings,"ssl") };
-			if( !fs::exists(settings.PrivateKeyPath) ){
-				settings.CreateDirectories();
-				Crypto::CreateKeyCertificate( settings );
-			}
+			Crypto::EnsureKeyCertificate( settings );
 			auto appClient = AppClient();
 			appClient->SslSettings = settings;
 			let serverName = Settings::FindString( "/opcServer/target" ).value_or( "default" );

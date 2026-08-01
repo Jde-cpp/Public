@@ -6,11 +6,13 @@
 // dbServers: {…}, …what varies… }`.  Read the inherited fields back through the merged self - `args.repoBuildDir`,
 // `args.repoSourceDir`, `args.schema()` - so an override (none today) would flow through; the fields/method resolve
 // against `self`, not the import binding.  `schema()` is hidden (`::`), so files that never call it are unaffected.
-{
+local paths = import 'paths-common.libsonnet'; //companyDir/certsDir, shared with sqlite-common so the two can't drift.
+paths + {
 	local args = self,
 	buildTarget: std.extVar("buildTarget"),
 	logsDir: std.extVar("logsDir"),
 	repoBuildDir: "$(REPO_BUILD_DIR)/"+args.buildTarget,
 	repoSourceDir: "$(REPO_SOURCE_DIR)",
 	schema():: if args.buildTarget == "release" then "rls" else args.buildTarget,
+	instanceName: paths.instanceNameFor( args.buildTarget ),
 }

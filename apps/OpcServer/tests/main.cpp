@@ -4,9 +4,10 @@
 #include "gtest/gtest.h"
 #include <jde/fwk/settings.h>
 #include <jde/fwk/co/Timer.h>
-#include <jde/fwk/crypto/OpenSsl.h>
+#include <jde/fwk/io/json.h>
 #include <jde/opc/uatypes/Logger.h>
 #include <jde/tests/SpdlogTestListener.h>
+#include <jde/tests/testMain.h>
 #include "../src/StartupAwait.h"
 #include "../../AppServer/src/AppStartupAwait.h"
 #define let const auto
@@ -22,7 +23,7 @@ namespace Jde{
 		Process::Startup( argc, argv, "Tests.OpcServer", "OpcServer tests", true );
 		Opc::Server::AppClient()->InitLogging( Opc::Server::AppClient() );
 		try{
-			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )
+			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )//the fresh db enrolls the client cert every run: /access/trustedCertDirs anchors its dir, StartupAwait ensures the cert, and TrustVerify rescans - no pre-anchoring here.
 				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };
 			co_await Opc::Server::StartupAwait{ Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") };
 		}
@@ -48,7 +49,7 @@ namespace Jde{
 		}
 		::testing::GTEST_FLAG( filter ) = Settings::FindString( "/testing/tests" ).value_or( "*" );
 		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
-		result = RUN_ALL_TESTS();
+		result = CheckTestsRan( RUN_ALL_TESTS() );
 	}
 	catch( exception& e ){
 		Process::ExitException( move(e) );

@@ -67,7 +67,7 @@ BLOCK "StringFileInfo"
 BEGIN
 BLOCK "040904b0"
 BEGIN
-VALUE "CompanyName", "Jde-cpp"
+VALUE "CompanyName", "Jde-Cpp"
 VALUE "FileDescription", "Opc Gateway Tests"
 VALUE "FileVersion", "1.0.0.1"
 VALUE "InternalName", "Jde.Opc.Gateway.exe"
