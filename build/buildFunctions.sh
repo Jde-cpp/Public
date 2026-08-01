@@ -110,7 +110,7 @@ function build() (
 	[ -n "$target" ] && targetArg=( --target "$target" );
 	cd $repoBuildDir || return 1;
 	set -o pipefail;
-	echo `pwd`"/$file.output | tee $file.output";
+	echo `pwd`/$file.output | tee $file.output;
 	echo "cmake --build . -j ${targetArg[*]}" | tee -a $file.output;
 	cmake --build . -j "${targetArg[@]}" 2>&1 | tee -a $file.output;
 )
@@ -122,8 +122,12 @@ function clean() (
 )
 function buildTests() (
 	baseTarget=$3;
-	if [ $baseTarget == "Jde.Opc.Gateway" ]; then
+	if [[ $baseTarget == "Jde.Opc.Gateway" ]]; then
 		baseTarget="Jde.Opc";
 	fi;
-	build $1 $2 $baseTarget.Tests;
+	if [[ -z $baseTarget ]]; then
+		build $1 $2;
+	else
+		build $1 $2 $baseTarget.Tests;
+	fi;
 )

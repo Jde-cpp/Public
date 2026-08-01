@@ -22,20 +22,33 @@ namespace Jde::Crypto{
 		return cn;
 	}
 
+	//certInstance is the OPC Target (settable via createServerConnection) and fileName the subject CN - both become
+	//part of a file name, so separators must not survive.  Substituted, not rejected: getPath's callers are noexcept.
+	Ω safeComponent( sv x )ι->string{
+		string y{ x };
+		for( auto& c : y ){
+			if( c=='/' || c=='\\' || c==':' || c=='*' || c=='?' || c=='"' || c=='<' || c=='>' || c=='|' || (unsigned char)c<0x20 )
+				c = '_';
+		}
+		return y;
+	}
+
 	Ω getPath( const jobject& settings, str jpath, fs::path subDir, sv fileName, sv certInstance={} )ι->fs::path{
-		auto fqFileName = [certInstance]( string base )ι->fs::path {
-			return certInstance.size() ? fs::path{ Ƒ("{}.{}.pem", base, certInstance) } : fs::path{ base };
+		auto fqFileName = [certInstance]( fs::path base )ι->fs::path{
+			if( certInstance.size() )
+				base += Ƒ( ".{}.pem", safeComponent(certInstance) );
+			return base;
 		};
 
 		auto filePath = Json::FindString( settings, jpath );
 		if( filePath )
-			return fqFileName( *filePath );
+			return fqFileName( *filePath );//an operator-supplied whole path - its separators are meant.
 
 		auto productName = Json::FindString( settings, "productName" ).value_or( string{Process::ProductName()} );
-		auto parent = Process::ProgramDataFolder()/Process::CompanyRootDir()/move(productName)/"ssl";
+		auto parent = Process::ProgramDataFolder()/Process::CompanyRootDir()/safeComponent(productName)/"ssl";
 		if( !subDir.empty() )
 			parent /= subDir;
-		parent /= fileName;
+		parent /= safeComponent( fileName );
 		if( certInstance.empty() )
 			parent += ".pem";
 		return fqFileName( parent );
@@ -47,7 +60,8 @@ namespace Jde::Crypto{
 
 	Certificate::Certificate( const jobject& settings, sv certInstance )ι:
 		CommonName{ Json::FindString(settings, "commonName").value_or(string{defaultCommonName()}) },
-		Path{ getPath(settings, "path", "certs", CommonName, certInstance) },
+		FileStem{ Json::FindString(settings, "fileName").value_or(CommonName) },
+		Path{ getPath(settings, "path", "certs", FileStem, certInstance) },
 		SubjectAltName{ Json::FindString(settings, "subjectAltName").value_or("") },
 		Country{ Json::FindString(settings, "country").value_or("") },
 		Company{ Json::FindString(settings, "company").value_or("Jde-Cpp") }{
@@ -159,8 +173,8 @@ namespace Jde::Crypto{
 
 	CryptoSettings::CryptoSettings( const jobject& settings, sv certInstance )ι:
 		Certificate{ Json::FindDefaultObject(settings, "certificate"), certInstance },
-		PrivateKey{ Json::FindDefaultObject(settings, "privateKey"), Certificate.CommonName },
-		PublicKey{ Json::FindDefaultObject(settings, "publicKey"), Certificate.CommonName },
+		PrivateKey{ Json::FindDefaultObject(settings, "privateKey"), Certificate.FileStem },
+		PublicKey{ Json::FindDefaultObject(settings, "publicKey"), Certificate.FileStem },
 		DhPath{ getPath(settings, "dh", "", "dh") }
 /*		AltName{ Json::FindSVPath(settings, "cert/altName").value_or("DNS:localhost,IP:127.0.0.1") },
 		Company{ Json::FindSVPath(settings, "cert/company").value_or("Jde-Cpp") },

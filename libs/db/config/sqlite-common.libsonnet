@@ -16,6 +16,7 @@ paths + {
 	logsDir: std.extVar("logsDir"),
 	repoBuildDir: "$(REPO_BUILD_DIR)/"+common.buildTarget,
 	repoSourceDir: "$(REPO_SOURCE_DIR)",
+	instanceName: paths.instanceNameFor( common.buildTarget ), //see paths-common: the base value there is build-target-free for args/install, which has no ext vars.
 	windows:: std.extVar("windows")=="true",
 	//windows dlls all land in <buildDir>/bin.  Derived from repoBuildDir, not cwd, so it stays correct wherever the
 	//process runs: ctest uses <buildDir>/Testing and direct runs <buildDir>/runtime (both one level down, which the

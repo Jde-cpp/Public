@@ -14,5 +14,5 @@ paths + {
 	repoBuildDir: "$(REPO_BUILD_DIR)/"+args.buildTarget,
 	repoSourceDir: "$(REPO_SOURCE_DIR)",
 	schema():: if args.buildTarget == "release" then "rls" else args.buildTarget,
-	instanceName: "$(PRODUCT_NAME)."+args.buildTarget,
+	instanceName: paths.instanceNameFor( args.buildTarget ),
 }

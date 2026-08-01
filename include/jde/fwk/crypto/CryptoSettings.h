@@ -36,6 +36,9 @@ namespace Jde::Crypto{
 		Φ SanUri()Ι->string;//the SAN's URI entry with the "URI:" prefix stripped, empty if it has none.
 		//users.name = UPN → email → CN
 		string CommonName; //subject CN, empty if absent. users.target
+		//file stem for the cert and both keys - settings "fileName", defaulting to CommonName.  Separate because the CN
+		//is the enrollment identity and may carry $(HostName), which must not put the key pair on a moving path.
+		string FileStem;
 		fs::path Path;
 		string Issuer;     //issuer RFC2253 one-line DN, der ctor only.
 		string DistinguishedName; //subject RFC2253 one-line DN, der ctor only.  identities.subject

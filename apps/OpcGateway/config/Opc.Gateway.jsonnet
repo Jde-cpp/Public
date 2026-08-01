@@ -102,6 +102,7 @@ function( sync=false )
 			certificate:{
 				subjectAltName: "URI:urn:open62541.server.application",
 				company:: "Jde-Cpp",
+				fileName: args.instanceName + ".web",
 				commonName: args.instanceName + ".web.$(HostName)",
 				country:: "US",
 			},

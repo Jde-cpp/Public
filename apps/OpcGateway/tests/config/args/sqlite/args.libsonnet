@@ -1,6 +1,5 @@
 local common = import '../../../../../../libs/db/config/sqlite-common.libsonnet';
 common + {
-	instanceName: "$(PRODUCT_NAME)."+common.buildTarget,
 	opc:{
 		urn: "urn:open62541.server.application",
 		url: "opc.tcp://127.0.0.1:4840"

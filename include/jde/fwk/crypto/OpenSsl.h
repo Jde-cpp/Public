@@ -22,7 +22,7 @@ namespace Jde::Crypto{
 	//Φ IssueCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain, SL sl )ε->void;
 	Φ IssueCertificate( const CryptoSettings& settings, SRCE )ε->void;
 	Φ CreateKeyCertificate( const CryptoSettings& settings, SRCE )ε->void;
-	Φ EnsureKeyCertificate( const CryptoSettings& settings, SRCE )ε->void;//creates key+cert if the key is missing; re-issues the cert on the existing key if the cert is missing/unreadable.
+	Φ EnsureKeyCertificate( const CryptoSettings& settings, SRCE )ε->void;
 	Φ ExtractPublicKey( std::span<byte> certificate, SL sl )ε->PublicKey;
 	Φ Fingerprint( const PublicKey& key, SRCE )ε->MD5;
 	Φ ReadPublicKey( const fs::path& publicKey, SRCE )ε->PublicKey;

@@ -2,7 +2,6 @@ local common = import '../../../../../../libs/db/config/args-common.libsonnet';
 common + {
 	local args = self,
 	sqlType: "mysql",
-	instanceName: "$(PRODUCT_NAME)."+common.buildTarget,
 	opc:{
 		urn: "urn:open62541.server.application",
 		url: "opc.tcp://127.0.0.1:4840"

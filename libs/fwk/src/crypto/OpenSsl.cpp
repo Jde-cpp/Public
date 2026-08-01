@@ -64,19 +64,14 @@ namespace Jde{
 		CreateKey( settings, sl );
 		IssueCertificate( settings, sl );
 	}
-	
+
 	α Crypto::EnsureKeyCertificate( const CryptoSettings& settings, SL sl )ε->void{
 		if( !fs::exists(settings.PrivateKey.Path) )
-			CreateKey( settings, sl );
-		if( !fs::exists(settings.Certificate.Path) )
+			CreateKeyCertificate( settings, sl );
+		else if( !fs::exists(settings.Certificate.Path) )
 			IssueCertificate( settings, sl );
 
 		Certificate{ ReadCertificate(settings.Certificate.Path), sl }.Log( Ƒ("Read Certificate at {}", settings.Certificate.Path.string()), sl );
-		// catch( const std::exception& e ){//missing or unreadable cert (interrupted write, partial restore) - re-issue on the existing key rather than fail every start; the modulus is unchanged, so enrolled users are unaffected.
-		// 	WARN( "Re-issuing certificate '{}': {}", settings.Certificate.Path.string(), e.what() );
-		// 	settings.CreateDirectories();
-		// 	IssueCertificate( settings, sl );
-		// }
 	}
 
 	//https://stackoverflow.com/questions/5927164/how-to-generate-rsa-private-key-using-openssl
@@ -89,8 +84,7 @@ namespace Jde{
 		EVP_PKEY* key{};
 		EVP_PKEY_generate( pctx.get(), &key ); CHECK_NULL( key );
 		KeyPtr pKey( key, ::EVP_PKEY_free );
-		if( !fs::exists(settings.PublicKey.Path.parent_path()) )
-			settings.CreateDirectories();
+		settings.CreateDirectories();
 
 		BioPtr publicBio{ BIO_new_file(settings.PublicKey.Path.string().c_str(), "w"), ::BIO_free }; CHECK_NULL( publicBio );
 		INFO( "Created public key at {}", settings.PublicKey.Path.string() );
