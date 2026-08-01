@@ -1,5 +1,6 @@
 #include <jde/fwk/process/process.h>
 #include <iostream>
+#include <typeinfo>
 #include <sys/types.h>
 
 #include <jde/fwk/settings.h>
@@ -100,15 +101,23 @@ namespace Jde{
 
 	α Process::ExitException( exception&& e )ι->int{
 		int y{ EXIT_FAILURE };
-		auto cerrOutput = [&](){
-			sv prefix = y==0 ? "Exiting on exception:  " : "Exiting on error:  ";
-			std::cerr << prefix << e.what() << std::endl;
-		};
+		string message;
 		if( auto p = dynamic_cast<Exception*>(&e); p ){
 			y = p->Level()==ELogLevel::Trace ? EXIT_SUCCESS :
 				p->Code() ? ( int )p->Code() : EXIT_FAILURE;
+			message = p->What();//What(), not what() - it forces the lazy format/args expansion.
+			if( message.empty() ){//no format, no args, no inner - all that is left is where it came from.
+				let& sl = p->Source();
+				message = Ƒ( "[{}] no message, thrown at {}({}) '{}', code={:x}", typeid(*p).name(), sl.file_name(), sl.line(), sl.function_name(), p->Code() );
+			}
 		}
-		cerrOutput();
+		else if( let what = e.what(); what && *what )
+			message = what;
+		if( message.empty() )//e.g. a default-constructed derived std::exception whose what() is ""
+			message = Ƒ( "[{}] no message", typeid(e).name() );
+
+		sv prefix = y==0 ? "Exiting on exception:  " : "Exiting on error:  ";
+		std::cerr << prefix << message << std::endl;
 		return y;
 	}
 

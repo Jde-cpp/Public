@@ -19,18 +19,18 @@ function( sync=false )
 		},
 		ssl:{
 			certificate:{
-				path:: "{ApplicationDataFolder}/ssl/certs/AppServer.pem",
+				path:: "{ApplicationDataFolder}/ssl/certs/AppServer.http.pem",
 				subjectAltName: "DNS:localhost,IP:127.0.0.1",
 				company:: "Jde-Cpp",
 				country: "US",
 				commonName: "AppServer"
 			},
 			privateKey:{
-				path:: "{ApplicationDataFolder}/ssl/private/AppServer.pem",
+				path:: "{ApplicationDataFolder}/ssl/private/AppServer.http.pem",
 				passcode:: "$(JDE_PASSCODE)"
 			},
 			publicKey:{
-				path:: "{ApplicationDataFolder}/ssl/public/AppServer.pem"
+				path:: "{ApplicationDataFolder}/ssl/public/AppServer.http.pem"
 			},
 			dh:{
 				path:: "{ApplicationDataFolder}/ssl/dh.pem"

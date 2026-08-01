@@ -18,7 +18,7 @@ namespace Jde{
 	public:
 		ExceptionArgs( const ExceptionArgs& args )ι:Tags{args.Tags}, _level{args._level}, _code{args._code}{}
 		ExceptionArgs( ELogLevel level=DefaultExceptionLevel, ELogTags tags=ELogTags::Exception, uint32 code=UninitializedCode )ι: Tags{tags}, _level{level}, _code{code}{}
-		ExceptionArgs( ELogTags tags )ι:ExceptionArgs{DefaultExceptionLevel, tags}{}
+		ExceptionArgs( ELogTags tags, uint32 code=0 )ι:ExceptionArgs{DefaultExceptionLevel, tags, code}{}
 		ExceptionArgs( uint32 code )ι:ExceptionArgs{DefaultExceptionLevel, ELogTags::Exception, code}{}
 
 		α HasCode()Ι->bool{ return _code!=UninitializedCode; }
