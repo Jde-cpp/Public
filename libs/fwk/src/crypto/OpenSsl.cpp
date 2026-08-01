@@ -131,7 +131,7 @@ namespace Jde{
 		BioPtr file{ BIO_new_file(path.string().c_str(), "w"), ::BIO_free }; CHECK_NULL( file );
 		CALL( PEM_write_bio_X509(file.get(), pCert) );
 		file = nullptr; //write
-		Certificate{ ReadCertificate(path), sl }.Log( Ƒ("Created Certificate at {}", path.string()) );
+		Certificate{ ReadCertificate(path), sl }.Log( Ƒ("Issued Certificate at {}", path.string()) );
 	}
 
 	Ω toPublicKey( KeyPtr&& key, SL sl )ε->Crypto::PublicKey{

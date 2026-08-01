@@ -23,6 +23,7 @@ namespace Jde::Web::Client{
 		α await_resume()ε->ClientHttpRes override;
 	protected:
 		α Execute()ι->TAwait<ClientHttpRes>::Task;
+		α Url()ι->string{ return Ƒ("{}:{}{}", _host, _port, _target); }
 		string _host;
 		string _target;
 		string _body;

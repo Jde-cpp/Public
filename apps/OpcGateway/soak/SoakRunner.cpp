@@ -178,9 +178,8 @@ namespace Jde::Opc::Gateway::Soak{
 		string authorization;
 		try{
 			//ClientHttpAwait::await_resume throws ClientHttpResException on any error status, so a THROW_IF on res.IsError()
-			//here would be dead code - and that exception carries only a status, no message, so an unwrapped login failure
-			//surfaces as an empty string with the real reason (bad credential, untrusted cert, unreachable endpoint) visible
-			//only in the gateway log. Both catches below restate it as something the operator can act on.
+			//here would be dead code. That exception now carries the status, reason & response body, but the body is whatever
+			//the gateway chose to say - the catches below add the soak-side context (which leg, which user, what to fix).
 			auto res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{
 				_host, "/login", body, _port, {.ContentType="application/json", .IsSsl=false} } );
 			authorization = res[http::field::authorization];

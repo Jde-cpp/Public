@@ -89,7 +89,7 @@ namespace Jde::Web::Client{
 	}
 	α ClientHttpAwait::await_resume()ε->ClientHttpRes{
 		ClientHttpRes res = base::await_resume();
-		THROW_IFX( res.IsError(), ClientHttpResException(move(res), _sl) );
+		THROW_IFX( res.IsError(), ClientHttpResException(move(res), Url(), _sl) );
 		return res;
 	}
 
