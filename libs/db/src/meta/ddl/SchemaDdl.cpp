@@ -221,8 +221,12 @@ namespace Jde::DB{
 
 			auto& dbIndexes = dbTable->Indexes;
 			for( let& index : Index::GetConfig(*table) ){
-				if( find_if(dbIndexes, [&](let& db){ return db.TableName==config.ObjectPrefix()+tableName && db.Columns==index.Columns;} )!=dbIndexes.end() )
+				if( let db = find_if(dbIndexes, [&](let& db){ return db.TableName==config.ObjectPrefix()+tableName && db.Columns==index.Columns;} ); db!=dbIndexes.end() ){
+					//matching on columns alone treats a non-unique index as satisfying a unique natural key - the case for schemas predating a naturalKeys addition. Not reconciled here: dropping an index on a live table is destructive, and recreating it unique fails outright once duplicates exist. Say so instead of skipping silently - callers treat the configured uniqueness as the integrity contract.
+					if( db->Unique!=index.Unique )
+						WARN( "Index '{}.{}' on ({}) is {}unique in the database but {}unique in the configuration - not reconciled; existing rows may already violate the configured constraint.", table->DBName, db->Name, Str::Join(index.Columns), db->Unique ? "" : "not ", index.Unique ? "" : "not " );
 					continue;
+				}
 				let name = UniqueIndexName( index, dbTable->DBName, syntax, dbIndexes );
 				let fqTableName = syntax.QualifiedName( schemaName, dbTable->DBName );
 				ds.ExecuteSync( {index.Create(name, fqTableName, syntax)} );

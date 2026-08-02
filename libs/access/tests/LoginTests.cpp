@@ -113,10 +113,15 @@ namespace Jde::Access::Tests{
 		EXPECT_ANY_THROW( keyLogin(pair.Key, vector<byte>{pair.Der}) );
 	}
 
-	TEST_F( LoginTests, LocalhostCn_Rejected ){//a generic CN means the operator never chose an identity - it cannot be unique across clients.
-		let pair = Generate( "g", "localhost" );
-		Server::Trust().AddCertificate( pair.Der );
-		EXPECT_ANY_THROW( keyLogin(pair.Key, vector<byte>{pair.Der}) );
+	TEST_F( LoginTests, DuplicateCn_Rejected ){//the CN is the identity target - a second key may not claim an enrolled CN.
+		let first = Generate( "h", "loginTests-duplicate" );
+		Server::Trust().AddCertificate( first.Der );
+		let userPK = keyLogin( first.Key, vector<byte>{first.Der} );
+		let second = Generate( "i", "loginTests-duplicate" );
+		Server::Trust().AddCertificate( second.Der );
+		EXPECT_ANY_THROW( keyLogin(second.Key, vector<byte>{second.Der}) );
+		EXPECT_ANY_THROW( keyLogin(second.Key, {}) );//user_insert_key rejects before any insert - the second key is not enrolled.
+		PurgeUser( userPK, GetRoot() );
 	}
 
 	TEST_F( LoginTests, DirAnchor_Enrolls ){//the production anchoring path: the operator copies a client cert into /access/trustedCertDirs - TrustVerify rescans on failure, so no AddCertificate and no restart.

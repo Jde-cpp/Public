@@ -22,4 +22,55 @@ namespace Jde::DB::Tests{
 		} //dtors run: dst logs exactly once; src stays silent (was the junk "sqle: " / double-log before the fix).
 		EXPECT_EQ( countSqle(), 1u );
 	}
+
+	//#5: UserError() reaches unauthenticated clients as the 401 body (ServerImpl's App branch), so it must carry the driver
+	//message without the statement text that what() keeps for the log.
+	TEST( DBExceptionTests, UserErrorOmitsSql ){
+		DB::Sql sql; sql.Text = "exec access_user_insert_key ?,?,?";
+		DBException e{ EDbError::App, move(sql), "Target 'x' already exists.", {ELogLevel::NoLog, {}, 50000} };
+
+		let userError = e.UserError();
+		EXPECT_FALSE( userError.contains("access_user_insert_key") ) << userError;
+		EXPECT_TRUE( userError.contains("Target 'x' already exists.") ) << userError;
+		EXPECT_TRUE( string{e.what()}.contains("access_user_insert_key") ) << e.what(); //the split is the point: the log still gets the statement.
+	}
+
+	//#13: engine codes are documented in decimal (sqlite 2067, mysql 1062, mssql 2627), so rendering them in hex made
+	//"(813)" read as a decimal code that does not exist. UA status and OpenSSL errors are quoted in hex and keep it -
+	//hence ECodeBase rather than a blanket change.
+	TEST( DBExceptionTests, CodeRendersDecimal ){
+		DBException e{ EDbError::Duplicate, DB::Sql{}, "UNIQUE constraint failed", {ELogLevel::NoLog, {}, 2067}, SRCE_CUR };
+		EXPECT_TRUE( string{e.what()}.starts_with("(2067)") ) << e.what();
+	}
+
+	//#10: what() is the exception text - the statement with its placeholders. Bound values belong to the log, which
+	//DB::Log appends via EmbedParams; keeping them out of what() also keeps them out of whatever wraps or forwards it.
+	TEST( DBExceptionTests, ParamValuesReachLogNotWhat ){
+		if( !Logging::FindLogger<Logging::MemoryLog>() )
+			Logging::AddLogger( mu<Logging::MemoryLog>() );
+		Logging::ClearMemory();
+		{
+			DB::Sql sql; sql.Text = "insert into t( secret ) values( ? )"; sql.Params.push_back( Value{string{"hunter2"}} );
+			DBException e{ EDbError::None, move(sql), "boom", {ELogLevel::Error, {}, 7}, SRCE_CUR };
+			let what = string{ e.what() };
+			EXPECT_TRUE( what.contains("values( ? )") ) << what;
+			EXPECT_FALSE( what.contains("hunter2") ) << what;
+		}
+		EXPECT_EQ( Logging::Find([](const Logging::Entry& e){ return e.Message().contains("hunter2");}).size(), 1u );
+	}
+
+	//#7: odbc's SQL_SUCCESS_WITH_INFO path re-wraps a classified inner exception to attach the statement it was thrown
+	//without. The legacy 4-arg ctor reset Error to None and Code to the RETCODE; this mirrors the replacement expression,
+	//const ref included - the odbc TU is WIN32-only, so this is what compiles it on Linux.
+	TEST( DBExceptionTests, RewrapKeepsClassification ){
+		DB::Sql statement; statement.Text = "exec proc_with_constraint ?";
+		DBException inner{ EDbError::Duplicate, DB::Sql{}, "Violation of UNIQUE KEY constraint", {ELogLevel::NoLog, {}, 2627}, SRCE_CUR };
+		const DBException& e = inner;
+
+		DBException rewrapped{ e.Error, move(statement), e.Message(), {ELogLevel::NoLog, {}, e.Code()}, SRCE_CUR };
+		EXPECT_EQ( EDbError::Duplicate, rewrapped.Error );
+		EXPECT_EQ( 2627u, rewrapped.Code() );
+		EXPECT_EQ( "Violation of UNIQUE KEY constraint", rewrapped.Message() ); //what() here would have nested a second "(a43)" prefix.
+		EXPECT_TRUE( string{rewrapped.what()}.contains("exec proc_with_constraint") ) << rewrapped.what();
+	}
 }

@@ -78,7 +78,7 @@ namespace Jde::DB::Odbc{
 				HandleDiagnosticRecord( "SQLExecDirect", statement, SQL_HANDLE_STMT, retCode );
 			}
 			catch( const DBException& e ){
-				throw DBException{ retCode, move(sql), e.what(), sl };
+				throw DBException{ e.Error, move(sql), e.Message(), {ELogLevel::Error, ELogTags::Sql, e.Code()}, sl };
 			}
 		case SQL_SUCCESS:{
 			if( params.HasOut() && params.Function ) //if not getting value, make sure nocount on
@@ -92,7 +92,7 @@ namespace Jde::DB::Odbc{
 				OdbcRow row{ bindings };
 				for( SQLRETURN fetch; (fetch=::SQLFetch(statement))!=SQL_NO_DATA_FOUND; ){
 					if( fetch!=SQL_SUCCESS && fetch!=SQL_SUCCESS_WITH_INFO ) //SQL_ERROR/SQL_INVALID_HANDLE: was an infinite loop feeding garbage rows to the callback.
-						throw DBException{ fetch, move(sql), HandleDiagnosticRecord("SQLFetch", statement, SQL_HANDLE_STMT, fetch, sl), sl };
+						ThrowDiagnostic( "SQLFetch", statement, fetch, move(sql), sl );
 					row.Reset();
 					(*params.Function)( row.ToRow() );
 					++resultCount;
@@ -107,9 +107,8 @@ namespace Jde::DB::Odbc{
 		}
 		case SQL_INVALID_HANDLE:
 			throw DBException( retCode, move(sql), "SQL_INVALID_HANDLE" );
-			break;
-		case SQL_ERROR:
-			throw DBException{ retCode, move(sql), HandleDiagnosticRecord("SQLExecDirect", statement, SQL_HANDLE_STMT, retCode, sl), sl };
+		case SQL_ERROR: //the RETCODE (-1) was the exception's code - the native number and SQLSTATE only reached the message.
+			ThrowDiagnostic( "SQLExecDirect", statement, retCode, move(sql), sl );
 		default:
 			throw DBException( retCode, move(sql), "Unknown error" );
 		}

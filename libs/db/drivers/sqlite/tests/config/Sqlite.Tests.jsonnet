@@ -36,7 +36,12 @@ local cluster(path) = { //one backend; instantiated per-path as the 'memory' and
 		],
 		sync:: true,
 		memory: cluster(":memory:"),
-		file: cluster( std.extVar("cwd")+"/sqlite-tests.db" )
+		file: cluster( std.extVar("cwd")+"/sqlite-tests.db" ),
+		//ConnectionTests only: the open must fail. No app schemas - it never runs a query, and the meta jsonnets cluster() pulls in cost seconds to evaluate.
+		wedge: {
+			driver: lib( "Jde.DB.Sqlite", "/libs/db/drivers/sqlite/lib" ),
+			catalogs: { testDb: { path: "/nonexistent-dir-for-tests/wedge.db", schemas: { master: {} } } }
+		}
 	},
 	logging:{
 		spd:{

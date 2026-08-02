@@ -40,7 +40,7 @@ namespace Jde::DB::MySql{
 				Conn.connect( cs );
 			}
 			catch( mysql::error_with_diagnostics& e ){
-				throw MySqlException{ toString(cs), move(e), sl, ELogTags::DBDriver, ELogLevel::Critical };
+				throw MySqlException{ toString(cs), move(e), {ELogLevel::Critical, ELogTags::DBDriver}, sl };
 			}
 		}
 	private:
@@ -128,7 +128,7 @@ namespace Jde::DB::MySql{
 			}
 		}
 		catch( mysql::error_with_diagnostics& e ){
-			throw MySqlException{ sql.Text, move(e), sl, ELogTags::DBDriver };
+			throw MySqlException{ move(sql), move(e), sl, {ELogLevel::Critical, ELogTags::DBDriver} };
 		}
 		if( exeParams.Function && result.has_value() ){
 			for( auto&& row : result.rows() )
@@ -159,15 +159,15 @@ namespace Jde::DB::MySql{
 		}
 		catch( const Exception& e ){//assume can't connect on current schema.
 		}
-		sp<MySqlDataSource> pDataSource;
+		sp<MySqlDataSource> ds;
 		if( schema==schemaName )
-			pDataSource = dynamic_pointer_cast<MySqlDataSource>( shared_from_this() );
+			ds = dynamic_pointer_cast<MySqlDataSource>( shared_from_this() );
 		else{
-			pDataSource = sp<MySqlDataSource>( (MySqlDataSource*)GetDataSource() );
-			pDataSource->_cs = _cs;
-			pDataSource->_cs.database = schema;
+			ds = sp<MySqlDataSource>( (MySqlDataSource*)GetDataSource() );
+			ds->_cs = _cs;
+			ds->_cs.database = schema;
 		}
-		return pDataSource;
+		return ds;
 	}
 
 	α MySqlDataSource::ExecuteSync( Sql&& sql, SL sl )ε->uint{

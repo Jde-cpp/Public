@@ -1,5 +1,6 @@
 #include <jde/app/proto/app.FromServer.h>
 #include <jde/fwk/io/protobuf.h>
+#include <jde/db/DBException.h>
 #include <jde/db/Row.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/meta/Column.h>
@@ -55,6 +56,8 @@ namespace Jde::App{
 		proto.set_what( e.what() );
 		if( let p = dynamic_cast<const Jde::Exception*>(&e); p )
 			proto.set_code( p->Code() );
+		if( let p = dynamic_cast<const DB::DBException*>(&e); p )
+			proto.set_db_error( (uint32)p->Error );//the type can't cross the wire, but the classification is what the web server branches on.
 		return t;
 	}
 	α FromServer::Exception( string&& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission{

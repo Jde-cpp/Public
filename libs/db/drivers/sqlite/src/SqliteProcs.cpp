@@ -1,6 +1,7 @@
 #include <sqlite3.h>
 #include "SqliteProcs.h"
 #include "SqliteRow.h" //Bind/ToRow
+#include "SqliteException.h"
 #include <jde/db/DBException.h>
 
 #define let const auto
@@ -38,7 +39,9 @@ namespace Jde::DB::Sqlite{
 
 	α ExecuteStatement( sqlite3& db, sv sql, const vector<Value>& params, RowΛ* onRow, SL sl )ε->uint{
 		sqlite3_stmt* stmt{};
-		THROW_IFSL( sqlite3_prepare_v2(&db, sql.data(), (int)sql.size(), &stmt, nullptr)!=SQLITE_OK, "prepare failed: {} - {}", sqlite3_errmsg(&db), sql );
+		//SqliteException rather than a bare Exception: the result code is what ToDbError maps, and it was dropped here.
+		if( let rc = sqlite3_prepare_v2(&db, sql.data(), (int)sql.size(), &stmt, nullptr); rc!=SQLITE_OK )
+			throw SqliteException{ sl, rc, Sql{string{sql}, params}, "prepare failed: {}", sqlite3_errmsg(&db) };
 		std::unique_ptr<sqlite3_stmt,decltype(&sqlite3_finalize)> cleanup{ stmt, &sqlite3_finalize };
 		Bind( *stmt, params, sl );
 		int rc;
@@ -46,7 +49,8 @@ namespace Jde::DB::Sqlite{
 			if( onRow )
 				(*onRow)( ToRow(*stmt) );
 		}
-		THROW_IFSL( rc!=SQLITE_DONE, "step failed: {} - {}", sqlite3_errmsg(&db), sql );
+		if( rc!=SQLITE_DONE )
+			throw SqliteException{ sl, rc, Sql{string{sql}, params}, "step failed: {}", sqlite3_errmsg(&db) };
 		return (uint)sqlite3_changes( &db );
 	}
 
