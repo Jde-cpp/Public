@@ -4,7 +4,7 @@
 #include "../client/proto/Web.FromServer.pb.h"
 
 namespace Jde::Web::Server{
-	α ToProto( const Web::Server::SessionInfo& session )ι->FromServer::SessionInfo{
+	Ξ ToProto( const Web::Server::SessionInfo& session )ι->FromServer::SessionInfo{
 		FromServer::SessionInfo proto;
 		*proto.mutable_expiration() = Protobuf::ToTimestamp( Chrono::ToClock<Clock,steady_clock>(session.Expiration) );
 		proto.set_session_id( session.SessionId );

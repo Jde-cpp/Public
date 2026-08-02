@@ -1,3 +1,4 @@
+#include <jde/web/client/ClientSsl.h>
 #include "jde/fwk/log/logTags.h"
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/fwk/process/execution.h>
@@ -21,7 +22,7 @@ namespace Client{
 		base{ sl },
 		_appClient{ appClient },
 		_sessionId{ sessionId },
-		_session{ ms<Client::AppClientSocketSession>(Executor(), IsSsl() ? ssl::context(ssl::context::tlsv12_client) : optional<ssl::context>{}, move(authorize), move(appClient)) }
+		_session{ ms<Client::AppClientSocketSession>(Executor(), IsSsl() ? Web::Client::Ssl::MakeContext() : optional<ssl::context>{}, move(authorize), move(appClient)) }
 	{}
 
 	α StartSocketAwait::Suspend()ι->void{

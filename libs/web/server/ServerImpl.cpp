@@ -113,8 +113,11 @@ namespace Server{
 	}
 
 	Ω handleCustomRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->IHttpRequestAwait::Task{
+		//keep the await in the coroutine frame instead of a temporary: it took ownership of req, and the catch blocks below need
+		//the request back to build the error response - a moved-from one loses the session-id authorization header & version.
+		auto requestAwait = reqHandler->HandleRequest( move(req) );
 		try{
-			HttpTaskResult result = co_await *( reqHandler->HandleRequest(move(req)) );
+			HttpTaskResult result = co_await *requestAwait;
 			THROW_IF( !result.Request, "Request not set." );
 			send( move(*result.Request), move(stream), move(result.Json), {}, result.Source.value_or(SRCE_CUR) );
 		}
@@ -122,8 +125,8 @@ namespace Server{
 			send( move(e), move(stream) );
 		}
 		catch( Exception& e ){
-			e.SetLevel( ELogLevel::Critical );//TODO no request object - req was moved into HandleRequest, so this responds with a moved-from HttpRequest.
-			send( RestException<>{move(e), move(req), "Error handling request."}, move(stream) );
+			e.SetLevel( ELogLevel::Critical );
+			send( RestException<>{move(e), move(requestAwait->Request()), "Error handling request."}, move(stream) );
 		}
 	}
 
@@ -226,7 +229,7 @@ namespace Server{
 		INFOT( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
-	concurrent_flat_map<SessionPK, sp<IWebsocketSession>> _socketSessions;
+	concurrent_flat_map<SocketId, sp<IWebsocketSession>> _socketSessions;
 	α Internal::Stop( sp<IRequestHandler>&& handler, bool terminate, SL sl )ι->void{
 		handler->Stop( terminate, sl );
 		//Close each session, don't just drop the refs: a pending async_read holds the session (and io_context work count)
@@ -262,18 +265,21 @@ namespace Server{
 			handleCustomRequest( move(req), move(stream), reqHandler );
 	}
 
+	//compare codes, not ec.value(): values are only unique within a category, and beast's end_of_stream, asio's stream_truncated
+	//and errno's EPERM are all 1.  switching on the value quieted normal keep-alive closes only by that collision, and equally
+	//dropped a genuine category-1 error to Trace.
 	α Server::ReadSeverity( beast::error_code ec )ι->ELogLevel{
-		auto level{ ELogLevel::Error };
-		switch( ec.value() ){
-		case net::error::operation_aborted: //EOF
-			level = ELogLevel::Debug;
-			break;
-		case ssl::error::stream_truncated: //also known as an SSL "short read", peer closed the connection without performing the required closing handshake.
-		case 0xA000416: //ERR_SSL_SSLV3_ALERT_CERTIFICATE_UNKNOWN: The client doesn't trust the certificate.
-			level = ELogLevel::Trace;
-			break;
-		}
-		return level;
+		if( ec==net::error::operation_aborted )
+			return ELogLevel::Debug;
+		if( ec==http::error::end_of_stream )//peer closed a keep-alive connection - how a session normally ends.
+			return ELogLevel::Trace;
+		if( ec==ssl::error::stream_truncated )//an SSL "short read": peer closed without performing the required closing handshake.
+			return ELogLevel::Trace;
+		//ERR_SSL_SSLV3_ALERT_CERTIFICATE_UNKNOWN: the client doesn't trust the certificate.  openssl packs its own codes and asio
+		//has no enumerator to name them, so this one is matched on category+value.
+		if( ec.category()==net::error::get_ssl_category() && ec.value()==0xA000416 )
+			return ELogLevel::Trace;
+		return ELogLevel::Error;
 	}
 
 	α Server::SendOptions( const HttpRequest&& req )ι->http::message_generator{

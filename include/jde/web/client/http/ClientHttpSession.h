@@ -19,7 +19,6 @@ namespace Jde::Web::Client{
 		const string Host;
 		const PortType Port;
 		const bool IsSsl;
-		const bool AllowRedirects{ true };
 	private:
 		α Write( string target, string body, const HttpAwaitArgs& args, ClientHttpAwaitSingle::Handle h )ι->TAwait<ClientHttpRes>::Task;
 		string _authorization;

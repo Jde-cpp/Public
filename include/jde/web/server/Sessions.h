@@ -44,7 +44,6 @@ namespace Jde::Web::Server{
 			α Suspend()ι->void;
 			α await_resume()ε->sp<SessionInfo>;
 		private:
-			α Execute()ι->TTask<Web::FromServer::SessionInfo>;
 			α FromSessionId()ι->TTask<Web::FromServer::SessionInfo>;
 			α FromJwt( str jwt )ι->TTask<UserPK>;
 			α CreateSession( UserPK userPK={} )ι->void;

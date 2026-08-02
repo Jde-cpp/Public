@@ -89,9 +89,29 @@ namespace Jde::Web::Server{
 	α IWebsocketSession::OnClose()ι->void{
 		LogRead( "ServerSocket::OnClose.", 0 );
 		Internal::RemoveSocketSession( Id() );
+		if( auto log = Logging::FindLogger<SubscribeLog>(); log )
+			log->Unsubscribe( Id() );
 		if( _listener ){
 			QL::Subscriptions::StopListen( _listener );
 			_listener = nullptr;
+		}
+		//S3: a query still in flight would otherwise sit out its full timeout on a socket that is already gone.  Same shape as
+		//QueryClientResults - null the handle and cancel the timer, leaving AddTimeout's resumption to erase the entry, so it does
+		//not then log "No pending query" against something we removed.
+		vector<QueryClientAwait::Handle> pending;
+		{
+			lg l{ _pendingQueriesMutex };
+			pending.reserve( _pendingQueries.size() );
+			for( auto it = _pendingQueries.begin(); it!=_pendingQueries.end(); ++it ){//iterator, not a structured binding: flat_map hands back a temporary.
+				if( it->second.first )
+					pending.push_back( it->second.first );
+				it->second.first = nullptr;
+				it->second.second->Cancel();
+			}
+		}
+		for( auto h : pending ){//resumed outside the lock: a resumed coroutine can come back through _pendingQueries.
+			h.promise().SetExp( Exception{SRCE_CUR, {ELogTags::SocketServerWrite}, "[{}]Socket closed with the query still pending.", Ƒ("{:x}", Id())} );
+			h.resume();
 		}
 		lg _{ _streamMutex };
 		Stream = nullptr;
@@ -139,6 +159,10 @@ namespace Jde::Web::Server{
 	}
 
 	α IWebsocketSession::AddTimeout( RequestId requestId, QueryClientAwait::Handle h, Duration timeout, SL sl )ι->TimerAwait::Task{
+		//S3: the frame outlives the request.  QueryClientAwait keeps the session alive only until it resumes its caller, so once
+		//QueryClientResults has done that the last reference can drop while this coroutine's resumption is still queued - and it
+		//touches _pendingQueriesMutex below.  Hold a reference in the frame.
+		let self = shared_from_this();
 		auto timer = ms<DurationTimer>( timeout, sl );
 		{
 			lg l{ _pendingQueriesMutex };

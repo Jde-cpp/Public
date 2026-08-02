@@ -1,3 +1,4 @@
+#include <jde/web/client/ClientSsl.h>
 #include <jde/web/client/http/ClientHttpStream.h>
 #include "webClientUtils.h"
 
@@ -7,6 +8,10 @@ namespace Jde::Web::Client{
 			beast::error_code ec{ static_cast<int>(::ERR_get_error()), net::error::get_ssl_category() };
 			throw ClientHttpException{ ec, host };
 		}
+	}
+
+	α ClientHttpStream::SetVerifyHost( str host )ι->void{
+		Ssl::SetVerifyHost( get<1>(_stream), host );
 	}
 
 	α ClientHttpStream::async_connect( const tcp::resolver::results_type& resolved, function<void(beast::error_code ec, tcp::resolver::results_type::endpoint_type)>&& token )ε->void{

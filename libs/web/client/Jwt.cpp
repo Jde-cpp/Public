@@ -65,13 +65,21 @@ namespace Jde::Web{
 			SetExponent( Json::AsString(Body, "e") );
 			fpKey = Crypto::Fingerprint( PublicKey );
 		}
-		if( let exp = Json::FindNumber<time_t>(Body, "exp"); exp && *exp<time(nullptr) )
-			THROW( "Invalid jwt.  Expired at '{}'.", *exp );
+		Iat = Json::AsNumber<time_t>( Body, "iat" );
+		//a jwt has to be time-bounded.  the ones minted for certificate login carry no exp (App::Client::getJwt) and were accepted
+		//forever; bound those by iat instead - they are posted to /login the moment they are signed, so a stale one is a replay.
+		//tokens that do carry an exp are left to it: a google id token or an AppServer-issued session token is legitimately hours
+		//old by the time it is re-presented, which is why the same window cannot be applied to the login path as a whole.
+		//two independent tests, not if/else: THROW_IF expands to a bare `if`, so an `else` here would bind to its inner one and
+		//run the iat check on every unexpired token that does have an exp.
+		let now = time( nullptr );
+		let exp = Json::FindNumber<time_t>( Body, "exp" );
+		THROW_IF( exp && *exp<now, "Invalid jwt.  Expired at '{}'.", *exp );
+		THROW_IF( !exp && std::abs(now-Iat)>MaxAgeWithoutExpiration, "Invalid jwt.  No 'exp' claim and 'iat' '{}' is not within {}s of '{}'.", Iat, MaxAgeWithoutExpiration, now );
 		UserPK = { Json::FindNumber<UserPK::Type>(Body, "sub").value_or(0) };
 		UserName = Json::FindString( Body, "name" ).value_or( fpKey ? Str::ToHex((byte*)fpKey->data(), fpKey->size()) : "" );
 		UserTarget = Json::FindString( Body, "target" ).value_or( UserName );
 		Host = Json::FindString( Body, "host" ).value_or( "" );
-		Iat = Json::AsNumber<time_t>( Body, "iat" );
 		SessionId = Json::FindDefaultSV( Body, "sid" );
 
 		Description = Json::FindSV( Body, "description" ).value_or( fpKey ? Ƒ("Public key md5: {}", ToString(*fpKey)) : "" );

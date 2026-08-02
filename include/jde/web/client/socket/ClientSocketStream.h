@@ -1,5 +1,5 @@
 #pragma once
-#include "../ClientCancellation.h"
+#include "../usings.h"
 #include <jde/fwk/co/CoLock.h>
 
 namespace Jde::Web::Client{
@@ -23,6 +23,8 @@ namespace Jde::Web::Client{
 		α OnWrite( beast::error_code ec, uint bytes_transferred )ι->void;
 		α ReadBuffer()ι{ return std::span<uint8_t>{(uint8_t*)_buffer.data().data(), _buffer.size()}; }
 		α IsSsl()ι->bool{ return _ws.index()==1; }
+		//Close early-returns on an already-closing stream without completing anyone's await, so callers have to ask first.
+		α IsClosing()Ι->bool{ return _closing.test(); }
 	private:
 		beast::flat_buffer _buffer;
 		CoLock _writeLock;

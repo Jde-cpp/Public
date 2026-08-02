@@ -6,6 +6,13 @@
 #define let const auto
 
 namespace Jde::Web{
+	uint bodyLimit{};
+	α Server::BodyLimit()ι->uint{
+		if( !bodyLimit )
+			bodyLimit = Settings::FindNumber<uint>( "/http/bodyLimit" ).value_or( 10000 );
+		return bodyLimit;
+	}
+
 	static optional<uint16> _maxLogLength;
 	α Server::MaxLogLength()ι->uint16{
 		if( !_maxLogLength )

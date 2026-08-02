@@ -13,6 +13,7 @@ namespace Jde::Web::Client{
 			},
 			_res{ move(res) }
 		{}
+		α Res()Ι->const ClientHttpRes&{ return _res; }
 		α Status()Ι->http::status{ return _res.Status(); }
 		α Move()ι->up<Exception> override{ return mu<ClientHttpResException>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }

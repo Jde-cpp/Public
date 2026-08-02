@@ -1,4 +1,5 @@
 #include <jde/web/client/socket/ClientSocketStream.h>
+#include <jde/web/client/ClientSsl.h>
 #include <jde/web/client/socket/IClientSocketSession.h>
 #include "webClientUtils.h"
 
@@ -37,6 +38,7 @@ namespace Jde::Web::Client{
 				CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientRead };
 				return;
 			}
+			Ssl::SetVerifyHost( stream.next_layer(), host );//C1: bind the peer's certificate to the host we dialled, not just to a trusted anchor.
 			host += ':' + std::to_string( ep.port() ); // Update the _host string. This will provide the value of the Host HTTP header during the WebSocket handshake. See https://tools.ietf.org/html/rfc7230#section-5.4
 			stream.next_layer().async_handshake( ssl::stream_base::client, beast::bind_front_handler( &IClientSocketSession::OnSslHandshake, session) );
 		}

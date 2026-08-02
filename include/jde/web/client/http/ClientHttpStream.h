@@ -8,6 +8,7 @@ namespace Jde::Web::Client{
 		~ClientHttpStream(){}
 
 		α SetSslTlsExtHostName(str host)ε->void;
+		α SetVerifyHost(str host)ι->void;
 		α expires_after( Duration d )ι->auto{ return std::visit( [d](auto&& arg)->auto { return beast::get_lowest_layer(arg).expires_after(d); }, _stream ); }
 		α async_connect( const tcp::resolver::results_type& resolved, function<void(beast::error_code ec, tcp::resolver::results_type::endpoint_type)>&& token )ε->void;
 		α async_handshake( function<void(beast::error_code ec)>&& token )ε->void{ get<1>( _stream ).async_handshake( ssl::stream_base::client, token ); }

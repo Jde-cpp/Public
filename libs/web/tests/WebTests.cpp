@@ -1,6 +1,7 @@
 ﻿#include <execution>
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/client/http/ClientHttpResException.h>
+#include <jde/web/Jwt.h>
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/utils/Stopwatch.h>
 #include <jde/fwk/str.h>
@@ -200,6 +201,20 @@ namespace Jde::Web{
 			ASSERT_EQ( http::status::internal_server_error, e.Status() );
 		}
 	}
+	//#3: the error funnel has to build its response from the await's request - the local was moved into HandleRequest, and a
+	//moved-from one carries no SessionInfo, so an initial request would fail without ever being told its session id.
+	TEST_F( WebTests, ErrorResponseKeepsSession ){
+		try{
+			let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/NoResult", Port} );
+			ASSERT_FALSE( true ) << "expected internal_server_error, got " << (uint32)res.Status();
+		}
+		catch( const ClientHttpResException& e ){
+			ASSERT_EQ( http::status::internal_server_error, e.Status() );
+			let authorization = e.Res()[http::field::authorization];
+			let sessionId = Str::TryTo<SessionPK>( authorization, nullptr, 16 );
+			ASSERT_TRUE( sessionId && *sessionId ) << Ƒ( "authorization='{}'", authorization );
+		}
+	}
 	TEST_F( WebTests, TestTimeout ){
 		let testStartTime = Chrono::ToClock<Clock,steady_clock>( steady_clock::now() );
 		let timeoutString = Settings::FindSV("/http/timeout").value_or( "PT30S" );
@@ -229,6 +244,114 @@ namespace Jde::Web{
 			ASSERT_EQ( http::status::unauthorized, e.Status() );
 		}
 	}
+	//#7: LogRead & UserPK() ran straight through a null SessionInfo.  every call site happens to resolve the session first,
+	//but nothing enforces it - UpsertAwait itself returns a null sp when constructed with throw_=false.
+	TEST( HttpRequestTests, NoSessionInfo ){
+		Server::HttpRequest req{ Server::TRequestType{}, tcp::endpoint{}, false, 0 };
+		ASSERT_EQ( nullptr, req.SessionInfo );
+		EXPECT_FALSE( req.UserPK() ); //anonymous, not a deref.
+		EXPECT_EQ( 0u, req.SessionId() );
+		req.LogRead( "no session" );//used to segfault.
+	}
+
+	//with no session resolved the log line falls back to what the client asked for.
+	TEST( HttpRequestTests, SessionIdFromHeader ){
+		Server::TRequestType raw;
+		raw.set( http::field::authorization, "1a2b" );
+		Server::HttpRequest req{ move(raw), tcp::endpoint{}, false, 0 };
+		EXPECT_EQ( 0x1a2bu, req.SessionId() );
+		req.LogRead( "unresolved session" );
+	}
+
+	//C1: the client verifies peers now.  The mock's self-signed cert is a trust anchor (ServerMock::Start registers it) and names
+	//DNS:localhost,IP:127.0.0.1 - trusting it must not make it acceptable for any other host we happen to dial.
+	TEST_F( WebTests, TlsVerifiesHostName ){
+		auto ping = []( string host ){ return ClientHttpAwait{ move(host), "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} }; };
+		//in the SAN, same server, same anchor - the control that says the rejection below is about the name and nothing else.
+		EXPECT_NO_THROW( (BlockAwait<ClientHttpAwait,ClientHttpRes>( ping("127.0.0.1") )) );
+		//another loopback address the certificate does not name.  before this the handshake accepted whatever was offered.
+		EXPECT_ANY_THROW( (BlockAwait<ClientHttpAwait,ClientHttpRes>( ping("127.0.0.2") )) );
+	}
+
+	//C4: redirects were followed recursively with no hop limit, and the full args - Authorization included - were re-sent to
+	//whatever host the Location header named.
+	TEST_F( WebTests, RedirectLimit ){
+		//the mock answers /redirectLoop with a 302 back to itself; without a budget this never returns.
+		EXPECT_ANY_THROW( (BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/redirectLoop", Port} )) );
+
+		//AllowRedirects=false hands the 3xx back instead of following it - there used to be no way to ask for that.
+		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/redirectLoop", Port, {.AllowRedirects=false}} );
+		EXPECT_EQ( http::status::found, res.Status() );
+	}
+
+	TEST_F( WebTests, RedirectDropsAuthorizationCrossHost ){
+		//a real session id, not a made-up string: an unknown one is rejected as 401 before the handler runs, and the session id is
+		//precisely the credential at stake here.
+		let seed = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/echo?seed", Port} );
+		let authorization = seed[http::field::authorization];
+		ASSERT_FALSE( authorization.empty() );
+
+		//same server, reached by a name its certificate also covers, so only the host string differs - which is exactly the
+		//condition under which a credential must not travel.
+		let crossHost = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/redirectHost", Port, {.Authorization=authorization}} );
+		EXPECT_EQ( "", Json::AsString(crossHost.Json(), "authorization") ) << "Authorization followed a redirect to another host";
+
+		//control: reaching the same target directly still carries it, so the assertion above is about the redirect, not the echo.
+		let direct = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{"127.0.0.1", "/authHeader", Port, {.Authorization=authorization}} );
+		EXPECT_EQ( authorization, Json::AsString(direct.Json(), "authorization") );
+	}
+
+	TEST_F( WebTests, BodyLimit ){
+		let limit = Settings::FindNumber<uint>( "/http/bodyLimit" ).value_or( 0 );
+		ASSERT_TRUE( limit && limit<10000 ) << "the configured limit has to sit below the old hard-coded 10000 or the over-limit case proves nothing";
+		//extra parens: the comma in BlockAwait<A,B> would otherwise split the macro's argument list.
+		let post = []( uint size ){ return ClientHttpAwait{ Host, "/ping", string(size, 'x'), Port, {.ContentType="text/plain", .Verb=http::verb::post} }; };
+
+		EXPECT_NO_THROW( (BlockAwait<ClientHttpAwait,ClientHttpRes>( post(limit/2) )) );
+		//past the cap beast fails the read and drops the connection instead of answering, so the client sees a throw, not a 413.
+		EXPECT_ANY_THROW( (BlockAwait<ClientHttpAwait,ClientHttpRes>( post(limit+1024) )) );
+	}
+
+	//#14: Access-Control-Allow-Origin was a flat "*".  it carries one value, so "same host, any port" can only be done by
+	//reflecting the request's Origin - the deployment is AppServer 1967, OpcGateway 1968 and the spa each on their own port.
+	TEST_F( WebTests, CorsSameHostAnyPort ){
+		let sameHost = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/echo?cors", Port, {.Origin=Ƒ("https://{}:9999", Host)}} );
+		EXPECT_EQ( Ƒ("https://{}:9999", Host), sameHost[http::field::access_control_allow_origin] );
+		EXPECT_EQ( "Origin", sameHost[http::field::vary] ) << "reflected without Vary, so a cache can hand this to another origin";
+
+		//a different host must get no header at all - the browser blocks on its absence.
+		let foreign = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/echo?cors", Port, {.Origin="https://evil.example.com"}} );
+		EXPECT_EQ( "", foreign[http::field::access_control_allow_origin] );
+		EXPECT_EQ( "Origin", foreign[http::field::vary] ) << "the refusal is origin-specific too, so it still varies";
+
+		//no Origin at all is not a cross-origin request; nothing to reflect, and it must not fall back to "*".
+		let none = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/echo?cors", Port} );
+		EXPECT_EQ( "", none[http::field::access_control_allow_origin] );
+	}
+
+	//#11: a jwt with no `exp` was accepted forever - App::Client::getJwt mints exactly that for certificate login and posts it as a
+	//bearer credential.  it is now bounded by `iat` instead, but only when there is no exp: a google id token, or the jwt
+	//ServerSocketSession::Login replays, carries an hours-old iat next to a still-valid exp, so the window must not reach those.
+	//the parser does not verify the signature, so these hand-built tokens need no key.
+	Ω encodeJwt( jobject body )ι->string{
+		let head = jobject{ {"alg","RS256"}, {"typ","JWT"} };
+		return Str::Encode64( serialize(head), true )+"."+Str::Encode64( serialize(body), true )+"."+Str::Encode64( "notVerifiedHere"s, true );
+	}
+	Ω parseJwt( jobject body )ε->Jwt{ return Jwt{ encodeJwt(move(body)) }; }
+
+	TEST( JwtExpirationTests, UnboundedTokenRejected ){
+		let now = time( nullptr );
+		constexpr time_t stale{ Jwt::MaxAgeWithoutExpiration+60 };
+
+		EXPECT_NO_THROW( parseJwt({{"iat", now}}) );              //fresh & exp-less: certificate login, still works.
+		EXPECT_THROW( parseJwt({{"iat", now-stale}}), Exception );//the hole - this was replayable forever.
+		EXPECT_THROW( parseJwt({{"iat", now+stale}}), Exception );//future-dated iat would otherwise age into validity.
+
+		//an exp is authoritative on its own; the iat window must not touch these or google login and socket re-auth break.
+		EXPECT_NO_THROW( parseJwt({{"iat", now-stale}, {"exp", now+3600}}) );
+		EXPECT_THROW( parseJwt({{"iat", now}, {"exp", now-1}}), Exception );
+	}
+
 	//#15: the response body picks up the wrapped exception's ClientDetail, so every funnel surfaces a proc-raised
 	//message without repeating the policy - and #5 stays honoured: the statement is not part of that detail.
 	TEST( RestExceptionTests, AppDetailReachesBody ){

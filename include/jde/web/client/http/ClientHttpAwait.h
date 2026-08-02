@@ -10,9 +10,12 @@ namespace Jde::Web::Client{
 
 	struct HttpAwaitArgs {
 		string Authorization;
+		string Origin;//browsers set this themselves; here it is what lets a test exercise the server's cross-origin policy.
 		string ContentType{ "application/x-www-form-urlencoded" };
 		optional<http::verb> Verb{ http::verb::unknown };
 		const bool IsSsl{ true };
+		bool AllowRedirects{ true };
+		uint8 Redirects{ 5 };//hop budget: each redirect forwards a copy with one fewer, and running out is an error.
 	};
 	struct ΓWC ClientHttpAwait : TAwait<ClientHttpRes>, HttpAwaitArgs{
 		using base = TAwait<ClientHttpRes>;

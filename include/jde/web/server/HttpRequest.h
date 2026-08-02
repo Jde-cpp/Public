@@ -7,7 +7,9 @@
 #include "usings.h"
 
 namespace Jde::Web::Server{
-	α AccessControlAllowOrigin()ι->string;
+	α AccessControlAllowOrigin()ι->str;
+	//the allowOrigin setting value that selects same-host-any-port reflection instead of a literal header.
+	constexpr sv SameHostOrigin{ "sameHost" };
 	α ServerVersion( bool isSsl )ι->string;
 
 	struct IRestException;
@@ -32,9 +34,12 @@ namespace Jde::Web::Server{
 		α Params()Ι->const flat_map<string,string>&{ return _params; }
 		α SessionId()Ι->SessionPK;
 		α Target()Ι->const string&{ return _target; }
-		α UserPK()Ι->UserPK{ return SessionInfo->UserPK; }
+		α UserPK()Ι->UserPK{ return SessionInfo ? SessionInfo->UserPK : Jde::UserPK{}; }//no session is anonymous, so a gate on this fails closed.
 		α Version()Ι->uint{ return _request.version(); }//TODO get rid of
 
+		//this request's Access-Control-Allow-Origin value - empty to omit the header - and whether the answer depended on the
+		//request's Origin, which is what obliges us to send Vary.
+		α AllowOrigin()Ι->tuple<string,bool>;
 		ψ BadRequest( SL sl, fmt::format_string<Args...> format, Args&&... args )Ι->http::response<http::string_body>;
 		α LogRead( str text="", ELogLevel level=ELogLevel::Debug, SRCE )Ι->void;
 		template<class T=http::string_body>
@@ -63,7 +68,11 @@ namespace Jde::Web::Server{
 	α HttpRequest::Response( http::status status )Ι->http::response<T>{
 		http::response<T> res{ status, _request.version() };
 		res.set( http::field::server, ServerVersion(_isSsl) );
-		res.set( http::field::access_control_allow_origin, AccessControlAllowOrigin() );
+		auto [allowOrigin, varyOrigin] = AllowOrigin();
+		if( allowOrigin.size() )
+			res.set( http::field::access_control_allow_origin, allowOrigin );
+		if( varyOrigin )//a cache must not hand one origin's Allow-Origin to another; true even when we refused, since the refusal is origin-specific too.
+			res.set( http::field::vary, "Origin" );
 		if( SessionInfo && SessionInfo->IsInitialRequest ){
 			res.set( http::field::access_control_expose_headers, "Authorization" );
 			res.set( http::field::authorization, Jde::format("{:x}", SessionInfo->SessionId) );

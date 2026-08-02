@@ -6,6 +6,7 @@ namespace Jde::Web::Client{
 
 	α IClientSocketVoidAwait::Suspend( std::any hCoroutine )ι->void{
 		_session->AddTask( _requestId, hCoroutine );
+		_session->AddTimeout( _requestId );//C6: every request goes through here, so this is the one place a deadline covers them all.
 		_session->Write( move(_request) );
 	}
 

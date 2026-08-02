@@ -44,8 +44,9 @@ local logsDir = std.extVar("logsDir");
 		# asserts the jump - so keep it far enough above timeout to be unambiguous.
 		socketTimeout: "PT30S",
 		maxLogLength: 31,
+		bodyLimit: 8192,
 		accessControl: {
-			allowOrigin: "*",
+			allowOrigin: "sameHost",//any port on the host the client reached us by; "*" restores the wide-open default.
 			allowMethods: "GET, POST, OPTIONS",
 			allowHeaders: "Content-Type, Authorization"
 		},
@@ -61,6 +62,13 @@ local logsDir = std.extVar("logsDir");
 			publicKey:: "{ApplicationDataFolder}/ssl/public/server.pem",
 			dh:: "{ApplicationDataFolder}/ssl/dh.pem",
 			passcode:: "$(JDE_PASSCODE)"
+		}
+	},
+	web:{
+		client:{
+			# C6: SocketTests.BadTransmissionClient waits on a request the server answers with an unmatchable exception, so the
+			# deadline is the only thing that ends it.  Short so the suite does not sit out the 60s default.
+			socketRequestTimeout: "PT2S"
 		}
 	},
 	workers:{

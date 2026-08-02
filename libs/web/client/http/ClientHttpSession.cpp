@@ -1,4 +1,5 @@
 #include <jde/web/client/http/ClientHttpSession.h>
+#include <jde/web/client/ClientSsl.h>
 #include <jde/web/client/http/ClientHttpRes.h>
 #include <jde/web/client/socket/IClientSocketSession.h>
 #include <jde/fwk/process/execution.h>
@@ -18,7 +19,6 @@ namespace Jde::Web::Client{
 			_timeout = Settings::FindDuration( "web/client/timeout" ).value_or( std::chrono::seconds(30) );
 		return _timeout;
 	}
-	ssl::context _ctx{ ssl::context::tlsv12_client };// The SSL context is required, and should hold certificates
 	ELogTags _tags{ ELogTags::HttpClientWrite };
 	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 
@@ -32,9 +32,10 @@ namespace Jde::Web::Client{
 
 	ClientHttpSession::ClientHttpSession( str host, PortType port, net::any_io_executor strand, SL sl )ε:
 		Host{ host }, Port{ port }, IsSsl{ true }, _log{ true }, _resolver{ strand },
-		_stream{ beast::ssl_stream<beast::tcp_stream>{strand, _ctx} },
+		_stream{ beast::ssl_stream<beast::tcp_stream>{strand, Ssl::Context()} },
 		_sl{ sl }{
 		_stream.SetSslTlsExtHostName( Host );
+		_stream.SetVerifyHost( Host );//C1: the context brings the trust anchors, this binds the answer to the host we dialled.
 		_isRunning.test_and_set();
 	}
 
@@ -73,16 +74,31 @@ namespace Jde::Web::Client{
 		sp<ClientHttpSession> _session;
 	};
 
+	struct ResolveAwait final : VoidAwait{
+		ResolveAwait( sp<ClientHttpSession> session, SRCE )ι:VoidAwait{ sl }, _session{ session }{}
+		α Suspend()ι->void override{
+			_session->Resolver().async_resolve( _session->Host, std::to_string(_session->Port), beast::bind_front_handler(&ResolveAwait::OnResolve, this) );
+		}
+		α OnResolve( beast::error_code ec, tcp::resolver::results_type results )->void{
+			if( ec )
+				ResumeExp( ClientHttpException{ec} );
+			else{
+				Results = move( results );
+				Resume();
+			}
+		}
+		tcp::resolver::results_type Results;
+		sp<ClientHttpSession> _session;
+	};
+
 	struct MakeConnectionAwait final : VoidAwait{
 		MakeConnectionAwait( sp<ClientHttpSession> session, SRCE )ι:VoidAwait{ sl }, _session{ session }{}
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->ConnectAwait::Task{
 			try{
-				beast::error_code ec;
-				auto resolvedResults = _session->Resolver().resolve( _session->Host, std::to_string(_session->Port), ec );//async resolve starts another thread.
-				if( ec )
-					throw ClientHttpException{ ec };
-				co_await ConnectAwait{ move(resolvedResults), _session };
+				ResolveAwait resolve{ _session };//named: the await has to outlive the suspension it carries its result across.
+				co_await resolve;
+				co_await ConnectAwait{ move(resolve.Results), _session };
 				if( _session->IsSsl )
 					co_await HandshakeAwait{ _session };
 				Resume();
@@ -115,15 +131,27 @@ namespace Jde::Web::Client{
 				ResumeExp( ClientHttpException{ec, _session, &_req} );
 			else{
 				ClientHttpRes res{ move(_res) };
-				if( res.IsRedirect() && _session->AllowRedirects ){
+				if( res.IsRedirect() && _args.AllowRedirects ){
+					if( !_args.Redirects ){//budget spent - a server redirecting to itself would otherwise loop forever.
+						ResumeExp( Exception{_sl, {ELogTags::HttpClientRead}, "Too many redirects from {}:{}{} - last Location '{}'.", _session->Host, _session->Port, string{_req.target()}, res[http::field::location]} );
+						co_return;
+					}
 					auto [host,target,port] = res.RedirectVariables();
 					if( host.empty() ){//relative Location - reuse the original host & port.
 						host = _session->Host;
 						port = _session->Port;
 					}
 					DBG( "redirecting from {}{} to {}", _session->Host, _req.target(), res[http::field::location] );
+					auto args = _args;
+					--args.Redirects;
+					//an Authorization header is a credential for the host it was issued to; a redirect elsewhere must not carry it.
+					//Whoever controls the Location header would otherwise be handed the caller's session id or bearer token.
+					if( args.Authorization.size() && Str::ToLower(host)!=Str::ToLower(_session->Host) ){
+						DBG( "dropping Authorization: redirect leaves {} for {}", _session->Host, host );
+						args.Authorization.clear();
+					}
 					try{
-						res = co_await ClientHttpAwait{ host, target, _req.body(), port, _args, _sl };
+						res = co_await ClientHttpAwait{ host, target, _req.body(), port, args, _sl };
 					}
 					catch( Exception& e ){
 						ResumeExp( move(e) );
@@ -167,6 +195,7 @@ namespace Jde::Web::Client{
 		}
 		catch( Exception& e ){
 			SetIsRunning( false );
+			RemoveHttpSession( shared_from_this() );
 			h.promise().ResumeExp( move(e), h );
 		}
   }
@@ -184,6 +213,8 @@ namespace Jde::Web::Client{
 		req.set( http::field::accept_encoding, "gzip" );
 		if( args.Authorization.size() )
 			req.set( http::field::authorization, args.Authorization );
+		if( args.Origin.size() )
+			req.set( http::field::origin, args.Origin );
 
 		req.body() = move( body );
 		req.prepare_payload();
