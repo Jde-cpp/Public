@@ -5,6 +5,7 @@
 #include "jde/fwk.h"
 #include "jde/fwk/co/Await.h"
 #include "jde/fwk/log/logTags.h"
+#include "jde/fwk/usings.h"
 #include <jde/app/client/clientSubscriptions.h>
 
 namespace Jde::Web{
@@ -54,6 +55,33 @@ namespace Jde::Web::Client{
 		_tasks.erase_if( requestId, [&h](auto&& kv){h=kv.second; return true;} );//Subscriptions aren't in tasks.
 		return h;
 	}
+	//60s: long enough that a slow query is not mistaken for a dead peer, short enough that a stranded caller does not wait out the
+	//process.  Whether it is right depends on the workload, hence the setting - a legitimate query that outlives it takes the
+	//session down and reconnects, which is worse than waiting.
+	Duration _socketRequestTimeout{};
+	Ω requestTimeout()ι->Duration{
+		auto value = _socketRequestTimeout;
+		if( value==Duration::zero() )
+			_socketRequestTimeout = value = Settings::FindDuration( "/web/client/socketRequestTimeout" ).value_or( std::chrono::seconds(60) );
+		return value;
+	}
+
+	α IClientSocketSession::CloseOnError( string reason, SL sl )ι->void{
+		Exception{ sl, ELogLevel::Error, "[{}]Closing socket: {}", Ƒ("{:x}", Id()), reason };
+		if( auto stream = StreamPtr(); stream )
+			stream->Close( shared_from_this(), false, sl );
+	}
+
+	α IClientSocketSession::AddTimeout( RequestId requestId, SL sl )ι->TimerAwait::Task{
+		const auto _ = shared_from_this();//the timer outlives the request; keep us alive so the check below is not on a freed session.
+		const auto timeout = requestTimeout();
+		auto timer = ms<DurationTimer>( timeout, sl );
+		co_await *timer;
+		if( !HasTask(requestId) )
+			co_return;//answered, or already failed with the session.
+		CloseOnError( Ƒ("request {} unanswered after {}", hex(requestId), Chrono::ToString(timeout)), sl );
+	}
+
 	α IClientSocketSession::CloseTasks( function<void(std::any&&)> f )ι->void{
 		_tasks.erase_if( [ f ](auto&& kv){
 			f( move(kv.second) );
@@ -85,31 +113,29 @@ namespace Jde::Web::Client{
 	α IClientSocketSession::Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void{ // Start the asynchronous operation
 		_connectHandle = h;
 		_host = host;
-		net::post( *_ioContext, [=, self=shared_from_this()]{
-			TRACET( _connectPedanticTag, "[{}:{}]resolve socket.", self->_host, port );
-			beast::error_code ec;
-			auto results = self->_resolver.resolve( self->_host, std::to_string(port), ec );//TODO use async_resolve.  async_resolve starts another thread.
-			//_resolver.async_resolve( _host, std::to_string(port_), beast::bind_front_handler(&IClientSocketSession::OnResolve, shared_from_this()) );// Look up the domain name
-			self->OnResolve( ec, results );
-		});
+		TRACET( _connectPedanticTag, "[{}:{}]resolve socket.", _host, port );
+		_resolver.async_resolve( _host, std::to_string(port), beast::bind_front_handler(&IClientSocketSession::OnResolve, shared_from_this()) );
 	}
 
 	α IClientSocketSession::OnResolve( beast::error_code ec, tcp::resolver::results_type results )ι->void{
 		CHECK_EC( _writeTag )
 		TRACET( _connectPedanticTag, "[{}]resolve succeeded.", _host );
-		_stream->OnResolve( results, shared_from_this() );
+		if( auto stream = StreamPtr(); stream )
+			stream->OnResolve( results, shared_from_this() );
 	}
 
 	α IClientSocketSession::OnConnect( beast::error_code ec, tcp::resolver::results_type::endpoint_type ep )ι->void{
 		CHECK_EC( _readTag )
 		TRACET( _connectPedanticTag, "[{}]connect succeeded.", _host );
-		_stream->OnConnect( ep, _host, shared_from_this() );
+		if( auto stream = StreamPtr(); stream )
+			stream->OnConnect( ep, _host, shared_from_this() );
 	}
 
 	α IClientSocketSession::OnSslHandshake( beast::error_code ec )ι->void{
 		CHECK_EC( _readTag )
 		TRACET( _connectPedanticTag, "[{}]SslHandshake succeeded.", _host );
-		_stream->AfterHandshake( _host, shared_from_this() );
+		if( auto stream = StreamPtr(); stream )
+			stream->AfterHandshake( _host, shared_from_this() );
 	}
 
 	α IClientSocketSession::OnHandshake( beast::error_code ec )ι->void{
@@ -119,10 +145,13 @@ namespace Jde::Web::Client{
 			_connectHandle = nullptr;
 			h.resume();
 		}
-		_stream->AsyncRead( shared_from_this() );
+		if( auto stream = StreamPtr(); stream )
+			stream->AsyncRead( shared_from_this() );
 	}
 	α IClientSocketSession::Write( string&& m )ι->void{
-		_stream->AsyncWrite( move(m), shared_from_this() );
+		//the hot cross-thread case: a caller writing while a close is running on the strand used to dereference a nulled _stream.
+		if( auto stream = StreamPtr(); stream )
+			stream->AsyncWrite( move(m), shared_from_this() );
 	}
 
 	α IClientSocketSession::OnRead( beast::error_code ec, uint bytes_transferred )ι->void{
@@ -131,18 +160,35 @@ namespace Jde::Web::Client{
 			CodeException{ static_cast<std::error_code>(ec), _readTag, Ƒ("[{:x}]ClientSocket::DoRead", Id()), GetLogLevel(ec) };
 			if( ec==net::error::operation_aborted )// our own in-flight Close() cancelled this read; its OnClose completion will drain _tasks with the real close reason, so don't preempt it with a misleading "operation_aborted" one here.
 				return;
-			if( ec!=boost::beast::websocket::error::closed )// websocket::error::closed means the close handshake already completed (Beast auto-replies to a received close frame); calling Close() again would initiate a second async_close that collides with the in-flight one on Beast's write soft_mutex.
-				_stream->Close( shared_from_this(), false, SRCE_CUR );
-			else
+			// websocket::error::closed means the close handshake already completed (Beast auto-replies to a received close frame);
+			// calling Close() again would initiate a second async_close that collides with the in-flight one on Beast's write
+			// soft_mutex.  Tested first so the stream lookup below needs no nesting - an `else` after an `if` that guards on
+			// StreamPtr binds to the inner one.
+			if( ec==boost::beast::websocket::error::closed )
 				CloseTasks( ec );// remote-initiated close: we never call our own Close()/async_close for this case, so OnClose never fires - drain _tasks here instead.
+			else if( auto stream = StreamPtr(); stream )
+				stream->Close( shared_from_this(), false, SRCE_CUR );
 			return;
 		}
-		OnReadData( _stream->ReadBuffer() );
-		_stream->AsyncRead( shared_from_this() );
+		auto stream = StreamPtr();
+		if( !stream )
+			return;
+		OnReadData( stream->ReadBuffer() );
+		stream->AsyncRead( shared_from_this() );
+	}
+	//Nothing to wait on: no stream, or a close already running.  OnClose resumes the *first* waiter and only then nulls _stream, so
+	//a caller that closes again on waking finds a live-but-closing stream - and ClientSocketStream::Close early-returns on _closing
+	//without completing anyone's await, so that second caller would wait out the process.
+	//Answered here rather than resuming from Suspend: calling Resume() inside await_suspend re-enters a coroutine that has not
+	//finished suspending.
+	α CloseClientSocketSessionAwait::await_ready()ι->bool{
+		auto stream = _session->StreamPtr();
+		return !stream || stream->IsClosing();
 	}
 	α CloseClientSocketSessionAwait::Suspend()ι->void{
 		_session->_closeHandle = _h;
-		_session->_stream->Close( _session, _terminate );
+		if( auto stream = _session->StreamPtr(); stream )
+			stream->Close( _session, _terminate );
 	}
 	α IClientSocketSession::OnClose( beast::error_code ec )ι->void{
 		if( ec )
@@ -153,7 +199,10 @@ namespace Jde::Web::Client{
 		if( _closeHandle )
 			_closeHandle.resume();
 		_closeHandle = nullptr;
-		_stream = nullptr;
+		{
+			lg _{ _streamMutex };
+			_stream = nullptr;
+		}
 		_ioContext = nullptr;
 	}
 }

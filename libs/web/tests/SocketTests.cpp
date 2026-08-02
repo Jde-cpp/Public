@@ -1,4 +1,5 @@
 //#include <boost/beast/ssl.hpp>
+#include <jde/web/client/ClientSsl.h>
 #include "jde/fwk/co/Await.h"
 #include "jde/fwk/usings.h"
 #include "mocks/ServerMock.h"
@@ -49,11 +50,16 @@ namespace Jde::Web{
 	α SocketTests::SetUp()->void{
 		Logging::ClearMemory();
 	}
-	#define NOTIFY sl l{ _mutex }; cv.notify_one()
+	//_notified + a predicate, not a bare notify_one: a completion that lands before Wait() blocks is otherwise lost and the test
+	//hangs instead of the code.  That happens whenever a close or a request finishes synchronously - which C3 and C6 both made
+	//routine.
+	#define NOTIFY sl l{ _mutex }; _notified = true; cv.notify_one()
 	std::shared_mutex _mutex;
 	std::condition_variable_any cv;
+	bool _notified{};
 	α Notify()ι{
 		sl l{ _mutex };
+		_notified = true;
 		cv.notify_one();
 	}
 	α Close()ι->VoidTask{
@@ -63,7 +69,8 @@ namespace Jde::Web{
 
 	α Wait()ι{
 		sl l{ _mutex };
-		cv.wait( l );
+		cv.wait( l, []{ return _notified; } );
+		_notified = false;
 	}
 
 	α SocketTests::TearDown()->void{
@@ -116,7 +123,7 @@ namespace Jde::Web{
 		std::this_thread::sleep_for( 1s );
 		TRACET( ELogTags::Test, "WebTests::CreateSsl" );
 		Stopwatch sw{ "WebTests::CreateSsl", ELogTags::Test };
-		createSession( ssl::context(ssl::context::tlsv12_client) );
+		createSession( Client::Ssl::MakeContext() );
 		ASSERT_EQ( _sessionId, _clientSession->SessionId() );
 	}
 
@@ -199,6 +206,20 @@ namespace Jde::Web{
 		std::this_thread::sleep_for( 100ms );
 	}
 
+	//C3: OnClose nulls the stream on the strand while Write/Close run on other threads.  Everything reaches it through StreamPtr()
+	//now, and a second close finds null - which has to resume the await rather than dereference it or hang the caller.  TearDown
+	//closes again after this, so the test also covers a third.
+	TEST_F( SocketTests, CloseAfterClose ){
+		createSession();
+		Close();
+		Wait();
+		//BlockVoidAwait rather than the Close()/Wait() pair above: the second close completes synchronously now (await_ready sees a
+		//closed/closing stream), and Wait()'s condition_variable has no predicate - Notify() would fire before it blocks and the
+		//lost wakeup would hang the test rather than the code.  Before this, Suspend went straight at a nulled _stream.
+		BlockVoidAwait( _clientSession->Close(true, SRCE_CUR) );
+		_clientSession = nullptr;//TearDown's Close()/Wait() would hit the same lost wakeup.
+	}
+
 	TEST_F( SocketTests, CloseServerSide ){
 		createSession();
 		EXPECT_THROW( (BlockAwait<ClientSocketAwait<string>,string>( _clientSession->CloseServerSide() )), Exception );
@@ -206,7 +227,8 @@ namespace Jde::Web{
 
 	α BadTransmissionClientCall()ι->ClientSocketAwait<string>::Task{
 		try{
-			//never returns because server can't read it, TODO add a timeout.
+			//C6: the server answers this with an exception carrying a requestId the client cannot match, so nothing ever resumes
+			//the caller.  It used to hang here forever; /web/client/socketRequestTimeout now ends it.
 			co_await _clientSession->BadTransmissionClient();
 		}
 		catch( Exception& e ){
@@ -228,6 +250,11 @@ namespace Jde::Web{
 		}
 		TRACET( ELogTags::Test, "logs.size(): {}", logs.size() );
 		ASSERT_TRUE( logs.size()>0 );
+		//C6: and the stranded caller is now released rather than left waiting - the request deadline fails it.
+		Wait();
+		ASSERT_TRUE( _exception!=nullptr ) << "the unanswerable request never completed";
+		_exception = nullptr;
+		_clientSession = nullptr;//the request deadline already closed this session.
 	}
 
 	α BadTransmissionServerCall()ι->ClientSocketAwait<string>::Task{

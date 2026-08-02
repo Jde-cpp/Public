@@ -93,8 +93,9 @@ function( sync=false )
 		timeout:: "PT30M",
 		socketTimeout:: "P1D",
 		maxLogLength: 255,
+		bodyLimit: 10000,
 		accessControl: {
-			allowOrigin: "*",
+			allowOrigin: "sameHost",
 			allowMethods: "GET, POST, OPTIONS",
 			allowHeaders: "Content-Type, Authorization"
 		},

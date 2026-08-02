@@ -22,6 +22,7 @@ namespace Jde::Web::Server{
 		using base = TAwait<HttpTaskResult>;
 		IHttpRequestAwait( HttpRequest&& req, SRCE )ι:base{sl},_request{ move(req) }{}
 		virtual ~IHttpRequestAwait()=0;
+		α Request()ι->HttpRequest&{ return _request; }//the await owns the request once HandleRequest takes it; error funnels need it back to build the response.  moved-from if the implementation forwarded it on (into the result or a RestException).
 	protected:
 		HttpRequest _request;
 		up<jvalue> _readyResult;

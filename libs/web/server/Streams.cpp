@@ -22,7 +22,7 @@ namespace Jde::Web::Server{
 	α RestStream::OnWrite( beast::error_code ec, uint bytes_transferred )ι->void{
 		boost::ignore_unused( bytes_transferred );
 		if( ec )
-			CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientWrite, ec.value()==(int)boost::beast::error::timeout ? ELogLevel::Debug : ELogLevel::Error };
+			CodeException{ static_cast<std::error_code>(ec), ELogTags::HttpClientWrite, ec.value()==(int)boost::beast::error::timeout ? ELogLevel::Debug : ELogLevel::Error };
   }
 
 	α CreateWS( sp<RestStream>&& stream )ι->optional<SocketStream::Stream>{

@@ -2,6 +2,7 @@
 #include <boost/asio/experimental/parallel_group.hpp>
 #include "Streams.h"
 #include <jde/web/server/HttpRequest.h>
+#include <jde/web/server/Server.h>
 #include <jde/web/server/usings.h>
 #include <jde/app/IApp.h>
 #include <jde/web/server/IRequestHandler.h>
@@ -30,7 +31,7 @@ namespace Jde::Web{
 	Ŧ Server::RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> /*cancel*/, IRequestHandler* reqHandler )ι->net::awaitable<void, executor_type>{
 		optional<http::request_parser<http::string_body>> parser;// a new parser must be used for every message so we use an optional to reconstruct it every time.
 		parser.emplace();
-		parser->body_limit(10000); // TODO Make Setting. Apply a reasonable limit to the allowed size  of the body in bytes to prevent abuse.
+		parser->body_limit( BodyLimit() );
 		auto [ec, bytes_transferred] = co_await http::async_read( stream, buffer, *parser );
 		if( ec == http::error::end_of_stream )
 			co_await DoEof( stream );
@@ -72,7 +73,7 @@ namespace Jde::Web{
 			}
 			parser.reset();// we must use a new parser for every async_read
 			parser.emplace();
-			parser->body_limit( 10000 );
+			parser->body_limit( BodyLimit() );//the keep-alive parser is rebuilt per message, so it needs the same cap.
 			http::message_generator msg{ move(*res) };
 			auto [_, ec_r, sz_r, ec_w, sz_w ] = co_await net::experimental::make_parallel_group(
 				http::async_read( stream, buffer, *parser, net::deferred ),

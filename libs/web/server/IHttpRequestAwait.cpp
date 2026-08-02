@@ -15,6 +15,7 @@ namespace Jde::Web::Server{
 		else
 			Request.reset();
 		Json=move( rhs.Json );
+		Source=move( rhs.Source );
 		return *this;
 	}
 

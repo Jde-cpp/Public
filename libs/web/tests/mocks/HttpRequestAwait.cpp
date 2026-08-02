@@ -1,4 +1,5 @@
 #include "HttpRequestAwait.h"
+#include "ServerMock.h"//Mock::Port, for the redirect Location.
 #include <jde/web/Jwt.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/fwk/chrono.h>
@@ -53,6 +54,8 @@ namespace Jde::Web::Mock{
 			_request.ResponseHeaders.emplace( "Authorization", Jde::format("{:x}", _request.SessionInfo->SessionId) );
 			result = jobject{};
 		}
+		else if( _request.IsGet("/authHeader") )//echoes the credential as received, so a test can see whether a redirect carried it.
+			result = jobject{ {"authorization", _request.Header("authorization")} };
 		else if( _request.IsGet("/timeout") ){
 			jobject j;
 			let expiration = Chrono::ToClock<Clock,steady_clock>( _request.SessionInfo->Expiration );
@@ -65,6 +68,8 @@ namespace Jde::Web::Mock{
 		if( result ){
 			_result = HttpTaskResult{ move(*result), move(_request) };
 		}
+		else if( _request.IsGet("/NoResult") )//#3: a result with no request drops ServerImpl into catch( Exception& ).  leave _request with the await - that is what the error response has to be built from.
+			_result = HttpTaskResult{};
 		return _result.has_value();
 	}
 	α HttpRequestAwait::Suspend()ι->void{
@@ -86,6 +91,13 @@ namespace Jde::Web::Mock{
 				net::post( *Executor(), [h](){ h.resume(); } );
 				DBGT( ELogTags::HttpServerWrite, "~/BadAwaitable handler" );
 			 });
+		}
+		else if( _request.Target()=="/redirectLoop" || _request.Target()=="/redirectHost" ){
+			//302 straight back at the client: /redirectLoop points at itself so the hop budget is the only thing that stops it,
+			///redirectHost sends it to the same server under a different host name so the Authorization drop can be observed.
+			let location = _request.Target()=="/redirectLoop" ? string{"/redirectLoop"} : Ƒ( "https://127.0.0.1:{}/authHeader", Port );
+			_request.ResponseHeaders.emplace( "Location", location );//set before the move - RestException::Response() emits these.
+			ResumeExp( RestException<http::status::found>(SRCE_CUR, move(_request), "redirecting") );
 		}
 		else
 			ResumeExp( RestException<http::status::not_found>(SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target()) );

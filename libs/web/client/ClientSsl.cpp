@@ -1,0 +1,91 @@
+#include <jde/web/client/ClientSsl.h>
+#include <boost/asio/ssl/host_name_verification.hpp>
+
+#define let const auto
+
+namespace Jde::Web::Client::Ssl{
+	constexpr ELogTags _tags{ ELogTags::Http | ELogTags::Client };
+
+	static shared_mutex _mutex;
+	static vector<fs::path> _anchors;
+	static up<ssl::context> _shared;
+
+	α VerifyPeer()ι->bool{
+		static const bool y = Settings::FindBool( "/web/client/ssl/verifyPeer" ).value_or( true );
+		return y;
+	}
+
+	Ω load( ssl::context& ctx, const fs::path& pem )ι->void{
+		beast::error_code ec;
+		ctx.load_verify_file( pem.string(), ec );
+		if( ec )//not fatal: the OS roots may still cover the peer, and failing closed here would take the process down at startup.
+			CodeException{ static_cast<std::error_code>(ec), _tags, Ƒ("Could not load trust anchor '{}'", pem.string()), ELogLevel::Error };
+		else
+			TRACET( _tags, "Loaded trust anchor '{}'.", pem.string() );
+	}
+
+	//_mutex held by the caller.
+	Ω make()ι->ssl::context{
+		ssl::context ctx{ ssl::context::tlsv12_client };
+		if( !VerifyPeer() ){
+			WARNT( _tags, "/web/client/ssl/verifyPeer is false - server certificates are not checked, so any peer can impersonate any host." );
+			ctx.set_verify_mode( ssl::verify_none );
+			return ctx;
+		}
+		beast::error_code ec;
+		ctx.set_default_verify_paths( ec );//the OS roots, for public hosts like the google jwks endpoint.
+		if( ec )
+			CodeException{ static_cast<std::error_code>(ec), _tags, ELogLevel::Warning };
+		if( let caFile = Settings::FindPath("/web/client/ssl/caFile"); caFile )
+			load( ctx, *caFile );
+		for( let& anchor : _anchors )
+			load( ctx, anchor );
+		ctx.set_verify_mode( ssl::verify_peer );
+		return ctx;
+	}
+
+	α MakeContext()ι->ssl::context{
+		sl _{ _mutex };
+		return make();
+	}
+
+	α Context()ι->ssl::context&{
+		ul _{ _mutex };
+		if( !_shared )
+			_shared = mu<ssl::context>( make() );
+		return *_shared;
+	}
+
+	α AddTrustAnchor( fs::path pem )ι->void{
+		ul _{ _mutex };
+		_anchors.emplace_back( move(pem) );
+		//the shared context may already be built - a pooled session can have connected before this anchor was known, which is
+		//exactly what the tests do when they restart the mock server on a fresh self-signed cert.  X509_STORE accepts additions
+		//after construction, so add it rather than rebuilding under live connections.  Register anchors at startup in a server:
+		//mutating a context that handshakes are running against is not something OpenSSL promises.
+		if( _shared && VerifyPeer() )
+			load( *_shared, _anchors.back() );
+	}
+
+	α SetVerifyHost( beast::ssl_stream<beast::tcp_stream>& stream, str host )ι->void{
+		if( !VerifyPeer() )
+			return;
+		beast::error_code ec;
+		//host_name_verification alone: without it a peer holding any certificate we trust could answer for any host - trusting an
+		//anchor is not the same as accepting whoever presents it.  wrapped only to say *why* on rejection; a bare handshake
+		//failure surfaces as "unspecified system error", which is not enough to tell a bad name from a missing anchor.
+		stream.set_verify_callback( [name=string{host}]( bool preverified, ssl::verify_context& ctx )ι->bool{
+			let ok = ssl::host_name_verification{name}( preverified, ctx );
+			if( !ok ){
+				let err = ::X509_STORE_CTX_get_error( ctx.native_handle() );
+				char subject[256]{};
+				if( auto cert = ::X509_STORE_CTX_get_current_cert(ctx.native_handle()); cert )
+					::X509_NAME_oneline( ::X509_get_subject_name(cert), subject, sizeof(subject) );
+				WARNT( _tags, "tls verify failed for '{}' at depth {}: ({}){} - peer presented '{}'", name, ::X509_STORE_CTX_get_error_depth(ctx.native_handle()), err, ::X509_verify_cert_error_string(err), subject );
+			}
+			return ok;
+		}, ec );
+		if( ec )
+			CodeException{ static_cast<std::error_code>(ec), _tags, ELogLevel::Error };
+	}
+}

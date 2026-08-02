@@ -28,7 +28,7 @@ namespace Server{
 			appClient->SetPublicKey( sslSettings.PublicKey.Value(SRCE_CUR) );
 			appClient->LoadLogSettings();
 			QL::Hook::Add( mu<AppInstanceHook>(appClient) );
-			QL::Hook::Add( mu<Web::Server::SessionGraphQL>(appClient) );
+			QL::Hook::Add( mu<Web::Server::SessionGraphQL>(appClient, Authorizer()) );
 			INFOT( ELogTags::App, "--AppServer Started.--" );
 			Resume();
 		}

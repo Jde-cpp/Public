@@ -6,11 +6,9 @@
 #define let const auto
 
 namespace Jde::Web{
-	string _accessControlAllowOrigin;
-	α Server::AccessControlAllowOrigin()ι->string{
-		if( _accessControlAllowOrigin.empty() )
-			_accessControlAllowOrigin = Settings::FindString( "http/accessControl/allowOrigin" ).value_or( "*" );
-		return _accessControlAllowOrigin;
+	α Server::AccessControlAllowOrigin()ι->str{
+		static const string y = Settings::FindString( "/http/accessControl/allowOrigin" ).value_or( string{Server::SameHostOrigin} );
+		return y;
 	}
 
 	string _plainVersion{ Ƒ("({})Jde.Web.Server - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
@@ -29,6 +27,35 @@ namespace Jde::Web::Server{
 		_request{ move(request) },
 		_start{ steady_clock::now() }{
 		ParseUri();
+	}
+
+	//host portion of an Origin ("https://h:1968") or a Host ("h:1968"): scheme and port stripped, ipv6 literal kept whole.
+	Ω hostOf( sv value )ι->sv{
+		if( let scheme = value.find("://"); scheme!=sv::npos )
+			value = value.substr( scheme+3 );
+		if( value.starts_with('[') ){//ipv6 literal - the colons inside it are not a port separator.
+			let close = value.find( ']' );
+			return close==sv::npos ? value : value.substr( 0, close+1 );
+		}
+		let end = value.find_first_of( ":/" );
+		return end==sv::npos ? value : value.substr( 0, end );
+	}
+
+	//Access-Control-Allow-Origin carries one value - "*", "null", or a single origin - so "same host, any port" cannot be written
+	//as a header pattern; it has to be evaluated per request and the Origin reflected back.  that is the shape of this deployment:
+	//AppServer, OpcGateway and the spa each on their own port of one host.
+	//Comparing the Origin's host against this request's own Host holds up for the browser threat model: a page on evil.com reaching
+	//us sends our host in Host and its own in Origin, so it fails.  Forging Host takes a non-browser client, which CORS never
+	//constrained anyway.  Reflecting is only safe here because Access-Control-Allow-Credentials is never sent - auth rides an
+	//explicit Authorization header - reflect-plus-credentials is the combination that hands an attacker the session.
+	α HttpRequest::AllowOrigin()Ι->tuple<string,bool>{
+		let& configured = Server::AccessControlAllowOrigin();
+		if( configured!=Server::SameHostOrigin )
+			return { configured, false };//literal "*" or a pinned origin: same answer for every caller, so nothing to vary on.
+		let origin = Header( "origin" );
+		let host = Header( "host" );
+		let allowed = origin.size() && Str::ToLower( hostOf(origin) )==Str::ToLower( hostOf(host) );
+		return { allowed ? origin : string{}, true };
 	}
 
 	α HttpRequest::operator[]( str x )Ι->const string&{
@@ -76,6 +103,6 @@ namespace Jde::Web::Server{
 	}
 
 	α HttpRequest::LogRead( str text, ELogLevel level, SL sl )Ι->void{
-		LOGSL( level, sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {} - {} - {}", SessionInfo->SessionId, _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(steady_clock::now()-_start) );
+		LOGSL( level, sl, ELogTags::HttpServerRead, "[{:x}.{:x}.{:x}]HttpRequest:  {} - {} - {}", SessionId(), _connectionId, _index, Target(), text.substr(0, MaxLogLength()), Chrono::ToString<steady_clock::duration>(steady_clock::now()-_start) );
 	}
 }

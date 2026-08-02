@@ -1,4 +1,5 @@
 #include <jde/web/server/SessionGraphQL.h>
+#include <jde/access/Authorize.h>
 #include <jde/fwk/io/protobuf.h>
 #include <jde/fwk/io/json.h>
 #include <jde/ql/ql.h>
@@ -83,19 +84,25 @@ namespace Jde::Web::Server{
 	}
 
 	struct PurgeSessionAwait final: TAwait<jvalue>{
-		PurgeSessionAwait( const QL::MutationQL& m, UserPK executer, SRCE )ι: TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer }{}
+		PurgeSessionAwait( const QL::MutationQL& m, UserPK executer, sp<Access::Authorize> authorizer, SRCE )ι:
+			TAwait<jvalue>{ sl }, _mutation{ m }, _executer{ executer }, _authorizer{ move(authorizer) }{}
 		α await_resume()ε->jvalue override;
 		α await_ready()ι->bool override;
 	private:
 		QL::MutationQL _mutation;
 		Jde::UserPK _executer;
+		sp<Access::Authorize> _authorizer;
 		jobject _result{ {"complete", true} };
 		up<Exception> _exception;
 	};
 	α PurgeSessionAwait::await_ready()ι->bool{
-		//TODO check permissions
 		uint rows = 0;
 		try{
+			//the acl is the only gate available here - ownership can't be one.  OpcGateway logs a user out by purging *their*
+			//session as its own service identity (HttpRequestAwait::Logout), so a legitimate purge is routinely cross-user and
+			//"you may only purge your own" would break logout.  admin over "sessions" is what separates that from an attacker.
+			THROW_IF( !_authorizer, "No authorizer - refusing to purge session." );
+			_authorizer->TestAdmin( "sessions", _executer, _sl );
 			if( auto sessionId = _mutation.FindPtr("id"); sessionId )
 				rows = Sessions::Remove( Str::TryTo<SessionPK>(Json::AsString(*sessionId), nullptr, 16).value_or(0) ) ? 1 : 0;
 			_result["rowCount"] =	rows;
@@ -116,6 +123,6 @@ namespace Jde::Web::Server{
 	}
 
 	α SessionGraphQL::PurgeBefore( const QL::MutationQL& m, UserPK executer, SL sl )ι->HookResult{
-		return m.TableName()=="sessions" ? mu<PurgeSessionAwait>( m, executer, sl ) : nullptr;
+		return m.TableName()=="sessions" ? mu<PurgeSessionAwait>( m, executer, _authorizer, sl ) : nullptr;
 	}
 }
