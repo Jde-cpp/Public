@@ -5,6 +5,8 @@
 #include <jde/fwk/utils/Stopwatch.h>
 #include <jde/fwk/str.h>
 #include <jde/fwk/process/execution.h>
+#include <jde/app/proto/app.FromServer.h>
+#include <jde/app/proto/common.h>
 #include "mocks/ServerMock.h"
 
 #define let const auto
@@ -226,6 +228,46 @@ namespace Jde::Web{
 		catch( const ClientHttpResException& e ){
 			ASSERT_EQ( http::status::unauthorized, e.Status() );
 		}
+	}
+	//#15: the response body picks up the wrapped exception's ClientDetail, so every funnel surfaces a proc-raised
+	//message without repeating the policy - and #5 stays honoured: the statement is not part of that detail.
+	TEST( RestExceptionTests, AppDetailReachesBody ){
+		DB::Sql sql; sql.Text = "exec access_user_insert_key ?,?";
+		DB::DBException inner{ DB::EDbError::App, move(sql), "Target 'x' already exists.", {0}, SRCE_CUR };
+		Server::RestException<http::status::unauthorized> e{ move(inner), Server::HttpRequest{Server::TRequestType{}, tcp::endpoint{}, false, 0}, "Could not get sessionInfo." };
+
+		let body = e.Response().body();
+		EXPECT_TRUE( body.contains("Could not get sessionInfo.") ) << body;
+		EXPECT_TRUE( body.contains("Target 'x' already exists.") ) << body;
+		EXPECT_FALSE( body.contains("access_user_insert_key") ) << body; //#5: the statement is not client text.
+	}
+
+	//engine errors name our schema, so only the proc-raised class is surfaced.
+	TEST( RestExceptionTests, NonAppDetailWithheld ){
+		DB::DBException inner{ DB::EDbError::Duplicate, DB::Sql{}, "UNIQUE constraint failed: access_identities.target", {ELogLevel::NoLog, {}, 2067}, SRCE_CUR };
+		Server::RestException<http::status::unauthorized> e{ move(inner), Server::HttpRequest{Server::TRequestType{}, tcp::endpoint{}, false, 0}, "Could not get sessionInfo." };
+
+		let body = e.Response().body();
+		EXPECT_EQ( body, "Could not get sessionInfo." ) << body;
+	}
+
+	//the web server branches on catch( DB::DBException& )/EDbError::App, so the classification has to survive the AppServer round trip - the type itself cannot.
+	TEST( AppExceptionProtoTests, DbErrorSurvivesRoundTrip ){
+		DB::DBException source{ DB::EDbError::App, DB::Sql{}, "Target 'x' already exists.", {ELogLevel::NoLog, {}, 0}, SRCE_CUR };
+		let t = App::FromServer::Exception( source, RequestId{1} );
+		auto e = App::ProtoUtils::ToException( Jde::Proto::Exception{t.messages(0).exception()} );
+
+		let p = dynamic_cast<DB::DBException*>( e.get() );
+		ASSERT_NE( nullptr, p ) << "flattened to a plain Exception - ServerImpl's catch would miss it";
+		EXPECT_EQ( DB::EDbError::App, p->Error );
+		EXPECT_TRUE( string{p->what()}.contains("already exists") ) << p->what();
+	}
+
+	TEST( AppExceptionProtoTests, NonDbStaysPlain ){
+		Exception source{ "not a db error", {ELogLevel::NoLog} };
+		let t = App::FromServer::Exception( source, RequestId{1} );
+		auto e = App::ProtoUtils::ToException( Jde::Proto::Exception{t.messages(0).exception()} );
+		EXPECT_EQ( nullptr, dynamic_cast<DB::DBException*>(e.get()) );
 	}
 //TODO! gzip
 //TODO Test redirect.

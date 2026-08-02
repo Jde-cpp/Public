@@ -48,6 +48,8 @@ namespace Jde{
 		virtual ~Exception();
 
 		β Log()Ι->void;
+		//the part of this exception a client may see, empty unless a subclass opts in - what() carries internals. Response bodies append it, so a new funnel gets it without repeating the policy.
+		β ClientDetail()Ι->string{ return {}; }
 		α what()const noexcept->const char* override;
 		α What()Ι->const string&{ what(); return _what; }
 		α PrependWhat( const string& prepend )ι->void{ What()/*initialize*/; _what = prepend+_what; }

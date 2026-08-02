@@ -1,4 +1,5 @@
 #include <jde/db/Row.h>
+#include <jde/db/DBException.h>
 #include <jde/db/IDataSource.h>
 #include "jde/fwk/settings.h"
 #include <jde/access/Authorize.h>
@@ -9,6 +10,18 @@ namespace Jde::DB::Sqlite::Tests{
 	struct OpTests : BackendTests{};
 	INSTANTIATE_BACKENDS( OpTests );
 		//TODO Test Data, Test Procs, Test FKs, Test Indexes, Test Triggers.
+
+	//#12: sqlite3_open_v2 allocates a handle even when it fails, so a failed open used to leave _db set - every later
+	//call skipped the `if( !_db )` reopen and reused the dead handle, wedging the data source until process restart
+	//even once the cause was gone. Not backend-parameterized: it owns a data source pointed at an unopenable path.
+	TEST( ConnectionTests, ReopensAfterFailedOpen ){
+		auto ds = DS( "wedge" ); //configured at a path whose directory does not exist.
+		EXPECT_ANY_THROW( ds->ExecuteSync(Sql{"select 1"}, SRCE_CUR) ) << "open must fail";
+
+		//cause removed: the next call has to open afresh. Before the fix _db stayed set, so this reused the dead handle and threw.
+		ds->SetConfig( jobject{ {"catalogs", jobject{ {"testDb", jobject{ {"path", ":memory:"}, {"schemas", jobject{}}}} }} } );
+		EXPECT_NO_THROW( ds->ExecuteSync(Sql{"select 1"}, SRCE_CUR) );
+	}
 
 	TEST_P( OpTests, InsertSelectRoundTrip ){
 		let now = DBTimePoint{ std::chrono::floor<std::chrono::seconds>(DBClock::now()) };
@@ -95,6 +108,27 @@ namespace Jde::DB::Sqlite::Tests{
 		}
 		Sql call{ "access_role_insert( ?, ?, ?, ?, ? )", {Value{"survivor"}, Value{"survivor"}, Value{}, Value{}, Value{}}, true };
 		EXPECT_GT( _ds->ExecuteScalerSync(move(call), EValue::UInt64).get_number<uint>(), 0u );
+	}
+
+	TEST_P( OpTests, ConstraintErrorsMapped ){
+		//Constraint violations used to surface as a bare Exception whose code was a crc of "step failed: {} - {}" - the
+		//sqlite result code was dropped. They now carry the extended code and EDbError, so callers branch without knowing sqlite.
+		_ds->ExecuteSync( {"insert into access_identities( name, target ) values( ?, ? )", {Value{"mapped1"}, Value{"mapped@example.com"}}} );
+		try{
+			_ds->ExecuteSync( {"insert into access_identities( name, target ) values( ?, ? )", {Value{"mapped2"}, Value{"mapped@example.com"}}} ); //access_identities_nk1 is unique.
+			FAIL() << "duplicate target should have thrown.";
+		}
+		catch( const DBException& e ){
+			EXPECT_EQ( ToString(e.Error), "duplicate" );
+			EXPECT_EQ( e.Code(), 2067u ); //SQLITE_CONSTRAINT_UNIQUE - the extended code, not the bare SQLITE_CONSTRAINT(19).
+		}
+		try{ //fks are enforced (pragma foreign_keys=on) and no provider row is seeded.
+			_ds->ExecuteSync( {"insert into access_identities( name, target, provider_id ) values( ?, ?, ? )", {Value{"mapped3"}, Value{"mappedFk@example.com"}, Value{(uint)999}}} );
+			FAIL() << "unknown provider_id should have thrown.";
+		}
+		catch( const DBException& e ){
+			EXPECT_EQ( ToString(e.Error), "foreignKey" );
+		}
 	}
 
 	TEST_P( OpTests, DbSettingsHonoredAfterCache ){

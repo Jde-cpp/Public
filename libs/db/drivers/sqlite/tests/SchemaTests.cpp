@@ -65,6 +65,12 @@ namespace Jde::DB::Sqlite::Tests{
 		EXPECT_FALSE( named->PrimaryKey );
 		EXPECT_EQ( named->Columns, (vector<string>{"name", "provider_id"}) );
 
+		//the access_user_insert_key twins document this index as the thing enforcing target uniqueness - their pre-check only supplies the message.
+		let target = find_if( indexes, [](let& i){ return i.Name=="access_identities_nk1"; } );
+		ASSERT_NE( target, indexes.end() );
+		EXPECT_TRUE( target->Unique );
+		EXPECT_EQ( target->Columns, (vector<string>{"target"}) );
+
 		//rowid-alias single-integer pk is omitted by pragma_index_list; a composite pk surfaces as an autoindex, origin 'pk'.
 		let pk = find_if( indexes, [](let& i){ return i.TableName=="access_role_members" && i.PrimaryKey; } );
 		ASSERT_NE( pk, indexes.end() );

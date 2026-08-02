@@ -3,8 +3,13 @@ go
 
 create procedure access_user_insert_key( modulus varchar(1024), exponent int unsigned, provider_id int unsigned, name varchar(255), target varchar(255), description varchar(2047), issuer varchar(1024), subject_alt varchar(1024), distinguished varchar(1024), email varchar(255), expiration datetime, out _identity_id int unsigned )
 begin
+	declare msg varchar(128);
 	if length(name)=0 or length(target)=0 then
 		signal sqlstate '45000' set message_text = 'Name and target are required';
+	end if;
+	if exists( select 1 from access_identities i where i.target = target ) then
+		set msg = concat('Target ''', left(target,103), ''' already exists.');
+		signal sqlstate '45000' set message_text = msg;
 	end if;
 	call access_identity_insert(name, provider_id, target, 0, description, false, email, _identity_id);
 	insert into access_users( identity_id, modulus, exponent, issuer, subject_alt, distinguished, expiration ) values( _identity_id, modulus, exponent, issuer, subject_alt, distinguished, expiration );

@@ -38,7 +38,6 @@ namespace Jde::Access::Server{
 				THROW_IF( Crypto::ExtractPublicKey(_certificate, _sl)!=_publicKey, "Certificate public key does not match jwt key." );
 				Crypto::Certificate info{ _certificate, _sl };
 				THROW_IF( info.CommonName.empty(), "Certificate subject CN is required for enrollment." );
-				THROW_IF( info.CommonName=="localhost", "Certificate CN 'localhost' is not unique - set ssl/certificate/commonName." );//the CN is the identity target; a generic CN means the operator never chose one.
 				auto name = info.Upn.size() ? info.Upn : info.Email.size() ? info.Email : info.CommonName;//UPN → email → CN.
 				InsertUser( _publicKey.ModulusHex(), _publicKey.ExponentInt(), move(info), move(name) );
 			}

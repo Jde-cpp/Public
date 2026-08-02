@@ -237,9 +237,10 @@ namespace Client{
 			[[likely]]case kSubscription:
 				OnMessage( move(*m->mutable_subscription()), requestId );
 			break;
-			case kException:
-				HandleException( move(hAny), App::ProtoUtils::ToException(move(*m->mutable_exception())), requestId );
-				break;
+			case kException:{
+				auto e = App::ProtoUtils::ToException( move(*m->mutable_exception()) );
+				HandleException( move(hAny), move(*e), requestId );
+				break;}
 			case kExecute:
 			case kExecuteAnonymous:{
 				bool isAnonymous = m->value_case()==kExecuteAnonymous;

@@ -67,8 +67,10 @@ namespace Jde::DB::Sqlite{
 		if( !_db ){
 			//SQLITE_OPEN_FULLMUTEX (serialized) as a backstop; _connMutex is the real serialization.
 			let rc = sqlite3_open_v2( _path.c_str(), &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr );
-			THROW_IFX( rc, SqliteException( sl, rc, "sqlite3_open_v2('{}')", _path) );
 			try{
+				//inside the try: open_v2 allocates a handle even when it fails, so throwing past the cleanup below left _db set and every later call skipped the reopen and used the dead handle.
+				THROW_IFX( rc, SqliteException(sl, rc, Sql{}, "sqlite3_open_v2('{}'): {}", _path, _db ? sqlite3_errmsg(_db) : sqlite3_errstr(rc)) );
+				sqlite3_extended_result_codes( _db, 1 ); //ToDbError needs SQLITE_CONSTRAINT_UNIQUE etc; the base SQLITE_CONSTRAINT cannot tell unique from fk/not-null.
 				//exec succeeds even when fks are compiled out (the pragma no-ops) - read the setting back instead of trusting rc.
 				ExecuteStatement( *_db, "pragma foreign_keys=on", {}, nullptr, sl );
 				THROW_IFSL( ScalarUInt(*_db, "pragma foreign_keys", {}, sl).value_or(0)!=1, "Could not enable foreign_keys on '{}' - fks would go unenforced.", _path );
@@ -80,7 +82,7 @@ namespace Jde::DB::Sqlite{
 						WARN( "('{}') journal_mode=wal not applied - using '{}'.", _path, mode );
 				}
 			}
-			catch( ... ){ //don't cache a half-configured connection - a retry would skip the pragmas.
+			catch( ... ){ //don't cache a failed or half-configured connection - a retry would skip the open and the pragmas. close_v2 is a no-op on the null handle an OOM open leaves behind.
 				sqlite3_close_v2( _db );
 				_db = nullptr;
 				throw;

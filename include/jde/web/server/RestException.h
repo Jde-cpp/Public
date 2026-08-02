@@ -29,8 +29,13 @@ namespace Jde::Web::Server{
 	template<http::status TStatus=http::status::internal_server_error>
 	struct RestException final: IRestException{
 		RestException( Exception&& inner, HttpRequest&& req )ι:IRestException{ move(inner), move(req)}{}
-		template<class... Args> RestException( SL sl, HttpRequest&& req, fmt::format_string<Args...> fmt, Args&&... args )ι:IRestException( sl, move(req), fmt, FWD(args)... ){}
-		template<class... Args> RestException( Exception&& inner, HttpRequest&& req, fmt::format_string<Args...> fmt, Args&&... args )ι:IRestException{ move(inner), move(req), fmt, FWD(args)...}{}
+		template<class... Args> RestException( SL sl, HttpRequest&& req, fmt::format_string<Args...> fmt, Args&&... args )ι:
+			IRestException( sl, move(req), fmt, FWD(args)... )
+		{}
+		template<class... Args> RestException( Exception&& inner, HttpRequest&& req, fmt::format_string<Args...> fmt, Args&&... args )ι:
+			IRestException{ move(inner), move(req), fmt, FWD(args)...}
+		{}
+
 		RestException( const RestException& rhs ):IRestException{rhs}{ ASSERT(false); }
 		RestException( RestException&& ) = default;
 		constexpr α Status()Ι->http::status override{ return TStatus; }
@@ -46,6 +51,10 @@ namespace Jde::Web::Server{
 	Ξ IRestException::Response()Ι->http::response<http::string_body>{
 		auto res = _request.Response<http::string_body>( Status() );
 		res.body() = what();
+		//every funnel gets the wrapped exception's client-safe detail here, rather than each catch site composing it.
+		if( auto p = dynamic_cast<const Exception*>(_inner.get()) )
+			if( auto detail = p->ClientDetail(); detail.size() )
+				res.body() += "  " + detail;
 		res.prepare_payload();
 		return res;
 	}
