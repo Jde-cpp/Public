@@ -12,7 +12,7 @@ if( NOT jde_Superbuild )
 	if( WIN32 ) #odbc is windows-only; mysql builds everywhere.
 		add_subdirectory( ${jdeRoot}/libs/db/drivers/odbc/src ../../libs/db/drivers/odbc/lib )
 	endif()
-	add_subdirectory( ${jdeRoot}/libs/ql ../../libs/ql )
+	add_subdirectory( ${jdeRoot}/libs/ql/src ../../libs/ql/lib )
 	add_subdirectory( ${jdeRoot}/libs/access/src ../../libs/access/lib )
 	add_subdirectory( ${jdeRoot}/libs/web/server ../../libs/web/server )
 	add_subdirectory( ${jdeRoot}/libs/web/client ../../libs/web/client )

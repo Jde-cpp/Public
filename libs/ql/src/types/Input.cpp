@@ -112,7 +112,8 @@ namespace Jde::QL{
 			else
 				addArg( value );
 		}
-		argStr.back() = ')';
+		argStr.resize( argStr.size()-2 ); //each arg appends ", " - overwriting only back() left the comma: "(id: 42,)".
+		argStr += ')';
 		return argStr;
 	}
 }
