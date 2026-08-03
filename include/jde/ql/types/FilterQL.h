@@ -4,17 +4,21 @@
 namespace Jde::DB{ struct Value; struct View; }
 
 namespace Jde::QL{
-	struct TableQL;
+	struct TableQL; struct Pattern;
 	α ToString( DB::EOperator op )ι->string;
 	α ToQLOperator( string op )ι->DB::EOperator;
+	inline constexpr uint MaxPatternLength{ 1024 }; //a longer `regex`/`glob` filter is rejected rather than handed to std::regex.
 
 	struct FilterValue final{
+		FilterValue( DB::EOperator op, jvalue value )ι;
 		DB::EOperator Operator;
 		jvalue Value;
 		α Test( const DB::Value& value, ELogTags logTags )Ι->bool;
 		Ŧ Test( T value )Ι->bool;
 		α TestAnd( uint value )Ι->bool;
 		α ToString()Ι->string;
+	private:
+		sp<const Pattern> _pattern; //regex/glob only, and null when the pattern was unusable - built once here, never per row.  Defined in FilterQL.cpp so <regex> stays out of this header.
 	};
 	struct Filter final{
 		α Empty()Ι->bool{ return ColumnFilters.empty() /*&& !StartTime && !EndTime*/; }

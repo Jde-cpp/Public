@@ -46,12 +46,12 @@ namespace Jde::QL{
 	}
 
 	MutationAwaits::MutationAwaits( MutationQL mutation, UserPK executer, Hook::Operation op, SL sl )ι:
-		MutationAwaits{ mutation, executer, op, 0, sl }
+		MutationAwaits{ move(mutation), executer, op, 0, sl }
 	{}
 
 	MutationAwaits::MutationAwaits( MutationQL m, UserPK executer, Hook::Operation op, uint pk, SL sl )ι:
 		base{ sl },
-		_mutation{ m },
+		_mutation{ move(m) }, //the by-value parameter is ours: Hook::Start/Stop's copy off the caller's const& is the only one needed.
 		_op{ op },
 		_pk{ pk },
 		_userPK{ executer }

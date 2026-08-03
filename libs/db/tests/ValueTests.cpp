@@ -40,4 +40,19 @@ namespace Jde::DB::Tests{
 		EXPECT_EQ( Value{-5.0}.ToInt(), -5 );              //ToInt = (_int)ToUInt round-trips.
 		EXPECT_EQ( Value{42.0}.ToUInt(), 42u );            //non-negative unchanged.
 	}
+
+	TEST( ValueTests, ToJsonCoversEveryAlternative ){
+		EXPECT_EQ( Value{uint32_t{7}}.ToJson().to_number<uint32_t>(), 7u );  //the gap.
+		EXPECT_FALSE( Value{uint32_t{7}}.ToJson().is_null() );
+		EXPECT_EQ( Value{uint32_t{0}}.ToJson().to_number<uint32_t>(), 0u );  //0 is not null either.
+
+		EXPECT_TRUE( Value{}.ToJson().is_null() );
+		EXPECT_EQ( Value{string{"abc"}}.ToJson().as_string(), "abc" );
+		EXPECT_TRUE( Value{true}.ToJson().as_bool() );
+		EXPECT_EQ( Value{(int8_t)-3}.ToJson().to_number<int>(), -3 );
+		EXPECT_EQ( Value{42}.ToJson().to_number<int>(), 42 );
+		EXPECT_EQ( Value{uint{9}}.ToJson().to_number<uint>(), 9u );
+		EXPECT_EQ( Value{_int{-9}}.ToJson().to_number<_int>(), -9 );
+		EXPECT_DOUBLE_EQ( Value{1.5}.ToJson().to_number<double>(), 1.5 );
+	}
 }

@@ -106,4 +106,24 @@ namespace Jde::QL::Tests{
 		TestInput in{ R"({name: $userName})", jobject{ {"userName","bob"} } };
 		EXPECT_EQ( in.ArgString(), R"((name: "bob"))" );
 	}
+
+	//OrderByJson is Ι - const *noexcept* - so a non-string member used to reach as_string() and take the process down with it
+	//(verified with EXPECT_DEATH against the old code: "terminating due to uncaught exception").  R2 fixed the same hazard in
+	//the caller, TableQL::OrderBy; this is the feeder, and its other callers (ArchiveFile::IsComplete/ToJson) are Ι too, so it
+	//drops the malformed entry rather than throwing.
+	TEST( InputTests, OrderByJsonSurvivesNonStringMembers ){
+		TestInput active{ R"({orderBy:{active:1, direction:"asc"}})" };
+		EXPECT_TRUE( active.OrderByJson().empty() ); //no column name to order by.
+
+		TestInput direction{ R"({orderBy:{active:"name", direction:5}})" };
+		let& d = direction.OrderByJson();
+		ASSERT_EQ( d.size(), 1u );
+		EXPECT_EQ( d[0].first, "name" );
+		EXPECT_TRUE( d[0].second ); //anything that isn't "desc" is ascending, as before.
+
+		TestInput both{ R"({orderBy:[{active:1, direction:2}, "name"]})" };
+		let& b = both.OrderByJson();
+		ASSERT_EQ( b.size(), 1u ); //the bad entry is dropped, the good one survives.
+		EXPECT_EQ( b[0].first, "name" );
+	}
 }

@@ -13,14 +13,20 @@ namespace Jde::QL{
 				let returnRaw = table.ReturnRaw && _tables.size()==1;
 				auto returnName = table.ReturnName();
 				if( _ql ){
+					//route on the name _before_ handing the table over:  StatusQuery/LogSettingsQuery/LogQuery take it by rvalue, so nothing
+					//after the call may read `table` (or a reference into it) again - hence the branches that move are terminal.
 					let& jsonName = table.JsonName;
-					if( jsonName=="status" )
-						result = _ql->StatusQuery(move(table));
-					else if( auto await = jsonName.starts_with("logSetting") ? _ql->LogSettingsQuery(move(table), _sl) : nullptr; await )
+					let isStatus = jsonName=="status";
+					let isLogSettings = jsonName.starts_with( "logSetting" );
+					let isLog = !isLogSettings && jsonName.starts_with( "log" ) && !jsonName.starts_with( "logLevel" );
+					if( isStatus )
+						result = _ql->StatusQuery( move(table) ); //returns by value - always sets result, so the select fallback below can't see the moved-from table.
+					else if( isLogSettings || isLog ){
+						auto await = isLogSettings ? _ql->LogSettingsQuery( move(table), _sl ) : _ql->LogQuery( move(table), _sl );
+						THROW_IF( !await, "[{}]{} returned null.", returnName, isLogSettings ? "LogSettingsQuery" : "LogQuery" ); //the table is gone - there is nothing left to fall back on.
 						result = co_await *await;
-					else if( auto await = jsonName.starts_with("log") && !jsonName.starts_with("logLevel") ? _ql->LogQuery(move(table), _sl) : nullptr; await )
-						result = co_await *await;
-					else if( auto await = _ql->CustomQuery(table, _creds, _sl); await )
+					}
+					else if( auto await = _ql->CustomQuery( table, _creds, _sl ); await ) //takes an lvalue: ownership stays here.
 						result = co_await *await;
 				}
 				if( !result ){

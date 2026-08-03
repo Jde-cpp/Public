@@ -163,6 +163,36 @@ namespace Jde::QL{
 		y += "\"";
 		return i;
 	}
+	//A json number - -?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)? - validated where it is read.  The old scanner took any
+	//run of digits, '-' and '.', so it stopped mid-token on `1e5` and left the caller to complain about the stray 'e', while
+	//`1.2.3-` went through verbatim for Json::Parse to reject: safe either way, but neither error named the real problem.
+	Ω parseNumber( sv json, string& y )ε->uint{
+		let isDigit = []( char c )ι->bool{ return c>='0' && c<='9'; }; //not isdigit(): a negative char is undefined there.
+		uint i{};
+		let digits = [&]( sv expected )->void{
+			let start = i;
+			for( ; i<json.size() && isDigit(json[i]); ++i );
+			THROW_IF( i==start, "Expected {} vs '{}' in '{}' @ '{}'.", expected, i<json.size() ? json.substr(i,1) : sv{"end of input"}, json, i );
+		};
+		if( i<json.size() && json[i]=='-' )
+			++i;
+		let integer = i;
+		digits( "a digit" );
+		THROW_IF( i-integer>1 && json[integer]=='0', "Leading zeros are not allowed in '{}' @ '{}'.", json, integer );
+		if( i<json.size() && json[i]=='.' ){
+			++i;
+			digits( "a digit after the '.'" );
+		}
+		if( i<json.size() && (json[i]=='e' || json[i]=='E') ){
+			++i;
+			if( i<json.size() && (json[i]=='+' || json[i]=='-') )
+				++i;
+			digits( "a digit after the exponent" );
+		}
+		y += json.substr( 0, i );
+		return i;
+	}
+
 	Ω parseObject( sv json, string& y )ε->uint;
 	Ω parseValue( sv json, string& y )ε->uint{
 		uint i=0;
@@ -203,13 +233,8 @@ namespace Jde::QL{
 			y += true_;
 			i += 4;
 		}
-		else if( isdigit(ch) || ch=='-' || ch=='.' ){
-			for( ; i<json.size() && (isdigit(ch) || ch=='-' || ch=='.'); ch = json[++i] ){
-				y += ch;
-				if( i+1==json.size() )
-					break;
-			}
-		}
+		else if( isdigit(ch) || ch=='-' || ch=='.' ) //'.' can't start a json number, but landing in parseNumber names it better than "unexpected character".
+			i += parseNumber( json.substr(i), y );
 		else if( ch!=',' )
 			THROW( "Unexpected character '{}' @ '{}'.", ch, i );
 		return i;
