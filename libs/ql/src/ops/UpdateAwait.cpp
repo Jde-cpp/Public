@@ -15,6 +15,8 @@
 
 namespace Jde::QL{
 	using DB::Value;
+	α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>; //ops/SelectAwait.cpp - SelectEnumSync, i.e. cached but blocking.
+
 	UpdateAwait::UpdateAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
 		base{ sl },
 		_mutation{ move(mutation) },
@@ -22,23 +24,42 @@ namespace Jde::QL{
 		_userPK{ userPK }
 	{}
 
+	//Authorization only - it is an in-memory acl check, so an unauthorized mutation is still refused without suspending.  The
+	//clauses are built in Build() instead: resolving a flags column's names needs the enum table, and await_ready can not
+	//co_await, which is what forced the old BlockAwait onto whatever thread happened to be running the mutation.
 	α UpdateAwait::await_ready()ι->bool{
 		try{
 			THROW_IF( !_table, "Table not found for mutation '{}'.", _mutation.ToString() );
-			if( _mutation.Type==EMutationQL::Update ){
-				_table->Authorize( Access::ERights::Update, _userPK, _sl );
-				CreateUpdate( *_table );
-				THROW_IF( _updates.empty(), "There is nothing to update." );
-			}
-			else{
-				CreateDeleteRestore( *_table );
-				_table->Authorize( Access::ERights::Delete, _userPK, _sl );
-			}
+			_table->Authorize( _mutation.Type==EMutationQL::Update ? Access::ERights::Update : Access::ERights::Delete, _userPK, _sl );
 		}
 		catch( Exception& e ){
 			_exception = e.Move();
 		}
 		return _exception!=nullptr;
+	}
+
+	//The flags columns this mutation actually sets, over the same extension chain and the same arg predicate CreateUpdate uses.
+	α UpdateAwait::FlagTables( const DB::Table& table, vector<sp<DB::View>>& y )ι->void{
+		if( let extends = table.IsView() ? nullptr : AsTable(table).Extends; extends )
+			FlagTables( *extends, y );
+		for( let& c : table.Columns ){
+			if( !c->Updateable || !c->IsFlags() )
+				continue;
+			let jvalue = _mutation.Args.if_contains( QLColumn{c}.MemberName() );
+			if( let flags = jvalue ? jvalue->if_array() : nullptr; flags && flags->size() )
+				y.push_back( QLColumn{c}.Column->PKTable );
+		}
+	}
+
+	//Prefetched by Build().  The fallback is the old path (cached, but it blocks); it only runs if the two walks ever
+	//disagree, so a future divergence costs a stall instead of a failed mutation.
+	α UpdateAwait::EnumValues( const DB::View& enumTable )ε->const flat_map<uint,string>&{
+		auto p = _enums.find( enumTable.Name );
+		if( p==_enums.end() ){
+			WARNT( ELogTags::QL, "[{}]enum values were not prefetched - falling back to a blocking lookup.", enumTable.Name );
+			p = _enums.emplace( enumTable.Name, GetEnumValues(enumTable) ).first;
+		}
+		return p->second;
 	}
 
 	α UpdateAwait::CreateUpdate( const DB::Table& table )ε->DB::Value{
@@ -75,13 +96,11 @@ namespace Jde::QL{
 			else{
 				uint value = 0;
 				if( let flags = jvalue->if_array(); flags && flags->size() ){
-					let enumTable = qlColumn.Table();
-					let values = BlockAwait<TAwait<flat_map<string,uint>>,flat_map<string,uint>>(
-						enumTable.Schema->DS()->SelectMap<string,uint>( {Ƒ("select name, {} from {}", enumTable.GetPK()->Name, enumTable.DBName)} )
-					);
+					let& values = EnumValues( qlColumn.Table() );
 					for( let& flagName : *flags ){
-						if( let flag = values.find(Json::AsString(flagName)); flag != values.end() )
-							value |= flag->second;
+						let name = Json::AsString( flagName );
+						let flag = FindKey( values, name ); THROW_IF( !flag, "Could not find '{}' for {}", name, qlColumn.MemberName() );
+						value |= *flag;
 					}
 				}
 				else if( jvalue->is_number() )
@@ -108,6 +127,30 @@ namespace Jde::QL{
 				update.Where.Add( column, DB::Value{column->Type, arg.value()} );
 		}
 		_updates.push_back( move(update) );
+	}
+
+	//The clauses are built here rather than in await_ready: a flags column resolves its names through the enum table, and this
+	//is where waiting on the db is free.  Each awaitable dictates its caller's return type, so this step is CacheAwait's and
+	//hands off to UpdateBefore - the same chaining InsertAwait uses.
+	α UpdateAwait::Build()ι->TTask<flat_map<uint,string>>{
+		try{
+			if( _mutation.Type==EMutationQL::Update ){
+				vector<sp<DB::View>> enumTables;
+				FlagTables( *_table, enumTables );
+				for( let& enumTable : enumTables ){
+					if( !_enums.contains(enumTable->Name) )
+						_enums.emplace( enumTable->Name, co_await enumTable->Schema->DS()->SelectEnum<uint,string>(*enumTable, _sl) );
+				}
+				CreateUpdate( *_table );
+				THROW_IF( _updates.empty(), "There is nothing to update." );
+			}
+			else
+				CreateDeleteRestore( *_table );
+			UpdateBefore();
+		}
+		catch( exception& e ){
+			ResumeExp( move(e) );
+		}
 	}
 
 	α UpdateAwait::UpdateBefore()ι->MutationAwaits::Task{

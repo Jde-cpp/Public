@@ -97,6 +97,7 @@ namespace Jde::DB{
 		case Bool: j = get_bool(); break;
 		case Int8: j = get_int8(); break;
 		case Int64: j = get_int(); break;
+		case UInt32: j = get_uint32(); break;
 		case UInt64: j = get_uint(); break;
 		case Int32: j = get_int32(); break;
 		case Double: j = get_double(); break;

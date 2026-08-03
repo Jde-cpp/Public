@@ -94,6 +94,31 @@ namespace Jde::QL::Tests{
 		EXPECT_TRUE( Parser::ParseArgs("{}").empty() );
 	}
 
+	//The number scanner is the json grammar: exponents parse (they used to stop the scan at the 'e'), and every other
+	//json number shape survives the rewrite unchanged.
+	TEST( ParserTests, ParseArgsNumbers ){
+		let number = []( sv text )ε{ return Parser::ParseArgs( Ƒ("{{n: {}}}", text) ).at("n"); };
+		EXPECT_DOUBLE_EQ( number("1e5").to_number<double>(), 1e5 );
+		EXPECT_DOUBLE_EQ( number("1E5").to_number<double>(), 1e5 );
+		EXPECT_DOUBLE_EQ( number("1.5e-3").to_number<double>(), 1.5e-3 );
+		EXPECT_DOUBLE_EQ( number("-2.5E+2").to_number<double>(), -250. );
+		EXPECT_EQ( number("0").to_number<uint>(), 0u );
+		EXPECT_EQ( number("-7").to_number<int>(), -7 );
+		EXPECT_DOUBLE_EQ( number("0.5").to_number<double>(), 0.5 );
+		EXPECT_EQ( number("9007199254740993").to_number<uint>(), 9007199254740993u ); //a uint64 past double's exact range.
+	}
+
+	//Malformed numbers are now caught where they are read, not by Json::Parse on the rewritten string.
+	TEST( ParserTests, ParseArgsRejectsMalformedNumbers ){
+		EXPECT_THROW( Parser::ParseArgs("{n: 1.2.3-}"), Exception );
+		EXPECT_THROW( Parser::ParseArgs("{n: 1.}"), Exception );   //no digit after the '.'.
+		EXPECT_THROW( Parser::ParseArgs("{n: .5}"), Exception );   //json numbers need a leading digit.
+		EXPECT_THROW( Parser::ParseArgs("{n: -}"), Exception );
+		EXPECT_THROW( Parser::ParseArgs("{n: 1e}"), Exception );   //no digit after the exponent.
+		EXPECT_THROW( Parser::ParseArgs("{n: 1e+}"), Exception );
+		EXPECT_THROW( Parser::ParseArgs("{n: 007}"), Exception );  //leading zeros.
+	}
+
 	TEST( ParserTests, ParseArgsRejectsMalformed ){
 		EXPECT_THROW( Parser::ParseArgs("{id: 42"), Exception );      //unterminated object.
 		EXPECT_THROW( Parser::ParseArgs(R"({active: tru})"), Exception ); //'t' must spell true.

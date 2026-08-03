@@ -70,4 +70,21 @@ namespace Jde::Access::Tests{
  		let purge = Ƒ( "{{mutation purgeResource(\"id\":{}) }}", id );
  		ASSERT_TRUE( Tests::SelectGroup("groupTest", GetRoot(), true).empty() );
 	}
+
+	TEST_F( ResourceTests, UnknownFlagNameIsAnErrorNotAWipe ){
+		constexpr sv schema{ "qlFlagTests" };
+		constexpr sv target{ "flagTypo" };
+		let select = Ƒ( R"(resources( schemaName:"{}", target:"{}" ){{ id allowed }})", schema, target );
+		if( QL().QuerySync<jarray>(select, {}, GetRoot()).empty() )
+			QL().QuerySync<jvalue>( Ƒ(R"(mutation createResource( schemaName:"{0}", name:"{1}", target:"{1}", allowed:["Read"] ))", schema, target), {}, GetRoot() );
+		auto rows = QL().QuerySync<jarray>( select, {}, GetRoot() );
+		ASSERT_EQ( rows.size(), 1u );
+		let id = GetId( Json::AsObject(rows[0]) );
+		let before = serialize( Json::AsObject(rows[0]).at("allowed") );
+
+		EXPECT_THROW( QL().QuerySync<jvalue>(Ƒ(R"(mutation updateResource( "id":{}, "allowed":["Reed"] ))", id), {}, GetRoot()), Exception );
+		let after = QL().QuerySync<jarray>( select, {}, GetRoot() );
+		ASSERT_EQ( after.size(), 1u );
+		EXPECT_EQ( serialize(Json::AsObject(after[0]).at("allowed")), before ); //unchanged - the update never ran, rather than running with 0.
+	}
 }

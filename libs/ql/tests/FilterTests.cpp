@@ -25,9 +25,6 @@ namespace Jde::QL::Tests{
 		EXPECT_EQ( ToQLOperator("notAnOperator"), Equal ); //unknown spellings degrade to equality.
 	}
 
-	//DB::Value{uint{}}, not {42u}: an `unsigned int` literal selects the variant's uint32_t alternative, which
-	//Value::ToJson has no case for (libs/db/src/Value.cpp) - it logs "Unknown type(uint32)" and yields json null,
-	//so every comparison below would silently fail for reasons that have nothing to do with the filters.
 	TEST( FilterTests, EqualityOperators ){
 		EXPECT_TRUE( filterValue(DB::EOperator::Equal, 42).Test(DB::Value{uint{42}}) );
 		EXPECT_FALSE( filterValue(DB::EOperator::Equal, 42).Test(DB::Value{uint{43}}) );
@@ -46,6 +43,13 @@ namespace Jde::QL::Tests{
 		EXPECT_TRUE( filterValue(DB::EOperator::LessOrEqual, 42).Test(DB::Value{uint{42}}) );
 	}
 
+	TEST( FilterTests, UInt32ComparesLikeAnyOtherNumber ){
+		EXPECT_TRUE( filterValue(DB::EOperator::Equal, 42).Test(DB::Value{uint32_t{42}}) );
+		EXPECT_FALSE( filterValue(DB::EOperator::Equal, 42).Test(DB::Value{uint32_t{43}}) );
+		EXPECT_TRUE( filterValue(DB::EOperator::Greater, 41).Test(DB::Value{uint32_t{42}}) );
+		EXPECT_TRUE( filterValue(DB::EOperator::In, jarray{1,2,3}).Test(DB::Value{uint32_t{2}}) );
+	}
+
 	TEST( FilterTests, InAndNotIn ){
 		let list = jarray{ 1, 2, 3 };
 		EXPECT_TRUE( filterValue(DB::EOperator::In, list).Test(DB::Value{uint{2}}) );
@@ -57,13 +61,62 @@ namespace Jde::QL::Tests{
 	TEST( FilterTests, Regex ){
 		EXPECT_TRUE( filterValue(DB::EOperator::Regex, "b.b").Test(DB::Value{string{"bob"}}) );
 		EXPECT_FALSE( filterValue(DB::EOperator::Regex, "b.b").Test(DB::Value{string{"alice"}}) );
+		EXPECT_TRUE( filterValue(DB::EOperator::Regex, "b.b").Test(DB::Value{string{"bib"}}) ); //the same compiled regex, reused - it is built in the ctor, not per Test().
 	}
 
-	//Test() swallows its own exceptions and reports "no match" - an unparseable pattern must not escape.
-	TEST( FilterTests, BadRegexDoesNotThrow ){
+	//A pattern that can't be used matches nothing rather than throwing:  the ctor rejects it once instead of Test() throwing per row.
+	TEST( FilterTests, UnusablePatternsMatchNothing ){
 		bool matched{ true };
-		EXPECT_NO_THROW( matched = filterValue(DB::EOperator::Regex, "[").Test(DB::Value{string{"bob"}}) );
+		EXPECT_NO_THROW( matched = filterValue(DB::EOperator::Regex, "[").Test(DB::Value{string{"bob"}}) ); //doesn't compile.
 		EXPECT_FALSE( matched );
+		EXPECT_FALSE( filterValue(DB::EOperator::Regex, 42).Test(DB::Value{string{"42"}}) );   //not a string.
+		EXPECT_FALSE( filterValue(DB::EOperator::Glob, 42).Test(DB::Value{string{"42"}}) );
+		let tooLong = string( MaxPatternLength+1, 'a' );
+		EXPECT_FALSE( filterValue(DB::EOperator::Regex, jstring{tooLong}).Test(DB::Value{tooLong}) );
+	}
+
+	//glob is a glob, not a regex.  `*abc*` is not even a legal regex (nothing for the leading '*' to repeat), so this used
+	//to throw inside Test() and report "no match" for everything.
+	TEST( FilterTests, Glob ){
+		let glob = []( sv pattern, sv value ){ return filterValue(DB::EOperator::Glob, jstring{pattern}).Test( DB::Value{string{value}} ); };
+		EXPECT_TRUE( glob("*abc*", "xxabcyy") );
+		EXPECT_TRUE( glob("*abc*", "abc") );
+		EXPECT_FALSE( glob("*abc*", "xxabyy") );
+		EXPECT_TRUE( glob("abc*", "abcdef") );
+		EXPECT_FALSE( glob("abc*", "xabcdef") );
+		EXPECT_TRUE( glob("*def", "abcdef") );
+		EXPECT_TRUE( glob("a*b*c", "axxbyyc") );  //two stars, each backtracking independently.
+		EXPECT_TRUE( glob("b?b", "bob") );
+		EXPECT_FALSE( glob("b?b", "boob") );
+		EXPECT_TRUE( glob("bob", "bob") );
+		EXPECT_FALSE( glob("bob", "bobby") );
+		EXPECT_TRUE( glob("*", "anything") );
+		EXPECT_TRUE( glob("*", "") );
+		EXPECT_FALSE( glob("", "notEmpty") );
+		EXPECT_TRUE( glob("", "") );
+	}
+
+	//The metacharacters are the glob ones - a regex's are literal, which is the whole point of the operator being distinct.
+	TEST( FilterTests, GlobMetacharactersAreLiteral ){
+		let glob = []( sv pattern, sv value ){ return filterValue(DB::EOperator::Glob, jstring{pattern}).Test( DB::Value{string{value}} ); };
+		EXPECT_TRUE( glob("a.c", "a.c") );
+		EXPECT_FALSE( glob("a.c", "abc") ); //'.' is not "any character" here.
+		EXPECT_TRUE( glob("a+b", "a+b") );
+		EXPECT_TRUE( glob("(x)", "(x)") );
+	}
+
+	TEST( FilterTests, GlobCharacterClasses ){
+		let glob = []( sv pattern, sv value ){ return filterValue(DB::EOperator::Glob, jstring{pattern}).Test( DB::Value{string{value}} ); };
+		EXPECT_TRUE( glob("[bB]ob", "Bob") );
+		EXPECT_TRUE( glob("[bB]ob", "bob") );
+		EXPECT_FALSE( glob("[bB]ob", "rob") );
+		EXPECT_TRUE( glob("[a-c]at", "bat") );
+		EXPECT_FALSE( glob("[a-c]at", "hat") );
+		EXPECT_TRUE( glob("[^a-c]at", "hat") );  //sqlite spells negation '^'…
+		EXPECT_FALSE( glob("[!a-c]at", "bat") ); //…and '!' is accepted too.
+		EXPECT_TRUE( glob("[]x]y", "]y") );      //a ']' first is a literal, not the terminator.
+		EXPECT_TRUE( glob("[abc", "[abc") );     //unterminated -> the '[' is a literal.
+		EXPECT_TRUE( glob("*[0-9]", "port 8") );
 	}
 
 	TEST( FilterTests, TestAndIsBitwise ){

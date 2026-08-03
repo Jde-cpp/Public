@@ -86,8 +86,13 @@ namespace Jde::QL{
 			if( v.is_string() )
 				_orderBy->emplace_back( string{v.get_string()}, true );
 			else if( auto o = v.is_object() ? v.get_object() : jobject{}; !o.empty() ){
-				if( o.contains("active") && o.contains("direction") )
-					_orderBy->emplace_back( o.at("active").as_string(), o.at("direction").as_string()!="desc" );
+				if( let active = o.if_contains("active"), direction = o.if_contains("direction"); active && direction ){
+					let descending = direction->if_string() && *direction->if_string()=="desc";
+					if( let name = active->if_string(); name )
+						_orderBy->emplace_back( string{*name}, !descending );
+					else
+						DBGT( ELogTags::QL, "orderBy active='{}' is not a column name - ignored.", serialize(*active) );
+				}
 				else{ //orderBy:{"name","desc"}
 					for( let& [key,value] : o )
 						_orderBy->emplace_back( key, value.is_string() && value.get_string()!="desc" );
