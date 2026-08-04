@@ -30,8 +30,6 @@ namespace Jde::App{
 		return true;
 	}
 	α LogSettingsAwait::await_resume()ε->jvalue{
-		if( _exception )
-			throw move( *_exception );
 		return move( _result );
 	}
 

@@ -18,7 +18,7 @@ namespace Jde::App{
 					if( crit.Operator==DB::EOperator::Greater )
 						_startTime = Chrono::ToTimePoint( string{crit.Value.as_string()} );
 					else if( crit.Operator==DB::EOperator::Less )
-						_endTime = Chrono::ToTimePoint( string{crit.Value.get_string()} );
+						_endTime = Chrono::ToTimePoint( string{crit.Value.as_string()} );
 				}
 			}
 			let& ob = _ql.OrderByJson();

@@ -53,8 +53,13 @@ namespace Jde::App{
 		valid = valid && filter.TestF<uuid>( "templateId", [&](){return ToGuid(entry.template_id());} );
 		valid = valid && filter.TestF<string>( "message", [&](){return Message(entry);} );
 		if( valid && filter.ColumnFilters.contains("args") ){
+			//Any argument, not every one.  ANDing meant `args:"timeout"` rejected every entry that also had an unrelated
+			//argument, and an entry with *no* arguments passed outright - the loop that could have rejected it never ran.
+			//Starting false is what fixes the second half; each iteration is still ANDed across the operators on the
+			//column by TestF, so `args:{gt:"a", lt:"z"}` asks for one argument satisfying both.
+			valid = false;
 			for( let& argId : entry.args() ){
-				if( valid = filter.TestF<string>("args", [&](){return find(Args, argId);}); !valid )
+				if( valid = filter.TestF<string>("args", [&](){return find(Args, argId);}); valid )
 					break;
 			}
 		}
@@ -131,16 +136,22 @@ namespace Jde::App{
 		auto addString = [&]( auto& map, auto& id ){
 			map.try_emplace( ToGuid(id), move(strings[ToGuid(id)]) );
 		};
+		//Collect in a pass of its own, before any Test: the filter resolves "text", "message" and "args" through these very
+		//maps (Test/Message below), so populating them per surviving entry meant the first entry was compared against an
+		//empty map - and every one after it, since none ever survived.  Any text/message/args filter silently dropped the
+		//whole daily file.  The TableQL overload above has always collected first; this is the same order.
+		//No extra memory: each value is moved out of `strings`, which we already hold in full, rather than copied.
 		for( let& entry : logEntries ){
-			let time = Protobuf::ToTimePoint( entry.time() );
-			if( !Test(filter, time, entry) )
-				continue;
 			addString( Templates, entry.template_id() );
 			addString( Files, entry.file_id() );
 			addString( Functions, entry.function_id() );
 			for( let& argId : entry.args() )
 				addString( Args, argId );
-			Entries[time].emplace_back( move(entry) );
+		}
+		for( auto& entry : logEntries ){
+			let time = Protobuf::ToTimePoint( entry.time() );
+			if( Test(filter, time, entry) )
+				Entries[time].emplace_back( move(entry) );
 		}
 	}
 
@@ -149,10 +160,10 @@ namespace Jde::App{
 		for( let& [ts,entries] : Entries )
 			y.insert( y.end(), entries.begin(), entries.end() );
 
-		if( orderBy.empty() || (orderBy[0].first=="time" && orderBy[0].second) )
+		if( orderBy.empty() || (orderBy.size()==1 && orderBy[0].first=="time" && orderBy[0].second) )
 			return y;
 
-		std::sort( y.begin(), y.end(), [&](let& a, let& b){
+		std::stable_sort( y.begin(), y.end(), [&](let& a, let& b){
 			optional<bool> lessThan;
 			for( let& [field,asc] : orderBy ){
 				if( field=="time" ){
@@ -161,10 +172,16 @@ namespace Jde::App{
 					if( aTime != bTime )
 						lessThan = aTime<bTime;
 				}
-				else if( field=="file" )
-					lessThan = a.file_id()==b.file_id() ? nullopt : optional<bool>{ a.file_id()<b.file_id() };
-				else if( field=="function" )
-					lessThan = a.function_id()==b.function_id() ? nullopt : optional<bool>{ a.function_id()<b.function_id() };
+				else if( field=="file" ){
+					let& aFile = find( Files, a.file_id() );
+					let& bFile = find( Files, b.file_id() );
+					lessThan = aFile==bFile ? nullopt : optional<bool>{ aFile<bFile };
+				}
+				else if( field=="function" ){
+					let& aFunction = find( Functions, a.function_id() );
+					let& bFunction = find( Functions, b.function_id() );
+					lessThan = aFunction==bFunction ? nullopt : optional<bool>{ aFunction<bFunction };
+				}
 				else if( field=="level" )
 					lessThan = a.level()==b.level() ? nullopt : optional<bool>{ a.level()<b.level() };
 				else if( field=="line" )

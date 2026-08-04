@@ -1,3 +1,4 @@
+#pragma once
 #include "../usings.h"
 
 namespace Jde::App::LogProto{
@@ -7,8 +8,9 @@ namespace Jde::App::LogProto{
 	α FromLogEntry( Log::Proto::LogEntryClient&& m )ι->Logging::Entry;
 	α ToEntry( Log::Proto::LogEntryFileExternal&& x )ι->Log::Proto::LogEntryFile;//drops app_pk/app_instance_pk attribution.
 	α ToString( uuid id, string&& value )ι->Log::Proto::String;
-
+	//Debugger-facing; see LogProto.cpp for why these are unconditional.
 	α DebugString( const Log::Proto::FileEntry& f )ι->string;
 	α DebugString( const Log::Proto::LogEntryFile& f )ι->string;
 	α DebugString( const Log::Proto::LogEntryFileExternal& f )ι->string;
+
 }

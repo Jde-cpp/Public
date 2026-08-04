@@ -1,6 +1,7 @@
 #include "WebServer.h"
 #include <jde/ql/types/FilterQL.h>
 #include <jde/app/IApp.h>
+#include <jde/app/log/ProtoLog.h>
 #include "LocalClient.h"
 #include "ServerSocketSession.h"
 #include "jde/fwk/usings.h"
@@ -25,7 +26,13 @@ namespace Jde::App{
 	α Server::GetAppPK()ι->ProgramPK{ return _appId; }
 	α Server::SetAppPKs( std::tuple<ProgramPK, ProgInstPK, ConnectionPK> x )ι->void{
 		_appId=get<0>( x );
+		_instancePK=get<1>( x );
 		AppClient()->SetAppPKs( get<1>(x), get<2>(x) );
+		//ProtoLog needs them for the same reason SubscribeLog is handed them at construction - to tell an entry a client
+		//forwarded to us from one of our own coming back.  It cannot take them at construction: Init() runs before the
+		//AddConnection round-trip that mints them.
+		if( auto log = Logging::FindLogger<App::ProtoLog>(); log )
+			log->SetAppPKs( get<0>(x), get<1>(x) );
 	}
 	α Server::StartWebServer( jobject&& settings )ε->void{
 		_requestHandler = ms<RequestHandler>( move(settings) );

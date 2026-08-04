@@ -10,7 +10,6 @@
 #include <jde/access/server/accessServer.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/AccessListener.h>
-#include <jde/app/StringCache.h>
 #include <jde/app/proto/app.FromServer.h>
 #include "LocalClient.h"
 #include "WebServer.h"

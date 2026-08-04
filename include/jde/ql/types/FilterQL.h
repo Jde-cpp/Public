@@ -18,7 +18,9 @@ namespace Jde::QL{
 		α TestAnd( uint value )Ι->bool;
 		α ToString()Ι->string;
 	private:
+		α TestTime( TimePoint value )Ι->bool;
 		sp<const Pattern> _pattern; //regex/glob only, and null when the pattern was unusable - built once here, never per row.  Defined in FilterQL.cpp so <regex> stays out of this header.
+		vector<TimePoint> _times; //Value parsed as time(s), once, so a time column compares chronologically - see TestTime.  Empty unless every literal parsed.
 	};
 	struct Filter final{
 		α Empty()Ι->bool{ return ColumnFilters.empty() /*&& !StartTime && !EndTime*/; }

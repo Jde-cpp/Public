@@ -4,7 +4,7 @@
 #define let const auto
 
 namespace Jde::QL{
-	α Input::Filter()Ι->QL::Filter{
+	α Input::Filter()Ι->const QL::Filter&{
 		if( _filter )
 			return *_filter;
 		auto addFilters = []( jvalue&& value )ε->vector<FilterValue> {

@@ -1,5 +1,6 @@
 #include <jde/ql/types/FilterQL.h>
 #include <regex>
+#include <jde/fwk/chrono.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/meta/Column.h>
@@ -116,10 +117,41 @@ namespace Jde::QL{
 		return {};
 	}
 
+	//The filter's own literal(s) as TimePoints, parsed once here rather than per row.  Empty unless *every* literal parses,
+	//which is also how Test decides whether a time column can be compared chronologically at all - an unparseable literal
+	//keeps the old string behaviour rather than silently matching nothing.
+	Ω makeTimes( const jvalue& value )ι->vector<TimePoint>{
+		vector<TimePoint> y;
+		auto add = [&y]( const jvalue& v )ι->bool{
+			let text = v.try_as_string();
+			//shape test first: Chrono::ToTimePoint wants %FT%T and throws otherwise, and most filter literals ("text",
+			//"message", ...) are not times at all - this runs per filter, but there is no reason to throw per filter.
+			if( !text || text->size()<19 || (*text)[10]!='T' )
+				return false;
+			try{
+				y.push_back( Chrono::ToTimePoint(string{*text}) );
+				return true;
+			}
+			catch( const exception& ){
+			}
+			return false;
+		};
+		if( let a = value.try_as_array(); a ){
+			for( let& v : *a ){
+				if( !add(v) )
+					return {};
+			}
+			return y;
+		}
+		return add( value ) ? y : vector<TimePoint>{};
+	}
+
 	FilterValue::FilterValue( DB::EOperator op, jvalue value )ι:
 		Operator{ op },
 		Value{ move(value) },
-		_pattern{ op==DB::EOperator::Regex || op==DB::EOperator::Glob ? makePattern(op, Value) : nullptr }
+		_pattern{ op==DB::EOperator::Regex || op==DB::EOperator::Glob ? makePattern(op, Value) : nullptr },
+		//keyed off the operator, not off _pattern: a regex/glob whose pattern failed to compile is still a text match.
+		_times{ op==DB::EOperator::Regex || op==DB::EOperator::Glob ? vector<TimePoint>{} : makeTimes(Value) }
 	{}
 
 	α Filter::Test( const DB::Value::Underlying& value, const vector<FilterValue>& filters, ELogTags logTags )ι->bool{
@@ -143,10 +175,32 @@ namespace Jde::QL{
 		return p==ColumnFilters.end() || p->second.empty() ? "none" : p->second[0].ToString();
 	}
 
+	//A time column compares as a TimePoint, never through its rendered string.  ToIsoString is variable width - a whole
+	//second drops the fraction - so "2026-08-02T10:00:00.250000Z" is lexicographically *less* than "2026-08-02T10:00:00Z"
+	//('.'=0x2E < 'Z'=0x5A at index 19).  gt on a whole-second boundary therefore dropped every sub-second entry inside that
+	//second, and lt on a sub-second bound dropped the whole-second entry below it - each one classified backwards.
+	α FilterValue::TestTime( TimePoint value )Ι->bool{
+		using enum DB::EOperator;
+		let one = _times.size()==1;//a scalar operator against an array literal is nonsense; keep it matching nothing.
+		switch( Operator ){
+		case Equal: return one && value==_times[0];
+		case NotEqual: return !one || value!=_times[0];
+		case Greater: return one && value>_times[0];
+		case GreaterOrEqual: return one && value>=_times[0];
+		case Less: return one && value<_times[0];
+		case LessOrEqual: return one && value<=_times[0];
+		case In: return find( _times, value )!=_times.end();
+		case NotIn: return find( _times, value )==_times.end();
+		default: return false;//Regex/Glob never reach here (no _times); ElementMatch matches nothing, as in the switch below.
+		}
+	}
+
 	α FilterValue::Test( const DB::Value& db, ELogTags logTags )Ι->bool{
 		using namespace Json;
 		bool passesFilters{};
 		try{
+			if( db.Type()==DB::EValue::Time && _times.size() )
+				return TestTime( db.get_time() );
 			switch( Operator ){
 			using enum DB::EOperator;
 			case Equal: passesFilters = Value==db.ToJson(); break;

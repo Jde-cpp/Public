@@ -1,6 +1,5 @@
 #pragma once
 #include <jde/app/client/usings.h>
-#include <jde/app/client/AppClientSubscriptions.h>
 #include <jde/app/proto/app.FromClient.h>
 #include <jde/access/usings.h>
 #include <jde/ql/types/Subscription.h>
@@ -12,6 +11,7 @@
 #define Φ ΓAC auto
 namespace Jde::QL{ struct IListener; }
 namespace Jde::App::Client{
+	struct AppClientSocketSession;
 	struct IAppClient;
 	struct StartSocketAwait : TAwait<Proto::FromServer::ConnectionInfo>{
 		using base = TAwait<Proto::FromServer::ConnectionInfo>;
@@ -49,7 +49,10 @@ namespace Jde::App::Client{
 		sp<IAppClient> _appClient;
 		sp<Access::Authorize> _authorize;
 		sp<QL::IQL> _qlServer;
-		concurrent_flat_map<RequestId, std::pair<sp<QL::IListener>,vector<QL::Subscription>>> _subscriptionRequests;
+		//Query/Variables are carried through to the ack so Subscriptions::Remember records what actually succeeded, rather
+		//than what was merely attempted - a request the server rejects must not be replayed on every reconnect forever.
+		struct SubscriptionRequest final{ sp<QL::IListener> Listener; vector<QL::Subscription> Subscriptions; string Query; jobject Variables; };
+		concurrent_flat_map<RequestId, SubscriptionRequest> _subscriptionRequests;
 	};
 }
 #undef Φ

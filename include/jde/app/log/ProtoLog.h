@@ -9,6 +9,7 @@
 
 namespace Jde::App{
 	struct ProtoLogCache{
+		α Clear()ι->void;
 		α Trim()ι->void;
 		std::deque<uuid> Args;
 		std::deque<uuid> Strings;
@@ -20,18 +21,20 @@ namespace Jde::App{
 		α Archive()ι->VoidAwait::Task;
 		α Shutdown( bool terminate, SL sl )ι->void override;
 		α DailyFile()ι->fs::path{ return _root/"log.binpb"; }
-		α DailyFileStart()ι->TimePoint{ return _dailyFileStart; }//max if not started
+		α DailyFileStart()Ι->TimePoint{ lg _{_mutex}; return _dailyFileStart; }
 		Ω Deserialize( sv bytes )ε->vector<App::Log::Proto::FileEntry>;
 		α Entries()Ε->vector<App::Log::Proto::FileEntry>{ lg _{_mutex}; return Deserialize( sv{(char*)_toSave.data(), _toSave.size()} ); }
 		α Name()Ι->sv override{ return "ProtoLog"; }
 		α Root()Ι->const fs::path&{ return _root; }
 		α SetMinLevel( ELogLevel /*level*/ )ι->void override{}
+		α SetAppPKs( App::ProgramPK appPK, App::ProgInstPK instancePK )ι->void{ _appPK = appPK; _instancePK = instancePK; }
 		α TimeZone()Ι->const std::chrono::time_zone&{ return _tz; }
+		α Today()Ι->std::chrono::year_month_day{ lg _{_mutex}; return _today; }
 		α Write( const Logging::Entry& m )ι->void override;
 		α Write( const Logging::Entry& m, App::ProgramPK appPK, App::ProgInstPK instancePK )ι->void override;
-		App::ProgramPK ProgramPK;
-		ProgInstPK InstancePK;
 	private:
+		App::ProgramPK _appPK{};
+		App::ProgInstPK _instancePK{};
 		α Write( const Logging::Entry& m, App::Log::Proto::FileEntry&& entry )ι->void;
 		α AddString( uuid id, sv str )ι->void;
 		α AddString( uuid id, sv str, std::deque<uuid>& cache )ι->void;
@@ -40,10 +43,11 @@ namespace Jde::App{
 		α Save( vector<byte> toSave, CoLockGuard l )ι->VoidAwait::Task;
 
 		α StartTimer()ι->TimerAwait::Task;
-		α ResetTimer()ι->void;
+		α ResetTimerUnlocked()ι->void;//_mutex must already be held - see the definition.
+		α StopTimer()ι->void;//shutdown: takes _mutex, and no timer starts again.
 
 		ProtoLogCache _cache;
-		TimePoint _dailyFileStart;
+		TimePoint _dailyFileStart{ TimePoint::max() };//re-seeded in the ctor when a daily file already exists; guarded by _mutex.
 		Duration _delay;
 		const uint16 _delaySize{8096};
 		mutable mutex _mutex;

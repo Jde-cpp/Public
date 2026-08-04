@@ -1,4 +1,5 @@
 #include <jde/fwk/co/CoLock.h>
+#include <jde/fwk/co/LockKey.h>
 #include <jde/fwk/process/execution.h>
 #include <atomic>
 
@@ -59,5 +60,30 @@ namespace Jde::Tests{
 			std::this_thread::sleep_for( 1ms );
 		ASSERT_EQ( completed.load(), total ) << "waiter chain stalled - release deadlock or lost wakeup";
 		ASSERT_FALSE( overlapped.load() ) << "two coroutines held the lock simultaneously";
+	}
+
+	//TryLockKey: the non-blocking half of LockKeyAwait, for callers that cannot wait on a holder that may never resume -
+	//e.g. ProtoLog::Shutdown, which runs after the executor has been destroyed.
+	TEST_F( CoLockTests, TryLockKeyIsExclusive ){
+		let key = string{ "CoLockTests.TryLockKeyIsExclusive" };
+		auto first = TryLockKey( key );
+		ASSERT_TRUE( first );
+		EXPECT_FALSE( TryLockKey(key) ) << "the key was handed out twice";
+		first.reset();
+		EXPECT_TRUE( TryLockKey(key) ) << "released, so it must be acquirable again";
+	}
+
+	//The reason LockKeyAwait itself cannot be used to probe: its await_ready enqueues *before* it answers, so abandoning
+	//it on a false answer would leave a placeholder nothing pops and the key would be locked for the rest of the process.
+	//A failed TryLockKey must leave the queue exactly as it found it.
+	TEST_F( CoLockTests, FailedTryLockKeyDoesNotPoisonTheKey ){
+		let key = string{ "CoLockTests.FailedTryLockKeyDoesNotPoisonTheKey" };
+		auto held = TryLockKey( key );
+		ASSERT_TRUE( held );
+		for( uint i=0; i<8; ++i )
+			EXPECT_FALSE( TryLockKey(key) );
+		held.reset();
+		auto after = TryLockKey( key );
+		EXPECT_TRUE( after ) << "the failed attempts left an entry queued behind the holder";
 	}
 }

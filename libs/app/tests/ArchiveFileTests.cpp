@@ -1,0 +1,345 @@
+//Everything Jde.App.Shared does to a log archive once it is in memory:  which entries a QL filter keeps, which strings
+//come with them, the sort, the paging and the json the `logs` query returns.  ArchiveFile is fed the protos ArchiveAwait
+//and ProtoLog would have read off disk, so no file and no data source is involved.
+#include <gtest/gtest.h>
+#include <boost/uuid/uuid_io.hpp>
+#include <jde/fwk/chrono.h>
+#include <jde/app/log/ArchiveFile.h>
+#include "helpers.h"
+
+#define let const auto
+
+namespace Jde::App::Tests{
+	Ω load( const vector<Logging::Entry>& entries, QL::TableQL& ql )ε->ArchiveFile{
+		ArchiveFile y;
+		y.Append( ql, archiveProto(entries) );
+		return y;
+	}
+	Ω load( const vector<Logging::Entry>& entries )ε->ArchiveFile{
+		auto ql = table( "logs" );
+		return load( entries, ql );
+	}
+	Ω lines( const vector<Log::Proto::LogEntryFile>& entries )ι->vector<uint32_t>{
+		vector<uint32_t> y;
+		for( let& e : entries )
+			y.push_back( e.line() );
+		return y;
+	}
+
+	TEST( ArchiveFileTests, EntrySizeCountsEveryTimeBucket ){
+		let af = load( {entry(tp(0), ELogLevel::Information, 1, "a"), entry(tp(0), ELogLevel::Information, 2, "b"), entry(tp(1), ELogLevel::Information, 3, "c")} );
+		EXPECT_EQ( af.Entries.size(), 2u ); //keyed by time - two of the three share a timestamp.
+		EXPECT_EQ( af.EntrySize(), 3u );
+	}
+
+	TEST( ArchiveFileTests, NoFilterKeepsEverything ){
+		EXPECT_EQ( load({entry(tp(0), ELogLevel::Error, 1, "a"), entry(tp(1), ELogLevel::Debug, 2, "b")}).EntrySize(), 2u );
+	}
+
+	TEST( ArchiveFileTests, FilterSelectsEntries ){
+		auto ql = table( "logs", "{level: 4}" ); //Error
+		let af = load( {entry(tp(0), ELogLevel::Error, 1, "boom"), entry(tp(1), ELogLevel::Debug, 2, "noise")}, ql );
+		ASSERT_EQ( af.EntrySize(), 1u );
+		EXPECT_EQ( af.Entries.begin()->second.front().line(), 1u );
+	}
+
+	TEST( ArchiveFileTests, TagFilterIsBitwise ){
+		auto ql = table( "logs", Ƒ("{{tags: {}}}", (uint)ELogTags::Test) );
+		let af = load( {entry(tp(0), ELogLevel::Information, 1, "tagged", {}, "src/x.cpp", "Fn", ELogTags::Test), entry(tp(1), ELogLevel::Information, 2, "other", {}, "src/x.cpp", "Fn", ELogTags::Sql)}, ql );
+		ASSERT_EQ( af.EntrySize(), 1u );
+		EXPECT_EQ( af.Entries.begin()->second.front().line(), 1u );
+	}
+
+	//The archived-file path loads the whole string table before it filters, so a dropped entry's strings stay behind.
+	TEST( ArchiveFileTests, ArchiveProtoKeepsEveryStringItWasGiven ){
+		auto ql = table( "logs", "{level: 4}" );
+		let af = load( {entry(tp(0), ELogLevel::Error, 1, "boom"), entry(tp(1), ELogLevel::Debug, 2, "noise")}, ql );
+		ASSERT_EQ( af.EntrySize(), 1u );
+		EXPECT_EQ( af.Templates.size(), 2u );
+	}
+
+	//The daily-file path partitions strings from entries first, and - like the archive path above - loads all of them
+	//before filtering.  It used to keep only the strings a surviving entry named, which was not a policy but #5: it
+	//filtered first, so Test() resolved "text"/"message"/"args" against maps that were still empty, nothing survived, and
+	//so nothing was ever loaded.  Carrying a dropped entry's strings costs nothing - ToJson emits only the ids a surviving
+	//entry names.
+	TEST( ArchiveFileTests, FileEntriesKeepEveryStringItWasGiven ){
+		let entries = vector<Logging::Entry>{ entry(tp(0), ELogLevel::Error, 1, "boom", {"42"}), entry(tp(1), ELogLevel::Debug, 2, "noise") };
+		auto ql = table( "logs", "{level: 4}" );
+		let filter = ql.Filter();
+		ArchiveFile af{ filter, fileEntries(entries) };
+		ASSERT_EQ( af.EntrySize(), 1u );//the filter still selects entries - only the string table is unconditional.
+		ASSERT_EQ( af.Templates.size(), 2u );
+		EXPECT_EQ( af.Templates.at(entries[0].Id()), "boom" );
+		EXPECT_EQ( af.Templates.at(entries[1].Id()), "noise" );
+		ASSERT_EQ( af.Args.size(), 1u );//only entry 0 has an arg, so this is unchanged.
+		EXPECT_EQ( af.Args.at(Logging::Entry::GenerateId("42")), "42" );
+	}
+
+	//#5, at the level it broke:  a filter on a string column has to be able to see the strings.  These are the daily-file
+	//counterparts of FilterOnMessageFormatsTheTemplate below, which only ever covered the archive path.
+	TEST( ArchiveFileTests, FileEntriesFilterOnText ){
+		let entries = vector<Logging::Entry>{ entry(tp(0), ELogLevel::Information, 1, "keep me"), entry(tp(1), ELogLevel::Information, 2, "drop me") };
+		auto ql = table( "logs", R"({text: "keep me"})" );
+		let filter = ql.Filter();
+		ArchiveFile af{ filter, fileEntries(entries) };
+		ASSERT_EQ( af.EntrySize(), 1u );
+		EXPECT_EQ( af.Entries.begin()->second.front().line(), 1u );
+	}
+
+	TEST( ArchiveFileTests, FileEntriesFilterOnMessage ){
+		let entries = vector<Logging::Entry>{ entry(tp(0), ELogLevel::Information, 1, "zeta"), entry(tp(1), ELogLevel::Information, 2, "alpha {}", {"9"}) };
+		auto ql = table( "logs", R"({message: "alpha 9"})" );
+		let filter = ql.Filter();
+		ArchiveFile af{ filter, fileEntries(entries) };
+		ASSERT_EQ( af.EntrySize(), 1u );
+		EXPECT_EQ( af.Entries.begin()->second.front().line(), 2u );//args resolve through Args, which the entry pass fills.
+	}
+
+	TEST( ArchiveFileTests, FileEntriesFilterOnArgs ){
+		let entries = vector<Logging::Entry>{ entry(tp(0), ELogLevel::Information, 1, "a {}", {"keep"}), entry(tp(1), ELogLevel::Information, 2, "b {}", {"drop"}) };
+		auto ql = table( "logs", R"({args: "keep"})" );
+		let filter = ql.Filter();
+		ArchiveFile af{ filter, fileEntries(entries) };
+		ASSERT_EQ( af.EntrySize(), 1u );
+		EXPECT_EQ( af.Entries.begin()->second.front().line(), 1u );
+	}
+
+	//M9: the args filter ANDed across an entry's arguments, so `args:"alpha"` rejected any entry that also carried an
+	//unrelated argument - and an entry with no arguments at all passed, because the loop that could have rejected it never
+	//ran.  Pre-fix this returned {3}, the exact complement of the right answer.
+	TEST( ArchiveFileTests, ArgsFilterMatchesAnyArgument ){
+		let entries = vector<Logging::Entry>{
+			entry( tp(0), ELogLevel::Information, 1, "two {} {}", {"alpha","beta"} ),
+			entry( tp(1), ELogLevel::Information, 2, "one {}", {"beta"} ),
+			entry( tp(2), ELogLevel::Information, 3, "none" ) };
+		auto ql = table( "logs", R"({args: "alpha"})" );
+		EXPECT_EQ( lines(load(entries, ql).Sort({})), (vector<uint32_t>{1}) ) << "1 has alpha among its args; 2 does not; 3 has no args to match with";
+	}
+
+	//The app server writes gateway/opc entries with the originating app stamped on them;  the archive keeps the entry and
+	//drops the attribution - LogProto::ToEntry has nowhere to put it.
+	TEST( ArchiveFileTests, ExternalEntriesAreAppended ){
+		let e = entry( tp(0), ELogLevel::Warning, 7, "external" );
+		Log::Proto::ArchiveFile proto;
+		*proto.add_externalentries() = LogProto::LogEntryFile( e, 3, 4 );
+		addStrings( proto, e );
+
+		ArchiveFile af;
+		auto ql = table( "logs" );
+		af.Append( ql, move(proto) );
+		ASSERT_EQ( af.EntrySize(), 1u );
+		EXPECT_EQ( af.Entries.begin()->second.front().line(), 7u );
+	}
+
+	//IsComplete is what stops the reader walking further back through the archived days.  It can only answer for a
+	//time-ordered page:  any other order needs every entry before the first one can be named.
+	TEST( ArchiveFileTests, IsComplete ){
+		let af = load( {entry(tp(0), ELogLevel::Information, 1, "a"), entry(tp(1), ELogLevel::Information, 2, "b"), entry(tp(2), ELogLevel::Information, 3, "c")} );
+		EXPECT_FALSE( af.IsComplete(table("logs", R"({orderBy: "time"})")) );              //no limit -> read it all.
+		EXPECT_FALSE( af.IsComplete(table("logs", R"({limit: 2})")) );                     //no orderBy.
+		EXPECT_FALSE( af.IsComplete(table("logs", R"({limit: 2, orderBy: "level"})")) );
+		EXPECT_TRUE( af.IsComplete(table("logs", R"({limit: 2, orderBy: "time"})")) );
+		EXPECT_TRUE( af.IsComplete(table("logs", R"({limit: 3, orderBy: "time"})")) );
+		EXPECT_FALSE( af.IsComplete(table("logs", R"({limit: 3, offset: 1, orderBy: "time"})")) ); //offset counts against the limit.
+	}
+
+	TEST( ArchiveFileTests, SortDefaultsToTimeAscending ){
+		let af = load( {entry(tp(2), ELogLevel::Information, 3, "c"), entry(tp(0), ELogLevel::Information, 1, "a"), entry(tp(1), ELogLevel::Information, 2, "b")} );
+		EXPECT_EQ( lines(af.Sort({})), (vector<uint32_t>{1,2,3}) );
+	}
+
+	TEST( ArchiveFileTests, SortByLevelDescending ){
+		let af = load( {entry(tp(0), ELogLevel::Debug, 1, "a"), entry(tp(1), ELogLevel::Critical, 2, "b"), entry(tp(2), ELogLevel::Information, 3, "c")} );
+		auto ql = table( "logs", R"({orderBy: {level: "desc"}})" );
+		EXPECT_EQ( lines(af.Sort(ql.OrderByJson())), (vector<uint32_t>{2,3,1}) );
+	}
+
+	TEST( ArchiveFileTests, SortByFileAndFunctionUsesTheName ){
+		let entries = vector<Logging::Entry>{
+			entry( tp(0), ELogLevel::Information, 1, "a", {}, "d.cpp", "Dd" ),
+			entry( tp(1), ELogLevel::Information, 2, "b", {}, "b.cpp", "Bb" ),
+			entry( tp(2), ELogLevel::Information, 3, "c", {}, "a.cpp", "Aa" ),
+			entry( tp(3), ELogLevel::Information, 4, "d", {}, "c.cpp", "Cc" ) };
+		let af = load( entries );
+
+		auto byFile = table( "logs", R"({orderBy: "file"})" );
+		EXPECT_EQ( lines(af.Sort(byFile.OrderByJson())), (vector<uint32_t>{3,2,4,1}) ) << "a.cpp, b.cpp, c.cpp, d.cpp";
+
+		auto byFunction = table( "logs", R"({orderBy: {function: "desc"}})" );
+		EXPECT_EQ( lines(af.Sort(byFunction.OrderByJson())), (vector<uint32_t>{1,4,2,3}) ) << "Dd, Cc, Bb, Aa";
+	}
+
+	//M3: the fast path returned early whenever the *first* key was time-ascending, discarding every key after it.  Skipping
+	//the sort is right when time-ascending is the whole ordering - Entries is a std::map keyed on time, so the flatten is
+	//already in that order - but only then.  Both entries share a timestamp, so they land in one bucket in insertion order
+	//and the secondary key is the only thing that can separate them.
+	TEST( ArchiveFileTests, SecondaryOrderByKeyIsApplied ){
+		let af = load( {entry(tp(0), ELogLevel::Information, 1, "a", {}, "b.cpp"), entry(tp(0), ELogLevel::Information, 2, "b", {}, "a.cpp")} );
+		auto ql = table( "logs", R"({orderBy: ["time", {file: "asc"}]})" );
+		EXPECT_EQ( lines(af.Sort(ql.OrderByJson())), (vector<uint32_t>{2,1}) ) << "a.cpp before b.cpp within the same timestamp";
+	}
+
+	//The sort is stable, so entries tied on every requested key keep the source's time order rather than an arbitrary one -
+	//which is what the fast path above does too, so the two agree.
+	//Two interleaved levels rather than one, and 64 of them: libc++ insertion-sorts short ranges and short-circuits a range
+	//whose elements all compare equivalent, so neither a handful of entries nor a single level would tell the two sorts
+	//apart.  Real partitioning across two groups is what moves tied elements past each other.
+	TEST( ArchiveFileTests, TiedEntriesKeepTimeOrder ){
+		vector<Logging::Entry> entries;
+		vector<uint32_t> information, critical;
+		for( uint32_t i=0; i<64; ++i ){
+			let isInformation = i%2==0;
+			entries.push_back( entry(tp(i), isInformation ? ELogLevel::Information : ELogLevel::Critical, i+1, "same") );
+			(isInformation ? information : critical).push_back( i+1 );
+		}
+		auto expected = information;//Information sorts below Critical; within each, time order has to survive.
+		expected.insert( expected.end(), critical.begin(), critical.end() );
+
+		let af = load( entries );
+		auto ql = table( "logs", R"({orderBy: {level: "asc"}})" );
+		EXPECT_EQ( lines(af.Sort(ql.OrderByJson())), expected );
+	}
+
+	//"message" is the formatted text, not the template:  sorting by it has to expand the args first.
+	TEST( ArchiveFileTests, SortByMessageFormatsTheTemplate ){
+		let af = load( {entry(tp(0), ELogLevel::Information, 1, "zeta"), entry(tp(1), ELogLevel::Information, 2, "alpha {}", {"9"})} );
+		auto ql = table( "logs", R"({orderBy: "message"})" );
+		EXPECT_EQ( lines(af.Sort(ql.OrderByJson())), (vector<uint32_t>{2,1}) ); //"alpha 9" < "zeta".
+	}
+
+	TEST( ArchiveFileTests, FilterOnMessageFormatsTheTemplate ){
+		auto ql = table( "logs", R"({message: "alpha 9"})" );
+		let af = load( {entry(tp(0), ELogLevel::Information, 1, "zeta"), entry(tp(1), ELogLevel::Information, 2, "alpha {}", {"9"})}, ql );
+		ASSERT_EQ( af.EntrySize(), 1u );
+		EXPECT_EQ( af.Entries.begin()->second.front().line(), 2u );
+	}
+
+	//#6: the time filter compared the *rendered* ISO strings, and ToIsoString is variable width - a whole second drops the
+	//fraction.  So "…T22:13:25.250000Z" is lexicographically below "…T22:13:25Z" ('.'=0x2E < 'Z'=0x5A at index 19) and each
+	//comparison came out backwards for entries sharing a second with the bound.  The coarse day window in LogAwait uses
+	//real TimePoints, so the right archive was loaded and the entries were then silently discarded one at a time.
+	TEST( ArchiveFileTests, TimeFilterIsChronologicalNotLexicographic ){
+		let boundary = tp( 5 );                                     //whole second -> renders with no fraction.
+		let sub = boundary+std::chrono::milliseconds{ 250 };        //renders "…:25.250000Z", which sorts *before* "…:25Z".
+		let entries = vector<Logging::Entry>{ entry(boundary, ELogLevel::Information, 1, "boundary"), entry(sub, ELogLevel::Information, 2, "sub") };
+		let filtered = [&entries]( sv op, TimePoint bound )ε->vector<uint32_t>{
+			auto ql = table( "logs", Ƒ(R"({{time: {{{}: "{}"}}}})", op, ToIsoString(bound)+"Z") );
+			return lines( load(entries, ql).Sort({}) );
+		};
+		EXPECT_EQ( filtered("gt", boundary), (vector<uint32_t>{2}) ) << "250ms after the boundary is after it";
+		EXPECT_EQ( filtered("lt", boundary), (vector<uint32_t>{}) ) << "nothing precedes the boundary";
+		//the symmetric case: a whole-second entry is lexicographically *above* a sub-second bound in the same second.
+		EXPECT_EQ( filtered("lt", boundary+std::chrono::milliseconds{100}), (vector<uint32_t>{1}) );
+		EXPECT_EQ( filtered("gte", boundary), (vector<uint32_t>{1,2}) );
+		EXPECT_EQ( filtered("lte", sub), (vector<uint32_t>{1,2}) );
+		EXPECT_EQ( filtered("eq", sub), (vector<uint32_t>{2}) ) << "a sub-second literal must match its own entry";
+	}
+
+	TEST( ArchiveFileTests, SubTableFiltersFileNameAndUser ){
+		let entries = vector<Logging::Entry>{
+			entry( tp(0), ELogLevel::Information, 1, "a", {}, "keep.cpp", "Fn", ELogTags::Test, UserPK{7} ),
+			entry( tp(1), ELogLevel::Information, 2, "b", {}, "drop.cpp", "Fn", ELogTags::Test, UserPK{7} ),
+			entry( tp(2), ELogLevel::Information, 3, "c", {}, "keep.cpp", "Fn", ELogTags::Test, UserPK{8} ) };
+
+		auto byFile = table( "logs" );
+		addTable( byFile, "file", {"name"}, R"({name: "keep.cpp"})" );
+		EXPECT_EQ( lines(load(entries, byFile).Sort({})), (vector<uint32_t>{1,3}) );
+
+		auto byUser = table( "logs" );
+		addTable( byUser, "user", {"id"}, "{id: 8}" );
+		EXPECT_EQ( lines(load(entries, byUser).Sort({})), (vector<uint32_t>{3}) );
+	}
+
+	TEST( ArchiveFileTests, ToJsonEntryColumns ){
+		let e = entry( tp(0), ELogLevel::Error, 42, "boom {}", {"9"}, "src/x.cpp", "Fn", ELogTags::Test, UserPK{7} );
+		let af = load( {e} );
+
+		auto ql = table( "logs" );
+		addTable( ql, "entries", {"templateId","argIds","level","tags","line","time","userId","fileId","functionId"} );
+		let o = af.ToJson( ql );
+		let& jentries = o.at( "entries" ).as_array();
+		ASSERT_EQ( jentries.size(), 1u );
+		let& j = jentries[0].as_object();
+		EXPECT_EQ( j.at("templateId").as_string(), to_string(e.Id()) );
+		EXPECT_EQ( j.at("fileId").as_string(), to_string(e.FileId()) );
+		EXPECT_EQ( j.at("functionId").as_string(), to_string(e.FunctionId()) );
+		EXPECT_EQ( j.at("level").as_string(), "Error" );
+		EXPECT_EQ( j.at("line").to_number<uint32_t>(), 42u );
+		EXPECT_EQ( j.at("userId").to_number<uint32_t>(), 7u );
+		EXPECT_EQ( j.at("time").as_string(), ToIsoString(tp(0))+"Z" );
+		let& tags = j.at( "tags" ).as_array();
+		ASSERT_EQ( tags.size(), 1u );
+		EXPECT_EQ( tags[0].as_string(), "test" );
+		let& args = j.at( "argIds" ).as_array();
+		ASSERT_EQ( args.size(), 1u );
+		EXPECT_EQ( args[0].as_string(), to_string(Logging::Entry::GenerateId("9")) );
+	}
+
+	//Only the columns the query asked for are emitted - the web client trims on what it requested.
+	TEST( ArchiveFileTests, ToJsonEmitsOnlyRequestedColumns ){
+		let af = load( {entry(tp(0), ELogLevel::Error, 42, "boom")} );
+		auto ql = table( "logs" );
+		addTable( ql, "entries", {"line"} );
+		let o = af.ToJson( ql );
+		let& j = o.at( "entries" ).as_array()[0].as_object();
+		EXPECT_EQ( j.size(), 1u );
+		EXPECT_TRUE( j.contains("line") );
+	}
+
+	//No `entries` sub-table -> no entries key at all, rather than an empty array.
+	TEST( ArchiveFileTests, ToJsonWithoutEntriesTable ){
+		let af = load( {entry(tp(0), ELogLevel::Error, 42, "boom")} );
+		auto ql = table( "logs" );
+		EXPECT_FALSE( af.ToJson(ql).contains("entries") );
+	}
+
+	TEST( ArchiveFileTests, ToJsonPages ){
+		let af = load( {entry(tp(0), ELogLevel::Information, 1, "a"), entry(tp(1), ELogLevel::Information, 2, "b"), entry(tp(2), ELogLevel::Information, 3, "c")} );
+		auto ql = table( "logs", "{limit: 1, offset: 1}" );
+		addTable( ql, "entries", {"line"} );
+		let o = af.ToJson( ql );
+		let& jentries = o.at( "entries" ).as_array();
+		ASSERT_EQ( jentries.size(), 1u );
+		EXPECT_EQ( jentries[0].as_object().at("line").to_number<uint32_t>(), 2u );
+	}
+
+	//`strings` is the id->text side table the client joins the ids against.  It is filled by the id columns that were
+	//asked for, so a query with no id column gets an empty one.
+	TEST( ArchiveFileTests, ToJsonStringsTable ){
+		let e = entry( tp(0), ELogLevel::Error, 42, "boom {}", {"9"}, "src/x.cpp", "Fn" );
+		let af = load( {e} );
+
+		auto ql = table( "logs" );
+		addTable( ql, "entries", {"templateId","argIds","fileId","functionId"} );
+		addTable( ql, "strings", {"id","value"} );
+		let o = af.ToJson( ql );
+		flat_map<string,string> strings;
+		for( let& s : o.at("strings").as_array() )
+			strings.emplace( string{s.as_object().at("id").as_string()}, string{s.as_object().at("value").as_string()} );
+
+		ASSERT_EQ( strings.size(), 4u );
+		EXPECT_EQ( strings.at(to_string(e.Id())), "boom {}" );          //the template, not the formatted message.
+		EXPECT_EQ( strings.at(to_string(e.FileId())), "src/x.cpp" );
+		EXPECT_EQ( strings.at(to_string(e.FunctionId())), "Fn" );
+		EXPECT_EQ( strings.at(to_string(Logging::Entry::GenerateId("9"))), "9" );
+	}
+
+	TEST( ArchiveFileTests, ToJsonSubTables ){
+		let e = entry( tp(0), ELogLevel::Error, 42, "boom", {}, "src/x.cpp", "Fn", ELogTags::Test, UserPK{7} );
+		let af = load( {e} );
+
+		auto ql = table( "logs" );
+		addTable( ql, "entries", {"line"} );
+		addTable( ql, "file", {"id","name"} );
+		addTable( ql, "function", {"name"} );
+		addTable( ql, "user", {"id"} );
+		let o = af.ToJson( ql );
+		let& j = o.at( "entries" ).as_array()[0].as_object();
+		EXPECT_EQ( j.at("file").as_object().at("name").as_string(), "src/x.cpp" );
+		EXPECT_EQ( j.at("file").as_object().at("id").as_string(), to_string(e.FileId()) );
+		EXPECT_EQ( j.at("function").as_object().at("name").as_string(), "Fn" );
+		EXPECT_FALSE( j.at("function").as_object().contains("id") ); //not asked for.
+		EXPECT_EQ( j.at("user").as_object().at("id").to_number<uint32_t>(), 7u );
+	}
+}
