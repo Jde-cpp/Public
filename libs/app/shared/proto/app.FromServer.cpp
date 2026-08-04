@@ -95,7 +95,7 @@ namespace Jde::App{
 		return setMessage( requestId, [&](auto& m){
 			auto& clientQuery = *m.mutable_client_query();
 			clientQuery.set_query( move(query) );
-			clientQuery.set_executer_pk( executer );
+			clientQuery.set_executer_pk( executer.Value );//.Value: UserPK converts to bool implicitly, so the raw struct sets 1 for every non-zero user.
 			clientQuery.set_raw( raw );
 			if( variables )
 				*clientQuery.mutable_variables() = serialize(*variables);
@@ -137,7 +137,7 @@ namespace Jde::App{
 		toServer->set_request_id( serverRequestId );
 		if( userPK ){
 			auto customExecute = toServer->mutable_execute();
-			customExecute->set_user_pk( userPK );
+			customExecute->set_user_pk( userPK.Value );//.Value: UserPK converts to bool implicitly, so the raw struct sets 1 for every non-zero user.
 			*customExecute->mutable_transmission() = move( fromClient );
 		}
 		else

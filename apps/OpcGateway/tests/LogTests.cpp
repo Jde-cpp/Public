@@ -1,14 +1,12 @@
+//The log tests that need a live gateway.  Everything that needed only Jde.App.Shared and a filesystem - the daily
+//file, the archive rounds and the QL read-back - moved to libs/app/tests/LogTests.cpp.
 #include <jde/fwk/log/MemoryLog.h>
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/str.h>
 #include <jde/fwk/io/protobuf.h>
-#include <jde/fwk/io/FileAwait.h>
 #include <jde/fwk/utils/Stopwatch.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/web/server/SubscribeLog.h>
-#include <jde/app/log/DailyLoadAwait.h>
-#include <jde/app/log/LogQLAwait.h>
-#include <jde/app/log/ProtoLog.h>
 #include <jde/app/client/RemoteLog.h>
 #include "../src/GatewayAppClient.h" //!important
 #include "utils/GatewayClientSocket.h"//!important
@@ -33,122 +31,9 @@ namespace Jde::Opc::Gateway::Tests{
 		Ω SetUpTestCase()ι->void{ }
 		α SetUp()->void override{ _listener = sp<Listener>(new Listener{}); }
 		α TearDown()->void override {}
-		α ProtoLog()ι->App::ProtoLog&{ return Logging::GetLogger<App::ProtoLog>(); }
 
 		sp<Listener> _listener;
 	};
-
-	TEST_F( LogTests, Exists ){
-		auto entries = BlockAwait<TAwait<vector<App::Log::Proto::FileEntry>>,vector<App::Log::Proto::FileEntry>>( App::DailyLoadAwait(ProtoLog().DailyFile()) );
-		ASSERT_TRUE( entries.size() );
-	}
-	TEST_F( LogTests, Archive ){
-		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "Test message" };
-		let archiveFile = ( *Settings::FindPath("/logging/proto/path") )/"2025/1/1/archive.binpb";
-		if( fs::exists(archiveFile) )
-			fs::remove( archiveFile );
-		e.Time = Chrono::ToTimePoint( 2025, 1, 1, 12 );
-		ProtoLog().Write( e );
-		for( int i=0; i<100; ++i ){
-			ProtoLog().Write( {SRCE_CUR, ELogLevel::Information, ELogTags::Test, Ƒ("Test message - {}", i)} );
-			if( fs::exists(archiveFile) )
-				break;
-		}
-		std::this_thread::sleep_for( 1s );
-		DBG( "archiveFile: {}", archiveFile.string() );
-		ASSERT_TRUE( fs::exists(archiveFile) );
-		auto content = BlockTAwait<string>( IO::ReadAwait(archiveFile) );
-		ASSERT_NO_THROW( Protobuf::Deserialize<App::Log::Proto::ArchiveFile>(move(content)) );
-	}
-
-	TEST_F( LogTests, ArchiveExternal ){
-		let archiveFile = ( *Settings::FindPath("/logging/proto/path") )/"2025/1/2/archive.binpb";
-		if( fs::exists(archiveFile) )
-			fs::remove( archiveFile );
-		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "External test message" };
-		e.Time = Chrono::ToTimePoint( 2025, 1, 2, 12 );
-		ProtoLog().Write( e, 123, 456 );
-		for( int i=0; i<100; ++i ){
-			ProtoLog().Write( {SRCE_CUR, ELogLevel::Information, ELogTags::Test, Ƒ("External filler - {}", i)} );
-			if( fs::exists(archiveFile) )
-				break;
-		}
-		std::this_thread::sleep_for( 1s );
-		ASSERT_TRUE( fs::exists(archiveFile) );
-		auto content = BlockTAwait<string>( IO::ReadAwait(archiveFile) );
-		App::Log::Proto::ArchiveFile archive;
-		ASSERT_NO_THROW( archive = Protobuf::Deserialize<App::Log::Proto::ArchiveFile>(move(content)) );
-		optional<App::Log::Proto::LogEntryFileExternal> external;
-		for( int i=0; i<archive.externalentries_size() && !external; ++i ){
-			if( let& x = archive.externalentries(i); x.app_pk()==123 && x.app_instance_pk()==456 )
-				external = x;
-		}
-		ASSERT_TRUE( external );
-		ASSERT_EQ( Protobuf::ToGuid(external->template_id()), e.Id() );
-		bool templateArchived{};
-		for( int i=0; i<archive.templates_size() && !templateArchived; ++i )
-			templateArchived = archive.templates(i).value()==e.Text;
-		ASSERT_TRUE( templateArchived ) << "External entry's template string not archived.";
-	}
-
-	// Regression, two ways a round could write an entry it had already archived:
-	//   1. ArchiveFileAwait::Save appended the fully-merged archive to the very file it had just merged from, so every
-	//      round wrote back everything already on disk - archive.binpb grew ~x3.7 per round until it no longer parsed
-	//      and aborted the suite.
-	//   2. the round archived ProtoLog's unflushed buffer as well as the daily file, but deleted only the file, so an
-	//      entry still buffered when a round ran was archived again as soon as the next flush wrote it to disk.  Timing
-	//      dependent - it needed a flush already in flight when the entry was written, so it only flaked (release more
-	//      often than debug).
-	// Either way, a second round must not duplicate the first round's entries.
-	TEST_F( LogTests, ArchiveReplacesFile ){
-		let archiveFile = ( *Settings::FindPath("/logging/proto/path") )/"2025/1/3/archive.binpb";
-		if( fs::exists(archiveFile) )
-			fs::remove( archiveFile );
-		auto count = []( const App::Log::Proto::ArchiveFile& archive, const uuid& id )ι->uint{
-			uint y{};
-			for( int i=0; i<archive.entries_size(); ++i )
-				y += Protobuf::ToGuid( archive.entries(i).template_id() )==id;
-			return y;
-		};
-		//the archive is written asynchronously & rewritten in place, so a read can catch it mid-write - retry until
-		//`until` lands, then let the round quiesce: the round's remaining entries are still arriving (and a later flush
-		//can start another round), so a count sampled the instant an entry appears is still moving.
-		auto archived = [&archiveFile,&count]( const uuid& until )ι->App::Log::Proto::ArchiveFile{
-			App::Log::Proto::ArchiveFile y;
-			for( int i=0; i<100; ++i ){
-				try{
-					if( fs::exists(archiveFile) ){
-						auto archive = Protobuf::Deserialize<App::Log::Proto::ArchiveFile>( BlockTAwait<string>(IO::ReadAwait(archiveFile)) );
-						if( count(archive, until) ){
-							if( y.entries_size()==archive.entries_size() )//unchanged over the last interval - settled.
-								return archive;
-							y = move( archive );
-						}
-					}
-				}
-				catch( const Exception& )
-				{}
-				std::this_thread::sleep_for( 250ms );
-			}
-			return y;
-		};
-		//an entry dated other than today flags ProtoLog for archiving; today-dated filler flips the day back and fills the flush buffer.
-		auto round = [this]( sv text )->uuid{
-			Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, string{text} };
-			e.Time = Chrono::ToTimePoint( 2025, 1, 3, 12 );
-			ProtoLog().Write( e );
-			for( int i=0; i<200; ++i )
-				ProtoLog().Write( {SRCE_CUR, ELogLevel::Information, ELogTags::Test, Ƒ("{} filler {}", text, i)} );
-			return e.Id();
-		};
-		let first = round( "ArchiveReplacesFile first" );
-		ASSERT_EQ( count(archived(first), first), 1u ) << "first round's entry not archived exactly once";
-		let second = round( "ArchiveReplacesFile second" );
-		let after = archived( second );
-		ASSERT_EQ( count(after, second), 1u ) << "second round's entry not archived exactly once";
-		//exactly once, not "same as before": a round archives the daily file and nothing else, and holds that file's lock from the read until fs::remove - so an entry has one source, and no round can re-read what an earlier one archived.
-		EXPECT_EQ( count(after, first), 1u ) << "the second round wrote the first round's entry again - archive.binpb was appended to, not replaced";
-	}
 
 	TEST_F( LogTests, Remote ){
 		App::Client::RemoteLog remote{ {{"delay", "PT0.001S"}}, AppClient() };
@@ -159,28 +44,6 @@ namespace Jde::Opc::Gateway::Tests{
 		std::this_thread::sleep_for( 1s );
 	}
 
-	TEST_F( LogTests, GraphQL ){
-		let now = ToIsoString( Clock::now() );
-		Logging::Entry eNow{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, string{now} };
-		Logging::Entry eHour{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, ToIsoString(eNow.Time - 1h) };
-		eHour.Time = eNow.Time - 1h;
-		TRACE( "prev.Time: {}, id: {}", ToIsoString(eHour.Time), Jde::ToString(eHour.Id()) );
-		ProtoLog().Write( eHour );
-		const string start{ ToIsoString(eHour.Time+1s) };
-		TRACE( "filter: time: {}, id: {}", start, Jde::ToString(eNow.Id()) );
-		ProtoLog().Write( eNow );
-		constexpr auto q = "logs( time: {gt: $start} ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }";
-		jobject vars{ {"start", start} };
-		let logs = BlockTAwait<jvalue>( App::LogQLAwait{move(QL::Parse(q, vars, {}).Queries()[0])} );
-		optional<jobject> jNow;
-		for( let& log : logs.at("entries").as_array() ){
-			let id = ToUuid( log.at("templateId").as_string() );
-			if( id==eNow.Id() )
-				jNow = log.as_object();
-			ASSERT_FALSE( id==eHour.Id() ) << "Found hour log entry which should be excluded.";
-		}
-		ASSERT_TRUE( jNow );
-	}
 	TEST_F( LogTests, Subscribe ){
 		if( !Logging::FindLogger<Web::Server::SubscribeLog>() ){
 			GTEST_SKIP() << "Need to fix logic of embedded appServer with subscription.";

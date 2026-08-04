@@ -1,0 +1,43 @@
+#ifdef BOOST_ALL_NO_LIB
+	#include <boost/json/src.hpp>
+#endif
+#include "gtest/gtest.h"
+#include <jde/fwk/process/process.h>
+#include <jde/fwk/settings.h>
+#include <jde/app/log/ProtoLog.h>
+#include <jde/tests/testMain.h>
+
+#define let const auto
+
+namespace Jde{
+#ifndef _MSC_VER
+	α Process::ProductName()ι->sv{ return "Tests.App"; }
+#endif
+	Ω startup( int argc, char **argv )ε->void{
+		Process::Startup( argc, argv, Process::ProductName(), "App shared-library tests", true );
+		Logging::Init();
+		App::ProtoLog::Init();//the `binary` logger LogSettingsTests reads and updates.  A no-op unless /logging/proto is set.
+	}
+}
+
+α main( int argc, char **argv )->int{
+	using namespace Jde;
+	let filterSet = Process::Args().find( "--gtest_filter" )!=Process::Args().end();
+	::testing::InitGoogleTest( &argc, argv );
+	int exitCode{ EXIT_FAILURE };
+	try{
+		startup( argc, argv );
+		if( !filterSet )
+			::testing::GTEST_FLAG( filter ) = Settings::FindSV( "/testing/tests" ).value_or( "*" );
+		exitCode = CheckTestsRan( RUN_ALL_TESTS() );
+	}
+	catch( exception& e ){
+		if( auto p = dynamic_cast<Exception*>(&e); p ){
+			p->Log();
+			exitCode = p->HasCode() ? (int)p->Code() : EXIT_FAILURE;
+		}
+		std::cerr << e.what() << std::endl;
+	}
+	Process::Shutdown( exitCode );
+	return exitCode;
+}
