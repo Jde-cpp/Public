@@ -84,6 +84,10 @@ namespace Jde::App{
 		return m;
 	}
 
+//Called from the debugger, not from the program: ~/.lldb/jde_proto_formatter.py evaluates
+//`Jde::App::LogProto::DebugString(*(T*)addr)` in the inferior, so the symbol has to be in whatever binary is
+//being debugged.  Deliberately NOT behind #ifndef NDEBUG - relWithDebInfo is a debugging configuration and
+//CMake defines NDEBUG there, which would strip it from the one build most likely to be attached to.
 	Ω guidToString( const string& guid )ι->string{
 		using Protobuf::ToGuid;
 		if( guid.size()!=16 )
@@ -145,4 +149,5 @@ namespace Jde::App{
 	α LogProto::DebugString( const Log::Proto::LogEntryFileExternal& f )ι->string{
 		return debugStringExternal( f );
 	}
+
 }

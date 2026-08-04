@@ -162,10 +162,18 @@ namespace Jde::Web::Client{
 				return;
 			// websocket::error::closed means the close handshake already completed (Beast auto-replies to a received close frame);
 			// calling Close() again would initiate a second async_close that collides with the in-flight one on Beast's write
-			// soft_mutex.  Tested first so the stream lookup below needs no nesting - an `else` after an `if` that guards on
-			// StreamPtr binds to the inner one.
-			if( ec==boost::beast::websocket::error::closed )
-				CloseTasks( ec );// remote-initiated close: we never call our own Close()/async_close for this case, so OnClose never fires - drain _tasks here instead.
+			// soft_mutex.  Braced, not a bare `else if` - an `else` after an `if` that guards on StreamPtr binds to the inner one.
+			if( ec==boost::beast::websocket::error::closed ){
+				//Since no async_close of ours runs, nothing would otherwise call OnClose - and the teardown it owns is not
+				//optional.  Draining _tasks alone left _stream and _ioContext live, IAppClient::Connected() still true and no
+				//reconnect scheduled, so a routine server restart wedged the client until the process died.  Do the whole
+				//teardown here - unless our own Close() is already in flight, in which case its async_close completion is the
+				//call that fires OnClose and repeating it here would run the derived reconnect twice.
+				if( auto stream = StreamPtr(); stream && stream->IsClosing() )
+					CloseTasks( ec );
+				else
+					OnClose( ec );
+			}
 			else if( auto stream = StreamPtr(); stream )
 				stream->Close( shared_from_this(), false, SRCE_CUR );
 			return;

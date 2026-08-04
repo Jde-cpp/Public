@@ -7,6 +7,7 @@
 #include <jde/app/client/usings.h>
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/app/client/IAppClient.h>
+#include <jde/app/client/clientSubscriptions.h>
 
 #define let const auto
 
@@ -16,10 +17,10 @@ namespace Jde::App::Client{
 }
 namespace Jde::App{
 	using Web::Client::ClientHttpAwait;
-	α reconnectWait()ι->Duration{ return Settings::FindDuration("server/reconnectWait").value_or(5s); }
-	α Client::IsSsl()ι->bool{ return Settings::FindBool("server/isSsl").value_or( false ); }
-	α Client::Host()ι->string{ return Settings::FindString("server/host").value_or("localhost"); }
-	α Client::Port()ι->PortType{ return Settings::FindNumber<PortType>("server/port").value_or(1967); }
+	α reconnectWait()ι->Duration{ return Settings::FindDuration("/server/reconnectWait").value_or(5s); }
+	α Client::IsSsl()ι->bool{ return Settings::FindBool("/server/isSsl").value_or( false ); }
+	α Client::Host()ι->string{ return Settings::FindString("/server/host").value_or("localhost"); }
+	α Client::Port()ι->PortType{ return Settings::FindNumber<PortType>("/server/port").value_or(1967); }
 
 	α Client::RemoteAcl( string libName )ι->sp<Access::Authorize>{
 		if( !_authorize )
@@ -40,7 +41,12 @@ namespace Jde::App{
 	α Client::Connect( sp<IAppClient> appClient )ι->ConnectAwait::Task{
 		try{
 			co_await ConnectAwait{ appClient, true };
-			accessSubscribe( move(appClient) );
+			//Server-side subscriptions die with the socket, so everything the process asked for has to be re-issued, not
+			//just the one call that used to be hard-coded here.  Replaying covers accessSubscribe's own request too, so it
+			//only runs when there is nothing to replay - a first connect.  Running both would subscribe twice and deliver
+			//every event twice: ListenRemote keys on the new id, so the duplicate is invisible to the dedup in _subs.
+			if( !Client::Subscriptions::Replay(appClient) )
+				accessSubscribe( move(appClient) );
 		}
 		catch( exception& )
 		{}

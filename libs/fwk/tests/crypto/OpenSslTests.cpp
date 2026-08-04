@@ -42,7 +42,7 @@ namespace Jde::Crypto{
 	}
 
 	α OpenSslTests::SetUpTestCase()->void{
-		let clear = Settings::FindBool( "cryptoTests/clear" ).value_or( true );
+		let clear = Settings::FindBool( "/cryptoTests/clear" ).value_or( true );
 		INFO( "clear={}", clear );
 		INFO( "HeaderPayload={}", HeaderPayload );
 		let settings = SslSettings( PublicKeyFile, PrivateKeyFile, CertificateFile, "openSslTests" );//the CN is the identity target - never "localhost".

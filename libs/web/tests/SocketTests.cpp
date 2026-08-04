@@ -220,9 +220,16 @@ namespace Jde::Web{
 		_clientSession = nullptr;//TearDown's Close()/Wait() would hit the same lost wakeup.
 	}
 
+	//app-review2 #2: the server closing first must run the *whole* client teardown, not just drain _tasks.  Beast auto-replies
+	//to the received close frame, so no async_close of ours ever completes and nothing else will ever call OnClose - which is
+	//where _stream/_ioContext are nulled and where an app session drops its dead session and reconnects.  Draining _tasks alone
+	//left the gateway wedged after every routine AppServer restart: still Connected(), never reconnecting.
 	TEST_F( SocketTests, CloseServerSide ){
 		createSession();
 		EXPECT_THROW( (BlockAwait<ClientSocketAwait<string>,string>( _clientSession->CloseServerSide() )), Exception );
+		for( uint i=0; i<100 && !_clientSession->OnCloseCount(); ++i )
+			std::this_thread::sleep_for( 10ms );
+		EXPECT_EQ( _clientSession->OnCloseCount(), 1u );//exactly once - firing it here as well as from an in-flight async_close would run a derived session's reconnect twice.
 	}
 
 	α BadTransmissionClientCall()ι->ClientSocketAwait<string>::Task{

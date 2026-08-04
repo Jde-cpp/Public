@@ -2,6 +2,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/io/protobuf.h>
+#include <jde/db/DBException.h>
 #include <jde/fwk/settings.h>
 #include <jde/web/Jwt.h>
 #include <jde/app/proto/LogProto.h>
@@ -39,6 +40,8 @@ namespace Jde::App{
 			request.set_what( e.what() );
 			if( auto p = dynamic_cast<Jde::Exception*>(&e); p )
 				request.set_code( (uint32)p->Code() );
+			if( auto p = dynamic_cast<DB::DBException*>(&e); p )
+				request.set_db_error( (uint32)p->Error );
 		} );
 	}
 	α FromClient::Exception( string&& e, RequestId requestId )ι->PFromClient::Transmission{

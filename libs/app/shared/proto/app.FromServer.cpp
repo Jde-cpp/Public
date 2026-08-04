@@ -12,6 +12,28 @@
 #define let const auto
 
 namespace Jde::App::FromServer{
+	//AppClientSocketSession::ProcessTransmission used to PopTask for every kind ahead of its switch, and nine of them never
+	//look at the handle - so a server-originated push (kClientQuery, kExecute, kSubscription, kTraces, ...) erased and
+	//dropped the handle of whichever request of the client's happened to share that id.  The ids do collide: the client
+	//allocates from a process-global counter and the server from a per-session one, both starting at 1, and
+	//Server::QuerySessions fans a kClientQuery out to every app client.  The dropped coroutine is never resumed and never
+	//failed, and the 60s watchdog cannot rescue it - AddTimeout starts with `if( !HasTask(requestId) ) co_return;` and
+	//PopTask has already erased the entry - so the caller waits out the process.
+	//Every enumerator is listed and there is no default, so adding a kind is a -Wswitch error rather than a silent
+	//classification; when in doubt a kind is a push, which fails safe (an unanswered request still trips the watchdog).
+	α IsResponse( Proto::FromServer::Message::ValueCase kind )ι->bool{
+		using enum Proto::FromServer::Message::ValueCase;
+		switch( kind ){
+		case kConnectionInfo: case kException: case kGeneric: case kJwt: case kProgress:
+		case kQueryResult: case kSessionInfo: case kStrings: case kSubscriptionAck:
+			return true;
+		case kAck: case kClientQuery: case kExecute: case kExecuteAnonymous: case kExecuteResponse:
+		case kStringPks: case kSubscription: case kTraces: case VALUE_NOT_SET:
+			return false;
+		}
+		return false;
+	}
+
 	Ω setMessage( RequestId requestId, function<void(Proto::FromServer::Message&)> set )ι->Proto::FromServer::Transmission{
 		Proto::FromServer::Transmission t;
 		auto& m = *t.add_messages();

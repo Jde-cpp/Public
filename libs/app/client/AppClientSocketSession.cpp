@@ -6,6 +6,7 @@
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/app/client/clientSubscriptions.h>
 #include <jde/app/proto/app.FromClient.h>
+#include <jde/app/proto/app.FromServer.h>
 #include <jde/app/proto/common.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/clientSubscriptions.h>
@@ -82,7 +83,7 @@ namespace Client{
 			return;//a secondary session (tests create their own) - clearing the live session here would make IAppClient::Shutdown skip closing it, and reconnecting would be spurious.
 		_appClient->SetSession( nullptr );
 		if( !Process::ShuttingDown() )
-			App::Client::Connect( move(_appClient) );
+			App::Client::Connect( _appClient );
 	}
 	α AppClientSocketSession::OnMessage( string&& j, RequestId requestId )ι->void{
 		DBG( "[{}]OnMessage: {}", hex(requestId), j.substr(0, Web::Client::MaxLogLength()) );
@@ -118,7 +119,7 @@ namespace Client{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Debug, sl, ELogTags::SocketClientWrite, "[{}]{} {}.", hex(requestId), q.substr(0, Web::Client::MaxLogLength()), serialize(vars) );
 		auto subscriptions = QL::ParseSubscriptions( q, vars, _appClient->SubscriptionSchemas, sl );
-		_subscriptionRequests.emplace( requestId, make_pair(listener, move(subscriptions)) );
+		_subscriptionRequests.emplace( requestId, SubscriptionRequest{listener, move(subscriptions), q, vars} );
 		return ClientSocketAwait<jarray>{ FromClient::Subscription(move(q), move(vars), requestId), requestId, shared_from_this(), sl };
 	}
 
@@ -145,12 +146,6 @@ namespace Client{
 		}
 	}
 
-	ψ resumeVoid( std::any&& hAny )ι->void{
-		auto h = std::any_cast<Web::Client::ClientSocketVoidAwait::Handle>( &hAny );
-		ASSERT_DESC( h, Ƒ("typeT={}, typeV={}", typeid(Web::Client::ClientSocketVoidAwait::Handle).name(), hAny.type().name()) );
-		h->resume();
-	}
-
 	template<class T,class... Args>
 	α resumeScaler( std::any&& h, T v )ι->void{
 		resume( move(h), move(v) );
@@ -175,7 +170,9 @@ namespace Client{
 			auto m = t.mutable_messages( i );
 			using enum Proto::FromServer::Message::ValueCase;
 			let requestId = clientRequestId.value_or( m->request_id() );
-			std::any hAny = requestId ? IClientSocketSession::PopTask( requestId ) : nullptr;
+			//Only for kinds that answer a request of ours.  Popping for every kind erased the handle of an unrelated
+			//in-flight await whenever a server-originated push happened to carry a colliding id - see FromServer::IsResponse.
+			std::any hAny = requestId && FromServer::IsResponse( m->value_case() ) ? IClientSocketSession::PopTask( requestId ) : nullptr;
 			switch( m->value_case() ){
 			[[unlikely]] case kAck:
 				SetId( m->ack() );
@@ -218,12 +215,17 @@ namespace Client{
 				break;
 			case kSubscriptionAck:
 				if( !_subscriptionRequests.erase_if(requestId, [&](auto&& kv){
-					auto& listenerSubs = kv.second;
-					for( auto& sub : listenerSubs.second ){
+					auto& request = kv.second;
+					flat_set<QL::SubscriptionId> ids;
+					for( auto& sub : request.Subscriptions ){
 						if( sub.Id == 0 )
 							sub.Id = requestId;
-						Subscriptions::ListenRemote( listenerSubs.first, move(sub) );
+						ids.emplace( sub.Id );
+						Subscriptions::ListenRemote( request.Listener, move(sub) );
 					}
+					//Remembered on the ack, not on the request: this is the point at which the subscription is known to
+					//exist, and it is what a reconnect re-issues.  Clear() drops the ids above; this outlives them.
+					Subscriptions::Remember( move(request.Query), move(request.Variables), request.Listener, ids );
 					return true;
 				}) ){ //request not found.
 					HandleException( move(hAny), Exception{"SubscriptionAck: '{}' not found.", requestId}, requestId );
@@ -239,6 +241,7 @@ namespace Client{
 				OnMessage( move(*m->mutable_subscription()), requestId );
 			break;
 			case kException:{
+				_subscriptionRequests.erase( requestId );
 				auto e = App::ProtoUtils::ToException( move(*m->mutable_exception()) );
 				HandleException( move(hAny), move(*e), requestId );
 				break;}

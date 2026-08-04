@@ -5,6 +5,7 @@
 #include <jde/app/proto/App.FromServer.pb.h> //app.FromServer.h declares against the generated types without including them.
 #include <jde/app/proto/app.FromClient.h>
 #include <jde/app/proto/app.FromServer.h>
+#include <jde/db/DBException.h>
 #include <jde/app/proto/common.h>
 #include "helpers.h"
 
@@ -88,6 +89,16 @@ namespace Jde::App::Tests{
 		let thrown = FromClient::Exception( std::runtime_error{"plain"}, 4 );
 		EXPECT_EQ( thrown.messages(0).exception().what(), "plain" );
 		EXPECT_EQ( thrown.messages(0).exception().code(), 0u ); //not a Jde::Exception - there is no code to carry.
+		EXPECT_EQ( thrown.messages(0).exception().db_error(), 0u ); //nor a DBException - "unclassified" and "not one" read the same.
+	}
+
+	//M10: both directions share Common.proto's Exception, but only FromServer set db_error - so a DB error a client
+	//forwarded to the app server arrived looking like it had never been one, and the receiver branches on exactly that.
+	TEST( FromClientTests, ExceptionCarriesTheDbClassification ){
+		DB::DBException e{ DB::EDbError::Duplicate, DB::Sql{"insert into t values(1)"}, "duplicate key", {} };
+		let t = FromClient::Exception( move(e), 5 );
+		ASSERT_EQ( t.messages_size(), 1 );
+		EXPECT_EQ( t.messages(0).exception().db_error(), (uint32)DB::EDbError::Duplicate );
 	}
 
 	//Log traffic is unsolicited:  one message per entry, no request to answer.
@@ -186,6 +197,19 @@ namespace Jde::App::Tests{
 		let none = FromServer::QueryClient( string{"{users{id}}"}, nullptr, UserPK{}, false, 7 );
 		EXPECT_TRUE( none.messages(0).client_query().variables().empty() ); //no variables object -> the field is left unset, not "null".
 		EXPECT_FALSE( none.messages(0).client_query().raw() );
+	}
+
+	//#8: the client used to PopTask for *every* incoming kind before switching on it - i.e. it treated all eighteen as
+	//responses.  The nine below that are pushes carry the *server's* request ids, from a counter that has nothing to do
+	//with the client's, so each one erased and dropped whichever await of the client's shared that number.  The pop is
+	//gated on this classifier now, and the EXPECT_FALSE half is the regression: those nine must never touch the task map.
+	//The builders above are what mint these kinds, which is why the classification is pinned next to them.
+	TEST( FromServerTests, IsResponse ){
+		using enum SMessage::ValueCase;
+		for( let kind : {kConnectionInfo, kException, kGeneric, kJwt, kProgress, kQueryResult, kSessionInfo, kStrings, kSubscriptionAck} )
+			EXPECT_TRUE( FromServer::IsResponse(kind) ) << "value_case " << (int)kind << " answers a client request";
+		for( let kind : {kAck, kClientQuery, kExecute, kExecuteAnonymous, kExecuteResponse, kStringPks, kSubscription, kTraces, VALUE_NOT_SET} )
+			EXPECT_FALSE( FromServer::IsResponse(kind) ) << "value_case " << (int)kind << " is a server push - popping a task for it drops an unrelated await";
 	}
 
 	TEST( ProtoUtilsTests, ToQuery ){

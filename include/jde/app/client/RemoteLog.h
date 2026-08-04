@@ -14,14 +14,17 @@ namespace Jde::App::Client{
 		α Write( const Logging::Entry& m, uint32 /*appPK*/, uint32 /*instancePK*/ )ι->void override{ Write(m); }
 		α Name()Ι->sv override{ return "RemoteLog"; }
 	private:
-		α ResetTimer()ι->void;
-		α Send()ι->void;
+		// Shutdown has to: the executor is being torn down, so a posted lambda can simply never run
+		α Send( bool post=true )ι->void;
 		α Start( sp<IAppClient> client )ι->void;
 		α StartTimer()ι->TimerAwait::Task;
-		ProtoLogCache _cache;
 		sp<IAppClient> _client;
 		Duration _delay;
+		//Entries go in whenever the process logs and only come out when the app server is reachable
+		uint32 _maxEntries;
+		uint _dropped{};
 		mutex _mutex;
+		bool _running{};
 		static constexpr ELogTags _tags{ ELogTags::ExternalLogger | ELogTags::App };
 		up<DurationTimer> _timer;
 		vector<Logging::Entry> _entries;

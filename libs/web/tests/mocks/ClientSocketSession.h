@@ -17,6 +17,9 @@ namespace Jde::Web::Mock{
 		α BadTransmissionClient( SRCE )ι->ClientSocketAwait<string>;
 		α BadTransmissionServer( SRCE )ι->ClientSocketAwait<string>;
 		α SetSessionId( str strSessionId, RequestId requestId )->Server::Sessions::UpsertAwait::Task;
+		//A server-initiated close reaches OnRead as websocket::error::closed and no async_close of ours ever completes, so
+		//OnRead has to fire OnClose itself - counted here because that is the only externally visible proof it did.
+		α OnCloseCount()Ι->uint{ return _onCloseCount.load(); }
 	private:
 		α Query( string&&, jobject, bool, SL )ι->ClientSocketAwait<jvalue> override{ ASSERT(false); return { {}, {}, {} }; }
 		α Subscribe( string&&, jobject, sp<QL::IListener>, SL )ε->ClientSocketAwait<jarray> override{ ASSERT(false); return { {}, {}, {} }; }
@@ -24,7 +27,9 @@ namespace Jde::Web::Mock{
 		α HandleException( RequestId requestId, std::any&& h, string&& what )ι;
 		α OnRead( Proto::FromServerTransmission&& transmission )ι->void override;
 		α CloseTasks( beast::error_code ec )ι->void override;
+		α OnClose( beast::error_code ec )ι->void override;
 
 		α OnAck( uint32 ack )ι->void;
+		atomic<uint> _onCloseCount{};
 	};
 }

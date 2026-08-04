@@ -9,14 +9,24 @@ namespace Jde::App::Client{
 	RemoteLog::RemoteLog( const jobject& settings, sp<IAppClient> client )ι:
 		ILogger{ settings },
 		_client{ move(client) },
-		_delay{ Json::FindDuration(settings, "delay", ELogLevel::Error).value_or(1min) }{
+		_delay{ Json::FindDuration(settings, "delay", ELogLevel::Error).value_or(1min) },
+		_maxEntries{ Json::FindNumber<uint32>(settings, "maxEntries").value_or(10'000) }{
 		Process::AddShutdown( this );
 	}
 	RemoteLog::~RemoteLog(){
-		ASSERT( !_timer );
-		if( _timer ){
-			ResetTimer();
-			while( _timer )
+		Process::RemoveShutdown( this );//first: the ctor registered a raw `this`, and nothing else takes it back out.
+		{
+			lg _{ _mutex };
+			_delay = Duration::min();
+			if( _timer )
+				_timer->Cancel();
+		}
+		for( bool running=true; running; ){
+			{
+				lg _{ _mutex };
+				running = _running;
+			}
+			if( running )
 				std::this_thread::sleep_for( 1ms );
 		}
 	}
@@ -35,7 +45,7 @@ namespace Jde::App::Client{
 				_timer->Cancel();
 		}
 		if( !terminate )
-			Send();
+			Send( false );//inline: a posted write is not guaranteed to run once the executor is stopping.
 		lg _{ _mutex };
 		_client = nullptr;
 	}
@@ -52,44 +62,76 @@ namespace Jde::App::Client{
 			_mutex.unlock();
 			return;
 		}
+		if( _entries.size()>=_maxEntries ){
+			let drop = _entries.size()/2;
+			_entries.erase( _entries.begin(), _entries.begin()+drop );
+			if( !_dropped )//once per outage, not once per entry.  Safe under _mutex: the recursion guard above returns before this lock.
+				WARN( "Remote log buffer reached {} entries - the app server is not taking them.  Dropping the oldest.", _maxEntries );
+			_dropped += drop;
+		}
 		_entries.push_back( m );
 		if( !_timer )
 			StartTimer();
 		else
 			_mutex.unlock();
 	}
+	//A loop, not a tail call.  Restarting itself meant the replacement coroutine was live while the one that spawned it was
+	//still finishing, so no single flag could say "nobody is running" - only a count could.  One coroutine at a time makes
+	//_running a plain bool, and every transition of it happens under _mutex: set here while the caller still holds the
+	//lock, cleared in the same critical section as the final unlock.
+	//_mutex is held on entry by every caller and released before the first suspend - the contract Write relies on.
 	α RemoteLog::StartTimer()ι->TimerAwait::Task{
-		if( _delay<=Duration::zero() ){//callers hold _mutex and expect StartTimer to release it.
+		_running = true;
+		for( bool again=true; again; ){
+			again = false;
+			if( _delay<=Duration::zero() ){//Shutdown/~RemoteLog set this, so a cancelled round stops here instead of arming another.
+				_timer.reset();
+				_running = false;
+				_mutex.unlock();
+				break;
+			}
+			//By reference, taken before the unlock: only this loop assigns _timer, and only under the lock.
+			auto& timer = *(_timer = mu<DurationTimer>( _delay ));
 			_mutex.unlock();
-			co_return;
+			let fired = co_await timer;
+			if( fired )
+				Send();//takes _mutex itself, and moves _entries out when it can send.
+			_mutex.lock();
+			//_timer is held for the whole round rather than dropped here.  Dropping it early is what let Write - which
+			//starts a round only when _timer is null - spawn a second coroutine alongside this one.
+			again = !_entries.empty();//also covers entries written during Send(), which used to wait for the next Write.
+			if( !again ){
+				_timer.reset();
+				_running = false;
+				_mutex.unlock();//last touch of `this`; ~RemoteLog can only see _running false after this releases.
+			}
 		}
-		_timer = mu<DurationTimer>( _delay );
-		_mutex.unlock();
-		let timedOut = co_await *_timer;
+	}
+	α RemoteLog::Send( bool post )ι->void{
+		vector<Logging::Entry> entries;
+		sp<IAppClient> client;
+		uint dropped{};
 		{
 			lg _{ _mutex };
-			_timer.reset();
+			if( _entries.empty() || !_client || !_client->Connected() )
+				return;
+			entries = move( _entries );
+			_entries.clear();//a moved-from vector is only "valid but unspecified", and StartTimer's `again` reads it next.
+			client = _client;
+			dropped = std::exchange( _dropped, 0 );
 		}
-		if( timedOut )
-			Send();
-		else{
-			_mutex.lock();
-			if( _entries.size() )
-				StartTimer();
-			else
-				_mutex.unlock();
-		}
-	}
-
-	α RemoteLog::ResetTimer()ι->void{
-		lg _{ _mutex };
-		if( _timer )
-			_timer->Cancel();
-	}
-	α RemoteLog::Send()ι->void{
-		lg _{ _mutex };
-		if( _entries.empty() || !_client || !_client->Connected() )
-			return;
-		Post( [entries=move(_entries),client=_client]() mutable{client->Write(move(entries));} );
+		if( dropped )//outside the lock, and after the swap, so the count reported is the one this batch leaves behind.
+			WARN( "Remote log dropped {} entries while the app server was unreachable.", dropped );
+		//Neither path captures `this`: a posted lambda is not covered by ~RemoteLog's wait, so it must not outlive the
+		//object holding a pointer to it.
+		auto write = []( sp<IAppClient> client, vector<Logging::Entry>&& entries )ι{
+			let count = entries.size();
+			if( !client->Write(move(entries)) )
+				WARN( "Remote log lost {} entries - the session closed before the batch reached it.", count );
+		};
+		if( post )
+			Post( [write,client=move(client),entries=move(entries)]() mutable{ write(move(client), move(entries)); } );
+		else
+			write( move(client), move(entries) );//shutdown: see the declaration.
 	}
 }

@@ -30,5 +30,5 @@ namespace Jde::Opc::Gateway::Tests{
 
 	α AvailableUserTokens( sv url )ε->ETokenType;
 	α Query( sv ql, jobject vars={}, bool raw=true )ε->jobject;
-	Ξ GatewayPort()ι{ return Settings::FindNumber<PortType>("http/gateway/port").value_or(1968); }
+	Ξ GatewayPort()ι{ return Settings::FindNumber<PortType>("/http/gateway/port").value_or(1968); }
 }

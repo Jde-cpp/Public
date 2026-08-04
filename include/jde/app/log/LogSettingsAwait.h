@@ -17,7 +17,6 @@ namespace Jde::App{
 		α ToJson( const Logging::ILogger& logger )ι->jobject;
 		α CalcResult()ι->jobject;
 		QL::TableQL _ql;
-		up<Exception> _exception;
 		jobject _result;
 	};
 

@@ -16,6 +16,13 @@ namespace Jde{
 		string Key;
 	};
 
+	//Non-blocking acquire; nullopt when the key is already held.  LockKeyAwait cannot be used to probe: its await_ready
+	//enqueues *before* it answers, so abandoning it on a false answer leaves a placeholder in the queue that no
+	//CoLockGuard will ever pop - the key would be locked for the rest of the process.  This enqueues only on success.
+	//For callers that must not block on a lock whose holder may never resume, e.g. anything running after the executor
+	//has been destroyed.
+	Γ α TryLockKey( string key )ι->optional<CoLockGuard>;
+
 	struct Γ LockKeyAwait final : TAwait<CoLockGuard>, noncopyable{
 		using base=TAwait<CoLockGuard>;
 		LockKeyAwait( string key )ι:Key{move(key)}{}

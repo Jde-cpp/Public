@@ -57,7 +57,7 @@ namespace Jde::Web{
 	}
 
 	TEST_F( CertificateTests, NewDirectory ){
-		let path = Settings::FindPath( "testing/certDir" ).value_or( fs::temp_directory_path()/"webTests/ssl" );
+		let path = Settings::FindPath( "/testing/certDir" ).value_or( fs::temp_directory_path()/"webTests/ssl" );
 		fs::remove_all( path );
 		Mock::Start( SslSettings(path, "PaSsCoDe", "web-certificate-tests-newdir") );
 		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} };

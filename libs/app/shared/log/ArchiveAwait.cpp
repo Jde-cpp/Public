@@ -98,9 +98,13 @@ namespace Jde::App{
 				co_return;
 			}
 		}
-		fs::remove( _dailyFile );
+		std::error_code ec;
+		fs::remove( _dailyFile, ec );
 		lock.reset();//before resuming: Resume() runs the continuation on this stack, which must not inherit the daily file's lock.
-		Resume();
+		if( ec )//the archives are written, but the round's postcondition - the daily file is gone - does not hold, so say so.
+			ResumeExp( IO::IOException{_dailyFile, (uint32)ec.value(), Ƒ("Could not remove the archived daily file: {}", ec.message()), _sl} );
+		else
+			Resume();
 	}
 	Ω getFile( year_month_day ymd, const fs::path& root )ε->fs::path{
 		let dir = root/std::to_string( (int)ymd.year() )/std::to_string( (unsigned)ymd.month() )/std::to_string( (unsigned)ymd.day() );
@@ -115,14 +119,17 @@ namespace Jde::App{
 	{}
 
 	α ArchiveFileAwait::Suspend()ι->void{
-		if( fs::exists(_file) )
+		std::error_code ec;
+		if( let exists = fs::exists(_file, ec); ec )
+			ResumeExp( IO::IOException{_file, (uint32)ec.value(), Ƒ("Could not stat the archive file: {}", ec.message()), _sl} );
+		else if( exists )
 			Append();
 		else
 			Save( move(_archive) );
 	}
 	α ArchiveFileAwait::Append()ι->TAwait<string>::Task{
 		App::Log::Proto::ArchiveFile cumulative;
-		try{//the whole merge is guarded: an unparseable archive must fail this await, not escape into a coroutine nobody is awaiting.
+		try{ //the whole merge is guarded: an unparseable archive must fail this await, not escape into a coroutine nobody is awaiting.
 			auto content = co_await IO::ReadAwait( _file );
 			std::map<uuid,App::Log::Proto::String> args, templates, files, functions;
 			std::multimap<TimePoint,App::Log::Proto::LogEntryFile> entries;
@@ -231,7 +238,7 @@ namespace Jde::App{
 
 	α ArchiveLoadAwait::LoadArchives( ArchiveFile archive )ι->StringAwait::Task{
 		try{
-			auto process = [this]( ArchiveFile& archive, string&& content )ι->bool {
+			auto process = [this]( ArchiveFile& archive, string&& content )ε->bool {
 				archive.Append( _query, Protobuf::Deserialize<App::Log::Proto::ArchiveFile>(move(content)) );
 				return archive.IsComplete( _query );
 			};

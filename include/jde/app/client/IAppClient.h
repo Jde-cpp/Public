@@ -12,13 +12,14 @@ namespace Jde::App::Client{
 	struct AppClientSocketSession;
 	struct IAppClient : IApp, IShutdown{
 		IAppClient()ι;
+		~IAppClient();
 		α Shutdown( bool terminate, SL sl )ι->void override;
 
 		Τ using await = Web::Client::ClientSocketAwait<T>;
 		α Listener()Ε->sp<Access::AccessListener>;
 		α InitLogging( sp<App::Client::IAppClient> client )ι->void;
 		α LoadLogSettings( SRCE )ι->void;
-		α Connected()Ι->bool{ return LoadSession()!=nullptr; }
+		β Connected()Ι->bool{ return LoadSession()!=nullptr; }
 		α IsLocal()Ι->bool override{ return false; }
 		α UserName()Ι->const jobject&{ return _userName; }
 		α SetUserName( jobject&& userName )ι->void{ _userName = move(userName); }
@@ -40,7 +41,7 @@ namespace Jde::App::Client{
 		optional<Crypto::CryptoSettings> SslSettings;
 		Crypto::PublicKey ServerPublicKey;
 		vector<sp<DB::AppSchema>> SubscriptionSchemas;
-		α Write( vector<Logging::Entry>&& entries )ι->void;
+		β Write( vector<Logging::Entry>&& entries )ι->bool;
 	private:
 		α QueryArray( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jarray>> override;
 		α QueryObject( string&& q, jobject variables, bool returnRaw, SRCE )ε->up<TAwait<jobject>> override;

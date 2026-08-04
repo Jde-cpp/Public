@@ -40,7 +40,6 @@ namespace Jde::Opc::Gateway::Tests{
 		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, "Test message" };
 		remote.Write( e );
 		remote.Shutdown();
-		Process::RemoveShutdown( &remote );
 		std::this_thread::sleep_for( 1s );
 	}
 
@@ -66,7 +65,6 @@ namespace Jde::Opc::Gateway::Tests{
 		while( _listener->Received.empty() )
 			ASSERT_NO_THROW( sw.CheckTimeout(600s, 1ms) );
 		ASSERT_EQ( Protobuf::ToGuid(_listener->Received.back().message_id()), log.Id() );
-		Process::RemoveShutdown( &remote );
 		//TODO add logs before subscription to make sure they are retrieved.
 		//Make sure only fields requested are returned.
 		//Make sure meta data is correct.

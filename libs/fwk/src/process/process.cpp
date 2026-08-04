@@ -137,8 +137,10 @@ namespace Jde{
 		ASSERT( !_rawShutdowns.find(shutdown) );
 		_rawShutdowns.push_back( shutdown );
 	}
+	//No assert on absence: Shutdown() below drains the whole container before invoking anything, so by the time the
+	//registrants are destroyed - which is where they unregister - there is nothing left to find.  That is the ordinary
+	//path, not a bug.
 	α Process::RemoveShutdown( IShutdown* shutdown )ι->void{
-		ASSERT( _rawShutdowns.find(shutdown) );
 		_rawShutdowns.erase( shutdown );
 	}
 

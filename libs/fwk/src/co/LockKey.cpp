@@ -9,6 +9,19 @@ namespace Jde{
 	flat_map<string,std::deque<std::variant<uint,coroutine_handle<>>>> _coLocks; mutex _coLocksMutex;
 	atomic<uint> _lockIndex;
 
+	α TryLockKey( string key )ι->optional<CoLockGuard>{
+		lg _( _coLocksMutex );
+		auto& locks = _coLocks.try_emplace( key ).first->second;//absent -> empty deque, which is the acquirable state.
+		if( locks.size() ){
+			TRACE( "({})TryLockKey - held, size={}.", key, locks.size() );
+			return nullopt;//nothing enqueued: see the header for why probing with await_ready cannot work.
+		}
+		let index = ++_lockIndex;
+		locks.push_back( index );
+		TRACE( "({})TryLockKey - acquired.", key );
+		return CoLockGuard{ move(key), index };
+	}
+
 	α LockKeyAwait::await_ready()ι->bool{
 		lg _( _coLocksMutex );
 		auto& locks = _coLocks.try_emplace( Key ).first->second;

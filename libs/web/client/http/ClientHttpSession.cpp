@@ -10,13 +10,13 @@ namespace Jde::Web::Client{
 	Duration _handshakeTimeout{};
 	α handshakeTimeout()ι{
 		if( _handshakeTimeout==Duration::zero() )
-			_handshakeTimeout = Settings::FindDuration( "web/client/timeoutHandshake" ).value_or( std::chrono::seconds(30) );
+			_handshakeTimeout = Settings::FindDuration( "/web/client/timeoutHandshake" ).value_or( std::chrono::seconds(30) );
 		return _handshakeTimeout;
 	}
 	Duration _timeout{};
 	α Timeout()ι{
 		if( _timeout==Duration::zero() )
-			_timeout = Settings::FindDuration( "web/client/timeout" ).value_or( std::chrono::seconds(30) );
+			_timeout = Settings::FindDuration( "/web/client/timeout" ).value_or( std::chrono::seconds(30) );
 		return _timeout;
 	}
 	ELogTags _tags{ ELogTags::HttpClientWrite };

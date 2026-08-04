@@ -9,6 +9,10 @@ namespace Jde::QL{ struct ColumnQL; struct Subscription; }
 namespace Jde::Web{ struct Jwt; namespace Server{struct SessionInfo;} }
 namespace Jde::App::Proto::FromClient { class Status; }
 namespace Jde::App::FromServer{
+	//Whether a message answers a request the *client* made - i.e. whether its request_id indexes the client's pending-task
+	//map at all.  Everything else is a server-originated push stamped with the server's own request id, which is a
+	//different id space entirely.  See the definition for why the client may not touch its tasks for those.
+	α IsResponse( Proto::FromServer::Message::ValueCase kind )ι->bool;
 	α Ack( uint32 serverSocketId )ι->Proto::FromServer::Transmission;
 	α Complete( RequestId requestId )ι->Proto::FromServer::Transmission;
 	α ConnectionInfo( ProgramPK appPK, ProgInstPK instancePK, ConnectionPK connectionPK, RequestId clientRequestId, const Crypto::PublicKey& appServerPublicKey, sp<Web::Server::SessionInfo> session, optional<bool> authResult )ι->Proto::FromServer::Transmission;

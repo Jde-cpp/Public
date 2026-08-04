@@ -20,7 +20,7 @@ namespace Jde::QL{
 		α FindKey()Ι->optional<DB::Key>;
 		α GetKey( SRCE )Ε->DB::Key;
 		α ExtrapolateVariables()Ι->jobject;
-		α Filter()Ι->Filter;
+		α Filter()Ι->const Filter&;
 		β JTableName()Ι->string=0;
 		α Limit()Ι->uint{ return TryNumber<uint>( "limit" ).value_or(0); }
 		α Offset()Ι->uint{ auto offset = TryNumber<uint>( "offset" ); return offset ? *offset : TryNumber<uint>( "skip" ).value_or(0); }

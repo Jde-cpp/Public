@@ -23,10 +23,7 @@ file( GLOB headers *.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 target_compile_definitions( ${targetName} PRIVATE TESTS )
 target_link_libraries( ${targetName} GTest::gtest Threads::Threads )
-#Jde.Web.Server: app.FromServer.cpp calls Web::Server::ToProto(SessionInfo), so the object pulls the server lib in with it.
-#No driver and no schema:  everything here is in-memory - the archive filter/sort/json, the string cache and the
-#proto builders.  Nothing opens a data source.
-target_link_libraries( ${targetName} Jde.App.Shared Jde.Web.Server Jde.QL Jde.DB Jde )
+target_link_libraries( ${targetName} Jde.App.Client Jde.Web.Server ) # Jde.QL Jde.DB Jde
 
 if( WIN32 )
 	set_target_properties( ${targetName} PROPERTIES VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/App.Tests.jsonnet" )

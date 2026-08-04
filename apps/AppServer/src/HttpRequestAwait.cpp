@@ -46,7 +46,7 @@ namespace Jde::App::Server{
 		if( _request.Method() == http::verb::get ){
 			if( _request.Target()=="/GoogleAuthClientId" ){
 				_request.LogRead();
-				_readyResult = mu<jvalue>( ValueJson(Settings::FindString("GoogleAuthClientId").value_or("GoogleAuthClientId Not Configured.")) );
+				_readyResult = mu<jvalue>( ValueJson(Settings::FindString("/http/clientSettings/googleAuthClientId").value_or("GoogleAuthClientId Not Configured.")) );//same pointer SettingQLAwait serves the ql `setting(target:"googleAuthClientId")` from - the old "GoogleAuthClientId" was both unrooted and a key no config defines, so this endpoint always answered "Not Configured".
 			}
 			else if( _request.Target()=="/opcGateways" || _request.Target()=="/opcServers" ){
 				_request.LogRead();

@@ -1,5 +1,6 @@
 #include <jde/app/log/ProtoLog.h>
 #include <jde/fwk/chrono.h>
+#include <jde/fwk/co/LockKey.h>
 #include <jde/fwk/co/Timer.h>
 #include <jde/fwk/io/protobuf.h>
 #include <jde/fwk/io/FileAwait.h>
@@ -12,19 +13,35 @@
 
 namespace Jde::App{
 	using Protobuf::ToGuid;
+	//The day the daily file's *content* belongs to - not today's.  Seeding from now() meant a service that starts and stops
+	//within one day never saw a day change, so _needsArchive was never set and log.binpb accumulated across every restart
+	//cycle forever, with every logs() query deserializing the whole thing.  Only a process that happened to stay up across
+	//midnight ever archived.  Seeded from the file instead, so the first entry of a new day arms the round that the previous
+	//run should have done.
+	//Last-write time rather than the first entry's timestamp: the file is appended on every flush, and reading it here would
+	//deserialize the entire accumulated file on the startup path - the very cost this is fixing.  Residual window: a file
+	//last appended just after midnight but holding only the previous day's entries reads as current, so its round waits for
+	//the next day change.  Late, never lost - ArchiveAwait buckets entries by their own day, whenever the round runs.
+	Ω dailyFileDay( const fs::path& dailyFile, const std::chrono::time_zone& tz )ι->std::chrono::year_month_day{
+		std::error_code ec;
+		let written = fs::last_write_time( dailyFile, ec );//ec overload: no file (the normal first-run case) is not an error here.
+		//to_sys off the value's own clock, not clang's missing std::chrono::clock_cast; time_point_cast because file_clock's
+		//tick period differs from Clock's (ns vs µs on libc++, 100ns on MSVC) and sys_time<D> does not narrow implicitly.
+		return Chrono::LocalYMD( ec ? Clock::now() : std::chrono::time_point_cast<Clock::duration>(fs::file_time_type::clock::to_sys(written)), tz );
+	}
 	ProtoLog::ProtoLog( const jobject& settings )ε:
 		Logging::ILogger{ settings },
 		_delay{ Json::FindDuration(settings, "delay", ELogLevel::Error).value_or(1min) },
 		_root{ Json::FindString(settings, "path").value_or((Process::AppDataFolder()/"logs").string()) },
 		_tz{ Json::FindTimeZone(settings, "timeZone", *std::chrono::current_zone()) },
-		_today{ Chrono::LocalYMD(Clock::now(), _tz) }{
+		_today{ dailyFileDay(DailyFile(), _tz) }{//_root and _tz are declared before _today, so both are live here.
+		if( fs::exists(DailyFile()) )
+			_dailyFileStart = TimePoint::min();
 		Executor();//locks up if starts in StartTimer.
 		Execution::Run();
 		Process::AddShutdownFunction( [](bool /*terminate*/, SL){	//member Shutdown gets called after timer thread shutdown.
-			if( auto log = Logging::FindLogger<App::ProtoLog>(); log ){
-				log->_delay = Duration::min();
-				log->ResetTimer();
-			}
+			if( auto log = Logging::FindLogger<App::ProtoLog>(); log )
+				log->StopTimer();
 		});
 		try{
 			fs::create_directories( _root );
@@ -38,14 +55,30 @@ namespace Jde::App{
 	}
 
 	α ProtoLog::Shutdown( bool terminate, SL )ι->void{
-		if( !terminate && !_toSave.empty() ){
-			try{
-				lg _{ _mutex };
-				IO::SaveBinary<byte>( DailyFile(), _toSave, true );
+		if( terminate )
+			return;
+		//Every other writer of the daily file holds its LockKey; this one did not.  The stream is size-prefixed, so
+		//appending into the middle of a flush's write leaves a file nothing can parse, and appending into one an archive
+		//round is about to fs::remove loses the entries silently.
+		//Try, never wait: loggers are destroyed *after* the executor is (Process::cleanup), so a flush or round suspended
+		//mid-flight will never resume to release this key - blocking here would hang the process instead of losing a buffer.
+		auto lock = TryLockKey( DailyFile().string() );
+		uint dropped{};
+		{
+			lg _{ _mutex };
+			if( _toSave.empty() )
+				return;
+			if( lock ){
+				try{
+					IO::SaveBinary<byte>( DailyFile(), _toSave, true );
+				}
+				catch( exception& )
+				{}
+				return;
 			}
-			catch( exception& )
-			{}
+			dropped = _toSave.size();
 		}
+		ERR( "Shutdown could not take the daily file's lock - {} buffered bytes dropped rather than interleaved into it.", dropped );//outside _mutex: this reaches the loggers that are still alive.
 	}
 	α ProtoLog::Deserialize( sv bytes )ε->vector<App::Log::Proto::FileEntry>{
 		return Protobuf::DeserializeVector<App::Log::Proto::FileEntry>( bytes );
@@ -61,7 +94,7 @@ namespace Jde::App{
 	}
 
 	α ProtoLog::Write( const Logging::Entry& e, App::ProgramPK appPK, App::ProgInstPK instancePK )ι->void{
-		if( appPK==ProgramPK || !appPK || instancePK==InstancePK || !instancePK )
+		if( !appPK || !instancePK || (appPK==_appPK && instancePK==_instancePK) )
 			return Write( e );
 		if( !empty(e.Tags & _tags) )//recursion guard
 			return;
@@ -71,9 +104,9 @@ namespace Jde::App{
 		Write( e, move(fileEntry) );
 	}
 	α ProtoLog::Write( const Logging::Entry& e, App::Log::Proto::FileEntry&& fileEntry )ι->void{
-		_dailyFileStart = std::min<TimePoint>( _dailyFileStart, e.Time );
 		auto data = Protobuf::SizePrefixed( fileEntry );
 		_mutex.lock();
+		_dailyFileStart = std::min<TimePoint>( _dailyFileStart, e.Time );//inside the lock: read by the query coroutine, written by every logging thread.
 		if( auto day = Chrono::LocalYMD(e.Time, _tz); _today!=day ){
 			_today = day;
 			_needsArchive = true;
@@ -103,7 +136,7 @@ namespace Jde::App{
 	}
 	α ProtoLog::Save()ι->TAwait<CoLockGuard>::Task{
 		auto toSave = move( _toSave );
-		ResetTimer();
+		ResetTimerUnlocked();//_mutex is held on entry and released below.
 		_toSave.reserve( toSave.size() );
 		_cache.Trim();
 		_mutex.unlock();
@@ -112,8 +145,12 @@ namespace Jde::App{
 	α ProtoLog::Save( vector<byte> toSave, CoLockGuard )ι->VoidAwait::Task{
 		try{
 			TRACE( "Saving {} bytes to {}", toSave.size(), DailyFile().string() );
+			//NOT _dailyFileStart = max() here.  A flush moves entries from the buffer into the daily file - both of which are
+			//"local" - so parking the bound at max() after every successful flush told LogAwait::ShouldReadLocal that nothing
+			//was local at all: `*_endTime > max` is false for any finite bound, so every time-bounded query silently skipped
+			//the whole of today's log and answered out of the archives alone.  The bound is only released when the round
+			//below actually takes the file away.
 			co_await IO::WriteAwait( DailyFile(), vector<byte>{toSave}, true, IO::EWriteMode::Append, _tags );
-			_dailyFileStart = TimePoint::max();
 		}
 		catch( exception& )	{
 			lg _{ _mutex };
@@ -132,6 +169,8 @@ namespace Jde::App{
 			pending = move( _toSave );
 			_toSave.reserve( pending.size() );
 			_needsArchive = false;//cleared here, under _mutex: a day-changed entry arriving after the drain re-arms it for the next round instead of being stranded in the daily file.
+			_cache.Clear();
+			_dailyFileStart = TimePoint::max();//_toSave is empty and everything local is bound for the file the round deletes; entries written from here lower it again.
 		}
 		if( pending.size() ){
 			try{
@@ -141,6 +180,7 @@ namespace Jde::App{
 				lg _{ _mutex };
 				_toSave.insert( _toSave.begin(), pending.begin(), pending.end() );
 				_needsArchive = true;//nothing archived - re-arm so the next flush retries the round.
+				_dailyFileStart = TimePoint::min();//the drain released the bound on the promise of a round that is not happening; those entries are local again, earliest unknown.
 				co_return;
 			}
 		}
@@ -150,8 +190,10 @@ namespace Jde::App{
 		try{
 			co_await ArchiveAwait{ DailyFile(), _root, _tz };
 		}
-		catch( const exception& )
-		{}
+		catch( const exception& ){
+			lg _{ _mutex };//the round failed, so the daily file survives with everything the drain wrote into it - take the bound back.
+			_dailyFileStart = TimePoint::min();
+		}
 	}
 
 	α ProtoLog::AddString( uuid id, sv str )ι->void{
@@ -195,9 +237,27 @@ namespace Jde::App{
 		}
 	}
 
-	α ProtoLog::ResetTimer()ι->void{
+	//_mutex must be held.  StartTimer's continuation nulls _timer - destroying the DurationTimer - under this same lock, so
+	//an unguarded `if( _timer ) _timer->Cancel()` could pass the test on the shutdown thread and then call Cancel() on
+	//freed memory once the io thread ran the continuation.  Every other _timer access was already guarded; this one was
+	//not, only because Save() calls it with the lock already held.
+	//Safe to hold _mutex across Cancel(): it takes the DurationTimer's own lock and calls asio's cancel(), which *posts*
+	//the completion - the continuation that re-takes _mutex never runs on this stack, so there is no re-entry to deadlock
+	//on, and the lock order is only ever ProtoLog -> DurationTimer.
+	α ProtoLog::ResetTimerUnlocked()ι->void{
 		if( _timer )
 			_timer->Cancel();
+	}
+	//One locked operation, because it is two writes: _delay is read by StartTimer under _mutex, so setting it from the
+	//shutdown thread without the lock raced the very timer being cancelled.  min() is the sentinel StartTimer bails on.
+	α ProtoLog::StopTimer()ι->void{
+		lg _{ _mutex };
+		_delay = Duration::min();
+		ResetTimerUnlocked();
+	}
+	α ProtoLogCache::Clear()ι->void{
+		Args.clear();
+		Strings.clear();
 	}
 	α ProtoLogCache::Trim()ι->void{
 		while( Args.size()>1000 )

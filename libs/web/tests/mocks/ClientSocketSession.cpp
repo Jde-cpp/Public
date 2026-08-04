@@ -113,6 +113,11 @@ namespace Jde::Web::Mock{
 		return ClientSocketAwait<string>{ Protobuf::ToString(t), requestId, shared_from_this(), sl };
 	}
 
+	α ClientSocketSession::OnClose( beast::error_code ec )ι->void{
+		++_onCloseCount;//incremented before the base call: base::OnClose drains _tasks, which resumes whoever is blocked on the request, so the count has to be visible by then.
+		base::OnClose( ec );
+	}
+
 	α ClientSocketSession::CloseTasks( beast::error_code ec )ι->void{
 		auto f = [this, ec]( std::any&& h )->void {
 			HandleException(
