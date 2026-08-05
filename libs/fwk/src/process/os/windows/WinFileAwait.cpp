@@ -27,7 +27,8 @@ namespace Jde::IO{
 
 	α FileIOArg::Open( bool create, bool append )ε->void{
 		const DWORD access = IsRead ? GENERIC_READ : GENERIC_WRITE;
-		const DWORD sharing = IsRead ? FILE_SHARE_READ : FILE_SHARE_WRITE;
+		//FILE_SHARE_DELETE on the read path so a whole-file rewrite can rename its temp over a file being read (ArchiveFileAwait::Save): without it MoveFileEx cannot take DELETE on the target and the replace fails, which would only move the sharing violation from the reader to the writer.  The open handle goes on reading the version it opened, as it would on linux.
+		const DWORD sharing = IsRead ? FILE_SHARE_READ|FILE_SHARE_DELETE : FILE_SHARE_WRITE;
 		//truncate must drop the old contents: chunks write from offset 0 (InitialSize stays 0), so OPEN_EXISTING would leave a longer previous version's tail behind.  create picks whether a missing file is an error, matching linux's O_CREAT.
 		const DWORD creationDisposition = IsRead ? OPEN_EXISTING : (append ? OPEN_ALWAYS : (create ? CREATE_ALWAYS : TRUNCATE_EXISTING));
 		const DWORD dwFlagsAndAttributes = IsRead ? FILE_FLAG_SEQUENTIAL_SCAN : FILE_ATTRIBUTE_ARCHIVE;

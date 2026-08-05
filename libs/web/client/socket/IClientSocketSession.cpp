@@ -76,7 +76,7 @@ namespace Jde::Web::Client{
 		const auto _ = shared_from_this();//the timer outlives the request; keep us alive so the check below is not on a freed session.
 		const auto timeout = requestTimeout();
 		auto timer = ms<DurationTimer>( timeout, sl );
-		co_await *timer;
+		auto _ = co_await *timer;
 		if( !HasTask(requestId) )
 			co_return;//answered, or already failed with the session.
 		CloseOnError( Ƒ("request {} unanswered after {}", hex(requestId), Chrono::ToString(timeout)), sl );

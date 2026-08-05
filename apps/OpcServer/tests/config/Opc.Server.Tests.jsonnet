@@ -20,8 +20,11 @@ local logsDir = args.logsDir;
 		configDir: args.repoSourceDir + "/apps/OpcServer/config/mutations/pumps",
 		port: 4840,
 		ssl:{
-			certificate: args.repoBuildDir + "/OpcServer/ssl/certs/cert.pem",
-			privateKey: {path: args.repoBuildDir + "/OpcServer/ssl/private/private.pem", passcode: ""}
+			certificate:{
+				subjectAltName: "URI:urn:open62541.server.application,DNS:localhost,IP:127.0.0.1",
+				commonName: args.instanceName + ".opcServer.tests.web",
+			},
+			privateKey: {path: args.repoBuildDir + "/OpcServer/ssl/private/OpcServer.Tests.pem", passcode: ""}
 		}
 	},
 	dbServers: {

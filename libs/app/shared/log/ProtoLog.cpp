@@ -25,9 +25,10 @@ namespace Jde::App{
 	Ω dailyFileDay( const fs::path& dailyFile, const std::chrono::time_zone& tz )ι->std::chrono::year_month_day{
 		std::error_code ec;
 		let written = fs::last_write_time( dailyFile, ec );//ec overload: no file (the normal first-run case) is not an error here.
-		//to_sys off the value's own clock, not clang's missing std::chrono::clock_cast; time_point_cast because file_clock's
-		//tick period differs from Clock's (ns vs µs on libc++, 100ns on MSVC) and sys_time<D> does not narrow implicitly.
-		return Chrono::LocalYMD( ec ? Clock::now() : std::chrono::time_point_cast<Clock::duration>(fs::file_time_type::clock::to_sys(written)), tz );
+		//ToClock, because file_clock has no portable conversion to Clock: libc++ offers to_sys, MSVC only to_utc (which needs
+		//the leap-second table and throws), and clang has no std::chrono::clock_cast.  Offsetting by both clocks' current
+		//readings is exact to the sampling gap - orders of magnitude finer than the day this resolves to.
+		return Chrono::LocalYMD( ec ? Clock::now() : Chrono::ToClock<Clock, fs::file_time_type::clock>(written), tz );
 	}
 	ProtoLog::ProtoLog( const jobject& settings )ε:
 		Logging::ILogger{ settings },

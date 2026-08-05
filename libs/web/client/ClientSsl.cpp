@@ -1,5 +1,7 @@
 #include <jde/web/client/ClientSsl.h>
 #include <boost/asio/ssl/host_name_verification.hpp>
+#include <openssl/ssl.h>
+#include <jde/fwk/crypto/TrustStore.h>
 
 #define let const auto
 
@@ -32,10 +34,18 @@ namespace Jde::Web::Client::Ssl{
 			ctx.set_verify_mode( ssl::verify_none );
 			return ctx;
 		}
-		beast::error_code ec;
-		ctx.set_default_verify_paths( ec );//the OS roots, for public hosts like the google jwks endpoint.
-		if( ec )
-			CodeException{ static_cast<std::error_code>(ec), _tags, ELogLevel::Warning };
+		//the OS roots, for public hosts like the google jwks endpoint.  ctx.set_default_verify_paths() is not enough: OpenSSL has
+		//no notion of the windows certificate store, so there it resolves to a compiled-in OPENSSLDIR that does not exist and
+		//leaves the context with no anchors at all - silently, because registering a lookup for a missing directory succeeds.
+		//TrustStore snapshots the windows ROOT store and keeps the default-path lookups on linux.  set1 up-refs, so the context
+		//owns the store once the local drops its reference, and the caFile/anchor loads below land in that context's own copy.
+		try{
+			Crypto::TrustStore roots{};
+			::SSL_CTX_set1_cert_store( ctx.native_handle(), roots.Native() );
+			TRACET( _tags, "Loaded {} OS trust anchors.", roots.CertCount() );
+		}catch( const std::exception& e ){//not fatal: an internal-only client needs no public roots, and failing closed here would take the process down at startup.
+			WARNT( _tags, "Could not load the OS trust store ({}) - public hosts will fail verification unless /web/client/ssl/caFile names an anchor.", e.what() );
+		}
 		if( let caFile = Settings::FindPath("/web/client/ssl/caFile"); caFile )
 			load( ctx, *caFile );
 		for( let& anchor : _anchors )

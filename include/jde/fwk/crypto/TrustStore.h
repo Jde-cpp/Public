@@ -14,6 +14,11 @@ namespace Jde::Crypto{
 		α Verify( std::span<const byte> der, SRCE )Ε->void;//throws OpenSslException with X509_verify_cert_error_string reason+code+depth.
 		α IsTrusted( std::span<const byte> der )Ι->bool;
 		α CertCount()Ι->uint;//loaded objects (certs+CRLs); lazy hash-dir lookups on Linux can leave this 0 even when Verify works.
+		//the store itself, for OpenSSL entry points that take one - SSL_CTX_set1_cert_store, to hand a TLS context these anchors.
+		//Non-owning: this TrustStore still frees it, so anything that takes ownership needs an X509_STORE_up_ref first (set1 does
+		//that itself; the set_cert_store spelling does not).  Copying the certs out instead would drop Linux's lazy hash-dir
+		//lookups, which are lookup methods on the store rather than loaded certificates.
+		α Native()Ι->X509_STORE*{ return _store.get(); }
 	private:
 		up<X509_STORE, void(*)(X509_STORE*)> _store;
 	};

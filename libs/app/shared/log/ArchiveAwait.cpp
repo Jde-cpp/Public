@@ -186,13 +186,29 @@ namespace Jde::App{
 		Save( move(cumulative) );
 	}
 	α ArchiveFileAwait::Save( App::Log::Proto::ArchiveFile&& values )ι->VoidAwait::Task{
+		//truncate: values is the complete file - Append already merged what is on disk into it, so appending would write every existing entry a second time (the file grew ~x3.7 per archive round until it no longer parsed).
+		//Truncating the target in place published a half-written archive: CREATE_ALWAYS puts the name on disk at open, so a
+		//reader polling for the file found it a whole write early - and on windows could not even open it, the writer's sharing
+		//mode locking readers out until the last chunk landed (ERROR_SHARING_VIOLATION).  A sibling temp renamed over the target
+		//is atomic within the filesystem, so the name only ever refers to a complete archive.  One fixed temp name is enough:
+		//ArchiveAwait::Save archives days one at a time under the daily file's lock, and a leftover is inert either way -
+		//ArchiveFiles() matches "archive.binpb" exactly, and the next round's CREATE_ALWAYS overwrites it.
+		let temp = fs::path{ _file }.concat( ".tmp" );
 		try{
-			//truncate: values is the complete file - Append already merged what is on disk into it, so appending would write every existing entry a second time (the file grew ~x3.7 per archive round until it no longer parsed).
-			co_await IO::WriteAwait( move(_file), Protobuf::ToString(values), true, IO::EWriteMode::Truncate, _tags );
-			Resume();
+			co_await IO::WriteAwait( temp, Protobuf::ToString(values), true, IO::EWriteMode::Truncate, _tags );
 		}
 		catch( exception& e ){
 			ResumeExp( move(e) );
+			co_return;
+		}
+		std::error_code ec;
+		fs::rename( temp, _file, ec );
+		if( !ec )
+			Resume();
+		else{
+			std::error_code removeEc;
+			fs::remove( temp, removeEc );//the target still holds the previous archive; a stray temp would only mislead whoever looks at the directory next.
+			ResumeExp( IO::IOException{_file, (uint32)ec.value(), Ƒ("Could not rename '{}' onto the archive: {}", temp.string(), ec.message()), _sl} );
 		}
 	}
 	α ArchiveLoadAwait::Suspend()ι->void{
