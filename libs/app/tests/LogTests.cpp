@@ -211,7 +211,7 @@ namespace Jde::App::Tests{
 		α WriteDailyFile( TimePoint written )->void{
 			let file = _root/"log.binpb";
 			{ std::ofstream os{ file, std::ios::binary }; os << "unparsed"; }
-			fs::last_write_time( file, fs::file_time_type::clock::from_sys(std::chrono::time_point_cast<fs::file_time_type::duration>(written)) );
+			fs::last_write_time( file, Chrono::ToClock<fs::file_time_type::clock, Clock>(written) );//ToClock: from_sys is libc++-only, MSVC's file_clock has just from_utc.
 		}
 	};
 

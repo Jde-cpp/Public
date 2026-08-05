@@ -36,12 +36,17 @@ namespace Jde::QL{
 		if( !pk )
 			return {};
 		DB::WhereClause where; //the generator, not hand-rolled sql:  placeholders & qualified names then follow the driver's Syntax.
+		vector<sp<DB::Column>> nullColumns; //held back: `col is null` matches nothing when the column was server-defaulted (created/updated), so only narrow with them when the plain lookup is ambiguous.
 		for( let& [key, value] : args ){
-			if( value.is_object() || value.is_array() || value.is_null() ) //a null resolves to `col is null`, which matches nothing when the column was server-defaulted (created/updated).
+			if( value.is_object() || value.is_array() )
 				continue;
 			let column = table->FindColumn( DB::Names::FromJson(key) );
 			if( !column || column==pk )
 				continue;
+			if( value.is_null() ){
+				nullColumns.push_back( column );
+				continue;
+			}
 			try{
 				where.Add( column, DB::Value{column->Type, value} ); //Value{EType,jvalue} throws for Guid/VarBinary/TimeSpan/… and on json-kind mismatches - such a column just doesn't narrow the search.
 			}
@@ -53,8 +58,17 @@ namespace Jde::QL{
 			return {};
 		optional<uint> y;
 		try{
-			vector<uint> ids;
-			table->Schema->DS()->Select( DB::Sql{Ƒ("select {} from {} {}", pk->FQName(), table->DBName, where.ToString()), where.Params()}, [&ids](DB::Row&& r){ ids.push_back( r.GetUInt(0) ); } );
+			auto select = [&]()ε{
+				vector<uint> ids;
+				table->Schema->DS()->Select( DB::Sql{Ƒ("select {} from {} {}", pk->FQName(), table->DBName, where.ToString()), where.Params()}, [&ids](DB::Row&& r){ ids.push_back( r.GetUInt(0) ); } );
+				return ids;
+			};
+			auto ids = select();
+			if( ids.size()>1 && nullColumns.size() ){ //eg restoreResource(target:x, criteria:null): the mutation's own `is null` predicates pick between rows differing only in the null column.
+				for( let& column : nullColumns )
+					where.Add( column, DB::Value{} );
+				ids = select();
+			}
 			if( ids.size()==1 )
 				y = ids.front();
 			else //0 rows was ScalerSync's throw; 2+ used to broadcast whichever row came last.

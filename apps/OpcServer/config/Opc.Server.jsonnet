@@ -50,6 +50,9 @@ function( sync=false )
 		name: "OpcServer.Test."+args.buildTarget,
 		target:: "OpcServer"
 	},
+	web:{
+		client:{ ssl:{ caFile: "$(ProgramData)/Jde-Cpp/AppServer/ssl/certs/AppServer.pem" } }//the AppServer is its own root - without an anchor the client rejects localhost:1967's self-signed cert.
+	},
 	http:{
 		port: 1970,
 		ssl:{

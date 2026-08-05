@@ -33,7 +33,7 @@ namespace Jde::Crypto{
 		Certificate( std::span<const byte> certificate, SRCE )ε;
 		α Log( string prefix, SRCE )Ι->void;
 		α ToString()Ι->string;
-		Φ SanUri()Ι->string;//the SAN's URI entry with the "URI:" prefix stripped, empty if it has none.
+		α SanUri()Ι->string;//the SAN's URI entry with the "URI:" prefix stripped, empty if it has none.
 		//users.name = UPN → email → CN
 		string CommonName; //subject CN, empty if absent. users.target
 		//file stem for the cert and both keys - settings "fileName", defaulting to CommonName.  Separate because the CN

@@ -86,6 +86,9 @@ function( sync=false )
 		name: "OpcGateway",
 		target:: "OpcGateway"
 	},
+	web:{
+		client:{ ssl:{ caFile: "$(ProgramData)/Jde-Cpp/AppServer/ssl/certs/AppServer.pem" } }//the AppServer is its own root - without an anchor the client rejects localhost:1967's self-signed cert.
+	},
 	http:{
 		address: null,
 		port: 1968,
