@@ -74,7 +74,7 @@ namespace Jde::Web::Client::Ssl{
 		//host_name_verification alone: without it a peer holding any certificate we trust could answer for any host - trusting an
 		//anchor is not the same as accepting whoever presents it.  wrapped only to say *why* on rejection; a bare handshake
 		//failure surfaces as "unspecified system error", which is not enough to tell a bad name from a missing anchor.
-		stream.set_verify_callback( [name=string{host}]( bool preverified, ssl::verify_context& ctx )ι->bool{
+		stream.set_verify_callback( [name=string{host}]( bool preverified, ssl::verify_context& ctx )ι->bool {
 			let ok = ssl::host_name_verification{name}( preverified, ctx );
 			if( !ok ){
 				let err = ::X509_STORE_CTX_get_error( ctx.native_handle() );

@@ -42,8 +42,8 @@ local logsDir = args.logsDir;
 		}
 	},
 	http:{
-		app:{ port: 1967, ssl:{productName: "AppServer"} },
-		opcServer:{ port: 1970, ssl:{productName: "OpcServer"} }
+		app:{ port: 1967, ssl:{productName: "AppServer", certificate:{ subjectAltName: "DNS:localhost,IP:127.0.0.1" }} },//TLS clients match the SAN - without it host_name_verification rejects the generated cert.
+		opcServer:{ port: 1970, ssl:{productName: "OpcServer", certificate:{ subjectAltName: "DNS:localhost,IP:127.0.0.1" }} }
 	},
 	credentials:{
 		opcServer:{ name: "OpcTests" }

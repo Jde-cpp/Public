@@ -41,7 +41,7 @@ local logsDir = args.logsDir;
 			port: 1967,
 			ssl:{
 				certificate:{
-					subjectAltName:: "DNS:localhost,IP:127.0.0.1",
+					subjectAltName: "DNS:localhost,IP:127.0.0.1",//TLS clients match the SAN - without it host_name_verification rejects the generated cert.
 					commonName: args.instanceName + ".appServer.web"
 				}
 			}
@@ -50,7 +50,7 @@ local logsDir = args.logsDir;
 			port: 1968,
 			ssl:{
 				certificate:{
-					subjectAltName: "URI:urn:open62541.server.application",
+					subjectAltName: "URI:urn:open62541.server.application,DNS:localhost,IP:127.0.0.1",
 					commonName: args.instanceName + ".gateway.web"
 				}
 			}
@@ -59,7 +59,7 @@ local logsDir = args.logsDir;
 			port: 1970,
 			ssl:{
 				certificate:{
-					subjectAltName: "URI:urn:open62541.server.application",
+					subjectAltName: "URI:urn:open62541.server.application,DNS:localhost,IP:127.0.0.1",
 					commonName: args.instanceName + ".opcServer.web"
 				}
 			}
