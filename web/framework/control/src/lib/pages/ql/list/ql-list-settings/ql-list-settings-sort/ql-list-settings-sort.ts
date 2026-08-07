@@ -8,11 +8,12 @@ import { MatInputModule } from "@angular/material/input";
 import { MatSelectModule } from "@angular/material/select";
 import { Sort } from "@angular/material/sort";
 import { MatTable, MatTableModule } from "@angular/material/table";
-import { TableSchema, View } from "jde-framework";
+import { TableSchema } from '../../../../../model/ql/schema/TableSchema';
+import { View } from '../../../../../model/ql/View';
 
 
 @Component( {
-		selector: 'ql-list-settings-sort',//.main-content.mat-drawer-container.my-content
+		selector: 'ql-list-settings-sort',
 		templateUrl: './ql-list-settings-sort.html',
 		styleUrls: ['./ql-list-settings-sort.scss'],
 		host: {class:'main-content.mat-drawer-container.my-content'},

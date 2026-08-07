@@ -57,6 +57,8 @@ namespace Jde::App::Server{
 			let& table = schema->GetView( "instance_tag_levels" );
 			auto sql = [&,instanceId]( str type, sv tag, jvalue level )->DB::Sql {
 				DB::Value dbTag = tag=="default" ? DB::Value{0} : DB::Value{ underlying(ToLogTags(tag)) };
+				if( level.is_null() )
+					return { Ƒ("delete from {} where instance_id=? and type=? and tag=?", table.DBName), {{instanceId}, {type}, dbTag} };
 				return {
 					Ƒ("{}(?,?,?,?)", table.UpsertProcName()),
 					{ {instanceId}, {type}, dbTag, {underlying(ToLogLevel(level.as_string()))} },

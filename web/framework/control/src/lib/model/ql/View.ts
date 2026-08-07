@@ -1,4 +1,7 @@
-import { verify, Query, StringUtils, TableSettings } from "jde-framework";
+import { verify } from '../../utils/utils';
+import { StringUtils } from '../../utils/StringUtils';
+import { Query } from '../../services/IGraphQL';
+import { TableSettings } from '../../services/ql-list.resolver';
 import { Field, FieldKind } from "./schema/Field";
 import { TableSchema } from "./schema/TableSchema";
 import { Sort } from "@angular/material/sort";

@@ -2,7 +2,7 @@ import { Injectable, Inject, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
-import { AppService, AuthStore, Duration, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Timestamp, Type, Query } from 'jde-framework';
+import { AppService, AuthStore, describeFetchError, Duration, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Timestamp, Type, Query } from 'jde-framework';
 import { EProvider, User } from 'jde-spa';
 
 
@@ -106,8 +106,12 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	constructor( gateway:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore ){
 		super( FromClient.Transmission, http, transport, authStore );
 		super.instances = [gateway];
+		if( typeof location!="undefined" && gateway.host!=location.hostname )//the registry reports the machine hostname; a page served from another host fails the server's allowOrigin 'sameHost' check
+			console.warn( `Gateway '${gateway.instanceName}' is registered at host '${gateway.host}' but the app is served from '${location.hostname}' - requests will be CORS-blocked unless http/accessControl/allowOrigin is pinned or the app is browsed via '${gateway.host}'.` );
 		super.queryArray<ServerCnnctn>( `serverConnections{id target name url certificateUri defaultBrowseNs}`, null, (x)=>console.log(x) ).then( connections=>{
 			connections.forEach( c=>this.#connections.set(c.target, new ServerCnnctn(c as any)) );
+		}).catch( async e=>{
+			console.error( await describeFetchError(this.urlWithTarget("graphql"), e) );
 		});
 	}
 	async login( domain:string, username:string, password:string, log:Log ):Promise<void>{

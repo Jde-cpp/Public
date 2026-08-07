@@ -20,7 +20,9 @@ export * from './lib/pages/ql/selector/ql-selector';
 
 export * from './lib/pages/authorization/login-page/login-page';
 export * from './lib/pages/apps/apps';
-export * from './lib/pages/logs/logs';
+export * from './lib/pages/logs/detail/logs';
+export * from './lib/pages/logs/settings/log-settings';
+export * from './lib/pages/logs/tags/log-tags';
 export * from './lib/services/IGraphQL'
 export * from './lib/services/auth.store'
 export * from './lib/services/proto.service'

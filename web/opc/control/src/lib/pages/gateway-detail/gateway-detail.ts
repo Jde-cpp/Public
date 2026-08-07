@@ -2,16 +2,16 @@ import { Component, OnInit, OnDestroy, Inject, ViewChild, input, signal, model, 
 import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute } from '@angular/router';
 import {  ProfileStore } from 'jde-spa';
-import { AppService, Logs, QLList, QLListData } from 'jde-framework';
+import { AppService, LogDetail, LogSettingsPanel, QLList, QLListData } from 'jde-framework';
 import { RouteItem } from 'jde-spa';
-import { GatewayService } from 'jde-opc';
+import { GatewayService } from '../../services/gateway.service';
 import { Gateway } from '../../services/gateway.service';
 
 @Component( {
 		styleUrls: ['gateway-detail.scss'],
 		templateUrl: './gateway-detail.html',
 		host: {class:'main-content mat-drawer-container my-content'},
-		imports: [MatTabsModule, QLList, Logs]
+		imports: [MatTabsModule, QLList, LogDetail, LogSettingsPanel]
 })
 export class GatewayDetail implements OnInit, OnDestroy{
 	constructor( private route: ActivatedRoute )
@@ -21,8 +21,10 @@ export class GatewayDetail implements OnInit, OnDestroy{
 		this.route.data.subscribe( async (routeData)=>{
 			this.pageData = <QLListData>routeData["data"];
 			this.sideNav.set( this.pageData.routing );
-			this.gateway = await this.gatewayService.gateway( this.pageData.routing.path.split('/').slice(-1)[0] );
+			const instanceName = this.pageData.routing.path.split('/').slice(-1)[0];
+			this.gateway = await this.gatewayService.gateway( instanceName );
 			this.isLoading.set( false );
+			this.instanceId.set( await this.appService.instancePK(instanceName, "OpcGateway") );
 		});
 	}
 	ngOnDestroy(): void {
@@ -39,5 +41,7 @@ export class GatewayDetail implements OnInit, OnDestroy{
 
 	gateway!:Gateway;
 	gatewayService = inject(GatewayService);
+	appService = inject(AppService);
+	instanceId = signal<number|undefined>( undefined );
 	isLoading = signal<boolean>( true );
 }

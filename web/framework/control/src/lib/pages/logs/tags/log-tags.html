@@ -1,0 +1,39 @@
+<mat-table #table [dataSource]="dataSource">
+	<ng-container matColumnDef="tag">
+		<mat-header-cell *matHeaderCellDef> Tag </mat-header-cell>
+		<mat-cell *matCellDef="let row">
+			@if( isDefault(row) ){
+				<span class="default-tag">{{tagName(row.tag)}}</span>
+			}
+			@else{
+				<mat-form-field subscriptSizing="dynamic">
+					<mat-select [value]="row.tag" (selectionChange)="onTagChange(row, $event.value)">
+						@for( tag of selectableTags(row); track tag ){
+							<mat-option [value]=tag>{{tagName(tag)}}</mat-option>
+						}
+					</mat-select>
+				</mat-form-field>
+			}
+		</mat-cell>
+	</ng-container>
+	<ng-container matColumnDef="level">
+		<mat-header-cell *matHeaderCellDef> Minimum Level </mat-header-cell>
+		<mat-cell *matCellDef="let row">
+			@if( row.tag ){
+				<severity-picker [level]="row.level" (levelChange)="row.level=$event"></severity-picker>
+			}
+		</mat-cell>
+	</ng-container>
+	<ng-container matColumnDef="delete">
+		<mat-header-cell *matHeaderCellDef></mat-header-cell>
+		<mat-cell *matCellDef="let row">
+			@if( row.tag && !isDefault(row) ){
+				<button matIconButton (click)="onDelete(row)" matTooltip="Remove — the tag falls back to the default level. Pick level None to silence it instead.">
+					<mat-icon>delete</mat-icon>
+				</button>
+			}
+		</mat-cell>
+	</ng-container>
+	<mat-header-row *matHeaderRowDef="['tag', 'level', 'delete']"></mat-header-row>
+	<mat-row *matRowDef="let row; columns: ['tag', 'level', 'delete'];"></mat-row>
+</mat-table>

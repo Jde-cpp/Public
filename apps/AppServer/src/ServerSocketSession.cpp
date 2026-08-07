@@ -255,7 +255,7 @@ namespace Jde::App::Server{
 				auto& ql = *s.mutable_text();
 				auto& variablesString = *s.mutable_variables();
 				auto vars = variablesString.empty() ? jobject{} : Json::Parse( move(variablesString) );
-				LogRead( Ƒ("Subscription - {}", ql.substr(0, MaxLogLength())), requestId );
+				LogRead( Ƒ("Subscription - {}", ql.substr(0, MaxLogLength())), requestId, ELogLevel::Trace, ELogTags::SocketClientReadSub );
 				try{
 					Write( FromServer::SubscriptionAck(AddSubscription(move(ql), move(vars), requestId), requestId) );
 				}

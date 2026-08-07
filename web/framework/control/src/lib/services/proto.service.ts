@@ -1,6 +1,6 @@
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { firstValueFrom } from 'rxjs';
-import { HttpClient, HttpEvent, HttpResponse, HttpSentEvent } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpEvent, HttpResponse, HttpSentEvent } from '@angular/common/http';
 import { FieldKind } from '../model/ql/schema/Field';
 import { fromIsoDuration, verify } from '../utils/utils';
 import { TableSchema } from '../model/ql/schema/TableSchema';
@@ -22,6 +22,23 @@ type Resolve = (x:any)=>void;
 type Reject = ( e:{error:IError} )=>void;
 export type RequestId = number;
 export enum ETransport{ Unsecure, Secure, Hybrid };
+
+//status-0/"Failed to fetch" errors are deliberately opaque - the browser hides whether CORS, DNS, or the connection failed.  A no-cors probe reaches the server regardless of its CORS headers, so reachable-but-blocked (a policy problem) can be told apart from unreachable.
+export async function describeFetchError( url:string, e:unknown ):Promise<string>{
+	const isNetworkError = e instanceof TypeError || (e instanceof HttpErrorResponse && e.status==0);
+	if( !isNetworkError || typeof location=="undefined" )
+		return e instanceof Error || e instanceof HttpErrorResponse ? e.message : `${e}`;
+	const target = new URL( url, location.href );
+	try{
+		await fetch( target, {mode:"no-cors", cache:"no-store"} );
+	}
+	catch{
+		return `'${target.host}' is unreachable - server down, wrong port, or the hostname doesn't resolve.`;
+	}
+	return target.hostname==location.hostname
+		? `'${target.host}' is reachable but the response was blocked - likely a CORS policy problem on the server.`
+		: `'${target.host}' answered but withheld CORS approval for origin '${location.origin}' - with allowOrigin 'sameHost' the page's host must match the server's; pin http/accessControl/allowOrigin to '${location.origin}' or browse the app via '${target.hostname}'.`;
+}
 
 class RequestPromise<ResultMessage>{
 	constructor( public result:undefined|((arg:ResultMessage)=>any), public resolve:Resolve, public reject:Reject, public transformInput:TransformInput|null=null )
@@ -185,8 +202,11 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 					this.authStore.logout();
 					y = await this.authGet<Y>( target, undefined, log );
 				}
-				else
+				else{
+					if( e["status"]==0 )
+						describeFetchError( url, e ).then( m=>log(m) );//async probe; the rethrow keeps the original error for callers
 					throw e;
+				}
 			}
 		}
 		else{
@@ -199,8 +219,11 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 					this.authStore.logout();
 					y = await this.authGet<Y>( target, undefined, log );
 				}
-				else
+				else{
+					if( e["status"]==0 )
+						describeFetchError( url, e ).then( m=>log(m) );//async probe; the rethrow keeps the original error for callers
 					throw e;
+				}
 			}
 		}
 		if( this.log.restResults ) log( JSON.stringify(y).substring(0,this.log.maxLength) );

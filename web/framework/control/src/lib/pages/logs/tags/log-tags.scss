@@ -1,0 +1,17 @@
+:host{
+	display: block;
+	width: 560px;//the three column widths below — a definite width is what lets the parent flex container center it
+	max-width: 100%;
+}
+.mat-column-tag{
+	flex: 0 0 280px;
+}
+.default-tag{
+	font-weight: 500;
+}
+.mat-column-level{
+	flex: 0 0 200px;
+}
+.mat-column-delete{
+	flex: 0 0 80px;
+}

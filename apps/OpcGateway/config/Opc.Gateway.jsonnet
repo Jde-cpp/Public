@@ -29,7 +29,9 @@ function( sync=false )
 				http_server_write: "Debug",
 				http_server_read: "Debug",
 				socket_client_write: "Debug",
+				socket_client_write_subscription: "Information",
 				socket_client_read: "Debug",
+				socket_client_read_subscription: "Information",
 				socket_server_write: "Debug",
 				socket_server_read: "Debug",
 				settings: "Trace",
@@ -86,8 +88,12 @@ function( sync=false )
 		name: "OpcGateway",
 		target:: "OpcGateway"
 	},
+	web:{
+		client:{ ssl:{ caFile: "$(ProgramData)/Jde-Cpp/AppServer/ssl/certs/AppServer.pem" } }//the AppServer is its own root - without an anchor the client rejects localhost:1967's self-signed cert.
+	},
 	http:{
 		address: null,
+		host: "localhost",//advertised to the AppServer registry - the frontend fetches this host, and allowOrigin 'sameHost' requires it to match the page's host (localhost:4200).
 		port: 1968,
 		threads: 1,
 		timeout:: "PT30M",

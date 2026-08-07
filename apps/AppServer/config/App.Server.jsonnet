@@ -79,6 +79,7 @@ function( sync=false )
 				socket_client_read: "Trace",
 				socket_server_write: "Trace",
 				socket_server_read: "Trace",
+				socket_client_read_subscription: "Information",
 				ql: "Debug",
 				settings: "Debug"
 			},

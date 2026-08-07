@@ -90,7 +90,7 @@ namespace Logging{
 	};
 	Φ AddTagParser( up<ITagParser>&& tagParser )ι->void;
 	Φ ShouldLog( ELogLevel level, ELogTags tags )ι->bool;
-	Φ Tags()ι->flat_map<string,uint>;
+	Φ Tags( bool user=false )ι->flat_map<string,uint>;
 }}
 #undef Φ
 #endif
