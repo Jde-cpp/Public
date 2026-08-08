@@ -23,7 +23,7 @@ namespace Jde::App{
 	α Server::AppSchema()ι->sp<DB::AppSchema>{ return _appSchema; }
 	sp<Access::AccessListener> _listener;
 	Ω ds()ι->DB::IDataSource&{ return *_appSchema->DS(); }
-	Ω instanceTableName()ε->string{ return _appSchema->GetView("connections").DBName; }
+	Ω connectionTableName()ε->string{ return _appSchema->GetView("connections").DBName; }
 
 namespace Server{
 	α ConfigureDSAwait::Suspend()ι->void{ Configure(); }
@@ -57,7 +57,7 @@ namespace Server{
 	}
 	α ConfigureDSAwait::EndAppInstances()ι->DB::ExecuteAwait::Task{
 		try{
-			co_await ds().Execute( {Ƒ("update {} set deleted={} where deleted is null", instanceTableName(), ds().Syntax().UtcNow())} );
+			co_await ds().Execute( {Ƒ("update {} set deleted={} where deleted is null", connectionTableName(), ds().Syntax().UtcNow())} );
 			Resume();
 		}
 		catch( exception& e ){
@@ -84,9 +84,9 @@ namespace Jde{
 
 		return make_tuple( appId, appInstanceId, appConnectionId );
 	}
-	α App::EndInstance( ProgInstPK instanceId, SL sl )ι->DB::ExecuteAwait::Task{
+	α App::EndConnection( ConnectionPK connectionId, SL sl )ι->DB::ExecuteAwait::Task{
 		try{
-			co_await ds().Execute( {Ƒ("update {} set deleted={} where connection_id=?", instanceTableName(), ds().Syntax().UtcNow()), {DB::Value{instanceId}}}, sl );
+			co_await ds().Execute( {Ƒ("update {} set deleted={} where connection_id=?", connectionTableName(), ds().Syntax().UtcNow()), {DB::Value{connectionId}}}, sl );
 		}
 		catch( exception& )
 		{}

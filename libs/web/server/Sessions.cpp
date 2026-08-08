@@ -33,7 +33,7 @@ namespace Jde::Web::Server{
 			existing.second->HasSocket|=hasSocket;
 			existing.second->Expiration=existing.second->NewExpiration();
 		}) ){
-			TRACE( "Session added: id: {:x}, userPK: {}, endpoint: '{}'", info->SessionId, info->UserPK.Value, info->UserEndpoint );
+			TRACE( "Session added: id: {:x}, userPK: {}, endpoint: '{}', expiration: '{}'", info->SessionId, info->UserPK.Value, info->UserEndpoint, ToIsoString<seconds>(info->Expiration) );
 		}
 	}
 
@@ -111,7 +111,7 @@ namespace	Sessions{
 				info = existing;
 			}
 			else
-				TRACET( ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, ToIsoString(existingExpiration) );
+				TRACET( ELogTags::HttpServerRead, "[{:x}]Session expired:  '{}'", sessionId, ToIsoString<seconds>(existingExpiration) );
 		} );
 		if( _lastTrim<steady_clock::now()-Sessions::RestSessionTimeout() ){
 			_sessions.erase_if( [](auto& kv){return kv.second->Expiration<steady_clock::now();} );

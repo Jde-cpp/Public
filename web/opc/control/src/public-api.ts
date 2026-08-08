@@ -1,6 +1,6 @@
 export * from './lib/jde-opc.module';
 
-export {GatewayDetail} from './lib/pages/gateway-detail/gateway-detail';
+export {GatewayDetail, gatewayTableSettings} from './lib/pages/gateway-detail/gateway-detail';
 export {ClientDetail} from './lib/pages/gateway-detail/client-detail/client-detail';
 export {NodeDetail} from './lib/pages/node-detail/node-detail';
 export {NodeChildren} from './lib/pages/node-detail/node-children/node-children';

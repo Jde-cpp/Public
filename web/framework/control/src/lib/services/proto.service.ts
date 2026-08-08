@@ -137,7 +137,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		});
 		if( this.#loginCallbacks.length==1 ){
 			let url = this.urlWithTarget( "serverSettings", true );
-			if( this.log.restRequests ) log( url );
+			if( this.log.restRequests ) log( `get: ${url}` );
 			let settings;
 			try{
 				let args = this.user()?.authorization ? {headers:{"Authorization":this.user()!.authorization}} : {} as any;
@@ -180,7 +180,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	private async authGet<Y>( target:string, authorization?:string, log:Log=console.log ):Promise<Y>{
 		if( target.indexOf("undefined")>=0 )
 			console.error( `authGet - target contains 'undefined': ${target}` );
-		if( this.log.restRequests )	log( decodeURIComponent(target).substring(0,this.log.maxLength) );
+		if( this.log.restRequests )	log( `get: ${decodeURIComponent(target).substring(0,this.log.maxLength)}` );
 		let url = this.urlWithTarget(target);
 		let y:Y;
 		let options:any = {};
@@ -291,7 +291,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		let args:any = {query: q};
 		if( vars )
 			args["variables"] = vars;
-		if( this.log.restRequests ) log( `POST graphql/${JSON.stringify(args).substring(0,this.log.maxLength)}` );
+		if( this.log.restRequests ) log( `post: graphql/${JSON.stringify(args).substring(0,this.log.maxLength)}` );
 		const y = await this.post<any>( `graphql`, args, false );
 		if( this.log.restResults ) log( JSON.stringify(y).substring(0,this.log.maxLength) );
 		return y ? y["data"] : null as unknown as Y;
@@ -472,7 +472,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	protected abstract encode( t:Transmission ):any;
 
 	protected backlog:Transmission[] = [];
-	protected log = { sockRequests:true, sockResults:true, restRequests:true, restResults:true, subRequest:true, subResults:true, maxLength:255 };
+	protected log = { sockRequests:true, sockResults:true, restRequests:true, restResults:false, subRequest:true, subResults:true, maxLength:255 };
 	//Informational purposes only to match with server logs.
 	protected get socketId():number{ return this.#socketId; } #socketId!:number;
 	get instances(){return this.#instances;} set instances(x){

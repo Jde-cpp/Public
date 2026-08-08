@@ -128,7 +128,7 @@ namespace Jde::Opc::Server{
     UA_ByteString decryptedPrivateKey = UA_BYTESTRING_NULL;
     UA_ByteString keyPassword = UA_BYTESTRING_NULL;
     if ( privateKey && privateKey->length > 0 )
-        UAε( UA_CertificateUtils_decryptPrivateKey(localPrivateKey, keyPassword, &decryptedPrivateKey) );
+      UAε( UA_CertificateUtils_decryptPrivateKey(localPrivateKey, keyPassword, &decryptedPrivateKey) );
     /* Basic256Sha256 */
     UAε( UA_ServerConfig_addSecurityPolicyBasic256Sha256(this, &localCertificate,&decryptedPrivateKey) );
 

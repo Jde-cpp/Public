@@ -19,7 +19,7 @@ export class GatewayResolver implements Resolve<GatewayData> {
 	{}
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<GatewayData>{
-		const routing = new AppInstanceRoute( "gateways", route.params["instance"] );
+		const routing = new AppInstanceRoute( "gateways", route.params["instance"], route.data["tableSettings"] );
 		routing.siblings = this.routeStore.getChildren( route.parent!.url.slice(0, -1) );
 		routing.parent = new RouteItem( { path: "/apps", title:"Applications" } );
 		return this.load( route.params["instance"], routing );
@@ -27,11 +27,11 @@ export class GatewayResolver implements Resolve<GatewayData> {
 
 	private async load( instanceName:string, routing:AppInstanceRoute ):Promise<GatewayData>{
 		const gateway = await this.gatewayService.gateway( instanceName );
-		const pageSettings = new PageSettings(routing);
+		const pageSettings = new PageSettings( routing.tableSettings );
 		const schema = await gateway.schemaWithEnums( "ServerConnection", (m)=>console.log(m) );
 		var profile = new PageProfile();
 		const viewCols = schema.fields.map( f=>f.name );
-		const defaultView = new View( {configColumns: viewCols, sort: [{active: "name", direction: "asc"}]}, schema );
+		const defaultView = new View( routing.tableSettings, schema );
 		profile.views.push( defaultView );
 		await profile.loadViews( schema.collectionName, this.profileStore, schema );
 		profile.currentViewIndex = ProfileStore.viewIndex( schema.collectionName );

@@ -12,7 +12,7 @@ import { RouteStore } from './route.store';
 import { View, ViewFieldSettings } from '../model/ql/View';
 import { Sort } from '@angular/material/sort';
 
-export type TableSettings = {canPurge?:boolean,showAdd?:boolean, excludedColumns:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]};
+export type TableSettings = {canPurge?:boolean,showAdd?:boolean, excludedColumns?:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]|string};
 export type CollectionItem = string | { path:string, title?:string, data?:{summary:string, collectionName:string, tableSettings:TableSettings} };
 export class ListRoute extends RouteItem{
 	constructor( collection:string|CollectionItem ){

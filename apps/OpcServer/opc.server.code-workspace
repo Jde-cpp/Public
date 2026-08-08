@@ -33,15 +33,15 @@
 			"name": "fwk"
 		},
 		{
-			"path": "/mnt/ram/linux/clang++-22/repos/open62541/src/open62541/src",
+			"path": "/mnt/ram/linux/clang++/Public/debug/repos/open62541/src/open62541/src",
 			"name": "open62541"
 		},
 		{
-			"path": "/mnt/ram/linux/clang++-22/repos/open62541/src/open62541/include",
+			"path": "/mnt/ram/linux/clang++/Public/debug/repos/open62541/src/open62541/include",
 			"name": "openInclude"
 		},
 		{
-			"path": "/mnt/ram/linux/clang++-22/repos/open62541/src/open62541/tests",
+			"path": "/mnt/ram/linux/clang++/Public/debug/repos/open62541/src/open62541/tests",
 			"name": "openTests"
 		},
 		{

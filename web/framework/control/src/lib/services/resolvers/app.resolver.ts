@@ -5,16 +5,19 @@ import { IErrorService } from '../error/IErrorService';
 import { AppService } from '../app/app.service';
 import { RouteStore } from '../route.store';
 import { StringUtils } from '../../utils/StringUtils';
+import { TableSettings } from 'jde-framework';
 
 
 export type Connection = { id: number, instanceId: number, programName: string, instanceName: string, hostName: string, created: Date, status: { memory: number, values: any[] }, urlSegments:string[] };
 
 export class AppInstanceRoute extends RouteItem{
-	constructor( programName:string, instanceName:string ){
+	constructor( programName:string, instanceName:string, tableSettings:TableSettings ){
 		super();
 		this.path = `${programName}/${instanceName}`;
 		this.title = `${programName}/${instanceName}`;
+		this.tableSettings = tableSettings;
 	}
+	tableSettings:TableSettings;
 }
 
 @Injectable()

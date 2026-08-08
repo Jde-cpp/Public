@@ -228,7 +228,7 @@ export class QLList implements OnInit, OnDestroy{
 	collectionName = computed<string>( ()=>this.schema().collectionName );
 	columns():Record<string,string>{ return this.resolvedData().columns; }
 	data = signal<any[]>([]);
-	excludedColumns = computed<string[]>( ()=>this.tableSettings().excludedColumns );
+	excludedColumns = computed<string[]>( ()=>this.tableSettings().excludedColumns ?? [] );
 	get name():string{ return <string>this.routeConfig.title; }
 	enums = computed<Map<string, EnumValue[]>>( ()=>this.schema().enums );
 	resolvedData = signal<QLListData>(null as any);

@@ -24,8 +24,9 @@ namespace Jde::App{
 		Ω Status()ι->jobject{
 			return jobject{
 				{"memory", Process::MemorySize()},
-				{"startTime", ToIsoString(Process::StartTime())},
-				{"uptimeSeconds", duration_cast<std::chrono::seconds>(Clock::now()-Process::StartTime()).count()} };
+				{"startTime", ToIsoString<seconds>(Process::StartTime())},
+				{"uptimeSeconds", duration_cast<std::chrono::seconds>(Clock::now()-Process::StartTime()).count()}
+			};
 		}
 
 		α LoadLogSettings( optional<jobject> clientSettings=nullopt, SRCE )ι->void;

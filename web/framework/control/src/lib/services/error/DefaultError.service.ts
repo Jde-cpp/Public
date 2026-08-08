@@ -10,8 +10,8 @@ export class DefaultErrorService implements IErrorService
 	constructor( private snackbar:MatSnackBar )
 	{}
 
-	private showUser( message:string, panelClass:string ){
-		this.snackbar.open( message, "", {panelClass: [panelClass], duration: 2000} );
+	private showUser( message:string, panelClass:string, duration:number=10000 ){
+		this.snackbar.open( message, "", {panelClass: [panelClass], duration} );
 	}
 	private showUserError( message:string, log:Log ){
 		this.showUser( message ?? "Unknown error", 'red-snackbar' );
@@ -66,10 +66,10 @@ export class DefaultErrorService implements IErrorService
 	}
 
 	warn( message:string ){
-		this.showUser( message, 'yellow-snackbar' );
+		this.showUser( message, 'yellow-snackbar', 3000 );
 	}
 
 	info( message:string):void{
-		this.showUser( message, 'white-snackbar' );
+		this.showUser( message, 'white-snackbar', 3000 );
 	}
 }

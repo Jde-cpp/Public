@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, Inject, ViewChild, input, signal, model, 
 import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute } from '@angular/router';
 import {  ProfileStore } from 'jde-spa';
-import { AppService, LogDetail, LogSettingsPanel, QLList, QLListData } from 'jde-framework';
+import { AppService, LogDetail, LogSettingsPanel, QLList, QLListData, TableSettings } from 'jde-framework';
 import { RouteItem } from 'jde-spa';
 import { GatewayService } from '../../services/gateway.service';
 import { Gateway } from '../../services/gateway.service';
@@ -44,4 +44,9 @@ export class GatewayDetail implements OnInit, OnDestroy{
 	appService = inject(AppService);
 	instanceId = signal<number|undefined>( undefined );
 	isLoading = signal<boolean>( true );
+}
+
+export const gatewayTableSettings:TableSettings = {
+	columns: ["name", "certificateUri", "url", "description" ],
+	sort: "name"
 }

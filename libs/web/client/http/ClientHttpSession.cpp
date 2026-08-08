@@ -221,7 +221,7 @@ namespace Jde::Web::Client{
 		try{
 			auto res = co_await AsyncWriteAwait{ move(req), args, shared_from_this() };
 			if( _log )
-				LOGSL( ELogLevel::Trace, _sl, ELogTags::HttpClientRead, "{}:{}{} - {}", Host, Port, target, res.Body().substr(0/*, Client::MaxLogLength()*/) );
+				LOGSL( ELogLevel::Trace, _sl, ELogTags::HttpClientRead, "{}:{}{} - {}", Host, Port, target, res.Body().substr(0, Client::MaxLogLength()) );
 			h.promise().SetValue( move(res) );
 		}
 		catch( exception& e ){

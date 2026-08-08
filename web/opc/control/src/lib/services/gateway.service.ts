@@ -45,7 +45,7 @@ export class GatewayService implements IGraphQL{
 			console.debug( `GatewayService:  url changed to '${url}'` );
 		});
 	}
-	onGatewaySuccess(gateways:Instance[], transport:ETransport, http: HttpClient, authStore:AuthStore, opcStore:OpcStore){
+	private onGatewaySuccess(gateways:Instance[], transport:ETransport, http: HttpClient, authStore:AuthStore, opcStore:OpcStore){
 		if( gateways.length==0 )
 			console.error("No IotServies running");
 		this.#gateways = gateways.map( instance=>new Gateway(instance, transport, http, authStore, opcStore) );
@@ -72,7 +72,7 @@ export class GatewayService implements IGraphQL{
 		return Promise.resolve( this.#gateways );
 	}
 	async ql<Y>( q:Query, log:Log ):Promise<Y>{ return this.defaultGateway.ql( q, log ); }
-	async query<T>( ql: string ):Promise<T>{ return this.defaultGateway.query<T>( ql ); }
+	async query<T>( ql: string, args?:any, log?:Log ):Promise<T>{ return this.defaultGateway.query<T>(ql, args, log); }
 	async querySingle<T>( ql: string ):Promise<T>{ return this.defaultGateway.querySingle<T>( ql ); }
 	async schema( names:string[] ):Promise<TableSchema[]>{ return this.defaultGateway.schema( names ); }
 	async schemaWithEnums( type:string, log:Log ):Promise<TableSchema>{ return this.defaultGateway.schemaWithEnums( type, log ); }
@@ -182,7 +182,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 			}
 		}
 		catch( e ){
-			if( e instanceof String )
+			if( typeof e=="string" )
 				console.error( e );
 			else
 				console.error( e );

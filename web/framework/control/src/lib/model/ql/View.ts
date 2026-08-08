@@ -143,13 +143,16 @@ export enum ViewType{
 	User
 }
 export class View{
-	constructor( value:ViewConfigArgs|ViewSerializedArgs|View, schema?:TableSchema ){
+	constructor( value:ViewConfigArgs|ViewSerializedArgs|View|TableSettings, schema?:TableSchema ){
 		if( value instanceof View )
 			this.copyConstructor( value as View );
 		else if( (value as ViewConfigArgs).configColumns )
 			this.configConstructor( value as ViewConfigArgs, schema! );
 		else if( (value as ViewSerializedArgs).fields )
 			this.serializedConstructor( value as ViewSerializedArgs, schema! );
+		else if( (value as TableSettings).columns ){
+			this.tableConstructor(value, schema!);
+		}
 	}
 	private copyConstructor( view:View ):void{
 		this.name = view.name;
@@ -184,6 +187,11 @@ export class View{
 		this.sort = config.sort;
 		this.type = ViewType.User;
 	}
+	private tableConstructor(config:TableSettings, schema:TableSchema){
+		this.collectionName = schema.collectionName;
+		this.fields = this.columns( schema, config.columns!, config.excludedColumns ?? ["id", "attributes"] );
+		this.sort = typeof config.sort=="string" ? [{active: config.sort, direction: "asc"}] : config.sort ?? [];
+	}
 	private columnsToQuery( excludedColumns:string[], includeDeleted:boolean ):ViewField[]{
 		return this.fields.filter( (x)=>
 			(x.displayed || x.name=="id")
@@ -203,14 +211,15 @@ export class View{
 		for( let col of configColumns ){
 			const fieldName = typeof col=="string" ? col : col.name;
 			const settings = typeof col=="string" ? {} : col;
-			const field = schema.fields.find( f=>f.name==fieldName )!;
+			const field = schema.fields.find( f=>f.name==fieldName )!; verify(field);
 			const viewField = new ViewField( {qlField: field, settings: settings} );
 			if( field.name=="description" )
 				description = viewField;
 			else
 				selectCols.push( new ViewField({qlField:field, settings: settings}) );
 		}
-		for( let field of schema.fields.filter( f=>!selectCols.find( (c)=>c.name==f.name ) && (f.name=="id" || f.name=="deleted") ) ){
+		//target is the navigation key (ql-list.onRowActivate), so it must be queried even when a TableSettings omits it - like id/deleted, add it hidden
+		for( let field of schema.fields.filter( f=>!selectCols.find( (c)=>c.name==f.name ) && (f.name=="id" || f.name=="deleted" || f.name=="target") ) ){
 			const viewField = new ViewField( {qlField:field, settings: {name: field.name, hidden: true}} );
 			if( field.name=="id" )
 				id = viewField;
@@ -294,7 +303,7 @@ export class View{
 		if( deletedField )
 				deletedField.displayed = showDeleted;
 
-		let fieldStr = this.fields.filter( f=>f.displayed || f.name=="id" ).map( f=>f.name ).join(" ");
+		let fieldStr = this.fields.filter( f=>f.displayed || f.name=="id" || f.name=="target" ).map( f=>f.name ).join(" ");//id/target are queried even when hidden:  id is the mutation key, target the navigation key
 		let args = [];
 		let vars:Record<string, DbScalar[]|DbScalar|null> = {};
 		if( this.limit )
