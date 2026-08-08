@@ -7,7 +7,7 @@ import { Sort } from "@angular/material/sort";
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
 import { Gateway, GatewayService, SubscriptionResult } from '../../../services/gateway.service';
 import { ProfileStore } from 'jde-spa';
-import { DateUtils, IErrorService, ProtoUtils, Timestamp} from 'jde-framework'
+import { DateUtils, SnackbarService, ProtoUtils, Timestamp} from 'jde-framework'
 import { EAccess, ETypes } from '../../../model/types';
 import {  MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
@@ -36,7 +36,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	constructor(
 		@Inject('GatewayService') private gatewayService:GatewayService,
 		private route: ActivatedRoute,
-		@Inject('IErrorService') private snackbar: IErrorService,
+		private snackbar: SnackbarService,
 		private componentPageTitle:ComponentPageTitle,
 		private cdRef:ChangeDetectorRef)
 	{}

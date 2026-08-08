@@ -1,11 +1,10 @@
 import {inject, Inject, Injectable} from '@angular/core';
 import {ActivatedRouteSnapshot, Resolve, RouterStateSnapshot} from '@angular/router';
 import { RouteItem } from 'jde-spa';
-import { IErrorService } from '../error/IErrorService';
 import { AppService } from '../app/app.service';
 import { RouteStore } from '../route.store';
 import { StringUtils } from '../../utils/StringUtils';
-import { TableSettings } from 'jde-framework';
+import { TableSettings } from '../ql-list.resolver';
 
 
 export type Connection = { id: number, instanceId: number, programName: string, instanceName: string, hostName: string, created: Date, status: { memory: number, values: any[] }, urlSegments:string[] };
@@ -22,7 +21,7 @@ export class AppInstanceRoute extends RouteItem{
 
 @Injectable()
 export class AppResolver implements Resolve<Connection[]> {
-	constructor( @Inject("AppService") private appService: AppService, @Inject('IProfile') @Inject('IErrorService') private cnsl: IErrorService )
+	constructor( @Inject("AppService") private appService: AppService )
 	{}
 	async resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<Connection[]>{
 		let connections = await this.appService.queryArray<Connection>( "connections{id instanceId programName instanceName hostName created status{memory values}}", null, (m)=>console.log(m) );

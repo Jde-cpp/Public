@@ -1,9 +1,9 @@
-import { Component, OnInit, OnDestroy, Inject, ViewChild, input, signal, model, effect, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, input, signal, model, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {ActivatedRoute, Router} from '@angular/router';
 import {Sort} from '@angular/material/sort';
 import { MatTable } from '@angular/material/table';
-import {IErrorService} from '../../../services/error/IErrorService'
+import {SnackbarService} from '../../../shared/snackbar/snackbar-service'
 import {IGraphQL } from '../../../services/IGraphQL';
 import {Field} from '../../../model/ql/schema/Field';
 import {TableSchema}  from '../../../model/ql/schema/TableSchema';
@@ -22,7 +22,7 @@ import { View, ViewField } from '../../../model/ql/View';
 		imports: [CommonModule, GraphQLTable]
 })
 export class QLSelector implements OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, @Inject('IErrorService') private snackbar: IErrorService )
+	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, private snackbar: SnackbarService )
 	{}
 
 	async ngOnInit(){

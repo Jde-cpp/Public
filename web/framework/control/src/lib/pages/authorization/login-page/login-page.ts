@@ -5,7 +5,7 @@ import { MatInputModule } from '@angular/material/input';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import { EProvider, IAuth, IEnvironment, User } from 'jde-spa';
 import {FormBuilder, ReactiveFormsModule} from "@angular/forms";
-import {IErrorService} from '../../../services/error/IErrorService';
+import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
 
 declare const google: any;
 
@@ -14,7 +14,7 @@ declare const google: any;
     imports: [MatButtonModule,MatFormFieldModule,MatInputModule,RouterLink,ReactiveFormsModule],
 })
 export class LoginPageComponent{
-	constructor( @Inject('IAuth') private authService: IAuth, @Inject('IErrorService') private snackbar: IErrorService, @Inject('IEnvironment') private envService: IEnvironment ){
+	constructor( @Inject('IAuth') private authService: IAuth, private snackbar: SnackbarService, @Inject('IEnvironment') private envService: IEnvironment ){
 		effect( async ()=>{
 			if( this.providers?.value()?.includes(EProvider.Google) && !this.showedGoogleLogin ){
 				this.showedGoogleLogin = true;

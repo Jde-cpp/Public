@@ -1,12 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject, OnDestroy, OnInit, ViewChild, input, output, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, input, output, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbar } from '@angular/material/toolbar';
 import { ProfileStore } from 'jde-spa';
 import { LogTags } from '../tags/log-tags';
 import { IGraphQL } from '../../../services/IGraphQL';
-import { IErrorService } from '../../../services/error/IErrorService';
+import { SnackbarService } from '../../../shared/snackbar/snackbar-service';
 import { Mutation, MutationType } from '../../../model/ql/Mutation';
 
 type TagLevels = Record<string,string>;
@@ -18,7 +18,7 @@ type TagLevels = Record<string,string>;
 	imports: [CommonModule, MatButtonModule, MatTabsModule, MatToolbar, LogTags]
 })
 export class LogSettingsPanel implements OnInit, OnDestroy{
-	constructor( @Inject('IErrorService') private snackBar: IErrorService ){}
+	constructor( private snackBar: SnackbarService ){}
 
 	async ngOnInit(){ await this.load(); }
 	ngOnDestroy(){ ProfileStore.setTabIndex( 'log-settings', this.tabIndex() ); }

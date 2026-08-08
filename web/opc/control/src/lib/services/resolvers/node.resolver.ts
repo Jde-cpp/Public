@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@angular/core';
 import { ActivatedRoute, ActivatedRouteSnapshot, Params, Resolve, Router, RouterStateSnapshot } from '@angular/router';
-import { IErrorService } from 'jde-framework';
+import { SnackbarService } from 'jde-framework';
 import { Gateway, GatewayService } from '../gateway.service';
 import { OpcObject, UaNode } from '../../model/Node';
 import { NodeRoute } from '../../model/NodeRoute';
@@ -17,7 +17,7 @@ export type NodePageData = {
 export class NodeResolver implements Resolve<NodePageData> {
 	constructor(
 		private router:Router,
-		@Inject('IErrorService') private snackbar: IErrorService,
+		private snackbar: SnackbarService,
 		@Inject('GatewayService') private gatewayService: GatewayService,
 		@Inject('OpcStore') private opcStore:OpcStore,
 		@Inject(ActivatedRoute) private route: ActivatedRoute

@@ -1,4 +1,4 @@
-import { Component, effect, OnInit, OnDestroy, Inject, signal, inject } from '@angular/core';
+import { Component, effect, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,7 +6,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
 import { ProfileStore } from 'jde-spa';
-import { DetailResolverData, IErrorService, IGraphQL, Properties} from 'jde-framework';
+import { DetailResolverData, SnackbarService, IGraphQL, Properties} from 'jde-framework';
 
 import { ServerProperties } from './server-properties/server-properties';
 import { ServerCnnctn, ServerCnnctnProps } from '../../../model/ServerCnnctn';
@@ -21,7 +21,7 @@ import { Server } from '../../../model/Server';
 	imports: [CommonModule, MatButtonModule, MatIcon, MatTabsModule, Properties, ServerProperties],
 })
 export class ClientDetail implements OnDestroy, OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, @Inject('IErrorService') private snackbar: IErrorService ){
+	constructor( private route: ActivatedRoute, private router:Router, private snackbar: SnackbarService ){
 		effect(() => {
 			if( !this.properties() )
 				return;

@@ -6,7 +6,7 @@ import { MatTable } from '@angular/material/table';
 import {FormsModule} from '@angular/forms';
 import {MatSelectModule} from '@angular/material/select';
 import { QLListSettings } from './ql-list-settings/ql-list-settings';
-import {IErrorService} from '../../../services/error/IErrorService'
+import {SnackbarService} from '../../../shared/snackbar/snackbar-service'
 import {IGraphQL, EnumValue } from '../../../services/IGraphQL';
 import {Field} from '../../../model/ql/schema/Field';
 import {TableSchema}  from '../../../model/ql/schema/TableSchema';
@@ -40,7 +40,7 @@ export class QLList implements OnInit, OnDestroy{
 		private router:Router,
 		private componentPageTitle:ComponentPageTitle,
 		@Inject('IGraphQL') private ql: IGraphQL,
-		@Inject('IErrorService') private snackbar: IErrorService)
+		private snackbar: SnackbarService)
 	{}
 
 	ngOnDestroy(){

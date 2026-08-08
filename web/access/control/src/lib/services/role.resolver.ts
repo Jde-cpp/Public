@@ -1,7 +1,7 @@
 import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
-import { inject, Inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { ProfileStore } from 'jde-spa';
-import { IErrorService, TableSchema } from 'jde-framework';
+import { SnackbarService, TableSchema } from 'jde-framework';
 import { Role, RoleNK } from '../model/Role';
 import { AccessService } from '../services/access.service';
 
@@ -11,7 +11,7 @@ export class IRoleData{
 };
 @Injectable()
 export class RoleResolver implements Resolve<IRoleData> {
-	constructor( private route: ActivatedRoute, private router:Router, @Inject('IErrorService') private snackbar: IErrorService ){}
+	constructor( private route: ActivatedRoute, private router:Router, private snackbar: SnackbarService ){}
 
 	async load(target:RoleNK):Promise<IRoleData>{
 		const schema = await this.#ql.schemaWithEnums( "roles", (m)=>console.log(m) );

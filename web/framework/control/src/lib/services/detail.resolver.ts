@@ -1,6 +1,6 @@
 import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { inject, Inject, Injectable } from '@angular/core';
-import { IErrorService } from './error/IErrorService';
+import { SnackbarService } from '../shared/snackbar/snackbar-service';
 import { TableSchema } from '../model/ql/schema/TableSchema';
 import { IGraphQL } from '../services/IGraphQL';
 import { ListRoute, TableSettings } from './ql-list.resolver';
@@ -31,7 +31,7 @@ export type DetailResolverData<T>={
 @Injectable()
 export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 	constructor( private route: ActivatedRoute, private router:Router,
-		@Inject('IErrorService') private snackbar: IErrorService,
+		private snackbar: SnackbarService,
 		@Inject('IGraphQL') private ql: IGraphQL
 	){}
 

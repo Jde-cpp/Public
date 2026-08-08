@@ -28,8 +28,7 @@ export * from './lib/services/auth.store'
 export * from './lib/services/proto.service'
 export * from './lib/services/route.store';
 export * from './lib/services/app/app.service';
-export * from './lib/services/error/DefaultError.service';
-export * from './lib/services/error/IErrorService';
+export * from './lib/shared/snackbar/snackbar-service';
 export * from './lib/services/ql-list.resolver';
 export * from './lib/services/detail.resolver';
 export * from './lib/services/resolvers/app.resolver';
@@ -38,6 +37,7 @@ export * from './lib/shared/link-select/link-select'
 export * from './lib/shared/paginator/paginator'
 export * from './lib/shared/pipes/enum-keys-pipe';
 export * from './lib/shared/severity-picker/severity-picker'
+export * from './lib/shared/snackbar/snackbar';
 export * from './lib/utils/collections';
 export * from './lib/utils/dateUtils';
 export * from './lib/utils/mathUtils';

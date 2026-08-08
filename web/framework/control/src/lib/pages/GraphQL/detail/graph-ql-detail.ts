@@ -6,7 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 
 import { ProfileStore, ComponentPageTitle } from 'jde-spa';
 
-import {IErrorService} from '../../../services/error/IErrorService';
+import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
 import {IGraphQL}  from '../../../services/IGraphQL';
 import {TableSchema} from '../../../model/ql/schema/TableSchema'
 import { MetaObject } from '../../../model/ql/schema/MetaObject';
@@ -22,7 +22,7 @@ import { clone } from '../../../utils/utils';
     imports: [CommonModule, MatTabsModule/*, Properties*/]
 })
 export class GraphQLDetailComponent implements OnDestroy, OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private dialog : MatDialog, private componentPageTitle:ComponentPageTitle, @Inject('IGraphQL') private graphQL: IGraphQL, @Inject('IErrorService') private cnsle: IErrorService ){
+	constructor( private route: ActivatedRoute, private router:Router, private dialog : MatDialog, private componentPageTitle:ComponentPageTitle, @Inject('IGraphQL') private graphQL: IGraphQL, private cnsle: SnackbarService ){
 		this.target = this.router.url.substring( this.router.url.lastIndexOf('/')+1 );
 	}
 

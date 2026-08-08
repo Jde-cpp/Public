@@ -2,7 +2,7 @@ import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSna
 import { inject, Inject, Injectable } from '@angular/core';
 import { RouteItem } from 'jde-spa';
 import {  ProfileStore } from 'jde-spa';
-import { DetailResolverData, DetailRoute, IErrorService, MetaObject, RouteStore} from 'jde-framework'
+import { DetailResolverData, DetailRoute, SnackbarService, MetaObject, RouteStore} from 'jde-framework'
 import { Gateway, GatewayService } from '../gateway.service';
 import { ServerCnnctn } from '../../model/ServerCnnctn';
 import { OpcStore } from '../opc-store';
@@ -11,7 +11,7 @@ import { Server } from '../../model/Server';
 @Injectable()
 export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>> {
 	constructor( private route: ActivatedRoute, private router:Router,
-		@Inject('IErrorService') private snackbar: IErrorService,
+		private snackbar: SnackbarService,
 		@Inject('IGraphQL') private gatewayService: GatewayService
 	){}
 

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild, Inject, input, effect, Signal, signal, inject, computed, viewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, input, effect, Signal, signal, inject, computed, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import {MatSortModule, Sort} from '@angular/material/sort';
@@ -9,7 +9,7 @@ import {AppStatus} from '../../../services/app/application';
 import {LogSettings} from '../Settings';
 import { QLListSettings } from '../../ql/list/ql-list-settings/ql-list-settings';
 import { ComponentPageTitle } from 'jde-spa';
-import {IErrorService} from '../../../services/error/IErrorService';
+import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
 
 
 import * as AppFromServer from '../../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
@@ -40,7 +40,7 @@ import { Entry,LogEntries, LogEntriesRest, LogView } from '../LogEntry';
 	imports: [CommonModule, MatFormFieldModule, MatIcon, MatIconButton, MatTableModule, MatToolbar, MatSelectModule, MatSortModule, Paginator, QLListSettings]
 })
 export class LogDetail implements OnInit, OnDestroy{
-	constructor( public _componentPageTitle: ComponentPageTitle, @Inject('IErrorService') private snackBar: IErrorService ){
+	constructor( public _componentPageTitle: ComponentPageTitle, private snackBar: SnackbarService ){
 	}
 
 	async ngOnInit(){
