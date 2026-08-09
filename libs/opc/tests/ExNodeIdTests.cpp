@@ -10,8 +10,8 @@
 
 namespace Jde::Opc::Tests{
 	Ω exFromJson( sv json )ε->ExNodeId{ return ExNodeId{ parse(json) }; }
-	//Anything needing namespaceUri/serverIndex is built through the rest-params ctor: the json ctor silently drops both -
-	//see DISABLED_JsonCtorReadsNamespaceUriAndServerIndex at the bottom.
+	//The rest/query-string spelling.  Both ctors read nsu/serverindex since #17; this one is kept as the independent path,
+	//so a round-trip test cannot pass by both halves being wrong the same way.
 	Ω exFromParams( sv idKey, sv idValue, sv nsu, UA_UInt32 serverIndex )ε->ExNodeId{
 		flat_map<string,string> params;
 		params.emplace( string{idKey}, string{idValue} );
@@ -69,10 +69,13 @@ namespace Jde::Opc::Tests{
 	}
 
 	//Unlike NodeId's, ExNodeId's serializer omits ns when it is 0 - both spellings have to survive FromJson.  The
-	//nsu/serverindex case is in the disabled test below: it round trips vacuously today, because ToJson writes them and
-	//the ctor drops them again.
+	//nsu/serverindex cases only became meaningful with #17: before it they round tripped vacuously, because ToJson wrote
+	//both fields and the ctor dropped them again.
 	TEST( ExNodeIdTests, JsonRoundTrip ){
-		for( let json : { R"({"ns":2,"i":5002})", R"({"i":85})", R"({"ns":2,"s":"tag.one"})", R"({"ns":7,"s":"x"})" } ){
+		for( let json : { R"({"ns":2,"i":5002})", R"({"i":85})", R"({"ns":2,"s":"tag.one"})", R"({"ns":7,"s":"x"})",
+				R"({"ns":2,"g":"12345678-1234-5678-1234-567812345678"})",
+				R"({"ns":2,"i":7,"nsu":"urn:test"})", R"({"i":7,"serverindex":3})",
+				R"({"ns":2,"s":"tag","nsu":"urn:test","serverindex":3})" } ){
 			let original = exFromJson( json );
 			let round = ExNodeId{ jvalue{original.ToJson()} };
 			EXPECT_TRUE( round==original ) << json;
@@ -172,14 +175,7 @@ namespace Jde::Opc::Tests{
 
 	// ---- open findings.  See main.cpp for why these are disabled. ---------------------------------------------------
 
-	//NOT in reviews/opc-review2.md - found by running this suite.  ExNodeId( const NodeId& ) is defined inline in
-	//ExNodeId.h, where NodeId is only forward-declared, and it reaches the base with a C-style cast:
-	//`UA_NodeId_copy( (UA_NodeId*)&x, &nodeId )`.  Against an incomplete type that cast degrades to reinterpret_cast, so
-	//no derived-to-base adjustment happens - and NodeId is polymorphic (virtual dtor), so its UA_NodeId base sits at
-	//offset 8 behind the vptr.  The copy therefore reads namespaceIndex/identifierType out of the vptr bytes and the
-	//resulting ExNodeId is garbage.  This is finding #2's mechanism inside the library itself rather than at a call site.
-	//Fix: include NodeId.h and use static_cast (or move the ctor into ExNodeId.cpp, which already includes it).
-	TEST( ExNodeIdTests, DISABLED_ConstructFromNodeId ){
+	TEST( ExNodeIdTests, ConstructFromNodeId ){
 		let n = NodeId{ parse(R"({"ns":2,"s":"tag"})") };
 		ExNodeId x{ n };
 		ASSERT_TRUE( x.String() );
@@ -190,32 +186,54 @@ namespace Jde::Opc::Tests{
 		EXPECT_EQ( x.namespaceUri.length, 0u );
 	}
 
-	//NOT in reviews/opc-review2.md - found by running this suite.  ExNodeId( const jvalue& ) reads its two extra fields
-	//with Json::FindDefaultSV( v, "nsu" ) / Json::FindNumber<UA_UInt32>( v, "serverindex" ).  The jvalue overloads of
-	//those take a *json pointer path* (value::try_at_pointer), not a member name, and a pointer that does not start with
-	//'/' never resolves - so both always come back empty and the json ctor can only ever produce a plain NodeId.  ToJson
-	//does write them, which makes the json round trip look green while dropping data.  Fix: "/nsu" and "/serverindex", or
-	//take j.as_object() and use the jobject overloads (which do take a key, as the rest-params ctor does).
-	TEST( ExNodeIdTests, DISABLED_JsonCtorReadsNamespaceUriAndServerIndex ){
+	//#17 (fixed): ExNodeId( const jvalue& ) read its two extra fields with Json::FindDefaultSV( v, "nsu" ) /
+	//Json::FindNumber<UA_UInt32>( v, "serverindex" ).  The jvalue overloads of those take a *json pointer path*
+	//(value::try_at_pointer), not a member name, and a pointer that does not start with '/' never resolves - so both
+	//always came back empty and the json ctor could only ever produce a plain NodeId.
+	TEST( ExNodeIdTests, JsonCtorReadsNamespaceUriAndServerIndex ){
 		let x = exFromJson( R"({"ns":2,"i":7,"nsu":"urn:test","serverindex":3})" );
 		EXPECT_EQ( ToSV(x.namespaceUri), "urn:test" );
 		EXPECT_EQ( x.serverIndex, 3u );
+		EXPECT_EQ( x.NsIndex(), 2 );
 
-		let round = ExNodeId{ jvalue{x.ToJson()} }; //and only then is the round trip meaningful.
-		EXPECT_TRUE( round==x );
+		//the two ctors have to agree; exFromParams passes no "ns", so compare it against the ns-less json spelling.
+		EXPECT_TRUE( exFromJson(R"({"i":7,"nsu":"urn:test","serverindex":3})")==exFromParams("i", "7", "urn:test", 3) );
+
+		//each field on its own, so a fix that reads only one of them is caught.
+		EXPECT_EQ( ToSV(exFromJson(R"({"i":7,"nsu":"urn:test"})").namespaceUri), "urn:test" );
+		EXPECT_EQ( exFromJson(R"({"i":7,"nsu":"urn:test"})").serverIndex, 0u );
+		EXPECT_EQ( exFromJson(R"({"i":7,"serverindex":3})").serverIndex, 3u );
+		EXPECT_EQ( exFromJson(R"({"i":7,"serverindex":3})").namespaceUri.length, 0u );
 	}
 
-	//#6, the ExNodeId twin:  the unused guid/bytes columns bind a non-null empty blob while the insert procs dispatch
-	//on IS NULL.
-	TEST( ExNodeIdTests, DISABLED_R2_6_UnusedIdentifierColumnsAreNull ){
+	//The bare forms NodeId::FromJson accepts have no object to read those fields off - if_object, not as_object.
+	TEST( ExNodeIdTests, JsonCtorAcceptsBareIdentifiers ){
+		let numeric = ExNodeId{ parse("5002") };
+		ASSERT_TRUE( numeric.Numeric() );
+		EXPECT_EQ( *numeric.Numeric(), 5002u );
+		EXPECT_EQ( numeric.namespaceUri.length, 0u );
+		EXPECT_EQ( numeric.serverIndex, 0u );
+
+		let stringId = ExNodeId{ parse(R"("tag")") };
+		ASSERT_TRUE( stringId.String() );
+		EXPECT_EQ( *stringId.String(), "tag" );
+	}
+
+	//#6 (fixed), the ExNodeId twin.  The extended columns follow the same rule - an absent namespaceUri is null too.
+	TEST( ExNodeIdTests, UnusedIdentifierColumnsAreNull ){
 		let params = exFromJson( R"({"ns":2,"s":"tag"})" ).InsertParams( false );
 		ASSERT_EQ( params.size(), 5u );
 		EXPECT_TRUE( params[3].is_null() ) << "guid column of a string id";
 		EXPECT_TRUE( params[4].is_null() ) << "bytes column of a string id";
+
+		let numericParams = exFromJson( R"({"ns":2,"i":5002})" ).InsertParams( false );
+		EXPECT_TRUE( numericParams[2].is_null() ) << "string column of a numeric id";
+		EXPECT_TRUE( numericParams[3].is_null() ) << "guid column of a numeric id";
+		EXPECT_TRUE( numericParams[4].is_null() ) << "bytes column of a numeric id";
 	}
 
-	//#7, the ExNodeId twin:  hex out, base64 in.
-	TEST( ExNodeIdTests, DISABLED_R2_7_ByteStringJsonRoundTrip ){
+	//#7 (fixed), the ExNodeId twin:  hex out, base64 in.  base64 both ways now.
+	TEST( ExNodeIdTests, ByteStringJsonRoundTrip ){
 		UA_NodeId ua{};
 		ua.namespaceIndex = 2;
 		ua.identifierType = UA_NODEIDTYPE_BYTESTRING;
@@ -223,8 +241,15 @@ namespace Jde::Opc::Tests{
 		::memcpy( ua.identifier.byteString.data, "\xde\xad\xbe\xef", 4 );
 		ExNodeId original{ move(ua) };
 		ASSERT_TRUE( original.IsBytes() );
-		EXPECT_EQ( original.ToJson().at("b").as_string(), "deadbeef" );
+		EXPECT_EQ( original.ToJson().at("b").as_string(), "3q2+7w==" );
 		let round = ExNodeId{ jvalue{original.ToJson()} };
 		EXPECT_TRUE( round==original ) << original.to_string();
+
+		//and the rest-params ctor, the other reader of "b".
+		flat_map<string,string> params;
+		params.emplace( "ns", "2" );
+		params.emplace( "b", "3q2+7w==" );
+		ExNodeId fromParams{ params };
+		EXPECT_TRUE( fromParams==original );
 	}
 }

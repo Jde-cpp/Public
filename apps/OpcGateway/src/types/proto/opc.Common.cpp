@@ -5,7 +5,7 @@ namespace Jde::Opc{
 		ExNodeId y;
 		y.namespaceUri = AllocUAString( proto.namespace_uri() );
 		y.serverIndex = (uint32)proto.server_index();
-		y.nodeId = ToNodeId( proto.node() );
+		y.nodeId = ToNodeId( proto.node() ).Move(); //Move(), or the owning temporary frees the identifier at the end of this expression.
 		return y;
 	}
 	α ProtoUtils::ToNodeId( const NodeId& id )ι->Proto::NodeId{

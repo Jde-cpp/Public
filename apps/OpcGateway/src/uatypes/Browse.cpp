@@ -162,7 +162,7 @@ namespace Browse{
 
 	Request::Request( NodeId&& id, UA_BrowseResultMask mask )ι:
 		UA_BrowseRequest{ .requestedMaxReferencesPerNode=0, .nodesToBrowseSize=1, .nodesToBrowse=UA_BrowseDescription_new() }{
-		nodesToBrowse[0].nodeId = move( id );
+		nodesToBrowse[0].nodeId = id.Move(); //not move(id): that slices, and ~NodeId then frees the id the in-flight request points at.
 	 	nodesToBrowse[0].resultMask = mask;
 	}
 

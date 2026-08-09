@@ -33,7 +33,7 @@ namespace Jde{
 		Test					= 1ul << 24,
 		Threads				= 1ul << 25,
 		Write		 			= 1ul << 26,
-		All						= ~0ul,
+		All						= ~0ull,
 
 		HttpClientRead	  = Http | Client | Read,
 		HttpClientWrite		= Http | Client | Write,
@@ -84,6 +84,7 @@ namespace Jde{
 	Φ ToLogTags( jvalue v )ι->ELogTags;
 namespace Logging{
 	struct ITagParser{
+		virtual ~ITagParser()=default;
 		β ToTag( str tagName )Ι->ELogTags=0;
 		β ToString( ELogTags tags )Ι->string=0;
 		β Tags()Ι->flat_map<string,uint> = 0;

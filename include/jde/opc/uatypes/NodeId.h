@@ -22,6 +22,9 @@ namespace Jde::Opc{
 		α operator=( const NodeId& x )ι->NodeId&;
 		α operator=( NodeId&& x )ι->NodeId&;
 		α operator<( const NodeId& x )Ι->bool;
+		//Hands the identifier to a raw UA_NodeId and leaves this null.  `raw = move(wrapper)` cannot do that - it slices
+		//to the base, whose implicit copy assignment is a shallow byte copy that leaves both sides owning the identifier.
+		α Move()ι->UA_NodeId;
 
 		Ω FromJson( const jvalue& v, UA_UInt16 ns=0 )ε->UA_NodeId;
 		Ω FromJson( const jobject& j, UA_UInt16 ns=0 )ε->UA_NodeId;

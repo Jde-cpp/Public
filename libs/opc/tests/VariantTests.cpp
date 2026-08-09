@@ -51,16 +51,40 @@ namespace Jde::Opc::Tests{
 		UA_Variant_clear( &raw ); //Move() made us the owner.
 	}
 
-	//The json inference used when a node has no declared DataType.  Note "double" is the only dataType string honoured -
-	//see DISABLED_R2_8 below.
+	//A null dataType means "no declared DataType attribute" - infer from the json kind.
 	TEST( VariantTests, FromJsonInfersTheType ){
-		EXPECT_EQ( Variant( jvalue{true}, "" ).type, &UA_TYPES[UA_TYPES_BOOLEAN] );
-		EXPECT_EQ( Variant( jvalue{"abc"}, "" ).type, &UA_TYPES[UA_TYPES_STRING] );
-		EXPECT_EQ( Variant( jvalue{1.5}, "" ).type, &UA_TYPES[UA_TYPES_DOUBLE] );
-		EXPECT_EQ( Variant( jvalue{5}, "" ).type, &UA_TYPES[UA_TYPES_INT64] );
-		EXPECT_EQ( Variant( jvalue{5u}, "" ).type, &UA_TYPES[UA_TYPES_UINT64] );
-		EXPECT_EQ( Variant( jvalue{5}, "double" ).type, &UA_TYPES[UA_TYPES_DOUBLE] );
-		EXPECT_EQ( serialize(Variant( jvalue{"abc"}, "" ).ToJson(true)), R"("abc")" );
+		EXPECT_EQ( Variant( jvalue{true}, nullptr ).type, &UA_TYPES[UA_TYPES_BOOLEAN] );
+		EXPECT_EQ( Variant( jvalue{"abc"}, nullptr ).type, &UA_TYPES[UA_TYPES_STRING] );
+		EXPECT_EQ( Variant( jvalue{1.5}, nullptr ).type, &UA_TYPES[UA_TYPES_DOUBLE] );
+		EXPECT_EQ( Variant( jvalue{5}, nullptr ).type, &UA_TYPES[UA_TYPES_INT64] );
+		EXPECT_EQ( Variant( jvalue{5u}, nullptr ).type, &UA_TYPES[UA_TYPES_UINT64] );
+		EXPECT_EQ( serialize(Variant( jvalue{"abc"}, nullptr ).ToJson(true)), R"("abc")" );
+		EXPECT_THROW( Variant( jvalue{}, nullptr ), Exception ); //nothing to infer from.
+	}
+
+	//#8 (fixed): only the literal "double" used to be honoured; every other declared dataType fell through to json
+	//inference, so {dataType:"int", value:5} yielded an Int64 variant against an Int32 DataType attribute and
+	//UA_Server_addVariableNode rejected it with BadTypeMismatch.  The declared type now decides, and the value is
+	//decoded toward it rather than merely labelled with it.
+	TEST( VariantTests, DeclaredDataTypeWins ){
+		EXPECT_EQ( Variant( jvalue{5}, &UA_TYPES[UA_TYPES_INT32] ).type, &UA_TYPES[UA_TYPES_INT32] );
+		EXPECT_EQ( Variant( jvalue{5}, &UA_TYPES[UA_TYPES_UINT32] ).type, &UA_TYPES[UA_TYPES_UINT32] );
+		EXPECT_EQ( Variant( jvalue{5}, &UA_TYPES[UA_TYPES_BYTE] ).type, &UA_TYPES[UA_TYPES_BYTE] );
+		EXPECT_EQ( Variant( jvalue{5}, &UA_TYPES[UA_TYPES_INT16] ).type, &UA_TYPES[UA_TYPES_INT16] );
+		EXPECT_EQ( Variant( jvalue{5}, &UA_TYPES[UA_TYPES_FLOAT] ).type, &UA_TYPES[UA_TYPES_FLOAT] );
+		EXPECT_EQ( Variant( jvalue{5}, &UA_TYPES[UA_TYPES_DOUBLE] ).type, &UA_TYPES[UA_TYPES_DOUBLE] );
+
+		//the value has to arrive as that type, not just be tagged with it.
+		Variant i32{ jvalue{5}, &UA_TYPES[UA_TYPES_INT32] };
+		ASSERT_TRUE( i32.IsScalar() );
+		EXPECT_EQ( *(const UA_Int32*)i32.data, 5 );
+		EXPECT_EQ( serialize(i32.ToJson(true)), "5" );
+
+		Variant f{ jvalue{1.5}, &UA_TYPES[UA_TYPES_FLOAT] };
+		EXPECT_FLOAT_EQ( *(const UA_Float*)f.data, 1.5f );
+
+		//and a value the declared type cannot hold is rejected rather than silently retyped.
+		EXPECT_THROW( Variant( jvalue{"abc"}, &UA_TYPES[UA_TYPES_INT32] ), Exception );
 	}
 
 	TEST( VariantTests, ScalarToJsonUsesTheOpcShapeForNodeIds ){
@@ -105,7 +129,7 @@ namespace Jde::Opc::Tests{
 		EXPECT_EQ( json[0], "1" );
 		EXPECT_EQ( json[2], "3" );
 
-		let [count, data] = Variant::ToUAValues( UA_TYPES[UA_TYPES_INT32], stored(json) );
+		let [count, data] = Variant::ToUAValues( UA_TYPES[UA_TYPES_INT32], stored(json), true );
 		ASSERT_NE( data, nullptr );
 		ASSERT_EQ( count, 3u );
 		Variant round{ 0, {count, data}, Variant::ToArrayDims("3"), UA_TYPES[UA_TYPES_INT32] };
@@ -120,7 +144,7 @@ namespace Jde::Opc::Tests{
 		ASSERT_EQ( json.size(), 1u );
 		EXPECT_EQ( json[0], R"("tag value")" );
 
-		let [count, data] = Variant::ToUAValues( UA_TYPES[UA_TYPES_STRING], stored(json) );
+		let [count, data] = Variant::ToUAValues( UA_TYPES[UA_TYPES_STRING], stored(json), false );
 		ASSERT_NE( data, nullptr );
 		EXPECT_EQ( count, 0u ); //a single value decodes as a scalar - arrayLength 0, data non-null.
 		Variant round{ 0, {count, data}, Variant::ToArrayDims(""), UA_TYPES[UA_TYPES_STRING] };
@@ -128,14 +152,10 @@ namespace Jde::Opc::Tests{
 		EXPECT_EQ( serialize(round.ToJson(true)), R"("tag value")" );
 	}
 
-	//reviews/opc-review2.md #1:  ToUAValues catches every decode failure and returns {0,nullptr} with no log, so a row it
-	//cannot read is indistinguishable from "no value".  Both OpcServer insert sites store serialize(array[i]), which
-	//json-quotes an already-encoded token - an Int32 element 5 goes in as "5" and comes back null on every restart.  The
-	//fix is at the call sites (store the raw token) plus an ERR here; this pins the contract both halves depend on.
 	TEST( VariantTests, ToUAValuesNeedsRawUaJson ){
 		flat_map<uint,string> raw;
 		raw.emplace( 0u, "5" );
-		let [rawCount, rawData] = Variant::ToUAValues( UA_TYPES[UA_TYPES_INT32], move(raw) );
+		let [rawCount, rawData] = Variant::ToUAValues( UA_TYPES[UA_TYPES_INT32], move(raw), false );
 		ASSERT_NE( rawData, nullptr );
 		EXPECT_EQ( rawCount, 0u );
 		EXPECT_EQ( *(const UA_Int32*)rawData, 5 );
@@ -143,39 +163,49 @@ namespace Jde::Opc::Tests{
 
 		flat_map<uint,string> quoted;
 		quoted.emplace( 0u, serialize(jvalue{"5"}) ); //exactly what serialize(array[i]) writes today.
-		let [quotedCount, quotedData] = Variant::ToUAValues( UA_TYPES[UA_TYPES_INT32], move(quoted) );
+		let [quotedCount, quotedData] = Variant::ToUAValues( UA_TYPES[UA_TYPES_INT32], move(quoted), false );
 		EXPECT_EQ( quotedCount, 0u );
 		EXPECT_EQ( quotedData, nullptr ) << R"(an Int32 column holding "5" must not decode)";
 	}
 
 	// ---- the review's open findings.  See main.cpp for why these are disabled. -------------------------------------
 
-	//#8: only the literal "double" is honoured; every other declared dataType falls through to json inference, so
-	//{dataType:"int", value:5} yields an Int64 variant against an Int32 DataType attribute and UA_Server_addVariableNode
-	//rejects it with BadTypeMismatch.  The names are OpcServer's DT() vocabulary, which is where the mapping belongs.
-	TEST( VariantTests, DISABLED_R2_8_DeclaredDataTypeWins ){
-		EXPECT_EQ( Variant( jvalue{5}, "int" ).type, &UA_TYPES[UA_TYPES_INT32] );
-		EXPECT_EQ( Variant( jvalue{5}, "uint" ).type, &UA_TYPES[UA_TYPES_UINT32] );
-		EXPECT_EQ( Variant( jvalue{5}, "byte" ).type, &UA_TYPES[UA_TYPES_BYTE] );
-		EXPECT_EQ( Variant( jvalue{5}, "double" ).type, &UA_TYPES[UA_TYPES_DOUBLE] );
-	}
+	//#10 (fixed): a one-element array collapsed to a scalar ("size==1 would be an array") while the caller still applied
+	//the persisted arrayDimensions, producing scalar data with arrayDimensionsSize 1 - open62541 answers BadTypeMismatch,
+	//so one-element arrays did not survive a restart.  The stored dims, not the element count, decide.
+	TEST( VariantTests, OneElementArrayStaysAnArray ){
+		const UA_Int32 one[]{ 5 };
+		Variant original{ arrayVariant(one, 1u, UA_TYPES[UA_TYPES_INT32]) };
+		ASSERT_FALSE( original.IsScalar() );
+		let json = original.ToUAJson();
+		ASSERT_EQ( json.size(), 1u ); //indistinguishable from a scalar by count alone - hence the isArray argument.
 
-	//#10: a one-element array collapses to a scalar ("size==1 would be an array") while the caller still applies the
-	//persisted arrayDimensions, producing scalar data with arrayDimensionsSize 1 - open62541 answers BadTypeMismatch and
-	//one-element arrays do not survive a restart.  The stored dims, not the element count, decide.
-	TEST( VariantTests, DISABLED_R2_10_OneElementArrayStaysAnArray ){
-		flat_map<uint,string> one;
-		one.emplace( 0u, "5" );
-		let [count, data] = Variant::ToUAValues( UA_TYPES[UA_TYPES_INT32], move(one) );
+		let [count, data] = Variant::ToUAValues( UA_TYPES[UA_TYPES_INT32], stored(json), true );
 		ASSERT_NE( data, nullptr );
 		ASSERT_EQ( count, 1u );
-		UA_Array_delete( data, 1, &UA_TYPES[UA_TYPES_INT32] );
+		Variant round{ 0, {count, data}, Variant::ToArrayDims("1"), UA_TYPES[UA_TYPES_INT32] };
+		EXPECT_FALSE( round.IsScalar() ) << "scalar data carrying arrayDimensions is what open62541 rejects";
+		EXPECT_EQ( serialize(round.ToJson(true)), "[5]" );
+		EXPECT_EQ( round.ArrayDimString(), "1" );
 	}
 
-	//#11: open62541 uses a non-empty outBuf as a hard limit, so the fixed 2096-byte buffer in uaJsonString caps every
-	//value - a large but perfectly valid string/ByteString/ExtensionObject throws BadEncodingLimitsExceeded instead of
-	//encoding.  Pass an empty UA_String and let the encoder size it (which also drops a 2 KB malloc per element).
-	TEST( VariantTests, DISABLED_R2_11_LargeValueEncodes ){
+	//...and the same single stored element still reloads as a scalar when no dims were persisted.
+	TEST( VariantTests, OneElementScalarStaysAScalar ){
+		flat_map<uint,string> one;
+		one.emplace( 0u, "5" );
+		let [count, data] = Variant::ToUAValues( UA_TYPES[UA_TYPES_INT32], move(one), false );
+		ASSERT_NE( data, nullptr );
+		EXPECT_EQ( count, 0u );
+		Variant round{ 0, {count, data}, Variant::ToArrayDims(""), UA_TYPES[UA_TYPES_INT32] };
+		EXPECT_TRUE( round.IsScalar() );
+		EXPECT_EQ( serialize(round.ToJson(true)), "5" );
+	}
+
+	//#11 (fixed): open62541 uses a non-empty outBuf as a hard limit, so the fixed 2096-byte buffer in uaJsonString capped
+	//every value - a large but perfectly valid string/ByteString/ExtensionObject threw BadEncodingLimitsExceeded instead
+	//of encoding.  uaJsonString now passes an empty UA_String and lets the encoder size it, which also drops a 2 KB
+	//malloc per element.
+	TEST( VariantTests, LargeValueEncodes ){
 		let text = string( 4096, 'x' );
 		let ua = ToUV( text );
 		Variant v{ scalarVariant(&ua, UA_TYPES[UA_TYPES_STRING]) };

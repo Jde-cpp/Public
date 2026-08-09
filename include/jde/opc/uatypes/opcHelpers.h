@@ -1,13 +1,12 @@
 ﻿#pragma once
 #ifndef IOT_UA_HELPERS_H
 #define IOT_UA_HELPERS_H
-#include <boost/algorithm/hex.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <boost/lexical_cast.hpp>
 #include <google/protobuf/duration.pb.h>
 #include <google/protobuf/timestamp.pb.h>
 #include <jde/fwk/chrono.h>
+#include <jde/fwk/str.h>
 #include "../usings.h"
 #include "UAString.h"
 
@@ -15,7 +14,6 @@
 namespace Jde::Opc{
 	struct NodeId;
 	α FindDataType( const NodeId& nodeId )ι->UA_DataType*;
-	Ŧ Zero( T& x )ι->void{ ::memset( &x, 0, sizeof(T) ); }
 	constexpr α operator ""_uv( const char* x, uint len )ι->UA_String{ return UA_String{ len, static_cast<UA_Byte*>((void*)x) }; } //(UA_Byte*) gcc error
 	Ξ ToJson( UA_UInt64 v )ι->jobject{ return jobject{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",true} }; };
 	Ξ ToJson( UA_Int64 v )ι->jobject{ return jobject{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",false} }; };
@@ -36,16 +34,14 @@ namespace Jde::Opc{
 		return ua;
 	}
 	Ξ ToJson( UA_Guid v )ι->jstring{ return jstring{ Jde::ToString(ToGuid(v)) }; }
-	Ξ ByteStringToJson( const UA_ByteString& v )ι->jstring{ string hex; hex.reserve( v.length*2 ); boost::algorithm::hex_lower( ToSV(v), std::back_inserter(hex) ); return jstring{hex}; }//TODO combine with Str::
-	Ξ ToGuid( string x, UA_Guid& ua )ε->void{
-		std::erase( x, '-' );
-		try{
-			ua = ToUAGuid( boost::lexical_cast<boost::uuids::uuid>(x) );
-		}
-		catch( const boost::bad_lexical_cast& ){
-			THROW( "Could not parse guid: '{}'.", x );
-		}
+	Ξ ByteStringToJson( const UA_ByteString& v )ι->jstring{ return jstring{ Str::ToHex((byte*)v.data, v.length) }; }
+	Ξ ByteStringToBase64( const UA_ByteString& v )ι->jstring{
+		if( !v.length )
+			return jstring{};
+		UAString y; //empty - UA_ByteString_toBase64 allocates.
+		return UA_ByteString_toBase64( &v, &y ) ? jstring{} : jstring{ ToSV(y) };
 	}
+	Ξ ToGuid( sv x, UA_Guid& ua )ε->void{ ua = ToUAGuid( Jde::ToUuid(x) ); }
 	Ξ ToBinaryString( const UA_Guid& ua )ι->string{ return {(const char*)&ua, sizeof(UA_Guid)}; }
 	using ByteStringPtr = up<UA_ByteString,decltype(&UA_ByteString_delete)>;
 	Ŧ ToUAByteString( const T& bytes )ι->ByteStringPtr{

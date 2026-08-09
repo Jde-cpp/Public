@@ -49,14 +49,27 @@ namespace Jde::Opc::Tests{
 		EXPECT_EQ( ToBinaryString(testGuid).size(), sizeof(UA_Guid) );
 	}
 
-	//ToGuid( string, UA_Guid& ) strips the dashes and then hands the result to boost::lexical_cast<uuid>.  Boost 1.87
-	//rewrote uuid's operator>> around detail::from_chars, which *requires* the canonical dashed form (from_chars_generic
-	//returns dash_expected at byte 4), so with the vendored 1.91 every guid string fails to parse and every guid-identified
-	//node id throws "Could not parse guid".  Not in reviews/opc-review2.md - found writing these tests.  The fix is to
-	//drop the std::erase, or to delegate to fwk's Jde::ToUuid( sv, SRCE ) instead of hand-rolling the parse.
-	TEST( OpcHelperTests, DISABLED_ParseGuidAcceptsTheCanonicalForm ){
+	//#18 (fixed):  ToGuid used to std::erase the dashes and then hand the result to boost::lexical_cast<uuid>, but boost
+	//1.87 rewrote uuid's operator>> around detail::from_chars, which *requires* the canonical dashed form - so the
+	//de-dashed string parsed under no boost version and every guid-identified node id threw "Could not parse guid".
+	//It now delegates to Jde::ToUuid, i.e. boost::uuids::string_generator, which detects the dashes and takes both.
+	TEST( OpcHelperTests, ParseGuid ){
+		UA_Guid dashed{};
+		ASSERT_NO_THROW( ToGuid("12345678-1234-5678-1234-567812345678", dashed) ); //the form the serializer emits.
+		EXPECT_EQ( 0, ::memcmp(&testGuid, &dashed, sizeof(UA_Guid)) );
+
+		UA_Guid undashed{};
+		ASSERT_NO_THROW( ToGuid("12345678123456781234567812345678", undashed) );
+		EXPECT_EQ( 0, ::memcmp(&testGuid, &undashed, sizeof(UA_Guid)) );
+
+		UA_Guid unused{};
+		EXPECT_THROW( ToGuid("not-a-guid", unused), Exception );
+	}
+
+	//The round trip the serializer half depends on: ToJson emits what ToGuid reads back.
+	TEST( OpcHelperTests, GuidTextRoundTrip ){
 		UA_Guid parsed{};
-		ASSERT_NO_THROW( ToGuid("12345678-1234-5678-1234-567812345678", parsed) );
+		ASSERT_NO_THROW( ToGuid(string{ToJson(testGuid)}, parsed) );
 		EXPECT_EQ( 0, ::memcmp(&testGuid, &parsed, sizeof(UA_Guid)) );
 	}
 
@@ -65,7 +78,11 @@ namespace Jde::Opc::Tests{
 		let ua = ToUAByteString( bytes );
 		ASSERT_EQ( ua->length, 4u );
 		EXPECT_EQ( FromByteString(*ua), bytes );
-		EXPECT_EQ( ByteStringToJson(*ua), "deadbeef" ); //lowercase hex - see NodeIdTests DISABLED_R2_7, the parser expects base64.
+		//Two encodings on purpose, for two audiences: hex for ByteString *values*, which have no parser, and base64 for a
+		//node id's "b", which has to survive FromJson (reviews/opc-review2.md #7).
+		EXPECT_EQ( ByteStringToJson(*ua), "deadbeef" );
+		EXPECT_EQ( ByteStringToBase64(*ua), "3q2+7w==" );
+		EXPECT_EQ( ByteStringToBase64(*ToUAByteString(vector<uint8_t>{})), "" );
 
 		let none = ToUAByteString( vector<uint8_t>{} );
 		EXPECT_EQ( none->length, 0u );
@@ -108,15 +125,15 @@ namespace Jde::Opc::Tests{
 		EXPECT_TRUE( LocalizedText{}.ToJson().empty() );      //and an empty text drops the whole object.
 	}
 
-	//UAString.h guards itself with `#ifndef UA_STRING`, but UA_STRING is open62541's own exported function (types.h) and
-	//the expansion of UA_BYTESTRING.  Once this header has been seen, `UA_STRING(chars)` expands to `(chars)` inside any
-	//vendor header that follows.  reviews/opc-review2.md, "below the cut" - rename the guard to JDE_OPC_UASTRING_H.
+	//L3: UAString.h used to guard itself with `#ifndef UA_STRING`, but UA_STRING is open62541's own exported function
+	//(types.h) and the expansion of UA_BYTESTRING.  Once that header had been seen, `UA_STRING(chars)` expanded to
+	//`(chars)` inside any vendor header that followed.  It guards with #pragma once now.
 #ifdef UA_STRING
 	constexpr bool uaStringGuardShadowsTheVendorSymbol = true;
 #else
 	constexpr bool uaStringGuardShadowsTheVendorSymbol = false;
 #endif
-	TEST( OpcHelperTests, DISABLED_R2_UAStringGuardDoesNotShadowTheVendorSymbol ){
+	TEST( OpcHelperTests, UAStringGuardDoesNotShadowTheVendorSymbol ){
 		EXPECT_FALSE( uaStringGuardShadowsTheVendorSymbol );
 	}
 }

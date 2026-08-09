@@ -10,12 +10,5 @@ namespace Jde::Opc{
 	using StatusCode = UA_StatusCode;
 	using VariantPK = uint32;
 	using BrowseNamePK = uint32;
-
-	template <auto F> //https://stackoverflow.com/questions/19053351/how-do-i-use-a-custom-deleter-with-a-stdunique-ptr-member
-	struct DeleterFromFunction {
-    Τ constexpr α operator()(T* arg)Ι->void{ F(arg); }
-	};
-
-	template <typename T, auto F> using UAUP = std::unique_ptr<T, DeleterFromFunction<F>>;
 }
 #endif

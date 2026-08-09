@@ -13,7 +13,7 @@
 namespace Jde::DB::Sqlite::OpcProcs{
 	α RegisterOpcVariableInsert( IProcs& procs )ι->void{
 		procs.RegisterProc( "opc_variable_insert", [&procs]( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
-			THROW_IFSL( !params[15].is_null() && params[15].get_number<uint>(sl)==0, "Data type ID cannot be zero" );
+			THROW_IFSL( !params[15].is_null() && params[15].get_number<uint>()==0, "Data type ID cannot be zero" );
 			Value nodeId;
 			if( !params[1].is_null() || !params[2].is_null() || !params[3].is_null() || !params[4].is_null() )
 				nodeId = Value{ NodeIdInsert(procs, db, params[0], params[1], params[2], params[3], params[4], Value{}, Value{}, Value{}, sl) };

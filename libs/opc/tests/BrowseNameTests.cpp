@@ -76,31 +76,28 @@ namespace Jde::Opc::Tests{
 		EXPECT_EQ( ToSV(a.name), "c" );
 	}
 
-	//operator== takes the raw UA_QualifiedName base, so `wrapper==wrapper` is -Wambiguous-reversed-operator under C++20
-	//(the reversed candidate is an equally good match) and does not compile under -Werror.  Comparing against the base is
-	//the spelling that works; the library would need a free `operator==( const BrowseName&, const BrowseName& )` - as
-	//NodeId and ExNodeId already have - for the wrapper-to-wrapper form.
 	TEST( BrowseNameTests, EqualityIgnoresThePk ){
 		BrowseName a{ 0u, 2, "Tag" };
 		BrowseName samePk{ 5u, 2, "Tag" };
-		EXPECT_TRUE( a==static_cast<const UA_QualifiedName&>(samePk) );
+		EXPECT_TRUE( a==samePk );   //the plain spelling, which is the point of the fix.
+		EXPECT_FALSE( a!=samePk );  //!= is the rewritten form of the same operator, so it comes along for free.
 
 		BrowseName otherNamespace{ 0u, 3, "Tag" };
-		EXPECT_FALSE( a==static_cast<const UA_QualifiedName&>(otherNamespace) );
+		EXPECT_FALSE( a==otherNamespace );
 
 		BrowseName otherName{ 0u, 2, "Other" };
-		EXPECT_FALSE( a==static_cast<const UA_QualifiedName&>(otherName) );
+		EXPECT_FALSE( a==otherName );
+
+		EXPECT_TRUE( BrowseName{}==BrowseName{} );//both empty - namespace 0 and a null name.
 	}
 
-	// ---- the review's open findings.  See main.cpp for why these are disabled. -------------------------------------
-
-	//#5: `BrowseName()ι = default` gives PK an NSDMI but leaves the UA_QualifiedName base indeterminate under
+	//#5 (fixed): `BrowseName()ι = default` gave PK an NSDMI but left the UA_QualifiedName base indeterminate under
 	//default-initialization - every sibling wrapper (NodeId(), ExNodeId(), LocalizedText()) zeroes its base.  OpcServer
-	//declares `BrowseName Browse;` with no initializer and five ctors omit it from their init lists, so on recycled heap
-	//~BrowseName frees a garbage name.data (and assigning to it first is just as fatal - operator= clears the target).
-	//Placement-new over poisoned storage is the only way to observe this deterministically; the ASSERTs come before the
-	//explicit destructor call so a failing run does not free a wild pointer.  Fix: `BrowseName()ι:UA_QualifiedName{}{}`.
-	TEST( BrowseNameTests, DISABLED_R2_5_DefaultConstructorZeroesTheBase ){
+	//declares `BrowseName Browse;` with no initializer and three Node ctors omit it from their init lists, so on recycled
+	//heap ~BrowseName freed a garbage name.data (and assigning to it first was just as fatal - operator= clears the
+	//target before copying).  Placement-new over poisoned storage is the only way to observe this deterministically; the
+	//ASSERTs come before the explicit destructor call so a failing run does not free a wild pointer.
+	TEST( BrowseNameTests, DefaultConstructorZeroesTheBase ){
 		alignas(BrowseName) std::byte storage[sizeof(BrowseName)];
 		::memset( storage, 0xCD, sizeof(storage) );
 		auto* p = ::new (static_cast<void*>(storage)) BrowseName;
@@ -108,6 +105,13 @@ namespace Jde::Opc::Tests{
 		ASSERT_EQ( p->name.data, nullptr );
 		EXPECT_EQ( p->namespaceIndex, 0 );
 		EXPECT_EQ( p->PK, 0u );
+
+		//the other half of #5: operator= clears the target before copying, so assigning over a default-constructed
+		//BrowseName - what OpcServer does with `node.Browse = GetUAServer().GetBrowse(...)` - has to be safe too.
+		*p = BrowseName{ 7u, 2, "Tag" };
+		EXPECT_EQ( ToSV(p->name), "Tag" );
+		EXPECT_EQ( p->PK, 7u );
+
 		p->~BrowseName();
 	}
 }

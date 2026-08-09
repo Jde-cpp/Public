@@ -48,8 +48,11 @@ namespace Jde::Opc::Server {
 			return UA_VALUERANK_ANY;
 	}
 	Ω toVariables( jobject& o, SL sl )->UA_VariableAttributes{
-		auto variant = o.contains("value") ? Variant{ o.at("value"), Json::FindSV(o, "dataType").value_or("") }.Move() : UA_VariableAttributes_default.value;
-		auto dataType = o.contains("dataType") ? DT( o.at("dataType"), sl ).typeId : variant.type ? variant.type->typeId : UA_TYPES[UA_TYPES_STRING].typeId;
+		//Resolve the declared type once and build the value toward it - the two used to be derived independently, so an
+		//"int" node got an Int64 value against an Int32 attribute and addVariableNode answered BadTypeMismatch.
+		const UA_DataType* declared = o.contains("dataType") ? &DT( o.at("dataType"), sl ) : nullptr;
+		auto variant = o.contains("value") ? Variant{ o.at("value"), declared }.Move() : UA_VariableAttributes_default.value;
+		auto dataType = declared ? declared->typeId : variant.type ? variant.type->typeId : UA_TYPES[UA_TYPES_STRING].typeId;
 		return UA_VariableAttributes{
 			0,
 			UA_LocalizedText{ "en-US"_uv, AllocUAString(Json::AsString(o, "name")) },

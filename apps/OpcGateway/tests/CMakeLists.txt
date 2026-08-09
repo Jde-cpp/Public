@@ -4,7 +4,6 @@ project( Jde.Opc.Tests VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ${jdeRoot}/build/dependencies.cmake )
 
 find_package( open62541 REQUIRED )
-add_definitions( -DUA_ENABLE_ENCRYPTION )
 if( WIN32 )
 	add_definitions( -DZLIB_USE_STATIC_LIBS )
 	set( ZLIB_ROOT ${CMAKE_INSTALL_PREFIX}/zlib )

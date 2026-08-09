@@ -27,9 +27,9 @@ namespace Jde::DB::Sqlite::OpcProcs{
 	}
 
 	α NodeIdInsert( IProcs& procs, sqlite3& db, const Value& ns, const Value& number, const Value& string_, const Value& guid, const Value& bytes, const Value& namespaceUri, const Value& serverIndex, const Value& isGlobal, SL sl )ε->uint{
-		uint nodeId = ns.get_number<uint>( sl ) << 32;
+		uint nodeId = ns.get_number<uint>() << 32;
 		if( !number.is_null() )
-			nodeId |= number.get_number<uint>( sl );
+			nodeId |= number.get_number<uint>();
 		else if( !string_.is_null() )
 			nodeId |= crc32( string_.get_string().data(), string_.get_string().size() );
 		else if( !guid.is_null() ){
@@ -44,7 +44,7 @@ namespace Jde::DB::Sqlite::OpcProcs{
 	}
 
 	α EnsureDataTypeNodeId( IProcs& procs, sqlite3& db, const Value& dataTypeId, SL sl )ε->void{
-		if( dataTypeId.is_null() || dataTypeId.get_number<uint>(sl)>32750 )
+		if( dataTypeId.is_null() || dataTypeId.get_number<uint>()>32750 )
 			return;
 		if( let count = procs.ScalarUInt(db, "select count(*) from opc_node_ids where node_id=?", {dataTypeId}, sl); count && *count==0 )
 			NodeIdInsert( procs, db, Value{(uint)0}, dataTypeId, Value{}, Value{}, Value{}, Value{}, Value{}, Value{}, sl );

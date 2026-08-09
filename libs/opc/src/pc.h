@@ -1,10 +1,4 @@
 #pragma once
-#include <boost/asio.hpp>
-#include <boost/beast.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/beast/ssl/ssl_stream.hpp>
-#include <boost/unordered/concurrent_flat_map.hpp>
-#include <boost/unordered/concurrent_flat_set.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <open62541/client_config_default.h>

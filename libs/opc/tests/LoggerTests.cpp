@@ -5,7 +5,30 @@
 
 #define let const auto
 
+namespace Jde::Opc{
+	α Format( const char* format, va_list args )->string;//Logger.cpp's own, not declared in a header - the UA callback is its only other caller.
+}
 namespace Jde::Opc::Tests{
+	Ω format( const char* fmt, ... )->string{
+		va_list args; va_start( args, fmt );
+		let y = Opc::Format( fmt, args );
+		va_end( args );
+		return y;
+	}
+
+	//L5: the old fixed 512-byte buffer made UA_String_vformat report BADENCODINGLIMITSEXCEEDED, and Format then discarded
+	//what had been written and logged the format string itself - so the messages that overflowed, the cert and endpoint
+	//diagnostics, were exactly the ones that became unreadable.
+	TEST( UALogParserTests, FormatKeepsMessagesPastTheOldBufferSize ){
+		EXPECT_EQ( format("plain %d", 42), "plain 42" );//the short path is unchanged.
+		for( let size : { 511u, 512u, 513u, 4096u } ){
+			let arg = string( size, 'x' );
+			let y = format( "%s", arg.c_str() );
+			EXPECT_EQ( y.size(), size );
+			EXPECT_EQ( y, arg ) << size;//not "%s", which is what a discarded buffer used to leave behind.
+		}
+	}
+
 	TEST( UALogParserTests, TagNamesRoundTrip ){
 		UALogParser parser;
 		EXPECT_EQ( parser.ToTag("opc"), (ELogTags)EOpcLogTags::Opc );
@@ -50,15 +73,14 @@ namespace Jde::Opc::Tests{
 			EXPECT_EQ( bit & 0xFFFFFFFFull, 0u ) << name;
 	}
 
-	// ---- the review's open findings.  See main.cpp for why these are disabled. -------------------------------------
-
-	//#14: fwk spells ELogTags::All as ~0ul.  `unsigned long` is 32-bit under the windows ABI while the enum's underlying
-	//type is 64-bit, so All is 0xFFFFFFFF and masks off every opc tag - SubscribeLog's default Tags{ELogTags::All} drops
-	//the whole opc/uaClient/monitoring/browse channel on the win-clang build only (this passes as written on linux).
-	//Fix: `All = ~0ull` in fwk's logTags.h.
-	TEST( UALogParserTests, DISABLED_R2_14_AllIncludesTheOpcTags ){
+	//#14: fwk spelled ELogTags::All as ~0ul.  `unsigned long` is 32-bit under the windows ABI while the enum's underlying
+	//type is 64-bit, so All was 0xFFFFFFFF and masked off every opc tag - SubscribeLog's default Tags{ELogTags::All}
+	//dropped the whole opc/uaClient/monitoring/browse channel, on the win-clang build only (this passed on linux).
+	TEST( UALogParserTests, AllIncludesTheOpcTags ){
 		EXPECT_NE( (uint)ELogTags::All & (uint)EOpcLogTags::Opc, 0u );
 		EXPECT_NE( (uint)ELogTags::All & (uint)EOpcLogTags::Browse, 0u );
 		EXPECT_NE( (uint)ELogTags::All & (uint)EOpcLogTags::Monitoring, 0u );
+		for( let& [name, bit] : UALogParser{}.Tags() )//not just the three above:  every registered bit has to survive the mask.
+			EXPECT_EQ( (uint)ELogTags::All & bit, bit ) << name;
 	}
 }

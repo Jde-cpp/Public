@@ -12,7 +12,6 @@ find_package( GTest REQUIRED )
 find_package( Threads REQUIRED )
 find_package( OpenSSL REQUIRED )
 find_package( open62541 REQUIRED )
-add_definitions( -DUA_ENABLE_ENCRYPTION ) #matches libs/opc/src: the macro changes vendor struct layouts, so a TU that disagrees with the library is an ODR violation.
 
 if( NOT WIN32 )
 	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )
@@ -27,9 +26,6 @@ file( GLOB sources *.cpp )
 file( GLOB headers *.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 target_compile_definitions( ${targetName} PRIVATE TESTS )
-#pc.h includes open62541 first (see the comment there), and on windows that pulls in windows.h - whose min/max macros
-#then break std::numeric_limits<>::max() in fwk's usings.h.  libs/opc/src gets NOMINMAX incidentally, from the
-#boost/asio at the top of its own pch; this target names it, as apps/OpcGateway/tests does.
 if( WIN32 )
 	target_compile_definitions( ${targetName} PRIVATE NOMINMAX )
 endif()

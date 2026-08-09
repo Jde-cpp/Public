@@ -4,8 +4,8 @@
 //
 //Convention:  a test named DISABLED_R2_<n>_* asserts the *correct* behaviour of finding #<n> in reviews/opc-review2.md.
 //They are disabled rather than absent so the suite stays green while the findings are open - drop the DISABLED_ prefix
-//as each one is fixed and the test becomes its acceptance check.  Do not enable one speculatively:  #4, #5 and #12
-//corrupt the heap or std::terminate the runner as the library stands today.
+//as each one is fixed and the test becomes its acceptance check.  The two that remain carry no number because they
+//belong to that review's below-the-cut list instead:  the Duration asymmetry (L1) and the UA_STRING guard (L3).
 #ifdef BOOST_ALL_NO_LIB
 	#include <boost/json/src.hpp>
 #endif
