@@ -272,13 +272,17 @@ set_property(TARGET ryml::ryml APPEND PROPERTY INTERFACE_LINK_LIBRARIES \"\${RYM
     file(WRITE "${CONFIG}" "${_c}")
 endif()
 ]=] )
+# c4Project.cmake installs the package config to <prefix>/cmake on Windows but
+# <prefix>/lib/cmake/ryml on Unix, so the path the step patches is OS-dependent.
 if( WIN32 )
 	set( _c4coreLib c4core.lib )
+	set( _rymlConfig ${CMAKE_INSTALL_PREFIX}/ryml/cmake/rymlConfig.cmake )
 else()
 	set( _c4coreLib libc4core.a )
+	set( _rymlConfig ${CMAKE_INSTALL_PREFIX}/ryml/lib/cmake/ryml/rymlConfig.cmake )
 endif()
 ExternalProject_Add_Step( ryml fix-export
-	COMMAND ${CMAKE_COMMAND} "-DCONFIG=${CMAKE_INSTALL_PREFIX}/ryml/cmake/rymlConfig.cmake" -DLIB_NAME=${_c4coreLib} -P "${_rymlExportPatch}"
+	COMMAND ${CMAKE_COMMAND} "-DCONFIG=${_rymlConfig}" -DLIB_NAME=${_c4coreLib} -P "${_rymlExportPatch}"
 	DEPENDEES install
 	DEPENDS "${_rymlExportPatch}"
 	COMMENT "ryml: appending the c4core dependency to the installed export"

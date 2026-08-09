@@ -4,12 +4,12 @@ import { ComponentSidenav } from 'jde-spa';
 
 import{ DetailResolver, Cards, LoginPageComponent, QLList, QLListResolver, QLListRouteService, HomeRouteService, Apps, AppResolver } from 'jde-framework';
 import { AccessService, AuthGuard, Group, GroupDetail, groupTableSettings, Role, RoleDetail, roleTableSettings, User, UserDetail, userTableSettings } from 'jde-access';
-import{ ClientResolver, GatewayDetail, GatewayRouteService, GatewayCnnctnRouteService,GatewayService, NodeDetail, NodeResolver, OpcNodeRouteService, OpcServerRouteService, SettingsRouteService, GatewayResolver, ClientDetail } from 'jde-opc';
+import{ ClientResolver, GatewayDetail, GatewayRouteService, gatewayTableSettings, GatewayCnnctnRouteService,GatewayService, NodeDetail, NodeResolver, OpcNodeRouteService, GatewayResolver, ClientDetail } from 'jde-opc';
 
-const accessProvider = { provide: 'IGraphQL', useClass: AccessService };
-const gatewayProvider = { provide: 'IGraphQL', useClass: GatewayService };
+const accessProvider = { provide: 'IGraphQL', useExisting: AccessService };//route-scoped token, but aliases the single providedIn:'root' instance instead of constructing a per-route one
+const gatewayProvider = { provide: 'IGraphQL', useExisting: GatewayService };//route-scoped token, but aliases the single providedIn:'root' instance instead of constructing a per-route one
 const qlListProvider = { provide: 'IRouteService', useClass: QLListRouteService };
-const opcNodeRouteProvider = { provide: 'IRouteService', useClass: OpcNodeRouteService };;
+const opcNodeRouteProvider = { provide: 'IRouteService', useExisting: OpcNodeRouteService };//NodeChildren injects the class token, so the route binding must alias that instance rather than build a second one
 
 export const routes: Routes = [
 	{ path: '', title: "Home", component: Cards, data: {summary: "Welcome" },
@@ -38,14 +38,6 @@ export const routes: Routes = [
 			}
 		]
 	},
-/*	{ path: 'gateways',
-		component: ComponentSidenav,
-		children :[
-			{ path: ':target',     component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "pathParamsOrQueryParamsChange" }/*,
-			{ path: ':target/:id', component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "paramsChange" },* /
-		]
-	},
-*/
 	{ path: 'access', title: "Access", component: Cards, providers: [qlListProvider], canActivate: [AuthGuard], data: {
 		summary: "Configure User Access"
 	} },
@@ -96,17 +88,6 @@ export const routes: Routes = [
 		providers: [ AppResolver, accessProvider ],
 		resolve: { connections: AppResolver },
 	},
-	// {
-	// 	path: 'settings/appServer', title: "App Server", component: Applications, canActivate: [AuthGuard], data: { summary: "Applications" },
-	// },
-	// {
-	// 	path: 'settings/gateways', title: "Gateways", providers: [{provide: 'IRouteService', useClass: GatewayRouteService}], component: Cards, canActivate: [AuthGuard],
-	// 	data: { summary: "Gateways Connected" },
-	// },
-	// {
-	// 	path: 'settings/opcServers', title: "OPC Servers", providers: [{provide: 'IRouteService', useClass: OpcServerRouteService}], component: Cards, canActivate: [AuthGuard],
-	// 	data: { summary: "OPC Servers Connected" },
-	// },
 	{
 		path: 'apps/gateways/:instance', title: ":instance", component: ComponentSidenav, canActivate: [AuthGuard],
 		children :[
@@ -114,8 +95,9 @@ export const routes: Routes = [
 				path: '',
 				component: GatewayDetail,
 				providers:[ GatewayResolver, gatewayProvider],
-				resolve: {data : GatewayResolver},
-				canActivate: [AuthGuard]
+				resolve: {data: GatewayResolver},
+				canActivate: [AuthGuard],
+				data: { tableSettings: gatewayTableSettings }
 			},
 			{
 				path: ':connection',
@@ -126,39 +108,7 @@ export const routes: Routes = [
 				resolve: { pageData: ClientResolver }
 			}
 		]
-	},
-
-//	{ path: 'settings', component: ComponentSidenav, providers: [qlListProvider],
-//		children:
-//		[
-//			{ path: 'applications', component: Applications, title: "Applications", canActivate: [AuthGuard], data: { summary: "View Applications" } },
-			// 	{ path: 'gateways', title: "Gateways", canActivate: [AuthGuard], component: Cards,
-			// 	children :[
-			// 		{ path: ':target',     component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "pathParamsOrQueryParamsChange" }/*,
-			// 		{ path: ':target/:id', component: NodeDetail, canActivate: [AuthGuard], resolve: { pageData: NodeResolver }, providers: [NodeResolver,opcNodeRouteProvider], runGuardsAndResolvers: "paramsChange" },*/
-			// 	]
-			// },
-
-			// {
-			// 	path: ':collectionDisplay',
-			// 	component: QLList,
-			// 	providers:[ QLListResolver, gatewayProvider],
-			// 	resolve: {data : QLListResolver},
-			// 	canActivate: [AuthGuard],
-			// 	data: { collections: [
-			// 		{ path:"clients", title: "OPC Clients", data:{summary: "Change OPC Clients on Gateway", collectionName: "clients"} },
-			// 	]}
-			// },
-			// {
-			// 	path: 'gateways/:target',
-			// 	component: GatewayDetail,
-			// 	providers: [ DetailResolver<ServerCnnctn>, gatewayProvider ],
-			// 	canActivate: [AuthGuard],
-			// 	data: { summary: "Opc Gateway Detail" },
-			// 	resolve: { pageData: DetailResolver<ServerCnnctn> }
-			// }
-//		]
-//	}
+	}
 ];
 function setRoutes(){
 	return routes;
@@ -166,7 +116,7 @@ function setRoutes(){
 
 @NgModule( { imports: [RouterModule.forRoot([])], exports: [RouterModule],
 	providers: [
-		{ provide: ROUTES, useFactory: setRoutes, multi: true },AuthGuard]
+		{ provide: ROUTES, useFactory: setRoutes, multi: true }]//AuthGuard is providedIn:'root'; listing it here built a second one for this module's injector
 })
 export class AppRoutingModule
 {}

@@ -59,11 +59,7 @@ export class NavBar implements OnInit {
 		).map( x=>({ name: x.title as string, route: '/'+x.path } ));
   }
 	async ngOnInit(){
-		this.favorites.set( this.defaultFavorites );
-		//this.favorites.set( await this.#profileStore.load<Favorite[]>("favorites", this.defaultFavorites) );
-		this.isLoading.set( false );
-
-		this.router.events.pipe(
+		this.router.events.pipe(//subscribe before the await:  the load defers the rest of ngOnInit past the initial NavigationEnd.
 			filter( (e)=> e instanceof NavigationEnd )
 		).subscribe( (e:NavigationEnd)=>{
 			this.router.config.find( config=>{
@@ -80,15 +76,12 @@ export class NavBar implements OnInit {
 				}
 				let title = config.title as string;
 				this.name.set( !title || title.startsWith(':') ? e.urlAfterRedirects.split('?')[0].split('/').pop()! : title );
-				this.route.set( e.urlAfterRedirects.split('?')[0] );
 				return true;
 			});
-			let fav = this.favorites().find( fav=>{
-				const y = fav.route==e.urlAfterRedirects.split('?')[0];
-				return y ? fav : null;
-			})!;
-			this.existing.set( fav );
-		})
+			this.route.set( e.urlAfterRedirects.split('?')[0] );
+		});
+		this.favorites.set( await this.#profileStore.load<Favorite[]>("favorites", this.defaultFavorites) );
+		this.isLoading.set( false );
 	}
 	asFolder(item:Favorite|Folder):Folder{
 		return item as Folder;
@@ -97,27 +90,20 @@ export class NavBar implements OnInit {
     return {exact:!route.path!.length};
   }
 	onFavoriteChange( change:Favorite ){
+		const route = this.route();
 		let favs;
-		if( this.existing() && !change ){ //delete
-			favs = this.favorites().filter( fav=>fav.route!=this.existing()!.route );
-			this.existing.set( undefined );
-		}
+		if( !change ) //delete
+			favs = this.favorites().filter( fav=>fav.route!=route );
 		else{
-			let newFav = { ...change, route: this.route() };
-			let previous = this.favorites().find( fav=>fav.route==newFav.route );
-			if( previous ){ //edit
-				previous.name = newFav.name;
-				previous.folderName = newFav.folderName;
-				this.existing.set( previous );
-				favs = [ ...this.favorites() ];
-			}
-			else{ //add
-				favs = [ ...this.favorites(), newFav ];
-				this.existing.set( newFav );
-			}
+			favs = [ ...this.favorites() ];
+			const index = favs.findIndex( fav=>fav.route==route );
+			if( index==-1 ) //add
+				favs.push( { ...change, route } );
+			else //edit
+				favs[index] = { ...favs[index], name: change.name, folderName: change.folderName };
 		}
 		this.favorites.set( favs );
-		//this.#profileStore.save( "favorites", favs );
+		this.#profileStore.save( "favorites", favs );
 	}
 
 	onSearch( event:any ){
@@ -153,7 +139,7 @@ export class NavBar implements OnInit {
 	isLoading = signal<boolean>( true );
 	name = signal<string>( null as any );
 	route = signal<string>( null as any );
-	existing = signal<Favorite|undefined>( undefined );// the favorite corresponding to the current route, if any
+	existing = computed<Favorite|undefined>( ()=>this.favorites()?.find( fav=>fav.route==this.route() ) );// the favorite corresponding to the current route, if any
 	router = inject(Router);
 	searchForm = new FormControl<string>('');
 }

@@ -1,50 +1,46 @@
-import { Component, OnDestroy, OnInit, ViewChild, Inject, input, effect, Signal, signal, inject, computed, viewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, input, effect, Signal, signal, inject, computed, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import {MatSortModule, Sort} from '@angular/material/sort';
 import {MatDatepickerInputEvent} from '@angular/material/datepicker';
 import { Subject, Unsubscribable } from 'rxjs';
-import { LogDataSource } from './DataSource';
-import {AppStatus} from '../../services/app/application';
-import {LogSettings} from './Settings';
-import { QLListSettings } from '../ql/list/ql-list-settings/ql-list-settings';
+import { LogDataSource } from '../DataSource';
+import {AppStatus} from '../../../services/app/application';
+import {LogSettings} from '../Settings';
+import { QLListSettings } from '../../ql/list/ql-list-settings/ql-list-settings';
 import { ComponentPageTitle } from 'jde-spa';
-import {IErrorService} from '../../services/error/IErrorService';
+import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
 
 
-import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
-import * as LogProto from '../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
+import * as AppFromServer from '../../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
+import * as LogProto from '../../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
 import { FormControl } from '@angular/forms';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatOption, MatSelect } from '@angular/material/select';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import {MatSelectModule} from '@angular/material/select';
-import { PageEvent, Paginator } from '../../shared/paginator/paginator';
+import { PageEvent, Paginator } from '../../../shared/paginator/paginator';
 import { ProfileStore } from 'jde-spa';
-import { IGraphQL, ProtoService, TableSchema, verify, View, ViewType } from 'jde-framework';
-import { Entry,LogEntries, LogEntriesRest, LogView } from './LogEntry';
+import { IGraphQL } from '../../../services/IGraphQL';
+import { TableSchema } from '../../../model/ql/schema/TableSchema';
+import { verify } from '../../../utils/utils';
+import { View, ViewType } from '../../../model/ql/View';
+import { Entry,LogEntries, LogEntriesRest, LogView } from '../LogEntry';
 
 // Move levels to combo.
 // Add dates.
 // Fix pause button.
 // Comment out statuses
 @Component({
-	selector: 'logs',
+	selector: 'log-detail',
 	//.main-content.mat-drawer-container.my-content
 	templateUrl: './logs.html',
 	styleUrls: ['./logs.scss'],
 	imports: [CommonModule, MatFormFieldModule, MatIcon, MatIconButton, MatTableModule, MatToolbar, MatSelectModule, MatSortModule, Paginator, QLListSettings]
 })
-export class Logs implements OnInit, OnDestroy{
-	constructor( public _componentPageTitle: ComponentPageTitle, @Inject('IErrorService') private snackBar: IErrorService ){
-		// effect( ()=>{
-		// 	if( this.isSettings() )
-		// 		debugger;
-		// 	else
-		// 		debugger;
-		// } );
+export class LogDetail implements OnInit, OnDestroy{
+	constructor( public _componentPageTitle: ComponentPageTitle, private snackBar: SnackbarService ){
 	}
 
 	async ngOnInit(){
@@ -58,7 +54,6 @@ export class Logs implements OnInit, OnDestroy{
 		await this.load();//load() sends the profile's level, so the first page already matches the combo
 	}
 	ngOnDestroy(){
-		//this.appService.statusUnsubscribe( this.statusSubscription );
 		this.unsubscribe();
 		this.profileStore.save<LogSettings>( "logs", this.profile );
 	}
@@ -72,7 +67,7 @@ export class Logs implements OnInit, OnDestroy{
 			this.isLoading.set( false );
 		}
 		catch(e){
-			this.snackBar.exception( e, (m)=>console.log(m) );
+			this.snackBar.exception( "Could not load log entries.", e );
 		}
 	}
 
@@ -100,10 +95,7 @@ export class Logs implements OnInit, OnDestroy{
 		}
 		if( i>0 ){
 			this.buffer.splice( 0, i );
-			//this.push( entries );
 		}
-	//	if( !this.buffer.length )
-	//		console.log( 'no buffer length' );
 	}
 
 	onChangeApplication( event:number ){
@@ -120,7 +112,6 @@ export class Logs implements OnInit, OnDestroy{
 			this.unsubscribe();
 			this.level = level;
 			this.currentSubscription = subscription;
-			//this.subscription = this.appService.logs( subscription.applicationId, subscription.level, subscription.start, subscription.limit ).subscribe( traces => {this.onTrace(traces);} );
 		}
 	}
 
@@ -128,15 +119,10 @@ export class Logs implements OnInit, OnDestroy{
 		if( this.subscription ){
 			this.subscription.unsubscribe();
 			this.subscription = undefined;
-			this.currentSubscription = Logs.DefaultSubscription;
+			this.currentSubscription = LogDetail.DefaultSubscription;
 		}
 	}
-	// @HostListener('window:scroll', ['$event'])
-	// doSomething(event)
-	// {
-	// 	console.debug("Scroll Event", document.body.scrollTop );
-	// 	console.debug("Scroll Event", window.pageYOffset );
-	// }
+
 	onLevelChange( logLevel:ELogLevel ){
 		this.subscribe( this.applicationId, logLevel );
 	}
@@ -283,7 +269,7 @@ export class Logs implements OnInit, OnDestroy{
 		if( !this.data.selectNext() ){
 			await this.load( this.data.allEntries.length );
 			if( !this.data.selectNext() )
-				this.snackBar.warn( "No more instances found.", (m)=>console.log(m) );
+				this.snackBar.warn( "No more instances found." );
 		}
 	}
 	applyFilter( value:string ){
@@ -350,7 +336,7 @@ export class Logs implements OnInit, OnDestroy{
 	startChange( event: MatDatepickerInputEvent<Date> ){ this.subscribe( this.applicationId, this.level ); }
 	private buffer:Entry[] = [];
 	static DefaultSubscription:ISubscription={ applicationId: 0, level:  ELogLevel.NoLog, start:null };
-	private currentSubscription:ISubscription=Logs.DefaultSubscription;//actual subscribtion
+	private currentSubscription:ISubscription=LogDetail.DefaultSubscription;//actual subscribtion
 	isLoading = signal<boolean>( true );
 	isSettings = signal<boolean>( false );
 //	lengthChange = new Subject<number>();

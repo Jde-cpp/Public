@@ -20,5 +20,6 @@ namespace Jde::App::Server{
 }
 namespace Jde::App{
 	α AddConnection( str applicationName, str instanceName, str hostName, uint pid )ε->tuple<ProgramPK, ProgInstPK, ConnectionPK>;
-	α EndInstance( ProgInstPK instanceId, SRCE )ι->DB::ExecuteAwait::Task;
+	//ends a *connection*, not a program instance - it stamps connections.deleted for one connection_id.
+	α EndConnection( ConnectionPK connectionId, SRCE )ι->DB::ExecuteAwait::Task;
 }

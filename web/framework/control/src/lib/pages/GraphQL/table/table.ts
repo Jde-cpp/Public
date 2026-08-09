@@ -1,9 +1,9 @@
-import { Component, Inject, input, effect, model, Signal, output } from '@angular/core';
+import { Component, input, effect, model, Signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SelectionModel } from '@angular/cdk/collections';
 import { MatTableModule } from '@angular/material/table';
 import { MatSortModule, Sort } from '@angular/material/sort';
-import { IErrorService } from '../../../services/error/IErrorService';
+import { SnackbarService } from '../../../shared/snackbar/snackbar-service';
 import {FieldKind} from '../../../model/ql/schema/Field';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { MatIcon } from '@angular/material/icon';
@@ -17,7 +17,7 @@ import { ViewField } from '../../../model/ql/View';
 	imports: [CommonModule, MatCheckbox, MatIcon, MatTableModule, MatSortModule]
 })
 export class GraphQLTable{
-	constructor( @Inject('IErrorService') private cnsle: IErrorService ){
+	constructor( private cnsle: SnackbarService ){
 	}
 
 	checkboxLabel( row?: any ): string{

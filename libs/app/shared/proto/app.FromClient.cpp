@@ -59,7 +59,7 @@ namespace Jde::App{
 		i.set_application( application );
 		i.set_instance_name( instanceName );
 		i.set_session_id( sessionId );
-		i.set_host( Process::HostName() );
+		i.set_host( Settings::FindString("/http/host").value_or(Process::HostName()) );//advertised web host - browsers reach the web endpoint by this name, and sameHost CORS requires it to match the page's host; the machine name is wrong when pages are served from 'localhost'.
 		i.set_pid( Process::ProcessId() );
 		*i.mutable_start_time() = Jde::Protobuf::ToTimestamp( Process::StartTime() );
 		i.set_web_port( Settings::FindNumber<PortType>("/http/port").value_or(0) );

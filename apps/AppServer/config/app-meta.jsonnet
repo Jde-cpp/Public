@@ -5,6 +5,7 @@ local common = import 'common-meta.libsonnet';
 		connections_ql:{
 			columns: {
 				connectionId: tables.connections.columns.connectionId,
+				instanceId: common.types.uint+{ i:1 }, // plain data, no sequence/sk
 				instanceName: tables.instances.columns.name,
 				programName: tables.programs.columns.name,
 				hostName: tables.hosts.columns.name,

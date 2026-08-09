@@ -106,12 +106,16 @@ namespace Jde::App::Tests{
 		EXPECT_EQ( binary.at("externalLogger").as_string(), "None" ); //…and logging.proto.tags.
 	}
 
-	//`tags` is the name->bit map the settings UI builds its tag list from, not a per-logger level.
+	//`tags` is the name->bit map the settings UI builds its tag list from, not a per-logger level.  The query asks for
+	//the *user* catalog - Tags(true) - which adds the composite tags (httpServerRead = Http|Server|Read &c) on top of
+	//the single-bit ones, so assert against that overload, not the bare Tags().
 	TEST_F( LogSettingsTests, QueryReturnsTheTagCatalog ){
 		let tags = logSettings( {"tags"} ).at( "tags" ).as_object();
-		EXPECT_EQ( tags.size(), Logging::Tags().size() );
+		EXPECT_EQ( tags.size(), Logging::Tags(true).size() );
+		EXPECT_GT( Logging::Tags(true).size(), Logging::Tags().size() ) << "the user catalog is a superset of the single-bit tags";
 		EXPECT_EQ( tags.at("app").to_number<uint>(), (uint)ELogTags::App );
 		EXPECT_EQ( tags.at("test").to_number<uint>(), (uint)ELogTags::Test );
+		EXPECT_EQ( tags.at("httpServerRead").to_number<uint>(), (uint)ELogTags::HttpServerRead ) << "composite tags have to reach the UI";
 	}
 
 	//The ported round trip:  flip the default, read it back through the query, for each logger in turn.

@@ -229,7 +229,7 @@ namespace Jde::App{
 			else if( name=="line" )
 				o[name] = entry.line();
 			else if( name=="time" )
-				o[name] = ToIsoString( Protobuf::ToTimePoint(entry.time()) )+'Z';
+				o[name] = ToIsoString( Protobuf::ToTimePoint(entry.time()) );//ToIsoString already ends in 'Z'.
 			else if( name=="userId" )
 				o[name] = entry.user_pk();
 			else if( name=="fileId" ){

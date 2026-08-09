@@ -2,7 +2,7 @@ import { Injectable, Inject, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
-import { AppService, AuthStore, Duration, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Timestamp, Type, Query } from 'jde-framework';
+import { AppService, AuthStore, describeFetchError, Duration, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Timestamp, Type, Query } from 'jde-framework';
 import { EProvider, User } from 'jde-spa';
 
 
@@ -45,7 +45,7 @@ export class GatewayService implements IGraphQL{
 			console.debug( `GatewayService:  url changed to '${url}'` );
 		});
 	}
-	onGatewaySuccess(gateways:Instance[], transport:ETransport, http: HttpClient, authStore:AuthStore, opcStore:OpcStore){
+	private onGatewaySuccess(gateways:Instance[], transport:ETransport, http: HttpClient, authStore:AuthStore, opcStore:OpcStore){
 		if( gateways.length==0 )
 			console.error("No IotServies running");
 		this.#gateways = gateways.map( instance=>new Gateway(instance, transport, http, authStore, opcStore) );
@@ -72,7 +72,7 @@ export class GatewayService implements IGraphQL{
 		return Promise.resolve( this.#gateways );
 	}
 	async ql<Y>( q:Query, log:Log ):Promise<Y>{ return this.defaultGateway.ql( q, log ); }
-	async query<T>( ql: string ):Promise<T>{ return this.defaultGateway.query<T>( ql ); }
+	async query<T>( ql: string, args?:any, log?:Log ):Promise<T>{ return this.defaultGateway.query<T>(ql, args, log); }
 	async querySingle<T>( ql: string ):Promise<T>{ return this.defaultGateway.querySingle<T>( ql ); }
 	async schema( names:string[] ):Promise<TableSchema[]>{ return this.defaultGateway.schema( names ); }
 	async schemaWithEnums( type:string, log:Log ):Promise<TableSchema>{ return this.defaultGateway.schemaWithEnums( type, log ); }
@@ -106,8 +106,12 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	constructor( gateway:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore ){
 		super( FromClient.Transmission, http, transport, authStore );
 		super.instances = [gateway];
+		if( typeof location!="undefined" && gateway.host!=location.hostname )//the registry reports the machine hostname; a page served from another host fails the server's allowOrigin 'sameHost' check
+			console.warn( `Gateway '${gateway.instanceName}' is registered at host '${gateway.host}' but the app is served from '${location.hostname}' - requests will be CORS-blocked unless http/accessControl/allowOrigin is pinned or the app is browsed via '${gateway.host}'.` );
 		super.queryArray<ServerCnnctn>( `serverConnections{id target name url certificateUri defaultBrowseNs}`, null, (x)=>console.log(x) ).then( connections=>{
 			connections.forEach( c=>this.#connections.set(c.target, new ServerCnnctn(c as any)) );
+		}).catch( async e=>{
+			console.error( await describeFetchError(this.urlWithTarget("graphql"), e) );
 		});
 	}
 	async login( domain:string, username:string, password:string, log:Log ):Promise<void>{
@@ -178,7 +182,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 			}
 		}
 		catch( e ){
-			if( e instanceof String )
+			if( typeof e=="string" )
 				console.error( e );
 			else
 				console.error( e );

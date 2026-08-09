@@ -6,7 +6,7 @@ import { MatTable } from '@angular/material/table';
 import {FormsModule} from '@angular/forms';
 import {MatSelectModule} from '@angular/material/select';
 import { QLListSettings } from './ql-list-settings/ql-list-settings';
-import {IErrorService} from '../../../services/error/IErrorService'
+import {SnackbarService} from '../../../shared/snackbar/snackbar-service'
 import {IGraphQL, EnumValue } from '../../../services/IGraphQL';
 import {Field} from '../../../model/ql/schema/Field';
 import {TableSchema}  from '../../../model/ql/schema/TableSchema';
@@ -40,7 +40,7 @@ export class QLList implements OnInit, OnDestroy{
 		private router:Router,
 		private componentPageTitle:ComponentPageTitle,
 		@Inject('IGraphQL') private ql: IGraphQL,
-		@Inject('IErrorService') private snackbar: IErrorService)
+		private snackbar: SnackbarService)
 	{}
 
 	ngOnDestroy(){
@@ -94,7 +94,7 @@ export class QLList implements OnInit, OnDestroy{
 		try{
 			this.router.navigate([row.target], {relativeTo: this.route} );
 		}catch( e ){
-			this.snackbar.exceptionInfo( e, "Could not navigate to properties", (m)=>console.log(m) );
+			this.snackbar.exception( "Could not navigate to properties", e );
 		}
 	}
 
@@ -108,7 +108,7 @@ export class QLList implements OnInit, OnDestroy{
 			await this.refresh( this.resolvedData().profile );
 		}
 		catch( e ){
-			this.snackbar.exception( e, (m)=>console.log(m) );
+			this.snackbar.exception( "Could not refresh data.", e );
 		}
 	}
 
@@ -128,7 +128,7 @@ export class QLList implements OnInit, OnDestroy{
 			}
 		}
 		catch( e ){
-			this.snackbar.exception( e, (m)=>console.log(m) );
+			this.snackbar.exception( "Could not delete entry.", e );
 		}
 	}
 	selection = computed<any>( ()=>{
@@ -228,7 +228,7 @@ export class QLList implements OnInit, OnDestroy{
 	collectionName = computed<string>( ()=>this.schema().collectionName );
 	columns():Record<string,string>{ return this.resolvedData().columns; }
 	data = signal<any[]>([]);
-	excludedColumns = computed<string[]>( ()=>this.tableSettings().excludedColumns );
+	excludedColumns = computed<string[]>( ()=>this.tableSettings().excludedColumns ?? [] );
 	get name():string{ return <string>this.routeConfig.title; }
 	enums = computed<Map<string, EnumValue[]>>( ()=>this.schema().enums );
 	resolvedData = signal<QLListData>(null as any);

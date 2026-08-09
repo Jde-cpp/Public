@@ -65,8 +65,8 @@ namespace Jde::Web::Server{
 		{}
 	}
 
-	α IWebsocketSession::LogRead( string&& what, RequestId requestId, ELogLevel level, SL sl )ι->void{ //TODO forward args.
-		Logging::Log( level, ELogTags::SocketServerRead, sl, "[{:x}.{:x}]{}", Id(), requestId, move(what) );
+	α IWebsocketSession::LogRead( string&& what, RequestId requestId, ELogLevel level, ELogTags tags, SL sl )ι->void{ //TODO forward args.
+		Logging::Log( level, tags, sl, "[{:x}.{:x}]{}", Id(), requestId, move(what) );
 	}
 
 	α IWebsocketSession::LogWrite( string&& what, RequestId requestId, ELogLevel level, SL sl )ι->void{

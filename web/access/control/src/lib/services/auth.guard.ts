@@ -1,6 +1,6 @@
 import {inject, Inject, Injectable} from '@angular/core';
 import {ActivatedRouteSnapshot, CanActivate, CanActivateChild, GuardResult, Router, RouterStateSnapshot, UrlTree} from '@angular/router';
-import { AccessService } from 'jde-access';
+import { AccessService } from './access.service';
 
 
 @Injectable( {providedIn: 'root'} )

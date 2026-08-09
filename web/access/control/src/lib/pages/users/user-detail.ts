@@ -1,4 +1,4 @@
-import { Component, effect, OnInit, OnDestroy, signal, inject, Inject, model } from '@angular/core';
+import { Component, effect, OnInit, OnDestroy, signal, inject, model } from '@angular/core';
 import { SelectionModel } from '@angular/cdk/collections';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,7 +7,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
 import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
-import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, Properties, QLSelector, Style, TableSettings, TargetRow, toIdArray} from 'jde-framework';
+import { arraysEqual, cloneClassArray, DetailResolverData, SnackbarService, IGraphQL, Properties, QLSelector, Style, TableSettings, TargetRow, toIdArray} from 'jde-framework';
 
 import { RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
@@ -23,7 +23,7 @@ import { User } from '../../model/User';
     imports: [CommonModule, MatButtonModule, MatIcon, MatTabsModule, Properties, PermissionTable, QLSelector]
 })
 export class UserDetail implements OnDestroy, OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, @Inject('IErrorService') private snackbar: IErrorService ){
+	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, private snackbar: SnackbarService ){
 		effect(() => {
 			if( !this.properties() )
 				return;
@@ -73,7 +73,7 @@ export class UserDetail implements OnDestroy, OnInit{
 			await this.ql.mutate( mutation, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 		}catch(e){
-			this.snackbar.exceptionInfo( e, "Save failed.", (m)=>console.log(m) );
+			this.snackbar.exception( "Save failed.", e );
 		}
 	}
 	public onCancelClick(){

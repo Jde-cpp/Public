@@ -29,12 +29,12 @@
 	"launch": {
 		"version": "0.2.0",
 		"configurations": [{
-				"name": "ng serve",
+				"name": "Debug",
 				"type": "chrome",
 				"request": "launch",
-				"preLaunchTask": "npm: start",
+				"preLaunchTaskx": "npm: start",
 				"url": "http://localhost:4200/",
-				"userDataDir": false
+				"userDataDir": "${env:HOME}/.config/vscode-chrome-debug"
 			},
 			{
 				"name": "ng test",
@@ -63,14 +63,6 @@
 				"options": { "cwd": "${workspaceFolder:my-workspace}" },
 				"isBackground": true,
 				"problemMatcher": { "owner": "typescript", "pattern": "$tsc", "background": { "activeOnStart": true, "beginsPattern": { "regexp": "Changes detected" }, "endsPattern": { "regexp": "bundle generation (complete|failed)" } } }
-			},
-
-			{
-				"type": "npm",
-				"script": "startxx",
-				"problemMatcher": { "owner": "typescript", "pattern": "$tsc", "background": { "activeOnStart": true, "beginsPattern": { "regexp": "(.*?)" }, "endsPattern": { "regexp": "bundle generation complete" } } },
-				"label": "npm: startx",
-				"detail": "ng serve"
 			},
 			{
 				"label": "build",

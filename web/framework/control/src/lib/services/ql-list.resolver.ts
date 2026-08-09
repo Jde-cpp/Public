@@ -1,6 +1,6 @@
 import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot} from '@angular/router';
 import {inject, Inject, Injectable} from '@angular/core';
-import {IErrorService} from './error/IErrorService';
+import {SnackbarService} from '../shared/snackbar/snackbar-service';
 import { TableSchema} from '../model/ql/schema/TableSchema';
 import { IGraphQL } from '../services/IGraphQL';
 import { PageProfile, PageSettings } from '../pages/GraphQL/model/PageSettings';
@@ -12,7 +12,7 @@ import { RouteStore } from './route.store';
 import { View, ViewFieldSettings } from '../model/ql/View';
 import { Sort } from '@angular/material/sort';
 
-export type TableSettings = {canPurge?:boolean,showAdd?:boolean, excludedColumns:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]};
+export type TableSettings = {canPurge?:boolean,showAdd?:boolean, excludedColumns?:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]|string};
 export type CollectionItem = string | { path:string, title?:string, data?:{summary:string, collectionName:string, tableSettings:TableSettings} };
 export class ListRoute extends RouteItem{
 	constructor( collection:string|CollectionItem ){
@@ -44,7 +44,7 @@ export type QLListData = {
 
 @Injectable()
 export class QLListResolver implements Resolve<QLListData> {
-	constructor( private route: ActivatedRoute, private router:Router, @Inject('IGraphQL') private ql: IGraphQL, @Inject('IErrorService') private cnsl: IErrorService ){}
+	constructor( private route: ActivatedRoute, private router:Router, @Inject('IGraphQL') private ql: IGraphQL, private cnsl: SnackbarService ){}
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<QLListData>{
 		const collectionDisplay = route.paramMap.get( "collectionDisplay" );

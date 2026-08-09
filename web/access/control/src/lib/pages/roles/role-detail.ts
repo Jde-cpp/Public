@@ -1,4 +1,4 @@
-import { Component, effect, OnInit, OnDestroy, Inject, signal, inject, model } from '@angular/core';
+import { Component, effect, OnInit, OnDestroy, signal, inject, model } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {ActivatedRoute, Router} from '@angular/router';
 import { SelectionModel } from '@angular/cdk/collections';
@@ -7,7 +7,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
 import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
-import { arraysEqual, cloneClassArray, DetailResolverData, IErrorService, IGraphQL, Properties, QLSelector, TableSettings, TargetRow, toIdArray} from 'jde-framework';
+import { arraysEqual, cloneClassArray, DetailResolverData, SnackbarService, IGraphQL, Properties, QLSelector, TableSettings, TargetRow, toIdArray} from 'jde-framework';
 import { Role, RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
 import { Permission } from '../../model/Permission';
@@ -23,7 +23,7 @@ import { UserPK } from '../../model/User';
     imports: [CommonModule, MatButtonModule, MatIcon, MatTabsModule, Properties, PermissionTable, QLSelector]
 })
 export class RoleDetail implements OnDestroy, OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, @Inject('IErrorService') private snackbar: IErrorService ){
+	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, private snackbar: SnackbarService ){
 		effect(() => {
 			if( !this.properties() )
 				return;
@@ -86,7 +86,7 @@ export class RoleDetail implements OnDestroy, OnInit{
 			await this.ql.mutate( mutation, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 		}catch(e){
-			this.snackbar.exceptionInfo( e, "Save failed.", (m)=>console.log(m) );
+			this.snackbar.exception( "Save failed.", e );
 		}
 	}
 	public onCancelClick(){

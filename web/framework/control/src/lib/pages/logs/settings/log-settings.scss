@@ -1,0 +1,13 @@
+.centered-content{
+	display: flex;
+	justify-content: center;
+}
+.load-error{
+	margin: 16px;
+	color: var(--mat-sys-error, #b3261e);
+}
+.restart-hint{
+	margin-left: 16px;
+	font-size: 12px;
+	opacity: 0.7;
+}

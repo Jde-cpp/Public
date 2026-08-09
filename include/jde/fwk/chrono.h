@@ -6,7 +6,10 @@
 #define Φ Γ auto
 namespace Jde{
 	using namespace std::chrono;
-	template<class T=TimePoint>
+
+	//Precision is the chrono duration to truncate to - ToIsoString<seconds>(tp) - and may be days, hours, minutes, or
+	//any seconds-or-finer duration.  void, the default, renders the time_point's own precision, untouched.
+	template<class Precision=void, class T=TimePoint>
 	α ToIsoString( T timePoint )ι->string;
 }
 namespace Jde::Chrono{
@@ -26,14 +29,30 @@ namespace Jde::Chrono{
 	α ToClock( typename From::time_point from )ι->typename To::time_point{ return To::now()-milliseconds{duration_cast<milliseconds>(From::time_point::clock::now()-from)}; }
 }
 
-template<>
-Ξ Jde::ToIsoString( steady_clock::time_point tp )ι->string{
-	return Jde::ToIsoString<TimePoint>( Chrono::ToClock<Clock, steady_clock>(tp) );
-}
-Ŧ Jde::ToIsoString( T timePoint )ι->string{
-	return std::chrono::duration_cast<std::chrono::milliseconds>( timePoint.time_since_epoch() ).count()%1000==0
-		? std::format( "{:%FT%T}", std::chrono::floor<seconds>(timePoint) )
-		: std::format( "{:%FT%T}", timePoint );
+//the single definition, so steady_clock is normalized in one place - no explicit specialization that would have to
+//precede every instantiation.
+template<class Precision, class T>
+auto Jde::ToIsoString( T timePoint )ι->string{
+	using namespace std::chrono;
+	if constexpr( std::same_as<T,steady_clock::time_point> )
+		return ToIsoString<Precision>( Chrono::ToClock<Clock, steady_clock>(timePoint) );
+	//format the *truncated type*, not a truncated value: %T's subsecond digit count comes from the time_point's
+	//period, so assigning back to T would print the dropped digits as zeros (…T00:00:00.123000000Z).  Each step
+	//drops one field rather than zero-filling it, so the string narrows with the precision.
+	//floor, not round: these render expirations and 'the day/hour it falls in' never advances to the next one.
+	else if constexpr( std::same_as<Precision,void> )
+		return std::format( "{:%FT%T}Z", timePoint );//no truncation - whatever precision T already carries.
+	else if constexpr( std::same_as<Precision,days> )
+		return std::format( "{:%F}", floor<days>(timePoint) );//a bare date has no zone to designate - no 'Z'.
+	else if constexpr( std::same_as<Precision,hours> )
+		return std::format( "{:%FT%H}Z", floor<hours>(timePoint) );
+	else if constexpr( std::same_as<Precision,minutes> )
+		return std::format( "{:%FT%R}Z", floor<minutes>(timePoint) );
+	else{
+		static_assert( Precision::period::num==1,
+			"ToIsoString<Precision> takes days, hours, minutes, or a seconds-or-finer duration - a 12-hour or 5-minute period has no ISO-8601 rendering." );
+		return std::format( "{:%FT%T}Z", floor<Precision>(timePoint) );
+	}
 }
 namespace Jde{
 	Ŧ Chrono::ToString( T d )ι->string{

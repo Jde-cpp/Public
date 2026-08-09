@@ -1,7 +1,7 @@
-import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
-import { inject, Inject, Injectable } from '@angular/core';
+import { ActivatedRouteSnapshot, createUrlTreeFromSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
+import { inject, Injectable } from '@angular/core';
 import { ProfileStore } from 'jde-spa';
-import { IErrorService, TableSchema } from 'jde-framework';
+import { SnackbarService, TableSchema } from 'jde-framework';
 import { Role, RoleNK } from '../model/Role';
 import { AccessService } from '../services/access.service';
 
@@ -11,9 +11,9 @@ export class IRoleData{
 };
 @Injectable()
 export class RoleResolver implements Resolve<IRoleData> {
-	constructor( private route: ActivatedRoute, private router:Router, @Inject('IErrorService') private snackbar: IErrorService ){}
+	constructor( private router:Router, private snackbar: SnackbarService ){}
 
-	async load(target:RoleNK):Promise<IRoleData>{
+	async load(target:RoleNK, route:ActivatedRouteSnapshot):Promise<IRoleData>{
 		const schema = await this.#ql.schemaWithEnums( "roles", (m)=>console.log(m) );
 
 		let ql = `role( target: "${target}" ){ id target name created updated ${ProfileStore.showDeleted("roles") ? "deleted" : ""} description permissionRights{id allowed denied resource{id}} roles{id} }`;
@@ -21,13 +21,13 @@ export class RoleResolver implements Resolve<IRoleData> {
 			const role = await this.#ql.querySingle(ql);
 			return { role: new Role(role), schema: schema };
 		}catch( e ){
-			this.snackbar.error( `Role not found:  '${target}'`, (m)=>console.error(m) );
-			this.router.navigate( ['..'], { relativeTo: this.route } );
+			this.snackbar.error( `Role not found:  '${target}'` );
+			this.router.navigateByUrl( createUrlTreeFromSnapshot(route, ['..']) );//an injected ActivatedRoute is the ROOT route inside a resolver, so relativeTo sent this to '/';  the snapshot is this route.
 			return null;
 		}
 	}
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<IRoleData>{
-		return this.load( route.paramMap.get("target") );
+		return this.load( route.paramMap.get("target"), route );
 	}
 
 	#ql = inject( AccessService );

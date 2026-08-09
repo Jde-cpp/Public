@@ -41,7 +41,7 @@ namespace Jde::Web::Server{
 		β SendAck( uint32 id )ι->void=0;
 		β Query( Proto::Query&& query, RequestId requestId, function<string(string&&, RequestId)>&& toProtoString )ι->QL::QLAwait<jvalue>::Task;
 
-		α LogRead( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;
+		α LogRead( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, ELogTags tags=ELogTags::SocketServerRead, SRCE )ι->void;
 		α LogWriteException( const exception& e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α LogWriteException( str e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α QueryClientResults( string&& queryResult, RequestId requestId )ι->void;

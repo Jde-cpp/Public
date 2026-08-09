@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@angular/core';
-import { ActivatedRoute, ActivatedRouteSnapshot, Params, Resolve, Router, RouterStateSnapshot } from '@angular/router';
-import { IErrorService } from 'jde-framework';
+import { ActivatedRouteSnapshot, createUrlTreeFromSnapshot, Params, Resolve, Router, RouterStateSnapshot } from '@angular/router';
+import { SnackbarService } from 'jde-framework';
 import { Gateway, GatewayService } from '../gateway.service';
 import { OpcObject, UaNode } from '../../model/Node';
 import { NodeRoute } from '../../model/NodeRoute';
@@ -17,10 +17,9 @@ export type NodePageData = {
 export class NodeResolver implements Resolve<NodePageData> {
 	constructor(
 		private router:Router,
-		@Inject('IErrorService') private snackbar: IErrorService,
+		private snackbar: SnackbarService,
 		@Inject('GatewayService') private gatewayService: GatewayService,
-		@Inject('OpcStore') private opcStore:OpcStore,
-		@Inject(ActivatedRoute) private route: ActivatedRoute
+		@Inject('OpcStore') private opcStore:OpcStore
 	){}
 
 	async load( route:NodeRoute ):Promise<NodePageData>{
@@ -41,8 +40,8 @@ export class NodeResolver implements Resolve<NodePageData> {
 			this.opcStore.setRoute( route, defaultBrowseNs );
 			return { route: route, nodes: displayed, gateway: gateway, server: server };
 		}catch( e ){
-			this.snackbar.exceptionInfo( e, `Not found:  '${route.cnnctnTarget}'`, (m)=>console.log(m) );
-			this.router.navigate( ['..'], { relativeTo: this.route } );
+			this.snackbar.exception( "Not found.", e );
+			this.router.navigateByUrl( createUrlTreeFromSnapshot(route.route, ['..']) );//an injected ActivatedRoute is the ROOT route inside a resolver, so relativeTo sent this to '/';  NodeRoute keeps this route's snapshot.
 			return undefined as unknown as NodePageData;
 		}
 	}
