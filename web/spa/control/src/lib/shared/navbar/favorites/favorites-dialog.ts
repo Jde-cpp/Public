@@ -52,7 +52,7 @@ export class Favorites {
 })
 export class FavoritesDialog {
 	constructor( public dialogRef: MatDialogRef<FavoritesDialog>, @Inject(MAT_DIALOG_DATA) public data: DialogData ){
-		this.favoriteModel.set( {name: this.titleService.getTitle(), folderName: data.existing?.folderName ?? ""} );
+		this.favoriteModel.set( {name: data.existing?.name || data.name || this.titleService.getTitle(), folderName: data.existing?.folderName ?? ""} );//the document title is ':instance' for parameterized routes; data.name is the resolved segment.
 		this.folderNames = data.folderNames;
 	};
 	onRemove(): void {

@@ -39,7 +39,7 @@ export class LogSettingsPanel implements OnInit, OnDestroy{
 		catch( e ){
 			this.error.set( `${e}` );//without this the panel stays behind isLoading and renders blank
 			this.isLoading.set( false );
-			this.snackBar.exception( e, (m)=>console.log(m) );
+			this.snackBar.exception( "Could not load log settings.", e );
 		}
 	}
 	async save(){
@@ -65,7 +65,7 @@ export class LogSettingsPanel implements OnInit, OnDestroy{
 			this.onSave.emit();
 		}
 		catch( e ){
-			this.snackBar.exception( e, (m)=>console.log(m) );
+			this.snackBar.exception( "Could not save log settings.", e );
 		}
 	}
 	async cancel(){

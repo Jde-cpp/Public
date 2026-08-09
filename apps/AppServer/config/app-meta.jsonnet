@@ -5,12 +5,7 @@ local common = import 'common-meta.libsonnet';
 		connections_ql:{
 			columns: {
 				connectionId: tables.connections.columns.connectionId,
-				//NOT tables.instances.columns.instanceId:  that is pkSequenced, and `sequence:true` forces SKIndex=0
-				//(Column.cpp), so it would claim surrogate-key slot 0 alongside connectionId.  getSurrogateKeys keys a
-				//flat_map by SKIndex and silently drops the duplicate, leaving both columns answering IsPK() - and
-				//TableQL writes every PK column under the literal key "id", so instanceId overwrote the connection id.
-				//Here it is plain data, so declare it from the base type with no sequence/sk.
-				instanceId: common.types.uint+{ i:1 },
+				instanceId: common.types.uint+{ i:1 }, // plain data, no sequence/sk
 				instanceName: tables.instances.columns.name,
 				programName: tables.programs.columns.name,
 				hostName: tables.hosts.columns.name,

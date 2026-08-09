@@ -94,7 +94,7 @@ export class QLList implements OnInit, OnDestroy{
 		try{
 			this.router.navigate([row.target], {relativeTo: this.route} );
 		}catch( e ){
-			this.snackbar.exceptionInfo( e, "Could not navigate to properties", (m)=>console.log(m) );
+			this.snackbar.exception( "Could not navigate to properties", e );
 		}
 	}
 
@@ -108,7 +108,7 @@ export class QLList implements OnInit, OnDestroy{
 			await this.refresh( this.resolvedData().profile );
 		}
 		catch( e ){
-			this.snackbar.exception( e, (m)=>console.log(m) );
+			this.snackbar.exception( "Could not refresh data.", e );
 		}
 	}
 
@@ -128,7 +128,7 @@ export class QLList implements OnInit, OnDestroy{
 			}
 		}
 		catch( e ){
-			this.snackbar.exception( e, (m)=>console.log(m) );
+			this.snackbar.exception( "Could not delete entry.", e );
 		}
 	}
 	selection = computed<any>( ()=>{

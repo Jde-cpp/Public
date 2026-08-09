@@ -10,17 +10,19 @@ describe('SnackbarService', () => {
 	beforeEach( () => snackbar.openFromComponent.mockClear() );
 
 	it('error shows red for 10s and logs', () => {
-		const log = vi.fn();
-		service.error( 'boom', log );
+		const log = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
+		service.error( 'boom' );
 		expect( snackbar.openFromComponent ).toHaveBeenCalledWith( Snackbar, {panelClass: ['red-snackbar'], data: {message: 'boom', duration: 10000}} );
 		expect( log ).toHaveBeenCalledWith( 'boom' );
+		log.mockRestore();
 	});
 
 	it('warn shows yellow for 3s and logs', () => {
-		const log = vi.fn();
-		service.warn( 'careful', log );
+		const log = vi.spyOn( console, 'warn' ).mockImplementation( () => {} );
+		service.warn( 'careful' );
 		expect( lastConfig() ).toEqual( {panelClass: ['yellow-snackbar'], data: {message: 'careful', duration: 3000}} );
 		expect( log ).toHaveBeenCalledWith( 'careful' );
+		log.mockRestore();
 	});
 
 	it('info shows white for 3s', () => {
@@ -34,7 +36,7 @@ describe('SnackbarService', () => {
 	});
 
 	it('assert(false) shows and throws', () => {
-		expect( () => service.assert(false, () => {}) ).toThrow();
+		expect( () => service.assert(false) ).toThrow();
 		expect( lastConfig()?.panelClass ).toEqual( ['red-snackbar'] );
 	});
 });

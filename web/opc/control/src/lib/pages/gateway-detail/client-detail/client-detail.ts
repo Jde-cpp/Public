@@ -58,7 +58,7 @@ export class ClientDetail implements OnDestroy, OnInit{
 			await this.gateway.mutate( mutation, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 		}catch(e){
-			this.snackbar.exceptionInfo( e, "Save failed.", (m)=>console.log(m) );
+			this.snackbar.exception( "Save failed.", e );
 		}
 	}
 	public onCancelClick(){

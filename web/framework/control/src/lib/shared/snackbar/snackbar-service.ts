@@ -1,77 +1,91 @@
 import { Injectable } from '@angular/core';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Log } from '../../services/IGraphQL'
 import { Snackbar } from './snackbar';
 
+enum Type{
+	Info = 'blue-snackbar',
+	Warning =  'yellow-snackbar',
+	Error = 'red-snackbar'
+}
 @Injectable({ providedIn: 'root' })
-export class SnackbarService
-{
+export class SnackbarService{
 	constructor( private snackbar:MatSnackBar )
 	{}
 
-	private showUser( message:string, panelClass:string, duration:number=10000 ){
-		this.snackbar.openFromComponent( Snackbar, {panelClass: [panelClass], data: {message, duration}} );
-	}
-	private showUserError( message:string, log:Log ){
-		this.showUser( message ?? "Unknown error", 'red-snackbar' );
-		log( message );
+	//DevTools anchors these console lines at this file, not at the caller.  To get the caller back, ignore-list it:  right-click the snackbar-service.ts frame in the console → "Add script to ignore list", or DevTools Settings → Ignore list → add a pattern.  Working around this is what the old `log:Log` parameter existed for.
+	private static write( type:Type, message:string, detail?:any ):void{
+		const args = detail===undefined || detail===message ? [message] : [message, detail];//log the throw itself, not its text:  DevTools renders an Error's stack expandable.
+		switch( type ){
+		case Type.Info:
+			console.log( ...args );
+			break;
+		case Type.Warning:
+			console.warn( ...args );
+			break;
+		case Type.Error:
+			console.error( ...args );
+			break;
+		}
 	}
 
-	assert( condition:boolean, log:Log ):void{
+	private show( userMessage:string, type:Type, detail?:any, duration?:number ){
+		switch( type ){
+		case Type.Info:
+			duration = duration ?? 1000;
+			break;
+		case Type.Warning:
+			duration = duration ?? 3000;
+			break;
+		case Type.Error:
+			duration = duration ?? 5000;
+			break;
+		}
+		SnackbarService.write( type, userMessage ?? "Unknown error", detail );
+		this.snackbar.openFromComponent( Snackbar, {panelClass: [type], data: {message: userMessage ?? "Unknown error", duration}} );
+	}
+	private showError( userMessage:string|undefined, detail:any ){
+		this.show( userMessage ?? "Unknown error", Type.Error, detail );
+	}
+
+	assert( condition:boolean ):void{
 		if( !condition ) {
-			this.showUserError( "assert failed", log );
+			this.showError( "assert failed", "assert failed" );
 			throw "assert failed";
 		}
 	}
-
-	error( error: any, log:Log ){
-		//this.showUserError( error && typeof error=='object' ? `${message} - ${error["message"]}` : message, log );
-		let message = typeof error=='object' ? error["message"] : error;
-		this.showUserError( message, log );
-		//this.showUserError( error && typeof error=='object' ? `${message} - ${error["message"]}` : message, log );
-	}
-
-	exception( e:any, log:Log ):void{
+	private processEvent( e:any, type:Type=Type.Error, info?:string ):void{
 		if( e instanceof HttpErrorResponse ){
 			if( e.error instanceof ProgressEvent )
-				this.error( `timeout`, log );  //this.error( `(${e.status})${e.message}`, log );
+				this.show( `timeout`, type, e );
 			else if( e.error && e.error.message )
-				this.error( e.error.message, log );
+				this.show( e.error.message, type, e );
 			else
-				this.error( `(${e.status})${e.error}`, log );
+				this.show( `(${e.status})${e.error}`, type, e );
 		}
 		else if( typeof e=='object' && typeof e.message=="string" )
-			this.showUserError( e.message, log );
+			this.show( e.message, type, e );
+		else if( e instanceof Error )
+			this.show( `${e.cause}:  ${e.message}`, Type.Error, e );
+		else if( info )
+			this.show( `${info}  ${typeof e=='string' ? e : JSON.stringify(e)}`, Type.Error, e );
 		else
-			this.showUserError( typeof e=='string' ? e : `Unknown error:  ${JSON.stringify(e)}`, log );//plain-string throws are common in this codebase — must reach the user
-	}
-	exceptionInfo( e:any, info:string, log:Log ):void{
-		if( e instanceof HttpErrorResponse ){
-			if( e.error instanceof ProgressEvent )
-				this.error( `(${e.status})${e.message}`, log );
-			else if( e.error && e.error.message )
-				this.error( e.error.message, log );
-			else
-				this.error( `(${e.status})${e.error}`, log );
-		}
-		else if( e instanceof Error ){
-			this.showUser( `${e.cause}:  ${e.message}`, 'red-snackbar' );
-			log( `info: '${info}', cause: '${e.cause}' ${e.stack}` );
-		}
-		else{
-			this.showUser( `${info}  ${typeof e=='string' ? e : JSON.stringify(e)}`, 'red-snackbar' );
-			log( `info: '${info}', e: ${JSON.stringify(e)}` );
-		}
+			this.show( typeof e=='string' ? e : `Unknown error:  ${JSON.stringify(e)}`, type, e );//plain-string throws are common in this codebase — must reach the user
 	}
 
-	warn( message:string, log?:Log ){
-		this.showUser( message, 'yellow-snackbar', 3000 );
-		log?.( message );
+	exception( message:string, e:any ){
+		this.processEvent( e, Type.Error, message );
 	}
 
-	info( message:string, log?:Log ):void{
-		this.showUser( message, 'white-snackbar', 3000 );
-		log?.( message );
+	error( message:string ){
+		this.processEvent( message, Type.Error );
+	}
+
+	warn( message:string|any ){
+		this.processEvent( message, Type.Warning );
+	}
+
+	info( message:string|any ):void{
+		this.processEvent( message, Type.Info );
 	}
 }

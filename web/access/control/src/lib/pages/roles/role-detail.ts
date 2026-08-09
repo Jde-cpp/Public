@@ -86,7 +86,7 @@ export class RoleDetail implements OnDestroy, OnInit{
 			await this.ql.mutate( mutation, (m)=>console.log(m) );
 			this.router.navigate( ['..'], { relativeTo: this.route } );
 		}catch(e){
-			this.snackbar.exceptionInfo( e, "Save failed.", (m)=>console.log(m) );
+			this.snackbar.exception( "Save failed.", e );
 		}
 	}
 	public onCancelClick(){

@@ -38,7 +38,7 @@ export class QLSelector implements OnInit{
 			this.isLoading.set( false );
 		}
 		catch( e ){
-			this.snackbar.exceptionInfo( e, "Could not load values", (m)=>console.log(m) );
+			this.snackbar.exception( "Could not load values", e );
 		}
 	};
 	sortData( options:Sort ){

@@ -67,7 +67,7 @@ export class LogDetail implements OnInit, OnDestroy{
 			this.isLoading.set( false );
 		}
 		catch(e){
-			this.snackBar.exception( e, (m)=>console.log(m) );
+			this.snackBar.exception( "Could not load log entries.", e );
 		}
 	}
 
@@ -269,7 +269,7 @@ export class LogDetail implements OnInit, OnDestroy{
 		if( !this.data.selectNext() ){
 			await this.load( this.data.allEntries.length );
 			if( !this.data.selectNext() )
-				this.snackBar.warn( "No more instances found.", (m)=>console.log(m) );
+				this.snackBar.warn( "No more instances found." );
 		}
 	}
 	applyFilter( value:string ){

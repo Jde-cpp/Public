@@ -32,7 +32,7 @@ export class LoginPageComponent{
   async onLogin() {
 		let {username, password} = this.form.value;
 		if (!username || !password) {
-			this.snackbar.error( "Enter an email and password.", (m)=>console.log(m) );
+			this.snackbar.error( "Enter an email and password." );
 			return;
 		}
 		let domain = undefined;
@@ -51,7 +51,7 @@ export class LoginPageComponent{
 			this.router.navigate( [''] );
 		}
 		catch( e ){
-			this.snackbar.exception( e, (m)=>console.log(m) );
+			this.snackbar.exception( "Login failed.", e );
 		}
   }
 	onGoogleLogin2(credential:string){
@@ -66,7 +66,7 @@ export class LoginPageComponent{
 			this.router.navigate( [''] );
 		}
 		catch( e ){
-			this.snackbar.exception( e, (m)=>console.log(m) );
+			this.snackbar.exception( "Login failed.", e );
 		};
 	}
 
@@ -94,7 +94,7 @@ export class LoginPageComponent{
 		}
 		catch( e ){
 			console.assert( !(e instanceof ReferenceError), "ReferenceError" );
-			this.snackbar.exceptionInfo( e, 'could not render google login', (m)=>console.log(m) );
+			this.snackbar.exception( "Could not render Google login.", e );
 		}
 	}
 

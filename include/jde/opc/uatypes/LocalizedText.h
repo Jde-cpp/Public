@@ -1,3 +1,4 @@
+#pragma once
 
 namespace Jde::Opc{
 	struct LocalizedText final : UA_LocalizedText{

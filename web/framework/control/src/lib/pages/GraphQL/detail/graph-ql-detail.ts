@@ -66,7 +66,7 @@ export class GraphQLDetailComponent implements OnDestroy, OnInit{
 				this.viewPromise = Promise.resolve( true );
 		}
 		catch( e ){
-			this.cnsle.exception( e, (m)=>console.log(m) );
+			this.cnsle.exception( "Load failed.", e );
 		}
 	}
 	onNavigationEnd =( val:NavigationEnd )=>{///settings
@@ -98,7 +98,7 @@ export class GraphQLDetailComponent implements OnDestroy, OnInit{
 				this.data = data[this.fetchName];
 			}
 			catch( e ){
-				this.cnsle.exceptionInfo( e, `${this.target} not found`, (m)=>console.log(m) );
+				this.cnsle.exception( `${this.target} not found`, e );
 			}
 			this.viewPromise = Promise.resolve( true );
 		}

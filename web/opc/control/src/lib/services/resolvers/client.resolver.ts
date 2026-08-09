@@ -1,4 +1,4 @@
-import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
+import { ActivatedRouteSnapshot, createUrlTreeFromSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { inject, Inject, Injectable } from '@angular/core';
 import { RouteItem } from 'jde-spa';
 import {  ProfileStore } from 'jde-spa';
@@ -10,8 +10,7 @@ import { Server } from '../../model/Server';
 
 @Injectable()
 export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>> {
-	constructor( private route: ActivatedRoute, private router:Router,
-		private snackbar: SnackbarService,
+	constructor( private router:Router,
 		@Inject('IGraphQL') private gatewayService: GatewayService
 	){}
 
@@ -28,16 +27,16 @@ export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>>
 		let siblings = this.routeStore.getChildren( parent.url ).map( s=>new RouteItem({path:`${s.path}`, title:s.title}) );
 		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings, new RouteItem({path:'.', title:parent.params["instance"]}) );
 		try{
-			return await ClientResolver.load( ql, this.opcStore, target, routing );//await inside try — without it, async failures skip the catch entirely
+			return await ClientResolver.load( ql, this.opcStore, target, routing, this.snackbar );//await inside try — without it, async failures skip the catch entirely
 		}
 		catch( e:any ){
-			this.snackbar.exceptionInfo( e, `Target not found:  '${target}'`, (m)=>console.log(`${m} - ${e.toString()}`) );
-			this.router.navigate( ['..'], { relativeTo: this.route } );
+			this.snackbar.exception( "Target not found.", e );
+			this.router.navigateByUrl( createUrlTreeFromSnapshot(route, ['..']) );//an injected ActivatedRoute is the ROOT route inside a resolver, so relativeTo sent this to '/';  the snapshot is this route.
 			return null as unknown as DetailResolverData<ServerCnnctn>;
 		}
 	}
 
-	static async load( ql:Gateway, opcStore:OpcStore, target:string, routing:DetailRoute ):Promise<DetailResolverData<ServerCnnctn>>{
+	static async load( ql:Gateway, opcStore:OpcStore, target:string, routing:DetailRoute, snackbar:SnackbarService ):Promise<DetailResolverData<ServerCnnctn>>{//snackbar is passed in:  inject() needs an injection context, which a static method never has.
 		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection("serverConnections"), (m)=>console.log(m) );
 		let obj:any = {};
 		//let server:Server = null;
@@ -51,7 +50,12 @@ export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>>
 				else
 					obj[property] = obj[property].concat( propValue );
 			}
-			obj["server"] = await opcStore.getConnection( ql, target );
+			try{
+				obj["server"] = await opcStore.getConnection( ql, target );
+			}
+			catch( e ){ //can't connect, maybe bad settings.
+				snackbar.exception( "Could not connect to server.", e );
+			}
 		}
 		return {
 			row: obj,
@@ -59,6 +63,7 @@ export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>>
 			routing: routing
 		};
 	}
-	routeStore = inject( RouteStore );
 	opcStore:OpcStore = inject( OpcStore );
+	routeStore = inject( RouteStore );
+	snackbar = inject( SnackbarService );
 }

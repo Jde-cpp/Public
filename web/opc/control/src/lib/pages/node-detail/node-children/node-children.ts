@@ -95,7 +95,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 							this.variables.find( (r)=>r.nodeId.equals(value.node) )!.value = value.value;
 						},
 						error:(e: Error) =>{
-							this.snackbar.exception( e, (m)=>console.log(m) );
+							this.snackbar.exception( "Subscription error.", e );
 						},
 						complete:()=>{ console.debug( "complete" );}
 					});
@@ -103,7 +103,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 				else
 					this._iot.addToSubscription( this.cnnctnTarget, nodes, this.Key );
 			} catch (e:any) {
-				this.snackbar.error( e["error"], (m)=>console.log(m) );
+				this.snackbar.exception( "Could not add subscription.", e );
 			}
 		}
 		if( r.removed.length>0 ){
@@ -116,7 +116,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 					this._iot.unsubscribe( this.cnnctnTarget, nodes, this.Key );
 				}
 				catch( e:any ) {
-					this.snackbar.error( e["error"], (m)=>console.log(m) );
+					this.snackbar.exception( "Could not remove subscription.", e );
 				}
 			}
 		}
@@ -136,7 +136,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 			this.cdRef.detectChanges();
 		}
 		catch (e) {
-			this.snackbar.exception( e, (m)=>console.log(m) );
+			this.snackbar.exception( "Could not toggle value.", e );
 		}
 	}
 	async changeDouble( x:Variable, e:Event ){
@@ -144,7 +144,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +(e.target as any)["value"], (x)=>console.log(x) );
 		}
 		catch (e:any) {
-			this.snackbar.exception( e, (m)=>console.log(m) );
+			this.snackbar.exception( "Could not change double value.", e );
 			x.value = await this._iot.read( this.cnnctnTarget, x.nodeId );
 			console.log(x.value);
 		}
@@ -155,7 +155,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 		}
 		catch(err:any){
 			(e.target as any)["value"] = n.value;
-			this.snackbar.exception( err, (m)=>console.error(m) );
+			this.snackbar.exception( "Could not change string value.", err );
 		}
 	}
 	async changeEnum( n:Variable, e:MatSelectChange<number> ){
@@ -164,7 +164,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 		}
 		catch(err:any){
 			e.source.value = <number>n.value;
-			this.snackbar.exception( err, (m)=>console.error(m) );
+			this.snackbar.exception( "Could not change enum value.", err );
 		}
 	}
 	async dateInput( n:Variable, e:MatDatepickerInputEvent<Date, any> ){
@@ -174,7 +174,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 		}
 		catch (err) {
 			e.target["value"] = n.value;
-			this.snackbar.exception( err, (m)=>console.error(m) );
+			this.snackbar.exception( "Could not change date input.", err );
 		}
 	}
 	async changeDate( n:Variable, e:Event ){
@@ -183,7 +183,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 		}
 		catch(err:any){
 			(e.target as any)["value"] = n.value;
-			this.snackbar.exception( err, (m)=>console.error(m) );
+			this.snackbar.exception( "Could not change date value.", err );
 		}
 	}
 
