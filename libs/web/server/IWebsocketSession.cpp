@@ -73,7 +73,7 @@ namespace Jde::Web::Server{
 		Logging::Log( level, ELogTags::SocketServerWrite, sl, "[{:x}.{:x}]{}", Id(), requestId, move(what) );
 	}
 
-	α IWebsocketSession::LogWriteException( const exception& e, RequestId requestId, ELogLevel level, SL sl )ι->void{
+	α IWebsocketSession::LogWriteException( const runtime_error& e, RequestId requestId, ELogLevel level, SL sl )ι->void{
 		if( let p = dynamic_cast<const Exception*>(&e); p )
 			p->SetLevel( ELogLevel::NoLog );
 		Exception{ sl, level, "[{}.{}]{}", Ƒ("{:x}", Id()), Ƒ("{:x}", requestId), e.what() }; //:x doesn't work with exception formatter
@@ -140,7 +140,7 @@ namespace Jde::Web::Server{
 		try{
 			QL::Subscriptions::StopListen( _listener, move(ids) );
 		}
-		catch( std::exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -153,7 +153,7 @@ namespace Jde::Web::Server{
 			LogWrite( Ƒ("GraphQL: {}", y.substr(0,100)), requestId );
 			Write( toProtoQuery(move(y), requestId) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -203,7 +203,7 @@ namespace Jde::Web::Server{
 			try{
 				h.promise().SetValue( parse(move(queryResult)) );
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				h.promise().SetExp( Exception{SRCE_CUR, {ELogLevel::Warning}, move(e), "[{}]QueryClientResults parse exception", hex(requestId)} );
 			}
 			h.resume();

@@ -89,7 +89,7 @@ namespace Jde::Opc{
 				try{
 					addExplicit( Variant::ElementToJson((const UA_Byte*)value.data + i*type->memSize, *type, true) );
 				}
-				catch( const exception& e ){
+				catch( const runtime_error& e ){
 					ERRT( ELogTags::Parsing, "Could not encode element {} of '{}' - {}.  Serializing it as a status instead.", i, type->typeName, e.what() );
 					addExplicit( UAException::ToJson(UA_STATUSCODE_BADENCODINGERROR) );
 				}

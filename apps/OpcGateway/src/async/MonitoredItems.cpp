@@ -43,7 +43,7 @@ namespace Jde::Opc::Gateway{
 					_client->Process( _requestId, "MonitoredItems_delete" );
 			}
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			//_submitted has no concurrent writer here (the loop has exited); if nothing was accepted, no callback will fire, so propagate like the original. Otherwise the in-flight deletes complete and TryResume() resumes normally.
 			WARN( "[{}]Delete monitored items: {}/{} submitted before error: {}", _client->Handle(), _submitted, _monitoredItems.size(), e.what() );
 			if( !_submitted ){

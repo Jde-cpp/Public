@@ -6,6 +6,7 @@
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLAwait.h>
 #include "../src/awaits/ResourceLoadAwait.h"
+#include "jde/fwk/exceptions/Exception.h"
 #include <jde/access/Authorize.h>
 
 #define let const auto
@@ -34,7 +35,9 @@ namespace Tests{
 				Create(table, target, executer);
 				throw std::runtime_error( "Should not be able to create." );
 			}
-			catch( Exception& e ){ e.SetLevel(ELogLevel::NoLog); }
+			catch( Exception& e ){
+				e.SetLevel(ELogLevel::NoLog);
+			}
 			Create( table, target, GetRoot() );
 			EXPECT_THROW( Select(table, target, executer, cols, includeDeleted), Exception );
 			y = Select( table, target, GetRoot(), cols, includeDeleted );

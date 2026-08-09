@@ -19,7 +19,7 @@ namespace Jde::Web::Server{
 			else
 				LoginAppServer();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -29,7 +29,7 @@ namespace Jde::Web::Server{
 			auto session = co_await _appClient->Login( move(_jwt), _sl );
 			ResumeScaler( {session.user_pk()} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

@@ -45,7 +45,7 @@ namespace Jde::Opc::Gateway{
 				else
 					TRACE( "[{}.{}]CreateSubscription - queued", hex(_client->Handle()), hex(_requestId) );
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				ResumeExp( move(e) );
 			}
 		});

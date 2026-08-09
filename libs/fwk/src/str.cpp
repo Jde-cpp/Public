@@ -15,7 +15,7 @@ template<> α Jde::To<double>( sv x )ι->double{
 	double y{}; //use 0.0 to keep consistent with the other To<T>.
 	try{
 		y = stod(string{x});
-	}catch( const exception& e ){
+	}catch( const std::exception& e ){//not runtime_error: stod throws invalid_argument/out_of_range, both logic_error - narrowing this escapes the noexcept and terminates.
 		DBGT( ELogTags::Parsing, "stod failed on '{}': {}", x, e.what() );
 	}
 	return y;

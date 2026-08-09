@@ -23,7 +23,7 @@ namespace Jde::Opc::Gateway{
 			_client = co_await UAClient::GetClient( _opcNK, _cred, base::_sl );
 			OnSuccess();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			base::ResumeExp( move(e) );
 		}
 	}

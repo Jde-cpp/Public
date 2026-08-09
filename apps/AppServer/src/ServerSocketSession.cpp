@@ -3,6 +3,7 @@
 #include <jde/app/proto/LogProto.h>
 #include <jde/app/proto/app.FromServer.h>
 #include <jde/app/proto/app.FromClient.h>
+#include <jde/app/proto/common.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/server/accessServer.h>
 #include "LocalClient.h" // !important
@@ -32,7 +33,7 @@ namespace Jde::App::Server{
 					Authorizer()->AddAdminAuthorizer( resource, std::dynamic_pointer_cast<Access::IAdminAcl>(shared_from_this()) );
 					authResult = true;
 				}
-				catch( exception& ){
+				catch( runtime_error& ){
 					INFOT( ELogTags::Access, "[{}.{}]Instance '{}' denied authorizor with resource '{}'", hex(Id()), hex(requestId), instance.instance_name(), resource );
 					authResult = false;
 				}
@@ -42,7 +43,7 @@ namespace Jde::App::Server{
 			_instance = move( instance );
 			Write( FromServer::ConnectionInfo(appPK, instancePK, connectionPK, requestId, AppClient()->PublicKey(), info, authResult) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -56,7 +57,7 @@ namespace Jde::App::Server{
 			LogWrite( Ƒ("AddSession id: {:x}", info->SessionId), requestId );
 			Write( FromServer::Session(*info, requestId) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -65,7 +66,7 @@ namespace Jde::App::Server{
 			auto t = Protobuf::Deserialize<Proto::FromClient::Transmission>( move(bytes) );
 			ProcessTransmission( move(t), userPK, clientRequestId );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), clientRequestId );
 		}
 	}
@@ -78,7 +79,7 @@ namespace Jde::App::Server{
 			LogWrite( Ƒ("ForwardExecution{} size: {:10L}", functionSuffix, result.size()), requestId );
 			Write( FromServer::Execute(move(result), requestId) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -92,7 +93,7 @@ namespace Jde::App::Server{
 			LogWrite( Ƒ("GraphQL: {}", y.substr(0,100)), requestId );
 			Write( FromServer::GraphQL(move(y), requestId) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -128,7 +129,7 @@ namespace Jde::App::Server{
 			base::SetSessionId( sessionId );
 			Write( FromServer::Complete(requestId) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -155,7 +156,7 @@ namespace Jde::App::Server{
 			let expiration = Chrono::ToClock<Clock,steady_clock>( info->Expiration );
 			Write( FromServer::Jwt(Server::GetJwt(*_userPK, string{user.at("name").as_string()}, string{user.at("target").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -165,7 +166,7 @@ namespace Jde::App::Server{
 			let session = co_await Sessions::UpsertAwait( "Bearer " + move(jwt), _userEndpoint.address().to_string(), true, Server::AppClient() );
 			Write( FromServer::Session(*session, requestId) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -190,8 +191,9 @@ namespace Jde::App::Server{
 				if( !requestId ){
 					DBGT( ELogTags::SocketServerRead | ELogTags::Exception, "[{:x}.{:x}]Exception - {}", Id(), 0, m.exception().what() );
 				}else{
-					auto what = move( *m.mutable_exception()->mutable_what() );
-					if( !ForwardExecutionAwait::ResumeExp(Exception{what}, requestId) )
+					auto e = ProtoUtils::ToException( move(*m.mutable_exception()) );//keeps status/category - Exception{what} dropped them.
+					auto what = e->What();
+					if( !ForwardExecutionAwait::ResumeExp(move(*e), requestId) )
 						LogRead( Ƒ("Exception not handled - {}", what), requestId, ELogLevel::Critical );
 				}
 				break;
@@ -219,8 +221,13 @@ namespace Jde::App::Server{
 			[[likely]]case kQuery:{
 				auto& query = *m.mutable_query();
 				auto& variableString = *query.mutable_variables();
-				jobject variables = variableString.empty() ? jobject{} : Json::Parse( variableString );
-				GraphQL( move(*query.mutable_text()), move(variables), query.return_raw(), requestId );
+				try{
+					jobject variables = variableString.empty() ? jobject{} : Json::Parse( variableString );
+					GraphQL( move(*query.mutable_text()), move(variables), query.return_raw(), requestId );
+				}
+				catch( runtime_error& e ){
+					WriteException( move(e), requestId );
+				}
 				break;}
 			case kQueryResult:
 				QueryClientResults( move(*m.mutable_query_result()), requestId );
@@ -254,12 +261,12 @@ namespace Jde::App::Server{
 				auto& s = *m.mutable_subscription();
 				auto& ql = *s.mutable_text();
 				auto& variablesString = *s.mutable_variables();
-				auto vars = variablesString.empty() ? jobject{} : Json::Parse( move(variablesString) );
-				LogRead( Ƒ("Subscription - {}", ql.substr(0, MaxLogLength())), requestId, ELogLevel::Trace, ELogTags::SocketClientReadSub );
 				try{
+					auto vars = variablesString.empty() ? jobject{} : Json::Parse( move(variablesString) );
+					LogRead( Ƒ("Subscription - {}", ql.substr(0, MaxLogLength())), requestId, ELogLevel::Trace, ELogTags::SocketClientReadSub );
 					Write( FromServer::SubscriptionAck(AddSubscription(move(ql), move(vars), requestId), requestId) );
 				}
-				catch( std::exception& e ){
+				catch( runtime_error& e ){
 					WriteException( move(e), requestId );
 				}
 				break;}
@@ -300,7 +307,7 @@ namespace Jde::App::Server{
 		LogWrite( "Complete", requestId );
 		Write( FromServer::Complete(requestId) );
 	}
-	α ServerSocketSession::WriteException( exception&& e, RequestId requestId )ι->void{
+	α ServerSocketSession::WriteException( runtime_error&& e, RequestId requestId )ι->void{
 		LogWriteException( e, requestId );
 		Write( FromServer::Exception(move(e), requestId) );
 	}

@@ -12,7 +12,7 @@ namespace Jde::Web::Server{
 	constexpr sv SameHostOrigin{ "sameHost" };
 	α ServerVersion( bool isSsl )ι->string;
 
-	struct IRestException;
+	struct RestException;
 	struct ΓWS HttpRequest final{
 		HttpRequest( TRequestType&& request, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionId )ι;
 		HttpRequest( const HttpRequest& ) = delete;
@@ -61,7 +61,7 @@ namespace Jde::Web::Server{
 		steady_clock::time_point _start;
 		string _target;
 
-		friend IRestException;
+		friend RestException;
 	};
 
 	template<class T>

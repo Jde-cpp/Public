@@ -96,7 +96,10 @@ if( WIN32 )
 		add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_INSTALL_PREFIX}/fmt/bin/fmt$<IF:$<CONFIG:Debug>,d,>.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "fmtd.dll" )
 		add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_INSTALL_PREFIX}/zlib/bin/z$<IF:$<CONFIG:Debug>,d,>.dll" $<TARGET_FILE_DIR:${targetName}> COMMENT "copy z.dll" )
 	endfunction()
-	#Stages Jde/Jde.DB (+pdbs) next to ${targetName}, for the targets whose RUNTIME_OUTPUT_DIRECTORY is not <buildDir>/bin.
+	#Stages the shared-library targets named in ARGN (+their pdbs) next to ${targetName}, for the targets whose
+	#RUNTIME_OUTPUT_DIRECTORY is not <buildDir>/bin.  Defaults to `Jde Jde.DB` - the pair nearly every consumer needs -
+	#so pass an explicit list to narrow it: the staging edge is a build-order dependency, so naming a dll the exe never
+	#loads builds it for nothing (`--target Jde.Fwk.Tests` used to build Jde.DB that way).
 	#Deliberately NOT a POST_BUILD step on ${targetName}: ninja lists bin/Jde.dll only as an order-only input (`||`) of the
 	#consumer's link, and lld-link leaves the import lib byte-identical when the exported symbols don't change, so RESTAT
 	#prunes the consumer's relink - a POST_BUILD command hanging off that link then silently never runs and leaves a stale
@@ -107,16 +110,25 @@ if( WIN32 )
 	#The pdbs are copied but kept out of DEPENDS - ninja knows no rule producing them, so listing them fails a clean tree.
 	function( copyCommonDlls )
 		copyLibDlls()
+		set( dlls ${ARGN} )
+		if( NOT dlls )
+			set( dlls Jde Jde.DB )
+		endif()
+		foreach( dll ${dlls} )
+			list( APPEND dllFiles $<TARGET_FILE:${dll}> )
+			list( APPEND pdbFiles $<TARGET_PDB_FILE:${dll}> )
+		endforeach()
+		string( REPLACE ";" "/" dllNames "${dlls}" ) #COMMENT is one string: keep it readable instead of `Jde;Jde.DB`.
 		set( stamp ${CMAKE_CURRENT_BINARY_DIR}/${targetName}.dlls.stamp )
 		add_custom_command( OUTPUT ${stamp}
 			COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${targetName}> #may not exist yet: this runs before ${targetName} links.
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Jde> $<TARGET_FILE:Jde.DB> $<TARGET_PDB_FILE:Jde> $<TARGET_PDB_FILE:Jde.DB> $<TARGET_FILE_DIR:${targetName}>
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${dllFiles} ${pdbFiles} $<TARGET_FILE_DIR:${targetName}>
 			COMMAND ${CMAKE_COMMAND} -E touch ${stamp}
-			DEPENDS Jde Jde.DB $<TARGET_FILE:Jde> $<TARGET_FILE:Jde.DB>
-			COMMENT "copy Jde/Jde.DB dlls -> ${targetName}"
+			DEPENDS ${dlls} ${dllFiles}
+			COMMENT "copy ${dllNames} dlls -> ${targetName}"
 		)
 		add_custom_target( ${targetName}.dlls DEPENDS ${stamp} )
-		add_dependencies( ${targetName} ${targetName}.dlls ) #staging depends on Jde/Jde.DB, not on ${targetName}, so this is not a cycle - and `--target ${targetName}` stages too.
+		add_dependencies( ${targetName} ${targetName}.dlls ) #staging depends on ${dlls}, not on ${targetName}, so this is not a cycle - and `--target ${targetName}` stages too.
 	endfunction()
 endif()
 

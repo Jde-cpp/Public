@@ -121,7 +121,7 @@ namespace Jde::Opc{
 			try{
 				return parse( uaJson );
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				ERRT( ELogTags::Parsing, "Error parsing {} - {}", uaJson, e.what() );
 				return {uaJson};
 			}
@@ -166,7 +166,7 @@ namespace Jde::Opc{
 			}
 			values.clear();
 		}
-		catch( const exception& e ){
+		catch( const runtime_error& e ){
 			if( data )
 				UA_Array_delete( data, size, &type );
 			//Loudly:  a variant that cannot be decoded loads as null, which is indistinguishable from a node that never

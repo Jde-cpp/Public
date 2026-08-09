@@ -212,7 +212,7 @@ namespace Jde{
 				SetEnv( _settings->get_object() );
 			INFOT( ELogTags::App, "Settings path={}", settingsPath.string() );
 		}
-		catch( const std::exception& e ){
+		catch( const runtime_error& e ){
 			_settings = mu<jvalue>( jobject{{"error", e.what()}} );
 			std::cerr << e.what() << std::endl;
 			CRITICAL( "({})Could not load settings - {}", settingsPath.string(), e.what() );

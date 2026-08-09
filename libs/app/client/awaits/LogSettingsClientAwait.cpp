@@ -21,7 +21,7 @@ namespace Jde::App::Client{
 			UpdateRuntime<RemoteLog>( args, "appServer" );
 			Update( move(args) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

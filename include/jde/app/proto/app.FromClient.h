@@ -8,7 +8,7 @@ namespace Jde::App::FromClient{
 	namespace PFromClient = Jde::App::Proto::FromClient;
 	using StringTrans = string;
 	α AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, RequestId requestId )ι->StringTrans;
-	α Exception( exception&& e, RequestId requestId=0 )ι->PFromClient::Transmission;
+	α Exception( runtime_error&& e, RequestId requestId=0 )ι->PFromClient::Transmission;
 	α Exception( string&& e, RequestId requestId )ι->PFromClient::Transmission;
 	α Jwt( RequestId requestId )ι->StringTrans;
 	α Login( Web::Jwt&& jwt, RequestId requestId )ι->StringTrans;

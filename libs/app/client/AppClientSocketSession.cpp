@@ -1,4 +1,5 @@
 #include <jde/web/client/ClientSsl.h>
+#include "jde/fwk/exceptions/Exception.h"
 #include "jde/fwk/log/logTags.h"
 #include <jde/app/client/AppClientSocketSession.h>
 #include <jde/fwk/process/execution.h>
@@ -34,7 +35,7 @@ namespace Client{
 			co_await _session->RunSession( Host(), Port() );//Web::Client
 			SendSessionId();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -49,7 +50,7 @@ namespace Client{
 			};
 			Resume( move(info) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -105,7 +106,7 @@ namespace Client{
 			auto result = co_await *_appClient->ClientQuery( QL::Parse(move(*proto.mutable_query()), move(vars), {}, proto.raw()), {proto.executer_pk()} );
 			Write( FromClient::QueryResult(serialize(result), requestId) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -136,7 +137,7 @@ namespace Client{
 		try{
 			resume<jvalue>( move(hAny), Json::ParseValue(move(v)) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			if( auto h = std::any_cast<typename ClientSocketAwait<jvalue>::Handle>(&hAny); h ){
 				h->promise().SetExp( move(e) );
 				h->resume();
@@ -156,7 +157,7 @@ namespace Client{
 			auto t = Protobuf::Deserialize<Proto::FromServer::Transmission>( move(bytes) );
 			ProcessTransmission( move(t), userPK, clientRequestId );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), clientRequestId );
 		}
 	}
@@ -300,7 +301,7 @@ namespace Client{
 			LOG( severity, _tags, "[{}]Failed to process incoming exception '{}'.", hex(requestId), e.what() );
 		}
 	}
-	α AppClientSocketSession::WriteException( exception&& e, RequestId requestId )ι->void{
+	α AppClientSocketSession::WriteException( runtime_error&& e, RequestId requestId )ι->void{
 		Write( FromClient::Exception(move(e), requestId) );
 	}
 	α AppClientSocketSession::WriteException( string&& e, RequestId requestId )ι->void{

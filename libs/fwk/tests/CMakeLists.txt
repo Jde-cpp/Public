@@ -28,5 +28,5 @@ if( WIN32 )
 		VS_DEBUGGER_COMMAND_ARGUMENTS "-tests -settings=${CMAKE_CURRENT_SOURCE_DIR}/config/Framework.Tests.jsonnet"
 		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${targetName}"
 	)
-	copyCommonDlls()
+	copyCommonDlls( Jde ) #no Jde.DB: nothing here links or loads it, and staging it would make `--target ${targetName}` build it.
 endif()

@@ -122,7 +122,7 @@ namespace Jde::QL{
 	//keeps the old string behaviour rather than silently matching nothing.
 	Ω makeTimes( const jvalue& value )ι->vector<TimePoint>{
 		vector<TimePoint> y;
-		auto add = [&y]( const jvalue& v )ι->bool{
+		auto add = [&y]( const jvalue& v )ι->bool {
 			let text = v.try_as_string();
 			//shape test first: Chrono::ToTimePoint wants %FT%T and throws otherwise, and most filter literals ("text",
 			//"message", ...) are not times at all - this runs per filter, but there is no reason to throw per filter.
@@ -132,7 +132,7 @@ namespace Jde::QL{
 				y.push_back( Chrono::ToTimePoint(string{*text}) );
 				return true;
 			}
-			catch( const exception& ){
+			catch( const runtime_error& ){
 			}
 			return false;
 		};
@@ -215,8 +215,12 @@ namespace Jde::QL{
 			case ElementMatch: BREAK; break;
 			}
 		}
-		catch( const exception& e ){
-			DBGT( logTags | ELogTags::Exception, "FilterValue::Test exception={}", e.what() );
+		catch( Exception& e ){
+			e.SetTags( logTags | ELogTags::Exception );
+			e.PrependWhat("FilterValue::Test exception: ");
+		}
+		catch( const runtime_error& e ){
+			DBGT( logTags | ELogTags::Exception, "FilterValue::Test runtime_error={}", e.what() );
 		}
 		catch( ... ){
 			CRITICALT( logTags | ELogTags::Exception, "FilterValue::unknown exception" );

@@ -88,7 +88,7 @@ namespace Jde::Opc::Server {
 				UA_BrowsePathResult_clear( &bpr );
 			}
 			return UA_STATUSCODE_GOOD;
-		}catch( exception& e ){
+		}catch( runtime_error& e ){
 			Exception{ move(e) };
 		}
 		return UA_STATUSCODE_BAD;

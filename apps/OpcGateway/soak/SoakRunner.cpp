@@ -190,7 +190,7 @@ namespace Jde::Opc::Gateway::Soak{
 				"[{}]/login failed for user '{}': http {}. The gateway refused the login or could not open a session on {} - the UA status code is in the gateway log. On a first run against an external server, trust '{}' in its certificate/configuration manager and confirm '{}' may write the configured nodes.",
 				leg.Target, leg.User, status, leg.Url, CertPath(leg.Target), leg.User };
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			throw Exception{ SRCE_CUR, {}, move(e), "[{}]/login for user '{}' could not reach the gateway at {}:{}.", leg.Target, leg.User, _host, _port };
 		}
 		let sessionId = Str::TryTo<SessionPK>( authorization, nullptr, 16 );

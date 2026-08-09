@@ -26,6 +26,13 @@ namespace Jde::Opc::Gateway{
 		α IsBadSession()Ι->bool{ return Code()==UA_STATUSCODE_BADSESSIONIDINVALID; }
 		//status plus the throw-site reason; the description names an operation or a configuration mismatch, never internals.
 		α ClientDetail()Ι->string override{ return _detail.size() ? Ƒ("{} - {}", UAException::ClientDetail(), _detail) : UAException::ClientDetail(); }
+		//mirrors ThrowRest so the websocket path answers the same status the REST path would.
+		α HttpStatus()Ι->Jde::EHttpStatus override{
+			return _statusCode ? _statusCode
+				: Code()==UA_STATUSCODE_BADIDENTITYTOKENREJECTED ? EHttpStatus::Unauthorized
+				: Code()==UA_STATUSCODE_BADCONNECTIONREJECTED ? EHttpStatus::BadGateway
+				: EHttpStatus::InternalServerError;
+		}
 		[[noreturn]] α ThrowRest( UAClientException&& e, Web::Server::HttpRequest&& request )ε->void;
 	private:
 		string _detail;
@@ -33,11 +40,11 @@ namespace Jde::Opc::Gateway{
 
 	Ξ UAClientException::ThrowRest( UAClientException&& e, Web::Server::HttpRequest&& request )ε->void{
 		if( e.Code()==UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
-			throw Web::Server::RestException<http::status::unauthorized>( move(e), move(request), "Bad identity token" );
+			throw Web::Server::RestException{ EHttpStatus::Unauthorized, move(e), move(request), "Bad identity token" };
 		}
 		else if( e.Code()==UA_STATUSCODE_BADCONNECTIONREJECTED )
-			throw Web::Server::RestException<http::status::bad_gateway>{ move(e), move(request), "Opc Server not reachable" };
-		throw Web::Server::RestException<>( move(e), move(request) );
+			throw Web::Server::RestException{ EHttpStatus::BadGateway, move(e), move(request), "Opc Server not reachable" };
+		throw Web::Server::RestException{ EHttpStatus::InternalServerError, move(e), move(request) };
 	}
 }
 #endif

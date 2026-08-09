@@ -35,7 +35,7 @@ namespace Jde::App{
 		try{
 			co_await Access::EventsSubscribeAwait( appClient->QLServer(), {appClient->ResourceSchema}, appClient->UserPK(), appClient->Listener() );
 		}
-		catch( exception& )
+		catch( runtime_error& )
 		{}
 	}
 	α Client::Connect( sp<IAppClient> appClient )ι->ConnectAwait::Task{
@@ -48,7 +48,7 @@ namespace Jde::App{
 			if( !Client::Subscriptions::Replay(appClient) )
 				accessSubscribe( move(appClient) );
 		}
-		catch( exception& )
+		catch( runtime_error& )
 		{}
 	}
 }
@@ -82,7 +82,7 @@ namespace Jde::App::Client{
 			THROW_IF( !sessionPK, "Invalid authorization: {}.", res[http::field::authorization] );
 			Resume( move(*sessionPK) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -99,7 +99,7 @@ namespace Jde::App::Client{
 			THROW_IF( Process::ShuttingDown(), "Shutting down." );
 			HttpLogin();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -110,7 +110,7 @@ namespace Jde::App::Client{
 			_appClient->SetAppPKs( info.instance_pk(), info.connection_pk() );
 			Post( _h );  //in OnRead, will block subsequent reads
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			if( _retry )
 				Retry();
 			else
@@ -122,7 +122,7 @@ namespace Jde::App::Client{
 			let sessionId = co_await LoginAwait{ *_appClient->SslSettings };//http call
 			RunSocket( sessionId );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			if( _retry )
 				Retry();
 			else

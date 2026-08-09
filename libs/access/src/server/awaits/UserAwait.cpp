@@ -43,7 +43,7 @@ namespace Jde::Access::Server{
 			auto groupInfo = co_await QL::QLAwait<jarray>{ move(_query.GetTable("groupings")), move(groupStatement), _executer, _sl };
 			QueryTables( move(groupInfo) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -70,7 +70,7 @@ namespace Jde::Access::Server{
 			}
 			Resume( move(userInfo) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

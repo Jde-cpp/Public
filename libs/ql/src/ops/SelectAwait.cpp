@@ -68,7 +68,7 @@ namespace Jde::QL{
 			else if( _qlTable.JsonName=="__schema" )
 				_result = QuerySchema( _qlTable );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			_result = ToUP( move(e) );
 		}
 		return _result.index() != 0;
@@ -80,7 +80,7 @@ namespace Jde::QL{
 			else
 				Query();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -244,7 +244,7 @@ namespace Jde::QL{
 			auto statement = _statement ? move(*_statement) : SelectStatement( _qlTable );
 			SelectSubTables( statement, _qlTable.Tables, DB::AsTable(dbTable), statement ? statement->Where : DB::WhereClause{} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -266,14 +266,14 @@ namespace Jde::QL{
 			}
 			Resume( move(y) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
 
 	α SelectAwait::await_resume()ε->jvalue{
 		if( _result.index()==2 )
-			throw *get<up<exception>>( move(_result) );
+			throw *get<up<runtime_error>>( move(_result) );
 		auto y = _result.index()==0 ? base::await_resume() : get<jvalue>( move(_result) );
 		if( _log )
 			LOGSL( ELogLevel::Trace, _sl, ELogTags::QL, "{}", serialize(y) );

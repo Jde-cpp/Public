@@ -14,9 +14,9 @@ namespace Jde{
 		β Exp()Ι->const up<Exception>& =0;
 		β MoveExp()ι->up<Exception> =0;
 		β SetExp( Exception&& x )ι->void =0;
-		β SetExp( exception&& x )ι->void =0;
+		β SetExp( runtime_error&& x )ι->void =0;
 		α ResumeExp( Exception&& e, coroutine_handle<> h )ι->void{ SetExp( move(e) ); h.resume(); };
-		α ResumeExp( exception&& e, coroutine_handle<> h )ι->void{ SetExp( move(e) ); h.resume(); };
+		α ResumeExp( runtime_error&& e, coroutine_handle<> h )ι->void{ SetExp( move(e) ); h.resume(); };
 	protected:
 		TResult Expected;
 	};
@@ -34,7 +34,7 @@ namespace Jde{
 		α Resume( TResult&& x, coroutine_handle<> h )ι->void{ SetValue(std::move(x)); h.resume(); };
 //		α ResumeScaler( TResult x, coroutine_handle<> h )ι->void{ SetScaler(x); h.resume(); }; windows doesn't work.
 		α SetExp( Exception&& e )ι->void override{ base::Expected = e.Move(); }
-		α SetExp( exception&& x )ι->void override{
+		α SetExp( runtime_error&& x )ι->void override{
 			if( auto p = dynamic_cast<Exception*>(&x); p )
 				SetExp( move(*p) );
 			else
@@ -47,7 +47,7 @@ namespace Jde{
 		α Exp()Ι->const up<Exception>& override{ return base::Expected; }
 		α MoveExp()ι->up<Exception> override{ return move(base::Expected); }
 		α SetExp( Exception&& x )ι->void override{ base::Expected = x.Move(); }
-		α SetExp( exception&& x )ι->void override{
+		α SetExp( runtime_error&& x )ι->void override{
 			if( auto p = dynamic_cast<Exception*>(&x); p )
 				SetExp( move(*p) );
 			else
@@ -74,8 +74,8 @@ namespace Jde{
 			e.SetLevel( ELogLevel::Critical );
 			SetExp( move(e) );
 		}
-		catch( std::exception& e ){
-			SetExp( Exception{SRCE_CUR, {ELogLevel::Critical}, move(e), "std::exception - {}", e.what()} );
+		catch( runtime_error& e ){
+			SetExp( Exception{SRCE_CUR, {ELogLevel::Critical}, move(e), "runtime_error - {}", e.what()} );
 		}
 		catch( ... ){
 			SetExp( Exception{"unknown exception", {ELogLevel::Critical}} );

@@ -19,7 +19,7 @@ namespace Jde::Opc::Server {
 				references.try_emplace( row.GetUInt32(0), move(row) );
 			Resume( move(references) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -36,7 +36,7 @@ namespace Jde::Opc::Server {
 			GetUAServer().AddReference( _ref.SourcePK, _ref );
 			Resume();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

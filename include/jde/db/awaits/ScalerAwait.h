@@ -32,7 +32,7 @@ namespace Jde::DB{
 				else
 					base::ResumeExp( Exception{"No value returned", ELogLevel::Error, base::_sl} );
 			}
-			catch( Exception& e ){
+			catch( runtime_error& e ){
 				base::ResumeExp( move(e) );
 			}
 		}
@@ -64,7 +64,7 @@ namespace Jde::DB{
 		try{
 			base::ResumeScaler( r ? r->template Get<T>(0) : optional<T>{} );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			base::ResumeExp( move(e) );
 		}
 	}

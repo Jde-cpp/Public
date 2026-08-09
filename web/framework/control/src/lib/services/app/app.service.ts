@@ -162,7 +162,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 							|| this.iotProcessError(message.exception, requestId);
 					}
 					if( !processed )
-						throw `[App.${requestId}]Error:  (${message.exception.code!.toString(16)})${message.exception.what}`;
+						throw `[App.${requestId}]Error:  (${message.exception.statusCode})(${message.exception.code!.toString(16)})${message.exception.what}`;
 				}
 				else
 					throw `unknown message type ${Object.keys(message)}`

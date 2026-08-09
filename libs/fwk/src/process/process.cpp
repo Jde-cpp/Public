@@ -99,7 +99,7 @@ namespace Jde{
 	bool _finalizing{};
 	α Process::Finalizing()ι->bool{ return _finalizing; }
 
-	α Process::ExitException( exception&& e )ι->int{
+	α Process::ExitException( std::exception&& e )ι->int{
 		int y{ EXIT_FAILURE };
 		string message;
 		if( auto p = dynamic_cast<Exception*>(&e); p ){

@@ -24,7 +24,7 @@ std::optional<int> _exitCode;
 		BlockVoidAwait( Opc::Server::StartupAwait{webServerSettings ? *webServerSettings : jobject{}, Settings::AsObject("/credentials")} );
 		exitCode = Process::Pause();
 	}
-	catch( exception& e ){
+	catch( runtime_error& e ){
 		exitCode = Process::ExitException( move(e) );
 	}
 	Process::Shutdown( exitCode );

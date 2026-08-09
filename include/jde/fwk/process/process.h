@@ -50,7 +50,7 @@ namespace Process{
 	Φ AddShutdown( IShutdown* pShutdown )ι->void; //global unique ptrs
 	Φ RemoveShutdown( IShutdown* pShutdown )ι->void;
 
-	Φ ExitException( exception&& e )ι->int;
+	Φ ExitException( std::exception&& e )ι->int;
 	Φ ExitHandler( int s )->void;
 	Φ ExitReason()ι->optional<int>;
 	Φ OnTerminate()ι->void;

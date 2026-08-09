@@ -1,3 +1,4 @@
+#include "jde/fwk/exceptions/CodeException.h"
 #ifdef BOOST_ALL_NO_LIB
 	#include <boost/json/src.hpp>
 #endif
@@ -88,7 +89,7 @@ namespace Jde{
 		try{
 			return Parse( j, sl );
 		}
-		catch( exception& e ){
+		catch( CodeException& e ){
 			return std::unexpected{ Ƒ("Failed to read '{}': {}", path.string(), e.what()) };
 		}
 	}

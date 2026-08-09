@@ -34,14 +34,18 @@ namespace Jde::App{
 		} );
 	}
 
-	α FromClient::Exception( exception&& e, RequestId requestId )ι->PFromClient::Transmission{
+	α FromClient::Exception( runtime_error&& e, RequestId requestId )ι->PFromClient::Transmission{
 		return setMessage( requestId, [&](auto& m){
 			auto& request = *m.mutable_exception();
 			request.set_what( e.what() );
-			if( auto p = dynamic_cast<Jde::Exception*>(&e); p )
+			if( auto p = dynamic_cast<Jde::Exception*>(&e); p ){
 				request.set_code( (uint32)p->Code() );
-			if( auto p = dynamic_cast<DB::DBException*>(&e); p )
-				request.set_db_error( (uint32)p->Error );
+				request.set_status_code( p->HttpStatus() );//status & classification ride the base virtuals - the type can't cross the wire.
+				request.set_category( (Jde::Proto::ECategory)p->Category() );
+				request.set_category_code( p->CategoryCode() );
+			}
+			else
+				request.set_status_code( 500 );//plain std::exception - unclassified server fault.
 		} );
 	}
 	α FromClient::Exception( string&& e, RequestId requestId )ι->PFromClient::Transmission{

@@ -66,12 +66,12 @@ namespace Jde::Opc::Gateway{
 					);
 					_client->Process( _requestId, "call" );
 				}
-				catch( exception& e ){
+				catch( runtime_error& e ){
 					ResumeExp( move(e) );
 				}
 			});
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -88,7 +88,7 @@ namespace Jde::Opc::Gateway{
 			auto response = co_await CallAwait{ move(_ql), move(_session), _sl };
 			Resume( response.ToJson() );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

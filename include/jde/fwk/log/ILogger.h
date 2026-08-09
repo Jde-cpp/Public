@@ -28,7 +28,7 @@ namespace Jde::Logging{
 			try{
 				y = (T*)AddLogger( mu<T>(*settings, FWD(args)...) );
 			}
-			catch( exception& )
+			catch( runtime_error& )
 			{}
 		}
 		return y;

@@ -59,6 +59,25 @@ namespace Jde::DB::Tests{
 		EXPECT_EQ( Logging::Find([](const Logging::Entry& e){ return e.Message().contains("hunter2");}).size(), 1u );
 	}
 
+	//the EDbError -> http status map lives on DBException::EHttpStatus; after a wire round trip the reconstructed
+	//DBException recomputes it from Error, and ServerImpl answers with it.
+	TEST( DBExceptionTests, HttpStatusMapsError ){
+		let status = []( EDbError error ){ return DBException{ error, DB::Sql{}, "boom", {ELogLevel::NoLog} }.HttpStatus(); };
+		EXPECT_EQ( 409u, status(EDbError::Duplicate) );
+		EXPECT_EQ( 400u, status(EDbError::App) );
+		EXPECT_EQ( 403u, status(EDbError::Permission) );
+		EXPECT_EQ( 503u, status(EDbError::Connection) );
+		EXPECT_EQ( 504u, status(EDbError::Timeout) );
+		EXPECT_EQ( 500u, status(EDbError::None) );
+		EXPECT_EQ( 500u, status(EDbError::Syntax) );
+
+		DBException e{ EDbError::Duplicate, DB::Sql{}, "boom", {ELogLevel::NoLog} };
+		EXPECT_EQ( Exception::ECategory::DB, e.Category() );
+		EXPECT_EQ( (uint32)EDbError::Duplicate, e.CategoryCode() );
+		e.SetHttpStatus( EHttpStatus::IAmATeapot );
+		EXPECT_EQ( EHttpStatus::IAmATeapot, e.HttpStatus() ); //an explicit SetHttpStatus wins, same contract as the base.
+	}
+
 	//#7: odbc's SQL_SUCCESS_WITH_INFO path re-wraps a classified inner exception to attach the statement it was thrown
 	//without. The legacy 4-arg ctor reset Error to None and Code to the RETCODE; this mirrors the replacement expression,
 	//const ref included - the odbc TU is WIN32-only, so this is what compiles it on Linux.

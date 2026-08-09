@@ -63,6 +63,8 @@ export class SnackbarService{
 			else
 				this.show( `(${e.status})${e.error}`, type, e );
 		}
+		else if( typeof e=='object' && typeof e?.error?.message=="string" )//a ProtoService rejection - {error:IError}; was falling through to the JSON.stringify fallback
+			this.show( e.error.httpStatus ? `(${e.error.httpStatus})${e.error.message}` : e.error.message, type, e );
 		else if( typeof e=='object' && typeof e.message=="string" )
 			this.show( e.message, type, e );
 		else if( e instanceof Error )

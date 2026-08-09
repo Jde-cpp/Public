@@ -21,7 +21,7 @@ namespace Jde::App::Server{
 
 			QueryDB( move(conStatuses) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -39,7 +39,7 @@ namespace Jde::App::Server{
 			});
 			Resume( move(connections) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

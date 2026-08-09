@@ -11,7 +11,7 @@ namespace Jde::Access{
 		UserPK Executer;
 	};
 	template<class... Args> AccessException::AccessException( SL sl, UserPK executer, fmt::format_string<Args...> m, Args&& ...args )ι:
-		Exception{ sl, {DefaultExceptionLevel, ELogTags::Access | ELogTags::Exception}, m, FWD(args)... },
+		Exception{ sl, {DefaultExceptionLevel, ELogTags::Access | ELogTags::Exception, 0, EHttpStatus::Unauthorized}, m, FWD(args)... },
 		Executer{ executer }
 	{}
 }

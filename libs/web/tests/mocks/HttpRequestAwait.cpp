@@ -26,7 +26,7 @@ namespace Jde::Web::Mock{
 			req.SessionInfo->IsInitialRequest = true;  //expecting sessionId to be set.
 			return j;
 		}
-		catch( Exception& ){
+		catch( const runtime_error& ){
 			ASSERT(false);
 			return {};
 		}
@@ -68,7 +68,7 @@ namespace Jde::Web::Mock{
 		if( result ){
 			_result = HttpTaskResult{ move(*result), move(_request) };
 		}
-		else if( _request.IsGet("/NoResult") )//#3: a result with no request drops ServerImpl into catch( Exception& ).  leave _request with the await - that is what the error response has to be built from.
+		else if( _request.IsGet("/NoResult") )//#3: a result with no request drops ServerImpl into catch( const runtime_error& ).  leave _request with the await - that is what the error response has to be built from.
 			_result = HttpTaskResult{};
 		return _result.has_value();
 	}
@@ -87,7 +87,7 @@ namespace Jde::Web::Mock{
 		else if( _request.Target()=="/BadAwaitable" ){
 			_thread = std::jthread( [this,h=_h]()mutable->void {
 				Thread::SetName( "BadAwaitable" );
-				h.promise().SetExp( RestException{SRCE_CUR, move(_request), "BadAwaitable"} );
+				h.promise().SetExp( RestException{ EHttpStatus::InternalServerError, SRCE_CUR, move(_request), "BadAwaitable"} );//a handler that just fails is a server fault - the status RestException carried before it took one explicitly.
 				net::post( *Executor(), [h](){ h.resume(); } );
 				DBGT( ELogTags::HttpServerWrite, "~/BadAwaitable handler" );
 			 });
@@ -97,10 +97,12 @@ namespace Jde::Web::Mock{
 			///redirectHost sends it to the same server under a different host name so the Authorization drop can be observed.
 			let location = _request.Target()=="/redirectLoop" ? string{"/redirectLoop"} : Ƒ( "https://127.0.0.1:{}/authHeader", Port );
 			_request.ResponseHeaders.emplace( "Location", location );//set before the move - RestException::Response() emits these.
-			ResumeExp( RestException<http::status::found>(SRCE_CUR, move(_request), "redirecting") );
+			ResumeExp( RestException(EHttpStatus::Found, SRCE_CUR, move(_request), "redirecting") );
 		}
-		else
-			ResumeExp( RestException<http::status::not_found>(SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target()) );
+		else{
+			let target = _request.Target();//read before the move: argument evaluation is indeterminately sequenced, so Target() could otherwise run against a moved-from request.
+			ResumeExp( RestException(EHttpStatus::NotFound, SRCE_CUR, move(_request), "Unknown target '{}'", target) );
+		}
 	}
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		ASSERT( Promise() || _result );

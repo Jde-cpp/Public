@@ -1,6 +1,7 @@
 #include "SchemaDdl.h"
 #include <jde/fwk/io/file.h>
 #include "TableDdl.h"
+#include <jde/db/DBException.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/Functions.h>
@@ -334,9 +335,8 @@ namespace Jde::DB{
 		try{
 			return config.DS()->ScalerSyncOpt<string>( {string{config.DS()->Syntax().SchemaExistsSql()}, {Value{config.Name}}} ).has_value();
 		}
-		catch( Exception& e ){
+		catch( DBException& e ){
 			e.SetLevel( ELogLevel::Debug );
-			e.Log();
 			return false;//connected to schema which doesn't exist.
 		}
 	}

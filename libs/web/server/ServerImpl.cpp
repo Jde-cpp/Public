@@ -2,6 +2,7 @@
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/fwk/process/execution.h>
 #include "jde/db/DBException.h"
+#include "jde/fwk/exceptions/Exception.h"
 #include <jde/ql/ql.h>
 #include <jde/ql/QLAwait.h>
 #include <jde/access/AccessException.h>
@@ -45,7 +46,7 @@ namespace Server{
 		stream->AsyncWrite( move(res) );
 	}
 
-	Ω send( IRestException&& e, sp<RestStream> stream, sv contentType={} )ι->void{
+	Ω send( RestException&& e, sp<RestStream> stream, sv contentType={} )ι->void{
 		auto res = e.Response();
 		if( contentType.size() )
 			res.set( http::field::content_type, contentType );
@@ -70,15 +71,15 @@ namespace Server{
 				if( auto jvars = body.if_contains("variables"); jvars && jvars->is_object() )
 					vars = move( jvars->get_object() );
 			}
-			THROW_IFX( query.empty(), RestException<http::status::bad_request>(SRCE_CUR, move(req), "No query sent.") );
+			THROW_IFX( query.empty(), RestException(EHttpStatus::BadRequest, SRCE_CUR, move(req), "No query sent.") );
 			req.LogRead( query, ELogLevel::Trace );
 			optional<QL::RequestQL> q;
 			try{
 				q = QL::Parse( move(query), move(vars), reqHandler->Schemas(), returnRaw );
 			}
-			catch( Exception& e ){
+			catch( runtime_error& e ){
 				DBGT( ELogTags::HttpServerRead, "parsing failed: {}", e.what() );
-				co_return send( RestException<http::status::bad_request>{move(e), move(req), "Query parsing failed."}, move(stream), contentType );
+				co_return send( RestException{EHttpStatus::BadRequest, move(e), move(req), "Query parsing failed."}, move(stream), contentType );
 			}
 			if( Logging::ShouldLog(ELogLevel::Debug, ELogTags::HttpServerRead) ){
 				req.LogRead( q->ToString(), ELogLevel::Debug );
@@ -92,22 +93,22 @@ namespace Server{
 			jobject y{ {"data", move(result)} };
 			send( move(req), move(stream), move(y), contentType );
 		}
-		catch( IRestException& e ){
+		catch( RestException& e ){
 			send( move(e), move(stream), contentType );
 			co_return;
 		}
 		catch( Access::AccessException& e ){
-			send( RestException<http::status::unauthorized>{move(e), move(req), "[{}]{}", reqHandler->UserName(e.Executer), e.what()}, move(stream), contentType );
+			send( RestException{EHttpStatus::Unauthorized, move(e), move(req), "[{}]{}", reqHandler->UserName(e.Executer), e.what()}, move(stream), contentType );
 		}
 		catch( Exception& e ){
 			if( !empty(e.Tags & ELogTags::Parsing) )
-				send( RestException<http::status::bad_request>{move(e), move(req), "Query parsing failed."}, move(stream), contentType );
-			else
-				send( RestException{move(e), move(req), "Query failed."}, move(stream), contentType );
+				send( RestException{EHttpStatus::BadRequest, move(e), move(req), "Query parsing failed."}, move(stream), contentType );
+			else//braced-init sequences left-to-right: the status reads before move(e) - do not switch to parens.
+				send( RestException{e.HttpStatus(), move(e), move(req), "Query failed."}, move(stream), contentType );
 			co_return;
 		}
-		catch( exception& e ){
-			send( RestException{SRCE_CUR, move(req), "Query failed: {}", e.what()}, move(stream), contentType );
+		catch( runtime_error& e ){
+			send( RestException{EHttpStatus::InternalServerError, SRCE_CUR, move(req), "Query failed: {}", e.what()}, move(stream), contentType );
 			co_return;
 		}
 	}
@@ -121,12 +122,13 @@ namespace Server{
 			THROW_IF( !result.Request, "Request not set." );
 			send( move(*result.Request), move(stream), move(result.Json), {}, result.Source.value_or(SRCE_CUR) );
 		}
-		catch( IRestException& e ){
+		catch( RestException& e ){
 			send( move(e), move(stream) );
 		}
 		catch( Exception& e ){
-			e.SetLevel( ELogLevel::Critical );
-			send( RestException<>{move(e), move(requestAwait->Request()), "Error handling request."}, move(stream) );
+			if( e.HttpStatus()>=500 )//a relayed 401/409 is the caller's fault - only server faults escalate.
+				e.SetLevel( ELogLevel::Critical );
+			send( RestException{e.HttpStatus(), move(e), move(requestAwait->Request()), "Error handling request."}, move(stream) );
 		}
 	}
 
@@ -255,8 +257,8 @@ namespace Server{
 		try{
 			req.SessionInfo = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false, reqHandler->AppServer() );
 		}
-		catch( Exception& e ){
-			send( RestException<http::status::unauthorized>{move(e), move(req), "Could not get sessionInfo."}, move(stream) );
+		catch( runtime_error& e ){
+			send( RestException{ EHttpStatus::Unauthorized, move(e), move(req), "Could not get sessionInfo."}, move(stream) );
 			co_return;
 		}
 		if( req.IsGet("/graphql") || req.IsPost("/graphql") )

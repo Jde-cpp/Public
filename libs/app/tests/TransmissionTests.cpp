@@ -85,20 +85,25 @@ namespace Jde::App::Tests{
 		EXPECT_EQ( text.messages(0).request_id(), 3u );
 		EXPECT_EQ( text.messages(0).exception().what(), "boom" );
 		EXPECT_EQ( text.messages(0).exception().code(), 0u );
+		EXPECT_EQ( text.messages(0).exception().status_code(), 0u ); //text-only stays unset - the receiver resolves 0 to 500.
 
 		let thrown = FromClient::Exception( std::runtime_error{"plain"}, 4 );
 		EXPECT_EQ( thrown.messages(0).exception().what(), "plain" );
 		EXPECT_EQ( thrown.messages(0).exception().code(), 0u ); //not a Jde::Exception - there is no code to carry.
-		EXPECT_EQ( thrown.messages(0).exception().db_error(), 0u ); //nor a DBException - "unclassified" and "not one" read the same.
+		EXPECT_EQ( thrown.messages(0).exception().status_code(), 500u ); //unclassified server fault.
+		EXPECT_EQ( thrown.messages(0).exception().category(), Jde::Proto::Jde );
+		EXPECT_EQ( thrown.messages(0).exception().category_code(), 0u ); //nor a DBException - "unclassified" and "not one" read the same.
 	}
 
-	//M10: both directions share Common.proto's Exception, but only FromServer set db_error - so a DB error a client
+	//M10: both directions share Common.proto's Exception, but only FromServer carried the DB classification - so a DB error a client
 	//forwarded to the app server arrived looking like it had never been one, and the receiver branches on exactly that.
 	TEST( FromClientTests, ExceptionCarriesTheDbClassification ){
 		DB::DBException e{ DB::EDbError::Duplicate, DB::Sql{"insert into t values(1)"}, "duplicate key", {} };
 		let t = FromClient::Exception( move(e), 5 );
 		ASSERT_EQ( t.messages_size(), 1 );
-		EXPECT_EQ( t.messages(0).exception().db_error(), (uint32)DB::EDbError::Duplicate );
+		EXPECT_EQ( t.messages(0).exception().category(), Jde::Proto::DB );
+		EXPECT_EQ( t.messages(0).exception().category_code(), (uint32)DB::EDbError::Duplicate );
+		EXPECT_EQ( t.messages(0).exception().status_code(), 409u ); //Duplicate -> conflict.
 	}
 
 	//Log traffic is unsolicited:  one message per entry, no request to answer.
@@ -134,13 +139,16 @@ namespace Jde::App::Tests{
 		EXPECT_EQ( t.messages(0).request_id(), 8u );
 		EXPECT_EQ( t.messages(0).exception().what(), "plain" );
 		EXPECT_EQ( t.messages(0).exception().code(), 0u );
-		EXPECT_EQ( t.messages(0).exception().db_error(), 0u ); //not a DBException - "unclassified" and "not one" are the same to the receiver.
+		EXPECT_EQ( t.messages(0).exception().status_code(), 500u ); //unclassified server fault.
+		EXPECT_EQ( t.messages(0).exception().category(), Jde::Proto::Jde );
+		EXPECT_EQ( t.messages(0).exception().category_code(), 0u ); //not a DBException - "unclassified" and "not one" are the same to the receiver.
 
 		let unsolicited = FromServer::Exception( std::runtime_error{"plain"}, nullopt );
 		EXPECT_EQ( unsolicited.messages(0).request_id(), 0u );
 
 		let text = FromServer::Exception( string{"boom"}, nullopt );
 		EXPECT_EQ( text.messages(0).exception().what(), "boom" );
+		EXPECT_EQ( text.messages(0).exception().status_code(), 0u ); //text-only stays unset - the receiver resolves 0 to 500.
 	}
 
 	//Forwarded execution carries the user only when there is one;  otherwise it is the anonymous member, not user 0.

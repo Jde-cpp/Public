@@ -79,7 +79,7 @@ namespace Tests{
 				try{
 					h.promise().Resume( parse(move(*m->mutable_query())), h );
 				}
-				catch( std::exception& e ){
+				catch( runtime_error& e ){
 					h.promise().ResumeExp( move(e), h );
 				}
 				break;}

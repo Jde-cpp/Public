@@ -41,7 +41,7 @@ namespace Jde::IO::Tests{
 			}
 			catch( Exception& e ){
 				e.Log();
-				e.Throw();
+				throw;
 			}
 			written.push_back( guid1 );
 			written.push_back( guid2 );
@@ -108,9 +108,8 @@ namespace Jde::IO::Tests{
 			try{
 				co_await IO::WriteAwait{ move(file), move(content), true, mode, Jde::ELogTags::IO, sl };
 			}
-			catch( Exception& e ){
-				e.Log();
-			}
+			catch( Exception& e )
+			{}
 			*done = true;
 		}( move(file), move(content), move(done), move(l), mode );
 	}
@@ -119,9 +118,8 @@ namespace Jde::IO::Tests{
 		try{
 			*content = co_await IO::ReadAwait{ move(file), cache, sl };
 		}
-		catch( Exception& e ){
-			e.Log();
-		}
+		catch( Exception& e )
+		{}
 		*done = true;
 	}
 

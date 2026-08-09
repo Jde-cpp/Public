@@ -21,7 +21,7 @@ namespace Jde::Opc::Gateway{
 		FromServer::Message m;
 		return MessageTrans( move(m), requestId );
 	}
-	α FromServer::ExceptionTrans( const exception& e, optional<RequestId> requestId )ι->FromServer::Transmission{
+	α FromServer::ExceptionTrans( const runtime_error& e, optional<RequestId> requestId )ι->FromServer::Transmission{
 		FromServer::Transmission t;
 		auto& m = *t.add_messages();
 		if( requestId )
@@ -29,8 +29,14 @@ namespace Jde::Opc::Gateway{
 
 		auto& proto = *m.mutable_exception();
 		proto.set_what( string{e.what()} );
-		if( auto p = dynamic_cast<const Exception*>(&e) )
+		if( auto p = dynamic_cast<const Exception*>(&e) ){
 			proto.set_code( p->Code() );
+			proto.set_status_code( p->HttpStatus() );//status & classification ride the base virtuals - the type can't cross the wire.
+			proto.set_category( (Jde::Proto::ECategory)p->Category() );
+			proto.set_category_code( p->CategoryCode() );
+		}
+		else
+			proto.set_status_code( 500 );//plain std::exception - unclassified server fault.
 		return t;
 	}
 	α FromServer::MessageTrans( FromServer::Message&& m, RequestId requestId )ι->FromServer::Transmission{

@@ -48,7 +48,7 @@ namespace Jde::App::Client{
 				co_await client->Subscribe( string{r.Query}, r.Variables, r.Listener );
 				++done;
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				WARNT( _subTags, "Could not replay subscription '{}': {}", r.Query, e.what() );
 			}
 		}
@@ -120,7 +120,7 @@ namespace Jde::App::Client{
 			try{
 				listener->OnChange( m, clientId );
 			}
-			catch( exception& )
+			catch( runtime_error& )
 			{}
 		}
 	}

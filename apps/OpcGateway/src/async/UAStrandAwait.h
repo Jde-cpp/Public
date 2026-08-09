@@ -15,7 +15,7 @@ namespace Jde::Opc::Gateway{
 				try{
 					this->Resume( _f() );
 				}
-				catch( exception& e ){
+				catch( runtime_error& e ){
 					this->ResumeExp( move(e) );
 				}
 			});

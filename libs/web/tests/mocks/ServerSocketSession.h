@@ -14,7 +14,7 @@ namespace Jde::Web::Mock{
 		α SendAck( uint32 serverSocketId )ι->void override;
 		α LocalQL()Ι->sp<QL::IQL> override{ return nullptr; }
 	private:
-		α WriteException( exception&& e, RequestId requestId )ι->void override;
+		α WriteException( runtime_error&& e, RequestId requestId )ι->void override;
 		α WriteException( std::string&&, Jde::RequestId )ι->void override{ ASSERT(false); }
 		α WriteException( Exception&& e )ι->void{ WriteException( move(e), 0 ); }
 		α WriteSubscription( const jvalue&, RequestId )ι->void override{ ASSERT(false); }

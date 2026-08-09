@@ -11,7 +11,7 @@ namespace Jde::DB{
 			else
 				base::ResumeExp( Exception{"No value returned", ELogLevel::Error, base::_sl} );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			base::ResumeExp( move(e) );
 		}
 	}
@@ -24,7 +24,7 @@ namespace Jde{
 			auto result = co_await ds.Query( move(query), isInsert, sl );
 			onRow( result.Rows.size() ? move(result.Rows[0]) : optional<Row>{} );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			onError( move(e) );
 		}
 	}

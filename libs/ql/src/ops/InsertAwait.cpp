@@ -100,7 +100,7 @@ namespace Jde::QL{
 				co_return;
 			}
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 			co_return;
 		}
@@ -143,7 +143,7 @@ namespace Jde::QL{
 			TRACE( "InsertAwait::Execute: {}", serialize(y) );
 			InsertAfter( move(y) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			InsertFailure( move(e) );
 		}
 	}
@@ -153,16 +153,16 @@ namespace Jde::QL{
 			co_await Hook::InsertAfter( id, _mutation, _executer );
 			Resume( move(result) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α InsertAwait::InsertFailure( exception e )ι->MutationAwaits::Task{
+	α InsertAwait::InsertFailure( runtime_error e )ι->MutationAwaits::Task{
 		try{
 			co_await Hook::InsertFailure( _mutation, _executer );
 			ResumeExp( move(e) );
 		}
-		catch( exception& e2 ){
+		catch( runtime_error& e2 ){
 			ResumeExp( move(e2) );
 		}
 	}

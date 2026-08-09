@@ -15,6 +15,7 @@ namespace Jde{
 	α Exception::EmptyPtr()ι->const up<Exception>&{ return _empty; }
 
 	Exception::Exception( string value, ExceptionArgs args, SL sl )ι:
+		runtime_error{ {} },
 		ExceptionArgs{ args },
 		_format{ move(value) },
 		_sl{ sl }{
@@ -22,16 +23,18 @@ namespace Jde{
 	}
 
 	Exception::Exception( const Exception& from )ι:
+		runtime_error{ from },
 		ExceptionArgs{ from },
 		_what{ from._what },
 		_logged{ from._logged },
-		_inner{ from._inner ? up<std::exception>{mu<std::runtime_error>( from._inner->what() )} : nullptr },//a base std::exception copy slices - what() is all consumers read; preserve it.
+		_inner{ from._inner ? up<runtime_error>{mu<runtime_error>( from._inner->what() )} : nullptr },//a base std::exception copy slices - what() is all consumers read; preserve it.
 		_format{ from._format },
 		_args{ from._args },
 		_sl{ from._sl }{
 		BREAK;//should only be called by rethrow_exception
 	};
 	Exception::Exception( Exception&& from )ι:
+		runtime_error{ from },
 		ExceptionArgs{ move(from) },
 		_what{ move(from._what) },
 		_logged{ from._logged },
@@ -41,7 +44,8 @@ namespace Jde{
 		_sl{ from._sl }{
 		from._logged = true;//the source made its log decision at construction - the moved-to object owns any future logging.
 	}
-	Exception::Exception( std::exception&& from, ExceptionArgs args, SL sl )ι:
+	Exception::Exception( runtime_error&& from, ExceptionArgs args, SL sl )ι:
+		runtime_error{ from },
 		ExceptionArgs{ args },
 		_sl{ sl }{
 		if( let p = dynamic_cast<Exception*>(&from) )

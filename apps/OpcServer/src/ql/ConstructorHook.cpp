@@ -43,7 +43,7 @@ namespace Jde::Opc::Server{
 			ua.AddConstructor( *node, move(values) );
 			Resume( y );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

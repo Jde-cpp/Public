@@ -32,14 +32,14 @@ namespace Jde::Opc::Server{
 					try{
 						y.push_back( co_await QL::QLAwait<jvalue>{move(m), {UserPK::System}} );
 					}
-					catch( exception& )//assume already exists
+					catch( runtime_error& )//assume already exists
 					{}
 				}
 			}
 			DBGT( ELogTags::App, "Upsert: {}", serialize(y) );
 			Resume();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

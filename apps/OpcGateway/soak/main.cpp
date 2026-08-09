@@ -70,7 +70,7 @@ namespace Jde::Opc::Gateway::Soak{
 				exitCode = Soak::Run( client );
 		}
 	}
-	catch( exception& e ){
+	catch( runtime_error& e ){
 		exitCode = Process::ExitException( move(e) );
 	}
 	Process::Shutdown( exitCode );

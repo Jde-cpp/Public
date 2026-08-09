@@ -64,7 +64,7 @@ namespace Jde::Opc::Gateway{
 			INFOT( ELogTags::App, "---Started {}---", "OPC Gateway" );
 			Resume();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

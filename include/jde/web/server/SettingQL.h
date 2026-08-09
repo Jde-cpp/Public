@@ -12,7 +12,7 @@ namespace Jde::Web::Server{
 		α await_resume()ε->jvalue override;
 	private:
 		sp<App::IApp> _appClient;
-		up<exception> _exception;
+		up<runtime_error> _exception;
 		QL::TableQL _query;
 		jvalue _result;
 	};

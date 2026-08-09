@@ -23,7 +23,7 @@ namespace Jde::Opc::Server{
 				variantPKs.push_back( row[6] );
 			LoadVariants( move(rows), move(variantPKs) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -38,7 +38,7 @@ namespace Jde::Opc::Server{
 			}
 			Resume( move(y) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

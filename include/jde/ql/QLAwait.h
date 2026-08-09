@@ -40,7 +40,7 @@ namespace Jde::QL{
 			jvalue v = co_await QLAwait<jvalue>{move(_request), move(_statement), _executer, _ql, base::_sl};
 			Resume( v.is_null() ? jobject{} : move(Json::AsObject(v)) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -50,7 +50,7 @@ namespace Jde::QL{
 			auto a = Json::AsArray(v);
 			Resume( move(a) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

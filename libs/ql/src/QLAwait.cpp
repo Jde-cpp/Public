@@ -33,7 +33,7 @@ namespace Jde::QL{
 			else
 				ResumeExp( Exception{"Unsubscribe is not supported in this context.", {}, _sl} ); //would need a listener
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

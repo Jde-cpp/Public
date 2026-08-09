@@ -40,7 +40,7 @@ namespace Jde::Access::Server{
 			THROW_IF( !permissionPK, "Could not find permissionRight or role id in '{}'", serialize(_mutation.Args) );
 			PurgeAcl( identityPK, *permissionPK );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -57,7 +57,7 @@ namespace Jde::Access::Server{
 			QL::Subscriptions::OnMutation( _mutation, y );
 			Resume( move(y) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -84,7 +84,7 @@ namespace Jde::Access::Server{
 			QL::Subscriptions::OnMutation( _mutation, y );
 			Resume( jvalue{y} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -109,7 +109,7 @@ namespace Jde::Access::Server{
 			}
 			InsertPermission( allowed, denied, key.PK() );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -129,7 +129,7 @@ namespace Jde::Access::Server{
 			QL::Subscriptions::OnMutation( _mutation, y );
 			Resume( y );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -138,7 +138,7 @@ namespace Jde::Access::Server{
 		try{
 			GetTable( "acl" ).Authorize( Access::ERights::Read, _executer, _sl );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 			return;
 		}
@@ -189,7 +189,7 @@ namespace Jde::Access::Server{
 			else
 				Resume( o );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -225,7 +225,7 @@ namespace Jde::Access::Server{
 			}
 			Resume( move(y) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -244,7 +244,7 @@ namespace Jde::Access::Server{
 			}
 			Resume( move(y) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -282,7 +282,7 @@ namespace Jde::Access::Server{
 			}
 			Resume( move(y) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

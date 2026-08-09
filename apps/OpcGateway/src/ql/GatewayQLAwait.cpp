@@ -27,7 +27,7 @@ namespace Jde::Opc::Gateway{
 			_client = co_await ConnectAwait{ string{opcId}, *session };
 			await->Query();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			await->ResumeExp( move(e) );
 		}
 	}
@@ -72,7 +72,7 @@ namespace Jde::Opc::Gateway{
 				throw Exception{ _sl, {}, "Unknown query type: {}", _query.JsonName };
 			Resume( move(y) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			TRACET( ELogTags::Test, "Exception in GatewayQLAwait::Query: {}", e.what() );
 			ResumeExp( move(e) );
 		}
@@ -94,7 +94,7 @@ namespace Jde::Opc::Gateway{
 				throw Exception{ _sl, {},	"Unknown query type: {}", _query.JsonTableName };
 			Resume( move(y) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

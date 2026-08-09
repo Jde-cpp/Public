@@ -34,3 +34,10 @@ endif()
 addJdeTest( ${targetName} ${CMAKE_CURRENT_SOURCE_DIR}/config/Sqlite.Tests.jsonnet )
 
 target_precompile_headers( ${targetName} PRIVATE pc.h )
+
+if( WIN32 )
+	#copyLibDlls, not copyCommonDlls: this exe links into bin/ alongside Jde/Jde.DB, so staging those would copy them onto
+	#themselves.  fmt/zlib still have to be copied in - copyLibDlls is the only thing that puts them there, so without this
+	#`--target Jde.DB.Sqlite.Tests` on a clean tree leaves bin without fmtd.dll and Jde.dll fails to load.
+	copyLibDlls()
+endif()

@@ -30,7 +30,7 @@ namespace Jde::App{
 			}
 			Resume( move(y) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

@@ -148,7 +148,7 @@ namespace Jde::QL{
 				CreateDeleteRestore( *_table );
 			UpdateBefore();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -158,7 +158,7 @@ namespace Jde::QL{
 			co_await Hook::UpdateBefore( _mutation, _userPK );
 			Execute();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -169,7 +169,7 @@ namespace Jde::QL{
 				rowCount += co_await _table->Schema->DS()->Execute( update.Move() );
 			UpdateAfter( rowCount );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -178,7 +178,7 @@ namespace Jde::QL{
 			co_await Hook::UpdateAfter( _mutation, _userPK );
 			Resume( jvalue{rowCount} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

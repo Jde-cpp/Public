@@ -1,10 +1,17 @@
 syntax = "proto3";
 package Jde.Proto;
 
+enum ECategory{
+	Jde = 0;
+	DB = 1;
+}
+
 message Exception{
 	uint32 code = 1;
 	string what = 2;
-	uint32 db_error = 3;//DB::EDbError. 0 (None) covers both 'not a DBException' and 'unclassified' - to a receiver those are the same thing, so no presence bit is needed.
+	uint32 status_code = 3;//http status; 0 = unset - receiver treats as 500.
+	ECategory category = 4;
+	uint32 category_code = 5;//(uint32)DB::EDbError when category==DB, else 0. 0 (None) covers both 'not a DBException' and 'unclassified' - to a receiver those are the same thing.
 }
 
 message Query{

@@ -40,7 +40,7 @@ namespace Jde::Opc::Server::UAAccess{
 		try{
 			GetSchema().Authorizer->Test( _schemaName, string{resource}, rights, userPK );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			TRACE( "Access denied to resource '{}' for user {}: {}", resource, userPK.Value, e.what() );
 			allow = false;
 		}
@@ -271,7 +271,7 @@ namespace Jde::Opc::Server{
 		catch( const UAException& e ){
 			return e.Code();
 		}
-		catch( const exception& e ){
+		catch( const runtime_error& e ){
 			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 		}
 	}

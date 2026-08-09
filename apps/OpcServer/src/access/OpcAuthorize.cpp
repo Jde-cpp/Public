@@ -52,7 +52,7 @@ namespace Jde::Opc::Server{
 			try{
 				baseResources.emplace( resource.Criteria.empty() ? root : NodeId::DecodeJson(resource.Criteria), pk );
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				ERR( "Invalid NodeId '{}' for permission {}: {}", resource.Criteria, pk, e.what() );
 				if( auto jde = dynamic_cast<Exception*>(&e); jde )
 					jde->SetLevel( ELogLevel::NoLog );

@@ -35,6 +35,13 @@ describe('SnackbarService', () => {
 		expect( lastConfig() ).toEqual( {panelClass: ['red-snackbar'], data: {message: 'string throw', duration: 10000}} );
 	});
 
+	it('a ProtoService rejection shows status and message, not JSON', () => {
+		service.exception( 'ctx', {error: {requestId: 5, message: 'denied', sc: 3, httpStatus: 401}} );
+		expect( lastConfig()?.data.message ).toBe( '(401)denied' );
+		service.exception( 'ctx', {error: {message: 'boom'}} );//no status - message alone, no "(undefined)".
+		expect( lastConfig()?.data.message ).toBe( 'boom' );
+	});
+
 	it('assert(false) shows and throws', () => {
 		expect( () => service.assert(false) ).toThrow();
 		expect( lastConfig()?.panelClass ).toEqual( ['red-snackbar'] );

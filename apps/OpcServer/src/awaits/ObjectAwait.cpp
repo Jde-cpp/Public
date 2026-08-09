@@ -1,5 +1,6 @@
 #include "ObjectAwait.h"
 #include <jde/db/meta/AppSchema.h>
+#include <stdexcept>
 #include "ServerConfigAwait.h"
 #include "../uaTypes/ObjectAttr.h"
 
@@ -22,7 +23,7 @@ namespace Jde::Opc::Server {
 			}
 			Resume( move(objects) );
 		}
-		catch (exception& e) {
+		catch(runtime_error& e){
 			ResumeExp(move(e));
 		}
 	}
@@ -43,7 +44,7 @@ namespace Jde::Opc::Server {
 			} );
 			Resume( move(_node) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
