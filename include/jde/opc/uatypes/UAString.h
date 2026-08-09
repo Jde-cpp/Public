@@ -1,6 +1,4 @@
 #pragma once
-#ifndef UA_STRING
-#define UA_STRING
 
 namespace Jde::Opc{
 	Ξ ToSV( UA_String s )ι->sv{ return sv{ (const char*)s.data, s.length }; }
@@ -16,4 +14,3 @@ namespace Jde::Opc{
 		α ToString()Ι->string{ return Opc::ToString( *this ); }
 	};
 }
-#endif

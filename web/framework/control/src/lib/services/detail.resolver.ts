@@ -1,6 +1,6 @@
-import { ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
+import { ActivatedRouteSnapshot, createUrlTreeFromSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { inject, Inject, Injectable } from '@angular/core';
-import { IErrorService } from './error/IErrorService';
+import { SnackbarService } from '../shared/snackbar/snackbar-service';
 import { TableSchema } from '../model/ql/schema/TableSchema';
 import { IGraphQL } from '../services/IGraphQL';
 import { ListRoute, TableSettings } from './ql-list.resolver';
@@ -30,8 +30,8 @@ export type DetailResolverData<T>={
 
 @Injectable()
 export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
-	constructor( private route: ActivatedRoute, private router:Router,
-		@Inject('IErrorService') private snackbar: IErrorService,
+	constructor( private router:Router,
+		private snackbar: SnackbarService,
 		@Inject('IGraphQL') private ql: IGraphQL
 	){}
 
@@ -48,8 +48,8 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 			return await DetailResolver.load<T>( this.ql, this.ql.toCollectionName(collectionDisplay), target, routing );//await inside try — without it, async failures skip the catch entirely
 		}
 		catch( e ){
-			this.snackbar.error( `Target not found:  '${target}'`, (m)=>console.log(m) );
-			this.router.navigate( ['..'], { relativeTo: this.route } );
+			this.snackbar.error( `Target not found:  '${target}'` );
+			this.router.navigateByUrl( createUrlTreeFromSnapshot(route, ['..']) );//an injected ActivatedRoute is the ROOT route inside a resolver, so relativeTo sent this to '/';  the snapshot is this route.
 			return null as unknown as DetailResolverData<T>;
 		}
 	}

@@ -24,7 +24,9 @@ namespace Jde::Opc{
 		α Move()ι->up<Exception> override{ return mu<UAException>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }
 
-		α ClientMessage()Ι->string{ return format( "({:x}){}", Code(), Message((StatusCode)Code()) ); }
+		//the UA status names the protocol failure without exposing handles, request ids or source locations, so it is safe
+		//to hand a client - what() keeps those internals.  RestException::Response appends this to the body.
+		α ClientDetail()Ι->string override{ return format( "({:x}){}", Code(), Message((StatusCode)Code()) ); }
 	};
 }
 #endif

@@ -44,13 +44,26 @@ namespace Jde{
 	α Logging::ShouldLog( ELogLevel level, ELogTags tags )ι->bool{
 		return _cumulative->ShouldLog( level, tags );
 	}
-	α Logging::Tags()ι->flat_map<string,uint>{
+	α Logging::Tags( bool user )ι->flat_map<string,uint>{
 		flat_map<string,uint> y;
 		for( uint i=1; i<ELogTagStrings.size(); ++i )
 			y.emplace( string{ELogTagStrings[i]}, 1ul<<(i-1) );
 		for( let& parser : _tagParsers ){
 			let additional = parser->Tags();
 			y.insert( additional.begin(), additional.end() );
+		}
+		if( user ){
+			y.emplace( "httpClientRead", underlying(ELogTags::HttpClientRead) );
+			y.emplace( "httpClientWrite", underlying(ELogTags::HttpClientWrite) );
+			y.emplace( "httpClientSessions", underlying(ELogTags::HttpClientSessions) );
+			y.emplace( "httpServerRead", underlying(ELogTags::HttpServerRead) );
+			y.emplace( "httpServerWrite", underlying(ELogTags::HttpServerWrite) );
+			y.emplace( "socketClientRead", underlying(ELogTags::SocketClientRead) );
+			y.emplace( "socketClientReadSub", underlying(ELogTags::SocketClientReadSub) );
+			y.emplace( "socketClientWrite", underlying(ELogTags::SocketClientWrite) );
+			y.emplace( "socketClientWriteSub", underlying(ELogTags::SocketClientWriteSub) );
+			y.emplace( "socketServerRead", underlying(ELogTags::SocketServerRead) );
+			y.emplace( "socketServerWrite", underlying(ELogTags::SocketServerWrite) );
 		}
 		return y;
 	}

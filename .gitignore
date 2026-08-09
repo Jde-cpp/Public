@@ -95,3 +95,4 @@ apps/AppServer/src/build/**
 **/*.db-wal
 web/framework/control/src/lib/proto/*.*
 web/opc/control/src/lib/proto/*.*
+*.binpb

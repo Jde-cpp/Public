@@ -26,19 +26,21 @@ function( sync=false )
 				io: "Warning",
 				ql: "Debug",
 				settings: "Debug",
-				socket_client_write: "Debug",
+				http_client_read: "Debug",
+				http_client_write: "Debug",
 				socket_client_read: "Debug",
+				socket_client_write: "Debug",
 				sql: "Information",
 				threads: "Warning",
 				opc_access: "Trace",
-				uaEvent: "Warning",
-				uaNet: "Warning",
-				uaSession: "Warning",
-				uaServer: "Warning",
-				uaUser: "Warning",
-				uaSecurity: "Warning",
-				uaClient: "Warning",
-				uaSecure: "Warning"
+				uaEvent: "Debug",
+				uaNet: "Information",
+				uaSession: "Trace",
+				uaServer: "Trace",
+				uaUser: "Trace",
+				uaSecurity: "Trace",
+				uaClient: "Trace",
+				uaSecure: "Trace"
 			},
 			sinks:{
 				console:{},
@@ -54,6 +56,7 @@ function( sync=false )
 		client:{ ssl:{ caFile: "$(ProgramData)/Jde-Cpp/AppServer/ssl/certs/AppServer.pem" } }//the AppServer is its own root - without an anchor the client rejects localhost:1967's self-signed cert.
 	},
 	http:{
+		host: "localhost",//advertised to the AppServer registry - the frontend fetches this host, and allowOrigin 'sameHost' requires it to match the page's host (localhost:4200).
 		port: 1970,
 		ssl:{
 			certificate:{

@@ -3,7 +3,7 @@
 		<mat-chip *ngFor="let option of options" (click)="onSelectionChange(option.value)" [selected]="level==option.value">{{option.name}}</mat-chip>
 	</mat-chip-listbox>
 }
-<mat-form-field>
+<mat-form-field subscriptSizing="dynamic">
 	<!-- (selectionChange)="onSelectionChange($event.value)" -->
 	<mat-select  [(value)]="level">
 		<mat-option *ngFor="let o of options" [value]="o.value">{{o.name}}</mat-option>

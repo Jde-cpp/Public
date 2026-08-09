@@ -11,7 +11,7 @@ import { QLListSettingsDisplay } from './ql-list-settings-display/ql-list-settin
 import { QLListSettingsSort } from './ql-list-settings-sort/ql-list-settings-sort';
 import { View, ViewField } from '../../../../model/ql/View';
 import { ProfileStore } from 'jde-spa';
-import { TableSchema } from 'jde-framework';
+import { TableSchema } from '../../../../model/ql/schema/TableSchema';
 
 @Component({
 	selector: 'ql-list-settings',//.main-content.mat-drawer-container.my-content
@@ -23,7 +23,6 @@ import { TableSchema } from 'jde-framework';
 export class QLListSettings implements OnInit, OnDestroy{
 	ngOnInit(){
 		this.name.set( this.originalName() );
-//		this.view().append( this.schema().fields.filter(f=>!this.excludedColumns().includes(f.name)) );
 	}
 	ngOnDestroy(){
 		ProfileStore.setTabIndex('groupDetail', this.tabIndex() );

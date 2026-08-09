@@ -79,8 +79,9 @@ namespace Jde::Opc::Gateway{
 		α Configuration()ε->UA_ClientConfig*;
 		α Create()ε->UA_Client*;
 		α Connect()ε->void;
-		Ω LogServerEndpoints( str url, Jde::Handle h )ι->void;
+		Ω LogServerEndpoints( str url, Jde::Handle h )ι->string;//returns the server's ApplicationUri, empty if the endpoints could not be read.
 		α LogClientEndpoints()ι->void;
+		α ApplicationUri()Ι->string;//the endpoint filter open62541 matches against the server's ApplicationUri - not clientDescription's.
 
 		α CryptoSettings()Ι->Crypto::CryptoSettings{ return CryptoSettings( Target(), _opcServer.CertificateUri ); }
 

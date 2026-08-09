@@ -199,18 +199,25 @@ namespace Jde::Opc::Gateway{
 		for_each( handles, [](auto&& h){h.resume();} );
 	}
 
+	α UAClient::ApplicationUri()Ι->string{
+		return ToString( UA_Client_getConfig(_ptr)->applicationUri );
+	}
 	α UAClient::LogClientEndpoints()ι->void{
 		vector<string> policyUris;
 		auto config = UA_Client_getConfig( _ptr );
 		for( let& sp : Iterable<UA_SecurityPolicy>( config->securityPolicies, config->securityPoliciesSize) )
 			policyUris.emplace_back( ToString(sp.policyUri) );
-		INFO( "[{}]Client Security Policies: {}", hex(Handle()), Str::Join(policyUris) );
+		//both uris: config->applicationUri filters the *server's* endpoints, clientDescription's is what we advertise -
+		//they come from the same certificateUri (Configuration()) and a mismatch in either rejects every endpoint.
+		INFO( "[{}]Client Security Policies: {}, applicationUri filter: '{}', advertised applicationUri: '{}'", hex(Handle()), Str::Join(policyUris), ToString(config->applicationUri), ToString(config->clientDescription.applicationUri) );
 	}
-	α UAClient::LogServerEndpoints( str url, Jde::Handle h )ι->void{
+	//returns the server's ApplicationUri so the caller can name both sides of an endpoint-filter mismatch.
+	α UAClient::LogServerEndpoints( str url, Jde::Handle h )ι->string{
     UA_Client *client = UA_Client_new();
     UA_ClientConfig *config = UA_Client_getConfig(client);
     UA_ClientConfig_setDefault(config);
 		UA_EndpointDescription* endpointArray{}; uint endpointArraySize{};
+		string serverUri;
 
 		if( UA_Client_getEndpoints(client, url.c_str(), &endpointArraySize, &endpointArray) ){
 			WARN( "[{}]Could not get endpoints for url='{}'", hex(h), url );
@@ -222,11 +229,15 @@ namespace Jde::Opc::Gateway{
 				vector<string> tokenTypes;
 				for( uint j=0; j<ep.userIdentityTokensSize; ++j )
 					tokenTypes.emplace_back( FromEnum(TokenTypeNames, ToTokenType(ep.userIdentityTokens[j].tokenType)) );
-				INFO( "[{}]ServerEndpoint {}=[{}]", hex(h), securityMode, Str::Join(tokenTypes) );
+				let applicationUri = ToString( ep.server.applicationUri );
+				INFO( "[{}]ServerEndpoint {}=[{}], applicationUri: '{}'", hex(h), securityMode, Str::Join(tokenTypes), applicationUri );
+				if( serverUri.empty() )
+					serverUri = applicationUri;//every endpoint of one server carries the same uri; keep the first non-empty.
 			}
 			UA_Array_delete( endpointArray, endpointArraySize, &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION] );
 		}
 		UA_Client_delete( client );
+		return serverUri;
 	}
 
 	α UAClient::StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void{
@@ -243,12 +254,22 @@ namespace Jde::Opc::Gateway{
 			_awaitingActivation.erase_if( [ua, sessionState,connectStatus](sp<UAClient> client){
 				if( client->UAPointer()!=ua )return false;
 
+				string detail;//the reason handed to the waiting requests, not just the log - empty falls back to "Connection Failed".
 				if( connectStatus == UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
-					LogServerEndpoints( client->Url(), client->Handle() );
+					let serverUri = LogServerEndpoints( client->Url(), client->Handle() );
 					client->LogClientEndpoints();
+					//open62541 reports "No suitable endpoint found" as BadIdentityTokenRejected, so the usual cause - our
+					//configured applicationUri filtering out every endpoint (matchEndpoint) - reads as a credential problem.
+					//Name both uris; the fix is the target's certificateUri, which is what Configuration() puts in the filter.
+					if( let clientUri = client->ApplicationUri(); clientUri.size() && !serverUri.empty() && clientUri!=serverUri ){
+						detail = Ƒ( "client applicationUri '{}' does not match the server's '{}' at '{}' - every endpoint is filtered out; correct the target's certificateUri", clientUri, serverUri, client->Url() );
+						ERR( "[{}]{}", hex(client->Handle()), detail );
+					}
 				}
-				else if( auto sslSettings=connectStatus==UA_STATUSCODE_BADCERTIFICATEINVALID ? AppClient()->SslSettings : optional<Crypto::CryptoSettings>{}; sslSettings )
+				else if( auto sslSettings=connectStatus==UA_STATUSCODE_BADCERTIFICATEINVALID ? AppClient()->SslSettings : optional<Crypto::CryptoSettings>{}; sslSettings ){
+					detail = Ƒ( "certificate '{}' rejected", sslSettings->Certificate.Path.string() );//path only - ToString() carries the whole subject/issuer/SAN dump, which belongs in the log.
 					ERR( "Certificate: {} rejected.", sslSettings->Certificate.ToString() );
+				}
 
 				client->ClearRequest( ConnectRequestId );//previous clear didn't have client
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
@@ -265,7 +286,7 @@ namespace Jde::Opc::Gateway{
 				}
 				else{
 					client->StopProcessing();// Break the UAClient<->_asyncRequest._client self-reference; on the failure path the client never enters _clients, so Shutdown would never Stop() it and the UAClient (and its UA_Client) would leak.
-					Post( [client,connectStatus]()ι->void {ConnectAwait::Resume(client->Target(), client->Credential, UAClientException{connectStatus, client->Handle(), "Connection Failed"});} );
+					Post( [client,connectStatus,detail=move(detail)]()ι->void {ConnectAwait::Resume(client->Target(), client->Credential, UAClientException{connectStatus, client->Handle(), detail.size() ? detail : "Connection Failed"});} );
 				}
 
 				return true;
@@ -317,7 +338,7 @@ namespace Jde::Opc::Gateway{
 			UA_ExtensionObject_setValue( &_config.userIdentityToken, identityToken, &UA_TYPES[UA_TYPES_ISSUEDIDENTITYTOKEN] );
 		}
 		else{
-			BREAK;
+			BREAK; //need to sign in.
 			INFO( "[{}]Using anonymous authentication.", hex(Handle()) );
 		}
 

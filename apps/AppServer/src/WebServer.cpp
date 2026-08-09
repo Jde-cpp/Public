@@ -48,7 +48,7 @@ namespace Jde::App{
 	α Server::OnSessionDisconnect( sp<ServerSocketSession> session )ι->void{
 		_sessions.erase( session->Id() );
 		ForwardExecutionAwait::OnCloseConnection( session->ConnectionPK() );
-		EndInstance( session->ConnectionPK() );
+		EndConnection( session->ConnectionPK() );
 	}
 
 	α Server::GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ε->Web::Jwt{

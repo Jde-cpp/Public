@@ -18,7 +18,7 @@ namespace Jde::App{
 		// }
 		if( auto tags = _ql.FindColumn("tags"); tags ){
 			jobject jtags;
-			for( let& [tag,value] : Logging::Tags() )
+			for( let& [tag,value] : Logging::Tags(true) )
 				jtags[tag] = value;
 			y["tags"] = move( jtags );
 		}

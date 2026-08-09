@@ -224,7 +224,7 @@ namespace Jde::App::Tests{
 		let sub = boundary+std::chrono::milliseconds{ 250 };        //renders "…:25.250000Z", which sorts *before* "…:25Z".
 		let entries = vector<Logging::Entry>{ entry(boundary, ELogLevel::Information, 1, "boundary"), entry(sub, ELogLevel::Information, 2, "sub") };
 		let filtered = [&entries]( sv op, TimePoint bound )ε->vector<uint32_t>{
-			auto ql = table( "logs", Ƒ(R"({{time: {{{}: "{}"}}}})", op, ToIsoString(bound)+"Z") );
+			auto ql = table( "logs", Ƒ(R"({{time: {{{}: "{}"}}}})", op, ToIsoString(bound)) );
 			return lines( load(entries, ql).Sort({}) );
 		};
 		EXPECT_EQ( filtered("gt", boundary), (vector<uint32_t>{2}) ) << "250ms after the boundary is after it";
@@ -267,7 +267,7 @@ namespace Jde::App::Tests{
 		EXPECT_EQ( j.at("level").as_string(), "Error" );
 		EXPECT_EQ( j.at("line").to_number<uint32_t>(), 42u );
 		EXPECT_EQ( j.at("userId").to_number<uint32_t>(), 7u );
-		EXPECT_EQ( j.at("time").as_string(), ToIsoString(tp(0))+"Z" );
+		EXPECT_EQ( j.at("time").as_string(), ToIsoString(tp(0)) );
 		let& tags = j.at( "tags" ).as_array();
 		ASSERT_EQ( tags.size(), 1u );
 		EXPECT_EQ( tags[0].as_string(), "test" );

@@ -148,7 +148,7 @@ namespace Jde::Crypto{
 	α Certificate::ToString()Ι->string{
 		return Ƒ(
 			"issuer: {}, subject: {}, SubjectAltName: {}, CommonName: {}, UPN: {}, Email: {}, Expiration: {}",
-			Issuer, DistinguishedName, SubjectAltName, CommonName, Upn, Email, ToIsoString( Expiration )
+			Issuer, DistinguishedName, SubjectAltName, CommonName, Upn, Email, ToIsoString<days>( Expiration )
 		);
 	}
 

@@ -55,6 +55,8 @@ namespace Jde::Web::Server{
 		let origin = Header( "origin" );
 		let host = Header( "host" );
 		let allowed = origin.size() && Str::ToLower( hostOf(origin) )==Str::ToLower( hostOf(host) );
+		if( origin.size() && !allowed )//the browser only shows an opaque 'Failed to fetch' - this side knows why the header was withheld.
+			DBGT( ELogTags::Server | ELogTags::Http, "CORS: rejecting Origin '{}' for Host '{}' - allowOrigin='sameHost' requires matching hosts; pin /http/accessControl/allowOrigin or serve the page from '{}'.", origin, host, hostOf(host) );
 		return { allowed ? origin : string{}, true };
 	}
 

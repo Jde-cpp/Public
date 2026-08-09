@@ -2,7 +2,7 @@ import {Component, effect, Inject, input, output, AfterViewInit, EventEmitter, V
 import { CommonModule } from '@angular/common';
 import { MatFormFieldModule, MatLabel } from '@angular/material/form-field';
 import { ActivatedRoute, Router } from '@angular/router';
-import { IErrorService } from '../../../services/error/IErrorService';
+import { SnackbarService } from '../../../shared/snackbar/snackbar-service';
 import { ComponentPageTitle } from 'jde-spa';
 import { EnumValue, IGraphQL } from '../../../services/IGraphQL';
 import { TableSchema } from '../../../model/ql/schema/TableSchema';
@@ -20,7 +20,7 @@ import { MatButtonModule } from '@angular/material/button';
 		schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class Properties implements OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, @Inject('IGraphQL') private graphQL: IGraphQL, private cdr: ChangeDetectorRef, @Inject('IErrorService') private cnsl: IErrorService ){
+	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, @Inject('IGraphQL') private graphQL: IGraphQL, private cdr: ChangeDetectorRef, private cnsl: SnackbarService ){
 		effect( ()=>{
 			this.componentPageTitle.detail = this.record()["name"] ?? `New ${this.schema().type}`;
 		});

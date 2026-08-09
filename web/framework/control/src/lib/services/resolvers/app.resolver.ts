@@ -1,31 +1,33 @@
 import {inject, Inject, Injectable} from '@angular/core';
 import {ActivatedRouteSnapshot, Resolve, RouterStateSnapshot} from '@angular/router';
 import { RouteItem } from 'jde-spa';
-import { IErrorService } from '../error/IErrorService';
 import { AppService } from '../app/app.service';
 import { RouteStore } from '../route.store';
 import { StringUtils } from '../../utils/StringUtils';
+import { TableSettings } from '../ql-list.resolver';
 
 
-export type Connection = { id: number, programName: string, instanceName: string, hostName: string, created: Date, status: { memory: number, values: any[] }, urlSegments:string[] };
+export type Connection = { id: number, instanceId: number, programName: string, instanceName: string, hostName: string, created: Date, status: { memory: number, values: any[] }, urlSegments:string[] };
 
 export class AppInstanceRoute extends RouteItem{
-	constructor( programName:string, instanceName:string ){
+	constructor( programName:string, instanceName:string, tableSettings:TableSettings ){
 		super();
 		this.path = `${programName}/${instanceName}`;
 		this.title = `${programName}/${instanceName}`;
+		this.tableSettings = tableSettings;
 	}
+	tableSettings:TableSettings;
 }
 
 @Injectable()
 export class AppResolver implements Resolve<Connection[]> {
-	constructor( @Inject("AppService") private appService: AppService, @Inject('IProfile') @Inject('IErrorService') private cnsl: IErrorService )
+	constructor( @Inject("AppService") private appService: AppService )
 	{}
 	async resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<Connection[]>{
-		let connections = await this.appService.queryArray<Connection>( "connections{id programName instanceName hostName created status{memory values}}", null, (m)=>console.log(m) );
+		let connections = await this.appService.queryArray<Connection>( "connections{id instanceId programName instanceName hostName created status{memory values}}", null, (m)=>console.log(m) );
 		let urlMap:any = {};
 		connections.forEach( c=>{
-			c.created = new Date( c.created+'Z' );
+			c.created = new Date( c.created );
 			c.programName = c.programName.startsWith("Jde.") ? c.programName.substring(4) : c.programName;
 			if( c.programName=="OpcGateway" )
 				c.programName = "Gateway";

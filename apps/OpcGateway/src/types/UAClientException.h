@@ -13,15 +13,22 @@ namespace Jde::Opc::Gateway{
 		UAClientException( StatusCode sc, sp<UAClient> client, RequestId requestId=0, SRCE, ELogLevel level=ELogLevel::Debug )ι;
 		UAClientException( StatusCode sc, Handle uaHandle, RequestId requestId=0, SRCE, ELogLevel level=ELogLevel::Debug )ι:
 			UAException{ sc, Ƒ("[{:x}.{:x}]{}", uaHandle, requestId, UAException::Message(sc)), sl, {level} }{}
-		UAClientException( StatusCode sc, Handle uaHandle, string /*description*/, SRCE )ι:
-			UAException{ sc, Ƒ("[{:x}]{}", uaHandle, UAException::Message(sc)), sl }{}
-		UAClientException( UAClientException&& from )ι:UAException{ move(from) }{}
-		UAClientException( const UAClientException& from )ι:UAException{ from }{}
+		//the description is the throw-site's reason ("Connection Failed", "writeValueAttribute", an applicationUri
+		//mismatch...); it was previously discarded, leaving the status name as the only clue anywhere.
+		UAClientException( StatusCode sc, Handle uaHandle, string description, SRCE )ι:
+			UAException{ sc, Ƒ("[{:x}]{}", uaHandle, description.size() ? sv{description} : sv{UAException::Message(sc)}), sl },
+			_detail{ move(description) }{}
+		UAClientException( UAClientException&& from )ι:UAException{ move(from) }, _detail{ move(from._detail) }{}
+		UAClientException( const UAClientException& from )ι:UAException{ from }, _detail{ from._detail }{}
 
 		α Move()ι->up<Exception> override{ return mu<UAClientException>(move(*this)); }
 		[[noreturn]] α Throw()->void override{ throw move(*this); }
 		α IsBadSession()Ι->bool{ return Code()==UA_STATUSCODE_BADSESSIONIDINVALID; }
+		//status plus the throw-site reason; the description names an operation or a configuration mismatch, never internals.
+		α ClientDetail()Ι->string override{ return _detail.size() ? Ƒ("{} - {}", UAException::ClientDetail(), _detail) : UAException::ClientDetail(); }
 		[[noreturn]] α ThrowRest( UAClientException&& e, Web::Server::HttpRequest&& request )ε->void;
+	private:
+		string _detail;
 	};
 
 	Ξ UAClientException::ThrowRest( UAClientException&& e, Web::Server::HttpRequest&& request )ε->void{

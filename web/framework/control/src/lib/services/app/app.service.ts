@@ -39,34 +39,13 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		return y["servers"];
 	}
 
-
-/*	getApplications():Promise<FromServer.IApplication[]>{
-		return this.applications.length
-			? Promise.resolve( this.applications )
-			: new Promise<FromServer.IApplication[]>( (resolve,reject)=>
-			{
-				this.applicationPromises.push( new PromiseCallbacks<FromServer.IApplication[]>(resolve,reject) );
-				if( this.applicationPromises.length==1 )
-					this.sendRequest( FromClient.ERequest.Applications );
-			});
-	};
-
-	statuses():Observable<FromServer.IStatus>{
-		var eventStream = new Subject<FromServer.IStatus>();
-		this.statusSubscriptions.push( eventStream );
-		if( this.statusSubscriptions.length==1 ){
-			this.send( {subscribeStatus:true}, "Subscribe: statuses" );
-		}
-		return eventStream;
+	async instancePK( instanceName:string, programName?:string ):Promise<number|undefined>{
+		const connections = await this.queryArray<{id?:number, instanceId?:number, instanceName:string, programName:string}>( "connections{instanceId instanceName programName}", null, (m)=>console.log(m) );
+		const strip = ( p:string )=> p?.startsWith("Jde.") ? p.substring(4) : p;
+		const match = connections.find( c=>c.instanceName==instanceName && (!programName || strip(c.programName)==strip(programName)) );//instance names are only unique per program — "Debug" exists for both the AppServer and the gateway
+		return match?.instanceId ?? match?.id;//servers whose connections view predates the instanceId column emit the instance pk under 'id'
 	}
-	statusUnsubscribe( subscription:Observable<FromServer.IStatus> ){
-		const index = this.statusSubscriptions.indexOf( <Subject<FromServer.IStatus>>subscription );
-		if( index>-1 )
-			this.statusSubscriptions.splice( index, 1 );
-		if( !this.statusSubscriptions.length )
-			this.send( {subscribeStatus:false}, "UnSubscribe: statuses" );
-	};
-*/
+
 	logs( applicationId:number, level:ELogLevel, start:Date, limit:number ):Observable<FromServer.ITrace>{
 		const columns = "id instance_id time level message_id file_id function_id line user_pk thread_id args";
 		const q = `subscribe logs(applicationId:${applicationId}, limit:${limit}, filter:{ level:{gte:${level}}, {time:{gte:${start.toISOString()}}} }){ ${columns} }`;
@@ -92,39 +71,16 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		const requestId = this.send( {strings:strings}, `AppService::requestStrings count='${strings.files.length+strings.functions.length+strings.messages.length+strings.userPKs.length}'` );
 		return new Promise<FromServer.Strings>( (resolve,reject)=>{ this.stringRequests.set(requestId,{resolve:resolve,reject:reject})} );
 	}
-/*	request( instanceId:number, value:number ){
-		var request = new FromClient.RequestApp(); request.type = value; request.instanceId = instanceId;
-		var msg = new FromClient.MessageUnion(); msg.requestApp=request;
-		this.send( msg );
-	}
-*/
+
 	custom( appPK:number, bytes:Uint8Array ):Promise<Uint8Array>{
 		const requestId = this.send( {forwardExecution:{appPK:appPK, executionTransmission:bytes}}, `custom appPK: ${appPK}, bytes: ${bytes.length}` );
 		return new Promise<Uint8Array>( (resolve,reject)=>{ this.customCallbacks.set(requestId,{resolve:resolve,reject:reject})} );
 	}
 
-/*	private sendRequest( x:FromClient.ERequest ){
-		console.log( `requesting '${FromClient.ERequest[x]}'`)
-		let msg = { request: {type:x} };
-		this.send( msg );
-	}
-
-	private sendSingularRequest( x:FromClient.ERequest ):Promise<string>{
-		const m = { value:x, instanceId:super.nextRequestId };
-		let p = new Promise<string>( (resolve,reject)=>{
-			this.singularRequests.set( m.instanceId, {resolve:resolve,reject:reject} );
-		});
-
-		console.log( `(${m.instanceId})requesting '${FromClient.ERequest[m.value]}'` );
-		this.send( m );
-		return p;
-	}
-*/
 	async login( user:User, log:Log ):Promise<void>{
 		console.assert( !user.sessionId );
 		await super.loginJwt( user.authorization! );//the sessionId arrives in the response Authorization header — postRaw already appended it to authStore; the /login body is metadata ({expiration}), NOT the sessionId
 		this.authStore.append( user );//persist the jwt/identity fields; user.sessionId stays undefined so append() keeps the header-derived sessionId instead of clobbering it with the body
-		//if( this.log.restResults )	log( `authorization='${self.authorization}'` );
 	}
 	loginPassword( username:string, password:string, authenticator:string ):Promise<void>{
 		throw "noImpl";
@@ -145,8 +101,6 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	private logsSubscriptions:Map<RequestId,Subject<FromServer.ITrace>>= new Map<RequestId,Subject<FromServer.ITrace>>();
 	//private addMessage( msg ):void{}
 	override handleConnectionError( err:any ):void{
-	// 	this.statusSubscriptions.forEach( (x)=>x.error( err ) );
-	// 	this.statusSubscriptions = [];
 	}
 	encode( t:FromClient.Transmission ){ return FromClient.Transmission.encode(t); }
 	public async validateSessionId():Promise<User | null>{
@@ -159,8 +113,6 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	}
 	private complete():void{
 		console.log( 'complete' );
-		// for( const subscription of this.statusSubscriptions )
-		// 	subscription.complete();
 	}
 
 	protected processMessage( bytearray:protobuf.Buffer ){
@@ -191,11 +143,6 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 					this.customCallbacks.delete( requestId );//settled requests must be removed or the map grows for the socket's lifetime
 					promise.resolve( message.executeResponse );
 				}
-/*				else if( message.status ){
-					if( this.log.subResults )	console.log( `[App.${requestId}]status appId:${message.status.applicationId}` );
-					for( const callback of this.statusSubscriptions )
-						callback.next( message.status );
-				}*/
 				else if( message.strings ){
 					const x = message.strings;
 					if( this.log.sockResults ) console.log( `[App.${requestId}]strings messageCount: ${Object.keys(x.messages as any).length}` );
@@ -240,14 +187,6 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 			processed = false;
 		return processed;
 	}
-	//private applications:FromServer.IApplication[]=[];
-	//private applicationPromises:PromiseCallbacks<FromServer.IApplication[]>[]=[];
-	//private singularRequests = new Map<number,{resolve:any,reject:any}>();
 	private stringRequests = new Map<number,{resolve:any,reject:any}>();
-	//private stringRequests:Map<FromClient.IRequestAppString,Subject<[number,FromServer.IApplicationString]>>= new Map<FromClient.IRequestAppString,Subject<[number,FromServer.IApplicationString]>>();
-	//private statusSubscriptions:Subject<FromServer.IStatus>[]=[];
 	private customCallbacks = new Map<number,{resolve:any,reject:any}>();
-	//private stringValuePromises = new Map<number,Promise<string>>();
-	//private _customRequestId:number=0;
-//	private static Url = environment.applicationServerUrl;// 'ws://localhost:1967';
 }

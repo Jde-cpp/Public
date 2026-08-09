@@ -21,7 +21,7 @@ namespace Jde::App::Server{
 			THROW_IFX( authorization.empty() || !authorization.starts_with("Bearer "), RestException<http::status::unauthorized>(SRCE_CUR, move(req), "Missing or invalid Authorization header") );
 
 			req.SessionInfo->UserPK = co_await JwtLoginAwait( Web::Jwt{authorization.substr(7)}, req.UserEndpoint.address().to_string(), Server::AppClient() );
-			jobject j{ {"expiration", ToIsoString(req.SessionInfo->Expiration)} };
+			jobject j{ {"expiration", ToIsoString<seconds>(req.SessionInfo->Expiration)} };
 			req.SessionInfo->IsInitialRequest = true;  //expecting sessionId to be set.
 			h.promise().Resume( {move(j), move(req)}, h );
 		}

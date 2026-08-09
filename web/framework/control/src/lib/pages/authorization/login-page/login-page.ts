@@ -5,7 +5,7 @@ import { MatInputModule } from '@angular/material/input';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import { EProvider, IAuth, IEnvironment, User } from 'jde-spa';
 import {FormBuilder, ReactiveFormsModule} from "@angular/forms";
-import {IErrorService} from '../../../services/error/IErrorService';
+import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
 
 declare const google: any;
 
@@ -14,7 +14,7 @@ declare const google: any;
     imports: [MatButtonModule,MatFormFieldModule,MatInputModule,RouterLink,ReactiveFormsModule],
 })
 export class LoginPageComponent{
-	constructor( @Inject('IAuth') private authService: IAuth, @Inject('IErrorService') private snackbar: IErrorService, @Inject('IEnvironment') private envService: IEnvironment ){
+	constructor( @Inject('IAuth') private authService: IAuth, private snackbar: SnackbarService, @Inject('IEnvironment') private envService: IEnvironment ){
 		effect( async ()=>{
 			if( this.providers?.value()?.includes(EProvider.Google) && !this.showedGoogleLogin ){
 				this.showedGoogleLogin = true;
@@ -32,7 +32,7 @@ export class LoginPageComponent{
   async onLogin() {
 		let {username, password} = this.form.value;
 		if (!username || !password) {
-			this.snackbar.error( "Enter an email and password.", (m)=>console.log(m) );
+			this.snackbar.error( "Enter an email and password." );
 			return;
 		}
 		let domain = undefined;
@@ -51,7 +51,7 @@ export class LoginPageComponent{
 			this.router.navigate( [''] );
 		}
 		catch( e ){
-			this.snackbar.exception( e, (m)=>console.log(m) );
+			this.snackbar.exception( "Login failed.", e );
 		}
   }
 	onGoogleLogin2(credential:string){
@@ -66,7 +66,7 @@ export class LoginPageComponent{
 			this.router.navigate( [''] );
 		}
 		catch( e ){
-			this.snackbar.exception( e, (m)=>console.log(m) );
+			this.snackbar.exception( "Login failed.", e );
 		};
 	}
 
@@ -94,7 +94,7 @@ export class LoginPageComponent{
 		}
 		catch( e ){
 			console.assert( !(e instanceof ReferenceError), "ReferenceError" );
-			this.snackbar.exceptionInfo( e, 'could not render google login', (m)=>console.log(m) );
+			this.snackbar.exception( "Could not render Google login.", e );
 		}
 	}
 
