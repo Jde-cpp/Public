@@ -35,10 +35,10 @@ export class SnackbarService{
 			duration = duration ?? 1000;
 			break;
 		case Type.Warning:
-			duration = duration ?? 3000;
+			duration = duration ?? 5000;
 			break;
 		case Type.Error:
-			duration = duration ?? 5000;
+			duration = duration ?? 10000;
 			break;
 		}
 		SnackbarService.write( type, userMessage ?? "Unknown error", detail );

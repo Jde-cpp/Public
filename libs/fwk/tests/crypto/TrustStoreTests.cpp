@@ -77,6 +77,22 @@ namespace Jde::Crypto{
 		EXPECT_TRUE( store.IsTrusted(Der2) );
 	}
 
+	TEST_F( TrustStoreTests, SerialsRandomized ){//IssueCertificate must never reuse a constant serial - same-DN+same-serial re-issues are indistinguishable by subject in an X509_STORE.
+		using X509Ptr = up<X509, decltype(&::X509_free)>;
+		auto parse = []( const vector<byte>& der )->X509Ptr{
+			auto p = (const unsigned char*)der.data();
+			return X509Ptr{ ::d2i_X509(nullptr, &p, (long)der.size()), ::X509_free };
+		};
+		let cert = parse( Der ), cert2 = parse( Der2 );
+		ASSERT_TRUE( cert && cert2 );
+		let sn = ::X509_get_serialNumber( cert.get() ), sn2 = ::X509_get_serialNumber( cert2.get() );
+		EXPECT_NE( ::ASN1_INTEGER_cmp(sn, sn2), 0 );
+		up<ASN1_INTEGER, decltype(&::ASN1_INTEGER_free)> one{ ::ASN1_INTEGER_new(), ::ASN1_INTEGER_free };
+		::ASN1_INTEGER_set( one.get(), 1 );
+		EXPECT_NE( ::ASN1_INTEGER_cmp(sn, one.get()), 0 );//the historical hardcoded value.
+		EXPECT_NE( ::ASN1_INTEGER_cmp(sn2, one.get()), 0 );
+	}
+
 	TEST_F( TrustStoreTests, OsStoreLoads ){
 		TrustStore store;
 		if( _msvc )

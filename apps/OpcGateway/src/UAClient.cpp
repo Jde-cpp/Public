@@ -228,7 +228,7 @@ namespace Jde::Opc::Gateway{
 				let securityMode = FromEnum( securityModeNames, ep.securityMode );
 				vector<string> tokenTypes;
 				for( uint j=0; j<ep.userIdentityTokensSize; ++j )
-					tokenTypes.emplace_back( FromEnum(TokenTypeNames, ToTokenType(ep.userIdentityTokens[j].tokenType)) );
+					tokenTypes.emplace_back( TokenTypeName(ToTokenType(ep.userIdentityTokens[j].tokenType)) );
 				let applicationUri = ToString( ep.server.applicationUri );
 				INFO( "[{}]ServerEndpoint {}=[{}], applicationUri: '{}'", hex(h), securityMode, Str::Join(tokenTypes), applicationUri );
 				if( serverUri.empty() )

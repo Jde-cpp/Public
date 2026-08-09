@@ -23,6 +23,7 @@ namespace Jde::Opc{
 		PubSub        = 1ull << (UaLogTagBase+(uint)UA_LOGCATEGORY_PUBSUB),
 		Discovery     = 1ull << (UaLogTagBase+(uint)UA_LOGCATEGORY_DISCOVERY),
 		//ours, continuing past the last vendor category (Discovery==9).
+		OpcCrypto     = Opc+underlying(ELogTags::Crypto),
 		Monitoring    = 1ull << (UaLogTagBase+10),
 		Browse        = 1ull << (UaLogTagBase+11),
 		ProcessingLoop= 1ull << (UaLogTagBase+12)

@@ -33,7 +33,9 @@ namespace Jde{
 				Web::Client::Ssl::AddTrustAnchor( Crypto::CryptoSettings{ "/http/app/ssl" }.Certificate.Path );
 			}
 			if( Settings::FindBool("/testing/embeddedOpcServer").value_or(true) ){
-				//UAConfig::SetConfig snapshots trustedCertDirs at startup - create both gateway certs (UAClient transport + AppClient SslSettings auth) first, or the first run with a fresh $HOME fails BadCertificateUntrusted.
+				//create both gateway certs (UAClient transport + AppClient SslSettings auth) before the server: not required
+				//anymore (UATrust rescans trustedCertDirs on a failed verify), but it spares the first connect a
+				//fail-rescan-retry cycle and still matters for embeddedOpcServer=false against a snapshotting server.
 				Opc::Gateway::UAClient::EnsureCertificate( Opc::Gateway::Tests::OpcServerTarget, Settings::FindSV("/opc/urn").value_or("urn:open62541.server.application") );
 				Crypto::CryptoSettings sslSettings{ Json::FindDefaultObject(Settings::AsObject("/http/gateway"), "ssl"), {} };
 				Crypto::EnsureKeyCertificate( sslSettings );

@@ -61,7 +61,7 @@ namespace Jde::Opc::Gateway{
 		α AddSessionAwait( VoidAwait::Handle h )ι->void;
 		α TriggerSessionAwaitables()ι->void;
 
-		Ω EnsureCertificate( const ServerCnnctnNK& target, sv certificateUri, SRCE )ε->void;//no-op if the cert exists. Callable before any client - servers that snapshot trustedCertDirs at startup (UAConfig::SetConfig) must see it before they start.
+		Ω EnsureCertificate( const ServerCnnctnNK& target, sv certificateUri, SRCE )ε->void;//no-op if the cert exists. Callable before any client - the Jde OpcServer rescans trustedCertDirs on a failed verify (UATrust), so pre-start creation only matters for third-party servers that snapshot their trust list.
 		Ω CryptoSettings( const ServerCnnctnNK& target, sv certificateUri={} )ι->Crypto::CryptoSettings; //for soak
 		α Target()Ι->const ServerCnnctnNK&{ return _opcServer.Target; }
 		α Url()Ι->str{ return _opcServer.Url; }

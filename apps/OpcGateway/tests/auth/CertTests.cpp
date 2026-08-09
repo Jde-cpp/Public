@@ -37,6 +37,56 @@ namespace Jde::Opc::Gateway::Tests{
 		EXPECT_EQ( Crypto::ReadCertificate(path), before );
 	}
 
+	//server-side counterpart to ReissuesWhenCertificateUriChanges: the OpcServer must trust a transport cert re-issued
+	//AFTER its startup snapshot (UATrust rescans on a failed verify) - pre-fix every secured connect fails
+	//BadCertificateUntrusted until the server restarts. IssuedToken auth, not Certificate: certAuth swaps the transport
+	//cert to AppClient()->SslSettings (Configuration()), while every other credential presents the per-target issued
+	//file - the production scenario. (Not Username - the test server doesn't offer that policy.)
+	class TrustReloadTests : public Auth{
+	protected:
+		TrustReloadTests()ι:Auth{ETokenType::IssuedToken}{}
+		Ω SetUpTestCase()ε->void{ _jwt = BlockAwait<Web::Client::ClientSocketAwait<Jde::Web::Jwt>,Web::Jwt>( AppClient()->Jwt() ); }
+		α TearDown()ι->void override{
+			if( _client )
+				UAClient::RemoveClient( move(_client) );
+		}
+		α Connect( atomic_flag& flag )ι->ConnectAwait::Task;
+		static optional<Web::Jwt> _jwt;
+		up<Exception> _exception;
+		sp<UAClient> _client;
+	};
+	optional<Web::Jwt> TrustReloadTests::_jwt;
+
+	α TrustReloadTests::Connect( atomic_flag& flag )ι->ConnectAwait::Task{
+		try{
+			_exception = nullptr;
+			_client = co_await UAClient::GetClient( Connection->Target, Credential{_jwt->Payload()} );//same credential as TokenTests.Authenticate.
+		}
+		catch( Exception& e ){
+			_exception = e.Move();
+		}
+		flag.test_and_set();
+		flag.notify_all();
+	}
+
+	TEST_F( TrustReloadTests, ServerReloadsReissuedCert ){
+		atomic_flag first;
+		Connect( first );
+		first.wait( false );
+		ASSERT_FALSE( _exception ) << _exception->what();//startup snapshot trusts the pre-created cert (tests/main.cpp).
+		ASSERT_TRUE( _client );
+		UAClient::RemoveClient( move(_client) );//the next connect builds a fresh UAClient => full OPN handshake.
+
+		//in-place re-issue: same SAN+key, new serial/validity => a DER the server's snapshot has never seen.
+		Crypto::IssueCertificate( UAClient::CryptoSettings(Connection->Target, Connection->CertificateUri) );
+
+		atomic_flag second;
+		Connect( second );//no server restart - the verify shim must rescan trustedCertDirs and trust the new file.
+		second.wait( false );
+		EXPECT_FALSE( _exception ) << _exception->what();
+		EXPECT_TRUE( _client );
+	}
+
 	class CertTests : public Auth{
 	protected:
 		CertTests()ι:Auth{ETokenType::Certificate}{}
@@ -94,21 +144,20 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	TEST_F( CertTests, Authenticate_Bad ){
+		//the bad cert must live OUTSIDE trustedCertDirs: the server rescans them on a failed verify (UATrust), so a
+		//cert dropped into an anchored dir is trusted by design - the old ssl-dir swap put it exactly there.
 		let root = Process::AppDataFolder();
-		let working = root/"ssl";
-		if( fs::exists(working) && !fs::exists(root/"ssl_backup") )
-			fs::rename( working, root/"ssl_backup" );
-		if( fs::exists(root/"ssl_badTest") )
-			fs::rename( root/"ssl_badTest", working );
-		struct Restore final{ //the real certs have to come back even when the body throws - otherwise every later run starts on the bad ssl dir.
-			fs::path Root; fs::path Working;
-			~Restore(){
-				std::error_code ec;
-				fs::rename( Working, Root/"ssl_badTest", ec );
-				fs::rename( Root/"ssl_backup", Working, ec );
-			}
-		} restore{ root, working };
-		Crypto::EnsureKeyCertificate( *AppClient()->SslSettings );
+		auto& ssl = *AppClient()->SslSettings;
+		auto bad = ssl;
+		bad.Certificate.Path = root/"ssl_badTest"/"certs"/bad.Certificate.Path.filename();
+		bad.PrivateKey.Path = root/"ssl_badTest"/"private"/bad.PrivateKey.Path.filename();
+		bad.PublicKey.Path = root/"ssl_badTest"/"public"/bad.PublicKey.Path.filename();
+		Crypto::EnsureKeyCertificate( bad );//no-op when a previous run left the tree behind.
+		struct Restore final{ //the real settings have to come back even when the body throws - otherwise every later test connects with the bad cert.
+			Crypto::CryptoSettings Good; Crypto::CryptoSettings& Live;
+			~Restore(){ Live = move(Good); }
+		} restore{ ssl, ssl };
+		ssl = move( bad );
 
 		atomic_flag flag;
 		Connect( flag, 'a' );
