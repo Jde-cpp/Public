@@ -103,7 +103,7 @@ namespace Jde::Web::Client{
 					co_await HandshakeAwait{ _session };
 				Resume();
 			}
-			catch( Exception& e ){
+			catch( runtime_error& e ){
 				ResumeExp( move(e) );
 			}
 		}
@@ -136,24 +136,26 @@ namespace Jde::Web::Client{
 						ResumeExp( Exception{_sl, {ELogTags::HttpClientRead}, "Too many redirects from {}:{}{} - last Location '{}'.", _session->Host, _session->Port, string{_req.target()}, res[http::field::location]} );
 						co_return;
 					}
-					auto [host,target,port] = res.RedirectVariables();
-					if( host.empty() ){//relative Location - reuse the original host & port.
-						host = _session->Host;
-						port = _session->Port;
-					}
-					DBG( "redirecting from {}{} to {}", _session->Host, _req.target(), res[http::field::location] );
-					auto args = _args;
-					--args.Redirects;
-					//an Authorization header is a credential for the host it was issued to; a redirect elsewhere must not carry it.
-					//Whoever controls the Location header would otherwise be handed the caller's session id or bearer token.
-					if( args.Authorization.size() && Str::ToLower(host)!=Str::ToLower(_session->Host) ){
-						DBG( "dropping Authorization: redirect leaves {} for {}", _session->Host, host );
-						args.Authorization.clear();
-					}
+					//RedirectVariables throws on a Location it cannot parse; left outside the catch that escapes OnRead, and since
+					//nothing has resumed the caller yet the await never completes - a malformed 3xx hangs the client instead of failing it.
 					try{
+						auto [host,target,port] = res.RedirectVariables();
+						if( host.empty() ){//relative Location - reuse the original host & port.
+							host = _session->Host;
+							port = _session->Port;
+						}
+						DBG( "redirecting from {}{} to {}", _session->Host, _req.target(), res[http::field::location] );
+						auto args = _args;
+						--args.Redirects;
+						//an Authorization header is a credential for the host it was issued to; a redirect elsewhere must not carry it.
+						//Whoever controls the Location header would otherwise be handed the caller's session id or bearer token.
+						if( args.Authorization.size() && Str::ToLower(host)!=Str::ToLower(_session->Host) ){
+							DBG( "dropping Authorization: redirect leaves {} for {}", _session->Host, host );
+							args.Authorization.clear();
+						}
 						res = co_await ClientHttpAwait{ host, target, _req.body(), port, args, _sl };
 					}
-					catch( Exception& e ){
+					catch( runtime_error& e ){
 						ResumeExp( move(e) );
 						co_return;
 					}
@@ -193,7 +195,7 @@ namespace Jde::Web::Client{
 			}
 			Write( move(target), move(body), args, h );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			SetIsRunning( false );
 			RemoveHttpSession( shared_from_this() );
 			h.promise().ResumeExp( move(e), h );
@@ -224,7 +226,7 @@ namespace Jde::Web::Client{
 				LOGSL( ELogLevel::Trace, _sl, ELogTags::HttpClientRead, "{}:{}{} - {}", Host, Port, target, res.Body().substr(0, Client::MaxLogLength()) );
 			h.promise().SetValue( move(res) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			h.promise().SetExp( move(e) );
 		}
 		Close();

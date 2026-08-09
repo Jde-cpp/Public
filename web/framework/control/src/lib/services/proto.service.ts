@@ -15,7 +15,7 @@ import { computed, Signal } from '@angular/core';
 import { EProvider, User } from 'jde-spa';
 
 interface IStringResult{ id:number; value:string; }
-export interface IError{ requestId?:number; message: string; sc?:number; }
+export interface IError{ requestId?:number; message: string; sc?:number; httpStatus?:number; }//sc is the proto `code`; httpStatus avoids the opc StatusCode collision.
 
 type TransformInput = (x:any)=>any;
 type Resolve = (x:any)=>void;
@@ -459,9 +459,11 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 */
 	processError( e:IException, requestId:RequestId ):boolean{
 		const handled = this._callbacks.has( requestId );
+		if( e.statusCode==401 )
+			this.authStore.logout();//same policy as authGet's http 401: the credential is stale - a retry with it can only repeat the 401.
 		if( handled ){
 			let p:RequestPromise<ResultMessage> = this._callbacks.get( requestId )!;
-			p.reject( {error: {requestId:requestId, message:e.what as string, sc:e.code as number}} );
+			p.reject( {error: {requestId:requestId, message:e.what as string, sc:e.code as number, httpStatus:e.statusCode as number}} );
 			this._callbacks.delete( requestId );
 		}
 		return handled;

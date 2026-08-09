@@ -17,7 +17,7 @@ namespace Jde::DB::Sqlite{
 				result.RowsAffected = _ds->Select( move(_sql), f, _sl );
 				Resume( move(result) );
 			}
-			catch( Exception& e ){
+			catch( runtime_error& e ){
 				ResumeExp( move(e) );
 			}
 		}

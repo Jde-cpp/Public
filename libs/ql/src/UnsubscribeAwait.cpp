@@ -1,6 +1,7 @@
 #include <jde/ql/UnsubscribeAwait.h>
 #include <jde/ql/IQL.h>
 #include <jde/fwk/str.h>
+#include <stdexcept>
 
 #define let const auto
 namespace Jde::QL{
@@ -9,7 +10,7 @@ namespace Jde::QL{
 			co_await *_qlServer->Query( Ƒ("unsubscribe( id:[{}] )", Str::Join(_ids, ",")), {}, {0}, true, _sl );
 			Resume();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

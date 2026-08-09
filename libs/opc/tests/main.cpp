@@ -39,7 +39,7 @@ namespace Jde{
 			::testing::GTEST_FLAG( filter ) = Settings::FindSV( "/testing/tests" ).value_or( "*" );
 		exitCode = CheckTestsRan( RUN_ALL_TESTS() );
 	}
-	catch( exception& e ){
+	catch( runtime_error& e ){
 		if( auto p = dynamic_cast<Exception*>(&e); p ){
 			p->Log();
 			exitCode = p->HasCode() ? (int)p->Code() : EXIT_FAILURE;

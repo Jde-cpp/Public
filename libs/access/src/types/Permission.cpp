@@ -49,7 +49,7 @@ namespace Jde::Access{
 			}
 			await.Resume( move(roles) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			await.ResumeExp( move(e) );
 		}
 	}

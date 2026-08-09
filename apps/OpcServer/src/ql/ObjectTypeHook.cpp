@@ -40,7 +40,7 @@ namespace Jde::Opc::Server{
 				_root = GetUAServer().GetTypeDef( NodeId{Args().at("parent").as_object()} );
 			GetBrowseName( move(Args()), _root );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -58,7 +58,7 @@ namespace Jde::Opc::Server{
 			}
 			Create( move(o), move(browseName), parent );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -93,7 +93,7 @@ namespace Jde::Opc::Server{
 			else
 				Resume( jobject{{"complete", true}} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -114,7 +114,7 @@ namespace Jde::Opc::Server{
 			// else
 			CreateChildren( move(o), move(oType) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -127,7 +127,7 @@ namespace Jde::Opc::Server{
 			}
 			CreateChildren( move(o), move(oType) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -137,7 +137,7 @@ namespace Jde::Opc::Server{
 				for( auto&& child : children->get_array() )
 					co_await ObjectTypeQLAwait{ move(child.as_object()), oType, _executer, _sl };
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				ResumeExp( move(e) );
 			}
 		}

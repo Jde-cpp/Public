@@ -212,7 +212,7 @@ namespace Jde::Opc::Gateway{
 			response.Validate( _client->Handle(), _sl );
 			Resume( move(response) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

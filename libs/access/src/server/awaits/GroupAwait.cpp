@@ -99,7 +99,7 @@ namespace Jde::Access::Server{
 		catch( boost::system::system_error& e ){
 			ResumeExp( CodeException{e.code(), ELogTags::Access, ELogLevel::Debug} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

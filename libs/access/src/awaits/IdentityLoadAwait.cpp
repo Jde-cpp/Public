@@ -34,7 +34,7 @@ namespace Jde::Access{
 			}
 			Resume( std::move(identities) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

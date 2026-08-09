@@ -16,7 +16,7 @@ namespace Jde{
 			ASSERT( Promise() );
 			Promise()->ResumeExp( move(e), _h );
 		}
-		α ResumeExp( exception&& e )ι{
+		α ResumeExp( runtime_error&& e )ι{
 			ASSERT( Promise() );
 			Promise()->ResumeExp( move(e), _h );
 		}
@@ -50,7 +50,7 @@ namespace Jde{
 			ASSERT(Promise());
 			Promise()->ResumeExp( move(e), _h );
 		}
-		α ResumeExp( exception&& e )ι{
+		α ResumeExp( runtime_error&& e )ι{
 			ASSERT( Promise() );
 			Promise()->ResumeExp( move(e), _h );
 		}

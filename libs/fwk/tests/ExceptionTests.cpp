@@ -32,4 +32,19 @@ namespace Jde::Tests{
 		ExternalException e{ "near \"}\": syntax error", {}, {ELogLevel::Debug} };
 		EXPECT_EQ( string{e.what()}, "near \"}\": syntax error" );
 	}
+
+	TEST( ExceptionTests, HttpStatusDefaults ){
+		Exception e{ "boom", {ELogLevel::Debug} };
+		EXPECT_EQ( 500u, e.HttpStatus() ); //unset resolves to internal server error.
+		EXPECT_EQ( Exception::ECategory::Jde, e.Category() );
+		EXPECT_EQ( 0u, e.CategoryCode() );
+	}
+
+	//a wire exception loses its concrete type - the stored status set by the reconstructor is all that keeps a 401 a 401, so it has to ride Move().
+	TEST( ExceptionTests, HttpStatusSurvivesMove ){
+		Exception e{ "denied", {ELogLevel::Debug} };
+		e.SetHttpStatus( EHttpStatus::IAmATeapot );
+		let moved = e.Move();
+		EXPECT_EQ( EHttpStatus::IAmATeapot, moved->HttpStatus() );
+	}
 }

@@ -44,7 +44,7 @@ namespace Jde::Web::Server{
 			Crypto::Verify( _jwt.PublicKey, _jwt.HeaderBodyEncoded, _jwt.Signature );
 			Authenticate();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -56,7 +56,7 @@ namespace Jde::Web::Server{
 			THROW_IF( !_debug && expiration<Clock::now(), "Token expired: '{}'.", ToIsoString(expiration) );
 			ResumeScaler( co_await Access::Server::Authenticate(token.Email, underlying(Access::EProviderType::Google)) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

@@ -38,7 +38,7 @@ namespace Jde::Opc::Server{
 			}
 			Create( move(browseName), parent.PK );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -62,7 +62,7 @@ namespace Jde::Opc::Server{
 			else
 				Resume( jobject{{"complete", true}} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -75,7 +75,7 @@ namespace Jde::Opc::Server{
 			}
 			Resume( jobject{{"complete", true}} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

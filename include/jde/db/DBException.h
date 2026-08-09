@@ -39,6 +39,9 @@ namespace Jde::DB{
 		//only a proc-raised message is the app talking to the user; engine errors name our schema.
 		α ClientDetail()Ι->string override{ return Error==EDbError::App ? UserError() : string{}; }
 		α Message()Ι->str{ return _message; }
+		α HttpStatus()Ι->EHttpStatus override;//EDbError -> http status; the one mapping site.
+		α Category()Ι->ECategory override{ return ECategory::DB; }
+		α CategoryCode()Ι->uint32 override{ return (uint32)Error; }
 		[[noreturn]] α Throw()ε->void override{ throw move(*this); }
 
 		DB::Sql Sql;

@@ -45,7 +45,7 @@ namespace Jde::QL{
 			}
 			Resume( y.value_or(jvalue{}) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

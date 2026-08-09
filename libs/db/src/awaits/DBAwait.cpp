@@ -7,7 +7,7 @@ namespace Jde{
 			auto rows = co_await _ds->SelectAsync( move(_sql), sl );
 			onRows( move(rows) );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			onError( move(e) );
 		}
 	}

@@ -27,7 +27,7 @@ namespace Jde{
 	using std::atomic;
 	using std::atomic_flag;
 	using std::byte;
-	using std::exception;
+	using std::runtime_error;
 	using std::function;
 	using namespace std::literals;
 	using lg = std::lock_guard<std::mutex>;

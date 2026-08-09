@@ -18,7 +18,7 @@ namespace Jde{
 #ifndef _MSC_VER
 	α Process::ProductName()ι->sv{ return "Tests.OpcServer"; }
 #endif
-	up<exception> _error;
+	up<std::exception> _error;
 
  	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
 		Logging::AddTagParser( mu<Opc::UALogParser>() );
@@ -33,7 +33,7 @@ namespace Jde{
 			}
 			co_await Opc::Server::StartupAwait{ Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") };
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			auto p = ToUP( move(e) );
 			_error = move(p);
 		}
@@ -51,13 +51,13 @@ namespace Jde{
 	int result{ EXIT_FAILURE };
 	try{
 		if( _error ){
-			Throw( move(*_error) );
+			throw *_error;
 		}
 		::testing::GTEST_FLAG( filter ) = Settings::FindString( "/testing/tests" ).value_or( "*" );
 		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
 		result = CheckTestsRan( RUN_ALL_TESTS() );
 	}
-	catch( exception& e ){
+	catch( std::exception& e ){
 		Process::ExitException( move(e) );
 	}
 	Process::Shutdown( result );

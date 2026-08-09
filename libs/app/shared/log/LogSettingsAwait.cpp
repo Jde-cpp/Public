@@ -57,7 +57,7 @@ namespace Jde::App{
 			m.CommandName = "updateInstanceTagLevel";
 			UpdateApp( move(m) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -65,7 +65,7 @@ namespace Jde::App{
 		try{
 			Resume( co_await *_appClient->Query<jvalue>(m.ToString(), m.Variables ? *m.Variables : jobject{}) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

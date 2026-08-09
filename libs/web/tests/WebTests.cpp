@@ -8,6 +8,8 @@
 #include <jde/fwk/process/execution.h>
 #include <jde/app/proto/app.FromServer.h>
 #include <jde/app/proto/common.h>
+#include <jde/access/AccessException.h>
+#include "jde/fwk/exceptions/Exception.h"
 #include "mocks/ServerMock.h"
 
 #define let const auto
@@ -136,7 +138,7 @@ namespace Jde::Web{
 		catch( ClientHttpResException& e){
 			ASSERT_EQ( http::status::unauthorized, e.Status() );
 		}
-		catch( exception& e){
+		catch( runtime_error& e){
 			ASSERT_FALSE( true );
 		}
 	}
@@ -357,7 +359,7 @@ namespace Jde::Web{
 	TEST( RestExceptionTests, AppDetailReachesBody ){
 		DB::Sql sql; sql.Text = "exec access_user_insert_key ?,?";
 		DB::DBException inner{ DB::EDbError::App, move(sql), "Target 'x' already exists.", {0}, SRCE_CUR };
-		Server::RestException<http::status::unauthorized> e{ move(inner), Server::HttpRequest{Server::TRequestType{}, tcp::endpoint{}, false, 0}, "Could not get sessionInfo." };
+		Server::RestException e{ EHttpStatus::Unauthorized, move(inner), Server::HttpRequest{Server::TRequestType{}, tcp::endpoint{}, false, 0}, "Could not get sessionInfo." };
 
 		let body = e.Response().body();
 		EXPECT_TRUE( body.contains("Could not get sessionInfo.") ) << body;
@@ -368,21 +370,22 @@ namespace Jde::Web{
 	//engine errors name our schema, so only the proc-raised class is surfaced.
 	TEST( RestExceptionTests, NonAppDetailWithheld ){
 		DB::DBException inner{ DB::EDbError::Duplicate, DB::Sql{}, "UNIQUE constraint failed: access_identities.target", {ELogLevel::NoLog, {}, 2067}, SRCE_CUR };
-		Server::RestException<http::status::unauthorized> e{ move(inner), Server::HttpRequest{Server::TRequestType{}, tcp::endpoint{}, false, 0}, "Could not get sessionInfo." };
+		Server::RestException e{ EHttpStatus::Unauthorized, move(inner), Server::HttpRequest{Server::TRequestType{}, tcp::endpoint{}, false, 0}, "Could not get sessionInfo." };
 
 		let body = e.Response().body();
 		EXPECT_EQ( body, "Could not get sessionInfo." ) << body;
 	}
 
-	//the web server branches on catch( DB::DBException& )/EDbError::App, so the classification has to survive the AppServer round trip - the type itself cannot.
+	//the DB classification and http status have to survive the AppServer round trip - the type itself cannot; ServerImpl answers with the reconstructed exception's EHttpStatus().
 	TEST( AppExceptionProtoTests, DbErrorSurvivesRoundTrip ){
 		DB::DBException source{ DB::EDbError::App, DB::Sql{}, "Target 'x' already exists.", {ELogLevel::NoLog, {}, 0}, SRCE_CUR };
 		let t = App::FromServer::Exception( source, RequestId{1} );
 		auto e = App::ProtoUtils::ToException( Jde::Proto::Exception{t.messages(0).exception()} );
 
 		let p = dynamic_cast<DB::DBException*>( e.get() );
-		ASSERT_NE( nullptr, p ) << "flattened to a plain Exception - ServerImpl's catch would miss it";
+		ASSERT_NE( nullptr, p ) << "flattened to a plain Exception - the ClientDetail policy would miss it";
 		EXPECT_EQ( DB::EDbError::App, p->Error );
+		EXPECT_EQ( 400u, p->HttpStatus() ); //App: a proc rejected the request - the client's fault.
 		EXPECT_TRUE( string{p->what()}.contains("already exists") ) << p->what();
 	}
 
@@ -391,6 +394,29 @@ namespace Jde::Web{
 		let t = App::FromServer::Exception( source, RequestId{1} );
 		auto e = App::ProtoUtils::ToException( Jde::Proto::Exception{t.messages(0).exception()} );
 		EXPECT_EQ( nullptr, dynamic_cast<DB::DBException*>(e.get()) );
+		EXPECT_EQ( 500u, e->HttpStatus() );
+	}
+
+	//the concrete type (AccessException) has no counterpart in the reconstruction - the stored status is all that keeps a 401 a 401.
+	TEST( AppExceptionProtoTests, StatusSurvivesRoundTrip ){
+		Access::AccessException source{ SRCE_CUR, UserPK{1}, "denied" };
+		source.SetLevel( ELogLevel::NoLog );
+		let t = App::FromServer::Exception( source, RequestId{1} );
+		EXPECT_EQ( 401u, t.messages(0).exception().status_code() );
+
+		auto e = App::ProtoUtils::ToException( Jde::Proto::Exception{t.messages(0).exception()} );
+		EXPECT_EQ( nullptr, dynamic_cast<Access::AccessException*>(e.get()) );
+		EXPECT_EQ( 401u, e->HttpStatus() );
+	}
+
+	//status decided at run time, e.g. off the wire - RestException<TStatus> bakes it into the type.
+	TEST( RestExceptionTests, RuntimeStatus ){
+		Exception inner{ "boom", {ELogLevel::NoLog} };
+		inner.SetHttpStatus( EHttpStatus::Conflict );
+		Server::RestException e{ inner.HttpStatus(), move(inner), Server::HttpRequest{Server::TRequestType{}, tcp::endpoint{}, false, 0}, "Query failed." };
+		EXPECT_EQ( EHttpStatus::Conflict, e.HttpStatus() );
+		EXPECT_EQ( EHttpStatus::Conflict, static_cast<Exception&>(e).HttpStatus() ); //the catch(Exception&) funnel reads the same status.
+		EXPECT_EQ( EHttpStatus::Conflict, (EHttpStatus)e.Response().result() );
 	}
 //TODO! gzip
 //TODO Test redirect.

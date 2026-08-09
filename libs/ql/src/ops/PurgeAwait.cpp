@@ -27,7 +27,7 @@ namespace Jde::QL{
 			else
 				Execute();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -59,7 +59,7 @@ namespace Jde::QL{
 				y += co_await ds.Execute( move(statement), _sl );
 			After( y );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			After( move(e) );
 		}
 	}
@@ -68,7 +68,7 @@ namespace Jde::QL{
 			co_await Hook::PurgeAfter( _mutation, _userPK );
 			Resume( jvalue{y} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -77,7 +77,7 @@ namespace Jde::QL{
 			co_await Hook::PurgeFailure( _mutation, _userPK );
 			ResumeExp( move(e) );
 		}
-		catch( exception& inner ){
+		catch( runtime_error& inner ){
 			//e->_pInner TODO
 			ResumeExp( move(inner) );
 		}

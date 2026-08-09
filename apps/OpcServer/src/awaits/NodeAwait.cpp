@@ -19,7 +19,7 @@ namespace Jde::Opc::Server {
 			}
 			Resume( move(nodes) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

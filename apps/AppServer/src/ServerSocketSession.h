@@ -27,7 +27,7 @@ namespace Jde::App::Server{
 		α QueryClient( QL::TableQL&& query, Jde::UserPK executer, RequestId requestId )ι->void override;
 		α SharedFromThis()ι->sp<ServerSocketSession>{ return std::dynamic_pointer_cast<ServerSocketSession>(shared_from_this()); }
 		α TestAdmin( str resource, str criteria, Jde::UserPK userPK, SRCE )ε->void override;
-		α WriteException( exception&& e, RequestId requestId )ι->void override;
+		α WriteException( runtime_error&& e, RequestId requestId )ι->void override;
 		α WriteException(std::string&&, Jde::RequestId)ι->void override;
 		α WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void override;
 		α WriteSubscription( const jvalue& j, RequestId requestId )ι->void override;

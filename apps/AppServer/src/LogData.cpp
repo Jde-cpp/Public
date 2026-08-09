@@ -51,7 +51,7 @@ namespace Server{
 			co_await Access::Server::Configure( {accessSchema, _appSchema}, QLPtr(), UserPK{UserPK::System}, authorizer, _listener );
 			EndAppInstances();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -60,7 +60,7 @@ namespace Server{
 			co_await ds().Execute( {Ƒ("update {} set deleted={} where deleted is null", connectionTableName(), ds().Syntax().UtcNow())} );
 			Resume();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -88,7 +88,7 @@ namespace Jde{
 		try{
 			co_await ds().Execute( {Ƒ("update {} set deleted={} where connection_id=?", connectionTableName(), ds().Syntax().UtcNow()), {DB::Value{connectionId}}}, sl );
 		}
-		catch( exception& )
+		catch( runtime_error& )
 		{}
 	}
 }

@@ -38,7 +38,7 @@ namespace Jde::App::Client{
 	private:
 		α ClientQuery( Proto::FromServer::ClientQuery proto, RequestId requestId )ι->TAwait<jvalue>::Task;
 		α Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void;
-		α WriteException( exception&&, RequestId requestId )ι->void;
+		α WriteException( runtime_error&&, RequestId requestId )ι->void;
 		α WriteException( string&& e, RequestId requestId )ι->void;
 		α ProcessTransmission( Proto::FromServer::Transmission&& t, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId )ι->void;
 		α HandleException( std::any&& h, Exception&& what, RequestId requestId )ι->void;

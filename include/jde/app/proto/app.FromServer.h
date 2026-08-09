@@ -1,6 +1,7 @@
 #pragma once
 #include "../usings.h"
 #include <jde/ql/usings.h>
+#include <stdexcept>
 
 
 namespace Jde::Crypto{ struct PublicKey; }
@@ -16,7 +17,7 @@ namespace Jde::App::FromServer{
 	α Ack( uint32 serverSocketId )ι->Proto::FromServer::Transmission;
 	α Complete( RequestId requestId )ι->Proto::FromServer::Transmission;
 	α ConnectionInfo( ProgramPK appPK, ProgInstPK instancePK, ConnectionPK connectionPK, RequestId clientRequestId, const Crypto::PublicKey& appServerPublicKey, sp<Web::Server::SessionInfo> session, optional<bool> authResult )ι->Proto::FromServer::Transmission;
-	α Exception( const exception& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission;
+	α Exception( const runtime_error& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission;
 	α Exception( string&& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission;
 	α Execute( string&& executionResult, RequestId clientRequestId )ι->Proto::FromServer::Transmission;
 	α ExecuteRequest( RequestId serverRequestId, UserPK userPK, string&& fromClient )ι->Proto::FromServer::Transmission;

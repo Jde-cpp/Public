@@ -1,4 +1,5 @@
 ﻿#include "gtest/gtest.h"
+#include <exception>
 #include <jde/fwk/settings.h>
 #include <jde/fwk/co/Timer.h>
 #include <jde/fwk/io/json.h>
@@ -19,7 +20,7 @@ namespace Jde{
 #ifndef _MSC_VER
 	α Process::ProductName()ι->sv{ return "Tests.Opc"; }
 #endif
-	up<exception> _error;
+	up<std::exception> _error;
 
  	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
 		Logging::AddTagParser( mu<Opc::UALogParser>() );
@@ -45,7 +46,7 @@ namespace Jde{
 			done.test_and_set();
 			done.notify_one();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			_error = ToUP( move(e) );
 			if( auto p = dynamic_cast<Exception*>( _error.get() ); p )
 				p->Log();
@@ -71,7 +72,7 @@ namespace Jde{
 		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
 		result = CheckTestsRan( RUN_ALL_TESTS() );
 	}
-	catch( exception& e ){
+	catch( std::exception& e ){
 		if( auto p = dynamic_cast<Exception*>( &e ); p )
 			p->Log();
 		Process::ExitException( move(e) );

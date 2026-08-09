@@ -7,7 +7,7 @@ namespace Jde::DB{
 		try{
 			ResumeScaler( (co_await _ds->Query(move(_sql), false, base::_sl)).RowsAffected );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

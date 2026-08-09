@@ -126,7 +126,7 @@ namespace Sessions{
 			try{
 				FromJwt( _authorization.substr(7) );
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				ResumeExp( move(e) );
 			}
 		}
@@ -140,7 +140,7 @@ namespace Sessions{
 			auto userPK = co_await JwtLoginAwait{ Web::Jwt{jwt}, _endpoint, _appClient };
 			CreateSession( userPK );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -180,7 +180,7 @@ namespace Sessions{
 			}
 			Resume( move(info) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

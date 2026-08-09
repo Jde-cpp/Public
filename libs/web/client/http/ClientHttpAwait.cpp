@@ -75,14 +75,14 @@ namespace Jde::Web::Client{
 			else
 				retry = true;
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 		if( retry ){
 			try{
 				Resume( co_await ClientHttpAwaitSingle{ move(firstAttempt) } );
 			}
-			catch( Exception& e ){
+			catch( runtime_error& e ){
 				ResumeExp( move(e) );
 			}
 		}
@@ -108,7 +108,7 @@ namespace Jde::Web::Client{
 				net::any_io_executor strand = net::make_strand( *_ioContext );
 				session = IsSsl ?  ms<ClientHttpSession>( _host, _port, strand, _sl ) : ms<ClientHttpSession>( _host, _port, strand, true, true, _sl );
 			}
-			catch( Exception& e ){
+			catch( runtime_error& e ){
 				ResumeExp( move(e) );
 				return;
 			}

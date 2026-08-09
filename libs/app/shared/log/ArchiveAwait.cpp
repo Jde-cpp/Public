@@ -28,7 +28,7 @@ namespace Jde::App{
 		try{
 			entries = co_await DailyLoadAwait{ _dailyFile, EDailyLoad::Archive };//the lock is ours & stays ours; the daily file is read, ProtoLog's buffer is not.
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			lock.reset();
 			ResumeExp( move(e) );
 			co_return;
@@ -92,7 +92,7 @@ namespace Jde::App{
 			try{
 				co_await ArchiveFileAwait{ ymd, _path, move(archive), _sl };
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				lock.reset();//the daily file survives a failed archive - drop the lock so the next flush & round can proceed.
 				ResumeExp( move(e) );
 				co_return;
@@ -179,7 +179,7 @@ namespace Jde::App{
 			for( auto& [_,s] : functions )
 				*cumulative.add_functions() = move( s );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 			co_return;
 		}
@@ -197,7 +197,7 @@ namespace Jde::App{
 		try{
 			co_await IO::WriteAwait( temp, Protobuf::ToString(values), true, IO::EWriteMode::Truncate, _tags );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 			co_return;
 		}
@@ -227,7 +227,7 @@ namespace Jde::App{
 			else
 			 	LoadArchives( move(archive) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -294,7 +294,7 @@ namespace Jde::App{
 			}
 			Resume( move(archive) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

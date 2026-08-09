@@ -18,7 +18,7 @@ namespace Jde::Web::Mock{
 			m->set_session_id( sessionId );
 			Write( move(t) );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			Proto::FromServerTransmission t;
 			auto m = t.add_messages();
 			m->set_request_id( requestId );
@@ -27,7 +27,7 @@ namespace Jde::Web::Mock{
 		}
 	}
 
-	α ServerSocketSession::WriteException( exception&& e, RequestId )ι->void{
+	α ServerSocketSession::WriteException( runtime_error&& e, RequestId )ι->void{
 		Proto::FromServerTransmission t;
 		auto m = t.add_messages();
 		m->set_exception( e.what() );

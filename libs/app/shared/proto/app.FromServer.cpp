@@ -69,17 +69,21 @@ namespace Jde::App{
 		});
 	}
 
-	α FromServer::Exception( const exception& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission{
+	α FromServer::Exception( const runtime_error& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission{
 		Proto::FromServer::Transmission t;
 		auto& m = *t.add_messages();
 		if( requestId )
 			m.set_request_id( *requestId );
 		auto& proto = *m.mutable_exception();
 		proto.set_what( e.what() );
-		if( let p = dynamic_cast<const Jde::Exception*>(&e); p )
+		if( let p = dynamic_cast<const Jde::Exception*>(&e); p ){
 			proto.set_code( p->Code() );
-		if( let p = dynamic_cast<const DB::DBException*>(&e); p )
-			proto.set_db_error( (uint32)p->Error );//the type can't cross the wire, but the classification is what the web server branches on.
+			proto.set_status_code( p->HttpStatus() );//status & classification ride the base virtuals - the type can't cross the wire.
+			proto.set_category( (Jde::Proto::ECategory)p->Category() );
+			proto.set_category_code( p->CategoryCode() );
+		}
+		else
+			proto.set_status_code( 500 );//plain std::exception - unclassified server fault.
 		return t;
 	}
 	α FromServer::Exception( string&& e, optional<RequestId> requestId )ι->Proto::FromServer::Transmission{

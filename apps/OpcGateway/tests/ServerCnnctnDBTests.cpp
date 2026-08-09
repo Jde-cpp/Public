@@ -122,7 +122,7 @@ namespace Jde::Opc::Gateway::Tests{
 			auto providerPK = CrudImpl();
 			ASSERT_EQ( 0, providerPK );
 		}
-		catch( const exception& e ){
+		catch( const runtime_error& e ){
 			ASSERT_DESC( false, e.what() );
 		}
 	}

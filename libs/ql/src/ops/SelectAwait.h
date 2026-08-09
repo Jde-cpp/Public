@@ -25,6 +25,6 @@ namespace Jde::QL{
 		bool _log;
 		TableQL _qlTable;
 		optional<DB::Statement> _statement;
-		variant<nullptr_t,jvalue,up<exception>> _result;
+		variant<nullptr_t,jvalue,up<runtime_error>> _result;
 	};
 }

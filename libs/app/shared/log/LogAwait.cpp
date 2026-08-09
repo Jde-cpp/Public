@@ -28,7 +28,7 @@ namespace Jde::App{
 			else
 				ReadArchive( {} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -43,7 +43,7 @@ namespace Jde::App{
 			else
 				Resume( move(archive) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -58,7 +58,7 @@ namespace Jde::App{
 			else
 				ReadArchive( move(dailyEntries) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

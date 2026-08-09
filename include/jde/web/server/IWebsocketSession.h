@@ -28,7 +28,7 @@ namespace Jde::Web::Server{
 		β WriteSubscription( uint32 appPK, uint32 appInstancePK, const Logging::Entry& e, const QL::Subscription& sub )ι->void=0;
 		β WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void=0;
 		β WriteComplete( RequestId requestId )ι->void=0;
-		β WriteException( exception&& e, RequestId requestId )ι->void=0;
+		β WriteException( runtime_error&& e, RequestId requestId )ι->void=0;
 		β WriteException( string&& e, RequestId requestId )ι->void=0;
 		α UserPK()Ι{ return _userPK; }
 		β Close()ι->void;
@@ -42,7 +42,7 @@ namespace Jde::Web::Server{
 		β Query( Proto::Query&& query, RequestId requestId, function<string(string&&, RequestId)>&& toProtoString )ι->QL::QLAwait<jvalue>::Task;
 
 		α LogRead( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, ELogTags tags=ELogTags::SocketServerRead, SRCE )ι->void;
-		α LogWriteException( const exception& e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
+		α LogWriteException( const runtime_error& e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α LogWriteException( str e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α QueryClientResults( string&& queryResult, RequestId requestId )ι->void;
 		α Schemas()Ι->const vector<sp<DB::AppSchema>>&{ return LocalQL()->Schemas(); }
@@ -91,7 +91,7 @@ namespace Jde::Web::Server{
 			auto t = Protobuf::Deserialize<TFromClient>( (const google::protobuf::uint8*)p, size );
 			OnRead( move(t) );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), RequestId{0} );
 		}
 	}

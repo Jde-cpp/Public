@@ -31,6 +31,20 @@ namespace Jde::DB{
 		BreakLog();
 	}
 
+	α DBException::HttpStatus()Ι->EHttpStatus{
+		if( _statusCode )//an explicit SetHttpStatus wins, same contract as the base.
+			return _statusCode;
+		switch( Error ){
+			case EDbError::Duplicate: case EDbError::ForeignKey: case EDbError::Constraint: return EHttpStatus::Conflict;
+			case EDbError::NotNull: case EDbError::Check: return EHttpStatus::BadRequest;//the client sent an invalid/incomplete row.
+			case EDbError::App: return EHttpStatus::BadRequest;//proc-raised business rule rejecting the request - the only Error whose message ClientDetail surfaces.
+			case EDbError::Permission: return EHttpStatus::Forbidden;
+			case EDbError::Deadlock: case EDbError::Connection: return EHttpStatus::ServiceUnavailable;//transient/unreachable backend - retryable.
+			case EDbError::Timeout: return EHttpStatus::GatewayTimeout;
+			default: return EHttpStatus::InternalServerError;//None (unclassified driver error) and Syntax (our statement is wrong) are server faults.
+		}
+	}
+
 	α DBException::Log()Ι->void{
 		if( _logged || Level()==ELogLevel::NoLog || Process::Finalizing() ) //participate in the base _logged protocol: don't re-log a moved-from/BreakLog'd exception, and stay quiet during teardown.
 			return;

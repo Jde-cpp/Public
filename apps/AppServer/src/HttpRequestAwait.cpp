@@ -18,14 +18,14 @@ namespace Jde::App::Server{
 		try{
 			req.LogRead();
 			let authorization = req.Header( "Authorization" );
-			THROW_IFX( authorization.empty() || !authorization.starts_with("Bearer "), RestException<http::status::unauthorized>(SRCE_CUR, move(req), "Missing or invalid Authorization header") );
+			THROW_IFX( authorization.empty() || !authorization.starts_with("Bearer "), RestException(EHttpStatus::Unauthorized,SRCE_CUR, move(req), "Missing or invalid Authorization header") );
 
 			req.SessionInfo->UserPK = co_await JwtLoginAwait( Web::Jwt{authorization.substr(7)}, req.UserEndpoint.address().to_string(), Server::AppClient() );
 			jobject j{ {"expiration", ToIsoString<seconds>(req.SessionInfo->Expiration)} };
 			req.SessionInfo->IsInitialRequest = true;  //expecting sessionId to be set.
 			h.promise().Resume( {move(j), move(req)}, h );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			h.promise().ResumeExp( move(e), h );
 		}
 	}
@@ -36,7 +36,7 @@ namespace Jde::App::Server{
 			jobject j{ {"removed", Sessions::Remove(req.SessionInfo->SessionId)} };
 			h.promise().SetValue( {move(j), move(req)} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			h.promise().SetExp( move(e) );
 		}
 		h.resume();
@@ -75,8 +75,8 @@ namespace Jde::App::Server{
 				Query( QLPtr() );
 			else{
 				_request.LogRead();
-				RestException<http::status::not_found> e{ SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() };
-				ResumeExp( RestException<http::status::not_found>(move(e)) );
+				RestException e{ EHttpStatus::NotFound, SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() };
+				ResumeExp( move(e) );
 			}
 		}
 	}
@@ -85,10 +85,10 @@ namespace Jde::App::Server{
 
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		if( auto e = Promise() ? Promise()->MoveExp() : nullptr; e ){
-			if( auto rest = dynamic_cast<IRestException*>(e.get()); rest )
+			if( auto rest = dynamic_cast<RestException*>(e.get()); rest )
 				rest->Throw();
 			else
-				throw RestException<http::status::internal_server_error>{ move(*e), move(_request) };
+				throw RestException(EHttpStatus::InternalServerError, move(*e), move(_request) );
 		}
 		return _readyResult
 			? HttpTaskResult{ move(*_readyResult), move(_request) }

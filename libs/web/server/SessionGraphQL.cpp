@@ -78,7 +78,7 @@ namespace Jde::Web::Server{
 			if( array )
 				Resume( move(*array) );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

@@ -52,9 +52,6 @@ namespace Jde::IO{
 		α ResumeExp( uint32 code, string&& msg )ι->void;
 		α ResumeExp( uint32 code, string&& m, lg& chunkLock )ι->void;
 
-		//α ResumeExp( exception&& e )ι->void;
-		//α ResumeExp( exception&& e, lg& chunkLock )ι->void;
-
 		α CoHandle()ι->HCo{ lg _{_coHandleMutex}; auto h = _coHandle; if( IsRead ) _coHandle = StringAwait::Handle{}; else _coHandle = VoidAwait::Handle{}; return h; }
 		α ReadCoHandle()ι->StringAwait::Handle{ return get<StringAwait::Handle>(CoHandle()); }
 		α WriteCoHandle()ι->VoidAwait::Handle{ return get<VoidAwait::Handle>(CoHandle()); }

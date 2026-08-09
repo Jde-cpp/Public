@@ -7,7 +7,7 @@ namespace Jde::DB{
 		try{
 			Resume( move((co_await _ds->Query(move(_sql), false, base::_sl)).Rows) );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

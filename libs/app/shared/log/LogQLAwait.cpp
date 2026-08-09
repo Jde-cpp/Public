@@ -12,7 +12,7 @@ namespace Jde::App{
 			auto archive = co_await LogAwait{ _ql, _sl };
 			Resume( archive.ToJson(_ql) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

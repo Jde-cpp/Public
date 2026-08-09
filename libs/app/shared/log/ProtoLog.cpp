@@ -73,7 +73,7 @@ namespace Jde::App{
 				try{
 					IO::SaveBinary<byte>( DailyFile(), _toSave, true );
 				}
-				catch( exception& )
+				catch( const runtime_error& )
 				{}
 				return;
 			}
@@ -153,7 +153,7 @@ namespace Jde::App{
 			//below actually takes the file away.
 			co_await IO::WriteAwait( DailyFile(), vector<byte>{toSave}, true, IO::EWriteMode::Append, _tags );
 		}
-		catch( exception& )	{
+		catch( const runtime_error& ){
 			lg _{ _mutex };
 			_toSave.insert( _toSave.begin(), toSave.begin(), toSave.end() );//prepend: strings must precede the entries referencing them.
 			co_return;
@@ -177,7 +177,7 @@ namespace Jde::App{
 			try{
 				co_await IO::WriteAwait( DailyFile(), vector<byte>{pending}, true, IO::EWriteMode::Append, _tags );
 			}
-			catch( exception& ){
+			catch( const runtime_error& ){
 				lg _{ _mutex };
 				_toSave.insert( _toSave.begin(), pending.begin(), pending.end() );
 				_needsArchive = true;//nothing archived - re-arm so the next flush retries the round.
@@ -191,7 +191,7 @@ namespace Jde::App{
 		try{
 			co_await ArchiveAwait{ DailyFile(), _root, _tz };
 		}
-		catch( const exception& ){
+		catch( const runtime_error& ){
 			lg _{ _mutex };//the round failed, so the daily file survives with everything the drain wrote into it - take the bound back.
 			_dailyFileStart = TimePoint::min();
 		}

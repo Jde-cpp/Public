@@ -1,5 +1,6 @@
 ﻿#include "ConnectAwait.h"
 #include "../UAClient.h"
+#include <stdexcept>
 
 #define let const auto
 
@@ -66,7 +67,7 @@ namespace Jde::Opc::Gateway{
 			auto client = ms<UAClient>( move(servers.front()), _cred );
 			client->Connect();
 		}
-		catch( const exception& e ){
+		catch( const runtime_error& e ){
 			let ua = dynamic_cast<const UAClientException*>( &e );
 			lg l{ _requestMutex };
 			auto handles = EraseRequests( _opcTarget, _cred, l );

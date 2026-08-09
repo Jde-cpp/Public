@@ -7,6 +7,7 @@
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
 #include <open62541/types.h>
+#include <stdexcept>
 #include "StartupAwait.h"
 #include "async/DataChanges.h"
 #include "jde/fwk/crypto/CryptoSettings.h"
@@ -153,8 +154,8 @@ namespace Jde::Opc::Gateway{
 		auto config = UA_Client_getConfig( _ptr );
 		const uint size = addSecurity ? 2 : 1; ASSERT( !config->securityPoliciesSize );
 		uint initialized = 0;//policies actually constructed; on an exception before ownership transfers to config, the deleter clears these — UA_free alone would leak each policy's internals (policyUri, contexts, ...).
-		auto clearPolicies = [&initialized]( UA_SecurityPolicy* p )ι{ for( uint i=0; i<initialized; ++i ) p[i].clear( &p[i] ); UA_free( p ); };
-		up<UA_SecurityPolicy, decltype(clearPolicies)> securityPolicies{ (UA_SecurityPolicy*)UA_malloc(sizeof(UA_SecurityPolicy)*size), clearPolicies };
+		auto clearPolicies = [&initialized]( UA_SecurityPolicy* p )ι{ for(uint i=0; i<initialized; ++i) p[i].clear(&p[i]); UA_free(p); };
+		up<UA_SecurityPolicy, decltype( clearPolicies )> securityPolicies{ (UA_SecurityPolicy*)UA_malloc(sizeof(UA_SecurityPolicy)*size), clearPolicies };
 		auto sc = UA_SecurityPolicy_None( &securityPolicies.get()[0], UA_BYTESTRING_NULL, &_logger ); THROW_IFX( sc, UAClientException(sc, Handle()) );
 		++initialized;
 		if( addSecurity ){
@@ -205,7 +206,7 @@ namespace Jde::Opc::Gateway{
 	α UAClient::LogClientEndpoints()ι->void{
 		vector<string> policyUris;
 		auto config = UA_Client_getConfig( _ptr );
-		for( let& sp : Iterable<UA_SecurityPolicy>( config->securityPolicies, config->securityPoliciesSize) )
+		for( let& sp : Iterable<UA_SecurityPolicy>(config->securityPolicies, config->securityPoliciesSize) )
 			policyUris.emplace_back( ToString(sp.policyUri) );
 		//both uris: config->applicationUri filters the *server's* endpoints, clientDescription's is what we advertise -
 		//they come from the same certificateUri (Configuration()) and a mismatch in either rejects every endpoint.
@@ -214,8 +215,8 @@ namespace Jde::Opc::Gateway{
 	//returns the server's ApplicationUri so the caller can name both sides of an endpoint-filter mismatch.
 	α UAClient::LogServerEndpoints( str url, Jde::Handle h )ι->string{
     UA_Client *client = UA_Client_new();
-    UA_ClientConfig *config = UA_Client_getConfig(client);
-    UA_ClientConfig_setDefault(config);
+    UA_ClientConfig *config = UA_Client_getConfig( client );
+    UA_ClientConfig_setDefault( config );
 		UA_EndpointDescription* endpointArray{}; uint endpointArraySize{};
 		string serverUri;
 
@@ -281,7 +282,7 @@ namespace Jde::Opc::Gateway{
 						ASSERT( inserted ); // not sure why we would already have a record.
 					}
 					Post( [client]()ι->void {
-						ConnectAwait::Resume(move(client));
+						ConnectAwait::Resume( move(client) );
 					});
 				}
 				else{
@@ -368,28 +369,28 @@ namespace Jde::Opc::Gateway{
 		//async submissions, and sync services all serialize here. dispatch runs f inline when the caller is already on
 		//the strand (e.g. completion callbacks inside run_iterate) and posts otherwise. `self` keeps the client - and
 		//with it _asyncRequest and the raw UA_Client - alive until f runs.
-		boost::asio::dispatch( _asyncRequest.Strand(), [self=shared_from_this(), f=move(f)]{ f(); } );
+		boost::asio::dispatch( _asyncRequest.Strand(), [self=shared_from_this(), f=move(f)]{f();} );
 	}
 
 	α UAClient::PostStrand( function<void()> f )ι->void{
 		//Always post (never dispatch inline): the handler runs after the current strand op returns. Used to break
 		//re-entrancy - e.g. resuming a caller from inside run_iterate must not unblock/destroy the awaitable while the
 		//strand handler that drove run_iterate is still touching it. `self` keeps the client (and its strand) alive until f runs.
-		boost::asio::post( _asyncRequest.Strand(), [self=shared_from_this(), f=move(f)]{ f(); } );
+		boost::asio::post( _asyncRequest.Strand(), [self=shared_from_this(), f=move(f)]{f();} );
 	}
 
 	α UAClient::Process( RequestId requestId, sv what )ι->void{
 		if( _asyncRequest.IsStopped() )
 			return;
-		PostUA( [this, requestId, what=string{what}]{ _asyncRequest.Process(requestId, what); } );
+		PostUA( [this, requestId, what=string{what}]{_asyncRequest.Process(requestId, what);} );
 	}
 
 	α UAClient::ClearRequest( RequestId requestId )ι->void{
-		PostUA( [this, requestId]{ _asyncRequest.Clear(requestId); } );
+		PostUA( [this, requestId]{_asyncRequest.Clear(requestId);} );
 	}
 
 	α UAClient::StopProcessing()ι->void{
-		PostUA( [this]{ _asyncRequest.Stop(); } );
+		PostUA( [this]{_asyncRequest.Stop();} );
 	}
 
 	α UAClient::ShutdownIdle( sp<UAClient> client )ι->VoidAwait::Task{
@@ -422,8 +423,9 @@ namespace Jde::Opc::Gateway{
 				client = co_await GetClient( move(target), move(credential) );
 				f( move(client) );
 			}
-			catch( const exception& retryEx ){
-				WARN( "[{}]Retry after '{}' failed: {}", target, UAException::Message(e.Code()), retryEx.what() );
+			catch( UAException& retryEx ){
+				retryEx.PrependWhat( "Retry failed" );
+				retryEx.SetLevel( ELogLevel::Warning );
 			}
 		}
 	}

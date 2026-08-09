@@ -22,7 +22,7 @@ namespace Jde::Opc::Server {
 			}
 			LoadVariants( move(variants), move(rows) );
 		}
-		catch (exception& e) {
+		catch(runtime_error& e){
 			ResumeExp(move(e));
 		}
 	}
@@ -48,7 +48,7 @@ namespace Jde::Opc::Server {
 			}
 			Resume( move(nodes) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -79,7 +79,7 @@ namespace Jde::Opc::Server {
 			ua._variables.try_emplace( _node.PK, _node );
 			InsertMembers( variantPK );
 		}
-		catch (exception& e) {
+		catch(runtime_error& e){
 			ResumeExp( move(e) );
 		}
 	}
@@ -95,7 +95,7 @@ namespace Jde::Opc::Server {
 					} );
 				}
 			}
-			catch (exception& e) {
+			catch(runtime_error& e){
 				ResumeExp( move( e ) );
 				co_return;
 			}
@@ -109,7 +109,7 @@ namespace Jde::Opc::Server {
 				});
 				GetUAServer().AddReference( _node.PK, *ref );
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				ResumeExp( move(e) );
 				co_return;
 			}

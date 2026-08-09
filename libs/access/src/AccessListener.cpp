@@ -14,7 +14,7 @@ namespace Jde::Access{
 		try{
 			BlockVoidAwait( _qlServer->Unsubscribe(move(Ids)) );
 		}
-		catch( Exception& )
+		catch( runtime_error& )
 		{}
 	}
 	α AccessListener::OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void{

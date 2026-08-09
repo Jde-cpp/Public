@@ -38,7 +38,7 @@ namespace Jde::App::Client{
 		catch( Exception& e ){
 			e.SetLevel( ELogLevel::Critical );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			Exception{ move(e), {ELogLevel::Critical}, sl };
 		}
 	}

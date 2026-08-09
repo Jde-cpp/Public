@@ -36,7 +36,7 @@ namespace Jde::Opc::Gateway{
 			else
 				ResumeScaler( {{"rowCount", *rowCount}} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -46,7 +46,7 @@ namespace Jde::Opc::Gateway{
 			co_await ProviderMAwait( move(id), insert );
 			ResumeScaler( {{"rowCount", 1}} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

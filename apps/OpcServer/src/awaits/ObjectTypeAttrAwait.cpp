@@ -19,7 +19,7 @@ namespace Jde::Opc::Server {
 				attributes.try_emplace( row.GetUInt32(0), move(row) );
 			Resume( move(attributes) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

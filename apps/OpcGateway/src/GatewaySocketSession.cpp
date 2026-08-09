@@ -41,7 +41,7 @@ namespace Jde::Opc::Gateway{
 			base::SetSessionInfo( move(sessionInfo) );
 			Write( FromServer::CompleteTrans(requestId) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -57,7 +57,7 @@ namespace Jde::Opc::Gateway{
 			else
 				WriteException( Ƒ("Client not found: opcId: '{}'", move(opcId)), requestId );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -71,12 +71,12 @@ namespace Jde::Opc::Gateway{
 					auto values = co_await ReadValueAwait{ move(nodes), client };
 					session->Write( FromServer::ReadValuesTrans(client->Target(), move(values), requestId) );
 				}
-				catch( exception& e ){
+				catch( runtime_error& e ){
 					session->WriteException( move(e), requestId );
 				}
 			}( move(nodes), move(client), requestId, move(session) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			session->WriteException( move(e), requestId );
 		}
 	}
@@ -86,7 +86,7 @@ namespace Jde::Opc::Gateway{
 			co_await SubscribeAwait{ client };
 			subscribe( move(client), move(nodes), requestId, move(self) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -100,7 +100,7 @@ namespace Jde::Opc::Gateway{
 			auto v = co_await QL::QLAwait<>{ move(ql), {Session()}, Gateway::QLPtr() };
 			Write( FromServer::QueryTrans(serialize(move(v)), requestId) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 			co_return;
 		}
@@ -117,7 +117,7 @@ namespace Jde::Opc::Gateway{
 			else
 				WriteException( Ƒ("Client not found: opcId: '{}'", opcId), requestId );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
@@ -131,7 +131,7 @@ namespace Jde::Opc::Gateway{
 		ASSERT_DESC( false, "Not Implemented" );
 	}
 
-	α GatewaySocketSession::WriteException( exception&& e, Jde::RequestId requestId )ι->void{
+	α GatewaySocketSession::WriteException( runtime_error&& e, Jde::RequestId requestId )ι->void{
 		LogWriteException( e, requestId );
 		Write( FromServer::ExceptionTrans(move(e), requestId) );
 	}

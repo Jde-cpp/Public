@@ -6,6 +6,7 @@
 #include "StartupAwait.h"
 #include "UAClient.h"
 #include "auth/PasswordAwait.h"
+#include "jde/fwk/exceptions/Exception.h"
 #include "jde/fwk/str.h"
 #include "ql/GatewayQL.h"
 
@@ -37,7 +38,7 @@ namespace Jde::Opc::Gateway{
 		for( let& node : jNodes )
 			nodes.emplace( Json::AsObject(node) );
 		if( nodes.empty() )
-			throw RestException<http::status::bad_request>{ SRCE_CUR, move(_request), "empty nodes" };
+			throw RestException{ EHttpStatus::BadRequest, SRCE_CUR, move(_request), "empty nodes" };
 		return make_tuple( nodes, move(jNodes) );
 	}
 
@@ -56,14 +57,14 @@ namespace Jde::Opc::Gateway{
 		try{
 			//_client = co_await ConnectAwait( move(opcId), _request.SessionId(), _request.UserPK(), SRCE_CUR );
 			if( _request.IsGet() ){
-				throw RestException<http::status::not_found>{ SRCE_CUR, move(_request), "Unknown get target '{}'", target };
+				throw RestException{ EHttpStatus::NotFound, SRCE_CUR, move(_request), "Unknown get target '{}'", target };
 			}
 			else if( _request.IsPost() )
-				throw RestException<http::status::not_found>{ SRCE_CUR, move(_request), "Post not supported for target '{}'", target };
+				throw RestException{ EHttpStatus::NotFound, SRCE_CUR, move(_request), "Post not supported for target '{}'", target };
 			else
-				throw RestException<http::status::forbidden>{ SRCE_CUR, move(_request), "Only get/post verb is supported for target '{}'", target };
+				throw RestException{ EHttpStatus::Forbidden, SRCE_CUR, move(_request), "Only get/post verb is supported for target '{}'", target };
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -73,10 +74,10 @@ namespace Jde::Opc::Gateway{
 			let body = _request.Body();
 			auto domain = Json::FindString( body, "opc" );
 			if( !domain )
-				throw RestException<http::status::bad_request>{ SRCE_CUR, move(_request), "opc server not specified" };
+				throw RestException{ EHttpStatus::BadRequest, SRCE_CUR, move(_request), "opc server not specified" };
 			auto user = Json::FindString( body, "user" );
 			if( !user )
-				throw RestException<http::status::bad_request>{ SRCE_CUR, move(_request), "user not specified" };
+				throw RestException{ EHttpStatus::BadRequest, SRCE_CUR, move(_request), "user not specified" };
 			auto password = Json::AsString( body, "password" );
 			_request.LogRead( Ƒ("(opc: {}, user: {})", *domain, *user) );
 			let sessionInfo = co_await PasswordAwait{ move(*user), move(password), move(*domain), endpoint, false, _request.SessionInfo->SessionId };
@@ -86,11 +87,11 @@ namespace Jde::Opc::Gateway{
 			}
 			Resume( move(_request) );
 		}
-		catch( RestException<http::status::bad_request>& e ){
+		catch( RestException& e ){
 			ResumeExp( move(e) );
 		}
-		catch( exception& e ){
-			ResumeExp( RestException<http::status::unauthorized>(move(e), move(_request)) );
+		catch( runtime_error& e ){
+			ResumeExp( RestException{EHttpStatus::Unauthorized, move(e), move(_request)} );
 		}
 	}
 	α HttpRequestAwait::Logout()ι->TAwait<jvalue>::Task{
@@ -101,8 +102,8 @@ namespace Jde::Opc::Gateway{
 			co_await *( appClient->QLServer()->Query(Ƒ("purgeSession(id:\"{:x}\")", _request.SessionId()), {}, appClient->UserPK()) );
 			Resume( move(_request) );
 		}
-		catch( exception& e ){
-			ResumeExp( RestException<http::status::internal_server_error>(move(e), move(_request)) );
+		catch( runtime_error& e ){
+			ResumeExp( RestException{EHttpStatus::InternalServerError, move(e), move(_request)} );
 		}
 	}
 
@@ -116,22 +117,22 @@ namespace Jde::Opc::Gateway{
 		else if( _request.IsPost("/logout") )
 			Logout();
 		else if( _request.IsGet("/graphql") || _request.IsPost("/graphql") )
-			ResumeExp( RestException<http::status::not_found>{ SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() } );
+			ResumeExp( RestException{ EHttpStatus::NotFound, SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() } );
 		else{
 			auto opc = _request["opc"];
 			if( opc.size() )
 				CoHandleRequest( move(opc) );
 			else if( _request.Target().size() ){
 				_request.LogRead();
-				RestException<http::status::not_found> e{ SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() };
-				ResumeExp( RestException<http::status::not_found>(move(e)) );
+				RestException e{ EHttpStatus::NotFound, SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() };
+				ResumeExp( RestException{ EHttpStatus::NotFound, move(e), move(_request) } );
 			}
 		}
 	}
 
 	α HttpRequestAwait::await_resume()ε->HttpTaskResult{
 		if( auto e = Promise() ? Promise()->MoveExp() : nullptr; e ){
-			auto rest = dynamic_cast<IRestException*>( e.get() );
+			auto rest = dynamic_cast<RestException*>( e.get() );
 			if( rest )
 				rest->Throw();
 			else{
@@ -139,7 +140,7 @@ namespace Jde::Opc::Gateway{
 				if( ua )
 					ua->ThrowRest( move(*ua), move(_request) );
 				else
-					throw RestException<>{ move(*e), move(_request) };
+					throw RestException{ EHttpStatus::InternalServerError, move(*e), move(_request) };
 			}
 		}
 		return _readyResult

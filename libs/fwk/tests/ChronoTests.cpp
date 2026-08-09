@@ -41,9 +41,13 @@ namespace Jde::Tests{
 		EXPECT_EQ( ToIsoString<hours>(tp), "2024-01-02T03Z" );
 		EXPECT_EQ( ToIsoString<days>(tp), "2024-01-02" ) << "a bare date carries no zone designator";
 		EXPECT_EQ( ToIsoString<microseconds>(tp), "2024-01-02T03:04:05.123456Z" );
-		//Precision defaults to void: the time_point's own precision, untouched.
-		EXPECT_EQ( ToIsoString(tp), "2024-01-02T03:04:05.123456Z" );
-		EXPECT_EQ( ToIsoString<>(tp), ToIsoString(tp) );
+		//Precision defaults to void: the time_point's own precision, untouched - and that period is the standard
+		//library's, not ours (1µs on libc++, 100ns on the MSVC STL), so only the leading digits are portable.
+		let dflt = ToIsoString( tp );
+		EXPECT_TRUE( dflt.starts_with("2024-01-02T03:04:05.123456") ) << dflt;
+		EXPECT_TRUE( dflt.ends_with("Z") ) << dflt;
+		EXPECT_EQ( ToIsoString<Duration>(tp), dflt ) << "void must render exactly what the time_point's own period does";
+		EXPECT_EQ( ToIsoString<>(tp), dflt );
 	}
 
 	// steady_clock has no calendar, so it is converted to Clock first - it used to need an explicit specialization and

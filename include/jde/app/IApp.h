@@ -79,7 +79,7 @@ namespace Jde::App{
 		catch( Exception& e ){
 			e.SetLevel( ELogLevel::Critical );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			Exception{ move(e), ExceptionArgs{ELogLevel::Critical}, sl };
 		}
 	}

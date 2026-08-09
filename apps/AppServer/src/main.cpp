@@ -27,7 +27,7 @@ namespace Jde{
 		startup( argc, argv );
 		exitCode = Process::Pause();
 	}
-	catch( exception& e ){
+	catch( runtime_error& e ){
 		exitCode = Process::ExitException( move(e) );
 	}
 	Process::Shutdown( exitCode );

@@ -52,7 +52,7 @@ namespace Jde::QL{
 			}
 			Resume( move(y) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -62,7 +62,7 @@ namespace Jde::QL{
 			optional<jvalue> y = co_await Hook::Start( _mutation, _creds.UserPK() );
 			Resume( y ? move(*y) : jvalue{} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -72,7 +72,7 @@ namespace Jde::QL{
 			optional<jvalue> y = co_await Hook::Stop( _mutation, _creds.UserPK() );
 			Resume( y ? move(*y) : jvalue{} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

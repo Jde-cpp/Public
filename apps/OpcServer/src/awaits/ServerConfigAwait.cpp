@@ -29,7 +29,7 @@ namespace Jde::Opc::Server{
 			GetUAServer()._browseNames = co_await BrowseNameAwait{};
 			LoadConstructors();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -38,7 +38,7 @@ namespace Jde::Opc::Server{
 			GetUAServer()._constructors = co_await ConstructorAwait{};
 			LoadObjectTypes();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -48,7 +48,7 @@ namespace Jde::Opc::Server{
 			GetUAServer()._typeDefs = co_await ObjectTypeAwait{};
 			LoadObjects();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -58,7 +58,7 @@ namespace Jde::Opc::Server{
 			GetUAServer()._objects = co_await ObjectAwait{};
 			LoadReferences();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -68,7 +68,7 @@ namespace Jde::Opc::Server{
 			_refs = co_await ReferenceAwait{};
 			LoadVariables();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -78,7 +78,7 @@ namespace Jde::Opc::Server{
 			AllocateNodes();
 			//SaveSystem( /*move(nodes)*/ );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -104,7 +104,7 @@ namespace Jde::Opc::Server{
 			}
 			SaveSystem();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -151,7 +151,7 @@ namespace Jde::Opc::Server{
 			}
 			Set();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -209,7 +209,7 @@ namespace Jde::Opc::Server{
 			}
 			Resume();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

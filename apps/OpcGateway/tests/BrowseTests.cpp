@@ -21,7 +21,7 @@ namespace Jde::Opc::Gateway::Tests{
 				_client = BlockAwait<TAwait<sp<UAClient>>,sp<UAClient>>( ConnectAwait{move(con.Target), cred} );
 				AddSession( sessionId, OpcServerTarget, move(cred) );
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				INFOT( ELogTags::Test, "Failed to connect to gateway: {}", e.what() );
 				THROW( "Failed to connect to gateway: {}", e.what() );
 			}

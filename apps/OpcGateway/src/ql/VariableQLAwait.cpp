@@ -15,7 +15,7 @@ namespace Jde::Opc::Gateway{
 			else
 				ResumeExp( Exception("Only update is supported") );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -35,7 +35,7 @@ namespace Jde::Opc::Gateway{
 
 			Write( Value{move(value), dt} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -47,7 +47,7 @@ namespace Jde::Opc::Gateway{
 			else
 				Resume( jvalue{} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -56,7 +56,7 @@ namespace Jde::Opc::Gateway{
 			auto response = co_await ReadAwait{ {{_nodeId}, ql}, _client };
 			Resume( response.ToJson(ql) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

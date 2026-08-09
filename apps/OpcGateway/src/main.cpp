@@ -24,7 +24,7 @@
 		BlockVoidAwait( Opc::Gateway::StartupAwait{webServerSettings ? *webServerSettings : jobject{}, userName ? *userName : jobject{}} );
 		exitCode = Process::Pause();
 	}
-	catch( exception& e ){
+	catch( runtime_error& e ){
 		Jde::Process::ExitException( move(e) );
 	}
 

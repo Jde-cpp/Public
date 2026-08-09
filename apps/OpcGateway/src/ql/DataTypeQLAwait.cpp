@@ -73,7 +73,7 @@ namespace Jde::Opc::Gateway{
 				freeRemoteDataTypes( customTypes );
 				Resume( _ql.TransformResult(move(y)) );
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				ResumeExp( move(e) );
 			}
 		});

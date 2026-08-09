@@ -20,7 +20,7 @@ namespace Jde::Opc::Server {
 				values.try_emplace( values.end(), row.GetUInt32(0) )->second.try_emplace( row.GetUInt32(1), row.GetString(2) );
 			Resume( move(values) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -30,7 +30,7 @@ namespace Jde::Opc::Server {
 			auto values = co_await VariantMembersAwait{ _pks, _sl };
 			SelectVariants( move(values) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -55,7 +55,7 @@ namespace Jde::Opc::Server {
 			};
 			Resume( move(variants) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -78,7 +78,7 @@ namespace Jde::Opc::Server {
 			}
 			ResumeScaler( variantPK );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

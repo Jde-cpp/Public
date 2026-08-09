@@ -20,7 +20,7 @@ namespace Jde::Opc::Server {
 			}
 			Resume( move(objectTypes) );
 		}
-		catch (exception& e) {
+		catch(runtime_error& e){
 			ResumeExp(move(e));
 		}
 	}
@@ -41,7 +41,7 @@ namespace Jde::Opc::Server {
 			} );
 			Resume( move(_node) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

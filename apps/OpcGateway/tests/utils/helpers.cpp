@@ -24,7 +24,7 @@ namespace Jde::Opc::Gateway::Tests{
 			let createJson = co_await *QL().QueryObject( Str::Replace(create, '\'', '"'), {}, {UserPK::System}, true, _sl );
 			ResumeScaler( Json::AsNumber<ServerCnnctnPK>(createJson, "id") );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -79,7 +79,7 @@ namespace Jde::Opc::Gateway{
 			});
 			return res.Json();
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 		}
 		return {};
 	}

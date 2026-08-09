@@ -42,7 +42,7 @@ namespace Jde::Opc::Gateway{
 			else
 				AddAttributes( NodeId::ParseQL(_query) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -53,7 +53,7 @@ namespace Jde::Opc::Gateway{
 			browseResp.SetJson( jChildren, childrenQL.FindColumn("id") );
 			AddAttributes( move(browseResp), move(childrenQL), move(jChildren) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -67,7 +67,7 @@ namespace Jde::Opc::Gateway{
 			jobject jReqNode{ {"children", move(a)} };
 			Resume( _query.ReturnRaw ? jReqNode : jobject{{"node", jReqNode}} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -92,7 +92,7 @@ namespace Jde::Opc::Gateway{
 				if( !found )
 					nodeId = pathNode->second;
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				ResumeExp( move(e) );
 				co_return;
 			}
@@ -134,7 +134,7 @@ namespace Jde::Opc::Gateway{
 			}
 			Resume( _query.ReturnRaw ? jReqNode : jobject{{"node", jReqNode}} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -144,7 +144,7 @@ namespace Jde::Opc::Gateway{
 		 	auto json = resp.ToJson( _query );
 			Resume( _query.ReturnRaw ? move(json) : jobject{{"nodes", move(json)}} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

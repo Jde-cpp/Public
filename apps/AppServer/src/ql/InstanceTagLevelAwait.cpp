@@ -44,7 +44,7 @@ namespace Jde::App::Server{
 				y["appServer"] = move(*appServer);
 			Resume( y );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -80,7 +80,7 @@ namespace Jde::App::Server{
 			}
 			Resume( jvalue{rowCount} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

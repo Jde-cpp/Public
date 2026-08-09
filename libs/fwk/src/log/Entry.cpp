@@ -63,7 +63,7 @@ namespace Jde::Logging{
 		try{
 			_message = Arguments.size()==0 ? Text : fmt::vformat(Text, store);
 		}
-		catch( const exception& e ){
+		catch( const runtime_error& e ){
 			CRITICALT( Tags, "Bad Format: {}, args: '{}', what: '{}'", Text, Str::Join(Arguments, ", ", true), e.what() );
 			_message = Ƒ( "{}, args: '{}'", Text, Str::Join(Arguments, ", ", true) );
 		}

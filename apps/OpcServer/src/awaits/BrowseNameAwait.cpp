@@ -36,7 +36,7 @@ namespace Jde::Opc::Server{
 			}
 			Resume( move(names) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -48,7 +48,7 @@ namespace Jde::Opc::Server{
 			}, _sl );
 			Resume( {} );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

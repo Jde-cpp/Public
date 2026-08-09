@@ -13,12 +13,12 @@
 #include "types/MonitoringNodes.h"
 #include "uatypes/Browse.h"
 
-namespace Jde::Opc{	struct Value; }
+namespace Jde::Opc{ 	struct Value; }
 namespace Jde::Opc::Gateway{
 	namespace Browse{ struct Request; }
-	namespace Read{ α OnResponse( UA_Client *client, void *userdata, RequestId requestId, StatusCode status, UA_DataValue *value )ι->void; }
-	namespace Write{ α OnResponse( UA_Client *ua, void *userdata, RequestId requestId, UA_WriteResponse *response )ι->void; }
-	namespace Attributes{α OnResponse( UA_Client* ua, void* userdata, RequestId requestId, StatusCode status, UA_NodeId* dataType )ι->void;}
+	namespace Read{ α OnResponse(UA_Client *client, void *userdata, RequestId requestId, StatusCode status, UA_DataValue *value)ι->void; }
+	namespace Write{ α OnResponse(UA_Client *ua, void *userdata, RequestId requestId, UA_WriteResponse *response)ι->void; }
+	namespace Attributes{ α OnResponse(UA_Client* ua, void* userdata, RequestId requestId, StatusCode status, UA_NodeId* dataType)ι->void; }
 
 	struct CreateMonitoredItemsRequest;
 
@@ -37,7 +37,7 @@ namespace Jde::Opc::Gateway{
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
 		Ω RemoveClient( sp<UAClient>&& client )ι->bool;
 
-		α SubscriptionId()Ι->SubscriptionId{ auto p = CreatedSubscriptionResponse(); return p ? p->subscriptionId : 0;}
+		α SubscriptionId()Ι->SubscriptionId{ auto p = CreatedSubscriptionResponse(); return p ? p->subscriptionId : 0; }
 		//Responses are written on the strand but read by await_ready/await_resume on arbitrary threads - guard the shared_ptrs themselves.
 		α CreatedSubscriptionResponse()Ι->sp<UA_CreateSubscriptionResponse>{ lg _{_responseMutex}; return _createdSubscriptionResponse; }
 		α SetCreatedSubscriptionResponse( sp<UA_CreateSubscriptionResponse> p )ι->void{ lg _{_responseMutex}; _createdSubscriptionResponse = move(p); }
@@ -48,7 +48,7 @@ namespace Jde::Opc::Gateway{
 		Ṫ ClearRequestH( UA_Client* ua , RequestId requestId )ι->T;
 		α ClearRequest( RequestId requestId )ι->void;
 		Ŧ ClearRequestH( RequestId requestId )ι->T;//{ return ClearRequest<UARequest<T>>( requestId )->CoHandle; }
-		α MonitoredNodes()ι->UAMonitoringNodes&{ std::call_once( _monitoredNodesOnce, [this]{ _monitoredNodes = mu<UAMonitoringNodes>(shared_from_this()); } ); return *_monitoredNodes; }//lazy but thread-safe: callers run on the loop thread (data-change callbacks) and pool threads (subscribe/unsubscribe) concurrently. Can't build eagerly in the ctor — shared_from_this() isn't valid until make_shared finishes wiring the weak ref.
+		α MonitoredNodes()ι->UAMonitoringNodes&{ std::call_once(_monitoredNodesOnce, [this]{_monitoredNodes = mu<UAMonitoringNodes>(shared_from_this());}); return *_monitoredNodes; }//lazy but thread-safe: callers run on the loop thread (data-change callbacks) and pool threads (subscribe/unsubscribe) concurrently. Can't build eagerly in the ctor — shared_from_this() isn't valid until make_shared finishes wiring the weak ref.
 		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
 		α RetryVoid( function<void(sp<UAClient>&&) > f, UAException&& e, sp<UAClient>&& pClient )ι->ConnectAwait::Task;
 		α Process( RequestId requestId, sv what )ι->void;
@@ -67,8 +67,8 @@ namespace Jde::Opc::Gateway{
 		α Url()Ι->str{ return _opcServer.Url; }
 		α IsDefault()Ι->bool{ return _opcServer.IsDefault; }
 		α DefaultBrowseNs()Ι->NsIndex{ return _opcServer.DefaultBrowseNs; }
-		α Handle()Ι->Jde::Handle{ return _handle;}
-		α UAPointer()Ι->UA_Client*{return _ptr;}
+		α Handle()Ι->Jde::Handle{ return _handle; }
+		α UAPointer()Ι->UA_Client*{ return _ptr; }
 		α BrowsePathsToNodeIds( sv path, bool parents )Ε->flat_map<string,ExpectedNodeId>;
 		UA_ClientConfig _config{};//TODO move private.
 		Gateway::Credential Credential;
@@ -83,7 +83,7 @@ namespace Jde::Opc::Gateway{
 		α LogClientEndpoints()ι->void;
 		α ApplicationUri()Ι->string;//the endpoint filter open62541 matches against the server's ApplicationUri - not clientDescription's.
 
-		α CryptoSettings()Ι->Crypto::CryptoSettings{ return CryptoSettings( Target(), _opcServer.CertificateUri ); }
+		α CryptoSettings()Ι->Crypto::CryptoSettings{ return CryptoSettings(Target(), _opcServer.CertificateUri); }
 
 		//optional<Crypto::CryptoSettings> _cryptoSettings;
 		//Ω PrivateKey( const ServerCnnctnNK& target )ι->Crypto::PrivateKeySettings;
@@ -123,7 +123,7 @@ namespace Jde::Opc::Gateway{
 				client = co_await GetClient( move(target), move(credential) );
 				f( move(client), h );
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				h.promise().ResumeExp( move(e), h );
 			}
 		}

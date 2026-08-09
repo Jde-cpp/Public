@@ -8,7 +8,7 @@ namespace Jde{
 			auto tp = std::chrono::current_zone()->to_local( time );
 			return std::format( "{0:%H:%M:}{1:%S}", tp, time.time_since_epoch() );
 		}
-		catch( const std::exception& e ){
+		catch( const std::format_error& e ){
 			THROWSL( "Failed to convert time point to local time: {} - {}", ToIsoString(time), e.what() );
 		}
 	}

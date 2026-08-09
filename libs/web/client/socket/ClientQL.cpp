@@ -17,7 +17,7 @@ namespace Jde::Web::Client{
 				auto y = Json::FromArray<QL::SubscriptionId>( co_await _await );
 				base::Resume( move(y) );
 			}
-			catch( Exception& e ){
+			catch( runtime_error& e ){
 				base::ResumeExp( move(e) );
 			}
 		}
@@ -44,7 +44,7 @@ namespace Jde::Web::Client{
 					throw Exception{ "Client socket session closed.", {}, base::_sl };
 				Resume( co_await _session->Query(move(_query), move(_variables), _returnRaw, base::_sl) );
 			}
-			catch( exception& e ){
+			catch( runtime_error& e ){
 				base::ResumeExp( move(e) );
 			}
 		}

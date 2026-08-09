@@ -61,7 +61,7 @@ namespace Jde::DB::MySql{
 				catch( mysql::error_with_diagnostics& e ){
 					ResumeExp( MySqlException{move(_sql), move(e), _sl} );
 				}
-				catch( Exception& e ){
+				catch( runtime_error& e ){
 					ResumeExp( move(e) );
 				}
 				catch( ... ){

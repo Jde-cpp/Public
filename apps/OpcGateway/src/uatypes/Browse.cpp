@@ -101,7 +101,7 @@ namespace Browse{
 			else
 				ResumeExp( move(e) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 		if( retry )
@@ -119,7 +119,7 @@ namespace Browse{
 			auto values = vars.size() ? co_await ReadValueAwait{ vars, _client } : flat_map<NodeId, Value>{};
 			Attributes( move(vars), move(response), move(values) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
@@ -128,24 +128,24 @@ namespace Browse{
 			auto dataTypes = variables.size() ? co_await DataTypeAttribAwait{ move(variables), move(_client) } : flat_map<NodeId, variant<NodeId, StatusCode>>{};
 			Resume( response.ToJson(move(values), move(dataTypes)) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
 	α ObjectsFolderAwait::Retry()ι->VoidAwait::Task{
 		try{
 			co_await AwaitSessionActivation( _client );
-			[]( ObjectsFolderAwait&& self )->Task{
+			[]( ObjectsFolderAwait&& self )->Task {
 				try{
 					auto j = co_await ObjectsFolderAwait{ self._node, self._snapshot, self._client, self._sl };
 					self.Resume( move(j) );
 				}
-				catch( exception& e ){
+				catch( runtime_error& e ){
 					self.ResumeExp( move(e) );
 				}
 			}( move(*this) );
 		}
-		catch( exception& e ){
+		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}

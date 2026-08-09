@@ -22,7 +22,7 @@ namespace Jde::DB{
 		try{
 			Process( co_await SelectAwait{_ds, move(_sql), base::_sl} );
 		}
-		catch( Exception& e ){
+		catch( runtime_error& e ){
 			base::ResumeExp( move(e) );
 		}
 	}
