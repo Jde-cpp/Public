@@ -1,6 +1,7 @@
 #include "ReadAwait.h"
 #include <jde/fwk/utils/collections.h>
 #include <jde/ql/types/TableQL.h>
+#include <jde/opc/uatypes/Value.h>
 #include <jde/opc/uatypes/Variant.h>
 #include "../UAClient.h"
 #include "../uatypes/Browse.h"
@@ -175,10 +176,12 @@ namespace Jde::Opc::Gateway{
 			const NodeId nodeId{ attribReq.nodeId };
 			auto nodeIt = nodes.try_emplace( nodeId );
 			jobject& j = nodeIt.first->second;
-			auto& result = results[i];
-			Variant value = result.status ? Variant{ result.status } : Variant{ move(result.value) };
 			let attrib = ( UA_AttributeId )attribReq.attributeId;
-			j[ReadRequest::AtribString( attrib )] = value.ToJson( true );
+			//Value::ToJson, not `status ? Variant{status} : Variant{value}`: that collapse discarded the reading for any
+			//non-zero status - #15's bug, alive on this path - and serialized a Bad code as a bare number posing as a value.
+			//Now Bad → {"sc":…}, a non-zero code with a reading → {"v":…,"sc":…}, and Int64s go out in the Long form
+			//the SPA's toValue() was written for.
+			j[ReadRequest::AtribString( attrib )] = Value{ move(results[i]) }.ToJson();
 		}
 	}
 

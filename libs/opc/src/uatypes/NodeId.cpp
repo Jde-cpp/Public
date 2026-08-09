@@ -76,6 +76,11 @@ namespace Jde::Opc{
 		}
 		return *this;
 	}
+	α NodeId::Move()ι->UA_NodeId{
+		UA_NodeId y = *this; //slices deliberately: a shallow copy of the base *is* the transfer.
+		UA_NodeId_init( this );
+		return y;
+	}
 	α NodeId::operator<( const NodeId& x )Ι->bool{
 		return
 			namespaceIndex==x.namespaceIndex ?
@@ -103,14 +108,13 @@ namespace Jde::Opc{
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
 			nodeId.identifier.numeric = Json::AsNumber<UA_UInt32>( p->value() );
 		}
-/*		else if( auto p = j.find("number"); p!=j.end() ){
-			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
-			nodeId.identifier.numeric = Json::AsNumber<UA_UInt32>( p->value() );
-		}*/
 		else if( auto p = j.find("b"); p!=j.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
 			let v = ToUV( Json::AsSV(p->value()) );
-			UA_ByteString_fromBase64( &nodeId.identifier.byteString, &v );
+			if( let sc = UA_ByteString_fromBase64(&nodeId.identifier.byteString, &v); sc ){
+				UA_ByteString_clear( &nodeId.identifier.byteString );//nodeId is abandoned by the throw, so clear whatever was allocated.
+				throw UAException{ sc, Ƒ("Could not base64-decode byte-string node id '{}'.", Json::AsSV(p->value())) };
+			}
 		}
 		else if( auto p = j.find("g"); p!=j.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
@@ -137,13 +141,13 @@ namespace Jde::Opc{
 	}
 
 	α NodeId::InsertParams()Ι->vector<DB::Value>{
-		vector<DB::Value> params; params.reserve( 64 );
+		vector<DB::Value> params; params.reserve( 5 );
 		using enum UA_NodeIdType;
 		params.emplace_back( namespaceIndex );
 		params.emplace_back( IsNumeric() ? DB::Value{*Numeric()} : DB::Value{} );
 		params.emplace_back( IsString() ? DB::Value{*String()} : DB::Value{} );
-		params.emplace_back( IsGuid() ? DB::Value{*Guid()} : DB::Value{vector<uint8_t>{}} );
-		params.emplace_back( IsBytes() ? DB::Value{FromByteString(*Bytes())} : DB::Value{vector<uint8_t>{}} );
+		params.emplace_back( IsGuid() ? DB::Value{*Guid()} : DB::Value{} );
+		params.emplace_back( IsBytes() ? DB::Value{FromByteString(*Bytes())} : DB::Value{} );
 		return params;
 	}
 
@@ -153,7 +157,7 @@ namespace Jde::Opc{
 		return Opc::ToJson( *this );
 	}
 	α NodeId::ToString()Ι->string{
-		UAString j{ 1024 };
+		UAString j;
 		UA_EncodeJsonOptions options{};
 		if( let sc=UA_encodeJson(dynamic_cast<const UA_NodeId*>(this), &UA_TYPES[UA_TYPES_NODEID], &j, &options); sc )
 			return serialize( ToJson() );
@@ -167,7 +171,7 @@ namespace Jde::Opc{
 		return serialize( j );
 	}
 
-	α toJson( jobject& j, const UA_NodeId& nodeId )ι->jobject{
+	Ω toJson( jobject& j, const UA_NodeId& nodeId )ι->jobject{
 		j["ns"] = nodeId.namespaceIndex;
 		const UA_NodeIdType type = nodeId.identifierType;
 		if( type==UA_NodeIdType::UA_NODEIDTYPE_NUMERIC )
@@ -177,7 +181,7 @@ namespace Jde::Opc{
 		else if( type==UA_NodeIdType::UA_NODEIDTYPE_GUID )
 			j["g"] = ToJson( nodeId.identifier.guid );
 		else if( type==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
-			j["b"] = ByteStringToJson( nodeId.identifier.byteString );
+			j["b"] = ByteStringToBase64( nodeId.identifier.byteString );//base64, matching the parser and OPC-UA.  Values still use hex - see ByteStringToJson.
 		return j;
 	}
 	α NodeId::Add( jobject& j )Ι->void{
@@ -188,13 +192,18 @@ namespace Jde::Opc{
 		if( json.find(':')!=string::npos ){ //ns:4,i:5002
 			return FromJson( QL::Parser::ParseArgs(json.starts_with('{') ? json : "{" + json + "}") );
 		}
-		//ns=4;i=5002
+		//ns=4;i=5002.  open62541 spells that form as a *quoted* json string, and every caller supplies it bare - an ACL
+		//criteria is written bare, and ToString strips the quotes off its own output - so quote it back.  serialize()
+		//rather than '"'+json+'"' so an identifier containing a quote or backslash is escaped rather than malformed.
+		let quoted = serialize( jvalue{json} );
 		UA_ByteString jbs;
-		jbs.length = (UA_UInt32)json.size();
-		jbs.data = (UA_Byte*)json.data();
+		jbs.length = (UA_UInt32)quoted.size();
+		jbs.data = (UA_Byte*)quoted.data();
 		UA_DecodeJsonOptions options{};
 		NodeId nodeId;
-		if( let sc=UA_decodeJson( &jbs, &nodeId, &UA_TYPES[UA_TYPES_NODEID], &options ); sc ) // ns=4;i=5002 vs ns:4,i:5002
+		//static_cast, not &nodeId: NodeId is polymorphic, so the implicit conversion to void* would hand the decoder the
+		//vptr and it would write its 24-byte image over it.
+		if( let sc=UA_decodeJson( &jbs, static_cast<UA_NodeId*>(&nodeId), &UA_TYPES[UA_TYPES_NODEID], &options ); sc )
 			throw UAException{ sc, Ƒ("Could not decode NodeId from json: '{}'", json) };
 		return nodeId;
 	}

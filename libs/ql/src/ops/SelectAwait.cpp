@@ -16,7 +16,7 @@ namespace Jde::QL{
 	α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>{
 		return table.Schema->DS()->SelectEnumSync<uint,string>( table, sl );
 	}
-	α numberToJson( const DB::Value& dbValue, const DB::Column& c, SRCE )ε->jvalue{
+	α numberToJson( const DB::Value& dbValue, const DB::Column& c )ι->jvalue{
 		jvalue y;
 		if( c.Type==DB::EType::DateTime ){
 			let v = dbValue.get_number<uint>();
@@ -24,7 +24,7 @@ namespace Jde::QL{
 		}
 		else if( c.PKTable && (c.IsEnum() || c.IsFlags()) ){
 			let values = GetEnumValues( *c.PKTable );
-			let value = dbValue.get_number<uint>( sl );
+			let value = dbValue.Get<uint>();
 			if( c.IsFlags() ){
 				jarray flags;
 				auto remainingFlags = value;

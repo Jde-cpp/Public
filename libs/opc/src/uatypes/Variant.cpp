@@ -4,36 +4,20 @@
 #include <jde/opc/uatypes/DateTime.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/UAString.h>
+#include <jde/opc/uatypes/Value.h>
 
 #define let const auto
 namespace Jde::Opc{
-	Variant::Variant( const jvalue& v, sv dataType )ε:
+	//Value::Set already decodes a jvalue toward a declared UA type, and infers one when there is none - this delegates
+	//rather than growing a second conversion chain that can drift from it.  Previously only the literal "double" was
+	//honoured and everything else fell through to json inference, so a config's {dataType:"int", value:5} produced an
+	//Int64 against an Int32 attribute and UA_Server_addVariableNode rejected the node with BadTypeMismatch.
+	Variant::Variant( const jvalue& v, const UA_DataType* dataType )ε:
 		UA_Variant{},
 		VariantPK{0}{
-		if( v.is_bool() ){
-			auto boolValue = v.get_bool();
-			UA_Variant_setScalarCopy( this, &boolValue, &UA_TYPES[UA_TYPES_BOOLEAN] );
-		}
-		else if( v.is_string() ){
-			auto sValue = ToUV( v.get_string() );
-			UA_Variant_setScalarCopy( this, &sValue, &UA_TYPES[UA_TYPES_STRING] );
-		}
-		else if( dataType=="double" || v.is_double() ){
-			auto doubleValue = Json::AsNumber<double>( v );
-			UA_Variant_setScalarCopy( this, &doubleValue, &UA_TYPES[UA_TYPES_DOUBLE] );
-		}
-		else if( v.is_int64() ){
-			auto intValue = v.get_int64();
-			UA_Variant_setScalarCopy( this, &intValue, &UA_TYPES[UA_TYPES_INT64] );
-		}
-		else if( v.is_uint64() ){
-			auto uintValue = v.get_uint64();
-			UA_Variant_setScalarCopy( this, &uintValue, &UA_TYPES[UA_TYPES_UINT64] );
-		}
-		else{
-			WARNT( ELogTags::App, "Unsupported data type in Variant: {}", serialize(v) );
-			UA_Variant_setScalar( this, nullptr, &UA_TYPES[UA_TYPES_STRING] );
-		}
+		Value converted{ v, dataType };
+		static_cast<UA_Variant&>(*this) = converted.value;
+		UA_Variant_init( &converted.value );//we own it now.
 	}
 
 	Variant::Variant( uint32 pk, tuple<uint,void*> data, tuple<UA_UInt32*, uint> dims, const UA_DataType& dataType )ι:
@@ -89,8 +73,12 @@ namespace Jde::Opc{
 
 	α Variant::GetUAValue( const UA_DataType& type, UA_ByteString j )ε->void*{
 		void* p = UA_new( &type );
-		if( let sc = UA_decodeJson(&j, p, &type, nullptr); sc )
+		if( !p )
+			throw UAException{ UA_STATUSCODE_BADOUTOFMEMORY };
+		if( let sc = UA_decodeJson(&j, p, &type, nullptr); sc ){
+			UA_delete( p, &type );
 			throw UAException{ sc };
+		}
 		return p;
 	}
 
@@ -104,8 +92,8 @@ namespace Jde::Opc{
 		return csv;
 	}
 
-	Ω uaJsonString( void* v, const UA_DataType& type )ε->string{
-		UAString j{ 2096 };
+	Ω uaJsonString( const void* v, const UA_DataType& type )ε->string{
+		UAString j;
 		UA_EncodeJsonOptions options{};
 		if( let sc=UA_encodeJson(v, &type, &j, &options); sc )
 			throw UAException{ sc };
@@ -123,43 +111,43 @@ namespace Jde::Opc{
 		}
 		return y;
 	}
+	α Variant::ElementToJson( const void* element, const UA_DataType& type, bool trimNames )ε->jvalue{
+		if( &type==&UA_TYPES[UA_TYPES_LOCALIZEDTEXT] && trimNames )
+			return jstring{ ToString( ((const UA_LocalizedText*)element)->text ) };
+		else if( &type==&UA_TYPES[UA_TYPES_DATETIME] )
+			return UADateTime{ *(const UA_DateTime*)element }.ToJson();
+		else{
+			auto uaJson = uaJsonString( element, type );
+			try{
+				return parse( uaJson );
+			}
+			catch( exception& e ){
+				ERRT( ELogTags::Parsing, "Error parsing {} - {}", uaJson, e.what() );
+				return {uaJson};
+			}
+		}
+	}
 	α Variant::ToJson( bool trimNames )ε->jvalue{
 		jvalue y;
 		if( IsNull() )
 			return y;
-		auto toJson = [trimNames]( void* v, const UA_DataType& type )ε->jvalue{
-			if( &type==&UA_TYPES[UA_TYPES_LOCALIZEDTEXT] && trimNames )
-				return jstring{ ToString( ((UA_LocalizedText*)v)->text ) };
-			else if( &type==&UA_TYPES[UA_TYPES_DATETIME] )
-				return UADateTime{ *(UA_DateTime*)v }.ToJson();
-			else{
-				auto uaJson = uaJsonString( v, type );
-				try{
-					return parse( uaJson );
-				}
-				catch( exception& e ){
-					ERRT( ELogTags::Parsing, "Error parsing {} - {}", uaJson, e.what() );
-					return {uaJson};
-				}
-			}
-		};
 		if( IsScalar() ){
 			if( type==&UA_TYPES[UA_TYPES_NODEID] )
 			  y = Opc::ToJson( *(UA_NodeId*)data );
 			else if( type==&UA_TYPES[UA_TYPES_QUALIFIEDNAME] )
 			  y = BrowseName::ToJson( *(UA_QualifiedName*)data );
 			else
-				y = toJson( data, *type );
+				y = ElementToJson( data, *type, trimNames );
 		}
 		else{
 			jarray arr;
 			for( uint i=0; i<arrayLength; ++i )
-				arr.emplace_back( toJson((UA_Byte*)data+i*type->memSize, *type) );
+				arr.emplace_back( ElementToJson((UA_Byte*)data+i*type->memSize, *type, trimNames) );
 			y = move(arr);
 		}
 		return y;
 	}
-	α Variant::ToUAValues( const UA_DataType& type, flat_map<uint, string>&& values )ι->tuple<uint,void*>{
+	α Variant::ToUAValues( const UA_DataType& type, flat_map<uint, string>&& values, bool isArray )ι->tuple<uint,void*>{
 		void* data = nullptr;
 		let size = values.size();
 		try{
@@ -178,12 +166,21 @@ namespace Jde::Opc{
 			}
 			values.clear();
 		}
-		catch( exception& ){
+		catch( const exception& e ){
 			if( data )
 				UA_Array_delete( data, size, &type );
+			//Loudly:  a variant that cannot be decoded loads as null, which is indistinguishable from a node that never
+			//had a value.  The stored text has to be the raw UA-json token ToUAJson emits - json-quoting a copy of it
+			//(serialize(array[i])) turns an Int32 5 into "5", which decodes for no non-string type.
+			ERRT( ELogTags::Parsing, "Could not decode {} '{}' element{} loaded from the db - {}.  First element: '{}'.  The variant loads as null.",
+				size, type.typeName, size==1 ? "" : "s", e.what(), size ? values.begin()->second : string{} );
 			return {0, nullptr};
 		}
-		return { size==1 ? 0 : size, data };//size==1 would be an array
+		//The persisted shape decides, not the element count.  A one-element array used to collapse to a scalar here while
+		//the caller still applied its arrayDimensions, and open62541 answers BadTypeMismatch to scalar data carrying
+		//arrayDimensionsSize 1 - so one-element arrays did not survive a restart.  UA_new and UA_Array_new(1) allocate
+		//the same single element, so only the length reported here has to change.
+		return { isArray || size>1 ? size : 0, data };
 	}
 
 	α Variant::ToArrayDims( str csv )ι->tuple<UA_UInt32*, uint>{

@@ -4,8 +4,7 @@ message( Jde.Opc )
 project( Jde.Opc VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ${jdeRoot}/build/dependencies.cmake )
 find_package( OpenSSL REQUIRED )
-find_package( open62541 REQUIRED ) #open62541::open62541 (linked below) carries the include/lib dirs.
-add_definitions( -DUA_ENABLE_ENCRYPTION )
+find_package( open62541 REQUIRED ) #open62541::open62541 (linked below) carries the include/lib dirs, and its config.h defines UA_ENABLE_ENCRYPTION itself (from UA_ENABLE_ENCRYPTION_OPENSSL) - hand-defining it here only risked disagreeing with how the vendor was actually built.
 
 set( targetName Jde.Opc )
 add_library( ${targetName} )
@@ -16,6 +15,7 @@ file( GLOB_RECURSE headers  *.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
 if( WIN32 )
+	target_compile_definitions( ${targetName} PRIVATE NOMINMAX )
 else()
 	target_link_libraries( ${targetName} stdc++exp )
 endif()

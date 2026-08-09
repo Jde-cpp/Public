@@ -14,6 +14,11 @@ namespace Jde::Opc{
 		serverIndex = x.serverIndex;
 	}
 
+	ExNodeId::ExNodeId( const NodeId& x )ι:
+		ExNodeId{}{
+		UA_NodeId_copy( static_cast<const UA_NodeId*>(&x), &nodeId );
+	}
+
 	ExNodeId::ExNodeId( const flat_map<string,string>& x )ε:
 		UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{
 		if( auto p = x.find("serverindex"); p!=x.end() )
@@ -31,7 +36,10 @@ namespace Jde::Opc{
 		else if( auto p = x.find("b"); p!=x.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
 			auto t = ToUV( p->second );
-			UA_ByteString_fromBase64( &nodeId.identifier.byteString, &t );
+			if( let sc = UA_ByteString_fromBase64(&nodeId.identifier.byteString, &t); sc ){
+				UA_ByteString_clear( &nodeId.identifier.byteString );//the ctor never completes, so ~ExNodeId will not run to free it.
+				throw UAException{ sc, Ƒ("Could not base64-decode byte-string node id '{}'.", p->second) };
+			}
 		}
 		else if( auto p = x.find("g"); p!=x.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
@@ -43,13 +51,18 @@ namespace Jde::Opc{
 			namespaceUri = UA_String_fromChars( p->second.c_str() );
 	}
 
+	//The jvalue overloads of Json::FindDefaultSV/FindNumber take a json *pointer path*, not a member name, so "nsu" never
+	//resolved and both extra fields were dropped on every construction from json.  Read them off the object, where the
+	//overloads do take a key.  if_object rather than as_object: a bare `5002`/`"tag"` is a legal node id here, which
+	//NodeId::FromJson accepts and which as_object would throw on.
 	ExNodeId::ExNodeId( const jvalue& j )ε:
-		UA_ExpandedNodeId{
-			NodeId::FromJson(j),
-			UA_String_fromChars(string{Json::FindDefaultSV(j, "nsu")}.c_str()),
-			Json::FindNumber<UA_UInt32>(j, "serverindex").value_or(0)
+		UA_ExpandedNodeId{ NodeId::FromJson(j), UA_STRING_NULL, 0 }{
+		if( let* o = j.if_object(); o ){
+			serverIndex = Json::FindNumber<UA_UInt32>( *o, "serverindex" ).value_or( 0 );
+			if( let nsu = Json::FindSV(*o, "nsu"); nsu && nsu->size() ) //allocated last, as in the rest-params ctor above.
+				namespaceUri = AllocUAString( *nsu );
 		}
-	{}
+	}
 
 	ExNodeId::ExNodeId( ExNodeId&& x )ι:
 		UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{
@@ -61,6 +74,11 @@ namespace Jde::Opc{
 
 	ExNodeId::ExNodeId( DB::Row& r, uint8 index, bool extended )ε:
 		UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{
+		string uri; UA_UInt32 server{};
+		if( extended ){//these 2 could throw.
+			uri = r.GetString( index+5 );
+			server = r.GetUInt32Opt( index+6 ).value_or( 0 );
+		}
 		nodeId.namespaceIndex = r.Get<uint16>( index );
 		if( !r.IsNull(index+1) ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
@@ -80,18 +98,18 @@ namespace Jde::Opc{
 			UA_ByteString_allocBuffer( &nodeId.identifier.byteString, bytes.size() );
 			::memcpy( nodeId.identifier.byteString.data, bytes.data(), bytes.size() );
 		}
-		namespaceUri = extended ? UA_String_fromChars( r.GetString(index+5).c_str() ) : UA_STRING_NULL;
-		serverIndex = extended ? r.GetUInt32Opt( index+6 ).value_or( 0 ) : 0;
+		namespaceUri = extended ? UA_String_fromChars( uri.c_str() ) : UA_STRING_NULL;
+		serverIndex = server;
 	}
 
 	α ExNodeId::InsertParams( bool extended )Ι->vector<DB::Value>{
-		vector<DB::Value> params; params.reserve( 64 );
+		vector<DB::Value> params; params.reserve( extended ? 7 : 5 );
 		using enum UA_NodeIdType;
 		params.emplace_back( nodeId.namespaceIndex );
 		params.emplace_back( IsNumeric() ? DB::Value{*Numeric()} : DB::Value{} );
 		params.emplace_back( IsString() ? DB::Value{*String()} : DB::Value{} );
-		params.emplace_back( IsGuid() ? DB::Value{*Guid()} : DB::Value{vector<uint8_t>{}} );
-		params.emplace_back( IsBytes() ? DB::Value{FromByteString(*Bytes())} : DB::Value{vector<uint8_t>{}} );
+		params.emplace_back( IsGuid() ? DB::Value{*Guid()} : DB::Value{} );
+		params.emplace_back( IsBytes() ? DB::Value{FromByteString(*Bytes())} : DB::Value{} );
 		if( extended ){
 			params.emplace_back( namespaceUri.length ? DB::Value{ToString(namespaceUri)} : DB::Value{} );
 			params.emplace_back( serverIndex );
@@ -192,7 +210,7 @@ namespace Jde::Opc{
 		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_STRING )
 			boost::hash_combine( seed, ToSV(nodeId.identifier.string) );
 		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_GUID )
-			boost::hash_combine( seed, serialize(ToJson(nodeId.identifier.guid)) );
+			boost::hash_combine( seed, ToBinaryString(nodeId.identifier.guid) );
 		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
 			boost::hash_combine( seed, ToSV(nodeId.identifier.byteString) );
 		return seed;//4452845294327023648
@@ -208,7 +226,7 @@ namespace Jde::Opc{
 		else if( type==UA_NodeIdType::UA_NODEIDTYPE_GUID )
 			j["g"] = ToJson( nodeId.identifier.guid );
 		else if( type==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
-			j["b"] = ByteStringToJson( nodeId.identifier.byteString );
+			j["b"] = ByteStringToBase64( nodeId.identifier.byteString );
 		return j;
 	}
 	α ExNodeId::Add( jobject& j )Ι->void{

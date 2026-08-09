@@ -50,7 +50,9 @@ export function valueString( value: Value ):string{
 
 export function toValue( json:any ):Value{
 	let value = json;
-	if( value?.hasOwnProperty('sc') )
+	if( value?.hasOwnProperty('v') )//{v,sc} — a reading with quality attached.  Before the 'sc' test on purpose: sc-first turned it into an OpcError and discarded the reading.  Recurse for a Long payload.
+		value = toValue( json.v );
+	else if( value?.hasOwnProperty('sc') )
 		value = new OpcError( json.sc, "OpcError", "", undefined );//was `new Error(sc)` — a plain Error isn't `instanceof OpcError`, so valueString rendered it as "unknown type object"
 	else if( value?.hasOwnProperty('unsigned') )
 		value = new Long( json.low, json.high, json.unsigned );

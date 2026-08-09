@@ -77,9 +77,26 @@ namespace Jde::Opc::Gateway{
 		y.set_allocated_node( new Proto::NodeId{ToNodeProto(id.nodeId)} );
 		return y;
 	}
+	//A UA_Duration is a double count of milliseconds, not a time point, so it does not go through UADateTime at all -
+	//see #20.  protobuf wants seconds and nanos to share a sign (a Timestamp is the opposite, nanos non-negative), so
+	//truncate toward zero.  Clamped to protobuf's own documented Duration range first: the value comes off the wire, and
+	//a NaN or 1e300 would make the integer casts undefined.
+	constexpr double _maxDurationMs = 315'576'000'000.*1000.;//±10000 years, what a google.protobuf.Duration is defined for.
+	Ω toDurationProto( UA_Duration ms )ι->google::protobuf::Duration{
+		let clamped = std::isfinite( ms ) ? std::clamp( ms, -_maxDurationMs, _maxDurationMs ) : 0.;
+		let seconds = std::trunc( clamped/1000. );
+		google::protobuf::Duration y;
+		y.set_seconds( (int64_t)seconds );
+		y.set_nanos( (int32_t)((clamped-seconds*1000.)*1'000'000.) );
+		return y;
+	}
+	Ω toDuration( const google::protobuf::Duration& d )ι->UA_Duration{
+		return d.seconds()*1000. + d.nanos()/1'000'000.;//the same arithmetic Value::Set's {seconds,nanos} branch does.
+	}
+
 #define IS( ua ) type==&UA_TYPES[ua]
 	α FromServer::ToProto( const ServerCnnctnNK& opcId, const NodeId& node, const Opc::Value& v, RequestId requestId )ι->FromServer::Message{
-		let scaler = v.IsScaler();
+		let scaler = v.IsScalar();
 		let type = v.value.type;
 		auto nv = mu<FromServer::NodeValues>(); nv->set_allocated_node( new Proto::NodeId{ToNodeProto(node)} ); nv->set_opc_id( opcId );
 		//auto p = m.mutable_data_change();
@@ -92,11 +109,11 @@ namespace Jde::Opc::Gateway{
 			else if( IS(UA_TYPES_BYTESTRING) ) [[unlikely]]
 				proto.set_allocated_byte_string( new string(ToSV(((UA_ByteString*)v.value.data)[i])) );
 			else if( IS(UA_TYPES_DATETIME) )
-				proto.set_allocated_date( new google::protobuf::Timestamp{v.Get<UADateTime>(i).ToProto()} );
+				proto.set_allocated_date( new google::protobuf::Timestamp{UADateTime{v.Get<UA_DateTime>(i)}.ToProto()} );//construct, don't Get the wrapper - #20.
 			else if( IS(UA_TYPES_DOUBLE) )
 				proto.set_double_value( v.Get<UA_Double>(i) );
 			else if( IS(UA_TYPES_DURATION) ) [[unlikely]]
-				proto.set_allocated_duration( new google::protobuf::Duration{v.Get<UADateTime>(i).ToDuration()} );
+				proto.set_allocated_duration( new google::protobuf::Duration{toDurationProto(v.Get<UA_Duration>(i))} );
 			else if( IS(UA_TYPES_EXPANDEDNODEID) ) [[unlikely]]
 				proto.set_allocated_expanded_node( new Proto::ExpandedNodeId{ToProto(v.Get<UA_ExpandedNodeId>(i))} );
 			else if( IS(UA_TYPES_FLOAT) )
@@ -130,6 +147,7 @@ namespace Jde::Opc::Gateway{
 				proto.set_status_code( UA_STATUSCODE_BADNOTIMPLEMENTED );
 			}
 		}
+		nv->set_sc( v.status );//the reading's quality - without it a Bad or Uncertain reading was indistinguishable from a Good one on the socket (proto3 omits 0/Good from the wire).
 		FromServer::Message m;
 		m.set_request_id( requestId );
 		m.set_allocated_node_values( nv.release() );
@@ -160,7 +178,7 @@ namespace Jde::Opc::Gateway{
 			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_DOUBLE] );
 			break;}
 		case FromServer::Value::OfCase::kDuration:{
-			UA_Duration v = UADateTime{ proto.duration() }.UA();
+			let v = toDuration( proto.duration() );//not UADateTime{}.UA(), which returns 100ns ticks since 1601 - #20.
 			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_DURATION] );
 			break;}
 		case FromServer::Value::OfCase::kExpandedNode:{

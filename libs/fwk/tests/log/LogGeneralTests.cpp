@@ -14,6 +14,31 @@ namespace Jde::Tests{
 		α TearDown()->void override {}
 	};
 
+	//ELogTags is a 64-bit space that libraries extend above fwk's own 27 bits - Jde::Opc registers 32-45 through
+	//AddTagParser - so All has to span the whole underlying type.  Spelled ~0ul it stopped at bit 31 under the windows
+	//ABI, where unsigned long is 32-bit, and silently dropped every extension tag from an All-based subscription.
+	TEST_F( LogGeneralTests, AllCoversTheFullUnderlyingWidth ){
+		EXPECT_EQ( (uint)ELogTags::All, ~(std::underlying_type_t<ELogTags>)0 );
+		EXPECT_NE( (uint)ELogTags::All & (1ull<<32), 0ull );//the bit range that actually went missing.
+	}
+
+	//AddTagParser takes ownership as up<ITagParser>, so every parser is destroyed through a base pointer.  Without a
+	//virtual destructor on the base that is undefined behaviour, and in practice the derived destructor never runs - it
+	//goes unnoticed only because the one implementation, Jde::Opc::UALogParser, holds no state to leak.
+	TEST_F( LogGeneralTests, TagParserIsDestroyedThroughTheBase ){
+		static bool destroyed;//a local class may use a static local of its enclosing function, not an automatic one.
+		struct Counted : Logging::ITagParser{
+			~Counted(){ destroyed = true; }
+			α ToTag( str )Ι->ELogTags override{ return ELogTags::None; }
+			α ToString( ELogTags )Ι->string override{ return {}; }
+			α Tags()Ι->flat_map<string,uint> override{ return {}; }
+		};
+		destroyed = false;
+		up<Logging::ITagParser> parser = mu<Counted>();//the conversion AddTagParser performs.
+		parser.reset();
+		EXPECT_TRUE( destroyed );
+	}
+
 	//config keys are split on '_' and each part looked up in ELogTagStrings, so an unrecognised part is simply dropped
 	//and the key silently collapses onto a shorter one's mask - where parseTags' insert_or_assign then overwrites it.
 	TEST_F( LogGeneralTests, CompositeTagNamesResolveDistinctly ){

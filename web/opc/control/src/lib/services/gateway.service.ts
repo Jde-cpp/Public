@@ -427,7 +427,9 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	private nodeValues( nodeValues:FromServer.INodeValues ):void{
 		let opcSubscriptions = this.#subscriptions.get( nodeValues.opcId! ); if( !opcSubscriptions ){ return console.error(`Could not find opc ${nodeValues.opcId}`);}
 		const node = Gateway.toNode( nodeValues.node! );
-		opcSubscriptions.get( node.key )?.forEach( owner=>this.#ownerSubscriptions.get(owner)!.next({opcId:nodeValues.opcId!, node:node, value:Gateway.toValues(nodeValues.values!)}) );
+		const sc = nodeValues.sc ?? 0;//proto3 omits 0/Good from the wire.
+		const value = sc>=0x80000000 ? new OpcError( sc, "OpcError", "", undefined ) : Gateway.toValues( nodeValues.values! );//Bad → error, matching the REST shape; Uncertain keeps the reading and sc says so.
+		opcSubscriptions.get( node.key )?.forEach( owner=>this.#ownerSubscriptions.get(owner)!.next({opcId:nodeValues.opcId!, node:node, value:value, sc:sc}) );
 	};
 
 	private clearOwnerNode( opcSubscriptions:Map<NodeKey, Owner[]>,  key:NodeKey, owner:Owner ){
@@ -490,4 +492,4 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	get target():GatewayTarget{ return this.instances[0].instanceName!; }
 	#connections = new Map<CnnctnTarget, ServerCnnctn>();
 }
-export type SubscriptionResult = {opcId:string, node:NodeId,value:Value};
+export type SubscriptionResult = {opcId:string, node:NodeId, value:Value, sc?:StatusCode};//sc: the reading's quality; 0/undefined = Good.  Bad already arrives as an OpcError in `value`; sc mainly distinguishes Uncertain.

@@ -3,6 +3,7 @@
 #include <jde/opc/uatypes/Variant.h>
 #include "../UAServer.h"
 #include "../awaits/VariantAwait.h"
+#include "../uaTypes/DataType.h" //DT: the value has to be decoded toward the declared dataType.
 
 #define let const auto
 namespace Jde::Opc::Server{
@@ -27,7 +28,7 @@ namespace Jde::Opc::Server{
 				auto& o = v.as_object();
 				BrowseName browse{ o.at("browseName").as_object() };
 				ua.GetBrowse( browse );
-				Variant variant{ o.at("value"), Json::FindSV(o, "dataType").value_or("") };
+				Variant variant{ o.at("value"), o.contains("dataType") ? &DT(o.at("dataType"), _sl) : nullptr };
 				let variantPK = co_await VariantInsertAwait{ variant };
 				values.try_emplace( browse.PK, move(variant) );
 				y.emplace_back( jobject{

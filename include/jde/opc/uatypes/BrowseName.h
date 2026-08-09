@@ -2,7 +2,7 @@
 
 namespace Jde::Opc{
 	struct BrowseName final : UA_QualifiedName{
-		BrowseName()ι = default;
+		BrowseName()ι:UA_QualifiedName{}{}
 		BrowseName( const jobject& j )ε;
 		BrowseName( BrowseNamePK pk, NsIndex ns=0, sv name={} )ι;
 		BrowseName( sv fqBrowseName, NsIndex defaultNs )ε;
@@ -12,7 +12,6 @@ namespace Jde::Opc{
 		~BrowseName(){ UA_QualifiedName_clear( this ); }
 		α operator=( const BrowseName& x )ι->BrowseName&;
 		α operator=( BrowseName&& x )ι->BrowseName&;
-		α operator==( const UA_QualifiedName& x )Ι->bool{ return namespaceIndex==x.namespaceIndex && ToSV(name)==ToSV(x.name); }
 
 		Ω ToJson( UA_QualifiedName ua )ι->jobject;
 		α ToJson()Ι->jobject;
@@ -20,4 +19,6 @@ namespace Jde::Opc{
 
 		BrowseNamePK PK{};
 	};
+	Ξ operator==( const BrowseName& x, const UA_QualifiedName& y )ι->bool{ return x.namespaceIndex==y.namespaceIndex && ToSV(x.name)==ToSV(y.name); }
+	Ξ operator==( const BrowseName& x, const BrowseName& y )ι->bool{ return x==static_cast<const UA_QualifiedName&>(y); }
 }

@@ -44,6 +44,7 @@ message NodeValues{
 	string opc_id=1;
 	Jde.Opc.Proto.NodeId node=2;
 	repeated Value values=3;
+	uint32 sc=4;//the UA_DataValue's quality - one per reading, even when the value is an array.  0 = Good.
 }
 
 message UnsubscribeAck{

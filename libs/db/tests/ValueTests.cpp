@@ -28,10 +28,13 @@ namespace Jde::DB::Tests{
 		EXPECT_TRUE( Value{true}.Get<uint32_t>()==1u );
 		EXPECT_EQ( Value{string{"abc"}}.Get<string>(), "abc" );
 
-		EXPECT_THROW( Value{42}.Get<string>(), Exception );              //a number is not a string - throws, no longer a compile error.
-		EXPECT_THROW( Value{string{"abc"}}.Get<uint32_t>(), Exception ); //and a string is not a number.
-		EXPECT_THROW( Value{}.Get<uint32_t>(), Exception );              //null.
-		EXPECT_THROW( Value{}.Get<string>(), Exception );
+		//A type the value does not hold asserts and yields the default rather than throwing:  these accessors are noexcept,
+		//so a throw out of one was a std::terminate with no message.  The ASSERT logs CRITICAL naming the type it does
+		//hold, which is the diagnostic - the return is only there so the caller survives a bug it cannot handle anyway.
+		EXPECT_EQ( Value{42}.Get<string>(), "" );               //a number is not a string.
+		EXPECT_EQ( Value{string{"abc"}}.Get<uint32_t>(), 0u );  //and a string is not a number.
+		EXPECT_EQ( Value{}.Get<uint32_t>(), 0u );               //null counts as a mismatch: a nullable column wants Row's *Opt accessors.
+		EXPECT_EQ( Value{}.Get<string>(), "" );
 	}
 
 	//#21: Value::ToUInt on a negative Double must not be UB - go through signed _int, matching the integer cases' modular wrap.

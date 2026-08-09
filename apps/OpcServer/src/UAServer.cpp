@@ -200,8 +200,7 @@ namespace Jde::Opc::Server {
 		for( const auto& [pk, node] : _objects ){
 			if( node.ParentNodePK != parent.PK )
 				continue;
-			if( let nodeBrowse = _browseNames.find(node.Browse.PK);
-				nodeBrowse==_browseNames.end() || nodeBrowse->second.namespaceIndex!=browse.namespaceIndex || ToSV( nodeBrowse->second.name )!=ToSV( browse.name ) ){
+			if( let nodeBrowse = _browseNames.find(node.Browse.PK); nodeBrowse==_browseNames.end() || nodeBrowse->second!=browse ){
 				continue;
 			}
 			y = &node;
@@ -213,7 +212,7 @@ namespace Jde::Opc::Server {
 	α UAServer::FindBrowse( BrowseName& browse )Ι->bool{
 		let p = browse.PK
 			? _browseNames.find( browse.PK )
-			: find_if( _browseNames, [&browse](const auto& kv){return kv.second.namespaceIndex==browse.namespaceIndex && ToSV(kv.second.name)==ToSV(browse.name);} );
+			: find_if( _browseNames, [&browse](let& kv){return kv.second==browse;} );
 		if( p!=_browseNames.end() )
 			browse = p->second;
 		return p!=_browseNames.end();

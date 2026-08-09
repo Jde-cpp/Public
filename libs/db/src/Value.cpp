@@ -11,6 +11,9 @@ namespace Jde::DB{
 	constexpr ELogTags _tags{ ELogTags::Sql };
 	constexpr array<sv,11> EValueStrings = { "null", "string", "bool", "int8", "int32", "int64", "uint32", "uint64", "double", "time", "bytes" };
 
+	string Value::_errorString;
+	vector<uint8_t> Value::_errorBytes;
+
 	Ω fromJson( EType type, const jvalue& j, SL sl )->Value::Underlying{
 		Value::Underlying value{ nullptr };
 		if( j.is_null() )

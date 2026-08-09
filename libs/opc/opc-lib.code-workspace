@@ -1,0 +1,26 @@
+{
+	"settings": {
+		"window.title": "OpcLib",
+		"name": "opc",
+		"target": "Jde.Opc.Lib.Tests",
+		"testTarget": "${config:target}",
+		"subDir": "libs/${config:name}",
+		"workspace": "${workspaceFolder:tests}/..",
+		"cmake.sourceDirectory": "${config:workspace}/../..",
+		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
+		"settings": "${workspaceFolder:tests}/config/Opc.Lib.Tests.jsonnet",
+		"program": "${config:subDir}/tests/${config:target}"
+	},
+	"folders": [
+		{
+			"path": "C:/Users/duffyj/source/repos/jde/Public/libs/opc/src"
+		},
+		{
+			"path": "C:/Users/duffyj/source/repos/jde/Public/libs/opc/tests"
+		},
+		{
+			"path": "C:/Users/duffyj/source/repos/jde/Public/include/jde",
+			"name": "include"
+		}
+	]
+}

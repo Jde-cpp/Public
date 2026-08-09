@@ -55,8 +55,8 @@ namespace Jde::Opc::Server{
 
 	α BrowseNameAwait::GetOrInsert( BrowseName& browseName, SL sl )ε->bool{
 		auto& browseNames = GetUAServer()._browseNames;
-		for( auto&& [pk, name] : browseNames ){
-			if( name.namespaceIndex == browseName.namespaceIndex && ToSV(name.name) == ToSV(browseName.name) ){
+		for( let&& [pk, name] : browseNames ){
+			if( name==browseName ){
 				browseName.PK = pk;
 				return false;
 			}

@@ -9,7 +9,7 @@ namespace Jde::Opc{
 	struct ExNodeId : UA_ExpandedNodeId{
 		ExNodeId()ι:UA_ExpandedNodeId{UA_EXPANDEDNODEID_NULL}{}
 		ExNodeId( UA_NodeId&& x )ι:UA_ExpandedNodeId{move(x), UA_EXPANDEDNODEID_NULL.namespaceUri, UA_EXPANDEDNODEID_NULL.serverIndex}{ UA_NodeId_init( &x ); }
-		ExNodeId( const NodeId& x )ι:ExNodeId{}{ UA_NodeId_copy( (UA_NodeId*)&x, &nodeId ); }
+		ExNodeId( const NodeId& x )ι;
 		ExNodeId( const UA_ExpandedNodeId& x )ι:ExNodeId{}{ UA_ExpandedNodeId_copy( &x, this ); }
 		ExNodeId( UA_ExpandedNodeId&& x )ι:UA_ExpandedNodeId{move(x)}{ UA_ExpandedNodeId_init(&x); }
 		ExNodeId( const flat_map<string,string>& x )ε;//rest params
@@ -41,7 +41,6 @@ namespace Jde::Opc{
 		α Move()ι->UA_NodeId;
 		α ToJson()Ι->jobject;
 		α Add( jobject& j )Ι->void;
-		Ω ToJson( flat_set<ExNodeId> nodes )ι->jarray{ jarray j; for_each(nodes, [&j](const auto& n){ j.push_back( n.ToJson() ); }); return j; }
 		α to_string()Ι->string;
 	};
 	Ξ operator==( const ExNodeId& x, const ExNodeId& y )ι->bool{ return !(x<y) && !(y<x); }

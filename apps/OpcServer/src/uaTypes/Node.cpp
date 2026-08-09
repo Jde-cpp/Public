@@ -31,7 +31,7 @@ namespace Jde::Opc::Server{
 		ParentNodePK{ parentPK },
 		ReferenceTypePK{ Json::FindNumberPath<Server::NodePK>(j, "ref/id").value_or(0) },
 		Browse{ move(browse) },
-		TypeDef{ j.contains("type") ? ms<ObjectType>(ExNodeId{j.at("type").as_object()}.nodeId) : nullptr }
+		TypeDef{ j.contains("type") ? ms<ObjectType>(ExNodeId{j.at("type").as_object()}.Move()) : nullptr }//Move(), not .nodeId: the temporary's Clear() would free what ObjectType then owns.
 	{}
 
 	Node::Node( NodePK pk ):

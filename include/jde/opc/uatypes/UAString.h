@@ -8,7 +8,8 @@ namespace Jde::Opc{
 	Ξ AllocUAString( sv s )ι->UA_String{ return AllocUAString( string{s} ); }
 
 	struct UAString final : UA_String, noncopyable{
-		explicit UAString( uint size )ι;
+		UAString()ι:UA_String{}{}
+		explicit UAString( uint size )ι;//a scratch buffer of `size` bytes.  Never as a UA_encodeJson outBuf - see above.
 		~UAString()ι;
 
 		α ToString()Ι->string{ return Opc::ToString( *this ); }

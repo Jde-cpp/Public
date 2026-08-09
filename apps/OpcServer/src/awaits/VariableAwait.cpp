@@ -34,10 +34,12 @@ namespace Jde::Opc::Server {
 				let variantPK = row.GetUInt32Opt(21);
 				let dtPK = row.GetUInt32Opt(29);
 				let variableDTPK = row.GetUInt32Opt(22);
+				let variantDims = row.GetString( 30 );
+				let isArray = !variantDims.empty();//stored arrayDimensions: the shape a one-element array cannot state by its count.
 				Variable node{
 					row,
 					GetUAServer().GetTypeDef( row.GetUInt32(12), _sl ),
-					variantPK && dtPK ? Variant{ *variantPK, Variant::ToUAValues(DT(*dtPK), move(values.at(*variantPK))), Variant::ToArrayDims(row.GetString(30)), DT(*dtPK) }.Move() : UA_Variant{},
+					variantPK && dtPK ? Variant{ *variantPK, Variant::ToUAValues(DT(*dtPK), move(values.at(*variantPK)), isArray), Variant::ToArrayDims(variantDims), DT(*dtPK) }.Move() : UA_Variant{},
 					DT( variableDTPK.value_or(UA_NS0ID_BASEDATATYPE) ),
 					Variant::ToArrayDims( row.GetString(24) )
 				};
@@ -89,7 +91,7 @@ namespace Jde::Opc::Server {
 				for( uint i=0; i<array.size(); ++i ){
 					co_await DS().Execute( DB::Sql{
 						Ƒ("insert into {}(variant_id, idx, value) values (?,?,?)", GetSchema().DBName("variant_members")),
-						{ variantPK,{i},{serialize(array[i])} }
+						{ variantPK,{i},{array[i]} }
 					} );
 				}
 			}

@@ -49,8 +49,9 @@ namespace Jde::Opc::Server {
 			for( auto&& row : variantRows ){
 				let variantPK = row.GetUInt32(0);
 				let& dt = DT( row.GetUInt(1) );
-				auto dims = row.IsNull(2) ? make_tuple(nullptr, 0) : Variant::ToArrayDims( row.GetString(2) );
-				variants.try_emplace( variants.end(), variantPK, Variant{variantPK, Variant::ToUAValues(dt, move(values.at(variantPK))), move(dims), dt} );
+				let isArray = !row.IsNull( 2 );//stored arrayDimensions: the shape a one-element array cannot state by its count.
+				auto dims = isArray ? Variant::ToArrayDims( row.GetString(2) ) : make_tuple( (UA_UInt32*)nullptr, uint{0} );
+				variants.try_emplace( variants.end(), variantPK, Variant{variantPK, Variant::ToUAValues(dt, move(values.at(variantPK)), isArray), move(dims), dt} );
 			};
 			Resume( move(variants) );
 		}
@@ -72,7 +73,7 @@ namespace Jde::Opc::Server {
 					Ƒ("INSERT INTO {}(variant_id, idx, value) VALUES (?,?,?)", GetSchema().DBName("variant_members")),
 					{ {variantPK},
 						{i},
-						{serialize(array[i])}
+						{array[i]}
 					}} );
 			}
 			ResumeScaler( variantPK );
