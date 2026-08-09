@@ -13,13 +13,13 @@
 	},
 	"folders": [
 		{
-			"path": "C:/Users/duffyj/source/repos/jde/Public/libs/opc/src"
+			"path": "./src"
 		},
 		{
-			"path": "C:/Users/duffyj/source/repos/jde/Public/libs/opc/tests"
+			"path": "./tests"
 		},
 		{
-			"path": "C:/Users/duffyj/source/repos/jde/Public/include/jde",
+			"path": "../../include/jde",
 			"name": "include"
 		}
 	]

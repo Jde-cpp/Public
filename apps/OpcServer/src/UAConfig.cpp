@@ -6,6 +6,7 @@
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/app/client/IAppClient.h>
 #include "access/UAAccess.h"
+#include "UATrust.h"
 #include "jde/fwk/crypto/CryptoSettings.h"
 #include "jde/fwk/settings.h"
 
@@ -49,41 +50,9 @@ namespace Jde::Opc::Server{
 	α UAConfig::SetConfig( PortType port, ByteStringPtr&& certificate, const ByteStringPtr&& privateKey )ε->void{
     UAε( UA_ServerConfig_setBasics_withPort(this, port) );
 
-		vector<ByteStringPtr> trustedCertOwners;// owns the struct+buffer; freed when SetConfig returns (after UA_Array_copy deep-copies into the trust list).
-		vector<UA_ByteString> trustedCerts;// shallow views into the owners, only used to feed UA_Array_copy.
-		for( let& sdir : Settings::FindStringArray("/access/trustedCertDirs") ){
-			const fs::path dir{ sdir };
-			if( !fs::exists(dir) || !fs::is_directory(dir) ){
-				CRITICAL( "Trusted certificate directory does not exist: '{}'.", dir.string() );
-				continue;
-			}
-			for( let& entry : fs::directory_iterator(dir) ){
-				if( entry.path().extension()==".pem" || entry.path().extension()==".crt" ){
-					trustedCertOwners.push_back( ToUAByteString(Crypto::ReadCertificate({entry.path()})) );
-					trustedCerts.push_back( *trustedCertOwners.back() );
-					INFO( "Added certificate:  {}", entry.path().string() );
-				}
-			}
-		}
-		UA_ByteString issuerList; uint issuerListSize = 0;
-		UA_ByteString revocationList; uint revocationListSize = 0;
     UA_TrustListDataType list;
     UA_TrustListDataType_init( &list );
-    if( trustedCerts.size() ){
-			list.specifiedLists |= UA_TRUSTLISTMASKS_TRUSTEDCERTIFICATES;
-			UAε( UA_Array_copy(&trustedCerts[0], trustedCerts.size(), (void**)&list.trustedCertificates, &UA_TYPES[UA_TYPES_BYTESTRING]) );
-			list.trustedCertificatesSize = trustedCerts.size();
-    }
-    if( issuerListSize > 0 ) {
-			list.specifiedLists |= UA_TRUSTLISTMASKS_ISSUERCERTIFICATES;
-			UAε( UA_Array_copy(&issuerList, issuerListSize, (void**)&list.issuerCertificates, &UA_TYPES[UA_TYPES_BYTESTRING]) );
-			list.issuerCertificatesSize = issuerListSize;
-    }
-    if( revocationListSize > 0 ) {
-			list.specifiedLists |= UA_TRUSTLISTMASKS_TRUSTEDCRLS;
-			UAε( UA_Array_copy(&revocationList, revocationListSize, (void**)&list.trustedCrls, &UA_TYPES[UA_TYPES_BYTESTRING]) );
-			list.trustedCrlsSize = revocationListSize;
-    }
+		UATrust::LoadTrustList( list );//also primes the mtime cache the runtime rescan (UATrust::VerifyCertificate) diffs against. An unreadable cert now logs CRITICAL and is skipped rather than aborting startup - matches Access loadTrustAnchors.
 
     /* Set up the parameters */
     UA_KeyValuePair params[2];

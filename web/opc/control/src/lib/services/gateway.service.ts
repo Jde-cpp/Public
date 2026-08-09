@@ -417,14 +417,14 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		}
 		return undefined!;
 	}
-	private static toValues( proto:FromServer.IValue[] ):Value{
+	private static toValues( proto:FromServer.Value.$Properties[] ):Value{
 		let value = proto.length==1 ? Gateway.toValue( proto[0] ) : new Array<Value>();
 		if( proto.length>1 )
 			proto.forEach( v => (<Value[]>value).push( Gateway.toValue(v) ) );
 		return value;
 	}
 
-	private nodeValues( nodeValues:FromServer.INodeValues ):void{
+	private nodeValues( nodeValues:FromServer.NodeValues.$Properties ):void{
 		let opcSubscriptions = this.#subscriptions.get( nodeValues.opcId! ); if( !opcSubscriptions ){ return console.error(`Could not find opc ${nodeValues.opcId}`);}
 		const node = Gateway.toNode( nodeValues.node! );
 		const sc = nodeValues.sc ?? 0;//proto3 omits 0/Good from the wire.

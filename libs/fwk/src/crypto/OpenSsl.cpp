@@ -96,7 +96,13 @@ namespace Jde{
 		X509Ptr cert{ ::X509_new(), ::X509_free };
 		auto pCert = cert.get();
 
-		::ASN1_INTEGER_set( ::X509_get_serialNumber(pCert), 1 );
+		//random serial, never a constant: re-issues keep the same subject DN, and same-DN+same-serial certs are
+		//indistinguishable to anything that resolves anchors by subject (X509_STORE) - RFC 5280 caps serials at 20 octets.
+		unsigned char serial[16];
+		Random( serial, sizeof(serial) );
+		serial[0] &= 0x7f;//DER serials must be positive.
+		BNPtr serialBN{ ::BN_bin2bn(serial, sizeof(serial), nullptr), ::BN_free }; CHECK_NULL( serialBN );
+		CHECK_NULL( ::BN_to_ASN1_INTEGER(serialBN.get(), ::X509_get_serialNumber(pCert)) );
 		::X509_set_version( pCert, 2 );//X509v3
 		::X509_gmtime_adj( ::X509_get_notBefore(pCert), 0 );
 		::X509_gmtime_adj( ::X509_get_notAfter(pCert), 365 * 24 * 60 * 60 );

@@ -22,10 +22,11 @@
 
 namespace Jde::Opc::Gateway::Soak{
 	constexpr ELogTags _tags{ ELogTags::Test };
-	//Creates the gateway's client certificate for each active soak leg. Must run before OpcServer starts: OpcServer
-	//snapshots trustedCertDirs at startup, but the gateway only creates the cert lazily at first connect - too late
-	//in a split-process run.  Goes through UAClient's own helpers so the files land exactly where the gateway process
-	//will look for them; /gateway/issuedCerts in Opc.Soak.jsonnet supplies the gateway's product and CN.
+	//Creates the gateway's client certificate for each active soak leg. Recommended before OpcServer starts, no longer
+	//required for the Jde OpcServer (UATrust rescans trustedCertDirs on a failed verify) - still required for external
+	//servers that snapshot their trust list, and it prints the path they need to anchor. Goes through UAClient's own
+	//helpers so the files land exactly where the gateway process will look for them; /gateway/issuedCerts in
+	//Opc.Soak.jsonnet supplies the gateway's product and CN.
 	Ω createGatewayCerts()ε->void{
 		for( let& leg : ActiveServers() ){
 			if( leg.CertificateUri.empty() ){//no uri -> the gateway connects with SecurityPolicy None and never presents a cert.

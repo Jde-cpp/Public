@@ -3,6 +3,7 @@
 #include <jde/fwk/process/thread.h>
 #include <jde/opc/uatypes/opcHelpers.h>
 #include <NodesetLoader/backendOpen62541.h>
+#include "UATrust.h"
 
 
 #define let const auto
@@ -11,7 +12,10 @@ namespace Jde::Opc::Server {
 	UAServer::UAServer()ε:
 		ServerName{ Settings::FindString("/opcServer/name").value_or("OpcServer") },
 		_ua{ UA_Server_newWithConfig(&_config) }
-	{}
+	{
+		if( _ua )
+			UATrust::Install( *_ua );//must target the server-owned config - UA_Server_newWithConfig memset _config. Main thread, before Run() spawns the loop thread.
+	}
 	UAServer::~UAServer(){
 		INFOT( ELogTags::App, "Stopping OPC UA server..." );
 		if( _thread.has_value() ){

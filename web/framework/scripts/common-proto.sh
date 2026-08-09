@@ -1,4 +1,34 @@
 #!/bin/bash
+
+#Collects $1 and, transitively, every .proto it imports into the global $_protoDeps.  Imports are matched by basename
+#against the cwd - the output dir - because that is where create() symlinks everything pbjs has to resolve; the
+#google/protobuf/* ones it ships itself are not linked in, so a name that is not there is simply not a dependency.
+function protoDeps {
+	local proto=$1;
+	if [ -n "${_protoDeps[$proto]}" ] || [ ! -f $proto ]; then return 0; fi;
+	_protoDeps[$proto]=1;
+	local import;
+	for import in `sed -n 's/^[[:space:]]*import[[:space:]]*"\([^"]*\)".*/\1/p' $proto`; do
+		protoDeps `basename $import`;
+	done;
+}
+
+#true when $1.js/$1.d.ts still have to be built - they are missing, or a .proto they were generated from has changed
+#since.  pbjs emits a static module with the imported messages inlined, so an import's timestamp counts as much as
+#the target's own: Opc.FromServer.d.ts goes stale when Opc.Common.proto moves under it, not just when its own does.
+#Only call this from an if/&&/|| condition - env.sh traps ERR, and the `return 1` here is an answer, not a failure.
+function isStale {
+	local name=$1;
+	if [ ! -f $name.d.ts ] || [ ! -f $name.js ]; then return 0; fi;
+	unset _protoDeps; declare -gA _protoDeps;
+	protoDeps $name.proto;
+	local proto;
+	for proto in "${!_protoDeps[@]}"; do
+		if [ $proto -nt $name.d.ts ]; then return 0; fi;
+	done;
+	return 1;
+}
+
 function create {
 	dir=$1;
 	local -n files=$2;

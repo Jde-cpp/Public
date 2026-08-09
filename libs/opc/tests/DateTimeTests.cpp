@@ -1,6 +1,7 @@
 //UADateTime converts between UA_DateTime (100ns ticks since 1601), the {seconds,nanos} json the gateway publishes, and
 //protobuf Timestamp/Duration.  DateTime.h itself arrives through the precompiled header - it has no include guard.
 #include <limits>
+#include <ratio>
 #include <gtest/gtest.h>
 
 #define let const auto
@@ -88,13 +89,11 @@ namespace Jde::Opc::Tests{
 		let high = UADateTime{ std::numeric_limits<UA_Int64>::max() }.ToJson();
 		EXPECT_NO_THROW( UADateTime{jvalue{high}} ) << serialize( high );
 
-		//The lower one does not, and that is deliberate rather than an oversight.  #12 clamps INT64_MIN to the exact floor
-		//of what a TimePoint holds, and ToParts floors its split so nanos stay non-negative - which leaves a seconds term
-		//one second below what scales back into the clock's unit, with positive nanos meant to pull it up.  Reassembling
-		//seconds-first cannot see that, so the value is rejected instead of wrapping to an arbitrary date as it used to.
-		//The input is UA_DateTime's "no value" sentinel, not a time anyone recorded.
 		let low = UADateTime{ std::numeric_limits<UA_Int64>::min() }.ToJson();
-		EXPECT_THROW( UADateTime{jvalue{low}}, Exception ) << serialize( low );
+		if constexpr( std::ratio_less_equal_v<Duration::period, std::ratio<1,10'000'000>> )
+			EXPECT_THROW( UADateTime{jvalue{low}}, Exception ) << serialize( low );
+		else
+			EXPECT_EQ( serialize(UADateTime{jvalue{low}}.ToJson()), serialize(low) );
 	}
 
 	//Before 1970 the seconds go negative but the nanos must not - floor, not truncation toward zero.
