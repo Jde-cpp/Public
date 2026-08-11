@@ -96,8 +96,8 @@ namespace Jde::Opc::Server{
     // Load the private key and convert to the DER format. Use an empty password on the first try -- maybe the key does not require a password.
     UA_ByteString decryptedPrivateKey = UA_BYTESTRING_NULL;
     UA_ByteString keyPassword = UA_BYTESTRING_NULL;
-    if ( privateKey && privateKey->length > 0 )
-      UAε( UA_CertificateUtils_decryptPrivateKey(localPrivateKey, keyPassword, &decryptedPrivateKey) );
+    if ( privateKey->length > 0 )
+        UAε( UA_CertificateUtils_decryptPrivateKey(localPrivateKey, keyPassword, &decryptedPrivateKey) );
     /* Basic256Sha256 */
     UAε( UA_ServerConfig_addSecurityPolicyBasic256Sha256(this, &localCertificate,&decryptedPrivateKey) );
 

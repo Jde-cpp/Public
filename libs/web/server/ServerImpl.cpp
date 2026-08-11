@@ -6,6 +6,7 @@
 #include <jde/ql/ql.h>
 #include <jde/ql/QLAwait.h>
 #include <jde/access/AccessException.h>
+#include <jde/web/client/ClientSsl.h>
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/web/server/IRequestHandler.h>
 #include <jde/web/server/IWebsocketSession.h>
@@ -218,6 +219,11 @@ namespace Server{
 
 	α Internal::Start( sp<IRequestHandler> handler )ε->void{
 		loadServerCertificate( handler->Context(), handler->Settings().Crypto() );
+		//the server is its own root: anchor the (possibly just-generated) cert for THIS process's web clients, so every
+		//embedder gets trust plus register-before-first-client-context ordering by construction - each embedding test
+		//main used to repeat the AddTrustAnchor incantation, and a forgotten one surfaced as an opaque TLS failure.
+		//Benign in production: the anchor names a cert whose private key this process already holds.
+		Client::Ssl::AddTrustAnchor( handler->Settings().Crypto().Certificate.Path );
 
 		let port = handler->Settings().Port();
 		let addressString = handler->Settings().Address();

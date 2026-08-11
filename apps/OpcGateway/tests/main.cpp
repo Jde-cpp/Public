@@ -4,7 +4,6 @@
 #include <jde/fwk/co/Timer.h>
 #include <jde/fwk/io/json.h>
 #include <jde/fwk/crypto/OpenSsl.h>
-#include <jde/web/client/ClientSsl.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/Logger.h>
 #include "../src/StartupAwait.h"
@@ -27,12 +26,8 @@ namespace Jde{
 		Process::Startup( argc, argv, "Tests.Opc", "Opc tests", true );
 		Opc::Gateway::AppClient()->InitLogging( Opc::Gateway::AppClient() );
 		try{
-			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) ){//the fresh db enrolls the gateway+opcServer client certs every run: /access/trustedCertDirs anchors their dirs, each StartupAwait ensures its own cert, and TrustVerify rescans - no pre-anchoring here.
+			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )//the fresh db enrolls the gateway+opcServer client certs every run: /access/trustedCertDirs anchors their dirs, each StartupAwait ensures its own cert, and TrustVerify rescans - no pre-anchoring of the CLIENT certs here.  The other direction (client trusts each embedded server's cert) is covered by Web::Server::Start's self-anchor.
 				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };
-				//the clients verify peers and the embedded server is its own root.  A deployment names its peer's cert in
-				///web/client/ssl/caFile; here StartWebServer only just generated it, so register it programmatically.
-				Web::Client::Ssl::AddTrustAnchor( Crypto::CryptoSettings{ "/http/app/ssl" }.Certificate.Path );
-			}
 			if( Settings::FindBool("/testing/embeddedOpcServer").value_or(true) ){
 				//create both gateway certs (UAClient transport + AppClient SslSettings auth) before the server: not required
 				//anymore (UATrust rescans trustedCertDirs on a failed verify), but it spares the first connect a
@@ -44,7 +39,6 @@ namespace Jde{
 			}
 
 			co_await Opc::Gateway::StartupAwait{ Settings::AsObject("/http/gateway"), Settings::AsObject("/credentials/gateway") };
-			Web::Client::Ssl::AddTrustAnchor( Crypto::CryptoSettings{ "/http/gateway/ssl" }.Certificate.Path );//the tests' GatewayClientSocket verifies localhost:1968 against this just-generated cert.
 			done.test_and_set();
 			done.notify_one();
 		}

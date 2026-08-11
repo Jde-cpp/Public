@@ -111,6 +111,38 @@ namespace Jde::Crypto{
 		EXPECT_EQ( legacy.Certificate.Path, sslDir/"certs"/"legacy-cn.pem" );
 		EXPECT_EQ( legacy.PrivateKey.Path, sslDir/"private"/"legacy-cn.pem" );
 	}
+	//`productName` at the ssl level names the per-product tree for every path derived from the block.  It used to be
+	//honored only by `dh`: sibling servers with different ssl-level productNames shared one cert file derived from
+	//Process::ProductName(), while dh alone pointed at the configured tree.  A sub-object's own productName still
+	//outranks the block's - the soak's issuedCerts block sets all three explicitly and must keep resolving as written.
+	TEST_F( OpenSslTests, SslLevelProductNameNamesTheTree ){
+		let companyDir = Process::ProgramDataFolder()/Process::CompanyRootDir();
+		let a = CryptoSettings{ jobject{ {"productName", "ProductA"}, {"certificate", jobject{{"commonName", "product-tree-cn"}}} } };
+		EXPECT_EQ( a.Certificate.Path, companyDir/"ProductA"/"ssl"/"certs"/"product-tree-cn.pem" );
+		EXPECT_EQ( a.PrivateKey.Path, companyDir/"ProductA"/"ssl"/"private"/"product-tree-cn.pem" );
+		EXPECT_EQ( a.PublicKey.Path, companyDir/"ProductA"/"ssl"/"public"/"product-tree-cn.pem" );
+		EXPECT_EQ( a.DhPath, companyDir/"ProductA"/"ssl"/"dh.pem" );//dh always honored the ssl level - now consistent with its siblings.
+
+		let overridden = CryptoSettings{ jobject{ {"productName", "ProductA"}, {"certificate", jobject{{"commonName", "product-tree-cn"}, {"productName", "ProductB"}}} } };
+		EXPECT_EQ( overridden.Certificate.Path, companyDir/"ProductB"/"ssl"/"certs"/"product-tree-cn.pem" );//own wins.
+		EXPECT_EQ( overridden.PrivateKey.Path, companyDir/"ProductA"/"ssl"/"private"/"product-tree-cn.pem" );//only the certificate overrode.
+
+		let plain = CryptoSettings{ jobject{ {"certificate", jobject{{"commonName", "product-tree-cn"}}} } };
+		EXPECT_EQ( plain.Certificate.Path, companyDir/Process::ProductName()/"ssl"/"certs"/"product-tree-cn.pem" );//no productName anywhere - the process default, unchanged.
+	}
+
+	//an unconfigured subjectAltName defaults to the localhost pair - a generated server cert without one is guaranteed
+	//to fail host_name_verification, and the hand-spelled per-config line kept getting forgotten (finding: a fresh
+	//deployment could never establish trust) or misspelled.  Explicit "" still opts out, any configured value wins.
+	TEST_F( OpenSslTests, SubjectAltNameDefaultsToLocalhost ){
+		let defaulted = CryptoSettings{ jobject{ {"certificate", jobject{{"commonName", "san-default-cn"}}} } };
+		EXPECT_EQ( defaulted.Certificate.SubjectAltName, "DNS:localhost,IP:127.0.0.1" );
+		let optedOut = CryptoSettings{ jobject{ {"certificate", jobject{{"commonName", "san-default-cn"}, {"subjectAltName", ""}}} } };
+		EXPECT_TRUE( optedOut.Certificate.SubjectAltName.empty() );
+		let overridden = CryptoSettings{ jobject{ {"certificate", jobject{{"commonName", "san-default-cn"}, {"subjectAltName", "URI:urn:x"}}} } };
+		EXPECT_EQ( overridden.Certificate.SubjectAltName, "URI:urn:x" );
+	}
+
 	//certInstance is the OPC Target, settable through the createServerConnection mutation, and the CN is the stem of
 	//all three files - neither may escape the ssl tree, or CreateDirectories/IssueCertificate write a PEM anywhere the
 	//service account can reach.
@@ -162,6 +194,30 @@ namespace Jde::Crypto{
 
 		EXPECT_THROW( Crypto::EnsureKeyCertificate(settings), Exception );
 		EXPECT_TRUE( fs::exists(settings.PrivateKey.Path) );//the key is left alone, so deleting the cert re-issues on the same modulus.
+		fs::remove_all( dir );
+	}
+	//a cert issued before its config gained a SAN (or with a different one) must heal on startup - the CI runner kept a
+	//SAN-less web cert failing host_name_verification until its config dir was hand-wiped.  The key pair must survive
+	//the re-issue, and an equivalent config must leave the cert untouched - including conf-syntax slack and the msUPN
+	//OID→short-name round-trip, either of which would otherwise re-issue on every start.
+	TEST_F( OpenSslTests, EnsureKeyCertificate_ReconcilesSan ){
+		let dir = ( _msvc ? Process::AppDataFolder() : fs::path{"/tmp"} )/"reconcileSan";
+		fs::remove_all( dir );
+		let publicFile = (dir/"public.pem").string(), privateFile = (dir/"private.pem").string(), certFile = (dir/"cert.pem").string();
+		let sanless = SslSettings( publicFile, privateFile, certFile, "reconcile-san", "" );
+		sanless.CreateDirectories();
+		Crypto::CreateKeyCertificate( sanless );
+		EXPECT_TRUE( Crypto::Certificate{ ReadCertificate(certFile) }.SubjectAltName.empty() );
+
+		let configured = SslSettings( publicFile, privateFile, certFile, "reconcile-san", "DNS:localhost,IP:127.0.0.1,otherName:1.3.6.1.4.1.311.20.2.3;UTF8:upn@jde-cpp.com" );
+		Crypto::EnsureKeyCertificate( configured );//stale environment: the config gained a SAN after the cert was issued.
+		auto healedDer = ReadCertificate( certFile );
+		EXPECT_EQ( Crypto::Certificate{ healedDer }.SubjectAltName, "DNS:localhost,IP:127.0.0.1,otherName:msUPN;UTF8:upn@jde-cpp.com" );
+		EXPECT_TRUE( Crypto::ExtractPublicKey(healedDer, SRCE_CUR)==Crypto::ReadPublicKey(publicFile) );//re-issued on the same key - enrollment by modulus survives.
+
+		let slack = SslSettings( publicFile, privateFile, certFile, "reconcile-san", " DNS:localhost , IP:127.0.0.1 ,otherName:1.3.6.1.4.1.311.20.2.3;UTF8:upn@jde-cpp.com" );
+		Crypto::EnsureKeyCertificate( slack );
+		EXPECT_TRUE( ReadCertificate(certFile)==healedDer );//equivalent config - the cert stands, no re-issue loop.
 		fs::remove_all( dir );
 	}
 	TEST_F( OpenSslTests, PrivateKey ){

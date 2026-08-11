@@ -65,11 +65,47 @@ namespace Jde{
 		IssueCertificate( settings, sl );
 	}
 
+	//SAN entry types a re-issue comparison can trust: sanEntry() renders these back byte-for-byte.  otherName is excluded
+	//on both sides - an OID spelling comes back as its short name (1.3.6.1.4.1.311.20.2.3 → msUPN), which would re-issue
+	//on every start.  Entries are normalized ("dns : x" → "DNS:x") so conf-syntax slack doesn't read as drift.
+	Ω comparableSanEntries( sv san )ι->vector<string>{
+		constexpr array<sv,4> types{ "DNS", "IP", "URI", "email" };
+		vector<string> y;
+		for( let& entry : Str::Split(san) ){
+			let colon = entry.find( ':' );
+			if( colon==sv::npos )
+				continue;
+			let type = Str::Trim( entry.substr(0, colon) );
+			let p = find_if( types, [type](sv t){ return t.size()==type.size() && Str::StartsWithInsensitive(type, t); } );
+			if( p!=types.end() )
+				y.push_back( Ƒ("{}:{}", *p, Str::Trim(entry.substr(colon+1))) );
+		}
+		return y;
+	}
+
+	//why the on-disk certificate can no longer stand for `settings`, empty if it can.  It used to stand forever: a cert
+	//issued before its config gained a subjectAltName kept failing host_name_verification until an operator hand-deleted
+	//the pems.  A re-issue keeps the key pair, so modulus-keyed enrollment and public-key trust survive; only anchors
+	//holding the exact bytes have to re-read the file.  Configs sharing one path with differing SANs re-issue on every
+	//start - the caller's log line names both sides, making that visible.
+	Ω reissueReason( const Crypto::CryptoSettings& settings, SL sl )ε->string{
+		if( !fs::exists(settings.Certificate.Path) )
+			return "no certificate";
+		let onDisk = Crypto::Certificate{ Crypto::ReadCertificate(settings.Certificate.Path, sl), sl };//unreadable throws - a damaged install, not something to paper over by minting a replacement.
+		if( onDisk.Expiration<=Clock::now() )
+			return Ƒ( "expired {}", ToIsoString<std::chrono::days>(onDisk.Expiration) );
+		if( comparableSanEntries(settings.Certificate.SubjectAltName)!=comparableSanEntries(onDisk.SubjectAltName) )
+			return Ƒ( "subjectAltName '{}' -> '{}'", onDisk.SubjectAltName, settings.Certificate.SubjectAltName );
+		return {};
+	}
+
 	α Crypto::EnsureKeyCertificate( const CryptoSettings& settings, SL sl )ε->void{
 		if( !fs::exists(settings.PrivateKey.Path) )
 			CreateKeyCertificate( settings, sl );
-		else if( !fs::exists(settings.Certificate.Path) )
+		else if( let reason = reissueReason(settings, sl); reason.size() ){
+			INFO( "Re-issuing '{}': {}.", settings.Certificate.Path.string(), reason );
 			IssueCertificate( settings, sl );
+		}
 
 		Certificate{ ReadCertificate(settings.Certificate.Path), sl }.Log( Ƒ("Read Certificate at {}", settings.Certificate.Path.string()), sl );
 	}

@@ -44,6 +44,7 @@ namespace Jde::Crypto{
 		string DistinguishedName; //subject RFC2253 one-line DN, der ctor only.  identities.subject
 		//openssl config syntax - "URI:urn:x,DNS:host,IP:127.0.0.1,email:a@b" - i.e. what X509V3_EXT_conf_nid consumes,
 		//NOT a DN.  Both ctors produce this form, so a cert can be parsed and re-issued without mangling the extension.
+		//The settings ctor defaults an unconfigured value to "DNS:localhost,IP:127.0.0.1"; an explicit "" opts out.
 		string SubjectAltName;
 		string Country;			//subject C, empty if absent.
 		string Company;		//subject O, empty if absent.
