@@ -62,7 +62,12 @@ namespace Jde::Crypto{
 		CommonName{ Json::FindString(settings, "commonName").value_or(string{defaultCommonName()}) },
 		FileStem{ Json::FindString(settings, "fileName").value_or(CommonName) },
 		Path{ getPath(settings, "path", "certs", FileStem, certInstance) },
-		SubjectAltName{ Json::FindString(settings, "subjectAltName").value_or("") },
+		//unconfigured defaults to the localhost pair: a generated server cert with no SAN is guaranteed to fail
+		//host_name_verification, and the hand-spelled per-config line kept getting forgotten or misspelled.  An
+		//explicit "" opts out; any configured value overrides.  The default belongs HERE, not in IssueCertificate -
+		//EnsureKeyCertificate's re-issue comparison reads this field, and a generator-only default would mismatch the
+		//comparison and re-issue on every start.
+		SubjectAltName{ Json::FindString(settings, "subjectAltName").value_or("DNS:localhost,IP:127.0.0.1") },
 		Country{ Json::FindString(settings, "country").value_or("") },
 		Company{ Json::FindString(settings, "company").value_or("Jde-Cpp") }{
 		//Issuer{ Json::FindString(settings, "issuer").value_or("") },
@@ -171,10 +176,19 @@ namespace Jde::Crypto{
 		CryptoSettings{ Settings::FindDefaultObject(settingsPath) }
 	{}
 
+	//ssl-level productName is the default tree for every path derived from the block; a sub-object's own still wins
+	//(the soak's issuedCerts block sets all three explicitly).  Without this only `dh` honored the ssl level, so
+	//sibling servers configured with different productNames derived one shared cert path from Process::ProductName().
+	Ω withDefaultProductName( jobject sub, const jobject& parent )ι->jobject{
+		if( let p = parent.if_contains("productName"); p && !sub.contains("productName") )
+			sub["productName"] = *p;
+		return sub;
+	}
+
 	CryptoSettings::CryptoSettings( const jobject& settings, sv certInstance )ι:
-		Certificate{ Json::FindDefaultObject(settings, "certificate"), certInstance },
-		PrivateKey{ Json::FindDefaultObject(settings, "privateKey"), Certificate.FileStem },
-		PublicKey{ Json::FindDefaultObject(settings, "publicKey"), Certificate.FileStem },
+		Certificate{ withDefaultProductName(Json::FindDefaultObject(settings, "certificate"), settings), certInstance },
+		PrivateKey{ withDefaultProductName(Json::FindDefaultObject(settings, "privateKey"), settings), Certificate.FileStem },
+		PublicKey{ withDefaultProductName(Json::FindDefaultObject(settings, "publicKey"), settings), Certificate.FileStem },
 		DhPath{ getPath(settings, "dh", "", "dh") }
 /*		AltName{ Json::FindSVPath(settings, "cert/altName").value_or("DNS:localhost,IP:127.0.0.1") },
 		Company{ Json::FindSVPath(settings, "cert/company").value_or("Jde-Cpp") },

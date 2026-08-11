@@ -4,9 +4,7 @@
 #include "gtest/gtest.h"
 #include <jde/fwk/settings.h>
 #include <jde/fwk/co/Timer.h>
-#include <jde/fwk/crypto/CryptoSettings.h>
 #include <jde/fwk/io/json.h>
-#include <jde/web/client/ClientSsl.h>
 #include <jde/opc/uatypes/Logger.h>
 #include <jde/tests/SpdlogTestListener.h>
 #include <jde/tests/testMain.h>
@@ -25,12 +23,8 @@ namespace Jde{
 		Process::Startup( argc, argv, "Tests.OpcServer", "OpcServer tests", true );
 		Opc::Server::AppClient()->InitLogging( Opc::Server::AppClient() );
 		try{
-			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) ){//the fresh db enrolls the client cert every run: /access/trustedCertDirs anchors its dir, StartupAwait ensures the cert, and TrustVerify rescans - no pre-anchoring here.
+			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )//the fresh db enrolls the client cert every run: /access/trustedCertDirs anchors its dir, StartupAwait ensures the cert, and TrustVerify rescans - no pre-anchoring of the CLIENT cert here.  The other direction (client trusts each embedded server's cert) is covered by Web::Server::Start's self-anchor.
 				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };
-				//the client verifies peers and the embedded server is its own root.  A deployment names its peer's cert in
-				///web/client/ssl/caFile; here StartWebServer only just generated it, so register it programmatically.
-				Web::Client::Ssl::AddTrustAnchor( Crypto::CryptoSettings{ "/http/app/ssl" }.Certificate.Path );
-			}
 			co_await Opc::Server::StartupAwait{ Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") };
 		}
 		catch( runtime_error& e ){

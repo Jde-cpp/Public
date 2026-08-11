@@ -27,10 +27,7 @@ namespace Jde::Web{
 	sp<Mock::RequestHandler> _requestHandler;
 	α Mock::Start( jobject settings )ε->void{
 		_requestHandler = ms<RequestHandler>( move(settings) );
-		Server::Start( _requestHandler );//generates the self-signed cert if it isn't there yet, so trust it only after this.
-		//C1: the client verifies peers now, and this server is its own root.  A deployment names its peer's cert in
-		///web/client/ssl/caFile; here the path is only known at runtime, so register it programmatically.
-		Client::Ssl::AddTrustAnchor( _requestHandler->Settings().Crypto().Certificate.Path );
+		Server::Start( _requestHandler );//generates the self-signed cert if needed and self-anchors it (C1) - in-process clients trust the mock with no incantation here.
 	}
 
 	α Mock::Stop()ι->void{

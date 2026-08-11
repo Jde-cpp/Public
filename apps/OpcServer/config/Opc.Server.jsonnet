@@ -53,13 +53,14 @@ function( sync=false )
 		target:: "OpcServer"
 	},
 	web:{
-		client:{ ssl:{ caFile: "$(ProgramData)/Jde-Cpp/AppServer/ssl/certs/AppServer.pem" } }//the AppServer is its own root - without an anchor the client rejects localhost:1967's self-signed cert.
+		client:{ ssl:{ caFile: args.certsDir("AppServer")+"/AppServer.pem" } }//the AppServer is its own root - without an anchor the client rejects localhost:1967's self-signed cert.  The stem is App.Server.jsonnet's visible commonName; if that or its `path::` un-hides, this anchor must follow.
 	},
 	http:{
 		host: "localhost",//advertised to the AppServer registry - the frontend fetches this host, and allowOrigin 'sameHost' requires it to match the page's host (localhost:4200).
 		port: 1970,
 		ssl:{
 			certificate:{
+				subjectAltName: "DNS:localhost,IP:127.0.0.1",//browsers and TLS clients match the SAN, never the CN - without it host_name_verification rejects the generated cert.
 				commonName: args.instanceName + ".web"
 			}
 		}
