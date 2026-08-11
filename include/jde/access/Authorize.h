@@ -29,6 +29,7 @@ namespace Jde::Access{
 		α TestAdmin( ResourcePK resourcePK, UserPK userPK, SRCE )ε->void;
 		α TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SRCE )ε->void;
 		α AddAdminAuthorizer( str resourceName, sp<IAdminAcl> authorizer )ι->void;
+		α RemoveAdminAuthorizer( const sp<IAdminAcl>& authorizer )ι->void;//deregister on disconnect - registrations are otherwise permanent and go stale.
 
 		α TestAddGroupMember( GroupPK groupPK, flat_set<IdentityPK::Type>&& memberPKs, SRCE )ε->void;
 		α TestAddRoleMember( RolePK parent, RolePK child, SRCE )ε->void;

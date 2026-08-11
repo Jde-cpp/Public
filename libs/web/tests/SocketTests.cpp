@@ -12,6 +12,7 @@
 #include <jde/fwk/process/execution.h>
 #include "mocks/ClientSocketSession.h"
 #include <jde/web/server/IHttpRequestAwait.h>
+#include <jde/web/server/Sessions.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 
 #define let const auto
@@ -125,6 +126,23 @@ namespace Jde::Web{
 		Stopwatch sw{ "WebTests::CreateSsl", ELogTags::Test };
 		createSession( Client::Ssl::MakeContext() );
 		ASSERT_EQ( _sessionId, _clientSession->SessionId() );
+	}
+
+	//A raw session id is only a credential from the endpoint it was minted for.  Resuming it from a different address must be
+	//denied - otherwise a guessed or leaked id is a full account takeover (appserver-review2 #3, Sessions.cpp UpdateExpiration).
+	//Driven through the Sessions API rather than the socket because both ends of a localhost socket share 127.0.0.1.
+	TEST_F( SocketTests, SessionEndpointBinding ){
+		using Server::SessionInfo; using Server::Sessions::UpsertAwait;
+		let info = Server::Sessions::Add( Jde::UserPK{7}, "10.9.9.1", true );//session bound to 10.9.9.1.
+		let id = Ƒ("{:x}", info->SessionId);
+		let resume = []( str authorization, str endpoint )->sp<SessionInfo>{
+			return BlockAwait<UpsertAwait,sp<SessionInfo>>( UpsertAwait{ authorization, endpoint, true, nullptr } );
+		};
+		EXPECT_THROW( resume(id, "10.9.9.2"), Exception ) << "a session id must not resume from a different endpoint";
+		let same = resume( id, "10.9.9.1" );
+		ASSERT_TRUE( same ) << "the minting endpoint must still resume the session";
+		EXPECT_EQ( info->SessionId, same->SessionId );
+		Server::Sessions::Remove( info->SessionId );
 	}
 
 	flat_map<RequestId,string> _requests; flat_map<RequestId,string> _responses; mutex _echoMutex;

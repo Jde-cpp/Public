@@ -14,7 +14,7 @@ namespace Jde::App::Server{
 		using base = TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>;
 		ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α ProgramPK()Ι->ProgramPK{ return _programPK; }
-		α Instance()Ι->const Proto::FromClient::Instance&{ return _instance; }
+		α Instance()Ι->Proto::FromClient::Instance{ lg _{_instanceMutex}; return _instance; }//copy under the lock: _instance is written on this session's strand (AddInstance) while _sessions visitors read it from other threads.
 		α InstancePK()Ι->ProgInstPK{ return _instancePK; }
 		α ConnectionPK()Ι->ConnectionPK{ return _connectionPK; }
 	private:
@@ -23,7 +23,7 @@ namespace Jde::App::Server{
 		α OnDisconnect( CodeException&& e )ι->void override;
 		α GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task;
 		α Login( string&& jwt, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task;
-		α ProcessTransmission( Proto::FromClient::Transmission&& transmission, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId )ι->void;
+		α ProcessTransmission( Proto::FromClient::Transmission&& transmission, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId, uint8 depth )ι->void;
 		α QueryClient( QL::TableQL&& query, Jde::UserPK executer, RequestId requestId )ι->void override;
 		α SharedFromThis()ι->sp<ServerSocketSession>{ return std::dynamic_pointer_cast<ServerSocketSession>(shared_from_this()); }
 		α TestAdmin( str resource, str criteria, Jde::UserPK userPK, SRCE )ε->void override;
@@ -37,18 +37,21 @@ namespace Jde::App::Server{
 		α AddSession( Proto::FromClient::AddSession addSession, RequestId clientRequestId, SL sl )ι->TAwait<Jde::UserPK>::Task;
 		α AddInstance( Proto::FromClient::Instance instance, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task;
 		α LocalQL()Ι->sp<QL::IQL> override;
-		α Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void;
+		α Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId, uint8 depth )ι->void;
 		α ForwardExecution( Proto::FromClient::ForwardExecution&& clientMsg, bool anonymous, RequestId clientRequestId, SRCE )ι->ForwardExecutionAwait::Task;
-		α GraphQL( string&& query, jobject variables, bool returnRaw, RequestId requestId )ι->QL::QLAwait<jvalue>::Task;
+		α GraphQL( string&& query, jobject variables, bool returnRaw, RequestId requestId, optional<Jde::UserPK> executer )ι->QL::QLAwait<jvalue>::Task;
 		α SaveLogEntry( Log::Proto::LogEntryClient logEntry, RequestId requestId )ι->void;
 		α SendAck( uint32 id )ι->void override;
 		α SessionInfo( SessionPK sessionId, RequestId requestId )ι->void;
 		α SetSessionId( SessionPK sessionId, RequestId requestId )->Web::Server::Sessions::UpsertAwait::Task;
+		α NoteFailedAdoption()ι->void;//closes the socket after too many failed session-id adoptions - a 32-bit id is otherwise cheap to brute-force.
 
 		Proto::FromClient::Instance _instance;
+		mutable mutex _instanceMutex;//guards _instance across the AddInstance write and the Instance() copies made by _sessions visitors on other threads.
 		App::ProgramPK _programPK{};
 		ProgInstPK _instancePK{};
 		App::ConnectionPK _connectionPK{};
 		optional<Jde::UserPK> _userPK{};
+		uint8 _failedAdoptions{};
 	};
 }

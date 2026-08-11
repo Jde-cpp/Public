@@ -72,8 +72,8 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		return new Promise<FromServer.Strings>( (resolve,reject)=>{ this.stringRequests.set(requestId,{resolve:resolve,reject:reject})} );
 	}
 
-	custom( appPK:number, bytes:Uint8Array ):Promise<Uint8Array>{
-		const requestId = this.send( {forwardExecution:{appPK:appPK, executionTransmission:bytes}}, `custom appPK: ${appPK}, bytes: ${bytes.length}` );
+	custom( appPk:number, bytes:Uint8Array ):Promise<Uint8Array>{
+		const requestId = this.send( {forwardExecution:{appPk:appPk, executionTransmission:bytes}}, `custom appPk: ${appPk}, bytes: ${bytes.length}` );
 		return new Promise<Uint8Array>( (resolve,reject)=>{ this.customCallbacks.set(requestId,{resolve:resolve,reject:reject})} );
 	}
 

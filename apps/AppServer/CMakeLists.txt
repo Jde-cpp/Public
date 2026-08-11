@@ -2,6 +2,7 @@ cmake_minimum_required( VERSION ${MIN_REQ_CMAKE_VERSION} )
 
 include( ${CMAKE_CURRENT_LIST_DIR}/../../build/functions.cmake )
 project( Jde.App.Server VERSION ${JDE_VERSION} LANGUAGES CXX )
+enable_testing()
 
 if( NOT jde_Superbuild )
 	add_subdirectory( config/sql/sqlite )
@@ -18,6 +19,9 @@ if( NOT jde_Superbuild )
 	add_subdirectory( ${jdeRoot}/libs/web/client ../../libs/web/client )
 	add_subdirectory( ${jdeRoot}/libs/app/shared ../../libs/app/shared )
 	add_subdirectory( src lib )
+	if( jde_TESTS )
+		add_subdirectory( tests )
+	endif()
 endif()
 
 if( WIN32 )

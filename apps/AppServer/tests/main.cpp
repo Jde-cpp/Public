@@ -1,35 +1,35 @@
+#ifdef BOOST_ALL_NO_LIB
+	#include <boost/json/src.hpp>
+#endif
 #include "gtest/gtest.h"
 #include <jde/fwk/settings.h>
-#include <jde/fwk/process/process.h>
-#include <jde/app/shared/proto/App.FromClient.pb.h>
-#include <jde/app/shared/proto/App.FromServer.pb.h>
-//#include "../../AppServer/source/LogData.h"
-//#include "../../Framework/source/db/Database.h"
-
+#include <jde/tests/testMain.h>
 #define let const auto
+
 namespace Jde{
-	α OSApp::ProductName()ι->sv{ return "Tests.Crypto"; }
- 	void Startup( int argc, char **argv )ι{
-#ifdef _MSC_VER
-		ASSERT( Settings::Get<uint>("workers/drive/threads")>0 )
+#ifndef _MSC_VER
+	α Process::ProductName()ι->sv{ return "Tests.AppServer"; }
 #endif
-		ASSERT( argc>1 && string{argv[1]}=="-c" )
-		OSApp::Startup( argc, argv, "Tests.Crypto", "Test app" );
-		Threading::SetThreadDscrptn( "Main" );
+ 	Ω startup( int argc, char **argv )ι->void{
+		Process::Startup( argc, argv, "Tests.AppServer", "AppServer unit tests", true );
+		Logging::Init();
 	}
 }
 
-int main(int argc, char **argv){
+α main( int argc, char **argv )->int{
 	using namespace Jde;
-
- 	::testing::InitGoogleTest( &argc, argv );
-	Startup( argc, argv );
+	let filterSet = Process::Args().find("--gtest_filter") != Process::Args().end();
+	::testing::InitGoogleTest( &argc, argv );
+	startup( argc, argv );
 	auto result = EXIT_FAILURE;
 	{
-		let p=Settings::Get<string>( "testing/tests" );
+		let p = Settings::FindSV( "/testing/tests" );
 		let filter = p ? *p : "*";
-		::testing::GTEST_FLAG( filter ) = filter;
-	  result = RUN_ALL_TESTS();
+		if( !filterSet ){
+			INFOT( ELogTags::App, "filter:'{}'", filter );
+			::testing::GTEST_FLAG( filter ) = filter;
+		}
+		result = CheckTestsRan( RUN_ALL_TESTS() );
 		Process::Shutdown( result );
 	}
 	return result;

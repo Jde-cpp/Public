@@ -2,6 +2,7 @@
 #include <jde/ql/types/FilterQL.h>
 #include <jde/app/IApp.h>
 #include <jde/app/log/ProtoLog.h>
+#include <jde/access/Authorize.h>//RemoveAdminAuthorizer needs the full type, not just Authorizer()'s forward declaration.
 #include "LocalClient.h"
 #include "ServerSocketSession.h"
 #include "jde/fwk/usings.h"
@@ -40,14 +41,24 @@ namespace Jde::App{
 		Process::AddShutdownFunction( [](bool terminate, SL sl){Server::StopWebServer(terminate, sl);} );//TODO move to Web::Server
 	}
 	α Server::RemoveExisting( str host, PortType port )ι->void{
-		_sessions.erase_if( [&host=host,port=port](auto&& kv){
-			auto& existing = kv.second->Instance();
-			return existing.host()==host && existing.web_port()==port;
+		if( !port )//web_port 0 (a client with no /http/port, e.g. the test binaries) is not a unique endpoint - matching on it would evict every other portless session on the host.
+			return;
+		vector<sp<ServerSocketSession>> evicted;
+		_sessions.erase_if( [&evicted,&host,port](auto&& kv){
+			let existing = kv.second->Instance();
+			if( existing.host()!=host || existing.web_port()!=port )
+				return false;
+			evicted.push_back( kv.second );
+			return true;
 		});
+		//Close outside erase_if: Close dispatches to the session's strand and its OnSessionDisconnect re-erases (a no-op now), so it must not run under the map's bucket lock.  Erasing without this left the superseded socket open.
+		for( auto& session : evicted )
+			session->Close();
 	}
 	α Server::OnSessionDisconnect( sp<ServerSocketSession> session )ι->void{
 		_sessions.erase( session->Id() );
-		ForwardExecutionAwait::OnCloseConnection( session->ConnectionPK() );
+		Authorizer()->RemoveAdminAuthorizer( std::dynamic_pointer_cast<Access::IAdminAcl>(session) );//else a restarted app's stale registration keeps answering admin checks on a dead stream.
+		ForwardExecutionAwait::OnCloseConnection( session->Id(), session->ConnectionPK() );
 		EndConnection( session->ConnectionPK() );
 	}
 
@@ -92,17 +103,22 @@ namespace Jde::App{
 		});
 		return QuerySessionsAwait{ move(ql), executer, move(sessions), sl };
 	}
-	α Server::Write( ProgramPK appPK, optional<ConnectionPK> connectionPK, Proto::FromServer::Transmission&& msg )ε->void{
+	//instancePK names an app instance (App.FromClient.proto app_instance_pk); nullopt = any instance of appPK.  Returns the
+	//connection actually delivered to, so a forward can bind its response to that one session (finding #5).
+	α Server::Write( ProgramPK appPK, optional<ProgInstPK> instancePK, Proto::FromServer::Transmission&& msg )ε->ConnectionPK{
+		ConnectionPK target{};
 		if( _sessions.visit_while([&](auto&& kv){ //visit_while returns true if no lambda returned false, i.e. no session matched.
 			auto& session = kv.second;
-			auto appInstPK = session->ProgramPK()==appPK ? session->ConnectionPK() : 0;
-			let found = appInstPK && appInstPK==connectionPK.value_or( appInstPK );
-			if( found )
+			let found = appPK && session->ProgramPK()==appPK && (!instancePK || session->InstancePK()==*instancePK);//appPK guard: an unregistered session's ProgramPK is 0, so appPK:0 must not match it.
+			if( found ){
 				session->Write( move(msg) );
+				target = session->ConnectionPK();
+			}
 			return !found;
 		}) ){
-			THROW( "No session found for appPK:{}, connectionPK:{}", appPK, connectionPK.value_or(0) );
+			THROW( "No session found for appPK:{}, instancePK:{}", appPK, instancePK ? *instancePK : 0 );
 		}
+		return target;
 	}
 }
 namespace Jde::App::Server{

@@ -31,7 +31,7 @@ namespace Jde{
 	public:
 		ExceptionArgs( const ExceptionArgs& args )ι:Tags{args.Tags}, _level{args._level}, _code{args._code}, _statusCode{args._statusCode}{}
 		ExceptionArgs( ELogLevel level=DefaultExceptionLevel, ELogTags tags=ELogTags::Exception, uint32 code=UninitializedCode, EHttpStatus status=EHttpStatus::None )ι: Tags{tags}, _level{level}, _statusCode{status}, _code{code}{}
-		ExceptionArgs( ELogTags tags, uint32 code=0 )ι:ExceptionArgs{DefaultExceptionLevel, tags, code}{}
+		ExceptionArgs( ELogTags tags, uint32 code=0, EHttpStatus status=EHttpStatus::None )ι:ExceptionArgs{DefaultExceptionLevel, tags, code, status}{}
 		ExceptionArgs( uint32 code )ι:ExceptionArgs{DefaultExceptionLevel, ELogTags::Exception, code}{}
 		ExceptionArgs( EHttpStatus status )ι:ExceptionArgs{DefaultExceptionLevel, ELogTags::Exception, UninitializedCode, status}{}
 
