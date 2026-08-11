@@ -10,7 +10,7 @@ namespace Jde::App::Server{
 		α await_resume()ε->flat_map<ConnectionPK, jvalue> override;
 	private:
 		α Suspend()ι->void override;
-		α SessionQuery( sp<ServerSocketSession> session )ι->TAwait<jvalue>::Task;
+		α SessionQuery( sp<ServerSocketSession> session, uint total )ι->TAwait<jvalue>::Task;
 		Jde::UserPK _executer;
 		QL::TableQL _ql;
 		flat_map<ConnectionPK, jvalue> _results; mutex _resultsMutex; uint _completed{};

@@ -32,7 +32,7 @@ namespace Jde::App::Server{
 	α QuerySessions( QL::TableQL ql, UserPK executer, SRCE )ι->QuerySessionsAwait;
 
 	α UnsubscribeLogs( ProgInstPK instancePK )ι->bool;
-	α Write( ProgramPK appPK, optional<ProgInstPK> instancePK, Proto::FromServer::Transmission&& msg )ε->void;
+	α Write( ProgramPK appPK, optional<ProgInstPK> instancePK, Proto::FromServer::Transmission&& msg )ε->ConnectionPK;
 
 	struct RequestHandler final : IRequestHandler{
 		RequestHandler( jobject&& settings )ι;

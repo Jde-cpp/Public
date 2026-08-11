@@ -12,6 +12,8 @@
 #define let const auto
 
 namespace Jde::App::Server{
+	constexpr uint8 _maxExecuteDepth{ 4 };//how many times a kExecute payload may nest another Transmission.
+	constexpr uint8 _maxFailedAdoptions{ 5 };//consecutive failed session-id adoptions on an unauthenticated socket before it's dropped.
 	ServerSocketSession::ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
 		base{ move(stream), move(buffer), move(request), move(userEndpoint), connectionIndex }
 	{}
@@ -40,11 +42,12 @@ namespace Jde::App::Server{
 			}
 
 			_instancePK = instancePK; _programPK = appPK; _connectionPK = connectionPK;
-			_instance = move( instance );
+			{ lg _{_instanceMutex}; _instance = move( instance ); }//serialize with the Instance() copies taken by _sessions visitors on other threads.
 			Write( FromServer::ConnectionInfo(appPK, instancePK, connectionPK, requestId, AppClient()->PublicKey(), info, authResult) );
 		}
 		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
+			NoteFailedAdoption();
 		}
 	}
 	α ServerSocketSession::AddSession( Proto::FromClient::AddSession m, RequestId requestId, SL /*sl*/ )ι->TAwait<Jde::UserPK>::Task{
@@ -61,10 +64,12 @@ namespace Jde::App::Server{
 			WriteException( move(e), requestId );
 		}
 	}
-	α ServerSocketSession::Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void{
+	α ServerSocketSession::Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId, uint8 depth )ι->void{
 		try{
+			//kExecute carries a Transmission inside a bytes field, so every level is a fresh ParseFromString starting at depth 0 - protobuf's own recursion guard never sees the nesting.  Without this cap one frame can drive ProcessTransmission thousands of levels deep and overflow the stack.
+			THROW_IF( depth>_maxExecuteDepth, "Execute nesting depth {} exceeds the maximum of {}.", depth, _maxExecuteDepth );
 			auto t = Protobuf::Deserialize<Proto::FromClient::Transmission>( move(bytes) );
-			ProcessTransmission( move(t), userPK, clientRequestId );
+			ProcessTransmission( move(t), userPK, clientRequestId, depth );
 		}
 		catch( runtime_error& e ){
 			WriteException( move(e), clientRequestId );
@@ -75,7 +80,8 @@ namespace Jde::App::Server{
 		sv functionSuffix = anonymous ? "Anonymous" : "";
 		LogRead( Ƒ("ForwardExecution{} appPK: {}, appInstancePK: {:x}, size: {:10L}", functionSuffix, m.app_pk(), m.app_instance_pk(), m.execution_transmission().size()), requestId );
 		try{
-			string result = co_await ForwardExecutionAwait{ _userPK.value_or(Jde::UserPK{0}), move(m), SharedFromThis(), sl };
+			//Anonymous means "forward with no creds" - pass UserPK{0} so ExecuteRequest emits kExecuteAnonymous; otherwise the target runs under the caller's identity.  Mirrors the kExecuteAnonymous path.
+			string result = co_await ForwardExecutionAwait{ anonymous ? Jde::UserPK{0} : _userPK.value_or(Jde::UserPK{0}), move(m), SharedFromThis(), sl };
 			LogWrite( Ƒ("ForwardExecution{} size: {:10L}", functionSuffix, result.size()), requestId );
 			Write( FromServer::Execute(move(result), requestId) );
 		}
@@ -83,12 +89,12 @@ namespace Jde::App::Server{
 			WriteException( move(e), requestId );
 		}
 	}
-	α ServerSocketSession::GraphQL( string&& query, jobject vars, bool returnRaw, RequestId requestId )ι->QL::QLAwait<jvalue>::Task{
+	α ServerSocketSession::GraphQL( string&& query, jobject vars, bool returnRaw, RequestId requestId, optional<Jde::UserPK> executer )ι->QL::QLAwait<jvalue>::Task{
 		let _ = shared_from_this();
 		try{
 			LogRead( Ƒ("GraphQL{}: {}", returnRaw ? "*" : "", query), requestId );
 			auto ql = QL::Parse( move(query), move(vars), Server::Schemas(), returnRaw );
-			auto j = co_await QL::QLAwait( move(ql), {_userPK.value_or(Jde::UserPK{0})}, LocalQL() );
+			auto j = co_await QL::QLAwait( move(ql), {executer.value_or(Jde::UserPK{0})}, LocalQL() );//run as the on-behalf-of user threaded through ProcessTransmission (a forwarded request carries the end-user's pk), not the sending session's identity.
 			auto y = serialize( move(j) );
 			LogWrite( Ƒ("GraphQL: {}", y.substr(0,100)), requestId );
 			Write( FromServer::GraphQL(move(y), requestId) );
@@ -131,7 +137,14 @@ namespace Jde::App::Server{
 		}
 		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
+			NoteFailedAdoption();
 		}
+	}
+	α ServerSocketSession::NoteFailedAdoption()ι->void{
+		if( _userPK || ++_failedAdoptions<_maxFailedAdoptions )//an authenticated socket, or still under the limit - a legitimate client adopts once, so only unauthenticated guessing accumulates.
+			return;
+		WARNT( ELogTags::SocketServerRead, "[{}]Closing socket after {} failed session-id adoptions.", hex(Id()), _failedAdoptions );
+		OnClose();
 	}
 	α ServerSocketSession::TestAdmin( str resource, str criteria, Jde::UserPK userPK, SL sl )ε->void{
 		string q = "permissionRight( user:$user ){isAdmin resource( resource:$resource, criteria:$criteria )}";
@@ -142,7 +155,7 @@ namespace Jde::App::Server{
 	}
 
 	α ServerSocketSession::OnRead( Proto::FromClient::Transmission&& t )ι->void{
-		ProcessTransmission( move(t), _userPK, nullopt );
+		ProcessTransmission( move(t), _userPK, nullopt, 0 );
 	}
 
 	α ServerSocketSession::GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task{
@@ -171,7 +184,7 @@ namespace Jde::App::Server{
 		}
 	}
 
-	α ServerSocketSession::ProcessTransmission( Proto::FromClient::Transmission&& transmission, optional<Jde::UserPK> /*userPK*/, optional<RequestId> clientRequestId )ι->void{
+	α ServerSocketSession::ProcessTransmission( Proto::FromClient::Transmission&& transmission, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId, uint8 depth )ι->void{
 		uint cLog{}, cString{};
 		if( transmission.messages_size()==0 )
 			LogRead( "No messages in transmission.", 0, ELogLevel::Error );
@@ -193,7 +206,9 @@ namespace Jde::App::Server{
 				}else{
 					auto e = ProtoUtils::ToException( move(*m.mutable_exception()) );//keeps status/category - Exception{what} dropped them.
 					auto what = e->What();
-					if( !ForwardExecutionAwait::ResumeExp(move(*e), requestId) )
+					//A failure reply to one of our QueryClient calls (TestAdmin/QuerySessions) echoes a per-session id; resolve it on
+					//this session's own map first so it can't fall through and clobber an unrelated forward that shares the id value.
+					if( !ResumeQueryException(requestId, move(*e)) && !ForwardExecutionAwait::ResumeExp(move(*e), requestId, ConnectionPK()) )
 						LogRead( Ƒ("Exception not handled - {}", what), requestId, ELogLevel::Critical );
 				}
 				break;
@@ -203,10 +218,10 @@ namespace Jde::App::Server{
 				auto bytes = isAnonymous ? move( *m.mutable_execute_anonymous() ) : move( *m.mutable_execute()->mutable_transmission() );
 				optional<Jde::UserPK> executor = m.value_case()==kExecuteAnonymous ? nullopt : optional<Jde::UserPK>( {m.execute().user_pk()} );
 				LogRead( Ƒ("Execute{} size: {:10L}", isAnonymous ? "Anonymous" : "", bytes.size()), requestId );
-				Execute( move(bytes), executor, requestId );
+				Execute( move(bytes), executor, requestId, uint8(depth+1) );
 				break;}
 			case kExecuteResponse:
-				if( !ForwardExecutionAwait::Resume(move(*m.mutable_execute_response()), requestId) )
+				if( !ForwardExecutionAwait::Resume(move(*m.mutable_execute_response()), requestId, ConnectionPK()) )
 					LogRead( Ƒ("ExecuteResponse requestId:{} not found.", requestId), requestId, ELogLevel::Critical );
 				break;
 			case kForwardExecution:
@@ -223,7 +238,7 @@ namespace Jde::App::Server{
 				auto& variableString = *query.mutable_variables();
 				try{
 					jobject variables = variableString.empty() ? jobject{} : Json::Parse( variableString );
-					GraphQL( move(*query.mutable_text()), move(variables), query.return_raw(), requestId );
+					GraphQL( move(*query.mutable_text()), move(variables), query.return_raw(), requestId, userPK );
 				}
 				catch( runtime_error& e ){
 					WriteException( move(e), requestId );

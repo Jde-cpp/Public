@@ -19,6 +19,6 @@ namespace Jde::DB::Sqlite::AppProcs{
 			if( onRow )
 				(*onRow)( Row{ {Value{instanceId}} } ); //out _instanceId
 			return 1;
-		});
+		}, 3);
 	}
 }

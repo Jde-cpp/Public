@@ -12,7 +12,10 @@ namespace Jde::Access{
 	constexpr ELogTags _ptags{ ELogTags::Access | ELogTags::Pedantic };
 
 	α Authorize::AddAdminAuthorizer( str schemaName, sp<IAdminAcl> authorizer )ι->void{
-		_adminAuthorizers.emplace( schemaName, move(authorizer) );
+		_adminAuthorizers.insert_or_assign( schemaName, move(authorizer) );//not emplace: a restarted app must replace its stale registration, not be silently discarded behind the closed one.
+	}
+	α Authorize::RemoveAdminAuthorizer( const sp<IAdminAcl>& authorizer )ι->void{
+		_adminAuthorizers.erase_if( [&](let& pair){ return pair.second==authorizer; } );//drop every schema this session authorized, so FindAdminAuthorizer falls back to the local check instead of a dead stream.
 	}
 	α Authorize::FindAdminAuthorizer( str schemaName )ι->sp<IAdminAcl>{
 		sp<IAdminAcl> authorizer;
