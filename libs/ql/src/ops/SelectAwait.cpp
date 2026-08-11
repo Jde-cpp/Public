@@ -276,7 +276,7 @@ namespace Jde::QL{
 			throw *get<up<runtime_error>>( move(_result) );
 		auto y = _result.index()==0 ? base::await_resume() : get<jvalue>( move(_result) );
 		if( _log )
-			LOGSL( ELogLevel::Trace, _sl, ELogTags::QL, "{}", serialize(y) );
+			LOGSL( ELogLevel::Trace, _sl, ELogTags::QL, "SelectAwaitResult: {}", serialize(y) );
 		return y;
 	}
 }

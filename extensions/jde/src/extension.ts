@@ -111,23 +111,61 @@ function findRepoRoot( start:string ):string {
 	}
 }
 
+//The workspace's `buildDir` setting, undefined when unset or blank. It is the workspace file's own un-namespaced
+//key - it sits next to `sourceDir`/`target`/`presetSuffix` in the .code-workspace rather than being contributed by
+//this extension - because the configuration model keeps unregistered keys, which is also what `${config:...}` in
+//tasks.json reads, so a workspace spells the value once and uses it from both places.
+function buildDirSetting():string|undefined {
+	const value = vscode.workspace.getConfiguration( undefined, vscode.workspace.workspaceFolders?.[0]?.uri ).get<string>( 'buildDir' )?.trim();
+	return value?.length ? value : undefined;
+}
+
+//A setting read through the configuration API comes back verbatim: VS Code only expands ${env:...} and
+//${workspaceFolder} in tasks.json/launch.json, so do it here for the two forms the workspace files use.
+//An unset variable throws rather than collapsing to '' - same reason repoBuildDirFrom throws below, a
+//truncated root silently builds into the wrong tree.
+function expandVars( value:string, repoRoot:string, source:string ):string {
+	return value.replace( /\$\{(?:env:(\w+)|(workspaceFolder))\}/g, ( match:string, envName:string|undefined ):string => {
+		if( !envName )
+			return repoRoot;
+		const expanded = process.env[envName];
+		if( !expanded ){
+			const msg = `${source}: '${match}' is not set - launch/build paths cannot be resolved. Start VS Code from a shell that sources ~/.profile.`;
+			vscode.window.showErrorMessage( msg );
+			throw new Error( msg );
+		}
+		return expanded;
+	});
+}
+
 // The out-of-source build root for a repo checkout. This is the single encoding of the layout
 // formula `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>` (without the trailing `<debug|release>` segment).
 // build/buildFunctions.sh no longer re-derives this: its helpers now receive the full build dir - callers
 // compose `${command:jde.repoBuildDir}/<debug|release>` - and read the source dir back from CMakeCache.txt.
 // This stays JS (not a shell-out) so the command resolves synchronously and cross-platform.
 // Throws if the env is missing rather than yielding a repo-relative path (stray dirs / opaque "program not found").
-//`vars` are the build-root env vars in precedence order - the first one set wins.
+//The `buildDir` setting wins over `vars`, the build-root env vars in precedence order (the first one set wins).
+//The setting is the root *verbatim* - only the env formula appends $JDE_COMPILER/<repo>. That is the point of it:
+//repos.code-workspace's dependency tree is a flat `$JDE_DEPENDS_BUILD_DIR/<debug|release>` with neither segment,
+//which the formula cannot express. Both commands read the same setting, so pinning it puts debug and release under
+//one root - the release/debug split is a $JDE_RBUILD_DIR concern, and a workspace that pins the root has none.
+//Relative values resolve against the checkout; path.resolve also collapses the `../..` such a value carries.
 function repoBuildDirFrom( repoRoot:string, command:string, ...vars:string[] ):string {
-	const buildDir = vars.map( v=>process.env[v] ).find( Boolean );
-	const compiler = process.env['JDE_COMPILER'];
-	const missing = [!buildDir && vars.join(' or '), !compiler && 'JDE_COMPILER'].filter( Boolean );
-	if( missing.length ){
-		const msg = `${command}: ${missing.join(' and ')} not set - launch/build paths cannot be resolved. Start VS Code from a shell that sources ~/.profile.`;
-		vscode.window.showErrorMessage( msg );
-		throw new Error( msg );
+	const setting = buildDirSetting();
+	let joined:string;
+	if( setting )
+		joined = path.resolve( repoRoot, expandVars(setting, repoRoot, `${command}: setting 'buildDir'`) );
+	else{
+		const buildDir = vars.map( v=>process.env[v] ).find( Boolean );
+		const compiler = process.env['JDE_COMPILER'];
+		const missing = [!buildDir && `${vars.join(' or ')} (nor the buildDir setting)`, !compiler && 'JDE_COMPILER'].filter( Boolean );
+		if( missing.length ){
+			const msg = `${command}: ${missing.join(' and ')} not set - launch/build paths cannot be resolved. Start VS Code from a shell that sources ~/.profile.`;
+			vscode.window.showErrorMessage( msg );
+			throw new Error( msg );
+		}
+		joined = path.join( buildDir!, compiler!, path.basename(repoRoot) );
 	}
-	const joined = path.join( buildDir!, compiler!, path.basename(repoRoot) );
 	//tasks.json splices this into an unquoted bash command line (see cmakeDebug), which VS Code tokenizes
 	//and bash then parses again - backslashes get eaten as escape chars either way. '/' has no escaping
 	//meaning to either layer and is a valid Windows path separator, so use it instead of trying to survive escaping.
@@ -140,7 +178,7 @@ function repoBuildDir( repoRoot:string ):string {
 
 // The same layout rooted at $JDE_RBUILD_DIR when it is set, so a checkout can put its release outputs on a
 // different volume than the debug tree. Falls back to $JDE_BUILD_DIR, so a machine that never sets
-// JDE_RBUILD_DIR resolves identically to repoBuildDir.
+// JDE_RBUILD_DIR resolves identically to repoBuildDir - as does a workspace that sets `buildDir`.
 function repoBuildRelDir( repoRoot:string ):string {
 	return repoBuildDirFrom( repoRoot, 'jde.repoBuildRelDir', 'JDE_RBUILD_DIR', 'JDE_BUILD_DIR' );
 }

@@ -6,6 +6,7 @@ function( sync=false )
 	gateway:{
 		pingInterval: "PT30S",
 		ttl: "PT2M",
+		idleDrain: "PT0.5S",//keep pumping run_iterate this long after the last request so open62541's own traffic (the namespace-array read it fires at session activation) completes; raise it above the round trip of the slowest server.
 		issuedCerts: {
 			certificate:{
 				subjectAltName: "URI:urn:open62541.server.application",
@@ -23,7 +24,7 @@ function( sync=false )
 				access: "Trace",
 				opc_access: "Trace",
 				test: "Trace",
-				externalLogger: "Trace",
+				externalLogger: "Information",
 				http_client_write: "Debug",
 				http_client_read: "Debug",
 				http_server_write: "Debug",
@@ -39,15 +40,15 @@ function( sync=false )
 				monitoring: "Information",
 				processingLoop: "Information",
 				opc: "Trace",
-				uaNet: "Trace",
-				uaClient: "Trace",
-				uaSecure: "Trace",
-				uaSession: "Trace",
-				uaServer: "Trace",
-				uaUser: "Trace",
-				uaSecurity: "Trace",
-				uaPubSub: "Trace",
-				uaDiscovery: "Trace"
+				uaNet: "Information",
+				uaClient: "Information",
+				uaSecure: "Information",
+				uaSession: "Information",
+				uaServer: "Information",
+				uaUser: "Information",
+				uaSecurity: "Information",
+				uaPubSub: "Information",
+				uaDiscovery: "Information"
 			},
 			sinks:{
 				console:{},

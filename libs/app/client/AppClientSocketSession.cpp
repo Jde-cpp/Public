@@ -118,7 +118,7 @@ namespace Client{
 	}
 	α AppClientSocketSession::Subscribe( string&& q, jobject vars, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
 		let requestId = NextRequestId();
-		LOGSL( ELogLevel::Debug, sl, ELogTags::SocketClientWrite, "[{}]{} {}.", hex(requestId), q.substr(0, Web::Client::MaxLogLength()), serialize(vars) );
+		LOGSL( ELogLevel::Debug, sl, ELogTags::SocketClientWriteSub, "[{}]{} {}.", hex(requestId), q.substr(0, Web::Client::MaxLogLength()), serialize(vars) );
 		auto subscriptions = QL::ParseSubscriptions( q, vars, _appClient->SubscriptionSchemas, sl );
 		_subscriptionRequests.emplace( requestId, SubscriptionRequest{listener, move(subscriptions), q, vars} );
 		return ClientSocketAwait<jarray>{ FromClient::Subscription(move(q), move(vars), requestId), requestId, shared_from_this(), sl };

@@ -66,7 +66,7 @@ function( sync=false )
 			flushOn: "Trace",
 			tags:{
 				default: "Information",
-				sql: "Debug",
+				sql: "Information",
 				exception: "Debug",
 				parsing: "Trace",
 				test: "Trace",

@@ -25,17 +25,16 @@ export class GraphQLTable{
 			? `${this.selections().isSelected(row) ? 'deselect' : 'select'} row ${row.name}`
 			: `${this.isAllSelected() ? 'select' : 'deselect'} all`;
 	}
-	toggle( id: number ){
-		const newSelections = this.selections().isSelected(id) ? this.selections().selected.filter( (x)=>x!=id ) : this.selections().selected.concat( id );
-		console.log( `table set selections: ${newSelections}` );
-		this.selections.set( new SelectionModel<number>(this.selections().isMultipleSelection(), newSelections) );
+	toggle( row: any ){//rows, not ids - the row click path, the highlight and ql-list's selection() all key off the row object
+		const newSelections = this.selections().isSelected(row) ? this.selections().selected.filter( (x)=>x!=row ) : this.selections().selected.concat( row );
+		this.selections.set( new SelectionModel<any>(this.selections().isMultipleSelection(), newSelections) );
 	}
 
 	toggleAll(){
 		if( this.isAllSelected() )
-			this.selections.set( new SelectionModel<number>(this.selections().isMultipleSelection(), []) );
+			this.selections.set( new SelectionModel<any>(this.selections().isMultipleSelection(), []) );
 		else
-			this.selections.set( new SelectionModel<number>(this.selections().isMultipleSelection(), [...this.dataSource()().map(x=>x.id)]) );
+			this.selections.set( new SelectionModel<any>(this.selections().isMultipleSelection(), [...this.dataSource()()]) );
 	}
 
 	cellClick( row:any ){
@@ -67,7 +66,7 @@ export class GraphQLTable{
 
 	dataSource=input.required<Signal<any[]>>();
 	displayedFields = input.required<ViewField[]>();
-	selections=model.required<SelectionModel<number>>();
+	selections=model.required<SelectionModel<any>>();
 	//showDeleted = input<boolean>( false );
 	sort = model<Sort>();
 	onSortChange = output<Sort>();

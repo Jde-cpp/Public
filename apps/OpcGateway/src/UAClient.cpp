@@ -214,9 +214,20 @@ namespace Jde::Opc::Gateway{
 	}
 	//returns the server's ApplicationUri so the caller can name both sides of an endpoint-filter mismatch.
 	α UAClient::LogServerEndpoints( str url, Jde::Handle h )ι->string{
-    UA_Client *client = UA_Client_new();
-    UA_ClientConfig *config = UA_Client_getConfig( client );
-    UA_ClientConfig_setDefault( config );
+		Logger logger{ h };
+		UA_ClientConfig config{};
+		config.logging = &logger;
+		if( let sc = UA_ClientConfig_setDefault(&config); sc ){
+			WARN( "[{}]Could not configure an endpoint client for url='{}': '({}){}'", hex(h), url, hex(sc), UAException::Message(sc) );
+			UA_ClientConfig_clear( &config );
+			return {};
+		}
+		UA_Client *client = UA_Client_newWithConfig( &config );//takes a copy - from here the client owns the config, and UA_Client_delete clears it.
+		if( !client ){
+			WARN( "[{}]Could not create an endpoint client for url='{}'", hex(h), url );
+			UA_ClientConfig_clear( &config );
+			return {};
+		}
 		UA_EndpointDescription* endpointArray{}; uint endpointArraySize{};
 		string serverUri;
 
@@ -245,8 +256,9 @@ namespace Jde::Opc::Gateway{
 		constexpr std::array<sv,6> sessionStates = { "Closed", "CreateRequested", "Created", "ActivateRequested", "Activated", "Closing" };
 		DBG( "[{}]channelState: '{}', sessionState: '{}', connectStatus: '({}){}'", hex((uint)ua), UAException::Message(channelState), FromEnum(sessionStates, sessionState), hex(connectStatus), UAException::Message(connectStatus) );
 		if( auto client = sessionState == UA_SESSIONSTATE_ACTIVATED ? UAClient::TryFind(ua) : sp<UAClient>{}; client ){
-			if constexpr( _debug )
-				client->Process( PingRequestId, "ping" ); //mitigate No result in the read namespace array response
+			//(a debug-only Process(PingRequestId) used to sit here to mitigate "No result in the read namespace array
+			//response"; it never could - the loop erases a lone ping at the top of the next iteration, so it bought one
+			//extra run_iterate a millisecond after the read was sent.  AsyncRequest's idle drain handles it now.)
 			client->TriggerSessionAwaitables();
 			client->ClearRequest( ConnectRequestId );
 		}
@@ -287,7 +299,15 @@ namespace Jde::Opc::Gateway{
 				}
 				else{
 					client->StopProcessing();// Break the UAClient<->_asyncRequest._client self-reference; on the failure path the client never enters _clients, so Shutdown would never Stop() it and the UAClient (and its UA_Client) would leak.
-					Post( [client,connectStatus,detail=move(detail)]()ι->void {ConnectAwait::Resume(client->Target(), client->Credential, UAClientException{connectStatus, client->Handle(), detail.size() ? detail : "Connection Failed"});} );
+					Post(
+						[client,connectStatus,detail=move(detail)]()ι->void {
+							ConnectAwait::Resume(
+								client->Target(),
+								client->Credential,
+								UAClientException{connectStatus, client->Handle(), detail.size() ? detail : "Connection Failed"}
+							);
+						}
+					);
 				}
 
 				return true;

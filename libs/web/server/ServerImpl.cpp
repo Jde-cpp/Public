@@ -103,6 +103,8 @@ namespace Server{
 		catch( Exception& e ){
 			if( !empty(e.Tags & ELogTags::Parsing) )
 				send( RestException{EHttpStatus::BadRequest, move(e), move(req), "Query parsing failed."}, move(stream), contentType );
+			if( e.HttpStatus()!=EHttpStatus::InternalServerError )
+				send( RestException{move(e), move(req)}, move(stream), contentType );
 			else//braced-init sequences left-to-right: the status reads before move(e) - do not switch to parens.
 				send( RestException{e.HttpStatus(), move(e), move(req), "Query failed."}, move(stream), contentType );
 			co_return;

@@ -15,7 +15,7 @@ namespace Jde{
 	α Exception::EmptyPtr()ι->const up<Exception>&{ return _empty; }
 
 	Exception::Exception( string value, ExceptionArgs args, SL sl )ι:
-		runtime_error{ {} },
+		runtime_error{ "" },
 		ExceptionArgs{ args },
 		_format{ move(value) },
 		_sl{ sl }{

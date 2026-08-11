@@ -7,6 +7,7 @@ namespace Jde::Opc::Gateway{
 	namespace asio = boost::asio;
 	Duration _pingInterval;//config, set once at startup - safe to share.
 	Duration _ttl;//config, set once at startup - safe to share.
+	Duration _idleDrain;//config, set once at startup - safe to share.  How long the loop keeps polling after our own queue drains; see ProcessingLoop.
 
 	AsyncRequest::AsyncRequest()ι:
 		_strand{ Executor()->get_executor() }
@@ -40,6 +41,7 @@ namespace Jde::Opc::Gateway{
 		DBG( "{}ProcessingLoop started", logPrefix() );
 		CancelPing();
 		StatusCode sc{};
+		optional<TimePoint> drainStart;//when our queue emptied; the loop keeps iterating for _idleDrain after that - see below.
 		while( _running.test() ){
 			let size = _requests.size();
 			if( size ){
@@ -48,7 +50,8 @@ namespace Jde::Opc::Gateway{
 				else
 					_lastRequest = Clock::now();
 			}
-			TRACE( "{}run_iterate: requestCount: {}", logPrefix(), size );
+			if( !drainStart )//draining is a poll every millisecond - tracing each one buries the log.
+				TRACE( "{}run_iterate: requestCount: {}", logPrefix(), size );
 			if( sc = UA_Client_run_iterate(*client, 0); sc ){
 				_running.clear();
 				let level = _requests.size()>0 ? ELogLevel::Critical : ELogLevel::Debug;
@@ -60,14 +63,29 @@ namespace Jde::Opc::Gateway{
 			}
 			let newSize = _requests.size();
 			if( !newSize ){
+				//open62541 issues requests of its own that never reach _requests - the server namespace-array read it fires
+				//the moment the session activates is the one that bit us - and both their responses and their staleness
+				//sweep are only serviced from run_iterate.  Leaving the loop as soon as our own queue drained left that
+				//read unpumped until the ping woke us _pingInterval later, by which point open62541 had already given up
+				//on it ("No result in the read namespace array response") and then discarded the reply that had been
+				//sitting in the socket the whole time ("Request with unknown RequestId").  So keep polling for
+				//_idleDrain before handing the client back to the ping timer; a request arriving meanwhile resets it.
+				let now = Clock::now();
+				if( !drainStart )
+					drainStart = now;
+				if( *drainStart+_idleDrain > now ){
+					(void)co_await DurationTimer{ 1ms, _strand, SRCE_CUR };
+					continue;
+				}
 				TRACE( "{}requestCount: {}", logPrefix(), newSize );
 				_running.clear();
-				if( let now = Clock::now(); _lastRequest + _ttl < now ){
+				if( _lastRequest + _ttl < now ){
 					DBG( "{}No requests for {}, shutting down client.", logPrefix(), Chrono::ToString(now-_lastRequest) );
 					UAClient::ShutdownIdle( client );//per-client teardown: _lastRequest is per-client, so this client idling out must not tear down the others.
 				}
 				break;
 			}
+			drainStart.reset();
 			let firstRequest = *_requests.begin();
 			TRACE( "{}requestCount: {}, [0]={}", logPrefix(), newSize, hex(firstRequest) );
 			if( size==newSize ){

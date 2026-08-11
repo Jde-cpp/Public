@@ -4,7 +4,6 @@ import {ActivatedRoute, Route, Router, Routes, UrlSegment} from '@angular/router
 import {Sort} from '@angular/material/sort';
 import { MatTable } from '@angular/material/table';
 import {FormsModule} from '@angular/forms';
-import {MatSelectModule} from '@angular/material/select';
 import { QLListSettings } from './ql-list-settings/ql-list-settings';
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service'
 import {IGraphQL, EnumValue } from '../../../services/IGraphQL';
@@ -14,9 +13,12 @@ import {MetaObject}  from '../../../model/ql/schema/MetaObject';
 
 import { ComponentPageTitle, RouteItem, IRouteService, RouteService } from 'jde-spa';
 import { MatIcon } from '@angular/material/icon';
-import { MatIconButton, MatAnchor } from '@angular/material/button';
+import { MatIconButton, MatButton } from '@angular/material/button';
+import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { MatCheckbox } from '@angular/material/checkbox';
+import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatToolbar } from '@angular/material/toolbar';
+import { MatTooltip } from '@angular/material/tooltip';
 import { ProfileStore } from 'jde-spa';
 import { GraphQLTable } from '../../GraphQL/table/table';
 import { QLListData, QLListResolver, TableSettings } from '../../../services/ql-list.resolver';
@@ -24,7 +26,6 @@ import { SelectionModel } from '@angular/cdk/collections';
 import { RouteStore } from '../../../services/route.store';
 import { View, ViewField, ViewType } from '../../../model/ql/View';
 import { PageProfile } from '../../GraphQL/model/PageSettings';
-import { MatSelect } from "@angular/material/select";
 import { verify } from '../../../utils/utils';
 
 @Component({
@@ -32,7 +33,7 @@ import { verify } from '../../../utils/utils';
 	styleUrls: ['ql-list.scss'],
 	templateUrl: './ql-list.html',
 	host: {class:'main-content mat-drawer-container my-content'},
-	imports: [CommonModule, FormsModule, GraphQLTable, MatAnchor, MatCheckbox, MatIcon, MatIconButton, MatSelectModule, MatToolbar, QLListSettings]
+	imports: [CommonModule, FormsModule, GraphQLTable, MatButton, MatButtonToggle, MatButtonToggleGroup, MatCheckbox, MatIcon, MatIconButton, MatProgressBar, MatToolbar, MatTooltip, QLListSettings]
 })
 export class QLList implements OnInit, OnDestroy{
 	constructor(
@@ -56,14 +57,20 @@ export class QLList implements OnInit, OnDestroy{
 	async init( resolvedValue:any ){
 		let data = resolvedValue["data"] as QLListData;
 		verify( data.profile.view );
-		this.selections.set( new SelectionModel<any>(data.profile.view.showSelector, []) );
+		const priorIds = this.selections()?.selected.map( r=>r?.id ).filter( id=>id!=null ) ?? [];//a reload builds new row objects, so carry the selection over by id
 		this.view.set( data.profile.view );
 		const collectionName = data.schema.collectionName;
 		this.resolvedData.set( data );
 		//if( !this.profile )
 			//this.profile = await this.profileStore.load(collectionName, QLList.defaultProfile );
 
-		this.data.set( data.results[collectionName] );
+		const rows = data.results[collectionName];
+		const multiple = data.profile.view.showSelector;
+		let selected = rows.filter( (r:any)=>priorIds.includes(r.id) );
+		if( !multiple )
+			selected = selected.slice( 0, 1 );//SelectionModel throws on multiple values in single-select mode
+		this.selections.set( new SelectionModel<any>(multiple, selected) );
+		this.data.set( rows );
 		this.sideNav.set( data.routing );
 		let paths = [];
 		for( let x = this.route; x.routeConfig?.data && x.routeConfig?.data["name"]; x = x.parent! )
@@ -89,8 +96,6 @@ export class QLList implements OnInit, OnDestroy{
 	}
 
 	onRowActivate( row:any ){
-		if( row.deleted )	//deleted rows just select, so restore/purge stay reachable
-			return;
 		try{
 			this.router.navigate([row.target], {relativeTo: this.route} );
 		}catch( e ){
@@ -103,9 +108,8 @@ export class QLList implements OnInit, OnDestroy{
 	}
 
 	async onRefresh(){
-		this.data.set( [] );
 		try{
-			await this.refresh( this.resolvedData().profile );
+			await this.refresh( this.resolvedData().profile );//keep the current rows visible; the progress bar signals the reload
 		}
 		catch( e ){
 			this.snackbar.exception( "Could not refresh data.", e );
@@ -143,8 +147,7 @@ export class QLList implements OnInit, OnDestroy{
 		if( view.type==ViewType.User )
 			this.profileStore.save( `qlList/${this.collectionName()}/views`, profile.views.filter(v=>v.isUser).map(v=>v.toJson(this.tableSettings())) );
 
-		let reload = await QLListResolver.load( this.ql, this.resolvedData(), this.routeStore );
-		this.init( {data:reload} );
+		await this.reload();
 		this.isSettings.set( false );
 	}
 	async onViewShow(view:View){
@@ -166,15 +169,24 @@ export class QLList implements OnInit, OnDestroy{
 	async refresh( profile: PageProfile ){
 		this.resolvedData().profile = profile;
 		this.resolvedData().schema = new TableSchema( this.resolvedData().schema ); //TODO just copy
-		const reload = await QLListResolver.load( this.ql, this.resolvedData(), this.routeStore );
-		this.init( {data:reload} );
+		await this.reload();
+	}
+	//every path that re-queries goes through here so isRefreshing covers the whole load, not just the Refresh button
+	async reload(){
+		this.isRefreshing.set( true );
+		try{
+			const reload = await QLListResolver.load( this.ql, this.resolvedData(), this.routeStore );
+			this.init( {data:reload} );
+		}
+		finally{
+			this.isRefreshing.set( false );
+		}
 	}
 	async onViewDelete(view:View){
 		let profile = this.resolvedData().profile;
 		profile.removeView( view.name!, this.collectionName(), this.profileStore );
 		profile.currentViewIndex = 0;
-		let reload = await QLListResolver.load( this.ql, this.resolvedData(), this.routeStore );
-		this.init( {data:reload} );
+		await this.reload();
 		this.isSettings.set( false );
 	}
 
@@ -217,6 +229,7 @@ export class QLList implements OnInit, OnDestroy{
 	collectionDisplay = input.required<string>();
 
 	isLoading = signal<boolean>( true );
+	isRefreshing = signal<boolean>( false );
 	isSettings = signal<boolean>( false );
 	selections = signal<SelectionModel<any>>(null as any);
 

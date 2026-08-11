@@ -20,4 +20,7 @@
 <div style="display: flex; margin: 20px;border-top: 20px;border-color: primary;">
 	<button tabindex="100" mat-fab extended (click)="onSubmitClick()" [disabled]="!isChanged()"><mat-icon>done</mat-icon>Save</button>
 	<button tabindex="101" mat-fab extended (click)="onCancelClick()" style="margin-left:50px;margin-right:20px"><mat-icon>cancel</mat-icon>Cancel</button>
+	<button tabindex="102" mat-fab extended (click)="onDeleteClick()" [disabled]="isNew" style="margin-left:30px" [attr.aria-label]="isDeleted ? 'Restore' : 'Delete'">
+		<mat-icon>{{isDeleted ? "restore" : "delete"}}</mat-icon>{{isDeleted ? "Restore" : "Delete"}}
+	</button>
 </div>

@@ -65,12 +65,24 @@ export class ClientDetail implements OnDestroy, OnInit{
 		this.router.navigate( ['..'], { relativeTo: this.route } );
 	}
 
+	async onDeleteClick(){
+		const restore = this.isDeleted;
+		try{
+			await this.gateway.mutate( `${restore ? "restore" : "delete"}${this.serverCnnctn.type}(id:${this.serverCnnctn.id})`, (m)=>console.log(m) );
+			this.router.navigate( ['..'], { relativeTo: this.route } );
+		}catch( e ){
+			this.snackbar.exception( `${restore ? "Restore" : "Delete"} failed.`, e );
+		}
+	}
+
 	serverCnnctn!:ServerCnnctn;
 	pageData!:DetailResolverData<ServerCnnctn>;
 	ctor:new (item: any) => any = ServerCnnctn;
 	isChanged = signal<boolean>( false );
 
 	properties = signal<ServerCnnctn>( null as any );
+	get isDeleted():boolean{ return this.serverCnnctn?.deleted!=null; }//only populated when show-deleted is on - the query drops the column otherwise
+	get isNew():boolean{ return !this.serverCnnctn?.id; }
 	get schema(){ return this.pageData.schema; }
 	get server(): Server{ return this.serverCnnctn?.server; }
 	sideNav = signal<any>( null );

@@ -26,14 +26,18 @@ mat-header-cell
 	flex: 0 0 160px;
 }
 .mat-column-name{
-	flex: 0 0 230px;
+	flex: .25 .25 150px;
+}
+.boolColumn{
+	flex: 0 0 80px;
 }
 .mat-column-target{
 	flex: 0 0 150px;
 }
 .mat-column-select{
 	flex: 0 0 60px;
+	justify-content: center;
 }
 .mat-column-description{
-	flex: 1 1 500px;
+	flex: 1 1 300px;
 }

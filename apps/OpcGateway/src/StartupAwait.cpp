@@ -21,6 +21,7 @@
 namespace Jde::Opc::Gateway{
 	extern Duration _pingInterval;
 	extern Duration _ttl;
+	extern Duration _idleDrain;
 	StartupAwait::StartupAwait( jobject webServerSettings, jobject userName, SL sl )ι:
 		VoidAwait{sl},
 		_webServerSettings{move(webServerSettings)},
@@ -61,6 +62,7 @@ namespace Jde::Opc::Gateway{
 
 			_pingInterval = Settings::FindDuration("/gateway/pingInterval").value_or( 60s );
 			_ttl = Settings::FindDuration("/gateway/ttl").value_or( 5min );
+			_idleDrain = Settings::FindDuration("/gateway/idleDrain").value_or( 500ms );//must exceed the round trip to the slowest server, or open62541's own post-activation namespace read times out.
 			INFOT( ELogTags::App, "---Started {}---", "OPC Gateway" );
 			Resume();
 		}

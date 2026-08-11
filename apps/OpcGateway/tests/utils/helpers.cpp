@@ -89,13 +89,15 @@ namespace Jde::Opc::Gateway{
 		const string url{url_};
 		if( _userTokens.contains(url) )
 			return _userTokens[url];
-    UA_Client *client = UA_Client_new();
-    UA_ClientConfig *config = UA_Client_getConfig(client);
+		Logger logger;
+		UA_ClientConfig config{};
+		config.logging = &logger;
+		config.tcpReuseAddr = true;
+		UA_ClientConfig_setDefault( &config );
 		auto UA_DateTime_now_fake = []( UA_EventLoop* ) -> UA_DateTime{ return 0x5C8F735D; };
-    config->eventLoop->dateTime_now = UA_DateTime_now_fake;
-    config->eventLoop->dateTime_nowMonotonic = UA_DateTime_now_fake;
-    config->tcpReuseAddr = true;
-    UA_ClientConfig_setDefault(config);
+		config.eventLoop->dateTime_now = UA_DateTime_now_fake;
+		config.eventLoop->dateTime_nowMonotonic = UA_DateTime_now_fake;
+		UA_Client *client = UA_Client_newWithConfig( &config );
     UA_EndpointDescription* endpointArray{}; uint endpointArraySize{};
 		auto tokens = _userTokens.try_emplace( url ).first;
     UAε( UA_Client_getEndpoints(client, url.c_str(), &endpointArraySize, &endpointArray) ) ;

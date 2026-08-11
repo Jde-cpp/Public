@@ -1,5 +1,6 @@
 ﻿#include "ConnectAwait.h"
 #include "../UAClient.h"
+#include "jde/fwk/exceptions/Exception.h"
 #include <stdexcept>
 
 #define let const auto
@@ -63,19 +64,19 @@ namespace Jde::Opc::Gateway{
 	α ConnectAwait::Create()ι->TAwait<vector<ServerCnnctn>>::Task{
 		try{
 			auto servers = co_await ServerCnnctnAwait{ _opcTarget };
-			THROW_IF( servers.empty(), "Could not find opc server:  '{}'", _opcTarget );
+			THROW_IFX( servers.empty(), Exception( _sl, {EHttpStatus::NotFound}, "Could not find connection:  '{}'", _opcTarget) );
 			auto client = ms<UAClient>( move(servers.front()), _cred );
 			client->Connect();
 		}
-		catch( const runtime_error& e ){
-			let ua = dynamic_cast<const UAClientException*>( &e );
+		catch( Exception& e ){
 			lg l{ _requestMutex };
 			auto handles = EraseRequests( _opcTarget, _cred, l );
-			for( auto& h : handles ){
-				if( ua )
-					h.promise().ResumeExp( UAClientException(*ua), h );
+			for( uint i=0; i<handles.size(); ++i ){
+				auto& h = handles[i];
+				if( i==handles.size()-1 )
+					h.promise().ResumeExp( move(e), h );
 				else
-					h.promise().ResumeExp( Exception{e.what(), {ELogLevel::Error}}, h );
+					h.promise().ResumeExp( move(*e.Move()), h );
 			}
 		}
 	}

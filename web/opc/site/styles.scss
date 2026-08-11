@@ -42,3 +42,8 @@ a:visited {
 .mat-column-select{
 	flex: 0 0 60px;
 }
+.mat-column-id{
+	flex: 0 0 100px;
+	justify-content: flex-end;
+	text-align: right;
+}

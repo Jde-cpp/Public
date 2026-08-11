@@ -40,7 +40,7 @@ export class GatewayResolver implements Resolve<GatewayData> {
 		return GatewayResolver.load( gateway, {columns: QLListResolver.columns(schema, [], []), pageSettings, profile, schema, results: undefined, routing}, this.routeStore );
 	}
 	static async load( gateway:Gateway, data:GatewayData, routeStore:RouteStore ):Promise<GatewayData>{
-		const query = data.profile.view.query( ProfileStore.showDeleted("gateways"), 0 );
+		const query = data.profile.view.query( data.profile.showDeleted, 0 );//the toggle persists under the collection name (serverConnections), not "gateways"
 		const results = await gateway.query<any>( query.text, query.vars, (m)=>console.log(m) );
 		routeStore.setChildren( data.routing.path, results[data.schema.collectionName].map( (r:any)=>{return {title:r.name, path: r.target};}) );
 		return {
