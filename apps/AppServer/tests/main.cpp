@@ -3,34 +3,53 @@
 #endif
 #include "gtest/gtest.h"
 #include <jde/fwk/settings.h>
+#include <jde/tests/SpdlogTestListener.h>
 #include <jde/tests/testMain.h>
+#include "../src/AppStartupAwait.h"
 #define let const auto
 
 namespace Jde{
 #ifndef _MSC_VER
 	α Process::ProductName()ι->sv{ return "Tests.AppServer"; }
 #endif
- 	Ω startup( int argc, char **argv )ι->void{
+	up<std::exception> _error;
+
+ 	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
 		Process::Startup( argc, argv, "Tests.AppServer", "AppServer unit tests", true );
-		Logging::Init();
+		App::Server::InitLogging();
+		try{
+			co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };
+		}
+		catch( runtime_error& e ){
+			_error = ToUP( move(e) );
+			if( auto p = dynamic_cast<Exception*>( _error.get() ); p )
+				p->Log();
+		}
+		done.test_and_set();
+		done.notify_one();
 	}
 }
 
 α main( int argc, char **argv )->int{
 	using namespace Jde;
-	let filterSet = Process::Args().find("--gtest_filter") != Process::Args().end();
 	::testing::InitGoogleTest( &argc, argv );
-	startup( argc, argv );
-	auto result = EXIT_FAILURE;
-	{
-		let p = Settings::FindSV( "/testing/tests" );
-		let filter = p ? *p : "*";
-		if( !filterSet ){
-			INFOT( ELogTags::App, "filter:'{}'", filter );
-			::testing::GTEST_FLAG( filter ) = filter;
+	atomic_flag done;
+	startup( argc, argv, done );
+	done.wait( false );
+	int result{ EXIT_FAILURE };
+	try{
+		if( _error ){
+			std::cerr << "startup error: " << _error->what() << std::endl;//throw *_error slices to std::exception, losing the message.
+			throw *_error;
 		}
+		::testing::GTEST_FLAG( filter ) = Settings::FindString( "/testing/tests" ).value_or( "*" );
+		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
 		result = CheckTestsRan( RUN_ALL_TESTS() );
-		Process::Shutdown( result );
 	}
+	catch( std::exception& e ){
+		Process::ExitException( move(e) );
+	}
+	Process::Shutdown( result );
+
 	return result;
 }

@@ -23,16 +23,16 @@ namespace Jde::Opc::Gateway{
 	}
 
 	UAClientException::UAClientException( StatusCode sc, Handle uaHandle, string description, SL sl )ι:
-		UAException{ sc, move(description), {.HttpStatus=httpStatus(sc)}, sl },
+		UAException{ sc, description, {.HttpStatus=httpStatus(sc)}, sl },
 		_userMessage{ move(description) }
 	{}
 
 	α UAClientException::what()const noexcept->const char*{
 		if( _what.empty() ){
 			if( _requestId )
-				_what = Ƒ( "[{:x}.{:x}]{}", _handle, _requestId, UAException::What() );
+				_what = Ƒ( "[{:x}.{:x}]{}", _handle, _requestId, Exception::what() );
 			else
-				_what = Ƒ( "[{:x}]{}", _handle, UAException::What() );
+				_what = Ƒ( "[{:x}]{}", _handle, Exception::what() );
 		}
 		return _what.c_str();
 	}
