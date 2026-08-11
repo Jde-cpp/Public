@@ -29,7 +29,7 @@ namespace Jde{
 	};
 	class ExceptionArgs{
 	public:
-		ExceptionArgs( const ExceptionArgs& args )ι:Tags{args.Tags}, _level{args._level}, _statusCode{args._statusCode}, _code{args._code}{}
+		ExceptionArgs( const ExceptionArgs& args )ι:Tags{args.Tags}, _level{args._level}, _code{args._code}, _statusCode{args._statusCode}{}
 		ExceptionArgs( ELogLevel level=DefaultExceptionLevel, ELogTags tags=ELogTags::Exception, uint32 code=UninitializedCode, EHttpStatus status=EHttpStatus::None )ι: Tags{tags}, _level{level}, _statusCode{status}, _code{code}{}
 		ExceptionArgs( ELogTags tags, uint32 code=0, EHttpStatus status=EHttpStatus::None )ι:ExceptionArgs{DefaultExceptionLevel, tags, code, status}{}
 		ExceptionArgs( uint32 code )ι:ExceptionArgs{DefaultExceptionLevel, ELogTags::Exception, code}{}
@@ -41,11 +41,11 @@ namespace Jde{
 		ELogTags Tags;
 	protected:
 		mutable ELogLevel _level;
-		EHttpStatus _statusCode{ EHttpStatus::None };
 	private:
 		static constexpr uint32 UninitializedCode{ (uint32)std::numeric_limits<int32_t>::max() };
 	public:
 		mutable uint32 _code;
+		EHttpStatus _statusCode{ EHttpStatus::None };
 	};
 	#define $ template<class... Args>
 	struct Γ Exception : std::runtime_error, ExceptionArgs{
@@ -71,8 +71,9 @@ namespace Jde{
 		α SetHttpStatus( EHttpStatus status )ι->void{ _statusCode = status; }
 		β Category()Ι->ECategory{ return ECategory::Jde; }
 		β CategoryCode()Ι->uint32{ return 0; }
-		α what()const noexcept->const char* override;
+		β what()const noexcept->const char* override;
 		α What()Ι->const string&{ what(); return _what; }
+		β UserMessage()Ι->const string&{ return What(); }
 		α PrependWhat( const string& prepend )ι->void{ What()/*initialize*/; _what = prepend+_what; }
 		α Source()Ι->SL{ return _sl; }
 		β Move()ι->up<Exception>{ return mu<Exception>(move(*this)); }
@@ -81,7 +82,7 @@ namespace Jde{
 		α SetTags( ELogTags tags )ι{ Tags = tags | ELogTags::Exception; }
 		Ω EmptyPtr()ι->const up<Exception>&;
 	protected:
-		Exception( SRCE )ι:base{{}},_sl{ sl }{}
+		Exception( SRCE )ι:base{""},_sl{ sl }{}
 		α Format()Ι->sv{ return visit( []( auto&& arg )->sv{return {arg.data(),arg.size()};}, _format ); }
 		α BreakLog()Ι->void;
 
@@ -107,7 +108,7 @@ namespace Jde{
 	}
 
 	$ Exception::Exception( SL sl, ExceptionArgs args, runtime_error&& inner, fmt::format_string<Args...> m, Args&&... sargs )ι:
-		runtime_error{ {} },
+		runtime_error{ "" },//not '{}': that picks runtime_error(const char*) with a null pointer - libc++ strlen's it.
 		ExceptionArgs{ args },
 		_inner{ ToUP(move(inner)) }, //preserves derived message/type; mu<runtime_error> would slice.
 		_format{ sv{m.get().data(), m.get().size()} },
@@ -118,7 +119,7 @@ namespace Jde{
 	}
 
 	$ Exception::Exception( SL sl, ExceptionArgs args, fmt::format_string<Args...> m, Args&&... sargs )ι:
-		runtime_error{ {} },
+		runtime_error{ "" },
 		ExceptionArgs{ args },
 		_format{ sv{m.get().data(), m.get().size()} },
 		_sl{ sl }{

@@ -2,10 +2,12 @@
 #include <jde/fwk/str.h>
 #include "Exception.h"
 
+#define let const auto
+
 namespace Jde{
 	struct ExternalException : Exception{
 		ExternalException( const ExternalException& from )ι:
-			Exception{ string{from.Format()}, {ELogLevel::NoLog, from.Tags, from._code}, from._sl }{
+			Exception{ string{from.Format()}, {ELogLevel::NoLog, from.Tags, from._code, from._statusCode}, from._sl }{
 			_args = from._args;
 		}
 		ExternalException( ExternalException&& from )ι=default;
@@ -17,7 +19,7 @@ namespace Jde{
 			ExternalException{ ECodeBase::Hex, move(externalMessage), move(description), args, sl }{}
 
 		ExternalException( ECodeBase codeBase, string externalMessage, string description, ExceptionArgs args, SRCE )ι:
-			Exception{ FormatMsg(codeBase, move(externalMessage), description.size(), args), {ELogLevel::NoLog, args.Tags, args._code}, sl }{
+			Exception{ FormatMsg(codeBase, move(externalMessage), description.size(), args), {ELogLevel::NoLog, args.Tags, args._code, args._statusCode}, sl }{
 			if( description.size() ){
 				_what = Str::TryFormat( Format(), {description} );//never throw out of a ι ctor: Str::Format is ε.
 				_args.push_back( move(description) );
@@ -37,3 +39,4 @@ namespace Jde{
 		}
 	};
 }
+#undef let

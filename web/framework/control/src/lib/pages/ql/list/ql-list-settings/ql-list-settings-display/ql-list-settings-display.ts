@@ -29,12 +29,16 @@ import { Schema } from '@angular/forms/signals';
 export class QLListSettingsDisplay implements OnInit{
 	ngOnInit(){
 		let columns:(SelectorField|ViewField)[] = [{name:"Selector", displayed:this.view().showSelector}];
-		for( let [name,display] of Object.entries(this.columns()) ){
+		const available = this.columns();
+		//the table renders view.fields in order, so list them in that order too; schema-order leftovers (not in the view) follow
+		const viewNames = this.view().fields.map( f=>f.name ).filter( n=>n in available );
+		const names = [...viewNames, ...Object.keys(available).filter( n=>!viewNames.includes(n) )];
+		for( let name of names ){
 			let field = this.view().fields.find( f=>f.name==name );
 			if( field )
 				columns.push( field );
 			else //if( !this.excludedColumns().includes(name) )
-				columns.push( new ViewField({field:{name: name, hidden:true, displayName: display}, schema:this.schema()}) );
+				columns.push( new ViewField({field:{name: name, hidden:true, displayName: available[name]}, schema:this.schema()}) );
 		}
 		//
 		//[{name:"Selector", displayed:this.view().showSelector}, ...this.view().fields.map( f => new ViewField(f) )]

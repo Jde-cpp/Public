@@ -178,7 +178,7 @@ namespace Jde::Opc::Server {
 			variable,
 			(void*)variable.PK,
 			&id);
-		THROW_IFX( status, UAException(status, variable.ToString(), sl, {ELogLevel::Error, EOpcLogTags::Opc}) );
+		THROW_IFX( status, UAException(status, variable.ToString(), {.Level=ELogLevel::Error, .Tags=EOpcLogTags::Opc}, sl) );
 		dynamic_cast<NodeId&>(variable) = id;
 		DBGSL( "Added Variable: {}", variable.ToString(parent) );
 		if( !variable.PK )

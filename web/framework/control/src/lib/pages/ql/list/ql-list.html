@@ -4,33 +4,30 @@
 	} @else {
 		<ng-container>
 			<mat-toolbar>
-				<mat-form-field subscriptSizing="dynamic">
-					<mat-label>View</mat-label>
-					<mat-select [(value)]="resolvedData().profile.currentViewIndex" (selectionChange)="onChangeView($event.value)">
+				<div class="bar-left">
+					@if( showAdd() ){
+						<button [matButton]="isRefreshing() || data().length ? 'tonal' : 'filled'" (click)="onAdd()"><mat-icon>add</mat-icon>Add</button><!--filled only on a genuinely empty list, where Add is the one useful action; isRefreshing suppresses the flash while a reload has the rows cleared-->
+					}
+				</div>
+				<div class="bar-center"><!--the two icon buttons are equal width, so they bracket the group symmetrically and it lands dead centre-->
+					<button matIconButton aria-label="Refresh" matTooltip="Refresh" [disabled]="isRefreshing()" (click)="onRefresh()">
+						<mat-icon>refresh</mat-icon>
+					</button>
+					<mat-button-toggle-group class="view-group" aria-label="View" [value]="resolvedData().profile.currentViewIndex" (change)="onChangeView($event.value)">
 						@for (view of resolvedData().profile.views; track view; let i=$index) {
-							<mat-option [value]=i>{{ (view.name ?? "&lt;default&gt;") + (view.isAdhoc ? "*" : "") }}</mat-option>
+							<mat-button-toggle [value]=i [matTooltip]="view.isAdhoc ? 'Unsaved changes' : ''">{{ view.name ?? "default" }}@if( view.isAdhoc ){<span class="adhoc">&nbsp;(edited)</span>}</mat-button-toggle>
 						}
-					</mat-select>
-				</mat-form-field>
-				<button matIconButton aria-label="Settings" (click)="isSettings.set(true)">
-					<mat-icon>settings</mat-icon>
-				</button>
-				<button matIconButton aria-label="Refresh" title="Refresh" (click)="onRefresh()">
-					<mat-icon>refresh</mat-icon>
-				</button>
-				@if( showAdd() ){
-					<button matButton="tonal" style="margin-left :20px; margin-right:10px" (click)="onAdd()">Add</button>
-				}
-				<button mat-icon-button (click)="restore()" [disabled]="selection()?.deleted==null" title="Restore" color="primary" style="margin-left :20px; margin-right:10px">
-					<mat-icon>restore</mat-icon>
-				</button>
-				<button mat-icon-button color="primary"  style="margin-left :20px; margin-right:10px"
-					[disabled]="selection()==null || (selection().deleted && !canPurge)"
-					(click)="delete()">
-					<mat-icon>{{selection()?.deleted ? "delete_forever" : "remove"}}</mat-icon></button>
-				<span></span>
-				<mat-checkbox [checked]="showDeleted()" color="primary" (change)="onToggleShowDeleted()">Show Deleted</mat-checkbox>
+					</mat-button-toggle-group>
+					<button matIconButton aria-label="Edit view" matTooltip="Edit view" (click)="isSettings.set(true)">
+						<mat-icon>tune</mat-icon>
+					</button>
+				</div>
+				<div class="bar-right">
+					<span class="row-count">{{ data().length }} {{ data().length==1 ? "row" : "rows" }}</span>
+					<mat-checkbox [checked]="showDeleted()" (change)="onToggleShowDeleted()">Show deleted</mat-checkbox>
+				</div>
 			</mat-toolbar>
+			<mat-progress-bar class="refresh-bar" [mode]="isRefreshing() ? 'indeterminate' : 'determinate'" [value]="0"></mat-progress-bar>
 			<div style="align-content: center; margin: auto;  text-align: center">
 				<ql-table [dataSource]=data [displayedFields]=displayedFields() [sort]=sort (onSortChange)=onSortChange($event) (onRowActivate)=onRowActivate($event) [(selections)]=selections></ql-table>
 			</div>

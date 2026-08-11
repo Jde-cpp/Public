@@ -3,6 +3,7 @@
 		"window.title": "Repos",
 		"releaseRoot": "${env:JDE_BASH}/Release",
 		"sourceDir": "${workspaceFolder}",
+		"buildDir": "${env:JDE_DEPENDS_BUILD_DIR}",
 		"target": "all",
 		"cmake.sourceDirectory": "${workspaceFolder}",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",

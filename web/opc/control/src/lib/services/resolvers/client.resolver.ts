@@ -41,7 +41,7 @@ export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>>
 		let obj:any = {};
 		//let server:Server = null;
 		if( target && target!="$new" ){
-			obj = await ql.querySingle( ql.targetQuery(schema, target, ProfileStore.showDeleted('clients'), routing.tableSettings.excludedColumns), null, (m)=>console.log(m) );
+			obj = await ql.querySingle( ql.targetQuery(schema, target, ProfileStore.showDeleted(schema.collectionName), routing.tableSettings.excludedColumns), null, (m)=>console.log(m) );//'clients' was never a key the list writes - it stores under the collection name
 			for( let query of ql.subQueries(schema.type, obj["id"]) ){
 				const subRows = await ql.query<any>( query, null, (m)=>console.log(m) );
 				let [property, propValue] = Object.entries(subRows)[0];

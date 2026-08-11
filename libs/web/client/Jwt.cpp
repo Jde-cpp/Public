@@ -1,4 +1,5 @@
 #include "jde/fwk/crypto/CryptoSettings.h"
+#include "jde/fwk/exceptions/Exception.h"
 #include <jde/web/Jwt.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <jde/fwk/io/json.h>
@@ -16,7 +17,7 @@ namespace Jde::Web{
 			{ "name", userName },
 			{ "target", userTarget },
 		};
-		if( certificate.size() ){//the cert is the single source of key material - n/e derive from it on parse. Encode64 iterates elements - std::byte won't feed transform_width, so view as chars.
+		if( certificate.size() ){ //the cert is the single source of key material - n/e derive from it on parse. Encode64 iterates elements - std::byte won't feed transform_width, so view as chars.
 			Body["x5c"] = Str::Encode64( sv{(const char*)certificate.data(), certificate.size()}, true );
 			Certificate = move( certificate );
 		}
@@ -60,7 +61,7 @@ namespace Jde::Web{
 			PublicKey = Crypto::ExtractPublicKey( Certificate, sl );
 			fpKey = Crypto::Fingerprint( PublicKey );
 		}
-		else if( auto modulus = Json::FindString(Body, "n"); modulus ){//certless jwts - session reissue, google jwks keys.
+		else if( auto modulus = Json::FindString(Body, "n"); modulus ){ //certless jwts - session reissue, google jwks keys.
 			SetModulus( move(*modulus) );
 			SetExponent( Json::AsString(Body, "e") );
 			fpKey = Crypto::Fingerprint( PublicKey );
@@ -74,8 +75,8 @@ namespace Jde::Web{
 		//run the iat check on every unexpired token that does have an exp.
 		let now = time( nullptr );
 		let exp = Json::FindNumber<time_t>( Body, "exp" );
-		THROW_IF( exp && *exp<now, "Invalid jwt.  Expired at '{}'.", *exp );
-		THROW_IF( !exp && std::abs(now-Iat)>MaxAgeWithoutExpiration, "Invalid jwt.  No 'exp' claim and 'iat' '{}' is not within {}s of '{}'.", Iat, MaxAgeWithoutExpiration, now );
+		THROW_IFX( exp && *exp<now, Exception(sl, {EHttpStatus::Unauthorized}, "Invalid jwt.  Expired at '{}'.", ToIsoString(Clock::from_time_t(*exp))) );
+		THROW_IFX( !exp && std::abs(now-Iat)>MaxAgeWithoutExpiration, Exception(sl, {EHttpStatus::Unauthorized}, "Invalid jwt.  No 'exp' claim and 'iat' '{}' is not within {}s of '{}'.", Iat, MaxAgeWithoutExpiration, ToIsoString(Clock::from_time_t(now))) );
 		UserPK = { Json::FindNumber<UserPK::Type>(Body, "sub").value_or(0) };
 		UserName = Json::FindString( Body, "name" ).value_or( fpKey ? Str::ToHex((byte*)fpKey->data(), fpKey->size()) : "" );
 		UserTarget = Json::FindString( Body, "target" ).value_or( UserName );

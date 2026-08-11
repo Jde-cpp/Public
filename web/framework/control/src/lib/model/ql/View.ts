@@ -109,7 +109,7 @@ export class ViewField{
 			const json = serialized.field;
 			this.qlField = serialized.schema.fields.find( f=>f.name==json.name )!;
 			this.style = json.style;
-			this._displayed = json.hidden ? false : undefined;
+			this._displayed = !json.hidden;//explicit, not the type default: toJson always stamps hidden when a field isn't displayed, so no flag means displayed - the default would re-hide an ID/list column the user checked
 			this.displayName = json.displayName ?? StringUtils.idToDisplay( this.name );
 		}
 	}
@@ -169,6 +169,7 @@ export class View{
 		this.sort = config.sort;
 		this.collectionName = schema.collectionName;
 		this.fields = this.columns( schema, config.configColumns, ["id", "attributes"] );
+		this.appendAlwaysQueried( schema );
 	}
 	private serializedConstructor( config:ViewSerializedArgs, schema:TableSchema ):void{
 		this.name = config.name;
@@ -186,11 +187,23 @@ export class View{
 		this.showSelector = config.showSelector;
 		this.sort = config.sort;
 		this.type = ViewType.User;
+		this.appendAlwaysQueried( schema );//toJson only persists displayed fields, so a saved view arrives without id/target
 	}
 	private tableConstructor(config:TableSettings, schema:TableSchema){
 		this.collectionName = schema.collectionName;
 		this.fields = this.columns( schema, config.columns!, config.excludedColumns ?? ["id", "attributes"] );
 		this.sort = typeof config.sort=="string" ? [{active: config.sort, direction: "asc"}] : config.sort ?? [];
+		this.appendAlwaysQueried( schema );
+	}
+	//id is the mutation key, target the navigation key (ql-list.onRowActivate) and deleted drives show-deleted - query() asks for them whether or not they are displayed, so every view must carry them
+	private appendAlwaysQueried( schema:TableSchema ):void{
+		for( let field of schema.fields.filter( f=>["id","deleted","target"].includes(f.name) && !this.fields.find(c=>c.name==f.name) ) ){
+			const viewField = new ViewField( {qlField:field, settings: {name: field.name, hidden: true}} );
+			if( field.name=="id" )
+				this.fields.unshift( viewField );
+			else
+				this.fields.push( viewField );
+		}
 	}
 	private columnsToQuery( excludedColumns:string[], includeDeleted:boolean ):ViewField[]{
 		return this.fields.filter( (x)=>
@@ -207,7 +220,6 @@ export class View{
 	private columns( schema:TableSchema, configColumns:(string|ViewFieldSettings)[], defaultHidden:string[] ):ViewField[]{
 		let selectCols = [];
 		let description; //want last
-		let id; //want first
 		for( let col of configColumns ){
 			const fieldName = typeof col=="string" ? col : col.name;
 			const settings = typeof col=="string" ? {} : col;
@@ -218,16 +230,6 @@ export class View{
 			else
 				selectCols.push( new ViewField({qlField:field, settings: settings}) );
 		}
-		//target is the navigation key (ql-list.onRowActivate), so it must be queried even when a TableSettings omits it - like id/deleted, add it hidden
-		for( let field of schema.fields.filter( f=>!selectCols.find( (c)=>c.name==f.name ) && (f.name=="id" || f.name=="deleted" || f.name=="target") ) ){
-			const viewField = new ViewField( {qlField:field, settings: {name: field.name, hidden: true}} );
-			if( field.name=="id" )
-				id = viewField;
-			else
-				selectCols.push( viewField );
-		}
-		if( id )
-			selectCols.unshift( id );
 		if( description )
 			selectCols.push( description );
 		return selectCols;

@@ -2,10 +2,11 @@
 #include "HttpRequest.h"
 #include "jde/fwk.h"
 #include "jde/fwk/exceptions/Exception.h"
+#include "jde/web/server/Server.h"
 
 namespace Jde::Web::Server{
 	struct RestException : Exception{
-		RestException( Exception&& inner, HttpRequest&& req )ι:Exception{ move(inner) },_request{move(req)}{}
+		RestException( Exception&& copyFrom, HttpRequest&& req )ι:Exception{ move(copyFrom) },_request{move(req)}{}
 		RestException( const RestException& rhs );
 		RestException( RestException&& ) = default;
 
@@ -44,6 +45,14 @@ namespace Jde::Web::Server{
 			if( auto detail = p->ClientDetail(); detail.size() )
 				res.body() += "  " + detail;
 		res.prepare_payload();
+		LOGSL( ELogLevel::Debug, _sl, ELogTags::HttpServerWrite, "[{}.{}.{}]HttpResponse:  {}({}){}",
+			hex(_request.SessionInfo ? _request.SessionInfo->SessionId : 0),
+			hex(_request._connectionId),
+			hex(_request._index),
+			_request.Target(),
+			(uint16)HttpStatus(),
+			res.body().substr(0, MaxLogLength())
+		);
 		return res;
 	}
 }

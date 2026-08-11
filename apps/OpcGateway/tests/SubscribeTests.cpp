@@ -75,7 +75,9 @@ namespace Jde::Opc::Gateway::Tests{
 		auto result = BlockAwait<ClientSocketAwait<FromServer::UnsubscribeAck>,FromServer::UnsubscribeAck>( _session->Unsubscribe(OpcServerTarget, {nodeId}) );
 		ASSERT_TRUE( result.successes_size()==1 );
 		TRACE( "-------------------------------------------------------------" );
-		std::this_thread::sleep_for( 2s );// Gateway waits for 1 seconds before destroying the subscription.
-		ASSERT_FALSE( _client->Processing() );
+		//teardown costs the gateway's 1s subscription wait + a 500ms poll tick + the 500ms idleDrain, so a fixed 2s sleep loses the tie by ~2ms.
+		sw.Reset();
+		while( _client->Processing() )
+			ASSERT_NO_THROW( sw.CheckTimeout(6s, 1ms) );
 	}
 }

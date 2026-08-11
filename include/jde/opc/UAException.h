@@ -11,11 +11,12 @@
 namespace Jde::Opc{
 	struct UAExParams{
 		ELogLevel Level{DefaultExceptionLevel};
+		EHttpStatus HttpStatus{EHttpStatus::InternalServerError};
 		EOpcLogTags Tags{EOpcLogTags::Opc};
 	};
 	struct UAException : ExternalException{
 		//UAException( StatusCode sc, ELogLevel level=Exception::DefaultLogLevel, SRCE )ι:ExternalException{ Message(sc), {}, sc, sl, level, sl, {} }{}
-		UAException( StatusCode sc, string what={}, SRCE, UAExParams params={} ):ExternalException{ Message(sc), what, {params.Level, (ELogTags)params.Tags, (uint32)sc}, sl }{}
+		UAException( StatusCode sc, string description={}, UAExParams params={}, SRCE ):ExternalException{ Message(sc), description, {params.Level, (ELogTags)params.Tags, (uint32)sc, params.HttpStatus}, sl }{}
 		UAException( UAException&& from )ι:ExternalException{ move(from) }{}
 		UAException( const UAException& from )ι:ExternalException{ from }{}
 		Ω Message( StatusCode sc )ι->const char*{ return UA_StatusCode_name(sc); }

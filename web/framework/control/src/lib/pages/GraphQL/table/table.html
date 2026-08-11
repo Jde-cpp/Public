@@ -13,7 +13,7 @@
 				<mat-checkbox (change)="toggleAll()" [checked]="selections().hasValue() && isAllSelected()" [indeterminate]="selections().hasValue() && !isAllSelected()" [aria-label]="checkboxLabel()"> </mat-checkbox>
 			</mat-header-cell>
 			<mat-cell *matCellDef="let row">
-				<mat-checkbox (click)="$event.stopPropagation()" (change)="toggle(row.id)" [checked]="selections().isSelected(row.id)" [aria-label]="checkboxLabel(row)"></mat-checkbox>
+				<mat-checkbox (click)="$event.stopPropagation()" (change)="toggle(row)" [checked]="selections().isSelected(row)" [aria-label]="checkboxLabel(row)"></mat-checkbox>
 			</mat-cell>
 		</ng-container>
 	}
@@ -40,8 +40,8 @@
 		<mat-cell *matCellDef="let element" class="dateColumn"> {{element[column] | date:'yy-MM-dd HH:mm a'}} </mat-cell>
 	</ng-container>
 	<ng-container [matColumnDef]="column" *ngFor="let column of boolColumnNames">
-		<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header> {{columnName(column)}} </mat-header-cell>
-		<mat-cell *matCellDef="let element"> {{element[column] ? '&#10003;' : '&#10005;'}} </mat-cell>
+		<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header class="boolColumn"> {{columnName(column)}} </mat-header-cell>
+		<mat-cell *matCellDef="let element" class="boolColumn"> {{element[column] ? '&#10003;' : '&#10005;'}} </mat-cell>
 	</ng-container>
 	<ng-container [matColumnDef]="column" *ngFor="let column of uintColumnNames">
 		<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header> {{columnName(column)}} </mat-header-cell>
