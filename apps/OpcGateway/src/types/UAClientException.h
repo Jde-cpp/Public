@@ -21,7 +21,7 @@ namespace Jde::Opc::Gateway{
 		α IsBadSession()Ι->bool{ return Code()==UA_STATUSCODE_BADSESSIONIDINVALID; }
 		//status plus the throw-site reason; the description names an operation or a configuration mismatch, never internals.
 		//α ClientDetail()Ι->string override{ return _detail.size() ? Ƒ("{} - {}", UAException::ClientDetail(), _detail) : UAException::ClientDetail(); }
-		α UserMessage()Ι->const string&;
+		α UserMessage()Ι->const string& override;
 		α what()const noexcept->const char* override;
 		[[noreturn]] α ThrowRest( UAClientException&& e, Web::Server::HttpRequest&& request )ε->void;
 	private:
