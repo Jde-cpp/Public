@@ -20,6 +20,6 @@ namespace Jde::DB::Sqlite::AppProcs{
 			if( onRow )
 				(*onRow)( Row{ {Value{*programId}, Value{*instanceId}, Value{procs.LastInsertRowId(db)}} } );
 			return y;
-		});
+		}, 4);
 	}
 }

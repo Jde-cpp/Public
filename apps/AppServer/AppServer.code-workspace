@@ -3,8 +3,9 @@
 		"window.title": "App",
 		"name": "AppServer",
 		"target": "Jde.App.Server",
+		"testTarget": "Jde.App.Server.Tests",
 		"subDir": "apps/${config:name}",
-		"workspace": "${workspaceFolder:AppServer}/..",
+		"workspace": "${workspaceFolder:src}/..",
 		"cmake.sourceDirectory": "${config:workspace}/../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"settings": "${workspaceFolder:config}/App.Server.jsonnet",
@@ -14,7 +15,11 @@
 	"folders": [
 		{
 			"path": "./src",
-			"name": "AppServer"
+			"name": "src"
+		},
+		{
+			"path": "./tests",
+			"name": "tests"
 		},
 		{
 			"path": "../../libs/app/shared",

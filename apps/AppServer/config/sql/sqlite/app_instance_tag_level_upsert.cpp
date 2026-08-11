@@ -11,6 +11,6 @@ namespace Jde::DB::Sqlite::AppProcs{
 			return exists
 				? procs.ExecuteStatement( db, "update app_instance_tag_levels set level_id=? where instance_id=? and tag=? and type=?", {params[3], params[0], params[2], params[1]}, nullptr, sl )
 				: procs.ExecuteStatement( db, "insert into app_instance_tag_levels( instance_id, type, tag, level_id ) values( ?, ?, ?, ? )", {params[0], params[1], params[2], params[3]}, nullptr, sl );
-		});
+		}, 4);
 	}
 }

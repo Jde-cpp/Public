@@ -86,7 +86,7 @@ namespace Jde{
 	}
 	α App::EndConnection( ConnectionPK connectionId, SL sl )ι->DB::ExecuteAwait::Task{
 		try{
-			co_await ds().Execute( {Ƒ("update {} set deleted={} where connection_id=?", connectionTableName(), ds().Syntax().UtcNow()), {DB::Value{connectionId}}}, sl );
+			co_await ds().Execute( {Ƒ("update {} set deleted={} where connection_id=? and deleted is null", connectionTableName(), ds().Syntax().UtcNow()), {DB::Value{connectionId}}}, sl );
 		}
 		catch( runtime_error& )
 		{}

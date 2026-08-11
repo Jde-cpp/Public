@@ -45,6 +45,7 @@ namespace Jde::Web::Server{
 		α LogWriteException( const runtime_error& e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α LogWriteException( str e, RequestId requestId, ELogLevel level=ELogLevel::Debug, SRCE )ι->void;
 		α QueryClientResults( string&& queryResult, RequestId requestId )ι->void;
+		α ResumeQueryException( RequestId requestId, Exception&& e )ι->bool;//fails a pending QueryClient; false if requestId isn't one of ours, so the caller can try another router (e.g. a forwarded execution).
 		α Schemas()Ι->const vector<sp<DB::AppSchema>>&{ return LocalQL()->Schemas(); }
 		α Session()Ι->const sp<SessionInfo>&{ return _sessionInfo; }
 		α SessionId()ι{ return _sessionInfo ? _sessionInfo->SessionId : SessionPK{}; }

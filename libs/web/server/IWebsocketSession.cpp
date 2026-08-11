@@ -211,6 +211,23 @@ namespace Jde::Web::Server{
 		else
 			WARNT( ELogTags::SocketServerRead, "[{}]No pending query", hex(requestId) );
 	}
+	α IWebsocketSession::ResumeQueryException( RequestId requestId, Exception&& e )ι->bool{
+		QueryClientAwait::Handle h;
+		{
+			lg l{ _pendingQueriesMutex };
+			auto it = _pendingQueries.find( requestId );
+			if( it==_pendingQueries.end() )
+				return false;//not a query we issued - leave `e` intact for the caller's next router.
+			h = it->second.first;
+			it->second.first = nullptr;
+			it->second.second->Cancel();//will delete iterator
+		}
+		if( h ){
+			h.promise().SetExp( move(e) );
+			h.resume();
+		}
+		return true;
+	}
 	α IWebsocketSession::SetSessionId( SessionPK sessionId )ι->void{
 		if( !_sessionInfo )
 			_sessionInfo = ms<SessionInfo>();

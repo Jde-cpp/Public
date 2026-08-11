@@ -98,12 +98,27 @@ namespace	Sessions{
 		return steady_clock::now()+( HasSocket ? sockExpirationDuration() : Sessions::RestSessionTimeout() );
 	}
 
-	α UpdateExpiration( SessionPK sessionId, str /*userEndpoint*/, bool socket )ε->sp<SessionInfo>{
+	Ω normalizedAddress( str s )ι->string{//::ffff:127.0.0.1 (an IPv4-mapped IPv6 address) and 127.0.0.1 name the same peer - strip the prefix so they compare equal.
+		constexpr sv mapped{ "::ffff:" };
+		return s.starts_with(mapped) && s.find('.')!=string::npos ? s.substr(mapped.size()) : s;
+	}
+	Ω sameEndpoint( str a, str b )ι->bool{//is this the address the session was minted for?
+		let na = normalizedAddress( a ); let nb = normalizedAddress( b );
+		if( na==nb )
+			return true;
+		boost::system::error_code eca, ecb;
+		let aa = net::ip::make_address( na, eca ); let bb = net::ip::make_address( nb, ecb );
+		return !eca && !ecb && aa.is_loopback() && bb.is_loopback();//127.0.0.1 vs ::1 - same host, so not a trust boundary; every other address requires an exact match.
+	}
+	α UpdateExpiration( SessionPK sessionId, str userEndpoint, bool socket )ε->sp<SessionInfo>{
 		sp<SessionInfo> info;
-		_sessions.visit( sessionId, [&info, sessionId, socket](auto& kv){
+		_sessions.visit( sessionId, [&info, sessionId, userEndpoint, socket](auto& kv){
 			sp<SessionInfo> existing = kv.second;
-			//let& existingAddress = existing->UserEndpoint;
-			//THROW_IF( existingAddress!=userEndpoint, "[{}]existingAddress='{}' does not match userEndpoint='{}'", sessionId, existingAddress, userEndpoint );
+			let& existingAddress = existing->UserEndpoint;
+			if( !sameEndpoint(existingAddress, userEndpoint) ){//proof of possession - a session id is only a credential from the address it was minted for; otherwise a guessed/leaked id is a full takeover.  Return null so the caller reports the generic "Session not found", not an existence oracle for a bound-elsewhere id.
+				WARNT( ELogTags::HttpServerRead, "[{:x}]Session endpoint '{}' does not match request endpoint '{}' - denying.", sessionId, existingAddress, userEndpoint );
+				return;
+			}
 			auto& existingExpiration = existing->Expiration;
 			if( existingExpiration>steady_clock::now() ){
 				existing->HasSocket |= socket;//sticky - a socket connecting on a rest session promotes it to the socket timeout, later rest requests must not demote it.
