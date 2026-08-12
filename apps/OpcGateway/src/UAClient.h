@@ -76,6 +76,7 @@ namespace Jde::Opc::Gateway{
 	private:
 		Ω Unsubscribe( const sp<IDataChange>&& dataChange )ι->void;
 		Ω StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void;
+		Ω ServiceNotificationCallback( UA_Client* ua, UA_ApplicationNotificationType type, const UA_KeyValueMap payload )ι->void;
 		α Configuration()ε->UA_ClientConfig*;
 		α Create()ε->UA_Client*;
 		α Connect()ε->void;
@@ -84,12 +85,6 @@ namespace Jde::Opc::Gateway{
 		α ApplicationUri()Ι->string;//the endpoint filter open62541 matches against the server's ApplicationUri - not clientDescription's.
 
 		α CryptoSettings()Ι->Crypto::CryptoSettings{ return CryptoSettings(Target(), _opcServer.CertificateUri); }
-
-		//optional<Crypto::CryptoSettings> _cryptoSettings;
-		//Ω PrivateKey( const ServerCnnctnNK& target )ι->Crypto::PrivateKeySettings;
-		//α PrivateKey()Ι->Crypto::PrivateKeySettings{ return PrivateKey( Target() ); }
-		//Ω Certificate( const ServerCnnctnNK& target )ι->Crypto::Certificate;
-		//α Certificate()Ι->Crypto::Certificate{ return Certificate( Target() ); }
 
 		ServerCnnctn _opcServer;
 

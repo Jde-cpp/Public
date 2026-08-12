@@ -23,9 +23,8 @@ namespace Jde{
 		ASSERT( !_h && "Timer destroyed before awaited completion." );
 	}
 
-	α DurationTimer::Start()ε->void{
+	α DurationTimer::Start()ι->void{
 		lg _{_mutex};
-		THROW_IF( !_h, "Already triggered." );
 		_timer.expires_after( _duration );
 		auto handler = [h=_h](const boost::system::error_code& ec){
 			if( !ec )

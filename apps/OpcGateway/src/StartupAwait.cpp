@@ -21,7 +21,6 @@
 namespace Jde::Opc::Gateway{
 	extern Duration _pingInterval;
 	extern Duration _ttl;
-	extern Duration _idleDrain;
 	StartupAwait::StartupAwait( jobject webServerSettings, jobject userName, SL sl )ι:
 		VoidAwait{sl},
 		_webServerSettings{move(webServerSettings)},
@@ -44,9 +43,12 @@ namespace Jde::Opc::Gateway{
 			else if( Settings::FindBool("/dbServers/sync").value_or(false) || schema->DS()->RequiresSync() )
 				DB::SyncSchema( *schema, QLPtr() );
 
+			//value_or defaults mirror config/Opc.Gateway.jsonnet - keep them in lockstep so a deployment missing a key runs what the shipped config documents.
+			_pingInterval = Settings::FindDuration("/gateway/pingInterval").value_or( 30s );
+			_ttl = Settings::FindDuration("/gateway/ttl").value_or( 2min );
 			Crypto::CryptoSettings sslSettings{ Json::FindDefaultObject(_webServerSettings, "ssl") };
 			Crypto::EnsureKeyCertificate( sslSettings );
-			StartWebServer( move(_webServerSettings) );
+			StartWebServer( move(_webServerSettings) );//must follow the _pingInterval/_ttl assignments - requests can hit ProcessingLoop once the server is up.
 			auto accessSchema = DB::GetAppSchema( "access", authorize );
 			auto appClient = AppClient();
 			appClient->SubscriptionSchemas.push_back( accessSchema );
@@ -59,10 +61,6 @@ namespace Jde::Opc::Gateway{
 			co_await Access::Client::Configure( accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, appClient->Listener(), {} );
 			Process::AddShutdownFunction( [](bool terminate, SL sl){UAClient::Shutdown(terminate, sl);} );
 			QL::Hook::Add( mu<OpcQLHook>() );
-
-			_pingInterval = Settings::FindDuration("/gateway/pingInterval").value_or( 60s );
-			_ttl = Settings::FindDuration("/gateway/ttl").value_or( 5min );
-			_idleDrain = Settings::FindDuration("/gateway/idleDrain").value_or( 500ms );//must exceed the round trip to the slowest server, or open62541's own post-activation namespace read times out.
 			INFOT( ELogTags::App, "---Started {}---", "OPC Gateway" );
 			Resume();
 		}
