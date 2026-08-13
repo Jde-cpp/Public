@@ -1,16 +1,25 @@
 local args = import 'args.libsonnet';
 local logsDir = args.logsDir;
+local embeddedAppServer = true; //false = run against a live AppServer on localhost:1967.
 {
 	testing:{
 		tests:: "AccessTests.UserAccess",
 		recreateDB: true,
-		embeddedAppServer: true,
+		embeddedAppServer: embeddedAppServer,
 		UANodeSets: "$(UA_NODE_SETS)"
+	},
+	//a live AppServer is its own root - without this anchor the verify-by-default client rejects its self-signed cert
+	//on the first login and the whole suite fails in StartupAwait.  Only for the live mode: the embedded server's
+	//just-generated cert is anchored programmatically in main.cpp, and an unconditional caFile would log a load error
+	//on every host with no deployed AppServer.
+	[if !embeddedAppServer then "web"]: {
+		client:{ ssl:{ caFile: args.certsDir("AppServer")+"/AppServer.pem" } }
 	},
 	opc: args.opc,
 	access:{
 		trustedCertDirs: [
-			"$(ProgramData)/Jde-Cpp/$(PRODUCT_NAME)/ssl/certs"
+			"$(ProgramData)/Jde-Cpp/$(PRODUCT_NAME)/ssl/certs",
+			"$(ProgramData)/Jde-Cpp/OpcServer/ssl/certs" //the app logs into the AppServer with its web cert (StartupAwait -> SslSettings), and http.opcServer.ssl's productName puts that cert in the OpcServer tree, not $(PRODUCT_NAME)'s.
 		]
 	},
 	opcServer:{

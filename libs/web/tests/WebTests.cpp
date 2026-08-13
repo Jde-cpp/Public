@@ -265,7 +265,7 @@ namespace Jde::Web{
 		req.LogRead( "unresolved session" );
 	}
 
-	//C1: the client verifies peers now.  The mock's self-signed cert is a trust anchor (ServerMock::Start registers it) and names
+	//C1: the client verifies peers now.  The mock's self-signed cert is a trust anchor (Web::Server::Start self-registers it) and names
 	//DNS:localhost,IP:127.0.0.1 - trusting it must not make it acceptable for any other host we happen to dial.
 	TEST_F( WebTests, TlsVerifiesHostName ){
 		auto ping = []( string host ){ return ClientHttpAwait{ move(host), "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} }; };
