@@ -276,7 +276,7 @@ namespace QL{
 	}
 
 	α QueryType( const TableQL& typeTable )ε->jobject{
-		let typeName = Json::AsString( typeTable.Args, "name" );
+		let& typeName = typeTable.As<jstring>( "name" ); //variable-aware: raw Args holds the '\b$var' marker when the caller binds name via $variables, which made Find miss the config types.
 		auto dbTable = DB::AsTable( typeTable.DBTable() );
 		jobject y;
 		for( let& qlTable : typeTable.Tables ){

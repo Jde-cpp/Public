@@ -31,6 +31,13 @@ namespace Jde::DB::MySql::Tests{
 		EXPECT_EQ( MySqlSyntax::Instance().EscapeDdl("s.t"), "`s`.`t`" );    //each part quoted separately.
 	}
 
+	//SqlName() quotes a reserved table name in generated sql - `groups` is reserved in mysql 8+ but fine with a prefix or in the base dialect.
+	TEST( SyntaxTests, IsReservedWord ){
+		EXPECT_TRUE( MySqlSyntax::Instance().IsReservedWord("groups") );
+		EXPECT_FALSE( MySqlSyntax::Instance().IsReservedWord("access_groups") );
+		EXPECT_FALSE( Syntax::Instance().IsReservedWord("groups") );
+	}
+
 	TEST( SyntaxTests, Limit ){
 		const auto& my = MySqlSyntax::Instance();
 		const auto sql = string{ "select * from t" };

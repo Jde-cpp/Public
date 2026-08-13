@@ -68,7 +68,7 @@ namespace Jde::DB{
 	}
 
 	α Column::FQName()Ι->string{
-		return Ƒ( "{}.{}", Table->DBName, Name );
+		return Ƒ( "{}.{}", Table->SqlName(), Name );
 	}
 
 	α Column::IsEnum()Ι->bool{

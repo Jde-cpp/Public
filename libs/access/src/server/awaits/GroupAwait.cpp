@@ -31,7 +31,7 @@ namespace Jde::Access::Server{
 				_query.Tables.erase( p );
 				return ql;
 			}();
-			GetTable( "groupings" ).Authorize( Access::ERights::Read, _executer, _sl );
+			GetTable( "groups" ).Authorize( Access::ERights::Read, _executer, _sl );
 			optional<jarray> members;
 			bool haveId{};
 			_query.JsonName = _query.IsPlural() ? "identities" : "identity"; //from members, want distinct + nothing in members table except for members.
@@ -104,7 +104,7 @@ namespace Jde::Access::Server{
 		}
 	}
 
-	//{ mutation addGrouping( "id":14, "memberId":[15,13] ) }
+	//{ mutation addGroup( "id":14, "memberId":[15,13] ) }
 	α GroupHook::AddRemoveArgs( const QL::MutationQL& m )ι->std::pair<GroupPK, flat_set<IdentityPK::Type>>{
 		const GroupPK groupPK{ Json::AsNumber<GroupPK::Type>(m.Args, "id") };
 		flat_set<IdentityPK::Type> memberPKs;
@@ -121,7 +121,7 @@ namespace Jde::Access::Server{
 	}
 
 	α GroupHook::AddBefore( const QL::MutationQL& m, UserPK /*executer*/, SL sl )ι->HookResult{
-		if( m.TableName()=="groupings" ){
+		if( m.TableName()=="groups" ){
 			auto [groupPK, memberPKs] = AddRemoveArgs( m );
 			try{
 				Authorizer().TestAddGroupMember( groupPK, move(memberPKs), sl );

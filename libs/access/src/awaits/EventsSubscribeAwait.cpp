@@ -43,8 +43,8 @@ namespace Jde::Access{
 		jobject vars{ {"schemas", boost::json::value_from(_schemas)} };
 		try{
 			co_await EventTypeSubscribeAwait{ _qlServer, "user", User, "id", Created | Deleted | Restored | Purged, {}, _executer, _listener };
-			co_await EventTypeSubscribeAwait{ _qlServer, "grouping", Group, "id", Deleted | Restored | Purged, {}, _executer, _listener };
-			co_await EventTypeSubscribeAwait{ _qlServer, "grouping", Group, "id memberId", Added | Removed, {}, _executer, _listener };
+			co_await EventTypeSubscribeAwait{ _qlServer, "group", Group, "id", Deleted | Restored | Purged, {}, _executer, _listener };
+			co_await EventTypeSubscribeAwait{ _qlServer, "group", Group, "id memberId", Added | Removed, {}, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "role", Role, "id", Deleted | Restored | Purged, {}, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "role", Role, "id permissionRight{id allowed denied resource(schemaName:$schemas){id target schemaName target criteria}} role{id}", Added | Removed, vars, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "resources", Resources, "(schema:$schemas)id schemaName target criteria deleted", Created, vars, _executer, _listener };

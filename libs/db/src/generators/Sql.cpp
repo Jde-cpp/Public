@@ -51,7 +51,7 @@ namespace Jde{
 		sql += "select ";
 		bool haveDeleted{};
 		for( let& c : columns ){
-			let columnName = c->Table->DBName+'.'+c->Name;
+			let columnName = c->Table->SqlName()+'.'+c->Name;
 			if( c->Type==EType::DateTime ){
 				sql += c->Table->Syntax().DateTimeSelect( columnName )+' '+c->Name + ',';
 				if( c->Name=="deleted" )

@@ -1,6 +1,6 @@
 mutation{
 	createRole( name:"read", name:"readers", target:"readers", description: "test-data" )
-	addRole( target:"readers", permissionRight:{allowed:2, denied:0, resource:{target:"groupings"}} )
+	addRole( target:"readers", permissionRight:{allowed:2, denied:0, resource:{target:"groups"}} )
 	addRole( target:"readers", permissionRight:{allowed:2, denied:0, resource:{target:"providerTypes"}} )
 	addRole( target:"readers", permissionRight:{allowed:2, denied:0, resource:{target:"roles"}} )
 	addRole( target:"readers", permissionRight:{allowed:2, denied:0, resource:{target:"users"}} )
@@ -10,11 +10,11 @@ mutation{
 	createRole( name:"security", target:"security", description: "test-data" )
 	createRole( name:"Opc Gateway Permissions", target:"OpcGateway", description: "test-data" )
 
-	createGroupings( target:"admins" )
-	createGroupings( target:"operators" )
-	createGroupings( target:"managers" )
-	createGroupings( target:"complianceOfficers" )
-	createGroupings( target:"opcGateways" )
+	createGroups( target:"admins" )
+	createGroups( target:"operators" )
+	createGroups( target:"managers" )
+	createGroups( target:"complianceOfficers" )
+	createGroups( target:"opcGateways" )
 
 	createUser( target:"admin1" )
 	createUser( target:"op1" )

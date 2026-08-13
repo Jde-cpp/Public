@@ -24,10 +24,10 @@ export class Group extends TargetRow<Group>{
 			this.roles = cloneClassArray( obj.roles, Role );
 			this.permissions = cloneClassArray( obj.permissions, Permission );
 		}
-		if( obj.members ){
+		if( obj.groupMembers ?? obj.members ){
 			this.childGroups = [];
 			this.users = [];
-			for( let identity of obj.members ?? [] ){
+			for( let identity of obj.groupMembers ?? obj.members ?? [] ){
 				if( identity.isGroup )
 					this.childGroups.push( new Group(identity) );
 				else
@@ -65,5 +65,5 @@ export class Group extends TargetRow<Group>{
 		properties.childGroups=undefined;
 		return properties;
 	}
-	static typeName = "Grouping";
+	static typeName = "Group";
 }

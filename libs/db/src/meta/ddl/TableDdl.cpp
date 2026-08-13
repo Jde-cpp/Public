@@ -15,7 +15,7 @@ namespace Jde::DB{
 	α TableDdl::CreateStatement()Ε->string{
 		let& syntax = Syntax();
 		std::ostringstream createStatement;
-		createStatement << "create table " << DBName << "(";
+		createStatement << "create table " << SqlName() << "(";
 		string suffix = "";
 		for( let& c : Columns ){
 			createStatement << suffix << endl << "\t" << ColumnDdl::CreateStatement( *c );
@@ -37,7 +37,7 @@ namespace Jde::DB{
 				if( !c->NeedsFK() )
 					continue;
 				let& pk = *c->PKTable;
-				createStatement << suffix << endl << "\tforeign key(" << c->Name << ") references " << pk.DBName << "(" << pk.GetPK()->Name << ")";
+				createStatement << suffix << endl << "\tforeign key(" << c->Name << ") references " << pk.SqlName() << "(" << pk.GetPK()->Name << ")";
 				suffix = ",";
 			}
 		}
@@ -52,7 +52,7 @@ namespace Jde::DB{
 		if( let index = procName.find_first_of('.'); index<procName.size()-1 )
 			procName = procName.substr( index+1 );
 		osCreate << "create procedure " << this->Schema->DBSchema->Name << "." << syntax.EscapeDdl( procName ) << "(";
-		osInsert << "\tinsert into " << DBName << "(";
+		osInsert << "\tinsert into " << SqlName() << "(";
 		osValues << "\t\tvalues(";
 		let prefix = syntax.ProcParameterPrefix().empty() ? "_" : syntax.ProcParameterPrefix();
 		char delimiter = ' ';

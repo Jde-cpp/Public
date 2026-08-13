@@ -9,7 +9,7 @@ namespace Jde::DB{
    	α operator==( const AliasCol& b )Ι{ return *Column==*b.Column && Alias==b.Alias; }
 		α ToString( bool useAlias=true )Ι->string{
 			const auto alias = useAlias
-				? Alias.empty() && Column->Table ? Column->Table->DBName : Alias
+				? Alias.empty() && Column->Table ? Column->Table->SqlName() : Alias
 				: "";
 			return alias.empty() ? Column->Name : alias+'.'+Column->Name;
 		}

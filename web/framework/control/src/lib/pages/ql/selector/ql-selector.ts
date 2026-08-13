@@ -32,7 +32,7 @@ export class QLSelector implements OnInit{
 			let rows = await this.ql().query(`${this.collectionName()}${input}{${columns.join(" ")}}`, {}, (m)=>console.log(m)) as any;
 			this.data.set( rows[this.collectionName()] );
 			if( !this.schemaInput() )
-				this.#schema = await this.ql().schemaWithEnums( this.collectionName(), (m)=>console.log(m) );
+				this.#schema = await this.ql().schemaWithEnums( this.type(), (m)=>console.log(m) ); //takes the type name ("Group"), not the collection ("groups") - it asserts on a lower-case first char.
 			let view = new View( {configColumns: columns, sort: [{active: "name", direction: "asc"}]}, this.schema );
 			this.displayedFields = view.fields.filter( f=>f.displayed );
 			this.isLoading.set( false );

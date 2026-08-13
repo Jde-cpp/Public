@@ -39,7 +39,7 @@ export const routes: Routes = [
 				resolve: { data: QLListResolver },
 				data: { collections: [
 					"users",
-					{id:"groups", collectionName: "groupings"},
+					{id:"groups", collectionName: "groups"},
 					"roles",
 					{id:"resources", canPurge:false}] }
 			},

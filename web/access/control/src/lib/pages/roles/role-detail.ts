@@ -7,7 +7,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
 import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
-import { arraysEqual, cloneClassArray, DetailResolverData, SnackbarService, IGraphQL, Properties, QLSelector, TableSettings, TargetRow, toIdArray} from 'jde-framework';
+import { arraysEqual, cloneClassArray, DetailResolverData, SnackbarService, IGraphQL, Properties, QLSelector, TableSettings, TargetRow, toIdArray, Style} from 'jde-framework';
 import { Role, RolePK } from '../../model/Role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
 import { Permission } from '../../model/Permission';
@@ -113,5 +113,9 @@ export class RoleDetail implements OnDestroy, OnInit{
 	ql:IGraphQL = inject( AccessService );
 }
 export const roleTableSettings:TableSettings = {
-	excludedColumns:["permissions"]
+	excludedColumns:["permissions"],
+	columns: [
+		{ name:"name", style: new Style(300) },
+		"description"
+	]
 }

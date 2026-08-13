@@ -104,7 +104,7 @@ export class UserDetail implements OnDestroy, OnInit{
 export const userTableSettings:TableSettings = {
 	excludedColumns: ["isGroup"],
 	columns: [
-		{ name:"target", displayName: "Trgt", style: new Style(300) },
+		{ name:"name", style: new Style(300) },
 		{ name:"provider", style: new Style(100) },
 		"description"
 	]
