@@ -50,8 +50,21 @@ namespace Jde::App{
 		try{
 			UpdateRuntime<Logging::SpdLog>( args, "text" );
 			UpdateRuntime<App::ProtoLog>( args, "binary" );
+			//persist:false - the app server pushed levels it has already written to instance_tag_levels.  Writing them back
+			//would re-enter updateInstanceTagLevel there, which would push again, and neither side would ever settle.
+			if( let persist = args.if_contains("persist"); persist && persist->is_bool() && !persist->get_bool() ){
+				Resume( jvalue{true} );
+				return;
+			}
 			THROW_IF( !_appClient->InstancePK(), "No App InstancePK available for LogSettings update." );
 			auto m = _mutation;
+			m.Args.erase( "persist" );
+			//updateLogSetting takes tag->level; updateInstanceTagLevel takes a record per override, since a combined tag is
+			//no object key there.  Convert on the way out or the app server sees an object where it wants a list.
+			for( let type : {"text", "binary", "appServer"} ){
+				if( auto group = m.Args.if_contains(type); group && group->is_object() )
+					*group = ToTagLevelArray( group->get_object() );
+			}
 			m.Args["id"] = _appClient->InstancePK();
 			m.JsonTableName = "instanceTagLevels";
 			m.CommandName = "updateInstanceTagLevel";

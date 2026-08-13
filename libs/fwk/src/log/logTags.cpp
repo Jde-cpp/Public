@@ -53,26 +53,27 @@ namespace Jde{
 			y.insert( additional.begin(), additional.end() );
 		}
 		if( user ){
-			y.emplace( "httpClientRead", underlying(ELogTags::HttpClientRead) );
-			y.emplace( "httpClientWrite", underlying(ELogTags::HttpClientWrite) );
-			y.emplace( "httpClientSessions", underlying(ELogTags::HttpClientSessions) );
-			y.emplace( "httpServerRead", underlying(ELogTags::HttpServerRead) );
-			y.emplace( "httpServerWrite", underlying(ELogTags::HttpServerWrite) );
-			y.emplace( "socketClientRead", underlying(ELogTags::SocketClientRead) );
-			y.emplace( "socketClientReadSub", underlying(ELogTags::SocketClientReadSub) );
-			y.emplace( "socketClientWrite", underlying(ELogTags::SocketClientWrite) );
-			y.emplace( "socketClientWriteSub", underlying(ELogTags::SocketClientWriteSub) );
-			y.emplace( "socketServerRead", underlying(ELogTags::SocketServerRead) );
-			y.emplace( "socketServerWrite", underlying(ELogTags::SocketServerWrite) );
+			//named by ToString, not by hand: "socketClientReadSub" was no more a tag name than ["socket","client","read"]
+			//was - ToLogTags knows neither - so the catalogue offered the ui rows it could not then save.  It also has to
+			//be the *same* spelling the logSetting/instanceTagLevel answers carry, or the ui shows one tag as two rows.
+			constexpr array<ELogTags,11> composites{
+				ELogTags::HttpClientRead, ELogTags::HttpClientWrite, ELogTags::HttpClientSessions,
+				ELogTags::HttpServerRead, ELogTags::HttpServerWrite,
+				ELogTags::SocketClientRead, ELogTags::SocketClientReadSub,
+				ELogTags::SocketClientWrite, ELogTags::SocketClientWriteSub,
+				ELogTags::SocketServerRead, ELogTags::SocketServerWrite
+			};
+			for( let tags : composites )
+				y.emplace( ToString(tags, false), underlying(tags) );
 		}
 		return y;
 	}
 }
 
 #pragma warning( disable:4334 )
-α Jde::ToArray( ELogTags tags )ι->jarray{
+α Jde::ToValue( ELogTags tags )ι->jvalue{
 	if( tags==ELogTags::None )
-		return { string{ELogTagStrings[0]} };
+		return jvalue( jstring{ELogTagStrings[0]} );//parenthesized: jvalue{x} prefers value's initializer_list constructor, which wraps x in an array.
 	jarray tagStrings;
 	for( uint i=1; i<ELogTagStrings.size(); ++i ){
 		if( (uint)tags & (uint)(1ul<<(i-1ul)) )
@@ -83,25 +84,34 @@ namespace Jde{
 		if( additional.size() )
 			tagStrings.push_back( jstring{additional} );
 	}
-	return tagStrings.empty() ? jarray{ jstring{ELogTagStrings[0]} } : tagStrings;
+	return tagStrings.size()==1
+		? tagStrings.front()//the one tag, bare - ELogTagStrings[0] here spelled every single-tag value "none".
+		: tagStrings.empty()
+			? jvalue{}
+			: tagStrings;
 }
 α Jde::ToString( ELogTags tags, bool outputArray )ι->string{
-	auto array = ToArray( tags );
+	auto value = ToValue( tags );
 	if( outputArray )
-		return serialize( move(array) );
+		return serialize( move(value) );
 	else{
-		string result; result.reserve( array.size()*12 );
-		for( auto&& item : array ){
-			if( !result.empty() )
-				result += "_";
-			result += move( item.as_string() );
+		let isArray = value.is_array();
+		string y;
+		if( isArray ){
+			for( auto&& item : value.get_array() ){
+				if( !y.empty() )
+					y += TagSeparator;
+				y += move( item.as_string() );
+			}
 		}
-		return result;
+		else if( value.is_string() )//null when the tags are set but none of them nameable; get_string would throw out of a noexcept function.
+			y = move(value.get_string());
+		return y;
 	}
 }
 
 α Jde::ToLogTags( sv name )ι->ELogTags{
-	auto flags = Str::Split( name, "_" );
+	auto flags = Str::Split( name, TagSeparator );
 	if( name=="default" )
 		return ELogTags::None;
 	ELogTags y{};
@@ -137,6 +147,68 @@ namespace Jde{
 		WARNT( ELogTags::Settings, "Expected string or array for tags but got {}", Json::Kind(v.kind()) );
 		return ELogTags::None;
 	}
+}
+
+α Jde::ToTagName( const jvalue& tags )ι->string{
+	string y;
+	if( let s = tags.try_as_string(); s )
+		y = string{ (sv)*s };
+	else if( let parts = tags.try_as_array(); parts ){
+		for( let& part : *parts ){
+			if( let p = part.try_as_string(); p ){
+				if( !y.empty() )
+					y += TagSeparator;
+				y += (sv)*p;
+			}
+		}
+	}
+	return y;
+}
+
+//A combined tag can only be spelled as an array, and an array is no object key - so the wire carries tags as *values*,
+//both in the instanceTagLevel answer (grouped under the level) and in the updateInstanceTagLevel argument (a record per
+//override).  SetLevels and the config file key on the tag, so these flatten.  Lossless: the array joins back with the
+//'.' ToLogTags splits on, and "default" passes through untouched.
+α Jde::ToTagLevels( const jobject& levelTags )ι->jobject{
+	jobject y;
+	for( let& [level, tags] : levelTags ){
+		let array = tags.try_as_array();
+		if( !array )
+			continue;
+		for( let& tag : *array ){
+			if( let name = ToTagName(tag); !name.empty() )
+				y[name] = jstring{ level };
+		}
+	}
+	return y;
+}
+α Jde::ToTagLevels( const jarray& tagLevels )ι->jobject{
+	jobject y;
+	for( let& entry : tagLevels ){
+		let o = entry.try_as_object();
+		if( !o )
+			continue;
+		let tags = o->if_contains( "tags" );
+		let name = tags ? ToTagName( *tags ) : string{};
+		if( name.empty() )
+			continue;
+		let level = o->if_contains( "level" );
+		y[name] = level ? *level : jvalue{};//no level at all reads as null - the same "remove this override" a null does.
+	}
+	return y;
+}
+α Jde::ToTagLevelArray( const jobject& tagLevels )ι->jarray{
+	jarray y;
+	for( let& [name, level] : tagLevels ){
+		jarray tags;
+		for( let& part : Str::Split(name, TagSeparator) )
+			tags.push_back( jstring{part} );
+		jobject entry;
+		entry["tags"] = move( tags );
+		entry["level"] = level;
+		y.push_back( move(entry) );
+	}
+	return y;
 }
 
 namespace Jde{
@@ -233,6 +305,12 @@ namespace Jde{
 	α LogTags::SetLevel( ELogTags tags, ELogLevel level )ι->void{
 		_configuredTags.insert_or_assign( tags, level );
 		ExtrapolatedTags = _configuredTags;
+		UpdateCumulative( Logging::Loggers() );
+	}
+
+	α LogTags::ClearLevel( ELogTags tags )ι->void{
+		_configuredTags.erase( tags );
+		ExtrapolatedTags = _configuredTags;//MinLevel memoizes into ExtrapolatedTags, so the cleared tag has to be dropped from the cache too, not just the configuration.
 		UpdateCumulative( Logging::Loggers() );
 	}
 

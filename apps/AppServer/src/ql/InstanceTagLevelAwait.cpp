@@ -2,13 +2,20 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/app/usings.h>
+#include "../LocalClient.h"
 #include "../LogData.h"
+#include "../ServerSocketSession.h"
+#include "../WebServer.h"
+#include "jde/fwk/log/break.h"
 
 
 #define let const auto
 namespace Jde::App::Server{
 
-	//logSettings( programInstanceId:42 ){ text binary tags }
+	//instanceTagLevel( id:42 ){ text binary appServer } -> { "text": {"Debug":["sql",["socket","client","read"]], "Information":["default"]} }
+	//Grouped by level, with the tags as the values: a multi-tag override has no name of its own - as a key ToString spells
+	//it `["socket","client","read"]`, which is not a tag name and comes back as one - but as a value ToValue's array feeds
+	//straight into ToLogTags( jvalue ).  Levels also repeat far more than tags do, so the object is smaller this way.
 	α InstanceTagLevelAwait::Execute()ι->TAwait<vector<DB::Row>>::Task{
 		try{
 			auto schema = AppSchema();
@@ -23,17 +30,25 @@ namespace Jde::App::Server{
 			auto text = _query.FindColumn("text") ? jobject{} : optional<jobject>{};
 			auto binary = _query.FindColumn("binary") ? jobject{} : optional<jobject>{};
 			auto appServer = _query.FindColumn("appServer") ? jobject{} : optional<jobject>{};
+			auto add = []( optional<jobject>& group, ELogTags tag, ELogLevel level ){
+				if( !group )
+					return;
+				auto& tags = (*group)[ ToString(level) ];
+				if( !tags.is_array() )
+					tags.emplace_array();
+				//tag 0 is spelled "default" by the mutation, the logSetting query and the ui catalogue; ToValue spells it "none".
+				tags.get_array().push_back( tag==ELogTags::None ? jvalue(jstring{"default"}) : ToValue(tag) );
+			};
 			for( auto&& row : rows ){
 				let type = row.GetString( 0 );
-				let tag = row.GetUInt( 1 );
-				let tagName = tag==0 ? "default" : ToString( (ELogTags)tag );
-				let level = (ELogLevel)row.GetUInt8Opt(2).value_or(0);
-				if( type=="text" && text )
-					(*text)[tagName] = ToString( level );
-				else if( type=="binary" && binary )
-					(*binary)[tagName] = ToString( level );
-				else if( type=="appServer" && appServer )
-					(*appServer)[tagName] = ToString( level );
+				let tag = (ELogTags)row.GetUInt( 1 );
+				let level = (ELogLevel)row.GetUInt8( 2 );
+				if( type=="text" )
+					add( text, tag, level );
+				else if( type=="binary" )
+					add( binary, tag, level );
+				else if( type=="appServer" )
+					add( appServer, tag, level );
 			}
 			jobject y;
 			if( text )
@@ -48,7 +63,30 @@ namespace Jde::App::Server{
 			ResumeExp( move(e) );
 		}
 	}
-	//updateLogSettings( programInstanceId: 42, text(default: Information,settings: Warning), binary(...) )
+	//The rows are the record, but the instance is what has to change.  Hand it the same levels as an updateLogSetting
+	//mutation so they take effect without a restart - persist:false, since we have already written them and a write-back
+	//would re-enter this mutation and push again, forever.  Detached: a wedged instance must not delay the rows' result.
+	Ω pushRuntime( ProgInstPK instanceId, jobject args, UserPK executer, SL sl )ι->TAwait<jvalue>::Task{
+		try{
+			args["persist"] = false;
+			QL::TableQL ql{ "updateLogSetting", move(args), ms<jobject>(), {}, true, sl };
+			if( instanceId==AppClient()->InstancePK() ) //our own levels: there is no socket back to this process.
+				co_await *AppClient()->Query<jvalue>( ql.ToString(), {}, true, sl );
+			else if( auto session = FindInstance(instanceId); session ){
+				IWebsocketSession& base = *session;//ServerSocketSession's own QueryClient override hides the awaitable-returning overloads.
+				co_await base.QueryClient( move(ql), executer, sl );
+			}
+			else
+				TRACET( ELogTags::Settings, "[{}]Instance is not connected - the levels take effect when it next starts.", instanceId );
+		}
+		catch( runtime_error& e ){
+			Exception{ move(e), ExceptionArgs{ELogLevel::Warning, ELogTags::Settings}, sl };//the rows are written either way; a failed push is not a failed mutation.
+		}
+	}
+
+	//updateInstanceTagLevel( id:42, text:[{tags:["settings"],level:"Warning"},{tags:["crypto"],level:null}], binary:[...] )
+	//A record per override rather than tag→level: a combined tag is only spellable as an array, and an array is no object
+	//key - the same reason the query answers grouped by level.  `level:null` (or no level at all) deletes the row.
 	α InstanceTagLevelMAwait::Update()ι->TAwait<uint32>::Task{
 		try{
 			auto vars = _mutation.ExtrapolateVariables();
@@ -66,18 +104,30 @@ namespace Jde::App::Server{
 				};
 			};
 			uint rowCount{};
-			if( let text = vars.if_contains("text"); text && text->is_object() ){
-				for( auto&& [tag,level] : text->get_object() )
-					rowCount += co_await schema->DS()->Execute( sql("text", tag, level) );
+			jobject runtime;//what pushRuntime hands the instance: the persisted tags only.
+			constexpr array<sv,3> types{ "text", "binary", "appServer" };
+			for( let type : types ){
+				let values = vars.if_contains( type );
+				if( !values )
+					continue;
+				let array = values->try_as_array();
+				THROW_IF( !array, "{} takes a list of {{tags,level}} records, not {}.", type, Json::Kind(values->kind()) );
+				for( auto&& [tag,level] : ToTagLevels(*array) ){//by name from here: the db column, the break check and the push all want the joined spelling.
+					if( tag==Logging::BreakTag ){//this process's debugger trap, not a tag level - neither persisted nor pushed.
+#ifndef NDEBUG
+						Logging::SetBreakLevel( ToLogLevel(level.as_string()) );
+#endif
+						continue;
+					}
+					rowCount += co_await schema->DS()->Execute( sql(string{type}, tag, level) );
+					auto& group = runtime[type];
+					if( !group.is_object() )
+						group.emplace_object();
+					group.get_object()[tag] = level;
+				}
 			}
-			if( let binary = vars.if_contains("binary"); binary && binary->is_object() ){
-				for( auto&& [tag,level] : binary->get_object() )
-					rowCount += co_await schema->DS()->Execute( sql("binary", tag, level) );
-			}
-			if( let appServer = vars.if_contains("appServer"); appServer && appServer->is_object() ){
-				for( auto&& [tag,level] : appServer->get_object() )
-					rowCount += co_await schema->DS()->Execute( sql("appServer", tag, level) );
-			}
+			if( !runtime.empty() )
+				pushRuntime( instanceId, move(runtime), _executer, _sl );
 			Resume( jvalue{rowCount} );
 		}
 		catch( runtime_error& e ){

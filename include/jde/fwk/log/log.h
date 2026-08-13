@@ -95,7 +95,7 @@ namespace Jde{
 				Log( ELogLevel::Critical, ELogTags::App, SRCE_CUR, "could not format '{}' cargs: {} error: '{}'", string{m.get().data(), m.get().size()}, sizeof...(args), string{e.what()} );
 			}
 		}
-		BREAK_IF( tags<=ELogTags::Write && level>=BreakLevel() );//don't want to break for opc server.
+		BREAK_IF( underlying(tags)<=(1ull << 32) && level>=BreakLevel() );//don't want to break for opc server.
 	}
 }
 

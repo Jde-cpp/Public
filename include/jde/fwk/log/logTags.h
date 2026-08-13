@@ -65,6 +65,7 @@ namespace Jde{
 		β MinLevel( ELogTags tags )Ι->ELogLevel;
 		β SetMinLevel( ELogLevel level )ι->void{ _minLevel = level; }
 		α SetLevel( ELogTags tags, ELogLevel level )ι->void;
+		α ClearLevel( ELogTags tags )ι->void;//drops the override so the tag falls back to _defaultLevel - the runtime twin of deleting the instance_tag_levels row.
 		β ShouldLog( ELogLevel level, ELogTags tags )Ι->bool;
 		β ToString()ι->string;
 		α ConfiguredTags()Ι->const concurrent_flat_map<ELogTags,ELogLevel>&{ return _configuredTags; }
@@ -77,11 +78,17 @@ namespace Jde{
 	};
 
 	constexpr ELogTags DefaultTag=ELogTags::App;
+	constexpr sv TagSeparator{ "." };//how a combined tag is spelled as one name: "socket.client.read" - config keys, ui rows and the joined form of the wire's tag array.
 	Φ ShouldTrace( ELogTags tags )ι->bool;
 	Φ ToString( ELogTags tags, bool outputArray=true )ι->string;
-	Φ ToArray( ELogTags tags )ι->jarray;
+	Φ ToValue( ELogTags tags )ι->jvalue;
 	Φ ToLogTags( sv name )ι->ELogTags;
 	Φ ToLogTags( jvalue v )ι->ELogTags;
+	Φ ToTagName( const jvalue& tags )ι->string;//["socket","client","read"] | "sql" -> "socket.client.read" | "sql" - the TagSeparator spelling ToLogTags splits.
+	//The two wire shapes that carry tags as values, flattened to the tag->level map SetLevels and the config file use:
+	Φ ToTagLevels( const jobject& levelTags )ι->jobject;//instanceTagLevel's answer - {"Debug":["sql",["socket","client","read"]]}
+	Φ ToTagLevels( const jarray& tagLevels )ι->jobject;//updateInstanceTagLevel's argument - [{tags:["socket","client","read"],level:"Debug"}]
+	Φ ToTagLevelArray( const jobject& tagLevels )ι->jarray;//and back the other way, for a caller holding the flat map.
 namespace Logging{
 	struct ITagParser{
 		virtual ~ITagParser()=default;

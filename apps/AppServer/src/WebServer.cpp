@@ -94,6 +94,16 @@ namespace Jde::App{
 		return y;
 	}
 
+	α Server::FindInstance( ProgInstPK instancePK )ι->sp<ServerSocketSession>{
+		sp<ServerSocketSession> y;
+		_sessions.cvisit_while( [&](let& kv){//_sessions is keyed by socket Id, not the instance pk; 0=session not yet registered, and every unregistered session shares it.
+			if( kv.second->InstancePK()==instancePK )
+				y = kv.second;
+			return !y;
+		});
+		return y;
+	}
+
 	α Server::NextRequestId()->RequestId{ return ++_requestId; }
 	α Server::QuerySessions( QL::TableQL ql, UserPK executer, SL sl )ι->QuerySessionsAwait{
 		vector<sp<ServerSocketSession>> sessions;

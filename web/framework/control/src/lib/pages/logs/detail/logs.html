@@ -4,19 +4,35 @@
 			(onCancel)="isSettings.set( false )"></ql-list-settings>
 	} @else {
 	<!-- <ng-container> -->
-		<mat-toolbar style="padding-top: 20px; width: 100%;">
-			<mat-form-field subscriptSizing="dynamic">
-				<mat-label>View</mat-label>
-				<mat-select [value]="viewIndex()" (selectionChange)="onViewChange($event.value)">
-					@for (view of views(); track view; let i=$index) {
-						<mat-option [value]=i>{{ (view.name ?? "[default]") + (view.isAdhoc ? "*" : "") }}</mat-option>
+		<mat-toolbar>
+			<div class="bar-left">
+				<mat-form-field subscriptSizing="dynamic" class="level-field">
+					<mat-label>Level</mat-label>
+					<mat-select [value]="level" (selectionChange)="onMinLevelChange($event.value)">
+						@for( l of levels; track l.value ){
+							<mat-option [value]=l.value>{{l.name}}</mat-option>
+						}
+					</mat-select>
+				</mat-form-field>
+			</div>
+			<div class="bar-center"><!--the two icon buttons are equal width, so they bracket the group symmetrically and it lands dead centre-->
+				<button matIconButton aria-label="Refresh" matTooltip="Refresh" (click)="refresh()">
+					<mat-icon>refresh</mat-icon>
+				</button>
+				<mat-button-toggle-group class="view-group" aria-label="View" [value]="viewIndex()" (change)="onViewChange($event.value)">
+					@for( view of views(); track view; let i=$index ){
+						<mat-button-toggle [value]=i [matTooltip]="view.isAdhoc ? 'Unsaved changes' : ''">{{ view.name ?? "default" }}@if( view.isAdhoc ){<span class="adhoc">&nbsp;(edited)</span>}</mat-button-toggle>
 					}
-				</mat-select>
-			</mat-form-field>
-			<button matIconButton aria-label="Settings" (click)="isSettings.set(true)">
-				<mat-icon>settings</mat-icon>
-			</button>
-
+				</mat-button-toggle-group>
+				<button matIconButton aria-label="Edit view" matTooltip="Edit view" (click)="isSettings.set(true)">
+					<mat-icon>tune</mat-icon>
+				</button>
+			</div>
+			<div class="bar-right">
+				<paginator (onPageEvent)="onPagerChange($event)" [pageSize]="view().limit"></paginator>
+			</div>
+			<!--parked from the old toolbar - applications picker, pause, date range, filter and the hidden-message
+			buttons were never rebuilt, so the markup stays here rather than being lost to git history-->
 			<!-- <i class="material-icons" [innerHTML]="connected ? 'power' : 'power_off'"></i> -->
 			<!-- <button class="mdc-icon-button material-icons" (click)="settings()" >settings</button>  -->
 			<!--  [value]="application.Name" -->
@@ -42,18 +58,6 @@
 				<mat-datepicker #dateId></mat-datepicker>
 			</mat-form-field> -->
 			<!-- <mat-paginator (page)="pageChangeEvent($event)" [pageIndex]="pageIndex" [length]="data.length" [pageSize]="pageSize" [pageSizeOptions]="[14, 100, 500, 1000]" showFirstLastButtons></mat-paginator> -->
-			<button matIconButton aria-label="Refresh" (click)="refresh()">
-				<mat-icon>refresh</mat-icon>
-			</button>
-			<mat-form-field subscriptSizing="dynamic" style="margin-left: 10px; width: 130px;">
-				<mat-label>Level</mat-label>
-				<mat-select [value]="level" (selectionChange)="onMinLevelChange($event.value)">
-					@for( l of levels; track l.value ){
-						<mat-option [value]=l.value>{{l.name}}</mat-option>
-					}
-				</mat-select>
-			</mat-form-field>
-			<paginator (onPageEvent)="onPagerChange($event)" [pageSize]="view().limit"></paginator>
 			<!-- [startIndex]="pageInfo.startIndex" -->
 			<!-- <mat-form-field>
 				<input matInput (keyup)="applyFilter($event.target['value'])" placeholder="Filter">
@@ -69,7 +73,7 @@
 			</ng-container>
 			<ng-container matColumnDef="level">
 				<mat-header-cell mat-sort-header *matHeaderCellDef> Level </mat-header-cell>
-				<mat-cell mat-cell [ngClass]="levelClass(entry)" *matCellDef="let entry">{{toLevel(entry.level)}}</mat-cell>
+				<mat-cell mat-cell *matCellDef="let entry"><mat-chip [class]="levelClass(entry)">{{toLevel(entry.level)}}</mat-chip></mat-cell>
 			</ng-container>
 			<ng-container matColumnDef="message">
 				<mat-header-cell mat-sort-header *matHeaderCellDef> Message </mat-header-cell>
@@ -88,8 +92,12 @@
 				<mat-cell mat-cell *matCellDef="let element" class="number"> {{element.line}} </mat-cell>
 			</ng-container>
 			<ng-container matColumnDef="tags">
-				<mat-header-cell mat-sort-header *matHeaderCellDef class="number"> Tags </mat-header-cell>
-				<mat-cell mat-cell *matCellDef="let entry" class="number"> {{entry.tags}} </mat-cell>
+				<mat-header-cell mat-sort-header *matHeaderCellDef> Tags </mat-header-cell>
+				<mat-cell mat-cell *matCellDef="let entry" [title]="tagList(entry)">
+					@for( tag of tags(entry); track tag ){
+						<mat-chip>{{tagName(tag)}}</mat-chip>
+					}
+				</mat-cell>
 			</ng-container>
 			<ng-container matColumnDef="user">
 				<mat-header-cell mat-sort-header *matHeaderCellDef class="number"> User </mat-header-cell>

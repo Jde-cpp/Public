@@ -2,6 +2,63 @@ table {
 	width: 100%;
  }
 
+/* the toolbar mirrors ql-list's, so the Logs and Connections tabs of a gateway present the same control: refresh,
+the view group, then the view editor.  the zone rules are ql-list.scss's - kept in step by hand, the two components
+share no stylesheet. */
+mat-toolbar{
+	position: relative;//containing block for the out-of-flow centre zone
+	display: flex;
+	justify-content: space-between;//only .bar-left and .bar-right are in flow
+	align-items: center;
+	gap: .5rem;
+	height: auto;
+	min-height: 56px;
+	padding-block: .25rem;
+	background: var(--mat-sys-surface-container);
+	color: var(--mat-sys-on-surface);
+}
+
+.bar-left, .bar-center, .bar-right{
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	min-width: 0;
+}
+
+//Centre the view group on the VIEWPORT (to line up with the navbar search) rather than on the
+//toolbar, whose left edge is inset by the shell's sidenav. Taken out of flow so its width cannot
+//push the left/right zones around. --jde-content-offset must match that inset; the shell should
+//set it if the sidenav is ever a width other than the 240px fallback.
+.bar-center{
+	position: absolute;
+	left: calc(50vw - var(--jde-content-offset, 240px));
+	top: 50%;
+	transform: translate(-50%, -50%);
+}
+
+@media (max-width: 1024px){//too narrow to centre against the viewport — fall back to a wrapping single row
+	mat-toolbar{
+		flex-wrap: wrap;
+		justify-content: flex-start;
+	}
+	.bar-center{
+		position: static;
+		transform: none;
+	}
+}
+
+.view-group{
+	max-width: 100%;
+}
+
+.adhoc{
+	color: var(--mat-sys-tertiary);
+}
+
+.level-field{
+	width: 130px;
+}
+
 div.table
 {
 	/* display: -webkit-box; */
@@ -79,27 +136,58 @@ scrollWidth>clientWidth true exactly when the text is cut, which is what drives 
 	flex: 0 0 110px;
 }
 .mat-column-level {
-	flex: 0 0 60px;
+	flex: 0 0 78px;
 }
 .mat-column-line {
 	flex: 0 0 45px;
 }
+/* level and tags are chips, so the cell is the flex container that lays them out.  no wrapping - .table-row is a
+fixed 30px, a second line would just be cut off; the overflow is clipped and the full set is on the cell's title.
+the mat-chip tokens shrink the 32px default chip to fit that row - they are custom properties, so they inherit
+into the chip's own DOM, which component styles cannot reach. */
+.mat-column-level,
+.mat-column-tags {
+	--mat-chip-container-height: 20px;
+	--mat-chip-container-shape-radius: 10px;
+	--mat-chip-label-text-size: 11px;
+	--mat-chip-label-text-line-height: 20px;
+}
+.mat-column-tags {
+	flex: 0 0 200px;
+	gap: 4px;
+	overflow: hidden;
+}
+/* the chips are flex items of the cell, so they default to flex-shrink:1 and a crowded row squeezes every chip
+until its label is cut mid-word.  holding them at their natural width instead clips whole chips off the tail,
+which the cell's title still lists. */
+.mat-column-level mat-chip,
+.mat-column-tags mat-chip {
+	flex: 0 0 auto;
+}
 
 
+/* these sit on the level chip now, so the colour has to go through the chip's tokens - a plain `color` would not
+reach the label, which MatChip paints from --mat-chip-label-text-color inside its own template.  trace keeps the
+theme default, so it stays the one level with no rule. */
 /*.log-trace{
 }*/
 .log-debug{
-	color: aqua;
+	--mat-chip-label-text-color: aqua;
+	--mat-chip-outline-color: aqua;
 }
 .log-information{
-	color: green;
+	--mat-chip-label-text-color: green;
+	--mat-chip-outline-color: green;
 }
 .log-warning{
-	color: orange;
+	--mat-chip-label-text-color: orange;
+	--mat-chip-outline-color: orange;
 }
 .log-error{
-	color: red;
+	--mat-chip-label-text-color: red;
+	--mat-chip-outline-color: red;
 }
 .log-critical{
-	color: darkred;
+	--mat-chip-label-text-color: darkred;
+	--mat-chip-outline-color: darkred;
 }

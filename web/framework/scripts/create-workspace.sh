@@ -29,17 +29,7 @@ if [ ! -x "$(which "ng" 2> /dev/null)" ]; then
 	if [ $? -ne 0 ]; then echo `pwd`; echo $cmd; exit 1; fi;
 fi;
 ##################
-#`ng new` emits tsconfig.json with leading /* */ comment lines, which jq cannot parse.  Strip whole-line
-#comments before piping to jq - matching create-library.sh - so a // inside a string value is left alone.
-#Only replace the original once jq has succeeded: `cmd > tmp; rm orig; mv tmp orig` zeroed the file on any failure.
-function jqEdit() {
-	local file=$1; local filter=$2;
-	if [ ! -f "$file" ]; then echo `pwd`; echo "jqEdit: $file not found"; exit 1; fi;
-	sed -e '/^[[:space:]]*\/\*/d' -e '/^[[:space:]]*\*/d' -e '/^[[:space:]]*\/\//d' "$file" | jq "$filter" > "$file.tmp";
-	#jq exits 0 on empty input, so check for output too - otherwise an already-zeroed file rewrites as still-zeroed.
-	if [ ${PIPESTATUS[1]} -ne 0 ] || [ ! -s "$file.tmp" ]; then echo `pwd`; echo jq "$filter" $file; rm -f "$file.tmp"; exit 1; fi;
-	mv "$file.tmp" "$file";
-}
+#jqEdit lives in build/common.sh (sourced above) - the per-site setup.sh scripts need it too.
 ##################
 if [ ! -d $workspace ]; then
 	echo -------------------- create workspace start --------------------;

@@ -224,8 +224,10 @@ namespace Jde::App{
 			}
 			else if( name=="level" )
 				o[name] = Jde::ToString( (ELogLevel)entry.level() );
-			else if( name=="tags" )
-				o[name] = ToArray( (ELogTags)entry.tags() );
+			else if( name=="tags" ){
+				auto tags = ToValue( (ELogTags)entry.tags() );//a lone tag comes back bare, but the grid column is string[] (web LogEntry.ts) - always a list.
+				o[name] = tags.is_array() ? move(tags) : jvalue( jarray{move(tags)} );
+			}
 			else if( name=="line" )
 				o[name] = entry.line();
 			else if( name=="time" )
