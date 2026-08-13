@@ -131,7 +131,7 @@ namespace Jde::QL{
 					y.push_back( jobject{ {"id", id}, {"rowCount",result.RowsAffected} } );
 				}else{
 					if( _identityInsert && ds.Syntax().NeedsIdentityInsert() )
-						sql.Text = Ƒ("SET IDENTITY_INSERT {0} ON;{1};SET IDENTITY_INSERT {0} OFF;", _table->DBName, sql.Text );
+						sql.Text = Ƒ("SET IDENTITY_INSERT {0} ON;{1};SET IDENTITY_INSERT {0} OFF;", _table->SqlName(), sql.Text );
 					let rowCount = ( co_await ds.Query(move(sql), false, _sl) ).RowsAffected;
 					y.push_back( jobject{ {"rowCount",rowCount} } );
 				}

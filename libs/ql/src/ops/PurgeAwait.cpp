@@ -36,7 +36,7 @@ namespace Jde::QL{
 
 		auto pk = table.Extends ? table.SurrogateKeys[0] : table.GetPK();
 		DB::Sql sql{
-			table.PurgeProcName.size() ? Ƒ( "{}( ? )", table.Schema->Prefix+table.PurgeProcName ) : Ƒ( "delete from {} where {}=?", table.DBName, pk->Name ),
+			table.PurgeProcName.size() ? Ƒ( "{}( ? )", table.Schema->Prefix+table.PurgeProcName ) : Ƒ( "delete from {} where {}=?", table.SqlName(), pk->Name ),
 			{ DB::Value{_mutation.AsNumber<uint>("id", _sl)} },
 			!table.PurgeProcName.empty()
 		};

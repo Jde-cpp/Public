@@ -46,7 +46,7 @@ namespace Jde::QL{
 	α AddRemoveAwait::Add()ι->DB::ExecuteAwait::Task{
 		let& map = *_table->Map;
 		let& parentId = map.Parent->Name; let& childId =map.Child->Name;
-		let prefix = Ƒ( "insert into {}({},{})values(?,?", _table->DBName, parentId, childId );
+		let prefix = Ƒ( "insert into {}({},{})values(?,?", _table->SqlName(), parentId, childId );
 		string extraParamsString;
 		vector<DB::Value> extraParams;
 		try{
@@ -84,7 +84,7 @@ namespace Jde::QL{
 
 	α AddRemoveAwait::Remove()->DB::ExecuteAwait::Task{
 		let& map = *_table->Map;
-		let sql = Ƒ( "delete from {} where {}=? and {}=?", _table->DBName, map.Parent->Name, map.Child->Name );
+		let sql = Ƒ( "delete from {} where {}=? and {}=?", _table->SqlName(), map.Parent->Name, map.Child->Name );
 		uint result{};
 		try{
 			for( let& p : _params.ChildParams ){

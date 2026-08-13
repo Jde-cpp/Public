@@ -208,7 +208,7 @@ namespace Jde::DB{
 					auto pDBColumn = dbTable->FindColumn( column->Name ); if( !pDBColumn ){ CRITICAL("Could not find db column {}.{}", tableName, column->Name); continue; }
 					pDBColumn->Insertable = column->Insertable;
 					if( pDBColumn->Default && pDBColumn->Default->is_string() && pDBColumn->Default->get_string()!="$now" )
-						ds.TryExecuteSync( {syntax.AddDefault(table->DBName, column->Name, *pDBColumn->Default)} );
+						ds.TryExecuteSync( {syntax.AddDefault(table->SqlName(), column->Name, *pDBColumn->Default)} );
 				}
 			}
 			else{
@@ -230,7 +230,8 @@ namespace Jde::DB{
 				}
 				let name = UniqueIndexName( index, dbTable->DBName, syntax, dbIndexes );
 				let fqTableName = syntax.QualifiedName( schemaName, dbTable->DBName );
-				ds.ExecuteSync( {index.Create(name, fqTableName, syntax)} );
+				let fqSqlTableName = syntax.QualifiedName( schemaName, dbTable->SqlName() );
+				ds.ExecuteSync( {index.Create(name, fqTableName, fqSqlTableName, syntax)} );
 				dbIndexes.push_back( Index{name, tableName, index} );
 				INFO( "Created index '{}.{}'.", table->DBName, name );
 			}
@@ -279,8 +280,8 @@ namespace Jde::DB{
 		//error).  Guarding the loop also skips LoadForeignKeys' per-table pragma scan for those dialects.
 		if( ds.Syntax().CanAddForeignKeys() ){
 			for( let& [name, fk] : config.DS()->ServerMeta().LoadForeignKeys(config.Name) ){
-				if( find_if(config.Tables, [&fk](let& t){return t.second->DBName==fk.Table;})!=config.Tables.end() )
-					ds.ExecuteSync( {Ƒ("ALTER TABLE {} DROP CONSTRAINT {}", fk.Table, name)} );
+				if( let p = find_if(config.Tables, [&fk](let& t){return t.second->DBName==fk.Table;}); p!=config.Tables.end() )
+					ds.ExecuteSync( {Ƒ("ALTER TABLE {} DROP CONSTRAINT {}", p->second->SqlName(), name)} );
 			}
 		}
 
@@ -290,7 +291,7 @@ namespace Jde::DB{
 				ds.ExecuteSync( {Ƒ("DROP PROCEDURE IF EXISTS {}", procName)} );
 			if( hasProcs && table->PurgeProcName.size() )
 				ds.ExecuteSync( {Ƒ("DROP PROCEDURE IF EXISTS {}", table->PurgeProcName)} );
-			ds.ExecuteSync( {Ƒ("DROP TABLE IF EXISTS {}", table->DBName)} );
+			ds.ExecuteSync( {Ƒ("DROP TABLE IF EXISTS {}", table->SqlName())} );
 		}
 		let& initConfig = ConfigurationJson( config );
 		if( auto script = Json::FindString(initConfig, "meta"); script ){

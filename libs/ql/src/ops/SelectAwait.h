@@ -17,7 +17,7 @@ namespace Jde::QL{
 		α Execute()ι->TAwait<optional<jvalue>>::Task override;
 		α Query()ι->void;
 		α Query( DB::Statement statement, SubTables subTables )ε->DB::SelectAwait::Task;
-		α SelectSubTables( optional<DB::Statement> parentSql, vector<TableQL> tables, sp<DB::Table> parentTable, DB::WhereClause where )->DB::SelectAwait::Task;
+		α SelectSubTables( optional<DB::Statement> parentSql, vector<TableQL> tables, sp<DB::Table> parentTable, DB::WhereClause where )ε->DB::SelectAwait::Task;
 
 		α DS()->DB::IDataSource&{ return *_ds; }
 		sp<DB::IDataSource> _ds;

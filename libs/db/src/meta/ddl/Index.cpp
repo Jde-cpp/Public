@@ -23,13 +23,13 @@ namespace Jde::DB{
 		PrimaryKey{ y.PrimaryKey }
 	{}
 
-	α Index::Create( sv name, sv tableName, const Syntax& syntax )Ι->string{
+	α Index::Create( sv name, sv tableName, sv sqlTableName, const Syntax& syntax )Ι->string{
 		string unique = Unique ? "unique" : "";
 		std::ostringstream os;
 		if( PrimaryKey )
-			os << "alter table " << tableName << " add constraint " << Str::Replace(tableName, '.', '_') << "_" << name << (Clustered || !syntax.SpecifyIndexCluster() ? "" : " nonclustered") << " primary key(";
+			os << "alter table " << sqlTableName << " add constraint " << Str::Replace(tableName, '.', '_') << "_" << name << (Clustered || !syntax.SpecifyIndexCluster() ? "" : " nonclustered") << " primary key(";
 		else
-			os << "create " << (Clustered && syntax.SpecifyIndexCluster() ? "clustered " : " ") << unique << " index "<< name << " on " << std::endl << tableName << "(";
+			os << "create " << (Clustered && syntax.SpecifyIndexCluster() ? "clustered " : " ") << unique << " index "<< name << " on " << std::endl << sqlTableName << "(";
 
 		os << Str::Join( Columns ) << ")";
 

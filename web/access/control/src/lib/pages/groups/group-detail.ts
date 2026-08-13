@@ -53,6 +53,8 @@ export class GroupDetail implements OnDestroy, OnInit{
 		route.data.subscribe( (data)=>{
 			this.pageData = data["pageData"];
 			this.group = new Group( this.pageData.row );
+			if( !this.group.id && this.tabIndex()>0 )
+				this.tabIndex.set( 0 ); //only the Properties tab exists on $new - a stored index past it hard-loops mat-tab-group.
 			this.pageData.row = null;
 			this.properties.set( this.group.properties );
 			this.users.set( new SelectionModel<UserPK>(true, TargetRow.idArray(this.group.users)) );
@@ -102,5 +104,5 @@ export class GroupDetail implements OnDestroy, OnInit{
 }
 export const groupTableSettings = {
 	excludedColumns: ["isGroup", "members"],
-	collectionName: "groupings"
+	collectionName: "groups"
 }

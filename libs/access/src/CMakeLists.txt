@@ -18,6 +18,8 @@ file( GLOB headers *.h server/*.h server/awaits/*.h awaits/*.h client/*.h types/
 target_sources(${targetName} PRIVATE ${sources} ${headers} )
 target_link_libraries( ${targetName} Jde Jde.DB Jde.QL )
 
+linkConfigFile( "${jdeRoot}/libs/db/config/common-meta.libsonnet" "${jdeRoot}/libs/access/config/common-meta.libsonnet" )
+
 target_precompile_headers(${targetName}
   PUBLIC
   <jde/fwk.h>

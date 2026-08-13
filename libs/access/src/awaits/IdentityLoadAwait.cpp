@@ -22,7 +22,7 @@ namespace Jde::Access{
 				else
 					identities.Users.emplace( UserPK{pk}, User{UserPK{pk}, name, deleted} );
 			}
-			let jgroups = co_await *_ql->QueryArray( "groupings{ id deleted groupMembers{id} }", {}, _executer, true, _sl );
+			let jgroups = co_await *_ql->QueryArray( "groups{ id deleted groupMembers{id} }", {}, _executer, true, _sl );
 			for( let& value : jgroups ){
 				let& group = Json::AsObject(value);
 				const GroupPK groupPK{ Json::AsNumber<GroupPK::Type>(group, "id") };

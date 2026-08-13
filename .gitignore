@@ -72,6 +72,7 @@ libs/app/shared/proto/Web.FromServer.proto
 apps/OpcGateway/config/common-meta.libsonnet
 apps/OpcServer/config/common-meta.libsonnet
 apps/AppServer/config/common-meta.libsonnet
+libs/access/config/common-meta.libsonnet
 **/*.aps
 apps/AppServer/src/build/CMakeFiles/3.28.3/CMakeDetermineCompilerABI_C.bin
 libs/fwk/src/build/**

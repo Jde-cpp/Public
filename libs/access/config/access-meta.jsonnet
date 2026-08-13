@@ -1,58 +1,12 @@
-local types = {
-	binary: {type: "Binary"},
-	bit: {type:"Bit", length: 1},
-	blob: {type: "Blob"},
-	char: {type: "Char"},
-	cursor: {type: "Cursor"},
-	dateTime: {type: "DateTime", length:: 64},
-	decimal: {type: "Decimal"},
-	float: {type:"Float", length:: 64},
-	guid: {type: "Guid", length:: 128},
-	image: {type: "Image"},
-	int: {type:"Int", length:: 32},
-	int8: {type: "Int8", length:: 8},
-	int16: {type:"Int16", length:: 16},
-	long: {type: "Long", length:: 64},
-	money: {type: "Money", length:: 64},
-	ntext: {type: "NText"},
-	numeric: {type: "Numeric"},
-	refCursor: {type: "RefCursor", length:: 64},
-	smallDateTime: {type: "SmallDateTime", length:: 32},
-	smallFloat: {type:"SmallFloat", length:: 32},
-	tchar: {type: "TChar"},
-	text: {type: "Text"},
-	timeSpan: {type: "TimeSpan", length:: 64},
-	uint: {type:"UInt", length:: 32},
-	uint8: {type: "UInt8", length:: 8},
-	uint16: {type: "UInt16", length:: 16},
-	ulong: {type: "ULong", length:: 64},
-	uri: {type: "Uri"},
-	varbinary: {type: "VarBinary"},
-	varchar: {type: "Varchar"},
-	varTChar: {type: "VarTChar"},
-	varWChar: {type: "VarWChar"},
-	wchar: {type: "WChar"},
-};
-local sqlFunctions = {
-	now: { name: "$now" }
-};
-
-local smallSequenced = types.uint16+{ sequence: true, sk:0, i:0 };
-local pkSequenced = types.uint+{ sequence: true, sk:0, i:0 };
-local valuesColumns = { name: types.varchar+{ length: 256, i:10 } };
-
-local valuesNK = ["name"];
-
-local targetColumns = valuesColumns+{
-	target:types.varchar+{ length: valuesColumns.name.length, i:20 },
-	attributes: types.uint16+{ nullable: true, i:30 },
-	created: types.dateTime+{ insertable: false, updateable: false, default: sqlFunctions.now.name, i:40 },
-	updated: types.dateTime+{ nullable: true, insertable: false, updateable: false, i:50 },
-	deleted:types.dateTime+{ nullable: true, insertable: false, updateable: false, i:60 },
-	description: types.varchar+{ length: 2048, nullable: true, i:70 }
-};
-
-local targetNKs = [valuesNK, ["target"]];
+local common = import 'common-meta.libsonnet';
+local types = common.types;
+local sqlFunctions = common.sqlFunctions;
+local smallSequenced = common.smallSequenced;
+local pkSequenced = common.pkSequenced;
+local valuesColumns = common.valuesColumns;
+local valuesNK = common.valuesNK;
+local targetColumns = common.targetColumns;
+local targetNKs = common.targetNKs;
 local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"];
 {
 	local tables = self.tables,
@@ -60,9 +14,9 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		groupMembers:{
 			comment: "Group Members",
 			columns:{
-				groupId: tables.groupings.columns.identityId+{ criteria: null },
+				groupId: tables.groups.columns.identityId+{ criteria: null },
 				groupTarget: targetColumns.target,
-				memberId: tables.groupings.columns.memberId,
+				memberId: tables.groups.columns.memberId,
 				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true },
 				isGroup: tables.identities.columns.isGroup
 			}+targetColumns,
@@ -127,7 +81,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			extends: "identities",
 			qlView: "users_ql"
 		},
-		groupings:{
+		groups:{
 			columns: {
 				identityId: tables.identities.columns.identityId+{ pkTable: "identities", criteria: {columnName:"is_group", value: true} },
 				memberId: 	tables.identities.columns.identityId+{ pkTable: "identities", name: "member_id", sk: 1, i:1 },

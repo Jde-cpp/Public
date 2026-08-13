@@ -33,10 +33,11 @@ export class AccessService extends AppService implements OnDestroy{
 		let fields = super.fieldColumns( schema, showDeleted, [] );
 		switch( schema.collectionName ){
 			case "users":
-				fields.push( `groupings{id}` );
+				fields.push( `groups{id}` );
 				break;
-			case "groupings":
-				fields[fields.findIndex(f=>f.startsWith("members"))] = `members{id isGroup}`;
+			case "groups":
+				fields[fields.findIndex(f=>f.startsWith("members"))] = `groupMembers{id isGroup}`; //the server parses/returns groupMembers (group_members view); 'members' is only the introspection field name.
+				fields.push( "id" ); //not in the introspected type (the map table has two surrogate keys, so no pk field) but the subQueries need it.
 				break;
 			case "roles":
 				fields.push( ...[`permissionRights{id allowed denied resource{id}}`, `roles{id}`] );
@@ -50,7 +51,7 @@ export class AccessService extends AppService implements OnDestroy{
 		let queries = new Array<string>();
 		switch( typeName ){
 		case "User":
-		case "Grouping":
+		case "Group":
 			queries = [
 				`acl( identityId:${id} ){ permissionRights{id allowed denied resource{id deleted}} }`,
 				`acl( identityId:${id} ){ role{id deleted} }`
@@ -66,7 +67,7 @@ export class AccessService extends AppService implements OnDestroy{
 	}
 
 	override toCollectionName( collectionDisplay:string ):string{
-		return collectionDisplay=="groups" ? "groupings" : collectionDisplay;
+		return collectionDisplay;
 	}
 
 

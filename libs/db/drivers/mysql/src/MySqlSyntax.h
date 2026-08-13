@@ -40,6 +40,7 @@ namespace Jde::DB::MySql{
 		α HasUnsigned()Ι->bool override{ return true; }
 		α IdentityColumnSyntax()Ι->sv override{ return "AUTO_INCREMENT"; }
 		α IdentitySelect()Ι->sv override{ return "LAST_INSERT_ID()"; }
+		α IsReservedWord( sv name )Ι->bool override{ return name=="groups"; } //mysql 8+ window-function keyword; the only reserved word used as an unprefixed table name.
 		α Limit( str sql, uint limit, uint skip )Ι->string override{
 			ASSERT( limit || skip );
 			return skip
@@ -60,7 +61,7 @@ namespace Jde::DB::MySql{
 		α UsingClause( const Join& join )Ι->string override{
 			const auto& c1 = *join.To;
 			return join.From->Name==c1.Name && join.ToAlias.empty() && join.FromAlias.empty()
-				? Ƒ( "\n\t{}join {} using({})", join.Inner ? "" : "left ", c1.Table->DBName, c1.Name )
+				? Ƒ( "\n\t{}join {} using({})", join.Inner ? "" : "left ", c1.Table->SqlName(), c1.Name )
 				: Syntax::UsingClause( join );
 		}
 		α UtcNow()Ι->sv override{ return "CURRENT_TIMESTAMP()"; }

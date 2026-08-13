@@ -12,7 +12,7 @@ export class User extends TargetRow<User>{
 		let roles = obj.roles ?? obj.childRoles;
 
 		this.exponent = obj.exponent;
-		this.groups = cloneClassArray( obj.groupings ?? obj.groups, Group );
+		this.groups = cloneClassArray( obj.groups, Group );
 		this.loginName = obj.loginName;
 		this.modulus = obj.modulus;
 		this.password = obj.password;

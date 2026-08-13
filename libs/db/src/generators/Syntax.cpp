@@ -68,11 +68,11 @@ namespace Jde::DB{
 		let& c1 = *join.To;
 		return Ƒ( "\n\t{0}join {3}{4} on {1}.{2}={5}.{6}",
 			joinType(join.Inner),
-			join.FromAlias.empty() ? c0.Table->DBName : join.FromAlias,
+			join.FromAlias.empty() ? c0.Table->SqlName() : join.FromAlias,
 			c0.Name,
-			c1.Table->DBName,
+			c1.Table->SqlName(),
 			join.ToAlias.empty() ? "" : " "+join.ToAlias,
-			join.ToAlias.empty() ? c1.Table->DBName : join.ToAlias,
+			join.ToAlias.empty() ? c1.Table->SqlName() : join.ToAlias,
 			c1.Name );
 	}
 	α Syntax::ToString( EType type )Ι->string{

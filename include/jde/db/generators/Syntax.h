@@ -33,6 +33,7 @@ namespace Jde::DB{
 		β IdentityColumnSyntax()Ι->sv{ return "identity(1001,1)"; }
 		β IdentitySelect()Ι->sv{ return "@@identity"; }
 		β IndexName( sv /*tableName*/, sv indexName )Ι->string{ return string{indexName}; } //per-table index namespace; schema-wide dialects qualify with the table.
+		β IsReservedWord( sv /*name*/ )Ι->bool{ return false; } //only words actually used as unprefixed object names - extend the dialect override when a new collision appears.
 		β Limit( str syntax, uint limit, uint skip )Ε->string;
 		β NeedsIdentityInsert()Ι->bool{ return true; }
 		β NowDefault()Ι->sv{ return UtcNow(); }

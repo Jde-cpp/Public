@@ -8,7 +8,7 @@ namespace Jde::DB{
 		Index( sv indexName, sv tableName, const Index& other )ι;
 
 		Ω GetConfig( const Table& t )ι->vector<Index>;
-		α Create( sv name, sv tableName, const Syntax& syntax )Ι->string;
+		α Create( sv name, sv tableName, sv sqlTableName, const Syntax& syntax )Ι->string; //tableName names the constraint, sqlTableName (possibly quoted) is what the ddl targets.
 		string Name;
 		string TableName;
 		vector<string> Columns;

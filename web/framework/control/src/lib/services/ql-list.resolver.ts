@@ -21,7 +21,8 @@ export class ListRoute extends RouteItem{
 			collection = {path:collection, title:StringUtils.capitalize(collection)};
 		this.path = collection.path;
 		this.collectionName = collection.data?.collectionName ?? this.path;
-		this.tableSettings = collection.data?.tableSettings ?? { excludedColumns: [], columns: ["name", "created", "updated", "deleted", "target"], sort: [{active:"name", direction:"asc"}] };
+		//per-field defaults: routes pass partial settings (e.g. groups/roles set only excludedColumns) and columns must never be undefined.
+		this.tableSettings = { excludedColumns: [], columns: ["name", "created", "updated", "deleted", "target"], sort: [{active:"name", direction:"asc"}], ...collection.data?.tableSettings };
 		this.summary = collection?.data?.summary;
 		this.title = collection.title ?? StringUtils.capitalize( this.path );
 	}

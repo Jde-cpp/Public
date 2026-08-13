@@ -86,7 +86,7 @@ namespace Jde::DB{
 				auto& c = colAlias.Column;
 				auto alias = shouldAlias ? colAlias.Alias : "";
 				if( shouldAlias && alias.empty() && c->Table )//count(*) won't have table
-					alias = c->Table->DBName;
+					alias = c->Table->SqlName();
 
 				string columnName = alias.size() ? alias + '.' + c->Name : c->Name;
 				if( c->Type==EType::DateTime && c->Table )

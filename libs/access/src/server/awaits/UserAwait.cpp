@@ -12,9 +12,9 @@ namespace Jde::Access::Server{
 	α UserAwait::GroupStatement()->DB::Statement{
 		let& identityTable = GetTable( "identities" );
 		auto pk = identityTable.GetPK();
-		let& groupDBTable = GetTable( "groupings" );
+		let& groupDBTable = GetTable( "groups" );
 		DB::Statement statement;
-		auto& groupTable = _query.GetTable( "groupings" );
+		auto& groupTable = _query.GetTable( "groups" );
 		let memberIdColumn = groupDBTable.GetColumnPtr( "member_id" );
 		groupTable.Columns.emplace_back( QL::ColumnQL{"memberId", memberIdColumn} );
 
@@ -40,7 +40,7 @@ namespace Jde::Access::Server{
 	α UserAwait::QueryGroups()ι->QL::QLAwait<jarray>::Task{
 		try{
 			auto groupStatement = GroupStatement();
-			auto groupInfo = co_await QL::QLAwait<jarray>{ move(_query.GetTable("groupings")), move(groupStatement), _executer, _sl };
+			auto groupInfo = co_await QL::QLAwait<jarray>{ move(_query.GetTable("groups")), move(groupStatement), _executer, _sl };
 			QueryTables( move(groupInfo) );
 		}
 		catch( runtime_error& e ){
@@ -65,7 +65,7 @@ namespace Jde::Access::Server{
 						}else
 							v = std::next(v);
 					}
-					user["groupings"] = userGroups;
+					user["groups"] = userGroups;
 				} );
 			}
 			Resume( move(userInfo) );
