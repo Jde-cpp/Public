@@ -1,5 +1,7 @@
 #include "OpcQL.h"
+#include <jde/app/client/IAppClient.h>
 #include <jde/app/client/awaits/LogSettingsClientAwait.h>
+#include "../globals.h"
 
 namespace Jde::Opc{
 	sp<Server::OpcQL> _ql;
@@ -18,7 +20,10 @@ namespace Jde::Opc::Server{
 		//QL::Configure is done once by ConfigureQL (the only construction site) before this runs; calling it here again was redundant.
 	}
 	α OpcQL::CustomQuery( QL::TableQL&, QL::Creds, SL )ι->up<TAwait<jvalue>>{return nullptr;}
-	α OpcQL::CustomMutation( QL::MutationQL&, QL::Creds, SL )ι->up<TAwait<jvalue>>{return nullptr;}
+	α OpcQL::CustomMutation( QL::MutationQL& m, QL::Creds creds, SL sl )ι->up<TAwait<jvalue>>{
+		//the app server pushes updateLogSetting here when its instance_tag_levels rows change; without this route the push comes back an error.
+		return App::LogSettingsMAwait::IsApplicable( m ) ? mu<App::Client::LogSettingsClientMAwait>( move(m), AppClient(), creds.UserPK(), sl ) : nullptr;
+	}
 
 	α OpcQL::LogSettingsQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>>{
 		return mu<App::Client::LogSettingsClientAwait>( move(ql), sl );

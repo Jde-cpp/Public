@@ -47,7 +47,9 @@ namespace Jde{
 	};
 
 	α Logging::Init()ι->void{
-		SetBreakLevel();
+#ifndef NDEBUG
+		SetBreakLevel( Settings::FindEnum<ELogLevel>("/logging/breakLevel", ToLogLevel).value_or(ELogLevel::Warning) );
+#endif
 		Logging::Add<SpdLog>( "spd" );
 		auto& memoryLogger = Logging::GetLogger<MemoryLog>();
 		for( let& logger : _loggers ){

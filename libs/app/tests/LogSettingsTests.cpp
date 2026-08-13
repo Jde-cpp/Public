@@ -107,7 +107,7 @@ namespace Jde::App::Tests{
 	}
 
 	//`tags` is the name->bit map the settings UI builds its tag list from, not a per-logger level.  The query asks for
-	//the *user* catalog - Tags(true) - which adds the composite tags (httpServerRead = Http|Server|Read &c) on top of
+	//the *user* catalog - Tags(true) - which adds the composite tags (http.server.read = Http|Server|Read &c) on top of
 	//the single-bit ones, so assert against that overload, not the bare Tags().
 	TEST_F( LogSettingsTests, QueryReturnsTheTagCatalog ){
 		let tags = logSettings( {"tags"} ).at( "tags" ).as_object();
@@ -115,7 +115,13 @@ namespace Jde::App::Tests{
 		EXPECT_GT( Logging::Tags(true).size(), Logging::Tags().size() ) << "the user catalog is a superset of the single-bit tags";
 		EXPECT_EQ( tags.at("app").to_number<uint>(), (uint)ELogTags::App );
 		EXPECT_EQ( tags.at("test").to_number<uint>(), (uint)ELogTags::Test );
-		EXPECT_EQ( tags.at("httpServerRead").to_number<uint>(), (uint)ELogTags::HttpServerRead ) << "composite tags have to reach the UI";
+		//a catalogue name the ui cannot save is worse than no name: it must be the spelling ToLogTags reads and the one
+		//the logSetting/instanceTagLevel answers carry, which is ToString's - bit order, not the config's reading order.
+		let composite = Jde::ToString( ELogTags::HttpServerRead, false );
+		EXPECT_EQ( tags.at(composite).to_number<uint>(), (uint)ELogTags::HttpServerRead ) << "composite tags have to reach the UI";
+		EXPECT_EQ( ToLogTags(sv{composite}), ELogTags::HttpServerRead ) << "and have to come back";
+		for( let& [name, id] : tags )
+			EXPECT_EQ( underlying(ToLogTags(sv{name})), id.to_number<uint>() ) << "every catalogue name round-trips: " << name;
 	}
 
 	//The ported round trip:  flip the default, read it back through the query, for each logger in turn.

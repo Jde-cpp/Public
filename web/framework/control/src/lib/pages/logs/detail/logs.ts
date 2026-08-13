@@ -19,6 +19,9 @@ import { MatToolbar } from '@angular/material/toolbar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
+import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
+import { MatChip } from '@angular/material/chips';
+import { MatTooltip } from '@angular/material/tooltip';
 import {MatSelectModule} from '@angular/material/select';
 import { PageEvent, Paginator } from '../../../shared/paginator/paginator';
 import { ProfileStore } from 'jde-spa';
@@ -37,7 +40,7 @@ import { Entry,LogEntries, LogEntriesRest, LogView } from '../LogEntry';
 	//.main-content.mat-drawer-container.my-content
 	templateUrl: './logs.html',
 	styleUrls: ['./logs.scss'],
-	imports: [CommonModule, MatFormFieldModule, MatIcon, MatIconButton, MatTableModule, MatToolbar, MatSelectModule, MatSortModule, Paginator, QLListSettings]
+	imports: [CommonModule, MatButtonToggle, MatButtonToggleGroup, MatChip, MatFormFieldModule, MatIcon, MatIconButton, MatTableModule, MatToolbar, MatTooltip, MatSelectModule, MatSortModule, Paginator, QLListSettings]
 })
 export class LogDetail implements OnInit, OnDestroy{
 	constructor( public _componentPageTitle: ComponentPageTitle, private snackBar: SnackbarService ){
@@ -300,6 +303,7 @@ export class LogDetail implements OnInit, OnDestroy{
 		}
 		return "";
 	}
+	//lands on the level chip, not the cell - the "table-row" it used to carry was redundant, mat-row is already given it
 	levelClass(row:Entry){
 		let className = "";
 		//const levelValue = ELogLevel[row.level as keyof typeof ELogLevel];
@@ -311,10 +315,23 @@ export class LogDetail implements OnInit, OnDestroy{
 			case ELogLevel.Error: className = "log-error"; break;
 			case ELogLevel.Critical: className = "log-critical"; break;
 		}
-		return "table-row "+className;
+		return className;
 	}
 	message(entry:Entry):string{
 		return this.data.message(entry);
+	}
+
+	//same order the settings page spells a combined tag in, so the transport leads - the cell clips its tail, and the
+	//leading chip is the one worth keeping
+	tags(entry:Entry):string[]{
+		return LogEntries.orderTags( entry.tags ?? [] );
+	}
+	tagName(tag:string):string{
+		return LogEntries.tagName( tag );
+	}
+	//the chips are clipped rather than wrapped, so the whole set goes on the cell's tooltip
+	tagList(entry:Entry):string{
+		return this.tags(entry).map( t=>LogEntries.tagName(t) ).join( ", " );
 	}
 
 	fileName(entry:Entry):string{

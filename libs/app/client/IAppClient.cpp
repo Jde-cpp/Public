@@ -31,7 +31,7 @@ namespace Jde::App::Client{
 			auto settings = QuerySync( "instanceTagLevel(id:$id){ text binary appServer }", {{"id",InstancePK()}}, true, sl );
 			IApp::LoadLogSettings( settings, sl );
 			if( auto logger = Logging::FindLogger<App::Client::RemoteLog>(); logger )
-				logger->SetLevels( move(settings.at("appServer").as_object()) );
+				logger->SetLevels( ToTagLevels(settings.at("appServer").as_object()) );
 			Logging::UpdateCumulative( Logging::Loggers() );
 			Logging::Log( ELogLevel::Trace, ELogTags::Settings, sl, "Loaded log settings." );
 		}

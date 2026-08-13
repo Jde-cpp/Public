@@ -2,6 +2,7 @@ import { Component, OnInit, input, signal, computed, output, ViewChild, OnDestro
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -18,7 +19,7 @@ import { TableSchema } from '../../../../model/ql/schema/TableSchema';
 	styleUrls: ['ql-list-settings.scss'],
 	templateUrl: './ql-list-settings.html',
 	host: {class:'main-content.mat-drawer-container.my-content'},
-	imports: [CommonModule, FormsModule, MatButtonModule, MatInputModule, MatSelectModule, MatTabsModule, MatToolbar, QLListSettingsFilter, QLListSettingsDisplay, QLListSettingsSort]
+	imports: [CommonModule, FormsModule, MatButtonModule, MatIcon, MatInputModule, MatSelectModule, MatTabsModule, MatToolbar, QLListSettingsFilter, QLListSettingsDisplay, QLListSettingsSort]
 })
 export class QLListSettings implements OnInit, OnDestroy{
 	ngOnInit(){

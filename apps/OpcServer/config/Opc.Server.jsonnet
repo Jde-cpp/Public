@@ -26,13 +26,13 @@ function( sync=false )
 				io: "Warning",
 				ql: "Debug",
 				settings: "Debug",
-				http_client_read: "Debug",
-				http_client_write: "Debug",
-				socket_client_read: "Debug",
-				socket_client_write: "Debug",
+				"http.client.read": "Debug",
+				"http.client.write": "Debug",
+				"socket.client.read": "Debug",
+				"socket.client.write": "Debug",
 				sql: "Information",
 				threads: "Warning",
-				opc_access: "Trace",
+				"opc.access": "Trace",
 				uaEvent: "Debug",
 				uaNet: "Information",
 				uaSession: "Trace",
@@ -60,7 +60,6 @@ function( sync=false )
 		port: 1970,
 		ssl:{
 			certificate:{
-				subjectAltName: "DNS:localhost,IP:127.0.0.1",//browsers and TLS clients match the SAN, never the CN - without it host_name_verification rejects the generated cert.
 				commonName: args.instanceName + ".web"
 			}
 		}

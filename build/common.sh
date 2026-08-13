@@ -24,6 +24,20 @@ function addHard {
 	fi;
 };
 
+#`ng new` emits tsconfig.json with leading /* */ comment lines, which jq cannot parse.  Strip whole-line
+#comments before piping to jq - matching create-library.sh - so a // inside a string value is left alone.
+#Only replace the original once jq has succeeded: `cmd > tmp; rm orig; mv tmp orig` zeroed the file on any failure.
+#Lives here rather than in create-workspace.sh because the per-site setup.sh scripts patch angular.json too - their
+#edits have to re-apply on every run, while create-workspace.sh only runs when the workspace is absent.
+function jqEdit() {
+	local file=$1; local filter=$2;
+	if [ ! -f "$file" ]; then echo `pwd`; echo "jqEdit: $file not found"; exit 1; fi;
+	sed -e '/^[[:space:]]*\/\*/d' -e '/^[[:space:]]*\*/d' -e '/^[[:space:]]*\/\//d' "$file" | jq "$filter" > "$file.tmp";
+	#jq exits 0 on empty input, so check for output too - otherwise an already-zeroed file rewrites as still-zeroed.
+	if [ ${PIPESTATUS[1]} -ne 0 ] || [ ! -s "$file.tmp" ]; then echo `pwd`; echo jq "$filter" $file; rm -f "$file.tmp"; exit 1; fi;
+	mv "$file.tmp" "$file";
+}
+
 function addHardDir {
 	local dir=$1;
 	local sourceDir=$2/$1;
