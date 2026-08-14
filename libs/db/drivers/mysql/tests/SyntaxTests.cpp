@@ -38,6 +38,34 @@ namespace Jde::DB::MySql::Tests{
 		EXPECT_FALSE( Syntax::Instance().IsReservedWord("groups") );
 	}
 
+	//MySQL is the only dialect with a regex engine, so `regex:` passes through; `glob:` becomes an anchored REGEXP rather
+	//than a LIKE, because LIKE would drop the character classes.
+	TEST( SyntaxTests, PatternOperators ){
+		const auto& my = MySqlSyntax::Instance();
+		EXPECT_EQ( my.PatternOperator(EOperator::Regex), "regexp" );
+		EXPECT_EQ( my.PatternOperator(EOperator::Glob), "regexp" );
+		EXPECT_THROW( my.PatternOperator(EOperator::ElementMatch), Exception );
+
+		EXPECT_EQ( my.PatternParam(EOperator::Regex, "b.b"), "b.b" ); //verbatim - it is already a regex.
+		EXPECT_EQ( my.PatternParam(EOperator::Glob, "*abc*"), "^.*abc.*$" );
+		EXPECT_EQ( my.PatternParam(EOperator::Glob, "b?b"), "^b.b$" );
+	}
+
+	//glob -> regex is a total mapping, which is why it beats glob -> LIKE here.  Anchored, because glob matches the whole
+	//value where REGEXP is a search.
+	TEST( SyntaxTests, GlobToRegex ){
+		EXPECT_EQ( GlobToRegex("*abc*"), "^.*abc.*$" );
+		EXPECT_EQ( GlobToRegex("b?b"), "^b.b$" );
+		EXPECT_EQ( GlobToRegex("bob"), "^bob$" );        //anchored: a bare name must not match "bobby".
+		EXPECT_EQ( GlobToRegex("a.c"), "^a\\.c$" );      //'.' is literal in a glob - it must be escaped, not left as "any".
+		EXPECT_EQ( GlobToRegex("a+b"), "^a\\+b$" );
+		EXPECT_EQ( GlobToRegex("(x)"), "^\\(x\\)$" );
+		EXPECT_EQ( GlobToRegex("[a-c]at"), "^[a-c]at$" ); //classes are spelled the same in both languages.
+		EXPECT_EQ( GlobToRegex("[!a-c]at"), "^[^a-c]at$" );//glob's '!' negation becomes regex '^'.
+		EXPECT_EQ( GlobToRegex("[^a-c]at"), "^[^a-c]at$" );
+		EXPECT_EQ( GlobToRegex("[abc"), "^\\[abc$" );     //unterminated class -> a literal '[', as in sqlite.
+	}
+
 	TEST( SyntaxTests, Limit ){
 		const auto& my = MySqlSyntax::Instance();
 		const auto sql = string{ "select * from t" };

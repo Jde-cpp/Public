@@ -32,6 +32,21 @@ namespace Jde::DB::Sqlite{
 		}
 		α NeedsIdentityInsert()Ι->bool override{ return false; }
 		α NowDefault()Ι->sv override{ return "(unixepoch())"; }
+		//The only dialect that takes a `glob:` pattern verbatim - QL::globMatch *is* sqlite GLOB, so the in-memory filter
+		//and the where clause agree character for character, negated classes and all.  REGEXP is a different story: sqlite
+		//parses the operator but ships no implementation, and this driver registers no such udf (SqliteProcs is the C++
+		//proc registry, not sqlite3_create_function), so `x regexp ?` would fail at execution with "no such function".
+		//Refusing here turns that into a clear error at statement build instead.
+		α PatternOperator( EOperator op, SRCE )Ε->sv override{
+			if( op==EOperator::Glob )
+				return "glob";
+			throw Exception{ sl, Jde::ELogLevel::Debug, "sqlite has no '{}' operator - REGEXP needs a udf this driver does not register; use 'glob'.", DB::ToString(op) };
+		}
+		α PatternParam( EOperator op, str pattern, SRCE )Ε->string override{
+			if( op==EOperator::Glob )
+				return pattern;
+			throw Exception{ sl, Jde::ELogLevel::Debug, "sqlite has no '{}' operator - REGEXP needs a udf this driver does not register; use 'glob'.", DB::ToString(op) };
+		}
 		α PrefixOut()Ι->bool override{ return false; }
 		//No server-side procs - proc calls dispatch to native C++ registered in SqliteProcs.h, so Proc* generators are unused.
 		α ProcParameterPrefix()Ι->sv override{ return {}; }

@@ -129,6 +129,41 @@ namespace Jde::DB::Sqlite::Tests{
 		EXPECT_NE( syntax.FormatOperator(*col, EOperator::In, 2).find("in(?,?)"), string::npos ); //non-empty still an IN list.
 	}
 
+	//A word operator needs whitespace, punctuation does not.  FormatOperator used to render every non-IN operator as
+	//`Ƒ("{}{}?", FQName, OperatorStrings[op])`, which is right for '=' and '>=' but glued the three word-valued entries
+	//onto the column name - `regex` gave "access_identities.idregex?", one identifier, a syntax error on every backend.
+	//Only IN/NOT IN were covered by a test, which is the branch that was never broken.
+	TEST_P( SchemaTests, FormatOperatorSpacing ){
+		auto schema = DB::GetCluster( GetParam(), ms<Access::Authorize>("SqliteTests") )->GetAppSchema( "access" );
+		auto col = schema->GetTablePtr("identities")->GetColumnPtr( "id", SRCE_CUR );
+		let& syntax = SqliteSyntax::Instance();
+		let fq = col->FQName();
+		EXPECT_EQ( syntax.FormatOperator(*col, EOperator::Equal), fq+"=?" );          //punctuation self-delimits.
+		EXPECT_EQ( syntax.FormatOperator(*col, EOperator::GreaterOrEqual), fq+">=?" );
+		EXPECT_EQ( syntax.FormatOperator(*col, EOperator::Glob), fq+" glob ?" );      //…a word does not.
+		EXPECT_EQ( syntax.FormatOperator(*col, EOperator::Glob).find(fq+"glob"), string::npos ); //the bug.
+		EXPECT_THROW( syntax.FormatOperator(*col, EOperator::Regex), Exception );     //sqlite REGEXP needs a udf; refused, not emitted.
+		EXPECT_THROW( syntax.FormatOperator(*col, EOperator::ElementMatch), Exception ); //no SQL form at all - was "…idelemMatch?".
+		//One pattern, one placeholder: a `glob:["a*","b*"]` array must not bind 2 params against the single '?'.
+		EXPECT_THROW( syntax.FormatOperator(*col, EOperator::Glob, 2), Exception );
+	}
+
+	//The whole point of the dialect hook: a where clause built from a glob filter has to be executable, so the pattern
+	//is bound as-is for sqlite (GLOB *is* QL::globMatch) while other dialects rewrite it.
+	TEST_P( SchemaTests, GlobWhereClauseRoundTrips ){
+		auto schema = DB::GetCluster( GetParam(), ms<Access::Authorize>("SqliteTests") )->GetAppSchema( "access" );
+		auto table = schema->GetTablePtr( "identities" );
+		auto col = table->GetColumnPtr( "name", SRCE_CUR );
+		WhereClause where;
+		where.Add( col, EOperator::Glob, Value{string{"*bob*"}} );
+		EXPECT_EQ( where.ToString(), Ƒ("where {} glob ?", col->FQName()) );
+
+		//and it parses - a clause reaching a real sqlite parser is what the old spelling could never survive.
+		auto sql = DB::SelectSql( vector<sp<Column>>{col}, FromClause{table}, move(where) );
+		let text = sql.Text;
+		EXPECT_NO_THROW( _ds->Select(move(sql)) ) << text;
+	}
+
 	//#40: SelectSql with empty columns overwrote the trailing space of "select " with '\n' ("select\nfrom..."). Guard the comma->newline replacement.
 	TEST_P( SchemaTests, SelectSqlEmptyColumns ){
 		auto schema = DB::GetCluster( GetParam(), ms<Access::Authorize>("SqliteTests") )->GetAppSchema( "access" );

@@ -29,6 +29,32 @@ namespace Jde::DB::Odbc::Tests{
 		EXPECT_EQ( Syntax::Instance().EscapeDdl("s.t"), "[s].[t]" );  //each part quoted separately.
 	}
 
+	//SQL Server has LIKE but no regex before 2025, so `glob:` translates and `regex:` is refused at build time rather
+	//than sent to the server to fail.
+	TEST( SyntaxTests, PatternOperators ){
+		const auto& s = Syntax::Instance();
+		EXPECT_EQ( s.PatternOperator(EOperator::Glob), "like" );
+		EXPECT_THROW( s.PatternOperator(EOperator::Regex), Exception );
+		EXPECT_THROW( s.PatternOperator(EOperator::ElementMatch), Exception );
+		EXPECT_EQ( s.PatternParam(EOperator::Glob, "*abc*"), "%abc%" );
+		EXPECT_THROW( s.PatternParam(EOperator::Regex, "b.b"), Exception );
+	}
+
+	//T-SQL LIKE is glob with two characters renamed.  A literal '%'/'_' has to be bracket-escaped, which is also how
+	//QL::globMatch reads it, so the same pattern text means the same thing on both sides.
+	TEST( SyntaxTests, GlobToLike ){
+		EXPECT_EQ( GlobToLike("*abc*"), "%abc%" );
+		EXPECT_EQ( GlobToLike("b?b"), "b_b" );
+		EXPECT_EQ( GlobToLike("bob"), "bob" );
+		EXPECT_EQ( GlobToLike("a.c"), "a.c" );          //'.' is not a metacharacter in either language.
+		EXPECT_EQ( GlobToLike("50%"), "50[%]" );        //a literal '%' would otherwise become a wildcard.
+		EXPECT_EQ( GlobToLike("a_b"), "a[_]b" );        //…and a literal '_' a single-character wildcard.
+		EXPECT_EQ( GlobToLike("[a-c]at"), "[a-c]at" );  //T-SQL LIKE has classes - they survive.
+		EXPECT_EQ( GlobToLike("[!a-c]at"), "[^a-c]at" );//glob accepts '!' for negation, T-SQL only '^'.
+		EXPECT_EQ( GlobToLike("[^a-c]at"), "[^a-c]at" );
+		EXPECT_EQ( GlobToLike("[abc"), "[[]abc" );      //unterminated -> a literal '[', which LIKE also has to escape.
+	}
+
 	TEST( SyntaxTests, Limit ){
 		const auto& s = Syntax::Instance();
 		const auto sql = string{ "select * from t order by id" };

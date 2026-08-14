@@ -49,6 +49,21 @@ namespace Jde::DB::MySql{
 		}
 		α NeedsIdentityInsert()Ι->bool override{ return false; }
 		α NowDefault()Ι->sv override{ return "CURRENT_TIMESTAMP"; }
+		//The only dialect with a real regex engine (ICU, since 8.0), so `regex:` passes through.  There is no GLOB, and
+		//LIKE would lose the character classes, so `glob:` is translated to an anchored REGEXP rather than to LIKE - that
+		//mapping is total, where glob->LIKE is not.  Both are collation-cased, unlike the case-sensitive in-memory match.
+		α PatternOperator( EOperator op, SRCE )Ε->sv override{
+			if( op==EOperator::Regex || op==EOperator::Glob )
+				return "regexp";
+			throw Exception{ sl, Jde::ELogLevel::Debug, "Operator '{}' has no SQL form.", DB::ToString(op) };
+		}
+		α PatternParam( EOperator op, str pattern, SRCE )Ε->string override{
+			if( op==EOperator::Regex )
+				return pattern; //ICU dialect: near enough to ECMAScript for the patterns the filters accept.
+			if( op==EOperator::Glob )
+				return GlobToRegex( pattern );
+			throw Exception{ sl, Jde::ELogLevel::Debug, "Operator '{}' has no SQL form.", DB::ToString(op) };
+		}
 		α PrefixOut()Ι->bool override{ return true; }
 		α ProcParameterPrefix()Ι->sv override{ return {}; }
 		α ProcStart()Ι->sv override{ return "begin"; }

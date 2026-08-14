@@ -75,6 +75,40 @@ namespace Jde::QL::Tests{
 		EXPECT_FALSE( filterValue(DB::EOperator::Regex, jstring{tooLong}).Test(DB::Value{tooLong}) );
 	}
 
+	//Catastrophically-backtracking patterns must come back promptly instead of pinning the fan-out thread.  All of these
+	//are valid, tiny, and far inside MaxPatternLength, so the compile-side guards do not see them - only the engine's
+	//own bounds do, which is the whole reason the operator is on boost::regex rather than std::regex.  The first two
+	//shapes are stopped by boost's recursion-depth guard, the `.*`-chains by BOOST_REGEX_MAX_STATE_COUNT.  On libc++,
+	//whose std::regex is unbounded, this test does not finish.
+	TEST( FilterTests, CatastrophicRegexIsBounded ){
+		let subject = string( 42, 'a' )+"!"; //the trailing '!' denies the match, forcing every way to split the a's.
+		for( let pattern : {"(a+)+$", "(a|a)*$", ".*.*.*.*.*.*=", "a*a*a*a*a*a*a*a*b"} ){
+			let start = std::chrono::steady_clock::now();
+			EXPECT_FALSE( filterValue(DB::EOperator::Regex, jstring{pattern}).Test(DB::Value{subject}) ) << pattern;
+			EXPECT_LT( std::chrono::steady_clock::now()-start, std::chrono::seconds{5} ) << pattern << " was not bounded";
+		}
+	}
+
+	//The bound is per match call, so the first abort poisons the pattern: one filter is tested against every log entry,
+	//and SubscribeLog::Write would otherwise pay the whole budget - and it is a budget, not a hang - once per entry.
+	TEST( FilterTests, BoundedRegexIsPoisonedAfterTheFirstAbort ){
+		let subject = string( 42, 'a' )+"!";
+		auto filter = filterValue( DB::EOperator::Regex, "(a+)+$" );
+		EXPECT_FALSE( filter.Test(DB::Value{subject}) );
+		let start = std::chrono::steady_clock::now();
+		for( uint i{}; i<1000; ++i )
+			EXPECT_FALSE( filter.Test(DB::Value{subject}) );
+		EXPECT_LT( std::chrono::steady_clock::now()-start, std::chrono::milliseconds{100} ) << "1000 rows re-ran the aborted match instead of short-circuiting";
+	}
+
+	//The cap has to leave ordinary patterns room: a linear match over a long subject costs states too, and a filter that
+	//starts returning false under load would be a far worse bug than the one the cap fixes.
+	TEST( FilterTests, StateCapLeavesHeadroomForOrdinaryPatterns ){
+		let haystack = string( 4000, 'x' )+"needle"+string( 4000, 'y' );
+		EXPECT_TRUE( filterValue(DB::EOperator::Regex, ".*needle.*").Test(DB::Value{haystack}) );
+		EXPECT_FALSE( filterValue(DB::EOperator::Regex, ".*absent.*").Test(DB::Value{haystack}) );
+	}
+
 	//glob is a glob, not a regex.  `*abc*` is not even a legal regex (nothing for the leading '*' to repeat), so this used
 	//to throw inside Test() and report "no match" for everything.
 	TEST( FilterTests, Glob ){

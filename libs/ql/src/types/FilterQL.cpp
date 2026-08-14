@@ -1,5 +1,5 @@
 #include <jde/ql/types/FilterQL.h>
-#include <regex>
+#include <boost/regex.hpp>
 #include <jde/fwk/chrono.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/Functions.h>
@@ -8,6 +8,12 @@
 #include <jde/ql/types/TableQL.h>
 
 #define let const auto
+
+//The state cap arrives as a -D from libs/ql/src/CMakeLists.txt, not a #define here: the PUBLIC precompiled header is
+//force-included ahead of this file's first line, so a #define could land after boost/regex/config.hpp had already baked
+//in its 100,000,000 default.  Assert it, because a lost -D would widen the bound back silently - measurably so only for
+//the shallow-but-wide patterns; boost's recursion guard covers the nested ones at any cap.
+static_assert( BOOST_REGEX_MAX_STATE_COUNT==100'000, "Jde.QL must lower boost's regex state cap - see libs/ql/src/CMakeLists.txt." );
 
 namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL };
@@ -82,15 +88,42 @@ namespace Jde::QL{
 		return p==pattern.size();
 	}
 
-	//Built once per FilterValue: glob keeps the pattern text, regex keeps the compiled std::regex.  Every row used to
+	//Built once per FilterValue: glob keeps the pattern text, regex keeps the compiled boost::regex.  Every row used to
 	//construct a std::regex from the json - and SubscribeLog::Write tests every log entry against every subscriber's
 	//filter, so that was a compile per entry per subscription.
 	struct Pattern final{
-		Pattern( string text, up<const std::regex>&& regex )ι: Text{ move(text) }, Regex{ move(regex) }{}
-		α Match( str value )Ι->bool{ return Regex ? std::regex_match( value, *Regex ) : globMatch( value, Text ); }
+		Pattern( string text, up<const boost::regex>&& regex )ι: Text{ move(text) }, Regex{ std::move(regex) }{} //qualified: ADL on up<boost::regex> also finds boost::move.
+		α Match( str value )Ι->bool;
 		string Text;
-		up<const std::regex> Regex;
+		up<const boost::regex> Regex;
+	private:
+		mutable atomic<bool> _tooComplex{}; //shared as sp<const Pattern> across rows and threads - see Match.
 	};
+
+	//boost, not std: the standard puts no step limit on std::regex_match, so on libc++ a *valid* pattern like `(a+)+$`
+	//backtracks without bound - once per row, on the fan-out thread.  (The MSVC STL happens to raise error_complexity
+	//of its own accord, which is why this only ever threatened the linux build.)  boost guarantees the bound on both:
+	//a recursion-depth guard stops the nested-quantifier shapes, and BOOST_REGEX_MAX_STATE_COUNT - lowered in
+	//libs/ql/src/CMakeLists.txt - the shallow-but-wide ones.  Either way the abort arrives as an exception, in ~1ms.
+	//The bound is per match call, so the first abort poisons the whole pattern: one filter is tested against every log
+	//entry, and a 10k-entry burst would otherwise pay the full budget 10k times over.
+	//Deliberately silent.  Match runs under SubscribeLog::Write's shared_lock and every log macro re-enters that same
+	//logger, so a WARN here would take a recursive shared_lock on a shared_mutex - UB, and a deadlock against any queued
+	//writer.  A poisoned pattern reads as "matches nothing", the same as one that failed to compile - and that case *is*
+	//warned about, in makePattern, which runs off this path.
+	α Pattern::Match( str value )Ι->bool{
+		if( !Regex )
+			return globMatch( value, Text );
+		if( _tooComplex.load(std::memory_order_relaxed) )
+			return false;
+		try{
+			return boost::regex_match( value, *Regex );
+		}
+		catch( const std::exception& ){ //boost::regex_error derives from runtime_error; error_complexity/error_stack land here.
+			_tooComplex.store( true, std::memory_order_relaxed );
+		}
+		return false;
+	}
 
 	//A pattern that can't be used (wrong json type, too long, doesn't compile) yields null, i.e. the filter matches nothing -
 	//as before, except it is now said out loud once instead of throwing per row into Test's catch.
@@ -109,7 +142,7 @@ namespace Jde::QL{
 		if( op==DB::EOperator::Glob )
 			return ms<Pattern>( move(pattern), nullptr );
 		try{
-			return ms<Pattern>( string{}, mu<const std::regex>(pattern) );
+			return ms<Pattern>( string{}, mu<const boost::regex>(pattern) );
 		}
 		catch( const std::exception& e ){
 			WARN( "regex '{}' does not compile ({}) - it can not match.", pattern, e.what() );
