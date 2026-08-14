@@ -3,7 +3,7 @@ local logsDir = args.logsDir;
 {
 	testing:{
 		tests:: "*",
-		recreateDB: true
+		recreateDB: std.parseJson( std.extVar("recreateDB") )
 	},
 	dbServers: {
 		scriptPaths: [

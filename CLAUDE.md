@@ -49,7 +49,9 @@ The presets are **split by OS across four files** (presets schema `version: 9`).
 | win clang | `win-clang-debug-repos` | — | `win-clang-release-repos` |
 | g++ | `linux-debug-repos` | `linux-relWithDebInfo-repos` | — |
 
-The g++ (`linux-*`, **g++-15**) presets exist only for the dependency build — there is no g++ `-jde` preset, so the project itself is built with clang. Note the leftover `linux-debug` **build**/**test** presets are currently unusable: they name the now-hidden `linux-debug` configure preset, and CMake rejects that (`Cannot use hidden configure preset`) — see `reviews/todo.md` §3.
+The g++ (`linux-*`, **g++-15**) presets exist only for the dependency build — there is no g++ `-jde` preset, so the project itself is built with clang.
+
+There are **no build or test presets** on either OS — `cmake --list-presets` lists configure presets only, and building/testing go through `cmake --build <buildDir>` and `cd <buildDir> && ctest`. Two vestigial `linux-debug` build/test presets were removed 2026-08-14: they named the hidden `linux-debug` configure preset, so `cmake --build --preset` and `ctest --preset` both failed with `Cannot use hidden configure preset`, and they could not have worked regardless since no Linux configure preset sets `binaryDir` (which is also why `reconfig` passes `-B`).
 
 ## Running Tests (C++)
 

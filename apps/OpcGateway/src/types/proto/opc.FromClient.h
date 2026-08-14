@@ -1,6 +1,6 @@
 #pragma once
 #include "Opc.Common.pb.h"
-#include "../proto/Opc.FromClient.pb.h"
+#include "Opc.FromClient.pb.h"
 namespace Jde::Opc{ struct NodeId; struct Value; }
 
 namespace Jde::Opc::Gateway::FromClientUtils{

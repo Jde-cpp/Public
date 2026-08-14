@@ -10,7 +10,9 @@ local gatewayProduct = "OpcGateway"; //must match the gateway process's ProductN
 	//resolve to the same files the gateway process would: its product (not the soak exe's "Opc.Soak") and the CN
 	//Opc.Gateway.jsonnet configures, `args.instanceName` = <product>.<buildTarget>.  No passcode, likewise matching -
 	//an encrypted key here would be unreadable to the gateway, which configures none.
-	//getPath reads productName from each key's own sub-object, not from the block around them, so all three carry it.
+	//getPath reads productName from each key's own sub-object; a block-level one is now inherited by all three
+	//(withDefaultProductName), so these lines are redundant rather than required - kept explicit because the point of
+	//the block is to write into another process's cert tree, which is worth stating on each key it moves.
 	gateway:{
 		issuedCerts:{
 			certificate:{

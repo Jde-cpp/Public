@@ -57,19 +57,26 @@ jobs:
         run: cmake --preset $env:PRESET
 
       - name: Build
-        # protobuf generates in-source (PROTOC_OUT_DIR = <lib>/proto), and
-        # actions/checkout clean:true (git clean -ffdx) deletes those gitignored
-        # *.pb.* first, so every run regenerates them under full parallelism. A
-        # consumer compile can then hold a *.pb.h open for read while protoc
-        # rewrites it; on Windows that share-locks protoc's output and fails the
-        # build ("<file>: Invalid argument"). It is latent on Linux (POSIX allows
-        # the concurrent open). If the parallel pass fails, finish serially
-        # (-j 1, race-free) — a genuine compile error still fails the serial pass,
-        # so this masks nothing. Proper fix: generate protos out-of-source.
+        # protoc used to generate in-source (PROTOC_OUT_DIR = <lib>/proto), where a
+        # *.pb.h was both a build output and a header other targets #include. A
+        # consumer compile could hold one open for read while protoc rewrote it;
+        # on Windows that share-locks protoc's output and fails the build
+        # ("<file>: Invalid argument"), latent on Linux (POSIX allows the
+        # concurrent open). Generation moved to the build tree 2026-08-14
+        # (reviews/todo.md §4 option 1), so no generated header sits in the source
+        # tree any more.
+        #
+        # The serial retry stays as a CANARY, not a crutch: the race is
+        # intermittent, so "it stopped failing" is weak evidence. If the warning
+        # below ever fires again, out-of-source generation was not sufficient and
+        # the real fix is the cross-target ordering edges (todo.md §4 option 2) —
+        # moving the output does not by itself stop an unrelated target from
+        # reading a generated header while protoc writes it. Drop this fallback
+        # once enough clean parallel runs have gone green without it firing.
         run: |
           cmake --build "$env:BUILD_DIR" -j $env:NUMBER_OF_PROCESSORS
           if ($LASTEXITCODE -ne 0) {
-            Write-Host "::warning::Parallel build failed once (in-source protobuf codegen race); completing serially (-j 1)."
+            Write-Host "::warning::Parallel build failed once after the out-of-source proto move; completing serially (-j 1). See reviews/todo.md §4 - this means ordering edges are still needed."
             cmake --build "$env:BUILD_DIR" -j 1
           }
 

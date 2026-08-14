@@ -65,6 +65,21 @@ namespace Jde::Crypto{
 		Crypto::Verify( publicKey, HeaderPayload, signature );
 	}
 
+	//a mismatch is an expected auth outcome, not a malfunction, and EVP_VerifyFinal reports both through one return
+	//value - 0 for the first, negative for the second.  The rejected client only ever sees this message, so it has to
+	//name the reason rather than echo a bare openssl rc.
+	TEST_F( OpenSslTests, VerifyRejectsBadSignature ){
+		let signature = Crypto::RsaSign( HeaderPayload, PrivateKeyFile, passcode );
+		auto publicKey = Crypto::ReadPublicKey( PublicKeyFile );
+		try{
+			Crypto::Verify( publicKey, HeaderPayload+"!", signature );//right key, wrong payload.
+			FAIL() << "Verify should have thrown.";
+		}
+		catch( const Exception& e ){
+			EXPECT_NE( string{e.what()}.find("Signature verification failed."), string::npos ) << e.what();
+		}
+	}
+
 	TEST_F( OpenSslTests, Certificate ){
 		auto bytes = ReadCertificate( CertificateFile );
 		ExtractPublicKey( bytes, SRCE_CUR );
@@ -181,6 +196,29 @@ namespace Jde::Crypto{
 		let reissued = Crypto::ExtractPublicKey( reissuedDer, SRCE_CUR );
 		EXPECT_FALSE( reissued==original );//the stale cert was replaced, not kept.
 		EXPECT_TRUE( reissued==Crypto::ReadPublicKey(settings.PublicKey.Path) );//and it matches the key actually on disk.
+		fs::remove_all( dir );
+	}
+	//the other half of MissingKeyReissuesCert, and the only reissueReason branch with no coverage: losing just the
+	//certificate must re-issue it on the key already on disk.  Minting a fresh pair here would strand the enrollment
+	//identity - access_users is keyed by the modulus, so the process would come back as a stranger to a db still
+	//holding the old key, and every peer that anchored the old cert would have to re-trust it.
+	TEST_F( OpenSslTests, EnsureKeyCertificate_MissingCertReissuesOnSameKey ){
+		let dir = ( _msvc ? Process::AppDataFolder() : fs::path{"/tmp"} )/"missingCert";
+		fs::remove_all( dir );
+		let settings = SslSettings( (dir/"public.pem").string(), (dir/"private.pem").string(), (dir/"cert.pem").string(), "missing-cert" );
+		settings.CreateDirectories();
+		Crypto::CreateKeyCertificate( settings );
+		let originalKey = Crypto::ReadPublicKey( settings.PublicKey.Path );
+		let originalDer = ReadCertificate( settings.Certificate.Path );
+
+		fs::remove( settings.Certificate.Path );//damaged install: the certificate is gone, the key pair survives.
+		Crypto::EnsureKeyCertificate( settings );
+
+		ASSERT_TRUE( fs::exists(settings.Certificate.Path) );
+		auto reissuedDer = ReadCertificate( settings.Certificate.Path );//lvalue - ExtractPublicKey takes a mutable span.
+		EXPECT_FALSE( reissuedDer==originalDer );//genuinely re-issued: IssueCertificate draws a random 128-bit serial.
+		EXPECT_TRUE( Crypto::ExtractPublicKey(reissuedDer, SRCE_CUR)==originalKey );//...but on the key that was already there.
+		EXPECT_TRUE( Crypto::ReadPublicKey(settings.PublicKey.Path)==originalKey );//and the pair itself was left alone.
 		fs::remove_all( dir );
 	}
 	//an unreadable certificate is a damaged install, not something to paper over by minting a replacement.
