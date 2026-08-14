@@ -9,6 +9,7 @@
 #include "serverInternal.h"
 #include "jde/access/server/awaits/AclAwait.h"
 #include "jde/access/server/awaits/RoleAwait.h"
+#include "jde/access/server/awaits/UiProfileAwait.h"
 #include "awaits/GroupAwait.h"
 #include "awaits/UserAwait.h"
 #include "../accessInternal.h"
@@ -101,6 +102,8 @@ namespace Jde::Access{
 			y = mu<UserAwait>( move(q), creds.UserPK(), sl );
 		else if( q.JsonName=="group" || q.JsonName=="groups" )
 			y = mu<GroupAwait>( q, creds.UserPK(), sl );
+		else if( q.DBTableName()=="ui_profiles" )
+			q.AddFilter( "identity_id", creds.UserPK().Value );//y stays null → stock select runs scoped to the executer. UserPK 0 matches nothing.
 		return y;
 	}
 	α Server::CustomMutation( QL::MutationQL& m, QL::Creds creds, SL sl )ι->up<TAwait<jvalue>>{
@@ -110,6 +113,8 @@ namespace Jde::Access{
 			y = mu<Access::Server::AclQLAwait>( move(m), creds.UserPK(), sl );
 		else if( (m.Type==Add || m.Type==Remove) && m.TableName()=="roles" )
 			y = mu<Access::Server::RoleMAwait>( move(m), creds.UserPK(), sl );
+		else if( m.TableName()=="ui_profiles" )//all types - stock UpdateAwait would fall back to an unscoped `target=` where clause.
+			y = mu<Access::Server::UiProfileAwait>( move(m), creds.UserPK(), sl );
 		return y;
 	}
 }

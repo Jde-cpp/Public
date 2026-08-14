@@ -1,4 +1,5 @@
-﻿import { Injectable } from '@angular/core';
+import { Inject, Injectable, Optional } from '@angular/core';
+import { IProfileService } from './IProfileService';
 
 type Constructor<T = object> = new (...args: any[]) => T;
 
@@ -8,7 +9,8 @@ function factory<T>(ctor: Constructor<T>, ...args: any[]): T {
 
 @Injectable( { providedIn: 'root' } )
 export class ProfileStore{
-	constructor() {
+	//string tokens can't go through inject(); optional so tests/apps without the provider stay on localStorage.
+	constructor( @Optional() @Inject('IProfileService') private profileService: IProfileService|null ) {
 	}
 	static showDeleted( collectionName:string ):boolean{
 		const item = localStorage.getItem( `${collectionName}.showDeleted` );
@@ -37,18 +39,53 @@ export class ProfileStore{
 		if( value!=null && typeof value != 'string' )
 			value = JSON.stringify( value );
 		if( value )
-			localStorage.setItem( key, value as string );
+			localStorage.setItem( key, value as string );//always: fallback copy + static local() readers (navbar showBreadcrumbs).
 		else
 			localStorage.removeItem( key );
+
+		const userKey = this.profileService?.userKey();
+		if( !this.profileService || !userKey )
+			return;
+		const json = (value as string) || null;
+		const cacheKey = ProfileStore.cacheKey( userKey, key );
+		if( this.cacheGet(cacheKey)===json )//save-as-needed: skip no-op mutations (e.g. unchanged ngOnDestroy saves).
+			return;
+		this.cacheSet( cacheKey, json );
+		try{
+			await this.profileService.save( key, json );
+		}
+		catch( e ){
+			console.warn( `ProfileStore.save('${key}') failed - value kept in localStorage.`, e );
+		}
 	}
 	async load<T>( key:string, defaultValue:T ): Promise<T>{
-		//return this.profileService.load<T>( key, defaultValue );
-		return Promise.resolve( ProfileStore.local<T>(key, defaultValue) );
+		const userKey = this.profileService?.userKey();
+		if( !this.profileService || !userKey )
+			return ProfileStore.local<T>( key, defaultValue );//logged out: exactly the pre-server behavior.
+		const cacheKey = ProfileStore.cacheKey( userKey, key );
+		let json = this.cacheGet( cacheKey );
+		if( json===undefined ){
+			try{
+				json = await this.profileService.load( key );
+			}
+			catch( e ){
+				console.warn( `ProfileStore.load('${key}') failed - using localStorage.`, e );
+				return ProfileStore.local<T>( key, defaultValue );//failure not cached ⇒ retried next visit.
+			}
+			if( json==null ){//no server row: migrate any pre-existing local value up.
+				const local = localStorage.getItem( key );
+				if( local!=null ){
+					json = local;
+					this.set( key, local );//fire & forget; also primes the cache.
+				}
+			}
+			this.cacheSet( cacheKey, json );
+		}
+		return json==null ? defaultValue : JSON.parse( json ) as T;//parse per call - callers never share mutable objects.
 	}
 
 	async loadClassArray<T>( key:string, ctor: Constructor<T>, ...args: any[] ): Promise<T[]>{
-		//return this.profileService.load<T>( key, defaultValue );
-		let json = ProfileStore.local<any[]>( key, [] );
+		let json = await this.load<any[]>( key, [] );
 		return json.map( item => factory(ctor, ...[item, ...args]) );
 	}
 
@@ -87,6 +124,25 @@ export class ProfileStore{
 	async save<T>( key:string, value:T|string|null ):Promise<void>{
 		return Promise.resolve( this.set<T>(key, value) );
 	}
+	private static cacheKey( userKey:string, key:string ):string{
+		return `${userKey}\u0000${key}`;//user-scoped so re-login as another user can't hit stale entries.
+	}
+	private cacheGet( key:string ):string|null|undefined{//undefined ⇒ miss, null ⇒ known-absent on the server.
+		if( !this.cache.has(key) )
+			return undefined;
+		const value = this.cache.get( key )!;
+		this.cache.delete( key );//re-insert: Map insertion order doubles as recency.
+		this.cache.set( key, value );
+		return value;
+	}
+	private cacheSet( key:string, value:string|null ):void{
+		this.cache.delete( key );
+		this.cache.set( key, value );
+		while( this.cache.size>ProfileStore.cacheLimit )
+			this.cache.delete( this.cache.keys().next().value! );
+	}
+	private cache = new Map<string,string|null>();
+	private static readonly cacheLimit = 10;//last N profiles kept in memory so page visits don't refetch.
 	private static localDefaults:Map<string, string> = new Map<string, string>();
 	//#defaults:Map<string, string> = new Map<string, string>();
 	private static localOriginalValues:Map<string, string> = new Map<string, string>();
