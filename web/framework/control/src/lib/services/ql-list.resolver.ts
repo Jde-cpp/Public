@@ -7,8 +7,7 @@ import { PageProfile, PageSettings } from '../pages/GraphQL/model/PageSettings';
 import { StringUtils } from '../utils/StringUtils';
 import { MetaObject } from '../model/ql/schema/MetaObject';
 import { Field } from '../model/ql/schema/Field';
-import { RouteItem, ProfileStore } from 'jde-spa';
-import { RouteStore } from './route.store';
+import { RouteItem, ProfileStore, RouteStore } from 'jde-spa';
 import { View, ViewFieldSettings } from '../model/ql/View';
 import { Sort } from '@angular/material/sort';
 

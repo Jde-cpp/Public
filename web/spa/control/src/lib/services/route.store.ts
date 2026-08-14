@@ -1,7 +1,6 @@
-import { HostListener, Injectable } from "@angular/core";
+import { Injectable } from "@angular/core";
 import { UrlSegment } from "@angular/router";
-import { RouteItem } from "jde-spa";
-import { load } from "protobufjs";
+import { RouteItem } from "../pages/component-sidenav/component-sidenav";
 
 @Injectable({ providedIn: 'root' })
 export class RouteStore{

@@ -1,8 +1,7 @@
 import {inject, Inject, Injectable} from '@angular/core';
 import {ActivatedRouteSnapshot, Resolve, RouterStateSnapshot} from '@angular/router';
-import { RouteItem } from 'jde-spa';
+import { RouteItem, RouteStore } from 'jde-spa';
 import { AppService } from '../app/app.service';
-import { RouteStore } from '../route.store';
 import { StringUtils } from '../../utils/StringUtils';
 import { TableSettings } from '../ql-list.resolver';
 

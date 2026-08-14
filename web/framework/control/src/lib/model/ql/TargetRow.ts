@@ -91,12 +91,6 @@ export abstract class TargetRow<T extends TargetRow<T>> extends ITargetRow{
 	mutation( original:T ):Mutation[]{
 		verify( this.canSave );
 		let args = this.mutationArgs( original );
-		if( this.target!=original?.target )
-			args["target"] = this.target;
-		if( this.name!=original?.name )
-			args["name"] = this.name;
-		if( this.description!=original?.description )
-			args["description"] = this.description;
 		return Object.keys(args).length ? [new Mutation( this.type, this.id, args, original.id ? MutationType.Update : MutationType.Create )] : [];
 	}
 

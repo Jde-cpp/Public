@@ -1,8 +1,8 @@
 import {inject, Inject, Injectable} from '@angular/core';
 import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot} from '@angular/router';
-import { AppInstanceRoute, SnackbarService, PageProfile, PageSettings, QLListResolver, RouteStore, TableSchema, View } from 'jde-framework';
+import { AppInstanceRoute, SnackbarService, PageProfile, PageSettings, QLListResolver, TableSchema, View } from 'jde-framework';
 import { Gateway, GatewayService } from '../gateway.service';
-import { RouteItem, ProfileStore } from 'jde-spa';
+import { RouteItem, ProfileStore, RouteStore } from 'jde-spa';
 
 export type GatewayData = {
 	columns: Record<string,string>;

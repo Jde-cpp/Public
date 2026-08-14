@@ -31,10 +31,11 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 				permission =  new Permission( {resource: new Resource( resource )} );
 			this.availablePermissions.push( permission );
 		}
-		//let sort = this.profile.value.sort;
-		let sort:Sort = {active: "schema,resource", direction: "asc"};
-		for( const col of sort.active.split(",").filter(x=>this.displayedColumnNames.includes(x)).reverse() )
-			this.sortData( {active:col, direction: sort.direction} );
+		this.#sort = {...(this.profile.sort ?? PermissionTable.defaultProfile.sort)};//copy: ProfileStore.load hands back the default OBJECT itself when nothing is stored, and that default is a static shared by every instance
+		if( this.#sort.direction ){//'' is MatSort's unsorted state - leave the rows in load order rather than sorting descending
+			for( const col of this.#sort.active.split(",").filter(x=>this.displayedColumnNames.includes(x)).reverse() )
+				this.#applySort( {active:col, direction: this.#sort.direction} );//not sortData(): that records the user's choice, and the multi-key loop would leave #sort holding only the last column
+		}
 		this.isLoading.set( false );
 	}
 	async ngAfterViewInit(){
@@ -45,6 +46,10 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 		this.profileStore.save<Profile>( 'permissionTable', { sort: this.sort, showDeleted: this.profile?.showDeleted } );
 	}
 	sortData($event:Sort){
+		this.#sort = $event;//remember what the user clicked; ngOnDestroy used to persist the hardcoded getter instead, so the choice was thrown away
+		this.#applySort( $event );
+	}
+	#applySort($event:Sort){
 		this.availablePermissions = this.availablePermissions.sort((a:Permission,b:Permission)=>{
 			let y:number;
 			if( ["schema", "resource", "deleted", "target"].includes($event.active) ){
@@ -115,8 +120,7 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 	permissions=model.required<Permission[]>();
 	availablePermissions:Permission[] = [];
 	rights = Rights;
-	//get sort(){ return this.profile.value.sort; }
-	get sort():Sort{ return {active: "schema,resource", direction: "asc"}; }
+	get sort():Sort{ return this.#sort; } #sort:Sort = {...PermissionTable.defaultProfile.sort};
 	@ViewChild('mainTable',{static: false}) table!:MatTable<Permission>;
 	isLoading = signal<boolean>( true );
 	get displayedColumnNames():string[]{

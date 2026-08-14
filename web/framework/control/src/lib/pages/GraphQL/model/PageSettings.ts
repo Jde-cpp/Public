@@ -7,7 +7,11 @@ export class PageProfile{
 		if( args ){
 			this.showDeleted = args.showDeleted;
 			this.currentViewIndex = args.currentViewIndex;
-			this.views = args.views;
+			//copy the ARRAY: every caller builds `new PageProfile(current)` as a private working copy, mutates it through
+			//upsertView/updateView and only then swaps it in via refresh() - sharing the array wrote those edits straight
+			//back into the profile still on screen.  Shallow on purpose: the View instances stay identical, which the logs
+			//view picker and the indexOf/currentViewIndex bookkeeping rely on.
+			this.views = [...args.views];
 		}
 	}
 	upsertView( view:View, collectionName:string, profileStore:ProfileStore ){

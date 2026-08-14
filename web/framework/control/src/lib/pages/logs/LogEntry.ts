@@ -1,5 +1,5 @@
 import { Guid } from '../../model/Guid';
-import * as LogProto from '../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
+import { ELogLevel } from 'jde-proto/Log';
 import { View, ViewField, ViewSerializedArgs, ViewType } from '../../model/ql/View';
 import { Query } from '../../services/IGraphQL';
 import { TableSchema } from '../../model/ql/schema/TableSchema';

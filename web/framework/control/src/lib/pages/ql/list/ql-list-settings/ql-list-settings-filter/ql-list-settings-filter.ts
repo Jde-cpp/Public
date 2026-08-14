@@ -36,7 +36,7 @@ export class QLListSettingsFilter implements OnInit{
 
 	ngOnInit(){
 		for( let fieldFilter of this.view().fieldFilters ){
-			this.dataSource.push( { field: fieldFilter.field, filter: fieldFilter.filter, displayName: this.columns()[fieldFilter.field.name] } );
+			this.dataSource.push( { field: fieldFilter.field, filter: View.copyFilter(fieldFilter.filter), displayName: this.columns()[fieldFilter.field.name] } );//edit a copy: every handler below mutates col.filter in place, and holding the live view's Filter meant those edits survived Cancel
 			this.addSignals( fieldFilter.field, fieldFilter.filter.operator );
 		}
 		this.dataSource.push( {field: undefined as any, filter: {operator: Operator.None, value: []}, displayName: ""} );//placeholder add-row: the template renders the column-select only when field is falsy (new Field({}) also threw in Field's ctor)
@@ -102,9 +102,12 @@ export class QLListSettingsFilter implements OnInit{
 		let suggestions = this.suggestions()[col.field.name] as string[];
 		if( !suggestions ) //filter column not shown.
 			return [];
+		const text = (value ?? "").toString().trim().toLowerCase();
 		let result = suggestions.filter( s=>{
 			const existing = col.filter.value;
 			if( existing.includes(s) )
+				return false;
+			if( text && !String(s).toLowerCase().includes(text) )//String(): ql-list.colSuggestions pushes raw row values, so numbers land here too
 				return false;
 			if( ["<null>", "<not null>"].includes(s) ){
 				if( [Operator.Less, Operator.Greater].includes(col.filter.operator) )
@@ -116,13 +119,11 @@ export class QLListSettingsFilter implements OnInit{
 		});
 		return result;
 	}
-	useObservable = false;
+
 	autoCompleteValues(col:ColumnFilter): Observable<string[]>{
-		if( !this.useObservable )
-			return this.autoCompleteSubjects.get(col.field.name)!.asObservable();
-		else
-			return this.autoCompleteObservables.get(col.field.name)!;
+		return this.autoCompleteSubjects.get(col.field.name)!.asObservable();
 	}
+
 	input(col: ColumnFilter): FormControl{
 		let input = this.autoCompleteInputs.get(col.field.name);
 		if( input )
@@ -211,7 +212,6 @@ export class QLListSettingsFilter implements OnInit{
 	suggestions = input.required<Record<string,any[]>>();
 	excludedColumns = input.required<string[]>();
 	autoCompleteSubjects = new Map<string, BehaviorSubject<string[]>>();
-	autoCompleteObservables = new Map<string, Observable<string[]>>();
 	operatorSignals = new Map<string, WritableSignal<Operator>>();
 	nullSignals = new Map<string, WritableSignal<NullCriteria>>();
 

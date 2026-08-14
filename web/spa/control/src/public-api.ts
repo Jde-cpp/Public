@@ -5,6 +5,7 @@ export * from './lib/pages/component-sidenav/component-sidenav';
 export * from './lib/pages/component-sidenav/component-sidenav-can-load-guard';
 export * from './lib/pages/component-category-list/component-category-list';
 export * from './lib/services/IRouteService';
+export * from './lib/services/route.store';
 export * from './lib/shared/footer/footer';
 export * from './lib/shared/navbar/navbar';
 export * from './lib/shared/navigation-focus/navigation-focus';

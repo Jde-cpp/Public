@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #Collects $1 and, transitively, every .proto it imports into the global $_protoDeps.  Imports are matched by basename
-#against the cwd - the output dir - because that is where create() symlinks everything pbjs has to resolve; the
-#google/protobuf/* ones it ships itself are not linked in, so a name that is not there is simply not a dependency.
+#against the cwd - the generation dir - because that is where linkProtos symlinks everything the compiler has to
+#resolve; the google/protobuf/* ones buf ships itself are not linked in, so a name that is not there is not a dependency.
 function protoDeps {
 	local proto=$1;
 	if [ -n "${_protoDeps[$proto]}" ] || [ ! -f $proto ]; then return 0; fi;
@@ -13,48 +13,63 @@ function protoDeps {
 	done;
 }
 
-#true when $1.js/$1.d.ts still have to be built - they are missing, or a .proto they were generated from has changed
-#since.  pbjs emits a static module with the imported messages inlined, so an import's timestamp counts as much as
-#the target's own: Opc.FromServer.d.ts goes stale when Opc.Common.proto moves under it, not just when its own does.
+#true when $1.ts still has to be generated - it is missing, or a .proto it was generated from has changed since.
+#An import's timestamp counts as much as the target's own: Opc.FromServer.ts goes stale when Opc.Common.proto moves
+#under it, not just when its own does.
 #Only call this from an if/&&/|| condition - env.sh traps ERR, and the `return 1` here is an answer, not a failure.
 function isStale {
 	local name=$1;
-	if [ ! -f $name.d.ts ] || [ ! -f $name.js ]; then return 0; fi;
+	if [ ! -f $name.ts ]; then return 0; fi;
 	unset _protoDeps; declare -gA _protoDeps;
 	protoDeps $name.proto;
 	local proto;
 	for proto in "${!_protoDeps[@]}"; do
-		if [ $proto -nt $name.d.ts ]; then return 0; fi;
+		if [ $proto -nt $name.ts ]; then return 0; fi;
 	done;
 	return 1;
 }
 
-function create {
-	dir=$1;
+#Symlink a set of .proto into the generation dir (the cwd).  Everything lands in one directory so cross-directory
+#imports resolve - App.FromServer.proto imports Web.FromServer.proto out of libs/web/client/proto, for instance.
+function linkProtos {
+	local dir=$1;
 	local -n files=$2;
-	wsFolder=$3;
-	#cwd is the proto output dir here, not the workspace, so wsFolder cannot be defaulted from it - the callers cd to
-	#the workspace and pass it.  Empty would silently probe /node_modules/.bin/pbjs, so say so instead.
-	if [ -z "$wsFolder" ]; then echo `pwd`; echo createProtos: no workspace dir passed; exit 1; fi;
-	echo createProtos pwd=`pwd` dir=$dir files=$2 wsFolder=$wsFolder;
+	local i;
 	for i in "${!files[@]}"; do
 		if [ ! -f $i.proto ]; then
 			mklink $i.proto $dir;
 		fi;
 	done;
-	#pushd `pwd` > /dev/null;
-	#cd $wsFolder;
-	local pbjs=$wsFolder/node_modules/.bin/pbjs;
-	local pbts=$wsFolder/node_modules/.bin/pbts;
-	#do not use npx - these dirs are symlinked out of the workspace, so npm resolves its local prefix outside it and fetches the unrelated registry 'pbjs' package.
-	if [ ! -x $pbjs ] || [ ! -x $pbts ]; then echo $PS4 protobufjs-cli not found in $wsFolder/node_modules; exit 1; fi;
-	for i in "${!files[@]}"; do
-		echo $pbjs -r ${files[$i]} -t static-module -w es6 -o `pwd`/$i.js `pwd`/$i.proto;
-		$pbjs -r ${files[$i]} -t static-module -w es6 -o `pwd`/$i.js `pwd`/$i.proto; if [ $? -ne 0 ]; then echo `pwd`; echo $pbjs -r ${files[$i]} -t static-module -w es6 -o `pwd`/$i.js `pwd`/$i.proto; exit 1; fi;
-		$pbts -o `pwd`/$i.d.ts `pwd`/$i.js; if [ $? -ne 0 ]; then echo `pwd`; echo $pbts -o `pwd`/$i.d.ts `pwd`/$i.js; exit 1; fi;
-	done;
-	#popd > /dev/null;
-#	for i in "${!files[@]}"; do
-#		rm $i.proto;
-#	done;
+}
+
+#Generate TypeScript for every .proto in the cwd.  ts-proto emits real .ts - flat per-message interfaces plus a codec
+#const - rather than protobufjs's static-module namespaces, so there is no shared `roots` registry and no need to keep
+#one generated set apart from another.
+#buf, not protoc: it resolves the google/protobuf well-known types itself and installs from npm like everything else
+#here, where protoc would be a system dependency the web build does not otherwise have.
+function generateProtos {
+	local wsFolder=$1;
+	if [ -z "$wsFolder" ]; then echo `pwd`; echo generateProtos: no workspace dir passed; exit 1; fi;
+	local buf=$wsFolder/node_modules/.bin/buf;
+	local plugin=$wsFolder/node_modules/.bin/protoc-gen-ts_proto;
+	#do not use npx - these dirs are symlinked out of the workspace, so npm resolves its local prefix outside it and fetches unrelated registry packages.
+	if [ ! -x $buf ] || [ ! -x $plugin ]; then echo $PS4 buf/ts-proto not found in $wsFolder/node_modules; exit 1; fi;
+	#forceLong=long keeps 64-bit fields as Long, which ProtoUtils.toNumber and every uint64 tag field already expect;
+	#the default (string) would silently change every one of those comparisons.
+	local template="{\"version\":\"v2\",\"plugins\":[{\"local\":\"$plugin\",\"out\":\".\",\"opt\":[\"esModuleInterop=true\",\"forceLong=long\",\"outputJsonMethods=false\",\"useOptionals=messages\"]}]}";
+	echo generateProtos pwd=`pwd`;
+	$buf generate --template "$template" . || { echo `pwd`; echo $buf generate failed; exit 1; };
+}
+
+#Compile the generated .ts down to the .js/.d.ts pair the jde-proto package ships.  It is published as a plain package
+#rather than compiled inside a library on purpose: ng-packagr cannot carry a relatively-imported declaration file into
+#a library's typings, which is what used to make `ng build <lib>` impossible.  Keeping the .ts under src/ (and out of
+#the package root) also stops a library build resolving jde-proto to source and pulling it outside its own rootDir.
+function buildProtos {
+	local wsFolder=$1;
+	local protoDir=$2;
+	local tsc=$wsFolder/node_modules/.bin/tsc;
+	if [ ! -x $tsc ]; then echo $PS4 tsc not found in $wsFolder/node_modules; exit 1; fi;
+	echo buildProtos $protoDir;
+	$tsc -p $protoDir/tsconfig.json || { echo `pwd`; echo $tsc -p $protoDir/tsconfig.json failed; exit 1; };
 }

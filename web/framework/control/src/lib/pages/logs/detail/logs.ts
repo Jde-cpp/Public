@@ -12,8 +12,8 @@ import { ComponentPageTitle } from 'jde-spa';
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
 
 
-import * as AppFromServer from '../../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
-import * as LogProto from '../../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
+import * as FromServer from 'jde-proto/App.FromServer';
+import { ELogLevel } from 'jde-proto/Log';
 import { FormControl } from '@angular/forms';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -188,9 +188,17 @@ export class LogDetail implements OnInit, OnDestroy{
  			this.load( this.data.allEntries.length );
 	}
 	onViewChange(index:number){
-		this.views.set( this.views().filter(v=>v.type!=ViewType.Adhoc) );
-		this.viewIndex.set( index );
-		ProfileStore.setViewIndex( "logs", index );
+		const selected = this.views()[index];
+		if( !selected )
+			return;//a stale index must not strand view() undefined - every path below re-derives from `selected`
+		//Resolve the view by identity, then re-find its index AFTER the filter.  Switching to a saved view still discards
+		//the adhoc entry, but the adhoc one is itself selectable: it sits last, so dropping it and then applying the
+		//pre-filter index left viewIndex==views().length, view() undefined, and load()/displayedColumns threw.
+		const remaining = this.views().filter( v=>v.type!=ViewType.Adhoc || v===selected );
+		const newIndex = remaining.indexOf( selected );
+		this.views.set( remaining );
+		this.viewIndex.set( newIndex );
+		ProfileStore.setViewIndex( "logs", newIndex );//the stale index was persisted too, so the bad selection survived a reload (clamped, landing on the wrong view)
 		this.data.clear();
 		this.load();
 	}
@@ -240,10 +248,26 @@ export class LogDetail implements OnInit, OnDestroy{
 		this.load();
 	}
 	onViewDelete(view:LogView){
-		verify( view.type==ViewType.User );
-		this.views.set( this.views().filter( v=>v.name!=view.name || v.type!=view.type ) );
-		this.viewIndex.set( 0 );
-		this.profileStore.save( `logs/views`, this.views().filter(v=>v.isUser).map(v=>v.toJson(undefined)) );
+		if( view.type!=ViewType.User ){//was `verify(...)`, i.e. `debugger;` + throw on a path the UI could reach - a frozen page rather than a no-op.  The Delete button is disabled for non-User views now; this is the belt to that braces.
+			console.warn( `onViewDelete: ignoring a non-user view ('${view.name}') - only saved views can be deleted.` );
+			this.isSettings.set( false );
+			return;
+		}
+		const current = this.views()[this.viewIndex()];
+		//`|| v.type!=view.type` left the deleted view's Adhoc twin behind — an unsaved edit of a view that no longer exists,
+		//and the present-but-not-current adhoc that onViewChange used to choke on.  Match the adhoc form too, but only for
+		//this name, so an unrelated adhoc (or a same-named System view) is untouched.
+		const remaining = this.views().filter( v=>!(v.name==view.name && (v.type==view.type || v.type==ViewType.Adhoc)) );
+		const newIndex = Math.max( remaining.indexOf(current), 0 );//keep the selection when it survived; the old code jumped to 0 even when the deleted view was not the current one
+		this.views.set( remaining );
+		this.viewIndex.set( newIndex );
+		ProfileStore.setViewIndex( "logs", newIndex );//never persisted here, so a reload could restore an index pointing at a different view
+		this.profileStore.save( `logs/views`, remaining.filter(v=>v.isUser).map(v=>v.toJson(undefined)) );
+		if( current!=remaining[newIndex] ){//the selection actually moved — without this the table keeps the deleted view's rows under another view's columns
+			this.data.clear();
+			this.load();
+		}
+		this.isSettings.set( false );//onViewSave/onViewShow both close; this one left the user editing a view that no longer exists (ql-list's onViewDelete already closed)
 	}
 
 	cellClick( entry:Entry ){
@@ -254,9 +278,10 @@ export class LogDetail implements OnInit, OnDestroy{
 			current.selected = false;
 	}
 	hideSelectedMessage(){
-		this.profile.level = ELogLevel.Information;
+		//the two `profile.level` writes that used to bracket this push were leftover experiment code: they clobbered the level
+		//the user picked (ngOnDestroy persists it) and, by assigning the field directly, bypassed the `level` setter that keeps
+		//data.filter.level in step — so the combo and the row filter disagreed until the next filterData().
 		this.profile.hiddenMessages.push( this.selectedEntry!.templateId );
-		this.profile.level = ELogLevel.Debug;
 		this.filterData();
 	}
 	clearHiddenMessages(){

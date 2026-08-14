@@ -1,7 +1,7 @@
 import { inject, Inject, Injectable } from '@angular/core';
 import { ActivatedRoute, Routes, UrlSegment } from "@angular/router";
-import { RouteItem, IRouteService } from "jde-spa";
-import { RouteStore, subscribe } from "jde-framework";
+import { RouteItem, IRouteService, RouteStore } from "jde-spa";
+import { subscribe } from "jde-framework";
 import { GatewayService } from '../gateway.service';
 
 @Injectable( {providedIn: 'root'} )
