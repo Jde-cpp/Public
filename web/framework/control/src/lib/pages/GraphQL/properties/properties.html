@@ -4,15 +4,7 @@
 			@for( field of fields(); track field.name; let tab = $index ){
 				<mat-form-field style="width: 100%;" appearance="fill">
 					<mat-label>{{field.displayName}}</mat-label>
-					@if( field.type==InputTypes.None ){
-						<input #stringField matInput
-							[type]="field.name=='url' ? 'url' : 'text'"
-							[attr.cdkFocusInitial]="field.name=='target' ? '' : null"
-							[value]="record()[field.name] ?? ''"
-							[tabIndex]=tab+1
-							(keyup)="onChange( field.name, $any($event.target).value )" >
-					}
-					@else if( field.type==InputTypes.Text ){
+					@if( field.type==InputTypes.Text ){
 						<textarea matInput
 							[value]="record()[field.name] ?? ''"
 							[tabIndex]="tab+1"
@@ -28,6 +20,14 @@
 								<mat-option [value]="option.id">{{option.name}}</mat-option>
 							}
 						</mat-select>
+					}
+					@else {<!-- None, Bool, and any future type: a form field must never render without a control -->
+						<input #stringField matInput
+							[type]="field.name=='url' ? 'url' : 'text'"
+							[attr.cdkFocusInitial]="field.name=='target' ? '' : null"
+							[value]="record()[field.name] ?? ''"
+							[tabIndex]=tab+1
+							(keyup)="onChange( field.name, $any($event.target).value )" >
 					}
 				</mat-form-field>
 			}

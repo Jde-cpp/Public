@@ -3,9 +3,8 @@ import { DatePipe } from '@angular/common';
 import {ActivatedRoute} from '@angular/router';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
-import { RouteItem } from 'jde-spa';
+import { RouteItem, RouteStore } from 'jde-spa';
 import { Connection } from '../../services/resolvers/app.resolver';
-import { RouteStore } from '../../services/route.store';
 
 @Component({
     selector: 'apps',

@@ -5,8 +5,7 @@ import { TableSchema } from '../model/ql/schema/TableSchema';
 import { IGraphQL } from '../services/IGraphQL';
 import { ListRoute, TableSettings } from './ql-list.resolver';
 import { MetaObject } from '../model/ql/schema/MetaObject';
-import { RouteItem } from 'jde-spa';
-import { RouteStore } from './route.store';
+import { RouteItem, RouteStore } from 'jde-spa';
 import { ProfileStore } from 'jde-spa';
 
 export type DetailPageSettings = {

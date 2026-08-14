@@ -1,8 +1,8 @@
 import { ActivatedRouteSnapshot, createUrlTreeFromSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { inject, Inject, Injectable } from '@angular/core';
-import { RouteItem } from 'jde-spa';
+import { RouteItem, RouteStore } from 'jde-spa';
 import {  ProfileStore } from 'jde-spa';
-import { DetailResolverData, DetailRoute, SnackbarService, MetaObject, RouteStore} from 'jde-framework'
+import { DetailResolverData, DetailRoute, SnackbarService, MetaObject} from 'jde-framework'
 import { Gateway, GatewayService } from '../gateway.service';
 import { ServerCnnctn } from '../../model/ServerCnnctn';
 import { OpcStore } from '../opc-store';
