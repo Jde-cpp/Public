@@ -6,6 +6,16 @@
 #define let const auto
 
 namespace Jde::DB{
+	//Regex/Glob bind their pattern as a parameter, so swapping the keyword is only half the translation - the dialect has
+	//to rewrite the value too (glob '*' is '%' to a LIKE, '.*' to a REGEXP).  Every other operator passes through.
+	Ω patternParam( const Column& col, EOperator op, Value param, SL sl )ε->Value{
+		if( op!=EOperator::Regex && op!=EOperator::Glob )
+			return param;
+		if( !param.is_string() )
+			throw Exception{ sl, Jde::ELogLevel::Debug, "'{}' needs a string pattern, not a '{}'.", DB::ToString(op), param.TypeName() };
+		return Value{ col.Table->Syntax().PatternParam(op, param.get_string(), sl) };
+	}
+
 	WhereClause::WhereClause( const Object& a, EOperator op, const Object& b, SL sl )ε{
 		auto clause = DB::ToString( a );
 		if( b.index()==underlying(EObject::Value) && get<Value>(b).is_null() ){
@@ -51,22 +61,26 @@ namespace Jde::DB{
 				throw Exception{ sl, Jde::ELogLevel::Debug, "Null value not allowed for operator '{}'.", DB::ToString(op) };
 			_clauses.push_back( Ƒ("{} is {}null", col->FQName(), prefix) );
 		}else{
+			auto translated = patternParam( *col, op, move(param), sl );
 			_clauses.push_back( col->Table->Syntax().FormatOperator(*col, op, 1, sl) );
-			_params.push_back( move(param) );
+			_params.push_back( move(translated) );
 		}
 	}
 
 	α WhereClause::Add( sp<Column> col, EOperator op, vector<Value> inParams, SL sl )ε->void{
+		//FormatOperator first: it rejects a Regex/Glob with a count other than 1, so a `glob:["a*","b*"]` fails here
+		//rather than binding two params against the single '?' the pattern operators emit.
+		auto clause = col->Table->Syntax().FormatOperator( *col, op, inParams.size(), sl );
 		for( auto& param : inParams )
-			_params.emplace_back( move(param) );
-		_clauses.push_back( col->Table->Syntax().FormatOperator(*col, op, inParams.size(), sl) );
+			_params.emplace_back( patternParam(*col, op, move(param), sl) );
+		_clauses.push_back( move(clause) );
 	}
 
 	α WhereClause::Add( sp<Column> col, EOperator op, vector<Value> inParams, bool haveNull, SL sl )ε->void{
 		if( !haveNull )
 			return Add( col, op, move(inParams), sl );
 		for( auto& param : inParams )
-			_params.emplace_back( move(param) );
+			_params.emplace_back( patternParam(*col, op, move(param), sl) );
 		let notIn = op==EOperator::NotIn;
 		if( inParams.empty() )
 			_clauses.push_back( Ƒ("{} is {}null", col->FQName(), notIn ? "not " : "") );

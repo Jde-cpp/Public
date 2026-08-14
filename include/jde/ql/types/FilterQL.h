@@ -7,7 +7,7 @@ namespace Jde::QL{
 	struct TableQL; struct Pattern;
 	α ToString( DB::EOperator op )ι->string;
 	α ToQLOperator( string op )ι->DB::EOperator;
-	inline constexpr uint MaxPatternLength{ 1024 }; //a longer `regex`/`glob` filter is rejected rather than handed to std::regex.
+	inline constexpr uint MaxPatternLength{ 1024 }; //a longer `regex`/`glob` filter is rejected rather than handed to boost::regex.  Bounds the compile only - BOOST_REGEX_MAX_STATE_COUNT bounds the match.
 
 	struct FilterValue final{
 		FilterValue( DB::EOperator op, jvalue value )ι;
@@ -19,7 +19,7 @@ namespace Jde::QL{
 		α ToString()Ι->string;
 	private:
 		α TestTime( TimePoint value )Ι->bool;
-		sp<const Pattern> _pattern; //regex/glob only, and null when the pattern was unusable - built once here, never per row.  Defined in FilterQL.cpp so <regex> stays out of this header.
+		sp<const Pattern> _pattern; //regex/glob only, and null when the pattern was unusable - built once here, never per row.  Defined in FilterQL.cpp so <boost/regex.hpp> - and the state cap it is compiled with - stay out of this header.
 		vector<TimePoint> _times; //Value parsed as time(s), once, so a time column compares chronologically - see TestTime.  Empty unless every literal parsed.
 	};
 	struct Filter final{
