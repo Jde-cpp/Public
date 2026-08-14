@@ -1,0 +1,128 @@
+#pragma once
+#ifndef ANY_AWAIT_H
+#define ANY_AWAIT_H
+#include "Task.h"
+
+namespace Jde{
+	//Secondary awaitable machinery. The VoidAwait/IAwait family (Await.h) fixes await_suspend to its own task's
+	//handle and uses the awaiting coroutine's promise as the value mailbox, so a coroutine can only co_await
+	//awaitables whose ::Task is its own return type - mixing types forces the one-coroutine-per-awaitable
+	//hand-off chain. These awaitables carry their own result/exception and hold a type-erased continuation, so
+	//any coroutine can co_await them regardless of its return type; Any() wraps an existing awaitable for the
+	//same purpose. Prefer these for new cross-type awaits instead of adding another chain.
+	struct AnyVoidAwait{
+		AnyVoidAwait( SRCE )ι:_sl{sl}{}
+		virtual ~AnyVoidAwait()=default;
+		β await_ready()ι->bool{ return false; }
+		α await_suspend( coroutine_handle<> h )ι->void{ _h=h; Suspend(); }	//any promise's handle converts.
+		α await_resume()ε->void{ CheckException(); }
+		//Resume/ResumeExp may run the awaiting coroutine to completion inline, destroying this awaitable - they must be the caller's last use of `this`.
+		α Resume()ι->void{ ASSERT(_h); auto h=_h; _h=nullptr; h.resume(); }
+		α ResumeExp( Exception&& e )ι->void{ _error=e.Move(); Resume(); }	//virtual Move keeps the subclass - await_resume rethrows the dynamic type.
+		α ResumeExp( runtime_error&& e )ι->void{
+			if( auto p = dynamic_cast<Exception*>(&e); p )
+				ResumeExp( move(*p) );
+			else{
+				_error = mu<Exception>( move(e) );
+				Resume();
+			}
+		}
+		α Source()Ι->SL{ return _sl; }
+	protected:
+		β Suspend()ι->void=0;
+		α CheckException()ε->void{
+			if( _error ){
+				auto e = move(_error);
+				e->Throw();
+			}
+		}
+		coroutine_handle<> _h{};
+		up<Exception> _error;
+		SL _sl;
+	};
+
+	template<class TResult>
+	struct AnyAwait{
+		AnyAwait( SRCE )ι:_sl{sl}{}
+		virtual ~AnyAwait()=default;
+		β await_ready()ι->bool{ return false; }
+		α await_suspend( coroutine_handle<> h )ι->void{ _h=h; Suspend(); }
+		α await_resume()ε->TResult{
+			CheckException();
+			if( !_result )
+				throw Exception{ _sl, {ELogLevel::Critical}, "Resumed without a value." };
+			return move( *_result );
+		}
+		α Resume( TResult&& r )ι->void{ _result=move(r); ResumeHandle(); }
+		α ResumeExp( Exception&& e )ι->void{ _error=e.Move(); ResumeHandle(); }	//virtual Move keeps the subclass - await_resume rethrows the dynamic type.
+		α ResumeExp( runtime_error&& e )ι->void{
+			if( auto p = dynamic_cast<Exception*>(&e); p )
+				ResumeExp( move(*p) );
+			else{
+				_error = mu<Exception>( move(e) );
+				ResumeHandle();
+			}
+		}
+		α Source()Ι->SL{ return _sl; }
+	protected:
+		β Suspend()ι->void=0;
+		α ResumeHandle()ι->void{ ASSERT(_h); auto h=_h; _h=nullptr; h.resume(); }
+		α CheckException()ε->void{
+			if( _error ){
+				auto e = move(_error);
+				e->Throw();
+			}
+		}
+		coroutine_handle<> _h{};
+		optional<TResult> _result;
+		up<Exception> _error;
+		SL _sl;
+	};
+
+	template<class R> using AnyAwaitFor = std::conditional_t<std::is_void_v<R>, AnyVoidAwait, AnyAwait<R>>;
+
+	Τ struct AnyAdapter;
+	Τ Ξ AnyAdapterExecute( AnyAdapter<T>& a )ι->typename std::remove_reference_t<T>::Task;
+
+	//Bridges a VoidAwait/IAwait-family awaitable to a foreign coroutine: Suspend launches a glue coroutine of
+	//the inner's own task type (BlockAwaitExecute reshaped - the thread block replaced by resuming the erased
+	//continuation). T is the inner's value type when Any() is given an rvalue, a reference type when given an
+	//lvalue - the lvalue must outlive the co_await, which it does when it lives in the awaiting frame.
+	Τ struct AnyAdapter final : AnyAwaitFor<decltype(std::declval<std::remove_reference_t<T>&>().await_resume())>{
+		using TInner = std::remove_reference_t<T>;
+		using R = decltype(std::declval<TInner&>().await_resume());
+		using base = AnyAwaitFor<R>;
+		AnyAdapter( T&& inner, SRCE )ι: base{sl}, _inner{ FWD(inner) }{}
+		α Inner()ι->TInner&{ return _inner; }
+	protected:
+		α Suspend()ι->void override{ AnyAdapterExecute( *this ); }	//discards the eager, self-destroying glue task - the BlockVoidAwaitExecute pattern.
+	private:
+		T _inner;
+	};
+
+	Ŧ Any( T&& inner, SRCE )ι->AnyAdapter<T>{ return AnyAdapter<T>{ FWD(inner), sl }; }
+
+	Τ Ξ AnyAdapterExecute( AnyAdapter<T>& a )ι->typename std::remove_reference_t<T>::Task{
+		using R = typename AnyAdapter<T>::R;
+		//Resume/ResumeExp is the last use of `a` on every path, and nothing may escape: an exception reaching
+		//the glue promise would be swallowed there and strand the awaiting coroutine forever.
+		try{
+			if constexpr( std::is_void_v<R> ){
+				co_await a.Inner();
+				a.Resume();
+			}
+			else
+				a.Resume( co_await a.Inner() );
+		}
+		catch( Exception& e ){
+			a.ResumeExp( move(e) );
+		}
+		catch( std::runtime_error& e ){
+			a.ResumeExp( move(e) );
+		}
+		catch( ... ){
+			a.ResumeExp( Exception{"Unknown exception from wrapped awaitable.", {ELogLevel::Critical}} );
+		}
+	}
+}
+#endif

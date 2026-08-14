@@ -37,6 +37,7 @@ target_precompile_headers(${targetName}
 #linux.  The binary dir mirrors the source layout, so `#include "proto/X.pb.h"` still resolves, now off the include
 #path rather than beside the includer.
 set( protoOutDir ${CMAKE_CURRENT_BINARY_DIR}/proto )
+file( MAKE_DIRECTORY ${protoOutDir} )
 protobuf_generate(
 	TARGET ${targetName}
 	IMPORT_DIRS proto ../../web/client/proto
