@@ -1,7 +1,7 @@
 import { Injectable, Inject, signal, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { IEnvironment } from 'jde-spa';
-import { AppService, AuthStore, IGraphQL, TableSchema } from 'jde-framework';
+import { AppService, AuthStore, IGraphQL, StringUtils, TableSchema } from 'jde-framework';
 import { Resource } from '../model/Resource';
 
 
@@ -46,7 +46,7 @@ export class AccessService extends AppService implements OnDestroy{
 			default:
 				throw new Error( `Unknown table: ${schema.collectionDisplay}` );
 		}
-		return `${schema.singular}( target:"${target}" ){ ${fields.join(" ")} }`;
+		return `${schema.singular}( target:${StringUtils.qlString(target)} ){ ${fields.join(" ")} }`;
 	}
 	override subQueries( typeName: string, id: number ):string[]{
 		let queries = new Array<string>();

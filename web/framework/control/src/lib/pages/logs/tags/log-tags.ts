@@ -9,7 +9,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { LogEntries } from '../LogEntry';
 import { SeverityPicker } from '../../../shared/severity-picker/severity-picker';
 
-import * as LogProto from '../../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
+import { ELogLevel } from 'jde-proto/Log';
 
 export type TagRow = { tag:string, level:ELogLevel };
 

@@ -7,13 +7,14 @@ import { TableSchema } from '../model/ql/schema/TableSchema';
 import { EnumValue, Log, IQueryResult, Query } from '../services/IGraphQL';
 import { MutationSchema } from '../model/ql/schema/MutationSchema';
 import { Instance } from './app/app.service.types';
-import * as LogProto from '../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
-import * as CommonProto from '../proto/Common'; import IException = CommonProto.Jde.Proto.IException;
+import { ELogLevel } from 'jde-proto/Log';
+import { Exception as IException } from 'jde-proto/Common';
 import { AuthStore } from './auth.store';
 import { GoogleAuthService } from './google-auth.service';
 import { Mutation } from '../model/ql/Mutation';
 import { computed, Signal } from '@angular/core';
 import { EProvider, User } from 'jde-spa';
+import { StringUtils } from '../utils/StringUtils';
 
 interface IStringResult{ id:number; value:string; }
 export interface IError{ requestId?:number; message: string; sc?:number; httpStatus?:number; }//sc is the proto `code`; httpStatus avoids the opc StatusCode collision.
@@ -46,12 +47,20 @@ class RequestPromise<ResultMessage>{
 	{}
 }
 
+//ts-proto emits a per-message interface plus a codec object, not a class, so the transport is handed the codec rather
+//than a constructor - `new Transmission()` no longer exists.  The codec also encodes, which retires the abstract
+//encode() hook each subclass used to implement identically.
+export interface MessageCodec<T>{
+	create( base?:any ):T;
+	encode( message:T ):{ finish():Uint8Array };
+}
+
 export abstract class ProtoService<Transmission,ResultMessage>{
-	constructor( private TCreator: { new (): Transmission; }, protected http: HttpClient, public readonly transport:ETransport, protected authStore:AuthStore, private isAppServer:boolean=false, protected googleAuth?:GoogleAuthService )
+	constructor( private TCreator: MessageCodec<Transmission>, protected http: HttpClient, public readonly transport:ETransport, protected authStore:AuthStore, private isAppServer:boolean=false, protected googleAuth?:GoogleAuthService )
 	{}
 
 	connect():void{
-		this.#socket = webSocket<protobuf.Buffer>( {url: this.socketUrl, deserializer: msg => this.onMessage(msg), serializer: msg=>msg, binaryType:"arraybuffer"} );
+		this.#socket = webSocket<Uint8Array>( {url: this.socketUrl, deserializer: msg => this.onMessage(msg), serializer: msg=>msg, binaryType:"arraybuffer"} );
 		this.#socket.subscribe(
 			( msg ) => this.addMessage( msg ),
 			( err ) => this.error( err ),
@@ -66,7 +75,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	subQueries( typeName: string, id: number ):string[]{ return []; }
 	targetQuery( schema: TableSchema, target: string, showDeleted:boolean, excludedColumns:string[] ):string{
 		let fields = this.fieldColumns( schema, showDeleted, excludedColumns );
-		return `${schema.singular}( target:"${target}" ){ ${fields.join(" ")} }`;
+		return `${schema.singular}( target:${StringUtils.qlString(target)} ){ ${fields.join(" ")} }`;
 	}
 	protected fieldColumns( schema: TableSchema, showDeleted:boolean, excludedColumns:string[] ):string[]{
 		let columns = [];
@@ -105,7 +114,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	}
 	sendTransmission( t:Transmission ){
 		console.log( JSON.stringify(t) );
-		var toSend = this.encode(t).finish();
+		var toSend = this.TCreator.encode(t).finish();
 		this.#socket?.next( toSend );
 	}
 	send( m:any, log:string ):RequestId{
@@ -114,7 +123,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		return requestId;
 	}
 	protected sendWithId( m:any, requestId:RequestId, log:string ):void{
-		let t = new this.TCreator() as any;
+		let t = this.TCreator.create() as any;
 		if( this.log.subRequest ) console.log( `[${requestId}]${log.substring(0, this.log.maxLength)}` );
 		t["messages"].push( {requestId:requestId,...m} );
 		const isAuthorization = Object.hasOwn( m, 'sessionId' );//the handshake message that releases the backlog; must go out before socketId is set
@@ -167,15 +176,14 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				const settings:any = await firstValueFrom( this.http.get<any>(url, args) );
 				if( this.log.restResults ) log( JSON.stringify(settings) );
 				this.timeoutSeconds = fromIsoDuration( settings["restSessionTimeout"] );
-				let instance = parseInt( settings["serverInstance"] );
 				let active = settings["active"];
 				let timedout = this.lastRestCall && ( this.lastRestCall.getTime() < Date.now() - this.timeoutSeconds*1000 );
-				let previousInstanceIndex = this.user()?.serverInstances?.findIndex( x=>x.url==this.url ) ?? -1;
-				let previousInstance = previousInstanceIndex>=0 ? this.user()!.serverInstances![previousInstanceIndex].instance : 0;
-				if( !active || timedout || (this.isAppServer && instance!=previousInstance) )
-					this.authStore.reset( {url:this.url, instance:instance}, this.user()?.jwt );
-				else if( previousInstance!=instance )
-					this.authStore.setServerInstance( this.url, instance );
+				//The per-server "instance" comparison that used to gate this is gone: it read settings["serverInstance"],
+				//a key Server::SendServerSettings never emits (it sends restSessionTimeout, connectionId and active), so
+				//parseInt gave NaN, `NaN != previousInstance` was always true, and on the AppServer path reset() fired on
+				//EVERY load - wiping the stored user down to the jwt each time.  Instance tracking lives in AuthStore now.
+				if( !active || timedout )
+					this.authStore.reset( this.user()?.jwt );
 				for( let callback of this.#loginCallbacks ){
 					let y = await this.authGet<any>(
 						callback.target,
@@ -482,7 +490,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 			this.sendTransmission( m );
 		this.backlog.length=0;
 	}
-	private onMessage( event:MessageEvent ):protobuf.Buffer{
+	private onMessage( event:MessageEvent ):Uint8Array{
 		const m = new Uint8Array( event.data );
 		this.processMessage( m );
 		return m;
@@ -492,7 +500,13 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		let handled = true;
 		let c = this._callbacks.get( requestId );
 		if( c ){
-			if( !m.Value ){//bare response (no oneof payload), e.g. the authorization ack
+			//`m.Value` was protobufjs's virtual oneof discriminator - a getter naming the set field.  ts-proto emits the oneof
+			//members as plain optionals with no such getter, so `!m.Value` was true for EVERY message and every pending
+			//request resolved with null (subscribe's ack among them, which then died on `y.length`).  requestId is the only
+			//non-oneof field, so "carries a payload" is "some other key is set" - and it must test `!==undefined`, because
+			//ts-proto's decode seeds every optional member as an explicit undefined key.
+			const payload = Object.keys(m).find( k=>k!="requestId" && m[k]!==undefined );
+			if( !payload ){//bare response (no oneof payload), e.g. the authorization ack
 				this._callbacks.delete( requestId );//settled requests must be removed or the map grows for the socket's lifetime
 				c.resolve( null );
 			}
@@ -528,10 +542,9 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		}
 		return handled;
 	}
-	protected abstract processMessage( bytearray:protobuf.Buffer ):void;
+	protected abstract processMessage( bytearray:Uint8Array ):void;
 
 	protected abstract handleConnectionError( err:any ):void;
-	protected abstract encode( t:Transmission ):any;
 
 	protected backlog:Transmission[] = [];
 	protected log = { sockRequests:true, sockResults:true, restRequests:true, restResults:false, subRequest:true, subResults:true, maxLength:255 };
@@ -550,7 +563,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	#loginCallbacks:{target:string, resolve:(result:any)=>void, reject:( e:any )=>void, log:Log}[]=[];
 
 	//abstract get queryId():number;
-	#socket:WebSocketSubject<protobuf.Buffer>|undefined;
+	#socket:WebSocketSubject<Uint8Array>|undefined;
 	protected _callbacks = new Map<number, RequestPromise<ResultMessage>>();
 	#tables = new Map<string,TableSchema>();
 	#mutations!:Array<MutationSchema>;//per-instance — a static cache shared one schema across AppService/AccessService/Gateway (different endpoints)

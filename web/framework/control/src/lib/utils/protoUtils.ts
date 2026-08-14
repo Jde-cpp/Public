@@ -1,5 +1,4 @@
 import Long from "long";
-import * as AppFromServer from '../proto/App.FromServer'; import Google = AppFromServer.google.protobuf;
 
 export type Timestamp = {seconds:number|Long; nanos:number;}
 export type Duration = {seconds:number|Long; nanos:number;}

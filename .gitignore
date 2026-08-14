@@ -94,6 +94,10 @@ apps/AppServer/src/build/**
 **/*.db
 **/*.db-shm
 **/*.db-wal
-web/framework/control/src/lib/proto/*.*
-web/opc/control/src/lib/proto/*.*
+# the jde-proto package: ts-proto generates src/*.ts, tsc compiles it to the .js/.d.ts pair the package ships.
+# package.json and tsconfig.json are tracked; everything generated or built is not.
+web/proto/src/
+web/proto/*.js
+web/proto/*.d.ts
+web/proto/google/
 *.binpb

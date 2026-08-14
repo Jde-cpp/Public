@@ -2,15 +2,15 @@ import { Injectable, Inject, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
-import { AppService, AuthStore, describeFetchError, Duration, GoogleAuthService, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Timestamp, Type, Query } from 'jde-framework';
+import { AppService, AuthStore, describeFetchError, Duration, ETransport, GoogleAuthService, Guid, IGraphQL, Instance, Log, Mutation, MutationSchema, ProtoService, ProtoUtils, Query, StringUtils, TableSchema, Timestamp, Type } from 'jde-framework';
 import { EProvider, User } from 'jde-spa';
 
 
 import { OpcError } from '../model/OpcError';
 
-import * as IotCommon from '../proto/Opc.Common'; import Common = IotCommon.Jde.Opc.Proto;
-import * as IotRequests from '../proto/Opc.FromClient'; import FromClient = IotRequests.Jde.Opc.FromClient;
-import * as IotResults from '../proto/Opc.FromServer'; import FromServer = IotResults.Jde.Opc.Gateway.FromServer;
+import * as Common from 'jde-proto/Opc.Common';
+import * as FromClient from 'jde-proto/Opc.FromClient';
+import * as FromServer from 'jde-proto/Opc.FromServer';
 import { OpcStore } from './opc-store';
 import { NodeRoute } from '../model/NodeRoute';
 import { CnnctnTarget, ServerCnnctn } from "../model/ServerCnnctn";
@@ -121,7 +121,7 @@ export class GatewayService implements IGraphQL{
 }
 
 
-export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IMessage>{
+export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Message>{
 	constructor( gateway:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore, googleAuth?:GoogleAuthService ){
 		super( FromClient.Transmission, http, transport, authStore, false, googleAuth );
 		super.instances = [gateway];
@@ -166,7 +166,6 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		this.authStore.logout();
 	}
 
-	protected encode( t:FromClient.Transmission ){ return FromClient.Transmission.encode(t); }
 	//the socket carried every subscription, so the server has already forgotten them: drop the local bookkeeping directly rather than via clearOwner, whose unsubscribe sends would re-open the socket just to cancel subscriptions that no longer exist.
 	protected handleConnectionError(){
 		const e = { message: "Connection to the gateway was lost." };
@@ -176,7 +175,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		this.#nodes.clear();
 		subjects.forEach( s=>s.error(e) );
 	};
-	protected processMessage( buffer:protobuf.Buffer ){
+	protected processMessage( buffer:Uint8Array ){
 		try{
 			const transmission = FromServer.Transmission.decode( buffer );
 			for( const message of <FromServer.Message[]>transmission.messages ){
@@ -205,7 +204,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 						throw e;
 				}
 				else
-					throw `unknown message:  ${JSON.stringify( message[message.Value!] )}`;
+					throw `unknown message:  ${JSON.stringify( message )}`;
 			}
 		}
 		catch( e ){
@@ -220,17 +219,17 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		Object.keys(obj).forEach( m=>{if(params.length)params+="&"; params+=`${m}=${obj[m]}`;} );
 		return params;
 	}
-	private static toNode( proto:Common.INodeId ):NodeId{
+	private static toNode( proto:Common.NodeId ):NodeId{
 		let node = new NodeId( {ns:proto.namespaceIndex} );
-		switch( proto.Identifier ){//oneof discriminator: identifies the set field even when its value is 0/"" (falsy)
-			case "numeric":    node.id = proto.numeric!; break;
-			case "string":     node.id = proto.string!; break;
-			case "byteString": node.id = proto.byteString!; break;
-			case "guid":       node.id = Gateway.toGuid( proto.guid! ); break;
-		}
+		//protobufjs exposed a virtual `Identifier` getter naming the set oneof field; ts-proto emits the fields as plain
+		//optionals, so test for undefined rather than truthiness - id 0 and "" are legitimate values, not absence.
+		if( proto.numeric!=undefined )         node.id = proto.numeric;
+		else if( proto.string!=undefined )     node.id = proto.string;
+		else if( proto.byteString!=undefined ) node.id = proto.byteString;
+		else if( proto.guid!=undefined )       node.id = Gateway.toGuid( proto.guid );
 		return node;
 	}
-	private static toExpanded( proto:Common.IExpandedNodeId ):ExNodeId{
+	private static toExpanded( proto:Common.ExpandedNodeId ):ExNodeId{
 		const en = new ExNodeId( {nsu:proto.namespaceUri!, serverIndex:proto.serverIndex!} );
 		const n = Gateway.toNode(proto.node!);
 		en.id = n.id;
@@ -238,11 +237,11 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		return en;
 	}
 
-	private static toProto( nodes:NodeId[] ):Common.INodeId[]{
+	private static toProto( nodes:NodeId[] ):Common.NodeId[]{
 		let protoNodes = [];
 		for( const node of nodes ){
 			//Subscribe/Unsubscribe.nodes are plain Proto.NodeId — the previous ExpandedNodeId{node:…} wrapper encoded as an EMPTY node (fields read off the wrapper), so every subscribe failed with BadNodeIdUnknown
-			let proto = new Common.NodeId();
+			let proto = Common.NodeId.create();//ts-proto codec object, not a constructor
 			proto.namespaceIndex = node.ns;
 			if( typeof node.id === "number" )
 				proto.numeric = node.id;
@@ -293,7 +292,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 					if( variable.customDataType )
 						try{
 							const nodeId = <NodeId>variable.customDataType
-							let x = await super.querySingle<Type>( `__type( opc: "${cnnctn}", ${nodeId.qlArgs()}){ enumValues{id name description}}`, null, log );
+							let x = await super.querySingle<Type>( `__type( opc: ${StringUtils.qlString(cnnctn)}, ${nodeId.qlArgs()}){ enumValues{id name description}}`, null, log );
 							variable.customDataType = new Enum(nodeId, x);
 						}
 						catch( e:any ){
@@ -310,7 +309,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		return y;
 	}
 	async snapshot( opcId:CnnctnTarget, nodes:NodeId[] ):Promise<Map<NodeId,Value>>{
-		const results = await super.queryArray<{id:NodeId,value:Value}>( `nodes( opc: "${opcId}", id:[${NodeId.qlArgsArray(nodes)}]){id value}` );
+		const results = await super.queryArray<{id:NodeId,value:Value}>( `nodes( opc: ${StringUtils.qlString(opcId)}, id:[${NodeId.qlArgsArray(nodes)}]){id value}` );
 		var y = new Map<NodeId,Value>();
 		for( const snapshot of results )
 			y.set( new NodeId(snapshot.id), toValue(snapshot.value) );
@@ -318,7 +317,12 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		return y;
 	}
 	async read( opcId:CnnctnTarget, n:NodeId ):Promise<Value>{
-		const v = await super.querySingle<{value:any}>( `node( opc: "${opcId}", ${n.qlArgs()}){value}` );
+		//`id` has to be an OBJECT argument: NodeId::ParseQL (libs/opc/src/uatypes/NodeId.cpp) reads FindPtr<jvalue>("id")
+		//and accepts only an object or an array of them, so the flat `ns:…,i:…` qlArgs() form matched nothing, the server
+		//answered {"node":{}}, and read() returned undefined for every node - silently blanking the cell on changeDouble's
+		//failed-write restore.  snapshot() below already passes id:[{…}] and works, and write() already uses $id; this is
+		//the same shape via variables, which also avoids hand-escaping the literal.
+		const v = await super.querySingle<{value:any}>( `node( opc: $opc, id: $id ){value}`, {opc: opcId, id: n.toJson()} );
 		return toValue( v["value"] );
 	}
 	async write( opcId:CnnctnTarget, n:NodeId, v:Value, log:Log ):Promise<Value>{
@@ -334,7 +338,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		this.store.setRoute( route, this.#connections.get(route.cnnctnTarget)?.defaultBrowseNs );
 	}
 
-	private onUnsubscriptionResult( requestId:number, result:FromServer.IUnsubscribeAck ){
+	private onUnsubscriptionResult( requestId:number, result:FromServer.UnsubscribeAck ){
 		result.failures?.forEach( (node)=>console.log(`unsubscribe failed for:  ${JSON.stringify(node)}`) );
 		const c = this._callbacks.get( requestId );
 		if( c ){
@@ -343,7 +347,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		}
 	}
 
-	private subscriptionAck( requestId:number, ack:FromServer.ISubscriptionAck ){
+	private subscriptionAck( requestId:number, ack:FromServer.SubscriptionAck ){
 		const c = this._callbacks.get( requestId );
 		if( c ){
 			this._callbacks.delete( requestId );
@@ -352,11 +356,11 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	}
 
 	private async _subscribe( opcId:OpcId, nodes:NodeId[], owner:Owner ):Promise<void>{
-		const request:FromClient.ISubscribe = { nodes:Gateway.toProto(nodes), opcId:opcId };
+		const request:FromClient.Subscribe = { nodes:Gateway.toProto(nodes), opcId:opcId };
 		let toDelete = new Array<NodeId>();
 		let error:any;
 		try{
-		 	let y = await this.sendPromise<FromServer.IMonitoredItemCreateResult[]>( {"subscribe":request}, `subscribe opcId: ${opcId}, nodeCount: ${nodes.length}` );
+		 	let y = await this.sendPromise<FromServer.MonitoredItemCreateResult[]>( {"subscribe":request}, `subscribe opcId: ${opcId}, nodeCount: ${nodes.length}` );
 		 	for( let i=0; i<y.length; ++i ){
 				const node = nodes[i];
 				if( y[i].statusCode ){
@@ -399,7 +403,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 					owners.push( owner );
 			}
 			else{
-				opcSubscriptions.set( node.key, [owner] ).get( node.key );
+				opcSubscriptions.set( node.key, [owner] );
 				this.#nodes.set( node.key, node );
 			}
 		}
@@ -419,39 +423,39 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	}
 
 	private static toGuid( proto:Uint8Array ):Guid{ let guid = new Guid(); guid.value = proto; return guid; }
-	private static toValue( proto:FromServer.IValue ):Value{
-		switch( proto.of ){//oneof discriminator: dispatch on the set field, not its truthiness, so false/0/"" are not dropped
-			case "boolean":      return proto.boolean!;
-			case "byte":         return proto.byte!;
-			case "byteString":   return proto.byteString!;
-			case "date":         return <Timestamp>proto.date;
-			case "doubleValue":  return proto.doubleValue!;
-			case "duration":     return <Duration>proto.duration;
-			case "expandedNode": return Gateway.toExpanded( proto.expandedNode! );
-			case "floatValue":   return proto.floatValue!;
-			case "guid":         return Gateway.toGuid( proto.guid! );
-			case "int16":        return proto.int16!;
-			case "int32":        return proto.int32!;
-			case "int64":        return proto.int64!;
-			case "node":         return Gateway.toNode( proto.node! );
-			case "sbyte":        return proto.sbyte!;
-			case "statusCode":   return proto.statusCode!;
-			case "stringValue":  return proto.stringValue!;
-			case "uint16":       return proto.uint16!;
-			case "uint32":       return proto.uint32!;
-			case "uint64":       return proto.uint64!;
-			case "xmlElement":   return proto.xmlElement!;
-		}
+	private static toValue( proto:FromServer.Value ):Value{
+		//protobufjs exposed a virtual `of` getter naming the set oneof field; ts-proto emits plain optionals, so each arm
+		//tests for undefined rather than truthiness - false, 0 and "" are values, not absence.
+		if( proto.boolean!=undefined )      return proto.boolean;
+		if( proto.byte!=undefined )         return proto.byte;
+		if( proto.byteString!=undefined )   return proto.byteString;
+		if( proto.date!=undefined )         return ProtoUtils.fromDate( proto.date )!;//ts-proto decodes google.protobuf.Timestamp to a Date; normalise to the {seconds,nanos} shape the rest of the Value pipeline (GraphQL JSON) uses, so there is one representation
+		if( proto.doubleValue!=undefined )  return proto.doubleValue;
+		if( proto.duration!=undefined )     return <Duration>proto.duration;
+		if( proto.expandedNode!=undefined ) return Gateway.toExpanded( proto.expandedNode );
+		if( proto.floatValue!=undefined )   return proto.floatValue;
+		if( proto.guid!=undefined )         return Gateway.toGuid( proto.guid );
+		if( proto.int16!=undefined )        return proto.int16;
+		if( proto.int32!=undefined )        return proto.int32;
+		if( proto.int64!=undefined )        return proto.int64;
+		if( proto.node!=undefined )         return Gateway.toNode( proto.node );
+		if( proto.sbyte!=undefined )        return proto.sbyte;
+		if( proto.statusCode!=undefined )   return proto.statusCode;
+		if( proto.stringValue!=undefined )  return proto.stringValue;
+		if( proto.uint16!=undefined )       return proto.uint16;
+		if( proto.uint32!=undefined )       return proto.uint32;
+		if( proto.uint64!=undefined )       return proto.uint64;
+		if( proto.xmlElement!=undefined )   return proto.xmlElement;
 		return undefined!;
 	}
-	private static toValues( proto:FromServer.Value.$Properties[] ):Value{
+	private static toValues( proto:FromServer.Value[] ):Value{
 		let value = proto.length==1 ? Gateway.toValue( proto[0] ) : new Array<Value>();
 		if( proto.length>1 )
 			proto.forEach( v => (<Value[]>value).push( Gateway.toValue(v) ) );
 		return value;
 	}
 
-	private nodeValues( nodeValues:FromServer.NodeValues.$Properties ):void{
+	private nodeValues( nodeValues:FromServer.NodeValues ):void{
 		let opcSubscriptions = this.#subscriptions.get( nodeValues.opcId! ); if( !opcSubscriptions ){ return console.error(`Could not find opc ${nodeValues.opcId}`);}
 		const node = Gateway.toNode( nodeValues.node! );
 		const sc = nodeValues.sc ?? 0;//proto3 omits 0/Good from the wire.
@@ -490,7 +494,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 		}
 		if( toDeleteNodes.size ){
 			for( const [opcId, nodes] of toDeleteNodes ){
-				var request:FromClient.IUnsubscribe = { nodes:Gateway.toProto(nodes), opcId:opcId };
+				var request:FromClient.Unsubscribe = { nodes:Gateway.toProto(nodes), opcId:opcId };
 				this.sendPromise<void>( {"unsubscribe": request}, `unsubscribe opcId: ${opcId}, nodeCount: ${nodes.length}` );
 			}
 		}
@@ -509,7 +513,7 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 
 		this.clearUnusedNodes();
 		if( toDelete.length ){
-			var request:FromClient.IUnsubscribe = { nodes:Gateway.toProto(toDelete), opcId:opcId };
+			var request:FromClient.Unsubscribe = { nodes:Gateway.toProto(toDelete), opcId:opcId };
 			return this.sendPromise<void>( {"unsubscribe": request}, `unsubscribe opcId: ${opcId}, nodeCount: ${toDelete.length}` );
 		}
 		else

@@ -119,13 +119,11 @@ export class QLListSettingsFilter implements OnInit{
 		});
 		return result;
 	}
-	useObservable = false;
+
 	autoCompleteValues(col:ColumnFilter): Observable<string[]>{
-		if( !this.useObservable )
-			return this.autoCompleteSubjects.get(col.field.name)!.asObservable();
-		else
-			return this.autoCompleteObservables.get(col.field.name)!;
+		return this.autoCompleteSubjects.get(col.field.name)!.asObservable();
 	}
+
 	input(col: ColumnFilter): FormControl{
 		let input = this.autoCompleteInputs.get(col.field.name);
 		if( input )
@@ -214,7 +212,6 @@ export class QLListSettingsFilter implements OnInit{
 	suggestions = input.required<Record<string,any[]>>();
 	excludedColumns = input.required<string[]>();
 	autoCompleteSubjects = new Map<string, BehaviorSubject<string[]>>();
-	autoCompleteObservables = new Map<string, Observable<string[]>>();
 	operatorSignals = new Map<string, WritableSignal<Operator>>();
 	nullSignals = new Map<string, WritableSignal<NullCriteria>>();
 

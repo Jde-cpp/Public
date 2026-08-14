@@ -26,12 +26,11 @@ const freshJwt = makeJwt( 'fresh@example.com' );
 
 class TestService extends ProtoService<object,object>{
 	constructor( http:HttpClient, authStore:AuthStore, googleAuth?:GoogleAuthService ){
-		super( Object, http, ETransport.Unsecure, authStore, false, googleAuth );
+		super( {create:()=>({}), encode:()=>({finish:()=>new Uint8Array()})}, http, ETransport.Unsecure, authStore, false, googleAuth );//ts-proto codec stub: the base takes a codec, not a constructor
 		super.instances = [{host:'apphost', port:1} as any];
 	}
 	protected override processMessage():void{}
 	protected override handleConnectionError():void{}
-	protected override encode():any{ return null; }
 	authGetPublic<Y>( target:string, auth?:string ):Promise<Y>{ return (this as any).authGet( target, auth, ()=>{} ); }
 	setSocket( id:number ){ this.setSocketId( id ); }
 	sentAuthorizations:number[] = [];

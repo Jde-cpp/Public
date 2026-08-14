@@ -30,42 +30,15 @@ export class AuthStore{
 		this.#userSignal.set( current );
 	}
 
-	reset( serverInstance?:{url:string,instance:number}, jwt?:string ):void{
-		let user:User|undefined;
-		if( serverInstance ){
-			user = new User( jwt );
-			user.serverInstances = user.serverInstances || [];
-			AuthStore.upsertServerInstance( user, serverInstance.url, serverInstance.instance );
-		}
-		if( this.log ) console.log( `auth.reset( ${user ? user.toString() : "undefined"} )` );
-		if( user )
-			localStorage.setItem( userStorageKey, JSON.stringify(user) );
-		else
-			localStorage.removeItem( userStorageKey );
+	//Drop the session, keeping only the jwt identity (undefined for password/OpcServer logins, which yields an empty
+	//User exactly as before).  The old signature took a {url,instance} whose only source was loginWait's read of a
+	//serverSettings key the server does not send; with that gone nothing produces an instance, so the parameter and the
+	//upsert it drove went with it.
+	reset( jwt?:string ):void{
+		const user = new User( jwt );
+		if( this.log ) console.log( `auth.reset( ${user.toString()} )` );
+		localStorage.setItem( userStorageKey, JSON.stringify(user) );
 		this.#userSignal.set( user );
-	}
-
-	setServerInstance( url: string, instance: number ){
-		const current = this.user();
-		if( !current )
-			return;//nothing to hang an instance off - append()/reset() are what create the User
-		//NOT `new User(current)`: the ctor's jwt branch skips its append(), so copying a Google user that way silently drops sessionId/serverInstances (the angular-review.md #21/#36 residual).
-		const user = new User();
-		user.append( current );
-		user.serverInstances = (user.serverInstances ?? []).map( x=>({...x}) );//own array, so the upsert below cannot reach back into the instance the signal still holds
-		AuthStore.upsertServerInstance( user, url, instance );
-		const stringify = JSON.stringify( user );
-		if( this.log ) console.log( `setServerInstance( ${stringify} )` );
-		localStorage.setItem( userStorageKey, stringify );//was never persisted, so the instance was lost on reload and loginWait's `previousInstance!=instance` re-fired every session
-		this.#userSignal.set( user );//a NEW reference: signals compare with Object.is, so mutating the held instance and re-setting it notified nobody
-	}
-
-	static upsertServerInstance( user: User, url: string, instance: number ){
-		let index = user.serverInstances!.findIndex( (x)=>x.url==url );
-		if( index>=0 )
-			user.serverInstances![index].instance = instance;
-		else
-			user.serverInstances!.push({ url, instance });
 	}
 
 	logout(){

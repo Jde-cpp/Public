@@ -277,7 +277,7 @@ export class View{
 		if( this.sort?.length ){
 			let sortStr = '';
 			for( let s of this.sort )
-				sortStr += `{${s.active}:"${s.direction}"},`;
+				sortStr += `{${s.active}:${StringUtils.qlString(s.direction)}},`;//`active` is a FIELD NAME - identifiers are not quoted and must not be escaped; only the direction is a string literal
 			args.push( `orderBy:[${sortStr.slice(0,-1)}]` );
 		}
 

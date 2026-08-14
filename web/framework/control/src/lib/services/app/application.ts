@@ -1,8 +1,8 @@
 import {ProtoUtils, Timestamp} from '../../utils/protoUtils'
 import { DatePipe } from '@angular/common';
 
-import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
-import * as LogProto from '../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
+import * as FromServer from 'jde-proto/App.FromServer';
+import { ELogLevel } from 'jde-proto/Log';
 
 export interface App{
 	id:number;

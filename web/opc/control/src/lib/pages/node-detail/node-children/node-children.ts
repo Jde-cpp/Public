@@ -46,13 +46,23 @@ export class NodeChildren implements OnInit, OnDestroy {
 			if( this.pageData )
 				this.#profileStore.save<UserSettings>( this.pageData.route.profileKey, this.profile );
 			this.pageData = data["pageData"];
+			//A node switch is a param change, so Angular reuses this component and ngOnDestroy never runs: without this the
+			//previous node's rows stayed selected, and since `nodes` is a fresh UaNode array per navigation, re-selecting the
+			//persisted subscriptions below added a SECOND entry for the same node rather than being a no-op (SelectionModel
+			//dedupes by object identity).  Three round trips left four copies of one node, and isAllSelected() compares
+			//`selected.length` to `nodes.length`, so the header checkbox went wrong.
+			//A NEW model rather than selections.clear(): clear() emits `removed`, which onSubscriptionChange cannot tell from
+			//the user unticking the rows - it would unsubscribe and drop the persisted subscriptions.  Dropping the live
+			//subscription with it matches what ngOnDestroy does, and keeps it paired with the owner key, which is per node.
+			this.subscription = undefined;
+			this.selections = new SelectionModel<UaNode>( true, [] );
+			this.selections.changed.subscribe( this.onSubscriptionChange.bind(this) );
 			this.profile = await this.#profileStore.load<UserSettings>( this.pageData.route.profileKey, new UserSettings() );
 			this.profile.subscriptions = (this.profile.subscriptions ?? []).map( (s)=>new NodeId(s) );//revive persisted plain objects into NodeId instances (s.equals/s.key below would otherwise throw)
 			this.nodes?.filter( (n:UaNode)=>this.profile.subscriptions.some((s)=>s.key==n.key) ).forEach( (n)=>this.selections.select(n) );
 			this.isLoading.set( false );
 			this.componentPageTitle.title = this.server.connection.name + (this.node().id==85 ? '' : `/${this.node().name}`);
 		});
-		this.selections.changed.subscribe( this.onSubscriptionChange.bind(this) );
 	}
 
   ngOnDestroy() {
