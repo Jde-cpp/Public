@@ -1,4 +1,4 @@
-import {Component, computed, effect, Inject, inject, Resource, resource} from '@angular/core';
+import {Component, computed, effect, Inject, inject, OnDestroy, Resource, resource} from '@angular/core';
 import {Router, RouterLink} from "@angular/router";
 import { MatButtonModule } from '@angular/material/button'
 import { MatInputModule } from '@angular/material/input';
@@ -6,19 +6,18 @@ import {MatFormFieldModule} from '@angular/material/form-field';
 import { EProvider, IAuth, IEnvironment, User } from 'jde-spa';
 import {FormBuilder, ReactiveFormsModule} from "@angular/forms";
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
-
-declare const google: any;
+import {GoogleAuthService, googleLoginHintKey} from '../../../services/google-auth.service';
 
 @Component({
     selector: 'app-login-page',templateUrl: './login-page.html',styleUrl: './login-page.scss',
     imports: [MatButtonModule,MatFormFieldModule,MatInputModule,RouterLink,ReactiveFormsModule],
 })
-export class LoginPageComponent{
+export class LoginPageComponent implements OnDestroy{
 	constructor( @Inject('IAuth') private authService: IAuth, private snackbar: SnackbarService, @Inject('IEnvironment') private envService: IEnvironment ){
 		effect( async ()=>{
 			if( this.providers?.value()?.includes(EProvider.Google) && !this.showedGoogleLogin ){
 				this.showedGoogleLogin = true;
-				if( !google )
+				if( !this.googleAuth.available )
 					console.error( "google not defined" );
 				else{
 					let authId = await this.getGoogleAuthClientId();
@@ -54,15 +53,12 @@ export class LoginPageComponent{
 			this.snackbar.exception( "Login failed.", e );
 		}
   }
-	onGoogleLogin2(credential:string){
-		this.onGoogleLogin( credential );
-	}
 	async onGoogleLogin(credential: string){
 		let user = new User( credential );
 		try{
 			await this.authService.login( user, console.log );
 			if( user.email )
-				localStorage.setItem( "googleLoginHint", user.email );
+				localStorage.setItem( googleLoginHintKey, user.email );
 			this.router.navigate( [''] );
 		}
 		catch( e ){
@@ -70,25 +66,14 @@ export class LoginPageComponent{
 		};
 	}
 
+	//initialize/prompt live in GoogleAuthService so a silent prompt() can also run from any page on session expiry
+	//(reviews/todo.md §7) — this page only wires its interactive handler and renders the button.
 	showGoogleLogin( authId:string ){
-		let self = this;
-		if( !google )
-			throw "google not defined";
 		try{
-			google.accounts.id.initialize({
-				client_id: authId,
-				auto_select: true,
-				button_auto_select: true,
-				cancel_on_tap_outside: true,
-				callback:  (response:any) => {self.onGoogleLogin(response.credential); },
-				native_callback: (response:any) => {self.onGoogleLogin2(response.credential);},
-				login_hint: localStorage.getItem( "googleLoginHint" )
-			});
-			google.accounts.id.renderButton(
-				document.getElementById("google-button"),
-				{ theme: "outline", size: "large" }
-			);
-			google.accounts.id.prompt();//auto_select only takes effect during prompt() — silently re-signs-in a returning user after session timeout
+			this.googleAuth.credentialHandler = this.#onCredential;
+			this.googleAuth.initialize( authId );
+			this.googleAuth.renderButton( document.getElementById("google-button") );
+			this.googleAuth.prompt();//auto_select only takes effect during prompt() — silently re-signs-in a returning user after session timeout
 			if( this.googleCredential && !this.user()?.picture )//user() is undefined when nobody's logged in
 				this.onGoogleLogin( this.googleCredential );
 		}
@@ -97,6 +82,11 @@ export class LoginPageComponent{
 			this.snackbar.exception( "Could not render Google login.", e );
 		}
 	}
+	ngOnDestroy():void{
+		if( this.googleAuth.credentialHandler===this.#onCredential )
+			this.googleAuth.credentialHandler = undefined;//don't hold the departed page; a later silent renewal settles through its own resolver
+	}
+	#onCredential = ( credential:string )=>{ this.onGoogleLogin( credential ); };
 
 	async getGoogleAuthClientId():Promise<string>{
 		const y = await this.authService.googleAuthClientId( console.log );
@@ -108,6 +98,7 @@ export class LoginPageComponent{
 	providers = resource<EProvider[], {}>( {loader: async () =>await this.authService.providers( console.log )} );
 
 	fb = inject(FormBuilder);
+	googleAuth = inject(GoogleAuthService);
 	private get googleCredential():string{return this.envService.get("googleCredential"); }
 	private showedGoogleLogin = false;
   form = this.fb.group({ username: [''], password: [''] });

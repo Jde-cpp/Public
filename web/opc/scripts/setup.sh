@@ -25,6 +25,7 @@ addHard app.component.ts $sitePath/app;
 addHard app.module.ts $sitePath/app;
 rm -f app.config.ts;
 addHard app.config.ts $sitePath/app;
+addHard google-relogin.spec.ts $sitePath/app;
 moveToDir services;
 addHard environment.service.ts $sitePath/app/services;
 cd ../..;

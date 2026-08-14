@@ -10,6 +10,7 @@ import { Instance } from './app/app.service.types';
 import * as LogProto from '../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
 import * as CommonProto from '../proto/Common'; import IException = CommonProto.Jde.Proto.IException;
 import { AuthStore } from './auth.store';
+import { GoogleAuthService } from './google-auth.service';
 import { Mutation } from '../model/ql/Mutation';
 import { computed, Signal } from '@angular/core';
 import { EProvider, User } from 'jde-spa';
@@ -46,7 +47,7 @@ class RequestPromise<ResultMessage>{
 }
 
 export abstract class ProtoService<Transmission,ResultMessage>{
-	constructor( private TCreator: { new (): Transmission; }, protected http: HttpClient, public readonly transport:ETransport, protected authStore:AuthStore, private isAppServer:boolean=false )
+	constructor( private TCreator: { new (): Transmission; }, protected http: HttpClient, public readonly transport:ETransport, protected authStore:AuthStore, private isAppServer:boolean=false, protected googleAuth?:GoogleAuthService )
 	{}
 
 	connect():void{
@@ -199,7 +200,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 			: `${this.restUrl}/${suffix}`;
 	}
 
-	private async authGet<Y>( target:string, authorization?:string, log:Log=console.log ):Promise<Y>{
+	private async authGet<Y>( target:string, authorization?:string, log:Log=console.log, renew:boolean=true ):Promise<Y>{
 		if( target.indexOf("undefined")>=0 )
 			console.error( `authGet - target contains 'undefined': ${target}` );
 		if( this.log.restRequests )	log( `get: ${decodeURIComponent(target).substring(0,this.log.maxLength)}` );
@@ -219,16 +220,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				y = response.body as Y;
 			}
 			catch( e:any ){
-				if( e["status"]==401 && authorization ){//retry anonymously only if a (stale) credential was sent — an anonymous 401 must throw, or this recurses forever
-					log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
-					this.authStore.logout();
-					y = await this.authGet<Y>( target, undefined, log );
-				}
-				else{
-					if( e["status"]==0 )
-						describeFetchError( url, e ).then( m=>log(m) );//async probe; the rethrow keeps the original error for callers
-					throw e;
-				}
+				y = await this.handle401<Y>( e, target, authorization, url, log, renew );
 			}
 		}
 		else{
@@ -236,22 +228,61 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				y = await firstValueFrom( this.http.get<Y>(url, options) ) as Y;
 			}
 			catch( e:any ){
-				if( e["status"]==401 && authorization ){//always true here (sessionId branch), but keeps the retry bound explicit
-					log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
-					this.authStore.logout();
-					y = await this.authGet<Y>( target, undefined, log );
-				}
-				else{
-					if( e["status"]==0 )
-						describeFetchError( url, e ).then( m=>log(m) );//async probe; the rethrow keeps the original error for callers
-					throw e;
-				}
+				y = await this.handle401<Y>( e, target, authorization, url, log, renew );//authorization is always set here (sessionId branch), so a 401 always retries
 			}
 		}
 		if( this.log.restResults ) log( JSON.stringify(y).substring(0,this.log.maxLength) );
 		this.lastRestCall = new Date();
 		return y;
 	}
+
+	//A 401 with a credential means the session/jwt went stale. A Google user can mint a fresh credential without leaving
+	//the page, so try that first and retry authenticated; otherwise retry anonymously — an anonymous 401 must throw, or
+	//this recurses forever.
+	private async handle401<Y>( e:any, target:string, authorization:string|undefined, url:string, log:Log, renew:boolean ):Promise<Y>{
+		if( e["status"]!=401 || !authorization ){
+			if( e["status"]==0 )
+				describeFetchError( url, e ).then( m=>log(m) );//async probe; the rethrow keeps the original error for callers
+			throw e;
+		}
+		log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
+		if( renew ){//false on the once-renewed retry: a second 401 against the fresh session must fall through to the anonymous retry, not loop into another prompt
+			const renewed = await this.renewGoogleSession( log );
+			if( renewed )
+				return await this.authGet<Y>( target, renewed, log, false );
+		}
+		this.authStore.logout();
+		return await this.authGet<Y>( target, undefined, log );
+	}
+
+	//Silent Google re-login (reviews/todo.md §7): renew the lapsed session in place instead of degrading to anonymous.
+	//Resolves the fresh authorization, or null when the silent path has nothing to offer — password/OpcServer users have
+	//no silent-renewal primitive, and a prompt that produced no credential is a normal outcome (FedCM cooldown, multiple
+	//Google sessions, a dismissal), not an error. Concurrent 401s coalesce into one renewal round-trip.
+	protected async renewGoogleSession( log:Log ):Promise<string|null>{
+		if( this.user()?.provider!=EProvider.Google || !this.googleAuth )
+			return null;
+		return this.#renewal ??= this.renewGoogleSessionOnce( log ).finally( ()=>this.#renewal=null );
+	}
+	private async renewGoogleSessionOnce( log:Log ):Promise<string|null>{
+		try{
+			const credential = await this.googleAuth!.renewCredential();
+			if( !credential )
+				return null;
+			const user = new User( credential );
+			this.authStore.append( user );//identity/jwt FIRST: appending a jwt-carrying user rebuilds via the User ctor, whose jwt branch drops an existing sessionId (the auth.store setServerInstance caveat) — so the sessionId must land last
+			await this.loginJwt( user.authorization! );//"Bearer <jwt>", the same shape AppService.login sends; the fresh sessionId arrives in the response Authorization header and postRaw appends it
+			if( this.socketId )
+				this.sendAuthorization( this.socketId );//the socket authenticated with the stale session; move it to the fresh one (not awaited — it settles its handshake internally)
+			log( "silent Google re-login renewed the session." );
+			return this.user()?.authorization ?? null;
+		}
+		catch( e ){
+			console.warn( "silent Google re-login failed - falling back to the anonymous retry.", e );
+			return null;
+		}
+	}
+	#renewal:Promise<string|null>|null = null;
 
 	async get<Y>( target:string, log?:Log ):Promise<Y>{
 		if( !this.#instances )

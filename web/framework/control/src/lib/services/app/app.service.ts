@@ -1,5 +1,5 @@
 import { Subject,Observable, tap } from 'rxjs';
-import { Injectable, Inject } from '@angular/core';
+import { Injectable, Inject, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {Instance} from './app.service.types'
 
@@ -12,11 +12,12 @@ import * as CommonProto from '../../proto/Common'; import IException = CommonPro
 import { IAuth, IEnvironment, User } from 'jde-spa';
 import { IGraphQL, Log } from '../IGraphQL';
 import { AuthStore } from '../auth.store';
+import { GoogleAuthService } from '../google-auth.service';
 
 @Injectable( {providedIn: 'root'} )
 export class AppService extends ProtoService<FromClient.Transmission,FromServer.IMessage> implements IGraphQL, IAuth{
 	constructor( http: HttpClient, @Inject('IEnvironment') private environment: IEnvironment, @Inject("AuthStore") authStore:AuthStore ){
-		super( FromClient.Transmission, http, environment.get<ETransport>("httpTransport"), authStore, true );
+		super( FromClient.Transmission, http, environment.get<ETransport>("httpTransport"), authStore, true, inject(GoogleAuthService) );
 		let appServer = environment.get<Instance>( 'applicationServer' );
 		if( !appServer ){
 			console.log( "No Application Server set in environment" );

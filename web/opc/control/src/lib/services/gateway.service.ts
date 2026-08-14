@@ -2,7 +2,7 @@ import { Injectable, Inject, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
-import { AppService, AuthStore, describeFetchError, Duration, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Timestamp, Type, Query } from 'jde-framework';
+import { AppService, AuthStore, describeFetchError, Duration, GoogleAuthService, IGraphQL, Guid, Instance, Log, MutationSchema, Mutation, ProtoService, ETransport, TableSchema, Timestamp, Type, Query } from 'jde-framework';
 import { EProvider, User } from 'jde-spa';
 
 
@@ -50,7 +50,7 @@ export class GatewayService implements IGraphQL{
 	private onGatewaySuccess(gateways:Instance[], transport:ETransport, http: HttpClient, authStore:AuthStore, opcStore:OpcStore){
 		if( gateways.length==0 )
 			console.error("No IotServies running");
-		this.#gateways = gateways.map( instance=>new Gateway(instance, transport, http, authStore, opcStore) );
+		this.#gateways = gateways.map( instance=>new Gateway(instance, transport, http, authStore, opcStore, this.googleAuth) );
 		this.#gatewaysCallbacks.forEach( cb=>cb.resolve(this.#gateways) );
 		this.#gatewaysCallbacks = [];
 		this.#gatewayCallbacks.forEach( cb=>cb.resolve(this.#gateways.find(gateway=>gateway.instances[0].instanceName==cb.instanceName)!) );
@@ -116,13 +116,14 @@ export class GatewayService implements IGraphQL{
 	#gatewaysCallbacks:{resolve: (value:Gateway[])=>void, reject:(e?:any)=>void}[]= [];
 	#gatewayCallbacks:{ instanceName:string, resolve: (value:Gateway)=>void, reject:(e?:any)=>void}[]= [];
 	appService = inject(AppService);
+	googleAuth = inject(GoogleAuthService);//Gateway is built by hand below, so the silent-renewal service is threaded through rather than injected there
 	http = inject(HttpClient);
 }
 
 
 export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IMessage>{
-	constructor( gateway:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore ){
-		super( FromClient.Transmission, http, transport, authStore );
+	constructor( gateway:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore, googleAuth?:GoogleAuthService ){
+		super( FromClient.Transmission, http, transport, authStore, false, googleAuth );
 		super.instances = [gateway];
 		if( typeof location!="undefined" && gateway.host!=location.hostname )//the registry reports the machine hostname; a page served from another host fails the server's allowOrigin 'sameHost' check
 			console.warn( `Gateway '${gateway.instanceName}' is registered at host '${gateway.host}' but the app is served from '${location.hostname}' - requests will be CORS-blocked unless http/accessControl/allowOrigin is pinned or the app is browsed via '${gateway.host}'.` );
