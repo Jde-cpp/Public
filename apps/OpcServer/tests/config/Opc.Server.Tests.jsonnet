@@ -4,7 +4,7 @@ local embeddedAppServer = true; //false = run against a live AppServer on localh
 {
 	testing:{
 		tests:: "AccessTests.UserAccess",
-		recreateDB: true,
+		recreateDB: std.parseJson( std.extVar("recreateDB") ),
 		embeddedAppServer: embeddedAppServer,
 		UANodeSets: "$(UA_NODE_SETS)"
 	},

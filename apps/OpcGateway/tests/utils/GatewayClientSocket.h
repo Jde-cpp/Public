@@ -4,8 +4,8 @@
 #include <jde/web/client/socket/IClientSocketSession.h>
 #include <jde/web/client/socket/ClientSocketAwait.h>
 #include <jde/opc/uatypes/NodeId.h>
-#include "../../src/types/proto/Opc.FromClient.pb.h"
-#include "../../src/types/proto/Opc.FromServer.pb.h"
+#include "Opc.FromClient.pb.h"
+#include "Opc.FromServer.pb.h"
 #include <jde/app/proto/Common.pb.h>
 
 namespace Jde::Opc::Gateway::Tests{

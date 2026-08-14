@@ -25,4 +25,4 @@ ENABLE_WARNINGS
 
 #include "../src/usings.h"
 #include "../src/types/ServerCnnctn.h"
-#include "../src/types/proto/Opc.FromServer.pb.h"
+#include "Opc.FromServer.pb.h"

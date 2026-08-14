@@ -5,7 +5,7 @@ local logsDir = args.logsDir;
 	instanceName: args.instanceName,
 	testing:{
 		tests:: "QLTests.ServerDescriptionTest",
-		recreateDB: true,
+		recreateDB: std.parseJson( std.extVar("recreateDB") ),
 		embeddedAppServer:: false,
 		embeddedOpcServer:: false
 	},
