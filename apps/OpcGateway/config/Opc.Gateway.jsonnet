@@ -15,6 +15,7 @@ function( sync=false )
 		}
 	},
 	logging:{
+		breakLevel: "Critical",
 		spd:{
 			tags: {
 				default: "Information",

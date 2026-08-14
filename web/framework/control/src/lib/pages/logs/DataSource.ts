@@ -54,25 +54,21 @@ export class LogDataSource extends DataSource<Entry>{
 		this.subject.next( entries );
 		return entries.length<pageSize;
 	}
-	locationOf( data:Entry[], entry:Entry, start:number, end:number ):number{//https://stackoverflow.com/questions/1344500/efficient-way-to-insert-a-number-into-a-sorted-array-of-numbers
-		var result = end;
-		if( data.length>0 && this.compare(data[end-1],entry)==1 ){
-			if( this.compare(entry, data[start])==-1 )
-				result = start;
-			else{
-				var pivotIndex = Math.round( start + (end - start) / 2 );
-				var pivot = data[pivotIndex];
-				if( this.compare(entry,pivot)==this.compare(pivot,entry) )
-					result = pivotIndex;
-				else if( end - start <= 1 )
-					result = this.compare(entry,pivot) ? pivotIndex-1 : pivotIndex;
-				else if( this.compare(pivot,entry) )
-					result = this.locationOf( data, entry, pivotIndex, end );
-				else
-					result = this.locationOf( data, entry, start, pivotIndex );
-			}
+	//Insertion index for `entry` in the sorted `data`: the first position holding something that sorts AFTER it, so equal
+	//entries keep arrival order.  Plain upper-bound binary search — the previous version branched on `compare(...)` as a
+	//boolean, but compare returns -1/0/1 and only 0 is falsy, so both "sorts before" and "sorts after" took the same path:
+	//the lower-half recursion was unreachable and inserts landed too far right (15 into [10..80] returned 4, not 1).  It
+	//also used Math.round for the pivot, which rounds 0.5 up and could index data[end] === undefined, and its
+	//`end-start<=1` case returned pivotIndex-1 for an entry that sorts after the pivot.
+	locationOf( data:Entry[], entry:Entry, start:number, end:number ):number{
+		while( start<end ){
+			const mid = (start+end)>>>1;//floor, so mid<end always — never indexes past the range
+			if( this.compare(data[mid], entry)>0 )
+				end = mid;
+			else
+				start = mid+1;
 		}
-		return result;
+		return start;
 	}
 
 	addLoadedEntries( data:LogEntries ){

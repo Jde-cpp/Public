@@ -8,7 +8,7 @@ import { NodeRights } from './node-rights/node-rights';
 //import { Gateway } from '../../../../services/gateway.service';
 import { NodeRoute } from '../../../model/NodeRoute';
 import { ProfileStore } from 'jde-spa';
-import { AppService, Mutation, MutationType } from 'jde-framework';
+import { AppService, Mutation, MutationType, SnackbarService } from 'jde-framework';
 import { ActivatedRoute } from '@angular/router';
 import { Permission, Rights, Role } from 'jde-access';
 
@@ -33,34 +33,51 @@ export class NodeAccess implements OnInit, OnDestroy{
 	{}
 
 	async ngOnInit(): Promise<void> {
-		this.actRoute.data.subscribe( async (data)=>{
-			const criteria = this.node().nodeId.uaString();//e.g. "ns=4;i=6020" — the server's resource criteria for this node
-			const vars = { schemaName: `opc.${this.accessResource()}`, target: "nodeIds", criteria };
-			const q = 'roles{ id name permissionRight{ id allowed denied resource(schemaName:$schemaName, criteria:$criteria, target:$target){ id criteria } } }';
-			const db = await this.appService.queryArray<any>( q, vars, (m)=>console.log(m) );
-			const roles:RolePermission[] = db.map( (role:any)=>{
-				const pr = role.permissionRight;//present only where a permission exists for this exact node; allowed/denied are [Right] name arrays
-				return {
-					roleId: role.id,
-					roleName: role.name,
-					permissionId: pr?.id ?? 0,
-					allowed: Permission.toRights( pr?.allowed ?? [] ),
-					denied: Permission.toRights( pr?.denied ?? [] ),
-					resourceId: pr?.resource?.id ?? 0,
-					criteria: pr?.resource?.criteria ?? criteria,
-				};
-			}).sort( (a,b)=>a.roleName.localeCompare(b.roleName) );
-			this.original = roles;
-			this.roles = roles.map( r=>({...r}) );
-			this.isLoading.set( false );
-		});
+		this.actRoute.data.subscribe( async (data)=>await this.load() );
+	}
+
+	private async load():Promise<void>{
+		const criteria = this.node().nodeId.uaString();//e.g. "ns=4;i=6020" — the server's resource criteria for this node
+		const vars = { schemaName: `opc.${this.accessResource()}`, target: "nodeIds", criteria };
+		const q = 'roles{ id name permissionRight{ id allowed denied resource(schemaName:$schemaName, criteria:$criteria, target:$target){ id criteria } } }';
+		const db = await this.appService.queryArray<any>( q, vars, (m)=>console.log(m) );
+		const roles:RolePermission[] = db.map( (role:any)=>{
+			const pr = role.permissionRight;//present only where a permission exists for this exact node; allowed/denied are [Right] name arrays
+			return {
+				roleId: role.id,
+				roleName: role.name,
+				permissionId: pr?.id ?? 0,
+				allowed: Permission.toRights( pr?.allowed ?? [] ),
+				denied: Permission.toRights( pr?.denied ?? [] ),
+				resourceId: pr?.resource?.id ?? 0,
+				criteria: pr?.resource?.criteria ?? criteria,
+			};
+		}).sort( (a,b)=>a.roleName.localeCompare(b.roleName) );
+		this.original = roles;
+		this.roles = roles.map( r=>({...r}) );
+		this.isLoading.set( false );
 	}
 
 	ngOnDestroy() {
 		ProfileStore.setTabIndex( 'nodeAccess', this.tabIndex );
   }
 	async save(){
-		await this.appService.mutate( this.mutations(), (m)=>console.log(m) );
+		const mutations = this.mutations();
+		if( !mutations.length )
+			return;
+		try{
+			await this.appService.mutate( mutations, (m)=>console.log(m) );
+		}
+		catch( e ){
+			this.snackbar.exception( "Could not save node access.", e );//a failed save used to be indistinguishable from a successful one - the rejection just escaped
+			return;//keep mutations() so Save stays enabled for a retry, and leave the baseline alone - nothing was applied
+		}
+		this.mutations.set( [] );
+		//Re-query rather than copying `roles` over `original`: the pending batch is now applied, so every later toggle must
+		//diff against the saved state (it used to re-Add rights the server already had, and a second Save resent the lot),
+		//and a newly Added permission only gets its permissionId/resourceId from the server - without them the next Remove
+		//would send `permissionRight:{id:0}` and the next Add would recreate the resource instead of reusing it.
+		await this.load();
 	}
 	onTabIndexChanged( index:number ){ this.tabIndex = index; }
 	onToggle( event:{ role: RolePermission, rights:number } ):void{
@@ -121,4 +138,5 @@ export class NodeAccess implements OnInit, OnDestroy{
 	route = model.required<NodeRoute>();
 	roles: RolePermission[]=[];
 	appService = inject(AppService);
+	snackbar = inject(SnackbarService);
 }

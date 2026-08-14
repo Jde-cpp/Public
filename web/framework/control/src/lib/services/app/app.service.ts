@@ -100,7 +100,15 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 
 	private logsSubscriptions:Map<RequestId,Subject<FromServer.ITrace>>= new Map<RequestId,Subject<FromServer.ITrace>>();
 	//private addMessage( msg ):void{}
+	//the base settles _callbacks; these three maps are AppService's own pending work and would otherwise hang forever when the socket drops.
 	override handleConnectionError( err:any ):void{
+		const e = { message: "Connection to the application server was lost." };
+		const strings = [...this.stringRequests.values()]; this.stringRequests.clear();//drain-then-settle: a handler may issue a fresh request, and it must not land in the map being cleared
+		strings.forEach( p=>p.reject(e) );
+		const customs = [...this.customCallbacks.values()]; this.customCallbacks.clear();
+		customs.forEach( p=>p.reject(e) );
+		const subscriptions = [...this.logsSubscriptions.values()]; this.logsSubscriptions.clear();//clear before error() so a resubscribe starts a fresh entry, per the gateway's clearOwner precedent
+		subscriptions.forEach( s=>s.error(e) );
 	}
 	encode( t:FromClient.Transmission ){ return FromClient.Transmission.encode(t); }
 	public async validateSessionId():Promise<User | null>{
@@ -131,7 +139,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 				if( message.ack ){//first message after handshake
 					console.log( `[App.${requestId}]Connected to '${super.socketUrl}', socketId: ${message.ack}` );
 					let socketId = message.ack;
-					if( this.user() )
+					if( this.user()?.authorization )//not `this.user()`: logout() leaves a truthy serverInstances-only User whose authorization is null
 						super.sendAuthorization( socketId );
 					else{
 						console.warn( `no authorization` );

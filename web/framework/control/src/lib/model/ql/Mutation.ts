@@ -53,7 +53,7 @@ export class Mutation{
 				if( value===null || value===undefined )
 					return "null";
 				if( typeof value == "string" )
-					return `"${value}"`;
+					return StringUtils.qlString( value );
 				if( typeof value == "number" || typeof value == "boolean" )
 					return `${value}`;
 				if( Array.isArray(value) )
@@ -71,7 +71,7 @@ export class Mutation{
 					if( value===null )
 						clause += `${key}:null`;
 					else if( typeof value == "string" )
-						clause += `${key}:"${value}"`;
+						clause += `${key}:${StringUtils.qlString(value)}`;
 					else if( typeof value == "number" || typeof value=="boolean" )
 						clause += `${key}:${value}`;
 					else if( Array.isArray(value) )

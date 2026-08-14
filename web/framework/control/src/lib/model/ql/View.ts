@@ -154,13 +154,17 @@ export class View{
 			this.tableConstructor(value, schema!);
 		}
 	}
+	//The settings dialog edits filters in place, so Cancel is only honest if the dialog never holds the live view's Filter objects.  structuredClone is unusable: it flattens Days into a plain object and breaks the `instanceof` checks in the filter UI and query().
+	static copyFilter( filter:Filter ):Filter{
+		return { operator: filter.operator, value: (filter.value ?? []).map( v=>v instanceof Days ? Days.fromJson({days:v.days}) : v instanceof Date ? new Date(v) : v ) };//`?? []` so a stale persisted view without a value array can't turn a copy into a load-time crash
+	}
 	private copyConstructor( view:View ):void{
 		this.name = view.name;
 		this.collectionName = view.collectionName;
 		this.limit = view.limit;
 		this.fields = [...view.fields];
 		if( view.fieldFilters )
-			this.fieldFilters = [...view.fieldFilters];
+			this.fieldFilters = view.fieldFilters.map( ff=>({field: ff.field, filter: View.copyFilter(ff.filter)}) );//`field` is shared schema metadata, but the filter is per-view state: a shallow [...] left the "copy" pointing at the original's Filter objects and value arrays, so it protected nothing
 		this.showSelector = view.showSelector;
 		this.sort = structuredClone( view.sort );
 		this.type = view.type;
@@ -257,48 +261,6 @@ export class View{
 			return isNaN( d.getTime() ) ? v : d;//"<not null>" etc. stay strings
 		}
 		return typeof v=="object" && "days" in (v as object) ? Days.fromJson( <{days:number}>v ) : v;
-	}
-	private parseQuery( query:string, vars:any, schema:TableSchema ){
-		const addField = ( fieldName:string, hidden=true )=>{
-			let view = this.fields.find( f=>f.name==fieldName );
-			if( view )
-				return view;
-			let field = schema.fields.find( f=>f.name==fieldName );
-			if( field ){
-				view = new ViewField( {qlField:field, settings: {name: field.name}} );
-				if( !hidden )
-					view.displayed = true;
-				this.fields.push( view );
-			}
-			return view;
-		}
-		let fieldNames = query.substring( query.indexOf("{")+1, query.lastIndexOf("}") ).split(" ").filter( x=>x.trim().length>0 );
-		for( let fieldName of fieldNames )
-			addField( fieldName, fieldName=="id" );
-		let argsStart = query.indexOf("(");
-		let args = argsStart>0
-			? query.substring( argsStart+1, query.indexOf(")") ).split(",").map( x=>x.trim() )
-			: [];
-		for( let arg of args ){
-			let parts = arg.split(":").map( x=>x.trim() );
-			if( parts.length!=2 )
-				continue;
-			let name = parts[0];
-			let value = vars[ parts[1].substring(1) ];
-			if( name=="limit" )
-				this.limit = +value;
-			else if( name=="orderBy" ){
-				this.sort = value;
-				for( let item of JSON.parse(value) as Record<string,"ASC"|"DESC">[] )
-					addField( Object.keys(item)[0] );
-			}
-		}
-		// this.fields = fieldNames.map( name => {
-		// 	let field = schema.fields.find( f=>f.name==name );
-		// 	if( !field )
-		// 		return ;
-		// 	return { field: field } as ViewField;
-		// } );
 	}
 	query( showDeleted:boolean, skip:number ):Query{
 		let deletedField = this.fields.find( f=>f.name=="deleted" );

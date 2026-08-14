@@ -38,7 +38,9 @@ export class GatewayService implements IGraphQL{
 		);
 		route.paramMap.subscribe( async params=>{
 			const gatewayTarget = params.get('gateway');
-			this.#defaultGateway = this.#gateways?.find( gateway=>gateway.target==gatewayTarget )!;
+			const gateway = gatewayTarget ? this.#gateways?.find( gateway=>gateway.target==gatewayTarget ) : undefined;
+			if( gateway )//never cache a miss: the param is absent on most routes and #gateways is still unset early on, and the old unconditional assignment WIPED an already-resolved default on every such navigation
+				this.#defaultGateway = gateway;
 		});
 		route.url.subscribe( async urlSegments=>{
 			const url = urlSegments.map(segment=>segment.path).join("/");
@@ -71,26 +73,42 @@ export class GatewayService implements IGraphQL{
 			return new Promise<Gateway[]>( (resolve,reject)=>this.#gatewaysCallbacks.push({resolve:resolve,reject:reject}) );
 		return Promise.resolve( this.#gateways );
 	}
-	async ql<Y>( q:Query, log:Log ):Promise<Y>{ return this.defaultGateway.ql( q, log ); }
-	async query<T>( ql: string, args?:any, log?:Log ):Promise<T>{ return this.defaultGateway.query<T>(ql, args, log); }
-	async querySingle<T>( ql: string ):Promise<T>{ return this.defaultGateway.querySingle<T>( ql ); }
-	async schema( names:string[] ):Promise<TableSchema[]>{ return this.defaultGateway.schema( names ); }
-	async schemaWithEnums( type:string, log:Log ):Promise<TableSchema>{ return this.defaultGateway.schemaWithEnums( type, log ); }
+	//Every IGraphQL entry point goes through defaultGatewayAsync, not the synchronous getter: until gatewayInstances()
+	//resolves there is no Gateway to hand back, and the getter used to return undefined so the caller died on
+	//"cannot read properties of undefined" - even though gateway()/gateways() already queue for exactly this window.
+	//These are all async, so waiting instead of throwing costs the caller nothing.
+	async ql<Y>( q:Query, log:Log ):Promise<Y>{ return (await this.defaultGatewayAsync()).ql( q, log ); }
+	async query<T>( ql: string, args?:any, log?:Log ):Promise<T>{ return (await this.defaultGatewayAsync()).query<T>(ql, args, log); }
+	async querySingle<T>( ql: string ):Promise<T>{ return (await this.defaultGatewayAsync()).querySingle<T>( ql ); }
+	async schema( names:string[] ):Promise<TableSchema[]>{ return (await this.defaultGatewayAsync()).schema( names ); }
+	async schemaWithEnums( type:string, log:Log ):Promise<TableSchema>{ return (await this.defaultGatewayAsync()).schemaWithEnums( type, log ); }
 	async mutate<T>( ql: string|Mutation|Mutation[], log?:Log ):Promise<T>{
-		return this.defaultGateway.mutate<T>( ql, log );
+		return (await this.defaultGatewayAsync()).mutate<T>( ql, log );
 	}
-	async mutations():Promise<MutationSchema[]>{ return this.defaultGateway.mutations(); }
+	async mutations():Promise<MutationSchema[]>{ return (await this.defaultGatewayAsync()).mutations(); }
 
 	targetQuery( schema:TableSchema, target: string, showDeleted:boolean ):string{ return null as any; }
 	subQueries( typeName: string, id: number ):string[]{ return []; }
 	excludedColumns( tableName:string ):string[]{ return []; }
 	toCollectionName( collectionDisplay:string ):string{ return collectionDisplay; }
 
+	//Same resolution as the getter, but waits for the instance lookup instead of failing during it.  Prefer this everywhere
+	//an await is already in hand; the getter stays for the synchronous callers.
+	async defaultGatewayAsync():Promise<Gateway>{
+		if( !this.#gateways )
+			await this.gateways();//queues on #gatewaysCallbacks, and rejects if gatewayInstances() failed
+		return this.defaultGateway;
+	}
 	get defaultGateway():Gateway{
 		if( !this.#defaultGateway ){
 			let target = this.router.url.split('/').slice(-1)[0];
-			this.#defaultGateway = this.#gateways?.find( gateway=>gateway.target==target )!;
+			//?? gateways[0]: 'default' means "when nothing names one", and the last url segment is only a gateway target on
+			//the /gateways/<target> routes - on a node url it is a browse path, so the find misses.  loginPassword already
+			//treats gateways[0] as the one to use.
+			this.#defaultGateway = this.#gateways?.find( gateway=>gateway.target==target ) ?? this.#gateways?.[0]!;
 		}
+		if( !this.#defaultGateway )//was `undefined!`, so callers died on "cannot read properties of undefined" far from the cause
+			throw new Error( "No gateway is available: the gatewayInstances() lookup has not resolved yet, or returned none.  Await defaultGatewayAsync() instead." );
 		return this.#defaultGateway;
 	} #defaultGateway!:Gateway;
 	#gateways!:Gateway[];
@@ -148,7 +166,15 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	}
 
 	protected encode( t:FromClient.Transmission ){ return FromClient.Transmission.encode(t); }
-	protected handleConnectionError(){};
+	//the socket carried every subscription, so the server has already forgotten them: drop the local bookkeeping directly rather than via clearOwner, whose unsubscribe sends would re-open the socket just to cancel subscriptions that no longer exist.
+	protected handleConnectionError(){
+		const e = { message: "Connection to the gateway was lost." };
+		const subjects = [...this.#ownerSubscriptions.values()];
+		this.#ownerSubscriptions.clear();//clear before error() so a later addToSubscription starts a fresh Subject, same as the _subscribe failure path
+		this.#subscriptions.clear();
+		this.#nodes.clear();
+		subjects.forEach( s=>s.error(e) );
+	};
 	protected processMessage( buffer:protobuf.Buffer ){
 		try{
 			const transmission = FromServer.Transmission.decode( buffer );
@@ -297,9 +323,10 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	async write( opcId:CnnctnTarget, n:NodeId, v:Value, log:Log ):Promise<Value>{
 		const q = `updateVariable( opc: $opc, id: $id, value: $value ){ value }`;
 		const vars = { opc: opcId, id: n.toJson(), value: valueJson(v) };
-		const newValue:any = toValue( await super.postQL<Value>(q, vars, log) );
+		const data:any = await super.postQL<any>( q, vars, log );
 		this.updateErrorCodes();
-		return newValue["value"];
+		//unwrap first, toValue last - mirroring read().  postQL returns the `data` object and the server keys a mutation payload by command name (QLAwait: `result[commandName]`, skipped only for `raw`, which this never requests), so toValue used to run on the wrapper and `["value"]` off its result was always undefined - blanking the cell.  `?? data` keeps the raw/unkeyed shape working too.
+		return toValue( (data?.["updateVariable"] ?? data)?.["value"] );
 	}
 
 	setRoute(route: NodeRoute){
@@ -365,9 +392,8 @@ export class Gateway extends ProtoService<FromClient.ITransmission,FromServer.IM
 	public addToSubscription( opcId:OpcId, nodes:NodeId[], owner:Owner ){
 		let opcSubscriptions = this.getOpcSubscriptions( opcId );
 		for( const node of nodes ){
-			let owners:Owner[];
 			if( opcSubscriptions.has(node.key) ){
-				let owners = opcSubscriptions.get( node.key )!;
+				const owners = opcSubscriptions.get( node.key )!;//the outer `let owners:Owner[]` this shadowed was never read - declared, shadowed, dropped
 				if( !owners.includes(owner) )
 					owners.push( owner );
 			}

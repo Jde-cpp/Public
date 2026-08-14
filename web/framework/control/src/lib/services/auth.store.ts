@@ -46,11 +46,18 @@ export class AuthStore{
 	}
 
 	setServerInstance( url: string, instance: number ){
-		let user = this.user() ?? undefined;
-		if( user )
-			AuthStore.upsertServerInstance( user, url, instance );
-		if( this.log ) console.log( `setServerInstance( ${JSON.stringify(user)} )` );
-		this.#userSignal.set( user );
+		const current = this.user();
+		if( !current )
+			return;//nothing to hang an instance off - append()/reset() are what create the User
+		//NOT `new User(current)`: the ctor's jwt branch skips its append(), so copying a Google user that way silently drops sessionId/serverInstances (the angular-review.md #21/#36 residual).
+		const user = new User();
+		user.append( current );
+		user.serverInstances = (user.serverInstances ?? []).map( x=>({...x}) );//own array, so the upsert below cannot reach back into the instance the signal still holds
+		AuthStore.upsertServerInstance( user, url, instance );
+		const stringify = JSON.stringify( user );
+		if( this.log ) console.log( `setServerInstance( ${stringify} )` );
+		localStorage.setItem( userStorageKey, stringify );//was never persisted, so the instance was lost on reload and loginWait's `previousInstance!=instance` re-fired every session
+		this.#userSignal.set( user );//a NEW reference: signals compare with Object.is, so mutating the held instance and re-setting it notified nobody
 	}
 
 	static upsertServerInstance( user: User, url: string, instance: number ){

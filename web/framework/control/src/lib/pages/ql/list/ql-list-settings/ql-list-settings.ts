@@ -14,6 +14,8 @@ import { View, ViewField } from '../../../../model/ql/View';
 import { ProfileStore } from 'jde-spa';
 import { TableSchema } from '../../../../model/ql/schema/TableSchema';
 
+const tabKey = 'qlListSettings';
+
 @Component({
 	selector: 'ql-list-settings',//.main-content.mat-drawer-container.my-content
 	styleUrls: ['ql-list-settings.scss'],
@@ -26,7 +28,7 @@ export class QLListSettings implements OnInit, OnDestroy{
 		this.name.set( this.originalName() );
 	}
 	ngOnDestroy(){
-		ProfileStore.setTabIndex('groupDetail', this.tabIndex() );
+		ProfileStore.setTabIndex( tabKey, this.tabIndex() );
 	}
 
 	getView( isAdhoc:boolean ):View{
@@ -41,7 +43,7 @@ export class QLListSettings implements OnInit, OnDestroy{
 		view.showSelector = displayCols[0].displayed;
 		view.fieldFilters = [];
 		for( let col of this.filter.dataSource.filter(c=>c.field) )
-			view.fieldFilters.push( {field: col.field, filter: {operator: col.filter.operator, value: col.filter.value}} );
+			view.fieldFilters.push( {field: col.field, filter: View.copyFilter(col.filter)} );//the built Filter was new but re-used col.filter.value, so the emitted view still shared the dialog's live arrays
 		view.sort = this.sort.dataSource.filter( s=>s.active ).map( s=>({active: s.active, direction: s.direction}) );
 		return view;
 	}
@@ -50,6 +52,10 @@ export class QLListSettings implements OnInit, OnDestroy{
 		return ( this.view().isSystem && this.originalName()==this.name() )
 			|| ( this.originalName()==this.name() && !this.view().name );
 	}
+	//Delete only ever removes a saved user view.  It used to share disableSave(), which left it ENABLED for an adhoc view —
+	//and logs' onViewDelete opens with an assertion on the type, so clicking it there threw (via a `debugger;` that freezes
+	//the page outright whenever DevTools/automation is attached).
+	disableDelete():boolean{ return !this.view().isUser; }
 	onTabIndexChanged( index:number ){ this.tabIndex.set(index); }
 	excludedColumns = input<string[]>([]);
 	suggestions = input.required<Record<string,any[]>>();
@@ -67,5 +73,5 @@ export class QLListSettings implements OnInit, OnDestroy{
 	@ViewChild(QLListSettingsSort) sort!: QLListSettingsSort;
 
 	name = signal<string>( null as any );
-	tabIndex = signal<number>( ProfileStore.tabIndex('groupDetail') );
+	tabIndex = signal<number>( ProfileStore.tabIndex(tabKey) );
 }

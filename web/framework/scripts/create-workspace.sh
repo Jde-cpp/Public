@@ -112,6 +112,11 @@ function execute() {
 }
 ##################
 startDir=`pwd`;
+#the names of every library in this workspace, needed before the loop body can write one library's view of its siblings.
+declare -a libraryNames=();
+for libraryDir in "${libraries[@]}"; do
+	libraryNames+=( $( basename $(jq -er .name $libraryDir/control/package.json) ) ) || { echo `pwd`; echo no .name in $libraryDir/control/package.json; exit 1; };
+done;
 echo -------------------- Start Libraries --------------------;
 for libraryDir in "${libraries[@]}"; do
 	echo $libraryDir - processing;
@@ -124,6 +129,19 @@ for libraryDir in "${libraries[@]}"; do
 	if [ ! -d projects/$library ]; then
 		$scriptDir/create-library.sh $library $libraryDir; if [ $? -ne 0 ]; then echo `pwd`; echo $scriptDir/WebFramework/create-library.sh $library $libraryDir; exit 1; fi;
 	fi;
+	#A library build compiles that library's sources ONLY.  The workspace tsconfig maps every jde-* package source-first
+	#(create-library.sh writes ["./projects/<lib>/src/public-api", "./dist/..."]), which is what lets `ng build/serve
+	#my-workspace` compile the libs straight from the symlinked projects/ tree - but under `ng build <lib>` it drags the
+	#sibling's .ts into this library's compilation, outside its rootDir, and ng-packagr fails with a wall of TS6059.
+	#So point the siblings at their built output here, in the library's own tsconfig.lib.json (tsconfig.lib.prod.json
+	#extends it, and paths resolve relative to the file that declares them).  `paths` replaces wholesale rather than
+	#merging per key, so every sibling has to be listed - self excluded, since no library imports its own package name.
+	#Libraries must then be built in dependency order, each into dist/: jde-spa, jde-framework, jde-access, jde-opc.
+	libraryPaths=;
+	for sibling in "${libraryNames[@]}"; do
+		if [ "$sibling" != "$library" ]; then libraryPaths="$libraryPaths\"$sibling\":[\"../../dist/$sibling\"],"; fi;
+	done;
+	if [ ! -z "$libraryPaths" ]; then jqEdit projects/$library/tsconfig.lib.json ".compilerOptions.paths = {${libraryPaths%,}}"; fi;
 	#unchecked, a failed cd left cwd at the workspace root and the rm -rf below ran there instead.
 	cd $baseDir/$workspace/projects/$library/src; if [ $? -ne 0 ]; then echo `pwd`; echo cd $baseDir/$workspace/projects/$library/src; exit 1; fi;
 	#public-api.ts is the library's export surface.  It used to be hard-linked by create-library.sh, which only runs

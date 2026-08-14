@@ -84,10 +84,23 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 
 	//
 	error( err:any ){
-		this.#socket = undefined;//drop the dead socket so the next send reconnects
-		this.setSocketId( 0 );
 		console.log( "No longer connected to Server.", err );
+		this.socketDown( err );
+	}
+	//a socket that is gone can never answer what was already sent or queued, so both teardown paths must settle everything: an unsettled promise is an await that never returns.
+	private socketDown( err:any ):void{
+		this.#socket = undefined;//drop the dead socket so the next send reconnects
+		this.#socketId = 0;//NOT setSocketId(0): that flushes the backlog, and with the socket already dropped every queued transmission would go to `#socket?.next` and vanish
+		this.rejectPending();
 		this.handleConnectionError( err );
+	}
+	protected rejectPending():void{
+		const message = `Connection to '${this.socketUrl}' was lost.`;
+		this.backlog.length = 0;//sendPromise registers its callback whether or not the message actually went out, so the backlog's promises are in _callbacks and reject below - resending them after a reconnect would arrive with no callback left to take the answer
+		const pending = [...this._callbacks];
+		this._callbacks.clear();//clear before rejecting: a reject handler may send again and register new callbacks
+		for( const [requestId, c] of pending )
+			c.reject( {error:{requestId, message}} );
 	}
 	sendTransmission( t:Transmission ){
 		console.log( JSON.stringify(t) );
@@ -113,9 +126,19 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		}
 	}
 
+	//the socketId MUST end up set on every path: setSocketId is what flushes the backlog, so an unsent/failed handshake would otherwise strand every queued send forever.
 	protected async sendAuthorization( socketId:number ):Promise<void>{
-		let user = this.user()!;
-		await this.sendPromise( {sessionId:user.authorization}, `sendAuthorization: ${user.authorization}` );
+		const authorization = this.user()?.authorization;
+		if( !authorization )//logout() leaves a truthy serverInstances-only User whose authorization is null; protobufjs omits the null field, so this used to put an *empty* handshake on the wire that the server never acks
+			console.warn( "sendAuthorization: no authorization - releasing the backlog unauthenticated." );
+		else{
+			try{
+				await this.sendPromise( {sessionId:authorization}, `sendAuthorization: ${authorization}` );
+			}
+			catch( e ){//callers never await this (it is fired from the ack handler), so swallowing here is what keeps the rejection from floating
+				console.error( "sendAuthorization failed - releasing the backlog anyway so queued requests fail against the server instead of hanging.", e );
+			}
+		}
 		this.setSocketId( socketId );//release buffer.
 	}
 
@@ -138,7 +161,6 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		if( this.#loginCallbacks.length==1 ){
 			let url = this.urlWithTarget( "serverSettings", true );
 			if( this.log.restRequests ) log( `get: ${url}` );
-			let settings;
 			try{
 				let args = this.user()?.authorization ? {headers:{"Authorization":this.user()!.authorization}} : {} as any;
 				const settings:any = await firstValueFrom( this.http.get<any>(url, args) );
@@ -307,7 +329,12 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	async providers( log:Log ):Promise<EProvider[]>{
 		const ql = `__type(name: "Provider") { enumValues { id name } }`;
 		const data:any = await this.query( ql, null, log );
-		return data["__type"]["enumValues"].map( (x:EnumValue)=>x.id );
+		//ql() hands back null when the request fails, and GraphQL introspection answers `__type:null` for a type the schema
+		//does not have - both used to TypeError here rather than say what went wrong.
+		const enumValues:EnumValue[]|undefined = data?.["__type"]?.["enumValues"];
+		if( !enumValues )
+			console.warn( `providers: no Provider enum in the schema (${JSON.stringify(data)}) - offering no login providers.` );
+		return enumValues?.map( (x:EnumValue)=>x.id ) ?? [];
 	}
 	async query<Y>( ql:string, vars?:any, log?:Log ):Promise<Y>{
 		return await this.ql( {text: ql, vars:vars}, log ?? console.log );
@@ -412,12 +439,14 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		return this.#mutations;
 	}
 
-	socketComplete(){ this.#socket = undefined; console.log( 'complete' ); }
+	socketComplete(){ console.log( 'complete' ); this.socketDown( "the server closed the connection" ); }//a clean close strands pending requests exactly like an error does
 	//get nextRequestId():RequestId{ return this.#requestId+1; }  why?
 	getRequestId():RequestId{ return ++this.#requestId;} #requestId:RequestId=0;
 
 	protected setSocketId( id:number ){
 		this.#socketId = id;
+		if( !this.#socket )
+			return;//sendTransmission is `#socket?.next(...)`, so flushing without a socket would silently destroy the backlog rather than leave it for the next connect
 		for( var m of this.backlog )
 			this.sendTransmission( m );
 		this.backlog.length=0;

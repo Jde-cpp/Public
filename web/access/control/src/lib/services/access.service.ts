@@ -15,17 +15,18 @@ export class AccessService extends AppService implements OnDestroy{
 		console.log( 'AccessService.ngOnDestroy' );
 	}
 
-	async loadResources(){
-		if( !this.#resources ){
-			let resources = ( await this.queryArray<Partial<Resource>>( `resources(criteria:null){ id schemaName allowed name deleted target }`));
-			this.#resources = new Array<Resource>();
-			for( const resource of resources )
-				this.#resources.push( new Resource(resource) );
-		}
-		return this.#resources;
+	//Cache the PROMISE, not the array.  The array was only assigned after the await, so two callers racing the first load
+	//(every permission tab builds its own PermissionTable) both saw an unset #resources and both queried.
+	async loadResources():Promise<Resource[]>{
+		return this.#resources ??= this.#queryResources().catch( (e)=>{ this.#resources = undefined; throw e; } );//never cache a failure: a rejected promise would be handed to every later caller
+	}
+	async #queryResources():Promise<Resource[]>{
+		const resources = (await this.queryArray<Partial<Resource>>( `resources(criteria:null){ id schemaName allowed name deleted target }` )).map( (r)=>new Resource(r) );
+		this.#resourceSignal.set( resources );//the public `resources` signal was never written, so it read empty forever
+		return resources;
 	}
 	async getResource( target:string ):Promise<Resource|undefined>{
-		let resources:Resource[] = await this.#resources;
+		const resources = await this.loadResources();//was `await this.#resources` - the field, not the loader, so this threw on `.find` unless something else had already loaded
 		return resources.find( r=>r.target==target );
 	}
 
@@ -71,7 +72,7 @@ export class AccessService extends AppService implements OnDestroy{
 	}
 
 
-	#resources!:Resource[];
+	#resources:Promise<Resource[]>|undefined;
 	#resourceSignal = signal<Resource[]>(new Array<Resource>());
   resources = this.#resourceSignal.asReadonly();
 };

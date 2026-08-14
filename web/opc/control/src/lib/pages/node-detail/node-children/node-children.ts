@@ -50,7 +50,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 			this.profile.subscriptions = (this.profile.subscriptions ?? []).map( (s)=>new NodeId(s) );//revive persisted plain objects into NodeId instances (s.equals/s.key below would otherwise throw)
 			this.nodes?.filter( (n:UaNode)=>this.profile.subscriptions.some((s)=>s.key==n.key) ).forEach( (n)=>this.selections.select(n) );
 			this.isLoading.set( false );
-			this.componentPageTitle.title = this.server.connection.name + (this.node().id==85 ? '' : `/${this.node.name}`);
+			this.componentPageTitle.title = this.server.connection.name + (this.node().id==85 ? '' : `/${this.node().name}`);
 		});
 		this.selections.changed.subscribe( this.onSubscriptionChange.bind(this) );
 	}
@@ -73,12 +73,13 @@ export class NodeChildren implements OnInit, OnDestroy {
 		this.retrievingSnapshot.set( false );
 	}
 
-	toDate( value:Timestamp ):Date{
-		return DateUtils.asUtc( ProtoUtils.toDate(value)! );
+	toDate( value:Timestamp|undefined ):Date|null{
+		const date = value ? ProtoUtils.toDate( value ) : null;
+		return date ? DateUtils.asUtc( date ) : null;
 	}
 
 	toObject( x:ENodeClass ):string{ return ENodeClass[x]; }
-	toString( value:Value ){ return valueString(value); }
+	toString( value:Value|undefined ){ return valueString(value); }//Variable.value is optional, and retrieveSnapshot clears it while reading
   checkboxLabel(row?: UaNode): string {
 		return row
 			? `${this.selections.isSelected(row) ? 'deselect' : 'select'} ${row.name}`
@@ -88,7 +89,12 @@ export class NodeChildren implements OnInit, OnDestroy {
 		if( r.added.length>0 ){
 			try {
 				let nodes = r.added.map( r=>r.nodeId );
-				this.profile.subscriptions.push( ...nodes );
+				//Dedupe by key.  Restoring persisted subscriptions re-selects those rows, and `selections.changed` is subscribed
+				//before the awaited profile load resumes, so that restore re-enters here — a blind push re-added every
+				//already-persisted NodeId on every visit and the array grew by N each time until an unsubscribe pruned the key.
+				//Compare by key like the removal branch below: these are fresh NodeId instances, so identity never matches.
+				const unsaved = nodes.filter( n=>!this.profile.subscriptions.some(s=>s.key==n.key) );
+				this.profile.subscriptions.push( ...unsaved );//`nodes` (not `unsaved`) still drives the gateway calls below - after a reload the live subscription does not exist yet even for persisted keys
 				if( !this.subscription){
 					this.subscription = this._iot.subscribe( this.cnnctnTarget, nodes, this.Key ).subscribe({
 						next:(value: SubscriptionResult) =>{
