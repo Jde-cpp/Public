@@ -30,6 +30,7 @@ target_precompile_headers(${targetName}
 
 #Out-of-source - see the note in libs/app/shared/CMakeLists.txt.
 set( protoOutDir ${CMAKE_CURRENT_BINARY_DIR}/proto )
+file( MAKE_DIRECTORY ${protoOutDir} )
 protobuf_generate(
 	TARGET ${targetName}
 	IMPORT_DIRS proto

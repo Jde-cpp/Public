@@ -11,6 +11,10 @@ namespace Jde{
 		VoidAwait( SRCE )ι:_sl{sl}{}
 		β await_ready()ι->bool{ return false; }
 		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
+		//Diagnostic only - a matching caller selects the non-template overload above; a mismatched one lands here and the static_assert names the rule instead of 'no viable conversion from coroutine_handle<...>'.
+		Τ α await_suspend( coroutine_handle<T> )ι->void{
+			static_assert( std::is_same_v<T,TPromise>, "An awaitable dictates its caller's return type: a coroutine may only co_await awaitables whose ::Task is its own return type (CLAUDE.md 'Coroutines'). Split into a hand-off chain, or co_await Any(awaitable) from co/AnyAwait.h." );
+		}
 		β await_resume()ε->void{ AwaitResume(); }
 		α ResumeExp( Exception&& e )ι{
 			ASSERT( Promise() );
@@ -45,6 +49,10 @@ namespace Jde{
 		IAwait( SRCE )ι:_sl{sl}{}
 		β await_ready()ι->bool{ return false; }
 		Ξ await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
+		//Diagnostic only - a matching caller selects the non-template overload above; a mismatched one lands here and the static_assert names the rule instead of 'no viable conversion from coroutine_handle<...>'.
+		Τ Ξ await_suspend( coroutine_handle<T> )ι->void{
+			static_assert( std::is_same_v<T,TPromise>, "An awaitable dictates its caller's return type: a coroutine may only co_await awaitables whose ::Task is its own return type (CLAUDE.md 'Coroutines'). Split into a hand-off chain, or co_await Any(awaitable) from co/AnyAwait.h." );
+		}
 		β await_resume()ε->TResult = 0;
 		α ResumeExp( Exception&& e )ι{
 			ASSERT(Promise());

@@ -28,6 +28,7 @@ set( PROTO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 #Out-of-source - see the note in libs/app/shared/CMakeLists.txt.  protoIncludeDir stays in the source tree: it is an
 #IMPORT_DIRS entry, i.e. where the hand-written .proto files live, not where generated output goes.
 set( protoOutDir ${CMAKE_CURRENT_BINARY_DIR}/types/proto )
+file( MAKE_DIRECTORY ${protoOutDir} )#protoc will not create it and Unix Makefiles does not either - see libs/app/shared.
 set( protoIncludeDir "${jdeRoot}/libs/app/shared/proto" )
 protobuf_generate(
 	TARGET ${targetName}

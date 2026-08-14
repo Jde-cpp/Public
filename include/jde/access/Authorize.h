@@ -24,8 +24,8 @@ namespace Jde::Access{
 		α GetSchema( str resourceTarget, SL sl )ε->string;
 
 		α TestAdmin( str resource, UserPK userPK, SRCE )ε->void;
-		α TestAdmin( str schema, str resource, str criteria, UserPK userPK, SRCE )ε->void;
-		α TestAdmin( str resource, str criteria, UserPK userPK, SRCE )ε->void override;
+		α TestAdmin( str schema, str resource, str criteria, UserPK userPK, SRCE )ι->up<AnyVoidAwait>;//remote when schema has a registered authorizer, else the local pre-completed check.
+		α TestAdmin( str resource, str criteria, UserPK userPK, SRCE )ι->up<AnyVoidAwait> override;
 		α TestAdmin( ResourcePK resourcePK, UserPK userPK, SRCE )ε->void;
 		α TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SRCE )ε->void;
 		α AddAdminAuthorizer( str resourceName, sp<IAdminAcl> authorizer )ι->void;

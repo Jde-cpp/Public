@@ -146,12 +146,39 @@ namespace Jde::App::Server{
 		WARNT( ELogTags::SocketServerRead, "[{}]Closing socket after {} failed session-id adoptions.", hex(Id()), _failedAdoptions );
 		OnClose();
 	}
-	α ServerSocketSession::TestAdmin( str resource, str criteria, Jde::UserPK userPK, SL sl )ε->void{
-		string q = "permissionRight( user:$user ){isAdmin resource( resource:$resource, criteria:$criteria )}";
-		auto ql = QL::ParseQuery(move(q), jobject{{"user", userPK.Value}, {"resource", resource}, {"criteria", criteria}}, {}, true, sl);
-		auto await = IWebsocketSession::QueryClient(move(ql), UserPK(), sl );
-		auto result = BlockTAwait<jvalue>( move(await) );
-		THROW_IF( !result.at("permissionRight").at("isAdmin").as_bool(), "User {:x} is not admin for resource '{}' with criteria '{}'.", userPK.Value, resource, criteria );
+	//The remote admin check as an awaitable any coroutine can co_await. Suspend launches a glue coroutine of
+	//QueryClientAwait's task type; the strand stays free to deliver the reply. The BlockTAwait this replaces
+	//deadlocked the self-registration case - the reply only arrives on the strand the block was holding
+	//(reviews/todo.md §12), recovered only by the QueryClient timeout as a wrongful denial.
+	struct TestAdminAwait final : AnyVoidAwait{
+		TestAdminAwait( sp<IWebsocketSession> session, string resource, string criteria, Jde::UserPK userPK, SL sl )ι:
+			AnyVoidAwait{sl}, _session{move(session)}, _resource{move(resource)}, _criteria{move(criteria)}, _userPK{userPK}{}
+		α Suspend()ι->void override{ Execute(); }
+	private:
+		α Execute()ι->QueryClientAwait::Task;
+		sp<IWebsocketSession> _session;
+		string _resource, _criteria;
+		Jde::UserPK _userPK;
+	};
+	α TestAdminAwait::Execute()ι->QueryClientAwait::Task{
+		try{
+			string q = "permissionRight( user:$user ){isAdmin resource( resource:$resource, criteria:$criteria )}";
+			auto ql = QL::ParseQuery( move(q), jobject{{"user", _userPK.Value}, {"resource", _resource}, {"criteria", _criteria}}, {}, true, Source() );
+			let result = co_await _session->QueryClient( move(ql), _session->UserPK(), Source() );
+			if( result.at("permissionRight").at("isAdmin").as_bool() )
+				Resume();
+			else
+				ResumeExp( Exception{Source(), {}, "User {:x} is not admin for resource '{}' with criteria '{}'.", _userPK.Value, _resource, _criteria} );
+		}
+		catch( Exception& e ){
+			ResumeExp( move(e) );
+		}
+		catch( runtime_error& e ){
+			ResumeExp( move(e) );
+		}
+	}
+	α ServerSocketSession::TestAdmin( str resource, str criteria, Jde::UserPK userPK, SL sl )ι->up<AnyVoidAwait>{
+		return mu<TestAdminAwait>( shared_from_this(), resource, criteria, userPK, sl );
 	}
 
 	α ServerSocketSession::OnRead( Proto::FromClient::Transmission&& t )ι->void{
