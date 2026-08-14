@@ -77,12 +77,18 @@ namespace Jde::Access{
 		if( resource!=Resources.end() && !resource->second.IsDeleted )
 			TestAdmin( resource->second, executer, sl );
 	}
-	α Authorize::TestAdmin( str schema, str resource, str criteria, UserPK userPK, SL sl )ε->void{
+	α Authorize::TestAdmin( str schema, str resource, str criteria, UserPK userPK, SL sl )ι->up<AnyVoidAwait>{
 		auto authorizer = FindAdminAuthorizer( schema );
-		authorizer->TestAdmin( resource, criteria, userPK, sl );
+		return authorizer->TestAdmin( resource, criteria, userPK, sl );
 	}
-	α Authorize::TestAdmin( str resource, str /*criteria*/, UserPK userPK, SL sl )ε->void{
-		return TestAdmin( resource, userPK, sl ); //TODO handle criteria
+	α Authorize::TestAdmin( str resource, str /*criteria*/, UserPK userPK, SL sl )ι->up<AnyVoidAwait>{
+		up<Exception> error;
+		try{
+			TestAdmin( resource, userPK, sl ); //TODO handle criteria
+		}
+		catch( Exception& e ){ error = e.Move(); }
+		catch( runtime_error& e ){ error = mu<Exception>( move(e) ); }
+		return mu<AnyCompletedAwait>( move(error), sl );
 	}
 	α Authorize::TestAdmin( const Resource& resource, UserPK executer, SL sl )ε->void{
 		if( executer==UserPK{UserPK::System} )

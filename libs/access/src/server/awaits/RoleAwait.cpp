@@ -68,7 +68,8 @@ namespace Jde::Access::Server{
 			if( !schema )
 				schema = auth.GetSchema( resourceKey.NK(), _sl );
 
-			auth.TestAdmin( *schema, resourceKey.NK(), criteria.value_or(""), _userPK );
+			auto adminCheck = auth.TestAdmin( *schema, resourceKey.NK(), criteria.value_or(""), _userPK );
+			co_await *adminCheck;
 			let& table = GetTable( "roles" );
 			DB::InsertClause insert{ DB::Names::ToSingular(table.DBName)+"_add" };
 			insert.Add( rolePK );

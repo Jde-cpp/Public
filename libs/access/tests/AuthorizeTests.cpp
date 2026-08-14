@@ -264,6 +264,29 @@ namespace Jde::Access::Tests{
 		EXPECT_THROW( auth->TestAdmin(_target, unknown), Exception );
 	}
 
+	//todo.md §12: the IAdminAcl overload returns a pre-completed awaitable any coroutine can co_await - the
+	//denial arrives at the co_await, not at the call. VoidTask return: the awaitable dictates no task type.
+	Ω testAdminAwait( TestAuthorize& auth, UserPK user, bool& threw, bool& completed )->VoidTask{
+		try{
+			auto check = auth.TestAdmin( _target, "", user );
+			co_await *check;
+			threw = false;
+		}
+		catch( Exception& ){ threw = true; }
+		completed = true;
+	}
+	TEST( AuthorizeTests, TestAdminAwaitable ){
+		auto auth = createAuthorizer();
+		bool threw{}, completed{};
+		testAdminAwait( *auth, UserPK{UserPK::System}, threw, completed );
+		ASSERT_TRUE( completed );//pre-completed awaitable, so the coroutine runs synchronously to the end.
+		EXPECT_FALSE( threw ) << "System must pass the admin check";
+		completed = false;
+		testAdminAwait( *auth, UserPK{999}, threw, completed );
+		ASSERT_TRUE( completed );
+		EXPECT_TRUE( threw ) << "an unknown user must fail the admin check through the awaitable";
+	}
+
 	TEST( AuthorizeTests, FindResourceBySchemaTarget ){
 		auto auth = createAuthorizer();
 		let found = auth->FindResource( Resource{jobject{{"schemaName",_schema},{"target",_target}}} );//no pk - resolve from schema/target.

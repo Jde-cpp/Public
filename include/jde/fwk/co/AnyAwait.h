@@ -41,6 +41,15 @@ namespace Jde{
 		SL _sl;
 	};
 
+	//An already-completed void awaitable: co_await returns immediately - throwing `error` if one was given - without suspending.
+	//For synchronous implementations of an interface whose contract is an awaitable (e.g. a local check beside a remote one).
+	struct AnyCompletedAwait final : AnyVoidAwait{
+		AnyCompletedAwait( up<Exception> error={}, SRCE )ι:AnyVoidAwait{sl}{ _error=move(error); }
+		α await_ready()ι->bool override{ return true; }
+	protected:
+		α Suspend()ι->void override{}//unreachable: await_ready is true.
+	};
+
 	template<class TResult>
 	struct AnyAwait{
 		AnyAwait( SRCE )ι:_sl{sl}{}
