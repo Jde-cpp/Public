@@ -173,6 +173,15 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			customInsertProc: true,
 			map:: { parentId:"identity_id", childId:"permission_id" },//not a map, but connector.
 			ops: ["None"] //handled through admin op.
+		},
+		profiles:{
+			comment: "Per-user UI profile blobs, keyed by page/component",
+			columns: {
+				identityId: types.uint+{ pkTable: "users", sk: 0, i:0 },
+				target: targetColumns.target+{ sk: 1, i:1, comment: "profile key, e.g. 'favorites', 'logs/views'" },
+				value: types.varchar+{ length: 4096, i:2 }
+			},
+			ops: ["None"] //scoped to the executer in Server::CustomQuery/CustomMutation.
 		}
 	}
 }

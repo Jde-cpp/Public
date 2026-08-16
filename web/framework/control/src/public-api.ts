@@ -26,6 +26,7 @@ export * from './lib/pages/logs/tags/log-tags';
 export * from './lib/services/IGraphQL'
 export * from './lib/services/auth.store'
 export * from './lib/services/google-auth.service'
+export * from './lib/services/profile.service'
 export * from './lib/services/proto.service'
 export * from './lib/services/app/app.service';
 export * from './lib/shared/snackbar/snackbar-service';
