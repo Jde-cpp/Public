@@ -9,22 +9,22 @@
 #define let const auto
 namespace Jde::Access::Tests{
 	using namespace Json;
-	class UiProfileTests : public ::testing::Test{};
+	class ProfileTests : public ::testing::Test{};
 
 	Ω upsertProfile( sv target, sv value, UserPK executer )ε->jvalue{
-		return QL().QuerySync<jvalue>( Ƒ("mutation updateUiProfile( \"target\":\"{}\", \"value\":{} )", target, value), {}, executer );
+		return QL().QuerySync<jvalue>( Ƒ("mutation updateProfile( \"target\":\"{}\", \"value\":{} )", target, value), {}, executer );
 	}
 	Ω deleteProfile( sv target, UserPK executer )ε->jvalue{
-		return QL().QuerySync<jvalue>( Ƒ("mutation updateUiProfile( \"target\":\"{}\", \"value\":null )", target), {}, executer );
+		return QL().QuerySync<jvalue>( Ƒ("mutation updateProfile( \"target\":\"{}\", \"value\":null )", target), {}, executer );
 	}
 	Ω selectProfile( sv target, UserPK executer )ε->jobject{
-		return QL().QuerySync( Ƒ("uiProfile( target:\"{}\" ){{ value }}", target), {}, executer );
+		return QL().QuerySync( Ƒ("profile( target:\"{}\" ){{ value }}", target), {}, executer );
 	}
 
-	TEST_F( UiProfileTests, Crud ){
+	TEST_F( ProfileTests, Crud ){
 		let root = GetRoot();
-		const UserPK userA{ GetId(GetUser("uiProfileA", root)) };
-		const UserPK userB{ GetId(GetUser("uiProfileB", root)) };
+		const UserPK userA{ GetId(GetUser("profileA", root)) };
+		const UserPK userB{ GetId(GetUser("profileB", root)) };
 
 		upsertProfile( "testKey", "\"v1\"", userA );//insert path
 		ASSERT_EQ( AsSV(selectProfile("testKey", userA), "value"), "v1" );
@@ -46,7 +46,7 @@ namespace Jde::Access::Tests{
 		PurgeUser( userB, root );
 	}
 
-	TEST_F( UiProfileTests, Anonymous ){
+	TEST_F( ProfileTests, Anonymous ){
 		EXPECT_THROW( upsertProfile("anonKey", "\"v\"", UserPK{}), Exception );
 		EXPECT_THROW( upsertProfile("anonKey", "\"v\"", UserPK{UserPK::System}), Exception );
 	}

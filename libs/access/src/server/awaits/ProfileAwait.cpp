@@ -1,4 +1,4 @@
-#include <jde/access/server/awaits/UiProfileAwait.h>
+#include <jde/access/server/awaits/ProfileAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
@@ -8,18 +8,18 @@
 
 #define let const auto
 namespace Jde::Access::Server{
-	α UiProfileAwait::Suspend()ι->void{
+	α ProfileAwait::Suspend()ι->void{
 		Execute();
 	}
-	α UiProfileAwait::Execute()ι->DB::ExecuteAwait::Task{
+	α ProfileAwait::Execute()ι->DB::ExecuteAwait::Task{
 		try{
-			THROW_IF( !_executer || _executer.Value==UserPK::System, "uiProfile mutations require an authenticated user." );
+			THROW_IF( !_executer || _executer.Value==UserPK::System, "profile mutations require an authenticated user." );
 			using enum QL::EMutationQL;
-			THROW_IF( _mutation.Type!=Create && _mutation.Type!=Update, "uiProfile mutation '{}' is not supported.", _mutation.CommandName );
+			THROW_IF( _mutation.Type!=Create && _mutation.Type!=Update, "profile mutation '{}' is not supported.", _mutation.CommandName );
 			let args = _mutation.ExtrapolateVariables();
 			let target = Json::AsString( args, "target" );
 			let value = Json::FindString( args, "value" );
-			let& table = GetTable( "ui_profiles" );
+			let& table = GetTable( "profiles" );
 			let ds = table.Schema->DS();
 			uint count{};
 			if( !value )

@@ -41,10 +41,10 @@ describe( 'ProfileService', ()=>{
 		expect( service.userKey() ).toBe( 'g@x.com' );
 	});
 
-	it( 'load queries uiProfile by target and unwraps value', async ()=>{
+	it( 'load queries profile by target and unwraps value', async ()=>{
 		app.querySingle.mockResolvedValue( {value:'{"a":1}'} );
 		await expect( service.load('qlList/users/views') ).resolves.toBe( '{"a":1}' );
-		expect( app.querySingle ).toHaveBeenCalledWith( 'uiProfile( target:"qlList/users/views" ){ value }' );
+		expect( app.querySingle ).toHaveBeenCalledWith( 'profile( target:"qlList/users/views" ){ value }' );
 	});
 
 	it( 'load returns null when the server has no row', async ()=>{
@@ -52,16 +52,16 @@ describe( 'ProfileService', ()=>{
 		await expect( service.load('k') ).resolves.toBeNull();
 	});
 
-	it( 'save mutates updateUiProfile with the escaped value', async ()=>{
+	it( 'save mutates updateProfile with the escaped value', async ()=>{
 		app.mutate.mockResolvedValue( {} );
 		await service.save( 'favorites', '[{"name":"a b"}]' );
 		expect( app.mutate ).toHaveBeenCalledTimes( 1 );
-		expect( app.mutate.mock.calls[0][0].toString() ).toBe( 'updateUiProfile( target:"favorites", value:"[{\\"name\\":\\"a b\\"}]" )' );
+		expect( app.mutate.mock.calls[0][0].toString() ).toBe( 'updateProfile( target:"favorites", value:"[{\\"name\\":\\"a b\\"}]" )' );
 	});
 
 	it( 'save with null deletes the row', async ()=>{
 		app.mutate.mockResolvedValue( {} );
 		await service.save( 'k', null );
-		expect( app.mutate.mock.calls[0][0].toString() ).toBe( 'updateUiProfile( target:"k", value:null )' );
+		expect( app.mutate.mock.calls[0][0].toString() ).toBe( 'updateProfile( target:"k", value:null )' );
 	});
 });

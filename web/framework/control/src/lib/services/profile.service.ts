@@ -4,7 +4,7 @@ import { AppService } from './app/app.service';
 import { Mutation, MutationType } from '../model/ql/Mutation';
 import { StringUtils } from '../utils/StringUtils';
 
-//Persists ProfileStore blobs to the AppServer's access_ui_profiles table; the server scopes rows to the executer.
+//Persists ProfileStore blobs to the AppServer's access_profiles table; the server scopes rows to the executer.
 @Service()
 export class ProfileService implements IProfileService{
 	#app = inject( AppService );
@@ -13,10 +13,10 @@ export class ProfileService implements IProfileService{
 		return u && (u.jwt || u.id) ? (u.id ?? u.email) : undefined;
 	} );
 	async load( key:string ):Promise<string|null>{
-		const row = await this.#app.querySingle<{value:string}|null>( `uiProfile( target:${StringUtils.qlString(key)} ){ value }` );
+		const row = await this.#app.querySingle<{value:string}|null>( `profile( target:${StringUtils.qlString(key)} ){ value }` );
 		return row?.value ?? null;
 	}
 	async save( key:string, value:string|null ):Promise<void>{//value null deletes the row.
-		await this.#app.mutate( new Mutation('uiProfile', 0, {target:key, value:value}, MutationType.Update) );
+		await this.#app.mutate( new Mutation('profile', 0, {target:key, value:value}, MutationType.Update) );
 	}
 }

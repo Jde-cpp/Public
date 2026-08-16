@@ -174,7 +174,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			map:: { parentId:"identity_id", childId:"permission_id" },//not a map, but connector.
 			ops: ["None"] //handled through admin op.
 		},
-		uiProfiles:{
+		profiles:{
 			comment: "Per-user UI profile blobs, keyed by page/component",
 			columns: {
 				identityId: types.uint+{ pkTable: "users", sk: 0, i:0 },
