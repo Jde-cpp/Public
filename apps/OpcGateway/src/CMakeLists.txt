@@ -25,7 +25,10 @@ target_precompile_headers(${targetName}
 )
 
 set( PROTO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
-set( protoOutDir ${PROJECT_SOURCE_DIR}/types/proto )
+#Out-of-source - see the note in libs/app/shared/CMakeLists.txt.  protoIncludeDir stays in the source tree: it is an
+#IMPORT_DIRS entry, i.e. where the hand-written .proto files live, not where generated output goes.
+set( protoOutDir ${CMAKE_CURRENT_BINARY_DIR}/types/proto )
+file( MAKE_DIRECTORY ${protoOutDir} )#protoc will not create it and Unix Makefiles does not either - see libs/app/shared.
 set( protoIncludeDir "${jdeRoot}/libs/app/shared/proto" )
 protobuf_generate(
 	TARGET ${targetName}
@@ -35,6 +38,8 @@ protobuf_generate(
 	PROTOC_OUT_DIR ${protoOutDir})
 
 suppressProtoWarnings( "${protos}" ${protoOutDir} )
+#PUBLIC: the tests and soak targets link this lib and include its generated headers by bare name.
+target_include_directories( ${targetName} PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ${protoOutDir} )
 
 #for intellisense; created once at configure time since recreating it as a PRE_BUILD/PRE_LINK step on every build
 #bumps its mtime, which is newer than the PCH's, forcing a full PCH rebuild (and thus a full target rebuild) every time

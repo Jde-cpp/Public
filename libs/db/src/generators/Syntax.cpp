@@ -14,18 +14,115 @@ namespace Jde::DB{
 	static Syntax _sqlInstance;
 	α Syntax::Instance()->const Syntax&{ return _sqlInstance; }
 
-	α Syntax::FormatOperator( const Column& col, EOperator op, uint size, SL )Ε->string{
-		if( op!=EOperator::In && op!=EOperator::NotIn )
-			return Ƒ( "{}{}?", col.FQName(), OperatorStrings[(uint)op] );
+	//OperatorStrings does double duty - it is the wire/display spelling for ToOperator/ToString *and* was indexed here for
+	//SQL.  Only its six punctuation entries are valid SQL: `regex`/`glob`/`elemMatch` are names, and the old
+	//`Ƒ("{}{}?", FQName, OperatorStrings[op])` glued them straight onto the column ("users.nameregex?"), which lexes as
+	//one identifier.  The comparison operators are listed explicitly now, so a word operator added to the enum later
+	//lands in the default and throws instead of silently emitting a broken clause.
+	α Syntax::FormatOperator( const Column& col, EOperator op, uint size, SL sl )Ε->string{
+		using enum EOperator;
+		switch( op ){
+		case Equal: case NotEqual: case Greater: case GreaterOrEqual: case Less: case LessOrEqual:
+			return Ƒ( "{}{}?", col.FQName(), OperatorStrings[(uint)op] ); //punctuation: self-delimiting, no spaces needed.
+		case In: case NotIn:
+			if( size==0 ) //`col in ()` is invalid SQL; an empty IN matches nothing, an empty NOT IN matches everything.
+				return op==NotIn ? "1=1" : "1=0";
+			else{
+				string params;
+				for( uint i=0; i<size; ++i )
+					params += "?,";
+				params.pop_back();
+				return Ƒ( "{} {}({})", col.FQName(), op==NotIn ? "not in" : "in", params );
+			}
+		case Regex: case Glob:
+			//A word operator needs its spaces.  One pattern, one placeholder: an array literal (`glob:["a*","b*"]`)
+			//would otherwise render one '?' against N bound params and silently misalign the whole statement.
+			if( size!=1 )
+				throw Exception{ sl, Jde::ELogLevel::Debug, "'{}' takes a single pattern, not {}.", DB::ToString(op), size };
+			return Ƒ( "{} {} ?", col.FQName(), PatternOperator(op, sl) );
+		default:
+			throw Exception{ sl, Jde::ELogLevel::Debug, "Operator '{}' has no SQL form.", DB::ToString(op) };
+		}
+	}
 
-		if( size==0 ) //`col in ()` is invalid SQL; an empty IN matches nothing, an empty NOT IN matches everything.
-			return op==EOperator::NotIn ? "1=1" : "1=0";
+	α Syntax::PatternOperator( EOperator op, SL sl )Ε->sv{
+		if( op==EOperator::Glob )
+			return "like"; //T-SQL LIKE is glob's language with '%'/'_' for '*'/'?' - PatternParam does that rewrite.
+		throw Exception{ sl, Jde::ELogLevel::Debug, "SQL Server has no '{}' operator (REGEXP_LIKE is 2025+); use 'glob'.", DB::ToString(op) };
+	}
+	α Syntax::PatternParam( EOperator op, str pattern, SL sl )Ε->string{
+		if( op==EOperator::Glob )
+			return GlobToLike( pattern );
+		throw Exception{ sl, Jde::ELogLevel::Debug, "SQL Server has no '{}' operator (REGEXP_LIKE is 2025+); use 'glob'.", DB::ToString(op) };
+	}
 
-		string params;
-		for( uint i=0; i<size; ++i )
-			params += "?,";
-		params.pop_back();
-		return Ƒ( "{} {}({})", col.FQName(), op==EOperator::NotIn ? "not in" : "in", params );
+	//'*'->'%' and '?'->'_'; a literal '%'/'_' becomes a one-element class ('[%]'), which is how T-SQL escapes them
+	//without an ESCAPE clause - and which QL::globMatch already reads the same way, so the two stay in step.  Classes
+	//pass through: T-SQL LIKE has them, spelled '[^…]' where glob also accepts '[!…]'.
+	α GlobToLike( sv glob )ι->string{
+		string y;
+		for( uint i{}; i<glob.size(); ++i ){
+			let c = glob[i];
+			if( c=='*' )
+				y += '%';
+			else if( c=='?' )
+				y += '_';
+			else if( c=='%' || c=='_' )
+				y += Ƒ( "[{}]", c );
+			else if( c=='[' ){
+				let close = glob.find( ']', i+2+(i+1<glob.size() && (glob[i+1]=='^'||glob[i+1]=='!') ? 1 : 0) );
+				if( close==sv::npos ) //unterminated: a literal '[', as in sqlite - and '[' is a LIKE metacharacter too.
+					y += "[[]";
+				else{
+					y += '[';
+					if( glob[i+1]=='!' || glob[i+1]=='^' ){ //glob accepts both spellings of negation; T-SQL only '^'.
+						y += '^';
+						++i;
+					}
+					y.append( glob.substr(i+1, close-i-1) );
+					y += ']';
+					i = close;
+				}
+			}
+			else
+				y += c;
+		}
+		return y;
+	}
+
+	//'*'->'.*', '?'->'.', classes pass through, everything else escaped, and the whole thing anchored - glob matches the
+	//entire value, where REGEXP is a search.
+	α GlobToRegex( sv glob )ι->string{
+		constexpr sv metacharacters{ ".^$*+?()[]{}|\\" };
+		string y{ "^" };
+		for( uint i{}; i<glob.size(); ++i ){
+			let c = glob[i];
+			if( c=='*' )
+				y += ".*";
+			else if( c=='?' )
+				y += '.';
+			else if( c=='[' ){
+				let close = glob.find( ']', i+2+(i+1<glob.size() && (glob[i+1]=='^'||glob[i+1]=='!') ? 1 : 0) );
+				if( close==sv::npos ) //unterminated: a literal '[', as in sqlite.
+					y += "\\[";
+				else{
+					y += '[';
+					if( glob[i+1]=='!' || glob[i+1]=='^' ){
+						y += '^';
+						++i;
+					}
+					y.append( glob.substr(i+1, close-i-1) ); //ranges and members are spelled the same in both languages.
+					y += ']';
+					i = close;
+				}
+			}
+			else{
+				if( metacharacters.find(c)!=sv::npos )
+					y += '\\';
+				y += c;
+			}
+		}
+		return y+"$";
 	}
 
 	α Syntax::AddDefault( sv tableName, sv columnName, Value dflt )Ι->string{
@@ -68,11 +165,11 @@ namespace Jde::DB{
 		let& c1 = *join.To;
 		return Ƒ( "\n\t{0}join {3}{4} on {1}.{2}={5}.{6}",
 			joinType(join.Inner),
-			join.FromAlias.empty() ? c0.Table->DBName : join.FromAlias,
+			join.FromAlias.empty() ? c0.Table->SqlName() : join.FromAlias,
 			c0.Name,
-			c1.Table->DBName,
+			c1.Table->SqlName(),
 			join.ToAlias.empty() ? "" : " "+join.ToAlias,
-			join.ToAlias.empty() ? c1.Table->DBName : join.ToAlias,
+			join.ToAlias.empty() ? c1.Table->SqlName() : join.ToAlias,
 			c1.Name );
 	}
 	α Syntax::ToString( EType type )Ι->string{

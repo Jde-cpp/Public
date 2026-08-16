@@ -117,30 +117,24 @@ namespace Jde{
 
 		vector<fs::path> paths{ fileName, fs::path{"../config"}/fileName, fs::path{"config"}/fileName };
 		if( auto settingsFile = _importPaths ? nullopt : Process::FindArg("-settings"); settingsFile ){
-			#ifdef _WIN32 //normalize once, before the branches: every use below (both import-dir forms and `paths`)
-				//derives from this path, and a bash-style '/c/…' won't fs::exists on windows.  Idempotent - a native
-				//path just round-trips through the '\\?\' prefix that substr(4) strips back off.
+			#ifdef _WIN32 //normalize once, before `paths` is built: a bash-style '/c/…' won't fs::exists on windows,
+				//and -include resolves against whatever this produces.  Idempotent - a native path just round-trips
+				//through the '\\?\' prefix that substr(4) strips back off.
 				settingsFile = IO::BashToWindows( *settingsFile ).string().substr( 4 ); //remove //?/
 			#endif
-			if( auto cli = Process::FindArg("-include"); cli ){
-				_importPaths = vector<fs::path>{};
-				for( auto& relPath : Str::Split(*cli, ';') )
-					_importPaths->push_back( fs::path{*settingsFile}.parent_path()/relPath );
-			}
-			else if( Process::FindArg("-tests") || Process::FindArg("-ctest") ){
-				_importPaths = vector<fs::path>{};
-				#ifdef _WIN32
-					string sqlTypePath = "sqlServer";
-				#else
-					string sqlTypePath = "mysql";
-				#endif
-				_importPaths->push_back( fs::path{*settingsFile}.parent_path()/"args"/sqlTypePath );
-			}
 			paths = { fs::path{*settingsFile} };
 		}
 
 		auto p = find_if( paths, [](let& path){return fs::exists(path);} );
 		_path = p!=paths.end() ? *p : Process::AppDataFolder()/fileName;
+		//Each -include dir is relative to the config's own directory, so this can only run once the config is resolved.
+		//It used to sit inside the -settings branch for want of that path, which silently dropped the flag on any run
+		//that found its config by search instead - the one import mechanism there is, ignored without a word.
+		if( auto cli = Process::FindArg("-include"); cli ){
+			_importPaths = vector<fs::path>{};
+			for( auto& relPath : Str::Split(*cli, ';') )
+				_importPaths->push_back( _path.parent_path()/relPath );
+		}
 		std::cout << "settings path=" << _path.string() << std::endl;
 		return _path;
 	}
@@ -188,6 +182,7 @@ namespace Jde{
 				args["cwd"] = fs::current_path().string();
 				args["logsDir"] = args["cwd"] + "/logs";
 				args["windows"] = _windows ? "true" : "false";
+				args["recreateDB"] = "true";//a suite starts from a clean schema; -arg=recreateDB=false is applied below and wins.
 			}
 			for( let& [key, value] : argMap("-arg") )
 				args[key] = value;
@@ -205,6 +200,11 @@ namespace Jde{
 						importPaths.push_back( path.string() ); //.string(): operator<<(fs::path) would quote it.
 
 				auto error = Ƒ("Could not load settings from '{}': {}\n-include: {}\nargs: {}\ntlas: {}", settingsPath.string(), settings.error(), Str::Join(importPaths,";"), joinKV(args), joinKV(tlas) );
+				//The -include/-tests pairing: an args dir reads ext vars that only a test flag binds, and jsonnet names
+				//the undefined variable without saying who was supposed to bind it.  -include is the only way to reach
+				//such a dir, so the two flags travel together and the omission is worth spelling out.
+				if( !Process::FindArg("-tests") && !Process::FindArg("-ctest") && settings.error().contains("external variable") )
+					error += "\nThe buildTarget/cwd/logsDir/windows ext vars are bound only under -tests/-ctest, so an args dir that reads one needs a test flag alongside -include (or an explicit -arg=<name>=<value>).";
 				throw std::runtime_error{ error };
 			}
 			_settings = mu<jvalue>( *settings );

@@ -372,10 +372,8 @@ namespace Jde::Opc::Gateway{
 			memcpy( identityToken->tokenData.data, Credential.Token().data(), Credential.Token().size() );
 			UA_ExtensionObject_setValue( &_config.userIdentityToken, identityToken, &UA_TYPES[UA_TYPES_ISSUEDIDENTITYTOKEN] );
 		}
-		else{
-			BREAK; //need to sign in.
-			INFO( "[{}]Using anonymous authentication.", hex(Handle()) );
-		}
+		else
+			WARN( "[{}]Using anonymous authentication.", hex(Handle()) );
 
 		//	UA_ClientConfig_setAuthenticationCert( &_config, Credential.Certificate().c_str(), Credential.PrivateKey().c_str() );
 		UA_ConnectionManager *udpCM = UA_ConnectionManager_new_POSIX_UDP( "udp connection manager"_uv );

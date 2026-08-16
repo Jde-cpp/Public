@@ -5,7 +5,7 @@ local Attributes = { kind:"SCALAR", name: 'UInt' };
 local DateTime = { kind:"SCALAR",name:'DateTime' };
 local NonNullDateTime = { kind:'NON_NULL',name:null, ofType: DateTime };
 {
-	Grouping:{
+	Group:{
 		fields: [
 				{ name: 'id', type: Id },
 				{ name: 'name', type: NonNullString },

@@ -1,10 +1,18 @@
 :host{
 	display: block;
-	width: 560px;//the three column widths below — a definite width is what lets the parent flex container center it
+	width: 600px;//the three column widths below — a definite width is what lets the parent flex container center it
 	max-width: 100%;
 }
+/* sized for the longest name the catalogue can offer - the composites are the flag names joined by TagSeparator, so
+"client.socket.subscription.write".  the form field has to be told to fill the cell: its own default is a 180px infix,
+so widening the column alone leaves the select the same size, and the panel is laid out to match the select, which is
+where the wrapping showed up. */
 .mat-column-tag{
-	flex: 0 0 280px;
+	flex: 0 0 320px;
+}
+.mat-column-tag mat-form-field{
+	flex: 1 1 auto;
+	width: 100%;
 }
 .default-tag{
 	font-weight: 500;

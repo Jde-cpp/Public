@@ -1,8 +1,8 @@
 import {Sort} from '@angular/material/sort';
 //import { IAssignable } from '../../utils/settings';
 
-import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
-import * as LogProto from '../../proto/Log'; import Log = LogProto.Jde.App.Log.Proto;
+import * as FromServer from 'jde-proto/App.FromServer';
+import * as Log from 'jde-proto/Log';
 import { Guid } from '../../model/Guid';
 
 export class LogSettings{

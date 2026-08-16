@@ -1,22 +1,24 @@
 import { Subject,Observable, tap } from 'rxjs';
-import { Injectable, Inject } from '@angular/core';
+import { Injectable, Inject, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {Instance} from './app.service.types'
 
 import { ETransport, ProtoService, RequestId } from '../proto.service';
-import * as AppFromServer from '../../proto/App.FromServer'; import FromServer = AppFromServer.Jde.App.Proto.FromServer;
-import * as AppFromClient from '../../proto/App.FromClient'; import FromClient = AppFromClient.Jde.App.Proto.FromClient;
-import * as AppCommon from '../../proto/App'; import App = AppCommon.Jde.App.Proto;
-import * as LogProto from '../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
-import * as CommonProto from '../../proto/Common'; import IException = CommonProto.Jde.Proto.IException;
+import * as FromServer from 'jde-proto/App.FromServer';
+import * as FromClient from 'jde-proto/App.FromClient';
+import * as App from 'jde-proto/App';
+import { ELogLevel } from 'jde-proto/Log';
+import { Exception as IException } from 'jde-proto/Common';
 import { IAuth, IEnvironment, User } from 'jde-spa';
 import { IGraphQL, Log } from '../IGraphQL';
 import { AuthStore } from '../auth.store';
+import { GoogleAuthService } from '../google-auth.service';
+import { StringUtils } from '../../utils/StringUtils';
 
 @Injectable( {providedIn: 'root'} )
-export class AppService extends ProtoService<FromClient.Transmission,FromServer.IMessage> implements IGraphQL, IAuth{
+export class AppService extends ProtoService<FromClient.Transmission,FromServer.Message> implements IGraphQL, IAuth{
 	constructor( http: HttpClient, @Inject('IEnvironment') private environment: IEnvironment, @Inject("AuthStore") authStore:AuthStore ){
-		super( FromClient.Transmission, http, environment.get<ETransport>("httpTransport"), authStore, true );
+		super( FromClient.Transmission, http, environment.get<ETransport>("httpTransport"), authStore, true, inject(GoogleAuthService) );
 		let appServer = environment.get<Instance>( 'applicationServer' );
 		if( !appServer ){
 			console.log( "No Application Server set in environment" );
@@ -46,11 +48,11 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		return match?.instanceId ?? match?.id;//servers whose connections view predates the instanceId column emit the instance pk under 'id'
 	}
 
-	logs( applicationId:number, level:ELogLevel, start:Date, limit:number ):Observable<FromServer.ITrace>{
+	logs( applicationId:number, level:ELogLevel, start:Date, limit:number ):Observable<FromServer.Trace>{
 		const columns = "id instance_id time level message_id file_id function_id line user_pk thread_id args";
 		const q = `subscribe logs(applicationId:${applicationId}, limit:${limit}, filter:{ level:{gte:${level}}, {time:{gte:${start.toISOString()}}} }){ ${columns} }`;
 		const requestId = this.send( {graphQl:q}, q );
-		let callback:Subject<FromServer.ITrace> = new Subject<FromServer.ITrace>();
+		let callback:Subject<FromServer.Trace> = new Subject<FromServer.Trace>();
 		this.logsSubscriptions.set( requestId, callback );
 		return callback.pipe(
 			tap( {unsubscribe:()=>{this.logsUnsubscribe( requestId );}} )
@@ -98,24 +100,31 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		return await super.querySetting( "googleAuthClientId", log );
 	}
 
-	private logsSubscriptions:Map<RequestId,Subject<FromServer.ITrace>>= new Map<RequestId,Subject<FromServer.ITrace>>();
+	private logsSubscriptions:Map<RequestId,Subject<FromServer.Trace>>= new Map<RequestId,Subject<FromServer.Trace>>();
 	//private addMessage( msg ):void{}
+	//the base settles _callbacks; these three maps are AppService's own pending work and would otherwise hang forever when the socket drops.
 	override handleConnectionError( err:any ):void{
+		const e = { message: "Connection to the application server was lost." };
+		const strings = [...this.stringRequests.values()]; this.stringRequests.clear();//drain-then-settle: a handler may issue a fresh request, and it must not land in the map being cleared
+		strings.forEach( p=>p.reject(e) );
+		const customs = [...this.customCallbacks.values()]; this.customCallbacks.clear();
+		customs.forEach( p=>p.reject(e) );
+		const subscriptions = [...this.logsSubscriptions.values()]; this.logsSubscriptions.clear();//clear before error() so a resubscribe starts a fresh entry, per the gateway's clearOwner precedent
+		subscriptions.forEach( s=>s.error(e) );
 	}
-	encode( t:FromClient.Transmission ){ return FromClient.Transmission.encode(t); }
 	public async validateSessionId():Promise<User | null>{
 		console.log( `validateSessionId: ${this.user()?.authorization}` );
 		let user = this.user();
 		if( !user )
 			return Promise.resolve( null );
-		const y = await this.query<{session:{domain:string,loginName:string}}>( `session( id:"${user.sessionId}" ){ domain loginName }` );
+		const y = await this.query<{session:{domain:string,loginName:string}}>( `session( id:${StringUtils.qlString(user.sessionId!)} ){ domain loginName }` );
 		return new User( { domain:y.session.domain, id:y.session.loginName, sessionId:user.sessionId } );
 	}
 	private complete():void{
 		console.log( 'complete' );
 	}
 
-	protected processMessage( bytearray:protobuf.Buffer ){
+	protected processMessage( bytearray:Uint8Array ){
 		try{
 			let t:FromServer.Transmission;
 			try{
@@ -131,7 +140,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 				if( message.ack ){//first message after handshake
 					console.log( `[App.${requestId}]Connected to '${super.socketUrl}', socketId: ${message.ack}` );
 					let socketId = message.ack;
-					if( this.user() )
+					if( this.user()?.authorization )//not `this.user()`: logout() leaves a truthy serverInstances-only User whose authorization is null
 						super.sendAuthorization( socketId );
 					else{
 						console.warn( `no authorization` );

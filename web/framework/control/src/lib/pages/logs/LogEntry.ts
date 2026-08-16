@@ -1,9 +1,12 @@
 import { Guid } from '../../model/Guid';
-import * as LogProto from '../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
+import { ELogLevel } from 'jde-proto/Log';
 import { View, ViewField, ViewSerializedArgs, ViewType } from '../../model/ql/View';
 import { Query } from '../../services/IGraphQL';
 import { TableSchema } from '../../model/ql/schema/TableSchema';
 import { Field, FieldKind, FieldType } from '../../model/ql/schema/Field';
+import { StringUtils } from '../../utils/StringUtils';
+
+const TagSeparator = ".";//logTags.h TagSeparator — how the server spells a combined tag as one name
 
 export type Entry={
 	templateId:Guid;
@@ -43,6 +46,25 @@ export class LogEntries{
 			&& a.templateId.equals(b.templateId)
 			&& a.fileId.equals(b.fileId)
 			&& a.functionId.equals(b.functionId);
+	}
+	//a combined tag reaches us in ELogTags bit order, which is alphabetical - "read.server.socket".  logTags.h spells
+	//that same tag "socket.client.read": transport, then role, then direction, which is the order that reads.  ranked
+	//tags lead in this order, the rest keep the order they arrived in.
+	static tagOrder = ["socket", "http", "client", "server", "read", "write"];
+	static orderTags( tags:readonly string[] ):string[]{
+		const rank = ( tag:string )=>{
+			const i = LogEntries.tagOrder.indexOf( tag );
+			return i<0 ? LogEntries.tagOrder.length : i;
+		};
+		return [...tags].sort( (a,b)=>rank(a)-rank(b) );//sort is stable, so the unranked tail is left as the wire had it
+	}
+	//display only — the wire value stays as the server spells it, because ToLogTags parses that spelling back and it
+	//is the key the settings are stored under.
+	static tagName( tag:string ):string{
+		return LogEntries.orderTags( tag.split(TagSeparator) ).map( LogEntries.partName ).join( TagSeparator );
+	}
+	private static partName( part:string ):string{
+		return part.length==2 ? part.toUpperCase() : StringUtils.capitalize( part );
 	}
 	static columns: Record<string,string> = {
 		time: "Time",

@@ -29,17 +29,7 @@ if [ ! -x "$(which "ng" 2> /dev/null)" ]; then
 	if [ $? -ne 0 ]; then echo `pwd`; echo $cmd; exit 1; fi;
 fi;
 ##################
-#`ng new` emits tsconfig.json with leading /* */ comment lines, which jq cannot parse.  Strip whole-line
-#comments before piping to jq - matching create-library.sh - so a // inside a string value is left alone.
-#Only replace the original once jq has succeeded: `cmd > tmp; rm orig; mv tmp orig` zeroed the file on any failure.
-function jqEdit() {
-	local file=$1; local filter=$2;
-	if [ ! -f "$file" ]; then echo `pwd`; echo "jqEdit: $file not found"; exit 1; fi;
-	sed -e '/^[[:space:]]*\/\*/d' -e '/^[[:space:]]*\*/d' -e '/^[[:space:]]*\/\//d' "$file" | jq "$filter" > "$file.tmp";
-	#jq exits 0 on empty input, so check for output too - otherwise an already-zeroed file rewrites as still-zeroed.
-	if [ ${PIPESTATUS[1]} -ne 0 ] || [ ! -s "$file.tmp" ]; then echo `pwd`; echo jq "$filter" $file; rm -f "$file.tmp"; exit 1; fi;
-	mv "$file.tmp" "$file";
-}
+#jqEdit lives in build/common.sh (sourced above) - the per-site setup.sh scripts need it too.
 ##################
 if [ ! -d $workspace ]; then
 	echo -------------------- create workspace start --------------------;
@@ -104,9 +94,8 @@ if [ ! -d $workspace ]; then
 	npm --silent install uglify-js@^3.7.7;
 	echo -------------------- npm install complete --------------------;
 	echo `pwd`;
-	cd src;
-	printf "\nimport * as protobuf from 'protobufjs/minimal';\nimport Long from 'long';\n\nprotobuf.util.Long = Long;\nprotobuf.configure();" >> main.ts;
-	cd ..;
+	#no protobufjs bootstrap appended to main.ts any more: ts-proto's generated code carries its own wire runtime
+	#(@bufbuild/protobuf) and takes Long as a normal import, so there is no global registry to configure.
 else
 	echo workspace already exists
 	cd $workspace;
@@ -122,6 +111,21 @@ function execute() {
 }
 ##################
 startDir=`pwd`;
+#jde-proto holds the generated proto surface for every library (see jde-framework-proto.sh).  It is a plain package,
+#not an Angular library - its own tsconfig compiles it - so it is linked in and mapped by path rather than added to
+#angular.json.  Keeping it out of the libraries is what lets `ng build <lib>` package them at all: ng-packagr cannot
+#carry a relatively-imported declaration file into a library's typings.
+protoDir=$(dirname ${libraries[0]})/proto;
+if [ -d $protoDir ]; then
+	mklinkDir proto $(dirname $protoDir);
+	#a /* subpath mapping, so jde-proto/App.FromServer resolves to proto/App.FromServer.d.ts.
+	jqEdit tsconfig.json '.compilerOptions.paths["jde-proto/*"] = ["./proto/*"]';
+fi;
+#the names of every library in this workspace, needed before the loop body can write one library's view of its siblings.
+declare -a libraryNames=();
+for libraryDir in "${libraries[@]}"; do
+	libraryNames+=( $( basename $(jq -er .name $libraryDir/control/package.json) ) ) || { echo `pwd`; echo no .name in $libraryDir/control/package.json; exit 1; };
+done;
 echo -------------------- Start Libraries --------------------;
 for libraryDir in "${libraries[@]}"; do
 	echo $libraryDir - processing;
@@ -134,6 +138,24 @@ for libraryDir in "${libraries[@]}"; do
 	if [ ! -d projects/$library ]; then
 		$scriptDir/create-library.sh $library $libraryDir; if [ $? -ne 0 ]; then echo `pwd`; echo $scriptDir/WebFramework/create-library.sh $library $libraryDir; exit 1; fi;
 	fi;
+	#A library build compiles that library's sources ONLY.  The workspace tsconfig maps every jde-* package source-first
+	#(create-library.sh writes ["./projects/<lib>/src/public-api", "./dist/..."]), which is what lets `ng build/serve
+	#my-workspace` compile the libs straight from the symlinked projects/ tree - but under `ng build <lib>` it drags the
+	#sibling's .ts into this library's compilation, outside its rootDir, and ng-packagr fails with a wall of TS6059.
+	#So point the siblings at their built output here, in the library's own tsconfig.lib.json (tsconfig.lib.prod.json
+	#extends it, and paths resolve relative to the file that declares them).  `paths` replaces wholesale rather than
+	#merging per key, so every sibling has to be listed - self excluded, since no library imports its own package name.
+	#Libraries must then be built in dependency order, each into dist/: jde-spa, jde-framework, jde-access, jde-opc.
+	#jde-proto is not an Angular library and has no dist: pbjs/pbts already emit the shipping .js/.d.ts pair, so it is
+	#consumed straight from the workspace `proto` symlink in every build.
+	libraryPaths="\"jde-proto/*\":[\"../../proto/*\"],";
+	for sibling in "${libraryNames[@]}"; do
+		if [ "$sibling" != "$library" ]; then libraryPaths="$libraryPaths\"$sibling\":[\"../../dist/$sibling\"],"; fi;
+	done;
+	jqEdit projects/$library/tsconfig.lib.json ".compilerOptions.paths = {${libraryPaths%,}}";
+	#and declare the dependency in the package ng-packagr publishes, for the libraries that actually import it - the
+	#generated package.json is what ships, and `ng g library` only writes it when the project is first created.
+	if grep -rq "from 'jde-proto/" $libraryDir/control/src; then jqEdit projects/$library/package.json '.peerDependencies["jde-proto"] = "0.0.1"'; fi;
 	#unchecked, a failed cd left cwd at the workspace root and the rm -rf below ran there instead.
 	cd $baseDir/$workspace/projects/$library/src; if [ $? -ne 0 ]; then echo `pwd`; echo cd $baseDir/$workspace/projects/$library/src; exit 1; fi;
 	#public-api.ts is the library's export surface.  It used to be hard-linked by create-library.sh, which only runs

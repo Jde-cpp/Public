@@ -17,7 +17,7 @@ namespace Jde::DB{
 		sql.Text += "update ";
 		for( let& [column,value] : Values ){
 			if( sql.Params.empty() )
-				sql.Text += table.DBName+" set ";
+				sql.Text += table.SqlName()+" set ";
 			else
 				sql.Text += ", ";
 			string valueText{ '?' };

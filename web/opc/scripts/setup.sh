@@ -25,10 +25,16 @@ addHard app.component.ts $sitePath/app;
 addHard app.module.ts $sitePath/app;
 rm -f app.config.ts;
 addHard app.config.ts $sitePath/app;
+addHard google-relogin.spec.ts $sitePath/app;
 moveToDir services;
 addHard environment.service.ts $sitePath/app/services;
 cd ../..;
 moveToDir environments;
 addHard environment.ts $sitePath/environments;
+addHard environment.development.ts $sitePath/environments;
+cd ..;
+#create-workspace.sh writes angular.json, but only when the workspace is absent, so the swap is re-applied here on
+#every run.  Without it `ng serve` and `--configuration development` build against the production environment.ts.
+jqEdit angular.json '.projects."my-workspace".architect.build.configurations.development.fileReplacements = [{"replace":"src/environments/environment.ts","with":"src/environments/environment.development.ts"}]';
 echo ------------------- Starting Build -------------------;
 ng build --output-hashing=none --source-map=true;

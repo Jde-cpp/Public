@@ -62,8 +62,12 @@ target_precompile_headers( ${targetName} PRIVATE
 	pc.h
 )
 
+#Out-of-source - see the note in libs/app/shared/CMakeLists.txt.  PROTOC_OUT_DIR is the root, not the proto dir: the
+#output keeps the .proto's own relative path, so test.proto lands in ${CMAKE_CURRENT_BINARY_DIR}/proto.
+file( MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/proto )
 protobuf_generate(
 	TARGET ${targetName}
-	PROTOC_OUT_DIR ${PROJECT_SOURCE_DIR}
+	PROTOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}
 )
-suppressProtoWarnings( "${protos}" ${PROJECT_SOURCE_DIR}/proto )
+suppressProtoWarnings( "${protos}" ${CMAKE_CURRENT_BINARY_DIR}/proto )
+target_include_directories( ${targetName} PRIVATE ${CMAKE_CURRENT_BINARY_DIR} )

@@ -67,10 +67,11 @@ namespace Jde::App{
 			const bool selfQuery = !clientSettings;//caller passed settings -> caller updates cumulative levels.
 			if( selfQuery )
 				clientSettings = QuerySync( "instanceTagLevel(id:$id){ text binary }", {{"id",InstancePK()}}, true, sl );
+			//instanceTagLevel groups the tags under their level; SetLevels keys on the tag.
 			if( auto logger = Logging::FindLogger<Logging::SpdLog>(); logger )
-				logger->SetLevels( clientSettings->at("text").as_object() );
+				logger->SetLevels( ToTagLevels(clientSettings->at("text").as_object()) );
 			if( auto logger = Logging::FindLogger<App::ProtoLog>(); logger )
-				logger->SetLevels( clientSettings->at("binary").as_object() );
+				logger->SetLevels( ToTagLevels(clientSettings->at("binary").as_object()) );
 			if( selfQuery ){
 				Logging::UpdateCumulative( Logging::Loggers() );
 				Logging::Log( ELogLevel::Trace, ELogTags::Settings, sl, "Loaded log settings." );

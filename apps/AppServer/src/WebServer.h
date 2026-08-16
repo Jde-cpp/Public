@@ -26,6 +26,7 @@ namespace Jde::App::Server{
 	α BroadcastAppStatus()ι->void;
 	α FindApplications( str name )ι->vector<Proto::FromClient::Instance>;
 	α FindConnection( ConnectionPK connectionPK )ι->sp<ServerSocketSession>;
+	α FindInstance( ProgInstPK instancePK )ι->sp<ServerSocketSession>;
 	α NextRequestId()->RequestId;
 	α OnSessionDisconnect( sp<ServerSocketSession> session )ι->void;
 

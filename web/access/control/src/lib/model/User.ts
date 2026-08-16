@@ -12,7 +12,7 @@ export class User extends TargetRow<User>{
 		let roles = obj.roles ?? obj.childRoles;
 
 		this.exponent = obj.exponent;
-		this.groups = cloneClassArray( obj.groupings ?? obj.groups, Group );
+		this.groups = cloneClassArray( obj.groups, Group );
 		this.loginName = obj.loginName;
 		this.modulus = obj.modulus;
 		this.password = obj.password;
@@ -37,7 +37,7 @@ export class User extends TargetRow<User>{
 		return super.equals(row)
 			&& JSON.stringify(this.groups)==JSON.stringify(row.groups)
 			&& JSON.stringify(this.permissions)==JSON.stringify(row.permissions)
-			&& JSON.stringify(this.roles)==JSON.stringify(this.roles);
+			&& JSON.stringify(this.roles)==JSON.stringify(row.roles);
 	}
 	override mutation( original:User ):Mutation[]{
 		console.assert( this.id==original.id, "User mutation id mismatch", this.id, original?.id );

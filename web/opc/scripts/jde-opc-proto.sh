@@ -15,16 +15,22 @@ popd > /dev/null;
 #any $? test can run.  Same reason for the nested call below.
 cd $wsDir || { echo `pwd`; echo cd $wsDir failed - not a directory; exit 1; };
 $frameworkDir/scripts/jde-framework-proto.sh $wsDir $clean || { echo `pwd`; echo jde-framework-proto.sh $wsDir $clean failed; exit 1; };
-cd projects/jde-opc/src/lib;
-moveToDir proto;
+#see the note in jde-framework-proto.sh: generated proto output belongs to the jde-proto package, not to a library.
+#Common.proto is not re-linked here - the framework pass above already put it in the same flat set, and ts-proto has
+#no per-module registry, so one generated Common serves both libraries.
+protoDir=$wsDir/proto;
+cd $protoDir/src;
 
-declare -A appFiles;
-if isStale Common || [ $clean == 1 ]; then appFiles[Common]=common_root; fi;
-create $JDE_BASH/libs/app/shared/proto appFiles $wsDir;
-declare -A opcFiles;
-if isStale Opc.Common || [ $clean == 1 ]; then opcFiles[Opc.Common]=opc_common_root; fi;
-if isStale Opc.FromServer || [ $clean == 1 ]; then opcFiles[Opc.FromServer]=opc_from_server_root; fi;
-if isStale Opc.FromClient || [ $clean == 1 ]; then opcFiles[Opc.FromClient]=opc_from_client_root; fi;
-create $JDE_BASH/apps/OpcGateway/src/types/proto opcFiles $wsDir;
+declare -A opcFiles=( [Opc.Common]=1 [Opc.FromServer]=1 [Opc.FromClient]=1 );
+linkProtos $JDE_BASH/apps/OpcGateway/src/types/proto opcFiles;
+
+stale=$clean;
+for name in "${!opcFiles[@]}"; do
+	if isStale $name; then stale=1; fi;
+done;
+if [ $stale != 0 ]; then
+	generateProtos $wsDir;
+	buildProtos $wsDir $protoDir;
+fi;
 echo 'jde-opc-proto done';
 popd > /dev/null;

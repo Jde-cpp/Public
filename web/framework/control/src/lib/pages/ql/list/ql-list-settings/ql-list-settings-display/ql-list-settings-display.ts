@@ -36,7 +36,7 @@ export class QLListSettingsDisplay implements OnInit{
 		for( let name of names ){
 			let field = this.view().fields.find( f=>f.name==name );
 			if( field )
-				columns.push( field );
+				columns.push( new ViewField(field) );//edit a copy: the template toggles `col.displayed` in place, so holding the live view's ViewField meant show/hide edits survived Cancel (same defect as the filter tab — see View.copyFilter)
 			else //if( !this.excludedColumns().includes(name) )
 				columns.push( new ViewField({field:{name: name, hidden:true, displayName: available[name]}, schema:this.schema()}) );
 		}

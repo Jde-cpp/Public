@@ -4,9 +4,3 @@ import { AppComponent } from './app/app.component';
 
 bootstrapApplication(AppComponent, appConfig)
   .catch((err) => console.error(err));
-
-import * as protobuf from 'protobufjs/minimal';
-import Long from 'long';
-
-protobuf.util.Long = Long;
-protobuf.configure();

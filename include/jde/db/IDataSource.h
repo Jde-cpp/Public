@@ -37,7 +37,7 @@ namespace Jde::DB{
 		β Select( Sql&& s, RowΛ f, SRCE )ε->uint =0;
 		α SelectAsync( Sql&& sql, SRCE )ι->SelectAwait{ return SelectAwait{ shared_from_this(), move(sql), sl }; }
 		template<class K=uint,class V=string>
-		α SelectEnum( const View& table, SRCE )ε->CacheAwait<flat_map<K,V>>{ return SelectMap<K,V>( {Ƒ("select {}, name from {}", table.GetPK()->Name, table.DBName)}, table.Name, sl ); }
+		α SelectEnum( const View& table, SRCE )ε->CacheAwait<flat_map<K,V>>{ return SelectMap<K,V>( {Ƒ("select {}, name from {}", table.GetPK()->Name, table.SqlName())}, table.Name, sl ); }
 		ẗ SelectEnumSync( const View& table, SRCE )ε->flat_map<K,V>{
 			return BlockAwait<CacheAwait<flat_map<K,V>>,flat_map<K,V>>( SelectEnum<K,V>( table, sl) );
 		}

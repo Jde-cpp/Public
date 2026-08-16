@@ -28,15 +28,19 @@ target_precompile_headers(${targetName}
 	"pc.h"
 )
 
+#Out-of-source - see the note in libs/app/shared/CMakeLists.txt.
+set( protoOutDir ${CMAKE_CURRENT_BINARY_DIR}/proto )
+file( MAKE_DIRECTORY ${protoOutDir} )
 protobuf_generate(
 	TARGET ${targetName}
 	IMPORT_DIRS proto
-	PROTOC_OUT_DIR ${PROJECT_SOURCE_DIR}/proto
+	PROTOC_OUT_DIR ${protoOutDir}
 	EXPORT_MACRO Jde_Web_Client_EXPORT
 )
-suppressProtoWarnings( "${protos}" ${PROJECT_SOURCE_DIR}/proto )
+suppressProtoWarnings( "${protos}" ${protoOutDir} )
+target_include_directories( ${targetName} PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ${protoOutDir} )
 set( protoIncludeDir ${includeDir}/proto )
 file( MAKE_DIRECTORY ${protoIncludeDir} )
 
-linkGeneratedHeader( ${targetName} "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.pb.h" "${protoIncludeDir}/Web.FromServer.pb.h" )
-linkGeneratedHeader( ${targetName} "${PROJECT_SOURCE_DIR}/proto/Web.FromServer.pb.h" "${jdeRoot}/include/jde/app/proto/Web.FromServer.pb.h" )
+linkGeneratedHeader( ${targetName} "${protoOutDir}/Web.FromServer.pb.h" "${protoIncludeDir}/Web.FromServer.pb.h" )
+linkGeneratedHeader( ${targetName} "${protoOutDir}/Web.FromServer.pb.h" "${jdeRoot}/include/jde/app/proto/Web.FromServer.pb.h" )

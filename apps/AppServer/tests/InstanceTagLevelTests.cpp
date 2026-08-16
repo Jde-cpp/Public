@@ -5,6 +5,7 @@
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLAwait.h>
 #include "helpers.h"
+#include "../src/LocalClient.h"
 #include "../src/LogData.h"
 #include "../src/ql/AppServerQL.h"
 #define let const auto
@@ -25,11 +26,55 @@ namespace Jde::App::Server::Tests{
 			let [program, instance, connection] = App::AddConnection( "Tests.TagLevels", name, "taglevel-host", 115 );
 			return instance;
 		}
+		Ω TextLogger()->Logging::SpdLog&{ auto p = Logging::FindLogger<Logging::SpdLog>(); return *p; }
+		Ω FindConfigured( ELogTags tags )->optional<ELogLevel>{
+			optional<ELogLevel> y;
+			TextLogger().ConfiguredTags().cvisit( tags, [&](let& kv){ y = kv.second; } );
+			return y;
+		}
 	};
+
+	//the mutation is not just a write: the instance it names has to end up logging at the new levels.  For our own
+	//instance there is no socket, so the push goes back through the local ql - same updateLogSetting either way.
+	TEST_F( InstanceTagLevelTests, PushesLevelsToTheInstance ){
+		let instanceId = Server::AppClient()->InstancePK();
+		ASSERT_TRUE( instanceId ) << "AppStartupAwait registers this process; without its pk there is nothing to push to";
+		let restore = FindConfigured( ELogTags::Threads );
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["threads"],level:"Critical"}}] ))", instanceId) );
+		EXPECT_EQ( FindConfigured(ELogTags::Threads), ELogLevel::Critical ) << "the push should have applied the level in this process";
+
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["threads"],level:null}}] ))", instanceId) );
+		EXPECT_FALSE( FindConfigured(ELogTags::Threads) ) << "deleting the row should clear the runtime override, not leave the old level in place";
+		if( restore )
+			TextLogger().SetLevel( ELogTags::Threads, *restore );
+	}
+
+	//`break` is a pseudo-tag - it sets this process's debugger-trap level.  It must reach neither the table (where tag 0
+	//means `default`) nor the push (where ToLogTags folds it into None, which is also `default`): either would silently
+	//rewrite the default level instead of the trap level.
+#ifndef NDEBUG
+	TEST_F( InstanceTagLevelTests, BreakSetsTheTrapLevelWithoutPersisting ){
+		let instanceId = MintInstance( "break" );
+		let restore = Logging::BreakLevel();
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["break"],level:"Critical"}},{{tags:["sql"],level:"Debug"}}] ))", instanceId) );
+		EXPECT_EQ( Logging::BreakLevel(), ELogLevel::Critical );
+		let rows = TagRows( instanceId );
+		ASSERT_EQ( rows.size(), 1u ) << "break is not a tag level - only sql should have been written";
+		EXPECT_EQ( rows[0].GetUInt(1), underlying(ELogTags::Sql) );
+		Logging::SetBreakLevel( restore );
+	}
+#endif
+
+	//an instance with no session is the normal case (it is offline, or it is a browser): the rows are still written.
+	TEST_F( InstanceTagLevelTests, PushToDisconnectedInstanceStillWrites ){
+		let instanceId = MintInstance( "offline" );
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["default"],level:"Warning"}}] ))", instanceId) );
+		EXPECT_EQ( TagRows(instanceId).size(), 1u );
+	}
 
 	TEST_F( InstanceTagLevelTests, UpsertAndQuery ){
 		let instanceId = MintInstance( "upsert" );
-		RunQL( Ƒ("mutation updateInstanceTagLevel( \"id\":{}, \"text\":{{\"default\":\"Warning\",\"sql\":\"Debug\"}}, \"binary\":{{\"default\":\"Debug\"}} )", instanceId) );
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["default"],level:"Warning"}},{{tags:["sql"],level:"Debug"}}], "binary":[{{tags:["default"],level:"Debug"}}] ))", instanceId) );
 		let rows = TagRows( instanceId );
 		ASSERT_EQ( rows.size(), 3u );
 		auto foundSql = false;
@@ -45,21 +90,38 @@ namespace Jde::App::Server::Tests{
 		let& o = y.as_object();
 		ASSERT_TRUE( o.contains("text") );
 		ASSERT_TRUE( o.contains("binary") );
+		//keyed by level, tags as values: { "Warning":["default"], "Debug":["sql"] }
 		let& text = o.at( "text" ).as_object();
-		EXPECT_EQ( text.at("default").as_string(), "Warning" );
-		EXPECT_EQ( text.size(), 2u );
-		auto foundSqlKey = false;//the non-default tag key: currently serialized via ToString(tags, outputArray=true), so it may round-trip as `["sql"]` rather than `sql`.
-		for( let& kv : text )
-			foundSqlKey |= string{kv.key()}.contains( "sql" );
-		EXPECT_TRUE( foundSqlKey );
+		ASSERT_EQ( text.size(), 2u );
+		let& warning = text.at( "Warning" ).as_array();
+		ASSERT_EQ( warning.size(), 1u );
+		EXPECT_EQ( warning[0].as_string(), "default" );
+		let& debug = text.at( "Debug" ).as_array();
+		ASSERT_EQ( debug.size(), 1u );
+		EXPECT_EQ( debug[0].as_string(), "sql" ) << "a tag value is the bare name; only a tag *key* had to be spelled [\"sql\"]";
+		EXPECT_EQ( ToLogTags(debug[0]), ELogTags::Sql ) << "and it has to parse back";
 		let& binary = o.at( "binary" ).as_object();
-		EXPECT_EQ( binary.at("default").as_string(), "Debug" );
+		EXPECT_EQ( binary.at("Debug").as_array()[0].as_string(), "default" );
+	}
+
+	//the shape's reason for existing, on both legs: a combined tag has no name of its own, so it goes out as an array
+	//value - legal json where the equivalent key was not - and comes back the same way, straight into ToLogTags( jvalue ).
+	TEST_F( InstanceTagLevelTests, MultiTagOverrideRoundTrips ){
+		let instanceId = MintInstance( "multiTag" );
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["socket","client","read"],level:"Error"}}] ))", instanceId) );
+		auto y = RunQL( Ƒ("instanceTagLevels( id: {} ){{ text }}", instanceId) );
+		let& text = y.as_object().at( "text" ).as_object();
+		ASSERT_EQ( text.size(), 1u );
+		let& error = text.at( "Error" ).as_array();
+		ASSERT_EQ( error.size(), 1u );
+		EXPECT_TRUE( error[0].is_array() ) << "socket|client|read has no single name - only the array spells it";
+		EXPECT_EQ( ToLogTags(error[0]), ELogTags::SocketClientRead );
 	}
 
 	//only the requested groups come back.
 	TEST_F( InstanceTagLevelTests, QueryFiltersColumns ){
 		let instanceId = MintInstance( "filters" );
-		RunQL( Ƒ("mutation updateInstanceTagLevel( \"id\":{}, \"text\":{{\"default\":\"Information\"}}, \"binary\":{{\"default\":\"Debug\"}} )", instanceId) );
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["default"],level:"Information"}}], "binary":[{{tags:["default"],level:"Debug"}}] ))", instanceId) );
 		auto y = RunQL( Ƒ("instanceTagLevels( id: {} ){{ text }}", instanceId) );
 		let& o = y.as_object();
 		EXPECT_TRUE( o.contains("text") );
@@ -67,21 +129,33 @@ namespace Jde::App::Server::Tests{
 		EXPECT_FALSE( o.contains("appServer") );
 	}
 
-	//a null level deletes the override instead of upserting it.
+	//a null level deletes the override instead of upserting it - as does a record with no level at all.
 	TEST_F( InstanceTagLevelTests, NullLevelDeletes ){
 		let instanceId = MintInstance( "deletes" );
-		RunQL( Ƒ("mutation updateInstanceTagLevel( \"id\":{}, \"text\":{{\"default\":\"Warning\",\"sql\":\"Debug\"}} )", instanceId) );
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["default"],level:"Warning"}},{{tags:["sql"],level:"Debug"}}] ))", instanceId) );
 		ASSERT_EQ( TagRows(instanceId).size(), 2u );
-		RunQL( Ƒ("mutation updateInstanceTagLevel( \"id\":{}, \"text\":{{\"sql\":null}} )", instanceId) );
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["sql"],level:null}}] ))", instanceId) );
 		let rows = TagRows( instanceId );
 		ASSERT_EQ( rows.size(), 1u );
 		EXPECT_EQ( rows[0].GetUInt(1), 0u ) << "only the default override should remain";
+
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["default"]}}] ))", instanceId) );
+		EXPECT_EQ( TagRows(instanceId).size(), 0u ) << "an omitted level is the same 'remove this override' a null one is";
+	}
+
+	//the argument takes either spelling of a combined tag: the parts, or the joined name the ui and the config use.
+	TEST_F( InstanceTagLevelTests, TagsAcceptTheJoinedSpelling ){
+		let instanceId = MintInstance( "spelling" );
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["socket.client.read"],level:"Error"}}] ))", instanceId) );
+		let rows = TagRows( instanceId );
+		ASSERT_EQ( rows.size(), 1u );
+		EXPECT_EQ( rows[0].GetUInt(1), underlying(ELogTags::SocketClientRead) );
 	}
 
 	//the appServer group rides the same table with its own type discriminator.
 	TEST_F( InstanceTagLevelTests, AppServerGroup ){
 		let instanceId = MintInstance( "appServer" );
-		RunQL( Ƒ("mutation updateInstanceTagLevel( \"id\":{}, \"appServer\":{{\"default\":\"Trace\"}} )", instanceId) );
+		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "appServer":[{{tags:["default"],level:"Trace"}}] ))", instanceId) );
 		let rows = TagRows( instanceId );
 		ASSERT_EQ( rows.size(), 1u );
 		EXPECT_EQ( rows[0].GetString(0), "appServer" );
@@ -89,6 +163,6 @@ namespace Jde::App::Server::Tests{
 		auto y = RunQL( Ƒ("instanceTagLevels( id: {} ){{ appServer }}", instanceId) );
 		let& o = y.as_object();
 		ASSERT_TRUE( o.contains("appServer") );
-		EXPECT_EQ( o.at("appServer").as_object().at("default").as_string(), "Trace" );
+		EXPECT_EQ( o.at("appServer").as_object().at("Trace").as_array()[0].as_string(), "default" );
 	}
 }

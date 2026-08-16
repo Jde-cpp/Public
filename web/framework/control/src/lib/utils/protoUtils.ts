@@ -1,5 +1,4 @@
 import Long from "long";
-import * as AppFromServer from '../proto/App.FromServer'; import Google = AppFromServer.google.protobuf;
 
 export type Timestamp = {seconds:number|Long; nanos:number;}
 export type Duration = {seconds:number|Long; nanos:number;}
@@ -7,9 +6,9 @@ export class ProtoUtils{
 	static toNumber( value:number|Long ):number{
 		return typeof(value)==='object' ? value.toNumber() : value;
 	}
-	static toDate( value:Timestamp ):Date|undefined{
-		const date = value==null || value.seconds==0 ? undefined : new Date( ProtoUtils.toNumber(value.seconds)*1000 + value.nanos/1000000 );
-		return date;
+
+	static toDate( value:Timestamp ):Date|null{
+		return !value || value.seconds==0 ? null : new Date( ProtoUtils.toNumber(value.seconds)*1000 + value.nanos/1000000 );
 	}
 	static fromDate( value:Date ):Timestamp|null{
 		return value

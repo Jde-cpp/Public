@@ -29,6 +29,7 @@ namespace Jde::DB{
 		β IsView()Ι->bool{ return true; }
 		α JsonName()Ι->string;
 		α SequenceColumn()Ι->sp<Column>;
+		α SqlName()Ι->string; //DBName, quoted when it is a reserved word (e.g. an unprefixed `groups`) - DBName stays raw for metadata lookups.
 		α Syntax()Ι->const DB::Syntax&;
 
 		α ChildTable()Ι->sp<View>;

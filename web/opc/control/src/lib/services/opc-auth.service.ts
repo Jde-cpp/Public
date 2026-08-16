@@ -23,7 +23,7 @@ export class OpcAuthService implements IAuth{
 	async logout( log:Log ):Promise<void>{
 		let promise;
 		if( this.isOpc() )
-			promise = await this.gatewayService.defaultGateway.logout( log );
+			promise = await (await this.gatewayService.defaultGatewayAsync()).logout( log );//await the resolver: the sync getter has nothing to return until gatewayInstances() lands
 		else
 			promise = await this.app.logout( log );
 		this.isOpc.set( undefined );

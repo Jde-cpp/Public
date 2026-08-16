@@ -32,13 +32,20 @@ target_precompile_headers(${targetName}
 	pc.h
 )
 
-set( protoOutDir ${PROJECT_SOURCE_DIR}/proto )
+#Generated out-of-source: a .pb.h in the source tree is both a protoc output and a header other targets #include, so
+#a consumer's dep-scan can hold it open while protoc rewrites it - fatal on windows ("Invalid argument"), latent on
+#linux.  The binary dir mirrors the source layout, so `#include "proto/X.pb.h"` still resolves, now off the include
+#path rather than beside the includer.
+set( protoOutDir ${CMAKE_CURRENT_BINARY_DIR}/proto )
+file( MAKE_DIRECTORY ${protoOutDir} )
 protobuf_generate(
 	TARGET ${targetName}
 	IMPORT_DIRS proto ../../web/client/proto
 	PROTOC_OUT_DIR ${protoOutDir}
 )
 suppressProtoWarnings( "${protos}" ${protoOutDir} )
+#${protoOutDir} too: the hand-written proto/*.cpp and protoc's own siblings include by bare name ("Log.pb.h").
+target_include_directories( ${targetName} PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ${protoOutDir} )
 
 linkGeneratedHeader( ${targetName} "${protoOutDir}/App.FromServer.pb.h" "${jdeRoot}/include/jde/app/proto/App.FromServer.pb.h" )
 linkGeneratedHeader( ${targetName} "${protoOutDir}/App.FromClient.pb.h" "${jdeRoot}/include/jde/app/proto/App.FromClient.pb.h" )

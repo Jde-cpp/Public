@@ -60,6 +60,10 @@
 		{
 			"path": "config",
 			"name": "config"
+		},
+		{
+			"path": "../../libs/access/config",
+			"name": "accessConfig"
 		}
 	],
 	"launch": {

@@ -6,10 +6,10 @@ import { MatIcon } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import { MatTooltip } from '@angular/material/tooltip';
+import { LogEntries } from '../LogEntry';
 import { SeverityPicker } from '../../../shared/severity-picker/severity-picker';
-import { StringUtils } from '../../../utils/StringUtils';
 
-import * as LogProto from '../../../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
+import { ELogLevel } from 'jde-proto/Log';
 
 export type TagRow = { tag:string, level:ELogLevel };
 
@@ -43,9 +43,7 @@ export class LogTags implements OnInit{
 		this.dataSource.splice( this.dataSource.indexOf(row), 1 );
 		this.table.renderRows();
 	}
-	tagName( tag:string ):string{
-		return tag.length==2 ? tag.toUpperCase() : StringUtils.capitalize( tag );//display only — the wire value stays as the server spells it
-	}
+	tagName( tag:string ):string{ return LogEntries.tagName(tag); }
 	selectableTags( row:TagRow ):string[]{
 		return this.catalogue().filter( t=>t==row.tag || !this.dataSource.some(r=>r.tag==t) );
 	}

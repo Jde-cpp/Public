@@ -1,7 +1,7 @@
 import { Injectable, Inject, signal, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { IEnvironment } from 'jde-spa';
-import { AppService, AuthStore, IGraphQL, TableSchema } from 'jde-framework';
+import { AppService, AuthStore, IGraphQL, StringUtils, TableSchema } from 'jde-framework';
 import { Resource } from '../model/Resource';
 
 
@@ -15,17 +15,18 @@ export class AccessService extends AppService implements OnDestroy{
 		console.log( 'AccessService.ngOnDestroy' );
 	}
 
-	async loadResources(){
-		if( !this.#resources ){
-			let resources = ( await this.queryArray<Partial<Resource>>( `resources(criteria:null){ id schemaName allowed name deleted target }`));
-			this.#resources = new Array<Resource>();
-			for( const resource of resources )
-				this.#resources.push( new Resource(resource) );
-		}
-		return this.#resources;
+	//Cache the PROMISE, not the array.  The array was only assigned after the await, so two callers racing the first load
+	//(every permission tab builds its own PermissionTable) both saw an unset #resources and both queried.
+	async loadResources():Promise<Resource[]>{
+		return this.#resources ??= this.#queryResources().catch( (e)=>{ this.#resources = undefined; throw e; } );//never cache a failure: a rejected promise would be handed to every later caller
+	}
+	async #queryResources():Promise<Resource[]>{
+		const resources = (await this.queryArray<Partial<Resource>>( `resources(criteria:null){ id schemaName allowed name deleted target }` )).map( (r)=>new Resource(r) );
+		this.#resourceSignal.set( resources );//the public `resources` signal was never written, so it read empty forever
+		return resources;
 	}
 	async getResource( target:string ):Promise<Resource|undefined>{
-		let resources:Resource[] = await this.#resources;
+		const resources = await this.loadResources();//was `await this.#resources` - the field, not the loader, so this threw on `.find` unless something else had already loaded
 		return resources.find( r=>r.target==target );
 	}
 
@@ -33,10 +34,11 @@ export class AccessService extends AppService implements OnDestroy{
 		let fields = super.fieldColumns( schema, showDeleted, [] );
 		switch( schema.collectionName ){
 			case "users":
-				fields.push( `groupings{id}` );
+				fields.push( `groups{id}` );
 				break;
-			case "groupings":
-				fields[fields.findIndex(f=>f.startsWith("members"))] = `members{id isGroup}`;
+			case "groups":
+				fields[fields.findIndex(f=>f.startsWith("members"))] = `groupMembers{id isGroup}`; //the server parses/returns groupMembers (group_members view); 'members' is only the introspection field name.
+				fields.push( "id" ); //not in the introspected type (the map table has two surrogate keys, so no pk field) but the subQueries need it.
 				break;
 			case "roles":
 				fields.push( ...[`permissionRights{id allowed denied resource{id}}`, `roles{id}`] );
@@ -44,13 +46,13 @@ export class AccessService extends AppService implements OnDestroy{
 			default:
 				throw new Error( `Unknown table: ${schema.collectionDisplay}` );
 		}
-		return `${schema.singular}( target:"${target}" ){ ${fields.join(" ")} }`;
+		return `${schema.singular}( target:${StringUtils.qlString(target)} ){ ${fields.join(" ")} }`;
 	}
 	override subQueries( typeName: string, id: number ):string[]{
 		let queries = new Array<string>();
 		switch( typeName ){
 		case "User":
-		case "Grouping":
+		case "Group":
 			queries = [
 				`acl( identityId:${id} ){ permissionRights{id allowed denied resource{id deleted}} }`,
 				`acl( identityId:${id} ){ role{id deleted} }`
@@ -66,11 +68,11 @@ export class AccessService extends AppService implements OnDestroy{
 	}
 
 	override toCollectionName( collectionDisplay:string ):string{
-		return collectionDisplay=="groups" ? "groupings" : collectionDisplay;
+		return collectionDisplay;
 	}
 
 
-	#resources!:Resource[];
+	#resources:Promise<Resource[]>|undefined;
 	#resourceSignal = signal<Resource[]>(new Array<Resource>());
   resources = this.#resourceSignal.asReadonly();
 };

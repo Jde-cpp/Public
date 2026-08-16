@@ -3,7 +3,7 @@ local logsDir = args.logsDir;
 {
 	testing:{
 		tests:: "RoleTests.Crud",
-		recreateDB: true
+		recreateDB: std.parseJson( std.extVar("recreateDB") )
 	},
 	dbServers:{
 		scriptPaths: [args.repoSourceDir+"/libs/access/config/sql/"+args.sqlType],

@@ -1,6 +1,6 @@
 //https://github.com/angular/components/blob/a55b19797f0bccf467d5602f526eef236737498b/docs/src/app/shared/navbar/navbar.ts
 import { AsyncPipe } from '@angular/common';
-import {Component, computed, inject, OnInit, signal} from '@angular/core';
+import {Component, computed, effect, inject, OnInit, signal} from '@angular/core';
 import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import {MatButtonModule} from '@angular/material/button';
@@ -8,15 +8,19 @@ import {MatFormFieldModule} from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import {ActivatedRoute, NavigationEnd, RouterLink, RouterLinkActive} from '@angular/router';
-import {Route, Router} from '@angular/router';
+import {Route, Router, Routes} from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { BehaviorSubject, filter, Observable } from 'rxjs';
 import {NavigationFocusService} from '../navigation-focus/navigation-focus.service';
 import {ThemePicker} from '../theme-picker/theme-picker';
 import { Authorization } from '../authorization/authorization';
+import { Breadcrumbs } from './breadcrumb/breadcrumbs';
 import { Favorites } from './favorites/favorites-dialog';
 import { ProfileStore } from '../../services/profile/profile-store';
+import { RouteStore } from '../../services/route.store';
+import { RouteItem } from '../../pages/component-sidenav/component-sidenav';
 import { MatAutocomplete } from "@angular/material/autocomplete";
 
 export type Favorite={
@@ -33,6 +37,7 @@ export type Folder = { folderName:string, items:Favorite[] };
   imports: [
 		AsyncPipe,
     Authorization,
+		Breadcrumbs,
     Favorites,
 		FormsModule,
 		MatAutocompleteModule,
@@ -41,6 +46,7 @@ export type Folder = { folderName:string, items:Favorite[] };
     MatIconModule,
 		MatInputModule,
     MatMenuModule,
+		MatTooltipModule,
 		ReactiveFormsModule,
     RouterLink,
     RouterLinkActive,
@@ -57,28 +63,17 @@ export class NavBar implements OnInit {
 			&& !x.path!.includes('/')
 			&& ( !x.children || x.children.find( y=>!y.path!.length) )
 		).map( x=>({ name: x.title as string, route: '/'+x.path } ));
+		effect( ()=>document.documentElement.style.setProperty('--jde-breadcrumb-height', this.showBreadcrumbs() ? '36px' : '0px') );//the site shells add this to their fixed-content margin; 36px must match the nav height in breadcrumbs.ts
   }
 	async ngOnInit(){
 		this.router.events.pipe(//subscribe before the await:  the load defers the rest of ngOnInit past the initial NavigationEnd.
 			filter( (e)=> e instanceof NavigationEnd )
 		).subscribe( (e:NavigationEnd)=>{
-			this.router.config.find( config=>{
-				let configSegments = config.path!.split('/');
-				let urlSegments = e.urlAfterRedirects.split('?')[0].split('/');
-				urlSegments.shift();
-				if( configSegments.length!=urlSegments.length )
-					return false;
-				for( let i=0; i<configSegments.length; i++ ){
-					if( configSegments[i].startsWith(':') )
-						continue;
-					if( configSegments[i]!=urlSegments[i] )
-						return false;
-				}
-				let title = config.title as string;
-				this.name.set( !title || title.startsWith(':') ? e.urlAfterRedirects.split('?')[0].split('/').pop()! : title );
-				return true;
-			});
-			this.route.set( e.urlAfterRedirects.split('?')[0] );
+			const path = e.urlAfterRedirects.split('?')[0];
+			const crumbs = this.#buildCrumbs( path );
+			this.crumbs.set( crumbs );
+			this.name.set( crumbs[crumbs.length-1].title );
+			this.route.set( path );
 		});
 		this.favorites.set( await this.#profileStore.load<Favorite[]>("favorites", this.defaultFavorites) );
 		this.isLoading.set( false );
@@ -104,6 +99,48 @@ export class NavBar implements OnInit {
 		}
 		this.favorites.set( favs );
 		this.#profileStore.save( "favorites", favs );
+	}
+	onToggleBreadcrumbs(){
+		const show = !this.showBreadcrumbs();
+		this.showBreadcrumbs.set( show );
+		this.#profileStore.save( "showBreadcrumbs", show );
+	}
+	#buildCrumbs( path:string ):RouteItem[]{
+		const segments = path.split('/').filter( s=>s.length );
+		const home = this.router.config.find( c=>c.path=='' );
+		const crumbs = [ new RouteItem({ path: '/', title: (home?.title as string) ?? 'Home' }) ];
+		for( let i=0; i<segments.length; i++ ){
+			const config = NavBar.matchConfig( this.router.config, segments.slice(0, i+1) );
+			let title = config?.title as string|undefined;
+			if( !title || title.startsWith(':') )//no title, or the ':param' substitute-the-segment convention
+				title = this.#segmentName( segments.slice(0,i).join('/'), segments[i] ) ?? decodeURIComponent( segments[i] );
+			crumbs.push( new RouteItem({ path: config ? '/'+segments.slice(0,i+1).join('/') : undefined, title }) );//no matching route ⇒ no path ⇒ rendered as text, not a link
+		}
+		return crumbs;
+	}
+	#segmentName( parentUrl:string, segment:string ):string|undefined{//RouteStore writers key inconsistently: "gateways/gw1" (UrlSegments join), '/apps', bare "users"
+		const last = parentUrl.split('/').pop() ?? '';
+		for( const key of [parentUrl, '/'+parentUrl, last] ){
+			const child = this.#routeStore.getChildren( key ).find( c=>c.path==segment || c.path?.endsWith('/'+segment) );//child paths are bare targets or parent-prefixed
+			if( child?.title )
+				return child.title;
+		}
+		return undefined;
+	}
+	static matchConfig( routes:Routes, segments:string[] ):Route|undefined{//first match wins ⇒ the duplicated 'access' path resolves like Angular's own matcher
+		for( const config of routes ){
+			if( config.path=='**' )
+				return config;//wildcard consumes any remainder ⇒ every prefix inside a node browse path is routable
+			const configSegments = config.path!.split('/').filter( s=>s.length );
+			if( configSegments.length>segments.length || !configSegments.every( (cs,j)=>cs.startsWith(':') || cs==segments[j] ) )
+				continue;
+			if( configSegments.length==segments.length )
+				return config;
+			const child = config.children ? NavBar.matchConfig( config.children, segments.slice(configSegments.length) ) : undefined;
+			if( child )
+				return child;
+		}
+		return undefined;
 	}
 
 	onSearch( event:any ){
@@ -134,6 +171,9 @@ export class NavBar implements OnInit {
 		return items;
 	});
 	#profileStore = inject(ProfileStore);
+	#routeStore = inject(RouteStore);
+	crumbs = signal<RouteItem[]>( [] );
+	showBreadcrumbs = signal<boolean>( ProfileStore.local<boolean>("showBreadcrumbs", true) );//sync static read — awaiting #profileStore.load here would delay isLoading
 	defaultFavorites:Favorite[];
 	favorites = signal<Favorite[]>(null as any);
 	isLoading = signal<boolean>( true );

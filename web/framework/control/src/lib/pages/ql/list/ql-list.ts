@@ -11,7 +11,7 @@ import {Field} from '../../../model/ql/schema/Field';
 import {TableSchema}  from '../../../model/ql/schema/TableSchema';
 import {MetaObject}  from '../../../model/ql/schema/MetaObject';
 
-import { ComponentPageTitle, RouteItem, IRouteService, RouteService } from 'jde-spa';
+import { ComponentPageTitle, RouteItem, RouteStore, IRouteService, RouteService } from 'jde-spa';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton, MatButton } from '@angular/material/button';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
@@ -23,7 +23,6 @@ import { ProfileStore } from 'jde-spa';
 import { GraphQLTable } from '../../GraphQL/table/table';
 import { QLListData, QLListResolver, TableSettings } from '../../../services/ql-list.resolver';
 import { SelectionModel } from '@angular/cdk/collections';
-import { RouteStore } from '../../../services/route.store';
 import { View, ViewField, ViewType } from '../../../model/ql/View';
 import { PageProfile } from '../../GraphQL/model/PageSettings';
 import { verify } from '../../../utils/utils';

@@ -49,6 +49,17 @@ export class Mutation{
 			query = `${getEnumName(MutationType,this.type).toLowerCase()}${StringUtils.capitalize(this.typeName)}( `;
 			if( this.id )
 				query += `id:${this.id}`;
+			let itemClause = ( value:any ):string=>{
+				if( value===null || value===undefined )
+					return "null";
+				if( typeof value == "string" )
+					return StringUtils.qlString( value );
+				if( typeof value == "number" || typeof value == "boolean" )
+					return `${value}`;
+				if( Array.isArray(value) )
+					return `[${value.map( item=>itemClause(item) ).join(",")}]`;
+				return `{${argClause(value, false)}}`;
+			};
 			let argClause = ( itemArgs:any, continuation:boolean=true )=>{
 				let clause = "";
 				for( let key in itemArgs ){
@@ -60,11 +71,11 @@ export class Mutation{
 					if( value===null )
 						clause += `${key}:null`;
 					else if( typeof value == "string" )
-						clause += `${key}:"${value}"`;
+						clause += `${key}:${StringUtils.qlString(value)}`;
 					else if( typeof value == "number" || typeof value=="boolean" )
 						clause += `${key}:${value}`;
 					else if( Array.isArray(value) )
-						clause += `${key}:[${value.join(",")}]`;
+						clause += `${key}:[${value.map( item=>itemClause(item) ).join(",")}]`;//join() alone stringifies an object as [object Object] and drops the quotes off a string.
 					else{
 						verify( typeof value == "object" );
 						clause += `${key}:{${argClause(value, false)}}`;

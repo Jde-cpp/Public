@@ -7,8 +7,7 @@ import { PageProfile, PageSettings } from '../pages/GraphQL/model/PageSettings';
 import { StringUtils } from '../utils/StringUtils';
 import { MetaObject } from '../model/ql/schema/MetaObject';
 import { Field } from '../model/ql/schema/Field';
-import { RouteItem, ProfileStore } from 'jde-spa';
-import { RouteStore } from './route.store';
+import { RouteItem, ProfileStore, RouteStore } from 'jde-spa';
 import { View, ViewFieldSettings } from '../model/ql/View';
 import { Sort } from '@angular/material/sort';
 
@@ -21,7 +20,8 @@ export class ListRoute extends RouteItem{
 			collection = {path:collection, title:StringUtils.capitalize(collection)};
 		this.path = collection.path;
 		this.collectionName = collection.data?.collectionName ?? this.path;
-		this.tableSettings = collection.data?.tableSettings ?? { excludedColumns: [], columns: ["name", "created", "updated", "deleted", "target"], sort: [{active:"name", direction:"asc"}] };
+		//per-field defaults: routes pass partial settings (e.g. groups/roles set only excludedColumns) and columns must never be undefined.
+		this.tableSettings = { excludedColumns: [], columns: ["name", "created", "updated", "deleted", "target"], sort: [{active:"name", direction:"asc"}], ...collection.data?.tableSettings };
 		this.summary = collection?.data?.summary;
 		this.title = collection.title ?? StringUtils.capitalize( this.path );
 	}

@@ -1,11 +1,13 @@
 #include <jde/fwk/log/break.h>
 
+#ifndef NDEBUG
 namespace Jde{
-	ELogLevel _breakLevel = ELogLevel::Warning;
-	α Logging::SetBreakLevel()ι->void{
-		_breakLevel = Settings::FindEnum<ELogLevel>( "/logging/breakLevel", ToLogLevel ).value_or( ELogLevel::Warning );
+	atomic<ELogLevel> _breakLevel = ELogLevel::Warning;
+	α Logging::SetBreakLevel( ELogLevel level )ι->void{
+		_breakLevel = level;
 	}
-	α Logging::BreakLevel()ι->ELogLevel{ return _breakLevel; }
+	α Logging::BreakLevel()ι->ELogLevel{ return _breakLevel.load(); }
 
 	α Logging::CanBreak()ι->bool{ return Process::IsDebuggerPresent(); }
 }
+#endif

@@ -97,9 +97,9 @@ namespace Jde::Access{
 			y = mu<AclQLSelectAwait>( q, creds.UserPK(), sl );
 		else if( q.JsonName.starts_with("role") && (q.FindTable("roles") || q.FindTable("permissionRights")) )
 			y = mu<RoleAwait>( q, creds.UserPK(), sl );
-		else if( q.JsonName.starts_with("user") && q.FindTable("groupings") )
+		else if( q.JsonName.starts_with("user") && q.FindTable("groups") )
 			y = mu<UserAwait>( move(q), creds.UserPK(), sl );
-		else if( q.JsonName.starts_with("grouping") )
+		else if( q.JsonName=="group" || q.JsonName=="groups" )
 			y = mu<GroupAwait>( q, creds.UserPK(), sl );
 		return y;
 	}

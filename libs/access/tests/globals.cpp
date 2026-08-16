@@ -99,7 +99,7 @@ namespace Tests{
 		return memberString;
 	}
 	α Tests::AddToGroup( GroupPK id, vector<IdentityPK> members, UserPK executer )ε->void{
-		let ql =	Ƒ( "mutation addGrouping( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
+		let ql =	Ƒ( "mutation addGroup( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
 		let addJson = QL().QuerySync<jvalue>( ql, {}, executer );
 	}
 
@@ -107,7 +107,7 @@ namespace Tests{
 		addRemove( "remove", table, groupPK, members, executer );
 	}
 	α Tests::RemoveFromGroup( GroupPK id, vector<IdentityPK> members, UserPK executer )ε->void{
-		let ql = Ƒ( "mutation removeGrouping( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
+		let ql = Ƒ( "mutation removeGroup( \"id\":{}, \"memberId\":{} )", id.Value, memberString(members) );
 		let removeJson = QL().QuerySync<jvalue>( ql, {}, executer );
 	}
 
@@ -125,7 +125,7 @@ namespace Tests{
 		return { Tests::GetId(createJson) };//{"user":{"id":7}}}
 	}
 	α createGroup( str target, UserPK executer )ε->GroupPK{
-		let create = Ƒ( "mutation createGrouping(  target:'{0}', name:'{0} - name', description:'{0} - description' ){{id}}", target );
+		let create = Ƒ( "mutation createGroup(  target:'{0}', name:'{0} - name', description:'{0} - description' ){{id}}", target );
 		let createJson = QL().QuerySync( Str::Replace(create, '\'', '"'), {}, executer );
 		return {AsNumber<GroupPK::Type>( createJson, "id")};
 	}
@@ -146,7 +146,7 @@ namespace Tests{
 	}
 
 	α Tests::SelectGroup( str target, UserPK executer, bool includeDeleted )ε->jobject{
-		let ql = Ƒ( "grouping(target:\"{}\"){{ id name attributes created updated target description {} groupMembers{{id name}} }}", target, includeDeleted ? "deleted" : "" );
+		let ql = Ƒ( "group(target:\"{}\"){{ id name attributes created updated target description {} groupMembers{{id name}} }}", target, includeDeleted ? "deleted" : "" );
 		return QL().QuerySync( ql, {}, executer );
 	}
 	α Tests::SelectPermission( ResourcePK resourcePK, UserPK executer )ε->jobject{
@@ -224,7 +224,7 @@ namespace Tests{
 		let purgeJson = QL().QuerySync<jvalue>( purge, {}, executer, true, sl );
 	}
 	α Tests::PurgeGroup( GroupPK id, UserPK executer )ε->void{
-		let purge = Ƒ( "mutation purgeGrouping(\"id\":{})", id.Value );
+		let purge = Ƒ( "mutation purgeGroup(\"id\":{})", id.Value );
 		let purgeJson = QL().QuerySync<jvalue>( purge, {}, executer );
 	}
 	α Tests::Delete( str table, uint id, UserPK executer )ε->jvalue{

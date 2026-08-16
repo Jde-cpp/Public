@@ -7,12 +7,14 @@ import { TableSchema } from '../model/ql/schema/TableSchema';
 import { EnumValue, Log, IQueryResult, Query } from '../services/IGraphQL';
 import { MutationSchema } from '../model/ql/schema/MutationSchema';
 import { Instance } from './app/app.service.types';
-import * as LogProto from '../proto/Log'; import ELogLevel = LogProto.Jde.App.Log.Proto.ELogLevel;
-import * as CommonProto from '../proto/Common'; import IException = CommonProto.Jde.Proto.IException;
+import { ELogLevel } from 'jde-proto/Log';
+import { Exception as IException } from 'jde-proto/Common';
 import { AuthStore } from './auth.store';
+import { GoogleAuthService } from './google-auth.service';
 import { Mutation } from '../model/ql/Mutation';
 import { computed, Signal } from '@angular/core';
 import { EProvider, User } from 'jde-spa';
+import { StringUtils } from '../utils/StringUtils';
 
 interface IStringResult{ id:number; value:string; }
 export interface IError{ requestId?:number; message: string; sc?:number; httpStatus?:number; }//sc is the proto `code`; httpStatus avoids the opc StatusCode collision.
@@ -45,12 +47,20 @@ class RequestPromise<ResultMessage>{
 	{}
 }
 
+//ts-proto emits a per-message interface plus a codec object, not a class, so the transport is handed the codec rather
+//than a constructor - `new Transmission()` no longer exists.  The codec also encodes, which retires the abstract
+//encode() hook each subclass used to implement identically.
+export interface MessageCodec<T>{
+	create( base?:any ):T;
+	encode( message:T ):{ finish():Uint8Array };
+}
+
 export abstract class ProtoService<Transmission,ResultMessage>{
-	constructor( private TCreator: { new (): Transmission; }, protected http: HttpClient, public readonly transport:ETransport, protected authStore:AuthStore, private isAppServer:boolean=false )
+	constructor( private TCreator: MessageCodec<Transmission>, protected http: HttpClient, public readonly transport:ETransport, protected authStore:AuthStore, private isAppServer:boolean=false, protected googleAuth?:GoogleAuthService )
 	{}
 
 	connect():void{
-		this.#socket = webSocket<protobuf.Buffer>( {url: this.socketUrl, deserializer: msg => this.onMessage(msg), serializer: msg=>msg, binaryType:"arraybuffer"} );
+		this.#socket = webSocket<Uint8Array>( {url: this.socketUrl, deserializer: msg => this.onMessage(msg), serializer: msg=>msg, binaryType:"arraybuffer"} );
 		this.#socket.subscribe(
 			( msg ) => this.addMessage( msg ),
 			( err ) => this.error( err ),
@@ -65,7 +75,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	subQueries( typeName: string, id: number ):string[]{ return []; }
 	targetQuery( schema: TableSchema, target: string, showDeleted:boolean, excludedColumns:string[] ):string{
 		let fields = this.fieldColumns( schema, showDeleted, excludedColumns );
-		return `${schema.singular}( target:"${target}" ){ ${fields.join(" ")} }`;
+		return `${schema.singular}( target:${StringUtils.qlString(target)} ){ ${fields.join(" ")} }`;
 	}
 	protected fieldColumns( schema: TableSchema, showDeleted:boolean, excludedColumns:string[] ):string[]{
 		let columns = [];
@@ -84,14 +94,27 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 
 	//
 	error( err:any ){
-		this.#socket = undefined;//drop the dead socket so the next send reconnects
-		this.setSocketId( 0 );
 		console.log( "No longer connected to Server.", err );
+		this.socketDown( err );
+	}
+	//a socket that is gone can never answer what was already sent or queued, so both teardown paths must settle everything: an unsettled promise is an await that never returns.
+	private socketDown( err:any ):void{
+		this.#socket = undefined;//drop the dead socket so the next send reconnects
+		this.#socketId = 0;//NOT setSocketId(0): that flushes the backlog, and with the socket already dropped every queued transmission would go to `#socket?.next` and vanish
+		this.rejectPending();
 		this.handleConnectionError( err );
+	}
+	protected rejectPending():void{
+		const message = `Connection to '${this.socketUrl}' was lost.`;
+		this.backlog.length = 0;//sendPromise registers its callback whether or not the message actually went out, so the backlog's promises are in _callbacks and reject below - resending them after a reconnect would arrive with no callback left to take the answer
+		const pending = [...this._callbacks];
+		this._callbacks.clear();//clear before rejecting: a reject handler may send again and register new callbacks
+		for( const [requestId, c] of pending )
+			c.reject( {error:{requestId, message}} );
 	}
 	sendTransmission( t:Transmission ){
 		console.log( JSON.stringify(t) );
-		var toSend = this.encode(t).finish();
+		var toSend = this.TCreator.encode(t).finish();
 		this.#socket?.next( toSend );
 	}
 	send( m:any, log:string ):RequestId{
@@ -100,7 +123,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		return requestId;
 	}
 	protected sendWithId( m:any, requestId:RequestId, log:string ):void{
-		let t = new this.TCreator() as any;
+		let t = this.TCreator.create() as any;
 		if( this.log.subRequest ) console.log( `[${requestId}]${log.substring(0, this.log.maxLength)}` );
 		t["messages"].push( {requestId:requestId,...m} );
 		const isAuthorization = Object.hasOwn( m, 'sessionId' );//the handshake message that releases the backlog; must go out before socketId is set
@@ -113,9 +136,19 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		}
 	}
 
+	//the socketId MUST end up set on every path: setSocketId is what flushes the backlog, so an unsent/failed handshake would otherwise strand every queued send forever.
 	protected async sendAuthorization( socketId:number ):Promise<void>{
-		let user = this.user()!;
-		await this.sendPromise( {sessionId:user.authorization}, `sendAuthorization: ${user.authorization}` );
+		const authorization = this.user()?.authorization;
+		if( !authorization )//logout() leaves a truthy serverInstances-only User whose authorization is null; protobufjs omits the null field, so this used to put an *empty* handshake on the wire that the server never acks
+			console.warn( "sendAuthorization: no authorization - releasing the backlog unauthenticated." );
+		else{
+			try{
+				await this.sendPromise( {sessionId:authorization}, `sendAuthorization: ${authorization}` );
+			}
+			catch( e ){//callers never await this (it is fired from the ack handler), so swallowing here is what keeps the rejection from floating
+				console.error( "sendAuthorization failed - releasing the backlog anyway so queued requests fail against the server instead of hanging.", e );
+			}
+		}
 		this.setSocketId( socketId );//release buffer.
 	}
 
@@ -138,21 +171,19 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		if( this.#loginCallbacks.length==1 ){
 			let url = this.urlWithTarget( "serverSettings", true );
 			if( this.log.restRequests ) log( `get: ${url}` );
-			let settings;
 			try{
 				let args = this.user()?.authorization ? {headers:{"Authorization":this.user()!.authorization}} : {} as any;
 				const settings:any = await firstValueFrom( this.http.get<any>(url, args) );
 				if( this.log.restResults ) log( JSON.stringify(settings) );
 				this.timeoutSeconds = fromIsoDuration( settings["restSessionTimeout"] );
-				let instance = parseInt( settings["serverInstance"] );
 				let active = settings["active"];
 				let timedout = this.lastRestCall && ( this.lastRestCall.getTime() < Date.now() - this.timeoutSeconds*1000 );
-				let previousInstanceIndex = this.user()?.serverInstances?.findIndex( x=>x.url==this.url ) ?? -1;
-				let previousInstance = previousInstanceIndex>=0 ? this.user()!.serverInstances![previousInstanceIndex].instance : 0;
-				if( !active || timedout || (this.isAppServer && instance!=previousInstance) )
-					this.authStore.reset( {url:this.url, instance:instance}, this.user()?.jwt );
-				else if( previousInstance!=instance )
-					this.authStore.setServerInstance( this.url, instance );
+				//The per-server "instance" comparison that used to gate this is gone: it read settings["serverInstance"],
+				//a key Server::SendServerSettings never emits (it sends restSessionTimeout, connectionId and active), so
+				//parseInt gave NaN, `NaN != previousInstance` was always true, and on the AppServer path reset() fired on
+				//EVERY load - wiping the stored user down to the jwt each time.  Instance tracking lives in AuthStore now.
+				if( !active || timedout )
+					this.authStore.reset( this.user()?.jwt );
 				for( let callback of this.#loginCallbacks ){
 					let y = await this.authGet<any>(
 						callback.target,
@@ -177,7 +208,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 			: `${this.restUrl}/${suffix}`;
 	}
 
-	private async authGet<Y>( target:string, authorization?:string, log:Log=console.log ):Promise<Y>{
+	private async authGet<Y>( target:string, authorization?:string, log:Log=console.log, renew:boolean=true ):Promise<Y>{
 		if( target.indexOf("undefined")>=0 )
 			console.error( `authGet - target contains 'undefined': ${target}` );
 		if( this.log.restRequests )	log( `get: ${decodeURIComponent(target).substring(0,this.log.maxLength)}` );
@@ -197,16 +228,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				y = response.body as Y;
 			}
 			catch( e:any ){
-				if( e["status"]==401 && authorization ){//retry anonymously only if a (stale) credential was sent — an anonymous 401 must throw, or this recurses forever
-					log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
-					this.authStore.logout();
-					y = await this.authGet<Y>( target, undefined, log );
-				}
-				else{
-					if( e["status"]==0 )
-						describeFetchError( url, e ).then( m=>log(m) );//async probe; the rethrow keeps the original error for callers
-					throw e;
-				}
+				y = await this.handle401<Y>( e, target, authorization, url, log, renew );
 			}
 		}
 		else{
@@ -214,22 +236,61 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 				y = await firstValueFrom( this.http.get<Y>(url, options) ) as Y;
 			}
 			catch( e:any ){
-				if( e["status"]==401 && authorization ){//always true here (sessionId branch), but keeps the retry bound explicit
-					log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
-					this.authStore.logout();
-					y = await this.authGet<Y>( target, undefined, log );
-				}
-				else{
-					if( e["status"]==0 )
-						describeFetchError( url, e ).then( m=>log(m) );//async probe; the rethrow keeps the original error for callers
-					throw e;
-				}
+				y = await this.handle401<Y>( e, target, authorization, url, log, renew );//authorization is always set here (sessionId branch), so a 401 always retries
 			}
 		}
 		if( this.log.restResults ) log( JSON.stringify(y).substring(0,this.log.maxLength) );
 		this.lastRestCall = new Date();
 		return y;
 	}
+
+	//A 401 with a credential means the session/jwt went stale. A Google user can mint a fresh credential without leaving
+	//the page, so try that first and retry authenticated; otherwise retry anonymously — an anonymous 401 must throw, or
+	//this recurses forever.
+	private async handle401<Y>( e:any, target:string, authorization:string|undefined, url:string, log:Log, renew:boolean ):Promise<Y>{
+		if( e["status"]!=401 || !authorization ){
+			if( e["status"]==0 )
+				describeFetchError( url, e ).then( m=>log(m) );//async probe; the rethrow keeps the original error for callers
+			throw e;
+		}
+		log( `(${e["status"]})${e["error"]} - ${e["url"]}` );
+		if( renew ){//false on the once-renewed retry: a second 401 against the fresh session must fall through to the anonymous retry, not loop into another prompt
+			const renewed = await this.renewGoogleSession( log );
+			if( renewed )
+				return await this.authGet<Y>( target, renewed, log, false );
+		}
+		this.authStore.logout();
+		return await this.authGet<Y>( target, undefined, log );
+	}
+
+	//Silent Google re-login (reviews/todo.md §7): renew the lapsed session in place instead of degrading to anonymous.
+	//Resolves the fresh authorization, or null when the silent path has nothing to offer — password/OpcServer users have
+	//no silent-renewal primitive, and a prompt that produced no credential is a normal outcome (FedCM cooldown, multiple
+	//Google sessions, a dismissal), not an error. Concurrent 401s coalesce into one renewal round-trip.
+	protected async renewGoogleSession( log:Log ):Promise<string|null>{
+		if( this.user()?.provider!=EProvider.Google || !this.googleAuth )
+			return null;
+		return this.#renewal ??= this.renewGoogleSessionOnce( log ).finally( ()=>this.#renewal=null );
+	}
+	private async renewGoogleSessionOnce( log:Log ):Promise<string|null>{
+		try{
+			const credential = await this.googleAuth!.renewCredential();
+			if( !credential )
+				return null;
+			const user = new User( credential );
+			this.authStore.append( user );//identity/jwt FIRST: appending a jwt-carrying user rebuilds via the User ctor, whose jwt branch drops an existing sessionId (the auth.store setServerInstance caveat) — so the sessionId must land last
+			await this.loginJwt( user.authorization! );//"Bearer <jwt>", the same shape AppService.login sends; the fresh sessionId arrives in the response Authorization header and postRaw appends it
+			if( this.socketId )
+				this.sendAuthorization( this.socketId );//the socket authenticated with the stale session; move it to the fresh one (not awaited — it settles its handshake internally)
+			log( "silent Google re-login renewed the session." );
+			return this.user()?.authorization ?? null;
+		}
+		catch( e ){
+			console.warn( "silent Google re-login failed - falling back to the anonymous retry.", e );
+			return null;
+		}
+	}
+	#renewal:Promise<string|null>|null = null;
 
 	async get<Y>( target:string, log?:Log ):Promise<Y>{
 		if( !this.#instances )
@@ -307,7 +368,12 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	async providers( log:Log ):Promise<EProvider[]>{
 		const ql = `__type(name: "Provider") { enumValues { id name } }`;
 		const data:any = await this.query( ql, null, log );
-		return data["__type"]["enumValues"].map( (x:EnumValue)=>x.id );
+		//ql() hands back null when the request fails, and GraphQL introspection answers `__type:null` for a type the schema
+		//does not have - both used to TypeError here rather than say what went wrong.
+		const enumValues:EnumValue[]|undefined = data?.["__type"]?.["enumValues"];
+		if( !enumValues )
+			console.warn( `providers: no Provider enum in the schema (${JSON.stringify(data)}) - offering no login providers.` );
+		return enumValues?.map( (x:EnumValue)=>x.id ) ?? [];
 	}
 	async query<Y>( ql:string, vars?:any, log?:Log ):Promise<Y>{
 		return await this.ql( {text: ql, vars:vars}, log ?? console.log );
@@ -412,17 +478,19 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		return this.#mutations;
 	}
 
-	socketComplete(){ this.#socket = undefined; console.log( 'complete' ); }
+	socketComplete(){ console.log( 'complete' ); this.socketDown( "the server closed the connection" ); }//a clean close strands pending requests exactly like an error does
 	//get nextRequestId():RequestId{ return this.#requestId+1; }  why?
 	getRequestId():RequestId{ return ++this.#requestId;} #requestId:RequestId=0;
 
 	protected setSocketId( id:number ){
 		this.#socketId = id;
+		if( !this.#socket )
+			return;//sendTransmission is `#socket?.next(...)`, so flushing without a socket would silently destroy the backlog rather than leave it for the next connect
 		for( var m of this.backlog )
 			this.sendTransmission( m );
 		this.backlog.length=0;
 	}
-	private onMessage( event:MessageEvent ):protobuf.Buffer{
+	private onMessage( event:MessageEvent ):Uint8Array{
 		const m = new Uint8Array( event.data );
 		this.processMessage( m );
 		return m;
@@ -432,7 +500,13 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		let handled = true;
 		let c = this._callbacks.get( requestId );
 		if( c ){
-			if( !m.Value ){//bare response (no oneof payload), e.g. the authorization ack
+			//`m.Value` was protobufjs's virtual oneof discriminator - a getter naming the set field.  ts-proto emits the oneof
+			//members as plain optionals with no such getter, so `!m.Value` was true for EVERY message and every pending
+			//request resolved with null (subscribe's ack among them, which then died on `y.length`).  requestId is the only
+			//non-oneof field, so "carries a payload" is "some other key is set" - and it must test `!==undefined`, because
+			//ts-proto's decode seeds every optional member as an explicit undefined key.
+			const payload = Object.keys(m).find( k=>k!="requestId" && m[k]!==undefined );
+			if( !payload ){//bare response (no oneof payload), e.g. the authorization ack
 				this._callbacks.delete( requestId );//settled requests must be removed or the map grows for the socket's lifetime
 				c.resolve( null );
 			}
@@ -468,10 +542,9 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		}
 		return handled;
 	}
-	protected abstract processMessage( bytearray:protobuf.Buffer ):void;
+	protected abstract processMessage( bytearray:Uint8Array ):void;
 
 	protected abstract handleConnectionError( err:any ):void;
-	protected abstract encode( t:Transmission ):any;
 
 	protected backlog:Transmission[] = [];
 	protected log = { sockRequests:true, sockResults:true, restRequests:true, restResults:false, subRequest:true, subResults:true, maxLength:255 };
@@ -490,7 +563,7 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 	#loginCallbacks:{target:string, resolve:(result:any)=>void, reject:( e:any )=>void, log:Log}[]=[];
 
 	//abstract get queryId():number;
-	#socket:WebSocketSubject<protobuf.Buffer>|undefined;
+	#socket:WebSocketSubject<Uint8Array>|undefined;
 	protected _callbacks = new Map<number, RequestPromise<ResultMessage>>();
 	#tables = new Map<string,TableSchema>();
 	#mutations!:Array<MutationSchema>;//per-instance — a static cache shared one schema across AppService/AccessService/Gateway (different endpoints)

@@ -60,7 +60,7 @@ namespace Jde::QL{
 		try{
 			auto select = [&]()ε{
 				vector<uint> ids;
-				table->Schema->DS()->Select( DB::Sql{Ƒ("select {} from {} {}", pk->FQName(), table->DBName, where.ToString()), where.Params()}, [&ids](DB::Row&& r){ ids.push_back( r.GetUInt(0) ); } );
+				table->Schema->DS()->Select( DB::Sql{Ƒ("select {} from {} {}", pk->FQName(), table->SqlName(), where.ToString()), where.Params()}, [&ids](DB::Row&& r){ ids.push_back( r.GetUInt(0) ); } );
 				return ids;
 			};
 			auto ids = select();

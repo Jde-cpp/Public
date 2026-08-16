@@ -13,6 +13,7 @@ import { MetaObject } from '../../../model/ql/schema/MetaObject';
 import { MatTabsModule } from '@angular/material/tabs';
 import{ PageSettings } from '../model/PageSettings';
 import { clone } from '../../../utils/utils';
+import { StringUtils } from '../../../utils/StringUtils';
 
 @Component( {
     selector: 'graph-ql-detail',
@@ -90,7 +91,7 @@ export class GraphQLDetailComponent implements OnDestroy, OnInit{
 	}
 	load(){
 		const fetch = async ( columns:any )=>{
-			const ql = `${this.fetchName}(filter:{target:{ eq:"${this.target}"}}){ ${columns} }`;
+			const ql = `${this.fetchName}(filter:{target:{ eq:${StringUtils.qlString(this.target)}}}){ ${columns} }`;
 			try{
 				const data:any = await this.graphQL.query( ql, {}, (m)=>console.log(m) );
 				if( data==null )

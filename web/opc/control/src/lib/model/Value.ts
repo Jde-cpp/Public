@@ -21,8 +21,10 @@ export function valueJson( value: Value ):any/*:NodeIdJson*/{
 		return value;
 }
 
-export function valueString( value: Value ):string{
-	if( typeof value === "string" )
+export function valueString( value: Value|undefined ):string{
+	if( value===undefined || value===null )
+		return "";//retrieveSnapshot blanks every Variable.value while the read is in flight, and the Object.hasOwn test below throws on null/undefined - so rendering a row in that window crashed the page
+	else if( typeof value === "string" )
 		return value;
 	else if( typeof value === "number" )
 		return value.toString();
@@ -34,8 +36,10 @@ export function valueString( value: Value ):string{
 		return value.toString();
 	else if( value instanceof Uint8Array )
 		return btoa( value.reduce((acc, current) => acc + String.fromCharCode(current), "") );
-	else if( Object.hasOwn(value, "seconds") && Object.hasOwn(value, "nanos") )
-		return ProtoUtils.toDate( <Timestamp>value )!.toISOString();
+	else if( Object.hasOwn(value, "seconds") && Object.hasOwn(value, "nanos") ){
+		const date = ProtoUtils.toDate( <Timestamp>value );
+		return date ? date.toISOString() : "";//unset is seconds==0
+	}
 	else if( value instanceof ExNodeId )
 		return JSON.stringify(value.toJson());
 	else if( value instanceof NodeId )

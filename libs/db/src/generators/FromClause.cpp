@@ -48,7 +48,7 @@ namespace Jde::DB{
 			throw Exception( "Joins.size()==0" );
 
 		let& syntax = Joins[0].From->Table->Schema->Syntax();
-		string sql{ "from "+Joins[0].From->Table->DBName }; sql.reserve( 255 );
+		string sql{ "from "+Joins[0].From->Table->SqlName() }; sql.reserve( 255 );
 		if( Joins[0].FromAlias.size() )
 			sql += " "+Joins[0].FromAlias;
 		if( Joins[0].To ){

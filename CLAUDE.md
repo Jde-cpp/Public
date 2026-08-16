@@ -49,7 +49,9 @@ The presets are **split by OS across four files** (presets schema `version: 9`).
 | win clang | `win-clang-debug-repos` | — | `win-clang-release-repos` |
 | g++ | `linux-debug-repos` | `linux-relWithDebInfo-repos` | — |
 
-The g++ (`linux-*`, **g++-15**) presets exist only for the dependency build — there is no g++ `-jde` preset, so the project itself is built with clang. Note the leftover `linux-debug` **build**/**test** presets are currently unusable: they name the now-hidden `linux-debug` configure preset, and CMake rejects that (`Cannot use hidden configure preset`) — see `reviews/todo.md` §3.
+The g++ (`linux-*`, **g++-15**) presets exist only for the dependency build — there is no g++ `-jde` preset, so the project itself is built with clang.
+
+There are **no build or test presets** on either OS — `cmake --list-presets` lists configure presets only, and building/testing go through `cmake --build <buildDir>` and `cd <buildDir> && ctest`. Two vestigial `linux-debug` build/test presets were removed 2026-08-14: they named the hidden `linux-debug` configure preset, so `cmake --build --preset` and `ctest --preset` both failed with `Cannot use hidden configure preset`, and they could not have worked regardless since no Linux configure preset sets `binaryDir` (which is also why `reconfig` passes `-B`).
 
 ## Running Tests (C++)
 
@@ -108,6 +110,13 @@ Use `#ifdef __cpp_lib_stacktrace` to branch between `std::stacktrace_entry` (GCC
 ### Coroutines
 
 Awaitables inherit from `VoidAwait` or `IAwait<TResult, TTask>` in `co/Await.h`. Tasks use `VoidTask` and typed task types from `co/Task.h`.
+
+**The pairing rule: an awaitable dictates its caller's return type.** `IAwait`/`VoidAwait` fix `await_suspend` to their **own** task's handle, and the awaited value is delivered through the *caller's promise* (`IExpectedPromise::Resume` stores it there; `TAwait::await_resume` reads it back) — so a coroutine may only `co_await` awaitables whose `::Task` **is** its own return type. Mixing two kinds in one coroutine fails a `static_assert` that states this rule and both fixes — a diagnostic-only wrong-handle `await_suspend` overload in `VoidAwait`/`IAwait` catches the mismatch that would otherwise surface as an unexplained `no viable conversion from 'coroutine_handle<…>'`. Corollaries:
+- `await_ready` is not a coroutine — nothing needing a `co_await` can live there.
+- The house workaround is the **hand-off chain**: one coroutine per awaitable type, each calling the next at its end, with state parked on the awaitable's *members*, not locals (e.g. `UpdateAwait::Build → UpdateBefore → Execute → UpdateAfter`).
+- A `BlockAwait` reached *from* awaitable machinery is the smell that this rule was hit and worked around. A `BlockAwait` *implementing* a synchronous API (`LocalQL::Upsert`, `ScalerSync`) is fine — that is what it is for.
+
+**The escape hatch — `co/AnyAwait.h`.** `AnyAwait<TResult>`/`AnyVoidAwait` carry their own result/exception storage and a type-erased `coroutine_handle<>`, so **any** coroutine can `co_await` them regardless of its return type; `Any( awaitable )` wraps an existing `IAwait`-family awaitable the same way (rvalue → owned, lvalue → referenced). Prefer these for new cross-type awaits instead of adding another hand-off chain. Because storage is local, a subclass may also pre-complete (set `_result`/`_error`, return `true` from `await_ready`) — impossible in the `IAwait` family. Discipline: `Resume`/`ResumeExp` may run the awaiter to completion inline and destroy the awaitable, so they must be the caller's last use of `this`.
 
 ## Environment Variables
 

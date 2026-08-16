@@ -19,7 +19,7 @@
 							access:{
 								meta: args.repoSourceDir+"/libs/access/config/access-meta.jsonnet",
 								ql: args.repoSourceDir+"/libs/access/config/access-ql.jsonnet",
-								prefix: "acc_"  //test with null prefix, debug with prefix
+								prefix: null  //test with null prefix, debug with prefix
 							},
 						}
 					}

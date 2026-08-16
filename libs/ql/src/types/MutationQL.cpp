@@ -36,7 +36,10 @@ namespace Jde::QL{
 		DBTable = schema->GetTablePtr( DB::Names::ToPlural(DB::Names::FromJson(JsonTableName)) );
 	}
 
-	α MutationQL::TableName()Ι->string{ ASSERT(DBTable); return DBTable->Name; }
+	//System mutations (updateLogSetting, ...) resolve no table, and the ASSERT this used to make did not stop the null
+	//deref that followed - Access::Server::CustomMutation asks every mutation for its table name before anything else,
+	//so `mutation updateLogSetting(...)` segfaulted the app server.  Callers all compare against a literal, and "" matches none of them.
+	α MutationQL::TableName()Ι->string{ return DBTable ? DBTable->Name : string{}; }
 	α MutationQL::ToString()Ι->string{
 		auto args = serialize(Args);
 		if( args.size()>3 && args[0]=='{' )

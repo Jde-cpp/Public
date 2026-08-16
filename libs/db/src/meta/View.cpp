@@ -157,6 +157,11 @@ namespace Jde::DB{
 		return Ƒ( "{}_upsert", Names::ToSingular(DBName) );
 	}
 
+	α View::SqlName()Ι->string{
+		let& syntax = Syntax();
+		return syntax.IsReservedWord( DBName ) ? syntax.EscapeDdl( DBName ) : DBName;
+	}
+
 	α View::IsEnum()Ι->bool{
 		return QLView ? QLView->IsEnum() : Columns.size()==2 && Columns[1]->Name=="name";
 	}

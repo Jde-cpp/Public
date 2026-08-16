@@ -3,7 +3,7 @@ local logsDir = args.logsDir;
 {
 	testing:{
 		tests:: "*",
-		recreateDB: true
+		recreateDB: std.parseJson( std.extVar("recreateDB") )
 	},
 	dbServers: {
 		scriptPaths: [
@@ -40,14 +40,14 @@ local logsDir = args.logsDir;
 				scheduler: "Debug",
 				sql: "Debug",
 				threads: "Information",
-				http_client_write: "Trace",
-				http_client_read: "Trace",
-				http_server_write: "Debug",
-				http_server_read: "Debug",
-				socket_client_write: "Debug",
-				socket_client_read: "Debug",
-				socket_server_write: "Debug",
-				socket_server_read: "Debug"
+				"http.client.write": "Trace",
+				"http.client.read": "Trace",
+				"http.server.write": "Debug",
+				"http.server.read": "Debug",
+				"socket.client.write": "Debug",
+				"socket.client.read": "Debug",
+				"socket.server.write": "Debug",
+				"socket.server.read": "Debug"
 			},
 			sinks:{
 				console:{},
