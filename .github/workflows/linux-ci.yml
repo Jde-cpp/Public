@@ -20,7 +20,7 @@ concurrency:
 jobs:
   build-and-test:
     # Matches the LABELS set when the runner container was registered.
-    runs-on: [self-hosted, clang22]
+    runs-on: [self-hosted, clang23]
 
     env:
       JDE_DIR: ${{ github.workspace }}

@@ -84,7 +84,11 @@ namespace Jde{
 	}
 
 	α Exception::BreakLog()Ι->void{
+#ifndef NDEBUG
 		if( Level()>=Logging::BreakLevel() || Logging::ShouldLog(ELogLevel::Trace, ELogTags::Exception) )
+#else
+		if( Logging::ShouldLog(ELogLevel::Trace, ELogTags::Exception) ) //no break level in release builds (log/break.h).
+#endif
 			Log();
 	}
 	α Exception::Log()Ι->void{
