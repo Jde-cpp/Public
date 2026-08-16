@@ -6,7 +6,6 @@ function( sync=false )
 	gateway:{
 		pingInterval: "PT30S",
 		ttl: "PT2M",
-		idleDrain: "PT0.5S",//keep pumping run_iterate this long after the last request so open62541's own traffic (the namespace-array read it fires at session activation) completes; raise it above the round trip of the slowest server.
 		issuedCerts: {
 			certificate:{
 				subjectAltName: "URI:urn:open62541.server.application",

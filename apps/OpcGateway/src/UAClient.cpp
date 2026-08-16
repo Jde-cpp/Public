@@ -256,9 +256,9 @@ namespace Jde::Opc::Gateway{
 		constexpr std::array<sv,6> sessionStates = { "Closed", "CreateRequested", "Created", "ActivateRequested", "Activated", "Closing" };
 		DBG( "[{}]channelState: '{}', sessionState: '{}', connectStatus: '({}){}'", hex((uint)ua), UAException::Message(channelState), FromEnum(sessionStates, sessionState), hex(connectStatus), UAException::Message(connectStatus) );
 		if( auto client = sessionState == UA_SESSIONSTATE_ACTIVATED ? UAClient::TryFind(ua) : sp<UAClient>{}; client ){
-			//(a debug-only Process(PingRequestId) used to sit here to mitigate "No result in the read namespace array
-			//response"; it never could - the loop erases a lone ping at the top of the next iteration, so it bought one
-			//extra run_iterate a millisecond after the read was sent.  AsyncRequest's idle drain handles it now.)
+			//a found client is a re-activation: no RequestDrain here - open62541 re-reads the namespace array only on
+			//a fresh client (haveNamespaces), so flagging would leave the drain waiting out its full limit for a read
+			//that never fires.
 			client->TriggerSessionAwaitables();
 			client->ClearRequest( ConnectRequestId );
 		}
@@ -286,6 +286,7 @@ namespace Jde::Opc::Gateway{
 
 				client->ClearRequest( ConnectRequestId );//previous clear didn't have client
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
+					client->_asyncRequest.RequestDrain();//open62541 fires its namespace-array read right after this callback returns; ProcessingLoop must keep pumping until the reply is serviced (OnServiceBegin).
 					{
 						ul _{ _clientsMutex };
 						client->Connected = true;
@@ -314,6 +315,18 @@ namespace Jde::Opc::Gateway{
 			});
 		}
 	}
+	//Fires inside run_iterate (client mutex held, on the strand) as each service response is processed.  SERVICE_BEGIN
+	//arrives while a request of ours is still tracked in _requests (its completion callback, which untracks it, runs
+	//just after), so a request-id we never sent is open62541's own traffic - the post-activation namespace-array read
+	//the processing loop's drain waits on.
+	α UAClient::ServiceNotificationCallback( UA_Client* ua, UA_ApplicationNotificationType type, const UA_KeyValueMap payload )ι->void{
+		if( type!=UA_APPLICATIONNOTIFICATIONTYPE_SERVICE_BEGIN )
+			return;
+		let requestId = (const UA_UInt32*)UA_KeyValueMap_getScalar( &payload, UA_QUALIFIEDNAME(0, (char*)"request-id"), &UA_TYPES[UA_TYPES_UINT32] );
+		if( auto client = requestId ? TryFind(ua) : sp<UAClient>{}; client )
+			client->_asyncRequest.OnServiceBegin( *requestId );
+	}
+
 	α inactivityCallback( UA_Client* /*client*/ )->void{
 		BREAK;
 	}
@@ -340,6 +353,7 @@ namespace Jde::Opc::Gateway{
 		_config.eventLoop->registerEventSource( _config.eventLoop, (UA_EventSource*)tcpCM );
 		_config.timeout = 10000; /*ms*/
 		_config.stateCallback = StateCallback;
+		_config.serviceNotificationCallback = ServiceNotificationCallback;//SERVICE_BEGIN ends the post-activation drain - see AsyncRequest::OnServiceBegin.
 		_config.inactivityCallback = inactivityCallback;
 		_config.subscriptionInactivityCallback = subscriptionInactivityCallback;
 		if( Credential.Type()==ETokenType::Username ){
