@@ -58,7 +58,7 @@ message( CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX} )
 set( fmtTag 12.2.0 )
 set( abslTag 20260526.0 )
 set( rymlTag v0.10.0 )
-set( open62541Tag v1.5.5 )
+set( open62541Tag v1.5.6 )
 
 ExternalProject_Add(fmt
 	GIT_REPOSITORY https://github.com/fmtlib/fmt.git
@@ -75,7 +75,7 @@ ExternalProject_Add(fmt
 
 ExternalProject_Add(gtest
 	GIT_REPOSITORY https://github.com/google/googletest.git
-	GIT_TAG v1.17.0
+	GIT_TAG v1.18.0
 	PREFIX gtest
 	INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/gtest
 	LOG_CONFIGURE ON

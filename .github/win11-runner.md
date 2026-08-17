@@ -23,7 +23,7 @@ x64)**, then, in an elevated PowerShell in the extracted runner folder:
 
 The `win11-clang` label is what `runs-on: [self-hosted, win11-clang]` targets; GitHub also
 auto-adds `self-hosted`, `Windows`, and `X64`. Keep the label distinct from the Linux runner's
-`clang22` so a job never lands on the wrong OS. Confirm the runner shows **Idle** under Settings →
+`clang23` so a job never lands on the wrong OS. Confirm the runner shows **Idle** under Settings →
 Actions → Runners.
 
 **Public-repo safety:** self-hosted + public repo means untrusted code must never execute here.
