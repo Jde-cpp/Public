@@ -16,7 +16,7 @@ namespace Jde{
 #else
 	//Ŧ Post( T value, typename TAwait<T>::Handle h )ι->void;
 #endif
-	α PostIO( function<void()> f )ι->void;
+	Φ PostIO( function<void()> f )ι->void;
 	Φ Post( VoidAwait::Handle&& h )ι->void;
 	Φ Post( VoidAwait::Handle&& h, Exception&& e )ι->void;
 

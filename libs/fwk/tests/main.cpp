@@ -8,7 +8,7 @@
 
 namespace Jde{
 #ifndef _MSC_VER
-	α Process::ProductName()ι->sv{ return "Tests.Crypto"; }
+	α Process::ProductName()ι->sv{ return "Tests.Framework"; }
 #endif
  	Ω startup( int argc, char **argv )ι->void{
 		Process::Startup( argc, argv, "Tests.Framework", "Unit Tests description", true );

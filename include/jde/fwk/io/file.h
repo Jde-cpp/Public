@@ -21,6 +21,7 @@ namespace Jde{
 		std::ofstream f( path, append ? std::ios::binary|std::ios::app : std::ios::binary );
 		THROW_IFX( f.fail(), IOException(path, "Could not open file", sl) );
 		f.write( (char*)data.data(), data.size() );
+		f.close();//ofstream buffers: for a payload under the streambuf size fail() is still false right after write() and an ENOSPC would surface only when the destructor closed the stream - silently.  Close first, then check.
 		THROW_IFX( f.fail(), IOException(path, "Could not write file", sl) );
 	}
 }

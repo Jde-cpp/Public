@@ -11,7 +11,7 @@ namespace Jde::IO{
 }
 
 namespace Jde::IO::Drive{
-	struct NativeDrive final: public IDrive{
+	struct Γ NativeDrive final: public IDrive{
 		//void Recursive2( path dir )ε;
 		α Recursive( const fs::path& dir, SRCE )ε->flat_map<string,up<IDirEntry>> override;
 		α Get( const fs::path& path )ε->up<IDirEntry> override;

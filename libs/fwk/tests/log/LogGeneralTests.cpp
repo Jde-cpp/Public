@@ -1,5 +1,6 @@
 #include "jde/fwk/log/ILogger.h"
 #include <jde/fwk/log/MemoryLog.h>
+#include <jde/fwk/log/SpdLog.h>
 #define let const auto
 #pragma warning( disable: 4702 )
 
@@ -9,9 +10,15 @@ namespace Jde::Tests{
 		LogGeneralTests() {}
 		~LogGeneralTests() override{}
 
+		static constexpr ELogTags MutatedTags{ ELogTags::Scheduler };
 		Ω SetUpTestCase()ι->void{ }
 		α SetUp()->void override{ Logging::ClearMemory(); }
-		α TearDown()->void override {}
+		α TearDown()->void override{ Logging::GetLogger<Logging::MemoryLog>().ClearLevel( MutatedTags ); }
+
+		α ExpectConfiguredLevel()->void{
+			auto& logger = Logging::GetLogger<Logging::MemoryLog>();
+			EXPECT_EQ( logger.MinLevel(MutatedTags), logger.DefaultLevel() ) << "an earlier test left an override on " << ToString( MutatedTags, false );
+		}
 	};
 
 	//ELogTags is a 64-bit space that libraries extend above fwk's own 27 bits - Jde::Opc registers 32-45 through
@@ -105,28 +112,140 @@ namespace Jde::Tests{
 		EXPECT_EQ( serialize(roundTrip), serialize(flat) );
 	}
 
+	// The level-resolution engine itself had no test.  fwk-max #3 was MinLevel counting split(tags).size() rather
+	// than the overlap, so the first configured entry sharing any bit won and the answer followed
+	// concurrent_flat_map iteration order; fwk-max #2 was the ctor leaving _minLevel at Information instead of the
+	// parsed default.  Every case here has a strict popcount winner - a tie (http vs client for HttpClientRead)
+	// really would be order-dependent, because the comparison is `iterCount>matches`.
+	TEST_F( LogGeneralTests, LogTagsResolvesBestMatch ){
+		//three single-bit distractors, so the buggy 'first overlapping entry wins' has to draw the one right entry
+		//out of four to look correct.  They are safe for the lookups below: only socket|client|read is asserted
+		//against them, and there its 2-bit entry beats each of them outright.
+		LogTags t{ jobject{{"tags", jobject{{"default","Warning"},{"socket.client","Debug"},{"http","Trace"},
+			{"socket","Information"},{"client","Error"},{"read","Critical"}}}} };
+		EXPECT_EQ( t.DefaultLevel(), ELogLevel::Warning );
+		EXPECT_EQ( t.MinLevel(), ELogLevel::Warning ) << "the ctor must carry the parsed default into _minLevel";
+		EXPECT_EQ( t.MinLevel(ELogTags::Http), ELogLevel::Trace );//exact match.
+		EXPECT_EQ( t.MinLevel(ELogTags::SocketClientRead), ELogLevel::Debug ) << "socket.client's 2 shared bits must beat every 1-bit entry";
+		EXPECT_EQ( t.MinLevel(ELogTags::Sql), ELogLevel::Warning ) << "nothing overlaps sql - it falls back to the default";
+		EXPECT_TRUE( t.ShouldLog(ELogLevel::Debug, ELogTags::SocketClientRead) );
+		EXPECT_FALSE( t.ShouldLog(ELogLevel::Trace, ELogTags::SocketClientRead) );
+	}
+
+	// MinLevel memoizes its answer into ExtrapolatedTags, so both mutators have to drop the memo as well as the
+	// configuration - otherwise a cleared or re-set tag keeps resolving to whatever it was when first asked.
+	TEST_F( LogGeneralTests, LogTagsMutatorsDropTheMemo ){
+		LogTags t{ jobject{{"tags", jobject{{"default","Warning"},{"socket.client","Debug"},{"client","Error"}}}} };
+		ASSERT_EQ( t.MinLevel(ELogTags::SocketClientRead), ELogLevel::Debug );//memoizes socket|client|read -> Debug
+		ASSERT_EQ( t.MinLevel(ELogTags::Sql), ELogLevel::Warning );//and sql -> the default
+
+		t.ClearLevel( ToLogTags(sv{"socket.client"}) );
+		EXPECT_EQ( t.MinLevel(ELogTags::SocketClientRead), ELogLevel::Error ) << "the memoized best match survived ClearLevel";
+
+		t.SetLevels( jobject{{"default","Critical"},{"sql","Trace"}} );//the flat tag->level map, 'default' included.
+		EXPECT_EQ( t.DefaultLevel(), ELogLevel::Critical );
+		EXPECT_EQ( t.MinLevel(ELogTags::Sql), ELogLevel::Trace ) << "the memoized default survived SetLevels";
+	}
+
+	// Logging::min is not std::min: NoLog is -1, below every real level, so a plain minimum would let one logger
+	// that wants nothing silence every other logger through the cumulative.
+	TEST_F( LogGeneralTests, CumulativeNoLogYieldsToARealLevel ){
+		LogTags quiet{ ELogLevel::NoLog };
+		quiet.SetLevel( ELogTags::Sql, ELogLevel::NoLog );
+		LogTags loud{ jobject{{"tags", jobject{{"default","Debug"},{"sql","Debug"}}}} };
+		quiet += loud;
+		EXPECT_EQ( quiet.DefaultLevel(), ELogLevel::Debug );
+		EXPECT_EQ( quiet.MinLevel(), ELogLevel::Debug );
+		EXPECT_EQ( quiet.MinLevel(ELogTags::Sql), ELogLevel::Debug ) << "a configured NoLog must yield to the other side's level too";
+		EXPECT_TRUE( quiet.ShouldLog(ELogLevel::Debug, ELogTags::Sql) );
+	}
+
+	// fwk-max #16 was the UserPK-taking variadic ctor delegating to the overload without one, so every entry built
+	// for a user came out anonymous.  fwk-review2 cites a regression test named exactly this for it; the test was
+	// never written, and nothing else in the suite reads Entry::UserPK back off the variadic ctors.
+	TEST_F( LogGeneralTests, EntryKeepsUserPK ){
+		constexpr auto userPK = Jde::UserPK{ 42 };
+		Logging::Entry e{ SRCE_CUR, ELogLevel::Debug, ELogTags::Test, userPK, string{"msg {}"}, 1 };
+		EXPECT_EQ( e.UserPK, userPK );
+		EXPECT_EQ( e.Level, ELogLevel::Debug );
+		EXPECT_EQ( e.Tags, ELogTags::Test );
+		ASSERT_EQ( e.Arguments.size(), 1u ) << "delegating to the vector<string> overload must not cost the args";
+		EXPECT_EQ( e.Arguments[0], "1" );
+		EXPECT_EQ( e.Message(), "msg 1" );
+
+		Logging::Entry anonymous{ SRCE_CUR, ELogLevel::Debug, ELogTags::Test, string{"msg {}"}, 1 };
+		EXPECT_EQ( anonymous.UserPK, Jde::UserPK{} ) << "the overload without a user must default it";
+
+		Logging::Entry preformatted{ SRCE_CUR, ELogLevel::Debug, ELogTags::Test, userPK, string{"msg {}"}, vector<string>{"1"} };
+		EXPECT_EQ( preformatted.UserPK, userPK );//the overload the variadic one delegates to.
+		//the stacktrace-frame overloads are deliberately not exercised here: constructing one Entry from a frame
+		//costs ~170ms of one-time symbol-machinery init (even for an empty frame) and their only caller is
+		//Jde::Opc's LogStack - see opc-review2.md.
+	}
+
+	// The level asked for has to be one the tag does not already have, or the test proves nothing: the old version
+	// set Debug, which /logging/memory/tags/default already grants, so its assertion passed with the SetLevel line
+	// deleted.  Here Debug is established explicitly (so no prior test's leftover level can decide the outcome),
+	// the DBG both proves that level and memoizes it into the logger's ExtrapolatedTags, and only then is the tag
+	// raised to Trace - which fails unless SetLevel reaches the cumulative (it short-circuits the TRACE before any
+	// logger is consulted) *and* drops that memo.
 	TEST_F( LogGeneralTests, CachedTags ){
 		auto& logger = Logging::GetLogger<Logging::MemoryLog>();
 
-		let _tags = ELogTags::Scheduler;
+		let _tags = MutatedTags;
+		ExpectConfiguredLevel();
 		Logging::ClearMemory();
 		constexpr auto logMessage = "scheduler msg";
-		TRACE( logMessage );
-		ASSERT_TRUE( logger.Find(logMessage).empty() );
+		constexpr auto debugMessage = "scheduler dbg";
 		logger.SetLevel( _tags, ELogLevel::Debug );
-		DBG( logMessage );
-		ASSERT_FALSE( logger.Find(logMessage).empty() );
+		TRACE( logMessage );
+		ASSERT_TRUE( logger.Find(logMessage).empty() ) << "Debug must not admit Trace";
+		DBG( debugMessage );
+		ASSERT_FALSE( logger.Find(debugMessage).empty() );
+
+		logger.SetLevel( _tags, ELogLevel::Trace );
+		TRACE( logMessage );
+		EXPECT_FALSE( logger.Find(logMessage).empty() ) << "SetLevel did not reach the cumulative, or the memoized tag level survived it";
 	}
 
 	TEST_F( LogGeneralTests, ArgsNotCalled ){
 		auto& logger = Logging::GetLogger<Logging::MemoryLog>();
-		let unConfiguredTags = ELogTags::Scheduler;
+		let unConfiguredTags = MutatedTags;
+		ExpectConfiguredLevel();
 		logger.SetLevel( unConfiguredTags, ELogLevel::Error );
 		auto arg = []()->string {
 			throw std::runtime_error("should not be called");
 			return "";
 		};
 		ASSERT_NO_THROW( TRACET(unConfiguredTags, "{}", arg()) );
+	}
+
+	//%U is what makes the console log's osc-8 links clickable, and a wrong branch shows up only as a link that does
+	//not open - nothing fails, nothing logs, the path just does not resolve.  Four spellings reach it and each takes a
+	//different route: repo-relative (the -fmacro-prefix-map form, and on windows that form has *backslashes*),
+	//already-absolute posix, and a drive letter.  JDE_SOURCE_ROOT is a compile definition on this target too, so the
+	//root can be named here rather than guessed.
+	TEST( SpdLogTests, FormatSourceUriMapsEachSpelling ){
+		let root = string{ JDE_SOURCE_ROOT };
+		ASSERT_FALSE( root.empty() ) << "JDE_SOURCE_ROOT is not defined for the test target - the repo-relative cases below prove nothing";
+
+		let relative = Logging::FormatSourceUri( "libs/x.cpp" );
+		EXPECT_TRUE( relative.ends_with("libs/x.cpp") ) << relative;
+		EXPECT_NE( relative.find(root), string::npos ) << "a repo-relative source has to be made absolute: " << relative;
+		EXPECT_EQ( relative[0], '/' ) << "the pattern is file://%U, so the uri must open with a slash: " << relative;
+
+		//the shape __FILE__ actually has on windows: -fmacro-prefix-map rewrites mapped paths with backslashes.
+		let backslashed = Logging::FormatSourceUri( "libs\\fwk\\x.cpp" );
+		EXPECT_TRUE( backslashed.ends_with("libs/fwk/x.cpp") ) << backslashed;
+		EXPECT_EQ( backslashed.find('\\'), string::npos ) << "a file:// uri has no backslashes: " << backslashed;
+		EXPECT_NE( backslashed.find(root), string::npos ) << backslashed;
+
+		//already absolute: left alone, and never prefixed with the repo root.
+		EXPECT_EQ( Logging::FormatSourceUri("/abs/x.cpp"), "/abs/x.cpp" ) << "an absolute posix path is not remapped and needs no extra slash";
+		EXPECT_EQ( Logging::FormatSourceUri("c:\\r\\x.cpp"), "/c:/r/x.cpp" ) << "file:// + c:/x has to become file:///c:/x";
+		EXPECT_EQ( Logging::FormatSourceUri("c:/r/x.cpp"), "/c:/r/x.cpp" );
+
+		EXPECT_TRUE( Logging::FormatSourceUri("").empty() ) << "a message with no source location contributes nothing to the pattern";
 	}
 
 	//TODO makesure cumulative is updated when some obscure tag is sent.

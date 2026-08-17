@@ -86,30 +86,10 @@ namespace Jde{
 			if( !szArglist )
 				std::cerr << "CommandLineToArgvW failed\n";
 		   else{
-				optional<string> key;
-				for( int i=0; i<nArgs; ++i ){
-					var current = Windows::ToString( szArglist[i] );
-					if( current.starts_with('-') ){
-						if( key )
-							_args->emplace( *key, string{} );
-						if( uint i=current.find('='); i<current.size() ){
-							auto value = current.substr( i+1 );
-							if( value.size()>1 && value.front()=='"' && value.back()=='"' ) //lldb/VS Code pass argv unshelled, so the quotes are literal.
-								value = value.substr( 1, value.size()-2 );
-							_args->emplace( current.substr(0, i), move(value) );
-							key.reset();
-						}else
-							key = current;
-					}
-					else if( key ){
-						_args->emplace( *key, current );
-						key.reset(); //else the next positional binds to the same flag and the post-loop flush emplaces a duplicate.
-					}
-					else
-						_args->emplace( string{}, current );
-				}
-				if( key )
-					_args->emplace( *key, string{} );
+				vector<string> tokens; tokens.reserve( (uint)nArgs );
+				for( int i=0; i<nArgs; ++i )
+					tokens.push_back( Windows::ToString(szArglist[i]) );
+				*_args = Process::ParseArgs( tokens );//the rules live in process.cpp - they were hand-rolled here and in LinuxApp, and had to agree.
 			  LocalFree(szArglist);
 			}
 		}

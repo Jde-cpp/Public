@@ -29,6 +29,32 @@ namespace Jde{
 	function<void()> OnExit;
 }
 namespace Jde{
+	α Process::ParseArgs( const vector<string>& tokens )ι->flat_multimap<string,string>{
+		flat_multimap<string,string> y;
+		optional<string> key; //flag awaiting a value: `-k v` binds on the next token, `-k` alone binds empty.
+		for( let& current : tokens ){
+			if( !current.starts_with('-') ){ //the pending flag's value, or a positional (empty key).
+				y.emplace( key ? move(*key) : string{}, current );
+				key.reset();
+				continue;
+			}
+			if( key ) //previous flag never got a value.
+				y.emplace( move(*key), string{} );
+			key.reset(); //every path that consumes key resets it - reading a moved-from optional emplaced junk.
+			if( uint i=current.find('='); i<current.size() ){
+				auto value = current.substr( i+1 );
+				if( value.size()>1 && value.front()=='"' && value.back()=='"' ) //lldb/VS Code pass argv unshelled, so the quotes are literal.
+					value = value.substr( 1, value.size()-2 );
+				y.emplace( current.substr(0, i), move(value) );
+			}
+			else
+				key = current;
+		}
+		if( key )
+			y.emplace( move(*key), string{} );
+		return y;
+	}
+
 	α Process::FindArg( string key )ι->optional<string>{
 		auto p = Args().find( key );
 		return p!=Args().end() ? p->second : optional<string>{};
