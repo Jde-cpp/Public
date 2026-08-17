@@ -1,8 +1,7 @@
-import { CommonModule } from "@angular/common";
 import { Component, Inject, Injectable, OnInit, signal } from "@angular/core";
 import { ActivatedRoute, Router, RouterLink, Routes, UrlSegment } from "@angular/router";
 import { MatIconModule } from "@angular/material/icon";
-import { ComponentCategoryList, RouteItem, IRouteService, RouteService } from "jde-spa";
+import { RouteItem, IRouteService, RouteService } from "jde-spa";
 
 
 @Injectable( {providedIn: 'root'} )
@@ -13,26 +12,37 @@ export class HomeRouteService extends RouteService{
 	override children():Promise<Routes>{
 		let y:Routes = [];
 		for( let config of this.router.config.filter(x=> x.title && x.path!.length && x.path!="login" && !x.path!.includes('/')) ){
-			let pageSettings = config.data ? config.data["pageSettings"] : null;
-			y.push( {title: config.title, path: config.path, data:{ id: config.path, summary: pageSettings?.summary }} );
+			const data = config.data ?? {};
+			const pageSettings = data["pageSettings"];//the app routes set summary/icon directly; pageSettings is the older shape
+			//cards.scss colors the tile per section; the route path is the section name (gateways/access/apps)
+			y.push( {title: config.title, path: config.path, data:{ id: config.path, icon: data["icon"] ?? pageSettings?.icon, summary: data["summary"] ?? pageSettings?.summary, cardClass: data["cardClass"] ?? `card-${config.path}` }} );
 		}
 		return Promise.resolve( y );
 	}
 }
 
+//the route summary names the page ("Available Gateways"); the title is the fallback, unless it is an unsubstituted parameter like ":gateway"
+export function pageHeading( route:ActivatedRoute ):string{
+	const summary = <string|undefined>route.snapshot.data["summary"];
+	const title = <string|undefined>route.snapshot.title;
+	return summary ?? (title?.startsWith(":") ? "" : title ?? "");
+}
+
 @Component( {
 	templateUrl: './cards.html',
 	styleUrls: ['./cards.scss'],
-	imports: [CommonModule, MatIconModule, RouterLink]
+	imports: [MatIconModule, RouterLink]
 })
 export class Cards implements OnInit {
 	constructor( private route: ActivatedRoute, private router: Router, @Inject("IRouteService") private routerService: IRouteService )
 	{}
 	ngOnInit(){
 		this.route.url.subscribe( async (urlSegments)=>{
+			this.heading.set( pageHeading(this.route) );
 			let items = await this.routerService.docItems( urlSegments );
 			this.items.set( items.filter((x)=>x.path.length && x.path!="login") );
 		});
 	}
-	items = signal<RouteItem[]>( null as any );
+	heading = signal<string>( "" );
+	items = signal<RouteItem[]>( [] );
 }

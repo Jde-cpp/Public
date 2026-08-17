@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import {Routes, ROUTES, RouterModule} from '@angular/router';
 
 import{ DetailResolver, QLListResolver, QLListRouteService, HomeRouteService, AppResolver } from 'jde-framework';
-import { AccessService, AuthGuard, Group, groupTableSettings, Role, roleTableSettings, User, userTableSettings } from 'jde-access';
+import { AccessService, AuthGuard, Group, groupTableSettings, resourceTableSettings, Role, roleTableSettings, User, userTableSettings } from 'jde-access';
 import{ ClientResolver, GatewayRouteService, gatewayTableSettings, GatewayCnnctnRouteService,GatewayService, NodeResolver, OpcNodeRouteService, GatewayResolver } from 'jde-opc';
 
 const accessProvider = { provide: 'IGraphQL', useExisting: AccessService };//route-scoped token, but aliases the single providedIn:'root' instance instead of constructing a per-route one
@@ -21,7 +21,7 @@ export const routes: Routes = [
 	{ path: 'login', loadComponent: ()=>import('jde-framework').then( m=>m.LoginPageComponent ), data: {name: "Login", summary: "Login to Site"} },
 	{ path: 'gateways', title: "Gateways", canActivate: [AuthGuard], loadComponent: cards,
 		providers: [{provide: 'IRouteService', useClass: GatewayRouteService}],
-		data: {summary: "Available Gateways",}
+		data: {summary: "Available Gateways", icon: "hub"}
 	},
 	{ path: 'gateways/:gateway', title: ":gateway", canActivate: [AuthGuard], loadComponent: cards,
 		providers: [{provide: 'IRouteService', useClass: GatewayCnnctnRouteService}],
@@ -42,7 +42,7 @@ export const routes: Routes = [
 		]
 	},
 	{ path: 'access', title: "Access", loadComponent: cards, providers: [qlListProvider], canActivate: [AuthGuard], data: {
-		summary: "Configure User Access"
+		summary: "Configure User Access", icon: "admin_panel_settings"
 	} },
 	{ path: 'access', loadComponent: sidenav, canActivate: [AuthGuard], providers: [qlListProvider],
 			children :[
@@ -75,10 +75,10 @@ export const routes: Routes = [
 					resolve: { data: QLListResolver },
 					canActivate: [AuthGuard],
 					data: { collections: [
-						{ path:"users", data:{tableSettings: userTableSettings} },
-						{ path:"groups", data:{tableSettings: groupTableSettings} },
-						{ path: "roles", data:{tableSettings: roleTableSettings} },
-						{ path:"resources", data:{canPurge:false} }
+						{ path:"users", data:{tableSettings: userTableSettings, icon: "person"} },
+						{ path:"groups", data:{tableSettings: groupTableSettings, icon: "group"} },
+						{ path: "roles", data:{tableSettings: roleTableSettings, icon: "badge"} },
+						{ path:"resources", data:{tableSettings: resourceTableSettings, icon: "lock"} }
 					]}
 				},
 			]
@@ -90,6 +90,7 @@ export const routes: Routes = [
 		loadComponent: ()=>import('jde-framework').then( m=>m.Apps ),
 		providers: [ AppResolver, accessProvider ],
 		resolve: { connections: AppResolver },
+		data: { summary: "Running Services", icon: "apps" },
 	},
 	{
 		path: 'apps/gateways/:instance', title: ":instance", loadComponent: sidenav, canActivate: [AuthGuard],
@@ -109,6 +110,30 @@ export const routes: Routes = [
 				canActivate: [AuthGuard],
 				data: { summary: "Opc Connection", collectionName: "serverConnections" },
 				resolve: { pageData: ClientResolver }
+			}
+		]
+	},
+	{
+		//AppResolver builds this url from the program name (Jde.AppServer -> appServers), so the segment must match it.
+		path: 'apps/appServers/:instance', title: ":instance", loadComponent: sidenav, canActivate: [AuthGuard],
+		children :[
+			{
+				path: '',
+				loadComponent: ()=>import('jde-framework').then( m=>m.AppServerDetail ),
+				canActivate: [AuthGuard],
+				data: { summary: "Application Server" }
+			}
+		]
+	},
+	{
+		//AppResolver builds this url from the program name (Jde.OpcServer -> opcServers), so the segment must match it.
+		path: 'apps/opcServers/:instance', title: ":instance", loadComponent: sidenav, canActivate: [AuthGuard],
+		children :[
+			{
+				path: '',
+				loadComponent: ()=>import('jde-opc').then( m=>m.OpcServerDetail ),
+				canActivate: [AuthGuard],
+				data: { summary: "Opc Server" }
 			}
 		]
 	}

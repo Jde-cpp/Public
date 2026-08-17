@@ -71,7 +71,7 @@ namespace Jde::Opc::Gateway{
 
 	α HttpRequestAwait::Login( str endpoint )ι->TAwait<optional<Web::FromServer::SessionInfo>>::Task{
 		try{
-			let body = _request.Body();
+			let& body = _request.Body();
 			auto domain = Json::FindString( body, "opc" );
 			if( !domain )
 				throw RestException{ EHttpStatus::BadRequest, SRCE_CUR, move(_request), "opc server not specified" };

@@ -5,7 +5,7 @@
 		<ng-container>
 			<mat-toolbar>
 				<div class="bar-left">
-					@if( showAdd() ){
+					@if( canAdd() ){
 						<button [matButton]="isRefreshing() || data().length ? 'tonal' : 'filled'" (click)="onAdd()"><mat-icon>add</mat-icon>Add</button><!--filled only on a genuinely empty list, where Add is the one useful action; isRefreshing suppresses the flash while a reload has the rows cleared-->
 					}
 				</div>

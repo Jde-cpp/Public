@@ -23,7 +23,7 @@
 		</div>
 		<form>
   		<mat-form-field class="rounded-input search" appearance="outline" subscriptSizing="dynamic">
-				<input matInput type=text class=search [formControl]=searchForm [matAutocomplete]=searchAC/>
+				<input #searchInput matInput type=text class=search aria-label="Search" aria-keyshortcuts="/" [formControl]=searchForm [matAutocomplete]=searchAC/>
 				<mat-icon matPrefix>search</mat-icon>
 				<mat-autocomplete #searchAC=matAutocomplete (optionSelected)="onSearchSelected($event.option.value)" (keypress.enter)="onSearch($event)">
 					@for( suggestion of (searchValues() | async); track suggestion) {

@@ -1,5 +1,5 @@
 #!/bin/bash
-#sudo npm install -g @angular/cli@latest
+#update-angular.sh installs/updates the global @angular/cli - run it first to create the workspace on current Angular.
 #sudo npm install -g npm@latest
 #sudo apt  install jq
 #chmod 777 ../WebFramework/jde-framework-proto.sh
@@ -14,19 +14,15 @@ echo create-workspace.sh workspace=$workspace libraries=\"${libraryLog:1}\";
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )";
 echo $scriptDir;
 source $JDE_BASH/build/common.sh;
+source $scriptDir/common-ng.sh;
 baseDir=`pwd`;
 echo $baseDir;
 #REPO_WEB=`readlink -f $scriptDir/../..`;
 findExecutable npm;
+#bootstrap only - an already-installed cli is left at whatever version it is on, since bumping it here would change
+#the Angular a workspace comes out on as a side effect of creating one.  update-angular.sh is that entry point.
 if [ ! -x "$(which "ng" 2> /dev/null)" ]; then
-	cmd="npm install -g @angular/cli";
-	echo d;
-	if windows; then
-		$cmd;
-	else
-		sudo $cmd;
-	fi;
-	if [ $? -ne 0 ]; then echo `pwd`; echo $cmd; exit 1; fi;
+	npmInstallGlobal @angular/cli || { echo `pwd`; echo npm install -g @angular/cli failed; exit 1; };
 fi;
 ##################
 #jqEdit lives in build/common.sh (sourced above) - the per-site setup.sh scripts need it too.
@@ -35,23 +31,14 @@ if [ ! -d $workspace ]; then
 	echo -------------------- create workspace start --------------------;
 	#the workspace must come out on the same Angular as the global cli that scaffolds it.  `ng new` already writes
 	#its own version, but the installs below default to @latest and would drag a newer major into a workspace built
-	#by an older cli.  Read the version off the package.json next to the resolved ng, not `ng --version` output.
-	#`which ng` resolves through the symlink to <pkg>/bin/ng.js on linux, so the manifest is one level up.  on windows
-	#npm writes a plain sh shim into the prefix itself and readlink -f returns that shim, leaving <prefix>/../package.json
-	#pointing at nothing - there the package sits under <prefix>/node_modules.  try both, and match on .name rather than
-	#mere existence, since <prefix>/../package.json can be an unrelated manifest.
-	ngPath=`readlink -f "$(which ng)"`;
-	ngPackage=;
-	for candidate in "`dirname $ngPath`/.." "`dirname $ngPath`/node_modules/@angular/cli"; do
-		if [ "`jq -r .name "$candidate/package.json" 2> /dev/null`" == "@angular/cli" ]; then ngPackage=$candidate/package.json; break; fi;
-	done;
-	if [ -z "$ngPackage" ]; then echo `pwd`; echo could not find the @angular/cli package.json near $ngPath; exit 1; fi;
-	ngVersion=`jq -er .version "$ngPackage" 2> /dev/null`;
-	if [ -z "$ngVersion" ]; then echo `pwd`; echo could not read the global @angular/cli version from $ngPackage; exit 1; fi;
+	#by an older cli.  ngGlobalVersion (common-ng.sh) reads it off the resolved cli's own package.json; keeping that
+	#version current is update-angular.sh's job, not this script's.
+	ngGlobalVersion ngVersion;
+	if [ -z "$ngVersion" ]; then echo `pwd`; echo could not read the global @angular/cli version near `which ng`; exit 1; fi;
 	ngMajor=${ngVersion%%.*};
 	echo global @angular/cli $ngVersion - creating the workspace to match;
 	createApplication=true;
-	cmd="ng new $workspace --create-application=$createApplication --ai-config=claude --defaults --routing=false --style=scss"
+	cmd="ng new $workspace --create-application=$createApplication --ai-config=claude-code --defaults --routing=false --style=scss"
 	$cmd; if [ $? -ne 0 ]; then echo $cmd; exit 1; fi;
 	echo -------------------- create workspace complete --------------------;
 	cd $workspace;
@@ -153,9 +140,13 @@ for libraryDir in "${libraries[@]}"; do
 		if [ "$sibling" != "$library" ]; then libraryPaths="$libraryPaths\"$sibling\":[\"../../dist/$sibling\"],"; fi;
 	done;
 	jqEdit projects/$library/tsconfig.lib.json ".compilerOptions.paths = {${libraryPaths%,}}";
-	#and declare the dependency in the package ng-packagr publishes, for the libraries that actually import it - the
-	#generated package.json is what ships, and `ng g library` only writes it when the project is first created.
-	if grep -rq "from 'jde-proto/" $libraryDir/control/src; then jqEdit projects/$library/package.json '.peerDependencies["jde-proto"] = "0.0.1"'; fi;
+	#the generated projects/$library/package.json is what ng-packagr publishes, and `ng g library` only writes it when the
+	#project is first created (with whatever @angular/* range that cli scaffolds).  The tracked control/package.json is
+	#the source of truth for what the library needs at runtime - @angular/* + rxjs ranges and the jde-* siblings it
+	#imports - so copy its peerDependencies over wholesale on every run.  Was a grep for `from 'jde-proto/` that added
+	#that one peer and left the sibling jde-* libraries and the material/cdk/forms/router imports undeclared.
+	peers=$(jq -ec .peerDependencies $libraryDir/control/package.json) || { echo `pwd`; echo no .peerDependencies in $libraryDir/control/package.json; exit 1; };
+	jqEdit projects/$library/package.json ".peerDependencies = $peers";
 	#unchecked, a failed cd left cwd at the workspace root and the rm -rf below ran there instead.
 	cd $baseDir/$workspace/projects/$library/src; if [ $? -ne 0 ]; then echo `pwd`; echo cd $baseDir/$workspace/projects/$library/src; exit 1; fi;
 	#public-api.ts is the library's export surface.  It used to be hard-linked by create-library.sh, which only runs

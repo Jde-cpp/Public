@@ -1,0 +1,23 @@
+@if( !isLoading() ){
+	@if( error() ){
+		<p>{{error()}}</p>
+	}
+	@else{
+		<mat-tab-group class="my-content" mat-stretch-tabs="false" mat-align-tabs="start"
+			[selectedIndex]="tabIndex"
+			(selectedIndexChange)="tabIndexChanged($event)">
+			<mat-tab>
+				<ng-template mat-tab-label>Logs</ng-template>
+				<ng-template matTabContent>
+					<log-detail [service]=appService></log-detail>
+				</ng-template>
+			</mat-tab>
+			<mat-tab>
+				<ng-template mat-tab-label>Log Settings</ng-template>
+				<ng-template matTabContent>
+					<log-settings [service]=appService [instanceId]=instanceId()!></log-settings>
+				</ng-template>
+			</mat-tab>
+		</mat-tab-group>
+	}
+}
