@@ -41,6 +41,7 @@ export class QLListSettings implements OnInit, OnDestroy{
 			fields.push( new ViewField(field) );
 		view.fields = fields;
 		view.showSelector = displayCols[0].displayed;
+		view.limit = this.display.pageSize();
 		view.fieldFilters = [];
 		for( let col of this.filter.dataSource.filter(c=>c.field) )
 			view.fieldFilters.push( {field: col.field, filter: View.copyFilter(col.filter)} );//the built Filter was new but re-used col.filter.value, so the emitted view still shared the dialog's live arrays

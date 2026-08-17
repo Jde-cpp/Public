@@ -43,6 +43,10 @@ export class QLListSettingsDisplay implements OnInit{
 		//
 		//[{name:"Selector", displayed:this.view().showSelector}, ...this.view().fields.map( f => new ViewField(f) )]
 		this.dataSource = columns;
+		this.pageSize.set( this.view().limit );
+	}
+	updatePageSize( value:number ){
+		this.pageSize.set( value>0 ? Math.floor(value) : 1 );//the box is free text: a cleared or negative one would save as `limit:0`, which query() reads as "no limit"
 	}
 	cellClick( row:any ){
 		this.selection.set( row );
@@ -61,6 +65,7 @@ export class QLListSettingsDisplay implements OnInit{
 	get columnNames(){ return ["position", "select", "name"] };
 	dataSource:(SelectorField|ViewField)[] = [];
 	selection = signal<ViewField>( null as any );
+	pageSize = signal<number>( 25 );//ngOnInit seeds it from view().limit; ql-list-settings.getView reads it back
 
 	view = input.required<View>();
 	columns = input.required<Record<string,string>>();

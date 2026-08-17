@@ -46,15 +46,13 @@ export class PageSettings{
 		this.configColumns = x.columns ? [ ...x.columns ] : [];
 		this.excludedColumns = x.excludedColumns;
 		this.name = x.name;
-		this.showAdd = x.showAdd;
-		this.canPurge = x.canPurge!==false;
 		this.table = x.table ?? x.id;
 	}
-	canPurge:boolean;
+	name:string;
+	//canAdd/canPurge are not copied here:  QLList reads both straight off the TableSettings, and a second copy
+	//on this class only gave a route somewhere else to set them and be ignored
 	configColumns:(string|ViewFieldSettings)[];
 	excludedColumns:string[];
-	name:string;
-	showAdd:boolean;
 	table:string;
 	get type():string{ return this.table ?? this.name[0].toLowerCase()+this.name.substring(1); }
 }

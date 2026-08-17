@@ -1,5 +1,6 @@
 import { provideHttpClient } from "@angular/common/http";
 import { ApplicationConfig } from '@angular/core';
+import { MAT_TABS_CONFIG } from '@angular/material/tabs';
 import { provideRouter } from '@angular/router';
 import { AppService, AuthStore, ProfileService } from 'jde-framework'
 import { GatewayService, OpcAuthService, OpcStore} from 'jde-opc';
@@ -11,6 +12,8 @@ export const appConfig: ApplicationConfig = {
   providers: [
 		provideHttpClient(),
 		provideRouter(routes),
+		//0ms kills both tab animations at once:  MatTabGroup feeds animationDuration to --mat-tab-body-animation-duration (the body slide) and --mat-tab-header-animation-duration (the ink bar), and flags the group noopable.  dynamicHeight (the wrapper-height transition) is off by default and must stay off in the templates - an attribute there overrides this.
+		{provide: MAT_TABS_CONFIG, useValue: {animationDuration: '0ms'}},
 		{provide: "AccessService", useExisting: AccessService},
 		{provide: 'AppService', useExisting: AppService},
 		{provide: 'IAuth', useClass: OpcAuthService},

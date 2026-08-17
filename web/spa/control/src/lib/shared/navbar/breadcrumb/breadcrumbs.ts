@@ -20,7 +20,7 @@ import { RouteItem } from '../../../pages/component-sidenav/component-sidenav';
 			</ol>
 		</nav>`,
 	styles: `
-		nav{ height: 36px; box-sizing: border-box; display: flex; align-items: center; padding: 0 16px; overflow-x: auto; white-space: nowrap;/*36px total (incl. border) must match --jde-breadcrumb-height in navbar.ts*/
+		nav{ height: 36px; box-sizing: border-box; display: flex; align-items: center; padding: 0 16px; overflow-x: auto; white-space: nowrap;
 			background: var(--mat-sys-surface-container);
 			border-bottom: 1px solid var(--mat-sys-outline-variant); }
 		ol{ display: flex; align-items: center; list-style: none; margin: 0; padding: 0; }

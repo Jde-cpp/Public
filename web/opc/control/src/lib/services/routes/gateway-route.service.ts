@@ -15,7 +15,7 @@ export class GatewayRouteService implements IRouteService{
 		let y = [];
 		let gateways = await this._gatewayService.gateways();
 		for( const gateway of gateways )
-			y.push( new RouteItem({path: gateway.target, title: gateway.name}) );
+			y.push( new RouteItem({path: gateway.target, title: gateway.name, icon: "router"}) );
 
 		this.routeStore.setChildren( urlSegments, y );
 		return y;
@@ -41,7 +41,7 @@ export class GatewayCnnctnRouteService implements IRouteService{
 			throw new Error( "Gateway not found: "+gatewayTarget );
 		let connections = await gateway.queryArray<any>( `serverConnections{ name target }`,  );
 		for( const c of connections )
-			y.push( new RouteItem({path: c.target, title: c.name}) );
+			y.push( new RouteItem({path: c.target, title: c.name, icon: "lan"}) );
 
 		this.routeStore.setChildren( route.url, y );
 		return y;

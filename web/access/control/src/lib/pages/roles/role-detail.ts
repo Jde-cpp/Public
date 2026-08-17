@@ -16,7 +16,6 @@ import { GroupPK } from '../../model/Group';
 import { UserPK } from '../../model/User';
 
 @Component( {
-    selector: 'roles',
     templateUrl: './role-detail.html',
 		styleUrls: ['./role-detail.scss'],
 		host: {class:'main-content mat-drawer-container my-content'},

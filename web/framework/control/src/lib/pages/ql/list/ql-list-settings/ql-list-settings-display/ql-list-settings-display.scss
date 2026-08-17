@@ -1,3 +1,12 @@
+.page-size{
+	display: flex;
+	justify-content: flex-start;//the table below and the tab labels above both start at the left edge; anchoring it right left it floating against nothing
+	padding-bottom: 8px;
+}
+.page-size mat-form-field{
+	width: 120px;
+}
+
 table {
   width: 100%;
   font-family: sans-serif;

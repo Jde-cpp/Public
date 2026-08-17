@@ -1,6 +1,6 @@
 //https://github.com/angular/components/blob/a55b19797f0bccf467d5602f526eef236737498b/docs/src/app/shared/navbar/navbar.ts
 import { AsyncPipe } from '@angular/common';
-import {Component, computed, effect, inject, OnInit, signal} from '@angular/core';
+import {Component, computed, ElementRef, inject, OnInit, signal, viewChild} from '@angular/core';
 import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import {MatButtonModule} from '@angular/material/button';
@@ -34,6 +34,9 @@ export type Folder = { folderName:string, items:Favorite[] };
   selector: 'app-navbar',
   templateUrl: './navbar.html',
   styleUrls: ['./navbar.scss'],
+  host: {
+    '(document:keydown)': 'onKeydown($event)',
+  },
   imports: [
 		AsyncPipe,
     Authorization,
@@ -63,7 +66,6 @@ export class NavBar implements OnInit {
 			&& !x.path!.includes('/')
 			&& ( !x.children || x.children.find( y=>!y.path!.length) )
 		).map( x=>({ name: x.title as string, route: '/'+x.path } ));
-		effect( ()=>document.documentElement.style.setProperty('--jde-breadcrumb-height', this.showBreadcrumbs() ? '36px' : '0px') );//the site shells add this to their fixed-content margin; 36px must match the nav height in breadcrumbs.ts
   }
 	async ngOnInit(){
 		this.router.events.pipe(//subscribe before the await:  the load defers the rest of ngOnInit past the initial NavigationEnd.
@@ -143,6 +145,16 @@ export class NavBar implements OnInit {
 		return undefined;
 	}
 
+	onKeydown( event:KeyboardEvent ){//'/' jumps to search, unless the keystroke belongs to whatever the user is already typing in
+		if( event.key!='/' || event.ctrlKey || event.metaKey || event.altKey || this.#isTyping(event.target) )
+			return;
+		event.preventDefault();//otherwise the '/' lands in the field we just focused
+		this.searchInput()?.nativeElement.focus();
+	}
+	#isTyping( target:EventTarget|null ):boolean{
+		const el = target as HTMLElement|null;
+		return !!el && (el.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(el.tagName));
+	}
 	onSearch( event:any ){
 
 	}
@@ -182,4 +194,5 @@ export class NavBar implements OnInit {
 	existing = computed<Favorite|undefined>( ()=>this.favorites()?.find( fav=>fav.route==this.route() ) );// the favorite corresponding to the current route, if any
 	router = inject(Router);
 	searchForm = new FormControl<string>('');
+	searchInput = viewChild<ElementRef<HTMLInputElement>>( 'searchInput' );
 }

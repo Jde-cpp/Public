@@ -2,10 +2,12 @@ export * from './lib/jde-opc.module';
 
 export {GatewayDetail, gatewayTableSettings} from './lib/pages/gateway-detail/gateway-detail';
 export {ClientDetail} from './lib/pages/gateway-detail/client-detail/client-detail';
+export {OpcServerDetail} from './lib/pages/opc-server-detail/opc-server-detail';
 export {NodeDetail} from './lib/pages/node-detail/node-detail';
 export {NodeChildren} from './lib/pages/node-detail/node-children/node-children';
 export {OpcAuthService} from './lib/services/opc-auth.service';
 export {GatewayService} from './lib/services/gateway.service';
+export {OpcServer, OpcServerService} from './lib/services/opc-server.service';
 export {GatewayResolver} from './lib/services/resolvers/gateway.resolver';
 export {NodeResolver} from './lib/services/resolvers/node.resolver';
 //export {ConnectionResolver} from './lib/services/resolvers/connection.resolver';

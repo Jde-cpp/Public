@@ -4,7 +4,6 @@ import {
   NgZone,
   OnDestroy,
   OnInit,
-  Signal,
   ViewEncapsulation,
   effect,
   forwardRef,
@@ -15,7 +14,7 @@ import {
 } from '@angular/core';
 import {CdkAccordionModule} from '@angular/cdk/accordion';
 import {BreakpointObserver} from '@angular/cdk/layout';
-import {AsyncPipe, NgClass} from '@angular/common';
+import {AsyncPipe} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {MatIconModule} from '@angular/material/icon';
 import {MatListModule} from '@angular/material/list';
@@ -38,14 +37,11 @@ import {
 import {ComponentPageHeader} from '../component-page-header/component-page-header';
 import { ComponentCategoryList } from '../component-category-list/component-category-list';
 
-// These constants are used by the ComponentSidenav for orchestrating the MatSidenav in a responsive
-// way. This includes hiding the sidenav, defaulting it to open, changing the mode from over to
-// side, determining the size of the top gap, and whether the sidenav is fixed in the viewport.
-// The values were determined through the combination of Material Design breakpoints and careful
+// Used by the ComponentSidenav for orchestrating the MatSidenav in a responsive way: hiding the
+// sidenav, defaulting it to open, and changing the mode from over to side.
+// The value was determined through the combination of Material Design breakpoints and careful
 // testing of the application across a range of common device widths (360px+).
-// These breakpoint values need to stay in sync with the related Sass variables in
-// src/styles/_constants.scss.
-const EXTRA_SMALL_WIDTH_BREAKPOINT = 720;
+// It needs to stay in sync with the related Sass variables in src/styles/_constants.scss.
 const SMALL_WIDTH_BREAKPOINT = 959;
 export class RouteItem{
 	constructor( args?:Partial<RouteItem>){
@@ -75,7 +71,6 @@ export class RouteItem{
 export class ComponentSidenav implements OnInit, OnDestroy {
   readonly sidenav = viewChild(MatSidenav);
   params: Observable<Params> | undefined;
-  isExtraScreenSmall: Observable<boolean>;
   isScreenSmall: Observable<boolean>;
   private subscriptions = new Subscription();
 	item = model<RouteItem>(null as any);
@@ -85,9 +80,6 @@ export class ComponentSidenav implements OnInit, OnDestroy {
               breakpoints: BreakpointObserver,
 							private router: Router/*,
 							@Optional() @Inject('IRouteService') private routeService:IRouteService*/) {
-    this.isExtraScreenSmall =
-        breakpoints.observe(`(max-width: ${EXTRA_SMALL_WIDTH_BREAKPOINT}px)`)
-            .pipe(map(breakpoint => breakpoint.matches));
     this.isScreenSmall = breakpoints.observe(`(max-width: ${SMALL_WIDTH_BREAKPOINT}px)`).pipe(map(breakpoint => breakpoint.matches));
   }
 
@@ -125,20 +117,30 @@ export class ComponentSidenav implements OnInit, OnDestroy {
 @Component({
   selector: 'app-component-nav',
   templateUrl: './component-nav.html',
-	styles: [`.child-nav { margin-left: 15px; }`],
-  imports: [ MatIconModule, MatListModule, NgClass, RouterLinkActive, RouterLink ],
+	styles: [`
+		.parent-nav {
+			--mat-list-list-item-one-line-container-height: 32px;
+			--mat-list-list-item-label-text-size: .75rem;
+			--mat-list-list-item-label-text-weight: 500;
+			--mat-list-list-item-label-text-tracking: .08em;
+			text-transform: uppercase;
+			opacity: .7;
+			margin-bottom: 4px;
+		}
+	`],
+  imports: [ MatIconModule, MatListModule, RouterLinkActive, RouterLink ],
 })
 export class ComponentNav {
   constructor(private router: Router, private route: ActivatedRoute ){
 		effect(() => {
-			let loaded = this.item()()!=null;
+			let loaded = this.item()!=null;
 			if( loaded ){
-				if( this.item()().parent )
-					this.parentUrl = this.item()().parent!.path;
+				if( this.item().parent )
+					this.parentUrl = this.item().parent!.path;
 				else{
 					let segments = this.parentUrl.split( "/" );
 					if( segments[segments.length-1].startsWith(":") )
-						this.parentUrl = `${segments.slice(0,segments.length-1).join("/")}/${this.item()().parent?.path}`;
+						this.parentUrl = `${segments.slice(0,segments.length-1).join("/")}/${this.item().parent?.path}`;
 					//else
 					//	this.parentUrl = '';
 				}
@@ -158,7 +160,7 @@ export class ComponentNav {
     return url==`/${this.parentUrl}` || url.substr( this.parentUrl.length+2 ).indexOf('/')!=-1;
   }
   currentItemId: string | undefined;
-	item = input.required<Signal<RouteItem>>();
+	item = input.required<RouteItem>();
 	parentUrl!: string;
 	isLoading = signal( true );
 }

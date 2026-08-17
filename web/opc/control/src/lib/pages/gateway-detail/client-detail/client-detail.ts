@@ -14,7 +14,6 @@ import { Gateway, GatewayService } from '../../../services/gateway.service';
 import { Server } from '../../../model/Server';
 
 @Component( {
-	selector: 'roles',
 	templateUrl: './client-detail.html',
 	styleUrls: ['./client-detail.scss'],
 	host: {class:'main-content mat-drawer-container my-content'},
