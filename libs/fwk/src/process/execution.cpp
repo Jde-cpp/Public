@@ -217,8 +217,8 @@ namespace Jde{
 		h = nullptr;
 		return;
 	}
-	asio::post( *ctx, [h, e = move(e)]() mutable {
-		h.promise().ResumeExp( move(e), h );
+	asio::post( *ctx, [h, e = e.Move()]() mutable {
+		h.promise().ResumeExp( move(*e), h );
 	} );
 	h = nullptr;
 }

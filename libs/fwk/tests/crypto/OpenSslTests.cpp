@@ -1,5 +1,8 @@
 ﻿#include <jde/fwk/crypto/OpenSsl.h>
 #include "../../src/crypto/OpenSslInternal.h"
+#include "cryptoFixture.h"
+#include <jde/fwk/exceptions/IOException.h>
+#include <jde/fwk/io/file.h>
 #include <jde/fwk/settings.h>
 #include <fstream>
 
@@ -13,49 +16,84 @@ namespace Jde::Crypto{
 		OpenSslTests() {}
 		~OpenSslTests() override{}
 
-		static α SetUpTestCase()->void;
+		Ω SetUpTestCase()->void;
+		Ω TearDownTestCase()->void;
 		α SetUp()->void override{};
 		α TearDown()->void override{}
 
-		static α GetModulusExponent( fs::path publicKey )ε->tuple<vector<unsigned char>,vector<unsigned char>>;
-		static α SslSettings( str publicKeyFile, str privateKeyFile, str certificateFile, sv commonName, sv subjectAltName="URI:urn:my.server.application" )ε->CryptoSettings;
+		Ω ScratchDir( sv name )->fs::path;
+		Ω GetModulusExponent( fs::path publicKey )ε->tuple<vector<unsigned char>,vector<unsigned char>>;
+		Ω SslSettings( str publicKeyFile, str privateKeyFile, str certificateFile, sv commonName, sv subjectAltName="URI:urn:my.server.application" )ε->CryptoSettings;
 
+		static flat_set<string> Scratch;
 		static string HeaderPayload;
 		static string passcode;
 		static string PublicKeyFile;
 		static string PrivateKeyFile;
 		static string CertificateFile;
 	};
+	flat_set<string> OpenSslTests::Scratch;
 	string OpenSslTests::HeaderPayload{ "secret stuff" };
 	string OpenSslTests::passcode{ "123456789" };
-	string OpenSslTests::PublicKeyFile{ _msvc ? (Process::AppDataFolder() / "public.pem").string() : "/tmp/public.pem" };
-	string OpenSslTests::PrivateKeyFile{ _msvc ? (Process::AppDataFolder() / "private.pem").string() : "/tmp/private.pem" };
-	string OpenSslTests::CertificateFile{ _msvc ? (Process::AppDataFolder() / "cert.pem").string() : "/tmp/cert.pem" };
+	string OpenSslTests::PublicKeyFile;
+	string OpenSslTests::PrivateKeyFile;
+	string OpenSslTests::CertificateFile;
 
 
 	α OpenSslTests::SslSettings( str publicKeyFile, str privateKeyFile, str certificateFile, sv commonName, sv subjectAltName )ε->CryptoSettings{
 		return CryptoSettings{ jobject{
 			{"certificate", jobject{{"path", certificateFile}, {"subjectAltName", subjectAltName}, {"company", "jde-cpp"}, {"country", "US"}, {"commonName", commonName}}},
 			{"privateKey", jobject{{"path", privateKeyFile}, {"passcode", passcode}}},
-			{"publicKey", jobject{{"path", publicKeyFile}}}
+			{"publicKey", jobject{{"path", publicKeyFile}}},
+			{"dh", ""}
 		}, {} };
 	}
 
+	α OpenSslTests::ScratchDir( sv name )->fs::path{
+		let dir = Tests::FixtureDir( "openSsl" )/name;
+		fs::remove_all( dir );
+		Scratch.emplace( dir.string() );
+		return dir;
+	}
+
+	//EnsureKeyCertificate re-issues on the key that is there, but reissueReason only weighs existence, expiry and
+	//subjectAltName - never whether the certificate on disk was issued for that key - so it heals a missing or stale
+	//certificate and leaves a mismatched one standing.  With clear:false a fixture left mismatched by an older build
+	//would therefore stay mismatched forever, so the check has to happen here.  (The library has the same blind spot
+	//for a real damaged install - see the note on #26.)
+	Ω matchesKey( str certificateFile, str publicKeyFile )ι->bool{
+		try{
+			auto der = Crypto::ReadCertificate( certificateFile );
+			return Crypto::ExtractPublicKey( der, SRCE_CUR )==Crypto::ReadPublicKey( publicKeyFile );
+		}
+		catch( const Exception& ){ return false; }//missing or unreadable either way - mint a fresh pair.
+	}
+
+	α OpenSslTests::TearDownTestCase()->void{
+		for( str dir : Scratch )
+			EXPECT_FALSE( fs::exists(dir) ) << dir << " was left behind - a test that mints a key+cert has to remove them (#25)";
+		Scratch.clear();
+	}
+
 	α OpenSslTests::SetUpTestCase()->void{
+		let dir = Tests::FixtureDir( "openSsl" );
+		PublicKeyFile = ( dir/"public.pem" ).string();
+		PrivateKeyFile = ( dir/"private.pem" ).string();
+		CertificateFile = ( dir/"cert.pem" ).string();
 		let clear = Settings::FindBool( "/cryptoTests/clear" ).value_or( true );
 		INFO( "clear={}", clear );
 		INFO( "HeaderPayload={}", HeaderPayload );
 		let settings = SslSettings( PublicKeyFile, PrivateKeyFile, CertificateFile, "openSslTests" );//the CN is the identity target - never "localhost".
-		if( clear || (!fs::exists(PublicKeyFile) || !fs::exists(PrivateKeyFile)) ){
-			if( !fs::exists(fs::path{PublicKeyFile}.parent_path()) )
-				fs::create_directories( fs::path{PublicKeyFile}.parent_path() );
-			Crypto::CreateKey( settings, SRCE_CUR );
-			INFO( "Created keys {} {}", PublicKeyFile, PrivateKeyFile );
-		}
-		if( clear || !fs::exists(CertificateFile) ){
-			Crypto::IssueCertificate( settings );
-			INFO( "Created certificate {}", CertificateFile );
-		}
+		//key and certificate are one unit.  This used to be two independent exists() checks - keys re-created when
+		//either key was missing, the certificate kept whenever it existed - so a surviving cert.pem could stand against
+		//a freshly minted key pair: a certificate advertising a public key the private key cannot sign for, which is
+		//the exact damaged install the EnsureKeyCertificate_* tests below guard against (#26).  EnsureKeyCertificate is
+		//the library's own heal-as-a-unit path: it re-issues on the key that is there, or mints both when it is not.
+		if( clear || !fs::exists(PublicKeyFile) || !matchesKey(CertificateFile, PublicKeyFile) )
+			Crypto::CreateKeyCertificate( settings, SRCE_CUR );//a wiped fixture, a missing public key or an inherited mismatch - all mint the pair and the cert together.
+		else
+			Crypto::EnsureKeyCertificate( settings, SRCE_CUR );//consistent already: this is left to re-issue an expired one or reconcile the SAN.
+		INFO( "fixture at {}", dir.string() );
 	}
 
 	TEST_F( OpenSslTests, Main ){
@@ -82,12 +120,23 @@ namespace Jde::Crypto{
 
 	TEST_F( OpenSslTests, Certificate ){
 		auto bytes = ReadCertificate( CertificateFile );
-		ExtractPublicKey( bytes, SRCE_CUR );
+		EXPECT_TRUE( ExtractPublicKey(bytes, SRCE_CUR)==Crypto::ReadPublicKey(PublicKeyFile) );
+	}
+
+	//what made #26 latent: no test asserted the fixture's certificate and key pair belong together, so the split
+	//regeneration - keys re-created when either key was missing, the certificate kept whenever it existed - could leave
+	//a cert advertising a public key its private key cannot sign for, and every test still passed.  That is the same
+	//damaged install EnsureKeyCertificate_MissingKeyReissuesCert guards for a scratch dir; this guards the fixture.
+	TEST_F( OpenSslTests, FixtureCertificateMatchesItsKey ){
+		auto der = ReadCertificate( CertificateFile );
+		auto certKey = Crypto::ExtractPublicKey( der, SRCE_CUR );
+		EXPECT_TRUE( certKey==Crypto::ReadPublicKey(PublicKeyFile) ) << "the fixture certificate was issued for a different key pair than public.pem";
+		//and the private half really signs for the key the certificate carries - access_users is keyed by that modulus.
+		EXPECT_NO_THROW( Crypto::Verify(certKey, HeaderPayload, Crypto::RsaSign(HeaderPayload, PrivateKeyFile, passcode)) );
 	}
 	TEST_F( OpenSslTests, ExtractInfo ){
-		let publicKeyFile = _msvc ? (Process::AppDataFolder()/"extractInfo-public.pem").string() : "/tmp/extractInfo-public.pem";
-		let privateKeyFile = _msvc ? (Process::AppDataFolder()/"extractInfo-private.pem").string() : "/tmp/extractInfo-private.pem";
-		let certificateFile = _msvc ? (Process::AppDataFolder()/"extractInfo-cert.pem").string() : "/tmp/extractInfo-cert.pem";
+		let dir = ScratchDir( "extractInfo" );
+		let publicKeyFile = (dir/"public.pem").string(), privateKeyFile = (dir/"private.pem").string(), certificateFile = (dir/"cert.pem").string();
 		Crypto::CreateKeyCertificate( SslSettings(publicKeyFile, privateKeyFile, certificateFile, "extract-info-cn", "email:tester@jde-cpp.com,otherName:1.3.6.1.4.1.311.20.2.3;UTF8:upn-tester@jde-cpp.com,URI:urn:my.server.application") );
 		let info = Crypto::Certificate{ ReadCertificate(certificateFile) };
 		EXPECT_EQ( info.CommonName, "extract-info-cn" );
@@ -103,6 +152,54 @@ namespace Jde::Crypto{
 		EXPECT_TRUE( plain.Email.empty() );
 		EXPECT_TRUE( plain.Upn.empty() );
 		EXPECT_EQ( plain.SubjectAltName, "URI:"+plain.SanUri() );//single entry - SanUri is the whole thing bar the prefix.
+		fs::remove_all( dir );
+	}
+
+	// access_users is keyed by (modulus, exponent) and Jwt caches by fingerprint, so a byte-order slip in
+	// ExponentInt or a spelling/width change in ModulusHex re-enrolls every existing identity as a stranger.
+	// None of these helpers had a caller in any test.
+	TEST_F( OpenSslTests, PublicKeyIdentity ){
+		auto key = Crypto::ReadPublicKey( PublicKeyFile );
+		EXPECT_EQ( key.Modulus.size(), 256u ) << "CreateKey issues 2048-bit keys";
+		EXPECT_EQ( key.ExponentInt(), 65537u ) << "the exponent bytes fold big-endian";
+		EXPECT_EQ( key.ModulusHex(), Str::ToHex((byte*)key.Modulus.data(), key.Modulus.size()) );
+		EXPECT_EQ( key.ModulusHex().size(), 512u ) << "two hex chars per byte - the enrollment column's width";
+		EXPECT_EQ( key.Hash32(), key.Hash32() ) << "OpcServerSession displays this per session";
+		//deliberately a mirror of the implementation: what matters is that the displayed id stays the big-endian
+		//fold of md5(modulus) across versions, not any particular value, which depends on the generated key.
+		uint32_t folded{};
+		for( let b : Crypto::CalcMd5(key.Modulus) )
+			folded = ( folded<<8 ) | (uint32_t)b;
+		EXPECT_EQ( key.Hash32(), folded );
+
+		//through PublicKeyPath::Value rather than PublicKey{path} directly: the ctor and the ToBytes member are
+		//declared but not exported (only the Φ members are), so Value is how an out-of-dll caller reaches them.
+		auto settings = SslSettings( PublicKeyFile, PrivateKeyFile, CertificateFile, "openSslTests" );
+		EXPECT_TRUE( settings.PublicKey.Value(SRCE_CUR)==key ) << "the configured path must resolve to the key ReadPublicKey returns";
+		EXPECT_EQ( &settings.PublicKey.Value(SRCE_CUR), &settings.PublicKey.Value(SRCE_CUR) ) << "Value caches rather than re-reading";
+		let bytes = Crypto::ToBytes( key );//modulus+exponent -> DER, which is what Fingerprint hashes.
+		EXPECT_EQ( Crypto::Fingerprint(key), Crypto::CalcMd5(bytes) );
+
+		//a second key must collide with the first on none of them.
+		let dir = ScratchDir( "identity" );
+		let publicKey2 = (dir/"public.pem").string(), privateKey2 = (dir/"private.pem").string();
+		Crypto::CreateKey( SslSettings(publicKey2, privateKey2, CertificateFile, "identity-cn"), SRCE_CUR );
+		auto other = Crypto::ReadPublicKey( publicKey2 );
+		EXPECT_EQ( other.ExponentInt(), key.ExponentInt() ) << "same e - the modulus is what separates two identities";
+		EXPECT_NE( other.ModulusHex(), key.ModulusHex() );
+		EXPECT_NE( other.Hash32(), key.Hash32() );
+		EXPECT_NE( Crypto::Fingerprint(other), Crypto::Fingerprint(key) );
+		EXPECT_FALSE( other==key );
+		fs::remove_all( dir );
+	}
+
+	//fwk-max #12 made Value() Ε: a missing public key has to throw rather than hand back a default-constructed
+	//key, which would compare equal to every other empty one.
+	TEST_F( OpenSslTests, PublicKeyPathValueThrowsWhenMissing ){
+		let missing = (fs::path{PublicKeyFile}.parent_path()/"no-such-public.pem").string();
+		ASSERT_FALSE( fs::exists(missing) );
+		auto settings = SslSettings( missing, PrivateKeyFile, CertificateFile, "missing-public-key" );
+		EXPECT_THROW( settings.PublicKey.Value(SRCE_CUR), IO::IOException );
 	}
 
 	//the CN is the enrollment identity (access_identities.target, a unique natural key) so it must stay per-host, but
@@ -181,8 +278,7 @@ namespace Jde::Crypto{
 	//key.  A surviving cert would advertise a public key the new private key cannot sign for - and since access_users
 	//is keyed by modulus, the process would also enroll as a second identity.
 	TEST_F( OpenSslTests, EnsureKeyCertificate_MissingKeyReissuesCert ){
-		let dir = ( _msvc ? Process::AppDataFolder() : fs::path{"/tmp"} )/"ensureKeyCert";
-		fs::remove_all( dir );
+		let dir = ScratchDir( "ensureKeyCert" );
 		let settings = SslSettings( (dir/"public.pem").string(), (dir/"private.pem").string(), (dir/"cert.pem").string(), "ensure-key-cert" );
 		settings.CreateDirectories();
 		Crypto::CreateKeyCertificate( settings );
@@ -203,8 +299,7 @@ namespace Jde::Crypto{
 	//identity - access_users is keyed by the modulus, so the process would come back as a stranger to a db still
 	//holding the old key, and every peer that anchored the old cert would have to re-trust it.
 	TEST_F( OpenSslTests, EnsureKeyCertificate_MissingCertReissuesOnSameKey ){
-		let dir = ( _msvc ? Process::AppDataFolder() : fs::path{"/tmp"} )/"missingCert";
-		fs::remove_all( dir );
+		let dir = ScratchDir( "missingCert" );
 		let settings = SslSettings( (dir/"public.pem").string(), (dir/"private.pem").string(), (dir/"cert.pem").string(), "missing-cert" );
 		settings.CreateDirectories();
 		Crypto::CreateKeyCertificate( settings );
@@ -223,15 +318,16 @@ namespace Jde::Crypto{
 	}
 	//an unreadable certificate is a damaged install, not something to paper over by minting a replacement.
 	TEST_F( OpenSslTests, EnsureKeyCertificate_BadCertThrows ){
-		let dir = ( _msvc ? Process::AppDataFolder() : fs::path{"/tmp"} )/"badCert";
-		fs::remove_all( dir );
+		let dir = ScratchDir( "badCert" );
 		let settings = SslSettings( (dir/"public.pem").string(), (dir/"private.pem").string(), (dir/"cert.pem").string(), "bad-cert" );
 		settings.CreateDirectories();
 		Crypto::CreateKeyCertificate( settings );
-		{ std::ofstream truncated{ settings.Certificate.Path, std::ios::trunc }; truncated << "-----BEGIN CERTIFICATE-----\ngarbage\n"; }
+		constexpr sv garbage{ "-----BEGIN CERTIFICATE-----\ngarbage\n" };
+		{ std::ofstream damaged{ settings.Certificate.Path, std::ios::trunc|std::ios::binary }; damaged << garbage; }//binary, so the read-back below compares the bytes that were written.
 
-		EXPECT_THROW( Crypto::EnsureKeyCertificate(settings), Exception );
+		EXPECT_THROW( Crypto::EnsureKeyCertificate(settings), OpenSslException );
 		EXPECT_TRUE( fs::exists(settings.PrivateKey.Path) );//the key is left alone, so deleting the cert re-issues on the same modulus.
+		EXPECT_EQ( IO::Load(settings.Certificate.Path), garbage ) << "the unreadable certificate was rewritten instead of being left for an operator to look at";
 		fs::remove_all( dir );
 	}
 	//a cert issued before its config gained a SAN (or with a different one) must heal on startup - the CI runner kept a
@@ -239,8 +335,7 @@ namespace Jde::Crypto{
 	//the re-issue, and an equivalent config must leave the cert untouched - including conf-syntax slack and the msUPN
 	//OID→short-name round-trip, either of which would otherwise re-issue on every start.
 	TEST_F( OpenSslTests, EnsureKeyCertificate_ReconcilesSan ){
-		let dir = ( _msvc ? Process::AppDataFolder() : fs::path{"/tmp"} )/"reconcileSan";
-		fs::remove_all( dir );
+		let dir = ScratchDir( "reconcileSan" );
 		let publicFile = (dir/"public.pem").string(), privateFile = (dir/"private.pem").string(), certFile = (dir/"cert.pem").string();
 		let sanless = SslSettings( publicFile, privateFile, certFile, "reconcile-san", "" );
 		sanless.CreateDirectories();

@@ -37,6 +37,108 @@ namespace Jde::Tests{
 		EXPECT_EQ( To<double>("1.5"), 1.5 );
 	}
 
+	//settings' $(NAME) expansion and ExternalException's brace doubling both run through Replace, and neither had
+	//a test.  The empty-find case was an infinite loop until 2026-08-16 - source.find("",i) returns i and
+	//i+find.length() never advances - so it could not even be asserted before.
+	TEST( StrTests, Replace ){
+		EXPECT_EQ( Str::Replace("abc", "b", "X"), "aXc" );
+		EXPECT_EQ( Str::Replace("aaa", "a", "b"), "bbb" );//adjacent matches.
+		EXPECT_EQ( Str::Replace("aaaa", "aa", "b"), "bb" );//overlapping candidates - the match consumes both chars.
+		EXPECT_EQ( Str::Replace("{}", "{", "{{"), "{{}" );//ExternalException::FormatMsg's escaping: the inserted text must not be rescanned.
+		EXPECT_EQ( Str::Replace("abc", "b", ""), "ac" );//removal.
+		EXPECT_EQ( Str::Replace("abc", "z", "X"), "abc" );//no match.
+		EXPECT_EQ( Str::Replace("a", "abc", "X"), "a" );//find longer than source.
+		EXPECT_EQ( Str::Replace("", "a", "X"), "" );
+		EXPECT_EQ( Str::Replace("abc", "", "X"), "abc" ) << "an empty find must return the source, not spin";
+		EXPECT_EQ( Str::Replace(sv{"a/b/c"}, '/', '_'), "a_b_c" );//the char overload Decode64's file-safe path uses.
+	}
+
+	//two different split contracts: the char form drops every empty field, the sv/sv form keeps interior and
+	//leading ones and drops only a trailing empty.  FileTests' line reader depends on the first.
+	TEST( StrTests, Split ){
+		EXPECT_EQ( Str::Split("a,b").size(), 2u );
+		let dropped = Str::Split( "a,,b," );
+		ASSERT_EQ( dropped.size(), 2u ) << "empty fields and a trailing delimiter are dropped";
+		EXPECT_EQ( dropped[0], "a" );
+		EXPECT_EQ( dropped[1], "b" );
+		EXPECT_TRUE( Str::Split(",,").empty() );
+		EXPECT_TRUE( Str::Split("").empty() );
+		EXPECT_EQ( Str::Split("a\nb", '\n').size(), 2u );
+
+		let multi = Str::Split<sv,sv>( sv{"a::b::c"}, sv{"::"} );//multi-char delimiter - a different implementation.
+		ASSERT_EQ( multi.size(), 3u );
+		EXPECT_EQ( multi[0], "a" );
+		EXPECT_EQ( multi[2], "c" );
+		let empties = Str::Split<sv,sv>( sv{":a::b:"}, sv{":"} );
+		ASSERT_EQ( empties.size(), 4u ) << "leading and interior empties survive here; only the trailing one is dropped";
+		EXPECT_EQ( empties[0], "" );
+		EXPECT_EQ( empties[2], "" );
+	}
+
+	TEST( StrTests, Join ){
+		let items = vector<string>{ "a", "b", "c" };
+		EXPECT_EQ( Str::Join(items), "a,b,c" );
+		EXPECT_EQ( Str::Join(items, "; "), "a; b; c" );
+		EXPECT_EQ( Str::Join(items, ",", true), "\"a\",\"b\",\"c\"" );
+		EXPECT_EQ( Str::Join(vector<string>{}), "" );
+		EXPECT_EQ( Str::Join(vector<string>{"only"}), "only" );//no trailing separator.
+	}
+
+	//query strings and form bodies: an invalid escape has to pass through rather than be swallowed, and a
+	//trailing '%' must not read past the end of a non-terminated view.
+	TEST( StrTests, DecodeUri ){
+		EXPECT_EQ( Str::DecodeUri("%41"), "A" );
+		EXPECT_EQ( Str::DecodeUri("a%20b"), "a b" );
+		EXPECT_EQ( Str::DecodeUri("a+b"), "a b" );
+		EXPECT_EQ( Str::DecodeUri("%2f%2F"), "//" );//hex case-insensitive.
+		EXPECT_EQ( Str::DecodeUri("%zz"), "%zz" );//not hex - literal.
+		EXPECT_EQ( Str::DecodeUri("100%"), "100%" );//trailing '%' with nothing after it.
+		EXPECT_EQ( Str::DecodeUri("100%4"), "100%4" );//trailing '%' with only one digit.
+		EXPECT_EQ( Str::DecodeUri(""), "" );
+	}
+
+	//the modulus spelling every enrolled identity is keyed by - see OpenSslTests.PublicKeyIdentity.
+	TEST( StrTests, ToHex ){
+		let bytes = vector<byte>{ byte{0x00}, byte{0x0f}, byte{0xff}, byte{0xa5} };
+		EXPECT_EQ( Str::ToHex((byte*)bytes.data(), bytes.size()), "000fffa5" ) << "lower case, two chars per byte, leading zeros kept";
+		EXPECT_EQ( Str::ToHex((byte*)bytes.data(), 0), "" );
+	}
+
+	TEST( StrTests, TryTo ){
+		EXPECT_EQ( Str::TryTo<uint32>(string{"42"}), 42u );
+		EXPECT_FALSE( Str::TryTo<uint32>(string{"abc"}).has_value() );
+		EXPECT_FALSE( Str::TryTo<uint32>(string{""}).has_value() );
+		EXPECT_FALSE( Str::TryTo<uint>(string{"99999999999999999999999"}).has_value() ) << "past unsigned long long - out_of_range, not a throw";
+		EXPECT_EQ( Str::TryTo<uint>(string{"ff"}, nullptr, 16), 255u );
+		uint pos{};
+		EXPECT_EQ( Str::TryTo<uint>(string{"42abc"}, &pos), 42u );//stoull stops at the first non-digit.
+		EXPECT_EQ( pos, 2u );
+	}
+
+	TEST( StrTests, TrimFirstLast ){
+		EXPECT_EQ( Str::TrimFirstLast(string{" [abc] "}, '[', ']'), "abc" );
+		EXPECT_EQ( Str::TrimFirstLast(string{"[abc]"}, '[', ']'), "abc" );
+		EXPECT_EQ( Str::TrimFirstLast(string{" abc "}, '[', ']'), "abc" );//no bracket - plain trim.
+		EXPECT_EQ( Str::TrimFirstLast(string{"[a[b]c]"}, '[', ']'), "a[b]c" );//only the outermost pair.
+		EXPECT_EQ( Str::TrimFirstLast(string{""}, '[', ']'), "" );
+	}
+
+	TEST( StrTests, CaseInsensitiveComparison ){
+		EXPECT_TRUE( Str::StartsWith("abcdef", "abc") );
+		EXPECT_FALSE( Str::StartsWith("abc", "abcdef") );//starting longer than value.
+		EXPECT_TRUE( Str::StartsWith("abc", "") );
+		EXPECT_TRUE( Str::StartsWithInsensitive("ABCdef", "abc") );
+		EXPECT_TRUE( Str::StartsWithInsensitive("abcdef", "ABC") );
+		EXPECT_FALSE( Str::StartsWithInsensitive("abc", "ABCDEF") );
+		EXPECT_FALSE( Str::StartsWithInsensitive("xbc", "abc") );
+
+		EXPECT_TRUE( "ABC"_iv=="abc"_iv );//ci_traits - the comparison IssueCertificate's SAN matching relies on.
+		EXPECT_FALSE( "ABC"_iv=="abd"_iv );
+		EXPECT_EQ( ToSV("ABC"_iv), "ABC" );//the view still carries the original spelling.
+		EXPECT_EQ( Str::ToLower("AbC"), "abc" );
+		EXPECT_EQ( Str::ToUpper("AbC"), "ABC" );
+	}
+
 	TEST( StrTests, Decode64RoundTrip ){
 		Bytes signature( 256 );
 		for( uint i=0; i<signature.size(); ++i )

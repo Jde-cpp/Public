@@ -12,6 +12,9 @@ compileOptions( ${targetName} )
 
 file( GLOB sources *.cpp co/*.cpp log/*.cpp crypto/*.cpp )
 file( GLOB_RECURSE headers *.h log/*.h )
+if( WIN32 )
+	list( APPEND sources Tests.Framework.rc )
+endif()
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 target_link_libraries( ${targetName} GTest::gtest GTest::gtest_main )

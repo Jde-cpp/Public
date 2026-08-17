@@ -28,7 +28,7 @@ namespace Jde{
 			return stringValues.size() ? string{stringValues[0]} : "0";
 		string flags;
 		for( uint i=0; i+1<stringValues.size(); ++i ){
-			if( uint current = (1ul<<i); uflag & current ){
+			if( uint current = (1ull<<i); uflag & current ){
 				flags += stringValues[i+1];
 				flags.push_back( ',' );
 			}
@@ -56,7 +56,7 @@ namespace Jde{
 		//using T = typename std::underlying_type<TEnum>::type;
 		let index = std::distance( std::begin(stringValues), std::find(std::begin(stringValues), std::end(stringValues), text) );
 		return index && index<std::ssize( stringValues )
-			? (TEnum)( 1<<(index-1) )
+			? (TEnum)( 1ull<<(index-1) )
 			: optional<TEnum>{};
 	}
 }

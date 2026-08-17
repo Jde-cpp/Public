@@ -68,12 +68,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "Jde-Cpp"
-            VALUE "FileDescription", "TODO: <File description>"
+            VALUE "FileDescription", "Jde framework unit tests"
             VALUE "FileVersion", "1.0.0.1"
             VALUE "InternalName", "Tests.Framework"
             VALUE "LegalCopyright", "Copyright (C) 2021"
             VALUE "OriginalFilename", "Tests.Framework"
-            VALUE "ProductName", "TODO: <Product name>"
+            VALUE "ProductName", "Tests.Framework"
             VALUE "ProductVersion", "1.0.0.1"
         END
     END

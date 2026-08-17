@@ -16,19 +16,24 @@ namespace Jde::Logging{
 	using spdlog::level::level_enum;
 
 	//`-fmacro-prefix-map` makes source paths repo-relative;  the terminal's osc-8 link needs an absolute file:// uri.
+	α FormatSourceUri( sv file )ι->string{
+		string y;
+		if( file.empty() )
+			return y;
+		let absolute = file[0]=='/' || file[0]=='\\' || ( file.size()>1 && file[1]==':' );//sources outside CMAKE_SOURCE_DIR (pch stubs, generated, 3rd party) are not remapped.
+		let root = absolute ? sv{} : sv{ JDE_SOURCE_ROOT };
+		let& first = root.empty() ? file : root;
+		if( first[0]!='/' )
+			y.push_back( '/' );//file:// + c:/x -> file:///c:/x
+		for( let& part : {root, file} )
+			for( let ch : part )
+				y.push_back( ch=='\\' ? '/' : ch );
+		return y;
+	}
 	struct SourceUri final : spdlog::custom_flag_formatter{
 		α format( const spdlog::details::log_msg& msg, const std::tm&, spdlog::memory_buf_t& dest )ι->void override{
-			let file = msg.source.filename ? sv{ msg.source.filename } : sv{};
-			if( file.empty() )
-				return;
-			let absolute = file[0]=='/' || file[0]=='\\' || ( file.size()>1 && file[1]==':' );//sources outside CMAKE_SOURCE_DIR (pch stubs, generated, 3rd party) are not remapped.
-			let root = absolute ? sv{} : sv{ JDE_SOURCE_ROOT };
-			let& first = root.empty() ? file : root;
-			if( first[0]!='/' )
-				dest.push_back( '/' );//file:// + c:/x -> file:///c:/x
-			for( let& part : {root, file} )
-				for( let ch : part )
-					dest.push_back( ch=='\\' ? '/' : ch );
+			let uri = FormatSourceUri( msg.source.filename ? sv{msg.source.filename} : sv{} );
+			dest.append( uri.data(), uri.data()+uri.size() );
 		}
 		α clone()Ι->up<spdlog::custom_flag_formatter> override{ return mu<SourceUri>(); }
 	};

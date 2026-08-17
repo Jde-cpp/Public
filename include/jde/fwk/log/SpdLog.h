@@ -6,10 +6,12 @@
 #include <spdlog/common.h>
 #include <spdlog/logger.h>
 
+#define Φ Γ auto
 #define FormatString const fmt::format_string<Args const&...>
 #define ARGS const Args&
 
 namespace Jde::Logging{
+	Φ FormatSourceUri( sv file )ι->string;
 	Ξ ToSpdSL( SL sl )ι->spdlog::source_loc{ return {sl.file_name(), (int)sl.line(), sl.function_name()}; }
 	struct SpdLog final : ILogger{
 		SpdLog( const jobject& settings )ι;
@@ -29,4 +31,5 @@ namespace Jde::Logging{
 }
 #undef FormatString
 #undef ARGS
+#undef Φ
 #endif

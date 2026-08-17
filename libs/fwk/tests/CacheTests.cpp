@@ -21,6 +21,49 @@ namespace Jde::Tests{
 		std::this_thread::sleep_for( 50ms );//expiry is sweep-driven; windows timers tick at ~15.6ms, so leave slack past the deadline.
 		ASSERT_EQ( Cache::Get<string>("expired"), nullptr );
 	}
+	// Internal::Set has to drop the old deadline before emplacing the new one, or the sweep evicts the freshly
+	// assigned value at the *previous* entry's due time.  Nothing re-Set a live key with a longer duration, so
+	// deleting that eraseTimeout left every existing test green.
+	TEST_F( CacheTests, ReSetExtendsDeadline ){
+		Cache::Set<string>( "reset", "a", 5ms );
+		Cache::Set<string>( "reset", "b", 1h );
+		std::this_thread::sleep_for( 60ms );//past the first deadline and a windows timer tick.
+		let p = Cache::Get<string>( "reset" );
+		ASSERT_NE( p, nullptr ) << "the stale 5ms deadline evicted the re-set value";
+		EXPECT_EQ( *p, "b" );
+		EXPECT_TRUE( Cache::Clear("reset") );
+	}
+
+	//no duration at all means no timeout row, so the sweep never sees the entry.  Clear's bool return - discarded
+	//at every call site - is the only way to tell a hit from a miss.
+	TEST_F( CacheTests, NoDurationNeverExpires ){
+		Cache::Set<string>( "forever", "value", nullopt );
+		std::this_thread::sleep_for( 60ms );
+		let p = Cache::Get<string>( "forever" );
+		ASSERT_NE( p, nullptr ) << "an entry with no duration must not be swept";
+		EXPECT_EQ( *p, "value" );
+		EXPECT_TRUE( Cache::Clear("forever") );
+		EXPECT_FALSE( Cache::Clear("forever") ) << "the second clear erased nothing";
+		EXPECT_EQ( Cache::Get<string>("forever"), nullptr );
+	}
+
+	//the zero-copy overload has no caller in the library either - FileAwait passes a string by value.
+	TEST_F( CacheTests, SharedPointerOverload ){
+		auto p = ms<const string>( "shared" );
+		let cached = Cache::Set<string>( "sharedPtr", p );
+		EXPECT_EQ( cached.get(), p.get() ) << "Set returns the caller's instance";
+		let got = Cache::Get<string>( "sharedPtr" );
+		ASSERT_NE( got, nullptr );
+		EXPECT_EQ( got.get(), p.get() ) << "the cache shares the instance rather than copying it";
+		EXPECT_TRUE( Cache::Clear("sharedPtr") );
+	}
+
+	//only the fallback half of Init: the suite config has no /cache section, and adding one to assert the
+	//configured path would be a config change rather than a test.
+	TEST_F( CacheTests, DefaultDurationFallsBackToAnHour ){
+		EXPECT_EQ( Cache::DefaultDuration(), 1h );
+	}
+
 	TEST_F( CacheTests, Stress ){
 		let threadCount = std::max( 2u, std::thread::hardware_concurrency() );
 		let end = steady_clock::now()+1s;

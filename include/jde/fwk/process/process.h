@@ -12,6 +12,7 @@ namespace Process{
 	Φ AppName()ι->const string&;
 	Φ AppDataFolder()ι->fs::path;
 	Φ Args()ι->const flat_multimap<string,string>&;
+	Φ ParseArgs( const vector<string>& tokens )ι->flat_multimap<string,string>;
 	Φ FindArg( string key )ι->optional<string>;
 	Φ CompanyName()ι->string;
 	Φ CompanyRootDir()ι->fs::path;

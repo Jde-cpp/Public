@@ -82,6 +82,9 @@ namespace Jde{
 		return result;
 	}
 	α Str::Replace( sv source, sv find, sv replace )ι->string{
+		ASSERT( find.size() );
+		if( find.empty() )
+			return string{ source };//find("",i) returns i, so i+find.length() never advances
 		string y; y.reserve( source.size() ); uint iLast{ 0 };
 		for( uint i{}; (i = source.find(find, i))!=string::npos; iLast = (i=i+find.length()) ){
 			y += source.substr( iLast, i-iLast );

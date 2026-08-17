@@ -85,4 +85,103 @@ namespace Jde::Tests{
 		//-03:00 => local is 3h behind UTC, so UTC = 03:04:05 + 3h = 06:04:05.
 		EXPECT_EQ( Chrono::ToTimePoint("2024-01-02T03:04:05-03:00"), Chrono::ToTimePoint("2024-01-02T06:04:05") );
 	}
+
+	//returns what it could parse and no indication of what it could not, if the is.fail() checks go: a stream that
+	//failed leaves tp default-constructed, so every one of these would silently become the epoch rather than throw -
+	//an unparseable expiry reading as 1970 is a permanent "expired" instead of an error someone can see.
+	Ω parseFailure( sv iso )->string{
+		try{
+			Chrono::ToTimePoint( string{iso} );
+			return {};
+		}
+		catch( const Exception& e ){ return e.what(); }
+	}
+	TEST( ChronoTests, ToTimePointRejectsGarbage ){
+		for( let iso : {"2024-13-45", "", "not a date", "2024-01-02", "2024-01-02T03:04"} ){
+			let what = parseFailure( iso );
+			EXPECT_NE( what.find("Could not parse ISO time"), string::npos ) << "'" << iso << "' parsed as a time point, or threw something else: " << what;
+		}
+		//the three branches each carry their own fail() check, so garbage has to be rejected through all of them.
+		EXPECT_NE( parseFailure("garbage-with-a-zone+05:00").find("Could not parse ISO time"), string::npos );
+		EXPECT_NE( parseFailure("garbage-that-ends-in-a-zulu-charZ").find("Could not parse ISO time"), string::npos );
+	}
+
+	//year_month_day::ok() is what separates a real calendar date from an arithmetic one; without it sys_days{ymd}
+	//happily normalizes Feb 30 into March, so a bad date becomes a valid-looking time point a few days out.
+	TEST( ChronoTests, InvalidYmdThrows ){
+		EXPECT_THROW( Chrono::ToTimePoint(2023, 2, 29), Exception ) << "2023 is not a leap year";
+		EXPECT_THROW( Chrono::ToTimePoint(2024, 2, 30), Exception );
+		EXPECT_THROW( Chrono::ToTimePoint(2024, 13, 1), Exception );
+		EXPECT_THROW( Chrono::ToTimePoint(2024, 4, 31), Exception );
+		//...and the check is the calendar, not a blanket day>28: the leap day itself must go through.
+		EXPECT_NO_THROW( Chrono::ToTimePoint(2024, 2, 29) );
+		EXPECT_EQ( ToIsoString<days>(Chrono::ToTimePoint(2024, 2, 29)), "2024-02-29" );
+	}
+
+	//ToDuration is fed straight from config (Settings/json durations), so the leading 'P' check is the only thing
+	//between a mistyped setting and a silently-zero duration - every token loop below it just breaks on what it
+	//cannot read, which for "5M" would be immediately.
+	TEST( ChronoTests, ToDurationRequiresP ){
+		for( let iso : {"5M", "", "T5M", "p5M"} ){
+			try{
+				let d = Chrono::ToDuration( sv{iso} );
+				ADD_FAILURE() << "'" << iso << "' parsed as " << Chrono::ToString( d );
+			}
+			catch( const Exception& e ){
+				//only the stable half of the message: the rest of it is garbled and asserting on it would pin the bug
+				//in place.  `is.get()` returns int, so the "{}{}" renders the offending character as its code and then
+				//again as text - "5M" reports `in '535M'`, "T5M" reports `in '84T5M'`.  Reported, not fixed here.
+				EXPECT_NE( string{e.what()}.find("Expected 'P'"), string::npos ) << e.what();
+			}
+		}
+		EXPECT_NO_THROW( Chrono::ToDuration(sv{"P5M"}) );
+	}
+
+	//the nullopt contract is load-bearing: Settings and json durations call only through here, and a throw escaping
+	//would take down config parsing over one bad key rather than falling back to the caller's default.
+	TEST( ChronoTests, TryToDurationNullopt ){
+		EXPECT_FALSE( Chrono::TryToDuration(string{"5M"}).has_value() );
+		EXPECT_FALSE( Chrono::TryToDuration(string{""}).has_value() );
+		EXPECT_EQ( Chrono::TryToDuration(string{"P4D"}), duration_cast<Duration>(days{4}) );
+		//the level argument only re-levels the swallowed exception, which is already logged by then - it changes
+		//nothing observable here, so this asserts only that passing one is still a nullopt rather than a throw.
+		EXPECT_FALSE( Chrono::TryToDuration(string{"5M"}, ELogLevel::Critical).has_value() );
+	}
+
+	//an unknown zone is operator error in a config, not a reason to fail startup: locate_zone throws and the caller's
+	//default has to come back instead.  The identity check is the point - returning some other valid zone would read
+	//as success at every call site.
+	TEST( ChronoTests, ToTimeZoneFallsBack ){
+		let& dflt = *std::chrono::current_zone();
+		EXPECT_EQ( &Chrono::ToTimeZone("No/Such_Zone", dflt), &dflt );
+		EXPECT_EQ( &Chrono::ToTimeZone("", dflt), &dflt );
+		//by name, not by address: the spelling is canonicalized ("UTC" comes back as "Etc/UTC"), and the pointers are
+		//not comparable across the dll boundary either - Jde.dll and this exe each hold their own tzdb, so
+		//locate_zone("UTC") here and inside ToTimeZone return different objects for the same zone.
+		EXPECT_EQ( Chrono::ToTimeZone("UTC", dflt).name(), std::chrono::locate_zone("UTC")->name() ) << "a zone that does exist must not fall back";
+	}
+
+	//IsoStringRoundTrips only ever round-trips a whole second, so the fractional branch of the parse was never fed a
+	//non-zero fraction: a parser that dropped subseconds entirely passed it.
+	TEST( ChronoTests, IsoStringRoundTripsSubSecond ){
+		let tp = Chrono::ToTimePoint( 2024, 1, 2, 3, 4, 5, duration_cast<Duration>(milliseconds{123}) );
+		EXPECT_EQ( ToIsoString<milliseconds>(tp), "2024-01-02T03:04:05.123Z" );
+		EXPECT_EQ( Chrono::ToTimePoint(ToIsoString<milliseconds>(tp)), tp );
+		EXPECT_NE( Chrono::ToTimePoint(ToIsoString<seconds>(tp)), tp ) << "the fraction is what distinguishes them - if this holds, it was never parsed";
+
+		let micro = Chrono::ToTimePoint( 2024, 1, 2, 3, 4, 5, duration_cast<Duration>(microseconds{123456}) );
+		EXPECT_EQ( Chrono::ToTimePoint(ToIsoString<microseconds>(micro)), micro );
+	}
+
+	//the local-time renderer used by the console log pattern.  The hour is the machine's zone and not assertable, but
+	//the shape and the seconds field are: an offset is a whole number of minutes everywhere, so seconds do not move.
+	TEST( ChronoTests, LocalTimeMilliShape ){
+		let tp = Chrono::ToTimePoint( 2024, 1, 2, 3, 4, 5, duration_cast<Duration>(milliseconds{123}) );
+		let local = Chrono::LocalTimeMilli( tp );
+		ASSERT_GE( local.size(), 8u ) << local;
+		EXPECT_EQ( local[2], ':' ) << local;
+		EXPECT_EQ( local[5], ':' ) << local;
+		EXPECT_EQ( local.substr(6,2), "05" ) << "seconds are zone-invariant: " << local;
+		EXPECT_NE( local.find(".123"), string::npos ) << "the milli in LocalTimeMilli: " << local;
+	}
 }

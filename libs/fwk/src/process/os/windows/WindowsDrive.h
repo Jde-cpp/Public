@@ -3,7 +3,7 @@
 #include "../../../io/IDrive.h"
 namespace Jde::IO{
 
-	struct WindowsDrive final : IDrive{
+	struct Γ WindowsDrive final : IDrive{
 		α Get( const fs::path& path )ε->up<IDirEntry> override;
 		α Recursive( const fs::path& dir, SRCE )ε->flat_map<string,up<IDirEntry>> override;
 		up<IDirEntry> Save( const fs::path& path, const vector<char>& bytes, const IDirEntry& dirEntry )ε override;

@@ -1,5 +1,6 @@
 #include <jde/fwk/co/AnyAwait.h>
 #include <jde/fwk/co/Await.h>
+#include <jde/fwk/log/MemoryLog.h>
 #include <atomic>
 #include <thread>
 
@@ -160,5 +161,81 @@ namespace Jde::Tests{
 		ASSERT_TRUE( settle(completed, 1) );
 		EXPECT_TRUE( ok.load() );
 		EXPECT_FALSE( suspendCalled.load() ) << "await_ready()==true must skip Suspend entirely";
+	}
+
+	//the runtime_error overloads, which wrap a non-Jde exception instead of dropping it.  Every ResumeExp in the
+	//suite took the Exception&& overload, so the wrapping had no coverage on either the promise or the adapter.
+	struct OldPlainThrower final : VoidAwait{
+		OldPlainThrower( SRCE )ι:VoidAwait{sl}{}
+		α Suspend()ι->void override{ ResumeExp( std::runtime_error{"plain runtime_error"} ); }
+	};
+	Ω plainThrowDirect( std::atomic<uint>& completed, std::atomic<bool>& ok )->VoidTask{
+		try{
+			co_await OldPlainThrower{};
+		}
+		catch( const Exception& e ){ ok = string{e.what()}.contains("plain runtime_error"); }
+		catch( ... ){ ok = false; }
+		++completed;
+	}
+	Ω plainThrowAdapted( std::atomic<uint>& completed, std::atomic<bool>& ok )->VoidTask{
+		try{
+			co_await Any( OldPlainThrower{} );
+		}
+		catch( const Exception& e ){ ok = string{e.what()}.contains("plain runtime_error"); }
+		catch( ... ){ ok = false; }
+		++completed;
+	}
+	TEST_F( AnyAwaitTests, RuntimeErrorIsWrapped ){
+		std::atomic<uint> completed{}; std::atomic<bool> direct{}, adapted{};
+		plainThrowDirect( completed, direct );
+		plainThrowAdapted( completed, adapted );
+		ASSERT_TRUE( settle(completed, 2) ) << "a coroutine never completed";
+		EXPECT_TRUE( direct.load() ) << "SetExp(runtime_error&&) must wrap a non-Jde exception, not drop it";
+		EXPECT_TRUE( adapted.load() ) << "and it must survive the adapter relay";
+	}
+
+	//the adapter's catch(...): nothing may escape the glue coroutine or the awaiting one is stranded forever.
+	//await_resume is the only place a non-runtime_error can come from - Suspend is noexcept, so a throw there
+	//terminates rather than reaching any handler.
+	struct OldLogicThrower final : TAwait<int>{
+		OldLogicThrower( SRCE )ι:TAwait<int>{sl}{}
+		α Suspend()ι->void override{ Resume( 1 ); }
+		α await_resume()ε->int override{ throw std::logic_error{"a logic_error is not a runtime_error"}; }
+	};
+	Ω logicThrow( std::atomic<uint>& completed, std::atomic<bool>& ok )->VoidTask{
+		try{
+			co_await Any( OldLogicThrower{} );
+		}
+		catch( const Exception& e ){ ok = string{e.what()}.contains("Unknown exception"); }
+		catch( ... ){ ok = false; }
+		++completed;
+	}
+	TEST_F( AnyAwaitTests, UnknownExceptionResumesTheAwaiter ){
+		std::atomic<uint> completed{}; std::atomic<bool> ok{};
+		logicThrow( completed, ok );
+		ASSERT_TRUE( settle(completed, 1) ) << "the awaiting coroutine was stranded by the unknown exception";
+		EXPECT_TRUE( ok.load() );
+	}
+
+	//An exception escaping a coroutine body lands in IPromise::unhandled_exception, on a promise nobody will read
+	//(final_suspend is suspend_never), so the log line is the only trace it leaves.  A Jde::Exception logs itself
+	//at construction and would be counted whether or not unhandled_exception ran - hence a plain runtime_error,
+	//which that handler wraps into a fresh Critical one.
+	Ω escapingTask( sp<std::atomic<bool>> reached )->VoidTask{
+		*reached = true;
+		if( reached->load() )
+			throw std::runtime_error{ "escaped-from-coroutine" };
+		co_return;
+	}
+	TEST_F( AnyAwaitTests, UnhandledExceptionLogsCriticalAndSurvives ){
+		auto& logger = Logging::GetLogger<Logging::MemoryLog>();
+		Logging::ClearMemory();
+		auto reached = ms<std::atomic<bool>>();
+		escapingTask( reached );
+		EXPECT_TRUE( reached->load() );
+		let critical = logger.Find( function<bool(const Logging::Entry&)>{[]( const Logging::Entry& e ){
+			return e.Level==ELogLevel::Critical && e.Message().contains( "escaped-from-coroutine" );
+		}} );
+		EXPECT_EQ( critical.size(), 1u ) << "the escaping exception must be logged Critical, not swallowed";
 	}
 }
