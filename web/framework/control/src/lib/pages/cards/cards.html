@@ -1,21 +1,22 @@
 <div class="page">
-	<h2 class="page-heading">Welcome</h2>
+	@if( heading() ){
+		<h2 class="page-heading">{{heading()}}</h2>
+	}
 	<div class="cards">
-		@for( c of items(); track c.title ){
+		@for( c of items(); track c.path ){
 			<a [routerLink]="c.path" class="card-link">
-				<div class="card" [ngClass]="c.cardClass">
-					<mat-icon class="card-icon">{{c.icon}}</mat-icon>
-					<div class="card-title">{{c.title}}</div>
-					<!-- <div class="card-label">{{c.label}}</div> -->
-					<!-- <div class="card-stat">{{c.stat}}</div>
-					@if( c.badge ){
-						<span class="card-badge">{{c.badge}}</span>
+				<div class="card" [class]="c.cardClass">
+					@if( c.icon ){
+						<mat-icon class="card-icon" aria-hidden="true">{{c.icon}}</mat-icon>
 					}
-					@if( c.trend ){
-						<mat-icon class="card-trend">{{trendIcon(c.trend)}}</mat-icon>
-					} -->
+					<div class="card-title">{{c.title}}</div>
+					@if( c.summary ){
+						<div class="card-summary">{{c.summary}}</div>
+					}
 				</div>
 			</a>
+		} @empty {
+			<div class="cards-empty">Nothing to show here.</div>
 		}
 	</div>
 </div>

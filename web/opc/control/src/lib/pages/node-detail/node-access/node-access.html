@@ -4,8 +4,7 @@
 	</mat-toolbar>
 	<mat-tab-group class="my-content" mat-stretch-tabs="false" mat-align-tabs="start"
 		[selectedIndex]="tabIndex"
-		(selectedIndexChange)="onTabIndexChanged($event)"
-		dynamicHeight="true">
+		(selectedIndexChange)="onTabIndexChanged($event)">
 		<mat-tab>
 			<ng-template mat-tab-label>General</ng-template>
 			<ng-template matTabContent>

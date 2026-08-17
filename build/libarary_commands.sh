@@ -3,10 +3,22 @@ cd /mnt/ram/external/Debug
 cls;rm -f CMakeCache.txt;cmake /home/duffyj/code/jde/Public/build --preset linux-debug;
 
 
-DST_DIR=$REPO_DIR/install/clang++-22/Debug/boost
-cls;./bootstrap.sh --with-toolset=clang-22 --prefix=${DST_DIR} --includedir=headers --libdir=dist
---change clang-22 to clang in file.
-cls;./b2 variant=debug  --prefix=${DST_DIR} address-sanitizer=on install cxxflags="-stdlib=libc++"  linkflags="-stdlib=libc++ -static-libasan" --with-json --with-charconv
+#Boost (Linux, clang/libc++) - json + charconv (container comes in as json's dependency). toolset=clang uses whatever
+#/usr/bin/clang++ resolves to (update-alternatives -> clang++-23), so nothing here pins a compiler version.
+#Source: https://archives.boost.io/release/1.92.0/source/boost_1_92_0.tar.gz -> $REPO_DIR/boost_1_92_0
+cd $REPO_DIR/boost_1_92_0;
+./bootstrap.sh --with-toolset=clang;
+./b2 -j$(nproc) toolset=clang variant=debug address-sanitizer=on cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++ -static-libasan" --prefix=$REPO_DIR/install/clang++/Debug/boost --with-json --with-charconv install;
+./b2 -j$(nproc) toolset=clang variant=release debug-symbols=on cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" --prefix=$REPO_DIR/install/clang++/RelWithDebInfo/boost --with-json --with-charconv install;
+
+#sqlite - static lib from the amalgamation (https://www.sqlite.org/2026/sqlite-amalgamation-3530400.zip -> $REPO_DIR/sqlite-amalgamation-3530400).
+#The sqlite driver appends ${CMAKE_INSTALL_PREFIX}/sqlite to CMAKE_PREFIX_PATH (libs/db/drivers/sqlite/src/CMakeLists.txt). No ASan on purpose.
+SQLITE_OPTS="-DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0";
+cd $REPO_DIR/sqlite-amalgamation-3530400;
+for cfg in Debug:"-g -O0" RelWithDebInfo:"-g -O2"; do
+	dst=$REPO_DIR/install/clang++/${cfg%%:*}/sqlite; mkdir -p $dst/lib $dst/include;
+	clang -c ${cfg#*:} -fPIC $SQLITE_OPTS sqlite3.c -o sqlite3.o && ar rcs $dst/lib/libsqlite3.a sqlite3.o && cp sqlite3.h sqlite3ext.h $dst/include/;
+done;
 
 
 
@@ -14,13 +26,13 @@ cls;./b2 variant=debug  --prefix=${DST_DIR} address-sanitizer=on install cxxflag
 DST_DIR=$REPO_DIR/install/g++-15/Debug/boost
 ./bootstrap.sh --prefix=${DST_DIR} --includedir=headers --libdir=dist
 echo "using gcc : : /usr/bin/g++-15 ; " >> tools/build/src/user-config.jam
-echo "using clang : : /usr/bin/clang++-22 ;" >> tools/build/src/user-config.jam
+echo "using clang : : /usr/bin/clang++ ;" >> tools/build/src/user-config.jam
 
 #./b2 --prefix=${DST_DIR} address-sanitizer=on install
 ./b2 variant=debug --prefix=${DST_DIR} address-sanitizer=on install cxxflags="-static-libasan" linkflags="-static-libasan" --with-json --with-charconv
 ./b2 variant=debug --prefix=${DST_DIR} address-sanitizer=on install cxxflags="-ggdb -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -D_GLIBCXX_DEBUG=ON -static-libstdc++ -static-libasan" linkflags="-static-libasan" --with-json --with-charconv
 
-./b2 variant=debug toolset=clang-22 --prefix=${DST_DIR} address-sanitizer=on install cxxflags="-stdlib=libc++" -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libc++ -static-libasan linkflags="-stdlib=libc++ -static-libasan" --with-json --with-charconv
+./b2 variant=debug toolset=clang --prefix=${DST_DIR} address-sanitizer=on install cxxflags="-stdlib=libc++" -fsanitize=address -fsanitize=leak -fno-omit-frame-pointer -static-libc++ -static-libasan linkflags="-stdlib=libc++ -static-libasan" --with-json --with-charconv
 
 
 bootstrap.bat --prefix=C:\Users\duffyj\source\repos\libs\install\clang\boost --with-toolset=clang-win

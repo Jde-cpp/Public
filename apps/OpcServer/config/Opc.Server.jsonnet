@@ -46,6 +46,15 @@ function( sync=false )
 				console:{},
 				file:{ path: logsDir, md: false }
 			}
+		},
+		proto:{//without this ProtoLog::Init is a no-op, there is no binary archive, and the `logs` query 500s on GetLogger<ProtoLog> - which is what the web ui's Logs tab reads.
+			path: logsDir + "/opc-server",
+			timeZone: "America/New_York",
+			delay: "PT1M",
+			tags: {
+				default: "Debug",
+				externalLogger: "None"
+			}
 		}
 	},
 	credentials:{

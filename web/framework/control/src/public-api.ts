@@ -20,6 +20,7 @@ export * from './lib/pages/ql/selector/ql-selector';
 
 export * from './lib/pages/authorization/login-page/login-page';
 export * from './lib/pages/apps/apps';
+export * from './lib/pages/apps/app-server-detail/app-server-detail';
 export * from './lib/pages/logs/detail/logs';
 export * from './lib/pages/logs/settings/log-settings';
 export * from './lib/pages/logs/tags/log-tags';

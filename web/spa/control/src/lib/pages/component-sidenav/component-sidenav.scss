@@ -13,6 +13,7 @@ app-component-sidenav {
 .docs-component-viewer-sidenav-container {
   flex: 1;
   box-sizing: border-box;
+  container-type: size;//lets the nav pane below ask for the visible height (100cqh) instead of re-deriving it from 100vh minus the chrome above
 }
 
 .docs-component-viewer-sidenav {
@@ -39,7 +40,7 @@ app-component-sidenav {
     border-right: 1px solid var(--mat-sys-outline-variant);
     width: constants.$sidenav-width;
     padding: 16px 8px;
-    height: calc(100vh - 75px);
+    height: 100cqh;//exactly the sidenav container's visible height, whatever the navbar/breadcrumb row above it measures - a flat `100vh - 75px` was 17px too tall with breadcrumbs on (a scrollbar) and 19px short with them off
     overflow: auto;
     box-sizing: border-box;
 

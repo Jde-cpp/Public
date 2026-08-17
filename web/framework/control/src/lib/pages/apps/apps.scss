@@ -1,13 +1,92 @@
 //@import '../../../../styles/constants';
+@use '../../../styles/section-tints' as tints;
 
 .cards {
 	display: flex;
 	flex-direction: column;
-	overflow: auto;
-	flex: 1;
-	margin-top: calc(56px + var(--jde-breadcrumb-height, 0px));
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+}
+
+// same wrapping-and-centered row as the cards page
+.cards-row {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-content: start;
+	gap: 20px;
+	padding: 24px 20px 32px;
+}
+
+.card-link {
+	flex: 0 1 280px;//shrinks on a phone, never grows past the tile width
+	border-radius: var(--mat-sys-corner-large);
+
+	// the global `a:visited{color:magenta}` in styles.scss turns visited tiles pink without the :visited arm
+	&, &:visited, &:active, &:hover, &:focus { color: inherit; text-decoration: none; }
+	&:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 3px; }
+}
+
+// same hover/focus affordance as the cards page - these tiles are links, so they should react like one.
+// This is the Applications section, so its tiles carry the tint its home tile advertised.
+.docs-component-category-list-card {
+	height: 100%;
+	box-sizing: border-box;
+	border: 1px solid transparent;//reserved so the hover border does not shift the layout
+	transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+	@include tints.tint( apps );
+
+	.card-link:hover &, .card-link:focus-visible & {
+		@include tints.tintHover( apps );
+		box-shadow: var(--mat-sys-level2);
+		transform: translateY( -2px );
+	}
+}
+
+.card-heading {
+	display: flex;
+	justify-content: space-between;
+	align-items: start;
+	gap: 12px;
+	padding: 16px 16px 0;//mat-card-header's padding, which we are standing in for
+}
+
+.card-heading-text {
+	min-width: 0;//lets a long instance name wrap instead of pushing the icon off the card
+
+	// the instance is a qualifier on the program name, not a second title
+	.mat-mdc-card-subtitle {
+		margin-top: 2px;
+		font-weight: 400;
+		color: var(--mat-sys-on-surface-variant);
+		opacity: 0.75;
+	}
+}
+
+// label/value pairs line up in a column instead of running as "Label:  value" text
+.card-facts {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 4px 12px;
+	align-items: baseline;
+	padding-top: 12px;
+	padding-bottom: 16px;
+}
+
+.card-label {
+	color: var(--mat-sys-on-surface-variant);
+	opacity: 0.75;//on-surface-variant is barely dimmer than on-surface in these themes
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.docs-component-category-list-card {
+		transition: none;
+
+		.card-link:hover &, .card-link:focus-visible & { transform: none; }
+	}
+}
+
+.card-icon {
+	flex: none;
+	color: var(--mat-sys-primary);
 }
 
 .docs-component-category-list-summary
@@ -47,10 +126,7 @@
 }
 
 .docs-component-list-item {
-	display: inline-block;
-	margin: 20px;
-	vertical-align: top;
-	width: 260px;
+	display: block;
 
 	.mat-card-title {
 	  font-size: 20px;

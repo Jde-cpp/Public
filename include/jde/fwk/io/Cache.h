@@ -13,9 +13,9 @@ namespace Jde::Cache{
 	Φ Init()ι->void;
 	Φ DefaultDuration()ι->steady_clock::duration;
 
-	Ṫ Get( str id )ι->sp<const T>;
-	Ṫ Set( str name, T value, optional<steady_clock::duration> duration = DefaultDuration() )ι->sp<const T>;
-	Ṫ Set( str name, sp<const T> value, optional<steady_clock::duration> duration = DefaultDuration() )ι->sp<const T>;//zero-copy - the cache shares the caller's instance.
+	Ŧ Get( str id )ι->sp<const T>;
+	Ŧ Set( str name, T value, optional<steady_clock::duration> duration = DefaultDuration() )ι->sp<const T>;
+	Ŧ Set( str name, sp<const T> value, optional<steady_clock::duration> duration = DefaultDuration() )ι->sp<const T>;//zero-copy - the cache shares the caller's instance.
 	Φ Shutdown( bool terminate, SRCE )ι->void;
 	Φ Clear( str id )ι->bool;
 	namespace Internal{
@@ -24,7 +24,7 @@ namespace Jde::Cache{
 	}
 }
 namespace Jde{
-	Ṫ Cache::Get( str id )ι->sp<const T>{
+	Ŧ Cache::Get( str id )ι->sp<const T>{
 		auto p = Cache::Internal::Get( id );
 		if( auto* tptr = p ? std::any_cast<std::shared_ptr<const T>>(p.get()) : nullptr )
 			return *tptr;
@@ -33,12 +33,12 @@ namespace Jde{
 			return nullptr;
 		}
 	}
-	Ṫ Cache::Set( str id, sp<const T> value, optional<steady_clock::duration> duration )ι->sp<const T>{
+	Ŧ Cache::Set( str id, sp<const T> value, optional<steady_clock::duration> duration )ι->sp<const T>{
 		DBGT( ELogTags::Cache, "Cache set for {}", id );
 		Internal::Set( id, ms<std::any>(value), duration );
 		return value;
 	}
-	Ṫ Cache::Set( str id, T value, optional<steady_clock::duration> duration )ι->sp<const T>{
+	Ŧ Cache::Set( str id, T value, optional<steady_clock::duration> duration )ι->sp<const T>{
 		return Set<T>( id, sp<const T>{ms<const T>(std::move(value))}, duration );
 	}
 }

@@ -1,6 +1,6 @@
 # Self-hosted GitHub Actions runner image for the Jde OpcGateway build.
 #
-# Layers the clang++-22 / libc++ toolchain (and the system libraries the -jde
+# Layers the clang++-23 / libc++ toolchain (and the system libraries the -jde
 # CMake presets link against) on top of the myoung34 auto-registering runner.
 #
 # Third-party dependencies (Boost, protobuf, open62541, jsonnet, …) are NOT baked
@@ -17,7 +17,7 @@
 ARG BASE_IMAGE=myoung34/github-runner:ubuntu-noble
 FROM ${BASE_IMAGE}
 
-ARG LLVM_VERSION=22
+ARG LLVM_VERSION=23
 USER root
 
 # clang/libc++/lld from apt.llvm.org, plus the system -dev packages the presets
@@ -85,8 +85,8 @@ RUN set -eux; \
     cmake --version
 
 # The -jde presets set CMAKE_CXX_COMPILER=clang++ and link with -fuse-ld=lld, so
-# the unversioned names must resolve to the v22 binaries (mirrors the host, where
-# /usr/bin/clang++ -> clang++-22).
+# the unversioned names must resolve to the v23 binaries (mirrors the host, where
+# /usr/bin/clang++ -> clang++-23).
 RUN set -eux; \
     update-alternatives --install /usr/bin/clang   clang   /usr/bin/clang-${LLVM_VERSION}   100; \
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_VERSION} 100; \

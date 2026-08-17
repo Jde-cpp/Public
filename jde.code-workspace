@@ -2,7 +2,8 @@
 	"settings": {
 		"window.title": "Jde",
 		"releaseRoot": "${env:JDE_BASH}/Release",
-		"sourceDir": "${workspaceFolder}",
+		"sourceDir": "${workspaceFolder:Public}",
+		"workspace": "${config:sourceDir}",
 		"target": "",
 		"testTarget": "",
 		"cmake.sourceDirectory": "${workspaceFolder}",

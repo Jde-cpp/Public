@@ -1,7 +1,7 @@
 # Self-hosted CI runner
 
 Containerised, auto-registering GitHub Actions runner for the Jde OpcGateway
-build. The image adds the clang++-22 / libc++ toolchain to
+build. The image adds the clang++-23 / libc++ toolchain to
 [`myoung34/github-runner`](https://github.com/myoung34/docker-github-actions-runner);
 the 2 GB third-party dependency tree is **bind-mounted from the host**, not baked
 in. Consumed by [`.github/workflows/linux-ci.yml`](../workflows/linux-ci.yml).
@@ -39,7 +39,7 @@ sudo docker run -d --restart always --name gha-runner \
   -e RUNNER_NAME="jde-ci" \
   -e RUNNER_SCOPE="repo" \
   -e EPHEMERAL="1" \
-  -e LABELS="linux,container,clang22" \
+  -e LABELS="linux,container,clang23" \
   -e REPO_DIR="/deps" \
   -v /home/duffyj/code/libs/install:/deps/install:ro \
   -v /home/duffyj/code/libs/UA-Nodeset:/deps/UA-Nodeset:ro \

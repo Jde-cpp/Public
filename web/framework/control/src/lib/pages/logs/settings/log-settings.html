@@ -7,7 +7,7 @@
 		<button matButton="outlined" (click)="cancel()">Cancel</button>
 		<span class="restart-hint">Changes take effect when the instance restarts.</span>
 	</mat-toolbar>
-	<mat-tab-group class="my-content" mat-align-tabs="center" mat-stretch-tabs="false" [selectedIndex]="tabIndex()" (selectedIndexChange)="tabIndex.set($event)" dynamicHeight="true">
+	<mat-tab-group class="my-content" mat-align-tabs="center" mat-stretch-tabs="false" [selectedIndex]="tabIndex()" (selectedIndexChange)="tabIndex.set($event)">
 		<mat-tab>
 			<ng-template mat-tab-label>Binary</ng-template>
 			<div class="centered-content">

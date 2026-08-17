@@ -6,9 +6,7 @@
 @use '../projects/jde-spa/src/styles/general';
 
 .rounded-input{
-  --mdc-outlined-text-field-container-shape: 30px !important;
-  //border-radius: 50px 0 0 50px !important;
-	//background-color: red;
+  --mat-form-field-outlined-container-shape: 20px;
 }
 
 html {

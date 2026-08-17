@@ -109,3 +109,11 @@ export const userTableSettings:TableSettings = {
 		"description"
 	]
  }
+ export const resourceTableSettings:TableSettings = {
+	canAdd: false,
+	canPurge: false,
+	columns: [
+		{ name:"target" },
+		{ name:"deleted" },
+	]
+ }

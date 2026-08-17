@@ -89,6 +89,15 @@ function( sync=false )
 			}
 		},
 		subscribe:{},
+		proto:{//without this ProtoLog::Init is a no-op, there is no binary archive, and the `logs` query 500s on GetLogger<ProtoLog> - which is what the web ui's Logs tab reads.
+			path: logsDir + "/app-server",
+			timeZone: "America/New_York",
+			delay: "PT1M",
+			tags: {
+				default: "Debug",
+				externalLogger: "None"
+			}
+		},
 		breakLevel: "Warning"
 	},
 	workers:{

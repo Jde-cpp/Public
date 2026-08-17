@@ -1,42 +1,48 @@
+@use '../../../styles/section-tints' as tints;
+
 .page {
-	margin-top: calc(56px + var(--jde-breadcrumb-height, 0px));
-	overflow-y: auto;
-	-webkit-overflow-scrolling: touch;
-}
-.page-heading {
-	margin: 32px 0 0;
-	text-align: center;
-	font-size: 22px;
-	font-weight: 500;
-	color: var(--mat-sys-on-surface);
-
-	// full-width divider under the page title
-	&::after {
-		content: "";
-		display: block;
-		height: 1px;
-		margin: 16px 20px 0;
-		background: var(--mat-sys-outline-variant);
-	}
+	display: flex;
+	flex-direction: column;
 }
 
-.card {
+// wrapping flex row rather than a grid: a fixed tile width keeps three of them from stretching across a 4k
+// monitor, and justify-content centers whatever is on the row - including a short last row
+.cards {
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
-	gap: 28px;
+	align-content: start;
+	gap: 20px;
 	padding: 24px 20px 32px;
 }
 
 .card-link {
-	text-decoration: none;
-	&, &:active, &:hover, &:focus { text-decoration: none; }
+	display: block;
+	flex: 0 1 280px;//shrinks on a phone, never grows past the tile width
+	border-radius: var(--mat-sys-corner-large);
 
-	// takes the whole row, card centered within it
-	&.full-row {
-		flex-basis: 100%;
-		display: flex;
-		justify-content: center;
+	// the global `a:visited{color:magenta}` in styles.scss turns visited tiles pink without the :visited arm
+	&, &:visited, &:active, &:hover, &:focus { color: inherit; text-decoration: none; }
+	&:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 3px; }
+}
+
+.card {
+	position: relative;//.card-icon is positioned against this
+	box-sizing: border-box;
+	height: 100%;
+	min-height: 96px;
+	padding: 20px 60px 20px 20px;//right side left clear for the icon
+	border: 1px solid var(--mat-sys-outline-variant);
+	border-radius: var(--mat-sys-corner-large);
+	background: var(--mat-sys-surface-container);
+	box-shadow: var(--mat-sys-level1);
+	transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+
+	.card-link:hover &, .card-link:focus-visible & {
+		background: var(--mat-sys-surface-container-high);
+		border-color: var(--mat-sys-primary);
+		box-shadow: var(--mat-sys-level2);
+		transform: translateY( -2px );
 	}
 }
 
@@ -44,86 +50,45 @@
 	position: absolute;
 	top: 18px;
 	right: 18px;
-	color: rgba(33, 43, 54, 0.35);
+	color: var(--mat-sys-primary);
 }
 
 .card-title {
-	position: relative;
-	z-index: 1;
-	font-size: 20px;
-	font-weight: 700;
-	color: #212b36;
-	letter-spacing: 0.2px;
-}
-
-// sits just above the stat at the bottom, like the reference dashboard
-.card-label {
-	position: absolute;
-	left: 24px;
-	bottom: 60px;
-	z-index: 1;
-	font-size: 11px;
+	font-size: 18px;
 	font-weight: 600;
-	letter-spacing: 1px;
-	color: rgba(33, 43, 54, 0.55);
+	letter-spacing: 0.2px;
+	color: var(--mat-sys-on-surface);
+	overflow-wrap: anywhere;//node/gateway names are unspaced and would otherwise widen the column
 }
 
-.card-stat {
-	position: absolute;
-	left: 24px;
-	bottom: 20px;
-	z-index: 1;
-	font-size: 34px;
-	font-weight: 700;
-	color: #1a2330;
+.card-summary {
+	margin-top: 6px;
+	font-size: 13px;
+	line-height: 1.4;
+	color: var(--mat-sys-on-surface-variant);
 }
 
-.card-trend {
-	position: absolute;
-	right: 18px;
-	bottom: 20px;
-	z-index: 1;
-	font-size: 22px;
-	width: 22px;
-	height: 22px;
-	color: rgba(33, 43, 54, 0.6);
+// the home tiles are color coded per section so the areas read apart at a glance - HomeRouteService tags each
+// tile `card-<route path>`, and the section page it leads to wears the same tint
+@each $section, $tint in tints.$section-tints {
+	.card.card-#{$section} {
+		@include tints.tint( $section );
+
+		.card-link:hover &, .card-link:focus-visible & { @include tints.tintHover( $section ); }
+	}
 }
 
-.card-badge {
-	position: absolute;
-	right: 52px;
-	top: 18px;
-	z-index: 1;
-	padding: 3px 10px;
-	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.55);
-	border: 1px solid rgba(33, 43, 54, 0.25);
-	font-size: 11px;
-	font-weight: 700;
-	letter-spacing: 0.5px;
-	color: rgba(33, 43, 54, 0.75);
+.cards-empty {
+	flex: 1 1 100%;
+	padding: 24px 20px;
+	text-align: center;
+	color: var(--mat-sys-on-surface-variant);
 }
 
+@media (prefers-reduced-motion: reduce) {
+	.card {
+		transition: none;
 
-.cards {
-	display: flex;
-	flex-direction: column;
-	overflow: auto;
-	flex: 1;
-	margin-top: calc(56px + var(--jde-breadcrumb-height, 0px));
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+		.card-link:hover &, .card-link:focus-visible & { transform: none; }
+	}
 }
-
-.card::after {
-	top: 0;
-	height: auto;
-//	background-image: url("cards/gateways-topology.svg");
-	background-size: 210px auto;
-	background-position: center;
-}
-
-
-.card-gateways { background: linear-gradient(135deg, #d7f5e3 0%, #a8e6c5 100%); }
-.card-access   { background: linear-gradient(135deg, #fdf6d2 0%, #fbe48a 100%); }
-.card-applications { background: linear-gradient(135deg, #eceff2 0%, #cfd6de 100%); }
