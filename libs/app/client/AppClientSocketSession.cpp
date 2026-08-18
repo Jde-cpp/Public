@@ -33,6 +33,7 @@ namespace Client{
 	α StartSocketAwait::RunSession()ι->VoidTask{
 		try{
 			co_await _session->RunSession( Host(), Port() );//Web::Client
+			THROW_IF( Process::ShuttingDown(), "Shutting down." );
 			SendSessionId();
 		}
 		catch( runtime_error& e ){

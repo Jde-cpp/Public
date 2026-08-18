@@ -1,13 +1,14 @@
 local logsDir = std.extVar("logsDir");
 {
 	testing:{
-		tests:: "TrustStoreTests.*",
+		tests: "ChronoTests.ToTimePointRejectsGarbage",
 		file: logsDir + "/tests/test.txt"
 	},
 	cryptoTests:{
 		clear: false
 	},
 	logging:{
+		breakLevel: "Critical",
 		spd:{
 			tags: {
 				default: "Information",
@@ -29,6 +30,7 @@ local logsDir = std.extVar("logsDir");
 		}
 	},
 	workers:{
+		blockStallWarning: "PT0.2S",//short enough for BlockAwaitTests.WarnsWhileStalled to observe; production defaults to 30s.
 		executor: {threads: 2},
 		io: {chunkByteSize: 10, threads: 2}
 	}

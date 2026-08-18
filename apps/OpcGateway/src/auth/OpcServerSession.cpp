@@ -66,7 +66,7 @@ namespace Jde::Opc{
 
 	α Gateway::AuthCache( const Credential& cred, const ServerCnnctnNK& opcNK, SessionPK sessionId )ι->optional<bool>{
 		optional<bool> authenticated;
-		sl _{ _sessionsMutex };
+		ul _{ _sessionsMutex };
 		for( let& [_,sessionConnections] : _sessions ){
 			auto p = sessionConnections.find(opcNK);
 			if( p==sessionConnections.end() )
@@ -84,7 +84,7 @@ namespace Jde::Opc{
 				break;
 		};
 		if( authenticated && *authenticated )
-			AddSession( sessionId, opcNK, cred );
+			_sessions[sessionId][opcNK] = cred;
 
 		return authenticated;
 	}

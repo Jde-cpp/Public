@@ -40,6 +40,10 @@ namespace Jde::App{
 	}
 	α Client::Connect( sp<IAppClient> appClient )ι->ConnectAwait::Task{
 		try{
+			if( Process::ShuttingDown() ){
+				TRACET( ELogTags::App, "Not reconnecting - shutting down." );
+				co_return;
+			}
 			co_await ConnectAwait{ appClient, true };
 			//Server-side subscriptions die with the socket, so everything the process asked for has to be re-issued, not
 			//just the one call that used to be hard-coded here.  Replaying covers accessSubscribe's own request too, so it
@@ -105,13 +109,14 @@ namespace Jde::App::Client{
 	}
 	α ConnectAwait::RunSocket( SessionPK sessionId )ι->TAwait<Proto::FromServer::ConnectionInfo>::Task{
 		try{
+			THROW_IF( Process::ShuttingDown(), "Shutting down." );
 			TRACET( ELogTags::App, "[{}]Creating socket session", hex(sessionId) );
 			auto info = co_await StartSocketAwait{ sessionId, _authorize, _appClient, _sl };
 			_appClient->SetAppPKs( info.instance_pk(), info.connection_pk() );
 			Post( _h );  //in OnRead, will block subsequent reads
 		}
 		catch( runtime_error& e ){
-			if( _retry )
+			if( _retry && !Process::ShuttingDown() )
 				Retry();
 			else
 				ResumeExp( move(e) );
@@ -120,10 +125,11 @@ namespace Jde::App::Client{
 	α ConnectAwait::HttpLogin()ι->LoginAwait::Task{
 		try{
 			let sessionId = co_await LoginAwait{ *_appClient->SslSettings };//http call
+			THROW_IF( Process::ShuttingDown(), "Shutting down." );
 			RunSocket( sessionId );
 		}
 		catch( runtime_error& e ){
-			if( _retry )
+			if( _retry && !Process::ShuttingDown() )//a retry timer armed during teardown only delays the executor drain.
 				Retry();
 			else
 				ResumeExp( move(e) );

@@ -31,6 +31,7 @@ namespace Jde::Web::Server{
 		β WriteException( runtime_error&& e, RequestId requestId )ι->void=0;
 		β WriteException( string&& e, RequestId requestId )ι->void=0;
 		α UserPK()Ι{ return _userPK; }
+		α IsOpen()ι->bool{ return StreamPtr()!=nullptr; }//OnClose nulls Stream, so this is the one place that knows the socket behind a registration is gone.
 		β Close()ι->void;
 	protected:
 		sp<SocketStream> Stream;

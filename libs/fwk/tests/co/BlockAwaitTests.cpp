@@ -1,4 +1,5 @@
 #include <jde/fwk/co/Await.h>
+#include <jde/fwk/log/MemoryLog.h>
 #include <jde/fwk/process/execution.h>
 #include <atomic>
 #include <thread>
@@ -64,10 +65,27 @@ namespace Jde::Tests{
 		EXPECT_EQ( value->load(), 7 );
 	}
 
-	//BlockAwaitState is co-owned because the waiter can wake between test_and_set and notify_all - a
-	//stack-owned flag would be destroyed while notify_all still touched it.  Repeat enough to hit that window.
+	//BlockAwaitState is co-owned because the waiter can wake between Signal's assignment and its notify_all - a
+	//stack-owned state would be destroyed while notify_all still touched it.  Repeat enough to hit that window.
 	TEST_F( BlockAwaitTests, RepeatedBlocksDoNotRaceTheNotify ){
 		for( int i=0; i<300; ++i )
 			ASSERT_EQ( BlockTAwait(ThreadedInt{i}), i ) << "iteration " << i;
+	}
+
+	struct SlowInt final : TAwait<int>{
+		SlowInt( Duration delay, SRCE )ι:TAwait<int>{sl},_delay{delay}{}
+		α Suspend()ι->void override{ std::thread{ [this]{ std::this_thread::sleep_for(_delay); Resume(int{9}); } }.detach(); }
+		Duration _delay;
+	};
+
+	//A response that is dropped rather than delivered parks the caller with nothing in the log to say so - 7m33s of it in the
+	//2026-08-07 gateway stall.  The wait still never gives up; past /workers/blockStallWarning (200ms in this suite's config,
+	//30s in production) it just says what it is waiting on.  reviews/gateway-review.md #36.
+	TEST_F( BlockAwaitTests, WarnsWhileStalled ){
+		auto& logger = Logging::GetLogger<Logging::MemoryLog>();
+		Logging::ClearMemory();
+		EXPECT_EQ( BlockTAwait(SlowInt{700ms}), 9 ) << "the warning must not disturb the result";
+		let warnings = logger.Find( [](let& entry){ return entry.Message().starts_with("BlockAwait has been waiting"); } );
+		EXPECT_GE( warnings.size(), 1u ) << "a stalled block logged nothing";
 	}
 }

@@ -129,15 +129,21 @@ namespace Jde::IO{
 				continue;
 			if( res < 0 ){
 				auto op = chunk->FileArg();
+				//Message first, as at the EBUSY site above.  PostExp takes up<IFileChunkArg>&&, so passing a up<LinuxChunk>
+				//converts - and that conversion moves, emptying `chunk`.  Argument order is unspecified, and clang empties it
+				//before evaluating the format, so reading chunk->Index inline dereferenced null: every failed read/write
+				//(EISDIR, EIO, ENOSPC) crashed the process instead of reporting.
+				auto message = Ƒ( "AIO index: {} failed: {}\n", chunk->Index, strerror(-res) );
 				markFinished( op );
-				op->PostExp( move(chunk), -res, Ƒ("AIO index: {} failed: {}\n", chunk->Index, strerror(-res)) );
+				op->PostExp( move(chunk), -res, move(message) );
 				continue;
 			}
 			if( (uint)res < chunk->Bytes ){//partial read/write - resubmit the remainder.
 				auto op = chunk->FileArg();
 				if( res==0 ){//no progress - EOF or full disk; resubmitting would loop forever.
+					auto message = Ƒ( "AIO index: {} {} returned 0 with {} bytes remaining.\n", chunk->Index, chunk->IsRead() ? "read" : "write", chunk->Bytes );//before the move, same as above.
 					markFinished( op );
-					op->PostExp( move(chunk), EIO, Ƒ("AIO index: {} {} returned 0 with {} bytes remaining.\n", chunk->Index, chunk->IsRead() ? "read" : "write", chunk->Bytes) );
+					op->PostExp( move(chunk), EIO, move(message) );
 					continue;
 				}
 				TRACE( "Partial {}: {}, index: {}, completed: {} of {} - resubmitting remainder.", chunk->IsRead() ? "read" : "write", op->Path.string(), chunk->Index, res, chunk->Bytes );

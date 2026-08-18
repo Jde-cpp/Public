@@ -11,6 +11,7 @@
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"settings": "${workspaceFolder:tests}/config/Framework.Tests.jsonnet",
 		"testSettings": "${config:settings}",
+		"binDir": "${config:subDir}/tests",
 		"program": "${config:binDir}/${config:target}${config:targetExtension}"
 	},
 	"folders": [

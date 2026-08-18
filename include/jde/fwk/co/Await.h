@@ -1,6 +1,7 @@
 #pragma once
 #ifndef AWAIT_H
 #define AWAIT_H
+#include <condition_variable>
 #include "Task.h"
 
 namespace Jde{
@@ -123,13 +124,25 @@ namespace Jde{
 	};
 
 
-	//shared between the blocked thread & the coroutine: the waiter can wake & return between test_and_set and notify_all,
+	//The blocking half of the bridge.  Wait() never gives up - a bounded wait would turn every legitimately long sync call
+	//(schema sync, LocalQL::Upsert) into a spurious failure - but it warns on an interval naming the awaitable's source
+	//location, so a response that is dropped instead of delivered leaves a trail rather than 7 minutes of silence.
+	//reviews/gateway-review.md #36.
+	struct Γ BlockAwaitSync{
+		α Signal()ι->void;
+		α Wait( SL sl )ι->void;
+	private:
+		std::mutex _mutex;
+		std::condition_variable _cv;
+		bool _done{};
+	};
+
+	//shared between the blocked thread & the coroutine: the waiter can wake & return between the signal and the notify,
 	//so stack-owned state would be destroyed while notify_all still touches it - the coroutine frame co-owns it instead.
 	template<class TResult>
-	struct BlockAwaitState{
+	struct BlockAwaitState : BlockAwaitSync{
 		optional<TResult> Result;
 		up<Exception> Error;
-		atomic_flag Done;
 	};
 
 	Ξ BlockVoidAwaitExecute( VoidAwait&& a, sp<BlockAwaitState<std::monostate>> s )ι->VoidAwait::Task{
@@ -139,14 +152,14 @@ namespace Jde{
 		catch( Exception& e2 ){
 			s->Error = e2.Move();
 		}
-		s->Done.test_and_set();
-		s->Done.notify_all();
+		s->Signal();
 	}
 
 	Ξ BlockVoidAwait( VoidAwait&& a )ε->void{
 		auto s = ms<BlockAwaitState<std::monostate>>();
+		const auto sl = a.Source();//copied before the move - the awaitable is the caller's only clue to what a stalled wait is waiting on.
 		BlockVoidAwaitExecute( move(a), s );
-		s->Done.wait( false );
+		s->Wait( sl );
 		if( s->Error )
 			s->Error->Throw();
 	}
@@ -159,15 +172,15 @@ namespace Jde{
 		catch( Exception& e2 ){
 			s->Error = e2.Move();
 		}
-		s->Done.test_and_set();
-		s->Done.notify_all();
+		s->Signal();
 	}
 
 	template<class TAwait, class TResult>
 	α BlockAwait( TAwait&& a )ε->TResult{
 		auto s = ms<BlockAwaitState<TResult>>();
+		const auto sl = a.Source();
 		BlockAwaitExecute<TAwait,TResult>( a, s );
-		s->Done.wait( false );
+		s->Wait( sl );
 		if( s->Error )
 			s->Error->Throw();
 		return move( *s->Result );

@@ -1,5 +1,8 @@
 #include <jde/fwk/process/process.h>
+#include <condition_variable>
+#include <cstdlib>
 #include <iostream>
+#include <thread>
 #include <typeinfo>
 #include <sys/types.h>
 
@@ -143,6 +146,9 @@ namespace Jde{
 			message = Ƒ( "[{}] no message", typeid(e).name() );
 
 		sv prefix = y==0 ? "Exiting on exception:  " : "Exiting on error:  ";
+		LOG( y==0 ? ELogLevel::Information : ELogLevel::Critical, ELogTags::App | ELogTags::Shutdown, "{}{}", prefix, message );
+		if( !ExitReason() )
+			SetExitReason( y, false );
 		std::cerr << prefix << message << std::endl;
 		return y;
 	}
@@ -172,6 +178,35 @@ namespace Jde{
 
 
 	Ω cleanup( bool terminate )ι->void;
+
+	std::mutex _shutdownMutex;
+	std::condition_variable _shutdownComplete;
+	bool _shutdownFinished{};
+	Ω shutdownTimeout()ι->Duration{
+		if( let configured = Settings::FindDuration("/shutdown/timeout"); configured )
+			return *configured;
+		return Process::IsDebuggerPresent() ? Duration{5min} : Duration{30s};//stepping through teardown in a debugger is not a wedge - give it room, but still bound it.
+	}
+	//A process that runs its shutdown functions - closing its listeners - and then never returns from cleanup() is worse than
+	//a hard exit: it keeps its AppServer registration and goes on advertising ports it has already closed.  Nothing stops new
+	//work arriving mid-teardown (the 100ms sleep below is not a barrier), so this is the backstop.  reviews/gateway-review.md #33.
+	Ω armShutdownWatchdog( int exitReason )ι->void{
+		let timeout = shutdownTimeout();
+		if( timeout<=Duration::zero() )
+			return;
+		std::thread{ [timeout,exitReason](){
+			Thread::SetName( "ShutdownWatchdog" );
+			std::unique_lock l{ _shutdownMutex };
+			if( _shutdownComplete.wait_for(l, timeout, [](){return _shutdownFinished;}) )
+				return;
+			l.unlock();
+			let message = Ƒ( "Shutdown did not complete within {}ms - exiting hard.", std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count() );
+			std::cerr << message << std::endl;//the loggers are the likeliest thing wedged - say it somewhere that cannot be.
+			Process::AddApplicationLog( ELogLevel::Critical, message );
+			std::_Exit( exitReason );//not exit(): atexit handlers & static destructors are exactly what is stuck.
+		} }.detach();
+	}
+
 	α Process::Shutdown( int exitReason )ι->void{
 		static std::atomic_flag _ran;
 		if( _ran.test_and_set() )//linux signal exits run this twice - Pause() calls it before returning, then main calls it with Pause's result; the 2nd pass re-ran the shutdown functions against already-nulled state (e.g. AppServer's AccessListener).
@@ -179,6 +214,7 @@ namespace Jde{
 		if( !ExitReason() )//ExitHandler may have recorded the reason & terminate flag (SIGTERM) already - first cause wins.
 			SetExitReason( exitReason, false );
 		let terminate = _terminate;
+		armShutdownWatchdog( ExitReason().value_or(exitReason) );
 
 		for_each( _shutdownFunctions, [=](let& shutdown){shutdown(terminate, SRCE_CUR);} );
 		DBGT( ELogTags::App | ELogTags::Shutdown, "{} Shutdown functions removed", _shutdownFunctions.size() );
@@ -204,6 +240,8 @@ namespace Jde{
 		if( ioc && ioc.use_count()>1 )//everything that used the io_context should have released it by now; a leftover ref means an asio object would otherwise outlive the io_context (use-after-free).
 			std::cout << "WARNING: io_context still has " << ioc.use_count()-1 << " reference(s) at finalize." << std::endl;
 		ioc = nullptr;//io_context destroyed here, deterministically last.
+		{ lg _{_shutdownMutex}; _shutdownFinished = true; }
+		_shutdownComplete.notify_all();//disarms the watchdog.
 		std::cout << "Shutdown complete." << std::endl;
 	}
 	α Process::AppDataFolder()ι->fs::path{

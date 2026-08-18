@@ -345,7 +345,18 @@ namespace Jde::IO::Tests{
 	//produces it is pinned - on linux that is to_timespec + utimensat (fwk-max #15 lived here), on windows GetTimes +
 	//SetFileTime.  Note the two platforms gate on *different* fields: linux on ModifiedTime, windows on CreatedTime,
 	//so a portable test has to set both or it silently exercises nothing on one of them.
-	Ω toSys( fs::file_time_type t )ι->TimePoint{ return std::chrono::clock_cast<Clock>( t ); }
+	//clock_cast is C++20 chrono - libc++ is still at __cpp_lib_chrono 201611L and does not have it at all, so this has to
+	//branch on the library feature, not the compiler.  What libc++ does offer is file_clock::to_sys, the same exact
+	//conversion clock_cast would resolve to.  Not Chrono::ToClock (which is what ProtoLog::dailyFileDay and LogTests use):
+	//that offsets by two now() readings and lands within a millisecond of the truth, and `when` below sits exactly on the
+	//whole second these expectations floor to - a sub-millisecond error either way flips the comparison.
+	Ω toSys( fs::file_time_type t )ι->TimePoint{
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
+		return std::chrono::clock_cast<Clock>( t );
+#else
+		return std::chrono::time_point_cast<Duration>( fs::file_time_type::clock::to_sys(t) );
+#endif
+	}
 	TEST( DriveTests, CreateFolderAndSaveApplyTheirTimes ){
 		//native separators throughout: /testing/file arrives with forward slashes, and WindowsDrive hands the raw
 		//string to CreateDirectory/CreateFileW, which reject a mixed path with ERROR_INVALID_NAME.

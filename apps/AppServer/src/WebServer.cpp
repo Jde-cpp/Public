@@ -76,6 +76,11 @@ namespace Jde::App{
 		vector<Proto::FromClient::Instance> y;
 		_sessions.cvisit_all( [&](let& kv){
 			let& session = kv.second;
+			//A registration is only worth serving while the socket that made it is still up: /opcGateways hands its answer
+			//straight to the browser, which has no way to tell a live endpoint from one whose process is tearing down.
+			//OnSessionDisconnect normally erases first, but it runs on the session's strand - this closes the window.
+			if( !session->IsOpen() )
+				return;
 			if( let instance = session->Instance(); instance.application()==name )
 				y.push_back( instance );
 		} );
