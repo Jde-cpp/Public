@@ -171,6 +171,9 @@ namespace Jde::Tests{
 
 		let micro = Chrono::ToTimePoint( 2024, 1, 2, 3, 4, 5, duration_cast<Duration>(microseconds{123456}) );
 		EXPECT_EQ( Chrono::ToTimePoint(ToIsoString<microseconds>(micro)), micro );
+		//a fraction and a numeric offset in the one string: the fraction is consumed digit by digit, so the offset has to
+		//still be found after it rather than inside it.
+		EXPECT_EQ( Chrono::ToTimePoint("2024-01-02T03:04:05.123456+05:00"), micro-hours{5} );
 	}
 
 	//the local-time renderer used by the console log pattern.  The hour is the machine's zone and not assertable, but

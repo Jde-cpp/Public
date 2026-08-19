@@ -14,9 +14,9 @@ namespace Jde::Proto{ class Query; }
 namespace Jde::QL{ struct Subscription; }
 
 namespace Jde::Web::Server{
-	struct RestStream; struct SocketStream;
+	struct IRestStream; struct ISocketStream; template<class TStream> struct SocketStream;
 	struct ΓWS IWebsocketSession : std::enable_shared_from_this<IWebsocketSession>{
-		IWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
+		IWebsocketSession( sp<IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α Run()ι->void;
 		α Id()Ι->SocketId{ return _id; }
 		α QueryClient( QL::TableQL query, Jde::UserPK executer, SRCE )ι->QueryClientAwait{ return QueryClientAwait{move(query), executer, shared_from_this(), sl}; }
@@ -31,10 +31,11 @@ namespace Jde::Web::Server{
 		β WriteException( runtime_error&& e, RequestId requestId )ι->void=0;
 		β WriteException( string&& e, RequestId requestId )ι->void=0;
 		α UserPK()Ι{ return _userPK; }
+		α IsOpen()ι->bool{ return StreamPtr()!=nullptr; }//OnClose nulls Stream, so this is the one place that knows the socket behind a registration is gone.
 		β Close()ι->void;
 	protected:
-		sp<SocketStream> Stream;
-		α StreamPtr()ι->sp<SocketStream>{ lg _{ _streamMutex }; return Stream; }//Stream is written by OnClose on the strand & read from other threads (Write/Close) - always copy through here outside the strand.
+		sp<ISocketStream> Stream;
+		α StreamPtr()ι->sp<ISocketStream>{ lg _{ _streamMutex }; return Stream; }//Stream is written by OnClose on the strand & read from other threads (Write/Close) - always copy through here outside the strand.
 		tcp::endpoint _userEndpoint;
 		β OnClose()ι->void;
 		β OnRead( const char* p, uint size )ι->void=0;
@@ -73,12 +74,12 @@ namespace Jde::Web::Server{
 		atomic<RequestId> _requestId;
 		sp<SessionInfo> _sessionInfo;
 		Jde::UserPK _userPK{};
-		friend struct SocketStream;
+		template<class> friend struct SocketStream;
 	};
 
 	template<class TFromServer, class TFromClient>
 	struct TWebsocketSession /*abstract*/ : IWebsocketSession{
-		TWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint userEndpoint, uint32 connectionIndex )ι :
+		TWebsocketSession( sp<IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint userEndpoint, uint32 connectionIndex )ι :
 			IWebsocketSession{ move(stream), move(buffer), move(request), move(userEndpoint), connectionIndex }{}
 
 		α OnRead( const char* p, uint size )ι->void;

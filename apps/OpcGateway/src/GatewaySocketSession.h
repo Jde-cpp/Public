@@ -12,7 +12,7 @@ namespace Jde::Opc::Gateway{
 	using namespace Jde::Web::Client;
 	struct GatewaySocketSession final: TWebsocketSession<FromServer::Transmission,FromClient::Transmission>, IDataChange{
 		using base = TWebsocketSession<FromServer::Transmission,FromClient::Transmission>;
-		GatewaySocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
+		GatewaySocketSession( sp<IRestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α OnRead( FromClient::Transmission&& transmission )ι->void override;
 		α SendDataChange( const ServerCnnctnNK& opcNK, const NodeId& node, const Value& value )ι->void override;
 		α to_string()Ι->string override{ return Ƒ( "{:x}", Id() ); }

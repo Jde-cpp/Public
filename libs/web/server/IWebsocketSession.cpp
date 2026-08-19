@@ -18,8 +18,8 @@ namespace Jde::Web::Server{
 		sp<IWebsocketSession> _session;
 	};
 
-	IWebsocketSession::IWebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
-		Stream{ ms<SocketStream>(move(stream), move(buffer)) },
+	IWebsocketSession::IWebsocketSession( sp<IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
+		Stream{ stream->CreateSocketStream(move(buffer)) },
 		_userEndpoint{ userEndpoint },
 		_id{ connectionIndex },
 		_initialRequest{ move(request) }

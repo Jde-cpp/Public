@@ -52,8 +52,6 @@ namespace Jde::Opc::Gateway{
 				try{
 					jarray jargs = Json::FindDefaultArray( _ql.Args, "args" );
 					auto args = Reserve<Variant>( jargs.size() );
-					// for( size_t i=0; i<jargs.size(); ++i )
-					// 	args[i] = Variant{ jargs[i], &UA_TYPES[UA_TYPES_VARIANT] };
 					UA_Client_call_async(
 						*_client,
 						NodeId{ _ql.Args },

@@ -25,9 +25,8 @@
 		exitCode = Process::Pause();
 	}
 	catch( runtime_error& e ){
-		Jde::Process::ExitException( move(e) );
+		exitCode = Jde::Process::ExitException( move(e) );
 	}
-
 	Process::Shutdown( exitCode );
 	return exitCode;
 }

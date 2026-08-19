@@ -1,4 +1,5 @@
 #include <jde/fwk/chrono.h>
+#include <limits>
 #include <jde/fwk/utils/mathUtils.h>
 
 #define let const auto
@@ -101,13 +102,35 @@ namespace Jde{
 			if( !iso.empty() && iso.back()=='Z' )//UTC designator; timegm below already treats the fields as UTC.
 				iso.pop_back();
 			std::istringstream is{ iso };
+			//Sentinels, because is.fail() alone does not mean what it does on the %FT%T branch: get_time that runs out of
+			//input mid-format sets eofbit and *not* failbit, so "2024-01-02" and "2024-01-02T03:04" came back "parsed" with
+			//the fields it never reached left at whatever tm held - silently 00:00:00, where chrono::parse throws.  get_time
+			//writes each field as it reads it, so a field still holding its sentinel is one the format never got to.  This
+			//stays width-agnostic: "2024-1-2T3:4:5" fills all six and is accepted, exactly as chrono::parse accepts it.
+			constexpr int unset{ std::numeric_limits<int>::min() };
 			std::tm tm{};
+			tm.tm_year = tm.tm_mon = tm.tm_mday = tm.tm_hour = tm.tm_min = tm.tm_sec = unset;
 			is >> std::get_time( &tm, "%Y-%m-%dT%H:%M:%S" );
-			THROW_IFSL( is.fail(), "Could not parse ISO time:  {}", iso );
+			THROW_IFSL( is.fail() || tm.tm_year==unset || tm.tm_mon==unset || tm.tm_mday==unset || tm.tm_hour==unset || tm.tm_min==unset || tm.tm_sec==unset, "Could not parse ISO time:  {}", iso );
 			// timegm interprets tm as UTC, matching the %FT%T sys_time branch (mktime would apply the local tz offset).
 			auto tp = std::chrono::system_clock::from_time_t( ::timegm(&tm) );
-			if( iso.size()>19 && iso[19]=='.' )
-				tp += std::chrono::milliseconds( Round(std::stod( iso.substr(19) )*1000) );
+			//Sub-second field, read off the stream where get_time stopped rather than at a fixed offset, and accumulated in
+			//Duration's own ticks.  The old stod(fraction)*1000 rounded to whole milliseconds, so ToIsoString<microseconds>
+			//came back as .123000 from .123456 - the %FT%T branch keeps every digit the time_point can hold.
+			is.clear();//get_time sets eofbit on a timestamp that ends at the seconds; peek needs a good stream.
+			if( is.peek()=='.' ){
+				static_assert( Duration::period::num==1, "the digit scaling below assumes a 1/n tick period" );
+				is.get();
+				Duration::rep scale{ Duration::period::den }; Duration::rep ticks{};
+				for( auto ch=is.peek(); ch>='0' && ch<='9'; ch=is.peek() ){
+					is.get();
+					if( scale<=1 )
+						continue;//finer than Duration can represent: consumed so it cannot be mistaken for a zone, then dropped - the same truncation ToIsoString applies on the way out.
+					scale /= 10;
+					ticks += ( ch-'0' )*scale;
+				}
+				tp += Duration{ ticks };
+			}
 			if( let zonePos = iso.size()>19 ? iso.find_first_of("+-", 19) : string::npos; zonePos!=string::npos ){//numeric offset: local = UTC + offset, so subtract it to normalize.
 				let off = iso.substr( zonePos );
 				let sign = off[0]=='-' ? -1 : 1;

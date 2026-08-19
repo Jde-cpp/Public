@@ -110,6 +110,13 @@ namespace IO{
 		if( ExceptionPtr )
 			ExceptionPtr->Throw();
 		DBGT( _arg->_tags, "ReadAwait::Complete: {}, size: {}", _arg->Path.string(), _arg->Size() );
+		//The failure of a suspended read lives in the promise - PostExp/ResumeExp put it there - and Open sized Buffer to the
+		//file *before* the io ran, so a read that failed still has a full-length buffer the io never filled.  Testing r.size()
+		//first therefore reported every such failure as a successful read of that many zero bytes; reading a directory
+		//returned 200 of them instead of throwing EISDIR.  CheckException keeps the concrete IOException type, and the null
+		//check is for the ready paths (cache hit, or Open threw): they never suspend, so there is no promise at all.
+		if( auto promise = Promise(); promise && promise->Exp() )
+			CheckException();
 		auto& r = get<string>(_arg->Buffer);
 		if( _fromCache || r.size() )//an empty cache hit must not fall through - StringAwait has no promise on the ready path.
 			return move(r);

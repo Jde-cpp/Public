@@ -14,7 +14,7 @@
 namespace Jde::App::Server{
 	constexpr uint8 _maxExecuteDepth{ 4 };//how many times a kExecute payload may nest another Transmission.
 	constexpr uint8 _maxFailedAdoptions{ 5 };//consecutive failed session-id adoptions on an unauthenticated socket before it's dropped.
-	ServerSocketSession::ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
+	ServerSocketSession::ServerSocketSession( sp<IRestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι:
 		base{ move(stream), move(buffer), move(request), move(userEndpoint), connectionIndex }
 	{}
 	α ServerSocketSession::AddInstance( Proto::FromClient::Instance instance, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task{

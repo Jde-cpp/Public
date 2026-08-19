@@ -8,7 +8,7 @@
 
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::QL{ struct LocalQL; }
-namespace Jde::Web::Server{ struct RestStream; }
+namespace Jde::Web::Server{ struct IRestStream; }
 namespace Jde::App::Server{
 	using namespace Jde::Web::Server;
 	struct ServerSocketSession; struct RequestHandler;
@@ -40,7 +40,7 @@ namespace Jde::App::Server{
 		α HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> override{ return mu<HttpRequestAwait>( move(req), sl ); }
 		α Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt;
 		α Schemas()ι->const vector<sp<DB::AppSchema>>& override{ return Server::Schemas(); }
-		α WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> override;
+		α WebsocketSession( sp<IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> override;
 		α QLServer()ι->sp<QL::IQL> override;
 	};
 }

@@ -5,14 +5,14 @@
 
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::Web::Server{
-	struct HttpRequest; struct IHttpRequestAwait; struct IWebsocketSession;struct RestStream;
+	struct HttpRequest; struct IHttpRequestAwait; struct IWebsocketSession;struct IRestStream;
 	struct IRequestHandler{
 		IRequestHandler( jobject settings, sp<App::IApp> appServer )ι;
 		virtual ~IRequestHandler()=default; //msvc error
 		β HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> =0;
 		β QLServer()ι->sp<QL::IQL> =0;
 		β Schemas()ι->const vector<sp<DB::AppSchema>>& =0;
-		β WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> =0;
+		β WebsocketSession( sp<IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> =0;
 
 		α AppServer()ι->sp<App::IApp>{ return _appServer; }
 		α AppServerLocal()ι->bool{ return _appServer->IsLocal(); }
