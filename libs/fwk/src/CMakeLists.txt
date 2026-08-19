@@ -48,6 +48,12 @@ else()
 #	target_link_libraries( ${targetName} PRIVATE libssl.a libcrypto.a )
 endif()
 target_link_libraries( ${targetName} PUBLIC OpenSSL::SSL )
+if( WIN32 )
+	#TrustStore.cpp calls CertOpenSystemStoreW/CertEnumCertificatesInStore/CertCloseStore directly (the OpenSSL
+	#winstore loader cannot enumerate - it only searches by subject).  crypt32 arrived transitively from the
+	#*static* libcrypto.lib; the dynamic build's import lib does not drag it, so name it here.
+	target_link_libraries( ${targetName} PUBLIC crypt32 )
+endif()
 
 target_precompile_headers( ${targetName}
   PUBLIC

@@ -42,7 +42,7 @@ namespace Jde::DB::Odbc{
 		return shared_from_this();
 	}
 
-	α OdbcDataSource::ExecDirect( Sql&& sql, SL sl, Params&& params )Ε->uint{
+	α OdbcDataSource::Execute( Sql&& sql, SL sl, Params params )ε->uint{
 		HandleStatement statement{ _connectionString };
 		vector<SQLUSMALLINT> paramStatusArray;
 		vector<up<Binding>> parameters; parameters.reserve( sql.Params.size() ); //keepalive
@@ -151,44 +151,18 @@ namespace Jde::DB::Odbc{
 		return bindings;
 	}
 
-	α OdbcDataSource::ExecuteSync( Sql&& sql, SL sl )ε->uint{
-		return ExecDirect( move(sql), sl, {} );
-	}
-	α OdbcDataSource::ExecuteNoLog( Sql&& sql, SL sl )ε->uint{
-		return ExecDirect( move(sql), sl, Params{.Log=false} );
-	}
 
 	α OdbcDataSource::ServerMeta()ι->IServerMeta&{
 		if( !_schemaProc )
-			_schemaProc = mu<MsSql::MsSqlSchemaProc>( shared_from_this() );
+			_schemaProc = mu<MsSql::MsSqlSchemaProc>( *this );
 		return *_schemaProc;
 	}
 
-	α OdbcDataSource::Select( Sql&& sql, RowΛ f, SL sl )ε->uint{
-		return ExecDirect( move(sql), sl, {.Function=&f} );
-	}
 	α OdbcDataSource::Select( Sql&& s, RowΛ f, bool outParams, SL sl )ε->uint{
-		return ExecDirect( move(s), sl, {.Function=&f, .OutValue=outParams ? EValue::UInt64 : EValue::Null} );
+		return Execute( move(s), sl, {.Function=&f, .OutValue=outParams ? EValue::UInt64 : EValue::Null} );
 	}
 
-	α OdbcDataSource::Select( Sql&& s, SL sl )ε->vector<Row>{
-		vector<Row> rows;
-		function<void( Row&& )> f = [&rows]( Row&& r )ι{
-			rows.push_back( move(r) );
-		};
-		ExecDirect( move(s), sl, {.Function=&f} );
-		return rows;
-	}
 
-	α OdbcDataSource::ExecuteScalerSync( Sql&& sql, EValue outValue, SL sl )ε->Value{
-		Value y;
-		RowΛ f = [&]( Row&& r )->void {
-			THROW_IFSL( r.Size()==0, "Query did not return any {}.", empty(outValue) ? "rows" : "out params" );
-			y = move(r[0]);
-		};
-		ExecDirect( move(sql), sl, {.Function=&f, .OutValue=outValue} ); //was dropping outValue -> HasOut() false -> last param bound INPUT not OUTPUT (cf. MySqlDataSource::ExecuteScalerSync).
-		return y;
-	}
 
 	α OdbcDataSource::SetConfig( const jobject& config )ε->void{
 		SetConnectionString( Json::AsString( config, "connectionString") );
@@ -202,7 +176,7 @@ namespace Jde::DB::Odbc{
 		insert.Add( (uint)0 );
 		uint newId;
 		RowΛ f = [&newId]( Row&& r ){ newId=r[0].get_number<uint>(); };
-		ExecDirect( insert.Move(), sl, {&f,EValue::UInt64} );
+		Execute( insert.Move(), sl, {&f,EValue::UInt64} );
 		return newId;
 	}
 }

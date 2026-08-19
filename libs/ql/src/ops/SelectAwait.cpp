@@ -23,7 +23,12 @@ namespace Jde::QL{
 			y = ToIsoString( TimePoint{std::chrono::seconds(v)} );//ToIsoString already ends in 'Z'.
 		}
 		else if( c.PKTable && (c.IsEnum() || c.IsFlags()) ){
-			let values = GetEnumValues( *c.PKTable );
+			flat_map<uint,string> values;
+			try{
+				values = GetEnumValues( *c.PKTable );
+			}
+			catch( const runtime_error& )
+			{}
 			let value = dbValue.Get<uint>();
 			if( c.IsFlags() ){
 				jarray flags;
@@ -173,65 +178,70 @@ namespace Jde::QL{
 
 	α SelectAwait::SelectSubTables( optional<DB::Statement> parentSql, vector<TableQL> tables, sp<DB::Table> parentTable, DB::WhereClause where )ε->DB::SelectAwait::Task{
 		SubTables subTables;
-		for( auto& qlTable : tables ){//members
-			auto fk = findFK( *parentTable, qlTable.DBTable()->Name );
-			DB::Statement statement;
-			if( auto map = fk ? fk->Table->Map : nullopt; map ){ //members.member_id  if not a map, get it in main table.
-				statement.Select.TryAdd( fk->Table->SurrogateKeys[0] );//add identity_id of members for result.
-				columnSql( qlTable, *fk->PKTable, false, statement );
-				statement.From.TryAdd( {fk->PKTable->GetPK(), fk, true} ); //identities join members
-			}
-			else if( auto map = findMap(*parentTable, qlTable.DBTable()->Name); map ){ //role_members
-				auto parent = map->Parent; //role_id
-				auto child = map->Child; //permission_id
-				statement.Select.TryAdd( parent );
-				columnSql( qlTable, *child->PKTable, false, statement ); //select id, allowed, denied
-				statement.From.TryAdd( {parent->PKTable->GetPK(), parent, true} ); //from roles join role_members
-				statement.From.TryAdd( {child, child->PKTable->GetPK(), true} ); //join permissions
-			}
-			else
-				continue; //THROW_IF( !fk, "Could not find fk for {}->{}", parentTable.Name, qlTable.DBTable->Name );
-
-			statement.Where = where;
-			auto& jrow = subTables.emplace( qlTable.JsonName, flat_multimap<uint,jobject>{} ).first->second;
-			auto sql = statement.Move();
-			auto rows = co_await DS().SelectAsync( move(sql) );
-			for( auto&& row : rows ){
-				jobject jSubRow;
-				let rowToJson2 = [&row]( const vector<ColumnQL>& columns, jobject& toRow ){
-					int i = 1;//first should be pk of parent table.
-					for( let& c : columns ){
-						//auto i = checkId && c.DBColumn->IsPK() ? 1 : (index2++)+2;
-/*						if( c.DBColumn->QLAppend.size() ){
-							let pk = row[i++].ToUInt(); ++index2;
-							let pColumn = c.DBColumn->Table->FindColumn( FromJson(c.DBColumn->QLAppend) );  CHECK( pColumn && pColumn->IsEnum() );
-							let pEnum = parentTable.Schema->DS()->SelectEnumSync<uint,string>( pColumn->PKTable->Name ); CHECK( pEnum->find(pk)!=pEnum->end() );
-							//jRow[c.JsonName] = ValueToJson( row, i, subFlagValues, &c );
-							let name = Json::FindDefaultSV( jRow, c.JsonName );
-							jRow[c.JsonName] = name.empty() ? pEnum->find(pk)->second : Ƒ( "{}\\{}", pEnum->find(pk)->second, name );
-						}
-						else*/
-							toRow[c.JsonName] = ValueToJson( move(row[i++]), &c );
-					}
-				};
-				rowToJson2( qlTable.Columns, jSubRow );
-				for( let& childTable : qlTable.Tables ){
-					let pkTable = childTable.DBTable();
-					if( fk ){
-						jobject jChildTable;
-						rowToJson2( childTable.Columns, jChildTable );
-						jSubRow[childTable.JsonName] = jChildTable;
-					}
+		try{
+			for( auto& qlTable : tables ){//members
+				auto fk = findFK( *parentTable, qlTable.DBTable()->Name );
+				DB::Statement statement;
+				if( auto map = fk ? fk->Table->Map : nullopt; map ){ //members.member_id  if not a map, get it in main table.
+					statement.Select.TryAdd( fk->Table->SurrogateKeys[0] );//add identity_id of members for result.
+					columnSql( qlTable, *fk->PKTable, false, statement );
+					statement.From.TryAdd( {fk->PKTable->GetPK(), fk, true} ); //identities join members
 				}
-				jrow.emplace( row.GetUInt(0), jSubRow );
+				else if( auto map = findMap(*parentTable, qlTable.DBTable()->Name); map ){ //role_members
+					auto parent = map->Parent; //role_id
+					auto child = map->Child; //permission_id
+					statement.Select.TryAdd( parent );
+					columnSql( qlTable, *child->PKTable, false, statement ); //select id, allowed, denied
+					statement.From.TryAdd( {parent->PKTable->GetPK(), parent, true} ); //from roles join role_members
+					statement.From.TryAdd( {child, child->PKTable->GetPK(), true} ); //join permissions
+				}
+				else
+					continue; //THROW_IF( !fk, "Could not find fk for {}->{}", parentTable.Name, qlTable.DBTable->Name );
+
+				statement.Where = where;
+				auto& jrow = subTables.emplace( qlTable.JsonName, flat_multimap<uint,jobject>{} ).first->second;
+				auto sql = statement.Move();
+				auto rows = co_await DS().SelectAsync( move(sql) );
+				for( auto&& row : rows ){
+					jobject jSubRow;
+					let rowToJson2 = [&row]( const vector<ColumnQL>& columns, jobject& toRow ){
+						int i = 1;//first should be pk of parent table.
+						for( let& c : columns ){
+							//auto i = checkId && c.DBColumn->IsPK() ? 1 : (index2++)+2;
+	/*						if( c.DBColumn->QLAppend.size() ){
+								let pk = row[i++].ToUInt(); ++index2;
+								let pColumn = c.DBColumn->Table->FindColumn( FromJson(c.DBColumn->QLAppend) );  CHECK( pColumn && pColumn->IsEnum() );
+								let pEnum = parentTable.Schema->DS()->SelectEnumSync<uint,string>( pColumn->PKTable->Name ); CHECK( pEnum->find(pk)!=pEnum->end() );
+								//jRow[c.JsonName] = ValueToJson( row, i, subFlagValues, &c );
+								let name = Json::FindDefaultSV( jRow, c.JsonName );
+								jRow[c.JsonName] = name.empty() ? pEnum->find(pk)->second : Ƒ( "{}\\{}", pEnum->find(pk)->second, name );
+							}
+							else*/
+								toRow[c.JsonName] = ValueToJson( move(row[i++]), &c );
+						}
+					};
+					rowToJson2( qlTable.Columns, jSubRow );
+					for( let& childTable : qlTable.Tables ){
+						let pkTable = childTable.DBTable();
+						if( fk ){
+							jobject jChildTable;
+							rowToJson2( childTable.Columns, jChildTable );
+							jSubRow[childTable.JsonName] = jChildTable;
+						}
+					}
+					jrow.emplace( row.GetUInt(0), jSubRow );
+				}
+			}
+			if( parentSql )
+				Query( move(*parentSql), move(subTables) );
+			else{
+				jobject jRow;
+				addSubTables( _qlTable, subTables, jRow, 0 );
+				Resume( move(jRow) );
 			}
 		}
-		if( parentSql )
-			Query( move(*parentSql), move(subTables) );
-		else{
-			jobject jRow;
-			addSubTables( _qlTable, subTables, jRow, 0 );
-			Resume( move(jRow) );
+		catch( runtime_error& e ){
+			ResumeExp( move(e) );
 		}
 	}
 

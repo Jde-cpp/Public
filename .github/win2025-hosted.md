@@ -34,7 +34,7 @@ pieces:
 |-----|-------|-------|
 | `REPO_DIR` | `C:/jde/libs` | `install/clang++/Release`, `boostorg/boost_1_91_0` |
 | `JDE_BUILD_DIR` | `C:/jde/build` | transient CMake build trees (not cached) |
-| `VCPKG_ROOT` | `C:\vcpkg` (image default) | `installed/` (openssl, sqlite3 @ `x64-windows-static-md`) |
+| `VCPKG_ROOT` | `C:\vcpkg` (image default) | `installed/` (openssl, sqlite3 @ `x64-windows` - dynamic) |
 
 ## The deps cache
 

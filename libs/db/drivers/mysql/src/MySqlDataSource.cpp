@@ -1,4 +1,4 @@
-#include "MySqlDataSource.h"
+﻿#include "MySqlDataSource.h"
 #include <jde/db/DBException.h>
 #include <jde/db/generators/Functions.h>
 #include "field.h" //!important
@@ -18,7 +18,6 @@
 namespace Jde::DB::MySql{
 //	constexpr ELogTags _tags{ ELogTags::Sql };
 //	using mysqlx::SessionOption;
-	α MySqlDataSource::Params::HasOut()Ι->bool{ return OutValue!=EValue::Null; }
 	namespace mysql = boost::mysql;
 	α toString( const mysql::connect_params& cs )ι->string{
 		return Ƒ( "'{}@{}:{}/{}' pwd:'{}' collation:{}, ssl:{}, multi:{}",
@@ -38,6 +37,12 @@ namespace Jde::DB::MySql{
 			Logging::LogOnce( SRCE_CUR, ELogTags::DBDriver, "mysql::connect_params: {}", toString(cs) );
 			try{
 				Conn.connect( cs );
+				//The driver's datetime convention is UTC - see ToField in field.cpp - but CURRENT_TIMESTAMP and
+				//UNIX_TIMESTAMP read the *session* zone, so without this the write half and the read half disagree by the
+				//server's offset, and are ambiguous outright across a DST fold.  Set once per connection: a session
+				//variable survives, so a pooled session reused by AcquireSession keeps it.
+				mysql::results tz;
+				Conn.execute( "set time_zone='+00:00'", tz );
 			}
 			catch( mysql::error_with_diagnostics& e ){
 				throw MySqlException{ toString(cs), move(e), {ELogLevel::Critical, ELogTags::DBDriver}, sl };
@@ -100,17 +105,25 @@ namespace Jde::DB::MySql{
 		_cs.multi_queries = true;
 	}
 
-	α MySqlDataSource::Execute( DB::Sql&& sql, SL sl, Params exeParams )ε->uint{
+	α MySqlDataSource::Execute( Sql&& sql, SL sl, Params exeParams )ε->uint{
 		if( sql.IsProc )
 			sql.Text = Ƒ( "call {}", move(sql.Text) );
-		DB::Log( sql, sl );
+		if( exeParams.Log )
+			DB::Log( sql, sl );
 
+		//#47: an OUT param is a *proc* convention - the trailing placeholder of `call p(?,?,?)`.  This used to key off
+		//outValue alone, so ExecuteScalerSync on plain SQL dropped the caller's last param, and with none at all the loop
+		//bound `0 + -1` wrapped to SIZE_MAX and walked off an empty vector.  sqlite binds every param for a non-proc and
+		//lets the row callback answer; keying on IsProc makes this driver do the same instead of corrupting the call.
+		let outPlaceholder = exeParams.HasOut() && sql.IsProc;
+		//ASSERT is log-only in every build, so it never actually stopped this.  Same precondition sqlite throws on (#42).
+		if( outPlaceholder && sql.Params.empty() )
+			throw MySqlException{ move(sql), mysql::error_with_diagnostics{mysql::error_code{mysql::client_errc::wrong_num_params}, mysql::diagnostics{}}, sl };
 		auto session = AcquireSession( sl ); //not returned to the pool on exception - connection state is uncertain.
 		vector<mysql::field_view> params; params.reserve( sql.Params.size() );
-		ASSERT( !exeParams.HasOut() || sql.Params.size()>0 );
-		for( uint i=0; i<sql.Params.size()+(exeParams.HasOut() ? -1 : 0); ++i )
+		for( uint i=0; i<sql.Params.size()-(outPlaceholder ? 1 : 0); ++i )
 			params.push_back( ToField(sql.Params[i], sl) );
-		if( exeParams.HasOut() )
+		if( outPlaceholder )
 			params.push_back( mysql::field_view{0ul} );
    	mysql::results result;
 		mysql::statement stmt;
@@ -120,7 +133,7 @@ namespace Jde::DB::MySql{
 			else{
 				stmt = session->Conn.prepare_statement( sql.Text );
 				session->Conn.execute( stmt.bind(params.begin(), params.end()), result );
-				if( exeParams.Function && exeParams.HasOut() ){
+				if( exeParams.Function && outPlaceholder ){ //out_params() is a proc's answer; a plain statement's rows come from the loop below.
 					auto view = result.out_params();
 					ASSERT( view.size() );
 					(*exeParams.Function)( ToRow(view) );
@@ -128,21 +141,26 @@ namespace Jde::DB::MySql{
 			}
 		}
 		catch( mysql::error_with_diagnostics& e ){
-			throw MySqlException{ move(sql), move(e), sl, {ELogLevel::Critical, ELogTags::DBDriver} };
+			throw MySqlException{ move(sql), move(e), sl };
 		}
 		if( exeParams.Function && result.has_value() ){
 			for( auto&& row : result.rows() )
 				(*exeParams.Function)( ToRow(row) );
 		}
-		if( stmt.valid() )
-			session->Conn.close_statement( stmt );
-		ReleaseSession( move(session) );
+		if( stmt.valid() ){
+			mysql::error_code ec; mysql::diagnostics diag;
+			session->Conn.close_statement( stmt, ec, diag );
+			if( ec ){
+				WARN( "close_statement failed - dropping the session rather than pooling it: {} - {}", ec.message(), diag.server_message() );
+				session = nullptr;
+			}
+		}
+		if( session )
+			ReleaseSession( move(session) );
 
-		let y = result.has_value()
+		return result.has_value()
 			? exeParams.Sequence ? result.last_insert_id() : result.affected_rows()
 			: 0;
-		ASSERT_DESC( !exeParams.Sequence || y, "MySql should return last insert id." );
-		return y;
 	}
 
 	α MySqlDataSource::AtCatalog( sv , SL sl )ε->sp<IDataSource>{
@@ -170,18 +188,6 @@ namespace Jde::DB::MySql{
 		return ds;
 	}
 
-	α MySqlDataSource::ExecuteSync( Sql&& sql, SL sl )ε->uint{
-		return Execute( move(sql), sl );
-	}
-	α MySqlDataSource::ExecuteScalerSync( Sql&& sql, EValue outValue, SL sl )ε->Value{
-		Value y;
-		RowΛ f = [&]( Row&& r )->void {
-			THROW_IFSL( r.Size()==0, "Query did not return any {}.", empty(outValue) ? "rows" : "out params" );
-			y = move(r[0]);
-		};
-		Execute( move(sql), sl, {&f, outValue} );
-		return y;
-	}
 
 	α MySqlDataSource::InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint{
 		insert.Add( {}, 0ull ); //0ul is 32-bit under LLP64, so it matches both the unsigned int and unsigned long long alternatives of Value::Underlying - name the 64-bit one the OUT param wants.
@@ -194,28 +200,14 @@ namespace Jde::DB::MySql{
 
 	α MySqlDataSource::ServerMeta()ι->IServerMeta&{
 		if( !_schemaProc )
-			_schemaProc = mu<MySqlServerMeta>( shared_from_this() );
+			_schemaProc = mu<MySqlServerMeta>( *this );
 		return *_schemaProc;
-	}
-	α MySqlDataSource::Select( Sql&& s, SL sl )ε->vector<Row>{
-		vector<Row> rows;
-		RowΛ f = [&rows]( Row&& r ){
-			rows.push_back( move(r) );
-		};
-		Execute( move(s), sl, {&f} );
-		return rows;
-	}
-	α MySqlDataSource::Select( Sql&& s, RowΛ f, SL sl )ε->uint{
-		return Execute( move(s), sl, {&f} );
 	}
 
 	α MySqlDataSource::Query( Sql&& sql, bool outParams, SL sl )ε->QueryAwait{
 		return QueryAwait{ mu<MySqlQueryAwait>(dynamic_pointer_cast<MySqlDataSource>(shared_from_this()), move(sql), outParams, sl), sl };
 	}
 
-	α MySqlDataSource::ExecuteNoLog( Sql&& sql, SL sl )ε->uint{
-		return Execute( move(sql), sl, {.Log=false} );
-	}
 }
 Jde::DB::IDataSource* GetDataSource(){ //below Session definition: implicit MySqlDataSource ctor needs the complete type.
 	return new Jde::DB::MySql::MySqlDataSource();

@@ -21,7 +21,7 @@ struct Binding{
 		β Data()ι->void* = 0;
 		β GetValue()Ι->Value = 0;
 #define $ [[noreturn]] β
-		$ GetBit()Ι->bool{ THROW( "{} not implemented for DBType={} CodeType={}", "bit", _dbType, CodeType ); }
+		β GetBit()Ι->bool{ ASSERT_DESC( false, Ƒ("bit not implemented for DBType={} CodeType={}", _dbType, CodeType) ); return false; }
 		$ to_string()Ε->string{ THROW( "to_string not implemented for DBType='{}' CodeType='{}' {}", _dbType, CodeType, "GetTypeName<decltype(this)>()" ); }
 		$ GetInt()Ε->int64_t{ THROW( "{} not implemented for DBType={} CodeType={}", "GetInt", _dbType, CodeType ); }
 		$ GetInt32()Ε->int32_t{ THROW( "{} not implemented for DBType={} CodeType={}", "GetInt32", _dbType, CodeType ); }

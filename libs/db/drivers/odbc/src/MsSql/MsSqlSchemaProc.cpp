@@ -5,6 +5,7 @@
 #include "../../../../src/meta/ddl/ForeignKey.h"
 #include "../../../../src/meta/ddl/Index.h"
 #include "../../../../src/meta/ddl/Procedure.h"
+#include "../../../../src/meta/ServerMetaFold.h"
 #include "../../../../src/meta/ddl/TableDdl.h"
 #include "MsSqlStatements.h"
 #include "../OdbcDataSource.h"
@@ -39,7 +40,7 @@ namespace Jde::DB::MsSql{
 		}
 
 	α MsSqlSchemaProc::LoadColumns( DB::Sql&& sql )Ε->flat_map<string,sp<Table>>{
-		auto rows = _pDataSource->Select( move(sql) );
+		auto rows = _ds.Select( move(sql) );
 		flat_map<string,sp<Table>> tables;
 		for( auto&& row : rows ){
 			processRow( tables, move(row.GetString(0)), move(row.GetString(1)), row.GetInt(2), move(row.GetString(3)), row.GetBit(4), move(row.GetString(5)), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
@@ -71,30 +72,21 @@ namespace Jde::DB::MsSql{
 
 	α MsSqlSchemaProc::LoadIndexes( sv schema, sv tableName )Ε->vector<Index>{
 		if( schema.empty() )
-			schema = "dbo";// _pDataSource->Catalog( MsSql::Sql::CatalogSql );
+			schema = "dbo";// _ds.Catalog( MsSql::Sql::CatalogSql );
 
 		vector<Index> indexes;
 		auto result = [&]( Row&& row ){
 			uint i=0;
 			let tableName = move(row.GetString(i++)); let indexName = move(row.GetString(i++)); let columnName = move(row.GetString(i++)); let unique = row.GetBit(i++)==0;
 
-			vector<string>* pColumns;
-			auto pExisting = std::find_if( indexes.begin(), indexes.end(), [&](let& index){ return index.Name==indexName && index.TableName==tableName; } );
-			if( pExisting==indexes.end() ){
-				bool clustered = false;//Boolean.Parse( row["CLUSTERED"].ToString() );
-				let primaryKey = indexName==Ƒ( "{}_pk", tableName );//Boolean.Parse( row["PRIMARY_KEY"].ToString() );
-				pColumns = &indexes.emplace_back( indexName, tableName, primaryKey, nullptr, unique, clustered ).Columns;
-			}
-			else
-				pColumns = &pExisting->Columns;
-			pColumns->push_back( columnName );
+			FoldIndexRow( indexes, tableName, indexName, columnName, unique, indexName==Ƒ("{}_pk", tableName) );
 		};
 
 		vector<Value> values{ Value{string{schema}} };
 		if( tableName.size() )
 			values.push_back( Value{string{tableName}} );
 		let sql = Sql::IndexSql( tableName.size() );
-		_pDataSource->Select( {sql, values}, result );
+		_ds.Select( {sql, values}, result );
 
 		return indexes;
 	}
@@ -105,7 +97,7 @@ namespace Jde::DB::MsSql{
 			let name = move(row.GetString( 0 ));
 			values.try_emplace( name, Procedure{name, schemaName} );
 		};
-		_pDataSource->Select( {Sql::ProcSql(true), {Value{schemaName}}}, fnctn );
+		_ds.Select( {Sql::ProcSql(true), {Value{schemaName}}}, fnctn );
 		return values;
 	}
 
@@ -168,13 +160,9 @@ namespace Jde::DB::MsSql{
 		auto result = [&]( Row&& row ){
 			uint i=0;
 			let name = move(row.GetString(i++)); let fkTable = move(row.GetString(i++)); let column = move(row.GetString(i++)); let pkTable = move(row.GetString(i++)); //let pkColumn = row.GetString(i++); let ordinal = row.GetUInt(i);
-			auto pExisting = fks.find( name );
-			if( pExisting==fks.end() )
-				fks.emplace( name, ForeignKey{name, fkTable, {column}, pkTable} );
-			else if( auto& columns=pExisting->second.Columns; find(columns, column)==columns.end() )
-				columns.push_back( column );//a constraint can't list the same column twice, so a repeat is a duplicated row - folding it in would break SyncFKs' Columns compare and re-create every fk each sync.
+			FoldForeignKeyRow( fks, name, fkTable, column, pkTable );
 		};
-		_pDataSource->Select( {Sql::ForeignKeySql(schemaName.size()), {Value{schemaName}}}, result );
+		_ds.Select( {Sql::ForeignKeySql(schemaName.size()), {Value{schemaName}}}, result );
 		return fks;
 	}
 }

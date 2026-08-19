@@ -1,4 +1,4 @@
-#include <jde/db/generators/Sql.h>
+﻿#include <jde/db/generators/Sql.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/db/generators/WhereClause.h>
@@ -9,11 +9,6 @@
 #define let const auto
 
 namespace Jde::DB{
-	α Sql::operator+=( WhereClause&& where )ι->Sql&{
-		Text += where.Move();
-		Params.insert( Params.end(), std::make_move_iterator(where.Params().begin()), std::make_move_iterator(where.Params().end()) );
-		return *this;
-	}
 	α Sql::EmbedParams()Ι->string{ //display/logging only - not escaped for execution.
 		string fullSql; fullSql.reserve( Text.size()+Params.size()*8 );
 		char quote{};

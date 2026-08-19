@@ -14,11 +14,7 @@ namespace Jde::DB{
 		α Initialize( sp<DB::AppSchema> schema, sp<Table> self )ε->void;
 
 		α FindColumn( sv name )Ι->sp<Column> override;
-		α GetColumn( sv name, SRCE )Ε->const Column& override;//also looks into extended from table
-		α GetColumnPtr( sv name, SRCE )Ε->sp<Column> override;
-		α GetColumns( vector<string> names, SRCE )Ε->vector<sp<Column>> override;
 
-		α FKName()Ι->string;
 		α IsView()Ι->bool override{ return false; }
 
 		vector<vector<string>> NaturalKeys;

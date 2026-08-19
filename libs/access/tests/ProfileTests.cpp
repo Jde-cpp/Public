@@ -46,6 +46,26 @@ namespace Jde::Access::Tests{
 		PurgeUser( userB, root );
 	}
 
+	//#10: the save used to be update-then-insert-if-zero.  MySQL's row count is rows *changed*, so re-saving an identical
+	//value answered 0, fell into the insert, and the (identity_id,target) pk turned an idempotent save into a 409 - while
+	//sqlite and SQL Server, which count rows *matched*, succeeded.  A save is now one dialect upsert, so the second and
+	//third writes below are no-ops rather than conflicts on every backend.  This passes on sqlite either way; it is the
+	//MySQL path it exists to hold, which no ctest suite reaches.
+	TEST_F( ProfileTests, RepeatedIdenticalSave ){
+		let root = GetRoot();
+		const UserPK user{ GetId(GetUser("profileRepeat", root)) };
+		EXPECT_NO_THROW( upsertProfile("repeatKey", "\"same\"", user) );//insert
+		EXPECT_NO_THROW( upsertProfile("repeatKey", "\"same\"", user) );//identical - the 409 used to land here
+		EXPECT_NO_THROW( upsertProfile("repeatKey", "\"same\"", user) );
+		EXPECT_EQ( AsSV(selectProfile("repeatKey", user), "value"), "same" );
+
+		EXPECT_NO_THROW( upsertProfile("repeatKey", "\"changed\"", user) );//a real change still lands
+		EXPECT_EQ( AsSV(selectProfile("repeatKey", user), "value"), "changed" );
+
+		deleteProfile( "repeatKey", user );
+		PurgeUser( user, root );
+	}
+
 	TEST_F( ProfileTests, Anonymous ){
 		EXPECT_THROW( upsertProfile("anonKey", "\"v\"", UserPK{}), Exception );
 		EXPECT_THROW( upsertProfile("anonKey", "\"v\"", UserPK{UserPK::System}), Exception );

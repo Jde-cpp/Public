@@ -35,7 +35,7 @@ namespace Jde::DB::Odbc{
 	}
 
 	α HandleDiagnosticRecord( sv functionName, SQLHANDLE hHandle, SQLSMALLINT hType, RETCODE retCode, SL sl, DiagnosticRecord* pFirst )ε->string{
-		THROW_IF( retCode==SQL_INVALID_HANDLE, "({}) {} - Invalid handle {}", functionName, hType, retCode );
+		THROW_IFX( retCode==SQL_INVALID_HANDLE, DBException(retCode, Sql{}, Ƒ("({}) {} - Invalid handle", functionName, hType), sl) );
 		SQLSMALLINT iRec = 0;
 		SQLINTEGER iError;
 		SQLCHAR szMessage[SQL_MAX_MESSAGE_LENGTH];
@@ -59,7 +59,7 @@ namespace Jde::DB::Odbc{
 				Logging::LogOnce( SRCE_CUR, _tags, "{}", msg );
 			else{
 				if( functionName=="SQLDriverConnect" && level==ELogLevel::Error )
-					throw Exception{ sl, ELogLevel::Critical, "[{:<5}] {} {}", state, (char*)szMessage, iError };
+					throw DBException{ error, Sql{}, Ƒ("[{:<5}] {}", state, (char*)szMessage), {ELogLevel::Critical, ELogTags::Sql, (uint32)iError}, sl };
 				else if( retCode==1 && state=="23000" )//23000=Integrity constraint violation.  multiple statements why retCode==1.
 					throw DBException{ error, Sql{}, msg, {ELogLevel::Error, ELogTags::Sql, (uint32)iError}, sl };
 				else if( iError )

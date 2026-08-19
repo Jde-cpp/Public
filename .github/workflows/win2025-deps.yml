@@ -64,7 +64,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Boost extract failed" }
 
       # Top-level configure with the vcpkg toolchain + vcpkg.json manifest
-      # installs openssl + sqlite3 into %VCPKG_ROOT%/installed (x64-windows-static-md)
+      # installs openssl + sqlite3 into %VCPKG_ROOT%/installed (x64-windows - the dynamic triplet;
+      # the preset names it, so this step follows automatically)
       # before any ExternalProject builds, which is where open62541 finds OpenSSL.
       - name: Configure deps
         if: steps.deps.outputs.cache-hit != 'true'

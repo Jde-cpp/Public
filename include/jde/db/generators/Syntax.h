@@ -24,19 +24,19 @@ namespace Jde::DB{
 		Ω Instance()->const Syntax&;
 		virtual ~Syntax()=default;
 		α FormatOperator( const Column& col, EOperator op, uint size=1, SRCE )Ε->string;
-		//Regex/Glob bind their pattern as a parameter, so a dialect has to state both halves - the keyword, and how the
-		//pattern must be spelled for that keyword.  Throwing is a legitimate answer: no dialect implements all of them.
+		Ω IsPatternOperator( EOperator op )ι->bool{ return op==EOperator::Regex || op==EOperator::Glob; }
 		β PatternOperator( EOperator op, SRCE )Ε->sv;              //SQL Server: LIKE, but no regex before 2025.
 		β PatternParam( EOperator op, str pattern, SRCE )Ε->string;
 		β AddDefault( sv tableName, sv columnName, Value dflt )Ι->string;
-		β AltDelimiter()Ι->sv{ return {}; }
 		β CanAddForeignKeys()Ι->bool{ return true; } //false (sqlite): no 'alter table add constraint' - fks only enforced when inline in create table.
 		β CanSetDefaultSchema()Ι->bool{ return false; }
 		β CatalogSelect()Ι->sv{ return "select db_name();"; }
 		β CreatePrimaryKey( str tableName, str columns )Ι->string{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columns); } //columns: comma-separated for composite keys.
+		β CreateProcSql()Ι->sv{ return "create or alter procedure"; }
+		β DropProcSql( sv /*qualifiedName*/ )Ι->string{ return {}; } //empty: CreateProcSql already replaces.
 		β DateTimeSelect( sv columnName )Ι->string{ return string{ columnName }; }
-		β DriverReturnsLastInsertId()Ι->bool{ return true; }
-		β EscapeDdl( sv sql )Ι->string;
+		β QuoteChars()Ι->std::pair<char,char>{ return {'[',']'}; }
+		α EscapeDdl( sv sql )Ι->string;
 		β GuidType()Ι->sv{ return "uniqueidentifier"; }
 		β HasLength( EType type )Ι->bool;
 		β HasCatalogs()Ι->bool{ return true; }
@@ -54,7 +54,6 @@ namespace Jde::DB{
 		β ProcParameterPrefix()Ι->sv{ return "@"; }
 		β ProcStart()Ι->sv{ return "as\n\tset nocount on;\n"; }
 		β ProcEnd()Ι->sv{ return {}; }
-		β SchemaDropsObjects()Ι->bool{ return false; }
 		β SchemaExistsSql()Ι->sv{ return "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?"; }
 		β QualifiedName( sv schema, sv name )Ι->string{ return HasSchemas() ? Ƒ("{}.{}", schema, name) : string{name}; } //fully-qualified object name; schemaless dialects use the bare name.
 		β SchemaSelect()Ι->sv{ return "select schema_name();"; } //empty (like CatalogSelect): SchemaName falls back to SysSchema without querying.
@@ -63,9 +62,13 @@ namespace Jde::DB{
 		β ToString( EType type )Ι->string;
 
 		β UniqueIndexNames()Ι->bool{ return false; }
+		//An insert suffix that turns a primary-key collision into an update of `updateColumns`, so a caller does not have
+		//to branch on an UPDATE's row count to decide whether to insert.  That branch is not portable: MySQL reports rows
+		//*changed* (a re-save of an identical value counts 0), sqlite and SQL Server report rows *matched*.
+		//Empty means the dialect has no such form - SQL Server, where the caller's update-then-insert is correct anyway.
+		β UpsertSuffix( const vector<sv>& /*keyColumns*/, const vector<sv>& /*updateColumns*/ )Ι->string{ return {}; }
 		β UsingClause( const Join& join )Ι->string;
 		β UtcNow()Ι->sv{ return "getutcdate()"; }
-		β ZeroSequenceMode()Ι->sv{ return {}; }
 	};
 	//The MySQL dialect lives with its driver, in libs/db/drivers/mysql/src/MySqlSyntax.h - like Sqlite::SqliteSyntax,
 	//it is only reached through IDataSource::Syntax(), so Jde.DB never needs the type statically.

@@ -1,4 +1,4 @@
-#include <jde/db/generators/Statement.h>
+﻿#include <jde/db/generators/Statement.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/meta/View.h>
 
@@ -24,16 +24,5 @@ namespace Jde::DB{
 			sql.Text = From.GetFirstTable()->Syntax().Limit( sql.Text, _limit, _skip );
 		sql.Params = move( Where.Params() );
 		return sql;
-	}
-	α Statement::ToString()Ι->string{
-		string y;
-		y += Select.ToString( From.HasJoin() );
-		y += '\n'+From.ToString();
-		y += '\n'+Where.ToString();
-		if( !OrderBy.empty() )
-			y += "\norder by "+OrderBy;
-		if( _limit )
-			y = From.GetFirstTable()->Syntax().Limit( y, _limit, _skip );
-		return y;
 	}
 }

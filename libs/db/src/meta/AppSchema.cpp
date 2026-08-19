@@ -1,4 +1,4 @@
-#include <jde/db/meta/AppSchema.h>
+﻿#include <jde/db/meta/AppSchema.h>
 #include <jde/fwk/io/json.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
@@ -111,22 +111,6 @@ namespace Jde::DB{
 		return y;
 	}
 
-	α AppSchema::FindDefTable( const Table& t1, const Table& t2 )Ι->sp<Table>{
-		sp<Table> result;
-		let singularT1 = t1.FKName();
-		let singularT2 = t2.FKName();
-		for( let& [name,pTable] : Tables ){
-			let pParentTable = pTable->ParentTable();
-			let pChildTable = pTable->ChildTable();
-			if( pParentTable && pChildTable
-				&& (  (t1.Name==pParentTable->Name && t2.Name==pChildTable->Name)
-						||(t2.Name==pParentTable->Name && t1.Name==pChildTable->Name) ) ){
-				result = pTable;
-				break;
-			}
-		}
-		return result;
-	}
 	α AppSchema::ObjectPrefix()Ι->string{
 		string y{ Prefix };
 		if( let index = Prefix.find( '.' ); index!=string::npos )

@@ -8,9 +8,12 @@ namespace Jde::DB::Sqlite{
 	//Driver-internal registry. The app-facing surface is IProcs (in <jde/db/sqlite_api.h>) - proc DLLs register and
 	//run statements through the IProcs the driver hands them, so they needn't link this driver.
 	//The data source intercepts Sql::IsProc statements and dispatches to FindProc's result inside a transaction.
-	α RegisterProc( string name, ProcΛ proc, uint minParams=0 )ι->void; //minParams: see IProcs::RegisterProc.
-	α UnregisterProcs( const vector<string>& names )ι->void; //remove a dll's procs before it unloads (see SqliteApi) so their ProcΛ std::functions aren't destroyed after dlclose.
-	α FindProc( sv name )ι->const ProcΛ*; //nullptr if not registered.
+	//owner: whoever is answerable for the entry, so UnregisterProcs can tell "my registration" from "somebody else's with
+	//the same name".  Without it a second registrar overwriting a name made the *first* one's teardown erase the
+	//survivor's entry, and the proc vanished while its dll was still loaded.  nullptr = anonymous, matches only itself.
+	α RegisterProc( string name, ProcΛ proc, uint minParams=0, const void* owner=nullptr )ι->void; //minParams: see IProcs::RegisterProc.
+	α UnregisterProcs( const vector<string>& names, const void* owner=nullptr )ι->void; //remove a dll's procs before it unloads (see SqliteApi) so their ProcΛ std::functions aren't destroyed after dlclose.  Only entries this owner still holds.
+	α FindProc( sv name )ι->sp<const ProcΛ>; //nullptr if not registered.  By value: the caller runs the proc long after the lock is gone, and the map is vector-backed.
 	α RegisteredProcNames()ι->vector<string>; //for SqliteServerMeta::LoadProcs - DDL sync treats registered procs as existing.
 
 	//Helpers for proc bodies - prepare/bind/step plain statements against `db`.

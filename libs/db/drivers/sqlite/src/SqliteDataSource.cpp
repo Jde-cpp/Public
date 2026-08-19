@@ -1,4 +1,4 @@
-#include "SqliteDataSource.h"
+﻿#include "SqliteDataSource.h"
 #include "jde/fwk/exceptions/Exception.h"
 #include "jde/fwk/process/dll.h"
 #include <jde/db/DBException.h>
@@ -13,6 +13,10 @@
 #define let const auto
 
 namespace Jde::DB::Sqlite{
+	//C5: `call p( ?, ? )` -> `p`.  Both the dispatch in ExecuteProc and the error message in InsertSeqSyncUInt spell this,
+	//and they have to agree - the second is naming the proc the first failed to find.
+	α procName( const DB::Sql& sql )ι->sv{ return Str::RTrim( sv{sql.Text}.substr(0, sql.Text.find('(')) ); }
+
 	//A loaded proc dll. Extends ProcRegistry so the dll registers through us; we record the names it registers and
 	//unregister them in the destructor - before _dll unloads - so their ProcΛ std::functions (bodies in the dll)
 	//aren't destroyed after dlclose (which would fault during the registry's static teardown at exit).
@@ -24,11 +28,11 @@ namespace Jde::DB::Sqlite{
 			decltype(RegisterProcs)* registerProcs{ _dll["RegisterProcs"] };
 			registerProcs( *this );
 		}
-		~SqliteApi(){ UnregisterProcs( _procNames ); } //while _dll is still mapped (destroyed after this body).
+		~SqliteApi(){ UnregisterProcs( _procNames, this ); } //while _dll is still mapped (destroyed after this body).  `this`: only the entries still ours - see UnregisterProcs.
 
 		α RegisterProc( string name, ProcΛ proc, uint minParams )ι->void override{
 			_procNames.push_back( name );
-			ProcRegistry::RegisterProc( move(name), move(proc), minParams );
+			Sqlite::RegisterProc( move(name), move(proc), minParams, this ); //not ProcRegistry::, which registers anonymously - this dll owns what it registers.
 		}
 	};
 
@@ -47,13 +51,20 @@ namespace Jde::DB::Sqlite{
 			let& catalog = Json::AsObject( vcatalog );
 			if( let path = Json::FindSV(catalog, "path") )
 				_path = *path; //defaults to ':memory:' when no catalog supplies a path.
+			if( let busyMs = Json::FindNumber<uint32>(catalog, "busyTimeoutMs") )
+				_busyTimeoutMs = *busyMs;
 			for( auto&& [dbSchemaName, dbSchema] : Json::AsObject(catalog, "schemas") ){
 				if( dbSchemaName.starts_with('_') ) //internal schema, not a real db schema.
 					continue;
 				for( auto&& [appSchemaName, vappSchema] : Json::AsObject(dbSchema) ){
 					let lib = Json::FindSV( Json::AsObject(vappSchema), "dynamicLib" );
 					THROW_IFX( !lib, Exception(SRCE_CUR, {ELogLevel::Critical, ELogTags::App}, "No dynamicLib for {}.{}.{}", catalogName, dbSchemaName, appSchemaName) );
-					fs::path dynamicLib{ *lib };
+					//weakly_canonical: _procDlls and DllApiCache both key on the path as written, so `…/lib/x.so` and
+					//`…/lib/./x.so` would load the same dll twice and register every twin twice over.
+					std::error_code ec;
+					fs::path dynamicLib{ fs::weakly_canonical(fs::path{*lib}, ec) };
+					if( ec )
+						dynamicLib = fs::path{ *lib }; //unresolvable (a path that does not exist yet): use it as written and let the load report.
 					if( !_procDlls.contains(dynamicLib) ){
 						auto api = _dllApis.Get( dynamicLib ); //ctor loads the dll and registers its procs.
 						_procDlls.emplace( move(dynamicLib), move(api) );
@@ -71,6 +82,10 @@ namespace Jde::DB::Sqlite{
 				//inside the try: open_v2 allocates a handle even when it fails, so throwing past the cleanup below left _db set and every later call skipped the reopen and used the dead handle.
 				THROW_IFX( rc, SqliteException(sl, rc, Sql{}, "sqlite3_open_v2('{}'): {}", _path, _db ? sqlite3_errmsg(_db) : sqlite3_errstr(rc)) );
 				sqlite3_extended_result_codes( _db, 1 ); //ToDbError needs SQLITE_CONSTRAINT_UNIQUE etc; the base SQLITE_CONSTRAINT cannot tell unique from fk/not-null.
+				//Without this sqlite's busy handler is absent and a locked db fails the statement immediately; there is no
+				//retry on EDbError::Timeout anywhere above, so the caller just sees the error.  Harmless for ':memory:',
+				//which no second connection can reach - it is set unconditionally so the two paths cannot drift.
+				sqlite3_busy_timeout( _db, (int)_busyTimeoutMs );
 				//exec succeeds even when fks are compiled out (the pragma no-ops) - read the setting back instead of trusting rc.
 				ExecuteStatement( *_db, "pragma foreign_keys=on", {}, nullptr, sl );
 				THROW_IFSL( ScalarUInt(*_db, "pragma foreign_keys", {}, sl).value_or(0)!=1, "Could not enable foreign_keys on '{}' - fks would go unenforced.", _path );
@@ -102,9 +117,16 @@ namespace Jde::DB::Sqlite{
 	//"call app_instance_insert( ?, ?, ?, ? )" never reaches the server - there is none. Dispatch to the
 	//native twin registered in SqliteProcs, wrapped in a transaction so multi-statement procs stay atomic.
 	α SqliteDataSource::ExecuteProc( DB::Sql& sql, SL sl, Params& exeParams )ε->uint{
-		let name = Str::RTrim( sv{sql.Text}.substr(0, sql.Text.find('(')) );
+		let name = procName( sql );
 		let proc = FindProc( name );
 		THROW_IFSL( !proc, "No native proc registered for '{}'.", name );
+		//Before `begin immediate`, so there is nothing to roll back: the slice below drops the trailing out placeholder,
+		//and with no params at all `end()-1` is a transposed range - std::length_error on libc++, a debug-iterator abort
+		//on the MS STL.  Either way it is a logic_error, which every catch( runtime_error& ) in the driver and the awaits
+		//lets through.  MySql asserts the same precondition (MySqlDataSource.cpp); this throws it, and SQLITE_MISUSE maps
+		//to EDbError::None - a caller fault, 500 - as it does for #40's placeholder-count check.
+		if( exeParams.HasOut() && sql.Params.empty() )
+			throw SqliteException{ sl, SQLITE_MISUSE, DB::Sql{sql}, "'{}' was called with an out value but no params - the out param is the last placeholder.", name };
 		auto& db = Connection( sl );
 		ExecuteStatement( db, "begin immediate", {}, nullptr, sl );
 		try{
@@ -115,38 +137,52 @@ namespace Jde::DB::Sqlite{
 			return y;
 		}
 		catch( ... ){
-			ExecuteStatement( db, "rollback", {}, nullptr, sl );
+			//sqlite auto-rolls-back on SQLITE_FULL/IOERR/NOMEM/INTERRUPT (and some BUSY), and `rollback` is then itself an
+			//error - "cannot rollback - no transaction is active".  ExecuteStatement throws on that, which skipped the
+			//`throw;` and handed the caller a Syntax error about a statement they never wrote, in place of the real one.
+			//get_autocommit is the only way to ask whether the transaction is still there; the try/catch covers a rollback
+			//that fails for any other reason.  Either way the original exception is what leaves this function.
+			if( !sqlite3_get_autocommit(&db) ){
+				try{
+					ExecuteStatement( db, "rollback", {}, nullptr, sl );
+				}
+				catch( const std::exception& e ){
+					ERR( "rollback after a failed '{}' failed: {}", name, e.what() );
+				}
+			}
 			throw;
 		}
 	}
 
-	α SqliteDataSource::Execute( DB::Sql&& sql, SL sl, Params exeParams )ε->uint{
+	α SqliteDataSource::Execute( Sql&& sql, SL sl, Params exeParams )ε->uint{
 		if( exeParams.Log )
 			DB::Log( sql, sl );
-		lg l{ _connMutex };
-		if( sql.IsProc )
+		if( sql.IsProc ){
+			//The proc path keeps the callback inside the lock on purpose: its RowΛ carries the out-param row and has to
+			//run within the transaction, so that a callback which throws still reaches ExecuteProc's rollback.
+			lg _{ _connMutex };
 			return ExecuteProc( sql, sl, exeParams );
-
-		auto& db = Connection( sl );
-		let y = ExecuteStatement( db, sql.Text, sql.Params, exeParams.Function, sl );
-		return exeParams.Sequence ? (uint)sqlite3_last_insert_rowid( &db ) : y;
-	}
-
-	α SqliteDataSource::ExecuteSync( Sql&& sql, SL sl )ε->uint{
-		return Execute( move(sql), sl );
-	}
-	α SqliteDataSource::ExecuteNoLog( Sql&& sql, SL sl )ε->uint{
-		return Execute( move(sql), sl, {.Log=false} );
-	}
-	α SqliteDataSource::ExecuteScalerSync( Sql&& sql, EValue outValue, SL sl )ε->Value{
-		Value y;
-		RowΛ f = [&]( Row&& r )->void{
-			THROW_IFSL( r.Size()==0, "Query did not return any {}.", empty(outValue) ? "rows" : "out params" );
-			y = move( r[0] );
-		};
-		Execute( move(sql), sl, {&f, outValue} );
+		}
+		//Rows are collected under the lock and handed to the caller's RowΛ after it is released.  _connMutex is a plain
+		//std::mutex and Disconnect() takes it too, so a callback that queried this data source from inside the step loop
+		//deadlocked against itself - where the same callback on MySQL simply takes another pooled session, because that
+		//driver iterates result.rows() after execute with no lock held.  One virtual owes its callers one contract.
+		vector<Row> rows;
+		RowΛ collect = [&rows]( Row&& r ){ rows.push_back( move(r) ); };
+		uint y;
+		{
+			lg _{ _connMutex };
+			auto& db = Connection( sl );
+			y = ExecuteStatement( db, sql.Text, sql.Params, exeParams.Function ? &collect : nullptr, sl );
+			if( exeParams.Sequence )
+				y = (uint)sqlite3_last_insert_rowid( &db );
+		}
+		if( exeParams.Function )
+			for( auto& row : rows )
+				(*exeParams.Function)( move(row) );
 		return y;
 	}
+
 
 	α SqliteDataSource::InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint{
 		auto sql = insert.Move();
@@ -162,24 +198,15 @@ namespace Jde::DB::Sqlite{
 			if( !sequence && r.Size() )
 				sequence = r.GetUInt( 0 );
 		};
-		let procName = string{ Str::RTrim(sv{sql.Text}.substr(0, sql.Text.find('('))) }; //owned - sql is moved below.
+		let name = string{ procName(sql) }; //owned - sql is moved below.
 		Execute( move(sql), sl, {.Function=&f} );
-		THROW_IFSL( !sequence, "Proc '{}' returned no out row - its twin must emit the sequence column.", procName );
+		THROW_IFSL( !sequence, "Proc '{}' returned no out row - its twin must emit the sequence column.", name );
 		return *sequence;
 	}
 
-	α SqliteDataSource::Select( Sql&& s, SL sl )ε->vector<Row>{
-		vector<Row> rows;
-		RowΛ f = [&rows]( Row&& r ){ rows.push_back( move(r) ); };
-		Execute( move(s), sl, {&f} );
-		return rows;
-	}
-	α SqliteDataSource::Select( Sql&& s, RowΛ f, SL sl )ε->uint{
-		return Execute( move(s), sl, {&f} );
-	}
 
 	α SqliteDataSource::Query( Sql&& sql, bool outParams, SL sl )ε->QueryAwait{
-		return QueryAwait{ mu<SqliteQueryAwait>(dynamic_pointer_cast<SqliteDataSource>(shared_from_this()), move(sql), outParams, sl), sl };
+		return QueryAwait{ mu<SqliteQueryAwait>(shared_from_this(), move(sql), outParams, sl), sl };
 	}
 
 	α SqliteDataSource::AtCatalog( sv, SL sl )ε->sp<IDataSource>{
@@ -193,7 +220,7 @@ namespace Jde::DB::Sqlite{
 
 	α SqliteDataSource::ServerMeta()ι->IServerMeta&{
 		if( !_serverMeta )
-			_serverMeta = mu<SqliteServerMeta>( shared_from_this() );
+			_serverMeta = mu<SqliteServerMeta>( *this );
 		return *_serverMeta;
 	}
 }

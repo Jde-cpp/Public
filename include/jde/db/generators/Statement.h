@@ -1,4 +1,4 @@
-#ifndef STATEMENT_H
+﻿#ifndef STATEMENT_H
 #define STATEMENT_H
 #pragma once
 #include "../exports.h"
@@ -17,7 +17,6 @@ namespace Jde::DB{
 		α Limit( uint limit )ι->void{ _limit=limit; }
 		α Skip( uint skip )ι->void{ _skip=skip; }
 		α Move()ε->Sql;
-		α ToString()Ι->string;
 		SelectClause Select;
 		FromClause From;
 		WhereClause Where;
