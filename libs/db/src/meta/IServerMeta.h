@@ -5,7 +5,11 @@ namespace Jde::DB{
 	struct Cluster; struct ForeignKey; struct IDataSource;  struct Index; struct Procedure; struct AppSchema; struct SchemaDdl; struct Table; struct TableDdl;
 
 	struct IServerMeta{
-		IServerMeta( sp<IDataSource> p ):_pDataSource{p}{}
+		//#52: a reference, not an sp.  The meta is a up<> member of the data source, so it strictly cannot outlive it -
+		//and holding an sp made every data source that reached ServerMeta() own itself, so its destructor never ran and
+		//sqlite never got its close/WAL-checkpoint (nor MySQL its session close).  A reference also cannot be rebound or
+		//nulled, which is the invariant: this meta belongs to that data source for its whole life.
+		IServerMeta( IDataSource& ds ):_ds{ds}{}
 
 		β LoadTables( sv schemaName, sv tablePrefix )Ε->flat_map<string,sp<Table>> = 0;
 		β LoadTable( str schemaName, str tableName, SRCE )Ε->sp<TableDdl> = 0;
@@ -15,6 +19,6 @@ namespace Jde::DB{
 	private:
 		β ToType( sv typeName )Ι->EType=0;
 	protected:
-		sp<IDataSource> _pDataSource;
+		IDataSource& _ds;
 	};
 }

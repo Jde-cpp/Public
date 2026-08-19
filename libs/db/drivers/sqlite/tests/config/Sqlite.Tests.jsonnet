@@ -37,6 +37,14 @@ local cluster(path) = { //one backend; instantiated per-path as the 'memory' and
 		sync:: true,
 		memory: cluster(":memory:"),
 		file: cluster( std.extVar("cwd")+"/sqlite-tests.db" ),
+		//#45 only: two connections on one file, so a busy timeout has something to wait for.  Their own file, so nothing
+		//else in the suite sees the write lock, and no app schemas - they run raw statements, never a query.
+		local bare( path, extra={} ) = {
+			driver: lib( "Jde.DB.Sqlite", "/libs/db/drivers/sqlite/lib" ),
+			catalogs: { testDb: { path: path, schemas: { master: {} } } + extra }
+		},
+		busyHolder: bare( std.extVar("cwd")+"/sqlite-busy.db" ),
+		busyWaiter: bare( std.extVar("cwd")+"/sqlite-busy.db", {busyTimeoutMs: 500} ),
 		//ConnectionTests only: the open must fail. No app schemas - it never runs a query, and the meta jsonnets cluster() pulls in cost seconds to evaluate.
 		wedge: {
 			driver: lib( "Jde.DB.Sqlite", "/libs/db/drivers/sqlite/lib" ),

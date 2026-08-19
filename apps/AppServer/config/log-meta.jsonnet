@@ -16,9 +16,9 @@ local crc64 = common.types.ulong+{ i:0 };
 		appInstances:{
 			columns: {
 				appInstanceId: common.pkSequenced,
-				appId: tables.apps.columns.appId+{ pkTable: "apps", i:1 },
+				appId: tables.apps.columns.appId+{ pkTable: "apps", i:1, sk:null },
 				endTime: common.types.dateTime+{ i:2, nullable:true },
-				hostId: tables.hosts.columns.hostId+{ pkTable: "hosts", i:3 },
+				hostId: tables.hosts.columns.hostId+{ pkTable: "hosts", i:3, sk:null },
 				pid: common.types.ulong+{ i:4 },
 				startTime: common.types.dateTime+{ i:5 }
 			},
@@ -69,7 +69,7 @@ local crc64 = common.types.ulong+{ i:0 };
 			columns: {
 				entryId: tables.entries.columns.entryId+{ pkTable: "entries", sk:0, i:0 },
 				arg_index: common.types.uint8+{ sk:1, i:2, },
-				argId: tables.args.columns.argId+{ pkTable: "args", i:3 }
+				argId: tables.args.columns.argId+{ pkTable: "args", i:3, sk:null }
 			},
 			map: {parentId:"entry_id", childId:"arg_id"},
 			naturalKeys:: [["entry_id", "arg_index"]],
@@ -78,13 +78,13 @@ local crc64 = common.types.ulong+{ i:0 };
 		entries:{
 			columns: {
 				entryId: common.longSequenced,
-				appInstanceId: tables.appInstances.columns.appInstanceId+{ nullable:true, pkTable: "app_instances", i:1 },
-				messageId: tables.messages.columns.messageId+{ pkTable: "messages", nullable: true, i:2 },
+				appInstanceId: tables.appInstances.columns.appInstanceId+{ nullable:true, pkTable: "app_instances", i:1, sk:null },
+				messageId: tables.messages.columns.messageId+{ pkTable: "messages", nullable: true, i:2, sk:null },
 				lineNumber: common.types.uint16+{ nullable:true, i:3 },
-				severity: tables.severities.columns.severityId+{ i:4 },
-				sourceFileId: tables.sourceFiles.columns.sourceFileId+{ nullable:true, pkTable: "source_files", i:5 },
-				sourceFunctionId: tables.sourceFunctions.columns.sourceFunctionId+{ nullable:true, pkTable: "source_functions", i:6 },
-				tags: tables.tags.columns.tagId+{nullable:true, i:7 },
+				severity: tables.severities.columns.severityId+{ i:4, sk:null },
+				sourceFileId: tables.sourceFiles.columns.sourceFileId+{ nullable:true, pkTable: "source_files", i:5, sk:null },
+				sourceFunctionId: tables.sourceFunctions.columns.sourceFunctionId+{ nullable:true, pkTable: "source_functions", i:6, sk:null },
+				tags: tables.tags.columns.tagId+{nullable:true, i:7, sk:null },
 				time: common.types.dateTime+{ i:8 },
 				threadId: common.types.ulong+{ i:9 },
 				userId: common.types.uint+{ i:10 }

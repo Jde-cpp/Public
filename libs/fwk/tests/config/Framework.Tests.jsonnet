@@ -8,6 +8,7 @@ local logsDir = std.extVar("logsDir");
 		clear: false
 	},
 	logging:{
+		breakLevel: "Critical",
 		spd:{
 			tags: {
 				default: "Information",

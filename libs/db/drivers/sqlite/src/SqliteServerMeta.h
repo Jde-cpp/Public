@@ -13,8 +13,8 @@ namespace Jde::DB::Sqlite{
 	//	foreign keys: pragma foreign_key_list(<table>)
 	//	procs:        the SqliteProcs registry - report registered native procs so DDL sync doesn't recreate them.
 	struct SqliteServerMeta final : IServerMeta{
-		SqliteServerMeta( sp<IDataSource> pDataSource ):
-			IServerMeta{ pDataSource }
+		SqliteServerMeta( IDataSource& ds ):
+			IServerMeta{ ds }
 		{}
 		α LoadTables( sv schemaName, sv tablePrefix )Ε->flat_map<string,sp<Table>> override;
 		α LoadTable( str schemaName, str tableName, SRCE )Ε->sp<TableDdl> override;

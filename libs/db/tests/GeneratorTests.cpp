@@ -4,6 +4,9 @@
 #include <jde/db/generators/Object.h>
 #include <jde/db/generators/Sql.h>
 #include <jde/db/meta/AppSchema.h>
+#include <jde/db/meta/Column.h>
+#include <jde/db/meta/Table.h>
+#include "../src/meta/ddl/ColumnDdl.h" //#39: the deleted-overload guard.
 
 namespace Jde::DB::Tests{
 	//#10: SchemaDdl::Sync now delegates to ObjectPrefix (was a swapped-ternary duplicate that yielded "" for a "db.um_" prefix). Lock in ObjectPrefix.
@@ -24,6 +27,35 @@ namespace Jde::DB::Tests{
 	TEST( InsertClauseTests, SequenceColumnNullColumnSafe ){
 		InsertClause ins{ "p", vector<Value>{ Value{1} } }; //proc ctor -> Values have null columns.
 		EXPECT_EQ( ins.SequenceColumn(), nullptr );          //was a null-column ->Table deref (segfault).
+	}
+
+	//#33: getMap() runs from View's member-init list and FindColumn's "id" alias reads SurrogateKeys, which used to be declared *after* Map - so the read was of a not-yet-constructed vector.
+	//The surrogate key is deliberately not named "id": with the old order the garbage size() sends FindColumn to the Columns search, which has no "id", and GetColumnPtr throws.
+	TEST( ViewTests, MapIdAliasResolvesSurrogateKey ){
+		const auto j = Json::Parse( R"({"columns":{"entity_id":{"sk":0,"i":0},"member_id":{"i":1}},"map":{"parentId":"id","childId":"member_id"}})" );
+		const Table t{ "m", j };
+		ASSERT_EQ( t.SurrogateKeys.size(), 1u );
+		ASSERT_TRUE( t.Map.has_value() );
+		EXPECT_EQ( t.Map->Parent, t.SurrogateKeys[0] ); //"id" resolved through the surrogate key, not by column name.
+		EXPECT_EQ( t.Map->Parent->Name, "entity_id" );
+		EXPECT_EQ( t.Map->Child->Name, "member_id" );
+	}
+
+	//#39: MySQL's loadTables passed `isId!=0` where ColumnDdl takes `optional<uint8> skIndex`, and a bool converts to an
+	//*engaged* optional{0} - "column 0 of the primary key", not "no primary key" - so every MySQL-loaded column claimed
+	//to be the first pk column.  It sat next to `isIdentity!=0`, which is spelled identically and is genuinely a bool.
+	//The all-bool spelling is now deleted, so getting it wrong is a compile error rather than a wrong answer.
+	TEST( ColumnDdlTests, SkIndexRejectsBool ){
+		static_assert( std::is_constructible_v<ColumnDdl, sv, uint, sv, bool, EType, optional<uint>, bool, optional<uint8>, optional<uint>, optional<uint>>,
+			"the real signature has to stay callable." );
+		static_assert( !std::is_constructible_v<ColumnDdl, sv, uint, sv, bool, EType, optional<uint>, bool, bool, optional<uint>, optional<uint>>,
+			"a bool in skIndex's place must not compile - it means optional{0}, which is a pk claim." );
+
+		const ColumnDdl noKey{ "c", 1, "", true, EType::Int, {}, false, optional<uint8>{}, {}, {} };
+		EXPECT_FALSE( noKey.SKIndex.has_value() ); //what a non-pk column must report.
+		const ColumnDdl firstKey{ "c", 1, "", true, EType::Int, {}, false, optional<uint8>{0}, {}, {} };
+		ASSERT_TRUE( firstKey.SKIndex.has_value() );
+		EXPECT_EQ( (uint)*firstKey.SKIndex, 0u ); //(uint): uint8 formats as a character.
 	}
 
 	TEST( ObjectTests, ValueEquality ){

@@ -7,7 +7,8 @@ include( ${jdeRoot}/build/dependencies.cmake )
 if( WIN32 )
 	add_definitions( -DZLIB_USE_STATIC_LIBS )
 	set( ZLIB_ROOT ${CMAKE_INSTALL_PREFIX}/zlib )
-	set( OPENSSL_USE_STATIC_LIBS ON )
+	#OpenSSL is the vcpkg `x64-windows` (dynamic) triplet now - libcrypto-3-x64.dll / libssl-3-x64.dll.  Asking for static
+	#here makes vcpkg-cmake-wrapper warn and FindOpenSSL restrict CMAKE_FIND_LIBRARY_SUFFIXES, which finds nothing.
 	find_package( OpenSSL REQUIRED )
 endif()
 find_package( ZLIB REQUIRED )

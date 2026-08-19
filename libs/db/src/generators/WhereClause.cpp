@@ -1,4 +1,4 @@
-#include <jde/db/generators/WhereClause.h>
+﻿#include <jde/db/generators/WhereClause.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/generators/Functions.h>
@@ -9,28 +9,39 @@ namespace Jde::DB{
 	//Regex/Glob bind their pattern as a parameter, so swapping the keyword is only half the translation - the dialect has
 	//to rewrite the value too (glob '*' is '%' to a LIKE, '.*' to a REGEXP).  Every other operator passes through.
 	Ω patternParam( const Column& col, EOperator op, Value param, SL sl )ε->Value{
-		if( op!=EOperator::Regex && op!=EOperator::Glob )
+		if( !Syntax::IsPatternOperator(op) ) //C14: one membership test, shared with FormatOperator.
 			return param;
 		if( !param.is_string() )
 			throw Exception{ sl, Jde::ELogLevel::Debug, "'{}' needs a string pattern, not a '{}'.", DB::ToString(op), param.TypeName() };
 		return Value{ col.Table->Syntax().PatternParam(op, param.get_string(), sl) };
 	}
 
+	//Object-to-Object comparison.  Restricted to the six punctuation operators, because this composes both sides itself
+	//and so cannot go through Syntax::FormatOperator/PatternParam: `regex`/`glob`/`nin`/`elemMatch` are ToString's *wire*
+	//spellings, not SQL, and the pattern operators additionally need their bound value rewritten per dialect.  Emitting
+	//them here produced `t.col nin (?,?)` and untranslated globs - the same wire-string-into-SQL bug 0e59d753 fixed in
+	//FormatOperator, which this path was not given.  Use WhereClause::Add( col, op, … ) for those.
 	WhereClause::WhereClause( const Object& a, EOperator op, const Object& b, SL sl )ε{
+		using enum EOperator;
+		switch( op ){
+		case Equal: case NotEqual: case Greater: case GreaterOrEqual: case Less: case LessOrEqual: break;
+		default:
+			throw Exception{ sl, Jde::ELogLevel::Debug, "Operator '{}' has no SQL form here - it needs Syntax::FormatOperator, which takes a Column.", DB::ToString(op) };
+		}
 		auto clause = DB::ToString( a );
+		auto aParams = GetParams( a );//`a` binds either way: a Coalesce renders '?' for its Value members, and the null
+		move( aParams.begin(), aParams.end(), back_inserter(_params) );//branch below used to leave those unbound.
 		if( b.index()==underlying(EObject::Value) && get<Value>(b).is_null() ){
-			if( op==EOperator::Equal )
+			if( op==Equal )
 				clause = Ƒ( "{} is null", move(clause) );
-			else if( op==EOperator::NotEqual )
+			else if( op==NotEqual )
 				clause = Ƒ( "{} is not null", move(clause) );
 			else
 				throw Exception{ sl, Jde::ELogLevel::Debug, "Null value not allowed for operator '{}'.", DB::ToString(op) };
 		}
 		else{
 			clause = Ƒ( "{} {} {}", move(clause), DB::ToString(op), DB::ToString(b) );
-			auto aParams = GetParams( a );
 			auto bParams = GetParams( b );
-			move( aParams.begin(), aParams.end(), back_inserter(_params) );
 			move( bParams.begin(), bParams.end(), back_inserter(_params) );
 		}
 		_clauses.push_back( move(clause) );
@@ -67,29 +78,36 @@ namespace Jde::DB{
 		}
 	}
 
+	//Both overloads below run everything that can throw before committing anything, so a rejected Add leaves the clause
+	//exactly as it found it.  Two things throw here: FormatOperator, for a Regex/Glob with a count other than 1 (and for
+	//Regex on sqlite at all), and patternParam, for a non-string pattern - the latter part way through the list.
 	α WhereClause::Add( sp<Column> col, EOperator op, vector<Value> inParams, SL sl )ε->void{
-		//FormatOperator first: it rejects a Regex/Glob with a count other than 1, so a `glob:["a*","b*"]` fails here
-		//rather than binding two params against the single '?' the pattern operators emit.
 		auto clause = col->Table->Syntax().FormatOperator( *col, op, inParams.size(), sl );
+		vector<Value> translated; translated.reserve( inParams.size() );
 		for( auto& param : inParams )
-			_params.emplace_back( patternParam(*col, op, move(param), sl) );
+			translated.emplace_back( patternParam(*col, op, move(param), sl) );
+		move( translated.begin(), translated.end(), back_inserter(_params) );
 		_clauses.push_back( move(clause) );
 	}
 
 	α WhereClause::Add( sp<Column> col, EOperator op, vector<Value> inParams, bool haveNull, SL sl )ε->void{
 		if( !haveNull )
 			return Add( col, op, move(inParams), sl );
-		for( auto& param : inParams )
-			_params.emplace_back( patternParam(*col, op, move(param), sl) );
 		let notIn = op==EOperator::NotIn;
+		string clause;
+		vector<Value> translated; translated.reserve( inParams.size() );
 		if( inParams.empty() )
-			_clauses.push_back( Ƒ("{} is {}null", col->FQName(), notIn ? "not " : "") );
+			clause = Ƒ( "{} is {}null", col->FQName(), notIn ? "not " : "" );
 		else{
-			string inClause = col->Table->Syntax().FormatOperator( *col, op, inParams.size(), sl );
-			_clauses.push_back( notIn
-				? Ƒ("({} and {} is not null)", move(inClause), col->FQName())
-				: Ƒ("({} or {} is null)", move(inClause), col->FQName()) );
+			auto inClause = col->Table->Syntax().FormatOperator( *col, op, inParams.size(), sl );//`glob:[null,"a*","b*"]` throws here, with 2 params still un-committed.
+			for( auto& param : inParams )
+				translated.emplace_back( patternParam(*col, op, move(param), sl) );
+			clause = notIn
+				? Ƒ( "({} and {} is not null)", move(inClause), col->FQName() )
+				: Ƒ( "({} or {} is null)", move(inClause), col->FQName() );
 		}
+		move( translated.begin(), translated.end(), back_inserter(_params) );
+		_clauses.push_back( move(clause) );
 	}
 
 	α WhereClause::Add( const DB::Criteria& criteria )ε->void{
@@ -103,17 +121,5 @@ namespace Jde::DB{
 	α WhereClause::ToString()Ι->string{
 		string prefix{ _clauses.size() ? "where " : "" };
 		return prefix + Str::Join( _clauses, " and " );
-	}
-	α WhereClause::Remove( sv clause )ι->void{
-		for( auto it=_clauses.begin(); it!=_clauses.end(); ++it ){
-			if( *it==clause ){
-				_clauses.erase( it );
-				break;
-			}
-		}
-	}
-	α WhereClause::Replace( sv tablePrefix1, sv tablePrefix2 )ι->void{
-		for( auto&& clause : _clauses )
-			clause = Str::Replace( clause, tablePrefix1, tablePrefix2 );
 	}
 }

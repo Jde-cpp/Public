@@ -1,11 +1,14 @@
-#include <sqlite3.h>
+﻿#include <sqlite3.h>
 #include "SqliteRow.h"
 #include <jde/db/DBException.h>
+#include "SqliteException.h"
 
 #define let const auto
 
 namespace Jde::DB::Sqlite{
 	α Bind( sqlite3_stmt& stmt, const vector<Value>& params, SL sl )ε->void{
+		if( let placeholders = sqlite3_bind_parameter_count(&stmt); placeholders!=(int)params.size() )
+			throw SqliteException{ sl, SQLITE_MISUSE, Sql{string{sqlite3_sql(&stmt)}, params}, "has {} placeholders but {} params.", placeholders, params.size() };
 		for( uint i=0; i<params.size(); ++i ){
 			let& v = params[i];
 			let col = (int)i+1;
@@ -24,7 +27,8 @@ namespace Jde::DB::Sqlite{
 					rc = sqlite3_bind_blob( &stmt, col, bytes.data(), (int)bytes.size(), SQLITE_TRANSIENT ); break;
 				}
 			}
-			THROW_IFSL( rc!=SQLITE_OK, "bind param[{}] failed: rc={}", i, rc );
+			if( rc!=SQLITE_OK )
+				throw SqliteException{ sl, rc, Sql{string{sqlite3_sql(&stmt)}, params}, "bind param[{}] failed: {}", i, sqlite3_errstr(rc) };
 		}
 	}
 
@@ -35,10 +39,16 @@ namespace Jde::DB::Sqlite{
 				let v = sqlite3_column_int64( &stmt, col );
 				//sqlite stores datetimes as epoch ints & bits as 0/1 - the declared type recovers them. Expressions have no decltype and stay ints.
 				if( let declared = sqlite3_column_decltype(&stmt, col); declared ){
-					let lower = Str::ToLower( declared );
-					if( lower.find("date")!=string::npos || lower.find("time")!=string::npos )
+					//C16: case-insensitive search over the decltype in place - Str::ToLower allocated a string per integer
+					//cell per row, on the read path, only to be thrown away.
+					let ieq = []( char a, char b )ι{ return std::tolower( (unsigned char)a )==b; }; //`b` is the lowercase literal.
+					let contains = [&ieq]( sv haystack, sv needle )ι{
+						return std::search( haystack.begin(), haystack.end(), needle.begin(), needle.end(), ieq )!=haystack.end();
+					};
+					let equals = [&ieq]( sv a, sv b )ι{ return a.size()==b.size() && std::equal( a.begin(), a.end(), b.begin(), ieq ); };
+					if( contains(declared, "date") || contains(declared, "time") )
 						return Value{ DBTimePoint{Chrono::Epoch()+std::chrono::seconds{v}} };
-					if( lower=="bit" || lower=="bool" || lower=="boolean" )
+					if( equals(declared, "bit") || equals(declared, "bool") || equals(declared, "boolean") )
 						return Value{ v!=0 };
 				}
 				return Value{ v };

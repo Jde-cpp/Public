@@ -3,18 +3,7 @@
 
 #define let const auto
 namespace Jde::DB{
-	α ScalerAwait<uint32>::Execute()ι->ScalerAwaitOpt<uint32>::Task{
-		try{
-			auto opt = co_await ScalerAwaitOpt<uint32>{ move(_ds), move(_sql), base::_sl };
-			if( opt )
-				base::Resume( move(*opt) );
-			else
-				base::ResumeExp( Exception{"No value returned", ELogLevel::Error, base::_sl} );
-		}
-		catch( runtime_error& e ){
-			base::ResumeExp( move(e) );
-		}
-	}
+	α ScalerAwait<uint32>::Execute()ι->ScalerAwaitOpt<uint32>::Task{ return ScalerExecute<uint32>( *this, move(_ds), move(_sql), base::_sl ); } //C4: the body lives in ScalerAwait.h, shared with the template.
 }
 namespace Jde{
 	α DB::ScalerAwaitExecute( IDataSource& ds, variant<Sql,InsertClause>&& sql, function<void(optional<Row>)> onRow, function<void(Exception&&)> onError, SL sl )ι->QueryAwait::Task{
@@ -24,7 +13,7 @@ namespace Jde{
 			auto result = co_await ds.Query( move(query), isInsert, sl );
 			onRow( result.Rows.size() ? move(result.Rows[0]) : optional<Row>{} );
 		}
-		catch( runtime_error& e ){
+		catch( Exception& e ){
 			onError( move(e) );
 		}
 	}

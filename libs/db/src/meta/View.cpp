@@ -1,4 +1,4 @@
-#include <jde/db/meta/View.h>
+﻿#include <jde/db/meta/View.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/Functions.h>
@@ -38,11 +38,13 @@ namespace Jde::DB{
 			: optional<View::ParentChildMap>{};
 	}
 
-	α getSurrogateKeys( const vector<sp<Column>>& columns )ι->vector<sp<Column>>{
+	α getSurrogateKeys( sv viewName, const vector<sp<Column>>& columns )ε->vector<sp<Column>>{
 		flat_map<uint8,sp<Column>> skColumns;
 		for( let& c : columns ){
-			if( c->SKIndex.has_value() )
-				skColumns.emplace( *c->SKIndex, c );
+			if( !c->SKIndex.has_value() )
+				continue;
+			let [existing, added] = skColumns.emplace( *c->SKIndex, c );
+			THROW_IF( !added, "[{}]Columns '{}' and '{}' both declare sk:{}.  Clear it on the one that is a foreign key.", viewName, existing->second->Name, c->Name, (uint)*c->SKIndex );//(uint): SKIndex is uint8, which formats as a character - sk:0 would print as a NUL.
 		}
 		vector<sp<Column>> y;
 		for( let& [_,c] : skColumns )
@@ -59,9 +61,9 @@ namespace Jde::DB{
 		AddProc{ string{Json::FindDefaultSV(o, "addProc")} },
 		RemoveProc{ string{Json::FindDefaultSV(o, "removeProc")} },
 		IsFlags{ Json::FindBool(o, "isFlags").value_or(false) },
+		SurrogateKeys{ getSurrogateKeys(name, Columns) },//before Map
 		Map{ getMap(o,*this) },
 		QLView{ o.contains("qlView") ? ms<View>( Json::AsString(o,"qlView")) : nullptr },
-		SurrogateKeys{ getSurrogateKeys(Columns) },
 		Operations{ Json::FindArray(o, "ops") ? Access::ToRights(Json::AsArray(o, "ops")) : DefaultOps }
 	{}
 
@@ -91,13 +93,6 @@ namespace Jde::DB{
 	α View::Authorize( Access::ERights rights, UserPK userPK, SL sl )Ε->void{
 		if( let p=Schema->Authorizer; p )
 			p->Test( Schema->Name, Names::ToJson(Name), rights, userPK, sl );
-	}
-
-	α View::ChildTable()Ι->sp<View>{
-		return Map && Map->Child ? Map->Child->PKTable : sp<Table>{};
-	}
-	α View::ParentTable()Ι->sp<View>{
-		return Map && Map->Parent ? Map->Parent->PKTable : sp<Table>{};
 	}
 
 	α View::FindColumn( sv name )Ι->sp<Column>{

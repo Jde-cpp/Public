@@ -14,7 +14,7 @@ namespace Jde::DB::Odbc{
 		if( const RETCODE retCode = func(); retCode!=SQL_SUCCESS ){
 			string diagnostics = HandleDiagnosticRecord( functionName, handle, handleType, retCode, sl );
 			if( retCode==SQL_ERROR ) //was log-and-continue: callers ran on with uninitialized out-params (ssType/count/columnCount/…). SUCCESS_WITH_INFO(1)/NO_DATA(100) still pass.
-				throw Exception{ sl, ELogLevel::Error, "({}) {} failed: {}", retCode, functionName, diagnostics };
+				throw DBException{ retCode, Sql{}, Ƒ("{} failed: {}", functionName, diagnostics), sl };
 		}
 	}
 	#define CALL( handle, handleType, function, functionName ) Call( handle, handleType, [&](){ return function; }, functionName )

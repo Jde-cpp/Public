@@ -17,8 +17,8 @@ namespace Jde::DB{
 	struct ΓDB Value{
 		using Underlying=variant<std::nullptr_t,string,bool,int8_t,int,_int,uint32_t,uint,double,DBTimePoint,vector<uint8_t>>;
 		Value()=default;
-		Value( Underlying v )ι:Variant{v}{}
-		Value( Underlying v, Underlying nullValue )ι:Variant{v==nullValue ? nullptr : v}{}
+		Value( Underlying v )ι:Variant{move(v)}{}
+		Value( Underlying v, Underlying nullValue )ι:Variant{ v==nullValue ? Underlying{nullptr} : move(v) }{}
 		Value( uuid guid )ι:Variant{vector<uint8_t>( (uint8_t*)guid.data(), (uint8_t*)guid.data()+16 )}{}
 		Value( EType type, const jvalue& j, SRCE )ε;
 		Ω FromKey( Key key )ι->Value{ return key.IsPK() ? Value{key.PK()} : Value{move(key.NK())}; }

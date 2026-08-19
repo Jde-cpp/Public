@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "exports.h"
 #include "usings.h"
 #include <jde/db/Value.h>
@@ -12,10 +12,6 @@ namespace Jde::DB::MySql{
 	struct MySqlServerMeta; struct Session;
 	struct MySqlDataSource final : IDataSource{
 		~MySqlDataSource() override;
-		α ExecuteSync( Sql&& sql, SL sl )ε->uint override;
-		α ExecuteScalerSync( Sql&& sql, EValue outValue, SL sl )ε->Value override;
-		α ExecuteNoLog( Sql&& sql, SRCE )ε->uint override;
-		α Select( Sql&& s, SRCE )ε->vector<Row> override;
 		α Query( Sql&& sql, bool outParams, SRCE )ε->QueryAwait override;
 
 		α ServerMeta()ι->IServerMeta& override;
@@ -28,16 +24,7 @@ namespace Jde::DB::MySql{
 		α Disconnect()ε->void override{ THROW("Not implemented"); }
 		α ConnectionParams()ι->const mysql::connect_params&{ return _cs; }
 	private:
-		struct Params final{
-			α HasOut()Ι->bool;
-			RowΛ* Function{};
-			EValue OutValue{EValue::Null};
-			bool Log{true};
-			bool Sequence{false};
-		};
-		α Execute( DB::Sql&& sql, SL sl, Params exeParams )ε->uint;
-		α Execute( DB::Sql&& sql, SL sl )ε->uint{ return Execute( move(sql), sl, {} ); }
-		α Select( Sql&& s, RowΛ f, SL sl )ε->uint override;
+		α Execute( Sql&& sql, SL sl, Params exeParams )ε->uint override; //C1: the one primitive; IDataSource implements the sync wrappers over it.
 		α InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint override;
 		α AcquireSession( SL sl )ε->up<Session>; //pooled or fresh connection.
 		α ReleaseSession( up<Session>&& session )ι->void;

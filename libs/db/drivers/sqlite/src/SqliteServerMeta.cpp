@@ -1,4 +1,4 @@
-#include <sqlite3.h>
+﻿#include <sqlite3.h>
 #include "SqliteServerMeta.h"
 #include <jde/db/IDataSource.h>
 #include <jde/db/Row.h>
@@ -15,6 +15,7 @@
 namespace Jde::DB::Sqlite{
 	//'~' escape: '_' is a like wildcard and sqlite has no default escape char.
 	constexpr sv userTableFilter{ "m.type='table' and m.name not like 'sqlite~_%' escape '~'" };
+	constexpr sv userObjectFilter{ "m.type in ('table','view') and m.name not like 'sqlite~_%' escape '~'" };
 
 	//declared type 'varchar(255)' / 'decimal(10,2)' -> base name + length/precision/scale.
 	Ω parseDeclaredType( sv declared )ι->std::tuple<string,optional<uint>,optional<uint>,optional<uint>>{
@@ -34,7 +35,7 @@ namespace Jde::DB::Sqlite{
 		return { move(base), length, precision, scale };
 	}
 
-	Ω loadTables( sp<IDataSource> ds, const SqliteServerMeta& meta, sv tableName, bool like )ε->flat_map<string,sp<Table>>{
+	Ω loadTables( IDataSource& ds, const SqliteServerMeta& meta, sv tableName, bool like )ε->flat_map<string,sp<Table>>{
 		flat_map<string,sp<Table>> tables;
 		auto onRow = [&]( Row&& row ){
 			uint i=0;
@@ -56,10 +57,10 @@ namespace Jde::DB::Sqlite{
 			"\n\t(select count(*) from pragma_table_info(m.name) p where p.pk>0)"
 			"\nfrom sqlite_master m, pragma_table_info(m.name) ti"
 			"\nwhere {}{}"
-			"\norder by m.name, ti.cid", userTableFilter, tableName.size() ? (like ? " and m.name like ?" : " and m.name=?") : "") };
+			"\norder by m.name, ti.cid", userObjectFilter, tableName.size() ? (like ? " and m.name like ?" : " and m.name=?") : "") };
 		if( tableName.size() )
 			sql.Params.emplace_back( like ? string{tableName}+'%' : string{tableName} );
-		ds->Select( move(sql), onRow );
+		ds.Select( move(sql), onRow );
 		let indexes = meta.LoadIndexes( like ? tableName : sv{}, like ? sv{} : tableName );
 		for( auto& index : indexes ){
 			if( auto pTable = tables.find( index.TableName ); pTable!=tables.end() )
@@ -85,10 +86,10 @@ namespace Jde::DB::Sqlite{
 	}
 
 	α SqliteServerMeta::LoadTables( sv /*schemaName - always 'main'*/, sv tablePrefix )Ε->flat_map<string,sp<Table>>{
-		return loadTables( _pDataSource, *this, tablePrefix, true );
+		return loadTables( _ds, *this, tablePrefix, true );
 	}
 	α SqliteServerMeta::LoadTable( str /*schemaName*/, str tableName, SL sl )Ε->sp<TableDdl>{
-		auto tables = loadTables( _pDataSource, *this, tableName, false );
+		auto tables = loadTables( _ds, *this, tableName, false );
 		THROW_IFSL( tables.empty(), "Table '{}' not found.", tableName );
 		return std::dynamic_pointer_cast<TableDdl>( tables.begin()->second );
 	}
@@ -122,7 +123,7 @@ namespace Jde::DB::Sqlite{
 			"\nfrom sqlite_master m, pragma_index_list(m.name) il, pragma_index_info(il.name) ii"
 			"\nwhere {}{}"
 			"\norder by m.name, il.seq, ii.seqno", userTableFilter, filter );
-		_pDataSource->Select( move(sql), onRow );
+		_ds.Select( move(sql), onRow );
 		return indexes;
 	}
 
@@ -142,7 +143,7 @@ namespace Jde::DB::Sqlite{
 			else
 				pExisting->second.Columns.push_back( column );
 		};
-		_pDataSource->Select( {Ƒ("select m.name, fk.id, fk.\"table\", fk.\"from\""
+		_ds.Select( {Ƒ("select m.name, fk.id, fk.\"table\", fk.\"from\""
 			"\nfrom sqlite_master m, pragma_foreign_key_list(m.name) fk"
 			"\nwhere {}"
 			"\norder by m.name, fk.id, fk.seq", userTableFilter)}, onRow );

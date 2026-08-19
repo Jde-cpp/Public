@@ -5,7 +5,8 @@ message( "Jde.Opc.Gateway" )
 project( Jde.Opc.Gateway VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ${jdeRoot}/build/dependencies.cmake )
 if( WIN32 )
-	set( OPENSSL_USE_STATIC_LIBS ON )
+	#OpenSSL is the vcpkg `x64-windows` (dynamic) triplet now - libcrypto-3-x64.dll / libssl-3-x64.dll.  Asking for static
+	#here makes vcpkg-cmake-wrapper warn and FindOpenSSL restrict CMAKE_FIND_LIBRARY_SUFFIXES, which finds nothing.
 endif()
 find_package( OpenSSL REQUIRED )
 

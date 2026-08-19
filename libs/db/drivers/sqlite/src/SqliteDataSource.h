@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "exports.h"
 #include "jde/db/sqlite_api.h"
 #include "usings.h"
@@ -17,11 +17,7 @@ namespace Jde::DB::Sqlite{
 	struct SqliteDataSource final : IDataSource{
 		~SqliteDataSource() override;
 		α RequiresSync()ι->bool override{ return _path == ":memory:"; }
-		α ExecuteSync( Sql&& sql, SL sl )ε->uint override;
-		α ExecuteScalerSync( Sql&& sql, EValue outValue, SL sl )ε->Value override;
-		α ExecuteNoLog( Sql&& sql, SRCE )ε->uint override;
-		α Select( Sql&& s, SRCE )ε->vector<Row> override;
-		α Select( Sql&& s, RowΛ f, SRCE )ε->uint override; //public - SqliteQueryAwait executes through it.
+		α CompletesInline()Ι->bool override{ return true; } //in-process: Select runs the statement before it returns.
 		α Query( Sql&& sql, bool outParams, SRCE )ε->QueryAwait override;
 
 		α ServerMeta()ι->IServerMeta& override;
@@ -33,15 +29,7 @@ namespace Jde::DB::Sqlite{
 		α SetConfig( const jobject& config )ε->void override;
 		α Disconnect()ε->void override;
 	private:
-		struct Params final{
-			α HasOut()Ι->bool{ return OutValue!=EValue::Null; }
-			RowΛ* Function{};
-			EValue OutValue{EValue::Null};
-			bool Log{true};
-			bool Sequence{false};
-		};
-		α Execute( DB::Sql&& sql, SL sl, Params exeParams )ε->uint;
-		α Execute( DB::Sql&& sql, SL sl )ε->uint{ return Execute( move(sql), sl, {} ); }
+		α Execute( Sql&& sql, SL sl, Params exeParams )ε->uint override; //C1: the one primitive; IDataSource implements the sync wrappers over it.
 		α InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint override;
 		α Connection( SL sl )ε->sqlite3&; //lazy open.
 		α ExecuteProc( DB::Sql& sql, SL sl, Params& exeParams )ε->uint; //dispatch to SqliteProcs registry inside a transaction.
@@ -52,6 +40,10 @@ namespace Jde::DB::Sqlite{
 		sqlite3* _db{};
 		std::mutex _connMutex;
 		string _path{ ":memory:" };
+		//sqlite defaults to 0 - a concurrent writer makes the next statement fail with SQLITE_BUSY straight away.  Any
+		//second connection on the same file (another service, the CLI, a second cluster) hits it; catalog `busyTimeoutMs`
+		//overrides, 0 restores sqlite's own behaviour.
+		uint32 _busyTimeoutMs{ 5000 };
 		up<SqliteServerMeta> _serverMeta;
 	};
 }

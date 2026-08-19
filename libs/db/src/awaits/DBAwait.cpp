@@ -7,7 +7,7 @@ namespace Jde{
 			auto rows = co_await _ds->SelectAsync( move(_sql), sl );
 			onRows( move(rows) );
 		}
-		catch( runtime_error& e ){
+		catch( Exception& e ){//see ScalerAwaitExecute: catching runtime_error slices the driver's exception here.
 			onError( move(e) );
 		}
 	}

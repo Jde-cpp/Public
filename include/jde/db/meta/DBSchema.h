@@ -15,7 +15,6 @@ namespace Jde::DB{
 		α DS()Ε->sp<IDataSource>;
 
 		α FindAppSchema( str name )ι->sp<AppSchema>;
-		α FindDefTable( const Table& t1, const Table& t2 )Ι->sp<Table>;//route, route_steps-> -> route_definition
 		Ω Initialize( sp<DB::Catalog> catalog, sp<DBSchema> self )ε->void;
 		β IsPhysical()Ι->bool{ return false; }
 		α IsQLOnly()Ι->bool{ return Name.starts_with('_'); }

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "../exports.h"
 #include <jde/access/usings.h>
 
@@ -32,8 +32,6 @@ namespace Jde::DB{
 		α SqlName()Ι->string; //DBName, quoted when it is a reserved word (e.g. an unprefixed `groups`) - DBName stays raw for metadata lookups.
 		α Syntax()Ι->const DB::Syntax&;
 
-		α ChildTable()Ι->sp<View>;
-		α ParentTable()Ι->sp<View>;
 
 		string Name; //provider_id
 		vector<sp<Column>> Columns;
@@ -42,11 +40,11 @@ namespace Jde::DB{
 		string AddProc;
 		string RemoveProc;
 		bool IsFlags; //e.g. read=1, update=2, purge=4, execute=8, rights=16
+		vector<sp<Column>> SurrogateKeys;//before Map
 		struct ParentChildMap{ sp<Column> Parent; sp<Column> Child; };
 		optional<ParentChildMap> Map;//members: identity_id, member_id
 		sp<View> QLView;
 		sp<DB::AppSchema> Schema;
-		vector<sp<Column>> SurrogateKeys;
 		Access::ERights Operations; //user operations.
 		vector<sp<View>> Children;
 	};

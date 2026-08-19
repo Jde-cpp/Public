@@ -2,7 +2,6 @@
 #ifndef DATA_SOURCE_H
 #define DATA_SOURCE_H
 #include <jde/fwk/co/Await.h>
-#include "awaits/MapAwait.h"
 #include "awaits/DBAwait.h"
 #include "awaits/ExecuteAwait.h"
 #include "awaits/QueryAwait.h"
@@ -23,6 +22,10 @@ namespace Jde::DB{
 		α SchemaName( SRCE )ε->string;
 		β SchemaNameConfig( SL=SRCE_CUR )ι->string{ return {}; } //schema name in connection string.
 		β RequiresSync()ι->bool{ return false; } //sqlite :memory:=true
+		//True when a query completes on the calling thread - sqlite is in-process, there is no socket to await.  The
+		//awaitables use it to finish in await_ready instead of suspending and resuming inline, which would leave the
+		//caller's frame under the resumed continuation and nest one level per await.
+		β CompletesInline()Ι->bool{ return false; }
 		β SetConfig( const jobject& config )ε->void=0;
 		β AtCatalog( sv catalog, SRCE )ε->sp<IDataSource> = 0; //create new pointing to other catalog.  If have catalogs.
 		β AtSchema( sv schema, SRCE )ε->sp<IDataSource> = 0; //create new pointing to other schema.  If can specify schema in connection.
@@ -33,33 +36,43 @@ namespace Jde::DB{
 		Ŧ Scaler( Sql&& sql, SRCE )ι{ return ScalerAwait<T>{ shared_from_this(), move(sql), sl }; }
 		Ŧ ScalerOpt( Sql&& sql, SRCE )ι{ return ScalerAwaitOpt<T>{ shared_from_this(), move(sql), sl }; }
 
-		β Select( Sql&& s, SRCE )ε->vector<Row> =0;
-		β Select( Sql&& s, RowΛ f, SRCE )ε->uint =0;
+		α Select( Sql&& s, SRCE )ε->vector<Row>;
+		α Select( Sql&& s, RowΛ f, SRCE )ε->uint;
 		α SelectAsync( Sql&& sql, SRCE )ι->SelectAwait{ return SelectAwait{ shared_from_this(), move(sql), sl }; }
 		template<class K=uint,class V=string>
 		α SelectEnum( const View& table, SRCE )ε->CacheAwait<flat_map<K,V>>{ return SelectMap<K,V>( {Ƒ("select {}, name from {}", table.GetPK()->Name, table.SqlName())}, table.Name, sl ); }
 		ẗ SelectEnumSync( const View& table, SRCE )ε->flat_map<K,V>{
 			return BlockAwait<CacheAwait<flat_map<K,V>>,flat_map<K,V>>( SelectEnum<K,V>( table, sl) );
 		}
-		α TrySelect( Sql&& s, RowΛ f, SRCE )ι->bool;
 
 		ẗ SelectMap( Sql&& sql, string cacheName, SRCE )ι->CacheAwait<flat_map<K,V>>;
-		ẗ SelectMap( Sql&& sql, SRCE )ι->MapAwait<K,V>{ return MapAwait<K,V>{shared_from_this(), move(sql), sl}; }
-		Ŧ SelectSet( Sql&& sql, SRCE )ι->TSelectAwait<flat_set<T>>{ return SelectSet<T>( move(sql.Text), move(sql.Params), sl ); }
-		Ŧ SelectSet( Sql&& sql, string cacheName, SRCE )ι->CacheAwait<flat_set<T>>;
 
 		α TryExecuteSync( Sql&& sql, SRCE )ι->optional<uint>;
 
 		[[nodiscard]] α Execute( Sql&& sql, SRCE )ε->ExecuteAwait{ return ExecuteAwait{shared_from_this(), move(sql), sl}; }
-		β ExecuteSync( Sql&& sql, SRCE )ε->uint=0;
-		β ExecuteScalerSync( Sql&& sql, EValue outValue, SRCE )ε->DB::Value=0;
+		α ExecuteSync( Sql&& sql, SRCE )ε->uint;
+		//outValue: a non-Null one asks for the first column of the first row back.  On a *proc* (`Sql::IsProc`) it also
+		//declares the trailing placeholder an OUT param - `call p(?,?,?)` where the last `?` is the sequence the proc
+		//assigns - and both drivers strip it before binding.  On plain SQL nothing is stripped and the value is simply
+		//the row the statement returned; the EValue itself is only ever tested against Null (#47).
+		α ExecuteScalerSync( Sql&& sql, EValue outValue, SRCE )ε->DB::Value;
 		Ŧ InsertSeq( DB::InsertClause&& sql, SRCE )ι{ return ScalerAwait<T>{ shared_from_this(), move(sql), sl }; }
 		Ŧ InsertSeqSync( DB::InsertClause&& insert, SRCE )ε->T{ return static_cast<T>( InsertSeqSyncUInt(move(insert), sl) ); }
-		β ExecuteNoLog( Sql&& sql, SRCE )ε->uint=0;
 		β Query( Sql&& sql, bool outParams=false, SRCE )ε->QueryAwait=0;
 		β Syntax()ι->const Syntax& = 0;
 
 	protected:
+		//C1: one statement-execution primitive per driver, and the five sync wrappers over it implemented once here.
+		//They were line-for-line identical in all three drivers and had already drifted twice - odbc dropped `outValue`
+		//in ExecuteScalerSync (binding the last param INPUT instead of OUTPUT), and MySQL ignored `Log` (#48).
+		struct Params final{
+			α HasOut()Ι->bool{ return OutValue!=EValue::Null; } //a proc's trailing placeholder is the OUT param - see ExecuteScalerSync and #47.
+			RowΛ* Function{};
+			EValue OutValue{ EValue::Null };
+			bool Log{ true };
+			bool Sequence{};
+		};
+		β Execute( Sql&& sql, SL sl, Params exeParams )ε->uint =0;
 		β InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint=0;
 		optional<string> _catalog; //db catalog name ie jde
 		string _schema;  //db schema name ie dbo
@@ -80,7 +93,6 @@ namespace Jde::DB{
 
 	namespace zInternal{
 		ẗ ProcessMapRow( flat_map<K,V>& y, Row&& row )ε{ y.emplace( row.Get<K>(0), row.Get<V>(1) ); }
-		Ŧ ProcessSetRow( flat_set<T>& y, Row&& row )ε{ y.emplace( row.Get<T>(0) ); }
 	}
 
 	ẗ IDataSource::SelectMap( Sql&& sql, string cacheName, SL sl )ι->CacheAwait<flat_map<K,V>>{

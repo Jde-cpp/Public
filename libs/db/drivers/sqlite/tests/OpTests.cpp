@@ -1,3 +1,5 @@
+#include <sqlite3.h>
+#include "../src/SqliteProcs.h" //compiled into this target - see CMakeLists.txt.
 #include <jde/db/Row.h>
 #include <jde/db/DBException.h>
 #include <jde/db/IDataSource.h>
@@ -21,6 +23,69 @@ namespace Jde::DB::Sqlite::Tests{
 		//cause removed: the next call has to open afresh. Before the fix _db stayed set, so this reused the dead handle and threw.
 		ds->SetConfig( jobject{ {"catalogs", jobject{ {"testDb", jobject{ {"path", ":memory:"}, {"schemas", jobject{}}}} }} } );
 		EXPECT_NO_THROW( ds->ExecuteSync(Sql{"select 1"}, SRCE_CUR) );
+	}
+
+	//#45: sqlite installs no busy handler by default, so the moment a second connection holds the write lock the next
+	//statement fails outright with SQLITE_BUSY -> EDbError::Timeout, which nothing above retries.  busyTimeoutMs (catalog
+	//config, 5s by default) makes it wait for the lock instead.  busyHolder/busyWaiter share their own file, so the write
+	//lock taken here is invisible to the rest of the suite.
+	TEST( ConnectionTests, BusyTimeoutWaitsForAConcurrentWriter ){
+		auto holder = DS( "busyHolder" );      //default timeout; only takes the lock.
+		auto waiter = DS( "busyWaiter" );      //busyTimeoutMs: 500 - short enough to assert on.
+		holder->ExecuteSync( Sql{"create table if not exists zz_45(c)"}, SRCE_CUR );
+
+		holder->ExecuteSync( Sql{"begin immediate"}, SRCE_CUR ); //held until the commit below, whatever happens between.
+		let start = std::chrono::steady_clock::now();
+		string error;
+		try{ waiter->ExecuteSync( Sql{"insert into zz_45 values(1)"}, SRCE_CUR ); }
+		catch( const Exception& e ){ error = e.what(); }
+		let waited = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now()-start ).count();
+		holder->ExecuteSync( Sql{"commit"}, SRCE_CUR );
+
+		EXPECT_NE( error.find("locked"), string::npos ) << error; //sqlite spells SQLITE_BUSY "database is locked".
+		EXPECT_GE( waited, 400 ) << waited; //it waited out the 500ms rather than failing at once - without the handler this is ~0.
+		EXPECT_LT( waited, 2000 ) << waited; //bounded well under the 5s default, so this also proves busyTimeoutMs was read.
+	}
+
+	//#46: RegisterProc replaced a same-named twin silently and UnregisterProcs erased by name alone - so when two
+	//registrars held one name, whichever was destroyed *first* stripped the entry the survivor was still dispatching,
+	//and its next call failed with "No native proc registered".  Entries carry their owner now, and only that owner can
+	//remove them.  This runs against the copy of the registry compiled into the test binary, so the names below are
+	//invisible to the driver's own.
+	TEST( ProcRegistryTests, UnregisterOnlyRemovesTheOwnersEntries ){
+		int ownerA{}, ownerB{}; //addresses only - the registry treats an owner as an opaque token.
+		let body = []( uint result ){ return [result]( sqlite3&, const vector<Value>&, RowΛ*, SL )->uint{ return result; }; };
+		sqlite3* db{};
+		ASSERT_EQ( sqlite3_open(":memory:", &db), SQLITE_OK ); //a real handle: the bodies ignore it, but forming *nullptr would not be.
+		let call = [&]( sv name ){ let p = FindProc(name); return p ? (*p)( *db, {}, nullptr, SRCE_CUR ) : 0u; };
+
+		RegisterProc( "zz_46", body(1), 0, &ownerA );
+		RegisterProc( "zz_46", body(2), 0, &ownerB ); //takes the name over; logs CRITICAL, which is the point of noticing.
+		EXPECT_EQ( call("zz_46"), 2u );
+
+		UnregisterProcs( {"zz_46"}, &ownerA ); //A's teardown: no longer A's entry, so it must be left alone.
+		ASSERT_TRUE( FindProc("zz_46") );      //was erased here - the survivor lost a proc its dll was still serving.
+		EXPECT_EQ( call("zz_46"), 2u );
+
+		UnregisterProcs( {"zz_46"}, &ownerB ); //its actual owner does remove it.
+		EXPECT_FALSE( FindProc("zz_46") );
+
+		//an anonymous registration (ProcRegistry's default) owns itself: a tagged unregister must not take it either.
+		RegisterProc( "zz_46b", body(3) );
+		UnregisterProcs( {"zz_46b"}, &ownerA );
+		EXPECT_TRUE( FindProc("zz_46b") );
+		UnregisterProcs( {"zz_46b"} );
+		EXPECT_FALSE( FindProc("zz_46b") );
+		sqlite3_close_v2( db );
+	}
+
+	//#47: a non-Null outValue declares the *trailing placeholder* an OUT param, which is a proc convention.  MySQL keyed
+	//it off outValue alone, so a plain statement had its last param silently replaced by 0 - and with no params the loop
+	//bound `0 + -1` wrapped to SIZE_MAX and indexed an empty vector.  sqlite always bound every param for a non-proc;
+	//this pins the contract both drivers now share, so the two cannot drift apart again.
+	TEST_P( OpTests, ScalerSyncOnPlainSqlBindsEveryParam ){
+		EXPECT_EQ( _ds->ExecuteScalerSync({"select ? + ?", {Value{40}, Value{2}}}, EValue::UInt64).get_number<uint>(), 42u ); //42, not 40: the last param is a value, not an OUT slot.
+		EXPECT_EQ( _ds->ExecuteScalerSync({"select 7"}, EValue::UInt64).get_number<uint>(), 7u );                            //and no params at all is legitimate on plain SQL.
 	}
 
 	TEST_P( OpTests, InsertSelectRoundTrip ){
@@ -108,6 +173,41 @@ namespace Jde::DB::Sqlite::Tests{
 		}
 		Sql call{ "access_role_insert( ?, ?, ?, ?, ? )", {Value{"survivor"}, Value{"survivor"}, Value{}, Value{}, Value{}}, true };
 		EXPECT_GT( _ds->ExecuteScalerSync(move(call), EValue::UInt64).get_number<uint>(), 0u );
+	}
+
+	//#52: IServerMeta held an *owning* sp back to its data source, so DS -> up<ServerMeta> -> sp<DS> closed a cycle the
+	//moment anything called ServerMeta().  Nothing ever reset it, so such a data source could not be destroyed however
+	//many external owners let go - sqlite never reached sqlite3_close_v2 and its final WAL checkpoint, MySQL never closed
+	//its sessions.  It is a reference now: the meta is a up<> member of the data source and cannot outlive it.
+	TEST_P( OpTests, ServerMetaDoesNotOwnItsDataSource ){
+		wp<IDataSource> weak;
+		{
+			let ds = DB::DataSource( Settings::AsObject(Ƒ("/dbServers/{}", GetParam())) ); //standalone, as ProcsSurviveSiblingTeardown builds one.
+			weak = ds;
+			ds->ServerMeta(); //the call that formed the cycle.
+			EXPECT_FALSE( weak.expired() );
+		}
+		EXPECT_TRUE( weak.expired() ); //was false forever: the data source owned itself.
+	}
+
+	//#53: the async ScalerOpt read the cell with Row::Get, which ASSERTs on a NULL and returns T{} - so it answered an
+	//*engaged* optional{0} where the sync ScalerSyncOpt, which goes through Row::GetOpt, answers nullopt.  One API, two
+	//answers, and Scaler<T> inherited it: 0 instead of "No value returned".
+	TEST_P( OpTests, ScalerOptMatchesTheSyncContract ){
+		let asyncOpt = [&]( sv text ){ return BlockAwait<ScalerAwaitOpt<uint>,optional<uint>>( _ds->ScalerOpt<uint>(Sql{string{text}}) ); };
+
+		//a NULL cell: nullopt on both paths.  This is the one that differed.
+		EXPECT_FALSE( asyncOpt("select null").has_value() );
+		EXPECT_FALSE( _ds->ScalerSyncOpt<uint>(Sql{"select null"}).has_value() );
+
+		//no rows at all, and a real value: they already agreed, and have to keep agreeing.
+		EXPECT_FALSE( asyncOpt("select 1 where 1=0").has_value() );
+		EXPECT_FALSE( _ds->ScalerSyncOpt<uint>(Sql{"select 1 where 1=0"}).has_value() );
+		EXPECT_EQ( asyncOpt("select 5").value_or(0), 5u );
+		EXPECT_EQ( _ds->ScalerSyncOpt<uint>(Sql{"select 5"}).value_or(0), 5u );
+
+		//and the non-Opt form now reports the missing value instead of quietly returning 0.
+		EXPECT_THROW( _ds->ScalerSync<uint>(Sql{"select null"}), Exception );
 	}
 
 	TEST_P( OpTests, ConstraintErrorsMapped ){

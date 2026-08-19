@@ -66,6 +66,17 @@ namespace Jde::DB::Sqlite{
 			DB::SyncSchema( *gatewaySchema, ql );
 		}
 
+		//QL::Configure is deliberately not repeated: AddIntrospection appends to a global, and Schema::Create already
+		//registered these schemas once.  Everything else is what a restart re-runs against an existing database.
+		α Schema::Resync( str cluster )ε->void{
+			auto authorizer = ms<Access::Authorize>( "SqliteTests" );
+			auto dbCluster = DB::GetCluster( cluster, authorizer );
+			auto accessSchema = dbCluster->GetAppSchema( "access" );
+			vector<sp<AppSchema>> schemas{ accessSchema, dbCluster->GetAppSchema("app"), dbCluster->GetAppSchema("opc"), dbCluster->GetAppSchema("gateway") };
+			auto ql = ms<SqliteQL>( move(schemas), move(authorizer) );
+			DB::SyncSchema( *accessSchema, ql );
+		}
+
 		α BackendTests::SetUp()ε->void{
 			const auto& cluster = GetParam();
 			static flat_set<string> synced;

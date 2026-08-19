@@ -46,22 +46,4 @@ namespace Jde::DB{
 			pColumn = Extends->FindColumn( name );
 		return pColumn;
 	}
-
-	α Table::GetColumn( sv name, SL sl )Ε->const Column&{
-		return *GetColumnPtr( name, sl );
-	}
-
-	α Table::GetColumnPtr( sv name, SL sl )Ε->sp<Column>{
-		auto pColumn = FindColumn( name ); THROW_IFSL( !pColumn, "[{}.{}]Could not find column.", Name, name );
-		return pColumn;
-	}
-
-	α Table::GetColumns( vector<string> names, SL sl )Ε->vector<sp<Column>>{
-		vector<sp<Column>> columns;
-		for( let& name : names )
-			columns.push_back( GetColumnPtr(name, sl) );
-		return columns;
-	}
-
-	α Table::FKName()Ι->string{ return string{Names::ToSingular(Name)}+"_id"; }
 }
