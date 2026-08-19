@@ -20,11 +20,11 @@ namespace Internal{
 	α AppServerLocal()ι->bool;
 	Τ [[nodiscard]] α DoEof( T& stream )ι->net::awaitable<void, executor_type>{ beast::error_code ec; stream.socket().shutdown( tcp::socket::shutdown_send, ec ); co_return; }
 	Τ [[nodiscard]] α DoEof( beast::ssl_stream<T>& stream )ι->net::awaitable<void, executor_type>{ co_await stream.async_shutdown(); }
-	α HandleRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task;
+	α HandleRequest( HttpRequest req, sp<IRestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task;
 	α ReadSeverity( beast::error_code ec )ι->ELogLevel;
 	Τ [[nodiscard]] α RunSession( T& stream, beast::flat_buffer& buffer, tcp::endpoint userEndpoint, bool isSsl, uint32 connectionIndex, sp<net::cancellation_signal> cancel, IRequestHandler* reqHandler )ι->net::awaitable<void, executor_type>;
 	α SendOptions( const HttpRequest&& req )ι->http::message_generator;
-	α SendServerSettings( HttpRequest req, sp<RestStream> stream, sp<App::IApp> appServer )ι->TAwait<sp<SessionInfo>>::Task;
+	α SendServerSettings( HttpRequest req, sp<IRestStream> stream, sp<App::IApp> appServer )ι->TAwait<sp<SessionInfo>>::Task;
 }
 
 namespace Jde::Web{
@@ -44,7 +44,7 @@ namespace Jde::Web{
 		for( auto cs = co_await net::this_coro::cancellation_state; cs.cancelled() == net::cancellation_type::none; cs = co_await net::this_coro::cancellation_state ){
 			if( websocket::is_upgrade(parser->get()) ){
 				beast::get_lowest_layer(stream).expires_never();// Disable the timeout. The websocket::stream uses its own timeout settings.
-				Internal::RunSocketSession( reqHandler->WebsocketSession(ms<RestStream>(mu<T>(move(stream))), move(buffer), parser->release(), userEndpoint, connectionIndex) );
+				Internal::RunSocketSession( reqHandler->WebsocketSession(ms<RestStream<T>>(move(stream)), move(buffer), parser->release(), userEndpoint, connectionIndex) );
 				co_return;
 			}
 			HttpRequest req{ parser->release(), move(userEndpoint), isSsl, connectionIndex };
@@ -58,11 +58,11 @@ namespace Jde::Web{
 				res = move(pingRes);
 			}
 			else if( req.IsGet("/serverSettings") ){
-				SendServerSettings( move(req), ms<RestStream>(mu<T>(move(stream))), reqHandler->AppServer() );
+				SendServerSettings( move(req), ms<RestStream<T>>(move(stream)), reqHandler->AppServer() );
 				co_return;
 			}
 			if( !res ){
-				HandleRequest( move(req), ms<RestStream>(mu<T>(move(stream))), reqHandler );
+				HandleRequest( move(req), ms<RestStream<T>>(move(stream)), reqHandler );
 				co_return;//TODO handle keepalive
 			}
 			if( res && !res->keep_alive() ){

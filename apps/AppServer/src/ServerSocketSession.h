@@ -12,7 +12,7 @@ namespace Jde::App::Server{
 
 	struct ServerSocketSession final: TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>, Access::IAdminAcl{
 		using base = TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>;
-		ServerSocketSession( sp<RestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
+		ServerSocketSession( sp<IRestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α ProgramPK()Ι->ProgramPK{ return _programPK; }
 		α Instance()Ι->Proto::FromClient::Instance{ lg _{_instanceMutex}; return _instance; }//copy under the lock: _instance is written on this session's strand (AddInstance) while _sessions visitors read it from other threads.
 		α InstancePK()Ι->ProgInstPK{ return _instancePK; }

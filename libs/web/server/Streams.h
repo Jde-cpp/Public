@@ -9,21 +9,24 @@
 #include <jde/fwk/co/CoLock.h>
 
 namespace Jde::Web::Server{
-//	using namespace Jde::Coroutine;
-	struct IWebsocketSession;
-	struct SocketStream;
-	struct RestStream final: std::enable_shared_from_this<RestStream>{
-		RestStream( up<StreamType>&& plain )ι:Plain{ move(plain) }{}
-		RestStream( up<beast::ssl_stream<StreamType>>&& ssl )ι:Ssl{ move(ssl) }{}
-		RestStream( RestStream&& rhs ):Plain{ move(rhs.Plain) }, Ssl{ move(rhs.Ssl) }{}
-		α operator=( RestStream&& rhs )ι->RestStream&;
-		α AsyncWrite( http::message_generator&& m )ι->void;
-	private:
+	struct IWebsocketSession; struct ISocketStream;
+	//Non-template handle for the http side - RestStream<TStream> owns the socket once RunSession hands it over, and turns it into the websocket on upgrade.
+	struct ΓWS IRestStream: std::enable_shared_from_this<IRestStream>{
+		virtual ~IRestStream()=default;
+		β AsyncWrite( http::message_generator&& m )ι->void=0;
+		β CreateSocketStream( beast::flat_buffer&& buffer )ι->sp<ISocketStream> = 0;
+	protected:
 		α OnWrite( beast::error_code ec, uint bytes_transferred )ι->void;
-	public:
-		up<StreamType> Plain;//TODO move to variant.
-		up<beast::ssl_stream<StreamType>> Ssl;
-		friend struct SocketStream;
+	};
+
+	//TStream: StreamType | beast::ssl_stream<StreamType>.  Bodies live in Streams.cpp, explicitly instantiated for both.
+	template<class TStream>
+	struct RestStream final: IRestStream{
+		RestStream( TStream&& stream )ι:_stream{ move(stream) }{}
+		α AsyncWrite( http::message_generator&& m )ι->void override;
+		α CreateSocketStream( beast::flat_buffer&& buffer )ι->sp<ISocketStream> override;
+	private:
+		TStream _stream;
 	};
 
 	//Resumes the coroutine on the strand - promise-agnostic (unlike VoidAwait/IAwait) so it can be awaited inside LockAwait::Task.
@@ -34,22 +37,35 @@ namespace Jde::Web::Server{
 		α await_resume()Ι->void{}
 	};
 
-	struct ΓWS SocketStream final: std::enable_shared_from_this<SocketStream>{
-		using Stream = std::variant<websocket::stream<StreamType>,websocket::stream<beast::ssl_stream<StreamType>>>;
-		SocketStream( sp<RestStream>&& stream, beast::flat_buffer&& buffer )ι;
-		α Write( string&& buffer, sp<IWebsocketSession> session )ι->LockAwait::Task;
-		α GetExecutor()ι->executor_type;
+	//Non-template handle held by IWebsocketSession - owns everything that doesn't depend on the stream type; SocketStream<TStream> supplies the beast ops.
+	struct ΓWS ISocketStream: std::enable_shared_from_this<ISocketStream>{
+		virtual ~ISocketStream()=default;
+		β Write( string&& buffer, sp<IWebsocketSession> session )ι->LockAwait::Task=0;
+		β DoAccept( TRequestType request, sp<IWebsocketSession> session )ι->void=0;
+		β DoRead( sp<IWebsocketSession> session )ι->void=0;
+		β Close( sp<IWebsocketSession> session )ι->LockAwait::Task=0;
+		α GetExecutor()ι->executor_type{ return _strand.get_inner_executor(); }
 		α Strand()ι->net::strand<executor_type>&{ return _strand; }
-		α DoAccept( TRequestType request, sp<IWebsocketSession> session )ι->void;
-		α DoRead( sp<IWebsocketSession> session )ι->void;
-		α Close( sp<IWebsocketSession> session )ι->LockAwait::Task;
-	private:
+	protected:
+		ISocketStream( executor_type executor, beast::flat_buffer&& buffer )ι:_buffer{ move(buffer) }, _strand{ net::make_strand(executor) }{}
 		beast::flat_buffer _buffer;
 		CoLock _writeLock;
-		Stream _ws;
 		net::strand<executor_type> _strand;//serializes every op on _ws: the ioc is multithreaded and beast streams aren't thread-safe, so Close (shutdown thread) would otherwise race read/write handlers.
 		bool _open{};//strand-confined. Handshake completed - async_close is only valid on an open stream.
 		bool _closing{};//strand-confined. Close initiated - makes Close idempotent & drops later reads/writes.
 		bool _transportClosed{};//strand-confined. Close deadline fired - lowest layer closed, no close handshake possible.
+	};
+
+	//TStream: websocket::stream<StreamType> | websocket::stream<beast::ssl_stream<StreamType>>.  Bodies live in Streams.cpp, explicitly instantiated for both.
+	template<class TStream>
+	struct SocketStream final: ISocketStream{
+		static constexpr bool IsSsl = std::is_same_v<TStream, websocket::stream<beast::ssl_stream<StreamType>>>;
+		SocketStream( typename TStream::next_layer_type&& next, beast::flat_buffer&& buffer )ι;//next = RestStream<>::_stream
+		α Write( string&& buffer, sp<IWebsocketSession> session )ι->LockAwait::Task override;
+		α DoAccept( TRequestType request, sp<IWebsocketSession> session )ι->void override;
+		α DoRead( sp<IWebsocketSession> session )ι->void override;
+		α Close( sp<IWebsocketSession> session )ι->LockAwait::Task override;
+	private:
+		TStream _ws;
 	};
 }

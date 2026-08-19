@@ -16,7 +16,7 @@ namespace Jde::Opc{
 		Web::Server::Stop( move(_requestHandler), terminate, sl );
 	}
 	namespace Server{
-		α RequestHandler::WebsocketSession( sp<RestStream>&& /*stream*/, beast::flat_buffer&& /*buffer*/, TRequestType /*req*/, tcp::endpoint /*userEndpoint*/, uint32 /*connectionIndex*/ )ι->sp<IWebsocketSession>{
+		α RequestHandler::WebsocketSession( sp<IRestStream>&& /*stream*/, beast::flat_buffer&& /*buffer*/, TRequestType /*req*/, tcp::endpoint /*userEndpoint*/, uint32 /*connectionIndex*/ )ι->sp<IWebsocketSession>{
 			ASSERT_DESC( false, "Websocket sessions not implemented in OpcServer." );
 			// auto session = ms<ServerSocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
 			// _sessions.emplace( session->Id(), session );

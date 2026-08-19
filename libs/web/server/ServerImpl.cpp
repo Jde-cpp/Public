@@ -40,21 +40,21 @@ namespace Server{
 			co_await RunSession( stream, buffer, move(userEndpoint), false, index, cancel, handler );
 	}
 
-	Ω send( HttpRequest&& req, sp<RestStream> stream, jvalue j, sv contentType={}, SRCE )ι->void{
+	Ω send( HttpRequest&& req, sp<IRestStream> stream, jvalue j, sv contentType={}, SRCE )ι->void{
 		auto res = req.Response( move(j), sl );
 		if( contentType.size() )
 			res.set( http::field::content_type, contentType );
 		stream->AsyncWrite( move(res) );
 	}
 
-	Ω send( RestException&& e, sp<RestStream> stream, sv contentType={} )ι->void{
+	Ω send( RestException&& e, sp<IRestStream> stream, sv contentType={} )ι->void{
 		auto res = e.Response();
 		if( contentType.size() )
 			res.set( http::field::content_type, contentType );
 		stream->AsyncWrite( move(res) );
 	}
 
-	Ω graphQL( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )->QL::QLAwait<>::Task{
+	Ω graphQL( HttpRequest req, sp<IRestStream> stream, IRequestHandler* reqHandler )->QL::QLAwait<>::Task{
 		constexpr sv contentType = "application/graphql-response+json";
 		try{
 			let returnRaw = req.Params().contains( "raw" );
@@ -116,7 +116,7 @@ namespace Server{
 		}
 	}
 
-	Ω handleCustomRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->IHttpRequestAwait::Task{
+	Ω handleCustomRequest( HttpRequest req, sp<IRestStream> stream, IRequestHandler* reqHandler )ι->IHttpRequestAwait::Task{
 		//keep the await in the coroutine frame instead of a temporary: it took ownership of req, and the catch blocks below need
 		//the request back to build the error response - a moved-from one loses the session-id authorization header & version.
 		auto requestAwait = reqHandler->HandleRequest( move(req) );
@@ -261,7 +261,7 @@ namespace Server{
 		TRACET( ELogTags::SocketServerRead, "erased socket: {:x}", _socketSessions.erase(id) );
 	}
 }
-	α Server::HandleRequest( HttpRequest req, sp<RestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task{
+	α Server::HandleRequest( HttpRequest req, sp<IRestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task{
 		try{
 			req.SessionInfo = co_await Sessions::UpsertAwait( req.Header("authorization"), req.UserEndpoint.address().to_string(), false, reqHandler->AppServer() );
 		}
@@ -301,7 +301,7 @@ namespace Server{
 		res.set( http::field::access_control_max_age, "7200" ); //2 hours chrome max
 		return res;
 	}
-	α Server::SendServerSettings( HttpRequest req, sp<RestStream> stream, sp<App::IApp> appClient )ι->Sessions::UpsertAwait::Task{
+	α Server::SendServerSettings( HttpRequest req, sp<IRestStream> stream, sp<App::IApp> appClient )ι->Sessions::UpsertAwait::Task{
 		jobject j;
 		j["restSessionTimeout"] = Chrono::ToString( Sessions::RestSessionTimeout() );
 		j["connectionId"] = appClient->ConnectionPK();

@@ -16,6 +16,6 @@ namespace Jde::Opc::Server{
 		α QLServer()ι->sp<QL::IQL> override{ return QLPtr(); }
 		α Query( QL::RequestQL&&, UserPK, bool, SL )ε->up<TAwait<jvalue>>{ throw Exception("NoImpl"); }
 		α Schemas()ι->const vector<sp<DB::AppSchema>>& override;
-		α WebsocketSession( sp<RestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> override;
+		α WebsocketSession( sp<IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> override;
 	};
 }

@@ -6,89 +6,69 @@
 #define let const auto
 namespace Jde::Web::Server{
 	constexpr auto _closeTimeout{ 5s };//how long Close waits for a pending write & the close handshake before tearing down the transport.
-	α RestStream::operator=( RestStream&& rhs )ι->RestStream&{
-		Plain = move(rhs.Plain);
-		Ssl = move(rhs.Ssl);
-		return *this;
-	}
-
-	α RestStream::AsyncWrite( http::message_generator&& m )ι->void{
-		if( Plain )//TODO Move async_write to streams class and pass shared_from_this.  Implement certificates.
-			beast::async_write( *Plain, move(m), beast::bind_front_handler(&RestStream::OnWrite, shared_from_this()) );
-		else
-			beast::async_write( *Ssl, move(m), beast::bind_front_handler(&RestStream::OnWrite, shared_from_this()) );
-	}
-
-	α RestStream::OnWrite( beast::error_code ec, uint bytes_transferred )ι->void{
+	α IRestStream::OnWrite( beast::error_code ec, uint bytes_transferred )ι->void{
 		boost::ignore_unused( bytes_transferred );
 		if( ec )
 			CodeException{ static_cast<std::error_code>(ec), ELogTags::HttpClientWrite, ec.value()==(int)boost::beast::error::timeout ? ELogLevel::Debug : ELogLevel::Error };
-  }
-
-	α CreateWS( sp<RestStream>&& stream )ι->optional<SocketStream::Stream>{
-		optional<SocketStream::Stream> y;
-		if( stream->Plain )
-		 	y.emplace( websocket::stream<StreamType>{ move(*stream->Plain) } );
-		else
-		 	y.emplace( websocket::stream<beast::ssl_stream<StreamType>>{ move(*stream->Ssl) } );
-
-		std::visit( [](auto&& ws){ ws.binary(true); }, *y );
-		return y;
-	}
-	SocketStream::SocketStream( sp<RestStream>&& stream, beast::flat_buffer&& buffer )ι:
-		_buffer{ move(buffer) },
-		_ws{ *CreateWS(move(stream)) },
-		_strand{ net::make_strand(GetExecutor()) }
-	{}
-
-	α SocketStream::GetExecutor()ι->executor_type{
-		return std::visit( [&]( auto&& ws ){	return ws.get_executor(); }, _ws );
 	}
 
-	α SocketStream::DoAccept( TRequestType req, sp<IWebsocketSession> session )ι->void{
+#define $ template<class TStream> auto RestStream<TStream>
+	$::AsyncWrite( http::message_generator&& m )ι->void{
+		beast::async_write( _stream, move(m), beast::bind_front_handler(&RestStream::OnWrite, shared_from_this()) );//&RestStream:: not &IRestStream:: - OnWrite is protected.
+	}
+
+	$::CreateSocketStream( beast::flat_buffer&& buffer )ι->sp<ISocketStream>{
+		return ms<SocketStream<websocket::stream<TStream>>>( move(_stream), move(buffer) );
+	}
+#undef $
+
+	template<class TStream>
+	SocketStream<TStream>::SocketStream( typename TStream::next_layer_type&& next, beast::flat_buffer&& buffer )ι:
+		ISocketStream{ next.get_executor(), move(buffer) },
+		_ws{ move(next) }
+	{
+		_ws.binary( true );
+	}
+
+#define $ template<class TStream> auto SocketStream<TStream>
+	$::DoAccept( TRequestType req, sp<IWebsocketSession> session )ι->void{
 		net::dispatch( _strand, [this, self=shared_from_this(), req=move(req), session=move(session)]()mutable{
 			if( _closing )
 				return;
-			std::visit(
-				[&]( auto&& ws ){
-					ws.set_option( websocket::stream_base::timeout::suggested(beast::role_type::server) );
-					ws.set_option( websocket::stream_base::decorator( [&]( websocket::response_type& res ){
-						res.set( http::field::server, ServerVersion(_ws.index()==1) );
-					}) );
-					ws.async_accept( req, net::bind_executor(_strand, [this, self, session]( beast::error_code ec ){
-						_open = !ec;
-						session->OnAccept( ec );
-					}) );
-				}, _ws );
+			_ws.set_option( websocket::stream_base::timeout::suggested(beast::role_type::server) );
+			_ws.set_option( websocket::stream_base::decorator( []( websocket::response_type& res ){
+				res.set( http::field::server, ServerVersion(IsSsl) );
+			}) );
+			_ws.async_accept( req, net::bind_executor(_strand, [this, self, session]( beast::error_code ec ){
+				_open = !ec;
+				session->OnAccept( ec );
+			}) );
 		});
 	}
 
-	α SocketStream::DoRead( sp<IWebsocketSession> session )ι->void{
+	$::DoRead( sp<IWebsocketSession> session )ι->void{
 		net::dispatch( _strand, [this, self=shared_from_this(), session=move(session)]()mutable{
 			if( _closing )
 				return;
-			std::visit(
-				[&]( auto&& ws ){
-					ws.async_read( _buffer, net::bind_executor(_strand, [this, self, session]( beast::error_code ec, uint /*c*/ )mutable{
-						if( ec ){
-							//ELogLevel level = ec==boost::beast::error::timeout || ec==websocket::error::closed || ec==net::error::connection_aborted || ec==net::error::not_connected || ec==net::error::connection_reset ? ELogLevel::Trace : ELogLevel::Error;
-							constexpr ELogLevel level = ELogLevel::Debug;
-							if( ec == websocket::error::closed ){
-								CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientRead, Ƒ("[{:x}]Server::DoRead", session->Id()), level };
-								session->OnClose();
-							}else
-								session->OnDisconnect( CodeException{static_cast<std::error_code>(ec), ELogTags::SocketClientRead, Ƒ("[{:x}]Server::DoRead", session->Id()), level} );
-							return;
-						}
-						session->OnRead( (char*)_buffer.data().data(), _buffer.size() );
-						_buffer.clear();
-						session->DoRead();
-					}) );
-				}, _ws );
+			_ws.async_read( _buffer, net::bind_executor(_strand, [this, self, session]( beast::error_code ec, uint /*c*/ )mutable{
+				if( ec ){
+					//ELogLevel level = ec==boost::beast::error::timeout || ec==websocket::error::closed || ec==net::error::connection_aborted || ec==net::error::not_connected || ec==net::error::connection_reset ? ELogLevel::Trace : ELogLevel::Error;
+					constexpr ELogLevel level = ELogLevel::Debug;
+					if( ec == websocket::error::closed ){
+						CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientRead, Ƒ("[{:x}]Server::DoRead", session->Id()), level };
+						session->OnClose();
+					}else
+						session->OnDisconnect( CodeException{static_cast<std::error_code>(ec), ELogTags::SocketClientRead, Ƒ("[{:x}]Server::DoRead", session->Id()), level} );
+					return;
+				}
+				session->OnRead( (char*)_buffer.data().data(), _buffer.size() );
+				_buffer.clear();
+				session->DoRead();
+			}) );
 		});
 	}
 
-	α SocketStream::Write( string&& output, sp<IWebsocketSession> session )ι->LockAwait::Task{
+	$::Write( string&& output, sp<IWebsocketSession> session )ι->LockAwait::Task{
 		auto self = shared_from_this();//the coroutine frame keeps the stream alive across the hop - OnClose can drop the session's ref while we're queued.
 		auto outputPtr = mu<string>( move(output) );
 		co_await StrandAwait{ _strand };
@@ -96,28 +76,25 @@ namespace Jde::Web::Server{
 		if( _closing )
 			co_return;
 		let buffer = net::buffer( (const void*)outputPtr->data(), outputPtr->size() );
-		std::visit(
-			[&]( auto&& ws ){
-				ws.async_write( buffer, net::bind_executor(_strand, [this, pKeepAlive=move(self), session=move(session), buffer, l=move(lock), out=move(outputPtr) ]( beast::error_code ec, uint bytes_transferred )mutable{
-					l.unlock();
-					if( ec || out->size()!=bytes_transferred ){
-						DBGT( ELogTags::SocketClientWrite | ELogTags::ExternalLogger, "({})Error writing to Session:  '{}'", ec.value(), boost::diagnostic_information(ec) );
-						Close( move(session) );
-						CodeException{ ec, ELogTags::SocketClientRead };
-					}
-					(void)buffer;
-				}) );
-			}, _ws );
+		_ws.async_write( buffer, net::bind_executor(_strand, [this, pKeepAlive=move(self), session=move(session), buffer, l=move(lock), out=move(outputPtr) ]( beast::error_code ec, uint bytes_transferred )mutable{
+			l.unlock();
+			if( ec || out->size()!=bytes_transferred ){
+				DBGT( ELogTags::SocketClientWrite | ELogTags::ExternalLogger, "({})Error writing to Session:  '{}'", ec.value(), boost::diagnostic_information(ec) );
+				Close( move(session) );
+				CodeException{ ec, ELogTags::SocketClientRead };
+			}
+			(void)buffer;
+		}) );
 	}
 
-	α SocketStream::Close( sp<IWebsocketSession> session )ι->LockAwait::Task{
+	$::Close( sp<IWebsocketSession> session )ι->LockAwait::Task{
 		auto self = shared_from_this();//the coroutine frame keeps the stream alive across the hop.
 		co_await StrandAwait{ _strand };
 		if( _closing )
 			co_return;
 		_closing = true;
 		if( !_open ){//handshake hasn't completed - async_close is invalid; abort the pending accept at the transport, OnAccept eats the error.
-			std::visit( []( auto&& ws ){ beast::get_lowest_layer( ws ).close(); }, _ws );
+			beast::get_lowest_layer( _ws ).close();
 			session->OnClose();
 			co_return;
 		}
@@ -129,22 +106,23 @@ namespace Jde::Web::Server{
 			if( ec )
 				return;//cancelled - close completed in time.
 			_transportClosed = true;
-			std::visit( []( auto&& ws ){ beast::get_lowest_layer( ws ).close(); }, _ws );
+			beast::get_lowest_layer( _ws ).close();
 		}) );
 		auto lock = co_await _writeLock.Lock();//async_close is a write op - can't overlap pending writes.
 		if( _transportClosed ){//a stalled write ate the deadline - transport is gone, no close handshake possible.
 			session->OnClose();
 			co_return;
 		}
-		std::visit(
-			[&]( auto&& ws ){
-				ws.async_close( websocket::close_code::normal, net::bind_executor(_strand, [pKeepAlive=move(self), deadline=move(deadline), session=move(session), l=move(lock)]( beast::error_code ec )mutable{
-					deadline->cancel();
-					l.unlock();
-					if( ec )
-						CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientRead };
-					session->OnClose();
-				}) );
-			}, _ws );
+		_ws.async_close( websocket::close_code::normal, net::bind_executor(_strand, [pKeepAlive=move(self), deadline=move(deadline), session=move(session), l=move(lock)]( beast::error_code ec )mutable{
+			deadline->cancel();
+			l.unlock();
+			if( ec )
+				CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientRead };
+			session->OnClose();
+		}) );
 	}
+	template struct SocketStream<websocket::stream<StreamType>>;
+	template struct SocketStream<websocket::stream<beast::ssl_stream<StreamType>>>;
+	template struct RestStream<StreamType>;
+	template struct RestStream<beast::ssl_stream<StreamType>>;
 }
